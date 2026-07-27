@@ -90,7 +90,7 @@ export function getStealth(entity: Pawn | Mob, base: number): number {
   return Math.max(0, base + stealthAdditives(entity));
 }
 
-/** Creature-side detection score: perception above a dull-animal floor, dimmed by the light on the
+/** Creature-side detection score: awareness above a dull-animal floor, dimmed by the light on the
  *  PAWN's tile through the creature's night vision — so stealth is automatically stronger after
  *  dark against diurnal animals while nocturnal predators stay dangerous. */
 export function detectionScore(

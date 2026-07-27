@@ -155,14 +155,14 @@ describe('driveWindchill — effective wind → staged condition (direct, not ac
     );
   });
 
-  it('is a nuisance only — no life-threatening stage, never touches STR/CON', () => {
+  it('is a nuisance only — no life-threatening stage, never touches BRAWN/VIGOUR', () => {
     const c: EntityCondition[] = [];
     driveWindchill(c, 1.0);
     const stage = getConditionCurrentStage(c.find((x) => x.id === 'windchilled')!);
     expect(stage!.lifeThreatening).toBeFalsy();
-    expect(stage!.modifiers.strength).toBeUndefined();
-    expect(stage!.modifiers.constitution).toBeUndefined();
-    expect(stage!.modifiers.dexterity).toBeLessThan(1); // buffeted: aim/balance
+    expect(stage!.modifiers.brawn).toBeUndefined();
+    expect(stage!.modifiers.vigour).toBeUndefined();
+    expect(stage!.modifiers.agility).toBeLessThan(1); // buffeted: aim/balance
     expect(stage!.modifiers.moveSpeed).toBeLessThan(1); // walking into the wind
   });
 });

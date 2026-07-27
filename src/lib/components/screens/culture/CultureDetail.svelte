@@ -9,11 +9,11 @@
   export let headcount = 0;
 
   const STAT_ORDER = [
-    'strength',
-    'dexterity',
-    'constitution',
-    'intelligence',
-    'perception',
+    'brawn',
+    'agility',
+    'vigour',
+    'intellect',
+    'awareness',
     'charisma'
   ];
 

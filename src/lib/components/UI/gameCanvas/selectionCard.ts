@@ -60,11 +60,11 @@ export function coreStats(entity: Pawn | Mob): EntityStat[] {
   };
   const s = entity.stats;
   return [
-    cell('STR', s.strength, sm.strength),
-    cell('DEX', s.dexterity, sm.dexterity),
-    cell('CON', s.constitution, sm.constitution),
-    cell('INT', s.intelligence, sm.intelligence),
-    cell('PER', s.perception, sm.perception),
+    cell('BRN', s.brawn, sm.brawn),
+    cell('AGI', s.agility, sm.agility),
+    cell('VIG', s.vigour, sm.vigour),
+    cell('INT', s.intellect, sm.intellect),
+    cell('AWR', s.awareness, sm.awareness),
     cell('CHA', s.charisma, 1)
   ];
 }

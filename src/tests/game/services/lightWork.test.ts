@@ -14,11 +14,11 @@ const pawn = (): Pawn =>
     limbs: [],
     injuries: [],
     stats: {
-      strength: 10,
-      dexterity: 10,
-      intelligence: 10,
-      perception: 10,
-      constitution: 10,
+      brawn: 10,
+      agility: 10,
+      intellect: 10,
+      awareness: 10,
+      vigour: 10,
       wisdom: 10,
       charisma: 10
     }

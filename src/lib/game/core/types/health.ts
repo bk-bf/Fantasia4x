@@ -215,17 +215,17 @@ export interface LimbState {
 /** A single severity stage within a ConditionDef. */
 /**
  * Multipliers a condition stage (or transient condition) applies while active. The BASE-STAT keys
- * (strength…intelligence) scale the raw attribute everywhere it's read — combat damage/hit, dodge,
+ * (brawn…intellect) scale the raw attribute everywhere it's read — combat damage/hit, dodge,
  * carry, every work formula — so a severe condition genuinely cripples the body, not just "work
  * output". The legacy throughput keys (workEfficiency/moveSpeed/…) stack ON TOP for flavour. All are
  * multipliers, 1.0 = no change; <1 = penalty, >1 = boost (magical buffs).
  */
 export interface ConditionModifiers {
-  strength?: number;
-  dexterity?: number;
-  constitution?: number;
-  perception?: number;
-  intelligence?: number;
+  brawn?: number;
+  agility?: number;
+  vigour?: number;
+  awareness?: number;
+  intellect?: number;
   workEfficiency?: number; // multiplier on work output (on top of the stat hit)
   moveSpeed?: number; // multiplier on movement
   hungerRate?: number; // multiplier on hunger accrual rate
@@ -382,7 +382,7 @@ export interface DeadPawnRecord {
     | 'heat_stroke'
     | 'burning';
   turn: number;
-  stats: { strength: number; dexterity: number; intelligence: number };
+  stats: { brawn: number; agility: number; intellect: number };
   /** SOCIAL-LAYER: the dead pawn's id + blood ties, retained minimally so a survivor's family
    *  tree can still name a lost parent/sibling (full retention waits on children). */
   id?: string;

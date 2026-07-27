@@ -3,7 +3,7 @@ import { driveEncumbrance, getConditionCurrentStage } from '$lib/game/core/needs
 import { itemService } from '$lib/game/services/ItemService';
 import type { EntityCondition, GameState, Pawn } from '$lib/game/core/types';
 
-// Worn armour + pack weight over a STR-scaled capacity drives the staged `encumbered` condition (set directly from the ratio).
+// Worn armour + pack weight over a BRAWN-scaled capacity drives the staged `encumbered` condition (set directly from the ratio).
 describe('driveEncumbrance (load → staged condition)', () => {
   it('adds nothing up to full capacity, onsets only OVER 1.0, clears when unburdened again', () => {
     const c: EntityCondition[] = [];
@@ -45,13 +45,13 @@ describe('driveEncumbrance (load → staged condition)', () => {
     );
   });
 
-  it('the overloaded stage cuts combat (DEX → dodge + aim) and movement', () => {
+  it('the overloaded stage cuts combat (AGILITY → dodge + aim) and movement', () => {
     const c: EntityCondition[] = [];
     driveEncumbrance(c, 1.5);
     const stage = getConditionCurrentStage(c.find((x) => x.id === 'encumbered')!);
-    // Evasion + aim flow through the DEX penalty; movement is its own modifier.
-    expect(stage!.modifiers.dexterity).toBeLessThan(1); // easier to hit + worse aim
-    expect(stage!.modifiers.strength).toBeLessThan(1); // weaker under the load
+    // Evasion + aim flow through the AGILITY penalty; movement is its own modifier.
+    expect(stage!.modifiers.agility).toBeLessThan(1); // easier to hit + worse aim
+    expect(stage!.modifiers.brawn).toBeLessThan(1); // weaker under the load
     expect(stage!.modifiers.moveSpeed).toBeLessThan(1); // slower
   });
 });
@@ -61,11 +61,11 @@ describe('carry capacity: worn armour adds VOLUME (pockets) but fills WEIGHT', (
     ({
       id: 'p',
       stats: {
-        strength: 10,
-        dexterity: 10,
-        constitution: 10,
-        perception: 10,
-        intelligence: 10,
+        brawn: 10,
+        agility: 10,
+        vigour: 10,
+        awareness: 10,
+        intellect: 10,
         charisma: 10
       },
       physicalTraits: { weight: 70, height: 170 },

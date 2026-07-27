@@ -425,9 +425,9 @@ export interface Item {
     /**
      * Which attribute drives the damage roll (`raw = damage × stat / 10`). Omitted, the older
      * `finesse`/`arcane` shorthands decide it (PER / INT), and failing those it is STRENGTH.
-     * A dagger sets `dexterity`: a knife kills by placement and speed of hand, not by shoulder.
+     * A dagger sets `agility`: a knife kills by placement and speed of hand, not by shoulder.
      */
-    powerStat?: 'strength' | 'dexterity' | 'perception' | 'intelligence';
+    powerStat?: 'brawn' | 'agility' | 'awareness' | 'intellect';
     /**
      * Damage multiplier on a critical hit (default 1.5). A precision weapon raises it: the whole
      * point of a stiletto is that the hit which finds the gap is the hit that ends the fight.
@@ -458,14 +458,14 @@ export interface Item {
     staminaCost?: number; // stamina drained by this attack (default ATTACK_STAMINA_COST)
     /**
      * CREATURE-COMBAT-OVERHAUL §2c — wielding requirement (Battle-Brothers "heavy" weapons). A crude,
-     * massive orc weapon needs raw muscle to swing WELL: a wielder with STR below `strength` still CAN
+     * massive orc weapon needs raw muscle to swing WELL: a wielder with STR below `brawn` still CAN
      * equip it but is driven the staged **`overmatched`** condition (PawnStateMachine `driveWieldStrain`,
-     * scaled by the shortfall) — worse aim (hitChance), softer blows + less force (strength), harder to
+     * scaled by the shortfall) — worse aim (hitChance), softer blows + less force (brawn), harder to
      * dodge, and faster fatigue (drains stamina in a fight). An orc clears its own weapon's bar; a scrawny
      * colonist who loots it flails, and the condition shows as a pill so the player sees WHY. Absent =
      * anyone wields it fine. Gates by CAPABILITY, not by looting — you must field a STRONG pawn.
      */
-    wieldRequirement?: { strength?: number };
+    wieldRequirement?: { brawn?: number };
   };
 
   /**

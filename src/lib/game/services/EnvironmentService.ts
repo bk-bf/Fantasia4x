@@ -101,7 +101,7 @@ export function getAmbientTint(turn: number): [number, number, number] {
 
 // Per-channel RGB multiplier for HTML panels (applied via SVG feColorMatrix in +page.svelte).
 // Brightness and hue are computed SEPARATELY: multiplying hue by `light` would crush the tint
-// at night. Brightness floors at PANEL_BRIGHT_FLOOR; PANEL_SAT sets constant tint strength.
+// at night. Brightness floors at PANEL_BRIGHT_FLOOR; PANEL_SAT sets constant tint brawn.
 const PANEL_BRIGHT_FLOOR = 0.45;
 const PANEL_SAT = 0.8;
 export function getPanelTint(turn: number): [number, number, number] {

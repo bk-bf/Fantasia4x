@@ -260,7 +260,7 @@ describe('species-specific organ + weapon wiring', () => {
       limbs,
       injuries: [],
       conditions: [],
-      stats: { strength: 12, dexterity: 12, constitution: 10, intelligence: 8, perception: 10 },
+      stats: { brawn: 12, agility: 12, vigour: 10, intellect: 8, awareness: 10 },
       bloodVolume: 100,
       maxBloodVolume: 100
     }) as unknown as Mob;

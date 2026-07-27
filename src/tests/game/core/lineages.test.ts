@@ -16,7 +16,7 @@ import type { Culture, Pawn, Trait } from '$lib/game/core/types';
 // (beast-heritage etc.) lands in Phase 2; here we exercise the mechanism with real awakening data.
 
 const pawn = (over: Partial<Pawn> = {}): Pawn =>
-  ({ id: 'p', isAlive: true, stats: { perception: 10 }, traits: [], ...over }) as unknown as Pawn;
+  ({ id: 'p', isAlive: true, stats: { awareness: 10 }, traits: [], ...over }) as unknown as Pawn;
 
 // A standalone gateway trait: rolls awakening meters toward two lineages (beast + werewolf).
 const clawGateway: Trait = {
@@ -213,12 +213,12 @@ describe('LINEAGES §4 awakening meters', () => {
     const p = pawn({
       traits: [gateway],
       stats: {
-        strength: 10,
-        constitution: 10,
+        brawn: 10,
+        vigour: 10,
         charisma: 10,
-        perception: 10,
-        dexterity: 10,
-        intelligence: 10
+        awareness: 10,
+        agility: 10,
+        intellect: 10
       },
       lineagePaths: [
         {
@@ -256,12 +256,12 @@ describe('LINEAGES §4 awakening meters', () => {
       const p = pawn({
         traits: [{ ...parent }],
         stats: {
-          strength: 10,
-          constitution: 10,
+          brawn: 10,
+          vigour: 10,
           charisma: 10,
-          perception: 10,
-          dexterity: 10,
-          intelligence: 10
+          awareness: 10,
+          agility: 10,
+          intellect: 10
         }
       });
       const res = lineageGrowthEvent(p, () => {});

@@ -70,7 +70,7 @@ const WIRING: Record<string, { wiring: Wiring; where: string; engineFormula?: st
     wiring: 'dead',
     where:
       'no callsite. Melee damage is baseDamage × powerScale(powerStat) inside resolveHit; only the trait key combatMods.melee_damage is read, as a flat weapon-damage add',
-    engineFormula: 'raw = weapon.damage × powerScale(STR | DEX | PER | INT)'
+    engineFormula: 'raw = weapon.damage × powerScale(BRAWN | AGILITY | AWARENESS | INTELLECT)'
   },
   armor_damage: {
     wiring: 'wired',
@@ -81,9 +81,9 @@ const WIRING: Record<string, { wiring: Wiring; where: string; engineFormula?: st
   hit_chance: {
     wiring: 'dead',
     where:
-      'no callsite. resolveHit builds its own to-hit from RAW dexterity, so sight/manipulation never touch melee accuracy',
+      'no callsite. resolveHit builds its own to-hit from RAW agility, so sight/manipulation never touch melee accuracy',
     engineFormula:
-      'toHit = 60 + (DEX − 10) × 1 + weapon.accuracy × 2 − (dodge − 1) × 50, clamped 5–95'
+      'toHit = 60 + (AGILITY − 10) × 1 + weapon.accuracy × 2 − (dodge − 1) × 50, clamped 5–95'
   },
   dodge: {
     wiring: 'wired',
@@ -108,8 +108,8 @@ const WIRING: Record<string, { wiring: Wiring; where: string; engineFormula?: st
   vision_range: {
     wiring: 'dead',
     where:
-      'superseded by core/vision.baseVisionRange, which pawns and mobs share and which returns TILES from raw PER — this multiplier is read by nothing',
-    engineFormula: 'sight tiles = round(4 + PER × 1.3), × light (floor 0.35)'
+      'superseded by core/vision.baseVisionRange, which pawns and mobs share and which returns TILES from raw AWARENESS — this multiplier is read by nothing',
+    engineFormula: 'sight tiles = round(4 + AWARENESS × 1.3), × light (floor 0.35)'
   },
   attack_speed: {
     wiring: 'wired',
@@ -140,15 +140,15 @@ const WIRING: Record<string, { wiring: Wiring; where: string; engineFormula?: st
   ranged_damage: {
     wiring: 'dead',
     where:
-      'no callsite. A shot’s damage comes from the AMMO, and STR enters through the same powerScale term melee uses',
+      'no callsite. A shot’s damage comes from the AMMO, and BRAWN enters through the same powerScale term melee uses',
     engineFormula:
-      'raw = ammo.damage × launcher.drawPower, × powerScale(STR) unless strScaled: false'
+      'raw = ammo.damage × launcher.drawPower, × powerScale(BRAWN) unless strScaled: false'
   },
   stamina: {
     wiring: 'mirrored',
     where:
       'Combat reads calcMaxStamina (entities/Pawns.ts), a raw-stat copy — the × moving × blood_pumping capacity terms of the design formula are dropped',
-    engineFormula: 'maxStamina = 50 + (CON − 10) × 4 + (DEX − 10) × 2'
+    engineFormula: 'maxStamina = 50 + (VIGOUR − 10) × 4 + (AGILITY − 10) × 2'
   },
   stamina_recovery_rate: {
     wiring: 'wired',
@@ -159,12 +159,12 @@ const WIRING: Record<string, { wiring: Wiring; where: string; engineFormula?: st
     wiring: 'mirrored',
     where:
       'PawnService.getMoveSpeed keeps its OWN curve — a different shape from the design formula, not just a copy',
-    engineFormula: 'tiles/s = 4 × clamp(0.5 + DEX/20, 0.4, 1.8) × load × legs × needs × conditions'
+    engineFormula: 'tiles/s = 4 × clamp(0.5 + AGILITY/20, 0.4, 1.8) × load × legs × needs × conditions'
   },
   carry_weight: {
     wiring: 'mirrored',
-    where: 'ItemService.getCarryCapacityBreakdown recomputes the same fraction from raw STR',
-    engineFormula: 'capacity kg = bodyWeight × clamp(STR × 0.012, 0.05, 0.3)'
+    where: 'ItemService.getCarryCapacityBreakdown recomputes the same fraction from raw BRAWN',
+    engineFormula: 'capacity kg = bodyWeight × clamp(BRAWN × 0.012, 0.05, 0.3)'
   }
 };
 
@@ -250,7 +250,7 @@ interface Profile {
   maxCrit: number;
   avgStamina: number;
   reloads: boolean;
-  /** Every ranged weapon bypasses STR (crossbow / sling) — the draw is mechanical. */
+  /** Every ranged weapon bypasses BRAWN (crossbow / sling) — the draw is mechanical. */
   allMechanical: boolean;
   powerStats: string[];
 }
@@ -316,7 +316,7 @@ function cellsFor(b: BuildClass): Record<string, StatCell> {
   c.melee_damage = melee
     ? cell(
         'primary',
-        `every swing multiplies by it — scales on ${p.powerStats.join(' / ') || 'STR'}`
+        `every swing multiplies by it — scales on ${p.powerStats.join(' / ') || 'BRN'}`
       )
     : cell('none', `shots take their damage from the ammo, not a melee multiplier — ${arsenal}`);
   c.hit_chance = melee
@@ -374,7 +374,7 @@ function cellsFor(b: BuildClass): Record<string, StatCell> {
   c.block = p.hasShield
     ? cell('primary', 'carries a shield — block resolves before evasion and stops the blow cold')
     : p.wearsHeavy
-      ? cell('secondary', 'no shield, but mass and CON still stop some blows')
+      ? cell('secondary', 'no shield, but mass and vigour still stop some blows')
       : cell('none', 'no shield — bare block is a rounding error');
   c.knockdown_resistance = p.wearsHeavy
     ? cell('primary', 'holds ground under blows meant to stagger it')

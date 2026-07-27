@@ -512,7 +512,7 @@ export function applyTileToGrid(grid: GameGrid, tile: WorldTile, hiddenMask: boo
  *  • a MINORITY of GROUND tiles also get a scattered snow SPRITE accent (44/45/46, mixed in early) for
  *    texture — never the whole map. OBSTACLE tiles (trees, walls, standing features — isSnowFeature)
  *    take only the wash, no sprite, so their glyphs poke out of the snow.
- *  • the ICE glaze (pale-blue sheen; full strength on open water, ⅓ on damp ground) composites UNDER
+ *  • the ICE glaze (pale-blue sheen; full brawn on open water, ⅓ on damp ground) composites UNDER
  *    the snow wash — both fold into this one cell's colour+alpha.
  * Melted/bare cells REMOVE their cell so the sparse grid only rasterizes where weather actually shows.
  */
@@ -522,11 +522,11 @@ export function applySnowToGrid(grid: GameGrid, tile: WorldTile, hiddenMask: boo
     grid.removeTile(tile.x, tile.y);
     return;
   }
-  // Ice glaze strength (alpha toward ICE_BLUE). Wet-capable tiles only, past the visible threshold.
+  // Ice glaze brawn (alpha toward ICE_BLUE). Wet-capable tiles only, past the visible threshold.
   const ice = tile.walkable || tile.type === 'water' ? (tile.ice ?? 0) : 0;
   const iceMax = tile.type === 'water' ? 0.4 : 0.4 / 3; // water full · dirt ⅓ (faint rime)
   const ai = ice >= ICE_VISIBLE_RENDER ? Math.min(1, ice / 100) * iceMax : 0;
-  // Snow wash strength (alpha toward SNOW_WHITE) — same drift-field formula the baked path used.
+  // Snow wash brawn (alpha toward SNOW_WHITE) — same drift-field formula the baked path used.
   // The wash is suppressed ONLY on SOLID wall tiles (mountain/cliff rock): that rock is a TERRAIN glyph
   // drawn BENEATH this weather layer, so washing it would flatten the wall into a solid-white block.
   // Trees, bushes and buildings draw ABOVE the wash, so they KEEP the snow blanket behind them and poke

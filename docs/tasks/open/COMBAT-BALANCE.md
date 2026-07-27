@@ -37,12 +37,12 @@ core stat feeds them is decided by the **grip**, so the physique picks the *weap
 
 | weapon | scales on |
 | --- | --- |
-| two-handed melee | **STR** |
-| one-handed melee | **DEX** |
-| ranged | **PER** |
-| rapier / finesse line | **PER** (the standing special case) |
-| arcane staff / rod | **INT** |
-| banner polearm (new) | **CHA** — raises the bearer's `prestige` |
+| two-handed melee | **BRAWN** |
+| one-handed melee | **AGILITY** |
+| ranged | **AWARENESS** |
+| rapier / finesse line | **AWARENESS** (the standing special case) |
+| arcane staff / rod | **INTELLECT** |
+| banner polearm (new) | **CHARISMA** — raises the bearer's `prestige` |
 
 No physique is locked out of a weapon family, because each family ships in both grips: a strong pawn
 takes the family's two-hander, a nimble pawn its one-hander. **Exception: flail is 1H-only**, so a
@@ -56,13 +56,13 @@ from**: a per-pawn roll, modified by traits and body size, still multiplied by t
 Nothing is renamed — the stat block a player reads is the same one, it just stops being a function of a
 core stat.
 
-All six move, so **no core stat buys combat performance anywhere**: DEX stops buying evasion and PER
+All six move, so **no core stat buys combat performance anywhere**: AGILITY stops buying evasion and AWARENESS
 stops buying marksmanship, which are the last two channels through which a damage stat could still pay
 for something other than damage. `dodge` keeps its body-weight term (mass is physique, not aptitude)
-and `block` stays derived — it is CON, body mass and the shield, none of which are skill.
+and `block` stays derived — it is VIGOUR, body mass and the shield, none of which are skill.
 
-This is what makes two pawns with identical STR/DEX play differently, and it is what the current system
-cannot express at all: a 40-STR pawn that rolled badly is a hard hitter who cannot land a blow.
+This is what makes two pawns with identical BRAWN/AGILITY play differently, and it is what the current system
+cannot express at all: a 40-BRAWN pawn that rolled badly is a hard hitter who cannot land a blow.
 
 ### What this is not
 
@@ -78,14 +78,14 @@ Do these first; every tuning number after them is only as good as the RNG and th
 
 ### 1. Accept signed stat grants — every `*Penalty` currently RAISES its stat
 
-- [ ] Re-author penalties as **signed bonuses** in `traits.jsonc` (`"dexterityBonus": -5`), dropping the `*Penalty` key entirely — 68 traits.
+- [ ] Re-author penalties as **signed bonuses** in `traits.jsonc` (`"agilityBonus": -5`), dropping the `*Penalty` key entirely — 68 traits.
 - [ ] Collapse both bake paths to one signed add with no key-suffix branch: `applyCulturalTraitBonuses` ([Pawns.ts:867](../../../src/lib/game/entities/Pawns.ts)) and `applyGainedTrait` ([Pawns.ts:272](../../../src/lib/game/entities/Pawns.ts)).
 - [ ] Keep the `max(1, …)` floor so a stacked flaw can't drive a stat to zero or negative.
 - [ ] Re-point the pinning test (`t4WeaponAudit` → "every `*Penalty` RAISES its stat") at the corrected behaviour — it pins the BUG on purpose today so it can't change silently.
 - [ ] Re-run the trait sweep and confirm the negative twins invert.
 
 > **Evidence.** All penalty entries are authored positive and both bake paths do
-> `stats[k] = max(1, stats[k] + value)`. `frail` grants **+2 CON**, `clumsy` **+2 DEX**, `dull` **+2 INT**.
+> `stats[k] = max(1, stats[k] + value)`. `frail` grants **+2 VIGOUR**, `clumsy` **+2 AGILITY**, `dull` **+2 INTELLECT**.
 > A flaw scores identically to its blessing: `str-dex-minus-5` **+45.4%** vs `str-dex-plus-5` +45.4%;
 > `accursed-blood-5` (epic, all-penalty) **+49.1%**.
 > **68 traits author a `*Penalty`; 0 author a negative `*Bonus`**, so the migration cannot double-negate
@@ -123,20 +123,20 @@ change: `resolveHit` stops reading a raw core stat and reads the damage stat ins
 
 ### 4. Set each weapon's power stat by its grip
 
-- [ ] Sweep `items.jsonc`: `powerStat: "strength"` on every two-handed melee weapon, `"dexterity"` on every one-handed melee weapon.
-- [ ] Leave the finesse/rapier line on `"perception"` and the arcane line on `"intelligence"`.
-- [ ] Ranged: `"perception"` — and confirm it doesn't double-count with `aim_accuracy`, which is already PER.
+- [ ] Sweep `items.jsonc`: `powerStat: "brawn"` on every two-handed melee weapon, `"agility"` on every one-handed melee weapon.
+- [ ] Leave the finesse/rapier line on `"awareness"` and the arcane line on `"intellect"`.
+- [ ] Ranged: `"awareness"` — and confirm it doesn't double-count with `aim_accuracy`, which is already AWARENESS.
 - [ ] Acceptance: each weapon's own power stat is its best stat, across all three opponent profiles.
 
 > **Evidence.** Today the named power stat loses on **6 of 16** tier-4 melee weapons — **6 of 8
-> two-handers, 0 of 8 one-handers**. Warhammer STR-40 **20.8** vs DEX-40 **23.8**; greatsword 12.9 vs
+> two-handers, 0 of 8 one-handers**. Warhammer BRAWN-40 **20.8** vs AGILITY-40 **23.8**; greatsword 12.9 vs
 > 13.3. The mechanism is the cadence floor: a 0.55-speed greataxe sits far below the 1.67× ceiling so
-> every DEX point still buys swings, while a 0.9-speed mace is already capped and DEX's biggest channel
-> is dead there. **DEX pays more the slower your weapon is** — so it steals exactly the weapons STR is
+> every AGILITY point still buys swings, while a 0.9-speed mace is already capped and AGILITY's biggest channel
+> is dead there. **AGILITY pays more the slower your weapon is** — so it steals exactly the weapons BRAWN is
 > supposed to own.
 >
 > Modelled with damage on the grip: **16 of 16** answer to the physique their grip names, and the
-> warhammer inversion reverses to **17.2 STR / 6.2 DEX** (`statAxisProposal` → ADOPTED).
+> warhammer inversion reverses to **17.2 BRAWN / 6.2 AGILITY** (`statAxisProposal` → ADOPTED).
 
 ### 5. Fold `hit_chance` into the melee to-hit roll
 
@@ -146,13 +146,13 @@ change: `resolveHit` stops reading a raw core stat and reads the damage stat ins
 
 ### 6. Delete `vision_range`
 
-- [ ] Nothing reads it; `core/vision.baseVisionRange` returns TILES from raw PER and is shared by pawns and mobs. Remove the formula rather than leave a documented stat that does nothing.
+- [ ] Nothing reads it; `core/vision.baseVisionRange` returns TILES from raw AWARENESS and is shared by pawns and mobs. Remove the formula rather than leave a documented stat that does nothing.
 - [ ] Check the pawn stat panel and `/gear-db` → Stats by build for references before removing.
 
 ### 7. Data: the gaps this mapping exposes
 
 - [ ] **Author a 2H flail.** Flail is the one melee family with no two-handed version, so a strong pawn has no flail at any age (`statAxisProposal` → FAMILY REACH).
-- [ ] **Author the banner polearm** — a CHA-scaled reach weapon that raises the bearer's `prestige` (the stat already exists, fed by `SocialService`). Rapier-shaped: a special case that gives one more core stat a weapon to belong to.
+- [ ] **Author the banner polearm** — a CHARISMA-scaled reach weapon that raises the bearer's `prestige` (the stat already exists, fed by `SocialService`). Rapier-shaped: a special case that gives one more core stat a weapon to belong to.
 - [ ] Check 1H sword coverage at the runed tier — the T4 band has no one-handed sword, so a nimble pawn's sword line stops at steel.
 
 ---
@@ -164,7 +164,7 @@ Only after Phase 1, so the damage axis is already honest when the second axis la
 ### 8. Roll and store aptitudes
 
 - [ ] Add `pawn.aptitudes` — a small record keyed by the same stat ids, rolled beside `rollStatsFromRanges` ([Pawns.ts:811](../../../src/lib/game/entities/Pawns.ts)).
-- [ ] Roll **independently of the core stats** — a stat-biased roll re-introduces the DEX correlation through the side door.
+- [ ] Roll **independently of the core stats** — a stat-biased roll re-introduces the AGILITY correlation through the side door.
 - [ ] Triangular distribution over the band so an extreme aptitude is rare, not one roll in three.
 - [ ] Modify by body size and traits at generation; let the existing growth events move them.
 - [ ] Decide the band. ⚠ At ±0.25 on `hit_chance` + `attack_speed` + `hit_precision` together the swing is **+95%** — too wide. Either narrow the band or stop the three compounding.
@@ -175,11 +175,11 @@ Only after Phase 1, so the damage axis is already honest when the second axis la
 - [ ] `hit_chance`, `attack_speed`, `hit_precision`, `armor_damage`, `dodge`, `aim_accuracy`: formula reads the pawn's rolled aptitude instead of a core stat, still `×` its capacity terms.
 - [ ] Keep every id, name and description — this is a source change, not a rename.
 - [ ] `dodge` keeps its `− (weight − 70) × 0.002` term: mass is physique, and a heavy pawn should still evade worse however well it rolled.
-- [ ] Leave `block` derived (CON + body mass + shield) — none of those three is skill.
+- [ ] Leave `block` derived (VIGOUR + body mass + shield) — none of those three is skill.
 - [ ] Acceptance: two pawns with identical core stats produce measurably different dps AND different survivability, and **no core stat correlates with hit rate, cadence, crit, evasion or marksmanship**.
 
-> **Evidence.** Modelled on the rune-graven spear vs an armoured target: a 40-DEX pawn with a bad roll
-> (**8.1**) loses to a **16-DEX** pawn with a good one (**8.4**), while a 40-DEX pawn who also rolled
+> **Evidence.** Modelled on the rune-graven spear vs an armoured target: a 40-AGILITY pawn with a bad roll
+> (**8.1**) loses to a **16-AGILITY** pawn with a good one (**8.4**), while a 40-AGILITY pawn who also rolled
 > well leads at **17.4**. Aptitude tilts the result without replacing the physique
 > (`statAxisProposal` → APTITUDE AXIS).
 
@@ -217,7 +217,7 @@ land; several may resolve on their own.
 
 ### 12. The cadence floor
 
-- [ ] Re-measure first — the floor's damage was that DEX kept buying swings on slow weapons, and Phase 1 removes DEX from the damage of those weapons entirely.
+- [ ] Re-measure first — the floor's damage was that AGILITY kept buying swings on slow weapons, and Phase 1 removes AGILITY from the damage of those weapons entirely.
 - [ ] Then decide whether `MIN_ATTACK_INTERVAL_TICKS` (72 against a 120 base → 1.67× ceiling) is still the right ceiling.
 - [ ] Note the trap: a uniform speed rescale only **delays** the ceiling and doubles as a 2H nerf. Measured, not guessed — `weaponStatSweep` → "PROPOSAL C".
 

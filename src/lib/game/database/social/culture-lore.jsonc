@@ -10,8 +10,8 @@
     "archetypes": [
         {
             "name"     : "Mountain-born",
-            "statFocus": ["strength", "constitution"],
-            "statDump" : ["dexterity"],
+            "statFocus": ["brawn", "vigour"],
+            "statDump" : ["agility"],
             "sizeBias" : ["large", "huge"],
             "traits"   : ["earth-bound", "stone-bones", "iron-skin", "scaled-hide", "industrious"],
             "epithets" : ["the Stoneborn", "the Peakfolk", "the Unbowed"],
@@ -25,8 +25,8 @@
         },
         {
             "name"     : "Forest-kin",
-            "statFocus": ["dexterity", "perception"],
-            "statDump" : ["strength"],
+            "statFocus": ["agility", "awareness"],
+            "statDump" : ["brawn"],
             "sizeBias" : ["small", "medium"],
             "traits"   : ["wind-walker", "keen-senses", "feathered", "photosynthetic", "nocturnal"],
             "epithets" : ["the Greenwise", "the Quiet-foot", "the Leafkin"],
@@ -39,7 +39,7 @@
         },
         {
             "name"     : "Deep-dwellers",
-            "statFocus": ["constitution", "intelligence"],
+            "statFocus": ["vigour", "intellect"],
             "statDump" : ["charisma"],
             "sizeBias" : ["small", "medium"],
             "traits"   : ["earth-bound", "crystalline-eyes", "loner", "iron-skin", "meticulous"],
@@ -53,8 +53,8 @@
         },
         {
             "name"     : "Sky-touched",
-            "statFocus": ["intelligence", "perception"],
-            "statDump" : ["constitution"],
+            "statFocus": ["intellect", "awareness"],
+            "statDump" : ["vigour"],
             "sizeBias" : ["small", "medium"],
             "traits"   : ["stargazer", "crystalline-eyes", "dream-walker", "ancient", "curious"],
             "epithets" : ["the Star-read", "the Cloudborn", "the Far-seeing"],
@@ -67,7 +67,7 @@
         },
         {
             "name"     : "Marsh-folk",
-            "statFocus": ["constitution", "dexterity"],
+            "statFocus": ["vigour", "agility"],
             "statDump" : ["charisma"],
             "sizeBias" : ["small", "medium"],
             "traits"   : ["marsh-dweller", "amphibious", "venomous", "scaled-hide", "regenerative"],
@@ -81,8 +81,8 @@
         },
         {
             "name"     : "Tundra-clans",
-            "statFocus": ["constitution", "strength"],
-            "statDump" : ["intelligence"],
+            "statFocus": ["vigour", "brawn"],
+            "statDump" : ["intellect"],
             "sizeBias" : ["medium", "large"],
             "traits"   : ["frost-born", "feathered", "robust", "pack-hunter", "berserker-blood"],
             "epithets" : ["the Frostkin", "the White-wanderers", "the Cold-hardened"],
@@ -95,8 +95,8 @@
         },
         {
             "name"     : "Ember-kin",
-            "statFocus": ["strength", "intelligence"],
-            "statDump" : ["perception"],
+            "statFocus": ["brawn", "intellect"],
+            "statDump" : ["awareness"],
             "sizeBias" : ["medium", "large"],
             "traits"   : ["flame-touched", "dragon-heritage", "iron-skin", "meticulous", "berserker-blood"],
             "epithets" : ["the Ashborn", "the Forge-blooded", "the Ember-kin"],
@@ -109,8 +109,8 @@
         },
         {
             "name"     : "River-people",
-            "statFocus": ["dexterity", "charisma"],
-            "statDump" : ["strength"],
+            "statFocus": ["agility", "charisma"],
+            "statDump" : ["brawn"],
             "sizeBias" : ["small", "medium"],
             "traits"   : ["amphibious", "hearthkeeper", "shapeshifter", "keen-senses", "industrious"],
             "epithets" : ["the Streamborn", "the Ferryfolk", "the Bright-watered"],
@@ -123,8 +123,8 @@
         },
         {
             "name"     : "Wastrel-nomads",
-            "statFocus": ["constitution", "perception"],
-            "statDump" : ["intelligence"],
+            "statFocus": ["vigour", "awareness"],
+            "statDump" : ["intellect"],
             "sizeBias" : ["medium", "large"],
             "traits"   : ["wind-walker", "robust", "pack-hunter", "keen-senses", "tanner-caste"],
             "epithets" : ["the Dustwalkers", "the Sand-clans", "the Far-roving"],
@@ -137,8 +137,8 @@
         },
         {
             "name"     : "Verdant",
-            "statFocus": ["intelligence", "constitution"],
-            "statDump" : ["strength"],
+            "statFocus": ["intellect", "vigour"],
+            "statDump" : ["brawn"],
             "sizeBias" : ["medium", "large"],
             "traits"   : ["photosynthetic", "regenerative", "hearthkeeper", "ancient", "curious"],
             "epithets" : ["the Greenborn", "the Sunfed", "the Rooted"],
@@ -183,7 +183,7 @@
             "average" : ["of plain and practical wit", "of a shrewd, practical turn of mind"],
             "frail"   : ["slow to abstraction, but cunning where it counts", "no scholars, but no fools either"]
         },
-        "perception": {
+        "awareness": {
             "high" : ["watchful and missing little", "alert to every shift in the world around them"],
             "low"  : ["inattentive to the small details", "easily caught off their guard"]
         },

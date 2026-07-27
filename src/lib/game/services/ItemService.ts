@@ -218,7 +218,7 @@ export interface CarryCapacityBreakdown {
   height: number;
   /** Body mass in kg — the realistic driver of carry capacity. */
   bodyWeight: number;
-  strength: number;
+  brawn: number;
   /** Realistic carry weight = bodyWeight × loadFraction (a STR-dependent % of body mass) + gear. */
   weight: {
     bodyWeight: number;
@@ -227,7 +227,7 @@ export interface CarryCapacityBreakdown {
     gear: number;
     total: number;
   };
-  /** Carry volume = bodyWeight × a frame fraction (strength-independent bulk) + gear. */
+  /** Carry volume = bodyWeight × a frame fraction (brawn-independent bulk) + gear. */
   volume: { bodyWeight: number; fraction: number; capacity: number; gear: number; total: number };
   gearSources: { name: string; weightKg: number; volumeL: number }[];
 }
@@ -296,7 +296,7 @@ export interface ItemService {
 
   // Carry capacity
   getCarryBudget(pawn: Pawn, state: GameState): { maxWeightKg: number; maxVolumeL: number };
-  /** Itemised carry-budget breakdown (body mass × strength-scaled load fraction + gear) — single
+  /** Itemised carry-budget breakdown (body mass × brawn-scaled load fraction + gear) — single
    *  source of truth for the CAPACITIES panel and the CARRYING header so the UI can show the maths. */
   getCarryCapacityBreakdown(pawn: Pawn): CarryCapacityBreakdown;
   canAddToInventory(pawn: Pawn, itemId: string, qty: number, state: GameState): boolean;
@@ -694,11 +694,11 @@ export class ItemServiceImpl implements ItemService {
     const height = pawn.physicalTraits?.height ?? 170;
     const bodyWeight = pawn.physicalTraits?.weight ?? 70;
     const size = sizeFromHeight(height);
-    const str = pawn.stats.strength ?? 10;
+    const str = pawn.stats.brawn ?? 10;
 
     // A pawn bears a STRENGTH-dependent fraction of its OWN body mass — ~1.2% per STR point, clamped to
     // a realistic 5%–30% of body weight (STR 10 ≈ 12%; a strong porter ~25%). Volume (bulk) tracks the
-    // frame, ~13% of body mass, independent of strength.
+    // frame, ~13% of body mass, independent of brawn.
     const loadFraction = Math.min(0.3, Math.max(0.05, str * 0.012));
     const VOLUME_FRACTION = 0.13;
     const weight = {
@@ -773,7 +773,7 @@ export class ItemServiceImpl implements ItemService {
     weight.total = Math.max(1, weight.capacity + weight.gear);
     volume.total = Math.max(1, volume.capacity + volume.gear);
 
-    return { size, height, bodyWeight, strength: str, weight, volume, gearSources };
+    return { size, height, bodyWeight, brawn: str, weight, volume, gearSources };
   }
 
   /**

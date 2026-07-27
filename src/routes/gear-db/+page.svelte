@@ -301,11 +301,11 @@
       if (g.evoStage) push('evolution stage', g.evoStage);
       push('evolves into', g.evolvesTo);
       for (const stat of [
-        'strength',
-        'dexterity',
-        'constitution',
-        'perception',
-        'intelligence',
+        'brawn',
+        'agility',
+        'vigour',
+        'awareness',
+        'intellect',
         'charisma'
       ]) {
         const ab = stat.slice(0, 3).toUpperCase();

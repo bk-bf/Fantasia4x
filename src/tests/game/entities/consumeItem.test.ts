@@ -9,13 +9,13 @@ function makePawn(): Pawn {
   return {
     id: 'p1',
     stats: {
-      strength: 10,
-      dexterity: 10,
-      constitution: 10,
-      intelligence: 10,
+      brawn: 10,
+      agility: 10,
+      vigour: 10,
+      intellect: 10,
       wisdom: 10,
       charisma: 10,
-      perception: 10
+      awareness: 10
     },
     traits: [],
     conditionTimers: {}
@@ -44,7 +44,7 @@ describe('§2h applyConsumable', () => {
     expect(next.traits.some((t) => t.rarity === 'negative')).toBe(true);
     // The original pawn's stats/traits are never mutated by the in-place bake.
     expect(pawn.traits).toHaveLength(0);
-    expect(pawn.stats.dexterity).toBe(10);
+    expect(pawn.stats.agility).toBe(10);
   });
 
   it('drinking a brewed trait draught runs the gamble — grants a pool trait', () => {

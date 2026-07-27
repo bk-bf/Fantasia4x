@@ -370,13 +370,13 @@ function profileFromWeapon(
 }
 
 /** Attributes a weapon's damage roll can key off. */
-export type PowerStat = 'strength' | 'dexterity' | 'perception' | 'intelligence';
+export type PowerStat = 'brawn' | 'agility' | 'awareness' | 'intellect';
 
 /** The attribute this attack's damage scales with: an explicit `powerStat` first, then the older
  *  arcane→INT / finesse→PER shorthands, else STRENGTH. */
 function powerStatValue(attacker: Pawn | Mob, p: AttackProfile, str: number): number {
-  const key: PowerStat = p.powerStat ?? (p.arcane ? 'intelligence' : p.finesse ? 'perception' : 'strength');
-  if (key === 'strength') return str; // already condition-scaled by the caller
+  const key: PowerStat = p.powerStat ?? (p.arcane ? 'intellect' : p.finesse ? 'awareness' : 'brawn');
+  if (key === 'brawn') return str; // already condition-scaled by the caller
   return attacker.stats?.[key] ?? 10;
 }
 
@@ -529,8 +529,8 @@ function attackerProfile(attacker: Pawn | Mob, distTiles = 1): AttackProfile {
   // so a shocked/frostbitten/envenomed fighter genuinely hits softer and misses more — not just "works
   // slower". Dodge/crit/attack-speed already flow through evaluateStat, which applies the same penalty.
   const sm = conditionStatMultipliers(attacker);
-  const str = attacker.stats.strength * sm.strength;
-  const dex = attacker.stats.dexterity * sm.dexterity;
+  const str = attacker.stats.brawn * sm.brawn;
+  const dex = attacker.stats.agility * sm.agility;
 
   // Equipped weapon (pawns; future-proofed for armed mobs) — but only if a hand can still hold it.
   // Lose both hands and the weapon drops; you fall through to natural attacks / the thrash fallback.
@@ -546,7 +546,7 @@ function attackerProfile(attacker: Pawn | Mob, distTiles = 1): AttackProfile {
       // ADR-023: a cultural `weaponBonus` (Giant's Grip) rides the wielded weapon only.
       const wb = weaponBonusDamage(attacker);
       if (wb) p.baseDamage *= 1 + wb;
-      // §2c wielding requirement: a crude, massive weapon (orc greataxe) punishes an under-strength
+      // §2c wielding requirement: a crude, massive weapon (orc greataxe) punishes an under-brawn
       // wielder. The penalty is carried by the `overmatched` CONDITION (driven per-tick from the
       // wieldRequirement shortfall in PawnStateMachine) — it flows into `str`/`dex` (conditionStat-
       // Multipliers) and the to-hit (conditionHitMult) here automatically, so no inline math is needed.
@@ -908,7 +908,7 @@ class CombatServiceImpl implements CombatService {
       if (bc > 0 && rng.random() < bc)
         return this.negatedHit(weaponId, staminaCost, damageType, 'blocked');
     }
-    // Evasion uses the `dodge` stat (DEX − weight, × moving) rather than raw dexterity, so injury,
+    // Evasion uses the `dodge` stat (DEX − weight, × moving) rather than raw agility, so injury,
     // load, and the winded penalty (× 0.5) all lower it. ×20 keeps baseline parity with the old
     // `defDex × 2` term (dodge ≈ 1.0 at DEX 10 → 20).
     // Natural-armour weight is an innate dodge drag (heavy-hided beasts evade worse) — subtracted from
@@ -1029,9 +1029,9 @@ class CombatServiceImpl implements CombatService {
         : {})
     };
 
-    // Knockdown/stun: blunt hits roll chance from damage vs constitution, PLUS the weapon's flat
+    // Knockdown/stun: blunt hits roll chance from damage vs vigour, PLUS the weapon's flat
     // `stunChance` (maces/hammers stun regardless of damage type). Reduced by knockdown_resistance.
-    const defCon = defender.stats.constitution ?? 10;
+    const defCon = defender.stats.vigour ?? 10;
     const stunResist = clamp(
       pawnStatService.evaluateStat('knockdown_resistance', defender),
       0.1,
@@ -2034,8 +2034,8 @@ class CombatServiceImpl implements CombatService {
     if (isMob && (tgt as Mob).state === 'Corpse') return state;
 
     // +2% push chance per point of STR advantage; cut by the target's knockdown_resistance (bracing/mass).
-    const atkStr = attacker.stats.strength * conditionStatMultipliers(attacker).strength;
-    const defStr = tgt.stats.strength * conditionStatMultipliers(tgt).strength;
+    const atkStr = attacker.stats.brawn * conditionStatMultipliers(attacker).brawn;
+    const defStr = tgt.stats.brawn * conditionStatMultipliers(tgt).brawn;
     const resist = clamp(pawnStatService.evaluateStat('knockdown_resistance', tgt), 0, 0.9);
     const chance = clamp((base + (atkStr - defStr) * 0.02) * (1 - resist), 0, 0.75);
     if (rng.random() >= chance) return state;
@@ -2259,8 +2259,8 @@ class CombatServiceImpl implements CombatService {
     // §I: a Famed bow explodes them ×2–5 on top of its tier.
     const wp = rawWp ? scaleWeaponQuality(rawWp, rw.quality, rw.famedStatMult) : undefined;
     const profile = profileFromWeapon(
-      pawn.stats.strength,
-      pawn.stats.dexterity,
+      pawn.stats.brawn,
+      pawn.stats.agility,
       wp ?? { damage: 1, attackSpeed: 1, range: rw.range },
       rw.itemName
     );

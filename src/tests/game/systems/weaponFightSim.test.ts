@@ -43,7 +43,7 @@ async function duel(weaponId: string, offHand: string | undefined, maxTicks = 12
         {
           count: 1,
           drafted: true,
-          stats: { strength: 30, dexterity: 30, constitution: 40, perception: 20 },
+          stats: { brawn: 30, agility: 30, vigour: 40, awareness: 20 },
           equip: [weaponId, ...(offHand ? [offHand] : [])]
         }
       ],
@@ -138,7 +138,7 @@ async function traitDuel(weaponId: string, traitIds: string[], seed = 4242, maxT
         {
           count: 1,
           drafted: true,
-          stats: { strength: 30, dexterity: 30, constitution: 40, perception: 30 },
+          stats: { brawn: 30, agility: 30, vigour: 40, awareness: 30 },
           traits: traitIds,
           equip: [weaponId]
         }
@@ -187,7 +187,7 @@ describe('fight sim — total damage over a real fight (HeadlessSession)', () =>
     'time to kill an armoured orc, and whether its armour survived the fight',
     { timeout: 300_000 },
     async () => {
-      const lines = ['[FIGHT] one drafted colonist STR/DEX 30 vs one Orc Reaver, 1v1'];
+      const lines = ['[FIGHT] one drafted colonist BRAWN/AGILITY 30 vs one Orc Reaver, 1v1'];
       lines.push('loadout              ticks  killed  blood%  armour%  stripped@  blood lost @600t');
       const results: [string, Outcome][] = [];
       for (const [label, id, off] of CONTENDERS) {

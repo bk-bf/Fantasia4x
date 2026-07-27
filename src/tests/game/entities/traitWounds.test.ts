@@ -25,11 +25,11 @@ const makePawn = (traits: Trait[]): Pawn =>
     id: 'p',
     isAlive: true,
     stats: {
-      strength: 10,
-      dexterity: 10,
-      constitution: 10,
-      perception: 10,
-      intelligence: 10,
+      brawn: 10,
+      agility: 10,
+      vigour: 10,
+      awareness: 10,
+      intellect: 10,
       charisma: 10
     },
     physicalTraits: { weight: 70, height: 170 },

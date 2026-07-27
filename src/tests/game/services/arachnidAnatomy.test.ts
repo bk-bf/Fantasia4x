@@ -14,11 +14,11 @@ import type { LimbState, Mob } from '$lib/game/core/types';
  * Plus a mammal-invariance guard: the generalized resolver leaves a humanoid's capacities unchanged.
  */
 const STATS = {
-  strength: 16,
-  dexterity: 13,
-  constitution: 7,
-  intelligence: 4,
-  perception: 11,
+  brawn: 16,
+  agility: 13,
+  vigour: 7,
+  intellect: 4,
+  awareness: 11,
   wisdom: 10,
   charisma: 10
 };

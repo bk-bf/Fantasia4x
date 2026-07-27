@@ -55,7 +55,7 @@ export interface ConditionView {
   /** Readable summary of the modifiers this condition applies (e.g. "STR −30%  ·  Work −25%"). */
   effects: string[];
   /** Raw active modifiers (active stage for persistent, def for transient) — multipliers keyed by
-   *  base stat (strength/…) plus workEfficiency / moveSpeed / hungerRate / fatigueRate / dodge /
+   *  base stat (brawn/…) plus workEfficiency / moveSpeed / hungerRate / fatigueRate / dodge /
    *  hitChance. For numeric consumers (e.g. the work-tab speed breakdown). */
   modifiers: ConditionModifiers;
   /** Human "when is this active" line for a trigger-gated condition (a transient's `activateWhen`),
@@ -65,11 +65,11 @@ export interface ConditionView {
 
 // Base-stat penalties first (the headline "stat loss"), then the throughput/combat multipliers.
 const MOD_LABEL: Partial<Record<keyof ConditionModifiers, string>> = {
-  strength: 'STR',
-  dexterity: 'DEX',
-  constitution: 'CON',
-  perception: 'PER',
-  intelligence: 'INT',
+  brawn: 'BRN',
+  agility: 'AGI',
+  vigour: 'VIG',
+  awareness: 'AWR',
+  intellect: 'INT',
   workEfficiency: 'Work',
   moveSpeed: 'Move',
   dodge: 'Dodge',
@@ -95,12 +95,12 @@ function effectLines(mods: ConditionModifiers): string[] {
 // Trait effect formatting — the ONE source for a granting trait's grant lines, used by BOTH the trait's
 // COND pill tooltip and the active-condition ICON tooltip so the two render identically.
 const GRANT_STAT_ABBR: Record<string, string> = {
-  strength: 'STR',
-  dexterity: 'DEX',
-  intelligence: 'INT',
-  perception: 'PER',
+  brawn: 'BRN',
+  agility: 'AGI',
+  intellect: 'INT',
+  awareness: 'AWR',
   charisma: 'CHA',
-  constitution: 'CON'
+  vigour: 'VIG'
 };
 const grantAxis = (name: string): string =>
   name === 'workSpeed'

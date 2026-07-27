@@ -18,11 +18,11 @@ import type { GameState, Injury, Pawn } from '$lib/game/core/types';
 
 // Wounds mend at full rate only while resting; untended serious wounds stall; dressing quality is shelter-gated. Drives the real services — no mocks.
 const stats = {
-  strength: 12,
-  dexterity: 12,
-  constitution: 12,
-  intelligence: 12,
-  perception: 12,
+  brawn: 12,
+  agility: 12,
+  vigour: 12,
+  intellect: 12,
+  awareness: 12,
   charisma: 10
 };
 

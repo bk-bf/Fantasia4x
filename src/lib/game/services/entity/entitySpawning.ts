@@ -879,16 +879,16 @@ export function makeMob(
   // the fixed def value. Base creatures author no `statRanges` → identical to before (fixed stats).
   const sr = def.statRanges;
   const stats: EntityStats = {
-    strength: rollStatRange(sr?.str, def.stats.str),
-    dexterity: rollStatRange(sr?.dex, def.stats.dex),
-    perception: rollStatRange(sr?.per, def.stats.per),
-    constitution: rollStatRange(sr?.con, def.stats.con),
-    intelligence: def.behaviour === 'passive' ? 4 : 8,
+    brawn: rollStatRange(sr?.str, def.stats.str),
+    agility: rollStatRange(sr?.dex, def.stats.dex),
+    awareness: rollStatRange(sr?.per, def.stats.per),
+    vigour: rollStatRange(sr?.con, def.stats.con),
+    intellect: def.behaviour === 'passive' ? 4 : 8,
     charisma: 5
   };
-  // Blood/health pool tracks the ROLLED constitution (con×5), so a tougher individual soaks more — for a
+  // Blood/health pool tracks the ROLLED vigour (con×5), so a tougher individual soaks more — for a
   // base creature (no range) this equals the old def.stats.health.
-  const scaledHealth = Math.round(stats.constitution * 5 * bodyScale);
+  const scaledHealth = Math.round(stats.vigour * 5 * bodyScale);
   // §2a per-spawn natural-armour spread (individual elites vary in hide toughness); absent = fixed.
   const naturalArmorOverride = def.naturalArmorRange
     ? Math.round(
@@ -945,7 +945,7 @@ export function makeMob(
     // with each part's HP scaled by bodyScale (bigger beast = bigger, tougher limbs).
     limbs: createBodyPlanLimbs(def.limbMap ?? DEFAULT_PLAN, bodyScale),
     // ── Combat & stat parity with Pawn ───────────────────────────────────────────
-    // CreatureDefinition has no explicit size; derive a size class from strength
+    // CreatureDefinition has no explicit size; derive a size class from brawn
     // (bear str 22 → large, wolf 12 → medium, rabbit 1 → small).
     physicalTraits: {
       height: sizeClass === 'large' ? 180 : sizeClass === 'medium' ? 140 : 80,

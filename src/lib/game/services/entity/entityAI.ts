@@ -678,7 +678,7 @@ export function stepOne(
   // for everyone else it's invisible to threat detection, so they never alert on it (and so never
   // oscillate Wander↔Alerted beside the body) — they just keep wandering off. Finishers still see + engage.
   const finisher = willFinishOffDowned(mob.needs.hunger ?? 0, def);
-  // §G shared vision: perception-based range scaled by this tile's light + the mob's night_vision,
+  // §G shared vision: awareness-based range scaled by this tile's light + the mob's night_vision,
   // computed ONCE here and threaded into the FSM (so darkness shortens detection without recomputing
   // the light per check). Daytime with nightVision 0 ≈ the old def.stats.visionRange.
   const tileLight = computeTileLightLevel(
@@ -707,7 +707,7 @@ export function stepOne(
   // LOS test runs only when a pawn is already within range, so the cost stays on mobs that have a
   // candidate in sight range, not every mob every tick.
   // STEALTH filter on the same gate: a pawn in range WITH LOS must ALSO have been detected
-  // (isPawnDetected — a cached ~2 s roll of the mob's perception vs the pawn's stealth). An
+  // (isPawnDetected — a cached ~2 s roll of the mob's awareness vs the pawn's stealth). An
   // undetected pawn is treated as not in vision AND skipped as `nearest`, so it can't body-block
   // aggro for a visible ally behind it. The loop re-picks the next-nearest only while an actual
   // stealther is in sight — the common path costs exactly one nearestPawn + one LOS, as before.
@@ -1487,7 +1487,7 @@ export function stepAnimal(
   pendingTileDepletion: Array<{ x: number; y: number; id: string }>,
   pendingMobState: Map<string, Partial<Mob>>
 ): Mob {
-  // `visionRange` is the §G light-scaled, perception-based sight range (computed in stepOne) — the
+  // `visionRange` is the §G light-scaled, awareness-based sight range (computed in stepOne) — the
   // SAME model mobs and pawns share. Detection uses it; flee DISTANCE still uses def.stats.fleeRange.
 
   // Combined threat: pawn in vision OR a predatory mob nearby. A KINGDOMS-TRADE party pack beast

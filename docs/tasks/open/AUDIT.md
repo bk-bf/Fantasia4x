@@ -119,7 +119,7 @@ Audit only what's implemented. An unrealistic simplification that doesn't match 
 > file is the WORK (what to change). The findings resolved into a **two-axis rebuild**: core stats set
 > damage capacity only (through `melee_damage`/`ranged_damage`, so injury applies), the grip picks which
 > core stat, and `hit_chance`/`attack_speed`/`hit_precision`/`armor_damage` become per-pawn rolls
-> instead of DEX derivatives.
+> instead of AGILITY derivatives.
 
 Mechanic-level checks (equip, ammo lifecycle, staves, shields) are settled and stay ticked. The
 per-weapon BALANCE tracker below replaces the old five-bullet pass, which only ever sampled two
@@ -131,7 +131,7 @@ proposal pricing), `weaponFightSim.test.ts` (HeadlessSession duels vs a live Orc
 
 #### Mechanics (settled)
 - [x] Melee equips `mainHand` + deals damage of the weapon's type (iron_mace → goblin Corpse; `resolveHit` avg 44, type blunt).
-- [x] Power stat routes correctly: finesse→PER, arcane→INT, and the new explicit `powerStat` field→any attribute (daggers→DEX). Swept per weapon in `t4WeaponAudit`.
+- [x] Power stat routes correctly: finesse→AWARENESS, arcane→INTELLECT, and the new explicit `powerStat` field→any attribute (daggers→AGILITY). Swept per weapon in `t4WeaponAudit`.
 - [x] Ranged ammo lifecycle: fires only with matching ammo + consumes it (war_bow arrows 8→6); NO phantom shots at 0 ammo; WRONG ammo doesn't feed. — *`recoverable`-retrieval still not asserted numerically*
 - [x] Magic staves: channeled (no ammo), pays `staminaCost` as mana (ember_staff stamina 124→117 per cast)
 - [x] Shield equips to `offHand`; 2H + off-hand allowed but penalised via `fouled_guard` (halves dodge/hitChance/attackSpeed/weaponDamage/critChance/block). Verified headless: hit 0.67→0.33, dmg 50.1→25.2.
@@ -141,19 +141,19 @@ proposal pricing), `weaponFightSim.test.ts` (HeadlessSession duels vs a live Orc
 #### Engine fixes landed this pass
 - [x] ⚠→fixed: **the damage term was uncapped.** `raw = baseDamage × stat / 10` was written for a ~5–22 stat band; PAWN-GROWTH later took caps to 62–100, making it a ×6–×10 multiplier that drowned subtractive armour and collapsed weapon choice into "biggest base damage". Now `powerScale()` — linear to 10, damped above by `POWER_SOFT_CAP 30`, bounded at 4×. Early game barely moves (stat 16: ×1.60→×1.50), the ceiling is tamed (stat 100: ×10.0→×3.25).
 - [x] ⚠→fixed: **armour condition did nothing until it shattered.** `partArmorReduction` never read `durability`, so `armorDamage` had no in-fight payoff and a hammer needed an 11-hit strip that never lands (measured: warhammer took 13% off an orc's plate before the orc died). Now `defense × (0.5 + 0.5 × condition)`, mirrored in `partArmorPoints`. Headless: warhammer now strips the orc to **46%** and that feeds back into its own damage.
-- [x] New `weaponProperties.powerStat` — daggers scale on DEX. Stiletto at STR 20: **18.9 → 83.9 dps** across DEX 10→60 (vs bare); flat across a STR sweep, so a strength build gains nothing from a knife.
-- [x] New `weaponProperties.critMultiplier` (default 1.5) — daggers 2.0, rapiers 1.8. Calibrated against an equal-investment STR-60 greatsword: 2.6 gave the assassin 1.80×, 2.0 gives 1.47×.
-- [x] Heavy 2H (22 items: greatsword / 2H axe / 2H hammer / 2H cleaver, all ages incl. orc + boss) took **−8 accuracy, ×0.85 speed**. Vs an evasive target at DEX 60 the greatsword went 65.0 → 47.2, landing just above the sword-and-board control. Polearms and shod staves deliberately untouched — reach and accuracy are what they are for.
+- [x] New `weaponProperties.powerStat` — daggers scale on AGILITY. Stiletto at BRAWN 20: **18.9 → 83.9 dps** across AGILITY 10→60 (vs bare); flat across a BRAWN sweep, so a strength build gains nothing from a knife.
+- [x] New `weaponProperties.critMultiplier` (default 1.5) — daggers 2.0, rapiers 1.8. Calibrated against an equal-investment BRAWN-60 greatsword: 2.6 gave the assassin 1.80×, 2.0 gives 1.47×.
+- [x] Heavy 2H (22 items: greatsword / 2H axe / 2H hammer / 2H cleaver, all ages incl. orc + boss) took **−8 accuracy, ×0.85 speed**. Vs an evasive target at AGILITY 60 the greatsword went 65.0 → 47.2, landing just above the sword-and-board control. Polearms and shod staves deliberately untouched — reach and accuracy are what they are for.
 - [x] New dev lever `devSetPawnTraits` + `ScenarioPawnGroup.traits` — assigns an exact trait list and bakes its stat bonuses the way generation does, so a trait pile can be priced in a real fight.
 - [x] ⚠→fixed: `combatRanged.test.ts`'s hammer-vs-cleaver test was measuring FISTS. `makeMeleeAttacker` minted a weapon with no `durability`, and `decrEquipDurability` reads `durability ?? 0`, so it shattered on the first landed hit. Fixture now durable + the defender survives the window: hammer strips **172 vs the cleaver's 20** condition (8.6×).
 
 #### ⚠ Open findings (measured, NOT yet fixed — decisions needed)
-- [ ] ⚠ **DEX is the best stat on 15 of 16 T4 melee weapons, including every STR weapon.** Taming the power term fixed the runaway but inverted the stat economy: STR now buys one soft-capped channel (damage, ≤4×) while DEX buys three (cadence to the interval floor, +1 to-hit per point, +0.005 crit per point). Warhammer at stat 40 vs a raider: STR 19.1 / **DEX 24.9**. Only the Rune-Banded Longstaff prefers STR (its speed is already at the cap). Fix is on the DEX side — damp the to-hit term or `DEX_HIT_WEIGHT` — not by loosening the power cap (parity would need `POWER_SOFT_CAP ≈ 99`, i.e. no cap).
+- [ ] ⚠ **AGILITY is the best stat on 15 of 16 T4 melee weapons, including every BRAWN weapon.** Taming the power term fixed the runaway but inverted the stat economy: BRAWN now buys one soft-capped channel (damage, ≤4×) while AGILITY buys three (cadence to the interval floor, +1 to-hit per point, +0.005 crit per point). Warhammer at stat 40 vs a raider: BRAWN 19.1 / **AGILITY 24.9**. Only the Rune-Banded Longstaff prefers BRAWN (its speed is already at the cap). Fix is on the AGILITY side — damp the to-hit term or `DEX_HIT_WEIGHT` — not by loosening the power cap (parity would need `POWER_SOFT_CAP ≈ 99`, i.e. no cap).
 - [ ] ⚠ **Precision can make a low-damage weapon worse.** Headless, 8 seeds: a stiletto with `lumbering-fighter` (attack_speed ×0.6, hit_precision ×0.75) kills an Orc Reaver in **1290 mean ticks vs 2500 unimpaired — ×1.94 FASTER with the crippling flaw.** Hypothesis: `aimedBodyPart` biases toward the least-armoured part, and for a dagger that is an extremity, so a precise dagger keeps stabbing hands and never reaches a lethal part. Needs a follow-up: weight the aim roll by whether the part can actually kill.
 - [ ] ⚠ **`whirlwind` (epic) is the single strongest trait in the game** — `attack_speed ×1.5, hit_precision ×1.5`, up to **+78.5%** dps (Rune-Bitten Greataxe vs duelist) and the top pick in every 2H stack. Headless it is worth ×1.36 on the warhammer.
 - [ ] ⚠ **`giants-grip` (epic) is a flat `melee_damage ×1.3` that bypasses the power cap** — it multiplies `baseDamage` directly (`weaponBonusDamage`), so it is the one damage source the soft cap does not touch. +45.3% on the Orc Greataxe vs knight, and present in every 1H stack.
-- [ ] ⚠ **Flat stat-pile traits outclass every designed combat trait.** `all-plus-5` (legendary) +49.1%, `str-dex-plus-5` (epic) +45.4%, `dex-plus-5` (rare) +35.5% — all above `quick-striking` (+25.7%) and `killer-instinct` (+18.0%). A "+5 to everything" trait is strictly better than a combat-designed one, because it feeds the DEX channels above.
-- [ ] ⚠⚠ **Every `*Penalty` RAISES the stat it should lower — a curse is a blessing.** All **103** penalty entries in `traits.jsonc` are authored POSITIVE, and both bake paths do `stats[k] = max(1, stats[k] + value)`: `applyCulturalTraitBonuses` (generation) and `applyGainedTrait` (runtime growth). So `frail` grants **+2 CON**, `clumsy` **+2 DEX**, `dull` **+2 INT**. The sweep shows it unmistakably — the negative trait and its positive twin score *identically*:
+- [ ] ⚠ **Flat stat-pile traits outclass every designed combat trait.** `all-plus-5` (legendary) +49.1%, `str-dex-plus-5` (epic) +45.4%, `dex-plus-5` (rare) +35.5% — all above `quick-striking` (+25.7%) and `killer-instinct` (+18.0%). A "+5 to everything" trait is strictly better than a combat-designed one, because it feeds the AGILITY channels above.
+- [ ] ⚠⚠ **Every `*Penalty` RAISES the stat it should lower — a curse is a blessing.** All **103** penalty entries in `traits.jsonc` are authored POSITIVE, and both bake paths do `stats[k] = max(1, stats[k] + value)`: `applyCulturalTraitBonuses` (generation) and `applyGainedTrait` (runtime growth). So `frail` grants **+2 VIGOUR**, `clumsy` **+2 AGILITY**, `dull` **+2 INTELLECT**. The sweep shows it unmistakably — the negative trait and its positive twin score *identically*:
   | trait | rarity | best-case dps |
   | --- | --- | --- |
   | `str-dex-plus-5` | epic | +45.4% |
@@ -172,10 +172,10 @@ proposal pricing), `weaponFightSim.test.ts` (HeadlessSession duels vs a live Orc
 #### Per-weapon tracker — tier 4 (top tier; there is no T5)
 Tick when the weapon's role is confirmed to survive a real fight against all three opponent profiles
 (raider / knight / duelist) AND its best stat is its own power stat. Every row below is currently
-blocked on the DEX finding above, so none are ticked.
+blocked on the AGILITY finding above, so none are ticked.
 
 **Melee (16)**
-- [ ] `fang_reaver` Fang-Reaver — STR 15.6 vs DEX 18.9 (raider). Boss-tier 1H sword, `wieldRequirement 22` never exercised.
+- [ ] `fang_reaver` Fang-Reaver — BRAWN 15.6 vs AGILITY 18.9 (raider). Boss-tier 1H sword, `wieldRequirement 22` never exercised.
 - [ ] `orc_greataxe` Orc Greataxe — best `giants-grip` host (+45.3% vs knight); loot-only.
 - [ ] `iron_tide_greataxe` The Iron Tide — famed Warboss drop; ages Boss correctly since the `ageOf` fix.
 - [ ] `rune_etched_axe` Rune-Etched Splitting Axe — 1H axe, armourDmg 7.
@@ -183,20 +183,20 @@ blocked on the DEX finding above, so none are ticked.
 - [ ] `rune_toothed_cleaver` Rune-Toothed Cleaver — bleed/crit identity; highest 1H stamina cost (7).
 - [ ] `rune_chained_flail` Rune-Chained Flail — 23.5 dps vs raider, second only to the warhammer.
 - [ ] `rune_graven_spear` Rune-Graven Spear — most trait-sensitive weapon in the sweep (top host for 6 of the 15 worst traits).
-- [ ] `rune_needle_rapier` Rune-Needle Rapier — **only weapon whose power stat wins** vs raider/knight (PER 28.6), but DEX overtakes it vs the duelist (9.3 vs 8.6).
-- [ ] `rune_slotted_stiletto` Rune-Slotted Stiletto — DEX 34.0 vs raider, the highest single cell in the audit; also the weapon the precision anomaly hits.
+- [ ] `rune_needle_rapier` Rune-Needle Rapier — **only weapon whose power stat wins** vs raider/knight (AWARENESS 28.6), but AGILITY overtakes it vs the duelist (9.3 vs 8.6).
+- [ ] `rune_slotted_stiletto` Rune-Slotted Stiletto — AGILITY 34.0 vs raider, the highest single cell in the audit; also the weapon the precision anomaly hits.
 - [ ] `rune_sung_greatsword` Rune-Sung Greatsword — worst trait-stack blowout (×4.47 paper vs knight).
 - [ ] `rune_bitten_greataxe` Rune-Bitten Greataxe — host of the single worst trait cell (`whirlwind` +78.5%).
 - [ ] `rune_fanged_greatcleaver` Rune-Fanged Greatcleaver — crit 0.26; 2H bleed identity.
 - [ ] `rune_weighted_warhammer` Rune-Weighted Warhammer — highest dps in the game at every opponent; armourDmg 16 (11 hits to strip 200 plate).
 - [ ] `rune_etched_halberd` Rune-Etched Halberd — reach + knockdown; exempt from the 2H accuracy nerf, confirm that is still right.
-- [ ] `rune_banded_longstaff` Rune-Banded Longstaff — **the one weapon that still prefers STR** (20.0 vs DEX 12.3), because its speed is already at the cadence cap. The control case for the DEX finding.
+- [ ] `rune_banded_longstaff` Rune-Banded Longstaff — **the one weapon that still prefers BRAWN** (20.0 vs AGILITY 12.3), because its speed is already at the cadence cap. The control case for the AGILITY finding.
 
 **Ranged / arcane (4)** — not covered by the melee sweep; need their own pass through the ranged path.
 - [ ] `rune_strung_warbow` Rune-Strung Warbow — drawPower 2.4, `wieldRequirement 16`.
 - [ ] `rune_cranked_arbalest` Rune-Cranked Arbalest — drawPower 3.2, reload 4.
 - [ ] `rune_marked_javelin` Rune-Marked Javelin — thrown; self-consuming off-hand path.
-- [ ] `rune_whistling_sling` Rune-Whistling Sling — mechanical (no STR), stun 0.2.
+- [ ] `rune_whistling_sling` Rune-Whistling Sling — mechanical (no BRAWN), stun 0.2.
 
 ### Gear
 - [x] Worn armor mitigates incoming damage (plate_cuirass: `resolveHit` avg 44 → 32.7). — *per-part coverage, layer-stacking, individual slash/crush/pierce resistances, sane-per-piece values not yet asserted individually*
@@ -205,9 +205,9 @@ blocked on the DEX finding above, so none are ticked.
       limbs** over 5000 `resolveHit`s, bucketed by `coversPart` itself — armour soaks per-struck-part, no flat
       body shield, no hit-through. (fatigue/movePenalty ride the same `armorProperties` and flow through the
       encumbrance/fatigue path; the per-part coverage was the open claim.)
-- [x] ⚠→fixed: **shields were near-useless** — one flat ×1.25 dodge, tier-independent, with `defense`/`parryChance`/`bashDamage`/`kickDamage` all dead. Rebuilt as a real **block/parry** axis (2nd negation path, distinct from dodge): new `block` stat (CON + body mass, NOT weight-penalized → the heavy tank's negation); shields add `blockBonus` (the tier ladder made real, 0.12→0.34), a `parryChance` (deflect + **immediate guaranteed free counter**), and on-hit **shield-bash** procs (stagger/knockback/knockdown, heavy tiers). Block covers melee + reduced-vs-ranged. Verified headless: no-shield 26/300 negated → iron shield 131/300 (block 124 + parry 7); buckler 79 < iron boss 127; live bash staggers/knocks down. `SHIELD_DODGE_MULT` removed (no more dodge double-dip). Layer 2 (dodge/block build traits) + creature block deferred. — *armorDamage degradation still not asserted*
-  - **Shield audit (adversarial, `_shieldAudit`, 6/6):** ✓ block scales with CON (0.41→0.46); ✓ **the key coherence claim** — block stays high under heavy full-plate (0.42) while dodge stays low (0.18), i.e. the tank blocks rather than evades; ✓ block+parry CAPPED (extreme CON40/140kg tank = 0.57 block, 0.60 negated, still eats real hits — `BLOCK_CAP` holds); ✓ bash procs are heavy-shield only (buckler produces no stagger); ✓ tier ladder + parry occurrence (from `_shieldBlock`). Two findings surfaced, **your call** (not fixed):
-    - ⚠ **Mobs get ~1.8% innate block** — the `block` stat is CON+mass, and mobs have CON, so every creature now negates ~2% of melee even with no shield. Creature block was deferred (Layer 3). Tiny, but unintended: gate block behind holding a shield, keep it as negligible "bracing", or make innate block pawn-only?
+- [x] ⚠→fixed: **shields were near-useless** — one flat ×1.25 dodge, tier-independent, with `defense`/`parryChance`/`bashDamage`/`kickDamage` all dead. Rebuilt as a real **block/parry** axis (2nd negation path, distinct from dodge): new `block` stat (VIGOUR + body mass, NOT weight-penalized → the heavy tank's negation); shields add `blockBonus` (the tier ladder made real, 0.12→0.34), a `parryChance` (deflect + **immediate guaranteed free counter**), and on-hit **shield-bash** procs (stagger/knockback/knockdown, heavy tiers). Block covers melee + reduced-vs-ranged. Verified headless: no-shield 26/300 negated → iron shield 131/300 (block 124 + parry 7); buckler 79 < iron boss 127; live bash staggers/knocks down. `SHIELD_DODGE_MULT` removed (no more dodge double-dip). Layer 2 (dodge/block build traits) + creature block deferred. — *armorDamage degradation still not asserted*
+  - **Shield audit (adversarial, `_shieldAudit`, 6/6):** ✓ block scales with VIGOUR (0.41→0.46); ✓ **the key coherence claim** — block stays high under heavy full-plate (0.42) while dodge stays low (0.18), i.e. the tank blocks rather than evades; ✓ block+parry CAPPED (extreme CON40/140kg tank = 0.57 block, 0.60 negated, still eats real hits — `BLOCK_CAP` holds); ✓ bash procs are heavy-shield only (buckler produces no stagger); ✓ tier ladder + parry occurrence (from `_shieldBlock`). Two findings surfaced, **your call** (not fixed):
+    - ⚠ **Mobs get ~1.8% innate block** — the `block` stat is VIGOUR+mass, and mobs have VIGOUR, so every creature now negates ~2% of melee even with no shield. Creature block was deferred (Layer 3). Tiny, but unintended: gate block behind holding a shield, keep it as negligible "bracing", or make innate block pawn-only?
     - [x] ⚠→fixed: **2H + shield freeloaded full shield block/parry.** `fouled_guard` now also halves `block` (`"block": 0.5`, wired through `blockChance` via `conditionMult`), so a two-hander can't strap a shield for free defense. Verified headless: clean shield pawn negates 0.667 of blows → fouled 0.332 (halved). (Parry left intact — a deflect+counter a two-hander can't set up anyway; block was the freeloaded stat.)
 - [x] Jewelry grants conditions while worn (ruby_ring → `might` in transientConditions; re-derived each tick, auto-clears on unequip). — *aim gear/quivers → ranged, cold/heat/stealth mods still not asserted*
 
@@ -534,14 +534,14 @@ Grew into its own spec: 9 builds (8 + Mage) audited against stats/traits/gear/li
 Quick reference (each row = primary stats → the gear it *wants*):
 | Build | Key stats | Weapons | Armour | Tools/gear it wants |
 | --- | --- | --- | --- | --- |
-| Bruiser | STR/CON | mauls, greataxes, cleavers (blunt/cleave) | heavy plate | high carry, big two-handers |
-| Duelist / skirmisher | DEX | finesse blades (rapier/seax), spears | light/medium, dodge | attack-speed, parry shield |
-| Marksman / sniper | PER + DEX | bows, crossbows | light | quivers, bracers, aim gear |
-| Tank | CON + mass | one-hand + shield | heaviest plate | shields (block), knockdown-resist |
-| Skirmish-scout | DEX/PER | sling, short bow, dagger | light/quiet | stealth gear, night-vision, soft boots |
-| Artisan/smith | INT/DEX | — | work apron | crafting-quality tools (tongs, kit) |
-| Medic | INT | — | — | physicians_kit + wound medicines (§4) |
-| Face/leader | CHA | — | regalia | prestige robes, circlets, trade goods |
+| Bruiser | BRAWN/VIGOUR | mauls, greataxes, cleavers (blunt/cleave) | heavy plate | high carry, big two-handers |
+| Duelist / skirmisher | AGILITY | finesse blades (rapier/seax), spears | light/medium, dodge | attack-speed, parry shield |
+| Marksman / sniper | AWARENESS + AGILITY | bows, crossbows | light | quivers, bracers, aim gear |
+| Tank | VIGOUR + mass | one-hand + shield | heaviest plate | shields (block), knockdown-resist |
+| Skirmish-scout | AGILITY/AWARENESS | sling, short bow, dagger | light/quiet | stealth gear, night-vision, soft boots |
+| Artisan/smith | INTELLECT/AGILITY | — | work apron | crafting-quality tools (tongs, kit) |
+| Medic | INTELLECT | — | — | physicians_kit + wound medicines (§4) |
+| Face/leader | CHARISMA | — | regalia | prestige robes, circlets, trade goods |
 - [ ] For each build × tech tier (primitive1-3 / copper / bronze / iron / steel / runed), mark whether a viable
       weapon + armour + role-tool exists; the empties are the backlog. (This audit *is* that grid.)
 

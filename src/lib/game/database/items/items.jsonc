@@ -2564,7 +2564,7 @@
       "armorPenetration": 0.02,
       "armorDamage": 0.5,
       "critMod": 0.08,
-      "powerStat"  : "dexterity",
+      "powerStat"  : "agility",
       "critMultiplier" : 2.0,
       "staminaCost": 3,
       "twoHanded": false
@@ -4095,7 +4095,7 @@
       "armorPenetration": 0.15,
       "critMod"         : 0.1,
       "staminaCost"     : 5,
-      "wieldRequirement": {"strength": 22}
+      "wieldRequirement": {"brawn": 22}
     },
     "onHitWound": [ {"wound": "bloodletting", "chance": 0.4} ]
   },
@@ -6594,7 +6594,7 @@
       "accuracy"        : -1,
       "critMod"         : 0.12,
       "armorDamage"     : 0.5,
-      "powerStat"       : "dexterity",
+      "powerStat"       : "agility",
       "critMultiplier"  : 2.0,
       "staminaCost"     : 3
     }
@@ -6689,7 +6689,7 @@
       "accuracy"        : -1,
       "critMod"         : 0.12,
       "armorDamage"     : 0.6,
-      "powerStat"       : "dexterity",
+      "powerStat"       : "agility",
       "critMultiplier"  : 2.0,
       "staminaCost"     : 3,
       "twoHanded"       : false
@@ -6955,7 +6955,7 @@
       "critMod"         : 0.05,
       "staminaCost"     : 10,
       "twoHanded"       : true,
-      "wieldRequirement": {"strength": 20}
+      "wieldRequirement": {"brawn": 20}
     },
     "onHitWound": [ {"wound": "bloodletting", "chance": 0.25} ]
   },
@@ -6990,7 +6990,7 @@
       "accuracy"        : -8,
       "staminaCost"     : 9,
       "twoHanded"       : true,
-      "wieldRequirement": {"strength": 22}
+      "wieldRequirement": {"brawn": 22}
     }
   },
   {
@@ -7022,7 +7022,7 @@
       "accuracy"        : -1,
       "critMod"         : 0.06,
       "staminaCost"     : 6,
-      "wieldRequirement": {"strength": 16}
+      "wieldRequirement": {"brawn": 16}
     },
     "onHitWound": [ {"wound": "bloodletting", "chance": 0.35} ]
   },
@@ -7080,7 +7080,7 @@
       "armorPenetration": 0.06,
       "critMod"         : 0.08,
       "armorDamage"     : 0.5,
-      "powerStat"       : "dexterity",
+      "powerStat"       : "agility",
       "critMultiplier"  : 2.0,
       "staminaCost"     : 3
     },
@@ -7200,7 +7200,7 @@
       "critMod"         : 0.06,
       "staminaCost"     : 8,
       "twoHanded"       : true,
-      "wieldRequirement": {"strength": 24}
+      "wieldRequirement": {"brawn": 24}
     },
     "onHitWound": [ {"wound": "bloodletting", "chance": 0.3} ]
   },
@@ -7235,7 +7235,7 @@
       "accuracy"        : -8,
       "staminaCost"     : 9,
       "twoHanded"       : true,
-      "wieldRequirement": {"strength": 24}
+      "wieldRequirement": {"brawn": 24}
     },
     "onHitWound": [ {"wound": "bloodletting", "chance": 0.35} ]
   },
@@ -7410,7 +7410,7 @@
       "armorDamage"     : 3,
       "accuracy"        : -1,
       "staminaCost"     : 8,
-      "wieldRequirement": {"strength": 14}
+      "wieldRequirement": {"brawn": 14}
     },
     "onHitWound": [ {"wound": "bloodletting", "chance": 0.3} ]
   },
@@ -7946,7 +7946,7 @@
       "accuracy"        : 0,
       "critMod"         : 0.16,
       "armorDamage"     : 0.8,
-      "powerStat"       : "dexterity",
+      "powerStat"       : "agility",
       "critMultiplier"  : 2.0,
       "staminaCost"     : 3,
       "twoHanded"       : false
@@ -7982,7 +7982,7 @@
       "accuracy"        : 0,
       "critMod"         : 0.2,
       "armorDamage"     : 0.8,
-      "powerStat"       : "dexterity",
+      "powerStat"       : "agility",
       "critMultiplier"  : 2.0,
       "staminaCost"     : 3,
       "twoHanded"       : false
@@ -8700,7 +8700,7 @@
       "armorPenetration": 0.03,
       "armorDamage"     : 0.5,
       "critMod"         : 0.1,
-      "powerStat"       : "dexterity",
+      "powerStat"       : "agility",
       "critMultiplier"  : 2.0,
       "staminaCost"     : 3,
       "twoHanded"       : false
@@ -9070,7 +9070,7 @@
       "accuracy"        : -8,
       "staminaCost"     : 5,
       "twoHanded"       : true,
-      "wieldRequirement": {"strength": 12}
+      "wieldRequirement": {"brawn": 12}
     },
     "onHitWound": [ {"wound": "bloodletting", "chance": 0.15} ]
   },
@@ -9105,7 +9105,7 @@
       "accuracy"        : -8,
       "staminaCost"     : 8,
       "twoHanded"       : true,
-      "wieldRequirement": {"strength": 13}
+      "wieldRequirement": {"brawn": 13}
     },
     "onHitWound": [ {"wound": "bloodletting", "chance": 0.24} ]
   },
@@ -9140,7 +9140,7 @@
       "accuracy"        : -8,
       "staminaCost"     : 6,
       "twoHanded"       : true,
-      "wieldRequirement": {"strength": 13}
+      "wieldRequirement": {"brawn": 13}
     }
   },
   {
@@ -9175,7 +9175,7 @@
       "accuracy"        : -8,
       "staminaCost"     : 7,
       "twoHanded"       : true,
-      "wieldRequirement": {"strength": 14}
+      "wieldRequirement": {"brawn": 14}
     }
   },
   {
@@ -9344,7 +9344,7 @@
       "accuracy"        : -8,
       "staminaCost"     : 6,
       "twoHanded"       : true,
-      "wieldRequirement": {"strength": 16}
+      "wieldRequirement": {"brawn": 16}
     }
   },
   {
@@ -9378,7 +9378,7 @@
       "accuracy"        : -8,
       "staminaCost"     : 8,
       "twoHanded"       : true,
-      "wieldRequirement": {"strength": 16}
+      "wieldRequirement": {"brawn": 16}
     },
     "onHitWound": [ {"wound": "bloodletting", "chance": 0.28} ]
   },
@@ -9512,7 +9512,7 @@
       "accuracy"        : -8,
       "staminaCost"     : 6,
       "twoHanded"       : true,
-      "wieldRequirement": {"strength": 18}
+      "wieldRequirement": {"brawn": 18}
     }
   },
   {
@@ -9813,7 +9813,7 @@
       "armorPenetration": 0.2,
       "critMod"         : 0.24,
       "armorDamage"     : 1,
-      "powerStat"       : "dexterity",
+      "powerStat"       : "agility",
       "critMultiplier"  : 2.0,
       "staminaCost"     : 3,
       "twoHanded"       : false
@@ -9850,7 +9850,7 @@
       "accuracy"        : -8,
       "staminaCost"     : 5,
       "twoHanded"       : true,
-      "wieldRequirement": {"strength": 18}
+      "wieldRequirement": {"brawn": 18}
     },
     "onHitWound": [ {"wound": "bloodletting", "chance": 0.22} ]
   },
@@ -9885,7 +9885,7 @@
       "accuracy"        : -8,
       "staminaCost"     : 6,
       "twoHanded"       : true,
-      "wieldRequirement": {"strength": 20}
+      "wieldRequirement": {"brawn": 20}
     }
   },
   {
@@ -9919,7 +9919,7 @@
       "accuracy"        : -8,
       "staminaCost"     : 8,
       "twoHanded"       : true,
-      "wieldRequirement": {"strength": 18}
+      "wieldRequirement": {"brawn": 18}
     },
     "onHitWound": [ {"wound": "bloodletting", "chance": 0.34} ]
   },
@@ -9955,7 +9955,7 @@
       "accuracy"        : -8,
       "staminaCost"     : 7,
       "twoHanded"       : true,
-      "wieldRequirement": {"strength": 20}
+      "wieldRequirement": {"brawn": 20}
     },
     "onHitCondition": {"condition": "concussed", "chance": 0.28, "durationHours": 0.6, "resist": "blunt_resistance"}
   },
@@ -10136,7 +10136,7 @@
       "ammoCategory"    : "arrow",
       "reload"          : 1,
       "strScaled"       : true,
-      "wieldRequirement": {"strength": 15}
+      "wieldRequirement": {"brawn": 15}
     },
     "aimBonuses": {"accuracy": 4, "range": 4}
   },
@@ -10172,7 +10172,7 @@
       "ammoCategory"    : "arrow",
       "reload"          : 1,
       "strScaled"       : true,
-      "wieldRequirement": {"strength": 16}
+      "wieldRequirement": {"brawn": 16}
     },
     "aimBonuses": {"accuracy": 5, "range": 4}
   },
@@ -10247,7 +10247,7 @@
       "ammoCategory"    : "bolt",
       "reload"          : 5,
       "strScaled"       : false,
-      "wieldRequirement": {"strength": 14}
+      "wieldRequirement": {"brawn": 14}
     },
     "aimBonuses": {"accuracy": 12}
   },
@@ -10285,7 +10285,7 @@
       "ammoCategory"    : "bolt",
       "reload"          : 4,
       "strScaled"       : false,
-      "wieldRequirement": {"strength": 14}
+      "wieldRequirement": {"brawn": 14}
     },
     "aimBonuses": {"accuracy": 14}
   },

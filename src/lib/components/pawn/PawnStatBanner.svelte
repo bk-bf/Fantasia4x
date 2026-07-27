@@ -13,11 +13,11 @@
   $: sm = conditionStatMultipliers(pawn);
   // PAWN-GROWTH: 4th tuple field is the stat key — drives the ★ (favoured) marker + growth cap lookup.
   $: cells = [
-    ['STR', pawn.stats.strength, sm.strength, 'strength'],
-    ['DEX', pawn.stats.dexterity, sm.dexterity, 'dexterity'],
-    ['CON', pawn.stats.constitution, sm.constitution, 'constitution'],
-    ['INT', pawn.stats.intelligence, sm.intelligence, 'intelligence'],
-    ['PER', pawn.stats.perception, sm.perception, 'perception'],
+    ['BRN', pawn.stats.brawn, sm.brawn, 'brawn'],
+    ['AGI', pawn.stats.agility, sm.agility, 'agility'],
+    ['VIG', pawn.stats.vigour, sm.vigour, 'vigour'],
+    ['INT', pawn.stats.intellect, sm.intellect, 'intellect'],
+    ['AWR', pawn.stats.awareness, sm.awareness, 'awareness'],
     ['CHA', pawn.stats.charisma, 1, 'charisma']
   ] as const;
   const isFav = (key: string) => pawn.favStats?.includes(key as keyof typeof pawn.stats) ?? false;
@@ -30,11 +30,11 @@
   // Trait contributions to a core stat (baked into pawn.stats at generation, so surfaced here for the
   // hover breakdown — "+2 Sturdy, −1 Stocky"). ADR-023.
   const STAT_KEY: Record<string, string> = {
-    STR: 'strength',
-    DEX: 'dexterity',
-    CON: 'constitution',
-    INT: 'intelligence',
-    PER: 'perception',
+    STR: 'brawn',
+    DEX: 'agility',
+    CON: 'vigour',
+    INT: 'intellect',
+    PER: 'awareness',
     CHA: 'charisma'
   };
   function traitParts(lbl: string): string {

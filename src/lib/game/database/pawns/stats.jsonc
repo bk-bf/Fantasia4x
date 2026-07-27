@@ -1,7 +1,7 @@
 // Pawn stat definitions. Work-category definitions live in Work.ts (WORK_CATEGORIES).
 // "category" — UI grouping: "combat" | "physical" | "resistance" | "capacity" | "work" | "social"
 // "formula"  — expression evaluated at runtime; tokens:
-//                STR DEX CON PER INT CHA weight height  (base stats / physique)
+//                BRAWN AGILITY VIGOUR AWARENESS INTELLECT CHARISMA weight height  (base stats / physique)
 //                consciousness manipulation sight moving blood_pumping blood_filtration
 //                breathing digestion talking hearing pain  (body capacities, 0–1)
 //                prestige  (standing from worn regalia — SocialService; 0 unadorned)
@@ -9,46 +9,46 @@
 //                        that work category, levelBase(level 1–50) × the pawn's speed↔finesse
 //                        style weight; see core/workExperience.ts. 1.0 for non-work formulas.)
 //              Non-capacity formulas multiply by relevant capacities so limb damage
-//              cascades into stat reduction. Example: dodge = (1.0 + (DEX−10)×0.02) × moving
+//              cascades into stat reduction. Example: dodge = (1.0 + (AGILITY−10)×0.02) × moving
 //              clamp(x, lo, hi) is the one supported function (hard floors/caps, e.g. stealth's
-//              DEX gate — zero below the floor, not merely small).
+//              AGILITY gate — zero below the floor, not merely small).
 //              Work formulas: SKILL is the BASE; core stats are only a small tertiary supplement
-//              (STR+DEX → speed, INT+PER → yield, all four → quality; ≈ +0.27 max at stat 100).
+//              (BRAWN+AGILITY → speed, INTELLECT+AWARENESS → yield, all four → quality; ≈ +0.27 max at stat 100).
 [
     // ── Combat ────────────────────────────────────────────────────────────────────
     {
         "id": "hit_precision",
         "category": "combat",
-        "primaryStat": "dexterity",
-        "formula": "(0.05 + (DEX − 10) × 0.005 + (PER − 10) × 0.0025) × consciousness × sight",
+        "primaryStat": "agility",
+        "formula": "(0.05 + (AGILITY − 10) × 0.005 + (AWARENESS − 10) × 0.0025) × consciousness × sight",
         "description": "chance per landed blow to strike true — a telling hit that finds a gap (an eye, the throat, a soft belly) instead of glancing off (× consciousness × sight); weapons add their own bonus on top"
     },
     {
         "id"         : "melee_damage",
         "category"   : "combat",
-        "primaryStat": "strength",
-        "formula"    : "(1.0 + (STR − 10) × 0.01) × manipulation",
-        "description": "melee attack damage multiplier, STR is the muscle behind a blow (× manipulation). Breaking ARMOUR is its own stat (armor_damage); ranged damage is ranged_damage."
+        "primaryStat": "brawn",
+        "formula"    : "(1.0 + (BRAWN − 10) × 0.01) × manipulation",
+        "description": "melee attack damage multiplier, brawn is the muscle behind a blow (× manipulation). Breaking ARMOUR is its own stat (armor_damage); ranged damage is ranged_damage."
     },
     {
         "id"         : "armor_damage",
         "category"   : "combat",
-        "primaryStat": "strength",
-        "formula"    : "(1.0 + (STR − 10) × 0.02) × manipulation",
-        "description": "armour-breaking multiplier, how fast your blows wreck a foe's ARMOUR condition, SEPARATE from the flesh damage you deal through it (× manipulation). STR drives the force. Armour lost per landed hit = weapon.armorDamage × this: a hammer caves plate in a few blows, a mace dents it, a cleaver's edge barely scratches it (made to open flesh, not crack steel). Wreck the armour, then later blows land clean."
+        "primaryStat": "brawn",
+        "formula"    : "(1.0 + (BRAWN − 10) × 0.02) × manipulation",
+        "description": "armour-breaking multiplier, how fast your blows wreck a foe's ARMOUR condition, SEPARATE from the flesh damage you deal through it (× manipulation). brawn drives the force. Armour lost per landed hit = weapon.armorDamage × this: a hammer caves plate in a few blows, a mace dents it, a cleaver's edge barely scratches it (made to open flesh, not crack steel). Wreck the armour, then later blows land clean."
     },
     {
         "id"         : "hit_chance",
         "category"   : "combat",
-        "primaryStat": "dexterity",
-        "formula"    : "(1.0 + (DEX − 10) × 0.03) × sight × manipulation",
+        "primaryStat": "agility",
+        "formula"    : "(1.0 + (AGILITY − 10) × 0.03) × sight × manipulation",
         "description": "attack accuracy (× sight × manipulation)"
     },
     {
         "id"         : "dodge",
         "category"   : "combat",
-        "primaryStat": "dexterity",
-        "formula"    : "(1.0 + (DEX − 10) × 0.02 − (weight − 70) × 0.002) × moving",
+        "primaryStat": "agility",
+        "formula"    : "(1.0 + (AGILITY − 10) × 0.02 − (weight − 70) × 0.002) × moving",
         "description": "evasion (× moving; heavier = harder to dodge)"
     },
     {
@@ -58,83 +58,83 @@
         // `blockBonus` is the bulk of it. Halved vs ranged. Clamped to the cap in Combat.
         "id"         : "block",
         "category"   : "combat",
-        "primaryStat": "constitution",
-        "formula"    : "0.03 + (CON − 10) × 0.006 + (weight − 70) × 0.0015",
-        "description": "block chance (CON + body mass; a shield adds the bulk of it)"
+        "primaryStat": "vigour",
+        "formula"    : "0.03 + (VIGOUR − 10) × 0.006 + (weight − 70) × 0.0015",
+        "description": "block chance (vigour + body mass; a shield adds the bulk of it)"
     },
     {
-        // STEALTH base (Layer A): sizeFactor (weight, dominant) × dexGate (hard zero below DEX 8)
+        // STEALTH base (Layer A): sizeFactor (weight, dominant) × agilityGate (hard zero below AGILITY 8)
         // × moving. Traits/part grants/armour stealthMod layer on top in core/stealth.ts (Layer B),
         // folded in by evaluateStat — so reading this stat gives the FULL stealth value.
         "id"         : "stealth",
         "category"   : "combat",
-        "primaryStat": "dexterity",
-        "formula"    : "clamp(1 + (70 − weight) × 0.015, 0.2, 2.2) × clamp((DEX − 8) × 0.1, 0.0, 1.4) × moving",
+        "primaryStat": "agility",
+        "formula"    : "clamp(1 + (70 − weight) × 0.015, 0.2, 2.2) × clamp((AGILITY − 8) × 0.1, 0.0, 1.4) × moving",
         "description": "how easily the body goes unnoticed — a small, deft, sound-footed frame slips a watch that a big or clumsy one never could (× moving; a bad leg gives you away). Armour and a heavy tread cost it."
     },
     {
         "id"         : "knockdown_resistance",
         "category"   : "combat",
-        "primaryStat": "constitution",
-        "formula"    : "(1.0 + (CON − 10) × 0.025) × consciousness",
+        "primaryStat": "vigour",
+        "formula"    : "(1.0 + (VIGOUR − 10) × 0.025) × consciousness",
         "description": "resistance to stagger (× consciousness; dazed = easier to knock down)"
     },
     {
         "id"         : "vision_range",
         "category"   : "combat",
-        "primaryStat": "perception",
-        "formula"    : "(1.0 + (PER − 10) × 0.05) × sight",
+        "primaryStat": "awareness",
+        "formula"    : "(1.0 + (AWARENESS − 10) × 0.05) × sight",
         "description": "threat detection range (× sight)"
     },
     {
         "id"         : "attack_speed",
         "category"   : "combat",
-        "primaryStat": "dexterity",
-        "formula"    : "(1.0 + (DEX − 10) × 0.03) × manipulation",
+        "primaryStat": "agility",
+        "formula"    : "(1.0 + (AGILITY − 10) × 0.03) × manipulation",
         "description": "attack cadence multiplier, higher = faster strikes (× manipulation, × the equipped weapon's own attackSpeed — a light blade darts, a heavy maul swings slow)"
     },
-    // ── Ranged — PER = precision axis (aim_accuracy + aim_range), DEX = speed axis (aim_speed +
-    //    reload_speed); STR is melee/throw power only, never an aiming stat.
+    // ── Ranged — AWARENESS = precision axis (aim_accuracy + aim_range), AGILITY = speed axis (aim_speed +
+    //    reload_speed); BRAWN is melee/throw power only, never an aiming stat.
     {
         "id": "aim_accuracy",
         "category": "combat",
-        "primaryStat": "perception",
-        "formula": "(1.0 + (PER − 10) × 0.04) × sight × manipulation",
-        "description": "ranged hit accuracy, the PER PRECISION axis (deadeye), × sight × manipulation; Combat adds a LINEAR distance penalty + gear/ammo aimBonuses. The sniper stat, pairs with aim_range."
+        "primaryStat": "awareness",
+        "formula": "(1.0 + (AWARENESS − 10) × 0.04) × sight × manipulation",
+        "description": "ranged hit accuracy, the awareness PRECISION axis (deadeye), × sight × manipulation; Combat adds a LINEAR distance penalty + gear/ammo aimBonuses. The sniper stat, pairs with aim_range."
     },
     {
         "id": "aim_speed",
         "category": "combat",
-        "primaryStat": "dexterity",
-        "formula": "(1.0 + (DEX − 10) × 0.04) × manipulation",
-        "description": "ranged AIM cadence, the DEX SPEED axis (quick hands → fast loose), × manipulation. The shot gap is AIM time (this, lengthened by distance, far targets take longer to line up) PLUS span time (reload_speed, crossbows only); both shorten it. A ready quiver + bracers speed the aim further. The skirmisher/sling stat."
+        "primaryStat": "agility",
+        "formula": "(1.0 + (AGILITY − 10) × 0.04) × manipulation",
+        "description": "ranged AIM cadence, the agility SPEED axis (quick hands → fast loose), × manipulation. The shot gap is AIM time (this, lengthened by distance, far targets take longer to line up) PLUS span time (reload_speed, crossbows only); both shorten it. A ready quiver + bracers speed the aim further. The skirmisher/sling stat."
     },
     {
         "id": "reload_speed",
         "category": "combat",
-        "primaryStat": "dexterity",
-        "formula": "(1.0 + (DEX − 10) × 0.03) × manipulation",
-        "description": "ranged RELOAD/spanning cadence, DEX works the crossbow's windlass/lever fast, × manipulation. Only weapons with a mechanical reload (crossbows) have a span step, so it's a crossbow stat: interval = aim time (aim_speed) + span time (reload_speed). Bows/slings have no span → unaffected. Same DEX SPEED axis as aim_speed, a deft shooter cycles a crossbow fast."
+        "primaryStat": "agility",
+        "formula": "(1.0 + (AGILITY − 10) × 0.03) × manipulation",
+        "description": "ranged RELOAD/spanning cadence, agility works the crossbow's windlass/lever fast, × manipulation. Only weapons with a mechanical reload (crossbows) have a span step, so it's a crossbow stat: interval = aim time (aim_speed) + span time (reload_speed). Bows/slings have no span → unaffected. Same agility SPEED axis as aim_speed, a deft shooter cycles a crossbow fast."
     },
     {
         "id": "aim_range",
         "category": "combat",
-        "primaryStat": "perception",
-        "formula": "(1.0 + (PER − 10) × 0.025) × sight",
-        "description": "ranged reach multiplier, the PER PRECISION axis (a sharp eye sights + holds a far mark), × sight; scales the weapon's base range, capped by visionRange (effectiveRange = min(vision, weaponRange × aim_range + gear)). The sniper stat, pairs with aim_accuracy."
+        "primaryStat": "awareness",
+        "formula": "(1.0 + (AWARENESS − 10) × 0.025) × sight",
+        "description": "ranged reach multiplier, the awareness PRECISION axis (a sharp eye sights + holds a far mark), × sight; scales the weapon's base range, capped by visionRange (effectiveRange = min(vision, weaponRange × aim_range + gear)). The sniper stat, pairs with aim_accuracy."
     },
     {
         "id": "ranged_damage",
         "category": "combat",
-        "primaryStat": "strength",
-        "formula": "(1.0 + (STR − 10) × 0.01) × manipulation",
-        "description": "ranged attack damage multiplier, the DRAW/THROW power behind a shot (× manipulation). STR's ONLY ranged role: a bow's draw-weight and a thrown weapon's force scale with it (ammo damage × weapon drawPower × this). Crossbows & slings are MECHANICAL, they ignore it (the stock/cord does the work)."
+        "primaryStat": "brawn",
+        "formula": "(1.0 + (BRAWN − 10) × 0.01) × manipulation",
+        "description": "ranged attack damage multiplier, the DRAW/THROW power behind a shot (× manipulation). brawn's ONLY ranged role: a bow's draw-weight and a thrown weapon's force scale with it (ammo damage × weapon drawPower × this). Crossbows & slings are MECHANICAL, they ignore it (the stock/cord does the work)."
     },
     {
         "id": "heal_rate",
         "category": "physical",
-        "primaryStat": "constitution",
-        "formula": "(1.0 + (CON − 10) × 0.05) × blood_filtration",
+        "primaryStat": "vigour",
+        "formula": "(1.0 + (VIGOUR − 10) × 0.05) × blood_filtration",
         "description": "wound recovery speed multiplier (× blood_filtration, kidneys drive recovery; NOT × consciousness: an unconscious body still knits, often harder). Boosted further by rest, food, and mood"
     },
     // WORK-EXPERIENCE: the old `medical_skill` physical stat is gone — tend quality now rides the
@@ -143,74 +143,74 @@
     {
         "id"         : "movement_speed",
         "category"   : "physical",
-        "primaryStat": "dexterity",
-        "formula"    : "(1.0 + (DEX − 10) × 0.05 − (weight − 70) × 0.003 + (height − 170) × 0.001) × moving",
+        "primaryStat": "agility",
+        "formula"    : "(1.0 + (AGILITY − 10) × 0.05 − (weight − 70) × 0.003 + (height − 170) × 0.001) × moving",
         "description": "movement speed (× moving; broken legs = crawl)"
     },
     {
         "id"         : "stamina",
         "category"   : "physical",
-        "primaryStat": "constitution",
-        "formula"    : "(50 + (CON − 10) × 4 + (DEX − 10) × 2) × moving × blood_pumping",
+        "primaryStat": "vigour",
+        "formula"    : "(50 + (VIGOUR − 10) × 4 + (AGILITY − 10) × 2) × moving × blood_pumping",
         "description": "stamina pool (× moving × blood_pumping)"
     },
     {
         "id": "stamina_recovery_rate",
         "category": "physical",
-        "primaryStat": "constitution",
-        "formula": "(2 + (CON − 10) × 0.15) × blood_filtration × blood_pumping",
-        "description": "stamina recovered PER SECOND while resting/winded (scaled to ticks by Combat.tickStaminaAndWinded; × blood_filtration × blood_pumping; injury slows it). ~2/s at CON 10 → a ~50 pool refills in ~25s; in-fight regen (×0.2) trails the ~2/s attack drain so long fights wind you (N-2 tuning dial). Fatigue divides this (up to ÷1.3 at fatigue 100) and multiplies attack stamina drain, so anything that raises fatigue, weather fatigueMul, conditions, indirectly saps stamina without double counting"
+        "primaryStat": "vigour",
+        "formula": "(2 + (VIGOUR − 10) × 0.15) × blood_filtration × blood_pumping",
+        "description": "stamina recovered PER SECOND while resting/winded (scaled to ticks by Combat.tickStaminaAndWinded; × blood_filtration × blood_pumping; injury slows it). ~2/s at vigour 10 → a ~50 pool refills in ~25s; in-fight regen (×0.2) trails the ~2/s attack drain so long fights wind you (N-2 tuning dial). Fatigue divides this (up to ÷1.3 at fatigue 100) and multiplies attack stamina drain, so anything that raises fatigue, weather fatigueMul, conditions, indirectly saps stamina without double counting"
     },
     {
         "id"         : "blood_volume",
         "category"   : "physical",
-        "primaryStat": "constitution",
-        "formula"    : "weight × 1.4 + (CON − 10) × 2",
+        "primaryStat": "vigour",
+        "formula"    : "weight × 1.4 + (VIGOUR − 10) × 2",
         "description": "total blood pool, physical property, not capacity-dependent"
     },
     {
         "id"         : "blood_regeneration",
         "category"   : "physical",
-        "primaryStat": "constitution",
-        "formula"    : "(1.0 + (CON − 10) × 0.08) × blood_filtration",
+        "primaryStat": "vigour",
+        "formula"    : "(1.0 + (VIGOUR − 10) × 0.08) × blood_filtration",
         "description": "blood recovery (× blood_filtration)"
     },
     {
         "id"         : "blood_clotting",
         "category"   : "physical",
-        "primaryStat": "constitution",
-        "formula"    : "(1.0 + (CON − 10) × 0.05) × blood_filtration",
-        "description": "clotting ability, scales the per-roll chance a bleeding wound stops on its own (a lucky natural clot rolled ~every 3 in-game hours; × blood_filtration). A wound needs as many successful clots as its severity (minor 1, serious 2, critical+ 3); each cuts the bleed proportionally. A higher-CON pawn is likelier to clot before bleeding out, but dressing the wound (caretaking) is the reliable stop. Mirrors heal_rate as the recovery-axis counterpart."
+        "primaryStat": "vigour",
+        "formula"    : "(1.0 + (VIGOUR − 10) × 0.05) × blood_filtration",
+        "description": "clotting ability, scales the per-roll chance a bleeding wound stops on its own (a lucky natural clot rolled ~every 3 in-game hours; × blood_filtration). A wound needs as many successful clots as its severity (minor 1, serious 2, critical+ 3); each cuts the bleed proportionally. A higher-vigour pawn is likelier to clot before bleeding out, but dressing the wound (caretaking) is the reliable stop. Mirrors heal_rate as the recovery-axis counterpart."
     },
     {
         "id": "hunger_rate",
         "category": "physical",
-        "primaryStat": "constitution",
+        "primaryStat": "vigour",
         "formula": "1.0 + (weight − 70) × 0.01",
         "description": "hunger accrual multiplier by body size (70 kg = 1.0×; bigger bodies hunger faster). Scaled at runtime by work, heat/weather and conditions (malnutrition, infection…)"
     },
     {
         "id": "fatigue_rate",
         "category": "physical",
-        "primaryStat": "constitution",
-        "formula": "1.0 − (CON − 10) × 0.02",
-        "description": "fatigue accrual multiplier by fitness (CON 10 = 1.0×; fitter pawns tire slower). The base rate everything multiplies, scaled at runtime by work/combat, cold weather + night, and conditions (dehydration, hypothermia…)"
+        "primaryStat": "vigour",
+        "formula": "1.0 − (VIGOUR − 10) × 0.02",
+        "description": "fatigue accrual multiplier by fitness (vigour 10 = 1.0×; fitter pawns tire slower). The base rate everything multiplies, scaled at runtime by work/combat, cold weather + night, and conditions (dehydration, hypothermia…)"
     },
     {
         "id": "carry_weight",
         "category": "capacity",
-        "primaryStat": "strength",
+        "primaryStat": "brawn",
         // Computed in ItemService.getCarryCapacityBreakdown (body mass + gear), not the formula engine.
-        "carryLoadPerStrength": 0.012,
+        "carryLoadPerBrawn": 0.012,
         "carryLoadMin": 0.05,
         "carryLoadMax": 0.30,
-        "formula": "bodyWeight × clamp(STR × carryLoadPerStrength, carryLoadMin, carryLoadMax)",
-        "description": "maximum carry weight in kg, a strength-scaled fraction of body mass (STR 10 ≈ 12%)"
+        "formula": "bodyWeight × clamp(BRAWN × carryLoadPerBrawn, carryLoadMin, carryLoadMax)",
+        "description": "maximum carry weight in kg, a brawn-scaled fraction of body mass (brawn 10 ≈ 12%)"
     },
     {
         "id"              : "carry_volume",
         "category"        : "capacity",
-        "primaryStat"     : "constitution",
+        "primaryStat"     : "vigour",
         // Also computed in ItemService.getCarryCapacityBreakdown, not the formula engine.
         "carryVolumePerKg": 0.13,
         "formula"         : "bodyWeight × carryVolumePerKg",
@@ -220,78 +220,78 @@
     {
         "id"         : "cutting_resistance",
         "category"   : "resistance",
-        "primaryStat": "dexterity",
-        "formula"    : "(0.0 + (DEX − 10) × 0.01)",
+        "primaryStat": "agility",
+        "formula"    : "(0.0 + (AGILITY − 10) × 0.01)",
         "description": "cutting damage reduction, innate (stat-only, not dimmed by a daze)"
     },
     {
         "id"         : "piercing_resistance",
         "category"   : "resistance",
-        "primaryStat": "constitution",
-        "formula"    : "(0.0 + (CON − 10) × 0.008)",
+        "primaryStat": "vigour",
+        "formula"    : "(0.0 + (VIGOUR − 10) × 0.008)",
         "description": "piercing damage reduction, innate (stat-only, not dimmed by a daze)"
     },
     {
         "id"         : "blunt_resistance",
         "category"   : "resistance",
-        "primaryStat": "constitution",
-        "formula"    : "(0.0 + (CON − 10) × 0.008 + (STR − 10) × 0.004)",
+        "primaryStat": "vigour",
+        "formula"    : "(0.0 + (VIGOUR − 10) × 0.008 + (BRAWN − 10) × 0.004)",
         "description": "blunt damage reduction, innate (stat-only, not dimmed by a daze)"
     },
     {
         "id": "fire_resistance",
         "category": "resistance",
-        "primaryStat": "constitution",
-        "formula": "(0.0 + (CON − 10) × 0.01)",
+        "primaryStat": "vigour",
+        "formula": "(0.0 + (VIGOUR − 10) × 0.01)",
         "description": "fire damage reduction, innate (stat-only); also slows HEAT-STROKE onset from hot weather/temperature (SEASONS_WEATHER), reduces heat exposure before the condition driver"
     },
     {
         "id": "cold_resistance",
         "category": "resistance",
-        "primaryStat": "constitution",
-        "formula": "(0.0 + (CON − 10) × 0.01)",
+        "primaryStat": "vigour",
+        "formula": "(0.0 + (VIGOUR − 10) × 0.01)",
         "description": "cold damage reduction, innate (stat-only); also slows HYPOTHERMIA onset from cold weather/temperature (SEASONS_WEATHER), reduces cold exposure before the condition driver"
     },
     {
         "id": "wetness_resistance",
         "category": "resistance",
-        "primaryStat": "constitution",
-        "formula": "(0.0 + (CON − 10) × 0.015)",
+        "primaryStat": "vigour",
+        "formula": "(0.0 + (VIGOUR − 10) × 0.015)",
         "description": "how well the body sheds water (fur/hide/fitness), innate (stat-only). Does NOT change the `wet` onset (a full 100 meter, same for all); it slows how FAST the wetness meter FILLS on wet ground, so a hardy/woolly creature soaks slower and a frail one fast (SEASONS_WEATHER)"
     },
     {
         "id"         : "lightning_resistance",
         "category"   : "resistance",
-        "primaryStat": "dexterity",
-        "formula"    : "(0.0 + (DEX − 10) × 0.01)",
+        "primaryStat": "agility",
+        "formula"    : "(0.0 + (AGILITY − 10) × 0.01)",
         "description": "lightning damage reduction, innate (stat-only, not dimmed by a daze)"
     },
     {
         "id"         : "shadow_resistance",
         "category"   : "resistance",
-        "primaryStat": "intelligence",
-        "formula"    : "(0.0 + (INT − 10) × 0.01)",
+        "primaryStat": "intellect",
+        "formula"    : "(0.0 + (INTELLECT − 10) × 0.01)",
         "description": "shadow damage reduction, innate (stat-only, not dimmed by a daze)"
     },
     {
         "id"         : "poison_resistance",
         "category"   : "resistance",
-        "primaryStat": "constitution",
-        "formula"    : "(0.0 + (CON − 10) × 0.015) × blood_filtration",
+        "primaryStat": "vigour",
+        "formula"    : "(0.0 + (VIGOUR − 10) × 0.015) × blood_filtration",
         "description": "toxin mitigation (× blood_filtration, kidneys/liver clear toxins; not dimmed by a daze)"
     },
     {
         "id"         : "disease_resistance",
         "category"   : "resistance",
-        "primaryStat": "constitution",
-        "formula"    : "(0.0 + (CON − 10) × 0.01) × blood_filtration",
+        "primaryStat": "vigour",
+        "formula"    : "(0.0 + (VIGOUR − 10) × 0.01) × blood_filtration",
         "description": "disease resistance (× blood_filtration, organ-based immune clearance; not dimmed by a daze)"
     },
     {
         "id"         : "mental_resistance",
         "category"   : "resistance",
-        "primaryStat": "intelligence",
-        "formula"    : "(0.0 + (INT − 10) × 0.015) × consciousness",
+        "primaryStat": "intellect",
+        "formula"    : "(0.0 + (INTELLECT − 10) × 0.015) × consciousness",
         "description": "mental resistance (× consciousness)"
     },
     // ── Work ──────────────────────────────────────────────────────────────────────
@@ -299,43 +299,43 @@
     {
         "id"         : "foraging_speed",
         "category"   : "work",
-        "primaryStat": "perception",
-        "formula"    : "SKILL × (1.0 + (STR − 10) × 0.0015 + (DEX − 10) × 0.0015) × ((sight + moving) / 2)",
+        "primaryStat": "awareness",
+        "formula"    : "SKILL × (1.0 + (BRAWN − 10) × 0.0015 + (AGILITY − 10) × 0.0015) × ((sight + moving) / 2)",
         "description": "foraging work speed (× ((sight + moving) / 2))"
     },
     {
         "id"         : "foraging_yield",
         "category"   : "work",
-        "primaryStat": "perception",
-        "formula"    : "SKILL × (1.0 + (INT − 10) × 0.0015 + (PER − 10) × 0.0015) × sight",
+        "primaryStat": "awareness",
+        "formula"    : "SKILL × (1.0 + (INTELLECT − 10) × 0.0015 + (AWARENESS − 10) × 0.0015) × sight",
         "description": "foraging resource amount (× sight)"
     },
     {
         "id"         : "woodcutting_speed",
         "category"   : "work",
-        "primaryStat": "strength",
-        "formula"    : "SKILL × (1.0 + (STR − 10) × 0.0015 + (DEX − 10) × 0.0015) × ((manipulation + moving) / 2)",
+        "primaryStat": "brawn",
+        "formula"    : "SKILL × (1.0 + (BRAWN − 10) × 0.0015 + (AGILITY − 10) × 0.0015) × ((manipulation + moving) / 2)",
         "description": "woodcutting speed (× ((manipulation + moving) / 2))"
     },
     {
         "id"         : "woodcutting_yield",
         "category"   : "work",
-        "primaryStat": "strength",
-        "formula"    : "SKILL × (1.0 + (INT − 10) × 0.0015 + (PER − 10) × 0.0015) × manipulation",
+        "primaryStat": "brawn",
+        "formula"    : "SKILL × (1.0 + (INTELLECT − 10) × 0.0015 + (AWARENESS − 10) × 0.0015) × manipulation",
         "description": "wood per tree (× manipulation)"
     },
     {
         "id"         : "mining_speed",
         "category"   : "work",
-        "primaryStat": "strength",
-        "formula"    : "SKILL × (1.0 + (STR − 10) × 0.0015 + (DEX − 10) × 0.0015) × ((manipulation + moving) / 2)",
+        "primaryStat": "brawn",
+        "formula"    : "SKILL × (1.0 + (BRAWN − 10) × 0.0015 + (AGILITY − 10) × 0.0015) × ((manipulation + moving) / 2)",
         "description": "mining speed (× ((manipulation + moving) / 2))"
     },
     {
         "id"         : "mining_yield",
         "category"   : "work",
-        "primaryStat": "strength",
-        "formula"    : "SKILL × (1.0 + (INT − 10) × 0.0015 + (PER − 10) × 0.0015) × manipulation",
+        "primaryStat": "brawn",
+        "formula"    : "SKILL × (1.0 + (INTELLECT − 10) × 0.0015 + (AWARENESS − 10) × 0.0015) × manipulation",
         "description": "ore per vein (× manipulation)"
     },
     // Deliberately NO `hunting_speed`/`_yield`/`_quality`: hunting is NOT a work skill — the task is
@@ -345,138 +345,138 @@
     {
         "id"         : "butchery_speed",
         "category"   : "work",
-        "primaryStat": "strength",
-        "formula"    : "SKILL × (1.0 + (STR − 10) × 0.0015 + (DEX − 10) × 0.0015) × manipulation",
+        "primaryStat": "brawn",
+        "formula"    : "SKILL × (1.0 + (BRAWN − 10) × 0.0015 + (AGILITY − 10) × 0.0015) × manipulation",
         "description": "butchery speed (× manipulation)"
     },
     {
         "id"         : "butchery_yield",
         "category"   : "work",
-        "primaryStat": "strength",
-        "formula"    : "SKILL × (1.0 + (INT − 10) × 0.0015 + (PER − 10) × 0.0015) × manipulation",
+        "primaryStat": "brawn",
+        "formula"    : "SKILL × (1.0 + (INTELLECT − 10) × 0.0015 + (AWARENESS − 10) × 0.0015) × manipulation",
         "description": "meat per carcass (× manipulation)"
     },
     {
         "id"         : "butchery_quality",
         "category"   : "work",
-        "primaryStat": "dexterity",
-        "formula"    : "SKILL × (1.0 + (STR − 10) × 0.0007 + (DEX − 10) × 0.0007 + (INT − 10) × 0.0007 + (PER − 10) × 0.0007) × ((manipulation + sight) / 2)",
+        "primaryStat": "agility",
+        "formula"    : "SKILL × (1.0 + (BRAWN − 10) × 0.0007 + (AGILITY − 10) × 0.0007 + (INTELLECT − 10) × 0.0007 + (AWARENESS − 10) × 0.0007) × ((manipulation + sight) / 2)",
         "description": "cut quality (× ((manipulation + sight) / 2))"
     },
     {
         "id"         : "fishing_speed",
         "category"   : "work",
-        "primaryStat": "dexterity",
-        "formula"    : "SKILL × (1.0 + (STR − 10) × 0.0015 + (DEX − 10) × 0.0015) × ((sight + manipulation) / 2)",
+        "primaryStat": "agility",
+        "formula"    : "SKILL × (1.0 + (BRAWN − 10) × 0.0015 + (AGILITY − 10) × 0.0015) × ((sight + manipulation) / 2)",
         "description": "fishing speed (× ((sight + manipulation) / 2))"
     },
     {
         "id"         : "fishing_yield",
         "category"   : "work",
-        "primaryStat": "dexterity",
-        "formula"    : "SKILL × (1.0 + (INT − 10) × 0.0015 + (PER − 10) × 0.0015) × sight",
+        "primaryStat": "agility",
+        "formula"    : "SKILL × (1.0 + (INTELLECT − 10) × 0.0015 + (AWARENESS − 10) × 0.0015) × sight",
         "description": "catch size (× sight)"
     },
     {
         "id"         : "crafting_speed",
         "category"   : "work",
-        "primaryStat": "dexterity",
-        "formula"    : "SKILL × (1.0 + (STR − 10) × 0.0015 + (DEX − 10) × 0.0015) × ((manipulation + sight) / 2)",
+        "primaryStat": "agility",
+        "formula"    : "SKILL × (1.0 + (BRAWN − 10) × 0.0015 + (AGILITY − 10) × 0.0015) × ((manipulation + sight) / 2)",
         "description": "crafting speed (× ((manipulation + sight) / 2))"
     },
     {
         "id"         : "crafting_quality",
         "category"   : "work",
-        "primaryStat": "dexterity",
-        "formula"    : "SKILL × (1.0 + (STR − 10) × 0.0007 + (DEX − 10) × 0.0007 + (INT − 10) × 0.0007 + (PER − 10) × 0.0007) × ((manipulation + sight + consciousness) / 3)",
+        "primaryStat": "agility",
+        "formula"    : "SKILL × (1.0 + (BRAWN − 10) × 0.0007 + (AGILITY − 10) × 0.0007 + (INTELLECT − 10) × 0.0007 + (AWARENESS − 10) × 0.0007) × ((manipulation + sight + consciousness) / 3)",
         "description": "item quality (× ((manipulation + sight + consciousness) / 3))"
     },
     {
         "id"         : "metalworking_speed",
         "category"   : "work",
-        "primaryStat": "strength",
-        "formula"    : "SKILL × (1.0 + (STR − 10) × 0.0015 + (DEX − 10) × 0.0015) × ((manipulation + sight) / 2)",
+        "primaryStat": "brawn",
+        "formula"    : "SKILL × (1.0 + (BRAWN − 10) × 0.0015 + (AGILITY − 10) × 0.0015) × ((manipulation + sight) / 2)",
         "description": "smithing speed (× ((manipulation + sight) / 2))"
     },
     {
         "id"         : "metalworking_quality",
         "category"   : "work",
-        "primaryStat": "intelligence",
-        "formula"    : "SKILL × (1.0 + (STR − 10) × 0.0007 + (DEX − 10) × 0.0007 + (INT − 10) × 0.0007 + (PER − 10) × 0.0007) × ((manipulation + sight + consciousness) / 3)",
+        "primaryStat": "intellect",
+        "formula"    : "SKILL × (1.0 + (BRAWN − 10) × 0.0007 + (AGILITY − 10) × 0.0007 + (INTELLECT − 10) × 0.0007 + (AWARENESS − 10) × 0.0007) × ((manipulation + sight + consciousness) / 3)",
         "description": "metal purity / edge retention (× ((manipulation + sight + consciousness) / 3))"
     },
     {
         "id"         : "leatherworking_speed",
         "category"   : "work",
-        "primaryStat": "dexterity",
-        "formula"    : "SKILL × (1.0 + (STR − 10) × 0.0015 + (DEX − 10) × 0.0015) × ((manipulation + sight) / 2)",
+        "primaryStat": "agility",
+        "formula"    : "SKILL × (1.0 + (BRAWN − 10) × 0.0015 + (AGILITY − 10) × 0.0015) × ((manipulation + sight) / 2)",
         "description": "leatherwork speed (× ((manipulation + sight) / 2))"
     },
     {
         "id"         : "leatherworking_quality",
         "category"   : "work",
-        "primaryStat": "dexterity",
-        "formula"    : "SKILL × (1.0 + (STR − 10) × 0.0007 + (DEX − 10) × 0.0007 + (INT − 10) × 0.0007 + (PER − 10) × 0.0007) × ((manipulation + sight) / 2)",
+        "primaryStat": "agility",
+        "formula"    : "SKILL × (1.0 + (BRAWN − 10) × 0.0007 + (AGILITY − 10) × 0.0007 + (INTELLECT − 10) × 0.0007 + (AWARENESS − 10) × 0.0007) × ((manipulation + sight) / 2)",
         "description": "leather quality (× ((manipulation + sight) / 2))"
     },
     // ── Tailoring PARENT (soft goods): fallback for the Weaving leaf; Leatherwork has its own above.
     {
         "id"         : "tailoring_speed",
         "category"   : "work",
-        "primaryStat": "dexterity",
-        "formula"    : "SKILL × (1.0 + (STR − 10) × 0.0015 + (DEX − 10) × 0.0015) × ((manipulation + sight) / 2)",
+        "primaryStat": "agility",
+        "formula"    : "SKILL × (1.0 + (BRAWN − 10) × 0.0015 + (AGILITY − 10) × 0.0015) × ((manipulation + sight) / 2)",
         "description": "soft-goods work speed (× ((manipulation + sight) / 2))"
     },
     {
         "id"         : "tailoring_quality",
         "category"   : "work",
-        "primaryStat": "dexterity",
-        "formula"    : "SKILL × (1.0 + (STR − 10) × 0.0007 + (DEX − 10) × 0.0007 + (INT − 10) × 0.0007 + (PER − 10) × 0.0007) × ((manipulation + sight) / 2)",
+        "primaryStat": "agility",
+        "formula"    : "SKILL × (1.0 + (BRAWN − 10) × 0.0007 + (AGILITY − 10) × 0.0007 + (INTELLECT − 10) × 0.0007 + (AWARENESS − 10) × 0.0007) × ((manipulation + sight) / 2)",
         "description": "cloth / garment quality (× ((manipulation + sight) / 2))"
     },
     // ── Woodworking (carpentry): planks, furniture, hafts.
     {
         "id"         : "woodworking_speed",
         "category"   : "work",
-        "primaryStat": "dexterity",
-        "formula"    : "SKILL × (1.0 + (STR − 10) × 0.0015 + (DEX − 10) × 0.0015) × ((manipulation + sight) / 2)",
+        "primaryStat": "agility",
+        "formula"    : "SKILL × (1.0 + (BRAWN − 10) × 0.0015 + (AGILITY − 10) × 0.0015) × ((manipulation + sight) / 2)",
         "description": "woodworking speed (× ((manipulation + sight) / 2))"
     },
     {
         "id"         : "woodworking_quality",
         "category"   : "work",
-        "primaryStat": "dexterity",
-        "formula"    : "SKILL × (1.0 + (STR − 10) × 0.0007 + (DEX − 10) × 0.0007 + (INT − 10) × 0.0007 + (PER − 10) × 0.0007) × ((manipulation + sight) / 2)",
+        "primaryStat": "agility",
+        "formula"    : "SKILL × (1.0 + (BRAWN − 10) × 0.0007 + (AGILITY − 10) × 0.0007 + (INTELLECT − 10) × 0.0007 + (AWARENESS − 10) × 0.0007) × ((manipulation + sight) / 2)",
         "description": "joinery / haft quality (× ((manipulation + sight) / 2))"
     },
     // ── Pottery (ceramics): forming + kiln work.
     {
         "id"         : "pottery_speed",
         "category"   : "work",
-        "primaryStat": "dexterity",
-        "formula"    : "SKILL × (1.0 + (STR − 10) × 0.0015 + (DEX − 10) × 0.0015) × ((manipulation + sight) / 2)",
+        "primaryStat": "agility",
+        "formula"    : "SKILL × (1.0 + (BRAWN − 10) × 0.0015 + (AGILITY − 10) × 0.0015) × ((manipulation + sight) / 2)",
         "description": "pottery speed (× ((manipulation + sight) / 2))"
     },
     {
         "id"         : "pottery_quality",
         "category"   : "work",
-        "primaryStat": "dexterity",
-        "formula"    : "SKILL × (1.0 + (STR − 10) × 0.0007 + (DEX − 10) × 0.0007 + (INT − 10) × 0.0007 + (PER − 10) × 0.0007) × ((manipulation + sight) / 2)",
+        "primaryStat": "agility",
+        "formula"    : "SKILL × (1.0 + (BRAWN − 10) × 0.0007 + (AGILITY − 10) × 0.0007 + (INTELLECT − 10) × 0.0007 + (AWARENESS − 10) × 0.0007) × ((manipulation + sight) / 2)",
         "description": "ceramic / glass quality (× ((manipulation + sight) / 2))"
     },
     // ── Stoneworking PARENT: fallback for the Knapping / Masonry / Lapidary / Bonecarving leaves.
     {
         "id"         : "stoneworking_speed",
         "category"   : "work",
-        "primaryStat": "strength",
-        "formula"    : "SKILL × (1.0 + (STR − 10) × 0.0015 + (DEX − 10) × 0.0015) × ((manipulation + sight) / 2)",
+        "primaryStat": "brawn",
+        "formula"    : "SKILL × (1.0 + (BRAWN − 10) × 0.0015 + (AGILITY − 10) × 0.0015) × ((manipulation + sight) / 2)",
         "description": "stone-shaping speed (× ((manipulation + sight) / 2))"
     },
     {
         "id"         : "stoneworking_quality",
         "category"   : "work",
-        "primaryStat": "dexterity",
-        "formula"    : "SKILL × (1.0 + (STR − 10) × 0.0007 + (DEX − 10) × 0.0007 + (INT − 10) × 0.0007 + (PER − 10) × 0.0007) × ((manipulation + sight + consciousness) / 3)",
+        "primaryStat": "agility",
+        "formula"    : "SKILL × (1.0 + (BRAWN − 10) × 0.0007 + (AGILITY − 10) × 0.0007 + (INTELLECT − 10) × 0.0007 + (AWARENESS − 10) × 0.0007) × ((manipulation + sight + consciousness) / 3)",
         "description": "cut / dressed-stone quality (× ((manipulation + sight + consciousness) / 3))"
     },
     // ── Craft-discipline LEAF work skills — each an INDEPENDENT skill (a weaver never levels a
@@ -485,176 +485,176 @@
     {
         "id"         : "knapping_speed",
         "category"   : "work",
-        "primaryStat": "strength",
-        "formula"    : "SKILL × (1.0 + (STR − 10) × 0.0015 + (DEX − 10) × 0.0015) × ((manipulation + sight) / 2)",
+        "primaryStat": "brawn",
+        "formula"    : "SKILL × (1.0 + (BRAWN − 10) × 0.0015 + (AGILITY − 10) × 0.0015) × ((manipulation + sight) / 2)",
         "description": "flint / stone knapping speed (× ((manipulation + sight) / 2))"
     },
     {
         "id"         : "knapping_quality",
         "category"   : "work",
-        "primaryStat": "strength",
-        "formula"    : "SKILL × (1.0 + (STR − 10) × 0.0007 + (DEX − 10) × 0.0007 + (INT − 10) × 0.0007 + (PER − 10) × 0.0007) × ((manipulation + sight) / 2)",
+        "primaryStat": "brawn",
+        "formula"    : "SKILL × (1.0 + (BRAWN − 10) × 0.0007 + (AGILITY − 10) × 0.0007 + (INTELLECT − 10) × 0.0007 + (AWARENESS − 10) × 0.0007) × ((manipulation + sight) / 2)",
         "description": "knapped-edge quality (× ((manipulation + sight) / 2))"
     },
     {
         "id"         : "masonry_speed",
         "category"   : "work",
-        "primaryStat": "strength",
-        "formula"    : "SKILL × (1.0 + (STR − 10) × 0.0015 + (DEX − 10) × 0.0015) × ((manipulation + moving) / 2)",
+        "primaryStat": "brawn",
+        "formula"    : "SKILL × (1.0 + (BRAWN − 10) × 0.0015 + (AGILITY − 10) × 0.0015) × ((manipulation + moving) / 2)",
         "description": "stone-dressing speed (× ((manipulation + moving) / 2))"
     },
     {
         "id"         : "masonry_quality",
         "category"   : "work",
-        "primaryStat": "strength",
-        "formula"    : "SKILL × (1.0 + (STR − 10) × 0.0007 + (DEX − 10) × 0.0007 + (INT − 10) × 0.0007 + (PER − 10) × 0.0007) × ((manipulation + moving) / 2)",
+        "primaryStat": "brawn",
+        "formula"    : "SKILL × (1.0 + (BRAWN − 10) × 0.0007 + (AGILITY − 10) × 0.0007 + (INTELLECT − 10) × 0.0007 + (AWARENESS − 10) × 0.0007) × ((manipulation + moving) / 2)",
         "description": "dressed-block quality (× ((manipulation + moving) / 2))"
     },
     {
         "id"         : "lapidary_speed",
         "category"   : "work",
-        "primaryStat": "dexterity",
-        "formula"    : "SKILL × (1.0 + (DEX − 10) × 0.0015 + (PER − 10) × 0.0015) × ((manipulation + sight) / 2)",
+        "primaryStat": "agility",
+        "formula"    : "SKILL × (1.0 + (AGILITY − 10) × 0.0015 + (AWARENESS − 10) × 0.0015) × ((manipulation + sight) / 2)",
         "description": "gem-cutting speed (× ((manipulation + sight) / 2))"
     },
     {
         "id"         : "lapidary_quality",
         "category"   : "work",
-        "primaryStat": "dexterity",
-        "formula"    : "SKILL × (1.0 + (STR − 10) × 0.0007 + (DEX − 10) × 0.0007 + (INT − 10) × 0.0007 + (PER − 10) × 0.0007) × ((manipulation + sight) / 2)",
+        "primaryStat": "agility",
+        "formula"    : "SKILL × (1.0 + (BRAWN − 10) × 0.0007 + (AGILITY − 10) × 0.0007 + (INTELLECT − 10) × 0.0007 + (AWARENESS − 10) × 0.0007) × ((manipulation + sight) / 2)",
         "description": "cut-gem brilliance (× ((manipulation + sight) / 2))"
     },
     {
         "id"         : "bonecarving_speed",
         "category"   : "work",
-        "primaryStat": "dexterity",
-        "formula"    : "SKILL × (1.0 + (DEX − 10) × 0.0015 + (STR − 10) × 0.0015) × ((manipulation + sight) / 2)",
+        "primaryStat": "agility",
+        "formula"    : "SKILL × (1.0 + (AGILITY − 10) × 0.0015 + (BRAWN − 10) × 0.0015) × ((manipulation + sight) / 2)",
         "description": "bone / antler carving speed (× ((manipulation + sight) / 2))"
     },
     {
         "id"         : "bonecarving_quality",
         "category"   : "work",
-        "primaryStat": "dexterity",
-        "formula"    : "SKILL × (1.0 + (STR − 10) × 0.0007 + (DEX − 10) × 0.0007 + (INT − 10) × 0.0007 + (PER − 10) × 0.0007) × ((manipulation + sight) / 2)",
+        "primaryStat": "agility",
+        "formula"    : "SKILL × (1.0 + (BRAWN − 10) × 0.0007 + (AGILITY − 10) × 0.0007 + (INTELLECT − 10) × 0.0007 + (AWARENESS − 10) × 0.0007) × ((manipulation + sight) / 2)",
         "description": "carved-bone quality (× ((manipulation + sight) / 2))"
     },
     {
         "id"         : "weaving_speed",
         "category"   : "work",
-        "primaryStat": "dexterity",
-        "formula"    : "SKILL × (1.0 + (DEX − 10) × 0.0015 + (PER − 10) × 0.0015) × ((manipulation + sight) / 2)",
+        "primaryStat": "agility",
+        "formula"    : "SKILL × (1.0 + (AGILITY − 10) × 0.0015 + (AWARENESS − 10) × 0.0015) × ((manipulation + sight) / 2)",
         "description": "weaving speed (× ((manipulation + sight) / 2))"
     },
     {
         "id"         : "weaving_quality",
         "category"   : "work",
-        "primaryStat": "dexterity",
-        "formula"    : "SKILL × (1.0 + (STR − 10) × 0.0007 + (DEX − 10) × 0.0007 + (INT − 10) × 0.0007 + (PER − 10) × 0.0007) × ((manipulation + sight) / 2)",
+        "primaryStat": "agility",
+        "formula"    : "SKILL × (1.0 + (BRAWN − 10) × 0.0007 + (AGILITY − 10) × 0.0007 + (INTELLECT − 10) × 0.0007 + (AWARENESS − 10) × 0.0007) × ((manipulation + sight) / 2)",
         "description": "cloth / thread quality (× ((manipulation + sight) / 2))"
     },
     {
         "id"         : "meals_speed",
         "category"   : "work",
-        "primaryStat": "dexterity",
-        "formula"    : "SKILL × (1.0 + (DEX − 10) × 0.0015 + (INT − 10) × 0.0015) × ((manipulation + sight) / 2)",
+        "primaryStat": "agility",
+        "formula"    : "SKILL × (1.0 + (AGILITY − 10) × 0.0015 + (INTELLECT − 10) × 0.0015) × ((manipulation + sight) / 2)",
         "description": "cooking speed (× ((manipulation + sight) / 2))"
     },
     {
         "id"         : "meals_quality",
         "category"   : "work",
-        "primaryStat": "dexterity",
-        "formula"    : "SKILL × (1.0 + (STR − 10) × 0.0007 + (DEX − 10) × 0.0007 + (INT − 10) × 0.0007 + (PER − 10) × 0.0007) × ((manipulation + sight) / 2)",
+        "primaryStat": "agility",
+        "formula"    : "SKILL × (1.0 + (BRAWN − 10) × 0.0007 + (AGILITY − 10) × 0.0007 + (INTELLECT − 10) × 0.0007 + (AWARENESS − 10) × 0.0007) × ((manipulation + sight) / 2)",
         "description": "meal quality (× ((manipulation + sight) / 2))"
     },
     {
         "id"         : "baking_speed",
         "category"   : "work",
-        "primaryStat": "dexterity",
-        "formula"    : "SKILL × (1.0 + (DEX − 10) × 0.0015 + (INT − 10) × 0.0015) × ((manipulation + sight) / 2)",
+        "primaryStat": "agility",
+        "formula"    : "SKILL × (1.0 + (AGILITY − 10) × 0.0015 + (INTELLECT − 10) × 0.0015) × ((manipulation + sight) / 2)",
         "description": "baking speed (× ((manipulation + sight) / 2))"
     },
     {
         "id"         : "baking_quality",
         "category"   : "work",
-        "primaryStat": "dexterity",
-        "formula"    : "SKILL × (1.0 + (STR − 10) × 0.0007 + (DEX − 10) × 0.0007 + (INT − 10) × 0.0007 + (PER − 10) × 0.0007) × ((manipulation + sight) / 2)",
+        "primaryStat": "agility",
+        "formula"    : "SKILL × (1.0 + (BRAWN − 10) × 0.0007 + (AGILITY − 10) × 0.0007 + (INTELLECT − 10) × 0.0007 + (AWARENESS − 10) × 0.0007) × ((manipulation + sight) / 2)",
         "description": "baked-good quality (× ((manipulation + sight) / 2))"
     },
     {
         "id"         : "brewing_speed",
         "category"   : "work",
-        "primaryStat": "intelligence",
-        "formula"    : "SKILL × (1.0 + (INT − 10) × 0.0015 + (PER − 10) × 0.0015) × ((sight + consciousness) / 2)",
+        "primaryStat": "intellect",
+        "formula"    : "SKILL × (1.0 + (INTELLECT − 10) × 0.0015 + (AWARENESS − 10) × 0.0015) × ((sight + consciousness) / 2)",
         "description": "brewing / fermentation speed (× ((sight + consciousness) / 2))"
     },
     {
         "id"         : "brewing_quality",
         "category"   : "work",
-        "primaryStat": "intelligence",
-        "formula"    : "SKILL × (1.0 + (STR − 10) × 0.0007 + (DEX − 10) × 0.0007 + (INT − 10) × 0.0007 + (PER − 10) × 0.0007) × ((sight + consciousness) / 2)",
+        "primaryStat": "intellect",
+        "formula"    : "SKILL × (1.0 + (BRAWN − 10) × 0.0007 + (AGILITY − 10) × 0.0007 + (INTELLECT − 10) × 0.0007 + (AWARENESS − 10) × 0.0007) × ((sight + consciousness) / 2)",
         "description": "brew quality (× ((sight + consciousness) / 2))"
     },
     {
         "id"         : "herbalism_speed",
         "category"   : "work",
-        "primaryStat": "intelligence",
-        "formula"    : "SKILL × (1.0 + (INT − 10) × 0.0015 + (PER − 10) × 0.0015) × ((sight + consciousness) / 2)",
+        "primaryStat": "intellect",
+        "formula"    : "SKILL × (1.0 + (INTELLECT − 10) × 0.0015 + (AWARENESS − 10) × 0.0015) × ((sight + consciousness) / 2)",
         "description": "herb-preparation speed (× ((sight + consciousness) / 2))"
     },
     {
         "id"         : "herbalism_quality",
         "category"   : "work",
-        "primaryStat": "intelligence",
-        "formula"    : "SKILL × (1.0 + (STR − 10) × 0.0007 + (DEX − 10) × 0.0007 + (INT − 10) × 0.0007 + (PER − 10) × 0.0007) × ((sight + consciousness) / 2)",
+        "primaryStat": "intellect",
+        "formula"    : "SKILL × (1.0 + (BRAWN − 10) × 0.0007 + (AGILITY − 10) × 0.0007 + (INTELLECT − 10) × 0.0007 + (AWARENESS − 10) × 0.0007) × ((sight + consciousness) / 2)",
         "description": "herbal-remedy quality (× ((sight + consciousness) / 2))"
     },
     {
         "id"         : "potions_speed",
         "category"   : "work",
-        "primaryStat": "intelligence",
-        "formula"    : "SKILL × (1.0 + (INT − 10) × 0.0015 + (PER − 10) × 0.0015) × ((sight + consciousness) / 2)",
+        "primaryStat": "intellect",
+        "formula"    : "SKILL × (1.0 + (INTELLECT − 10) × 0.0015 + (AWARENESS − 10) × 0.0015) × ((sight + consciousness) / 2)",
         "description": "potion-brewing speed (× ((sight + consciousness) / 2))"
     },
     {
         "id"         : "potions_quality",
         "category"   : "work",
-        "primaryStat": "intelligence",
-        "formula"    : "SKILL × (1.0 + (STR − 10) × 0.0007 + (DEX − 10) × 0.0007 + (INT − 10) × 0.0007 + (PER − 10) × 0.0007) × ((sight + consciousness) / 2)",
+        "primaryStat": "intellect",
+        "formula"    : "SKILL × (1.0 + (BRAWN − 10) × 0.0007 + (AGILITY − 10) × 0.0007 + (INTELLECT − 10) × 0.0007 + (AWARENESS − 10) × 0.0007) × ((sight + consciousness) / 2)",
         "description": "potion potency (× ((sight + consciousness) / 2))"
     },
     {
         "id"         : "digging_speed",
         "category"   : "work",
-        "primaryStat": "dexterity",
-        "formula"    : "SKILL × (1.0 + (STR − 10) × 0.0015 + (DEX − 10) × 0.0015) × ((manipulation + moving) / 2)",
+        "primaryStat": "agility",
+        "formula"    : "SKILL × (1.0 + (BRAWN − 10) × 0.0015 + (AGILITY − 10) × 0.0015) × ((manipulation + moving) / 2)",
         "description": "digging speed (× ((manipulation + moving) / 2))"
     },
     {
         "id"         : "digging_yield",
         "category"   : "work",
-        "primaryStat": "strength",
-        "formula"    : "SKILL × (1.0 + (INT − 10) × 0.0015 + (PER − 10) × 0.0015) × manipulation",
+        "primaryStat": "brawn",
+        "formula"    : "SKILL × (1.0 + (INTELLECT − 10) × 0.0015 + (AWARENESS − 10) × 0.0015) × manipulation",
         "description": "soil / clay per dig (× manipulation)"
     },
     {
         "id"         : "research_speed",
         "category"   : "work",
-        "primaryStat": "intelligence",
-        "formula"    : "SKILL × (1.0 + (STR − 10) × 0.0015 + (DEX − 10) × 0.0015) × ((sight + consciousness) / 2)",
+        "primaryStat": "intellect",
+        "formula"    : "SKILL × (1.0 + (BRAWN − 10) × 0.0015 + (AGILITY − 10) × 0.0015) × ((sight + consciousness) / 2)",
         "description": "research speed (× ((sight + consciousness) / 2))"
     },
     {
         "id"         : "construction_speed",
         "category"   : "work",
-        "primaryStat": "strength",
-        "formula"    : "SKILL × (1.0 + (STR − 10) × 0.0015 + (DEX − 10) × 0.0015) × ((manipulation + moving) / 2)",
+        "primaryStat": "brawn",
+        "formula"    : "SKILL × (1.0 + (BRAWN − 10) × 0.0015 + (AGILITY − 10) × 0.0015) × ((manipulation + moving) / 2)",
         "description": "construction speed (× ((manipulation + moving) / 2))"
     },
     {
         "id"         : "construction_quality",
         "category"   : "work",
-        "primaryStat": "dexterity",
-        "formula"    : "SKILL × (1.0 + (STR − 10) × 0.0007 + (DEX − 10) × 0.0007 + (INT − 10) × 0.0007 + (PER − 10) × 0.0007) × ((manipulation + sight) / 2)",
+        "primaryStat": "agility",
+        "formula"    : "SKILL × (1.0 + (BRAWN − 10) × 0.0007 + (AGILITY − 10) × 0.0007 + (INTELLECT − 10) × 0.0007 + (AWARENESS − 10) × 0.0007) × ((manipulation + sight) / 2)",
         "description": "building durability (× ((manipulation + sight) / 2))"
     },
     // ── Construction SUBJOBS — keyed by job-type id, resolved per-axis with fallback to the parent
@@ -662,99 +662,99 @@
     {
         "id"         : "repair_speed",
         "category"   : "work",
-        "primaryStat": "dexterity",
-        "formula"    : "SKILL × (1.0 + (STR − 10) × 0.0015 + (DEX − 10) × 0.0015) × ((manipulation + sight) / 2)",
+        "primaryStat": "agility",
+        "formula"    : "SKILL × (1.0 + (BRAWN − 10) × 0.0015 + (AGILITY − 10) × 0.0015) × ((manipulation + sight) / 2)",
         "description": "repair speed, careful patching of worn structure favours a deft, sharp-eyed hand (× ((manipulation + sight) / 2)), NOT raw muscle. A construction subjob (falls back to the construction skill)."
     },
     {
         "id"         : "repair_quality",
         "category"   : "work",
-        "primaryStat": "dexterity",
-        "formula"    : "SKILL × (1.0 + (STR − 10) × 0.0007 + (DEX − 10) × 0.0007 + (INT − 10) × 0.0007 + (PER − 10) × 0.0007) × ((manipulation + sight + consciousness) / 3)",
+        "primaryStat": "agility",
+        "formula"    : "SKILL × (1.0 + (BRAWN − 10) × 0.0007 + (AGILITY − 10) × 0.0007 + (INTELLECT − 10) × 0.0007 + (AWARENESS − 10) × 0.0007) × ((manipulation + sight + consciousness) / 3)",
         "description": "repair quality, how soundly the structure is restored (× ((manipulation + sight + consciousness) / 3))."
     },
     {
         "id"         : "deconstruct_speed",
         "category"   : "work",
-        "primaryStat": "strength",
-        "formula"    : "SKILL × (1.0 + (STR − 10) × 0.0015 + (DEX − 10) × 0.0015) × ((manipulation + moving) / 2)",
+        "primaryStat": "brawn",
+        "formula"    : "SKILL × (1.0 + (BRAWN − 10) × 0.0015 + (AGILITY − 10) × 0.0015) × ((manipulation + moving) / 2)",
         "description": "demolition speed, brute teardown favours raw muscle and stamina (× ((manipulation + moving) / 2)). Throughput is speed-only; it has no own quality stat (inherits the category's only for the work-tab readout)."
     },
     {
         "id"         : "refuel_speed",
         "category"   : "work",
-        "primaryStat": "strength",
-        "formula"    : "SKILL × (1.0 + (STR − 10) × 0.0015 + (DEX − 10) × 0.0015) × ((moving + manipulation) / 2)",
+        "primaryStat": "brawn",
+        "formula"    : "SKILL × (1.0 + (BRAWN − 10) × 0.0015 + (AGILITY − 10) × 0.0015) × ((moving + manipulation) / 2)",
         "description": "refuel speed, hauling fuel to a fire/station, a carrying chore (× ((moving + manipulation) / 2)). Speed-only throughput; no own quality stat."
     },
     {
         "id"         : "alchemy_speed",
         "category"   : "work",
-        "primaryStat": "intelligence",
-        "formula"    : "SKILL × (1.0 + (STR − 10) × 0.0015 + (DEX − 10) × 0.0015) × ((sight + manipulation) / 2)",
+        "primaryStat": "intellect",
+        "formula"    : "SKILL × (1.0 + (BRAWN − 10) × 0.0015 + (AGILITY − 10) × 0.0015) × ((sight + manipulation) / 2)",
         "description": "brewing speed (× ((sight + manipulation) / 2))"
     },
     {
         "id"         : "alchemy_quality",
         "category"   : "work",
-        "primaryStat": "intelligence",
-        "formula"    : "SKILL × (1.0 + (STR − 10) × 0.0007 + (DEX − 10) × 0.0007 + (INT − 10) × 0.0007 + (PER − 10) × 0.0007) × ((sight + manipulation + consciousness) / 3)",
+        "primaryStat": "intellect",
+        "formula"    : "SKILL × (1.0 + (BRAWN − 10) × 0.0007 + (AGILITY − 10) × 0.0007 + (INTELLECT − 10) × 0.0007 + (AWARENESS − 10) × 0.0007) × ((sight + manipulation + consciousness) / 3)",
         "description": "potion potency (× ((sight + manipulation + consciousness) / 3))"
     },
     {
         "id"         : "cooking_speed",
         "category"   : "work",
-        "primaryStat": "intelligence",
-        "formula"    : "SKILL × (1.0 + (STR − 10) × 0.0015 + (DEX − 10) × 0.0015) × ((manipulation + sight) / 2)",
+        "primaryStat": "intellect",
+        "formula"    : "SKILL × (1.0 + (BRAWN − 10) × 0.0015 + (AGILITY − 10) × 0.0015) × ((manipulation + sight) / 2)",
         "description": "cooking speed (× ((manipulation + sight) / 2))"
     },
     {
         "id"         : "cooking_quality",
         "category"   : "work",
-        "primaryStat": "intelligence",
-        "formula"    : "SKILL × (1.0 + (STR − 10) × 0.0007 + (DEX − 10) × 0.0007 + (INT − 10) × 0.0007 + (PER − 10) × 0.0007) × ((manipulation + sight + consciousness) / 3)",
+        "primaryStat": "intellect",
+        "formula"    : "SKILL × (1.0 + (BRAWN − 10) × 0.0007 + (AGILITY − 10) × 0.0007 + (INTELLECT − 10) × 0.0007 + (AWARENESS − 10) × 0.0007) × ((manipulation + sight + consciousness) / 3)",
         "description": "meal nutrition / taste (× ((manipulation + sight + consciousness) / 3))"
     },
     {
         // WORK-EXPERIENCE: hauling is NOT a learned skill (no SKILL token, no experience level) —
-        // it's carrying, driven by carry capacity (STR) and movement (DEX), so core stats are the
+        // it's carrying, driven by carry capacity (BRAWN) and movement (AGILITY), so core stats are the
         // FULL driver here, not a tertiary supplement. × ((moving + manipulation) / 2): legs to walk,
         // hands to hold.
         "id"         : "hauling_speed",
         "category"   : "work",
-        "primaryStat": "strength",
-        "formula"    : "(1.0 + (STR − 10) × 0.03 + (DEX − 10) × 0.02) × ((moving + manipulation) / 2)",
-        "description": "hauling speed — carry capacity (STR) + movement (DEX), × ((moving + manipulation) / 2)"
+        "primaryStat": "brawn",
+        "formula"    : "(1.0 + (BRAWN − 10) × 0.03 + (AGILITY − 10) × 0.02) × ((moving + manipulation) / 2)",
+        "description": "hauling speed — carry capacity (brawn) + movement (agility), × ((moving + manipulation) / 2)"
     },
     {
         // Hauling SUBJOB — `haul`/Haul itself inherits hauling_* (no entry needed).
         // Hauling subjob — also a non-skill carry task (no SKILL token). Nimble shuttle runs favour
-        // movement (DEX) over load (STR), the inverse lean of bulk hauling.
+        // movement (AGILITY) over load (BRAWN), the inverse lean of bulk hauling.
         "id"         : "fetch_speed",
         "category"   : "work",
-        "primaryStat": "dexterity",
-        "formula"    : "(1.0 + (DEX − 10) × 0.03 + (STR − 10) × 0.02) × ((moving + manipulation) / 2)",
+        "primaryStat": "agility",
+        "formula"    : "(1.0 + (AGILITY − 10) × 0.03 + (BRAWN − 10) × 0.02) × ((moving + manipulation) / 2)",
         "description": "fetch speed, nimble shuttle runs of reserved inputs to a station favour movement over load (× ((moving + manipulation) / 2)); no quality axis."
     },
     {
         "id"         : "planting_speed",
         "category"   : "work",
-        "primaryStat": "dexterity",
-        "formula"    : "SKILL × (1.0 + (STR − 10) × 0.0015 + (DEX − 10) × 0.0015) × ((manipulation + sight) / 2)",
+        "primaryStat": "agility",
+        "formula"    : "SKILL × (1.0 + (BRAWN − 10) × 0.0015 + (AGILITY − 10) × 0.0015) × ((manipulation + sight) / 2)",
         "description": "planting speed (× ((manipulation + sight) / 2))"
     },
     {
         "id"         : "planting_yield",
         "category"   : "work",
-        "primaryStat": "dexterity",
-        "formula"    : "SKILL × (1.0 + (INT − 10) × 0.0015 + (PER − 10) × 0.0015) × manipulation",
+        "primaryStat": "agility",
+        "formula"    : "SKILL × (1.0 + (INTELLECT − 10) × 0.0015 + (AWARENESS − 10) × 0.0015) × manipulation",
         "description": "crop yield (× manipulation)"
     },
     {
         "id"         : "caretaking_speed",
         "category"   : "work",
-        "primaryStat": "intelligence",
-        "formula"    : "SKILL × (1.0 + (STR − 10) × 0.0015 + (DEX − 10) × 0.0015) × ((manipulation + sight) / 2)",
+        "primaryStat": "intellect",
+        "formula"    : "SKILL × (1.0 + (BRAWN − 10) × 0.0015 + (AGILITY − 10) × 0.0015) × ((manipulation + sight) / 2)",
         "description": "treatment speed (× ((manipulation + sight) / 2))"
     },
     {
@@ -762,8 +762,8 @@
         // now rides this axis (jobs/caretake.ts scales it back into the 0–1 tend band).
         "id"         : "caretaking_quality",
         "category"   : "work",
-        "primaryStat": "intelligence",
-        "formula"    : "SKILL × (1.0 + (STR − 10) × 0.0007 + (DEX − 10) × 0.0007 + (INT − 10) × 0.0007 + (PER − 10) × 0.0007) × ((manipulation + sight + consciousness) / 3)",
+        "primaryStat": "intellect",
+        "formula"    : "SKILL × (1.0 + (BRAWN − 10) × 0.0007 + (AGILITY − 10) × 0.0007 + (INTELLECT − 10) × 0.0007 + (AWARENESS − 10) × 0.0007) × ((manipulation + sight + consciousness) / 3)",
         "description": "treatment quality — how cleanly a wound is dressed and how soundly the care takes (× ((manipulation + sight + consciousness) / 3))"
     },
     // ── Body Capacities ───────────────────────────────────────────────────────────
@@ -772,77 +772,77 @@
     {
         "id"         : "pain",
         "category"   : "capacity",
-        "primaryStat": "constitution",
+        "primaryStat": "vigour",
         "formula"    : "1.0",
         "description": "injuries + limb damage + bleeding → 0–200%+, reduces consciousness"
     },
     {
         "id"         : "sight",
         "category"   : "capacity",
-        "primaryStat": "perception",
+        "primaryStat": "awareness",
         "formula"    : "1.0",
         "description": "weaker eye × 0.4 + avg eyes × 0.6 + 0.05 baseline, THEN × effective light — low light lowers it (see the Darkness condition), and night_vision negates that reduction"
     },
     {
         "id"         : "night_vision",
         "category"   : "capacity",
-        "primaryStat": "perception",
+        "primaryStat": "awareness",
         "formula"    : "1.0",
         "description": "darkness immunity 0–1 — summed from racial traits (or a creature's own def), NOT organ- or core-stat-derived. 0 = full low-light sight penalty; 1 = sees in the dark as by day (fully negates it). The counter to the Darkness condition."
     },
     {
         "id"         : "hearing",
         "category"   : "capacity",
-        "primaryStat": "perception",
+        "primaryStat": "awareness",
         "formula"    : "1.0",
         "description": "weaker ear × 0.3 + avg ears × 0.7 + 0.15 baseline (bone conduction)"
     },
     {
         "id": "consciousness",
         "category": "capacity",
-        "primaryStat": "constitution",
+        "primaryStat": "vigour",
         "formula": "1.0",
         "description": "brain × 0.6 + heart × 0.15 + lungs × 0.1 + hearing × 0.05 + 0.1 baseline, reduced by pain (a blind pawn is NOT less conscious, so sight no longer feeds this)"
     },
     {
         "id"         : "manipulation",
         "category"   : "capacity",
-        "primaryStat": "dexterity",
+        "primaryStat": "agility",
         "formula"    : "1.0",
         "description": "weaker arm × 0.3 + avg arms × 0.7"
     },
     {
         "id"         : "moving",
         "category"   : "capacity",
-        "primaryStat": "dexterity",
+        "primaryStat": "agility",
         "formula"    : "1.0",
         "description": "weaker leg × 0.5 + avg legs × 0.5"
     },
     {
         "id"         : "blood_pumping",
         "category"   : "capacity",
-        "primaryStat": "constitution",
+        "primaryStat": "vigour",
         "formula"    : "1.0",
         "description": "heart × 0.9 + 0.10 baseline (agonal/CPR)"
     },
     {
         "id"         : "blood_filtration",
         "category"   : "capacity",
-        "primaryStat": "constitution",
+        "primaryStat": "vigour",
         "formula"    : "1.0",
         "description": "weaker kidney × 0.4 + avg kidneys × 0.6 (one kidney sustains ~60%)"
     },
     {
         "id"         : "breathing",
         "category"   : "capacity",
-        "primaryStat": "constitution",
+        "primaryStat": "vigour",
         "formula"    : "1.0",
         "description": "weaker lung × 0.5 + avg lungs × 0.5 + 0.05 baseline (diaphragm)"
     },
     {
         "id"         : "digestion",
         "category"   : "capacity",
-        "primaryStat": "constitution",
+        "primaryStat": "vigour",
         "formula"    : "1.0",
         "description": "stomach × 0.6 + liver × 0.4"
     },
@@ -858,14 +858,14 @@
         "id"         : "trade",
         "category"   : "social",
         "primaryStat": "charisma",
-        "formula"    : "(1.0 + (CHA − 10) × 0.02 + prestige × 0.004) × ((talking + 1) / 2)",
+        "formula"    : "(1.0 + (CHARISMA − 10) × 0.02 + prestige × 0.004) × ((talking + 1) / 2)",
         "description": "a feel for what a thing is worth to the one across the table — charm carries it, fine regalia lends weight, and a clear voice closes it (× ((talking + 1) / 2))"
     },
     {
         "id"         : "oratory",
         "category"   : "social",
         "primaryStat": "charisma",
-        "formula"    : "(1.0 + (CHA − 10) × 0.025 + prestige × 0.004) × ((talking + 1) / 2)",
+        "formula"    : "(1.0 + (CHARISMA − 10) × 0.025 + prestige × 0.004) × ((talking + 1) / 2)",
         "description": "the knack for reaching someone who has come apart and steadying them with a word — warmth carries it, a name that commands respect lends weight, and a clear voice drives it home (× ((talking + 1) / 2))"
     },
     // SOCIAL-LAYER §5: `intact` is the whole-body scan capacity (fraction of parts still whole and
@@ -874,7 +874,7 @@
         "id"         : "beauty",
         "category"   : "social",
         "primaryStat": "charisma",
-        "formula"    : "(0.4 + 0.6 × intact) × (1.0 + (CHA − 10) × 0.04)",
+        "formula"    : "(0.4 + 0.6 × intact) × (1.0 + (CHARISMA − 10) × 0.04)",
         "description": "the face and bearing the world sees before a word is spoken; charm brightens it, and every scar and missing piece takes its toll"
     },
     // SOCIAL-LAYER §6: the lazily-computed `prestige` token surfaced as its own readout — inherent

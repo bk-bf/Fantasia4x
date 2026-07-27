@@ -5,32 +5,32 @@ import type { Pawn } from '$lib/game/core/types';
 import { statBucket } from '$lib/game/core/Culture';
 
 const STATS = [
-  'strength',
-  'dexterity',
-  'constitution',
-  'intelligence',
-  'perception',
+  'brawn',
+  'agility',
+  'vigour',
+  'intellect',
+  'awareness',
   'charisma'
 ] as const;
 type StatKey = (typeof STATS)[number];
 
 /** Flattering phrase for a notably-high stat (`strong` vs the stronger `mighty` wording). */
 const POSITIVE: Record<StatKey, { strong: string; mighty: string }> = {
-  strength: { strong: 'strong-armed', mighty: 'immensely powerful' },
-  dexterity: { strong: 'deft-handed', mighty: 'remarkably nimble' },
-  constitution: { strong: 'hardy', mighty: 'tireless and tough' },
-  intelligence: { strong: 'sharp-witted', mighty: 'brilliant of mind' },
-  perception: { strong: 'keen-eyed', mighty: 'preternaturally observant' },
+  brawn: { strong: 'strong-armed', mighty: 'immensely powerful' },
+  agility: { strong: 'deft-handed', mighty: 'remarkably nimble' },
+  vigour: { strong: 'hardy', mighty: 'tireless and tough' },
+  intellect: { strong: 'sharp-witted', mighty: 'brilliant of mind' },
+  awareness: { strong: 'keen-eyed', mighty: 'preternaturally observant' },
   charisma: { strong: 'personable', mighty: 'magnetic in company' }
 };
 
 /** Caveat phrase for a notably-low (`frail`) stat. */
 const FRAIL: Record<StatKey, string> = {
-  strength: 'weak-limbed',
-  dexterity: 'clumsy',
-  constitution: 'sickly',
-  intelligence: 'slow-witted',
-  perception: 'oblivious to their surroundings',
+  brawn: 'weak-limbed',
+  agility: 'clumsy',
+  vigour: 'sickly',
+  intellect: 'slow-witted',
+  awareness: 'oblivious to their surroundings',
   charisma: 'graceless with others'
 };
 

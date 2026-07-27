@@ -46,12 +46,12 @@ export function calculatePawnStats(
 
 function getBaseStats(pawn: Pawn) {
   return {
-    strength: pawn.stats.strength || 0,
-    dexterity: pawn.stats.dexterity || 0,
-    intelligence: pawn.stats.intelligence || 0,
-    perception: pawn.stats.perception || 0,
+    brawn: pawn.stats.brawn || 0,
+    agility: pawn.stats.agility || 0,
+    intellect: pawn.stats.intellect || 0,
+    awareness: pawn.stats.awareness || 0,
     charisma: pawn.stats.charisma || 0,
-    constitution: pawn.stats.constitution || 0
+    vigour: pawn.stats.vigour || 0
   };
 }
 
@@ -70,12 +70,12 @@ function getTotalStats(
   equip: { [k: string]: number }
 ) {
   return {
-    strength: base.strength + (trait.strength || 0) + (equip.strength || 0),
-    dexterity: base.dexterity + (trait.dexterity || 0) + (equip.dexterity || 0),
-    intelligence: base.intelligence + (trait.intelligence || 0),
-    perception: base.perception + (trait.perception || 0),
+    brawn: base.brawn + (trait.brawn || 0) + (equip.brawn || 0),
+    agility: base.agility + (trait.agility || 0) + (equip.agility || 0),
+    intellect: base.intellect + (trait.intellect || 0),
+    awareness: base.awareness + (trait.awareness || 0),
     charisma: base.charisma + (trait.charisma || 0),
-    constitution: base.constitution + (trait.constitution || 0)
+    vigour: base.vigour + (trait.vigour || 0)
   };
 }
 
@@ -83,20 +83,20 @@ function addBasicPhysicalAbilities(
   abilities: Record<string, { value: number; sources: string[] }>,
   totalStats: { [k: string]: number }
 ) {
-  const carryCapacity = 50 + totalStats.strength * 2;
+  const carryCapacity = 50 + totalStats.brawn * 2;
   addAbility(
     abilities,
     'carryCapacity',
     carryCapacity,
-    `Base (50) + Strength (${totalStats.strength} × 2)`
+    `Base (50) + Brawn (${totalStats.brawn} × 2)`
   );
 
-  const movementSpeed = 1.0 + (totalStats.dexterity - 10) * 0.02;
+  const movementSpeed = 1.0 + (totalStats.agility - 10) * 0.02;
   addAbility(
     abilities,
     'movementSpeed',
     movementSpeed,
-    `Base (1.0) + Dexterity modifier (${totalStats.dexterity - 10} × 0.02)`
+    `Base (1.0) + Agility modifier (${totalStats.agility - 10} × 0.02)`
   );
 
   const baseSwimmingSpeed = movementSpeed * 0.5;
@@ -112,12 +112,12 @@ function addBasicMentalAbilities(
   abilities: Record<string, { value: number; sources: string[] }>,
   totalStats: { [k: string]: number }
 ) {
-  const learningSpeed = 1.0 + (totalStats.intelligence - 10) * 0.05;
+  const learningSpeed = 1.0 + (totalStats.intellect - 10) * 0.05;
   addAbility(
     abilities,
     'learningSpeed',
     learningSpeed,
-    `Base (1.0) + Intelligence modifier (${totalStats.intelligence - 10} × 0.05)`
+    `Base (1.0) + Intellect modifier (${totalStats.intellect - 10} × 0.05)`
   );
 
   const socialInfluence = 1.0 + (totalStats.charisma - 10) * 0.05;
@@ -128,36 +128,36 @@ function addBasicMentalAbilities(
     `Base (1.0) + Charisma modifier (${totalStats.charisma - 10} × 0.05)`
   );
 
-  const intuition = 1.0 + (totalStats.perception - 10) * 0.05;
+  const intuition = 1.0 + (totalStats.awareness - 10) * 0.05;
   addAbility(
     abilities,
     'intuition',
     intuition,
-    `Base (1.0) + Perception modifier (${totalStats.perception - 10} × 0.05)`
+    `Base (1.0) + Awareness modifier (${totalStats.awareness - 10} × 0.05)`
   );
 
-  const knowledgeStorage = totalStats.intelligence * 10;
+  const knowledgeStorage = totalStats.intellect * 10;
   addAbility(
     abilities,
     'knowledgeStorage',
     knowledgeStorage,
-    `Intelligence × 10 (${totalStats.intelligence} × 10)`
+    `Intellect × 10 (${totalStats.intellect} × 10)`
   );
 
-  const experienceGain = 1.0 + (totalStats.intelligence - 10) * 0.02;
+  const experienceGain = 1.0 + (totalStats.intellect - 10) * 0.02;
   addAbility(
     abilities,
     'experienceGain',
     experienceGain,
-    `Base (1.0) + Intelligence modifier (${totalStats.intelligence - 10} × 0.02)`
+    `Base (1.0) + Intellect modifier (${totalStats.intellect - 10} × 0.02)`
   );
 
-  const visionRange = 10 + (totalStats.perception - 10) * 0.5;
+  const visionRange = 10 + (totalStats.awareness - 10) * 0.5;
   addAbility(
     abilities,
     'visionRange',
     visionRange,
-    `Base (10) + Perception modifier (${totalStats.perception - 10} × 0.5)`
+    `Base (10) + Awareness modifier (${totalStats.awareness - 10} × 0.5)`
   );
 }
 
@@ -165,24 +165,24 @@ function addBasicSurvivalAbilities(
   abilities: Record<string, { value: number; sources: string[] }>,
   totalStats: { [k: string]: number }
 ) {
-  const healthRegenRate = 0.5 + (totalStats.constitution - 10) * 0.1;
+  const healthRegenRate = 0.5 + (totalStats.vigour - 10) * 0.1;
   addAbility(
     abilities,
     'healthRegenRate',
     healthRegenRate,
-    `Base (0.5) + Constitution modifier (${totalStats.constitution - 10} × 0.1)`
+    `Base (0.5) + Vigour modifier (${totalStats.vigour - 10} × 0.1)`
   );
 
-  const diseaseResistance = Math.max(0, (totalStats.constitution - 10) * 0.05);
+  const diseaseResistance = Math.max(0, (totalStats.vigour - 10) * 0.05);
   addAbility(
     abilities,
     'diseaseResistance',
     diseaseResistance,
-    `Constitution modifier (${totalStats.constitution - 10} × 0.05, min 0)`
+    `Vigour modifier (${totalStats.vigour - 10} × 0.05, min 0)`
   );
 
-  const vitality = totalStats.constitution;
-  addAbility(abilities, 'vitality', vitality, `Constitution score (${totalStats.constitution})`);
+  const vitality = totalStats.vigour;
+  addAbility(abilities, 'vitality', vitality, `Vigour score (${totalStats.vigour})`);
 }
 
 function addAbility(

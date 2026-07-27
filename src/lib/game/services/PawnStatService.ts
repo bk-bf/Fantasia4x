@@ -127,12 +127,12 @@ function heldToolBoost(
 // per-call argument order. (Profiler: evaluateFormula was ~15-17% of the sim — it regex-substituted
 // 21 tokens into a string and `new Function`-compiled + number-parsed it on EVERY call, ~328×/tick.)
 const FORMULA_VARS = [
-  'STR',
-  'DEX',
-  'CON',
-  'PER',
-  'INT',
-  'CHA',
+  'BRAWN',
+  'AGILITY',
+  'VIGOUR',
+  'AWARENESS',
+  'INTELLECT',
+  'CHARISMA',
   'weight',
   'height',
   'consciousness',
@@ -283,11 +283,11 @@ function evaluateFormula(
   // Same deal for the whole-body `intact` scan (beauty only).
   const intact = formulaUsesIntact(formula) ? intactBodyFraction(p) : 1;
   const v = fn(
-    (s?.strength ?? 10) * sm.strength,
-    (s?.dexterity ?? 10) * sm.dexterity,
-    (s?.constitution ?? 10) * sm.constitution,
-    (s?.perception ?? 10) * sm.perception,
-    (s?.intelligence ?? 10) * sm.intelligence,
+    (s?.brawn ?? 10) * sm.brawn,
+    (s?.agility ?? 10) * sm.agility,
+    (s?.vigour ?? 10) * sm.vigour,
+    (s?.awareness ?? 10) * sm.awareness,
+    (s?.intellect ?? 10) * sm.intellect,
     s?.charisma ?? 10,
     tr?.weight ?? 70,
     tr?.height ?? 170,
@@ -666,7 +666,7 @@ export interface StatDerivation {
 /** One contributor to a side's resistance headroom, in degrees (for the hover breakdown). */
 export interface TempToleranceSource {
   label: string;
-  /** Degrees of headroom contributed (can be negative — a frail constitution costs tolerance). */
+  /** Degrees of headroom contributed (can be negative — a frail vigour costs tolerance). */
   deg: number;
 }
 
@@ -682,7 +682,7 @@ export interface TemperatureTolerance {
   /** Temperatures at which the cold / heat meter starts to rise = comfort ∓ resistance degrees. */
   coldOnset: number;
   heatOnset: number;
-  /** Per-source breakdown (Constitution / Traits / Gear) of each side's headroom, for the hover panel. */
+  /** Per-source breakdown (Vigour / Traits / Gear) of each side's headroom, for the hover panel. */
   coldSources: TempToleranceSource[];
   heatSources: TempToleranceSource[];
   /** True when the raw headroom hit the cap (so the breakdown sums beyond the shown degrees). */
@@ -802,7 +802,7 @@ export class PawnStatServiceImpl implements PawnStatService {
     const bloodTarget = maxBlood * (1 - bloodLossTarget);
     // Blood regen per tick — inlined from calcBloodRegenRate(entities/Pawns) (importing it would close a
     // PawnStatService↔Pawns↔Combat cycle): (1 + (CON−10)·0.08)·0.05 blood/sec, CON-scaled, × per-tick.
-    const bloodRegenPerSec = (1.0 + ((entity.stats?.constitution ?? 10) - 10) * 0.08) * 0.05;
+    const bloodRegenPerSec = (1.0 + ((entity.stats?.vigour ?? 10) - 10) * 0.08) * 0.05;
     const regenPerTick = bloodRegenPerSec * SECONDS_PER_TICK;
     if (regenPerTick <= 0 || bloodTarget <= blood) return null;
     return (bloodTarget - blood) / regenPerTick;
@@ -877,13 +877,13 @@ export class PawnStatServiceImpl implements PawnStatService {
     const gear = equippedTemperatureSources(pawn as Pawn);
     // Split each side's resistance into its sources (in degrees): the CON-derived stat base, any trait
     // resistance bonus, and EACH worn garment by name. `evaluateStat` already folds the trait bonus into
-    // the stat, so the constitution base is the remainder.
+    // the stat, so the vigour base is the remainder.
     const sideTolerance = (statId: string, pick: (g: WornThermalSource) => number) => {
       const stat = this.evaluateStat(statId, pawn);
       const trait = traitResistanceBonus(pawn, statId);
       const con = stat - trait;
       const sources: TempToleranceSource[] = [];
-      if (con !== 0) sources.push({ label: 'Constitution', deg: con * TEMP_RES_DEG_PER_UNIT });
+      if (con !== 0) sources.push({ label: 'Vigour', deg: con * TEMP_RES_DEG_PER_UNIT });
       if (trait !== 0) sources.push({ label: 'Traits', deg: trait * TEMP_RES_DEG_PER_UNIT });
       let gearTotal = 0;
       for (const g of gear) {
@@ -923,12 +923,12 @@ export class PawnStatServiceImpl implements PawnStatService {
     // Every formula variable (attributes scaled by active conditions, body traits, capacities) with its
     // CURRENT value — the same set evaluateFormula feeds the compiled formula.
     const all: Record<string, number> = {
-      STR: (s?.strength ?? 10) * sm.strength,
-      DEX: (s?.dexterity ?? 10) * sm.dexterity,
-      CON: (s?.constitution ?? 10) * sm.constitution,
-      PER: (s?.perception ?? 10) * sm.perception,
-      INT: (s?.intelligence ?? 10) * sm.intelligence,
-      CHA: s?.charisma ?? 10,
+      BRAWN: (s?.brawn ?? 10) * sm.brawn,
+      AGILITY: (s?.agility ?? 10) * sm.agility,
+      VIGOUR: (s?.vigour ?? 10) * sm.vigour,
+      AWARENESS: (s?.awareness ?? 10) * sm.awareness,
+      INTELLECT: (s?.intellect ?? 10) * sm.intellect,
+      CHARISMA: s?.charisma ?? 10,
       weight: tr?.weight ?? 70,
       height: tr?.height ?? 170,
       consciousness: caps.consciousness ?? 1,

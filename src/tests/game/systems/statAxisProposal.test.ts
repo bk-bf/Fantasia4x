@@ -18,8 +18,8 @@ import type { BodyPartId, GameState, Pawn, Trait } from '$lib/game/core/types';
 /**
  * STAT-AXIS PROPOSAL — an EVALUATION harness. It changes no engine code.
  *
- * The audit found the core stats do not decide what their labels claim: DEX feeds melee cadence,
- * melee to-hit AND crit while a weapon's nominal `powerStat` feeds one damped damage channel, so DEX
+ * The audit found the core stats do not decide what their labels claim: AGILITY feeds melee cadence,
+ * melee to-hit AND crit while a weapon's nominal `powerStat` feeds one damped damage channel, so AGILITY
  * out-earns the power stat on nearly every melee weapon. The proposal splits the two:
  *
  *   PHYSIQUE  (core stats)  — damage capacity, wield gates, stamina pool. Nothing else.
@@ -55,16 +55,16 @@ const APT = {
   strikeSpan: 40,
   /** Kept at Combat's current dodge weight, so defence keeps exactly the pull it has today. */
   evasionSpan: DODGE_HIT_WEIGHT,
-  /** `hit_precision` at aptitude 1.0 — the baseline the stats.jsonc formula already produces at DEX 10. */
+  /** `hit_precision` at aptitude 1.0 — the baseline the stats.jsonc formula already produces at AGILITY 10. */
   precisionBase: 0.05
 };
 
 const baseStats = {
-  strength: 10,
-  dexterity: 10,
-  constitution: 10,
-  intelligence: 10,
-  perception: 10,
+  brawn: 10,
+  agility: 10,
+  vigour: 10,
+  intellect: 10,
+  awareness: 10,
   charisma: 10
 };
 
@@ -142,7 +142,7 @@ function dummy(kind: 'bare' | 'armoured' | 'evasive'): Pawn {
       : {};
   return makePawn({
     id: 'dummy',
-    stats: { ...baseStats, dexterity: kind === 'evasive' ? 30 : 1 },
+    stats: { ...baseStats, agility: kind === 'evasive' ? 30 : 1 },
     equipment: eq
   });
 }
@@ -177,8 +177,8 @@ const swingsPerSec = (speedStat: number) =>
   );
 
 // ── the weapon set: every tier-4 melee weapon, as the audit used ────────────────────────────────
-type PowerMode = 'strength' | 'dexterity' | 'perception';
-type Physique = { strength: number; dexterity: number; perception: number };
+type PowerMode = 'brawn' | 'agility' | 'awareness';
+type Physique = { brawn: number; agility: number; awareness: number };
 const T4 = ITEMS.filter(
   (i) => i.tier === 4 && i.weaponProperties && i.category !== 'natural_weapon'
 )
@@ -191,7 +191,7 @@ const T4 = ITEMS.filter(
     attackSpeed: (i.weaponProperties.attackSpeed ?? 1) as number,
     critMod: (i.weaponProperties.critMod ?? 0) as number,
     shipped: (i.weaponProperties.powerStat ??
-      (i.weaponProperties.finesse ? 'perception' : 'strength')) as string
+      (i.weaponProperties.finesse ? 'awareness' : 'brawn')) as string
   }));
 
 const offHandFor = (w: { twoHanded: boolean; id: string }) =>
@@ -199,8 +199,8 @@ const offHandFor = (w: { twoHanded: boolean; id: string }) =>
 
 /**
  * ADOPTED weapon power mode — the GRIP decides, so the physique picks the weapon rather than the
- * build: two-handed is driven by the body (STR), one-handed is placed by the hand (DEX), a finesse
- * thrust is placed by the eye (PER, the rapier's standing special case). Ranged is PER and an arcane
+ * build: two-handed is driven by the body (BRAWN), one-handed is placed by the hand (AGILITY), a finesse
+ * thrust is placed by the eye (AWARENESS, the rapier's standing special case). Ranged is AWARENESS and an arcane
  * staff is INT; neither resolves through this melee path.
  *
  * Every melee FAMILY exists in both grips (sword · axe · mace/hammer · cleaver · spear/pole), so no
@@ -208,12 +208,12 @@ const offHandFor = (w: { twoHanded: boolean; id: string }) =>
  * 1H only, so a strong pawn currently has no flail.
  */
 function proposedMode(w: (typeof T4)[number]): PowerMode {
-  if (w.shipped === 'perception') return 'perception'; // finesse — the rapier line
-  return w.twoHanded ? 'strength' : 'dexterity';
+  if (w.shipped === 'awareness') return 'awareness'; // finesse — the rapier line
+  return w.twoHanded ? 'brawn' : 'agility';
 }
 
 const effectivePower = (mode: PowerMode, phys: Physique) =>
-  mode === 'strength' ? phys.strength : mode === 'dexterity' ? phys.dexterity : phys.perception;
+  mode === 'brawn' ? phys.brawn : mode === 'agility' ? phys.agility : phys.awareness;
 
 // ── the two models ──────────────────────────────────────────────────────────────────────────────
 
@@ -226,8 +226,8 @@ function dpsShipped(w: (typeof T4)[number], stats: Partial<typeof baseStats>, ta
 
 /**
  * PROPOSED: the real kernel supplies damage per LANDED hit with the core stats reduced to a single
- * power channel (DEX pinned to baseline so its parasitic to-hit/crit channels are inert, the weapon's
- * power routed through `strength`, and its crit re-based on the `precision` aptitude). To-hit and
+ * power channel (AGILITY pinned to baseline so its parasitic to-hit/crit channels are inert, the weapon's
+ * power routed through `brawn`, and its crit re-based on the `precision` aptitude). To-hit and
  * cadence are then the proposed aptitude terms.
  */
 function dpsProposed(
@@ -242,12 +242,12 @@ function dpsProposed(
   return withWeaponPatch(
     {
       [w.id]: {
-        powerStat: 'strength',
+        powerStat: 'brawn',
         critMod: w.critMod + APT.precisionBase * (apt.precision - 1)
       }
     },
     () => {
-      const a = armed(w.id, { strength: power, dexterity: 10 }, offHandFor(w));
+      const a = armed(w.id, { brawn: power, agility: 10 }, offHandFor(w));
       const s = sample(a, target);
       const perLanded = s.hitRate > 0 ? s.perSwing / s.hitRate : 0;
       const toHit =
@@ -269,9 +269,9 @@ const FLAT = { strike: 1, cadence: 1, precision: 1 };
 describe('STAT AXIS — proposal evaluation (no engine changes)', () => {
   it('cadence parity: the mirrored constants still match the engine', () => {
     // The stat ALREADY folds in the equipped weapon's own attackSpeed, so the model must not
-    // double-apply it. Greatsword 0.595 at DEX 30 → (1 + 0.6) × 0.595.
+    // double-apply it. Greatsword 0.595 at AGILITY 30 → (1 + 0.6) × 0.595.
     const w = T4.find((x) => x.id === 'rune_sung_greatsword')!;
-    const p = armed(w.id, { dexterity: 30 });
+    const p = armed(w.id, { agility: 30 });
     expect(pawnStatService.evaluateStat('attack_speed', p)).toBeCloseTo(
       (1 + 20 * 0.03) * w.attackSpeed,
       5
@@ -287,7 +287,7 @@ describe('STAT AXIS — proposal evaluation (no engine changes)', () => {
     rows.push('weapon                          power  grip    own-stat   rival    verdict');
     const lost: string[] = [];
     for (const w of T4) {
-      const rival = w.shipped === 'strength' ? 'dexterity' : 'strength';
+      const rival = w.shipped === 'brawn' ? 'agility' : 'brawn';
       const own = dpsShipped(w, { [w.shipped]: 40 }, t);
       const alt = dpsShipped(w, { [rival]: 40 }, t);
       const bad = alt > own;
@@ -309,9 +309,9 @@ describe('STAT AXIS — proposal evaluation (no engine changes)', () => {
         `${lostTwoH.length} of ${twoH.length} two-handers, ${lost.length - lostTwoH.length} of ${T4.length - twoH.length} one-handers`
     );
     console.log(rows.join('\n'));
-    // The mechanism, pinned: DEX out-earns STR on exactly the weapons STR is supposed to own. A slow
-    // two-hander sits far below the cadence ceiling, so every DEX point still buys swings there, while
-    // a fast one-hander is already capped and DEX's biggest channel is dead. The label is decoration
+    // The mechanism, pinned: AGILITY out-earns BRAWN on exactly the weapons BRAWN is supposed to own. A slow
+    // two-hander sits far below the cadence ceiling, so every AGILITY point still buys swings there, while
+    // a fast one-hander is already capped and AGILITY's biggest channel is dead. The label is decoration
     // precisely where it matters most.
     expect(lostTwoH.length).toBeGreaterThanOrEqual(twoH.length * 0.6);
     expect(lost.length - lostTwoH.length).toBe(0);
@@ -330,15 +330,15 @@ describe('STAT AXIS — proposal evaluation (no engine changes)', () => {
     for (const w of T4) {
       const mode = proposedMode(w);
       tally[mode] = (tally[mode] ?? 0) + 1;
-      const strong = dpsProposed(w, { strength: 40, dexterity: 10, perception: 10 }, FLAT, t);
-      const nimble = dpsProposed(w, { strength: 10, dexterity: 40, perception: 10 }, FLAT, t);
-      const keen = dpsProposed(w, { strength: 10, dexterity: 10, perception: 40 }, FLAT, t);
+      const strong = dpsProposed(w, { brawn: 40, agility: 10, awareness: 10 }, FLAT, t);
+      const nimble = dpsProposed(w, { brawn: 10, agility: 40, awareness: 10 }, FLAT, t);
+      const keen = dpsProposed(w, { brawn: 10, agility: 10, awareness: 40 }, FLAT, t);
       const best = [
         ['STRONG', strong],
         ['NIMBLE', nimble],
         ['KEEN', keen]
       ].sort((a, b) => (b[1] as number) - (a[1] as number))[0][0] as string;
-      const want = mode === 'strength' ? 'STRONG' : mode === 'dexterity' ? 'NIMBLE' : 'KEEN';
+      const want = mode === 'brawn' ? 'STRONG' : mode === 'agility' ? 'NIMBLE' : 'KEEN';
       if (best === want) correct++;
       rows.push(
         w.name.slice(0, 28).padEnd(30) +
@@ -360,19 +360,19 @@ describe('STAT AXIS — proposal evaluation (no engine changes)', () => {
   });
 
   it('PROPOSAL — a stat point can no longer be spent on the wrong weapon', () => {
-    // The specific inversion from the audit: the warhammer and the greatsword are STR weapons that
-    // currently pay MORE for DEX. Under the proposal a nimble pawn gains nothing from them.
+    // The specific inversion from the audit: the warhammer and the greatsword are BRAWN weapons that
+    // currently pay MORE for AGILITY. Under the proposal a nimble pawn gains nothing from them.
     const t = dummy('armoured');
     const rows = [
       '[INVERSION] the two weapons the audit named',
-      'weapon                        shipped STR/DEX     proposed STRONG/NIMBLE'
+      'weapon                        shipped BRAWN/AGILITY     proposed STRONG/NIMBLE'
     ];
     for (const id of ['rune_weighted_warhammer', 'rune_sung_greatsword']) {
       const w = T4.find((x) => x.id === id)!;
-      const sStr = dpsShipped(w, { strength: 40 }, t);
-      const sDex = dpsShipped(w, { dexterity: 40 }, t);
-      const pStr = dpsProposed(w, { strength: 40, dexterity: 10, perception: 10 }, FLAT, t);
-      const pDex = dpsProposed(w, { strength: 10, dexterity: 40, perception: 10 }, FLAT, t);
+      const sStr = dpsShipped(w, { brawn: 40 }, t);
+      const sDex = dpsShipped(w, { agility: 40 }, t);
+      const pStr = dpsProposed(w, { brawn: 40, agility: 10, awareness: 10 }, FLAT, t);
+      const pDex = dpsProposed(w, { brawn: 10, agility: 40, awareness: 10 }, FLAT, t);
       rows.push(
         w.name.padEnd(30) + f(sStr) + ' /' + f(sDex) + '       ' + f(pStr) + ' /' + f(pDex)
       );
@@ -388,20 +388,20 @@ describe('STAT AXIS — proposal evaluation (no engine changes)', () => {
     const cases: [string, Physique, typeof FLAT][] = [
       [
         'gifted, skilled',
-        { strength: 10, dexterity: 40, perception: 10 },
+        { brawn: 10, agility: 40, awareness: 10 },
         { strike: 1.25, cadence: 1.2, precision: 1.2 }
       ],
       [
         'gifted, clumsy',
-        { strength: 10, dexterity: 40, perception: 10 },
+        { brawn: 10, agility: 40, awareness: 10 },
         { strike: 0.75, cadence: 0.8, precision: 0.8 }
       ],
       [
         'modest, skilled',
-        { strength: 10, dexterity: 16, perception: 10 },
+        { brawn: 10, agility: 16, awareness: 10 },
         { strike: 1.25, cadence: 1.2, precision: 1.2 }
       ],
-      ['average', { strength: 10, dexterity: 25, perception: 10 }, FLAT]
+      ['average', { brawn: 10, agility: 25, awareness: 10 }, FLAT]
     ];
     const rows = [
       '[APTITUDE AXIS] rune-graven spear vs an armoured target',
@@ -450,7 +450,7 @@ describe('STAT AXIS — proposal evaluation (no engine changes)', () => {
       else fam.one ??= w;
     }
     const rows = [
-      '[FAMILY REACH] STRONG (40 STR) on the 2H version vs NIMBLE (40 DEX) on the 1H version',
+      '[FAMILY REACH] STRONG (40 BRAWN) on the 2H version vs NIMBLE (40 AGILITY) on the 1H version',
       'family         2H weapon → STRONG    1H weapon → NIMBLE    ratio'
     ];
     const gaps: string[] = [];
@@ -460,18 +460,8 @@ describe('STAT AXIS — proposal evaluation (no engine changes)', () => {
         gaps.push(`${fam} (${pair.one ? 'no 2H' : 'no 1H'})`);
         continue;
       }
-      const strong = dpsProposed(
-        pair.two,
-        { strength: 40, dexterity: 10, perception: 10 },
-        FLAT,
-        t
-      );
-      const nimble = dpsProposed(
-        pair.one,
-        { strength: 10, dexterity: 40, perception: 10 },
-        FLAT,
-        t
-      );
+      const strong = dpsProposed(pair.two, { brawn: 40, agility: 10, awareness: 10 }, FLAT, t);
+      const nimble = dpsProposed(pair.one, { brawn: 10, agility: 40, awareness: 10 }, FLAT, t);
       rows.push(fam.padEnd(15) + f(strong, 18) + f(nimble, 22) + f(strong / nimble, 9, 2) + '×');
       // Neither physique may be more than half again as good in a shared family.
       expect(Math.max(strong, nimble) / Math.min(strong, nimble)).toBeLessThan(1.5);
@@ -490,7 +480,7 @@ describe('STAT AXIS — proposal evaluation (no engine changes)', () => {
     ];
     const dist: Record<string, Record<string, number>> = {};
     for (const dex of [10, 60]) {
-      const s = sample(armed('rune_slotted_stiletto', { strength: 20, dexterity: dex }), t, 3000);
+      const s = sample(armed('rune_slotted_stiletto', { brawn: 20, agility: dex }), t, 3000);
       const total = Object.values(s.parts).reduce((a, c) => a + c, 0);
       const top = Object.entries(s.parts)
         .sort((a, b) => b[1] - a[1])
@@ -499,7 +489,7 @@ describe('STAT AXIS — proposal evaluation (no engine changes)', () => {
       dist['dex' + dex] = s.parts;
       const lethalShare = lethalHitShare(s.parts);
       rows.push(
-        `DEX ${String(dex).padStart(2)} (precision ${f(pawnStatService.evaluateStat('hit_precision', armed('rune_slotted_stiletto', { dexterity: dex })), 5, 3)})  ` +
+        `AGILITY ${String(dex).padStart(2)} (precision ${f(pawnStatService.evaluateStat('hit_precision', armed('rune_slotted_stiletto', { agility: dex })), 5, 3)})  ` +
           `vital-part share ${f(lethalShare * 100, 5)}%   ${top.join(' · ')}`
       );
     }
@@ -554,8 +544,8 @@ describe('STAT AXIS — proposal evaluation (no engine changes)', () => {
       return counts;
     };
 
-    // The same three precision VALUES the real engine produced in the test above (DEX 10 → 0.053,
-    // mid, DEX 60 → 0.317), so the two rules are compared at equal effect strength.
+    // The same three precision VALUES the real engine produced in the test above (AGILITY 10 → 0.053,
+    // mid, AGILITY 60 → 0.317), so the two rules are compared at equal effect brawn.
     const LEVELS = [0.05, 0.18, 0.32];
     const rows = [
       '[SELECTION RULE] armoured torso + head; share of blows landing somewhere that can kill'

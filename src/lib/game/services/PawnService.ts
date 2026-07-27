@@ -1022,8 +1022,8 @@ export class PawnServiceImpl implements PawnService {
    * Stat-derived walking speed in tiles/second on open (movementCost 1) terrain.
    * Multiplicative model where every factor is ×1.0 for an all-average pawn, so
    * the baseline lands on the RimWorld-ish 4 tiles/s. Factors:
-   *   • Dexterity — nimbleness (DEX 10 = ×1.0)
-   *   • Body load — own weight carried by strength (weight ≈ STR×6kg = ×1.0)
+   *   • Agility — nimbleness (DEX 10 = ×1.0)
+   *   • Body load — own weight carried by brawn (weight ≈ STR×6kg = ×1.0)
    *   • Legs — each leg ≈ half of locomotion; missing/injured legs cripple speed
    *   • Needs — hunger/fatigue above 50% progressively slow the pawn
    *   • Conditions — transient & persistent condition moveSpeed multipliers
@@ -1034,13 +1034,13 @@ export class PawnServiceImpl implements PawnService {
 
     const base = 4.0; // tiles/s on open terrain at all-average stats
 
-    // Dexterity: average (10) → ×1.0; capped so extremes stay sane.
-    const dex = entity.stats?.dexterity ?? 10;
+    // Agility: average (10) → ×1.0; capped so extremes stay sane.
+    const dex = entity.stats?.agility ?? 10;
     const dexFactor = clamp(0.5 + dex / 20, 0.4, 1.8);
     sources.push(`DEX ${dex} ×${dexFactor.toFixed(2)}`);
 
-    // Body load: own bodyweight carried by strength-derived capacity.
-    const str = entity.stats?.strength ?? 10;
+    // Body load: own bodyweight carried by brawn-derived capacity.
+    const str = entity.stats?.brawn ?? 10;
     const weight = entity.physicalTraits?.weight ?? 60;
     const capacity = Math.max(1, str * 6); // STR 10 ≈ 60 kg comfortable
     const weightFactor = clamp(1.15 - 0.15 * (weight / capacity), 0.65, 1.1);

@@ -54,11 +54,11 @@ const RES_KEY: Record<string, string> = {
 const BASELINE = {
   id: '__statbaseline__',
   stats: {
-    strength: 10,
-    dexterity: 10,
-    constitution: 10,
-    perception: 10,
-    intelligence: 10,
+    brawn: 10,
+    agility: 10,
+    vigour: 10,
+    awareness: 10,
+    intellect: 10,
     charisma: 10
   },
   physicalTraits: { weight: 70, height: 170, size: 'medium' }
@@ -149,7 +149,7 @@ function derivation(s: StatDef, pawn: Pawn, ctx: StatContext): Deriv {
         { name: 'bodyWeight', value: `${ctx.carry.bodyWeight}kg` },
         {
           name: 'loadFraction',
-          value: `${Math.round(ctx.carry.weight.loadFraction * 100)}% (STR ${ctx.carry.strength})`
+          value: `${Math.round(ctx.carry.weight.loadFraction * 100)}% (STR ${ctx.carry.brawn})`
         },
         { name: 'gear', value: signed(ctx.carry.weight.gear) }
       ],
@@ -183,11 +183,11 @@ function derivation(s: StatDef, pawn: Pawn, ctx: StatContext): Deriv {
   const st = pawn.stats;
   const sm = ctx.condStatMult;
   const eff = (base: number, mult: number) => (mult === 1 ? base : Math.round(base * mult));
-  add('STR', eff(st.strength, sm.strength));
-  add('DEX', eff(st.dexterity, sm.dexterity));
-  add('CON', eff(st.constitution, sm.constitution));
-  add('PER', eff(st.perception, sm.perception));
-  add('INT', eff(st.intelligence, sm.intelligence));
+  add('BRN', eff(st.brawn, sm.brawn));
+  add('AGI', eff(st.agility, sm.agility));
+  add('VIG', eff(st.vigour, sm.vigour));
+  add('AWR', eff(st.awareness, sm.awareness));
+  add('INT', eff(st.intellect, sm.intellect));
   add('CHA', st.charisma);
   add('weight', pawn.physicalTraits?.weight ?? 70);
   add('height', pawn.physicalTraits?.height ?? 170);

@@ -29,7 +29,7 @@ describe('stations & capacity gates', () => {
   it('§130 a cart raises the haul carry budget (held wheelbarrow/handcart via inventoryBonus)', () => {
     const base: Pawn = {
       id: 'p1',
-      stats: { strength: 12, dexterity: 10, constitution: 10, intelligence: 10, wisdom: 10, charisma: 10, perception: 10 },
+      stats: { brawn: 12, agility: 10, vigour: 10, intellect: 10, wisdom: 10, charisma: 10, awareness: 10 },
       equipment: {},
       inventory: { items: {}, instances: [], weightKg: 0, maxWeightKg: 20, volumeL: 0, maxVolumeL: 20 }
     } as unknown as Pawn;
@@ -47,7 +47,7 @@ describe('stations & capacity gates', () => {
   it('§130 carry budget is ENFORCED on pickup: you can only take what fits', () => {
     const pawn: Pawn = {
       id: 'p2',
-      stats: { strength: 10, dexterity: 10, constitution: 10, intelligence: 10, wisdom: 10, charisma: 10, perception: 10 },
+      stats: { brawn: 10, agility: 10, vigour: 10, intellect: 10, wisdom: 10, charisma: 10, awareness: 10 },
       equipment: {},
       inventory: { items: {}, instances: [], weightKg: 0, maxWeightKg: 20, volumeL: 0, maxVolumeL: 20 }
     } as unknown as Pawn;

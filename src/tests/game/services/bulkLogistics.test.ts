@@ -16,7 +16,7 @@ function makePawn(over: Partial<Pawn> = {}): Pawn {
   return {
     id: 'p',
     name: 'P',
-    stats: { strength: 10, dexterity: 10 },
+    stats: { brawn: 10, agility: 10 },
     physicalTraits: { size: 'medium', weight: 70, height: 170 },
     inventory: { items: {}, instances: [] },
     equipment: {},

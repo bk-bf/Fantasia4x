@@ -5,7 +5,7 @@
  * in the worker (ADR-021), which can't read the page URL, so the main thread reads the `?flag` and
  * passes it through the worker `init` message; the worker calls the setter once at init.
  *
- * `combatDisabled` (`?nocombat`): nulls pawn↔mob perception (no Alerted/Attacking/Fleeing toward
+ * `combatDisabled` (`?nocombat`): nulls pawn↔mob awareness (no Alerted/Attacking/Fleeing toward
  * pawns) and skips `tickCombat`, so the entire combat cascade disappears while entity count stays
  * the same — an A/B baseline to measure how much of the tick is combat (ENGINE-PERFORMANCE).
  */

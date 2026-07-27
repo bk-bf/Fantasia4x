@@ -3,12 +3,12 @@
 import type { EquipmentSlot } from './items';
 
 export interface EntityStats {
-  strength: number;
-  dexterity: number;
-  intelligence: number;
-  perception: number;
+  brawn: number;
+  agility: number;
+  intellect: number;
+  awareness: number;
   charisma: number;
-  constitution: number;
+  vigour: number;
 }
 
 /** A core-attribute key — the six fields of {@link EntityStats}. */
@@ -271,18 +271,18 @@ export interface Trait {
    *  The old grab-bag of unread effect keys (telepathicRange, memoryBonus…) was pruned. */
   effects: {
     // Stat bonuses/penalties — applied at pawn generation (applyCulturalTraitBonuses).
-    strengthBonus?: number;
-    dexterityBonus?: number;
-    intelligenceBonus?: number;
-    perceptionBonus?: number;
+    brawnBonus?: number;
+    agilityBonus?: number;
+    intellectBonus?: number;
+    awarenessBonus?: number;
     charismaBonus?: number;
-    constitutionBonus?: number;
-    strengthPenalty?: number;
-    dexterityPenalty?: number;
-    intelligencePenalty?: number;
-    perceptionPenalty?: number;
+    vigourBonus?: number;
+    brawnPenalty?: number;
+    agilityPenalty?: number;
+    intellectPenalty?: number;
+    awarenessPenalty?: number;
     charismaPenalty?: number;
-    constitutionPenalty?: number;
+    vigourPenalty?: number;
 
     // Work modifiers — each maps a workType (or "all") to a multiplier applied
     // directly to the matching stats.jsonc output (see traits.jsonc header).

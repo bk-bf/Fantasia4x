@@ -33,7 +33,7 @@ export interface CreatureStats {
   visionRange: number;
   fleeRange: number;
   /** Alias for str; used by legacy spawn code. */
-  strength: number;
+  brawn: number;
 }
 
 // Natural attacks are first-class items (category 'natural_weapon' in items.jsonc),
@@ -76,7 +76,7 @@ export interface CreatureDefinition {
    *  a passive omnivore (chicken) is not a predator, a neutral omnivore (bear) is. */
   predator: boolean;
   /** `primitive` = animals; `sapient` = humanoid NPCs (spawn as Pawn, not Mob). */
-  intelligence: EntityIntelligence;
+  intellect: EntityIntelligence;
   nocturnalAggro: boolean;
   /** Only spawns at night. */
   nightOnly: boolean;
@@ -211,7 +211,7 @@ function toDefinition(raw: RawCreature): CreatureDefinition {
     dex: rs.dex,
     con: rs.con,
     per: rs.per,
-    strength: rs.str,
+    brawn: rs.str,
     health: rs.con * 5,
     speed: Math.floor(1.5 + rs.dex * 0.35),
     visionRange,
@@ -233,7 +233,7 @@ function toDefinition(raw: RawCreature): CreatureDefinition {
     predator,
     eats: (raw.eats as FoodCategory[] | undefined) ?? defaultEatsForDiet(diet),
     grazes: (raw.grazes as boolean | undefined) ?? diet === 'herbivore',
-    intelligence: (raw.intelligence as EntityIntelligence) ?? 'primitive',
+    intellect: (raw.intellect as EntityIntelligence) ?? 'primitive',
     nocturnalAggro: (raw.nocturnalAggro as boolean) ?? false,
     nightOnly: (raw.nightOnly as boolean) ?? false,
     pack: (raw.pack as [number, number]) ?? [1, 1],

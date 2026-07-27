@@ -30,15 +30,15 @@ const ITEMS = itemsData as any[];
 const TRAITS = traitsData as any[];
 
 const baseStats = {
-  strength: 10,
-  dexterity: 10,
-  constitution: 10,
-  intelligence: 10,
-  perception: 10,
+  brawn: 10,
+  agility: 10,
+  vigour: 10,
+  intellect: 10,
+  awareness: 10,
   charisma: 10
 };
 type Stats = typeof baseStats;
-const CORE: (keyof Stats)[] = ['strength', 'dexterity', 'constitution', 'perception', 'intelligence'];
+const CORE: (keyof Stats)[] = ['brawn', 'agility', 'vigour', 'awareness', 'intellect'];
 
 const fullLimbs = () =>
   (['head', 'torso', 'left_arm', 'right_arm', 'left_leg', 'right_leg'] as const).map((id) => ({
@@ -80,7 +80,7 @@ const T4 = ITEMS.filter(
   twoHanded: !!i.weaponProperties.twoHanded,
   ranged: (i.weaponProperties.range ?? 0) > 1,
   powerStat: (i.weaponProperties.powerStat ??
-    (i.weaponProperties.arcane ? 'intelligence' : i.weaponProperties.finesse ? 'perception' : 'strength')) as keyof Stats
+    (i.weaponProperties.arcane ? 'intellect' : i.weaponProperties.finesse ? 'awareness' : 'brawn')) as keyof Stats
 }));
 const T4_MELEE = T4.filter((w) => !w.ranged);
 
@@ -109,19 +109,19 @@ function armed(weaponId: string, stats: Partial<Stats>, offHand?: string, traits
  * Three real opponents drawn from gear the game actually fields, not abstractions:
  *  • `raider`  — light foe, leather, low dodge: the common fight.
  *  • `knight`  — heavy plate + great helm: the armour check.
- *  • `duelist` — high DEX, shield, no plate: the dodge + block check.
+ *  • `duelist` — high AGILITY, shield, no plate: the dodge + block check.
  */
 const OPPONENTS = {
   raider: () =>
     makePawn({
       id: 'raider',
-      stats: { ...baseStats, dexterity: 8, constitution: 12 },
+      stats: { ...baseStats, agility: 8, vigour: 12 },
       equipment: { bodyOuter: { itemId: 'raw_hide_vest', instanceId: 'o1', durability: 999 } }
     }),
   knight: () =>
     makePawn({
       id: 'knight',
-      stats: { ...baseStats, dexterity: 6, constitution: 20 },
+      stats: { ...baseStats, agility: 6, vigour: 20 },
       equipment: {
         bodyOuter: { itemId: 'plate_cuirass', instanceId: 'o1', durability: 999 },
         bodyMid: { itemId: 'mail_hauberk', instanceId: 'o2', durability: 999 },
@@ -131,7 +131,7 @@ const OPPONENTS = {
   duelist: () =>
     makePawn({
       id: 'duelist',
-      stats: { ...baseStats, dexterity: 40, constitution: 25 },
+      stats: { ...baseStats, agility: 40, vigour: 25 },
       equipment: { offHand: { itemId: 'iron_boss_shield', instanceId: 'o1', durability: 999 } }
     })
 };
@@ -162,21 +162,21 @@ describe('trait baking — a gained trait is a born trait', () => {
     // `applyGainedTrait`, which is also what the trait-gamble/consume path and `devSetPawnTraits` use.
     // So a trait acquired at turn 40,000 lands the same stat deltas as one rolled at generation.
     const gain = TRAITS.find((t) => t.id === 'str-dex-plus-5');
-    const plain = armed('rune_sung_greatsword', { strength: 20, dexterity: 20 });
-    const grown = armed('rune_sung_greatsword', { strength: 20, dexterity: 20 }, undefined, [
+    const plain = armed('rune_sung_greatsword', { brawn: 20, agility: 20 });
+    const grown = armed('rune_sung_greatsword', { brawn: 20, agility: 20 }, undefined, [
       gain as unknown as Trait
     ]);
     console.log(
-      `[BAKE] str-dex-plus-5 gained at runtime: STR ${plain.stats.strength}→${grown.stats.strength}, DEX ${plain.stats.dexterity}→${grown.stats.dexterity}`
+      `[BAKE] str-dex-plus-5 gained at runtime: BRAWN ${plain.stats.brawn}→${grown.stats.brawn}, AGILITY ${plain.stats.agility}→${grown.stats.agility}`
     );
-    expect(grown.stats.strength).toBe(plain.stats.strength + 5);
-    expect(grown.stats.dexterity).toBe(plain.stats.dexterity + 5);
+    expect(grown.stats.brawn).toBe(plain.stats.brawn + 5);
+    expect(grown.stats.agility).toBe(plain.stats.agility + 5);
   });
 
   it('⚠ every `*Penalty` RAISES its stat — the sign is wrong in both bake paths', () => {
     // `applyCulturalTraitBonuses` (generation) and `applyGainedTrait` (runtime) both do
     // `stats[k] = max(1, stats[k] + value)`, and all 103 penalty entries in traits.jsonc are POSITIVE.
-    // So a penalty adds. `frail` grants +2 CON, `clumsy` +2 DEX, `dull` +2 INT.
+    // So a penalty adds. `frail` grants +2 VIGOUR, `clumsy` +2 AGILITY, `dull` +2 INT.
     //
     // This test pins the CURRENT behaviour so the audit numbers are reproducible and the bug cannot be
     // "fixed" silently — flipping it changes every pawn in every save, so it is a deliberate call.
@@ -191,15 +191,15 @@ describe('trait baking — a gained trait is a born trait', () => {
       'all penalty values are authored POSITIVE'
     ).toBe(true);
 
-    const clumsy = TRAITS.find((t) => t.id === 'clumsy'); // dexterityPenalty: 2
-    const plain = armed('rune_slotted_stiletto', { dexterity: 20 });
-    const cursed = armed('rune_slotted_stiletto', { dexterity: 20 }, undefined, [
+    const clumsy = TRAITS.find((t) => t.id === 'clumsy'); // agilityPenalty: 2
+    const plain = armed('rune_slotted_stiletto', { agility: 20 });
+    const cursed = armed('rune_slotted_stiletto', { agility: 20 }, undefined, [
       clumsy as unknown as Trait
     ]);
     console.log(
-      `[SIGN BUG] ${penalties.length} penalty entries, all positive. "clumsy" (dexterityPenalty 2): DEX ${plain.stats.dexterity} → ${cursed.stats.dexterity}`
+      `[SIGN BUG] ${penalties.length} penalty entries, all positive. "clumsy" (agilityPenalty 2): AGILITY ${plain.stats.agility} → ${cursed.stats.agility}`
     );
-    expect(cursed.stats.dexterity, 'clumsy currently ADDS dexterity').toBe(plain.stats.dexterity + 2);
+    expect(cursed.stats.agility, 'clumsy currently ADDS agility').toBe(plain.stats.agility + 2);
   });
 });
 
@@ -208,13 +208,13 @@ describe('tier-4 weapon audit — stats', { timeout: 600_000 }, () => {
     // The fix for the runaway `baseDamage × stat / 10` term. Early-game values barely move; the
     // growth ceiling is bounded instead of multiplying weapon damage tenfold.
     const rows = [10, 16, 20, 30, 45, 60, 100].map((s) => {
-      const w = armed('rune_sung_greatsword', { strength: s }, undefined);
+      const w = armed('rune_sung_greatsword', { brawn: s }, undefined);
       const d = dpsOf(w, OPPONENTS.knight());
       return `stat ${String(s).padStart(3)}  old ×${(s / 10).toFixed(2).padStart(5)}  now ×${(1 + ((s - 10) / 10) / (1 + (s - 10) / 30)).toFixed(2).padStart(5)}  dps vs knight ${f(d)}`;
     });
     console.log('[POWER CURVE]\n' + rows.join('\n'));
-    const low = dpsOf(armed('rune_sung_greatsword', { strength: 16 }), OPPONENTS.knight());
-    const high = dpsOf(armed('rune_sung_greatsword', { strength: 100 }), OPPONENTS.knight());
+    const low = dpsOf(armed('rune_sung_greatsword', { brawn: 16 }), OPPONENTS.knight());
+    const high = dpsOf(armed('rune_sung_greatsword', { brawn: 100 }), OPPONENTS.knight());
     expect(high / Math.max(0.01, low), 'a maxed pawn no longer multiplies damage tenfold').toBeLessThan(6);
   });
 
@@ -223,7 +223,7 @@ describe('tier-4 weapon audit — stats', { timeout: 600_000 }, () => {
     // being carried by cadence or to-hit rather than by what it is supposed to be about.
     for (const opp of Object.keys(OPPONENTS) as OppKey[]) {
       const lines = [`[STAT SWEEP vs ${opp}]   dps at stat 40 (all others 10) — ★ = the weapon's power stat`];
-      lines.push('weapon                      STR     DEX     CON     PER     INT   best');
+      lines.push('weapon                      BRAWN     AGILITY     VIGOUR     AWARENESS     INT   best');
       for (const w of T4_MELEE) {
         const t = OPPONENTS[opp]();
         const cells = CORE.map((s) => dpsOf(armed(w.id, { [s]: 40 }, offHandFor(w)), t));
@@ -271,17 +271,17 @@ const COMBAT_TRAITS = TRAITS.filter((t) => {
   const e = t.effects ?? {};
   return (
     e.combatMods ||
-    e.strengthBonus ||
-    e.dexterityBonus ||
-    e.perceptionBonus ||
-    e.constitutionBonus ||
-    e.intelligenceBonus ||
-    e.strengthPenalty ||
-    e.dexterityPenalty
+    e.brawnBonus ||
+    e.agilityBonus ||
+    e.awarenessBonus ||
+    e.vigourBonus ||
+    e.intellectBonus ||
+    e.brawnPenalty ||
+    e.agilityPenalty
   );
 });
 
-const AUDIT_STATS = { strength: 30, dexterity: 30, constitution: 30, perception: 30, intelligence: 30 };
+const AUDIT_STATS = { brawn: 30, agility: 30, vigour: 30, awareness: 30, intellect: 30 };
 /** Smaller sample for the trait matrix: it is 100× bigger than the stat sweep and only needs a ranking. */
 const TRAIT_N = 400;
 

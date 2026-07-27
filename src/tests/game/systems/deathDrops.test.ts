@@ -10,7 +10,7 @@ function makePawn(): Pawn {
     name: 'Bjorn',
     position: { x: 4, y: 7 },
     isAlive: true,
-    stats: { strength: 10, dexterity: 10, intelligence: 10 },
+    stats: { brawn: 10, agility: 10, intellect: 10 },
     state: { mood: 50 },
     inventory: {
       items: { wood: 3 },

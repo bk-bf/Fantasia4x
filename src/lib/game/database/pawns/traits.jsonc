@@ -54,7 +54,7 @@
         "name"       : "Sturdy",
         "description": "Simply hardy, a body that holds up to hard use.",
         "flavorLine" : "hard work and hard weather leave little mark on them",
-        "effects"    : {"constitutionBonus": 2}
+        "effects"    : {"vigourBonus": 2}
     },
     {
         "id"         : "stocky",
@@ -65,7 +65,7 @@
         "description": "Short, broad and solidly built, powerful, but never quick.",
         "flavorLine" : "they are built low and broad, planted like fence-posts",
         "requires"   : {"minBuild": 0.5},
-        "effects"    : {"constitutionBonus": 2, "dexterityPenalty": 1}
+        "effects"    : {"vigourBonus": 2, "agilityPenalty": 1}
     },
     {
         "id"         : "rangy",
@@ -75,7 +75,7 @@
         "name"       : "Rangy",
         "description": "Lean and light, quick and far-reaching, but easily worn down.",
         "flavorLine" : "all reach and easy motion, they move with a loose, rangy grace",
-        "effects"    : {"dexterityBonus": 2, "constitutionPenalty": 1}
+        "effects"    : {"agilityBonus": 2, "vigourPenalty": 1}
     },
     {
         "id"         : "strong-backed",
@@ -85,7 +85,7 @@
         "name"       : "Brawny",
         "description": "Powerfully built, real force behind everything they lift and swing.",
         "flavorLine" : "they carry loads that would fold a lesser sort",
-        "effects"    : {"strengthBonus": 2}
+        "effects"    : {"brawnBonus": 2}
     },
     {
         "id"         : "keen-eyed",
@@ -95,7 +95,7 @@
         "name"       : "Watchful",
         "description": "Alert and attentive, missing little around them.",
         "flavorLine" : "little escapes their notice across an open field",
-        "effects"    : {"perceptionBonus": 2}
+        "effects"    : {"awarenessBonus": 2}
     },
     {
         "id"         : "bright",
@@ -105,7 +105,7 @@
         "name"       : "Bright",
         "description": "Quick to grasp and reason, though never robust with it.",
         "flavorLine" : "understanding comes to them quickly, almost before the asking",
-        "effects"    : {"intelligenceBonus": 2, "constitutionPenalty": 1}
+        "effects"    : {"intellectBonus": 2, "vigourPenalty": 1}
     },
     // — bodyMod: intrinsic body-structure (real limbmap changes, §1) —
     {
@@ -219,7 +219,7 @@
         "name"       : "Frail",
         "description": "Delicate and easily tired, gives out early under any real strain.",
         "flavorLine" : "there is a worn thinness to them, as of a people long stretched too far",
-        "effects"    : {"constitutionPenalty": 2}
+        "effects"    : {"vigourPenalty": 2}
     },
     {
         "id"         : "dull",
@@ -229,7 +229,7 @@
         "name"       : "Dull",
         "description": "Slow to reason and slower to learn.",
         "flavorLine" : "new ideas reach them slowly, as through deep water",
-        "effects"    : {"intelligencePenalty": 2}
+        "effects"    : {"intellectPenalty": 2}
     },
     {
         "id"         : "clumsy",
@@ -239,7 +239,7 @@
         "name"       : "Clumsy",
         "description": "Awkward and graceless, forever fumbling fine work.",
         "flavorLine" : "willing enough at a task, but forever fumbling it",
-        "effects"    : {"dexterityPenalty": 2}
+        "effects"    : {"agilityPenalty": 2}
     },
     {
         "id"         : "sickly",
@@ -271,7 +271,7 @@
         "description": "Wasted and spare, light and quick, but weak and fragile.",
         "flavorLine" : "hunger-lean and hollow, they carry nothing to spare",
         "requires"   : {"maxBuild": 0.55},
-        "effects"    : {"strengthPenalty": 1, "constitutionPenalty": 1, "dexterityBonus": 1}
+        "effects"    : {"brawnPenalty": 1, "vigourPenalty": 1, "agilityBonus": 1}
     },
     {
         "id"         : "nearsighted",
@@ -281,7 +281,7 @@
         "name"       : "Oblivious",
         "description": "Slow to notice things at any distance, poor at spotting and picking out detail.",
         "flavorLine" : "the far hills are only a smear of colour to them",
-        "effects"    : {"perceptionPenalty": 2}
+        "effects"    : {"awarenessPenalty": 2}
     },
     // — personal afflictions (WOUND granters, §4): the injury IS real, applied at gen (applyTraitWounds),
     //   so its handicap flows through the body model (sight/hearing capacities, part health) —
@@ -378,7 +378,7 @@
         "name"       : "Graceless",
         "description": "Heavy and graceless in motion, slow to dodge and turn.",
         "flavorLine" : "they meet the ground flat and heavy at every step",
-        "effects"    : {"dexterityPenalty": 1}
+        "effects"    : {"agilityPenalty": 1}
     },
     // — "really shitty" commons (§2): a deeper negative pull, kind-clean (two core OR two derived) —
     {
@@ -389,7 +389,7 @@
         "name"       : "Sluggard",
         "description": "Leaden and slow, weak and clumsy at everything they set to.",
         "flavorLine" : "everything about them moves at the pace of cold honey",
-        "effects"    : {"strengthPenalty": 1, "dexterityPenalty": 1}
+        "effects"    : {"brawnPenalty": 1, "agilityPenalty": 1}
     },
     {
         "id"         : "slow-mending",
@@ -532,7 +532,7 @@
         "name"       : "Hot-Headed",
         "description": "Quick to anger, throws itself into a fight, careless of the odds.",
         "mood"       : "trait_hot_headed",
-        "effects"    : {"strengthBonus": 1, "intelligencePenalty": 1}
+        "effects"    : {"brawnBonus": 1, "intellectPenalty": 1}
     },
     {
         "id"         : "greenthumb",
@@ -614,7 +614,7 @@
         // inventory, so mainHand stays free. Apex (stage 3) blocks the weapon hands, see ripping-talons.
         "blocksSlots"  : ["gloves"],
         // dexterityPenalty folds the retired `clawed` condition's DEX ×0.95 (clumsy claw-hands).
-        "effects"      : { "dexterityPenalty": 1, "workSpeed": {"crafts": 0.75, "leatherworking": 0.8, "construction": 0.85} }
+        "effects"      : { "agilityPenalty": 1, "workSpeed": {"crafts": 0.75, "leatherworking": 0.8, "construction": 0.85} }
     },
     // ══ LINEAGE · BEAST (LINEAGES §5) — feral-predator blood: always-on power at the cost of a wild
     //    life. The parent is the identity marker a pawn holds once born into or awakened to the line;
@@ -652,7 +652,7 @@
         "lineage"     : ["beast"],
         "name"        : "Bestial Might",
         "description" : "Raw animal power in the shoulders and back, more than any frame that size should hold.",
-        "effects"     : {"strengthBonus": 2, "constitutionBonus": 1}
+        "effects"     : {"brawnBonus": 2, "vigourBonus": 1}
     },
     {
         "id"          : "feral-adrenaline",
@@ -888,7 +888,7 @@
         "lineage"     : ["arachnid"],
         "name"        : "Spider's Poise",
         "description" : "An unsettling, weightless quickness — they are simply elsewhere when the blow lands.",
-        "effects"     : {"dexterityBonus": 2}
+        "effects"     : {"agilityBonus": 2}
     },
     {
         "id"          : "unsettling-presence",
@@ -911,7 +911,7 @@
         "flavorLine"   : "their skin clicks faintly when they roll their shoulders",
         "naturalArmor" : 14,
         "carryPenalty" : 0.1,
-        "effects"      : {"strengthPenalty": 1}
+        "effects"      : {"brawnPenalty": 1}
     },
     {
         "id"          : "webbed-limbs",
@@ -945,7 +945,7 @@
         "lineage"     : ["amphibian"],
         "name"        : "Cold Vigor",
         "description" : "A slow, deep constitution that the chill of water never seems to touch.",
-        "effects"     : {"constitutionBonus": 2}
+        "effects"     : {"vigourBonus": 2}
     },
     {
         "id"          : "murk-eyes",
@@ -1056,7 +1056,7 @@
         "lineage"     : ["vampiric"],
         "name"        : "Unnatural Vigor",
         "description" : "A strength that was not earned and does not tire the way honest muscle does.",
-        "effects"     : {"strengthBonus": 2}
+        "effects"     : {"brawnBonus": 2}
     },
     // STEALTH §7b — a dusk-shroud: moderate, strongest in the dark the line already loves (night
     // synergy is free — creature vision ranges shrink after dark).
@@ -2111,7 +2111,7 @@
         "kind"       : "stat",
         "name"       : "Strapping",
         "description": "A solid, capable frame, real force in the arm.",
-        "effects"    : {"strengthBonus": 1}
+        "effects"    : {"brawnBonus": 1}
     },
     {
         "id"         : "str-plus-3",
@@ -2120,7 +2120,7 @@
         "kind"       : "stat",
         "name"       : "Powerful",
         "description": "Genuinely powerful, loads and blows that stagger others.",
-        "effects"    : {"strengthBonus": 3}
+        "effects"    : {"brawnBonus": 3}
     },
     {
         "id"         : "str-plus-5",
@@ -2130,7 +2130,7 @@
         "name"       : "Mighty",
         "description": "Strength spoken of in other settlements.",
         "flavorLine" : "they lift as three and strike as five",
-        "effects"    : {"strengthBonus": 5}
+        "effects"    : {"brawnBonus": 5}
     },
     {
         "id"         : "str-minus-1",
@@ -2139,7 +2139,7 @@
         "kind"       : "stat",
         "name"       : "Slight",
         "description": "A light, unforceful frame.",
-        "effects"    : {"strengthPenalty": 1}
+        "effects"    : {"brawnPenalty": 1}
     },
     {
         "id"         : "str-minus-3",
@@ -2148,7 +2148,7 @@
         "kind"       : "stat",
         "name"       : "Feeble",
         "description": "Weak in the arm and back, heavy work defeats them.",
-        "effects"    : {"strengthPenalty": 3}
+        "effects"    : {"brawnPenalty": 3}
     },
     {
         "id"         : "str-minus-5",
@@ -2157,7 +2157,7 @@
         "kind"       : "stat",
         "name"       : "Enfeebled",
         "description": "Barely able to lift their own tools.",
-        "effects"    : {"strengthPenalty": 5}
+        "effects"    : {"brawnPenalty": 5}
     },
     {
         "id"         : "dex-plus-1",
@@ -2166,7 +2166,7 @@
         "kind"       : "stat",
         "name"       : "Nimble",
         "description": "Quick, sure movements.",
-        "effects"    : {"dexterityBonus": 1}
+        "effects"    : {"agilityBonus": 1}
     },
     {
         "id"         : "dex-plus-3",
@@ -2175,7 +2175,7 @@
         "kind"       : "stat",
         "name"       : "Deft",
         "description": "Hands and feet that never miss their mark.",
-        "effects"    : {"dexterityBonus": 3}
+        "effects"    : {"agilityBonus": 3}
     },
     {
         "id"         : "dex-plus-5",
@@ -2185,7 +2185,7 @@
         "name"       : "Quicksilver",
         "description": "Moves like poured quicksilver, almost too fast to follow.",
         "flavorLine" : "they are gone from where the eye puts them",
-        "effects"    : {"dexterityBonus": 5}
+        "effects"    : {"agilityBonus": 5}
     },
     {
         "id"         : "dex-minus-1",
@@ -2194,7 +2194,7 @@
         "kind"       : "stat",
         "name"       : "Awkward",
         "description": "A half-beat behind in everything.",
-        "effects"    : {"dexterityPenalty": 1}
+        "effects"    : {"agilityPenalty": 1}
     },
     {
         "id"         : "dex-minus-3",
@@ -2203,7 +2203,7 @@
         "kind"       : "stat",
         "name"       : "Fumbling",
         "description": "Drops, trips and knocks things from tables.",
-        "effects"    : {"dexterityPenalty": 3}
+        "effects"    : {"agilityPenalty": 3}
     },
     {
         "id"         : "dex-minus-5",
@@ -2212,7 +2212,7 @@
         "kind"       : "stat",
         "name"       : "Palsied",
         "description": "Hands that shake at any fine task.",
-        "effects"    : {"dexterityPenalty": 5}
+        "effects"    : {"agilityPenalty": 5}
     },
     {
         "id"         : "con-plus-1",
@@ -2221,7 +2221,7 @@
         "kind"       : "stat",
         "name"       : "Robust",
         "description": "Healthy and hard to wear down.",
-        "effects"    : {"constitutionBonus": 1}
+        "effects"    : {"vigourBonus": 1}
     },
     {
         "id"         : "con-plus-3",
@@ -2230,7 +2230,7 @@
         "kind"       : "stat",
         "name"       : "Rugged",
         "description": "Endures what breaks others, weather, work and wounds.",
-        "effects"    : {"constitutionBonus": 3}
+        "effects"    : {"vigourBonus": 3}
     },
     {
         "id"         : "con-plus-5",
@@ -2240,7 +2240,7 @@
         "name"       : "Indomitable",
         "description": "A body that simply refuses to fail.",
         "flavorLine" : "sickness and season pass over them like weather over stone",
-        "effects"    : {"constitutionBonus": 5}
+        "effects"    : {"vigourBonus": 5}
     },
     {
         "id"         : "con-minus-1",
@@ -2249,7 +2249,7 @@
         "kind"       : "stat",
         "name"       : "Soft",
         "description": "Tires and sickens a little easier than most.",
-        "effects"    : {"constitutionPenalty": 1}
+        "effects"    : {"vigourPenalty": 1}
     },
     {
         "id"         : "con-minus-3",
@@ -2258,7 +2258,7 @@
         "kind"       : "stat",
         "name"       : "Infirm",
         "description": "Never quite well, hard seasons hit them first and worst.",
-        "effects"    : {"constitutionPenalty": 3}
+        "effects"    : {"vigourPenalty": 3}
     },
     {
         "id"         : "con-minus-5",
@@ -2267,7 +2267,7 @@
         "kind"       : "stat",
         "name"       : "Decrepit",
         "description": "Worn through, every effort costs them dearly.",
-        "effects"    : {"constitutionPenalty": 5}
+        "effects"    : {"vigourPenalty": 5}
     },
     {
         "id"         : "per-plus-1",
@@ -2276,7 +2276,7 @@
         "kind"       : "stat",
         "name"       : "Attentive",
         "description": "Notices what others walk past.",
-        "effects"    : {"perceptionBonus": 1}
+        "effects"    : {"awarenessBonus": 1}
     },
     {
         "id"         : "per-plus-3",
@@ -2285,7 +2285,7 @@
         "kind"       : "stat",
         "name"       : "Perceptive",
         "description": "Very little happens nearby without their knowing.",
-        "effects"    : {"perceptionBonus": 3}
+        "effects"    : {"awarenessBonus": 3}
     },
     {
         "id"         : "per-plus-5",
@@ -2295,7 +2295,7 @@
         "name"       : "Uncanny",
         "description": "Seems to know things before there is any way to know them.",
         "flavorLine" : "they turn to face trouble before it has made a sound",
-        "effects"    : {"perceptionBonus": 5}
+        "effects"    : {"awarenessBonus": 5}
     },
     {
         "id"         : "per-minus-1",
@@ -2304,7 +2304,7 @@
         "kind"       : "stat",
         "name"       : "Inattentive",
         "description": "Misses the small tells.",
-        "effects"    : {"perceptionPenalty": 1}
+        "effects"    : {"awarenessPenalty": 1}
     },
     {
         "id"         : "per-minus-3",
@@ -2313,7 +2313,7 @@
         "kind"       : "stat",
         "name"       : "Absent",
         "description": "Forever elsewhere, the world must shout to reach them.",
-        "effects"    : {"perceptionPenalty": 3}
+        "effects"    : {"awarenessPenalty": 3}
     },
     {
         "id"         : "per-minus-5",
@@ -2322,7 +2322,7 @@
         "kind"       : "stat",
         "name"       : "Heedless",
         "description": "Would walk past a fire in their own house.",
-        "effects"    : {"perceptionPenalty": 5}
+        "effects"    : {"awarenessPenalty": 5}
     },
     {
         "id"         : "int-plus-1",
@@ -2331,7 +2331,7 @@
         "kind"       : "stat",
         "name"       : "Clever",
         "description": "Quick to see how a thing works.",
-        "effects"    : {"intelligenceBonus": 1}
+        "effects"    : {"intellectBonus": 1}
     },
     {
         "id"         : "int-plus-3",
@@ -2340,7 +2340,7 @@
         "kind"       : "stat",
         "name"       : "Brilliant",
         "description": "A mind that leaps where others climb.",
-        "effects"    : {"intelligenceBonus": 3}
+        "effects"    : {"intellectBonus": 3}
     },
     {
         "id"         : "int-plus-5",
@@ -2350,7 +2350,7 @@
         "name"       : "Genius",
         "description": "A once-a-generation mind.",
         "flavorLine" : "problems seem to solve themselves in their presence",
-        "effects"    : {"intelligenceBonus": 5}
+        "effects"    : {"intellectBonus": 5}
     },
     {
         "id"         : "int-minus-1",
@@ -2359,7 +2359,7 @@
         "kind"       : "stat",
         "name"       : "Simple",
         "description": "Takes things slowly and plainly.",
-        "effects"    : {"intelligencePenalty": 1}
+        "effects"    : {"intellectPenalty": 1}
     },
     {
         "id"         : "int-minus-3",
@@ -2368,7 +2368,7 @@
         "kind"       : "stat",
         "name"       : "Dim",
         "description": "New ideas reach them slowly, as through deep water.",
-        "effects"    : {"intelligencePenalty": 3}
+        "effects"    : {"intellectPenalty": 3}
     },
     {
         "id"         : "int-minus-5",
@@ -2377,7 +2377,7 @@
         "kind"       : "stat",
         "name"       : "Witless",
         "description": "Must be shown a thing many times, and then shown again.",
-        "effects"    : {"intelligencePenalty": 5}
+        "effects"    : {"intellectPenalty": 5}
     },
     {
         "id"         : "cha-plus-1",
@@ -2442,7 +2442,7 @@
         "kind"       : "stat",
         "name"       : "Solid",
         "description": "Built for force over finesse.",
-        "effects"    : {"strengthBonus": 1, "dexterityPenalty": 1}
+        "effects"    : {"brawnBonus": 1, "agilityPenalty": 1}
     },
     {
         "id"         : "str-for-dex-3",
@@ -2451,7 +2451,7 @@
         "kind"       : "stat",
         "name"       : "Bruiser",
         "description": "Power over finesse, a wrecking swing on slow feet.",
-        "effects"    : {"strengthBonus": 3, "dexterityPenalty": 3}
+        "effects"    : {"brawnBonus": 3, "agilityPenalty": 3}
     },
     {
         "id"         : "str-for-dex-5",
@@ -2460,7 +2460,7 @@
         "kind"       : "stat",
         "name"       : "Juggernaut",
         "description": "A dramatic, lopsided frame, irresistible force that turns like a cart.",
-        "effects"    : {"strengthBonus": 5, "dexterityPenalty": 5}
+        "effects"    : {"brawnBonus": 5, "agilityPenalty": 5}
     },
     {
         "id"         : "dex-for-str-3",
@@ -2469,7 +2469,7 @@
         "kind"       : "stat",
         "name"       : "Willowy",
         "description": "Finesse over power, quick and precise, nothing behind it.",
-        "effects"    : {"dexterityBonus": 3, "strengthPenalty": 3}
+        "effects"    : {"agilityBonus": 3, "brawnPenalty": 3}
     },
     {
         "id"         : "con-for-int-3",
@@ -2478,7 +2478,7 @@
         "kind"       : "stat",
         "name"       : "Bull-Headed",
         "description": "Body over mind, endures anything, understands less.",
-        "effects"    : {"constitutionBonus": 3, "intelligencePenalty": 3}
+        "effects"    : {"vigourBonus": 3, "intellectPenalty": 3}
     },
     {
         "id"         : "int-for-con-3",
@@ -2487,7 +2487,7 @@
         "kind"       : "stat",
         "name"       : "Bookish",
         "description": "Mind over body, brilliant at the desk, wilting in the field.",
-        "effects"    : {"intelligenceBonus": 3, "constitutionPenalty": 3}
+        "effects"    : {"intellectBonus": 3, "vigourPenalty": 3}
     },
     {
         "id"         : "per-for-cha-3",
@@ -2496,7 +2496,7 @@
         "kind"       : "stat",
         "name"       : "Watchful Recluse",
         "description": "Sees all, charms none.",
-        "effects"    : {"perceptionBonus": 3, "charismaPenalty": 3}
+        "effects"    : {"awarenessBonus": 3, "charismaPenalty": 3}
     },
     {
         "id"         : "cha-for-per-3",
@@ -2505,7 +2505,7 @@
         "kind"       : "stat",
         "name"       : "Glad-Hander",
         "description": "All warmth and welcome, little notice of anything else.",
-        "effects"    : {"charismaBonus": 3, "perceptionPenalty": 3}
+        "effects"    : {"charismaBonus": 3, "awarenessPenalty": 3}
     },
     {
         "id"         : "str-for-int-3",
@@ -2514,7 +2514,7 @@
         "kind"       : "stat",
         "name"       : "Brute",
         "description": "Muscle over sense.",
-        "effects"    : {"strengthBonus": 3, "intelligencePenalty": 3}
+        "effects"    : {"brawnBonus": 3, "intellectPenalty": 3}
     },
     {
         "id"         : "int-for-cha-3",
@@ -2523,7 +2523,7 @@
         "kind"       : "stat",
         "name"       : "Cold Intellect",
         "description": "Brilliant, and chilly with it.",
-        "effects"    : {"intelligenceBonus": 3, "charismaPenalty": 3}
+        "effects"    : {"intellectBonus": 3, "charismaPenalty": 3}
     },
     // ── §2c · Two-stat combined swings (both up, or both down) ──────────────────
     {
@@ -2533,7 +2533,7 @@
         "kind"       : "stat",
         "name"       : "Athletic",
         "description": "Strong AND quick, a natural at any physical task.",
-        "effects"    : {"strengthBonus": 1, "dexterityBonus": 1}
+        "effects"    : {"brawnBonus": 1, "agilityBonus": 1}
     },
     {
         "id"         : "str-dex-plus-3",
@@ -2542,7 +2542,7 @@
         "kind"       : "stat",
         "name"       : "Warrior-Built",
         "description": "The complete fighter's frame, power and speed together.",
-        "effects"    : {"strengthBonus": 3, "dexterityBonus": 3}
+        "effects"    : {"brawnBonus": 3, "agilityBonus": 3}
     },
     {
         "id"         : "str-dex-plus-5",
@@ -2552,7 +2552,7 @@
         "name"       : "Peerless Physique",
         "description": "A body out of the old songs.",
         "flavorLine" : "sculptors would weep; sparring partners already do",
-        "effects"    : {"strengthBonus": 5, "dexterityBonus": 5}
+        "effects"    : {"brawnBonus": 5, "agilityBonus": 5}
     },
     {
         "id"         : "str-dex-minus-1",
@@ -2561,7 +2561,7 @@
         "kind"       : "stat",
         "name"       : "Ungainly",
         "description": "Neither strong nor quick.",
-        "effects"    : {"strengthPenalty": 1, "dexterityPenalty": 1}
+        "effects"    : {"brawnPenalty": 1, "agilityPenalty": 1}
     },
     {
         "id"         : "str-dex-minus-3",
@@ -2570,7 +2570,7 @@
         "kind"       : "stat",
         "name"       : "Feeble & Fumbling",
         "description": "Weak and clumsy both, physical work is a trial.",
-        "effects"    : {"strengthPenalty": 3, "dexterityPenalty": 3}
+        "effects"    : {"brawnPenalty": 3, "agilityPenalty": 3}
     },
     {
         "id"         : "str-dex-minus-5",
@@ -2579,7 +2579,7 @@
         "kind"       : "stat",
         "name"       : "Wretched Frame",
         "description": "A body that betrays them at every turn.",
-        "effects"    : {"strengthPenalty": 5, "dexterityPenalty": 5}
+        "effects"    : {"brawnPenalty": 5, "agilityPenalty": 5}
     },
     {
         "id"         : "con-str-plus-1",
@@ -2588,7 +2588,7 @@
         "kind"       : "stat",
         "name"       : "Hardy Stock",
         "description": "Tough and strong, good working blood.",
-        "effects"    : {"constitutionBonus": 1, "strengthBonus": 1}
+        "effects"    : {"vigourBonus": 1, "brawnBonus": 1}
     },
     {
         "id"         : "con-str-plus-3",
@@ -2597,7 +2597,7 @@
         "kind"       : "stat",
         "name"       : "Ox-Strong",
         "description": "Pulls like an ox and shrugs off the weather doing it.",
-        "effects"    : {"constitutionBonus": 3, "strengthBonus": 3}
+        "effects"    : {"vigourBonus": 3, "brawnBonus": 3}
     },
     {
         "id"         : "con-str-plus-5",
@@ -2607,7 +2607,7 @@
         "name"       : "Titanic",
         "description": "Strength and endurance past the natural.",
         "flavorLine" : "they were carved for burdens no one else will name",
-        "effects"    : {"constitutionBonus": 5, "strengthBonus": 5}
+        "effects"    : {"vigourBonus": 5, "brawnBonus": 5}
     },
     {
         "id"         : "con-str-minus-1",
@@ -2616,7 +2616,7 @@
         "kind"       : "stat",
         "name"       : "Poor Stock",
         "description": "Weak working blood.",
-        "effects"    : {"constitutionPenalty": 1, "strengthPenalty": 1}
+        "effects"    : {"vigourPenalty": 1, "brawnPenalty": 1}
     },
     {
         "id"         : "con-str-minus-3",
@@ -2625,7 +2625,7 @@
         "kind"       : "stat",
         "name"       : "Wasted Frame",
         "description": "Neither strength nor stamina to draw on.",
-        "effects"    : {"constitutionPenalty": 3, "strengthPenalty": 3}
+        "effects"    : {"vigourPenalty": 3, "brawnPenalty": 3}
     },
     {
         "id"         : "con-str-minus-5",
@@ -2634,7 +2634,7 @@
         "kind"       : "stat",
         "name"       : "Ruinous Frame",
         "description": "A body already spent.",
-        "effects"    : {"constitutionPenalty": 5, "strengthPenalty": 5}
+        "effects"    : {"vigourPenalty": 5, "brawnPenalty": 5}
     },
     {
         "id"         : "int-per-plus-1",
@@ -2643,7 +2643,7 @@
         "kind"       : "stat",
         "name"       : "Observant",
         "description": "Sharp of mind and notice both.",
-        "effects"    : {"intelligenceBonus": 1, "perceptionBonus": 1}
+        "effects"    : {"intellectBonus": 1, "awarenessBonus": 1}
     },
     {
         "id"         : "int-per-plus-3",
@@ -2652,7 +2652,7 @@
         "kind"       : "stat",
         "name"       : "Studious",
         "description": "The scholar's pairing, a keen mind fed by keen senses.",
-        "effects"    : {"intelligenceBonus": 3, "perceptionBonus": 3}
+        "effects"    : {"intellectBonus": 3, "awarenessBonus": 3}
     },
     {
         "id"         : "int-per-plus-5",
@@ -2662,7 +2662,7 @@
         "name"       : "All-Seeing",
         "description": "Nothing escapes them, and nothing observed is wasted.",
         "flavorLine" : "they read a room the way others read a page",
-        "effects"    : {"intelligenceBonus": 5, "perceptionBonus": 5}
+        "effects"    : {"intellectBonus": 5, "awarenessBonus": 5}
     },
     {
         "id"         : "int-per-minus-1",
@@ -2671,7 +2671,7 @@
         "kind"       : "stat",
         "name"       : "Distracted",
         "description": "Neither sharp nor watchful.",
-        "effects"    : {"intelligencePenalty": 1, "perceptionPenalty": 1}
+        "effects"    : {"intellectPenalty": 1, "awarenessPenalty": 1}
     },
     {
         "id"         : "int-per-minus-3",
@@ -2680,7 +2680,7 @@
         "kind"       : "stat",
         "name"       : "Muddled",
         "description": "Slow to see and slower to grasp.",
-        "effects"    : {"intelligencePenalty": 3, "perceptionPenalty": 3}
+        "effects"    : {"intellectPenalty": 3, "awarenessPenalty": 3}
     },
     {
         "id"         : "int-per-minus-5",
@@ -2689,7 +2689,7 @@
         "kind"       : "stat",
         "name"       : "Senseless",
         "description": "The world arrives to them late, and poorly explained.",
-        "effects"    : {"intelligencePenalty": 5, "perceptionPenalty": 5}
+        "effects"    : {"intellectPenalty": 5, "awarenessPenalty": 5}
     },
     {
         "id"         : "cha-int-plus-1",
@@ -2698,7 +2698,7 @@
         "kind"       : "stat",
         "name"       : "Personable",
         "description": "Bright and warm together.",
-        "effects"    : {"charismaBonus": 1, "intelligenceBonus": 1}
+        "effects"    : {"charismaBonus": 1, "intellectBonus": 1}
     },
     {
         "id"         : "cha-int-plus-3",
@@ -2707,7 +2707,7 @@
         "kind"       : "stat",
         "name"       : "Silver-Tongued",
         "description": "The diplomat's pairing, wit that lands and words that carry.",
-        "effects"    : {"charismaBonus": 3, "intelligenceBonus": 3}
+        "effects"    : {"charismaBonus": 3, "intellectBonus": 3}
     },
     {
         "id"         : "cha-int-plus-5",
@@ -2717,7 +2717,7 @@
         "name"       : "Statecraft",
         "description": "Born to speak for a people.",
         "flavorLine" : "arguments end when they clear their throat",
-        "effects"    : {"charismaBonus": 5, "intelligenceBonus": 5}
+        "effects"    : {"charismaBonus": 5, "intellectBonus": 5}
     },
     {
         "id"         : "cha-int-minus-1",
@@ -2726,7 +2726,7 @@
         "kind"       : "stat",
         "name"       : "Tactless",
         "description": "Says the wrong true thing.",
-        "effects"    : {"charismaPenalty": 1, "intelligencePenalty": 1}
+        "effects"    : {"charismaPenalty": 1, "intellectPenalty": 1}
     },
     {
         "id"         : "cha-int-minus-3",
@@ -2735,7 +2735,7 @@
         "kind"       : "stat",
         "name"       : "Boorish",
         "description": "Dull company with dull opinions.",
-        "effects"    : {"charismaPenalty": 3, "intelligencePenalty": 3}
+        "effects"    : {"charismaPenalty": 3, "intellectPenalty": 3}
     },
     {
         "id"         : "cha-int-minus-5",
@@ -2744,7 +2744,7 @@
         "kind"       : "stat",
         "name"       : "Insufferable",
         "description": "Wrong about everything, loudly.",
-        "effects"    : {"charismaPenalty": 5, "intelligencePenalty": 5}
+        "effects"    : {"charismaPenalty": 5, "intellectPenalty": 5}
     },
     {
         "id"         : "per-dex-plus-1",
@@ -2753,7 +2753,7 @@
         "kind"       : "stat",
         "name"       : "Sharp",
         "description": "Quick eye, quick hand.",
-        "effects"    : {"perceptionBonus": 1, "dexterityBonus": 1}
+        "effects"    : {"awarenessBonus": 1, "agilityBonus": 1}
     },
     {
         "id"         : "per-dex-plus-3",
@@ -2762,7 +2762,7 @@
         "kind"       : "stat",
         "name"       : "Dead-Shot",
         "description": "The marksman's pairing, sees the mark and puts the hand to it.",
-        "effects"    : {"perceptionBonus": 3, "dexterityBonus": 3}
+        "effects"    : {"awarenessBonus": 3, "agilityBonus": 3}
     },
     {
         "id"         : "per-dex-plus-5",
@@ -2772,7 +2772,7 @@
         "name"       : "Peerless Shot",
         "description": "What they can see, they can hit.",
         "flavorLine" : "they call the knot in the fencepost, then split it",
-        "effects"    : {"perceptionBonus": 5, "dexterityBonus": 5}
+        "effects"    : {"awarenessBonus": 5, "agilityBonus": 5}
     },
     {
         "id"         : "per-dex-minus-1",
@@ -2781,7 +2781,7 @@
         "kind"       : "stat",
         "name"       : "Unsteady",
         "description": "Poor aim, poor notice.",
-        "effects"    : {"perceptionPenalty": 1, "dexterityPenalty": 1}
+        "effects"    : {"awarenessPenalty": 1, "agilityPenalty": 1}
     },
     {
         "id"         : "per-dex-minus-3",
@@ -2790,7 +2790,7 @@
         "kind"       : "stat",
         "name"       : "Shaky",
         "description": "Can't see the mark and couldn't hold on it anyway.",
-        "effects"    : {"perceptionPenalty": 3, "dexterityPenalty": 3}
+        "effects"    : {"awarenessPenalty": 3, "agilityPenalty": 3}
     },
     {
         "id"         : "per-dex-minus-5",
@@ -2799,7 +2799,7 @@
         "kind"       : "stat",
         "name"       : "Hopeless Shot",
         "description": "A danger mostly to bystanders.",
-        "effects"    : {"perceptionPenalty": 5, "dexterityPenalty": 5}
+        "effects"    : {"awarenessPenalty": 5, "agilityPenalty": 5}
     },
     {
         "id"         : "con-int-plus-1",
@@ -2809,7 +2809,7 @@
         "name"       : "Tempered",
         "description": "Sound of body and mind.",
         "mood"       : "trait_tempered",
-        "effects"    : {"constitutionBonus": 1, "intelligenceBonus": 1}
+        "effects"    : {"vigourBonus": 1, "intellectBonus": 1}
     },
     {
         "id"         : "con-int-plus-3",
@@ -2818,7 +2818,7 @@
         "kind"       : "stat",
         "name"       : "Sage-Wrought",
         "description": "The sage's pairing, a deep mind in a body that can carry it far.",
-        "effects"    : {"constitutionBonus": 3, "intelligenceBonus": 3}
+        "effects"    : {"vigourBonus": 3, "intellectBonus": 3}
     },
     {
         "id"         : "con-int-plus-5",
@@ -2828,7 +2828,7 @@
         "name"       : "Enduring Mind",
         "description": "Wisdom that outlasts winters, in a frame that means to see them all.",
         "flavorLine" : "they will outthink you, and then outlive you",
-        "effects"    : {"constitutionBonus": 5, "intelligenceBonus": 5}
+        "effects"    : {"vigourBonus": 5, "intellectBonus": 5}
     },
     {
         "id"         : "con-int-minus-1",
@@ -2837,7 +2837,7 @@
         "kind"       : "stat",
         "name"       : "Frayed",
         "description": "Neither body nor mind quite holds.",
-        "effects"    : {"constitutionPenalty": 1, "intelligencePenalty": 1}
+        "effects"    : {"vigourPenalty": 1, "intellectPenalty": 1}
     },
     {
         "id"         : "con-int-minus-3",
@@ -2846,7 +2846,7 @@
         "kind"       : "stat",
         "name"       : "Worn Through",
         "description": "Body failing, mind following.",
-        "effects"    : {"constitutionPenalty": 3, "intelligencePenalty": 3}
+        "effects"    : {"vigourPenalty": 3, "intellectPenalty": 3}
     },
     {
         "id"         : "con-int-minus-5",
@@ -2855,7 +2855,7 @@
         "kind"       : "stat",
         "name"       : "Broken Vessel",
         "description": "Little left of either strength or sense.",
-        "effects"    : {"constitutionPenalty": 5, "intelligencePenalty": 5}
+        "effects"    : {"vigourPenalty": 5, "intellectPenalty": 5}
     },
     // ── §2d · All-stats grand pulls (+5 all = legendary · +3 mythic · +1 epic; the deep curses live
     //    inline under the Blighted heritage as its sub-capabilities — the dark mirror, §4) ──
@@ -2868,11 +2868,11 @@
         "description": "A quietly gifted bloodline, a touch better at everything.",
         "flavorLine" : "whatever they turn a hand to comes easier than it should",
         "effects"    : {
-            "strengthBonus"    : 1,
-            "dexterityBonus"   : 1,
-            "constitutionBonus": 1,
-            "intelligenceBonus": 1,
-            "perceptionBonus"  : 1,
+            "brawnBonus"    : 1,
+            "agilityBonus"   : 1,
+            "vigourBonus": 1,
+            "intellectBonus": 1,
+            "awarenessBonus"  : 1,
             "charismaBonus"    : 1
         }
     },
@@ -2885,11 +2885,11 @@
         "description": "A heroic lineage, markedly better at everything.",
         "flavorLine" : "the old heroic blood runs true in them",
         "effects"    : {
-            "strengthBonus"    : 3,
-            "dexterityBonus"   : 3,
-            "constitutionBonus": 3,
-            "intelligenceBonus": 3,
-            "perceptionBonus"  : 3,
+            "brawnBonus"    : 3,
+            "agilityBonus"   : 3,
+            "vigourBonus": 3,
+            "intellectBonus": 3,
+            "awarenessBonus"  : 3,
             "charismaBonus"    : 3
         }
     },
@@ -2902,11 +2902,11 @@
         "description": "The once-in-a-world pawn, better at everything, by far.",
         "flavorLine" : "whatever made them spent longer on it than on the rest of us",
         "effects"    : {
-            "strengthBonus"    : 5,
-            "dexterityBonus"   : 5,
-            "constitutionBonus": 5,
-            "intelligenceBonus": 5,
-            "perceptionBonus"  : 5,
+            "brawnBonus"    : 5,
+            "agilityBonus"   : 5,
+            "vigourBonus": 5,
+            "intellectBonus": 5,
+            "awarenessBonus"  : 5,
             "charismaBonus"    : 5
         }
     },
@@ -2918,11 +2918,11 @@
         "name"       : "Ill-Made",
         "description": "A little worse at everything, a body and mind assembled carelessly.",
         "effects"    : {
-            "strengthPenalty"    : 1,
-            "dexterityPenalty"   : 1,
-            "constitutionPenalty": 1,
-            "intelligencePenalty": 1,
-            "perceptionPenalty"  : 1,
+            "brawnPenalty"    : 1,
+            "agilityPenalty"   : 1,
+            "vigourPenalty": 1,
+            "intellectPenalty": 1,
+            "awarenessPenalty"  : 1,
             "charismaPenalty"    : 1
         }
     },
@@ -2959,7 +2959,7 @@
         // Stage 3 apex: the talons are too big to grip anything — no gloves, and no weapon/shield either.
         "blocksSlots": ["gloves", "mainHand", "offHand"],
         // dexterityPenalty folds the retired `taloned` condition's DEX ×0.92 (killing tools, not hands).
-        "effects": { "dexterityPenalty": 1, "workSpeed": {"crafts": 0.7, "leatherworking": 0.75, "construction": 0.8} }
+        "effects": { "agilityPenalty": 1, "workSpeed": {"crafts": 0.7, "leatherworking": 0.75, "construction": 0.8} }
     },
     {
         "id"           : "jagged-teeth",
@@ -4289,7 +4289,7 @@
         "lineage"     : ["stoneblood"],
         "name"        : "Stone Vigor",
         "description" : "A constitution like bedrock, weather and want wear it down slowly, if at all.",
-        "effects"     : {"constitutionBonus": 2}
+        "effects"     : {"vigourBonus": 2}
     },
 
     {
@@ -4347,7 +4347,7 @@
         "lineage"     : ["crustacean"],
         "name"        : "Tidal Vigor",
         "description" : "A deep, armored constitution that shrugs off what would flatten softer folk.",
-        "effects"     : {"constitutionBonus": 2}
+        "effects"     : {"vigourBonus": 2}
     },
 
     {
@@ -4568,7 +4568,7 @@
         "kind"        : "stat",
         "name"       : "Dragon's Might",
         "description": "Draconic strength behind every wielded blow.",
-        "effects": {"strengthBonus": 2}
+        "effects": {"brawnBonus": 2}
     },
     {
         "id"           : "fire-breath",
@@ -4641,7 +4641,7 @@
         "kind"        : "stat",
         "name"       : "Crushing Grip",
         "description": "A grip that splits hafts, stone weight behind every wielded blow.",
-        "effects": {"strengthBonus": 2}
+        "effects": {"brawnBonus": 2}
     },
     {
         "id"           : "tremor-sense",
@@ -4786,7 +4786,7 @@
         // Unstaged (not a stage-3 line), so it blocks gloves only — mainHand/offHand stay free.
         "blocksSlots"  : ["gloves"],
         // dexterityPenalty folds the retired `crusher_clawed` condition's DEX ×0.92 (pincers).
-        "effects"      : { "dexterityPenalty": 1, "workSpeed": {"crafts": 0.75, "leatherworking": 0.8} }
+        "effects"      : { "agilityPenalty": 1, "workSpeed": {"crafts": 0.75, "leatherworking": 0.8} }
     },
     {
         "id"         : "ponderous-plating",
@@ -4850,7 +4850,7 @@
         "kind"       : "stat",
         "name"       : "Quickened",
         "description": "Nerves that fire like the storm itself.",
-        "effects"    : {"dexterityBonus": 3}
+        "effects"    : {"agilityBonus": 3}
     },
     {
         "id"           : "tempest-fed",
@@ -4924,7 +4924,7 @@
         "kind"       : "stat",
         "name"       : "Shadowmeld",
         "description": "Moves as if the dark itself were greasing the way.",
-        "effects"    : {"dexterityBonus": 2}
+        "effects"    : {"agilityBonus": 2}
     },
     {
         "id"         : "giants-grip",
@@ -4978,7 +4978,7 @@
         "name"       : "Long Reach",
         "description": "An arm-span only a true giant owns, three metres of frame behind it.",
         "requires"   : {"minHeightCm": 300},
-        "effects"    : {"strengthBonus": 3}
+        "effects"    : {"brawnBonus": 3}
     },
     {
         "id": "aura-might",
@@ -5052,7 +5052,7 @@
         "kind"       : "stat",
         "name"       : "Keen Intellect",
         "description": "Thought that cuts straight through.",
-        "effects"    : {"intelligenceBonus": 3}
+        "effects"    : {"intellectBonus": 3}
     },
     {
         "id"         : "unnerving-aura",
@@ -5073,7 +5073,7 @@
         "kind"       : "stat",
         "name"       : "Foreknowing",
         "description": "Threats announce themselves to them early.",
-        "effects"    : {"perceptionBonus": 2}
+        "effects"    : {"awarenessBonus": 2}
     },
     {
         "id"         : "accursed-blood-3",
@@ -5084,11 +5084,11 @@
         "name"       : "Blighted Lineage",
         "description": "The curse in full, markedly worse at everything.",
         "effects"    : {
-            "strengthPenalty"    : 3,
-            "dexterityPenalty"   : 3,
-            "constitutionPenalty": 3,
-            "intelligencePenalty": 3,
-            "perceptionPenalty"  : 3,
+            "brawnPenalty"    : 3,
+            "agilityPenalty"   : 3,
+            "vigourPenalty": 3,
+            "intellectPenalty": 3,
+            "awarenessPenalty"  : 3,
             "charismaPenalty"    : 3
         }
     },
@@ -5101,11 +5101,11 @@
         "name"       : "Accursed Blood",
         "description": "The curse at its deepest, ruined at everything, and still walking.",
         "effects"    : {
-            "strengthPenalty"    : 5,
-            "dexterityPenalty"   : 5,
-            "constitutionPenalty": 5,
-            "intelligencePenalty": 5,
-            "perceptionPenalty"  : 5,
+            "brawnPenalty"    : 5,
+            "agilityPenalty"   : 5,
+            "vigourPenalty": 5,
+            "intellectPenalty": 5,
+            "awarenessPenalty"  : 5,
             "charismaPenalty"    : 5
         }
     },

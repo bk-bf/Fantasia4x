@@ -34,12 +34,12 @@ function makePawn(
     id,
     name: id,
     stats: {
-      strength: 10,
-      dexterity: opts.dex ?? 10,
-      intelligence: 10,
-      perception: 10,
+      brawn: 10,
+      agility: opts.dex ?? 10,
+      intellect: 10,
+      awareness: 10,
       charisma: 10,
-      constitution: 10
+      vigour: 10
     },
     physicalTraits: { height: 170, weight: opts.weight ?? 70, size: 'medium' },
     traits,
@@ -67,12 +67,12 @@ function makeWolf(id: string, per = 8): Mob {
     stateSince: 0,
     needs: { hunger: 0, fatigue: 0 },
     stats: {
-      strength: 10,
-      dexterity: 10,
-      intelligence: 4,
-      perception: per,
+      brawn: 10,
+      agility: 10,
+      intellect: 4,
+      awareness: per,
       charisma: 4,
-      constitution: 10
+      vigour: 10
     },
     skills: {},
     isAlive: true

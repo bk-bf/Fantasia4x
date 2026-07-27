@@ -46,11 +46,11 @@
 
   // What a core stat drives — shown when a stat pill is hovered.
   const STAT_DRIVES: Record<string, string> = {
-    strength: 'melee damage, carry weight, and heavy labour (mining, woodcutting, construction)',
-    dexterity: 'accuracy, dodge, attack & aim speed, and fine work (crafting, cooking)',
-    constitution: 'stamina, blood, healing, and cold / heat / poison resistance',
-    perception: 'ranged accuracy & range, foraging, research, and spotting threats',
-    intelligence: 'research, medicine, smithing quality, and alchemy',
+    brawn: 'melee damage, carry weight, and heavy labour (mining, woodcutting, construction)',
+    agility: 'accuracy, dodge, attack & aim speed, and fine work (crafting, cooking)',
+    vigour: 'stamina, blood, healing, and cold / heat / poison resistance',
+    awareness: 'ranged accuracy & range, foraging, research, and spotting threats',
+    intellect: 'research, medicine, smithing quality, and alchemy',
     charisma: 'social standing and speech'
   };
 
@@ -92,12 +92,12 @@
   const rarityColor = (t: Trait) => RARITY_COLOR[t.rarity ?? 'common'] ?? '#9E9E9E';
 
   const STAT_ABBR: Record<string, string> = {
-    strength: 'STR',
-    dexterity: 'DEX',
-    intelligence: 'INT',
-    perception: 'PER',
+    brawn: 'BRN',
+    agility: 'AGI',
+    intellect: 'INT',
+    awareness: 'AWR',
     charisma: 'CHA',
-    constitution: 'CON'
+    vigour: 'VIG'
   };
   const SLOT_LABEL: Record<string, string> = {
     mainHand: 'Main Hand',
@@ -622,7 +622,7 @@
   .tip-name.neg {
     color: var(--neg);
   }
-  /* Muted value appended to a pill-panel header (e.g. "Strength +2", "Crafting +15% spd"). */
+  /* Muted value appended to a pill-panel header (e.g. "Brawn +2", "Crafting +15% spd"). */
   .tip-val {
     color: var(--text-muted);
     font-weight: normal;

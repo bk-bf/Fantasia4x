@@ -5,8 +5,8 @@
 //   "transient": true → re-derived each tick into `pawn.transientConditions` (ids); a flat `modifiers`
 //                  block, no severity/stages; clears itself when its cause goes away.
 //
-// modifiers (all MULTIPLIERS, 1.0 = no change): the base-stat keys — strength / dexterity /
-// constitution / perception / intelligence — scale the RAW attribute EVERYWHERE it's read (combat
+// modifiers (all MULTIPLIERS, 1.0 = no change): the base-stat keys — brawn / agility /
+// vigour / awareness / intellect — scale the RAW attribute EVERYWHERE it's read (combat
 // damage/hit/dodge/resistance, carry, every work formula), so a severe condition genuinely cripples
 // the body. workEfficiency / moveSpeed / hungerRate / fatigueRate / dodge / hitChance stack ON TOP.
 [
@@ -14,22 +14,22 @@
         "id": "encumbered",
         "name": "Encumbered",
         "flags": ["physical", "load"],
-        "description": "Carrying more than the body comfortably bears, worn armour plus pack weight against a strength-scaled limit. Slows movement, wrecks evasion and aim (DEX), and tires the body faster. Overload is allowed, at a price: strength and bags (belt/back) raise the limit, armour eats most of it. Severity = load ÷ capacity (driven directly, not over time).",
+        "description": "Carrying more than the body comfortably bears, worn armour plus pack weight against a brawn-scaled limit. Slows movement, wrecks evasion and aim (DEX), and tires the body faster. Overload is allowed, at a price: brawn and bags (belt/back) raise the limit, armour eats most of it. Severity = load ÷ capacity (driven directly, not over time).",
         "lethalSeverity": 99,
         "stages": [
             {
                 "label"      : "burdened",
                 "minSeverity": 0.0,
                 "color"      : "#C8A064",
-                "modifiers"  : {"dexterity": 0.9, "moveSpeed": 0.95, "fatigueRate": 1.1}
+                "modifiers"  : {"agility": 0.9, "moveSpeed": 0.95, "fatigueRate": 1.1}
             },
             {
                 "label"      : "encumbered",
                 "minSeverity": 0.33,
                 "color"      : "#D08040",
                 "modifiers"  : {
-                    "dexterity"     : 0.7 ,
-                    "strength"      : 0.9 ,
+                    "agility"     : 0.7 ,
+                    "brawn"      : 0.9 ,
                     "moveSpeed"     : 0.85,
                     "workEfficiency": 0.85,
                     "fatigueRate"   : 1.3
@@ -40,8 +40,8 @@
                 "minSeverity": 0.83,
                 "color"      : "#C04030",
                 "modifiers"  : {
-                    "dexterity"     : 0.45,
-                    "strength"      : 0.75,
+                    "agility"     : 0.45,
+                    "brawn"      : 0.75,
                     "moveSpeed"     : 0.6 ,
                     "workEfficiency": 0.6 ,
                     "fatigueRate"   : 1.6
@@ -53,26 +53,26 @@
         "id": "overmatched",
         "name": "Overmatched",
         "flags": ["physical", "weapon"],
-        "description": "Straining to control a weapon heavier than the body can master — a crude orc slab in a mortal grip. Swings go wide, blows land soft, and the effort drains fast; only raw muscle tames such a thing. Severity = how far the wielder's strength falls short of the weapon's (driven directly, not over time).",
+        "description": "Straining to control a weapon heavier than the body can master — a crude orc slab in a mortal grip. Swings go wide, blows land soft, and the effort drains fast; only raw muscle tames such a thing. Severity = how far the wielder's brawn falls short of the weapon's (driven directly, not over time).",
         "lethalSeverity": 99,
         "stages": [
             {
                 "label"      : "unwieldy",
                 "minSeverity": 0.0,
                 "color"      : "#C8A064",
-                "modifiers"  : {"hitChance": 0.85, "strength": 0.95, "fatigueRate": 1.25}
+                "modifiers"  : {"hitChance": 0.85, "brawn": 0.95, "fatigueRate": 1.25}
             },
             {
                 "label"      : "overmatched",
                 "minSeverity": 0.35,
                 "color"      : "#D08040",
-                "modifiers"  : {"hitChance": 0.68, "strength": 0.86, "dodge": 0.9, "fatigueRate": 1.5}
+                "modifiers"  : {"hitChance": 0.68, "brawn": 0.86, "dodge": 0.9, "fatigueRate": 1.5}
             },
             {
                 "label"      : "flailing",
                 "minSeverity": 0.7,
                 "color"      : "#C04030",
-                "modifiers"  : {"hitChance": 0.5, "strength": 0.75, "dodge": 0.8, "fatigueRate": 1.8}
+                "modifiers"  : {"hitChance": 0.5, "brawn": 0.75, "dodge": 0.8, "fatigueRate": 1.8}
             }
         ]
     },
@@ -90,31 +90,31 @@
                 "label"      : "slightly windy",
                 "minSeverity": 0.0,
                 "color"      : "#B0C4DE",
-                "modifiers"  : {"dexterity": 0.98, "moveSpeed": 0.98}
+                "modifiers"  : {"agility": 0.98, "moveSpeed": 0.98}
             },
             {
                 "label"      : "somewhat windy",
                 "minSeverity": 0.2,
                 "color"      : "#A0B8D8",
-                "modifiers"  : {"dexterity": 0.95, "moveSpeed": 0.95, "fatigueRate": 1.05}
+                "modifiers"  : {"agility": 0.95, "moveSpeed": 0.95, "fatigueRate": 1.05}
             },
             {
                 "label"      : "fairly windy",
                 "minSeverity": 0.4,
                 "color"      : "#8FB0D4",
-                "modifiers"  : {"dexterity": 0.9, "moveSpeed": 0.92, "workEfficiency": 0.95, "fatigueRate": 1.1}
+                "modifiers"  : {"agility": 0.9, "moveSpeed": 0.92, "workEfficiency": 0.95, "fatigueRate": 1.1}
             },
             {
                 "label"      : "very windy",
                 "minSeverity": 0.6,
                 "color"      : "#6FA0CC",
-                "modifiers"  : {"dexterity": 0.82, "moveSpeed": 0.85, "workEfficiency": 0.88, "fatigueRate": 1.2}
+                "modifiers"  : {"agility": 0.82, "moveSpeed": 0.85, "workEfficiency": 0.88, "fatigueRate": 1.2}
             },
             {
                 "label"      : "extremely windy",
                 "minSeverity": 0.8,
                 "color"      : "#4F8FC4",
-                "modifiers"  : {"dexterity": 0.72, "moveSpeed": 0.75, "workEfficiency": 0.78, "fatigueRate": 1.3}
+                "modifiers"  : {"agility": 0.72, "moveSpeed": 0.75, "workEfficiency": 0.78, "fatigueRate": 1.3}
             }
         ]
     },
@@ -124,26 +124,26 @@
         "name": "Fractured Bone",
         "mood": "cond_fractured",
         "flags": ["injury", "bone"],
-        "description": "A cracked or shattered bone, graded by how far the break has gone. Severity tracks the worst fracture on the body: a hairline crack nags, but a fully shattered bone (bone HP driven to 0) is agony that collapses strength and dexterity and crawls all work. The struck limb's own function, manipulation for an arm, movement for a leg, is gutted on top via the body model. The limb is NOT lost: bone mends over WEEKS of rest (dressing + a caretaker speed it).",
+        "description": "A cracked or shattered bone, graded by how far the break has gone. Severity tracks the worst fracture on the body: a hairline crack nags, but a fully shattered bone (bone HP driven to 0) is agony that collapses brawn and agility and crawls all work. The struck limb's own function, manipulation for an arm, movement for a leg, is gutted on top via the body model. The limb is NOT lost: bone mends over WEEKS of rest (dressing + a caretaker speed it).",
         "lethalSeverity": 99,
         "stages": [
             {
                 "label"      : "hairline",
                 "minSeverity": 0.0,
                 "color"      : "#D8B048",
-                "modifiers"  : {"strength": 0.9, "dexterity": 0.88, "workEfficiency": 0.9}
+                "modifiers"  : {"brawn": 0.9, "agility": 0.88, "workEfficiency": 0.9}
             },
             {
                 "label"      : "cracked",
                 "minSeverity": 0.4,
                 "color"      : "#C8743A",
-                "modifiers"  : {"strength": 0.75, "dexterity": 0.7, "workEfficiency": 0.8}
+                "modifiers"  : {"brawn": 0.75, "agility": 0.7, "workEfficiency": 0.8}
             },
             {
                 "label"      : "shattered",
                 "minSeverity": 0.75,
                 "color"      : "#C04030",
-                "modifiers"  : {"strength": 0.55, "dexterity": 0.5, "workEfficiency": 0.65}
+                "modifiers"  : {"brawn": 0.55, "agility": 0.5, "workEfficiency": 0.65}
             }
         ]
     },
@@ -153,7 +153,7 @@
         "mood": "cond_dehydration",
         "flags": ["need", "thirst", "driver"],
         "charSpans": [ {"sheet": "font", "id": 247} ],
-        "description": "Lack of water, progressive and fast. Saps strength, dexterity and endurance; lethal within days if no water is drunk.",
+        "description": "Lack of water, progressive and fast. Saps brawn, agility and endurance; lethal within days if no water is drunk.",
         "lethalSeverity": 1.0,
         "driver": {
             "need"        : "thirst",
@@ -169,16 +169,16 @@
                 "label"      : "thirsty",
                 "minSeverity": 0.0,
                 "color"      : "#4FC3F7",
-                "modifiers"  : {"strength": 0.9, "dexterity": 0.95, "workEfficiency": 0.8, "moveSpeed": 0.9}
+                "modifiers"  : {"brawn": 0.9, "agility": 0.95, "workEfficiency": 0.8, "moveSpeed": 0.9}
             },
             {
                 "label"      : "parched",
                 "minSeverity": 0.25,
                 "color"      : "#29B6F6",
                 "modifiers"  : {
-                    "strength"      : 0.75,
-                    "dexterity"     : 0.85,
-                    "constitution"  : 0.85,
+                    "brawn"      : 0.75,
+                    "agility"     : 0.85,
+                    "vigour"  : 0.85,
                     "workEfficiency": 0.65,
                     "fatigueRate"   : 1.3
                 }
@@ -189,9 +189,9 @@
                 "color"          : "#0288D1",
                 "lifeThreatening": true,
                 "modifiers"      : {
-                    "strength"      : 0.5,
-                    "dexterity"     : 0.6,
-                    "constitution"  : 0.6,
+                    "brawn"      : 0.5,
+                    "agility"     : 0.6,
+                    "vigour"  : 0.6,
                     "workEfficiency": 0.4,
                     "fatigueRate"   : 1.5
                 }
@@ -202,9 +202,9 @@
                 "color"          : "#01579B",
                 "lifeThreatening": true,
                 "modifiers"      : {
-                    "strength"      : 0.25,
-                    "dexterity"     : 0.3 ,
-                    "constitution"  : 0.4 ,
+                    "brawn"      : 0.25,
+                    "agility"     : 0.3 ,
+                    "vigour"  : 0.4 ,
                     "workEfficiency": 0.1 ,
                     "fatigueRate"   : 1.8
                 }
@@ -235,22 +235,22 @@
                 "label"      : "hungry",
                 "minSeverity": 0.0,
                 "color"      : "#f57c00",
-                "modifiers"  : {"strength": 0.9, "workEfficiency": 0.8, "moveSpeed": 0.85}
+                "modifiers"  : {"brawn": 0.9, "workEfficiency": 0.8, "moveSpeed": 0.85}
             },
             {
                 "label"      : "minor",
                 "minSeverity": 0.2,
                 "color"      : "#ef6c00",
-                "modifiers"  : {"strength": 0.8, "constitution": 0.9, "workEfficiency": 0.7, "hungerRate": 1.1}
+                "modifiers"  : {"brawn": 0.8, "vigour": 0.9, "workEfficiency": 0.7, "hungerRate": 1.1}
             },
             {
                 "label"      : "moderate",
                 "minSeverity": 0.35,
                 "color"      : "#e65100",
                 "modifiers"  : {
-                    "strength"      : 0.65,
-                    "constitution"  : 0.8 ,
-                    "dexterity"     : 0.9 ,
+                    "brawn"      : 0.65,
+                    "vigour"  : 0.8 ,
+                    "agility"     : 0.9 ,
                     "workEfficiency": 0.6 ,
                     "hungerRate"    : 1.2
                 }
@@ -260,9 +260,9 @@
                 "minSeverity": 0.5,
                 "color"      : "#bf360c",
                 "modifiers"  : {
-                    "strength"      : 0.5,
-                    "constitution"  : 0.7,
-                    "dexterity"     : 0.8,
+                    "brawn"      : 0.5,
+                    "vigour"  : 0.7,
+                    "agility"     : 0.8,
                     "workEfficiency": 0.5,
                     "hungerRate"    : 1.3
                 }
@@ -273,9 +273,9 @@
                 "color"          : "#b71c1c",
                 "lifeThreatening": true,
                 "modifiers"      : {
-                    "strength"      : 0.35,
-                    "constitution"  : 0.55,
-                    "dexterity"     : 0.6 ,
+                    "brawn"      : 0.35,
+                    "vigour"  : 0.55,
+                    "agility"     : 0.6 ,
                     "workEfficiency": 0.35,
                     "hungerRate"    : 1.4
                 }
@@ -286,9 +286,9 @@
                 "color"          : "#c62828",
                 "lifeThreatening": true,
                 "modifiers"      : {
-                    "strength"      : 0.2,
-                    "constitution"  : 0.4,
-                    "dexterity"     : 0.4,
+                    "brawn"      : 0.2,
+                    "vigour"  : 0.4,
+                    "agility"     : 0.4,
                     "workEfficiency": 0.2,
                     "hungerRate"    : 1.5
                 }
@@ -298,7 +298,7 @@
                 "minSeverity"    : 0.95,
                 "color"          : "#ff1744",
                 "lifeThreatening": true,
-                "modifiers"      : {"strength": 0.1, "constitution": 0.2, "dexterity": 0.2, "workEfficiency": 0.0}
+                "modifiers"      : {"brawn": 0.1, "vigour": 0.2, "agility": 0.2, "workEfficiency": 0.0}
             }
         ]
     },
@@ -316,23 +316,23 @@
                 "label"      : "mild",
                 "minSeverity": 0.0,
                 "color"      : "#f9a825",
-                "modifiers"  : {"constitution": 0.9, "workEfficiency": 0.85}
+                "modifiers"  : {"vigour": 0.9, "workEfficiency": 0.85}
             },
             {
                 "label"      : "moderate",
                 "minSeverity": 0.25,
                 "color"      : "#f57f17",
-                "modifiers"  : {"constitution": 0.8, "strength": 0.85, "workEfficiency": 0.7, "hungerRate": 1.1}
+                "modifiers"  : {"vigour": 0.8, "brawn": 0.85, "workEfficiency": 0.7, "hungerRate": 1.1}
             },
             {
                 "label"      : "serious",
                 "minSeverity": 0.5,
                 "color"      : "#e65100",
                 "modifiers"  : {
-                    "constitution"  : 0.6 ,
-                    "strength"      : 0.65,
-                    "dexterity"     : 0.75,
-                    "intelligence"  : 0.8 ,
+                    "vigour"  : 0.6 ,
+                    "brawn"      : 0.65,
+                    "agility"     : 0.75,
+                    "intellect"  : 0.8 ,
                     "workEfficiency": 0.5 ,
                     "moveSpeed"     : 0.8 ,
                     "hungerRate"    : 1.25
@@ -344,10 +344,10 @@
                 "color"          : "#bf360c",
                 "lifeThreatening": true,
                 "modifiers"      : {
-                    "constitution"  : 0.4 ,
-                    "strength"      : 0.45,
-                    "dexterity"     : 0.5 ,
-                    "intelligence"  : 0.6 ,
+                    "vigour"  : 0.4 ,
+                    "brawn"      : 0.45,
+                    "agility"     : 0.5 ,
+                    "intellect"  : 0.6 ,
                     "workEfficiency": 0.25,
                     "moveSpeed"     : 0.5 ,
                     "hungerRate"    : 1.5
@@ -359,9 +359,9 @@
                 "color"          : "#ff1744",
                 "lifeThreatening": true,
                 "modifiers"      : {
-                    "constitution"  : 0.2,
-                    "strength"      : 0.2,
-                    "dexterity"     : 0.2,
+                    "vigour"  : 0.2,
+                    "brawn"      : 0.2,
+                    "agility"     : 0.2,
                     "workEfficiency": 0.0,
                     "moveSpeed"     : 0.0
                 }
@@ -375,7 +375,7 @@
         "mood": "cond_pain_shock",
         "flags": ["combat", "crisis", "driver"],
         "charSpans": [ {"sheet": "font", "id": 19} ],
-        "description": "Severe pain has driven the body into shock, HALF the old unified crisis, the pain half. Strength, dexterity, focus and footing all falter. When it stacks with Hypovolemia (blood-loss shock) the two together are the full crisis of old. Numbed by painkillers/drink.",
+        "description": "Severe pain has driven the body into shock, HALF the old unified crisis, the pain half. Brawn, agility, focus and footing all falter. When it stacks with Hypovolemia (blood-loss shock) the two together are the full crisis of old. Numbed by painkillers/drink.",
         "lethalSeverity": 1.0,
         "floater": true,
         "stages": [
@@ -384,9 +384,9 @@
                 "minSeverity": 0.0,
                 "color"      : "#E0A050",
                 "modifiers"  : {
-                    "strength"      : 0.9  ,
-                    "dexterity"     : 0.9  ,
-                    "perception"    : 0.925,
+                    "brawn"      : 0.9  ,
+                    "agility"     : 0.9  ,
+                    "awareness"    : 0.925,
                     "workEfficiency": 0.9  ,
                     "moveSpeed"     : 0.925
                 }
@@ -396,9 +396,9 @@
                 "minSeverity": 0.3,
                 "color"      : "#D98A3A",
                 "modifiers"  : {
-                    "strength"      : 0.775,
-                    "dexterity"     : 0.75 ,
-                    "perception"    : 0.8  ,
+                    "brawn"      : 0.775,
+                    "agility"     : 0.75 ,
+                    "awareness"    : 0.8  ,
                     "workEfficiency": 0.75 ,
                     "moveSpeed"     : 0.825
                 }
@@ -409,10 +409,10 @@
                 "color"          : "#C46A2A",
                 "lifeThreatening": true,
                 "modifiers"      : {
-                    "strength"      : 0.65 ,
-                    "dexterity"     : 0.625,
-                    "perception"    : 0.675,
-                    "constitution"  : 0.8  ,
+                    "brawn"      : 0.65 ,
+                    "agility"     : 0.625,
+                    "awareness"    : 0.675,
+                    "vigour"  : 0.8  ,
                     "workEfficiency": 0.6  ,
                     "moveSpeed"     : 0.675
                 }
@@ -423,10 +423,10 @@
                 "color"          : "#A0501E",
                 "lifeThreatening": true,
                 "modifiers"      : {
-                    "strength"      : 0.575,
-                    "dexterity"     : 0.55 ,
-                    "perception"    : 0.6  ,
-                    "constitution"  : 0.7  ,
+                    "brawn"      : 0.575,
+                    "agility"     : 0.55 ,
+                    "awareness"    : 0.6  ,
+                    "vigour"  : 0.7  ,
                     "workEfficiency": 0.5  ,
                     "moveSpeed"     : 0.5
                 }
@@ -449,9 +449,9 @@
                 "minSeverity": 0.0,
                 "color"      : "#b0bec5",
                 "modifiers"  : {
-                    "strength"      : 0.9  ,
-                    "dexterity"     : 0.9  ,
-                    "perception"    : 0.925,
+                    "brawn"      : 0.9  ,
+                    "agility"     : 0.9  ,
+                    "awareness"    : 0.925,
                     "workEfficiency": 0.9  ,
                     "moveSpeed"     : 0.925
                 }
@@ -461,9 +461,9 @@
                 "minSeverity": 0.3,
                 "color"      : "#90a4ae",
                 "modifiers"  : {
-                    "strength"      : 0.775,
-                    "dexterity"     : 0.75 ,
-                    "perception"    : 0.8  ,
+                    "brawn"      : 0.775,
+                    "agility"     : 0.75 ,
+                    "awareness"    : 0.8  ,
                     "workEfficiency": 0.75 ,
                     "moveSpeed"     : 0.825
                 }
@@ -474,10 +474,10 @@
                 "color"          : "#607d8b",
                 "lifeThreatening": true,
                 "modifiers"      : {
-                    "strength"      : 0.65 ,
-                    "dexterity"     : 0.625,
-                    "perception"    : 0.675,
-                    "constitution"  : 0.8  ,
+                    "brawn"      : 0.65 ,
+                    "agility"     : 0.625,
+                    "awareness"    : 0.675,
+                    "vigour"  : 0.8  ,
                     "workEfficiency": 0.6  ,
                     "moveSpeed"     : 0.675
                 }
@@ -488,10 +488,10 @@
                 "color"          : "#455a64",
                 "lifeThreatening": true,
                 "modifiers"      : {
-                    "strength"      : 0.575,
-                    "dexterity"     : 0.55 ,
-                    "perception"    : 0.6  ,
-                    "constitution"  : 0.7  ,
+                    "brawn"      : 0.575,
+                    "agility"     : 0.55 ,
+                    "awareness"    : 0.6  ,
+                    "vigour"  : 0.7  ,
                     "workEfficiency": 0.5  ,
                     "moveSpeed"     : 0.5
                 }
@@ -504,7 +504,7 @@
         "mood": "cond_hypothermia",
         "flags": ["environmental", "cold", "driver"],
         "charSpans": [ {"sheet": "font", "id": 42} ],
-        "description": "Prolonged exposure to cold below the pawn's comfort range. Numb fingers wreck dexterity and the stiffened body loses its strength; lethal if the pawn never warms up. Cold resistance (CON) slows onset; shelter, fire, and warmer seasons drive it back.",
+        "description": "Prolonged exposure to cold below the pawn's comfort range. Numb fingers wreck agility and the stiffened body loses its brawn; lethal if the pawn never warms up. Cold resistance (CON) slows onset; shelter, fire, and warmer seasons drive it back.",
         "lethalSeverity": 1.0,
         "floater": true,
         "driver": {
@@ -520,15 +520,15 @@
                 "label"      : "shivering",
                 "minSeverity": 0.0,
                 "color"      : "#81D4FA",
-                "modifiers"  : {"dexterity": 0.85, "strength": 0.9, "workEfficiency": 0.85, "moveSpeed": 0.9}
+                "modifiers"  : {"agility": 0.85, "brawn": 0.9, "workEfficiency": 0.85, "moveSpeed": 0.9}
             },
             {
                 "label"      : "chilled",
                 "minSeverity": 0.25,
                 "color"      : "#4FC3F7",
                 "modifiers"  : {
-                    "dexterity"     : 0.6,
-                    "strength"      : 0.8,
+                    "agility"     : 0.6,
+                    "brawn"      : 0.8,
                     "workEfficiency": 0.7,
                     "moveSpeed"     : 0.8,
                     "fatigueRate"   : 1.3
@@ -540,9 +540,9 @@
                 "color"          : "#29B6F6",
                 "lifeThreatening": true,
                 "modifiers"      : {
-                    "dexterity"     : 0.35,
-                    "strength"      : 0.6 ,
-                    "constitution"  : 0.8 ,
+                    "agility"     : 0.35,
+                    "brawn"      : 0.6 ,
+                    "vigour"  : 0.8 ,
                     "workEfficiency": 0.45,
                     "moveSpeed"     : 0.55,
                     "fatigueRate"   : 1.5
@@ -554,9 +554,9 @@
                 "color"          : "#0277BD",
                 "lifeThreatening": true,
                 "modifiers"      : {
-                    "dexterity"     : 0.2,
-                    "strength"      : 0.4,
-                    "constitution"  : 0.6,
+                    "agility"     : 0.2,
+                    "brawn"      : 0.4,
+                    "vigour"  : 0.6,
                     "workEfficiency": 0.2,
                     "moveSpeed"     : 0.3,
                     "fatigueRate"   : 1.7
@@ -570,7 +570,7 @@
         "mood": "cond_heat_stroke",
         "flags": ["environmental", "heat", "driver"],
         "charSpans": [ {"sheet": "font", "id": 15} ],
-        "description": "Prolonged exposure to heat above the pawn's comfort range. The body wilts, strength, dexterity and endurance drain away; lethal if the pawn never cools down. Fire resistance (CON) slows onset; shade, water, and cooler seasons drive it back.",
+        "description": "Prolonged exposure to heat above the pawn's comfort range. The body wilts, brawn, agility and endurance drain away; lethal if the pawn never cools down. Fire resistance (CON) slows onset; shade, water, and cooler seasons drive it back.",
         "lethalSeverity": 1.0,
         "floater": true,
         "driver": {
@@ -586,16 +586,16 @@
                 "label"      : "overheating",
                 "minSeverity": 0.0,
                 "color"      : "#FFCC80",
-                "modifiers"  : {"strength": 0.9, "workEfficiency": 0.85}
+                "modifiers"  : {"brawn": 0.9, "workEfficiency": 0.85}
             },
             {
                 "label"      : "heat exhaustion",
                 "minSeverity": 0.3,
                 "color"      : "#FFA726",
                 "modifiers"  : {
-                    "strength"      : 0.7 ,
-                    "dexterity"     : 0.85,
-                    "constitution"  : 0.85,
+                    "brawn"      : 0.7 ,
+                    "agility"     : 0.85,
+                    "vigour"  : 0.85,
                     "workEfficiency": 0.65,
                     "moveSpeed"     : 0.8 ,
                     "hungerRate"    : 1.2
@@ -607,9 +607,9 @@
                 "color"          : "#FB8C00",
                 "lifeThreatening": true,
                 "modifiers"      : {
-                    "strength"      : 0.45,
-                    "dexterity"     : 0.55,
-                    "constitution"  : 0.6 ,
+                    "brawn"      : 0.45,
+                    "agility"     : 0.55,
+                    "vigour"  : 0.6 ,
                     "workEfficiency": 0.4 ,
                     "moveSpeed"     : 0.55,
                     "hungerRate"    : 1.3
@@ -621,9 +621,9 @@
                 "color"          : "#E65100",
                 "lifeThreatening": true,
                 "modifiers"      : {
-                    "strength"      : 0.25,
-                    "dexterity"     : 0.3 ,
-                    "constitution"  : 0.4 ,
+                    "brawn"      : 0.25,
+                    "agility"     : 0.3 ,
+                    "vigour"  : 0.4 ,
                     "workEfficiency": 0.15,
                     "moveSpeed"     : 0.3
                 }
@@ -667,7 +667,7 @@
         "color": "#ff5722",
         "floater": true,
         "charSpans": [ {"sheet": "font", "id": 15} ],
-        "modifiers": {"dexterity": 0.2, "strength": 0.5, "moveSpeed": 0.0, "workEfficiency": 0.0}
+        "modifiers": {"agility": 0.2, "brawn": 0.5, "moveSpeed": 0.0, "workEfficiency": 0.0}
     },
     {
         "id": "collapse",
@@ -689,7 +689,7 @@
         "fsmState": "Collapsed",
         // Being down is enforced by the FSM (dropped job, released draft, action gate) — so the only
         // modifier that carries weight is zeroing evasion, so a downed body is trivially hit. The old
-        // dexterity/strength/moveSpeed/workEfficiency cuts were dead weight the FSM already covers.
+        // agility/brawn/moveSpeed/workEfficiency cuts were dead weight the FSM already covers.
         "modifiers": {"dodge": 0.0}
     },
     {
@@ -731,7 +731,7 @@
         "name": "Exhausted",
         "flags": ["need", "fatigue"],
         "transient": true,
-        "description": "Severe fatigue, heavy-limbed and slow-witted. Strength, dexterity and perception sag along with work and movement.",
+        "description": "Severe fatigue, heavy-limbed and slow-witted. Brawn, agility and awareness sag along with work and movement.",
         "color": "#ff7043",
         "floater": true,
         "charSpans": [ {"sheet": "items", "id": 25} ],
@@ -739,19 +739,19 @@
         // 60) long before this, so the debuff only bites when something keeps it awake to the cap. Pawns
         // and mobs both read this number; the "not while sleeping" suppression lives in code.
         "needOnset": {"need": "fatigue", "atOrAbove": 100},
-        "modifiers": {"strength": 0.7, "dexterity": 0.7, "perception": 0.8, "workEfficiency": 0.5, "moveSpeed": 0.5}
+        "modifiers": {"brawn": 0.7, "agility": 0.7, "awareness": 0.8, "workEfficiency": 0.5, "moveSpeed": 0.5}
     },
     {
         "id": "winded",
         "name": "Winded",
         "flags": ["combat", "stamina"],
         "transient": true,
-        "description": "Out of breath, stamina spent. Strength and dexterity crater, so it can barely swing, barely dodge and barely move until stamina recovers to full.",
+        "description": "Out of breath, stamina spent. Brawn and agility crater, so it can barely swing, barely dodge and barely move until stamina recovers to full.",
         "color": "#9575cd",
         "floater": true,
         "charSpans": [ {"sheet": "font", "id": 126} ],
         "priority": 20,
-        "modifiers": {"strength": 0.5, "dexterity": 0.4, "moveSpeed": 0.3}
+        "modifiers": {"brawn": 0.5, "agility": 0.4, "moveSpeed": 0.3}
     },
     {
         "id": "wet",
@@ -778,7 +778,7 @@
                 "severity": 0.04
             }
         ],
-        "modifiers": {"dexterity": 0.95, "moveSpeed": 0.9, "workEfficiency": 0.95}
+        "modifiers": {"agility": 0.95, "moveSpeed": 0.9, "workEfficiency": 0.95}
     },
     {
         "id": "sheltered",
@@ -828,22 +828,22 @@
                 "label"      : "tipsy",
                 "minSeverity": 0.0,
                 "color"      : "#E8C35A",
-                "modifiers"  : {"dexterity": 0.95, "perception": 0.95, "pain": 0.85}
+                "modifiers"  : {"agility": 0.95, "awareness": 0.95, "pain": 0.85}
             },
             {
                 "label"      : "merry",
                 "minSeverity": 0.3,
                 "color"      : "#D8A52A",
-                "modifiers"  : {"dexterity": 0.88, "perception": 0.9, "workEfficiency": 0.92, "pain": 0.7}
+                "modifiers"  : {"agility": 0.88, "awareness": 0.9, "workEfficiency": 0.92, "pain": 0.7}
             },
             {
                 "label"      : "drunk",
                 "minSeverity": 0.6,
                 "color"      : "#C2871A",
                 "modifiers"  : {
-                    "strength"      : 0.9 ,
-                    "dexterity"     : 0.7 ,
-                    "perception"    : 0.7 ,
+                    "brawn"      : 0.9 ,
+                    "agility"     : 0.7 ,
+                    "awareness"    : 0.7 ,
                     "workEfficiency": 0.75,
                     "moveSpeed"     : 0.85,
                     "consciousness" : 0.8 ,
@@ -855,9 +855,9 @@
                 "minSeverity": 0.85,
                 "color"      : "#9C6A12",
                 "modifiers"  : {
-                    "strength"      : 0.7,
-                    "dexterity"     : 0.4,
-                    "perception"    : 0.4,
+                    "brawn"      : 0.7,
+                    "agility"     : 0.4,
+                    "awareness"    : 0.4,
                     "workEfficiency": 0.4,
                     "moveSpeed"     : 0.5,
                     "consciousness" : 0.4,
@@ -908,21 +908,21 @@
         "color": "#8FAE52",
         "floater": true,
         "charSpans": [ {"sheet": "font", "id": 247} ],
-        "modifiers": {"dexterity": 0.85, "workEfficiency": 0.6, "moveSpeed": 0.85, "hungerRate": 0.7}
+        "modifiers": {"agility": 0.85, "workEfficiency": 0.6, "moveSpeed": 0.85, "hungerRate": 0.7}
     },
     {
         "id": "dysentery",
         "name": "Dysentery",
         "flags": ["food", "disease"],
         "transient": true,
-        "description": "A gut sickness from spoiled or tainted food. Fever, cramps and fluid loss leave the body wrung out and weak, strength, dexterity and endurance all sag, the body parches faster, and it lingers for days.",
+        "description": "A gut sickness from spoiled or tainted food. Fever, cramps and fluid loss leave the body wrung out and weak, brawn, agility and endurance all sag, the body parches faster, and it lingers for days.",
         "color": "#6E8B3D",
         "floater": true,
         "charSpans": [ {"sheet": "font", "id": 247} ],
         "modifiers": {
-            "strength"      : 0.7,
-            "dexterity"     : 0.7,
-            "constitution"  : 0.8,
+            "brawn"      : 0.7,
+            "agility"     : 0.7,
+            "vigour"  : 0.8,
             "workEfficiency": 0.4,
             "moveSpeed"     : 0.7,
             "thirstRate"    : 1.6,
@@ -978,7 +978,7 @@
         "description": "A full, balanced meal of meat and garden veg. The body works the better for it.",
         "color"      : "#8BC34A",
         "charSpans"  : [ {"sheet": "font", "id": 2} ],
-        "modifiers"  : {"constitution": 1.05, "workEfficiency": 1.06}
+        "modifiers"  : {"vigour": 1.05, "workEfficiency": 1.06}
     },
     {
         "id"         : "fortified",
@@ -988,7 +988,7 @@
         "description": "A rich, hearty feast. The body is steeled, stronger, hardier, and slow to tire.",
         "color"      : "#D8A52A",
         "charSpans"  : [ {"sheet": "font", "id": 2} ],
-        "modifiers"  : {"strength": 1.05, "constitution": 1.06, "fatigueRate": 0.88}
+        "modifiers"  : {"brawn": 1.05, "vigour": 1.06, "fatigueRate": 0.88}
     },
     {
         "id"         : "refreshed",
@@ -999,7 +999,7 @@
         "description": "Sweet, cool fruit, a welcome lift. Senses sharpen and the step lightens.",
         "color"      : "#AED581",
         "charSpans"  : [ {"sheet": "font", "id": 1} ],
-        "modifiers"  : {"perception": 1.05, "dexterity": 1.03}
+        "modifiers"  : {"awareness": 1.05, "agility": 1.03}
     },
     {
         "id"         : "soothed",
@@ -1081,7 +1081,7 @@
         "name": "Envenomed",
         "flags": ["combat", "poison"],
         "transient": true,
-        "description": "Venom courses through the blood, nauseous, weak and shaking. Strength, dexterity and endurance all fail until it passes. Onset chance is reduced by poison resistance (CON × blood filtration).",
+        "description": "Venom courses through the blood, nauseous, weak and shaking. Brawn, agility and endurance all fail until it passes. Onset chance is reduced by poison resistance (CON × blood filtration).",
         "color": "#7CB342",
         "floater": true,
         "charSpans": [ {"sheet": "font", "id": 21} ],
@@ -1089,9 +1089,9 @@
         // to also turn nauseous (a NEW secondary the graph enables; nausea decays on its own).
         "triggers": [ {"to": "nausea", "chance": 0.015, "durationHours": 1.5} ],
         "modifiers": {
-            "strength"      : 0.6,
-            "dexterity"     : 0.6,
-            "constitution"  : 0.7,
+            "brawn"      : 0.6,
+            "agility"     : 0.6,
+            "vigour"  : 0.7,
             "workEfficiency": 0.7,
             "moveSpeed"     : 0.8,
             "fatigueRate"   : 1.3
@@ -1106,11 +1106,11 @@
         "name": "Disoriented",
         "flags": ["combat", "mental"],
         "transient": true,
-        "description": "Reeling from a piercing screech, senses scrambled, slow to act and easy to land a blow on. Perception and dexterity scatter. Onset chance is reduced by mental resistance (INT).",
+        "description": "Reeling from a piercing screech, senses scrambled, slow to act and easy to land a blow on. Awareness and agility scatter. Onset chance is reduced by mental resistance (INT).",
         "color": "#AB47BC",
         "floater": true,
         "charSpans": [ {"sheet": "font", "id": 19} ],
-        "modifiers": {"perception": 0.4, "dexterity": 0.6, "intelligence": 0.7, "workEfficiency": 0.7, "moveSpeed": 0.9}
+        "modifiers": {"awareness": 0.4, "agility": 0.6, "intellect": 0.7, "workEfficiency": 0.7, "moveSpeed": 0.9}
     },
     {
         "id": "ensnared",
@@ -1122,7 +1122,7 @@
         "color": "#8D6E63",
         "floater": true,
         "charSpans": [ {"sheet": "font", "id": 15} ],
-        "modifiers": {"dexterity": 0.4, "moveSpeed": 0.0}
+        "modifiers": {"agility": 0.4, "moveSpeed": 0.0}
     },
     // ── Weapon-signature on-hit effects (crafted-weapon `onHitEffect`) ────────
     // Same timed-transient machinery as the creature effects above, but inflicted by HELD weapons: a
@@ -1139,7 +1139,7 @@
         "color": "#E08840",
         "floater": true,
         "charSpans": [ {"sheet": "font", "id": 15} ],
-        "modifiers": {"dexterity": 0.85, "moveSpeed": 0.9}
+        "modifiers": {"agility": 0.85, "moveSpeed": 0.9}
     },
     {
         "id": "concussed",
@@ -1147,11 +1147,11 @@
         "name": "Concussed",
         "flags": ["combat", "mental"],
         "transient": true,
-        "description": "Skull rung by a crushing hammer blow, vision swims and the head won't clear. Perception, dexterity and wakefulness all crater; a devastating follow-up is easy to land.",
+        "description": "Skull rung by a crushing hammer blow, vision swims and the head won't clear. Awareness, agility and wakefulness all crater; a devastating follow-up is easy to land.",
         "color": "#9C6AC0",
         "floater": true,
         "charSpans": [ {"sheet": "font", "id": 19} ],
-        "modifiers": {"perception": 0.5, "dexterity": 0.6, "consciousness": 0.7, "workEfficiency": 0.5}
+        "modifiers": {"awareness": 0.5, "agility": 0.6, "consciousness": 0.7, "workEfficiency": 0.5}
     },
     {
         "id": "hamstrung",
@@ -1163,7 +1163,7 @@
         "color": "#B5502E",
         "floater": true,
         "charSpans": [ {"sheet": "font", "id": 3} ],
-        "modifiers": {"moveSpeed": 0.4, "dexterity": 0.75}
+        "modifiers": {"moveSpeed": 0.4, "agility": 0.75}
     },
     // ALCHEMY-BUTCHERY-EXPANSION §C — a DREAD coating's on-hit mark: the nerve breaks, the arm loses
     // its conviction and the feet want to be elsewhere. Onset cut by mental resistance (INT).
@@ -1177,7 +1177,7 @@
         "color": "#6A5ACD",
         "floater": true,
         "charSpans": [ {"sheet": "font", "id": 19} ],
-        "modifiers": {"strength": 0.8, "hitChance": 0.75, "moveSpeed": 0.85, "workEfficiency": 0.85}
+        "modifiers": {"brawn": 0.8, "hitChance": 0.75, "moveSpeed": 0.85, "workEfficiency": 0.85}
     },
     // ── Racial trait conditions (ADR-023 · ADR-028) ──────────────────────────
     // The legible pill for a rare/epic/legendary body trait — pushed by syncTransientConditions for
@@ -1233,7 +1233,7 @@
         "description": "The hunger has the reins now — whatever is nearest and alive will do.",
         "color"      : "#8B1A1A",
         "charSpans"  : [ {"sheet": "items", "id": 84} ],
-        "modifiers"  : {"strength": 1.2, "intelligence": 0.7}
+        "modifiers"  : {"brawn": 1.2, "intellect": 0.7}
     },
     {
         "id"         : "berserk",
@@ -1245,7 +1245,7 @@
         "color"      : "#C0392B",
         "charSpans"  : [ {"sheet": "items", "id": 211} ],
         "priority"   : 60,
-        "modifiers"  : {"strength": 1.5, "intelligence": 0.9, "consciousness": 1.5},
+        "modifiers"  : {"brawn": 1.5, "intellect": 0.9, "consciousness": 1.5},
         "selfTrigger": {"meter": "pain", "atOrAbove": 40, "durationHours": 0.25},
         "onExpiry"   : {"to": "berserk_spent", "durationHours": 0.5}
     },
@@ -1259,7 +1259,7 @@
         "color"      : "#E67E22",
         "charSpans"  : [ {"sheet": "items", "id": 211} ],
         "priority"   : 55,
-        "modifiers"  : {"strength": 1.2, "consciousness": 1.2},
+        "modifiers"  : {"brawn": 1.2, "consciousness": 1.2},
         "selfTrigger": {"meter": "pain", "atOrAbove": 40, "durationHours": 0.25},
         "onExpiry"   : {"to": "adrenal_spent", "durationHours": 0.5}
     },
@@ -1272,7 +1272,7 @@
         "description": "Wrung out after the fury — muscles leaden, the body paying back what the rage borrowed.",
         "color"      : "#7B241C",
         "charSpans"  : [ {"sheet": "items", "id": 211} ],
-        "modifiers"  : {"strength": 0.75}
+        "modifiers"  : {"brawn": 0.75}
     },
     {
         "id"         : "adrenal_spent",
@@ -1283,7 +1283,7 @@
         "description": "The surge fades to a shaky, sapped weariness as the body settles its debt.",
         "color"      : "#A04000",
         "charSpans"  : [ {"sheet": "items", "id": 211} ],
-        "modifiers"  : {"strength": 0.9}
+        "modifiers"  : {"brawn": 0.9}
     },
     {
         "id"         : "stone_boned",
@@ -1319,7 +1319,7 @@
         "flags"       : ["racial", "environmental"],
         // TRAIT-SYSTEM-V2 §5: environment-gated — active only while unsheltered in daylight.
         "activateWhen": {"unsheltered": true, "meter": "ambientLight", "atOrAbove": 0.7},
-        "modifiers"   : {"strength": 0.85, "dexterity": 0.85, "perception": 0.85}
+        "modifiers"   : {"brawn": 0.85, "agility": 0.85, "awareness": 0.85}
     },
     {
         "id": "burning",
@@ -1330,7 +1330,7 @@
         "color": "#FF5722",
         "floater": true,
         "charSpans": [ {"sheet": "font", "id": 15} ],
-        "modifiers": {"dexterity": 0.9, "moveSpeed": 0.9, "workEfficiency": 0.85}
+        "modifiers": {"agility": 0.9, "moveSpeed": 0.9, "workEfficiency": 0.85}
     },
     // ── TRAIT-LIBRARY-EXPANSION §4.0: the shared blood-feast buff ─────────────
     // Stamped on ANY feeder (pawn or mob) whose blood-draining bite lands its drain (Combat
@@ -1345,7 +1345,7 @@
         "color": "#C62828",
         "floater": true,
         "charSpans": [ {"sheet": "items", "id": 84} ],
-        "modifiers": {"strength": 1.2, "dexterity": 1.15, "constitution": 1.15, "moveSpeed": 1.1, "workEfficiency": 1.1}
+        "modifiers": {"brawn": 1.2, "agility": 1.15, "vigour": 1.15, "moveSpeed": 1.1, "workEfficiency": 1.1}
     },
     // ── TRAIT-LIBRARY-EXPANSION §3b/§3c: staged natural-gear conditions ──────
     // One pill per stage of each weapon/armor line (the trait's selfCondition). Armor carries
@@ -1431,7 +1431,7 @@
         "charSpans"  : [ {"sheet": "creatures", "id": 251} ],
         "priority"   : 70,
         "activateWhen": {"fullMoon": true, "meter": "ambientLight", "atOrBelow": 0.35},
-        "modifiers"  : {"strength": 1.4, "constitution": 1.2, "moveSpeed": 1.2, "intelligence": 0.8},
+        "modifiers"  : {"brawn": 1.4, "vigour": 1.2, "moveSpeed": 1.2, "intellect": 0.8},
         "grants"     : {"nightVision": 1.0}
     },
     {
@@ -1447,7 +1447,7 @@
         "charSpans"  : [ {"sheet": "items", "id": 211} ],
         "priority"   : 40,
         "activateWhen": {"hasCondition": "werewolf"},
-        "modifiers"  : {"strength": 1.15, "workEfficiency": 0.6}
+        "modifiers"  : {"brawn": 1.15, "workEfficiency": 0.6}
     },
     // ── LINEAGES §5 — lineage-trait conditions (the granted object carries the numbers, §0) ──────────
     {
@@ -1484,7 +1484,7 @@
         "color"      : "#c05a3a",
         "charSpans"  : [ {"sheet": "items", "id": 211} ],
         "priority"   : 30,
-        "modifiers"  : {"strength": 1.1}
+        "modifiers"  : {"brawn": 1.1}
     },
     {
         // Torpid Blood (amphibian) — ACTIVE while cold exposure builds: the cold-blooded body slows,
@@ -1497,7 +1497,7 @@
         "color"      : "#6a9ac0",
         "charSpans"  : [ {"sheet": "font", "id": 247} ],
         "activateWhen": {"need": "coldExposure", "atOrAbove": 30},
-        "modifiers"  : {"dexterity": 0.85, "moveSpeed": 0.85, "workEfficiency": 0.9}
+        "modifiers"  : {"agility": 0.85, "moveSpeed": 0.85, "workEfficiency": 0.9}
     },
     {
         // Parched Skin — ACTIVE while the amphibian's skin has gone dry (low wetness): the body wilts
@@ -1506,11 +1506,11 @@
         "name"       : "Parched",
         "flags"      : ["cultural", "environmental"],
         "transient"  : true,
-        "description": "Amphibian skin gone papery and tight — strength and quickness drain until it is soaked again.",
+        "description": "Amphibian skin gone papery and tight — brawn and quickness drain until it is soaked again.",
         "color"      : "#c8a030",
         "charSpans"  : [ {"sheet": "font", "id": 247} ],
         "activateWhen": {"need": "wetness", "atOrBelow": 10},
-        "modifiers"  : {"strength": 0.9, "dexterity": 0.9}
+        "modifiers"  : {"brawn": 0.9, "agility": 0.9}
     },
     // ── Passive affinity pills (resistances live on the TRAIT; the pill is the readout) ──
     {
@@ -1603,7 +1603,7 @@
         "floater"     : true,
         "charSpans"   : [ {"sheet": "font", "id": 247} ],
         "activateWhen": {"need": "coldExposure", "atOrAbove": 60},
-        "modifiers"   : {"dexterity": 1.15, "moveSpeed": 1.1}
+        "modifiers"   : {"agility": 1.15, "moveSpeed": 1.1}
     },
     {
         "id"          : "frostbrittle",
@@ -1628,7 +1628,7 @@
         "floater"     : true,
         "charSpans"   : [ {"sheet": "font", "id": 15} ],
         "activateWhen": {"need": "heatExposure", "atOrAbove": 40},
-        "modifiers"   : {"strength": 1.1, "workEfficiency": 1.05}
+        "modifiers"   : {"brawn": 1.1, "workEfficiency": 1.05}
     },
     {
         "id"          : "heat_faint",
@@ -1677,7 +1677,7 @@
         "floater"     : true,
         "charSpans"   : [ {"sheet": "font", "id": 21} ],
         "activateWhen": {"hasCondition": "windchilled"},
-        "modifiers"   : {"dexterity": 1.1, "moveSpeed": 1.1}
+        "modifiers"   : {"agility": 1.1, "moveSpeed": 1.1}
     },
     {
         "id"          : "wind_cowed",
@@ -1726,7 +1726,7 @@
         "floater"     : true,
         "charSpans"   : [ {"sheet": "items", "id": 211} ],
         "activateWhen": {"meter": "pain", "atOrAbove": 40},
-        "modifiers"   : {"strength": 1.2, "hitChance": 1.1}
+        "modifiers"   : {"brawn": 1.2, "hitChance": 1.1}
     },
     {
         "id"          : "faint_hearted",
@@ -1750,7 +1750,7 @@
         "floater"     : true,
         "charSpans"   : [ {"sheet": "items", "id": 84} ],
         "activateWhen": {"meter": "bloodFrac", "atOrBelow": 0.6},
-        "modifiers"   : {"dexterity": 1.2, "strength": 1.1}
+        "modifiers"   : {"agility": 1.2, "brawn": 1.1}
     },
     {
         "id"          : "anemic_shock",
@@ -1775,7 +1775,7 @@
         "floater"     : true,
         "charSpans"   : [ {"sheet": "font", "id": 15} ],
         "activateWhen": {"hasCondition": "infection"},
-        "modifiers"   : {"constitution": 1.15}
+        "modifiers"   : {"vigour": 1.15}
     },
     {
         "id"          : "septic_prone",
@@ -1800,7 +1800,7 @@
         "floater"     : true,
         "charSpans"   : [ {"sheet": "items", "id": 195} ],
         "activateWhen": {"hasCondition": "envenomed"},
-        "modifiers"   : {"strength": 1.25, "dexterity": 1.25}
+        "modifiers"   : {"brawn": 1.25, "agility": 1.25}
     },
     {
         "id"          : "thin_veined",
@@ -1890,10 +1890,10 @@
         "flags"      : ["magical", "buff"],
         "transient"  : true,
         "magical"    : true,
-        "description": "An attuned ruby lends raw strength, heavier blows and easier labour.",
+        "description": "An attuned ruby lends raw brawn, heavier blows and easier labour.",
         "color"      : "#FF3355",
         "charSpans"  : [ {"sheet": "font", "id": 2} ],
-        "modifiers"  : {"strength": 1.15, "workEfficiency": 1.06}
+        "modifiers"  : {"brawn": 1.15, "workEfficiency": 1.06}
     },
     {
         "id"         : "insight",
@@ -1904,7 +1904,7 @@
         "description": "An attuned sapphire sharpens the mind, keener wits and more productive work.",
         "color"      : "#4A90D8",
         "charSpans"  : [ {"sheet": "font", "id": 2} ],
-        "modifiers"  : {"intelligence": 1.15, "workEfficiency": 1.06}
+        "modifiers"  : {"intellect": 1.15, "workEfficiency": 1.06}
     },
     {
         "id"         : "vigor",
@@ -1915,7 +1915,7 @@
         "description": "An attuned emerald bolsters endurance, a hardier body that tires more slowly.",
         "color"      : "#3FB36B",
         "charSpans"  : [ {"sheet": "font", "id": 2} ],
-        "modifiers"  : {"constitution": 1.12, "fatigueRate": 0.85}
+        "modifiers"  : {"vigour": 1.12, "fatigueRate": 0.85}
     },
     {
         "id": "quickness",
@@ -1926,7 +1926,7 @@
         "description": "An attuned topaz quickens the limbs, faster on foot, harder to land a blow on, and quicker to strike.",
         "color": "#E0B83A",
         "charSpans": [ {"sheet": "font", "id": 2} ],
-        "modifiers": {"dexterity": 1.15, "moveSpeed": 1.12}
+        "modifiers": {"agility": 1.15, "moveSpeed": 1.12}
     },
     {
         "id"         : "keen_senses",
@@ -1937,7 +1937,7 @@
         "description": "An attuned amethyst heightens awareness, sharper aim and quicker to read danger.",
         "color"      : "#A060D0",
         "charSpans"  : [ {"sheet": "font", "id": 2} ],
-        "modifiers"  : {"perception": 1.15}
+        "modifiers"  : {"awareness": 1.15}
     },
     {
         "id"         : "charm",
@@ -1970,7 +1970,7 @@
         "description": "Attuned regalia lends preternatural poise, quick and sure, far harder to land a blow on. The magical answer to a plate cuirass: dodge instead of armour.",
         "color": "#B0E0D0",
         "charSpans": [ {"sheet": "font", "id": 2} ],
-        "modifiers": {"dexterity": 1.15, "moveSpeed": 1.06}
+        "modifiers": {"agility": 1.15, "moveSpeed": 1.06}
     },
     {
         "id": "fortitude",
@@ -1981,6 +1981,6 @@
         "description": "Attuned regalia steels the body against hardship, hardier, and tires and hungers far more slowly.",
         "color": "#C8A85A",
         "charSpans": [ {"sheet": "font", "id": 2} ],
-        "modifiers": {"constitution": 1.12, "fatigueRate": 0.82, "hungerRate": 0.90}
+        "modifiers": {"vigour": 1.12, "fatigueRate": 0.82, "hungerRate": 0.90}
     }
 ]

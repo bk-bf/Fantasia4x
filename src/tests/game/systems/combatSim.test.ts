@@ -14,19 +14,19 @@ import type { GameState, Injury, Mob, Pawn } from '$lib/game/core/types';
  * back at an adjacent hostile, and a mob in Attacking state damages an adjacent pawn.
  */
 const stats = {
-  strength: 14,
-  dexterity: 16,
-  constitution: 12,
-  intelligence: 10,
-  perception: 10,
+  brawn: 14,
+  agility: 16,
+  vigour: 12,
+  intellect: 10,
+  awareness: 10,
   charisma: 10
 };
 
-// The combat rebalance made bare fists claw-tier (8 dmg), so a full-strength pawn now BEATS a passive
+// The combat rebalance made bare fists claw-tier (8 dmg), so a full-brawn pawn now BEATS a passive
 // goblin to death. The down-not-kill / collapse tests below need the low-damage regime they were built
-// for, so they use a deliberately weak (STR 5) attacker — raw ≈ 8 × 0.5 = 4, matching the old
+// for, so they use a deliberately weak (BRAWN 5) attacker — raw ≈ 8 × 0.5 = 4, matching the old
 // str14 × fists3 ≈ 4.2 — which downs via cumulative pain instead of destroying a limb.
-const weakStats = { ...stats, strength: 5, dexterity: 20 };
+const weakStats = { ...stats, brawn: 5, agility: 20 };
 
 function makePawn(over: Partial<Pawn> = {}): Pawn {
   return {
@@ -35,7 +35,7 @@ function makePawn(over: Partial<Pawn> = {}): Pawn {
     isAlive: true,
     position: { x: 5, y: 5 },
     currentState: 'Fighting',
-    stats: { ...stats, dexterity: 20 },
+    stats: { ...stats, agility: 20 },
     traits: [],
     equipment: {},
     limbs: [
@@ -69,7 +69,7 @@ function makeGoblin(over: Partial<Mob> = {}): Mob {
     y: 6, // adjacent to the pawn at (5,5)
     health: 35,
     maxHealth: 35,
-    stats: { ...stats, dexterity: 4 },
+    stats: { ...stats, agility: 4 },
     traits: [],
     bloodVolume: 100,
     maxBloodVolume: 100,
@@ -187,7 +187,7 @@ describe('combat sim (headless tickCombat)', () => {
     // by index (handleFreshCombatCorpses, etc.) — that ONLY works if tickCombat never writes through to
     // its input. Drive a pawn beating a passive goblin until it DOWNS (Collapsed — the status-change the
     // clone must isolate now that collapse no longer instant-kills) and assert the input is untouched.
-    // Weak (STR 5) attacker so the beating DOWNS the goblin (pain → Collapsed) as the isolation vehicle,
+    // Weak (BRAWN 5) attacker so the beating DOWNS the goblin (pain → Collapsed) as the isolation vehicle,
     // instead of killing it — buffed fists would otherwise beat this passive target to death.
     let state = makeState([makePawn({ stats: weakStats })], [makeGoblin({ state: 'Wander' })]);
     let validated = false;
@@ -212,8 +212,8 @@ describe('combat sim (headless tickCombat)', () => {
 
   it('an Attacking mob damages the adjacent pawn', () => {
     // Accurate mob vs low-dodge pawn so hits land reliably regardless of rng sequence.
-    const target = makePawn({ currentState: 'Idle', stats: { ...stats, dexterity: 3 } });
-    let state = makeState([target], [makeGoblin({ stats: { ...stats, dexterity: 16 } })]);
+    const target = makePawn({ currentState: 'Idle', stats: { ...stats, agility: 3 } });
+    let state = makeState([target], [makeGoblin({ stats: { ...stats, agility: 16 } })]);
     let pawnInjured = false;
     for (let t = 0; t < 1500 && !pawnInjured; t++) {
       state = { ...state, turn: t };
@@ -225,7 +225,7 @@ describe('combat sim (headless tickCombat)', () => {
 
   it('rolls between a pawn’s natural weapons (fists/kick) with per-weapon stamina', () => {
     const attacker = makePawn();
-    const defender = makeGoblin({ stats: { ...stats, dexterity: 2 } }); // low dodge → lots of hits
+    const defender = makeGoblin({ stats: { ...stats, agility: 2 } }); // low dodge → lots of hits
     const empty = makeState([], []);
     const seen = new Set<string>();
     const staminaByWeapon = new Map<string, number>();
@@ -242,9 +242,9 @@ describe('combat sim (headless tickCombat)', () => {
   });
 
   it('lands critical hits for a high-crit attacker (stat + weapon critMod)', () => {
-    // High DEX/PER pawn → high base hit_precision; low-dodge target → mostly hits.
-    const attacker = makePawn({ stats: { ...stats, dexterity: 22, perception: 22 } });
-    const defender = makeGoblin({ stats: { ...stats, dexterity: 1 } });
+    // High AGILITY/AWARENESS pawn → high base hit_precision; low-dodge target → mostly hits.
+    const attacker = makePawn({ stats: { ...stats, agility: 22, awareness: 22 } });
+    const defender = makeGoblin({ stats: { ...stats, agility: 1 } });
     const empty = makeState([], []);
     let crits = 0;
     let hits = 0;
@@ -258,10 +258,10 @@ describe('combat sim (headless tickCombat)', () => {
   });
 
   it('a blow lands a DOUBLE wound whose flesh and bone depths are INDEPENDENT (blunt cracks bone, blades rarely do)', () => {
-    // High-STR attacker, near-zero-dodge target → lots of landed hits. The pawn's hands offer fists
+    // High-BRAWN attacker, near-zero-dodge target → lots of landed hits. The pawn's hands offer fists
     // (blunt) and claw (cutting); resolveHit rolls between them, so one run samples both damage classes.
-    const attacker = makePawn({ stats: { ...stats, strength: 22, dexterity: 20 } });
-    const defender = makeGoblin({ stats: { ...stats, dexterity: 1 } });
+    const attacker = makePawn({ stats: { ...stats, brawn: 22, agility: 20 } });
+    const defender = makeGoblin({ stats: { ...stats, agility: 1 } });
     const empty = makeState([], []);
     let bluntHits = 0;
     let cutHits = 0;
@@ -304,19 +304,19 @@ describe('combat sim (headless tickCombat)', () => {
   });
 
   it('a deep blow can reach an organ inside a cavity — penetrating finds them, blunt rarely ruptures', () => {
-    // A high-STR pawn batters a near-zero-dodge defender that carries a FULL humanoid body plan (so its
+    // A high-BRAWN pawn batters a near-zero-dodge defender that carries a FULL humanoid body plan (so its
     // organs actually exist to be struck). Run once with a CUTTING weapon (penetrating) and once with a
     // BLUNT one (shallow) to prove the asymmetry: a thrust/slash reaches organs, a battering rarely does.
     const empty = makeState([], []);
     function organStats(weaponId: string) {
       const attacker = makePawn({
-        stats: { ...stats, strength: 22, dexterity: 20 },
+        stats: { ...stats, brawn: 22, agility: 20 },
         limbs: createBodyPlanLimbs('humanoid', 1), // real hands → the equipped weapon is actually wielded
         equipment: { mainHand: { itemId: weaponId, instanceId: 'w1', durability: 100 } }
       });
       const defender = makePawn({
         id: 'def',
-        stats: { ...stats, dexterity: 1 },
+        stats: { ...stats, agility: 1 },
         limbs: createBodyPlanLimbs('humanoid', 1)
       });
       let hits = 0;
@@ -348,10 +348,10 @@ describe('combat sim (headless tickCombat)', () => {
   });
 
   it('melee lands a sane ~60% at parity (no more ~80% dodge whiff-slog)', () => {
-    // Evenly-matched DEX-10 combatants. The old formula (DEX×3 − dodge×20, no base) gave ~10% here,
+    // Evenly-matched AGILITY-10 combatants. The old formula (AGILITY×3 − dodge×20, no base) gave ~10% here,
     // so fights never resolved; the rebased formula centres parity near 60%.
-    const attacker = makePawn({ id: 'atk', stats: { ...stats, dexterity: 10 } });
-    const defender = makePawn({ id: 'def', stats: { ...stats, dexterity: 10 } });
+    const attacker = makePawn({ id: 'atk', stats: { ...stats, agility: 10 } });
+    const defender = makePawn({ id: 'def', stats: { ...stats, agility: 10 } });
     const empty = makeState([], []);
     let hits = 0;
     for (let i = 0; i < 1000; i++)
@@ -369,10 +369,10 @@ describe('combat sim (headless tickCombat)', () => {
     const { itemService } = await import('$lib/game/services/ItemService');
     const cuirass = itemService.getItemById('plate_cuirass')!;
     const empty = makeState([], []);
-    const attacker = makePawn({ stats: { ...stats, strength: 22, dexterity: 20 }, limbs: createBodyPlanLimbs('humanoid', 1) });
+    const attacker = makePawn({ stats: { ...stats, brawn: 22, agility: 20 }, limbs: createBodyPlanLimbs('humanoid', 1) });
     const defender = makePawn({
       id: 'def',
-      stats: { ...stats, dexterity: 1 },
+      stats: { ...stats, agility: 1 },
       limbs: createBodyPlanLimbs('humanoid', 1),
       equipment: { bodyOuter: { itemId: 'plate_cuirass', instanceId: 'a1', durability: 100 } }
     });
@@ -407,11 +407,11 @@ describe('combat sim (headless tickCombat)', () => {
     const empty = makeState([], []);
     const avgDamage = (quality: 0 | 4) => {
       const attacker = makePawn({
-        stats: { ...stats, strength: 18, dexterity: 20 },
+        stats: { ...stats, brawn: 18, agility: 20 },
         limbs: createBodyPlanLimbs('humanoid', 1),
         equipment: { mainHand: { itemId: 'steel_longsword', instanceId: 'w1', durability: 100, quality } }
       });
-      const defender = makePawn({ id: 'def', stats: { ...stats, dexterity: 1 }, limbs: createBodyPlanLimbs('humanoid', 1) });
+      const defender = makePawn({ id: 'def', stats: { ...stats, agility: 1 }, limbs: createBodyPlanLimbs('humanoid', 1) });
       let dmg = 0;
       let hits = 0;
       for (let i = 0; i < 3000; i++) {
@@ -438,7 +438,7 @@ describe('combat sim (headless tickCombat)', () => {
     const empty = makeState([], []);
     const bloodlettingRate = (weaponId: string, coated: boolean) => {
       const attacker = makePawn({
-        stats: { ...stats, strength: 22, dexterity: 20 },
+        stats: { ...stats, brawn: 22, agility: 20 },
         limbs: createBodyPlanLimbs('humanoid', 1),
         equipment: {
           mainHand: {
@@ -449,7 +449,7 @@ describe('combat sim (headless tickCombat)', () => {
           }
         }
       });
-      const defender = makePawn({ id: 'def', stats: { ...stats, dexterity: 1 }, limbs: createBodyPlanLimbs('humanoid', 1) });
+      const defender = makePawn({ id: 'def', stats: { ...stats, agility: 1 }, limbs: createBodyPlanLimbs('humanoid', 1) });
       let hits = 0;
       let bled = 0;
       for (let i = 0; i < 4000; i++) {
@@ -482,7 +482,7 @@ describe('combat sim (headless tickCombat)', () => {
       entityClass: 'animal',
       state: 'Wander', // peaceful — never attacks back
       markedForHunt: true,
-      stats: { ...stats, dexterity: 2 } // low dodge so swings land
+      stats: { ...stats, agility: 2 } // low dodge so swings land
     });
     let state = makeState([hunter], [prey]);
     let downed = false;
@@ -499,7 +499,7 @@ describe('combat sim (headless tickCombat)', () => {
     // Player walked a drafted pawn next to a hostile but never issued an attack order.
     // It must still defend itself rather than stand inert — damage the adjacent goblin.
     const guard = makePawn({ drafted: true, draftTarget: undefined, currentState: 'Idle' });
-    const goblin = makeGoblin({ state: 'Attacking', stats: { ...stats, dexterity: 2 } });
+    const goblin = makeGoblin({ state: 'Attacking', stats: { ...stats, agility: 2 } });
     let state = makeState([guard], [goblin]);
     let goblinDamaged = false;
     for (let t = 0; t < 4000 && !goblinDamaged; t++) {
@@ -523,7 +523,7 @@ describe('combat sim (headless tickCombat)', () => {
       maxStamina: 50,
       conditionTimers: { winded: 2 }
     });
-    const goblin = makeGoblin({ state: 'Wander', stats: { ...stats, dexterity: 1 } }); // peaceful, won't hit back
+    const goblin = makeGoblin({ state: 'Wander', stats: { ...stats, agility: 1 } }); // peaceful, won't hit back
     let state = makeState([winded], [goblin]);
     for (let t = 0; t < 10; t++) {
       state = { ...state, turn: t };

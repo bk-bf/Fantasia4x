@@ -26,11 +26,11 @@ import type { GameState, Mob, Pawn } from '$lib/game/core/types';
  * strikes a mob beyond melee reach, consumes ammo, holds fire without ammo, and bow-butts in contact.
  */
 const stats = {
-  strength: 14,
-  dexterity: 16,
-  constitution: 12,
-  intelligence: 10,
-  perception: 10,
+  brawn: 14,
+  agility: 16,
+  vigour: 12,
+  intellect: 10,
+  awareness: 10,
   charisma: 10
 };
 
@@ -51,7 +51,7 @@ function makeArcher(over: Partial<Pawn> = {}): Pawn {
     position: { x: 5, y: 5 },
     currentState: 'Fighting',
     combatStance: 'defensive',
-    stats: { ...stats, dexterity: 20 },
+    stats: { ...stats, agility: 20 },
     traits: [],
     equipment: { mainHand: { itemId: 'self_bow', durability: 80 } },
     inventory: {
@@ -86,7 +86,7 @@ function makeGoblin(over: Partial<Mob> = {}): Mob {
     y: 8, // 3 tiles south — beyond melee reach (1), inside self_bow range (6)
     health: 35,
     maxHealth: 35,
-    stats: { ...stats, dexterity: 2 }, // low dodge → shots land
+    stats: { ...stats, agility: 2 }, // low dodge → shots land
     traits: [],
     bloodVolume: 100,
     maxBloodVolume: 100,
@@ -109,7 +109,7 @@ function makeArmored(id: string): Pawn {
     currentState: 'Idle',
     combatStance: 'defensive',
     drafted: false,
-    stats: { ...stats, dexterity: 2, constitution: 16 },
+    stats: { ...stats, agility: 2, vigour: 16 },
     equipment: { bodyMid: { itemId: 'mail_hauberk', durability: 100 } }
   } as unknown as Partial<Pawn>);
 }
@@ -122,7 +122,7 @@ function makeMeleeAttacker(id: string, weapon: string, targetId: string): Pawn {
     currentState: 'Idle',
     drafted: true,
     draftTarget: { type: 'attack', targetType: 'pawn', targetId },
-    stats: { ...stats, strength: 16, dexterity: 16 },
+    stats: { ...stats, brawn: 16, agility: 16 },
     equipment: { mainHand: { itemId: weapon } }
   } as unknown as Partial<Pawn>);
 }
@@ -145,10 +145,10 @@ describe('rangedCombat helpers', () => {
     expect(pickAmmo(archer, 'bolt')).toBeNull();
   });
 
-  it('vision range follows perception (not the evaluateStat 1.0 fallback)', () => {
+  it('vision range follows awareness (not the evaluateStat 1.0 fallback)', () => {
     expect(pawnVisionRange(makeArcher())).toBe(10);
     expect(
-      pawnVisionRange(makeArcher({ stats: { ...stats, perception: 20 } } as Partial<Pawn>))
+      pawnVisionRange(makeArcher({ stats: { ...stats, awareness: 20 } } as Partial<Pawn>))
     ).toBe(15);
   });
 
@@ -175,9 +175,9 @@ describe('rangedCombat helpers', () => {
   });
 
   it('shot cadence is floored at the melee cap (72) and averages near melee — never tick-rate', () => {
-    // A high-DEX, aim-geared archer at close range would collapse to ~27 ticks without the floor.
+    // A high-AGILITY, aim-geared archer at close range would collapse to ~27 ticks without the floor.
     expect(aimIntervalTicks(75, 1, 2, 1.8, 0.8, 1.0)).toBe(72);
-    // A typical combat archer (DEX ~15) lands near melee's ~104-tick interval, not tens of ticks.
+    // A typical combat archer (AGILITY ~15) lands near melee's ~104-tick interval, not tens of ticks.
     const typical = aimIntervalTicks(104, 1, 4, 1.2, 0, 1.2);
     expect(typical).toBeGreaterThanOrEqual(72);
     expect(typical).toBeLessThan(160);
@@ -185,22 +185,22 @@ describe('rangedCombat helpers', () => {
     expect(aimIntervalTicks(104, 3, 4, 1.2, 0, 1.0)).toBeGreaterThan(200);
   });
 
-  it('reload_speed (DEX) shortens only a crossbow span — bows ignore it (the build fork)', () => {
+  it('reload_speed (AGILITY) shortens only a crossbow span — bows ignore it (the build fork)', () => {
     // reload 3 = crossbow: a defter loader (higher reload_speed) spans faster.
     expect(aimIntervalTicks(90, 3, 4, 1.0, 0, 1.4)).toBeLessThan(
       aimIntervalTicks(90, 3, 4, 1.0, 0, 0.8)
     );
     // reload 1 = bow: no span step, so reload_speed makes no difference.
     expect(aimIntervalTicks(90, 1, 4, 1.0, 0, 1.4)).toBe(aimIntervalTicks(90, 1, 4, 1.0, 0, 0.8));
-    // aim_speed (DEX) still governs the AIM portion regardless.
+    // aim_speed (AGILITY) still governs the AIM portion regardless.
     expect(aimIntervalTicks(90, 3, 4, 1.5, 0, 1.0)).toBeLessThan(
       aimIntervalTicks(90, 3, 4, 1.0, 0, 1.0)
     );
   });
 
-  it('effective range scales weapon range by PER (aim_range), capped by vision', () => {
-    const low = makeArcher({ stats: { ...stats, perception: 10 } } as Partial<Pawn>);
-    const sharp = makeArcher({ stats: { ...stats, perception: 22 } } as Partial<Pawn>);
+  it('effective range scales weapon range by AWARENESS (aim_range), capped by vision', () => {
+    const low = makeArcher({ stats: { ...stats, awareness: 10 } } as Partial<Pawn>);
+    const sharp = makeArcher({ stats: { ...stats, awareness: 22 } } as Partial<Pawn>);
     const rw = getRangedWeapon(low)!;
     expect(effectiveRangedRange(sharp, rw)).toBeGreaterThan(effectiveRangedRange(low, rw));
     // Never exceeds the pawn's own vision range.
@@ -413,9 +413,9 @@ describe('ranged combat (headless tickCombat)', () => {
     expect(hammerArmor).toBeLessThan(cleaverArmor); // the hammer caves the plate; the cleaver barely scratches it
   });
 
-  it('FINESSE: a rapier scales melee damage with PER (a sword scales with STR)', () => {
+  it('FINESSE: a rapier scales melee damage with AWARENESS (a sword scales with BRAWN)', () => {
     const empty = makeState([], []);
-    const defender = makeGoblin({ stats: { ...stats, dexterity: 2 } }); // low dodge → hits land
+    const defender = makeGoblin({ stats: { ...stats, agility: 2 } }); // low dodge → hits land
     const avgDmg = (weapon: string, st: Partial<typeof stats>) => {
       const atk = makeArcher({
         equipment: { mainHand: { itemId: weapon } },
@@ -432,16 +432,16 @@ describe('ranged combat (headless tickCombat)', () => {
       }
       return hits ? total / hits : 0;
     };
-    // Rapier (finesse): high PER massively out-damages low PER at the SAME strength.
-    expect(avgDmg('steel_rapier', { strength: 10, perception: 20 })).toBeGreaterThan(
-      avgDmg('steel_rapier', { strength: 10, perception: 4 }) * 1.4
+    // Rapier (finesse): high AWARENESS massively out-damages low AWARENESS at the SAME brawn.
+    expect(avgDmg('steel_rapier', { brawn: 10, awareness: 20 })).toBeGreaterThan(
+      avgDmg('steel_rapier', { brawn: 10, awareness: 4 }) * 1.4
     );
-    // Longsword (not finesse): PER barely matters (only a little crit); STR is the driver.
-    const swHiPer = avgDmg('steel_longsword', { strength: 10, perception: 20 });
-    const swLoPer = avgDmg('steel_longsword', { strength: 10, perception: 4 });
+    // Longsword (not finesse): AWARENESS barely matters (only a little crit); BRAWN is the driver.
+    const swHiPer = avgDmg('steel_longsword', { brawn: 10, awareness: 20 });
+    const swLoPer = avgDmg('steel_longsword', { brawn: 10, awareness: 4 });
     expect(Math.abs(swHiPer - swLoPer) / swHiPer).toBeLessThan(0.2);
-    expect(avgDmg('steel_longsword', { strength: 20, perception: 10 })).toBeGreaterThan(
-      avgDmg('steel_longsword', { strength: 5, perception: 10 }) * 1.4
+    expect(avgDmg('steel_longsword', { brawn: 20, awareness: 10 })).toBeGreaterThan(
+      avgDmg('steel_longsword', { brawn: 5, awareness: 10 }) * 1.4
     );
   });
 

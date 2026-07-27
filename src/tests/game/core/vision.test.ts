@@ -8,12 +8,12 @@ import {
 } from '$lib/game/core/vision';
 import type { Pawn, Mob } from '$lib/game/core/types';
 
-// Shared §G vision: one perception-based range for pawns AND mobs, scaled by tile light and dampened
+// Shared §G vision: one awareness-based range for pawns AND mobs, scaled by tile light and dampened
 // by night_vision. baseVisionRange matches the old creature formula, so daytime entity vision is
 // unchanged; darkness shortens it; night_vision restores it.
 
 const pawn = (per: number, traits: Array<{ effects: { nightVision?: number } }> = []): Pawn =>
-  ({ stats: { perception: per }, traits: traits }) as unknown as Pawn;
+  ({ stats: { awareness: per }, traits: traits }) as unknown as Pawn;
 
 describe('shared vision model', () => {
   it('baseVisionRange is the doubled sight formula round(4 + per*1.3)', () => {
@@ -62,7 +62,7 @@ describe('shared vision model', () => {
     });
     const spiderEyed = (parts: ReturnType<typeof eye>[]) =>
       ({
-        stats: { perception: 10 },
+        stats: { awareness: 10 },
         traits: [],
         limbs: [{ id: 'extra_eyes', parts }]
       }) as unknown as Pawn;
@@ -85,7 +85,7 @@ describe('shared vision model', () => {
   it('pawns and mobs use the SAME range at full light (unified)', () => {
     const p = effectiveVisionRange(pawn(12), 1);
     const m = effectiveVisionRange(
-      { creatureId: 'nope', stats: { perception: 12 } } as unknown as Mob,
+      { creatureId: 'nope', stats: { awareness: 12 } } as unknown as Mob,
       1
     );
     expect(p).toBe(m);
@@ -99,7 +99,7 @@ const atPawn = (x: number, y: number, over: Partial<Pawn> = {}): Pawn =>
     id: `p${x}_${y}`,
     isAlive: true,
     position: { x, y },
-    stats: { perception: 10 },
+    stats: { awareness: 10 },
     ...over
   }) as Pawn;
 

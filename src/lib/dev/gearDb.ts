@@ -176,7 +176,7 @@ export interface GearRow {
   reach: number | null;
   range: number | null;
   stun: number | null;
-  scaling: 'STR' | 'DEX' | 'PER' | 'INT' | 'draw' | null;
+  scaling: 'BRN' | 'AGI' | 'AWR' | 'INT' | 'CHA' | 'draw' | null;
   twoHanded: boolean | null;
   onHit: string | null;
   wieldStr: number | null;
@@ -360,13 +360,17 @@ function bodyPartOf(slot: string | null): string | null {
   return null;
 }
 
+/** Core-stat display abbreviations, matching the pawn panels. */
+const SCALE_ABBR: Record<string, GearRow['scaling']> = {
+  brawn: 'BRN', agility: 'AGI', awareness: 'AWR', intellect: 'INT', charisma: 'CHA'
+};
 function scalingOf(wp: any): GearRow['scaling'] {
   if (!wp) return null;
-  if (wp.powerStat) return String(wp.powerStat).slice(0, 3).toUpperCase() as GearRow['scaling'];
+  if (wp.powerStat) return SCALE_ABBR[String(wp.powerStat)] ?? null;
   if (wp.arcane) return 'INT';
-  if (wp.finesse) return 'PER';
+  if (wp.finesse) return 'AWR';
   if (wp.strScaled === false) return 'draw';
-  return 'STR';
+  return 'BRN';
 }
 
 function recipeInfo(rec: any): RecipeInfo | null {
@@ -436,7 +440,7 @@ function toRow(item: any): GearRow | null {
     scaling: scalingOf(wp),
     twoHanded: wp ? !!wp.twoHanded : null,
     onHit: oh?.condition ?? null,
-    wieldStr: item.wieldRequirement?.strength ?? null,
+    wieldStr: item.wieldRequirement?.brawn ?? null,
     defense: ap?.defense ?? null,
     armorType: ap?.armorType ?? null,
     slot: ap?.slot ?? ap?.equipmentSlot ?? null,
@@ -467,7 +471,7 @@ function toRow(item: any): GearRow | null {
 
 // ── traits ──────────────────────────────────────────────────────────────────
 const STAT_ABBR: Record<string, string> = {
-  strength: 'STR', dexterity: 'DEX', constitution: 'CON', perception: 'PER', intelligence: 'INT', charisma: 'CHA'
+  brawn: 'BRN', agility: 'AGI', vigour: 'VIG', awareness: 'AWR', intellect: 'INT', charisma: 'CHA'
 };
 
 const RARITY_ORDER = ['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythic', 'negative'];
@@ -549,11 +553,11 @@ function classifyTrait(t: any): BuildClass[] {
   const e = t.effects ?? {};
   const set = new Set<BuildClass>();
   const stat = (k: string) => e[k + 'Bonus'] != null || e[k + 'Penalty'] != null;
-  if (stat('strength')) MELEE_ALL.forEach((b) => set.add(b));
-  if (stat('constitution')) { FRONTLINE.forEach((b) => set.add(b)); set.add('Pure Tank'); }
-  if (stat('dexterity')) { set.add('Assassin (Dagger)'); set.add('Fencer (Rapier)'); DUELIST.forEach((b) => set.add(b)); }
-  if (stat('perception')) PER_BUILDS.forEach((b) => set.add(b));
-  if (stat('intelligence')) CASTERS.forEach((b) => set.add(b));
+  if (stat('brawn')) MELEE_ALL.forEach((b) => set.add(b));
+  if (stat('vigour')) { FRONTLINE.forEach((b) => set.add(b)); set.add('Pure Tank'); }
+  if (stat('agility')) { set.add('Assassin (Dagger)'); set.add('Fencer (Rapier)'); DUELIST.forEach((b) => set.add(b)); }
+  if (stat('awareness')) PER_BUILDS.forEach((b) => set.add(b));
+  if (stat('intellect')) CASTERS.forEach((b) => set.add(b));
   const cm = e.combatMods ?? {};
   for (const k of Object.keys(cm)) {
     if (/aim|reload|ranged|vision_range/.test(k)) RANGED.forEach((b) => set.add(b));
