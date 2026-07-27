@@ -33,9 +33,10 @@ export function powerScale(stat: number): number {
 /**
  * Which core stat drives an attack's damage. The weapon names it (`weaponProperties.powerStat`); the
  * fallbacks cover the older shorthands — an arcane staff channels on INTELLECT, a finesse thrust is
- * placed by AWARENESS, everything else is driven by the body.
+ * placed by AWARENESS, a standard is carried on CHARISMA (its bearer's presence is the point of it),
+ * and everything else is driven by the body.
  */
-export type PowerStat = 'brawn' | 'agility' | 'awareness' | 'intellect';
+export type PowerStat = 'brawn' | 'agility' | 'awareness' | 'intellect' | 'charisma';
 export function powerStatOf(
   wp:
     | {

@@ -20,7 +20,10 @@ export function computePrestige(entity: Pawn | Mob): number {
   if (!equipment) return total;
   for (const inst of Object.values(equipment) as (ItemInstance | undefined | null)[]) {
     if (!inst || !inst.itemId) continue;
-    const bonus = itemDefById(inst.itemId)?.armorProperties?.prestigeBonus;
+    // Worn regalia carries it on `armorProperties`; a WIELDED standard carries it top-level (a banner
+    // glaive is not armour, but being seen holding it is exactly what it is for).
+    const def = itemDefById(inst.itemId);
+    const bonus = def?.prestigeBonus ?? def?.armorProperties?.prestigeBonus;
     if (!bonus) continue;
     total += bonus * combinedQualityMultiplier(inst.quality, inst.famedStatMult);
   }

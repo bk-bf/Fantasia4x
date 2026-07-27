@@ -8,6 +8,8 @@ import { pawnStatService } from '$lib/game/services/PawnStatService';
 import { itemService } from '$lib/game/services/ItemService';
 import { getActiveConditionViews } from '$lib/components/util/conditionInfo';
 import { conditionNeedMultipliers, conditionStatMultipliers } from '$lib/game/core/needs';
+import { powerStatOf, powerToken } from '$lib/game/core/powerScale';
+import { aptitudeOf } from '$lib/game/core/aptitudes';
 
 export type StatDef = {
   id: string;
@@ -183,12 +185,13 @@ function derivation(s: StatDef, pawn: Pawn, ctx: StatContext): Deriv {
   const st = pawn.stats;
   const sm = ctx.condStatMult;
   const eff = (base: number, mult: number) => (mult === 1 ? base : Math.round(base * mult));
-  add('BRN', eff(st.brawn, sm.brawn));
-  add('AGI', eff(st.agility, sm.agility));
-  add('VIG', eff(st.vigour, sm.vigour));
-  add('AWR', eff(st.awareness, sm.awareness));
-  add('INT', eff(st.intellect, sm.intellect));
-  add('CHA', st.charisma);
+  // These MUST match PawnStatService.FORMULA_VARS — the tokens the formulas actually use.
+  add('BRAWN', eff(st.brawn, sm.brawn));
+  add('AGILITY', eff(st.agility, sm.agility));
+  add('VIGOUR', eff(st.vigour, sm.vigour));
+  add('AWARENESS', eff(st.awareness, sm.awareness));
+  add('INTELLECT', eff(st.intellect, sm.intellect));
+  add('CHARISMA', st.charisma);
   add('weight', pawn.physicalTraits?.weight ?? 70);
   add('height', pawn.physicalTraits?.height ?? 170);
   // WORK-EXPERIENCE: the SKILL token = the pawn's experience level in this work category × its
@@ -196,6 +199,23 @@ function derivation(s: StatDef, pawn: Pawn, ctx: StatContext): Deriv {
   if (/\bSKILL\b/.test(s.formula)) {
     const info = pawnStatService.workSkillInfo(s.id, pawn);
     if (info) vars.push({ name: 'SKILL', value: `${round2(info.factor)} (Lv ${info.level})` });
+  }
+  // COMBAT-BALANCE task 3: the POWER token — the equipped weapon's own core stat, damped by the power
+  // curve. Named so the player can see WHICH stat the weapon in hand is actually paying out on.
+  if (/\bPOWER\b/.test(s.formula)) {
+    const mh = pawn.equipment?.mainHand;
+    const wp = mh ? itemService.getItemById(mh.itemId)?.weaponProperties : undefined;
+    const key = powerStatOf(wp);
+    const raw = (st as unknown as Record<string, number>)[key] ?? 10;
+    const mult = key === 'charisma' ? 1 : ((sm as unknown as Record<string, number>)[key] ?? 1);
+    vars.push({
+      name: 'POWER',
+      value: `${round2(powerToken(raw * mult))} (${key} ${eff(raw, mult)}, damped)`
+    });
+  }
+  // COMBAT-BALANCE tasks 8–9: the APT token — this pawn's ROLLED aptitude for THIS stat.
+  if (/\bAPT\b/.test(s.formula)) {
+    vars.push({ name: 'APT', value: `${round2(aptitudeOf(pawn, s.id))} (rolled)` });
   }
   for (const [cap, cv] of Object.entries(ctx.capacities)) add(cap, Math.round(cv * 100) / 100);
   const cm = conditionMult(s.id, ctx);

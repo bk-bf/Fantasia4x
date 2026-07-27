@@ -1,4 +1,4 @@
-<!-- PawnStatBanner.svelte — the six base-stat chips (STR DEX CON INT PER CHA), showing the
+<!-- PawnStatBanner.svelte — the six core-stat chips (BRN AGI VIG INT AWR CHA), showing the
      condition-adjusted (effective) value with a signed delta. The single source of truth for the
      stat grid: rendered by the Attributes tab (PawnAttributes) and the Status tab (via PawnStatsBar,
      which adds the name header), plus anywhere else the core attributes are shown. -->
@@ -30,11 +30,11 @@
   // Trait contributions to a core stat (baked into pawn.stats at generation, so surfaced here for the
   // hover breakdown — "+2 Sturdy, −1 Stocky"). ADR-023.
   const STAT_KEY: Record<string, string> = {
-    STR: 'brawn',
-    DEX: 'agility',
-    CON: 'vigour',
+    BRN: 'brawn',
+    AGI: 'agility',
+    VIG: 'vigour',
     INT: 'intellect',
-    PER: 'awareness',
+    AWR: 'awareness',
     CHA: 'charisma'
   };
   function traitParts(lbl: string): string {

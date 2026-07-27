@@ -6,6 +6,7 @@
   import type { Pawn } from '$lib/game/core/types';
   import statsData from '$lib/game/database/pawns/stats.jsonc';
   import PawnStatBanner from './PawnStatBanner.svelte';
+  import PawnAptitudes from './PawnAptitudes.svelte';
   import PawnSkillBanner from './PawnSkillBanner.svelte';
   import StatTooltip from './StatTooltip.svelte';
   import {
@@ -122,6 +123,11 @@
   <!-- Core attributes show on EVERY view (they still supplement the work formulas); the work view
        adds the experience-level banner (WORK-EXPERIENCE) between them and the skills table. -->
   <PawnStatBanner {pawn} />
+  <!-- The second combat axis sits directly under the core stats: the stat block says how hard this
+       pawn CAN hit, the aptitudes say how well it fights. Combat-only, so the work view skips it. -->
+  {#if categories.includes('combat')}
+    <PawnAptitudes {pawn} />
+  {/if}
   {#if categories.includes('work')}
     <PawnSkillBanner {pawn} />
   {/if}

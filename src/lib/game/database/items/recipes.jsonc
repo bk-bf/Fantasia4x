@@ -5157,6 +5157,43 @@
     "researchRequired": "runic_inscription"
   },
   {
+    "id"              : "make_steel_greatflail",
+    "station"         : "anvil",
+    "inputs"          : {"seasoned_haft": 1, "category:steel": 3, "iron_nail": 2},
+    "outputs"         : {"steel_greatflail": 1},
+    "workAmount"      : 26,
+    "toolTierRequired": 2,
+    "discipline"      : "metalworking",
+    "researchRequired": "steel_making"
+  },
+  {
+    "id"              : "make_rune_lashing_greatflail",
+    "station"         : "runecarver_bench",
+    "inputs"          : {"magic_alloy_bar": 2, "gem_dust": 1, "seasoned_haft": 1, "iron_nail": 2},
+    "outputs"         : {"rune_lashing_greatflail": 1},
+    "workAmount"      : 36,
+    "toolTierRequired": 2,
+    "researchRequired": "runic_inscription"
+  },
+  {
+    "id"              : "make_rune_etched_arming_sword",
+    "station"         : "runecarver_bench",
+    "inputs"          : {"magic_alloy_bar": 1, "gem_dust": 1, "category:leather": 1},
+    "outputs"         : {"rune_etched_arming_sword": 1},
+    "workAmount"      : 30,
+    "toolTierRequired": 2,
+    "researchRequired": "runic_inscription"
+  },
+  {
+    "id"              : "make_rune_standard_glaive",
+    "station"         : "runecarver_bench",
+    "inputs"          : {"magic_alloy_bar": 1, "gem_dust": 1, "seasoned_haft": 1, "linen_cloth": 2},
+    "outputs"         : {"rune_standard_glaive": 1},
+    "workAmount"      : 32,
+    "toolTierRequired": 2,
+    "researchRequired": "runic_inscription"
+  },
+  {
     "id"              : "make_rune_chained_flail",
     "station"         : "runecarver_bench",
     "inputs"          : {"magic_alloy_bar": 2, "gem_dust": 1, "seasoned_haft": 1, "category:leather": 1},

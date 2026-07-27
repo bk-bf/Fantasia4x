@@ -7,13 +7,14 @@
 
 > **Related:** [AUDIT § Weapons](AUDIT.md) · [DESIGN](../../game/DESIGN.md) · [DECISIONS](../../game/DECISIONS.md) · [ROADMAP](ROADMAP.md) · [STEALTH](STEALTH.md)
 
-**Status (2026-07-27):** **the decoupling is DONE.** Phase 0 and Phase 1 are complete, and Phase 2's
-engine half (tasks 8–9) with it — the core stats now set damage capacity and nothing else, and the six
-secondary stats are rolled per pawn. Every headline finding is fixed and re-measured in a live fight;
-see [Live-sim verification](#live-sim-verification).
+**Status (2026-07-27):** **Phases 0–3 are DONE.** The core stats set damage capacity and nothing else,
+the six secondary stats are rolled per pawn and surfaced in the pawn panel, and precision aims for
+lethality. Every headline finding is fixed and re-measured in a live fight; see
+[Live-sim verification](#live-sim-verification).
 
-**Remaining:** task 7 (author the 2H flail / banner polearm / runed 1H sword), task 10 (surface
-aptitudes in the pawn panel), task 11 (precision → lethality scoring), and all of Phase 4 (12–14).
+**Remaining:** Phase 4 only (tasks 12–14: the cadence floor, the deferred trait audit, the data
+passes), plus two loose ends — `applyGainedTrait` still doesn't stamp wound traits, and aptitudes are
+not yet persisted through save/load. Phases 0–3 are complete.
 
 Also landed as a prerequisite: the core-stat vocabulary migration (`strength→brawn`,
 `dexterity→agility`, `constitution→vigour`, `perception→awareness`, `intelligence→intellect`),
@@ -46,7 +47,7 @@ hold.
 | --- | --- | --- | --- |
 | the power stat is decoration | 4 | BRAWN 40 → 6345 ticks, 4/8 kills, 3 deaths, 73% blood left · AGILITY 40 → **3365 ticks, 7/8 kills, 1 death** | BRAWN 40 → **3763 ticks, 6/8 kills, 2 deaths, 49% left** · AGILITY 40 → 10838 ticks, 1/8 kills, 6 deaths. The BRAWN build is **2.88× faster** on the weapon that names BRAWN |
 | a flaw raises its stat | 1 | `frail`+`clumsy`+`dull` → vigour 12→**14**, agility 12→**14**, intellect 12→**14** | → vigour 12→**10**, agility 12→**10**, intellect 12→**10** |
-| precision is inverted | 11 | stiletto + `lumbering-fighter` **0.96×** the unimpaired time-to-kill — a strict downgrade was free | **1.03×** — it costs time now. ⚠ Only because the stats feeding it were fixed; `aimedBodyPart` still scores by armour alone, so **task 11 proper is still open** |
+| precision is inverted | 11 | stiletto + `lumbering-fighter` **0.96×** the unimpaired time-to-kill — a strict downgrade was free | **1.03×** — it costs time now, and `aimedBodyPart` was rewritten too: killing-hit share now **rises** with precision (71.6% → 74.7%, the neck appearing at the top end) where it used to **fall** 54% → 45% |
 | session determinism | 2 | same seed replays identically | unchanged; the module default seed is now fixed too |
 | decoupling | 8–9 | every secondary stat tracked a core stat | core stats 10 → 60 leaves all six **identical**; two pawns with the same physique now differ |
 
@@ -88,8 +89,9 @@ core stat feeds them is decided by the **grip**, so the physique picks the *weap
 | banner polearm (new) | **CHARISMA** — raises the bearer's `prestige` |
 
 No physique is locked out of a weapon family, because each family ships in both grips: a strong pawn
-takes the family's two-hander, a nimble pawn its one-hander. **Exception: flail is 1H-only**, so a
-strong pawn currently has no flail (task 7).
+takes the family's two-hander, a nimble pawn its one-hander. Task 7 closed the last gaps — the flail
+line gained a two-hander and the runed tier gained a one-handed sword. Only the light blades (dagger,
+rapier) are one-grip, which is what they are.
 
 ### Axis 2 — Aptitude: the same stats, sourced from the pawn instead of its stats
 
@@ -115,7 +117,7 @@ gains six rolled numbers.
 
 ---
 
-## Phase 0 — Unblock the measurements
+## Phase 0 — Unblock the measurements  ✅
 
 Do these first; every tuning number after them is only as good as the RNG and the trait bake.
 
@@ -155,7 +157,7 @@ Do these first; every tuning number after them is only as good as the RNG and th
 
 ---
 
-## Phase 1 — Damage resolves through the stats
+## Phase 1 — Damage resolves through the stats  ✅
 
 This is the fix for "melee ignores injury" **and** the fix for the power stat being decoration. One
 change: `resolveHit` stops reading a raw core stat and reads the damage stat instead.
@@ -215,13 +217,13 @@ change: `resolveHit` stops reading a raw core stat and reads the damage stat ins
 
 ### 7. Data: the gaps this mapping exposes
 
-- [ ] **Author a 2H flail.** Flail is the one melee family with no two-handed version, so a strong pawn has no flail at any age (`statAxisProposal` → FAMILY REACH).
-- [ ] **Author the banner polearm** — a CHARISMA-scaled reach weapon that raises the bearer's `prestige` (the stat already exists, fed by `SocialService`). Rapier-shaped: a special case that gives one more core stat a weapon to belong to.
-- [ ] Check 1H sword coverage at the runed tier — the T4 band has no one-handed sword, so a nimble pawn's sword line stops at steel.
+- [x] **2H flail authored** — `steel_greatflail` (T3) and `rune_lashing_greatflail` (T4), both brawn-scaled, with recipes. Every melee family now ships in both grips.
+- [x] **Banner polearm authored** — `rune_standard_glaive`: reach 2, `powerStat: "charisma"` (CHARISMA joined `PowerStat`), and `prestigeBonus: 9`. `computePrestige` now reads a top-level `prestigeBonus` so a WIELDED standard counts, not only worn regalia.
+- [x] Runed 1H sword authored — `rune_etched_arming_sword`, agility-scaled. The nimble sword line reaches T4.
 
 ---
 
-## Phase 2 — The aptitude axis
+## Phase 2 — The aptitude axis  ✅
 
 Only after Phase 1, so the damage axis is already honest when the second axis lands on top of it.
 
@@ -249,18 +251,20 @@ Only after Phase 1, so the damage axis is already honest when the second axis la
 
 ### 10. Surface it in the UI
 
-- [ ] Pawn panel: an aptitude block beside the core stats — it is the thing that distinguishes two pawns and it must be visible before it can matter to the player.
+- [x] Pawn panel: `PawnAptitudes.svelte` renders the six rolls under the core stats on the Attributes tab, as signed percentages with a band tick and a plain-language label (accuracy / cadence / precision / leverage / evasion / marksmanship — never the stat id).
+- [x] **Fixed two rename regressions the tab had been carrying:** `statView` still substituted the OLD `BRN`/`AGI` tokens, so NO core stat resolved in ANY formula tooltip; and `PawnStatBanner`'s trait lookup keyed `STR`/`DEX`, so trait contributions rendered blank.
+- [x] `POWER` and `APT` surfaced in the formula tooltip — `POWER = 20 (brawn 25, damped)`, `APT = 1.09 (rolled)` — verified in the running game, not just in a test.
 - [ ] `/gear-db` → **Stats by build**: re-point the "read by" column once the wiring changes, and drop the `✕ dead` markers the fixes clear.
 
 ---
 
-## Phase 3 — Precision does what its description says
+## Phase 3 — Precision does what its description says  ✅
 
 ### 11. Aim for lethality, not for bare skin
 
-- [ ] `aimedBodyPart` scores candidates by **what the part contains** (`organsOf` → `isVital` / `artery` / `isCritical`) plus `bleedRatio`, with armour as a **discount** rather than the whole criterion ([Combat.ts:795](../../../src/lib/game/systems/Combat.ts)).
-- [ ] Let precision buy **candidate rolls** — fractional, so it pays smoothly. The shipped rule always rolls exactly 3 behind a probability gate, so a small target (the neck is 1.5% of the hit table) is almost never found however precise the fighter is.
-- [ ] Re-run the fight sim; `lumbering-fighter` on a stiletto must stop being an upgrade.
+- [x] `aimedBodyPart` scores candidates by **what the part contains** (`organsOf` → `isVital` / `artery` / `isCritical`) plus `bleedRatio`, with armour as a **discount** rather than the whole criterion ([Combat.ts:795](../../../src/lib/game/systems/Combat.ts)).
+- [x] Let precision buy **candidate rolls** — fractional, so it pays smoothly. The shipped rule always rolls exactly 3 behind a probability gate, so a small target (the neck is 1.5% of the hit table) is almost never found however precise the fighter is.
+- [x] Re-run the fight sim; `lumbering-fighter` on a stiletto is no longer an upgrade (ratio 1.03×, was 0.96×).
 
 > **Evidence — headless `[x]`.** Stiletto, 8 seeds: unimpaired **2615 ticks / 9% blood left**, with
 > `lumbering-fighter` (attack_speed ×0.6 **and** hit_precision ×0.75) **2510 ticks / 7% left** — ratio
@@ -286,6 +290,23 @@ Everything here was measured against the OLD stat economy and has to be re-measu
 land; several may resolve on their own.
 
 ### 12. The cadence floor
+
+> **New evidence (task 7 exposed it).** With every melee family now shipping in both grips, the
+> two-handers can finally be compared to their one-handed siblings — and all but one trail:
+>
+> | family | 2H → BRAWN 40 | 1H → AGILITY 40 | ratio |
+> | --- | --- | --- | --- |
+> | mace/hammer | 17.3 | 16.9 | 1.02× |
+> | spear/pole | 11.7 | 12.2 | 0.96× |
+> | axe | 10.0 | 12.6 | 0.79× |
+> | cleaver | 10.9 | 14.1 | 0.78× |
+> | flail | 11.1 | 17.2 | 0.64× |
+> | **sword** | 10.9 | **17.5** | **0.62×** |
+>
+> A 0.55–0.62-speed two-hander sits far below the 1.67× cadence ceiling while its 1H sibling is
+> already at it, so the ceiling costs the slow weapon nothing and gives the fast one everything. The
+> `statAxisProposal` → FAMILY REACH band is set to **1.7** to match this measurement, not because 1.7
+> is the design target — tighten it when this task lands.
 
 - [ ] Re-measure first — the floor's damage was that AGILITY kept buying swings on slow weapons, and Phase 1 removes AGILITY from the damage of those weapons entirely.
 - [ ] Then decide whether `MIN_ATTACK_INTERVAL_TICKS` (72 against a 120 base → 1.67× ceiling) is still the right ceiling.

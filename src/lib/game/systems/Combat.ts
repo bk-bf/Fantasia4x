@@ -348,7 +348,7 @@ function profileFromWeapon(
 }
 
 /** Attributes a weapon's damage roll can key off. */
-export type PowerStat = 'brawn' | 'agility' | 'awareness' | 'intellect';
+export type PowerStat = 'brawn' | 'agility' | 'awareness' | 'intellect' | 'charisma';
 
 
 /** Bonus a duelist (one-handed, off-hand free) adds to damage/armorPen/crit. */
@@ -767,18 +767,65 @@ function partArmorPoints(defender: Pawn | Mob, partId: BodyPartId, turn?: number
  *  caller) — roll two extra candidate locations and take the LEAST ARMOURED: a skilled fighter works
  *  the gaps (eye/throat/belly) instead of clanging off the plate. One chance, two payoffs: a "crit"
  *  is both the damage spike AND the eye for openings; capacity-dimmed sight/consciousness aim worse. */
+/**
+ * How much a hit HERE can contribute to a kill. A rolled external part never carries `isVital` itself —
+ * the carotid is inside the neck, the heart inside the chest — so a part is worth aiming at for what it
+ * CONTAINS, plus how hard it bleeds. A hand contains nothing and barely bleeds; the neck is an artery
+ * under thin cover.
+ */
+function partLethality(partId: BodyPartId): number {
+  const cached = _lethalityCache.get(partId);
+  if (cached !== undefined) return cached;
+  const def = PART_DEF_MAP[partId];
+  let score = 1;
+  if (def) {
+    score += def.bleedRatio * 6;
+    for (const organ of organsOf(partId)) {
+      const o = PART_DEF_MAP[organ];
+      if (o?.isCritical) score += 2.5;
+      else if (o?.isVital) score += 2;
+      if (o?.artery) score += 1.5;
+    }
+  }
+  _lethalityCache.set(partId, score);
+  return score;
+}
+const _lethalityCache = new Map<BodyPartId, number>();
+
+/** How much ONE point of armour discounts a part's worth to a precise attacker. Armour is a discount,
+ *  not a veto: dividing by it outright is what used to walk the blow off a covered chest onto a bare
+ *  thigh — on an armoured target the lethal parts ARE the covered ones. Calibrated against the real
+ *  `partArmorPoints` scale (mail + helm ≈ 8–12 points), so a mailed chest still outranks a bare leg. */
+const PRECISION_ARMOUR_DISCOUNT = 0.05;
+/** Candidate locations a searching attacker considers. Fractional above the base three, so a very
+ *  precise fighter can find a SMALL target (the neck is ~1.5% of the hit table) that three rolls
+ *  almost never turn up. */
+const PRECISION_CANDIDATES = 3;
+const PRECISION_CANDIDATE_SPAN = 6;
+
+/**
+ * Where a blow lands. A precise fighter does not merely find bare skin — it finds the spot that ENDS
+ * the fight: score each candidate by its lethality, discounted by what covers it, and let precision buy
+ * how many candidates get considered. (COMBAT-BALANCE task 11: scoring by armour alone made precision
+ * ANTI-lethal — raising it moved a dagger off the chest and onto an unarmoured extremity.)
+ */
 function aimedBodyPart(defender: Pawn | Mob, precision: number, turn?: number): BodyPartId {
   const plan = planOf(defender);
-  const first = rollBodyPartOf(defender.limbs, plan);
-  if (precision <= 0 || rng.random() >= precision) return first;
-  let best = first;
-  let bestArmor = partArmorPoints(defender, first, turn);
-  for (let i = 0; i < 2; i++) {
+  let best = rollBodyPartOf(defender.limbs, plan);
+  // Precision is the chance the fighter gets to CHOOSE at all; above that it widens the choice.
+  if (precision <= 0 || rng.random() >= precision) return best;
+  const exact = PRECISION_CANDIDATES + precision * PRECISION_CANDIDATE_SPAN;
+  const rolls = Math.floor(exact) + (rng.random() < exact - Math.floor(exact) ? 1 : 0);
+  if (rolls <= 1) return best;
+  const worth = (id: BodyPartId) =>
+    partLethality(id) / (1 + partArmorPoints(defender, id, turn) * PRECISION_ARMOUR_DISCOUNT);
+  let bestWorth = worth(best);
+  for (let i = 1; i < rolls; i++) {
     const cand = rollBodyPartOf(defender.limbs, plan);
-    const a = partArmorPoints(defender, cand, turn);
-    if (a < bestArmor) {
+    const w = worth(cand);
+    if (w > bestWorth) {
       best = cand;
-      bestArmor = a;
+      bestWorth = w;
     }
   }
   return best;

@@ -203,6 +203,10 @@ export interface Recipe {
 }
 
 export interface Item {
+  /** COMBAT-BALANCE task 7: standing this item lends its bearer while EQUIPPED, wielded or worn
+   *  (core/prestige.computePrestige). Worn regalia states it on `armorProperties`; a carried standard
+   *  states it here, because a banner is not armour and being seen holding it is the point of it. */
+  prestigeBonus?: number;
   id: string;
   name: string;
   amount: number;

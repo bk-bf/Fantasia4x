@@ -609,7 +609,9 @@ function equippedPowerToken(pawn: Pawn | Mob, sm: StatMultipliers): number {
   const mh = (pawn as Pawn).equipment?.mainHand;
   const wp = mh ? ITEM_BY_ID.get(mh.itemId)?.weaponProperties : undefined;
   const key = powerStatOf(wp);
-  return powerToken((pawn.stats?.[key] ?? 10) * (sm[key] ?? 1));
+  // charisma is not a physical stat, so no condition multiplier exists for it
+  const mult = key === 'charisma' ? 1 : sm[key];
+  return powerToken((pawn.stats?.[key] ?? 10) * mult);
 }
 
 function equippedWeaponSpeedMult(pawn: Pawn | Mob): number {
