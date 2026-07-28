@@ -545,6 +545,49 @@ armour is a brawn-45 kit, which is the intended gate.
 - [ ] Fold `_stylePremiseProbe.test.ts` into a permanent regression gate (it is the only harness that
       measures the MECHANISM — swings, landed share, damage per landed hit — rather than ticks-to-kill).
 
+### 12f. The armour-vs-shield comparison was a category error  ✅ 2026-07-28
+
+The earlier reading — "heavy armour is a worse defensive answer than a shield" — compared two different
+layers. **Armour is MITIGATION** (what a landed blow does); **a shield belongs to NEGATION alongside
+dodge** (whether it lands at all). A two-hander in plate being hit more often than a shield user is the
+trade it took, not a defect. Owner's framing, 2026-07-28.
+
+`styleMatchups.test.ts` tests what is actually diagnostic: pawn vs pawn, equal stats pinned at the
+**spawn ceiling (20)** rather than the 30–45 fixtures — balance read at stats no colonist can reach is
+not balance.
+
+- [x] **FLOOR — no issue.** Against a NAKED shield user (full dodge, no stiffness, no load), the
+      armoured two-hander wins **5–1**, and the naked two-hander **4–2**: plate earns its slot. The bare
+      shield user does hold out (lands 80% of its swings) but achieves nothing — **6.7 damage per landed
+      hit against the two-hander's 48.1, biggest blow 79**. Exactly the intended shape: hard to finish,
+      decided by one connection.
+
+- [ ] **CYCLE — not a cycle.** Intended `1H+shield > 2H > polearm 2H > 1H+shield`; measured a strict
+      ordering, **polearm > 2H > 1H+shield**, with only the third leg correct:
+
+  | matchup | result | intended |
+  | --- | --- | --- |
+  | 1H+shield · medium vs 2H · heavy | **2–4** | 1H+shield should lead |
+  | 2H · heavy vs polearm · medium | **1–5** | 2H should lead |
+  | polearm · medium vs 1H+shield · medium | **4–2** | ✅ |
+
+  Two causes, both traceable to decisions made earlier in this same phase:
+
+  - **Polearms were exempted from the 2H speed cut** (task 12d left reach ≥ 2 alone as "a reach identity,
+    already fast"). That leaves `steel_halberd` at `attackSpeed` **1.09** with 23 damage and reach 2 — a
+    one-hander's swing rate with two-handed reach. It lands **81%** against the greatsword's 58%. It is
+    strictly better than the weapon it is supposed to lose to.
+  - **The 1H damage cut was calibrated against the wrong target.** ×0.62 was set in a pawn-vs-MOB fight
+    (an orc reaver, natural armour). Against an ARMOURED pawn, ADR-029 subtractive mitigation eats
+    almost all of a 12-damage longsword blow: 1H+shield lands 68–72% of its swings for **6.9–7.2 per
+    hit**, against 43.8 coming back. The intended 60% throughput holds against a mob and collapses to
+    roughly a sixth against armour.
+
+- [ ] Re-rate the reach ≥ 2 two-handers against the sluggers rather than exempting them.
+- [ ] Re-derive the 1H damage cut against an ARMOURED opponent, not a mob — subtractive armour makes the
+      two calibrations completely different problems.
+- [ ] Re-run every task 12d number at the spawn ceiling; they were all measured at brawn 30–45.
+
 ### 13. The deferred trait audit
 
 Bundled deliberately: all three are trait-economy problems and re-pricing them one at a time against a
