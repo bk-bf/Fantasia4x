@@ -99,6 +99,9 @@ function desktopShellGuardPlugin(): Plugin {
         url.startsWith('/node_modules/') ||
         url.startsWith('/.svelte-kit/') ||
         url.startsWith('/src/') ||
+        // Balance-audit results (static/audit/*.json), read by the gear-db AUDIT tab. Generated data,
+        // not game content — and the tab is useless without it.
+        url.startsWith('/audit/') ||
         url.startsWith('/favicon'))
     )
       return next();

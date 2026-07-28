@@ -1,4 +1,9 @@
 <script lang="ts">
+  import AuditTables from '$lib/dev/AuditTables.svelte';
+
+  // Server-loaded audit results (+page.server.ts). Everything else on this page is derived from the
+  // static data files at module scope, so this is the only prop.
+  let { data } = $props();
   // DEV TOOL — data-driven BUILD database. Reads the derived catalogue from $lib/dev/gearDb (which
   // imports the real items/recipes/buildings/research/traits .jsonc), so it stays in sync with the
   // data. Everything is auto-classified to build archetypes by stats. Views: a Builds overview + a
@@ -390,8 +395,12 @@
   const params = page.url?.searchParams ?? new URLSearchParams();
   const pKind = params.get('kind');
   const pBuild = params.get('build');
-  let view = $state<'builds' | 'catalogue'>(
-    pKind || pBuild || params.get('view') === 'catalogue' ? 'catalogue' : 'builds'
+  let view = $state<'builds' | 'catalogue' | 'audit'>(
+    params.get('view') === 'audit'
+      ? 'audit'
+      : pKind || pBuild || params.get('view') === 'catalogue'
+        ? 'catalogue'
+        : 'builds'
   );
   let kind = $state<GearKind | 'all'>(
     pKind && CAT_KINDS.includes(pKind as never) ? (pKind as GearKind | 'all') : 'all'
@@ -726,6 +735,13 @@
     <button class="tab lead" class:active={view === 'builds'} onclick={() => (view = 'builds')}
       >Builds</button
     >
+    <button
+      class="tab lead"
+      class:active={view === 'audit'}
+      onclick={() => (view = 'audit')}
+      title="Headless balance-audit results — real HeadlessSession runs, pulled from the remote runner"
+      >Audit</button
+    >
     <span class="sep"></span>
     {#each CAT_KINDS as k (k)}
       <button
@@ -824,7 +840,9 @@
     </div>
   {/snippet}
 
-  {#if view === 'builds'}
+  {#if view === 'audit'}
+    <AuditTables audit={data.audit} />
+  {:else if view === 'builds'}
     <div class="tabs sub">
       <button class="tab" class:active={bview === 'weapon'} onclick={() => (bview = 'weapon')}
         >Weapons by age</button

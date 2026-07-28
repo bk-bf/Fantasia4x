@@ -53,3 +53,6 @@ src/lib/sim-core-pkg/
 
 # Local architecture vault (Obsidian/Foam notes; not version-controlled for now)
 docs/architecture/vault/
+
+# Audit results pulled back from the remote runner (generated; see audit.sh --fetch)
+static/audit/

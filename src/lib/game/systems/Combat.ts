@@ -888,6 +888,26 @@ export function partIncapacitation(partId: BodyPartId): number {
 }
 const _maimCache = new Map<BodyPartId, number>();
 
+/**
+ * COMBAT VALUE of a location — how much a fight is decided by wrecking it.
+ *
+ * A fight is not decided by killing. Most end in COLLAPSE, and long before that they are decided by
+ * degrading what the other body can still do: a foe who cannot see, cannot hold a weapon or cannot
+ * close has lost, whatever their blood volume. Scoring a weapon by kills therefore measures the tail of
+ * a fight and misses the part that decided it.
+ *
+ * So a location is worth what it contributes on BOTH axes at once: `partLethality` (organs it holds,
+ * how hard it bleeds) plus `partIncapacitation` (the combat capacities it gates — sight, manipulation,
+ * movement). An eye scores 3.46 against a bare thigh's 2.48 not because taking an eye kills, but
+ * because it ends the other fighter as a fighter.
+ *
+ * Damage is scored against the part's OWN size, so wrecking half a hand and half a chest count as
+ * halves of their respective values — a big weapon does not get credit for overkilling a finger.
+ */
+export function partCombatValue(partId: BodyPartId): number {
+  return partLethality(partId) + partIncapacitation(partId);
+}
+
 /** How much ONE point of armour discounts a part's worth to a precise attacker. Armour is a discount,
  *  not a veto: dividing by it outright is what used to walk the blow off a covered chest onto a bare
  *  thigh — on an armoured target the lethal parts ARE the covered ones. Calibrated against the real

@@ -9,6 +9,7 @@
 #   ./audit.sh --tail                           follow a run already in progress (from anywhere)
 #   ./audit.sh --status                         is anything running, and how far along
 #   ./audit.sh --result                         the finished output, once it is done
+#   ./audit.sh --fetch                          pull results into static/audit/ for the gear-db page
 #   ./audit.sh --setup                          (re)prepare the remote checkout
 #   ./audit.sh --shell                          a shell there, in the repo
 #
@@ -52,6 +53,25 @@ case "${1:-}" in
   --result)
     exec ssh "$HOST" "grep -vE '^\[scenario\]' $LOG"
     ;;
+  --fetch)
+    # Pull the structured results back and drop them where the dev server can serve them, so the
+    # gear-db AUDIT tab reads real numbers from the last remote run rather than anything hand-copied.
+    mkdir -p static/audit
+    ssh "$HOST" "cd $REMOTE_DIR && tar czf - .debug/audit .debug/weapon-meta-*.json 2>/dev/null" \
+      | tar xzf - --strip-components=1 -C static/ 2>/dev/null || true
+    # `.debug/audit/*` lands as `static/audit/*`; the weapon-meta files land beside them.
+    mv -f static/weapon-meta-*.json static/audit/ 2>/dev/null || true
+    ls -1 static/audit/*.json 2>/dev/null | sed 's|^|  |' || echo "  (nothing yet — run an audit first)"
+    # An index so the page knows what exists without guessing filenames.
+    node -e '
+      const fs = require("fs");
+      const dir = "static/audit";
+      const files = fs.existsSync(dir) ? fs.readdirSync(dir).filter((f) => f.endsWith(".json") && f !== "index.json") : [];
+      fs.writeFileSync(dir + "/index.json", JSON.stringify({ generated: new Date().toISOString(), files }, null, 1));
+      console.log("==> index.json lists " + files.length + " result files");
+    '
+    exit 0
+    ;;
   --setup)
     echo "==> preparing $HOST"
     ssh "$HOST" "$NODE_ENV_SETUP
@@ -70,6 +90,10 @@ case "${1:-}" in
     tar czf - src/lib/spatial-core-pkg | ssh "$HOST" "cd $REMOTE_DIR && tar xzf -"
     echo "==> ready"
     exit 0
+    ;;
+  --fit)
+    TEST_FILE="src/tests/game/systems/{weaponPawnFitNone,weaponPawnFitMedium,weaponPawnFitHeavy}.test.ts"
+    shift
     ;;
   --all)
     # Every audit at once. They are separate FILES, so vitest's fork pool runs them in parallel and the

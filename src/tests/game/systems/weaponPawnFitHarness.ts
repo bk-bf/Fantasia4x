@@ -2,7 +2,7 @@ import { HeadlessSession } from '$lib/game/headless/HeadlessSession';
 import { buildScenario } from '$lib/game/headless/Scenario';
 import { setSimLogSink } from '$lib/game/core/logSink';
 import { itemService } from '$lib/game/services/ItemService';
-import { partArmorPoints } from '$lib/game/systems/Combat';
+import { partArmorPoints, partCombatValue } from '$lib/game/systems/Combat';
 import type { CombatTurnEntry } from '$lib/game/core/Events';
 import type { BodyPartId, EntityStats, Pawn } from '$lib/game/core/types';
 
@@ -113,6 +113,18 @@ export interface FitResult {
   damage: number;
   /** Total armour points at the locations this weapon actually struck — the hammer question. */
   armourAtHits: number;
+  /**
+   * COMBAT EFFECTIVENESS — the metric that actually matters, and the reason `wins` is kept only as a
+   * secondary column. A fight is decided by degrading what the other body can still DO, not by killing:
+   * most end in collapse, and the outcome is settled well before that. Each landed blow scores the
+   * FRACTION of the struck location it accounted for, times how much that location is worth to a
+   * fighter (`partCombatValue` — organs and bleeding, plus the combat capacities it gates).
+   *
+   * Scoring by kills measured the tail of a fight and missed the part that decided it.
+   */
+  effect: number;
+  /** Ticks the fights actually ran, so `effect` can be expressed as a RATE rather than a total. */
+  ticks: number;
 }
 
 /**
@@ -124,7 +136,16 @@ export async function runFit(
   fit: Fit,
   armour: string[]
 ): Promise<FitResult> {
-  const out: FitResult = { wins: 0, fights: 0, landed: 0, swings: 0, damage: 0, armourAtHits: 0 };
+  const out: FitResult = {
+    wins: 0,
+    fights: 0,
+    landed: 0,
+    swings: 0,
+    damage: 0,
+    armourAtHits: 0,
+    effect: 0,
+    ticks: 0
+  };
   for (const seed of SEEDS) {
     const s = new HeadlessSession();
     await s.start(
@@ -171,8 +192,13 @@ export async function runFit(
         out.landed++;
         out.damage += sw.damage ?? 0;
         if (sw.bodyPart) {
+          const part = sw.bodyPart as BodyPartId;
           const live = (s.getState().pawns as Pawn[]).find((p) => p.id === foe.id);
-          if (live) out.armourAtHits += partArmorPoints(live, sw.bodyPart as BodyPartId);
+          if (live) out.armourAtHits += partArmorPoints(live, part);
+          // Against the part's OWN size, so a maul does not get credit for overkilling a finger.
+          const maxHp = sw.partMaxHp ?? 0;
+          const frac = maxHp > 0 ? Math.min(1, (sw.damage ?? 0) / maxHp) : 0;
+          out.effect += frac * partCombatValue(part);
         }
       },
       logCombatKill: () => {},
@@ -205,6 +231,7 @@ export async function runFit(
       ticks += 20;
     }
     setSimLogSink(null as never);
+    out.ticks += ticks;
     out.fights++;
     if (alive(me.id) && !alive(foe.id)) out.wins++;
   }
