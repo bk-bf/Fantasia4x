@@ -684,6 +684,51 @@ resolves to `dualWield` at attack_speed 2.268 against a single dagger's 1.5.
       behind a shield is supposed to die LESS than a two-hander, and currently dies more. Re-assert it
       once the one-handed damage re-derivation below lands.
 
+### 12i. Weapon identities, and the default build  ✅ 2026-07-28
+
+**Sword and shield is the DEFAULT, not one option among nine.** The even nine-way split from 12h was
+wrong — it made every build equally easy to reach, so nothing was a fallback and nothing was special
+("too easy to make a build"). `INTENDED_SHARE` now gives sword-and-shield the widest door at 26% and
+narrows the specialists; the calibrator solves for those shares instead of 1/N. Measured over 300
+pawns: Sword & Shield **28%**, Archer 12.3%, 2H Hammer 11.7%, Mace & Shield 11.3%, Greatsword 9%,
+Duelist 7.7%, Assassin 7.7%, Battlemage 6.7%, Fencer 5.7%. The tier ladder is untouched by this — the
+offset is a per-build constant, so it moves WHICH build a pawn lands in, never their rank inside it
+(S 8.3% / A 13% / B 17% / C 29.7% / D 14.7% / F 17.3%).
+
+- [x] **1H spears lose their reach.** All eight go reach 2 → **1**, the same as every other one-hander.
+- [x] **2H spears keep exactly one tile of reach** (steel pike 3 → 2; the rest were already 2).
+- [x] **1H spear accuracy +3, 1H sword accuracy +2.** The ask was "+10% and +5%"; melee to-hit is
+      `60 + accuracy × 2` points, so +10% ≈ 6 points ≈ accuracy +3, and +5% ≈ 3 points ≈ +1.5, rounded
+      to +2. Nine of these weapons had no `accuracy` field at all (defaulting to 0) and needed it added.
+- [x] **2H spears slowed to 0.762** — the reach-1 two-handed sluggers average 0.693, so this is exactly
+      10% faster than the rest of the two-handers, down from 1.15–1.28. Their damage was already well
+      below the other two-handers (pike 17 against greatsword 31) and was left alone.
+- [x] **`partPreference` — where a weapon WANTS to land.** New weapon property, a chance to redirect a
+      landed blow onto a named location, matched by substring so a plan that names its parts differently
+      still resolves. 1H flails ask for the head **5%**, 2H flails **10%**, daggers ask for the **neck
+      8%**.
+  - Daggers target the NECK, not the carotid directly: the carotid is an internal part (`hitWeight 0`)
+    that the existing organ-penetration roll finds *on* a neck hit, so preferring the neck delivers both
+    through anatomy that already exists rather than letting a blow select an organ out of nowhere.
+  - **It is not free**, which is the "should make them less accurate overall" the owner called for: the
+    total preference is charged straight back as a to-hit penalty at `PREFERENCE_ACCURACY_COST = 40`
+    points per 1.0, so a 2H flail gives up 4 points (~7% of its hit chance) and a dagger 3.2. Derived
+    from the preference itself, so it can never be authored away.
+- [x] **`pierceThrough` — the pike's actual case.** A thrust carries into whoever stands one tile
+      further along the same line and strikes the SAME body part for a fraction of the damage. On the
+      iron `framea` and the steel `steel_pike` at **50%**. It does nothing at all in a duel, which is the
+      point: it is a weapon for a rank.
+  - [ ] **80% for T4+ is authored but unreachable — there is no tier-4 two-handed spear.** The T4
+        polearms are the `rune_etched_halberd` and the `rune_standard_glaive`, neither of which is a
+        spear. Either add one, or decide the line tops out at steel.
+- [x] **One-handed spears cost one less stamina** (all eight; steel boar spear 2 → 1), making them the
+      cheapest melee weapon to swing and the loadout a low-stamina pawn or a pure tank can still use when
+      everything else has run them dry.
+
+- [ ] **None of 12i is measured yet.** The numbers above are authored, type-checked and unit-green, but
+      no headless re-audit has been run since — `weaponMeta` and `styleMatchups` both need re-running
+      before any claim about what these changes DID.
+
 ### 13. The deferred trait audit
 
 Bundled deliberately: all three are trait-economy problems and re-pricing them one at a time against a

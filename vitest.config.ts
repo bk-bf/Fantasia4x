@@ -48,6 +48,19 @@ function jsoncPlugin(): Plugin {
   };
 }
 
+/** The long-running balance sweeps — see the `exclude` note below. */
+const AUDIT_SUITES = [
+  'src/tests/game/systems/weaponMeta.test.ts',
+  'src/tests/game/systems/styleMatchups.test.ts',
+  'src/tests/game/systems/armourStyleAudit.test.ts',
+  'src/tests/game/systems/weaponFightSim.test.ts',
+  'src/tests/game/systems/combatBalanceAudit.test.ts',
+  'src/tests/game/systems/buildFitAudit.test.ts',
+  'src/tests/game/systems/t4WeaponAudit.test.ts',
+  'src/tests/game/systems/maimTargeting.test.ts',
+  'src/tests/game/systems/carryCapacityAudit.test.ts'
+];
+
 export default defineConfig({
   plugins: [jsoncPlugin()],
   resolve: {
@@ -61,7 +74,22 @@ export default defineConfig({
   test: {
     environment: 'node',
     include: ['src/**/*.{test,spec}.ts'],
-    exclude: ['node_modules/**', '.svelte-kit/**', 'build/**'],
+    // The BALANCE AUDITS are excluded from the default run. They are not slow tests, they are sweeps —
+    // thousands of real headless duels each — and together they take longer than the entire rest of the
+    // suite put together (measured: styleMatchups 13 min, weaponFightSim 12 min, armourStyleAudit 7 min,
+    // combatBalanceAudit 6.6 min, buildFitAudit 3 min, and weaponMeta ~45 min on its own). With them in,
+    // `pnpm test` stopped finishing at all, which makes the gate useless for ordinary work.
+    //
+    // Run them deliberately with `pnpm test:audit`, ideally on a machine that is not the one being typed
+    // on (see `audit.sh`). Raise `VITEST_MAX_FORKS` there — each audit is a separate FILE, so vitest's
+    // fork pool fans them out; the sim's one-session-per-process rule (HeadlessSession) means the
+    // parallelism has to come from separate processes, which is exactly what the fork pool gives.
+    exclude: [
+      'node_modules/**',
+      '.svelte-kit/**',
+      'build/**',
+      ...(process.env.RUN_AUDITS ? [] : AUDIT_SUITES)
+    ],
     // RESOURCE CAP (laptop OOM guard). Vitest defaults to one worker PER CORE — on a 22-thread box
     // that is ~21 parallel Node forks, each loading worldgen + WASM + the big JSONC databases. On a
     // 15 GB machine already deep into swap that thrashes RAM and OOM-kills the session. The suite does

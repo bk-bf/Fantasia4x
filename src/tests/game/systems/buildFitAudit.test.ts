@@ -11,6 +11,7 @@ import {
   MELEE_FIT_BUILDS,
   fitOf,
   calibrate,
+  INTENDED_SHARE,
   tierOf,
   type Tier
 } from '$lib/dev/buildFit';
@@ -155,16 +156,23 @@ describe('BUILD FIT — generation and payoff', () => {
     // Generation must reach every build — a build no rolled pawn is ever best at is a dead build.
     for (const b of FIT_BUILDS)
       expect((byBuild.get(b) ?? []).length, `${b} is never any pawn's best fit`).toBeGreaterThan(0);
-    // …and no build may hoover up the population. With per-build calibration the shares should sit
-    // near 1/N, so the bar is a loose multiple of the even share rather than a flat 50%.
-    const even = 1 / FIT_BUILDS.length;
-    for (const [b, s] of byBuild)
-      expect(s.length / pop.length, `${b} takes too much of the population`).toBeLessThan(even * 2.5);
-    // Nor may a build be all but unreachable — that is the same defect from the other side.
+    // Shares are deliberately UNEVEN (see `INTENDED_SHARE`): sword and shield is the wide door almost
+    // any body fits through, the specialists are narrow. So each build is checked against ITS OWN
+    // intended share rather than a flat 1/N, with room for sampling noise at n=300.
+    for (const b of FIT_BUILDS) {
+      const got = (byBuild.get(b) ?? []).length / pop.length;
+      const want = INTENDED_SHARE[b] ?? 1 / FIT_BUILDS.length;
+      expect(got, `${b} takes too much of the population`).toBeLessThan(want * 1.6 + 0.03);
+      expect(got, `${b} is nearly unreachable`).toBeGreaterThan(want * 0.4);
+    }
+    // And the default really must be the biggest door — that is the whole point of the split.
+    const shieldShare = (byBuild.get('Sword & Shield') ?? []).length / pop.length;
     for (const b of FIT_BUILDS)
-      expect((byBuild.get(b) ?? []).length / pop.length, `${b} is nearly unreachable`).toBeGreaterThan(
-        even * 0.3
-      );
+      if (b !== 'Sword & Shield')
+        expect(
+          shieldShare,
+          `Sword & Shield must be at least as common as ${b} — it is the fallback build`
+        ).toBeGreaterThanOrEqual((byBuild.get(b) ?? []).length / pop.length);
   });
 
   it('PAYOFF: fitting a build pays, measured against the same weapon rather than across weapon classes', () => {

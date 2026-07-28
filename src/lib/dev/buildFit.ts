@@ -207,6 +207,25 @@ const moments = (xs: number[]) => {
   return { mean, sd: Math.sqrt(varr) || 1e-9 };
 };
 
+/**
+ * The share of a generated population each build is MEANT to claim. Deliberately uneven: sword and
+ * shield is the default a colonist falls back to, because a blade and a board is the loadout almost any
+ * body can hold, while the specialist builds are meant to be harder to qualify for. An even split made
+ * every build equally easy to reach, which is the "too easy to make a build" problem — nothing was a
+ * fallback and nothing was special. Sums to 1.
+ */
+export const INTENDED_SHARE: Record<string, number> = {
+  'Sword & Shield': 0.26,
+  'Mace & Shield': 0.14,
+  'Greatsword (2H)': 0.11,
+  '2H Hammer': 0.09,
+  'Archer (Bow)': 0.11,
+  'Duelist (1H, no shield)': 0.08,
+  'Fencer (Rapier)': 0.07,
+  'Battlemage (1H Staff)': 0.07,
+  'Assassin (Dagger)': 0.07
+};
+
 export function calibrate(pawns: Pawn[]): FitCalibration {
   const acc: Record<string, number[]> = {};
   for (const p of pawns) for (const s of gradePawn(p)) (acc[s.build] ??= []).push(s.score);
@@ -227,7 +246,13 @@ export function calibrate(pawns: Pawn[]): FitCalibration {
   // dozen passes and is deterministic — no randomness, so a given population always calibrates the same.
   const offset: Record<string, number> = {};
   for (const b of builds) offset[b] = 0;
-  const target = 1 / builds.length;
+  // NOT an even split. `Sword & Shield` is the DEFAULT a colonist falls back to — a blade and a board
+  // is the loadout almost any body can hold — so it is deliberately the widest door, while the
+  // specialist builds are meant to be harder to qualify for. An even nine-way split made every build
+  // equally easy to reach, which read as "too easy to make a build": nothing was a fallback and nothing
+  // was special. Shares below sum to 1.
+  const SHARE = INTENDED_SHARE;
+  const shareOf = (b: string) => SHARE[b] ?? 1 / builds.length;
   const argmax = () => {
     const count: Record<string, number> = {};
     for (const b of builds) count[b] = 0;
@@ -253,12 +278,13 @@ export function calibrate(pawns: Pawn[]): FitCalibration {
     const count = argmax();
     let worst = 0;
     for (const b of builds) {
+      const want = shareOf(b);
       const share = Math.max(0.5 / zs.length, count[b] / zs.length); // never log(0)
-      const raw = -0.3 * Math.log(share / target);
+      const raw = -0.3 * Math.log(share / want);
       offset[b] += Math.max(-MAX_STEP, Math.min(MAX_STEP, raw));
-      worst = Math.max(worst, Math.abs(share - target));
+      worst = Math.max(worst, Math.abs(share - want) / want);
     }
-    if (worst < target * 0.25) break; // every build within a quarter of the even share
+    if (worst < 0.25) break; // every build within a quarter of its intended share
   }
 
   // Winner moments, computed with the offsets in place so the tier ladder is measured on the same

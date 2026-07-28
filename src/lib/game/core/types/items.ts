@@ -447,6 +447,23 @@ export interface Item {
      *  scrap of protection for reach into gaps and a much faster working rate. Daggers only — anything
      *  with real heft needs the off hand free to control it. */
     offHandable?: boolean;
+    /**
+     * Where this weapon WANTS to land, as a chance to redirect the blow onto a named location. A flail
+     * comes over the guard at the head; a dagger goes for the throat. Keys are matched against the part
+     * id, so `neck` also reaches the carotid inside it.
+     *
+     * It is not free: going for a small, high-value target is harder than swinging at the mass of
+     * someone, so the total preference is charged back as a to-hit penalty (see
+     * `Combat.PREFERENCE_ACCURACY_COST`). A weapon that insists on the head lands less often than one
+     * that will take whatever it finds — which is exactly why a flail is wild and a mace is not.
+     */
+    partPreference?: Record<string, number>;
+    /**
+     * PIERCETHROUGH — a thrust that carries on into whoever is standing behind the target, striking the
+     * SAME body part for this fraction of the damage. The signature of a couched spear or a pike line:
+     * its whole case is what it does to a rank, not to one person.
+     */
+    pierceThrough?: number;
     tags?: string[]; // ability grants
     ammoCategory?: string; // links a ranged weapon to its ammo (e.g. "arrow" | "bolt" | "sling_stone"); omit = no ammo (thrown weapons self-consume)
     reload?: number; // mechanical SPANNING multiplier on the aim_speed cadence (default 0→1×); a crossbow at 3 fires a third as often as a bow. See rangedCombat.aimIntervalTicks.

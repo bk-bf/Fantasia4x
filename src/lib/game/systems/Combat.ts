@@ -263,6 +263,8 @@ interface AttackProfile {
   dex: number;
   baseDamage: number;
   accuracy: number;
+  /** Where this weapon wants the blow to land — see `WeaponProperties.partPreference`. */
+  partPreference?: Record<string, number>;
   damageType: DamageType;
   bluntMod: number;
   /** Flat 0–1 chance to stun (knock down) on hit, regardless of damage type (maces/hammers). */
@@ -332,7 +334,12 @@ function profileFromWeapon(
     str,
     dex,
     baseDamage: wp.damage,
-    accuracy: wp.accuracy ?? 0,
+    // A weapon that INSISTS on a location is harder to land — going for the head over a guard, or the
+    // throat, is not the same swing as taking whatever presents itself. Charged here so the cost can
+    // never be authored away: it is derived from the preference itself.
+    accuracy:
+      (wp.accuracy ?? 0) - preferenceTotal(wp.partPreference) * PREFERENCE_ACCURACY_COST,
+    partPreference: wp.partPreference,
     damageType: dtype,
     bluntMod: wp.bluntMod ?? (dtype === 'blunt' ? 1.0 : 0),
     stunChance: wp.stunChance ?? 0,
@@ -889,6 +896,43 @@ const PRECISION_ARMOUR_DISCOUNT = 0.05;
 /** Candidate locations a searching attacker considers. Fractional above the base three, so a very
  *  precise fighter can find a SMALL target (the neck is ~1.5% of the hit table) that three rolls
  *  almost never turn up. */
+/** Total insistence of a weapon's `partPreference`, i.e. how much of the time it refuses to take
+ *  whatever it finds. */
+function preferenceTotal(pref: Record<string, number> | undefined): number {
+  if (!pref) return 0;
+  let t = 0;
+  for (const k in pref) t += pref[k] ?? 0;
+  return Math.min(1, t);
+}
+/** To-hit POINTS surrendered per 1.0 of insistence. On the 60-point melee base, a flail asking for the
+ *  head 10% of the time gives up 4 points (~7% of its hit chance) — which is the whole reason a flail
+ *  is a wild weapon and a mace is a reliable one. */
+const PREFERENCE_ACCURACY_COST = 40;
+
+/** Redirect a landed blow onto the location the weapon was going for, if the defender still has it.
+ *  Matched by substring so `neck` also finds a `carotid` inside it, and a plan that names its parts
+ *  differently still resolves without per-creature authoring. */
+function preferredPart(
+  defender: Pawn | Mob,
+  pref: Record<string, number> | undefined
+): BodyPartId | null {
+  if (!pref) return null;
+  for (const key in pref) {
+    if (rng.random() >= (pref[key] ?? 0)) continue;
+    const want = key.toLowerCase();
+    const hits: BodyPartId[] = [];
+    for (const limb of defender.limbs ?? []) {
+      if (limb.isMissing) continue;
+      for (const part of limb.parts ?? []) {
+        if (part.isMissing) continue;
+        if (part.id.toLowerCase().includes(want)) hits.push(part.id as BodyPartId);
+      }
+    }
+    if (hits.length) return hits[Math.floor(rng.random() * hits.length)];
+  }
+  return null;
+}
+
 const PRECISION_CANDIDATES = 3;
 /** Extra looks a fully precise fighter buys on top of the base three.
  *
@@ -1119,7 +1163,11 @@ class CombatServiceImpl implements CombatService {
     // (stats.jsonc: DEX/PER × consciousness × sight, + the weapon's critMod, so a crit-prone stiletto
     // finds gaps more often), the attacker rolls extra candidate locations and takes the least-armoured
     // one (eye/throat/belly over plate).
-    const partId = aimedBodyPart(defender, critChance, state.turn);
+    // The weapon's own preference answers FIRST: a flail comes over the guard at the head and a dagger
+    // goes for the throat whether or not the wielder is skilled enough to pick a target deliberately.
+    // Its accuracy cost is already paid in `attackerProfile`.
+    const partId =
+      preferredPart(defender, profile.partPreference) ?? aimedBodyPart(defender, critChance, state.turn);
     const partDef = PART_DEF_MAP[partId]!;
     // The defender's part may be bodyScale-scaled; severity/fracture use its ACTUAL maxHp.
     const partMaxHp =
@@ -1583,6 +1631,35 @@ class CombatServiceImpl implements CombatService {
    * stamina this swing drained (deducted by the caller regardless of hit/miss).
    * Misses are surfaced too (as a "dodge") so the defender's evasion is visible.
    */
+  /**
+   * The entity standing one tile BEYOND the target, on the line from the attacker through it — who a
+   * pierce-through thrust runs into. Steps one further along the (rounded) attack direction and looks
+   * for anything alive on that tile, the attacker excepted. Nothing there ⇒ the thrust hits air, which
+   * is the common case and costs one tile lookup.
+   */
+  private entityBehind(
+    attacker: Pawn | Mob,
+    target: Pawn | Mob,
+    state: GameState
+  ): Pawn | Mob | null {
+    const a = this.entityPos(attacker);
+    const t = this.entityPos(target);
+    const dx = t.x - a.x;
+    const dy = t.y - a.y;
+    if (dx === 0 && dy === 0) return null;
+    const bx = t.x + Math.sign(dx);
+    const by = t.y + Math.sign(dy);
+    for (const m of state.mobs ?? []) {
+      if (m.isAlive === false || m.id === target.id || m.id === attacker.id) continue;
+      if (m.x === bx && m.y === by) return m;
+    }
+    for (const p of state.pawns ?? []) {
+      if (p.isAlive === false || p.id === target.id || p.id === attacker.id) continue;
+      if (p.position?.x === bx && p.position?.y === by) return p;
+    }
+    return null;
+  }
+
   private performAttack(
     attacker: Pawn | Mob,
     target: Pawn | Mob,
@@ -1700,6 +1777,29 @@ class CombatServiceImpl implements CombatService {
     let next = isTargetMob
       ? this.applyInjuryToMob(target.id, result.injury, state, result.knockdown)
       : this.applyInjury(target.id, result.injury, state, result.knockdown);
+
+    // PIERCETHROUGH — the thrust carries on into whoever is standing directly behind the target, one
+    // tile further along the same line, and strikes the SAME body part for a fraction of the damage.
+    // This is the pike's whole case: it is a weapon for a RANK, not a duel, and it does nothing extra
+    // when the enemy comes at you one at a time.
+    const pierce = itemService.getItemById(result.weaponId)?.weaponProperties?.pierceThrough ?? 0;
+    if (pierce > 0 && result.bodyPart) {
+      const behind = this.entityBehind(attacker, target, next);
+      if (behind) {
+        const carried: Injury = {
+          ...result.injury,
+          damage: Math.max(1, Math.round(result.injury.damage * pierce)),
+          bleeding: result.injury.bleeding * pierce,
+          painContribution: result.injury.painContribution * pierce
+        };
+        next =
+          'entityClass' in behind
+            ? this.applyInjuryToMob(behind.id, carried, next, false)
+            : this.applyInjury(behind.id, carried, next, false);
+        const bpos = this.entityPos(behind);
+        this.emitFloat(bpos.x, bpos.y, 'damage', `-${carried.damage}`);
+      }
+    }
 
     // A fracture from the same blow lands as a second (bone) wound — no extra knockdown.
     if (result.fractureInjury) {
