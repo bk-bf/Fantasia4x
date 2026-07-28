@@ -50,7 +50,11 @@ function jsoncPlugin(): Plugin {
 
 /** The long-running balance sweeps — see the `exclude` note below. */
 const AUDIT_SUITES = [
-  'src/tests/game/systems/weaponMeta.test.ts',
+  'src/tests/game/systems/weaponMetaNone.test.ts',
+  'src/tests/game/systems/weaponMetaLight.test.ts',
+  'src/tests/game/systems/weaponMetaMedium.test.ts',
+  'src/tests/game/systems/weaponMetaHeavy.test.ts',
+  'src/tests/game/systems/weaponMetaHeadToHead.test.ts',
   'src/tests/game/systems/styleMatchups.test.ts',
   'src/tests/game/systems/armourStyleAudit.test.ts',
   'src/tests/game/systems/weaponFightSim.test.ts',

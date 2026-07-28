@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.1.247",
   "license": "AGPL-3.0-or-later",
-  "description": "Fantasia4x — a turn-based 4X colony chronicle.",
+  "description": "Fantasia4x \u2014 a turn-based 4X colony chronicle.",
   "author": "bk",
   "type": "module",
   "main": "electron/main.cjs",
@@ -36,7 +36,7 @@
     "threat:check": "node scripts/threat-model.mjs --check",
     "build:distance": "bash scripts/build-distance.sh",
     "hooks:install": "bash scripts/hooks/install.sh",
-    "test:audit": "RUN_AUDITS=1 vitest run src/tests/game/systems/{weaponMeta,styleMatchups,armourStyleAudit,weaponFightSim,combatBalanceAudit,buildFitAudit,t4WeaponAudit,maimTargeting,carryCapacityAudit}.test.ts"
+    "test:audit": "RUN_AUDITS=1 vitest run src/tests/game/systems/{weaponMetaNone,weaponMetaLight,weaponMetaMedium,weaponMetaHeavy,weaponMetaHeadToHead,styleMatchups,armourStyleAudit,weaponFightSim,combatBalanceAudit,buildFitAudit,t4WeaponAudit,maimTargeting,carryCapacityAudit}.test.ts"
   },
   "devDependencies": {
     "@eslint/js": "^9.30.0",
