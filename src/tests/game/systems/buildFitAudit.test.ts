@@ -10,6 +10,7 @@ import {
   FIT_BUILDS,
   MELEE_FIT_BUILDS,
   fitOf,
+  calibrate,
   tierOf,
   type Tier
 } from '$lib/dev/buildFit';
@@ -102,7 +103,11 @@ const pct = (n: number, of: number) => `${((n / of) * 100).toFixed(1)}%`;
 
 describe('BUILD FIT — generation and payoff', () => {
   const pop = population();
-  const fits = pop.map((p) => ({ pawn: p, fit: fitOf(p) }));
+  // Each build is graded against its OWN score distribution (see `calibrate`): comparing raw scores
+  // across profiles just measures which weight vector has the widest spread, which is what previously
+  // handed three builds 76% of the population.
+  const calib = calibrate(pop);
+  const fits = pop.map((p) => ({ pawn: p, fit: fitOf(p, calib) }));
 
   it('GENERATION: which builds the roller actually serves, and how well', () => {
     const byBuild = new Map<string, number[]>();
@@ -150,73 +155,96 @@ describe('BUILD FIT — generation and payoff', () => {
     // Generation must reach every build — a build no rolled pawn is ever best at is a dead build.
     for (const b of FIT_BUILDS)
       expect((byBuild.get(b) ?? []).length, `${b} is never any pawn's best fit`).toBeGreaterThan(0);
-    // …and it must not funnel everyone into one.
+    // …and no build may hoover up the population. With per-build calibration the shares should sit
+    // near 1/N, so the bar is a loose multiple of the even share rather than a flat 50%.
+    const even = 1 / FIT_BUILDS.length;
     for (const [b, s] of byBuild)
-      expect(s.length / pop.length, `${b} takes too much of the population`).toBeLessThan(0.5);
+      expect(s.length / pop.length, `${b} takes too much of the population`).toBeLessThan(even * 2.5);
+    // Nor may a build be all but unreachable — that is the same defect from the other side.
+    for (const b of FIT_BUILDS)
+      expect((byBuild.get(b) ?? []).length / pop.length, `${b} is nearly unreachable`).toBeGreaterThan(
+        even * 0.3
+      );
   });
 
-  it('PAYOFF: an S-tier pawn beats an F-tier one, and does better IN its build than outside it', () => {
-    const rows = [
-      '[PAYOFF] dps with the build’s own weapon vs a weapon from a build it does not fit'
-    ];
-    rows.push('build                     tier  in-build   out-of-build   in/out');
+  it('PAYOFF: fitting a build pays, measured against the same weapon rather than across weapon classes', () => {
+    // The previous version compared a pawn's dps with its OWN build's weapon against its dps with some
+    // other build's weapon, and read a one-hander as a failure every time. That is not a fit result: a
+    // one-hander is DESIGNED to land near 60% of a two-hander (task 12d), so any 1H build loses that
+    // comparison however perfectly the pawn suits it. Both halves below hold the WEAPON constant and
+    // vary the pawn, or normalise by what an average pawn does with that weapon.
+    const rows = ['[PAYOFF] does fitting a build actually pay?'];
+
+    // Population mean dps per build weapon — the yardstick that makes 1H and 2H comparable.
+    const meanDps: Record<string, number> = {};
+    for (const build of MELEE_FIT_BUILDS) {
+      const prof = BUILD_PROFILES[build];
+      const xs = pop.map((p) => dpsWith(p, prof.weapon, prof.offHand));
+      meanDps[build] = xs.reduce((a, b) => a + b, 0) / xs.length;
+    }
+
+    // (a) SAME WEAPON, different pawns: the pawn that best fits a build must out-fight the one that
+    //     fits it worst, both holding that build's weapon.
+    rows.push('');
+    rows.push('same weapon, best-fit pawn vs worst-fit pawn');
+    rows.push('build                          weapon dps: best   worst   ratio');
+    const ladder: [string, number, number][] = [];
+    for (const build of MELEE_FIT_BUILDS) {
+      const prof = BUILD_PROFILES[build];
+      // Rank the WHOLE population by their z for THIS build, not just the cohort that picked it.
+      const ranked = fits
+        .map((f) => ({ f, z: f.fit.all.find((b) => b.build === build)!.score }))
+        .sort((a, b) => b.z - a.z);
+      const best = dpsWith(ranked[0].f.pawn, prof.weapon, prof.offHand);
+      const worst = dpsWith(ranked[ranked.length - 1].f.pawn, prof.weapon, prof.offHand);
+      ladder.push([build, best, worst]);
+      rows.push(
+        build.padEnd(30) + best.toFixed(1).padStart(11) + worst.toFixed(1).padStart(8) +
+          (best / worst).toFixed(2).padStart(8) + '\u00d7'
+      );
+    }
+
+    // (b) SAME PAWN, different builds, each normalised by that weapon's population mean: a pawn should
+    //     do relatively better in the build it fits than in the one it fits worst.
+    rows.push('');
+    rows.push('same pawn, own best build vs own worst build (dps \u00f7 that weapon\u2019s population mean)');
     let checked = 0;
     let inBeatsOut = 0;
     const perTier: Record<string, number[]> = {};
-    const byBuildPair: Record<string, { best: number; worst: number }> = {};
-
-    // MELEE only: a bow swung at melee range measures the fumble, not the build.
-    for (const build of MELEE_FIT_BUILDS) {
-      const cohort = fits.filter((f) => f.fit.best.build === build);
-      if (!cohort.length) continue;
-      const sorted = cohort.slice().sort((a, b) => b.fit.best.score - a.fit.best.score);
-      const prof = BUILD_PROFILES[build];
-      // "Outside its build" = the MELEE build this pawn fits worst, so both sides of the comparison
-      // resolve through the same path and the ratio means something.
-      const worstBuild = sorted[0].fit.all
+    for (const { pawn, fit } of fits) {
+      const mine = fit.all.find((b) => MELEE_FIT_BUILDS.includes(b.build));
+      const theirs = fit.all
         .slice()
         .reverse()
-        .find((b) => MELEE_FIT_BUILDS.includes(b.build) && b.build !== build)!.build;
-      const other = BUILD_PROFILES[worstBuild];
-
-      for (const [label, entry] of [
-        ['best', sorted[0]],
-        ['worst', sorted[sorted.length - 1]]
-      ] as const) {
-        const inB = dpsWith(entry.pawn, prof.weapon, prof.offHand);
-        const outB = dpsWith(entry.pawn, other.weapon, other.offHand);
-        (perTier[entry.fit.tier] ??= []).push(inB);
-        (byBuildPair[build] ??= { best: 0, worst: 0 })[label] = inB;
-        checked++;
-        if (inB > outB) inBeatsOut++;
-        rows.push(
-          build.padEnd(26) +
-            `${entry.fit.tier}(${label})`.padEnd(12) +
-            inB.toFixed(1).padStart(7) +
-            outB.toFixed(1).padStart(14) +
-            (inB / outB).toFixed(2).padStart(9) +
-            '×  vs ' +
-            worstBuild
-        );
-      }
+        .find((b) => MELEE_FIT_BUILDS.includes(b.build));
+      if (!mine || !theirs || mine.build === theirs.build) continue;
+      const pIn = BUILD_PROFILES[mine.build];
+      const pOut = BUILD_PROFILES[theirs.build];
+      const relIn = dpsWith(pawn, pIn.weapon, pIn.offHand) / meanDps[mine.build];
+      const relOut = dpsWith(pawn, pOut.weapon, pOut.offHand) / meanDps[theirs.build];
+      (perTier[fit.tier] ??= []).push(relIn);
+      checked++;
+      if (relIn > relOut) inBeatsOut++;
     }
+    rows.push(`  in-build beat out-of-build in ${inBeatsOut}/${checked} (${pct(inBeatsOut, checked)})`);
     rows.push('');
-    rows.push(`in-build beat out-of-build in ${inBeatsOut}/${checked} cases`);
-    for (const t of ['S', 'A', 'B', 'C', 'D', 'F'])
+    rows.push('relative in-build dps by tier (1.00 = an average pawn with that weapon):');
+    for (const t of ['S', 'A', 'B', 'C', 'D', 'F'] as Tier[])
       if (perTier[t])
         rows.push(
-          `  tier ${t}: mean in-build dps ${(perTier[t].reduce((a, c) => a + c, 0) / perTier[t].length).toFixed(1)} (n=${perTier[t].length})`
+          `  ${t}  ${(perTier[t].reduce((a, c) => a + c, 0) / perTier[t].length).toFixed(3)}  (n=${perTier[t].length})`
         );
     console.log(rows.join('\n'));
 
-    // The claim under test, in two halves:
-    // (a) a BETTER fit must beat a worse fit ON THE SAME WEAPON — the tier ladder has to mean something;
-    for (const [b, pair] of Object.entries(byBuildPair))
-      expect(pair.best, `${b}: the best-fit pawn must out-fight the worst-fit one`).toBeGreaterThan(
-        pair.worst
-      );
-    // (b) and playing to your build has to beat playing against it, most of the time.
+    for (const [b, best, worst] of ladder)
+      expect(best, `${b}: the best-fit pawn must out-fight the worst-fit one`).toBeGreaterThan(worst);
     expect(inBeatsOut / checked, 'in-build should win most of the time').toBeGreaterThan(0.5);
+    // The tier ladder must be monotone where it has data: an S pawn out-performs an F one, relative to
+    // the same weapon.
+    if (perTier.S && perTier.F) {
+      const m = (t: string) => perTier[t].reduce((a, c) => a + c, 0) / perTier[t].length;
+      expect(m('S'), 'S tier must out-perform F tier in-build').toBeGreaterThan(m('F'));
+    }
   });
 
   it('the fit grade is a spectrum, not a coin flip', () => {

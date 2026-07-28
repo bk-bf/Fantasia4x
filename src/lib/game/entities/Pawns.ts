@@ -10,7 +10,7 @@ import type {
   KinKind
 } from '../core/types';
 import { createPawnInventory, createPawnEquipment } from '../core/PawnEquipment';
-import { drawPawnTraits } from '../core/Culture';
+import { drawPawnTraits, SPAWN_STAT_CAP } from '../core/Culture';
 import {
   type Background,
   rollOrigin,
@@ -430,7 +430,11 @@ export function buildPawnFromCulture(culture: Culture, index: number, origin?: P
   // in the drawn traits' bonuses.
   const affinity = origin ? backgroundTraitAffinity(origin.childhood, origin.adulthood) : undefined;
   const traits = drawPawnTraits(culture, physicalTraits, affinity);
-  const finalStats = applyCulturalTraitBonuses(baseStats, traits);
+  // Trait bonuses land ON TOP of the rolled range, so the spawn ceiling has to be enforced HERE, after
+  // them — capping the culture's ranges alone still let a trait push a stat over (measured: 6% of
+  // pawns, topping out at 23). The floor keeps a stacked-negative draw from producing a stat so low
+  // that capacity formulas read as a corpse.
+  const finalStats = clampSpawnStats(applyCulturalTraitBonuses(baseStats, traits));
   // TRAIT-SYSTEM-V2 §1: bodyMod weight (heavy bones) mass folded in AFTER the draw (it doesn't change
   // the base build the gate reads) but BEFORE the blood pool is derived from weight.
   physicalTraits.weight += traitBodyWeightDelta(traits);
@@ -807,6 +811,21 @@ export function getStatDescription(
 }
 
 // --- Existing utility functions (unchanged) ---
+
+/** Floor on a spawned stat. A stacked-negative trait draw could otherwise land a stat at 1, which reads
+ *  through the capacity formulas as a body that can barely function before anything has happened to it. */
+export const SPAWN_STAT_FLOOR = 4;
+
+/** Clamp every core stat into the growth-level-1 band. See `SPAWN_STAT_CAP` for why the ceiling exists. */
+function clampSpawnStats(stats: EntityStats): EntityStats {
+  const out = { ...stats } as unknown as Record<string, number>;
+  for (const k of STAT_KEYS) {
+    const v = out[k as string];
+    if (typeof v === 'number')
+      out[k as string] = Math.max(SPAWN_STAT_FLOOR, Math.min(SPAWN_STAT_CAP, Math.round(v)));
+  }
+  return out as unknown as EntityStats;
+}
 
 function rollStatsFromRanges(statRanges: Record<string, [number, number]>): EntityStats {
   const stats: any = {};

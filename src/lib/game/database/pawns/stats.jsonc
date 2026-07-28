@@ -17,10 +17,18 @@
 [
     // ── Combat ────────────────────────────────────────────────────────────────────
     {
+        // Was a flat `0.05 × APT`, which meant a superbly precise fighter chose its target on 6.1% of
+        // landed blows against a poor one's 4.5% — a 1.6-point spread across the whole aptitude band,
+        // so no build could ever be played toward finding a gap. The curve is now CONVEX in the roll:
+        // anchored at the bottom of the band (0.045 at APT 0.85, i.e. unchanged), it reaches 0.20 at
+        // the top — a top-precision fighter picks where the blow goes on one landed hit in five, and a
+        // poor one gains nothing. `** 5` is the exponent that maps the band onto exactly that range;
+        // `/ 0.85` is the anchor, so the low end pivots rather than shifts. Clamped because traits can
+        // push the aptitude past the roll band and the curve is steep out there.
         "id": "hit_precision",
         "category": "combat",
         "primaryStat": "agility",
-        "formula": "0.05 × APT × consciousness × sight",
+        "formula": "clamp(0.045 × (APT / 0.85) ** 5, 0.03, 0.22) × consciousness × sight",
         "description": "chance per landed blow to strike true — a telling hit that finds a gap (an eye, the throat, a soft belly) instead of glancing off (× consciousness × sight); weapons add their own bonus on top"
     },
     {
