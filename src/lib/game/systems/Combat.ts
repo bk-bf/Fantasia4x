@@ -388,7 +388,9 @@ const HIT_CHANCE_WEIGHT = 100 / 3;
 /** Hit-chance points removed per +1.0 of defender `dodge` above the 1.0 baseline. */
 const DODGE_HIT_WEIGHT = 50;
 /** Dodge lost per point of NATURAL armour — heavy hide is dead weight that evades worse. Worn armour
- *  is separate: it drags dodge through the staged `encumbered` condition. */
+ *  is separate and costs dodge on TWO channels: its `movementPenalty` (see `wornStiffness`, paid even
+ *  by a wearer strong enough to carry it) and its weight through the staged `laden`/`encumbered`
+ *  conditions. */
 const NATURAL_ARMOR_DODGE_DRAG = 0.01;
 /** Default projectile particle style per ammo bucket when the ammo item doesn't author its own. */
 const PROJECTILE_BY_CATEGORY: Record<string, string> = {
@@ -704,6 +706,25 @@ function entityNaturalArmor(defender: Pawn | Mob): number {
   return s;
 }
 
+/** Sum of worn armour's authored `movementPenalty` — plate 0.10, great helm 0.05, brigandine 0.05,
+ *  every light piece 0. This is the STIFFNESS of a suit, independent of what the wearer can carry: a
+ *  brawn build affords plate without going `laden`, but the suit still costs it evasion. That is what
+ *  makes light armour the right answer for a dodge build rather than a strictly worse one.
+ *  Read directly off equipment — worn gear never reaches `evaluateStat`. Mobs wear nothing → 0. */
+function wornStiffness(defender: Pawn | Mob): number {
+  const eq = (defender as Pawn).equipment as Record<string, ItemInstance | undefined> | undefined;
+  if (!eq) return 0;
+  let s = 0;
+  for (const slot in eq) {
+    const inst = eq[slot];
+    if (!inst) continue;
+    s += itemService.getItemById(inst.itemId)?.armorProperties?.movementPenalty ?? 0;
+  }
+  return s;
+}
+/** Cap on the dodge lost to worn stiffness, so no pile of gear can zero evasion outright. */
+const STIFFNESS_DODGE_CAP = 0.45;
+
 /** Natural-armour DAMAGE POINTS at a part: a creature's hide (`naturalArmor`) or a pawn's cultural traits
  *  (ADR-029 `naturalArmor` sugar), the scalar distributed by the part's `share`, PLUS any explicit
  *  per-part `armorMods` (carapace back-heavy, soft belly). ADR-031: when `turn` is given, a mob's
@@ -956,7 +977,8 @@ class CombatServiceImpl implements CombatService {
     const armorDrag = entityNaturalArmor(defender) * NATURAL_ARMOR_DODGE_DRAG;
     const defDodge =
       Math.max(0, pawnStatService.evaluateStat('dodge', defender) - armorDrag) *
-      this.conditionMult(defender, 'dodge'); // injuries, winded, encumbrance, fouled guard (easier to hit)
+      (1 - Math.min(STIFFNESS_DODGE_CAP, wornStiffness(defender))) *
+      this.conditionMult(defender, 'dodge'); // injuries, winded, load, fouled guard (easier to hit)
 
     // MELEE gets the sane base (BASE_MELEE_HIT ± skill/dodge edges). RANGED keeps its OWN calibrated
     // curve — its `hitMod` IS rangedAccuracyMod (aim_accuracy + distance + cover), layered on the

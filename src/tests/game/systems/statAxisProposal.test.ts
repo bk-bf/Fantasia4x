@@ -475,8 +475,16 @@ describe('STAT AXIS — the landed two-axis split', () => {
     // trait-gated. So the check is direction + magnitude, not parity.
     for (const [fam, r] of ratios)
       expect(r, `${fam}: the two-hander must lead its one-handed sibling`).toBeGreaterThan(1);
-    expect(1 / meanRatio, 'one-hander should sit near 60% of a two-hander').toBeGreaterThan(0.5);
-    expect(1 / meanRatio, 'one-hander should sit near 60% of a two-hander').toBeLessThan(0.72);
+    // This is a PAPER ratio and it reads the one-hander LOW by construction — `dpsProposed` pins
+    // agility to baseline so the power channel is isolated, which deletes the one-hander's `hit_chance`
+    // edge, and it samples a static target so there is no wound feedback either way. In a real fight
+    // both of those run in the one-hander's favour: task 12d measured 85% landed against the
+    // two-hander's 33%, putting 1H+shield at **61%** of the greatsword (`_stylePremiseProbe`, 6 seeds).
+    // The 60% design target belongs to that harness; this assertion only pins that the paper channel
+    // stays in a sane band and never inverts. Widened from 0.50–0.72 when the grips were separated on
+    // `attack_speed` — do NOT re-tune weapon damage to move THIS number, tune against the fight.
+    expect(1 / meanRatio, 'paper power ratio must stay in band').toBeGreaterThan(0.38);
+    expect(1 / meanRatio, 'paper power ratio must stay in band').toBeLessThan(0.62);
     // LANDED (task 7): the flail line gained `rune_lashing_greatflail`, so no SWUNG family is
     // single-grip any more. Only the light blades remain 1H-only, which is what they are.
     expect(gaps).not.toContain('flail (no 2H)');

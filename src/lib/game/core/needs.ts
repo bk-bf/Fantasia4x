@@ -366,27 +366,37 @@ export function driveTemperatureConditions(
   return null;
 }
 
-/** Load ratio below which a pawn is unencumbered; ratio at/above which encumbrance is maxed.
- *  Encumbrance only bites OVER capacity (matches the UI "past ~100% encumbers" copy). */
+/** The load ladder, in two tiers, so armour class is a choice rather than a free upgrade.
+ *
+ *  `laden`     LADEN_START → ENC_BURDEN_START — a full kit costs EVASION and swing rate before it
+ *              costs anything else. Combat-only by design: a hauler at 80% of capacity walks and works
+ *              at full speed, so this never reads as a punishment for carrying the day's logs.
+ *  `encumbered` ENC_BURDEN_START → ENC_OVERLOAD_FULL — genuinely over the limit, and now it bites
+ *              movement and work too. `laden` stays pinned at max underneath, so the tiers stack.
+ */
+export const LADEN_START = 0.6;
 export const ENC_BURDEN_START = 1.0;
 export const ENC_OVERLOAD_FULL = 1.4;
 
-/** Set the `encumbered` condition's severity DIRECTLY from the carry-load ratio — INSTANTANEOUS
- *  (snaps each tick), not accrued via `applyConditionDriver`. severity 0 at/below `ENC_BURDEN_START`,
- *  1 at `ENC_OVERLOAD_FULL`. Mutates in place; the common (light) case allocates nothing. */
-export function driveEncumbrance(conditions: EntityCondition[], loadRatio: number): void {
-  const sev = Math.min(
-    1,
-    Math.max(0, (loadRatio - ENC_BURDEN_START) / (ENC_OVERLOAD_FULL - ENC_BURDEN_START))
-  );
-  const idx = conditions.findIndex((c) => c.id === 'encumbered');
+/** Set a directly-driven load condition's severity in place, or clear it at severity 0. */
+function setLoadCondition(conditions: EntityCondition[], id: string, sev: number): void {
+  const idx = conditions.findIndex((c) => c.id === id);
   if (sev <= 0) {
     if (idx !== -1) conditions.splice(idx, 1);
     return;
   }
-  if (idx === -1) conditions.push({ id: 'encumbered', severity: sev });
+  if (idx === -1) conditions.push({ id, severity: sev });
   else if (Math.abs(conditions[idx].severity - sev) > 1e-3)
     conditions[idx] = { ...conditions[idx], severity: sev };
+}
+
+/** Set BOTH load conditions' severity DIRECTLY from the carry-load ratio — INSTANTANEOUS (snaps each
+ *  tick), not accrued via `applyConditionDriver`. Mutates in place; the common (light) case allocates
+ *  nothing. */
+export function driveEncumbrance(conditions: EntityCondition[], loadRatio: number): void {
+  const span = (lo: number, hi: number) => Math.min(1, Math.max(0, (loadRatio - lo) / (hi - lo)));
+  setLoadCondition(conditions, 'laden', span(LADEN_START, ENC_BURDEN_START));
+  setLoadCondition(conditions, 'encumbered', span(ENC_BURDEN_START, ENC_OVERLOAD_FULL));
 }
 
 /** STRENGTH shortfall (weapon `wieldRequirement.brawn` − wielder STR) at which weapon-strain is

@@ -458,10 +458,92 @@ class, 6 seeds, live orc reaver) the picture changes and the premise collapses.
 > | p95 capacity | 61.2kg | 32.8kg (mass outliers gone) |
 >
 > **Kit audit re-run:** `1H+shield · heavy` fell from **1343t / 0 deaths — best on every axis** to
-> **2317t / 1 death**, and the fastest kit is now `2H greatsword · light` at 1500t. Two-hander leads on
-> speed, shield leads on safety. The trade exists now.
-- [ ] Note that `2H greatsword · heavy` kills in **660t** — by far the fastest in the table — but converts only 4/6. Once encumbrance bites, check whether that becomes the intended glass-cannon shape rather than a coin flip.
+> **2317t / 1 death**, and the fastest kit is now `2H greatsword · light`, ending the encounter in
+> 1500t. The two-hander ends fights soonest, the shield survives them best. The trade exists now.
+- [ ] Note that `2H greatsword · heavy` ends the encounter in **660t** — by far the fastest in the table — but converts only 4/6. Once encumbrance bites, check whether that becomes the intended glass-cannon shape rather than a coin flip.
 - [ ] Re-run `armourStyleAudit` after any encumbrance change; it is the gate for this task.
+
+### 12d. The style identities were never in the sim  ✅ 2026-07-28
+
+**The goal, finally written down as numbers** (it had never been, which is why the previous three
+passes circled):
+
+| | `attack_speed` | `hit_chance` | damage per landed hit | throughput | armour |
+| --- | --- | --- | --- | --- | --- |
+| Two-handed | low | lower | devastating | 100 (reference) | heavy — it has no shield |
+| One-handed + shield | high | high | modest | ~60 | what its brawn affords |
+| Duelist (1H, trait) | high | high | between the two | ~80 | light |
+
+Armour class is meant to be a read of the pawn: high brawn / low dodge → heavy; low brawn / high
+dodge → light; middling at both → medium, paid for with brawn.
+
+**What the sim was actually doing** (`_stylePremiseProbe.test.ts`, 6 seeds each, real swings captured
+off the combat sink rather than inferred from ticks-to-kill):
+
+- Weapon identity was real (2H 312t between swings / 47% landed / 71.4 per hit vs 1H 194t / 83% / 30.4)
+  but the RATIO was inverted — 1H throughput was **121%** of the two-hander's, and mace-and-shield
+  **176%**, against a 60% target.
+- Armour identity did not exist **at all**: plate cost **0.9% dodge and 0% `attack_speed`**, and
+  protection rose monotonically with weight. No pawn had any reason to wear light armour.
+
+- [x] **A · the stat decoupling had orphaned 88 condition stages.** `dodge` / `hit_chance` /
+      `attack_speed` became pure aptitude reads, but 88 stages across 51 conditions still expressed
+      their effect as an `agility`/`brawn` multiplier written back when agility *was* dodge. They had
+      silently degraded to damage-only: `encumbered · overloaded` (`agility 0.45`) left evasion
+      untouched, `winded` claimed in its own description to leave a fighter "barely able to swing,
+      barely able to dodge" and did neither, and `quickness`/`grace` granted no swing rate. Restored
+      the channel on all 67 stages that name a core stat the combat stats used to read, derived from
+      the existing multiplier and damped (dodge 0.70, `attack_speed` 0.45, `hit_chance` 0.40) so a
+      condition no longer moves evasion as hard as raw agility once did. `windchilled` maps to
+      `hit_chance` only — wind spoils the shot, it does not make you evade worse.
+- [x] **B · a lower load tier, and armour stiffness as its own channel.**
+  - New **`laden`** condition, 60% → 100% of capacity, **combat-only** (dodge / `attack_speed` /
+    `hit_chance`, no `moveSpeed`, no `workEfficiency`) so a hauler at 80% of budget is never slowed for
+    it and it cannot read as a punishment for carrying the day's logs. `encumbered` keeps its old
+    100% → 140% band and stacks on top.
+  - `armorProperties.movementPenalty` was a **dead field** — written into a bonuses object in
+    [PawnEquipment.ts:406](../../../src/lib/game/core/PawnEquipment.ts) and read by nothing, while the
+    item tooltip promised the player a penalty the sim never applied. Now `wornStiffness` sums it and
+    it multiplies dodge in `resolveHit`, capped at 0.45. This is the half of the trade weight alone
+    cannot express: a brawn build affords plate without going `laden`, and the suit still costs it
+    evasion. Tooltip relabelled to "Evasion penalty".
+  - `fatiguePerTurn` is still dead — authored on every armour piece, read only by the tooltip.
+- [x] **C · the grips swapped ends of the `attack_speed` axis.** They were on the *same* end: 1H mean
+      **0.887**, 2H mean **0.921** — two-handers were on average the faster grip, and `steel_warhammer`
+      (0.87) out-swung `steel_longsword` (0.82). The previous pass had taken the 60% target out of 1H
+      speed, which is the one axis a one-hander is supposed to own; it belonged in damage.
+  - 42 one-handers: `attackSpeed` mean **0.764 → 1.137**, scaled so the heavier head is the slower one.
+  - 23 two-handed sluggers (reach 1): mean **0.766 → 0.690**, likewise damage-ranked, which drops
+    `steel_warhammer` to 0.62 — the slowest in the game rather than the fastest 2H.
+  - Untouched by design: 2H reach ≥ 2 (staves, spears, polearms — a reach identity, already fast), 1H
+    daggers (≥ 1.30), and the finesse line (rapier/estoc, whose case *is* speed plus accuracy).
+  - The same 41 one-handers took **damage ×0.62** (`damage`/`damMin`/`damMax` together), so speed and
+    damage moved as a pair.
+
+**Measured after, same probe** (medium armour on every style, the only kit where the weapon is the
+variable — bare-vs-bare flatters the shield, and heavy is over a brawn-30 budget):
+
+| style | ticks between swings | landed | per landed hit | throughput |
+| --- | --- | --- | --- | --- |
+| 2H greatsword | 255t | 33% | 75.1 | 98.3 |
+| 1H longsword + shield | 218t | 85% | 15.4 | **60.2 → 61% of the two-hander** |
+| 1H duelist | 143t | 66% | 22.8 | 105.5 |
+
+Armour now costs what it should: plate takes **−36.9%** off effective dodge (0.778 → 0.491), and a
+brawn-30 fighter in full plate plus shield sits at `laden` 1.00 **and** `encumbered` 0.40 — heavy
+armour is a brawn-45 kit, which is the intended gate.
+
+- [ ] **Heavy armour is still the worse defensive answer than a shield.** In the intended matchup
+      (brawn 45 in plate with a greatsword vs agility 45 behind a shield in light) the two-hander is
+      hit on **73%** of incoming swings against the shield build's **67%**, and converts 4/6 against
+      6/6. Plate buys soak but hands back so much dodge that the shield build is both safer and level
+      on damage (106.6 vs 107.7). Either `STIFFNESS_DODGE_CAP` is too harsh or block is too strong —
+      measure before touching either.
+- [ ] **`steel_warhammer` still reads ~2× the greatsword** (192–208 vs 98–108 throughput) even after
+      becoming the slowest 2H. Its 46 damage is the remaining cause. This is task 14 and it distorts
+      every 2H average.
+- [ ] Fold `_stylePremiseProbe.test.ts` into a permanent regression gate (it is the only harness that
+      measures the MECHANISM — swings, landed share, damage per landed hit — rather than ticks-to-kill).
 
 ### 13. The deferred trait audit
 

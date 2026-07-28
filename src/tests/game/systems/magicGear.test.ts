@@ -78,7 +78,14 @@ describe('§M magical conditions', () => {
       'moveSpeed',
       'fatigueRate',
       'hungerRate',
-      'dodge'
+      // The flat combat keys, all read by `Combat.conditionMult` — `dodge` in the evasion term,
+      // `hitChance` on the to-hit roll, `attackSpeed` on the swing interval, `critChance` on the crit
+      // roll. `quickness` and `grace` carry `attackSpeed` because a haste buff that granted only
+      // `agility` bought nothing but damage once the stats were decoupled.
+      'dodge',
+      'hitChance',
+      'attackSpeed',
+      'critChance'
     ]);
     for (const c of MAGICAL_CONDS) {
       expect(c.transient).toBe(true);

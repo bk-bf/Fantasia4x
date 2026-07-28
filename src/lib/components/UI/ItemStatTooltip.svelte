@@ -174,7 +174,7 @@
       if (ap.parryChance) out.push({ label: 'Parry', val: pct(ap.parryChance) });
       if (ap.coldResistance) out.push({ label: 'Cold res.', val: pct(ap.coldResistance) });
       if (ap.heatResistance) out.push({ label: 'Heat res.', val: pct(ap.heatResistance) });
-      if (ap.movementPenalty) out.push({ label: 'Move penalty', val: pct(-ap.movementPenalty) });
+      if (ap.movementPenalty) out.push({ label: 'Evasion penalty', val: pct(-ap.movementPenalty) });
       if (ap.fatiguePerTurn) out.push({ label: 'Fatigue/turn', val: `${ap.fatiguePerTurn}` });
     }
 
