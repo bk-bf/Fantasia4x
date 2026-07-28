@@ -801,7 +801,7 @@ function armorModHits(defender: Pawn | Mob, target: string, partId: BodyPartId):
 /** Total armour DAMAGE POINTS protecting a part (worn covering pieces + natural hide) — the "how plated
  *  is this spot" scan behind ADR-029 aimed targeting. Mirrors partArmorReduction's layer collection
  *  without running the subtraction. */
-function partArmorPoints(defender: Pawn | Mob, partId: BodyPartId, turn?: number): number {
+export function partArmorPoints(defender: Pawn | Mob, partId: BodyPartId, turn?: number): number {
   const def = PART_DEF_MAP[partId];
   if (!def) return 0;
   let pts = 0;

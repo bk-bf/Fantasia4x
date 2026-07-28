@@ -74,7 +74,7 @@ case "${1:-}" in
   --all)
     # Every audit at once. They are separate FILES, so vitest's fork pool runs them in parallel and the
     # short sweeps finish alongside the long one for free — `weaponMeta` (~45 min) is the only real pole.
-    TEST_FILE="src/tests/game/systems/{weaponMetaNone,weaponMetaLight,weaponMetaMedium,weaponMetaHeavy,weaponMetaHeadToHead,styleMatchups,armourStyleAudit,weaponFightSim,combatBalanceAudit,buildFitAudit,t4WeaponAudit,maimTargeting,carryCapacityAudit}.test.ts"
+    TEST_FILE="src/tests/game/systems/{weaponMetaNone,weaponMetaLight,weaponMetaMedium,weaponMetaHeavy,weaponMetaHeadToHead,styleMatchups,armourStyleAudit,weaponFightSim,combatBalanceAudit,buildFitAudit,t4WeaponAudit,maimTargeting,carryCapacityAudit,weaponPawnFitNone,weaponPawnFitMedium,weaponPawnFitHeavy}.test.ts"
     shift
     ;;
   --shell)

@@ -62,7 +62,10 @@ const AUDIT_SUITES = [
   'src/tests/game/systems/buildFitAudit.test.ts',
   'src/tests/game/systems/t4WeaponAudit.test.ts',
   'src/tests/game/systems/maimTargeting.test.ts',
-  'src/tests/game/systems/carryCapacityAudit.test.ts'
+  'src/tests/game/systems/carryCapacityAudit.test.ts',
+  'src/tests/game/systems/weaponPawnFitNone.test.ts',
+  'src/tests/game/systems/weaponPawnFitMedium.test.ts',
+  'src/tests/game/systems/weaponPawnFitHeavy.test.ts'
 ];
 
 export default defineConfig({
