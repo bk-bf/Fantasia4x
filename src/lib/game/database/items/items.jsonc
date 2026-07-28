@@ -6656,7 +6656,7 @@
       "knockback"       : 0.22,
       "damageType"      : "piercing",
       "armorPenetration": 0.18,
-      "staminaCost"     : 2
+      "staminaCost"     : 1
     }
   },
   // ── Phase B: Tier 1 weapons ───────────────────────────────────────────────
@@ -7111,7 +7111,7 @@
       "reach"           : 2,
       "damageType"      : "cutting",
       "accuracy"        : 1,
-      "staminaCost"     : 3
+      "staminaCost"     : 2
     },
     "onHitWound": [ {"wound": "bloodletting", "chance": 0.3} ]
   },
@@ -7379,7 +7379,7 @@
       "reach"           : 2,
       "damageType"      : "piercing",
       "accuracy"        : 1,
-      "staminaCost"     : 3
+      "staminaCost"     : 2
     },
     "onHitCondition": {"condition": "ensnared", "chance": 0.3, "durationHours": 0.4, "resist": "blunt_resistance"}
   },
@@ -8803,7 +8803,7 @@
       "damageType"      : "piercing",
       "armorPenetration": 0.15,
       "knockback"       : 0.22,
-      "staminaCost"     : 2,
+      "staminaCost"     : 1,
       "twoHanded"       : false
     }
   },
@@ -8932,7 +8932,7 @@
       "damageType"      : "piercing",
       "armorPenetration": 0.2,
       "knockback"       : 0.25,
-      "staminaCost"     : 2,
+      "staminaCost"     : 1,
       "twoHanded"       : false
     }
   },
@@ -9309,7 +9309,7 @@
       "armorPenetration": 0.28,
       "knockback"       : 0.32,
       "critMod"         : 0.03,
-      "staminaCost"     : 2,
+      "staminaCost"     : 1,
       "twoHanded"       : false
     }
   },
@@ -9477,7 +9477,7 @@
       "armorPenetration": 0.32,
       "knockback"       : 0.35,
       "critMod"         : 0.03,
-      "staminaCost"     : 2,
+      "staminaCost"     : 1,
       "twoHanded"       : false
     }
   },
@@ -9882,7 +9882,7 @@
       "armorPenetration": 0.4,
       "knockback"       : 0.38,
       "critMod"         : 0.04,
-      "staminaCost"     : 2,
+      "staminaCost"     : 1,
       "twoHanded"       : false
     }
   },
