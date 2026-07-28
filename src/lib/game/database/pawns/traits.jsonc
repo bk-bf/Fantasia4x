@@ -1421,6 +1421,16 @@
         "effects"    : { "combatMods": {"dodge": 0.6, "knockdown_resistance": 0.6} }
     },
     {
+        "id"         : "duelist",
+        "scope"      : "personal",
+        "rarity"     : "rare",
+        "kind"       : "attribute",
+        "name"       : "Duelist",
+        "description": "Trained to fight with one hand and nothing in the other — the free arm counterbalances every cut, and the point recovers where a shield-bearer is still hauling their guard back across.",
+        "flavorLine" : "they fight with one hand behind them and it never once looks like showing off",
+        "effects"    : {}
+    },
+    {
         "id"         : "quick-striking",
         "scope"      : "personal",
         "rarity"     : "uncommon",

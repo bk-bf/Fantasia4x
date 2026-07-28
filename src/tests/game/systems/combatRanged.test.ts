@@ -475,8 +475,15 @@ describe('ranged combat (headless tickCombat)', () => {
     const dualWield = makeArcher({
       equipment: { mainHand: { itemId: 'bone_knife' }, offHand: { itemId: 'bone_knife' } }
     } as unknown as Partial<Pawn>);
+    // COMBAT-BALANCE 12a: the duel grip is a TRAINED style. An empty off-hand alone no longer buys it —
+    // it used to, which handed every pawn in the game the bonus for free.
+    const trained = makeArcher({
+      equipment: { mainHand: { itemId: 'bone_knife' } },
+      traits: [{ id: 'duelist', name: 'Duelist', effects: {} }]
+    } as unknown as Partial<Pawn>);
     expect(getGrip(twoH)).toBe('twoHanded');
-    expect(getGrip(duelist)).toBe('duelist'); // 1H + free off-hand
+    expect(getGrip(duelist)).toBe('oneHanded'); // 1H + free off-hand, but UNTRAINED
+    expect(getGrip(trained)).toBe('duelist'); // …the trait is what unlocks it
     expect(getGrip(shield)).toBe('shield');
     expect(getGrip(dualWield)).toBe('oneHanded'); // off-hand occupied, not a shield
   });

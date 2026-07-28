@@ -49,6 +49,7 @@ hold.
 | a flaw raises its stat | 1 | `frail`+`clumsy`+`dull` → vigour 12→**14**, agility 12→**14**, intellect 12→**14** | → vigour 12→**10**, agility 12→**10**, intellect 12→**10** |
 | precision is inverted | 11 | stiletto + `lumbering-fighter` **0.96×** the unimpaired time-to-kill — a strict downgrade was free | **1.03×** — it costs time now, and `aimedBodyPart` was rewritten too: killing-hit share now **rises** with precision (71.6% → 74.7%, the neck appearing at the top end) where it used to **fall** 54% → 45% |
 | session determinism | 2 | same seed replays identically | unchanged; the module default seed is now fixed too |
+| 1H out-damages 2H | 12/12a | 1H+shield 110–140% of a two-hander; duel grip free to every pawn | **kill speed 2H 1070t · duelist 1277t · shield 1488t**, with **deaths 3/8 · 3/8 · 0/8** — the intended order, offence and defence traded against each other |
 | decoupling | 8–9 | every secondary stat tracked a core stat | core stats 10 → 60 leaves all six **identical**; two pawns with the same physique now differ |
 
 > **What the fix actually was.** Agility used to buy four things at once — damage on its own weapons,
@@ -321,7 +322,7 @@ worst-fit pawn of each build with its own weapon and with a weapon from a melee 
 - [ ] Normalise the fit score by profile concentration, then re-read the generation shares.
 - [ ] Decide the intended specialisation: should the median pawn be a generalist (0.037 gap) or should generation push harder toward one build?
 - [ ] Fix the cases where a build loses to a weapon it should not hold (Assassin, Sword & Shield vs the warhammer) — blocked on task 14's warhammer re-rate.
-- [ ] Then re-read the cadence floor below with these numbers in hand.
+- [ ] Then re-read task 12 below with these numbers in hand.
 
 
 Everything here was measured against the OLD stat economy and has to be re-measured once Phases 1–3
@@ -346,30 +347,69 @@ land; several may resolve on their own.
 > The *defensive* style out-damages every two-hander, and the ungated duelist grip beats the best one
 > by 41%. "Buff the duelist to 80% of a 2H" cannot be applied as stated — from 104–141% that is a
 > nerf, and it presumes 2H is the ceiling, which it is not. The order has to be: make 2H the ceiling
-> (task 12), THEN set the duelist multiplier against it.
+> (task 12 — close the 2H swing-rate deficit), THEN set the duelist multiplier against it.
 
-### 12. The cadence floor
+### 12. Two-handers lose on SWING RATE  ✅
 
-> **New evidence (task 7 exposed it).** With every melee family now shipping in both grips, the
-> two-handers can finally be compared to their one-handed siblings — and all but one trail:
+**Diagnosis, re-derived twice** (the earlier readings — the cadence *floor*, then the accuracy penalty
+alone — were both wrong). Measured at brawn/agility 40, `dmg/swing` already NET of the hit rate:
+
+| head-to-head | per-swing | cadence | net |
+| --- | --- | --- | --- |
+| Greatsword vs Longsword | 1.21× | **0.59×** | **0.72×** |
+| Warhammer vs Mace | 1.17× | **0.76×** | **0.89×** |
+
+The two-hander survived its accuracy penalty and still won the per-swing exchange by ~1.2×. It lost
+because 0.55–0.68 `attackSpeed` against 0.90–1.00 is a 1.7× deficit a 1.2× damage premium cannot
+cover. **The 72-tick floor was never involved** — it engages at `attack_speed ≥ 1.667` and 0 of 38
+tier-3+ melee weapons reach it at aptitude 1.0 (2 at the top of the ±15% band). Rolling cadence into an
+aptitude removed the ×1.9 multiplier that used to make the floor matter.
+
+**FIXED 2026-07-28 — a bit of all three levers, not one.** The speed and accuracy debuffs on
+two-handers were added to nerf them under the OLD stat system, where they were the stronger option.
+That premise inverted, so the debuffs were unwound rather than compensated for:
+
+- [x] **2H speed ×1.28** — mean `attackSpeed` 0.72 → **0.92**.
+- [x] **2H accuracy +7, capped at 0** — the −8/−10 band becomes −1/−3; mean −4.15 → **−0.82**.
+- [x] **2H damage ×1.15** (damage, damMin, damMax together).
+- [x] **1H speed ×0.82** — mean 1.02 → **0.89**. Light blades (dagger/rapier, 11 weapons) EXEMPT: their speed is their identity and the dagger build is meant to be compensated by crit, not throughput.
+- [x] 34 two-handers and 43 one-handers swept.
+
+> **Result, measured on aggregate across every tier-3 melee weapon** (mean dps, both a bare and a
+> mail-clad target, so an anti-armour weapon can't flatter the average):
 >
-> | family | 2H → BRAWN 40 | 1H → AGILITY 40 | ratio |
-> | --- | --- | --- | --- |
-> | mace/hammer | 17.3 | 16.9 | 1.02× |
-> | spear/pole | 11.7 | 12.2 | 0.96× |
-> | axe | 10.0 | 12.6 | 0.79× |
-> | cleaver | 10.9 | 14.1 | 0.78× |
-> | flail | 11.1 | 17.2 | 0.64× |
-> | **sword** | 10.9 | **17.5** | **0.62×** |
+> | target | 2H | 1H + shield | 1H duelist | light-blade duelist |
+> | --- | --- | --- | --- | --- |
+> | armoured | 17.83 | 9.98 (**56%**) | 13.97 (**78%**) | 5.67 (32%) |
+> | bare | 21.72 | 13.44 (**62%**) | 17.49 (**81%**) | 11.93 (55%) |
 >
-> A 0.55–0.62-speed two-hander sits far below the 1.67× cadence ceiling while its 1H sibling is
-> already at it, so the ceiling costs the slow weapon nothing and gives the fast one everything. The
-> `statAxisProposal` → FAMILY REACH band is set to **1.7** to match this measurement, not because 1.7
-> is the design target — tighten it when this task lands.
+> Against the design target — one-hander at ~60% of a two-hander, duel grip buying it back to ~80%.
+>
+> **⚠ The bench and the fight disagree, and the fight is right.** Re-audited headless (8 seeds, drafted
+> colonist vs a live orc reaver), the shield build *wins the encounter outright*: 1488 ticks, 8/8
+> kills, **0 deaths**, against the two-hander's 3803 ticks, 6/8, **3 deaths**. Backing the censoring
+> out shows why the two readings differ:
+>
+> | style | kill speed (runs that killed) | deaths |
+> | --- | --- | --- |
+> | 2H greatsword | **1070t** | 3/8 |
+> | 1H + duelist | 1277t | 3/8 |
+> | 1H + shield | 1488t | **0/8** |
+>
+> The two-hander DOES kill fastest and the duel grip DOES sit between — the damage calibration holds.
+> What the dps bench cannot see is that the shield converts its damage deficit into never dying, and in
+> a 1v1 that is worth more than swinging harder. Whether that is correct is a design call: it may be
+> exactly right (a duel rewards defence) and only show its cost in a multi-enemy fight where the
+> two-hander's throughput matters. **Do not "fix" it by nerfing the shield without testing a group
+> fight first.**
 
-- [ ] Re-measure first — the floor's damage was that AGILITY kept buying swings on slow weapons, and Phase 1 removes AGILITY from the damage of those weapons entirely.
-- [ ] Then decide whether `MIN_ATTACK_INTERVAL_TICKS` (72 against a 120 base → 1.67× ceiling) is still the right ceiling.
-- [ ] Note the trap: a uniform speed rescale only **delays** the ceiling and doubles as a 2H nerf. Measured, not guessed — `weaponStatSweep` → "PROPOSAL C".
+- [ ] ⚠ **The warhammer line is now further out of band**, not less: 30.8 dps armoured against a 2H mean of 17.8, with the next-best at 20.4. The uniform +15% amplified it. This is task 14 and it now distorts every 2H average — do it next.
+
+### 12a. The Duelist grip  ✅
+
+- [x] **Authored a real `duelist` trait** (personal, rare) in `traits.jsonc`.
+- [x] **Gated `getGrip` on it** ([rangedCombat.ts:115](../../../src/lib/game/systems/rangedCombat.ts)). It previously returned `duelist` for ANY one-hander with an empty off-hand, handing every pawn in the game +20% damage / +10% pen / +5% crit for free — never intended, and the opposite of a gated specialisation.
+- [x] **`DUELIST_DAMAGE_MULT` 1.2 → 1.28**, calibrated so the style lands at ~80% of a two-hander while shield-and-one-hander sits at ~60%.
 
 ### 13. The deferred trait audit
 

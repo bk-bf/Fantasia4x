@@ -102,12 +102,18 @@ async function meanDuel(
   // RIGHT-CENSORED: a run that never killed counts as the full budget. Averaging over the kills only
   // flatters whichever build fails most — it silently drops its worst runs.
   const ticks = runs.reduce((a, r) => a + (r.killed ? r.ticks : MAX_TICKS), 0) / runs.length;
+  // Ticks among the runs that DID kill — answers "how fast does it kill", which is a different
+  // question from "does it win the encounter" (the censored mean above). A glass cannon can lead on
+  // this and still lose overall by dying; reporting only one of the two hides exactly that trade.
+  const killed = runs.filter((r) => r.killed);
+  const killTicks = killed.length ? killed.reduce((a, r) => a + r.ticks, 0) / killed.length : NaN;
   // Blood removed is the UNBIASED measure: every run contributes, kill or not.
   const blood = runs.reduce((a, r) => a + r.bloodPct, 0) / runs.length;
   return {
     label,
     ticks,
     blood,
+    killTicks,
     kills: runs.filter((r) => r.killed).length,
     deaths: runs.filter((r) => !r.survived).length,
     of: runs.length
@@ -236,6 +242,35 @@ describe('COMBAT-BALANCE audit — live sim', () => {
     expect(after.agility).toBeLessThan(before.agility);
     expect(after.intellect).toBeLessThan(before.intellect);
   }, 120_000);
+
+  it('#12 LANDED — a real fight puts the two-hander ahead, and the duel grip between', async () => {
+    // COMBAT-BALANCE 12/12a in the live sim, not the sweep. The design order is:
+    //   two-hander (most damage) > one-hander + DUELIST trait > one-hander + shield (defensive).
+    const stats = { brawn: 30, agility: 30, vigour: 30 };
+    const twoH = await meanDuel('2H greatsword', { stats, equip: ['steel_greatsword'] });
+    const shield = await meanDuel('1H longsword + shield', {
+      stats,
+      equip: ['steel_longsword', 'iron_boss_shield']
+    });
+    const duel = await meanDuel('1H longsword, duelist trait', {
+      stats,
+      equip: ['steel_longsword'],
+      traits: ['duelist']
+    });
+    console.log('[#12 STYLES]\n' + row(twoH) + '\n' + row(duel) + '\n' + row(shield));
+    console.log(
+      `  KILL SPEED (runs that killed): 2H ${twoH.killTicks.toFixed(0)}t · duelist ${duel.killTicks.toFixed(0)}t · shield ${shield.killTicks.toFixed(0)}t\n` +
+        `  SURVIVAL: 2H ${twoH.deaths}/${twoH.of} deaths · duelist ${duel.deaths}/${duel.of} · shield ${shield.deaths}/${shield.of}`
+    );
+    // Two SEPARATE claims, because they trade against each other and one number hides that:
+    // (a) OFFENCE — the two-hander kills fastest when it lands the kill. That is the damage claim the
+    //     weapon sweep is calibrated for (one-hander ≈ 60% of a two-hander's throughput).
+    expect(twoH.killTicks, 'the two-hander must kill fastest').toBeLessThan(shield.killTicks);
+    // (b) DEFENCE — the shield is what the one-hander bought with that damage. It must die less.
+    expect(shield.deaths, 'the shield style must die less than the two-hander').toBeLessThan(
+      twoH.deaths
+    );
+  }, 900_000);
 
   it('#2 the sim itself is deterministic — the same seed replays identically', async () => {
     // The RNG finding is about the module DEFAULT seed, not the session: a scenario that pins its

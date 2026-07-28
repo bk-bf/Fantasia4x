@@ -464,17 +464,19 @@ describe('STAT AXIS — the landed two-axis split', () => {
     }
     rows.push(`single-grip families (one physique has no entry): ${gaps.join(', ') || 'none'}`);
     console.log(rows.join('\n'));
+    const meanRatio = ratios.reduce((a, [, r]) => a + r, 0) / ratios.length;
     const worst = ratios.slice().sort((a, b) => b[1] - a[1])[0];
     console.log(
-      `  worst spread: ${worst[0]} at ${worst[1].toFixed(2)}× — every two-hander except the hammer ` +
-        `line trails its one-handed sibling, which is COMBAT-BALANCE task 12 (the cadence floor), not a ` +
-        `weapon-data problem. Tighten this band when task 12 lands.`
+      `  mean 2H÷1H ${meanRatio.toFixed(2)}× (one-hander at ${((1 / meanRatio) * 100).toFixed(0)}% of a two-hander; ` +
+        `design target 60%). Widest: ${worst[0]} at ${worst[1].toFixed(2)}× — the warhammer line is out of band, task 14.`
     );
-    // Neither physique may be locked out of a family it can play. The band is 1.7 because that is what
-    // the data measures today, NOT because 1.7 is the design target — a slow 2H weapon sits far below
-    // the cadence ceiling while its 1H sibling is already at it.
+    // COMBAT-BALANCE task 12: the two-hander is MEANT to lead. A one-hander is the defensive choice
+    // (shield up, ~60% of the damage) and buys the difference back with the duel grip, which is
+    // trait-gated. So the check is direction + magnitude, not parity.
     for (const [fam, r] of ratios)
-      expect(r, `${fam}: one grip is ${r.toFixed(2)}× the other`).toBeLessThan(1.7);
+      expect(r, `${fam}: the two-hander must lead its one-handed sibling`).toBeGreaterThan(1);
+    expect(1 / meanRatio, 'one-hander should sit near 60% of a two-hander').toBeGreaterThan(0.5);
+    expect(1 / meanRatio, 'one-hander should sit near 60% of a two-hander').toBeLessThan(0.72);
     // LANDED (task 7): the flail line gained `rune_lashing_greatflail`, so no SWUNG family is
     // single-grip any more. Only the light blades remain 1H-only, which is what they are.
     expect(gaps).not.toContain('flail (no 2H)');

@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { DUELIST_TRAIT_ID } from '$lib/game/systems/rangedCombat';
 import { TRAIT_DATABASE } from '$lib/game/core/Culture';
 import { getTransientConditionDef } from '$lib/game/core/needs';
 import { PART_DEF_MAP, BOUND_NATURAL_WEAPONS } from '$lib/game/core/BodyParts';
@@ -136,6 +137,10 @@ describe('TRAIT-SYSTEM-V2 trait registry', () => {
           // the significant combos deliberately sit at rare/epic) is a legitimate high-rarity pull —
           // as is an affinity passive's payload (nocturnal's night sight) or a covering/affinity's typed
           // resistances (ever-warm), now that those live on the TRAIT (effects / the resistances block).
+          // COMBAT-BALANCE 12a: the duel grip is unlocked by a TRAIT, and that unlock (+28% damage,
+          // +10% pen, +5% crit) is its whole payload — it carries no `effects` block because the
+          // capability lives in `getGrip`, not in the stat engine.
+          t.id === DUELIST_TRAIT_ID ||
           ((t.kind === 'stat' || t.kind === 'attribute' || t.kind === 'passive') &&
             (Object.keys(t.effects ?? {}).length > 0 ||
               Object.keys(t.resistances ?? {}).length > 0));

@@ -351,8 +351,11 @@ function profileFromWeapon(
 export type PowerStat = 'brawn' | 'agility' | 'awareness' | 'intellect' | 'charisma';
 
 
-/** Bonus a duelist (one-handed, off-hand free) adds to damage/armorPen/crit. */
-const DUELIST_DAMAGE_MULT = 1.2;
+/** Bonus the DUELIST grip adds to damage/armorPen/crit — one-handed, off-hand free, and gated on the
+ *  `duelist` trait (see rangedCombat.getGrip). Calibrated so the style lands at ~80% of a two-hander's
+ *  output while shield-and-one-hander sits at ~60%: the one-hander is the defensive choice, and the
+ *  duel grip is what buys the damage back. */
+const DUELIST_DAMAGE_MULT = 1.28;
 const DUELIST_ARMOR_PEN = 0.1;
 const DUELIST_CRIT = 0.05;
 /** Bonus a two-handed grip adds. */
