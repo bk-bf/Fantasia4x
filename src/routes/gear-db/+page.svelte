@@ -779,7 +779,9 @@
   {/snippet}
   {#snippet statBody(s: StatInfo, build: string | null, why: string | null)}
     <div class="info-head" data-cat={build ? BUILD_CAT[build] : 'general'}>
-      {s.label}<span class="info-kind">{s.wiring === 'wired' ? 'stat' : s.wiring}</span>
+      {s.label}<span class="info-kind"
+        >{s.source === 'rolled' ? 'rolled aptitude' : s.wiring === 'wired' ? 'derived stat' : s.wiring}</span
+      >
     </div>
     {#if s.description}<p class="info-desc">{s.description}</p>{/if}
     <div class="info-grid">
@@ -927,8 +929,9 @@
         Which stats decide each build's fights — <b class="pri">●</b> decisive ·
         <b class="sec">○</b>
         matters · <span class="dot">·</span> irrelevant. Hover a column head for the formula, a cell
-        for why this build cares. <b class="neg">Struck-through columns are stats no fight reads</b> —
-        the formula is there, the callsite isn't.
+        for why this build cares. <b class="rolled">R marks a ROLLED aptitude</b> — a per-pawn roll no
+        core stat touches; <b class="sec">≈</b> marks a stat the engine recomputes in its own function.
+        Every combat stat is wired now; the dead ones were fixed or deleted.
       </p>
       <div class="scroll">
         <table class="grid stats">
@@ -947,10 +950,14 @@
                   <th
                     class="stath"
                     class:dead={s.wiring === 'dead'}
+                    class:rolled={s.source === 'rolled'}
                     class:mirrored={s.wiring === 'mirrored'}
                     onmouseenter={(e) => hoverStat(sid, e)}
                     onmouseleave={hoverOut}
-                    >{s.label}{#if s.wiring !== 'wired'}<i class="wire"
+                    >{s.label}{#if s.source === 'rolled'}<i
+                        class="wire roll"
+                        title="rolled per pawn — no core stat touches it">R</i
+                      >{:else if s.wiring !== 'wired'}<i class="wire"
                         >{s.wiring === 'dead' ? '✕' : '≈'}</i
                       >{/if}</th
                   >
@@ -1496,6 +1503,16 @@
   }
   table.stats th.stath.mirrored {
     color: #b08a4a;
+  }
+  table.stats th.stath.rolled {
+    color: #83bb6f;
+  }
+  b.rolled {
+    color: #83bb6f;
+  }
+  th .wire.roll {
+    color: #83bb6f;
+    font-weight: 700;
   }
   th .wire {
     font-style: normal;

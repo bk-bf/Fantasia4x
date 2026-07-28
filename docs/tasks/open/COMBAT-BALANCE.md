@@ -411,6 +411,44 @@ That premise inverted, so the debuffs were unwound rather than compensated for:
 - [x] **Gated `getGrip` on it** ([rangedCombat.ts:115](../../../src/lib/game/systems/rangedCombat.ts)). It previously returned `duelist` for ANY one-hander with an empty off-hand, handing every pawn in the game +20% damage / +10% pen / +5% crit for free — never intended, and the opposite of a gated specialisation.
 - [x] **`DUELIST_DAMAGE_MULT` 1.2 → 1.28**, calibrated so the style lands at ~80% of a two-hander while shield-and-one-hander sits at ~60%.
 
+### 12c. Shields are FREE — encumbrance never fires  ⚠ NEW, 2026-07-28
+
+The earlier style comparison put both pawns in NO armour, the one configuration where the shield is
+guaranteed to look best. Re-run as a KIT audit (`armourStyleAudit.test.ts`, every style × every armour
+class, 6 seeds, live orc reaver) the picture changes and the premise collapses.
+
+- [x] **Block now scales with the incoming blow's force.** `blockChance(defender, ranged, incoming)`: a shield turns a glancing cut aside easily and a descending maul barely at all. Reference force scales with the shield's own `blockBonus`, so a boss shield stops what a buckler does not. Bounded 0.35–1.4× so nothing is unblockable or auto-blocked.
+- [x] Kit audit built and run.
+
+> | kit | encounter | kill speed | outcome |
+> | --- | --- | --- | --- |
+> | 2H greatsword · light | 1500t | 1500t | 6/6 kills · 2 deaths |
+> | 2H greatsword · medium | 1600t | 1600t | 6/6 kills · 2 deaths |
+> | 2H greatsword · heavy | 4433t | **650t** | 4/6 kills · 2 deaths |
+> | 1H+shield · light | 2770t | 2770t | 6/6 kills · 1 death |
+> | 1H+shield · medium | 2780t | 2780t | 6/6 kills · 1 death |
+> | **1H+shield · heavy** | **1343t** | 1343t | **6/6 kills · 0 deaths** |
+> | 1H duelist · light | 3120t | 1344t | 5/6 kills · 2 deaths |
+> | 1H duelist · medium | 3067t | 1280t | 5/6 kills · 2 deaths |
+>
+> **1H+shield+heavy is the best kit on every axis at once** — fastest encounter, most kills, no deaths.
+>
+> **The reason: encumbrance never fires.** The design assumes a shield user must drop to light/medium
+> armour because the shield eats the weight budget. Measured:
+>
+> | kit | worn | carry cap | condition | dodge |
+> | --- | --- | --- | --- | --- |
+> | 2H + heavy plate | 30.0kg | 35.7kg | `comfortable` | **0.83** |
+> | 1H + shield + heavy plate | 33.9kg | 35.7kg | `comfortable` | **0.83** |
+>
+> The shield pawn wears full plate AND carries a shield, stays under budget, and takes **identical
+> dodge** to the two-hander. The shield costs nothing. So shields are not "a bit too strong" — they are
+> FREE, and no shield-side tuning is meaningful until the weight actually bites.
+
+- [ ] **Decide the mechanism**, then re-run this audit. Options, in rough order of bluntness: (a) lower the carry fraction so a full plate + shield exceeds it; (b) count WORN armour against a separate, tighter budget from pack cargo (they are different burdens); (c) give shields their own explicit encumbrance cost independent of the carry budget.
+- [ ] Note that `2H greatsword · heavy` kills in **650t** — by far the fastest in the table — but converts only 4/6. Once encumbrance bites, check whether that becomes the intended glass-cannon shape rather than a coin flip.
+- [ ] Re-run `armourStyleAudit` after any encumbrance change; it is the gate for this task.
+
 ### 13. The deferred trait audit
 
 Bundled deliberately: all three are trait-economy problems and re-pricing them one at a time against a

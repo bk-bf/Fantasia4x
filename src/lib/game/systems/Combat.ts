@@ -364,6 +364,13 @@ const TWOHAND_ARMOR_PEN = 0.05;
 // SHIELD DEFENCE (block/parry). A shield is now its OWN negation axis (the `block` stat + the shield's
 // `blockBonus`), NOT a dodge boost — so a heavy tank negates where it can't evade. Block is all-or-nothing.
 const BLOCK_CAP = 0.65; // hard ceiling on total block chance
+/** The blow force at which block chance is UNMODIFIED — a solid, ordinary hit. Below it a shield does
+ *  better than its printed chance, above it worse, hyperbolically. Scaled per shield by `blockBonus`. */
+const BLOCK_FORCE_REF = 40;
+/** Floor/ceiling on that scaling, so a monstrous blow is never unblockable and a feeble one is never
+ *  auto-blocked. */
+const BLOCK_FORCE_MIN = 0.35;
+const BLOCK_FORCE_MAX = 1.4;
 const PARRY_CAP = 0.4; // hard ceiling on parry chance
 const RANGED_BLOCK_MULT = 0.5; // a shield stops fewer projectiles than melee blows
 // Weight on a weapon's flat `accuracy` in the melee hit roll — ×2 so the accurate-vs-brutish weapon
@@ -921,15 +928,23 @@ class CombatServiceImpl implements CombatService {
       bloodletting
     } = profile;
 
+    const ranged = !!override;
+    // The blow's FORCE, computed before the shield answers because how hard it lands is what decides
+    // whether a shield can stop it. Independent of which body part is struck, so hoisting is free.
+    const raw =
+      override && !override.strScaled
+        ? baseDamage
+        : baseDamage *
+          pawnStatService.evaluateStat(override ? 'ranged_damage' : 'melee_damage', attacker);
+
     // SHIELD DEFENCE — the shield answers BEFORE evasion. Melee: PARRY (turn the blow aside → free
     // guaranteed counter in performAttack) then BLOCK (stop it cold). Ranged: block only, halved. A
     // guaranteed riposte skips this entirely (it can't itself be parried/blocked → no recursion).
-    const ranged = !!override;
     if (!guaranteed) {
       const pc = ranged ? 0 : this.parryChanceOf(defender);
       if (pc > 0 && rng.random() < pc)
         return this.negatedHit(weaponId, staminaCost, damageType, 'parried');
-      const bc = this.blockChance(defender, ranged);
+      const bc = this.blockChance(defender, ranged, raw);
       if (bc > 0 && rng.random() < bc)
         return this.negatedHit(weaponId, staminaCost, damageType, 'blocked');
     }
@@ -1008,17 +1023,12 @@ class CombatServiceImpl implements CombatService {
     const partMaxHp =
       limbOfPart(defender, partId)?.parts?.find((p) => p.id === partId)?.maxHp ?? partDef.maxHp;
 
-    // Damage: baseDamage × the DAMAGE STAT, then armour + resistance reduce it, then the crit
-    // multiplier. COMBAT-BALANCE task 3 — the multiplier is `melee_damage` / `ranged_damage` rather
-    // than a raw core stat, so the formulas' `× manipulation` finally applies and a mangled arm costs
-    // damage. The stat's POWER token resolves the weapon's own power stat (two-hander → brawn,
-    // one-hander → agility, finesse → awareness, arcane → intellect) and damps it through powerScale,
-    // so the curve is unchanged. Ranged with `strScaled: false` (crossbow/sling) bypasses all of it —
-    // the mechanism did the work, not the shooter.
-    const raw =
-      override && !override.strScaled
-        ? baseDamage
-        : baseDamage * pawnStatService.evaluateStat(override ? 'ranged_damage' : 'melee_damage', attacker);
+    // `raw` (the blow's force) was computed above, before the shield answered — see the block roll.
+    // COMBAT-BALANCE task 3: the multiplier is `melee_damage` / `ranged_damage` rather than a raw core
+    // stat, so the formulas' `× manipulation` applies and a mangled arm costs damage. The stat's POWER
+    // token resolves the weapon's own power stat and damps it through powerScale, so the curve is
+    // unchanged. Ranged with `strScaled: false` (crossbow/sling) bypasses it — the mechanism did the
+    // work, not the shooter.
     const armorRed = partArmorReduction(defender, partId, armorPen, raw, state.turn);
     const physRes = physicalResistance(defender, damageType);
     const mitigated = raw * (1 - armorRed) * (1 - physRes);
@@ -2515,12 +2525,24 @@ class CombatServiceImpl implements CombatService {
     return off?.armorProperties?.armorType === 'shield' ? off : undefined;
   }
 
-  /** Chance (0..BLOCK_CAP) to FULLY stop a blow: the `block` stat (CON + body mass) + the shield's flat
-   *  `blockBonus`, halved vs a ranged attack. Never weight-penalized — the heavy tank's negation. */
-  private blockChance(defender: Pawn | Mob, ranged: boolean): number {
-    const bonus = this.shieldDef(defender)?.armorProperties?.blockBonus ?? 0;
-    const base = (pawnStatService.evaluateStat('block', defender) + bonus) * this.conditionMult(defender, 'block');
-    return clamp(base * (ranged ? RANGED_BLOCK_MULT : 1), 0, BLOCK_CAP);
+  /**
+   * Chance (0..BLOCK_CAP) to FULLY stop a blow: the `block` stat (vigour + body mass) + the shield's
+   * flat `blockBonus`, halved vs a ranged attack, never weight-penalized — the heavy tank's negation.
+   *
+   * SCALED BY THE INCOMING FORCE: a shield turns a glancing cut aside easily and a descending maul
+   * barely at all. Without this, a shield negated a greataxe exactly as often as a knife, which made
+   * "stop it cold" strictly better the harder the game hit — the opposite of how a shield behaves.
+   */
+  private blockChance(defender: Pawn | Mob, ranged: boolean, incoming = BLOCK_FORCE_REF): number {
+    const shield = this.shieldDef(defender)?.armorProperties;
+    const bonus = shield?.blockBonus ?? 0;
+    const base =
+      (pawnStatService.evaluateStat('block', defender) + bonus) * this.conditionMult(defender, 'block');
+    // A sturdier shield holds against a heavier blow: its own `blockBonus` raises the force it shrugs
+    // off, so a boss shield stops what a buckler does not.
+    const ref = BLOCK_FORCE_REF * (1 + bonus);
+    const forceFactor = clamp((2 * ref) / (ref + Math.max(0, incoming)), BLOCK_FORCE_MIN, BLOCK_FORCE_MAX);
+    return clamp(base * forceFactor * (ranged ? RANGED_BLOCK_MULT : 1), 0, BLOCK_CAP);
   }
 
   /** Melee parry chance from the shield's `parryChance` (0 without a shield). */

@@ -23,6 +23,8 @@ const statDefs = statsData as {
 }[];
 
 export type Wiring = 'wired' | 'mirrored' | 'dead';
+/** Where the stat's NUMBER comes from — the second axis the rebuild introduced. */
+export type Source = 'rolled' | 'derived';
 export type Rank = 'primary' | 'secondary' | 'none';
 
 export interface StatInfo {
@@ -39,6 +41,8 @@ export interface StatInfo {
   where: string;
   /** The term the engine really evaluates, when it differs from (or elaborates) the design formula. */
   engineFormula: string | null;
+  /** `rolled` = a per-pawn aptitude no core stat touches; `derived` = computed from stats/body/gear. */
+  source: Source;
 }
 
 export interface StatCell {
@@ -54,6 +58,16 @@ export interface BuildStatRow {
   cells: Record<string, StatCell>;
 }
 
+/** COMBAT-BALANCE tasks 8–9: the stats whose value is ROLLED per pawn, not derived from a core stat. */
+const ROLLED = new Set([
+  'hit_chance',
+  'attack_speed',
+  'hit_precision',
+  'armor_damage',
+  'dodge',
+  'aim_accuracy'
+]);
+
 // ── engine wiring ───────────────────────────────────────────────────────────
 // Verified against the callsites, not assumed: `wired` has an evaluateStat() call in a combat path;
 // `mirrored` means the engine recomputes the same idea from raw stats in its own function (so
@@ -67,10 +81,10 @@ const WIRING: Record<string, { wiring: Wiring; where: string; engineFormula?: st
       'critChance = clamp((hit_precision × (unseen ? 3.5 : 1) + weapon.critMod) × condition, 0, 0.6)'
   },
   melee_damage: {
-    wiring: 'dead',
-    where:
-      'no callsite. Melee damage is baseDamage × powerScale(powerStat) inside resolveHit; only the trait key combatMods.melee_damage is read, as a flat weapon-damage add',
-    engineFormula: 'raw = weapon.damage × powerScale(BRAWN | AGILITY | AWARENESS | INTELLECT)'
+    wiring: 'wired',
+    where: 'Combat.resolveHit — THE melee damage multiplier (COMBAT-BALANCE task 3)',
+    engineFormula:
+      'raw = weapon.damage × melee_damage, where the stat is (1.0 + (POWER − 10) × 0.1) × manipulation and POWER is the equipped weapon’s own core stat, damped'
   },
   armor_damage: {
     wiring: 'wired',
@@ -79,11 +93,10 @@ const WIRING: Record<string, { wiring: Wiring; where: string; engineFormula?: st
     engineFormula: 'armour lost = weapon.armorDamage × armor_damage'
   },
   hit_chance: {
-    wiring: 'dead',
-    where:
-      'no callsite. resolveHit builds its own to-hit from RAW agility, so sight/manipulation never touch melee accuracy',
+    wiring: 'wired',
+    where: 'Combat.resolveHit — the melee to-hit roll (COMBAT-BALANCE task 5)',
     engineFormula:
-      'toHit = 60 + (AGILITY − 10) × 1 + weapon.accuracy × 2 − (dodge − 1) × 50, clamped 5–95'
+      'toHit = 60 + (hit_chance − 1) × 33.3 + weapon.accuracy × 2 − (dodge − 1) × 50, clamped 5–95'
   },
   dodge: {
     wiring: 'wired',
@@ -132,11 +145,10 @@ const WIRING: Record<string, { wiring: Wiring; where: string; engineFormula?: st
     engineFormula: 'effective range = weapon.range × aim_range'
   },
   ranged_damage: {
-    wiring: 'dead',
-    where:
-      'no callsite. A shot’s damage comes from the AMMO, and BRAWN enters through the same powerScale term melee uses',
+    wiring: 'wired',
+    where: 'Combat.resolveHit, ranged branch — THE ranged damage multiplier (COMBAT-BALANCE task 3)',
     engineFormula:
-      'raw = ammo.damage × launcher.drawPower, × powerScale(BRAWN) unless strScaled: false'
+      'raw = ammo.damage × launcher.drawPower × ranged_damage; a crossbow/sling (strScaled: false) bypasses the stat entirely — the mechanism supplies the force'
   },
   stamina: {
     wiring: 'mirrored',
@@ -217,7 +229,8 @@ export const STAT_INFO: Record<string, StatInfo> = (() => {
       description: def?.description ?? '',
       wiring: w.wiring,
       where: w.where,
-      engineFormula: w.engineFormula ?? null
+      engineFormula: w.engineFormula ?? null,
+      source: ROLLED.has(id) ? 'rolled' : 'derived'
     };
   }
   return out;
