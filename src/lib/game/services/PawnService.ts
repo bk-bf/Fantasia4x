@@ -183,6 +183,24 @@ const WET_DRY_WARMTH_SPEED = 0.6; // warmth contributes this much (0–1) on top
 /**
  * PawnService Implementation - Focused on pawn behavior and needs only
  */
+/** Fraction of an armour set's authored `fatiguePerTurn` that actually reaches the fatigue need.
+ *  See the callsite for why the raw numbers cannot be used directly. */
+const ARMOUR_FATIGUE_SCALE = 0.18;
+
+/** Sum the `fatiguePerTurn` of everything a pawn is WEARING. Zero for an unequipped pawn, which is the
+ *  common case, so the loop is skipped entirely rather than paid for on every needs tick. */
+function wornFatiguePerTurn(pawn: Pawn): number {
+  const eq = pawn.equipment;
+  if (!eq) return 0;
+  let sum = 0;
+  for (const slot in eq) {
+    const inst = eq[slot as keyof typeof eq];
+    if (!inst) continue;
+    sum += itemService.getItemById(inst.itemId)?.armorProperties?.fatiguePerTurn ?? 0;
+  }
+  return sum;
+}
+
 export class PawnServiceImpl implements PawnService {
   // ===== RECOVERY CONFIGURATION =====
   private RECOVERY_CONFIG = {
@@ -911,6 +929,18 @@ export class PawnServiceImpl implements PawnService {
           break;
       }
     });
+
+    // WORN ARMOUR — the weight you carry all day. Every armour piece authors `fatiguePerTurn` (light
+    // 0.01–0.2, medium 0.08–0.4, heavy 0.1–0.9), graded by class across 50 items, and until now NOTHING
+    // read it: the field existed only to be printed in a tooltip that promised the player a cost the sim
+    // never charged. Added rather than multiplied, because it is a fixed burden the body carries whether
+    // it is working or idle.
+    //
+    // Scaled: the raw numbers were authored against a much larger fatigue base than the 0.32 this uses,
+    // and a full heavy suit sums to 1.74 — five times the base, which would make armour the only thing
+    // that mattered for exhaustion. ARMOUR_FATIGUE_SCALE lands a full plate harness at roughly DOUBLE
+    // the resting rate, which is a real reason to take it off in camp without making it unwearable.
+    baseRest += wornFatiguePerTurn(pawn) * ARMOUR_FATIGUE_SCALE;
 
     return Math.max(0.1, baseRest);
   }

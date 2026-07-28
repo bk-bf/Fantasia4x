@@ -171,8 +171,23 @@ proposal pricing), `weaponFightSim.test.ts` (HeadlessSession duels vs a live Orc
 
 #### Per-weapon tracker — tier 4 (top tier; there is no T5)
 Tick when the weapon's role is confirmed to survive a real fight against all three opponent profiles
-(raider / knight / duelist) AND its best stat is its own power stat. Every row below is currently
-blocked on the AGILITY finding above, so none are ticked.
+(raider / knight / duelist) AND its best stat is its own power stat.
+
+**✅ 2026-07-28 — the AGILITY blocker is GONE.** The finding above ("AGILITY is the best stat on 15 of 16
+T4 melee weapons, including every BRAWN weapon") was measured BEFORE the two-axis decoupling. Re-running
+`t4WeaponAudit` after it, every weapon's best stat is now its OWN power stat, on all three opponents:
+
+| weapon | BRAWN | AGILITY | AWARENESS | best |
+| --- | --- | --- | --- | --- |
+| Orc Greataxe | **22.0** | 8.3 | 8.3 | brawn ✅ |
+| Rune-Sung Greatsword | **21.4** | 8.4 | 8.4 | brawn ✅ |
+| Rune-Weighted Warhammer | **17.8** | 6.7 | 6.7 | brawn ✅ |
+| Rune-Ribbed Mace | 4.9 | **13.5** | 4.9 | agility ✅ |
+| Rune-Slotted Stiletto | 5.3 | **13.8** | 5.3 | agility ✅ |
+| Rune-Needle Rapier | 8.7 | 8.7 | **23.1** | awareness ✅ |
+
+19 of 19 melee rows now prefer the stat their grip names, against 1 of 16 before. Agility no longer buys
+cadence, to-hit and crit alongside damage, so a weapon's named stat is the one that pays.
 
 **Melee (16)**
 - [ ] `fang_reaver` Fang-Reaver — BRAWN 15.6 vs AGILITY 18.9 (raider). Boss-tier 1H sword, `wieldRequirement 22` never exercised.

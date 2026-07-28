@@ -890,7 +890,19 @@ const PRECISION_ARMOUR_DISCOUNT = 0.05;
  *  precise fighter can find a SMALL target (the neck is ~1.5% of the hit table) that three rolls
  *  almost never turn up. */
 const PRECISION_CANDIDATES = 3;
-const PRECISION_CANDIDATE_SPAN = 6;
+/** Extra looks a fully precise fighter buys on top of the base three.
+ *
+ *  Widened from 6 when `hit_precision` was re-curved: the gate this scales against (crit chance) used
+ *  to top out near 0.06, so the whole span bought a third of one extra look and precision searched no
+ *  harder than clumsiness. It now reaches ~0.42 on a crit-heavy weapon, which at 14 is ~9 looks against
+ *  a poor fighter's 3.7.
+ *
+ *  This does NOT make the eyes a common target and is not meant to. An eye is 0.2 of roughly 70 total
+ *  hit weight — under 1% per look — so even a searching fighter finds one only occasionally. That is
+ *  the anatomy being honest: a deliberate eye-thrust is a rare, exceptional thing. What the extra looks
+ *  really buy is the reachable maim targets (hands, arms, legs), which is where the measured effect
+ *  shows up. */
+const PRECISION_CANDIDATE_SPAN = 14;
 
 /**
  * Where a blow lands. A precise fighter does not merely find bare skin — it finds the spot that TAKES

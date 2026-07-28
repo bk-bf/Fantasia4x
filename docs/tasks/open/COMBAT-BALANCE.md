@@ -588,6 +588,94 @@ not balance.
       two calibrations completely different problems.
 - [ ] Re-run every task 12d number at the spawn ceiling; they were all measured at brawn 30–45.
 
+### 12g. The weapon meta, measured properly  ✅ 2026-07-28
+
+`weaponMeta.test.ts` — 22 styles (every steel-tier weapon; one-handers in BOTH configurations, behind a
+shield and as a trained duelist; the assassin as a matched PAIR of daggers), equal stats at the spawn
+ceiling of 20. Two sweeps, ~7,000 duels.
+
+**Dual wield now exists.** There was no such thing before: `getGrip` returned the neutral `oneHanded`
+grip whenever the off hand held anything that was not a shield, so a second dagger was never swung — it
+only blocked the duelist grip, making two daggers strictly WORSE than one. Added `offHandable` to the
+eight daggers, a `dualWield` grip, an off-hand slot resolver (a second dagger goes to the free hand
+instead of swapping out the first, the same occupancy rule rings use), and the pair's payout: ×1.4
+working rate, +0.08 crit, +0.08 penetration, ×1.05 damage. Verified in the sim — a stiletto in each hand
+resolves to `dualWield` at attack_speed 2.268 against a single dagger's 1.5.
+
+- [x] **THE ARMOUR SPLIT IS REAL, and it is the balance to keep.** Attacker always naked, target's armour
+      the only variable, 63 fights per style per class:
+
+  | | bare target, top 5 | plated target, top 5 |
+  | --- | --- | --- |
+  | 1 | greatflail (2H) 54 wins | **greataxe (2H) 61** |
+  | 2 | **mace + shield 50** | greatflail (2H) 54 |
+  | 3 | **rapier + shield 48** | greatsword (2H) 52 |
+  | 4 | warhammer (2H) 48 | greatcleaver (2H) 52 |
+  | 5 | **flail + shield 46** | mace + shield 48 |
+
+  Against plate the top four are ALL two-handers; against bare flesh three of the top five are
+  one-handers behind shields. The movement is unambiguous: greatcleaver **+10 places**, greataxe **+5**,
+  greatsword **+4** when the target armours up, while cleaver + shield falls **8**, rapier + shield **6**
+  and halberd **5**. Cause is ADR-029 subtractive mitigation — a big weapon loses a slice off a large
+  number, a light one loses nearly the whole number. **No flat damage buff is needed, and the bleeding
+  idea can stay parked.**
+
+- [ ] ⚠ **`mace + shield` is the outlier: 107 wins of 126, helpless against NOTHING.** It beats 17 of its
+      21 opponents at 5-or-6 out of 6, including every two-hander. `flail + shield` is second at 97, also
+      with no losing matchup. The blunt one-handers carry a 1.3 blunt multiplier and much better
+      penetration on top of damage that the flat ×0.62 one-handed cut left them, because they started
+      higher than the swords did. That cut did not land evenly and this is where it shows.
+- [ ] ⚠ **Twin daggers are NOT a counter build** — the intended design, but not the measured one. 33 wins
+      of 126, and the only opponents it takes 5-of-6 from are `broadaxe duelist` and `boar spear duelist`,
+      the two weakest styles in the game. It is helpless against six styles. It needs an ACCURACY source,
+      not more precision: it lands 53 swings in 100, and precision cannot help a swing that never lands.
+- [ ] ⚠ **Three duelist configurations dominate nothing at all**: `broadaxe duelist` (28 wins),
+      `cleaver duelist` (27), `boar spear duelist` (18). A style with no favourable matchup anywhere is
+      not a trade-off, it is a dead option.
+- [x] **Real counters DO exist**, so the rock-paper-scissors shape is reachable: `rapier duelist` takes
+      the greatsword 5-of-6 and the greataxe 5-of-6 (the anti-two-hander), `flail duelist` takes the
+      halberd 6-of-6, and `warhammer` takes the greatflail 5-of-6.
+- [x] **One-handed spears cost one less stamina per swing** (all eight; steel boar spear 2 → 1), making
+      them the cheapest melee weapon to swing and the loadout a low-stamina pawn or a pure tank can keep
+      using after everything else has run them dry.
+
+### 12h. Loose ends closed  ✅ 2026-07-28
+
+- [x] **Wound traits are stamped when GAINED, not only at generation.** `applyGainedTrait` baked stat
+      grants, grafts, silk and body mods but never `trait.wounds`, so a pawn who became `one-eyed`
+      mid-life kept both eyes and the trait was a name with no body behind it. `applyTraitWounds` now
+      takes an optional single trait — stamping is not idempotent, so the gained path must never re-run
+      the whole set or every wound the pawn was born with is stamped twice.
+- [x] **`armorProperties.fatiguePerTurn` is wired.** 50 armour pieces author it, cleanly graded by class
+      (light 0.01–0.2, medium 0.08–0.4, heavy 0.1–0.9), and NOTHING read it — the field existed only to
+      be printed in a tooltip promising the player a cost the sim never charged. Now added to the fatigue
+      need. Scaled by 0.18: the raw values were authored against a much larger base than the 0.32 this
+      uses, and a full plate harness sums to 1.74, five times the base. At 0.18 a full harness roughly
+      DOUBLES the resting fatigue rate — a real reason to take it off in camp, not a reason never to wear it.
+- [x] **Precision searches harder.** `PRECISION_CANDIDATE_SPAN` 6 → 14. It was calibrated when the gate
+      topped out near 0.06, so the entire span bought a third of one extra look; it now reaches ~0.42 on a
+      crit-heavy weapon, giving ~9 looks against a poor fighter's 3.7. This does NOT make eyes common and
+      is not meant to: an eye is 0.2 of ~70 total hit weight, under 1% per look, and a deliberate
+      eye-thrust being rare is the anatomy being honest. The gain shows up on the reachable maim targets.
+- [x] **Build shares are even.** Per-build z-calibration was not enough on its own: five builds compete
+      for agility, while `intellect` is wanted by the Battlemage ALONE and is uncorrelated with every
+      physical stat (measured |r| ≤ 0.05), so it won its argmax unopposed and took 27 pawns in 100 against
+      an even share of 11. A per-build offset, solved by clamped iterative correction, evens the shares
+      without reordering pawns inside a build. Now 5.7%–15.3% across nine builds, with the tier ladder
+      still spread S 8% / A 13% / B 18% / C 25% / D 19% / F 17%.
+- [x] **The collapse test was asserting the wrong thing.** A downed pawn with nobody to tend it does not
+      get back up, and should not: pawn clotting is deliberately sparse so that "bleeding stays a
+      treat-or-die threat… leaving room for a caretaker to make it (or not)" ([Wounds.ts:236](../../../src/lib/game/core/Wounds.ts)),
+      and the scenario has exactly ONE pawn. Traced to 72,000 ticks the arc is real and not a hang: blood
+      98.6% → 33.6%, bleeding clots, an untended infection starts climbing. The test now asserts the
+      designed shape — goes down, draft releases, stays down, still alive to be saved, still bleeding.
+
+- [ ] ⚠ **`combatBalanceAudit` #12 is RED on purpose.** Re-run at the spawn ceiling (it was measuring
+      brawn 30, above what a colonist can reach): the two-hander kills fastest at 2,170t ✅, but the shield
+      style dies MOST — 5 deaths in 8 against the two-hander's 3, where the design says the shield is what
+      the one-hander bought with its damage. The assertion is correct and the game is wrong; it is the
+      tracking signal for the one-handed damage re-derivation below, and must not be weakened to go green.
+
 ### 13. The deferred trait audit
 
 Bundled deliberately: all three are trait-economy problems and re-pricing them one at a time against a

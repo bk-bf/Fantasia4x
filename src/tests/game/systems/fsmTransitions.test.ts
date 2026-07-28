@@ -164,7 +164,7 @@ describe('FSM transitions & interrupt priority', () => {
     expect(ate, 'un-drafting returns the pawn to need-driven behaviour (it goes to eat)').toBe(true);
   });
 
-  it('COLLAPSE lifecycle & collapse-over-draft: a drafted pawn beaten down goes Collapsed (draft released), then recovers', async () => {
+  it('COLLAPSE lifecycle & collapse-over-draft: a drafted pawn beaten down goes Collapsed, the draft releases, and with NOBODY to tend it it stays down', async () => {
     const s = new HeadlessSession();
     await s.start(
       buildScenario({
@@ -196,19 +196,42 @@ describe('FSM transitions & interrupt priority', () => {
     console.log(`[FSM collapse] frail drafted pawn → state=${stateOf(s, p.id)} drafted=${downedDraft} alive=${gs(s).pawns.find((x) => x.id === p.id)?.isAlive}`);
     expect(collapsed, 'cumulative pain downs the pawn into Collapsed (recoverable, not killed)').toBe(true);
     expect(downedDraft, 'going down RELEASES the draft — an unconscious pawn can\'t be commanded').toBe(false);
-    // clear the threat, then confirm it is HELD down and eventually RECOVERS to Idle
+    // Clear the threat. What follows is the DESIGNED arc for a pawn nobody can reach, and it is not
+    // recovery: pawn clotting is deliberately sparse (Wounds.CLOT_ROLL_INTERVAL — "bleeding stays a
+    // treat-or-die threat that only OCCASIONALLY resolves itself, leaving room for a caretaker to make
+    // it (or not)"), and this colony has exactly ONE pawn, so no caretaker can ever come. It bleeds
+    // down, consciousness falls with the blood, and it stays down. An earlier version of this test
+    // asserted that it stood back up on its own, which contradicted that design note and only ever
+    // passed while pawns took lighter wounds.
     for (const m of [...(gs(s).mobs ?? [])]) s.command({ type: 'devKillEntity', payload: { id: (m as { id: string }).id } } as never);
     s.tick(30);
     expect(stateOf(s, p.id), 'still held down right after the threat clears').toBe('Collapsed');
-    let recovered = false;
-    for (let i = 0; i < 200 && !recovered; i++) {
+    const bloodPct = () => {
+      const x = gs(s).pawns.find((q) => q.id === p.id);
+      return ((x?.bloodVolume ?? 0) / (x?.maxBloodVolume ?? 1)) * 100;
+    };
+    const bloodAtDowning = bloodPct();
+    let stoodUp = false;
+    for (let i = 0; i < 200 && !stoodUp; i++) {
       s.tick(60);
       const st = stateOf(s, p.id);
-      // Recovery = it left the downed state (stands back up), typically into rest to mend its wounds.
-      if (st && st !== 'Collapsed' && gs(s).pawns.find((x) => x.id === p.id)?.isAlive !== false) recovered = true;
+      if (st && st !== 'Collapsed' && gs(s).pawns.find((x) => x.id === p.id)?.isAlive !== false)
+        stoodUp = true;
     }
-    console.log(`[FSM collapse] stood back up: ${recovered} (state=${stateOf(s, p.id)})`);
-    expect(recovered, 'once consciousness recovers the pawn stands back up out of Collapsed (into rest/idle)').toBe(true);
+    const alive = gs(s).pawns.find((x) => x.id === p.id)?.isAlive !== false;
+    console.log(
+      `[FSM collapse] untended → state=${stateOf(s, p.id)} alive=${alive} ` +
+        `blood ${bloodAtDowning.toFixed(1)}% → ${bloodPct().toFixed(1)}%`
+    );
+    // The point of the downed state is that it is a WINDOW someone else has to act in, so the pawn must
+    // still be there to be saved rather than dead on the spot…
+    expect(alive, 'going down is a treat-or-die window, not an instant kill').toBe(true);
+    // …and it must not quietly solve itself, or tending a casualty would never matter.
+    expect(stoodUp, 'with no caretaker, an untended bleeding pawn does NOT get back up on its own').toBe(
+      false
+    );
+    // The arc has to be LIVE rather than wedged: blood is still draining, so this is heading somewhere.
+    expect(bloodPct(), 'the untended bleed keeps costing blood').toBeLessThan(bloodAtDowning);
   });
 
   it('STUCK / OSCILLATION invariant: a realistic colony over thousands of ticks never wedges a pawn', async () => {

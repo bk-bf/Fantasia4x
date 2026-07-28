@@ -246,7 +246,9 @@ describe('COMBAT-BALANCE audit — live sim', () => {
   it('#12 LANDED — a real fight puts the two-hander ahead, and the duel grip between', async () => {
     // COMBAT-BALANCE 12/12a in the live sim, not the sweep. The design order is:
     //   two-hander (most damage) > one-hander + DUELIST trait > one-hander + shield (defensive).
-    const stats = { brawn: 30, agility: 30, vigour: 30 };
+    // At the SPAWN CEILING (Culture.SPAWN_STAT_CAP), not the 30 this used to run at. A colonist cannot
+    // exceed 20 at growth level 1, so balance measured above it describes a fighter who cannot exist.
+    const stats = { brawn: 20, agility: 20, vigour: 20 };
     const twoH = await meanDuel('2H greatsword', { stats, equip: ['steel_greatsword'] });
     const shield = await meanDuel('1H longsword + shield', {
       stats,

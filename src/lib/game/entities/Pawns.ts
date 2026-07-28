@@ -109,11 +109,14 @@ export function applyTraitGrafts(pawn: Pawn): void {
  * amputation — every part missing, limb.isMissing, one permanent stump wound on the named part);
  * refused on limbs holding a vital/critical organ (head/torso stay whole — the same non-lethal cap).
  */
-export function applyTraitWounds(pawn: Pawn): void {
+export function applyTraitWounds(pawn: Pawn, only?: Trait): void {
   const limbs = pawn.limbs;
   if (!limbs) return;
   let stamped = false;
-  for (const trait of pawn.traits ?? []) {
+  // `only` restricts the pass to ONE trait — the gained-later path (`applyGainedTrait`). Stamping is
+  // not idempotent (each call pushes a fresh injury), so a trait gained mid-life must never re-run the
+  // whole set or every wound the pawn was born with is stamped a second time.
+  for (const trait of only ? [only] : (pawn.traits ?? [])) {
     for (const spec of trait.wounds ?? []) {
       const partId = maybeFlipPairedSide(spec.part);
       if (spec.amputate) {
@@ -288,6 +291,11 @@ export function applyGainedTrait(pawn: Pawn, trait: Trait): void {
         if (typeof per === 'number') pawn.stats.awareness += per;
       }
   }
+  // TRAIT-SYSTEM-V2 §4: a `wound`-kind trait stamps a REAL permanent injury on the body. Generation
+  // does this through `applyTraitWounds`; gaining one later has to as well, or a pawn who becomes
+  // `one-eyed` keeps both eyes and the trait is a name with no body behind it. Scoped to THIS trait —
+  // the full pass would re-stamp everything the pawn was born with.
+  if (trait.wounds?.length) applyTraitWounds(pawn, trait);
   // LINEAGES-II §3: gained spinnerets start the silk trickle.
   if (trait.grafts?.some((g) => g.parts.includes('spinneret'))) pawn.silkSpinner = true;
   // LINEAGES-II: a gained blood-need trait (grown into a lineage later in life) starts its meter.

@@ -177,6 +177,19 @@ export interface FitCalibration {
   /** build → mean and standard deviation of its raw score across the calibration population. */
   by: Record<string, { mean: number; sd: number }>;
   /**
+   * build → a constant added to its z, chosen so every build wins a roughly EQUAL share of pawns.
+   *
+   * Normalising each build's spread is not enough on its own, because the builds do not compete on
+   * equal terms: five of them want agility, so a strong-agility pawn is fought over and only one of
+   * them can claim it, while `intellect` is wanted by the Battlemage ALONE and is uncorrelated with
+   * everything else (measured: |r| ≤ 0.05 against every physical stat). An uncontested stat wins its
+   * argmax unopposed — the Battlemage was taking 27 pawns in every 100 against an even share of 11.
+   *
+   * The offset is a per-build constant, so it shifts which build a pawn lands in WITHOUT reordering
+   * pawns inside a build: the F-to-S spread and every tier boundary are untouched.
+   */
+  offset: Record<string, number>;
+  /**
    * build → mean and sd of the WINNING z among pawns whose best fit is that build. The tier is graded
    * against this, not against `by`. A pawn's best fit is the maximum of N z-scores, and the maximum of
    * N draws sits well above zero by construction — grading the raw winning z put 75% of the population
@@ -200,18 +213,65 @@ export function calibrate(pawns: Pawn[]): FitCalibration {
   const by: Record<string, { mean: number; sd: number }> = {};
   for (const [build, xs] of Object.entries(acc)) by[build] = moments(xs);
 
-  // Second pass: with `by` known, find each pawn's winning build and z, then take the moments of the
-  // winners per build.
+  // Pre-compute every pawn's z per build once — the offset solver below sweeps it repeatedly.
+  const builds = Object.keys(by);
+  const zs = pawns.map((p) => {
+    const row: Record<string, number> = {};
+    for (const s of gradePawn(p)) row[s.build] = (s.score - by[s.build].mean) / by[s.build].sd;
+    return row;
+  });
+
+  // Solve the per-build offsets that even out the argmax shares. Plain iterative correction: measure
+  // each build's share, nudge its offset by how far it is from an even share (in log space, so a build
+  // taking twice its share is pushed exactly as hard as one taking half), repeat. Converges in a few
+  // dozen passes and is deterministic — no randomness, so a given population always calibrates the same.
+  const offset: Record<string, number> = {};
+  for (const b of builds) offset[b] = 0;
+  const target = 1 / builds.length;
+  const argmax = () => {
+    const count: Record<string, number> = {};
+    for (const b of builds) count[b] = 0;
+    for (const row of zs) {
+      let bb = builds[0];
+      let bz = -Infinity;
+      for (const b of builds) {
+        const z = row[b] + offset[b];
+        if (z > bz) {
+          bz = z;
+          bb = b;
+        }
+      }
+      count[bb]++;
+    }
+    return count;
+  };
+  // The step is CLAMPED. An unclamped log correction is unstable: a build that momentarily wins zero
+  // pawns gets an unbounded push, overshoots into dominating, and the whole thing oscillates apart —
+  // the first attempt drove four builds to a 0% share and the offsets to ~38.
+  const MAX_STEP = 0.08;
+  for (let iter = 0; iter < 400; iter++) {
+    const count = argmax();
+    let worst = 0;
+    for (const b of builds) {
+      const share = Math.max(0.5 / zs.length, count[b] / zs.length); // never log(0)
+      const raw = -0.3 * Math.log(share / target);
+      offset[b] += Math.max(-MAX_STEP, Math.min(MAX_STEP, raw));
+      worst = Math.max(worst, Math.abs(share - target));
+    }
+    if (worst < target * 0.25) break; // every build within a quarter of the even share
+  }
+
+  // Winner moments, computed with the offsets in place so the tier ladder is measured on the same
+  // scale the assignment actually uses.
   const wins: Record<string, number[]> = {};
-  for (const p of pawns) {
-    let bestBuild = '';
+  for (const row of zs) {
+    let bestBuild = builds[0];
     let bestZ = -Infinity;
-    for (const s of gradePawn(p)) {
-      const c = by[s.build];
-      const z = (s.score - c.mean) / c.sd;
+    for (const b of builds) {
+      const z = row[b] + offset[b];
       if (z > bestZ) {
         bestZ = z;
-        bestBuild = s.build;
+        bestBuild = b;
       }
     }
     (wins[bestBuild] ??= []).push(bestZ);
@@ -220,7 +280,7 @@ export function calibrate(pawns: Pawn[]): FitCalibration {
   for (const [build, xs] of Object.entries(wins)) winners[build] = moments(xs);
   // A build no pawn ever won falls back to the unconditional distribution rather than vanishing.
   for (const build of Object.keys(by)) winners[build] ??= by[build];
-  return { by, winners };
+  return { by, winners, offset };
 }
 
 /**
@@ -263,7 +323,7 @@ export function fitOf(pawn: Pawn, calib: FitCalibration): PawnFit {
   const all = raw
     .map((s) => {
       const c = calib.by[s.build] ?? { mean: 0, sd: 1 };
-      return { ...s, score: (s.score - c.mean) / c.sd };
+      return { ...s, score: (s.score - c.mean) / c.sd + (calib.offset?.[s.build] ?? 0) };
     })
     .sort((a, b) => b.score - a.score);
   const margin = all[0].score - all[1].score;
