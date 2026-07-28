@@ -5,6 +5,7 @@
 # Running them here makes the machine unusable for the duration, which is the only reason this exists.
 #
 #   ./audit.sh <test-file> [-t "name filter"]   sync the working tree, start the run, follow it
+#   ./audit.sh --all                            every balance audit, fanned out across the remote cores
 #   ./audit.sh --tail                           follow a run already in progress (from anywhere)
 #   ./audit.sh --status                         is anything running, and how far along
 #   ./audit.sh --result                         the finished output, once it is done
@@ -70,6 +71,12 @@ case "${1:-}" in
     echo "==> ready"
     exit 0
     ;;
+  --all)
+    # Every audit at once. They are separate FILES, so vitest's fork pool runs them in parallel and the
+    # short sweeps finish alongside the long one for free — `weaponMeta` (~45 min) is the only real pole.
+    TEST_FILE="src/tests/game/systems/{weaponMeta,styleMatchups,armourStyleAudit,weaponFightSim,combatBalanceAudit,buildFitAudit,t4WeaponAudit,maimTargeting,carryCapacityAudit}.test.ts"
+    shift
+    ;;
   --shell)
     exec ssh -t "$HOST" "$NODE_ENV_SETUP; cd $REMOTE_DIR && exec bash -l"
     ;;
@@ -79,8 +86,10 @@ case "${1:-}" in
     ;;
 esac
 
-TEST_FILE="$1"; shift
-[ -f "$TEST_FILE" ] || die "no such test file: $TEST_FILE"
+if [ -z "${TEST_FILE:-}" ]; then
+  TEST_FILE="$1"; shift
+  [ -f "$TEST_FILE" ] || die "no such test file: $TEST_FILE"
+fi
 
 ssh "$HOST" "[ -f $PIDFILE ] && kill -0 \$(cat $PIDFILE) 2>/dev/null" \
   && die "a run is already going on $HOST — ./audit.sh --status"
@@ -95,7 +104,7 @@ ssh "$HOST" "$NODE_ENV_SETUP
   cd $REMOTE_DIR
   : > $LOG; : > $PROGRESS
   nohup env VITEST_MAX_FORKS=\${AUDIT_FORKS:-\$(nproc)} RUN_AUDITS=1 \
-    pnpm vitest run '$TEST_FILE' ${*:+$*} > $LOG 2>&1 &
+    pnpm vitest run $TEST_FILE ${*:+$*} > $LOG 2>&1 &
   echo \$! > $PIDFILE"
 
 echo "==> running. Ctrl-C only stops the tail; the run continues."
