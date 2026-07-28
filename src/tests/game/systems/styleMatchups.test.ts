@@ -3,6 +3,8 @@ import { HeadlessSession } from '$lib/game/headless/HeadlessSession';
 import { buildScenario } from '$lib/game/headless/Scenario';
 import { setSimLogSink } from '$lib/game/core/logSink';
 import type { CombatTurnEntry } from '$lib/game/core/Events';
+import { getGrip } from '$lib/game/systems/rangedCombat';
+import { pawnStatService } from '$lib/game/services/PawnStatService';
 import type { EntityStats, Pawn } from '$lib/game/core/types';
 
 /**
@@ -218,85 +220,137 @@ describe('STYLE MATCHUPS — equal skill, kit as the only variable', () => {
     ).toBeGreaterThan(armoured.bStats.perHit);
   }, 1_800_000);
 
-  it('ROUND ROBIN: which style beats which, with everyone in the same armour', async () => {
-    // Every style fights every other style six times. All six fighters wear the same medium armour and
-    // have the same stats, so the weapon and the free hand are the only things that differ. Armour is
-    // held constant on purpose: it is a separate defensive layer, and letting each build wear its own
-    // would mix "which style wins" with "which armour wins".
+  it('ROUND ROBIN: every steel weapon and style against every other, NO ARMOUR', async () => {
+    // NO ARMOUR on anyone, deliberately. With armour on, ADR-029 subtractive mitigation subtracts about
+    // the same number from every blow, which crushes every light weapon into the same 5-to-8 damage band
+    // and makes the whole table a ranking of raw weapon damage. Nothing about style survives that. Armour
+    // has not been overhauled yet, so measuring styles through it measures the armour instead.
+    //
+    // Every steel-tier melee weapon is here, not one sword per class. One-handers are run in BOTH of
+    // their real configurations — behind a shield, and as a trained duelist with the hand free — because
+    // those are different builds, not the same weapon twice. The assassin is a matched PAIR of daggers
+    // (the `dualWield` grip), and the fencer is a duelist, since a rapier is a one-hander with no shield.
+    const ONE_H = [
+      ['longsword', 'steel_longsword'],
+      ['mace', 'steel_mace'],
+      ['flail', 'steel_flail'],
+      ['cleaver', 'steel_cleaver'],
+      ['broadaxe', 'steel_broadaxe'],
+      ['boar spear', 'steel_boar_spear'],
+      ['rapier', 'steel_rapier']
+    ] as const;
+    const TWO_H = [
+      ['greatsword', 'steel_greatsword'],
+      ['greataxe', 'steel_greataxe'],
+      ['greatcleaver', 'steel_greatcleaver'],
+      ['warhammer', 'steel_warhammer'],
+      ['greatflail', 'steel_greatflail'],
+      ['halberd', 'steel_halberd'],
+      ['pike', 'steel_pike']
+    ] as const;
+
     const styles: Side[] = [
-      { label: 'sword and shield', equip: ['steel_longsword', 'iron_boss_shield', ...KIT.medium] },
-      { label: 'greatsword', equip: ['steel_greatsword', ...KIT.medium] },
-      { label: 'halberd', equip: ['steel_halberd', ...KIT.medium] },
-      { label: 'duelist sword', equip: ['steel_longsword', ...KIT.medium], traits: ['duelist'] },
-      { label: 'assassin dagger', equip: ['steel_stiletto', ...KIT.medium] },
-      { label: 'fencer rapier', equip: ['steel_rapier', ...KIT.medium] }
+      ...ONE_H.map(([n, id]) => ({ label: `${n} + shield`, equip: [id, 'iron_boss_shield'] })),
+      ...ONE_H.map(([n, id]) => ({ label: `${n} duelist`, equip: [id], traits: ['duelist'] })),
+      { label: 'twin daggers', equip: ['steel_stiletto', 'steel_stiletto'] },
+      ...TWO_H.map(([n, id]) => ({ label: `${n} (2H)`, equip: [id] }))
     ];
+
+    // The matched pair has to actually reach both hands, or this whole row is measuring one dagger.
+    {
+      const s = new HeadlessSession();
+      await s.start(
+        buildScenario({
+          seed: 5,
+          map: { w: 16, h: 16 },
+          pawns: [{ count: 1, stats: EQUAL, equip: ['steel_stiletto', 'steel_stiletto'] }],
+          needsDisabled: ['hunger', 'fatigue', 'thirst', 'hygiene'],
+          seedEntities: false
+        })
+      );
+      const p = (s.getState().pawns as Pawn[])[0];
+      const grip = getGrip(p);
+      console.log(
+        `  twin-dagger check: main hand ${p.equipment?.mainHand?.itemId ?? 'empty'}, ` +
+          `off hand ${p.equipment?.offHand?.itemId ?? 'empty'}, grip "${grip}", ` +
+          `attack_speed ${pawnStatService.evaluateStat('attack_speed', p).toFixed(3)}`
+      );
+      expect(grip, 'two daggers must resolve to the dual-wield grip').toBe('dualWield');
+    }
 
     const wins: Record<string, Record<string, number>> = {};
     const total: Record<string, { won: number; lost: number; drawn: number }> = {};
+    const dmg: Record<string, { hits: number; damage: number; swings: number }> = {};
     for (const s of styles) {
       wins[s.label] = {};
       total[s.label] = { won: 0, lost: 0, drawn: 0 };
+      dmg[s.label] = { hits: 0, damage: 0, swings: 0 };
     }
 
-    const detail: string[] = [];
     for (let i = 0; i < styles.length; i++)
       for (let j = i + 1; j < styles.length; j++) {
         const r = await matchup(styles[i], styles[j]);
-        wins[styles[i].label][styles[j].label] = r.aWins;
-        wins[styles[j].label][styles[i].label] = r.bWins;
-        total[styles[i].label].won += r.aWins;
-        total[styles[i].label].lost += r.bWins;
-        total[styles[i].label].drawn += r.draws;
-        total[styles[j].label].won += r.bWins;
-        total[styles[j].label].lost += r.aWins;
-        total[styles[j].label].drawn += r.draws;
-        detail.push(
-          `  ${styles[i].label} won ${r.aWins}, ${styles[j].label} won ${r.bWins}` +
-            (r.draws ? `, ${r.draws} ended with both alive` : '') +
-            `  —  ${styles[i].label} landed ${(r.aStats.hitRate * 100).toFixed(0)} swings in 100 for ` +
-            `${r.aStats.perHit.toFixed(1)} damage each; ${styles[j].label} landed ` +
-            `${(r.bStats.hitRate * 100).toFixed(0)} for ${r.bStats.perHit.toFixed(1)}`
-        );
+        const A = styles[i].label;
+        const B = styles[j].label;
+        wins[A][B] = r.aWins;
+        wins[B][A] = r.bWins;
+        total[A].won += r.aWins;
+        total[A].lost += r.bWins;
+        total[A].drawn += r.draws;
+        total[B].won += r.bWins;
+        total[B].lost += r.aWins;
+        total[B].drawn += r.draws;
+        dmg[A].damage += r.aStats.perHit * 1;
+        dmg[A].hits += 1;
+        dmg[B].damage += r.bStats.perHit * 1;
+        dmg[B].hits += 1;
+        dmg[A].swings += r.aStats.hitRate;
+        dmg[B].swings += r.bStats.hitRate;
       }
 
-    const name = (s: Side) => s.label;
-    const head = '                    ' + styles.map((s) => name(s).slice(0, 9).padStart(10)).join('');
-    const grid = styles.map(
-      (row) =>
-        name(row).padEnd(20) +
-        styles
-          .map((col) => (col.label === row.label ? '—' : String(wins[row.label][col.label])).padStart(10))
-          .join('')
-    );
-
+    const fights = (styles.length - 1) * SEEDS.length;
     const ranked = styles
       .slice()
       .sort((x, y) => total[y.label].won - total[x.label].won)
-      .map(
-        (s) =>
-          `  ${name(s).padEnd(20)} won ${String(total[s.label].won).padStart(2)} of its 30 fights, ` +
-          `lost ${String(total[s.label].lost).padStart(2)}` +
-          (total[s.label].drawn ? `, ${total[s.label].drawn} ended with both alive` : '')
-      );
+      .map((s) => {
+        const t = total[s.label];
+        const d = dmg[s.label];
+        return (
+          `  ${s.label.padEnd(22)} won ${String(t.won).padStart(3)} of its ${fights} fights` +
+          (t.drawn ? ` (${t.drawn} ended with both alive)` : '') +
+          `   ~${(d.damage / d.hits).toFixed(1)} damage per landed hit` +
+          `, landed ~${((d.swings / d.hits) * 100).toFixed(0)} swings in 100`
+        );
+      });
 
     console.log(
-      `[ROUND ROBIN] every style against every other, six fights each, everyone in the same medium armour\n` +
-        `fights won by the style on the left, against the style on top:\n` +
-        head +
-        '\n' +
-        grid.join('\n') +
-        '\n\noverall:\n' +
-        ranked.join('\n') +
-        '\n\nfight by fight:\n' +
-        detail.join('\n')
+      `[ROUND ROBIN, NO ARMOUR] every style against every other, ${SEEDS.length} fights each\n` +
+        `${styles.length} styles, so each fights ${fights} times in total\n\n` +
+        ranked.join('\n')
     );
 
-    // Every style must be able to win SOMETHING. A style that loses all thirty of its fights is broken,
-    // not a rock-paper-scissors loser.
+    // The matchups the design cares about, pulled out of the grid so they are readable.
+    const look = (a: string, b: string) =>
+      `  ${a} vs ${b}: ${wins[a]?.[b] ?? '?'}–${wins[b]?.[a] ?? '?'}`;
+    console.log(
+      '\nthe matchups the design cares about (wins on the left vs wins on the right):\n' +
+        [
+          look('longsword + shield', 'greatsword (2H)'),
+          look('longsword + shield', 'halberd (2H)'),
+          look('longsword + shield', 'pike (2H)'),
+          look('greatsword (2H)', 'halberd (2H)'),
+          look('greatsword (2H)', 'pike (2H)'),
+          look('twin daggers', 'longsword + shield'),
+          look('twin daggers', 'greatsword (2H)'),
+          look('rapier duelist', 'longsword + shield'),
+          look('rapier duelist', 'greatsword (2H)'),
+          look('rapier duelist', 'twin daggers')
+        ].join('\n')
+    );
+
     for (const s of styles)
       expect(total[s.label].won, `${s.label} never won a single fight`).toBeGreaterThan(0);
-  }, 1_800_000);
+  }, 3_600_000);
 
   it('CYCLE: 1H+shield > 2H > polearm 2H > 1H+shield, loosely', async () => {
     // All three in the armour their own build would plausibly field, so the cycle is read between

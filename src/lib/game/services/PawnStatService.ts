@@ -614,10 +614,23 @@ function equippedPowerToken(pawn: Pawn | Mob, sm: StatMultipliers): number {
   return powerToken((pawn.stats?.[key] ?? 10) * mult);
 }
 
+/** Extra working rate from a matched pair of daggers — the speed half of the `dualWield` grip. Kept
+ *  here rather than in the attack profile because the swing interval is built from this stat, not from
+ *  the profile. Mirrors `Combat.DUAL_SPEED_MULT`. */
+const DUAL_WIELD_SPEED_MULT = 1.4;
+
 function equippedWeaponSpeedMult(pawn: Pawn | Mob): number {
-  const mh = (pawn as Pawn).equipment?.mainHand;
+  const eq = (pawn as Pawn).equipment;
+  const mh = eq?.mainHand;
   if (!mh) return 1;
-  return ITEM_BY_ID.get(mh.itemId)?.weaponProperties?.attackSpeed ?? 1;
+  const mainWp = ITEM_BY_ID.get(mh.itemId)?.weaponProperties;
+  let mult = mainWp?.attackSpeed ?? 1;
+  // Both blades light enough to work in either hand → the pair is worked as one faster weapon.
+  if (mainWp?.offHandable && eq?.offHand) {
+    const offWp = ITEM_BY_ID.get(eq.offHand.itemId)?.weaponProperties;
+    if (offWp?.offHandable) mult *= DUAL_WIELD_SPEED_MULT;
+  }
+  return mult;
 }
 
 // ── Cultural resistance bonuses (Culture overhaul) ────────────────────────────────

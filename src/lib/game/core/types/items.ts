@@ -442,6 +442,11 @@ export interface Item {
     channeled?: boolean; // a CHANNELED ranged weapon (staff): fires with NO ammo, paying its `staminaCost` as MANA each shot, and is NOT self-consumed/dropped like a thrown weapon (it stays in hand). Bottoming out stamina latches `winded` = out of mana.
     critMod?: number; // added to the wielder's base hit_precision (0–1)
     twoHanded?: boolean; // requires both mainHand and offHand slots
+    /** A blade light enough to be held in EITHER hand, so a matched pair can be worn at once. Two of
+     *  them is the `dualWield` grip (Combat.getGrip): a second point instead of a shield, trading every
+     *  scrap of protection for reach into gaps and a much faster working rate. Daggers only — anything
+     *  with real heft needs the off hand free to control it. */
+    offHandable?: boolean;
     tags?: string[]; // ability grants
     ammoCategory?: string; // links a ranged weapon to its ammo (e.g. "arrow" | "bolt" | "sling_stone"); omit = no ammo (thrown weapons self-consume)
     reload?: number; // mechanical SPANNING multiplier on the aim_speed cadence (default 0→1×); a crossbow at 3 fires a third as often as a bow. See rangedCombat.aimIntervalTicks.

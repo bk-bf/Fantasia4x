@@ -111,7 +111,7 @@ export function hasMeleeMainHand(pawn: Pawn): boolean {
  * defence is all dodge); duelist (1H with off-hand FREE: +damage/+armorPen/+crit); oneHanded (1H
  * with off-hand occupied by a non-shield: neutral). Melee only — the ranged path never calls `attackerProfile`.
  */
-export type MeleeGrip = 'twoHanded' | 'shield' | 'duelist' | 'oneHanded';
+export type MeleeGrip = 'twoHanded' | 'shield' | 'dualWield' | 'duelist' | 'oneHanded';
 /** The trait that unlocks the duel grip. Data-side id, so the trait can be re-themed without code. */
 export const DUELIST_TRAIT_ID = 'duelist';
 const hasDuelistTraining = (entity: Pawn | Mob): boolean =>
@@ -128,6 +128,13 @@ export function getGrip(entity: Pawn | Mob): MeleeGrip {
     ? itemService.getItemById(eq.offHand.itemId)?.armorProperties
     : undefined;
   if (offArmor?.armorType === 'shield') return 'shield';
+  // A matched pair of daggers. Both blades must be `offHandable` — light enough to be worked in either
+  // hand — so this can never be a sword and a buckler-substitute. It is the assassin's answer to having
+  // no shield: a second point instead of protection.
+  const offWp = eq.offHand
+    ? itemService.getItemById(eq.offHand.itemId)?.weaponProperties
+    : undefined;
+  if (mainWp?.offHandable && offWp?.offHandable) return 'dualWield';
   // DUELIST is a TRAINED style, not a consequence of an empty hand. It used to be handed to every
   // pawn holding a one-hander with nothing in the off-hand, which made the +damage/+pen/+crit free and
   // universal — the exact opposite of a gated specialisation.

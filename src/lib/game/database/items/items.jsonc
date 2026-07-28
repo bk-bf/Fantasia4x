@@ -2567,7 +2567,7 @@
       "powerStat"  : "agility",
       "critMultiplier" : 2.0,
       "staminaCost": 3,
-      "twoHanded": false
+      "twoHanded": false, "offHandable": true
     }
   },
   {
@@ -6584,7 +6584,7 @@
     "durabilityLossPerCombatHit": 1,
     "weaponProperties": {
       "damage"          : 6,
-      "attackSpeed"     : 1.5,
+      "attackSpeed"     : 1.5, "offHandable": true,
       "range"           : 0,
       "damMin"          : 4,
       "damMax"          : 8,
@@ -6692,7 +6692,7 @@
       "powerStat"       : "agility",
       "critMultiplier"  : 2.0,
       "staminaCost"     : 3,
-      "twoHanded"       : false
+      "twoHanded"       : false, "offHandable": true
     },
     "onHitWound": [ {"wound": "bloodletting", "chance": 0.12} ]
   },
@@ -7071,7 +7071,7 @@
     "durabilityLossPerCombatHit": 3,
     "weaponProperties": {
       "damage"          : 7,
-      "attackSpeed"     : 1.35,
+      "attackSpeed"     : 1.35, "offHandable": true,
       "range"           : 0,
       "damMin"          : 5,
       "damMax"          : 9,
@@ -7949,7 +7949,7 @@
       "powerStat"       : "agility",
       "critMultiplier"  : 2.0,
       "staminaCost"     : 3,
-      "twoHanded"       : false
+      "twoHanded"       : false, "offHandable": true
     },
     "onHitWound": [ {"wound": "bloodletting", "chance": 0.15} ]
   },
@@ -7985,7 +7985,7 @@
       "powerStat"       : "agility",
       "critMultiplier"  : 2.0,
       "staminaCost"     : 3,
-      "twoHanded"       : false
+      "twoHanded"       : false, "offHandable": true
     },
     "onHitWound": [ {"wound": "bloodletting", "chance": 0.18} ]
   },
@@ -8703,7 +8703,7 @@
       "powerStat"       : "agility",
       "critMultiplier"  : 2.0,
       "staminaCost"     : 3,
-      "twoHanded"       : false
+      "twoHanded"       : false, "offHandable": true
     }
   },
   // ── WEAPON-COVERAGE PASS ──────────────────────────────────────────────────
@@ -9940,7 +9940,7 @@
     "researchRequired": "runic_inscription",
     "weaponProperties": {
       "damage"          : 11,
-      "attackSpeed"     : 1.5,
+      "attackSpeed"     : 1.5, "offHandable": true,
       "range"           : 0,
       "damMin"          : 8,
       "damMax"          : 15,

@@ -361,6 +361,19 @@ const DUELIST_CRIT = 0.05;
 /** Bonus a two-handed grip adds. */
 const TWOHAND_DAMAGE_MULT = 1.15;
 const TWOHAND_ARMOR_PEN = 0.05;
+
+/**
+ * DUAL WIELD — a matched pair of daggers, the assassin's grip.
+ *
+ * Two points working together do not hit harder; they work FASTER and find gaps far more often, which
+ * is why the payout is almost entirely in swing rate and precision rather than damage. The wielder has
+ * given up the shield AND the free hand, so there is nothing defensive to show for it — the whole case
+ * is that a second blade keeps the pressure on and eventually slips into something that matters.
+ */
+const DUAL_SPEED_MULT = 1.4;
+const DUAL_CRIT = 0.08;
+const DUAL_ARMOR_PEN = 0.08;
+const DUAL_DAMAGE_MULT = 1.05;
 // SHIELD DEFENCE (block/parry). A shield is now its OWN negation axis (the `block` stat + the shield's
 // `blockBonus`), NOT a dodge boost — so a heavy tank negates where it can't evade. Block is all-or-nothing.
 const BLOCK_CAP = 0.65; // hard ceiling on total block chance
@@ -410,6 +423,12 @@ function applyMeleeGrip(p: AttackProfile, grip: MeleeGrip): AttackProfile {
     p.baseDamage *= DUELIST_DAMAGE_MULT;
     p.armorPen = clamp(p.armorPen + DUELIST_ARMOR_PEN, 0, 1);
     p.critMod += DUELIST_CRIT;
+  } else if (grip === 'dualWield') {
+    // The speed half lives in `equippedWeaponSpeedMult` — the interval is built from the attack_speed
+    // stat, not from this profile.
+    p.baseDamage *= DUAL_DAMAGE_MULT;
+    p.armorPen = clamp(p.armorPen + DUAL_ARMOR_PEN, 0, 1);
+    p.critMod += DUAL_CRIT;
   } else if (grip === 'twoHanded') {
     p.baseDamage *= TWOHAND_DAMAGE_MULT;
     p.armorPen = clamp(p.armorPen + TWOHAND_ARMOR_PEN, 0, 1);

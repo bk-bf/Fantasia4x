@@ -144,6 +144,14 @@ const PAIRED_SLOTS: Partial<Record<EquipmentSlot, EquipmentSlot>> = { ring: 'rin
 export function resolveEquipSlot(pawn: Pawn, item: Item): EquipmentSlot | null {
   const base = getEquipmentSlot(item);
   if (!base) return null;
+  // A second dagger goes to the OFF hand rather than swapping out the first — the same
+  // occupancy-aware rule as a second ring, and what makes the matched pair (`dualWield`) equippable at
+  // all. Both blades must be `offHandable`, so a dagger can never displace a real weapon or a shield.
+  if (base === 'mainHand' && item.weaponProperties?.offHandable && !pawn.equipment?.offHand) {
+    const held = pawn.equipment?.mainHand;
+    const heldWp = held ? itemDefById(held.itemId)?.weaponProperties : undefined;
+    if (heldWp?.offHandable) return 'offHand';
+  }
   const partner = PAIRED_SLOTS[base];
   if (partner && pawn.equipment?.[base] && !pawn.equipment?.[partner]) return partner;
   return base;
