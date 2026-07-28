@@ -411,7 +411,7 @@ That premise inverted, so the debuffs were unwound rather than compensated for:
 - [x] **Gated `getGrip` on it** ([rangedCombat.ts:115](../../../src/lib/game/systems/rangedCombat.ts)). It previously returned `duelist` for ANY one-hander with an empty off-hand, handing every pawn in the game +20% damage / +10% pen / +5% crit for free — never intended, and the opposite of a gated specialisation.
 - [x] **`DUELIST_DAMAGE_MULT` 1.2 → 1.28**, calibrated so the style lands at ~80% of a two-hander while shield-and-one-hander sits at ~60%.
 
-### 12c. Shields are FREE — encumbrance never fires  ⚠ NEW, 2026-07-28
+### 12c. Shields were FREE — the carry curve had drifted  ✅ 2026-07-28
 
 The earlier style comparison put both pawns in NO armour, the one configuration where the shield is
 guaranteed to look best. Re-run as a KIT audit (`armourStyleAudit.test.ts`, every style × every armour
@@ -445,8 +445,22 @@ class, 6 seeds, live orc reaver) the picture changes and the premise collapses.
 > dodge** to the two-hander. The shield costs nothing. So shields are not "a bit too strong" — they are
 > FREE, and no shield-side tuning is meaningful until the weight actually bites.
 
-- [ ] **Decide the mechanism**, then re-run this audit. Options, in rough order of bluntness: (a) lower the carry fraction so a full plate + shield exceeds it; (b) count WORN armour against a separate, tighter budget from pack cargo (they are different burdens); (c) give shields their own explicit encumbrance cost independent of the carry budget.
-- [ ] Note that `2H greatsword · heavy` kills in **650t** — by far the fastest in the table — but converts only 4/6. Once encumbrance bites, check whether that becomes the intended glass-cannon shape rather than a coin flip.
+- [x] **FIXED — the carry curve was the mechanism, and it had drifted.** Shields and weapons were already counted (`getCurrentCarryLoad` sums `pawn.equipment`); the defect was entirely on the capacity side, and `carryCapacityAudit.test.ts` found two:
+  - `loadFraction = clamp(brawn × 0.012, 0.05, 0.3)` **bound at brawn 25**. 28% of the population sat at that clamp, and above it brawn bought nothing — a brawn-100 pawn carried exactly what a brawn-25 pawn did. That is the 1–100 stat-expansion drift.
+  - capacity was `bodyWeight × loadFraction`, so with a **median bodyweight of 108kg** the budget was decided by how HEAVY a pawn was, not how strong. Being fat was the carrying stat.
+  - Replaced with `(3 + brawn × 0.85) × frameFactor`, where `frameFactor = clamp(bodyWeight/80, 0.85, 1.15)` — brawn sets the budget, the frame only modulates it.
+
+> | | before | after |
+> | --- | --- | --- |
+> | plate + shield + sword unencumbered | **32%** of all pawns | **2%** |
+> | capacity, brawn 25 → 100 | 21.0kg flat | 21.2 → 84kg, no cap |
+> | median capacity | 21.8kg | 19.9kg (hauling throughput preserved) |
+> | p95 capacity | 61.2kg | 32.8kg (mass outliers gone) |
+>
+> **Kit audit re-run:** `1H+shield · heavy` fell from **1343t / 0 deaths — best on every axis** to
+> **2317t / 1 death**, and the fastest kit is now `2H greatsword · light` at 1500t. Two-hander leads on
+> speed, shield leads on safety. The trade exists now.
+- [ ] Note that `2H greatsword · heavy` kills in **660t** — by far the fastest in the table — but converts only 4/6. Once encumbrance bites, check whether that becomes the intended glass-cannon shape rather than a coin flip.
 - [ ] Re-run `armourStyleAudit` after any encumbrance change; it is the gate for this task.
 
 ### 13. The deferred trait audit

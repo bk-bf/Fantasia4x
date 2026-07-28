@@ -210,6 +210,18 @@ const DETERIORATION_RATE_BY_CATEGORY: Record<string, number> = {
   natural_weapon: 0 // innate attacks: never real dropped items, but immune for safety
 };
 
+/** Carry budget: `(CARRY_BASE_KG + brawn × CARRY_KG_PER_BRAWN) × frameFactor`.
+ *  Calibrated against the kits a build actually fields (light 15.3kg with a shield, medium 23.9kg,
+ *  heavy 33.9kg): a brawn-10 agility build affords light, a brawn-20 pawn medium, and plate needs
+ *  the high-brawn body it is supposed to need. */
+const CARRY_BASE_KG = 3;
+const CARRY_KG_PER_BRAWN = 0.85;
+/** The frame only MODULATES the brawn budget — a bigger body carries a little more, but mass can
+ *  never stand in for strength (which is what the old bodyWeight-multiplied formula allowed). */
+const CARRY_FRAME_REF_KG = 80;
+const CARRY_FRAME_MIN = 0.85;
+const CARRY_FRAME_MAX = 1.15;
+
 /** Itemised carry-budget breakdown for the UI (see ItemService.getCarryCapacityBreakdown). */
 export interface CarryCapacityBreakdown {
   /** Size category derived from the pawn's actual height (a description of height, not the culture box). */
@@ -696,15 +708,31 @@ export class ItemServiceImpl implements ItemService {
     const size = sizeFromHeight(height);
     const str = pawn.stats.brawn ?? 10;
 
-    // A pawn bears a STRENGTH-dependent fraction of its OWN body mass — ~1.2% per STR point, clamped to
-    // a realistic 5%–30% of body weight (STR 10 ≈ 12%; a strong porter ~25%). Volume (bulk) tracks the
-    // frame, ~13% of body mass, independent of brawn.
-    const loadFraction = Math.min(0.3, Math.max(0.05, str * 0.012));
+    // WHAT A PAWN CAN BEAR — brawn-led, mass-modulated.
+    //
+    // This used to be `bodyWeight × clamp(brawn × 0.012, 0.05, 0.3)`, which broke twice over once the
+    // core stats expanded to a 1–100 band:
+    //   • the 0.30 clamp BOUND AT BRAWN 25, so every pawn from 25 to 100 carried exactly the same —
+    //     a quarter of the population sat at the cap and brawn bought nothing above it;
+    //   • capacity scaled linearly with body mass, so the budget was decided by how HEAVY a pawn was
+    //     rather than how strong. With a median bodyweight of ~108kg that handed a weak, fat pawn a
+    //     bigger budget than a lean strong one, and let any build wear plate + shield regardless.
+    //
+    // Now brawn sets the budget directly and the frame only modulates it: a bigger body carries a
+    // little more, but it cannot substitute for strength.
+    const carried = CARRY_BASE_KG + str * CARRY_KG_PER_BRAWN;
+    const frameFactor = Math.min(
+      CARRY_FRAME_MAX,
+      Math.max(CARRY_FRAME_MIN, bodyWeight / CARRY_FRAME_REF_KG)
+    );
+    const capacity = carried * frameFactor;
+    // Kept for the UI breakdown and the carry_weight readout: the EFFECTIVE share of body mass.
+    const loadFraction = bodyWeight > 0 ? capacity / bodyWeight : 0;
     const VOLUME_FRACTION = 0.13;
     const weight = {
       bodyWeight,
       loadFraction,
-      capacity: bodyWeight * loadFraction,
+      capacity,
       gear: 0,
       total: 0
     };
