@@ -670,11 +670,19 @@ resolves to `dualWield` at attack_speed 2.268 against a single dagger's 1.5.
       98.6% → 33.6%, bleeding clots, an untended infection starts climbing. The test now asserts the
       designed shape — goes down, draft releases, stays down, still alive to be saved, still bleeding.
 
-- [ ] ⚠ **`combatBalanceAudit` #12 is RED on purpose.** Re-run at the spawn ceiling (it was measuring
-      brawn 30, above what a colonist can reach): the two-hander kills fastest at 2,170t ✅, but the shield
-      style dies MOST — 5 deaths in 8 against the two-hander's 3, where the design says the shield is what
-      the one-hander bought with its damage. The assertion is correct and the game is wrong; it is the
-      tracking signal for the one-handed damage re-derivation below, and must not be weakened to go green.
+- [x] **`combatBalanceAudit` #12 DELETED (owner's call, 2026-07-28) — but the finding it caught stands.**
+      Re-run at the spawn ceiling (it had been measuring brawn 30, above what a colonist can reach) it
+      read: two-hander kills fastest at **2,170t** ✅, but the shield style dies **MOST — 5 deaths in 8
+      against the two-hander's 3**, where the design says the shield is precisely what the one-hander
+      bought with its damage. The assertion was correct and the game is wrong.
+
+      Only that ONE test was removed, not the file: the other five pin the two-handed/BRAWN decoupling
+      (#4), the signed trait-grant fix (#1), the downgrade cost (#11), mob stat bands, and sim
+      determinism (#2) — all still green and all worth keeping.
+
+      **The claim is now tracked HERE instead of by a red test**, so it must not be lost: a one-hander
+      behind a shield is supposed to die LESS than a two-hander, and currently dies more. Re-assert it
+      once the one-handed damage re-derivation below lands.
 
 ### 13. The deferred trait audit
 

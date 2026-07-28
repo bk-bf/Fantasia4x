@@ -485,7 +485,11 @@ describe('ranged combat (headless tickCombat)', () => {
     expect(getGrip(duelist)).toBe('oneHanded'); // 1H + free off-hand, but UNTRAINED
     expect(getGrip(trained)).toBe('duelist'); // …the trait is what unlocks it
     expect(getGrip(shield)).toBe('shield');
-    expect(getGrip(dualWield)).toBe('oneHanded'); // off-hand occupied, not a shield
+    // COMBAT-BALANCE 12g: a matched PAIR of daggers is its own grip. This used to read `oneHanded` —
+    // the off hand was occupied by something that was not a shield, so the second blade did nothing at
+    // all and two daggers were strictly WORSE than one (it only blocked the duel grip). Both blades must
+    // be `offHandable`, so this can never fire for a sword-and-buckler-substitute.
+    expect(getGrip(dualWield)).toBe('dualWield');
   });
 
   it('combat wears equipment: a weapon loses condition as it lands blows', () => {

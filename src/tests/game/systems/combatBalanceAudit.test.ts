@@ -243,37 +243,6 @@ describe('COMBAT-BALANCE audit — live sim', () => {
     expect(after.intellect).toBeLessThan(before.intellect);
   }, 120_000);
 
-  it('#12 LANDED — a real fight puts the two-hander ahead, and the duel grip between', async () => {
-    // COMBAT-BALANCE 12/12a in the live sim, not the sweep. The design order is:
-    //   two-hander (most damage) > one-hander + DUELIST trait > one-hander + shield (defensive).
-    // At the SPAWN CEILING (Culture.SPAWN_STAT_CAP), not the 30 this used to run at. A colonist cannot
-    // exceed 20 at growth level 1, so balance measured above it describes a fighter who cannot exist.
-    const stats = { brawn: 20, agility: 20, vigour: 20 };
-    const twoH = await meanDuel('2H greatsword', { stats, equip: ['steel_greatsword'] });
-    const shield = await meanDuel('1H longsword + shield', {
-      stats,
-      equip: ['steel_longsword', 'iron_boss_shield']
-    });
-    const duel = await meanDuel('1H longsword, duelist trait', {
-      stats,
-      equip: ['steel_longsword'],
-      traits: ['duelist']
-    });
-    console.log('[#12 STYLES]\n' + row(twoH) + '\n' + row(duel) + '\n' + row(shield));
-    console.log(
-      `  KILL SPEED (runs that killed): 2H ${twoH.killTicks.toFixed(0)}t · duelist ${duel.killTicks.toFixed(0)}t · shield ${shield.killTicks.toFixed(0)}t\n` +
-        `  SURVIVAL: 2H ${twoH.deaths}/${twoH.of} deaths · duelist ${duel.deaths}/${duel.of} · shield ${shield.deaths}/${shield.of}`
-    );
-    // Two SEPARATE claims, because they trade against each other and one number hides that:
-    // (a) OFFENCE — the two-hander kills fastest when it lands the kill. That is the damage claim the
-    //     weapon sweep is calibrated for (one-hander ≈ 60% of a two-hander's throughput).
-    expect(twoH.killTicks, 'the two-hander must kill fastest').toBeLessThan(shield.killTicks);
-    // (b) DEFENCE — the shield is what the one-hander bought with that damage. It must die less.
-    expect(shield.deaths, 'the shield style must die less than the two-hander').toBeLessThan(
-      twoH.deaths
-    );
-  }, 900_000);
-
   it('#2 the sim itself is deterministic — the same seed replays identically', async () => {
     // The RNG finding is about the module DEFAULT seed, not the session: a scenario that pins its
     // seed must still replay byte-for-byte, or no tuning number above is trustworthy.
