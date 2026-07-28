@@ -56,11 +56,17 @@
         // NOT weight-penalized (heavier braces BETTER — opposite of dodge) and never × moving, so a
         // plate-and-shield tank negates even when it can't dodge. Bare-handed this is small; a shield's
         // `blockBonus` is the bulk of it. Halved vs ranged. Clamped to the cap in Combat.
+        //
+        // Was `0.03 + (VIGOUR − 10) × 0.006`, which made block a THIRD thing a core stat bought, the
+        // exact convergence the two-axis split exists to stop — and reading a raw stat as a skill is
+        // what it is: catching a blow on a shield is training, not constitution. Now the skill half is
+        // an APT roll like dodge, and the two things that genuinely are physical (frame, shield) stay.
+        // 0.06 is the old curve's value at the median rolled vigour, so the median pawn is unchanged.
         "id"         : "block",
         "category"   : "combat",
         "primaryStat": "vigour",
-        "formula"    : "0.03 + (VIGOUR − 10) × 0.006 + (weight − 70) × 0.0015",
-        "description": "block chance (vigour + body mass; a shield adds the bulk of it)"
+        "formula"    : "0.06 × APT + (weight − 70) × 0.0015",
+        "description": "block chance (body mass; a shield adds the bulk of it)"
     },
     {
         // STEALTH base (Layer A): sizeFactor (weight, dominant) × agilityGate (hard zero below AGILITY 8)

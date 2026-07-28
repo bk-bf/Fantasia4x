@@ -37,6 +37,7 @@ import type { ActivityLogEntry } from '$lib/game/core/Events';
 import { TICKS_PER_SECOND } from '$lib/game/core/time';
 import { SUBTERRAINS, SUBTERRAIN_FALLBACK } from '$lib/game/core/Terrains';
 import { ensureWorkSkills } from '$lib/game/core/workExperience';
+import { ensureAptitudes } from '$lib/game/core/aptitudes';
 import { autosaveEnabled } from './uiPrefs';
 
 // ── constants ──────────────────────────────────────────────────────────────
@@ -411,6 +412,10 @@ export async function loadSave(id?: string): Promise<GameState | null> {
       const state = hydrateState(dyn, world);
       migrateLoadedTerrain(state.worldMap); // pre-rework saves: cliff/rocky → cave (one-time)
       ensureWorkSkills(state.pawns ?? []); // pre-WORK-EXPERIENCE saves: seed levels + work style
+      // Pre-decoupling saves have no aptitudes at all; saves from between the decoupling and `block`
+      // joining the axis have all but that one. Backfill 1.0 rather than re-roll — re-rolling would
+      // silently redistribute an established colony's combat ability on load.
+      ensureAptitudes(state.pawns ?? []);
       return state;
     }
   } catch (err) {

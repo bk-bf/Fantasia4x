@@ -468,7 +468,7 @@ describe('STAT AXIS — the landed two-axis split', () => {
     const worst = ratios.slice().sort((a, b) => b[1] - a[1])[0];
     console.log(
       `  mean 2H÷1H ${meanRatio.toFixed(2)}× (one-hander at ${((1 / meanRatio) * 100).toFixed(0)}% of a two-hander; ` +
-        `design target 60%). Widest: ${worst[0]} at ${worst[1].toFixed(2)}× — the warhammer line is out of band, task 14.`
+        `design target 60% — measured in the FIGHT, see the band note below). Widest family: ${worst[0]} at ${worst[1].toFixed(2)}×.`
     );
     // COMBAT-BALANCE task 12: the two-hander is MEANT to lead. A one-hander is the defensive choice
     // (shield up, ~60% of the damage) and buys the difference back with the duel grip, which is

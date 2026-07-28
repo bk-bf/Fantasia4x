@@ -12,11 +12,12 @@
   /** Short player-facing label per aptitude — never the stat id (AGENTS: no raw ids in the UI). */
   const LABEL: Record<string, string> = {
     hit_chance: 'accuracy',
-    attack_speed: 'cadence',
+    attack_speed: 'attack speed',
     hit_precision: 'precision',
     armor_damage: 'leverage',
     dodge: 'evasion',
-    aim_accuracy: 'marksmanship'
+    aim_accuracy: 'marksmanship',
+    block: 'blocking'
   };
   const BLURB: Record<string, string> = {
     hit_chance: 'How reliably a swing finds its mark.',
@@ -24,7 +25,8 @@
     hit_precision: 'How often a blow finds something that ends a fight.',
     armor_damage: 'How much force is put through a foe’s armour.',
     dodge: 'How readily a blow is slipped.',
-    aim_accuracy: 'How true a shot flies.'
+    aim_accuracy: 'How true a shot flies.',
+    block: 'How well a blow is caught on shield or guard.'
   };
 
   // A roll is a multiplier around 1.0. Show it as a signed percentage — "+9%" reads; "1.09" doesn't.

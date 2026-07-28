@@ -20,7 +20,8 @@ export const APTITUDE_IDS = [
   'hit_precision',
   'armor_damage',
   'dodge',
-  'aim_accuracy'
+  'aim_accuracy',
+  'block'
 ] as const;
 export type AptitudeId = (typeof APTITUDE_IDS)[number];
 
@@ -51,6 +52,10 @@ export function rollAptitudes(bodyWeightKg = 70): Aptitudes {
   for (const id of APTITUDE_IDS) out[id] = round3(triangular(APTITUDE_MIN, APTITUDE_MAX));
   out.armor_damage = round3(clampBand((out.armor_damage ?? 1) + massTilt));
   out.dodge = round3(clampBand((out.dodge ?? 1) - massTilt));
+  // A heavy frame braces better against a blow for the same reason it evades worse — mass resists
+  // being moved. `block`'s formula already carries a separate weight term for the frame itself; this
+  // is the same tilt the other physical aptitudes get.
+  out.block = round3(clampBand((out.block ?? 1) + massTilt));
   return out;
 }
 
@@ -70,17 +75,22 @@ export function creatureAptitudes(stats: {
   brawn?: number;
   agility?: number;
   awareness?: number;
+  vigour?: number;
 }): Aptitudes {
   const agility = stats.agility ?? 10;
   const brawn = stats.brawn ?? 10;
   const awareness = stats.awareness ?? 10;
+  const vigour = stats.vigour ?? 10;
   return {
     hit_chance: 1 + (agility - 10) * 0.03,
     attack_speed: 1 + (agility - 10) * 0.03,
     hit_precision: 1 + ((agility - 10) * 0.005 + (awareness - 10) * 0.0025) / 0.05,
     armor_damage: 1 + (brawn - 10) * 0.02,
     dodge: 1 + (agility - 10) * 0.02,
-    aim_accuracy: 1 + (awareness - 10) * 0.04
+    aim_accuracy: 1 + (awareness - 10) * 0.04,
+    // The old block curve was `0.03 + (vigour − 10) × 0.006` against a 0.06 base, so this reproduces a
+    // creature's shipped block chance exactly: 0.5 at vigour 10, 1.5 at vigour 20.
+    block: 0.5 + (vigour - 10) * 0.1
   };
 }
 
@@ -91,3 +101,23 @@ export function aptitudeOf(entity: { aptitudes?: Aptitudes }, statId: string): n
 
 export const isAptitudeStat = (statId: string): statId is AptitudeId =>
   (APTITUDE_IDS as readonly string[]).includes(statId);
+
+/**
+ * SAVE MIGRATION — backfill 1.0 for every aptitude a loaded pawn is missing.
+ *
+ * Aptitudes persist on their own (they are a plain field on `Pawn`, and the save writes the whole
+ * object), so this is not about losing a roll. It is about saves written BEFORE an aptitude existed:
+ * a pre-decoupling save has none at all, and a save from between the decoupling and `block` joining
+ * the list has six of seven. Every reader already defaults a missing id to 1.0, so the safe migration
+ * is to make that default explicit in the data rather than leave it implied at each callsite.
+ *
+ * 1.0 deliberately, not a fresh roll: re-rolling would silently redistribute the combat ability of an
+ * established colony on load, and a neutral pawn is the honest reading of a save that never had the
+ * axis. Mutates in place — this runs once, on load.
+ */
+export function ensureAptitudes(pawns: { aptitudes?: Aptitudes }[]): void {
+  for (const p of pawns) {
+    const a = (p.aptitudes ??= {});
+    for (const id of APTITUDE_IDS) if (a[id] == null) a[id] = 1;
+  }
+}

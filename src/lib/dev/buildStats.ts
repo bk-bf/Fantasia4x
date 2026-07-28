@@ -65,7 +65,8 @@ const ROLLED = new Set([
   'hit_precision',
   'armor_damage',
   'dodge',
-  'aim_accuracy'
+  'aim_accuracy',
+  'block'
 ]);
 
 // ── engine wiring ───────────────────────────────────────────────────────────

@@ -804,7 +804,7 @@ function partArmorPoints(defender: Pawn | Mob, partId: BodyPartId, turn?: number
  * CONTAINS, plus how hard it bleeds. A hand contains nothing and barely bleeds; the neck is an artery
  * under thin cover.
  */
-function partLethality(partId: BodyPartId): number {
+export function partLethality(partId: BodyPartId): number {
   const cached = _lethalityCache.get(partId);
   if (cached !== undefined) return cached;
   const def = PART_DEF_MAP[partId];
@@ -823,6 +823,45 @@ function partLethality(partId: BodyPartId): number {
 }
 const _lethalityCache = new Map<BodyPartId, number>();
 
+/**
+ * How much taking this location out DISABLES a fighter, as opposed to killing it.
+ *
+ * Lethality alone is an oversimplification of what a skilled fighter aims at: a foe who cannot see,
+ * cannot hold a weapon, or cannot close is out of the fight, and got there far cheaper than killing
+ * them. `partLethality` scores an eye at 1.06 — the lowest of any location, because it holds no organ
+ * and barely bleeds — while destroying one drops `sight` to 0.35, and `sight` multiplies `hit_chance`,
+ * `aim_accuracy` AND `hit_precision`. Under lethality alone a precise fighter would never once go for
+ * the eyes.
+ *
+ * Derived from the SAME id patterns `calculateCapacityValue` uses to build the capacities, so this
+ * needs no new authoring and cannot drift from the anatomy: whatever a body plan calls its eyes/arms/
+ * legs, both sides read it the same way. Weighted by how much of a fighter each capacity carries —
+ * `manipulation` gates damage, attack_speed, hit_chance and armor_damage; `sight` gates the three
+ * accuracy stats and is the cheapest to take (an eye has 10 hp and almost no armour); `moving` gates
+ * dodge and the ability to disengage.
+ */
+// Calibrated against the real lethality scale, where an exposed chest is 3.72, a head 3.24, a neck
+// 2.86 and a bare upper leg 2.98. Maiming is meant to be a genuine SECOND option, never the dominant
+// one: going for the kill on an exposed vital still wins, and the eye only floats to the top once the
+// chest is behind plate — which is exactly when blinding IS the right answer.
+const MAIM_SIGHT = 2.4; // eye → 3.46, just under an exposed chest and well clear of any limb
+const MAIM_MANIPULATION = 2; // hand/arm → 3.30
+const MAIM_MOVING = 1; // foot/leg → ~2.48
+export function partIncapacitation(partId: BodyPartId): number {
+  const cached = _maimCache.get(partId);
+  if (cached !== undefined) return cached;
+  // The location itself plus whatever it contains — an eye scores as an eye whether it is struck
+  // directly or reached through the socket.
+  const ids: string[] = [partId, ...organsOf(partId)];
+  let score = 0;
+  if (ids.some((id) => /eye/i.test(id))) score += MAIM_SIGHT;
+  if (/arm|hand|finger|claw|wing/i.test(partId)) score += MAIM_MANIPULATION;
+  if (/leg|foot|paw|hoof|talon/i.test(partId)) score += MAIM_MOVING;
+  _maimCache.set(partId, score);
+  return score;
+}
+const _maimCache = new Map<BodyPartId, number>();
+
 /** How much ONE point of armour discounts a part's worth to a precise attacker. Armour is a discount,
  *  not a veto: dividing by it outright is what used to walk the blow off a covered chest onto a bare
  *  thigh — on an armoured target the lethal parts ARE the covered ones. Calibrated against the real
@@ -835,10 +874,16 @@ const PRECISION_CANDIDATES = 3;
 const PRECISION_CANDIDATE_SPAN = 6;
 
 /**
- * Where a blow lands. A precise fighter does not merely find bare skin — it finds the spot that ENDS
- * the fight: score each candidate by its lethality, discounted by what covers it, and let precision buy
- * how many candidates get considered. (COMBAT-BALANCE task 11: scoring by armour alone made precision
- * ANTI-lethal — raising it moved a dagger off the chest and onto an unarmoured extremity.)
+ * Where a blow lands. A precise fighter does not merely find bare skin — it finds the spot that TAKES
+ * THE FOE OUT OF THE FIGHT, whether that is by killing them or by leaving them unable to see, hold a
+ * weapon or close the distance. Score each candidate by lethality PLUS incapacitation, discounted by
+ * what covers it, and let precision buy how many candidates get considered.
+ *
+ * Two corrections are baked in here, both of which made precision actively counterproductive:
+ *   • task 11 — scoring by armour alone made it ANTI-lethal, walking a dagger off the chest onto a
+ *     bare extremity.
+ *   • task 12e — scoring by lethality alone made it blind to MAIMING, so the eyes (the cheapest
+ *     decisive target on the body) ranked dead last.
  */
 function aimedBodyPart(defender: Pawn | Mob, precision: number, turn?: number): BodyPartId {
   const plan = planOf(defender);
@@ -848,8 +893,12 @@ function aimedBodyPart(defender: Pawn | Mob, precision: number, turn?: number): 
   const exact = PRECISION_CANDIDATES + precision * PRECISION_CANDIDATE_SPAN;
   const rolls = Math.floor(exact) + (rng.random() < exact - Math.floor(exact) ? 1 : 0);
   if (rolls <= 1) return best;
+  // Worth = what a hit here BUYS — a step toward the kill plus a step toward disabling — over what it
+  // costs to reach through armour. Scoring lethality alone made a blinding thrust the worst choice on
+  // the board.
   const worth = (id: BodyPartId) =>
-    partLethality(id) / (1 + partArmorPoints(defender, id, turn) * PRECISION_ARMOUR_DISCOUNT);
+    (partLethality(id) + partIncapacitation(id)) /
+    (1 + partArmorPoints(defender, id, turn) * PRECISION_ARMOUR_DISCOUNT);
   let bestWorth = worth(best);
   for (let i = 1; i < rolls; i++) {
     const cand = rollBodyPartOf(defender.limbs, plan);
