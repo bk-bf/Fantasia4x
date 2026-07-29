@@ -65,7 +65,15 @@ const AUDIT_SUITES = [
   'src/tests/game/systems/carryCapacityAudit.test.ts',
   'src/tests/game/systems/weaponPawnFitNone.test.ts',
   'src/tests/game/systems/weaponPawnFitMedium.test.ts',
-  'src/tests/game/systems/weaponPawnFitHeavy.test.ts'
+  'src/tests/game/systems/weaponPawnFitHeavy.test.ts',
+  'src/tests/game/systems/creatureMatchup0.test.ts',
+  'src/tests/game/systems/creatureMatchup1.test.ts',
+  'src/tests/game/systems/creatureMatchup2.test.ts',
+  'src/tests/game/systems/creatureMatchup3.test.ts',
+  'src/tests/game/systems/creatureMatchup4.test.ts',
+  'src/tests/game/systems/creatureMatchup5.test.ts',
+  'src/tests/game/systems/creatureMatchup6.test.ts',
+  'src/tests/game/systems/creatureMatchup7.test.ts'
 ];
 
 export default defineConfig({

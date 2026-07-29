@@ -91,14 +91,18 @@ case "${1:-}" in
     echo "==> ready"
     exit 0
     ;;
+  --creatures)
+    TEST_FILE="src/tests/game/systems/{creatureMatchup0,creatureMatchup1,creatureMatchup2,creatureMatchup3,creatureMatchup4,creatureMatchup5,creatureMatchup6,creatureMatchup7}.test.ts"
+    shift
+    ;;
   --fit)
-    TEST_FILE="src/tests/game/systems/{weaponPawnFitNone,weaponPawnFitMedium,weaponPawnFitHeavy}.test.ts"
+    TEST_FILE="src/tests/game/systems/{weaponPawnFitNone,weaponPawnFitMedium,weaponPawnFitHeavy,creatureMatchup0,creatureMatchup1,creatureMatchup2,creatureMatchup3,creatureMatchup4,creatureMatchup5,creatureMatchup6,creatureMatchup7}.test.ts"
     shift
     ;;
   --all)
     # Every audit at once. They are separate FILES, so vitest's fork pool runs them in parallel and the
     # short sweeps finish alongside the long one for free — `weaponMeta` (~45 min) is the only real pole.
-    TEST_FILE="src/tests/game/systems/{weaponMetaNone,weaponMetaLight,weaponMetaMedium,weaponMetaHeavy,weaponMetaHeadToHead,styleMatchups,armourStyleAudit,weaponFightSim,combatBalanceAudit,buildFitAudit,t4WeaponAudit,maimTargeting,carryCapacityAudit,weaponPawnFitNone,weaponPawnFitMedium,weaponPawnFitHeavy}.test.ts"
+    TEST_FILE="src/tests/game/systems/{weaponMetaNone,weaponMetaLight,weaponMetaMedium,weaponMetaHeavy,weaponMetaHeadToHead,styleMatchups,armourStyleAudit,weaponFightSim,combatBalanceAudit,buildFitAudit,t4WeaponAudit,maimTargeting,carryCapacityAudit,weaponPawnFitNone,weaponPawnFitMedium,weaponPawnFitHeavy,creatureMatchup0,creatureMatchup1,creatureMatchup2,creatureMatchup3,creatureMatchup4,creatureMatchup5,creatureMatchup6,creatureMatchup7}.test.ts"
     shift
     ;;
   --shell)

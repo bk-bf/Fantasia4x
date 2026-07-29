@@ -36,7 +36,7 @@
     "threat:check": "node scripts/threat-model.mjs --check",
     "build:distance": "bash scripts/build-distance.sh",
     "hooks:install": "bash scripts/hooks/install.sh",
-    "test:audit": "RUN_AUDITS=1 vitest run src/tests/game/systems/{weaponMetaNone,weaponMetaLight,weaponMetaMedium,weaponMetaHeavy,weaponMetaHeadToHead,styleMatchups,armourStyleAudit,weaponFightSim,combatBalanceAudit,buildFitAudit,t4WeaponAudit,maimTargeting,carryCapacityAudit,weaponPawnFitNone,weaponPawnFitMedium,weaponPawnFitHeavy}.test.ts"
+    "test:audit": "RUN_AUDITS=1 vitest run src/tests/game/systems/{weaponMetaNone,weaponMetaLight,weaponMetaMedium,weaponMetaHeavy,weaponMetaHeadToHead,styleMatchups,armourStyleAudit,weaponFightSim,combatBalanceAudit,buildFitAudit,t4WeaponAudit,maimTargeting,carryCapacityAudit,weaponPawnFitNone,weaponPawnFitMedium,weaponPawnFitHeavy,creatureMatchup0,creatureMatchup1,creatureMatchup2,creatureMatchup3,creatureMatchup4,creatureMatchup5,creatureMatchup6,creatureMatchup7}.test.ts"
   },
   "devDependencies": {
     "@eslint/js": "^9.30.0",
