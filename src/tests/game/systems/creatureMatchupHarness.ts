@@ -76,22 +76,45 @@ export const ARMOUR_KEYS = Object.keys(ARMOUR);
 export const SHARDS = 8;
 export const shardOf = (n: number) => HOSTILES.filter((_, i) => i % SHARDS === n);
 
-export const WEAPONS: [string, string][] = [
+/** One row of the sweep: the weapon plus everything else that makes the grip real. */
+export interface Loadout {
+  label: string;
+  itemId: string;
+  /** Extra items in the hands beside the weapon — a shield, or the second dagger. */
+  alsoEquip?: string[];
+  /** Trait ids granted to the pawn — the duel grip is trained, not just an empty off-hand. */
+  traits?: string[];
+}
+
+const TWO_HANDERS: [string, string][] = [
   ['greatsword 2H', 'steel_greatsword'],
   ['greataxe 2H', 'steel_greataxe'],
   ['greatcleaver 2H', 'steel_greatcleaver'],
   ['warhammer 2H', 'steel_warhammer'],
   ['greatflail 2H', 'steel_greatflail'],
   ['halberd 2H', 'steel_halberd'],
-  ['pike 2H', 'steel_pike'],
-  ['longsword 1H', 'steel_longsword'],
-  ['mace 1H', 'steel_mace'],
-  ['flail 1H', 'steel_flail'],
-  ['cleaver 1H', 'steel_cleaver'],
-  ['broadaxe 1H', 'steel_broadaxe'],
-  ['boar spear 1H', 'steel_boar_spear'],
-  ['rapier 1H', 'steel_rapier'],
-  ['twin daggers', 'steel_stiletto']
+  ['pike 2H', 'steel_pike']
+];
+const ONE_HANDERS: [string, string][] = [
+  ['longsword', 'steel_longsword'],
+  ['mace', 'steel_mace'],
+  ['flail', 'steel_flail'],
+  ['cleaver', 'steel_cleaver'],
+  ['broadaxe', 'steel_broadaxe'],
+  ['boar spear', 'steel_boar_spear'],
+  ['rapier', 'steel_rapier']
+];
+
+/** Every 1H weapon fights TWICE — with a shield and as a trained duelist — because a bare 1H with an
+ *  empty, untrained off-hand is the neutral grip no player actually fields. The daggers equip two, so
+ *  the row really is the dual-wield grip and not one stiletto swung one-handed. */
+export const WEAPONS: Loadout[] = [
+  ...TWO_HANDERS.map(([label, itemId]) => ({ label, itemId })),
+  ...ONE_HANDERS.flatMap(([name, itemId]) => [
+    { label: `${name} 1H+shield`, itemId, alsoEquip: ['iron_boss_shield'] },
+    { label: `${name} 1H duelist`, itemId, traits: ['duelist'] }
+  ]),
+  { label: 'twin daggers', itemId: 'steel_stiletto', alsoEquip: ['steel_stiletto'] }
 ];
 
 /** The weapon's own power stat — the grip names it, and a suited pawn maxes exactly that one. */
@@ -136,14 +159,13 @@ export interface Matchup {
 
 const PROGRESS = '.debug/weapon-meta-progress.log';
 
-/** One weapon against one creature, over every seed. Duel grip: shield-less, so the WEAPON is what is
- *  being measured rather than a shield. */
+/** One loadout against one creature, over every seed. */
 export async function runMatchup(
-  label: string,
-  itemId: string,
+  loadout: Loadout,
   creature: CreatureDef,
   armourKey: string
 ): Promise<Matchup> {
+  const { label, itemId } = loadout;
   let effect = 0;
   let ticksTotal = 0;
   let landed = 0;
@@ -162,7 +184,8 @@ export async function runMatchup(
             count: 1,
             drafted: true,
             stats: suitedStats(itemId),
-            equip: [itemId, ...ARMOUR[armourKey]]
+            equip: [itemId, ...(loadout.alsoEquip ?? []), ...ARMOUR[armourKey]],
+            ...(loadout.traits ? { traits: loadout.traits } : {})
           }
         ],
         needsDisabled: ['hunger', 'fatigue', 'thirst', 'hygiene'],
@@ -259,9 +282,9 @@ export async function runShard(shard: number): Promise<Matchup[]> {
     /* ignore */
   }
   for (const c of creatures)
-    for (const [label, id] of WEAPONS)
+    for (const loadout of WEAPONS)
       for (const a of ARMOUR_KEYS) {
-        rows.push(await runMatchup(label, id, c, a));
+        rows.push(await runMatchup(loadout, c, a));
         if (++done % 20 === 0 || done === total)
           try {
             appendFileSync(

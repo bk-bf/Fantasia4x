@@ -450,11 +450,15 @@ describe('ranged combat (headless tickCombat)', () => {
     expect(Math.abs(swHiStr - swLoStr) / swHiStr).toBeLessThan(0.2);
   });
 
-  it('daggers are fast, crit-heavy and inaccurate; specialists are iron+ gated', () => {
+  it('daggers are fast, crit-heavy and accurate; specialists are iron+ gated', () => {
     const wp = (id: string) => itemService.getItemById(id)!.weaponProperties!;
     expect(wp('steel_stiletto').attackSpeed).toBeGreaterThan(1.3); // very fast
     expect(wp('steel_stiletto').critMod!).toBeGreaterThan(0.1); // crit-heavy
-    expect(wp('iron_rondel').accuracy!).toBeLessThanOrEqual(0); // no accuracy bonus
+    // A precision blade carries a real accuracy bonus — enough to cover what its neck
+    // preference charges — but stays under the rapier line at the same tier.
+    expect(wp('iron_rondel').accuracy!).toBeGreaterThan(0);
+    expect(wp('steel_stiletto').accuracy!).toBeGreaterThan(0);
+    expect(wp('steel_stiletto').accuracy!).toBeLessThan(wp('steel_rapier').accuracy!);
     // The specialists never appear at bronze — gated by research on their recipe (iron at the
     // earliest, the rest at steel).
     const research = (id: string) => recipeService.getRecipeForItem(id)?.researchRequired;
