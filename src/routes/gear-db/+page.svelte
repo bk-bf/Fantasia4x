@@ -1,9 +1,11 @@
 <script lang="ts">
   import AuditTables from '$lib/dev/AuditTables.svelte';
+  import SortableTable from '$lib/dev/SortableTable.svelte';
 
   // Server-loaded audit results (+page.server.ts). Everything else on this page is derived from the
   // static data files at module scope, so this is the only prop.
   let { data } = $props();
+
   // DEV TOOL — data-driven BUILD database. Reads the derived catalogue from $lib/dev/gearDb (which
   // imports the real items/recipes/buildings/research/traits .jsonc), so it stays in sync with the
   // data. Everything is auto-classified to build archetypes by stats. Views: a Builds overview + a
@@ -408,8 +410,6 @@
   let q = $state('');
   let cls = $state(pBuild ?? 'All');
   let age = $state('All');
-  let sortKey = $state<string>('name');
-  let sortDir = $state(1);
 
   const pct = (v: number | null) => (v == null ? '—' : Math.round(v * 100) + '%');
   const numf = (v: number | null) => (v == null ? '—' : String(v));
@@ -664,6 +664,17 @@
 
   const cols = $derived(colsByKind[kind]);
 
+  // The catalogue's own column descriptors, adapted to the shared `Column` shape: the per-column
+  // classes that used to be `class:name` / `class:cls` become `colCls`, and the build-category colour
+  // that was a `data-cat` attribute becomes `data`.
+  const tableCols = $derived(
+    cols.map((c) => ({
+      ...c,
+      colCls: [c.key === 'name' ? 'name' : '', c.clscol ? 'cls' : ''].filter(Boolean).join(' '),
+      data: (g: (typeof GEAR)[number]) => ({ 'data-cat': String(BUILD_CAT[g.cls] ?? '') })
+    }))
+  );
+
   const rows = $derived.by(() => {
     let r = kind === 'all' ? CATALOGUE : GEAR.filter((g) => g.kind === kind);
     if (cls !== 'All') r = r.filter((g) => g.classes.includes(cls as never));
@@ -686,37 +697,19 @@
           .includes(s)
       );
     }
-    const col = cols.find((c) => c.key === sortKey) ?? cols[0];
-    return [...r].sort((a, b) => {
-      const av = col.get(a),
-        bv = col.get(b);
-      if (av == null && bv == null) return 0;
-      if (av == null) return 1;
-      if (bv == null) return -1;
-      if (typeof av === 'number' && typeof bv === 'number') return (av - bv) * sortDir;
-      return String(av).localeCompare(String(bv)) * sortDir;
-    });
+    // Sorting moved into SortableTable — this derived now only FILTERS. Keeping both here meant the
+    // rows were sorted twice (once here, once in the component) with no way to keep the two in step.
+    return r;
   });
 
-  function sortBy(key: string) {
-    if (sortKey === key) sortDir = -sortDir;
-    else {
-      sortKey = key;
-      sortDir = 1;
-    }
-  }
   function openBuild(b: string) {
     cls = b;
     kind = 'all';
     view = 'catalogue';
-    sortKey = 'name';
-    sortDir = 1;
   }
   function selectKind(k: GearKind | 'all') {
     kind = k;
     view = 'catalogue';
-    sortKey = 'name';
-    sortDir = 1;
   }
 </script>
 
@@ -1122,41 +1115,14 @@
       </label>
       <span class="count">{rows.length} shown</span>
     </div>
-    <div class="scroll">
-      <table>
-        <thead>
-          <tr>
-            {#each cols as c (c.key)}
-              <th
-                class:num={c.numeric}
-                class:sorted={sortKey === c.key}
-                onclick={() => sortBy(c.key)}
-              >
-                {c.label}{#if sortKey === c.key}<span class="arrow"
-                    >{sortDir === 1 ? '▲' : '▼'}</span
-                  >{/if}
-              </th>
-            {/each}
-          </tr>
-        </thead>
-        <tbody>
-          {#each rows as g (g.id)}
-            <tr class="clickable" class:sel={sel[g.id]} onclick={() => toggleSel(g.id)}>
-              {#each cols as c (c.key)}
-                <td
-                  class:num={c.numeric}
-                  class:name={c.key === 'name'}
-                  class:cls={c.clscol}
-                  data-cat={BUILD_CAT[g.cls]}
-                >
-                  {c.disp ? c.disp(g) : (c.get(g) ?? '—')}
-                </td>
-              {/each}
-            </tr>
-          {/each}
-        </tbody>
-      </table>
-    </div>
+    <SortableTable
+      columns={tableCols}
+      {rows}
+      initialSort="name"
+      rowKey={(g) => g.id}
+      onRowClick={(g) => toggleSel(g.id)}
+      rowSelected={(g) => !!sel[g.id]}
+    />
     {#if rows.length === 0}<p class="empty">No entries match.</p>{/if}
   {/if}
 
@@ -1365,23 +1331,8 @@
     user-select: none;
     z-index: 1;
   }
-  th.sorted {
-    color: #d8ab52;
-  }
-  th.num,
-  td.num {
-    text-align: right;
-    font-variant-numeric: tabular-nums;
-  }
-  .arrow {
-    font-size: 9px;
-    margin-left: 3px;
-  }
   tbody tr:hover td {
     background: rgba(216, 171, 82, 0.04);
-  }
-  tr.clickable {
-    cursor: pointer;
   }
   td.name {
     color: #ece6d4;
@@ -1447,10 +1398,6 @@
     border-color: #d8ab52;
     background: rgba(216, 171, 82, 0.3);
     color: #fff;
-  }
-  tbody tr.sel td,
-  tbody tr.sel:hover td {
-    background: rgba(216, 171, 82, 0.16);
   }
   .tab.clear {
     color: #d8ab52;

@@ -15,13 +15,22 @@
     rows,
     initialSort,
     initialDir = 1,
-    caption
+    caption,
+    rowKey,
+    onRowClick,
+    rowSelected
   }: {
     columns: Column<T>[];
     rows: T[];
     initialSort?: string;
     initialDir?: 1 | -1;
     caption?: string;
+    /** Stable key per row. Without it rows are keyed by index, which is fine for a static table but
+     *  loses element identity when the list is filtered. */
+    rowKey?: (row: T) => string;
+    /** Makes rows clickable — the catalogue uses it to select an entry across tables. */
+    onRowClick?: (row: T) => void;
+    rowSelected?: (row: T) => boolean;
   } = $props();
 
   let sortKey = $state(initialSort ?? columns[0]?.key ?? '');
@@ -43,6 +52,11 @@
     return rows.slice().sort((a, b) => {
       const av = col.get(a);
       const bv = col.get(b);
+      // Blanks sort LAST whichever way the column is pointing — an empty cell is absent data, not a
+      // small value, and letting it lead a descending sort buries the rows that matter.
+      if (av == null && bv == null) return 0;
+      if (av == null) return 1;
+      if (bv == null) return -1;
       if (typeof av === 'number' && typeof bv === 'number') return (av - bv) * sortDir;
       return String(av).localeCompare(String(bv)) * sortDir;
     });
@@ -68,11 +82,19 @@
       </tr>
     </thead>
     <tbody>
-      {#each sorted as row, i (i)}
-        <tr>
+      {#each sorted as row, i (rowKey ? rowKey(row) : i)}
+        <tr
+          class:clickable={!!onRowClick}
+          class:sel={rowSelected?.(row)}
+          onclick={onRowClick ? () => onRowClick(row) : undefined}
+        >
           {#each columns as c (c.key)}
-            <td class:num={c.numeric} class={c.cls?.(row) ?? ''}>
-              {c.disp ? c.disp(row) : c.get(row)}
+            <td
+              class:num={c.numeric}
+              class="{c.colCls ?? ''} {c.cls?.(row) ?? ''}"
+              {...c.data?.(row) ?? {}}
+            >
+              {c.disp ? c.disp(row) : (c.get(row) ?? '—')}
             </td>
           {/each}
         </tr>
@@ -142,5 +164,11 @@
   }
   td.dim {
     color: #8a8069;
+  }
+  tr.clickable {
+    cursor: pointer;
+  }
+  tr.sel td {
+    background: rgba(216, 171, 82, 0.12);
   }
 </style>

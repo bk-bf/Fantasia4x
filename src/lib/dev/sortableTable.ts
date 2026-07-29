@@ -12,12 +12,17 @@ export interface Column<Row> {
   label: string;
   /** Right-align, tabular figures, and sort numerically. */
   numeric?: boolean;
-  /** Value used for SORTING — and displayed when there is no `disp`. */
-  get: (row: Row) => string | number;
+  /** Value used for SORTING — and displayed when there is no `disp`. Nullable: a blank cell is absent
+   *  data, and the comparator deliberately sorts those LAST in both directions. */
+  get: (row: Row) => string | number | null | undefined;
   /** Formatted cell text. Omit to show `get` directly. */
   disp?: (row: Row) => string;
   /** Extra class on the cell — `up` / `down` / `dim` are styled by the component. */
   cls?: (row: Row) => string;
   /** Tooltip on the column heading, for explaining what a number actually means. */
   title?: string;
+  /** Static class on every cell in this column (the catalogue tints its Class column this way). */
+  colCls?: string;
+  /** Extra data-* attributes per cell — the catalogue keys its build-category colour off `data-cat`. */
+  data?: (row: Row) => Record<string, string>;
 }
