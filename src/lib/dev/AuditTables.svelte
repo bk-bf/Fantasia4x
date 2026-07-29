@@ -33,10 +33,24 @@
     wins: number;
     perHit: number;
   }
+  interface CreatureRow {
+    weapon: string;
+    armour: string;
+    creature: string;
+    tier: number;
+    naturalArmor: number;
+    effectPer1k: number;
+    landed: number;
+    swings: number;
+    perHit: number;
+    kills: number;
+    fights: number;
+  }
   interface AuditData {
     generated: string;
     meta: Record<string, { fights: number; ranked: MetaRow[] }>;
     pawnFit: Record<string, { fights: number; rows: PawnFitRow[] }>;
+    creatures?: CreatureRow[];
   }
 
   let { audit }: { audit: AuditData | null } = $props();
@@ -48,8 +62,142 @@
   const metaClasses = $derived(ARMOUR_ORDER.filter((c) => meta[c]));
   const fitClasses = $derived(ARMOUR_ORDER.filter((c) => pawnFit[c]));
 
-  type Tab = 'fit' | 'styles' | 'move';
-  let tab = $state<Tab>('fit');
+  type Tab = 'creatures' | 'byCreature' | 'fit' | 'styles' | 'move';
+  let tab = $state<Tab>('creatures');
+
+  const creatures = $derived(audit?.creatures ?? []);
+
+  // ── weapon summary across every creature and armour class ─────────────────
+  interface WeaponAgg {
+    weapon: string;
+    effect: number;
+    landed: number;
+    killRate: number;
+    naked: number;
+    light: number;
+    medium: number;
+    heavy: number;
+    armourCost: number;
+  }
+  const weaponAgg = $derived.by<WeaponAgg[]>(() => {
+    if (!creatures.length) return [];
+    const acc: Record<string, { e: number; n: number; landed: number; k: number; f: number }> = {};
+    const byArm: Record<string, { e: number; n: number }> = {};
+    for (const r of creatures) {
+      (acc[r.weapon] ??= { e: 0, n: 0, landed: 0, k: 0, f: 0 });
+      const a = acc[r.weapon];
+      a.e += r.effectPer1k;
+      a.n++;
+      a.landed += r.landed;
+      a.k += r.kills;
+      a.f += r.fights;
+      const k = `${r.weapon}|${r.armour}`;
+      (byArm[k] ??= { e: 0, n: 0 });
+      byArm[k].e += r.effectPer1k;
+      byArm[k].n++;
+    }
+    const arm = (w: string, a: string) => {
+      const x = byArm[`${w}|${a}`];
+      return x && x.n ? x.e / x.n : 0;
+    };
+    return Object.entries(acc).map(([weapon, a]) => ({
+      weapon,
+      effect: a.e / a.n,
+      landed: a.landed,
+      killRate: a.f ? a.k / a.f : 0,
+      naked: arm(weapon, 'none'),
+      light: arm(weapon, 'light'),
+      medium: arm(weapon, 'medium'),
+      heavy: arm(weapon, 'heavy'),
+      armourCost: arm(weapon, 'heavy') - arm(weapon, 'none')
+    }));
+  });
+
+  const num = (v: number) => v.toFixed(2);
+  const weaponCols: Column<WeaponAgg>[] = [
+    { key: 'weapon', label: 'weapon', get: (r) => r.weapon },
+    {
+      key: 'effect',
+      label: 'overall',
+      numeric: true,
+      get: (r) => r.effect,
+      disp: (r) => num(r.effect),
+      title: 'Mean combat value wrecked per 1000 ticks, across every creature and armour class'
+    },
+    { key: 'naked', label: 'naked', numeric: true, get: (r) => r.naked, disp: (r) => num(r.naked) },
+    { key: 'light', label: 'light', numeric: true, get: (r) => r.light, disp: (r) => num(r.light) },
+    { key: 'medium', label: 'medium', numeric: true, get: (r) => r.medium, disp: (r) => num(r.medium) },
+    { key: 'heavy', label: 'plate', numeric: true, get: (r) => r.heavy, disp: (r) => num(r.heavy) },
+    {
+      key: 'armourCost',
+      label: 'naked → plate',
+      numeric: true,
+      get: (r) => r.armourCost,
+      disp: (r) => (r.armourCost >= 0 ? `+${num(r.armourCost)}` : num(r.armourCost)),
+      cls: (r) => (r.armourCost > 0 ? 'up' : r.armourCost < -1 ? 'down' : 'dim'),
+      title: 'What the pawn’s OWN armour does to this weapon. Negative = wearing it makes the pawn worse.'
+    },
+    {
+      key: 'killRate',
+      label: 'kill rate',
+      numeric: true,
+      get: (r) => r.killRate,
+      disp: (r) => `${(r.killRate * 100).toFixed(0)}%`,
+      title: 'Secondary — a fight is decided long before anything dies.'
+    },
+    {
+      key: 'landed',
+      label: 'hits landed',
+      numeric: true,
+      get: (r) => r.landed,
+      cls: (r) => (r.landed < 200 ? 'down' : 'dim'),
+      title: 'Total landed hits behind this row. Small numbers are noise.'
+    }
+  ];
+
+  // ── the full matchup grid ─────────────────────────────────────────────────
+  const ARM_ORDER = ['none', 'light', 'medium', 'heavy'];
+  const matchupCols: Column<CreatureRow>[] = [
+    { key: 'weapon', label: 'weapon', get: (r) => r.weapon },
+    { key: 'creature', label: 'creature', get: (r) => r.creature },
+    { key: 'tier', label: 'tier', numeric: true, get: (r) => r.tier },
+    {
+      key: 'hide',
+      label: 'natural armour',
+      numeric: true,
+      get: (r) => r.naturalArmor,
+      title: 'The creature’s own hide — its armour, not worn.'
+    },
+    {
+      key: 'armour',
+      label: 'pawn wearing',
+      get: (r) => ARM_ORDER.indexOf(r.armour),
+      disp: (r) => r.armour
+    },
+    {
+      key: 'effect',
+      label: 'effect',
+      numeric: true,
+      get: (r) => r.effectPer1k,
+      disp: (r) => num(r.effectPer1k),
+      title: 'Combat value wrecked per 1000 ticks'
+    },
+    { key: 'perHit', label: 'dmg / hit', numeric: true, get: (r) => r.perHit, disp: (r) => r.perHit.toFixed(1) },
+    {
+      key: 'landed',
+      label: 'hits',
+      numeric: true,
+      get: (r) => r.landed,
+      cls: (r) => (r.landed < 10 ? 'down' : 'dim')
+    },
+    {
+      key: 'kills',
+      label: 'kills',
+      numeric: true,
+      get: (r) => r.kills,
+      disp: (r) => `${r.kills} / ${r.fights}`
+    }
+  ];
 
   // ── one flat row per weapon × armour class ────────────────────────────────
   interface FlatFit {
@@ -246,6 +394,8 @@
   ];
 
   const TABS: { key: Tab; label: string }[] = [
+    { key: 'creatures', label: 'Weapon summary' },
+    { key: 'byCreature', label: 'Every matchup' },
     { key: 'fit', label: 'Weapon × pawn fit' },
     { key: 'styles', label: 'Style vs armour' },
     { key: 'move', label: 'Armour flip' }
@@ -271,7 +421,30 @@
         : ''}. Click any heading to sort. Refresh with <code>./audit.sh --fetch</code>.
     </p>
 
-    {#if tab === 'fit'}
+    {#if tab === 'creatures'}
+      {#if !creatures.length}
+        <p class="note err">No creature results yet — run <code>./audit.sh --creatures</code>.</p>
+      {:else}
+        <p class="sub">
+          Every weapon against the real hostile creatures from <code>creatures.jsonc</code>, in hands
+          built for it, across all four armour classes. <strong>Overall</strong> is the mean combat
+          value wrecked per 1000 ticks. The four armour columns show the same weapon with the PAWN
+          naked, in light, medium and plate — <strong>naked → plate</strong> is what wearing armour
+          does to its output.
+        </p>
+        <SortableTable columns={weaponCols} rows={weaponAgg} initialSort="effect" initialDir={-1} />
+      {/if}
+    {:else if tab === 'byCreature'}
+      {#if !creatures.length}
+        <p class="note err">No creature results yet — run <code>./audit.sh --creatures</code>.</p>
+      {:else}
+        <p class="sub">
+          The full grid: {creatures.length.toLocaleString()} matchups. Sort by creature to see what beats
+          it, by weapon to see what it is good against, or by tier to read the difficulty curve.
+        </p>
+        <SortableTable columns={matchupCols} rows={creatures} initialSort="effect" initialDir={-1} />
+      {/if}
+    {:else if tab === 'fit'}
       <p class="sub">
         The same weapon in hands built for it, average hands, and poor hands, against each armour
         class. Numbers are <strong>combat value wrecked per 1000 ticks</strong>: each landed blow
