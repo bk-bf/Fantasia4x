@@ -131,11 +131,7 @@ export interface FitResult {
  * One weapon, one pawn fit, against a standard opponent wearing `armour`. The opponent is always the
  * same average pawn with sword and shield, so the only things changing are the weapon and who holds it.
  */
-export async function runFit(
-  itemId: string,
-  fit: Fit,
-  armour: string[]
-): Promise<FitResult> {
+export async function runFit(itemId: string, fit: Fit, armour: string[]): Promise<FitResult> {
   const out: FitResult = {
     wins: 0,
     fights: 0,

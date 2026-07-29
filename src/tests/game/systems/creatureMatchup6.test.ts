@@ -11,7 +11,10 @@ describe('WEAPON x CREATURE — shard 6', () => {
   it('every weapon against this shard of the real hostile creatures', async () => {
     const rows = await runShard(6);
     const creatures = shardOf(6);
-    const best = rows.slice().sort((a, b) => b.effectPer1k - a.effectPer1k).slice(0, 8);
+    const best = rows
+      .slice()
+      .sort((a, b) => b.effectPer1k - a.effectPer1k)
+      .slice(0, 8);
     console.log(
       `[CREATURES shard 6] ${creatures.length} creatures x ${WEAPONS.length} weapons x ${SEEDS.length} fights\n` +
         'best matchups in this shard (combat value wrecked per 1000 ticks):\n' +

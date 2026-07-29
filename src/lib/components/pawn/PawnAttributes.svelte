@@ -6,7 +6,8 @@
   import type { Pawn } from '$lib/game/core/types';
   import statsData from '$lib/game/database/pawns/stats.jsonc';
   import PawnStatBanner from './PawnStatBanner.svelte';
-  import PawnAptitudes from './PawnAptitudes.svelte';
+  import { APTITUDE_IDS } from '$lib/game/core/aptitudes';
+  import { computeAptitudeView } from '$lib/components/util/statView';
   import PawnSkillBanner from './PawnSkillBanner.svelte';
   import StatTooltip from './StatTooltip.svelte';
   import {
@@ -105,10 +106,29 @@
 
   // buildRows takes the reactive values (pawn, ctx, relevant) as args purely so Svelte tracks them as
   // dependencies and recomputes the whole table on any change (function calls hide deps from the compiler).
+  // The rolled combat axis. Player-facing label + one line on what it does, never the raw id.
+  // `mass` marks the two the body-size tilt touches (rollAptitudes), so the tooltip can say so.
+  const APT_META: Record<string, { label: string; desc: string; mass?: boolean }> = {
+    hit_chance: { label: 'accuracy', desc: 'How reliably a swing finds its mark.' },
+    attack_speed: { label: 'attack speed', desc: 'How quickly blows follow one another.' },
+    hit_precision: {
+      label: 'precision',
+      desc: 'How often a blow finds something that ends a fight.'
+    },
+    armor_damage: {
+      label: 'leverage',
+      desc: 'How much force is put through a foe’s armour.',
+      mass: true
+    },
+    dodge: { label: 'evasion', desc: 'How readily a blow is slipped.', mass: true },
+    aim_accuracy: { label: 'marksmanship', desc: 'How true a shot flies.' },
+    block: { label: 'blocking', desc: 'How well a blow is caught on shield or guard.', mass: true }
+  };
+
   $: catRows = buildRows(pawn, ctx, relevant);
 
   function buildRows(..._deps: unknown[]) {
-    return grouped.map((g) => ({
+    const rows = grouped.map((g) => ({
       label: g.label,
       cells: g.stats.map((s) => ({
         id: s.id,
@@ -116,6 +136,22 @@
         view: computeStatView(s.id, pawn, ctx) as StatView
       }))
     }));
+    // APTITUDES as a category of its own, built into the same grid rather than bolted above it as a
+    // separate widget — they are numbers about this pawn like any other, so they get the same cell,
+    // the same value formatting and the same hover breakdown.
+    if (categories.includes('combat'))
+      rows.unshift({
+        label: 'APTITUDES',
+        cells: APTITUDE_IDS.map((id) => {
+          const m = APT_META[id] ?? { label: id, desc: '' };
+          return {
+            id,
+            hl: false,
+            view: computeAptitudeView(id, pawn, m.label, m.desc, !!m.mass) as StatView
+          };
+        })
+      });
+    return rows;
   }
 </script>
 
@@ -123,11 +159,6 @@
   <!-- Core attributes show on EVERY view (they still supplement the work formulas); the work view
        adds the experience-level banner (WORK-EXPERIENCE) between them and the skills table. -->
   <PawnStatBanner {pawn} />
-  <!-- The second combat axis sits directly under the core stats: the stat block says how hard this
-       pawn CAN hit, the aptitudes say how well it fights. Combat-only, so the work view skips it. -->
-  {#if categories.includes('combat')}
-    <PawnAptitudes {pawn} />
-  {/if}
   {#if categories.includes('work')}
     <PawnSkillBanner {pawn} />
   {/if}

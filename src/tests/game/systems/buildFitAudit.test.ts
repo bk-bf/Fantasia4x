@@ -207,15 +207,20 @@ describe('BUILD FIT — generation and payoff', () => {
       const worst = dpsWith(ranked[ranked.length - 1].f.pawn, prof.weapon, prof.offHand);
       ladder.push([build, best, worst]);
       rows.push(
-        build.padEnd(30) + best.toFixed(1).padStart(11) + worst.toFixed(1).padStart(8) +
-          (best / worst).toFixed(2).padStart(8) + '\u00d7'
+        build.padEnd(30) +
+          best.toFixed(1).padStart(11) +
+          worst.toFixed(1).padStart(8) +
+          (best / worst).toFixed(2).padStart(8) +
+          '\u00d7'
       );
     }
 
     // (b) SAME PAWN, different builds, each normalised by that weapon's population mean: a pawn should
     //     do relatively better in the build it fits than in the one it fits worst.
     rows.push('');
-    rows.push('same pawn, own best build vs own worst build (dps \u00f7 that weapon\u2019s population mean)');
+    rows.push(
+      'same pawn, own best build vs own worst build (dps \u00f7 that weapon\u2019s population mean)'
+    );
     let checked = 0;
     let inBeatsOut = 0;
     const perTier: Record<string, number[]> = {};
@@ -234,7 +239,9 @@ describe('BUILD FIT — generation and payoff', () => {
       checked++;
       if (relIn > relOut) inBeatsOut++;
     }
-    rows.push(`  in-build beat out-of-build in ${inBeatsOut}/${checked} (${pct(inBeatsOut, checked)})`);
+    rows.push(
+      `  in-build beat out-of-build in ${inBeatsOut}/${checked} (${pct(inBeatsOut, checked)})`
+    );
     rows.push('');
     rows.push('relative in-build dps by tier (1.00 = an average pawn with that weapon):');
     for (const t of ['S', 'A', 'B', 'C', 'D', 'F'] as Tier[])
@@ -245,7 +252,9 @@ describe('BUILD FIT — generation and payoff', () => {
     console.log(rows.join('\n'));
 
     for (const [b, best, worst] of ladder)
-      expect(best, `${b}: the best-fit pawn must out-fight the worst-fit one`).toBeGreaterThan(worst);
+      expect(best, `${b}: the best-fit pawn must out-fight the worst-fit one`).toBeGreaterThan(
+        worst
+      );
     expect(inBeatsOut / checked, 'in-build should win most of the time').toBeGreaterThan(0.5);
     // The tier ladder must be monotone where it has data: an S pawn out-performs an F one, relative to
     // the same weapon.

@@ -16,6 +16,8 @@
   $: thirstPct = Math.round(needs.thirst ?? 0);
   $: hygienePct = Math.round(needs.hygiene ?? 0);
   $: wetnessPct = Math.round(needs.wetness ?? 0);
+  // 100 = entertained, so this one counts DOWN as the pawn gets bored.
+  $: relaxPct = Math.round(needs.relaxation ?? 100);
   function getWetColor(pct: number): string {
     if (pct < 25) return '#7a8a90'; // dry — muted
     if (pct < 50) return '#4fa3d1'; // damp
@@ -41,7 +43,6 @@
     return '#c86030';
   }
   // Relaxation is INVERTED (100 = entertained). Only shown once it drops low (autohide); green→amber→red.
-  const RELAXATION_SHOW_BELOW = 12;
   function getRelaxationColor(pct: number): string {
     if (pct >= 50) return 'var(--pos)';
     if (pct >= 20) return '#c8a030';
@@ -85,26 +86,24 @@
     <span class="desc">{getNeedDescription('hygiene', hygienePct)}</span>
   </div>
 
-  {#if wetnessPct > 0}
-    <div class="need-row">
-      <span class="lbl">WETNESS</span>
-      <span class="block-bar" style="color: {getWetColor(wetnessPct)}">{blockBar(wetnessPct)}</span>
-      <span class="val" style="color: {getWetColor(wetnessPct)}">{wetnessPct}/100</span>
-      <span class="desc">{wetDesc(wetnessPct)}</span>
-    </div>
-  {/if}
+  <!-- WETNESS and RELAXATION are UNCONDITIONAL here. The map's info panel hides them until they have
+       something to say (a glance should not carry a dry pawn's wetness bar), but this screen is where
+       you come to read the whole pawn, so a need that is currently fine still has to be legible as
+       fine. Thresholds live in pawnUtils so the two surfaces cannot drift. -->
+  <div class="need-row">
+    <span class="lbl">WETNESS</span>
+    <span class="block-bar" style="color: {getWetColor(wetnessPct)}">{blockBar(wetnessPct)}</span>
+    <span class="val" style="color: {getWetColor(wetnessPct)}">{wetnessPct}/100</span>
+    <span class="desc">{wetDesc(wetnessPct)}</span>
+  </div>
 
-  {#if (needs.relaxation ?? 100) < RELAXATION_SHOW_BELOW}
-    {@const relaxPct = Math.round(needs.relaxation ?? 100)}
-    <div class="need-row">
-      <span class="lbl">RELAXATION</span>
-      <span class="block-bar" style="color: {getRelaxationColor(relaxPct)}"
-        >{blockBar(relaxPct)}</span
-      >
-      <span class="val" style="color: {getRelaxationColor(relaxPct)}">{relaxPct}/100</span>
-      <span class="desc">{relaxationDesc(relaxPct)}</span>
-    </div>
-  {/if}
+  <div class="need-row">
+    <span class="lbl">RELAXATION</span>
+    <span class="block-bar" style="color: {getRelaxationColor(relaxPct)}">{blockBar(relaxPct)}</span
+    >
+    <span class="val" style="color: {getRelaxationColor(relaxPct)}">{relaxPct}/100</span>
+    <span class="desc">{relaxationDesc(relaxPct)}</span>
+  </div>
 
   {#if needs.bloodHunger !== undefined}
     {@const bhPct = Math.round(needs.bloodHunger)}

@@ -57,7 +57,9 @@ describe('WEAPON META — head to head, nobody armoured', () => {
         (row, i) =>
           `${String(i + 1).padStart(2)} ${row.label.padEnd(22)}` +
           order
-            .map((col) => (col.label === row.label ? '  —' : String(wins[row.label][col.label] ?? 0).padStart(4)))
+            .map((col) =>
+              col.label === row.label ? '  —' : String(wins[row.label][col.label] ?? 0).padStart(4)
+            )
             .join('')
       )
     ];

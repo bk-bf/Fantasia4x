@@ -18,7 +18,13 @@ import type { GameState, Pawn } from '$lib/game/core/types';
  */
 
 const KITS: Record<string, string[]> = {
-  light: ['linen_gambeson', 'leather_coif', 'rawhide_shoulder_pads', 'rawhide_arm_wraps', 'rawhide_leg_wraps'],
+  light: [
+    'linen_gambeson',
+    'leather_coif',
+    'rawhide_shoulder_pads',
+    'rawhide_arm_wraps',
+    'rawhide_leg_wraps'
+  ],
   medium: ['brigandine_coat', 'leather_coif', 'iron_pauldrons', 'iron_bracers', 'iron_greaves'],
   heavy: ['plate_cuirass', 'great_helm', 'steel_pauldrons', 'steel_vambraces', 'steel_greaves']
 };
@@ -70,8 +76,8 @@ describe('CARRY CAPACITY — does the curve gate heavy armour on brawn?', () => 
     // pawns of the same body but very different brawn must now differ.
     const body = { physicalTraits: { weight: 80, height: 170 }, equipment: {} };
     const capAt = (b: number) =>
-      itemService.getCarryCapacityBreakdown({ ...body, stats: { brawn: b } } as unknown as Pawn).weight
-        .total;
+      itemService.getCarryCapacityBreakdown({ ...body, stats: { brawn: b } } as unknown as Pawn)
+        .weight.total;
     rows.push(
       `             brawn still pays above 25: cap(25) ${capAt(25).toFixed(1)}kg → cap(60) ${capAt(60).toFixed(1)}kg ` +
         `(was flat at the 0.30 clamp)`
@@ -92,7 +98,12 @@ describe('CARRY CAPACITY — does the curve gate heavy armour on brawn?', () => 
     const afford: Record<string, Record<string, number>> = {};
     for (const [label, ids] of kits) {
       const load = kg(ids);
-      const counts: Record<string, number> = { free: 0, comfortable: 0, burdened: 0, overloaded: 0 };
+      const counts: Record<string, number> = {
+        free: 0,
+        comfortable: 0,
+        burdened: 0,
+        overloaded: 0
+      };
       for (const p of pop) {
         const cap = itemService.getCarryCapacityBreakdown(p).weight.total;
         counts[band(cap > 0 ? load / cap : 99)]++;
@@ -101,7 +112,9 @@ describe('CARRY CAPACITY — does the curve gate heavy armour on brawn?', () => 
       rows.push(
         label.padEnd(28) +
           ['free', 'comfortable', 'burdened', 'overloaded']
-            .map((b) => `${((counts[b] / pop.length) * 100).toFixed(0)}%`.padStart(b === 'free' ? 6 : 12))
+            .map((b) =>
+              `${((counts[b] / pop.length) * 100).toFixed(0)}%`.padStart(b === 'free' ? 6 : 12)
+            )
             .join('')
       );
     }

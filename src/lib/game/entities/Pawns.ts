@@ -22,7 +22,12 @@ import {
 import { createBodyPlanLimbs } from '../systems/Combat';
 import { DEFAULT_PLAN, PART_DEF_MAP, containedParts } from '../core/BodyParts';
 import { SCARRING_CONFIG, makeScarInjury } from '../core/Wounds';
-import { seedAwakeningPaths, getTraitById, rollFlawTrait, resolveTraitGamble } from '../core/Lineages';
+import {
+  seedAwakeningPaths,
+  getTraitById,
+  rollFlawTrait,
+  resolveTraitGamble
+} from '../core/Lineages';
 import { KIN_INVERSE } from '../core/Social';
 import { itemDefById } from '../core/itemDefs';
 import { seedWorkLevels, rollWorkStyle } from '../core/workExperience';
@@ -408,7 +413,11 @@ export function applyConsumable(
   // (iv) ALCHEMY-BUTCHERY-EXPANSION §A — brewed trait draught: a weighted gamble. Odds + trait draw scale
   // with the draught tier and the drinker's alchemy proficiency (`durationMult` folds that in).
   if (def.traitGamble) {
-    const { trait, flaw } = resolveTraitGamble(def.traitGamble, Math.min(1, durationMult - 1), rand);
+    const { trait, flaw } = resolveTraitGamble(
+      def.traitGamble,
+      Math.min(1, durationMult - 1),
+      rand
+    );
     bake(trait);
     bake(flaw);
   }

@@ -48,7 +48,10 @@ describe('MAIM TARGETING — does a precise fighter value disabling a foe?', () 
     );
 
     const show = (pat: RegExp) =>
-      ids.filter((id) => pat.test(id)).map((id) => `${id} ${worth(id).toFixed(2)}`).join(' · ');
+      ids
+        .filter((id) => pat.test(id))
+        .map((id) => `${id} ${worth(id).toFixed(2)}`)
+        .join(' · ');
     console.log(
       '\n  controls: ' +
         ['chest|torso|thorax', 'thigh|upperLeg', 'neck|throat', 'head$|^head', 'hand']
@@ -61,11 +64,13 @@ describe('MAIM TARGETING — does a precise fighter value disabling a foe?', () 
     // A thigh is the control: big, bleeds a bit, holds nothing, disables nothing much. Before this
     // change an eye scored 1.06 against it and was the worst target on the board.
     const thigh = ids.find((id) => /thigh|upperLeg/i.test(id));
-    if (thigh) expect(worth(eye!), 'an eye must outrank a bare thigh').toBeGreaterThan(worth(thigh));
+    if (thigh)
+      expect(worth(eye!), 'an eye must outrank a bare thigh').toBeGreaterThan(worth(thigh));
     // …but taking an eye must NOT outrank going for the kill on an exposed vital. Maiming is a real
     // option, not the new dominant one.
     const chest = ids.find((id) => /chest|torso/i.test(id));
-    if (chest) expect(worth(chest), 'a chest must still outrank an eye').toBeGreaterThan(worth(eye!));
+    if (chest)
+      expect(worth(chest), 'a chest must still outrank an eye').toBeGreaterThan(worth(eye!));
     // A hand disables (manipulation gates damage, attack_speed, hit_chance and armor_damage) without
     // killing, so it must beat the thigh too.
     const hand = ids.find((id) => /hand/i.test(id));
@@ -183,8 +188,12 @@ describe('MAIM TARGETING — does a precise fighter value disabling a foe?', () 
             ([label, r]) =>
               (label as string) +
               String((r as typeof dull).landed).padStart(8) +
-              `   ${(r as typeof dull).eyeHits} (${pct((r as typeof dull).eyeHits, (r as typeof dull).landed)}%)`.padEnd(18) +
-              `${(r as typeof dull).limbHits} (${pct((r as typeof dull).limbHits, (r as typeof dull).landed)}%)`.padEnd(18) +
+              `   ${(r as typeof dull).eyeHits} (${pct((r as typeof dull).eyeHits, (r as typeof dull).landed)}%)`.padEnd(
+                18
+              ) +
+              `${(r as typeof dull).limbHits} (${pct((r as typeof dull).limbHits, (r as typeof dull).landed)}%)`.padEnd(
+                18
+              ) +
               String((r as typeof dull).destroyed).padStart(8) +
               String((r as typeof dull).kills).padStart(9)
           )

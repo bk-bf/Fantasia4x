@@ -19,7 +19,10 @@ export const load = async () => {
     const files = readdirSync(dir).filter((f) => f.endsWith('.json') && f !== 'index.json');
     // Shapes mirror what the audits write; the component declares them properly. `unknown` here would
     // just move the cast to the callsite.
-    const meta: Record<string, { fights: number; ranked: { style: string; wins: number; perHit: number }[] }> = {};
+    const meta: Record<
+      string,
+      { fights: number; ranked: { style: string; wins: number; perHit: number }[] }
+    > = {};
     const pawnFit: Record<
       string,
       {
@@ -27,7 +30,14 @@ export const load = async () => {
         rows: {
           weapon: string;
           armourAtHit: number;
-          fits: { fit: string; wins: number; landed: number; swings: number; perHit: number; effectPer1k: number }[];
+          fits: {
+            fit: string;
+            wins: number;
+            landed: number;
+            swings: number;
+            perHit: number;
+            effectPer1k: number;
+          }[];
         }[];
       }
     > = {};

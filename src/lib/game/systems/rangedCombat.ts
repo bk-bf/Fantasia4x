@@ -181,8 +181,7 @@ export function pickAmmo(pawn: Pawn, category: string): AmmoPick | null {
     if ((items[id] ?? 0) <= 0) continue;
     const props = itemService.getItemById(id)?.ammoProperties;
     if (!props || props.ammoCategory !== category) continue;
-    const score =
-      (props.damage ?? 0) + (props.damageBonus ?? 0) + (props.armorPen ?? 0) * 10;
+    const score = (props.damage ?? 0) + (props.damageBonus ?? 0) + (props.armorPen ?? 0) * 10;
     if (score > bestScore) {
       best = { itemId: id, props };
       bestScore = score;

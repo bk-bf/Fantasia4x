@@ -337,8 +337,7 @@ function profileFromWeapon(
     // A weapon that INSISTS on a location is harder to land — going for the head over a guard, or the
     // throat, is not the same swing as taking whatever presents itself. Charged here so the cost can
     // never be authored away: it is derived from the preference itself.
-    accuracy:
-      (wp.accuracy ?? 0) - preferenceTotal(wp.partPreference) * PREFERENCE_ACCURACY_COST,
+    accuracy: (wp.accuracy ?? 0) - preferenceTotal(wp.partPreference) * PREFERENCE_ACCURACY_COST,
     partPreference: wp.partPreference,
     damageType: dtype,
     bluntMod: wp.bluntMod ?? (dtype === 'blunt' ? 1.0 : 0),
@@ -356,7 +355,6 @@ function profileFromWeapon(
 
 /** Attributes a weapon's damage roll can key off. */
 export type PowerStat = 'brawn' | 'agility' | 'awareness' | 'intellect' | 'charisma';
-
 
 /** Bonus the DUELIST grip adds to damage/armorPen/crit — one-handed, off-hand free, and gated on the
  *  `duelist` trait (see rangedCombat.getGrip). Calibrated so the style lands at ~80% of a two-hander's
@@ -479,7 +477,11 @@ function bloodlettingChance(item: Item | undefined): number | undefined {
  *  whose `coatingEffect` carries no condition (a honing oil, not a venom). Multiplies the SWUNG weapon's
  *  own bloodletting proc — so it can only sharpen a weapon already built to cut (a maul's 0 stays 0).
  *  1 when the attacker holds no sharpness coating on the weapon actually swung. */
-function sharpnessBleedMult(attacker: Pawn | Mob, weaponId: string | undefined, turn: number): number {
+function sharpnessBleedMult(
+  attacker: Pawn | Mob,
+  weaponId: string | undefined,
+  turn: number
+): number {
   if (!weaponId || !('equipment' in attacker)) return 1;
   const mh = attacker.equipment?.mainHand;
   if (!mh?.coating || mh.coating.expiresAtTurn <= turn) return 1;
@@ -1187,7 +1189,8 @@ class CombatServiceImpl implements CombatService {
     // goes for the throat whether or not the wielder is skilled enough to pick a target deliberately.
     // Its accuracy cost is already paid in `attackerProfile`.
     const partId =
-      preferredPart(defender, profile.partPreference) ?? aimedBodyPart(defender, critChance, state.turn);
+      preferredPart(defender, profile.partPreference) ??
+      aimedBodyPart(defender, critChance, state.turn);
     const partDef = PART_DEF_MAP[partId]!;
     // The defender's part may be bodyScale-scaled; severity/fracture use its ACTUAL maxHp.
     const partMaxHp =
@@ -1205,8 +1208,7 @@ class CombatServiceImpl implements CombatService {
     // A precision weapon can author a bigger crit multiplier: the stiletto's whole case is that the
     // thrust which finds the gap is the one that ends it.
     const critMult = profile.critMultiplier ?? CRIT_MULTIPLIER;
-    const scaled =
-      mitigated * (crit ? critMult : 1) * this.conditionMult(attacker, 'weaponDamage');
+    const scaled = mitigated * (crit ? critMult : 1) * this.conditionMult(attacker, 'weaponDamage');
     // ADR-029: armour can FULLY stop a weak hit — 0 damage (was floored at 1). A 0 means the blow
     // clanged off; the wound below is a no-op (severity/bleed/fracture all gate on hpMissing > 0).
     const final = scaled <= 0 ? 0 : Math.max(1, Math.round(scaled));
@@ -1235,7 +1237,8 @@ class CombatServiceImpl implements CombatService {
       ...(bloodletting &&
       woundDef.bleedMod > 0 &&
       hpMissing > 0 &&
-      rng.random() < Math.min(0.95, bloodletting * sharpnessBleedMult(attacker, weaponId, state.turn))
+      rng.random() <
+        Math.min(0.95, bloodletting * sharpnessBleedMult(attacker, weaponId, state.turn))
         ? { bloodletting: true }
         : {})
     };
@@ -2759,11 +2762,16 @@ class CombatServiceImpl implements CombatService {
     const shield = this.shieldDef(defender)?.armorProperties;
     const bonus = shield?.blockBonus ?? 0;
     const base =
-      (pawnStatService.evaluateStat('block', defender) + bonus) * this.conditionMult(defender, 'block');
+      (pawnStatService.evaluateStat('block', defender) + bonus) *
+      this.conditionMult(defender, 'block');
     // A sturdier shield holds against a heavier blow: its own `blockBonus` raises the force it shrugs
     // off, so a boss shield stops what a buckler does not.
     const ref = BLOCK_FORCE_REF * (1 + bonus);
-    const forceFactor = clamp((2 * ref) / (ref + Math.max(0, incoming)), BLOCK_FORCE_MIN, BLOCK_FORCE_MAX);
+    const forceFactor = clamp(
+      (2 * ref) / (ref + Math.max(0, incoming)),
+      BLOCK_FORCE_MIN,
+      BLOCK_FORCE_MAX
+    );
     return clamp(base * forceFactor * (ranged ? RANGED_BLOCK_MULT : 1), 0, BLOCK_CAP);
   }
 

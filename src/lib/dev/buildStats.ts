@@ -147,7 +147,8 @@ const WIRING: Record<string, { wiring: Wiring; where: string; engineFormula?: st
   },
   ranged_damage: {
     wiring: 'wired',
-    where: 'Combat.resolveHit, ranged branch — THE ranged damage multiplier (COMBAT-BALANCE task 3)',
+    where:
+      'Combat.resolveHit, ranged branch — THE ranged damage multiplier (COMBAT-BALANCE task 3)',
     engineFormula:
       'raw = ammo.damage × launcher.drawPower × ranged_damage; a crossbow/sling (strScaled: false) bypasses the stat entirely — the mechanism supplies the force'
   },
@@ -166,7 +167,8 @@ const WIRING: Record<string, { wiring: Wiring; where: string; engineFormula?: st
     wiring: 'mirrored',
     where:
       'PawnService.getMoveSpeed keeps its OWN curve — a different shape from the design formula, not just a copy',
-    engineFormula: 'tiles/s = 4 × clamp(0.5 + AGILITY/20, 0.4, 1.8) × load × legs × needs × conditions'
+    engineFormula:
+      'tiles/s = 4 × clamp(0.5 + AGILITY/20, 0.4, 1.8) × load × legs × needs × conditions'
   },
   carry_weight: {
     wiring: 'mirrored',
@@ -204,13 +206,7 @@ export const STAT_GROUPS: { label: string; stats: string[] }[] = [
   },
   {
     label: 'Ranged',
-    stats: [
-      'aim_accuracy',
-      'aim_speed',
-      'aim_range',
-      'reload_speed',
-      'ranged_damage'
-    ]
+    stats: ['aim_accuracy', 'aim_speed', 'aim_range', 'reload_speed', 'ranged_damage']
   },
   { label: 'Defence', stats: ['dodge', 'block', 'knockdown_resistance', 'stealth'] },
   { label: 'Upkeep', stats: ['stamina', 'stamina_recovery_rate', 'movement_speed', 'carry_weight'] }

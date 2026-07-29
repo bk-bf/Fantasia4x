@@ -12,17 +12,24 @@ import type { GameState, Pawn } from '$lib/game/core/types';
 const stk = (s: HeadlessSession) => (s.getState().stockpile ?? {}) as Record<string, number>;
 const gs = (s: HeadlessSession) => s.getState() as GameState;
 const pawn = (s: HeadlessSession, i = 0) => gs(s).pawns[i] as Pawn;
-const stateOf = (s: HeadlessSession, id: string) => gs(s).pawns.find((p) => p.id === id)?.currentState;
+const stateOf = (s: HeadlessSession, id: string) =>
+  gs(s).pawns.find((p) => p.id === id)?.currentState;
 // A pawn that is actively engaged on a colony job (claimed a job / has an active craft).
 const busyPawn = (s: HeadlessSession) => {
   const jobs = (gs(s).jobs ?? []) as Array<{ claimedBy?: string | null }>;
   const claimedIds = new Set(jobs.filter((j) => j.claimedBy).map((j) => j.claimedBy));
   return gs(s).pawns.find(
-    (p) => claimedIds.has(p.id) || p.activeJob || ['Working', 'MovingToResource', 'Hauling'].includes(p.currentState ?? '')
+    (p) =>
+      claimedIds.has(p.id) ||
+      p.activeJob ||
+      ['Working', 'MovingToResource', 'Hauling'].includes(p.currentState ?? '')
   );
 };
 
-async function workingColony(seed: number, extra: Partial<Parameters<typeof buildScenario>[0]> = {}) {
+async function workingColony(
+  seed: number,
+  extra: Partial<Parameters<typeof buildScenario>[0]> = {}
+) {
   const s = new HeadlessSession();
   await s.start(
     buildScenario({
@@ -48,13 +55,19 @@ describe('FSM transitions & interrupt priority', () => {
     for (let i = 0; i < 20 && !busyPawn(s); i++) s.tick(50);
     const worker = busyPawn(s);
     expect(worker, 'a pawn is actively working the craft').toBeTruthy();
-    const claimedBefore = (gs(s).jobs ?? []).filter((j: { claimedBy?: string | null }) => j.claimedBy === worker!.id).length;
+    const claimedBefore = (gs(s).jobs ?? []).filter(
+      (j: { claimedBy?: string | null }) => j.claimedBy === worker!.id
+    ).length;
     // DRAFT it mid-job
     s.command({ type: 'toggleDraft', payload: { pawnId: worker!.id } } as never);
     s.tick(30);
     const w2 = gs(s).pawns.find((p) => p.id === worker!.id)!;
-    const stillClaimed = (gs(s).jobs ?? []).filter((j: { claimedBy?: string | null }) => j.claimedBy === worker!.id).length;
-    console.log(`[FSM draft>job] worker ${worker!.currentState}→${w2.currentState}; claimed ${claimedBefore}→${stillClaimed}; drafted=${w2.drafted}`);
+    const stillClaimed = (gs(s).jobs ?? []).filter(
+      (j: { claimedBy?: string | null }) => j.claimedBy === worker!.id
+    ).length;
+    console.log(
+      `[FSM draft>job] worker ${worker!.currentState}→${w2.currentState}; claimed ${claimedBefore}→${stillClaimed}; drafted=${w2.drafted}`
+    );
     expect(w2.drafted, 'the pawn is now drafted').toBe(true);
     expect(stillClaimed, 'drafting released the claimed job back to the pool').toBe(0);
     expect(w2.activeJob, 'no dangling active job').toBeFalsy();
@@ -62,7 +75,10 @@ describe('FSM transitions & interrupt priority', () => {
     s.command({ type: 'toggleDraft', payload: { pawnId: worker!.id } } as never);
     for (let i = 0; i < 40 && (stk(s).cordage ?? 0) < 4; i++) s.tick(100);
     console.log(`[FSM draft>job] batch completed cordage=${stk(s).cordage ?? 0} (queued 4)`);
-    expect(stk(s).cordage ?? 0, 'the 4-unit batch completes exactly, no work lost or double-counted').toBe(4);
+    expect(
+      stk(s).cordage ?? 0,
+      'the 4-unit batch completes exactly, no work lost or double-counted'
+    ).toBe(4);
   });
 
   it('MID-CRAFT NEED interrupt: hunger crossing seek DURING a craft releases the job, then it resumes (no lost work)', async () => {
@@ -90,15 +106,28 @@ describe('FSM transitions & interrupt priority', () => {
       if (st === 'Working' || st === 'MovingToResource') sawWorking = true;
       if (sawWorking && ['Eating', 'MovingToNeed', 'Hungry'].includes(st)) {
         interruptedToEat = true;
-        const claimed = (gs(s).jobs ?? []).filter((j: { type?: string; claimedBy?: string | null }) => j.type === 'craft' && j.claimedBy === p.id).length;
+        const claimed = (gs(s).jobs ?? []).filter(
+          (j: { type?: string; claimedBy?: string | null }) =>
+            j.type === 'craft' && j.claimedBy === p.id
+        ).length;
         if (claimed === 0) releasedWhileEating = true;
       }
     }
-    console.log(`[FSM mid-craft] worked=${sawWorking}; interrupted to eat=${interruptedToEat}; craft released while eating=${releasedWhileEating}; cordage=${stk(s).cordage ?? 0}/6`);
+    console.log(
+      `[FSM mid-craft] worked=${sawWorking}; interrupted to eat=${interruptedToEat}; craft released while eating=${releasedWhileEating}; cordage=${stk(s).cordage ?? 0}/6`
+    );
     expect(sawWorking, 'the pawn started the craft').toBe(true);
-    expect(interruptedToEat, 'hunger crossing seek mid-craft pulled the pawn off to eat').toBe(true);
-    expect(releasedWhileEating, 'the craft job was released back to the pool while it ate (not held)').toBe(true);
-    expect(stk(s).cordage ?? 0, 'the batch still completes — the accrued work was not lost or duplicated').toBe(6);
+    expect(interruptedToEat, 'hunger crossing seek mid-craft pulled the pawn off to eat').toBe(
+      true
+    );
+    expect(
+      releasedWhileEating,
+      'the craft job was released back to the pool while it ate (not held)'
+    ).toBe(true);
+    expect(
+      stk(s).cordage ?? 0,
+      'the batch still completes — the accrued work was not lost or duplicated'
+    ).toBe(6);
   });
 
   it('COMBAT threat interrupts work: an adjacent hostile pulls a working pawn into Fighting, job released', async () => {
@@ -108,12 +137,25 @@ describe('FSM transitions & interrupt priority', () => {
     const worker = busyPawn(s)!;
     const pos = gs(s).pawns.find((p) => p.id === worker.id)!.position!;
     // spawn a hostile ADJACENT (defensive stance engages at range 1, no vision gate)
-    s.command({ type: 'devSpawnMobAt', payload: { creatureId: 'goblin', x: pos.x + 1, y: pos.y } } as never);
-    for (let i = 0; i < 12 && stateOf(s, worker.id) !== 'Fighting' && stateOf(s, worker.id) !== 'Fleeing'; i++) s.tick(20);
+    s.command({
+      type: 'devSpawnMobAt',
+      payload: { creatureId: 'goblin', x: pos.x + 1, y: pos.y }
+    } as never);
+    for (
+      let i = 0;
+      i < 12 && stateOf(s, worker.id) !== 'Fighting' && stateOf(s, worker.id) !== 'Fleeing';
+      i++
+    )
+      s.tick(20);
     const st = stateOf(s, worker.id);
-    const stillClaimed = (gs(s).jobs ?? []).filter((j: { claimedBy?: string | null }) => j.claimedBy === worker.id).length;
+    const stillClaimed = (gs(s).jobs ?? []).filter(
+      (j: { claimedBy?: string | null }) => j.claimedBy === worker.id
+    ).length;
     console.log(`[FSM combat>job] worker state=${st}; still-claimed=${stillClaimed}`);
-    expect(['Fighting', 'Fleeing'], 'an adjacent hostile pulls the pawn into a combat state').toContain(st);
+    expect(
+      ['Fighting', 'Fleeing'],
+      'an adjacent hostile pulls the pawn into a combat state'
+    ).toContain(st);
     expect(stillClaimed, 'entering combat released the claimed job').toBe(0);
   });
 
@@ -123,11 +165,16 @@ describe('FSM transitions & interrupt priority', () => {
     s.command({ type: 'toggleDraft', payload: { pawnId: p.id } } as never);
     s.tick(10);
     const pos = gs(s).pawns.find((x) => x.id === p.id)!.position!;
-    s.command({ type: 'devSpawnMobAt', payload: { creatureId: 'goblin', x: pos.x + 1, y: pos.y } } as never);
+    s.command({
+      type: 'devSpawnMobAt',
+      payload: { creatureId: 'goblin', x: pos.x + 1, y: pos.y }
+    } as never);
     for (let i = 0; i < 12; i++) s.tick(20);
     const st = stateOf(s, p.id);
     const drafted = gs(s).pawns.find((x) => x.id === p.id)!.drafted;
-    console.log(`[FSM draft>combat] drafted pawn beside a hostile → state=${st} drafted=${drafted}`);
+    console.log(
+      `[FSM draft>combat] drafted pawn beside a hostile → state=${st} drafted=${drafted}`
+    );
     expect(drafted, 'the pawn stays under player control (drafted)').toBe(true);
     expect(st, 'a drafted pawn does NOT auto-engage — the player commands it').not.toBe('Fighting');
   });
@@ -152,7 +199,10 @@ describe('FSM transitions & interrupt priority', () => {
     for (let i = 0; i < 20; i++) s.tick(60);
     const draftedState = stateOf(s, p.id);
     console.log(`[FSM draft>need] drafted hungry pawn state=${draftedState}`);
-    expect(['Eating', 'MovingToNeed'], 'a drafted pawn ignores a non-critical hunger need').not.toContain(draftedState);
+    expect(
+      ['Eating', 'MovingToNeed'],
+      'a drafted pawn ignores a non-critical hunger need'
+    ).not.toContain(draftedState);
     // clear the draft → it resumes normal need-driven behaviour and goes to eat
     s.command({ type: 'toggleDraft', payload: { pawnId: p.id } } as never);
     let ate = false;
@@ -160,8 +210,12 @@ describe('FSM transitions & interrupt priority', () => {
       s.tick(60);
       if (['Eating', 'MovingToNeed'].includes(stateOf(s, p.id) ?? '')) ate = true;
     }
-    console.log(`[FSM draft>need] after un-draft → sought food: ${ate} (state=${stateOf(s, p.id)})`);
-    expect(ate, 'un-drafting returns the pawn to need-driven behaviour (it goes to eat)').toBe(true);
+    console.log(
+      `[FSM draft>need] after un-draft → sought food: ${ate} (state=${stateOf(s, p.id)})`
+    );
+    expect(ate, 'un-drafting returns the pawn to need-driven behaviour (it goes to eat)').toBe(
+      true
+    );
   });
 
   it('COLLAPSE lifecycle & collapse-over-draft: a drafted pawn beaten down goes Collapsed, the draft releases, and with NOBODY to tend it it stays down', async () => {
@@ -184,8 +238,16 @@ describe('FSM transitions & interrupt priority', () => {
     // draft the frail pawn (so it does NOT fight back — a drafted pawn skips the combat behaviour) and
     // surround it with goblins whose cumulative pain downs it (pain-collapse, recoverable, not death).
     s.command({ type: 'toggleDraft', payload: { pawnId: p.id } } as never);
-    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const)
-      s.command({ type: 'devSpawnMobAt', payload: { creatureId: 'goblin', x: pos.x + dx, y: pos.y + dy } } as never);
+    for (const [dx, dy] of [
+      [1, 0],
+      [-1, 0],
+      [0, 1],
+      [0, -1]
+    ] as const)
+      s.command({
+        type: 'devSpawnMobAt',
+        payload: { creatureId: 'goblin', x: pos.x + dx, y: pos.y + dy }
+      } as never);
     let collapsed = false;
     for (let i = 0; i < 60 && !collapsed; i++) {
       s.tick(30);
@@ -193,9 +255,17 @@ describe('FSM transitions & interrupt priority', () => {
       if (gs(s).pawns.find((x) => x.id === p.id)?.isAlive === false) break;
     }
     const downedDraft = gs(s).pawns.find((x) => x.id === p.id)?.drafted;
-    console.log(`[FSM collapse] frail drafted pawn → state=${stateOf(s, p.id)} drafted=${downedDraft} alive=${gs(s).pawns.find((x) => x.id === p.id)?.isAlive}`);
-    expect(collapsed, 'cumulative pain downs the pawn into Collapsed (recoverable, not killed)').toBe(true);
-    expect(downedDraft, 'going down RELEASES the draft — an unconscious pawn can\'t be commanded').toBe(false);
+    console.log(
+      `[FSM collapse] frail drafted pawn → state=${stateOf(s, p.id)} drafted=${downedDraft} alive=${gs(s).pawns.find((x) => x.id === p.id)?.isAlive}`
+    );
+    expect(
+      collapsed,
+      'cumulative pain downs the pawn into Collapsed (recoverable, not killed)'
+    ).toBe(true);
+    expect(
+      downedDraft,
+      "going down RELEASES the draft — an unconscious pawn can't be commanded"
+    ).toBe(false);
     // Clear the threat. What follows is the DESIGNED arc for a pawn nobody can reach, and it is not
     // recovery: pawn clotting is deliberately sparse (Wounds.CLOT_ROLL_INTERVAL — "bleeding stays a
     // treat-or-die threat that only OCCASIONALLY resolves itself, leaving room for a caretaker to make
@@ -203,7 +273,8 @@ describe('FSM transitions & interrupt priority', () => {
     // down, consciousness falls with the blood, and it stays down. An earlier version of this test
     // asserted that it stood back up on its own, which contradicted that design note and only ever
     // passed while pawns took lighter wounds.
-    for (const m of [...(gs(s).mobs ?? [])]) s.command({ type: 'devKillEntity', payload: { id: (m as { id: string }).id } } as never);
+    for (const m of [...(gs(s).mobs ?? [])])
+      s.command({ type: 'devKillEntity', payload: { id: (m as { id: string }).id } } as never);
     s.tick(30);
     expect(stateOf(s, p.id), 'still held down right after the threat clears').toBe('Collapsed');
     const bloodPct = () => {
@@ -227,9 +298,10 @@ describe('FSM transitions & interrupt priority', () => {
     // still be there to be saved rather than dead on the spot…
     expect(alive, 'going down is a treat-or-die window, not an instant kill').toBe(true);
     // …and it must not quietly solve itself, or tending a casualty would never matter.
-    expect(stoodUp, 'with no caretaker, an untended bleeding pawn does NOT get back up on its own').toBe(
-      false
-    );
+    expect(
+      stoodUp,
+      'with no caretaker, an untended bleeding pawn does NOT get back up on its own'
+    ).toBe(false);
     // The arc has to be LIVE rather than wedged: blood is still draining, so this is heading somewhere.
     expect(bloodPct(), 'the untended bleed keeps costing blood').toBeLessThan(bloodAtDowning);
   });
@@ -275,16 +347,25 @@ describe('FSM transitions & interrupt priority', () => {
     const distinctPerPawn = [...seen.values()].map((set) => set.size);
     const anyDead = gs(s).pawns.some((p) => p.isAlive === false);
     const union = [...new Set([...seen.values()].flatMap((set) => [...set]))].sort();
-    console.log(`[FSM stuck] distinct states/pawn=${distinctPerPawn.join(',')}; longest transient run=${maxTransientRun} samples (×400t); dead=${anyDead}`);
+    console.log(
+      `[FSM stuck] distinct states/pawn=${distinctPerPawn.join(',')}; longest transient run=${maxTransientRun} samples (×400t); dead=${anyDead}`
+    );
     console.log(`[FSM stuck] states exercised across the colony: ${union.join(', ')}`);
     // A wedge is being frozen in a NON-Idle state (stuck mid-work/need, unable to progress). Idle is the
     // safe RESTING state — a load-balanced pawn in a work-drained window may legitimately only ever be
     // Idle (needs met, nothing queued), which is not a wedge. So: no pawn stuck in a single non-Idle state.
     void distinctPerPawn;
-    const wedgedNonIdle = [...seen.values()].filter((set) => set.size === 1 && !set.has('Idle')).length;
-    expect(wedgedNonIdle, 'no pawn frozen in a single NON-Idle state (stuck mid-work/need)').toBe(0);
+    const wedgedNonIdle = [...seen.values()].filter(
+      (set) => set.size === 1 && !set.has('Idle')
+    ).length;
+    expect(wedgedNonIdle, 'no pawn frozen in a single NON-Idle state (stuck mid-work/need)').toBe(
+      0
+    );
     // … and none wedged in a movement/haul state across many consecutive samples (the classic stuck bug)
-    expect(maxTransientRun, 'no pawn is stuck in a MovingTo*/Hauling state for thousands of ticks').toBeLessThan(6);
+    expect(
+      maxTransientRun,
+      'no pawn is stuck in a MovingTo*/Hauling state for thousands of ticks'
+    ).toBeLessThan(6);
     expect(anyDead, 'no pawn died from a behavioural deadlock in a provisioned colony').toBe(false);
   });
 
@@ -312,9 +393,16 @@ describe('FSM transitions & interrupt priority', () => {
     for (let i = 0; i < 200 && (stk(s).venison ?? 0) === 0; i++) {
       s.tick(3); // fine-grained to catch the transient carry states
       for (const p of gs(s).pawns) seen.add(p.currentState ?? '');
-      if (gs(s).pawns.some((p) => p.currentState === 'MovingToDeposit' || p.currentState === 'Hauling')) sawDeposit = true;
+      if (
+        gs(s).pawns.some(
+          (p) => p.currentState === 'MovingToDeposit' || p.currentState === 'Hauling'
+        )
+      )
+        sawDeposit = true;
     }
-    console.log(`[FSM deposit] states seen during butchery fetch: ${[...seen].sort().join(', ')}; MovingToDeposit/Hauling=${sawDeposit}`);
+    console.log(
+      `[FSM deposit] states seen during butchery fetch: ${[...seen].sort().join(', ')}; MovingToDeposit/Hauling=${sawDeposit}`
+    );
     expect(sawDeposit, 'the fetch-carry drives the MovingToDeposit/Hauling states').toBe(true);
   });
 
@@ -337,16 +425,26 @@ describe('FSM transitions & interrupt priority', () => {
     );
     const victim = pawn(s, 0);
     const vpos = victim.position!;
-    const bed = (gs(s).buildings ?? []).find((b) => (b as { type?: string }).type === 'hay_bed') as { x: number; y: number };
-    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1]] as const)
-      s.command({ type: 'devSpawnMobAt', payload: { creatureId: 'goblin', x: vpos.x + dx, y: vpos.y + dy } } as never);
+    const bed = (gs(s).buildings ?? []).find(
+      (b) => (b as { type?: string }).type === 'hay_bed'
+    ) as { x: number; y: number };
+    for (const [dx, dy] of [
+      [1, 0],
+      [-1, 0],
+      [0, 1]
+    ] as const)
+      s.command({
+        type: 'devSpawnMobAt',
+        payload: { creatureId: 'goblin', x: vpos.x + dx, y: vpos.y + dy }
+      } as never);
     for (let i = 0; i < 80 && stateOf(s, victim.id) !== 'Collapsed'; i++) {
       s.tick(30);
       if (gs(s).pawns.find((x) => x.id === victim.id)?.isAlive === false) break;
     }
     expect(stateOf(s, victim.id), 'victim is down').toBe('Collapsed');
     // clear the threat — then issue NO draft/command. An idle caretaker should pick up the rescue as a JOB.
-    for (const m of [...(gs(s).mobs ?? [])]) s.command({ type: 'devKillEntity', payload: { id: (m as { id: string }).id } } as never);
+    for (const m of [...(gs(s).mobs ?? [])])
+      s.command({ type: 'devKillEntity', payload: { id: (m as { id: string }).id } } as never);
     let sawRescuing = false;
     let everCarried = false;
     let delivered = false;
@@ -354,29 +452,56 @@ describe('FSM transitions & interrupt priority', () => {
       s.tick(3); // fine-grained: the carry is fast, so sample often to catch Rescuing / carriedBy
       const carrier = gs(s).pawns.find((p) => p.id !== victim.id && p.currentState === 'Rescuing');
       if (carrier) sawRescuing = true;
-      const v = gs(s).pawns.find((p) => p.id === victim.id) as { carriedBy?: string; position?: { x: number; y: number } };
+      const v = gs(s).pawns.find((p) => p.id === victim.id) as {
+        carriedBy?: string;
+        position?: { x: number; y: number };
+      };
       if (v.carriedBy) everCarried = true;
       // delivered = the downed colonist has been laid on (or next to) the bed and no longer being carried
-      if (!v.carriedBy && v.position && Math.abs(v.position.x - bed.x) + Math.abs(v.position.y - bed.y) <= 1) delivered = true;
+      if (
+        !v.carriedBy &&
+        v.position &&
+        Math.abs(v.position.x - bed.x) + Math.abs(v.position.y - bed.y) <= 1
+      )
+        delivered = true;
     }
     const anyDrafted = gs(s).pawns.some((p) => p.drafted);
     void everCarried; // the ~1-tick carriedBy window is often skipped by sampling; `delivered` proves the carry
-    console.log(`[FSM auto-rescue] entered Rescuing=${sawRescuing}; carriedBy seen=${everCarried}; delivered to bed=${delivered}; anyone drafted=${anyDrafted}`);
+    console.log(
+      `[FSM auto-rescue] entered Rescuing=${sawRescuing}; carriedBy seen=${everCarried}; delivered to bed=${delivered}; anyone drafted=${anyDrafted}`
+    );
     // The three signals that prove the feature: the new Rescuing state is LIVE, the downed colonist was
     // moved from its collapse tile to the shelter, and it all happened as a caretaking JOB (no draft).
-    expect(sawRescuing, 'an idle caretaker took the rescue JOB and entered the (now-live) Rescuing state').toBe(true);
-    expect(delivered, 'the downed colonist was carried to the shelter (bed) and set down').toBe(true);
-    expect(anyDrafted, 'the rescue happened via the caretaking JOB, with NO pawn drafted').toBe(false);
+    expect(
+      sawRescuing,
+      'an idle caretaker took the rescue JOB and entered the (now-live) Rescuing state'
+    ).toBe(true);
+    expect(delivered, 'the downed colonist was carried to the shelter (bed) and set down').toBe(
+      true
+    );
+    expect(anyDrafted, 'the rescue happened via the caretaking JOB, with NO pawn drafted').toBe(
+      false
+    );
   });
 
-  it('BREAKDOWN is an uncontrollable state (draft refused): a broken pawn can\'t be commanded out of it', async () => {
+  it("BREAKDOWN is an uncontrollable state (draft refused): a broken pawn can't be commanded out of it", async () => {
     const s = new HeadlessSession();
     await s.start(
       buildScenario({
         seed: 108,
         map: { w: 18, h: 18 },
         pawns: [
-          { count: 10, needs: { hunger: 100, fatigue: 100, thirst: 100, hygiene: 100, relaxation: 0, comfort: 0 } }
+          {
+            count: 10,
+            needs: {
+              hunger: 100,
+              fatigue: 100,
+              thirst: 100,
+              hygiene: 100,
+              relaxation: 0,
+              comfort: 0
+            }
+          }
         ],
         needsDisabled: ['hunger', 'fatigue', 'thirst', 'hygiene', 'relaxation', 'comfort'],
         seedEntities: false
@@ -395,15 +520,25 @@ describe('FSM transitions & interrupt priority', () => {
         }
       }
     }
-    console.log(`[FSM breakdown] uncontrollable states reached: ${[...observed].join(', ') || 'none'}`);
-    expect(brokenId, 'a sustained-miserable colony produced an uncontrollable mental breakdown').toBeTruthy();
+    console.log(
+      `[FSM breakdown] uncontrollable states reached: ${[...observed].join(', ') || 'none'}`
+    );
+    expect(
+      brokenId,
+      'a sustained-miserable colony produced an uncontrollable mental breakdown'
+    ).toBeTruthy();
     // Try to DRAFT the broken pawn out of it — the order must be refused (breakdown outranks draft).
     const before = stateOf(s, brokenId!);
     s.command({ type: 'toggleDraft', payload: { pawnId: brokenId! } } as never);
     s.tick(30);
     const after = gs(s).pawns.find((p) => p.id === brokenId)!;
-    console.log(`[FSM breakdown] draft during breakdown: state ${before}→${after.currentState}, drafted=${after.drafted}`);
-    expect(BREAK.has(after.currentState ?? ''), 'the pawn stays in its breakdown — a draft can\'t command it out').toBe(true);
+    console.log(
+      `[FSM breakdown] draft during breakdown: state ${before}→${after.currentState}, drafted=${after.drafted}`
+    );
+    expect(
+      BREAK.has(after.currentState ?? ''),
+      "the pawn stays in its breakdown — a draft can't command it out"
+    ).toBe(true);
     expect(after.drafted, 'the breakdown refuses the draft (like Collapsed)').toBe(false);
   });
 });

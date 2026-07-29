@@ -571,7 +571,10 @@ function traitWorkMult(
     // `crafts` meta-key: a generalist-crafter trait applies to EVERY craft discipline (metalworking,
     // woodworking, tailoring/leatherwork/weaving, stoneworking/knapping…, pottery, cooking, alchemy) —
     // but NOT construction or the harvest jobs. Lets one key stand in for "good with their hands".
-    if (map['crafts'] && (isDiscipline(workType) || (fallbackType != null && isDiscipline(fallbackType))))
+    if (
+      map['crafts'] &&
+      (isDiscipline(workType) || (fallbackType != null && isDiscipline(fallbackType)))
+    )
       mult *= map['crafts'];
     if (map['all']) mult *= map['all'];
   }

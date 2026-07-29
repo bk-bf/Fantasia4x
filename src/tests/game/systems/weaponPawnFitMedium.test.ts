@@ -1,6 +1,14 @@
 import { describe, it, expect } from 'vitest';
 import { writeFileSync, mkdirSync } from 'node:fs';
-import { ARMOUR, WEAPONS, FITS, SEEDS, runFit, type Fit, type FitResult } from './weaponPawnFitHarness';
+import {
+  ARMOUR,
+  WEAPONS,
+  FITS,
+  SEEDS,
+  runFit,
+  type Fit,
+  type FitResult
+} from './weaponPawnFitHarness';
 
 /**
  * WEAPON × PAWN FIT — target in MEDIUM armour.
@@ -30,7 +38,7 @@ describe('WEAPON x PAWN FIT — target in medium armour', () => {
       // Armour actually present where this weapon's blows landed — low means it is finding gaps and
       // its penetration is going to waste; high means it is earning its penetration.
       const armAt = suited.landed ? suited.armourAtHits / suited.landed : 0;
-      const gain = (suited.wins - (r.poor?.wins ?? 0));
+      const gain = suited.wins - (r.poor?.wins ?? 0);
       return (
         label.padEnd(16) +
         cell(r.suited) +

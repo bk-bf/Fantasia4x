@@ -200,6 +200,22 @@ export function getHealthDescription(health: number): string {
   return 'Critical condition';
 }
 
+/**
+ * Thresholds for the two needs that are NOISE most of the time.
+ *
+ * The map's info panel is a glance — every bar it carries costs attention, so wetness and relaxation
+ * only earn a row once they are actually saying something. The pawn screen is the opposite: it is where
+ * you go to read the whole pawn, so it shows them unconditionally, dry and rested included.
+ *
+ * Shared here so the two surfaces cannot drift apart, which is exactly what had happened: the info
+ * panel showed relaxation always, and the pawn screen hid it unless it was already dire.
+ */
+/** Relaxation at or above this is fine — the info panel omits the bar. Matches its own colour ramp,
+ *  which turns from green at 50. */
+export const RELAXATION_NOTEWORTHY = 50;
+/** Any wetness at all is worth a row: being damp is a cold risk, and dry is the default. */
+export const WETNESS_NOTEWORTHY = 0;
+
 export function getNeedColor(needValue: number): string {
   if (needValue <= 20) return '#4CAF50';
   if (needValue <= 40) return '#8BC34A';

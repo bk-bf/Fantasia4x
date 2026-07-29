@@ -93,7 +93,12 @@
 
   const fitCols: Column<FlatFit>[] = [
     { key: 'weapon', label: 'weapon', get: (r) => r.weapon },
-    { key: 'armour', label: 'target armour', get: (r) => ARMOUR_ORDER.indexOf(r.armour), disp: (r) => r.armour },
+    {
+      key: 'armour',
+      label: 'target armour',
+      get: (r) => ARMOUR_ORDER.indexOf(r.armour),
+      disp: (r) => r.armour
+    },
     {
       key: 'suited',
       label: 'suited',
@@ -102,8 +107,20 @@
       disp: (r) => r.suited.toFixed(1),
       title: 'Combat value wrecked per 1000 ticks, in hands built for this weapon'
     },
-    { key: 'average', label: 'average', numeric: true, get: (r) => r.average, disp: (r) => r.average.toFixed(1) },
-    { key: 'poor', label: 'poor', numeric: true, get: (r) => r.poor, disp: (r) => r.poor.toFixed(1) },
+    {
+      key: 'average',
+      label: 'average',
+      numeric: true,
+      get: (r) => r.average,
+      disp: (r) => r.average.toFixed(1)
+    },
+    {
+      key: 'poor',
+      label: 'poor',
+      numeric: true,
+      get: (r) => r.poor,
+      disp: (r) => r.poor.toFixed(1)
+    },
     {
       key: 'ratio',
       label: 'suited ÷ poor',
@@ -111,7 +128,8 @@
       get: (r) => r.ratio,
       disp: (r) => (r.ratio > 0 ? `${r.ratio.toFixed(1)}×` : '—'),
       cls: (r) => (r.ratio >= 3 ? 'up' : r.ratio > 0 && r.ratio <= 1.5 ? 'down' : 'dim'),
-      title: 'How much the right pawn is worth. At or below 1 the weapon has no build payoff at all.'
+      title:
+        'How much the right pawn is worth. At or below 1 the weapon has no build payoff at all.'
     },
     {
       key: 'armourAtHit',
@@ -152,13 +170,24 @@
     const out: FlatMeta[] = [];
     for (const cls of metaClasses)
       for (const r of meta[cls].ranked)
-        out.push({ style: r.style, armour: cls, wins: r.wins, fights: meta[cls].fights, perHit: r.perHit });
+        out.push({
+          style: r.style,
+          armour: cls,
+          wins: r.wins,
+          fights: meta[cls].fights,
+          perHit: r.perHit
+        });
     return out;
   });
 
   const metaCols: Column<FlatMeta>[] = [
     { key: 'style', label: 'style', get: (r) => r.style },
-    { key: 'armour', label: 'target armour', get: (r) => ARMOUR_ORDER.indexOf(r.armour), disp: (r) => r.armour },
+    {
+      key: 'armour',
+      label: 'target armour',
+      get: (r) => ARMOUR_ORDER.indexOf(r.armour),
+      disp: (r) => r.armour
+    },
     {
       key: 'wins',
       label: 'fights won',
@@ -166,7 +195,13 @@
       get: (r) => r.wins,
       disp: (r) => `${r.wins} / ${r.fights}`
     },
-    { key: 'perHit', label: 'damage per landed hit', numeric: true, get: (r) => r.perHit, disp: (r) => r.perHit.toFixed(1) }
+    {
+      key: 'perHit',
+      label: 'damage per landed hit',
+      numeric: true,
+      get: (r) => r.perHit,
+      disp: (r) => r.perHit.toFixed(1)
+    }
   ];
 
   // ── how each style moves when the target armours up ───────────────────────
@@ -181,14 +216,24 @@
   const movement = $derived.by<MoveRow[]>(() => {
     if (!meta.none || !meta.heavy) return [];
     return meta.none.ranked
-      .map((r) => ({ style: r.style, bare: posIn('none', r.style), plate: posIn('heavy', r.style) }))
+      .map((r) => ({
+        style: r.style,
+        bare: posIn('none', r.style),
+        plate: posIn('heavy', r.style)
+      }))
       .filter((m) => m.bare && m.plate)
       .map((m) => ({ ...m, delta: m.bare - m.plate }));
   });
   const moveCols: Column<MoveRow>[] = [
     { key: 'style', label: 'style', get: (r) => r.style },
     { key: 'bare', label: 'vs bare', numeric: true, get: (r) => r.bare, disp: (r) => `#${r.bare}` },
-    { key: 'plate', label: 'vs plate', numeric: true, get: (r) => r.plate, disp: (r) => `#${r.plate}` },
+    {
+      key: 'plate',
+      label: 'vs plate',
+      numeric: true,
+      get: (r) => r.plate,
+      disp: (r) => `#${r.plate}`
+    },
     {
       key: 'delta',
       label: 'move',
@@ -215,7 +260,9 @@
   {:else}
     <div class="tabs sub">
       {#each TABS as t (t.key)}
-        <button class="tab" class:active={tab === t.key} onclick={() => (tab = t.key)}>{t.label}</button>
+        <button class="tab" class:active={tab === t.key} onclick={() => (tab = t.key)}
+          >{t.label}</button
+        >
       {/each}
     </div>
     <p class="note">
@@ -226,13 +273,13 @@
 
     {#if tab === 'fit'}
       <p class="sub">
-        The same weapon in hands built for it, average hands, and poor hands, against each armour class.
-        Numbers are <strong>combat value wrecked per 1000 ticks</strong>: each landed blow scores the
-        fraction of the location it accounted for, times what that location is worth to a fighter — the
-        organs it holds and how hard it bleeds, plus the sight, grip and movement it gates. Kills are
-        secondary, because a fight is decided by degrading what the other body can still do, and most end
-        in collapse long before anyone dies. Watch the <strong>hits landed</strong> column: under about
-        ten, the row is noise.
+        The same weapon in hands built for it, average hands, and poor hands, against each armour
+        class. Numbers are <strong>combat value wrecked per 1000 ticks</strong>: each landed blow
+        scores the fraction of the location it accounted for, times what that location is worth to a
+        fighter — the organs it holds and how hard it bleeds, plus the sight, grip and movement it
+        gates. Kills are secondary, because a fight is decided by degrading what the other body can
+        still do, and most end in collapse long before anyone dies. Watch the
+        <strong>hits landed</strong> column: under about ten, the row is noise.
       </p>
       <SortableTable columns={fitCols} rows={flatFit} initialSort="suited" initialDir={-1} />
     {:else if tab === 'styles'}
@@ -240,8 +287,8 @@
       <SortableTable columns={metaCols} rows={flatMeta} initialSort="wins" initialDir={-1} />
     {:else}
       <p class="sub">
-        Where each style ranks against a bare target, against where it ranks against plate. A positive
-        move means the style climbs as the enemy armours up.
+        Where each style ranks against a bare target, against where it ranks against plate. A
+        positive move means the style climbs as the enemy armours up.
       </p>
       <SortableTable columns={moveCols} rows={movement} initialSort="delta" initialDir={-1} />
     {/if}

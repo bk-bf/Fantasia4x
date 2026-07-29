@@ -40,7 +40,13 @@ const EQUAL: Partial<EntityStats> = { brawn: 20, agility: 20, vigour: 20, awaren
 
 const KIT = {
   naked: [] as string[],
-  light: ['linen_gambeson', 'leather_coif', 'rawhide_shoulder_pads', 'rawhide_arm_wraps', 'rawhide_leg_wraps'],
+  light: [
+    'linen_gambeson',
+    'leather_coif',
+    'rawhide_shoulder_pads',
+    'rawhide_arm_wraps',
+    'rawhide_leg_wraps'
+  ],
   medium: ['brigandine_coat', 'leather_coif', 'iron_pauldrons', 'iron_bracers', 'iron_greaves'],
   heavy: ['plate_cuirass', 'great_helm', 'steel_pauldrons', 'steel_vambraces', 'steel_greaves']
 };
@@ -74,8 +80,20 @@ async function duel(seed: number, A: Side, B: Side): Promise<Duel> {
       seed,
       map: { w: 24, h: 24 },
       pawns: [
-        { count: 1, drafted: true, stats: EQUAL, equip: A.equip, ...(A.traits ? { traits: A.traits } : {}) },
-        { count: 1, drafted: true, stats: EQUAL, equip: B.equip, ...(B.traits ? { traits: B.traits } : {}) }
+        {
+          count: 1,
+          drafted: true,
+          stats: EQUAL,
+          equip: A.equip,
+          ...(A.traits ? { traits: A.traits } : {})
+        },
+        {
+          count: 1,
+          drafted: true,
+          stats: EQUAL,
+          equip: B.equip,
+          ...(B.traits ? { traits: B.traits } : {})
+        }
       ],
       needsDisabled: ['hunger', 'fatigue', 'thirst', 'hygiene'],
       seedEntities: false
@@ -147,8 +165,18 @@ async function matchup(A: Side, B: Side) {
   for (const seed of SEEDS) rs.push(await duel(seed, A, B));
   const sum = (f: (d: Duel) => number) => rs.reduce((x, d) => x + f(d), 0);
   const per = (t: (d: Duel) => Tally) => ({
-    hitRate: sum((d) => t(d).hits) / Math.max(1, sum((d) => t(d).swings)),
-    perHit: sum((d) => t(d).damage) / Math.max(1, sum((d) => t(d).hits)),
+    hitRate:
+      sum((d) => t(d).hits) /
+      Math.max(
+        1,
+        sum((d) => t(d).swings)
+      ),
+    perHit:
+      sum((d) => t(d).damage) /
+      Math.max(
+        1,
+        sum((d) => t(d).hits)
+      ),
     biggest: Math.max(...rs.map((d) => t(d).biggest))
   });
   return {
@@ -184,16 +212,22 @@ describe('STYLE MATCHUPS — equal skill, kit as the only variable', () => {
     // two-hander coming off worse than an opponent wearing nothing.
     const out: Row[] = [];
     out.push(
-      await matchup({ ...TWOH, label: '2H · heavy', equip: ['steel_greatsword', ...KIT.heavy] }, {
-        ...SHIELD_1H,
-        label: '1H+shield · NAKED'
-      })
+      await matchup(
+        { ...TWOH, label: '2H · heavy', equip: ['steel_greatsword', ...KIT.heavy] },
+        {
+          ...SHIELD_1H,
+          label: '1H+shield · NAKED'
+        }
+      )
     );
     out.push(
-      await matchup({ ...TWOH, label: '2H · NAKED', equip: ['steel_greatsword'] }, {
-        ...SHIELD_1H,
-        label: '1H+shield · NAKED'
-      })
+      await matchup(
+        { ...TWOH, label: '2H · NAKED', equip: ['steel_greatsword'] },
+        {
+          ...SHIELD_1H,
+          label: '1H+shield · NAKED'
+        }
+      )
     );
     console.log(
       `[FLOOR] ${SEEDS.length} seeds, both pawns at the spawn ceiling (brawn/agility/vigour 20)\n` +
@@ -355,17 +389,23 @@ describe('STYLE MATCHUPS — equal skill, kit as the only variable', () => {
   it('CYCLE: 1H+shield > 2H > polearm 2H > 1H+shield, loosely', async () => {
     // All three in the armour their own build would plausibly field, so the cycle is read between
     // STYLES rather than between armour classes.
-    const shield: Side = { ...SHIELD_1H, label: '1H+shield · medium', equip: [...SHIELD_1H.equip, ...KIT.medium] };
+    const shield: Side = {
+      ...SHIELD_1H,
+      label: '1H+shield · medium',
+      equip: [...SHIELD_1H.equip, ...KIT.medium]
+    };
     const two: Side = { ...TWOH, label: '2H · heavy', equip: [...TWOH.equip, ...KIT.heavy] };
-    const pole: Side = { ...POLEARM, label: 'polearm · medium', equip: [...POLEARM.equip, ...KIT.medium] };
+    const pole: Side = {
+      ...POLEARM,
+      label: 'polearm · medium',
+      equip: [...POLEARM.equip, ...KIT.medium]
+    };
 
     const out: Row[] = [];
     out.push(await matchup(shield, two));
     out.push(await matchup(two, pole));
     out.push(await matchup(pole, shield));
-    console.log(
-      `[CYCLE] ${SEEDS.length} seeds each, equal stats\n` + out.map(render).join('\n')
-    );
+    console.log(`[CYCLE] ${SEEDS.length} seeds each, equal stats\n` + out.map(render).join('\n'));
     const leg = (r: Row) => `${r.A} ${r.aWins}–${r.bWins} ${r.B}`;
     console.log(
       `\n  intended tendency: 1H+shield > 2H > polearm > 1H+shield\n` +

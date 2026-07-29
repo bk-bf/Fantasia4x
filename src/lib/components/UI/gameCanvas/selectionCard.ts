@@ -6,6 +6,7 @@ import { uiState } from '$lib/stores/uiState.js';
 import { gameState } from '$lib/stores/gameState.js';
 import { resourceObjectService } from '$lib/game/services/ResourceObjectService.js';
 import { type CreatureDefinition, getCreatureById } from '$lib/game/core/Creatures.js';
+import { RELAXATION_NOTEWORTHY, WETNESS_NOTEWORTHY } from '$lib/components/util/pawnUtils';
 import type { Pawn, Mob, Injury } from '$lib/game/core/types.js';
 import { limbLabel, partLabel } from '$lib/utils/bodyLabels';
 import { woundById } from '$lib/game/core/Wounds';
@@ -621,18 +622,21 @@ export function buildPawnCard(
   }
   // SEASONS_WEATHER: how soaked the pawn is, as a body-state bar like BLOOD (blue = water) — only
   // shown while actually damp.
-  if ((pawn.needs.wetness ?? 0) > 0) {
+  if ((pawn.needs.wetness ?? 0) > WETNESS_NOTEWORTHY) {
     bars.push({ label: 'WETNESS', value: Math.round(pawn.needs.wetness ?? 0), color: '#4FA3D1' });
   }
-  // SOCIAL: RELAXATION is inverted (100 = entertained). Always shown; the colour ramps green→amber→red
-  // as it falls, matching the pawn Needs tab.
+  // SOCIAL: RELAXATION is inverted (100 = entertained). Shown only once it has something to say — a
+  // contented pawn does not need the row, and this panel is a glance. The pawn screen carries it
+  // unconditionally for when you actually want to read the whole pawn.
   const relaxVal = pawn.needs.relaxation ?? 100;
-  bars.push({
-    label: 'RELAXATION',
-    value: Math.round(relaxVal),
-    color: relaxVal >= 50 ? '#68a030' : relaxVal >= 20 ? '#c8a030' : '#c86030',
-    warn: relaxVal < 20
-  });
+  if (relaxVal < RELAXATION_NOTEWORTHY) {
+    bars.push({
+      label: 'RELAXATION',
+      value: Math.round(relaxVal),
+      color: relaxVal >= 20 ? '#c8a030' : '#c86030',
+      warn: relaxVal < 20
+    });
+  }
   // No flat "HP" stat: the body model (limbs/blood/pain) is the real health — see the HEALTH popup.
   // Core attributes, then MOVE (current movement speed), then Mood — Mood rides with the movement
   // readout rather than the header (which is left free for the name + long state tag).

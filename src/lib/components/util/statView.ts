@@ -3,6 +3,7 @@
 // PawnAttributes (where it was baked in) so BOTH the attributes tab AND the trait card's stat/resistance
 // pill render the IDENTICAL breakdown through the shared <StatTooltip> — one computation, no duplication.
 import type { Pawn } from '$lib/game/core/types';
+import { APTITUDE_MIN, APTITUDE_MAX, type AptitudeId } from '$lib/game/core/aptitudes';
 import statsData from '$lib/game/database/pawns/stats.jsonc';
 import { pawnStatService } from '$lib/game/services/PawnStatService';
 import { itemService } from '$lib/game/services/ItemService';
@@ -289,6 +290,60 @@ export interface StatView {
   description: string;
   trend: { glyph: string; color: string };
   traitMods: { name: string; text: string; pos: boolean }[];
+}
+
+/**
+ * A rolled APTITUDE as a `StatView`, so it renders through the same cell + `StatTooltip` as every other
+ * stat instead of getting its own bespoke widget.
+ *
+ * Aptitudes are not stats.jsonc entries — they are the `APT` INPUT to `hit_chance`, `attack_speed` and
+ * the rest. But to a player they are the same kind of thing (a number about this pawn with a reason
+ * behind it), so they get the same treatment: a value, a formula, the numbers that went into it, and a
+ * comparison against the average pawn. The band is fixed (`APTITUDE_MIN`..`APTITUDE_MAX`), so "average"
+ * is exactly 1.00.
+ */
+export function computeAptitudeView(
+  id: AptitudeId,
+  pawn: Pawn,
+  label: string,
+  description: string,
+  massTilted: boolean
+): StatView {
+  const v = pawn.aptitudes?.[id] ?? 1;
+  const pct = Math.round((v - 1) * 100);
+  // Same shape as `trend`, but against a fixed 1.00 average rather than a species baseline.
+  const mult = v;
+  const up = band(mult);
+  const down = band(1 / mult);
+  const tr =
+    up >= 0
+      ? { glyph: '▲', color: COOL[up] }
+      : down >= 0
+        ? { glyph: '▼', color: WARM[down] }
+        : {
+            glyph: pct > 0 ? '▲' : pct < 0 ? '▼' : '–',
+            color: pct === 0 ? NEUTRAL : pct > 0 ? COOL[0] : WARM[0]
+          };
+  const vars = [
+    { name: 'rolled', value: v.toFixed(3) },
+    { name: 'band', value: `${APTITUDE_MIN.toFixed(2)}–${APTITUDE_MAX.toFixed(2)}` }
+  ];
+  if (massTilted)
+    vars.push({ name: 'body mass', value: `${(pawn.physicalTraits?.weight ?? 70).toFixed(0)} kg` });
+  return {
+    id,
+    name: label,
+    unit: '×',
+    value: round2(v),
+    base: 1,
+    formula: massTilted ? 'triangular roll, tilted by body mass' : 'triangular roll at generation',
+    vars,
+    description,
+    trend: tr,
+    // An aptitude is rolled, not derived, so no trait feeds it — the trait modifiers a player is
+    // looking for show up on the STAT this aptitude drives, not here.
+    traitMods: []
+  };
 }
 
 /** Is `statId` a real stats.jsonc stat (has a rich view), vs a core attribute (STR/DEX) that isn't? */

@@ -64,7 +64,13 @@ const step = (what: string) => {
 
 export const ARMOUR: Record<string, string[]> = {
   none: [],
-  light: ['linen_gambeson', 'leather_coif', 'rawhide_shoulder_pads', 'rawhide_arm_wraps', 'rawhide_leg_wraps'],
+  light: [
+    'linen_gambeson',
+    'leather_coif',
+    'rawhide_shoulder_pads',
+    'rawhide_arm_wraps',
+    'rawhide_leg_wraps'
+  ],
   medium: ['brigandine_coat', 'leather_coif', 'iron_pauldrons', 'iron_bracers', 'iron_greaves'],
   heavy: ['plate_cuirass', 'great_helm', 'steel_pauldrons', 'steel_vambraces', 'steel_greaves']
 };
@@ -109,14 +115,25 @@ export interface Duel {
 }
 
 /** One duel. `defenderArmour` is added to side B only — side A always fights naked. */
-export async function duel(seed: number, A: Side, B: Side, defenderArmour: string[] = []): Promise<Duel> {
+export async function duel(
+  seed: number,
+  A: Side,
+  B: Side,
+  defenderArmour: string[] = []
+): Promise<Duel> {
   const s = new HeadlessSession();
   await s.start(
     buildScenario({
       seed,
       map: { w: 24, h: 24 },
       pawns: [
-        { count: 1, drafted: true, stats: EQUAL, equip: A.equip, ...(A.traits ? { traits: A.traits } : {}) },
+        {
+          count: 1,
+          drafted: true,
+          stats: EQUAL,
+          equip: A.equip,
+          ...(A.traits ? { traits: A.traits } : {})
+        },
         {
           count: 1,
           drafted: true,
@@ -192,4 +209,3 @@ export async function duel(seed: number, A: Side, B: Side, defenderArmour: strin
     aSwings
   };
 }
-

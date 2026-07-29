@@ -60,11 +60,18 @@ describe(`WEAPON META — target in none armour`, () => {
 
     const fights = (STYLES.length - 1) * SEEDS.length;
     const ranked = Object.entries(won)
-      .map(([k, v]) => ({ style: k, wins: v, perHit: dealt[k].hits ? dealt[k].dmg / dealt[k].hits : 0 }))
+      .map(([k, v]) => ({
+        style: k,
+        wins: v,
+        perHit: dealt[k].hits ? dealt[k].dmg / dealt[k].hits : 0
+      }))
       .sort((a, b) => b.wins - a.wins);
 
     try {
-      writeFileSync(`.debug/weapon-meta-${CLASS}.json`, JSON.stringify({ CLASS, fights, ranked }, null, 1));
+      writeFileSync(
+        `.debug/weapon-meta-${CLASS}.json`,
+        JSON.stringify({ CLASS, fights, ranked }, null, 1)
+      );
     } catch {
       /* ignore */
     }
