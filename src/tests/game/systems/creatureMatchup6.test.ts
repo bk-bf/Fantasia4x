@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { runShard, shardOf, WEAPONS, SEEDS } from './creatureMatchupHarness';
+import { runShard, shardOf, WEAPONS, SEEDS, ARMOUR_KEYS } from './creatureMatchupHarness';
 
 /**
  * WEAPON x CREATURE, shard 6 of 8 — see `creatureMatchupHarness.ts` for the design.
@@ -18,11 +18,11 @@ describe('WEAPON x CREATURE — shard 6', () => {
         best
           .map(
             (r) =>
-              `  ${r.weapon.padEnd(16)} vs ${r.creature.padEnd(22)} T${r.tier}  ` +
+              `  ${r.weapon.padEnd(16)} [${r.armour.padEnd(6)}] vs ${r.creature.padEnd(22)} T${r.tier}  ` +
               `${r.effectPer1k.toFixed(1)} pts  ${r.landed} hits  ${r.kills}/${r.fights} kills`
           )
           .join('\n')
     );
-    expect(rows.length).toBe(creatures.length * WEAPONS.length);
+    expect(rows.length).toBe(creatures.length * WEAPONS.length * ARMOUR_KEYS.length);
   }, 5_400_000);
 });

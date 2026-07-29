@@ -47,6 +47,19 @@ export const HOSTILES: CreatureDef[] = ALL.filter((c) => c && c.behaviour === 'a
   (a, b) => (a.tier ?? 0) - (b.tier ?? 0) || a.id.localeCompare(b.id)
 );
 
+/**
+ * The pawn's OWN armour is part of the matrix, not a constant. It decides how long the pawn survives
+ * and therefore how many blows it gets to land, so a weapon's effectiveness against a given creature is
+ * a different number in a shirt than in plate — which is exactly the thing worth knowing.
+ */
+export const ARMOUR: Record<string, string[]> = {
+  none: [],
+  light: ['linen_gambeson', 'leather_coif', 'rawhide_shoulder_pads', 'rawhide_arm_wraps', 'rawhide_leg_wraps'],
+  medium: ['brigandine_coat', 'leather_coif', 'iron_pauldrons', 'iron_bracers', 'iron_greaves'],
+  heavy: ['plate_cuirass', 'great_helm', 'steel_pauldrons', 'steel_vambraces', 'steel_greaves']
+};
+export const ARMOUR_KEYS = Object.keys(ARMOUR);
+
 /** Round-robin shards, so every shard gets a mix of tiers and they finish at about the same time.
  *  Slicing by tier instead would put all 18 tier-4 creatures in one shard and leave cores idle. */
 export const SHARDS = 8;
@@ -97,6 +110,8 @@ function suitedStats(itemId: string): Partial<EntityStats> {
 
 export interface Matchup {
   weapon: string;
+  /** What the PAWN was wearing — see `ARMOUR`. */
+  armour: string;
   creature: string;
   tier: number;
   naturalArmor: number;
@@ -115,7 +130,8 @@ const PROGRESS = '.debug/weapon-meta-progress.log';
 export async function runMatchup(
   label: string,
   itemId: string,
-  creature: CreatureDef
+  creature: CreatureDef,
+  armourKey: string
 ): Promise<Matchup> {
   let effect = 0;
   let ticksTotal = 0;
@@ -130,7 +146,14 @@ export async function runMatchup(
       buildScenario({
         seed,
         map: { w: 24, h: 24 },
-        pawns: [{ count: 1, drafted: true, stats: suitedStats(itemId), equip: [itemId] }],
+        pawns: [
+          {
+            count: 1,
+            drafted: true,
+            stats: suitedStats(itemId),
+            equip: [itemId, ...ARMOUR[armourKey]]
+          }
+        ],
         needsDisabled: ['hunger', 'fatigue', 'thirst', 'hygiene'],
         spawnMobs: [{ count: 1, creatureId: creature.id }],
         seedEntities: false
@@ -199,6 +222,7 @@ export async function runMatchup(
 
   return {
     weapon: label,
+    armour: armourKey,
     creature: creature.name ?? creature.id,
     tier: creature.tier ?? 0,
     naturalArmor: creature.naturalArmor ?? 0,
@@ -216,7 +240,7 @@ export async function runMatchup(
 export async function runShard(shard: number): Promise<Matchup[]> {
   const creatures = shardOf(shard);
   const rows: Matchup[] = [];
-  const total = creatures.length * WEAPONS.length;
+  const total = creatures.length * WEAPONS.length * ARMOUR_KEYS.length;
   let done = 0;
   try {
     mkdirSync('.debug/audit', { recursive: true });
@@ -224,18 +248,19 @@ export async function runShard(shard: number): Promise<Matchup[]> {
     /* ignore */
   }
   for (const c of creatures)
-    for (const [label, id] of WEAPONS) {
-      rows.push(await runMatchup(label, id, c));
-      if (++done % 5 === 0 || done === total)
-        try {
-          appendFileSync(
-            PROGRESS,
-            `  [creatures ${shard}] ${done} of ${total} matchups (${((done / total) * 100).toFixed(0)}%)\n`
-          );
-        } catch {
-          /* progress reporting must never fail the audit */
-        }
-    }
+    for (const [label, id] of WEAPONS)
+      for (const a of ARMOUR_KEYS) {
+        rows.push(await runMatchup(label, id, c, a));
+        if (++done % 20 === 0 || done === total)
+          try {
+            appendFileSync(
+              PROGRESS,
+              `  [creatures ${shard}] ${done} of ${total} matchups (${((done / total) * 100).toFixed(0)}%)\n`
+            );
+          } catch {
+            /* progress reporting must never fail the audit */
+          }
+      }
   try {
     writeFileSync(
       `.debug/audit/creatures-${shard}.json`,
