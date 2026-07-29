@@ -39,7 +39,12 @@ interface CreatureDef {
   threatLevel?: number;
   behaviour?: string;
   naturalArmor?: number;
+  naturalArmorRange?: [number, number];
 }
+
+/** The hide the creature actually fights with — variants declare a range instead of a flat value. */
+export const creatureHide = (c: CreatureDef): number =>
+  c.naturalArmor ?? (c.naturalArmorRange ? (c.naturalArmorRange[0] + c.naturalArmorRange[1]) / 2 : 0);
 const ALL = creaturesData as unknown as CreatureDef[];
 
 /** Every creature that will actually pick a fight — the ones a colonist meets as an enemy. */
@@ -231,7 +236,7 @@ export async function runMatchup(
     armour: armourKey,
     creature: creature.name ?? creature.id,
     tier: creature.tier ?? 0,
-    naturalArmor: creature.naturalArmor ?? 0,
+    naturalArmor: creatureHide(creature),
     effectPer1k: ticksTotal ? (effect / ticksTotal) * 1000 : 0,
     landed,
     swings,

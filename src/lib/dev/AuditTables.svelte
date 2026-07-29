@@ -73,16 +73,21 @@
     effect: number;
     landed: number;
     killRate: number;
+    softHide: number;
+    thickHide: number;
     naked: number;
     light: number;
     medium: number;
     heavy: number;
     armourCost: number;
   }
+  /** A creature with this much hide or more counts as armoured for the soft/armoured split. */
+  const THICK_HIDE = 26;
   const weaponAgg = $derived.by<WeaponAgg[]>(() => {
     if (!creatures.length) return [];
     const acc: Record<string, { e: number; n: number; landed: number; k: number; f: number }> = {};
     const byArm: Record<string, { e: number; n: number }> = {};
+    const byHide: Record<string, { e: number; n: number }> = {};
     for (const r of creatures) {
       (acc[r.weapon] ??= { e: 0, n: 0, landed: 0, k: 0, f: 0 });
       const a = acc[r.weapon];
@@ -95,9 +100,13 @@
       (byArm[k] ??= { e: 0, n: 0 });
       byArm[k].e += r.effectPer1k;
       byArm[k].n++;
+      const h = `${r.weapon}|${r.naturalArmor >= THICK_HIDE ? 'thick' : 'soft'}`;
+      (byHide[h] ??= { e: 0, n: 0 });
+      byHide[h].e += r.effectPer1k;
+      byHide[h].n++;
     }
-    const arm = (w: string, a: string) => {
-      const x = byArm[`${w}|${a}`];
+    const avg = (m: Record<string, { e: number; n: number }>, k: string) => {
+      const x = m[k];
       return x && x.n ? x.e / x.n : 0;
     };
     return Object.entries(acc).map(([weapon, a]) => ({
@@ -105,11 +114,13 @@
       effect: a.e / a.n,
       landed: a.landed,
       killRate: a.f ? a.k / a.f : 0,
-      naked: arm(weapon, 'none'),
-      light: arm(weapon, 'light'),
-      medium: arm(weapon, 'medium'),
-      heavy: arm(weapon, 'heavy'),
-      armourCost: arm(weapon, 'heavy') - arm(weapon, 'none')
+      softHide: avg(byHide, `${weapon}|soft`),
+      thickHide: avg(byHide, `${weapon}|thick`),
+      naked: avg(byArm, `${weapon}|none`),
+      light: avg(byArm, `${weapon}|light`),
+      medium: avg(byArm, `${weapon}|medium`),
+      heavy: avg(byArm, `${weapon}|heavy`),
+      armourCost: avg(byArm, `${weapon}|heavy`) - avg(byArm, `${weapon}|none`)
     }));
   });
 
@@ -123,6 +134,22 @@
       get: (r) => r.effect,
       disp: (r) => num(r.effect),
       title: 'Mean combat value wrecked per 1000 ticks, across every creature and armour class'
+    },
+    {
+      key: 'softHide',
+      label: 'soft creatures',
+      numeric: true,
+      get: (r) => r.softHide,
+      disp: (r) => num(r.softHide),
+      title: `Against creatures with natural armour under ${THICK_HIDE}`
+    },
+    {
+      key: 'thickHide',
+      label: 'armoured creatures',
+      numeric: true,
+      get: (r) => r.thickHide,
+      disp: (r) => num(r.thickHide),
+      title: `Against creatures with natural armour of ${THICK_HIDE} or more — owlbears, great beasts, warbosses`
     },
     { key: 'naked', label: 'naked', numeric: true, get: (r) => r.naked, disp: (r) => num(r.naked) },
     { key: 'light', label: 'light', numeric: true, get: (r) => r.light, disp: (r) => num(r.light) },
