@@ -7846,7 +7846,7 @@
       "staminaCost"     : 7,
       "twoHanded"       : false
     },
-    "onHitWound": [ {"wound": "bloodletting", "chance": 0.22} ]
+    "onHitWound": [ {"wound": "bloodletting", "chance": 0.5} ]
   },
   {
     "id": "steel_greatcleaver",
@@ -7880,6 +7880,7 @@
       "staminaCost"     : 8,
       "twoHanded"       : true
     },
+  "onHitWound": [ {"wound": "bloodletting", "chance": 0.5} ],
     "onHitCondition": {"condition": "hamstrung", "chance": 0.25, "durationHours": 0.5, "resist": "cutting_resistance"}
   },
   {
@@ -8967,7 +8968,7 @@
       "staminaCost"     : 7,
       "twoHanded"       : false
     },
-    "onHitWound": [ {"wound": "bloodletting", "chance": 0.2} ]
+    "onHitWound": [ {"wound": "bloodletting", "chance": 0.4} ]
   },
   {
     "id": "bronze_chain_flail",
@@ -9107,7 +9108,7 @@
       "twoHanded"       : true,
       "wieldRequirement": {"brawn": 13}
     },
-    "onHitWound": [ {"wound": "bloodletting", "chance": 0.24} ]
+    "onHitWound": [ {"wound": "bloodletting", "chance": 0.4} ]
   },
   {
     "id": "bronze_double_axe",
@@ -9244,7 +9245,7 @@
       "staminaCost"     : 7,
       "twoHanded"       : false
     },
-    "onHitWound": [ {"wound": "bloodletting", "chance": 0.24} ]
+    "onHitWound": [ {"wound": "bloodletting", "chance": 0.45} ]
   },
   {
     "id": "iron_ball_flail",
@@ -9380,7 +9381,7 @@
       "twoHanded"       : true,
       "wieldRequirement": {"brawn": 16}
     },
-    "onHitWound": [ {"wound": "bloodletting", "chance": 0.28} ]
+    "onHitWound": [ {"wound": "bloodletting", "chance": 0.45} ]
   },
   {
     "id": "iron_shod_staff",
@@ -9681,7 +9682,7 @@
       "staminaCost"     : 7,
       "twoHanded"       : false
     },
-    "onHitWound": [ {"wound": "bloodletting", "chance": 0.3} ]
+    "onHitWound": [ {"wound": "bloodletting", "chance": 0.6} ]
   },
   {
     "id": "steel_greatflail",
@@ -10057,7 +10058,7 @@
       "twoHanded"       : true,
       "wieldRequirement": {"brawn": 18}
     },
-    "onHitWound": [ {"wound": "bloodletting", "chance": 0.34} ]
+    "onHitWound": [ {"wound": "bloodletting", "chance": 0.6} ]
   },
   {
     "id": "rune_weighted_warhammer",
@@ -12018,7 +12019,7 @@
     "description": "Fluted steel shoulder-plates, articulated so the arm still swings a full arc.",
     "color": "#B0B8C0",
     "amount": 0,
-    "weightKg": 3.0,
+    "weightKg": 1.8,
     "volumeL": 1.5,
     "tier": 3,
     "maxDurability": 200,
@@ -12044,7 +12045,7 @@
     "description": "Hinged steel forearm-guards that close like a clamshell and lock at the wrist.",
     "color": "#B0B8C0",
     "amount": 0,
-    "weightKg": 2.4,
+    "weightKg": 1.5,
     "volumeL": 1.2,
     "tier": 3,
     "maxDurability": 200,
@@ -12070,7 +12071,7 @@
     "description": "Full steel leg-plates, shin and knee-cop in one articulated piece.",
     "color": "#B0B8C0",
     "amount": 0,
-    "weightKg": 3.6,
+    "weightKg": 2.2,
     "volumeL": 1.6,
     "tier": 3,
     "maxDurability": 200,
@@ -15294,7 +15295,7 @@
     "description": "A fitted steel breast-and-back plate. The pinnacle of mundane body armour, turns most blows outright.",
     "color": "#B0B8C0",
     "amount": 0,
-    "weightKg": 14,
+    "weightKg": 8.5,
     "volumeL": 7,
     "tier": 3,
     "maxDurability": 320,
@@ -15324,7 +15325,7 @@
     "description": "A heavy enclosed steel helm. Maximum head protection, at the price of a narrowed view.",
     "color": "#A8B0B8",
     "amount": 0,
-    "weightKg": 4,
+    "weightKg": 2.6,
     "volumeL": 5,
     "tier": 3,
     "maxDurability": 300,

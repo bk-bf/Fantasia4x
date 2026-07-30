@@ -223,14 +223,14 @@ function clotsNeeded(severity: Injury['severity']): number {
 }
 /** Fraction of the base bleed still flowing given clot progress: 1.0 fresh → 0 once fully clotted OR
  *  dressed. A DRESSED wound (treatedAt set) stops bleeding immediately — caretaking is the reliable stop.
- *  A BLEED-WOUND (`bloodletting`, §3b — raking claws / feeding fangs) never tapers on its own: it flows at
- *  full rate until dressed. */
+ *  A BLEED-WOUND (`bloodletting`, §3b — raking claws / feeding fangs / a cleaver's ragged cut) needs one
+ *  EXTRA clot stage, and whether it can progress at all depends on who carries it: a pawn's never rolls
+ *  (dressing is the counterplay), a creature's rolls at a reduced chance — see `rollWoundClotting`. */
 function clotRemaining(
   w: Pick<Injury, 'severity' | 'clotProgress' | 'treatedAt' | 'bloodletting'>
 ): number {
   if (w.treatedAt != null) return 0;
-  if (w.bloodletting) return 1;
-  const need = clotsNeeded(w.severity);
+  const need = clotsNeeded(w.severity) + (w.bloodletting ? 1 : 0);
   return Math.max(0, (need - (w.clotProgress ?? 0)) / need);
 }
 /** Ticks between clot rolls (~3 in-game hours: TURNS_PER_DAY 300 / 24 × 3 × 60 tps = 2250). Deliberately
@@ -244,6 +244,10 @@ export const BASE_CLOT_CHANCE = 0.4;
  *  a fight reliably self-stabilises within ~an in-game hour instead of bleeding out from a scratch. */
 export const MOB_CLOT_ROLL_INTERVAL = 750;
 export const MOB_BASE_CLOT_CHANCE = 0.7;
+/** A creature's bloodletting wounds clot at HALF its normal chance (plus the extra stage) — strong
+ *  enough that one ragged cut is not a death sentence, weak enough that stacked bleeds still win. The
+ *  `blood_clotting` stat scales the base, so a high-vigour great beast shrugs off what kills a goblin. */
+export const MOB_BLOODLETTING_CLOT_FACTOR = 0.5;
 
 /**
  * Derive a wound's severity, bleed rate and pain from its accumulated damage on a part. Shared by damage
@@ -397,16 +401,28 @@ export function recomputeWoundInPlace(
  * natural stop" — sparse and uncertain, so a wounded entity still mostly needs a caretaker's dressing.
  * Mutates limbs in place; returns true if any wound's bleed changed (so the caller refreshes bleedRate).
  */
-export function rollWoundClotting(limbs: LimbState[], clotChance: number, turn: number): boolean {
+export function rollWoundClotting(
+  limbs: LimbState[],
+  clotChance: number,
+  turn: number,
+  // What fraction of `clotChance` a BLOODLETTING wound rolls at. 0 (the pawn path's default) keeps the
+  // §3b rule — a pawn's bleed-wound never closes on its own, dressing is the counterplay. Creatures
+  // pass MOB_BLOODLETTING_CLOT_FACTOR: they can't be dressed, so a body that couldn't clot a ragged cut
+  // would make every cleaver gash an automatic death sentence. Slower than a clean wound (reduced
+  // chance AND one extra stage, via clotsNeeded), so STACKED bleeds still outrun a body's clotting —
+  // one cut is survivable, a butchering isn't.
+  bloodlettingFactor = 0
+): boolean {
   let changed = false;
   for (const limb of limbs) {
     let limbChanged = false;
     for (const part of limb.parts ?? []) {
       for (const w of part.injuries) {
         if (w.bleeding <= 0 || w.treatedAt != null) continue; // already dry or dressed
-        if (w.bloodletting) continue; // §3b bleed-wound: never clots on its own — only dressing stops it
-        if ((w.clotProgress ?? 0) >= clotsNeeded(w.severity)) continue; // fully clotted
-        if (rng.random() < clotChance) {
+        const chance = w.bloodletting ? clotChance * bloodlettingFactor : clotChance;
+        if (chance <= 0) continue;
+        if ((w.clotProgress ?? 0) >= clotsNeeded(w.severity) + (w.bloodletting ? 1 : 0)) continue;
+        if (rng.random() < chance) {
           w.clotProgress = (w.clotProgress ?? 0) + 1;
           recomputeWoundInPlace(w, w.damage, turn); // re-derive bleed from the new clot stage
           limbChanged = true;

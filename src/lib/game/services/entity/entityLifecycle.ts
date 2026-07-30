@@ -33,7 +33,8 @@ import {
   healLimbsInPlace,
   rollWoundClotting,
   MOB_CLOT_ROLL_INTERVAL,
-  MOB_BASE_CLOT_CHANCE
+  MOB_BASE_CLOT_CHANCE,
+  MOB_BLOODLETTING_CLOT_FACTOR
 } from '../../core/Wounds';
 import { entityName, mobInLiveRegion, isThinkTick } from './entityHelpers';
 import {
@@ -157,7 +158,8 @@ export function stepHunger(state: GameState): GameState {
         ) * (inBubble ? 1 : tickScale / MOB_CLOT_ROLL_INTERVAL);
       // Clotting mutates limb objects in place → bump mob.limbs ref so the worker re-ships the
       // updated bleed/clot state to the body panel (ref-diff cold sync).
-      if (rollWoundClotting(limbs, clotChance, turn)) mob.limbs = limbs.slice();
+      if (rollWoundClotting(limbs, clotChance, turn, MOB_BLOODLETTING_CLOT_FACTOR))
+        mob.limbs = limbs.slice();
     }
 
     // ── Blood loss ──────────────────────────────────────────────────────────────────
