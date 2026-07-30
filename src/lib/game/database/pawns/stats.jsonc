@@ -209,12 +209,10 @@
         "id": "carry_weight",
         "category": "capacity",
         "primaryStat": "brawn",
-        // Computed in ItemService.getCarryCapacityBreakdown (body mass + gear), not the formula engine.
-        "carryLoadPerBrawn": 0.012,
-        "carryLoadMin": 0.05,
-        "carryLoadMax": 0.30,
-        "formula": "bodyWeight × clamp(BRAWN × carryLoadPerBrawn, carryLoadMin, carryLoadMax)",
-        "description": "maximum carry weight in kg, a brawn-scaled fraction of body mass (brawn 10 ≈ 12%)"
+        // Computed in ItemService.getCarryCapacityBreakdown, not the formula engine. Brawn-led,
+        // frame-modulated: strength sets the budget, body size only nudges it.
+        "formula": "(3 + BRAWN × 0.39) × frameFactor",
+        "description": "maximum carry weight in kg, set by raw strength; a bigger frame carries a little more, but mass can never stand in for muscle"
     },
     {
         "id"              : "carry_volume",

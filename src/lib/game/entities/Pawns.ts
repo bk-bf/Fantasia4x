@@ -894,7 +894,11 @@ function rollGrowthProfile(
   const maxStats = {} as EntityStats;
   for (const stat of STAT_KEYS) {
     const isFav = favStats.includes(stat);
-    const base = isFav ? rng.int(85, 100) : rng.int(62, 82);
+    // Growth ceiling: 60 is the ABSOLUTE cap and only a talent reaches it. Ordinary stats top out in
+    // the 40s–low 50s. Re-banded down from 62–82 / 85–100: the old bands made brawn 80+ routine, which
+    // trivialised every carry/requirement gate (steel plate wearable at spawn) and pushed the top end
+    // into god-like territory — a legend at 60 is superhuman enough.
+    const base = isFav ? rng.int(50, 60) : rng.int(40, 55);
     maxStats[stat] = Math.max(base, finalStats[stat] + 15);
   }
   return { maxStats, favStats };

@@ -211,11 +211,12 @@ const DETERIORATION_RATE_BY_CATEGORY: Record<string, number> = {
 };
 
 /** Carry budget: `(CARRY_BASE_KG + brawn × CARRY_KG_PER_BRAWN) × frameFactor`.
- *  Calibrated against the kits a build actually fields (light 15.3kg with a shield, medium 23.9kg,
- *  heavy 33.9kg): a brawn-10 agility build affords light, a brawn-20 pawn medium, and plate needs
- *  the high-brawn body it is supposed to need. */
+ *  Calibrated against the GROWTH ladder, not the spawn band (growth ceiling 60, spawn cap 20): the
+ *  steel heavy set (16.6kg) sits at ~90% of capacity at brawn 40 — an earned colony milestone — while
+ *  a spawn pawn manages light armour only and medium arrives around brawn 30. The old 0.85/brawn made
+ *  the same set wearable at brawn 18, i.e. at spawn, which erased the entire armour progression. */
 const CARRY_BASE_KG = 3;
-const CARRY_KG_PER_BRAWN = 0.85;
+const CARRY_KG_PER_BRAWN = 0.39;
 /** The frame only MODULATES the brawn budget — a bigger body carries a little more, but mass can
  *  never stand in for strength (which is what the old bodyWeight-multiplied formula allowed). */
 const CARRY_FRAME_REF_KG = 80;
