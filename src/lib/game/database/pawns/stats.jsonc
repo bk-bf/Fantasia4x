@@ -211,7 +211,7 @@
         "primaryStat": "brawn",
         // Computed in ItemService.getCarryCapacityBreakdown, not the formula engine. Brawn-led,
         // frame-modulated: strength sets the budget, body size only nudges it.
-        "formula": "(3 + BRAWN × 0.39) × frameFactor",
+        "formula": "(11 + BRAWN × 0.19) × frameFactor",
         "description": "maximum carry weight in kg, set by raw strength; a bigger frame carries a little more, but mass can never stand in for muscle"
     },
     {

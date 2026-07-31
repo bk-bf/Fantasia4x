@@ -211,12 +211,15 @@ const DETERIORATION_RATE_BY_CATEGORY: Record<string, number> = {
 };
 
 /** Carry budget: `(CARRY_BASE_KG + brawn × CARRY_KG_PER_BRAWN) × frameFactor`.
- *  Calibrated against the GROWTH ladder, not the spawn band (growth ceiling 60, spawn cap 20): the
- *  steel heavy set (16.6kg) sits at ~90% of capacity at brawn 40 — an earned colony milestone — while
- *  a spawn pawn manages light armour only and medium arrives around brawn 30. The old 0.85/brawn made
- *  the same set wearable at brawn 18, i.e. at spawn, which erased the entire armour progression. */
-const CARRY_BASE_KG = 3;
-const CARRY_KG_PER_BRAWN = 0.39;
+ *  HIGH BASE, GENTLE SLOPE — calibrated against the growth ladder (ceiling 60, spawn cap 20) at both
+ *  ends at once: a median SPAWN pawn (brawn 12) comfortably fields the light set plus a weapon
+ *  (~11.6kg budget), while the steel heavy set (16.6kg) stays an EARNED milestone at ~90% of capacity
+ *  at brawn 40, with medium arriving around brawn 30. A steep slope from a low base (tried first)
+ *  gated steel correctly but starved the floor — spawn pawns were encumbered by cloth alone; the old
+ *  0.85/brawn slope let a spawn pawn wear plate. Strength decides the CLASS you wear; it no longer
+ *  decides whether you can dress at all. */
+const CARRY_BASE_KG = 11;
+const CARRY_KG_PER_BRAWN = 0.19;
 /** The frame only MODULATES the brawn budget — a bigger body carries a little more, but mass can
  *  never stand in for strength (which is what the old bodyWeight-multiplied formula allowed). */
 const CARRY_FRAME_REF_KG = 80;

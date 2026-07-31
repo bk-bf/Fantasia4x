@@ -82,7 +82,11 @@ describe('CARRY CAPACITY — does the curve gate heavy armour on brawn?', () => 
       `             brawn still pays above 25: cap(25) ${capAt(25).toFixed(1)}kg → cap(60) ${capAt(60).toFixed(1)}kg ` +
         `(was flat at the 0.30 clamp)`
     );
-    expect(capAt(60), 'brawn must keep paying past the old clamp').toBeGreaterThan(capAt(25) * 1.5);
+    // The magnitude is deliberately GENTLE (high base, 0.19/brawn slope): strength decides which
+    // armour CLASS you wear, not whether you can dress at all, and a brawn-60 legend is superhuman
+    // rather than a beast of burden. What must never come back is the old clamp where brawn bought
+    // nothing at all past 25 — so pin a real, meaningful gain, not the old steep one.
+    expect(capAt(60), 'brawn must keep paying past the old clamp').toBeGreaterThan(capAt(25) * 1.25);
 
     rows.push('');
     rows.push('[KIT AFFORDABILITY] share of the population in each encumbrance band');
