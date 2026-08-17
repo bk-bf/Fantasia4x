@@ -566,8 +566,61 @@ primitive full-body/leg/warmth clothing, no cloth base layer.** Proposed additio
 - [ ] **`woven_grass_cloak`** / **`rush_cape`** (t0, foraged grass+cordage) — cheap warmth/rain, scout-light.
 - [ ] **`bast_fiber_tunic`** / **`nettle_shift`** (t0–1, plant fiber) — the missing CLOTH base layer before linen.
 - [ ] **`fur_wrap`** / **`hide_leggings`** / **`hide_cap`** (t0, raw pelt/hide) — cold-region body/leg/head before boiled leather.
-- [ ] **`bark_sandals`** / **`hide_moccasins`** (t0) — the missing primitive FOOT slot (boots start at t1 tallow_boots).
-- [ ] slot-coverage pass: ensure head/body/legs/feet/hands each have a t0 AND t1 option per build lean (light vs warm).
+- [x] ~~**`bark_sandals`** / **`hide_moccasins`** (t0)~~ — the missing primitive FOOT slot, closed 2026-08-05 as
+      `hide_footwraps` (t0 boots) in the armour expansion below.
+- [x] slot-coverage pass — DONE 2026-08-05 (armour expansion below). Every age now has a craftable piece for all
+      eight protectable regions, guarded by `armourCoverage.test.ts` so a new age cannot ship with a gap. The
+      *warmth* lean of this line (grass cloak, fur wrap, bast/nettle cloth base layer) is still open above.
+
+### 2b. Armour expansion — coverage holes closed — ✅ DONE (2026-08-05, headless-verified)
+The armour audit's findings, implemented. **The severe one was not a gap in the piece list at all:** all fifteen
+limb pieces (pauldrons / bracers / greaves, every age from rawhide to steel) shipped as `items.jsonc` entries with
+**no recipe**, so shoulders, arms and legs were unprotectable in real play. The combat probes never caught it
+because they force-equip by id.
+
+- [x] **15 orphaned limb recipes added** — rawhide + boiled-leather at `makers_bench`, cast bronze at
+      `casting_hearth`, iron and steel at the `anvil`. Headless: `HeadlessSession`, flat map, 6 pawns —
+      `rawhide_arm_wraps` 0→1 in 400 turns (deer_hide 20→19) and equipped into `bracers`; the full iron line
+      `iron_pauldrons`/`iron_bracers`/`iron_greaves` 0→1 each by turn 1600 (iron_bar 30→25).
+- [x] **27 new pieces**, filling every remaining per-age gap: primitive hands/feet/neck (`rawhide_mitts`,
+      `hide_footwraps`, `rawhide_collar`); a copper-age scale line (5 pieces, `stone_forge`/`copper_smelting` —
+      headless `copper_scale_bracers` 0→1 by turn 800, copper_bar 20→19); the first mage torso at bronze
+      (`apprentice_robe`) and an archer's `shooting_glove`; an iron-age `quilted_jack`; the steel arming layer
+      (`arming_cap`, `arming_doublet`) and a munitions half-plate medium line (`open_burgonet`,
+      `munition_breastplate`, `splint_` spaulders/bracers/greaves); and the previously EMPTY runed age
+      (`rune_graven_` plate ×5, `rune_stitched_` lamellar/coif, `rune_woven_` robe/hood).
+- [x] **Heavy keeps its holes on purpose.** No steel or runed gorget, gauntlets or sabatons: a precision weapon
+      beating a knight through the gaps is live counterplay (the audit probe measured twin daggers putting 22% of
+      hits but **58% of damage** through a steel harness's bare spots vs a longsword's 22%). Full coverage in
+      plate is reachable only by mixing the iron gorget/gauntlets/boots back in, which costs 21.4kg against a
+      brawn-40 budget of 18.6kg.
+- [x] **No heavy class before iron** — `cast_bronze_skullcap` (def 12→9, 1.8→1.4kg) and the three cast-bronze limb
+      pieces reclassed heavy→medium; the iron limb trio reclassed heavy→medium and re-weighed down
+      (2.8/2.2/3.2 → 2.2/1.7/2.6kg), which is also the truer label for splint riveted to leather. Steel is now
+      the first heavy limb line.
+- [x] **Two data bugs fixed.** `stargazer_circlet` carried `equipmentSlot: "head"`, which is not an
+      `EquipmentSlot`, so it resolved to a key the mitigation walk never visits and could never be worn.
+      `archers_bracers` had `slot: "hands"` against `equipmentSlot: "gloves"` (the two-spelling wart) while being
+      named and described as a vambrace; it now occupies `bracers`, and `shooting_glove` takes over the hands slot
+      for the ranged kit.
+- [x] **Guardrails**: `armourCoverage.test.ts` (10 assertions — no recipe-less armour outside an explicit
+      loot allowlist, every `equipmentSlot` real, `slot`/`equipmentSlot` agree, every piece protects a body part,
+      all eight regions craftable at every age) and `armourChain.test.ts` (all 82 wearable pieces queue and
+      produce in a provisioned colony, plus the three headless pipelines above).
+- [x] Gates: `pnpm check` 0 errors; `test:related` on both data files 143 files / 1033 tests green;
+      `carryCapacityAudit` + `armourStyleAudit` re-run under `RUN_AUDITS=1`, both pass.
+- [ ] **FOLLOW-UP — medium armour has no stiffness identity at iron** (track only). `movementPenalty` is the
+      channel that makes light worth wearing, and at iron the medium/heavy gap is 0.03 vs 0.05 — nearly nothing,
+      so heavy is simply better per kg there. It reads correctly at steel (0.03/0.04 medium vs 0.10/0.05 heavy)
+      because that is where the channel was tuned. Deliberately NOT touched here: re-banding iron's stiffness
+      moves numbers the 2026-07-28 encumbrance pass measured, so it wants its own sweep.
+- [ ] **FOLLOW-UP — medium has no neck/hands/feet line at any age** (track only). A medium build covers those by
+      mixing (light rawhide extremities at 1.6kg total, or the iron heavy ones at 4.8kg), which is a real choice
+      rather than a gap — but if medium should be self-sufficient it needs a mail collar / mittens / chausses line.
+- [ ] **FOLLOW-UP — `slashResistance` / `pierceResistance` / `crushResistance` are dead fields** (track only).
+      Authored on several pieces and rendered in `ItemStatTooltip`, but `mitigationAt` reads only `defense`, so
+      they change nothing. New pieces deliberately do NOT lean on them for differentiation. Either wire them into
+      the mitigation walk or strip them; showing a player a stat that does nothing is the current state.
 
 ### 3. Tailoring category + realistic per-animal leather → **full spec: [SOFT-GOODS-CRAFTING.md](../archive/SOFT-GOODS-CRAFTING-2026-07-26.md)** — ✅ DONE (2026-07-25)
 - [x] Built end-to-end (full suite 1148, headless-verified): job registry unified (crafts nest like building);
