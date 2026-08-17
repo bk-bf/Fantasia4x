@@ -3407,7 +3407,8 @@
     "inputs"          : {"prime_cave_bear_hide": 2, "iron_bar": 2, "sinew": 6},
     "outputs"         : {"cave_bear_plate": 1},
     "workAmount"      : 60,
-    "toolTierRequired": 2
+    "toolTierRequired": 2,
+    "researchRequired" : "iron_working"
   },
   {
     "id"              : "make_fang_reaver",

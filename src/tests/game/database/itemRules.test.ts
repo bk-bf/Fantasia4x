@@ -10,8 +10,10 @@ import type { Item } from '$lib/game/core/types';
 // R1 every craftable equipment item declares a `tier`. A missing one is not "unset" — `gearDb.ageOf`
 //    falls back to `tier ?? 0`, so an untiered late-game piece files itself into the STONE AGE. That
 //    is how `cave_bear_plate`, which demands a tier-3 Cave Bear's hide, came to read as Primitive.
-// R2 an item's tier is >= the tier of the hardest creature its recipe DEMANDS BY NAME. Otherwise the
-//    player is shown a piece whose materials are a hundred turns out of reach.
+// R2 an item's tier is >= the BAND of the hardest creature its recipe DEMANDS BY NAME. Otherwise the
+//    player is shown a piece whose materials are a hundred turns out of reach. Creature `tier` runs
+//    0..5 and item `tier` runs 0..4 — one band wider — so the two go through `bandOf` instead of being
+//    compared directly, which is what made the first pass of this rule over-report.
 // R3 a species noun in the id means the recipe requires that species' material, and vice versa.
 //
 // A `category:`/dynamic slot gates NOTHING (it takes the cheapest member of the pool), and a material
@@ -133,6 +135,10 @@ const EQUIPMENT = ITEMS.filter(
 );
 const CRAFTABLE = EQUIPMENT.filter((i) => recipesByOutput.has(i.id));
 
+/** A creature's tier expressed on the ITEM tier scale. Creature tiers run 0..5 (a fawn at 1, a Great
+ *  Bear at 5); item tiers run 0..4 (primitive..runed), so the beast band sits one step lower. */
+const bandOf = (creatureTier: number) => Math.max(0, creatureTier - 1);
+
 const hardestCreature = (id: string): { p: Prov; via: string | null } => {
   const rs = recipesByOutput.get(id);
   if (!rs) return { p: NONE, via: null };
@@ -151,48 +157,14 @@ const hardestCreature = (id: string): { p: Prov; via: string | null } => {
 // ── Pre-existing debt, named rather than silently tolerated. Each entry is a decision waiting on the
 //    designer (re-tier it, rename it, or accept it as Boss-tier), NOT an approved exemption. This list
 //    must only ever SHRINK — a new item may not join it.
-const R1_DEBT = new Set([
-  // Jewellery and containers: the missing tier is a display wart, no material lie behind it.
-  'woven_basket',
-  'hide_tool_roll',
-  'hide_scrip',
-  'linen_snapsack',
-  'wicker_frame',
-  'ruby_ring',
-  'ruby_amulet',
-  'sapphire_ring',
-  'sapphire_amulet',
-  'emerald_ring',
-  'emerald_amulet',
-  'topaz_ring',
-  'topaz_amulet',
-  'amethyst_ring',
-  'amethyst_amulet',
-  'citrine_ring',
-  'citrine_amulet',
-  'moonstone_ring',
-  'moonstone_amulet',
-  'scholars_circlet',
-  'champions_crown',
-  'sovereign_crown',
-  'wardens_circlet',
-  'gold_torc',
-  'champions_torc',
-  'wayfarers_pendant',
-  'sages_pendant',
-  // These four DO carry a material lie: untiered ⇒ read as Primitive, while demanding a tier 3–5 beast.
-  'cave_bear_plate',
-  'direwolf_warcloak',
-  'stargazer_circlet',
-  'fang_charm'
+const R1_DEBT = new Set<string>([
+  // Empty. Every craftable equipment item now declares a tier; the 31 that did not were all filing
+  // themselves into the Primitive age off the `tier ?? 0` fallback.
 ]);
 const R2_DEBT = new Set([
-  'cave_bear_plate',
-  'direwolf_warcloak',
-  'stargazer_circlet',
-  'fang_charm', // untiered, see R1_DEBT
-  'fang_reaver', // tier 4, demands a tier-5 Great Wolf's fang
-  'great_bone_maul' // tier 2, demands a tier-5 Great Bear's bone
+  // A tier-2 maul demanding a Great Bear's bone (creature tier 5 ⇒ item band 4). Genuinely mis-tiered:
+  // either it belongs at tier 4, or it should be built from ordinary large bones.
+  'great_bone_maul'
 ]);
 const R3_DEBT = new Set([
   'beast_leather_plate', // "beast leather" but the recipe takes any leather
@@ -223,10 +195,13 @@ describe('ITEM-RULES R2 — tier is not below the creature the recipe demands', 
   it('no new item is gated behind a creature above its own tier', () => {
     const bad = CRAFTABLE.filter((i) => {
       if (R2_DEBT.has(i.id)) return false;
-      return hardestCreature(i.id).p.tier > (i.tier ?? 0);
+      return bandOf(hardestCreature(i.id).p.tier) > (i.tier ?? 0);
     }).map((i) => {
       const { p, via } = hardestCreature(i.id);
-      return `${i.id} (tier ${i.tier ?? 'MISSING'}) needs ${via} from ${p.name} (tier ${p.tier})`;
+      return (
+        `${i.id} (tier ${i.tier ?? 'MISSING'}) needs ${via} from ${p.name} ` +
+        `(creature tier ${p.tier} ⇒ item band ${bandOf(p.tier)})`
+      );
     });
     expect(bad, bad.join('; ')).toEqual([]);
   });
@@ -234,7 +209,7 @@ describe('ITEM-RULES R2 — tier is not below the creature the recipe demands', 
   it('the debt list has no stale entries', () => {
     const fixed = [...R2_DEBT].filter((id) => {
       const item = ITEMS.find((x) => x.id === id);
-      return item && hardestCreature(id).p.tier <= (item.tier ?? -1);
+      return item && bandOf(hardestCreature(id).p.tier) <= (item.tier ?? -1);
     });
     expect(fixed, `fixed — drop from R2_DEBT: ${fixed.join(', ')}`).toEqual([]);
   });

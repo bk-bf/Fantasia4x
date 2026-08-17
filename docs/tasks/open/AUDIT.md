@@ -617,6 +617,21 @@ because they force-equip by id.
 - [ ] **FOLLOW-UP — medium has no neck/hands/feet line at any age** (track only). A medium build covers those by
       mixing (light rawhide extremities at 1.6kg total, or the iron heavy ones at 4.8kg), which is a real choice
       rather than a gap — but if medium should be self-sufficient it needs a mail collar / mittens / chausses line.
+- [x] **Tier gates closed (2026-08-05).** 31 craftable equipment items carried NO `tier` field, so
+      `gearDb.ageOf`'s `tier ?? 0` fallback filed them under **Primitive** — that is the whole reason a
+      Cave Bear's plate sat in the stone age, not a design decision. All 31 now declare a tier, and the
+      ones whose RECIPE was already gated now carry the same `researchRequired` on the item (ageOf reads
+      the item's field, not the recipe's). Landing places: `cave_bear_plate` → **Iron** (tier 2 +
+      `iron_working`, and its recipe now requires `iron_working` too, so the gate is real rather than a
+      label); `direwolf_warcloak` → Iron; `stargazer_circlet`, `fang_charm` and the 22 attuned
+      rings/amulets/crowns/torcs/pendants → **Runed** (tier 4 + `attunement`); the five carry containers
+      → Primitive, which is where they belonged, now stated instead of inferred.
+- [x] **R2 was mis-scaled and over-reported.** Creature `tier` runs 0–5, item `tier` runs 0–4, so
+      comparing them directly flagged correctly-tiered gear. The rule now maps through
+      `bandOf(creatureTier) = creatureTier - 1`. That clears `fang_reaver` (tier 4, Great Wolf tier 5 ⇒
+      band 4) as a false positive and leaves one real violation: **`great_bone_maul`** at tier 2 while
+      demanding a Great Bear's bone (band 4) — either re-tier it to 4 or build it from ordinary large
+      bones. R1 debt is now empty.
 - [ ] **FOLLOW-UP — `slashResistance` / `pierceResistance` / `crushResistance` are dead fields** (track only).
       Authored on several pieces and rendered in `ItemStatTooltip`, but `mitigationAt` reads only `defense`, so
       they change nothing. New pieces deliberately do NOT lean on them for differentiation. Either wire them into

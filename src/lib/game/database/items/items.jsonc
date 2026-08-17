@@ -2869,6 +2869,7 @@
     "amount": 0,
     "weightKg": 0.5,
     "volumeL": 5,
+    "tier"   : 0,
     "inventoryBonus": {"weightKg": 8.0, "volumeL": 16.0},
     "armorProperties": {"defense": 0, "equipmentSlot": "mainHand"},
     "toolTierRequired": 0
@@ -3798,6 +3799,7 @@
     "amount"           : 0,
     "weightKg"         : 4,
     "volumeL"          : 5,
+    "tier"             : 2,
     "maxDurability"    : 160,
     "deteriorationRate": 0.006,
     "armorProperties"  : {
@@ -3825,6 +3827,8 @@
     "amount"           : 0,
     "weightKg"         : 0.4,
     "volumeL"          : 0.3,
+    "tier"             : 4,
+    "researchRequired" : "attunement",
     "maxDurability"    : 120,
     "deteriorationRate": 0.004,
     "armorProperties"  : {
@@ -4053,6 +4057,8 @@
     "amount"           : 0,
     "weightKg"         : 18,
     "volumeL"          : 8,
+    "tier"             : 2,
+    "researchRequired" : "iron_working",
     "maxDurability"    : 240,
     "deteriorationRate": 0.005,
     "armorProperties"  : {
@@ -6461,6 +6467,7 @@
     "amount": 0,
     "weightKg": 0.3,
     "volumeL": 0.5,
+    "tier"   : 0,
     "inventoryBonus": {"weightKg": 5.0, "volumeL": 8.0},
     "armorProperties": {"defense": 0, "equipmentSlot": "belt"}
   },
@@ -6477,6 +6484,7 @@
     "amount": 0,
     "weightKg": 0.5,
     "volumeL": 0.8,
+    "tier"   : 0,
     "inventoryBonus": {"weightKg": 8.0, "volumeL": 10.0},
     "armorProperties": {"defense": 0, "equipmentSlot": "belt"}
   },
@@ -6493,6 +6501,7 @@
     "amount": 0,
     "weightKg": 1.2,
     "volumeL": 2.0,
+    "tier"   : 1,
     "inventoryBonus": {"weightKg": 20.0, "volumeL": 25.0},
     "armorProperties": {"defense": 0, "equipmentSlot": "back2"}
   },
@@ -6509,6 +6518,7 @@
     "amount"           : 0,
     "weightKg"         : 0.8,
     "volumeL"          : 1.5,
+    "tier"             : 0,
     "inventoryBonus"   : {"weightKg": 12.0, "volumeL": 30.0},
     "armorProperties"  : {"defense": 0, "equipmentSlot": "back2"}
   },
@@ -13144,6 +13154,8 @@
     "amount"           : 0,
     "weightKg"         : 0.1,
     "volumeL"          : 0.05,
+    "tier"             : 4,
+    "researchRequired" : "attunement",
     "maxDurability"    : 200,
     "deteriorationRate": 0.002
   },
@@ -13160,6 +13172,8 @@
     "amount": 0,
     "weightKg": 0.15,
     "volumeL": 0.08,
+    "tier"   : 4,
+    "researchRequired" : "attunement",
     "maxDurability": 200,
     "deteriorationRate": 0.002
   },
@@ -13232,6 +13246,8 @@
     "amount"           : 0,
     "weightKg"         : 0.1,
     "volumeL"          : 0.05,
+    "tier"             : 4,
+    "researchRequired" : "attunement",
     "maxDurability"    : 200,
     "deteriorationRate": 0.002
   },
@@ -13248,6 +13264,8 @@
     "amount"           : 0,
     "weightKg"         : 0.15,
     "volumeL"          : 0.08,
+    "tier"             : 4,
+    "researchRequired" : "attunement",
     "maxDurability"    : 200,
     "deteriorationRate": 0.002
   },
@@ -13320,6 +13338,8 @@
     "amount"           : 0,
     "weightKg"         : 0.1,
     "volumeL"          : 0.05,
+    "tier"             : 4,
+    "researchRequired" : "attunement",
     "maxDurability"    : 200,
     "deteriorationRate": 0.002
   },
@@ -13336,6 +13356,8 @@
     "amount"           : 0,
     "weightKg"         : 0.15,
     "volumeL"          : 0.08,
+    "tier"             : 4,
+    "researchRequired" : "attunement",
     "maxDurability"    : 200,
     "deteriorationRate": 0.002
   },
@@ -13408,6 +13430,8 @@
     "amount"           : 0,
     "weightKg"         : 0.1,
     "volumeL"          : 0.05,
+    "tier"             : 4,
+    "researchRequired" : "attunement",
     "maxDurability"    : 200,
     "deteriorationRate": 0.002
   },
@@ -13424,6 +13448,8 @@
     "amount"           : 0,
     "weightKg"         : 0.15,
     "volumeL"          : 0.08,
+    "tier"             : 4,
+    "researchRequired" : "attunement",
     "maxDurability"    : 200,
     "deteriorationRate": 0.002
   },
@@ -13496,6 +13522,8 @@
     "amount"           : 0,
     "weightKg"         : 0.1,
     "volumeL"          : 0.05,
+    "tier"             : 4,
+    "researchRequired" : "attunement",
     "maxDurability"    : 200,
     "deteriorationRate": 0.002
   },
@@ -13512,6 +13540,8 @@
     "amount"           : 0,
     "weightKg"         : 0.15,
     "volumeL"          : 0.08,
+    "tier"             : 4,
+    "researchRequired" : "attunement",
     "maxDurability"    : 200,
     "deteriorationRate": 0.002
   },
@@ -13584,6 +13614,8 @@
     "amount"           : 0,
     "weightKg"         : 0.1,
     "volumeL"          : 0.05,
+    "tier"             : 4,
+    "researchRequired" : "attunement",
     "maxDurability"    : 200,
     "deteriorationRate": 0.002
   },
@@ -13600,6 +13632,8 @@
     "amount"           : 0,
     "weightKg"         : 0.15,
     "volumeL"          : 0.08,
+    "tier"             : 4,
+    "researchRequired" : "attunement",
     "maxDurability"    : 200,
     "deteriorationRate": 0.002
   },
@@ -13672,6 +13706,8 @@
     "amount"           : 0,
     "weightKg"         : 0.1,
     "volumeL"          : 0.05,
+    "tier"             : 4,
+    "researchRequired" : "attunement",
     "maxDurability"    : 200,
     "deteriorationRate": 0.002
   },
@@ -13688,6 +13724,8 @@
     "amount"           : 0,
     "weightKg"         : 0.15,
     "volumeL"          : 0.08,
+    "tier"             : 4,
+    "researchRequired" : "attunement",
     "maxDurability"    : 200,
     "deteriorationRate": 0.002
   },
@@ -13719,6 +13757,8 @@
     "amount": 0,
     "weightKg": 0.3,
     "volumeL": 0.2,
+    "tier"   : 4,
+    "researchRequired" : "attunement",
     "maxDurability": 200,
     "deteriorationRate": 0.002
   },
@@ -13741,6 +13781,8 @@
     "amount": 0,
     "weightKg": 0.5,
     "volumeL": 0.3,
+    "tier"   : 4,
+    "researchRequired" : "attunement",
     "maxDurability": 220,
     "deteriorationRate": 0.002
   },
@@ -13763,6 +13805,8 @@
     "amount": 0,
     "weightKg": 0.6,
     "volumeL": 0.35,
+    "tier"   : 4,
+    "researchRequired" : "attunement",
     "maxDurability": 220,
     "deteriorationRate": 0.002
   },
@@ -13785,6 +13829,8 @@
     "amount": 0,
     "weightKg": 0.4,
     "volumeL": 0.3,
+    "tier"   : 4,
+    "researchRequired" : "attunement",
     "maxDurability": 220,
     "deteriorationRate": 0.002
   },
@@ -13802,6 +13848,8 @@
     "amount": 0,
     "weightKg": 0.4,
     "volumeL": 0.15,
+    "tier"   : 4,
+    "researchRequired" : "attunement",
     "maxDurability": 220,
     "deteriorationRate": 0.002
   },
@@ -13818,6 +13866,8 @@
     "amount": 0,
     "weightKg": 0.3,
     "volumeL": 0.12,
+    "tier"   : 4,
+    "researchRequired" : "attunement",
     "maxDurability": 200,
     "deteriorationRate": 0.002
   },
@@ -13834,6 +13884,8 @@
     "amount": 0,
     "weightKg": 0.2,
     "volumeL": 0.1,
+    "tier"   : 4,
+    "researchRequired" : "attunement",
     "maxDurability": 200,
     "deteriorationRate": 0.002
   },
@@ -13850,6 +13902,8 @@
     "amount": 0,
     "weightKg": 0.25,
     "volumeL": 0.12,
+    "tier"   : 4,
+    "researchRequired" : "attunement",
     "maxDurability": 200,
     "deteriorationRate": 0.002
   },
@@ -16790,6 +16844,7 @@
       "amount": 0,
       "weightKg": 0.4,
       "volumeL": 0.2,
+      "tier"   : 4,
       "maxDurability": 220,
       "deteriorationRate": 0.002
     },

@@ -12,7 +12,7 @@ enforced by `src/tests/game/database/itemRules.test.ts`.
 before any alternative, flavoured or creature-derived version of the same slot is authored.
 
 - A **generic** item is named for its material and pattern, and its recipe asks for a material
-  *category*: Steel Plate Cuirass, Iron Pauldrons, Copper Scale Shirt. Any colony that reached the
+  *category*: Steel Plate Cuirass, Splint Bracers, Copper Scale Shirt. Any colony that reached the
   material can build it.
 - A **thematic** item is named for a creature or a legend, and its recipe demands that specific
   creature's material: Cave-Bear Plate, Direwolf Warcloak.
@@ -76,15 +76,21 @@ tier's cell, because the player cannot choose to go get it.
 
 ## Gate 2 — is it reachable at the tier it claims?
 
-This is the gate `cave_bear_plate` fails, and the one that produces the worst kind of item: a piece
-the player can see, whose materials they cannot get for another hundred turns.
+The gate that produces the worst kind of item: a piece the player can see in the tables, whose
+materials they cannot get for another hundred turns. `cave_bear_plate` failed it for a long time by
+carrying no `tier` at all, which put a tier-3 bear's hide in the stone-age column.
 
 - [ ] The item declares an explicit **`tier`**. A missing `tier` is not "unset", it reads as **0**
       everywhere (`gearDb`'s `ageOf` falls back to `tier ?? 0` ⇒ *Primitive*), so an untiered
-      late-game piece silently files itself into the stone age.
-- [ ] **Its tier is at least the tier of the hardest creature its recipe names.** Requiring
-      `prime_cave_bear_hide` means the item cannot be below the Cave Bear's own tier (3). A
-      `category:leather` or dynamic slot does **not** count here: it accepts the cheapest animal in
+      late-game piece silently files itself into the stone age. This is the single most common way an
+      item ends up in the wrong section, and it is invisible: nothing errors, the piece just appears
+      among the flint knives.
+- [ ] **`researchRequired` is on the ITEM, not only on its recipe.** `ageOf` reads the item's field, so
+      a recipe gated behind `attunement` whose item says nothing still displays as Primitive. Set both.
+- [ ] **Its tier is at least the BAND of the hardest creature its recipe names.** Creature `tier` runs
+      0–5, item `tier` runs 0–4, so the beast band is `creatureTier - 1`: requiring
+      `prime_cave_bear_hide` (Cave Bear, creature tier 3) puts the item at item tier **2 or above**.
+      A `category:leather` or dynamic slot does **not** count here: it accepts the cheapest animal in
       the pool, so it gates nothing.
 - [ ] Its tier is at least the era of the metal research the recipe requires
       (`copper_smelting` ⇒ 1, `bronze_working` ⇒ 1, `iron_working` ⇒ 2, `steel_making` ⇒ 3,
