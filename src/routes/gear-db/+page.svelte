@@ -54,12 +54,30 @@
       arr.push(g);
     }
   }
+  // Armour groups by SET (one-offs last, then tier/name); everything else stays tier-then-name. Six
+  // steel torso pieces in one cell are unreadable until the kit they belong to is what orders them.
   for (const arr of cellMap.values())
-    arr.sort((a, b) => a.tier - b.tier || a.name.localeCompare(b.name)); // by tier
+    arr.sort(
+      (a, b) =>
+        Number(!a.armorSet) - Number(!b.armorSet) ||
+        (a.armorSet ?? '').localeCompare(b.armorSet ?? '') ||
+        a.tier - b.tier ||
+        a.name.localeCompare(b.name)
+    );
   const cell = (build: string, gkind: 'weapon' | 'armor', age: string) =>
     cellMap.get(`${build}|${gkind}|${age}`) ?? [];
+
+  // What a build must have covered at an age. The three torso layers collapse to ONE requirement —
+  // a build needs *a* torso piece, not one per layer — and cloak/pack are carry, not protection, so
+  // neither counts as a coverage gap.
+  const COVERAGE_PARTS = ['head', 'torso', 'arms', 'hands', 'legs', 'feet'] as const;
+  const coverageOf = (p: string | null) => (p?.startsWith('torso') ? 'torso' : p);
   const missingParts = (items: GearRow[]) =>
-    BODY_PARTS.filter((p) => !items.some((it) => it.bodyPart === p));
+    COVERAGE_PARTS.filter((p) => !items.some((it) => coverageOf(it.bodyPart) === p));
+
+  /** First pill of each set in a cell, so the set name is printed once per run rather than per piece. */
+  const setHead = (items: GearRow[], i: number) =>
+    !!items[i].armorSet && (i === 0 || items[i - 1].armorSet !== items[i].armorSet);
 
   const byEvoRarity = (a: GearRow, b: GearRow) =>
     a.evoStage - b.evoStage || a.rarityRank - b.rarityRank || a.name.localeCompare(b.name);
@@ -756,11 +774,17 @@
       onmouseleave={hoverOut}
       >{g.name}{#if g.kind === 'trait'}{#if g.lineageNames}<i class="lin">{g.lineageNames}</i
           >{:else if g.evoStage}<i>s{g.evoStage}</i>{/if}{:else}<i>T{g.tier}</i
-        >{#if armour && g.bodyPart}<i class="slot">{g.bodyPart}</i>{/if}{/if}</button
+        >{#if armour && g.bodyPart}<i class="slot">{g.bodyPart}</i>{/if}{#if armour && !g.armorSet}<i
+            class="oneoff"
+            title="Belongs to no set — a boss drop, a ceremonial piece, or thematic beast gear. Cannot be what fills a tier's slot, because the player cannot choose to go get it."
+            >one-off</i
+          >{/if}{/if}</button
     >
   {/snippet}
   {#snippet gearCell(items: GearRow[], armour: boolean)}
-    {#each items as it (it.id)}{@render pill(it, armour)}{/each}
+    {#each items as it, i (it.id)}{#if armour && setHead(items, i)}<span class="setname"
+          >{it.setLabel}</span
+        >{/if}{@render pill(it, armour)}{/each}
     {#if armour}{#each missingParts(items) as p (p)}<span class="miss">– {p}</span>{/each}{/if}
     {#if !items.length && !armour}<span class="dot">·</span>{/if}
   {/snippet}
@@ -1417,6 +1441,26 @@
   .pill i.slot {
     color: #8fb0c8;
     background: #1e2731;
+    padding: 0 3px;
+    border-radius: 2px;
+    font-size: 9px;
+  }
+  .setname {
+    display: inline-block;
+    margin: 1px 3px 1px 6px;
+    padding: 0 4px;
+    font-size: 9px;
+    font-weight: 700;
+    color: #d8c48a;
+    background: #2b2415;
+    border: 1px solid #4a3d1f;
+    border-radius: 2px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .pill i.oneoff {
+    color: #b08a6a;
+    background: #2a1f18;
     padding: 0 3px;
     border-radius: 2px;
     font-size: 9px;
