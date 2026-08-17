@@ -1096,7 +1096,7 @@
         "description"  : "Heavy horns that punch through and knock foes flat, but nothing fits over the crown.",
         "flavorLine"   : "a heavy crown of horn sweeps back from their brow",
         "naturalWeapons": ["goring-horns"],
-        "blocksSlots"  : ["headOuter", "headBase"],
+        "blocksSlots"  : ["head"],
         "effects"      : {}
     },
     {
@@ -3035,7 +3035,7 @@
         "description": "A massive sweeping crown of horn, a goring charge that hurls foes flat. Nothing fits over it.",
         "flavorLine": "a crown of horn sweeps back the length of their skull",
         "naturalWeapons": ["great-horns"],
-        "blocksSlots": ["headOuter", "headBase"],
+        "blocksSlots": ["head"],
         "effects": {}
     },
     {
@@ -3468,10 +3468,9 @@
         "lineageExclusive": false,
         "awakens": ["keep-soaked", "the-angler", "submerge", "eat-aquatic", "endure-blows"],
         "name": "Gill Frills",
-        "description": "Feathery gill-frills at the throat, breathes water as easily as air, and a natural at wet work. Nothing closes around that neck.",
+        "description": "Feathery gill-frills at the throat, breathes water as easily as air, and a natural at wet work.",
         "flavorLine": "feathered slits at their throat flare when they wade in",
         "selfCondition": "gill_frilled",
-        "blocksSlots": ["gorget"],
         "effects": {}
     },
     {

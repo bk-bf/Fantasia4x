@@ -34,6 +34,8 @@ Core data (src/lib/game/core/)         ← types, static databases, GameStateMan
 
 **Data files are definitions only**: `src/lib/game/core/` contains static arrays/objects. Logic belongs in services.
 
+**Before creating any armour or weapon, walk `docs/game/ITEM-RULES.md`.** It is an ordered gate list, and each gate can kill the item outright. The two rules broken most often: an item's `tier` must be **at least** the tier of the hardest creature its recipe names (an untiered item reads as tier 0 = Primitive, which is how a Cave Bear's plate ended up in the stone age), and a piece named after a species must **require** that species' material. **Generic before thematic** — a tier's plain material-named line must be complete before any creature-derived alternative for the same slot is authored; Boss tier is the sole exception and must be thematic. `itemRules.test.ts` + `armourCoverage.test.ts` enforce the checkable part.
+
 **New core data needs a stable id**: entries added to `Items.ts`, `Buildings.ts`, `Research.ts`, or `Work.ts` need a stable `kebab-case` string `id`. Unlock conditions reference `researchId` strings from `Research.ts`; costs reference resource `id` strings from `types.ts`.
 
 **Never leak ids in the UI**: data ids — `Items/Buildings/Research` `kebab-case` ids, `limbmap.jsonc` limb/part keys (`front_right_leg`, `frontRightUpperLeg`, `tail`…), job types, etc. — are BACKEND REFERENCE ONLY. A panel/screen must render a human label, never the raw `id`. Use the def's `name`/`label` field; for anatomy route through `src/lib/utils/bodyLabels.ts` (`limbLabel`/`partLabel`) — the single chokepoint so a new body plan can't leak snake_case/camelCase ids into the health panels. Don't hand-roll `id.replace(...)` humanizers at the callsite (they drift — `.replace('_',' ')` only catches the first underscore).
@@ -220,6 +222,7 @@ Full architecture, design decisions, philosophy, and task tracking live in `docs
 | `docs/game/ARCHITECTURE.md`                | Layer map, service boundaries, turn order, data flow                       |
 | `docs/game/DESIGN.md`                      | Core gameplay loop, race/pawn mechanics, combat system design              |
 | `docs/game/DECISIONS.md`                   | ADRs — add one when a non-obvious design choice is locked in               |
+| `docs/game/ITEM-RULES.md`                  | Gate list every new armour/weapon must pass; generic-before-thematic rule   |
 | `docs/game/PHILOSOPHY.md`                  | Guiding development principles; edit only if a principle genuinely changes |
 | `docs/ui/ARCHITECTURE.md`                  | Component breakdown, screen structure, store usage patterns                |
 | `docs/ui/DESIGN.md`                        | Visual direction, retro terminal style, colour and typography rules        |

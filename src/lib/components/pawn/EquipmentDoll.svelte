@@ -25,21 +25,19 @@
 
   // Order here drives nothing visually — grid-area placement (CSS) lays out the doll.
   const SLOTS: { slot: EquipmentSlot; label: string }[] = [
-    { slot: 'headOuter', label: 'Helm' },
-    { slot: 'headBase', label: 'Head' },
-    { slot: 'gorget', label: 'Neck' },
+    { slot: 'head', label: 'Head' },
     { slot: 'mainHand', label: 'Main Hand' },
     { slot: 'bodyOuter', label: 'Outer' },
     { slot: 'offHand', label: 'Off Hand' },
     { slot: 'bodyMid', label: 'Mid' },
-    { slot: 'bodyBase', label: 'Base' },
-    { slot: 'pauldrons', label: 'Shoulders' },
+    { slot: 'bodyBase', label: 'Skin' },
     { slot: 'bracers', label: 'Arms' },
     { slot: 'greaves', label: 'Legs' },
     { slot: 'gloves', label: 'Hands' },
     { slot: 'belt', label: 'Belt' },
     { slot: 'boots', label: 'Feet' },
-    { slot: 'back', label: 'Back' },
+    { slot: 'back', label: 'Cloak' },
+    { slot: 'back2', label: 'Pack' },
     { slot: 'amulet', label: 'Amulet' },
     { slot: 'ring', label: 'Ring' },
     { slot: 'ring2', label: 'Ring' }
@@ -217,13 +215,13 @@
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     grid-template-areas:
-      'headOuter headBase  gorget'
-      'mainHand  bodyOuter offHand'
-      'mainHand  bodyMid   offHand'
-      'pauldrons bodyBase  bracers'
-      'gloves    greaves   belt'
-      'boots     back      amulet'
-      'ring      ring2     .';
+      '.        head      .'
+      'mainHand bodyOuter offHand'
+      'mainHand bodyMid   offHand'
+      'bracers  bodyBase  greaves'
+      'gloves   belt      boots'
+      'back     back2     amulet'
+      'ring     ring2     .';
     gap: 4px;
     padding: 8px;
   }

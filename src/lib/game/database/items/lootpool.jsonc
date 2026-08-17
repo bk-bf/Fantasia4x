@@ -16,9 +16,9 @@
 //     "slots": {
 //       "mainHand" : {"chance": 0.9, "pick": [{"id": "bone_knife", "w": 3}, {"id": "stone_spear", "w": 1}]},
 //       "bodyOuter": {"chance": 0.35, "pick": [{"id": "raw_hide_vest", "w": 1}]},
-//       "headOuter": {"chance": 0.15, "pick": [{"id": "padded_cap", "w": 1}]}
-//       // slot keys are real EquipmentSlot ids (mainHand/offHand/bodyBase/bodyMid/bodyOuter/headBase/
-//       // headOuter/gloves/boots/gorget/pauldrons/bracers/greaves/…); item ids reference items.jsonc.
+//       "head": {"chance": 0.15, "pick": [{"id": "padded_cap", "w": 1}]}
+//       // slot keys are real EquipmentSlot ids (mainHand/offHand/head/bodyBase/bodyMid/bodyOuter/
+//       // gloves/boots/bracers/greaves/back/back2/…); item ids reference items.jsonc.
 //     }
 //   }
 //
@@ -143,7 +143,7 @@
       "slots": {
         "mainHand":  {"chance": 0.95, "pick": [{"id": "bone_knife", "w": 2}, {"id": "stone_spear", "w": 3}, {"id": "flint_handaxe", "w": 2}]},
         "bodyBase":  {"chance": 0.5,  "pick": [{"id": "raw_hide_vest", "w": 2}, {"id": "wicker_vest", "w": 1}]},
-        "headBase":  {"chance": 0.25, "pick": [{"id": "padded_cap", "w": 1}]}
+        "head":      {"chance": 0.25, "pick": [{"id": "padded_cap", "w": 1}]}
       }
     },
     "guard_bronze": {
@@ -154,7 +154,7 @@
         "mainHand":  {"chance": 1.0,  "pick": [{"id": "leaf_blade_spear", "w": 3}, {"id": "bronze_punch_dagger", "w": 1}, {"id": "cast_bronze_hatchet", "w": 2}]},
         "offHand":   {"chance": 0.45, "pick": [{"id": "rawhide_round_shield", "w": 1}]},
         "bodyBase":  {"chance": 0.7,  "pick": [{"id": "linen_gambeson", "w": 1}]},
-        "headOuter": {"chance": 0.45, "pick": [{"id": "cast_bronze_skullcap", "w": 1}]},
+        "head":      {"chance": 0.45, "pick": [{"id": "cast_bronze_skullcap", "w": 1}]},
         "bracers":   {"chance": 0.3,  "pick": [{"id": "cast_bronze_bracers", "w": 1}]},
         "greaves":   {"chance": 0.3,  "pick": [{"id": "cast_bronze_greaves", "w": 1}]}
       }
@@ -168,7 +168,7 @@
         "offHand":   {"chance": 0.5,  "pick": [{"id": "iron_boss_shield", "w": 1}]},
         "bodyBase":  {"chance": 0.6,  "pick": [{"id": "linen_gambeson", "w": 1}]},
         "bodyMid":   {"chance": 0.75, "pick": [{"id": "mail_hauberk", "w": 1}]},
-        "headOuter": {"chance": 0.55, "pick": [{"id": "iron_nasal_helm", "w": 1}]},
+        "head":      {"chance": 0.55, "pick": [{"id": "iron_nasal_helm", "w": 1}]},
         "boots":     {"chance": 0.4,  "pick": [{"id": "iron_shod_boots", "w": 1}]}
       }
     },
@@ -180,10 +180,9 @@
         "mainHand":  {"chance": 1.0,  "pick": [{"id": "steel_longsword", "w": 3}, {"id": "steel_mace", "w": 2}, {"id": "steel_greatsword", "w": 1}]},
         "offHand":   {"chance": 0.55, "pick": [{"id": "iron_boss_shield", "w": 1}]},
         "bodyBase":  {"chance": 0.7,  "pick": [{"id": "linen_gambeson", "w": 1}]},
-        "headBase":  {"chance": 0.5,  "pick": [{"id": "mail_coif", "w": 1}]},
         "bodyMid":   {"chance": 0.6,  "pick": [{"id": "mail_hauberk", "w": 1}]},
         "bodyOuter": {"chance": 0.6,  "pick": [{"id": "brigandine_coat", "w": 2}, {"id": "plate_cuirass", "w": 1}]},
-        "headOuter": {"chance": 0.5,  "pick": [{"id": "great_helm", "w": 1}]},
+        "head":      {"chance": 0.65, "pick": [{"id": "great_helm", "w": 2}, {"id": "mail_coif", "w": 1}]},
         "boots":     {"chance": 0.5,  "pick": [{"id": "iron_shod_boots", "w": 1}]}
       }
     },
@@ -195,10 +194,9 @@
         "mainHand":  {"chance": 1.0,  "pick": [{"id": "steel_greatsword", "w": 2}, {"id": "steel_longsword", "w": 3}]},
         "offHand":   {"chance": 0.6,  "pick": [{"id": "iron_boss_shield", "w": 1}]},
         "bodyBase":  {"chance": 0.8,  "pick": [{"id": "linen_gambeson", "w": 2}, {"id": "regal_robes", "w": 1}]},
-        "headBase":  {"chance": 0.6,  "pick": [{"id": "mail_coif", "w": 1}]},
         "bodyMid":   {"chance": 0.7,  "pick": [{"id": "mail_hauberk", "w": 1}]},
         "bodyOuter": {"chance": 0.85, "pick": [{"id": "plate_cuirass", "w": 2}, {"id": "ceremonial_plate", "w": 1}]},
-        "headOuter": {"chance": 0.6,  "pick": [{"id": "great_helm", "w": 1}]},
+        "head":      {"chance": 0.75, "pick": [{"id": "great_helm", "w": 2}, {"id": "mail_coif", "w": 1}]},
         "boots":     {"chance": 0.6,  "pick": [{"id": "iron_shod_boots", "w": 1}]}
       }
     }

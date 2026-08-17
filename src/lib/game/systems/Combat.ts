@@ -2348,16 +2348,7 @@ class CombatServiceImpl implements CombatService {
   /** The worn-armour slot with the highest `defense` (the piece that takes a blow — mirrors
    *  partArmorReduction's best-of selection). Null if the entity wears no armour. Pawn OR geared mob. */
   private bestArmorSlot(entity: Pawn | Mob): string | null {
-    const slots = [
-      'bodyOuter',
-      'bodyMid',
-      'bodyBase',
-      'headOuter',
-      'headBase',
-      'gloves',
-      'boots',
-      'gorget'
-    ];
+    const slots = ['bodyOuter', 'bodyMid', 'bodyBase', 'head', 'gloves', 'boots'];
     const eq = entity.equipment as Record<string, ItemInstance | undefined> | undefined;
     if (!eq) return null;
     let best: string | null = null;

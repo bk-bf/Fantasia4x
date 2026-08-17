@@ -2535,21 +2535,6 @@
       }
     }
   },
-  {
-    "id"              : "make_iron_gorget",
-    "station"         : "anvil",
-    "inputs"          : {"iron_bar": 1},
-    "outputs"         : {"iron_gorget": 1},
-    "workAmount"      : 8,
-    "toolTierRequired": 2,
-    "researchRequired": "iron_working",
-    "dynamicRecipe"   : {
-      "lining": {
-        "acceptsCategory": "leather",
-        "quantity"       : 1
-      }
-    }
-  },
   // ═══════════════════════════════════════════════════════════════════════════
   // PRODUCTION-CHAIN-II §M — Lapidary Bench
   //   1) trade-gem cutting (normal crystal → cut gem)  — gate: arcane_lapidary
@@ -2813,10 +2798,10 @@
     "researchRequired": "attunement"
   },
   // ═══════════════════════════════════════════════════════════════════════════
-  // §M REGALIA — crowns/circlets (headOuter, vs helmets), torcs/pendants (amulet) & combo rings (ring).
+  // §M REGALIA — crowns/circlets (head slot, vs helmets), torcs/pendants (amulet) & combo rings (ring).
   // All set with ATTUNED gems at the lapidary; combos take two gems → two buff conditions.
   // ═══════════════════════════════════════════════════════════════════════════
-  // 4a) Crowns / circlets / diadems (headOuter — competes with a helmet)
+  // 4a) Crowns / circlets / diadems (head slot — competes with a helmet)
   {
     "id"              : "make_scholars_circlet",
     "station"         : "lapidary_bench",
@@ -5586,5 +5571,336 @@
     "outputs"         : {"flint_dagger": 1},
     "workAmount"      : 2,
     "toolTierRequired": 0
+  },
+  // ── Armour expansion recipes. The limb lines (pauldrons / bracers / greaves) shipped as item
+  //    definitions with no recipe at ANY age, so shoulders, arms and legs were unprotectable in
+  //    play even though the combat probes force-equipped them; those come first. Then the new
+  //    pieces that close the per-age coverage gaps. Ages gate on their own metal research and
+  //    station: stone_forge/copper_smelting, casting_hearth/bronze_working, anvil/iron_working,
+  //    anvil/steel_making, runecarver_bench/runic_inscription.
+  {
+    "id"              : "make_rawhide_arm_wraps",
+    "station"         : "makers_bench",
+    "inputs"          : {"cordage": 2},
+    "outputs"         : {"rawhide_arm_wraps": 1},
+    "workAmount"      : 3,
+    "toolTierRequired": 0,
+    "discipline"      : "leatherworking",
+    "dynamicRecipe"   : {"hide": {"acceptsCategory": "hide", "quantity": 1}}
+  },
+  {
+    "id"              : "make_rawhide_leg_wraps",
+    "station"         : "makers_bench",
+    "inputs"          : {"cordage": 2},
+    "outputs"         : {"rawhide_leg_wraps": 1},
+    "workAmount"      : 4,
+    "toolTierRequired": 0,
+    "discipline"      : "leatherworking",
+    "dynamicRecipe"   : {"hide": {"acceptsCategory": "hide", "quantity": 1}}
+  },
+  {
+    "id"              : "make_boiled_leather_bracers",
+    "station"         : "makers_bench",
+    "inputs"          : {"cordage": 1},
+    "outputs"         : {"boiled_leather_bracers": 1},
+    "workAmount"      : 5,
+    "toolTierRequired": 0,
+    "discipline"      : "leatherworking",
+    "dynamicRecipe"   : {"leather": {"acceptsCategory": "leather", "quantity": 1}}
+  },
+  {
+    "id"              : "make_boiled_leather_greaves",
+    "station"         : "makers_bench",
+    "inputs"          : {"cordage": 1},
+    "outputs"         : {"boiled_leather_greaves": 1},
+    "workAmount"      : 6,
+    "toolTierRequired": 0,
+    "discipline"      : "leatherworking",
+    "dynamicRecipe"   : {"leather": {"acceptsCategory": "leather", "quantity": 2}}
+  },
+  {
+    "id"              : "make_cast_bronze_bracers",
+    "station"         : "casting_hearth",
+    "inputs"          : {"bronze_bar": 1, "clay_mold": 1},
+    "outputs"         : {"cast_bronze_bracers": 1},
+    "workAmount"      : 7,
+    "toolTierRequired": 1,
+    "researchRequired": "bronze_working",
+    "dynamicRecipe"   : {"backing": {"acceptsCategory": "leather", "quantity": 1}}
+  },
+  {
+    "id"              : "make_cast_bronze_greaves",
+    "station"         : "casting_hearth",
+    "inputs"          : {"bronze_bar": 1, "clay_mold": 1},
+    "outputs"         : {"cast_bronze_greaves": 1},
+    "workAmount"      : 8,
+    "toolTierRequired": 1,
+    "researchRequired": "bronze_working",
+    "dynamicRecipe"   : {"backing": {"acceptsCategory": "leather", "quantity": 1}}
+  },
+  {
+    "id"              : "make_iron_bracers",
+    "station"         : "anvil",
+    "inputs"          : {"iron_bar": 1},
+    "outputs"         : {"iron_bracers": 1},
+    "workAmount"      : 8,
+    "toolTierRequired": 2,
+    "researchRequired": "iron_working",
+    "dynamicRecipe"   : {"backing": {"acceptsCategory": "leather", "quantity": 1}}
+  },
+  {
+    "id"              : "make_iron_greaves",
+    "station"         : "anvil",
+    "inputs"          : {"iron_bar": 2},
+    "outputs"         : {"iron_greaves": 1},
+    "workAmount"      : 10,
+    "toolTierRequired": 2,
+    "researchRequired": "iron_working",
+    "dynamicRecipe"   : {"hose": {"acceptsCategory": "leather", "quantity": 1}}
+  },
+  {
+    "id"              : "make_steel_vambraces",
+    "station"         : "anvil",
+    "inputs"          : {"category:steel": 1, "boiled_leather": 1, "steel_rivet": 2},
+    "outputs"         : {"steel_vambraces": 1},
+    "workAmount"      : 20,
+    "toolTierRequired": 3,
+    "discipline"      : "metalworking",
+    "researchRequired": "steel_making"
+  },
+  {
+    "id"              : "make_steel_greaves",
+    "station"         : "anvil",
+    "inputs"          : {"category:steel": 2, "boiled_leather": 1, "steel_rivet": 2},
+    "outputs"         : {"steel_greaves": 1},
+    "workAmount"      : 24,
+    "toolTierRequired": 3,
+    "discipline"      : "metalworking",
+    "researchRequired": "steel_making"
+  },
+  {
+    "id"              : "make_rawhide_mitts",
+    "station"         : "makers_bench",
+    "inputs"          : {"cordage": 1},
+    "outputs"         : {"rawhide_mitts": 1},
+    "workAmount"      : 3,
+    "toolTierRequired": 0,
+    "discipline"      : "leatherworking",
+    "dynamicRecipe"   : {"hide": {"acceptsCategory": "hide", "quantity": 1}}
+  },
+  {
+    "id"              : "make_hide_footwraps",
+    "station"         : "makers_bench",
+    "inputs"          : {"cordage": 1},
+    "outputs"         : {"hide_footwraps": 1},
+    "workAmount"      : 3,
+    "toolTierRequired": 0,
+    "discipline"      : "leatherworking",
+    "dynamicRecipe"   : {"hide": {"acceptsCategory": "hide", "quantity": 1}}
+  },
+  {
+    "id"              : "make_copper_scale_shirt",
+    "station"         : "stone_forge",
+    "inputs"          : {"copper_bar": 4, "thread": 2},
+    "outputs"         : {"copper_scale_shirt": 1},
+    "workAmount"      : 26,
+    "toolTierRequired": 0,
+    "researchRequired": "copper_smelting",
+    "dynamicRecipe"   : {"backing": {"acceptsCategory": "leather", "quantity": 2}}
+  },
+  {
+    "id"              : "make_copper_scale_cap",
+    "station"         : "stone_forge",
+    "inputs"          : {"copper_bar": 1, "thread": 1},
+    "outputs"         : {"copper_scale_cap": 1},
+    "workAmount"      : 10,
+    "toolTierRequired": 0,
+    "researchRequired": "copper_smelting",
+    "dynamicRecipe"   : {"backing": {"acceptsCategory": "leather", "quantity": 1}}
+  },
+  {
+    "id"              : "make_copper_scale_bracers",
+    "station"         : "stone_forge",
+    "inputs"          : {"copper_bar": 1, "thread": 1},
+    "outputs"         : {"copper_scale_bracers": 1},
+    "workAmount"      : 8,
+    "toolTierRequired": 0,
+    "researchRequired": "copper_smelting",
+    "dynamicRecipe"   : {"backing": {"acceptsCategory": "leather", "quantity": 1}}
+  },
+  {
+    "id"              : "make_copper_scale_greaves",
+    "station"         : "stone_forge",
+    "inputs"          : {"copper_bar": 1, "thread": 1},
+    "outputs"         : {"copper_scale_greaves": 1},
+    "workAmount"      : 9,
+    "toolTierRequired": 0,
+    "researchRequired": "copper_smelting",
+    "dynamicRecipe"   : {"backing": {"acceptsCategory": "leather", "quantity": 1}}
+  },
+  {
+    "id"              : "make_apprentice_robe",
+    "station"         : "weaving_frame",
+    "inputs"          : {"linen_cloth": 3, "thread": 1, "cordage": 1},
+    "outputs"         : {"apprentice_robe": 1},
+    "workAmount"      : 10,
+    "toolTierRequired": 0,
+    "discipline"      : "weaving"
+  },
+  {
+    "id"              : "make_shooting_glove",
+    "station"         : "makers_bench",
+    "inputs"          : {"thread": 1},
+    "outputs"         : {"shooting_glove": 1},
+    "workAmount"      : 4,
+    "toolTierRequired": 0,
+    "discipline"      : "leatherworking",
+    "dynamicRecipe"   : {"leather": {"acceptsCategory": "leather", "quantity": 1}}
+  },
+  {
+    "id"              : "make_quilted_jack",
+    "station"         : "weaving_frame",
+    "inputs"          : {"linen_cloth": 10, "plant_fiber": 6, "thread": 3},
+    "outputs"         : {"quilted_jack": 1},
+    "workAmount"      : 24,
+    "toolTierRequired": 0,
+    "discipline"      : "weaving"
+  },
+  {
+    "id"              : "make_arming_cap",
+    "station"         : "weaving_frame",
+    "inputs"          : {"linen_cloth": 2, "plant_fiber": 2, "thread": 1},
+    "outputs"         : {"arming_cap": 1},
+    "workAmount"      : 6,
+    "toolTierRequired": 0,
+    "discipline"      : "weaving"
+  },
+  {
+    "id"              : "make_arming_doublet",
+    "station"         : "weaving_frame",
+    "inputs"          : {"linen_cloth": 8, "plant_fiber": 4, "thread": 3},
+    "outputs"         : {"arming_doublet": 1},
+    "workAmount"      : 20,
+    "toolTierRequired": 0,
+    "discipline"      : "weaving"
+  },
+  {
+    "id"              : "make_open_burgonet",
+    "station"         : "anvil",
+    "inputs"          : {"category:steel": 2, "steel_rivet": 2},
+    "outputs"         : {"open_burgonet": 1},
+    "workAmount"      : 26,
+    "toolTierRequired": 3,
+    "discipline"      : "metalworking",
+    "researchRequired": "steel_making",
+    "dynamicRecipe"   : {"lining": {"acceptsCategory": "leather", "quantity": 1}}
+  },
+  {
+    "id"              : "make_munition_breastplate",
+    "station"         : "anvil",
+    "inputs"          : {"category:steel": 5, "steel_rivet": 4},
+    "outputs"         : {"munition_breastplate": 1},
+    "workAmount"      : 40,
+    "toolTierRequired": 3,
+    "discipline"      : "metalworking",
+    "researchRequired": "steel_making",
+    "dynamicRecipe"   : {"lining": {"acceptsCategory": "leather", "quantity": 1}}
+  },
+  {
+    "id"              : "make_splint_bracers",
+    "station"         : "anvil",
+    "inputs"          : {"category:steel": 1, "steel_rivet": 4},
+    "outputs"         : {"splint_bracers": 1},
+    "workAmount"      : 16,
+    "toolTierRequired": 3,
+    "discipline"      : "metalworking",
+    "researchRequired": "steel_making",
+    "dynamicRecipe"   : {"backing": {"acceptsCategory": "leather", "quantity": 1}}
+  },
+  {
+    "id"              : "make_splint_greaves",
+    "station"         : "anvil",
+    "inputs"          : {"category:steel": 1, "steel_rivet": 4},
+    "outputs"         : {"splint_greaves": 1},
+    "workAmount"      : 18,
+    "toolTierRequired": 3,
+    "discipline"      : "metalworking",
+    "researchRequired": "steel_making",
+    "dynamicRecipe"   : {"backing": {"acceptsCategory": "leather", "quantity": 1}}
+  },
+  {
+    "id"              : "make_rune_graven_cuirass",
+    "station"         : "runecarver_bench",
+    "inputs"          : {"magic_alloy_bar": 4, "gem_dust": 2, "boiled_leather": 1},
+    "outputs"         : {"rune_graven_cuirass": 1},
+    "workAmount"      : 60,
+    "toolTierRequired": 2,
+    "researchRequired": "runic_inscription"
+  },
+  {
+    "id"              : "make_rune_graven_helm",
+    "station"         : "runecarver_bench",
+    "inputs"          : {"magic_alloy_bar": 2, "gem_dust": 1, "boiled_leather": 1},
+    "outputs"         : {"rune_graven_helm": 1},
+    "workAmount"      : 40,
+    "toolTierRequired": 2,
+    "researchRequired": "runic_inscription"
+  },
+  {
+    "id"              : "make_rune_graven_vambraces",
+    "station"         : "runecarver_bench",
+    "inputs"          : {"magic_alloy_bar": 1, "gem_dust": 1},
+    "outputs"         : {"rune_graven_vambraces": 1},
+    "workAmount"      : 24,
+    "toolTierRequired": 2,
+    "researchRequired": "runic_inscription"
+  },
+  {
+    "id"              : "make_rune_graven_greaves",
+    "station"         : "runecarver_bench",
+    "inputs"          : {"magic_alloy_bar": 1, "gem_dust": 1},
+    "outputs"         : {"rune_graven_greaves": 1},
+    "workAmount"      : 28,
+    "toolTierRequired": 2,
+    "researchRequired": "runic_inscription"
+  },
+  {
+    "id"              : "make_rune_stitched_lamellar",
+    "station"         : "runecarver_bench",
+    "inputs"          : {"magic_alloy_bar": 2, "enchant_thread": 3, "gem_dust": 1},
+    "outputs"         : {"rune_stitched_lamellar": 1},
+    "workAmount"      : 48,
+    "toolTierRequired": 2,
+    "researchRequired": "runic_inscription",
+    "dynamicRecipe"   : {"backing": {"acceptsCategory": "leather", "quantity": 2}}
+  },
+  {
+    "id"              : "make_rune_stitched_coif",
+    "station"         : "runecarver_bench",
+    "inputs"          : {"magic_alloy_bar": 1, "enchant_thread": 2, "gem_dust": 1},
+    "outputs"         : {"rune_stitched_coif": 1},
+    "workAmount"      : 30,
+    "toolTierRequired": 2,
+    "researchRequired": "runic_inscription"
+  },
+  {
+    "id"              : "make_rune_woven_robe",
+    "station"         : "runic_loom",
+    "inputs"          : {"silk_cloth": 4, "enchant_thread": 3, "gem_dust": 1},
+    "outputs"         : {"rune_woven_robe": 1},
+    "workAmount"      : 36,
+    "toolTierRequired": 2,
+    "discipline"      : "weaving",
+    "researchRequired": "runic_inscription"
+  },
+  {
+    "id"              : "make_rune_woven_hood",
+    "station"         : "runic_loom",
+    "inputs"          : {"silk_cloth": 2, "enchant_thread": 1, "gem_dust": 1},
+    "outputs"         : {"rune_woven_hood": 1},
+    "workAmount"      : 20,
+    "toolTierRequired": 2,
+    "discipline"      : "weaving",
+    "researchRequired": "runic_inscription"
   }
 ]

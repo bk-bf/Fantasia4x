@@ -65,25 +65,32 @@ export interface PawnInventory {
   maxVolumeL: number; // derived from pawn stats + equipped carry containers
 }
 
+/**
+ * The worn slots. Deliberately SHORT: a slot only exists when the player has a real choice to make in
+ * it. Shoulder and neck slots were removed because they only ever held one obvious piece per tier and
+ * padded the item count; the shoulders now ride on the torso layers' coverage and the neck on the head
+ * piece's, so both stay protectable without a slot of their own.
+ *
+ * Torso is the one region with three layers, because layering a plate over mail over a gambeson is a
+ * real decision with a real weight cost. Head is a single slot: helm OR coif, not both.
+ */
 export interface PawnEquipment {
   mainHand?: ItemInstance;
   offHand?: ItemInstance;
-  headBase?: ItemInstance;
-  headOuter?: ItemInstance;
-  bodyBase?: ItemInstance;
-  bodyMid?: ItemInstance;
-  bodyOuter?: ItemInstance;
+  head?: ItemInstance; // helm / coif / cap — also covers the NECK
+  bodyBase?: ItemInstance; // skin layer: gambeson, doublet, robe
+  bodyMid?: ItemInstance; // mid layer: mail, scale, hardened leather
+  bodyOuter?: ItemInstance; // outer layer: plate, brigandine
   gloves?: ItemInstance;
   boots?: ItemInstance;
-  gorget?: ItemInstance;
-  pauldrons?: ItemInstance; // shoulder armour (covers leftShoulder/rightShoulder)
   bracers?: ItemInstance; // arm armour (upper arms + forearms)
   greaves?: ItemInstance; // leg armour (upper + lower legs)
   ring?: ItemInstance;
   ring2?: ItemInstance; // second ring slot — two rings can be worn at once (occupancy-resolved on equip)
-  amulet?: ItemInstance; // neck slot for attuned amulets (distinct from the `gorget` neck armour)
+  amulet?: ItemInstance; // jewellery at the throat (no armour value)
   belt?: ItemInstance;
-  back?: ItemInstance;
+  back?: ItemInstance; // GARMENT on the back: cloak, warcloak
+  back2?: ItemInstance; // LOAD on the back: pack, frame, quiver — so a cloak and a quiver coexist
 }
 
 /** @deprecated Use ItemInstance directly. */
@@ -97,22 +104,20 @@ export interface EquippedItem {
 export type EquipmentSlot =
   | 'mainHand'
   | 'offHand'
-  | 'headBase'
-  | 'headOuter'
+  | 'head'
   | 'bodyBase'
   | 'bodyMid'
   | 'bodyOuter'
   | 'gloves'
   | 'boots'
-  | 'gorget'
-  | 'pauldrons'
   | 'bracers'
   | 'greaves'
   | 'ring'
   | 'ring2'
   | 'amulet'
   | 'belt'
-  | 'back';
+  | 'back'
+  | 'back2';
 
 /**
  * A single dynamic ingredient slot in a recipe. Any item whose `category` matches is a valid
@@ -577,25 +582,15 @@ export interface Item {
      *  the shoulders, a plain vest does not. Omitted ⇒ the slot's default parts (SLOT_COVERAGE). */
     covers?: string[];
     armorType?: 'light' | 'medium' | 'heavy' | 'shield';
-    slot?:
-      | 'head'
-      | 'chest'
-      | 'legs'
-      | 'feet'
-      | 'hands'
-      | 'offhand'
-      | 'headBase'
-      | 'headOuter'
-      | 'bodyBase'
-      | 'bodyMid'
-      | 'bodyOuter'
-      | 'gloves'
-      | 'boots'
-      | 'gorget'
-      | 'ring'
-      | 'belt'
-      | 'back'
-      | 'offHand';
+    /** Duplicate of `equipmentSlot`, kept because the data files author both. The two MUST agree
+     *  (`itemRules`/`armourCoverage` assert it) — they drifted once (`hands` vs `gloves`) and left a
+     *  piece filed under a slot it did not occupy. The legacy aliases (`chest`/`legs`/`feet`/`hands`)
+     *  are gone: no entry used them. */
+    slot?: EquipmentSlot;
+    /** Which SET this piece belongs to, e.g. `steel_plate`, `munition_half_plate`. Pieces sharing a
+     *  set are meant to be worn together and are grouped as one row in the gear tables. Omitted on
+     *  deliberate one-offs (a boss drop, a ceremonial piece) — those stand alone by design. */
+    armorSet?: string;
     armorLayer?: 'gambeson' | 'mail' | 'plate';
     armorValue?: number; // damage absorbed per hit from this layer
     fatiguePerTurn?: number; // fatigue drain per turn while worn

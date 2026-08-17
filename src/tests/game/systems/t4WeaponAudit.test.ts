@@ -125,7 +125,7 @@ const OPPONENTS = {
       equipment: {
         bodyOuter: { itemId: 'plate_cuirass', instanceId: 'o1', durability: 999 },
         bodyMid: { itemId: 'mail_hauberk', instanceId: 'o2', durability: 999 },
-        headOuter: { itemId: 'great_helm', instanceId: 'o3', durability: 999 }
+        head: { itemId: 'great_helm', instanceId: 'o3', durability: 999 }
       }
     }),
   duelist: () =>

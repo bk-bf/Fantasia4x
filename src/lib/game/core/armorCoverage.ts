@@ -1,22 +1,27 @@
 // armorCoverage.ts — ADR-029: which body parts an equipment slot / piece protects, and the outer→in
-// layer order for the subtractive-armour walk. Pawns default to the humanoid SLOT_COVERAGE; a piece's
-// own `armorProperties.covers` overrides the slot default (a mail hauberk reaching the shoulders vs a
-// plain vest that stops at the torso). Coverage is BINARY — no RNG slip-through.
+// layer order for the subtractive-armour walk. The slot list is deliberately SHORT (see
+// docs/game/ITEM-RULES.md): shoulder and neck slots were cut because each held one obvious piece per
+// tier, and their coverage moved onto the rigid torso layers and the head piece respectively.
+// Pawns default to the humanoid SLOT_COVERAGE; a piece's own `armorProperties.covers` overrides the
+// slot default (a mail hauberk reaching the shoulders vs a plain vest that stops at the torso).
+// Coverage is BINARY — no RNG slip-through.
 import type { EquipmentSlot, Item } from './types';
 import { PART_DEF_MAP } from './BodyParts';
 
 /** Default parts each slot protects (humanoid), by limbmap part id. A piece's `covers` overrides this.
- *  Slots absent here (mainHand/offHand/back/ring/ring2/amulet) protect no body part — jewelry/cloaks
- *  give warmth/carry, and a shield mitigates via parry, not per-part soak. */
+ *  Slots absent here (mainHand/offHand/back/back2/ring/ring2/amulet) protect no body part — jewelry,
+ *  cloaks and packs give warmth/carry, and a shield mitigates via parry, not per-part soak. */
 export const SLOT_COVERAGE: Partial<Record<EquipmentSlot, string[]>> = {
-  headOuter: ['head', 'forehead', 'leftCheek', 'rightCheek', 'nose', 'leftEar', 'rightEar'],
-  headBase: ['head', 'forehead', 'neck'],
-  gorget: ['neck'],
-  pauldrons: ['leftShoulder', 'rightShoulder'],
+  // One head slot, and it carries the NECK: a helm's aventail, a coif's collar or a hood all close
+  // over the throat, so the neck needs no slot of its own.
+  head: ['head', 'forehead', 'leftCheek', 'rightCheek', 'nose', 'leftEar', 'rightEar', 'neck'],
   bracers: ['leftUpperArm', 'rightUpperArm', 'leftForearm', 'rightForearm'],
   greaves: ['leftUpperLeg', 'rightUpperLeg', 'leftLowerLeg', 'rightLowerLeg'],
-  bodyOuter: ['chest', 'abdomen'],
-  bodyMid: ['chest', 'abdomen'],
+  // The two rigid torso layers reach the SHOULDERS — a cuirass is strapped over them and a mail coat
+  // hangs off them. That is what replaced the shoulder slot. The skin layer (a gambeson, a robe) stops
+  // at the trunk, so shoulder cover is something the outer layers buy you.
+  bodyOuter: ['chest', 'abdomen', 'leftShoulder', 'rightShoulder'],
+  bodyMid: ['chest', 'abdomen', 'leftShoulder', 'rightShoulder'],
   bodyBase: ['chest', 'abdomen'],
   gloves: ['leftHand', 'rightHand'],
   boots: ['leftFoot', 'rightFoot'],
@@ -26,15 +31,12 @@ export const SLOT_COVERAGE: Partial<Record<EquipmentSlot, string[]>> = {
 /** Outer→in layer depth for the subtractive walk (0 = outermost). Torso stacks three (outer/mid/base),
  *  head two (outer/base); limb pieces are single-layer so their exact depth rarely competes. */
 export const SLOT_LAYER: Partial<Record<EquipmentSlot, number>> = {
-  headOuter: 0,
-  pauldrons: 0,
   bodyOuter: 0,
+  head: 0,
   bodyMid: 1,
   bracers: 1,
   greaves: 1,
-  gorget: 1,
   belt: 1,
-  headBase: 2,
   bodyBase: 2,
   gloves: 2,
   boots: 2

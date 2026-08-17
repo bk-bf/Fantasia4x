@@ -208,10 +208,10 @@ describe('§M arcane staves', () => {
 
 // Regalia — combo & head jewelry (the magic-vs-armour loadout fork).
 const REGALIA: Record<string, { slot: string; conds: string[] }> = {
-  scholars_circlet: { slot: 'headOuter', conds: ['insight'] },
-  champions_crown: { slot: 'headOuter', conds: ['might', 'quickness'] },
-  sovereign_crown: { slot: 'headOuter', conds: ['charm', 'keen_senses'] },
-  wardens_circlet: { slot: 'headOuter', conds: ['grace', 'fortitude'] },
+  scholars_circlet: { slot: 'head', conds: ['insight'] },
+  champions_crown: { slot: 'head', conds: ['might', 'quickness'] },
+  sovereign_crown: { slot: 'head', conds: ['charm', 'keen_senses'] },
+  wardens_circlet: { slot: 'head', conds: ['grace', 'fortitude'] },
   gold_torc: { slot: 'amulet', conds: ['fortitude'] },
   champions_torc: { slot: 'amulet', conds: ['might', 'vigor'] },
   wayfarers_pendant: { slot: 'amulet', conds: ['quickness', 'moonlit'] },
@@ -247,12 +247,12 @@ describe('§M regalia (combo & head jewelry)', () => {
     expect(synced.transientConditions).toContain('insight'); // sapphire
   });
 
-  it('crowns occupy the helmet slot (headOuter) — a buff crown means no helm', () => {
+  it('crowns occupy the head slot — a buff crown means no helm', () => {
     for (const [id, spec] of Object.entries(REGALIA)) {
-      if (spec.slot !== 'headOuter') continue;
+      if (spec.slot !== 'head') continue;
       const synced = syncTransientConditions({
         id: 'royal',
-        equipment: { headOuter: { instanceId: 'i', itemId: id, durability: 200 } },
+        equipment: { head: { instanceId: 'i', itemId: id, durability: 200 } },
         transientConditions: []
       } as unknown as Pawn);
       for (const c of spec.conds) expect(synced.transientConditions, id).toContain(c);

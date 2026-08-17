@@ -59,7 +59,7 @@ const dummy = (): Pawn =>
     traits: [],
     equipment: {
       bodyMid: { itemId: 'mail_hauberk', instanceId: 'a1', durability: 999 },
-      headOuter: { itemId: 'iron_nasal_helm', instanceId: 'a2', durability: 999 }
+      head: { itemId: 'iron_nasal_helm', instanceId: 'a2', durability: 999 }
     },
     limbs: fullLimbs(),
     injuries: [],

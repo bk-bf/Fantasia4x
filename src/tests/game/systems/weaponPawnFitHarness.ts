@@ -33,8 +33,8 @@ export const SEEDS = [11, 23, 37];
 
 export const ARMOUR: Record<string, string[]> = {
   none: [],
-  medium: ['brigandine_coat', 'leather_coif', 'iron_pauldrons', 'iron_bracers', 'iron_greaves'],
-  heavy: ['plate_cuirass', 'great_helm', 'steel_pauldrons', 'steel_vambraces', 'steel_greaves']
+  medium: ['brigandine_coat', 'leather_coif', 'iron_bracers', 'iron_greaves'],
+  heavy: ['plate_cuirass', 'great_helm', 'steel_vambraces', 'steel_greaves']
 };
 
 /** The steel tier of every melee family, so the comparison is like-for-like. */

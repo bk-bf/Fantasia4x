@@ -240,8 +240,13 @@ describe('rangedCombat helpers', () => {
     expect(itemService.getItemById('flint_arrow')!.ammoProperties!.damage!).toBeGreaterThan(0); // the arrow carries the kill
   });
 
-  it('quivers route by ammo: arrows to the BACK (blocks a pack), bolts to the BELT (keeps it)', () => {
-    expect(getEquipmentSlot(itemService.getItemById('leather_back_quiver')!)).toBe('back');
+  it('quivers route by ammo: arrows to the BACK LOAD slot (blocks a pack), bolts to the BELT (keeps it)', () => {
+    // `back2` is the load slot, shared with packs and frames, so an arrow quiver still costs the pack.
+    // `back` now carries only the GARMENT (a cloak), which is why the split happened: a marksman can
+    // wear the cloak AND the quiver, but still chooses between the quiver and a pack.
+    expect(getEquipmentSlot(itemService.getItemById('leather_back_quiver')!)).toBe('back2');
+    expect(getEquipmentSlot(itemService.getItemById('linen_snapsack')!)).toBe('back2');
+    expect(getEquipmentSlot(itemService.getItemById('marksmans_cloak')!)).toBe('back');
     expect(getEquipmentSlot(itemService.getItemById('leather_bolt_case')!)).toBe('belt');
     expect(itemService.getItemById('leather_back_quiver')!.quiver?.ammoCategory).toBe('arrow');
     expect(itemService.getItemById('leather_bolt_case')!.quiver?.ammoCategory).toBe('bolt');

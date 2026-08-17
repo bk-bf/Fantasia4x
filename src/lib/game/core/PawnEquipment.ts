@@ -96,25 +96,11 @@ export function getEquipmentSlot(item: Item): EquipmentSlot | null {
       const thrown = !!wp && (wp.range ?? 0) > 1 && !wp.ammoCategory && !wp.twoHanded;
       return thrown ? 'offHand' : 'mainHand';
     }
-    case 'armor': {
-      const slot = item.armorProperties?.slot;
-      switch (slot) {
-        case 'head':
-          return 'headBase';
-        case 'chest':
-          return 'bodyBase';
-        case 'legs':
-          return 'bodyMid';
-        case 'feet':
-          return 'boots';
-        case 'hands':
-          return 'gloves';
-        case 'offhand':
-          return 'offHand';
-        default:
-          return 'bodyBase';
-      }
-    }
+    case 'armor':
+      // `slot` and `equipmentSlot` are the same union and must agree (asserted by itemRules /
+      // armourCoverage), so `slot` answers directly. The skin layer is the safe default for an entry
+      // that authored neither.
+      return item.armorProperties?.slot ?? 'bodyBase';
     case 'tool':
       // A tool is held in hand, not worn on the belt — the belt slot is for belts/pouches
       // (inventoryBonus carry containers). Pawns carry tools in their inventory and only equip one

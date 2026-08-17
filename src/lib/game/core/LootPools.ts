@@ -41,22 +41,20 @@ type LootPoolFile = { pools: Record<string, LootPool> };
 const VALID_SLOTS = new Set<string>([
   'mainHand',
   'offHand',
-  'headBase',
-  'headOuter',
+  'head',
   'bodyBase',
   'bodyMid',
   'bodyOuter',
   'gloves',
   'boots',
-  'gorget',
-  'pauldrons',
   'bracers',
   'greaves',
   'ring',
   'ring2',
   'amulet',
   'belt',
-  'back'
+  'back',
+  'back2'
 ]);
 
 const POOLS: Map<string, LootPool> = new Map(
