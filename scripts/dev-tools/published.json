@@ -1,0 +1,5 @@
+{
+  "_comment": "Where each packed tool is published. Republishing to the SAME url keeps the link stable — an agent in a fresh session must pass the url through, or it mints a new one and the old link goes stale.",
+  "gear-db.html": "https://claude.ai/code/artifact/9c7fd6be-7b8f-4564-b6c0-c3309ad2beef",
+  "spritesheet-viewer.html": "https://claude.ai/code/artifact/55399c98-3641-444c-9960-49984ecef2c2"
+}

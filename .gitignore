@@ -56,3 +56,6 @@ docs/architecture/vault/
 
 # Audit results pulled back from the remote runner (generated; see audit.sh --fetch)
 static/audit/
+
+# Packed standalone dev tools (generated; see scripts/dev-tools/pack.mjs)
+.devtools-dist/

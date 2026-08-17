@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.1.247",
   "license": "AGPL-3.0-or-later",
-  "description": "Fantasia4x \u2014 a turn-based 4X colony chronicle.",
+  "description": "Fantasia4x — a turn-based 4X colony chronicle.",
   "author": "bk",
   "type": "module",
   "main": "electron/main.cjs",
@@ -11,6 +11,7 @@
   "scripts": {
     "dev": "vite dev --host",
     "build": "vite build",
+    "tools:pack": "node scripts/dev-tools/pack.mjs",
     "preview": "vite preview",
     "electron": "electron .",
     "package": "electron-builder",
