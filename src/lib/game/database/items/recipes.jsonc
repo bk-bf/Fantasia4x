@@ -2390,7 +2390,7 @@
   {
     "id"              : "make_boarhide_jerkin",
     "station"         : "makers_bench",
-    "inputs"          : {"hardened_boarhide": 3, "sinew": 2, "cordage": 1},
+    "inputs"          : {"hardened_boarhide": 3, "bronze_bar": 3, "sinew": 2, "cordage": 1},
     "outputs"         : {"boarhide_jerkin": 1},
     "workAmount"      : 12,
     "toolTierRequired": 0,
@@ -5597,7 +5597,7 @@
   {
     "id"              : "make_boarhide_bracers",
     "station"         : "makers_bench",
-    "inputs"          : {"hardened_boarhide": 1, "sinew": 1, "cordage": 1},
+    "inputs"          : {"hardened_boarhide": 1, "bronze_bar": 1, "sinew": 1, "cordage": 1},
     "outputs"         : {"boarhide_bracers": 1},
     "workAmount"      : 7,
     "toolTierRequired": 0,
@@ -5606,7 +5606,7 @@
   {
     "id"              : "make_boarhide_greaves",
     "station"         : "makers_bench",
-    "inputs"          : {"hardened_boarhide": 2, "sinew": 1, "cordage": 1},
+    "inputs"          : {"hardened_boarhide": 2, "bronze_bar": 2, "sinew": 1, "cordage": 1},
     "outputs"         : {"boarhide_greaves": 1},
     "workAmount"      : 9,
     "toolTierRequired": 0,
@@ -5655,7 +5655,7 @@
   {
     "id"              : "make_steel_vambraces",
     "station"         : "anvil",
-    "inputs"          : {"category:steel": 1, "hardened_boarhide": 1, "steel_rivet": 2},
+    "inputs"          : {"category:steel": 2, "hardened_boarhide": 1, "steel_rivet": 2},
     "outputs"         : {"steel_vambraces": 1},
     "workAmount"      : 20,
     "toolTierRequired": 3,
@@ -5787,18 +5787,18 @@
     "toolTierRequired": 3,
     "discipline"      : "metalworking",
     "researchRequired": "steel_making",
-    "dynamicRecipe"   : {"lining": {"acceptsCategory": "leather", "quantity": 1}}
+    "dynamicRecipe"   : {"lining": {"acceptsCategory": "leather", "quantity": 2}}
   },
   {
     "id"              : "make_munition_breastplate",
     "station"         : "anvil",
-    "inputs"          : {"category:steel": 5, "steel_rivet": 4},
+    "inputs"          : {"category:steel": 4, "steel_rivet": 4},
     "outputs"         : {"munition_breastplate": 1},
     "workAmount"      : 40,
     "toolTierRequired": 3,
     "discipline"      : "metalworking",
     "researchRequired": "steel_making",
-    "dynamicRecipe"   : {"lining": {"acceptsCategory": "leather", "quantity": 1}}
+    "dynamicRecipe"   : {"lining": {"acceptsCategory": "leather", "quantity": 4}}
   },
   {
     "id"              : "make_splint_bracers",
@@ -5894,6 +5894,571 @@
     "outputs"         : {"rune_woven_hood": 1},
     "workAmount"      : 20,
     "toolTierRequired": 2,
+    "discipline"      : "weaving",
+    "researchRequired": "runic_inscription"
+  },
+  // ── recipes for the 20-set matrix ──
+  {
+    "id"              : "make_jackal_head",
+    "station"         : "makers_bench",
+    "inputs"          : {"jackal_leather": 2, "sinew": 1, "cordage": 1},
+    "outputs"         : {"jackal_head": 1},
+    "workAmount"      : 11,
+    "toolTierRequired": 0,
+    "discipline"      : "leatherworking"
+  },
+  {
+    "id"              : "make_jackal_bodybase",
+    "station"         : "makers_bench",
+    "inputs"          : {"jackal_leather": 5, "sinew": 2, "cordage": 1},
+    "outputs"         : {"jackal_bodybase": 1},
+    "workAmount"      : 19,
+    "toolTierRequired": 0,
+    "discipline"      : "leatherworking"
+  },
+  {
+    "id"              : "make_jackal_bracers",
+    "station"         : "makers_bench",
+    "inputs"          : {"jackal_leather": 3, "sinew": 1, "cordage": 1},
+    "outputs"         : {"jackal_bracers": 1},
+    "workAmount"      : 11,
+    "toolTierRequired": 0,
+    "discipline"      : "leatherworking"
+  },
+  {
+    "id"              : "make_jackal_gloves",
+    "station"         : "makers_bench",
+    "inputs"          : {"jackal_leather": 2, "sinew": 1, "cordage": 1},
+    "outputs"         : {"jackal_gloves": 1},
+    "workAmount"      : 9,
+    "toolTierRequired": 0,
+    "discipline"      : "leatherworking"
+  },
+  {
+    "id"              : "make_jackal_greaves",
+    "station"         : "makers_bench",
+    "inputs"          : {"jackal_leather": 3, "sinew": 1, "cordage": 1},
+    "outputs"         : {"jackal_greaves": 1},
+    "workAmount"      : 13,
+    "toolTierRequired": 0,
+    "discipline"      : "leatherworking"
+  },
+  {
+    "id"              : "make_jackal_boots",
+    "station"         : "makers_bench",
+    "inputs"          : {"jackal_leather": 3, "sinew": 1, "cordage": 1},
+    "outputs"         : {"jackal_boots": 1},
+    "workAmount"      : 11,
+    "toolTierRequired": 0,
+    "discipline"      : "leatherworking"
+  },
+  {
+    "id"              : "make_boar_head",
+    "station"         : "casting_hearth",
+    "inputs"          : {"hardened_boarhide": 1, "bronze_bar": 1, "iron_nail": 2, "thread": 1},
+    "outputs"         : {"boar_head": 1},
+    "workAmount"      : 11,
+    "toolTierRequired": 0,
+    "researchRequired": "bronze_working"
+  },
+  {
+    "id"              : "make_boar_gloves",
+    "station"         : "casting_hearth",
+    "inputs"          : {"hardened_boarhide": 1, "bronze_bar": 1, "iron_nail": 2, "thread": 1},
+    "outputs"         : {"boar_gloves": 1},
+    "workAmount"      : 9,
+    "toolTierRequired": 0,
+    "researchRequired": "bronze_working"
+  },
+  {
+    "id"              : "make_boar_boots",
+    "station"         : "casting_hearth",
+    "inputs"          : {"hardened_boarhide": 2, "bronze_bar": 2, "iron_nail": 2, "thread": 1},
+    "outputs"         : {"boar_boots": 1},
+    "workAmount"      : 11,
+    "toolTierRequired": 0,
+    "researchRequired": "bronze_working"
+  },
+  {
+    "id"              : "make_deer_bodybase",
+    "station"         : "makers_bench",
+    "inputs"          : {"buckskin": 5, "sinew": 2, "cordage": 1},
+    "outputs"         : {"deer_bodybase": 1},
+    "workAmount"      : 19,
+    "toolTierRequired": 0,
+    "discipline"      : "leatherworking"
+  },
+  {
+    "id"              : "make_deer_boots",
+    "station"         : "makers_bench",
+    "inputs"          : {"buckskin": 3, "sinew": 1, "cordage": 1},
+    "outputs"         : {"deer_boots": 1},
+    "workAmount"      : 11,
+    "toolTierRequired": 0,
+    "discipline"      : "leatherworking"
+  },
+  {
+    "id"              : "make_linen_apprentice_head",
+    "station"         : "weaving_frame",
+    "inputs"          : {"linen_cloth": 2, "thread": 1},
+    "outputs"         : {"linen_apprentice_head": 1},
+    "workAmount"      : 11,
+    "toolTierRequired": 0,
+    "discipline"      : "weaving"
+  },
+  {
+    "id"              : "make_linen_apprentice_gloves",
+    "station"         : "weaving_frame",
+    "inputs"          : {"linen_cloth": 2, "thread": 1},
+    "outputs"         : {"linen_apprentice_gloves": 1},
+    "workAmount"      : 9,
+    "toolTierRequired": 0,
+    "discipline"      : "weaving"
+  },
+  {
+    "id"              : "make_linen_apprentice_boots",
+    "station"         : "weaving_frame",
+    "inputs"          : {"linen_cloth": 3, "thread": 1},
+    "outputs"         : {"linen_apprentice_boots": 1},
+    "workAmount"      : 11,
+    "toolTierRequired": 0,
+    "discipline"      : "weaving"
+  },
+  {
+    "id"              : "make_wolf_head",
+    "station"         : "makers_bench",
+    "inputs"          : {"wolf_leather": 2, "sinew": 1, "cordage": 1},
+    "outputs"         : {"wolf_head": 1},
+    "workAmount"      : 14,
+    "toolTierRequired": 1,
+    "discipline"      : "leatherworking"
+  },
+  {
+    "id"              : "make_wolf_bodybase",
+    "station"         : "makers_bench",
+    "inputs"          : {"wolf_leather": 5, "sinew": 2, "cordage": 1},
+    "outputs"         : {"wolf_bodybase": 1},
+    "workAmount"      : 22,
+    "toolTierRequired": 1,
+    "discipline"      : "leatherworking"
+  },
+  {
+    "id"              : "make_wolf_bracers",
+    "station"         : "makers_bench",
+    "inputs"          : {"wolf_leather": 3, "sinew": 1, "cordage": 1},
+    "outputs"         : {"wolf_bracers": 1},
+    "workAmount"      : 14,
+    "toolTierRequired": 1,
+    "discipline"      : "leatherworking"
+  },
+  {
+    "id"              : "make_wolf_gloves",
+    "station"         : "makers_bench",
+    "inputs"          : {"wolf_leather": 2, "sinew": 1, "cordage": 1},
+    "outputs"         : {"wolf_gloves": 1},
+    "workAmount"      : 12,
+    "toolTierRequired": 1,
+    "discipline"      : "leatherworking"
+  },
+  {
+    "id"              : "make_wolf_greaves",
+    "station"         : "makers_bench",
+    "inputs"          : {"wolf_leather": 3, "sinew": 1, "cordage": 1},
+    "outputs"         : {"wolf_greaves": 1},
+    "workAmount"      : 16,
+    "toolTierRequired": 1,
+    "discipline"      : "leatherworking"
+  },
+  {
+    "id"              : "make_wolf_boots",
+    "station"         : "makers_bench",
+    "inputs"          : {"wolf_leather": 3, "sinew": 1, "cordage": 1},
+    "outputs"         : {"wolf_boots": 1},
+    "workAmount"      : 14,
+    "toolTierRequired": 1,
+    "discipline"      : "leatherworking"
+  },
+  {
+    "id"              : "make_iron_plate_bracers",
+    "station"         : "anvil",
+    "inputs"          : {"hardened_boarhide": 1, "iron_bar": 3, "iron_nail": 2, "thread": 1},
+    "outputs"         : {"iron_plate_bracers": 1},
+    "workAmount"      : 14,
+    "toolTierRequired": 1,
+    "discipline"      : "metalworking",
+    "researchRequired": "iron_working"
+  },
+  {
+    "id"              : "make_iron_plate_greaves",
+    "station"         : "anvil",
+    "inputs"          : {"hardened_boarhide": 1, "iron_bar": 3, "iron_nail": 2, "thread": 1},
+    "outputs"         : {"iron_plate_greaves": 1},
+    "workAmount"      : 16,
+    "toolTierRequired": 1,
+    "discipline"      : "metalworking",
+    "researchRequired": "iron_working"
+  },
+  {
+    "id"              : "make_elk_head",
+    "station"         : "makers_bench",
+    "inputs"          : {"elk_leather": 2, "sinew": 1, "cordage": 1},
+    "outputs"         : {"elk_head": 1},
+    "workAmount"      : 14,
+    "toolTierRequired": 1,
+    "discipline"      : "leatherworking"
+  },
+  {
+    "id"              : "make_elk_bodybase",
+    "station"         : "makers_bench",
+    "inputs"          : {"elk_leather": 5, "sinew": 2, "cordage": 1},
+    "outputs"         : {"elk_bodybase": 1},
+    "workAmount"      : 22,
+    "toolTierRequired": 1,
+    "discipline"      : "leatherworking"
+  },
+  {
+    "id"              : "make_elk_bracers",
+    "station"         : "makers_bench",
+    "inputs"          : {"elk_leather": 3, "sinew": 1, "cordage": 1},
+    "outputs"         : {"elk_bracers": 1},
+    "workAmount"      : 14,
+    "toolTierRequired": 1,
+    "discipline"      : "leatherworking"
+  },
+  {
+    "id"              : "make_elk_gloves",
+    "station"         : "makers_bench",
+    "inputs"          : {"elk_leather": 2, "sinew": 1, "cordage": 1},
+    "outputs"         : {"elk_gloves": 1},
+    "workAmount"      : 12,
+    "toolTierRequired": 1,
+    "discipline"      : "leatherworking"
+  },
+  {
+    "id"              : "make_elk_boots",
+    "station"         : "makers_bench",
+    "inputs"          : {"elk_leather": 3, "sinew": 1, "cordage": 1},
+    "outputs"         : {"elk_boots": 1},
+    "workAmount"      : 14,
+    "toolTierRequired": 1,
+    "discipline"      : "leatherworking"
+  },
+  {
+    "id"              : "make_quilted_head",
+    "station"         : "weaving_frame",
+    "inputs"          : {"linen_cloth": 2, "thread": 1},
+    "outputs"         : {"quilted_head": 1},
+    "workAmount"      : 14,
+    "toolTierRequired": 1,
+    "discipline"      : "weaving"
+  },
+  {
+    "id"              : "make_quilted_gloves",
+    "station"         : "weaving_frame",
+    "inputs"          : {"linen_cloth": 2, "thread": 1},
+    "outputs"         : {"quilted_gloves": 1},
+    "workAmount"      : 12,
+    "toolTierRequired": 1,
+    "discipline"      : "weaving"
+  },
+  {
+    "id"              : "make_quilted_boots",
+    "station"         : "weaving_frame",
+    "inputs"          : {"linen_cloth": 3, "thread": 1},
+    "outputs"         : {"quilted_boots": 1},
+    "workAmount"      : 14,
+    "toolTierRequired": 1,
+    "discipline"      : "weaving"
+  },
+  {
+    "id"              : "make_sabretooth_head",
+    "station"         : "curriers_bench",
+    "inputs"          : {"sabretooth_leather": 2, "sinew": 1, "cordage": 1},
+    "outputs"         : {"sabretooth_head": 1},
+    "workAmount"      : 17,
+    "toolTierRequired": 2,
+    "discipline"      : "leatherworking"
+  },
+  {
+    "id"              : "make_sabretooth_bodybase",
+    "station"         : "curriers_bench",
+    "inputs"          : {"sabretooth_leather": 5, "sinew": 2, "cordage": 1},
+    "outputs"         : {"sabretooth_bodybase": 1},
+    "workAmount"      : 25,
+    "toolTierRequired": 2,
+    "discipline"      : "leatherworking"
+  },
+  {
+    "id"              : "make_sabretooth_bracers",
+    "station"         : "curriers_bench",
+    "inputs"          : {"sabretooth_leather": 3, "sinew": 1, "cordage": 1},
+    "outputs"         : {"sabretooth_bracers": 1},
+    "workAmount"      : 17,
+    "toolTierRequired": 2,
+    "discipline"      : "leatherworking"
+  },
+  {
+    "id"              : "make_sabretooth_gloves",
+    "station"         : "curriers_bench",
+    "inputs"          : {"sabretooth_leather": 2, "sinew": 1, "cordage": 1},
+    "outputs"         : {"sabretooth_gloves": 1},
+    "workAmount"      : 15,
+    "toolTierRequired": 2,
+    "discipline"      : "leatherworking"
+  },
+  {
+    "id"              : "make_sabretooth_greaves",
+    "station"         : "curriers_bench",
+    "inputs"          : {"sabretooth_leather": 3, "sinew": 1, "cordage": 1},
+    "outputs"         : {"sabretooth_greaves": 1},
+    "workAmount"      : 19,
+    "toolTierRequired": 2,
+    "discipline"      : "leatherworking"
+  },
+  {
+    "id"              : "make_sabretooth_boots",
+    "station"         : "curriers_bench",
+    "inputs"          : {"sabretooth_leather": 3, "sinew": 1, "cordage": 1},
+    "outputs"         : {"sabretooth_boots": 1},
+    "workAmount"      : 17,
+    "toolTierRequired": 2,
+    "discipline"      : "leatherworking"
+  },
+  {
+    "id"              : "make_munition_half_plate_gloves",
+    "station"         : "anvil",
+    "inputs"          : {"hardened_boarhide": 1, "category:steel": 1, "steel_rivet": 2, "thread": 1},
+    "outputs"         : {"munition_half_plate_gloves": 1},
+    "workAmount"      : 15,
+    "toolTierRequired": 2,
+    "discipline"      : "metalworking",
+    "researchRequired": "steel_making"
+  },
+  {
+    "id"              : "make_munition_half_plate_boots",
+    "station"         : "anvil",
+    "inputs"          : {"hardened_boarhide": 2, "category:steel": 2, "steel_rivet": 2, "thread": 1},
+    "outputs"         : {"munition_half_plate_boots": 1},
+    "workAmount"      : 17,
+    "toolTierRequired": 2,
+    "discipline"      : "metalworking",
+    "researchRequired": "steel_making"
+  },
+  {
+    "id"              : "make_owlbear_head",
+    "station"         : "curriers_bench",
+    "inputs"          : {"owlbear_leather": 2, "sinew": 1, "cordage": 1},
+    "outputs"         : {"owlbear_head": 1},
+    "workAmount"      : 17,
+    "toolTierRequired": 2,
+    "discipline"      : "leatherworking"
+  },
+  {
+    "id"              : "make_owlbear_bodybase",
+    "station"         : "curriers_bench",
+    "inputs"          : {"owlbear_leather": 5, "sinew": 2, "cordage": 1},
+    "outputs"         : {"owlbear_bodybase": 1},
+    "workAmount"      : 25,
+    "toolTierRequired": 2,
+    "discipline"      : "leatherworking"
+  },
+  {
+    "id"              : "make_owlbear_bracers",
+    "station"         : "curriers_bench",
+    "inputs"          : {"owlbear_leather": 3, "sinew": 1, "cordage": 1},
+    "outputs"         : {"owlbear_bracers": 1},
+    "workAmount"      : 17,
+    "toolTierRequired": 2,
+    "discipline"      : "leatherworking"
+  },
+  {
+    "id"              : "make_owlbear_gloves",
+    "station"         : "curriers_bench",
+    "inputs"          : {"owlbear_leather": 2, "sinew": 1, "cordage": 1},
+    "outputs"         : {"owlbear_gloves": 1},
+    "workAmount"      : 15,
+    "toolTierRequired": 2,
+    "discipline"      : "leatherworking"
+  },
+  {
+    "id"              : "make_owlbear_boots",
+    "station"         : "curriers_bench",
+    "inputs"          : {"owlbear_leather": 3, "sinew": 1, "cordage": 1},
+    "outputs"         : {"owlbear_boots": 1},
+    "workAmount"      : 17,
+    "toolTierRequired": 2,
+    "discipline"      : "leatherworking"
+  },
+  {
+    "id"              : "make_arming_gloves",
+    "station"         : "weaving_frame",
+    "inputs"          : {"linen_cloth": 2, "thread": 1},
+    "outputs"         : {"arming_gloves": 1},
+    "workAmount"      : 15,
+    "toolTierRequired": 2,
+    "discipline"      : "weaving"
+  },
+  {
+    "id"              : "make_arming_boots",
+    "station"         : "weaving_frame",
+    "inputs"          : {"linen_cloth": 3, "thread": 1},
+    "outputs"         : {"arming_boots": 1},
+    "workAmount"      : 17,
+    "toolTierRequired": 2,
+    "discipline"      : "weaving"
+  },
+  {
+    "id"              : "make_direwolf_head",
+    "station"         : "curriers_bench",
+    "inputs"          : {"prime_direwolf_leather": 2, "sinew": 1, "cordage": 1},
+    "outputs"         : {"direwolf_head": 1},
+    "workAmount"      : 20,
+    "toolTierRequired": 3,
+    "discipline"      : "leatherworking"
+  },
+  {
+    "id"              : "make_direwolf_bodybase",
+    "station"         : "curriers_bench",
+    "inputs"          : {"prime_direwolf_leather": 5, "sinew": 2, "cordage": 1},
+    "outputs"         : {"direwolf_bodybase": 1},
+    "workAmount"      : 28,
+    "toolTierRequired": 3,
+    "discipline"      : "leatherworking"
+  },
+  {
+    "id"              : "make_direwolf_bracers",
+    "station"         : "curriers_bench",
+    "inputs"          : {"prime_direwolf_leather": 3, "sinew": 1, "cordage": 1},
+    "outputs"         : {"direwolf_bracers": 1},
+    "workAmount"      : 20,
+    "toolTierRequired": 3,
+    "discipline"      : "leatherworking"
+  },
+  {
+    "id"              : "make_direwolf_gloves",
+    "station"         : "curriers_bench",
+    "inputs"          : {"prime_direwolf_leather": 2, "sinew": 1, "cordage": 1},
+    "outputs"         : {"direwolf_gloves": 1},
+    "workAmount"      : 18,
+    "toolTierRequired": 3,
+    "discipline"      : "leatherworking"
+  },
+  {
+    "id"              : "make_direwolf_greaves",
+    "station"         : "curriers_bench",
+    "inputs"          : {"prime_direwolf_leather": 3, "sinew": 1, "cordage": 1},
+    "outputs"         : {"direwolf_greaves": 1},
+    "workAmount"      : 22,
+    "toolTierRequired": 3,
+    "discipline"      : "leatherworking"
+  },
+  {
+    "id"              : "make_direwolf_boots",
+    "station"         : "curriers_bench",
+    "inputs"          : {"prime_direwolf_leather": 3, "sinew": 1, "cordage": 1},
+    "outputs"         : {"direwolf_boots": 1},
+    "workAmount"      : 20,
+    "toolTierRequired": 3,
+    "discipline"      : "leatherworking"
+  },
+  {
+    "id"              : "make_rune_stitched_bracers",
+    "station"         : "runecarver_bench",
+    "inputs"          : {"prime_wolf_leather": 2, "magic_alloy_bar": 2, "steel_rivet": 2, "thread": 1},
+    "outputs"         : {"rune_stitched_bracers": 1},
+    "workAmount"      : 20,
+    "toolTierRequired": 3,
+    "researchRequired": "runic_inscription"
+  },
+  {
+    "id"              : "make_rune_stitched_gloves",
+    "station"         : "runecarver_bench",
+    "inputs"          : {"prime_wolf_leather": 1, "magic_alloy_bar": 1, "steel_rivet": 2, "thread": 1},
+    "outputs"         : {"rune_stitched_gloves": 1},
+    "workAmount"      : 18,
+    "toolTierRequired": 3,
+    "researchRequired": "runic_inscription"
+  },
+  {
+    "id"              : "make_rune_stitched_greaves",
+    "station"         : "runecarver_bench",
+    "inputs"          : {"prime_wolf_leather": 2, "magic_alloy_bar": 2, "steel_rivet": 2, "thread": 1},
+    "outputs"         : {"rune_stitched_greaves": 1},
+    "workAmount"      : 22,
+    "toolTierRequired": 3,
+    "researchRequired": "runic_inscription"
+  },
+  {
+    "id"              : "make_rune_stitched_boots",
+    "station"         : "runecarver_bench",
+    "inputs"          : {"prime_wolf_leather": 2, "magic_alloy_bar": 2, "steel_rivet": 2, "thread": 1},
+    "outputs"         : {"rune_stitched_boots": 1},
+    "workAmount"      : 20,
+    "toolTierRequired": 3,
+    "researchRequired": "runic_inscription"
+  },
+  {
+    "id"              : "make_hippogriff_head",
+    "station"         : "curriers_bench",
+    "inputs"          : {"prime_hippogriff_leather": 2, "sinew": 1, "cordage": 1},
+    "outputs"         : {"hippogriff_head": 1},
+    "workAmount"      : 20,
+    "toolTierRequired": 3,
+    "discipline"      : "leatherworking"
+  },
+  {
+    "id"              : "make_hippogriff_bodybase",
+    "station"         : "curriers_bench",
+    "inputs"          : {"prime_hippogriff_leather": 5, "sinew": 2, "cordage": 1},
+    "outputs"         : {"hippogriff_bodybase": 1},
+    "workAmount"      : 28,
+    "toolTierRequired": 3,
+    "discipline"      : "leatherworking"
+  },
+  {
+    "id"              : "make_hippogriff_bracers",
+    "station"         : "curriers_bench",
+    "inputs"          : {"prime_hippogriff_leather": 3, "sinew": 1, "cordage": 1},
+    "outputs"         : {"hippogriff_bracers": 1},
+    "workAmount"      : 20,
+    "toolTierRequired": 3,
+    "discipline"      : "leatherworking"
+  },
+  {
+    "id"              : "make_hippogriff_gloves",
+    "station"         : "curriers_bench",
+    "inputs"          : {"prime_hippogriff_leather": 2, "sinew": 1, "cordage": 1},
+    "outputs"         : {"hippogriff_gloves": 1},
+    "workAmount"      : 18,
+    "toolTierRequired": 3,
+    "discipline"      : "leatherworking"
+  },
+  {
+    "id"              : "make_hippogriff_boots",
+    "station"         : "curriers_bench",
+    "inputs"          : {"prime_hippogriff_leather": 3, "sinew": 1, "cordage": 1},
+    "outputs"         : {"hippogriff_boots": 1},
+    "workAmount"      : 20,
+    "toolTierRequired": 3,
+    "discipline"      : "leatherworking"
+  },
+  {
+    "id"              : "make_rune_woven_gloves",
+    "station"         : "runic_loom",
+    "inputs"          : {"silk_cloth": 2, "thread": 1},
+    "outputs"         : {"rune_woven_gloves": 1},
+    "workAmount"      : 18,
+    "toolTierRequired": 3,
+    "discipline"      : "weaving",
+    "researchRequired": "runic_inscription"
+  },
+  {
+    "id"              : "make_rune_woven_boots",
+    "station"         : "runic_loom",
+    "inputs"          : {"silk_cloth": 3, "thread": 1},
+    "outputs"         : {"rune_woven_boots": 1},
+    "workAmount"      : 20,
+    "toolTierRequired": 3,
     "discipline"      : "weaving",
     "researchRequired": "runic_inscription"
   }

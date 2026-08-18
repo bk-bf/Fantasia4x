@@ -81,6 +81,11 @@ Read the ratio off the recipe's ingredient counts. A piece asking 4 leather + 1 
 medium; 1 + 4 is heavy. If the ratio and the declared `armorType` disagree, the ratio is right and the
 label is wrong.
 
+**One exception: flexible-metal construction.** Mail, scale and splint are `armorLayer: "mail"` and are
+**medium by build**, whatever their metal share — a mail coif is nearly all iron and is still not plate.
+The ratio governs `armorLayer: "plate"` composites, where metal share really does decide how rigid the
+piece is. A munitions half-plate stays medium by carrying a real leather share, not a token lining.
+
 **Ultra-light has its own chain and never touches metal.** Linen and cotton (flax/cotton → spinning
 wheel → thread → weaving frame → cloth), silk, and animal fur/pelt. This is the mage and rogue supply
 line, and it is deliberately separate from the hunt-and-tan leather line so the two compete for

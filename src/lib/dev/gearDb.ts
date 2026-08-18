@@ -14,6 +14,8 @@ import recipesData from '../game/database/items/recipes.jsonc';
 import buildingsData from '../game/database/world/buildings.jsonc';
 import researchData from '../game/database/progression/research.jsonc';
 import traitsData from '../game/database/pawns/traits.jsonc';
+import creaturesData from '../game/database/pawns/creatures.jsonc';
+import lootpoolData from '../game/database/items/lootpool.jsonc';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 const items = itemsData as any[];
@@ -171,6 +173,60 @@ export function describeClasses(cs: BuildClass[]): string {
  *  `DROPPED` has no recipe at all — enemy gear you can only take off a corpse, never plan for;
  *  `UNAFFILIATED` is craftable but belongs to no kit. Only the second is a candidate for folding into
  *  a set later, so the tables must not conflate them. */
+/** Who actually drops a given item, and how often. Creatures point at a `lootPool`; a pool lists a
+ *  pick-list per equipment slot with weights. Effective chance = pool.dropChance x slot.chance x the
+ *  pick's share of its slot's weight. Without this the tables could only say "wild / boss", which
+ *  names nothing you could go hunt. */
+export interface DropSource {
+  creature: string;
+  tier: number;
+  threat: number;
+  chance: number;
+}
+type LootPick = { id: string; w?: number };
+type LootSlot = { chance?: number; pick?: LootPick[] };
+type LootPool = { dropChance?: number; slots?: Record<string, LootSlot> };
+
+const DROPS_BY_ITEM: Map<string, DropSource[]> = (() => {
+  const pools = ((lootpoolData as { pools?: Record<string, LootPool> }).pools ?? {}) as Record<
+    string,
+    LootPool
+  >;
+  const byPool = new Map<string, { name: string; tier: number; threat: number }[]>();
+  for (const c of creaturesData as {
+    id: string;
+    name?: string;
+    tier?: number;
+    threatLevel?: number;
+    lootPool?: string;
+  }[]) {
+    if (!c?.lootPool) continue;
+    const arr = byPool.get(c.lootPool) ?? [];
+    arr.push({ name: c.name ?? c.id, tier: c.tier ?? 0, threat: c.threatLevel ?? 0 });
+    byPool.set(c.lootPool, arr);
+  }
+  const out = new Map<string, DropSource[]>();
+  for (const [poolId, pool] of Object.entries(pools)) {
+    const dropChance = pool.dropChance ?? 1;
+    for (const slot of Object.values(pool.slots ?? {})) {
+      const picks = slot.pick ?? [];
+      const total = picks.reduce((n, p) => n + (p.w ?? 1), 0) || 1;
+      for (const p of picks) {
+        const chance = dropChance * (slot.chance ?? 1) * ((p.w ?? 1) / total);
+        for (const c of byPool.get(poolId) ?? []) {
+          const arr = out.get(p.id) ?? [];
+          const prev = arr.find((x) => x.creature === c.name);
+          if (prev) prev.chance = Math.max(prev.chance, chance);
+          else arr.push({ creature: c.name, tier: c.tier, threat: c.threat, chance });
+          out.set(p.id, arr);
+        }
+      }
+    }
+  }
+  for (const arr of out.values()) arr.sort((a, b) => b.chance - a.chance || a.tier - b.tier);
+  return out;
+})();
+
 export const DROPPED = '__dropped';
 export const UNAFFILIATED = '__unaffiliated';
 
@@ -371,6 +427,8 @@ export interface GearRow {
   armorType: string | null;
   slot: string | null;
   bodyPart: string | null; // canonical body slot the piece equips to
+  /** Creatures that drop this, best chance first. Empty when nothing drops it. */
+  droppedBy: DropSource[];
   /** The SET this piece belongs to (`steel_plate`, `munition_half_plate`…), or null for a
    *  deliberate one-off — a boss drop, a ceremonial piece. Lets the tables group a kit into one
    *  row instead of scattering six torso pieces across a tier with no way to tell them apart. */
@@ -700,6 +758,7 @@ function toRow(item: any): GearRow | null {
     armorType: ap?.armorType ?? null,
     slot: ap?.slot ?? ap?.equipmentSlot ?? null,
     bodyPart: kind === 'armor' ? bodyPartOf(ap?.equipmentSlot ?? ap?.slot ?? null) : null,
+    droppedBy: DROPS_BY_ITEM.get(item.id) ?? [],
     armorSet: ap?.armorSet ?? (kind === 'armor' ? (craftable ? UNAFFILIATED : DROPPED) : null),
     setLabel: ap?.armorSet
       ? prettify(ap.armorSet)
@@ -925,6 +984,7 @@ function traitRow(t: any): GearRow {
     armorType: null,
     slot: null,
     bodyPart: null,
+    droppedBy: [],
     armorSet: null,
     setLabel: null,
     movePen: null,

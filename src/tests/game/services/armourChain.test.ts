@@ -117,7 +117,7 @@ describe('armour chain — physical pawn pipeline (HeadlessSession, real ticks)'
         pawns: [{ count: 6, skillLevel: 12 }],
         needsDisabled: ['hunger', 'fatigue'],
         buildings: [{ id: 'makers_bench' }],
-        items: { deer_hide: 20, cordage: 20 },
+        items: { deer_hide: 20, cordage: 20, jackal_leather: 20, sinew: 20 },
         seedEntities: false
       })
     );
@@ -127,6 +127,13 @@ describe('armour chain — physical pawn pipeline (HeadlessSession, real ticks)'
       payload: { itemId: 'rawhide_arm_wraps', quantity: 1 }
     } as never);
     for (let i = 0; i < 16 && !(stk().rawhide_arm_wraps > 0); i++) session.tick(400);
+    // …and a piece from the new species-named Bronze light set, to prove the rework is craftable.
+    session.command({
+      type: 'craftItem',
+      payload: { itemId: 'jackal_bracers', quantity: 1 }
+    } as never);
+    for (let i = 0; i < 16 && !(stk().jackal_bracers > 0); i++) session.tick(400);
+    expect(stk().jackal_bracers ?? 0, 'a species-named set piece is craftable').toBeGreaterThan(0);
 
     const made = stk().rawhide_arm_wraps ?? 0;
     const pawn = session.getState().pawns[0];

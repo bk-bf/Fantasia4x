@@ -378,7 +378,23 @@
         push('discipline', g.recipe.discipline);
         push('inputs', g.recipe.inputs.map((i) => `${i.qty}× ${i.name}`).join(', ') || null);
       } else {
-        push('source', g.craftable ? 'craftable' : 'wild / boss');
+        // Name the creatures, not the word "wild". A drop the player cannot attribute to an animal
+        // is a drop they cannot go get.
+        if (g.droppedBy.length) {
+          const top = g.droppedBy.slice(0, 5);
+          const more = g.droppedBy.length - top.length;
+          push(
+            g.craftable ? 'also drops from' : 'dropped by',
+            top.map((d) => `${d.creature} ${pct(d.chance)}`).join(', ') +
+              (more ? `, +${more} more` : ''),
+            'good'
+          );
+        }
+        push(
+          'source',
+          g.craftable ? 'craftable' : g.droppedBy.length ? 'drop only' : 'not obtainable',
+          g.craftable || g.droppedBy.length ? 'info' : 'bad'
+        );
       }
       push('research', g.research);
     }
