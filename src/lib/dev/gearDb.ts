@@ -167,6 +167,13 @@ export function describeClasses(cs: BuildClass[]): string {
   return labels.join(' · ');
 }
 
+/** Two DIFFERENT kinds of setless armour, which were previously lumped as "one-offs":
+ *  `DROPPED` has no recipe at all — enemy gear you can only take off a corpse, never plan for;
+ *  `UNAFFILIATED` is craftable but belongs to no kit. Only the second is a candidate for folding into
+ *  a set later, so the tables must not conflate them. */
+export const DROPPED = '__dropped';
+export const UNAFFILIATED = '__unaffiliated';
+
 export const AGES = ['Primitive', 'Copper', 'Bronze', 'Iron', 'Steel', 'Runed', 'Boss'] as const;
 export type Age = (typeof AGES)[number];
 
@@ -687,8 +694,14 @@ function toRow(item: any): GearRow | null {
     armorType: ap?.armorType ?? null,
     slot: ap?.slot ?? ap?.equipmentSlot ?? null,
     bodyPart: kind === 'armor' ? bodyPartOf(ap?.equipmentSlot ?? ap?.slot ?? null) : null,
-    armorSet: ap?.armorSet ?? null,
-    setLabel: ap?.armorSet ? prettify(ap.armorSet) : null,
+    armorSet: ap?.armorSet ?? (kind === 'armor' ? (craftable ? UNAFFILIATED : DROPPED) : null),
+    setLabel: ap?.armorSet
+      ? prettify(ap.armorSet)
+      : kind === 'armor'
+        ? craftable
+          ? 'unaffiliated'
+          : 'drop-only'
+        : null,
     movePen: ap?.movementPenalty ?? null,
     stealthMod: ap?.stealthMod ?? null,
     block: ap?.block ?? null,

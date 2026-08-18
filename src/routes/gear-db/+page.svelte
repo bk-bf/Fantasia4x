@@ -19,6 +19,8 @@
     BUILD_CAT,
     REAL_RARITIES,
     BODY_PARTS,
+    DROPPED,
+    UNAFFILIATED,
     BUILD_SPEC,
     buildSummaries,
     describeClasses,
@@ -83,7 +85,7 @@
       const key = setKey(it);
       const last = out[out.length - 1];
       if (last && last.key === key) last.items.push(it);
-      else out.push({ key, label: it.setLabel ?? 'one-offs', items: [it] });
+      else out.push({ key, label: it.setLabel ?? 'unaffiliated', items: [it] });
     }
     return out;
   };
@@ -117,9 +119,8 @@
   // Sets COLLAPSE rather than hide: the set name stays on screen as its own control and its pieces
   // fold in under it. Collapsing keys off the SET, so folding `steel_plate` folds it in every cell it
   // appears in — a kit is one thing wherever it shows up.
-  const ONEOFF = '__oneoff';
   let collapsedSets = $state<Record<string, boolean>>({});
-  const setKey = (g: GearRow) => g.armorSet ?? ONEOFF;
+  const setKey = (g: GearRow) => g.armorSet ?? UNAFFILIATED;
   const toggleSet = (k: string) => (collapsedSets[k] = !collapsedSets[k]);
 
   const pBview = page.url?.searchParams?.get('bview') ?? '';
@@ -802,7 +803,8 @@
           <button
             type="button"
             class="setname"
-            class:oneoff={grp.key === ONEOFF}
+            class:oneoff={grp.key === UNAFFILIATED || grp.key === DROPPED}
+            class:dropped={grp.key === DROPPED}
             onclick={() => toggleSet(grp.key)}
             title={shut ? `expand ${grp.label}` : `collapse ${grp.label}`}
             >{shut ? '▸' : '▾'}&nbsp;{grp.label}<i>{grp.items.length}</i></button
@@ -1511,6 +1513,16 @@
   .setname.oneoff:hover {
     border-color: #6d5038;
     color: #d0a984;
+  }
+  /* drop-only gear is not a plan, it is loot — read it apart from craftable unaffiliated pieces */
+  .setname.dropped {
+    color: #9a7f9c;
+    background: #241a26;
+    border-color: #40304a;
+  }
+  .setname.dropped:hover {
+    border-color: #5c456a;
+    color: #c0a2c4;
   }
   /* the nesting: pieces sit indented beneath their set, against a rule that ties them to it */
   .setitems {

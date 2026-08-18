@@ -64,6 +64,73 @@ starts at **iron** — plate before iron is not a missing cell, it is the no-hea
 thematic beast gear) carries **no** set and is excluded from the ladder — it can never be what fills a
 tier's cell, because the player cannot choose to go get it.
 
+## Armour composition — the class falls out of the recipe
+
+**Do not author an armour class. Author a recipe, and let the ratio decide the class.** This is the
+rule that makes weight, protection and build-fit agree with each other instead of being three numbers
+someone picked.
+
+| composition | class | reads as |
+| --- | --- | --- |
+| plant fabric / fur only, no metal, no rigid hide | **ultra-light** | mage, rogue, and the archer's inner layer |
+| mostly hide-leather, little or no metal | **light** | skirmisher, duelist, scout |
+| roughly 1 : 1 leather to metal | **medium** | the shield line, the workhorse kit |
+| mostly metal over a leather backing | **heavy** | 2H, tank |
+
+Read the ratio off the recipe's ingredient counts. A piece asking 4 leather + 1 bar is light; 2 + 2 is
+medium; 1 + 4 is heavy. If the ratio and the declared `armorType` disagree, the ratio is right and the
+label is wrong.
+
+**Ultra-light has its own chain and never touches metal.** Linen and cotton (flax/cotton → spinning
+wheel → thread → weaving frame → cloth), silk, and animal fur/pelt. This is the mage and rogue supply
+line, and it is deliberately separate from the hunt-and-tan leather line so the two compete for
+different labour.
+
+## Recipes must cost what the piece is worth
+
+A bronze-age bracer costing **1 cordage + 1 leather** is not a recipe, it is a placeholder. An armour
+recipe states, at minimum:
+
+- [ ] the **species material** it is cut from, by name, in a quantity that matches the piece's size
+      (a cuirass is not one hide; a glove is);
+- [ ] its **metal** component, if the class calls for one, in the ratio above;
+- [ ] its **binding** (sinew, cordage, thread) and any **fittings** (rivets, buckles);
+- [ ] a `workAmount` in step with its neighbours.
+
+## Species materials, and what the name must say
+
+Gear is named for **the material or the creature it came off**, never for a process. "Wolf-Hide
+Cloak", not "Boiled Leather Bracers" — nobody boils leather, and the phrase says nothing about what
+the piece is or how good it is.
+
+- [ ] The name carries the **specific creature**, not the species category. `wolf` spans Wolf Pup
+      (creature tier 1) to Great Wolf (tier 5); a name that says only "wolf" throws away the tier
+      information the player could otherwise read straight off the item.
+- [ ] Different species give **different stats and suit different builds** — a boar hide is thick and
+      slow, a jackal hide is thin and quiet. Species is a design axis, not a skin.
+- [ ] A generic `category:leather` slot is only acceptable on a piece that genuinely does not care
+      what died for it. Anything with a species in its name must **require that species**.
+
+## Sets from Bronze onward
+
+- [ ] Every build archetype has **its own set** from Bronze on. A tier that offers one medium kit and
+      nothing else is not a progression, it is a single choice wearing four hats.
+- [ ] **Heavy sets are deliberately incomplete.** A 2H or tank kit covers the torso, head and limbs it
+      can and leaves the rest to be padded from the light/medium lines of the primitive and copper
+      ages. That padding is the cost of wearing plate, and it is why the earlier lines stay relevant.
+- [ ] **Archers get a dedicated set** from Bronze — the aim bonuses, the quiver and the light chain
+      belong together rather than being scattered across three unrelated pieces.
+
+## Setless armour is two different things
+
+- [ ] **drop-only** — no recipe at all. Enemy gear off a corpse; the player can never plan for it, so
+      it can never fill a tier's slot.
+- [ ] **unaffiliated** — craftable, but belongs to no kit: a ceremonial piece, a regalia circlet, a
+      thematic beast plate. A candidate for folding into a set later.
+
+Lumping the two as "one-offs" hides the only distinction that matters: whether a colony can choose to
+have it.
+
 ## Gate 1 — does this item need to exist?
 
 - [ ] It fills a **real gap**: a slot × tier × armour-class cell (or weapon role) with nothing in it.
