@@ -714,7 +714,7 @@ Reference: VilesMods "Hell-Bent for Leather" (mandatory tanning step, per-animal
 >
 > **Bugs the end-to-end drive caught (all fixed):**
 > - ⚠→fixed: **finished armour satisfied a material slot.** Armour uses `category` as its armour CLASS
->   (leather/metal/cloth/organic), so `boiled_leather_jerkin` is `category:leather` — once 52 inputs became
+>   (leather/metal/cloth/organic), so `boarhide_jerkin` is `category:leather` — once 52 inputs became
 >   `category:leather`, `itemMatchesCostCategory` let a jerkin be consumed as raw leather (collision spans all
 >   classes: leather 19 mat + 16 gear, metal 16 + 22, cloth 1 + 3, organic 29 + 3). Fixed at the chokepoint
 >   (`itemDefs` + RecipeService copy): a cost/slot excludes `type` armor/weapon/tool, so it only draws raw stock.
@@ -725,13 +725,13 @@ Reference: VilesMods "Hell-Bent for Leather" (mandatory tanning step, per-animal
 
 **Current chain (3 stages):** raw pelt/hide → **cure** (passive, `hide_rack` "Curing Frame", +ash×2 or
 salt×1) → **tan** (TWO competing paths: active `tanning_rack` +bark, OR passive `tanning_bucket_station`
-fuelled by `tanning_brine`) → **harden** (`tanning_rack`, beast_leather + water → boiled_leather). Brine
+fuelled by `tanning_brine`) → **harden** (`tanning_rack`, beast_leather + water → hardened_boarhide). Brine
 brewed passively at `brewing_barrel` (bark+salt+ash+water). ⚠ Bucket recipes take NO material input —
 brine is consumed only as station FUEL (`defaultAllowedFuelItemIds`), so it's "cured hide → leather for free".
 
 **Decided direction — IMPLEMENTED (2026-07-23; `pnpm check` clean, 0 new dangling refs, recipe/craft tests green):**
 - [x] **Removed `tanning_rack` entirely** (building + its 5 `make_*_leather` recipes). Tanning is now only the passive bucket stations.
-- [x] **Relocated `harden_boiled_leather`** → `beast_tanning_bucket` (passive): a stiff leather (`boarhide`/`oxhide`) + water → `boiled_leather`.
+- [x] **Relocated `harden_boiled_leather`** → `beast_tanning_bucket` (passive): a stiff leather (`boarhide`/`oxhide`) + water → `hardened_boarhide`.
 - [x] **Bucket tanning consumes brine as a LISTED input** (`tanning_brine`/`beast_brine`), and the buckets' brine-as-fuel config was stripped (they're plain passive stations like the Curing Frame). Closes the "free leather" hole and gives `brew_*_brine` real consumers.
 - [x] **Curing kept passive** at the Curing Frame (two-step chain: cure → tan).
 - [x] `make_ash` reachability unchanged (still a hearth recipe; see Ash section).
@@ -781,7 +781,7 @@ comfort/insulation block (wired as a furniture material) — the hook is in plac
 - [x] **Butchery drops wired**: `make_goat_meat` coarse_wool→goat_wool; `make_mammoth_meat` coarse_wool→mammoth_wool; added `coney_wool` to `make_rabbit_meat`, `ox_wool` to `make_aurochs_meat`. sheep_fleece has no butchery drop (arrives with ANIMAL-HUSBANDRY live-shear; item + ladder ready).
 - [x] **No refine ladder**: grading is at the source, so `card_wool`/`comb_fine_wool` removed; `weave_woolcloth` now takes `category:wool`×3 (any fleece → cloth, finer fleece = better cloth via multiplier). `spin_thread`/`regal_robes`/`enchant_thread`/`stargazer_circlet` re-gated to `category:wool`.
 - [x] **`felt` removed** (dead-end material — nothing consumed it); its bedding/padding role is filled by raw wool directly (each fleece carries `material.building` comfort/insulation).
-- [x] **Furniture re-gate DONE** (a later furniture pass, not a separate "comfort section" — that section was never created): a wool→leather ladder is in place. Seating: `wicker_chair`/`tacked_chair`/`padded_bench` (mid, `category:wool`, comfort 0.30/0.38/0.45) → `couch` (cushion+cotton) → `armchair` (TOP, `boiled_leather`+wool, 0.85). Beds: `wool_tick_bed` (mid, `category:wool`×6, sleep 0.72) → `leather_bed` (`category:leather`, 0.80) → `feather_bed` (0.92). Wool for mid, leather for top — exactly as scoped.
+- [x] **Furniture re-gate DONE** (a later furniture pass, not a separate "comfort section" — that section was never created): a wool→leather ladder is in place. Seating: `wicker_chair`/`tacked_chair`/`padded_bench` (mid, `category:wool`, comfort 0.30/0.38/0.45) → `couch` (cushion+cotton) → `armchair` (TOP, `hardened_boarhide`+wool, 0.85). Beds: `wool_tick_bed` (mid, `category:wool`×6, sleep 0.72) → `leather_bed` (`category:leather`, 0.80) → `feather_bed` (0.92). Wool for mid, leather for top — exactly as scoped.
 - [ ] Cross-link ANIMAL-HUSBANDRY live-shear (sheep_fleece source) — still open.
 
 ### Feathers → fletched ammo (added this pass)

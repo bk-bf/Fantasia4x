@@ -47,7 +47,7 @@ const KIT = {
     'rawhide_arm_wraps',
     'rawhide_leg_wraps'
   ],
-  medium: ['brigandine_coat', 'leather_coif', 'iron_bracers', 'iron_greaves'],
+  medium: ['iron_plated_jack', 'leather_coif', 'iron_bracers', 'iron_greaves'],
   heavy: ['plate_cuirass', 'great_helm', 'steel_vambraces', 'steel_greaves']
 };
 

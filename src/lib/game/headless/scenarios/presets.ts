@@ -127,7 +127,7 @@ export const SCENARIO_PRESETS: ScenarioPreset[] = [
           skillLevel: 15,
           stats: { brawn: 14, agility: 13, vigour: 14 },
           drafted: true,
-          equip: ['iron_mace', 'boiled_leather_jerkin', 'leather_coif']
+          equip: ['iron_mace', 'boarhide_jerkin', 'leather_coif']
         }
       ],
       researchMaxTier: 2,

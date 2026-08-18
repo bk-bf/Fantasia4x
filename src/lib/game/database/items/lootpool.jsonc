@@ -181,7 +181,7 @@
         "offHand":   {"chance": 0.55, "pick": [{"id": "iron_boss_shield", "w": 1}]},
         "bodyBase":  {"chance": 0.7,  "pick": [{"id": "linen_gambeson", "w": 1}]},
         "bodyMid":   {"chance": 0.6,  "pick": [{"id": "mail_hauberk", "w": 1}]},
-        "bodyOuter": {"chance": 0.6,  "pick": [{"id": "brigandine_coat", "w": 2}, {"id": "plate_cuirass", "w": 1}]},
+        "bodyOuter": {"chance": 0.6,  "pick": [{"id": "iron_plated_jack", "w": 2}, {"id": "plate_cuirass", "w": 1}]},
         "head":      {"chance": 0.65, "pick": [{"id": "great_helm", "w": 2}, {"id": "mail_coif", "w": 1}]},
         "boots":     {"chance": 0.5,  "pick": [{"id": "iron_shod_boots", "w": 1}]}
       }

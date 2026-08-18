@@ -167,7 +167,7 @@ const R2_DEBT = new Set([
   'great_bone_maul'
 ]);
 const R3_DEBT = new Set([
-  'beast_leather_plate', // "beast leather" but the recipe takes any leather
+  'layered_boarhide_plate', // "beast leather" but the recipe takes any leather
   'steel_boar_spear' // named for its quarry, not its material — historically fine, confirm and comment
 ]);
 

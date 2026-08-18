@@ -117,7 +117,7 @@ describe('STEALTH — getStealth layers (via evaluateStat)', () => {
     const clanking = makePawn('clanking');
     (clanking.equipment as Record<string, unknown>).bodyMid = {
       instanceId: 'i2',
-      itemId: 'boiled_leather_jerkin', // 3.5 kg, no stealthMod → −0.105
+      itemId: 'boarhide_jerkin', // 3.5 kg, no stealthMod → −0.105
       durability: 50
     };
     expect(stealthOf(clanking)).toBeCloseTo(0.2 - 3.5 * 0.03, 3);

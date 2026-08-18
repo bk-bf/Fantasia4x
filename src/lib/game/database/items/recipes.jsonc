@@ -434,7 +434,7 @@
     "passive"          : true,
     "inputs"           : {"boarhide": 1, "water": 1},
     "inputAlternatives": [ {"oxhide": 1, "water": 1} ],
-    "outputs"          : {"boiled_leather": 1},
+    "outputs"          : {"hardened_boarhide": 1},
     "workAmount"       : 60,
     "toolTierRequired" : 1
   },
@@ -2388,19 +2388,13 @@
     "toolTierRequired": 0
   },
   {
-    "id"              : "make_boiled_leather_jerkin",
-    "discipline"      : "leatherworking",
+    "id"              : "make_boarhide_jerkin",
     "station"         : "makers_bench",
-    "inputs"          : {"cordage": 1},
-    "outputs"         : {"boiled_leather_jerkin": 1},
-    "workAmount"      : 8,
+    "inputs"          : {"hardened_boarhide": 3, "sinew": 2, "cordage": 1},
+    "outputs"         : {"boarhide_jerkin": 1},
+    "workAmount"      : 12,
     "toolTierRequired": 0,
-    "dynamicRecipe"   : {
-      "leather": {
-        "acceptsCategory": "leather",
-        "quantity"       : 3
-      }
-    }
+    "discipline"      : "leatherworking"
   },
   {
     "id"              : "make_leather_coif",
@@ -2446,7 +2440,7 @@
     "discipline"      : "leatherworking",
     "station"         : "makers_bench",
     "inputs"          : {"cordage": 1},
-    "outputs"         : {"tallow_boots": 1},
+    "outputs"         : {"hide_boots": 1},
     "workAmount"      : 5,
     "toolTierRequired": 0,
     "dynamicRecipe"   : {
@@ -2494,7 +2488,7 @@
     "id"              : "make_brigandine_coat",
     "station"         : "anvil",
     "inputs"          : {"iron_bar": 6, "linen_cloth": 2, "thread": 2},
-    "outputs"         : {"brigandine_coat": 1},
+    "outputs"         : {"iron_plated_jack": 1},
     "workAmount"      : 20,
     "toolTierRequired": 2,
     "researchRequired": "iron_working",
@@ -3647,7 +3641,7 @@
     "discipline"      : "leatherworking",
     "station"         : "makers_bench",
     "inputs"          : {"scale_plate": 4, "category:leather": 2, "thread": 2},
-    "outputs"         : {"scale_cuirass": 1},
+    "outputs"         : {"croc_scale_cuirass": 1},
     "workAmount"      : 60,
     "toolTierRequired": 1
   },
@@ -3655,7 +3649,7 @@
     "id"              : "make_plate_cuirass",
     "station"         : "anvil",
     "researchRequired": "steel_making",
-    "inputs"          : {"category:steel": 8, "boiled_leather": 1, "thread": 1},
+    "inputs"          : {"category:steel": 8, "hardened_boarhide": 1, "thread": 1},
     "outputs"         : {"plate_cuirass": 1},
     "workAmount"      : 64,
     "toolTierRequired": 3
@@ -3673,9 +3667,9 @@
     "id"               : "make_beast_leather_plate",
     "discipline"      : "leatherworking",
     "station"          : "makers_bench",
-    "inputs"           : {"boiled_leather": 4, "category:leather": 2, "thread": 2},
-    "inputAlternatives": [ {"boiled_leather": 4, "category:leather": 2} ],
-    "outputs"          : {"beast_leather_plate": 1},
+    "inputs"           : {"hardened_boarhide": 4, "category:leather": 2, "thread": 2},
+    "inputAlternatives": [ {"hardened_boarhide": 4, "category:leather": 2} ],
+    "outputs"          : {"layered_boarhide_plate": 1},
     "workAmount"       : 72,
     "toolTierRequired" : 1
   },
@@ -5601,24 +5595,22 @@
     "dynamicRecipe"   : {"hide": {"acceptsCategory": "hide", "quantity": 1}}
   },
   {
-    "id"              : "make_boiled_leather_bracers",
+    "id"              : "make_boarhide_bracers",
     "station"         : "makers_bench",
-    "inputs"          : {"cordage": 1},
-    "outputs"         : {"boiled_leather_bracers": 1},
-    "workAmount"      : 5,
+    "inputs"          : {"hardened_boarhide": 1, "sinew": 1, "cordage": 1},
+    "outputs"         : {"boarhide_bracers": 1},
+    "workAmount"      : 7,
     "toolTierRequired": 0,
-    "discipline"      : "leatherworking",
-    "dynamicRecipe"   : {"leather": {"acceptsCategory": "leather", "quantity": 1}}
+    "discipline"      : "leatherworking"
   },
   {
-    "id"              : "make_boiled_leather_greaves",
+    "id"              : "make_boarhide_greaves",
     "station"         : "makers_bench",
-    "inputs"          : {"cordage": 1},
-    "outputs"         : {"boiled_leather_greaves": 1},
-    "workAmount"      : 6,
+    "inputs"          : {"hardened_boarhide": 2, "sinew": 1, "cordage": 1},
+    "outputs"         : {"boarhide_greaves": 1},
+    "workAmount"      : 9,
     "toolTierRequired": 0,
-    "discipline"      : "leatherworking",
-    "dynamicRecipe"   : {"leather": {"acceptsCategory": "leather", "quantity": 2}}
+    "discipline"      : "leatherworking"
   },
   {
     "id"              : "make_cast_bronze_bracers",
@@ -5663,7 +5655,7 @@
   {
     "id"              : "make_steel_vambraces",
     "station"         : "anvil",
-    "inputs"          : {"category:steel": 1, "boiled_leather": 1, "steel_rivet": 2},
+    "inputs"          : {"category:steel": 1, "hardened_boarhide": 1, "steel_rivet": 2},
     "outputs"         : {"steel_vambraces": 1},
     "workAmount"      : 20,
     "toolTierRequired": 3,
@@ -5673,7 +5665,7 @@
   {
     "id"              : "make_steel_greaves",
     "station"         : "anvil",
-    "inputs"          : {"category:steel": 2, "boiled_leather": 1, "steel_rivet": 2},
+    "inputs"          : {"category:steel": 2, "hardened_boarhide": 1, "steel_rivet": 2},
     "outputs"         : {"steel_greaves": 1},
     "workAmount"      : 24,
     "toolTierRequired": 3,
@@ -5833,7 +5825,7 @@
   {
     "id"              : "make_rune_graven_cuirass",
     "station"         : "runecarver_bench",
-    "inputs"          : {"magic_alloy_bar": 4, "gem_dust": 2, "boiled_leather": 1},
+    "inputs"          : {"magic_alloy_bar": 4, "gem_dust": 2, "hardened_boarhide": 1},
     "outputs"         : {"rune_graven_cuirass": 1},
     "workAmount"      : 60,
     "toolTierRequired": 2,
@@ -5842,7 +5834,7 @@
   {
     "id"              : "make_rune_graven_helm",
     "station"         : "runecarver_bench",
-    "inputs"          : {"magic_alloy_bar": 2, "gem_dust": 1, "boiled_leather": 1},
+    "inputs"          : {"magic_alloy_bar": 2, "gem_dust": 1, "hardened_boarhide": 1},
     "outputs"         : {"rune_graven_helm": 1},
     "workAmount"      : 40,
     "toolTierRequired": 2,

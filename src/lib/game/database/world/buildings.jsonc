@@ -1647,7 +1647,7 @@
     "transparentBg": true,
     "description": "A deep leather-and-fleece armchair on a pegged frame. The finest seat a hall can offer, a place to sink into.",
     "category": "furniture",
-    "buildingCost": {"category:plank": 4, "boiled_leather": 2, "category:wool": 2, "steel_rivet": 2},
+    "buildingCost": {"category:plank": 4, "hardened_boarhide": 2, "category:wool": 2, "steel_rivet": 2},
     "workAmount": 44,
     "toolTierRequired": 2,
     "populationRequired": 1,
