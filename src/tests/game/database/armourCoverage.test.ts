@@ -11,7 +11,10 @@ import { SLOT_COVERAGE } from '$lib/game/core/armorCoverage';
 // never be worn at all. Those are invisible from inside the sim.
 
 const ITEMS = itemsData as unknown as Item[];
-const RECIPES = recipesData as unknown as { outputs?: Record<string, number> }[];
+const RECIPES = recipesData as unknown as {
+  outputs?: Record<string, number>;
+  researchRequired?: string | null;
+}[];
 
 const craftable = new Set(RECIPES.flatMap((r) => Object.keys(r.outputs ?? {})));
 const armour = ITEMS.filter((i) => i.armorProperties?.armorType);
@@ -147,11 +150,15 @@ describe('every tech age can dress a pawn', () => {
   };
   const AGE_NAMES = ['ungated', 'copper', 'bronze', 'iron', 'steel', 'runed'];
 
+  /** The research gate lives on the RECIPE, never on the item. */
+  const gateOf = (id: string) =>
+    RECIPES.find((r) => Object.keys(r.outputs ?? {}).includes(id))?.researchRequired ?? '';
+
   const reachableBy = (age: number): Set<string> => {
     const covered = new Set<string>();
     for (const i of wearable) {
       if (!craftable.has(i.id)) continue;
-      const gate = AGE_BY_RESEARCH[i.researchRequired ?? ''] ?? 0;
+      const gate = AGE_BY_RESEARCH[gateOf(i.id)] ?? 0;
       if (gate > age) continue;
       const region = REGION_OF[i.armorProperties!.equipmentSlot as EquipmentSlot];
       if (region) covered.add(region);

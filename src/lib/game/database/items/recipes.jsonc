@@ -3437,7 +3437,8 @@
     "inputs"          : {"star_shard": 1, "owlbear_pineal": 1, "witch_morel": 2},
     "outputs"         : {"stargazer_circlet": 1},
     "workAmount"      : 50,
-    "toolTierRequired": 2
+    "toolTierRequired": 2,
+    "researchRequired" : "attunement"
   },
   {
     "id"              : "make_sabretooth_meat",

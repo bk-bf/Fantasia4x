@@ -90,7 +90,8 @@ function synthesizeFromItem(item: Item): Recipe | null {
     outputs: { [item.id]: 1 },
     workAmount: item.craftingTime ?? 1,
     toolTierRequired: item.toolTierRequired,
-    researchRequired: item.researchRequired ?? null,
+    // Items carry no research gate of their own — a synthesized recipe is ungated by definition.
+    researchRequired: null,
     populationRequired: item.populationRequired,
     buildingRequired: item.buildingRequired ?? null,
     dynamicRecipe: item.dynamicRecipe,
@@ -194,7 +195,6 @@ export class RecipeServiceImpl implements RecipeService {
     if (recipe.toolRequirement) return recipe.toolRequirement;
     return (recipe.station && STATION_TOOL_REQ.get(recipe.station)) || null;
   }
-
 }
 
 export const recipeService = new RecipeServiceImpl();

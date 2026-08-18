@@ -424,7 +424,13 @@ for (const rec of recipes) {
 }
 
 // ── derivations ─────────────────────────────────────────────────────────────
-function ageOf(id: string, researchId: string | null, tier: number, craftable: boolean): Age {
+function ageOf(
+  id: string,
+  researchId: string | null,
+  tier: number,
+  craftable: boolean,
+  tierDeclared: boolean
+): Age {
   const r = researchId ?? '';
   if (/rune|runic|arcane|attunement|manaforge|lapidary/.test(r)) return 'Runed';
   if (r === 'steel_making') return 'Steel';
@@ -449,10 +455,9 @@ function ageOf(id: string, researchId: string | null, tier: number, craftable: b
   // Ambiguous words that only mean "primitive" at the FRONT of an id — a `staff_sling` is a later
   // build than a `sling`, and `padded`/`wicker` name a piece rather than a material.
   if (/^(throwing|sling|self|padded|linen|tallow|wattle|wicker)/.test(id)) return 'Primitive';
-  return (['Primitive', 'Bronze', 'Iron', 'Steel', 'Runed'] as Age[])[
-    Math.min(Math.max(tier, 0), 4)
-  ];
+  return AGE_BY_TIER[Math.min(Math.max(tier, 0), 4)];
 }
+const AGE_BY_TIER: Age[] = ['Primitive', 'Bronze', 'Iron', 'Steel', 'Runed'];
 
 function kindOf(item: any): GearKind | null {
   if (item.category === 'natural_weapon') return null;
@@ -649,10 +654,11 @@ function toRow(item: any): GearRow | null {
   const kind = kindOf(item);
   if (!kind) return null;
   const rec = recipeByOutput.get(item.id) ?? null;
-  const researchId = rec?.researchRequired ?? item.researchRequired ?? null;
+  // The RECIPE is the only research gate — items no longer carry one (it was a second, drifting copy).
+  const researchId = rec?.researchRequired ?? null;
   const tier = item.tier ?? 0;
   const craftable = !!rec;
-  const age = ageOf(item.id, researchId, tier, craftable);
+  const age = ageOf(item.id, researchId, tier, craftable, item.tier != null);
   const wp = item.weaponProperties;
   const ap = item.armorProperties;
   const tb = item.toolBoost;

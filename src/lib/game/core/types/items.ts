@@ -364,8 +364,8 @@ export interface Item {
    */
   driesTo?: { itemId: string; seconds: number; mode?: 'ambient' | 'fire-ring' } | null;
 
-  // Requirements
-  researchRequired?: string | null;
+  // Requirements. NOTE: research gating lives on the RECIPE (`recipes.jsonc`), never here — a second
+  // copy on the item drifted out of sync and silently mis-filed gear by age.
   level?: number;
   rarity?: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
 
