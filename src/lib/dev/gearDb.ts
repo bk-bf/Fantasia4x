@@ -498,6 +498,11 @@ function ageOf(
   // A high-tier LOOT piece is a boss drop, whatever it is forged from — checked before the material
   // words so `iron_tide_greataxe` reads as Boss, not as an iron-age craftable.
   if (!craftable && tier >= 4) return 'Boss';
+  // An EXPLICIT `tier` outranks every keyword guess below. The keywords read a material out of the
+  // NAME, which stops working the moment gear is named for the animal it came off: `boarhide_jerkin`
+  // contains "hide", and the keyword rule filed a tier-1 bronze-age piece under Primitive. Data
+  // first; the guesswork below is only for entries that declare nothing.
+  if (tierDeclared) return AGE_BY_TIER[Math.min(Math.max(tier, 0), 4)];
   if (/staff$|rune|arcane/.test(id)) return 'Runed';
   // Material words match ANYWHERE in the id, not just at the front: `gnoll_flint_axe` and
   // `gnoll_bone_cleaver` are stone-age pieces that happen to carry a faction prefix.

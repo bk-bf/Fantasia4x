@@ -17400,6 +17400,7 @@
     "armorProperties": {
       "defense"        : 26,
       "armorType"      : "heavy",
+      "armorSet"       : "boarhide_heavy",
       "slot"           : "bodyOuter",
       "equipmentSlot"  : "bodyOuter",
       "armorLayer"     : "plate",
