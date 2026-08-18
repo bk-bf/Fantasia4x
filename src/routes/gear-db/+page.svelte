@@ -64,10 +64,8 @@
         a.tier - b.tier ||
         a.name.localeCompare(b.name)
     );
-  const cell = (build: string, gkind: 'weapon' | 'armor', age: string) => {
-    const all = cellMap.get(`${build}|${gkind}|${age}`) ?? [];
-    return gkind === 'armor' ? all.filter(setVisible) : all;
-  };
+  const cell = (build: string, gkind: 'weapon' | 'armor', age: string) =>
+    cellMap.get(`${build}|${gkind}|${age}`) ?? [];
 
   // What a build must have covered at an age. The three torso layers collapse to ONE requirement —
   // a build needs *a* torso piece, not one per layer — and cloak/pack are carry, not protection, so
@@ -77,9 +75,18 @@
   const missingParts = (items: GearRow[]) =>
     COVERAGE_PARTS.filter((p) => !items.some((it) => coverageOf(it.bodyPart) === p));
 
-  /** First pill of each set in a cell, so the set name is printed once per run rather than per piece. */
-  const setHead = (items: GearRow[], i: number) =>
-    !!items[i].armorSet && (i === 0 || items[i - 1].armorSet !== items[i].armorSet);
+  /** A cell's pieces grouped into their sets, in the order the cell is already sorted. One-offs
+   *  collect into a single trailing group so they fold away together. */
+  const setGroups = (items: GearRow[]): { key: string; label: string; items: GearRow[] }[] => {
+    const out: { key: string; label: string; items: GearRow[] }[] = [];
+    for (const it of items) {
+      const key = setKey(it);
+      const last = out[out.length - 1];
+      if (last && last.key === key) last.items.push(it);
+      else out.push({ key, label: it.setLabel ?? 'one-offs', items: [it] });
+    }
+    return out;
+  };
 
   const byEvoRarity = (a: GearRow, b: GearRow) =>
     a.evoStage - b.evoStage || a.rarityRank - b.rarityRank || a.name.localeCompare(b.name);
@@ -107,30 +114,13 @@
       );
   let showLineageCol = $state(false);
 
-  // Set visibility. Hiding a set drops its pieces from every armour cell, so a tier can be read one
-  // kit at a time instead of as a wall. One-offs (no set) toggle together under `__oneoff`.
+  // Sets COLLAPSE rather than hide: the set name stays on screen as its own control and its pieces
+  // fold in under it. Collapsing keys off the SET, so folding `steel_plate` folds it in every cell it
+  // appears in — a kit is one thing wherever it shows up.
   const ONEOFF = '__oneoff';
-  const ALL_SETS: { key: string; label: string; n: number }[] = (() => {
-    const seen = new Map<string, { key: string; label: string; n: number }>();
-    for (const g of GEAR) {
-      if (g.kind !== 'armor') continue;
-      const key = g.armorSet ?? ONEOFF;
-      const label = g.setLabel ?? 'one-offs';
-      const e = seen.get(key) ?? { key, label, n: 0 };
-      e.n++;
-      seen.set(key, e);
-    }
-    return [...seen.values()].sort(
-      (a, b) =>
-        Number(a.key === ONEOFF) - Number(b.key === ONEOFF) || a.label.localeCompare(b.label)
-    );
-  })();
-  let hiddenSets = $state<Record<string, boolean>>({});
-  const hiddenCount = $derived(Object.values(hiddenSets).filter(Boolean).length);
-  const setVisible = (g: GearRow) => !hiddenSets[g.armorSet ?? ONEOFF];
-  const toggleSet = (k: string) => (hiddenSets[k] = !hiddenSets[k]);
-  const showAllSets = () => (hiddenSets = {});
-  const hideAllSets = () => (hiddenSets = Object.fromEntries(ALL_SETS.map((x) => [x.key, true])));
+  let collapsedSets = $state<Record<string, boolean>>({});
+  const setKey = (g: GearRow) => g.armorSet ?? ONEOFF;
+  const toggleSet = (k: string) => (collapsedSets[k] = !collapsedSets[k]);
 
   const pBview = page.url?.searchParams?.get('bview') ?? '';
   type BView = 'weapon' | 'armor' | 'trait' | 'stats' | 'all';
@@ -790,26 +780,6 @@
     >
   </div>
 
-  {#if view === 'builds' && (bview === 'armor' || bview === 'all')}
-    <div class="setbar">
-      <span class="setbar-label">sets</span>
-      {#each ALL_SETS as st (st.key)}
-        <button
-          type="button"
-          class="setchip"
-          class:off={hiddenSets[st.key]}
-          class:oneoff={st.key === ONEOFF}
-          onclick={() => toggleSet(st.key)}
-          title={hiddenSets[st.key] ? `show ${st.label}` : `hide ${st.label}`}
-          >{st.label}<i>{st.n}</i></button
-        >
-      {/each}
-      <button type="button" class="setchip act" onclick={showAllSets}>all</button>
-      <button type="button" class="setchip act" onclick={hideAllSets}>none</button>
-      {#if hiddenCount}<span class="setbar-note">{hiddenCount} hidden</span>{/if}
-    </div>
-  {/if}
-
   {#snippet pill(g: GearRow, armour: boolean)}
     <button
       type="button"
@@ -821,20 +791,32 @@
       onmouseleave={hoverOut}
       >{g.name}{#if g.kind === 'trait'}{#if g.lineageNames}<i class="lin">{g.lineageNames}</i
           >{:else if g.evoStage}<i>s{g.evoStage}</i>{/if}{:else}<i>T{g.tier}</i
-        >{#if armour && g.bodyPart}<i class="slot">{g.bodyPart}</i
-          >{/if}{#if armour && !g.armorSet}<i
-            class="oneoff"
-            title="Belongs to no set — a boss drop, a ceremonial piece, or thematic beast gear. Cannot be what fills a tier's slot, because the player cannot choose to go get it."
-            >one-off</i
-          >{/if}{/if}</button
+        >{#if armour && g.bodyPart}<i class="slot">{g.bodyPart}</i>{/if}{/if}</button
     >
   {/snippet}
   {#snippet gearCell(items: GearRow[], armour: boolean)}
-    {#each items as it, i (it.id)}{#if armour && setHead(items, i)}<span class="setname"
-          >{it.setLabel}</span
-        >{/if}{@render pill(it, armour)}{/each}
-    {#if armour}{#each missingParts(items) as p (p)}<span class="miss">– {p}</span>{/each}{/if}
-    {#if !items.length && !armour}<span class="dot">·</span>{/if}
+    {#if armour}
+      {#each setGroups(items) as grp (grp.key)}
+        {@const shut = collapsedSets[grp.key]}
+        <div class="setgrp">
+          <button
+            type="button"
+            class="setname"
+            class:oneoff={grp.key === ONEOFF}
+            onclick={() => toggleSet(grp.key)}
+            title={shut ? `expand ${grp.label}` : `collapse ${grp.label}`}
+            >{shut ? '▸' : '▾'}&nbsp;{grp.label}<i>{grp.items.length}</i></button
+          >
+          {#if !shut}<div class="setitems">
+              {#each grp.items as it (it.id)}{@render pill(it, armour)}{/each}
+            </div>{/if}
+        </div>
+      {/each}
+      {#each missingParts(items) as p (p)}<span class="miss">– {p}</span>{/each}
+    {:else}
+      {#each items as it (it.id)}{@render pill(it, armour)}{/each}
+      {#if !items.length}<span class="dot">·</span>{/if}
+    {/if}
   {/snippet}
 
   {#snippet infoBody(g: GearRow)}
@@ -1493,66 +1475,16 @@
     border-radius: 2px;
     font-size: 9px;
   }
-  .setbar {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 4px;
-    margin: 0 0 6px;
-    padding: 5px 6px;
-    background: #161a20;
-    border: 1px solid #262d36;
-    border-radius: 3px;
+  .setgrp {
+    margin: 2px 0 3px;
   }
-  .setbar-label {
-    font-size: 10px;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: #6f7c8a;
-    margin-right: 2px;
-  }
-  .setbar-note {
-    font-size: 10px;
-    color: #8a7a4a;
-    margin-left: 4px;
-  }
-  .setchip {
-    font: inherit;
-    font-size: 10px;
-    cursor: pointer;
-    padding: 1px 5px;
-    color: #d8c48a;
-    background: #2b2415;
-    border: 1px solid #4a3d1f;
-    border-radius: 2px;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-  }
-  .setchip i {
-    font-style: normal;
-    opacity: 0.55;
-    margin-left: 4px;
-  }
-  .setchip.oneoff {
-    color: #b08a6a;
-    background: #2a1f18;
-    border-color: #4a3528;
-  }
-  .setchip.off {
-    color: #55606c;
-    background: #14181d;
-    border-color: #232a32;
-    text-decoration: line-through;
-  }
-  .setchip.act {
-    color: #8fb0c8;
-    background: #1e2731;
-    border-color: #2c3a47;
-  }
+  /* The set name IS the control: click to fold its pieces in under it. */
   .setname {
     display: inline-block;
-    margin: 1px 3px 1px 6px;
-    padding: 0 4px;
+    font: inherit;
+    cursor: pointer;
+    margin: 1px 0 1px;
+    padding: 0 5px;
     font-size: 9px;
     font-weight: 700;
     color: #d8c48a;
@@ -1562,12 +1494,29 @@
     text-transform: uppercase;
     letter-spacing: 0.05em;
   }
-  .pill i.oneoff {
+  .setname:hover {
+    border-color: #6d5a2c;
+    color: #f0dda0;
+  }
+  .setname i {
+    font-style: normal;
+    opacity: 0.55;
+    margin-left: 5px;
+  }
+  .setname.oneoff {
     color: #b08a6a;
     background: #2a1f18;
-    padding: 0 3px;
-    border-radius: 2px;
-    font-size: 9px;
+    border-color: #4a3528;
+  }
+  .setname.oneoff:hover {
+    border-color: #6d5038;
+    color: #d0a984;
+  }
+  /* the nesting: pieces sit indented beneath their set, against a rule that ties them to it */
+  .setitems {
+    margin: 1px 0 0 5px;
+    padding-left: 6px;
+    border-left: 1px solid #3a3324;
   }
   .miss {
     display: inline-block;
