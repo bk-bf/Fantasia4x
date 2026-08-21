@@ -663,6 +663,7 @@ export const BODY_PARTS = [
   'hands',
   'legs',
   'feet',
+  'feet — under',
   'cloak',
   'pack'
 ] as const;
@@ -686,6 +687,8 @@ function bodyPartOf(slot: string | null): string | null {
       return 'legs';
     case 'boots':
       return 'feet';
+    case 'socks':
+      return 'feet — under';
     case 'back':
       return 'cloak';
     case 'back2':

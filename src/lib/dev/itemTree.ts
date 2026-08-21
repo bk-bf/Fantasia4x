@@ -18,6 +18,8 @@ import { GEAR, AGES, rowForAny, type Age, type BuildClass, type GearRow } from '
 import lootpoolData from '../game/database/items/lootpool.jsonc';
 import creaturesData from '../game/database/pawns/creatures.jsonc';
 import { AGE_NAMES, blameStation, chainAgeOf } from './chainAge';
+import { SLOT_LAYER } from '../game/core/armorCoverage';
+import type { EquipmentSlot } from '../game/core/types';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 const items = itemsData as any[];
@@ -78,6 +80,8 @@ export interface TreeItem {
   tier: number | null;
   /** The one number that matters for this kind — defence, damage, nutrition, comfort… */
   stat: string;
+  /** light / medium / heavy / shield — it left the tree when layers took that level. */
+  cls: string;
   weightKg: number;
   /** Where it comes from: a station name, "forage / hunt", or "drop only". */
   source: string;
@@ -100,6 +104,7 @@ const COVERAGE: Record<string, string> = {
   gloves: 'hands',
   greaves: 'legs',
   boots: 'feet',
+  socks: 'feet — under',
   back: 'cloak',
   back2: 'pack',
   belt: 'belt',
@@ -114,6 +119,13 @@ const CLASS_LABEL: Record<string, string> = {
   light: 'light',
   shield: 'shield'
 };
+
+// Armour is SUBTRACTIVE and layers ADD (ADR-029), so what stacks on top of what is the thing an audit
+// most needs to see — it is why three stone-age garments come to one bronze jerkin. The tree nests by
+// layer, outermost first, using the same depths the mitigation walk itself reads.
+const LAYER_LABEL = ['outer layer', 'mid layer', 'base layer', 'under layer'];
+const layerOf = (slot: string): string =>
+  LAYER_LABEL[SLOT_LAYER[slot as EquipmentSlot] ?? 1] ?? 'mid layer';
 
 // A weapon's family comes from the build gearDb ALREADY classified it into — one classifier, not a
 // second name-regex quietly disagreeing with it. `pilum`, `francisca` and `framea` all landed in an
@@ -226,7 +238,7 @@ function pathOf(i: any): string[] {
       age,
       ...sourceBranch(i),
       ap.armorSet ? prettify(ap.armorSet) : 'no set',
-      CLASS_LABEL[ap.armorType] ?? ap.armorType,
+      layerOf(ap.equipmentSlot ?? ap.slot ?? ''),
       COVERAGE[ap.equipmentSlot ?? ap.slot] ?? prettify(ap.equipmentSlot ?? 'unplaced')
     ];
   }
@@ -297,6 +309,7 @@ export const TREE_ITEMS: TreeItem[] = items
       ageRank: AGES.indexOf(ageOf(i)),
       tier: i.tier ?? null,
       stat: statOf(i),
+      cls: CLASS_LABEL[(i.armorProperties ?? {}).armorType] ?? '',
       weightKg: i.weightKg ?? 0,
       source: sourceOf(i),
       gatedBy: gated
@@ -336,9 +349,8 @@ function missingOf(node: TreeNode, rootLabel: string): string[] {
   if (rootLabel !== 'Armour' || NOT_A_KIT.has(node.label)) return [];
   // Armour ▸ age ▸ crafted ▸ SET  (or ▸ dropped ▸ species ▸ SET)
   if (node.depth !== 3 && node.depth !== 4) return [];
-  if (node.children.some((c) => CLASS_LABEL[c.label])) {
-    // it is a set node only if its children are classes
-  } else return [];
+  // a set node is the one whose children are layers
+  if (!node.children.some((c) => LAYER_LABEL.includes(c.label))) return [];
   const present = new Set<string>();
   (function walk(n: TreeNode) {
     if (!n.children.length) present.add(coverageOf(n.label));
@@ -354,6 +366,9 @@ function sortNodes(nodes: TreeNode[]): TreeNode[] {
     const ai = AGES.indexOf(a.label as Age);
     const bi = AGES.indexOf(b.label as Age);
     if (ai >= 0 && bi >= 0) return ai - bi;
+    const al = LAYER_LABEL.indexOf(a.label);
+    const bl = LAYER_LABEL.indexOf(b.label);
+    if (al >= 0 && bl >= 0) return al - bl;
     const at = TRAILING.indexOf(a.label);
     const bt = TRAILING.indexOf(b.label);
     if (at >= 0 || bt >= 0) return (at < 0 ? -1 : at) - (bt < 0 ? -1 : bt);

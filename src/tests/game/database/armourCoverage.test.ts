@@ -57,6 +57,7 @@ const SLOTS: EquipmentSlot[] = [
   'bodyOuter',
   'gloves',
   'boots',
+  'socks',
   'bracers',
   'greaves',
   'ring',

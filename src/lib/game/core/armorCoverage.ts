@@ -25,6 +25,7 @@ export const SLOT_COVERAGE: Partial<Record<EquipmentSlot, string[]>> = {
   bodyBase: ['chest', 'abdomen'],
   gloves: ['leftHand', 'rightHand'],
   boots: ['leftFoot', 'rightFoot'],
+  socks: ['leftFoot', 'rightFoot'],
   belt: ['leftHip', 'rightHip']
 };
 
@@ -39,7 +40,9 @@ export const SLOT_LAYER: Partial<Record<EquipmentSlot, number>> = {
   belt: 1,
   bodyBase: 2,
   gloves: 2,
-  boots: 2
+  boots: 2,
+  // deeper than the boot that goes over it
+  socks: 3
 };
 
 /** All slots that can carry body armour (ordered outer→in), for the mitigation walk. */

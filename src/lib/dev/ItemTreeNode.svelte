@@ -30,7 +30,7 @@
 </script>
 
 <tr class="grp d{Math.min(node.depth, 4)}">
-  <td colspan="7">
+  <td colspan="8">
     <button
       type="button"
       class="head"
@@ -59,6 +59,7 @@
     >
       <td class="nm" style="padding-left:{pad + 20}px">{it.name}</td>
       <td class="num">{it.tier ?? '—'}</td>
+      <td class="cls">{it.cls}</td>
       <td class="age">{it.age}</td>
       <td class="stat">{it.stat}</td>
       <td class="num">{it.weightKg || ''}</td>
@@ -67,7 +68,7 @@
     </tr>
     {#if sel[it.id]}
       <tr class="detail">
-        <td colspan="7" style="padding-left:{pad + 20}px">
+        <td colspan="8" style="padding-left:{pad + 20}px">
           {#if it.desc}<p>{it.desc}</p>{/if}
           <span class="id">{it.id}</span>
         </td>
@@ -158,6 +159,9 @@
   }
   .age {
     color: #8fb0c8;
+  }
+  .cls {
+    color: #9a8fb0;
   }
   .stat {
     color: #b8a06a;

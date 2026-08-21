@@ -72,8 +72,10 @@
   <p class="hint">
     Every entry in <code>items.jsonc</code>, filed by what it IS. Armour nests age ▸ set ▸ class ▸
     what it covers; consumables split food, drink, medicine and coatings, and perishables sit apart
-    from what keeps. <b>Gated by</b> is the latest station in an item's whole ingredient chain — the
-    thing that really decides which age it belongs to. Click a row for its description.
+    from what keeps. Armour nests by <b>body layer</b> — outermost first — because armour is
+    subtractive and layers add, so what stacks on what is the thing worth seeing. <b>Gated by</b> is
+    the latest station in an item's whole ingredient chain, which is what really decides its age.
+    Click a row for its description.
   </p>
   <div class="scroll">
     <table>
@@ -81,6 +83,7 @@
         <tr>
           <th class="l">Item</th>
           <th>Tier</th>
+          <th class="l">Class</th>
           <th class="l">Age</th>
           <th class="l">Stat</th>
           <th>kg</th>
@@ -93,7 +96,7 @@
           <ItemTreeNode node={root} {open} {sel} {toggle} {select} {onhover} {onout} />
         {/each}
         {#if !tree.count}
-          <tr><td colspan="7" class="none">nothing matches “{q}”</td></tr>
+          <tr><td colspan="8" class="none">nothing matches “{q}”</td></tr>
         {/if}
       </tbody>
     </table>

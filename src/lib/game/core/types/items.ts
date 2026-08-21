@@ -83,6 +83,7 @@ export interface PawnEquipment {
   bodyOuter?: ItemInstance; // outer layer: plate, brigandine
   gloves?: ItemInstance;
   boots?: ItemInstance;
+  socks?: ItemInstance; // under the boot: wraps, hose-feet — the one extremity with an inner layer
   bracers?: ItemInstance; // arm armour (upper arms + forearms)
   greaves?: ItemInstance; // leg armour (upper + lower legs)
   ring?: ItemInstance;
@@ -110,6 +111,9 @@ export type EquipmentSlot =
   | 'bodyOuter'
   | 'gloves'
   | 'boots'
+  // Worn UNDER the boot: wraps, hose-feet, socks. Feet are the one extremity with a real inner
+  // layer — everyone wound something around the foot before pulling a shoe over it.
+  | 'socks'
   | 'bracers'
   | 'greaves'
   | 'ring'

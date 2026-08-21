@@ -36,6 +36,7 @@
     { slot: 'gloves', label: 'Hands' },
     { slot: 'belt', label: 'Belt' },
     { slot: 'boots', label: 'Feet' },
+    { slot: 'socks', label: 'Wraps' },
     { slot: 'back', label: 'Cloak' },
     { slot: 'back2', label: 'Pack' },
     { slot: 'amulet', label: 'Amulet' },
@@ -220,6 +221,7 @@
       'mainHand bodyMid   offHand'
       'bracers  bodyBase  greaves'
       'gloves   belt      boots'
+      '.        .         socks'
       'back     back2     amulet'
       'ring     ring2     .';
     gap: 4px;
