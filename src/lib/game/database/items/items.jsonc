@@ -367,7 +367,7 @@
     "category"         : "leather",
     "maxDurability"    : 180,
     "deteriorationRate": 0.026,
-    "description"      : "Stiff, bristled boar hide, thickest across the shoulders. It sets hard in a hot bath and backs a shield without complaint.",
+    "description"      : "Stiff, bristled boar hide, thickest across the shoulders. It comes out of the tanning bucket hard enough to back a shield without complaint.",
     "color"            : "#7A6248",
     "amount"           : 0,
     "weightKg"         : 1.3,
@@ -6817,6 +6817,32 @@
       "movementPenalty": 0.0
     }
   },
+  // The unfaced sibling of the round shield above: same two boards, no hide. The facing is what keeps
+  // a struck board from walking apart at the seams, so dropping it costs durability, not block.
+  {
+    "id": "plank_round_shield",
+    "charSpans": [ {"sheet": "items", "id": 144} ],
+    "name": "Plank Round Shield",
+    "type": "armor",
+    "category": "combat",
+    "deteriorationRate": 0.02,
+    "description": "Boards pegged edge to edge around a hand-hole and sanded smooth, with nothing laid over the face. Every solid blow works the seams a little further apart.",
+    "color": "#A07840",
+    "amount": 0,
+    "weightKg": 4.0,
+    "volumeL": 12.0,
+    "tier": 1,
+    "maxDurability": 28,
+    "durabilityLossPerCombatHit": 30,
+    "armorProperties": {
+      "blockBonus"     : 0.20,
+      "parryChance"    : 0.05,
+      "armorType"      : "shield",
+      "slot"           : "offHand",
+      "equipmentSlot"  : "offHand",
+      "movementPenalty": 0.0
+    }
+  },
   // ── Phase B: Tier 2 weapons ───────────────────────────────────────────────
   {
     "id": "short_seax",
@@ -11106,14 +11132,14 @@
     }
   },
   {
-    "id": "padded_cap",
+    "id": "hide_cap",
     "charSpans": [ {"sheet": "items", "id": 84} ],
-    "name": "Padded Linen Cap",
+    "name": "Hide Cap",
     "type": "armor",
     "category": "primitive",
     "deteriorationRate": 0.02,
-    "description": "A padded cloth cap stuffed with fiber. Minimal head protection.",
-    "color": "#C8C0A0",
+    "description": "A cap of untreated hide drawn over the crown and tied under the chin, hair still on it. It softens a falling branch and little else.",
+    "color": "#8B6B47",
     "amount": 0,
     "weightKg": 0.4,
     "volumeL": 1.0,
@@ -16868,21 +16894,9 @@
     "toolTierRequired" : 0,
     "processingType"   : ["leatherworking"]
   },
-  // Beast-leather chain intermediates: raw → cured → tanned (beast_brine) → hardened/plated
-  {
-    "id": "hardened_boarhide",
-    "charSpans": [ {"sheet": "items", "id": 152} ],
-    "name": "Hardened Boarhide",
-    "type": "material",
-    "category": "leather",
-    "maxDurability": 240,
-    "deteriorationRate": 0.015,
-    "description": "Boar hide worked in a hot tanning bath until it sets rigid, thick across the shoulders where the beast carried its own armour. It holds a curve once shaped and will not take one again.",
-    "color": "#3E2E1A",
-    "amount": 0,
-    "weightKg": 2.2,
-    "volumeL": 4
-  },
+  // Beast-leather chain intermediates: raw → cured → tanned (beast_brine). There is no fourth
+  // "hardening" step — butcher, cure, tan is already three waits, and a bigger boar is what a
+  // better hide comes from, not a longer process.
   {
     "id"               : "scale_plate",
     "charSpans"        : [ {"sheet": "items", "id": 152} ],
@@ -17119,26 +17133,26 @@
     "name": "Arcane Robe",
     "type": "armor",
     "category": "cloth",
-    "deteriorationRate": 0.012,
-    "description": "A flowing silk robe sewn with gem-dust sigils. Little armour, but the vestment of a caster, light, fine, and humming faintly.",
+    "deteriorationRate": 0.004,
+    "description": "Silk laid down in one unbroken bolt and sewn with gem dust along every seam. It weighs nothing across the shoulders and the sigils drink what is thrown at them.",
     "color": "#5A4E8C",
     "amount": 0,
     "weightKg": 1.0,
     "volumeL": 2.5,
-    "tier": 2,
-    "maxDurability": 80,
-    "durabilityLossPerCombatHit": 35,
+    "tier": 4,
+    "maxDurability": 220,
+    "durabilityLossPerCombatHit": 6,
     "armorProperties": {
-      "defense"        : 2,
+      "defense"        : 10,
       "armorType"      : "light",
       "slot"           : "bodyBase",
       "equipmentSlot"  : "bodyBase",
       "armorLayer"     : "gambeson",
-      "armorValue"     : 2,
+      "armorValue"     : 10,
       "fatiguePerTurn" : 0.01,
       "movementPenalty": 0.0,
-      "coldResistance" : 0.12,
-      "magicResistance": 0.2
+      "coldResistance" : 0.18,
+      "magicResistance": 0.35
     }
   },
   // ════════════════════════════════════════════════════════════════════════════════════════════
@@ -17495,6 +17509,33 @@
       "fatiguePerTurn" : 0.7,
       "movementPenalty": 0.1,
       "prestigeBonus"  : 22
+    }
+  },
+  {
+    "id": "silk_robe",
+    "charSpans": [ {"sheet": "items", "id": 7} ],
+    "name": "Silk Robe",
+    "type": "armor",
+    "category": "cloth",
+    "deteriorationRate": 0.008,
+    "description": "Spider silk woven fine and hung loose from the shoulders. It slides off a glancing edge and costs the wearer nothing to walk in all day.",
+    "color": "#8F86B8",
+    "amount": 0,
+    "weightKg": 0.9,
+    "volumeL": 2.0,
+    "tier": 2,
+    "maxDurability": 120,
+    "durabilityLossPerCombatHit": 12,
+    "armorProperties": {
+      "defense"        : 6,
+      "armorType"      : "light",
+      "slot"           : "bodyBase",
+      "equipmentSlot"  : "bodyBase",
+      "armorLayer"     : "gambeson",
+      "armorValue"     : 6,
+      "fatiguePerTurn" : 0.02,
+      "movementPenalty": 0.0,
+      "coldResistance" : 0.10
     }
   },
   {

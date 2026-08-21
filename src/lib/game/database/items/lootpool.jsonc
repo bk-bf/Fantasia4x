@@ -16,7 +16,7 @@
 //     "slots": {
 //       "mainHand" : {"chance": 0.9, "pick": [{"id": "bone_knife", "w": 3}, {"id": "stone_spear", "w": 1}]},
 //       "bodyOuter": {"chance": 0.35, "pick": [{"id": "raw_hide_vest", "w": 1}]},
-//       "head": {"chance": 0.15, "pick": [{"id": "padded_cap", "w": 1}]}
+//       "head": {"chance": 0.15, "pick": [{"id": "hide_cap", "w": 1}]}
 //       // slot keys are real EquipmentSlot ids (mainHand/offHand/head/bodyBase/bodyMid/bodyOuter/
 //       // gloves/boots/bracers/greaves/back/back2/…); item ids reference items.jsonc.
 //     }
@@ -143,7 +143,7 @@
       "slots": {
         "mainHand":  {"chance": 0.95, "pick": [{"id": "bone_knife", "w": 2}, {"id": "stone_spear", "w": 3}, {"id": "flint_handaxe", "w": 2}]},
         "bodyBase":  {"chance": 0.5,  "pick": [{"id": "raw_hide_vest", "w": 2}, {"id": "wicker_vest", "w": 1}]},
-        "head":      {"chance": 0.25, "pick": [{"id": "padded_cap", "w": 1}]}
+        "head":      {"chance": 0.25, "pick": [{"id": "hide_cap", "w": 1}]}
       }
     },
     "guard_bronze": {

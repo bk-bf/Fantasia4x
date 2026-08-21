@@ -91,6 +91,22 @@ wheel → thread → weaving frame → cloth), silk, and animal fur/pelt. This i
 line, and it is deliberately separate from the hunt-and-tan leather line so the two compete for
 different labour.
 
+## A chain earns its length from the animal, not from a longer process
+
+The leather line is already three waits before anyone crafts anything:
+
+```
+kill → butcher (raw hide) → flesh → cure (hide rack, passive) → tan (tanning bucket, passive) → craft
+```
+
+That is the whole ladder, and it is enough. A fourth "harden / boil / temper / refine" step on top of
+a tanned leather does not make a better material, it makes the player wait longer for the same animal
+— which is what `hardened_boarhide` did before it was deleted.
+
+**A stronger hide comes from a bigger beast.** Boar → direboar, wolf → dire wolf, bear → cave bear.
+When a tier needs better leather, give the harder creature its own hide item and let the hunt be the
+gate. Adding a station step instead is padding, and it drags the item's age up with it (see gate 2).
+
 ## Recipes must cost what the piece is worth
 
 A bronze-age bracer costing **1 cordage + 1 leather** is not a recipe, it is a placeholder. An armour
@@ -167,11 +183,24 @@ carrying no `tier` at all, which put a tier-3 bear's hide in the stone-age colum
 - [ ] Its tier is at least the era of the metal research the recipe requires
       (`copper_smelting` ⇒ 1, `bronze_working` ⇒ 1, `iron_working` ⇒ 2, `steel_making` ⇒ 3,
       `runic_inscription` ⇒ 4).
+- [ ] **Its tier is at least the age of the latest STATION anywhere in its ingredient chain.** Not its
+      own station — the whole chain. `padded_cap` was a tier-0 piece of the stone-age hide set whose
+      linen came back through `thread` to the **spinning wheel**, a bronze-age building; the entire
+      bronze boarhide line hung off an **iron-age** tanning bucket. Buildings declare `ageTier`
+      ("bronze:1"), so this is checkable and `itemRules.test.ts` R4 now checks it.
 - [ ] Every ingredient resolves to something obtainable: a map-node yield, a butchery product, or
       another recipe. Nothing dead-ends.
 
 ## Gate 3 — does the name tell the truth?
 
+- [ ] **An archetypal name claims THE defining item of its kind** — "Arcane Robe", "Assassin's
+      Blade", "Warlord's Plate" — so it must sit at the **top of its line**, in the last age it could
+      belong to. A mid-tier piece does not get the archetype; it gets its material: Silk Robe, Wool
+      Robe, Quilted Linen Jack. `arcane_robe` sat at tier 2 while being woven on a runed loom, which
+      is the same lie told twice.
+- [ ] **Moving an item up an age leaves a hole — patch it in the same pass.** The build that wore it
+      still needs something where it used to be, and that replacement is the one that takes the plain
+      material name.
 - [ ] If the id or name carries a **species** (bear, wolf, boar, owlbear…), the recipe **requires
       that species' material**. Otherwise rename it after what it is actually made of.
 - [ ] If the recipe takes **any** hide/leather/bone, the name must be generic: "Boiled Leather
@@ -191,9 +220,10 @@ carrying no `tier` at all, which put a tier-3 bear's hide in the stone-age colum
       `(11 + 0.19 × brawn) × frameFactor`; `laden` starts at 60% of it. Sum the set and check.
 - [ ] It only uses fields the sim actually **reads**. `defense`, `covers`, `weightKg`,
       `movementPenalty`, `fatiguePerTurn`, `coldResistance`/`heatResistance`, `stealthMod`,
-      `maxDurability` and the shield block are live. **`slashResistance`, `pierceResistance` and
-      `crushResistance` are NOT** — `mitigationAt` reads only `defense`, so authoring them promises
-      the player something that does nothing. Do not differentiate an item with a dead field.
+      `maxDurability` and the shield block are live. **`slashResistance`, `pierceResistance`,
+      `crushResistance` and `magicResistance` are NOT** — `mitigationAt` reads only `defense`, and
+      nothing outside the `gearDb` dev tool reads `magicResistance`, so authoring them promises the
+      player something that does nothing. Do not justify an item with a dead field.
 - [ ] Armour class matches the construction: soft/flexible ⇒ `light`, rigid organic or flexible metal
       ⇒ `medium`, rigid metal plate ⇒ `heavy`. Class carries no combat effect on its own; the
       trade-off has to be real, and it lives in weight and `movementPenalty`.
@@ -214,6 +244,7 @@ carrying no `tier` at all, which put a tier-3 bear's hide in the stone-age colum
 | --- | --- | --- |
 | 1 | every slot × age cell has a craftable piece | `armourCoverage.test.ts` |
 | 2 | explicit `tier`; tier ≥ demanded creature's tier | `itemRules.test.ts` |
+| 2 | tier ≥ the age of the latest station in the ingredient chain (R4) | `itemRules.test.ts` |
 | 3 | species in the name ⇒ species in the recipe | `itemRules.test.ts` |
 | 5 | no recipe-less armour; slots resolve | `armourCoverage.test.ts` |
 | 5 | crafted and equipped by a real pawn | `armourChain.test.ts` |

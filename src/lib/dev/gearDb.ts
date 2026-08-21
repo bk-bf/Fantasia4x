@@ -393,7 +393,10 @@ export interface GearRow {
   name: string;
   kind: GearKind;
   cls: BuildClass; // primary build (for display/sort/colour)
-  classes: BuildClass[]; // every build this supports — filtered on
+  classes: BuildClass[]; // every build this is FOR — filtered on
+  /** Builds that can wear the piece but are not its target. Empty for weapons, shields and plate.
+   *  The coverage grid draws these only where a build's own kit leaves a region bare. */
+  fallbackClasses: BuildClass[];
   age: Age;
   ageRank: number;
   tier: number;
@@ -575,26 +578,46 @@ function classifyWeapon(item: any, wp: any): BuildClass {
   return dt === 'blunt' ? 'Mace & Shield' : pierce ? 'Spear & Shield' : 'Sword & Shield';
 }
 
-// Armour → the builds whose weight/role favour it (multi-build).
-function classifyArmor(item: any): BuildClass[] {
+/** Armour answers TWO questions, and lumping them together is what emptied half the table: which
+ *  builds is this piece FOR, and which builds would put it on anyway. A build with no kit of its own
+ *  at an age does not fight naked — the stone age offers hide, and a swordsman wears hide — but the
+ *  weight-class map handed every primitive piece to the nimble builds, so eleven of the twenty-seven
+ *  columns read "no armour exists at this age" while the pieces sat one column over.
+ *  `ideal` is the kit meant for the build; `fallback` is what it settles for. The grid surfaces a
+ *  fallback only where the ideal kit leaves a region bare, so a filled age stays clean. */
+export interface ArmorFit {
+  ideal: BuildClass[];
+  fallback: BuildClass[];
+}
+const othersThan = (ideal: BuildClass[]): BuildClass[] => BUILDS.filter((b) => !ideal.includes(b));
+
+// Armour → the builds whose weight/role favour it, plus the ones that would wear it for want of better.
+function classifyArmor(item: any): ArmorFit {
   const ap = item.armorProperties;
-  if (ap?.armorType === 'shield') return [...SHIELD_BUILDS, 'Pure Tank', 'Battlemage (1H Staff)'];
-  if (ap?.stealthMod) return ['Assassin (Dagger)', 'Fencer (Rapier)', ...RANGED];
+  // A shield claims the off-hand, so the two-handers and the duel-grip builds cannot hold one at all.
+  // That is a real exclusion, not a preference — no fallback.
+  if (ap?.armorType === 'shield')
+    return { ideal: [...SHIELD_BUILDS, 'Pure Tank', 'Battlemage (1H Staff)'], fallback: [] };
+  const fit = (ideal: BuildClass[]): ArmorFit => ({ ideal, fallback: othersThan(ideal) });
+  if (ap?.stealthMod) return fit(['Assassin (Dagger)', 'Fencer (Rapier)', ...RANGED]);
   if (
     item.magicResistance != null ||
     ap?.magicResistance != null ||
     /robe|circlet|arcane/.test(item.id)
   )
-    return [...CASTERS];
+    return fit([...CASTERS]);
   switch (ap?.armorType) {
     case 'heavy':
-      return [...FRONTLINE, 'Pure Tank']; // duelists excluded — heavy claps their speed
+      // The one class with no fallback list: plate does not "beat nothing" for a duelist or an archer,
+      // it takes away the speed the build is made of. They also have a light line at every single age,
+      // so they are never the ones staring at an empty cell.
+      return { ideal: [...FRONTLINE, 'Pure Tank'], fallback: [] };
     case 'medium':
-      return [...FRONTLINE, ...DUELIST, 'Fencer (Rapier)'];
+      return fit([...FRONTLINE, ...DUELIST, 'Fencer (Rapier)']);
     case 'light':
-      return [...NIMBLE, ...CASTERS];
+      return fit([...NIMBLE, ...CASTERS]);
     default:
-      return ['General'];
+      return { ideal: ['General'], fallback: [] };
   }
 }
 
@@ -608,18 +631,18 @@ const DUELIST_OF: Partial<Record<BuildClass, BuildClass>> = {
   'Spear & Shield': 'Spear (Duelist)'
 };
 
-function classifyItem(item: any, kind: GearKind): BuildClass[] {
+function classifyItem(item: any, kind: GearKind): ArmorFit {
   if (kind === 'weapon' || kind === 'ammo') {
     const wp = item.weaponProperties;
-    if (!wp) return ['General'];
+    if (!wp) return { ideal: ['General'], fallback: [] };
     const base = classifyWeapon(item, wp);
     const duel = DUELIST_OF[base];
     // A 1H melee weapon also serves its duel-grip variant AND Pure Tank (which has no bespoke weapon —
     // it wields a shield and whichever 1H turns out least stamina-hungry once balanced).
-    return duel ? [base, duel, 'Pure Tank'] : [base];
+    return { ideal: duel ? [base, duel, 'Pure Tank'] : [base], fallback: [] };
   }
   if (kind === 'armor') return classifyArmor(item);
-  return ['General']; // tool / medicine — pawn skills, not builds
+  return { ideal: ['General'], fallback: [] }; // tool / medicine — pawn skills, not builds
 }
 
 // Canonical body slots, in head→feet order. Used to show where a piece equips and which parts a
@@ -726,13 +749,14 @@ function toRow(item: any): GearRow | null {
   const ap = item.armorProperties;
   const tb = item.toolBoost;
   const oh = item.onHitCondition;
-  const classes = classifyItem(item, kind);
+  const { ideal: classes, fallback } = classifyItem(item, kind);
   return {
     id: item.id,
     name: item.name ?? prettify(item.id),
     kind,
     cls: classes[0] ?? 'General',
     classes,
+    fallbackClasses: fallback,
     age,
     ageRank: AGES.indexOf(age),
     tier,
@@ -959,6 +983,7 @@ function traitRow(t: any): GearRow {
     kind: 'trait',
     cls: classes[0],
     classes,
+    fallbackClasses: [],
     age: 'Primitive',
     ageRank: 0,
     tier: 0,

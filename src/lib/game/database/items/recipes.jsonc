@@ -427,17 +427,6 @@
     "workAmount"       : 120,
     "toolTierRequired" : 1
   },
-  // ── Boiled leather: a stiff leather hardened in hot water (relocated off the removed rack) ──
-  {
-    "id"               : "harden_boiled_leather",
-    "station"          : "beast_tanning_bucket",
-    "passive"          : true,
-    "inputs"           : {"boarhide": 1, "water": 1},
-    "inputAlternatives": [ {"oxhide": 1, "water": 1} ],
-    "outputs"          : {"hardened_boarhide": 1},
-    "workAmount"       : 60,
-    "toolTierRequired" : 1
-  },
   {
     "id"              : "make_spit_meat",
     "station"         : "campfire",
@@ -1640,10 +1629,21 @@
   {
     "id"              : "make_arcane_robe",
     "station"         : "runic_loom",
+    "researchRequired": "runic_inscription",
     "inputs"          : {"silk_cloth": 4, "gem_dust": 2, "thread": 2},
     "outputs"         : {"arcane_robe": 1},
     "workAmount"      : 16,
-    "toolTierRequired": 2
+    "toolTierRequired": 2,
+    "discipline"      : "weaving"
+  },
+  {
+    "id"              : "make_silk_robe",
+    "station"         : "weaving_frame",
+    "inputs"          : {"silk_cloth": 3, "thread": 2, "cordage": 1},
+    "outputs"         : {"silk_robe": 1},
+    "workAmount"      : 12,
+    "toolTierRequired": 0,
+    "discipline"      : "weaving"
   },
   // Sinew is no longer rendered from a whole carcass on its own — that destroyed an entire animal for
   // just tendon. It now drops as a BYPRODUCT of butchering any medium/large animal (see the per-carcass
@@ -1803,6 +1803,26 @@
           "deer_hide": {"name": "Deer-Faced Round Shield"},
           "wolf_hide": {"name": "Wolf-Faced Round Shield"},
           "bear_pelt": {"name": "Bear-Faced Round Shield"}
+        }
+      }
+    }
+  },
+  {
+    "id"              : "make_plank_round_shield",
+    "discipline"      : "woodworking",
+    "station"         : "makers_bench",
+    "inputs"          : {"cordage": 1},
+    "outputs"         : {"plank_round_shield": 1},
+    "workAmount"      : 5,
+    "toolTierRequired": 0,
+    "dynamicRecipe"   : {
+      "planks": {
+        "acceptsCategory": "wood",
+        "quantity"       : 2,
+        "variants"       : {
+          "oak_plank" : {"name": "Oak Plank Shield" },
+          "ash_plank" : {"name": "Ash Plank Shield" },
+          "pine_plank": {"name": "Pine Plank Shield"}
         }
       }
     }
@@ -2370,13 +2390,26 @@
     "toolTierRequired": 0
   },
   {
-    "id"              : "make_padded_cap",
-    "discipline"      : "weaving",
+    "id"              : "make_hide_cap",
+    "discipline"      : "leatherworking",
     "station"         : "makers_bench",
-    "inputs"          : {"linen_cloth": 1, "plant_fiber": 2, "cordage": 1},
-    "outputs"         : {"padded_cap": 1},
+    "inputs"          : {"cordage": 1},
+    "outputs"         : {"hide_cap": 1},
     "workAmount"      : 3,
-    "toolTierRequired": 0
+    "toolTierRequired": 0,
+    "dynamicRecipe"   : {
+      "hide": {
+        "acceptsCategory": "hide",
+        "quantity"       : 1,
+        "variants"       : {
+          "deer_hide": {"name": "Deer-Hide Cap"},
+          "wolf_hide": {"name": "Wolf-Hide Cap"},
+          "bear_pelt": {"name": "Bear-Pelt Cap"},
+          "boar_hide": {"name": "Boar-Hide Cap"},
+          "elk_hide" : {"name": "Elk-Hide Cap" }
+        }
+      }
+    }
   },
   // ── Phase B: Tier 1 armour recipes ────────────────────────────────────────
   {
@@ -2390,7 +2423,7 @@
   {
     "id"              : "make_boarhide_jerkin",
     "station"         : "makers_bench",
-    "inputs"          : {"hardened_boarhide": 3, "bronze_bar": 3, "sinew": 2, "cordage": 1},
+    "inputs"          : {"boarhide": 3, "bronze_bar": 3, "sinew": 2, "cordage": 1},
     "outputs"         : {"boarhide_jerkin": 1},
     "workAmount"      : 12,
     "toolTierRequired": 0,
@@ -3649,7 +3682,7 @@
     "id"              : "make_plate_cuirass",
     "station"         : "anvil",
     "researchRequired": "steel_making",
-    "inputs"          : {"category:steel": 8, "hardened_boarhide": 1, "thread": 1},
+    "inputs"          : {"category:steel": 8, "boarhide": 1, "thread": 1},
     "outputs"         : {"plate_cuirass": 1},
     "workAmount"      : 64,
     "toolTierRequired": 3
@@ -3667,8 +3700,8 @@
     "id"               : "make_beast_leather_plate",
     "discipline"      : "leatherworking",
     "station"          : "makers_bench",
-    "inputs"           : {"hardened_boarhide": 4, "category:leather": 2, "thread": 2},
-    "inputAlternatives": [ {"hardened_boarhide": 4, "category:leather": 2} ],
+    "inputs"           : {"boarhide": 4, "category:leather": 2, "thread": 2},
+    "inputAlternatives": [ {"boarhide": 4, "category:leather": 2} ],
     "outputs"          : {"layered_boarhide_plate": 1},
     "workAmount"       : 72,
     "toolTierRequired" : 1
@@ -5597,7 +5630,7 @@
   {
     "id"              : "make_boarhide_bracers",
     "station"         : "makers_bench",
-    "inputs"          : {"hardened_boarhide": 1, "bronze_bar": 1, "sinew": 1, "cordage": 1},
+    "inputs"          : {"boarhide": 1, "bronze_bar": 1, "sinew": 1, "cordage": 1},
     "outputs"         : {"boarhide_bracers": 1},
     "workAmount"      : 7,
     "toolTierRequired": 0,
@@ -5606,7 +5639,7 @@
   {
     "id"              : "make_boarhide_greaves",
     "station"         : "makers_bench",
-    "inputs"          : {"hardened_boarhide": 2, "bronze_bar": 2, "sinew": 1, "cordage": 1},
+    "inputs"          : {"boarhide": 2, "bronze_bar": 2, "sinew": 1, "cordage": 1},
     "outputs"         : {"boarhide_greaves": 1},
     "workAmount"      : 9,
     "toolTierRequired": 0,
@@ -5655,7 +5688,7 @@
   {
     "id"              : "make_steel_vambraces",
     "station"         : "anvil",
-    "inputs"          : {"category:steel": 2, "hardened_boarhide": 1, "steel_rivet": 2},
+    "inputs"          : {"category:steel": 2, "boarhide": 1, "steel_rivet": 2},
     "outputs"         : {"steel_vambraces": 1},
     "workAmount"      : 20,
     "toolTierRequired": 3,
@@ -5665,7 +5698,7 @@
   {
     "id"              : "make_steel_greaves",
     "station"         : "anvil",
-    "inputs"          : {"category:steel": 2, "hardened_boarhide": 1, "steel_rivet": 2},
+    "inputs"          : {"category:steel": 2, "boarhide": 1, "steel_rivet": 2},
     "outputs"         : {"steel_greaves": 1},
     "workAmount"      : 24,
     "toolTierRequired": 3,
@@ -5825,7 +5858,7 @@
   {
     "id"              : "make_rune_graven_cuirass",
     "station"         : "runecarver_bench",
-    "inputs"          : {"magic_alloy_bar": 4, "gem_dust": 2, "hardened_boarhide": 1},
+    "inputs"          : {"magic_alloy_bar": 4, "gem_dust": 2, "boarhide": 1},
     "outputs"         : {"rune_graven_cuirass": 1},
     "workAmount"      : 60,
     "toolTierRequired": 2,
@@ -5834,7 +5867,7 @@
   {
     "id"              : "make_rune_graven_helm",
     "station"         : "runecarver_bench",
-    "inputs"          : {"magic_alloy_bar": 2, "gem_dust": 1, "hardened_boarhide": 1},
+    "inputs"          : {"magic_alloy_bar": 2, "gem_dust": 1, "boarhide": 1},
     "outputs"         : {"rune_graven_helm": 1},
     "workAmount"      : 40,
     "toolTierRequired": 2,
@@ -5955,7 +5988,7 @@
   {
     "id"              : "make_boar_head",
     "station"         : "casting_hearth",
-    "inputs"          : {"hardened_boarhide": 1, "bronze_bar": 1, "iron_nail": 2, "thread": 1},
+    "inputs"          : {"boarhide": 1, "bronze_bar": 1, "bronze_nail": 2, "thread": 1},
     "outputs"         : {"boar_head": 1},
     "workAmount"      : 11,
     "toolTierRequired": 0,
@@ -5964,7 +5997,7 @@
   {
     "id"              : "make_boar_gloves",
     "station"         : "casting_hearth",
-    "inputs"          : {"hardened_boarhide": 1, "bronze_bar": 1, "iron_nail": 2, "thread": 1},
+    "inputs"          : {"boarhide": 1, "bronze_bar": 1, "bronze_nail": 2, "thread": 1},
     "outputs"         : {"boar_gloves": 1},
     "workAmount"      : 9,
     "toolTierRequired": 0,
@@ -5973,7 +6006,7 @@
   {
     "id"              : "make_boar_boots",
     "station"         : "casting_hearth",
-    "inputs"          : {"hardened_boarhide": 2, "bronze_bar": 2, "iron_nail": 2, "thread": 1},
+    "inputs"          : {"boarhide": 2, "bronze_bar": 2, "bronze_nail": 2, "thread": 1},
     "outputs"         : {"boar_boots": 1},
     "workAmount"      : 11,
     "toolTierRequired": 0,
@@ -6081,7 +6114,7 @@
   {
     "id"              : "make_iron_plate_bracers",
     "station"         : "anvil",
-    "inputs"          : {"hardened_boarhide": 1, "iron_bar": 3, "iron_nail": 2, "thread": 1},
+    "inputs"          : {"boarhide": 1, "iron_bar": 3, "iron_nail": 2, "thread": 1},
     "outputs"         : {"iron_plate_bracers": 1},
     "workAmount"      : 14,
     "toolTierRequired": 1,
@@ -6091,7 +6124,7 @@
   {
     "id"              : "make_iron_plate_greaves",
     "station"         : "anvil",
-    "inputs"          : {"hardened_boarhide": 1, "iron_bar": 3, "iron_nail": 2, "thread": 1},
+    "inputs"          : {"boarhide": 1, "iron_bar": 3, "iron_nail": 2, "thread": 1},
     "outputs"         : {"iron_plate_greaves": 1},
     "workAmount"      : 16,
     "toolTierRequired": 1,
@@ -6227,7 +6260,7 @@
   {
     "id"              : "make_munition_half_plate_gloves",
     "station"         : "anvil",
-    "inputs"          : {"hardened_boarhide": 1, "category:steel": 1, "steel_rivet": 2, "thread": 1},
+    "inputs"          : {"boarhide": 1, "category:steel": 1, "steel_rivet": 2, "thread": 1},
     "outputs"         : {"munition_half_plate_gloves": 1},
     "workAmount"      : 15,
     "toolTierRequired": 2,
@@ -6237,7 +6270,7 @@
   {
     "id"              : "make_munition_half_plate_boots",
     "station"         : "anvil",
-    "inputs"          : {"hardened_boarhide": 2, "category:steel": 2, "steel_rivet": 2, "thread": 1},
+    "inputs"          : {"boarhide": 2, "category:steel": 2, "steel_rivet": 2, "thread": 1},
     "outputs"         : {"munition_half_plate_boots": 1},
     "workAmount"      : 17,
     "toolTierRequired": 2,

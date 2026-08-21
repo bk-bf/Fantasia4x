@@ -69,6 +69,20 @@
   const cell = (build: string, gkind: 'weapon' | 'armor', age: string) =>
     cellMap.get(`${build}|${gkind}|${age}`) ?? [];
 
+  // The same grid keyed off fallbackClasses — armour a build can wear but that was not made for it.
+  // Sturdiest first, so picking the head of the list picks the best stopgap.
+  const fbMap = new Map<string, GearRow[]>();
+  for (const g of GEAR) {
+    if (g.kind !== 'armor') continue;
+    for (const b of g.fallbackClasses) {
+      const key = `${b}|${g.age}`;
+      const arr = fbMap.get(key) ?? fbMap.set(key, []).get(key)!;
+      arr.push(g);
+    }
+  }
+  for (const arr of fbMap.values())
+    arr.sort((a, b) => (b.defense ?? 0) - (a.defense ?? 0) || a.tier - b.tier);
+
   // What a build must have covered at an age. The three torso layers collapse to ONE requirement —
   // a build needs *a* torso piece, not one per layer — and cloak/pack are carry, not protection, so
   // neither counts as a coverage gap.
@@ -76,6 +90,19 @@
   const coverageOf = (p: string | null) => (p?.startsWith('torso') ? 'torso' : p);
   const missingParts = (items: GearRow[]) =>
     COVERAGE_PARTS.filter((p) => !items.some((it) => coverageOf(it.bodyPart) === p));
+
+  /** What a build borrows at an age: for each region its own line does not cover, the sturdiest piece
+   *  it could still put on. One per region — a stopgap, not a shopping list — so an age whose kit is
+   *  complete borrows nothing and the cell stays clean. */
+  const FALLBACK = '__fallback';
+  const fallbackFill = (build: string, age: string, own: GearRow[]): GearRow[] => {
+    const gaps = missingParts(own);
+    if (!gaps.length) return [];
+    const pool = fbMap.get(`${build}|${age}`) ?? [];
+    return gaps
+      .map((p) => pool.find((it) => coverageOf(it.bodyPart) === p))
+      .filter((it): it is GearRow => !!it);
+  };
 
   /** A cell's pieces grouped into their sets, in the order the cell is already sorted. One-offs
    *  collect into a single trailing group so they fold away together. */
@@ -811,7 +838,7 @@
         >{#if armour && g.bodyPart}<i class="slot">{g.bodyPart}</i>{/if}{/if}</button
     >
   {/snippet}
-  {#snippet gearCell(items: GearRow[], armour: boolean)}
+  {#snippet gearCell(items: GearRow[], armour: boolean, fill: GearRow[])}
     {#if armour}
       {#each setGroups(items) as grp (grp.key)}
         {@const shut = collapsedSets[grp.key]}
@@ -830,7 +857,22 @@
             </div>{/if}
         </div>
       {/each}
-      {#each missingParts(items) as p (p)}<span class="miss">– {p}</span>{/each}
+      {#if fill.length}
+        {@const shut = collapsedSets[FALLBACK]}
+        <div class="setgrp">
+          <button
+            type="button"
+            class="setname fb"
+            onclick={() => toggleSet(FALLBACK)}
+            title={shut ? 'expand borrowed pieces' : 'collapse borrowed pieces'}
+            >{shut ? '▸' : '▾'}&nbsp;for want of better<i>{fill.length}</i></button
+          >
+          {#if !shut}<div class="setitems">
+              {#each fill as it (it.id)}{@render pill(it, armour)}{/each}
+            </div>{/if}
+        </div>
+      {/if}
+      {#each missingParts([...items, ...fill]) as p (p)}<span class="miss">– {p}</span>{/each}
     {:else}
       {#each items as it (it.id)}{@render pill(it, armour)}{/each}
       {#if !items.length}<span class="dot">·</span>{/if}
@@ -1107,13 +1149,14 @@
                 {#each AGES as a (a)}
                   {@const its = cell(b, 'weapon', a)}
                   <td class="cellwrap" class:gap={its.length === 0}
-                    >{@render gearCell(its, false)}</td
+                    >{@render gearCell(its, false, [])}</td
                   >
                 {/each}
                 {#each AGES as a (a)}
                   {@const its = cell(b, 'armor', a)}
-                  <td class="cellwrap" class:gap={its.length === 0}
-                    >{@render gearCell(its, true)}</td
+                  {@const fb = fallbackFill(b, a, its)}
+                  <td class="cellwrap" class:gap={its.length + fb.length === 0}
+                    >{@render gearCell(its, true, fb)}</td
                   >
                 {/each}
                 {#each REAL_RARITIES as r (r)}
@@ -1155,8 +1198,9 @@
                 >
                 {#each AGES as a (a)}
                   {@const its = cell(b, bview, a)}
-                  <td class="cellwrap" class:gap={its.length === 0}
-                    >{@render gearCell(its, bview === 'armor')}</td
+                  {@const fb = bview === 'armor' ? fallbackFill(b, a, its) : []}
+                  <td class="cellwrap" class:gap={its.length + fb.length === 0}
+                    >{@render gearCell(its, bview === 'armor', fb)}</td
                   >
                 {/each}
               </tr>
@@ -1539,6 +1583,16 @@
   .setname.dropped:hover {
     border-color: #5c456a;
     color: #c0a2c4;
+  }
+  /* borrowed from another line to plug a hole — muted, so it never reads as this build's own kit */
+  .setname.fb {
+    color: #7f8a92;
+    background: #1c2126;
+    border-color: #333c44;
+  }
+  .setname.fb:hover {
+    border-color: #4a5762;
+    color: #a3b1bb;
   }
   /* the nesting: pieces sit indented beneath their set, against a rule that ties them to it */
   .setitems {

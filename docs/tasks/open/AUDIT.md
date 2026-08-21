@@ -24,6 +24,37 @@ Audit only what's implemented. An unrealistic simplification that doesn't match 
 
 ## Done (this session)
 
+- [x] **Item-tier vs. workshop age (ITEM-RULES R4) — new guardrail, 2026-08-21.** Nothing checked that an
+      item's ingredients were reachable at its own age: R2 catches a beast out of reach, and nothing caught a
+      *workshop* that is. `itemRules.test.ts` R4 now prices every ingredient chain in building `ageTier`s and
+      fails when the latest station outranks the item's tier. It found 17 offenders on the first run.
+  - [x] `padded_cap` → **`hide_cap`**: a tier-0 piece of the stone-age hide set whose linen came back through
+        `thread` to the **bronze-age spinning wheel**. Now hide + cordage at the maker's bench, with the same
+        per-species variants as the rest of the set. Verified: HeadlessSession, 400 ticks, `deer_hide` 20→19,
+        `linen_cloth` 20/20 untouched, `hide_cap` worn on the head.
+  - [x] The bronze **boar set** (`boar_head`/`gloves`/`boots`) was nailed together with **`iron_nail`** →
+        `bronze_nail` (cast at the bronze-age casting hearth).
+  - [x] `arcane_robe` — tier 2 while being woven on the **runed** `runic_loom` from gem dust, and an
+        archetypal name ("THE arcane robe") on a mid-tier piece with defence 2. Moved to **tier 4** with
+        stats that earn it, and the hole it left is patched by a plain material-named **`silk_robe`** at
+        tier 2. Verified: HeadlessSession, 1600 ticks, `silk_cloth` 20→17, `silk_robe` worn in `bodyBase`.
+  - [ ] **The caster weapon line is the same lie, thirteen times over** — every staff, rod and scepter
+        (`ember_staff`, `cinder_rod`, `emberglass_scepter`, `manaforge_greatstaff`…) is carved on a RUNED
+        bench or altar while claiming tier 1–3, so the caster has no real progression, just one age wearing
+        four hats. Named in `R4_DEBT` rather than silenced. Needs a design pass: move the line to the age it
+        is actually made in, then author real early staves for the tiers it vacates.
+  - [ ] `great_bone_maul` — tier 2, needs the runed `sanguinary_altar` (and already on `R2_DEBT` for demanding
+        a Great Bear's bone). Both go away together when it is re-tiered.
+- [x] **Armour fallbacks in the gear tables (2026-08-21).** `gearDb.classifyArmor` handed each weight class to
+      a disjoint build list, so all seven primitive pieces went to the nimble columns and eleven of the
+      twenty-seven builds read "no armour exists in the stone age". It now returns `{ideal, fallback}`, and a
+      cell borrows one piece per region its own line leaves bare ("for want of better"). Shields and plate
+      keep no fallback list — the off-hand is physically taken, and plate would gut a duelist's speed.
+- [x] **`plank_round_shield` (2026-08-21)** — the hide-free alternative to the rawhide-faced round shield:
+      same boards, no facing, so it blocks nearly as well and splits three times faster. Verified:
+      HeadlessSession, 800 ticks, `oak_plank` 20→18, `deer_hide` 20/20 untouched, worn in `offHand`.
+      ⚠ Still open: **no craftable shield above tier 2** — Steel and Runed have none.
+
 - [x] Headless sim end-to-end — session/tick/command/state/query/save/load/trace verified live over curl
 - [x] Creature AI sweep (map full of mobs, monitored logs)
   - [x] Pathfinding — no stuck/oscillating pathing under Node
@@ -723,15 +754,18 @@ Reference: VilesMods "Hell-Bent for Leather" (mandatory tanning step, per-animal
 > - **Infra:** `buildScenario` now designates the ENTIRE map as stockpile (was a 7×7 rect), so a headless test
 >   can never be silently bottlenecked on storage/reachability. Determinism byte-identical.
 
-**Current chain (3 stages):** raw pelt/hide → **cure** (passive, `hide_rack` "Curing Frame", +ash×2 or
-salt×1) → **tan** (TWO competing paths: active `tanning_rack` +bark, OR passive `tanning_bucket_station`
-fuelled by `tanning_brine`) → **harden** (`tanning_rack`, beast_leather + water → hardened_boarhide). Brine
-brewed passively at `brewing_barrel` (bark+salt+ash+water). ⚠ Bucket recipes take NO material input —
-brine is consumed only as station FUEL (`defaultAllowedFuelItemIds`), so it's "cured hide → leather for free".
+**Current chain (2 stages + butchery):** raw pelt/hide → **cure** (passive, `hide_rack` "Curing Frame",
++ash×2 or salt×1) → **tan** (passive `tanning_bucket_station`, brine as a listed input). Brine brewed
+passively at `brewing_barrel` (bark+salt+ash+water). **There is no hardening stage** — see below.
 
 **Decided direction — IMPLEMENTED (2026-07-23; `pnpm check` clean, 0 new dangling refs, recipe/craft tests green):**
 - [x] **Removed `tanning_rack` entirely** (building + its 5 `make_*_leather` recipes). Tanning is now only the passive bucket stations.
-- [x] **Relocated `harden_boiled_leather`** → `beast_tanning_bucket` (passive): a stiff leather (`boarhide`/`oxhide`) + water → `hardened_boarhide`.
+- [x] ~~Relocated `harden_boiled_leather` → `beast_tanning_bucket`~~ — **REVERSED and DELETED (2026-08-21).** The
+      recipe and the `hardened_boarhide` item are gone; all 18 consumers (17 recipes + the armchair's build
+      cost) now take plain tanned `boarhide`. A chain earns its length from the ANIMAL, not from extra
+      processing: butcher → cure → tan is already two passive waits, and a stronger hide is what a bigger
+      boar is for. It also dragged the whole bronze boarhide line behind an iron-age station (see R4 below).
+      Verified: HeadlessSession, 1600 ticks, `boarhide` 20→17, `boarhide_jerkin` 0→1, worn in `bodyMid`.
 - [x] **Bucket tanning consumes brine as a LISTED input** (`tanning_brine`/`beast_brine`), and the buckets' brine-as-fuel config was stripped (they're plain passive stations like the Curing Frame). Closes the "free leather" hole and gives `brew_*_brine` real consumers.
 - [x] **Curing kept passive** at the Curing Frame (two-step chain: cure → tan).
 - [x] `make_ash` reachability unchanged (still a hearth recipe; see Ash section).
