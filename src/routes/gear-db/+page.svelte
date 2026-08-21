@@ -1,5 +1,6 @@
 <script lang="ts">
   import AuditTables from '$lib/dev/AuditTables.svelte';
+  import ItemTree from '$lib/dev/ItemTree.svelte';
   import SortableTable from '$lib/dev/SortableTable.svelte';
 
   // Server-loaded audit results (+page.server.ts). Everything else on this page is derived from the
@@ -469,9 +470,11 @@
   const params = page.url?.searchParams ?? new URLSearchParams();
   const pKind = params.get('kind');
   const pBuild = params.get('build');
-  let view = $state<'builds' | 'catalogue' | 'audit'>(
-    params.get('view') === 'audit'
-      ? 'audit'
+  let view = $state<'builds' | 'catalogue' | 'audit' | 'balance'>(
+    params.get('view') === 'balance'
+      ? 'balance'
+      : params.get('view') === 'audit'
+        ? 'audit'
       : pKind || pBuild || params.get('view') === 'catalogue'
         ? 'catalogue'
         : 'builds'
@@ -804,8 +807,15 @@
       class="tab lead"
       class:active={view === 'audit'}
       onclick={() => (view = 'audit')}
-      title="Headless balance-audit results — real HeadlessSession runs, pulled from the remote runner"
+      title="Every item in items.jsonc, nested by what it is — armour by age ▸ set ▸ class ▸ coverage"
       >Audit</button
+    >
+    <button
+      class="tab lead"
+      class:active={view === 'balance'}
+      onclick={() => (view = 'balance')}
+      title="Headless balance-audit results — real HeadlessSession runs, pulled from the remote runner"
+      >Balance</button
     >
     <span class="sep"></span>
     {#each CAT_KINDS as k (k)}
@@ -945,6 +955,8 @@
   {/snippet}
 
   {#if view === 'audit'}
+    <ItemTree />
+  {:else if view === 'balance'}
     <AuditTables audit={data.audit} />
   {:else if view === 'builds'}
     <div class="tabs sub">

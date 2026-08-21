@@ -1,0 +1,344 @@
+// itemTree.ts — DEV TOOL. EVERY item in items.jsonc, filed into a nested tree.
+//
+// The flat tables could not answer the question an audit actually asks: "what does this age offer for
+// this slot, and what is missing next to it". A list of 888 rows sorted by one column hides that; a
+// path does not. Each item declares where it belongs — Armour ▸ Bronze ▸ jackal_hide ▸ light ▸ head —
+// and the tree is built by inserting paths, so a new item files itself and a hole shows up as a level
+// with one child instead of six.
+//
+// Ages: EQUIPMENT reuses `gearDb`'s age so this tree and the build grid never disagree. Everything
+// else (materials, food, drink, reagents) is priced by the WORKSHOP its chain needs — `chainAge` —
+// because a material has no tier of its own and its own station lies (linen cloth is woven at a
+// primitive frame from thread spun on a bronze-age wheel).
+
+import itemsData from '../game/database/items/items.jsonc';
+import recipesData from '../game/database/items/recipes.jsonc';
+import buildingsData from '../game/database/world/buildings.jsonc';
+import { GEAR, AGES, type Age, type BuildClass } from './gearDb';
+import { AGE_NAMES, blameStation, chainAgeOf } from './chainAge';
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+const items = itemsData as any[];
+const recipes = recipesData as any[];
+
+const prettify = (id: string) =>
+  id
+    .replace(/^category:/, '')
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+
+const buildingName = new Map<string, string>();
+for (const b of buildingsData as any[]) if (b?.id) buildingName.set(b.id, b.name ?? prettify(b.id));
+
+const recipeByOutput = new Map<string, any>();
+for (const r of recipes) {
+  const outs = Object.keys(r?.outputs ?? {});
+  if (outs.length && !recipeByOutput.has(outs[0])) recipeByOutput.set(outs[0], r);
+}
+
+const gearById = new Map(GEAR.map((g) => [g.id, g]));
+
+/** Chain age → the same age vocabulary the build tables use. */
+const AGE_OF_CHAIN: Age[] = ['Primitive', 'Copper', 'Bronze', 'Iron', 'Steel', 'Runed'];
+const ageOf = (item: any): Age =>
+  gearById.get(item.id)?.age ?? AGE_OF_CHAIN[chainAgeOf(item.id)] ?? 'Primitive';
+
+export interface TreeItem {
+  id: string;
+  name: string;
+  path: string[];
+  age: Age;
+  ageRank: number;
+  tier: number | null;
+  /** The one number that matters for this kind — defence, damage, nutrition, comfort… */
+  stat: string;
+  weightKg: number;
+  /** Where it comes from: a station name, "forage / hunt", or "drop only". */
+  source: string;
+  /** The station whose age set this item's chain age — why it sits in the age it does. */
+  gatedBy: string;
+  desc: string;
+  raw: any;
+}
+
+// ── slot / coverage vocabulary ──────────────────────────────────────────────
+const COVERAGE: Record<string, string> = {
+  head: 'head',
+  bodyOuter: 'torso — outer',
+  bodyMid: 'torso — mid',
+  bodyBase: 'torso — skin',
+  bracers: 'arms',
+  gloves: 'hands',
+  greaves: 'legs',
+  boots: 'feet',
+  back: 'cloak',
+  back2: 'pack',
+  belt: 'belt',
+  offHand: 'off-hand',
+  ring: 'ring',
+  ring2: 'ring',
+  amulet: 'amulet'
+};
+const CLASS_LABEL: Record<string, string> = {
+  heavy: 'heavy',
+  medium: 'medium',
+  light: 'light',
+  shield: 'shield'
+};
+
+// A weapon's family comes from the build gearDb ALREADY classified it into — one classifier, not a
+// second name-regex quietly disagreeing with it. `pilum`, `francisca` and `framea` all landed in an
+// "other" bucket while gearDb knew perfectly well what they were.
+const FAMILY_OF_CLASS: Partial<Record<BuildClass, string>> = {
+  'Sword & Shield': 'sword',
+  'Sword (Duelist)': 'sword',
+  'Greatsword (2H)': 'sword',
+  'Axe & Shield': 'axe',
+  'Axe (Duelist)': 'axe',
+  '2H Axe': 'axe',
+  'Mace & Shield': 'mace & hammer',
+  'Mace (Duelist)': 'mace & hammer',
+  '2H Hammer': 'mace & hammer',
+  'Cleaver & Shield': 'cleaver',
+  'Cleaver (Duelist)': 'cleaver',
+  '2H Cleaver': 'cleaver',
+  'Flail & Shield': 'flail',
+  'Flail (Duelist)': 'flail',
+  'Spear & Shield': 'spear & polearm',
+  'Spear (Duelist)': 'spear & polearm',
+  'Polearm (2H)': 'spear & polearm',
+  'Fencer (Rapier)': 'rapier',
+  'Assassin (Dagger)': 'dagger',
+  'Archer (Bow)': 'bow',
+  Crossbowman: 'crossbow',
+  'Skirmisher (Throwing)': 'thrown',
+  'Slinger (Sling)': 'sling',
+  'Battlemage (1H Staff)': 'staff & rod',
+  'War-Caster (2H Staff)': 'staff & rod',
+  'Stunwaller (2H Staff)': 'staff & rod'
+};
+const WEAPON_FAMILY: [RegExp, string][] = [
+  [/bow|longbow|shortbow|selfbow/, 'bow'],
+  [/crossbow|arbalest/, 'crossbow'],
+  [/sling/, 'sling'],
+  [/javelin|throwing|dart|bola|harpoon/, 'thrown'],
+  [/staff|rod|scepter|sceptre/, 'staff & rod'],
+  [/dagger|knife|shiv|dirk|stiletto/, 'dagger'],
+  [/rapier|estoc/, 'rapier'],
+  [/spear|pike|halberd|glaive|poleaxe|polearm|lance|bill/, 'spear & polearm'],
+  [/axe|hatchet|bardiche/, 'axe'],
+  [/cleaver|falx/, 'cleaver'],
+  [/flail|morningstar|whip/, 'flail'],
+  [/mace|hammer|maul|club|cudgel|warhammer/, 'mace & hammer'],
+  [/sword|seax|spatha|blade|sabre|saber|falchion|greatsword/, 'sword']
+];
+const familyOf = (id: string) =>
+  FAMILY_OF_CLASS[gearById.get(id)?.cls as BuildClass] ??
+  WEAPON_FAMILY.find(([re]) => re.test(id))?.[1] ??
+  'other';
+
+const MATERIAL_LINE: Record<string, string> = {
+  hide: 'hide & leather',
+  cured_hide: 'hide & leather',
+  leather: 'hide & leather',
+  wool: 'fibre & cloth',
+  fiber: 'fibre & cloth',
+  cloth: 'fibre & cloth',
+  metal: 'metal & ore',
+  ore: 'metal & ore',
+  steel: 'metal & ore',
+  iron: 'metal & ore',
+  wood: 'wood',
+  magic_wood: 'wood',
+  woodwork: 'wood',
+  stone: 'stone & masonry',
+  block: 'stone & masonry',
+  construction: 'stone & masonry',
+  soil: 'earth & soil',
+  gem: 'gems & crystal',
+  magic_gem: 'gems & crystal',
+  crystal: 'gems & crystal',
+  magic_crystal: 'gems & crystal',
+  reagent: 'reagents & organics',
+  organic: 'reagents & organics',
+  medicine: 'reagents & organics',
+  ingredient: 'reagents & organics',
+  fuel: 'fuel',
+  carcass: 'carcasses',
+  storage: 'containers',
+  primitive: 'primitive stock',
+  crafting: 'primitive stock',
+  metalworking: 'metal & ore',
+  grain_seed: 'seeds'
+};
+const materialLine = (cat: string) =>
+  MATERIAL_LINE[cat] ?? (/_seed$/.test(cat) ? 'seeds' : prettify(cat));
+
+const perishable = (i: any) => (i.decaySeconds || i.decaysTo ? 'perishable' : 'keeps');
+
+// ── the path each item files itself under ───────────────────────────────────
+function pathOf(i: any): string[] {
+  const ap = i.armorProperties;
+  const wp = i.weaponProperties;
+  const age = ageOf(i);
+
+  if (ap?.armorType === 'shield') return ['Shields', age];
+  if (i.type === 'armor' && ap?.armorType) {
+    const set = ap.armorSet ? prettify(ap.armorSet) : recipeByOutput.has(i.id) ? 'no set' : 'drop only';
+    return [
+      'Armour',
+      age,
+      set,
+      CLASS_LABEL[ap.armorType] ?? ap.armorType,
+      COVERAGE[ap.equipmentSlot ?? ap.slot] ?? prettify(ap.equipmentSlot ?? 'unplaced')
+    ];
+  }
+  // Worn but soaks nothing: rings, amulets, crowns, torcs.
+  if (i.type === 'armor') return ['Regalia & jewellery', COVERAGE[ap?.equipmentSlot] ?? 'worn', age];
+
+  if (i.category === 'ammunition' || i.ammoProperties)
+    return ['Ammo', prettify(i.ammoProperties?.ammoCategory ?? i.ammoCategory ?? 'other'), age];
+  if (i.category === 'natural_weapon') return ['Natural weapons', prettify(i.category), age];
+  if (wp) return ['Weapons', age, familyOf(i.id), wp.twoHanded ? 'two-handed' : 'one-handed'];
+
+  if (i.type === 'food' || i.nutrition != null)
+    return ['Consumables', 'Food', perishable(i), prettify(i.category ?? 'food'), age];
+  if (i.category === 'drink') return ['Consumables', 'Drink', perishable(i), age];
+  if (i.medicineQuality != null) return ['Consumables', 'Medicine', age];
+  if (i.type === 'consumable' && i.category === 'reagent')
+    return ['Consumables', 'Coatings & tinctures', age];
+  if (i.type === 'consumable') return ['Consumables', prettify(i.category ?? 'other'), age];
+
+  if (i.type === 'tool' || i.type === 'container') {
+    const work = i.toolBoost?.workType ?? i.category ?? 'other';
+    return ['Tools', prettify(String(work)), age];
+  }
+  return ['Materials', materialLine(String(i.category ?? 'other')), age];
+}
+
+/** The single number worth showing for a row, chosen by what the item IS. */
+function statOf(i: any): string {
+  const ap = i.armorProperties;
+  const wp = i.weaponProperties;
+  if (ap?.armorType === 'shield') return `block ${Math.round((ap.blockBonus ?? 0) * 100)}%`;
+  if (ap?.armorType) return `def ${ap.defense ?? 0}`;
+  if (wp) return `dmg ${wp.damage ?? '—'}${wp.damageType ? ` ${wp.damageType}` : ''}`;
+  if (i.ammoProperties) return `dmg ${i.ammoProperties.damage ?? '—'}`;
+  if (i.nutrition != null) return `food ${i.nutrition}`;
+  if (i.hydration != null) return `drink ${i.hydration}`;
+  if (i.medicineQuality != null) return `med ${i.medicineQuality}`;
+  if (i.toolBoost) {
+    const b = i.toolBoost;
+    const parts = [
+      b.speed ? `spd ×${b.speed}` : '',
+      b.yield ? `yld ×${b.yield}` : '',
+      b.quality ? `qly ×${b.quality}` : ''
+    ].filter(Boolean);
+    if (parts.length) return parts.join(' ');
+  }
+  if (i.inventoryBonus) return `carry +${i.inventoryBonus.weightKg ?? 0}kg`;
+  if (i.fuelValue) return `fuel ${i.fuelValue}`;
+  return '—';
+}
+
+function sourceOf(i: any): string {
+  const rec = recipeByOutput.get(i.id);
+  if (!rec) return gearById.get(i.id)?.droppedBy.length ? 'drop only' : 'forage / hunt';
+  const st = rec.station;
+  return !st || st === 'craft_spot' ? 'anywhere' : (buildingName.get(st) ?? prettify(st));
+}
+
+export const TREE_ITEMS: TreeItem[] = items
+  .filter((i) => i?.id)
+  .map((i) => {
+    const gated = blameStation(i.id);
+    return {
+      id: i.id,
+      name: i.name ?? prettify(i.id),
+      path: pathOf(i),
+      age: ageOf(i),
+      ageRank: AGES.indexOf(ageOf(i)),
+      tier: i.tier ?? null,
+      stat: statOf(i),
+      weightKg: i.weightKg ?? 0,
+      source: sourceOf(i),
+      gatedBy: gated
+        ? `${buildingName.get(gated) ?? prettify(gated)} · ${AGE_NAMES[chainAgeOf(i.id)]}`
+        : '',
+      desc: i.description ?? '',
+      raw: i
+    };
+  });
+
+// ── the tree itself ─────────────────────────────────────────────────────────
+export interface TreeNode {
+  key: string;
+  label: string;
+  depth: number;
+  count: number;
+  children: TreeNode[];
+  items: TreeItem[];
+}
+
+/** Ages sort by the real ladder; everything else alphabetically, with the catch-alls last. */
+const TRAILING = ['no set', 'drop only', 'other', 'unplaced'];
+function sortNodes(nodes: TreeNode[]): TreeNode[] {
+  return nodes.sort((a, b) => {
+    const ai = AGES.indexOf(a.label as Age);
+    const bi = AGES.indexOf(b.label as Age);
+    if (ai >= 0 && bi >= 0) return ai - bi;
+    const at = TRAILING.indexOf(a.label);
+    const bt = TRAILING.indexOf(b.label);
+    if (at >= 0 || bt >= 0) return (at < 0 ? -1 : at) - (bt < 0 ? -1 : bt);
+    return a.label.localeCompare(b.label);
+  });
+}
+
+/** Top level in the order an audit reads it, not alphabetically. */
+const ROOT_ORDER = [
+  'Armour',
+  'Shields',
+  'Weapons',
+  'Ammo',
+  'Regalia & jewellery',
+  'Tools',
+  'Consumables',
+  'Materials',
+  'Natural weapons'
+];
+
+export function buildTree(rows: TreeItem[] = TREE_ITEMS): TreeNode {
+  const root: TreeNode = { key: '', label: 'all', depth: -1, count: 0, children: [], items: [] };
+  const index = new Map<string, TreeNode>([['', root]]);
+  for (const it of rows) {
+    let key = '';
+    let node = root;
+    node.count++;
+    it.path.forEach((label, depth) => {
+      key = key ? `${key}/${label}` : label;
+      let child = index.get(key);
+      if (!child) {
+        child = { key, label, depth, count: 0, children: [], items: [] };
+        index.set(key, child);
+        node.children.push(child);
+      }
+      child.count++;
+      node = child;
+    });
+    node.items.push(it);
+  }
+  (function order(n: TreeNode) {
+    if (n === root)
+      n.children.sort((a, b) => {
+        const ai = ROOT_ORDER.indexOf(a.label);
+        const bi = ROOT_ORDER.indexOf(b.label);
+        return (ai < 0 ? 99 : ai) - (bi < 0 ? 99 : bi);
+      });
+    else sortNodes(n.children);
+    n.items.sort((a, b) => (a.tier ?? 0) - (b.tier ?? 0) || a.name.localeCompare(b.name));
+    n.children.forEach(order);
+  })(root);
+  return root;
+}
+
+export const ITEM_TREE = buildTree();

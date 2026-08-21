@@ -3,8 +3,8 @@ import itemsData from '$lib/game/database/items/items.jsonc';
 import recipesData from '$lib/game/database/items/recipes.jsonc';
 import creaturesData from '$lib/game/database/pawns/creatures.jsonc';
 import resourcesData from '$lib/game/database/world/resources.jsonc';
-import buildingsData from '$lib/game/database/world/buildings.jsonc';
 import type { Item } from '$lib/game/core/types';
+import { AGE_CEILING, AGE_NAMES, blameStation, chainAgeOf } from '$lib/dev/chainAge';
 
 // The machine-checkable subset of docs/game/ITEM-RULES.md.
 //
@@ -240,87 +240,8 @@ describe('ITEM-RULES R3 — a species in the name means that species in the reci
 });
 
 // ── R4: how deep in the workshop ladder an item's materials actually sit ────────────────────────
-// Buildings already declare an `ageTier` ("bronze:1"), so the chain can be priced in ages without a
-// second source of truth. The walk takes the CHEAPEST recipe for each ingredient and the cheapest
-// member of a `category:`/dynamic pool, exactly like R2 — a pool gates nothing, it takes what is
-// nearest to hand.
-type Building = { id: string; ageTier?: string };
-const BUILDING_AGE = new Map<string, number>();
-const AGE_NAMES = ['primitive', 'copper', 'bronze', 'iron', 'steel', 'runed'];
-for (const b of buildingsData as unknown as Building[]) {
-  const age = AGE_NAMES.indexOf((b.ageTier ?? 'primitive').split(':')[0]);
-  BUILDING_AGE.set(b.id, age < 0 ? 0 : age);
-}
-// Item tiers run 0..4 and building ages 0..5 — the item ladder has no separate copper rung, so a
-// tier-1 piece may legitimately be made at a copper OR a bronze station.
-const AGE_CEILING = [0, 2, 3, 4, 5];
-
-const byCategory = new Map<string, Item[]>();
-for (const i of ITEMS) {
-  const c = (i as { category?: string }).category;
-  if (c) byCategory.set(c, [...(byCategory.get(c) ?? []), i]);
-}
-const poolMembers = (cat: string) => byCategory.get(cat.replace(/^category:/, '')) ?? [];
-
-type RecipeWithStation = Recipe & {
-  station?: string;
-  dynamicRecipe?: Record<string, { acceptsCategory?: string; acceptsCategories?: string[] }>;
-};
-/** Every ingredient a recipe names, with `category:` and dynamic slots folded in as pool keys. */
-const ingredientsOf = (r: RecipeWithStation): string[] => {
-  const out = Object.keys(r.inputs ?? {});
-  for (const slot of Object.values(r.dynamicRecipe ?? {}))
-    if (slot.acceptsCategory) out.push(`category:${slot.acceptsCategory}`);
-  return out;
-};
-
-// Fixed point, the same shape R2 uses: an item costs the CHEAPEST recipe that makes it, a recipe
-// costs the latest station in it or in anything it consumes, and a pool costs its cheapest member.
-// Relaxing until stable also means a cycle settles instead of recursing forever.
-const chainAge = new Map<string, number>();
-const ageOfPool = (key: string) => {
-  const members = poolMembers(key);
-  if (!members.length) return 0; // a pool nothing fills constrains nothing
-  return Math.min(...members.map((m) => chainAge.get(m.id) ?? 0));
-};
-const ageOfInput = (k: string) =>
-  k.startsWith('category:') ? ageOfPool(k) : (chainAge.get(k) ?? 0);
-const recipeAge = (r: RecipeWithStation) =>
-  Math.max(
-    r.station ? (BUILDING_AGE.get(r.station) ?? 0) : 0,
-    ...ingredientsOf(r).map(ageOfInput),
-    0
-  );
-
-for (let pass = 0; pass < 30; pass++) {
-  let changed = false;
-  for (const [out, rs] of recipesByOutput) {
-    // Foraged, mined or butchered off a corpse: no workshop stands behind it, whatever else makes it.
-    if (nodeItems.has(out) || carcass.has(out)) continue;
-    const age = Math.min(...(rs as RecipeWithStation[]).map(recipeAge));
-    if (age !== (chainAge.get(out) ?? 0)) {
-      chainAge.set(out, age);
-      changed = true;
-    }
-  }
-  if (!changed) break;
-}
-
-/** Which building in the chain set the age — for the failure message, computed only when one fails. */
-function blameStation(id: string, seen = new Set<string>()): string {
-  const rs = (recipesByOutput.get(id) ?? []) as RecipeWithStation[];
-  if (!rs.length || seen.has(id)) return '';
-  const target = chainAge.get(id) ?? 0;
-  const r = rs.find((x) => recipeAge(x) === target) ?? rs[0];
-  if (r.station && (BUILDING_AGE.get(r.station) ?? 0) === target) return r.station;
-  for (const k of ingredientsOf(r)) {
-    if (ageOfInput(k) !== target) continue;
-    if (!k.startsWith('category:')) return blameStation(k, new Set(seen).add(id));
-    const worst = poolMembers(k).find((m) => (chainAge.get(m.id) ?? 0) === target);
-    if (worst) return blameStation(worst.id, new Set(seen).add(id));
-  }
-  return r.station ?? '';
-}
+// The walk itself lives in `$lib/dev/chainAge` so the /gear-db item tree and this assertion read the
+// SAME numbers — two copies of it would drift, and the drift would be invisible.
 
 const R4_DEBT = new Set<string>([
   // THE CASTER WEAPON LINE IS THE SAME LIE `arcane_robe` TOLD, thirteen times over: every staff, rod
@@ -349,7 +270,7 @@ const R4_DEBT = new Set<string>([
 describe('ITEM-RULES R4 — tier is not below the workshop its materials need', () => {
   it('no item is gated behind a station later than its own age', () => {
     const bad = CRAFTABLE.filter((i) => !R4_DEBT.has(i.id))
-      .map((i) => ({ i, age: chainAge.get(i.id) ?? 0 }))
+      .map((i) => ({ i, age: chainAgeOf(i.id) }))
       .filter(({ i, age }) => age > AGE_CEILING[Math.min(i.tier ?? 0, 4)])
       .map(
         ({ i, age }) =>
@@ -362,7 +283,7 @@ describe('ITEM-RULES R4 — tier is not below the workshop its materials need', 
   it('the debt list has no stale entries', () => {
     const fixed = [...R4_DEBT].filter((id) => {
       const item = ITEMS.find((x) => x.id === id);
-      return item && (chainAge.get(id) ?? 0) <= AGE_CEILING[Math.min(item.tier ?? 0, 4)];
+      return item && chainAgeOf(id) <= AGE_CEILING[Math.min(item.tier ?? 0, 4)];
     });
     expect(fixed, `fixed — drop from R4_DEBT: ${fixed.join(', ')}`).toEqual([]);
   });
