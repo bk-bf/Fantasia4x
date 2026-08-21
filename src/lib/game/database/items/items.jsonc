@@ -7061,6 +7061,7 @@
     "maxDurability": 200,
     "durabilityLossPerCombatHit": 6,
     "armorProperties": {
+      "armorSet"       : "orc_warhost",
       "defense"         : 18,
       "armorType"       : "heavy",
       "slot"            : "bodyMid",
@@ -7178,6 +7179,7 @@
     "maxDurability": 60,
     "durabilityLossPerCombatHit": 7,
     "armorProperties": {
+      "armorSet"       : "goblin_scrap",
       "defense"         : 6,
       "armorType"       : "light",
       "slot"            : "bodyOuter",
@@ -7301,6 +7303,7 @@
     "maxDurability": 280,
     "durabilityLossPerCombatHit": 5,
     "armorProperties": {
+      "armorSet"       : "orc_warboss",
       "defense"         : 24,
       "armorType"       : "heavy",
       "slot"            : "bodyMid",
@@ -11092,6 +11095,7 @@
     "maxDurability": 22,
     "durabilityLossPerCombatHit": 60,
     "armorProperties": {
+      "armorSet"       : "wicker",
       "defense"        : 2,
       "armorType"      : "light",
       "slot"           : "bodyBase",
@@ -11104,9 +11108,9 @@
     }
   },
   {
-    "id": "raw_hide_vest",
+    "id": "cured_hide_vest",
     "charSpans": [ {"sheet": "items", "id": 9} ],
-    "name": "Raw Hide Vest",
+    "name": "Cured Hide Vest",
     "type": "armor",
     "category": "primitive",
     "deteriorationRate": 0.02,
@@ -11121,7 +11125,7 @@
     "armorProperties": {
       "defense"        : 4,
       "armorType"      : "light",
-      "armorSet"       : "primitive_hide",
+      "armorSet"       : "cured_hide",
       "slot"           : "bodyBase",
       "equipmentSlot"  : "bodyBase",
       "armorLayer"     : "gambeson",
@@ -11132,9 +11136,9 @@
     }
   },
   {
-    "id": "hide_cap",
+    "id": "cured_hide_cap",
     "charSpans": [ {"sheet": "items", "id": 84} ],
-    "name": "Hide Cap",
+    "name": "Cured Hide Cap",
     "type": "armor",
     "category": "primitive",
     "deteriorationRate": 0.02,
@@ -11149,7 +11153,7 @@
     "armorProperties": {
       "defense"        : 2,
       "armorType"      : "light",
-      "armorSet"       : "primitive_hide",
+      "armorSet"       : "cured_hide",
       "slot"           : "head",
       "equipmentSlot"  : "head",
       "armorLayer"     : "gambeson",
@@ -11265,7 +11269,7 @@
     "armorProperties": {
       "defense"        : 4,
       "armorType"      : "light",
-      "armorSet"       : "jackal_hide",
+      "armorSet"       : "jackal_leather",
       "slot"           : "head",
       "equipmentSlot"  : "head",
       "armorLayer"     : "gambeson",
@@ -11407,7 +11411,7 @@
     "armorProperties": {
       "defense"        : 3,
       "armorType"      : "light",
-      "armorSet"       : "jackal_hide",
+      "armorSet"       : "jackal_leather",
       "slot"           : "gloves",
       "equipmentSlot"  : "gloves",
       "armorValue"     : 3,
@@ -11419,7 +11423,7 @@
   {
     "id": "hide_boots",
     "charSpans": [ {"sheet": "items", "id": 146} ],
-    "name": "Hide Boots",
+    "name": "Leather Boots",
     "type": "armor",
     "category": "leather",
     "deteriorationRate": 0.01,
@@ -11434,7 +11438,7 @@
     "armorProperties": {
       "defense"        : 2,
       "armorType"      : "light",
-      "armorSet"       : "jackal_hide",
+      "armorSet"       : "jackal_leather",
       "slot"           : "boots",
       "equipmentSlot"  : "boots",
       "armorValue"     : 2,
@@ -11616,9 +11620,9 @@
   //    age's chest piece at ~1/3 its defense. Coverage comes from the slot defaults (SLOT_COVERAGE):
   //    pauldrons→shoulders, bracers→arms, greaves→legs. Sprite ids are PLACEHOLDERS (items/12).
   {
-    "id": "rawhide_arm_wraps",
+    "id": "cured_hide_arm_wraps",
     "charSpans": [ {"sheet": "items", "id": 12} ],
-    "name": "Rawhide Arm-Wraps",
+    "name": "Cured Hide Arm-Wraps",
     "type": "armor",
     "category": "primitive",
     "deteriorationRate": 0.01,
@@ -11633,7 +11637,7 @@
     "armorProperties": {
       "defense"        : 2,
       "armorType"      : "light",
-      "armorSet"       : "primitive_hide",
+      "armorSet"       : "cured_hide",
       "slot"           : "bracers",
       "equipmentSlot"  : "bracers",
       "armorValue"     : 2,
@@ -11642,9 +11646,9 @@
     }
   },
   {
-    "id": "rawhide_leg_wraps",
+    "id": "cured_hide_leg_wraps",
     "charSpans": [ {"sheet": "items", "id": 12} ],
-    "name": "Rawhide Leg-Wraps",
+    "name": "Cured Hide Leg-Wraps",
     "type": "armor",
     "category": "primitive",
     "deteriorationRate": 0.01,
@@ -11659,7 +11663,7 @@
     "armorProperties": {
       "defense"        : 2,
       "armorType"      : "light",
-      "armorSet"       : "primitive_hide",
+      "armorSet"       : "cured_hide",
       "slot"           : "greaves",
       "equipmentSlot"  : "greaves",
       "armorValue"     : 2,
@@ -11885,9 +11889,9 @@
   //    a precision weapon beating a knight through the gaps is the counterplay, and mixing a
   //    lighter gorget or gauntlet back in costs weight. Sprite ids reuse the existing vocabulary.
   {
-    "id": "rawhide_mitts",
+    "id": "cured_hide_mitts",
     "charSpans": [ {"sheet": "items", "id": 12} ],
-    "name": "Rawhide Mitts",
+    "name": "Cured Hide Mitts",
     "type": "armor",
     "category": "primitive",
     "deteriorationRate": 0.01,
@@ -11902,7 +11906,7 @@
     "armorProperties": {
       "defense"        : 2,
       "armorType"      : "light",
-      "armorSet"       : "primitive_hide",
+      "armorSet"       : "cured_hide",
       "slot"           : "gloves",
       "equipmentSlot"  : "gloves",
       "armorValue"     : 2,
@@ -11911,9 +11915,9 @@
     }
   },
   {
-    "id": "hide_footwraps",
+    "id": "cured_hide_footwraps",
     "charSpans": [ {"sheet": "items", "id": 146} ],
-    "name": "Hide Foot-Wraps",
+    "name": "Cured Hide Foot-Wraps",
     "type": "armor",
     "category": "primitive",
     "deteriorationRate": 0.012,
@@ -11928,7 +11932,7 @@
     "armorProperties": {
       "defense"        : 2,
       "armorType"      : "light",
-      "armorSet"       : "primitive_hide",
+      "armorSet"       : "cured_hide",
       "slot"           : "boots",
       "equipmentSlot"  : "boots",
       "armorValue"     : 2,
@@ -12517,7 +12521,7 @@
   {
     "id": "jackal_head",
     "charSpans": [ {"sheet": "items", "id": 80} ],
-    "name": "Jackal-Hide Cap",
+    "name": "Jackal-Leather Cap",
     "type": "armor",
     "category": "leather",
     "deteriorationRate": 0.01,
@@ -12532,7 +12536,7 @@
     "armorProperties": {
       "defense"        : 3,
       "armorType"      : "light",
-      "armorSet"       : "jackal_hide",
+      "armorSet"       : "jackal_leather",
       "slot"           : "head",
       "equipmentSlot"  : "head",
       "armorValue"     : 3,
@@ -12543,7 +12547,7 @@
   {
     "id": "jackal_bodybase",
     "charSpans": [ {"sheet": "items", "id": 8} ],
-    "name": "Jackal-Hide Jerkin",
+    "name": "Jackal-Leather Jerkin",
     "type": "armor",
     "category": "leather",
     "deteriorationRate": 0.01,
@@ -12558,7 +12562,7 @@
     "armorProperties": {
       "defense"        : 6,
       "armorType"      : "light",
-      "armorSet"       : "jackal_hide",
+      "armorSet"       : "jackal_leather",
       "slot"           : "bodyBase",
       "equipmentSlot"  : "bodyBase",
       "armorValue"     : 6,
@@ -12569,7 +12573,7 @@
   {
     "id": "jackal_bracers",
     "charSpans": [ {"sheet": "items", "id": 12} ],
-    "name": "Jackal-Hide Bracers",
+    "name": "Jackal-Leather Bracers",
     "type": "armor",
     "category": "leather",
     "deteriorationRate": 0.01,
@@ -12584,7 +12588,7 @@
     "armorProperties": {
       "defense"        : 2,
       "armorType"      : "light",
-      "armorSet"       : "jackal_hide",
+      "armorSet"       : "jackal_leather",
       "slot"           : "bracers",
       "equipmentSlot"  : "bracers",
       "armorValue"     : 2,
@@ -12595,7 +12599,7 @@
   {
     "id": "jackal_gloves",
     "charSpans": [ {"sheet": "items", "id": 72} ],
-    "name": "Jackal-Hide Gloves",
+    "name": "Jackal-Leather Gloves",
     "type": "armor",
     "category": "leather",
     "deteriorationRate": 0.01,
@@ -12610,7 +12614,7 @@
     "armorProperties": {
       "defense"        : 2,
       "armorType"      : "light",
-      "armorSet"       : "jackal_hide",
+      "armorSet"       : "jackal_leather",
       "slot"           : "gloves",
       "equipmentSlot"  : "gloves",
       "armorValue"     : 2,
@@ -12621,7 +12625,7 @@
   {
     "id": "jackal_greaves",
     "charSpans": [ {"sheet": "items", "id": 12} ],
-    "name": "Jackal-Hide Greaves",
+    "name": "Jackal-Leather Greaves",
     "type": "armor",
     "category": "leather",
     "deteriorationRate": 0.01,
@@ -12636,7 +12640,7 @@
     "armorProperties": {
       "defense"        : 2,
       "armorType"      : "light",
-      "armorSet"       : "jackal_hide",
+      "armorSet"       : "jackal_leather",
       "slot"           : "greaves",
       "equipmentSlot"  : "greaves",
       "armorValue"     : 2,
@@ -12647,7 +12651,7 @@
   {
     "id": "jackal_boots",
     "charSpans": [ {"sheet": "items", "id": 146} ],
-    "name": "Jackal-Hide Boots",
+    "name": "Jackal-Leather Boots",
     "type": "armor",
     "category": "leather",
     "deteriorationRate": 0.01,
@@ -12662,7 +12666,7 @@
     "armorProperties": {
       "defense"        : 2,
       "armorType"      : "light",
-      "armorSet"       : "jackal_hide",
+      "armorSet"       : "jackal_leather",
       "slot"           : "boots",
       "equipmentSlot"  : "boots",
       "armorValue"     : 2,
@@ -12881,7 +12885,7 @@
   {
     "id": "wolf_head",
     "charSpans": [ {"sheet": "items", "id": 80} ],
-    "name": "Wolf-Hide Cap",
+    "name": "Wolf-Leather Cap",
     "type": "armor",
     "category": "leather",
     "deteriorationRate": 0.008,
@@ -12896,7 +12900,7 @@
     "armorProperties": {
       "defense"        : 6,
       "armorType"      : "light",
-      "armorSet"       : "wolf_hide",
+      "armorSet"       : "wolf_leather",
       "slot"           : "head",
       "equipmentSlot"  : "head",
       "armorValue"     : 6,
@@ -12907,7 +12911,7 @@
   {
     "id": "wolf_bodybase",
     "charSpans": [ {"sheet": "items", "id": 8} ],
-    "name": "Wolf-Hide Jerkin",
+    "name": "Wolf-Leather Jerkin",
     "type": "armor",
     "category": "leather",
     "deteriorationRate": 0.008,
@@ -12922,7 +12926,7 @@
     "armorProperties": {
       "defense"        : 10,
       "armorType"      : "light",
-      "armorSet"       : "wolf_hide",
+      "armorSet"       : "wolf_leather",
       "slot"           : "bodyBase",
       "equipmentSlot"  : "bodyBase",
       "armorValue"     : 10,
@@ -12933,7 +12937,7 @@
   {
     "id": "wolf_bracers",
     "charSpans": [ {"sheet": "items", "id": 12} ],
-    "name": "Wolf-Hide Bracers",
+    "name": "Wolf-Leather Bracers",
     "type": "armor",
     "category": "leather",
     "deteriorationRate": 0.008,
@@ -12948,7 +12952,7 @@
     "armorProperties": {
       "defense"        : 4,
       "armorType"      : "light",
-      "armorSet"       : "wolf_hide",
+      "armorSet"       : "wolf_leather",
       "slot"           : "bracers",
       "equipmentSlot"  : "bracers",
       "armorValue"     : 4,
@@ -12959,7 +12963,7 @@
   {
     "id": "wolf_gloves",
     "charSpans": [ {"sheet": "items", "id": 72} ],
-    "name": "Wolf-Hide Gloves",
+    "name": "Wolf-Leather Gloves",
     "type": "armor",
     "category": "leather",
     "deteriorationRate": 0.008,
@@ -12974,7 +12978,7 @@
     "armorProperties": {
       "defense"        : 3,
       "armorType"      : "light",
-      "armorSet"       : "wolf_hide",
+      "armorSet"       : "wolf_leather",
       "slot"           : "gloves",
       "equipmentSlot"  : "gloves",
       "armorValue"     : 3,
@@ -12985,7 +12989,7 @@
   {
     "id": "wolf_greaves",
     "charSpans": [ {"sheet": "items", "id": 12} ],
-    "name": "Wolf-Hide Greaves",
+    "name": "Wolf-Leather Greaves",
     "type": "armor",
     "category": "leather",
     "deteriorationRate": 0.008,
@@ -13000,7 +13004,7 @@
     "armorProperties": {
       "defense"        : 4,
       "armorType"      : "light",
-      "armorSet"       : "wolf_hide",
+      "armorSet"       : "wolf_leather",
       "slot"           : "greaves",
       "equipmentSlot"  : "greaves",
       "armorValue"     : 4,
@@ -13011,7 +13015,7 @@
   {
     "id": "wolf_boots",
     "charSpans": [ {"sheet": "items", "id": 146} ],
-    "name": "Wolf-Hide Boots",
+    "name": "Wolf-Leather Boots",
     "type": "armor",
     "category": "leather",
     "deteriorationRate": 0.008,
@@ -13026,7 +13030,7 @@
     "armorProperties": {
       "defense"        : 3,
       "armorType"      : "light",
-      "armorSet"       : "wolf_hide",
+      "armorSet"       : "wolf_leather",
       "slot"           : "boots",
       "equipmentSlot"  : "boots",
       "armorValue"     : 3,
@@ -13089,7 +13093,7 @@
   {
     "id": "elk_head",
     "charSpans": [ {"sheet": "items", "id": 80} ],
-    "name": "Elk-Hide Cap",
+    "name": "Elk-Leather Cap",
     "type": "armor",
     "category": "leather",
     "deteriorationRate": 0.008,
@@ -13116,7 +13120,7 @@
   {
     "id": "elk_bodybase",
     "charSpans": [ {"sheet": "items", "id": 8} ],
-    "name": "Elk-Hide Jerkin",
+    "name": "Elk-Leather Jerkin",
     "type": "armor",
     "category": "leather",
     "deteriorationRate": 0.008,
@@ -13142,7 +13146,7 @@
   {
     "id": "elk_bracers",
     "charSpans": [ {"sheet": "items", "id": 12} ],
-    "name": "Elk-Hide Bracers",
+    "name": "Elk-Leather Bracers",
     "type": "armor",
     "category": "leather",
     "deteriorationRate": 0.008,
@@ -13169,7 +13173,7 @@
   {
     "id": "elk_gloves",
     "charSpans": [ {"sheet": "items", "id": 72} ],
-    "name": "Elk-Hide Gloves",
+    "name": "Elk-Leather Gloves",
     "type": "armor",
     "category": "leather",
     "deteriorationRate": 0.008,
@@ -13196,7 +13200,7 @@
   {
     "id": "elk_boots",
     "charSpans": [ {"sheet": "items", "id": 146} ],
-    "name": "Elk-Hide Boots",
+    "name": "Elk-Leather Boots",
     "type": "armor",
     "category": "leather",
     "deteriorationRate": 0.008,
@@ -13300,7 +13304,7 @@
   {
     "id": "sabretooth_head",
     "charSpans": [ {"sheet": "items", "id": 80} ],
-    "name": "Sabretooth-Hide Cap",
+    "name": "Sabretooth-Leather Cap",
     "type": "armor",
     "category": "leather",
     "deteriorationRate": 0.006,
@@ -13315,7 +13319,7 @@
     "armorProperties": {
       "defense"        : 8,
       "armorType"      : "light",
-      "armorSet"       : "sabretooth_hide",
+      "armorSet"       : "sabretooth_leather",
       "slot"           : "head",
       "equipmentSlot"  : "head",
       "armorValue"     : 8,
@@ -13326,7 +13330,7 @@
   {
     "id": "sabretooth_bodybase",
     "charSpans": [ {"sheet": "items", "id": 8} ],
-    "name": "Sabretooth-Hide Jerkin",
+    "name": "Sabretooth-Leather Jerkin",
     "type": "armor",
     "category": "leather",
     "deteriorationRate": 0.006,
@@ -13341,7 +13345,7 @@
     "armorProperties": {
       "defense"        : 15,
       "armorType"      : "light",
-      "armorSet"       : "sabretooth_hide",
+      "armorSet"       : "sabretooth_leather",
       "slot"           : "bodyBase",
       "equipmentSlot"  : "bodyBase",
       "armorValue"     : 15,
@@ -13352,7 +13356,7 @@
   {
     "id": "sabretooth_bracers",
     "charSpans": [ {"sheet": "items", "id": 12} ],
-    "name": "Sabretooth-Hide Bracers",
+    "name": "Sabretooth-Leather Bracers",
     "type": "armor",
     "category": "leather",
     "deteriorationRate": 0.006,
@@ -13367,7 +13371,7 @@
     "armorProperties": {
       "defense"        : 6,
       "armorType"      : "light",
-      "armorSet"       : "sabretooth_hide",
+      "armorSet"       : "sabretooth_leather",
       "slot"           : "bracers",
       "equipmentSlot"  : "bracers",
       "armorValue"     : 6,
@@ -13378,7 +13382,7 @@
   {
     "id": "sabretooth_gloves",
     "charSpans": [ {"sheet": "items", "id": 72} ],
-    "name": "Sabretooth-Hide Gloves",
+    "name": "Sabretooth-Leather Gloves",
     "type": "armor",
     "category": "leather",
     "deteriorationRate": 0.006,
@@ -13393,7 +13397,7 @@
     "armorProperties": {
       "defense"        : 4,
       "armorType"      : "light",
-      "armorSet"       : "sabretooth_hide",
+      "armorSet"       : "sabretooth_leather",
       "slot"           : "gloves",
       "equipmentSlot"  : "gloves",
       "armorValue"     : 4,
@@ -13404,7 +13408,7 @@
   {
     "id": "sabretooth_greaves",
     "charSpans": [ {"sheet": "items", "id": 12} ],
-    "name": "Sabretooth-Hide Greaves",
+    "name": "Sabretooth-Leather Greaves",
     "type": "armor",
     "category": "leather",
     "deteriorationRate": 0.006,
@@ -13419,7 +13423,7 @@
     "armorProperties": {
       "defense"        : 6,
       "armorType"      : "light",
-      "armorSet"       : "sabretooth_hide",
+      "armorSet"       : "sabretooth_leather",
       "slot"           : "greaves",
       "equipmentSlot"  : "greaves",
       "armorValue"     : 6,
@@ -13430,7 +13434,7 @@
   {
     "id": "sabretooth_boots",
     "charSpans": [ {"sheet": "items", "id": 146} ],
-    "name": "Sabretooth-Hide Boots",
+    "name": "Sabretooth-Leather Boots",
     "type": "armor",
     "category": "leather",
     "deteriorationRate": 0.006,
@@ -13445,7 +13449,7 @@
     "armorProperties": {
       "defense"        : 4,
       "armorType"      : "light",
-      "armorSet"       : "sabretooth_hide",
+      "armorSet"       : "sabretooth_leather",
       "slot"           : "boots",
       "equipmentSlot"  : "boots",
       "armorValue"     : 4,
@@ -17414,7 +17418,6 @@
     "armorProperties": {
       "defense"        : 26,
       "armorType"      : "heavy",
-      "armorSet"       : "boarhide_heavy",
       "slot"           : "bodyOuter",
       "equipmentSlot"  : "bodyOuter",
       "armorLayer"     : "plate",
@@ -18942,5 +18945,1466 @@
     "weightKg": 1.0,
     "volumeL": 1.6,
     "material": { "label": "Prime Direwolf Leather", "desc": "curried, supple, tough", "building": { "durability": 1.3, "insulation": 0.12 }, "item": { "durability": 1.35, "weight": 0.95 } }
+  },
+  // ── Sackcloth: the stone age's clothing line. Woven from gathered fibre at the frame — no
+  //    spinning wheel, no animal killed — so a colony can dress itself on its first day. Turns a
+  //    thorn and the cold, and nothing more than that.
+  {
+    "id": "sackcloth_hood",
+    "charSpans": [
+      {
+        "sheet": "items",
+        "id": 7
+      }
+    ],
+    "name": "Sackcloth Hood",
+    "type": "armor",
+    "category": "primitive",
+    "deteriorationRate": 0.02,
+    "description": "A hood of coarse sacking, seamed up the back and pulled tight with a drawstring. It keeps the sun and the rain off and stops nothing else.",
+    "color": "#C4B79A",
+    "amount": 0,
+    "weightKg": 0.3,
+    "volumeL": 0.6,
+    "tier": 0,
+    "maxDurability": 18,
+    "durabilityLossPerCombatHit": 44,
+    "armorProperties": {
+      "defense": 1,
+      "armorType": "light",
+      "slot": "head",
+      "equipmentSlot": "head",
+      "armorLayer": "gambeson",
+      "armorValue": 1,
+      "fatiguePerTurn": 0.03,
+      "movementPenalty": 0.0,
+      "armorSet": "sackcloth",
+      "coldResistance": 0.06
+    }
+  },
+    {
+    "id": "sackcloth_tunic",
+    "charSpans": [
+      {
+        "sheet": "items",
+        "id": 7
+      }
+    ],
+    "name": "Sackcloth Tunic",
+    "type": "armor",
+    "category": "primitive",
+    "deteriorationRate": 0.02,
+    "description": "A shapeless tunic of coarse woven fibre, belted with a length of cord. The first thing anyone here wore that was not an animal.",
+    "color": "#C4B79A",
+    "amount": 0,
+    "weightKg": 1.0,
+    "volumeL": 2.0,
+    "tier": 0,
+    "maxDurability": 26,
+    "durabilityLossPerCombatHit": 42,
+    "armorProperties": {
+      "defense": 2,
+      "armorType": "light",
+      "slot": "bodyBase",
+      "equipmentSlot": "bodyBase",
+      "armorLayer": "gambeson",
+      "armorValue": 2,
+      "fatiguePerTurn": 0.03,
+      "movementPenalty": 0.0,
+      "armorSet": "sackcloth",
+      "coldResistance": 0.1
+    }
+  },
+    {
+    "id": "sackcloth_sleeves",
+    "charSpans": [
+      {
+        "sheet": "items",
+        "id": 7
+      }
+    ],
+    "name": "Sackcloth Sleeves",
+    "type": "armor",
+    "category": "primitive",
+    "deteriorationRate": 0.02,
+    "description": "Two tubes of sacking tied above the elbow. They keep the thorns off the forearms.",
+    "color": "#C4B79A",
+    "amount": 0,
+    "weightKg": 0.3,
+    "volumeL": 0.6,
+    "tier": 0,
+    "maxDurability": 16,
+    "durabilityLossPerCombatHit": 45,
+    "armorProperties": {
+      "defense": 1,
+      "armorType": "light",
+      "slot": "bracers",
+      "equipmentSlot": "bracers",
+      "armorLayer": "gambeson",
+      "armorValue": 1,
+      "fatiguePerTurn": 0.03,
+      "movementPenalty": 0.0,
+      "armorSet": "sackcloth",
+      "coldResistance": 0.05
+    }
+  },
+    {
+    "id": "sackcloth_mitts",
+    "charSpans": [
+      {
+        "sheet": "items",
+        "id": 7
+      }
+    ],
+    "name": "Sackcloth Mitts",
+    "type": "armor",
+    "category": "primitive",
+    "deteriorationRate": 0.02,
+    "description": "Bag-cut mitts with a separate thumb, stitched from offcuts. Warm, clumsy, and always fraying.",
+    "color": "#C4B79A",
+    "amount": 0,
+    "weightKg": 0.2,
+    "volumeL": 0.4,
+    "tier": 0,
+    "maxDurability": 14,
+    "durabilityLossPerCombatHit": 46,
+    "armorProperties": {
+      "defense": 1,
+      "armorType": "light",
+      "slot": "gloves",
+      "equipmentSlot": "gloves",
+      "armorLayer": "gambeson",
+      "armorValue": 1,
+      "fatiguePerTurn": 0.03,
+      "movementPenalty": 0.0,
+      "armorSet": "sackcloth",
+      "coldResistance": 0.04
+    }
+  },
+    {
+    "id": "sackcloth_leggings",
+    "charSpans": [
+      {
+        "sheet": "items",
+        "id": 7
+      }
+    ],
+    "name": "Sackcloth Leggings",
+    "type": "armor",
+    "category": "primitive",
+    "deteriorationRate": 0.02,
+    "description": "Loose leggings of sacking, cross-tied from ankle to knee so they do not catch.",
+    "color": "#C4B79A",
+    "amount": 0,
+    "weightKg": 0.5,
+    "volumeL": 1.0,
+    "tier": 0,
+    "maxDurability": 18,
+    "durabilityLossPerCombatHit": 44,
+    "armorProperties": {
+      "defense": 1,
+      "armorType": "light",
+      "slot": "greaves",
+      "equipmentSlot": "greaves",
+      "armorLayer": "gambeson",
+      "armorValue": 1,
+      "fatiguePerTurn": 0.03,
+      "movementPenalty": 0.0,
+      "armorSet": "sackcloth",
+      "coldResistance": 0.06
+    }
+  },
+    {
+    "id": "sackcloth_footwraps",
+    "charSpans": [
+      {
+        "sheet": "items",
+        "id": 7
+      }
+    ],
+    "name": "Sackcloth Foot-Wraps",
+    "type": "armor",
+    "category": "primitive",
+    "deteriorationRate": 0.02,
+    "description": "Strips of coarse cloth wound over the foot and lashed at the ankle. Better than bare soles on cold ground.",
+    "color": "#C4B79A",
+    "amount": 0,
+    "weightKg": 0.2,
+    "volumeL": 0.4,
+    "tier": 0,
+    "maxDurability": 14,
+    "durabilityLossPerCombatHit": 46,
+    "armorProperties": {
+      "defense": 1,
+      "armorType": "light",
+      "slot": "boots",
+      "equipmentSlot": "boots",
+      "armorLayer": "gambeson",
+      "armorValue": 1,
+      "fatiguePerTurn": 0.03,
+      "movementPenalty": 0.0,
+      "armorSet": "sackcloth",
+      "coldResistance": 0.05
+    }
+  },
+    {
+    "id": "sackcloth",
+    "charSpans": [
+      {
+        "sheet": "items",
+        "id": 7
+      }
+    ],
+    "name": "Sackcloth",
+    "type": "material",
+    "category": "cloth",
+    "maxDurability": 40,
+    "deteriorationRate": 0.02,
+    "description": "Coarse cloth woven from whatever fibre came to hand, loose enough to see daylight through. It sacks grain, and at a push it clothes a body.",
+    "color": "#C4B79A",
+    "amount": 0,
+    "weightKg": 0.3,
+    "volumeL": 0.6,
+    "toolTierRequired": 0,
+    "processingType": [
+      "weaving"
+    ]
+  },
+  // ── Set holes closed: the archer line had no leg armour at ANY age, the padded line no sleeves
+  //    and no hose at ANY age, and every plate kit stopped at the wrist and the ankle.
+  {
+    "id": "deer_greaves",
+    "charSpans": [
+      {
+        "sheet": "items",
+        "id": 9
+      }
+    ],
+    "name": "Buckskin Leggings",
+    "type": "armor",
+    "category": "leather",
+    "deteriorationRate": 0.01,
+    "description": "Buckskin cut long and laced up the outside of the calf, soft enough to kneel and hold still in.",
+    "color": "#B08A5A",
+    "amount": 0,
+    "weightKg": 0.9,
+    "volumeL": 1.4,
+    "tier": 1,
+    "maxDurability": 70,
+    "durabilityLossPerCombatHit": 33,
+    "armorProperties": {
+      "defense": 3,
+      "armorType": "light",
+      "armorSet": "deer_marksman",
+      "slot": "greaves",
+      "equipmentSlot": "greaves",
+      "armorLayer": "gambeson",
+      "armorValue": 3,
+      "fatiguePerTurn": 0.076,
+      "movementPenalty": 0.0,
+      "coldResistance": 0.06
+    }
+  },
+    {
+    "id": "elk_greaves",
+    "charSpans": [
+      {
+        "sheet": "items",
+        "id": 9
+      }
+    ],
+    "name": "Elk-Leather Greaves",
+    "type": "armor",
+    "category": "leather",
+    "deteriorationRate": 0.01,
+    "description": "Heavy elk leather over the shin, cut with a slit behind the knee so a stalker can still crouch.",
+    "color": "#8B6B47",
+    "amount": 0,
+    "weightKg": 1.1,
+    "volumeL": 1.8,
+    "tier": 2,
+    "maxDurability": 130,
+    "durabilityLossPerCombatHit": 27,
+    "armorProperties": {
+      "defense": 3,
+      "armorType": "light",
+      "armorSet": "elk_marksman",
+      "slot": "greaves",
+      "equipmentSlot": "greaves",
+      "armorLayer": "gambeson",
+      "armorValue": 3,
+      "fatiguePerTurn": 0.076,
+      "movementPenalty": 0.0,
+      "coldResistance": 0.08
+    }
+  },
+    {
+    "id": "owlbear_greaves",
+    "charSpans": [
+      {
+        "sheet": "items",
+        "id": 9
+      }
+    ],
+    "name": "Owlbear-Leather Greaves",
+    "type": "armor",
+    "category": "leather",
+    "deteriorationRate": 0.01,
+    "description": "Thick owlbear leather, still ridged where the beast's own muscle lay under it.",
+    "color": "#6E5A40",
+    "amount": 0,
+    "weightKg": 1.1,
+    "volumeL": 1.8,
+    "tier": 3,
+    "maxDurability": 210,
+    "durabilityLossPerCombatHit": 19,
+    "armorProperties": {
+      "defense": 5,
+      "armorType": "light",
+      "armorSet": "owlbear_marksman",
+      "slot": "greaves",
+      "equipmentSlot": "greaves",
+      "armorLayer": "gambeson",
+      "armorValue": 5,
+      "fatiguePerTurn": 0.1,
+      "movementPenalty": 0.0,
+      "coldResistance": 0.1
+    }
+  },
+    {
+    "id": "hippogriff_greaves",
+    "charSpans": [
+      {
+        "sheet": "items",
+        "id": 9
+      }
+    ],
+    "name": "Hippogriff-Feather Greaves",
+    "type": "armor",
+    "category": "leather",
+    "deteriorationRate": 0.01,
+    "description": "Feathered hide laid down the shin with the quills running to the ankle, so rain sheds off it.",
+    "color": "#7A5E40",
+    "amount": 0,
+    "weightKg": 1.1,
+    "volumeL": 1.8,
+    "tier": 4,
+    "maxDurability": 300,
+    "durabilityLossPerCombatHit": 10,
+    "armorProperties": {
+      "defense": 6,
+      "armorType": "light",
+      "armorSet": "hippogriff_marksman",
+      "slot": "greaves",
+      "equipmentSlot": "greaves",
+      "armorLayer": "gambeson",
+      "armorValue": 6,
+      "fatiguePerTurn": 0.112,
+      "movementPenalty": 0.0,
+      "coldResistance": 0.12
+    }
+  },
+    {
+    "id": "linen_sleeves",
+    "charSpans": [
+      {
+        "sheet": "items",
+        "id": 7
+      }
+    ],
+    "name": "Linen Sleeves",
+    "type": "armor",
+    "category": "cloth",
+    "deteriorationRate": 0.01,
+    "description": "Loose linen sleeves that tie to the shoulder, worn where a mail sleeve would otherwise chafe raw.",
+    "color": "#E8E0C8",
+    "amount": 0,
+    "weightKg": 0.4,
+    "volumeL": 0.6,
+    "tier": 1,
+    "maxDurability": 70,
+    "durabilityLossPerCombatHit": 33,
+    "armorProperties": {
+      "defense": 2,
+      "armorType": "light",
+      "armorSet": "linen",
+      "slot": "bracers",
+      "equipmentSlot": "bracers",
+      "armorLayer": "gambeson",
+      "armorValue": 2,
+      "fatiguePerTurn": 0.064,
+      "movementPenalty": 0.0,
+      "coldResistance": 0.05
+    }
+  },
+    {
+    "id": "linen_hose",
+    "charSpans": [
+      {
+        "sheet": "items",
+        "id": 7
+      }
+    ],
+    "name": "Linen Hose",
+    "type": "armor",
+    "category": "cloth",
+    "deteriorationRate": 0.01,
+    "description": "Linen hose, pointed to a belt and cut close so nothing catches on a stirrup.",
+    "color": "#E8E0C8",
+    "amount": 0,
+    "weightKg": 0.6,
+    "volumeL": 1.0,
+    "tier": 1,
+    "maxDurability": 70,
+    "durabilityLossPerCombatHit": 33,
+    "armorProperties": {
+      "defense": 2,
+      "armorType": "light",
+      "armorSet": "linen",
+      "slot": "greaves",
+      "equipmentSlot": "greaves",
+      "armorLayer": "gambeson",
+      "armorValue": 2,
+      "fatiguePerTurn": 0.064,
+      "movementPenalty": 0.0,
+      "coldResistance": 0.06
+    }
+  },
+    {
+    "id": "quilted_sleeves",
+    "charSpans": [
+      {
+        "sheet": "items",
+        "id": 7
+      }
+    ],
+    "name": "Quilted Linen Sleeves",
+    "type": "armor",
+    "category": "cloth",
+    "deteriorationRate": 0.01,
+    "description": "Channels of stuffed linen from shoulder to wrist. They soak a blow that has already spent itself on something harder.",
+    "color": "#C4B08A",
+    "amount": 0,
+    "weightKg": 0.6,
+    "volumeL": 1.0,
+    "tier": 2,
+    "maxDurability": 130,
+    "durabilityLossPerCombatHit": 27,
+    "armorProperties": {
+      "defense": 3,
+      "armorType": "light",
+      "armorSet": "quilted",
+      "slot": "bracers",
+      "equipmentSlot": "bracers",
+      "armorLayer": "gambeson",
+      "armorValue": 3,
+      "fatiguePerTurn": 0.076,
+      "movementPenalty": 0.0,
+      "coldResistance": 0.08
+    }
+  },
+    {
+    "id": "quilted_hose",
+    "charSpans": [
+      {
+        "sheet": "items",
+        "id": 7
+      }
+    ],
+    "name": "Quilted Linen Hose",
+    "type": "armor",
+    "category": "cloth",
+    "deteriorationRate": 0.01,
+    "description": "Stuffed and stitched the length of the thigh, heavy and hot, and worth both when a spear comes low.",
+    "color": "#C4B08A",
+    "amount": 0,
+    "weightKg": 0.9,
+    "volumeL": 1.4,
+    "tier": 2,
+    "maxDurability": 130,
+    "durabilityLossPerCombatHit": 27,
+    "armorProperties": {
+      "defense": 3,
+      "armorType": "light",
+      "armorSet": "quilted",
+      "slot": "greaves",
+      "equipmentSlot": "greaves",
+      "armorLayer": "gambeson",
+      "armorValue": 3,
+      "fatiguePerTurn": 0.076,
+      "movementPenalty": 0.0,
+      "coldResistance": 0.1
+    }
+  },
+    {
+    "id": "arming_sleeves",
+    "charSpans": [
+      {
+        "sheet": "items",
+        "id": 7
+      }
+    ],
+    "name": "Linen Arming Sleeves",
+    "type": "armor",
+    "category": "cloth",
+    "deteriorationRate": 0.01,
+    "description": "Tight-stitched sleeves with points at the shoulder for hanging plate off. Made to be worn under, never alone.",
+    "color": "#D8CDB0",
+    "amount": 0,
+    "weightKg": 0.5,
+    "volumeL": 0.8,
+    "tier": 3,
+    "maxDurability": 210,
+    "durabilityLossPerCombatHit": 19,
+    "armorProperties": {
+      "defense": 4,
+      "armorType": "light",
+      "armorSet": "arming",
+      "slot": "bracers",
+      "equipmentSlot": "bracers",
+      "armorLayer": "gambeson",
+      "armorValue": 4,
+      "fatiguePerTurn": 0.088,
+      "movementPenalty": 0.0,
+      "coldResistance": 0.07
+    }
+  },
+    {
+    "id": "arming_hose",
+    "charSpans": [
+      {
+        "sheet": "items",
+        "id": 7
+      }
+    ],
+    "name": "Linen Arming Hose",
+    "type": "armor",
+    "category": "cloth",
+    "deteriorationRate": 0.01,
+    "description": "Hose cut for a man in armour: doubled at the knee, pointed at the waist, and no looser anywhere than it has to be.",
+    "color": "#D8CDB0",
+    "amount": 0,
+    "weightKg": 0.8,
+    "volumeL": 1.3,
+    "tier": 3,
+    "maxDurability": 210,
+    "durabilityLossPerCombatHit": 19,
+    "armorProperties": {
+      "defense": 4,
+      "armorType": "light",
+      "armorSet": "arming",
+      "slot": "greaves",
+      "equipmentSlot": "greaves",
+      "armorLayer": "gambeson",
+      "armorValue": 4,
+      "fatiguePerTurn": 0.088,
+      "movementPenalty": 0.0,
+      "coldResistance": 0.08
+    }
+  },
+    {
+    "id": "rune_woven_sleeves",
+    "charSpans": [
+      {
+        "sheet": "items",
+        "id": 158
+      }
+    ],
+    "name": "Rune-Woven Sleeves",
+    "type": "armor",
+    "category": "cloth",
+    "deteriorationRate": 0.01,
+    "description": "Silk sleeves shot through with enchanted thread; the weave stiffens under a strike and falls slack again.",
+    "color": "#8890D8",
+    "amount": 0,
+    "weightKg": 0.4,
+    "volumeL": 0.6,
+    "tier": 4,
+    "maxDurability": 300,
+    "durabilityLossPerCombatHit": 10,
+    "armorProperties": {
+      "defense": 4,
+      "armorType": "light",
+      "armorSet": "rune_woven",
+      "slot": "bracers",
+      "equipmentSlot": "bracers",
+      "armorLayer": "gambeson",
+      "armorValue": 4,
+      "fatiguePerTurn": 0.088,
+      "movementPenalty": 0.0,
+      "coldResistance": 0.1
+    }
+  },
+    {
+    "id": "rune_woven_hose",
+    "charSpans": [
+      {
+        "sheet": "items",
+        "id": 158
+      }
+    ],
+    "name": "Rune-Woven Hose",
+    "type": "armor",
+    "category": "cloth",
+    "deteriorationRate": 0.01,
+    "description": "Hose of the same close spiral as the robe, weightless and cold to the touch.",
+    "color": "#8890D8",
+    "amount": 0,
+    "weightKg": 0.6,
+    "volumeL": 1.0,
+    "tier": 4,
+    "maxDurability": 300,
+    "durabilityLossPerCombatHit": 10,
+    "armorProperties": {
+      "defense": 4,
+      "armorType": "light",
+      "armorSet": "rune_woven",
+      "slot": "greaves",
+      "equipmentSlot": "greaves",
+      "armorLayer": "gambeson",
+      "armorValue": 4,
+      "fatiguePerTurn": 0.088,
+      "movementPenalty": 0.0,
+      "coldResistance": 0.12
+    }
+  },
+    {
+    "id": "copper_scale_gloves",
+    "charSpans": [
+      {
+        "sheet": "items",
+        "id": 84
+      }
+    ],
+    "name": "Copper Scale Gloves",
+    "type": "armor",
+    "category": "metal",
+    "deteriorationRate": 0.01,
+    "description": "Small copper scales laced over a leather glove, leaving the palm bare to grip with.",
+    "color": "#B87333",
+    "amount": 0,
+    "weightKg": 0.6,
+    "volumeL": 1.0,
+    "tier": 1,
+    "maxDurability": 100,
+    "durabilityLossPerCombatHit": 30,
+    "armorProperties": {
+      "defense": 3,
+      "armorType": "medium",
+      "armorSet": "copper_scale",
+      "slot": "gloves",
+      "equipmentSlot": "gloves",
+      "armorLayer": "mail",
+      "armorValue": 3,
+      "fatiguePerTurn": 0.076,
+      "movementPenalty": 0.0
+    }
+  },
+    {
+    "id": "copper_scale_shoes",
+    "charSpans": [
+      {
+        "sheet": "items",
+        "id": 84
+      }
+    ],
+    "name": "Copper Scale Shoes",
+    "type": "armor",
+    "category": "metal",
+    "deteriorationRate": 0.01,
+    "description": "Scaled flaps over the instep, laced under the sole. They turn a stamped foot and little else.",
+    "color": "#B87333",
+    "amount": 0,
+    "weightKg": 1.1,
+    "volumeL": 1.8,
+    "tier": 1,
+    "maxDurability": 100,
+    "durabilityLossPerCombatHit": 30,
+    "armorProperties": {
+      "defense": 3,
+      "armorType": "medium",
+      "armorSet": "copper_scale",
+      "slot": "boots",
+      "equipmentSlot": "boots",
+      "armorLayer": "mail",
+      "armorValue": 3,
+      "fatiguePerTurn": 0.076,
+      "movementPenalty": 0.0
+    }
+  },
+    {
+    "id": "steel_gauntlets",
+    "charSpans": [
+      {
+        "sheet": "items",
+        "id": 84
+      }
+    ],
+    "name": "Steel Gauntlets",
+    "type": "armor",
+    "category": "metal",
+    "deteriorationRate": 0.01,
+    "description": "Articulated steel over the back of the hand, the fingers lamed in strips so they still close on a grip.",
+    "color": "#A8A8B0",
+    "amount": 0,
+    "weightKg": 1.1,
+    "volumeL": 1.8,
+    "tier": 3,
+    "maxDurability": 200,
+    "durabilityLossPerCombatHit": 20,
+    "armorProperties": {
+      "defense": 9,
+      "armorType": "heavy",
+      "armorSet": "steel_plate",
+      "slot": "gloves",
+      "equipmentSlot": "gloves",
+      "armorLayer": "plate",
+      "armorValue": 9,
+      "fatiguePerTurn": 0.148,
+      "movementPenalty": 0.0
+    }
+  },
+    {
+    "id": "steel_sabatons",
+    "charSpans": [
+      {
+        "sheet": "items",
+        "id": 84
+      }
+    ],
+    "name": "Steel Sabatons",
+    "type": "armor",
+    "category": "metal",
+    "deteriorationRate": 0.01,
+    "description": "Overlapping steel lames down the foot, hinged at the toe. Loud on stone, and worth it.",
+    "color": "#A8A8B0",
+    "amount": 0,
+    "weightKg": 2.0,
+    "volumeL": 3.2,
+    "tier": 3,
+    "maxDurability": 200,
+    "durabilityLossPerCombatHit": 20,
+    "armorProperties": {
+      "defense": 9,
+      "armorType": "heavy",
+      "armorSet": "steel_plate",
+      "slot": "boots",
+      "equipmentSlot": "boots",
+      "armorLayer": "plate",
+      "armorValue": 9,
+      "fatiguePerTurn": 0.148,
+      "movementPenalty": 0.0
+    }
+  },
+    {
+    "id": "rune_graven_gauntlets",
+    "charSpans": [
+      {
+        "sheet": "items",
+        "id": 84
+      }
+    ],
+    "name": "Rune-Graven Gauntlets",
+    "type": "armor",
+    "category": "metal",
+    "deteriorationRate": 0.01,
+    "description": "Alloy plates cut with the same close script as the cuirass, warm to hold even in the cold.",
+    "color": "#9AA0C8",
+    "amount": 0,
+    "weightKg": 1.0,
+    "volumeL": 1.6,
+    "tier": 4,
+    "maxDurability": 280,
+    "durabilityLossPerCombatHit": 12,
+    "armorProperties": {
+      "defense": 11,
+      "armorType": "heavy",
+      "armorSet": "rune_graven",
+      "slot": "gloves",
+      "equipmentSlot": "gloves",
+      "armorLayer": "plate",
+      "armorValue": 11,
+      "fatiguePerTurn": 0.172,
+      "movementPenalty": 0.0
+    }
+  },
+    {
+    "id": "rune_graven_sabatons",
+    "charSpans": [
+      {
+        "sheet": "items",
+        "id": 84
+      }
+    ],
+    "name": "Rune-Graven Sabatons",
+    "type": "armor",
+    "category": "metal",
+    "deteriorationRate": 0.01,
+    "description": "Graven lames over the foot that ring faintly when the wearer stops walking.",
+    "color": "#9AA0C8",
+    "amount": 0,
+    "weightKg": 1.7,
+    "volumeL": 2.7,
+    "tier": 4,
+    "maxDurability": 280,
+    "durabilityLossPerCombatHit": 12,
+    "armorProperties": {
+      "defense": 11,
+      "armorType": "heavy",
+      "armorSet": "rune_graven",
+      "slot": "boots",
+      "equipmentSlot": "boots",
+      "armorLayer": "plate",
+      "armorValue": 11,
+      "fatiguePerTurn": 0.172,
+      "movementPenalty": 0.0
+    }
+  },
+  // ── Shields: the Steel and Runed ages had NONE, and the whole line offered one shape. These
+  //    differ on an axis, not a tier — the buckler parries what it cannot cover, the heater covers
+  //    everything and moves like a door.
+  {
+    "id": "iron_buckler",
+    "charSpans": [
+      {
+        "sheet": "items",
+        "id": 145
+      }
+    ],
+    "name": "Iron Buckler",
+    "type": "armor",
+    "category": "combat",
+    "deteriorationRate": 0.008,
+    "description": "A fist-sized iron disc held out on a bar grip. It cannot hide behind \u2014 it is swung at the incoming edge to knock it aside.",
+    "color": "#8A8A92",
+    "amount": 0,
+    "weightKg": 1.8,
+    "volumeL": 4.3,
+    "tier": 2,
+    "maxDurability": 120,
+    "durabilityLossPerCombatHit": 7,
+    "armorProperties": {
+      "blockBonus": 0.16,
+      "parryChance": 0.16,
+      "armorType": "shield",
+      "slot": "offHand",
+      "equipmentSlot": "offHand",
+      "movementPenalty": 0.0,
+      "bashStagger": 0.08
+    }
+  },
+    {
+    "id": "steel_heater_shield",
+    "charSpans": [
+      {
+        "sheet": "items",
+        "id": 145
+      }
+    ],
+    "name": "Steel Heater Shield",
+    "type": "armor",
+    "category": "combat",
+    "deteriorationRate": 0.008,
+    "description": "A tall steel-faced shield tapering to a point below the knee, strapped along the whole forearm. Nothing gets past it and nothing about it is quick.",
+    "color": "#B8BCC4",
+    "amount": 0,
+    "weightKg": 6.0,
+    "volumeL": 14.4,
+    "tier": 3,
+    "maxDurability": 260,
+    "durabilityLossPerCombatHit": 4,
+    "armorProperties": {
+      "blockBonus": 0.38,
+      "parryChance": 0.03,
+      "armorType": "shield",
+      "slot": "offHand",
+      "equipmentSlot": "offHand",
+      "movementPenalty": 0.0,
+      "bashStagger": 0.18,
+      "bashKnockback": 0.14,
+      "bashKnockdown": 0.07
+    }
+  },
+    {
+    "id": "rune_graven_kite",
+    "charSpans": [
+      {
+        "sheet": "items",
+        "id": 145
+      }
+    ],
+    "name": "Rune-Graven Kite Shield",
+    "type": "armor",
+    "category": "combat",
+    "deteriorationRate": 0.008,
+    "description": "Alloy laid over a long kite frame and cut with script from boss to point. Blows land on it and go quiet.",
+    "color": "#9AA0C8",
+    "amount": 0,
+    "weightKg": 5.0,
+    "volumeL": 12.0,
+    "tier": 4,
+    "maxDurability": 400,
+    "durabilityLossPerCombatHit": 3,
+    "armorProperties": {
+      "blockBonus": 0.44,
+      "parryChance": 0.05,
+      "armorType": "shield",
+      "slot": "offHand",
+      "equipmentSlot": "offHand",
+      "movementPenalty": 0.0,
+      "bashStagger": 0.2,
+      "bashKnockback": 0.16,
+      "bashKnockdown": 0.1
+    }
+  },
+  // ── Faction loot: gear you can only take off a body, filed by the SPECIES that carries it. None
+  //    of these sets is complete and none of them ever will be — that is what makes them loot and
+  //    not a kit the player can plan around.
+  {
+    "id": "goblin_scrap_cap",
+    "charSpans": [
+      {
+        "sheet": "items",
+        "id": 84
+      }
+    ],
+    "name": "Goblin Scrap Cap",
+    "type": "armor",
+    "category": "combat",
+    "deteriorationRate": 0.03,
+    "description": "A cook-pot with the handle knocked off and a strap riveted through it. It has been someone else's twice.",
+    "color": "#6E7A55",
+    "amount": 0,
+    "weightKg": 0.9,
+    "volumeL": 1.6,
+    "tier": 1,
+    "maxDurability": 40,
+    "durabilityLossPerCombatHit": 40,
+    "armorProperties": {
+      "defense": 3,
+      "armorType": "light",
+      "armorSet": "goblin_scrap",
+      "slot": "head",
+      "equipmentSlot": "head",
+      "armorLayer": "gambeson",
+      "armorValue": 3,
+      "fatiguePerTurn": 0.089,
+      "movementPenalty": 0.0
+    }
+  },
+    {
+    "id": "goblin_bark_bracers",
+    "charSpans": [
+      {
+        "sheet": "items",
+        "id": 73
+      }
+    ],
+    "name": "Goblin Bark Bracers",
+    "type": "armor",
+    "category": "combat",
+    "deteriorationRate": 0.03,
+    "description": "Slabs of bark bound over the forearms with stolen cord, the inside still smelling of the tree.",
+    "color": "#6E7A55",
+    "amount": 0,
+    "weightKg": 0.4,
+    "volumeL": 0.7,
+    "tier": 1,
+    "maxDurability": 30,
+    "durabilityLossPerCombatHit": 42,
+    "armorProperties": {
+      "defense": 2,
+      "armorType": "light",
+      "armorSet": "goblin_scrap",
+      "slot": "bracers",
+      "equipmentSlot": "bracers",
+      "armorLayer": "gambeson",
+      "armorValue": 2,
+      "fatiguePerTurn": 0.076,
+      "movementPenalty": 0.0
+    }
+  },
+    {
+    "id": "goblin_ring_vest",
+    "charSpans": [
+      {
+        "sheet": "items",
+        "id": 8
+      }
+    ],
+    "name": "Goblin Ring Vest",
+    "type": "armor",
+    "category": "combat",
+    "deteriorationRate": 0.03,
+    "description": "A hauberk cut off at the ribs to fit something half the size, the raw edge left to rust.",
+    "color": "#5F6B4A",
+    "amount": 0,
+    "weightKg": 5.5,
+    "volumeL": 9.9,
+    "tier": 2,
+    "maxDurability": 90,
+    "durabilityLossPerCombatHit": 34,
+    "armorProperties": {
+      "defense": 11,
+      "armorType": "medium",
+      "armorSet": "goblin_warren",
+      "slot": "bodyMid",
+      "equipmentSlot": "bodyMid",
+      "armorLayer": "mail",
+      "armorValue": 11,
+      "fatiguePerTurn": 0.193,
+      "movementPenalty": 0.0
+    }
+  },
+    {
+    "id": "goblin_pot_helm",
+    "charSpans": [
+      {
+        "sheet": "items",
+        "id": 84
+      }
+    ],
+    "name": "Goblin Pot Helm",
+    "type": "armor",
+    "category": "combat",
+    "deteriorationRate": 0.03,
+    "description": "Riveted iron scraps with eye-slots hacked through, worn over a filthy cap.",
+    "color": "#5F6B4A",
+    "amount": 0,
+    "weightKg": 2.0,
+    "volumeL": 3.6,
+    "tier": 2,
+    "maxDurability": 90,
+    "durabilityLossPerCombatHit": 34,
+    "armorProperties": {
+      "defense": 9,
+      "armorType": "medium",
+      "armorSet": "goblin_warren",
+      "slot": "head",
+      "equipmentSlot": "head",
+      "armorLayer": "mail",
+      "armorValue": 9,
+      "fatiguePerTurn": 0.167,
+      "movementPenalty": 0.0
+    }
+  },
+    {
+    "id": "kobold_scale_vest",
+    "charSpans": [
+      {
+        "sheet": "items",
+        "id": 8
+      }
+    ],
+    "name": "Kobold Scale Vest",
+    "type": "armor",
+    "category": "combat",
+    "deteriorationRate": 0.03,
+    "description": "Overlapping scutes stitched to a hide backing, cut narrow across the chest. It fits nothing taller than a child.",
+    "color": "#7A6A4A",
+    "amount": 0,
+    "weightKg": 3.0,
+    "volumeL": 5.4,
+    "tier": 1,
+    "maxDurability": 70,
+    "durabilityLossPerCombatHit": 37,
+    "armorProperties": {
+      "defense": 7,
+      "armorType": "medium",
+      "armorSet": "kobold_delver",
+      "slot": "bodyMid",
+      "equipmentSlot": "bodyMid",
+      "armorLayer": "mail",
+      "armorValue": 7,
+      "fatiguePerTurn": 0.141,
+      "movementPenalty": 0.0
+    }
+  },
+    {
+    "id": "kobold_dig_cap",
+    "charSpans": [
+      {
+        "sheet": "items",
+        "id": 84
+      }
+    ],
+    "name": "Kobold Dig-Cap",
+    "type": "armor",
+    "category": "combat",
+    "deteriorationRate": 0.03,
+    "description": "A hide cap with a stub of tallow candle still lashed above the brow.",
+    "color": "#7A6A4A",
+    "amount": 0,
+    "weightKg": 0.6,
+    "volumeL": 1.1,
+    "tier": 1,
+    "maxDurability": 50,
+    "durabilityLossPerCombatHit": 39,
+    "armorProperties": {
+      "defense": 3,
+      "armorType": "light",
+      "armorSet": "kobold_delver",
+      "slot": "head",
+      "equipmentSlot": "head",
+      "armorLayer": "gambeson",
+      "armorValue": 3,
+      "fatiguePerTurn": 0.089,
+      "movementPenalty": 0.0
+    }
+  },
+    {
+    "id": "kobold_bone_bracers",
+    "charSpans": [
+      {
+        "sheet": "items",
+        "id": 73
+      }
+    ],
+    "name": "Kobold Bone Bracers",
+    "type": "armor",
+    "category": "combat",
+    "deteriorationRate": 0.03,
+    "description": "Split rib bone laid along the forearm and whipped tight with sinew.",
+    "color": "#7A6A4A",
+    "amount": 0,
+    "weightKg": 0.5,
+    "volumeL": 0.9,
+    "tier": 1,
+    "maxDurability": 60,
+    "durabilityLossPerCombatHit": 38,
+    "armorProperties": {
+      "defense": 3,
+      "armorType": "light",
+      "armorSet": "kobold_delver",
+      "slot": "bracers",
+      "equipmentSlot": "bracers",
+      "armorLayer": "gambeson",
+      "armorValue": 3,
+      "fatiguePerTurn": 0.089,
+      "movementPenalty": 0.0
+    }
+  },
+    {
+    "id": "gnoll_bone_harness",
+    "charSpans": [
+      {
+        "sheet": "items",
+        "id": 8
+      }
+    ],
+    "name": "Gnoll Bone Harness",
+    "type": "armor",
+    "category": "combat",
+    "deteriorationRate": 0.03,
+    "description": "Ribs and shoulder blades lashed across the chest in a rough lattice, still yellowed at the joints.",
+    "color": "#8A7A5A",
+    "amount": 0,
+    "weightKg": 4.5,
+    "volumeL": 8.1,
+    "tier": 2,
+    "maxDurability": 110,
+    "durabilityLossPerCombatHit": 32,
+    "armorProperties": {
+      "defense": 12,
+      "armorType": "medium",
+      "armorSet": "gnoll_pack",
+      "slot": "bodyMid",
+      "equipmentSlot": "bodyMid",
+      "armorLayer": "mail",
+      "armorValue": 12,
+      "fatiguePerTurn": 0.206,
+      "movementPenalty": 0.0
+    }
+  },
+    {
+    "id": "gnoll_skull_helm",
+    "charSpans": [
+      {
+        "sheet": "items",
+        "id": 84
+      }
+    ],
+    "name": "Gnoll Skull Helm",
+    "type": "armor",
+    "category": "combat",
+    "deteriorationRate": 0.03,
+    "description": "The upper skull of something with a long jaw, hollowed and strapped under the chin.",
+    "color": "#8A7A5A",
+    "amount": 0,
+    "weightKg": 1.4,
+    "volumeL": 2.5,
+    "tier": 2,
+    "maxDurability": 100,
+    "durabilityLossPerCombatHit": 33,
+    "armorProperties": {
+      "defense": 7,
+      "armorType": "light",
+      "armorSet": "gnoll_pack",
+      "slot": "head",
+      "equipmentSlot": "head",
+      "armorLayer": "gambeson",
+      "armorValue": 7,
+      "fatiguePerTurn": 0.141,
+      "movementPenalty": 0.0
+    }
+  },
+    {
+    "id": "gnoll_hide_greaves",
+    "charSpans": [
+      {
+        "sheet": "items",
+        "id": 9
+      }
+    ],
+    "name": "Gnoll Hide Greaves",
+    "type": "armor",
+    "category": "combat",
+    "deteriorationRate": 0.03,
+    "description": "Untrimmed hide wrapped from ankle to knee, tied with gut.",
+    "color": "#8A7A5A",
+    "amount": 0,
+    "weightKg": 1.2,
+    "volumeL": 2.2,
+    "tier": 2,
+    "maxDurability": 100,
+    "durabilityLossPerCombatHit": 33,
+    "armorProperties": {
+      "defense": 5,
+      "armorType": "light",
+      "armorSet": "gnoll_pack",
+      "slot": "greaves",
+      "equipmentSlot": "greaves",
+      "armorLayer": "gambeson",
+      "armorValue": 5,
+      "fatiguePerTurn": 0.115,
+      "movementPenalty": 0.0,
+      "coldResistance": 0.08
+    }
+  },
+    {
+    "id": "orc_horned_helm",
+    "charSpans": [
+      {
+        "sheet": "items",
+        "id": 84
+      }
+    ],
+    "name": "Orc Horned Helm",
+    "type": "armor",
+    "category": "combat",
+    "deteriorationRate": 0.03,
+    "description": "A thick iron pot with two hacked-off horns riveted at the temples, packed out with rags.",
+    "color": "#4A4A52",
+    "amount": 0,
+    "weightKg": 3.4,
+    "volumeL": 6.1,
+    "tier": 3,
+    "maxDurability": 220,
+    "durabilityLossPerCombatHit": 18,
+    "armorProperties": {
+      "defense": 20,
+      "armorType": "heavy",
+      "armorSet": "orc_warhost",
+      "slot": "head",
+      "equipmentSlot": "head",
+      "armorLayer": "plate",
+      "armorValue": 20,
+      "fatiguePerTurn": 0.31,
+      "movementPenalty": 0.0
+    }
+  },
+    {
+    "id": "orc_iron_greaves",
+    "charSpans": [
+      {
+        "sheet": "items",
+        "id": 73
+      }
+    ],
+    "name": "Orc Iron Greaves",
+    "type": "armor",
+    "category": "combat",
+    "deteriorationRate": 0.03,
+    "description": "Bands of iron hammered around the shin over stinking hide. They were not measured for anyone.",
+    "color": "#4A4A52",
+    "amount": 0,
+    "weightKg": 3.0,
+    "volumeL": 5.4,
+    "tier": 3,
+    "maxDurability": 200,
+    "durabilityLossPerCombatHit": 20,
+    "armorProperties": {
+      "defense": 10,
+      "armorType": "heavy",
+      "armorSet": "orc_warhost",
+      "slot": "greaves",
+      "equipmentSlot": "greaves",
+      "armorLayer": "plate",
+      "armorValue": 10,
+      "fatiguePerTurn": 0.18,
+      "movementPenalty": 0.0
+    }
+  },
+    {
+    "id": "orc_warhelm",
+    "charSpans": [
+      {
+        "sheet": "items",
+        "id": 84
+      }
+    ],
+    "name": "Orc Warhelm",
+    "type": "armor",
+    "category": "combat",
+    "deteriorationRate": 0.03,
+    "description": "A full iron helm with a slot for the eyes and a chin bar, blackened by whatever fire forged it.",
+    "color": "#3E3E46",
+    "amount": 0,
+    "weightKg": 4.0,
+    "volumeL": 7.2,
+    "tier": 4,
+    "maxDurability": 340,
+    "durabilityLossPerCombatHit": 6,
+    "armorProperties": {
+      "defense": 26,
+      "armorType": "heavy",
+      "armorSet": "orc_warboss",
+      "slot": "head",
+      "equipmentSlot": "head",
+      "armorLayer": "plate",
+      "armorValue": 26,
+      "fatiguePerTurn": 0.388,
+      "movementPenalty": 0.0
+    }
+  },
+    {
+    "id": "orc_plate_greaves",
+    "charSpans": [
+      {
+        "sheet": "items",
+        "id": 73
+      }
+    ],
+    "name": "Orc Plate Greaves",
+    "type": "armor",
+    "category": "combat",
+    "deteriorationRate": 0.03,
+    "description": "Slabs of plate strapped over the thigh, dented inward more often than out.",
+    "color": "#3E3E46",
+    "amount": 0,
+    "weightKg": 3.8,
+    "volumeL": 6.8,
+    "tier": 4,
+    "maxDurability": 320,
+    "durabilityLossPerCombatHit": 6,
+    "armorProperties": {
+      "defense": 14,
+      "armorType": "heavy",
+      "armorSet": "orc_warboss",
+      "slot": "greaves",
+      "equipmentSlot": "greaves",
+      "armorLayer": "plate",
+      "armorValue": 14,
+      "fatiguePerTurn": 0.232,
+      "movementPenalty": 0.0
+    }
+  },
+  // ── Wicker & branch: the stone age's ARMOUR, as opposed to its clothing. Woven green and lashed,
+  //    it breaks instead of the bone under it and is meant to be rebuilt, not repaired.
+  {
+    "id": "wicker_cap",
+    "charSpans": [
+      {
+        "sheet": "items",
+        "id": 9
+      }
+    ],
+    "name": "Wicker Cap",
+    "type": "armor",
+    "category": "primitive",
+    "deteriorationRate": 0.04,
+    "description": "Green withies bent over the skull and lashed in a dome. It cracks before a skull does, which is the entire idea.",
+    "color": "#B89048",
+    "amount": 0,
+    "weightKg": 0.5,
+    "volumeL": 1.5,
+    "tier": 0,
+    "maxDurability": 20,
+    "durabilityLossPerCombatHit": 60,
+    "armorProperties": {
+      "defense": 2,
+      "armorType": "light",
+      "armorSet": "wicker",
+      "slot": "head",
+      "equipmentSlot": "head",
+      "armorLayer": "gambeson",
+      "armorValue": 2,
+      "fatiguePerTurn": 0.09,
+      "movementPenalty": 0.0
+    }
+  },
+    {
+    "id": "branch_bracers",
+    "charSpans": [
+      {
+        "sheet": "items",
+        "id": 9
+      }
+    ],
+    "name": "Branch Bracers",
+    "type": "armor",
+    "category": "primitive",
+    "deteriorationRate": 0.04,
+    "description": "Straight sticks laid side by side along the forearm and whipped tight. Turns a claw once.",
+    "color": "#B89048",
+    "amount": 0,
+    "weightKg": 0.6,
+    "volumeL": 1.8,
+    "tier": 0,
+    "maxDurability": 18,
+    "durabilityLossPerCombatHit": 60,
+    "armorProperties": {
+      "defense": 2,
+      "armorType": "light",
+      "armorSet": "wicker",
+      "slot": "bracers",
+      "equipmentSlot": "bracers",
+      "armorLayer": "gambeson",
+      "armorValue": 2,
+      "fatiguePerTurn": 0.09,
+      "movementPenalty": 0.0
+    }
+  },
+    {
+    "id": "branch_greaves",
+    "charSpans": [
+      {
+        "sheet": "items",
+        "id": 9
+      }
+    ],
+    "name": "Branch Greaves",
+    "type": "armor",
+    "category": "primitive",
+    "deteriorationRate": 0.04,
+    "description": "Split branches bound down the shin, rattling with every step. Nothing about this is quiet.",
+    "color": "#B89048",
+    "amount": 0,
+    "weightKg": 1.0,
+    "volumeL": 3.0,
+    "tier": 0,
+    "maxDurability": 18,
+    "durabilityLossPerCombatHit": 60,
+    "armorProperties": {
+      "defense": 2,
+      "armorType": "light",
+      "armorSet": "wicker",
+      "slot": "greaves",
+      "equipmentSlot": "greaves",
+      "armorLayer": "gambeson",
+      "armorValue": 2,
+      "fatiguePerTurn": 0.09,
+      "movementPenalty": 0.0
+    }
   }
 ]

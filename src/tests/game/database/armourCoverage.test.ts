@@ -22,10 +22,28 @@ const wearable = armour.filter((i) => i.armorProperties?.armorType !== 'shield')
 
 /** Enemy-faction gear: found on a corpse, never forged in the colony. */
 const LOOT_ONLY = new Set([
+  // Orc
   'orc_scrap_plate',
   'orc_warplate',
   'orc_iron_slab',
-  'goblin_scrap_vest'
+  'orc_horned_helm',
+  'orc_iron_greaves',
+  'orc_warhelm',
+  'orc_plate_greaves',
+  // Goblin
+  'goblin_scrap_vest',
+  'goblin_scrap_cap',
+  'goblin_bark_bracers',
+  'goblin_ring_vest',
+  'goblin_pot_helm',
+  // Kobold
+  'kobold_scale_vest',
+  'kobold_dig_cap',
+  'kobold_bone_bracers',
+  // Gnoll
+  'gnoll_bone_harness',
+  'gnoll_skull_helm',
+  'gnoll_hide_greaves'
 ]);
 
 /** Every slot a worn piece may claim. Mirrors the `EquipmentSlot` union; a value outside it is

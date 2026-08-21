@@ -15,6 +15,8 @@ import itemsData from '../game/database/items/items.jsonc';
 import recipesData from '../game/database/items/recipes.jsonc';
 import buildingsData from '../game/database/world/buildings.jsonc';
 import { GEAR, AGES, rowForAny, type Age, type BuildClass, type GearRow } from './gearDb';
+import lootpoolData from '../game/database/items/lootpool.jsonc';
+import creaturesData from '../game/database/pawns/creatures.jsonc';
 import { AGE_NAMES, blameStation, chainAgeOf } from './chainAge';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -37,6 +39,30 @@ for (const r of recipes) {
 }
 
 const gearById = new Map(GEAR.map((g) => [g.id, g]));
+
+// ── who drops what ──────────────────────────────────────────────────────────
+// "drop only" as one flat bucket said nothing you could act on. A kobold dropping a goblin vest and
+// an orc dropping his own warplate are different facts, and the species is the one that matters:
+// it names the thing you have to go and kill.
+const SPECIES_OF_POOL = new Map<string, string>();
+for (const c of creaturesData as any[]) {
+  const pool = c?.lootPool;
+  if (!pool || SPECIES_OF_POOL.has(pool)) continue;
+  // the pool's own name carries the faction far more reliably than any one creature that rolls on it
+  const word = String(pool).split('_')[0];
+  SPECIES_OF_POOL.set(pool, word.charAt(0).toUpperCase() + word.slice(1));
+}
+const DROPPER_OF_ITEM = new Map<string, string>();
+{
+  const pools = ((lootpoolData as { pools?: Record<string, any> }).pools ?? {}) as Record<string, any>;
+  for (const [poolId, pool] of Object.entries(pools)) {
+    const who = SPECIES_OF_POOL.get(poolId) ?? poolId.split('_')[0];
+    for (const slot of Object.values<any>(pool?.slots ?? {}))
+      for (const pick of slot?.pick ?? [])
+        if (pick?.id && !DROPPER_OF_ITEM.has(pick.id))
+          DROPPER_OF_ITEM.set(pick.id, who.charAt(0).toUpperCase() + who.slice(1));
+  }
+}
 
 /** Chain age → the same age vocabulary the build tables use. */
 const AGE_OF_CHAIN: Age[] = ['Primitive', 'Copper', 'Bronze', 'Iron', 'Steel', 'Runed'];
@@ -177,6 +203,14 @@ const MATERIAL_LINE: Record<string, string> = {
 const materialLine = (cat: string) =>
   MATERIAL_LINE[cat] ?? (/_seed$/.test(cat) ? 'seeds' : prettify(cat));
 
+/** Crafted and dropped are different things to a player: one is a plan, the other is a hunt. They
+ *  split BEFORE sets, so a craftable one-off never sits next to enemy loot. */
+function sourceBranch(i: any): string[] {
+  if (recipeByOutput.has(i.id)) return ['crafted'];
+  const who = DROPPER_OF_ITEM.get(i.id);
+  return who ? ['dropped', who] : ['dropped', 'unclaimed'];
+}
+
 const perishable = (i: any) => (i.decaySeconds || i.decaysTo ? 'perishable' : 'keeps');
 
 // ── the path each item files itself under ───────────────────────────────────
@@ -185,13 +219,13 @@ function pathOf(i: any): string[] {
   const wp = i.weaponProperties;
   const age = ageOf(i);
 
-  if (ap?.armorType === 'shield') return ['Shields', age];
+  if (ap?.armorType === 'shield') return ['Shields', age, ...sourceBranch(i)];
   if (i.type === 'armor' && ap?.armorType) {
-    const set = ap.armorSet ? prettify(ap.armorSet) : recipeByOutput.has(i.id) ? 'no set' : 'drop only';
     return [
       'Armour',
       age,
-      set,
+      ...sourceBranch(i),
+      ap.armorSet ? prettify(ap.armorSet) : 'no set',
       CLASS_LABEL[ap.armorType] ?? ap.armorType,
       COVERAGE[ap.equipmentSlot ?? ap.slot] ?? prettify(ap.equipmentSlot ?? 'unplaced')
     ];
@@ -299,7 +333,12 @@ const KIT_PARTS = ['head', 'torso', 'arms', 'hands', 'legs', 'feet'];
 const NOT_A_KIT = new Set(['no set', 'drop only']);
 const coverageOf = (label: string) => (label.startsWith('torso') ? 'torso' : label);
 function missingOf(node: TreeNode, rootLabel: string): string[] {
-  if (rootLabel !== 'Armour' || node.depth !== 2 || NOT_A_KIT.has(node.label)) return [];
+  if (rootLabel !== 'Armour' || NOT_A_KIT.has(node.label)) return [];
+  // Armour ▸ age ▸ crafted ▸ SET  (or ▸ dropped ▸ species ▸ SET)
+  if (node.depth !== 3 && node.depth !== 4) return [];
+  if (node.children.some((c) => CLASS_LABEL[c.label])) {
+    // it is a set node only if its children are classes
+  } else return [];
   const present = new Set<string>();
   (function walk(n: TreeNode) {
     if (!n.children.length) present.add(coverageOf(n.label));

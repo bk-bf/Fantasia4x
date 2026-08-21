@@ -16,6 +16,13 @@ import { AGE_CEILING, AGE_NAMES, blameStation, chainAgeOf } from '$lib/dev/chain
 //    0..5 and item `tier` runs 0..4 — one band wider — so the two go through `bandOf` instead of being
 //    compared directly, which is what made the first pass of this rule over-report.
 // R3 a species noun in the id means the recipe requires that species' material, and vice versa.
+// R6 bindings are not a placeholder tax: they follow the MATERIAL (leather is sewn with sinew, cloth
+//    with thread, metal is riveted), they SCALE with the piece, and cordage — primitive lashing — does
+//    not appear above Bronze. Every piece used to pay a flat 1x whatever its size, and the ladder ran
+//    backwards: copper scale bound with spun thread, the bronze leather sets one age later with cord.
+// R7 hide is not leather. A name saying "hide" must be cut from something in the `hide` line, and one
+//    saying "leather" from tanned leather. The steel-age sabretooth set called itself hide while being
+//    made of `sabretooth_leather`; R5 waved it through because its map treats the two words as one.
 // R5 a MATERIAL word in the name is a material the recipe actually uses. "Oiled Leather Cloak" with
 //    no oil in it, an "Antler War Club" carved from large bones, a "Bronze Punch Dagger" cast from a
 //    copper bar. R3 catches the same lie about CREATURES; nothing caught it about materials, and it
@@ -384,6 +391,87 @@ describe('ITEM-RULES R5 — a material in the name is a material in the recipe',
 
   it('no name promises a material its chain never contains', () => {
     const bad = offenders();
+    expect(bad, bad.join('; ')).toEqual([]);
+  });
+});
+
+// ── R6/R7 shared lookups ────────────────────────────────────────────────────────────────────────
+type ArmourItem = Item & { armorProperties?: { armorType?: string; equipmentSlot?: string; slot?: string } };
+const WEARABLE = (ITEMS as ArmourItem[]).filter(
+  (i) => i.armorProperties?.armorType && recipesByOutput.has(i.id)
+);
+/** How much binding a piece of this size takes. A glove and a cuirass are not lashed with equal cord. */
+const BINDING_SIZE: Record<string, number> = {
+  head: 1, gloves: 1, boots: 1, bracers: 1, belt: 1, back2: 1,
+  greaves: 2, back: 2, offHand: 2,
+  bodyBase: 3, bodyMid: 3, bodyOuter: 3
+};
+const BINDINGS = ['cordage', 'thread', 'sinew', 'enchant_thread'];
+const slotOf = (i: ArmourItem) => i.armorProperties?.equipmentSlot ?? i.armorProperties?.slot ?? '';
+
+describe('ITEM-RULES R6 — binding scales with the piece and matches the material', () => {
+  it('no token binding on a piece far bigger than one unit of cord', () => {
+    const bad: string[] = [];
+    for (const i of WEARABLE) {
+      const ins = (firstRecipe(i.id)?.inputs ?? {}) as Record<string, number>;
+      const size = BINDING_SIZE[slotOf(i)] ?? 1;
+      for (const b of BINDINGS)
+        if (ins[b] !== undefined && ins[b] < size)
+          bad.push(`${i.id} (${slotOf(i)}) binds with ${ins[b]}x ${b}, needs ${size}`);
+    }
+    expect(bad, bad.join('; ')).toEqual([]);
+  });
+
+  it('cordage does not survive above Bronze', () => {
+    const bad = WEARABLE.filter(
+      (i) => (i.tier ?? 0) >= 2 && (firstRecipe(i.id)?.inputs ?? {})['cordage'] !== undefined
+    ).map((i) => `${i.id} (tier ${i.tier}) still lashed with cordage`);
+    expect(bad, bad.join('; ')).toEqual([]);
+  });
+
+  it('leather is sewn with sinew, not thread', () => {
+    // Thread is spun plant fibre; it is what cloth is stitched with. Hide is sewn with sinew, and the
+    // two lines swapping back and forth is what made the ladder read as noise.
+    const bad: string[] = [];
+    for (const i of WEARABLE) {
+      const rec = firstRecipe(i.id)!;
+      const ins = (rec.inputs ?? {}) as Record<string, number>;
+      const keys = [
+        ...Object.keys(ins),
+        ...Object.values(rec.dynamicRecipe ?? {}).map((s) => `category:${s.acceptsCategory}`)
+      ];
+      const leather = keys.some((k) => /leather|hide|pelt|buckskin|fur/.test(k));
+      const cloth = keys.some((k) =>
+        /linen_cloth|silk_cloth|woolcloth|cotton_cloth|plant_fiber|category:wool/.test(k)
+      );
+      if (leather && !cloth && ins['thread'] !== undefined)
+        bad.push(`${i.id} sews leather with thread`);
+    }
+    expect(bad, bad.join('; ')).toEqual([]);
+  });
+});
+
+describe('ITEM-RULES R7 — hide is not leather', () => {
+  it('a name saying hide is cut from hide, and leather from leather', () => {
+    const bad: string[] = [];
+    for (const i of WEARABLE) {
+      const rec = firstRecipe(i.id)!;
+      const keys = [
+        ...Object.keys(rec.inputs ?? {}),
+        ...Object.values(rec.dynamicRecipe ?? {}).map((s) => s.acceptsCategory ?? '')
+      ];
+      // `boarhide`/`oxhide` are LEATHERS whose own name carries "hide" — a piece named for them is
+      // telling the truth, so the material's name counts, not just its category.
+      const words = keys
+        .map((k) => `${k} ${ITEM_BY_ID.get(k)?.category ?? ''} ${ITEM_BY_ID.get(k)?.name ?? ''}`)
+        .join(' ')
+        .toLowerCase();
+      const name = String(i.name).toLowerCase();
+      if (/\bhide\b|-hide/.test(name) && !/hide|pelt/.test(words))
+        bad.push(`${i.id} "${i.name}" says hide, made from [${keys.join(', ')}]`);
+      if (/leather/.test(name) && !/leather/.test(words))
+        bad.push(`${i.id} "${i.name}" says leather, made from [${keys.join(', ')}]`);
+    }
     expect(bad, bad.join('; ')).toEqual([]);
   });
 });

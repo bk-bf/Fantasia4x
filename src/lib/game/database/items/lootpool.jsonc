@@ -15,8 +15,8 @@
 //     "quality"       : [[1, 5], [2, 3], [3, 1]],  // weighted [ItemQuality 0–5, weight]; omit → all Standard(1)
 //     "slots": {
 //       "mainHand" : {"chance": 0.9, "pick": [{"id": "bone_knife", "w": 3}, {"id": "stone_spear", "w": 1}]},
-//       "bodyOuter": {"chance": 0.35, "pick": [{"id": "raw_hide_vest", "w": 1}]},
-//       "head": {"chance": 0.15, "pick": [{"id": "hide_cap", "w": 1}]}
+//       "bodyOuter": {"chance": 0.35, "pick": [{"id": "cured_hide_vest", "w": 1}]},
+//       "head": {"chance": 0.15, "pick": [{"id": "cured_hide_cap", "w": 1}]}
 //       // slot keys are real EquipmentSlot ids (mainHand/offHand/head/bodyBase/bodyMid/bodyOuter/
 //       // gloves/boots/bracers/greaves/back/back2/…); item ids reference items.jsonc.
 //     }
@@ -41,6 +41,7 @@
       "conditionRange": [0.3, 0.7],
       "quality": [[0, 3], [1, 2]],
       "slots": {
+        "head":      {"chance": 0.30, "pick": [{"id": "goblin_scrap_cap", "w": 2}, {"id": "goblin_bark_bracers", "w": 1}]},
         "mainHand":  {"chance": 0.85, "pick": [{"id": "goblin_shank", "w": 3}, {"id": "goblin_hooked_spear", "w": 2}, {"id": "goblin_net", "w": 1}]},
         "bodyOuter": {"chance": 0.4,  "pick": [{"id": "goblin_scrap_vest", "w": 1}]}
       }
@@ -59,6 +60,8 @@
       "conditionRange": [0.4, 0.8],
       "quality": [[0, 2], [1, 3], [2, 1]],
       "slots": {
+        "head":      {"chance": 0.35, "pick": [{"id": "goblin_pot_helm", "w": 2}]},
+        "bodyMid":   {"chance": 0.30, "pick": [{"id": "goblin_ring_vest", "w": 1}]},
         "mainHand":  {"chance": 0.95, "pick": [{"id": "goblin_shank", "w": 2}, {"id": "goblin_hooked_spear", "w": 3}, {"id": "goblin_poison_bow", "w": 2}, {"id": "goblin_firepot", "w": 1}]},
         "offHand":   {"chance": 0.3,  "pick": [{"id": "goblin_net", "w": 1}]},
         "bodyOuter": {"chance": 0.65, "pick": [{"id": "goblin_scrap_vest", "w": 1}]}
@@ -69,6 +72,8 @@
       "conditionRange": [0.5, 0.9],
       "quality": [[1, 3], [2, 2]],
       "slots": {
+        "head":      {"chance": 0.30, "pick": [{"id": "orc_horned_helm", "w": 2}]},
+        "greaves":   {"chance": 0.25, "pick": [{"id": "orc_iron_greaves", "w": 1}]},
         "mainHand": {"chance": 1.0,  "pick": [{"id": "orc_cleaver", "w": 2}, {"id": "orc_maul", "w": 2}, {"id": "orc_greataxe", "w": 3}]},
         "offHand":  {"chance": 0.35, "pick": [{"id": "orc_iron_slab", "w": 1}]},
         "bodyMid":  {"chance": 0.8,  "pick": [{"id": "orc_scrap_plate", "w": 2}, {"id": "orc_warplate", "w": 1}]}
@@ -92,6 +97,8 @@
       "conditionRange": [0.7, 1.0],
       "quality": [[2, 2], [4, 2], [5, 1]],
       "slots": {
+        "head":    {"chance": 0.45, "pick": [{"id": "orc_warhelm", "w": 2}]},
+        "greaves":   {"chance": 0.35, "pick": [{"id": "orc_plate_greaves", "w": 1}]},
         "mainHand": {"chance": 1.0, "pick": [{"id": "iron_tide_greataxe", "w": 1, "famed": true}]},
         "offHand":  {"chance": 0.6, "pick": [{"id": "orc_iron_slab", "w": 1}]},
         "bodyMid":  {"chance": 1.0, "pick": [{"id": "orc_warplate", "w": 1}]}
@@ -121,7 +128,9 @@
       "quality": [[0, 2], [1, 3]],
       "slots": {
         "mainHand":  {"chance": 0.95, "pick": [{"id": "kobold_trap_spear", "w": 3}, {"id": "sling", "w": 2}]},
-        "bodyOuter": {"chance": 0.3,  "pick": [{"id": "goblin_scrap_vest", "w": 1}]}
+        "bodyMid":   {"chance": 0.30, "pick": [{"id": "kobold_scale_vest", "w": 1}]},
+        "head":      {"chance": 0.35, "pick": [{"id": "kobold_dig_cap", "w": 2}]},
+        "bracers":   {"chance": 0.25, "pick": [{"id": "kobold_bone_bracers", "w": 1}]}
       }
     },
     "gnoll_pack": {
@@ -129,6 +138,9 @@
       "conditionRange": [0.35, 0.8],
       "quality": [[0, 2], [1, 3]],
       "slots": {
+        "bodyMid":   {"chance": 0.30, "pick": [{"id": "gnoll_bone_harness", "w": 1}]},
+        "head":      {"chance": 0.35, "pick": [{"id": "gnoll_skull_helm", "w": 2}]},
+        "greaves":   {"chance": 0.25, "pick": [{"id": "gnoll_hide_greaves", "w": 1}]},
         "mainHand": {"chance": 0.85, "pick": [{"id": "gnoll_flint_axe", "w": 3}, {"id": "gnoll_bone_cleaver", "w": 2}]}
       }
     },
@@ -142,8 +154,8 @@
       "quality": [[0, 3], [1, 2]],
       "slots": {
         "mainHand":  {"chance": 0.95, "pick": [{"id": "bone_knife", "w": 2}, {"id": "stone_spear", "w": 3}, {"id": "flint_handaxe", "w": 2}]},
-        "bodyBase":  {"chance": 0.5,  "pick": [{"id": "raw_hide_vest", "w": 2}, {"id": "wicker_vest", "w": 1}]},
-        "head":      {"chance": 0.25, "pick": [{"id": "hide_cap", "w": 1}]}
+        "bodyBase":  {"chance": 0.5,  "pick": [{"id": "cured_hide_vest", "w": 2}, {"id": "wicker_vest", "w": 1}]},
+        "head":      {"chance": 0.25, "pick": [{"id": "cured_hide_cap", "w": 1}]}
       }
     },
     "guard_bronze": {
