@@ -3,20 +3,25 @@
      state so folding is consistent across the whole tree and survives a filter. -->
 <script lang="ts">
   import Self from './ItemTreeNode.svelte';
-  import type { TreeNode, TreeItem } from './itemTree';
+  import type { TreeNode } from './itemTree';
+  import type { GearRow } from './gearDb';
 
   let {
     node,
     open,
     sel,
     toggle,
-    select
+    select,
+    onhover,
+    onout
   }: {
     node: TreeNode;
     open: Record<string, boolean>;
     sel: Record<string, boolean>;
     toggle: (key: string) => void;
     select: (id: string) => void;
+    onhover: (row: GearRow, e: MouseEvent) => void;
+    onout: () => void;
   } = $props();
 
   const shut = $derived(!open[node.key]);
@@ -38,10 +43,17 @@
 </tr>
 {#if !shut}
   {#each node.children as child (child.key)}
-    <Self node={child} {open} {sel} {toggle} {select} />
+    <Self node={child} {open} {sel} {toggle} {select} {onhover} {onout} />
   {/each}
   {#each node.items as it (it.id)}
-    <tr class="leaf" class:sel={sel[it.id]} onclick={() => select(it.id)}>
+    <tr
+      class="leaf"
+      class:sel={sel[it.id]}
+      onclick={() => select(it.id)}
+      onmouseenter={(e) => onhover(it.row, e)}
+      onmousemove={(e) => onhover(it.row, e)}
+      onmouseleave={onout}
+    >
       <td class="nm" style="padding-left:{pad + 20}px">{it.name}</td>
       <td class="num">{it.tier ?? '—'}</td>
       <td class="age">{it.age}</td>

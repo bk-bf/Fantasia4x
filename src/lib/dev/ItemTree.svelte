@@ -8,6 +8,14 @@
 <script lang="ts">
   import ItemTreeNode from './ItemTreeNode.svelte';
   import { ITEM_TREE, TREE_ITEMS, buildTree, type TreeNode } from './itemTree';
+  import type { GearRow } from './gearDb';
+
+  // The build tables already own a positioned, styled tooltip; the page hands its handlers down so
+  // hovering a tree row raises THAT one rather than a second copy that would drift from it.
+  let {
+    onhover,
+    onout
+  }: { onhover: (row: GearRow, e: MouseEvent) => void; onout: () => void } = $props();
 
   let q = $state('');
   let open = $state<Record<string, boolean>>({});
@@ -82,7 +90,7 @@
       </thead>
       <tbody>
         {#each tree.children as root (root.key)}
-          <ItemTreeNode node={root} {open} {sel} {toggle} {select} />
+          <ItemTreeNode node={root} {open} {sel} {toggle} {select} {onhover} {onout} />
         {/each}
         {#if !tree.count}
           <tr><td colspan="7" class="none">nothing matches “{q}”</td></tr>

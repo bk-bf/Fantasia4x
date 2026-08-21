@@ -14,7 +14,7 @@
 import itemsData from '../game/database/items/items.jsonc';
 import recipesData from '../game/database/items/recipes.jsonc';
 import buildingsData from '../game/database/world/buildings.jsonc';
-import { GEAR, AGES, type Age, type BuildClass } from './gearDb';
+import { GEAR, AGES, rowForAny, type Age, type BuildClass, type GearRow } from './gearDb';
 import { AGE_NAMES, blameStation, chainAgeOf } from './chainAge';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -58,6 +58,9 @@ export interface TreeItem {
   /** The station whose age set this item's chain age — why it sits in the age it does. */
   gatedBy: string;
   desc: string;
+  /** The catalogue row for this item — what the build tables' tooltip renders. Built for EVERY item,
+   *  including the materials and food `GEAR` does not carry, so there is one tooltip, not two. */
+  row: GearRow;
   raw: any;
 }
 
@@ -266,6 +269,7 @@ export const TREE_ITEMS: TreeItem[] = items
         ? `${buildingName.get(gated) ?? prettify(gated)} · ${AGE_NAMES[chainAgeOf(i.id)]}`
         : '',
       desc: i.description ?? '',
+      row: gearById.get(i.id) ?? rowForAny(i),
       raw: i
     };
   });

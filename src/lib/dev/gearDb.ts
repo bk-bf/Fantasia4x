@@ -70,7 +70,10 @@ export type BuildCategory =
   | 'ranged'
   | 'caster'
   | 'general';
-export type GearKind = 'weapon' | 'armor' | 'tool' | 'ammo' | 'medicine' | 'trait';
+/** `material` is deliberately NOT in `KINDS` and never enters `GEAR` — the build catalogue is about
+ *  gear. It exists so the item tree can hand a raw material to the SAME tooltip the build tables use
+ *  instead of growing a second one that would drift away from it. */
+export type GearKind = 'weapon' | 'armor' | 'tool' | 'ammo' | 'medicine' | 'trait' | 'material';
 export type TraitGating = 'ungated' | 'cultural' | 'lineage' | 'flaw';
 
 // ── build groups (used by the classifiers) ──────────────────────────────────
@@ -736,8 +739,8 @@ function recipeInfo(rec: any): RecipeInfo | null {
   };
 }
 
-function toRow(item: any): GearRow | null {
-  const kind = kindOf(item);
+function toRow(item: any, forcedKind?: GearKind): GearRow | null {
+  const kind = forcedKind ?? kindOf(item);
   if (!kind) return null;
   const rec = recipeByOutput.get(item.id) ?? null;
   // The RECIPE is the only research gate — items no longer carry one (it was a second, drifting copy).
@@ -1041,7 +1044,8 @@ function traitRow(t: any): GearRow {
   };
 }
 
-const itemRows = items.map(toRow).filter((r): r is GearRow => r !== null);
+// point-free would hand `map`'s INDEX to the new second parameter — pass the item only
+const itemRows = items.map((i) => toRow(i)).filter((r): r is GearRow => r !== null);
 const traitRows = traits.filter((t) => t?.id && t?.name).map(traitRow);
 export const GEAR: GearRow[] = [...itemRows, ...traitRows];
 
@@ -1091,3 +1095,7 @@ export function buildSummaries(): BuildSummary[] {
     };
   });
 }
+
+/** A row for ANY item, including the materials, food and drink the gear catalogue does not carry.
+ *  Same shape ⇒ the item tree reuses the build tables' tooltip verbatim. */
+export const rowForAny = (item: any): GearRow => toRow(item, kindOf(item) ?? 'material')!;

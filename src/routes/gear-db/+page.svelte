@@ -1,16 +1,9 @@
 <script lang="ts">
-  import AuditTables from '$lib/dev/AuditTables.svelte';
   import ItemTree from '$lib/dev/ItemTree.svelte';
-  import SortableTable from '$lib/dev/SortableTable.svelte';
-
-  // Server-loaded audit results (+page.server.ts). Everything else on this page is derived from the
-  // static data files at module scope, so this is the only prop.
-  let { data } = $props();
 
   // DEV TOOL — data-driven BUILD database. Reads the derived catalogue from $lib/dev/gearDb (which
   // imports the real items/recipes/buildings/research/traits .jsonc), so it stays in sync with the
-  // data. Everything is auto-classified to build archetypes by stats. Views: a Builds overview + a
-  // filterable/sortable catalogue of weapons, armour, ammo and traits.
+  // data. Two views: the build × age grids, and the item tree over every entry in items.jsonc.
   import { page } from '$app/state';
   import {
     GEAR,
@@ -36,15 +29,6 @@
     type Rank
   } from '$lib/dev/buildStats';
 
-  const CAT_KINDS: (GearKind | 'all')[] = ['all', 'weapon', 'armor', 'ammo', 'trait'];
-  const KIND_LABEL: Record<string, string> = {
-    all: 'All',
-    weapon: 'Weapons',
-    armor: 'Armour',
-    ammo: 'Ammo',
-    trait: 'Traits'
-  };
-  const CATALOGUE = GEAR.filter((g) => ['weapon', 'armor', 'ammo', 'trait'].includes(g.kind));
   const summaries = buildSummaries();
 
   // Coverage grid: build × kind × age → the actual items (precomputed once; GEAR is static).
@@ -466,25 +450,9 @@
     } else if (e.key === 'Escape') acq = '';
   }
 
-  // Initial view from the URL (?view=catalogue&kind=weapon&build=Marksman) so SSR + deep-links agree.
+  // Initial view from the URL (?view=audit) so SSR + deep-links agree.
   const params = page.url?.searchParams ?? new URLSearchParams();
-  const pKind = params.get('kind');
-  const pBuild = params.get('build');
-  let view = $state<'builds' | 'catalogue' | 'audit' | 'balance'>(
-    params.get('view') === 'balance'
-      ? 'balance'
-      : params.get('view') === 'audit'
-        ? 'audit'
-      : pKind || pBuild || params.get('view') === 'catalogue'
-        ? 'catalogue'
-        : 'builds'
-  );
-  let kind = $state<GearKind | 'all'>(
-    pKind && CAT_KINDS.includes(pKind as never) ? (pKind as GearKind | 'all') : 'all'
-  );
-  let q = $state('');
-  let cls = $state(pBuild ?? 'All');
-  let age = $state('All');
+  let view = $state<'builds' | 'audit'>(params.get('view') === 'audit' ? 'audit' : 'builds');
 
   const pct = (v: number | null) => (v == null ? '—' : Math.round(v * 100) + '%');
   const numf = (v: number | null) => (v == null ? '—' : String(v));
@@ -513,279 +481,7 @@
           ? 'craftable'
           : 'wild/boss';
 
-  interface Col {
-    key: string;
-    label: string;
-    get: (g: GearRow) => string | number | null;
-    disp?: (g: GearRow) => string;
-    numeric?: boolean;
-    clscol?: boolean;
-  }
 
-  const clsCol: Col = { key: 'cls', label: 'Class', get: (g) => g.cls, disp: clsStr, clscol: true };
-  const recipeCols: Col[] = [
-    {
-      key: 'station',
-      label: 'Station',
-      get: (g) => g.recipe?.station ?? null,
-      disp: (g) => dash(g.recipe?.station)
-    },
-    {
-      key: 'toolTier',
-      label: 'Tool tier',
-      get: (g) => g.recipe?.toolTier ?? null,
-      disp: (g) => (g.recipe ? 'T' + g.recipe.toolTier : '—'),
-      numeric: true
-    },
-    { key: 'inputs', label: 'Inputs', get: (g) => inputsStr(g), disp: inputsStr },
-    { key: 'research', label: 'Research', get: (g) => g.research, disp: (g) => dash(g.research) },
-    {
-      key: 'craftable',
-      label: 'Source',
-      get: (g) => (g.craftable ? 1 : 0),
-      disp: (g) => (g.craftable ? 'craftable' : 'wild/boss'),
-      numeric: true
-    }
-  ];
-
-  const colsByKind: Record<string, Col[]> = {
-    all: [
-      { key: 'name', label: 'Item · trait', get: (g) => g.name },
-      { key: 'kind', label: 'Kind', get: (g) => g.kind },
-      clsCol,
-      {
-        key: 'age',
-        label: 'Age',
-        get: (g) => g.ageRank,
-        disp: (g) => (g.kind === 'trait' ? '—' : g.age),
-        numeric: true
-      },
-      { key: 'detail', label: 'Detail', get: (g) => detail(g) },
-      { key: 'source', label: 'Source', get: (g) => source(g), disp: source }
-    ],
-    weapon: [
-      { key: 'name', label: 'Weapon', get: (g) => g.name },
-      clsCol,
-      {
-        key: 'dmg',
-        label: 'Dmg',
-        get: (g) => g.dmg,
-        disp: (g) => (g.dmg == null ? '—' : `${g.dmg} (${g.damMin}–${g.damMax})`),
-        numeric: true
-      },
-      {
-        key: 'damageType',
-        label: 'Type',
-        get: (g) => g.damageType,
-        disp: (g) => dash(g.damageType)
-      },
-      { key: 'ap', label: 'AP', get: (g) => g.ap, disp: (g) => pct(g.ap), numeric: true },
-      {
-        key: 'armorDmg',
-        label: 'ArmDmg',
-        get: (g) => g.armorDmg,
-        disp: (g) => numf(g.armorDmg),
-        numeric: true
-      },
-      { key: 'crit', label: 'Crit', get: (g) => g.crit, disp: (g) => pct(g.crit), numeric: true },
-      {
-        key: 'accuracy',
-        label: 'Acc',
-        get: (g) => g.accuracy,
-        disp: (g) => numf(g.accuracy),
-        numeric: true
-      },
-      {
-        key: 'atkSpeed',
-        label: 'Spd',
-        get: (g) => g.atkSpeed,
-        disp: (g) => numf(g.atkSpeed),
-        numeric: true
-      },
-      {
-        key: 'stamina',
-        label: 'Stam',
-        get: (g) => g.stamina,
-        disp: (g) => numf(g.stamina),
-        numeric: true
-      },
-      {
-        key: 'reach',
-        label: 'Reach',
-        get: (g) => g.reach,
-        disp: (g) => numf(g.reach),
-        numeric: true
-      },
-      {
-        key: 'range',
-        label: 'Range',
-        get: (g) => g.range,
-        disp: (g) => numf(g.range),
-        numeric: true
-      },
-      { key: 'stun', label: 'Stun', get: (g) => g.stun, disp: (g) => pct(g.stun), numeric: true },
-      { key: 'scaling', label: 'Scales', get: (g) => g.scaling, disp: (g) => dash(g.scaling) },
-      {
-        key: 'twoHanded',
-        label: 'Hands',
-        get: (g) => (g.twoHanded ? 2 : 1),
-        disp: (g) => (g.twoHanded ? '2H' : '1H'),
-        numeric: true
-      },
-      { key: 'onHit', label: 'On-hit', get: (g) => g.onHit, disp: (g) => dash(g.onHit) },
-      {
-        key: 'wieldStr',
-        label: 'STR gate',
-        get: (g) => g.wieldStr,
-        disp: (g) => numf(g.wieldStr),
-        numeric: true
-      },
-      {
-        key: 'weightKg',
-        label: 'Wt',
-        get: (g) => g.weightKg,
-        disp: (g) => g.weightKg + 'kg',
-        numeric: true
-      },
-      { key: 'age', label: 'Age', get: (g) => g.ageRank, disp: (g) => g.age, numeric: true },
-      { key: 'tier', label: 'Tier', get: (g) => g.tier, numeric: true },
-      ...recipeCols
-    ],
-    armor: [
-      { key: 'name', label: 'Armour', get: (g) => g.name },
-      clsCol,
-      {
-        key: 'defense',
-        label: 'Def',
-        get: (g) => g.defense,
-        disp: (g) => numf(g.defense),
-        numeric: true
-      },
-      {
-        key: 'armorType',
-        label: 'Weight',
-        get: (g) => g.armorType,
-        disp: (g) => dash(g.armorType)
-      },
-      { key: 'slot', label: 'Slot', get: (g) => g.slot, disp: (g) => dash(g.slot) },
-      {
-        key: 'block',
-        label: 'Block',
-        get: (g) => g.block,
-        disp: (g) => pct(g.block),
-        numeric: true
-      },
-      {
-        key: 'stealthMod',
-        label: 'Stealth',
-        get: (g) => g.stealthMod,
-        disp: (g) => (g.stealthMod == null ? '—' : '+' + g.stealthMod),
-        numeric: true
-      },
-      {
-        key: 'movePen',
-        label: 'Move pen',
-        get: (g) => g.movePen,
-        disp: (g) => pct(g.movePen),
-        numeric: true
-      },
-      {
-        key: 'weightKg',
-        label: 'Wt',
-        get: (g) => g.weightKg,
-        disp: (g) => g.weightKg + 'kg',
-        numeric: true
-      },
-      { key: 'age', label: 'Age', get: (g) => g.ageRank, disp: (g) => g.age, numeric: true },
-      { key: 'tier', label: 'Tier', get: (g) => g.tier, numeric: true },
-      ...recipeCols
-    ],
-    ammo: [
-      { key: 'name', label: 'Ammunition', get: (g) => g.name },
-      clsCol,
-      { key: 'dmg', label: 'Dmg', get: (g) => g.dmg, disp: (g) => numf(g.dmg), numeric: true },
-      {
-        key: 'damageType',
-        label: 'Type',
-        get: (g) => g.damageType,
-        disp: (g) => dash(g.damageType)
-      },
-      { key: 'ap', label: 'AP', get: (g) => g.ap, disp: (g) => pct(g.ap), numeric: true },
-      {
-        key: 'armorDmg',
-        label: 'ArmDmg',
-        get: (g) => g.armorDmg,
-        disp: (g) => numf(g.armorDmg),
-        numeric: true
-      },
-      { key: 'age', label: 'Age', get: (g) => g.ageRank, disp: (g) => g.age, numeric: true },
-      ...recipeCols
-    ],
-    trait: [
-      { key: 'name', label: 'Trait', get: (g) => g.name },
-      { key: 'cls', label: 'Supports', get: (g) => g.cls, disp: clsStr, clscol: true },
-      { key: 'effect', label: 'Effect', get: (g) => g.effect, disp: (g) => dash(g.effect) },
-      { key: 'gating', label: 'Gating', get: (g) => g.gating, disp: (g) => dash(g.gating) },
-      { key: 'scope', label: 'Scope', get: (g) => g.scope, disp: (g) => dash(g.scope) },
-      { key: 'rarity', label: 'Rarity', get: (g) => g.rarity, disp: (g) => dash(g.rarity) },
-      {
-        key: 'lineageNames',
-        label: 'Lineage',
-        get: (g) => g.lineageNames,
-        disp: (g) => dash(g.lineageNames)
-      }
-    ]
-  };
-
-  const cols = $derived(colsByKind[kind]);
-
-  // The catalogue's own column descriptors, adapted to the shared `Column` shape: the per-column
-  // classes that used to be `class:name` / `class:cls` become `colCls`, and the build-category colour
-  // that was a `data-cat` attribute becomes `data`.
-  const tableCols = $derived(
-    cols.map((c) => ({
-      ...c,
-      colCls: [c.key === 'name' ? 'name' : '', c.clscol ? 'cls' : ''].filter(Boolean).join(' '),
-      data: (g: (typeof GEAR)[number]) => ({ 'data-cat': String(BUILD_CAT[g.cls] ?? '') })
-    }))
-  );
-
-  const rows = $derived.by(() => {
-    let r = kind === 'all' ? CATALOGUE : GEAR.filter((g) => g.kind === kind);
-    if (cls !== 'All') r = r.filter((g) => g.classes.includes(cls as never));
-    if (age !== 'All') r = r.filter((g) => g.age === age);
-    if (q.trim()) {
-      const s = q.trim().toLowerCase();
-      r = r.filter((g) =>
-        (
-          g.name +
-          ' ' +
-          g.id +
-          ' ' +
-          clsStr(g) +
-          ' ' +
-          (g.effect ?? '') +
-          ' ' +
-          (g.damageType ?? '')
-        )
-          .toLowerCase()
-          .includes(s)
-      );
-    }
-    // Sorting moved into SortableTable — this derived now only FILTERS. Keeping both here meant the
-    // rows were sorted twice (once here, once in the component) with no way to keep the two in step.
-    return r;
-  });
-
-  function openBuild(b: string) {
-    cls = b;
-    kind = 'all';
-    view = 'catalogue';
-  }
-  function selectKind(k: GearKind | 'all') {
-    kind = k;
-    view = 'catalogue';
-  }
 </script>
 
 <div class="build-db">
@@ -810,21 +506,7 @@
       title="Every item in items.jsonc, nested by what it is — armour by age ▸ set ▸ class ▸ coverage"
       >Audit</button
     >
-    <button
-      class="tab lead"
-      class:active={view === 'balance'}
-      onclick={() => (view = 'balance')}
-      title="Headless balance-audit results — real HeadlessSession runs, pulled from the remote runner"
-      >Balance</button
-    >
     <span class="sep"></span>
-    {#each CAT_KINDS as k (k)}
-      <button
-        class="tab"
-        class:active={view === 'catalogue' && kind === k}
-        onclick={() => selectKind(k)}>{KIND_LABEL[k]}</button
-      >
-    {/each}
     <button
       class="tab info-toggle"
       class:active={compare}
@@ -955,9 +637,7 @@
   {/snippet}
 
   {#if view === 'audit'}
-    <ItemTree />
-  {:else if view === 'balance'}
-    <AuditTables audit={data.audit} />
+    <ItemTree onhover={hoverGear} onout={hoverOut} />
   {:else if view === 'builds'}
     <div class="tabs sub">
       <button class="tab" class:active={bview === 'weapon'} onclick={() => (bview = 'weapon')}
@@ -1029,9 +709,8 @@
             {#each BUILDS as b (b)}
               <tr>
                 <td
-                  class="name cls clickable"
+                  class="name cls"
                   data-cat={BUILD_CAT[b]}
-                  onclick={() => openBuild(b)}
                   onmouseenter={(e) => hoverBuild(b, e)}
                   onmouseleave={hoverOut}>{b}</td
                 >
@@ -1103,9 +782,8 @@
             {#each statRows as row (row.build)}
               <tr>
                 <td
-                  class="name cls clickable"
+                  class="name cls"
                   data-cat={BUILD_CAT[row.build]}
-                  onclick={() => openBuild(row.build)}
                   onmouseenter={(e) => hoverBuild(row.build, e)}
                   onmouseleave={hoverOut}>{row.build}</td
                 >
@@ -1152,9 +830,8 @@
             {#each BUILDS as b (b)}
               <tr>
                 <td
-                  class="name cls clickable"
+                  class="name cls"
                   data-cat={BUILD_CAT[b]}
-                  onclick={() => openBuild(b)}
                   onmouseenter={(e) => hoverBuild(b, e)}
                   onmouseleave={hoverOut}>{b}</td
                 >
@@ -1202,9 +879,8 @@
             {#each BUILDS as b (b)}
               <tr>
                 <td
-                  class="name cls clickable"
+                  class="name cls"
                   data-cat={BUILD_CAT[b]}
-                  onclick={() => openBuild(b)}
                   onmouseenter={(e) => hoverBuild(b, e)}
                   onmouseleave={hoverOut}>{b}</td
                 >
@@ -1221,34 +897,6 @@
         </table>
       </div>
     {/if}
-  {:else}
-    <div class="controls">
-      <input class="search" type="search" placeholder="search…" bind:value={q} />
-      <label
-        >build
-        <select bind:value={cls}>
-          <option>All</option>
-          {#each CLASSES as c (c)}<option>{c}</option>{/each}
-        </select>
-      </label>
-      <label
-        >age
-        <select bind:value={age}>
-          <option>All</option>
-          {#each AGES as a (a)}<option>{a}</option>{/each}
-        </select>
-      </label>
-      <span class="count">{rows.length} shown</span>
-    </div>
-    <SortableTable
-      columns={tableCols}
-      {rows}
-      initialSort="name"
-      rowKey={(g) => g.id}
-      onRowClick={(g) => toggleSel(g.id)}
-      rowSelected={(g) => !!sel[g.id]}
-    />
-    {#if rows.length === 0}<p class="empty">No entries match.</p>{/if}
   {/if}
 
   {#if compare}
@@ -1405,8 +1053,7 @@
     align-items: center;
     margin-bottom: 14px;
   }
-  .search,
-  select {
+  .search {
     font-family: inherit;
     font-size: 13px;
     color: #ece6d4;
