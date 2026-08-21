@@ -2358,7 +2358,7 @@
     "toolTierRequired": 0
   },
   {
-    "id"              : "make_dried_hide_vest",
+    "id"              : "make_cured_hide_vest",
     "discipline"      : "leatherworking",
     "station"         : "makers_bench",
     "inputs"          : {"cordage": 3},
@@ -2390,11 +2390,11 @@
     "toolTierRequired": 0
   },
   {
-    "id"              : "make_dried_hide_cap",
+    "id"              : "make_cured_hide_cap",
     "discipline"      : "leatherworking",
     "station"         : "makers_bench",
     "inputs"          : {"cordage": 1},
-    "outputs"         : {"cured_hide_cap": 1},
+    "outputs"         : {"cured_hide_hood": 1},
     "workAmount"      : 3,
     "toolTierRequired": 0,
     "dynamicRecipe"   : {
@@ -5608,20 +5608,10 @@
   //    station: stone_forge/copper_smelting, casting_hearth/bronze_working, anvil/iron_working,
   //    anvil/steel_making, runecarver_bench/runic_inscription.
   {
-    "id"              : "make_dried_hide_arm_wraps",
+    "id"              : "make_cured_hide_skirt",
     "station"         : "makers_bench",
     "inputs"          : {"cordage": 2},
-    "outputs"         : {"cured_hide_arm_wraps": 1},
-    "workAmount"      : 3,
-    "toolTierRequired": 0,
-    "discipline"      : "leatherworking",
-    "dynamicRecipe"   : {"hide": {"acceptsCategory": "cured_hide", "quantity": 1}}
-  },
-  {
-    "id"              : "make_dried_hide_leg_wraps",
-    "station"         : "makers_bench",
-    "inputs"          : {"cordage": 2},
-    "outputs"         : {"cured_hide_leg_wraps": 1},
+    "outputs"         : {"cured_hide_skirt": 1},
     "workAmount"      : 4,
     "toolTierRequired": 0,
     "discipline"      : "leatherworking",
@@ -5706,20 +5696,10 @@
     "researchRequired": "steel_making"
   },
   {
-    "id"              : "make_dried_hide_mitts",
+    "id"              : "make_cured_hide_footwraps",
     "station"         : "makers_bench",
     "inputs"          : {"cordage": 1},
-    "outputs"         : {"cured_hide_mitts": 1},
-    "workAmount"      : 3,
-    "toolTierRequired": 0,
-    "discipline"      : "leatherworking",
-    "dynamicRecipe"   : {"hide": {"acceptsCategory": "cured_hide", "quantity": 1}}
-  },
-  {
-    "id"              : "make_dried_hide_footwraps",
-    "station"         : "makers_bench",
-    "inputs"          : {"cordage": 1},
-    "outputs"         : {"cured_hide_footwraps": 1},
+    "outputs"         : {"cured_hide_boots": 1},
     "workAmount"      : 3,
     "toolTierRequired": 0,
     "discipline"      : "leatherworking",
@@ -6525,20 +6505,6 @@
     "toolTierRequired": 0
   },
     {
-    "id": "make_sackcloth_sleeves",
-    "discipline": "weaving",
-    "station": "weaving_frame",
-    "inputs": {
-      "sackcloth": 1,
-      "cordage": 1
-    },
-    "outputs": {
-      "sackcloth_sleeves": 1
-    },
-    "workAmount": 4,
-    "toolTierRequired": 0
-  },
-    {
     "id": "make_sackcloth_mitts",
     "discipline": "weaving",
     "station": "weaving_frame",
@@ -6550,20 +6516,6 @@
       "sackcloth_mitts": 1
     },
     "workAmount": 4,
-    "toolTierRequired": 0
-  },
-    {
-    "id": "make_sackcloth_leggings",
-    "discipline": "weaving",
-    "station": "weaving_frame",
-    "inputs": {
-      "sackcloth": 2,
-      "cordage": 2
-    },
-    "outputs": {
-      "sackcloth_leggings": 1
-    },
-    "workAmount": 5,
     "toolTierRequired": 0
   },
     {
@@ -6915,20 +6867,6 @@
   },
   // ── Wicker & branch line ──
   {
-    "id": "make_wicker_cap",
-    "discipline": "woodworking",
-    "station": "craft_spot",
-    "inputs": {
-      "branch": 5,
-      "cordage": 2
-    },
-    "outputs": {
-      "wicker_cap": 1
-    },
-    "workAmount": 4,
-    "toolTierRequired": 0
-  },
-    {
     "id": "make_branch_bracers",
     "discipline": "woodworking",
     "station": "craft_spot",
@@ -6954,6 +6892,21 @@
       "branch_greaves": 1
     },
     "workAmount": 5,
+    "toolTierRequired": 0
+  },
+  // ── Bark sandals ──
+  {
+    "id": "make_bark_sandals",
+    "discipline": "woodworking",
+    "station": "craft_spot",
+    "inputs": {
+      "bark": 3,
+      "cordage": 1
+    },
+    "outputs": {
+      "bark_sandals": 1
+    },
+    "workAmount": 3,
     "toolTierRequired": 0
   }
 ]

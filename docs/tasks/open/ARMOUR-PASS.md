@@ -36,8 +36,18 @@ Rawhide is the wrong first material: a hide goes stiff and rots unless it is cur
 armour" skips the two passive waits that make leather feel earned.
 
 - [x] The stone age dresses in **sackcloth** (plant fibre / cordage) and **wicker & branch** armour.
-- [x] **The first hide armour is DRIED hide** (`cured_*`), not raw — the hide rack is the gate.
-- [x] The `primitive_hide` set is retired into those two lines; nothing is left orphaned.
+- [x] **The first hide armour is CURED hide**, not raw — the hide rack is the gate.
+- [x] The `primitive_hide` set is retired into those lines; nothing is left orphaned.
+- [x] **The three lines are deliberately incomplete and fill each other's holes.** Sackcloth has no
+      arms and no proper legs; wicker has no head, hands or feet; cured hide has no arms or hands.
+      Arm cover is branch bracers or nothing. Legs are a CHOICE — the cured hide skirt (thigh, stops
+      at the knee) or branch greaves (shin), never both, because they share the slot.
+- [x] **Layering IS the stone age's heavy armour.** Sackcloth tunic (skin) → cured hide vest (mid) →
+      wicker shell (outer) stacks to **10 soak at 6.5 kg** — exactly one bronze boarhide jerkin, at
+      nearly twice the weight, and half what a bronze pawn gets from stacking two of their own pieces
+      (18). Wearing every primitive piece at once (22 soak, 10.0 kg) puts a brawn-20 pawn **over
+      laden**; that is the price. Cold tops out at 0.40 across eight garments against 0.30 for a
+      single wool cloak.
 
 ## 3 — Clothing worn UNDER armour
 

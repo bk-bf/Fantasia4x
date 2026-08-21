@@ -105,7 +105,7 @@ describe('armour reaches the craft card (provisioned colony, recipe gating live)
 });
 
 describe('armour chain — physical pawn pipeline (HeadlessSession, real ticks)', () => {
-  it('pawns craft a rawhide limb piece and wear it', async () => {
+  it('pawns craft a primitive limb piece and wear it', async () => {
     const session = new HeadlessSession();
     await session.start(
       buildScenario({
@@ -116,17 +116,17 @@ describe('armour chain — physical pawn pipeline (HeadlessSession, real ticks)'
         workReady: true,
         pawns: [{ count: 6, skillLevel: 12 }],
         needsDisabled: ['hunger', 'fatigue'],
-        buildings: [{ id: 'makers_bench' }],
-        items: { cured_deer_hide: 20, deer_hide: 20, cordage: 20, jackal_leather: 20, sinew: 20 },
+        buildings: [{ id: 'makers_bench' }, { id: 'craft_spot' }],
+        items: { cured_deer_hide: 20, deer_hide: 20, cordage: 20, branch: 30, jackal_leather: 20, sinew: 20 },
         seedEntities: false
       })
     );
     const stk = () => (session.getState().stockpile ?? {}) as Record<string, number>;
     session.command({
       type: 'craftItem',
-      payload: { itemId: 'cured_hide_arm_wraps', quantity: 1 }
+      payload: { itemId: 'branch_bracers', quantity: 1 }
     } as never);
-    for (let i = 0; i < 16 && !(stk().cured_hide_arm_wraps > 0); i++) session.tick(400);
+    for (let i = 0; i < 16 && !(stk().branch_bracers > 0); i++) session.tick(400);
     // …and a piece from the new species-named Bronze light set, to prove the rework is craftable.
     session.command({
       type: 'craftItem',
@@ -135,21 +135,21 @@ describe('armour chain — physical pawn pipeline (HeadlessSession, real ticks)'
     for (let i = 0; i < 16 && !(stk().jackal_bracers > 0); i++) session.tick(400);
     expect(stk().jackal_bracers ?? 0, 'a species-named set piece is craftable').toBeGreaterThan(0);
 
-    const made = stk().cured_hide_arm_wraps ?? 0;
+    const made = stk().branch_bracers ?? 0;
     const pawn = session.getState().pawns[0];
     session.command({
       type: 'equipPawnItem',
-      payload: { pawnId: pawn.id, itemId: 'cured_hide_arm_wraps' }
+      payload: { pawnId: pawn.id, itemId: 'branch_bracers' }
     } as never);
     const worn = session.getState().pawns.find((p) => p.id === pawn.id)?.equipment?.bracers;
     console.log(
-      `[ARMOUR-PIPELINE] turn=${session.getState().turn} cured_hide_arm_wraps=${made} ` +
-        `(deer_hide ${stk().deer_hide}/20, cordage ${stk().cordage}/20) worn in bracers=${worn?.itemId ?? 'none'}`
+      `[ARMOUR-PIPELINE] turn=${session.getState().turn} branch_bracers=${made} ` +
+        `(branch ${stk().branch}/30, cordage ${stk().cordage}/20) worn in bracers=${worn?.itemId ?? 'none'}`
     );
     expect(made, 'pawns crafted a limb piece over real ticks').toBeGreaterThan(0);
-    expect(stk().cured_deer_hide, 'cured hide consumed — the rack is the gate now').toBeLessThan(20);
+    expect(stk().branch, 'branches consumed — arms are wicker work at this age').toBeLessThan(30);
     expect(worn?.itemId, 'the crafted piece equips into the bracers slot').toBe(
-      'cured_hide_arm_wraps'
+      'branch_bracers'
     );
   });
 

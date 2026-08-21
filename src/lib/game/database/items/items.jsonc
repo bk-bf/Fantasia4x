@@ -11086,25 +11086,25 @@
     "type": "armor",
     "category": "primitive",
     "deteriorationRate": 0.04,
-    "description": "Branches and plant fibre lashed into a stiff woven jerkin. The very first armour, turns a glancing claw or a thrown stone, but splits and frays fast. Anything better needs hide or hammered metal.",
+    "description": "Green withies woven into a stiff shell and worn outermost, where it can splinter instead of a rib. It is rebuilt, never repaired.",
     "color": "#B89048",
     "amount": 0,
-    "weightKg": 2.0,
+    "weightKg": 2.5,
     "volumeL": 6.0,
     "tier": 0,
     "maxDurability": 22,
     "durabilityLossPerCombatHit": 60,
     "armorProperties": {
       "armorSet"       : "wicker",
-      "defense"        : 2,
+      "defense"        : 3,
       "armorType"      : "light",
-      "slot"           : "bodyBase",
-      "equipmentSlot"  : "bodyBase",
-      "armorLayer"     : "gambeson",
-      "armorValue"     : 2,
-      "fatiguePerTurn" : 0.07,
+      "slot"           : "bodyOuter",
+      "equipmentSlot"  : "bodyOuter",
+      "armorLayer"     : "plate",
+      "armorValue"     : 3,
+      "fatiguePerTurn" : 0.14,
       "movementPenalty": 0.0,
-      "coldResistance" : 0.05
+      "coldResistance" : 0.02
     }
   },
   {
@@ -11114,7 +11114,7 @@
     "type": "armor",
     "category": "primitive",
     "deteriorationRate": 0.02,
-    "description": "A rough vest of untreated hide. Basic protection against claws and blades.",
+    "description": "A sleeveless vest of ash-cured hide, stiff across the chest and laced down one side. It goes on over whatever is already being worn.",
     "color": "#C8A050",
     "amount": 0,
     "weightKg": 3.0,
@@ -11123,44 +11123,44 @@
     "maxDurability": 40,
     "durabilityLossPerCombatHit": 45,
     "armorProperties": {
-      "defense"        : 4,
+      "defense"        : 5,
       "armorType"      : "light",
       "armorSet"       : "cured_hide",
-      "slot"           : "bodyBase",
-      "equipmentSlot"  : "bodyBase",
-      "armorLayer"     : "gambeson",
-      "armorValue"     : 4,
-      "fatiguePerTurn" : 0.10,
+      "slot"           : "bodyMid",
+      "equipmentSlot"  : "bodyMid",
+      "armorLayer"     : "mail",
+      "armorValue"     : 5,
+      "fatiguePerTurn" : 0.12,
       "movementPenalty": 0.0,
-      "coldResistance" : 0.12
+      "coldResistance" : 0.1
     }
   },
   {
-    "id": "cured_hide_cap",
+    "id": "cured_hide_hood",
     "charSpans": [ {"sheet": "items", "id": 84} ],
-    "name": "Cured Hide Cap",
+    "name": "Cured Hide Hood",
     "type": "armor",
     "category": "primitive",
     "deteriorationRate": 0.02,
-    "description": "A cap of untreated hide drawn over the crown and tied under the chin, hair still on it. It softens a falling branch and little else.",
+    "description": "Cured hide cut in two panels and seamed over the crown, falling past the ears and tying under the chin.",
     "color": "#8B6B47",
     "amount": 0,
-    "weightKg": 0.4,
+    "weightKg": 0.5,
     "volumeL": 1.0,
     "tier": 0,
     "maxDurability": 30,
     "durabilityLossPerCombatHit": 45,
     "armorProperties": {
-      "defense"        : 2,
+      "defense"        : 3,
       "armorType"      : "light",
       "armorSet"       : "cured_hide",
       "slot"           : "head",
       "equipmentSlot"  : "head",
       "armorLayer"     : "gambeson",
-      "armorValue"     : 2,
+      "armorValue"     : 3,
       "fatiguePerTurn" : 0.05,
       "movementPenalty": 0.0,
-      "coldResistance" : 0.05,
+      "coldResistance" : 0.08,
       "heatResistance" : 0.04
     }
   },
@@ -11620,39 +11620,13 @@
   //    age's chest piece at ~1/3 its defense. Coverage comes from the slot defaults (SLOT_COVERAGE):
   //    pauldrons→shoulders, bracers→arms, greaves→legs. Sprite ids are PLACEHOLDERS (items/12).
   {
-    "id": "cured_hide_arm_wraps",
+    "id": "cured_hide_skirt",
     "charSpans": [ {"sheet": "items", "id": 12} ],
-    "name": "Cured Hide Arm-Wraps",
+    "name": "Cured Hide Skirt",
     "type": "armor",
     "category": "primitive",
     "deteriorationRate": 0.01,
-    "description": "Strips of dried hide wound from wrist to elbow. The first thing between a forearm and a wolf's teeth.",
-    "color": "#C8A050",
-    "amount": 0,
-    "weightKg": 1.0,
-    "volumeL": 1.2,
-    "tier": 0,
-    "maxDurability": 35,
-    "durabilityLossPerCombatHit": 5,
-    "armorProperties": {
-      "defense"        : 2,
-      "armorType"      : "light",
-      "armorSet"       : "cured_hide",
-      "slot"           : "bracers",
-      "equipmentSlot"  : "bracers",
-      "armorValue"     : 2,
-      "fatiguePerTurn" : 0.05,
-      "movementPenalty": 0.0
-    }
-  },
-  {
-    "id": "cured_hide_leg_wraps",
-    "charSpans": [ {"sheet": "items", "id": 12} ],
-    "name": "Cured Hide Leg-Wraps",
-    "type": "armor",
-    "category": "primitive",
-    "deteriorationRate": 0.01,
-    "description": "Dried hide bound around thigh and shin. Stiff-legged walking, but a briar or a blade bites shallower.",
+    "description": "A wrap of cured hide belted at the waist and falling to just above the knee. Below that there is nothing but shin.",
     "color": "#C8A050",
     "amount": 0,
     "weightKg": 1.4,
@@ -11661,13 +11635,15 @@
     "maxDurability": 35,
     "durabilityLossPerCombatHit": 5,
     "armorProperties": {
-      "defense"        : 2,
+      "covers": ["leftUpperLeg", "rightUpperLeg"],
+      "coldResistance": 0.06,
+      "defense"        : 4,
       "armorType"      : "light",
       "armorSet"       : "cured_hide",
       "slot"           : "greaves",
       "equipmentSlot"  : "greaves",
-      "armorValue"     : 2,
-      "fatiguePerTurn" : 0.05,
+      "armorValue"     : 4,
+      "fatiguePerTurn" : 0.06,
       "movementPenalty": 0.0
     }
   },
@@ -11889,42 +11865,16 @@
   //    a precision weapon beating a knight through the gaps is the counterplay, and mixing a
   //    lighter gorget or gauntlet back in costs weight. Sprite ids reuse the existing vocabulary.
   {
-    "id": "cured_hide_mitts",
-    "charSpans": [ {"sheet": "items", "id": 12} ],
-    "name": "Cured Hide Mitts",
-    "type": "armor",
-    "category": "primitive",
-    "deteriorationRate": 0.01,
-    "description": "Two flaps of dried hide sewn into a bag for the hand, with the thumb set apart. Fingers work clumsily inside, but a claw finds hide before it finds knuckle.",
-    "color": "#C8A050",
-    "amount": 0,
-    "weightKg": 0.4,
-    "volumeL": 0.5,
-    "tier": 0,
-    "maxDurability": 30,
-    "durabilityLossPerCombatHit": 6,
-    "armorProperties": {
-      "defense"        : 2,
-      "armorType"      : "light",
-      "armorSet"       : "cured_hide",
-      "slot"           : "gloves",
-      "equipmentSlot"  : "gloves",
-      "armorValue"     : 2,
-      "fatiguePerTurn" : 0.04,
-      "movementPenalty": 0.0
-    }
-  },
-  {
-    "id": "cured_hide_footwraps",
+    "id": "cured_hide_boots",
     "charSpans": [ {"sheet": "items", "id": 146} ],
-    "name": "Cured Hide Foot-Wraps",
+    "name": "Cured Hide Boots",
     "type": "armor",
     "category": "primitive",
     "deteriorationRate": 0.012,
-    "description": "Squares of hide gathered over the foot and tied off at the ankle. They soak through by midday and dry stiff overnight.",
+    "description": "Cured hide drawn up around the foot and gathered at the ankle with a thong, the sole doubled and stitched from the inside. Shapeless until it has been walked in.",
     "color": "#C8A050",
     "amount": 0,
-    "weightKg": 0.7,
+    "weightKg": 0.8,
     "volumeL": 0.8,
     "tier": 0,
     "maxDurability": 30,
@@ -11938,7 +11888,7 @@
       "armorValue"     : 2,
       "fatiguePerTurn" : 0.05,
       "movementPenalty": 0.0,
-      "coldResistance": 0.05
+      "coldResistance": 0.06
     }
   },
   {
@@ -18979,7 +18929,7 @@
       "fatiguePerTurn": 0.03,
       "movementPenalty": 0.0,
       "armorSet": "sackcloth",
-      "coldResistance": 0.06
+      "coldResistance": 0.04
     }
   },
     {
@@ -18994,7 +18944,7 @@
     "type": "armor",
     "category": "primitive",
     "deteriorationRate": 0.02,
-    "description": "A shapeless tunic of coarse woven fibre, belted with a length of cord. The first thing anyone here wore that was not an animal.",
+    "description": "A shapeless tunic of coarse fibre that hangs to mid-thigh, belted with a length of cord. It is the first thing anyone here wore that was not an animal.",
     "color": "#C4B79A",
     "amount": 0,
     "weightKg": 1.0,
@@ -19003,45 +18953,13 @@
     "maxDurability": 26,
     "durabilityLossPerCombatHit": 42,
     "armorProperties": {
+      "covers": ["chest", "abdomen", "leftUpperLeg", "rightUpperLeg"],
       "defense": 2,
       "armorType": "light",
       "slot": "bodyBase",
       "equipmentSlot": "bodyBase",
       "armorLayer": "gambeson",
       "armorValue": 2,
-      "fatiguePerTurn": 0.03,
-      "movementPenalty": 0.0,
-      "armorSet": "sackcloth",
-      "coldResistance": 0.1
-    }
-  },
-    {
-    "id": "sackcloth_sleeves",
-    "charSpans": [
-      {
-        "sheet": "items",
-        "id": 7
-      }
-    ],
-    "name": "Sackcloth Sleeves",
-    "type": "armor",
-    "category": "primitive",
-    "deteriorationRate": 0.02,
-    "description": "Two tubes of sacking tied above the elbow. They keep the thorns off the forearms.",
-    "color": "#C4B79A",
-    "amount": 0,
-    "weightKg": 0.3,
-    "volumeL": 0.6,
-    "tier": 0,
-    "maxDurability": 16,
-    "durabilityLossPerCombatHit": 45,
-    "armorProperties": {
-      "defense": 1,
-      "armorType": "light",
-      "slot": "bracers",
-      "equipmentSlot": "bracers",
-      "armorLayer": "gambeson",
-      "armorValue": 1,
       "fatiguePerTurn": 0.03,
       "movementPenalty": 0.0,
       "armorSet": "sackcloth",
@@ -19078,40 +18996,7 @@
       "fatiguePerTurn": 0.03,
       "movementPenalty": 0.0,
       "armorSet": "sackcloth",
-      "coldResistance": 0.04
-    }
-  },
-    {
-    "id": "sackcloth_leggings",
-    "charSpans": [
-      {
-        "sheet": "items",
-        "id": 7
-      }
-    ],
-    "name": "Sackcloth Leggings",
-    "type": "armor",
-    "category": "primitive",
-    "deteriorationRate": 0.02,
-    "description": "Loose leggings of sacking, cross-tied from ankle to knee so they do not catch.",
-    "color": "#C4B79A",
-    "amount": 0,
-    "weightKg": 0.5,
-    "volumeL": 1.0,
-    "tier": 0,
-    "maxDurability": 18,
-    "durabilityLossPerCombatHit": 44,
-    "armorProperties": {
-      "defense": 1,
-      "armorType": "light",
-      "slot": "greaves",
-      "equipmentSlot": "greaves",
-      "armorLayer": "gambeson",
-      "armorValue": 1,
-      "fatiguePerTurn": 0.03,
-      "movementPenalty": 0.0,
-      "armorSet": "sackcloth",
-      "coldResistance": 0.06
+      "coldResistance": 0.03
     }
   },
     {
@@ -20312,38 +20197,6 @@
   // ── Wicker & branch: the stone age's ARMOUR, as opposed to its clothing. Woven green and lashed,
   //    it breaks instead of the bone under it and is meant to be rebuilt, not repaired.
   {
-    "id": "wicker_cap",
-    "charSpans": [
-      {
-        "sheet": "items",
-        "id": 9
-      }
-    ],
-    "name": "Wicker Cap",
-    "type": "armor",
-    "category": "primitive",
-    "deteriorationRate": 0.04,
-    "description": "Green withies bent over the skull and lashed in a dome. It cracks before a skull does, which is the entire idea.",
-    "color": "#B89048",
-    "amount": 0,
-    "weightKg": 0.5,
-    "volumeL": 1.5,
-    "tier": 0,
-    "maxDurability": 20,
-    "durabilityLossPerCombatHit": 60,
-    "armorProperties": {
-      "defense": 2,
-      "armorType": "light",
-      "armorSet": "wicker",
-      "slot": "head",
-      "equipmentSlot": "head",
-      "armorLayer": "gambeson",
-      "armorValue": 2,
-      "fatiguePerTurn": 0.09,
-      "movementPenalty": 0.0
-    }
-  },
-    {
     "id": "branch_bracers",
     "charSpans": [
       {
@@ -20405,6 +20258,41 @@
       "armorValue": 2,
       "fatiguePerTurn": 0.09,
       "movementPenalty": 0.0
+    }
+  },
+  // ── Bark sandals: the cheapest thing between a sole and the ground. An afternoon's work, gone
+  //    in a season.
+  {
+    "id": "bark_sandals",
+    "charSpans": [
+      {
+        "sheet": "items",
+        "id": 9
+      }
+    ],
+    "name": "Bark Sandals",
+    "type": "armor",
+    "category": "primitive",
+    "deteriorationRate": 0.05,
+    "description": "Slabs of bark cut to the shape of a foot and held on with plaited cord between the toes. They wear through in a season and cost nothing but an afternoon.",
+    "color": "#9A7B52",
+    "amount": 0,
+    "weightKg": 0.4,
+    "volumeL": 0.8,
+    "tier": 0,
+    "maxDurability": 16,
+    "durabilityLossPerCombatHit": 60,
+    "armorProperties": {
+      "defense": 1,
+      "armorType": "light",
+      "armorSet": "wicker",
+      "slot": "boots",
+      "equipmentSlot": "boots",
+      "armorLayer": "gambeson",
+      "armorValue": 1,
+      "fatiguePerTurn": 0.02,
+      "movementPenalty": 0.0,
+      "coldResistance": 0.01
     }
   }
 ]
