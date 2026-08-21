@@ -11334,13 +11334,13 @@
     "aimBonuses": {"speed": 0.2}
   },
   {
-    "id": "oiled_leather_cloak",
+    "id": "leather_cloak",
     "charSpans": [ {"sheet": "items", "id": 82} ],
-    "name": "Oiled Leather Cloak",
+    "name": "Leather Cloak",
     "type": "armor",
     "category": "leather",
     "deteriorationRate": 0.01,
-    "description": "A long oiled-leather cloak for a steady stance on open ground; its weight settles the aim for the long shot.",
+    "description": "A long leather cloak, cut wide enough to kneel behind; its weight settles the aim for the long shot.",
     "color": "#4C5A3A",
     "amount": 0,
     "weightKg": 1.6,

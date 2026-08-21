@@ -201,6 +201,10 @@ carrying no `tier` at all, which put a tier-3 bear's hide in the stone-age colum
 - [ ] **Moving an item up an age leaves a hole — patch it in the same pass.** The build that wore it
       still needs something where it used to be, and that replacement is the one that takes the plain
       material name.
+- [ ] **A MATERIAL in the name is a material the chain actually contains.** Read the recipe, not the
+      old description: "Oiled Leather Cloak" was named off a description while its recipe was leather
+      and cordage, and the game has no oil. `itemRules.test.ts` R5 checks this against the full
+      transitive chain. When it fires the recipe is usually the half that is wrong.
 - [ ] If the id or name carries a **species** (bear, wolf, boar, owlbear…), the recipe **requires
       that species' material**. Otherwise rename it after what it is actually made of.
 - [ ] If the recipe takes **any** hide/leather/bone, the name must be generic: "Boiled Leather
@@ -246,6 +250,7 @@ carrying no `tier` at all, which put a tier-3 bear's hide in the stone-age colum
 | 2 | explicit `tier`; tier ≥ demanded creature's tier | `itemRules.test.ts` |
 | 2 | tier ≥ the age of the latest station in the ingredient chain (R4) | `itemRules.test.ts` |
 | 3 | species in the name ⇒ species in the recipe | `itemRules.test.ts` |
+| 3 | a material in the name ⇒ that material in the chain (R5) | `itemRules.test.ts` |
 | 5 | no recipe-less armour; slots resolve | `armourCoverage.test.ts` |
 | 5 | crafted and equipped by a real pawn | `armourChain.test.ts` |
 

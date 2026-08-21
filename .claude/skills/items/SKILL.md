@@ -9,7 +9,7 @@ description: Author, name, re-tier or audit any Fantasia4x item — armour, weap
 part that keeps getting forgotten: **what the tests do NOT catch, how to name a thing, and the audit
 loop to run afterwards.** Read the gate list, then this.
 
-## The three mistakes that keep happening
+## The four mistakes that keep happening
 
 Every one of these shipped, passed every test, and was caught by the user reading the tables.
 
@@ -45,7 +45,18 @@ harder creature and give that creature its own hide item; do not add a station s
 
 `hardened_boarhide` was exactly this and was deleted; everything that used it takes plain `boarhide`.
 
-### 3. A name that claims more than the item is
+### 3. A name that claims a material the recipe does not contain
+
+**Read the RECIPE before you write the name — never the old description.** "Oiled Leather Cloak" was
+named off a description that said "oiled leather"; the recipe is leather and cordage, and there is no
+oil in the game. Same shape: an "Antler War Club" carved from large bones, a "Bronze Punch Dagger"
+cast from a copper bar, "Rune-Woven" gloves with nothing runic in them.
+
+**R5 in `itemRules.test.ts` now checks this** against the item's FULL transitive chain (so
+"Hippogriff-Feather Boots" pass — the leather is tanned from a hide named "Feathered Hide"). When it
+fires, decide which half is wrong: usually the name is right and the recipe is the mistake.
+
+### 4. A name that claims more than the item is
 
 The name sets the item's rank before any number does.
 
@@ -100,7 +111,7 @@ What each layer actually covers, so you know what is still on you:
 
 | layer | catches | blind to |
 | --- | --- | --- |
-| `itemRules` R1–R4 | missing tier; creature out of reach; species-name lie; **station out of reach** | balance, naming rank, whether the item should exist |
+| `itemRules` R1–R5 | missing tier; creature out of reach; species-name lie; station out of reach; **material-name lie** | balance, naming rank, whether the item should exist |
 | `armourCoverage` | no recipe, bad slot, an age that cannot dress a pawn | anything about tier or material |
 | `armourChain` | queues, crafts, equips — wearables only | **shields and off-hand pieces are excluded** |
 | `/gear-db` grid | build × age holes, borrowed fallbacks, set grouping | nothing is asserted; you have to look |

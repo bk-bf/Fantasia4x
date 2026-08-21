@@ -16,6 +16,10 @@ import { AGE_CEILING, AGE_NAMES, blameStation, chainAgeOf } from '$lib/dev/chain
 //    0..5 and item `tier` runs 0..4 — one band wider — so the two go through `bandOf` instead of being
 //    compared directly, which is what made the first pass of this rule over-report.
 // R3 a species noun in the id means the recipe requires that species' material, and vice versa.
+// R5 a MATERIAL word in the name is a material the recipe actually uses. "Oiled Leather Cloak" with
+//    no oil in it, an "Antler War Club" carved from large bones, a "Bronze Punch Dagger" cast from a
+//    copper bar. R3 catches the same lie about CREATURES; nothing caught it about materials, and it
+//    was found three times by eye before this rule existed.
 // R4 an item's tier is >= the age of the LATEST STATION its whole ingredient chain needs. R2 catches
 //    a beast that is out of reach; nothing caught a *workshop* that is. A tier-0 linen cap looked
 //    innocent until you followed linen back through thread to the SPINNING WHEEL, a bronze-age
@@ -286,5 +290,100 @@ describe('ITEM-RULES R4 — tier is not below the workshop its materials need', 
       return item && chainAgeOf(id) <= AGE_CEILING[Math.min(item.tier ?? 0, 4)];
     });
     expect(fixed, `fixed — drop from R4_DEBT: ${fixed.join(', ')}`).toEqual([]);
+  });
+});
+
+// ── R5: a name may only claim a material the chain actually contains ────────────────────────────
+// The haystack is the FULL transitive chain, not the immediate inputs: "Hippogriff-Feather Boots" are
+// cut from prime hippogriff leather, tanned from a hide whose own name is "Feathered Hide". A fixed
+// one- or two-hop window calls that a lie. Construction words (quilted, splint, scale, riveted, cast)
+// are not materials and are deliberately absent from this map.
+const CLAIMS: Record<string, string[]> = {
+  oiled: ['oil', 'tallow', 'grease', 'fat'],
+  waxed: ['wax'],
+  tarred: ['tar', 'pitch', 'resin'],
+  linen: ['linen'],
+  silk: ['silk'],
+  wool: ['wool'],
+  woollen: ['wool'],
+  cotton: ['cotton'],
+  leather: ['leather', 'hide', 'buckskin'],
+  hide: ['hide', 'leather', 'pelt'],
+  rawhide: ['hide'],
+  fur: ['fur', 'pelt'],
+  iron: ['iron'],
+  steel: ['steel'],
+  bronze: ['bronze'],
+  copper: ['copper'],
+  silver: ['silver'],
+  gold: ['gold'],
+  bone: ['bone'],
+  antler: ['antler'],
+  flint: ['flint'],
+  stone: ['stone', 'granite', 'rock', 'flint'],
+  oak: ['oak'],
+  pine: ['pine'],
+  yew: ['yew'],
+  wicker: ['branch', 'wicker', 'withy'],
+  wattle: ['branch'],
+  plank: ['plank'],
+  sinew: ['sinew'],
+  horn: ['horn'],
+  glass: ['glass', 'sand'],
+  rune: ['rune', 'enchant', 'gem', 'magic'],
+  gem: ['gem'],
+  feather: ['feather']
+};
+
+type RecipeWithAlts = Recipe & {
+  inputAlternatives?: Record<string, number>[];
+  dynamicRecipe?: Record<string, { acceptsCategory?: string; variants?: Record<string, unknown> }>;
+};
+const ITEM_BY_ID = new Map(ITEMS.map((i) => [i.id, i]));
+const firstRecipe = (id: string) => recipesByOutput.get(id)?.[0] as RecipeWithAlts | undefined;
+
+function chainWords(k: string, seen: Set<string> = new Set()): string {
+  if (seen.has(k) || seen.size > 24) return '';
+  seen.add(k);
+  const it = ITEM_BY_ID.get(k) as { category?: string; name?: string } | undefined;
+  const sub = firstRecipe(k);
+  const subIngredients = sub ? Object.keys(sub.inputs ?? {}) : [];
+  return `${k} ${it?.category ?? ''} ${it?.name ?? ''} ${subIngredients
+    .map((x) => chainWords(x, seen))
+    .join(' ')}`;
+}
+
+const R5_DEBT = new Set<string>([
+  // Empty. A name that claims a material is a promise about the recipe; keep them in step.
+]);
+
+describe('ITEM-RULES R5 — a material in the name is a material in the recipe', () => {
+  const offenders = () => {
+    const bad: string[] = [];
+    for (const i of CRAFTABLE) {
+      if (R5_DEBT.has(i.id)) continue;
+      const rec = firstRecipe(i.id)!;
+      const ingredients = [...Object.keys(rec.inputs ?? {})];
+      for (const alt of rec.inputAlternatives ?? []) ingredients.push(...Object.keys(alt));
+      for (const slot of Object.values(rec.dynamicRecipe ?? {})) {
+        if (slot.acceptsCategory) ingredients.push(slot.acceptsCategory);
+        ingredients.push(...Object.keys(slot.variants ?? {}));
+      }
+      const hay = ingredients.map((k) => chainWords(k)).join(' ').toLowerCase();
+      for (const word of String(i.name)
+        .toLowerCase()
+        .replace(/[^a-z ]/g, ' ')
+        .split(/\s+/)) {
+        const need = CLAIMS[word];
+        if (need && !need.some((n) => hay.includes(n)))
+          bad.push(`${i.id} "${i.name}" claims ${word}, recipe has [${ingredients.join(', ')}]`);
+      }
+    }
+    return bad;
+  };
+
+  it('no name promises a material its chain never contains', () => {
+    const bad = offenders();
+    expect(bad, bad.join('; ')).toEqual([]);
   });
 });
