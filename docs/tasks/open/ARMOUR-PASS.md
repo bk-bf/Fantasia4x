@@ -19,16 +19,15 @@ enforced it.
 Worse, the ladder **goes backwards**: the copper scale line binds with spun `thread`, and the bronze
 leather sets one age later fall back to `cordage`.
 
-- [x] **Binding follows the MATERIAL, not the age** — that is what makes it stop flip-flopping:
-      leather and hide are sewn with **sinew**, cloth is sewn with **thread**, metal is joined with
-      **rivets / nails / wire**, and **cordage is primitive lashing only**.
-- [x] **Quantity scales with the piece.** `head/gloves/boots/bracers` = 1, `greaves`/`back` = 2,
-      `bodyBase/bodyMid/bodyOuter` = 3, shields = 2.
-- [x] **No token binding on a piece that is already fastened.** A recipe with rivets does not also
-      need a unit of cordage to make the numbers look busy.
-- [x] **Cordage disappears above Bronze.** A steel-age piece lashed with twisted plant fibre is the
-      same lie as a stone-age piece needing a spinning wheel.
-- [x] **R6** in `itemRules.test.ts` enforces all four.
+- [x] ~~Scale the binding with the piece~~ — **superseded.** Scaling it was still bookkeeping. A
+      fastener is now listed ONLY when it is the structure (wicker, wattle, bark) or a countable
+      manufactured part (rivets, nails, mail rings, enchanted thread).
+- [x] **Sewing thread is not a line item.** 135 recipes dropped their sinew/thread/cordage; you do not
+      sew a jerkin with rope, and the sinew closing a seam came off the animal the piece is cut from.
+- [x] Where that emptied a recipe, the lacing is **cut from the same material** — one more unit of its
+      own hide or planks, rather than a separate ingredient.
+- [x] **R6** enforces it: no sewing thread on a garment, cordage only where something is lashed, and
+      no recipe left costing nothing.
 
 ## 2 — The primitive line is rebuilt
 

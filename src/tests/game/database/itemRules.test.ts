@@ -16,10 +16,10 @@ import { AGE_CEILING, AGE_NAMES, blameStation, chainAgeOf } from '$lib/dev/chain
 //    0..5 and item `tier` runs 0..4 — one band wider — so the two go through `bandOf` instead of being
 //    compared directly, which is what made the first pass of this rule over-report.
 // R3 a species noun in the id means the recipe requires that species' material, and vice versa.
-// R6 bindings are not a placeholder tax: they follow the MATERIAL (leather is sewn with sinew, cloth
-//    with thread, metal is riveted), they SCALE with the piece, and cordage — primitive lashing — does
-//    not appear above Bronze. Every piece used to pay a flat 1x whatever its size, and the ladder ran
-//    backwards: copper scale bound with spun thread, the bronze leather sets one age later with cord.
+// R6 a fastener is a real component or it is not listed at all. Sewing thread is not a line item: the
+//    sinew that closes a seam comes off the animal the piece is cut from, and nobody sews leather with
+//    rope. Cordage stays only where it IS the structure (wicker, wattle, bark). Rivets, nails, mail
+//    rings and enchanted thread stay — those are countable manufactured parts.
 // R7 hide is not leather. A name saying "hide" must be cut from something in the `hide` line, and one
 //    saying "leather" from tanned leather. The steel-age sabretooth set called itself hide while being
 //    made of `sabretooth_leather`; R5 waved it through because its map treats the two words as one.
@@ -409,44 +409,48 @@ const BINDING_SIZE: Record<string, number> = {
 const BINDINGS = ['cordage', 'thread', 'sinew', 'enchant_thread'];
 const slotOf = (i: ArmourItem) => i.armorProperties?.equipmentSlot ?? i.armorProperties?.slot ?? '';
 
-describe('ITEM-RULES R6 — binding scales with the piece and matches the material', () => {
-  it('no token binding on a piece far bigger than one unit of cord', () => {
-    const bad: string[] = [];
-    for (const i of WEARABLE) {
-      const ins = (firstRecipe(i.id)?.inputs ?? {}) as Record<string, number>;
-      const size = BINDING_SIZE[slotOf(i)] ?? 1;
-      for (const b of BINDINGS)
-        if (ins[b] !== undefined && ins[b] < size)
-          bad.push(`${i.id} (${slotOf(i)}) binds with ${ins[b]}x ${b}, needs ${size}`);
-    }
-    expect(bad, bad.join('; ')).toEqual([]);
-  });
+describe('ITEM-RULES R6 — a fastener is a real component or it is not listed', () => {
+  // You do not sew a jerkin with ROPE, and the few metres of sinew or thread that close a seam come
+  // off the same animal or the same fibre the piece is cut from — listing them made the player
+  // stockpile and haul bookkeeping. A fastener earns a line in the recipe only when it is either the
+  // STRUCTURE (withies lashed into a shell, bark tied to a foot) or a countable manufactured part
+  // (rivets, nails, mail rings, enchanted thread).
+  const STRUCTURAL = /branch|withy|wicker|wattle|bark|hay|straw/;
+  const SEWING = ['sinew', 'thread'];
 
-  it('cordage does not survive above Bronze', () => {
-    const bad = WEARABLE.filter(
-      (i) => (i.tier ?? 0) >= 2 && (firstRecipe(i.id)?.inputs ?? {})['cordage'] !== undefined
-    ).map((i) => `${i.id} (tier ${i.tier}) still lashed with cordage`);
-    expect(bad, bad.join('; ')).toEqual([]);
-  });
-
-  it('leather is sewn with sinew, not thread', () => {
-    // Thread is spun plant fibre; it is what cloth is stitched with. Hide is sewn with sinew, and the
-    // two lines swapping back and forth is what made the ladder read as noise.
+  it('no sewn garment lists its sewing thread', () => {
     const bad: string[] = [];
     for (const i of WEARABLE) {
       const rec = firstRecipe(i.id)!;
       const ins = (rec.inputs ?? {}) as Record<string, number>;
+      for (const b of SEWING)
+        if (ins[b] !== undefined) bad.push(`${i.id} lists ${ins[b]}x ${b}`);
+    }
+    expect(bad, bad.join('; ')).toEqual([]);
+  });
+
+  it('cordage appears only where it is the structure', () => {
+    const bad: string[] = [];
+    for (const i of WEARABLE) {
+      const rec = firstRecipe(i.id)!;
+      const ins = (rec.inputs ?? {}) as Record<string, number>;
+      if (ins['cordage'] === undefined) continue;
       const keys = [
         ...Object.keys(ins),
-        ...Object.values(rec.dynamicRecipe ?? {}).map((s) => `category:${s.acceptsCategory}`)
+        ...Object.values(rec.dynamicRecipe ?? {}).map((d) => d.acceptsCategory ?? '')
       ];
-      const leather = keys.some((k) => /leather|hide|pelt|buckskin|fur/.test(k));
-      const cloth = keys.some((k) =>
-        /linen_cloth|silk_cloth|woolcloth|cotton_cloth|plant_fiber|category:wool/.test(k)
-      );
-      if (leather && !cloth && ins['thread'] !== undefined)
-        bad.push(`${i.id} sews leather with thread`);
+      if (!keys.some((k) => STRUCTURAL.test(k)))
+        bad.push(`${i.id} is lashed with cordage but nothing about it is lashed`);
     }
+    expect(bad, bad.join('; ')).toEqual([]);
+  });
+
+  it('every piece still costs SOMETHING', () => {
+    // Stripping the fastener must never leave a recipe that produces armour out of thin air.
+    const bad = WEARABLE.filter((i) => {
+      const rec = firstRecipe(i.id)!;
+      return !Object.keys(rec.inputs ?? {}).length && !Object.keys(rec.dynamicRecipe ?? {}).length;
+    }).map((i) => `${i.id} has no inputs at all`);
     expect(bad, bad.join('; ')).toEqual([]);
   });
 });

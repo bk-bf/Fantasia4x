@@ -9,7 +9,7 @@ description: Author, name, re-tier or audit any Fantasia4x item — armour, weap
 part that keeps getting forgotten: **what the tests do NOT catch, how to name a thing, and the audit
 loop to run afterwards.** Read the gate list, then this.
 
-## The four mistakes that keep happening
+## The five mistakes that keep happening
 
 Every one of these shipped, passed every test, and was caught by the user reading the tables.
 
@@ -29,7 +29,20 @@ not by the item's own recipe. Follow every ingredient back to the raw source and
 priced in ages. `R4_DEBT` names pre-existing offenders that are waiting on a design decision (the
 whole caster staff line is in there) and may only ever SHRINK — a **new** item never joins it.
 
-### 2. A process step invented instead of a better source
+### 2. A fastener listed that nobody would count
+
+**The material is the cost. The thread is not.** Every armour recipe used to pay a unit of cordage or
+thread on top of its real material, which meant hauling and stockpiling bookkeeping — and nobody sews
+leather with rope. A fastener earns a line only when it is:
+
+- **the structure** — withies lashed into a wicker shell, bark tied onto a foot; or
+- **a countable manufactured part** — rivets, nails, mail rings, enchanted thread.
+
+Sewing sinew and thread come off the same animal or the same fibre the piece is cut from, so they are
+not listed. Where stripping one emptied a recipe, the lacing is cut from the material itself: the
+piece takes one more unit of its own hide. **R6 enforces this.**
+
+### 3. A process step invented instead of a better source
 
 **A material chain earns its length from the animal, never from extra processing.** The canonical
 leather chain is already three waits:
@@ -45,7 +58,7 @@ harder creature and give that creature its own hide item; do not add a station s
 
 `hardened_boarhide` was exactly this and was deleted; everything that used it takes plain `boarhide`.
 
-### 3. A name that claims a material the recipe does not contain
+### 4. A name that claims a material the recipe does not contain
 
 **Read the RECIPE before you write the name — never the old description.** "Oiled Leather Cloak" was
 named off a description that said "oiled leather"; the recipe is leather and cordage, and there is no
@@ -56,7 +69,7 @@ cast from a copper bar, "Rune-Woven" gloves with nothing runic in them.
 "Hippogriff-Feather Boots" pass — the leather is tanned from a hide named "Feathered Hide"). When it
 fires, decide which half is wrong: usually the name is right and the recipe is the mistake.
 
-### 4. A name that claims more than the item is
+### 5. A name that claims more than the item is
 
 The name sets the item's rank before any number does.
 

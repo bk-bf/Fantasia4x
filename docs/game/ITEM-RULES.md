@@ -115,7 +115,11 @@ recipe states, at minimum:
 - [ ] the **species material** it is cut from, by name, in a quantity that matches the piece's size
       (a cuirass is not one hide; a glove is);
 - [ ] its **metal** component, if the class calls for one, in the ratio above;
-- [ ] its **binding** (sinew, cordage, thread) and any **fittings** (rivets, buckles);
+- [ ] any **fitting that is a real component** — rivets, nails, mail rings, enchanted thread. A
+      fastener is listed only when it is a countable manufactured part, or when it IS the structure
+      (withies lashed into a shell, bark tied to a foot). **Sewing thread is never a line item**: you
+      do not sew a jerkin with rope, and the sinew that closes a seam came off the same animal the
+      piece was cut from. Listing it made the player stockpile bookkeeping. R6 enforces this;
 - [ ] a `workAmount` in step with its neighbours.
 
 ## Species materials, and what the name must say
