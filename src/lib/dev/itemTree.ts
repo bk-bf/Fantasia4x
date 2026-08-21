@@ -282,6 +282,30 @@ export interface TreeNode {
   count: number;
   children: TreeNode[];
   items: TreeItem[];
+  /** Coverage cells this kit does NOT fill — the same "– legs" marker the build grid carries, at the
+   *  level where a complete kit is actually defined. */
+  missing: string[];
+}
+
+// What a KIT must cover, using the build grid's rule: six cells, and the three torso layers collapse
+// to one — a kit needs *a* torso piece, not one per layer (plate over mail over a gambeson is the
+// layering, not two holes). Cloak, pack and belt are carry slots and never count as coverage.
+//
+// The marker sits on the SET, not on the class beneath it: `Iron Mail` is one kit with a heavy
+// hauberk and medium limbs, and asking each class-node separately invented "heavy kit missing
+// everything". `no set` and `drop only` are not kits at all — loose pieces and enemy loot can never
+// be complete, so they carry no marker.
+const KIT_PARTS = ['head', 'torso', 'arms', 'hands', 'legs', 'feet'];
+const NOT_A_KIT = new Set(['no set', 'drop only']);
+const coverageOf = (label: string) => (label.startsWith('torso') ? 'torso' : label);
+function missingOf(node: TreeNode, rootLabel: string): string[] {
+  if (rootLabel !== 'Armour' || node.depth !== 2 || NOT_A_KIT.has(node.label)) return [];
+  const present = new Set<string>();
+  (function walk(n: TreeNode) {
+    if (!n.children.length) present.add(coverageOf(n.label));
+    n.children.forEach(walk);
+  })(node);
+  return KIT_PARTS.filter((p) => !present.has(p));
 }
 
 /** Ages sort by the real ladder; everything else alphabetically, with the catch-alls last. */
@@ -312,7 +336,15 @@ const ROOT_ORDER = [
 ];
 
 export function buildTree(rows: TreeItem[] = TREE_ITEMS): TreeNode {
-  const root: TreeNode = { key: '', label: 'all', depth: -1, count: 0, children: [], items: [] };
+  const root: TreeNode = {
+    key: '',
+    label: 'all',
+    depth: -1,
+    count: 0,
+    children: [],
+    items: [],
+    missing: []
+  };
   const index = new Map<string, TreeNode>([['', root]]);
   for (const it of rows) {
     let key = '';
@@ -322,7 +354,7 @@ export function buildTree(rows: TreeItem[] = TREE_ITEMS): TreeNode {
       key = key ? `${key}/${label}` : label;
       let child = index.get(key);
       if (!child) {
-        child = { key, label, depth, count: 0, children: [], items: [] };
+        child = { key, label, depth, count: 0, children: [], items: [], missing: [] };
         index.set(key, child);
         node.children.push(child);
       }
@@ -331,7 +363,7 @@ export function buildTree(rows: TreeItem[] = TREE_ITEMS): TreeNode {
     });
     node.items.push(it);
   }
-  (function order(n: TreeNode) {
+  (function order(n: TreeNode, rootLabel = '') {
     if (n === root)
       n.children.sort((a, b) => {
         const ai = ROOT_ORDER.indexOf(a.label);
@@ -340,7 +372,8 @@ export function buildTree(rows: TreeItem[] = TREE_ITEMS): TreeNode {
       });
     else sortNodes(n.children);
     n.items.sort((a, b) => (a.tier ?? 0) - (b.tier ?? 0) || a.name.localeCompare(b.name));
-    n.children.forEach(order);
+    n.children.forEach((c) => order(c, n.depth < 0 ? c.label : rootLabel));
+    n.missing = missingOf(n, rootLabel);
   })(root);
   return root;
 }

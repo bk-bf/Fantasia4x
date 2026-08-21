@@ -39,6 +39,9 @@
       title={shut ? `expand ${node.label}` : `collapse ${node.label}`}
       >{shut ? '▸' : '▾'}&nbsp;{node.label}<i>{node.count}</i></button
     >
+    <!-- Same marker the build grid uses: what this kit does NOT cover, spelled out rather than left
+         for the reader to count six children and work out which one is absent. -->
+    {#each node.missing as m (m)}<span class="miss">– {m}</span>{/each}
   </td>
 </tr>
 {#if !shut}
@@ -121,6 +124,15 @@
     color: #c2a68f;
     background: #241d18;
     border-color: #45362b;
+  }
+  .miss {
+    display: inline-block;
+    margin-left: 6px;
+    font-size: 10px;
+    color: #8a564a;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
   }
   .leaf {
     cursor: pointer;

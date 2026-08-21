@@ -11179,7 +11179,7 @@
     "armorProperties": {
       "defense"        : 8,
       "armorType"      : "light",
-      "armorSet"       : "linen_apprentice",
+      "armorSet"       : "linen",
       "slot"           : "bodyBase",
       "equipmentSlot"  : "bodyBase",
       "armorLayer"     : "gambeson",
@@ -11276,13 +11276,13 @@
     }
   },
   {
-    "id": "rangers_hood",
+    "id": "brimmed_leather_hood",
     "charSpans": [ {"sheet": "items", "id": 80} ],
-    "name": "Ranger's Hood",
+    "name": "Brimmed Leather Hood",
     "type": "armor",
     "category": "leather",
     "deteriorationRate": 0.01,
-    "description": "A soft leather hood with a low brim that cuts glare and steadies the eye. Favoured by marksmen.",
+    "description": "A soft leather hood with a low brim that cuts the glare and steadies the eye.",
     "color": "#5A6B3C",
     "amount": 0,
     "weightKg": 0.7,
@@ -11305,9 +11305,9 @@
     "aimBonuses": {"accuracy": 4}
   },
   {
-    "id": "archers_bracers",
+    "id": "leather_vambraces",
     "charSpans": [ {"sheet": "items", "id": 81} ],
-    "name": "Archer's Bracers",
+    "name": "Leather Vambraces",
     "type": "armor",
     "category": "leather",
     "deteriorationRate": 0.01,
@@ -11334,9 +11334,9 @@
     "aimBonuses": {"speed": 0.2}
   },
   {
-    "id": "marksmans_cloak",
+    "id": "oiled_leather_cloak",
     "charSpans": [ {"sheet": "items", "id": 82} ],
-    "name": "Marksman's Cloak",
+    "name": "Oiled Leather Cloak",
     "type": "armor",
     "category": "leather",
     "deteriorationRate": 0.01,
@@ -12046,9 +12046,9 @@
     }
   },
   {
-    "id": "apprentice_robe",
+    "id": "linen_robe",
     "charSpans": [ {"sheet": "items", "id": 7} ],
-    "name": "Apprentice's Robe",
+    "name": "Linen Robe",
     "type": "armor",
     "category": "cloth",
     "deteriorationRate": 0.01,
@@ -12063,7 +12063,7 @@
     "armorProperties": {
       "defense"        : 5,
       "armorType"      : "light",
-      "armorSet"       : "linen_apprentice",
+      "armorSet"       : "linen",
       "slot"           : "bodyBase",
       "equipmentSlot"  : "bodyBase",
       "armorLayer"     : "gambeson",
@@ -12074,9 +12074,9 @@
     }
   },
   {
-    "id": "shooting_glove",
+    "id": "three_finger_glove",
     "charSpans": [ {"sheet": "items", "id": 72} ],
-    "name": "Shooting Glove",
+    "name": "Three-Finger Glove",
     "type": "armor",
     "category": "leather",
     "deteriorationRate": 0.01,
@@ -12801,13 +12801,13 @@
     }
   },
   {
-    "id": "linen_apprentice_head",
+    "id": "linen_cap",
     "charSpans": [ {"sheet": "items", "id": 80} ],
-    "name": "Apprentice Cap",
+    "name": "Linen Cap",
     "type": "armor",
     "category": "cloth",
     "deteriorationRate": 0.01,
-    "description": "Cut in four panels and seamed over the crown, with a throat flap that laces under the jaw. Apprentice work, matched to the rest of the kit.",
+    "description": "Cut in four panels and seamed over the crown, with a throat flap that laces under the jaw. Plain linen work, matched to the rest of the kit.",
     "color": "#6A6AA0",
     "amount": 0,
     "weightKg": 0.5,
@@ -12818,7 +12818,7 @@
     "armorProperties": {
       "defense"        : 2,
       "armorType"      : "light",
-      "armorSet"       : "linen_apprentice",
+      "armorSet"       : "linen",
       "slot"           : "head",
       "equipmentSlot"  : "head",
       "armorValue"     : 2,
@@ -12827,13 +12827,13 @@
     }
   },
   {
-    "id": "linen_apprentice_gloves",
+    "id": "linen_gloves",
     "charSpans": [ {"sheet": "items", "id": 72} ],
-    "name": "Apprentice Gloves",
+    "name": "Linen Gloves",
     "type": "armor",
     "category": "cloth",
     "deteriorationRate": 0.01,
-    "description": "Cut with a separate thumb and a doubled palm, the seams turned inward. Apprentice work, matched to the rest of the kit.",
+    "description": "Cut with a separate thumb and a doubled palm, the seams turned inward. Plain linen work, matched to the rest of the kit.",
     "color": "#6A6AA0",
     "amount": 0,
     "weightKg": 0.3,
@@ -12844,7 +12844,7 @@
     "armorProperties": {
       "defense"        : 1,
       "armorType"      : "light",
-      "armorSet"       : "linen_apprentice",
+      "armorSet"       : "linen",
       "slot"           : "gloves",
       "equipmentSlot"  : "gloves",
       "armorValue"     : 1,
@@ -12853,13 +12853,13 @@
     }
   },
   {
-    "id": "linen_apprentice_boots",
+    "id": "linen_boots",
     "charSpans": [ {"sheet": "items", "id": 146} ],
-    "name": "Apprentice Boots",
+    "name": "Linen Boots",
     "type": "armor",
     "category": "cloth",
     "deteriorationRate": 0.01,
-    "description": "Ankle-high, seams greased, the sole doubled where a heel wears through first. Apprentice work, matched to the rest of the kit.",
+    "description": "Ankle-high, seams greased, the sole doubled where a heel wears through first. Plain linen work, matched to the rest of the kit.",
     "color": "#6A6AA0",
     "amount": 0,
     "weightKg": 0.5,
@@ -12870,7 +12870,7 @@
     "armorProperties": {
       "defense"        : 1,
       "armorType"      : "light",
-      "armorSet"       : "linen_apprentice",
+      "armorSet"       : "linen",
       "slot"           : "boots",
       "equipmentSlot"  : "boots",
       "armorValue"     : 1,

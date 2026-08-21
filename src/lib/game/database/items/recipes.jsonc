@@ -2213,29 +2213,29 @@
     "researchRequired": "iron_working"
   },
   {
-    "id"              : "make_rangers_hood",
+    "id"              : "make_brimmed_leather_hood",
     "discipline"      : "leatherworking",
     "station"         : "makers_bench",
     "inputs"          : {"category:leather": 1, "cordage": 1},
-    "outputs"         : {"rangers_hood": 1},
+    "outputs"         : {"brimmed_leather_hood": 1},
     "workAmount"      : 4,
     "toolTierRequired": 0
   },
   {
-    "id"              : "make_archers_bracers",
+    "id"              : "make_leather_vambraces",
     "discipline"      : "leatherworking",
     "station"         : "makers_bench",
     "inputs"          : {"category:leather": 1, "cordage": 1},
-    "outputs"         : {"archers_bracers": 1},
+    "outputs"         : {"leather_vambraces": 1},
     "workAmount"      : 4,
     "toolTierRequired": 0
   },
   {
-    "id"              : "make_marksmans_cloak",
+    "id"              : "make_oiled_leather_cloak",
     "discipline"      : "leatherworking",
     "station"         : "makers_bench",
     "inputs"          : {"category:leather": 2, "cordage": 1},
-    "outputs"         : {"marksmans_cloak": 1},
+    "outputs"         : {"oiled_leather_cloak": 1},
     "workAmount"      : 6,
     "toolTierRequired": 0
   },
@@ -5766,19 +5766,19 @@
     "dynamicRecipe"   : {"backing": {"acceptsCategory": "leather", "quantity": 1}}
   },
   {
-    "id"              : "make_apprentice_robe",
+    "id"              : "make_linen_robe",
     "station"         : "weaving_frame",
     "inputs"          : {"linen_cloth": 3, "thread": 1, "cordage": 1},
-    "outputs"         : {"apprentice_robe": 1},
+    "outputs"         : {"linen_robe": 1},
     "workAmount"      : 10,
     "toolTierRequired": 0,
     "discipline"      : "weaving"
   },
   {
-    "id"              : "make_shooting_glove",
+    "id"              : "make_three_finger_glove",
     "station"         : "makers_bench",
     "inputs"          : {"thread": 1},
-    "outputs"         : {"shooting_glove": 1},
+    "outputs"         : {"three_finger_glove": 1},
     "workAmount"      : 4,
     "toolTierRequired": 0,
     "discipline"      : "leatherworking",
@@ -6031,28 +6031,28 @@
     "discipline"      : "leatherworking"
   },
   {
-    "id"              : "make_linen_apprentice_head",
+    "id"              : "make_linen_cap",
     "station"         : "weaving_frame",
     "inputs"          : {"linen_cloth": 2, "thread": 1},
-    "outputs"         : {"linen_apprentice_head": 1},
+    "outputs"         : {"linen_cap": 1},
     "workAmount"      : 11,
     "toolTierRequired": 0,
     "discipline"      : "weaving"
   },
   {
-    "id"              : "make_linen_apprentice_gloves",
+    "id"              : "make_linen_gloves",
     "station"         : "weaving_frame",
     "inputs"          : {"linen_cloth": 2, "thread": 1},
-    "outputs"         : {"linen_apprentice_gloves": 1},
+    "outputs"         : {"linen_gloves": 1},
     "workAmount"      : 9,
     "toolTierRequired": 0,
     "discipline"      : "weaving"
   },
   {
-    "id"              : "make_linen_apprentice_boots",
+    "id"              : "make_linen_boots",
     "station"         : "weaving_frame",
     "inputs"          : {"linen_cloth": 3, "thread": 1},
-    "outputs"         : {"linen_apprentice_boots": 1},
+    "outputs"         : {"linen_boots": 1},
     "workAmount"      : 11,
     "toolTierRequired": 0,
     "discipline"      : "weaving"

@@ -211,8 +211,8 @@ describe('rangedCombat helpers', () => {
     const geared = makeArcher({
       equipment: {
         mainHand: { itemId: 'self_bow', durability: 80 },
-        gloves: { itemId: 'archers_bracers', durability: 50 }, // speed 0.2
-        back: { itemId: 'marksmans_cloak', durability: 60 } // range 1, accuracy 2
+        gloves: { itemId: 'leather_vambraces', durability: 50 }, // speed 0.2
+        back: { itemId: 'oiled_leather_cloak', durability: 60 } // range 1, accuracy 2
       }
     } as Partial<Pawn>);
     const b = sumAimBonuses(geared);
@@ -246,7 +246,7 @@ describe('rangedCombat helpers', () => {
     // wear the cloak AND the quiver, but still chooses between the quiver and a pack.
     expect(getEquipmentSlot(itemService.getItemById('leather_back_quiver')!)).toBe('back2');
     expect(getEquipmentSlot(itemService.getItemById('linen_snapsack')!)).toBe('back2');
-    expect(getEquipmentSlot(itemService.getItemById('marksmans_cloak')!)).toBe('back');
+    expect(getEquipmentSlot(itemService.getItemById('oiled_leather_cloak')!)).toBe('back');
     expect(getEquipmentSlot(itemService.getItemById('leather_bolt_case')!)).toBe('belt');
     expect(itemService.getItemById('leather_back_quiver')!.quiver?.ammoCategory).toBe('arrow');
     expect(itemService.getItemById('leather_bolt_case')!.quiver?.ammoCategory).toBe('bolt');
