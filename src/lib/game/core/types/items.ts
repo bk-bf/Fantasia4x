@@ -247,7 +247,9 @@ export interface Item {
    */
   dynamicRecipe?: Record<string, DynamicIngredientSlot>;
 
-  type: 'material' | 'tool' | 'weapon' | 'armor' | 'consumable' | 'currency';
+  // `food` and `container` are in the DATA (54 and 1 items) but were never in this union, so every
+  // `type === 'food'` check silently type-errored or was written around.
+  type: 'material' | 'tool' | 'weapon' | 'armor' | 'consumable' | 'currency' | 'food' | 'container';
   category: string; // wood, iron, harvesting, combat, head, etc.
   /** Internal item never surfaced as a player resource (e.g. natural weapons like fists/claws).
    *  Excluded from the resource sidebar — its category won't appear in the "show all" list. */

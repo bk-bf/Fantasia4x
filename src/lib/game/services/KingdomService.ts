@@ -605,18 +605,26 @@ class KingdomServiceImpl {
     return stock;
   }
 
-  private isTradeableDef(def: Item, tierCap: number): boolean {
+  /** Public because the item audit asks the SIM whether a thing can ever be bought, rather than
+   *  keeping a second copy of this rule that would quietly drift from it (ITEM-RULES R8). */
+  isTradeableDef(def: Item, tierCap: number): boolean {
     if (def.hidden) return false;
     if (def.type === 'currency') return false; // gold rides the party's `gold` float
     if ((def.tier ?? 1) > tierCap) return false;
     if (def.id.endsWith('_carcass')) return false;
     if (def.category === 'natural_weapon' || def.category === 'organic') return false;
+    // A caravan is weeks on the road: it hauls grain, honey and preserves, never fresh meat or fish.
+    // `decaySeconds` is the game's own definition of "will not survive the journey". Rot is the END
+    // of that chain and so has no decay left to declare — refuse it by name, or a merchant arrives
+    // selling spoiled meat.
+    if (def.type === 'food' && (def.decaySeconds || def.id.startsWith('rotten_'))) return false;
     return (
       def.type === 'material' ||
       def.type === 'consumable' ||
       def.type === 'tool' ||
       def.type === 'weapon' ||
-      def.type === 'armor'
+      def.type === 'armor' ||
+      def.type === 'food'
     );
   }
 

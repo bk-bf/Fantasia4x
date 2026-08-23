@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import itemsData from '$lib/game/database/items/items.jsonc';
 import recipesData from '$lib/game/database/items/recipes.jsonc';
 import creaturesData from '$lib/game/database/pawns/creatures.jsonc';
+import { kingdomService } from '$lib/game/services/KingdomService';
 import resourcesData from '$lib/game/database/world/resources.jsonc';
 import type { Item } from '$lib/game/core/types';
 import { AGE_CEILING, AGE_NAMES, blameStation, chainAgeOf } from '$lib/dev/chainAge';
@@ -16,6 +17,11 @@ import { AGE_CEILING, AGE_NAMES, blameStation, chainAgeOf } from '$lib/dev/chain
 //    0..5 and item `tier` runs 0..4 — one band wider — so the two go through `bandOf` instead of being
 //    compared directly, which is what made the first pass of this rule over-report.
 // R3 a species noun in the id means the recipe requires that species' material, and vice versa.
+// R8 EVERY item can be got. Recipes are one of six ways in — a map node, a carcass, a natural weapon,
+//    enemy loot, decay/drying, or a caravan — and an item that matches none of them is content the
+//    player can see and never hold. "A caravan" is not a flag on the item: it asks the SIM, through
+//    `kingdomService.isTradeableDef`, whether a caravan could ever stock the thing. One rule, checked
+//    where it actually lives, instead of a marker an author can assert about their own item.
 // R6 a fastener is a real component or it is not listed at all. Sewing thread is not a line item: the
 //    sinew that closes a seam comes off the animal the piece is cut from, and nobody sews leather with
 //    rope. Cordage stays only where it IS the structure (wicker, wattle, bark). Rivets, nails, mail
@@ -476,6 +482,71 @@ describe('ITEM-RULES R7 — hide is not leather', () => {
       if (/leather/.test(name) && !/leather/.test(words))
         bad.push(`${i.id} "${i.name}" says leather, made from [${keys.join(', ')}]`);
     }
+    expect(bad, bad.join('; ')).toEqual([]);
+  });
+});
+
+// ── R8: nothing is unobtainable ─────────────────────────────────────────────────────────────────
+import lootpoolData from '$lib/game/database/items/lootpool.jsonc';
+
+const NODE_ITEMS = new Set<string>();
+(function walk(o: unknown): void {
+  if (Array.isArray(o)) return o.forEach(walk);
+  if (o && typeof o === 'object')
+    for (const [k, v] of Object.entries(o as Record<string, unknown>))
+      k === 'itemId' && typeof v === 'string' ? NODE_ITEMS.add(v) : walk(v);
+})(resourcesData);
+
+const CARCASS_ITEMS = new Set(
+  (CREATURES as { carcassItemId?: string }[]).map((c) => c.carcassItemId).filter(Boolean) as string[]
+);
+const LOOTED = new Set<string>();
+for (const pool of Object.values<{ slots?: Record<string, { pick?: { id: string }[] }> }>(
+  (lootpoolData as { pools?: Record<string, never> }).pools ?? {}
+))
+  for (const slot of Object.values(pool?.slots ?? {}))
+    for (const pick of slot?.pick ?? []) LOOTED.add(pick.id);
+
+const TIMED = new Set<string>();
+for (const i of ITEMS as (Item & { driesTo?: string | { itemId?: string }; decaysTo?: string })[]) {
+  const dry = typeof i.driesTo === 'string' ? i.driesTo : i.driesTo?.itemId;
+  if (dry) TIMED.add(dry);
+  if (typeof i.decaysTo === 'string') TIMED.add(i.decaysTo);
+}
+// category-level drying lives in ItemService, not in the item defs
+['dried_meat', 'dried_fruit'].forEach((x) => TIMED.add(x));
+
+/** Produced by the sim itself, not by the player: a corpse, a colonist over a shoulder, water. */
+const SIM_MADE = new Set(['pawn_carcass', 'carried_pawn', 'water', 'terra_preta']);
+
+const R8_DEBT = new Set<string>([
+  // Fresh fish: a caravan will not haul it (R8 asks the sim, and `isTradeableDef` refuses perishable
+  // food), and there is no fishing system to catch it. Obtainable the day fishing lands, not before.
+  'common_carp',
+  'river_trout'
+]);
+
+describe('ITEM-RULES R8 — every item has a way in', () => {
+  it('nothing is visible in the tables and impossible to hold', () => {
+    const bad = (ITEMS as (Item & { category?: string })[])
+      .filter(
+        (i) =>
+          !recipesByOutput.has(i.id) &&
+          !NODE_ITEMS.has(i.id) &&
+          !CARCASS_ITEMS.has(i.id) &&
+          !LOOTED.has(i.id) &&
+          !TIMED.has(i.id) &&
+          !SIM_MADE.has(i.id) &&
+          !R8_DEBT.has(i.id) &&
+          i.category !== 'natural_weapon' &&
+          // the top tier cap a caravan can ever reach, so this asks "could ANY caravan carry it"
+          !kingdomService.isTradeableDef(i as Item, 5)
+      )
+      .map(
+        (i) =>
+          `${i.id} has no recipe, no node, no carcass, no drop, no decay, and no caravan would ` +
+          `ever stock it — give it a source or name it in R8_DEBT with the feature it waits on`
+      );
     expect(bad, bad.join('; ')).toEqual([]);
   });
 });

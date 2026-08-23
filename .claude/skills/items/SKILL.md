@@ -109,6 +109,16 @@ material name.
 - [ ] **A stable kebab-case `id`, an explicit `tier`.** A missing tier is not "unset" — `gearDb.ageOf`
       reads `tier ?? 0` and files the piece into the stone age.
 - [ ] **Ladder pieces carry `armorSet`.** No set = a one-off that can never fill a tier's cell.
+- [ ] **The item must be gettable.** Six ways in: a recipe, a map node, a carcass, enemy loot,
+      decay/drying, or a caravan. **R8** enforces it, and it asks the sim — `KingdomService`'s own
+      `isTradeableDef` — whether a caravan could stock the thing, instead of trusting a flag an
+      author writes about their own item. Most of the DB is already purchasable that way; the
+      exceptions are perishables, because a caravan never carries fresh food. An item with no source
+      at all goes in `R8_DEBT` named with the feature it waits on.
+      Two traps here, both of which cost real time: reading recipes ALONE once made 250 obtainable
+      things look missing (one butchery recipe yields meat, hide, sinew and bones, and only the first
+      output was indexed), and **before inventing a mechanism, grep for the one that exists** — the
+      caravan generator, prices, the trade stat and the trade UI were all already there.
 
 ## The audit loop — run all of it
 

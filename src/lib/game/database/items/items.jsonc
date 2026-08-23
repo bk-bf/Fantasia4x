@@ -206,23 +206,6 @@
     "decaysTo"         : "rotten_meat"
   },
   {
-    "id"               : "hide",
-    "charSpans"        : [ {"sheet": "items", "id": 152} ],
-    "name"             : "Raw Hide",
-    "type"             : "material",
-    "category"         : "hide",
-    "maxDurability"    : 80,
-    "deteriorationRate": 0.07,
-    "description"      : "Untreated animal skin. Rots if not cured.",
-    "color"            : "#8D6E63",
-    "amount"           : 0,
-    "weightKg"         : 2,
-    "volumeL"          : 4,
-    "processingType"   : ["leatherworking"],
-    "decaySeconds"     : 2400,
-    "decaysTo"         : "rotten_hide"
-  },
-  {
     "id"               : "rotten_hide",
     "charSpans"        : [ {"sheet": "items", "id": 152} ],
     "name"             : "Rotten Hide",
@@ -1746,21 +1729,6 @@
     "maxDurability"    : 60,
     "deteriorationRate": 0.01,
     "container"        : {"holds": "water", "capacityL": 1.5}
-  },
-  {
-    "id": "jug",
-    "charSpans": [ {"sheet": "items", "id": 24} ],
-    "name": "Water Jug",
-    "type": "material",
-    "category": "storage",
-    "description": "A big-bellied clay jug, heavy when full, but holds enough water for a round of cooking and a round of drinks. Best kept in store and topped up.",
-    "color": "#B98B52",
-    "amount": 0,
-    "weightKg": 2,
-    "volumeL": 4,
-    "maxDurability": 70,
-    "deteriorationRate": 0.01,
-    "container": {"holds": "water", "capacityL": 10}
   },
   {
     "id"               : "animal_fat",

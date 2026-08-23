@@ -194,6 +194,15 @@ carrying no `tier` at all, which put a tier-3 bear's hide in the stone-age colum
       ("bronze:1"), so this is checkable and `itemRules.test.ts` R4 now checks it.
 - [ ] Every ingredient resolves to something obtainable: a map-node yield, a butchery product, or
       another recipe. Nothing dead-ends.
+- [ ] **The item itself has a way IN.** A recipe is one of six: a map node, a carcass, a natural
+      weapon, enemy loot, decay/drying, or a caravan. R8 checks it.
+- [ ] **A caravan counts as a source, and the SIM decides that — not a flag.**
+      `KingdomService.generateCaravanStock` filters the whole item DB through `isTradeableDef`, capped
+      by the colony's wealth tier and the sending kingdom's, so most of the database is already
+      purchasable without anyone listing it. R8 asks that same predicate rather than trusting a
+      marker on the item. **A caravan never carries fresh food** — anything with `decaySeconds` (or
+      rot) will not survive weeks on the road — so a perishable with no other source is genuinely
+      unobtainable and belongs in `R8_DEBT`, named with the feature it waits on.
 
 ## Gate 3 — does the name tell the truth?
 
@@ -255,6 +264,7 @@ carrying no `tier` at all, which put a tier-3 bear's hide in the stone-age colum
 | 2 | tier ≥ the age of the latest station in the ingredient chain (R4) | `itemRules.test.ts` |
 | 3 | species in the name ⇒ species in the recipe | `itemRules.test.ts` |
 | 3 | a material in the name ⇒ that material in the chain (R5) | `itemRules.test.ts` |
+| 2 | every item has a way in — recipe, node, carcass, loot, decay or trade (R8) | `itemRules.test.ts` |
 | 5 | no recipe-less armour; slots resolve | `armourCoverage.test.ts` |
 | 5 | crafted and equipped by a real pawn | `armourChain.test.ts` |
 

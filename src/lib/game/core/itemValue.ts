@@ -14,7 +14,12 @@ const TYPE_BASE: Record<Item['type'], number> = {
   tool: 10,
   weapon: 12,
   armor: 12,
-  currency: 40
+  currency: 40,
+  // `food` and `container` were missing from this table while 55 items carried those types; they
+  // priced through the `?? 2` fallback below, so these two entries state what was already happening
+  // rather than changing any value. Worth a deliberate balance pass, not a silent one.
+  food: 2,
+  container: 2
 };
 
 /** Category premiums over the type baseline (metal is scarce, food is cheap and plentiful). */
