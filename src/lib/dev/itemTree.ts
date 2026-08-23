@@ -34,11 +34,11 @@ const prettify = (id: string) =>
 const buildingName = new Map<string, string>();
 for (const b of buildingsData as any[]) if (b?.id) buildingName.set(b.id, b.name ?? prettify(b.id));
 
+// EVERY output — one butchery recipe produces meat, hide, sinew and bones together.
 const recipeByOutput = new Map<string, any>();
-for (const r of recipes) {
-  const outs = Object.keys(r?.outputs ?? {});
-  if (outs.length && !recipeByOutput.has(outs[0])) recipeByOutput.set(outs[0], r);
-}
+for (const r of recipes)
+  for (const out of Object.keys(r?.outputs ?? {}))
+    if (!recipeByOutput.has(out)) recipeByOutput.set(out, r);
 
 const gearById = new Map(GEAR.map((g) => [g.id, g]));
 
@@ -290,13 +290,6 @@ function statOf(i: any): string {
   return '—';
 }
 
-function sourceOf(i: any): string {
-  const rec = recipeByOutput.get(i.id);
-  if (!rec) return gearById.get(i.id)?.droppedBy.length ? 'drop only' : 'forage / hunt';
-  const st = rec.station;
-  return !st || st === 'craft_spot' ? 'anywhere' : (buildingName.get(st) ?? prettify(st));
-}
-
 export const TREE_ITEMS: TreeItem[] = items
   .filter((i) => i?.id)
   .map((i) => {
@@ -311,7 +304,7 @@ export const TREE_ITEMS: TreeItem[] = items
       stat: statOf(i),
       cls: CLASS_LABEL[(i.armorProperties ?? {}).armorType] ?? '',
       weightKg: i.weightKg ?? 0,
-      source: sourceOf(i),
+      source: (gearById.get(i.id) ?? rowForAny(i)).source,
       gatedBy: gated
         ? `${buildingName.get(gated) ?? prettify(gated)} · ${AGE_NAMES[chainAgeOf(i.id)]}`
         : '',

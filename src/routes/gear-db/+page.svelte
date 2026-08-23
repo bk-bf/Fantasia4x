@@ -404,7 +404,7 @@
         }
         push(
           'source',
-          g.craftable ? 'craftable' : g.droppedBy.length ? 'drop only' : 'not obtainable',
+          g.craftable ? 'craftable' : g.droppedBy.length ? 'drop only' : g.source,
           g.craftable || g.droppedBy.length ? 'info' : 'bad'
         );
       }

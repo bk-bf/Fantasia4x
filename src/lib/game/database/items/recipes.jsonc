@@ -6831,5 +6831,32 @@
     },
     "workAmount": 3,
     "toolTierRequired": 0
+  },
+  // ── Water carriers that existed as items with no way to make them ──
+  {
+    "id": "make_waterskin",
+    "discipline": "leatherworking",
+    "station": "makers_bench",
+    "inputs": {
+      "category:leather": 2
+    },
+    "outputs": {
+      "waterskin": 1
+    },
+    "workAmount": 4,
+    "toolTierRequired": 0
+  },
+    {
+    "id": "throw_flask",
+    "discipline": "pottery",
+    "station": "potters_wheel",
+    "inputs": {
+      "blue_clay": 1
+    },
+    "outputs": {
+      "flask": 1
+    },
+    "workAmount": 2,
+    "toolTierRequired": 0
   }
 ]

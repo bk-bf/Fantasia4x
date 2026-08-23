@@ -16,6 +16,7 @@ import researchData from '../game/database/progression/research.jsonc';
 import traitsData from '../game/database/pawns/traits.jsonc';
 import creaturesData from '../game/database/pawns/creatures.jsonc';
 import lootpoolData from '../game/database/items/lootpool.jsonc';
+import { carcassItems, nodeItems } from './chainAge';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 const items = itemsData as any[];
@@ -435,6 +436,9 @@ export interface GearRow {
   bodyPart: string | null; // canonical body slot the piece equips to
   /** Creatures that drop this, best chance first. Empty when nothing drops it. */
   droppedBy: DropSource[];
+  /** Where it comes from — a station, or the world: `forage / mine`, `hunt`, `innate`, `drop only`.
+   *  Recipes are only ONE of four sources; reading them alone called 250 obtainable things missing. */
+  source: string;
   /** The SET this piece belongs to (`steel_plate`, `munition_half_plate`…), or null for a
    *  deliberate one-off — a boss drop, a ceremonial piece. Lets the tables group a kit into one
    *  row instead of scattering six torso pieces across a tier with no way to tell them apart. */
@@ -481,11 +485,12 @@ const researchName = new Map<string, string>();
 for (const r of research) if (r?.id) researchName.set(r.id, r.name ?? prettify(r.id));
 const itemName = new Map<string, string>();
 for (const it of items) if (it?.id) itemName.set(it.id, it.name ?? prettify(it.id));
+// EVERY output, not just the first: butchery yields meat AND hide AND sinew AND bones from one
+// recipe, and indexing only `outs[0]` made every byproduct read as having no source at all.
 const recipeByOutput = new Map<string, any>();
-for (const rec of recipes) {
-  const outs = rec?.outputs ? Object.keys(rec.outputs) : [];
-  if (outs.length && !recipeByOutput.has(outs[0])) recipeByOutput.set(outs[0], rec);
-}
+for (const rec of recipes)
+  for (const out of Object.keys(rec?.outputs ?? {}))
+    if (!recipeByOutput.has(out)) recipeByOutput.set(out, rec);
 
 // ── derivations ─────────────────────────────────────────────────────────────
 function ageOf(
@@ -742,6 +747,47 @@ function recipeInfo(rec: any): RecipeInfo | null {
   };
 }
 
+/** Items that appear by TIME rather than by work: `driesTo` cures plant fibre into hay and meat into
+ *  dried meat on a rack, `decaysTo` turns anything left too long into something rotten. Neither is a
+ *  recipe, and reading recipes alone made both look like content nobody could ever get. */
+const DRIED_FROM = new Map<string, string>();
+const ROTTED_FROM = new Map<string, string>();
+for (const i of items) {
+  const dry = i?.driesTo;
+  const to = typeof dry === 'string' ? dry : dry?.itemId;
+  if (to && !DRIED_FROM.has(to)) DRIED_FROM.set(to, i.id);
+  if (typeof i?.decaysTo === 'string' && !ROTTED_FROM.has(i.decaysTo)) ROTTED_FROM.set(i.decaysTo, i.id);
+}
+// Drying also runs at the CATEGORY level, and those rules live in code rather than in the item defs
+// (`ItemService.CATEGORY_DRYING`): any meat dries to dried meat, any fruit to dried fruit. Mirrored
+// here so the audit does not report two staples as unobtainable.
+for (const [cat, out] of [['meat', 'dried_meat'], ['fruit', 'dried_fruit']] as const)
+  if (!DRIED_FROM.has(out)) DRIED_FROM.set(out, `any ${cat}`);
+
+/** Drawn from the world rather than made: a river, a lake, a well. */
+const GATHERED = new Map<string, string>([
+  ['water', 'river / lake / well'],
+  ['terra_preta', 'dug from rich soil']
+]);
+
+/** Where an item actually comes from. A map node is foraged or mined, a carcass comes off a kill, a
+ *  natural weapon is part of the animal, enemy gear is taken off a body — and only then, a recipe. */
+function sourceOf(item: any, rec: any, drops: DropSource[]): string {
+  if (item.category === 'natural_weapon') return 'innate';
+  if (nodeItems.has(item.id)) return 'forage / mine';
+  if (carcassItems.has(item.id)) return 'hunt';
+  if (DRIED_FROM.has(item.id)) return `dries from ${DRIED_FROM.get(item.id)}`;
+  if (ROTTED_FROM.has(item.id)) return 'spoilage';
+  if (GATHERED.has(item.id)) return GATHERED.get(item.id)!;
+  // things the SIM makes, not the player: a downed colonist over a shoulder, a corpse on the ground
+  if (/^(carried_pawn|pawn_carcass)$/.test(item.id)) return 'the sim';
+  if (rec)
+    return !rec.station || rec.station === 'craft_spot'
+      ? 'anywhere / craft spot'
+      : (buildingName.get(rec.station) ?? prettify(rec.station));
+  return drops.length ? 'drop only' : 'no source';
+}
+
 function toRow(item: any, forcedKind?: GearKind): GearRow | null {
   const kind = forcedKind ?? kindOf(item);
   if (!kind) return null;
@@ -794,6 +840,7 @@ function toRow(item: any, forcedKind?: GearKind): GearRow | null {
     slot: ap?.slot ?? ap?.equipmentSlot ?? null,
     bodyPart: kind === 'armor' ? bodyPartOf(ap?.equipmentSlot ?? ap?.slot ?? null) : null,
     droppedBy: DROPS_BY_ITEM.get(item.id) ?? [],
+    source: sourceOf(item, rec, DROPS_BY_ITEM.get(item.id) ?? []),
     armorSet: ap?.armorSet ?? (kind === 'armor' ? (craftable ? UNAFFILIATED : DROPPED) : null),
     setLabel: ap?.armorSet
       ? prettify(ap.armorSet)
@@ -990,6 +1037,7 @@ function traitRow(t: any): GearRow {
     cls: classes[0],
     classes,
     fallbackClasses: [],
+    source: 'innate',
     age: 'Primitive',
     ageRank: 0,
     tier: 0,

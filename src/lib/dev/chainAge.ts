@@ -35,7 +35,7 @@ for (const b of buildingsData as any[]) {
 }
 
 /** Everything a map node yields — foraged or mined, so no workshop stands behind it. */
-const nodeItems = new Set<string>();
+export const nodeItems = new Set<string>();
 (function walk(o: unknown): void {
   if (Array.isArray(o)) return o.forEach(walk);
   if (o && typeof o === 'object')
@@ -44,7 +44,7 @@ const nodeItems = new Set<string>();
 })(resourcesData);
 
 /** Carcasses come off a corpse, not out of a building. */
-const carcassItems = new Set<string>();
+export const carcassItems = new Set<string>();
 for (const c of creaturesData as any[]) if (c?.carcassItemId) carcassItems.add(c.carcassItemId);
 
 const recipesByOutput = new Map<string, any[]>();
