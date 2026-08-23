@@ -652,9 +652,20 @@ const VESSEL_NOUNS = [
 ];
 
 describe('ITEM-RULES R11 — a container item and a storage building never share a noun', () => {
-  it('no storage building is named after a vessel a pawn could pick up', () => {
-    const bad = (BUILDINGS as { id?: string; name?: string; effects?: Record<string, number> }[])
-      .filter((b) => (b.effects?.storageStacks ?? 0) > 0)
+  it('no building that holds anything is named after a vessel a pawn could pick up', () => {
+    // Every building that STORES or holds FLUID, not just the storage bins — the first pass only
+    // checked `storageStacks` and let "Tanning Bucket" (a building) sit next to "Tanning Bucket" (an
+    // item) and "Brewing Barrel" next to "Barrel". Pit, vat, trough, rack and larder name no item and
+    // never will, because they are fixed by definition; those are a fixture's vocabulary.
+    const bad = (
+      BUILDINGS as {
+        id?: string;
+        name?: string;
+        effects?: Record<string, number>;
+        fluidCapacityL?: number;
+      }[]
+    )
+      .filter((b) => (b.effects?.storageStacks ?? 0) > 0 || (b.fluidCapacityL ?? 0) > 0)
       .filter((b) =>
         VESSEL_NOUNS.some((n) => (b.name ?? '').toLowerCase().split(/\W+/).includes(n))
       )
@@ -662,6 +673,19 @@ describe('ITEM-RULES R11 — a container item and a storage building never share
         (b) =>
           `the building "${b.name}" (${b.id}) is named after a portable vessel — either make it an ` +
           `ITEM, or give it a fitted place-name that says it cannot be carried`
+      );
+    expect(bad, bad.join('; ')).toEqual([]);
+  });
+
+  it('no building name is a word-for-word copy of an item name', () => {
+    const itemNames = new Map<string, string>();
+    for (const i of ITEMS) if (i.name) itemNames.set(i.name.toLowerCase(), i.id);
+    const bad = (BUILDINGS as { id?: string; name?: string }[])
+      .filter((b) => b.name && itemNames.has(b.name.toLowerCase()))
+      .map(
+        (b) =>
+          `the building "${b.name}" (${b.id}) is named exactly like the item ` +
+          `\`${itemNames.get((b.name ?? '').toLowerCase())}\` — one name, two things`
       );
     expect(bad, bad.join('; ')).toEqual([]);
   });

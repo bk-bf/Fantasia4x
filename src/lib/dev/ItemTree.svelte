@@ -7,15 +7,21 @@
      Taxonomy lives in itemTree.ts so a new item files itself; this file only draws it. -->
 <script lang="ts">
   import ItemTreeNode from './ItemTreeNode.svelte';
-  import { ITEM_TREE, TREE_ITEMS, buildTree, type TreeNode } from './itemTree';
+  import ItemTreeHeader from './ItemTreeHeader.svelte';
+  import {
+    ITEM_TREE,
+    TREE_ITEMS,
+    buildTree,
+    rowComparator,
+    type SortKey,
+    type TreeNode
+  } from './itemTree';
   import type { GearRow } from './gearDb';
 
   // The build tables already own a positioned, styled tooltip; the page hands its handlers down so
   // hovering a tree row raises THAT one rather than a second copy that would drift from it.
-  let {
-    onhover,
-    onout
-  }: { onhover: (row: GearRow, e: MouseEvent) => void; onout: () => void } = $props();
+  let { onhover, onout }: { onhover: (row: GearRow, e: MouseEvent) => void; onout: () => void } =
+    $props();
 
   let q = $state('');
   let open = $state<Record<string, boolean>>({});
@@ -23,6 +29,23 @@
 
   const toggle = (key: string) => (open[key] = !open[key]);
   const select = (id: string) => (sel[id] ? delete sel[id] : (sel[id] = true));
+
+  // Column sort, applied INSIDE each shelf (see itemTree.rowComparator). Three clicks on a heading
+  // cycle ascending → descending → back to the natural age ladder, so there is always a way out of a
+  // sort without hunting for a reset button.
+  let sortKey = $state<SortKey | null>(null);
+  let sortDir = $state<1 | -1>(1);
+  const cmp = $derived(rowComparator(sortKey, sortDir));
+  function sortBy(key: SortKey) {
+    if (sortKey !== key) {
+      sortKey = key;
+      sortDir = 1;
+    } else if (sortDir === 1) sortDir = -1;
+    else {
+      sortKey = null;
+      sortDir = 1;
+    }
+  }
 
   // Filtering rebuilds the tree from the surviving rows rather than hiding cells: a branch that keeps
   // nothing disappears with its heading, so the counts on screen are always true.
@@ -61,7 +84,12 @@
 
 <div class="wrap">
   <div class="controls">
-    <input class="search" type="search" placeholder="filter items, categories, ages…" bind:value={q} />
+    <input
+      class="search"
+      type="search"
+      placeholder="filter items, categories, ages…"
+      bind:value={q}
+    />
     <button class="btn" onclick={expandAll}>expand all</button>
     <button class="btn" onclick={collapseAll}>collapse all</button>
     <span class="count"
@@ -70,30 +98,20 @@
     >
   </div>
   <p class="hint">
-    Every entry in <code>items.jsonc</code>, filed by what it IS. Armour nests age ▸ set ▸ class ▸
-    what it covers; consumables split food, drink, medicine and coatings, and perishables sit apart
-    from what keeps. Armour nests by <b>body layer</b> — outermost first — because armour is
-    subtractive and layers add, so what stacks on what is the thing worth seeing. <b>Gated by</b> is
-    the latest station in an item's whole ingredient chain, which is what really decides its age.
-    Click a row for its description.
+    Every entry in <code>items.jsonc</code>, filed by what it IS. Branches are conceptual only —
+    <b>age is a column</b>, and every shelf reads from the earliest age to the latest, so one line
+    of armour is one shelf rather than six. Armour nests set ▸ <b>body layer</b> ▸ what it covers,
+    layers outermost first, because armour is subtractive and layers add. <b>Gated by</b> is the latest
+    station in an item's whole ingredient chain, which is what really decides its age. Click a row for
+    its description, or a column heading to re-sort every shelf by it — again for descending, a third
+    time back to the age ladder.
   </p>
   <div class="scroll">
     <table>
-      <thead>
-        <tr>
-          <th class="l">Item</th>
-          <th>Tier</th>
-          <th class="l">Class</th>
-          <th class="l">Age</th>
-          <th class="l">Stat</th>
-          <th>kg</th>
-          <th class="l">Made at</th>
-          <th class="l">Gated by</th>
-        </tr>
-      </thead>
+      <ItemTreeHeader {sortKey} {sortDir} {sortBy} />
       <tbody>
         {#each tree.children as root (root.key)}
-          <ItemTreeNode node={root} {open} {sel} {toggle} {select} {onhover} {onout} />
+          <ItemTreeNode node={root} {open} {sel} {cmp} {toggle} {select} {onhover} {onout} />
         {/each}
         {#if !tree.count}
           <tr><td colspan="8" class="none">nothing matches “{q}”</td></tr>
@@ -169,23 +187,6 @@
     border-collapse: collapse;
     width: 100%;
     font-size: 11px;
-  }
-  thead th {
-    position: sticky;
-    top: 0;
-    z-index: 1;
-    background: #191710;
-    color: #8a7f5f;
-    text-align: right;
-    font-weight: 700;
-    font-size: 10px;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    padding: 4px 6px;
-    border-bottom: 1px solid #3a3324;
-  }
-  thead th.l {
-    text-align: left;
   }
   .none {
     padding: 12px;

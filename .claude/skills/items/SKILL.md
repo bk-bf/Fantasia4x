@@ -149,11 +149,21 @@ Three separate things wore the word "container". An item is **exactly one** of t
 - [ ] **Name it for what it is, and never for what a BUILDING is called.** A container item takes the
       bare vessel noun (Bucket, Barrel, Bin, Crate, Basket, Chest, Jug, Urn); a storage building takes
       a fitted place-name (Larder Cupboard, Meat Hooks, Rope-Hung Granary, Root Clamp). **R11** fails
-      the build on a collision. A basket you WEAR is a Pannier — a carry aid must not take a vessel's
-      noun. The vessel ladder is basketry at a craft spot → stave work at the Sawpit → joined boxes at
+      the build on a collision — it checks every storing/fluid-holding building AND any building name
+      that copies an item's word for word. Pit, vat, trough, rack, larder and granary are a fixture's
+      vocabulary: fixed by definition, naming no item. A basket you WEAR is a Pannier — a carry aid
+      must not take a vessel's noun. The vessel ladder is basketry at a craft spot → stave work at the Sawpit → joined boxes at
       the Carpenter's Bench; put a new one on that ladder rather than inventing a station.
 - [ ] **A vessel's own bulk is the EMPTY vessel.** Contents ride on top everywhere a load is summed,
       so a 50 L cask that weighs 6 kg empty is the same kind of lie as armour with no material.
+
+- [ ] **No two `/gear-db` branches claim the same concept.** The tree's branches are what a thing IS,
+      and they must partition cleanly: a fluid files under what it is FOR (drink / potion / coating /
+      industrial), never under its raw `category`, because "reagent" and "organic" are words Materials
+      already uses for its own lines. A shelf named after its parent ("Consumables ▸ Consumable",
+      "Natural weapons ▸ Natural Weapon") is a level that tells the reader nothing — drop it.
+- [ ] **Age is a COLUMN, not a level.** Branches are conceptual only; every shelf reads top-to-bottom
+      from the earliest age to the latest, so one line of armour is one shelf rather than six.
 
 ## The audit loop — run all of it
 
@@ -190,6 +200,19 @@ node scripts/dev-tools/pack.mjs geardb     # bakes the .jsonc data into .devtool
 Then republish that file with the Artifact tool, passing the URL in
 `scripts/dev-tools/published.json` as `url` so the link stays stable. Publishing without it mints a
 new artifact and the user's link goes stale.
+
+**Check the pack actually rebuilt before you publish.** It shells out to `pnpm`, which is often not
+on an agent shell's PATH, and when it dies it dies with a raw Node stack — easy to scroll past and
+then publish the previous bake while reporting the new feature as shipped. Two things settle it:
+
+```bash
+ls -la --time-style=full-iso .devtools-dist/gear-db.html   # is the timestamp from THIS minute?
+grep -c '<some string only the new build contains>' .devtools-dist/gear-db.html
+```
+
+Grep for a string **unique to the change you just made** — a new label, a new title attribute. A
+string that was in the old bake too proves nothing, which is exactly how a stale file once went out
+under a "verified" claim.
 
 ## Finishing
 

@@ -257,8 +257,12 @@ same thing to the sim while doing opposite jobs.
       the bare vessel noun — Bucket, Barrel, Bin, Crate, Basket, Chest, Jug, Urn, Flask, Phial. A
       building you cannot takes a fitted place-name that says so — Larder Cupboard, Meat Hooks, Drying
       Rack, Rope-Hung Granary, Root Clamp. Three pairs used to collide and "put it in the chest" meant
-      two different things depending on the panel. **R11** checks both halves. A basket you WEAR is a
-      Pannier — a carry aid is not a vessel, and it must not take the vessel's noun.
+      two different things depending on the panel. **R11** checks both halves — every building that
+      STORES or holds FLUID, and any building name that is a word-for-word copy of an item's. A basket
+      you WEAR is a Pannier — a carry aid is not a vessel, and it must not take the vessel's noun.
+      **Pit, vat, trough, rack, larder and granary are a fixture's vocabulary**: they name no item and
+      never will, because they are fixed by definition. That is why the tanning buckets became Tanning
+      Pits and the brewing barrel a Steeping Vat.
 - [ ] **Never restrict a worn quiver to arrows.** It was tried and rejected: a hunter stuffs whatever
       they like down a hide tube, and a container that physically refuses a bundle of herbs is not
       realism, it is bookkeeping. Leave `accepts` off.
@@ -326,6 +330,7 @@ one loose — a stockpile tile, a pawn's bare hands, a `DroppedItem` — spills 
 | 3b | a vessel states a positive `capacityL`, and is not also a carry aid (R9) | `itemRules.test.ts` |
 | 3c | every fluid-output recipe has a station or vessel to catch it (R10) | `itemRules.test.ts` |
 | 3b | no noun is shared by a container item and a storage building (R11) | `itemRules.test.ts` |
+| 3b | no branch of `/gear-db` claims a concept another branch already owns | by hand |
 | 5 | no recipe-less armour; slots resolve | `armourCoverage.test.ts` |
 | 5 | crafted and equipped by a real pawn | `armourChain.test.ts` |
 

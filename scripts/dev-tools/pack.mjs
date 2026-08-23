@@ -84,14 +84,20 @@ function packGearDb() {
   const css = find('.css');
   if (!js) throw new Error('no JS chunk emitted — check the standalone build output');
 
+  // Both replacements pass a FUNCTION, never a string. A string replacement expands `$&`, `` $` ``
+  // and `$'` — and minified Svelte contains `a===$&&(…)`, where `$` is an internal variable and `&&`
+  // is just an operator. As a string replacement that `$&` expanded to the whole matched
+  // `<script src="/assets/…">` tag: the asset reference came back AND the JS was corrupted at that
+  // point. It only surfaced when a minifier reshuffle happened to name a variable `$`, so it can
+  // reappear on any build; a replacer function makes the payload opaque and settles it for good.
   html = html.replace(
     /<script[^>]*src="[^"]*"[^>]*><\/script>/,
-    `<script type="module">\n${readFileSync(join(assets, js), 'utf8')}\n</script>`
+    () => `<script type="module">\n${readFileSync(join(assets, js), 'utf8')}\n</script>`
   );
   html = css
     ? html.replace(
         /<link[^>]*rel="stylesheet"[^>]*>/,
-        `<style>\n${readFileSync(join(assets, css), 'utf8')}\n</style>`
+        () => `<style>\n${readFileSync(join(assets, css), 'utf8')}\n</style>`
       )
     : html;
 
