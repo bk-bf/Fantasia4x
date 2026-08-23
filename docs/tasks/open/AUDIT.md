@@ -125,11 +125,12 @@ Audit only what's implemented. An unrealistic simplification that doesn't match 
 - [x] makers_bench — tools: make_saw, make_stone_{pick,hoe,spear,spade}, make_bone_cleaver, make_candle
 - [x] makers_bench — melee: make_flint_handaxe, make_bone_knife, make_antler_club, make_bone_tipped_spear, make_fang_reaver
 - [x] makers_bench — ranged: make_{self_bow,hunting_recurve,war_bow,sling,blowgun}, make_throwing_{stone,spear}, make_{blow_dart,sling_stone,flint_arrow,bone_arrow}
-- [x] makers_bench — shields/carry: make_wattle_buckler, make_rawhide_round_shield, make_woven_basket, make_hide_scrip, make_hide_tool_roll, make_linen_snapsack, make_wicker_frame_pack, make_hide_arrow_sheath, make_leather_back_quiver, make_leather_bolt_case, make_hide_knife_sheath, make_leather_sword_belt, make_leather_girdle, make_ringed_belt, make_leather_knapsack, make_riveted_tool_belt, make_porters_rucksack
+- [x] makers_bench — shields/carry: make_wattle_buckler, make_rawhide_round_shield, make_woven_basket, make_hide_scrip, make_hide_tool_roll, make_linen_snapsack, make_wicker_frame_pack, make_hide_arrow_sheath, make_leather_back_quiver, make_leather_bolt_case, make_hide_knife_sheath, make_leather_sword_belt, make_leather_belt, make_ringed_belt, make_steel_buckled_belt, make_{leather,iron_buckled,steel_riveted}_knapsack, make_{iron,steel}_buckled_satchel, make_{framed_leather,iron_framed,steel_framed}_pack
 - [x] makers_bench — armor: make_rangers_hood, make_archers_bracers, make_marksmans_cloak, make_raw_hide_vest, make_soot_darkened_jerkin, make_padded_cap, make_boiled_leather_jerkin, make_leather_coif, make_stitched_gauntlets, make_tallow_boots, make_scale_cuirass, make_beast_leather_plate, make_bone_plated_cuirass, make_horned_helm
 - [x] craft_spot: make_cordage, make_torch, make_chewed_poultice, make_mud_brick, make_flint_{knife,sickle}, make_stone_{chopper,axe,hammer,maul}, make_digging_stick, make_wooden_tongs, make_wicker_vest
 - [x] lapidary_bench: cut_{ruby,sapphire,emerald,topaz,amethyst,citrine,moonstone}, attune_*, make_*_ring, make_*_amulet, crowns/pendants, grind_gem_dust, make_arcane_resin — ⚠ `grind_mana_crystal` SHADOWED by grind_gem_dust
-- [x] runecarver_bench: make_{ember,frost,spark}_staff, make_rune_etched_girdle, make_rune_stitched_rucksack
+- [x] runecarver_bench: make_{ember,frost,spark}_staff, make_rune_etched_belt, make_rune_stitched_knapsack, make_rune_bound_frame_pack
+- [x] runic_loom: make_rune_woven_satchel
 - [x] attunement_altar: make_{pyre,rime,tempest}_staff, make_stargazer_circlet
 - [x] runic_crucible/loom/glyph: smelt_magic_alloy, make_arcane_robe, spin_enchant_thread, cut_runed_block
 - [x] alchemy_lab: distil_tannin, make_dye, make_soap, brew_{might,vigor,grace,fortitude} potions, brew_{bloodrage,ironhide,vigor,calming,nightglow,frenzy}_draught, brew_venom_coating
@@ -269,7 +270,55 @@ cadence, to-hit and crit alongside damage, so a weapon's named stat is the one t
       **Eleven new pieces all crafted by pawns: turn 3200 for the leather half (buckskin 40→25, iron_bar
       20→18), turn 4800 for the metal/runed half (buckskin 60→32, steel_rivet 40→29).** Worn, they move the
       budget: leather_knapsack + ringed_belt **15.7kg/15.6L → 65.7kg/73.6L**, the runed pair **12.4 → 126.4kg**.
-      `rune_etched_girdle` also gives `magic_alloy_bar` a consumer outside the rune-stitched armour set.
+      `rune_etched_belt` also gives `magic_alloy_bar` a consumer outside the rune-stitched armour set.
+- [x] ⚠→fixed: **the audit priced `category:` slots from a pool the sim would never consume.** A piece's
+      `category` doubles as its armour CLASS, so 61 leather garments, 49 metal ones and 28 cloth ones sat
+      inside `category:leather`/`metal`/`cloth`. `chainAge` took the MIN over those — all made at a
+      primitive bench — so `category:leather` read **primitive**, when a tanned leather comes back through
+      `tanning_brine` to the **bronze-age** Steeping Vat. The sim's own `itemMatchesCostCategory` already
+      excludes armour/weapons/tools; `chainAge.poolMembers` now runs the same guard, and R4 immediately
+      named five tier-0 pieces demanding bronze leather (`hide_scrip`, `hide_tool_roll`,
+      `hide_knife_sheath`, `sling`, `flint_dagger`). All five now cut from `category:cured_hide`, which is
+      genuinely primitive. **Leather is a bronze material and no tier-0 item may require it.**
+- [x] ⚠→fixed: **R7 (hide is not leather) only ever looked at armour.** It filtered on
+      `armorProperties.armorType`, so every tool, quiver and carry aid was invisible to it and
+      `hide_scrip`/`hide_tool_roll` called themselves hide while asking for tanned leather. R7 now runs
+      over every craftable — a naming-truth rule has nothing to do with whether a piece soaks damage.
+- [x] ⚠→fixed: **R3 read `pack` as a species** (from the creature ids `pack_alpha` /
+      `kingdom_pack_beast`), so every backpack in the game was flagged as beast-named. `pack` is a group
+      noun and is now in the ADJECTIVES exclusion.
+- [x] ⚠→fixed: **`wheelbarrow` was tier 1 and needs a `wheel`**, which is hooped at the smithy — an
+      iron-age chain. Invisible until carts gained a weight class and entered the R4 audit at all. Now
+      tier 2, beside the handcart.
+- [x] **One weight class across armour, carry aids and weapons** (`core/gearClass.ts`, new **R12**).
+      Armour and carry aids author it in `armorProperties.armorType`; weapons DERIVE it from mass and
+      grip, so 125 rows cannot drift out of step with a hand-typed label. R12 holds the class honest:
+      inside one slot at one age a heavier class costs strictly more to wear and returns strictly more
+      carry *or* protection, and a belt granting over 10 kg fails outright. `/gear-db` files the class as
+      its own level under **Carry aids ▸ slot ▸ age** and **Weapons ▸ age ▸ family**, so a missing rung is
+      a shelf with one child instead of three.
+- [x] **The pack grid — light / medium / heavy at every age from the leather unlock** (`carryAidChain.test.ts`,
+      `HeadlessSession`). A satchel costs nothing to wear and holds least, a knapsack is the fitted middle,
+      a frame pack takes the largest load and charges `movementPenalty` + `fatiguePerTurn` for it.
+      Primitive keeps the wicker backframe alone. Bronze 14/22/32 kg · Iron 18/28/42 · Steel 24/36/55 ·
+      Runed 32/46/70. **Headless: all three iron-age classes crafted at turn 4400 and worn in turn on one
+      pawn — base 14.2 kg → +18.0 (satchel), +28.0 (knapsack), +42.0 (framed).**
+- [x] ⚠→fixed: **belts were carrying more than the pawn wearing them.** A "belt" granting 18-24 kg against
+      a ~15 kg body budget is a pack with a buckle. The whole belt line is now 1-10 kg (R12 fails anything
+      over 10), and the capacity ladder moved where it belongs, onto the packs. Rescaled once more after that
+      read as noise: a belt now runs 3-14kg against a ~15kg body budget, and **R12 caps it at exactly
+      that** — a belt never out-carries the body wearing it. What earns it the slot is that it is
+      ADDITIVE (back2 holds one thing, so an archer with a quiver has the belt and nothing else), it
+      costs no movement where a frame pack does, and the war-belt line is the only gear on the hips.
+- [x] ⚠→fixed: **giving carry aids a weight class blanked their carry readout in `/gear-db`.** The stat
+      column branched on `armorProperties.armorType` before `inventoryBonus`, so every newly-classed
+      pack and belt rendered `def 0` instead of what it grants. Carry is checked first now, with hip
+      defence appended where the war-belt line has any.
+- [x] **Naming: the plainest accurate word wins** (new **R13**). Not a ban on period vocabulary —
+      `greaves`/`bracers`/`cuirass`/`coif` are the genre's shared language and stay. It catches the
+      one-off antique where an ordinary word exists: Hide Scrip → **Hide Pouch**, Leather Girdle →
+      **Leather Belt**, Linen Snapsack → **Linen Satchel**, Withy-Framed → **Framed Leather Pack**,
+      Pannier → **Carry-Basket**, Hide Arrow-Sheath → **Hide Quiver**. R13 checks descriptions too.
 - [x] **Carts raise the haul carry budget** (`stationsAndCapacity.test.ts` `[CAP cart]`): a held wheelbarrow lifts
       the budget **10→70kg**, a handcart **→170kg** (their `inventoryBonus` is summed from the hand slot in
       `getCarryCapacityBreakdown`); they're then used by haul jobs like any worn carrier. — *quiver drawspeed not

@@ -192,6 +192,13 @@ carrying no `tier` at all, which put a tier-3 bear's hide in the stone-age colum
       linen came back through `thread` to the **spinning wheel**, a bronze-age building; the entire
       bronze boarhide line hung off an **iron-age** tanning bucket. Buildings declare `ageTier`
       ("bronze:1"), so this is checkable and `itemRules.test.ts` R4 now checks it.
+- [ ] **A `category:` slot is priced from the pool the SIM would consume**, not from every item
+      carrying that category. A piece's `category` doubles as its armour CLASS, so 61 leather
+      garments sat inside `category:leather`; taking the cheapest of those (all made at a primitive
+      bench) made leather read *primitive*, when a tanned leather comes back through `tanning_brine`
+      to the **bronze-age** Steeping Vat. `chainAge` now filters the pool through the sim's own
+      `itemMatchesCostCategory`. **Leather is a bronze material: no tier-0 item may require it** —
+      the stone age gets cured hide.
 - [ ] Every ingredient resolves to something obtainable: a map-node yield, a butchery product, or
       another recipe. Nothing dead-ends.
 - [ ] **The item itself has a way IN.** A recipe is one of six: a map node, a carcass, a natural
@@ -228,6 +235,15 @@ carrying no `tier` at all, which put a tier-3 bear's hide in the stone-age colum
       it as a violation.
 - [ ] The tier reads in the name: a tier-0 piece uses a crude, historically-real term ("Hide
       Foot-Wraps"), never a term that could belong to a later tier. See the naming rules in AGENTS.md.
+- [ ] **The plainest accurate word wins.** This is not a ban on period vocabulary: `greaves`,
+      `bracers`, `cuirass`, `coif` and `jerkin` are the genre's shared language, used across dozens of
+      pieces, learned once, with no plain synonym that says the same thing. What is banned is the
+      **one-off antique in a slot an ordinary word already covers** — a *scrip* is a pouch, a *girdle*
+      is a belt, a *snapsack* is a satchel, a *withy* frame is a bent-wood frame. Reaching for the
+      old word there costs the reader comprehension and buys nothing, and it reads as decoration
+      rather than as a thing in the world. The same holds inside a DESCRIPTION: name the part
+      ("the mouth of the scabbard"), not the saddler's term for it ("the locket"). **R13** carries the
+      running list; add to it whenever one of these gets caught.
 
 ## Gate 3b — carry aid, vessel or fixture: which one is it?
 
@@ -259,13 +275,34 @@ same thing to the sim while doing opposite jobs.
       Rack, Rope-Hung Granary, Root Clamp. Three pairs used to collide and "put it in the chest" meant
       two different things depending on the panel. **R11** checks both halves — every building that
       STORES or holds FLUID, and any building name that is a word-for-word copy of an item's. A basket
-      you WEAR is a Pannier — a carry aid is not a vessel, and it must not take the vessel's noun.
+      you WEAR is a Carry-Basket — a carry aid is not a vessel, and must not take its bare noun.
       **Pit, vat, trough, rack, larder and granary are a fixture's vocabulary**: they name no item and
       never will, because they are fixed by definition. That is why the tanning buckets became Tanning
       Pits and the brewing barrel a Steeping Vat.
 - [ ] **Never restrict a worn quiver to arrows.** It was tried and rejected: a hunter stuffs whatever
       they like down a hide tube, and a container that physically refuses a bundle of herbs is not
       realism, it is bookkeeping. Leave `accepts` off.
+
+## Gate 3d — light, medium or heavy: the class every worn or held piece answers to
+
+The weight class is not an armour field any more. Armour, worn carry aids and weapons all sit on the
+same light→medium→heavy axis, so a loadout can be read as one decision instead of a piece at a time.
+
+- [ ] **Armour and carry aids AUTHOR the class** in `armorProperties.armorType`. For armour the recipe's
+      metal-to-leather ratio decides it (above); for a carry aid it is the design axis itself — a
+      satchel costs nothing to wear and holds little, a frame pack takes the biggest load and charges
+      movement and fatigue for it.
+- [ ] **Weapons DERIVE it** from mass and grip (`gearClassOf` in `core/gearClass.ts`). 125 weapons
+      already state a `weightKg` and whether they need both hands; a hand-typed label over that many
+      rows drifts the moment one number moves.
+- [ ] **Regalia has no class and needs none** — a ring is not a light/medium/heavy choice.
+- [ ] **The class is a PRICE, and it must buy something.** Inside one slot at one age, a heavier class
+      costs strictly more to wear and returns strictly more carry *or* more protection. **R12** checks
+      it. Quivers sit outside the ordering: their job is draw speed and their capacity is incidental.
+- [ ] **A belt is worn on a waist.** A pack is where a load goes; a belt holds a pouch. Once a belt
+      out-carries the pawn's own body budget it has stopped being a belt, and R12 fails it above 10 kg.
+- [ ] **The pack ladder is three classes per age from the leather unlock upward**, because that is
+      where real bags become possible. Primitive gets the wicker backframe and nothing else.
 
 ## Gate 3c — is it a fluid, and can it exist?
 
@@ -325,11 +362,13 @@ one loose — a stockpile tile, a pawn's bare hands, a `DroppedItem` — spills 
 | 2 | explicit `tier`; tier ≥ demanded creature's tier | `itemRules.test.ts` |
 | 2 | tier ≥ the age of the latest station in the ingredient chain (R4) | `itemRules.test.ts` |
 | 3 | species in the name ⇒ species in the recipe | `itemRules.test.ts` |
+| 3 | a name saying hide is cut from hide, and leather from leather — over EVERY craftable, not just armour (R7) | `itemRules.test.ts` |
 | 3 | a material in the name ⇒ that material in the chain (R5) | `itemRules.test.ts` |
 | 2 | every item has a way in — recipe, node, carcass, loot, decay or trade (R8) | `itemRules.test.ts` |
 | 3b | a vessel states a positive `capacityL`, and is not also a carry aid (R9) | `itemRules.test.ts` |
 | 3c | every fluid-output recipe has a station or vessel to catch it (R10) | `itemRules.test.ts` |
 | 3b | no noun is shared by a container item and a storage building (R11) | `itemRules.test.ts` |
+| 3d | every weapon and worn carry aid resolves to a class, and a heavier class costs more and buys more (R12) | `itemRules.test.ts` |
 | 3b | no branch of `/gear-db` claims a concept another branch already owns | by hand |
 | 5 | no recipe-less armour; slots resolve | `armourCoverage.test.ts` |
 | 5 | crafted and equipped by a real pawn | `armourChain.test.ts` |

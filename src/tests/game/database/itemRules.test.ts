@@ -7,6 +7,7 @@ import resourcesData from '$lib/game/database/world/resources.jsonc';
 import buildingsData from '$lib/game/database/world/buildings.jsonc';
 import type { Item } from '$lib/game/core/types';
 import { AGE_CEILING, AGE_NAMES, blameStation, chainAgeOf } from '$lib/dev/chainAge';
+import { gearClassOf } from '$lib/game/core/gearClass';
 
 // The machine-checkable subset of docs/game/ITEM-RULES.md.
 //
@@ -124,6 +125,10 @@ for (let pass = 0; pass < 30; pass++) {
 
 /** Size and place words are not species — `great_helm` and `bearded_axe` are not beast-named. */
 const ADJECTIVES = new Set([
+  // Not a species — a GROUP noun, and the only reason it reaches this set is that `pack_alpha` and
+  // `kingdom_pack_beast` are creature ids. Left in, every backpack in the game reads as beast-named
+  // and R3 demands a creature the recipe was never going to name.
+  'pack',
   'great',
   'giant',
   'wild',
@@ -410,8 +415,10 @@ describe('ITEM-RULES R5 — a material in the name is a material in the recipe',
 type ArmourItem = Item & {
   armorProperties?: { armorType?: string; equipmentSlot?: string; slot?: string };
 };
+// Anything with a weight class that a pawn WEARS: armour, and now the worn carry aids. Weapons derive
+// their class instead of authoring it, and they are not sewn, so they stay out of the fastener rules.
 const WEARABLE = (ITEMS as ArmourItem[]).filter(
-  (i) => i.armorProperties?.armorType && recipesByOutput.has(i.id)
+  (i) => i.armorProperties?.armorType && !i.weaponProperties && recipesByOutput.has(i.id)
 );
 /** How much binding a piece of this size takes. A glove and a cuirass are not lashed with equal cord. */
 const BINDING_SIZE: Record<string, number> = {
@@ -476,10 +483,16 @@ describe('ITEM-RULES R6 — a fastener is a real component or it is not listed',
   });
 });
 
+// R7 asks whether a NAME tells the truth about its material, which has nothing to do with whether the
+// piece soaks damage — so it runs over every craftable, not just `WEARABLE`. Scoped to armour it could
+// not see a carry aid, a quiver or a tool, and `hide_scrip`/`hide_tool_roll` sat for months calling
+// themselves hide while their recipe asked for tanned leather.
+const NAMED_MATERIAL = CRAFTABLE.filter((i) => recipesByOutput.has(i.id)) as ArmourItem[];
+
 describe('ITEM-RULES R7 — hide is not leather', () => {
   it('a name saying hide is cut from hide, and leather from leather', () => {
     const bad: string[] = [];
-    for (const i of WEARABLE) {
+    for (const i of NAMED_MATERIAL) {
       const rec = firstRecipe(i.id)!;
       const keys = [
         ...Object.keys(rec.inputs ?? {}),
@@ -700,6 +713,148 @@ describe('ITEM-RULES R11 — a container item and a storage building never share
           `the vessel "${i.name}" (${i.id}) does not name a vessel — a container item takes the plain ` +
           `noun for the thing it is, so the player never has to guess which "chest" a panel means`
       );
+    expect(bad, bad.join('; ')).toEqual([]);
+  });
+});
+
+// ── R12: light / medium / heavy means the same thing on every piece of gear ─────────────────────
+// The class used to live on armour alone, so a loadout could only be read a piece at a time and
+// nothing said that a frame pack and a greatsword are the same KIND of choice. Now every worn or held
+// item answers to it — armour and carry aids author it, weapons derive it from mass and grip.
+//
+// Authoring a label is only worth anything if the numbers under it agree, so the second assertion is
+// the real one: inside one slot at one age, a heavier class must actually cost more to wear AND carry
+// more for it. That is what stops a "heavy" pack that is lighter and roomier than the light one.
+describe('ITEM-RULES R12 — the weight class is the same axis on armour, carry aids and weapons', () => {
+  const RANK: Record<string, number> = { light: 0, medium: 1, heavy: 2 };
+
+  it('every craftable weapon and worn carry aid resolves to a class', () => {
+    // Regalia is deliberately outside the axis: a ring is not a light/medium/heavy choice, it soaks
+    // nothing and costs nothing to wear, which is why it files under its own branch in /gear-db.
+    const bad = CRAFTABLE.filter((i) => i.weaponProperties || i.inventoryBonus)
+      .filter((i) => !gearClassOf(i as Item))
+      .map((i) => `${i.id} is worn or held and has no weight class`);
+    expect(bad, bad.join('; ')).toEqual([]);
+  });
+
+  it('a carry aid states a class, and does not borrow the shield label', () => {
+    const bad = (ITEMS as Item[])
+      .filter((i) => i.inventoryBonus && recipesByOutput.has(i.id))
+      .filter((i) => !['light', 'medium', 'heavy'].includes(i.armorProperties?.armorType ?? ''))
+      .map((i) => `${i.id} is a carry aid with no light/medium/heavy class`);
+    expect(bad, bad.join('; ')).toEqual([]);
+  });
+
+  it('within one slot and age, a heavier class costs more to wear and buys more for it', () => {
+    // The class is a PRICE: what the piece costs to have on you. So the invariant is cost-side, and it
+    // holds across both belt lines — a plated war-belt is heavy because there is steel on it, even
+    // though a tool-belt out-carries it. What the extra cost buys may be capacity OR protection, but it
+    // has to buy something, or the class is a label with nothing under it.
+    //
+    // Quivers sit out: their job is draw speed, their capacity is incidental, and ranking a war quiver
+    // against a rucksack compares two things that were never alternatives.
+    const aids = (ITEMS as Item[]).filter(
+      (i) =>
+        i.inventoryBonus &&
+        !i.quiver &&
+        recipesByOutput.has(i.id) &&
+        i.armorProperties?.equipmentSlot
+    );
+    const bucket = new Map<string, Item[]>();
+    for (const i of aids) {
+      const key = `${i.armorProperties!.equipmentSlot}@tier${i.tier ?? 0}`;
+      bucket.set(key, [...(bucket.get(key) ?? []), i]);
+    }
+    const cls = (i: Item) => i.armorProperties!.armorType as string;
+    const buys = (i: Item) =>
+      Math.max(i.inventoryBonus?.weightKg ?? 0, (i.armorProperties?.defense ?? 0) * 10);
+    const bad: string[] = [];
+    for (const [key, group] of bucket) {
+      for (const lower of ['light', 'medium'] as const) {
+        const upper = lower === 'light' ? 'medium' : 'heavy';
+        const lo = group.filter((i) => cls(i) === lower);
+        const hi = group.filter((i) => cls(i) === upper);
+        if (!lo.length || !hi.length) continue;
+        const loCost = Math.max(...lo.map((i) => i.weightKg ?? 0));
+        const hiCost = Math.min(...hi.map((i) => i.weightKg ?? 0));
+        if (hiCost <= loCost)
+          bad.push(
+            `${key}: the ${upper} pieces start at ${hiCost}kg, no heavier than the ${lower} ones ` +
+              `at ${loCost}kg — a heavier class that costs nothing to wear is a free upgrade`
+          );
+        const loBuys = Math.max(...lo.map(buys));
+        const hiBuys = Math.min(...hi.map(buys));
+        if (hiBuys <= loBuys)
+          bad.push(
+            `${key}: the ${upper} pieces buy no more than the ${lower} ones (${hiBuys} vs ${loBuys} ` +
+              `on carry-or-defence) — the extra bulk has to be worth something`
+          );
+      }
+    }
+    expect(bad, bad.join('; ')).toEqual([]);
+  });
+
+  it('a belt never out-carries the body wearing it', () => {
+    // A pack is where bulk goes and it charges movement for it; a belt is a small load that costs
+    // nothing, and it is the only carry a pawn keeps while a quiver owns their back. Both of those
+    // make it worth wearing — but a belt that beats the pawn's OWN budget has stopped being a belt.
+    // `getCarryCapacityBreakdown`: (11 + 0.19 x brawn) x frameFactor, ~15kg at an ordinary brawn.
+    const BODY_BUDGET_KG = 15;
+    const bad = (ITEMS as Item[])
+      .filter((i) => i.armorProperties?.equipmentSlot === 'belt' && i.inventoryBonus)
+      .filter((i) => (i.inventoryBonus?.weightKg ?? 0) > BODY_BUDGET_KG)
+      .map((i) => `${i.id} is a belt granting ${i.inventoryBonus?.weightKg}kg of carry`);
+    expect(bad, bad.join('; ')).toEqual([]);
+  });
+});
+
+// ── R13: the plainest accurate word wins ────────────────────────────────────────────────────────
+// This is NOT a ban on period vocabulary. `greaves`, `bracers`, `cuirass`, `coif` and `jerkin` are the
+// genre's shared language — used across dozens of pieces, learned once, and there is no plain synonym
+// that says the same thing. What this catches is the one-off obscurity in a slot where an ordinary word
+// already exists: a "scrip" is a pouch, a "girdle" is a belt, a "snapsack" is a satchel. Reaching for
+// the antique word there costs the player comprehension and buys nothing.
+describe('ITEM-RULES R13 — a one-off antique word where a plain one exists', () => {
+  const PLAINER: Record<string, string> = {
+    scrip: 'pouch',
+    girdle: 'belt',
+    snapsack: 'satchel',
+    withy: 'wicker or bent wood',
+    pannier: 'carry-basket',
+    chape: 'the tip of the scabbard',
+    locket: 'the mouth of the scabbard',
+    frog: 'a belt loop',
+    budget: 'pouch',
+    wallet: 'pouch',
+    creel: 'basket'
+  };
+
+  it('no item name reaches for an antique word a plain one already covers', () => {
+    const bad: string[] = [];
+    for (const i of ITEMS as Item[]) {
+      for (const word of String(i.name ?? '')
+        .toLowerCase()
+        .replace(/[^a-z ]/g, ' ')
+        .split(/\s+/)) {
+        if (PLAINER[word])
+          bad.push(`${i.id} "${i.name}" says "${word}" where the plain word is "${PLAINER[word]}"`);
+      }
+    }
+    expect(bad, bad.join('; ')).toEqual([]);
+  });
+
+  it('and neither does a description, which the player reads in full', () => {
+    const bad: string[] = [];
+    for (const i of ITEMS as Item[]) {
+      for (const word of String(i.description ?? '')
+        .toLowerCase()
+        .replace(/[^a-z ]/g, ' ')
+        .split(/\s+/)) {
+        // `budget`/`wallet` are ordinary English in a sentence; only their ITEM-NAME sense is antique.
+        if (PLAINER[word] && !['budget', 'wallet', 'frog'].includes(word))
+          bad.push(`${i.id} description says "${word}" — plainly, ${PLAINER[word]}`);
+      }
+    }
     expect(bad, bad.join('; ')).toEqual([]);
   });
 });

@@ -100,7 +100,7 @@ which panel you were looking at.
 - [x] **An item takes the bare vessel noun; a building takes a fitted place-name.** Bucket, Barrel,
       Bin, Crate, Basket, Chest, Jug, Urn, Flask, Phial, Waterskin — against Larder Cupboard, Meat
       Hooks, Rope-Hung Granary. No noun appears on both sides, and **R11** fails the build if one does.
-      The worn carrying basket became a **Pannier**, which is what a basket you wear actually is, so
+      The worn carrying basket became a **Carry-Basket**, which is plainly what it is, so
       the bare noun was free for the thing you set down.
 - [x] **The vessel ladder runs across three woodworking ages**, no new stations: **Basket** from withies
       and cordage at a craft spot (primitive); **Bucket** and **Barrel** stave-built at the Sawpit once

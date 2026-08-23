@@ -17,7 +17,10 @@ const RECIPES = recipesData as unknown as {
 }[];
 
 const craftable = new Set(RECIPES.flatMap((r) => Object.keys(r.outputs ?? {})));
-const armour = ITEMS.filter((i) => i.armorProperties?.armorType);
+// `armorType` is the shared weight class now — worn carry aids and (derived) weapons answer to it too,
+// so the coverage audit filters on the TYPE as well. A knapsack is classed medium and still protects
+// nothing; asserting slot coverage over it would be asserting a promise it never made.
+const armour = ITEMS.filter((i) => i.type === 'armor' && i.armorProperties?.armorType);
 const wearable = armour.filter((i) => i.armorProperties?.armorType !== 'shield');
 
 /** Enemy-faction gear: found on a corpse, never forged in the colony. */

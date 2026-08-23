@@ -1551,7 +1551,7 @@
     "id"              : "make_hide_scrip",
     "discipline"      : "leatherworking",
     "station"         : "makers_bench",
-    "inputs"          : {"category:leather": 2, "cordage": 1},
+    "inputs"          : {"category:cured_hide": 3},
     "outputs"         : {"hide_scrip": 1},
     "workAmount"      : 5,
     "toolTierRequired": 0
@@ -1560,7 +1560,7 @@
     "id"              : "make_hide_tool_roll",
     "discipline"      : "leatherworking",
     "station"         : "makers_bench",
-    "inputs"          : {"category:leather": 1, "cordage": 1},
+    "inputs"          : {"category:cured_hide": 2},
     "outputs"         : {"hide_tool_roll": 1},
     "workAmount"      : 4,
     "toolTierRequired": 0
@@ -1569,7 +1569,7 @@
     "id"              : "make_linen_snapsack",
     "discipline"      : "weaving",
     "station"         : "makers_bench",
-    "inputs"          : {"linen_cloth": 2, "category:leather": 1, "cordage": 2},
+    "inputs"          : {"linen_cloth": 3, "category:leather": 1},
     "outputs"         : {"linen_snapsack": 1},
     "workAmount"      : 8,
     "toolTierRequired": 0
@@ -1588,38 +1588,117 @@
     "id"              : "make_leather_knapsack",
     "discipline"      : "leatherworking",
     "station"         : "makers_bench",
-    "inputs"          : {"category:leather": 5, "iron_bar": 1},
+    "inputs"          : {"category:leather": 5, "bronze_nail": 2},
     "outputs"         : {"leather_knapsack": 1},
     "workAmount"      : 12,
-    "toolTierRequired": 1,
-    "researchRequired": "iron_working"
+    "toolTierRequired": 0,
+    "researchRequired": "leather_working"
   },
   {
-    "id"              : "make_porters_rucksack",
+    "id"              : "make_steel_riveted_knapsack",
     "discipline"      : "leatherworking",
     "station"         : "makers_bench",
     "inputs"          : {"category:leather": 8, "category:plank": 1, "steel_rivet": 4},
-    "outputs"         : {"porters_rucksack": 1},
+    "outputs"         : {"steel_riveted_knapsack": 1},
     "workAmount"      : 20,
     "toolTierRequired": 2,
     "researchRequired": "steel_making"
   },
   {
-    "id"              : "make_rune_stitched_rucksack",
+    "id"              : "make_rune_stitched_knapsack",
     "station"         : "runecarver_bench",
     "inputs"          : {"category:leather": 6, "enchant_thread": 3, "gem_dust": 1},
-    "outputs"         : {"rune_stitched_rucksack": 1},
+    "outputs"         : {"rune_stitched_knapsack": 1},
     "workAmount"      : 34,
+    "toolTierRequired": 1,
+    "researchRequired": "runic_inscription"
+  },
+  // ── The pack grid: light / medium / heavy at every age from leather up ────
+  {
+    "id"              : "make_framed_leather_pack",
+    "discipline"      : "leatherworking",
+    "station"         : "makers_bench",
+    "inputs"          : {"category:leather": 4, "branch": 6, "cordage": 3},
+    "outputs"         : {"framed_leather_pack": 1},
+    "workAmount"      : 11,
+    "toolTierRequired": 0,
+    "researchRequired": "leather_working"
+  },
+  {
+    "id"              : "make_iron_buckled_satchel",
+    "discipline"      : "leatherworking",
+    "station"         : "makers_bench",
+    "inputs"          : {"category:leather": 3, "iron_bar": 1},
+    "outputs"         : {"iron_buckled_satchel": 1},
+    "workAmount"      : 9,
+    "toolTierRequired": 1,
+    "researchRequired": "iron_working"
+  },
+  {
+    "id"              : "make_iron_buckled_knapsack",
+    "discipline"      : "leatherworking",
+    "station"         : "makers_bench",
+    "inputs"          : {"category:leather": 5, "iron_bar": 1},
+    "outputs"         : {"iron_buckled_knapsack": 1},
+    "workAmount"      : 14,
+    "toolTierRequired": 1,
+    "researchRequired": "iron_working"
+  },
+  {
+    "id"              : "make_iron_framed_pack",
+    "discipline"      : "leatherworking",
+    "station"         : "makers_bench",
+    "inputs"          : {"category:leather": 6, "category:plank": 1, "iron_nail": 4},
+    "outputs"         : {"iron_framed_pack": 1},
+    "workAmount"      : 18,
+    "toolTierRequired": 1,
+    "researchRequired": "iron_working"
+  },
+  {
+    "id"              : "make_steel_buckled_satchel",
+    "discipline"      : "leatherworking",
+    "station"         : "makers_bench",
+    "inputs"          : {"category:leather": 4, "category:steel": 1},
+    "outputs"         : {"steel_buckled_satchel": 1},
+    "workAmount"      : 13,
+    "toolTierRequired": 2,
+    "researchRequired": "steel_making"
+  },
+  {
+    "id"              : "make_steel_framed_pack",
+    "discipline"      : "leatherworking",
+    "station"         : "makers_bench",
+    "inputs"          : {"category:leather": 9, "category:plank": 2, "steel_rivet": 6},
+    "outputs"         : {"steel_framed_pack": 1},
+    "workAmount"      : 26,
+    "toolTierRequired": 2,
+    "researchRequired": "steel_making"
+  },
+  {
+    "id"              : "make_rune_woven_satchel",
+    "station"         : "runic_loom",
+    "inputs"          : {"silk_cloth": 3, "enchant_thread": 2, "gem_dust": 1},
+    "outputs"         : {"rune_woven_satchel": 1},
+    "workAmount"      : 28,
+    "toolTierRequired": 1,
+    "researchRequired": "runic_inscription"
+  },
+  {
+    "id"              : "make_rune_bound_frame_pack",
+    "station"         : "runecarver_bench",
+    "inputs"          : {"category:leather": 8, "magic_alloy_bar": 1, "enchant_thread": 3, "gem_dust": 1},
+    "outputs"         : {"rune_bound_frame_pack": 1},
+    "workAmount"      : 40,
     "toolTierRequired": 1,
     "researchRequired": "runic_inscription"
   },
   // ── Carry aids: belts, the carrying line ──────────────────────────────────
   {
-    "id"              : "make_leather_girdle",
+    "id"              : "make_leather_belt",
     "discipline"      : "leatherworking",
     "station"         : "makers_bench",
     "inputs"          : {"category:leather": 3, "bronze_nail": 2},
-    "outputs"         : {"leather_girdle": 1},
+    "outputs"         : {"leather_belt": 1},
     "workAmount"      : 7,
     "toolTierRequired": 0,
     "researchRequired": "bronze_working"
@@ -1635,20 +1714,20 @@
     "researchRequired": "iron_working"
   },
   {
-    "id"              : "make_riveted_tool_belt",
+    "id"              : "make_steel_buckled_belt",
     "discipline"      : "leatherworking",
     "station"         : "makers_bench",
-    "inputs"          : {"category:leather": 4, "steel_rivet": 3},
-    "outputs"         : {"riveted_tool_belt": 1},
+    "inputs"          : {"category:leather": 4, "category:steel": 1},
+    "outputs"         : {"steel_buckled_belt": 1},
     "workAmount"      : 14,
     "toolTierRequired": 2,
     "researchRequired": "steel_making"
   },
   {
-    "id"              : "make_rune_etched_girdle",
+    "id"              : "make_rune_etched_belt",
     "station"         : "runecarver_bench",
     "inputs"          : {"category:leather": 4, "magic_alloy_bar": 1, "gem_dust": 2},
-    "outputs"         : {"rune_etched_girdle": 1},
+    "outputs"         : {"rune_etched_belt": 1},
     "workAmount"      : 28,
     "toolTierRequired": 1,
     "researchRequired": "runic_inscription"
@@ -1658,7 +1737,7 @@
     "id"              : "make_hide_knife_sheath",
     "discipline"      : "leatherworking",
     "station"         : "makers_bench",
-    "inputs"          : {"category:leather": 1},
+    "inputs"          : {"category:cured_hide": 1},
     "outputs"         : {"hide_knife_sheath": 1},
     "workAmount"      : 3,
     "toolTierRequired": 0
@@ -2212,7 +2291,7 @@
     "id"              : "make_sling",
     "discipline"      : "leatherworking",
     "station"         : "makers_bench",
-    "inputs"          : {"category:leather": 1, "cordage": 1},
+    "inputs"          : {"category:cured_hide": 1, "cordage": 1},
     "outputs"         : {"sling": 1},
     "workAmount"      : 3,
     "toolTierRequired": 0
@@ -2389,7 +2468,7 @@
     "id"              : "make_hide_arrow_sheath",
     "discipline"      : "leatherworking",
     "station"         : "makers_bench",
-    "inputs"          : {"category:cured_hide": 1, "cordage": 1},
+    "inputs"          : {"category:cured_hide": 2},
     "outputs"         : {"hide_arrow_sheath": 1},
     "workAmount"      : 3,
     "toolTierRequired": 0
@@ -2398,7 +2477,7 @@
     "id"              : "make_leather_back_quiver",
     "discipline"      : "leatherworking",
     "station"         : "makers_bench",
-    "inputs"          : {"category:leather": 2, "sinew": 1, "cordage": 1},
+    "inputs"          : {"category:leather": 3},
     "outputs"         : {"leather_back_quiver": 1},
     "workAmount"      : 6,
     "toolTierRequired": 0,
@@ -2407,7 +2486,7 @@
   {
     "id"              : "make_stiffened_war_quiver",
     "station"         : "anvil",
-    "inputs"          : {"category:leather": 1, "iron_bar": 1, "sinew": 1},
+    "inputs"          : {"category:leather": 2, "iron_bar": 1},
     "outputs"         : {"stiffened_war_quiver": 1},
     "workAmount"      : 9,
     "toolTierRequired": 1,
@@ -2417,7 +2496,7 @@
     "id"              : "make_leather_bolt_case",
     "discipline"      : "leatherworking",
     "station"         : "makers_bench",
-    "inputs"          : {"category:leather": 1, "sinew": 1, "thread": 1},
+    "inputs"          : {"category:leather": 2},
     "outputs"         : {"leather_bolt_case": 1},
     "workAmount"      : 5,
     "toolTierRequired": 0,
@@ -2426,7 +2505,7 @@
   {
     "id"              : "make_banded_bolt_quiver",
     "station"         : "anvil",
-    "inputs"          : {"category:leather": 1, "iron_bar": 1, "oak_plank": 1, "thread": 1},
+    "inputs"          : {"category:leather": 2, "iron_bar": 1, "oak_plank": 1},
     "outputs"         : {"banded_bolt_quiver": 1},
     "workAmount"      : 8,
     "toolTierRequired": 1,
@@ -5731,7 +5810,7 @@
     "id"              : "make_flint_dagger",
     "discipline"      : "knapping",
     "station"         : "craft_spot",
-    "inputs"          : {"flint_shard": 2, "branch": 1, "category:leather": 1},
+    "inputs"          : {"flint_shard": 2, "branch": 1, "category:cured_hide": 1},
     "outputs"         : {"flint_dagger": 1},
     "workAmount"      : 2,
     "toolTierRequired": 0

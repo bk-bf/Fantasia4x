@@ -1428,7 +1428,7 @@ stockable that gate would have flipped and pawns would have stopped walking to t
   rule: an item you can pick up takes the bare vessel noun, a building you cannot takes a fitted
   place-name. Four portable stores stopped being buildings and folded onto the item that already played
   their part; the six genuinely fitted ones (Larder Cupboard, Meat Hooks, Drying Rack, Hay Rack,
-  Rope-Hung Granary, Root Clamp) stayed. A basket you WEAR became a Pannier, freeing the bare noun.
+  Rope-Hung Granary, Root Clamp) stayed. A basket you WEAR became a Carry-Basket, freeing the bare noun.
 - **Goods go INTO the bin (DF).** A pile hauled onto a tile where a vessel's own allow-list names it is
   packed inside rather than laid beside it, so a container item is what makes a tile dense — no building
   needed underneath. A vessel set down in a filtered stockpile inherits that zone's list, reconciling

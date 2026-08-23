@@ -28,6 +28,8 @@ export const AGE_CEILING = [0, 2, 3, 4, 5];
 const items = itemsData as any[];
 const recipes = recipesData as any[];
 
+const itemById = new Map<string, any>(items.map((i: any) => [i.id, i]));
+
 export const BUILDING_AGE = new Map<string, number>();
 for (const b of buildingsData as any[]) {
   const age = AGE_NAMES.indexOf(String(b?.ageTier ?? 'primitive').split(':')[0] as never);
@@ -52,10 +54,26 @@ for (const r of recipes)
   for (const o of Object.keys(r?.outputs ?? {}))
     recipesByOutput.set(o, [...(recipesByOutput.get(o) ?? []), r]);
 
+// A `category:` slot is priced from the pool the SIM would actually consume, which is not "every item
+// carrying that category". `itemMatchesCostCategory` excludes finished armour/weapons/tools, because a
+// piece's `category` doubles as its armour CLASS — 61 leather garments, 49 metal ones and 28 cloth ones
+// all sit under `category:leather`/`metal`/`cloth`. Pricing the pool without that guard took the MIN over
+// those finished pieces, every one of them made at a primitive bench, so `category:leather` read
+// *primitive* when a tanned leather actually comes back through `tanning_brine` to the bronze-age
+// Steeping Vat. That is what let a tier-0 hide scrip demand leather and pass R4.
 const byCategory = new Map<string, string[]>();
 for (const i of items)
   if (i?.category) byCategory.set(i.category, [...(byCategory.get(i.category) ?? []), i.id]);
-const poolMembers = (key: string) => byCategory.get(key.replace(/^category:/, '')) ?? [];
+const poolMembers = (key: string): string[] => {
+  const cat = key.replace(/^category:/, '');
+  // The pseudo-categories resolve by id, exactly as the sim's matcher does.
+  if (cat === 'plank' || cat === 'log')
+    return items.filter((i: any) => String(i?.id ?? '').endsWith(`_${cat}`)).map((i: any) => i.id);
+  return (byCategory.get(cat) ?? []).filter((id) => {
+    const t = itemById.get(id)?.type;
+    return t !== 'armor' && t !== 'weapon' && t !== 'tool';
+  });
+};
 
 /** Every ingredient a recipe names, with `category:` and dynamic slots folded in as pool keys. */
 export const ingredientsOf = (r: any): string[] => {

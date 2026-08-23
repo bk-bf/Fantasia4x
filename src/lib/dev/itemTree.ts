@@ -16,6 +16,7 @@
 // offer for this slot, and what sits empty beside it" — because a level with one child instead of six
 // IS the hole, visible without reading a row.
 
+import { gearClassOf } from '../game/core/gearClass';
 import itemsData from '../game/database/items/items.jsonc';
 import recipesData from '../game/database/items/recipes.jsonc';
 import buildingsData from '../game/database/world/buildings.jsonc';
@@ -264,7 +265,14 @@ function pathOf(i: any): string[] {
     return ['Ammo', prettify(i.ammoProperties?.ammoCategory ?? i.ammoCategory ?? 'other'), age];
   // One child named the same thing as its parent is a level that tells the reader nothing.
   if (i.category === 'natural_weapon') return ['Natural weapons', age];
-  if (wp) return ['Weapons', age, familyOf(i.id), wp.twoHanded ? 'two-handed' : 'one-handed'];
+  if (wp)
+    return [
+      'Weapons',
+      age,
+      familyOf(i.id),
+      gearClassOf(i) ?? 'unclassed',
+      wp.twoHanded ? 'two-handed' : 'one-handed'
+    ];
 
   // CONTAINERS-AND-FLUIDS: three separate branches for three separate things, and they sit beside
   // Armour/Shields/Weapons because a player choosing a loadout is choosing between them.
@@ -280,7 +288,12 @@ function pathOf(i: any): string[] {
   if (i.type === 'fluid') return ['Fluids', fluidPurpose(i), age];
   if (i.inventoryBonus) {
     const slot = i.armorProperties?.equipmentSlot ?? i.armorProperties?.slot;
-    return ['Carry aids', COVERAGE[slot] ?? (slot ? prettify(slot) : 'in hand'), age];
+    return [
+      'Carry aids',
+      COVERAGE[slot] ?? (slot ? prettify(slot) : 'in hand'),
+      age,
+      gearClassOf(i) ?? 'unclassed'
+    ];
   }
   if (i.container) {
     const holdsFluid = (i.container.accepts ?? []).includes('fluid');
@@ -327,6 +340,13 @@ function statOf(i: any): string {
   const ap = i.armorProperties;
   const wp = i.weaponProperties;
   if (ap?.armorType === 'shield') return `block ${Math.round((ap.blockBonus ?? 0) * 100)}%`;
+  // A carry aid answers to the same light/medium/heavy class as armour now, so it HAS an `armorType`.
+  // What the row has to say is still what the piece grants — the carry, plus hip defence where the
+  // war-belt line has any. Checked before the armour branch or every pack reads `def 0`.
+  if (i.inventoryBonus) {
+    const carry = `carry +${i.inventoryBonus.weightKg ?? 0}kg / +${i.inventoryBonus.volumeL ?? 0}L`;
+    return ap?.defense ? `${carry} · def ${ap.defense}` : carry;
+  }
   if (ap?.armorType) return `def ${ap.defense ?? 0}`;
   if (wp) return `dmg ${wp.damage ?? '—'}${wp.damageType ? ` ${wp.damageType}` : ''}`;
   if (i.ammoProperties) return `dmg ${i.ammoProperties.damage ?? '—'}`;
@@ -347,8 +367,7 @@ function statOf(i: any): string {
   }
   // A carry aid is read by what it GRANTS; a vessel by what it HOLDS. Checked in that order, because a
   // quiver has both blocks and while worn it is the carry aid.
-  if (i.inventoryBonus)
-    return `carry +${i.inventoryBonus.weightKg ?? 0}kg / +${i.inventoryBonus.volumeL ?? 0}L`;
+
   if (i.container)
     return `holds ${i.container.capacityL} L${i.container.capacityKg ? ` / ${i.container.capacityKg} kg` : ''}`;
   if (i.type === 'fluid') return `${i.volumeL ?? 1} L per measure`;
