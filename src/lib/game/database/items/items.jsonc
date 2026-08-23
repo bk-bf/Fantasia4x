@@ -1385,18 +1385,21 @@
   {
     "id"               : "iron_bar",
     "charSpans"        : [ {"sheet": "items", "id": 23} ],
-    "name"             : "Bloomery Iron",
+    // Named plainly, like every other bar in the game. It came out of a bloomery, but a furnace is a
+    // process and gear is named for its MATERIAL — the slag freckling in the description is what tells
+    // the player where it came from. `wrought_iron` beside it is the finery's cleaner answer.
+    "name"             : "Iron Bar",
     "type"             : "material",
     "category"         : "iron",
     "maxDurability"    : 250,
     "deteriorationRate": 0.008,
-    "description"      : "A bloomery ingot, still freckled with slag from the hearth. Soft, tough and endlessly forgeable, the everyday iron.",
+    "description"      : "An ingot still freckled with slag from the hearth it was worked out of. Soft, tough and endlessly forgeable, the everyday iron.",
     "value"            : 16,
     "color"            : "#6E7378",
     "amount"           : 0,
     "weightKg"         : 4,
     "volumeL"          : 0.5,
-    "material"         : { "label": "Bloomery Iron", "desc": "soft, tough, slaggy", "item": { "durability": 1 } }
+    "material"         : { "label": "Iron", "desc": "soft, tough, slaggy", "item": { "durability": 1 } }
   },
   {
     // The finery's output: pig iron with the carbon burned back out. Cleaner than a bloom because the
