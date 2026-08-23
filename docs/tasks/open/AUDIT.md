@@ -119,16 +119,17 @@ Audit only what's implemented. An unrealistic simplification that doesn't match 
 - [x] anvil — blades: make_short_seax, make_spatha, make_iron_rondel, make_iron_estoc, make_steel_{longsword,greatsword,stiletto,rapier,cleaver,greatcleaver}, make_iron_greatsword
 - [x] anvil — impact: make_iron_{mace,warhammer}, make_steel_{mace,warhammer,flail,pike}
 - [x] anvil — ranged/ammo: make_crossbow, make_{iron_arrow,iron_bolt,broadhead_arrow,barbed_arrow,heavy_quarrel}, make_{stiffened_war,banded_bolt}_quiver
+- [x] anvil — carry: make_mounted_sword_belt, make_plated_war_belt
 - [x] anvil — armor: make_mail_coif, make_mail_hauberk, make_iron_nasal_helm, make_iron_gauntlets, make_iron_shod_boots, make_iron_gorget, make_brigandine_coat, make_iron_boss_shield, make_cave_bear_plate, make_wheel
 - [x] anvil — steel plate (T3): make_plate_cuirass, make_great_helm, make_ceremonial_plate
 - [x] makers_bench — tools: make_saw, make_stone_{pick,hoe,spear,spade}, make_bone_cleaver, make_candle
 - [x] makers_bench — melee: make_flint_handaxe, make_bone_knife, make_antler_club, make_bone_tipped_spear, make_fang_reaver
 - [x] makers_bench — ranged: make_{self_bow,hunting_recurve,war_bow,sling,blowgun}, make_throwing_{stone,spear}, make_{blow_dart,sling_stone,flint_arrow,bone_arrow}
-- [x] makers_bench — shields/carry: make_wattle_buckler, make_rawhide_round_shield, make_woven_basket, make_hide_scrip, make_hide_tool_roll, make_linen_snapsack, make_wicker_frame_pack, make_hide_arrow_sheath, make_leather_back_quiver, make_leather_bolt_case
+- [x] makers_bench — shields/carry: make_wattle_buckler, make_rawhide_round_shield, make_woven_basket, make_hide_scrip, make_hide_tool_roll, make_linen_snapsack, make_wicker_frame_pack, make_hide_arrow_sheath, make_leather_back_quiver, make_leather_bolt_case, make_hide_knife_sheath, make_leather_sword_belt, make_leather_girdle, make_ringed_belt, make_leather_knapsack, make_riveted_tool_belt, make_porters_rucksack
 - [x] makers_bench — armor: make_rangers_hood, make_archers_bracers, make_marksmans_cloak, make_raw_hide_vest, make_soot_darkened_jerkin, make_padded_cap, make_boiled_leather_jerkin, make_leather_coif, make_stitched_gauntlets, make_tallow_boots, make_scale_cuirass, make_beast_leather_plate, make_bone_plated_cuirass, make_horned_helm
 - [x] craft_spot: make_cordage, make_torch, make_chewed_poultice, make_mud_brick, make_flint_{knife,sickle}, make_stone_{chopper,axe,hammer,maul}, make_digging_stick, make_wooden_tongs, make_wicker_vest
 - [x] lapidary_bench: cut_{ruby,sapphire,emerald,topaz,amethyst,citrine,moonstone}, attune_*, make_*_ring, make_*_amulet, crowns/pendants, grind_gem_dust, make_arcane_resin — ⚠ `grind_mana_crystal` SHADOWED by grind_gem_dust
-- [x] runecarver_bench: make_{ember,frost,spark}_staff
+- [x] runecarver_bench: make_{ember,frost,spark}_staff, make_rune_etched_girdle, make_rune_stitched_rucksack
 - [x] attunement_altar: make_{pyre,rime,tempest}_staff, make_stargazer_circlet
 - [x] runic_crucible/loom/glyph: smelt_magic_alloy, make_arcane_robe, spin_enchant_thread, cut_runed_block
 - [x] alchemy_lab: distil_tannin, make_dye, make_soap, brew_{might,vigor,grace,fortitude} potions, brew_{bloodrage,ironhide,vigor,calming,nightglow,frenzy}_draught, brew_venom_coating
@@ -259,6 +260,16 @@ cadence, to-hit and crit alongside damage, so a weapon's named stat is the one t
 
 ### Capacity & hauling
 - [x] Worn carriers add inventoryBonus to carry budget (wicker_frame: `getCarryBudget` maxWeightKg 16.3→28.3, +12kg). — *back-slot competition not yet asserted*
+- [x] **The carry-aid ladder reaches every age** (`carryAidChain.test.ts`, `HeadlessSession`, real pawns over
+      real ticks, flat map + `workReady`). `back2` packs run Wicker Frame (P) → Linen Snapsack (B) → Leather
+      Knapsack (I) → Porter's Rucksack (S) → Rune-Stitched Rucksack (R); `belt` runs two competing lines, a
+      carrying one (Hide Tool-Roll / Hide Scrip → Leather Girdle → Ringed Belt → Riveted Tool-Belt →
+      Rune-Etched Girdle) and a fighting one that trades capacity for hip coverage and a piece that does not
+      swing (Hide Knife-Sheath → Leather Sword-Belt → Iron-Mounted Sword-Belt → Plated War-Belt).
+      **Eleven new pieces all crafted by pawns: turn 3200 for the leather half (buckskin 40→25, iron_bar
+      20→18), turn 4800 for the metal/runed half (buckskin 60→32, steel_rivet 40→29).** Worn, they move the
+      budget: leather_knapsack + ringed_belt **15.7kg/15.6L → 65.7kg/73.6L**, the runed pair **12.4 → 126.4kg**.
+      `rune_etched_girdle` also gives `magic_alloy_bar` a consumer outside the rune-stitched armour set.
 - [x] **Carts raise the haul carry budget** (`stationsAndCapacity.test.ts` `[CAP cart]`): a held wheelbarrow lifts
       the budget **10→70kg**, a handcart **→170kg** (their `inventoryBonus` is summed from the hand slot in
       `getCarryCapacityBreakdown`); they're then used by haul jobs like any worn carrier. — *quiver drawspeed not

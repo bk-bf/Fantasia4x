@@ -1583,6 +1583,114 @@
     "workAmount"      : 6,
     "toolTierRequired": 0
   },
+  // ── Carry aids: packs above the wicker frame ──────────────────────────────
+  {
+    "id"              : "make_leather_knapsack",
+    "discipline"      : "leatherworking",
+    "station"         : "makers_bench",
+    "inputs"          : {"category:leather": 5, "iron_bar": 1},
+    "outputs"         : {"leather_knapsack": 1},
+    "workAmount"      : 12,
+    "toolTierRequired": 1,
+    "researchRequired": "iron_working"
+  },
+  {
+    "id"              : "make_porters_rucksack",
+    "discipline"      : "leatherworking",
+    "station"         : "makers_bench",
+    "inputs"          : {"category:leather": 8, "category:plank": 1, "steel_rivet": 4},
+    "outputs"         : {"porters_rucksack": 1},
+    "workAmount"      : 20,
+    "toolTierRequired": 2,
+    "researchRequired": "steel_making"
+  },
+  {
+    "id"              : "make_rune_stitched_rucksack",
+    "station"         : "runecarver_bench",
+    "inputs"          : {"category:leather": 6, "enchant_thread": 3, "gem_dust": 1},
+    "outputs"         : {"rune_stitched_rucksack": 1},
+    "workAmount"      : 34,
+    "toolTierRequired": 1,
+    "researchRequired": "runic_inscription"
+  },
+  // ── Carry aids: belts, the carrying line ──────────────────────────────────
+  {
+    "id"              : "make_leather_girdle",
+    "discipline"      : "leatherworking",
+    "station"         : "makers_bench",
+    "inputs"          : {"category:leather": 3, "bronze_nail": 2},
+    "outputs"         : {"leather_girdle": 1},
+    "workAmount"      : 7,
+    "toolTierRequired": 0,
+    "researchRequired": "bronze_working"
+  },
+  {
+    "id"              : "make_ringed_belt",
+    "discipline"      : "leatherworking",
+    "station"         : "makers_bench",
+    "inputs"          : {"category:leather": 3, "iron_bar": 1},
+    "outputs"         : {"ringed_belt": 1},
+    "workAmount"      : 10,
+    "toolTierRequired": 1,
+    "researchRequired": "iron_working"
+  },
+  {
+    "id"              : "make_riveted_tool_belt",
+    "discipline"      : "leatherworking",
+    "station"         : "makers_bench",
+    "inputs"          : {"category:leather": 4, "steel_rivet": 3},
+    "outputs"         : {"riveted_tool_belt": 1},
+    "workAmount"      : 14,
+    "toolTierRequired": 2,
+    "researchRequired": "steel_making"
+  },
+  {
+    "id"              : "make_rune_etched_girdle",
+    "station"         : "runecarver_bench",
+    "inputs"          : {"category:leather": 4, "magic_alloy_bar": 1, "gem_dust": 2},
+    "outputs"         : {"rune_etched_girdle": 1},
+    "workAmount"      : 28,
+    "toolTierRequired": 1,
+    "researchRequired": "runic_inscription"
+  },
+  // ── Carry aids: sheaths, the fighting line ────────────────────────────────
+  {
+    "id"              : "make_hide_knife_sheath",
+    "discipline"      : "leatherworking",
+    "station"         : "makers_bench",
+    "inputs"          : {"category:leather": 1},
+    "outputs"         : {"hide_knife_sheath": 1},
+    "workAmount"      : 3,
+    "toolTierRequired": 0
+  },
+  {
+    "id"              : "make_leather_sword_belt",
+    "discipline"      : "leatherworking",
+    "station"         : "makers_bench",
+    "inputs"          : {"category:leather": 3, "bronze_nail": 1},
+    "outputs"         : {"leather_sword_belt": 1},
+    "workAmount"      : 8,
+    "toolTierRequired": 0,
+    "researchRequired": "bronze_working"
+  },
+  {
+    "id"              : "make_mounted_sword_belt",
+    "station"         : "anvil",
+    "inputs"          : {"category:leather": 3, "iron_bar": 1},
+    "outputs"         : {"mounted_sword_belt": 1},
+    "workAmount"      : 12,
+    "toolTierRequired": 1,
+    "researchRequired": "iron_working"
+  },
+  {
+    "id"              : "make_plated_war_belt",
+    "station"         : "anvil",
+    "inputs"          : {"category:leather": 3, "category:steel": 1, "steel_rivet": 4},
+    "outputs"         : {"plated_war_belt": 1},
+    "workAmount"      : 18,
+    "toolTierRequired": 2,
+    "researchRequired": "steel_making"
+  },
   // ── Phase B: linen production ─────────────────────────────────────────────
   {
     "id"              : "weave_linen",
