@@ -400,15 +400,20 @@ function sortNodes(nodes: TreeNode[]): TreeNode[] {
   });
 }
 
-/** Top level in the order an audit reads it, not alphabetically. */
+/** Top level in the order an audit reads it, not alphabetically. A label missing from this list falls
+ *  to the end, which is where the three CONTAINERS-AND-FLUIDS branches landed until they were placed:
+ *  carry aids belong with the WORN kit, next to the armour they compete with for a slot. */
 const ROOT_ORDER = [
   'Armour',
+  'Carry aids',
   'Shields',
   'Weapons',
   'Ammo',
   'Regalia & jewellery',
   'Tools',
+  'Vessels',
   'Consumables',
+  'Fluids',
   'Materials',
   'Natural weapons'
 ];
