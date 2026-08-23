@@ -120,14 +120,24 @@ export function complete(job: Job, gs: GameState): GameState {
       maxVolumeL: 20
     };
     const newItems = { ...inv.items };
-    newItems[drop.resourceId] = (newItems[drop.resourceId] ?? 0) + taken;
+    // A TRACKED drop (a vessel with something in it, a famed piece) must ride as an instance or its
+    // identity — and, for a vessel, everything inside it — is flattened into a bare count.
+    const instances = drop.instance
+      ? [...(inv.instances ?? []), drop.instance]
+      : (inv.instances ?? []);
+    if (!drop.instance) newItems[drop.resourceId] = (newItems[drop.resourceId] ?? 0) + taken;
     const carriedUnitConditions = takenConds
       ? {
           ...(p.carriedUnitConditions ?? {}),
           [drop.resourceId]: [...(p.carriedUnitConditions?.[drop.resourceId] ?? []), ...takenConds]
         }
       : p.carriedUnitConditions;
-    return { ...p, inventory: { ...inv, items: newItems }, carryingForOrder: owner, carriedUnitConditions };
+    return {
+      ...p,
+      inventory: { ...inv, items: newItems, instances },
+      carryingForOrder: owner,
+      carriedUnitConditions
+    };
   });
   return { ...gs, droppedItems: newDropped, pawns: newPawns };
 }

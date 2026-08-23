@@ -8,7 +8,7 @@ import type { GameState, Pawn, ItemInstance } from '../../core/types';
 import {
   addToStockpileZone,
   absorbDropIfOnStockpileTile,
-  aggregateFromDrops,
+  withDrops,
   storageTileKeys,
   tilePileCapacity,
   tileStoredPileCount
@@ -162,7 +162,7 @@ export function pickUpFromTile(
       `removed=[${[...removeIds].join(',')}] reduced=[${[...reduceQty].map(([id, q]) => `${id}→${q}`).join(',')}] ` +
       `inv ${JSON.stringify(beforeItems)} → ${JSON.stringify(after)}`
   );
-  return { ...gs, droppedItems, pawns, stockpile: aggregateFromDrops(droppedItems) };
+  return { ...withDrops(gs, droppedItems), pawns };
 }
 
 /**
@@ -309,6 +309,15 @@ export function orderStationTile(ownerId: string, gs: GameState): { x: number; y
 }
 
 /**
+ * What the craft order an instance is being carried for actually asked for. A build site is not
+ * consulted: building materials are bulk costs, never tracked instances, so there is nothing of this
+ * shape to stage for one.
+ */
+function orderInputs(ownerId: string, gs: GameState): Record<string, number> {
+  return (gs.craftingQueue ?? []).find((o) => o.id === ownerId)?.inputs ?? {};
+}
+
+/**
  * ADR-016: stage everything the pawn is carrying for a craft order as `stored reservedFor` drops
  * ON the order's station tile (merging with any input stack already staged there), clear the
  * pawn's inventory + carry marker, and idle. Once every input is staged the craft job opens
@@ -347,7 +356,14 @@ export function stageInventoryAtStation(pawn: Pawn, orderId: string, gs: GameSta
         ...drops[idx],
         quantity: drops[idx].quantity + qty,
         ...(conds || drops[idx].unitConditions
-          ? { unitConditions: mergeConditions(drops[idx].unitConditions, drops[idx].quantity, conds, qty) }
+          ? {
+              unitConditions: mergeConditions(
+                drops[idx].unitConditions,
+                drops[idx].quantity,
+                conds,
+                qty
+              )
+            }
           : {})
       };
     } else {
@@ -362,6 +378,30 @@ export function stageInventoryAtStation(pawn: Pawn, orderId: string, gs: GameSta
         ...(conds ? { unitConditions: conds } : {})
       });
     }
+  }
+
+  // CONTAINERS-AND-FLUIDS §1: an input can travel as a tracked INSTANCE rather than a bulk count —
+  // a vessel with the fluid inside it, or an empty phial the recipe consumes as a component. Set those
+  // down at the station too. Without this the barrel of brine (or the glassware) stays in the hauler's
+  // pack, the order never reads as supplied, and the colony's stock silently walks around with a pawn.
+  //
+  // Only what THIS ORDER asked for is set down. A pawn's own tools are instances too, and it keeps
+  // them: it needs the hammer to do the work it just carried the nails for.
+  const wantedHere = new Set(Object.keys(orderInputs(orderId, gs)));
+  const stagedVesselIds = new Set<string>();
+  for (const inst of pawn.inventory?.instances ?? []) {
+    if (!inst.contents?.length && !wantedHere.has(inst.itemId)) continue;
+    stagedVesselIds.add(inst.instanceId);
+    drops.push({
+      id: `staged-${orderId.slice(-6)}-${inst.instanceId}-${station.x}-${station.y}`,
+      resourceId: inst.itemId,
+      x: station.x,
+      y: station.y,
+      quantity: 1,
+      stored: true,
+      reservedFor: orderId,
+      instance: inst
+    });
   }
 
   gameLogger.log(gs.turn, 'JOB-EVT', `${pawn.name} staged inputs at station for order ${orderId}`);
@@ -385,7 +425,11 @@ export function stageInventoryAtStation(pawn: Pawn, orderId: string, gs: GameSta
                 volumeL: 0,
                 maxVolumeL: 20
               }),
-              items: {}
+              items: {},
+              // Tools and empty vessels stay in hand; only the loaded vessels were set down.
+              instances: (p.inventory?.instances ?? []).filter(
+                (i) => !stagedVesselIds.has(i.instanceId)
+              )
             }
           }
         : p
@@ -483,7 +527,9 @@ export function depositInventory(pawn: Pawn, gs: GameState): GameState {
   // pawn hauling ONLY a carcass (empty `items` map) must not short-circuit to idle.
   const carriedInstances = pawn.inventory?.instances ?? [];
   const hasDepositableInstance = carriedInstances.some(
-    (i) => !isCarriedPawnInstance(i) && itemService.getItemById(i.itemId)?.dynamicName
+    (i) =>
+      !isCarriedPawnInstance(i) &&
+      (itemService.getItemById(i.itemId)?.dynamicName || !!i.contents?.length)
   );
   if (Object.keys(inv).length === 0 && !hasDepositableInstance) return goIdle(pawn, gs);
 
@@ -595,7 +641,13 @@ export function depositInventory(pawn: Pawn, gs: GameState): GameState {
       keptInstances.push(instance);
       continue;
     }
-    if (!itemService.getItemById(instance.itemId)?.dynamicName) {
+    // CONTAINERS-AND-FLUIDS §1: a LOADED vessel is deposited like a named carcass — it is stock, not
+    // a tool the pawn keeps. An empty one stays in hand (a waterskin is personal kit). Without this a
+    // pawn that fetched a barrel to fill and then found nowhere to fill it from would carry the
+    // colony's whole brine supply around forever, and the ledger would read zero.
+    const depositable =
+      itemService.getItemById(instance.itemId)?.dynamicName || !!instance.contents?.length;
+    if (!depositable) {
       keptInstances.push(instance);
       continue;
     }

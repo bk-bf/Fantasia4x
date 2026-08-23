@@ -5,10 +5,16 @@
   import { itemService } from '$lib/game/services/ItemService';
   import { gameState } from '$lib/stores/gameState';
   import CarryItemCard from './CarryItemCard.svelte';
+  import VesselFilterPanel from './VesselFilterPanel.svelte';
+  import { vesselOf } from '$lib/game/core/vessels';
   import CarryCapacity from './CarryCapacity.svelte';
   import PawnConsumables from './PawnConsumables.svelte';
 
   export let pawn: Pawn;
+
+  // Which carried vessel has its allow-list panel open (one at a time). Legacy-reactive component,
+  // so a plain `let` is the reactive form here.
+  let openVessel: string | null = null;
 
   $: pinned = new Set(pawn.pinnedItems ?? []);
   // Pinned items sort to the top; otherwise stable order.
@@ -94,7 +100,13 @@
               famedHistory={inst.famedHistory ?? null}
               famedEnchants={inst.famedEnchants ?? null}
               onDrop={() => dropInstance(inst)}
+              onConfigure={vesselOf(inst.itemId)
+                ? () => (openVessel = openVessel === inst.instanceId ? null : inst.instanceId)
+                : null}
             />
+            {#if openVessel === inst.instanceId}
+              <VesselFilterPanel {inst} onClose={() => (openVessel = null)} />
+            {/if}
           {:else}
             <!-- No def for this id — surface it LOUDLY rather than skipping silently. The raw id is
                  shown on purpose: it's a data bug (a dangling itemId) and the id is the only clue. -->

@@ -6,10 +6,24 @@ import type {
   PlacedBuilding,
   Job,
   StockpileZone,
-  DroppedItem
+  DroppedItem,
+  ItemInstance
 } from './types';
 import { rng } from './rng';
 import { mergeConditions } from './carcassCondition';
+import {
+  isFluidId,
+  litresToUnits,
+  takeOut,
+  heldQuantity,
+  litresPerUnit,
+  putIn,
+  pickVesselFor,
+  unitsToLitres,
+  vesselAccepts,
+  vesselOf
+} from './vessels';
+import { itemDefById } from './itemDefs';
 import buildingsData from '../database/world/buildings.jsonc';
 import itemsData from '../database/items/items.jsonc';
 
@@ -204,8 +218,63 @@ export function aggregateFromDrops(drops: DroppedItem[] | undefined): Record<str
   for (const d of drops ?? []) {
     if (!d.stored || (d.quantity ?? 0) <= 0) continue;
     agg[d.resourceId] = (agg[d.resourceId] ?? 0) + d.quantity;
+    // CONTAINERS-AND-FLUIDS: a stored VESSEL puts its contents in the colony's stock too — a barrel of
+    // water on a stockpile tile is the colony's water. Counted in recipe UNITS (doses), never litres,
+    // so the whole rest of the game keeps speaking one number.
+    creditVesselContents(agg, d);
   }
   return agg;
+}
+
+/**
+ * CONTAINERS-AND-FLUIDS §2 — commit a new `droppedItems` array to the state, spilling anything that
+ * cannot legally lie loose on its way in. Today that is exactly one thing: a FLUID. A fluid may only
+ * exist inside a vessel that accepts it, so a bare stack of water, brine or ale — however it got
+ * created — evaporates here rather than becoming a puddle the rest of the sim has to reason about.
+ *
+ * This is the chokepoint every drops-mutating path goes through, so the rule cannot be forgotten at a
+ * callsite. It is also the only place the aggregate is rebuilt, so the two can never disagree.
+ */
+export function withDrops(state: GameState, drops: DroppedItem[]): GameState {
+  let spilled = false;
+  for (const d of drops) {
+    if (isFluidId(d.resourceId)) {
+      spilled = true;
+      break;
+    }
+  }
+  const kept = spilled ? drops.filter((d) => !isFluidId(d.resourceId)) : drops;
+  return { ...state, droppedItems: kept, stockpile: colonyStock(kept, state.buildings) };
+}
+
+/**
+ * The colony's stock: everything on a stockpile tile, everything inside a vessel on one, and
+ * everything a STATION is holding in its own body (a vat of brine, a cask of ale). A batch fermenting
+ * in a cask is stock the colony owns — leaving it out of the ledger made brewing look like a hole.
+ */
+export function colonyStock(
+  drops: DroppedItem[] | undefined,
+  buildings: PlacedBuilding[] | undefined
+): Record<string, number> {
+  const agg = aggregateFromDrops(drops);
+  for (const b of buildings ?? []) {
+    if (!b.fluidContents?.length) continue;
+    for (const e of b.fluidContents) {
+      const qty = e.litres != null ? litresToUnits(e.itemId, e.litres) : (e.amount ?? 0);
+      if (qty > 0) agg[e.itemId] = (agg[e.itemId] ?? 0) + qty;
+    }
+  }
+  return agg;
+}
+
+/** Add one stored drop's nested contents to an aggregate. One level — `putIn` refuses any deeper. */
+function creditVesselContents(agg: Record<string, number>, d: DroppedItem): void {
+  const contents = d.instance?.contents;
+  if (!contents?.length) return;
+  for (const e of contents) {
+    const qty = e.litres != null ? litresToUnits(e.itemId, e.litres) : (e.amount ?? 0);
+    if (qty > 0) agg[e.itemId] = (agg[e.itemId] ?? 0) + qty;
+  }
 }
 
 /**
@@ -220,8 +289,11 @@ export function availableQuantityFromDrops(
 ): number {
   let total = 0;
   for (const d of drops ?? []) {
-    if (!d.stored || d.reservedFor || d.resourceId !== itemId || (d.quantity ?? 0) <= 0) continue;
-    total += d.quantity;
+    if (!d.stored || d.reservedFor || (d.quantity ?? 0) <= 0) continue;
+    if (d.resourceId === itemId) total += d.quantity;
+    // A fluid is never a stack of its own — what the colony has is what its vessels hold.
+    const held = heldQuantity(d.instance, itemId);
+    if (held > 0) total += isFluidId(itemId) ? litresToUnits(itemId, held) : held;
   }
   return total;
 }
@@ -271,14 +343,21 @@ export function reserveForOrder(
   let remaining = qty;
   const drops: DroppedItem[] = [];
   for (const d of state.droppedItems ?? []) {
-    if (
-      remaining <= 0 ||
-      !d.stored ||
-      d.reservedFor ||
-      d.resourceId !== itemId ||
-      d.quantity <= 0
-    ) {
+    if (remaining <= 0 || !d.stored || d.reservedFor || d.quantity <= 0) {
       drops.push(d);
+      continue;
+    }
+    // CONTAINERS-AND-FLUIDS: a fluid input is met by reserving the VESSEL that holds it — you cannot
+    // split two litres out of a barrel and leave the rest behind on the tile. The whole vessel is
+    // reserved and hauled to the station; the craft draws what it needs and the vessel comes back.
+    if (d.resourceId !== itemId) {
+      const held = heldQuantity(d.instance, itemId);
+      if (held > 0) {
+        drops.push({ ...d, reservedFor: orderId });
+        remaining -= isFluidId(itemId) ? held / litresPerUnit(itemId) : held;
+      } else {
+        drops.push(d);
+      }
       continue;
     }
     if (d.quantity <= remaining) {
@@ -477,6 +556,38 @@ export function addToStockpileZone(
 
   for (const [itemId, amount] of Object.entries(items)) {
     if (amount <= 0) continue;
+    // CONTAINERS-AND-FLUIDS §2: a fluid cannot be set down as a stack, so a deliberate credit of one
+    // arrives the way it would in the world — in something. It tops up a vessel already standing here
+    // that takes it, and mints a fresh vessel for whatever is left over. (A hauler is not this
+    // generous: it only fills what the player's allow-list names. This path is a credit, not a chore —
+    // a caravan sells you the wine and the cask it came in.)
+    if (isFluidId(itemId)) {
+      creditFluid(drops, itemId, amount, x, y);
+      continue;
+    }
+    // A VESSEL is credited as individual tracked instances rather than a counted stack. It has to be:
+    // a bare count cannot hold anything, so a stockpile "×4 glassware" that could never be filled is
+    // four ornaments. One instance each, each with its own (empty) allow-list.
+    if (vesselOf(itemId)) {
+      for (let n = 0; n < amount; n++) {
+        const seq = drops.length;
+        drops.push({
+          id: `stored-${itemId}-${x}-${y}-${seq}`,
+          resourceId: itemId,
+          x,
+          y,
+          quantity: 1,
+          stored: true,
+          instance: {
+            instanceId: `vessel-${itemId}-${x}-${y}-${seq}`,
+            itemId,
+            durability: itemDefById(itemId)?.maxDurability ?? 100,
+            filter: []
+          }
+        });
+      }
+      continue;
+    }
     const idx = drops.findIndex(
       (d) => d.stored && d.resourceId === itemId && d.x === x && d.y === y
     );
@@ -494,7 +605,57 @@ export function addToStockpileZone(
     }
   }
 
-  return { ...state, droppedItems: drops, stockpile: aggregateFromDrops(drops) };
+  return withDrops(state, drops);
+}
+
+/** Pour `units` of a fluid onto tile (x,y): top up vessels already there, then mint what is needed. */
+function creditFluid(
+  drops: DroppedItem[],
+  itemId: string,
+  units: number,
+  x: number,
+  y: number
+): void {
+  let remainingL = unitsToLitres(itemId, units);
+
+  for (let i = 0; i < drops.length && remainingL > 0; i++) {
+    const d = drops[i];
+    if (!d.stored || d.x !== x || d.y !== y || !d.instance) continue;
+    if (!vesselAccepts(d.resourceId, itemId)) continue;
+    const inst = { ...d.instance, contents: d.instance.contents?.map((e) => ({ ...e })) };
+    const poured = putIn(inst, itemId, remainingL);
+    if (poured <= 0) continue;
+    // Anything the colony deliberately puts in a vessel is on that vessel's list from then on, or the
+    // next hauler would read it as an orphan and start looking for somewhere else to put it.
+    inst.filter = [...new Set([...(inst.filter ?? []), itemId])];
+    drops[i] = { ...d, instance: inst };
+    remainingL -= poured;
+  }
+
+  let guard = 0;
+  while (remainingL > 0 && guard++ < 64) {
+    const vesselId = pickVesselFor(itemId, remainingL);
+    if (!vesselId) return; // nothing in the game holds this — it spills, which is the rule working
+    const n = drops.length;
+    const inst: ItemInstance = {
+      instanceId: `vessel-${vesselId}-${x}-${y}-${n}`,
+      itemId: vesselId,
+      durability: itemDefById(vesselId)?.maxDurability ?? 100,
+      filter: [itemId]
+    };
+    const poured = putIn(inst, itemId, remainingL);
+    if (poured <= 0) return;
+    drops.push({
+      id: `stored-${vesselId}-${x}-${y}-${n}`,
+      resourceId: vesselId,
+      x,
+      y,
+      quantity: 1,
+      stored: true,
+      instance: inst
+    });
+    remainingL -= poured;
+  }
 }
 
 /**
@@ -513,15 +674,45 @@ export function consumeFromStockpiles(state: GameState, items: Record<string, nu
     for (let i = 0; i < newDropped.length && remaining > 0; i++) {
       const d = newDropped[i];
       // ADR-016: never consume a stack reserved for a craft order from the general pool.
-      if (!d.stored || d.reservedFor || d.resourceId !== itemId || (d.quantity ?? 0) <= 0) continue;
-      const take = Math.min(d.quantity, remaining);
-      newDropped[i] = { ...d, quantity: d.quantity - take };
-      remaining -= take;
+      if (!d.stored || d.reservedFor || (d.quantity ?? 0) <= 0) continue;
+      if (d.resourceId === itemId) {
+        const take = Math.min(d.quantity, remaining);
+        newDropped[i] = { ...d, quantity: d.quantity - take };
+        remaining -= take;
+        continue;
+      }
+      // CONTAINERS-AND-FLUIDS: draw the rest out of what the stored VESSELS hold. The vessel itself
+      // survives — emptying a jug leaves a jug — so only its contents are deducted.
+      remaining = drawFromVessel(newDropped, i, itemId, remaining);
     }
   }
 
   const kept = newDropped.filter((d) => !d.stored || d.quantity > 0);
-  return { ...state, droppedItems: kept, stockpile: aggregateFromDrops(kept) };
+  return withDrops(state, kept);
+}
+
+/**
+ * Take up to `remaining` UNITS of `itemId` out of the vessel at `drops[i]`, replacing that entry with
+ * a copy whose instance carries the reduced contents (the array is the caller's working copy, but the
+ * nested instance is still shared with the live state until this clones it). Returns what is left to
+ * find elsewhere.
+ */
+function drawFromVessel(
+  drops: DroppedItem[],
+  i: number,
+  itemId: string,
+  remaining: number
+): number {
+  const d = drops[i];
+  const held = heldQuantity(d.instance, itemId);
+  if (held <= 0 || !d.instance) return remaining;
+  const fluid = isFluidId(itemId);
+  const wantNative = fluid ? remaining * litresPerUnit(itemId) : remaining;
+  const inst = { ...d.instance, contents: d.instance.contents?.map((e) => ({ ...e })) };
+  const got = takeOut(inst, itemId, Math.min(held, wantNative));
+  if (got <= 0) return remaining;
+  drops[i] = { ...d, instance: inst };
+  return remaining - (fluid ? got / litresPerUnit(itemId) : got);
 }
 
 /**
@@ -548,7 +739,7 @@ export function absorbDropIfOnStockpileTile(state: GameState, dropId: string): G
     const newDropped = (state.droppedItems ?? []).map((d) =>
       d.id === dropId ? { ...d, stored: true } : d
     );
-    return { ...state, droppedItems: newDropped, stockpile: aggregateFromDrops(newDropped) };
+    return withDrops(state, newDropped);
   }
 
   // Try to merge into an existing stored pile of the same resource at the same tile.
@@ -590,5 +781,5 @@ export function absorbDropIfOnStockpileTile(state: GameState, dropId: string): G
 
   // Stage 2: marking the drop `stored` IS the credit (drops are the source of truth).
   // No separate zone-inventory bookkeeping; just recompute the aggregate from drops.
-  return { ...state, droppedItems: newDropped, stockpile: aggregateFromDrops(newDropped) };
+  return withDrops(state, newDropped);
 }

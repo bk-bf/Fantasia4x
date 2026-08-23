@@ -46,8 +46,10 @@ import {
   releaseReservation,
   reserveForOrder,
   absorbDropIfOnStockpileTile,
-  availableAggregateFromDrops
+  availableAggregateFromDrops,
+  withDrops
 } from '../core/GameState';
+import { emptyOut } from '../core/vessels';
 import { equipItem, unequipItem, equipDropToPawn } from '../core/PawnEquipment';
 import { rng } from '../core/rng';
 import { pickUpFromTile } from '../systems/pawn/pawnHauling';
@@ -821,6 +823,43 @@ export const COMMANDS: Record<string, Cmd> = {
         : b
     )
   }),
+  /**
+   * CONTAINERS-AND-FLUIDS §1 — set what ONE vessel is allowed to be filled with. Finds the instance
+   * wherever it is: lying as a drop, in a pack, or on a belt. Setting a list is the whole trigger for
+   * filling — allowing `water` on a waterskin is what queues the job that goes and fills it.
+   *
+   * Nothing is ever poured away here. Contents the new list no longer allows simply stay put until
+   * some other vessel that allows them has room to take them; tipping a vessel out is `emptyVessel`.
+   */
+  setVesselFilter: (s, p: { instanceId: string; allowedItemIds: string[] }) =>
+    mapVesselInstance(s, p.instanceId, (inst) => ({ ...inst, filter: [...p.allowedItemIds] })),
+
+  /**
+   * CONTAINERS-AND-FLUIDS §1 — promote a list to the colony default for this KIND of vessel, so every
+   * waterskin the colony makes from now on is born allowing water. Existing vessels keep their own
+   * lists: a barrel of somebody else's wine bought off a caravan is not re-purposed behind the
+   * player's back.
+   */
+  setVesselFilterDefault: (s, p: { vesselItemId: string; allowedItemIds: string[] }) => ({
+    ...s,
+    vesselFilterDefaults: {
+      ...(s.vesselFilterDefaults ?? {}),
+      [p.vesselItemId]: [...p.allowedItemIds]
+    }
+  }),
+
+  /**
+   * CONTAINERS-AND-FLUIDS §1 — tip a vessel out on the ground. This DESTROYS what is in it (a fluid
+   * poured on the floor is gone), which is exactly why it is a deliberate order off the action menu
+   * and never something a job does on its own to make room.
+   */
+  emptyVessel: (s, p: { instanceId: string }) =>
+    mapVesselInstance(s, p.instanceId, (inst) => {
+      const next = { ...inst };
+      emptyOut(next);
+      return next;
+    }),
+
   /** Per-building repair controls (threshold / material allow-list / pawns / pause) — the REPAIR fly-out. */
   setBuildingRepairSettings: (s, p: { id: string; updates: Record<string, unknown> }) => ({
     ...s,
@@ -1516,7 +1555,8 @@ export const COMMANDS: Record<string, Cmd> = {
     pawns: s.pawns.map((pw) => {
       if (pw.id !== p.pawnId) return pw;
       const needs = { ...(pw.needs ?? {}) };
-      if (p.bloodHunger !== undefined) needs.bloodHunger = Math.max(0, Math.min(100, p.bloodHunger));
+      if (p.bloodHunger !== undefined)
+        needs.bloodHunger = Math.max(0, Math.min(100, p.bloodHunger));
       const conditionTimers = { ...(pw.conditionTimers ?? {}) };
       if (p.rage) conditionTimers.bloodthirst = Math.max(conditionTimers.bloodthirst ?? 0, 6 * 750);
       return { ...pw, bloodNeedKind: p.kind, needs, conditionTimers };
@@ -1530,7 +1570,10 @@ export const COMMANDS: Record<string, Cmd> = {
     ...s,
     droppedItems: (s.droppedItems ?? []).map((d) =>
       d.resourceId === p.resourceId
-        ? { ...d, unitConditions: Array(d.quantity ?? 1).fill(Math.max(0, Math.min(100, p.condition))) }
+        ? {
+            ...d,
+            unitConditions: Array(d.quantity ?? 1).fill(Math.max(0, Math.min(100, p.condition)))
+          }
         : d
     )
   }),
@@ -1745,4 +1788,48 @@ export function applySimCommand(state: GameState, cmd: SimCommand): GameState {
     return state;
   }
   return fn(state, cmd.payload);
+}
+
+/**
+ * Rewrite one vessel instance wherever it lives — a drop on the ground, a pack, or a worn slot — and
+ * hand back the new state. Vessels move constantly, so a command that could only reach one of those
+ * three places would work until the moment a pawn picked the thing up.
+ */
+function mapVesselInstance(
+  s: GameState,
+  instanceId: string,
+  fn: (inst: ItemInstance) => ItemInstance
+): GameState {
+  const drops = (s.droppedItems ?? []).map((d) =>
+    d.instance?.instanceId === instanceId ? { ...d, instance: fn(d.instance) } : d
+  );
+  const pawns = s.pawns.map((p) => {
+    const inInv = (p.inventory?.instances ?? []).some((i) => i.instanceId === instanceId);
+    const wornSlot = Object.entries(p.equipment ?? {}).find(
+      ([, i]) => i?.instanceId === instanceId
+    )?.[0];
+    if (!inInv && !wornSlot) return p;
+    return {
+      ...p,
+      ...(inInv
+        ? {
+            inventory: {
+              ...p.inventory,
+              instances: (p.inventory?.instances ?? []).map((i) =>
+                i.instanceId === instanceId ? fn(i) : i
+              )
+            }
+          }
+        : {}),
+      ...(wornSlot
+        ? {
+            equipment: {
+              ...p.equipment,
+              [wornSlot]: fn(p.equipment[wornSlot as EquipmentSlot]!)
+            }
+          }
+        : {})
+    };
+  });
+  return { ...withDrops(s, drops), pawns };
 }

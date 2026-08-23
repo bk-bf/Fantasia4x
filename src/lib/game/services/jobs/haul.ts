@@ -11,7 +11,7 @@ import {
   tileStoredPileCount,
   binFilterAt,
   isStorageTile,
-  aggregateFromDrops
+  withDrops
 } from '../../core/GameState';
 import { zoneInstanceIdAt } from '../DesignationService';
 import { itemMatchesFilter } from './filters';
@@ -108,7 +108,7 @@ export function reconcileEvictedDrops(gs: GameState): GameState {
     return { ...d, stored: false };
   });
   if (!changed) return gs;
-  return { ...gs, droppedItems: drops, stockpile: aggregateFromDrops(drops) };
+  return withDrops(gs, drops);
 }
 
 export function generate(jobs: Job[], gs: GameState): Job[] {

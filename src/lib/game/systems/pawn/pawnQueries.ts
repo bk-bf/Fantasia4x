@@ -7,7 +7,8 @@
  * in the AI god-file (hotspot report, step 4). Kept as plain functions so the layered
  * architecture is unchanged and so each is trivially unit-testable.
  */
-import type { GameState, Pawn } from '../../core/types';
+import type { GameState, Pawn, ItemInstance } from '../../core/types';
+import { litresToUnits } from '../../core/vessels';
 import ITEMS_DATABASE from '../../database/items/items.jsonc';
 import RARITIES from '../../database/items/rarities.jsonc';
 import { consumeFromStockpiles } from '../../core/GameState';
@@ -159,7 +160,27 @@ export function selectFoodForMeal(
 
 /** The meal a pawn can eat from the food it CARRIES (its pack) right now — the eat-from-inventory path. */
 export function selectFoodFromInventory(pawn: Pawn, gs: GameState): MealPortion[] {
-  return selectFoodForMeal(pawn, gs, pawn.inventory?.items ?? {});
+  return selectFoodForMeal(pawn, gs, carriedEdibles(pawn));
+}
+
+/**
+ * Everything in a pawn's pack it could put in a meal — the bulk stacks, PLUS whatever drinkable is in
+ * the vessels it carries. CONTAINERS-AND-FLUIDS §2 moved ale and the brews into vessels, and a meal
+ * without the ale in it is a meal without the mood lift (§F8 intoxication), so the planner has to see
+ * a carried skin as part of the larder. Counted in the same dose UNITS the rest of the meal speaks.
+ */
+export function carriedEdibles(pawn: Pawn): Record<string, number> {
+  const items = { ...(pawn.inventory?.items ?? {}) };
+  const sip = (inst: ItemInstance | undefined) => {
+    for (const e of inst?.contents ?? []) {
+      if (e.litres == null) continue;
+      items[e.itemId] = (items[e.itemId] ?? 0) + Math.floor(litresToUnits(e.itemId, e.litres));
+    }
+  };
+  for (const inst of pawn.inventory?.instances ?? []) sip(inst);
+  for (const inst of Object.values(pawn.equipment ?? {})) sip(inst);
+  for (const [id, q] of Object.entries(items)) if (q <= 0) delete items[id];
+  return items;
 }
 
 /** Stored food drops a hungry pawn could fetch, nearest first (capped). Reachability is tested by the

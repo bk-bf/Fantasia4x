@@ -1371,3 +1371,58 @@ seconds; the regression net stops going stale. Cost: a Node-target WASM path, on
 and the discipline that headless stays in-thread and dev-only so it adds **zero** per-tick allocation or
 snapshot fields to the shipped browser/worker path (ENGINE-PERFORMANCE cross-check on any hot-path/boundary
 touch). Not graph-checkable — it's a dev-tooling/runtime-topology decision, not a call-edge invariant.
+
+---
+
+### ADR-034 [GAME]: Fluids Are a TYPE, Not a Category — and a Vessel Is Not a Carry Aid
+
+**Status:** Accepted (2026-08-23) — implemented same day. Full plan + outcomes in
+[CONTAINERS-AND-FLUIDS](../tasks/open/CONTAINERS-AND-FLUIDS.md).
+
+**Context.** Three unrelated ideas shared the word "container". A wicker frame, a hide scrip and a
+quiver all did exactly one thing — add to `inventoryBonus` — while a clay jug did not even do that.
+Nothing could hold a thing inside another thing, so there was no water to carry, no oil, no brine you
+could move, and no reason a jug existed. Meanwhile `water` was a stockpile INTEGER that fourteen
+recipes consumed and **nothing in the game ever produced**: the well's `effects.waterSource` was read
+by no code, and a thirsty pawn sipped the colony total from wherever it happened to be standing —
+the last of the ethereal stockpile ADR-016 set out to kill.
+
+**Decision.** Split the word three ways, and make the sim able to REFUSE a fluid structurally.
+
+- **Carry aid / vessel / fixture, and an item is exactly one.** A carry aid raises what a pawn can
+  shoulder (`inventoryBonus`) and holds nothing. A **vessel** holds things (`Item.container`) and is
+  itself carried, hauled and stored. A fixture is a building. **R9** fails the build on an item that
+  is two of them.
+- **Capacity on the DEFINITION, contents on the INSTANCE.** Two jugs stop being interchangeable the
+  moment one has water in it, so `ItemInstance.contents` is a list of `VesselContent` — litres for a
+  fluid, units for a solid — and everything inside costs its carrier weight and volume on top of the
+  vessel's own. A full jug is not a jug.
+- **`type: 'fluid'`, not `category: 'fluid'`.** A type is what lets the sim refuse one: a fluid may
+  only sit inside a vessel that accepts it, and `withDrops` — the single chokepoint every
+  drops-mutating path goes through — spills any fluid that reaches the ground, whatever put it there.
+  The rule cannot be forgotten at a callsite because no callsite gets to decide it.
+- **One level of nesting**, enforced in `core/vessels.ts` rather than by convention. A jug in a crate
+  is fine; a jug in a crate in a cart is a recursion nobody can debug and a save-size problem.
+- **A worn vessel holds nothing.** Equipping a quiver moves its contents into the pawn's pack and it
+  reverts to granting `inventoryBonus`. This is what keeps ammo in ordinary inventory, which is what
+  `rangedCombat.drawSpeedModifier` reads — so a quiver can be a real container when set down without
+  touching the ranged model. **A worn quiver is never restricted to arrows**: that was proposed and
+  rejected as unrealistic, and the rule is now written down so it is not re-litigated.
+- **Filling is driven by the vessel's own allow-list, which starts EMPTY.** Nothing is filled that the
+  player has not opened up, and nothing is ever poured away to make room — re-filtering a jug full of
+  honey moves the honey only once a jug that allows honey has room. Tipping a vessel out destroys
+  what is in it, so it is a deliberate order (`emptyVessel`), never a job's decision.
+- **A station that IS a vessel holds its own fluid** (`Building.fluidCapacityL`), that fluid counts as
+  colony stock where it stands, and pawns draw it into carried vessels with the same `fill` job.
+  **R10** fails the build if a fluid recipe is authored at a station with nowhere to pour.
+
+**Consequences.** `water` becomes physical: a pawn drinks from the skin on its belt or walks to a well,
+and `processAutoDrink` no longer sips a barrel three screens away. 78 items became fluids; `animal_fat`
+did NOT and was renamed `tallow`, because rendered fat is a block you cut, not something you pour.
+Filling rides the hauling line as a `fill` job rather than becoming a new verb, so labour priorities,
+claim-gating and the UI all inherit it for free. Cost: every path that moves a craft input had to learn
+that an input can arrive as a tracked INSTANCE rather than a bulk count (fetch, staging, the supplied
+gate, input consumption), and a colony with no vessels genuinely cannot move a fluid — which is the
+point. Partly graph-checkable: the `withDrops` chokepoint is a forbidden-callee rule, registered in
+`codegraph.config.json`.
+

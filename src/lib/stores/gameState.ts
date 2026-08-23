@@ -6,7 +6,7 @@ import {
   addToStockpileZone,
   GENERAL_ZONE_ID,
   computeAggregate,
-  aggregateFromDrops,
+  colonyStock,
   availableAggregateFromDrops,
   absorbDropIfOnStockpileTile
 } from '$lib/game/core/GameState';
@@ -344,7 +344,10 @@ function applyMigrations(state: GameState): GameState {
   // from them. Migrate any items that exist only in a legacy aggregate / zone.inventory into
   // stored drops, then clear vestigial zone inventories (zones are now pure drop-off zones).
   {
-    const dropAgg = aggregateFromDrops(state.droppedItems);
+    // ADR-034: compare against the FULL colony stock, not just loose piles — a save whose water
+    // already lives in a barrel (or a batch still working in a cask) must not read as missing and
+    // get a second copy backfilled onto the floor.
+    const dropAgg = colonyStock(state.droppedItems, state.buildings);
     const zoneAgg = computeAggregate(state.stockpileZones ?? []);
     const oldAgg = state.stockpile ?? {};
     const target: Record<string, number> = { ...zoneAgg };
@@ -361,7 +364,7 @@ function applyMigrations(state: GameState): GameState {
     state = {
       ...state,
       stockpileZones: (state.stockpileZones ?? []).map((z) => ({ ...z, inventory: {} })),
-      stockpile: aggregateFromDrops(state.droppedItems)
+      stockpile: colonyStock(state.droppedItems, state.buildings)
     };
   }
 

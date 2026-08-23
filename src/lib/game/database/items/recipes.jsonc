@@ -745,12 +745,12 @@
     "toolTierRequired" : 0
   },
   {
-    "id"               : "make_animal_fat",
+    "id"               : "make_tallow",
     "passive"          : true,
     "station"          : "hearth",
     "inputs"           : {"bear_meat": 1},
     "inputAlternatives": [ {"boar_meat": 1}, {"elk_meat": 1}, {"goat_meat": 1} ],
-    "outputs"          : {"animal_fat": 1},
+    "outputs"          : {"tallow": 1},
     "workAmount"       : 6,
     "toolTierRequired" : 0
   },
@@ -758,7 +758,7 @@
     "id"              : "make_torch",
     "discipline"      : "cooking",
     "station"         : "craft_spot",
-    "inputs"          : {"branch": 1, "animal_fat": 1, "plant_fiber": 1},
+    "inputs"          : {"branch": 1, "tallow": 1, "plant_fiber": 1},
     "outputs"         : {"torch": 1},
     "workAmount"      : 3,
     "toolTierRequired": 0
@@ -767,7 +767,7 @@
     "id"              : "make_candle",
     "discipline"      : "cooking",
     "station"         : "makers_bench",
-    "inputs"          : {"animal_fat": 2, "plant_fiber": 1},
+    "inputs"          : {"tallow": 2, "plant_fiber": 1},
     "outputs"         : {"candle": 1},
     "workAmount"      : 4,
     "toolTierRequired": 0
@@ -3263,7 +3263,7 @@
     "id"              : "make_cave_bear",
     "station"         : "flensing_table",
     "inputs"          : {"cave_bear_carcass": 1},
-    "outputs"         : {"bear_meat": 22, "cave_bear_pelt": 2, "owlbear_bile": 1, "large_bones": 18, "sinew": 16, "animal_fat": 3, "predator_claw": 2},
+    "outputs"         : {"bear_meat": 22, "cave_bear_pelt": 2, "owlbear_bile": 1, "large_bones": 18, "sinew": 16, "tallow": 3, "predator_claw": 2},
     "workAmount"      : 80,
     "toolTierRequired": 2
   },
@@ -3271,7 +3271,7 @@
     "id"              : "make_direboar",
     "station"         : "flensing_table",
     "inputs"          : {"direboar_carcass": 1},
-    "outputs"         : {"boar_meat": 16, "boar_hide": 4, "great_tusk": 1, "large_bones": 14, "sinew": 10, "animal_fat": 4},
+    "outputs"         : {"boar_meat": 16, "boar_hide": 4, "great_tusk": 1, "large_bones": 14, "sinew": 10, "tallow": 4},
     "workAmount"      : 60,
     "toolTierRequired": 2
   },
@@ -3314,7 +3314,7 @@
     "id"              : "flense_great_bear",
     "station"         : "sanguinary_altar",
     "inputs"          : {"great_bear_carcass": 1},
-    "outputs"         : {"bear_meat": 26, "cave_bear_pelt": 3, "owlbear_bile": 2, "owlbear_pineal": 1, "sabretooth_glands": 1, "great_bone": 2, "great_fang": 1, "animal_fat": 5, "predator_claw": 2},
+    "outputs"         : {"bear_meat": 26, "cave_bear_pelt": 3, "owlbear_bile": 2, "owlbear_pineal": 1, "sabretooth_glands": 1, "great_bone": 2, "great_fang": 1, "tallow": 5, "predator_claw": 2},
     "workAmount"      : 100,
     "toolTierRequired": 2
   },
@@ -3330,7 +3330,7 @@
     "id"              : "flense_great_boar",
     "station"         : "sanguinary_altar",
     "inputs"          : {"great_boar_carcass": 1},
-    "outputs"         : {"boar_meat": 20, "boar_hide": 5, "great_tusk": 2, "great_bone": 2, "animal_fat": 6},
+    "outputs"         : {"boar_meat": 20, "boar_hide": 5, "great_tusk": 2, "great_bone": 2, "tallow": 6},
     "workAmount"      : 90,
     "toolTierRequired": 2
   },
@@ -3788,7 +3788,7 @@
   {
     "id"              : "make_soap",
     "station"         : "alchemy_lab",
-    "inputs"          : {"animal_fat": 2, "ash": 2},
+    "inputs"          : {"tallow": 2, "ash": 2},
     "outputs"         : {"soap": 2},
     "workAmount"      : 16,
     "toolTierRequired": 1,
@@ -4296,7 +4296,7 @@
     "station": "alchemy_lab",
     "inputs": {
       "resin": 2,
-      "animal_fat": 1,
+      "tallow": 1,
       "glassware": 1
     },
     "outputs": {
@@ -4511,7 +4511,7 @@
     "id": "brew_honing_oil",
     "station": "alchemy_lab",
     "inputs": {
-      "animal_fat": 1,
+      "tallow": 1,
       "sand": 2
     },
     "outputs": {
@@ -4524,7 +4524,7 @@
     "id": "brew_keen_edge_oil",
     "station": "alchemy_lab",
     "inputs": {
-      "animal_fat": 1,
+      "tallow": 1,
       "sand": 2,
       "distilled_spirit": 1
     },
@@ -4538,7 +4538,7 @@
     "id": "brew_razors_grace",
     "station": "apothecary",
     "inputs": {
-      "animal_fat": 1,
+      "tallow": 1,
       "sand": 2,
       "purified_catalyst": 1
     },
@@ -4785,7 +4785,7 @@
   {
     "id"              : "make_prime_wolf_leather",
     "station"         : "curriers_bench",
-    "inputs"          : {"wolf_leather": 1, "animal_fat": 1},
+    "inputs"          : {"wolf_leather": 1, "tallow": 1},
     "outputs"         : {"prime_wolf_leather": 1},
     "workAmount"      : 9,
     "toolTierRequired": 1,
@@ -4795,7 +4795,7 @@
   {
     "id"              : "make_prime_worg_leather",
     "station"         : "curriers_bench",
-    "inputs"          : {"worg_leather": 1, "animal_fat": 1},
+    "inputs"          : {"worg_leather": 1, "tallow": 1},
     "outputs"         : {"prime_worg_leather": 1},
     "workAmount"      : 9,
     "toolTierRequired": 1,
@@ -4805,7 +4805,7 @@
   {
     "id"              : "make_prime_boarhide",
     "station"         : "curriers_bench",
-    "inputs"          : {"boarhide": 1, "animal_fat": 1},
+    "inputs"          : {"boarhide": 1, "tallow": 1},
     "outputs"         : {"prime_boarhide": 1},
     "workAmount"      : 9,
     "toolTierRequired": 1,
@@ -4815,7 +4815,7 @@
   {
     "id"              : "make_prime_elk_leather",
     "station"         : "curriers_bench",
-    "inputs"          : {"elk_leather": 1, "animal_fat": 1},
+    "inputs"          : {"elk_leather": 1, "tallow": 1},
     "outputs"         : {"prime_elk_leather": 1},
     "workAmount"      : 9,
     "toolTierRequired": 1,
@@ -4825,7 +4825,7 @@
   {
     "id"              : "make_prime_oxhide",
     "station"         : "curriers_bench",
-    "inputs"          : {"oxhide": 1, "animal_fat": 1},
+    "inputs"          : {"oxhide": 1, "tallow": 1},
     "outputs"         : {"prime_oxhide": 1},
     "workAmount"      : 9,
     "toolTierRequired": 1,
@@ -4835,7 +4835,7 @@
   {
     "id"              : "make_prime_bearhide",
     "station"         : "curriers_bench",
-    "inputs"          : {"bearhide": 1, "animal_fat": 1},
+    "inputs"          : {"bearhide": 1, "tallow": 1},
     "outputs"         : {"prime_bearhide": 1},
     "workAmount"      : 9,
     "toolTierRequired": 1,
@@ -4845,7 +4845,7 @@
   {
     "id"              : "make_prime_cave_bear_hide",
     "station"         : "curriers_bench",
-    "inputs"          : {"cave_bear_hide": 1, "animal_fat": 1},
+    "inputs"          : {"cave_bear_hide": 1, "tallow": 1},
     "outputs"         : {"prime_cave_bear_hide": 1},
     "workAmount"      : 9,
     "toolTierRequired": 1,
@@ -4855,7 +4855,7 @@
   {
     "id"              : "make_prime_owlbear_leather",
     "station"         : "curriers_bench",
-    "inputs"          : {"owlbear_leather": 1, "animal_fat": 1},
+    "inputs"          : {"owlbear_leather": 1, "tallow": 1},
     "outputs"         : {"prime_owlbear_leather": 1},
     "workAmount"      : 9,
     "toolTierRequired": 1,
@@ -4865,7 +4865,7 @@
   {
     "id"              : "make_prime_sabretooth_leather",
     "station"         : "curriers_bench",
-    "inputs"          : {"sabretooth_leather": 1, "animal_fat": 1},
+    "inputs"          : {"sabretooth_leather": 1, "tallow": 1},
     "outputs"         : {"prime_sabretooth_leather": 1},
     "workAmount"      : 9,
     "toolTierRequired": 1,
@@ -4875,7 +4875,7 @@
   {
     "id"              : "make_prime_mammoth_leather",
     "station"         : "curriers_bench",
-    "inputs"          : {"mammoth_leather": 1, "animal_fat": 1},
+    "inputs"          : {"mammoth_leather": 1, "tallow": 1},
     "outputs"         : {"prime_mammoth_leather": 1},
     "workAmount"      : 9,
     "toolTierRequired": 1,
@@ -4885,7 +4885,7 @@
   {
     "id"              : "make_prime_hippogriff_leather",
     "station"         : "curriers_bench",
-    "inputs"          : {"hippogriff_leather": 1, "animal_fat": 1},
+    "inputs"          : {"hippogriff_leather": 1, "tallow": 1},
     "outputs"         : {"prime_hippogriff_leather": 1},
     "workAmount"      : 9,
     "toolTierRequired": 1,
@@ -4895,7 +4895,7 @@
   {
     "id"              : "make_prime_direwolf_leather",
     "station"         : "curriers_bench",
-    "inputs"          : {"direwolf_leather": 1, "animal_fat": 1},
+    "inputs"          : {"direwolf_leather": 1, "tallow": 1},
     "outputs"         : {"prime_direwolf_leather": 1},
     "workAmount"      : 9,
     "toolTierRequired": 1,

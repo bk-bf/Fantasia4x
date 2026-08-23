@@ -102,6 +102,7 @@ export interface Job {
     | 'construct'
     | 'haul'
     | 'fetch' // ADR-016: carry a reserved input stack from stockpile to a workstation tile
+    | 'fill' // CONTAINERS-AND-FLUIDS: fetch a vessel, then pour into it what its filter allows
     | 'craft'
     | 'caretake' // ADR-017: a medic walks to a resting wounded patient and dresses its wounds
     | 'rescue' // a caretaker carries a downed (Collapsed) colonist to shelter (auto, non-drafted)
@@ -117,7 +118,10 @@ export interface Job {
   /** caretake: id of the wounded pawn being tended; rescue: id of the downed pawn being carried
    *  (the job targets that pawn's tile). */
   patientId?: string;
-  resourceId?: string; // harvest / haul / fetch: which resource
+  resourceId?: string; // harvest / haul / fetch / fill: which resource
+  /** fill: `instanceId` of the vessel being filled — the job follows the vessel, not the tile, so it
+   *  survives the pawn picking it up and walking off with it. */
+  vesselInstanceId?: string;
   droppedItemId?: string; // haul / fetch: which DroppedItem to pick up
   buildingId?: string; // construct: which PlacedBuilding.id; fetch/craft: the station building
   craftQueueId?: string; // craft / fetch: which CraftingInProgress.id (the order)

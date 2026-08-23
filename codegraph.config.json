@@ -214,6 +214,18 @@
       "adr": "ADR-033",
       "checkable": false,
       "reason": "Headless, API-driven sim — a dev-only HeadlessSession drives its own GameEngineImpl in-thread (bypassing the worker), started from a Scenario/snapshot and steered via the existing sim/commands.ts COMMANDS registry, exposed over dev-only /api/sim routes. A dev-tooling + runtime-topology decision guarded by env (import.meta.env.DEV + --headless) and inert-until-POST, not a call-edge invariant; the shippable graph is unchanged (routes 404 in prod). Verified by the invariant suite over era scenarios (Phase 5) and Phase-0 pathfinder-under-Node spike."
+    },
+    {
+      "adr": "ADR-034",
+      "severity": "error",
+      "title": "Loose-fluid refusal only via the withDrops chokepoint",
+      "type": "restricted-callee",
+      "callee": "aggregateFromDrops",
+      "allowFrom": [
+        "game/core/GameState::withDrops",
+        "game/core/GameState::colonyStock"
+      ],
+      "msg": "rebuilds the stockpile aggregate outside withDrops (ADR-034: withDrops is the one place a fluid placed loose is spilled, so a path that aggregates around it can leave water lying on the ground)"
     }
   ]
 }

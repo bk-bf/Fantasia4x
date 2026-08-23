@@ -120,6 +120,35 @@ material name.
       output was indexed), and **before inventing a mechanism, grep for the one that exists** — the
       caravan generator, prices, the trade stat and the trade UI were all already there.
 
+## Containers and fluids
+
+Three separate things wore the word "container". An item is **exactly one** of them:
+
+| kind | what it is | authored as |
+| --- | --- | --- |
+| carry aid | worn gear that raises what a pawn can shoulder | `inventoryBonus`, no `container` |
+| vessel | an item that holds other items, itself carried and stored | `container` |
+| fixture | a placed building that stores | a building |
+
+- [ ] **A vessel states `capacityL` and what it `accepts`.** `accepts` takes item ids, categories, or
+      the bare word `fluid`; leaving it off means anything fits. **R9** checks the capacity, and that
+      nothing is both a vessel and a carry aid.
+- [ ] **Never restrict a worn quiver to arrows.** It has been proposed and rejected: a hunter puts
+      what they like down a hide tube. A quiver carries both fields legitimately because worn and
+      set-down are different states — worn, its contents move into the pack and it is a carry aid.
+- [ ] **Is it actually pourable?** `type: 'fluid'` exists so the sim can refuse a thing structurally:
+      a fluid may only sit inside a vessel that accepts it, and anything that would put one on the
+      ground spills it. Tallow is a set block of fat and is NOT a fluid; ale, brine, oil, ink, every
+      potion and every weapon coating are.
+- [ ] **A fluid's `volumeL` is one MEASURE, and every count in the game is in measures.** `"water": 1`
+      is a litre because water's `volumeL` is 1; `"potion_of_might": 1` is 0.3 L because that is a
+      phial. `weightKg / volumeL` is its density, and that is what a full vessel weighs to carry.
+- [ ] **A fluid output must be caught.** It is poured into the station's own body when the station
+      declares a `fluidCapacityL`, or into a vessel with room standing on the station tile. Nothing
+      catches it and the batch is lost. **R10** enforces the station half.
+- [ ] **A vessel's own bulk is the EMPTY vessel.** Contents ride on top everywhere a load is summed,
+      so a 50 L cask that weighs 6 kg empty is the same kind of lie as armour with no material.
+
 ## The audit loop — run all of it
 
 ```bash

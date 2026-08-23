@@ -10,6 +10,7 @@ import type {
   ConditionStage
 } from '../core/types';
 import { consumeFromStockpiles } from '../core/GameState';
+import { takeOut, carriedWaterVessel } from '../core/vessels';
 import { pawnById } from '../core/pawnIndex';
 import { categorizeStats, getStatDescription } from '../entities/Pawns';
 import { pawnStatService } from './PawnStatService';
@@ -603,10 +604,15 @@ export class PawnServiceImpl implements PawnService {
 
   /**
    * §D auto-drink. A pawn whose thirst passes AUTO_DRINK_THIRST drinks:
-   *   1. stored `water` from the colony (consumes one unit), else
+   *   1. from a vessel it is CARRYING (a waterskin on the belt — the reason to carry one), else
    *   2. raw water if standing next to a river/lake tile (free, but a small hygiene hit), else
    *   3. nothing (thirst keeps climbing → dehydration condition).
    * Mirrors auto-eat: a lightweight relief pass so thirst isn't a dead-end need.
+   *
+   * CONTAINERS-AND-FLUIDS §2 removed the step that used to sit at the top of that list — sipping the
+   * colony's `stockpile.water` from wherever the pawn happened to be standing. Water is physical now:
+   * it is in a skin on your belt or in a river in front of you, and a barrel three screens away is
+   * neither. A pawn that wants that barrel walks to it, which is what the FSM's drink routing does.
    */
   processAutoDrink(gameState: GameState): GameState {
     let state = gameState;
@@ -614,9 +620,10 @@ export class PawnServiceImpl implements PawnService {
       if (pawn.isAlive === false) continue;
       if ((pawn.needs.thirst ?? 0) < AUTO_DRINK_THIRST) continue;
 
-      // 1. stored water
-      if ((state.stockpile?.['water'] ?? 0) > 0) {
-        state = consumeFromStockpiles(state, { water: 1 });
+      // 1. the pawn's own carried water
+      const skin = carriedWaterVessel(pawn);
+      if (skin) {
+        takeOut(skin, 'water', 1);
         state = this.adjustThirst(pawn.id, -WATER_THIRST_RELIEF, 0, state);
         continue;
       }

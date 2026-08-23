@@ -17,6 +17,7 @@
     "researchRequired": null,
     "upkeepCost": {},
     "effects": {"warmth": 0.3, "cookingEnabled": true},
+    "fluidCapacityL": 5,
     "buildingProperties": {"gathering": true, "gatheringLevel": 1},
     "storageCapacity": {},
     "requiresLighting": true,
@@ -117,6 +118,7 @@
     "researchRequired": null,
     "upkeepCost": {},
     "effects": {"butcheringEnabled": true, "butcheryTier": 0},
+    "fluidCapacityL": 5,
     "storageCapacity": {},
     "buildingState": {"isUnique": false, "maxCount": 3}
   },
@@ -156,6 +158,7 @@
     "researchRequired": null,
     "upkeepCost": {},
     "effects": {"butcheringEnabled": true, "butcheryTier": 2, "butcheryYieldBonus": 0.45},
+    "fluidCapacityL": 10,
     "storageCapacity": {},
     "buildingState": {"isUnique": false, "maxCount": 2}
   },
@@ -176,6 +179,7 @@
     "researchRequired": "runic_inscription",
     "upkeepCost": {},
     "effects": {"butcheringEnabled": true, "butcheryTier": 3, "butcheryYieldBonus": 0.45},
+    "fluidCapacityL": 20,
     "storageCapacity": {},
     "buildingState": {"isUnique": false, "maxCount": 1}
   },
@@ -1942,6 +1946,7 @@
     "researchRequired": null,
     "upkeepCost": {},
     "effects": {"brewingEnabled": true, "craftingEnabled": true, "cooking": 1, "fermentation": 1},
+    "fluidCapacityL": 100,
     "storageCapacity": {},
     "buildingState": {"isUnique": false, "maxCount": 4}
   },
@@ -2117,6 +2122,7 @@
     "researchRequired": null,
     "upkeepCost": {},
     "effects": {"craftingEnabled": true, "leatherworkingEnabled": true},
+    "fluidCapacityL": 10,
     "storageCapacity": {},
     "buildingState": {"isUnique": false}
   },
@@ -2137,6 +2143,7 @@
     "researchRequired": null,
     "upkeepCost": {},
     "effects": {"craftingEnabled": true, "leatherworkingEnabled": true},
+    "fluidCapacityL": 10,
     "storageCapacity": {},
     "buildingState": {"isUnique": false}
   },
@@ -2157,6 +2164,7 @@
     "researchRequired": null,
     "upkeepCost": {},
     "effects": {"craftingEnabled": true},
+    "fluidCapacityL": 50,
     "storageCapacity": {},
     "buildingState": {"isUnique": false, "maxCount": 6}
   },
@@ -2179,6 +2187,7 @@
     "researchRequired": "basic_alchemy",
     "upkeepCost": {},
     "effects": {"craftingEnabled": true, "alchemyEnabled": true, "tier": 2},
+    "fluidCapacityL": 10,
     "storageCapacity": {},
     "buildingState": {"isUnique": false, "maxCount": 2}
   },
@@ -2200,6 +2209,7 @@
     "researchRequired": "master_alchemy",
     "upkeepCost": {},
     "effects": {"craftingEnabled": true, "alchemyEnabled": true, "tier": 3},
+    "fluidCapacityL": 10,
     "storageCapacity": {},
     "buildingState": {"isUnique": false, "maxCount": 2}
   },

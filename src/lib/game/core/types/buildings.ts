@@ -1,6 +1,8 @@
 // Zones, designations, and building types. Split out of core/types.ts (P-4); re-exported via the
 // barrel.
 
+import type { VesselContent } from './items';
+
 export type DesignationType =
   | 'harvest'
   | 'woodcut'
@@ -162,6 +164,14 @@ export interface PlacedBuilding {
   // §B/refactor Stage 1: per-instance structural condition.
   /** 0–100; 100 = pristine. Decays for buildings with a def `conditionDecayPerTurn`; restored by repair. Undefined = treat as full. */
   condition?: number;
+  /**
+   * CONTAINERS-AND-FLUIDS §2 — what this station is holding in its own body, for the buildings that
+   * realistically ARE a vessel: a steeping vat full of brine, a cask of ale still working, a trough of
+   * water. Only buildings whose def states a `fluidCapacityL` ever have this. It counts toward the
+   * colony's stock exactly as a barrel on a stockpile tile does, so brewing a batch is not a hole in
+   * the ledger; pawns draw it into a carried vessel with an ordinary fetch.
+   */
+  fluidContents?: VesselContent[];
 }
 
 export interface Building {
@@ -336,6 +346,12 @@ export interface Building {
   // Phase 6: fire / storage / rest semantics
   requiresLighting?: boolean; // must be lit before use (e.g. campfire)
   maxFuel?: number; // maximum fuel units it can hold
+  /** CONTAINERS-AND-FLUIDS §2 — litres of fluid this station holds in its own body (a steeping vat, a
+   *  brewing cask, a water trough). A fluid-output recipe worked here pours straight into the station
+   *  instead of needing a vessel staged on the tile; the level shows in `PlacedBuilding.fluidContents`
+   *  and counts in the colony stock. Omitted = the station holds no fluid and a recipe that makes one
+   *  must have a vessel with room staged on it. */
+  fluidCapacityL?: number;
   fuelConsumptionRate?: number; // fuel units burned per turn when lit
   // ── Dynamic point lighting (data-driven; see LightingService / EnvironmentService) ──
   /** Falloff radius in tiles. PRESENCE is the toggle: any building with `lightRadius` emits

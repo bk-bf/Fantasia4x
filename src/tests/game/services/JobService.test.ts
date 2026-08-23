@@ -93,13 +93,13 @@ describe('JobService subjobs (Work-tab fine-tuning)', () => {
         .map((s) => s.id)
         .sort()
     ).toEqual(['construct', 'deconstruct', 'repair'].sort());
-    // refuel is a carrying chore — it sits under hauling with haul/fetch.
+    // refuel and fill are carrying chores — both sit under hauling with haul/fetch.
     expect(
       jobService
         .getSubjobsForCategory('hauling')
         .map((s) => s.id)
         .sort()
-    ).toEqual(['fetch', 'haul', 'refuel'].sort());
+    ).toEqual(['fetch', 'haul', 'refuel', 'fill'].sort());
     expect(jobService.getSubjobsForCategory('crafting')).toEqual([]); // 1:1, nothing to expand
   });
 

@@ -9,6 +9,7 @@ import type {
 } from '../core/types';
 import { qualityPrefix } from '../core/itemQuality';
 import { itemDefById, itemMatchesCostCategory } from '../core/itemDefs';
+import { usedCapacityL, usedWeightKg } from '../core/vessels';
 import {
   decayAll,
   normalizeConditions,
@@ -17,7 +18,7 @@ import {
 import {
   consumeFromStockpiles,
   addToStockpileZone,
-  aggregateFromDrops,
+  withDrops,
   availableQuantityFromDrops,
   colonyToolTier
 } from '../core/GameState';
@@ -833,6 +834,12 @@ export class ItemServiceImpl implements ItemService {
       const def = this.getItemById(inst.itemId);
       weightKg += (def?.weightKg ?? 0.5) * (inst.matWeight ?? 1);
       volumeL += def?.volumeL ?? 0.5;
+      // CONTAINERS-AND-FLUIDS §1: a full jug is not a jug. What a vessel holds costs the pawn both
+      // weight and pack volume on top of the empty vessel's own.
+      if (inst.contents?.length) {
+        weightKg += usedWeightKg(inst);
+        volumeL += usedCapacityL(inst);
+      }
     }
 
     // Equipped gear — weight only (worn, not packed; see method doc).
@@ -840,6 +847,10 @@ export class ItemServiceImpl implements ItemService {
       if (!inst) continue;
       const def = this.getItemById(inst.itemId);
       weightKg += (def?.weightKg ?? 0.5) * (inst.matWeight ?? 1);
+      // A worn vessel (a filled waterskin on the belt) still weighs what is in it. Its contents are
+      // NOT pack volume — they are in the vessel, not the pack. Worn quivers hold nothing: their load
+      // moves into the pack on equip (see PawnEquipment.equipItem).
+      if (inst.contents?.length) weightKg += usedWeightKg(inst);
     }
 
     // TRAIT-SYSTEM-V2 §3 (ADR-028 rev): natural armor's burden is a CAPACITY reduction (getCarryBudget),
@@ -1019,7 +1030,7 @@ export class ItemServiceImpl implements ItemService {
       }
     }
 
-    return { ...gameState, droppedItems: next, stockpile: aggregateFromDrops(next) };
+    return withDrops(gameState, next);
   }
 
   carcassConditionByType(gameState: GameState): Record<string, number> {
@@ -1207,7 +1218,7 @@ export class ItemServiceImpl implements ItemService {
     });
 
     if (!changed) return gameState;
-    return { ...gameState, droppedItems: next, stockpile: aggregateFromDrops(next) };
+    return withDrops(gameState, next);
   }
 
   /**

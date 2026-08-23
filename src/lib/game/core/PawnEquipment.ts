@@ -9,7 +9,8 @@ import type {
   GameState
 } from './types';
 import { itemDefById } from './itemDefs';
-import { aggregateFromDrops } from './GameState';
+import { emptyOut, isFluidId } from './vessels';
+import { withDrops } from './GameState';
 
 /** Default carry budget for a pawn with no stats/equipment. */
 const DEFAULT_MAX_WEIGHT_KG = 20;
@@ -200,9 +201,14 @@ export function equipDropToPawn(
     ];
   }
   const pawns = state.pawns.map((pw, i) =>
-    i === pawnIdx ? { ...pw, equipment: { ...pw.equipment, [slot]: instance } } : pw
+    i === pawnIdx
+      ? {
+          ...drainWornVesselIntoPack(pw, instance),
+          equipment: { ...pw.equipment, [slot]: instance }
+        }
+      : pw
   );
-  return { ...state, pawns, droppedItems: drops, stockpile: aggregateFromDrops(drops) };
+  return { ...withDrops(state, drops), pawns };
 }
 
 /**
@@ -237,7 +243,7 @@ export function carryDropToInventory(state: GameState, pawnId: string, dropId: s
       ? { ...pw, inventory: { ...inv, instances: [...(inv.instances ?? []), instance] } }
       : pw
   );
-  return { ...state, pawns, droppedItems: drops, stockpile: aggregateFromDrops(drops) };
+  return { ...withDrops(state, drops), pawns };
 }
 
 export function canEquipItem(_pawn: Pawn, itemId: string): boolean {
@@ -271,6 +277,29 @@ export function addInstanceToInventory(pawn: Pawn, itemId: string, turn?: number
     ...pawn,
     inventory: { ...inv, instances: [...(inv.instances ?? []), instance] }
   };
+}
+
+/**
+ * CONTAINERS-AND-FLUIDS §3 — a worn vessel holds nothing. The moment a quiver (or any other vessel
+ * that has a worn slot) goes on, whatever was inside it moves into the pawn's own pack and the vessel
+ * reverts to what it has always been while worn: a carry aid granting `inventoryBonus`. That keeps
+ * ammo in normal inventory — which is what the ranged draw-speed model reads — while still letting the
+ * same quiver be a real container when it is set down or hauled.
+ *
+ * Fluids are the exception the type exists for: a pack is a loose place, so a fluid poured into one
+ * spills. Nothing sensible ever puts water in a quiver; this is the structural refusal, not a feature.
+ */
+function drainWornVesselIntoPack(pawn: Pawn, worn: ItemInstance): Pawn {
+  if (!worn.contents?.length) return pawn;
+  const inv = pawn.inventory ?? { items: {}, instances: [] };
+  const items = { ...(inv.items ?? {}) };
+  const instances = [...(inv.instances ?? [])];
+  for (const entry of emptyOut(worn)) {
+    if (isFluidId(entry.itemId)) continue; // spills — a fluid cannot exist loose in a pack
+    if (entry.instance) instances.push(entry.instance);
+    else items[entry.itemId] = (items[entry.itemId] ?? 0) + (entry.amount ?? 0);
+  }
+  return { ...pawn, inventory: { ...inv, items, instances } };
 }
 
 export function equipItem(pawn: Pawn, itemId: string, turn?: number): Pawn {

@@ -250,6 +250,12 @@ function pathOf(i: any): string[] {
   if (i.category === 'natural_weapon') return ['Natural weapons', prettify(i.category), age];
   if (wp) return ['Weapons', age, familyOf(i.id), wp.twoHanded ? 'two-handed' : 'one-handed'];
 
+  // CONTAINERS-AND-FLUIDS: fluids and vessels are their own branches — a thing that cannot exist
+  // outside a container, and the containers themselves, answer different questions from "a material".
+  if (i.type === 'fluid') return ['Fluids', prettify(i.category ?? 'other'), age];
+  if (i.container)
+    return ['Vessels', (i.container.accepts ?? []).includes('fluid') ? 'fluid' : 'general', age];
+
   if (i.type === 'food' || i.nutrition != null)
     return ['Consumables', 'Food', perishable(i), prettify(i.category ?? 'food'), age];
   if (i.category === 'drink') return ['Consumables', 'Drink', perishable(i), age];
@@ -285,6 +291,9 @@ function statOf(i: any): string {
     ].filter(Boolean);
     if (parts.length) return parts.join(' ');
   }
+  if (i.container)
+    return `holds ${i.container.capacityL} L${i.container.capacityKg ? ` / ${i.container.capacityKg} kg` : ''}`;
+  if (i.type === 'fluid') return `${i.volumeL ?? 1} L per measure`;
   if (i.inventoryBonus) return `carry +${i.inventoryBonus.weightKg ?? 0}kg`;
   if (i.fuelValue) return `fuel ${i.fuelValue}`;
   return '—';

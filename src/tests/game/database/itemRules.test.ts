@@ -4,6 +4,7 @@ import recipesData from '$lib/game/database/items/recipes.jsonc';
 import creaturesData from '$lib/game/database/pawns/creatures.jsonc';
 import { kingdomService } from '$lib/game/services/KingdomService';
 import resourcesData from '$lib/game/database/world/resources.jsonc';
+import buildingsData from '$lib/game/database/world/buildings.jsonc';
 import type { Item } from '$lib/game/core/types';
 import { AGE_CEILING, AGE_NAMES, blameStation, chainAgeOf } from '$lib/dev/chainAge';
 
@@ -59,6 +60,7 @@ type Creature = {
 };
 
 const ITEMS = itemsData as unknown as Item[];
+const BUILDINGS = buildingsData as unknown as { id?: string; fluidCapacityL?: number }[];
 const RECIPES = recipesData as unknown as Recipe[];
 const CREATURES = (creaturesData as unknown as Creature[]).filter((c) => c && c.id);
 
@@ -546,6 +548,64 @@ describe('ITEM-RULES R8 — every item has a way in', () => {
         (i) =>
           `${i.id} has no recipe, no node, no carcass, no drop, no decay, and no caravan would ` +
           `ever stock it — give it a source or name it in R8_DEBT with the feature it waits on`
+      );
+    expect(bad, bad.join('; ')).toEqual([]);
+  });
+});
+
+// ── CONTAINERS-AND-FLUIDS ───────────────────────────────────────────────────
+//
+// R9  a VESSEL states a real capacity, and is not simultaneously a carry aid. Three different things
+//     wore the word "container" before this pass — a carry aid raises what a pawn can shoulder, a
+//     vessel holds items, a fixture is a building — and an item is exactly one of them. A `container`
+//     block with no `capacityL` is a jug that holds nothing, which is the same lie as armour claiming
+//     a material it never uses.
+// R10 a fluid recipe OUTPUT has somewhere to be poured. A fluid cannot lie on the ground, so a recipe
+//     that makes one at a station with no body of its own is producing something the sim will refuse
+//     to place — the batch is silently lost. Every fluid-output recipe must name a station that
+//     declares a `fluidCapacityL`.
+
+const VESSELS = (ITEMS as (Item & { inventoryBonus?: unknown })[]).filter((i) => i.container);
+
+describe('ITEM-RULES R9 — a vessel holds a stated amount, and is only one kind of container', () => {
+  it('every vessel declares a positive capacityL', () => {
+    const bad = VESSELS.filter((i) => !((i.container?.capacityL ?? 0) > 0)).map(
+      (i) => `${i.id} is a vessel with no capacityL — say how much it holds or drop the container block`
+    );
+    expect(bad, bad.join('; ')).toEqual([]);
+  });
+
+  it('nothing is both a vessel and a carry aid', () => {
+    // A worn quiver is the one place these two ideas meet, and they are kept apart in TIME rather than
+    // in the data: its `container` is what it holds when it is set down, its `inventoryBonus` what it
+    // grants when it is worn, and equipping it moves the contents into the pack. Anything else
+    // carrying both fields is an author conflating the two.
+    const bad = VESSELS.filter((i) => i.inventoryBonus && !i.quiver).map(
+      (i) =>
+        `${i.id} is both a vessel (container) and a carry aid (inventoryBonus) — pick one; ` +
+        `only a quiver legitimately does both, and only because worn and set-down are different states`
+    );
+    expect(bad, bad.join('; ')).toEqual([]);
+  });
+});
+
+describe('ITEM-RULES R10 — a fluid output is always caught', () => {
+  it('every recipe that makes a fluid works at a station that can hold one', () => {
+    const fluids = new Set(ITEMS.filter((i) => i.type === 'fluid').map((i) => i.id));
+    const holds = new Set(
+      (BUILDINGS as { id?: string; fluidCapacityL?: number }[])
+        .filter((b) => b.id && (b.fluidCapacityL ?? 0) > 0)
+        .map((b) => b.id as string)
+    );
+    const bad = (RECIPES as (Recipe & { station?: string })[])
+      .filter((r) => Object.keys(r.outputs ?? {}).some((o) => fluids.has(o)))
+      .filter((r) => !r.station || !holds.has(r.station))
+      .map(
+        (r) =>
+          `${r.id} pours out ${Object.keys(r.outputs ?? {})
+            .filter((o) => fluids.has(o))
+            .join('/')} at "${r.station ?? '(no station)'}", which has no fluidCapacityL — ` +
+          `the batch would spill. Give the station a body, or stage a vessel there.`
       );
     expect(bad, bad.join('; ')).toEqual([]);
   });

@@ -2,6 +2,7 @@
 // handlers. Extracted from JobService (P-4, ADR-017 handler split): these resolve where an order's
 // workstation is and whether the inputs / build materials reserved for an owner are staged on it.
 import type { CraftingInProgress, GameState, PlacedBuilding } from '../../core/types';
+import { heldQuantity, isFluidId, litresToUnits } from '../../core/vessels';
 
 /** ADR-016: tile coords of an order's chosen workstation, or null if it's gone. */
 export function stationTileFor(
@@ -15,7 +16,14 @@ export function stationTileFor(
   return b ? { x: b.x, y: b.y } : null;
 }
 
-/** Quantity of an order's reserved input `itemId` already staged ON its station tile. */
+/**
+ * Quantity of an order's reserved input `itemId` already staged ON its station tile.
+ *
+ * CONTAINERS-AND-FLUIDS §2: an input that is a FLUID never arrives as a stack of its own — it arrives
+ * inside the vessel reserved to carry it. A barrel of brine standing on the tanning bucket IS staged
+ * brine, so what the vessel holds counts here or the order would sit "unsupplied" forever with its
+ * input parked on the station.
+ */
 export function stagedQty(
   order: CraftingInProgress,
   itemId: string,
@@ -24,15 +32,11 @@ export function stagedQty(
 ): number {
   let q = 0;
   for (const d of gs.droppedItems ?? []) {
-    if (
-      d.stored &&
-      d.reservedFor === order.id &&
-      d.resourceId === itemId &&
-      d.x === station.x &&
-      d.y === station.y
-    ) {
-      q += d.quantity;
-    }
+    if (!d.stored || d.reservedFor !== order.id) continue;
+    if (d.x !== station.x || d.y !== station.y) continue;
+    if (d.resourceId === itemId) q += d.quantity;
+    const held = heldQuantity(d.instance, itemId);
+    if (held > 0) q += isFluidId(itemId) ? litresToUnits(itemId, held) : held;
   }
   return q;
 }

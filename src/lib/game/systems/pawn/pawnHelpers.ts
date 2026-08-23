@@ -5,7 +5,16 @@
  * boundary: depends only on services/core/pawnQueries/pawnStates — never on the handlers or the
  * dispatcher — so the import graph stays acyclic.
  */
-import type { GameState, Pawn, Mob, Building, PlacedBuilding, Job } from '../../core/types';
+import type {
+  GameState,
+  Pawn,
+  Mob,
+  Building,
+  PlacedBuilding,
+  Job
+} from '../../core/types';
+import { carriedWaterVessel } from '../../core/vessels';
+export { carriedWaterVessel };
 import { transientNeedOnset } from '../../core/needs';
 import { gatheringLevelOf } from '../../core/buildingAmenity';
 import { needNum } from '../../core/needsDefs';
@@ -1069,6 +1078,16 @@ export function tryRouteToWaterNeed(
   gameState: GameState,
   kind: 'drink' | 'wash'
 ): GameState | null {
+  // A pawn with water on its belt drinks it where it stands — that is the whole point of carrying one.
+  if (kind === 'drink' && carriedWaterVessel(pawn)) {
+    const gs = transitionTo(pawn, PAWN_STATE.DRINKING, gameState);
+    return {
+      ...gs,
+      pawns: gs.pawns.map((p) =>
+        p.id === pawn.id ? { ...p, path: [], isMoving: false, nextCellCostLeft: undefined } : p
+      )
+    };
+  }
   const target = findNearestWaterTarget(pawn, gameState, kind);
   if (!target || !pawn.position) return null;
   const targetState = kind === 'drink' ? PAWN_STATE.DRINKING : PAWN_STATE.WASHING;

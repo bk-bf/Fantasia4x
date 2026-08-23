@@ -2,6 +2,7 @@
 // corpse decay. Extracted from EntityService (P-4).
 import type { GameState, Mob, MobState, DroppedItem, ItemInstance } from '../../core/types';
 import { getCreatureById } from '../../core/Creatures';
+import { stampForeignVessel } from '../../core/vessels';
 import { getLootPool } from '../../core/LootPools';
 import { itemService } from '../ItemService';
 import { rng } from '../../core/rng';
@@ -419,7 +420,9 @@ function dropMobGear(
       x: mob.x,
       y: mob.y,
       quantity: 1,
-      instance: inst,
+      // CONTAINERS-AND-FLUIDS §1: a vessel taken off a corpse keeps whatever it was carrying and is
+      // allowed nothing else, so no hauler tips it out to repurpose it as a colony water skin.
+      instance: stampForeignVessel(inst),
       quality: inst.quality,
       durability: inst.durability,
       forbidden: true

@@ -19,7 +19,11 @@ const TYPE_BASE: Record<Item['type'], number> = {
   // priced through the `?? 2` fallback below, so these two entries state what was already happening
   // rather than changing any value. Worth a deliberate balance pass, not a silent one.
   food: 2,
-  container: 2
+  container: 2,
+  // A fluid is priced by the litre. Water is worth nothing on its own — what it costs a colony is the
+  // trip and the vessel — while a brewed or steeped liquor carries real work; the category multiplier
+  // and each fluid's authored `value` do that separating, not this baseline.
+  fluid: 2
 };
 
 /** Category premiums over the type baseline (metal is scarce, food is cheap and plentiful). */

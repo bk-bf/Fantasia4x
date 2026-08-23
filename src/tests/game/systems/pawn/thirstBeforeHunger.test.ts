@@ -58,10 +58,33 @@ describe('thirst-before-hunger distance check', () => {
     expect(choice?.kind).toBe('water');
   });
 
-  it('does not seek a drink zone while there is stockpiled water to sip', () => {
+  it('still walks to the drink zone even when the colony has water stored elsewhere', () => {
     const gs = makeState(pawn(80, 85), { x: 0, y: 1 }, { x: 10, y: 10 });
     gs.stockpile = { bread: 5, water: 3 };
-    // thirst routing is suppressed (auto-drink handles stockpiled water) → hunger wins.
-    expect(selectIdleNeed(gs.pawns[0], gs)?.kind).toBe('eat');
+    // CONTAINERS-AND-FLUIDS §2: `stockpile.water` is no longer a number a pawn can sip from wherever
+    // it stands — those three litres are in a barrel somewhere. A thirsty pawn with nothing on its
+    // belt goes to the water, exactly as it would with the colony bone dry.
+    expect(selectIdleNeed(gs.pawns[0], gs)?.kind).toBe('water');
+  });
+
+  it('drinks from its own waterskin instead of walking, when it is carrying one', () => {
+    const gs = makeState(pawn(80, 85), { x: 0, y: 1 }, { x: 10, y: 10 });
+    gs.pawns[0].inventory = {
+      items: {},
+      instances: [
+        {
+          instanceId: 'skin1',
+          itemId: 'waterskin',
+          durability: 80,
+          filter: ['water'],
+          contents: [{ itemId: 'water', litres: 2 }]
+        }
+      ]
+    } as never;
+    const choice = selectIdleNeed(gs.pawns[0], gs);
+    expect(choice?.kind).toBe('water');
+    // Routed in place — no path assigned, because the water is already on the pawn's belt.
+    const routed = choice?.kind === 'water' ? choice.routedState : undefined;
+    expect(routed?.pawns[0].path ?? []).toHaveLength(0);
   });
 });

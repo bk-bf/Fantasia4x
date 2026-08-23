@@ -28,6 +28,7 @@ import * as haul from './jobs/haul';
 import * as construct from './jobs/construct';
 import * as deconstruct from './jobs/deconstruct';
 import * as fetch from './jobs/fetch';
+import * as fill from './jobs/fill';
 import * as craft from './jobs/craft';
 import * as caretake from './jobs/caretake';
 import * as rescue from './jobs/rescue';
@@ -80,6 +81,7 @@ type JobPoolType =
   | 'construct'
   | 'deconstruct'
   | 'fetch'
+  | 'fill'
   | 'craft'
   | 'caretake'
   | 'rescue'
@@ -130,6 +132,7 @@ class JobServiceImpl {
     construct: { generate: construct.generate, complete: construct.complete },
     deconstruct: { generate: deconstruct.generate, complete: deconstruct.complete },
     fetch: { generate: fetch.generate, complete: fetch.complete },
+    fill: { generate: fill.generate, complete: fill.complete },
     craft: { generate: craft.generate, complete: craft.complete },
     caretake: { generate: caretake.generate, complete: caretake.complete },
     rescue: { generate: rescue.generate, complete: rescue.complete },

@@ -275,7 +275,7 @@ describe('alchemy / magical-creature reagents', () => {
         buildings: [{ id: 'alchemy_lab' }],
         items: {
           resin: 6,
-          animal_fat: 6,
+          tallow: 6,
           glowcap: 6,
           woundwort: 6,
           distilled_spirit: 4,

@@ -8,7 +8,8 @@ import type {
   GameState,
   Job,
   ItemQuality,
-  ItemInstance
+  ItemInstance,
+  DroppedItem
 } from '../../core/types';
 // Gated console shim — see core/log.ts. Silences per-tick log/debug/warn unless gameDebug(true).
 import { gatedConsole as console } from '../../core/log';
@@ -20,12 +21,22 @@ import { craftDiscipline, disciplineParent } from './craftDiscipline';
 import { rollCraftQuality, qualityMultiplier } from '../../core/itemQuality';
 import { rollFamed, rollFamedIdentity } from '../../core/famedNames';
 import { itemDefById } from '../../core/itemDefs';
+import {
+  defaultFilterFor,
+  isFluidId,
+  litresToUnits,
+  putIn,
+  takeOut,
+  unitsToLitres,
+  vesselOf
+} from '../../core/vessels';
 import { memoryService } from '../MemoryService';
 import { aggregateMaterialMods } from '../../core/materialProperties';
 import {
   absorbDropIfOnStockpileTile,
   reserveForOrder,
-  releaseReservation
+  releaseReservation,
+  withDrops
 } from '../../core/GameState';
 import { rng } from '../../core/rng';
 import { stationTileFor, orderSupplied } from './staging';
@@ -321,7 +332,10 @@ export function completeCraftOrder(
   const matWeight = matMods.weight;
 
   const station = stationTileFor(entry, gs);
-  const droppedItems = (gs.droppedItems ?? []).filter((d) => d.reservedFor !== entry.id);
+  // CONTAINERS-AND-FLUIDS §2: the staged inputs are destroyed — EXCEPT a vessel that carried a fluid
+  // input here. Emptying a barrel of brine into the tanning bucket does not consume the barrel; the
+  // fluid is drawn out and the vessel is released, standing on the station for the next hauler.
+  const droppedItems = consumeStagedInputs(gs, entry);
   const newQueue = (gs.craftingQueue ?? []).filter((e) => e.id !== entry.id);
   let state: GameState = { ...gs, droppedItems, craftingQueue: newQueue };
 
@@ -330,6 +344,44 @@ export function completeCraftOrder(
     const next = [...(state.droppedItems ?? [])];
     for (const [outId, qty] of Object.entries(outputs)) {
       if (qty <= 0) continue;
+      // CONTAINERS-AND-FLUIDS §2: a fluid can never be set down as a stack. It is poured — into the
+      // station's own body when the station IS a vessel (a steeping vat, a brewing cask), otherwise
+      // into a vessel staged on the tile that allows it. Whatever will not fit is lost, and says so.
+      if (isFluidId(outId)) {
+        const captured = captureFluid(outId, qty, entry, station, next, state);
+        state = captured.state;
+        if (captured.lost > 0)
+          console.warn(
+            `[Craft] ${captured.lost} unit(s) of ${outId} spilled — no vessel with room at the station.`
+          );
+        continue;
+      }
+      // A newly made VESSEL is born with the colony's default allow-list for its kind (usually
+      // nothing), and rides an instance so that list and anything later poured into it survive
+      // hauling and storage. One instance per unit — two jugs are two jugs.
+      if (vesselOf(outId)) {
+        for (let i = 0; i < qty; i++) {
+          const id = `craft-${outId}-${station.x}-${station.y}-t${gs.turn}-${rng.random().toString(36).slice(2, 5)}`;
+          next.push({
+            id,
+            resourceId: outId,
+            x: station.x,
+            y: station.y,
+            quantity: 1,
+            instance: {
+              instanceId: `${outId}-${station.x}-${station.y}-t${gs.turn}-${rng.random().toString(36).slice(2, 5)}`,
+              itemId: outId,
+              durability: Math.round(
+                (itemService.getItemById(outId)?.maxDurability ?? 100) * matDur
+              ),
+              ...(matWeight !== 1 ? { matWeight } : {}),
+              filter: defaultFilterFor(outId, gs.vesselFilterDefaults)
+            }
+          });
+          newDropIds.push(id);
+        }
+        continue;
+      }
       // §Q: stamp rolled tiers onto instance-bearing equipment/tools only; bulk byproducts go plain.
       const stamp =
         rollQuality !== undefined &&
@@ -455,5 +507,115 @@ export function completeCraftOrder(
   console.log(
     `[JobService] Crafting complete: ${itemId} ×${outputs[itemId] ?? 0} (${Object.keys(outputs).length} output types) at station ${entry.stationBuildingId ?? '—'}`
   );
-  return state;
+  // Recompute the colony ledger once, at the end. A completion can change stock in three ways at
+  // once — inputs spent, outputs laid down, and (CONTAINERS-AND-FLUIDS §2) a fluid poured into the
+  // station's own body — and only `withDrops` counts all three.
+  return withDrops(state, state.droppedItems ?? []);
+}
+
+/**
+ * CONTAINERS-AND-FLUIDS §2 — put a fluid output somewhere it can legally be. In order:
+ *
+ *   1. the STATION's own body, when its def states a `fluidCapacityL` — a steeping vat holds its own
+ *      brine, a cask its own ale, and that fluid counts in the colony's stock where it stands;
+ *   2. a VESSEL on the station tile that allows this fluid and has room — first one reserved for this
+ *      order, then any other vessel sitting there;
+ *   3. nowhere, in which case it is lost. That is the whole point of `type: 'fluid'`: the sim refuses
+ *      to invent a puddle rather than quietly leaving a stack of ale on the floor.
+ *
+ * Returns the state with the fluid placed and how many UNITS could not be placed.
+ */
+function captureFluid(
+  outId: string,
+  qty: number,
+  entry: CraftingInProgress,
+  station: { x: number; y: number },
+  next: DroppedItem[],
+  state: GameState
+): { state: GameState; lost: number } {
+  let remainingL = unitsToLitres(outId, qty);
+
+  // 1 — the station itself.
+  const placed = (state.buildings ?? []).find(
+    (b) => b.id === entry.stationBuildingId && b.status === 'complete'
+  );
+  const capacityL = placed
+    ? buildingService.getBuildingById(placed.type)?.fluidCapacityL
+    : undefined;
+  let buildings = state.buildings;
+  if (placed && capacityL) {
+    const held = (placed.fluidContents ?? []).reduce((s, e) => s + (e.litres ?? 0), 0);
+    const room = Math.min(remainingL, Math.max(0, capacityL - held));
+    if (room > 0) {
+      const contents = (placed.fluidContents ?? []).map((e) => ({ ...e }));
+      const existing = contents.find((e) => e.itemId === outId);
+      if (existing) existing.litres = (existing.litres ?? 0) + room;
+      else contents.push({ itemId: outId, litres: room });
+      buildings = (state.buildings ?? []).map((b) =>
+        b.id === placed.id ? { ...b, fluidContents: contents } : b
+      );
+      remainingL -= room;
+    }
+  }
+
+  // 2 — vessels standing on the station tile, this order's own staged ones first.
+  if (remainingL > 0) {
+    const onTile = next
+      .map((d, i) => ({ d, i }))
+      .filter(
+        ({ d }) => d.x === station.x && d.y === station.y && d.instance && vesselOf(d.resourceId)
+      )
+      .sort((a, b) => Number(b.d.reservedFor === entry.id) - Number(a.d.reservedFor === entry.id));
+    for (const { d, i } of onTile) {
+      if (remainingL <= 0) break;
+      const inst: ItemInstance = {
+        ...d.instance!,
+        contents: d.instance!.contents?.map((e) => ({ ...e }))
+      };
+      // The craft's own output is what this vessel was staged FOR, so the player's allow-list is not
+      // asked here — only what the vessel can physically hold.
+      const poured = putIn(inst, outId, remainingL);
+      if (poured <= 0) continue;
+      next[i] = { ...d, instance: inst };
+      remainingL -= poured;
+    }
+  }
+
+  return {
+    state: buildings === state.buildings ? state : { ...state, buildings },
+    lost: Math.round(litresToUnits(outId, remainingL) * 1000) / 1000
+  };
+}
+
+/**
+ * Spend the inputs an order staged on its station. A plain stack is destroyed outright; a VESSEL has
+ * exactly the fluid the recipe asked for drawn out of it and then survives, unreserved, on the tile.
+ *
+ * Only the recipe's own inputs come out — a barrel carried here for two litres of brine goes home
+ * still holding the rest of what was in it.
+ */
+function consumeStagedInputs(gs: GameState, entry: CraftingInProgress): DroppedItem[] {
+  const want: Record<string, number> = { ...(entry.inputs ?? {}) };
+  const out: DroppedItem[] = [];
+  for (const d of gs.droppedItems ?? []) {
+    if (d.reservedFor !== entry.id) {
+      out.push(d);
+      continue;
+    }
+    if (!d.instance?.contents?.length) continue; // a plain staged stack — consumed
+    const inst: ItemInstance = {
+      ...d.instance,
+      contents: d.instance.contents.map((e) => ({ ...e }))
+    };
+    for (const [itemId, units] of Object.entries(want)) {
+      if (units <= 0) continue;
+      const native = isFluidId(itemId) ? unitsToLitres(itemId, units) : units;
+      const got = takeOut(inst, itemId, native);
+      if (got > 0) want[itemId] = units - (isFluidId(itemId) ? litresToUnits(itemId, got) : got);
+    }
+    const { reservedFor, ...rest } = d;
+    void reservedFor;
+    out.push({ ...rest, instance: inst });
+  }
+  return out;
 }

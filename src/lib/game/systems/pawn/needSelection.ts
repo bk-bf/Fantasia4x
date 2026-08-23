@@ -66,11 +66,14 @@ function recoveryChoice(pawn: Pawn, gameState: GameState): NeedChoice {
   return { kind: 'sleep' };
 }
 
-/** True when a pawn must seek water from a zone/well (thirst urgent AND no stockpiled water to sip). */
-function thirstNeedsRouting(pawn: Pawn, gameState: GameState): boolean {
-  return (
-    (pawn.needs?.thirst ?? 0) >= ROUTE_TO_DRINK_THIRST && (gameState.stockpile?.['water'] ?? 0) <= 0
-  );
+/**
+ * True when a thirsty pawn should be sent to drink. CONTAINERS-AND-FLUIDS §2 rewrote what "there is
+ * water" means: the colony aggregate is no longer a number that can be sipped from anywhere on the
+ * map — water now physically sits in vessels and rivers. So a thirsty pawn always goes for a drink,
+ * and `tryRouteToWaterNeed` decides whether that means uncorking its own waterskin or walking.
+ */
+function thirstNeedsRouting(pawn: Pawn, _gameState: GameState): boolean {
+  return (pawn.needs?.thirst ?? 0) >= ROUTE_TO_DRINK_THIRST;
 }
 
 /**
@@ -180,7 +183,7 @@ export function selectInterruptNeed(
   }
 
   const thirst = pawn.needs?.thirst ?? 0;
-  if (thirst >= ROUTE_TO_DRINK_THIRST && (gameState.stockpile?.['water'] ?? 0) <= 0) {
+  if (thirst >= ROUTE_TO_DRINK_THIRST) {
     const routed = tryRouteToWaterNeed(pawn, gameState, 'drink');
     if (routed) {
       gameLogger.log(

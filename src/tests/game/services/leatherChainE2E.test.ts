@@ -173,7 +173,7 @@ describe('leather chain — physical pawn pipeline (HeadlessSession, real ticks)
         pawns: [{ count: 6, skillLevel: 16 }],
         needsDisabled: ['hunger', 'fatigue'],
         buildings: [{ id: 'hide_rack' }, { id: 'tanning_bucket_station' }, { id: 'curriers_bench' }],
-        items: { wolf_hide: 20, ash: 60, tanning_brine: 20, animal_fat: 20 },
+        items: { wolf_hide: 20, ash: 60, tanning_brine: 20, tallow: 20 },
         seedEntities: false
       })
     );
@@ -190,10 +190,10 @@ describe('leather chain — physical pawn pipeline (HeadlessSession, real ticks)
     step('wolf_leather'); // passive tan
     step('prime_wolf_leather'); // ACTIVE curry at the currier's bench — the beast-tier gate
     console.log(
-      `[BEAST-CHAIN] fleshed_wolf=${stk().fleshed_wolf_hide} cured_wolf=${stk().cured_wolf_hide} wolf_leather=${stk().wolf_leather} prime_wolf_leather=${stk().prime_wolf_leather} fat=${stk().animal_fat}/20`
+      `[BEAST-CHAIN] fleshed_wolf=${stk().fleshed_wolf_hide} cured_wolf=${stk().cured_wolf_hide} wolf_leather=${stk().wolf_leather} prime_wolf_leather=${stk().prime_wolf_leather} fat=${stk().tallow}/20`
     );
     // The whole animal-identity chain survives: a WOLF hide drives a WOLF-named prime leather.
     expect(stk().prime_wolf_leather ?? 0, 'curry produced prime wolf leather (2 active steps for a beast)').toBeGreaterThan(0);
-    expect(stk().animal_fat, 'the oil/fat consumable was consumed by the curry (organic → quality)').toBeLessThan(20);
+    expect(stk().tallow, 'the oil/fat consumable was consumed by the curry (organic → quality)').toBeLessThan(20);
   });
 });

@@ -1,6 +1,6 @@
 # Item Rules — what an armour or weapon must satisfy before it exists
 
-> **Related:** [DESIGN.md](DESIGN.md) · [DECISIONS.md](DECISIONS.md) · [ARCHITECTURE.md](ARCHITECTURE.md) · [../tasks/open/AUDIT.md](../tasks/open/AUDIT.md)
+> **Related:** [DESIGN.md](DESIGN.md) · [DECISIONS.md](DECISIONS.md) · [ARCHITECTURE.md](ARCHITECTURE.md) · [../tasks/open/AUDIT.md](../tasks/open/AUDIT.md) · [../tasks/open/CONTAINERS-AND-FLUIDS.md](../tasks/open/CONTAINERS-AND-FLUIDS.md)
 
 Walk this in order for every new piece. Each gate can kill the item outright, so do not skip ahead:
 answering gate 4 for an item that fails gate 1 is wasted work. The machine-checkable subset is
@@ -229,6 +229,52 @@ carrying no `tier` at all, which put a tier-3 bear's hide in the stone-age colum
 - [ ] The tier reads in the name: a tier-0 piece uses a crude, historically-real term ("Hide
       Foot-Wraps"), never a term that could belong to a later tier. See the naming rules in AGENTS.md.
 
+## Gate 3b — carry aid, vessel or fixture: which one is it?
+
+Three different things wore the word "container" until CONTAINERS-AND-FLUIDS split them, and an item
+is **exactly one** of them. Getting this wrong is how a wicker frame and a quiver ended up meaning the
+same thing to the sim while doing opposite jobs.
+
+| kind | what it is | how it is authored |
+| --- | --- | --- |
+| carry aid | worn gear that raises what a pawn can shoulder | `inventoryBonus`, no `container` |
+| vessel | an item that holds other items and is itself carried, hauled and stored | `container` |
+| fixture | a placed building that stores | a building, not an item |
+
+- [ ] **A vessel states what it holds and how much.** `container.capacityL` is the volume budget;
+      `accepts` names item ids, categories, or the bare word `fluid` (empty = anything). A name that
+      says "jug" and holds nothing is the same lie as armour claiming a material it does not use.
+      R9 checks that every vessel states a positive `capacityL`.
+- [ ] **A vessel's capacity is believable next to its own bulk.** A 50 L cask is not 6 kg empty. The
+      def's `weightKg`/`volumeL` are the EMPTY vessel; contents ride on top everywhere a load is
+      summed, so a full jug is heavier and bulkier than an empty one without any extra authoring.
+- [ ] **Packs and frames do not gain nesting.** A rucksack that holds tracked item instances is a
+      second inventory system and a UI nobody asked for. They stay carry aids.
+- [ ] **A worn vessel holds nothing.** Anything a quiver is carrying moves into the pawn's pack the
+      moment it goes on, and the quiver reverts to granting `inventoryBonus`. That is what keeps ammo
+      in normal inventory, which is what the ranged draw-speed model reads.
+- [ ] **Never restrict a worn quiver to arrows.** It was tried and rejected: a hunter stuffs whatever
+      they like down a hide tube, and a container that physically refuses a bundle of herbs is not
+      realism, it is bookkeeping. Leave `accepts` off.
+
+## Gate 3c — is it a fluid, and can it exist?
+
+`type: 'fluid'` is a TYPE and not merely a category, precisely so the sim can refuse one
+structurally: a fluid may only exist inside a vessel that accepts it, and anything that would place
+one loose — a stockpile tile, a pawn's bare hands, a `DroppedItem` — spills it and it is gone.
+
+- [ ] **Is it actually pourable?** Tallow is a block of set fat, not a fluid; ale, brine, oil, ink and
+      every potion and weapon coating are. Realism decides this, not convenience.
+- [ ] **A fluid is measured in litres, and its `volumeL` is one MEASURE.** Recipes, loot and craft
+      outputs all count in those measures (`"water": 1` is a litre because water's `volumeL` is 1;
+      `"potion_of_might": 1` is 0.3 L because that is a phial). `weightKg / volumeL` is its density.
+- [ ] **A fluid never appears as a recipe output that is not captured into a vessel.** It is poured
+      into the station's own body when the station states a `fluidCapacityL` (a steeping vat, a
+      brewing cask) or into a vessel with room standing on the station tile. Nothing catches it, it
+      is lost — and the log says so. R10 checks that every fluid-output recipe has one or the other.
+- [ ] **A fluid needs a way in like anything else (R8)** — and its way in is usually a vessel plus a
+      source, not a node. Water comes from a drink zone or a well; the brews come out of a cask.
+
 ## Gate 4 — is it physically and mechanically consistent?
 
 - [ ] **Weight, defense and stiffness sit in the ladder** its neighbours already form. Compare
@@ -265,6 +311,8 @@ carrying no `tier` at all, which put a tier-3 bear's hide in the stone-age colum
 | 3 | species in the name ⇒ species in the recipe | `itemRules.test.ts` |
 | 3 | a material in the name ⇒ that material in the chain (R5) | `itemRules.test.ts` |
 | 2 | every item has a way in — recipe, node, carcass, loot, decay or trade (R8) | `itemRules.test.ts` |
+| 3b | a vessel states a positive `capacityL`, and is not also a carry aid (R9) | `itemRules.test.ts` |
+| 3c | every fluid-output recipe has a station or vessel to catch it (R10) | `itemRules.test.ts` |
 | 5 | no recipe-less armour; slots resolve | `armourCoverage.test.ts` |
 | 5 | crafted and equipped by a real pawn | `armourChain.test.ts` |
 

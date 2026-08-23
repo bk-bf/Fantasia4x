@@ -24,6 +24,9 @@
   { "id": "construct",   "label": "Build",    "workCategory": "construction", "audio": "construction" },
   { "id": "deconstruct", "label": "Demolish", "workCategory": "construction", "audio": "construction" },
   { "id": "fetch",       "label": "Fetch",    "workCategory": "hauling", "lightAffected": false },
+  // Filling a vessel rides the hauling line: same work category, same pawns, and it ends like every
+  // haul — carrying the thing back to a stockpile. Only what a vessel's own filter allows is poured.
+  { "id": "fill",        "label": "Fill",     "workCategory": "hauling", "lightAffected": false },
   {
     "id": "craft", "label": "Craft", "workCategory": "crafting", "workCategorySource": "recipe-output",
     "claimGate": "craftTool", "audio": "crafting",

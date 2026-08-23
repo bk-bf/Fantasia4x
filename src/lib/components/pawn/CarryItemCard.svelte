@@ -2,7 +2,9 @@
      ItemStatTooltip (the same stat/ability panel used on crafting cards and the equipment doll), so
      every carried item — bulk good or tracked tool/weapon — surfaces its info. Used by PawnInventory. -->
 <script lang="ts">
-  import type { Item, ItemQuality } from '$lib/game/core/types';
+  import type { Item, ItemQuality, VesselContent } from '$lib/game/core/types';
+  import { usedCapacityL } from '$lib/game/core/vessels';
+  import { itemService } from '$lib/game/services/ItemService';
   import ItemStatTooltip from '$lib/components/UI/ItemStatTooltip.svelte';
   import SpriteIcon from '$lib/components/UI/SpriteIcon.svelte';
   import { qualityColor, qualityPrefix } from '$lib/game/core/itemQuality';
@@ -21,6 +23,7 @@
     pinned = false,
     onPin = null,
     onDrop,
+    onConfigure = null,
     dropTitle = "Drop now — put this item down on the pawn's tile.",
     pinTitle = ''
   }: {
@@ -30,8 +33,9 @@
     qty?: number | null;
     durability?: number | null;
     maxDurability?: number | null;
-    /** Liquid-container fill (ItemInstance.contents): units of `def.container.holds` held inside. */
-    contents?: number | null;
+    /** What this VESSEL instance is holding (ItemInstance.contents) — fluids in litres, solids in
+     *  units. The card draws a fill bar for the fluid part and names the whole lot in its title. */
+    contents?: VesselContent[] | null;
     /** §I Famed identity (a named legend above the quality scale) — surfaced on the card face. */
     famed?: boolean;
     famedHistory?: string | null;
@@ -39,6 +43,8 @@
     pinned?: boolean;
     onPin?: (() => void) | null;
     onDrop: () => void;
+    /** Vessels only: open the allow-list panel. Null on anything that holds nothing. */
+    onConfigure?: (() => void) | null;
     dropTitle?: string;
     pinTitle?: string;
   } = $props();
@@ -71,13 +77,24 @@
       : null
   );
 
-  // Liquid-container fill bar (waterskin/flask/jug). Water is 1 L/unit so `contents` (units) ≈ litres,
-  // and capacity is the def's `container.capacityL`. Shown next to the condition bar.
+  // Vessel fill bar (waterskin/flask/jug/quiver). The bar tracks the VOLUME budget — litres for a
+  // fluid, `volumeL × amount` for a solid — against the def's `container.capacityL`.
   let container = $derived(def.container ?? null);
+  let held = $derived(contents ?? []);
+  let usedL = $derived(usedCapacityL({ contents: held }));
   let fillPct = $derived(
-    container && contents != null
-      ? Math.max(0, Math.min(100, (contents / container.capacityL) * 100))
+    container && held.length
+      ? Math.max(0, Math.min(100, (usedL / container.capacityL) * 100))
       : null
+  );
+  let fillTitle = $derived(
+    held
+      .map((e) =>
+        e.litres != null
+          ? `${itemService.getItemById(e.itemId)?.name ?? e.itemId} ${e.litres} L`
+          : `${itemService.getItemById(e.itemId)?.name ?? e.itemId} ×${e.amount}`
+      )
+      .join(', ')
   );
 </script>
 
@@ -88,6 +105,9 @@
     >
   {/if}
   <button class="corner drop" title={dropTitle} onclick={onDrop}>↓</button>
+  {#if onConfigure}
+    <button class="corner cfg" title="What this may be filled with" onclick={onConfigure}>⚙</button>
+  {/if}
 
   <!-- svelte-ignore a11y_no_static_element_interactions -->
   <span class="name" onmouseenter={show} onmousemove={move} onmouseleave={hide}>
@@ -115,7 +135,7 @@
       </div>
     {/if}
     {#if fillPct != null && container}
-      <div class="fill-bar" title="{contents ?? 0}/{container.capacityL} L {container.holds}">
+      <div class="fill-bar" title="{fillTitle} — {usedL}/{container.capacityL} L">
         <div class="fill-fill" style="width:{fillPct}%"></div>
       </div>
     {/if}
@@ -241,5 +261,11 @@
   }
   .drop:hover {
     color: var(--neg, #e05a5a);
+  }
+  .cfg {
+    right: 30px;
+  }
+  .cfg:hover {
+    color: var(--accent-hi, #ffd24a);
   }
 </style>

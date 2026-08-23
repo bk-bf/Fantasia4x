@@ -143,6 +143,13 @@ export interface GameState {
    *  another zone and stranded confined pawns Idle. Read a single layer via the DesignationService
    *  `zoneInstanceIdAt` helper. */
   designationZoneId?: Record<string, Partial<Record<DesignationType, string>>>;
+  /**
+   * CONTAINERS-AND-FLUIDS §1 — per-vessel-TYPE default allow-lists, keyed by the vessel's item id
+   * (`waterskin` → `['water']`). Stamped onto each newly crafted vessel's `ItemInstance.filter`, so
+   * the player sets "waterskins carry water" once instead of on every skin the colony ever makes.
+   * A vessel that arrives already full (loot, caravan) ignores this and keeps its own list.
+   */
+  vesselFilterDefaults?: Record<string, string[]>;
   /** Colony-wide food filter (which items pawns may eat). Unset → the default eat-list. */
   foodSettings?: FoodSettings;
   /** Phase 5a: active job pool — regenerated each turn by JobService */

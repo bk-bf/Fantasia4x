@@ -36,10 +36,24 @@ export interface ItemInstance {
   famedHistory?: string;
   famedStatMult?: number;
   famedEnchants?: string[];
-  /** Liquid-container fill: UNITS of this container def's `container.holds` item currently inside
-   *  (0 / undefined = empty; water is 1 L/unit, so for water it's the litres held). Drives the fill
-   *  bar and how much the container can dispense. Only meaningful on `container` items. */
-  contents?: number;
+  /** CONTAINERS-AND-FLUIDS §1 — what this VESSEL instance is holding right now. A list, not a
+   *  number: two jugs stop being interchangeable the moment one has water in it, and a crate has to
+   *  be able to hold a jug that is itself half full. Empty / undefined = empty. Only meaningful on
+   *  items carrying a `container` block; see `core/vessels.ts` for every read and write of it. */
+  contents?: VesselContent[];
+  /**
+   * CONTAINERS-AND-FLUIDS §1 — this vessel's own allow-list: the item ids a pawn may put INTO it.
+   * Empty allows nothing, and that is the deliberate default — a freshly thrown jug is a jug, not an
+   * open invitation for haulers to fill it with the first fluid they find. The player opens it up
+   * item by item (the same `ItemFilterChecklist` the fuel and stockpile panels use), and may promote
+   * a list to `GameState.vesselFilterDefaults` so every future vessel of that kind is born with it.
+   *
+   * A vessel that arrives from LOOT or a caravan is stamped with what it is already carrying, so a
+   * hauler never tips out a barrel of somebody else's wine to make room for water.
+   *
+   * Undefined is read as empty by `vesselFilterOf` — an unstamped vessel holds nothing new.
+   */
+  filter?: string[];
   /**
    * PRODUCTION-CHAIN-IIII §2 — a temporary weapon COATING applied to this instance (a venom/oil rubbed
    * on the blade). While unexpired it grants an EXTRA `onHitCondition` (read from the coating item's
@@ -47,6 +61,23 @@ export interface ItemInstance {
    * `expiresAtTurn` is the game turn it wears off. Re-coating overwrites. Only meaningful on weapons.
    */
   coating?: WeaponCoating;
+}
+
+/**
+ * CONTAINERS-AND-FLUIDS §1 — one thing inside a vessel. A fluid is measured in `litres`, a solid in
+ * `amount` (units); exactly one of the two is set. `instance` rides along when the solid is a TRACKED
+ * item (a jug inside a crate, a famed dagger inside a chest) so it keeps its own durability, quality
+ * and — for a nested vessel — its own contents. Bulk solids (arrows, grain) carry no instance.
+ */
+export interface VesselContent {
+  itemId: string;
+  /** Fluids only: litres held. Fractional. */
+  litres?: number;
+  /** Solids only: how many units. Whole. */
+  amount?: number;
+  /** Tracked solids only: the nested item itself. One level deep — a vessel inside a vessel inside a
+   *  vessel is refused by `core/vessels.ts`, not by convention. */
+  instance?: ItemInstance;
 }
 
 /** A timed weapon coating stamped on an {@link ItemInstance} — `itemId` names the coating consumable
@@ -249,7 +280,18 @@ export interface Item {
 
   // `food` and `container` are in the DATA (54 and 1 items) but were never in this union, so every
   // `type === 'food'` check silently type-errored or was written around.
-  type: 'material' | 'tool' | 'weapon' | 'armor' | 'consumable' | 'currency' | 'food' | 'container';
+  // `fluid` is a TYPE, not a category, precisely so the sim can refuse one structurally: a fluid may
+  // only exist inside a vessel that accepts it, and anything that would place one loose spills it.
+  type:
+    | 'material'
+    | 'tool'
+    | 'weapon'
+    | 'armor'
+    | 'consumable'
+    | 'currency'
+    | 'food'
+    | 'container'
+    | 'fluid';
   category: string; // wood, iron, harvesting, combat, head, etc.
   /** Internal item never surfaced as a player resource (e.g. natural weapons like fists/claws).
    *  Excluded from the resource sidebar — its category won't appear in the "show all" list. */
@@ -345,12 +387,23 @@ export interface Item {
    */
   inventoryBonus?: { weightKg: number; volumeL: number };
   /**
-   * Liquid-container items (waterskin/flask/jug). `holds` is the item id it carries (e.g. "water");
-   * `capacityL` the max VOLUME of contents in litres — the held item's `volumeL` sets how many units fit
-   * (water is 1 L/unit, so capacityL ≈ max units). A filled instance tracks its level in
-   * `ItemInstance.contents`, and the contents' weight (held units × held weightKg) rides on top of the
-   * empty container's own `weightKg` for carry/encumbrance. */
-  container?: { holds: string; capacityL: number };
+   * CONTAINERS-AND-FLUIDS §1 — this item is a VESSEL: it holds other items and is itself carried,
+   * hauled and stored. Distinct from a CARRY AID (`inventoryBonus`, which raises what a pawn can
+   * shoulder and holds nothing) and from a FIXTURE (a placed building that stores). An item is
+   * exactly one of the three.
+   *
+   *   capacityL  — the volume budget. A fluid spends its litres directly; a solid spends
+   *                `def.volumeL × amount`.
+   *   capacityKg — optional weight ceiling on top of the volume one, for a vessel whose walls give
+   *                out before it fills (a hide sack). Omitted = volume is the only limit.
+   *   accepts    — item ids, categories, or the bare word `fluid`; empty/omitted = anything fits.
+   *   sealed     — the vessel closes: a stopper, a lid, a bung. Halts the contents' spoilage clock
+   *                the way `stored` does for a stack.
+   *
+   * What is inside lives on the INSTANCE (`ItemInstance.contents`), never here, and its weight and
+   * volume ride on top of the empty vessel's own everywhere a load is summed. A full jug is not a jug.
+   */
+  container?: { capacityL: number; capacityKg?: number; accepts?: string[]; sealed?: boolean };
   /** Durability lost per combat hit when this item is equipped. */
   durabilityLossPerCombatHit?: number;
   // Typed stubs — no logic reads these yet:

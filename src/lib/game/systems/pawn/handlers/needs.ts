@@ -8,6 +8,8 @@ import { perTick, ticksFromSeconds } from '../../../core/time';
 import { consumeFromStockpiles, availableQuantityFromDrops } from '../../../core/GameState';
 import { PAWN_STATE, type PawnStateName } from '../pawnStates';
 import { tileHasBody } from '../carry';
+import { takeOut, isFluidId, unitsToLitres } from '../../../core/vessels';
+import type { ItemInstance } from '../../../core/types';
 import {
   isAdjacent,
   selectFoodForMeal,
@@ -43,6 +45,7 @@ import {
   HUNGER_THRESHOLD,
   ROUTE_TO_DRINK_THIRST,
   findNearestWaterTarget,
+  carriedWaterVessel,
   SLEEP_WAKE_THRESHOLD_HUNGRY,
   SLEEP_WAKE_THRESHOLD_FED,
   needsRecovery,
@@ -98,9 +101,23 @@ function startEatingFromInventory(
       `${pawn.name} starts eating [${fmtMeal(meal)}] hunger=${(pawn.needs?.hunger ?? 0).toFixed(1)} at ${fmtPos(pawn)} (${where})`
   );
   let next = mutatePawn(gameState, pawn.id, (p) => {
-    // Eat from the pack: deduct the consumed units (drop the key once a stack is finished).
+    // Eat from the pack: deduct the consumed units (drop the key once a stack is finished). A portion
+    // that is a FLUID — the ale in the meal, a cup of tea — is drunk out of the vessel carrying it
+    // rather than a bulk stack, because CONTAINERS-AND-FLUIDS §2 means it was never in one.
     const items = { ...(p.inventory?.items ?? {}) };
     for (const m of meal) {
+      if (isFluidId(m.id)) {
+        let litres = unitsToLitres(m.id, m.units);
+        for (const inst of p.inventory?.instances ?? []) {
+          if (litres <= 0) break;
+          litres -= takeOut(inst, m.id, litres);
+        }
+        for (const inst of Object.values(p.equipment ?? {})) {
+          if (litres <= 0) break;
+          if (inst) litres -= takeOut(inst, m.id, litres);
+        }
+        continue;
+      }
       const left = (items[m.id] ?? 0) - m.units;
       if (left > 0) items[m.id] = left;
       else delete items[m.id];
@@ -227,16 +244,43 @@ function grabFoodAt(gameState: GameState, pawn: Pawn, x: number, y: number): Gam
   });
 }
 
-/** §D: drink at the reached target over DRINK_TURNS (not instant — mirrors eating). Consumes one
- *  unit of stored water on the first sip; the thirst relief is spread evenly across the duration. */
+/** One drink is a litre — `water`'s dose is 1 L, so this is the same measure the recipes use. */
+const DRINK_LITRES = 1;
+
+/** Is the pawn standing at a river/drink zone or a well? Then the drink is free. */
+function atNaturalWater(pawn: Pawn, gs: GameState): boolean {
+  const target = findNearestWaterTarget(pawn, gs, 'drink');
+  if (!target || !pawn.position) return false;
+  return isAdjacent(pawn.position.x, pawn.position.y, target.x, target.y);
+}
+
+/**
+ * §D: drink at the reached target over DRINK_TURNS (not instant — mirrors eating). The thirst relief
+ * is spread evenly across the duration; a litre is paid on the first sip.
+ *
+ * CONTAINERS-AND-FLUIDS §2 — where that litre comes from, in order: the pawn's OWN carried vessel
+ * (the reason to carry a waterskin at all), then the river or well it walked to, which costs the
+ * colony nothing, and only failing both the colony's stored water. A pawn standing at a river never
+ * drains the barrels back home.
+ */
 export function handleDrinking(pawn: Pawn, gameState: GameState): GameState {
   const activeJob = pawn.activeJob;
   const turnsInState = (activeJob?.turnsInState ?? 0) + 1;
   const duration = DRINK_TURNS;
   let state = gameState;
-  // Consume one unit of stored water on the first sip (if any is stocked).
-  if (turnsInState === 1 && (state.stockpile?.['water'] ?? 0) > 0) {
-    state = consumeFromStockpiles(state, { water: 1 });
+  if (turnsInState === 1) {
+    const skin = carriedWaterVessel(pawn);
+    if (skin) {
+      state = mutatePawn(state, pawn.id, (p) => {
+        const drink = (inst: ItemInstance | undefined) => {
+          if (inst?.instanceId === skin.instanceId) takeOut(inst, 'water', DRINK_LITRES);
+        };
+        for (const inst of p.inventory?.instances ?? []) drink(inst);
+        for (const inst of Object.values(p.equipment ?? {})) drink(inst);
+      });
+    } else if (!atNaturalWater(pawn, state) && (state.stockpile?.['water'] ?? 0) > 0) {
+      state = consumeFromStockpiles(state, { water: 1 });
+    }
   }
   const reliefPerTurn = DRINK_NEED_RELIEF / duration;
   const done = turnsInState >= duration;

@@ -5205,6 +5205,20 @@
             run: () => gameState.pickUpItemFromTile(pawnId, d.id, qty)
           });
         }
+        // CONTAINERS-AND-FLUIDS §1 — tipping a vessel out DESTROYS what is in it, so it is a
+        // deliberate order and never something a job does to make room. Offered only when there is
+        // something in there to lose.
+        if (d.instance?.contents?.length) {
+          entries.push({
+            label: `Empty ${name} on the ground`,
+            run: () =>
+              gameState.command({
+                type: 'emptyVessel',
+                payload: { instanceId: d.instance!.instanceId },
+                save: true
+              })
+          });
+        }
         // Force-eat an edible item — a need, so undrafted-only (needs run through the FSM).
         if (!isDrafted && isEdibleFood(it)) {
           entries.push({

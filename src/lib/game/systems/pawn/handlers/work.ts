@@ -36,7 +36,7 @@ import {
   equipDropToPawn,
   carryDropToInventory
 } from '../../../core/PawnEquipment';
-import { aggregateFromDrops } from '../../../core/GameState';
+import { withDrops } from '../../../core/GameState';
 import { handleForcedConsume, handleForcedDrink } from './needs';
 
 /** DRAFTED-JOB-ORDERS §8: force-equip / carry a specific dropped item NOW (an undrafted manual order).
@@ -234,7 +234,18 @@ export function handleIdle(pawn: Pawn, gameState: GameState): GameState {
   // Pinned items are kept in hand and never deposited, so they must NOT trigger haul-recovery —
   // otherwise a pawn carrying only pinned items would loop Idle→Hauling→deposit(keeps)→Idle forever.
   const pinnedSet = new Set(pawn.pinnedItems ?? []);
-  if (Object.entries(pawn.inventory?.items ?? {}).some(([id, q]) => q > 0 && !pinnedSet.has(id))) {
+  // CONTAINERS-AND-FLUIDS §2: a fetched fluid input rides in a VESSEL, which is a tracked instance and
+  // never appears in the bulk `items` map — so a pawn carrying a barrel of brine for a craft order read
+  // as empty-handed here and went straight back to job selection, leaving the colony's brine walking
+  // around in its pack. `carryingForOrder` is the honest test for "this pawn owes a delivery".
+  // A LOADED vessel is stock in a pawn's hands, and stock belongs in a stockpile: a pawn that has just
+  // filled a flask at the vat has to carry it home before taking new work, exactly as it would with an
+  // armful of planks. (An empty vessel is personal kit and stays in hand — `depositInventory` keeps it.)
+  const owesDelivery =
+    !!pawn.carryingForOrder ||
+    (pawn.inventory?.instances ?? []).some((i) => !!i.contents?.length) ||
+    Object.entries(pawn.inventory?.items ?? {}).some(([id, q]) => q > 0 && !pinnedSet.has(id));
+  if (owesDelivery) {
     return transitionTo(pawn, PAWN_STATE.HAULING, gameState);
   }
 
@@ -481,9 +492,7 @@ function acquireToolAndProceed(pawn: Pawn, gameState: GameState): GameState {
   // (`pawnHasToolFor`) accepts a carried tool, so the pawn can work the job while holding it in its
   // pack; deposit/craft-staging preserve carried instances, so it isn't dropped at a stockpile.
   const withTool: GameState = {
-    ...gameState,
-    droppedItems: newDropped,
-    stockpile: aggregateFromDrops(newDropped),
+    ...withDrops(gameState, newDropped),
     pawns: gameState.pawns.map((p) => {
       if (p.id !== pawn.id) return p;
       const carried = addInstanceToInventory(p, tf.itemId, gameState.turn);
