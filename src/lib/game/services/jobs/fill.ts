@@ -201,12 +201,20 @@ export function generate(jobs: Job[], gs: GameState): Job[] {
   jobs = jobs.filter((j) => {
     if (j.type !== 'fill') return true;
     const v = j.vesselInstanceId ? byInstance.get(j.vesselInstanceId) : undefined;
-    return !!v && wantOf(v.inst, demand) === j.resourceId;
+    if (!v) return false; // the vessel is gone
+    // A hand-ordered draw is kept until it is done: the player asked for THIS fluid in THIS vessel,
+    // which by definition is not on the vessel's standing allow-list.
+    if (j.manual) return roomFor(v.inst, j.resourceId!, 0.001) > 0;
+    return wantOf(v.inst, demand) === j.resourceId;
   });
 
+  const manualVessels = new Set(
+    jobs.filter((j) => j.type === 'fill' && j.manual).map((j) => j.vesselInstanceId)
+  );
   for (const v of vessels) {
-    // A vessel already reserved for a craft order is on its way to a station — leave it alone.
-    if (v.drop?.reservedFor) continue;
+    // A vessel already reserved for a craft order is on its way to a station — leave it alone, and
+    // likewise one the player has hand-ordered to go and fetch something.
+    if (v.drop?.reservedFor || manualVessels.has(v.inst.instanceId)) continue;
     const itemId = wantOf(v.inst, demand);
     if (!itemId) continue;
     const id = `fill-${v.inst.instanceId}-${itemId}`;

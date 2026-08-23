@@ -75,12 +75,47 @@ down — while staying a carry aid on the back, which is what the ranged draw-sp
 - [x] **A vessel's contents survive a stockpile.** Storing a full barrel stores a full barrel; the
       colony ledger counts what is inside it, so nothing goes missing by being put away.
 - [x] **No evaporation, no spoilage by default.** Water, brine and oil keep. Only a fluid that already
-      carries `decaySeconds` decays, and `sealed: true` halts it the way `stored` halts a stack.
+      carries `decaySeconds` decays, and `sealed: true` halts it the way `stored` halts a stack. The
+      same rule now governs SOLIDS in a vessel: berries in an open bucket rot exactly as fast as
+      berries on the ground, and only a sealed vessel holds the clock. Being in a jar was otherwise a
+      loophole that made food immortal.
 - [x] **Carried first, then walk.** A pawn with a filled skin drinks where it stands; empty-handed it
       walks to a drink zone or a well. The colony water integer is gone — `processAutoDrink` no longer
       sips a barrel three screens away, which was the last of the ethereal stockpile.
 - [x] **No density field.** A fluid's `volumeL` is one MEASURE and `weightKg / volumeL` is its density,
       so a litre of oil already weighs what its def says without a second number to keep in sync.
+
+## 5 — Storage: buildings and container items are different things
+
+The word "container" collided one more time than the spec's table admitted: `storage_chest` was a
+BUILDING sitting next to a `wooden_chest` ITEM, `salting_barrel` next to `wooden_barrel`,
+`wicker_basket` next to `woven_basket`. "Put it in the chest" meant two different things depending on
+which panel you were looking at.
+
+- [x] **Portable stores became items; fitted ones stayed buildings.** Gone as buildings and folded onto
+      the item that already played their part: `wicker_basket` → the new `basket`, `storage_chest` →
+      `wooden_chest`, `clay_storage_jars` → `water_urn`, `salting_barrel` → `wooden_barrel`. Still
+      buildings, because you cannot pick them up: Larder Cupboard, Meat Hooks, Drying Rack, Hay Rack,
+      Rope-Hung Granary, Root Clamp.
+- [x] **An item takes the bare vessel noun; a building takes a fitted place-name.** Bucket, Barrel,
+      Bin, Crate, Basket, Chest, Jug, Urn, Flask, Phial, Waterskin — against Larder Cupboard, Meat
+      Hooks, Rope-Hung Granary. No noun appears on both sides, and **R11** fails the build if one does.
+      The worn carrying basket became a **Pannier**, which is what a basket you wear actually is, so
+      the bare noun was free for the thing you set down.
+- [x] **The vessel ladder runs across three woodworking ages**, no new stations: **Basket** from withies
+      and cordage at a craft spot (primitive); **Bucket** and **Barrel** stave-built at the Sawpit once
+      there are sawn planks (bronze — and the barrel is bound with cordage hoops, not iron nails, which
+      is what actually held a cask together); **Bin**, **Crate** and **Chest** joined at the Carpenter's
+      Bench (iron).
+- [x] **Goods go INTO the bin, DF-style.** A pile hauled onto a tile where a vessel's own allow-list
+      names it is packed inside rather than laid beside it, so a bin is what makes a tile dense — no
+      building needed underneath. What is inside still counts as colony stock exactly where it stands.
+- [x] **A vessel set down in a filtered stockpile inherits that stockpile's list.** Telling a zone
+      "firewood only" tells its bins the same thing; the two vocabularies (a zone filters by category, a
+      vessel by id) are reconciled once, at the moment the vessel lands.
+- [x] **`ZoneInstance.containerBudget`** — DF's max-bins, as a pure cap so one stockpile cannot hoard
+      every barrel the colony owns. Unset means no cap: the control only ever takes capacity away, and
+      a LOADED vessel is goods rather than furniture, so it always has a home to go to.
 
 ## What this grew beyond the original spec
 
@@ -104,6 +139,18 @@ Three things the spec did not have, decided during the build because the sim nee
   campfire's pot. A fluid recipe pours straight into the station, that fluid counts as colony stock
   where it stands, and pawns draw it out into carried vessels with the same `fill` job. **R10** fails
   the build if a fluid recipe is ever authored at a station with nowhere to pour.
+
+**Overfilling spills.** A station at its `fluidCapacityL` takes nothing more; the craft tries a vessel
+staged on the tile next, and what still will not fit is lost, with a warning naming the station. Keep
+butchering into a full catch basin and you lose the bile — the station does not silently grow a bigger
+belly. **Destruction takes the contents with it**: a vessel weathered apart on the ground, shattered in
+a fight or broken in a pack is removed whole, and what was inside goes with it.
+
+**The four items that carried a "preservation aura" lost it.** `preservationBonus` on an ITEM meant a
+clay jug lying on a stockpile tile kept the unrelated meat beside it fresh, and its `isContainer` /
+`storageCapacity` were read by no code at all. All three fields are deleted from the item type so
+nobody re-authors them. Keeping food fresher on a TILE is a storage BUILDING's `effects.preservation`,
+which is untouched; what a vessel preserves is what is inside it.
 
 Nothing pours a vessel out to make room. Re-filtering a jug full of honey to water moves the honey
 only once a jug that allows honey has room for it; otherwise the jug stays exactly as it is. Tipping a

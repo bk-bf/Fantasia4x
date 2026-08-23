@@ -64,6 +64,16 @@ export interface ZoneInstance {
   filter: ZoneFilter;
   /** Stockpile zones only: haul-fill priority (see {@link ZonePriority}). Undefined = 'normal'. */
   priority?: ZonePriority;
+  /**
+   * CONTAINERS-AND-FLUIDS §3 (DF's "max bins/barrels") — stockpile zones only: a CAP on how many
+   * vessels this stockpile will hold, so one zone cannot hoard every barrel the colony owns.
+   *
+   * Undefined or 0 means no cap, which is the old behaviour exactly — the control only ever takes
+   * capacity away. What makes a bin actually swallow goods is the bin's OWN allow-list, and a vessel
+   * set down in a filtered stockpile is seeded from that zone's filter, so telling a stockpile "food
+   * only" tells its barrels the same thing without a second round of clicking.
+   */
+  containerBudget?: number;
   /** View-only: when true, this zone's tint is suppressed on the map. Persisted with the save. */
   colorHidden?: boolean;
   /** RESTRICT zones only: pawns confined to this zone's tiles. A pawn's allowed area is the UNION of

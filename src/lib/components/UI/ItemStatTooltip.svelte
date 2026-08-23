@@ -200,8 +200,15 @@
     }
     if (item.medicineQuality != null)
       out.push({ label: 'Medicine quality', val: pct(item.medicineQuality) });
-    if (item.preservationBonus != null)
-      out.push({ label: 'Preservation', val: pct(item.preservationBonus) });
+    // A vessel's readout is what it HOLDS, not a preservation aura it no longer has.
+    if (item.container)
+      out.push({
+        label: 'Holds',
+        val:
+          `${item.container.capacityL} L` +
+          (item.container.capacityKg ? ` / ${item.container.capacityKg} kg` : '') +
+          (item.container.sealed ? ' · sealed' : '')
+      });
     if (item.fuelValue != null) out.push({ label: 'Fuel value', val: `${item.fuelValue}` });
 
     // Spoilage (decaySeconds): shelf life (duration) + qualitative speed + what it rots into.

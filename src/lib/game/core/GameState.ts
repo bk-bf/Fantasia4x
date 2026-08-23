@@ -12,6 +12,7 @@ import type {
 import { rng } from './rng';
 import { mergeConditions } from './carcassCondition';
 import {
+  vesselAllows,
   isFluidId,
   litresToUnits,
   takeOut,
@@ -23,7 +24,7 @@ import {
   vesselAccepts,
   vesselOf
 } from './vessels';
-import { itemDefById } from './itemDefs';
+import { allItemDefs, itemDefById } from './itemDefs';
 import buildingsData from '../database/world/buildings.jsonc';
 import itemsData from '../database/items/items.jsonc';
 
@@ -716,6 +717,60 @@ function drawFromVessel(
 }
 
 /**
+ * CONTAINERS-AND-FLUIDS §3 — the item ids a stockpile zone's filter admits, for SEEDING a vessel that
+ * has just been set down in it. A zone filters by CATEGORY; a vessel's own allow-list is by ID (a
+ * waterskin is set to water, not to "drinks"), so the categories are expanded once, here, at the one
+ * moment the two vocabularies have to meet. An unfiltered zone seeds nothing: "this stockpile takes
+ * anything" is not the same instruction as "fill this barrel with anything you like".
+ */
+function zoneSeedFilter(state: GameState, x: number, y: number): string[] {
+  if (!(state.zoneTiles?.[`${x},${y}`] ?? []).includes('stockpile')) return [];
+  const zone = (state.zoneInstances ?? []).find(
+    (z) => z.type === 'stockpile' && z.filter.allowedCategories.length > 0
+  );
+  if (!zone) return [];
+  const allowed = new Set(zone.filter.allowedCategories);
+  const blocked = new Set(zone.filter.blockedItems);
+  const ids: string[] = [];
+  for (const def of allItemDefs())
+    if (allowed.has(def.category) && !blocked.has(def.id)) ids.push(def.id);
+  return ids;
+}
+
+/** How many VESSELS are already standing, stored, on tile (x,y). */
+export function tileVesselCount(state: GameState, x: number, y: number): number {
+  let n = 0;
+  for (const d of state.droppedItems ?? [])
+    if (d.stored && d.x === x && d.y === y && d.instance && vesselOf(d.resourceId)) n++;
+  return n;
+}
+
+/**
+ * CONTAINERS-AND-FLUIDS §3 — pack a stored pile INTO a vessel already standing on its tile, DF-style:
+ * a bin in a stockpile swallows the goods rather than the tile growing another loose heap. Only a
+ * vessel whose own allow-list names the item takes it, so this can never quietly reshuffle a barrel
+ * the player set aside for something else.
+ *
+ * Mutates `drops` in place (the caller's working copy) and returns how many units went in.
+ */
+function packIntoVesselOnTile(drops: DroppedItem[], idx: number, x: number, y: number): number {
+  const d = drops[idx];
+  if (!d || d.instance || (d.quantity ?? 0) <= 0) return 0; // a vessel is never packed into a vessel
+  let packed = 0;
+  for (let i = 0; i < drops.length && packed < d.quantity; i++) {
+    const v = drops[i];
+    if (i === idx || !v.stored || v.x !== x || v.y !== y || !v.instance) continue;
+    if (!vesselAllows(v.instance, d.resourceId)) continue;
+    const inst = { ...v.instance, contents: v.instance.contents?.map((e) => ({ ...e })) };
+    const took = putIn(inst, d.resourceId, d.quantity - packed);
+    if (took <= 0) continue;
+    drops[i] = { ...v, instance: inst };
+    packed += took;
+  }
+  return packed;
+}
+
+/**
  * Single absorption trigger: if `dropId` is an unstored DroppedItem sitting on a
  * stockpile-designated tile, mark it stored and credit the zone.
  *
@@ -732,12 +787,40 @@ export function absorbDropIfOnStockpileTile(state: GameState, dropId: string): G
   // Stockpile zone tile OR a standalone storage-bin tile (a basket stores without a drawn zone).
   if (!isStorageTile(state, drop.x, drop.y)) return state;
 
+  // CONTAINERS-AND-FLUIDS §3 — DF's model: if a VESSEL standing on this tile takes the goods, they go
+  // IN it rather than becoming another loose heap beside it. That is what makes a bin worth crafting.
+  // Only what a vessel's own allow-list names is packed, so this can never repurpose a barrel quietly.
+  if (drop.name == null && drop.instance == null && drop.quality == null) {
+    const packing = (state.droppedItems ?? []).map((d) => ({ ...d }));
+    const idx = packing.findIndex((d) => d.id === dropId);
+    const packed = idx >= 0 ? packIntoVesselOnTile(packing, idx, drop.x, drop.y) : 0;
+    if (packed > 0) {
+      const left = drop.quantity - packed;
+      const kept = packing.filter((d) => d.id !== dropId || left > 0);
+      const j = kept.findIndex((d) => d.id === dropId);
+      if (j >= 0) kept[j] = { ...kept[j], quantity: left, stored: true };
+      return withDrops(state, kept);
+    }
+  }
+
   // Identity-tracked drops (a per-instance `name` override, a tracked `instance`, or a §Q craft
   // `quality` tier) must NOT be folded into a counted pile — that would erase the identity / merge
   // across quality tiers. Mark it stored in place as its own distinct pile.
   if (drop.name != null || drop.instance != null || drop.quality != null) {
+    // A VESSEL set down in a stockpile inherits that stockpile's filter when it has none of its own —
+    // telling a zone "food only" tells its barrels the same thing, instead of a second round of clicks.
+    const seeded =
+      drop.instance && vesselOf(drop.resourceId) && !(drop.instance.filter ?? []).length
+        ? zoneSeedFilter(state, drop.x, drop.y)
+        : null;
     const newDropped = (state.droppedItems ?? []).map((d) =>
-      d.id === dropId ? { ...d, stored: true } : d
+      d.id === dropId
+        ? {
+            ...d,
+            stored: true,
+            ...(seeded?.length ? { instance: { ...d.instance!, filter: seeded } } : {})
+          }
+        : d
     );
     return withDrops(state, newDropped);
   }

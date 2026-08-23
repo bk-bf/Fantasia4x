@@ -22,11 +22,13 @@
     instanceId,
     filter,
     priority = 'normal',
+    containerBudget = 0,
     open = false
   }: {
     instanceId: string;
     filter: ZoneFilter;
     priority?: ZonePriority;
+    containerBudget?: number;
     open?: boolean;
   } = $props();
 
@@ -42,6 +44,17 @@
     gameState.command({
       type: 'setInstancePriority',
       payload: { instanceId, priority: value },
+      save: true
+    });
+  }
+
+  // CONTAINERS-AND-FLUIDS §3 — how many bins/barrels/baskets this stockpile keeps. Haulers bring
+  // containers in until it has that many, then pack goods INTO them instead of laying another loose
+  // pile. 0 keeps whatever is already here and fetches nothing, which is the old behaviour exactly.
+  function setContainerBudget(n: number) {
+    gameState.command({
+      type: 'setInstanceContainerBudget',
+      payload: { instanceId, containerBudget: Math.max(0, Math.min(99, Math.floor(n) || 0)) },
       save: true
     });
   }
@@ -109,6 +122,20 @@
         <option value={p.value}>{p.label}</option>
       {/each}
     </select>
+  </div>
+
+  <div class="zfp-prio">
+    <span class="zfp-prio-label" title="Bins, barrels and baskets kept in this stockpile">
+      containers
+    </span>
+    <input
+      class="zfp-prio-select"
+      type="number"
+      min="0"
+      max="99"
+      value={containerBudget}
+      onchange={(e) => setContainerBudget(Number(e.currentTarget.value))}
+    />
   </div>
 
   <div class="zfp-block">

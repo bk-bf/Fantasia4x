@@ -253,6 +253,12 @@ same thing to the sim while doing opposite jobs.
 - [ ] **A worn vessel holds nothing.** Anything a quiver is carrying moves into the pawn's pack the
       moment it goes on, and the quiver reverts to granting `inventoryBonus`. That is what keeps ammo
       in normal inventory, which is what the ranged draw-speed model reads.
+- [ ] **A container ITEM and a storage BUILDING never share a noun.** An item you can pick up takes
+      the bare vessel noun — Bucket, Barrel, Bin, Crate, Basket, Chest, Jug, Urn, Flask, Phial. A
+      building you cannot takes a fitted place-name that says so — Larder Cupboard, Meat Hooks, Drying
+      Rack, Rope-Hung Granary, Root Clamp. Three pairs used to collide and "put it in the chest" meant
+      two different things depending on the panel. **R11** checks both halves. A basket you WEAR is a
+      Pannier — a carry aid is not a vessel, and it must not take the vessel's noun.
 - [ ] **Never restrict a worn quiver to arrows.** It was tried and rejected: a hunter stuffs whatever
       they like down a hide tube, and a container that physically refuses a bundle of herbs is not
       realism, it is bookkeeping. Leave `accepts` off.
@@ -313,6 +319,7 @@ one loose — a stockpile tile, a pawn's bare hands, a `DroppedItem` — spills 
 | 2 | every item has a way in — recipe, node, carcass, loot, decay or trade (R8) | `itemRules.test.ts` |
 | 3b | a vessel states a positive `capacityL`, and is not also a carry aid (R9) | `itemRules.test.ts` |
 | 3c | every fluid-output recipe has a station or vessel to catch it (R10) | `itemRules.test.ts` |
+| 3b | no noun is shared by a container item and a storage building (R11) | `itemRules.test.ts` |
 | 5 | no recipe-less armour; slots resolve | `armourCoverage.test.ts` |
 | 5 | crafted and equipped by a real pawn | `armourChain.test.ts` |
 

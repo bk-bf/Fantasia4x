@@ -352,7 +352,8 @@ export function completeCraftOrder(
         state = captured.state;
         if (captured.lost > 0)
           console.warn(
-            `[Craft] ${captured.lost} unit(s) of ${outId} spilled — no vessel with room at the station.`
+            `[Craft] ${captured.lost} unit(s) of ${outId} SPILLED — the ${entry.stationType ?? 'station'} ` +
+              `is full and no vessel with room was staged on it. Empty it, or keep vessels here.`
           );
         continue;
       }
@@ -520,8 +521,10 @@ export function completeCraftOrder(
  *      brine, a cask its own ale, and that fluid counts in the colony's stock where it stands;
  *   2. a VESSEL on the station tile that allows this fluid and has room — first one reserved for this
  *      order, then any other vessel sitting there;
- *   3. nowhere, in which case it is lost. That is the whole point of `type: 'fluid'`: the sim refuses
- *      to invent a puddle rather than quietly leaving a stack of ale on the floor.
+ *   3. nowhere, in which case it SPILLS and is gone. A colony that keeps butchering into a full catch
+ *      basin, or brewing into a full cask, loses the overflow — the station does not silently grow a
+ *      bigger belly, and the sim will not invent a puddle to hold it. Emptying the station (or keeping
+ *      vessels standing on it) is the player's job, and the warning below says so.
  *
  * Returns the state with the fluid placed and how many UNITS could not be placed.
  */

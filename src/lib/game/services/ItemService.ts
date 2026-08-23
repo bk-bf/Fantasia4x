@@ -5,11 +5,12 @@ import type {
   DroppedItem,
   Recipe,
   Pawn,
-  ItemQuality
+  ItemQuality,
+  ItemInstance
 } from '../core/types';
 import { qualityPrefix } from '../core/itemQuality';
 import { itemDefById, itemMatchesCostCategory } from '../core/itemDefs';
-import { usedCapacityL, usedWeightKg } from '../core/vessels';
+import { usedCapacityL, usedWeightKg, vesselOf } from '../core/vessels';
 import {
   decayAll,
   normalizeConditions,
@@ -904,28 +905,27 @@ export class ItemServiceImpl implements ItemService {
 
   /**
    * §C organic spoilage — per-stack. Every stack (stored or loose) of a perishable item accrues a
-   * spoilage clock; at the def's decaySeconds one unit rots into `decaysTo`. Containers stored on
-   * the same tile modestly slow a stored stack's clock by their `preservationBonus` (woven basket
-   * −10%, clay urn −20%, wooden chest −30%; best one wins). Deeper preservation (cold/freezing) is
-   * owned by the temperature system (Living World), not containers.
+   * spoilage clock; at the def's decaySeconds one unit rots into `decaysTo`. A storage BUILDING on the
+   * tile slows a stored stack's clock by its `effects.preservation` (meat hooks −20%, salting barrel
+   * −45%…). Deeper preservation (cold/freezing) is owned by the temperature system (Living World).
+   *
+   * CONTAINERS-AND-FLUIDS: the four ITEMS that used to radiate the same bonus — a jug lying on the
+   * floor keeping the meat beside it fresh — no longer do. A vessel preserves what is INSIDE it, and
+   * only when it is sealed: `stepVesselDecay` below runs the same clock on nested contents, so putting
+   * food in an open bucket is not a way to make it immortal.
    */
   stepItemDecay(gameState: GameState, elapsedTicks = 1): GameState {
     if (gameState._devFreezeSpoilage) return gameState; // DEBUG: freeze food/carcass spoilage (headless tests)
     const drops = gameState.droppedItems;
     if (!drops || drops.length === 0) return gameState;
 
-    // Best preservation per tile — the larger of any stored container stack's `preservationBonus`
-    // (woven basket item −10%, clay urn −20%…) and any storage-bin BUILDING's `effects.preservation`
-    // on the same tile (the wicker-basket store keeps its food fresher). Best one wins.
+    // Best preservation per tile — the storage BUILDING on it (meat hooks, salting barrel, root clamp).
+    // Best one wins. Items no longer contribute: a container preserves its contents, not its neighbours.
     const tilePreserve = new Map<string, number>();
     const bump = (key: string, bonus: number | undefined) => {
       if (bonus === undefined || bonus <= 0) return;
       if (bonus > (tilePreserve.get(key) ?? 0)) tilePreserve.set(key, bonus);
     };
-    for (const d of drops) {
-      if (!d.stored || (d.quantity ?? 0) <= 0) continue;
-      bump(`${d.x},${d.y}`, this.getItemById(d.resourceId)?.preservationBonus);
-    }
     for (const b of gameState.buildings ?? []) {
       if (b.status !== 'complete') continue;
       bump(
@@ -945,6 +945,11 @@ export class ItemServiceImpl implements ItemService {
 
     for (const d of drops) {
       const def = this.getItemById(d.resourceId);
+      // A VESSEL is not perishable itself, but what is in it may be. Run the nested clock and move on.
+      if (d.instance?.contents?.length) {
+        const spoiled = this.stepVesselContents(d.instance, elapsedTicks, rotted, d);
+        if (spoiled) changed = true;
+      }
       if (!def?.decaySeconds || (d.quantity ?? 0) <= 0) {
         next.push(d);
         continue;
@@ -1035,6 +1040,45 @@ export class ItemServiceImpl implements ItemService {
 
   carcassConditionByType(gameState: GameState): Record<string, number> {
     return computeCarcassConditionByType(gameState.droppedItems);
+  }
+
+  /**
+   * §C spoilage for what a VESSEL is holding. A sealed vessel (a stoppered jug, a bunged cask) halts
+   * the clock the way `stored` shelters a stack from weather; an OPEN one — a bucket — gives its
+   * contents no protection at all, so stuffing food in a bucket is not a way to make it immortal.
+   *
+   * Mutates the instance's contents in place (a cold, rarely-touched path) and pushes anything that
+   * rots into the shared `rotted` list, which is laid down on the vessel's own tile — a jar of berries
+   * that turns leaves rotten berries where the jar is standing.
+   */
+  private stepVesselContents(
+    inst: ItemInstance,
+    elapsedTicks: number,
+    rotted: { resourceId: string; x: number; y: number; stored?: boolean; qty: number }[],
+    at: { x: number; y: number; stored?: boolean }
+  ): boolean {
+    if (vesselOf(inst.itemId)?.sealed) return false;
+    let changed = false;
+    const kept: NonNullable<ItemInstance['contents']> = [];
+    for (const e of inst.contents ?? []) {
+      const def = this.getItemById(e.itemId);
+      if (!def?.decaySeconds || e.amount == null) {
+        kept.push(e);
+        continue;
+      }
+      let acc = (e.decayAcc ?? 0) + SECONDS_PER_TICK * elapsedTicks;
+      let qty = e.amount;
+      while (acc >= def.decaySeconds && qty > 0) {
+        acc -= def.decaySeconds;
+        qty -= 1;
+        if (def.decaysTo)
+          rotted.push({ resourceId: def.decaysTo, x: at.x, y: at.y, stored: at.stored, qty: 1 });
+      }
+      changed = true;
+      if (qty > 0) kept.push({ ...e, amount: qty, decayAcc: acc });
+    }
+    if (changed) inst.contents = kept.length ? kept : undefined;
+    return changed;
   }
 
   /**

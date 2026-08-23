@@ -15,7 +15,7 @@ import { storageTileAcceptsDrop, storageAcceptsDrop } from '$lib/game/services/j
  * §F storage bins — a building with `effects.storageStacks` is a STANDALONE dense store (its tile
  * accepts hauled goods with no drawn stockpile zone and holds several distinct piles); a `storageFilter`
  * additionally restricts WHAT it takes (categories or explicit item ids). Tests pin both behaviours to
- * the real building defs (wicker_basket general, meat_larder/hay_rack specialized).
+ * the real building defs (larder_cupboard general, meat_larder/hay_rack specialized).
  */
 const bin = (type: string, x: number, y: number): PlacedBuilding =>
   ({ id: `${type}-${x}-${y}`, type, x, y, status: 'complete', progress: 1 }) as PlacedBuilding;
@@ -28,28 +28,28 @@ function state(buildings: PlacedBuilding[], drops: DroppedItem[] = []): GameStat
 }
 
 describe('storage bins — capacity', () => {
-  it('a wicker basket tile holds 4 distinct piles; a bare tile holds 1', () => {
-    const gs = state([bin('wicker_basket', 3, 3)]);
-    expect(tilePileCapacity(gs, 3, 3)).toBe(4);
+  it('a larder cupboard tile holds 12 distinct piles; a bare tile holds 1', () => {
+    const gs = state([bin('larder_cupboard', 3, 3)]);
+    expect(tilePileCapacity(gs, 3, 3)).toBe(12);
     expect(tilePileCapacity(gs, 9, 9)).toBe(1);
   });
 
   it('tileStoredPileCount counts distinct stored piles on the tile', () => {
     const gs = state(
-      [bin('wicker_basket', 0, 0)],
+      [bin('larder_cupboard', 0, 0)],
       [stored('branch', 0, 0), stored('cordage', 0, 0), stored('branch', 5, 5)]
     );
     expect(tileStoredPileCount(gs, 0, 0)).toBe(2);
   });
 
   it('a bin tile is a storage tile and appears in storageTileKeys with no zone drawn', () => {
-    const gs = state([bin('wicker_basket', 2, 4)]);
+    const gs = state([bin('larder_cupboard', 2, 4)]);
     expect(storageTileKeys(gs)).toEqual(['2,4']);
     expect(isStorageTile(gs, 2, 4)).toBe(true);
   });
 
   it('absorbDropIfOnStockpileTile stores a loose drop sitting on a standalone bin tile', () => {
-    const gs = state([bin('wicker_basket', 1, 1)], [stored('branch', 1, 1, 3)]);
+    const gs = state([bin('larder_cupboard', 1, 1)], [stored('branch', 1, 1, 3)]);
     // re-mark it loose to exercise the absorb path
     gs.droppedItems![0].stored = false;
     const out = absorbDropIfOnStockpileTile(gs, gs.droppedItems![0].id);
@@ -59,7 +59,7 @@ describe('storage bins — capacity', () => {
 
 describe('storage bins — specialized filter', () => {
   it('binFilterAt returns the allow-list for a filtered bin, null for a general one', () => {
-    const gs = state([bin('meat_larder', 0, 0), bin('wicker_basket', 1, 1)]);
+    const gs = state([bin('meat_larder', 0, 0), bin('larder_cupboard', 1, 1)]);
     expect(binFilterAt(gs, 0, 0)).toContain('meat');
     expect(isFilteredBinTile(gs, 0, 0)).toBe(true);
     expect(binFilterAt(gs, 1, 1)).toBeNull();
@@ -80,14 +80,14 @@ describe('storage bins — specialized filter', () => {
   });
 
   it('a general bin (wicker basket) accepts anything', () => {
-    const gs = state([bin('wicker_basket', 0, 0)]);
+    const gs = state([bin('larder_cupboard', 0, 0)]);
     expect(storageTileAcceptsDrop(gs, 0, 0, 'goat_meat')).toBe(true);
     expect(storageTileAcceptsDrop(gs, 0, 0, 'wheat')).toBe(true);
   });
 
   it('a per-building override (FILTER fly-out) wins over the static default', () => {
     // A general basket restricted by the player to hay only.
-    const basket = bin('wicker_basket', 0, 0);
+    const basket = bin('larder_cupboard', 0, 0);
     (basket as { storageSettings?: { allowedItemIds: string[] } }).storageSettings = {
       allowedItemIds: ['hay']
     };
@@ -109,7 +109,7 @@ describe('storage bins — specialized filter', () => {
     const meatOnly = state([bin('meat_larder', 0, 0)]);
     expect(storageAcceptsDrop(meatOnly, 'goat_meat')).toBe(true);
     expect(storageAcceptsDrop(meatOnly, 'wheat')).toBe(false); // meat larder won't take grain
-    const withGeneral = state([bin('meat_larder', 0, 0), bin('wicker_basket', 1, 1)]);
+    const withGeneral = state([bin('meat_larder', 0, 0), bin('larder_cupboard', 1, 1)]);
     expect(storageAcceptsDrop(withGeneral, 'wheat')).toBe(true); // basket takes it
   });
 });

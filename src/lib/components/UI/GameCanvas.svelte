@@ -78,6 +78,7 @@
   import { projectiles, type ProjectileEvent } from '$lib/stores/projectiles.js';
   import { renderFps } from '$lib/stores/perfStats.js';
   import { buildingService } from '$lib/game/services/BuildingService.js';
+  import { roomFor } from '$lib/game/core/vessels';
   import {
     resolveCharSpans,
     BIOMES,
@@ -5138,6 +5139,37 @@
         entries.push({ label, run: () => issueOrder({ type: 'forceJob', jobId }) });
       }
 
+      // CONTAINERS-AND-FLUIDS §2 — a station holding a batch in its own body (a cask of ale, the
+      // butchery's catch) can be bottled by hand. Offered only when the colony actually has an empty
+      // vessel that could take it, so the entry never appears as a dead end.
+      for (const b of $gameState?.buildings ?? []) {
+        if (b.x !== tileX || b.y !== tileY || b.status !== 'complete') continue;
+        for (const e of b.fluidContents ?? []) {
+          if ((e.litres ?? 0) <= 0) continue;
+          const hasVessel = (droppedItems ?? []).some(
+            (d) =>
+              d.stored &&
+              !d.reservedFor &&
+              !d.forbidden &&
+              d.instance &&
+              !d.instance.contents?.length &&
+              roomFor(d.instance, e.itemId, 0.001) > 0
+          );
+          if (!hasVessel) continue;
+          const fluidName = itemService.getItemById(e.itemId)?.name ?? e.itemId;
+          const stationName = buildingService.getBuildingById(b.type)?.name ?? b.type;
+          entries.push({
+            label: `Draw ${fluidName} from the ${stationName}`,
+            run: () =>
+              gameState.command({
+                type: 'drawFluidFromStation',
+                payload: { buildingId: b.id, itemId: e.itemId, pawnId },
+                save: true
+              })
+          });
+        }
+      }
+
       // Items on the tile → equip / carry / pick-up (+ force-eat for an edible, undrafted only).
       const tileItems = droppedItems.filter(
         (d) => d.x === tileX && d.y === tileY && d.quantity > 0
@@ -5508,6 +5540,7 @@
           instanceId={selectedZone.id}
           filter={selectedZone.filter}
           priority={selectedZone.priority ?? 'normal'}
+          containerBudget={selectedZone.containerBudget ?? 0}
           open={showZoneFilter}
         />
       </div>

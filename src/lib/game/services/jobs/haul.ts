@@ -5,12 +5,14 @@ import type { GameState, Job, ItemInstance } from '../../core/types';
 // Gated console shim — see core/log.ts. Silences per-tick log/debug/warn unless gameDebug(true).
 import { gatedConsole as console, isGameDebug } from '../../core/log';
 import { itemService } from '../ItemService';
+import { vesselOf } from '../../core/vessels';
 import {
   storageTileKeys,
   tilePileCapacity,
   tileStoredPileCount,
   binFilterAt,
   isStorageTile,
+  tileVesselCount,
   withDrops
 } from '../../core/GameState';
 import { zoneInstanceIdAt } from '../DesignationService';
@@ -55,9 +57,41 @@ export function storageTileAcceptsDrop(
   y: number,
   resourceId: string
 ): boolean {
+  // CONTAINERS-AND-FLUIDS §3 — a stockpile's container budget (DF's "max bins/barrels") stops ONE
+  // zone hoarding every barrel the colony owns. It is purely a cap the player opts into: unset means
+  // no cap, and a LOADED vessel is goods rather than furniture, so it is always allowed home. Gating
+  // deposits by default would strand every filled skin in the hands of the pawn that filled it.
+  if (vesselOf(resourceId) && !zoneAcceptsAnotherVessel(gs, x, y)) return false;
   const filter = binFilterAt(gs, x, y);
   if (filter) return resourceAllowedByList(resourceId, filter);
   return stockpileAcceptsDrop(gs, resourceId);
+}
+
+/**
+ * Has the stockpile covering this tile room for one more EMPTY vessel? A zone with no budget set has
+ * no cap at all, so a colony that has never thought about bins behaves exactly as it did before any of
+ * this existed — the control only ever takes capacity away, never adds a switch you must find first.
+ */
+function zoneAcceptsAnotherVessel(gs: GameState, x: number, y: number): boolean {
+  const instId = zoneInstanceIdAt(gs, `${x},${y}`, 'stockpile');
+  if (!instId) return true; // a bare bin tile has no zone policy to consult
+  const budget = (gs.zoneInstances ?? []).find((z) => z.id === instId)?.containerBudget ?? 0;
+  if (budget <= 0) return true; // no cap set
+  let held = 0;
+  for (const key of zoneTileKeys(gs, instId)) {
+    const [zx, zy] = key.split(',').map(Number);
+    held += tileVesselCount(gs, zx, zy);
+    if (held >= budget) return false;
+  }
+  return true;
+}
+
+/** Every tile belonging to one zone instance. */
+function zoneTileKeys(gs: GameState, instanceId: string): string[] {
+  const out: string[] = [];
+  for (const [key] of Object.entries(gs.zoneTiles ?? {}))
+    if (zoneInstanceIdAt(gs, key, 'stockpile') === instanceId) out.push(key);
+  return out;
 }
 
 /** Is `resourceId` haulable at all — does ANY existing storage tile (zone or bin) accept it? */

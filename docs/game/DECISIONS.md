@@ -1382,10 +1382,15 @@ touch). Not graph-checkable — it's a dev-tooling/runtime-topology decision, no
 **Context.** Three unrelated ideas shared the word "container". A wicker frame, a hide scrip and a
 quiver all did exactly one thing — add to `inventoryBonus` — while a clay jug did not even do that.
 Nothing could hold a thing inside another thing, so there was no water to carry, no oil, no brine you
-could move, and no reason a jug existed. Meanwhile `water` was a stockpile INTEGER that fourteen
-recipes consumed and **nothing in the game ever produced**: the well's `effects.waterSource` was read
-by no code, and a thirsty pawn sipped the colony total from wherever it happened to be standing —
-the last of the ethereal stockpile ADR-016 set out to kill.
+could move, and no reason a jug existed. Meanwhile water existed as a PLACE but never as a THING. A drink zone or a well
+worked: a thirsty pawn walked there and drank, and that was never broken. But `water` the ITEM was a
+stockpile integer that three consumers read and nothing ever wrote — fourteen recipes took it as an
+input, `handleDrinking` deducted it, and `processAutoDrink` sipped it from wherever the pawn happened
+to be standing, the last of the ethereal stockpile ADR-016 set out to kill. The well's
+`effects.waterSource` was read by no code at all. Worse, `thirstNeedsRouting` gated walking-to-water on
+`stockpile.water <= 0`: permanently true, so routing always fired — and the moment water became
+stockable that gate would have flipped and pawns would have stopped walking to the river while
+"having" water they could not reach.
 
 **Decision.** Split the word three ways, and make the sim able to REFUSE a fluid structurally.
 
@@ -1415,6 +1420,26 @@ the last of the ethereal stockpile ADR-016 set out to kill.
 - **A station that IS a vessel holds its own fluid** (`Building.fluidCapacityL`), that fluid counts as
   colony stock where it stands, and pawns draw it into carried vessels with the same `fill` job.
   **R10** fails the build if a fluid recipe is authored at a station with nowhere to pour.
+
+**Amendment (same day).** Two follow-ons that fall straight out of the split, and one correction.
+
+- **A container ITEM and a storage BUILDING never share a noun** (**R11**). `storage_chest` sat beside
+  `wooden_chest`, `salting_barrel` beside `wooden_barrel`, `wicker_basket` beside `woven_basket`. The
+  rule: an item you can pick up takes the bare vessel noun, a building you cannot takes a fitted
+  place-name. Four portable stores stopped being buildings and folded onto the item that already played
+  their part; the six genuinely fitted ones (Larder Cupboard, Meat Hooks, Drying Rack, Hay Rack,
+  Rope-Hung Granary, Root Clamp) stayed. A basket you WEAR became a Pannier, freeing the bare noun.
+- **Goods go INTO the bin (DF).** A pile hauled onto a tile where a vessel's own allow-list names it is
+  packed inside rather than laid beside it, so a container item is what makes a tile dense — no building
+  needed underneath. A vessel set down in a filtered stockpile inherits that zone's list, reconciling
+  the zone's category vocabulary with the vessel's id vocabulary at the one moment they meet.
+  `ZoneInstance.containerBudget` is a pure CAP (unset = no cap): gating deposits by default stranded
+  every filled skin in the hands of the pawn that filled it.
+- **The four items carrying a "preservation aura" lost it.** `preservationBonus` on an ITEM meant a jug
+  on the floor kept the unrelated meat beside it fresh; `isContainer`/`storageCapacity` were read by no
+  code at all. All three fields are deleted from the item type. What a vessel preserves is what is
+  INSIDE it, and only when `sealed` — which required giving nested contents a real spoilage clock,
+  because "in a jar" was otherwise a loophole that made food immortal.
 
 **Consequences.** `water` becomes physical: a pawn drinks from the skin on its belt or walks to a well,
 and `processAutoDrink` no longer sips a barrel three screens away. 78 items became fluids; `animal_fat`

@@ -78,6 +78,10 @@ export interface VesselContent {
   /** Tracked solids only: the nested item itself. One level deep — a vessel inside a vessel inside a
    *  vessel is refused by `core/vessels.ts`, not by convention. */
   instance?: ItemInstance;
+  /** §C spoilage clock (seconds) for a perishable sitting INSIDE a vessel. Being in a jar is not a
+   *  licence to never rot — an unsealed vessel's contents keep the same clock a loose stack does, and
+   *  only `container.sealed` halts it. Undefined on anything that does not perish. */
+  decayAcc?: number;
 }
 
 /** A timed weapon coating stamped on an {@link ItemInstance} — `itemId` names the coating consumable
@@ -326,9 +330,11 @@ export interface Item {
    *  independent of `fuelValue` (bulk) and `fuelHeat` (temperature). Dense seasoned fuel (charcoal,
    *  coke) smoulders far longer than kindling, so a tank of it needs refuelling far less often. */
   burnDuration?: number;
-  isContainer?: boolean; // acts as a storage container
-  storageCapacity?: number; // max items stored
-  preservationBonus?: number; // 0–1, reduces food spoilage rate
+  // CONTAINERS-AND-FLUIDS removed `isContainer`/`storageCapacity`/`preservationBonus`. They were a
+  // FOURTH container idea nobody named: a jug lying on a stockpile tile radiated a spoilage bonus onto
+  // the unrelated stacks beside it, and its "capacity" was a number nothing read. A vessel now holds
+  // things (`container`) and preserves what is INSIDE it; keeping food fresher on a TILE is the job of
+  // a storage BUILDING's `effects.preservation`, which is still there and still the fixture system.
   isCookingVessel?: boolean; // required in stockpile to cook stews
   components?: string[]; // for dynamic stew crafts: ingredient item ids
 

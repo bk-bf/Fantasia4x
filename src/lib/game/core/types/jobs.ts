@@ -122,6 +122,10 @@ export interface Job {
   /** fill: `instanceId` of the vessel being filled — the job follows the vessel, not the tile, so it
    *  survives the pawn picking it up and walking off with it. */
   vesselInstanceId?: string;
+  /** fill: the player ordered this one by hand (the "Draw … " action), so the generator must not cull
+   *  it for failing the filter/demand test that drives the AUTOMATIC fills. It lives until it is done
+   *  or its vessel/source is gone. */
+  manual?: boolean;
   droppedItemId?: string; // haul / fetch: which DroppedItem to pick up
   buildingId?: string; // construct: which PlacedBuilding.id; fetch/craft: the station building
   craftQueueId?: string; // craft / fetch: which CraftingInProgress.id (the order)

@@ -1540,7 +1540,7 @@
   },
   {
     "id"              : "make_wooden_chest",
-    "station"         : "sawtable",
+    "station"         : "carpenter_bench",
     "inputs"          : {"category:plank": 4, "iron_nail": 6},
     "outputs"         : {"wooden_chest": 1},
     "workAmount"      : 16,
@@ -3183,9 +3183,36 @@
   // ════════════════════════════════════════════════════════════════════════════════════════════
   // PRODUCTION-CHAIN-III §B — Carpentry: buckets & barrels (carpenter_bench), brine (brewing_barrel)
   // ════════════════════════════════════════════════════════════════════════════════════════════
+  // ── CONTAINERS-AND-FLUIDS §3 — the general-goods vessel ladder. Basketry first (withies and a
+  //    craft spot), then stave work once there are sawn planks, then joined boxes at the bench. ──
+  {
+    "id"              : "make_basket",
+    "discipline"      : "weaving",
+    "station"         : "craft_spot",
+    "inputs"          : {"branch": 10, "cordage": 6},
+    "outputs"         : {"basket": 1},
+    "workAmount"      : 12,
+    "toolTierRequired": 0
+  },
+  {
+    "id"              : "make_storage_bin",
+    "station"         : "carpenter_bench",
+    "inputs"          : {"category:plank": 6, "iron_nail": 8},
+    "outputs"         : {"storage_bin": 1},
+    "workAmount"      : 30,
+    "toolTierRequired": 1
+  },
+  {
+    "id"              : "make_crate",
+    "station"         : "carpenter_bench",
+    "inputs"          : {"category:plank": 4, "iron_nail": 4},
+    "outputs"         : {"crate": 1},
+    "workAmount"      : 18,
+    "toolTierRequired": 1
+  },
   {
     "id"               : "make_wooden_bucket",
-    "station"          : "carpenter_bench",
+    "station"          : "sawtable",
     "inputs"           : {"category:plank": 2, "resin": 1},
     "inputAlternatives": [ {"category:plank": 2, "bone_glue": 1}, {"category:plank": 2, "hide_glue": 1} ],
     "outputs"          : {"wooden_bucket": 1},
@@ -3194,9 +3221,9 @@
   },
   {
     "id"               : "make_wooden_barrel",
-    "station"          : "carpenter_bench",
-    "inputs"           : {"category:plank": 4, "resin": 2, "iron_nail": 2},
-    "inputAlternatives": [ {"category:plank": 4, "bone_glue": 2, "iron_nail": 2} ],
+    "station"          : "sawtable",
+    "inputs"           : {"category:plank": 4, "resin": 2, "cordage": 3},
+    "inputAlternatives": [ {"category:plank": 4, "bone_glue": 2, "cordage": 3} ],
     "outputs"          : {"wooden_barrel": 1},
     "workAmount"       : 28,
     "toolTierRequired" : 1

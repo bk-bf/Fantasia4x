@@ -1718,7 +1718,7 @@
   {
     "id"               : "flask",
     "charSpans"        : [ {"sheet": "items", "id": 71} ],
-    "name"             : "Clay Flask",
+    "name"             : "Flask",
     "type"             : "tool",
     "category"         : "storage",
     "description"      : "A small stoppered flask of fired clay. Less than a skin, but cheap and sturdy.",
@@ -2270,7 +2270,7 @@
   {
     "id": "water_urn",
     "charSpans": [ {"sheet": "items", "id": 24} ],
-    "name": "Clay Urn",
+    "name": "Urn",
     "type": "material",
     "category": "storage",
     "maxDurability": 150,
@@ -2280,9 +2280,6 @@
     "amount": 0,
     "weightKg": 2.5,
     "volumeL": 3,
-    "isContainer": true,
-    "storageCapacity": 20,
-    "preservationBonus": 0.2,
     "container": {"capacityL": 20, "sealed": true},
     "toolTierRequired": 0
   },
@@ -2819,7 +2816,7 @@
   {
     "id": "woven_basket",
     "charSpans": [ {"sheet": "items", "id": 26} ],
-    "name": "Woven Basket",
+    "name": "Pannier",
     "type": "tool",
     "category": "storage",
     "maxDurability": 60,
@@ -2837,19 +2834,17 @@
   {
     "id": "wooden_chest",
     "charSpans": [ {"sheet": "items", "id": 38} ],
-    "name": "Wooden Chest",
+    "name": "Chest",
     "type": "container",
     "category": "storage",
     "maxDurability": 220,
     "deteriorationRate": 0.012,
     "description": "A planked chest nailed together with iron. The sturdiest storage tier, 40 slots, keeps goods dry and food longer (−30% spoilage). Needs planks and forged nails.",
+    "container": {"capacityL": 60, "sealed": true},
     "color": "#8B5A2B",
     "amount": 0,
     "weightKg": 3,
     "volumeL": 20,
-    "isContainer": true,
-    "storageCapacity": 40,
-    "preservationBonus": 0.3,
     "toolTierRequired": 1
   },
   {
@@ -16431,10 +16426,62 @@
   // ════════════════════════════════════════════════════════════════════════════════════════════
   // PRODUCTION-CHAIN-III §B — Carpentry: buckets, barrels, and tanning brine (the bucket's "fuel")
   // ════════════════════════════════════════════════════════════════════════════════════════════
+  // ── CONTAINERS-AND-FLUIDS §3: the general-goods vessels. These hold ITEMS, not just fluid, so they
+  //    carry no `accepts` — a bin takes whatever its own allow-list is opened up to. A vessel standing
+  //    on a stockpile tile is what makes that tile dense, which is why the ladder runs basket → bucket
+  //    /barrel → bin/crate/chest across three woodworking ages. ─────────────────────────────────────
+  {
+    "id"               : "basket",
+    "charSpans"        : [ {"sheet": "items", "id": 41} ],
+    "name"             : "Basket",
+    "type"             : "container",
+    "category"         : "storage",
+    "maxDurability"    : 60,
+    "deteriorationRate": 0.05,
+    "description"      : "Green withies bent round a rim and woven tight. Set it down and it holds a load of dry goods; it will not hold a drop of water.",
+    "container"        : {"capacityL": 25, "capacityKg": 12},
+    "color"            : "#B08A50",
+    "amount"           : 0,
+    "weightKg"         : 1.2,
+    "volumeL"          : 2,
+    "processingType"   : ["crafting"]
+  },
+  {
+    "id"               : "storage_bin",
+    "charSpans"        : [ {"sheet": "items", "id": 41} ],
+    "name"             : "Bin",
+    "type"             : "container",
+    "category"         : "storage",
+    "maxDurability"    : 180,
+    "deteriorationRate": 0.02,
+    "description"      : "A deep plank box on a square base, joined and pegged. Takes a great deal and stacks in a corner without falling over.",
+    "container"        : {"capacityL": 120, "capacityKg": 90},
+    "color"            : "#8B6B45",
+    "amount"           : 0,
+    "weightKg"         : 9,
+    "volumeL"          : 12,
+    "processingType"   : ["crafting"]
+  },
+  {
+    "id"               : "crate",
+    "charSpans"        : [ {"sheet": "items", "id": 41} ],
+    "name"             : "Crate",
+    "type"             : "container",
+    "category"         : "storage",
+    "maxDurability"    : 140,
+    "deteriorationRate": 0.025,
+    "description"      : "Slatted boards nailed into an open box. Lighter than a bin and quicker to knock together, and the gaps let a load breathe.",
+    "container"        : {"capacityL": 70, "capacityKg": 50},
+    "color"            : "#9A7B4F",
+    "amount"           : 0,
+    "weightKg"         : 5,
+    "volumeL"          : 8,
+    "processingType"   : ["crafting"]
+  },
   {
     "id": "wooden_bucket",
     "charSpans": [ {"sheet": "items", "id": 41} ],
-    "name": "Wooden Bucket",
+    "name": "Bucket",
     "type": "material",
     "category": "storage",
     "maxDurability": 150,
@@ -16450,7 +16497,7 @@
   {
     "id"               : "wooden_barrel",
     "charSpans"        : [ {"sheet": "items", "id": 41} ],
-    "name"             : "Wooden Barrel",
+    "name"             : "Barrel",
     "type"             : "material",
     "category"         : "storage",
     "maxDurability"    : 200,
@@ -17517,7 +17564,7 @@
   {
     "id": "glassware",
     "charSpans": [ {"sheet": "items", "id": 41} ],
-    "name": "Glassware",
+    "name": "Phial",
     "type": "material",
     "category": "storage",
     "maxDurability": 80,
@@ -17533,7 +17580,7 @@
   {
     "id": "clay_jug",
     "charSpans": [ {"sheet": "items", "id": 26} ],
-    "name": "Clay Jug",
+    "name": "Jug",
     "type": "material",
     "category": "storage",
     "maxDurability": 60,
@@ -17543,9 +17590,6 @@
     "amount": 0,
     "weightKg": 1.6,
     "volumeL": 1.2,
-    "isContainer": true,
-    "storageCapacity": 8,
-    "preservationBonus": 0.15,
     "container": {"capacityL": 5, "accepts": ["fluid"], "sealed": true},
     "toolTierRequired": 0
   },
@@ -17567,19 +17611,17 @@
   {
     "id": "porcelain_vessels",
     "charSpans": [ {"sheet": "items", "id": 26} ],
-    "name": "Porcelain Vessels",
+    "name": "Porcelain Jar",
     "type": "material",
     "category": "storage",
     "maxDurability": 120,
     "deteriorationRate": 0.004,
     "description": "Hard, glassy white porcelain, the finest reagent vessels there are. The top of the ceramic line; seals and preserves better than any clay.",
+    "container": {"capacityL": 4, "accepts": ["fluid"], "sealed": true},
     "color": "#F0ECE4",
     "amount": 0,
     "weightKg": 0.4,
     "volumeL": 0.6,
-    "isContainer": true,
-    "storageCapacity": 10,
-    "preservationBonus": 0.3,
     "toolTierRequired": 2
   },
   {

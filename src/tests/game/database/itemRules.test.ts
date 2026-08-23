@@ -384,7 +384,10 @@ describe('ITEM-RULES R5 — a material in the name is a material in the recipe',
         if (slot.acceptsCategory) ingredients.push(slot.acceptsCategory);
         ingredients.push(...Object.keys(slot.variants ?? {}));
       }
-      const hay = ingredients.map((k) => chainWords(k)).join(' ').toLowerCase();
+      const hay = ingredients
+        .map((k) => chainWords(k))
+        .join(' ')
+        .toLowerCase();
       for (const word of String(i.name)
         .toLowerCase()
         .replace(/[^a-z ]/g, ' ')
@@ -404,15 +407,26 @@ describe('ITEM-RULES R5 — a material in the name is a material in the recipe',
 });
 
 // ── R6/R7 shared lookups ────────────────────────────────────────────────────────────────────────
-type ArmourItem = Item & { armorProperties?: { armorType?: string; equipmentSlot?: string; slot?: string } };
+type ArmourItem = Item & {
+  armorProperties?: { armorType?: string; equipmentSlot?: string; slot?: string };
+};
 const WEARABLE = (ITEMS as ArmourItem[]).filter(
   (i) => i.armorProperties?.armorType && recipesByOutput.has(i.id)
 );
 /** How much binding a piece of this size takes. A glove and a cuirass are not lashed with equal cord. */
 const BINDING_SIZE: Record<string, number> = {
-  head: 1, gloves: 1, boots: 1, bracers: 1, belt: 1, back2: 1,
-  greaves: 2, back: 2, offHand: 2,
-  bodyBase: 3, bodyMid: 3, bodyOuter: 3
+  head: 1,
+  gloves: 1,
+  boots: 1,
+  bracers: 1,
+  belt: 1,
+  back2: 1,
+  greaves: 2,
+  back: 2,
+  offHand: 2,
+  bodyBase: 3,
+  bodyMid: 3,
+  bodyOuter: 3
 };
 const BINDINGS = ['cordage', 'thread', 'sinew', 'enchant_thread'];
 const slotOf = (i: ArmourItem) => i.armorProperties?.equipmentSlot ?? i.armorProperties?.slot ?? '';
@@ -431,8 +445,7 @@ describe('ITEM-RULES R6 — a fastener is a real component or it is not listed',
     for (const i of WEARABLE) {
       const rec = firstRecipe(i.id)!;
       const ins = (rec.inputs ?? {}) as Record<string, number>;
-      for (const b of SEWING)
-        if (ins[b] !== undefined) bad.push(`${i.id} lists ${ins[b]}x ${b}`);
+      for (const b of SEWING) if (ins[b] !== undefined) bad.push(`${i.id} lists ${ins[b]}x ${b}`);
     }
     expect(bad, bad.join('; ')).toEqual([]);
   });
@@ -500,7 +513,9 @@ const NODE_ITEMS = new Set<string>();
 })(resourcesData);
 
 const CARCASS_ITEMS = new Set(
-  (CREATURES as { carcassItemId?: string }[]).map((c) => c.carcassItemId).filter(Boolean) as string[]
+  (CREATURES as { carcassItemId?: string }[])
+    .map((c) => c.carcassItemId)
+    .filter(Boolean) as string[]
 );
 const LOOTED = new Set<string>();
 for (const pool of Object.values<{ slots?: Record<string, { pick?: { id: string }[] }> }>(
@@ -570,7 +585,8 @@ const VESSELS = (ITEMS as (Item & { inventoryBonus?: unknown })[]).filter((i) =>
 describe('ITEM-RULES R9 — a vessel holds a stated amount, and is only one kind of container', () => {
   it('every vessel declares a positive capacityL', () => {
     const bad = VESSELS.filter((i) => !((i.container?.capacityL ?? 0) > 0)).map(
-      (i) => `${i.id} is a vessel with no capacityL — say how much it holds or drop the container block`
+      (i) =>
+        `${i.id} is a vessel with no capacityL — say how much it holds or drop the container block`
     );
     expect(bad, bad.join('; ')).toEqual([]);
   });
@@ -606,6 +622,59 @@ describe('ITEM-RULES R10 — a fluid output is always caught', () => {
             .filter((o) => fluids.has(o))
             .join('/')} at "${r.station ?? '(no station)'}", which has no fluidCapacityL — ` +
           `the batch would spill. Give the station a body, or stage a vessel there.`
+      );
+    expect(bad, bad.join('; ')).toEqual([]);
+  });
+});
+
+// R11 a container ITEM and a storage BUILDING never share a noun. Three pairs used to collide —
+//     `storage_chest`/`wooden_chest`, `salting_barrel`/`wooden_barrel`, `wicker_basket`/`woven_basket` —
+//     and "put it in the chest" meant two different things depending on which panel you were in. The
+//     rule that settles it: an ITEM you can pick up takes the bare vessel noun (Bucket, Barrel, Bin,
+//     Crate, Basket, Chest, Jug, Urn); a BUILDING you cannot takes a fitted place-name that says so
+//     (Larder Cupboard, Meat Hooks, Rope-Hung Granary, Root Clamp, Drying Rack, Hay Rack).
+
+const VESSEL_NOUNS = [
+  'bucket',
+  'barrel',
+  'bin',
+  'crate',
+  'basket',
+  'chest',
+  'jug',
+  'urn',
+  'flask',
+  'phial',
+  'cask',
+  'sack',
+  'jar',
+  'waterskin'
+];
+
+describe('ITEM-RULES R11 — a container item and a storage building never share a noun', () => {
+  it('no storage building is named after a vessel a pawn could pick up', () => {
+    const bad = (BUILDINGS as { id?: string; name?: string; effects?: Record<string, number> }[])
+      .filter((b) => (b.effects?.storageStacks ?? 0) > 0)
+      .filter((b) =>
+        VESSEL_NOUNS.some((n) => (b.name ?? '').toLowerCase().split(/\W+/).includes(n))
+      )
+      .map(
+        (b) =>
+          `the building "${b.name}" (${b.id}) is named after a portable vessel — either make it an ` +
+          `ITEM, or give it a fitted place-name that says it cannot be carried`
+      );
+    expect(bad, bad.join('; ')).toEqual([]);
+  });
+
+  it('every container item reads as the bare vessel it is', () => {
+    const bad = VESSELS.filter((i) => !i.quiver && i.category === 'storage')
+      .filter(
+        (i) => !VESSEL_NOUNS.some((n) => (i.name ?? '').toLowerCase().split(/\W+/).includes(n))
+      )
+      .map(
+        (i) =>
+          `the vessel "${i.name}" (${i.id}) does not name a vessel — a container item takes the plain ` +
+          `noun for the thing it is, so the player never has to guess which "chest" a panel means`
       );
     expect(bad, bad.join('; ')).toEqual([]);
   });

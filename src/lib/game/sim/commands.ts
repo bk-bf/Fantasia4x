@@ -49,7 +49,7 @@ import {
   availableAggregateFromDrops,
   withDrops
 } from '../core/GameState';
-import { emptyOut } from '../core/vessels';
+import { emptyOut, roomFor } from '../core/vessels';
 import { equipItem, unequipItem, equipDropToPawn } from '../core/PawnEquipment';
 import { rng } from '../core/rng';
 import { pickUpFromTile } from '../systems/pawn/pawnHauling';
@@ -849,6 +849,56 @@ export const COMMANDS: Record<string, Cmd> = {
   }),
 
   /**
+   * CONTAINERS-AND-FLUIDS §2 — send a pawn to draw a station's fluid into an empty vessel by hand.
+   * The automatic fills answer the player's standing allow-lists and a queued order's demand; this is
+   * the one-off: "there is ale in that cask, go and bottle some". It picks the nearest free empty
+   * vessel in the colony that can hold the fluid, and mints the ordinary two-leg `fill` job for it —
+   * marked `manual` so the generator does not cull it for failing the filter test it was never meant
+   * to pass. No-op when the station is dry or the colony has nothing to put it in.
+   */
+  drawFluidFromStation: (s, p: { buildingId: string; itemId: string; pawnId?: string }) => {
+    const b = (s.buildings ?? []).find((x) => x.id === p.buildingId && x.status === 'complete');
+    const held = (b?.fluidContents ?? []).find((e) => e.itemId === p.itemId)?.litres ?? 0;
+    if (!b || held <= 0) return s;
+    const free = (s.droppedItems ?? [])
+      .filter(
+        (d) =>
+          d.stored &&
+          !d.reservedFor &&
+          !d.forbidden &&
+          d.instance &&
+          !d.instance.contents?.length &&
+          roomFor(d.instance, p.itemId, 0.001) > 0
+      )
+      .sort(
+        (l, r) =>
+          Math.abs(l.x - b.x) + Math.abs(l.y - b.y) - (Math.abs(r.x - b.x) + Math.abs(r.y - b.y))
+      )[0];
+    if (!free?.instance) return s;
+    const id = `fill-${free.instance.instanceId}-${p.itemId}`;
+    if ((s.jobs ?? []).some((j) => j.id === id)) return s;
+    return {
+      ...s,
+      jobs: [
+        ...(s.jobs ?? []),
+        {
+          id,
+          type: 'fill' as const,
+          targetX: free.x,
+          targetY: free.y,
+          resourceId: p.itemId,
+          droppedItemId: free.id,
+          vesselInstanceId: free.instance.instanceId,
+          manual: true,
+          workRequired: 0.02,
+          workDone: 0,
+          claimedBy: p.pawnId ?? null
+        }
+      ]
+    };
+  },
+
+  /**
    * CONTAINERS-AND-FLUIDS §1 — tip a vessel out on the ground. This DESTROYS what is in it (a fluid
    * poured on the floor is gone), which is exactly why it is a deliberate order off the action menu
    * and never something a job does on its own to make room.
@@ -954,6 +1004,13 @@ export const COMMANDS: Record<string, Cmd> = {
    *  zones before spilling into lower ones (see findNearestDepositPoint / depositInventory). */
   setInstancePriority: (s, p: { instanceId: string; priority: ZonePriority }) =>
     designationService.setInstancePriority(p.instanceId, p.priority, s),
+  /** CONTAINERS-AND-FLUIDS §3 — how many bins/barrels/baskets a stockpile keeps (DF's max-bins). */
+  setInstanceContainerBudget: (s, p: { instanceId: string; containerBudget: number }) => ({
+    ...s,
+    zoneInstances: (s.zoneInstances ?? []).map((z) =>
+      z.id === p.instanceId ? { ...z, containerBudget: p.containerBudget } : z
+    )
+  }),
   /** Toggle a loose stack's haul lockout (DroppedItem.forbidden). Forbidden stacks are skipped by the
    *  haul generator and any in-flight haul for them is pruned next tick (see jobs/haul.ts). */
   setDropForbidden: (s, p: { dropId: string; forbidden: boolean }) => ({
