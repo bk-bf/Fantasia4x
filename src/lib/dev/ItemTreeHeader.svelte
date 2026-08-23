@@ -26,7 +26,7 @@
           type="button"
           class="sort"
           class:on={sortKey === c.key}
-          title="Sort every shelf by {c.label.toLowerCase()} — again for descending, a third time for the age ladder"
+          title="Sort every shelf by {c.label.toLowerCase()} — again for descending, a third time for the natural order"
           onclick={() => sortBy(c.key)}>{c.label}{arrow(c.key)}</button
         >
       </th>

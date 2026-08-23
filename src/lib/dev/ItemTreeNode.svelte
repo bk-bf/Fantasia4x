@@ -3,14 +3,13 @@
      state so folding is consistent across the whole tree and survives a filter. -->
 <script lang="ts">
   import Self from './ItemTreeNode.svelte';
-  import type { TreeItem, TreeNode } from './itemTree';
+  import type { TreeNode } from './itemTree';
   import type { GearRow } from './gearDb';
 
   let {
     node,
     open,
     sel,
-    cmp,
     toggle,
     select,
     onhover,
@@ -19,16 +18,11 @@
     node: TreeNode;
     open: Record<string, boolean>;
     sel: Record<string, boolean>;
-    /** Row order for this shelf — the chosen column, or the natural age ladder. */
-    cmp: (a: TreeItem, b: TreeItem) => number;
     toggle: (key: string) => void;
     select: (id: string) => void;
     onhover: (row: GearRow, e: MouseEvent) => void;
     onout: () => void;
   } = $props();
-
-  // Sorted copy, never the node's own array — the tree is shared and a column click must not mutate it.
-  const rows = $derived([...node.items].sort(cmp));
 
   const shut = $derived(!open[node.key]);
   // The indent is the whole point of the thing — depth reads as position, not as decoration.
@@ -52,9 +46,9 @@
 </tr>
 {#if !shut}
   {#each node.children as child (child.key)}
-    <Self node={child} {open} {sel} {cmp} {toggle} {select} {onhover} {onout} />
+    <Self node={child} {open} {sel} {toggle} {select} {onhover} {onout} />
   {/each}
-  {#each rows as it (it.id)}
+  {#each node.items as it (it.id)}
     <tr
       class="leaf"
       class:sel={sel[it.id]}

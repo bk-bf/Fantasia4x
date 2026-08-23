@@ -11,10 +11,10 @@
 // because a material has no tier of its own and its own station lies (linen cloth is woven at a
 // primitive frame from thread spun on a bronze-age wheel).
 //
-// Age is a COLUMN on the row and the sort key for a shelf, never a level of the tree. It used to be a
-// level under every branch, which cut one line of armour into six shelves and made the obvious
-// question — "show me every hide piece, from the first crude vest to the last" — impossible to read.
-// The branches are conceptual only, and each shelf runs from the earliest age to the latest.
+// Age is a LEVEL of the tree: Armour ▸ Bronze ▸ crafted ▸ set ▸ layer ▸ what it covers. It is also a
+// column on the row, but the nesting is what answers the question an audit asks — "what does this age
+// offer for this slot, and what sits empty beside it" — because a level with one child instead of six
+// IS the hole, visible without reading a row.
 
 import itemsData from '../game/database/items/items.jsonc';
 import recipesData from '../game/database/items/recipes.jsonc';
@@ -236,18 +236,20 @@ const perishable = (i: any) => (i.decaySeconds || i.decaysTo ? 'perishable' : 'k
 
 // ── the path each item files itself under ───────────────────────────────────
 //
-// The branches are CONCEPTUAL only — what a thing IS. Age used to be a level of its own under every
-// branch, which split one line of armour into six shelves and made "show me every hide piece from
-// the first crude vest to the last" impossible to read. Age is now a COLUMN on the row and the sort
-// key for the leaf, so a shelf reads top-to-bottom from the earliest age to the latest.
+// Branches say what a thing IS; the AGE level under them says when the colony can have it. Equipment
+// puts age directly under the branch (an audit reads "what does Bronze offer for this slot"); every
+// other branch puts its conceptual line first and age beneath it, because "all the fuels, by age" is
+// the question there rather than "everything the bronze age has".
 function pathOf(i: any): string[] {
   const ap = i.armorProperties;
   const wp = i.weaponProperties;
+  const age = ageOf(i);
 
-  if (ap?.armorType === 'shield') return ['Shields', ...sourceBranch(i)];
+  if (ap?.armorType === 'shield') return ['Shields', age, ...sourceBranch(i)];
   if (i.type === 'armor' && ap?.armorType) {
     return [
       'Armour',
+      age,
       ...sourceBranch(i),
       ap.armorSet ? prettify(ap.armorSet) : 'no set',
       layerOf(ap.equipmentSlot ?? ap.slot ?? ''),
@@ -255,13 +257,14 @@ function pathOf(i: any): string[] {
     ];
   }
   // Worn but soaks nothing: rings, amulets, crowns, torcs.
-  if (i.type === 'armor') return ['Regalia & jewellery', COVERAGE[ap?.equipmentSlot] ?? 'worn'];
+  if (i.type === 'armor')
+    return ['Regalia & jewellery', COVERAGE[ap?.equipmentSlot] ?? 'worn', age];
 
   if (i.category === 'ammunition' || i.ammoProperties)
-    return ['Ammo', prettify(i.ammoProperties?.ammoCategory ?? i.ammoCategory ?? 'other')];
+    return ['Ammo', prettify(i.ammoProperties?.ammoCategory ?? i.ammoCategory ?? 'other'), age];
   // One child named the same thing as its parent is a level that tells the reader nothing.
-  if (i.category === 'natural_weapon') return ['Natural weapons'];
-  if (wp) return ['Weapons', familyOf(i.id), wp.twoHanded ? 'two-handed' : 'one-handed'];
+  if (i.category === 'natural_weapon') return ['Natural weapons', age];
+  if (wp) return ['Weapons', age, familyOf(i.id), wp.twoHanded ? 'two-handed' : 'one-handed'];
 
   // CONTAINERS-AND-FLUIDS: three separate branches for three separate things, and they sit beside
   // Armour/Shields/Weapons because a player choosing a loadout is choosing between them.
@@ -274,34 +277,35 @@ function pathOf(i: any): string[] {
   // Fluids split by what the fluid is FOR, never by its raw `category`. Those category words —
   // "reagent", "organic" — are the same words Materials files its own lines under, so reusing them
   // put a shelf called "Reagent" in two branches meaning two different things.
-  if (i.type === 'fluid') return ['Fluids', fluidPurpose(i)];
+  if (i.type === 'fluid') return ['Fluids', fluidPurpose(i), age];
   if (i.inventoryBonus) {
     const slot = i.armorProperties?.equipmentSlot ?? i.armorProperties?.slot;
-    return ['Carry aids', COVERAGE[slot] ?? (slot ? prettify(slot) : 'in hand')];
+    return ['Carry aids', COVERAGE[slot] ?? (slot ? prettify(slot) : 'in hand'), age];
   }
   if (i.container) {
     const holdsFluid = (i.container.accepts ?? []).includes('fluid');
-    return ['Vessels', holdsFluid ? 'fluid' : 'general goods'];
+    return ['Vessels', holdsFluid ? 'fluid' : 'general goods', age];
   }
 
   if (i.type === 'food' || i.nutrition != null)
-    return ['Consumables', 'Food', perishable(i), prettify(i.category ?? 'food')];
-  if (i.medicineQuality != null) return ['Consumables', 'Medicine'];
+    return ['Consumables', 'Food', perishable(i), prettify(i.category ?? 'food'), age];
+  if (i.medicineQuality != null) return ['Consumables', 'Medicine', age];
   // The coatings and tinctures all became FLUIDS; what still carries `category: reagent` here is beast
   // ORGANS, eaten whole for the trait gamble. Calling that shelf "Coatings & tinctures" was a leftover
   // pointing at a shelf that had moved.
-  if (i.type === 'consumable' && i.category === 'reagent') return ['Consumables', 'Beast organs'];
+  if (i.type === 'consumable' && i.category === 'reagent')
+    return ['Consumables', 'Beast organs', age];
   if (i.type === 'consumable') {
     const cat = String(i.category ?? 'other');
     // A shelf called "Consumable" inside a branch called Consumables says nothing twice.
-    return ['Consumables', cat === 'consumable' ? 'Other' : prettify(cat)];
+    return ['Consumables', cat === 'consumable' ? 'Other' : prettify(cat), age];
   }
 
   if (i.type === 'tool' || i.type === 'container') {
     const work = i.toolBoost?.workType ?? i.category ?? 'other';
-    return ['Tools', prettify(String(work))];
+    return ['Tools', prettify(String(work)), age];
   }
-  return ['Materials', materialLine(String(i.category ?? 'other'))];
+  return ['Materials', materialLine(String(i.category ?? 'other')), age];
 }
 
 /**
@@ -402,10 +406,8 @@ const NOT_A_KIT = new Set(['no set', 'drop only']);
 const coverageOf = (label: string) => (label.startsWith('torso') ? 'torso' : label);
 function missingOf(node: TreeNode, rootLabel: string): string[] {
   if (rootLabel !== 'Armour' || NOT_A_KIT.has(node.label)) return [];
-  // Armour ▸ crafted ▸ SET  (or ▸ dropped ▸ species ▸ SET). One shallower than it used to be, since
-  // age stopped being a level of its own — and a set now gathers its whole line rather than the slice
-  // of it that happened to share an age, which is the point of the change.
-  if (node.depth !== 2 && node.depth !== 3) return [];
+  // Armour ▸ age ▸ crafted ▸ SET  (or ▸ dropped ▸ species ▸ SET)
+  if (node.depth !== 3 && node.depth !== 4) return [];
   // a set node is the one whose children are layers
   if (!node.children.some((c) => LAYER_LABEL.includes(c.label))) return [];
   const present = new Set<string>();
@@ -416,11 +418,14 @@ function missingOf(node: TreeNode, rootLabel: string): string[] {
   return KIT_PARTS.filter((p) => !present.has(p));
 }
 
-/** Layers sort by the body's own order; everything else alphabetically, catch-alls last. (Ages used to
- *  sort here too — they are no longer nodes at all, they are a column on the row.) */
+/** Ages sort by the real ladder — Primitive before Bronze because it IS before it, not because P
+ *  precedes B; layers by the body's own order; everything else alphabetically, catch-alls last. */
 const TRAILING = ['no set', 'drop only', 'other', 'unplaced'];
 function sortNodes(nodes: TreeNode[]): TreeNode[] {
   return nodes.sort((a, b) => {
+    const ai = AGES.indexOf(a.label as Age);
+    const bi = AGES.indexOf(b.label as Age);
+    if (ai >= 0 && bi >= 0) return ai - bi;
     const al = LAYER_LABEL.indexOf(a.label);
     const bl = LAYER_LABEL.indexOf(b.label);
     if (al >= 0 && bl >= 0) return al - bl;
@@ -485,8 +490,9 @@ export function buildTree(rows: TreeItem[] = TREE_ITEMS): TreeNode {
         return (ai < 0 ? 99 : ai) - (bi < 0 ? 99 : bi);
       });
     else sortNodes(n.children);
-    // Age is a ROW property now, not a level, so a shelf reads down the ladder: the earliest piece
-    // first, the latest last. Tier breaks a tie within an age, the name within a tier.
+    // Age first, then tier, then name. With age as a LEVEL every row on a shelf shares one, so this
+    // usually reduces to tier-then-name — but it keeps the unsorted order identical either way, which
+    // is what `naturalOrder` (the sort's "off" position) promises.
     n.items.sort(
       (a, b) =>
         a.ageRank - b.ageRank || (a.tier ?? 0) - (b.tier ?? 0) || a.name.localeCompare(b.name)
@@ -532,8 +538,8 @@ function valueOf(it: TreeItem, key: SortKey): number | string {
       return it.tier ?? -1;
     case 'weightKg':
       return it.weightKg ?? 0;
-    // Sorting the age COLUMN means sorting the ladder, not the alphabet — Bronze comes after
-    // Primitive because it does, not because B follows P.
+    // Sorting by age means sorting the ladder, not the alphabet — Bronze comes after Primitive
+    // because it does, not because B follows P.
     case 'age':
       return it.ageRank;
     case 'stat':
@@ -543,9 +549,82 @@ function valueOf(it: TreeItem, key: SortKey): number | string {
   }
 }
 
-/** The default order every shelf falls back to: down the age ladder, then tier, then name. */
+/** The default order a shelf falls back to — the sort's "off" position: age, then tier, then name. */
 export function naturalOrder(a: TreeItem, b: TreeItem): number {
   return a.ageRank - b.ageRank || (a.tier ?? 0) - (b.tier ?? 0) || a.name.localeCompare(b.name);
+}
+
+/**
+ * The value a GROUP sorts by: the best value among everything under it, where "best" means the one
+ * that would come first under the current direction — the earliest age when sorting up, the latest
+ * when sorting down. That is what makes a sort visible at all here. Most shelves hold a single age, so
+ * ordering only the rows inside them left the headings alphabetical and the whole table looking
+ * unsorted; a set of Primitive pieces has to be able to move above a set of Iron ones.
+ */
+function aggregateOf(node: TreeNode, key: SortKey, dir: 1 | -1): number | string | null {
+  let best: number | string | null = null;
+  const consider = (v: number | string) => {
+    if (best === null) best = v;
+    else if (typeof v === 'number' && typeof best === 'number')
+      best = dir === 1 ? Math.min(best, v) : Math.max(best, v);
+    else {
+      const d = String(v).localeCompare(String(best));
+      if (dir === 1 ? d < 0 : d > 0) best = v;
+    }
+  };
+  (function walk(n: TreeNode) {
+    for (const it of n.items) consider(valueOf(it, key));
+    n.children.forEach(walk);
+  })(node);
+  return best;
+}
+
+/**
+ * A copy of the tree ordered by one column — GROUPS and rows alike. A copy rather than a re-sort in
+ * place because the built tree is shared with the search view and the fold state is keyed off it.
+ * With no column chosen this is the tree exactly as `buildTree` left it.
+ */
+export function sortTree(node: TreeNode, key: SortKey | null, dir: 1 | -1): TreeNode {
+  const cmp = rowComparator(key, dir);
+  const clone = (n: TreeNode, natural: number): TreeNode & { _n: number } => ({
+    ...n,
+    _n: natural,
+    children: n.children.map(clone),
+    items: [...n.items].sort(cmp)
+  });
+  const out = clone(node, 0);
+  if (!key) return out;
+
+  // The TOP level is a table of contents, not data: it is the deliberate order an audit reads in
+  // (ROOT_ORDER), and letting a column throw Regalia to the bottom because its earliest piece is
+  // late-age would undo that for no gain. Sorting starts one level in — at the AGE shelves and below.
+  (function orderGroups(n: TreeNode, isRoot: boolean) {
+    // The AGE level is the tree's spine. Sorting by weight or defence must not shuffle it into
+    // "Boss, Iron, Steel, Runed, Copper, Bronze, Primitive" — that answers no question and costs the
+    // reader the one ordering they can navigate by. Ages hold the ladder for every column EXCEPT the
+    // age column itself, which is exactly the case where flipping them is the point.
+    const holdsAges = key !== 'age' && n.children.some((c) => AGES.includes(c.label as Age));
+    if (isRoot || holdsAges) {
+      n.children.forEach((c) => orderGroups(c, false));
+      return;
+    }
+    n.children.sort((a, b) => {
+      const av = aggregateOf(a, key, dir);
+      const bv = aggregateOf(b, key, dir);
+      // A branch holding nothing sortable sinks, whichever way the column points.
+      if (av === null || bv === null) return av === null ? (bv === null ? 0 : 1) : -1;
+      const d =
+        typeof av === 'number' && typeof bv === 'number'
+          ? av - bv
+          : String(av).localeCompare(String(bv));
+      // Ties keep the shelf order the tree was built with, so equal groups never shuffle about.
+      return d
+        ? d * dir
+        : (a as TreeNode & { _n: number })._n - (b as TreeNode & { _n: number })._n;
+    });
+    n.children.forEach((c) => orderGroups(c, false));
+  })(out, true);
+  return out;
 }
 
 /**

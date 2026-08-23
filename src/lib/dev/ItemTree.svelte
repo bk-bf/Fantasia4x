@@ -12,7 +12,7 @@
     ITEM_TREE,
     TREE_ITEMS,
     buildTree,
-    rowComparator,
+    sortTree,
     type SortKey,
     type TreeNode
   } from './itemTree';
@@ -30,12 +30,12 @@
   const toggle = (key: string) => (open[key] = !open[key]);
   const select = (id: string) => (sel[id] ? delete sel[id] : (sel[id] = true));
 
-  // Column sort, applied INSIDE each shelf (see itemTree.rowComparator). Three clicks on a heading
-  // cycle ascending → descending → back to the natural age ladder, so there is always a way out of a
-  // sort without hunting for a reset button.
+  // Column sort. It reorders the GROUP HEADINGS as well as the rows (see itemTree.sortTree) — a shelf
+  // usually holds one age, so ordering only the rows inside it left the table looking unsorted. Three
+  // clicks on a heading cycle ascending → descending → back to the natural order, so there is always
+  // a way out of a sort without hunting for a reset button.
   let sortKey = $state<SortKey | null>(null);
   let sortDir = $state<1 | -1>(1);
-  const cmp = $derived(rowComparator(sortKey, sortDir));
   function sortBy(key: SortKey) {
     if (sortKey !== key) {
       sortKey = key;
@@ -62,6 +62,9 @@
         )
       : ITEM_TREE
   );
+
+  // What is actually drawn: the filtered tree, ordered by whichever column is active.
+  const view = $derived(sortTree(tree, sortKey, sortDir));
 
   const everyKey = (n: TreeNode, out: string[] = []): string[] => {
     for (const c of n.children) {
@@ -98,20 +101,20 @@
     >
   </div>
   <p class="hint">
-    Every entry in <code>items.jsonc</code>, filed by what it IS. Branches are conceptual only —
-    <b>age is a column</b>, and every shelf reads from the earliest age to the latest, so one line
-    of armour is one shelf rather than six. Armour nests set ▸ <b>body layer</b> ▸ what it covers,
-    layers outermost first, because armour is subtractive and layers add. <b>Gated by</b> is the latest
-    station in an item's whole ingredient chain, which is what really decides its age. Click a row for
-    its description, or a column heading to re-sort every shelf by it — again for descending, a third
-    time back to the age ladder.
+    Every entry in <code>items.jsonc</code>, filed by what it IS and then by <b>age</b> — a level
+    with one child instead of six is the hole, visible without reading a row. Armour nests age ▸ set
+    ▸
+    <b>body layer</b> ▸ what it covers, layers outermost first, because armour is subtractive and
+    layers add. <b>Gated by</b> is the latest station in an item's whole ingredient chain, which is what
+    really decides its age. Click a row for its description, or a column heading to re-sort every shelf
+    and its headings by it — again for descending, a third time back to the natural order.
   </p>
   <div class="scroll">
     <table>
       <ItemTreeHeader {sortKey} {sortDir} {sortBy} />
       <tbody>
-        {#each tree.children as root (root.key)}
-          <ItemTreeNode node={root} {open} {sel} {cmp} {toggle} {select} {onhover} {onout} />
+        {#each view.children as root (root.key)}
+          <ItemTreeNode node={root} {open} {sel} {toggle} {select} {onhover} {onout} />
         {/each}
         {#if !tree.count}
           <tr><td colspan="8" class="none">nothing matches “{q}”</td></tr>

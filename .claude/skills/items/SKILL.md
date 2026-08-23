@@ -162,8 +162,12 @@ Three separate things wore the word "container". An item is **exactly one** of t
       industrial), never under its raw `category`, because "reagent" and "organic" are words Materials
       already uses for its own lines. A shelf named after its parent ("Consumables ▸ Consumable",
       "Natural weapons ▸ Natural Weapon") is a level that tells the reader nothing — drop it.
-- [ ] **Age is a COLUMN, not a level.** Branches are conceptual only; every shelf reads top-to-bottom
-      from the earliest age to the latest, so one line of armour is one shelf rather than six.
+- [ ] **Age is a LEVEL, under the conceptual branch.** `Armour ▸ Bronze ▸ crafted ▸ set ▸ layer ▸
+      what it covers`. A level with one child instead of six IS the hole, visible without reading a
+      row — that is what the nesting is for. Age is also a column, and the columns sort (which
+      reorders the shelf HEADINGS too), but the age spine holds its ladder for every column except
+      age itself: scrambling it into "Boss, Iron, Steel, Copper" costs the one ordering you navigate
+      by and answers nothing.
 
 ## The audit loop — run all of it
 
@@ -212,7 +216,10 @@ grep -c '<some string only the new build contains>' .devtools-dist/gear-db.html
 
 Grep for a string **unique to the change you just made** — a new label, a new title attribute. A
 string that was in the old bake too proves nothing, which is exactly how a stale file once went out
-under a "verified" claim.
+under a "verified" claim. Comments and local names do NOT survive minification, so only ever grep for
+a string LITERAL that reaches the page. When a change adds no new text at all (pure logic), verify
+instead that Vite's content-hashed bundle name changed and that the inlined copy in the HTML matches
+the freshly built asset byte-for-byte.
 
 ## Finishing
 
