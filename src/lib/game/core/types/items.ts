@@ -78,10 +78,19 @@ export interface VesselContent {
   /** Tracked solids only: the nested item itself. One level deep — a vessel inside a vessel inside a
    *  vessel is refused by `core/vessels.ts`, not by convention. */
   instance?: ItemInstance;
-  /** §C spoilage clock (seconds) for a perishable sitting INSIDE a vessel. Being in a jar is not a
-   *  licence to never rot — an unsealed vessel's contents keep the same clock a loose stack does, and
-   *  only `container.sealed` halts it. Undefined on anything that does not perish. */
+  /**
+   * §C spoilage and §1 drying clocks for a solid sitting INSIDE a vessel.
+   *
+   * The rule for every idle-item process is the same one: **an open vessel is transparent to the
+   * world, a sealed one shuts it out.** Berries in a bucket rot exactly as fast as berries on the
+   * ground and firewood in a crate seasons exactly as fast as firewood in the yard, because in both
+   * cases the air still reaches them; a stoppered jug or a bunged cask stops both, which is also why
+   * you cannot season timber in a sealed barrel. Without this, "put it in a container" would have
+   * been a way to make food immortal and to freeze a curing rack mid-cure.
+   */
   decayAcc?: number;
+  /** §1 accumulated drying seconds — see `decayAcc`. */
+  drying?: number;
 }
 
 /** A timed weapon coating stamped on an {@link ItemInstance} — `itemId` names the coating consumable

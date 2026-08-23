@@ -49,7 +49,14 @@ import {
   availableAggregateFromDrops,
   withDrops
 } from '../core/GameState';
-import { emptyOut, roomFor } from '../core/vessels';
+import {
+  emptyOut,
+  heldQuantity,
+  isFluidId,
+  roomFor,
+  takeOut,
+  unitsToLitres
+} from '../core/vessels';
 import { equipItem, unequipItem, equipDropToPawn } from '../core/PawnEquipment';
 import { rng } from '../core/rng';
 import { pickUpFromTile } from '../systems/pawn/pawnHauling';
@@ -613,10 +620,14 @@ export const COMMANDS: Record<string, Cmd> = {
     // so the worn item lands on the ground (preserving durability/quality) instead of vanishing.
     return setInstanceDownOnTile(afterUnequip, p.pawnId, pawn.position, inst);
   },
-  useConsumableItem: (s, p: { pawnId: string; itemId: string }) => {
+  useConsumableItem: (s, p: { pawnId: string; itemId: string; vesselInstanceId?: string }) => {
     const idx = s.pawns.findIndex((pw) => pw.id === p.pawnId);
     if (idx === -1) return s;
-    if (((s.stockpile ?? {})[p.itemId] ?? 0) < 1) return s;
+    // CONTAINERS-AND-FLUIDS: a potion is a FLUID now, so the dose may be in a phial on this pawn's own
+    // belt rather than in the colony's stock. Drawing from the carried vessel is the same action from
+    // the player's side; only where the dose is paid from differs.
+    if (!p.vesselInstanceId && ((s.stockpile ?? {})[p.itemId] ?? 0) < 1) return s;
+    if (p.vesselInstanceId && !carriedDose(s, p.pawnId, p.vesselInstanceId, p.itemId)) return s;
     const pawns = s.pawns.slice();
     const before = pawns[idx];
     // §G: a timed draught lasts longer for a skilled alchemist — pass the drinker's alchemy work-quality
@@ -627,16 +638,19 @@ export const COMMANDS: Record<string, Cmd> = {
     // applied (e.g. a duplicate organ), keep the item — don't burn stock for a no-op.
     pawns[idx] = applyConsumable(before, p.itemId, () => rng.random(), alchemyQuality);
     if (pawns[idx] === before) return s;
-    return consumeFromStockpiles({ ...s, pawns }, { [p.itemId]: 1 });
+    return p.vesselInstanceId
+      ? drainCarriedDose({ ...s, pawns }, p.pawnId, p.vesselInstanceId, p.itemId)
+      : consumeFromStockpiles({ ...s, pawns }, { [p.itemId]: 1 });
   },
 
   /** §2 weapon coating: brush a colony-stock coating onto THIS pawn's mainHand weapon, stamping a timed
    *  `coating` on the instance (its on-hit proc rides the blade until `expiresAtTurn`). No-op — keeps the
    *  item — if the pawn holds no mainHand weapon or the id isn't a coating. Re-coating overwrites. */
-  applyWeaponCoating: (s, p: { pawnId: string; itemId: string }) => {
+  applyWeaponCoating: (s, p: { pawnId: string; itemId: string; vesselInstanceId?: string }) => {
     const idx = s.pawns.findIndex((pw) => pw.id === p.pawnId);
     if (idx === -1) return s;
-    if (((s.stockpile ?? {})[p.itemId] ?? 0) < 1) return s;
+    if (!p.vesselInstanceId && ((s.stockpile ?? {})[p.itemId] ?? 0) < 1) return s;
+    if (p.vesselInstanceId && !carriedDose(s, p.pawnId, p.vesselInstanceId, p.itemId)) return s;
     const pawn = s.pawns[idx];
     const mh = pawn.equipment?.mainHand;
     if (!mh) return s; // nothing equipped to coat
@@ -651,7 +665,9 @@ export const COMMANDS: Record<string, Cmd> = {
         mainHand: { ...mh, coating: { itemId: p.itemId, expiresAtTurn } }
       }
     };
-    return consumeFromStockpiles({ ...s, pawns }, { [p.itemId]: 1 });
+    return p.vesselInstanceId
+      ? drainCarriedDose({ ...s, pawns }, p.pawnId, p.vesselInstanceId, p.itemId)
+      : consumeFromStockpiles({ ...s, pawns }, { [p.itemId]: 1 });
   },
 
   /** Toggle a player "pin" on an item id for one pawn: pinned carried items are never deposited
@@ -1889,4 +1905,36 @@ function mapVesselInstance(
     };
   });
   return { ...withDrops(s, drops), pawns };
+}
+
+/** Is there at least one whole dose of `itemId` in the vessel this pawn is carrying? */
+function carriedDose(s: GameState, pawnId: string, instanceId: string, itemId: string): boolean {
+  const pawn = s.pawns.find((p) => p.id === pawnId);
+  const inst = (pawn?.inventory?.instances ?? []).find((i) => i.instanceId === instanceId);
+  if (!inst) return false;
+  const held = heldQuantity(inst, itemId);
+  return isFluidId(itemId) ? held >= unitsToLitres(itemId, 1) : held >= 1;
+}
+
+/** Spend one dose out of a carried vessel — the pack-side twin of `consumeFromStockpiles`. */
+function drainCarriedDose(
+  s: GameState,
+  pawnId: string,
+  instanceId: string,
+  itemId: string
+): GameState {
+  const want = isFluidId(itemId) ? unitsToLitres(itemId, 1) : 1;
+  return {
+    ...s,
+    pawns: s.pawns.map((p) => {
+      if (p.id !== pawnId) return p;
+      const instances = (p.inventory?.instances ?? []).map((i) => {
+        if (i.instanceId !== instanceId) return i;
+        const copy: ItemInstance = { ...i, contents: i.contents?.map((e) => ({ ...e })) };
+        takeOut(copy, itemId, want);
+        return copy;
+      });
+      return { ...p, inventory: { ...(p.inventory ?? { items: {} }), instances } };
+    })
+  };
 }

@@ -157,8 +157,16 @@ function dryingContext(gameState: GameState): DryingCtx {
  * SINGLE determination both stepDrying (to cure) and stepItemDecay (to gate spoilage) consult, so a
  * stack can never both dry and spoil. Reserved/committed stacks are handled by the callers, not here.
  */
-function dryRateFor(d: DroppedItem, gameState: GameState, ctx: DryingCtx): number {
-  const rule = dryingRuleFor(d.resourceId);
+function dryRateFor(
+  d: DroppedItem,
+  gameState: GameState,
+  ctx: DryingCtx,
+  // CONTAINERS-AND-FLUIDS: a VESSEL is not dryable itself, but what is inside an open one is. The
+  // caller passes the NESTED item's rule so the same tile/temperature/wetness maths is reused instead
+  // of a second copy drifting away from this one.
+  ruleOverride?: DryingRule | null
+): number {
+  const rule = ruleOverride ?? dryingRuleFor(d.resourceId);
   if (!rule) return 0;
   if (rule.mode === 'fire-ring') {
     if (ctx.fires.length === 0) return 0;
@@ -1233,7 +1241,17 @@ export class ItemServiceImpl implements ItemService {
     // (reserved stacks are committed to an order — e.g. fermenting — and never dry).
     let hasDryable = false;
     for (const d of drops) {
-      if ((d.quantity ?? 0) > 0 && !d.reservedFor && dryingRuleFor(d.resourceId)) {
+      if ((d.quantity ?? 0) <= 0 || d.reservedFor) continue;
+      if (dryingRuleFor(d.resourceId)) {
+        hasDryable = true;
+        break;
+      }
+      // CONTAINERS-AND-FLUIDS: firewood seasons just as well inside an OPEN crate as in the yard.
+      if (
+        d.instance?.contents?.length &&
+        !vesselOf(d.resourceId)?.sealed &&
+        d.instance.contents.some((e) => e.amount != null && dryingRuleFor(e.itemId))
+      ) {
         hasDryable = true;
         break;
       }
@@ -1249,7 +1267,26 @@ export class ItemServiceImpl implements ItemService {
       // dries nor (in stepItemDecay) spoils. Fermenting overrides both.
       if ((d.quantity ?? 0) <= 0 || d.reservedFor) return d;
       const rule = dryingRuleFor(d.resourceId);
-      if (!rule) return d;
+      if (!rule) {
+        // Not dryable itself — but it may be a VESSEL holding something that is. An open vessel lets
+        // the air through; a sealed one is exactly why you cannot season timber in a bunged cask.
+        if (!d.instance?.contents?.length || vesselOf(d.resourceId)?.sealed) return d;
+        let touched = false;
+        const contents = d.instance.contents.map((e) => {
+          const r = e.amount != null ? dryingRuleFor(e.itemId) : null;
+          if (!r) return e;
+          const rate = dryRateFor(d, gameState, ctx, r);
+          if (rate <= 0) return e;
+          const drying = Math.max(0, (e.drying ?? 0) + dt * rate);
+          touched = true;
+          return drying >= r.seconds
+            ? { ...e, itemId: r.itemId, drying: undefined }
+            : { ...e, drying };
+        });
+        if (!touched) return d;
+        changed = true;
+        return { ...d, instance: { ...d.instance, contents } };
+      }
       const rate = dryRateFor(d, gameState, ctx);
       if (rate === 0) return d; // idle (too cold / not by a fire) — just sits (it spoils instead)
       const have = d.drying ?? 0;

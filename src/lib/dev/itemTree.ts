@@ -56,7 +56,10 @@ for (const c of creaturesData as any[]) {
 }
 const DROPPER_OF_ITEM = new Map<string, string>();
 {
-  const pools = ((lootpoolData as { pools?: Record<string, any> }).pools ?? {}) as Record<string, any>;
+  const pools = ((lootpoolData as { pools?: Record<string, any> }).pools ?? {}) as Record<
+    string,
+    any
+  >;
   for (const [poolId, pool] of Object.entries(pools)) {
     const who = SPECIES_OF_POOL.get(poolId) ?? poolId.split('_')[0];
     for (const slot of Object.values<any>(pool?.slots ?? {}))
@@ -108,6 +111,7 @@ const COVERAGE: Record<string, string> = {
   back: 'cloak',
   back2: 'pack',
   belt: 'belt',
+  mainHand: 'in hand',
   offHand: 'off-hand',
   ring: 'ring',
   ring2: 'ring',
@@ -243,18 +247,30 @@ function pathOf(i: any): string[] {
     ];
   }
   // Worn but soaks nothing: rings, amulets, crowns, torcs.
-  if (i.type === 'armor') return ['Regalia & jewellery', COVERAGE[ap?.equipmentSlot] ?? 'worn', age];
+  if (i.type === 'armor')
+    return ['Regalia & jewellery', COVERAGE[ap?.equipmentSlot] ?? 'worn', age];
 
   if (i.category === 'ammunition' || i.ammoProperties)
     return ['Ammo', prettify(i.ammoProperties?.ammoCategory ?? i.ammoCategory ?? 'other'), age];
   if (i.category === 'natural_weapon') return ['Natural weapons', prettify(i.category), age];
   if (wp) return ['Weapons', age, familyOf(i.id), wp.twoHanded ? 'two-handed' : 'one-handed'];
 
-  // CONTAINERS-AND-FLUIDS: fluids and vessels are their own branches — a thing that cannot exist
-  // outside a container, and the containers themselves, answer different questions from "a material".
+  // CONTAINERS-AND-FLUIDS: three separate branches for three separate things, and they sit beside
+  // Armour/Shields/Weapons because a player choosing a loadout is choosing between them.
+  //
+  //   Carry aids — WORN. They raise what a pawn can shoulder and hold nothing. Filed by the slot they
+  //                occupy, because the loadout trade-off (a back quiver blocks a pack) is the point.
+  //   Vessels    — NOT worn. Nesting and capacity only; what they hold is what they are for.
+  //   Fluids     — cannot exist outside one of the above.
   if (i.type === 'fluid') return ['Fluids', prettify(i.category ?? 'other'), age];
-  if (i.container)
-    return ['Vessels', (i.container.accepts ?? []).includes('fluid') ? 'fluid' : 'general', age];
+  if (i.inventoryBonus) {
+    const slot = i.armorProperties?.equipmentSlot ?? i.armorProperties?.slot;
+    return ['Carry aids', COVERAGE[slot] ?? (slot ? prettify(slot) : 'in hand'), age];
+  }
+  if (i.container) {
+    const holdsFluid = (i.container.accepts ?? []).includes('fluid');
+    return ['Vessels', holdsFluid ? 'fluid' : 'general goods', age];
+  }
 
   if (i.type === 'food' || i.nutrition != null)
     return ['Consumables', 'Food', perishable(i), prettify(i.category ?? 'food'), age];
@@ -279,7 +295,10 @@ function statOf(i: any): string {
   if (ap?.armorType) return `def ${ap.defense ?? 0}`;
   if (wp) return `dmg ${wp.damage ?? '—'}${wp.damageType ? ` ${wp.damageType}` : ''}`;
   if (i.ammoProperties) return `dmg ${i.ammoProperties.damage ?? '—'}`;
-  if (i.nutrition != null) return `food ${i.nutrition}`;
+  // A drinkable food is BOTH: what it feeds and how much of the vessel it takes. Both numbers matter
+  // when you are deciding whether a skin of ale is worth the litre it costs to carry.
+  if (i.nutrition != null)
+    return i.type === 'fluid' ? `food ${i.nutrition} · ${i.volumeL ?? 1} L` : `food ${i.nutrition}`;
   if (i.hydration != null) return `drink ${i.hydration}`;
   if (i.medicineQuality != null) return `med ${i.medicineQuality}`;
   if (i.toolBoost) {
@@ -291,10 +310,13 @@ function statOf(i: any): string {
     ].filter(Boolean);
     if (parts.length) return parts.join(' ');
   }
+  // A carry aid is read by what it GRANTS; a vessel by what it HOLDS. Checked in that order, because a
+  // quiver has both blocks and while worn it is the carry aid.
+  if (i.inventoryBonus)
+    return `carry +${i.inventoryBonus.weightKg ?? 0}kg / +${i.inventoryBonus.volumeL ?? 0}L`;
   if (i.container)
     return `holds ${i.container.capacityL} L${i.container.capacityKg ? ` / ${i.container.capacityKg} kg` : ''}`;
   if (i.type === 'fluid') return `${i.volumeL ?? 1} L per measure`;
-  if (i.inventoryBonus) return `carry +${i.inventoryBonus.weightKg ?? 0}kg`;
   if (i.fuelValue) return `fuel ${i.fuelValue}`;
   return '—';
 }

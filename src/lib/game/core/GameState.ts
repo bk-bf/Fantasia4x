@@ -756,6 +756,10 @@ export function tileVesselCount(state: GameState, x: number, y: number): number 
 function packIntoVesselOnTile(drops: DroppedItem[], idx: number, x: number, y: number): number {
   const d = drops[idx];
   if (!d || d.instance || (d.quantity ?? 0) <= 0) return 0; // a vessel is never packed into a vessel
+  // A carcass carries its freshness PER UNIT (`unitConditions`), and a nested entry has nowhere to put
+  // that — packing one would flatten a half-spoiled deer to "fresh". It keeps its own pile, which is
+  // also the only sane place for it: nobody puts a deer in a bin.
+  if (d.unitConditions?.length) return 0;
   let packed = 0;
   for (let i = 0; i < drops.length && packed < d.quantity; i++) {
     const v = drops[i];

@@ -9,6 +9,7 @@
   import { vesselOf } from '$lib/game/core/vessels';
   import CarryCapacity from './CarryCapacity.svelte';
   import PawnConsumables from './PawnConsumables.svelte';
+  import PawnVesselContents from './PawnVesselContents.svelte';
 
   export let pawn: Pawn;
 
@@ -143,6 +144,7 @@
   {/if}
 </div>
 
+<PawnVesselContents {pawn} />
 <PawnConsumables {pawn} />
 
 <style>

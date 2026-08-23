@@ -278,6 +278,12 @@ one loose — a stockpile tile, a pawn's bare hands, a `DroppedItem` — spills 
       into the station's own body when the station states a `fluidCapacityL` (a steeping vat, a
       brewing cask) or into a vessel with room standing on the station tile. Nothing catches it, it
       is lost — and the log says so. R10 checks that every fluid-output recipe has one or the other.
+- [ ] **A vessel is not a loophole in the world.** One rule covers every process that acts on an idle
+      stack: an OPEN vessel is transparent to it, a SEALED one shuts it out. Berries in a bucket rot as
+      fast as berries on the ground; fibre cures into hay in a slatted crate and not in a bunged cask.
+      Weather wear needs no rule — a vessel is destroyed whole and its contents go with it. If you add
+      a new per-stack process, it goes through the same gate or a container becomes the place players
+      put things to stop time.
 - [ ] **A fluid needs a way in like anything else (R8)** — and its way in is usually a vessel plus a
       source, not a node. Water comes from a drink zone or a well; the brews come out of a cask.
 

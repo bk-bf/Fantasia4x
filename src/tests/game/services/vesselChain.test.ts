@@ -409,3 +409,120 @@ describe('containers & fluids — DF-style stockpiles: goods go INTO the bin', (
     ).toBe(true);
   });
 });
+
+describe('containers & fluids — a vessel is not a loophole in the world', () => {
+  // The rule, once, for every idle-item process: an OPEN vessel is transparent to the world and a
+  // SEALED one shuts it out. Spoilage and drying both go through it, in both directions.
+  const withVessel = (vesselId: string, contents: unknown) =>
+    ({
+      turn: 1,
+      pawns: [],
+      buildings: [],
+      season: 'summer',
+      droppedItems: [
+        {
+          id: `d-${vesselId}`,
+          resourceId: vesselId,
+          x: 2,
+          y: 2,
+          quantity: 1,
+          stored: true,
+          instance: {
+            instanceId: `i-${vesselId}`,
+            itemId: vesselId,
+            durability: 100,
+            filter: ['plant_fiber'],
+            contents
+          }
+        }
+      ],
+      stockpile: {},
+      stockpileZones: [],
+      worldMap: Array.from({ length: 5 }, (_, y) =>
+        Array.from({ length: 5 }, (_, x) => ({
+          x,
+          y,
+          type: 'land',
+          terrainType: 'plains',
+          moisture: 0
+        }))
+      )
+    }) as unknown as GameState;
+
+  it('fibre cures into hay inside an OPEN crate, and does not inside a sealed chest', () => {
+    const wood = () => [{ itemId: 'plant_fiber', amount: 3 }];
+    const ticks = 60 * 60 * 12;
+    const open = itemService.stepDrying(withVessel('crate', wood()), ticks);
+    const sealed = itemService.stepDrying(withVessel('wooden_chest', wood()), ticks);
+
+    const dried = (g: GameState, vid: string) =>
+      heldQuantity(
+        (g.droppedItems ?? []).find((d) => d.resourceId === vid)?.instance,
+        'dry_firewood'
+      );
+    const progressed = (g: GameState, vid: string) =>
+      ((g.droppedItems ?? []).find((d) => d.resourceId === vid)?.instance?.contents ?? []).some(
+        (e) => (e.drying ?? 0) > 0 || e.itemId === 'hay'
+      );
+
+    expect(
+      progressed(open, 'crate') || dried(open, 'crate') > 0,
+      'the air still reaches fibre in a slatted crate'
+    ).toBe(true);
+    expect(
+      progressed(sealed, 'wooden_chest'),
+      'and does not reach it in a bunged one — nothing cures in a sealed chest'
+    ).toBe(false);
+  });
+
+  it('a carcass is never packed into a bin — its per-unit freshness has nowhere to go', () => {
+    const gs = {
+      turn: 1,
+      pawns: [],
+      buildings: [],
+      droppedItems: [
+        {
+          id: 'd-bin',
+          resourceId: 'storage_bin',
+          x: 2,
+          y: 2,
+          quantity: 1,
+          stored: true,
+          instance: {
+            instanceId: 'bin-1',
+            itemId: 'storage_bin',
+            durability: 180,
+            filter: ['deer_carcass']
+          }
+        },
+        {
+          id: 'd-carcass',
+          resourceId: 'deer_carcass',
+          x: 2,
+          y: 2,
+          quantity: 2,
+          stored: false,
+          unitConditions: [80, 40]
+        }
+      ],
+      stockpile: {},
+      stockpileZones: [],
+      zoneTiles: { '2,2': ['stockpile'] },
+      zoneInstances: [],
+      worldMap: Array.from({ length: 5 }, (_, y) =>
+        Array.from({ length: 5 }, (_, x) => ({ x, y, type: 'land' }))
+      )
+    } as unknown as GameState;
+
+    const out = absorbDropIfOnStockpileTile(gs, 'd-carcass');
+    const carcass = (out.droppedItems ?? []).find((d) => d.id === 'd-carcass');
+    expect(carcass?.stored, 'it becomes its own stored pile').toBe(true);
+    expect(
+      carcass?.unitConditions,
+      'and both units keep the freshness they had — nothing was flattened'
+    ).toEqual([80, 40]);
+    expect(
+      heldQuantity((out.droppedItems ?? []).find((d) => d.id === 'd-bin')!.instance, 'deer_carcass')
+    ).toBe(0);
+  });
+});

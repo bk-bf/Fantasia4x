@@ -117,6 +117,35 @@ which panel you were looking at.
       every barrel the colony owns. Unset means no cap: the control only ever takes capacity away, and
       a LOADED vessel is goods rather than furniture, so it always has a home to go to.
 
+## 6 — A vessel is not a loophole in the world
+
+There are exactly three per-stack processes that act on idle goods, and a container had to be honest
+about all three or it would have become the place you put things to stop time.
+
+- [x] **Spoilage** reaches nested contents. An open bucket gives none, a sealed chest halts the clock.
+- [x] **Drying** reaches nested contents by the same rule: fibre cures into hay inside a slatted crate
+      exactly as fast as in the yard, and not at all inside a bunged one — you cannot season timber in
+      a sealed cask, and now the sim agrees.
+- [x] **Weather wear** needs nothing new. A loose vessel is destroyed whole when its durability runs
+      out, so what was inside goes with it — the same holds for a shattered worn one and a broken
+      carried one, all three of which remove the vessel object outright.
+- [x] Fermentation is untouched, and correctly so: it is a passive CRAFT at a station, not something
+      that happens to an idle stack.
+- [x] **A carcass is never packed into a bin.** Its freshness is per-unit (`unitConditions`) and a
+      nested entry has nowhere to put that, so packing one would flatten a half-spoiled deer to fresh.
+      It keeps its own pile — which is also the only sane place for a deer.
+
+- [x] **A carried vessel's contents are visible and usable from the pawn's inventory.** A phial on a
+      belt is no use if the only way to drink it is to haul it back to the stockpile first, so the
+      IN VESSELS panel lists what each carried vessel holds and offers the same DRINK / USE / COAT
+      actions the colony-stock list does, spending the dose out of that vessel. Water is deliberately
+      the exception: drinking is a NEED, so it routes through the FSM as a drink order and the pawn
+      stops what it is doing to take a drink.
+- [x] **`/gear-db` files the three concepts as three branches**, beside Armour and Weapons because a
+      player choosing a loadout is choosing between them: **Carry aids** (worn, filed by the slot they
+      occupy, read by what they GRANT), **Vessels** (not worn, fluid vs general goods, read by what
+      they HOLD), and **Fluids** (which cannot exist outside either).
+
 ## What this grew beyond the original spec
 
 Three things the spec did not have, decided during the build because the sim needs them to work:

@@ -1435,6 +1435,13 @@ stockable that gate would have flipped and pawns would have stopped walking to t
   the zone's category vocabulary with the vessel's id vocabulary at the one moment they meet.
   `ZoneInstance.containerBudget` is a pure CAP (unset = no cap): gating deposits by default stranded
   every filled skin in the hands of the pawn that filled it.
+- **A vessel is not a loophole in the world.** One rule covers every per-stack process that acts on
+  idle goods: an OPEN vessel is transparent to it, a SEALED one shuts it out. Spoilage and drying both
+  go through that gate on nested contents (berries rot in a bucket, fibre cures in a slatted crate and
+  not in a bunged cask); weather wear needs no rule because a vessel is destroyed whole and takes what
+  is inside with it. Fermentation is untouched — it is a passive CRAFT at a station, not something that
+  happens to an idle stack. A carcass is refused entry to a vessel outright: its freshness is per-unit
+  and a nested entry has nowhere to put it, so packing one would flatten a half-spoiled deer to fresh.
 - **The four items carrying a "preservation aura" lost it.** `preservationBonus` on an ITEM meant a jug
   on the floor kept the unrelated meat beside it fresh; `isContainer`/`storageCapacity` were read by no
   code at all. All three fields are deleted from the item type. What a vessel preserves is what is
