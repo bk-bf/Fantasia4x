@@ -296,6 +296,18 @@ same light→medium→heavy axis, so a loadout can be read as one decision inste
       already state a `weightKg` and whether they need both hands; a hand-typed label over that many
       rows drifts the moment one number moves.
 - [ ] **Regalia has no class and needs none** — a ring is not a light/medium/heavy choice.
+- [ ] **A worn carry aid grants VOLUME, never weight.** Weight capacity is the body's —
+      `(11 + 0.19 x brawn) x frameFactor` — and nothing strapped on changes how much mass a pawn can
+      bear. A pack that raised it was quietly claiming a rucksack makes you stronger; what a pack
+      actually does is give bulk somewhere to ride. **The one exception is a load carried IN HAND that
+      puts its weight on the ground**: a barrow, a handcart. Those genuinely raise what one person can
+      move, and they cost a hand to do it. This is also what keeps the wheeled line necessary — dense
+      goods (bars, ore) bind on WEIGHT, which no pack will ever help with, while bulky goods (timber,
+      pelts, food) bind on VOLUME. **R14** enforces it.
+- [ ] **A belt never out-holds the crudest backpack.** A belt is a small load that costs nothing and
+      stays on while a quiver owns the back; a pack is where bulk goes. R12 pins the ceiling to the
+      smallest pack in the game rather than a typed number, so the two ladders cannot drift past each
+      other unnoticed.
 - [ ] **The class is a PRICE, and it must buy something.** Inside one slot at one age, a heavier class
       costs strictly more to wear and returns strictly more carry *or* more protection. **R12** checks
       it. Quivers sit outside the ordering: their job is draw speed and their capacity is incidental.
@@ -369,6 +381,8 @@ one loose — a stockpile tile, a pawn's bare hands, a `DroppedItem` — spills 
 | 3c | every fluid-output recipe has a station or vessel to catch it (R10) | `itemRules.test.ts` |
 | 3b | no noun is shared by a container item and a storage building (R11) | `itemRules.test.ts` |
 | 3d | every weapon and worn carry aid resolves to a class, and a heavier class costs more and buys more (R12) | `itemRules.test.ts` |
+| 3d | a worn carry aid grants volume only; weight comes from the body, and only a hand-hauled cart adds it (R14) | `itemRules.test.ts` |
+| 3 | no one-off antique word where a plain one exists, in a name or a description (R13) | `itemRules.test.ts` |
 | 3b | no branch of `/gear-db` claims a concept another branch already owns | by hand |
 | 5 | no recipe-less armour; slots resolve | `armourCoverage.test.ts` |
 | 5 | crafted and equipped by a real pawn | `armourChain.test.ts` |

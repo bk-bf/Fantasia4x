@@ -6421,7 +6421,7 @@
     "weightKg": 0.3,
     "volumeL": 0.5,
     "tier"   : 0,
-    "inventoryBonus": {"weightKg": 3.0, "volumeL": 4.0},
+    "inventoryBonus": {"weightKg": 0, "volumeL": 3},
     "armorProperties": {"armorType": "light", "defense": 0, "equipmentSlot": "belt"}
   },
   {
@@ -6438,7 +6438,7 @@
     "weightKg": 0.5,
     "volumeL": 0.8,
     "tier"   : 0,
-    "inventoryBonus": {"weightKg": 4.5, "volumeL": 6.0},
+    "inventoryBonus": {"weightKg": 0, "volumeL": 5},
     "armorProperties": {"armorType": "light", "defense": 0, "equipmentSlot": "belt"}
   },
   {
@@ -6455,7 +6455,7 @@
     "weightKg": 1.2,
     "volumeL": 2.0,
     "tier"   : 1,
-    "inventoryBonus": {"weightKg": 14.0, "volumeL": 20.0},
+    "inventoryBonus": {"weightKg": 0, "volumeL": 24},
     "armorProperties": {"armorType": "light", "defense": 0, "equipmentSlot": "back2"}
   },
   {
@@ -6466,13 +6466,13 @@
     "category"         : "storage",
     "maxDurability"    : 80,
     "deteriorationRate": 0.02,
-    "description"      : "A lightweight wicker backframe. Poor weight limit but exceptional volume for bulky goods.",
+    "description"      : "A lattice of withies bent and lashed into a backframe. Nothing about it bears weight for you; it just gives bulky goods somewhere to ride.",
     "color"            : "#C8A050",
     "amount"           : 0,
     "weightKg"         : 0.8,
     "volumeL"          : 1.5,
     "tier"             : 0,
-    "inventoryBonus"   : {"weightKg": 12.0, "volumeL": 30.0},
+    "inventoryBonus"   : {"weightKg": 0, "volumeL": 18},
     "armorProperties"  : {"armorType": "light", "defense": 0, "equipmentSlot": "back2"}
   },
   // ── Carry aids: the pack ladder above the wicker frame ────────────────────
@@ -6493,7 +6493,7 @@
     "volumeL": 2.5,
     "tier": 1,
     "researchRequired": "leather_working",
-    "inventoryBonus": {"weightKg": 22.0, "volumeL": 28.0},
+    "inventoryBonus": {"weightKg": 0, "volumeL": 32},
     "armorProperties": {"armorType": "medium", "defense": 0, "equipmentSlot": "back2"}
   },
   {
@@ -6504,14 +6504,14 @@
     "category": "storage",
     "maxDurability": 300,
     "deteriorationRate": 0.006,
-    "description": "A tall leather pack lashed to a shaped wooden frame and riveted in steel at every strap end. The frame holds the load off the spine and spreads it across the whole back, which is what lets one person walk all day under it.",
+    "description": "A tall leather pack lashed to a shaped wooden frame and riveted in steel at every strap end. It swallows more than anything else worn on a back, and it is still the wearer's own shoulders underneath.",
     "color": "#6E5535",
     "amount": 0,
     "weightKg": 2.6,
     "volumeL": 4.0,
     "tier": 3,
     "researchRequired": "steel_making",
-    "inventoryBonus": {"weightKg": 36.0, "volumeL": 44.0},
+    "inventoryBonus": {"weightKg": 0, "volumeL": 54},
     "armorProperties": {"armorType": "medium", "defense": 0, "equipmentSlot": "back2"}
   },
   {
@@ -6529,7 +6529,7 @@
     "volumeL": 3.0,
     "tier": 4,
     "researchRequired": "runic_inscription",
-    "inventoryBonus": {"weightKg": 46.0, "volumeL": 58.0},
+    "inventoryBonus": {"weightKg": 0, "volumeL": 70},
     "armorProperties": {"armorType": "medium", "defense": 0, "equipmentSlot": "back2"}
   },
   // ── The pack grid: three classes per age, from the leather unlock upward ──
@@ -6552,7 +6552,7 @@
     "volumeL": 4.0,
     "tier": 1,
     "researchRequired": "leather_working",
-    "inventoryBonus": {"weightKg": 32.0, "volumeL": 44.0},
+    "inventoryBonus": {"weightKg": 0, "volumeL": 46},
     "armorProperties": {"armorType": "heavy", "defense": 0, "equipmentSlot": "back2", "movementPenalty": 0.05, "fatiguePerTurn": 0.02, "stealthMod": -0.06}
   },
   {
@@ -6570,7 +6570,7 @@
     "volumeL": 1.6,
     "tier": 2,
     "researchRequired": "iron_working",
-    "inventoryBonus": {"weightKg": 18.0, "volumeL": 24.0},
+    "inventoryBonus": {"weightKg": 0, "volumeL": 30},
     "armorProperties": {"armorType": "light", "defense": 0, "equipmentSlot": "back2", "stealthMod": 0.0}
   },
   {
@@ -6588,7 +6588,7 @@
     "volumeL": 2.6,
     "tier": 2,
     "researchRequired": "iron_working",
-    "inventoryBonus": {"weightKg": 28.0, "volumeL": 34.0},
+    "inventoryBonus": {"weightKg": 0, "volumeL": 42},
     "armorProperties": {"armorType": "medium", "defense": 0, "equipmentSlot": "back2", "movementPenalty": 0.02}
   },
   {
@@ -6599,14 +6599,14 @@
     "category": "storage",
     "maxDurability": 280,
     "deteriorationRate": 0.007,
-    "description": "A deep pack hung on a nailed wooden frame with iron corner straps, built to be loaded past what one person would choose to lift. The frame carries it; the wearer only keeps it upright.",
+    "description": "A deep pack hung on a nailed wooden frame with iron corner straps, cut square so nothing packs around a curve. Awkward through a doorway and worth it for a haul of pelts.",
     "color": "#5F5340",
     "amount": 0,
     "weightKg": 3.4,
     "volumeL": 5.0,
     "tier": 2,
     "researchRequired": "iron_working",
-    "inventoryBonus": {"weightKg": 42.0, "volumeL": 56.0},
+    "inventoryBonus": {"weightKg": 0, "volumeL": 60},
     "armorProperties": {"armorType": "heavy", "defense": 0, "equipmentSlot": "back2", "movementPenalty": 0.07, "fatiguePerTurn": 0.03, "stealthMod": -0.09}
   },
   {
@@ -6624,7 +6624,7 @@
     "volumeL": 1.9,
     "tier": 3,
     "researchRequired": "steel_making",
-    "inventoryBonus": {"weightKg": 24.0, "volumeL": 30.0},
+    "inventoryBonus": {"weightKg": 0, "volumeL": 38},
     "armorProperties": {"armorType": "light", "defense": 0, "equipmentSlot": "back2", "stealthMod": 0.02}
   },
   {
@@ -6635,14 +6635,14 @@
     "category": "storage",
     "maxDurability": 380,
     "deteriorationRate": 0.005,
-    "description": "A freighting pack on a riveted steel frame with a waist strap that puts the weight onto the hips instead of the shoulders. It will hold more than the person under it can walk with, which is the point and the danger.",
+    "description": "A freighting pack on a riveted steel frame, deep enough to lose a week's stores in. It holds far more than one back can actually shift, which is how people end up making two trips anyway.",
     "color": "#6C7076",
     "amount": 0,
     "weightKg": 4.6,
     "volumeL": 6.5,
     "tier": 3,
     "researchRequired": "steel_making",
-    "inventoryBonus": {"weightKg": 55.0, "volumeL": 70.0},
+    "inventoryBonus": {"weightKg": 0, "volumeL": 78},
     "armorProperties": {"armorType": "heavy", "defense": 0, "equipmentSlot": "back2", "movementPenalty": 0.09, "fatiguePerTurn": 0.04, "stealthMod": -0.12}
   },
   {
@@ -6660,7 +6660,7 @@
     "volumeL": 1.2,
     "tier": 4,
     "researchRequired": "runic_inscription",
-    "inventoryBonus": {"weightKg": 32.0, "volumeL": 40.0},
+    "inventoryBonus": {"weightKg": 0, "volumeL": 50},
     "armorProperties": {"armorType": "light", "defense": 0, "equipmentSlot": "back2", "stealthMod": 0.05}
   },
   {
@@ -6671,14 +6671,14 @@
     "category": "storage",
     "maxDurability": 500,
     "deteriorationRate": 0.003,
-    "description": "A freighting frame of magic alloy, its uprights cut with binding glyphs and its panels stitched in enchanted thread. It carries what a handcart carries, and it still has to be walked up a hill.",
+    "description": "A freighting frame of magic alloy, its uprights cut with binding glyphs and its panels stitched in enchanted thread. Space inside it runs out long after it should, and it is still walked up the hill by hand.",
     "color": "#7C6A9E",
     "amount": 0,
     "weightKg": 3.2,
     "volumeL": 5.0,
     "tier": 4,
     "researchRequired": "runic_inscription",
-    "inventoryBonus": {"weightKg": 70.0, "volumeL": 92.0},
+    "inventoryBonus": {"weightKg": 0, "volumeL": 100},
     "armorProperties": {"armorType": "heavy", "defense": 0, "equipmentSlot": "back2", "movementPenalty": 0.06, "fatiguePerTurn": 0.02, "stealthMod": -0.08}
   },
   // ── Carry aids: belts, the carrying line ──────────────────────────────────
@@ -6699,7 +6699,7 @@
     "volumeL": 1.0,
     "tier": 1,
     "researchRequired": "bronze_working",
-    "inventoryBonus": {"weightKg": 6.5, "volumeL": 9.0},
+    "inventoryBonus": {"weightKg": 0, "volumeL": 8},
     "armorProperties": {"armorType": "light", "defense": 0, "equipmentSlot": "belt"}
   },
   {
@@ -6717,7 +6717,7 @@
     "volumeL": 1.2,
     "tier": 2,
     "researchRequired": "iron_working",
-    "inventoryBonus": {"weightKg": 9.0, "volumeL": 12.0},
+    "inventoryBonus": {"weightKg": 0, "volumeL": 11},
     "armorProperties": {"armorType": "medium", "defense": 0, "equipmentSlot": "belt"}
   },
   {
@@ -6728,14 +6728,14 @@
     "category": "storage",
     "maxDurability": 320,
     "deteriorationRate": 0.006,
-    "description": "Broad, thick leather on a forged steel buckle, hung with loops, rings and a deep hip bag. As much as a waist will take before the belt starts dragging at the hips.",
+    "description": "Broad, thick leather on a forged steel buckle, hung with loops, rings and a deep hip bag. About as much as will hang off a waist before it starts fouling the legs.",
     "color": "#5E5A55",
     "amount": 0,
     "weightKg": 1.4,
     "volumeL": 1.5,
     "tier": 3,
     "researchRequired": "steel_making",
-    "inventoryBonus": {"weightKg": 11.5, "volumeL": 15.0},
+    "inventoryBonus": {"weightKg": 0, "volumeL": 14},
     "armorProperties": {"armorType": "medium", "defense": 0, "equipmentSlot": "belt"}
   },
   {
@@ -6753,7 +6753,7 @@
     "volumeL": 1.4,
     "tier": 4,
     "researchRequired": "runic_inscription",
-    "inventoryBonus": {"weightKg": 14.0, "volumeL": 18.0},
+    "inventoryBonus": {"weightKg": 0, "volumeL": 16},
     "armorProperties": {"armorType": "medium", "defense": 0, "equipmentSlot": "belt"}
   },
   // ── Carry aids: sheaths, the fighting line ────────────────────────────────
@@ -6774,7 +6774,7 @@
     "weightKg": 0.2,
     "volumeL": 0.3,
     "tier": 0,
-    "inventoryBonus": {"weightKg": 1.5, "volumeL": 2.0},
+    "inventoryBonus": {"weightKg": 0, "volumeL": 2},
     "armorProperties": {"armorType": "light", "defense": 0, "equipmentSlot": "belt", "stealthMod": 0.03}
   },
   {
@@ -6792,7 +6792,7 @@
     "volumeL": 1.0,
     "tier": 1,
     "researchRequired": "bronze_working",
-    "inventoryBonus": {"weightKg": 3.0, "volumeL": 4.0},
+    "inventoryBonus": {"weightKg": 0, "volumeL": 4},
     "armorProperties": {"armorType": "light", "defense": 1, "equipmentSlot": "belt", "stealthMod": 0.03}
   },
   {
@@ -6810,7 +6810,7 @@
     "volumeL": 1.3,
     "tier": 2,
     "researchRequired": "iron_working",
-    "inventoryBonus": {"weightKg": 4.0, "volumeL": 5.0},
+    "inventoryBonus": {"weightKg": 0, "volumeL": 5},
     "armorProperties": {"armorType": "medium", "defense": 2, "equipmentSlot": "belt", "stealthMod": 0.02}
   },
   {
@@ -6828,7 +6828,7 @@
     "volumeL": 1.8,
     "tier": 3,
     "researchRequired": "steel_making",
-    "inventoryBonus": {"weightKg": 5.0, "volumeL": 6.0},
+    "inventoryBonus": {"weightKg": 0, "volumeL": 6},
     "armorProperties": {"armorType": "heavy", "defense": 4, "equipmentSlot": "belt", "stealthMod": 0.0}
   },
   // ── Phase B: Tier 0 weapons ───────────────────────────────────────────────
@@ -8883,7 +8883,7 @@
     "weightKg": 0.5,
     "volumeL": 1.0,
     "tier": 0,
-    "inventoryBonus": {"weightKg": 3, "volumeL": 8},
+    "inventoryBonus": {"weightKg": 0, "volumeL": 8},
     "armorProperties": {"armorType": "light", "defense": 0, "equipmentSlot": "back2"},
     "container": {"capacityL": 8, "capacityKg": 3},
     "quiver": {"ammoCategory": "arrow", "drawSpeed": 0.15}
@@ -8902,7 +8902,7 @@
     "weightKg": 0.6,
     "volumeL": 1.2,
     "tier": 1,
-    "inventoryBonus": {"weightKg": 5, "volumeL": 12},
+    "inventoryBonus": {"weightKg": 0, "volumeL": 12},
     "armorProperties": {"armorType": "light", "defense": 0, "equipmentSlot": "back2"},
     "container": {"capacityL": 12, "capacityKg": 5},
     "quiver": {"ammoCategory": "arrow", "drawSpeed": 0.25}
@@ -8921,7 +8921,7 @@
     "weightKg": 0.9,
     "volumeL": 1.4,
     "tier": 2,
-    "inventoryBonus": {"weightKg": 6, "volumeL": 14},
+    "inventoryBonus": {"weightKg": 0, "volumeL": 14},
     "armorProperties": {"armorType": "medium", "defense": 1, "equipmentSlot": "back2"},
     "container": {"capacityL": 14, "capacityKg": 6},
     "quiver": {"ammoCategory": "arrow", "drawSpeed": 0.32}
@@ -8940,7 +8940,7 @@
     "weightKg": 0.5,
     "volumeL": 0.9,
     "tier": 2,
-    "inventoryBonus": {"weightKg": 3, "volumeL": 4},
+    "inventoryBonus": {"weightKg": 0, "volumeL": 4},
     "armorProperties": {"armorType": "light", "defense": 0, "equipmentSlot": "belt"},
     "container": {"capacityL": 4, "capacityKg": 3},
     "quiver": {"ammoCategory": "bolt", "drawSpeed": 0.25}
@@ -8959,7 +8959,7 @@
     "weightKg": 0.8,
     "volumeL": 1.0,
     "tier": 2,
-    "inventoryBonus": {"weightKg": 4, "volumeL": 5},
+    "inventoryBonus": {"weightKg": 0, "volumeL": 5},
     "armorProperties": {"armorType": "medium", "defense": 1, "equipmentSlot": "belt"},
     "container": {"capacityL": 5, "capacityKg": 4},
     "quiver": {"ammoCategory": "bolt", "drawSpeed": 0.30}

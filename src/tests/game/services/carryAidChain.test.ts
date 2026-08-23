@@ -84,9 +84,10 @@ describe('carry aid chain — packs, belts and sheaths (HeadlessSession, real ti
       'leather_knapsack'
     );
     expect(worn?.belt?.itemId, 'a belt goes on the belt').toBe('ringed_belt');
-    // 22 kg from the bronze-age knapsack + 9 kg from the iron-ringed belt, on top of the body.
-    expect(after.maxWeightKg - before.maxWeightKg).toBeCloseTo(31, 1);
-    expect(after.maxVolumeL - before.maxVolumeL).toBeCloseTo(40, 1);
+    // R14: nothing WORN raises what a pawn can bear, so the weight budget must not move at all.
+    expect(after.maxWeightKg - before.maxWeightKg).toBe(0);
+    // 32 L from the bronze-age knapsack + 11 L from the iron-ringed belt.
+    expect(after.maxVolumeL - before.maxVolumeL).toBeCloseTo(43, 1);
   });
 
   it('pawns craft the steel and runed rungs at the smithy and the runecarver', async () => {
@@ -149,12 +150,13 @@ describe('carry aid chain — packs, belts and sheaths (HeadlessSession, real ti
       'rune_stitched_knapsack'
     ])
       expect(stockOf(session)[id] ?? 0, `${id} is craftable in play`).toBeGreaterThan(0);
-    expect(after.maxWeightKg - before.maxWeightKg).toBeCloseTo(60, 1);
+    expect(after.maxWeightKg - before.maxWeightKg).toBe(0);
+    expect(after.maxVolumeL - before.maxVolumeL).toBeCloseTo(86, 1);
   });
 });
 
 describe('the pack grid — light / medium / heavy at one age (HeadlessSession, real ticks)', () => {
-  it('pawns craft all three iron-age classes, and each one trades bulk for load', async () => {
+  it('pawns craft all three iron-age classes, and each one trades bulk for space', async () => {
     const session = new HeadlessSession();
     await session.start(
       buildScenario({
@@ -175,22 +177,25 @@ describe('the pack grid — light / medium / heavy at one age (HeadlessSession, 
     const made = await craftAll(session, ids, 60);
 
     const pawnId = session.getState().pawns[0].id;
-    const base = budget(session.getState(), pawnId).maxWeightKg;
+    const base = budget(session.getState(), pawnId);
     const carried: Record<string, number> = {};
     for (const itemId of ids) {
       session.command({ type: 'equipPawnItem', payload: { pawnId, itemId } } as never);
-      carried[itemId] = budget(session.getState(), pawnId).maxWeightKg - base;
+      const now = budget(session.getState(), pawnId);
+      // R14 again, on the live pawn: the weight budget does not move for anything worn.
+      expect(now.maxWeightKg).toBeCloseTo(base.maxWeightKg, 1);
+      carried[itemId] = now.maxVolumeL - base.maxVolumeL;
     }
     console.log(
-      `[CARRY-AID] turn=${session.getState().turn} ${made} | base ${base.toFixed(1)}kg → ` +
-        ids.map((id) => `${id} +${carried[id].toFixed(1)}kg`).join(', ')
+      `[CARRY-AID] turn=${session.getState().turn} ${made} | base ${base.maxVolumeL.toFixed(1)}L → ` +
+        ids.map((id) => `${id} +${carried[id].toFixed(1)}L`).join(', ')
     );
 
     for (const id of ids)
       expect(stockOf(session)[id] ?? 0, `${id} is craftable`).toBeGreaterThan(0);
     // Each class is worn in turn (back2 swaps), so the delta is that piece alone.
-    expect(carried.iron_buckled_satchel).toBeCloseTo(18, 1);
-    expect(carried.iron_buckled_knapsack).toBeCloseTo(28, 1);
-    expect(carried.iron_framed_pack).toBeCloseTo(42, 1);
+    expect(carried.iron_buckled_satchel).toBeCloseTo(30, 1);
+    expect(carried.iron_buckled_knapsack).toBeCloseTo(42, 1);
+    expect(carried.iron_framed_pack).toBeCloseTo(60, 1);
   });
 });

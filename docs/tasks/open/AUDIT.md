@@ -300,9 +300,20 @@ cadence, to-hit and crit alongside damage, so a weapon's named stat is the one t
 - [x] **The pack grid — light / medium / heavy at every age from the leather unlock** (`carryAidChain.test.ts`,
       `HeadlessSession`). A satchel costs nothing to wear and holds least, a knapsack is the fitted middle,
       a frame pack takes the largest load and charges `movementPenalty` + `fatiguePerTurn` for it.
-      Primitive keeps the wicker backframe alone. Bronze 14/22/32 kg · Iron 18/28/42 · Steel 24/36/55 ·
-      Runed 32/46/70. **Headless: all three iron-age classes crafted at turn 4400 and worn in turn on one
-      pawn — base 14.2 kg → +18.0 (satchel), +28.0 (knapsack), +42.0 (framed).**
+      Primitive keeps the wicker backframe alone. Bronze 24/32/46 · Iron 30/42/60 · Steel 38/54/78 ·
+      Runed 50/70/100 **litres** (see the volume-only rule below). **Headless: all three iron-age classes
+      crafted at turn 4400 and worn in turn on one pawn — base 14.7 L → +30.0 (satchel), +42.0
+      (knapsack), +60.0 (framed), with the WEIGHT budget unmoved at every step.**
+- [x] **A worn carry aid grants VOLUME, never weight** (new **R14**). Weight capacity is the body's
+      `(11 + 0.19 x brawn) x frameFactor` and nothing worn changes it — a pack that raised it was
+      claiming a rucksack makes you stronger. Every worn aid is now `weightKg: 0`. The exception is the
+      hand-hauled line, which puts its load on the ground: Wheelbarrow +60 kg, Handcart +160 kg keep
+      theirs and cost a hand for it. **This is what makes carts necessary rather than optional** — bars
+      and ore bind on weight, which no pack helps with; timber, pelts and food bind on volume.
+      Headless: knapsack + belt now moves a pawn **15.6 L → 58.6 L with maxWeightKg unchanged at 15.7**.
+- [x] **A belt never out-holds the crudest backpack** — R12's belt ceiling is pinned to the smallest
+      pack (the 18 L wicker frame) instead of a typed constant, so the two ladders cannot drift past
+      each other. Belts run 2-16 L, packs 18-100 L.
 - [x] ⚠→fixed: **belts were carrying more than the pawn wearing them.** A "belt" granting 18-24 kg against
       a ~15 kg body budget is a pack with a buckle. The whole belt line is now 1-10 kg (R12 fails anything
       over 10), and the capacity ladder moved where it belongs, onto the packs. Rescaled once more after that

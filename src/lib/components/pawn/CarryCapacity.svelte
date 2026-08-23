@@ -47,13 +47,14 @@
       <div class="tip-gear">
         {#each cap.gearSources as g}
           <div>
-            {g.name}: <span class="tv">+{r1(g.weightKg)}</span> kg,
+            {g.name}:{#if g.weightKg}
+              <span class="tv">+{r1(g.weightKg)}</span> kg,{/if}
             <span class="tv">+{r1(g.volumeL)}</span> L
           </div>
         {/each}
       </div>
     {:else}
-      <div class="tip-gear">no belt/back container — equip one to raise capacity</div>
+      <div class="tip-gear">no belt or pack — equip one for more room</div>
     {/if}
   </div>
 </span>

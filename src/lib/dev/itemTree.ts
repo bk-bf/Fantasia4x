@@ -344,7 +344,10 @@ function statOf(i: any): string {
   // What the row has to say is still what the piece grants — the carry, plus hip defence where the
   // war-belt line has any. Checked before the armour branch or every pack reads `def 0`.
   if (i.inventoryBonus) {
-    const carry = `carry +${i.inventoryBonus.weightKg ?? 0}kg / +${i.inventoryBonus.volumeL ?? 0}L`;
+    // Worn aids are volume-only (R14), so the weight half is shown ONLY by the hand-hauled line that
+    // actually has one. Printing "+0kg" on every pack in the game is noise, not information.
+    const { weightKg = 0, volumeL = 0 } = i.inventoryBonus;
+    const carry = weightKg ? `carry +${weightKg}kg / +${volumeL}L` : `holds +${volumeL} L`;
     return ap?.defense ? `${carry} · def ${ap.defense}` : carry;
   }
   if (ap?.armorType) return `def ${ap.defense ?? 0}`;

@@ -766,8 +766,9 @@ describe('ITEM-RULES R12 — the weight class is the same axis on armour, carry 
       bucket.set(key, [...(bucket.get(key) ?? []), i]);
     }
     const cls = (i: Item) => i.armorProperties!.armorType as string;
+    // What a worn aid buys is VOLUME (see R14) or protection — never weight, which is the body's.
     const buys = (i: Item) =>
-      Math.max(i.inventoryBonus?.weightKg ?? 0, (i.armorProperties?.defense ?? 0) * 10);
+      Math.max(i.inventoryBonus?.volumeL ?? 0, (i.armorProperties?.defense ?? 0) * 10);
     const bad: string[] = [];
     for (const [key, group] of bucket) {
       for (const lower of ['light', 'medium'] as const) {
@@ -787,23 +788,31 @@ describe('ITEM-RULES R12 — the weight class is the same axis on armour, carry 
         if (hiBuys <= loBuys)
           bad.push(
             `${key}: the ${upper} pieces buy no more than the ${lower} ones (${hiBuys} vs ${loBuys} ` +
-              `on carry-or-defence) — the extra bulk has to be worth something`
+              `on volume-or-defence) — the extra bulk has to be worth something`
           );
       }
     }
     expect(bad, bad.join('; ')).toEqual([]);
   });
 
-  it('a belt never out-carries the body wearing it', () => {
-    // A pack is where bulk goes and it charges movement for it; a belt is a small load that costs
-    // nothing, and it is the only carry a pawn keeps while a quiver owns their back. Both of those
-    // make it worth wearing — but a belt that beats the pawn's OWN budget has stopped being a belt.
-    // `getCarryCapacityBreakdown`: (11 + 0.19 x brawn) x frameFactor, ~15kg at an ordinary brawn.
-    const BODY_BUDGET_KG = 15;
+  it('a belt never out-holds the crudest backpack', () => {
+    // A belt is a small load that costs nothing and stays on while a quiver owns the back; a pack is
+    // where bulk actually goes. Pinned to the smallest pack in the game rather than a typed constant,
+    // so the two ladders cannot drift past each other unnoticed.
+    const packFloor = Math.min(
+      ...(ITEMS as Item[])
+        .filter(
+          (i) => i.armorProperties?.equipmentSlot === 'back2' && i.inventoryBonus && !i.quiver
+        )
+        .map((i) => i.inventoryBonus?.volumeL ?? 0)
+    );
     const bad = (ITEMS as Item[])
       .filter((i) => i.armorProperties?.equipmentSlot === 'belt' && i.inventoryBonus)
-      .filter((i) => (i.inventoryBonus?.weightKg ?? 0) > BODY_BUDGET_KG)
-      .map((i) => `${i.id} is a belt granting ${i.inventoryBonus?.weightKg}kg of carry`);
+      .filter((i) => (i.inventoryBonus?.volumeL ?? 0) > packFloor)
+      .map(
+        (i) =>
+          `${i.id} holds ${i.inventoryBonus?.volumeL}L, more than the crudest pack at ${packFloor}L`
+      );
     expect(bad, bad.join('; ')).toEqual([]);
   });
 });
@@ -856,5 +865,51 @@ describe('ITEM-RULES R13 — a one-off antique word where a plain one exists', (
       }
     }
     expect(bad, bad.join('; ')).toEqual([]);
+  });
+});
+
+// ── R14: a carry aid gives you somewhere to put things, not stronger shoulders ──────────────────
+// Weight capacity is the BODY's — `(11 + 0.19 x brawn) x frameFactor`, and nothing you strap on
+// changes how much mass a pawn can bear. A pack that raised it was quietly saying a rucksack makes you
+// stronger. What a pack actually does is give bulk somewhere to ride, so worn aids grant VOLUME only.
+//
+// The single exception is a load carried IN HAND that puts its weight on the ground instead of on the
+// wearer: a barrow, a handcart. Those really do raise what one person can move, and they cost a hand
+// to do it. That is also what keeps carts necessary — dense goods (bars, ore) bind on weight, which no
+// pack will ever help with, while bulky goods (timber, pelts, food) bind on volume.
+describe('ITEM-RULES R14 — worn carry aids grant volume, never weight', () => {
+  it('nothing worn raises what a pawn can bear', () => {
+    const bad = (ITEMS as Item[])
+      .filter((i) => i.inventoryBonus)
+      .filter((i) => {
+        const slot = i.armorProperties?.equipmentSlot ?? i.armorProperties?.slot;
+        return slot !== 'mainHand' && slot !== 'offHand' && slot !== undefined;
+      })
+      .filter((i) => (i.inventoryBonus?.weightKg ?? 0) > 0)
+      .map(
+        (i) =>
+          `${i.id} is worn on the ${i.armorProperties?.equipmentSlot} and grants ` +
+          `+${i.inventoryBonus?.weightKg}kg — weight capacity comes from the body, not from gear`
+      );
+    expect(bad, bad.join('; ')).toEqual([]);
+  });
+
+  it('every worn carry aid still grants SOMETHING', () => {
+    // Stripping the weight must not leave a piece that does nothing at all.
+    const bad = (ITEMS as Item[])
+      .filter((i) => i.inventoryBonus && recipesByOutput.has(i.id))
+      .filter((i) => (i.inventoryBonus?.volumeL ?? 0) <= 0 && !(i.armorProperties?.defense ?? 0))
+      .map((i) => `${i.id} grants neither volume nor protection`);
+    expect(bad, bad.join('; ')).toEqual([]);
+  });
+
+  it('a hand-hauled cart DOES raise it — that is what a wheel is for', () => {
+    const carts = (ITEMS as Item[]).filter((i) => i.inventoryBonus && /barrow|cart/.test(i.id));
+    expect(carts.length, 'the wheeled line still exists').toBeGreaterThan(0);
+    for (const c of carts)
+      expect(
+        c.inventoryBonus?.weightKg ?? 0,
+        `${c.id} puts its load on wheels, so it raises carry weight`
+      ).toBeGreaterThan(0);
   });
 });
