@@ -171,8 +171,8 @@ second night starting on top of an overrunning one.
 **Linger.** A user timer only fires while the user has a session unless
 `loginctl enable-linger` is set. `install.sh` says so if it is not.
 
-Environment overrides: `AUDIT_REPO` `AUDIT_TREE` `AUDIT_GRAPH` `AUDIT_NODE` `AUDIT_HOURS`
-`AUDIT_WORKERS` `AUDIT_MODEL` `AUDIT_MON` `AUDIT_TAG` `AUDIT_NO_MON`.
+Environment overrides: `AUDIT_REPO` `AUDIT_TREE` `AUDIT_GRAPH` `AUDIT_NODE` `AUDIT_CLAUDE`
+`AUDIT_HOURS` `AUDIT_WORKERS` `AUDIT_MODEL` `AUDIT_MON` `AUDIT_TAG` `AUDIT_NO_MON`.
 
 ## Storage
 

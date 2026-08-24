@@ -37,6 +37,12 @@ MON="${AUDIT_MON:-$HOME/Documents/Projects/mon/mon}"
 TAG="${AUDIT_TAG:-ci/cl}"
 BRANCH="audit-ledger"
 
+# claude lives in ~/.local/bin, which is on PATH in a login shell and in the unit, but not
+# when this script is invoked over a bare ssh command. Resolve it here so all three agree.
+export PATH="$HOME/.local/bin:$PATH"
+AUDIT_CLAUDE="${AUDIT_CLAUDE:-$(command -v claude || echo "$HOME/.local/bin/claude")}"
+export AUDIT_CLAUDE
+
 LOGDIR="$TREE/tools/audit/.ledger/nightly"
 STAMP="$(date +%Y-%m-%d)"
 LOG="$LOGDIR/$STAMP.log"
@@ -54,9 +60,10 @@ flock -n 9 || die "a previous run still holds $LOCK"
 
 say "=== nightly audit $STAMP ==="
 [ -x "$NODE" ] || die "no node at $NODE (needs >= 22.5 for node:sqlite)"
+[ -x "$AUDIT_CLAUDE" ] || die "no claude at $AUDIT_CLAUDE"
 [ -d "$REPO/.git" ] || die "no checkout at $REPO"
 [ -d "$TREE" ] || die "no worktree at $TREE"
-say "node $("$NODE" -v)"
+say "node $("$NODE" -v), claude $AUDIT_CLAUDE"
 
 # --- 1. main -----------------------------------------------------------------
 say "--- pulling main"
