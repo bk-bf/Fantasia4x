@@ -186,6 +186,17 @@ half-finished branch. The worktree is removed either way.
 Status moves `open → in-progress → in-review`, with `pr:` written back. Merging is yours;
 nothing here closes an issue.
 
+**Every attempt is handed to `mon` under the `fix` tag** (`AUDIT_FIX_TAG`), separately from
+the nightly audit reports on `ci/cl`:
+
+| Outcome | The session |
+| --- | --- |
+| PR opened | Runs in the audit worktree. Reads the diff against the issue and says which remediation steps it actually did, which it skipped, and what a reviewer should look at hardest. |
+| Not green | **Keeps the fix worktree and runs in it**, with the changes still in place. `mon steer` can carry the same attempt forward from any machine rather than starting over. |
+| Crashed before verifying | Says whether it is a harness problem or an issue problem, and changes nothing. |
+
+`--no-mon` skips registration.
+
 ## Nightly run on ubuntuserver
 
 `deploy/` holds a systemd user timer that runs the whole thing at 04:00 local and hands the

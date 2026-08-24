@@ -5,6 +5,7 @@
 //   node tools/audit/fix.mjs --issue <slug>    a named one
 //   node tools/audit/fix.mjs --next --dry-run  pick and print, change nothing
 //   node tools/audit/fix.mjs --next --keep     leave the worktree for inspection
+//   node tools/audit/fix.mjs --next --no-mon   do not register a mon session
 //
 // The gate is `ready: true` in the issue's frontmatter, and only a person sets it. An issue
 // the audit raised is never picked up by the fixer that raised it.
@@ -12,6 +13,10 @@
 // Nothing is pushed unless `pnpm check` and the related tests are green. A run that cannot
 // get there pushes nothing and says why on the GitHub issue, so a failed attempt leaves a
 // record rather than a half-finished branch.
+//
+// Every attempt is handed to `mon` under the `fix` tag. A failed attempt keeps its worktree
+// and the session runs *in* it, so `mon steer` can carry the same attempt forward from any
+// machine instead of it having to start over.
 
 import { spawn, execFileSync } from 'node:child_process';
 import { existsSync, rmSync } from 'node:fs';
@@ -26,6 +31,8 @@ const ROOT = process.env.AUDIT_ROOT || join(HERE, '..', '..');
 const CLAUDE = process.env.AUDIT_CLAUDE || 'claude';
 const MODEL = process.env.AUDIT_FIX_MODEL || 'sonnet';
 const PNPM = process.env.AUDIT_PNPM || 'pnpm';
+const MON = process.env.AUDIT_MON || `${process.env.HOME}/Documents/Projects/mon/mon`;
+const FIX_TAG = process.env.AUDIT_FIX_TAG || 'fix';
 
 const arg = (n, d) => {
   const i = process.argv.indexOf(`--${n}`);
@@ -49,8 +56,11 @@ function run(cmd, args, { cwd = ROOT, input, timeoutMs = 1_800_000 } = {}) {
   });
 }
 
-const git = (args, cwd = ROOT) =>
-  execFileSync('git', args, { cwd, encoding: 'utf8', maxBuffer: 32 * 1024 * 1024 }).trim();
+const git = (args, cwd = ROOT, quiet = false) =>
+  execFileSync('git', args, {
+    cwd, encoding: 'utf8', maxBuffer: 32 * 1024 * 1024,
+    stdio: quiet ? ['ignore', 'pipe', 'ignore'] : ['ignore', 'pipe', 'pipe']
+  }).trim();
 
 // --- pick --------------------------------------------------------------------
 
@@ -139,12 +149,12 @@ function changedFiles(cwd) {
 async function verify(cwd, files) {
   const results = [];
   const check = await run(PNPM, ['check'], { cwd, timeoutMs: 900_000 });
-  results.push({ name: `${PNPM} check`, code: check.code, tail: tail(check.out + check.err) });
+  results.push({ name: `${PNPM} check`, code: check.code, tail: errorLines(check.out + check.err) });
 
   const src = files.filter((f) => /^src\/.*\.(ts|svelte)$/.test(f) && !/\.test\.ts$/.test(f));
   if (src.length) {
     const t = await run(PNPM, ['test:related', ...src], { cwd, timeoutMs: 1_800_000 });
-    results.push({ name: `${PNPM} test:related`, code: t.code, tail: tail(t.out + t.err) });
+    results.push({ name: `${PNPM} test:related`, code: t.code, tail: errorLines(t.out + t.err) });
   } else {
     results.push({ name: `${PNPM} test:related`, code: 0, tail: 'no source files changed' });
   }
@@ -152,6 +162,38 @@ async function verify(cwd, files) {
 }
 
 const tail = (s, n = 40) => s.trim().split('\n').slice(-n).join('\n');
+
+/** svelte-check and vitest both bury their errors in a wall of warnings; a reviewer needs
+ *  the error lines, not the last forty lines of whatever scrolled past. */
+const errorLines = (s, n = 25) => {
+  const hits = s.split('\n').filter((l) => /\bERROR\b|✕|FAIL|Error:|failed/i.test(l));
+  return (hits.length ? hits : s.trim().split('\n')).slice(0, n).join('\n');
+};
+
+/** Surface the attempt in mon. On failure the session runs in the kept worktree, so it can
+ *  be steered to finish the job rather than only describe why it stopped. */
+function toMon({ issue, cwd, title, prompt }) {
+  if (flag('no-mon') || !existsSync(MON)) return null;
+  const r = spawnSyncSafe(MON, [
+    'run', prompt,
+    '--project', cwd,
+    '--title', title,
+    '--tag', FIX_TAG,
+    '--by', 'fix.mjs',
+    '--mode', 'acceptEdits'
+  ]);
+  if (r.ok) out(`--- mon: ${r.out.split('\n')[0]}`);
+  else out(`--- mon registration failed: ${r.err}`);
+  return r.ok ? r.out : null;
+}
+
+function spawnSyncSafe(cmd, args) {
+  try {
+    return { ok: true, out: execFileSync(cmd, args, { encoding: 'utf8', cwd: ROOT }).trim() };
+  } catch (e) {
+    return { ok: false, err: `${e.stderr || e.message}`.trim() };
+  }
+}
 
 // --- main --------------------------------------------------------------------
 
@@ -180,21 +222,35 @@ if (!GH.available(ROOT)) fail('gh is not authenticated here');
 out(`--- worktree ${wt}`);
 if (existsSync(wt)) { try { git(['worktree', 'remove', '--force', wt]); } catch { rmSync(wt, { recursive: true, force: true }); } }
 git(['fetch', '--quiet', 'origin', 'main']);
-try { git(['branch', '-D', branch]); } catch { /* no such branch yet */ }
+try { git(['branch', '-D', branch], ROOT, true); } catch { /* no such branch yet */ }
 git(['worktree', 'add', '-b', branch, wt, 'origin/main']);
 
 I.patchIssue(issue.path, { status: 'in-progress', branch });
 
 let exitCode = 0;
+let keepTree = flag('keep');
 try {
   out(`--- pnpm install`);
   const inst = await run(PNPM, ['install', '--prefer-offline'], { cwd: wt, timeoutMs: 900_000 });
   if (inst.code !== 0) throw new Error(`pnpm install failed:\n${tail(inst.out + inst.err)}`);
 
+  // tsconfig.json extends ./.svelte-kit/tsconfig.json, which only exists once svelte-kit
+  // has generated it. There is no prepare script, so a fresh worktree has neither, and
+  // vitest dies resolving the extends before it runs a single test.
+  out(`--- svelte-kit sync`);
+  const sync = await run(join(wt, 'node_modules', '.bin', 'svelte-kit'), ['sync'],
+    { cwd: wt, timeoutMs: 300_000 });
+  if (sync.code !== 0) out(`    [warn] sync exited ${sync.code}; verification may not run`);
+
   out(`--- ${CLAUDE} (${MODEL})`);
   const t0 = Date.now();
   const res = await run(CLAUDE, [
-    '--print', '--model', MODEL, '--permission-mode', 'acceptEdits'
+    '--print', '--model', MODEL,
+    '--permission-mode', 'acceptEdits',
+    // Bash is granted deliberately: the model is told to get `pnpm check` and
+    // `pnpm test:related` green, and cannot without it. Scope is a throwaway worktree on
+    // a branch, and the harness re-runs both itself before anything is pushed.
+    '--allowedTools', 'Bash', 'Edit', 'Write', 'Read', 'Grep', 'Glob'
   ], { cwd: wt, input: buildPrompt(issue), timeoutMs: 3_600_000 });
   const mins = ((Date.now() - t0) / 60000).toFixed(1);
   if (res.code !== 0) throw new Error(`the model exited ${res.code}:\n${tail(res.err)}`);
@@ -222,6 +278,28 @@ try {
         `${detail}\n\n---\n\n${account}`);
       I.patchIssue(issue.path, { status: 'open', branch: null });
       out('--- not green; nothing pushed. The account is on the issue.');
+      keepTree = true;
+      toMon({
+        issue, cwd: wt,
+        title: `fix ${d.id} — not green`,
+        prompt: [
+          `A fix attempt for issue #${d.github} (${d.id}) changed ${files.length} file(s) but`,
+          `could not get \`${PNPM} check\` and \`${PNPM} test:related\` green, so nothing was pushed.`,
+          `You are running in that worktree on branch \`${branch}\`, with the changes still in place.`,
+          ``,
+          `What failed:`,
+          ``,
+          detail,
+          ``,
+          `What the attempt reported:`,
+          ``,
+          account,
+          ``,
+          `Say in one paragraph whether this is close to working or wants a different approach.`,
+          `Do not push and do not open a PR — if you are steered to carry it forward, make the`,
+          `changes here and get both commands green, then say so and stop.`
+        ].join('\n')
+      });
       exitCode = 1;
     } else {
       out(`--- committing`);
@@ -249,6 +327,25 @@ try {
       if (pr.ok) {
         I.patchIssue(issue.path, { status: 'in-review', pr: pr.number, branch });
         out(`--- PR #${pr.number}  ${pr.url}`);
+        toMon({
+          issue, cwd: ROOT,
+          title: `fix ${d.id} — PR #${pr.number}`,
+          prompt: [
+            `A fix for issue #${d.github} (${d.id}) is open as PR #${pr.number}: ${pr.url}`,
+            `It changed ${files.length} file(s) on \`${branch}\` and \`${PNPM} check\` plus`,
+            `\`${PNPM} test:related\` were green before it opened.`,
+            ``,
+            `Read the diff (\`gh pr diff ${pr.number}\`) against the issue at`,
+            `docs/issues/${d.id}.md and say, in one paragraph a person can read on a phone:`,
+            `which remediation steps it actually did, which it skipped, and the one thing a`,
+            `reviewer should look at hardest. Flag anything outside the issue's scope.`,
+            `Do not merge, do not push, do not change the PR.`,
+            ``,
+            `What the attempt reported:`,
+            ``,
+            account
+          ].join('\n')
+        });
       } else {
         I.patchIssue(issue.path, { status: 'open', branch });
         out(`--- push succeeded but the PR did not open: ${pr.err}`);
@@ -262,9 +359,16 @@ try {
     GH.commentIssue(ROOT, d.github, `The fixer failed before it could verify anything.\n\n\`\`\`\n${e.message}\n\`\`\``);
   }
   I.patchIssue(issue.path, { status: 'open', branch: null });
+  toMon({
+    issue, cwd: ROOT,
+    title: `fix ${d.id} — failed`,
+    prompt: `The fixer for issue #${d.github} (${d.id}) failed before it could verify ` +
+            `anything, with:\n\n${e.message}\n\nSay in one paragraph whether this is a ` +
+            `harness problem or an issue problem. Change nothing.`
+  });
   exitCode = 1;
 } finally {
-  if (flag('keep')) {
+  if (keepTree) {
     out(`--- worktree kept at ${wt}`);
   } else {
     try { git(['worktree', 'remove', '--force', wt]); } catch { rmSync(wt, { recursive: true, force: true }); }

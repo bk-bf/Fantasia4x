@@ -1,10 +1,10 @@
 ---
 id: core-stat-single-source
 title: The six core stats are re-declared by hand in ten rosters, nine abbreviation maps and three positional argument lists
-status: open
+status: in-progress
 kind: drift
 severity: high
-ready: false
+ready: true
 origin: human
 rules: []
 files:
@@ -20,8 +20,10 @@ files:
   - src/lib/components/screens/culture/CultureDetail.svelte
   - src/lib/utils/bodyLabels.ts
 symbols: []
+github: 2
+branch: fix/core-stat-single-source
 created: 2026-08-24
-updated: 2026-08-25
+updated: 2026-08-24
 ---
 
 # Core stats have no single declaration
