@@ -227,6 +227,23 @@ git(['worktree', 'add', '-b', branch, wt, 'origin/main']);
 
 I.patchIssue(issue.path, { status: 'in-progress', branch });
 
+// A killed run would otherwise leave the issue stuck at `in-progress` with a branch set,
+// which makes it permanently unclaimable by the next run -- the board would look busy
+// forever. Put it back on the way out.
+let released = false;
+const release = () => {
+  if (released) return;
+  released = true;
+  try { I.patchIssue(issue.path, { status: 'open', branch: null }); } catch { /* board gone */ }
+};
+for (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP']) {
+  process.on(sig, () => {
+    out(`\n--- ${sig}: releasing ${d.id} and leaving the worktree at ${wt}`);
+    release();
+    process.exit(130);
+  });
+}
+
 let exitCode = 0;
 let keepTree = flag('keep');
 try {
