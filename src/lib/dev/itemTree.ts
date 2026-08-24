@@ -80,6 +80,74 @@ const AGE_OF_CHAIN: Age[] = ['Primitive', 'Copper', 'Bronze', 'Iron', 'Steel', '
 const ageOf = (item: any): Age =>
   gearById.get(item.id)?.age ?? AGE_OF_CHAIN[chainAgeOf(item.id)] ?? 'Primitive';
 
+/**
+ * WHAT THE ITEM DOES — everything the sim actually reads off it, in one line.
+ *
+ * The `stat` column carries a single headline number, which meant a herbal tea and a cup of water were
+ * indistinguishable in the tables: nothing surfaced the conditions an item grants or clears, what a
+ * coating inflicts, what a draught gambles, or what a fluid needs to be held in. Auditing content you
+ * cannot see is guesswork, so this is deliberately exhaustive rather than pretty.
+ */
+export function effectsOf(i: any): string {
+  const out: string[] = [];
+  const hrs = (turns: number) => `${Math.round(turns * 10) / 10}t`;
+  if (i.nutrition != null) out.push(`food ${i.nutrition}`);
+  if (i.hydration != null) out.push(`drink ${i.hydration}`);
+  if (i.medicineQuality != null) out.push(`med ${i.medicineQuality}`);
+  if (i.curesConditions?.length) out.push(`cures ${i.curesConditions.join('/')}`);
+  if (i.grantsConditions?.length)
+    out.push(
+      `grants ${i.grantsConditions.join('/')}${i.conditionDurationTurns ? ` ${hrs(i.conditionDurationTurns)}` : ''}`
+    );
+  if (i.grantsTraitOnConsume) out.push(`trait ${i.grantsTraitOnConsume}`);
+  if (i.grantsLineage) out.push('awakens a bloodline');
+  if (i.traitGamble)
+    out.push(`gamble t${i.traitGamble.tier} → ${(i.traitGamble.traitPool ?? []).join('/')}`);
+  if (i.rawConsumeRisk)
+    out.push(
+      `raw risk${i.rawConsumeRisk.sickness ? ` ${i.rawConsumeRisk.sickness}` : ''}${
+        i.rawConsumeRisk.flawChance ? ` ${Math.round(i.rawConsumeRisk.flawChance * 100)}% flaw` : ''
+      }`
+    );
+  const ce = i.coatingEffect;
+  if (ce)
+    out.push(
+      ce.condition
+        ? `coats ${ce.condition} ${Math.round((ce.chance ?? 0) * 100)}%${ce.durationHours ? ` ${ce.durationHours}h` : ''}`
+        : `coats bleed ×${ce.bleedMult}`
+    );
+  if (i.preservationMethod) out.push(i.preservationMethod);
+  if (i.decaySeconds) out.push(`spoils ${Math.round(i.decaySeconds / 300)}d`);
+  if (i.heldBy?.length) out.push(`held by ${i.heldBy.join('/')}`);
+  if (i.container?.material) out.push(`${i.container.material} vessel`);
+  if (i.craftValue != null && i.craftValue !== 1) out.push(`worth ${i.craftValue}/unit`);
+  if (i.fuelValue) out.push(`fuel ${i.fuelValue}`);
+  const tb = i.toolBoost;
+  if (tb)
+    out.push(
+      `tool ${[tb.speed && `spd×${tb.speed}`, tb.yield && `yld×${tb.yield}`, tb.quality && `qly×${tb.quality}`].filter(Boolean).join(' ')}`
+    );
+  const ab = i.aimBonuses;
+  if (ab)
+    out.push(
+      `aim ${[ab.accuracy && `+${ab.accuracy}acc`, ab.speed && `+${ab.speed}spd`, ab.range && `+${ab.range}rng`].filter(Boolean).join(' ')}`
+    );
+  if (i.quiver) out.push(`draw +${i.quiver.drawSpeed} (${i.quiver.ammoCategory})`);
+  if (i.inventoryBonus) {
+    const { weightKg = 0, volumeL = 0 } = i.inventoryBonus;
+    out.push(weightKg ? `carry +${weightKg}kg/+${volumeL}L` : `holds +${volumeL}L`);
+  }
+  const ap = i.armorProperties;
+  if (ap?.stealthMod) out.push(`stealth ${ap.stealthMod > 0 ? '+' : ''}${ap.stealthMod}`);
+  if (ap?.movementPenalty) out.push(`move −${Math.round(ap.movementPenalty * 100)}%`);
+  if (ap?.fatiguePerTurn) out.push(`fatigue +${ap.fatiguePerTurn}`);
+  if (ap?.coldResistance) out.push(`cold +${ap.coldResistance}`);
+  if (ap?.heatResistance) out.push(`heat +${ap.heatResistance}`);
+  const oh = i.onHitCondition;
+  if (oh) out.push(`on hit ${oh.condition} ${Math.round((oh.chance ?? 0) * 100)}%`);
+  return out.join(' · ');
+}
+
 export interface TreeItem {
   id: string;
   name: string;
@@ -89,6 +157,8 @@ export interface TreeItem {
   tier: number | null;
   /** The one number that matters for this kind — defence, damage, nutrition, comfort… */
   stat: string;
+  /** Everything the sim reads off this item — conditions, cures, coatings, boosts. See `effectsOf`. */
+  effects: string;
   /** light / medium / heavy / shield — it left the tree when layers took that level. */
   cls: string;
   weightKg: number;
@@ -402,6 +472,7 @@ export const TREE_ITEMS: TreeItem[] = items
       ageRank: AGES.indexOf(ageOf(i)),
       tier: i.tier ?? null,
       stat: statOf(i),
+      effects: effectsOf(i),
       cls: CLASS_LABEL[(i.armorProperties ?? {}).armorType] ?? '',
       weightKg: i.weightKg ?? 0,
       source: (gearById.get(i.id) ?? rowForAny(i)).source,
@@ -546,7 +617,16 @@ export const ITEM_TREE = buildTree();
 // already answer better. Clicking a column re-orders the rows INSIDE every shelf, so "heaviest first"
 // means "heaviest in each line", which is the comparison an audit is actually making.
 
-export type SortKey = 'name' | 'tier' | 'cls' | 'age' | 'stat' | 'weightKg' | 'source' | 'gatedBy';
+export type SortKey =
+  | 'name'
+  | 'tier'
+  | 'cls'
+  | 'age'
+  | 'stat'
+  | 'effects'
+  | 'weightKg'
+  | 'source'
+  | 'gatedBy';
 
 /** The header row, in table order. `num` right-aligns, matching the cells. */
 export const SORT_COLUMNS: { key: SortKey; label: string; num?: boolean }[] = [
@@ -555,6 +635,7 @@ export const SORT_COLUMNS: { key: SortKey; label: string; num?: boolean }[] = [
   { key: 'cls', label: 'Class' },
   { key: 'age', label: 'Age' },
   { key: 'stat', label: 'Stat' },
+  { key: 'effects', label: 'Effects' },
   { key: 'weightKg', label: 'kg', num: true },
   { key: 'source', label: 'Made at' },
   { key: 'gatedBy', label: 'Gated by' }
@@ -578,6 +659,8 @@ function valueOf(it: TreeItem, key: SortKey): number | string {
       return it.ageRank;
     case 'stat':
       return statNumber(it.stat);
+    case 'effects':
+      return it.effects;
     default:
       return it[key] ?? '';
   }
