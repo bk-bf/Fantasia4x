@@ -27,6 +27,12 @@ function pawnWearing(slot: string, itemId: string): Pawn {
   } as unknown as Pawn;
 }
 
+/** A recipe ref is either a concrete item id or a `category:` POOL — a pool resolves to its members. */
+function refResolves(ref: string): boolean {
+  if (!ref.startsWith('category:')) return itemService.getItemById(ref) != null;
+  return itemService.getItemsByCategory(ref.slice('category:'.length)).length > 0;
+}
+
 describe('§M passive buff: worn gear → magical condition', () => {
   it('wearing a ruby ring grants the Might condition', () => {
     const synced = syncTransientConditions(pawnWearing('ring', 'ruby_ring'));
@@ -139,8 +145,18 @@ describe('§M item & recipe integrity', () => {
       const r = recipeService.getRecipeForItem(itemId);
       expect(r, itemId).toBeDefined();
       expect(r!.station).toBe(station);
-      for (const id of [...Object.keys(r!.inputs), ...Object.keys(r!.outputs)])
+      for (const id of [...Object.keys(r!.inputs), ...Object.keys(r!.outputs)]) {
+        // A `category:` slot names a POOL, not an item — resolve it to its members instead.
+        if (id.startsWith('category:')) {
+          const cat = id.slice('category:'.length);
+          expect(
+            itemService.getItemsByCategory(cat).length,
+            `recipe ${itemId} draws from empty pool ${id}`
+          ).toBeGreaterThan(0);
+          continue;
+        }
         expect(itemService.getItemById(id), `recipe ${itemId} ref ${id}`).toBeDefined();
+      }
     };
     for (const m of MINERALS) {
       check(`cut_${m}`, 'lapidary_bench');
@@ -201,7 +217,7 @@ describe('§M arcane staves', () => {
     for (const id of [...T1_STAVES, ...T2_STAVES]) {
       const r = recipeService.getRecipeForItem(id)!;
       for (const ref of [...Object.keys(r.inputs), ...Object.keys(r.outputs)])
-        expect(itemService.getItemById(ref), `recipe ${id} ref ${ref}`).toBeDefined();
+        expect(refResolves(ref), `recipe ${id} ref ${ref}`).toBe(true);
     }
   });
 });
@@ -232,7 +248,7 @@ describe('§M regalia (combo & head jewelry)', () => {
       expect(r, id).toBeDefined();
       expect(r!.station).toBe('lapidary_bench');
       for (const ref of [...Object.keys(r!.inputs), ...Object.keys(r!.outputs)])
-        expect(itemService.getItemById(ref), `recipe ${id} ref ${ref}`).toBeDefined();
+        expect(refResolves(ref), `recipe ${id} ref ${ref}`).toBe(true);
     }
   });
 

@@ -405,8 +405,9 @@ export function applyConsumable(
   // and the caller sees no change.
   if (def.grantsLineage) {
     const pool = Array.isArray(def.grantsLineage) ? def.grantsLineage : undefined;
-    const lineage = rollLineageTrait(next.traits, rand, pool);
-    if (lineage) bake(lineage);
+    // Awakens a bloodline, or — if the pawn already has one — carries them a rung further down it for
+    // free. Either way the shard is never wasted on someone who simply "already qualifies".
+    for (const t of rollLineageTrait(next, rand, pool)) bake(t);
   }
 
   // (iii) ALCHEMY-BUTCHERY-EXPANSION §A — RAW beast organ: no reward, only risk. Sicken the eater, and at
