@@ -31,6 +31,18 @@ export function stagedQty(
   gs: GameState
 ): number {
   let q = 0;
+  // A fluid the STATION ITSELF is already holding is staged where it stands. Nobody ladles molten
+  // copper out of a crucible into a bucket and back into the same crucible to pour it — the metal is
+  // in the hearth, and the mould is at the hearth. Without this a melt-then-cast pair deadlocks: the
+  // fluid exists, the order can never see it, and no vessel would sensibly carry it anyway. Same
+  // shape as a vat fermenting its own wort or a pit tanning in its own brine.
+  if (isFluidId(itemId)) {
+    const body = (gs.buildings ?? []).find(
+      (b) => b.id === order.stationBuildingId && b.x === station.x && b.y === station.y
+    );
+    const litres = (body?.fluidContents ?? []).find((e) => e.itemId === itemId)?.litres ?? 0;
+    if (litres > 0) q += litresToUnits(itemId, litres);
+  }
   for (const d of gs.droppedItems ?? []) {
     if (!d.stored || d.reservedFor !== order.id) continue;
     if (d.x !== station.x || d.y !== station.y) continue;

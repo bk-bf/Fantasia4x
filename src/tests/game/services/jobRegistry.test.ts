@@ -88,10 +88,9 @@ describe('job registry (jobs.jsonc ↔ JobService)', () => {
 
   it('a craft job resolves to its LEAF discipline as the within-parent subjob stat key', () => {
     const statKey = (stationType: string, itemId = 'iron_dagger') =>
-      jobService.getJobWorkStatKey(
-        { type: 'craft', targetX: 0, targetY: 0, craftQueueId: 'q' },
-        { craftingQueue: [{ id: 'q', item: { id: itemId }, stationType }] } as never
-      );
+      jobService.getJobWorkStatKey({ type: 'craft', targetX: 0, targetY: 0, craftQueueId: 'q' }, {
+        craftingQueue: [{ id: 'q', item: { id: itemId }, stationType }]
+      } as never);
     expect(statKey('butcher_spot')).toBe('butchery'); // leaf under Cooking
     expect(statKey('tanning_bucket_station')).toBe('leatherworking'); // leaf under Tailoring
     expect(statKey('hide_rack')).toBe('leatherworking'); // curing is leatherwork, not generic crafting

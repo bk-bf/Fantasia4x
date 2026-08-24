@@ -418,7 +418,16 @@ export interface Item {
    * What is inside lives on the INSTANCE (`ItemInstance.contents`), never here, and its weight and
    * volume ride on top of the empty vessel's own everywhere a load is summed. A full jug is not a jug.
    */
-  container?: { capacityL: number; capacityKg?: number; accepts?: string[]; sealed?: boolean };
+  container?: {
+    capacityL: number;
+    capacityKg?: number;
+    accepts?: string[];
+    sealed?: boolean;
+    /** What this vessel is MADE OF — `wood`, `leather`, `hide`, `clay`, `fireclay`, `porcelain`,
+     *  `glass`, `wicker`, `stone`, `metal`. Read against a fluid's `heldBy`, and the reason a
+     *  waterskin cannot take a melt is simply that leather is not on the list. */
+    material?: string;
+  };
   /** Durability lost per combat hit when this item is equipped. */
   durabilityLossPerCombatHit?: number;
   // Typed stubs — no logic reads these yet:
@@ -618,6 +627,17 @@ export interface Item {
     recoverable?: number; // 0–1 chance to recover the spent projectile as a DroppedItem after a shot (default 0)
     projectile?: string; // visual: particle style of the flying shot ("arrow"|"bolt"|"stone"); omitted = default by ammoCategory. Cosmetic only.
   };
+
+  /**
+   * What a FLUID may be held IN, matched against the vessel's `container.material`. Omitted means
+   * ordinary — any vessel that takes fluids will do. Naming materials rather than an invented tag
+   * makes the entry read as the physical fact it is: molten copper is `["fireclay"]` because ordinary
+   * fired earthenware, wood, glass and leather all fail at 1085C and a crucible is refractory clay.
+   *
+   * The constraint sits on the FLUID so a new vessel is safe by default — someone adding a jug cannot
+   * accidentally make it a crucible by forgetting to exclude something.
+   */
+  heldBy?: string[];
 
   /**
    * A worn item that speeds drawing AMMUNITION (a faster nock), NOT an ammo container — ammo rides

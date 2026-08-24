@@ -28,28 +28,46 @@ describe('tool/weapon handle chain (woodworking → soak)', () => {
     );
     for (const p of session.getState().pawns)
       for (const w of workService.getAllWorkCategories())
-        session.command({ type: 'setPawnLaborLevel', payload: { pawnId: p.id, workId: w.id, level: 3 } } as never);
+        session.command({
+          type: 'setPawnLaborLevel',
+          payload: { pawnId: p.id, workId: w.id, level: 3 }
+        } as never);
     const stk = () => (session.getState().stockpile ?? {}) as Record<string, number>;
 
     // Copper/bronze tier: a single carved haft.
-    session.command({ type: 'craftItem', payload: { itemId: 'wooden_haft', quantity: 1 } } as never);
+    session.command({
+      type: 'craftItem',
+      payload: { itemId: 'wooden_haft', quantity: 1 }
+    } as never);
     for (let i = 0; i < 8 && !(stk().wooden_haft > 0); i++) session.tick(400);
 
     // Iron tier: carve+sand a BATCH (one active job → 6 sanded hafts)…
-    session.command({ type: 'craftItem', payload: { itemId: 'sanded_haft', quantity: 1 } } as never);
+    session.command({
+      type: 'craftItem',
+      payload: { itemId: 'sanded_haft', quantity: 1 }
+    } as never);
     for (let i = 0; i < 10 && !(stk().sanded_haft > 0); i++) session.tick(400);
     const sandedMade = stk().sanded_haft ?? 0; // capture BEFORE the soak consumes them
 
     // …then SEASON the batch at the passive trough (soak six at once, walk away).
-    session.command({ type: 'craftItem', payload: { itemId: 'seasoned_haft', quantity: 1 } } as never);
+    session.command({
+      type: 'craftItem',
+      payload: { itemId: 'seasoned_haft', quantity: 1 }
+    } as never);
     for (let i = 0; i < 14 && !(stk().seasoned_haft > 0); i++) session.tick(400);
 
     console.log(
       `[HANDLE-CHAIN] branch=${stk().branch}/60 wooden_haft=${stk().wooden_haft} sanded_made=${sandedMade} seasoned_haft=${stk().seasoned_haft} water=${stk().water}/20 turn=${session.getState().turn}`
     );
     expect(stk().wooden_haft ?? 0, 'a wooden haft was carved (bronze tier)').toBeGreaterThan(0);
-    expect(sandedMade, 'the sanded-haft batch was carved (one active job → 6)').toBeGreaterThanOrEqual(6);
-    expect(stk().seasoned_haft ?? 0, 'the trough seasoned a batch of hafts (passive)').toBeGreaterThanOrEqual(6);
+    expect(
+      sandedMade,
+      'the sanded-haft batch was carved (one active job → 6)'
+    ).toBeGreaterThanOrEqual(6);
+    expect(
+      stk().seasoned_haft ?? 0,
+      'the trough seasoned a batch of hafts (passive)'
+    ).toBeGreaterThanOrEqual(6);
     expect(stk().water, 'the soak consumed water as a real input').toBeLessThan(20);
   });
 
@@ -74,12 +92,19 @@ describe('tool/weapon handle chain (woodworking → soak)', () => {
     );
     for (const p of session.getState().pawns)
       for (const w of workService.getAllWorkCategories())
-        session.command({ type: 'setPawnLaborLevel', payload: { pawnId: p.id, workId: w.id, level: 3 } } as never);
+        session.command({
+          type: 'setPawnLaborLevel',
+          payload: { pawnId: p.id, workId: w.id, level: 3 }
+        } as never);
     const stk = () => (session.getState().stockpile ?? {}) as Record<string, number>;
     session.command({ type: 'craftItem', payload: { itemId: 'iron_axe', quantity: 1 } } as never);
     for (let i = 0; i < 12 && !(stk().iron_axe > 0); i++) session.tick(400);
-    console.log(`[IRON-AXE] iron_axe=${stk().iron_axe} seasoned_haft=${stk().seasoned_haft}/4 turn=${session.getState().turn}`);
+    console.log(
+      `[IRON-AXE] iron_axe=${stk().iron_axe} seasoned_haft=${stk().seasoned_haft}/4 turn=${session.getState().turn}`
+    );
     expect(stk().iron_axe ?? 0, 'the axe forged from a seasoned haft').toBeGreaterThan(0);
-    expect(stk().seasoned_haft ?? 4, 'the seasoned haft was consumed as the handle').toBeLessThan(4);
+    expect(stk().seasoned_haft ?? 4, 'the seasoned haft was consumed as the handle').toBeLessThan(
+      4
+    );
   });
 });

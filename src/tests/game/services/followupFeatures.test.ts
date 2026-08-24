@@ -525,7 +525,9 @@ describe('mining tool gating (bugfix)', () => {
   it('TIN (cassiterite) requires a COPPER pick — a stone pick is too soft (bronze gate)', () => {
     // The metallurgical progression gate: stone gets you copper ore + coal, but tin — and thus bronze —
     // needs a copper pick first. cassiterite stays minTier 1; stone_pick is tier 0, copper_pick tier 1.
-    expect(jobService.requiredToolForJob(mineJob('cassiterite'), makeState({ designations }))).toEqual({
+    expect(
+      jobService.requiredToolForJob(mineJob('cassiterite'), makeState({ designations }))
+    ).toEqual({
       workType: 'mining',
       minTier: 1
     });
@@ -537,7 +539,9 @@ describe('mining tool gating (bugfix)', () => {
       { id: 'p', equipment: {}, inventory: { items: {}, instances: [] } } as unknown as Pawn,
       'copper_pick'
     );
-    expect(jobService.pawnHasToolFor(stonePick, 'mining', 1), 'stone pick too soft for tin').toBe(false);
+    expect(jobService.pawnHasToolFor(stonePick, 'mining', 1), 'stone pick too soft for tin').toBe(
+      false
+    );
     expect(jobService.pawnHasToolFor(copperPick, 'mining', 1), 'copper pick wins tin').toBe(true);
   });
 

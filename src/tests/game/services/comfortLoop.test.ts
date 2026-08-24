@@ -49,7 +49,9 @@ describe('comfort loop — headless (pawn lounges on a seat → comfort fills �
         map: { w: 18, h: 18 },
         researchMaxTier: 9,
         toolTier: 3,
-        pawns: [{ count: 2, skillLevel: 10, needs: { comfort: 20, hunger: 5, fatigue: 5 } as never }],
+        pawns: [
+          { count: 2, skillLevel: 10, needs: { comfort: 20, hunger: 5, fatigue: 5 } as never }
+        ],
         needsDisabled: ['hunger', 'fatigue'],
         buildings: [{ id: 'tacked_chair' }], // the ONLY seat — comfort must come from it
         seedEntities: false
@@ -59,7 +61,9 @@ describe('comfort loop — headless (pawn lounges on a seat → comfort fills �
     const comfort = () => p0().needs?.comfort ?? -1;
     const start = comfort();
     for (let i = 0; i < 16 && comfort() <= 70; i++) session.tick(200);
-    console.log(`[COMFORT-COPPER] tacked_chair: comfort ${start}→${comfort().toFixed(1)} turn=${session.getState().turn}`);
+    console.log(
+      `[COMFORT-COPPER] tacked_chair: comfort ${start}→${comfort().toFixed(1)} turn=${session.getState().turn}`
+    );
     expect(comfort(), 'copper-tier seat refills comfort').toBeGreaterThan(70);
   });
 
@@ -73,7 +77,9 @@ describe('comfort loop — headless (pawn lounges on a seat → comfort fills �
         researchMaxTier: 9,
         toolTier: 3,
         // fatigue just over the sleep threshold so the pawn beds down AND wakes within the tick budget.
-        pawns: [{ count: 2, skillLevel: 10, needs: { comfort: 20, fatigue: 78, hunger: 5 } as never }],
+        pawns: [
+          { count: 2, skillLevel: 10, needs: { comfort: 20, fatigue: 78, hunger: 5 } as never }
+        ],
         needsDisabled: ['hunger'],
         buildings: [{ id: 'feather_bed' }], // comfort 0.4 — no seats, so comfort can ONLY come from the bed
         seedEntities: false
@@ -91,7 +97,9 @@ describe('comfort loop — headless (pawn lounges on a seat → comfort fills �
       if ((p0().conditionTimers?.well_rested ?? 0) > 0) rested = true;
     }
     const end = p0().needs?.comfort ?? -1;
-    console.log(`[COMFORT-BED] slept=${slept} woke=${woke} comfort ${start}→${end.toFixed(1)} well_rested=${rested} turn=${session.getState().turn}`);
+    console.log(
+      `[COMFORT-BED] slept=${slept} woke=${woke} comfort ${start}→${end.toFixed(1)} well_rested=${rested} turn=${session.getState().turn}`
+    );
     expect(slept, 'pawn used the bed').toBe(true);
     expect(end, 'bed filled the comfort need').toBeGreaterThan(start);
     expect(rested, 'woke well_rested').toBe(true);
@@ -107,7 +115,9 @@ describe('comfort loop — headless (pawn lounges on a seat → comfort fills �
         map: { w: 18, h: 18, preset: 'flat' },
         researchMaxTier: 9,
         toolTier: 3,
-        pawns: [{ count: 2, skillLevel: 10, needs: { relaxation: 10, hunger: 5, fatigue: 5 } as never }],
+        pawns: [
+          { count: 2, skillLevel: 10, needs: { relaxation: 10, hunger: 5, fatigue: 5 } as never }
+        ],
         needsDisabled: ['hunger', 'fatigue'],
         // Pawns spawn ~(9,9). The level-1 campfire sits RIGHT NEXT to them, the level-3 table far across
         // the map — so walking to the table proves LEVEL beats proximity, not just "nearest wins".
@@ -119,14 +129,17 @@ describe('comfort loop — headless (pawn lounges on a seat → comfort fills �
       })
     );
     const st = () => session.getState();
-    const at = (t: string) => (st().buildings ?? []).find((b) => (b as { type?: string }).type === t)!;
+    const at = (t: string) =>
+      (st().buildings ?? []).find((b) => (b as { type?: string }).type === t)!;
     for (let i = 0; i < 12 && st().pawns[0].currentState !== 'Socialising'; i++) session.tick(200);
     const p = st().pawns[0];
     const d = (b: { x: number; y: number }) =>
       Math.max(Math.abs((p.position?.x ?? 0) - b.x), Math.abs((p.position?.y ?? 0) - b.y));
     const dTable = d(at('wooden_table'));
     const dFire = d(at('campfire'));
-    console.log(`[GATHER-LEVEL] state=${p.currentState} distToTable=${dTable} distToCampfire=${dFire}`);
+    console.log(
+      `[GATHER-LEVEL] state=${p.currentState} distToTable=${dTable} distToCampfire=${dFire}`
+    );
     expect(dTable, 'pawn gathered at the level-3 table, not the level-1 fire').toBeLessThan(dFire);
   });
 });

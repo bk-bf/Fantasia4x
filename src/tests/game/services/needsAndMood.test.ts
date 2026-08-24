@@ -12,9 +12,9 @@ import { HeadlessSession } from '$lib/game/headless/HeadlessSession';
  */
 
 const need = (s: HeadlessSession, i: number, k: string) =>
-  ((s.getState().pawns[i] as unknown as { needs?: Record<string, number> }).needs?.[k] ?? 0);
+  (s.getState().pawns[i] as unknown as { needs?: Record<string, number> }).needs?.[k] ?? 0;
 const mood = (s: HeadlessSession, i: number) =>
-  ((s.getState().pawns[i] as unknown as { state?: { mood?: number } }).state?.mood ?? 50);
+  (s.getState().pawns[i] as unknown as { state?: { mood?: number } }).state?.mood ?? 50;
 
 describe('needs & mood', () => {
   it('hunger: a hungry pawn abandons idle, eats, and its hunger falls below seek', async () => {
@@ -61,8 +61,8 @@ describe('needs & mood', () => {
       s.tick(250);
       states.add(String((s.getState().pawns[0] as { currentState?: string }).currentState));
       minFatigue = Math.min(minFatigue, need(s, 0, 'fatigue'));
-      const t = (s.getState().pawns[0] as { conditionTimers?: Record<string, number> }).conditionTimers
-        ?.well_rested;
+      const t = (s.getState().pawns[0] as { conditionTimers?: Record<string, number> })
+        .conditionTimers?.well_rested;
       if ((t ?? 0) > 0) wellRestedSeen = t as number;
     }
     console.log(
@@ -125,7 +125,9 @@ describe('needs & mood', () => {
       s.tick(200);
       peak = Math.max(peak, need(s, 0, 'relaxation'));
     }
-    console.log(`[NM relaxation] relaxation 12 → peaked at ${peak.toFixed(1)} (inverted: higher = entertained)`);
+    console.log(
+      `[NM relaxation] relaxation 12 → peaked at ${peak.toFixed(1)} (inverted: higher = entertained)`
+    );
     expect(peak, 'relaxation recovered after socialising').toBeGreaterThan(30);
   });
 
@@ -147,7 +149,9 @@ describe('needs & mood', () => {
     const m0 = () => mood(s, 0);
     const m1 = () => mood(s, 1);
     for (let i = 0; i < 8; i++) s.tick(150); // let mood ease toward target
-    console.log(`[NM mood] miserable pawn mood=${m0().toFixed(1)} vs content pawn mood=${m1().toFixed(1)} (base 50)`);
+    console.log(
+      `[NM mood] miserable pawn mood=${m0().toFixed(1)} vs content pawn mood=${m1().toFixed(1)} (base 50)`
+    );
     expect(m0(), 'miserable pawn eased BELOW baseline').toBeLessThan(50);
     expect(m0(), 'miserable well below content').toBeLessThan(m1() - 10);
   });
@@ -160,7 +164,17 @@ describe('needs & mood', () => {
         map: { w: 18, h: 18 },
         // Whole colony pinned at rock-bottom needs (frozen) → mood target near the floor → moral checks fire.
         pawns: [
-          { count: 10, needs: { hunger: 100, fatigue: 100, thirst: 100, hygiene: 100, relaxation: 0, comfort: 0 } }
+          {
+            count: 10,
+            needs: {
+              hunger: 100,
+              fatigue: 100,
+              thirst: 100,
+              hygiene: 100,
+              relaxation: 0,
+              comfort: 0
+            }
+          }
         ],
         needsDisabled: ['hunger', 'fatigue', 'thirst', 'hygiene', 'relaxation', 'comfort'],
         seedEntities: false
@@ -178,7 +192,9 @@ describe('needs & mood', () => {
       }
       if (broke > 0) break;
     }
-    console.log(`[NM breakdown] colony min mood reached ${minMood.toFixed(1)}; break events observed: ${broke}`);
+    console.log(
+      `[NM breakdown] colony min mood reached ${minMood.toFixed(1)}; break events observed: ${broke}`
+    );
     expect(minMood, 'colony mood sank into the breakdown band (≤25)').toBeLessThanOrEqual(25);
     expect(broke, 'at least one pawn suffered a mental breakdown').toBeGreaterThan(0);
   });
@@ -201,7 +217,9 @@ describe('needs & mood', () => {
       s.tick(200);
       peak = Math.max(peak, need(s, 0, 'comfort'));
     }
-    console.log(`[NM comfort] comfort 8 → peaked at ${peak.toFixed(1)} (inverted: higher = comfier)`);
+    console.log(
+      `[NM comfort] comfort 8 → peaked at ${peak.toFixed(1)} (inverted: higher = comfier)`
+    );
     expect(peak, 'comfort rose after lounging at a seat').toBeGreaterThan(8);
   });
 });
