@@ -1152,7 +1152,9 @@ describe('ITEM-RULES R17 — a category pool prices its members by what they cos
   it('every binding material states what a unit of it is worth', () => {
     const bad = pool('binding')
       .filter((i) => !(typeof i.craftValue === 'number' && i.craftValue > 0))
-      .map((i) => `${i.id} is in a category slot with no \`craftValue\` — it will win every slot free`);
+      .map(
+        (i) => `${i.id} is in a category slot with no \`craftValue\` — it will win every slot free`
+      );
     expect(bad, bad.join('; ')).toEqual([]);
   });
 
@@ -1208,7 +1210,14 @@ describe('ITEM-RULES R18 — the name says what one unit is', () => {
   /** One unit is ONE object: the name must be singular. */
   const SINGLE = ['iron_nail', 'bronze_nail', 'copper_tack', 'steel_rivet'];
   /** One unit is MANY objects: the name must say so. */
-  const BATCH = ['mail_rings', 'small_bones', 'medium_bones', 'large_bones', 'huge_bones', 'feathers'];
+  const BATCH = [
+    'mail_rings',
+    'small_bones',
+    'medium_bones',
+    'large_bones',
+    'huge_bones',
+    'feathers'
+  ];
   const BATCH_WORD = /bundle|hank|sheaf|bones|feathers|remains|pips|cuttings|dust|meal/i;
 
   it('a single-piece fastener is named in the singular', () => {
@@ -1253,7 +1262,34 @@ describe('ITEM-RULES R19 — armour layers stack on the pawn, not inside the rec
     for (const r of RECIPES as unknown as { id: string; inputs?: Record<string, number> }[])
       for (const k of Object.keys(r.inputs ?? {}))
         if (worn.has(k))
-          bad.push(`${r.id} consumes ${k}, which is a garment a pawn wears — layer it, do not eat it`);
+          bad.push(
+            `${r.id} consumes ${k}, which is a garment a pawn wears — layer it, do not eat it`
+          );
     expect(bad, bad.join('; ')).toEqual([]);
+  });
+});
+
+// ── Voidshard: the one thing a colony might never see ───────────────────────────────────────────
+describe('voidshard — every way in is a hard one', () => {
+  const shard = (ITEMS as Item[]).find((i) => i.id === 'voidshard')!;
+
+  it('awakens a bloodline and nothing else — no gamble, no flaw', () => {
+    expect(shard.grantsLineage, 'the shard grants a lineage').toBe(true);
+    expect(shard.traitGamble, 'not a gamble — the finding was the gamble').toBeUndefined();
+    expect(shard.rawConsumeRisk, 'no downside; it is pure reward').toBeUndefined();
+  });
+
+  it('is consumable, not a crafting material', () => {
+    expect(shard.type).toBe('consumable');
+    const eaten = (RECIPES as unknown as { inputs?: Record<string, number> }[]).filter(
+      (r) => r.inputs?.voidshard
+    );
+    expect(eaten, 'nothing grinds it up').toEqual([]);
+  });
+
+  it('a caravan only brings one for a kingdom that trusts you, at a fortune', () => {
+    expect(shard.tradeRelationsMin ?? 0).toBeGreaterThanOrEqual(75);
+    const bars = (ITEMS as Item[]).find((i) => i.id === 'gold_bar')?.value ?? 1;
+    expect(shard.value ?? 0, 'absurdly priced next to a gold bar').toBeGreaterThan(bars * 10);
   });
 });

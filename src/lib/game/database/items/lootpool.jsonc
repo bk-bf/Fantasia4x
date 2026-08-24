@@ -111,6 +111,7 @@
     // legend name + ×2–5 stat mult + enchants on top, so every Warboss axe is a unique legend.
     "orc_warboss_hoard": {
       "carried": [
+        {"chance": 0.25, "pick": [{"id": "voidshard", "w": 1}]},
         {"chance": 1.0, "count": [2, 4], "pick": [{"id": "grand_bloodrage_draught", "w": 2}, {"id": "grand_ironhide_tonic", "w": 2}, {"id": "grand_tonic_of_fortitude", "w": 1}]},
         {"chance": 0.6, "count": [1, 2], "pick": [{"id": "greater_caustic_coating", "w": 1}]}
       ],
@@ -127,6 +128,7 @@
     },
     "goblin_warlord_hoard": {
       "carried": [
+        {"chance": 0.2, "pick": [{"id": "voidshard", "w": 1}]},
         {"chance": 1.0, "count": [2, 3], "pick": [{"id": "greater_venom_coating", "w": 3}, {"id": "grand_venom_coating", "w": 1}]},
         {"chance": 0.7, "count": [1, 2], "pick": [{"id": "nightglow_draught", "w": 2}, {"id": "frenzy_draught", "w": 1}]}
       ],

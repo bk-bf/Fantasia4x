@@ -85,6 +85,28 @@ const FLAW_POOL: Trait[] = [
   .map((id) => TRAIT_BY_ID.get(id))
   .filter((t): t is Trait => !!t);
 
+/** Every lineage PARENT trait — the marker that makes a pawn a member of that bloodline. */
+export function lineageParentTraits(): Trait[] {
+  return ALL_TRAITS.filter((t) => t.lineageParent);
+}
+
+/** Draw one bloodline the pawn does not already belong to, optionally narrowed to `pool` (lineage
+ *  ids). Undefined when they already carry one — a pawn has one bloodline, not a collection. */
+export function rollLineageTrait(
+  held: readonly { id?: string }[],
+  rand: () => number,
+  pool?: string[]
+): Trait | undefined {
+  const heldIds = new Set(held.map((t) => t.id));
+  const candidates = lineageParentTraits().filter(
+    (t) => !heldIds.has(t.id) && (!pool?.length || pool.includes(t.lineageParent as string))
+  );
+  // Already in a bloodline: a second marker would make `pawnLineage` ambiguous.
+  if (held.some((t) => PARENT_TRAIT_IDS.has(t.id as string))) return undefined;
+  if (!candidates.length) return undefined;
+  return candidates[Math.floor(rand() * candidates.length)];
+}
+
 /** Roll one Faustian flaw (a curated pure-penalty negative trait), or undefined if the pool is empty. */
 export function rollFlawTrait(rand: () => number): Trait | undefined {
   if (FLAW_POOL.length === 0) return undefined;

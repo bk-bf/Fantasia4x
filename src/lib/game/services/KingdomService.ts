@@ -190,7 +190,10 @@ class KingdomServiceImpl {
     const kind: KingdomParty['kind'] =
       canTrade && rng.random() < ARRIVAL.caravan.tradeChance ? 'caravan' : 'visitor';
     const wealthTier = this.colonyWealthTier(state);
-    const stock = kind === 'caravan' ? this.generateCaravanStock(picked.kingdom, wealthTier) : [];
+    const stock =
+      kind === 'caravan'
+        ? this.generateCaravanStock(picked.kingdom, wealthTier, picked.relation.score)
+        : [];
 
     const spawned = spawnKingdomParty(state, picked.kingdom, kind, stock, 0);
     if (!spawned) {
@@ -239,7 +242,12 @@ class KingdomServiceImpl {
     const partyKind: KingdomParty['kind'] = wantCaravan ? 'caravan' : 'visitor';
     const stock =
       partyKind === 'caravan'
-        ? this.generateCaravanStock(kingdom, this.colonyWealthTier(state))
+        ? this.generateCaravanStock(
+            kingdom,
+            this.colonyWealthTier(state),
+            (state.kingdomRelations ?? []).find((r) => r.a === kingdom.id || r.b === kingdom.id)
+              ?.score ?? 0
+          )
         : [];
     const spawned = spawnKingdomParty(state, kingdom, partyKind, stock, 0);
     if (!spawned) return state;
@@ -580,10 +588,14 @@ class KingdomServiceImpl {
 
   /** A caravan only hauls wares up to the tier the colony can plausibly afford —
    *  and never beyond what its kingdom's wealth supports. */
-  generateCaravanStock(kingdom: Kingdom, colonyWealthTier: number): CaravanGood[] {
+  generateCaravanStock(
+    kingdom: Kingdom,
+    colonyWealthTier: number,
+    relationScore = 0
+  ): CaravanGood[] {
     const kingdomWealthIdx = WEALTH_BANDS.indexOf(kingdom.lore.wealthBand);
     const tierCap = clamp(Math.min(colonyWealthTier + 1, kingdomWealthIdx + 2), 1, 5);
-    const tradeable = allItemDefs().filter((d) => this.isTradeableDef(d, tierCap));
+    const tradeable = allItemDefs().filter((d) => this.isTradeableDef(d, tierCap, relationScore));
     if (tradeable.length === 0) return [];
     const lines = rng.int(6, 10 + kingdomWealthIdx);
     // Gold bars lead the manifest — the stable intermediate for settling lopsided deals (§4).
@@ -607,8 +619,10 @@ class KingdomServiceImpl {
 
   /** Public because the item audit asks the SIM whether a thing can ever be bought, rather than
    *  keeping a second copy of this rule that would quietly drift from it (ITEM-RULES R8). */
-  isTradeableDef(def: Item, tierCap: number): boolean {
+  isTradeableDef(def: Item, tierCap: number, relationScore = 0): boolean {
     if (def.hidden) return false;
+    // The one or two things a kingdom parts with only for people it trusts.
+    if (def.tradeRelationsMin != null && relationScore < def.tradeRelationsMin) return false;
     if (def.type === 'currency') return false; // gold rides the party's `gold` float
     if ((def.tier ?? 1) > tierCap) return false;
     if (def.id.endsWith('_carcass')) return false;
