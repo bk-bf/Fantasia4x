@@ -492,6 +492,17 @@ export interface Item {
    * `applyConsumable` alongside any `grantsConditions` window (e.g. a brief `toxin_immune` pill).
    */
   curesConditions?: string[];
+  /**
+   * Wound type ids (wounds.jsonc) this consumable MENDS outright on the patient it is given to —
+   * the injury is dropped from the limb tree and the part recovers the HP it was holding.
+   *
+   * Separate from `curesConditions` because the two write to different places. A condition timer is a
+   * countdown on the pawn; a wound is an entry on a body part, and the conditions that read it
+   * (`fractured`) are re-derived from the limb tree every tick — so deleting the timer changes
+   * nothing and the condition is back before the next frame. Anything that claims to heal an INJURY
+   * has to reach the injury.
+   */
+  mendsWounds?: string[];
 
   /**
    * How this food was kept, and therefore WHY it lasts. The `Keeps / Perishes` split it replaces was a
@@ -734,6 +745,15 @@ export interface Item {
      *  deliberate one-offs (a boss drop, a ceremonial piece) — those stand alone by design. */
     armorSet?: string;
     armorLayer?: 'gambeson' | 'mail' | 'plate';
+    /**
+     * A SPLINT or CAST: while this piece is worn, a bone wound on any part it `covers` knits this
+     * many times faster (read in `PawnStateMachine.healWounds` → `Wounds.healLimbs`). It speeds
+     * recovery and never cures — a break still takes as long as the body needs, just less of it.
+     *
+     * Targeting rides the coverage set the mitigation walk already uses, so which limb a splint helps
+     * is the same answer as which limb it protects, and a piece that reaches no bone helps nothing.
+     */
+    boneHealMultiplier?: number;
     armorValue?: number; // damage absorbed per hit from this layer
     fatiguePerTurn?: number; // fatigue drain per turn while worn
     equipmentSlot?: EquipmentSlot;

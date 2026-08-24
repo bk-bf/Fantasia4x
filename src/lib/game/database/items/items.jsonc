@@ -98,23 +98,153 @@
     "medicineQuality": 0.25,
     "curesConditions": ["bleeding"]
   },
+  // ── Fracture care: bind it, then knit it ─────────────────────────────────
+  // A splint is WORN, not swallowed. It occupies the limb's armour slot, pushes the `splinted`
+  // condition while it is on, and multiplies the mending rate of the bone under every part it
+  // `covers` (armorProperties.boneHealMultiplier → healWounds). It never closes a break: the weeks
+  // are still weeks, there are just fewer of them. Which limb it helps is which limb it covers, so
+  // an arm piece does nothing for a leg and neither reaches the skull or the ribs.
   {
-    "id": "bonesetters_splint",
+    "id": "wooden_arm_splint",
     "charSpans": [ {"sheet": "items", "id": 155} ],
-    "name": "Bonesetter's Splint",
-    "type": "consumable",
+    "name": "Wooden Arm Splint",
+    "type": "armor",
     "category": "medicine",
-    "maxDurability": 220,
+    "maxDurability": 120,
     "deteriorationRate": 0.004,
-    "description": "Two shaped battens, padded linen and a length of strapping, laid on by someone who knows which way the bone wants to go. A break set straight knits in weeks instead of never.",
+    "description": "Two shaved battens laid either side of the arm over a wad of linen, strapped from wrist to elbow. It holds the bone where it was set and lets the arm do nothing else at all.",
     "color": "#C8A870",
     "amount": 0,
-    "weightKg": 0.35,
-    "volumeL": 0.4,
+    "weightKg": 0.7,
+    "volumeL": 0.9,
+    "tier": 1,
+    "grantsConditions": ["splinted"],
+    "armorProperties": {
+      "defense": 1,
+      "armorType": "light",
+      "slot": "bracers",
+      "equipmentSlot": "bracers",
+      "boneHealMultiplier": 2.2,
+      "covers": ["leftUpperArm", "rightUpperArm", "leftForearm", "rightForearm", "leftHand", "rightHand"],
+      "movementPenalty": 0.02
+    }
+  },
+  {
+    "id": "wooden_leg_splint",
+    "charSpans": [ {"sheet": "items", "id": 155} ],
+    "name": "Wooden Leg Splint",
+    "type": "armor",
+    "category": "medicine",
+    "maxDurability": 120,
+    "deteriorationRate": 0.004,
+    "description": "Long battens run from thigh to ankle and lashed tight over padding. Walking on it is out of the question, which is rather the point.",
+    "color": "#C8A870",
+    "amount": 0,
+    "weightKg": 1.4,
+    "volumeL": 1.8,
+    "tier": 1,
+    "grantsConditions": ["splinted"],
+    "armorProperties": {
+      "defense": 1,
+      "armorType": "light",
+      "slot": "greaves",
+      "equipmentSlot": "greaves",
+      "boneHealMultiplier": 2.2,
+      "covers": ["leftUpperLeg", "rightUpperLeg", "leftLowerLeg", "rightLowerLeg", "leftFoot", "rightFoot"],
+      "movementPenalty": 0.12
+    }
+  },
+  // A cast is poured, not strapped: it takes the shape of whatever it is packed around, so it reaches
+  // the small bones a batten cannot and holds far harder. What it buys in grip it gives back in
+  // brittleness — one solid blow and it is so much rubble (maxDurability is a quarter of a splint's).
+  {
+    "id": "lime_arm_cast",
+    "charSpans": [ {"sheet": "items", "id": 155} ],
+    "name": "Lime Arm Cast",
+    "type": "armor",
+    "category": "medicine",
+    "maxDurability": 30,
+    "deteriorationRate": 0.004,
+    "description": "Linen soaked in slaked lime and wound around the arm, moulded to every knuckle before it goes off hard. It sets to stone overnight, and it breaks like stone too.",
+    "color": "#D8D4C6",
+    "amount": 0,
+    "weightKg": 1.0,
+    "volumeL": 1.0,
     "tier": 2,
-    "researchRequired": "iron_working",
-    "medicineQuality": 0.9,
-    "curesConditions": ["fractured"]
+    "grantsConditions": ["splinted"],
+    "armorProperties": {
+      "defense": 2,
+      "armorType": "medium",
+      "slot": "bracers",
+      "equipmentSlot": "bracers",
+      "boneHealMultiplier": 3.2,
+      "covers": ["leftUpperArm", "rightUpperArm", "leftForearm", "rightForearm", "leftHand", "rightHand", "leftThumb", "rightThumb", "leftIndexFinger", "rightIndexFinger", "leftMiddleFinger", "rightMiddleFinger", "leftRingFinger", "rightRingFinger", "leftLittleFinger", "rightLittleFinger"],
+      "movementPenalty": 0.04
+    }
+  },
+  {
+    "id": "lime_leg_cast",
+    "charSpans": [ {"sheet": "items", "id": 155} ],
+    "name": "Lime Leg Cast",
+    "type": "armor",
+    "category": "medicine",
+    "maxDurability": 30,
+    "deteriorationRate": 0.004,
+    "description": "A limed shell packed from thigh to toes and left to harden around the leg. Nothing shifts inside it, and nothing much shifts outside it either.",
+    "color": "#D8D4C6",
+    "amount": 0,
+    "weightKg": 2.0,
+    "volumeL": 2.0,
+    "tier": 2,
+    "grantsConditions": ["splinted"],
+    "armorProperties": {
+      "defense": 2,
+      "armorType": "medium",
+      "slot": "greaves",
+      "equipmentSlot": "greaves",
+      "boneHealMultiplier": 3.2,
+      "covers": ["leftUpperLeg", "rightUpperLeg", "leftLowerLeg", "rightLowerLeg", "leftFoot", "rightFoot", "leftBigToe", "rightBigToe", "leftSecondToe", "rightSecondToe", "leftMiddleToe", "rightMiddleToe", "leftFourthToe", "rightFourthToe", "leftLittleToe", "rightLittleToe"],
+      "movementPenalty": 0.18
+    }
+  },
+  // Knitting a break OUTRIGHT is a dose, not a dressing, and the steel age buys it at a price: the
+  // bone comes good and the body spends the next day paying for the hurry (`mendsWounds` clears the
+  // injury, `grantsConditions` charges for it).
+  {
+    "id": "bonemeal_draught",
+    "charSpans": [ {"sheet": "items", "id": 71} ],
+    "name": "Bone-Meal Draught",
+    "type": "consumable",
+    "category": "medicine",
+    "maxDurability": 280,
+    "deteriorationRate": 0.003,
+    "description": "Ground bone stirred into spirit and bitter root, drunk down in one and kept down with difficulty. A break knits over the day that follows, and the day that follows is not one anybody would choose to be awake for.",
+    "color": "#CFC3A6",
+    "amount": 0,
+    "weightKg": 0.3,
+    "volumeL": 0.3,
+    "tier": 3,
+    "researchRequired": "steel_making",
+    "mendsWounds": ["fracture"],
+    "grantsConditions": ["bone_ache", "nausea"],
+    "conditionDurationTurns": 18000
+  },
+  {
+    "id": "emberbloom_draught",
+    "charSpans": [ {"sheet": "items", "id": 71} ],
+    "name": "Emberbloom Draught",
+    "type": "consumable",
+    "category": "medicine",
+    "maxDurability": 400,
+    "deteriorationRate": 0.002,
+    "description": "The coal-red flower drawn off in spirit until the liquor glows faintly. Whatever is broken is whole again before the phial is set down, and the drinker feels nothing but warmth.",
+    "color": "#C4452E",
+    "amount": 0,
+    "weightKg": 0.15,
+    "volumeL": 0.15,
+    "tier": 4,
+    "researchRequired": "runic_inscription",
+    "mendsWounds": ["fracture"]
   },
   {
     "id": "fever_draught",
@@ -142,7 +272,7 @@
     "category": "medicine",
     "maxDurability": 200,
     "deteriorationRate": 0.004,
-    "description": "Burnt willow ground to black powder and stirred into water. It goes down foul and brings the poison back up with it, which is the entire point.",
+    "description": "Burnt willow ground to black powder and stirred into water. It goes down foul and brings the poison back up with it, and a good deal else besides, and leaves the drinker green and wrung out for the rest of the day.",
     "color": "#3A3A3A",
     "amount": 0,
     "weightKg": 0.1,
@@ -150,7 +280,9 @@
     "tier": 1,
     "researchRequired": "leather_working",
     "medicineQuality": 0.35,
-    "curesConditions": ["nausea", "envenomed"]
+    "curesConditions": ["envenomed"],
+    "grantsConditions": ["nausea"],
+    "conditionDurationTurns": 7200
   },
   {
     "id": "burn_dressing",

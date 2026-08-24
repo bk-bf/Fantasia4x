@@ -450,13 +450,16 @@ const UNTENDED_SERIOUS_HEAL_MUL = 0.15;
  * mobs false — animals can't dress wounds). A part with no wounds left snaps back to full HP (UI auto-hide).
  * `canScar` (TRAITS §0b, pawns only) rolls a PERMANENT scar as a wound closes — the mark keeps a small
  * HP shave + chronic ache; mobs pass false (no scar churn on the hot cull-bound path).
+ * `boneHealFor` (pawns only) returns the multiplier a worn splint or cast lends BONE wounds on a given
+ * part — 1 where nothing is strapped on. Structural wounds only: a splint does nothing for torn flesh.
  */
 export function healLimbs(
   limbs: LimbState[],
   baseHeal: number,
   turn: number,
   untendedSeriousStalls: boolean,
-  canScar = false
+  canScar = false,
+  boneHealFor?: (partId: string) => number
 ): LimbState[] {
   if (baseHeal <= 0) return limbs;
   let changed = false;
@@ -480,7 +483,10 @@ export function healLimbs(
           : untendedSeriousStalls && w.severity !== 'minor'
             ? UNTENDED_SERIOUS_HEAL_MUL
             : 1;
-        const heal = (baseHeal / (woundById(w.type)?.healDifficulty ?? 1)) * tendBoost;
+        const wd = woundById(w.type);
+        // A splint/cast speeds the BONE and nothing else — the flesh around it mends at its own rate.
+        const splintBoost = wd?.structural && boneHealFor ? boneHealFor(part.id) : 1;
+        const heal = (baseHeal / (wd?.healDifficulty ?? 1)) * tendBoost * splintBoost;
         const newDamage = w.damage - heal;
         if (newDamage <= 0.05) {
           // Fully mended — either drop it, or (§0b) leave a permanent scar with a small HP shave.

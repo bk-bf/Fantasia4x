@@ -569,7 +569,7 @@ export const COMMANDS: Record<string, Cmd> = {
     const held = (carer.inventory?.items ?? {})[p.itemId] ?? 0;
     if (held < 1) return s;
     const def = itemService.getItemById(p.itemId);
-    if (!def?.curesConditions?.length) return s;
+    if (!def?.curesConditions?.length && !def?.mendsWounds?.length) return s;
     // Beside the patient — you cannot dose someone across the map.
     const a = carer.position;
     const b = s.pawns[pi].position;

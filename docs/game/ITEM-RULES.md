@@ -525,6 +525,54 @@ wastes almost nothing, while weaving withies throws most of every rod away. The 
       costs evasion and swing rate) starts at 60% of it. A single primitive piece that would put a pawn
       near that line on its own is wrong however honest its mass looks.
 
+## Gate 3f — a consumable, and what it charges for what it does
+
+A dose that REMOVES something — a condition cleared, a wound knitted — is the strongest thing a
+consumable can do, and **the age decides whether it is paid for.**
+
+- [ ] **Early ages pay in the body.** A stone or bronze-age remedy worked by making the patient
+      sicker on the way to making them better, and that is the trade the item has to state: a
+      downside condition for a stretch of hours, or a `rawConsumeRisk`. Charcoal Purge said in its own
+      description that it "brings the poison back up with it" and then cleared nausea *and* envenom for
+      free — prose promising a trade the effects never charged.
+- [ ] **The middle ages pay less, or pay in time.** A narrower cure, a shorter downside, a partial
+      effect. The Bone-Meal Draught knits a break the day it is drunk and spends that day on a deep
+      ache and a turned stomach.
+- [ ] **The runed age is the one that gets it clean**, and that is the point of reaching it. A costless
+      instant cure earlier has quietly handed the player the endgame answer at bronze.
+- [ ] **Payment is a downside the sim applies, not a grim sentence in the description.** A low
+      `medicineQuality` is not payment either: `bestMedicine` skips anything carrying `curesConditions`,
+      so on a condition medicine that number is never read at all.
+      **R20** checks it, with the same named-debt list R1/R2/R4 use.
+
+**And check the cure actually reaches its target before pricing it.** `curesConditions` writes to
+`conditionTimers` and nothing else. A condition DERIVED from the body — `fractured` off the limb tree,
+`infection` and `hypothermia` as graded severities on `pawn.conditions`, `bleeding` off the wound
+bleed rate, `feverburn`/`frostbrittle`/`pain_maddened` off the pawn's own racial traits — is rebuilt
+every tick and cannot be cleared this way. An item that claims to heal an INJURY uses `mendsWounds`,
+which reaches the limb tree; anything else is a promise the sim never keeps, and charging a price for
+it makes the item worse than free.
+
+## Gate 3g — a splint is worn, a cure is drunk
+
+Bone care has its own ladder, and the split runs down the middle of it: **what holds a break still is
+gear, what closes one is a dose.**
+
+- [ ] **A splint or a cast is WORN.** It takes the limb's armour slot, pushes the `splinted` condition
+      while it is on, and multiplies the mending rate of the bone under the parts it covers
+      (`armorProperties.boneHealMultiplier`). It never closes a break — the weeks are still weeks,
+      there are just fewer of them, and the limb is stiff and half-useless for all of them.
+- [ ] **Which limb it helps is which limb it COVERS.** Targeting rides the same `covers` set the
+      mitigation walk reads, so no second body model is needed and a piece that reaches no bone helps
+      nothing. `coversPart` follows `containedIn`, so covering the forearm reaches the ulna inside it.
+      Arms, legs, hands and feet only — the torso and the skull are not splintable, and no piece in
+      this line may claim them.
+- [ ] **Wood first, then a cast.** Battens are bronze-age and strap over a limb; a limed cast is
+      iron-age, moulds to the small bones a batten cannot reach, holds far harder, and shatters on the
+      first solid blow (a quarter of the splint's `maxDurability`).
+- [ ] **Only a dose closes a break.** Steel age knits it and charges the day it takes; the runed age
+      knits it and charges nothing.
+
 ## Gate 4 — is it physically and mechanically consistent?
 
 - [ ] **Weight, defense and stiffness sit in the ladder** its neighbours already form. Compare
@@ -568,6 +616,7 @@ wastes almost nothing, while weaving withies throws most of every rod away. The 
 | 3d | every weapon and worn carry aid resolves to a class, and a heavier class costs more and buys more (R12) | `itemRules.test.ts` |
 | 3d | a worn carry aid grants volume only; weight comes from the body, and only a hand-hauled cart adds it (R14) | `itemRules.test.ts` |
 | 3 | no one-off antique word where a plain one exists, in a name or a description (R13) | `itemRules.test.ts` |
+| 3f | a cure below the runed age charges the patient a downside the sim applies (R20) | `itemRules.test.ts` |
 | 3b | no branch of `/gear-db` claims a concept another branch already owns | by hand |
 | 5 | no recipe-less armour; slots resolve | `armourCoverage.test.ts` |
 | 5 | crafted and equipped by a real pawn | `armourChain.test.ts` |

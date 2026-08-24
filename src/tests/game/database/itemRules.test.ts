@@ -5,6 +5,7 @@ import creaturesData from '$lib/game/database/pawns/creatures.jsonc';
 import { kingdomService } from '$lib/game/services/KingdomService';
 import resourcesData from '$lib/game/database/world/resources.jsonc';
 import buildingsData from '$lib/game/database/world/buildings.jsonc';
+import conditionsData from '$lib/game/database/pawns/conditions.jsonc';
 import type { Item } from '$lib/game/core/types';
 import { AGE_CEILING, AGE_NAMES, blameStation, chainAgeOf } from '$lib/dev/chainAge';
 import { gearClassOf } from '$lib/game/core/gearClass';
@@ -608,7 +609,6 @@ for (const i of ITEMS as (Item & { driesTo?: string | { itemId?: string }; decay
 const SIM_MADE = new Set(['pawn_carcass', 'carried_pawn', 'water', 'terra_preta']);
 
 const R8_DEBT = new Set<string>([
-
   // Fresh fish: a caravan will not haul it (R8 asks the sim, and `isTradeableDef` refuses perishable
   // food), and there is no fishing system to catch it. Obtainable the day fishing lands, not before.
   'common_carp',
@@ -1292,5 +1292,122 @@ describe('voidshard — every way in is a hard one', () => {
     expect(shard.tradeRelationsMin ?? 0).toBeGreaterThanOrEqual(75);
     const bars = (ITEMS as Item[]).find((i) => i.id === 'gold_bar')?.value ?? 1;
     expect(shard.value ?? 0, 'absurdly priced next to a gold bar').toBeGreaterThan(bars * 10);
+  });
+});
+
+// ── R20: an early consumable buys its effect; a runed one is handed it ──────────────────────────
+// A dose that removes something the colony would otherwise have to wait out is the strongest thing a
+// consumable can do, and in the early ages it has to be paid for — the medicine of a stone or bronze
+// age worked by making the patient sicker on the way to making them better. Charcoal Purge described
+// exactly that ("brings the poison back up with it") while clearing nausea AND envenom for nothing,
+// which is the shape this catches: prose that promises a trade the effects never charge.
+//
+// What counts as PAYMENT is a downside the sim actually applies — a `grantsConditions` window naming
+// a condition that is a net penalty, or a `rawConsumeRisk`. A grim description is not payment, and
+// neither is a low `medicineQuality` (the tend path skips condition medicine outright, so that number
+// is never read on one of these).
+//
+// The exemption is the RUNED age and only the runed age. A clean, instant, costless cure is what the
+// last age is FOR — it is the reward for reaching it, and an earlier one that acts the same way has
+// quietly handed the player the endgame answer at bronze.
+describe('ITEM-RULES R20 — a cure below the runed age costs the patient something', () => {
+  const RUNED = AGE_NAMES.indexOf('runed');
+  /** Modifier keys where a number BELOW 1 is a benefit, not a penalty (a slower hunger clock is good). */
+  const LOWER_IS_BETTER = new Set(['hungerRate', 'fatigueRate', 'thirstRate', 'pain']);
+  type CondDef = { id: string; modifiers?: Record<string, number> };
+  const CONDS = conditionsData as unknown as CondDef[];
+  const COND_BY_ID = new Map(CONDS.map((c) => [c.id, c]));
+
+  /** Does this condition leave the pawn worse off overall? Counted rather than all-or-nothing: nausea
+   *  slows the hunger clock while wrecking six other things, and it is plainly not a reward. */
+  const isPenalty = (id: string): boolean => {
+    const m = COND_BY_ID.get(id)?.modifiers ?? {};
+    let bad = 0;
+    let good = 0;
+    for (const [k, v] of Object.entries(m)) {
+      if (typeof v !== 'number' || v === 1) continue;
+      const worse = LOWER_IS_BETTER.has(k) ? v > 1 : v < 1;
+      if (worse) bad++;
+      else good++;
+    }
+    return bad > good;
+  };
+
+  /** Anything eaten, drunk or administered — the whole consumable surface, not just the medicine shelf. */
+  const CONSUMABLES = (ITEMS as Item[]).filter(
+    (i) =>
+      i.type === 'consumable' ||
+      i.type === 'fluid' ||
+      i.medicineQuality != null ||
+      i.curesConditions?.length ||
+      i.mendsWounds?.length
+  );
+  /** A dose that REMOVES something outright, rather than adding a timed effect on top. */
+  const cures = (i: Item) => [...(i.curesConditions ?? []), ...(i.mendsWounds ?? [])];
+  const pays = (i: Item) =>
+    !!(i as { rawConsumeRisk?: unknown }).rawConsumeRisk ||
+    !!(i.conditionDurationTurns && (i.grantsConditions ?? []).some(isPenalty));
+
+  // Named rather than silently tolerated, exactly like R1/R2/R4's lists. Six of these declare a cure
+  // that lands on nothing — see the audit in the R20 notes — and charging a price for an effect that
+  // does not happen makes the item worse than free. The cure has to work before it can cost anything,
+  // so they wait on that, not on a one-line data edit. This list may only ever SHRINK.
+  const R20_DEBT = new Set([
+    // Cure never fires: `bleeding` is re-derived from the limb tree every tick and is never written to
+    // `conditionTimers`, which is the only place `curesConditions` reaches.
+    'styptic_pack',
+    'field_surgeons_kit',
+    // Cure never fires: `infection` and `hypothermia` are graded persistent conditions on
+    // `pawn.conditions`; `feverburn`/`frostbrittle` are racial triggers re-derived from the pawn's own
+    // traits — and feverburn is a BENEFIT, so clearing it would be a downgrade if it worked.
+    'fever_draught',
+    'warming_liniment',
+    // Partly fires: `concussed` is a real timer, `pain_shock` is derived from the pain meter and
+    // `pain_maddened` is another racial benefit.
+    'poppy_draught',
+    // Fires, and is genuinely free: a bronze-age burn dressing puts the fire out at no cost.
+    'burn_dressing',
+    // Fires, and is genuinely free: the first two rungs of the antidote ladder clear the venom AND hand
+    // out a timed immunity. What they should charge is a balance decision about venom counterplay.
+    'antivenin_tonic',
+    'greater_antivenin_tonic'
+  ]);
+
+  it('no early-age dose clears a condition or a wound for nothing', () => {
+    const bad = CONSUMABLES.filter((i) => !R20_DEBT.has(i.id))
+      .filter((i) => cures(i).length > 0)
+      .filter((i) => chainAgeOf(i.id) < RUNED)
+      .filter((i) => !pays(i))
+      .map(
+        (i) =>
+          `${i.id} clears [${cures(i).join(', ')}] at the ${AGE_NAMES[chainAgeOf(i.id)]} age and charges nothing`
+      );
+    expect(bad, bad.join('; ')).toEqual([]);
+  });
+
+  it('the debt list has no stale entries', () => {
+    const fixed = [...R20_DEBT].filter((id) => {
+      const i = (ITEMS as Item[]).find((x) => x.id === id);
+      return i && (!cures(i).length || chainAgeOf(id) >= RUNED || pays(i));
+    });
+    expect(fixed, `fixed — drop from R20_DEBT: ${fixed.join(', ')}`).toEqual([]);
+  });
+
+  it('the runed age is the one that gets its cure clean', () => {
+    const bad = CONSUMABLES.filter((i) => cures(i).length > 0 && chainAgeOf(i.id) >= RUNED)
+      .filter((i) => (i.grantsConditions ?? []).some(isPenalty))
+      .map((i) => `${i.id} is a runed cure and still charges a price — that is what the age buys`);
+    expect(bad, bad.join('; ')).toEqual([]);
+  });
+
+  it('a downside condition is one the sim can actually apply', () => {
+    // A `grantsConditions` id that matches no condition def is a cost that never lands, and it looks
+    // identical to a real one in the data.
+    const bad = CONSUMABLES.flatMap((i) =>
+      (i.grantsConditions ?? [])
+        .filter((c) => !COND_BY_ID.has(c))
+        .map((c) => `${i.id} grants "${c}", which is not a condition`)
+    );
+    expect(bad, bad.join('; ')).toEqual([]);
   });
 });

@@ -7,15 +7,27 @@
   import type { Pawn, Item } from '$lib/game/core/types';
   import { itemService } from '$lib/game/services/ItemService';
   import { gameState } from '$lib/stores/gameState';
+  import { conditionViewForId } from '$lib/components/util/conditionInfo';
+  import { woundById } from '$lib/game/core/Wounds';
 
   let { pawn }: { pawn: Pawn } = $props();
 
-  /** What the caretaker is CARRYING that clears a named condition. */
+  /** Human labels for everything a dose can clear: named conditions, and the injuries it knits.
+      Never the raw ids — those are backend reference. */
+  function clears(def: Item): string[] {
+    return [
+      ...(def.curesConditions ?? []).map((c) => conditionViewForId(c)?.name ?? c),
+      ...(def.mendsWounds ?? []).map((w) => woundById(w)?.name ?? w)
+    ];
+  }
+
+  /** What the caretaker is CARRYING that clears a named condition or mends a wound. */
   const doses = $derived(
     Object.entries(pawn.inventory?.items ?? {})
-      .filter(
-        ([id, qty]) => qty > 0 && (itemService.getItemById(id)?.curesConditions?.length ?? 0) > 0
-      )
+      .filter(([id, qty]) => {
+        const def = itemService.getItemById(id);
+        return qty > 0 && !!def && clears(def).length > 0;
+      })
       .map(([id, qty]) => ({ id, qty, def: itemService.getItemById(id) as Item }))
   );
 
@@ -30,10 +42,18 @@
     })
   );
 
-  /** Conditions this patient actually has that the dose would clear — so the label can say so. */
+  /** What this patient actually has that the dose would clear — so the label can say so. */
   function treats(def: Item, patient: Pawn): string[] {
     const active = new Set(Object.keys(patient.conditionTimers ?? {}));
-    return (def.curesConditions ?? []).filter((c) => active.has(c));
+    const carried = new Set<string>();
+    for (const l of patient.limbs ?? [])
+      for (const pt of l.parts ?? []) for (const w of pt.injuries) carried.add(w.type);
+    return [
+      ...(def.curesConditions ?? [])
+        .filter((c) => active.has(c))
+        .map((c) => conditionViewForId(c)?.name ?? c),
+      ...(def.mendsWounds ?? []).filter((w) => carried.has(w)).map((w) => woundById(w)?.name ?? w)
+    ];
   }
 
   function administer(itemId: string, patientId: string) {
@@ -56,7 +76,7 @@
       <div class="dose">
         <span class="nm">{d.def.name}</span>
         <span class="qty">×{d.qty}</span>
-        <span class="cures">{(d.def.curesConditions ?? []).join(', ')}</span>
+        <span class="cures">{clears(d.def).join(', ')}</span>
       </div>
       <div class="targets">
         {#each adjacent as p (p.id)}
@@ -66,7 +86,7 @@
             class:relevant={hit.length > 0}
             title={hit.length
               ? `Clears ${hit.join(', ')} on ${p.name}`
-              : `${p.name} has none of ${(d.def.curesConditions ?? []).join(', ')} — the dose would be wasted`}
+              : `${p.name} has none of ${clears(d.def).join(', ')} — the dose would be wasted`}
             onclick={() => administer(d.id, p.id)}
           >
             Administer to {p.name}{hit.length ? ` · ${hit.join(', ')}` : ''}

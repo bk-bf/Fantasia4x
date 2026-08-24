@@ -107,15 +107,69 @@
     "toolTierRequired": 0,
     "researchRequired": "leather_working"
   },
+  // ── Fracture care ─────────────────────────────────────────────────────────
+  // Splints and casts are WORN gear, so they are made where woodwork and dressing are made, not
+  // brewed. The wooden pair are bronze-age because a batten needs a sawpit; the limed pair are iron
+  // because a cast is set at an apothecary out of burnt limestone.
   {
-    "id"              : "make_bonesetters_splint",
+    "id"              : "make_wooden_arm_splint",
     "discipline"      : "herbalism",
     "station"         : "makers_bench",
-    "inputs"          : {"category:plank": 1, "linen_cloth": 2, "category:binding": 2},
-    "outputs"         : {"bonesetters_splint": 2},
-    "workAmount"      : 7,
+    "inputs"          : {"category:plank": 1, "linen_cloth": 1, "category:binding": 2},
+    "outputs"         : {"wooden_arm_splint": 3},
+    "workAmount"      : 6,
+    "toolTierRequired": 1,
+    "researchRequired": "leather_working"
+  },
+  {
+    "id"              : "make_wooden_leg_splint",
+    "discipline"      : "herbalism",
+    "station"         : "makers_bench",
+    "inputs"          : {"category:plank": 2, "linen_cloth": 2, "category:binding": 3},
+    "outputs"         : {"wooden_leg_splint": 3},
+    "workAmount"      : 8,
+    "toolTierRequired": 1,
+    "researchRequired": "leather_working"
+  },
+  {
+    "id"              : "make_lime_arm_cast",
+    "discipline"      : "herbalism",
+    "station"         : "apothecary",
+    "inputs"          : {"quicklime": 1, "linen_cloth": 2, "water": 1, "category:binding": 1},
+    "outputs"         : {"lime_arm_cast": 2},
+    "workAmount"      : 10,
     "toolTierRequired": 1,
     "researchRequired": "iron_working"
+  },
+  {
+    "id"              : "make_lime_leg_cast",
+    "discipline"      : "herbalism",
+    "station"         : "apothecary",
+    "inputs"          : {"quicklime": 2, "linen_cloth": 4, "water": 2, "category:binding": 2},
+    "outputs"         : {"lime_leg_cast": 2},
+    "workAmount"      : 14,
+    "toolTierRequired": 1,
+    "researchRequired": "iron_working"
+  },
+  {
+    "id"              : "brew_bonemeal_draught",
+    "discipline"      : "alchemy",
+    "station"         : "apothecary",
+    "inputs"          : {"bone_meal": 2, "category:herb": 2, "distilled_spirit": 1},
+    "outputs"         : {"bonemeal_draught": 2},
+    "workAmount"      : 16,
+    "toolTierRequired": 2,
+    "researchRequired": "steel_making"
+  },
+  {
+    "id"              : "brew_emberbloom_draught",
+    "discipline"      : "alchemy",
+    "station"         : "apothecary",
+    "inputs"          : {"emberbloom": 2, "gem_dust": 1, "distilled_spirit": 1},
+    "outputs"         : {"emberbloom_draught": 2},
+    "workAmount"      : 22,
+    "toolTierRequired": 2,
+    "researchRequired": "runic_inscription"
   },
   {
     "id"              : "brew_fever_draught",

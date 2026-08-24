@@ -74,9 +74,10 @@ function needsTending(patient: Pawn, turn: number): boolean {
  * Two things are deliberately excluded:
  *   · anything above `patient.medicineTierCap` — the player's instruction not to spend the good stuff
  *     on this pawn. Unset means no ceiling.
- *   · anything with `curesConditions` — a styptic pack, a splint, an antivenin. Those treat a NAMED
- *     condition and are administered by hand from a caretaker's pack; letting the auto-tend grab one
- *     because it happened to be in stock would burn the colony's only phial on a graze.
+ *   · anything with `curesConditions` or `mendsWounds` — a styptic pack, an antivenin, a bone-knitting
+ *     draught. Those treat a NAMED condition or injury and are administered by hand from a caretaker's
+ *     pack; letting the auto-tend grab one because it happened to be in stock would burn the colony's
+ *     only phial on a graze.
  */
 function bestMedicine(gs: GameState, patient: Pawn): { id: string; quality: number } | null {
   const cap = patient.medicineTierCap;
@@ -86,7 +87,8 @@ function bestMedicine(gs: GameState, patient: Pawn): { id: string; quality: numb
     const def = itemService.getItemById(id);
     const q = def?.medicineQuality;
     if (!q || q <= 0) continue;
-    if (def?.curesConditions?.length) continue; // condition medicine — the player administers it
+    // Condition medicine and wound-mending doses are administered by hand — never spent by the auto-tend.
+    if (def?.curesConditions?.length || def?.mendsWounds?.length) continue;
     if (cap != null && (def?.tier ?? 0) > cap) continue;
     if (!best || q > best.quality) best = { id, quality: q };
   }

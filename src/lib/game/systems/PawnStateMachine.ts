@@ -24,7 +24,9 @@ import type {
   LimbState,
   EntityCondition,
   DroppedItem,
-  DeadPawnRecord
+  DeadPawnRecord,
+  Item,
+  EquipmentSlot
 } from '../core/types';
 import {
   HEALING_CONFIG,
@@ -37,6 +39,7 @@ import {
   BASE_CLOT_CHANCE
 } from '../core/Wounds';
 import { feedOnVictim } from '../core/Lineages';
+import { coversPart } from '../core/armorCoverage';
 import { lethalAnatomyCause } from '../core/BodyParts';
 import conditionsData from '../database/pawns/conditions.jsonc';
 import buildingsData from '../database/world/buildings.jsonc';
@@ -972,6 +975,39 @@ function tickConditions(pawn: Pawn, gameState: GameState): GameState {
   return gameState;
 }
 
+/**
+ * The bone-heal multiplier a pawn's worn splints/casts lend each body part, or `undefined` when the
+ * pawn has none on (the common case — no per-tick allocation for an unsplinted colonist).
+ *
+ * A splint targets a limb the same way armour does: through the piece's own coverage set. Nothing
+ * about the equipment model knows "left forearm" as a slot, and a per-part worn-splint registry would
+ * be a second body model to keep in step with the first — so the arm splint that protects the forearm
+ * is the one that speeds the ulna under it, resolved by the same `coversPart` walk (which follows
+ * `containedIn`, so covering the forearm reaches the bone inside it).
+ */
+function splintBoneHeal(pawn: Pawn): ((partId: string) => number) | undefined {
+  const eq = pawn.equipment;
+  if (!eq) return undefined;
+  let pieces: { item: Item; slot: EquipmentSlot }[] | null = null;
+  for (const [slot, inst] of Object.entries(eq)) {
+    if (!inst) continue;
+    const item = itemService.getItemById(inst.itemId);
+    const mult = item?.armorProperties?.boneHealMultiplier;
+    if (!item || !mult || mult <= 1) continue;
+    (pieces ??= []).push({ item, slot: slot as EquipmentSlot });
+  }
+  if (!pieces) return undefined;
+  const worn = pieces;
+  return (partId: string) => {
+    let best = 1;
+    for (const p of worn) {
+      const m = p.item.armorProperties!.boneHealMultiplier!;
+      if (m > best && coversPart(p.item, p.slot, partId)) best = m;
+    }
+    return best; // the best splint on the part, not the product — two casts are not four times a cast
+  };
+}
+
 export function healWounds(pawn: Pawn, turn = 0, buildings?: PlacedBuilding[]): Pawn {
   const limbs = pawn.limbs;
   const hasWounds = limbs?.some((l) => (l.parts ?? []).some((p) => p.injuries.length > 0));
@@ -1010,7 +1046,8 @@ export function healWounds(pawn: Pawn, turn = 0, buildings?: PlacedBuilding[]): 
   const baseHeal = HEALING_CONFIG.baseHealPerTick * healRate * mult; // part HP / tick, per wound
   if (baseHeal <= 0) return pawn;
 
-  const newLimbs = healLimbs(limbs, baseHeal, turn, true, true); // pawns scar (§0b)
+  // pawns scar (§0b); a worn splint/cast speeds the bone under it
+  const newLimbs = healLimbs(limbs, baseHeal, turn, true, true, splintBoneHeal(pawn));
   if (newLimbs === limbs) return pawn;
 
   let painTotal = 0;
