@@ -1382,6 +1382,142 @@
     "weightKg"         : 4,
     "volumeL"          : 0.5
   },
+  // ── Vessels for what an ordinary pot cannot hold ─────────────────────────
+  // Ordinary fired earthenware, wood, glass and leather all fail somewhere: a melt is over 1000C, a
+  // caustic humour eats leather and skin. These two are the answers, one mundane and one not.
+  {
+    "id": "fireclay_crucible",
+    "charSpans": [ {"sheet": "items", "id": 41} ],
+    "name": "Crucible",
+    "type": "container",
+    "category": "storage",
+    "maxDurability": 90,
+    "deteriorationRate": 0.02,
+    "description": "A squat pot thrown from refractory clay and fired until it rings. It will sit in a hearth holding liquid metal and come out unmarked, which is more than can be said for anything else in the colony.",
+    "container": {"material": "fireclay", "capacityL": 2, "accepts": ["fluid"]},
+    "color": "#9A8570",
+    "amount": 0,
+    "weightKg": 2.2,
+    "volumeL": 2.6,
+    "toolTierRequired": 1
+  },
+  {
+    "id": "rune_sealed_flask",
+    "charSpans": [ {"sheet": "items", "id": 41} ],
+    "name": "Rune-Sealed Flask",
+    "type": "container",
+    "category": "storage",
+    "maxDurability": 400,
+    "deteriorationRate": 0.002,
+    "description": "Glass held together by a binding cut into its own surface rather than by the glass itself. What goes in stops touching the walls, so nothing it carries can eat, burn or crack its way out.",
+    "container": {"material": "runed", "capacityL": 3, "accepts": ["fluid"], "sealed": true},
+    "color": "#8A72B8",
+    "amount": 0,
+    "weightKg": 0.5,
+    "volumeL": 0.9,
+    "researchRequired": "runic_inscription",
+    "toolTierRequired": 1
+  },
+  // ── Molten metal: the cast line's intermediate ────────────────────────────
+  // Copper, tin, bronze, lead, silver and gold are MELTED and poured; iron and steel are worked solid
+  // at an anvil, because no pre-industrial hearth reaches iron's 1538C. That is why the bronze age
+  // casts and the iron age forges, and it is why only these six have a molten form.
+  {
+    "id": "molten_copper",
+    "charSpans": [ {"sheet": "items", "id": 71} ],
+    "name": "Molten Copper",
+    "type": "fluid",
+    "category": "metal",
+    "maxDurability": 200,
+    "deteriorationRate": 0.0,
+    "description": "The red metal run to liquid, skinned over with dark oxide that a stir breaks open. Pour it into a mould or let the hearth go cold and take it back as a bar.",
+    "color": "#C87533",
+    "amount": 0,
+    "weightKg": 1,
+    "volumeL": 0.112,
+    "value": 4,
+    "heldBy": ["fireclay", "runed"]
+  },
+  {
+    "id": "molten_tin",
+    "charSpans": [ {"sheet": "items", "id": 71} ],
+    "name": "Molten Tin",
+    "type": "fluid",
+    "category": "metal",
+    "maxDurability": 200,
+    "deteriorationRate": 0.0,
+    "description": "Runs at a heat that barely reddens the hearth, and pours thin and quick as water. Pour it into a mould or let the hearth go cold and take it back as a bar.",
+    "color": "#BFC4C9",
+    "amount": 0,
+    "weightKg": 1,
+    "volumeL": 0.137,
+    "value": 4,
+    "heldBy": ["fireclay", "runed"]
+  },
+  {
+    "id": "molten_bronze",
+    "charSpans": [ {"sheet": "items", "id": 71} ],
+    "name": "Molten Bronze",
+    "type": "fluid",
+    "category": "metal",
+    "maxDurability": 200,
+    "deteriorationRate": 0.0,
+    "description": "Copper and tin gone into one another for good. It fills a mould sharper than either alone, which is the whole reason for the alloy. Pour it into a mould or let the hearth go cold and take it back as a bar.",
+    "color": "#B08D4F",
+    "amount": 0,
+    "weightKg": 1,
+    "volumeL": 0.114,
+    "value": 4,
+    "heldBy": ["fireclay", "runed"]
+  },
+  {
+    "id": "molten_lead",
+    "charSpans": [ {"sheet": "items", "id": 71} ],
+    "name": "Molten Lead",
+    "type": "fluid",
+    "category": "metal",
+    "maxDurability": 200,
+    "deteriorationRate": 0.0,
+    "description": "Sullen, heavy and slow to move, giving off a fume nobody should be standing over. Pour it into a mould or let the hearth go cold and take it back as a bar.",
+    "color": "#8C8F99",
+    "amount": 0,
+    "weightKg": 1,
+    "volumeL": 0.088,
+    "value": 4,
+    "heldBy": ["fireclay", "runed"]
+  },
+  {
+    "id": "molten_silver",
+    "charSpans": [ {"sheet": "items", "id": 71} ],
+    "name": "Molten Silver",
+    "type": "fluid",
+    "category": "metal",
+    "maxDurability": 200,
+    "deteriorationRate": 0.0,
+    "description": "Bright to the point of hurting when the dross is drawn back off it. Pour it into a mould or let the hearth go cold and take it back as a bar.",
+    "color": "#D6D9DE",
+    "amount": 0,
+    "weightKg": 1,
+    "volumeL": 0.095,
+    "value": 4,
+    "heldBy": ["fireclay", "runed"]
+  },
+  {
+    "id": "molten_gold",
+    "charSpans": [ {"sheet": "items", "id": 71} ],
+    "name": "Molten Gold",
+    "type": "fluid",
+    "category": "metal",
+    "maxDurability": 200,
+    "deteriorationRate": 0.0,
+    "description": "So heavy it seems to lie lower in the crucible than it should. Nothing dulls it, not even the fire. Pour it into a mould or let the hearth go cold and take it back as a bar.",
+    "color": "#E8C34A",
+    "amount": 0,
+    "weightKg": 1,
+    "volumeL": 0.052,
+    "value": 4,
+    "heldBy": ["fireclay", "runed"]
+  },
   {
     "id"               : "iron_bar",
     "charSpans"        : [ {"sheet": "items", "id": 23} ],
@@ -1716,7 +1852,7 @@
     "volumeL": 0.5,
     "maxDurability": 80,
     "deteriorationRate": 0.02,
-    "container": {"capacityL": 3, "accepts": ["fluid"], "sealed": true}
+    "container": {"material": "leather", "capacityL": 3, "accepts": ["fluid"], "sealed": true}
   },
   {
     "id"               : "flask",
@@ -1731,7 +1867,7 @@
     "volumeL"          : 0.4,
     "maxDurability"    : 60,
     "deteriorationRate": 0.01,
-    "container"        : {"capacityL": 1.5, "accepts": ["fluid"], "sealed": true}
+    "container"        : {"material": "clay", "capacityL": 1.5, "accepts": ["fluid"], "sealed": true}
   },
   {
     "id"               : "tallow",
@@ -2142,7 +2278,7 @@
     "charSpans": [ {"sheet": "items", "id": 30} ],
     "name": "Blue Clay",
     "type": "material",
-    "category": "primitive",
+    "category": "clay",
     "maxDurability": 120,
     "deteriorationRate": 0.01,
     "description": "Raw earthenware clay dug from a clay, mud or bog bank. The bulk ceramics and construction material.",
@@ -2157,7 +2293,7 @@
     "charSpans": [ {"sheet": "items", "id": 30} ],
     "name": "Fire Clay",
     "type": "material",
-    "category": "primitive",
+    "category": "clay",
     "maxDurability": 120,
     "deteriorationRate": 0.01,
     "description": "Pale refractory clay dug from rare seams. Withstands forge heat, the raw stock for fire bricks, crucibles and casting molds.",
@@ -2283,7 +2419,7 @@
     "amount": 0,
     "weightKg": 2.5,
     "volumeL": 3,
-    "container": {"capacityL": 20, "sealed": true},
+    "container": {"material": "clay", "capacityL": 20, "sealed": true},
     "toolTierRequired": 0
   },
   {
@@ -2843,7 +2979,7 @@
     "maxDurability": 220,
     "deteriorationRate": 0.012,
     "description": "A planked chest nailed together with iron. The sturdiest storage tier, 40 slots, keeps goods dry and food longer (−30% spoilage). Needs planks and forged nails.",
-    "container": {"capacityL": 60, "sealed": true},
+    "container": {"material": "wood", "capacityL": 60, "sealed": true},
     "color": "#8B5A2B",
     "amount": 0,
     "weightKg": 3,
@@ -3127,7 +3263,8 @@
     "color"            : "#6b7a2a",
     "amount"           : 0,
     "weightKg"         : 0.3,
-    "volumeL"          : 0.2
+    "volumeL"          : 0.2,
+    "heldBy": ["clay", "glass", "porcelain", "fireclay", "runed"]
   },
   {
     "id"                 : "caustic_coating",
@@ -3142,6 +3279,7 @@
     "amount"             : 0,
     "weightKg"           : 0.2,
     "volumeL"            : 0.2,
+    "heldBy": ["clay", "glass", "porcelain", "fireclay", "runed"],
     "coatingEffect"      : {"condition": "nausea", "chance": 0.6, "durationHours": 2.0, "resist": "poison_resistance"},
     "coatingDurationHours": 6
   },
@@ -3725,6 +3863,7 @@
     "amount"           : 0,
     "weightKg"         : 0.3,
     "volumeL"          : 0.3,
+    "heldBy": ["clay", "glass", "porcelain", "fireclay", "runed"],
     "coatingEffect"     : {"condition": "nausea", "chance": 0.75, "durationHours": 3.0, "resist": "poison_resistance"},
     "coatingDurationHours": 10
   },
@@ -3742,6 +3881,7 @@
     "amount"           : 0,
     "weightKg"         : 0.3,
     "volumeL"          : 0.3,
+    "heldBy": ["clay", "glass", "porcelain", "fireclay", "runed"],
     "coatingEffect"     : {"condition": "nausea", "chance": 0.8999999999999999, "durationHours": 4.0, "resist": "poison_resistance"},
     "coatingDurationHours": 16
   },
@@ -8888,7 +9028,7 @@
     "tier": 0,
     "inventoryBonus": {"weightKg": 0, "volumeL": 8},
     "armorProperties": {"armorType": "light", "defense": 0, "equipmentSlot": "back2"},
-    "container": {"capacityL": 8, "capacityKg": 3},
+    "container": {"material": "hide", "capacityL": 8, "capacityKg": 3},
     "quiver": {"ammoCategory": "arrow", "drawSpeed": 0.15}
   },
   {
@@ -8907,7 +9047,7 @@
     "tier": 1,
     "inventoryBonus": {"weightKg": 0, "volumeL": 12},
     "armorProperties": {"armorType": "light", "defense": 0, "equipmentSlot": "back2"},
-    "container": {"capacityL": 12, "capacityKg": 5},
+    "container": {"material": "leather", "capacityL": 12, "capacityKg": 5},
     "quiver": {"ammoCategory": "arrow", "drawSpeed": 0.25}
   },
   {
@@ -8926,7 +9066,7 @@
     "tier": 2,
     "inventoryBonus": {"weightKg": 0, "volumeL": 14},
     "armorProperties": {"armorType": "medium", "defense": 1, "equipmentSlot": "back2"},
-    "container": {"capacityL": 14, "capacityKg": 6},
+    "container": {"material": "leather", "capacityL": 14, "capacityKg": 6},
     "quiver": {"ammoCategory": "arrow", "drawSpeed": 0.32}
   },
   {
@@ -8945,7 +9085,7 @@
     "tier": 2,
     "inventoryBonus": {"weightKg": 0, "volumeL": 4},
     "armorProperties": {"armorType": "light", "defense": 0, "equipmentSlot": "belt"},
-    "container": {"capacityL": 4, "capacityKg": 3},
+    "container": {"material": "leather", "capacityL": 4, "capacityKg": 3},
     "quiver": {"ammoCategory": "bolt", "drawSpeed": 0.25}
   },
   {
@@ -8964,7 +9104,7 @@
     "tier": 2,
     "inventoryBonus": {"weightKg": 0, "volumeL": 5},
     "armorProperties": {"armorType": "medium", "defense": 1, "equipmentSlot": "belt"},
-    "container": {"capacityL": 5, "capacityKg": 4},
+    "container": {"material": "leather", "capacityL": 5, "capacityKg": 4},
     "quiver": {"ammoCategory": "bolt", "drawSpeed": 0.30}
   },
   // Bone and antler are butchered, dried and carved at a bench, so they sit a band above knapped
@@ -16800,7 +16940,7 @@
     "maxDurability"    : 60,
     "deteriorationRate": 0.05,
     "description"      : "Green withies bent round a rim and woven tight. Set it down and it holds a load of dry goods; it will not hold a drop of water.",
-    "container"        : {"capacityL": 25, "capacityKg": 12},
+    "container"        : {"material": "wicker", "capacityL": 25, "capacityKg": 12},
     "color"            : "#B08A50",
     "amount"           : 0,
     "weightKg"         : 1.9,
@@ -16816,7 +16956,7 @@
     "maxDurability"    : 180,
     "deteriorationRate": 0.02,
     "description"      : "A deep plank box on a square base, joined and pegged. Takes a great deal and stacks in a corner without falling over.",
-    "container"        : {"capacityL": 120, "capacityKg": 90},
+    "container"        : {"material": "wood", "capacityL": 120, "capacityKg": 90},
     "color"            : "#8B6B45",
     "amount"           : 0,
     "weightKg"         : 9,
@@ -16832,7 +16972,7 @@
     "maxDurability"    : 140,
     "deteriorationRate": 0.025,
     "description"      : "Slatted boards nailed into an open box. Lighter than a bin and quicker to knock together, and the gaps let a load breathe.",
-    "container"        : {"capacityL": 70, "capacityKg": 50},
+    "container"        : {"material": "wood", "capacityL": 70, "capacityKg": 50},
     "color"            : "#9A7B4F",
     "amount"           : 0,
     "weightKg"         : 5,
@@ -16853,7 +16993,7 @@
     "weightKg": 2,
     "volumeL": 3,
     "processingType": ["crafting"],
-    "container": {"capacityL": 10, "accepts": ["fluid"]}
+    "container": {"material": "wood", "capacityL": 10, "accepts": ["fluid"]}
   },
   {
     "id"               : "wooden_barrel",
@@ -16869,7 +17009,7 @@
     "weightKg"         : 12,
     "volumeL"          : 12,
     "processingType"   : ["crafting"],
-    "container"        : {"capacityL": 50, "accepts": ["fluid"], "sealed": true}
+    "container"        : {"material": "wood", "capacityL": 50, "accepts": ["fluid"], "sealed": true}
   },
   {
     "id": "tanning_brine",
@@ -16901,6 +17041,7 @@
     "amount": 0,
     "weightKg": 1.2,
     "volumeL": 1.5,
+    "heldBy": ["wood", "clay", "glass", "porcelain", "fireclay", "runed"],
     "fuelValue": 16,
     "fuelHeat": 3,
     "processingType": ["crafting"]
@@ -17931,7 +18072,7 @@
     "maxDurability": 80,
     "deteriorationRate": 0.01,
     "description": "Blown-glass flasks and phials melted from sand. Holds reagents, and bottles a finished potion.",
-    "container": {"capacityL": 2, "accepts": ["fluid"], "sealed": true},
+    "container": {"material": "glass", "capacityL": 2, "accepts": ["fluid"], "sealed": true},
     "color": "#A8D0C8",
     "amount": 0,
     "weightKg": 0.4,
@@ -17951,7 +18092,7 @@
     "amount": 0,
     "weightKg": 1.6,
     "volumeL": 1.2,
-    "container": {"capacityL": 5, "accepts": ["fluid"], "sealed": true},
+    "container": {"material": "clay", "capacityL": 5, "accepts": ["fluid"], "sealed": true},
     "toolTierRequired": 0
   },
   {
@@ -17978,7 +18119,7 @@
     "maxDurability": 120,
     "deteriorationRate": 0.004,
     "description": "Hard, glassy white porcelain, the finest reagent vessels there are. The top of the ceramic line; seals and preserves better than any clay.",
-    "container": {"capacityL": 4, "accepts": ["fluid"], "sealed": true},
+    "container": {"material": "porcelain", "capacityL": 4, "accepts": ["fluid"], "sealed": true},
     "color": "#F0ECE4",
     "amount": 0,
     "weightKg": 0.4,
@@ -18639,7 +18780,8 @@
       "color": "#d8e0e8",
       "amount": 0,
       "weightKg": 0.3,
-      "volumeL": 0.3
+      "volumeL": 0.3,
+      "heldBy": ["wood", "clay", "glass", "porcelain", "fireclay", "runed"]
     },
     {
       "id": "purified_catalyst",

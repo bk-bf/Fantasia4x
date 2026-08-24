@@ -91,9 +91,14 @@ export function spillsIfLoose(itemId: string): boolean {
 export function vesselAccepts(vesselItemId: string, itemId: string): boolean {
   const v = vesselOf(vesselItemId);
   if (!v) return false;
+  const def = itemDefById(itemId);
+  // What the vessel is MADE OF comes first, and it overrides an open allow-list. A fluid that names
+  // the materials able to hold it can go nowhere else — otherwise `accepts: ['fluid']` on a leather
+  // waterskin would take molten copper, and a vessel with no allow-list at all would take anything at
+  // any temperature.
+  if (def?.heldBy?.length && !def.heldBy.includes(v.material ?? '')) return false;
   const accepts = v.accepts;
   if (!accepts || accepts.length === 0) return true;
-  const def = itemDefById(itemId);
   return accepts.some(
     (a) => a === itemId || a === def?.category || (a === 'fluid' && def?.type === 'fluid')
   );

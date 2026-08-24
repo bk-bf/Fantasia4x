@@ -10,16 +10,22 @@ import type { GameState } from '$lib/game/core/types';
 
 const CURE = recipeService.getAllRecipes().filter((r) => r.id.startsWith('make_cured_'));
 const TAN = recipeService.getAllRecipes().filter((r) => r.id.startsWith('tan_'));
-const usesCat = (cat: string) => (r: { inputs?: object; inputAlternatives?: object[]; dynamicRecipe?: object }) =>
-  Object.keys(r.inputs ?? {}).includes(cat) ||
-  (r.inputAlternatives ?? []).some((a) => cat in a) ||
-  Object.values(r.dynamicRecipe ?? {}).some(
-    (d: { acceptsCategory?: string; acceptsCategories?: string[] }) =>
-      d.acceptsCategory === cat.slice(9) || (d.acceptsCategories ?? []).includes(cat.slice(9))
-  );
+const usesCat =
+  (cat: string) => (r: { inputs?: object; inputAlternatives?: object[]; dynamicRecipe?: object }) =>
+    Object.keys(r.inputs ?? {}).includes(cat) ||
+    (r.inputAlternatives ?? []).some((a) => cat in a) ||
+    Object.values(r.dynamicRecipe ?? {}).some(
+      (d: { acceptsCategory?: string; acceptsCategories?: string[] }) =>
+        d.acceptsCategory === cat.slice(9) || (d.acceptsCategories ?? []).includes(cat.slice(9))
+    );
 const CONSUMERS = recipeService
   .getAllRecipes()
-  .filter((r) => usesCat('category:leather')(r) || usesCat('category:wool')(r) || usesCat('category:cured_hide')(r));
+  .filter(
+    (r) =>
+      usesCat('category:leather')(r) ||
+      usesCat('category:wool')(r) ||
+      usesCat('category:cured_hide')(r)
+  );
 
 // Provision a colony that can afford everything: every station these recipes need, all research/tools,
 // and 999 of every material/food/consumable so only the STATION/research/tool gates are under test.
@@ -40,14 +46,22 @@ function provisioned(): GameState {
   });
 }
 
-const outputOf = (recipeId: string) => Object.keys(recipeService.getRecipeById(recipeId)!.outputs)[0];
+const outputOf = (recipeId: string) =>
+  Object.keys(recipeService.getRecipeById(recipeId)!.outputs)[0];
 const makeOrder = (recipeId: string, state: GameState) => {
   const r = recipeService.getRecipeById(recipeId)!;
-  const bld = (state.buildings ?? []).find((b) => (b as { type?: string }).type === r.station) as { id?: string };
+  const bld = (state.buildings ?? []).find((b) => (b as { type?: string }).type === r.station) as {
+    id?: string;
+  };
   return {
-    id: 'o1', item: { id: outputOf(recipeId), name: 'x', amount: 0 }, quantity: 1,
-    workRequired: r.workAmount ?? 4, workDone: 0, inputs: {},
-    stationType: r.station, stationBuildingId: bld?.id ?? 'b0'
+    id: 'o1',
+    item: { id: outputOf(recipeId), name: 'x', amount: 0 },
+    quantity: 1,
+    workRequired: r.workAmount ?? 4,
+    workDone: 0,
+    inputs: {},
+    stationType: r.station,
+    stationBuildingId: bld?.id ?? 'b0'
   } as never;
 };
 
@@ -59,8 +73,13 @@ describe('leather/wool chain — full end-to-end sweep (provisioned colony)', ()
     for (const r of [...CURE, ...TAN]) {
       const out = outputOf(r.id);
       if (!itemService.canQueueCraft(out, state)) fail.push(`${r.id}: canQueueCraft(${out})=false`);
-      const gs = completeCraftOrder(makeOrder(r.id, state), { ...state, craftingQueue: [makeOrder(r.id, state)] } as GameState, () => 1);
-      if (!(gs.droppedItems ?? []).some((d) => d.resourceId === out)) fail.push(`${r.id}: no ${out} produced`);
+      const gs = completeCraftOrder(
+        makeOrder(r.id, state),
+        { ...state, craftingQueue: [makeOrder(r.id, state)] } as GameState,
+        () => 1
+      );
+      if (!(gs.droppedItems ?? []).some((d) => d.resourceId === out))
+        fail.push(`${r.id}: no ${out} produced`);
     }
     console.log(`[E2E] cure+tan: ${CURE.length + TAN.length} targets, ${fail.length} failures`);
     expect(fail, fail.join('\n')).toEqual([]);
@@ -71,10 +90,17 @@ describe('leather/wool chain — full end-to-end sweep (provisioned colony)', ()
     for (const r of CONSUMERS) {
       const out = outputOf(r.id);
       if (!itemService.canQueueCraft(out, state)) fail.push(`${r.id}: canQueueCraft(${out})=false`);
-      const gs = completeCraftOrder(makeOrder(r.id, state), { ...state, craftingQueue: [makeOrder(r.id, state)] } as GameState, () => 1);
-      if (!(gs.droppedItems ?? []).some((d) => d.resourceId === out)) fail.push(`${r.id}: no ${out}`);
+      const gs = completeCraftOrder(
+        makeOrder(r.id, state),
+        { ...state, craftingQueue: [makeOrder(r.id, state)] } as GameState,
+        () => 1
+      );
+      if (!(gs.droppedItems ?? []).some((d) => d.resourceId === out))
+        fail.push(`${r.id}: no ${out}`);
     }
-    console.log(`[E2E] consumers: ${CONSUMERS.length} recipes (${CONSUMERS.filter(usesCat('category:leather')).length} leather), ${fail.length} failures`);
+    console.log(
+      `[E2E] consumers: ${CONSUMERS.length} recipes (${CONSUMERS.filter(usesCat('category:leather')).length} leather), ${fail.length} failures`
+    );
     expect(fail, fail.join('\n')).toEqual([]);
   });
 
@@ -96,23 +122,33 @@ describe('leather chain — physical pawn pipeline (HeadlessSession, real ticks)
         pawns: [{ count: 6, skillLevel: 12 }],
         needsDisabled: ['hunger', 'fatigue'],
         buildings: [{ id: 'makers_bench' }, { id: 'weaving_frame' }],
-        items: { buckskin: 20, cordage: 20, goat_wool: 20 },
+        items: { buckskin: 20, cordage: 20, goat_wool: 20, cured_deer_hide: 20 },
         seedEntities: false
       })
     );
     // Founders default to no enabled labor in a headless scenario — turn it on so they work the queue.
     for (const p of session.getState().pawns)
       for (const w of workService.getAllWorkCategories())
-        session.command({ type: 'setPawnLaborLevel', payload: { pawnId: p.id, workId: w.id, level: 3 } } as never);
+        session.command({
+          type: 'setPawnLaborLevel',
+          payload: { pawnId: p.id, workId: w.id, level: 3 }
+        } as never);
     const stock = () => (session.getState().stockpile ?? {}) as Record<string, number>;
-    session.command({ type: 'craftItem', payload: { itemId: 'hide_scrip', quantity: 1 } } as never); // category:leather
+    session.command({
+      type: 'craftItem',
+      payload: { itemId: 'brimmed_leather_hood', quantity: 1 }
+    } as never); // category:leather
     session.command({ type: 'craftItem', payload: { itemId: 'woolcloth', quantity: 1 } } as never); // category:wool
     // Reserve → haul → stage → craft is a multi-tick pawn pipeline; give it room for both stations.
-    for (let i = 0; i < 16 && !(stock().hide_scrip > 0 && stock().woolcloth > 0); i++) session.tick(500);
+    for (let i = 0; i < 16 && !(stock().brimmed_leather_hood > 0 && stock().woolcloth > 0); i++)
+      session.tick(500);
     console.log(
-      `[E2E-PIPELINE] after ${session.getState().turn} turns: hide_scrip=${stock().hide_scrip} (buckskin ${stock().buckskin}/20), woolcloth=${stock().woolcloth} (goat_wool ${stock().goat_wool}/20)`
+      `[E2E-PIPELINE] after ${session.getState().turn} turns: brimmed_leather_hood=${stock().brimmed_leather_hood} (buckskin ${stock().buckskin}/20), woolcloth=${stock().woolcloth} (goat_wool ${stock().goat_wool}/20)`
     );
-    expect(stock().hide_scrip ?? 0, 'pawn crafts a category:leather item').toBeGreaterThan(0);
+    expect(
+      stock().brimmed_leather_hood ?? 0,
+      'pawn crafts a category:leather item'
+    ).toBeGreaterThan(0);
     expect(stock().buckskin, 'leather consumed').toBeLessThan(20);
     expect(stock().woolcloth ?? 0, 'pawn crafts a category:wool item').toBeGreaterThan(0);
     expect(stock().goat_wool, 'wool consumed').toBeLessThan(20);
@@ -139,14 +175,23 @@ describe('leather chain — physical pawn pipeline (HeadlessSession, real ticks)
     );
     for (const p of session.getState().pawns)
       for (const w of workService.getAllWorkCategories())
-        session.command({ type: 'setPawnLaborLevel', payload: { pawnId: p.id, workId: w.id, level: 3 } } as never);
+        session.command({
+          type: 'setPawnLaborLevel',
+          payload: { pawnId: p.id, workId: w.id, level: 3 }
+        } as never);
     const stk = () => (session.getState().stockpile ?? {}) as Record<string, number>;
     // §A: the ACTIVE flesh step now comes FIRST — a raw hide must be scraped clean before it can cure.
-    session.command({ type: 'craftItem', payload: { itemId: 'fleshed_deer_hide', quantity: 1 } } as never);
+    session.command({
+      type: 'craftItem',
+      payload: { itemId: 'fleshed_deer_hide', quantity: 1 }
+    } as never);
     for (let i = 0; i < 16 && !(stk().fleshed_deer_hide > 0); i++) session.tick(400);
     const fleshed = stk().fleshed_deer_hide ?? 0;
     // …then cure the FLESHED hide at the rack…
-    session.command({ type: 'craftItem', payload: { itemId: 'cured_deer_hide', quantity: 1 } } as never);
+    session.command({
+      type: 'craftItem',
+      payload: { itemId: 'cured_deer_hide', quantity: 1 }
+    } as never);
     for (let i = 0; i < 16 && !(stk().cured_deer_hide > 0); i++) session.tick(400);
     const cured = stk().cured_deer_hide ?? 0;
     // …then tan that cured hide into buckskin at the bucket (brine consumed as a real input).
@@ -172,14 +217,21 @@ describe('leather chain — physical pawn pipeline (HeadlessSession, real ticks)
         workReady: true, // stocks a leatherworking tool that clears both the flesh (t1) and curry (t2) gates
         pawns: [{ count: 6, skillLevel: 16 }],
         needsDisabled: ['hunger', 'fatigue'],
-        buildings: [{ id: 'hide_rack' }, { id: 'tanning_bucket_station' }, { id: 'curriers_bench' }],
+        buildings: [
+          { id: 'hide_rack' },
+          { id: 'tanning_bucket_station' },
+          { id: 'curriers_bench' }
+        ],
         items: { wolf_hide: 20, ash: 60, tanning_brine: 20, tallow: 20 },
         seedEntities: false
       })
     );
     for (const p of session.getState().pawns)
       for (const w of workService.getAllWorkCategories())
-        session.command({ type: 'setPawnLaborLevel', payload: { pawnId: p.id, workId: w.id, level: 3 } } as never);
+        session.command({
+          type: 'setPawnLaborLevel',
+          payload: { pawnId: p.id, workId: w.id, level: 3 }
+        } as never);
     const stk = () => (session.getState().stockpile ?? {}) as Record<string, number>;
     const step = (item: string) => {
       session.command({ type: 'craftItem', payload: { itemId: item, quantity: 1 } } as never);
@@ -193,7 +245,13 @@ describe('leather chain — physical pawn pipeline (HeadlessSession, real ticks)
       `[BEAST-CHAIN] fleshed_wolf=${stk().fleshed_wolf_hide} cured_wolf=${stk().cured_wolf_hide} wolf_leather=${stk().wolf_leather} prime_wolf_leather=${stk().prime_wolf_leather} fat=${stk().tallow}/20`
     );
     // The whole animal-identity chain survives: a WOLF hide drives a WOLF-named prime leather.
-    expect(stk().prime_wolf_leather ?? 0, 'curry produced prime wolf leather (2 active steps for a beast)').toBeGreaterThan(0);
-    expect(stk().tallow, 'the oil/fat consumable was consumed by the curry (organic → quality)').toBeLessThan(20);
+    expect(
+      stk().prime_wolf_leather ?? 0,
+      'curry produced prime wolf leather (2 active steps for a beast)'
+    ).toBeGreaterThan(0);
+    expect(
+      stk().tallow,
+      'the oil/fat consumable was consumed by the curry (organic → quality)'
+    ).toBeLessThan(20);
   });
 });

@@ -337,6 +337,32 @@ one loose — a stockpile tile, a pawn's bare hands, a `DroppedItem` — spills 
       Weather wear needs no rule — a vessel is destroyed whole and its contents go with it. If you add
       a new per-stack process, it goes through the same gate or a container becomes the place players
       put things to stop time.
+- [ ] **A fluid states what MATERIAL is allowed to hold it.** The allow-list used to run one way only
+      — a vessel said what it accepted — so a leather waterskin declaring `accepts: ['fluid']` would
+      take molten copper at 1085C, and a container with no list at all took anything. Now every vessel
+      says what it is made of (`container.material`: wood, leather, hide, clay, fireclay, porcelain,
+      glass, wicker, stone, metal) and a fluid names the materials that may hold it (`heldBy`).
+      Omitted = ordinary, any fluid vessel will do. **Name materials, never an invented tag** — the
+      entry then reads as the physical fact it is, and the reason a waterskin is refused is simply that
+      leather is not on the list.
+      **Molten metal is `["fireclay", "runed"]`**, because ordinary fired earthenware, wood, glass and
+      leather all fail at those temperatures and a crucible is refractory clay. The **Crucible**
+      (fireclay, fired at the Fire-brick Kiln) is the mundane answer and the reason `fire_clay` is more
+      than a brick ingredient; the **Rune-Sealed Flask** is the runed one that holds anything.
+- [ ] **The runed vessel belongs in every restricted list.** A magically bound vessel is the universal
+      answer by design, so `"runed"` appears in each `heldBy` — that is the age buying its way out of
+      the material problem, not an oversight.
+- [ ] **Read the restriction off the fluid's own description.** `caustic_bile` already said it "eats at
+      leather and skin alike"; `beast_brine` said it is "hot enough to bite into thick beast hide". The
+      data was describing a rule nothing enforced. When a fluid's own prose says what it destroys, that
+      is the `heldBy` list waiting to be written down. Restricted today: the six melts, the caustic
+      line (bile + 3 coatings), `beast_brine` and `distilled_spirit`. Everything else — water, the ales,
+      all 39 potions, the venom and dread coatings — is ordinary and needs nothing.
+- [ ] **A clay recipe asks for `category:clay`,** not `blue_clay`, so a potter reaches for whatever clay
+      is to hand and fire clay is a real alternative rather than a dead-end brick material.
+      **R15** checks all of it: every vessel declares a material, `heldBy` names only real material
+      words, no wrong-material vessel accepts the fluid, and a fluid nothing can carry is only ever
+      asked for at a station that already holds it — otherwise the order can never be supplied.
 - [ ] **A fluid needs a way in like anything else (R8)** — and its way in is usually a vessel plus a
       source, not a node. Water comes from a drink zone or a well; the brews come out of a cask.
 

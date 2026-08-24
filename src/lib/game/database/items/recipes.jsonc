@@ -596,15 +596,27 @@
   },
   // TODO(honey): a fruit compote / stewed-fruit treat (fruit ×3 + honey → a `refreshed` morale dish) once
   // beekeeping (ENTITIES D) makes honey obtainable. Fruit currently has no cooked outlet besides pies/wine.
+  // Copper, tin, bronze, lead, silver and gold MELT and are poured. Iron and steel are worked
+  // solid at an anvil: no pre-industrial hearth reaches iron's 1538C, which is exactly why the
+  // bronze age casts and the iron age forges.
   {
-    "id"               : "make_copper_bar",
-    "passive"          : true,
+    "id"               : "smelt_copper",
     "station"          : "stone_forge",
-    "inputs"           : {"malachite": 3, "clay_mold": 1},
-    "inputAlternatives": [ {"azurite": 3, "clay_mold": 1}, {"chalcopyrite": 5, "clay_mold": 1} ],
-    "outputs"          : {"copper_bar": 1},
+    "inputs"           : {"malachite": 3},
+    "inputAlternatives": [{"azurite": 3}, {"chalcopyrite": 5}, {"copper_bar": 1}],
+    "outputs"          : {"molten_copper": 4},
     "workAmount"       : 8,
-    "toolTierRequired" : 0
+    "toolTierRequired" : 1,
+    "passive"          : true
+  },
+  {
+    "id"              : "cast_copper_bar",
+    "station"         : "stone_forge",
+    "inputs"          : {"molten_copper": 4, "clay_mold": 1},
+    "outputs"         : {"copper_bar": 1},
+    "workAmount"      : 4,
+    "toolTierRequired": 1,
+    "passive"         : true
   },
   // ── Copper tools/weapon — the Chalcolithic stepping stone (research `copper_smelting`, forged at the
   // copper-age Smelting Hearth from a bar + a plain branch haft; no wooden_haft until the bronze-age
@@ -646,22 +658,42 @@
     "researchRequired": "copper_smelting"
   },
   {
-    "id"              : "make_tin_bar",
-    "passive"         : true,
-    "station"         : "stone_forge",
-    "inputs"          : {"cassiterite": 3, "clay_mold": 1},
-    "outputs"         : {"tin_bar": 1},
-    "workAmount"      : 8,
-    "toolTierRequired": 0
+    "id"               : "smelt_tin",
+    "station"          : "stone_forge",
+    "inputs"           : {"cassiterite": 3},
+    "inputAlternatives": [{"tin_bar": 1}],
+    "outputs"          : {"molten_tin": 4},
+    "workAmount"       : 8,
+    "toolTierRequired" : 1,
+    "passive"          : true
   },
   {
-    "id"              : "make_bronze_bar",
-    "passive"         : true,
+    "id"              : "cast_tin_bar",
+    "station"         : "stone_forge",
+    "inputs"          : {"molten_tin": 4, "clay_mold": 1},
+    "outputs"         : {"tin_bar": 1},
+    "workAmount"      : 4,
+    "toolTierRequired": 1,
+    "passive"         : true
+  },
+  {
+    "id"               : "melt_bronze",
+    "station"          : "casting_hearth",
+    "inputs"           : {"copper_bar": 7, "tin_bar": 1},
+    "inputAlternatives": [{"bronze_bar": 1}],
+    "outputs"          : {"molten_bronze": 8},
+    "workAmount"       : 10,
+    "toolTierRequired" : 1,
+    "passive"          : true
+  },
+  {
+    "id"              : "cast_bronze_bar",
     "station"         : "casting_hearth",
-    "inputs"          : {"copper_bar": 7, "tin_bar": 1, "clay_mold": 1},
-    "outputs"         : {"bronze_bar": 2},
-    "workAmount"      : 10,
-    "toolTierRequired": 1
+    "inputs"          : {"molten_bronze": 4, "clay_mold": 1},
+    "outputs"         : {"bronze_bar": 1},
+    "workAmount"      : 5,
+    "toolTierRequired": 1,
+    "passive"         : true
   },
   {
     "id"              : "make_copper_tack",
@@ -690,38 +722,61 @@
     "toolTierRequired" : 1
   },
   {
-    "id"              : "make_lead_bar",
-    "passive"         : true,
-    "station"         : "stone_forge",
-    "inputs"          : {"galena": 3, "clay_mold": 1},
-    "outputs"         : {"lead_bar": 1},
-    "workAmount"      : 8,
-    "toolTierRequired": 0
-  },
-  {
-    // Cupellation: molten lead blown with air on a bone-ash hearth burns away as litharge and leaves the
-    // silver behind. Silver never came straight out of galena — the ore smelts to LEAD first, and this is
-    // what lead is FOR (it was dead content before this step existed).
-    "id"              : "cupel_silver",
-    "passive"         : true,
-    "station"         : "stone_forge",
-    "inputs"          : {"lead_bar": 3, "bone_meal": 1},
-    "outputs"         : {"silver_bar": 1},
-    "workAmount"      : 16,
-    "toolTierRequired": 1
-  },
-  {
-    "id"               : "make_gold_bar",
-    "passive"          : true,
+    "id"               : "smelt_lead",
     "station"          : "stone_forge",
-    "inputs"           : {"native_gold": 3, "clay_mold": 1},
-    // Electrum is a gold-silver alloy ore, poorer in gold than native metal, so it takes more to net a
-    // bar. Its silver fraction is not recovered here — true parting (gold + silver from one melt) needs a
-    // per-recipe craft card the engine doesn't have yet (getRecipeForItem is first-producer-wins).
-    "inputAlternatives": [ {"electrum": 4, "clay_mold": 1} ],
-    "outputs"          : {"gold_bar": 1},
+    "inputs"           : {"galena": 3},
+    "inputAlternatives": [{"lead_bar": 1}],
+    "outputs"          : {"molten_lead": 5},
+    "workAmount"       : 8,
+    "toolTierRequired" : 1,
+    "passive"          : true
+  },
+  {
+    "id"              : "cast_lead_bar",
+    "station"         : "stone_forge",
+    "inputs"          : {"molten_lead": 5, "clay_mold": 1},
+    "outputs"         : {"lead_bar": 1},
+    "workAmount"      : 4,
+    "toolTierRequired": 1,
+    "passive"         : true
+  },
+  {
+    "id"               : "cupel_silver",
+    "station"          : "stone_forge",
+    "inputs"           : {"lead_bar": 3, "bone_meal": 1},
+    "inputAlternatives": [{"silver_bar": 1}],
+    "outputs"          : {"molten_silver": 4},
+    "workAmount"       : 16,
+    "toolTierRequired" : 1,
+    "passive"          : true
+  },
+  {
+    "id"              : "cast_silver_bar",
+    "station"         : "stone_forge",
+    "inputs"          : {"molten_silver": 4, "clay_mold": 1},
+    "outputs"         : {"silver_bar": 1},
+    "workAmount"      : 5,
+    "toolTierRequired": 1,
+    "passive"         : true
+  },
+  {
+    "id"               : "smelt_gold",
+    "station"          : "stone_forge",
+    "inputs"           : {"native_gold": 3},
+    "inputAlternatives": [{"electrum": 4}, {"gold_bar": 1}],
+    "outputs"          : {"molten_gold": 4},
     "workAmount"       : 10,
-    "toolTierRequired" : 1
+    "toolTierRequired" : 1,
+    "passive"          : true
+  },
+  {
+    "id"              : "cast_gold_bar",
+    "station"         : "stone_forge",
+    "inputs"          : {"molten_gold": 4, "clay_mold": 1},
+    "outputs"         : {"gold_bar": 1},
+    "workAmount"      : 5,
+    "toolTierRequired": 1,
+    "passive"         : true
   },
   {
     // STEEL-REALISM: the finery forge's REAL job is decarburising brittle pig iron back into soft,
@@ -953,7 +1008,7 @@
     "discipline"      : "pottery",
     "station"         : "pottery_kiln",
     "passive"         : true,
-    "inputs"          : {"blue_clay": 1},
+    "inputs"          : {"category:clay": 1},
     "outputs"         : {"water_urn": 1},
     "workAmount"      : 4,
     "toolTierRequired": 0
@@ -963,7 +1018,7 @@
     "discipline"      : "pottery",
     "station"         : "pottery_kiln",
     "passive"         : true,
-    "inputs"          : {"blue_clay": 1},
+    "inputs"          : {"category:clay": 1},
     "outputs"         : {"clay_mold": 4},
     "workAmount"      : 4,
     "toolTierRequired": 0
@@ -1582,6 +1637,26 @@
     "outputs"         : {"wicker_frame": 1},
     "workAmount"      : 6,
     "toolTierRequired": 0
+  },
+  // Refractory clay fired hard enough to sit in a hearth full of liquid metal. The one vessel that can
+  // carry a melt, and the reason `fire_clay` stops being a brick ingredient and nothing else.
+  {
+    "id"              : "make_fireclay_crucible",
+    "station"         : "advanced_kiln",
+    "inputs"          : {"fire_clay": 3},
+    "outputs"         : {"fireclay_crucible": 1},
+    "workAmount"      : 10,
+    "toolTierRequired": 1
+  },
+  // Glass bound by a glyph cut into its own surface. Holds anything, which is what the runed age buys.
+  {
+    "id"              : "make_rune_sealed_flask",
+    "station"         : "runecarver_bench",
+    "inputs"          : {"glassware": 1, "gem_dust": 2, "enchant_thread": 1},
+    "outputs"         : {"rune_sealed_flask": 1},
+    "workAmount"      : 24,
+    "toolTierRequired": 1,
+    "researchRequired": "runic_inscription"
   },
   // ── Carry aids: packs above the wicker frame ──────────────────────────────
   {
