@@ -302,9 +302,13 @@ carrying no `tier` at all, which put a tier-3 bear's hide in the stone-age colum
       `KingdomService.generateCaravanStock` filters the whole item DB through `isTradeableDef`, capped
       by the colony's wealth tier and the sending kingdom's, so most of the database is already
       purchasable without anyone listing it. R8 asks that same predicate rather than trusting a
-      marker on the item. **A caravan never carries fresh food** — anything with `decaySeconds` (or
-      rot) will not survive weeks on the road — so a perishable with no other source is genuinely
-      unobtainable and belongs in `R8_DEBT`, named with the feature it waits on.
+      marker on the item.
+      **Perishables ARE traded.** The rule used to refuse anything with a `decaySeconds`, on the
+      reasoning that it would not survive weeks on the road — but the sim runs no spoilage clock on a
+      caravan's goods in transit, so that was a rule enforcing a simulation that does not exist, and it
+      quietly emptied the manifest of milk, cheese, fresh meat and fish: most of what a real caravan
+      carried. Only what has already turned (`rotten_*`) is refused. **Do not write a rule against a
+      system the game does not run.**
 
 ## Gate 3 — does the name tell the truth?
 
