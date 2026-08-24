@@ -67,7 +67,7 @@ say "node $("$NODE" -v), claude $AUDIT_CLAUDE"
 
 # --- 1. main -----------------------------------------------------------------
 say "--- pulling main"
-git -C "$REPO" fetch --quiet origin || die "fetch failed"
+git -C "$REPO" fetch --quiet origin "+refs/heads/*:refs/remotes/origin/*" || die "fetch failed"
 if [ -n "$(git -C "$REPO" status --porcelain)" ]; then
   say "WARN: $REPO has uncommitted changes; leaving main where it is"
 else
@@ -77,8 +77,18 @@ fi
 say "main at $(git -C "$REPO" rev-parse --short main)"
 
 # --- 2. worktree -------------------------------------------------------------
-say "--- merging main into $BRANCH"
+# Two sources feed this branch: tool changes pushed from another machine, and the game code
+# on main. Both come in as merges. The branch accumulates local merge commits and is never
+# pushed from here, so it will not fast-forward -- `merge`, not `pull --ff-only`.
 git -C "$TREE" rev-parse --abbrev-ref HEAD | grep -qx "$BRANCH" || die "worktree is not on $BRANCH"
+
+say "--- merging origin/$BRANCH (tool changes)"
+if ! git -C "$TREE" merge --no-edit "origin/$BRANCH"; then
+  git -C "$TREE" merge --abort 2>/dev/null
+  die "origin/$BRANCH does not merge cleanly — conflicts need a person"
+fi
+
+say "--- merging main (game code)"
 if ! git -C "$TREE" merge --no-edit main; then
   git -C "$TREE" merge --abort 2>/dev/null
   die "main does not merge cleanly into $BRANCH — conflicts need a person"
