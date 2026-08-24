@@ -29,7 +29,10 @@ describe('carcass spoilage → butchery yield', () => {
           seedEntities: false
         })
       );
-      s.command({ type: 'devSetDropCondition', payload: { resourceId: 'deer_carcass', condition } } as never);
+      s.command({
+        type: 'devSetDropCondition',
+        payload: { resourceId: 'deer_carcass', condition }
+      } as never);
       s.command({ type: 'craftItem', payload: { itemId: 'deer_carcass' } } as never);
       for (let i = 0; i < 25 && (stk(s).venison ?? 0) === 0; i++) s.tick(400);
       return stk(s).venison ?? 0;
@@ -38,7 +41,10 @@ describe('carcass spoilage → butchery yield', () => {
     const stale = await venisonAt(40); // 60% spoiled
     console.log(`[SPOIL yield] venison: fresh(100%)=${fresh} vs stale(40%)=${stale}`);
     expect(fresh, 'a fresh carcass renders meat').toBeGreaterThan(0);
-    expect(stale, 'a 40%-fresh carcass renders clearly less — spoilage scales the yield').toBeLessThan(fresh);
+    expect(
+      stale,
+      'a 40%-fresh carcass renders clearly less — spoilage scales the yield'
+    ).toBeLessThan(fresh);
     // roughly proportional: 40% freshness should land near 40% of the fresh yield (allow rng-carry slack).
     expect(stale).toBeGreaterThanOrEqual(Math.floor(fresh * 0.25));
     expect(stale).toBeLessThanOrEqual(Math.ceil(fresh * 0.6));
@@ -59,11 +65,18 @@ describe('carcass spoilage → butchery yield', () => {
       })
     );
     s.command({ type: 'setSeason', payload: { season: 'summer' } } as never); // warm → carcasses rot
-    s.command({ type: 'devSetDropCondition', payload: { resourceId: 'deer_carcass', condition: 100 } } as never);
+    s.command({
+      type: 'devSetDropCondition',
+      payload: { resourceId: 'deer_carcass', condition: 100 }
+    } as never);
     const cond = () => {
-      const d = ((s.getState() as { droppedItems?: Array<{ resourceId: string; unitConditions?: number[] }> }).droppedItems ?? []).find(
-        (x) => x.resourceId === 'deer_carcass'
-      );
+      const d = (
+        (
+          s.getState() as {
+            droppedItems?: Array<{ resourceId: string; unitConditions?: number[] }>;
+          }
+        ).droppedItems ?? []
+      ).find((x) => x.resourceId === 'deer_carcass');
       return d?.unitConditions?.[0] ?? -1;
     };
     const before = cond();
@@ -92,8 +105,13 @@ describe('carcass spoilage → butchery yield', () => {
     );
     s.command({ type: 'craftItem', payload: { itemId: 'rotten_carcass' } } as never);
     for (let i = 0; i < 25 && (stk(s).rotten_meat ?? 0) === 0; i++) s.tick(400);
-    console.log(`[SPOIL rotten] rotten_carcass → rotten_meat=${stk(s).rotten_meat ?? 0} rotten_hide=${stk(s).rotten_hide ?? 0}; good venison=${stk(s).venison ?? 0}`);
-    expect(stk(s).rotten_meat ?? 0, 'a rotten carcass renders rotten meat for compost').toBeGreaterThan(0);
+    console.log(
+      `[SPOIL rotten] rotten_carcass → rotten_meat=${stk(s).rotten_meat ?? 0} rotten_hide=${stk(s).rotten_hide ?? 0}; good venison=${stk(s).venison ?? 0}`
+    );
+    expect(
+      stk(s).rotten_meat ?? 0,
+      'a rotten carcass renders rotten meat for compost'
+    ).toBeGreaterThan(0);
     expect(stk(s).venison ?? 0, 'and NO good meat').toBe(0);
   });
 });

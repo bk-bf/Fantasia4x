@@ -333,6 +333,87 @@ cadence, to-hit and crit alongside damage, so a weapon's named stat is the one t
       **Applied: Carry-Basket 0.5 → 3.0 kg** (15 branch + 10 cordage is 6.5 kg of stock; it shipped
       lighter than the cord alone), **Basket 1.2 → 1.9**, **Rope 0.5 → 1.1**. Balance held: the basket
       still nets +5 kg / +16 L against a 15.7 kg early budget, well clear of the 9.4 kg laden line.
+- [x] **Metal now melts before it is cast** (ITEM-RULES gate 3e follow-on). Copper, tin, bronze, lead,
+      silver and gold are MELTED and poured; iron and steel are worked solid at an anvil, because no
+      pre-industrial hearth reaches iron's 1538C — which is exactly why the bronze age casts and the
+      iron age forges. The game already half-encoded this (casting_hearth: bronze 28, copper 2 · anvil:
+      iron 58, steel 16 · `clay_mold` used by 29 recipes); this finishes it.
+      - Six `molten_*` fluids, **one unit = 1 kg**, so `volumeL` is literally 1/density (molten gold is
+        19.3 kg/L and takes almost no room in a crucible — which is why a hearth holds so few litres).
+      - Ore no longer becomes a bar directly: `smelt_*` pours a MELT, `cast_*_bar` pours that into a
+        mould. The mould moved from the smelt to the cast, where a mould is actually used.
+      - **Remelting a bar is the same recipe via `inputAlternatives`, not a second producer** — a second
+        one would be shadowed by first-producer-wins and the recycle loop would silently die. Locked by
+        the ore audit's shadow test, now extended to all six melts.
+      - `stone_forge` 3 L, `casting_hearth` 5 L of crucible.
+      - **The leftover loop needs no slag item**: metal left in the crucible casts back into a bar,
+        which is what actually happens to a leftover melt.
+- [x] ⚠→fixed: **a craft could not consume the fluid sitting in its own station.** `reservePendingOrders`
+      only saw haulable stacks, so a cast order sat `pending` forever while the metal was in the hearth
+      two feet away, waiting for a bucket of molten copper nobody should ever carry. Station-held fluid
+      now counts as staged, needs no reservation, and is drained from the station body on completion
+      (staged vessels spent first). See CONTAINERS-AND-FLUIDS.
+- [x] ⚠→fixed: **any vessel would have carried molten metal.** `accepts` only ran vessel→fluid, so a
+      leather waterskin (`accepts: ['fluid']`), a wooden bucket and a barrel would all have taken a
+      1085C melt, and the fill job sends an empty vessel after whatever a queued order is short of. Every vessel now
+      declares `container.material` (read straight off its recipe) and a fluid declares `heldBy`, so the
+      constraint sits on the FLUID and names REAL MATERIALS instead of an invented tag — a waterskin is
+      refused because leather is not on the list. The six melts are `["fireclay"]`: ordinary earthenware,
+      wood, glass and leather all fail at those temperatures. Nothing is fireclay yet, so a melt never
+      leaves its furnace, and a Fireclay Crucible would just work (`fire_clay` already exists). One chokepoint (`vesselAccepts`), so fill, filters and capacity all
+      inherit it. **R15** added. **Headless: with 4 waterskins, 4 buckets and 2 barrels in stock and a
+      cast order pulling, 0 vessels held a melt and the cast still ran from the station body** — with a
+      control asserting the same skin still accepts water, so the refusal is containment and not a dead
+      fill job.
+- [x] **Vessels that can hold what an ordinary pot cannot.** `blue_clay` and `fire_clay` became
+      `category: clay` (nothing consumed `category:primitive`, so no recipe moved) and the clay vessels
+      now ask for `category:clay` — a potter reaches for whatever clay is to hand, and fire clay stops
+      being a brick ingredient and nothing else. Two new vessels: **Crucible** (fireclay, 2 L, fired at
+      the Fire-brick Kiln from 3 fire clay) and **Rune-Sealed Flask** (runed, 3 L, sealed, at the
+      Runecarver's Bench from glassware + gem dust + enchant-thread). The runed one is the universal
+      answer, so `"runed"` is in every restricted list by design.
+- [x] **Fluid audit — 12 of 84 fluids need a restriction, and the data was already saying so.**
+      `caustic_bile`'s own description said it "eats at leather and skin alike"; `beast_brine` said it
+      is "hot enough to bite into thick beast hide". Restricted: the six melts (`fireclay`/`runed`), the
+      caustic line — bile + 3 coatings (`clay`/`glass`/`porcelain`/`fireclay`/`runed`), `beast_brine`
+      and `distilled_spirit` (those plus `wood`). Everything else is ordinary and declares nothing:
+      water, the ales, all 39 potions, and the venom/tanglefoot/dread coatings, which are toxic rather
+      than corrosive and sit in a skin perfectly well.
+- [x] **HEADLESS** (`oreChain.test.ts`): pawns fired **2 crucibles from fire clay (20→14)** alongside a
+      live melt, with wooden buckets and waterskins in stock throughout and **neither ever holding it**.
+      Discriminating asserts alongside: a waterskin takes water and refuses a melt, fireclay and runed
+      both take one, wood refuses caustic bile and a sealed clay pot accepts it.
+- [x] **HEADLESS-PLAYTESTED** (`oreChain.test.ts`, real pawns over real ticks): pawns ran both legs of
+      all six chains — **melt Cu 4 / Sn 4 / Pb 20 / Au 4 / Bz 4, then cast copper 40→41, tin 20, lead 1,
+      gold 1, bronze 1, silver 1, ore drawn down malachite 60→57, cassiterite 60→57, galena 60→48,
+      native_gold 30→27, by turn 5200** (was 33600 before the staging fix). Copper reads 41→34 after leg
+      3 because alloying bronze eats 7 bars, which is the measurement working, not a leak.
+- [x] **Fasteners: the unit was 20x too heavy, not the counts too low.** A nail was 0.2 kg — a railway
+      spike — so a Chest carried 1.2 kg of nails in 3 kg of chest and a 0.7 kg Leather Belt was 57%
+      buckle-metal. Nails are **10 g** now (rivet 12 g, tack 8 g, mail rings 0.2 kg a bundle), a 4 kg bar
+      draws to **300**, and 43 consumption counts were rescaled to ~8% of what they fasten: chest 6→25,
+      bin 8→72, handcart 4→40, mail hauberk 8→42 rings. `draw_iron_wire` fixed 30%→90%; `make_mail_rings`
+      no longer creates matter (267%→67%). **This was the original complaint** — fasteners were underused
+      because the unit made it impossible to use them properly.
+- [x] **Fabric: wool and cotton skipped spinning entirely.** Flax went fibre→thread→cloth; wool and
+      cotton went straight to the loom, which left the **spinning wheel serving 2 recipes in the whole
+      game**. New `wool_yarn` and `cotton_thread`, spun at the wheel; the wheel now serves 4. Weaving
+      created matter on 3 of 5 lines (linen 133%, silk 200%, sackcloth 150%) — cloth is the thread it was
+      woven from, so every loom step is ~85% now. **12 starved garment recipes fed**: gambeson 6→23 cloth,
+      quilted jack 10→24, arming doublet 8→20, linen robe 3→7.
+- [x] **Hide: the middle two steps ran backwards.** Curing GAINED 15% (9 of 17 recipes) when drying must
+      be the chain's biggest loss, and currying LOST 39% when working tallow in adds mass. Both
+      endpoints were left alone — the raw hide is what came off the animal, the leather is what a hundred
+      armour recipes are priced against — and the two intermediates derived from them: flesh 83%, cure
+      54%, tan 85% hide-to-leather, curry 110%. Deer now reads **1.50 → 1.24 → 0.71 → 0.60 kg**,
+      monotone. `fleshed_rabbit_hide`/`fleshed_rat_hide` were a flat 1.0 kg regardless of animal (a
+      fleshed rat skin outweighed the whole rat); their leathers also outweighed their own raw pelts, so
+      `coney_fur` and `vermin_hide` came down too.
+      **Correction to the earlier audit**: "tan keeps 35%" counted the tanning brine as input mass. The
+      brine is a soak liquor that stays in the pit; hide-to-leather was never that lossy.
+- [x] Line medians after: **fabric 85%, garments 83%, hide 66%, fasteners 80%, none creating matter.**
+      Whole-DB shaping median moved 42% → 50%; the rest is woodwork, bone, stone and jewellery, which
+      have the same class of problem and have not been audited.
 - [ ] ⚠ **The derivation exposed three recipe-side defects it will not fix.** Where the derived weight
       is absurd for the object, the RECIPE is the broken half:
       - **Every small metal item eats a whole 4 kg bar** — Steel Stiletto derives to 4.8 kg, Copper

@@ -169,6 +169,27 @@ Three things the spec did not have, decided during the build because the sim nee
   where it stands, and pawns draw it out into carried vessels with the same `fill` job. **R10** fails
   the build if a fluid recipe is ever authored at a station with nowhere to pour.
 
+**A fluid says what MATERIAL may hold it.** `accepts` only ever ran vessel→fluid, so a leather
+waterskin with `accepts: ['fluid']` would take a 1085C melt and a basket with no list took anything at
+all. Every vessel now states `container.material` (wood, leather, hide, clay, fireclay, porcelain,
+glass, wicker, stone, metal) and a fluid states `heldBy`; omitted means ordinary and every fluid vessel
+takes it. Materials rather than an invented tag, so the entry reads as the physical fact — a waterskin
+is refused because leather is not on the list, not because of a word someone made up.
+The six melts are `["fireclay"]`: ordinary earthenware, wood, glass and leather all fail at those
+temperatures, and no vessel is fireclay yet, so a melt cannot leave the furnace it was made in. That is
+both realistic and what keeps melt-and-cast at one hearth, and a Fireclay Crucible would simply work
+when one is wanted. Enforced at the single chokepoint, `vesselAccepts`, so the fill job, vessel filters
+and capacity maths all inherit it. **R15** guards the data.
+
+**A station's own fluid is staged where it stands.** A melt sits in the crucible it was made in, and the
+mould is at that same hearth — nobody ladles molten copper into a bucket and back into the furnace to
+pour it. So a craft order whose fluid input is already held by *its own* station counts that as supplied
+(`staging.stagedQty`), skips reserving it (`craft.reservePendingOrders` — a hauler cannot carry it off
+anyway), and drains it from the station body on completion (`craft.drainStationFluidInputs`), spending
+any staged vessel's contents first. Without this a melt-then-cast pair deadlocks at `pending` forever:
+the metal exists, the ledger counts it, and the order can never see it. The same shape covers a vat
+fermenting its own wort and a pit tanning in its own brine.
+
 **Overfilling spills.** A station at its `fluidCapacityL` takes nothing more; the craft tries a vessel
 staged on the tile next, and what still will not fit is lost, with a warning naming the station. Keep
 butchering into a full catch basin and you lose the bile — the station does not silently grow a bigger

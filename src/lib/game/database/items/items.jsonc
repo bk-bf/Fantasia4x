@@ -248,7 +248,7 @@
     "description"      : "Downy rabbit fur. Warm out of all proportion to its weight, and about as tough as wet paper.",
     "color"            : "#D8C4A8",
     "amount"           : 0,
-    "weightKg"         : 0.3,
+    "weightKg"         : 0.12,
     "volumeL"          : 0.8,
     "material"         : { "label": "Coney Fur", "desc": "soft, very warm, flimsy", "building": { "durability": 0.85, "insulation": 0.18, "comfort": 0.1 }, "item": { "durability": 0.8, "weight": 0.75 } }
   },
@@ -263,7 +263,7 @@
     "description"      : "Patchy rat skin. Thin and quick to split, but it costs almost nothing.",
     "color"            : "#8A7A62",
     "amount"           : 0,
-    "weightKg"         : 0.4,
+    "weightKg"         : 0.08,
     "volumeL"          : 1,
     "material"         : { "label": "Vermin Hide", "desc": "poor, cheap", "building": { "durability": 0.8, "insulation": 0.04 }, "item": { "durability": 0.75, "weight": 0.9 } }
   },
@@ -504,7 +504,7 @@
     "description"      : "Ash- or salt-cured rabbit skin. Stable and slow to rot, ready for the tanning bucket.",
     "color"            : "#B89878",
     "amount"           : 0,
-    "weightKg"         : 1,
+    "weightKg"         : 0.14,
     "volumeL"          : 2
   },
   {
@@ -518,7 +518,7 @@
     "description"      : "Ash- or salt-cured rat skin. Stable and slow to rot, ready for the tanning bucket.",
     "color"            : "#B89878",
     "amount"           : 0,
-    "weightKg"         : 1,
+    "weightKg"         : 0.09,
     "volumeL"          : 2
   },
   {
@@ -532,7 +532,7 @@
     "description"      : "Ash- or salt-cured deer skin. Stable and slow to rot, ready for the tanning bucket.",
     "color"            : "#B89878",
     "amount"           : 0,
-    "weightKg"         : 1.5,
+    "weightKg"         : 0.71,
     "volumeL"          : 3
   },
   {
@@ -546,7 +546,7 @@
     "description"      : "Ash- or salt-cured goat skin. Stable and slow to rot, ready for the tanning bucket.",
     "color"            : "#B89878",
     "amount"           : 0,
-    "weightKg"         : 1.5,
+    "weightKg"         : 0.71,
     "volumeL"          : 3
   },
   {
@@ -560,7 +560,7 @@
     "description"      : "Ash- or salt-cured jackal skin. Stable and slow to rot, ready for the tanning bucket.",
     "color"            : "#B89878",
     "amount"           : 0,
-    "weightKg"         : 1.5,
+    "weightKg"         : 0.59,
     "volumeL"          : 3
   },
   {
@@ -574,7 +574,7 @@
     "description"      : "Ash- or salt-cured wolf skin. Stable and slow to rot, ready for the tanning bucket.",
     "color"            : "#B89878",
     "amount"           : 0,
-    "weightKg"         : 2,
+    "weightKg"         : 1.18,
     "volumeL"          : 4
   },
   {
@@ -588,7 +588,7 @@
     "description"      : "Ash- or salt-cured worg skin. Stable and slow to rot, ready for the tanning bucket.",
     "color"            : "#B89878",
     "amount"           : 0,
-    "weightKg"         : 2,
+    "weightKg"         : 1.29,
     "volumeL"          : 4
   },
   {
@@ -602,7 +602,7 @@
     "description"      : "Ash- or salt-cured boar skin. Stable and slow to rot, ready for the tanning bucket.",
     "color"            : "#B89878",
     "amount"           : 0,
-    "weightKg"         : 2,
+    "weightKg"         : 1.53,
     "volumeL"          : 4
   },
   {
@@ -616,7 +616,7 @@
     "description"      : "Ash- or salt-cured elk skin. Stable and slow to rot, ready for the tanning bucket.",
     "color"            : "#B89878",
     "amount"           : 0,
-    "weightKg"         : 2,
+    "weightKg"         : 1.41,
     "volumeL"          : 4
   },
   {
@@ -630,7 +630,7 @@
     "description"      : "Ash- or salt-cured aurochs skin. Stable and slow to rot, ready for the tanning bucket.",
     "color"            : "#B89878",
     "amount"           : 0,
-    "weightKg"         : 2.5,
+    "weightKg"         : 2.24,
     "volumeL"          : 5
   },
   {
@@ -644,7 +644,7 @@
     "description"      : "Ash- or salt-cured bear skin. Stable and slow to rot, ready for the tanning bucket.",
     "color"            : "#B89878",
     "amount"           : 0,
-    "weightKg"         : 2.5,
+    "weightKg"         : 2.35,
     "volumeL"          : 5
   },
   {
@@ -658,7 +658,7 @@
     "description"      : "Ash- or salt-cured cave bear skin. Stable and slow to rot, ready for the tanning bucket.",
     "color"            : "#B89878",
     "amount"           : 0,
-    "weightKg"         : 3,
+    "weightKg"         : 2.82,
     "volumeL"          : 6
   },
   {
@@ -672,7 +672,7 @@
     "description"      : "Ash- or salt-cured owlbear skin. Stable and slow to rot, ready for the tanning bucket.",
     "color"            : "#B89878",
     "amount"           : 0,
-    "weightKg"         : 3,
+    "weightKg"         : 2.12,
     "volumeL"          : 6
   },
   {
@@ -686,7 +686,7 @@
     "description"      : "Ash- or salt-cured sabretooth skin. Stable and slow to rot, ready for the tanning bucket.",
     "color"            : "#B89878",
     "amount"           : 0,
-    "weightKg"         : 3,
+    "weightKg"         : 1.65,
     "volumeL"          : 6
   },
   {
@@ -700,7 +700,7 @@
     "description"      : "Ash- or salt-cured mammoth skin. Stable and slow to rot, ready for the tanning bucket.",
     "color"            : "#B89878",
     "amount"           : 0,
-    "weightKg"         : 3,
+    "weightKg"         : 3.06,
     "volumeL"          : 6
   },
   {
@@ -714,7 +714,7 @@
     "description"      : "Ash- or salt-cured hippogriff skin. Stable and slow to rot, ready for the tanning bucket.",
     "color"            : "#B89878",
     "amount"           : 0,
-    "weightKg"         : 3,
+    "weightKg"         : 0.82,
     "volumeL"          : 6
   },
   {
@@ -728,7 +728,7 @@
     "description"      : "Ash- or salt-cured dire wolf skin. Stable and slow to rot, ready for the tanning bucket.",
     "color"            : "#B89878",
     "amount"           : 0,
-    "weightKg"         : 3,
+    "weightKg"         : 1.53,
     "volumeL"          : 6
   },
   {
@@ -1382,6 +1382,175 @@
     "weightKg"         : 4,
     "volumeL"          : 0.5
   },
+  // Wool and cotton reached the loom as raw fleece and raw boll, skipping the step flax has always
+  // had. Spinning is what turns a fibre into something a loom can take, and leaving it out is why the
+  // spinning wheel served two recipes in the whole game.
+  {
+    "id": "wool_yarn",
+    "charSpans": [ {"sheet": "items", "id": 158} ],
+    "name": "Wool Yarn",
+    "type": "material",
+    "category": "fiber",
+    "maxDurability": 120,
+    "deteriorationRate": 0.02,
+    "description": "Fleece carded straight and drawn onto the spindle. Springy, warm to handle, and the only form a loom will take wool in.",
+    "color": "#D8CBB0",
+    "amount": 0,
+    "weightKg": 0.15,
+    "volumeL": 0.3,
+    "value": 3
+  },
+  {
+    "id": "cotton_thread",
+    "charSpans": [ {"sheet": "items", "id": 158} ],
+    "name": "Cotton Thread",
+    "type": "material",
+    "category": "fiber",
+    "maxDurability": 120,
+    "deteriorationRate": 0.02,
+    "description": "Boll fibre picked clean of seed and spun fine. Takes dye better than flax and wears softer against skin.",
+    "color": "#EFE6D6",
+    "amount": 0,
+    "weightKg": 0.05,
+    "volumeL": 0.1,
+    "value": 3
+  },
+  // ── Vessels for what an ordinary pot cannot hold ─────────────────────────
+  // Ordinary fired earthenware, wood, glass and leather all fail somewhere: a melt is over 1000C, a
+  // caustic humour eats leather and skin. These two are the answers, one mundane and one not.
+  {
+    "id": "fireclay_crucible",
+    "charSpans": [ {"sheet": "items", "id": 41} ],
+    "name": "Fireclay Crucible",
+    "type": "container",
+    "category": "storage",
+    "maxDurability": 90,
+    "deteriorationRate": 0.02,
+    "description": "A squat pot thrown from refractory clay and fired until it rings. It will sit in a hearth holding liquid metal and come out unmarked, which is more than can be said for anything else in the colony.",
+    "container": {"material": "fireclay", "capacityL": 2, "accepts": ["fluid"]},
+    "color": "#9A8570",
+    "amount": 0,
+    "weightKg": 2.2,
+    "volumeL": 2.6,
+    "toolTierRequired": 1
+  },
+  {
+    "id": "rune_sealed_flask",
+    "charSpans": [ {"sheet": "items", "id": 41} ],
+    "name": "Rune-Sealed Flask",
+    "type": "container",
+    "category": "storage",
+    "maxDurability": 400,
+    "deteriorationRate": 0.002,
+    "description": "Glass held together by a binding cut into its own surface rather than by the glass itself. What goes in stops touching the walls, so nothing it carries can eat, burn or crack its way out.",
+    "container": {"material": "runed", "capacityL": 3, "accepts": ["fluid"], "sealed": true},
+    "color": "#8A72B8",
+    "amount": 0,
+    "weightKg": 0.5,
+    "volumeL": 0.9,
+    "researchRequired": "runic_inscription",
+    "toolTierRequired": 1
+  },
+  // ── Molten metal: the cast line's intermediate ────────────────────────────
+  // Copper, tin, bronze, lead, silver and gold are MELTED and poured; iron and steel are worked solid
+  // at an anvil, because no pre-industrial hearth reaches iron's 1538C. That is why the bronze age
+  // casts and the iron age forges, and it is why only these six have a molten form.
+  {
+    "id": "molten_copper",
+    "charSpans": [ {"sheet": "items", "id": 71} ],
+    "name": "Molten Copper",
+    "type": "fluid",
+    "category": "metal",
+    "maxDurability": 200,
+    "deteriorationRate": 0.0,
+    "description": "The red metal run to liquid, skinned over with dark oxide that a stir breaks open. Pour it into a mould or let the hearth go cold and take it back as a bar.",
+    "color": "#C87533",
+    "amount": 0,
+    "weightKg": 1,
+    "volumeL": 0.112,
+    "value": 4,
+    "heldBy": ["fireclay", "runed"]
+  },
+  {
+    "id": "molten_tin",
+    "charSpans": [ {"sheet": "items", "id": 71} ],
+    "name": "Molten Tin",
+    "type": "fluid",
+    "category": "metal",
+    "maxDurability": 200,
+    "deteriorationRate": 0.0,
+    "description": "Runs at a heat that barely reddens the hearth, and pours thin and quick as water. Pour it into a mould or let the hearth go cold and take it back as a bar.",
+    "color": "#BFC4C9",
+    "amount": 0,
+    "weightKg": 1,
+    "volumeL": 0.137,
+    "value": 4,
+    "heldBy": ["fireclay", "runed"]
+  },
+  {
+    "id": "molten_bronze",
+    "charSpans": [ {"sheet": "items", "id": 71} ],
+    "name": "Molten Bronze",
+    "type": "fluid",
+    "category": "metal",
+    "maxDurability": 200,
+    "deteriorationRate": 0.0,
+    "description": "Copper and tin gone into one another for good. It fills a mould sharper than either alone, which is the whole reason for the alloy. Pour it into a mould or let the hearth go cold and take it back as a bar.",
+    "color": "#B08D4F",
+    "amount": 0,
+    "weightKg": 1,
+    "volumeL": 0.114,
+    "value": 4,
+    "heldBy": ["fireclay", "runed"]
+  },
+  {
+    "id": "molten_lead",
+    "charSpans": [ {"sheet": "items", "id": 71} ],
+    "name": "Molten Lead",
+    "type": "fluid",
+    "category": "metal",
+    "maxDurability": 200,
+    "deteriorationRate": 0.0,
+    "description": "Sullen, heavy and slow to move, giving off a fume nobody should be standing over. Pour it into a mould or let the hearth go cold and take it back as a bar.",
+    "color": "#8C8F99",
+    "amount": 0,
+    "weightKg": 1,
+    "volumeL": 0.088,
+    "value": 4,
+    "heldBy": ["fireclay", "runed"]
+  },
+  {
+    "id": "molten_silver",
+    "charSpans": [ {"sheet": "items", "id": 71} ],
+    "name": "Molten Silver",
+    "type": "fluid",
+    "category": "metal",
+    "maxDurability": 200,
+    "deteriorationRate": 0.0,
+    "description": "Bright to the point of hurting when the dross is drawn back off it. Pour it into a mould or let the hearth go cold and take it back as a bar.",
+    "color": "#D6D9DE",
+    "amount": 0,
+    "weightKg": 1,
+    "volumeL": 0.095,
+    "value": 4,
+    "heldBy": ["fireclay", "runed"]
+  },
+  {
+    "id": "molten_gold",
+    "charSpans": [ {"sheet": "items", "id": 71} ],
+    "name": "Molten Gold",
+    "type": "fluid",
+    "category": "metal",
+    "maxDurability": 200,
+    "deteriorationRate": 0.0,
+    "description": "So heavy it seems to lie lower in the crucible than it should. Nothing dulls it, not even the fire. Pour it into a mould or let the hearth go cold and take it back as a bar.",
+    "color": "#E8C34A",
+    "amount": 0,
+    "weightKg": 1,
+    "volumeL": 0.052,
+    "value": 4,
+    "heldBy": ["fireclay", "runed"]
+  },
   {
     "id"               : "iron_bar",
     "charSpans"        : [ {"sheet": "items", "id": 23} ],
@@ -1430,8 +1599,8 @@
     "description": "A handful of forged iron nails. Fasten planks into chests, furniture and frames. Drawn out on the smithy anvil.",
     "color": "#7A7E84",
     "amount": 0,
-    "weightKg": 0.2,
-    "volumeL": 0.1,
+    "weightKg": 0.01,
+    "volumeL": 0.004,
     "toolTierRequired": 1
   },
   {
@@ -1445,8 +1614,8 @@
     "description": "Soft copper hammered into short tacks. The first metal fastener, holding boards where cordage would only lash them.",
     "color": "#B87333",
     "amount": 0,
-    "weightKg": 0.2,
-    "volumeL": 0.1
+    "weightKg": 0.008,
+    "volumeL": 0.003
   },
   {
     "id": "bronze_nail",
@@ -1459,8 +1628,8 @@
     "description": "A handful of cast bronze nails and tacks. The bronze-age fastener, pins planks into doors, floors and furniture before iron is smelted.",
     "color": "#A8782E",
     "amount": 0,
-    "weightKg": 0.2,
-    "volumeL": 0.1,
+    "weightKg": 0.01,
+    "volumeL": 0.004,
     "toolTierRequired": 1
   },
   {
@@ -1474,8 +1643,8 @@
     "description": "Drawn steel rivets and bands. The high-tier fastener, binds reinforced walls, steel frames and runed apparatus where rope and nails would fail.",
     "color": "#9AA0A8",
     "amount": 0,
-    "weightKg": 0.3,
-    "volumeL": 0.1,
+    "weightKg": 0.012,
+    "volumeL": 0.005,
     "toolTierRequired": 2
   },
   {
@@ -1716,7 +1885,7 @@
     "volumeL": 0.5,
     "maxDurability": 80,
     "deteriorationRate": 0.02,
-    "container": {"capacityL": 3, "accepts": ["fluid"], "sealed": true}
+    "container": {"material": "leather", "capacityL": 3, "accepts": ["fluid"], "sealed": true}
   },
   {
     "id"               : "flask",
@@ -1731,7 +1900,7 @@
     "volumeL"          : 0.4,
     "maxDurability"    : 60,
     "deteriorationRate": 0.01,
-    "container"        : {"capacityL": 1.5, "accepts": ["fluid"], "sealed": true}
+    "container"        : {"material": "clay", "capacityL": 1.5, "accepts": ["fluid"], "sealed": true}
   },
   {
     "id"               : "tallow",
@@ -2142,7 +2311,7 @@
     "charSpans": [ {"sheet": "items", "id": 30} ],
     "name": "Blue Clay",
     "type": "material",
-    "category": "primitive",
+    "category": "clay",
     "maxDurability": 120,
     "deteriorationRate": 0.01,
     "description": "Raw earthenware clay dug from a clay, mud or bog bank. The bulk ceramics and construction material.",
@@ -2157,7 +2326,7 @@
     "charSpans": [ {"sheet": "items", "id": 30} ],
     "name": "Fire Clay",
     "type": "material",
-    "category": "primitive",
+    "category": "clay",
     "maxDurability": 120,
     "deteriorationRate": 0.01,
     "description": "Pale refractory clay dug from rare seams. Withstands forge heat, the raw stock for fire bricks, crucibles and casting molds.",
@@ -2283,7 +2452,7 @@
     "amount": 0,
     "weightKg": 2.5,
     "volumeL": 3,
-    "container": {"capacityL": 20, "sealed": true},
+    "container": {"material": "clay", "capacityL": 20, "sealed": true},
     "toolTierRequired": 0
   },
   {
@@ -2843,7 +3012,7 @@
     "maxDurability": 220,
     "deteriorationRate": 0.012,
     "description": "A planked chest nailed together with iron. The sturdiest storage tier, 40 slots, keeps goods dry and food longer (−30% spoilage). Needs planks and forged nails.",
-    "container": {"capacityL": 60, "sealed": true},
+    "container": {"material": "wood", "capacityL": 60, "sealed": true},
     "color": "#8B5A2B",
     "amount": 0,
     "weightKg": 3,
@@ -3127,7 +3296,8 @@
     "color"            : "#6b7a2a",
     "amount"           : 0,
     "weightKg"         : 0.3,
-    "volumeL"          : 0.2
+    "volumeL"          : 0.2,
+    "heldBy": ["clay", "glass", "porcelain", "fireclay", "runed"]
   },
   {
     "id"                 : "caustic_coating",
@@ -3142,6 +3312,7 @@
     "amount"             : 0,
     "weightKg"           : 0.2,
     "volumeL"            : 0.2,
+    "heldBy": ["clay", "glass", "porcelain", "fireclay", "runed"],
     "coatingEffect"      : {"condition": "nausea", "chance": 0.6, "durationHours": 2.0, "resist": "poison_resistance"},
     "coatingDurationHours": 6
   },
@@ -3725,6 +3896,7 @@
     "amount"           : 0,
     "weightKg"         : 0.3,
     "volumeL"          : 0.3,
+    "heldBy": ["clay", "glass", "porcelain", "fireclay", "runed"],
     "coatingEffect"     : {"condition": "nausea", "chance": 0.75, "durationHours": 3.0, "resist": "poison_resistance"},
     "coatingDurationHours": 10
   },
@@ -3742,6 +3914,7 @@
     "amount"           : 0,
     "weightKg"         : 0.3,
     "volumeL"          : 0.3,
+    "heldBy": ["clay", "glass", "porcelain", "fireclay", "runed"],
     "coatingEffect"     : {"condition": "nausea", "chance": 0.8999999999999999, "durationHours": 4.0, "resist": "poison_resistance"},
     "coatingDurationHours": 16
   },
@@ -8888,7 +9061,7 @@
     "tier": 0,
     "inventoryBonus": {"weightKg": 0, "volumeL": 8},
     "armorProperties": {"armorType": "light", "defense": 0, "equipmentSlot": "back2"},
-    "container": {"capacityL": 8, "capacityKg": 3},
+    "container": {"material": "hide", "capacityL": 8, "capacityKg": 3},
     "quiver": {"ammoCategory": "arrow", "drawSpeed": 0.15}
   },
   {
@@ -8907,7 +9080,7 @@
     "tier": 1,
     "inventoryBonus": {"weightKg": 0, "volumeL": 12},
     "armorProperties": {"armorType": "light", "defense": 0, "equipmentSlot": "back2"},
-    "container": {"capacityL": 12, "capacityKg": 5},
+    "container": {"material": "leather", "capacityL": 12, "capacityKg": 5},
     "quiver": {"ammoCategory": "arrow", "drawSpeed": 0.25}
   },
   {
@@ -8926,7 +9099,7 @@
     "tier": 2,
     "inventoryBonus": {"weightKg": 0, "volumeL": 14},
     "armorProperties": {"armorType": "medium", "defense": 1, "equipmentSlot": "back2"},
-    "container": {"capacityL": 14, "capacityKg": 6},
+    "container": {"material": "leather", "capacityL": 14, "capacityKg": 6},
     "quiver": {"ammoCategory": "arrow", "drawSpeed": 0.32}
   },
   {
@@ -8945,7 +9118,7 @@
     "tier": 2,
     "inventoryBonus": {"weightKg": 0, "volumeL": 4},
     "armorProperties": {"armorType": "light", "defense": 0, "equipmentSlot": "belt"},
-    "container": {"capacityL": 4, "capacityKg": 3},
+    "container": {"material": "leather", "capacityL": 4, "capacityKg": 3},
     "quiver": {"ammoCategory": "bolt", "drawSpeed": 0.25}
   },
   {
@@ -8964,7 +9137,7 @@
     "tier": 2,
     "inventoryBonus": {"weightKg": 0, "volumeL": 5},
     "armorProperties": {"armorType": "medium", "defense": 1, "equipmentSlot": "belt"},
-    "container": {"capacityL": 5, "capacityKg": 4},
+    "container": {"material": "leather", "capacityL": 5, "capacityKg": 4},
     "quiver": {"ammoCategory": "bolt", "drawSpeed": 0.30}
   },
   // Bone and antler are butchered, dried and carved at a bench, so they sit a band above knapped
@@ -16800,7 +16973,7 @@
     "maxDurability"    : 60,
     "deteriorationRate": 0.05,
     "description"      : "Green withies bent round a rim and woven tight. Set it down and it holds a load of dry goods; it will not hold a drop of water.",
-    "container"        : {"capacityL": 25, "capacityKg": 12},
+    "container"        : {"material": "wicker", "capacityL": 25, "capacityKg": 12},
     "color"            : "#B08A50",
     "amount"           : 0,
     "weightKg"         : 1.9,
@@ -16816,7 +16989,7 @@
     "maxDurability"    : 180,
     "deteriorationRate": 0.02,
     "description"      : "A deep plank box on a square base, joined and pegged. Takes a great deal and stacks in a corner without falling over.",
-    "container"        : {"capacityL": 120, "capacityKg": 90},
+    "container"        : {"material": "wood", "capacityL": 120, "capacityKg": 90},
     "color"            : "#8B6B45",
     "amount"           : 0,
     "weightKg"         : 9,
@@ -16832,7 +17005,7 @@
     "maxDurability"    : 140,
     "deteriorationRate": 0.025,
     "description"      : "Slatted boards nailed into an open box. Lighter than a bin and quicker to knock together, and the gaps let a load breathe.",
-    "container"        : {"capacityL": 70, "capacityKg": 50},
+    "container"        : {"material": "wood", "capacityL": 70, "capacityKg": 50},
     "color"            : "#9A7B4F",
     "amount"           : 0,
     "weightKg"         : 5,
@@ -16853,7 +17026,7 @@
     "weightKg": 2,
     "volumeL": 3,
     "processingType": ["crafting"],
-    "container": {"capacityL": 10, "accepts": ["fluid"]}
+    "container": {"material": "wood", "capacityL": 10, "accepts": ["fluid"]}
   },
   {
     "id"               : "wooden_barrel",
@@ -16869,7 +17042,7 @@
     "weightKg"         : 12,
     "volumeL"          : 12,
     "processingType"   : ["crafting"],
-    "container"        : {"capacityL": 50, "accepts": ["fluid"], "sealed": true}
+    "container"        : {"material": "wood", "capacityL": 50, "accepts": ["fluid"], "sealed": true}
   },
   {
     "id": "tanning_brine",
@@ -16901,6 +17074,7 @@
     "amount": 0,
     "weightKg": 1.2,
     "volumeL": 1.5,
+    "heldBy": ["wood", "clay", "glass", "porcelain", "fireclay", "runed"],
     "fuelValue": 16,
     "fuelHeat": 3,
     "processingType": ["crafting"]
@@ -17209,7 +17383,7 @@
     "description"      : "Armoured reptilian hide, ridged with bony scutes. Hardens into scale plate.",
     "color"            : "#4C5A3A",
     "amount"           : 0,
-    "weightKg"         : 3.5,
+    "weightKg"         : 3.06,
     "volumeL"          : 6,
     "toolTierRequired" : 0,
     "processingType"   : ["leatherworking"]
@@ -17644,8 +17818,8 @@
     "description": "Loose riveted iron rings, ready to be woven into a coif or hauberk. The heart of the mail sub-chain.",
     "color": "#888F98",
     "amount": 0,
-    "weightKg": 0.8,
-    "volumeL": 0.3,
+    "weightKg": 0.2,
+    "volumeL": 0.08,
     "processingType": ["metalworking"]
   },
   {
@@ -17931,7 +18105,7 @@
     "maxDurability": 80,
     "deteriorationRate": 0.01,
     "description": "Blown-glass flasks and phials melted from sand. Holds reagents, and bottles a finished potion.",
-    "container": {"capacityL": 2, "accepts": ["fluid"], "sealed": true},
+    "container": {"material": "glass", "capacityL": 2, "accepts": ["fluid"], "sealed": true},
     "color": "#A8D0C8",
     "amount": 0,
     "weightKg": 0.4,
@@ -17951,7 +18125,7 @@
     "amount": 0,
     "weightKg": 1.6,
     "volumeL": 1.2,
-    "container": {"capacityL": 5, "accepts": ["fluid"], "sealed": true},
+    "container": {"material": "clay", "capacityL": 5, "accepts": ["fluid"], "sealed": true},
     "toolTierRequired": 0
   },
   {
@@ -17978,7 +18152,7 @@
     "maxDurability": 120,
     "deteriorationRate": 0.004,
     "description": "Hard, glassy white porcelain, the finest reagent vessels there are. The top of the ceramic line; seals and preserves better than any clay.",
-    "container": {"capacityL": 4, "accepts": ["fluid"], "sealed": true},
+    "container": {"material": "porcelain", "capacityL": 4, "accepts": ["fluid"], "sealed": true},
     "color": "#F0ECE4",
     "amount": 0,
     "weightKg": 0.4,
@@ -18639,7 +18813,8 @@
       "color": "#d8e0e8",
       "amount": 0,
       "weightKg": 0.3,
-      "volumeL": 0.3
+      "volumeL": 0.3,
+      "heldBy": ["wood", "clay", "glass", "porcelain", "fireclay", "runed"]
     },
     {
       "id": "purified_catalyst",
@@ -18885,7 +19060,7 @@
     "description": "Rabbit skin drawn clean of fat and membrane over the beam. It still needs curing before it will keep.",
     "color": "#B8916B",
     "amount": 0,
-    "weightKg": 1.0,
+    "weightKg": 0.25,
     "volumeL": 1.5,
     "tier": 1
   },
@@ -18898,7 +19073,7 @@
     "description": "Rat skin drawn clean of fat and membrane over the beam. It still needs curing before it will keep.",
     "color": "#B8916B",
     "amount": 0,
-    "weightKg": 1.0,
+    "weightKg": 0.17,
     "volumeL": 1.5,
     "tier": 1
   },
@@ -18911,7 +19086,7 @@
     "description": "Deer skin drawn clean of fat and membrane over the beam. It still needs curing before it will keep.",
     "color": "#B8916B",
     "amount": 0,
-    "weightKg": 1.0,
+    "weightKg": 1.24,
     "volumeL": 1.5,
     "tier": 1
   },
@@ -18924,7 +19099,7 @@
     "description": "Goat skin drawn clean of fat and membrane over the beam. It still needs curing before it will keep.",
     "color": "#B8916B",
     "amount": 0,
-    "weightKg": 1.0,
+    "weightKg": 1.24,
     "volumeL": 1.5,
     "tier": 1
   },
@@ -18950,7 +19125,7 @@
     "description": "Wolf skin drawn clean of fat and membrane over the beam. It still needs curing before it will keep.",
     "color": "#B8916B",
     "amount": 0,
-    "weightKg": 2.0,
+    "weightKg": 1.66,
     "volumeL": 3.0,
     "tier": 1
   },
@@ -18963,7 +19138,7 @@
     "description": "Worg skin drawn clean of fat and membrane over the beam. It still needs curing before it will keep.",
     "color": "#B8916B",
     "amount": 0,
-    "weightKg": 2.0,
+    "weightKg": 1.83,
     "volumeL": 3.0,
     "tier": 1
   },
@@ -18976,7 +19151,7 @@
     "description": "Boar skin drawn clean of fat and membrane over the beam. It still needs curing before it will keep.",
     "color": "#B8916B",
     "amount": 0,
-    "weightKg": 2.0,
+    "weightKg": 2.07,
     "volumeL": 3.0,
     "tier": 1
   },
@@ -18989,7 +19164,7 @@
     "description": "Elk skin drawn clean of fat and membrane over the beam. It still needs curing before it will keep.",
     "color": "#B8916B",
     "amount": 0,
-    "weightKg": 2.0,
+    "weightKg": 2.32,
     "volumeL": 3.0,
     "tier": 1
   },
@@ -19002,7 +19177,7 @@
     "description": "Aurochs skin drawn clean of fat and membrane over the beam. It still needs curing before it will keep.",
     "color": "#B8916B",
     "amount": 0,
-    "weightKg": 2.0,
+    "weightKg": 2.9,
     "volumeL": 3.0,
     "tier": 1
   },
@@ -19015,7 +19190,7 @@
     "description": "Bear skin drawn clean of fat and membrane over the beam. It still needs curing before it will keep.",
     "color": "#B8916B",
     "amount": 0,
-    "weightKg": 2.0,
+    "weightKg": 2.49,
     "volumeL": 3.0,
     "tier": 1
   },
@@ -19028,7 +19203,7 @@
     "description": "Cave Bear skin drawn clean of fat and membrane over the beam. It still needs curing before it will keep.",
     "color": "#B8916B",
     "amount": 0,
-    "weightKg": 2.0,
+    "weightKg": 8.3,
     "volumeL": 3.0,
     "tier": 1
   },
@@ -19041,7 +19216,7 @@
     "description": "Owlbear skin drawn clean of fat and membrane over the beam. It still needs curing before it will keep.",
     "color": "#B8916B",
     "amount": 0,
-    "weightKg": 2.0,
+    "weightKg": 2.9,
     "volumeL": 3.0,
     "tier": 1
   },
@@ -19054,7 +19229,7 @@
     "description": "Sabretooth skin drawn clean of fat and membrane over the beam. It still needs curing before it will keep.",
     "color": "#B8916B",
     "amount": 0,
-    "weightKg": 2.0,
+    "weightKg": 2.49,
     "volumeL": 3.0,
     "tier": 1
   },
@@ -19067,7 +19242,7 @@
     "description": "Mammoth skin drawn clean of fat and membrane over the beam. It still needs curing before it will keep.",
     "color": "#B8916B",
     "amount": 0,
-    "weightKg": 2.0,
+    "weightKg": 4.98,
     "volumeL": 3.0,
     "tier": 1
   },
@@ -19080,7 +19255,7 @@
     "description": "Hippogriff skin drawn clean of fat and membrane over the beam. It still needs curing before it will keep.",
     "color": "#B8916B",
     "amount": 0,
-    "weightKg": 2.0,
+    "weightKg": 2.07,
     "volumeL": 3.0,
     "tier": 1
   },
@@ -19093,7 +19268,7 @@
     "description": "Dire Wolf skin drawn clean of fat and membrane over the beam. It still needs curing before it will keep.",
     "color": "#B8916B",
     "amount": 0,
-    "weightKg": 2.0,
+    "weightKg": 4.98,
     "volumeL": 3.0,
     "tier": 1
   },
@@ -19108,7 +19283,7 @@
     "description": "Wolf leather curried supple with oil and worked to a fine, drapeable finish — the skin a warcloak or a great rug is worth cutting from.",
     "color": "#9C6B3F",
     "amount": 0,
-    "weightKg": 1.0,
+    "weightKg": 1.1,
     "volumeL": 1.6,
     "material": { "label": "Prime Wolf Leather", "desc": "curried, supple, tough", "building": { "durability": 1.3, "insulation": 0.12 }, "item": { "durability": 1.35, "weight": 0.95 } }
   },
@@ -19123,7 +19298,7 @@
     "description": "Worg leather curried supple with oil and worked to a fine, drapeable finish — the skin a warcloak or a great rug is worth cutting from.",
     "color": "#9C6B3F",
     "amount": 0,
-    "weightKg": 1.0,
+    "weightKg": 1.21,
     "volumeL": 1.6,
     "material": { "label": "Prime Worg Leather", "desc": "curried, supple, tough", "building": { "durability": 1.3, "insulation": 0.12 }, "item": { "durability": 1.35, "weight": 0.95 } }
   },
@@ -19138,7 +19313,7 @@
     "description": "Boar leather curried supple with oil and worked to a fine, drapeable finish — the skin a warcloak or a great rug is worth cutting from.",
     "color": "#9C6B3F",
     "amount": 0,
-    "weightKg": 1.0,
+    "weightKg": 1.43,
     "volumeL": 1.6,
     "material": { "label": "Prime Boarhide", "desc": "curried, supple, tough", "building": { "durability": 1.3, "insulation": 0.12 }, "item": { "durability": 1.35, "weight": 0.95 } }
   },
@@ -19153,7 +19328,7 @@
     "description": "Elk leather curried supple with oil and worked to a fine, drapeable finish — the skin a warcloak or a great rug is worth cutting from.",
     "color": "#9C6B3F",
     "amount": 0,
-    "weightKg": 1.0,
+    "weightKg": 1.32,
     "volumeL": 1.6,
     "material": { "label": "Prime Elk Leather", "desc": "curried, supple, tough", "building": { "durability": 1.3, "insulation": 0.12 }, "item": { "durability": 1.35, "weight": 0.95 } }
   },
@@ -19168,7 +19343,7 @@
     "description": "Aurochs leather curried supple with oil and worked to a fine, drapeable finish — the skin a warcloak or a great rug is worth cutting from.",
     "color": "#9C6B3F",
     "amount": 0,
-    "weightKg": 1.0,
+    "weightKg": 2.09,
     "volumeL": 1.6,
     "material": { "label": "Prime Oxhide", "desc": "curried, supple, tough", "building": { "durability": 1.3, "insulation": 0.12 }, "item": { "durability": 1.35, "weight": 0.95 } }
   },
@@ -19183,7 +19358,7 @@
     "description": "Bear leather curried supple with oil and worked to a fine, drapeable finish — the skin a warcloak or a great rug is worth cutting from.",
     "color": "#9C6B3F",
     "amount": 0,
-    "weightKg": 1.0,
+    "weightKg": 2.2,
     "volumeL": 1.6,
     "material": { "label": "Prime Bearhide", "desc": "curried, supple, tough", "building": { "durability": 1.3, "insulation": 0.12 }, "item": { "durability": 1.35, "weight": 0.95 } }
   },
@@ -19198,7 +19373,7 @@
     "description": "Cave Bear leather curried supple with oil and worked to a fine, drapeable finish — the skin a warcloak or a great rug is worth cutting from.",
     "color": "#9C6B3F",
     "amount": 0,
-    "weightKg": 1.0,
+    "weightKg": 2.64,
     "volumeL": 1.6,
     "material": { "label": "Prime Cave Bear Hide", "desc": "curried, supple, tough", "building": { "durability": 1.3, "insulation": 0.12 }, "item": { "durability": 1.35, "weight": 0.95 } }
   },
@@ -19213,7 +19388,7 @@
     "description": "Owlbear leather curried supple with oil and worked to a fine, drapeable finish — the skin a warcloak or a great rug is worth cutting from.",
     "color": "#9C6B3F",
     "amount": 0,
-    "weightKg": 1.0,
+    "weightKg": 1.98,
     "volumeL": 1.6,
     "material": { "label": "Prime Owlbear Leather", "desc": "curried, supple, tough", "building": { "durability": 1.3, "insulation": 0.12 }, "item": { "durability": 1.35, "weight": 0.95 } }
   },
@@ -19228,7 +19403,7 @@
     "description": "Sabretooth leather curried supple with oil and worked to a fine, drapeable finish — the skin a warcloak or a great rug is worth cutting from.",
     "color": "#9C6B3F",
     "amount": 0,
-    "weightKg": 1.0,
+    "weightKg": 1.54,
     "volumeL": 1.6,
     "material": { "label": "Prime Sabretooth Leather", "desc": "curried, supple, tough", "building": { "durability": 1.3, "insulation": 0.12 }, "item": { "durability": 1.35, "weight": 0.95 } }
   },
@@ -19243,7 +19418,7 @@
     "description": "Mammoth leather curried supple with oil and worked to a fine, drapeable finish — the skin a warcloak or a great rug is worth cutting from.",
     "color": "#9C6B3F",
     "amount": 0,
-    "weightKg": 1.0,
+    "weightKg": 2.86,
     "volumeL": 1.6,
     "material": { "label": "Prime Mammoth Leather", "desc": "curried, supple, tough", "building": { "durability": 1.3, "insulation": 0.12 }, "item": { "durability": 1.35, "weight": 0.95 } }
   },
@@ -19258,7 +19433,7 @@
     "description": "Hippogriff leather curried supple with oil and worked to a fine, drapeable finish — the skin a warcloak or a great rug is worth cutting from.",
     "color": "#9C6B3F",
     "amount": 0,
-    "weightKg": 1.0,
+    "weightKg": 0.77,
     "volumeL": 1.6,
     "material": { "label": "Prime Hippogriff Leather", "desc": "curried, supple, tough", "building": { "durability": 1.3, "insulation": 0.12 }, "item": { "durability": 1.35, "weight": 0.95 } }
   },
@@ -19273,7 +19448,7 @@
     "description": "Dire Wolf leather curried supple with oil and worked to a fine, drapeable finish — the skin a warcloak or a great rug is worth cutting from.",
     "color": "#9C6B3F",
     "amount": 0,
-    "weightKg": 1.0,
+    "weightKg": 1.43,
     "volumeL": 1.6,
     "material": { "label": "Prime Direwolf Leather", "desc": "curried, supple, tough", "building": { "durability": 1.3, "insulation": 0.12 }, "item": { "durability": 1.35, "weight": 0.95 } }
   },

@@ -109,10 +109,24 @@ describe('craft-discipline leaves are INDEPENDENT skills', () => {
   });
 
   it('every leaf is a real skill; the grouping parents are NOT', () => {
-    for (const leaf of ['leatherworking', 'weaving', 'knapping', 'masonry', 'lapidary', 'butchery', 'baking', 'brewing', 'meals', 'herbalism', 'potions'])
+    for (const leaf of [
+      'leatherworking',
+      'weaving',
+      'knapping',
+      'masonry',
+      'lapidary',
+      'butchery',
+      'baking',
+      'brewing',
+      'meals',
+      'herbalism',
+      'potions'
+    ])
       expect(SKILL_CATEGORIES, `${leaf} is a skill`).toContain(leaf);
     for (const parent of ['tailoring', 'stoneworking', 'cooking', 'alchemy'])
-      expect(SKILL_CATEGORIES, `${parent} is a grouping category, not a skill`).not.toContain(parent);
+      expect(SKILL_CATEGORIES, `${parent} is a grouping category, not a skill`).not.toContain(
+        parent
+      );
     expect(SKILL_CATEGORIES, 'metalworking is flat → a skill').toContain('metalworking');
     expect(SKILL_CATEGORIES, 'construction verbs share it → a skill').toContain('construction');
   });
@@ -120,7 +134,12 @@ describe('craft-discipline leaves are INDEPENDENT skills', () => {
   it("a pawn's weaving level does not touch its leatherworking throughput", () => {
     const p = pawn({}, { skills: { weaving: 45, leatherworking: 3 } });
     const weave = pawnStatService.getWorkModifiers(p, 'weaving', undefined, 'tailoring').speed;
-    const leather = pawnStatService.getWorkModifiers(p, 'leatherworking', undefined, 'tailoring').speed;
+    const leather = pawnStatService.getWorkModifiers(
+      p,
+      'leatherworking',
+      undefined,
+      'tailoring'
+    ).speed;
     // Master weaver, novice leatherworker — the gap proves the skills are read independently.
     expect(weave).toBeGreaterThan(leather * 2);
   });

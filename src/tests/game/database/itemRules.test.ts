@@ -8,6 +8,7 @@ import buildingsData from '$lib/game/database/world/buildings.jsonc';
 import type { Item } from '$lib/game/core/types';
 import { AGE_CEILING, AGE_NAMES, blameStation, chainAgeOf } from '$lib/dev/chainAge';
 import { gearClassOf } from '$lib/game/core/gearClass';
+import { vesselAccepts } from '$lib/game/core/vessels';
 
 // The machine-checkable subset of docs/game/ITEM-RULES.md.
 //
@@ -661,7 +662,8 @@ const VESSEL_NOUNS = [
   'cask',
   'sack',
   'jar',
-  'waterskin'
+  'waterskin',
+  'crucible'
 ];
 
 describe('ITEM-RULES R11 — a container item and a storage building never share a noun', () => {
@@ -911,5 +913,104 @@ describe('ITEM-RULES R14 — worn carry aids grant volume, never weight', () => 
         c.inventoryBonus?.weightKg ?? 0,
         `${c.id} puts its load on wheels, so it raises carry weight`
       ).toBeGreaterThan(0);
+  });
+});
+
+// ── R15: a fluid says what may hold it, by MATERIAL ────────────────────────────────────────────
+// The allow-list used to run one way only — a vessel said what it accepted — so a leather waterskin
+// declaring `accepts: ['fluid']` would take molten copper at 1085C, and a basket with no list at all
+// took anything. A fluid now names the vessel MATERIALS that can hold it (`heldBy`) and every vessel
+// says what it is made of (`container.material`), so the rule reads as the physical fact it is rather
+// than as a tag someone invented. A new vessel is safe by default.
+describe('ITEM-RULES R15 — a fluid states what material may hold it', () => {
+  const FLUIDS = (ITEMS as Item[]).filter((i) => i.type === 'fluid');
+  const VESSELS_ALL = (ITEMS as Item[]).filter((i) => i.container);
+
+  it('every vessel says what it is made of', () => {
+    const bad = VESSELS_ALL.filter((v) => !v.container?.material).map(
+      (v) => `${v.id} is a vessel with no \`container.material\` — a fluid cannot judge it`
+    );
+    expect(bad, bad.join('; ')).toEqual([]);
+  });
+
+  it('a fluid only names materials some vessel could actually be made of, or none at all', () => {
+    // Naming a material nothing is made of is fine and deliberate (fireclay is the crucible that does
+    // not exist yet) — but it must be a real material word, not a typo that silently allows nothing.
+    const KNOWN = new Set([
+      'wood',
+      'leather',
+      'hide',
+      'clay',
+      'fireclay',
+      'porcelain',
+      'glass',
+      'wicker',
+      'stone',
+      'metal',
+      'runed'
+    ]);
+    const bad: string[] = [];
+    for (const f of FLUIDS)
+      for (const m of f.heldBy ?? [])
+        if (!KNOWN.has(m))
+          bad.push(`${f.id} may be held by "${m}", which is not a vessel material`);
+    expect(bad, bad.join('; ')).toEqual([]);
+  });
+
+  it('no vessel of the wrong material will hold a fluid that names its own', () => {
+    const bad: string[] = [];
+    for (const f of FLUIDS) {
+      if (!f.heldBy?.length) continue;
+      for (const v of VESSELS_ALL) {
+        if (f.heldBy.includes(v.container?.material ?? '')) continue;
+        if (vesselAccepts(v.id, f.id))
+          bad.push(
+            `${v.id} (${v.container?.material}) would hold ${f.id}, which only ${f.heldBy.join('/')} may`
+          );
+      }
+    }
+    expect(bad, bad.join('; ')).toEqual([]);
+  });
+
+  it('molten metal needs a crucible or a runed flask, and nothing else will do', () => {
+    const melts = FLUIDS.filter((f) => f.id.startsWith('molten_'));
+    expect(melts.length, 'the cast line exists').toBeGreaterThan(0);
+    for (const m of melts) {
+      expect(m.heldBy, `${m.id} must say what can hold it`).toEqual(['fireclay', 'runed']);
+      // Exactly the two that exist for it — a fireclay crucible, and the runed flask that holds
+      // anything. Nothing made of wood, leather, glass or ordinary earthenware may take a melt.
+      const carriers = VESSELS_ALL.filter((v) => vesselAccepts(v.id, m.id)).map(
+        (v) => v.container?.material
+      );
+      expect(new Set(carriers), `${m.id} carriers`).toEqual(new Set(['fireclay', 'runed']));
+    }
+  });
+
+  it('a fluid nothing can carry is only ever asked for at a station that holds it', () => {
+    // If no vessel can bring it, the only way it reaches a craft is by already being in that station's
+    // body. Asking for one anywhere else is an order that can never be supplied — the deadlock the
+    // melt/cast pair hit before station-held fluid counted as staged.
+    const holds = new Set(
+      (BUILDINGS as { id?: string; fluidCapacityL?: number }[])
+        .filter((b) => b.id && (b.fluidCapacityL ?? 0) > 0)
+        .map((b) => b.id as string)
+    );
+    const uncarryable = new Set(
+      FLUIDS.filter(
+        (f) => f.heldBy?.length && !VESSELS_ALL.some((v) => vesselAccepts(v.id, f.id))
+      ).map((f) => f.id)
+    );
+    const bad: string[] = [];
+    for (const r of RECIPES as {
+      id: string;
+      station?: string | null;
+      inputs?: Record<string, number>;
+    }[])
+      for (const k of Object.keys(r.inputs ?? {}))
+        if (uncarryable.has(k) && !(r.station && holds.has(r.station)))
+          bad.push(
+            `${r.id} asks for ${k} at ${r.station ?? 'nowhere'}, which cannot hold it and nothing can carry it there`
+          );
+    expect(bad, bad.join('; ')).toEqual([]);
   });
 });

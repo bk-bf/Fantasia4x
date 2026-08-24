@@ -12,7 +12,11 @@ import { soilTierForTile } from '$lib/game/core/Terrains';
  * range, so the test forces summer (26°C) + `devSetMapMoisture`.
  */
 
-type Tile = { subType: string; growth?: Record<string, number>; resources?: Record<string, number> };
+type Tile = {
+  subType: string;
+  growth?: Record<string, number>;
+  resources?: Record<string, number>;
+};
 const tileAt = (s: HeadlessSession, x: number, y: number) =>
   (s.getState().worldMap as unknown as Tile[][])[y][x];
 // Max growth% of crop_wheat across the grow rect (x1..x2, y1..y2).
@@ -57,7 +61,9 @@ describe('crops', () => {
         for (let x = GROW[0]; x <= GROW[2]; x++)
           if ('crop_wheat' in (tileAt(s, x, y).growth ?? {})) sown = true;
     }
-    console.log(`[CROP plant] wheat sown in grow zone = ${sown}; maxGrowth now ${maxGrowth(s, GROW).toFixed(2)}%`);
+    console.log(
+      `[CROP plant] wheat sown in grow zone = ${sown}; maxGrowth now ${maxGrowth(s, GROW).toFixed(2)}%`
+    );
     expect(sown, 'plant job sowed crop_wheat on a grow tile').toBe(true);
   });
 
@@ -70,7 +76,9 @@ describe('crops', () => {
     }
     const gWet = maxGrowth(wet, GROW);
     const gDry = maxGrowth(dry, GROW);
-    console.log(`[CROP growth] moist(40) grew to ${gWet.toFixed(2)}% vs dry(5) ${gDry.toFixed(2)}%`);
+    console.log(
+      `[CROP growth] moist(40) grew to ${gWet.toFixed(2)}% vs dry(5) ${gDry.toFixed(2)}%`
+    );
     expect(gWet, 'a well-watered warm bed grows').toBeGreaterThan(2);
     expect(gDry, 'a dry bed does not grow (withers to ~1%)').toBeLessThan(gWet - 1);
   });
@@ -121,11 +129,20 @@ describe('crops', () => {
     for (let y = zone[1]; y <= zone[3]; y++)
       for (let x = zone[0]; x <= zone[2]; x++)
         if ((tileAt(s, x, y).resources?.crop_radish ?? 0) > 0)
-          s.command({ type: 'designateRect', payload: { x1: x, y1: y, x2: x, y2: y, type: 'harvest' } } as never);
-    for (let i = 0; i < 30 && ((s.getState().stockpile as Record<string, number>).radish ?? 0) === radish0; i++)
+          s.command({
+            type: 'designateRect',
+            payload: { x1: x, y1: y, x2: x, y2: y, type: 'harvest' }
+          } as never);
+    for (
+      let i = 0;
+      i < 30 && ((s.getState().stockpile as Record<string, number>).radish ?? 0) === radish0;
+      i++
+    )
       s.tick(300);
     const radishNow = (s.getState().stockpile as Record<string, number>).radish ?? 0;
-    console.log(`[CROP harvest] radish stock ${radish0} → ${radishNow}; reaped tile growth reset check`);
+    console.log(
+      `[CROP harvest] radish stock ${radish0} → ${radishNow}; reaped tile growth reset check`
+    );
     expect(radishNow, 'reaping a mature radish yields radish into stock').toBeGreaterThan(radish0);
   });
 
@@ -222,7 +239,8 @@ describe('crops', () => {
     const maxGrowthOf = () => {
       let g = 0;
       for (let y = zone[1]; y <= zone[3]; y++)
-        for (let x = zone[0]; x <= zone[2]; x++) g = Math.max(g, tileAt(s, x, y).growth?.[c.id] ?? 0);
+        for (let x = zone[0]; x <= zone[2]; x++)
+          g = Math.max(g, tileAt(s, x, y).growth?.[c.id] ?? 0);
       return g;
     };
     // 1–2. PLANT from seed, then GROW to REAL 100% through the real per-tick gate (compressed 20×, not
@@ -231,16 +249,22 @@ describe('crops', () => {
     for (let i = 0; i < 120 && !(mat = mature()); i++) s.tick(500); // up to 60k ticks ≈ 1.2M real ticks @20×
     // 3. REAP the real-matured crop into its OWN yield item.
     const stk = () => (s.getState().stockpile ?? {}) as Record<string, number>;
-    const y0 = mat ? stk()[c.yield] ?? 0 : 0;
+    const y0 = mat ? (stk()[c.yield] ?? 0) : 0;
     if (mat) {
-      s.command({ type: 'designateRect', payload: { x1: mat.x, y1: mat.y, x2: mat.x, y2: mat.y, type: 'harvest' } } as never);
+      s.command({
+        type: 'designateRect',
+        payload: { x1: mat.x, y1: mat.y, x2: mat.x, y2: mat.y, type: 'harvest' }
+      } as never);
       for (let i = 0; i < 25 && (stk()[c.yield] ?? 0) === y0; i++) s.tick(300);
     }
     const yNow = stk()[c.yield] ?? 0;
     console.log(
       `[CROP all] ${c.id.padEnd(13)} (${c.season}) matured=${!!mat} maxGrowth=${maxGrowthOf().toFixed(0)}% reaped ${c.yield} ${y0}→${yNow} @turn ${s.getState().turn}`
     );
-    expect(mat, `${c.id} reached REAL 100% maturity in ${c.season} (window is viable)`).toBeTruthy();
+    expect(
+      mat,
+      `${c.id} reached REAL 100% maturity in ${c.season} (window is viable)`
+    ).toBeTruthy();
     expect(yNow, `${c.id} reaped into ${c.yield}`).toBeGreaterThan(y0);
   });
 });

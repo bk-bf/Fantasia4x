@@ -105,7 +105,9 @@ describe('time-based progression', () => {
     for (let i = 0; i < 12; i++) coldS.tick(400);
     const coldDry = (drops(coldS, 'plant_fiber')[0]?.drying as number) ?? 0;
 
-    console.log(`[TIME dry] warm(26°C) drying=${warmDry.toFixed(1)}s vs cold(5°C) drying=${coldDry}s`);
+    console.log(
+      `[TIME dry] warm(26°C) drying=${warmDry.toFixed(1)}s vs cold(5°C) drying=${coldDry}s`
+    );
     expect(warmDry, 'warm tile accrues drying progress').toBeGreaterThan(0);
     expect(coldDry, 'cold tile (<12°C) does not dry').toBe(0);
   });
@@ -131,11 +133,21 @@ describe('time-based progression', () => {
       const lx = 3;
       const ly = 3;
       s.command({ type: 'clearDesignation', payload: { x: lx, y: ly } } as never);
-      s.command({ type: 'devSpawnItem', payload: { itemId: 'branch', amount: 10, x: lx, y: ly } } as never);
-      expect(drops(s, 'branch').find((d) => !d.stored), 'loose stack exists').toBeTruthy();
+      s.command({
+        type: 'devSpawnItem',
+        payload: { itemId: 'branch', amount: 10, x: lx, y: ly }
+      } as never);
+      expect(
+        drops(s, 'branch').find((d) => !d.stored),
+        'loose stack exists'
+      ).toBeTruthy();
       for (let i = 0; i < 20; i++) s.tick(400); // 8000 ticks → ~13 deterioration passes
-      const looseNow = drops(s, 'branch').find((d) => !d.stored) as Record<string, unknown> | undefined;
-      const storedNow = drops(s, 'branch').find((d) => d.stored) as Record<string, unknown> | undefined;
+      const looseNow = drops(s, 'branch').find((d) => !d.stored) as
+        | Record<string, unknown>
+        | undefined;
+      const storedNow = drops(s, 'branch').find((d) => d.stored) as
+        | Record<string, unknown>
+        | undefined;
       return [(looseNow?.durability as number) ?? 120, storedNow?.durability !== undefined];
     };
     const [clearDur, clearWornStored] = await run('clear');
@@ -213,9 +225,9 @@ describe('time-based progression', () => {
       s.command({ type: 'setWeather', payload: { type: weatherType } } as never);
       for (let i = 0; i < 4; i++) s.tick(400); // ~1600 ticks — short enough the storm roof survives
       // A collapsed (0%) roof is REMOVED from the list, so a missing building reads as 0, not 100.
-      const b = (s.getState().buildings ?? []).find((x) => (x as { type: string }).type === 'thatch_roof') as
-        | { condition?: number }
-        | undefined;
+      const b = (s.getState().buildings ?? []).find(
+        (x) => (x as { type: string }).type === 'thatch_roof'
+      ) as { condition?: number } | undefined;
       return b ? (b.condition ?? 100) : 0;
     };
     const clearCond = await build('clear');

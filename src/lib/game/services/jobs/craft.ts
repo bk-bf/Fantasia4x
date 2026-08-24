@@ -9,7 +9,8 @@ import type {
   Job,
   ItemQuality,
   ItemInstance,
-  DroppedItem
+  DroppedItem,
+  PlacedBuilding
 } from '../../core/types';
 // Gated console shim — see core/log.ts. Silences per-tick log/debug/warn unless gameDebug(true).
 import { gatedConsole as console } from '../../core/log';
@@ -23,6 +24,7 @@ import { rollFamed, rollFamedIdentity } from '../../core/famedNames';
 import { itemDefById } from '../../core/itemDefs';
 import {
   defaultFilterFor,
+  heldQuantity,
   isFluidId,
   litresToUnits,
   putIn,
@@ -48,6 +50,14 @@ import { wearWorkingPawnTool } from './harvest';
 const recipeForOrder = (o: CraftingInProgress) =>
   o.recipeId ? recipeService.getRecipeById(o.recipeId) : recipeService.getRecipeForItem(o.item.id);
 
+/** How much of a FLUID input the order's own station is already holding, in recipe units. */
+function stationHeldUnits(gs: GameState, order: CraftingInProgress, itemId: string): number {
+  if (!isFluidId(itemId) || !order.stationBuildingId) return 0;
+  const b = (gs.buildings ?? []).find((x) => x.id === order.stationBuildingId);
+  const litres = (b?.fluidContents ?? []).find((e) => e.itemId === itemId)?.litres ?? 0;
+  return litres > 0 ? litresToUnits(itemId, litres) : 0;
+}
+
 /**
  * Queue-without-materials (ADR-016): a `pending` craft order holds no input reservations. Each tick
  * we retry reserving its full input set ATOMICALLY — only when every input is reservable do we commit
@@ -65,9 +75,16 @@ export function reservePendingOrders(gs: GameState): GameState {
     let trial = state;
     let allReserved = true;
     for (const [id, q] of Object.entries(order.inputs)) {
-      const res = reserveForOrder(trial, id, q, order.id);
+      // A fluid the order's OWN station is already holding needs no reservation — it is in the vessel
+      // the craft happens in, and no hauler can carry it off. Only the shortfall has to be fetched.
+      // Without this a melt-then-cast pair never leaves `pending`: the metal is in the crucible, the
+      // reservation walk only sees haulable stacks, and the order waits forever for a bucket of
+      // molten copper that nobody should ever be carrying.
+      const need = q - stationHeldUnits(trial, order, id);
+      if (need <= 0) continue;
+      const res = reserveForOrder(trial, id, need, order.id);
       trial = res.state;
-      if (res.reserved < q) {
+      if (res.reserved < need) {
         allReserved = false;
         break;
       }
@@ -337,7 +354,16 @@ export function completeCraftOrder(
   // fluid is drawn out and the vessel is released, standing on the station for the next hauler.
   const droppedItems = consumeStagedInputs(gs, entry);
   const newQueue = (gs.craftingQueue ?? []).filter((e) => e.id !== entry.id);
-  let state: GameState = { ...gs, droppedItems, craftingQueue: newQueue };
+  // …and whatever the recipe still wants that the STATION was holding in its own body comes out of
+  // there (see `stagedQty`). Staged vessels are drained first, so a barrel carried in is emptied
+  // before the vat dips into its own stock.
+  const drainedBuildings = drainStationFluidInputs(gs, entry, droppedItems);
+  let state: GameState = {
+    ...gs,
+    droppedItems,
+    craftingQueue: newQueue,
+    ...(drainedBuildings ? { buildings: drainedBuildings } : {})
+  };
 
   if (station) {
     const newDropIds: string[] = [];
@@ -588,6 +614,42 @@ function captureFluid(
     state: buildings === state.buildings ? state : { ...state, buildings },
     lost: Math.round(litresToUnits(outId, remainingL) * 1000) / 1000
   };
+}
+
+/**
+ * Draw a recipe's fluid inputs out of the station's OWN body for whatever the staged vessels did not
+ * already cover. The counterpart to `stagedQty` counting that fluid as supplied: a melt sits in the
+ * crucible it was made in, and the cast pours straight out of it.
+ *
+ * Returns a new buildings array, or null when nothing was drawn (the common case — no allocation).
+ */
+function drainStationFluidInputs(
+  gs: GameState,
+  entry: CraftingInProgress,
+  remaining: DroppedItem[]
+): PlacedBuilding[] | null {
+  const placed = (gs.buildings ?? []).find((b) => b.id === entry.stationBuildingId);
+  if (!placed?.fluidContents?.length) return null;
+  type FluidEntry = NonNullable<PlacedBuilding['fluidContents']>[number];
+  let contents: FluidEntry[] | null = null;
+  for (const [itemId, units] of Object.entries(entry.inputs ?? {})) {
+    if (!isFluidId(itemId) || units <= 0) continue;
+    // What the staged vessels standing on the tile still hold for this order is spent first.
+    const inVessels = remaining
+      .filter((d) => d.reservedFor === entry.id)
+      .reduce((sum, d) => sum + heldQuantity(d.instance, itemId), 0);
+    let needL = unitsToLitres(itemId, units) - inVessels;
+    if (needL <= 1e-6) continue;
+    contents ??= (placed.fluidContents ?? []).map((e) => ({ ...e }));
+    const held = contents.find((e: FluidEntry) => e.itemId === itemId);
+    if (!held) continue;
+    const take = Math.min(held.litres ?? 0, needL);
+    held.litres = Math.round(((held.litres ?? 0) - take) * 1000) / 1000;
+    needL -= take;
+  }
+  if (!contents) return null;
+  const kept = contents.filter((e: FluidEntry) => (e.litres ?? 0) > 1e-6);
+  return (gs.buildings ?? []).map((b) => (b.id === placed.id ? { ...b, fluidContents: kept } : b));
 }
 
 /**

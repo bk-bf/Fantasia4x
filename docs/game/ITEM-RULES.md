@@ -235,6 +235,16 @@ carrying no `tier` at all, which put a tier-3 bear's hide in the stone-age colum
       it as a violation.
 - [ ] The tier reads in the name: a tier-0 piece uses a crude, historically-real term ("Hide
       Foot-Wraps"), never a term that could belong to a later tier. See the naming rules in AGENTS.md.
+- [ ] **MATERIAL, then item type.** That is the shape: `Fireclay Crucible`, `Iron-Ringed Belt`,
+      `Steel Plate Cuirass`. A **type word must never do the qualifier's job** — "Crucible Steelworks"
+      used a vessel type where the material belongs and became `Fire-brick Steelworks`, which is what
+      its 24 fire bricks say. `Runic Crucible` was already right. The same slip is what made
+      `iron_bar` read "Bloomery Iron" (a furnace, not a material) while every other bar in the game is
+      `<Metal> Bar`.
+      **The one exception is a family distinguished by process rather than material**: the steel grades
+      (Bloom, Blister, Shear, Crucible, Mild, Pattern-Welded Steel) are all steel, so there is no
+      material to name and the process is the only axis that separates them. Those are real
+      metallurgical grade names and stay.
 - [ ] **The plainest accurate word wins.** This is not a ban on period vocabulary: `greaves`,
       `bracers`, `cuirass`, `coif` and `jerkin` are the genre's shared language, used across dozens of
       pieces, learned once, with no plain synonym that says the same thing. What is banned is the
@@ -337,6 +347,32 @@ one loose — a stockpile tile, a pawn's bare hands, a `DroppedItem` — spills 
       Weather wear needs no rule — a vessel is destroyed whole and its contents go with it. If you add
       a new per-stack process, it goes through the same gate or a container becomes the place players
       put things to stop time.
+- [ ] **A fluid states what MATERIAL is allowed to hold it.** The allow-list used to run one way only
+      — a vessel said what it accepted — so a leather waterskin declaring `accepts: ['fluid']` would
+      take molten copper at 1085C, and a container with no list at all took anything. Now every vessel
+      says what it is made of (`container.material`: wood, leather, hide, clay, fireclay, porcelain,
+      glass, wicker, stone, metal) and a fluid names the materials that may hold it (`heldBy`).
+      Omitted = ordinary, any fluid vessel will do. **Name materials, never an invented tag** — the
+      entry then reads as the physical fact it is, and the reason a waterskin is refused is simply that
+      leather is not on the list.
+      **Molten metal is `["fireclay", "runed"]`**, because ordinary fired earthenware, wood, glass and
+      leather all fail at those temperatures and a crucible is refractory clay. The **Crucible**
+      (fireclay, fired at the Fire-brick Kiln) is the mundane answer and the reason `fire_clay` is more
+      than a brick ingredient; the **Rune-Sealed Flask** is the runed one that holds anything.
+- [ ] **The runed vessel belongs in every restricted list.** A magically bound vessel is the universal
+      answer by design, so `"runed"` appears in each `heldBy` — that is the age buying its way out of
+      the material problem, not an oversight.
+- [ ] **Read the restriction off the fluid's own description.** `caustic_bile` already said it "eats at
+      leather and skin alike"; `beast_brine` said it is "hot enough to bite into thick beast hide". The
+      data was describing a rule nothing enforced. When a fluid's own prose says what it destroys, that
+      is the `heldBy` list waiting to be written down. Restricted today: the six melts, the caustic
+      line (bile + 3 coatings), `beast_brine` and `distilled_spirit`. Everything else — water, the ales,
+      all 39 potions, the venom and dread coatings — is ordinary and needs nothing.
+- [ ] **A clay recipe asks for `category:clay`,** not `blue_clay`, so a potter reaches for whatever clay
+      is to hand and fire clay is a real alternative rather than a dead-end brick material.
+      **R15** checks all of it: every vessel declares a material, `heldBy` names only real material
+      words, no wrong-material vessel accepts the fluid, and a fluid nothing can carry is only ever
+      asked for at a station that already holds it — otherwise the order can never be supplied.
 - [ ] **A fluid needs a way in like anything else (R8)** — and its way in is usually a vessel plus a
       source, not a node. Water comes from a drink zone or a well; the brews come out of a cask.
 
@@ -359,7 +395,22 @@ wastes almost nothing, while weaving withies throws most of every rod away. The 
 | joinery / sawn timber | **0.72** | sawdust and end-trim |
 | forging | **0.82** | scale and hammer-trim off the billet |
 | assembly / hafting | **0.95** | parts are fitted, not consumed |
+| spin / weave | **0.85** | selvedge trimmed off the edge; a cloth cannot outweigh its thread |
+| cut-and-sew (garments) | **0.87** | offcuts around the pattern — a gambeson is ~20 layers, so it needs ~23 cloth, not 6 |
+| flesh a hide | **0.83** | fat and membrane scraped off |
+| **cure a hide** | **0.55** | this is DRYING and must be the biggest loss in the leather chain |
+| tan | **0.85** | hide→leather, not counting the brine, which stays in the pit |
+| curry | **1.10** | working tallow INTO leather adds mass |
 | smelting, butchery, cooking, fine metalwork | **n/a** | these legitimately lose or gain mass; leave the authored weight |
+
+- [ ] **A fastener is a small part, not a spike.** A nail is **10 g**, a rivet 12 g, a tack 8 g. At
+      0.2 kg each they were railway spikes, which is why every recipe could only ask for two or three
+      before the fastener outweighed the thing — a 0.7 kg belt was 57% buckle-metal. A 4 kg bar draws
+      out to ~300 nails; a chest takes 25, a bin 72, a belt 6. **When a count looks absurdly low, check
+      the UNIT before you touch the count.**
+- [ ] **Every fibre is spun before it is woven.** Flax → thread, wool → yarn, cotton → cotton thread,
+      silk reeled. Wool and cotton used to reach the loom as raw fleece and raw boll, which left the
+      spinning wheel serving two recipes in the entire game. A loom takes yarn, never fleece.
 
 - [ ] **Check the constant against something it should NOT move.** The basketry and laid-fibre numbers
       above are trustworthy because `wicker_frame` (0.8 → 0.81) and `cordage` (0.2 → 0.23) came out of

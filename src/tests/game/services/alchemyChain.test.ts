@@ -71,7 +71,9 @@ describe('alchemy / magical-creature reagents', () => {
     };
     const lo = goodRate(1, 0); // crude draught, novice
     const hi = goodRate(3, 1); // apothecary essence, master
-    console.log(`[ALCH gamble] clean-good rate: T1/novice=${lo.toFixed(2)} vs T3/master=${hi.toFixed(2)}`);
+    console.log(
+      `[ALCH gamble] clean-good rate: T1/novice=${lo.toFixed(2)} vs T3/master=${hi.toFixed(2)}`
+    );
     expect(hi, 'high tier + alchemy clearly beats low').toBeGreaterThan(lo + 0.3);
     expect(lo, 'a crude brew rarely gives a clean good result').toBeLessThan(0.2);
   });
@@ -88,18 +90,31 @@ describe('alchemy / magical-creature reagents', () => {
         pawns: [{ count: 6, skillLevel: 25 }],
         needsDisabled: ['hunger', 'fatigue', 'thirst', 'hygiene'],
         buildings: [{ id: 'apothecary' }],
-        items: { alpha_heart: 8, woundwort: 12, gem_dust: 12, mandrake: 6, glassware: 12, spit_meat: 10 },
+        items: {
+          alpha_heart: 8,
+          woundwort: 12,
+          gem_dust: 12,
+          mandrake: 6,
+          glassware: 12,
+          spit_meat: 10
+        },
         seedEntities: false
       })
     );
     type P = { id: string; traits?: Array<{ id: string }> };
-    const traitsOf = (i: number) => ((s.getState().pawns[i] as unknown as P).traits ?? []).map((t) => t.id);
+    const traitsOf = (i: number) =>
+      ((s.getState().pawns[i] as unknown as P).traits ?? []).map((t) => t.id);
     // RAW eat: pawn 0 swallows the heart raw — must NOT gain feral-adrenaline (the old freebie).
     const raw0 = traitsOf(0).length;
-    s.command({ type: 'useConsumableItem', payload: { pawnId: s.getState().pawns[0].id, itemId: 'alpha_heart' } } as never);
+    s.command({
+      type: 'useConsumableItem',
+      payload: { pawnId: s.getState().pawns[0].id, itemId: 'alpha_heart' }
+    } as never);
     const rawTraits = traitsOf(0);
     expect(rawTraits, 'raw heart does NOT grant the good trait').not.toContain('feral-adrenaline');
-    console.log(`[ALCH raw] raw alpha_heart → traits ${raw0}→${rawTraits.length} (${rawTraits.slice(-2).join(',')||'none'})`);
+    console.log(
+      `[ALCH raw] raw alpha_heart → traits ${raw0}→${rawTraits.length} (${rawTraits.slice(-2).join(',') || 'none'})`
+    );
 
     // BREW the T3 essence, then feed it to several pawns — the gamble should land a pool trait somewhere.
     s.command({ type: 'craftItem', payload: { itemId: 'alpha_essence', quantity: 3 } } as never);
@@ -109,11 +124,16 @@ describe('alchemy / magical-creature reagents', () => {
     let gotPoolTrait = false;
     for (let i = 1; i <= 3 && (stk(s).alpha_essence ?? 0) > 0; i++) {
       const before = traitsOf(i);
-      s.command({ type: 'useConsumableItem', payload: { pawnId: s.getState().pawns[i].id, itemId: 'alpha_essence' } } as never);
+      s.command({
+        type: 'useConsumableItem',
+        payload: { pawnId: s.getState().pawns[i].id, itemId: 'alpha_essence' }
+      } as never);
       const gained = traitsOf(i).filter((t) => !before.includes(t));
       if (gained.some((t) => POOL.has(t))) gotPoolTrait = true;
     }
-    console.log(`[ALCH brew] alpha_essence drunk by 3 pawns → any pool trait landed: ${gotPoolTrait}`);
+    console.log(
+      `[ALCH brew] alpha_essence drunk by 3 pawns → any pool trait landed: ${gotPoolTrait}`
+    );
     expect(gotPoolTrait, 'a T3 essence granted a pool trait to at least one drinker').toBe(true);
   });
 
@@ -135,8 +155,11 @@ describe('alchemy / magical-creature reagents', () => {
     );
     s.command({ type: 'craftItem', payload: { itemId: 'ivory' } } as never); // carve_ivory
     s.command({ type: 'craftItem', payload: { itemId: 'great_bone_maul' } } as never);
-    for (let i = 0; i < 25 && !((stk(s).ivory ?? 0) > 0 && (stk(s).great_bone_maul ?? 0) > 0); i++) s.tick(400);
-    console.log(`[ALCH loot] great_tusk→ivory=${stk(s).ivory ?? 0}; great_bone→great_bone_maul=${stk(s).great_bone_maul ?? 0}`);
+    for (let i = 0; i < 25 && !((stk(s).ivory ?? 0) > 0 && (stk(s).great_bone_maul ?? 0) > 0); i++)
+      s.tick(400);
+    console.log(
+      `[ALCH loot] great_tusk→ivory=${stk(s).ivory ?? 0}; great_bone→great_bone_maul=${stk(s).great_bone_maul ?? 0}`
+    );
     expect(stk(s).ivory ?? 0, 'great_tusk carved into ivory').toBeGreaterThan(0);
     expect(stk(s).great_bone_maul ?? 0, 'great_bone forged into a maul').toBeGreaterThan(0);
   });
@@ -144,7 +167,8 @@ describe('alchemy / magical-creature reagents', () => {
   it('§C potion tiers: every effect is a 3-tier ladder with a rising effect + station gate', () => {
     // Effect magnitude (buff duration / coating chance) strictly rises T1 → T2 → T3.
     const dur = (id: string) =>
-      (itemService.getItemById(id) as { conditionDurationTurns?: number })?.conditionDurationTurns ?? 0;
+      (itemService.getItemById(id) as { conditionDurationTurns?: number })
+        ?.conditionDurationTurns ?? 0;
     for (const base of ['potion_of_might', 'bloodrage_draught', 'calming_draught']) {
       const t1 = dur(base);
       const t2 = dur(`greater_${base}`);
@@ -154,7 +178,8 @@ describe('alchemy / magical-creature reagents', () => {
     }
     // Coatings: proc chance rises up the ladder.
     const ch = (id: string) =>
-      (itemService.getItemById(id) as { coatingEffect?: { chance?: number } })?.coatingEffect?.chance ?? 0;
+      (itemService.getItemById(id) as { coatingEffect?: { chance?: number } })?.coatingEffect
+        ?.chance ?? 0;
     expect(ch('greater_venom_coating')).toBeGreaterThan(ch('venom_coating'));
     expect(ch('grand_venom_coating')).toBeGreaterThan(ch('greater_venom_coating'));
     console.log(
@@ -187,7 +212,12 @@ describe('alchemy / magical-creature reagents', () => {
     );
     s.command({ type: 'craftItem', payload: { itemId: 'greater_potion_of_might' } } as never);
     s.command({ type: 'craftItem', payload: { itemId: 'grand_potion_of_might' } } as never);
-    for (let i = 0; i < 25 && !((stk(s).greater_potion_of_might ?? 0) > 0 && (stk(s).grand_potion_of_might ?? 0) > 0); i++)
+    for (
+      let i = 0;
+      i < 25 &&
+      !((stk(s).greater_potion_of_might ?? 0) > 0 && (stk(s).grand_potion_of_might ?? 0) > 0);
+      i++
+    )
       s.tick(400);
     console.log(
       `[ALCH tier-brew] greater=${stk(s).greater_potion_of_might ?? 0} grand=${stk(s).grand_potion_of_might ?? 0}`
@@ -208,7 +238,14 @@ describe('alchemy / magical-creature reagents', () => {
         pawns: [{ count: 6, skillLevel: 20 }],
         needsDisabled: ['hunger', 'fatigue', 'thirst', 'hygiene'],
         buildings: [{ id: 'campfire' }, { id: 'alchemy_lab' }, { id: 'apothecary' }],
-        items: { sugarcane: 18, wheat: 12, charcoal: 12, gem_dust: 12, glassware: 8, spit_meat: 10 },
+        items: {
+          sugarcane: 18,
+          wheat: 12,
+          charcoal: 12,
+          gem_dust: 12,
+          glassware: 8,
+          spit_meat: 10
+        },
         seedEntities: false
       })
     );
@@ -220,14 +257,24 @@ describe('alchemy / magical-creature reagents', () => {
     for (let i = 0; i < 20 && (stk(s).fermented_mash ?? 0) < 2; i++) s.tick(400);
     s.command({ type: 'craftItem', payload: { itemId: 'distilled_spirit' } } as never);
     s.command({ type: 'craftItem', payload: { itemId: 'purified_catalyst' } } as never);
-    for (let i = 0; i < 25 && !((stk(s).distilled_spirit ?? 0) > 0 && (stk(s).purified_catalyst ?? 0) > 0); i++)
+    for (
+      let i = 0;
+      i < 25 && !((stk(s).distilled_spirit ?? 0) > 0 && (stk(s).purified_catalyst ?? 0) > 0);
+      i++
+    )
       s.tick(400);
     console.log(
       `[ALCH reagents] sugarcane→sugar=${sugar} fermented_mash=${stk(s).fermented_mash ?? 0} distilled_spirit=${stk(s).distilled_spirit ?? 0} purified_catalyst=${stk(s).purified_catalyst ?? 0}`
     );
     expect(sugar, 'cane crushed + boiled down into sugar').toBeGreaterThan(0);
-    expect(stk(s).distilled_spirit ?? 0, 'grain+sugar fermented then distilled into spirit').toBeGreaterThan(0);
-    expect(stk(s).purified_catalyst ?? 0, 'gem_dust refined into a purified catalyst at the apothecary').toBeGreaterThan(0);
+    expect(
+      stk(s).distilled_spirit ?? 0,
+      'grain+sugar fermented then distilled into spirit'
+    ).toBeGreaterThan(0);
+    expect(
+      stk(s).purified_catalyst ?? 0,
+      'gem_dust refined into a purified catalyst at the apothecary'
+    ).toBeGreaterThan(0);
   });
 
   it('§C container-tool gate: refine_sugar needs a clay cooking pot — blocks without, works with (headless A/B)', async () => {
@@ -249,14 +296,19 @@ describe('alchemy / magical-creature reagents', () => {
         })
       );
       for (const p of s.getState().pawns)
-        s.command({ type: 'setPawnLaborLevel', payload: { pawnId: p.id, workId: 'cooking', level: 3 } } as never);
+        s.command({
+          type: 'setPawnLaborLevel',
+          payload: { pawnId: p.id, workId: 'cooking', level: 3 }
+        } as never);
       s.command({ type: 'craftItem', payload: { itemId: 'sugar', quantity: 2 } } as never);
       for (let i = 0; i < 18 && (stk(s).sugar ?? 0) === 0; i++) s.tick(400);
       return stk(s).sugar ?? 0;
     };
     const without = await run(false);
     const withPot = await run(true);
-    console.log(`[SUGAR gate] refine_sugar sugar produced: without pot=${without} with pot=${withPot}`);
+    console.log(
+      `[SUGAR gate] refine_sugar sugar produced: without pot=${without} with pot=${withPot}`
+    );
     expect(without, 'no clay cooking pot → refine_sugar is unclaimable, no sugar boiled').toBe(0);
     expect(withPot, 'a clay cooking pot in stock → cane boils down to sugar').toBeGreaterThan(0);
   });
@@ -291,7 +343,11 @@ describe('alchemy / magical-creature reagents', () => {
     for (
       let i = 0;
       i < 25 &&
-      !((stk(s).tanglefoot_coating ?? 0) > 0 && (stk(s).farsight_tonic ?? 0) > 0 && (stk(s).greater_farsight_tonic ?? 0) > 0);
+      !(
+        (stk(s).tanglefoot_coating ?? 0) > 0 &&
+        (stk(s).farsight_tonic ?? 0) > 0 &&
+        (stk(s).greater_farsight_tonic ?? 0) > 0
+      );
       i++
     )
       s.tick(400);
@@ -300,7 +356,10 @@ describe('alchemy / magical-creature reagents', () => {
     );
     expect(stk(s).tanglefoot_coating ?? 0, 'slow coating brewed').toBeGreaterThan(0);
     expect(stk(s).farsight_tonic ?? 0, 'awareness tonic brewed').toBeGreaterThan(0);
-    expect(stk(s).greater_farsight_tonic ?? 0, 'T2 tonic brewed off the distilled-spirit base').toBeGreaterThan(0);
+    expect(
+      stk(s).greater_farsight_tonic ?? 0,
+      'T2 tonic brewed off the distilled-spirit base'
+    ).toBeGreaterThan(0);
   });
 
   it('§C antidote tonic CURES an active poison (the counter to the venom/caustic coatings)', () => {
@@ -308,13 +367,24 @@ describe('alchemy / magical-creature reagents', () => {
     // toxin_immune window stamped. The counterplay the new coating threats needed.
     const poisoned = {
       id: 'p1',
-      stats: { brawn: 10, agility: 10, vigour: 10, intellect: 10, wisdom: 10, charisma: 10, awareness: 10 },
+      stats: {
+        brawn: 10,
+        agility: 10,
+        vigour: 10,
+        intellect: 10,
+        wisdom: 10,
+        charisma: 10,
+        awareness: 10
+      },
       traits: [],
       conditionTimers: { envenomed: 900, nausea: 600 }
     } as unknown as Pawn;
     const after = applyConsumable(poisoned, 'grand_antivenin_tonic', () => 0.42);
     expect(after.conditionTimers?.envenomed ?? 0, 'envenomed purged').toBe(0);
     expect(after.conditionTimers?.nausea ?? 0, 'nausea purged').toBe(0);
-    expect(after.conditionTimers?.toxin_immune ?? 0, 'a protective window is stamped').toBeGreaterThan(0);
+    expect(
+      after.conditionTimers?.toxin_immune ?? 0,
+      'a protective window is stamped'
+    ).toBeGreaterThan(0);
   });
 });

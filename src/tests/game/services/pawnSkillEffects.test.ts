@@ -17,7 +17,8 @@ import { itemService } from '$lib/game/services/ItemService';
  */
 const stk = (s: HeadlessSession) => (s.getState().stockpile ?? {}) as Record<string, number>;
 type Drop = { resourceId: string; quantity: number; quality?: number };
-const drops = (s: HeadlessSession) => ((s.getState() as { droppedItems?: Drop[] }).droppedItems ?? []);
+const drops = (s: HeadlessSession) =>
+  (s.getState() as { droppedItems?: Drop[] }).droppedItems ?? [];
 // Mean §Q tier across every crafted stack of `id` (quality-bearing drops never fold; undefined = Standard 1).
 const meanQuality = (s: HeadlessSession, id: string) => {
   let q = 0;
@@ -46,7 +47,10 @@ describe('pawn skill effects', () => {
           seedEntities: false
         })
       );
-      s.command({ type: 'craftItem', payload: { itemId: 'cordage', quantity: target * 3 } } as never);
+      s.command({
+        type: 'craftItem',
+        payload: { itemId: 'cordage', quantity: target * 3 }
+      } as never);
       let ticks = 0;
       while ((stk(s).cordage ?? 0) < target && ticks < 24000) {
         s.tick(100);
@@ -87,9 +91,10 @@ describe('pawn skill effects', () => {
     );
     expect(lo.made, 'unskilled colony still produced the batch').toBeGreaterThan(8);
     expect(hi.made, 'skilled colony still produced the batch').toBeGreaterThan(8);
-    expect(hi.mean, 'a master rolls a higher average quality tier than an unskilled crafter').toBeGreaterThan(
-      lo.mean + 0.5
-    );
+    expect(
+      hi.mean,
+      'a master rolls a higher average quality tier than an unskilled crafter'
+    ).toBeGreaterThan(lo.mean + 0.5);
   });
 
   it('butchery SKILL is a yield BONUS: master renders more, unskilled still gets the full base', async () => {
@@ -119,18 +124,32 @@ describe('pawn skill effects', () => {
     };
     const unskilled = await venisonFor(1);
     const master = await venisonFor(50);
-    console.log(`[SKILL butchery-yield] venison: butchery1=${unskilled} (base) vs butchery50=${master} (bonus)`);
+    console.log(
+      `[SKILL butchery-yield] venison: butchery1=${unskilled} (base) vs butchery50=${master} (bonus)`
+    );
     // The FLOOR: an unskilled butcher renders AT LEAST the full recipe base (venison 10 at butcher_spot),
     // NOT a reduced amount — so a qty-1 rare drop can never be rounded away by low skill. (It renders a
     // little MORE than 10 here because the workReady butchery KIT's yield boost now applies — a good kit
     // helps regardless of skill; the point is the floor, never a sub-1 penalty.)
-    expect(unskilled, 'unskilled butcher gets the full base drop or more (no sub-1 penalty)').toBeGreaterThanOrEqual(10);
-    expect(master, 'a skilled butcher renders MORE off the same carcass than an unskilled one').toBeGreaterThan(unskilled);
+    expect(
+      unskilled,
+      'unskilled butcher gets the full base drop or more (no sub-1 penalty)'
+    ).toBeGreaterThanOrEqual(10);
+    expect(
+      master,
+      'a skilled butcher renders MORE off the same carcass than an unskilled one'
+    ).toBeGreaterThan(unskilled);
     // recipe→discipline routing: a butcher-spot carcass order routes to the `butchery` LEAF discipline
     // (its own *_speed/_quality/_yield stats + tools apply), which nests under the Cooking parent category.
-    expect(craftDiscipline({ item: { id: 'venison' }, stationType: 'butcher_spot' })).toBe('butchery');
-    expect(craftWorkCategory({ item: { id: 'venison' }, stationType: 'butcher_spot' })).toBe('cooking');
-    expect(craftWorkCategory({ item: { id: 'copper_bar' }, stationType: 'stone_forge' })).toBe('metalworking');
+    expect(craftDiscipline({ item: { id: 'venison' }, stationType: 'butcher_spot' })).toBe(
+      'butchery'
+    );
+    expect(craftWorkCategory({ item: { id: 'venison' }, stationType: 'butcher_spot' })).toBe(
+      'cooking'
+    );
+    expect(craftWorkCategory({ item: { id: 'copper_bar' }, stationType: 'stone_forge' })).toBe(
+      'metalworking'
+    );
   });
 
   it('zero-skill pawn still completes a T0 craft — no bootstrap deadlock', async () => {
@@ -149,8 +168,13 @@ describe('pawn skill effects', () => {
     );
     s.command({ type: 'craftItem', payload: { itemId: 'cordage', quantity: 3 } } as never);
     for (let i = 0; i < 30 && (stk(s).cordage ?? 0) === 0; i++) s.tick(300);
-    console.log(`[SKILL bootstrap] skill-1 colony cordage=${stk(s).cordage ?? 0} @turn ${s.getState().turn}`);
-    expect(stk(s).cordage ?? 0, 'an unskilled colony can still bootstrap a T0 craft (slower, not stuck)').toBeGreaterThan(0);
+    console.log(
+      `[SKILL bootstrap] skill-1 colony cordage=${stk(s).cordage ?? 0} @turn ${s.getState().turn}`
+    );
+    expect(
+      stk(s).cordage ?? 0,
+      'an unskilled colony can still bootstrap a T0 craft (slower, not stuck)'
+    ).toBeGreaterThan(0);
   });
 
   it('quality flows DOWNSTREAM: §Q tier scales the weapon stats resolveHit reads', () => {
@@ -159,7 +183,9 @@ describe('pawn skill effects', () => {
     const wp = itemService.getItemById('steel_longsword')?.weaponProperties;
     expect(wp, 'steel_longsword has weapon properties').toBeTruthy();
     const dmg = (tier: 0 | 1 | 4) => scaleWeaponQuality(wp!, tier).damage ?? 0;
-    console.log(`[SKILL downstream] steel_longsword damage by tier: crude=${dmg(0)} standard=${dmg(1)} masterwork=${dmg(4)}`);
+    console.log(
+      `[SKILL downstream] steel_longsword damage by tier: crude=${dmg(0)} standard=${dmg(1)} masterwork=${dmg(4)}`
+    );
     expect(dmg(0), 'Crude < Standard').toBeLessThan(dmg(1));
     expect(dmg(4), 'Masterwork > Standard').toBeGreaterThan(dmg(1));
   });
