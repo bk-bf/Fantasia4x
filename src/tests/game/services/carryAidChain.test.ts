@@ -43,7 +43,7 @@ describe('carry aid chain — packs, belts and sheaths (HeadlessSession, real ti
           cured_deer_hide: 30,
           sinew: 60,
           thread: 60,
-          buckskin: 40,
+          buckskin: 120,
           jackal_leather: 40,
           bronze_nail: 200,
           iron_bar: 20
@@ -106,7 +106,7 @@ describe('carry aid chain — packs, belts and sheaths (HeadlessSession, real ti
         needsDisabled: ['hunger', 'fatigue'],
         buildings: [{ id: 'makers_bench' }, { id: 'anvil' }, { id: 'runecarver_bench' }],
         items: {
-          buckskin: 60,
+          buckskin: 200,
           sinew: 60,
           thread: 60,
           iron_bar: 20,
@@ -175,7 +175,7 @@ describe('the pack grid — light / medium / heavy at one age (HeadlessSession, 
         needsDisabled: ['hunger', 'fatigue'],
         buildings: [{ id: 'makers_bench' }],
         items: {
-          buckskin: 80,
+          buckskin: 200,
           jackal_leather: 40,
           iron_bar: 20,
           iron_nail: 200,

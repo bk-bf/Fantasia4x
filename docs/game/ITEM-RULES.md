@@ -144,6 +144,24 @@ recipe states, at minimum:
       mass.** **R16** checks it for both families, with a wide band (a third of the product) so it
       catches order-of-magnitude errors rather than dictating balance. Mail rings and a bow's sinew
       backing are exempt: those ARE the piece, not what fastens it.
+- [ ] **SIZE PROPAGATES DOWN THE CHAIN — every pool prices its members, not just binding.** A
+      `category:` slot takes the cheapest member for a full unit, so `category:leather: 3` bought a
+      jerkin with three scraps of coney fur. The leather pool spans **36x** (0.08 kg vermin hide to
+      2.86 kg mammoth) and the cured-hide pool 34x. Each member's `craftValue` is its weight over the
+      pool's MEDIAN, so a typical hide is still worth exactly 1 and existing counts keep their meaning
+      — what changes is that **a mammoth hide goes five times as far as a rabbit's**, which is the
+      whole point of hunting something big. **R17** fails any pool spanning more than 1.5x in size that
+      ships priced flat.
+      **Price an item against the pool it is DRAWN through, not its raw `category`.** Planks carry
+      `category: wood` alongside logs, so pricing them there measured a 2 kg plank against a 3 kg log
+      and made every plank worth 0.67. Planks are drawn via `category:plank`; that is the pool that
+      sets their value.
+- [ ] **A cast piece consumes the MELT, not a bar.** `cast_*_bar` already poured molten metal into a
+      mould while the item recipes at the same hearth took a bar plus a mould and did the melt
+      invisibly — same station, same operation, two different models. All 20 now take the melt.
+      **Iron and steel keep their bars**: no pre-industrial hearth melts iron, which is why the anvil
+      line is forged and unchanged. That is where smelting touches armour — upstream, in the bar, not
+      in the piece.
 - [ ] **A category pool prices its members by what they cost to HAVE (`craftValue`).** A `category:`
       slot takes whatever is cheapest to hand, which is fair only when the members cost the same to
       produce. They rarely do: cordage is plaited at a craft spot on turn one, sinew needs a carcass

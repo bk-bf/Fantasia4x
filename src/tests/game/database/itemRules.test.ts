@@ -1163,6 +1163,31 @@ describe('ITEM-RULES R17 — a category pool prices its members by what they cos
     expect(v('sinew'), 'sinew is cruder than spun thread').toBeLessThan(v('thread'));
   });
 
+  it('every pool whose members differ in SIZE prices them', () => {
+    // The leather pool ran 0.08kg (coney fur) to 2.86kg (mammoth) — a 36x spread — and a slot asking
+    // for "3 leather" took three scraps of vermin fur for a jerkin. Size has to propagate down the
+    // chain or a category slot quietly becomes the cheapest thing in it.
+    const CATS = ['leather', 'cured_hide', 'meat', 'vegetable', 'wood', 'plank', 'log', 'wool'];
+    const bad: string[] = [];
+    for (const cat of CATS) {
+      const members = (ITEMS as Item[]).filter(
+        (i) =>
+          (cat === 'plank' || cat === 'log' ? i.id.endsWith(`_${cat}`) : i.category === cat) &&
+          i.weightKg &&
+          !['armor', 'weapon', 'tool'].includes(i.type as string)
+      );
+      if (members.length < 2) continue;
+      const ws = members.map((i) => i.weightKg!);
+      if (Math.max(...ws) / Math.min(...ws) < 1.5) continue;
+      const values = new Set(members.map((i) => i.craftValue ?? 1));
+      if (values.size < 2)
+        bad.push(
+          `category:${cat} spans ${(Math.max(...ws) / Math.min(...ws)).toFixed(0)}x in size and is priced flat`
+        );
+    }
+    expect(bad, bad.join('; ')).toEqual([]);
+  });
+
   it('a pool whose members span more than one age is not priced flat', () => {
     // The failure this catches is subtle: someone adds a late-age material to an early-age pool and
     // every recipe using that slot silently gets cheaper, because the new member is never chosen but

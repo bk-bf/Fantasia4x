@@ -69,6 +69,7 @@
     "color": "#9DAE78",
     "amount": 0,
     "weightKg": 0.1,
+    "craftValue": 2.0,
     "volumeL": 0.2,
     "nutrition": 15,
     "effects": {"healthBonus": 0.1},
@@ -179,6 +180,7 @@
     "color"            : "#C8864E",
     "amount"           : 0,
     "weightKg"         : 0.5,
+    "craftValue": 0.5,
     "volumeL"          : 0.5,
     "nutrition"        : 54,
     "toolTierRequired" : 0,
@@ -249,6 +251,7 @@
     "color"            : "#D8C4A8",
     "amount"           : 0,
     "weightKg"         : 0.12,
+    "craftValue": 0.1,
     "volumeL"          : 0.8,
     "material"         : { "label": "Coney Fur", "desc": "soft, very warm, flimsy", "building": { "durability": 0.85, "insulation": 0.18, "comfort": 0.1 }, "item": { "durability": 0.8, "weight": 0.75 } }
   },
@@ -264,6 +267,7 @@
     "color"            : "#8A7A62",
     "amount"           : 0,
     "weightKg"         : 0.08,
+    "craftValue": 0.1,
     "volumeL"          : 1,
     "material"         : { "label": "Vermin Hide", "desc": "poor, cheap", "building": { "durability": 0.8, "insulation": 0.04 }, "item": { "durability": 0.75, "weight": 0.9 } }
   },
@@ -279,6 +283,7 @@
     "color"            : "#C8A878",
     "amount"           : 0,
     "weightKg"         : 0.6,
+    "craftValue": 0.44,
     "volumeL"          : 1.2,
     "material"         : { "label": "Buckskin", "desc": "supple, light", "building": { "durability": 1, "insulation": 0.06 }, "item": { "durability": 1, "weight": 0.85 } }
   },
@@ -294,6 +299,7 @@
     "color"            : "#BE9C68",
     "amount"           : 0,
     "weightKg"         : 0.6,
+    "craftValue": 0.44,
     "volumeL"          : 1.2,
     "material"         : { "label": "Kidskin", "desc": "soft, supple", "building": { "durability": 0.95, "insulation": 0.06 }, "item": { "durability": 0.95, "weight": 0.85 } }
   },
@@ -309,6 +315,7 @@
     "color"            : "#C6A06A",
     "amount"           : 0,
     "weightKg"         : 0.5,
+    "craftValue": 0.37,
     "volumeL"          : 1,
     "material"         : { "label": "Jackal Leather", "desc": "thin, light", "building": { "durability": 0.9, "insulation": 0.03 }, "item": { "durability": 0.9, "weight": 0.8 } }
   },
@@ -324,6 +331,7 @@
     "color"            : "#9A8878",
     "amount"           : 0,
     "weightKg"         : 1,
+    "craftValue": 0.74,
     "volumeL"          : 2,
     "material"         : { "label": "Wolf Leather", "desc": "tough, warm", "building": { "durability": 1.1, "insulation": 0.12, "comfort": 0.05 }, "item": { "durability": 1.1, "weight": 1 } }
   },
@@ -339,6 +347,7 @@
     "color"            : "#88786A",
     "amount"           : 0,
     "weightKg"         : 1.1,
+    "craftValue": 0.81,
     "volumeL"          : 2.2,
     "material"         : { "label": "Worg Leather", "desc": "+durable, warm", "building": { "durability": 1.15, "insulation": 0.13 }, "item": { "durability": 1.15, "weight": 1.05 } }
   },
@@ -369,6 +378,7 @@
     "color"            : "#8A6E4A",
     "amount"           : 0,
     "weightKg"         : 1.2,
+    "craftValue": 0.88,
     "volumeL"          : 2.5,
     "material"         : { "label": "Elk Leather", "desc": "tough, supple", "building": { "durability": 1.15, "insulation": 0.08 }, "item": { "durability": 1.15, "weight": 1.05 } }
   },
@@ -384,6 +394,7 @@
     "color"            : "#6E5232",
     "amount"           : 0,
     "weightKg"         : 1.9,
+    "craftValue": 1.4,
     "volumeL"          : 3.6,
     "material"         : { "label": "Oxhide", "desc": "very stiff, +durable, heavy", "building": { "durability": 1.3, "insulation": 0.06 }, "item": { "durability": 1.3, "weight": 1.25 } }
   },
@@ -399,6 +410,7 @@
     "color"            : "#5E4428",
     "amount"           : 0,
     "weightKg"         : 2,
+    "craftValue": 1.47,
     "volumeL"          : 4,
     "material"         : { "label": "Bearhide", "desc": "thick, very warm, heavy", "building": { "durability": 1.25, "insulation": 0.2, "comfort": 0.1 }, "item": { "durability": 1.2, "weight": 1.25 } }
   },
@@ -414,6 +426,7 @@
     "color"            : "#4E3A22",
     "amount"           : 0,
     "weightKg"         : 2.4,
+    "craftValue": 1.76,
     "volumeL"          : 4.6,
     "material"         : { "label": "Cave Bear Hide", "desc": "thickest, warmest, heavy", "building": { "durability": 1.3, "insulation": 0.24, "comfort": 0.12 }, "item": { "durability": 1.3, "weight": 1.3 } }
   },
@@ -429,6 +442,7 @@
     "color"            : "#6A5A44",
     "amount"           : 0,
     "weightKg"         : 1.8,
+    "craftValue": 1.32,
     "volumeL"          : 3.6,
     "material"         : { "label": "Owlbear Leather", "desc": "coarse, tough", "building": { "durability": 1.25, "insulation": 0.1 }, "item": { "durability": 1.25, "weight": 1.15 } }
   },
@@ -459,6 +473,7 @@
     "color"            : "#5A4632",
     "amount"           : 0,
     "weightKg"         : 2.6,
+    "craftValue": 1.91,
     "volumeL"          : 5,
     "material"         : { "label": "Mammoth Leather", "desc": "massive, warmest, very heavy", "building": { "durability": 1.3, "insulation": 0.25, "comfort": 0.1 }, "item": { "durability": 1.3, "weight": 1.35 } }
   },
@@ -474,6 +489,7 @@
     "color"            : "#A89478",
     "amount"           : 0,
     "weightKg"         : 0.7,
+    "craftValue": 0.51,
     "volumeL"          : 1.6,
     "material"         : { "label": "Hippogriff Leather", "desc": "light, fine", "building": { "durability": 1.05, "insulation": 0.1, "comfort": 0.1, "beauty": 0.15 }, "item": { "durability": 1.05, "weight": 0.75 } }
   },
@@ -505,6 +521,7 @@
     "color"            : "#B89878",
     "amount"           : 0,
     "weightKg"         : 0.14,
+    "craftValue": 0.1,
     "volumeL"          : 2
   },
   {
@@ -519,6 +536,7 @@
     "color"            : "#B89878",
     "amount"           : 0,
     "weightKg"         : 0.09,
+    "craftValue": 0.1,
     "volumeL"          : 2
   },
   {
@@ -533,6 +551,7 @@
     "color"            : "#B89878",
     "amount"           : 0,
     "weightKg"         : 0.71,
+    "craftValue": 0.5,
     "volumeL"          : 3
   },
   {
@@ -547,6 +566,7 @@
     "color"            : "#B89878",
     "amount"           : 0,
     "weightKg"         : 0.71,
+    "craftValue": 0.5,
     "volumeL"          : 3
   },
   {
@@ -561,6 +581,7 @@
     "color"            : "#B89878",
     "amount"           : 0,
     "weightKg"         : 0.59,
+    "craftValue": 0.42,
     "volumeL"          : 3
   },
   {
@@ -575,6 +596,7 @@
     "color"            : "#B89878",
     "amount"           : 0,
     "weightKg"         : 1.18,
+    "craftValue": 0.84,
     "volumeL"          : 4
   },
   {
@@ -589,6 +611,7 @@
     "color"            : "#B89878",
     "amount"           : 0,
     "weightKg"         : 1.29,
+    "craftValue": 0.91,
     "volumeL"          : 4
   },
   {
@@ -603,6 +626,7 @@
     "color"            : "#B89878",
     "amount"           : 0,
     "weightKg"         : 1.53,
+    "craftValue": 1.09,
     "volumeL"          : 4
   },
   {
@@ -631,6 +655,7 @@
     "color"            : "#B89878",
     "amount"           : 0,
     "weightKg"         : 2.24,
+    "craftValue": 1.59,
     "volumeL"          : 5
   },
   {
@@ -645,6 +670,7 @@
     "color"            : "#B89878",
     "amount"           : 0,
     "weightKg"         : 2.35,
+    "craftValue": 1.67,
     "volumeL"          : 5
   },
   {
@@ -659,6 +685,7 @@
     "color"            : "#B89878",
     "amount"           : 0,
     "weightKg"         : 2.82,
+    "craftValue": 2.0,
     "volumeL"          : 6
   },
   {
@@ -673,6 +700,7 @@
     "color"            : "#B89878",
     "amount"           : 0,
     "weightKg"         : 2.12,
+    "craftValue": 1.5,
     "volumeL"          : 6
   },
   {
@@ -687,6 +715,7 @@
     "color"            : "#B89878",
     "amount"           : 0,
     "weightKg"         : 1.65,
+    "craftValue": 1.17,
     "volumeL"          : 6
   },
   {
@@ -701,6 +730,7 @@
     "color"            : "#B89878",
     "amount"           : 0,
     "weightKg"         : 3.06,
+    "craftValue": 2.17,
     "volumeL"          : 6
   },
   {
@@ -715,6 +745,7 @@
     "color"            : "#B89878",
     "amount"           : 0,
     "weightKg"         : 0.82,
+    "craftValue": 0.58,
     "volumeL"          : 6
   },
   {
@@ -729,6 +760,7 @@
     "color"            : "#B89878",
     "amount"           : 0,
     "weightKg"         : 1.53,
+    "craftValue": 1.09,
     "volumeL"          : 6
   },
   {
@@ -1999,6 +2031,7 @@
     "color"            : "#9C5A3C",
     "amount"           : 0,
     "weightKg"         : 0.7,
+    "craftValue": 0.7,
     "volumeL"          : 0.8,
     "nutrition"        : 54,
     "toolTierRequired" : 0,
@@ -2037,6 +2070,7 @@
     "color"            : "#D2B48C",
     "amount"           : 0,
     "weightKg"         : 2,
+    "craftValue": 1.0,
     "volumeL"          : 3,
     "fuelValue"        : 8,
     "fuelHeat"         : 1,
@@ -2055,6 +2089,7 @@
     "color": "#9A7B4F",
     "amount": 0,
     "weightKg": 6,
+    "craftValue": 2.0,
     "volumeL": 5,
     "fuelValue": 16,
     "fuelHeat": 1,
@@ -2072,6 +2107,7 @@
     "color"            : "#A0742C",
     "amount"           : 0,
     "weightKg"         : 2,
+    "craftValue": 1.0,
     "volumeL"          : 3,
     "fuelValue"        : 10,
     "fuelHeat"         : 1,
@@ -2090,6 +2126,7 @@
     "color"            : "#E0D4B0",
     "amount"           : 0,
     "weightKg"         : 2,
+    "craftValue": 1.0,
     "volumeL"          : 3,
     "fuelValue"        : 9,
     "fuelHeat"         : 1,
@@ -2108,6 +2145,7 @@
     "color"            : "#C8B98E",
     "amount"           : 0,
     "weightKg"         : 2,
+    "craftValue": 1.0,
     "volumeL"          : 3,
     "fuelValue"        : 9,
     "fuelHeat"         : 1,
@@ -2126,6 +2164,7 @@
     "color"            : "#B6C089",
     "amount"           : 0,
     "weightKg"         : 2,
+    "craftValue": 1.0,
     "volumeL"          : 3,
     "fuelValue"        : 7,
     "fuelHeat"         : 1,
@@ -2143,6 +2182,7 @@
     "color"            : "#7A4E2C",
     "amount"           : 0,
     "weightKg"         : 2,
+    "craftValue": 1.0,
     "volumeL"          : 3,
     "fuelValue"        : 9,
     "fuelHeat"         : 1,
@@ -4756,6 +4796,7 @@
     "color"            : "#B06040",
     "amount"           : 0,
     "weightKg"         : 0.8,
+    "craftValue": 0.8,
     "volumeL"          : 0.8,
     "nutrition"        : 45,
     "toolTierRequired" : 0,
@@ -4775,6 +4816,7 @@
     "color"            : "#A05030",
     "amount"           : 0,
     "weightKg"         : 1.5,
+    "craftValue": 1.5,
     "volumeL"          : 1.5,
     "nutrition"        : 84,
     "toolTierRequired" : 0,
@@ -4813,6 +4855,7 @@
     "color"            : "#C86040",
     "amount"           : 0,
     "weightKg"         : 1.5,
+    "craftValue": 1.5,
     "volumeL"          : 1.5,
     "nutrition"        : 84,
     "toolTierRequired" : 0,
@@ -4832,6 +4875,7 @@
     "color"            : "#C07858",
     "amount"           : 0,
     "weightKg"         : 0.8,
+    "craftValue": 0.8,
     "volumeL"          : 0.8,
     "nutrition"        : 48,
     "toolTierRequired" : 0,
@@ -4851,6 +4895,7 @@
     "color"            : "#E8B870",
     "amount"           : 0,
     "weightKg"         : 0.5,
+    "craftValue": 0.5,
     "volumeL"          : 0.5,
     "nutrition"        : 27,
     "toolTierRequired" : 0,
@@ -4870,6 +4915,7 @@
     "color"            : "#907060",
     "amount"           : 0,
     "weightKg"         : 0.3,
+    "craftValue": 0.3,
     "volumeL"          : 0.3,
     "nutrition"        : 24,
     "toolTierRequired" : 0,
@@ -14705,6 +14751,7 @@
     "color": "#C9D4E0",
     "amount": 0,
     "weightKg": 2,
+    "craftValue": 0.67,
     "volumeL": 3,
     "fuelValue": 12,
     "fuelHeat": 1,
@@ -14796,6 +14843,7 @@
     "color": "#3A332E",
     "amount": 0,
     "weightKg": 4,
+    "craftValue": 1.33,
     "volumeL": 4,
     "fuelValue": 12,
     "fuelHeat": 1,
@@ -15034,6 +15082,7 @@
     "color": "#C9D4E0",
     "amount": 0,
     "weightKg": 1,
+    "craftValue": 0.5,
     "volumeL": 3,
     "fuelValue": 12,
     "fuelHeat": 1,
@@ -15053,6 +15102,7 @@
     "color": "#3A332E",
     "amount": 0,
     "weightKg": 3,
+    "craftValue": 1.5,
     "volumeL": 3,
     "fuelValue": 12,
     "fuelHeat": 1,
@@ -16497,6 +16547,7 @@
     "color"            : "#7FB04E",
     "amount"           : 0,
     "weightKg"         : 0.5,
+    "craftValue": 1.67,
     "volumeL"          : 0.7,
     "nutrition"        : 30,
     "maxDurability"    : 50,
@@ -16561,6 +16612,7 @@
     "color": "#C36A66",
     "amount": 0,
     "weightKg": 0.15,
+    "craftValue": 0.5,
     "volumeL": 0.2,
     "nutrition": 20,
     "maxDurability": 40,
@@ -16577,6 +16629,7 @@
     "color"            : "#C9A24E",
     "amount"           : 0,
     "weightKg"         : 0.15,
+    "craftValue": 0.5,
     "volumeL"          : 0.2,
     "nutrition"        : 20,
     "maxDurability"    : 90,
@@ -16721,6 +16774,7 @@
     "color"            : "#D2772A",
     "amount"           : 0,
     "weightKg"         : 3,
+    "craftValue": 10.0,
     "volumeL"          : 4,
     "nutrition"        : 120,
     "maxDurability"    : 120,
@@ -17114,6 +17168,7 @@
     "color"            : "#9C4A30",
     "amount"           : 0,
     "weightKg"         : 1.6,
+    "craftValue": 1.6,
     "volumeL"          : 1.6,
     "nutrition"        : 90,
     "toolTierRequired" : 0,
@@ -17133,6 +17188,7 @@
     "color"            : "#8A4628",
     "amount"           : 0,
     "weightKg"         : 2,
+    "craftValue": 2.0,
     "volumeL"          : 2,
     "nutrition"        : 110,
     "toolTierRequired" : 0,
@@ -17152,6 +17208,7 @@
     "color"            : "#7A5238",
     "amount"           : 0,
     "weightKg"         : 1.4,
+    "craftValue": 1.4,
     "volumeL"          : 1.4,
     "nutrition"        : 78,
     "toolTierRequired" : 0,
@@ -17171,6 +17228,7 @@
     "color"            : "#9A6040",
     "amount"           : 0,
     "weightKg"         : 1.2,
+    "craftValue": 1.2,
     "volumeL"          : 1.2,
     "nutrition"        : 70,
     "toolTierRequired" : 0,
@@ -17190,6 +17248,7 @@
     "color"            : "#B0A060",
     "amount"           : 0,
     "weightKg"         : 1.1,
+    "craftValue": 1.1,
     "volumeL"          : 1.1,
     "nutrition"        : 64,
     "toolTierRequired" : 0,
@@ -17209,6 +17268,7 @@
     "color"            : "#A85838",
     "amount"           : 0,
     "weightKg"         : 1.3,
+    "craftValue": 1.3,
     "volumeL"          : 1.3,
     "nutrition"        : 80,
     "toolTierRequired" : 0,
@@ -17228,6 +17288,7 @@
     "color"            : "#C08858",
     "amount"           : 0,
     "weightKg"         : 0.6,
+    "craftValue": 0.6,
     "volumeL"          : 0.6,
     "nutrition"        : 40,
     "toolTierRequired" : 0,
@@ -17247,6 +17308,7 @@
     "color"            : "#8A5840",
     "amount"           : 0,
     "weightKg"         : 1.1,
+    "craftValue": 1.1,
     "volumeL"          : 1.1,
     "nutrition"        : 60,
     "toolTierRequired" : 0,
@@ -17441,6 +17503,7 @@
     "color"            : "#3A4A2C",
     "amount"           : 0,
     "weightKg"         : 2.6,
+    "craftValue": 1.91,
     "volumeL"          : 4
   },
   // ════════════════════════════════════════════════════════════════════════════════════════════
@@ -17461,6 +17524,7 @@
     "color"            : "#EDE4D6",
     "amount"           : 0,
     "weightKg"         : 0.2,
+    "craftValue": 0.5,
     "volumeL"          : 0.8,
     "processingType"   : ["weaving"],
     "material"         : { "label": "Coney Wool", "desc": "fine, very warm, scant", "building": { "comfort": 0.2, "insulation": 0.18 }, "item": { "durability": 1 } }
@@ -17509,6 +17573,7 @@
     "color"            : "#B8A488",
     "amount"           : 0,
     "weightKg"         : 0.6,
+    "craftValue": 1.5,
     "volumeL"          : 1.6,
     "processingType"   : ["weaving"],
     "material"         : { "label": "Ox Wool", "desc": "coarse, heavy, warmest bulk", "building": { "comfort": 0.05, "insulation": 0.22 }, "item": { "durability": 1.15 } }
@@ -17525,6 +17590,7 @@
     "color"            : "#DAC9AE",
     "amount"           : 0,
     "weightKg"         : 0.5,
+    "craftValue": 1.25,
     "volumeL"          : 1.4,
     "processingType"   : ["weaving"],
     "material"         : { "label": "Mammoth Wool", "desc": "finest, warmest, prestige", "building": { "comfort": 0.22, "insulation": 0.25 }, "item": { "durability": 1.1 } }
@@ -19305,6 +19371,7 @@
     "color": "#9C6B3F",
     "amount": 0,
     "weightKg": 1.1,
+    "craftValue": 0.81,
     "volumeL": 1.6,
     "material": { "label": "Prime Wolf Leather", "desc": "curried, supple, tough", "building": { "durability": 1.3, "insulation": 0.12 }, "item": { "durability": 1.35, "weight": 0.95 } }
   },
@@ -19320,6 +19387,7 @@
     "color": "#9C6B3F",
     "amount": 0,
     "weightKg": 1.21,
+    "craftValue": 0.89,
     "volumeL": 1.6,
     "material": { "label": "Prime Worg Leather", "desc": "curried, supple, tough", "building": { "durability": 1.3, "insulation": 0.12 }, "item": { "durability": 1.35, "weight": 0.95 } }
   },
@@ -19335,6 +19403,7 @@
     "color": "#9C6B3F",
     "amount": 0,
     "weightKg": 1.43,
+    "craftValue": 1.05,
     "volumeL": 1.6,
     "material": { "label": "Prime Boarhide", "desc": "curried, supple, tough", "building": { "durability": 1.3, "insulation": 0.12 }, "item": { "durability": 1.35, "weight": 0.95 } }
   },
@@ -19365,6 +19434,7 @@
     "color": "#9C6B3F",
     "amount": 0,
     "weightKg": 2.09,
+    "craftValue": 1.54,
     "volumeL": 1.6,
     "material": { "label": "Prime Oxhide", "desc": "curried, supple, tough", "building": { "durability": 1.3, "insulation": 0.12 }, "item": { "durability": 1.35, "weight": 0.95 } }
   },
@@ -19380,6 +19450,7 @@
     "color": "#9C6B3F",
     "amount": 0,
     "weightKg": 2.2,
+    "craftValue": 1.62,
     "volumeL": 1.6,
     "material": { "label": "Prime Bearhide", "desc": "curried, supple, tough", "building": { "durability": 1.3, "insulation": 0.12 }, "item": { "durability": 1.35, "weight": 0.95 } }
   },
@@ -19395,6 +19466,7 @@
     "color": "#9C6B3F",
     "amount": 0,
     "weightKg": 2.64,
+    "craftValue": 1.94,
     "volumeL": 1.6,
     "material": { "label": "Prime Cave Bear Hide", "desc": "curried, supple, tough", "building": { "durability": 1.3, "insulation": 0.12 }, "item": { "durability": 1.35, "weight": 0.95 } }
   },
@@ -19410,6 +19482,7 @@
     "color": "#9C6B3F",
     "amount": 0,
     "weightKg": 1.98,
+    "craftValue": 1.46,
     "volumeL": 1.6,
     "material": { "label": "Prime Owlbear Leather", "desc": "curried, supple, tough", "building": { "durability": 1.3, "insulation": 0.12 }, "item": { "durability": 1.35, "weight": 0.95 } }
   },
@@ -19425,6 +19498,7 @@
     "color": "#9C6B3F",
     "amount": 0,
     "weightKg": 1.54,
+    "craftValue": 1.13,
     "volumeL": 1.6,
     "material": { "label": "Prime Sabretooth Leather", "desc": "curried, supple, tough", "building": { "durability": 1.3, "insulation": 0.12 }, "item": { "durability": 1.35, "weight": 0.95 } }
   },
@@ -19440,6 +19514,7 @@
     "color": "#9C6B3F",
     "amount": 0,
     "weightKg": 2.86,
+    "craftValue": 2.1,
     "volumeL": 1.6,
     "material": { "label": "Prime Mammoth Leather", "desc": "curried, supple, tough", "building": { "durability": 1.3, "insulation": 0.12 }, "item": { "durability": 1.35, "weight": 0.95 } }
   },
@@ -19455,6 +19530,7 @@
     "color": "#9C6B3F",
     "amount": 0,
     "weightKg": 0.77,
+    "craftValue": 0.57,
     "volumeL": 1.6,
     "material": { "label": "Prime Hippogriff Leather", "desc": "curried, supple, tough", "building": { "durability": 1.3, "insulation": 0.12 }, "item": { "durability": 1.35, "weight": 0.95 } }
   },
@@ -19470,6 +19546,7 @@
     "color": "#9C6B3F",
     "amount": 0,
     "weightKg": 1.43,
+    "craftValue": 1.05,
     "volumeL": 1.6,
     "material": { "label": "Prime Direwolf Leather", "desc": "curried, supple, tough", "building": { "durability": 1.3, "insulation": 0.12 }, "item": { "durability": 1.35, "weight": 0.95 } }
   },

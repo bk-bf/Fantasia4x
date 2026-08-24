@@ -123,7 +123,7 @@ describe('leather chain — physical pawn pipeline (HeadlessSession, real ticks)
         needsDisabled: ['hunger', 'fatigue'],
         buildings: [{ id: 'makers_bench' }, { id: 'weaving_frame' }, { id: 'spinning_wheel' }],
         items: {
-          buckskin: 20,
+          buckskin: 60,
           cordage: 20,
           goat_wool: 40,
           cured_deer_hide: 20,
@@ -153,13 +153,13 @@ describe('leather chain — physical pawn pipeline (HeadlessSession, real ticks)
     for (let i = 0; i < 16 && !(stock().brimmed_leather_hood > 0 && stock().woolcloth > 0); i++)
       session.tick(500);
     console.log(
-      `[E2E-PIPELINE] after ${session.getState().turn} turns: brimmed_leather_hood=${stock().brimmed_leather_hood} (buckskin ${stock().buckskin}/20), woolcloth=${stock().woolcloth} (goat_wool ${stock().goat_wool}/40, yarn ${stock().wool_yarn})`
+      `[E2E-PIPELINE] after ${session.getState().turn} turns: brimmed_leather_hood=${stock().brimmed_leather_hood} (buckskin ${stock().buckskin}/60), woolcloth=${stock().woolcloth} (goat_wool ${stock().goat_wool}/40, yarn ${stock().wool_yarn})`
     );
     expect(
       stock().brimmed_leather_hood ?? 0,
       'pawn crafts a category:leather item'
     ).toBeGreaterThan(0);
-    expect(stock().buckskin, 'leather consumed').toBeLessThan(20);
+    expect(stock().buckskin, 'leather consumed').toBeLessThan(60);
     expect(stock().woolcloth ?? 0, 'pawn crafts a category:wool item').toBeGreaterThan(0);
     expect(stock().goat_wool, 'wool consumed').toBeLessThan(40);
   });

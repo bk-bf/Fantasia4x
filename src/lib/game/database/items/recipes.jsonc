@@ -706,7 +706,7 @@
   {
     "id"              : "make_bronze_nail",
     "station"         : "casting_hearth",
-    "inputs"          : {"bronze_bar": 1, "clay_mold": 1},
+    "inputs"          : {"molten_bronze": 4, "clay_mold": 1},
     "outputs"         : {"bronze_nail": 300},
     "workAmount"      : 6,
     "toolTierRequired": 1
@@ -1026,7 +1026,7 @@
   {
     "id"              : "make_tile_mold",
     "station"         : "casting_hearth",
-    "inputs"          : {"bronze_bar": 1, "clay_mold": 1},
+    "inputs"          : {"molten_bronze": 4, "clay_mold": 1},
     "outputs"         : {"tile_mold": 1},
     "workAmount"      : 6,
     "toolTierRequired": 1
@@ -2000,7 +2000,7 @@
   {
     "id"              : "make_bronze_punch_dagger",
     "station"         : "casting_hearth",
-    "inputs"          : {"bronze_bar": 1, "clay_mold": 1, "medium_bones": 1, "category:leather": 1},
+    "inputs"          : {"molten_bronze": 4, "clay_mold": 1, "medium_bones": 1, "category:leather": 1},
     "outputs"         : {"bronze_punch_dagger": 1},
     "workAmount"      : 6,
     "toolTierRequired": 1,
@@ -2009,7 +2009,7 @@
   {
     "id"              : "make_leaf_blade_spear",
     "station"         : "casting_hearth",
-    "inputs"          : {"wooden_haft": 1, "bronze_bar": 1, "clay_mold": 1, "category:leather": 1},
+    "inputs"          : {"wooden_haft": 1, "molten_bronze": 4, "clay_mold": 1, "category:leather": 1},
     "outputs"         : {"leaf_blade_spear": 1},
     "workAmount"      : 8,
     "toolTierRequired": 1,
@@ -2029,7 +2029,7 @@
   {
     "id"              : "make_cast_bronze_hatchet",
     "station"         : "casting_hearth",
-    "inputs"          : {"wooden_haft": 1, "bronze_bar": 1, "clay_mold": 1, "category:leather": 1},
+    "inputs"          : {"wooden_haft": 1, "molten_bronze": 4, "clay_mold": 1, "category:leather": 1},
     "outputs"         : {"cast_bronze_hatchet": 1},
     "workAmount"      : 8,
     "toolTierRequired": 1,
@@ -2531,7 +2531,7 @@
   {
     "id"              : "make_cast_sling_bullet",
     "station"         : "casting_hearth",
-    "inputs"          : {"copper_bar": 1, "clay_mold": 1},
+    "inputs"          : {"molten_copper": 4, "clay_mold": 1},
     "outputs"         : {"cast_sling_bullet": 8},
     "workAmount"      : 4,
     "toolTierRequired": 1
@@ -2736,7 +2736,7 @@
   {
     "id"              : "make_cast_bronze_skullcap",
     "station"         : "casting_hearth",
-    "inputs"          : {"bronze_bar": 1, "clay_mold": 1},
+    "inputs"          : {"molten_bronze": 4, "clay_mold": 1},
     "outputs"         : {"cast_bronze_skullcap": 1},
     "workAmount"      : 8,
     "toolTierRequired": 1,
@@ -5261,7 +5261,7 @@
   {
     "id"              : "make_bronze_leaf_sword",
     "station"         : "casting_hearth",
-    "inputs"          : {"bronze_bar": 1, "clay_mold": 1, "category:leather": 1},
+    "inputs"          : {"molten_bronze": 4, "clay_mold": 1, "category:leather": 1},
     "outputs"         : {"bronze_leaf_sword": 1},
     "workAmount"      : 9,
     "toolTierRequired": 1,
@@ -5270,7 +5270,7 @@
   {
     "id"              : "make_bronze_flanged_mace",
     "station"         : "casting_hearth",
-    "inputs"          : {"bronze_bar": 1, "clay_mold": 1, "wooden_haft": 1, "category:leather": 1},
+    "inputs"          : {"molten_bronze": 4, "clay_mold": 1, "wooden_haft": 1, "category:leather": 1},
     "outputs"         : {"bronze_flanged_mace": 1},
     "workAmount"      : 9,
     "toolTierRequired": 1,
@@ -5279,7 +5279,7 @@
   {
     "id"              : "make_bronze_socketed_spear",
     "station"         : "casting_hearth",
-    "inputs"          : {"bronze_bar": 1, "clay_mold": 1, "wooden_haft": 1, "cordage": 4},
+    "inputs"          : {"molten_bronze": 4, "clay_mold": 1, "wooden_haft": 1, "cordage": 4},
     "outputs"         : {"bronze_socketed_spear": 1},
     "workAmount"      : 8,
     "toolTierRequired": 1,
@@ -5288,7 +5288,7 @@
   {
     "id"              : "make_bronze_cleaver",
     "station"         : "casting_hearth",
-    "inputs"          : {"bronze_bar": 2, "clay_mold": 1, "category:leather": 1},
+    "inputs"          : {"molten_bronze": 8, "clay_mold": 1, "category:leather": 1},
     "outputs"         : {"bronze_cleaver": 1},
     "workAmount"      : 10,
     "toolTierRequired": 1,
@@ -5297,7 +5297,7 @@
   {
     "id"              : "make_bronze_chain_flail",
     "station"         : "casting_hearth",
-    "inputs"          : {"bronze_bar": 2, "clay_mold": 1, "wooden_haft": 1, "category:leather": 1},
+    "inputs"          : {"molten_bronze": 8, "clay_mold": 1, "wooden_haft": 1, "category:leather": 1},
     "outputs"         : {"bronze_chain_flail": 1},
     "workAmount"      : 12,
     "toolTierRequired": 1,
@@ -5306,7 +5306,7 @@
   {
     "id"              : "make_bronze_rapier",
     "station"         : "casting_hearth",
-    "inputs"          : {"bronze_bar": 1, "clay_mold": 1, "category:leather": 1},
+    "inputs"          : {"molten_bronze": 4, "clay_mold": 1, "category:leather": 1},
     "outputs"         : {"bronze_rapier": 1},
     "workAmount"      : 11,
     "toolTierRequired": 1,
@@ -5315,7 +5315,7 @@
   {
     "id"              : "make_bronze_great_leaf_sword",
     "station"         : "casting_hearth",
-    "inputs"          : {"bronze_bar": 2, "clay_mold": 1, "sanded_haft": 1, "category:leather": 1},
+    "inputs"          : {"molten_bronze": 8, "clay_mold": 1, "sanded_haft": 1, "category:leather": 1},
     "outputs"         : {"bronze_great_leaf_sword": 1},
     "workAmount"      : 14,
     "toolTierRequired": 1,
@@ -5324,7 +5324,7 @@
   {
     "id"              : "make_bronze_greatcleaver",
     "station"         : "casting_hearth",
-    "inputs"          : {"bronze_bar": 3, "clay_mold": 1, "sanded_haft": 1, "category:leather": 1},
+    "inputs"          : {"molten_bronze": 12, "clay_mold": 1, "sanded_haft": 1, "category:leather": 1},
     "outputs"         : {"bronze_greatcleaver": 1},
     "workAmount"      : 15,
     "toolTierRequired": 1,
@@ -5333,7 +5333,7 @@
   {
     "id"              : "make_bronze_double_axe",
     "station"         : "casting_hearth",
-    "inputs"          : {"bronze_bar": 3, "clay_mold": 1, "sanded_haft": 1, "cordage": 4},
+    "inputs"          : {"molten_bronze": 12, "clay_mold": 1, "sanded_haft": 1, "cordage": 4},
     "outputs"         : {"bronze_double_axe": 1},
     "workAmount"      : 15,
     "toolTierRequired": 1,
@@ -5342,7 +5342,7 @@
   {
     "id"              : "make_bronze_maul",
     "station"         : "casting_hearth",
-    "inputs"          : {"bronze_bar": 3, "clay_mold": 1, "sanded_haft": 1, "category:leather": 1},
+    "inputs"          : {"molten_bronze": 12, "clay_mold": 1, "sanded_haft": 1, "category:leather": 1},
     "outputs"         : {"bronze_maul": 1},
     "workAmount"      : 14,
     "toolTierRequired": 1,
@@ -5351,7 +5351,7 @@
   {
     "id"              : "make_bronze_capped_staff",
     "station"         : "casting_hearth",
-    "inputs"          : {"bronze_bar": 1, "clay_mold": 1, "sanded_haft": 2},
+    "inputs"          : {"molten_bronze": 4, "clay_mold": 1, "sanded_haft": 2},
     "outputs"         : {"bronze_capped_staff": 1},
     "workAmount"      : 6,
     "toolTierRequired": 1,
@@ -5722,7 +5722,7 @@
   {
     "id"              : "make_bronze_javelin",
     "station"         : "casting_hearth",
-    "inputs"          : {"bronze_bar": 1, "clay_mold": 1, "wooden_haft": 1},
+    "inputs"          : {"molten_bronze": 4, "clay_mold": 1, "wooden_haft": 1},
     "outputs"         : {"bronze_javelin": 2},
     "workAmount"      : 6,
     "toolTierRequired": 1,
@@ -5833,7 +5833,7 @@
   {
     "id"              : "make_bronze_arrow",
     "station"         : "casting_hearth",
-    "inputs"          : {"branch": 1, "bronze_bar": 1, "clay_mold": 1, "category:binding": 1, "feathers": 1},
+    "inputs"          : {"branch": 1, "molten_bronze": 4, "clay_mold": 1, "category:binding": 1, "feathers": 1},
     "inputAlternatives": [{"branch": 1, "bronze_bar": 1, "clay_mold": 1, "sinew": 1, "chicken_feathers": 1}],
     "outputs"         : {"bronze_arrow": 8},
     "workAmount"      : 5,

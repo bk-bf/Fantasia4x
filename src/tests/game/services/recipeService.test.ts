@@ -18,11 +18,12 @@ describe('RecipeService (recipe registry, Stage A)', () => {
     expect(r!.inputs).toEqual({ deer_carcass: 1 });
     // Butchery multi-yield (ADR-016 follow-up): one carcass → meat + hide + bones + sinew in one run
     // (sinew is a butchery byproduct of medium/large animals now, not a separate whole-carcass recipe).
+    // What comes off a carcass is RAW sinew — a wet tendon. Drying it at the rack is what makes thread.
     expect(r!.outputs).toEqual({
       venison: 10,
       deer_hide: 3,
       medium_bones: 12,
-      sinew: 9,
+      raw_sinew: 9,
       antler_rack: 1
     });
   });
