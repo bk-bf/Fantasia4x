@@ -1,10 +1,10 @@
 ---
 id: core-stat-single-source
 title: The six core stats are re-declared by hand in ten rosters, nine abbreviation maps and three positional argument lists
-status: in-progress
+status: open
 kind: drift
 severity: high
-ready: true
+ready: false
 origin: human
 rules: []
 files:
@@ -21,9 +21,8 @@ files:
   - src/lib/utils/bodyLabels.ts
 symbols: []
 github: 2
-branch: fix/core-stat-single-source
 created: 2026-08-24
-updated: 2026-08-24
+updated: 2026-08-25
 ---
 
 # Core stats have no single declaration

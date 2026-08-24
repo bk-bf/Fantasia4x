@@ -197,6 +197,10 @@ the nightly audit reports on `ci/cl`:
 
 `--no-mon` skips registration.
 
+An interrupted run (SIGINT/SIGTERM/SIGHUP) releases its issue back to `open` before
+exiting and leaves the worktree in place. Without that a killed run leaves the issue at
+`in-progress` with a branch set, and no later run will ever pick it up again.
+
 ## Nightly run on ubuntuserver
 
 `deploy/` holds a systemd user timer that runs the whole thing at 04:00 local and hands the
@@ -206,7 +210,7 @@ report to `mon`. The units' `ExecStart` points into this checkout, so the repo o
 ```bash
 tools/audit/deploy/install.sh              # symlink the units, enable the timer
 tools/audit/deploy/install.sh --no-enable  # install only
-tools/audit/deploy/install.sh --uninstall
+tools/audit/deploy/install.sh --uninstall  # stop it autorunning; the checkout stays
 systemctl --user list-timers fantasia-audit.timer
 journalctl --user -u fantasia-audit.service -n 40
 ```
