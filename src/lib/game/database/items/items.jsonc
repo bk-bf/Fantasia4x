@@ -2128,6 +2128,7 @@
     "name": "Water",
     "type": "fluid",
     "category": "drink",
+    "hydration": 35,
     "maxDurability": 100,
     "deteriorationRate": 0,
     "poisonChance": 0,
@@ -2226,7 +2227,7 @@
     "name": "Smoked Fish", "type": "food", "category": "preserve",
     "description": "Split, brined overnight and hung a day in cold birch smoke. The smoke keeps the flies off and the flesh firm, and it will still be good long after the catch it came from would have gone.",
     "color": "#B07A45", "amount": 0, "weightKg": 0.35, "volumeL": 0.35,
-    "tier": 0, "nutrition": 55, "decaySeconds": 120000, "preservationMethod": "smoked",
+    "tier": 0, "nutrition": 55, "decaySeconds": 15000, "preservationMethod": "smoked",
     "maxDurability": 100, "deteriorationRate": 0.01
   },
   {
@@ -2234,7 +2235,7 @@
     "name": "Salt Pork", "type": "food", "category": "preserve",
     "description": "Boar cut into fist-sized pieces and packed down in a barrel under its own brine. It comes out grey and needs a long soak before anyone will eat it, and it will still be there next spring.",
     "color": "#C9A0A0", "amount": 0, "weightKg": 0.5, "volumeL": 0.45,
-    "tier": 1, "nutrition": 70, "decaySeconds": 260000, "preservationMethod": "salted",
+    "tier": 1, "nutrition": 70, "decaySeconds": 54000, "preservationMethod": "salted",
     "maxDurability": 120, "deteriorationRate": 0.008, "researchRequired": "food_preservation"
   },
   {
@@ -2242,7 +2243,7 @@
     "name": "Pickled Vegetables", "type": "food", "category": "preserve",
     "description": "Cabbage and turnip packed in a crock under salt until they sour on their own. Sharp, cold and eaten all winter by people who would rather not lose their teeth.",
     "color": "#A8B060", "amount": 0, "weightKg": 0.4, "volumeL": 0.45,
-    "tier": 1, "nutrition": 45, "decaySeconds": 220000, "preservationMethod": "pickled",
+    "tier": 1, "nutrition": 45, "decaySeconds": 36000, "preservationMethod": "pickled",
     "maxDurability": 120, "deteriorationRate": 0.008, "researchRequired": "food_preservation"
   },
   {
@@ -2250,7 +2251,7 @@
     "name": "Hard Cheese", "type": "food", "category": "preserve",
     "description": "Curd pressed under a stone, salted and turned in the dark for months until the rind goes hard as bark. A wheel is a season's milk you can carry.",
     "color": "#E2C878", "amount": 0, "weightKg": 0.45, "volumeL": 0.4,
-    "tier": 2, "nutrition": 90, "decaySeconds": 400000, "preservationMethod": "aged",
+    "tier": 2, "nutrition": 90, "decaySeconds": 90000, "preservationMethod": "aged",
     "maxDurability": 160, "deteriorationRate": 0.006, "researchRequired": "food_preservation"
   },
   {
@@ -2258,7 +2259,7 @@
     "name": "Cured Ham", "type": "food", "category": "preserve",
     "description": "A whole hind leg buried in salt for a month, washed, and hung in the rafters for a year. It is the single most valuable thing most farmhouses own and it is eaten in slivers.",
     "color": "#B0524A", "amount": 0, "weightKg": 0.8, "volumeL": 0.6,
-    "tier": 2, "nutrition": 120, "decaySeconds": 520000, "preservationMethod": "aged",
+    "tier": 2, "nutrition": 120, "decaySeconds": 110000, "preservationMethod": "aged",
     "maxDurability": 180, "deteriorationRate": 0.005, "researchRequired": "food_preservation"
   },
   {
@@ -2266,7 +2267,7 @@
     "name": "Dry Sausage", "type": "food", "category": "preserve",
     "description": "Trimmings and fat chopped fine, salted hard, packed into gut and hung until it has lost a third of its weight. Every scrap the butcher could not sell, made to last a year.",
     "color": "#8C4038", "amount": 0, "weightKg": 0.3, "volumeL": 0.25,
-    "tier": 2, "nutrition": 95, "decaySeconds": 460000, "preservationMethod": "aged",
+    "tier": 2, "nutrition": 95, "decaySeconds": 90000, "preservationMethod": "aged",
     "maxDurability": 170, "deteriorationRate": 0.005, "researchRequired": "food_preservation"
   },
   {
@@ -2274,7 +2275,7 @@
     "name": "Potted Meat", "type": "food", "category": "preserve",
     "description": "Meat cooked down to threads, packed into a crock and sealed under a finger of set tallow. Break the seal and it must be eaten; leave it and it waits.",
     "color": "#9A7048", "amount": 0, "weightKg": 0.45, "volumeL": 0.4,
-    "tier": 3, "nutrition": 110, "decaySeconds": 700000, "preservationMethod": "sealed",
+    "tier": 3, "nutrition": 110, "decaySeconds": 110000, "preservationMethod": "sealed",
     "maxDurability": 200, "deteriorationRate": 0.004, "researchRequired": "food_preservation"
   },
   {
@@ -2282,7 +2283,7 @@
     "name": "Fruit Preserve", "type": "food", "category": "preserve",
     "description": "Berries boiled down with honey until a spoon stands in it, then sealed hot in a crock. Sweet enough that nothing will grow in it, which is the trick.",
     "color": "#A03A5C", "amount": 0, "weightKg": 0.4, "volumeL": 0.35,
-    "tier": 3, "nutrition": 85, "decaySeconds": 640000, "preservationMethod": "sealed",
+    "tier": 3, "nutrition": 85, "decaySeconds": 100000, "preservationMethod": "sealed",
     "maxDurability": 200, "deteriorationRate": 0.004, "researchRequired": "food_preservation"
   },
   {
