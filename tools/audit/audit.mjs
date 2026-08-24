@@ -65,6 +65,14 @@ function cmdIndex() {
     if (matched / total < 0.8) {
       out(`[warn] low map rate — the codegraph extract (${graph.generatedAt}) is likely stale; re-run \`pnpm graph\`.`);
     }
+    // The `tested` flag comes from codegraph's heuristic. When it collapses, family F asks
+    // "is this untested?" about code that has tests -- noise, and it looks like coverage.
+    const testedRate = tested.size / Math.max(1, symbols.filter((s) => s.kind === 'function' || s.kind === 'method').length);
+    out(`graph: ${tested.size} symbols marked tested`);
+    if (testedRate < 0.05) {
+      out(`[warn] almost nothing is marked tested despite the repo having test files —`);
+      out(`[warn] codegraph's tested detection is not matching; family F verdicts will be unreliable.`);
+    }
   }
 
   L.replaceSymbols(db, symbols);
