@@ -1,0 +1,136 @@
+// Family S — single-source drift.
+//
+// Derived from docs/issues/core-stat-single-source.md, which was found by hand. The shape:
+// a fixed set is declared once properly and then restated by hand elsewhere, and the type
+// system checks the *members* of each restatement but never its *completeness or order*.
+// A `StatKey[]` annotation does not stop a list from being short one entry.
+//
+// This is the family most likely to be under-triggered rather than over-triggered: the
+// syntactic tell is weak, and the judgement is entirely "is there a canonical declaration
+// this restates?" Check the n/a rate here before trusting a clean result.
+[
+  {
+    "id": "S01",
+    "family": "single-source",
+    "tier": "T2",
+    "kind": "drift",
+    "severity": "high",
+    "title": "hand-maintained roster restates a declared set",
+    "authority": "docs/issues/core-stat-single-source.md",
+    "question": "Does this symbol write out, by hand, the members of a set that is already declared somewhere else — an interface's keys, a union's members, the ids in a data file — such that adding a member elsewhere would silently leave this list short?",
+    "fail_requires": [
+      "file:line of the hand-written list",
+      "where the set is actually declared",
+      "what goes wrong when the two disagree, stated concretely"
+    ],
+    "not_a_finding": [
+      "the canonical declaration itself",
+      "a deliberate subset with a name that says so (a filter, an allowlist, a display order for some of them)",
+      "a list whose completeness is already asserted by a test",
+      "a list derived at runtime from the canonical source (Object.keys, a .map over the data file)"
+    ],
+    "trigger": {
+      "all": [
+        { "kind_in": ["table"] },
+        { "matches": "['\"][A-Za-z_][A-Za-z0-9_]*['\"][\\s\\S]{0,120}['\"][A-Za-z_][A-Za-z0-9_]*['\"][\\s\\S]{0,120}['\"][A-Za-z_][A-Za-z0-9_]*['\"]" }
+      ]
+    },
+    "demotable": false,
+    "status": "active"
+  },
+  {
+    "id": "S02",
+    "family": "single-source",
+    "tier": "T2",
+    "kind": "drift",
+    "severity": "critical",
+    "title": "correspondence held together by a comment",
+    "authority": "docs/issues/core-stat-single-source.md",
+    "question": "Does a comment here instruct a future reader to keep two things in step — matching order, matching length, matching keys — where nothing enforces it? A comment is not a check, and the failure is silent.",
+    "fail_requires": [
+      "the comment, quoted",
+      "the two things it is holding together, with file:line for each",
+      "what silently goes wrong when they drift — the wrong value, not just 'a bug'"
+    ],
+    "not_a_finding": [
+      "a comment explaining why something is the way it is, with no instruction to maintain a correspondence",
+      "a correspondence a test already asserts, where the comment names that test"
+    ],
+    "trigger": {
+      "all": [
+        { "kind_in": ["function", "method", "store"] },
+        { "matches": "(?i)(MUST match|must be kept|keep (?:it |them |these )?in sync|keep in step|same order as|order must|mirrors? the|parallel (?:to|with)|corresponds? to the order)" }
+      ]
+    },
+    "demotable": false,
+    "status": "active"
+  },
+  {
+    "id": "S03",
+    "family": "single-source",
+    "tier": "T2",
+    "kind": "drift",
+    "severity": "medium",
+    "title": "display label mapped by hand where a lookup exists",
+    "authority": "docs/issues/core-stat-single-source.md",
+    "question": "Does this symbol map ids to display labels with its own literal table or string surgery, where the project already has one place that owns that mapping? Two copies disagree eventually, and the player sees both.",
+    "fail_requires": [
+      "file:line of the local map or the string surgery",
+      "the existing lookup it should route through",
+      "a value where the two would render differently"
+    ],
+    "not_a_finding": [
+      "the single owning lookup itself (bodyLabels.ts and its peers)",
+      "a label that is genuinely local to one screen and shares no ids with anything else",
+      "a map keyed on something that is not a data id"
+    ],
+    "trigger": {
+      "any": [
+        {
+          "all": [
+            { "kind_in": ["function", "method", "store", "markup", "table"] },
+            { "matches": "(\\bslice\\(0,\\s*[23]\\)\\s*\\.\\s*toUpperCase|toUpperCase\\(\\)\\s*\\.\\s*slice\\(0,\\s*[23]\\))" }
+          ]
+        },
+        {
+          "all": [
+            { "kind_in": ["function", "method", "store", "table"] },
+            { "matches": "['\"]?\\w+['\"]?\\s*:\\s*['\"][A-Z]{2,4}['\"]\\s*,[\\s\\S]{0,80}['\"]?\\w+['\"]?\\s*:\\s*['\"][A-Z]{2,4}['\"]\\s*,[\\s\\S]{0,80}['\"]?\\w+['\"]?\\s*:\\s*['\"][A-Z]{2,4}['\"]" }
+          ]
+        }
+      ]
+    },
+    "demotable": true,
+    "status": "active"
+  },
+  {
+    "id": "S04",
+    "family": "single-source",
+    "tier": "T2",
+    "kind": "drift",
+    "severity": "high",
+    "title": "data-file key read without validation against its roster",
+    "authority": "docs/issues/core-stat-single-source.md",
+    "question": "Does this symbol read a key straight off a definition object and fall back when it is absent, so a misspelt key in the data file is indistinguishable from an unspecified one and produces a default with no warning?",
+    "fail_requires": [
+      "file:line of the unchecked read and its fallback",
+      "the data file and field the key comes from",
+      "what the player gets when the key is misspelt — the default that silently applies"
+    ],
+    "not_a_finding": [
+      "a genuinely optional field where absent and default mean the same thing",
+      "a read whose key set is already validated by a test against the roster",
+      "a lookup that reports or throws when the key is unknown"
+    ],
+    "trigger": {
+      "all": [
+        { "kind_in": ["function", "method"] },
+        { "layer_in": ["services", "systems", "entities", "core"] },
+        { "matches": "\\bdef(?:inition)?\\??\\.|\\bsr\\??\\.|\\bentry\\??\\.|\\brow\\??\\." },
+        { "any_flag": ["hasNullishDefault", "hasOrDefault"] }
+      ]
+    },
+    "demotable": false,
+    "status": "active"
+  }
+]
