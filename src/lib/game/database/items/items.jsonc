@@ -77,6 +77,77 @@
     "decaySeconds": 1200,
     "decaysTo": "rotten_food"
   },
+  // ── Medicine: a ladder, not three foraged weeds ───────────────────────────
+  // `bestMedicine` takes the highest `medicineQuality` in stock and scales the tend roll by it, so a
+  // colony that never advances its medicine treats a mangled pawn with chewed leaves forever. Each
+  // rung is what that age could actually put on a wound.
+  {
+    "id": "honey_salve",
+    "charSpans": [ {"sheet": "items", "id": 71} ],
+    "name": "Honey Salve",
+    "type": "consumable",
+    "category": "medicine",
+    "maxDurability": 120,
+    "deteriorationRate": 0.004,
+    "description": "Woundwort worked into honey and spread on a strip of linen. Honey keeps a dressing from turning foul, which is why it was packed onto wounds for as long as anyone kept bees.",
+    "color": "#D9A441",
+    "amount": 0,
+    "weightKg": 0.15,
+    "volumeL": 0.15,
+    "tier": 1,
+    "medicineQuality": 0.75
+  },
+  {
+    "id": "spirit_tincture",
+    "charSpans": [ {"sheet": "items", "id": 71} ],
+    "name": "Spirit Tincture",
+    "type": "consumable",
+    "category": "medicine",
+    "maxDurability": 200,
+    "deteriorationRate": 0.003,
+    "description": "Staunchweed and sage steeped in distilled spirit until the liquor takes their colour. It bites going on and the wound stays clean, which nobody could explain and everybody noticed.",
+    "color": "#B8C7A8",
+    "amount": 0,
+    "weightKg": 0.12,
+    "volumeL": 0.12,
+    "tier": 2,
+    "researchRequired": "iron_working",
+    "medicineQuality": 1.1
+  },
+  {
+    "id": "surgeons_dressing",
+    "charSpans": [ {"sheet": "items", "id": 71} ],
+    "name": "Surgeon's Dressing",
+    "type": "consumable",
+    "category": "medicine",
+    "maxDurability": 260,
+    "deteriorationRate": 0.003,
+    "description": "Boiled linen, a measure of tincture and a splint of thin steel, rolled together and kept sealed until it is wanted. The first dressing that assumes someone knows what they are doing.",
+    "color": "#E4E0D4",
+    "amount": 0,
+    "weightKg": 0.2,
+    "volumeL": 0.2,
+    "tier": 3,
+    "researchRequired": "steel_making",
+    "medicineQuality": 1.5
+  },
+  {
+    "id": "emberbloom_balm",
+    "charSpans": [ {"sheet": "items", "id": 71} ],
+    "name": "Emberbloom Balm",
+    "type": "consumable",
+    "category": "medicine",
+    "maxDurability": 400,
+    "deteriorationRate": 0.002,
+    "description": "The coal-red flower rendered down with tallow and bound with gem-dust. It goes on cold and the flesh under it runs hot for a day afterwards, closing over faster than it has any business doing.",
+    "color": "#C4452E",
+    "amount": 0,
+    "weightKg": 0.15,
+    "volumeL": 0.15,
+    "tier": 4,
+    "researchRequired": "runic_inscription",
+    "medicineQuality": 2.2
+  },
   {
     "id": "woundwort",
     "charSpans": [ {"sheet": "items", "id": 115} ],
@@ -17859,20 +17930,6 @@
     "weightKg": 2.2,
     "volumeL": 1.5,
     "processingType": ["masonry"]
-  },
-  {
-    "id": "arcane_resin",
-    "charSpans": [ {"sheet": "items", "id": 71} ],
-    "name": "Arcane Binder",
-    "type": "material",
-    "category": "magic_crystal",
-    "maxDurability": 300,
-    "deteriorationRate": 0,
-    "description": "Tree resin alloyed with gem-dust into a binder that holds magic-material assemblies, Famed reforging, magic furniture, runed gear.",
-    "color": "#B070D0",
-    "amount": 0,
-    "weightKg": 0.2,
-    "volumeL": 0.2
   },
   // ════════════════════════════════════════════════════════════════════════════════════════════
   // PRODUCTION-CHAIN-III §F — Armour breadth: wire/ring sub-chain, scale, steel plate, beast/bone peak

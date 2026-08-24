@@ -59,6 +59,49 @@
     "workAmount"      : 14,
     "toolTierRequired": 0
   },
+  // ── Medicine ladder ───────────────────────────────────────────────────────
+  // Honey finally has a use: it is a real antibacterial dressing, which is what it was kept for.
+  {
+    "id"              : "make_honey_salve",
+    "discipline"      : "herbalism",
+    "station"         : "makers_bench",
+    "inputs"          : {"honey": 1, "woundwort": 2, "linen_cloth": 1},
+    "outputs"         : {"honey_salve": 2},
+    "workAmount"      : 5,
+    "toolTierRequired": 0,
+    "researchRequired": "leather_working"
+  },
+  {
+    "id"              : "brew_spirit_tincture",
+    "discipline"      : "alchemy",
+    "station"         : "alchemy_lab",
+    "inputs"          : {"distilled_spirit": 1, "woundwort": 2, "category:herb": 2},
+    "outputs"         : {"spirit_tincture": 3},
+    "workAmount"      : 8,
+    "toolTierRequired": 1,
+    "researchRequired": "iron_working"
+  },
+  {
+    "id"              : "make_surgeons_dressing",
+    "discipline"      : "alchemy",
+    "station"         : "apothecary",
+    "inputs"          : {"spirit_tincture": 1, "linen_cloth": 2, "category:steel": 1},
+    "outputs"         : {"surgeons_dressing": 4},
+    "workAmount"      : 12,
+    "toolTierRequired": 2,
+    "researchRequired": "steel_making"
+  },
+  // Emberbloom stops being a flower nothing picks.
+  {
+    "id"              : "make_emberbloom_balm",
+    "discipline"      : "alchemy",
+    "station"         : "apothecary",
+    "inputs"          : {"emberbloom": 2, "tallow": 1, "gem_dust": 1},
+    "outputs"         : {"emberbloom_balm": 3},
+    "workAmount"      : 20,
+    "toolTierRequired": 2,
+    "researchRequired": "runic_inscription"
+  },
   {
     "id"              : "make_chewed_poultice",
     "discipline"      : "herbalism",
@@ -3954,15 +3997,6 @@
     "outputs"         : {"magic_concrete": 2},
     "workAmount"      : 32,
     "toolTierRequired": 2
-  },
-  {
-    "id"              : "make_arcane_resin",
-    "station"         : "lapidary_bench",
-    "researchRequired": "runic_inscription",
-    "inputs"          : {"resin": 2, "gem_dust": 1},
-    "outputs"         : {"arcane_resin": 2},
-    "workAmount"      : 24,
-    "toolTierRequired": 1
   },
   // ════════════════════════════════════════════════════════════════════════════════════════════
   // PRODUCTION-CHAIN-III §F — Armour: mail wire/ring sub-chain, scale, steel plate, beast/bone, regalia

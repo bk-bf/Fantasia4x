@@ -778,7 +778,7 @@
       "category:steel": 4
     },
     "unlocks": {
-      "items": ["gem_dust", "magic_concrete", "arcane_resin"],
+      "items": ["gem_dust", "magic_concrete"],
       "buildings": ["magic_concrete_wall"]
     },
     "researchTime": 20,

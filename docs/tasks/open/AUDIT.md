@@ -383,6 +383,31 @@ cadence, to-hit and crit alongside damage, so a weapon's named stat is the one t
       live melt, with wooden buckets and waterskins in stock throughout and **neither ever holding it**.
       Discriminating asserts alongside: a waterskin takes water and refuses a melt, fireclay and runed
       both take one, wood refuses caustic bile and a sealed clay pot accepts it.
+- [x] **Dug soil can be LAID.** Digging turns up `poor_soil`/`loam`/`rich_soil`/`terra_preta` 1-2 at a
+      time and nothing consumed them: the `lay_*` beds only ever wanted dirt + compost + fertiliser, so a
+      colonist could dig good soil out of a riverbank and be left holding it. New
+      **`Building.buildingCostAlternatives`** (mirrors a recipe's `inputAlternatives`) — the made route
+      stays the default and the dug route pays when you have the real thing, with richer soil going
+      further (`lay_loam` takes 6 loam, or 4 rich soil, or 3 terra preta).
+      **First fix attempt was wrong and is recorded as such**: `sift_topsoil` bashed the soils into a
+      compost recipe instead of connecting them to the system they belong to. Reverted.
+      A bug in the resolver was caught by its own test before shipping — it returned null after the
+      FIRST failed alternative, so `lay_loam` would never have reached its rich-soil or terra-preta
+      options.
+- [x] **Medicine is a ladder, not three foraged weeds.** `bestMedicine` scales the tend roll by the
+      highest `medicineQuality` in stock, so a colony that never advanced treated a mangled pawn with
+      chewed leaves forever. Added **Honey Salve** (0.75, bronze), **Spirit Tincture** (1.1, iron),
+      **Surgeon's Dressing** (1.5, steel), **Emberbloom Balm** (2.2, runed) on top of moss 0.15 /
+      woundwort 0.2 / poultice 0.5. Two of them absorb dead findings rather than inventing materials:
+      honey is a genuine antibacterial dressing, and `emberbloom` stops being a flower nobody picks.
+- [x] **Humanoid enemies carry consumables.** `LootPool` was equipment-slots only, so a raider could
+      never have a phial on their belt. New `carried` block on all **15 pools** — goblins poison their
+      blades, orcs drink themselves brave, kobold trappers carry tanglefoot, caravan guards carry a
+      professional's medicine and the royal guard grand tonics. Rolled at DEATH rather than stored on
+      the mob: nothing drinks mid-fight, so a per-mob array would ship through the entity snapshot every
+      flush to describe something only the corpse reveals.
+- [x] ⚠→fixed: `dropMobGear` bailed on `!mob.equipment`, so an unarmed humanoid would have dropped
+      nothing it was carrying.
 - [x] **HEADLESS-PLAYTESTED** (`oreChain.test.ts`, real pawns over real ticks): pawns ran both legs of
       all six chains — **melt Cu 4 / Sn 4 / Pb 20 / Au 4 / Bz 4, then cast copper 40→41, tin 20, lead 1,
       gold 1, bronze 1, silver 1, ore drawn down malachite 60→57, cassiterite 60→57, galena 60→48,
@@ -886,8 +911,10 @@ Design rule (user): **TOOL = non-organic & durable → SPEED; CONSUMABLE = organ
 > DESIGN pass, not a prune — the user wants a real reagent economy here, not the products deleted.
 - [ ] **`magic_alloy_bar`** (`smelt_magic_alloy`: steel + gem_dust) has **NO consumer** — needs the `runed`-tier
       gear chain (runed weapons/armour/tools) that currently exists only as item stubs.
-- [ ] **`arcane_resin`** (`make_arcane_resin`: resin + gem_dust) has **NO consumer** — needs a rune-binding /
-      enchant recipe (bind a rune/enchant to gear; or a magical coating).
+- [x] **`arcane_resin` DELETED.** It had no consumer and its own description advertised features that do
+      not exist ("Famed reforging, magic fuel"). Wiring it to something arbitrary would have hidden that;
+      removing it means the gap shows up as a missing item when those features are built, not as a rock
+      nobody picks up. Item, recipe and the `runic_inscription` unlock reference are all gone.
 - [ ] **`mana_crystal`** (mined at `mana_crystal_vent`) is a **dead-end drop**: its only use `grind_mana_crystal`
       is shadowed by `grind_gem_dust` (both → gem_dust). Give `mana_crystal` a DISTINCT output (a mana-infusion
       reagent, not gem_dust) so it stops being shadowed and gains a purpose.
