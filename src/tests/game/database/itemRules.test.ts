@@ -439,26 +439,67 @@ const BINDING_SIZE: Record<string, number> = {
 const BINDINGS = ['cordage', 'thread', 'sinew', 'enchant_thread'];
 const slotOf = (i: ArmourItem) => i.armorProperties?.equipmentSlot ?? i.armorProperties?.slot ?? '';
 
-describe('ITEM-RULES R6 — a fastener is a real component or it is not listed', () => {
-  // You do not sew a jerkin with ROPE, and the few metres of sinew or thread that close a seam come
-  // off the same animal or the same fibre the piece is cut from — listing them made the player
-  // stockpile and haul bookkeeping. A fastener earns a line in the recipe only when it is either the
-  // STRUCTURE (withies lashed into a shell, bark tied to a foot) or a countable manufactured part
-  // (rivets, nails, mail rings, enchanted thread).
+describe('ITEM-RULES R6 — a sewn piece lists the binding that holds it together', () => {
+  // This rule used to say the opposite, and its stated reason was that listing a fastener "made the
+  // player stockpile bookkeeping". That was true when one cordage was 200g and one nail was 200g — a
+  // fastener was a heavy, annoying thing to haul, so banning it from 122 recipes bought something.
+  // The unit is fixed now (a nail is 10g, a bar draws to 300), the bookkeeping objection is gone, and
+  // what the ban left behind was a hide cap made of two hides and nothing else.
+  //
+  // What survives from the old rule: you do not sew leather with ROPE. Cordage is a lashing, not a
+  // seam, and it belongs only where it IS the structure.
   const STRUCTURAL = /branch|withy|wicker|wattle|bark|hay|straw/;
-  const SEWING = ['sinew', 'thread'];
+  const SEAM = ['category:binding', 'sinew', 'thread', 'enchant_thread', 'cotton_thread'];
+  const FASTENER = [
+    ...SEAM,
+    'cordage',
+    'rope',
+    'iron_nail',
+    'bronze_nail',
+    'steel_rivet',
+    'copper_tack',
+    'mail_rings'
+  ];
+  /** How much binding a piece of this size takes. A glove and a cuirass are not sewn with equal thread. */
+  const BINDING_SIZE: Record<string, number> = {
+    head: 1,
+    gloves: 1,
+    boots: 1,
+    socks: 1,
+    bracers: 1,
+    belt: 1,
+    back2: 1,
+    greaves: 2,
+    back: 2,
+    offHand: 2,
+    bodyBase: 3,
+    bodyMid: 3,
+    bodyOuter: 3
+  };
 
-  it('no sewn garment lists its sewing thread', () => {
+  it('every sewn piece names what holds it together', () => {
     const bad: string[] = [];
     for (const i of WEARABLE) {
       const rec = firstRecipe(i.id)!;
       const ins = (rec.inputs ?? {}) as Record<string, number>;
-      for (const b of SEWING) if (ins[b] !== undefined) bad.push(`${i.id} lists ${ins[b]}x ${b}`);
+      const slot = slotOf(i);
+      if (!BINDING_SIZE[slot]) continue;
+      const keys = [
+        ...Object.keys(ins),
+        ...Object.values(rec.dynamicRecipe ?? {}).map((d) => d.acceptsCategory ?? '')
+      ].join(' ');
+      // Wood and metal pieces are pegged, riveted or forged rather than stitched.
+      if (
+        !/leather|hide|pelt|fur|buckskin|kidskin|cloth|linen|wool|silk|cotton|sackcloth/.test(keys)
+      )
+        continue;
+      if (!FASTENER.some((f) => ins[f] !== undefined))
+        bad.push(`${i.id} is cut from ${keys.trim()} and nothing holds it together`);
     }
     expect(bad, bad.join('; ')).toEqual([]);
   });
 
-  it('cordage appears only where it is the structure', () => {
+  it('cordage appears only where it is the structure — a seam is not lashed with rope', () => {
     const bad: string[] = [];
     for (const i of WEARABLE) {
       const rec = firstRecipe(i.id)!;
@@ -474,8 +515,24 @@ describe('ITEM-RULES R6 — a fastener is a real component or it is not listed',
     expect(bad, bad.join('; ')).toEqual([]);
   });
 
+  it('a binding slot names the CATEGORY, so any threading will do', () => {
+    // A cured hood does not become impossible to craft because the colony has linen thread and no
+    // sinew. Naming one material in a seam slot is the same mistake as a `category:leather` piece
+    // demanding one species.
+    const bad: string[] = [];
+    for (const i of WEARABLE) {
+      const ins = (firstRecipe(i.id)!.inputs ?? {}) as Record<string, number>;
+      // A RUNED piece is woven WITH enchanted thread; that is what its name claims and R5 enforces,
+      // so naming the material there is the point rather than a mistake.
+      if (/rune/.test(i.id)) continue;
+      for (const k of ['sinew', 'thread', 'enchant_thread', 'cotton_thread'])
+        if (ins[k] !== undefined)
+          bad.push(`${i.id} demands ${k} by name — a seam takes \`category:binding\``);
+    }
+    expect(bad, bad.join('; ')).toEqual([]);
+  });
+
   it('every piece still costs SOMETHING', () => {
-    // Stripping the fastener must never leave a recipe that produces armour out of thin air.
     const bad = WEARABLE.filter((i) => {
       const rec = firstRecipe(i.id)!;
       return !Object.keys(rec.inputs ?? {}).length && !Object.keys(rec.dynamicRecipe ?? {}).length;
@@ -485,9 +542,7 @@ describe('ITEM-RULES R6 — a fastener is a real component or it is not listed',
 });
 
 // R7 asks whether a NAME tells the truth about its material, which has nothing to do with whether the
-// piece soaks damage — so it runs over every craftable, not just `WEARABLE`. Scoped to armour it could
-// not see a carry aid, a quiver or a tool, and `hide_scrip`/`hide_tool_roll` sat for months calling
-// themselves hide while their recipe asked for tanned leather.
+// piece soaks damage — so it runs over every craftable, not just `WEARABLE`.
 const NAMED_MATERIAL = CRAFTABLE.filter((i) => recipesByOutput.has(i.id)) as ArmourItem[];
 
 describe('ITEM-RULES R7 — hide is not leather', () => {
@@ -1012,5 +1067,73 @@ describe('ITEM-RULES R15 — a fluid states what material may hold it', () => {
             `${r.id} asks for ${k} at ${r.station ?? 'nowhere'}, which cannot hold it and nothing can carry it there`
           );
     expect(bad, bad.join('; ')).toEqual([]);
+  });
+});
+
+// ── R16: what holds a thing together is a believable share of the thing ─────────────────────────
+// One law for BOTH families, because they failed the same way. A nail was 0.2 kg, so a 3 kg chest
+// carried 1.2 kg of nails; a seam was picked off a hand-written size table, so a cap took the same
+// binding as an 18 kg plate took three of. In both cases the COUNT looked plausible and the MASS was
+// nonsense, and nothing was checking the mass.
+//
+// The band is deliberately wide — a mail hauberk really is mostly rings, a frame pack really is mostly
+// leather. What it catches is the order-of-magnitude error: fastenings that outweigh the object, or
+// that round down to a token.
+describe('ITEM-RULES R16 — a fastening is a believable share of what it fastens', () => {
+  const UNIT: Record<string, number> = {};
+  for (const i of ITEMS as Item[]) if (i.weightKg) UNIT[i.id] = i.weightKg;
+  const bindingUnit = Math.min(
+    ...(ITEMS as Item[])
+      .filter((i) => i.category === 'binding' && i.weightKg)
+      .map((i) => i.weightKg!)
+  );
+  const massOf = (k: string, q: number) =>
+    (k === 'category:binding' ? bindingUnit : (UNIT[k] ?? 0)) * q;
+  const FASTENERS = [
+    'category:binding',
+    'sinew',
+    'thread',
+    'enchant_thread',
+    'cotton_thread',
+    'iron_nail',
+    'bronze_nail',
+    'steel_rivet',
+    'copper_tack',
+    'mail_rings'
+  ];
+  // Mail is not FASTENED with rings, it is MADE of them; a bow's sinew backing is the same.
+  const IS_THE_PIECE = /mail_|_backed_bow|weave_|spin_|reel_|dry_sinew/;
+
+  it('no fastening outweighs a third of the thing it holds together', () => {
+    const bad: string[] = [];
+    for (const r of RECIPES as unknown as {
+      id: string;
+      inputs?: Record<string, number>;
+      outputs?: Record<string, number>;
+    }[]) {
+      if (IS_THE_PIECE.test(r.id)) continue;
+      const ins = r.inputs ?? {};
+      const fast = FASTENERS.filter((f) => ins[f] !== undefined);
+      if (!fast.length) continue;
+      const fm = fast.reduce((n, f) => n + massOf(f, ins[f]), 0);
+      const om = Object.entries(r.outputs ?? {}).reduce((n, [o, q]) => n + massOf(o, q), 0);
+      if (om <= 0) continue;
+      if (fm > om * 0.34)
+        bad.push(`${r.id}: ${fm.toFixed(2)}kg of fastening on a ${om.toFixed(2)}kg product`);
+    }
+    expect(bad, bad.join('; ')).toEqual([]);
+  });
+
+  it('every binding material weighs what a thread weighs', () => {
+    // The moment one of them is four times the others, every recipe that uses it is silently wrong —
+    // which is exactly what `enchant_thread` at 0.2kg did to the whole rune-woven line.
+    const units = (ITEMS as Item[])
+      .filter((i) => i.category === 'binding')
+      .map((i) => i.weightKg ?? 0);
+    expect(units.length, 'the binding pool exists').toBeGreaterThan(2);
+    expect(
+      Math.max(...units) / Math.min(...units),
+      'binding units are all the same size'
+    ).toBeLessThanOrEqual(1.5);
   });
 });

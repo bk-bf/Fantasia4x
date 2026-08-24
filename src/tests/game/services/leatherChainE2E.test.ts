@@ -122,7 +122,14 @@ describe('leather chain — physical pawn pipeline (HeadlessSession, real ticks)
         pawns: [{ count: 6, skillLevel: 12 }],
         needsDisabled: ['hunger', 'fatigue'],
         buildings: [{ id: 'makers_bench' }, { id: 'weaving_frame' }, { id: 'spinning_wheel' }],
-        items: { buckskin: 20, cordage: 20, goat_wool: 40, cured_deer_hide: 20 },
+        items: {
+          buckskin: 20,
+          cordage: 20,
+          goat_wool: 40,
+          cured_deer_hide: 20,
+          sinew: 40,
+          thread: 40
+        },
         seedEntities: false
       })
     );

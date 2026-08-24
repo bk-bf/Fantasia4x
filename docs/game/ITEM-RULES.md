@@ -115,11 +115,38 @@ recipe states, at minimum:
 - [ ] the **species material** it is cut from, by name, in a quantity that matches the piece's size
       (a cuirass is not one hide; a glove is);
 - [ ] its **metal** component, if the class calls for one, in the ratio above;
-- [ ] any **fitting that is a real component** — rivets, nails, mail rings, enchanted thread. A
-      fastener is listed only when it is a countable manufactured part, or when it IS the structure
-      (withies lashed into a shell, bark tied to a foot). **Sewing thread is never a line item**: you
-      do not sew a jerkin with rope, and the sinew that closes a seam came off the same animal the
-      piece was cut from. Listing it made the player stockpile bookkeeping. R6 enforces this;
+- [ ] the **binding that holds it together** — a sewn piece names it. Leather and hide take `sinew`,
+      cloth takes `thread`, runed work takes `enchant_thread`, and the quantity is in step with the
+      size of the piece (1 for a cap or a glove, 2 for greaves or a cloak, 3 for a torso). **A stone-age
+      piece takes sinew, never thread** — thread is spun at a bronze-age wheel, and R4 will fail a
+      tier-0 garment that waits on one.
+      **This rule used to say the opposite** and its reason was that listing a fastener "made the player
+      stockpile bookkeeping". That was true when one cordage weighed 200 g and one nail weighed 200 g:
+      a fastener really was a heavy, annoying thing to haul. Once the unit was corrected (a nail is
+      10 g, a bar draws to 300) the objection vanished, and what the ban had left behind was a hide cap
+      made of two hides and nothing else — 122 pieces with no binding at all. **A rule outlives its
+      reason quietly; check the reason still holds before enforcing it.**
+- [ ] **A seam slot names `category:binding`, never one material.** A cured hood does not become
+      impossible to craft because the colony has linen thread and no sinew. The pool is `sinew`,
+      `thread`, `cotton_thread` and `enchant_thread`, all **50 g a unit** — the moment one of them is
+      four times the others every recipe that uses it is silently wrong, which is what
+      `enchant_thread` at 0.2 kg did to the whole rune-woven line (a glove was 67% thread by mass).
+      The exception is a piece whose NAME claims the material: a Rune-Woven Robe is woven *with*
+      enchanted thread, so it names it, exactly as a species-named piece demands its species.
+- [ ] **Raw sinew is not thread.** What comes off a carcass is a wet tendon; it is dried hard and
+      shredded before anyone sews with it. Butchery yields `raw_sinew`, the drying rack turns 3 into
+      2 `sinew`. Wool needed the same correction — a fibre reaches the loom or the needle *processed*,
+      never raw.
+- [ ] **One law for every fastening, and it is about MASS: ~8% of what it holds together.** Nails and
+      seams failed identically — a nail was 0.2 kg so a 3 kg chest carried 1.2 kg of them, and a seam
+      came off a hand-written size table so a cap took one unit and an 18 kg plate took three. **In
+      both cases the COUNT looked plausible and the MASS was nonsense, and nothing was checking the
+      mass.** **R16** checks it for both families, with a wide band (a third of the product) so it
+      catches order-of-magnitude errors rather than dictating balance. Mail rings and a bow's sinew
+      backing are exempt: those ARE the piece, not what fastens it.
+- [ ] **You still do not sew leather with ROPE.** Cordage is a lashing, not a seam — it belongs only
+      where it IS the structure (withies lashed into a shell, bark tied to a foot). Rivets, nails and
+      mail rings stay as countable manufactured parts. R6 enforces both halves;
 - [ ] a `workAmount` in step with its neighbours.
 
 ## Species materials, and what the name must say
