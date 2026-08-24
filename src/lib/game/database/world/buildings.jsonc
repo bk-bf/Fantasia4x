@@ -1982,7 +1982,7 @@
   {
     "id": "crucible_steelworks",
     "ageTier": "steel:1",
-    "name": "Crucible Steelworks",
+    "name": "Fire-brick Steelworks",
     "color": "#8A7A6A",
     "charSpans": [ {"sheet": "tiles", "id": 14} ],
     "transparentBg": true,

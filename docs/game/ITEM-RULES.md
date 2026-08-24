@@ -235,6 +235,16 @@ carrying no `tier` at all, which put a tier-3 bear's hide in the stone-age colum
       it as a violation.
 - [ ] The tier reads in the name: a tier-0 piece uses a crude, historically-real term ("Hide
       Foot-Wraps"), never a term that could belong to a later tier. See the naming rules in AGENTS.md.
+- [ ] **MATERIAL, then item type.** That is the shape: `Fireclay Crucible`, `Iron-Ringed Belt`,
+      `Steel Plate Cuirass`. A **type word must never do the qualifier's job** — "Crucible Steelworks"
+      used a vessel type where the material belongs and became `Fire-brick Steelworks`, which is what
+      its 24 fire bricks say. `Runic Crucible` was already right. The same slip is what made
+      `iron_bar` read "Bloomery Iron" (a furnace, not a material) while every other bar in the game is
+      `<Metal> Bar`.
+      **The one exception is a family distinguished by process rather than material**: the steel grades
+      (Bloom, Blister, Shear, Crucible, Mild, Pattern-Welded Steel) are all steel, so there is no
+      material to name and the process is the only axis that separates them. Those are real
+      metallurgical grade names and stay.
 - [ ] **The plainest accurate word wins.** This is not a ban on period vocabulary: `greaves`,
       `bracers`, `cuirass`, `coif` and `jerkin` are the genre's shared language, used across dozens of
       pieces, learned once, with no plain synonym that says the same thing. What is banned is the

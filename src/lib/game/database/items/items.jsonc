@@ -1388,7 +1388,7 @@
   {
     "id": "fireclay_crucible",
     "charSpans": [ {"sheet": "items", "id": 41} ],
-    "name": "Crucible",
+    "name": "Fireclay Crucible",
     "type": "container",
     "category": "storage",
     "maxDurability": 90,
