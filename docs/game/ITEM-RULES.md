@@ -144,7 +144,43 @@ recipe states, at minimum:
       mass.** **R16** checks it for both families, with a wide band (a third of the product) so it
       catches order-of-magnitude errors rather than dictating balance. Mail rings and a bow's sinew
       backing are exempt: those ARE the piece, not what fastens it.
-- [ ] **You still do not sew leather with ROPE.** Cordage is a lashing, not a seam — it belongs only
+- [ ] **A category pool prices its members by what they cost to HAVE (`craftValue`).** A `category:`
+      slot takes whatever is cheapest to hand, which is fair only when the members cost the same to
+      produce. They rarely do: cordage is plaited at a craft spot on turn one, sinew needs a carcass
+      and a drying rack, thread a bronze-age wheel, enchant-thread five steps ending at a runed loom.
+      Priced one-for-one the cheapest always wins **and the slot is free** — a hide hood costing "1
+      binding" cost one cord.
+      A crude material is worth a FRACTION of a unit, so the recipe consumes more of it. A seam is
+      **4 cordage, 2 sinew, or 1 thread**: same job, same finished piece, honest difference in effort.
+      Set it once on the material; a single recipe that values something differently can override with
+      `costFactor` on its dynamic slot. **R17** fails a mixed-age pool that ships unpriced.
+- [ ] **A missing material is not a licence to reach for any material.** When a piece has no binding,
+      the answer is the binding it would actually be made with — not whatever the pool happens to
+      contain. Hide caps, gloves and boots were fastened with **8 bronze nails**; their own siblings
+      (bracers, greaves, jerkin) were stitched. Nails and rivets belong on plate, splint, shields,
+      packs, belts and boxes; a cap is sewn.
+- [ ] **Everything you fasten with is the same size of thing — 50 g.** Seams and lashings do different
+      jobs, but if their units differ then "1x" means two different amounts depending which one an
+      author reaches for. `cordage` was **0.2 kg and cost five gathers of fibre**, so it was four times
+      the effort of a sinew for the same job, and 31 of its 48 recipes asked for exactly one. The unit
+      is split four ways (`make_cordage` yields 4 from the same 5 fibre) and every count multiplied to
+      match: **identical mass everywhere, four times the granularity.** R16 checks both the unit sizes
+      and the cost of one cordage against its fibre.
+- [ ] **Everything you fasten with is the same size of thing — 50 g.** Seams and lashings do different
+      jobs, but if their units differ then "1x" means two different amounts depending which one an
+      author reaches for. `cordage` was **0.2 kg and cost five gathers of fibre**, four times the
+      effort of a sinew for the same job, and 31 of its 48 recipes asked for exactly one. The unit is
+      split four ways (`make_cordage` yields 4 from the same 5 fibre) and every count multiplied to
+      match: **identical mass everywhere, four times the granularity.** R16 checks the unit sizes and
+      the fibre cost of one cordage.
+- [ ] **The binding pool must reach back to the FIRST AGE.** A stone-age colony laces hide with plaited
+      cord at a craft spot on turn one. When cordage was 0.2 kg it was rope and rightly excluded from
+      seams — but shrinking its unit to 50 g made it a thong, and the exclusion should have gone with
+      it. It did not, which left the whole primitive hide line waiting on butchery *plus* a drying rack
+      for sinew. **Cordage is in the pool; `rope` at 1.1 kg is not, because that is still rope.**
+      Second time in one pass that a rule outlived the number it was written for: when you change a
+      unit, re-read every rule that mentions the material.
+- [ ] **You still do not sew leather with ROPE.** Rope is a lashing, not a seam — it belongs only
       where it IS the structure (withies lashed into a shell, bark tied to a foot). Rivets, nails and
       mail rings stay as countable manufactured parts. R6 enforces both halves;
 - [ ] a `workAmount` in step with its neighbours.

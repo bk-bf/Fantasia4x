@@ -52,6 +52,13 @@ const BUILDING_DEFS_FOR_ITEMS = buildingsData as unknown as import('../core/type
 // into BuildingService). Re-exported for existing importers.
 export { itemMatchesCostCategory } from '../core/itemDefs';
 
+/** How many units of a `category:` cost ONE of this item satisfies (see `Item.craftValue`). A crude
+ *  material is worth a fraction, so the slot consumes more of it. Defaults to 1. */
+function craftValueOf(item: { craftValue?: number } | undefined | null): number {
+  const v = item?.craftValue;
+  return typeof v === 'number' && v > 0 ? v : 1;
+}
+
 // §B Durability defaults — every item weathers when left exposed (loose, unsheltered).
 // Explicit `deteriorationRate`/`maxDurability` on an item override these. Rate 0 = weather-immune.
 const DEFAULT_MAX_DURABILITY = 100;
@@ -559,16 +566,20 @@ export class ItemServiceImpl implements ItemService {
         const cat = key.slice('category:'.length);
         let need = qty;
         for (const item of ITEMS_DATABASE) {
-          if (need <= 0) break;
+          if (need <= 1e-9) break;
           if (!itemMatchesCostCategory(item, cat)) continue;
           const avail = this.getAvailableQuantity(item.id, gameState) - (used[item.id] ?? 0);
           if (avail <= 0) continue;
-          const take = Math.min(avail, need);
+          // A crude material satisfies only a fraction of a unit, so more of it is consumed for the
+          // same slot — cordage is a quarter of a seam, thread is a whole one. Without this the
+          // cheapest member always wins and a category slot costs nothing.
+          const worth = craftValueOf(item);
+          const take = Math.min(avail, Math.ceil(need / worth));
           out[item.id] = (out[item.id] ?? 0) + take;
           used[item.id] = (used[item.id] ?? 0) + take;
-          need -= take;
+          need -= take * worth;
         }
-        if (need > 0) return null;
+        if (need > 1e-9) return null;
       } else {
         const avail = this.getAvailableQuantity(key, gameState) - (used[key] ?? 0);
         if (avail < qty) return null;
@@ -586,8 +597,9 @@ export class ItemServiceImpl implements ItemService {
     for (const [key, qty] of Object.entries(cost)) {
       if (key.startsWith('category:')) {
         const cat = key.slice('category:'.length);
-        const rep = ITEMS_DATABASE.find((i) => itemMatchesCostCategory(i, cat))?.id ?? key;
-        out[rep] = (out[rep] ?? 0) + qty;
+        const repItem = ITEMS_DATABASE.find((i) => itemMatchesCostCategory(i, cat));
+        const rep = repItem?.id ?? key;
+        out[rep] = (out[rep] ?? 0) + Math.ceil(qty / craftValueOf(repItem));
       } else {
         out[key] = (out[key] ?? 0) + qty;
       }

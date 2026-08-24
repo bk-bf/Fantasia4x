@@ -181,6 +181,13 @@ export interface DynamicIngredientSlot {
   /** Units consumed from the chosen ingredient */
   quantity: number;
   /**
+   * Per-ingredient DISCOUNT inside this slot: `{ cordage: 0.25 }` means one cordage only satisfies a
+   * quarter of a unit, so the slot takes four of them. Overrides the material's own `craftValue`.
+   * Use it where one recipe values a material differently from the rest of the game; otherwise set
+   * `craftValue` on the material once and every slot inherits it.
+   */
+  costFactor?: Record<string, number>;
+  /**
    * Per-ingredient overrides applied to the crafted item's display/stats.
    * Key = source itemId, value = overrides.
    */
@@ -256,6 +263,20 @@ export interface Recipe {
 }
 
 export interface Item {
+  /**
+   * How many units of a `category:` cost ONE of this item satisfies. Default 1.
+   *
+   * A category slot takes whatever is cheapest to hand, which is only fair when the members cost
+   * roughly the same to produce. They often do not: `cordage` is plaited from plant fibre at a craft
+   * spot on turn one, `sinew` needs a carcass and a drying rack, `thread` needs a bronze-age spinning
+   * wheel, `enchant_thread` needs five steps ending at a runed loom. Priced at one-for-one the cheapest
+   * always wins and the slot is free.
+   *
+   * So a crude material is worth a FRACTION of a unit and the recipe takes more of it: a seam is
+   * 4 cordage, 2 sinew, or 1 thread. Same job, same finished piece, honest difference in effort.
+   */
+  craftValue?: number;
+
   /** COMBAT-BALANCE task 7: standing this item lends its bearer while EQUIPPED, wielded or worn
    *  (core/prestige.computePrestige). Worn regalia states it on `armorProperties`; a carried standard
    *  states it here, because a banner is not armour and being seen holding it is the point of it. */

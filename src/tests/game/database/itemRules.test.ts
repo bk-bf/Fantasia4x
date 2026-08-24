@@ -499,18 +499,20 @@ describe('ITEM-RULES R6 — a sewn piece lists the binding that holds it togethe
     expect(bad, bad.join('; ')).toEqual([]);
   });
 
-  it('cordage appears only where it is the structure — a seam is not lashed with rope', () => {
+  it('ROPE appears only where it is the structure — a seam is not lashed with rope', () => {
     const bad: string[] = [];
     for (const i of WEARABLE) {
       const rec = firstRecipe(i.id)!;
       const ins = (rec.inputs ?? {}) as Record<string, number>;
-      if (ins['cordage'] === undefined) continue;
+      // Cordage moved INTO the binding pool when its unit shrank to a thong; `rope` at 1.1kg is
+      // still rope, and nothing is sewn with it.
+      if (ins['rope'] === undefined) continue;
       const keys = [
         ...Object.keys(ins),
         ...Object.values(rec.dynamicRecipe ?? {}).map((d) => d.acceptsCategory ?? '')
       ];
       if (!keys.some((k) => STRUCTURAL.test(k)))
-        bad.push(`${i.id} is lashed with cordage but nothing about it is lashed`);
+        bad.push(`${i.id} is lashed with rope but nothing about it is lashed`);
     }
     expect(bad, bad.join('; ')).toEqual([]);
   });
@@ -1135,5 +1137,37 @@ describe('ITEM-RULES R16 — a fastening is a believable share of what it fasten
       Math.max(...units) / Math.min(...units),
       'binding units are all the same size'
     ).toBeLessThanOrEqual(1.5);
+  });
+});
+
+// ── R17: a category pool spanning ages must price its members ───────────────────────────────────
+// A `category:` slot takes whatever is cheapest to hand. That is fair when the members cost the same
+// to produce and a lie when they do not: `cordage` is plaited at a craft spot on turn one, `sinew`
+// needs a carcass and a drying rack, `thread` a bronze-age wheel, `enchant_thread` five steps ending
+// at a runed loom. Priced one-for-one the cheapest always wins and the slot is free — which is exactly
+// what a hide hood costing "1 binding" meant when that binding could be a single cord.
+describe('ITEM-RULES R17 — a category pool prices its members by what they cost to have', () => {
+  const pool = (cat: string) => (ITEMS as Item[]).filter((i) => i.category === cat);
+
+  it('every binding material states what a unit of it is worth', () => {
+    const bad = pool('binding')
+      .filter((i) => !(typeof i.craftValue === 'number' && i.craftValue > 0))
+      .map((i) => `${i.id} is in a category slot with no \`craftValue\` — it will win every slot free`);
+    expect(bad, bad.join('; ')).toEqual([]);
+  });
+
+  it('the crude material is worth less than the worked one', () => {
+    const v = (id: string) => (ITEMS as Item[]).find((i) => i.id === id)?.craftValue ?? 1;
+    // turn-one cord < carcass-and-rack sinew < bronze-age spun thread
+    expect(v('cordage'), 'cordage is the crudest').toBeLessThan(v('sinew'));
+    expect(v('sinew'), 'sinew is cruder than spun thread').toBeLessThan(v('thread'));
+  });
+
+  it('a pool whose members span more than one age is not priced flat', () => {
+    // The failure this catches is subtle: someone adds a late-age material to an early-age pool and
+    // every recipe using that slot silently gets cheaper, because the new member is never chosen but
+    // the old cheap one is still worth a full unit.
+    const values = new Set(pool('binding').map((i) => i.craftValue ?? 1));
+    expect(values.size, 'binding members are not all worth the same').toBeGreaterThan(1);
   });
 });
