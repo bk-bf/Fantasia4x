@@ -10,7 +10,9 @@
 #   3. re-extract the codegraph (reachability triggers read it)
 #   4. re-index + re-plan  -> verdicts whose code did not move stay done
 #   5. run the audit until the budget runs out
-#   6. hand the result to mon so it can be read from anywhere
+#   6. raise confirmed findings onto the issue board, and commit it
+#   7. work any issue a person marked `ready: true` -> a PR on GitHub
+#   8. hand the result to mon so it can be read from anywhere
 #
 # Environment (all optional, defaults suit ubuntuserver):
 #   AUDIT_REPO      main checkout            ~/Projects/Fantasia4x
@@ -22,7 +24,9 @@
 #   AUDIT_MODEL     model for the loop       sonnet
 #   AUDIT_MON       mon binary               ~/Documents/Projects/mon/mon
 #   AUDIT_TAG       mon tag                  ci/cl
+#   AUDIT_FIXES     issues to attempt per night   2
 #   AUDIT_NO_MON=1  skip the mon handoff (for a manual test run)
+#   AUDIT_NO_FIX=1  skip phase 3 entirely
 
 set -uo pipefail
 
@@ -35,6 +39,7 @@ WORKERS="${AUDIT_WORKERS:-3}"
 MODEL="${AUDIT_MODEL:-sonnet}"
 MON="${AUDIT_MON:-$HOME/Documents/Projects/mon/mon}"
 TAG="${AUDIT_TAG:-ci/cl}"
+FIXES="${AUDIT_FIXES:-2}"
 BRANCH="audit-ledger"
 
 # claude lives in ~/.local/bin, which is on PATH in a login shell and in the unit, but not
@@ -125,6 +130,35 @@ say "run exited $RUN_RC"
 AFTER=$( cd "$TREE" && "$NODE" tools/audit/audit.mjs status | sed -n 's/^work .*done \([0-9]*\) .*/\1/p' )
 say "verdicts: ${BEFORE:-?} -> ${AFTER:-?}"
 
+# --- 6. raise onto the board -------------------------------------------------
+# Everything lands as `ready: false`. Nothing reaches GitHub or the fixer until a person
+# has read it and flipped that, which is the only gate between the audit and the repo.
+say "--- raising findings onto the board"
+( cd "$TREE" && "$NODE" tools/audit/audit.mjs issues ) || say "WARN: issue raising failed"
+
+if [ -n "$(git -C "$TREE" status --porcelain docs/issues)" ]; then
+  git -C "$TREE" add docs/issues
+  git -C "$TREE" -c user.name="fantasia-audit" -c user.email="audit@localhost" \
+    commit -q -m "docs(issues): board refresh $STAMP" || say "WARN: board commit failed"
+  git -C "$TREE" push -q origin "$BRANCH" || say "WARN: board push failed; next run retries"
+  say "board committed and pushed"
+else
+  say "board unchanged"
+fi
+
+# Anything already marked ready gets its GitHub issue; the rest stay on the board only.
+( cd "$TREE" && "$NODE" tools/audit/audit.mjs publish ) || say "WARN: publish failed"
+
+# --- 7. the fixer ------------------------------------------------------------
+if [ "${AUDIT_NO_FIX:-0}" = 1 ]; then
+  say "AUDIT_NO_FIX=1 — skipping phase 3"
+else
+  say "--- fixer: up to $FIXES issue(s)"
+  for _ in $(seq 1 "$FIXES"); do
+    ( cd "$TREE" && "$NODE" tools/audit/fix.mjs --next ) || break
+  done
+fi
+
 # --- 6. mon ------------------------------------------------------------------
 # The audit itself is deterministic and needs no agent. What is worth a session is reading
 # the night's findings and saying which ones matter, somewhere reachable from a phone.
@@ -140,13 +174,15 @@ elif [ -x "$MON" ]; then
   $NODE tools/audit/audit.mjs findings
   $NODE tools/audit/audit.mjs na
   $NODE tools/audit/audit.mjs demote
+  $NODE tools/audit/audit.mjs board
 
 Say what changed since yesterday and what is worth acting on, in one paragraph a
 person can read on a phone. Lead with the most severe finding, not the newest.
 Verify each fail you mention against the source it cites and drop any whose
 evidence does not hold — a fail with wrong line numbers is noise. If \`na\` shows a
 rule answering n/a on most of its matches, say which rule and that its trigger is
-too broad. If nothing meaningful landed, say that in one line rather than padding.
+too broad. Name any issue the board gained tonight that looks worth marking \`ready: true\`,
+and any PR the fixer opened. If nothing meaningful landed, say that in one line rather than padding.
 The run log is at $LOG." \
     --project "$TREE" \
     --title "Fantasia4x nightly code audit — $STAMP" \

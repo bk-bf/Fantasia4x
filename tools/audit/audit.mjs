@@ -11,6 +11,9 @@
 //   audit na             n/a verdicts + per-rule n/a rate (rule-scope review)
 //   audit t0             deterministic checks (ADR constant drift, ADR coverage gap)
 //   audit demote         T2 rules that have earned a move down to T0
+//   audit issues         phase 2: confirmed findings -> docs/issues/*.md
+//   audit publish        phase 2: ready issues -> GitHub issues
+//   audit board          every issue on the board, by status
 //   audit export         write the ledger out as JSONL for git
 //   audit rules          list loaded rules and validation errors
 
@@ -27,6 +30,9 @@ import { makeContext, match } from './lib/triggers.mjs';
 import { buildPrompt } from './lib/prompt.mjs';
 import { parseResponse, validate } from './lib/verdict.mjs';
 import { adrConstDrift, adrCoverage } from './lib/t0.mjs';
+import * as I from './lib/issues.mjs';
+import * as GH from './lib/github.mjs';
+import { groupFindings, upsertIssue } from './lib/raise.mjs';
 
 const ROOT = process.env.AUDIT_ROOT || join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 // Stable by default so `audit release` can find this machine's claims across separate
@@ -322,6 +328,110 @@ function cmdDemote() {
   out('Its verdicts stay in the ledger as the record of why it moved.');
 }
 
+
+// --- phase 2: findings -> issues -> GitHub -----------------------------------
+
+function cmdIssues() {
+  const db = L.open();
+  const { rules } = loadRules();
+  const byId = new Map(rules.map((r) => [r.id, r]));
+  const groups = groupFindings(db);
+  if (groups.length === 0) { out('no open findings to raise'); return; }
+
+  if (flag('dry-run')) {
+    out(`${groups.length} issue(s) would be written:`);
+    for (const g of groups) {
+      out(`  ${g.rule_id.padEnd(6)} ${String(g.findings.length).padStart(3)} finding(s)  ${g.group}`);
+    }
+    return;
+  }
+
+  const counts = {};
+  for (const g of groups) {
+    const r = upsertIssue(ROOT, g, byId);
+    counts[r.action] = (counts[r.action] ?? 0) + 1;
+    if (r.action === 'created') out(`  created  docs/issues/${r.id}.md  (${g.findings.length} findings)`);
+    else if (r.action === 'updated') out(`  updated  docs/issues/${r.id}.md  (${g.findings.length} findings)`);
+  }
+  out('');
+  out(Object.entries(counts).map(([k, v]) => `${k}: ${v}`).join('  '));
+  out('');
+  out('All raised as `ready: false`. Nothing is worked on until you flip that.');
+}
+
+function cmdPublish() {
+  const issues = I.listIssues(ROOT);
+  if (issues.length === 0) { out('no issues on the board'); return; }
+
+  const bad = issues.flatMap((i) => I.validate(i).map((e) => `${i.data.id ?? i.path}: ${e}`));
+  if (bad.length) {
+    for (const b of bad) out(`[invalid] ${b}`);
+    out('');
+    out('fix the board before publishing');
+    process.exit(1);
+  }
+
+  if (!GH.available(ROOT)) { out('gh is not authenticated here'); process.exit(1); }
+
+  // Publishing an unread issue would put the audit's raw output in front of anyone watching
+  // the repo. `ready` is the same gate the fixer uses.
+  const only = arg('id', null);
+  const wanted = issues.filter((i) =>
+    (only ? i.data.id === only : i.data.ready === true) && i.data.status !== 'closed');
+  if (wanted.length === 0) {
+    out(only ? `no issue with id ${only}` : 'no issue is marked ready: true');
+    return;
+  }
+
+  GH.ensureLabels(ROOT, wanted.flatMap((i) => I.labelsFor(i.data)));
+
+  for (const issue of wanted) {
+    const repoPath = `docs/issues/${issue.data.id}.md`;
+    const body = I.githubBody(issue, { repoPath });
+    const labels = I.labelsFor(issue.data);
+    if (flag('dry-run')) { out(`  would publish ${issue.data.id} (${issue.data.github ? 'edit #' + issue.data.github : 'create'})`); continue; }
+
+    if (issue.data.github) {
+      const r = GH.editIssue(ROOT, issue.data.github, { title: issue.data.title, body, labels });
+      out(r.ok ? `  updated  #${issue.data.github}  ${issue.data.id}`
+               : `  [fail]   #${issue.data.github}  ${r.err}`);
+    } else {
+      const r = GH.createIssue(ROOT, { title: issue.data.title, body, labels });
+      if (r.ok) {
+        I.patchIssue(issue.path, { github: r.number });
+        out(`  created  #${r.number}  ${issue.data.id}`);
+      } else {
+        out(`  [fail]   ${issue.data.id}: ${r.err}`);
+      }
+    }
+  }
+}
+
+function cmdBoard() {
+  const issues = I.listIssues(ROOT);
+  if (issues.length === 0) { out('no issues on the board'); return; }
+  const order = { critical: 0, high: 1, medium: 2, low: 3 };
+  for (const status of I.STATUSES) {
+    const rows = issues.filter((i) => i.data.status === status)
+      .sort((a, b) => (order[a.data.severity] ?? 9) - (order[b.data.severity] ?? 9));
+    if (rows.length === 0) continue;
+    out(`${status} (${rows.length})`);
+    for (const i of rows) {
+      const d = i.data;
+      const marks = [
+        d.ready ? 'ready' : '     ',
+        d.github ? `#${d.github}`.padEnd(5) : '     ',
+        d.pr ? `pr${d.pr}` : ''
+      ].join(' ');
+      out(`  ${String(d.severity).padEnd(9)}${marks}  ${d.id}`);
+      out(`  ${' '.repeat(9)}${' '.repeat(marks.length)}  ${d.title}`);
+    }
+    out('');
+  }
+  const errs = issues.flatMap((i) => I.validate(i).map((e) => `${i.data.id ?? i.path}: ${e}`));
+  if (errs.length) { for (const e of errs) out(`[invalid] ${e}`); process.exit(1); }
+}
+
 function cmdExport() {
   const db = L.open();
   const dir = join(dirname(fileURLToPath(import.meta.url)), 'ledger');
@@ -350,7 +460,8 @@ function cmdRules() {
 const commands = {
   index: cmdIndex, plan: cmdPlan, status: cmdStatus, next: cmdNext, submit: cmdSubmit,
   release: cmdRelease, findings: cmdFindings, t0: cmdT0, demote: cmdDemote, na: cmdNa,
-  export: cmdExport, rules: cmdRules
+  export: cmdExport, rules: cmdRules,
+  issues: cmdIssues, publish: cmdPublish, board: cmdBoard
 };
 
 const cmd = process.argv[2];
