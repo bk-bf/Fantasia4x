@@ -110,7 +110,7 @@ node tools/audit/audit.mjs status     # coverage, overall and per rule
 node tools/audit/audit.mjs t0         # ADR constant drift + which ADRs have no check at all
 node tools/audit/audit.mjs findings   # open fails with their evidence
 node tools/audit/audit.mjs demote     # T2 rules that have earned a move to T0
-node tools/audit/audit.mjs export     # ledger -> JSONL under tools/audit/ledger/
+node tools/audit/audit.mjs export     # ledger -> JSONL under tools/audit/ledger/ (git-ignored)
 
 node tools/audit/run.mjs --workers 4 --hours 8        # the overnight loop
 node tools/audit/run.mjs --once --model haiku         # one batch, for checking a rule
@@ -179,6 +179,8 @@ Environment overrides: `AUDIT_REPO` `AUDIT_TREE` `AUDIT_GRAPH` `AUDIT_NODE` `AUD
 
 ## Storage
 
-`tools/audit/.ledger/audit.db` (SQLite via `node:sqlite`, no native dependency), git-ignored.
-`audit export` writes `tools/audit/ledger/*.jsonl` for committing.
+`tools/audit/.ledger/audit.db` (SQLite via `node:sqlite`, no native dependency).
+`audit export` writes `tools/audit/ledger/*.jsonl` — a readable dump for grepping or
+backing up. Both directories are git-ignored: the ledger is per-machine state, and
+committing it from two machines guarantees a conflict on the nightly merge.
 Schema: [`schema.sql`](schema.sql).
