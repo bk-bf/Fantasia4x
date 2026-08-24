@@ -233,7 +233,19 @@ function sourceBranch(i: any): string[] {
   return who ? ['dropped', who] : ['dropped', 'unclaimed'];
 }
 
-const perishable = (i: any) => (i.decaySeconds || i.decaysTo ? 'perishable' : 'keeps');
+/**
+ * How a food is KEPT, not merely whether it rots. The old `keeps / perishable` split was a lie by
+ * omission — almost everything under "keeps" also rots, just slower — and it told the reader nothing
+ * about the technique that bought the time. Fresh food and finished meals are their own shelves
+ * because neither was preserved at all.
+ */
+const preservation = (i: any): string => {
+  if (i.preservationMethod) return `${i.preservationMethod}`;
+  if (i.category === 'meal') return 'cooked to order';
+  // Legacy preserved goods that predate the field, read off the name rather than guessed from decay.
+  if (/dried|smoked|salted|cured|pickled/i.test(`${i.id} ${i.name ?? ''}`)) return 'dried';
+  return 'fresh';
+};
 
 // ── the path each item files itself under ───────────────────────────────────
 //
@@ -301,7 +313,7 @@ function pathOf(i: any): string[] {
   }
 
   if (i.type === 'food' || i.nutrition != null)
-    return ['Consumables', 'Food', perishable(i), prettify(i.category ?? 'food'), age];
+    return ['Consumables', 'Food', preservation(i), prettify(i.category ?? 'food'), age];
   if (i.medicineQuality != null) return ['Consumables', 'Medicine', age];
   // The coatings and tinctures all became FLUIDS; what still carries `category: reagent` here is beast
   // ORGANS, eaten whole for the trait gamble. Calling that shelf "Coatings & tinctures" was a leftover

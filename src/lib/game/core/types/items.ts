@@ -492,6 +492,14 @@ export interface Item {
    * `applyConsumable` alongside any `grantsConditions` window (e.g. a brief `toxin_immune` pill).
    */
   curesConditions?: string[];
+
+  /**
+   * How this food was kept, and therefore WHY it lasts. The `Keeps / Perishes` split it replaces was a
+   * lie by omission: almost everything in "Keeps" also rots, just slower, so the shelf said nothing
+   * about the technique that bought the time. `smoked` → `salted` → `pickled` → `aged` → `sealed` is a
+   * real ladder of labour, salt and patience, and it reads off the item instead of off a decay flag.
+   */
+  preservationMethod?: 'smoked' | 'salted' | 'pickled' | 'aged' | 'sealed';
   /**
    * §2h(ii): consuming one of this item (a rare beast organ) PERMANENTLY grants this `traits.jsonc`
    * trait to the eater (pushed to `pawn.traits` + baked via `applyGainedTrait`) AND rolls a random

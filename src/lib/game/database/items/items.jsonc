@@ -2216,6 +2216,83 @@
     "fuelValue"        : 4,
     "toolTierRequired" : 0
   },
+  // ── Preserved food: the real answer to winter ─────────────────────────────
+  // Every method below is a step further from "eat it before it turns". `decaySeconds` is the whole
+  // point of the category — a ham keeps for a season, fresh venison for days — so each rung buys time
+  // with labour, salt, smoke or a cellar. Nothing here is runed; a colony can only out-eat a winter
+  // with technique it actually earned.
+  {
+    "id": "smoked_fish", "charSpans": [ {"sheet": "items", "id": 67} ],
+    "name": "Smoked Fish", "type": "food", "category": "preserve",
+    "description": "Split, brined overnight and hung a day in cold birch smoke. The smoke keeps the flies off and the flesh firm, and it will still be good long after the catch it came from would have gone.",
+    "color": "#B07A45", "amount": 0, "weightKg": 0.35, "volumeL": 0.35,
+    "tier": 0, "nutrition": 55, "decaySeconds": 120000, "preservationMethod": "smoked",
+    "maxDurability": 100, "deteriorationRate": 0.01
+  },
+  {
+    "id": "salt_pork", "charSpans": [ {"sheet": "items", "id": 67} ],
+    "name": "Salt Pork", "type": "food", "category": "preserve",
+    "description": "Boar cut into fist-sized pieces and packed down in a barrel under its own brine. It comes out grey and needs a long soak before anyone will eat it, and it will still be there next spring.",
+    "color": "#C9A0A0", "amount": 0, "weightKg": 0.5, "volumeL": 0.45,
+    "tier": 1, "nutrition": 70, "decaySeconds": 260000, "preservationMethod": "salted",
+    "maxDurability": 120, "deteriorationRate": 0.008, "researchRequired": "food_preservation"
+  },
+  {
+    "id": "pickled_vegetables", "charSpans": [ {"sheet": "items", "id": 67} ],
+    "name": "Pickled Vegetables", "type": "food", "category": "preserve",
+    "description": "Cabbage and turnip packed in a crock under salt until they sour on their own. Sharp, cold and eaten all winter by people who would rather not lose their teeth.",
+    "color": "#A8B060", "amount": 0, "weightKg": 0.4, "volumeL": 0.45,
+    "tier": 1, "nutrition": 45, "decaySeconds": 220000, "preservationMethod": "pickled",
+    "maxDurability": 120, "deteriorationRate": 0.008, "researchRequired": "food_preservation"
+  },
+  {
+    "id": "hard_cheese", "charSpans": [ {"sheet": "items", "id": 47} ],
+    "name": "Hard Cheese", "type": "food", "category": "preserve",
+    "description": "Curd pressed under a stone, salted and turned in the dark for months until the rind goes hard as bark. A wheel is a season's milk you can carry.",
+    "color": "#E2C878", "amount": 0, "weightKg": 0.45, "volumeL": 0.4,
+    "tier": 2, "nutrition": 90, "decaySeconds": 400000, "preservationMethod": "aged",
+    "maxDurability": 160, "deteriorationRate": 0.006, "researchRequired": "food_preservation"
+  },
+  {
+    "id": "cured_ham", "charSpans": [ {"sheet": "items", "id": 67} ],
+    "name": "Cured Ham", "type": "food", "category": "preserve",
+    "description": "A whole hind leg buried in salt for a month, washed, and hung in the rafters for a year. It is the single most valuable thing most farmhouses own and it is eaten in slivers.",
+    "color": "#B0524A", "amount": 0, "weightKg": 0.8, "volumeL": 0.6,
+    "tier": 2, "nutrition": 120, "decaySeconds": 520000, "preservationMethod": "aged",
+    "maxDurability": 180, "deteriorationRate": 0.005, "researchRequired": "food_preservation"
+  },
+  {
+    "id": "dry_sausage", "charSpans": [ {"sheet": "items", "id": 67} ],
+    "name": "Dry Sausage", "type": "food", "category": "preserve",
+    "description": "Trimmings and fat chopped fine, salted hard, packed into gut and hung until it has lost a third of its weight. Every scrap the butcher could not sell, made to last a year.",
+    "color": "#8C4038", "amount": 0, "weightKg": 0.3, "volumeL": 0.25,
+    "tier": 2, "nutrition": 95, "decaySeconds": 460000, "preservationMethod": "aged",
+    "maxDurability": 170, "deteriorationRate": 0.005, "researchRequired": "food_preservation"
+  },
+  {
+    "id": "potted_meat", "charSpans": [ {"sheet": "items", "id": 41} ],
+    "name": "Potted Meat", "type": "food", "category": "preserve",
+    "description": "Meat cooked down to threads, packed into a crock and sealed under a finger of set tallow. Break the seal and it must be eaten; leave it and it waits.",
+    "color": "#9A7048", "amount": 0, "weightKg": 0.45, "volumeL": 0.4,
+    "tier": 3, "nutrition": 110, "decaySeconds": 700000, "preservationMethod": "sealed",
+    "maxDurability": 200, "deteriorationRate": 0.004, "researchRequired": "food_preservation"
+  },
+  {
+    "id": "preserved_fruit", "charSpans": [ {"sheet": "items", "id": 41} ],
+    "name": "Fruit Preserve", "type": "food", "category": "preserve",
+    "description": "Berries boiled down with honey until a spoon stands in it, then sealed hot in a crock. Sweet enough that nothing will grow in it, which is the trick.",
+    "color": "#A03A5C", "amount": 0, "weightKg": 0.4, "volumeL": 0.35,
+    "tier": 3, "nutrition": 85, "decaySeconds": 640000, "preservationMethod": "sealed",
+    "maxDurability": 200, "deteriorationRate": 0.004, "researchRequired": "food_preservation"
+  },
+  {
+    "id": "milk", "charSpans": [ {"sheet": "items", "id": 41} ],
+    "name": "Milk", "type": "food", "category": "food",
+    "description": "Drawn warm and useless by evening unless someone does something about it. Almost everything worth keeping starts here.",
+    "color": "#F0EDE2", "amount": 0, "weightKg": 1.0, "volumeL": 1.0,
+    "tier": 0, "nutrition": 35, "decaySeconds": 9000,
+    "maxDurability": 40, "deteriorationRate": 0.06
+  },
   {
     "id"               : "salted_meat",
     "charSpans"        : [ {"sheet": "items", "id": 67} ],
@@ -15432,6 +15509,80 @@
     "volumeL"          : 0.05,
     "deteriorationRate": 0
   },
+  // ── Regalia below the runed age ───────────────────────────────────────────
+  // Every piece of jewellery in the game sat at Runed, so a colony had no way to mark anyone until it
+  // could cut gems. These are what people actually wore first: teeth, cast metal, a signet.
+  // No armour value — regalia soaks nothing, it says something.
+  {
+    "id": "tooth_necklace", "charSpans": [ {"sheet": "items", "id": 4} ],
+    "name": "Tooth Necklace", "type": "armor", "category": "regalia",
+    "description": "Fangs drilled and strung on a thong, one for each beast that nearly won. The oldest way of saying who you are without speaking.",
+    "color": "#D8CFB0", "amount": 0, "weightKg": 0.25, "volumeL": 0.1, "tier": 0,
+    "maxDurability": 60, "deteriorationRate": 0.02,
+    "armorProperties": {"defense": 0, "equipmentSlot": "amulet"}
+  },
+  {
+    "id": "bone_circlet", "charSpans": [ {"sheet": "items", "id": 51} ],
+    "name": "Bone Circlet", "type": "armor", "category": "regalia",
+    "description": "A band of scraped bone, carved with whatever the carver's people carve. Worn by whoever the rest have decided to listen to.",
+    "color": "#E2DCC4", "amount": 0, "weightKg": 0.22, "volumeL": 0.15, "tier": 0,
+    "maxDurability": 70, "deteriorationRate": 0.02,
+    "armorProperties": {"defense": 0, "equipmentSlot": "head"}
+  },
+  {
+    "id": "bronze_torc", "charSpans": [ {"sheet": "items", "id": 4} ],
+    "name": "Bronze Torc", "type": "armor", "category": "regalia",
+    "description": "A heavy twisted collar with terminals cast in the shape of animal heads, sprung open just enough to force around a throat. It is not taken off, and it is not given away.",
+    "color": "#C08A3E", "amount": 0, "weightKg": 0.4, "volumeL": 0.2, "tier": 1,
+    "maxDurability": 200, "deteriorationRate": 0.008,
+    "researchRequired": "bronze_working",
+    "armorProperties": {"defense": 0, "equipmentSlot": "amulet"}
+  },
+  {
+    "id": "bronze_arm_ring", "charSpans": [ {"sheet": "items", "id": 40} ],
+    "name": "Bronze Arm-Ring", "type": "armor", "category": "regalia",
+    "description": "A spiral of cast bronze worn high on the arm. Given by a chief to someone who did something worth paying for, and cut into pieces when the payment has to be made in metal.",
+    "color": "#C08A3E", "amount": 0, "weightKg": 0.25, "volumeL": 0.12, "tier": 1,
+    "maxDurability": 200, "deteriorationRate": 0.008,
+    "researchRequired": "bronze_working",
+    "armorProperties": {"defense": 0, "equipmentSlot": "ring"}
+  },
+  {
+    "id": "iron_signet_ring", "charSpans": [ {"sheet": "items", "id": 139} ],
+    "name": "Iron Signet Ring", "type": "armor", "category": "regalia",
+    "description": "A flat bezel cut in reverse, so that pressed into wax it leaves a mark nobody else can make. The first jewellery that is also a document.",
+    "color": "#7A7F86", "amount": 0, "weightKg": 0.08, "volumeL": 0.05, "tier": 2,
+    "maxDurability": 260, "deteriorationRate": 0.006,
+    "researchRequired": "iron_working",
+    "armorProperties": {"defense": 0, "equipmentSlot": "ring"}
+  },
+  {
+    "id": "silver_pendant", "charSpans": [ {"sheet": "items", "id": 4} ],
+    "name": "Silver Pendant", "type": "armor", "category": "regalia",
+    "description": "Cupelled silver beaten thin and hung on a fine chain. Worth a season's work and light enough to forget you are wearing it.",
+    "color": "#D6D9DE", "amount": 0, "weightKg": 0.1, "volumeL": 0.06, "tier": 2,
+    "maxDurability": 240, "deteriorationRate": 0.006,
+    "researchRequired": "iron_working",
+    "armorProperties": {"defense": 0, "equipmentSlot": "amulet"}
+  },
+  {
+    "id": "filigree_diadem", "charSpans": [ {"sheet": "items", "id": 51} ],
+    "name": "Filigree Diadem", "type": "armor", "category": "regalia",
+    "description": "Drawn silver wire soldered into a lattice so fine it seems to have grown rather than been made. The work of one person for one winter.",
+    "color": "#E4E7EC", "amount": 0, "weightKg": 0.12, "volumeL": 0.1, "tier": 3,
+    "maxDurability": 320, "deteriorationRate": 0.004,
+    "researchRequired": "steel_making",
+    "armorProperties": {"defense": 0, "equipmentSlot": "head"}
+  },
+  {
+    "id": "gold_chain_of_office", "charSpans": [ {"sheet": "items", "id": 45} ],
+    "name": "Gold Chain of Office", "type": "armor", "category": "regalia",
+    "description": "Interlocking links each the weight of a coin, worn across the shoulders by whoever currently answers for the colony. It is handed on, not inherited.",
+    "color": "#E8C34A", "amount": 0, "weightKg": 0.6, "volumeL": 0.2, "tier": 3,
+    "maxDurability": 340, "deteriorationRate": 0.003,
+    "researchRequired": "steel_making",
+    "armorProperties": {"defense": 0, "equipmentSlot": "amulet"}
+  },
   {
     "id"               : "ruby_ring",
     "charSpans"        : [ {"sheet": "items", "id": 32} ],
@@ -17183,7 +17334,7 @@
   {
     "id"               : "wine",
     "charSpans"        : [ {"sheet": "items", "id": 71} ],
-    "name"             : "Wine",
+    "name"             : "Table Wine",
     "type"             : "fluid",
     "category"         : "drink",
     "description"      : "Fruit pressed and fermented to a deep, heady wine. A finer drink, and a stronger one.",
@@ -17195,6 +17346,65 @@
     "intoxication"     : 12,
     "maxDurability"    : 300,
     "deteriorationRate": 0.004
+  },
+  // ── Drink: a ladder, and names that say what is in the cup ────────────────
+  // "Wine" is a category, not a drink. Every rung below is a real historical answer to the same
+  // problem — water you cannot trust — and each needs something the age before it did not have.
+  {
+    "id": "birch_sap_wine", "charSpans": [ {"sheet": "items", "id": 71} ],
+    "name": "Birch Sap Wine", "type": "fluid", "category": "drink",
+    "description": "Spring sap left in a covered crock until it works on its own. Thin, faintly sweet and barely strong enough to notice, which is all anyone expected of it.",
+    "color": "#D9CFA0", "amount": 0, "weightKg": 1.0, "volumeL": 1.0, "tier": 0, "nutrition": 8,
+    "maxDurability": 120, "deteriorationRate": 0.006
+  },
+  {
+    "id": "mead", "charSpans": [ {"sheet": "items", "id": 71} ],
+    "name": "Mead", "type": "fluid", "category": "drink",
+    "description": "Honey and water left to work through a whole summer. Sweet, heavy and strong enough that it was poured for oaths rather than for thirst.",
+    "color": "#E0A93A", "amount": 0, "weightKg": 1.0, "volumeL": 1.0, "tier": 1, "nutrition": 16,
+    "maxDurability": 200, "deteriorationRate": 0.004, "researchRequired": "fermentation"
+  },
+  {
+    "id": "barley_beer", "charSpans": [ {"sheet": "items", "id": 71} ],
+    "name": "Barley Beer", "type": "fluid", "category": "drink",
+    "description": "Malted grain mashed, soured and drunk cloudy within the week. Thick enough to be counted as food by the people drinking it, and safer than the well.",
+    "color": "#B87A2E", "amount": 0, "weightKg": 1.0, "volumeL": 1.0, "tier": 1, "nutrition": 14,
+    "maxDurability": 90, "deteriorationRate": 0.012, "researchRequired": "fermentation"
+  },
+  {
+    "id": "grape_wine", "charSpans": [ {"sheet": "items", "id": 71} ],
+    "name": "Grape Wine", "type": "fluid", "category": "drink",
+    "description": "Pressed, left on its skins, then racked off the lees into a bunged cask. It travels, it keeps, and it is the first thing this colony makes that another kingdom will want.",
+    "color": "#6E2038", "amount": 0, "weightKg": 1.0, "volumeL": 1.0, "tier": 1, "nutrition": 12,
+    "maxDurability": 300, "deteriorationRate": 0.003, "researchRequired": "fermentation"
+  },
+  {
+    "id": "hopped_ale", "charSpans": [ {"sheet": "items", "id": 71} ],
+    "name": "Hopped Ale", "type": "fluid", "category": "drink",
+    "description": "The same mash, bittered with hops that keep it drinkable for months instead of days. The invention that let beer be brewed somewhere other than where it was drunk.",
+    "color": "#C08A34", "amount": 0, "weightKg": 1.0, "volumeL": 1.0, "tier": 2, "nutrition": 15,
+    "maxDurability": 260, "deteriorationRate": 0.004, "researchRequired": "distillation"
+  },
+  {
+    "id": "apple_brandy", "charSpans": [ {"sheet": "items", "id": 71} ],
+    "name": "Apple Brandy", "type": "fluid", "category": "drink",
+    "description": "Cider run through the still twice and rested in oak until it stops biting. Small, strong and worth more by weight than anything else the orchard produces.",
+    "color": "#B8712A", "amount": 0, "weightKg": 0.9, "volumeL": 1.0, "tier": 2, "nutrition": 20,
+    "maxDurability": 400, "deteriorationRate": 0.002, "researchRequired": "distillation"
+  },
+  {
+    "id": "grain_whisky", "charSpans": [ {"sheet": "items", "id": 71} ],
+    "name": "Grain Whisky", "type": "fluid", "category": "drink",
+    "description": "Malt dried over peat smoke, distilled, and left in a charred cask for years while it turns from raw spirit into something worth waiting for.",
+    "color": "#9A5B1E", "amount": 0, "weightKg": 0.9, "volumeL": 1.0, "tier": 3, "nutrition": 22,
+    "maxDurability": 600, "deteriorationRate": 0.001, "researchRequired": "master_alchemy"
+  },
+  {
+    "id": "fortified_wine", "charSpans": [ {"sheet": "items", "id": 71} ],
+    "name": "Fortified Wine", "type": "fluid", "category": "drink",
+    "description": "Wine arrested mid-ferment with a measure of spirit, leaving it sweet and strong enough to cross an ocean without turning. Made to be shipped, not to be drunk at home.",
+    "color": "#7A2A2A", "amount": 0, "weightKg": 1.0, "volumeL": 1.0, "tier": 3, "nutrition": 24,
+    "maxDurability": 700, "deteriorationRate": 0.001, "researchRequired": "master_alchemy"
   },
   {
     "id"               : "cider",

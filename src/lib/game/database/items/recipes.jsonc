@@ -59,6 +59,33 @@
     "workAmount"      : 14,
     "toolTierRequired": 0
   },
+  // ── Preservation, drink and regalia ───────────────────────────────────────
+  {"id": "smoke_fish", "discipline": "cooking", "station": "drying_rack", "inputs": {"category:fish": 3, "salt": 1}, "outputs": {"smoked_fish": 3}, "workAmount": 5, "toolTierRequired": 0, "passive": true},
+  {"id": "make_salt_pork", "discipline": "cooking", "station": "larder_cupboard", "inputs": {"category:meat": 4, "salt": 3}, "outputs": {"salt_pork": 3}, "workAmount": 7, "toolTierRequired": 0, "researchRequired": "food_preservation", "passive": true},
+  {"id": "make_pickled_vegetables", "discipline": "cooking", "station": "larder_cupboard", "inputs": {"category:vegetable": 4, "salt": 2}, "outputs": {"pickled_vegetables": 3}, "workAmount": 6, "toolTierRequired": 0, "researchRequired": "food_preservation", "passive": true},
+  {"id": "make_hard_cheese", "discipline": "cooking", "station": "larder_cupboard", "inputs": {"milk": 8, "salt": 2}, "outputs": {"hard_cheese": 2}, "workAmount": 12, "toolTierRequired": 1, "researchRequired": "food_preservation", "passive": true},
+  {"id": "make_cured_ham", "discipline": "cooking", "station": "meat_larder", "inputs": {"category:meat": 6, "salt": 4}, "outputs": {"cured_ham": 2}, "workAmount": 14, "toolTierRequired": 1, "researchRequired": "food_preservation", "passive": true},
+  {"id": "make_dry_sausage", "discipline": "cooking", "station": "meat_larder", "inputs": {"category:meat": 4, "tallow": 1, "salt": 2}, "outputs": {"dry_sausage": 3}, "workAmount": 10, "toolTierRequired": 1, "researchRequired": "food_preservation", "passive": true},
+  {"id": "make_potted_meat", "discipline": "cooking", "station": "oven", "inputs": {"category:meat": 4, "tallow": 2, "clay_jug": 1}, "outputs": {"potted_meat": 3}, "workAmount": 12, "toolTierRequired": 2, "researchRequired": "food_preservation"},
+  {"id": "make_preserved_fruit", "discipline": "cooking", "station": "oven", "inputs": {"category:fruit": 4, "honey": 2, "clay_jug": 1}, "outputs": {"preserved_fruit": 3}, "workAmount": 10, "toolTierRequired": 2, "researchRequired": "food_preservation"},
+
+  {"id": "ferment_birch_sap_wine", "station": "fermenter", "inputs": {"water": 4, "honey": 1}, "outputs": {"birch_sap_wine": 3}, "workAmount": 6, "toolTierRequired": 0, "passive": true},
+  {"id": "ferment_mead", "station": "fermenter", "inputs": {"honey": 4, "water": 3}, "outputs": {"mead": 4}, "workAmount": 12, "toolTierRequired": 0, "researchRequired": "fermentation", "passive": true},
+  {"id": "brew_barley_beer", "station": "fermenter", "inputs": {"malt": 3, "water": 4}, "outputs": {"barley_beer": 4}, "workAmount": 8, "toolTierRequired": 0, "researchRequired": "fermentation", "passive": true},
+  {"id": "ferment_grape_wine", "station": "fermenter", "inputs": {"grapes": 6}, "outputs": {"grape_wine": 4}, "workAmount": 10, "toolTierRequired": 0, "researchRequired": "fermentation", "passive": true},
+  {"id": "brew_hopped_ale", "station": "fermenter", "inputs": {"malt": 3, "category:herb": 2, "water": 4}, "outputs": {"hopped_ale": 4}, "workAmount": 10, "toolTierRequired": 1, "researchRequired": "distillation", "passive": true},
+  {"id": "distil_apple_brandy", "discipline": "alchemy", "station": "alchemy_lab", "inputs": {"cider": 6}, "outputs": {"apple_brandy": 2}, "workAmount": 14, "toolTierRequired": 1, "researchRequired": "distillation"},
+  {"id": "distil_grain_whisky", "discipline": "alchemy", "station": "alchemy_lab", "inputs": {"malt": 6, "peat": 2}, "outputs": {"grain_whisky": 2}, "workAmount": 20, "toolTierRequired": 2, "researchRequired": "master_alchemy"},
+  {"id": "make_fortified_wine", "discipline": "alchemy", "station": "alchemy_lab", "inputs": {"grape_wine": 4, "distilled_spirit": 1}, "outputs": {"fortified_wine": 4}, "workAmount": 14, "toolTierRequired": 2, "researchRequired": "master_alchemy"},
+
+  {"id": "make_tooth_necklace", "discipline": "bonecarving", "station": "craft_spot", "inputs": {"predator_claw": 3, "category:binding": 1}, "outputs": {"tooth_necklace": 1}, "workAmount": 4, "toolTierRequired": 0},
+  {"id": "make_bone_circlet", "discipline": "bonecarving", "station": "bone_carvers_bench", "inputs": {"medium_bones": 2, "category:binding": 1}, "outputs": {"bone_circlet": 1}, "workAmount": 6, "toolTierRequired": 0},
+  {"id": "make_bronze_torc", "station": "casting_hearth", "inputs": {"molten_bronze": 4, "clay_mold": 1}, "outputs": {"bronze_torc": 1}, "workAmount": 10, "toolTierRequired": 1, "researchRequired": "bronze_working"},
+  {"id": "make_bronze_arm_ring", "station": "casting_hearth", "inputs": {"molten_bronze": 4, "clay_mold": 1}, "outputs": {"bronze_arm_ring": 2}, "workAmount": 8, "toolTierRequired": 1, "researchRequired": "bronze_working"},
+  {"id": "make_iron_signet_ring", "station": "anvil", "inputs": {"iron_bar": 1}, "outputs": {"iron_signet_ring": 4}, "workAmount": 10, "toolTierRequired": 1, "researchRequired": "iron_working"},
+  {"id": "make_silver_pendant", "station": "anvil", "inputs": {"silver_bar": 1}, "outputs": {"silver_pendant": 4}, "workAmount": 12, "toolTierRequired": 1, "researchRequired": "iron_working"},
+  {"id": "make_filigree_diadem", "station": "anvil", "inputs": {"silver_bar": 1, "iron_wire": 1}, "outputs": {"filigree_diadem": 2}, "workAmount": 20, "toolTierRequired": 2, "researchRequired": "steel_making"},
+  {"id": "make_gold_chain_of_office", "station": "anvil", "inputs": {"gold_bar": 1}, "outputs": {"gold_chain_of_office": 2}, "workAmount": 24, "toolTierRequired": 2, "researchRequired": "steel_making"},
   // ── Targeted medicine ─────────────────────────────────────────────────────
   {
     "id"              : "make_styptic_pack",

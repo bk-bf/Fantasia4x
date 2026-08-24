@@ -608,6 +608,11 @@ for (const i of ITEMS as (Item & { driesTo?: string | { itemId?: string }; decay
 const SIM_MADE = new Set(['pawn_carcass', 'carried_pawn', 'water', 'terra_preta']);
 
 const R8_DEBT = new Set<string>([
+  // Milk comes off livestock and the game has no husbandry yet. It is the INPUT to the cheese line
+  // rather than something a colony forages, and a caravan will not haul a fluid that sours in a day
+  // (`isTradeableDef` refuses perishables, correctly). Drops out of this list the moment animals can
+  // be kept and milked.
+  'milk',
   // Fresh fish: a caravan will not haul it (R8 asks the sim, and `isTradeableDef` refuses perishable
   // food), and there is no fishing system to catch it. Obtainable the day fishing lands, not before.
   'common_carp',
