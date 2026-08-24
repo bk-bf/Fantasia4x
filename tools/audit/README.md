@@ -110,7 +110,7 @@ node tools/audit/audit.mjs status     # coverage, overall and per rule
 node tools/audit/audit.mjs t0         # ADR constant drift + which ADRs have no check at all
 node tools/audit/audit.mjs findings   # open fails with their evidence
 node tools/audit/audit.mjs demote     # T2 rules that have earned a move to T0
-node tools/audit/audit.mjs export     # ledger -> JSONL under tools/audit/ledger/
+node tools/audit/audit.mjs export     # ledger -> JSONL under tools/audit/ledger/ (git-ignored)
 
 node tools/audit/run.mjs --workers 4 --hours 8        # the overnight loop
 node tools/audit/run.mjs --once --model haiku         # one batch, for checking a rule
@@ -150,7 +150,10 @@ journalctl --user -u fantasia-audit.service -n 40
 point — the source has to be current before the ledger is re-planned:
 
 1. `git fetch` + fast-forward `main` from origin
-2. merge `main` into `audit-ledger` in the worktree (aborts on conflict rather than guessing)
+2. merge `origin/audit-ledger` (tool changes pushed from another machine) and then
+   `main` (game code) into the worktree — both abort on conflict rather than guessing.
+   The branch accumulates local merge commits and is never pushed from the server, so it
+   will not fast-forward; that is why these are merges rather than a `pull --ff-only`.
 3. re-extract the codegraph — without it the reachability triggers stop firing, which reads
    as "the hot path is clean" rather than "nothing was asked about it"
 4. `audit index` + `audit plan` — verdicts whose code did not move stay `done`, so only the
@@ -171,11 +174,13 @@ second night starting on top of an overrunning one.
 **Linger.** A user timer only fires while the user has a session unless
 `loginctl enable-linger` is set. `install.sh` says so if it is not.
 
-Environment overrides: `AUDIT_REPO` `AUDIT_TREE` `AUDIT_GRAPH` `AUDIT_NODE` `AUDIT_HOURS`
-`AUDIT_WORKERS` `AUDIT_MODEL` `AUDIT_MON` `AUDIT_TAG` `AUDIT_NO_MON`.
+Environment overrides: `AUDIT_REPO` `AUDIT_TREE` `AUDIT_GRAPH` `AUDIT_NODE` `AUDIT_CLAUDE`
+`AUDIT_HOURS` `AUDIT_WORKERS` `AUDIT_MODEL` `AUDIT_MON` `AUDIT_TAG` `AUDIT_NO_MON`.
 
 ## Storage
 
-`tools/audit/.ledger/audit.db` (SQLite via `node:sqlite`, no native dependency), git-ignored.
-`audit export` writes `tools/audit/ledger/*.jsonl` for committing.
+`tools/audit/.ledger/audit.db` (SQLite via `node:sqlite`, no native dependency).
+`audit export` writes `tools/audit/ledger/*.jsonl` — a readable dump for grepping or
+backing up. Both directories are git-ignored: the ledger is per-machine state, and
+committing it from two machines guarantees a conflict on the nightly merge.
 Schema: [`schema.sql`](schema.sql).

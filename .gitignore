@@ -60,5 +60,7 @@ static/audit/
 # Packed standalone dev tools (generated; see scripts/dev-tools/pack.mjs)
 .devtools-dist/
 
-# audit ledger (rebuildable; `pnpm audit export` writes the committed JSONL)
+# audit ledger — per-machine state, including the `audit export` JSONL. Committing it
+# from two machines guarantees a conflict on the nightly merge.
 tools/audit/.ledger/
+tools/audit/ledger/
