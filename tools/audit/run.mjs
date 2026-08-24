@@ -27,6 +27,7 @@ const flag = (n) => process.argv.includes(`--${n}`);
 const WORKERS = Number(arg('workers', 1));
 const HOURS = Number(arg('hours', 8));
 const MODEL = arg('model', 'sonnet');
+const CLAUDE = process.env.AUDIT_CLAUDE || 'claude';
 const ONCE = flag('once');
 const RUN_ID = arg('run', `run-${new Date().toISOString().replace(/[:.]/g, '-')}`);
 const LOG = join(HERE, '.ledger', `${RUN_ID}.log`);
@@ -44,14 +45,16 @@ const log = (s) => {
 function sh(cmd, args, { input, env, timeoutMs = 600_000 } = {}) {
   return new Promise((resolve) => {
     const p = spawn(cmd, args, { env: { ...process.env, ...env }, stdio: ['pipe', 'pipe', 'pipe'] });
-    let out = '', err = '';
+    let out = '', err = '', settled = false;
     const timer = setTimeout(() => p.kill('SIGKILL'), timeoutMs);
+    const done = (r) => { if (settled) return; settled = true; clearTimeout(timer); resolve(r); };
     p.stdout.on('data', (d) => (out += d));
     p.stderr.on('data', (d) => (err += d));
-    p.on('close', (code) => {
-      clearTimeout(timer);
-      resolve({ code, out, err });
-    });
+    // A missing binary arrives as an 'error' event, not a non-zero close. Unhandled, it
+    // takes down the whole run instead of failing one batch.
+    p.on('error', (e) => done({ code: -1, out, err: `${err}spawn ${cmd}: ${e.message}` }));
+    p.on('close', (code) => done({ code, out, err }));
+    p.stdin.on('error', () => {});
     if (input !== undefined) { p.stdin.write(input); p.stdin.end(); }
   });
 }
@@ -59,7 +62,7 @@ function sh(cmd, args, { input, env, timeoutMs = 600_000 } = {}) {
 async function askModel(prompt) {
   // --print keeps it non-interactive; the audit prompt supplies the whole contract, so no
   // tools and no session are needed. A fresh process per batch is what keeps context fixed.
-  const r = await sh('claude', ['--print', '--model', MODEL, '--permission-mode', 'plan'], {
+  const r = await sh(CLAUDE, ['--print', '--model', MODEL, '--permission-mode', 'plan'], {
     input: prompt
   });
   if (r.code !== 0) throw new Error(`claude exited ${r.code}: ${r.err.slice(0, 400)}`);
@@ -90,6 +93,12 @@ async function worker(id, deadline) {
       log(`[w${id}] model error on ${task.symbol_key}: ${e.message}`);
       await sh(process.execPath, [AUDIT, 'release'], { env });
       errors++;
+      // A missing binary or a revoked login fails identically on every item; spinning
+      // through the queue would burn the night marking everything as an error.
+      if (/spawn .*ENOENT|not found/.test(e.message) || errors >= 5) {
+        log(`[w${id}] giving up after ${errors} model errors`);
+        break;
+      }
       continue;
     }
 
