@@ -243,12 +243,30 @@ export class BuildingServiceImpl implements BuildingService {
   ): Record<string, number> | null {
     const building = this.getBuildingById(buildingId);
     if (!building?.buildingCost) return {};
+    // Any ONE alternative cost set may be paid instead of the main one — the dug-loam case: lay the
+    // soil you actually dug rather than composting your way to the same tier. Tried in order, first
+    // affordable wins, main cost first so the ordinary route stays the default.
+    const viaMain = this.payCost(building.buildingCost, gameState, materialOverride);
+    if (viaMain) return viaMain;
+    for (const alt of building.buildingCostAlternatives ?? []) {
+      const viaAlt = this.payCost(alt, gameState, materialOverride);
+      if (viaAlt) return viaAlt;
+    }
+    return null;
+  }
+
+  /** Resolve ONE cost map against available stock, or null when it cannot be paid in full. */
+  private payCost(
+    cost0: Record<string, number>,
+    gameState: GameState,
+    materialOverride?: Record<string, string>
+  ): Record<string, number> | null {
     // ADR-016: pay from AVAILABLE stock (reserved-for-craft stacks excluded).
     const stock = availableAggregateFromDrops(gameState.droppedItems);
     const resolved: Record<string, number> = {};
     const used: Record<string, number> = {};
 
-    for (const [key, cost] of Object.entries(building.buildingCost)) {
+    for (const [key, cost] of Object.entries(cost0)) {
       if (key.startsWith('category:')) {
         const cat = key.slice('category:'.length);
         let need = cost as number;

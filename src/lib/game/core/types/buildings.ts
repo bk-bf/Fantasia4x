@@ -216,6 +216,14 @@ export interface Building {
 
   // Construction requirements
   buildingCost: Record<string, number>; // Renamed from 'cost' to match item system
+  /**
+   * Alternative cost sets — ANY ONE may be paid in place of `buildingCost`, mirroring a recipe's
+   * `inputAlternatives`. The case it exists for: a soil bed is normally *made* (dirt + compost +
+   * fertiliser), but a colonist who dug real loam out of a riverbank should be able to lay THAT
+   * instead of composting their way to the same thing. Resolved in `resolveBuildingCost`, which tries
+   * the main cost first and falls through the alternatives in order.
+   */
+  buildingCostAlternatives?: Record<string, number>[];
   workAmount: number;
   toolTierRequired: number; // Matches item system progression
   /** ADR-009 step 2 — craft-tool gate: a pawn must carry a qualifying tool to WORK a craft job at
