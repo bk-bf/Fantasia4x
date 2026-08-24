@@ -210,12 +210,12 @@ export function withinSight(dist: number, visionRange: number): boolean {
 export { hasLineOfSight, type SightCell } from '../core/lineOfSight';
 
 /**
- * Base awareness-driven sight range. NOTE: `visionRange` is a Pawns.ts ability, NOT a stats.jsonc
+ * Base perception-driven sight range. NOTE: `visionRange` is a Pawns.ts ability, NOT a stats.jsonc
  * stat — `pawnStatService.evaluateStat('visionRange')` would return the 1.0 fallback, so compute it
- * directly. It's ≥ the light-scaled `pawnVisionTiles`, so it never contradicts the FSM's awareness gate.
+ * directly. It's ≥ the light-scaled `pawnVisionTiles`, so it never contradicts the FSM's perception gate.
  */
 export function pawnVisionRange(pawn: Pawn): number {
-  return 10 + ((pawn.stats?.awareness ?? 10) - 10) * 0.5;
+  return 10 + ((pawn.stats?.perception ?? 10) - 10) * 0.5;
 }
 
 /** Farthest firable tile: weapon `range` scaled by `aim_range` (STR), plus flat gear bonuses,

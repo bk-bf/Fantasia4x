@@ -1,4 +1,4 @@
-<!-- PawnStatBanner.svelte — the six core-stat chips (BRN AGI VIG INT AWR CHA), showing the
+<!-- PawnStatBanner.svelte — the six core-stat chips (STR DEX CON INT PER CHA), showing the
      condition-adjusted (effective) value with a signed delta. The single source of truth for the
      stat grid: rendered by the Attributes tab (PawnAttributes) and the Status tab (via PawnStatsBar,
      which adds the name header), plus anywhere else the core attributes are shown. -->
@@ -13,11 +13,11 @@
   $: sm = conditionStatMultipliers(pawn);
   // PAWN-GROWTH: 4th tuple field is the stat key — drives the ★ (favoured) marker + growth cap lookup.
   $: cells = [
-    ['BRN', pawn.stats.brawn, sm.brawn, 'brawn'],
-    ['AGI', pawn.stats.agility, sm.agility, 'agility'],
-    ['VIG', pawn.stats.vigour, sm.vigour, 'vigour'],
-    ['INT', pawn.stats.intellect, sm.intellect, 'intellect'],
-    ['AWR', pawn.stats.awareness, sm.awareness, 'awareness'],
+    ['STR', pawn.stats.strength, sm.strength, 'strength'],
+    ['DEX', pawn.stats.dexterity, sm.dexterity, 'dexterity'],
+    ['CON', pawn.stats.constitution, sm.constitution, 'constitution'],
+    ['INT', pawn.stats.intelligence, sm.intelligence, 'intelligence'],
+    ['PER', pawn.stats.perception, sm.perception, 'perception'],
     ['CHA', pawn.stats.charisma, 1, 'charisma']
   ] as const;
   const isFav = (key: string) => pawn.favStats?.includes(key as keyof typeof pawn.stats) ?? false;
@@ -30,11 +30,11 @@
   // Trait contributions to a core stat (baked into pawn.stats at generation, so surfaced here for the
   // hover breakdown — "+2 Sturdy, −1 Stocky"). ADR-023.
   const STAT_KEY: Record<string, string> = {
-    BRN: 'brawn',
-    AGI: 'agility',
-    VIG: 'vigour',
-    INT: 'intellect',
-    AWR: 'awareness',
+    STR: 'strength',
+    DEX: 'dexterity',
+    CON: 'constitution',
+    INT: 'intelligence',
+    PER: 'perception',
     CHA: 'charisma'
   };
   function traitParts(lbl: string): string {

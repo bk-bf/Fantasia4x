@@ -125,7 +125,7 @@ export const SCENARIO_PRESETS: ScenarioPreset[] = [
         {
           count: 6,
           skillLevel: 15,
-          stats: { brawn: 14, agility: 13, vigour: 14 },
+          stats: { strength: 14, dexterity: 13, constitution: 14 },
           drafted: true,
           equip: ['iron_mace', 'boarhide_jerkin', 'leather_coif']
         }

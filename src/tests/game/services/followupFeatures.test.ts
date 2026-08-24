@@ -32,7 +32,7 @@ describe('R5 carry-budget pickup clamp', () => {
   const pawn = (size: string, str: number): Pawn =>
     ({
       id: 'p',
-      stats: { brawn: str },
+      stats: { strength: str },
       physicalTraits: { size },
       equipment: {},
       inventory: { items: {}, instances: [] }
@@ -59,7 +59,7 @@ describe('R5 carry-budget pickup clamp', () => {
     // Unconditional: even a pawn already near capacity can still take 1 of an over-budget item.
     const loaded = {
       id: 'p',
-      stats: { brawn: 1 },
+      stats: { strength: 1 },
       physicalTraits: { size: 'tiny' },
       equipment: {},
       inventory: { items: { rabbit_carcass: 5 }, instances: [] }

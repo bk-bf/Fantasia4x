@@ -30,13 +30,13 @@ describe('stations & capacity gates', () => {
     const base: Pawn = {
       id: 'p1',
       stats: {
-        brawn: 12,
-        agility: 10,
-        vigour: 10,
-        intellect: 10,
+        strength: 12,
+        dexterity: 10,
+        constitution: 10,
+        intelligence: 10,
         wisdom: 10,
         charisma: 10,
-        awareness: 10
+        perception: 10
       },
       equipment: {},
       inventory: {
@@ -70,13 +70,13 @@ describe('stations & capacity gates', () => {
     const pawn: Pawn = {
       id: 'p2',
       stats: {
-        brawn: 10,
-        agility: 10,
-        vigour: 10,
-        intellect: 10,
+        strength: 10,
+        dexterity: 10,
+        constitution: 10,
+        intelligence: 10,
         wisdom: 10,
         charisma: 10,
-        awareness: 10
+        perception: 10
       },
       equipment: {},
       inventory: {

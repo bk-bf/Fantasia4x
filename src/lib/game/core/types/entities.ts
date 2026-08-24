@@ -415,7 +415,7 @@ export interface Pawn {
   /** Blood volume; 0 = dead. Starts at maxBloodVolume. */
   bloodVolume?: number;
   /**
-   * Maximum blood pool — derived from weight and vigour.
+   * Maximum blood pool — derived from weight and constitution.
    * Formula: round(weight × 1.4 + (CON − 10) × 2).
    * A 70kg pawn with CON 10 ≈ 98; heavier/tougher pawns go up to ~140.
    */

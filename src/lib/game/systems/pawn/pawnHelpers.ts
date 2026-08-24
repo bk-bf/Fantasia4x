@@ -105,7 +105,7 @@ export function needsRecovery(pawn: Pawn): boolean {
 /** How far (tiles) a fleeing pawn tries to put between itself and the threat. */
 export const FLEE_DISTANCE = 6;
 
-/** Vision/aggro radius in tiles for this pawn. Uses the SHARED awareness-based vision (same as
+/** Vision/aggro radius in tiles for this pawn. Uses the SHARED perception-based vision (same as
  *  mobs, core/vision) scaled by the pawn's tile light + night_vision (§G) — so darkness shortens
  *  threat detection. Defensive pawns ignore this (they only react to adjacent hostiles). */
 export function pawnVisionTiles(pawn: Pawn, gs: GameState): number {
@@ -866,7 +866,7 @@ export function advancePawnOrders(p: Pawn): void {
   }
 }
 
-// ── P0 awareness pre-filter (ENGINE-PERFORMANCE §6 / ADR-018) ────────────────
+// ── P0 perception pre-filter (ENGINE-PERFORMANCE §6 / ADR-018) ────────────────
 // findCombatThreat / findNearestHuntTarget each run once per pawn per tick, and each
 // used to scan ALL mobs — most of them neutral animals — re-deriving the predicate
 // every call (O(pawns × mobs); the profiler measured ~21k checks/tick). The relevant

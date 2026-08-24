@@ -354,7 +354,7 @@ function profileFromWeapon(
 }
 
 /** Attributes a weapon's damage roll can key off. */
-export type PowerStat = 'brawn' | 'agility' | 'awareness' | 'intellect' | 'charisma';
+export type PowerStat = 'strength' | 'dexterity' | 'perception' | 'intelligence' | 'charisma';
 
 /** Bonus the DUELIST grip adds to damage/armorPen/crit — one-handed, off-hand free, and gated on the
  *  `duelist` trait (see rangedCombat.getGrip). Calibrated so the style lands at ~80% of a two-hander's
@@ -400,7 +400,7 @@ const BASE_MELEE_HIT = 60;
  *  parity fight stays ~60% hit / 40% dodge at any stat magnitude. */
 const DEX_HIT_WEIGHT = 1;
 /** Converts the `hit_chance` stat (a multiplier around 1.0) back onto the to-hit POINT scale. 100/3
- *  keeps the shipped curve exactly: the stat is `1 + (AGILITY − 10) × 0.03`, so at agility 40 it is
+ *  keeps the shipped curve exactly: the stat is `1 + (DEXTERITY − 10) × 0.03`, so at dexterity 40 it is
  *  1.9 → +30 points, which is what `(dex − 10) × DEX_HIT_WEIGHT` used to give. */
 const HIT_CHANCE_WEIGHT = 100 / 3;
 /** Hit-chance points removed per +1.0 of defender `dodge` above the 1.0 baseline. */
@@ -544,8 +544,8 @@ function attackerProfile(attacker: Pawn | Mob, distTiles = 1): AttackProfile {
   // so a shocked/frostbitten/envenomed fighter genuinely hits softer and misses more — not just "works
   // slower". Dodge/crit/attack-speed already flow through evaluateStat, which applies the same penalty.
   const sm = conditionStatMultipliers(attacker);
-  const str = attacker.stats.brawn * sm.brawn;
-  const dex = attacker.stats.agility * sm.agility;
+  const str = attacker.stats.strength * sm.strength;
+  const dex = attacker.stats.dexterity * sm.dexterity;
 
   // Equipped weapon (pawns; future-proofed for armed mobs) — but only if a hand can still hold it.
   // Lose both hands and the weapon drops; you fall through to natural attacks / the thrash fallback.
@@ -561,7 +561,7 @@ function attackerProfile(attacker: Pawn | Mob, distTiles = 1): AttackProfile {
       // ADR-023: a cultural `weaponBonus` (Giant's Grip) rides the wielded weapon only.
       const wb = weaponBonusDamage(attacker);
       if (wb) p.baseDamage *= 1 + wb;
-      // §2c wielding requirement: a crude, massive weapon (orc greataxe) punishes an under-brawn
+      // §2c wielding requirement: a crude, massive weapon (orc greataxe) punishes an under-strength
       // wielder. The penalty is carried by the `overmatched` CONDITION (driven per-tick from the
       // wieldRequirement shortfall in PawnStateMachine) — it flows into `str`/`dex` (conditionStat-
       // Multipliers) and the to-hit (conditionHitMult) here automatically, so no inline math is needed.
@@ -736,7 +736,7 @@ function entityNaturalArmor(defender: Pawn | Mob): number {
 
 /** Sum of worn armour's authored `movementPenalty` — plate 0.10, great helm 0.05, brigandine 0.05,
  *  every light piece 0. This is the STIFFNESS of a suit, independent of what the wearer can carry: a
- *  brawn build affords plate without going `laden`, but the suit still costs it evasion. That is what
+ *  strength build affords plate without going `laden`, but the suit still costs it evasion. That is what
  *  makes light armour the right answer for a dodge build rather than a strictly worse one.
  *  Read directly off equipment — worn gear never reaches `evaluateStat`. Mobs wear nothing → 0. */
 function wornStiffness(defender: Pawn | Mob): number {
@@ -1115,7 +1115,7 @@ class CombatServiceImpl implements CombatService {
       if (bc > 0 && rng.random() < bc)
         return this.negatedHit(weaponId, staminaCost, damageType, 'blocked');
     }
-    // Evasion uses the `dodge` stat (DEX − weight, × moving) rather than raw agility, so injury,
+    // Evasion uses the `dodge` stat (DEX − weight, × moving) rather than raw dexterity, so injury,
     // load, and the winded penalty (× 0.5) all lower it. ×20 keeps baseline parity with the old
     // `defDex × 2` term (dodge ≈ 1.0 at DEX 10 → 20).
     // Natural-armour weight is an innate dodge drag (heavy-hided beasts evade worse) — subtracted from
@@ -1128,7 +1128,7 @@ class CombatServiceImpl implements CombatService {
 
     // MELEE gets the sane base (BASE_MELEE_HIT ± skill/dodge edges). RANGED keeps its OWN calibrated
     // curve — its `hitMod` IS rangedAccuracyMod (aim_accuracy + distance + cover), layered on the
-    // original agility/dodge terms; don't double-buff it with the melee base. The attacker's
+    // original dexterity/dodge terms; don't double-buff it with the melee base. The attacker's
     // encumbrance spoils aim either way (conditionHitMult < 1 when encumbered/winded).
     //
     // COMBAT-BALANCE task 5: melee accuracy is the `hit_chance` STAT, not a raw core stat. That is what
@@ -1243,9 +1243,9 @@ class CombatServiceImpl implements CombatService {
         : {})
     };
 
-    // Knockdown/stun: blunt hits roll chance from damage vs vigour, PLUS the weapon's flat
+    // Knockdown/stun: blunt hits roll chance from damage vs constitution, PLUS the weapon's flat
     // `stunChance` (maces/hammers stun regardless of damage type). Reduced by knockdown_resistance.
-    const defCon = defender.stats.vigour ?? 10;
+    const defCon = defender.stats.constitution ?? 10;
     const stunResist = clamp(
       pawnStatService.evaluateStat('knockdown_resistance', defender),
       0.1,
@@ -2300,8 +2300,8 @@ class CombatServiceImpl implements CombatService {
     if (isMob && (tgt as Mob).state === 'Corpse') return state;
 
     // +2% push chance per point of STR advantage; cut by the target's knockdown_resistance (bracing/mass).
-    const atkStr = attacker.stats.brawn * conditionStatMultipliers(attacker).brawn;
-    const defStr = tgt.stats.brawn * conditionStatMultipliers(tgt).brawn;
+    const atkStr = attacker.stats.strength * conditionStatMultipliers(attacker).strength;
+    const defStr = tgt.stats.strength * conditionStatMultipliers(tgt).strength;
     const resist = clamp(pawnStatService.evaluateStat('knockdown_resistance', tgt), 0, 0.9);
     const chance = clamp((base + (atkStr - defStr) * 0.02) * (1 - resist), 0, 0.75);
     if (rng.random() >= chance) return state;
@@ -2516,8 +2516,8 @@ class CombatServiceImpl implements CombatService {
     // §I: a Famed bow explodes them ×2–5 on top of its tier.
     const wp = rawWp ? scaleWeaponQuality(rawWp, rw.quality, rw.famedStatMult) : undefined;
     const profile = profileFromWeapon(
-      pawn.stats.brawn,
-      pawn.stats.agility,
+      pawn.stats.strength,
+      pawn.stats.dexterity,
       wp ?? { damage: 1, attackSpeed: 1, range: rw.range },
       rw.itemName
     );
@@ -2742,7 +2742,7 @@ class CombatServiceImpl implements CombatService {
   }
 
   /**
-   * Chance (0..BLOCK_CAP) to FULLY stop a blow: the `block` stat (vigour + body mass) + the shield's
+   * Chance (0..BLOCK_CAP) to FULLY stop a blow: the `block` stat (constitution + body mass) + the shield's
    * flat `blockBonus`, halved vs a ranged attack, never weight-penalized — the heavy tank's negation.
    *
    * SCALED BY THE INCOMING FORCE: a shield turns a glancing cut aside easily and a descending maul

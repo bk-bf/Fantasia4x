@@ -30,14 +30,14 @@ const LORE = loreData as unknown as {
     gait: Record<string, string[]>;
     comparative: Record<string, string[]>;
     mind: Record<string, string[]>;
-    awareness: { high: string[]; low: string[] };
+    perception: { high: string[]; low: string[] };
     charisma: { high: string[]; low: string[] };
     vocation: Record<string, string[]>;
     quirkLeads: string[];
   };
 };
 
-const STATS = ['brawn', 'agility', 'intellect', 'awareness', 'charisma', 'vigour'];
+const STATS = ['strength', 'dexterity', 'intelligence', 'perception', 'charisma', 'constitution'];
 
 // Trait ids that may not co-occur on one pawn/culture (mutually exclusive biology / temperament, and
 // base↔evolution pairs so a pawn never carries both a seed trait and the power it grows into).
@@ -777,11 +777,11 @@ function buildBucket(phys: Culture['physicalTraits']): string {
 export function generateCultureDescription(culture: Culture): string {
   const P = LORE.phrases;
   const sr = culture.statRanges;
-  const str = mid(sr.brawn ?? [10, 10]);
-  const dex = mid(sr.agility ?? [10, 10]);
-  const con = mid(sr.vigour ?? [10, 10]);
-  const int = mid(sr.intellect ?? [10, 10]);
-  const per = mid(sr.awareness ?? [10, 10]);
+  const str = mid(sr.strength ?? [10, 10]);
+  const dex = mid(sr.dexterity ?? [10, 10]);
+  const con = mid(sr.constitution ?? [10, 10]);
+  const int = mid(sr.intelligence ?? [10, 10]);
+  const per = mid(sr.perception ?? [10, 10]);
   const cha = mid(sr.charisma ?? [10, 10]);
 
   // Sentence 1 — physique.
@@ -800,8 +800,8 @@ export function generateCultureDescription(culture: Culture): string {
   // Sentence 2 — temperament + mind + belief.
   const mindP = rng.pick(P.mind[statBucket(int)]);
   const extras: string[] = [];
-  if (per >= 12) extras.push(rng.pick(P.awareness.high));
-  else if (per < 9.5) extras.push(rng.pick(P.awareness.low));
+  if (per >= 12) extras.push(rng.pick(P.perception.high));
+  else if (per < 9.5) extras.push(rng.pick(P.perception.low));
   if (cha >= 12) extras.push(rng.pick(P.charisma.high));
   else if (cha < 9.5) extras.push(rng.pick(P.charisma.low));
   const mindClause = [mindP, ...extras].join(', ');

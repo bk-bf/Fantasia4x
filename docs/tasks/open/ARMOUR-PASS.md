@@ -44,7 +44,7 @@ armour" skips the two passive waits that make leather feel earned.
 - [x] **Layering IS the stone age's heavy armour.** Sackcloth tunic (skin) → cured hide vest (mid) →
       wicker shell (outer) stacks to **10 soak at 6.5 kg** — exactly one bronze boarhide jerkin, at
       nearly twice the weight, and half what a bronze pawn gets from stacking two of their own pieces
-      (18). Wearing every primitive piece at once (22 soak, 10.0 kg) puts a brawn-20 pawn **over
+      (18). Wearing every primitive piece at once (22 soak, 10.0 kg) puts a strength-20 pawn **over
       laden**; that is the price. Cold tops out at 0.40 across eight garments against 0.30 for a
       single wool cloak.
 

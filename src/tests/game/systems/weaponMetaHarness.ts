@@ -32,7 +32,7 @@ import type { EntityStats, Pawn } from '$lib/game/core/types';
  */
 
 export const MAX_TICKS = 14_000;
-export const EQUAL: Partial<EntityStats> = { brawn: 20, agility: 20, vigour: 20, awareness: 20 };
+export const EQUAL: Partial<EntityStats> = { strength: 20, dexterity: 20, constitution: 20, perception: 20 };
 
 /**
  * Live progress file. Vitest buffers a test's console output until the test ENDS, so a sweep this long

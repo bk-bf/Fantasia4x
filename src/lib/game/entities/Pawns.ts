@@ -43,9 +43,9 @@ export function resetPawnDebugIds(): void {
   _pawnDebugIdCounter = 1;
 }
 
-/** Stamina pool derived from vigour and agility — shared by Pawn and Mob. */
+/** Stamina pool derived from constitution and dexterity — shared by Pawn and Mob. */
 export function calcMaxStamina(stats: EntityStats): number {
-  return 50 + (stats.vigour - 10) * 4 + (stats.agility - 10) * 2;
+  return 50 + (stats.constitution - 10) * 4 + (stats.dexterity - 10) * 2;
 }
 
 /**
@@ -54,12 +54,12 @@ export function calcMaxStamina(stats: EntityStats): number {
  * Base rate 0.05 /s gives ~0→100 in 2000 s at CON 10; scales with CON.
  */
 export function calcBloodRegenRate(stats: EntityStats): number {
-  return (1.0 + (stats.vigour - 10) * 0.08) * 0.05;
+  return (1.0 + (stats.constitution - 10) * 0.08) * 0.05;
 }
 
-/** Blood pool derived from body weight and vigour. */
+/** Blood pool derived from body weight and constitution. */
 export function calcMaxBloodVolume(physicalTraits: { weight: number }, stats: EntityStats): number {
-  return Math.round(physicalTraits.weight * 1.4 + (stats.vigour - 10) * 2);
+  return Math.round(physicalTraits.weight * 1.4 + (stats.constitution - 10) * 2);
 }
 
 // ── TRAIT-SYSTEM-V2 §4: wound-granter traits ──────────────────────────────────
@@ -287,13 +287,13 @@ export function applyGainedTrait(pawn: Pawn, trait: Trait): void {
     if (pawn.stats[s] !== undefined) pawn.stats[s] = Math.max(1, pawn.stats[s] + v);
   }
   // Grafts — applyTraitGrafts is idempotent per limb id, so running the all-traits pass only adds the
-  // new limb; then credit this trait's grafted parts' core-stat grants (spider-eyes → +awareness).
+  // new limb; then credit this trait's grafted parts' core-stat grants (spider-eyes → +perception).
   if (trait.grafts?.length) {
     applyTraitGrafts(pawn);
     for (const g of trait.grafts)
       for (const pid of g.parts) {
-        const per = PART_DEF_MAP[pid]?.grants?.awarenessBonus;
-        if (typeof per === 'number') pawn.stats.awareness += per;
+        const per = PART_DEF_MAP[pid]?.grants?.perceptionBonus;
+        if (typeof per === 'number') pawn.stats.perception += per;
       }
   }
   // TRAIT-SYSTEM-V2 §4: a `wound`-kind trait stamps a REAL permanent injury on the body. Generation
@@ -805,7 +805,7 @@ export function getStatDescription(
     // Basic Survival
     healthRegenRate: 'Health points recovered per turn',
     diseaseResistance: 'Resistance to illness and poison',
-    vitality: 'Overall health and vigour',
+    vitality: 'Overall health and constitution',
 
     // Skills
     skill_mining: 'Experience in mineral extraction',
@@ -856,12 +856,12 @@ function rollStatsFromRanges(statRanges: Record<string, [number, number]>): Enti
 
 /** The six core-attribute keys. */
 const STAT_KEYS: (keyof EntityStats)[] = [
-  'brawn',
-  'agility',
-  'intellect',
-  'awareness',
+  'strength',
+  'dexterity',
+  'intelligence',
+  'perception',
   'charisma',
-  'vigour'
+  'constitution'
 ];
 
 /**
@@ -895,7 +895,7 @@ function rollGrowthProfile(
   for (const stat of STAT_KEYS) {
     const isFav = favStats.includes(stat);
     // Growth ceiling: 60 is the ABSOLUTE cap and only a talent reaches it. Ordinary stats top out in
-    // the 40s–low 50s. Re-banded down from 62–82 / 85–100: the old bands made brawn 80+ routine, which
+    // the 40s–low 50s. Re-banded down from 62–82 / 85–100: the old bands made strength 80+ routine, which
     // trivialised every carry/requirement gate (steel plate wearable at spawn) and pushed the top end
     // into god-like territory — a legend at 60 is superhuman enough.
     const base = isFav ? rng.int(50, 60) : rng.int(40, 55);
@@ -918,11 +918,11 @@ function applyCulturalTraitBonuses(baseStats: EntityStats, traits: Trait[]): Ent
       }
     });
     // TRAITS §0 — a bodyMod trait's GRAFTED parts pay out their own core-stat bonus (spider eyes → +1
-    // awareness), baked here from the part catalog rather than a rider on the trait's effects.
+    // perception), baked here from the part catalog rather than a rider on the trait's effects.
     for (const g of trait.grafts ?? [])
       for (const partId of g.parts) {
-        const per = PART_DEF_MAP[partId]?.grants?.awarenessBonus;
-        if (typeof per === 'number') modifiedStats.awareness += per;
+        const per = PART_DEF_MAP[partId]?.grants?.perceptionBonus;
+        if (typeof per === 'number') modifiedStats.perception += per;
       }
   });
 

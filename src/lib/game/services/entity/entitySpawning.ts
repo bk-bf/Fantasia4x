@@ -870,7 +870,7 @@ export function makeMob(
 ): Mob {
   const initialState: MobState = def.behaviour === 'passive' ? 'Grazing' : 'Wander';
   const sizeClass: 'large' | 'medium' | 'small' =
-    def.stats.brawn >= 14 ? 'large' : def.stats.brawn >= 6 ? 'medium' : 'small';
+    def.stats.strength >= 14 ? 'large' : def.stats.strength >= 6 ? 'medium' : 'small';
   // bodyScale (default 1.0) enlarges the creature's blood/health POOL so a big beast soaks a whole
   // squad's hits before bleeding out — the durability half of the big-creature fix (the shared body-part
   // HP table is intentionally NOT rescaled; naturalArmor + this larger pool carry it). RANGED note: this
@@ -880,20 +880,20 @@ export function makeMob(
   // the fixed def value. Base creatures author no `statRanges` → identical to before (fixed stats).
   const sr = def.statRanges;
   const stats: EntityStats = {
-    brawn: rollStatRange(sr?.brawn, def.stats.brawn),
-    agility: rollStatRange(sr?.agility, def.stats.agility),
-    awareness: rollStatRange(sr?.awareness, def.stats.awareness),
-    vigour: rollStatRange(sr?.vigour, def.stats.vigour),
-    intellect: def.behaviour === 'passive' ? 4 : 8,
+    strength: rollStatRange(sr?.strength, def.stats.strength),
+    dexterity: rollStatRange(sr?.dexterity, def.stats.dexterity),
+    perception: rollStatRange(sr?.perception, def.stats.perception),
+    constitution: rollStatRange(sr?.constitution, def.stats.constitution),
+    intelligence: def.behaviour === 'passive' ? 4 : 8,
     charisma: 5
   };
   // COMBAT-BALANCE tasks 8–9: a creature's combat aptitudes come from its OWN stat block, not from a
   // roll — its stats are its design. This reproduces the pre-decoupling formulas exactly, so encounter
   // pacing is unchanged while pawns move onto the rolled axis.
   const aptitudes = creatureAptitudes(stats);
-  // Blood/health pool tracks the ROLLED vigour (con×5), so a tougher individual soaks more — for a
+  // Blood/health pool tracks the ROLLED constitution (con×5), so a tougher individual soaks more — for a
   // base creature (no range) this equals the old def.stats.health.
-  const scaledHealth = Math.round(stats.vigour * 5 * bodyScale);
+  const scaledHealth = Math.round(stats.constitution * 5 * bodyScale);
   // §2a per-spawn natural-armour spread (individual elites vary in hide toughness); absent = fixed.
   const naturalArmorOverride = def.naturalArmorRange
     ? Math.round(
@@ -951,7 +951,7 @@ export function makeMob(
     // with each part's HP scaled by bodyScale (bigger beast = bigger, tougher limbs).
     limbs: createBodyPlanLimbs(def.limbMap ?? DEFAULT_PLAN, bodyScale),
     // ── Combat & stat parity with Pawn ───────────────────────────────────────────
-    // CreatureDefinition has no explicit size; derive a size class from brawn
+    // CreatureDefinition has no explicit size; derive a size class from strength
     // (bear str 22 → large, wolf 12 → medium, rabbit 1 → small).
     physicalTraits: {
       height: sizeClass === 'large' ? 180 : sizeClass === 'medium' ? 140 : 80,

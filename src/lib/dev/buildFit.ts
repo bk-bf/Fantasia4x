@@ -3,9 +3,9 @@
 // fitting a build measurably pay off?
 //
 // A build is a WEIGHTED PROFILE over the two axes the rebuild established:
-//   PHYSIQUE — the core stat its weapon's grip names (two-hander → brawn, one-hander → agility,
-//              ranged/finesse → awareness, staff → intellect, banner → charisma), plus whatever the
-//              build's armour and role demand (a frontline needs vigour to stand in it).
+//   PHYSIQUE — the core stat its weapon's grip names (two-hander → strength, one-hander → dexterity,
+//              ranged/finesse → perception, staff → intelligence, banner → charisma), plus whatever the
+//              build's armour and role demand (a frontline needs constitution to stand in it).
 //   APTITUDE — the rolled combat stats the build leans on (an archer lives on marksmanship, a
 //              hammerman on leverage).
 //
@@ -16,7 +16,7 @@
 import type { Pawn } from '../game/core/types';
 import { APTITUDE_IDS, type AptitudeId } from '../game/core/aptitudes';
 
-export type CoreStat = 'brawn' | 'agility' | 'vigour' | 'awareness' | 'intellect' | 'charisma';
+export type CoreStat = 'strength' | 'dexterity' | 'constitution' | 'perception' | 'intelligence' | 'charisma';
 
 export interface BuildProfile {
   /** Weights over the core stats. Need not sum to 1 — `gradePawn` normalises. */
@@ -32,65 +32,65 @@ export interface BuildProfile {
 
 /**
  * The build roster, as numbers. Weights are shares of the build's total demand, so a build that
- * lives on ONE stat (a duelist's agility) scores harder on it than one spreading across three.
+ * lives on ONE stat (a duelist's dexterity) scores harder on it than one spreading across three.
  */
 export const BUILD_PROFILES: Record<string, BuildProfile> = {
   'Sword & Shield': {
-    stats: { agility: 0.45, vigour: 0.4, brawn: 0.15 },
+    stats: { dexterity: 0.45, constitution: 0.4, strength: 0.15 },
     aptitudes: { hit_chance: 0.4, dodge: 0.2, attack_speed: 0.2, hit_precision: 0.2 },
     weapon: 'steel_longsword',
     offHand: 'iron_boss_shield',
-    note: 'One-handed, so agility drives the blade; the shield and the standing still need vigour.'
+    note: 'One-handed, so dexterity drives the blade; the shield and the standing still need constitution.'
   },
   'Mace & Shield': {
-    stats: { agility: 0.4, vigour: 0.4, brawn: 0.2 },
+    stats: { dexterity: 0.4, constitution: 0.4, strength: 0.2 },
     aptitudes: { armor_damage: 0.4, hit_chance: 0.3, dodge: 0.15, attack_speed: 0.15 },
     weapon: 'steel_mace',
     offHand: 'iron_boss_shield',
     note: 'Anti-armour behind a shield — leverage is what the mace is FOR.'
   },
   'Greatsword (2H)': {
-    stats: { brawn: 0.65, vigour: 0.35 },
+    stats: { strength: 0.65, constitution: 0.35 },
     aptitudes: { hit_chance: 0.35, attack_speed: 0.3, hit_precision: 0.2, armor_damage: 0.15 },
     weapon: 'steel_greatsword',
-    note: 'Two-handed: brawn is the whole damage channel, vigour is what survives having no shield.'
+    note: 'Two-handed: strength is the whole damage channel, constitution is what survives having no shield.'
   },
   '2H Hammer': {
-    stats: { brawn: 0.7, vigour: 0.3 },
+    stats: { strength: 0.7, constitution: 0.3 },
     aptitudes: { armor_damage: 0.5, hit_chance: 0.3, attack_speed: 0.2 },
     weapon: 'steel_warhammer',
-    note: 'The armour-breaker: brawn for the swing, leverage for what it does on arrival.'
+    note: 'The armour-breaker: strength for the swing, leverage for what it does on arrival.'
   },
   'Duelist (1H, no shield)': {
-    stats: { agility: 0.7, vigour: 0.3 },
+    stats: { dexterity: 0.7, constitution: 0.3 },
     aptitudes: { hit_chance: 0.3, attack_speed: 0.3, hit_precision: 0.25, dodge: 0.15 },
     weapon: 'steel_longsword',
     note: 'The trait-gated one-hander: the free hand buys damage instead of a shield, so nothing but skill keeps it alive.'
   },
   'Assassin (Dagger)': {
-    stats: { agility: 0.75, awareness: 0.25 },
+    stats: { dexterity: 0.75, perception: 0.25 },
     aptitudes: { hit_precision: 0.45, attack_speed: 0.3, dodge: 0.25 },
     weapon: 'steel_stiletto',
-    note: 'A dagger is placed, not swung — agility damage, and precision is the entire case for it.'
+    note: 'A dagger is placed, not swung — dexterity damage, and precision is the entire case for it.'
   },
   'Fencer (Rapier)': {
-    stats: { awareness: 0.7, agility: 0.3 },
+    stats: { perception: 0.7, dexterity: 0.3 },
     aptitudes: { hit_precision: 0.4, hit_chance: 0.3, dodge: 0.3 },
     weapon: 'steel_rapier',
-    note: 'Finesse: the point goes where the eye is, so awareness carries the damage.'
+    note: 'Finesse: the point goes where the eye is, so perception carries the damage.'
   },
   'Archer (Bow)': {
-    stats: { awareness: 0.8, agility: 0.2 },
+    stats: { perception: 0.8, dexterity: 0.2 },
     aptitudes: { aim_accuracy: 0.6, hit_precision: 0.25, dodge: 0.15 },
     weapon: 'war_bow',
-    note: 'Ranged damage is awareness; marksmanship is the aptitude nothing else uses.'
+    note: 'Ranged damage is perception; marksmanship is the aptitude nothing else uses.'
   },
   'Battlemage (1H Staff)': {
-    stats: { intellect: 0.8, vigour: 0.2 },
+    stats: { intelligence: 0.8, constitution: 0.2 },
     aptitudes: { aim_accuracy: 0.5, hit_chance: 0.3, dodge: 0.2 },
     weapon: 'storm_rod',
     offHand: 'iron_boss_shield',
-    note: 'A channelled bolt scales on intellect; the free hand keeps a shield.'
+    note: 'A channelled bolt scales on intelligence; the free hand keeps a shield.'
   }
 };
 
@@ -162,7 +162,7 @@ export type Tier = 'S' | 'A' | 'B' | 'C' | 'D' | 'F';
  *
  * A profile's raw score is a weighted average of the pawn's normalised stats. Averaging iid values
  * leaves the MEAN unchanged whatever the weights, but not the SPREAD: a build that leans on one stat
- * (Archer, awareness 0.8) has a far wider score distribution than one spread over three (Sword &
+ * (Archer, perception 0.8) has a far wider score distribution than one spread over three (Sword &
  * Shield, 0.45/0.4/0.15), because a single lucky roll carries it. Taking the argmax of raw scores
  * therefore hands the concentrated profiles most of the population — measured at 3 builds taking 76%.
  * That is an artefact of the weight vectors, not a statement about pawn generation.
@@ -180,8 +180,8 @@ export interface FitCalibration {
    * build → a constant added to its z, chosen so every build wins a roughly EQUAL share of pawns.
    *
    * Normalising each build's spread is not enough on its own, because the builds do not compete on
-   * equal terms: five of them want agility, so a strong-agility pawn is fought over and only one of
-   * them can claim it, while `intellect` is wanted by the Battlemage ALONE and is uncorrelated with
+   * equal terms: five of them want dexterity, so a strong-dexterity pawn is fought over and only one of
+   * them can claim it, while `intelligence` is wanted by the Battlemage ALONE and is uncorrelated with
    * everything else (measured: |r| ≤ 0.05 against every physical stat). An uncontested stat wins its
    * argmax unopposed — the Battlemage was taking 27 pawns in every 100 against an even share of 11.
    *

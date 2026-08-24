@@ -402,7 +402,7 @@ same light→medium→heavy axis, so a loadout can be read as one decision inste
       rows drifts the moment one number moves.
 - [ ] **Regalia has no class and needs none** — a ring is not a light/medium/heavy choice.
 - [ ] **A worn carry aid grants VOLUME, never weight.** Weight capacity is the body's —
-      `(11 + 0.19 x brawn) x frameFactor` — and nothing strapped on changes how much mass a pawn can
+      `(11 + 0.19 x strength) x frameFactor` — and nothing strapped on changes how much mass a pawn can
       bear. A pack that raised it was quietly claiming a rucksack makes you stronger; what a pack
       actually does is give bulk somewhere to ride. **The one exception is a load carried IN HAND that
       puts its weight on the ground**: a barrow, a handcart. Those genuinely raise what one person can
@@ -526,7 +526,7 @@ wastes almost nothing, while weaving withies throws most of every rod away. The 
 - [ ] **Weight, defense and stiffness sit in the ladder** its neighbours already form. Compare
       against the same slot one tier down and one tier up, and against the same tier's other classes.
 - [ ] **A full set is wearable** by the pawn who is supposed to wear it. Carry capacity is
-      `(11 + 0.19 × brawn) × frameFactor`; `laden` starts at 60% of it. Sum the set and check.
+      `(11 + 0.19 × strength) × frameFactor`; `laden` starts at 60% of it. Sum the set and check.
 - [ ] It only uses fields the sim actually **reads**. `defense`, `covers`, `weightKg`,
       `movementPenalty`, `fatiguePerTurn`, `coldResistance`/`heatResistance`, `stealthMod`,
       `maxDurability` and the shield block are live. **`slashResistance`, `pierceResistance`,

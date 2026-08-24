@@ -9,16 +9,16 @@ import { itemService } from '$lib/game/services/ItemService';
 import type { EntityCondition } from '$lib/game/core/types';
 
 // §2c wielding requirement, wired via the `overmatched` CONDITION (not inline combat math). Orc gear
-// carries a `wieldRequirement.brawn`; a pawn below it is driven `overmatched` each tick, and the
-// staged condition's modifiers (brawn/hitChance/dodge/fatigueRate) flow into combat via the same
+// carries a `wieldRequirement.strength`; a pawn below it is driven `overmatched` each tick, and the
+// staged condition's modifiers (strength/hitChance/dodge/fatigueRate) flow into combat via the same
 // conditionStatMultipliers / conditionHitMult / conditionNeedMultipliers reads as encumbrance.
 
 describe('§2c wield strain', () => {
-  it('orc gear carries a wieldRequirement.brawn; goblin gear does not', () => {
+  it('orc gear carries a wieldRequirement.strength; goblin gear does not', () => {
     expect(
-      itemService.getItemById('orc_cleaver')?.weaponProperties?.wieldRequirement?.brawn
+      itemService.getItemById('orc_cleaver')?.weaponProperties?.wieldRequirement?.strength
     ).toBe(20);
-    expect(itemService.getItemById('orc_maul')?.weaponProperties?.wieldRequirement?.brawn).toBe(
+    expect(itemService.getItemById('orc_maul')?.weaponProperties?.wieldRequirement?.strength).toBe(
       22
     );
     expect(
@@ -26,7 +26,7 @@ describe('§2c wield strain', () => {
     ).toBeUndefined();
   });
 
-  it('driveWieldStrain sets, scales, and clears the overmatched condition from the BRAWN shortfall', () => {
+  it('driveWieldStrain sets, scales, and clears the overmatched condition from the STRENGTH shortfall', () => {
     const conds: EntityCondition[] = [];
     driveWieldStrain(conds, 0); // meets the bar → nothing
     expect(conds.find((c) => c.id === 'overmatched')).toBeUndefined();
@@ -36,7 +36,7 @@ describe('§2c wield strain', () => {
     expect(mild).toBeTruthy();
     expect(getConditionCurrentStage(mild)?.label).toBe('unwieldy');
 
-    driveWieldStrain(conds, 14); // BRAWN-8 pawn on a BRAWN-22 slab → maxed
+    driveWieldStrain(conds, 14); // STRENGTH-8 pawn on a STRENGTH-22 slab → maxed
     const severe = conds.find((c) => c.id === 'overmatched')!;
     expect(severe.severity).toBeCloseTo(1);
     expect(getConditionCurrentStage(severe)?.label).toBe('flailing');
@@ -45,11 +45,11 @@ describe('§2c wield strain', () => {
     expect(conds.find((c) => c.id === 'overmatched')).toBeUndefined();
   });
 
-  it('the condition cripples combat: softer blows (brawn), worse aim (hitChance), faster fatigue', () => {
+  it('the condition cripples combat: softer blows (strength), worse aim (hitChance), faster fatigue', () => {
     const conds: EntityCondition[] = [];
     driveWieldStrain(conds, 14); // flailing
-    // brawn multiplier < 1 → less damage AND less raw force (combat reads it via conditionStatMultipliers).
-    expect(conditionStatMultipliers({ conditions: conds }).brawn).toBeLessThan(1);
+    // strength multiplier < 1 → less damage AND less raw force (combat reads it via conditionStatMultipliers).
+    expect(conditionStatMultipliers({ conditions: conds }).strength).toBeLessThan(1);
     // hitChance < 1 → flails (Combat.resolveHit folds this via conditionHitMult).
     expect(getConditionCurrentStage(conds[0])?.modifiers.hitChance).toBeLessThan(1);
     // fatigueRate > 1 → tires fast, so a sustained fight drains stamina and winds the wielder.

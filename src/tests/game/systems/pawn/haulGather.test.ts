@@ -5,7 +5,7 @@ import { itemService } from '$lib/game/services/ItemService';
 import { ENC_OVERLOAD_FULL } from '$lib/game/core/needs';
 import type { GameState, Pawn, DroppedItem, Job } from '$lib/game/core/types';
 
-// A real-ish pawn so the carry budget (body mass × BRAWN load fraction) computes. BRAWN 10, 70 kg body
+// A real-ish pawn so the carry budget (body mass × STRENGTH load fraction) computes. STRENGTH 10, 70 kg body
 // → ~8.4 kg / ~9.1 L budget; the haul ceiling is ENC_OVERLOAD_FULL (1.4×) of that.
 const makePawn = (x: number, y: number): Pawn =>
   ({
@@ -13,7 +13,7 @@ const makePawn = (x: number, y: number): Pawn =>
     name: 'Hauler',
     position: { x, y },
     isAlive: true,
-    stats: { brawn: 10 },
+    stats: { strength: 10 },
     physicalTraits: { height: 170, weight: 70 },
     inventory: { items: {}, instances: [] },
     equipment: {}

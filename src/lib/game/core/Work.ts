@@ -12,8 +12,8 @@ export const WORK_CATEGORIES: WorkCategory[] = [
     color: '#4CAF50',
     // Tool-free (the bootstrap activity) — a knife/sickle speeds it up but is never required.
     boostTools: ['flint_knife', 'flint_sickle'],
-    primaryStat: 'awareness',
-    secondaryStat: 'vigour',
+    primaryStat: 'perception',
+    secondaryStat: 'constitution',
     baseEfficiency: 1.0
   },
   {
@@ -22,8 +22,8 @@ export const WORK_CATEGORIES: WorkCategory[] = [
     description: 'Harvest wood from trees in forests and groves',
     color: '#8D6E63',
     toolsRequired: ['stone_axe', 'copper_axe', 'iron_axe', 'steel_axe'],
-    primaryStat: 'brawn',
-    secondaryStat: 'vigour',
+    primaryStat: 'strength',
+    secondaryStat: 'constitution',
     baseEfficiency: 1.0
   },
   {
@@ -32,8 +32,8 @@ export const WORK_CATEGORIES: WorkCategory[] = [
     description: 'Extract stone, ore, and minerals from quarries and mines',
     color: '#607D8B',
     toolsRequired: ['stone_pick', 'copper_pick', 'iron_pick', 'steel_pick'],
-    primaryStat: 'brawn',
-    secondaryStat: 'vigour',
+    primaryStat: 'strength',
+    secondaryStat: 'constitution',
     baseEfficiency: 1.0
   },
   {
@@ -42,8 +42,8 @@ export const WORK_CATEGORIES: WorkCategory[] = [
     description: 'Hunt animals for meat, hide, and other materials',
     color: '#8D4E85',
     // No tool gate: hunting is gated by the WEAPON the pawn carries (combat), not a harvest tool.
-    primaryStat: 'agility',
-    secondaryStat: 'awareness',
+    primaryStat: 'dexterity',
+    secondaryStat: 'perception',
     baseEfficiency: 1.0
   },
   {
@@ -59,8 +59,8 @@ export const WORK_CATEGORIES: WorkCategory[] = [
       'iron_butchery_kit',
       'steel_butchery_kit'
     ],
-    primaryStat: 'brawn',
-    secondaryStat: 'agility',
+    primaryStat: 'strength',
+    secondaryStat: 'dexterity',
     baseEfficiency: 1.0
   },
   {
@@ -69,8 +69,8 @@ export const WORK_CATEGORIES: WorkCategory[] = [
     description: 'Catch fish from rivers, lakes, and streams',
     color: '#4FC3F7',
     // No tool gate yet: fishing has no world content (0 fish nodes). Add a rod when fishing ships.
-    primaryStat: 'agility',
-    secondaryStat: 'awareness',
+    primaryStat: 'dexterity',
+    secondaryStat: 'perception',
     baseEfficiency: 1.0
   },
   {
@@ -79,8 +79,8 @@ export const WORK_CATEGORIES: WorkCategory[] = [
     description: 'Sow seeds, tend crops, and manage farmland',
     color: '#66BB6A',
     toolsRequired: ['flint_sickle', 'stone_hoe', 'iron_hoe', 'steel_hoe'],
-    primaryStat: 'agility',
-    secondaryStat: 'intellect',
+    primaryStat: 'dexterity',
+    secondaryStat: 'intelligence',
     baseEfficiency: 1.0
   },
 
@@ -94,8 +94,8 @@ export const WORK_CATEGORIES: WorkCategory[] = [
     description: 'Smelt ores and forge metal items',
     color: '#FF5722',
     toolsRequired: ['wooden_tongs', 'iron_tongs', 'steel_tongs'],
-    primaryStat: 'brawn',
-    secondaryStat: 'intellect',
+    primaryStat: 'strength',
+    secondaryStat: 'intelligence',
     baseEfficiency: 1.0
   },
   {
@@ -105,8 +105,8 @@ export const WORK_CATEGORIES: WorkCategory[] = [
     name: 'Tailoring',
     description: 'Work hides and fibres into leather, cloth, and finished apparel',
     color: '#A1887F',
-    primaryStat: 'agility',
-    secondaryStat: 'intellect',
+    primaryStat: 'dexterity',
+    secondaryStat: 'intelligence',
     baseEfficiency: 1.0
   },
   {
@@ -129,8 +129,8 @@ export const WORK_CATEGORIES: WorkCategory[] = [
       'sewing_kit',
       'tailors_kit'
     ],
-    primaryStat: 'agility',
-    secondaryStat: 'intellect',
+    primaryStat: 'dexterity',
+    secondaryStat: 'intelligence',
     baseEfficiency: 1.0
   },
   {
@@ -141,8 +141,8 @@ export const WORK_CATEGORIES: WorkCategory[] = [
     description: 'Carve wood — planks, furniture, bows, and seasoned tool hafts',
     color: '#A0522D',
     boostTools: ['flint_knife', 'iron_knife', 'steel_knife'],
-    primaryStat: 'agility',
-    secondaryStat: 'brawn',
+    primaryStat: 'dexterity',
+    secondaryStat: 'strength',
     baseEfficiency: 1.0
   },
   {
@@ -152,8 +152,8 @@ export const WORK_CATEGORIES: WorkCategory[] = [
     name: 'Stoneworking',
     description: 'Shape hard material — chipped tools, dressed blocks, cut gems, carved bone',
     color: '#78909C',
-    primaryStat: 'brawn',
-    secondaryStat: 'agility',
+    primaryStat: 'strength',
+    secondaryStat: 'dexterity',
     baseEfficiency: 1.0
   },
   {
@@ -162,8 +162,8 @@ export const WORK_CATEGORIES: WorkCategory[] = [
     name: 'Pottery',
     description: 'Form and fire clay — pots, bricks, tiles, urns, and glass',
     color: '#B5651D',
-    primaryStat: 'agility',
-    secondaryStat: 'intellect',
+    primaryStat: 'dexterity',
+    secondaryStat: 'intelligence',
     baseEfficiency: 1.0
   },
   {
@@ -173,8 +173,8 @@ export const WORK_CATEGORIES: WorkCategory[] = [
     color: '#8D6E63',
     // Tool-free (dig interactions require no tool) — a stick/spade/shovel speeds it up, never gates.
     boostTools: ['digging_stick', 'stone_spade', 'iron_shovel', 'steel_shovel'],
-    primaryStat: 'agility',
-    secondaryStat: 'intellect',
+    primaryStat: 'dexterity',
+    secondaryStat: 'intelligence',
     baseEfficiency: 1.0
   },
 
@@ -185,8 +185,8 @@ export const WORK_CATEGORIES: WorkCategory[] = [
     description: 'Study scrolls, conduct experiments, and advance knowledge',
     color: '#9C27B0',
     skillRequired: 'scholarship',
-    primaryStat: 'intellect',
-    secondaryStat: 'awareness',
+    primaryStat: 'intelligence',
+    secondaryStat: 'perception',
     baseEfficiency: 1.0
   },
   {
@@ -198,8 +198,8 @@ export const WORK_CATEGORIES: WorkCategory[] = [
     // Same boost-only pattern as digging's spade/shovel: a stone→iron→steel hammer adds its
     // `toolBoost.speed` (items.jsonc) to the construction work multiplier.
     boostTools: ['stone_hammer', 'iron_hammer', 'steel_hammer'],
-    primaryStat: 'brawn',
-    secondaryStat: 'intellect',
+    primaryStat: 'strength',
+    secondaryStat: 'intelligence',
     baseEfficiency: 1.0
   },
   {
@@ -209,8 +209,8 @@ export const WORK_CATEGORIES: WorkCategory[] = [
     color: '#9C27B0',
     // No tool gate: alchemy is STATION-gated (alchemy_lab / apothecary), not tool-gated.
     skillRequired: 'alchemy',
-    primaryStat: 'intellect',
-    secondaryStat: 'awareness',
+    primaryStat: 'intelligence',
+    secondaryStat: 'perception',
     baseEfficiency: 1.0
   },
   {
@@ -220,8 +220,8 @@ export const WORK_CATEGORIES: WorkCategory[] = [
     color: '#E53935',
     toolsRequired: ['herbal_kit', 'bandages', 'medicine'],
     skillRequired: 'medicine',
-    primaryStat: 'intellect',
-    secondaryStat: 'agility',
+    primaryStat: 'intelligence',
+    secondaryStat: 'dexterity',
     baseEfficiency: 1.0
   },
   // Phase 6: cooking over campfire
@@ -238,8 +238,8 @@ export const WORK_CATEGORIES: WorkCategory[] = [
     // A stone chopper (the first cleaver) doesn't GATE cooking — you can spit-roast bare-handed — but
     // held it speeds prep (quartering/mincing for the pot). Boost-only, like the sickle on foraging.
     boostTools: ['stone_chopper'],
-    primaryStat: 'intellect',
-    secondaryStat: 'agility',
+    primaryStat: 'intelligence',
+    secondaryStat: 'dexterity',
     baseEfficiency: 1.0
   },
 
@@ -254,8 +254,8 @@ export const WORK_CATEGORIES: WorkCategory[] = [
     color: '#C0A060',
     // Only recipes that DECLARE `toolRequirement:{weaving,…}` gate on a kit — tool-free wicker is unaffected.
     toolsRequired: ['sewing_kit', 'tailors_kit'],
-    primaryStat: 'agility',
-    secondaryStat: 'intellect',
+    primaryStat: 'dexterity',
+    secondaryStat: 'intelligence',
     baseEfficiency: 1.0
   },
   {
@@ -265,8 +265,8 @@ export const WORK_CATEGORIES: WorkCategory[] = [
     color: '#9AA0A6',
     // Bootstrap-free (the first tools are knapped bare-handed); a hammerstone-grade hammer speeds it.
     boostTools: ['stone_hammer', 'iron_hammer', 'steel_hammer'],
-    primaryStat: 'brawn',
-    secondaryStat: 'agility',
+    primaryStat: 'strength',
+    secondaryStat: 'dexterity',
     baseEfficiency: 1.0
   },
   {
@@ -275,8 +275,8 @@ export const WORK_CATEGORIES: WorkCategory[] = [
     description: 'Dress and lay stone — blocks, walls, querns',
     color: '#78909C',
     boostTools: ['stone_hammer', 'iron_hammer', 'steel_hammer'],
-    primaryStat: 'brawn',
-    secondaryStat: 'agility',
+    primaryStat: 'strength',
+    secondaryStat: 'dexterity',
     baseEfficiency: 1.0
   },
   {
@@ -284,8 +284,8 @@ export const WORK_CATEGORIES: WorkCategory[] = [
     name: 'Lapidary',
     description: 'Cut and polish gems',
     color: '#7E57C2',
-    primaryStat: 'agility',
-    secondaryStat: 'awareness',
+    primaryStat: 'dexterity',
+    secondaryStat: 'perception',
     baseEfficiency: 1.0
   },
   {
@@ -294,8 +294,8 @@ export const WORK_CATEGORIES: WorkCategory[] = [
     description: 'Carve bone, antler, and ivory into tools, weapons, and charms',
     color: '#C8A87A',
     boostTools: ['flint_knife', 'iron_knife', 'steel_knife'],
-    primaryStat: 'agility',
-    secondaryStat: 'awareness',
+    primaryStat: 'dexterity',
+    secondaryStat: 'perception',
     baseEfficiency: 1.0
   },
   {
@@ -303,8 +303,8 @@ export const WORK_CATEGORIES: WorkCategory[] = [
     name: 'Meals',
     description: 'Cook stews, roasts, and prepared dishes',
     color: '#FF9800',
-    primaryStat: 'agility',
-    secondaryStat: 'intellect',
+    primaryStat: 'dexterity',
+    secondaryStat: 'intelligence',
     baseEfficiency: 1.0
   },
   {
@@ -312,8 +312,8 @@ export const WORK_CATEGORIES: WorkCategory[] = [
     name: 'Baking',
     description: 'Mill flour and bake bread and pies',
     color: '#D4A056',
-    primaryStat: 'agility',
-    secondaryStat: 'intellect',
+    primaryStat: 'dexterity',
+    secondaryStat: 'intelligence',
     baseEfficiency: 1.0
   },
   {
@@ -321,8 +321,8 @@ export const WORK_CATEGORIES: WorkCategory[] = [
     name: 'Brewing',
     description: 'Ferment ale, wine, and cider',
     color: '#B5651D',
-    primaryStat: 'intellect',
-    secondaryStat: 'awareness',
+    primaryStat: 'intelligence',
+    secondaryStat: 'perception',
     baseEfficiency: 1.0
   },
   {
@@ -330,8 +330,8 @@ export const WORK_CATEGORIES: WorkCategory[] = [
     name: 'Herbalism',
     description: 'Gather and prepare herbal poultices, salves, and washes',
     color: '#6FA06F',
-    primaryStat: 'intellect',
-    secondaryStat: 'awareness',
+    primaryStat: 'intelligence',
+    secondaryStat: 'perception',
     baseEfficiency: 1.0
   },
   {
@@ -339,8 +339,8 @@ export const WORK_CATEGORIES: WorkCategory[] = [
     name: 'Potions',
     description: 'Brew potions, tonics, and coatings from reagents',
     color: '#9C27B0',
-    primaryStat: 'intellect',
-    secondaryStat: 'awareness',
+    primaryStat: 'intelligence',
+    secondaryStat: 'perception',
     baseEfficiency: 1.0
   },
   // Phase 7: hauling — carry dropped items to storage
@@ -349,8 +349,8 @@ export const WORK_CATEGORIES: WorkCategory[] = [
     name: 'Hauling',
     description: 'Pick up resources left on the ground and carry them to a storage building',
     color: '#FFB300',
-    primaryStat: 'brawn',
-    secondaryStat: 'vigour',
+    primaryStat: 'strength',
+    secondaryStat: 'constitution',
     baseEfficiency: 1.0
   }
 ];

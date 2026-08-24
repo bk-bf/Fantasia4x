@@ -19,13 +19,13 @@ export interface CreatureStats {
   // ── Primary attributes (set in creatures.jsonc) ───────────────────────
   // Same four core stats a pawn carries, so a mob and a colonist read identically.
   /** Physical power → melee damage, carry weight. */
-  brawn: number;
-  /** Agility → move speed, dodge, hit chance. */
-  agility: number;
+  strength: number;
+  /** Dexterity → move speed, dodge, hit chance. */
+  dexterity: number;
   /** Durability → maxHealth. */
-  vigour: number;
-  /** Awareness → vision range. */
-  awareness: number;
+  constitution: number;
+  /** Perception → vision range. */
+  perception: number;
   // ── Derived (computed in toDefinition(); do not set in JSON) ─────────
   health: number;
   /** Tiles per second. */
@@ -75,7 +75,7 @@ export interface CreatureDefinition {
    *  a passive omnivore (chicken) is not a predator, a neutral omnivore (bear) is. */
   predator: boolean;
   /** `primitive` = animals; `sapient` = humanoid NPCs (spawn as Pawn, not Mob). */
-  intellect: EntityIntelligence;
+  intelligence: EntityIntelligence;
   nocturnalAggro: boolean;
   /** Only spawns at night. */
   nightOnly: boolean;
@@ -123,7 +123,7 @@ export interface CreatureDefinition {
    *  an individual rolls uniformly within them at spawn (seeded), so two of a kind differ. The def's
    *  fixed `stats` above is DERIVED as the band midpoint (`creatureMidStats`) for display / threat model
    *  / spawn fallback. (A legacy fixed `stats` block in the JSON is still honoured if present.) */
-  statRanges?: Partial<Record<'brawn' | 'agility' | 'vigour' | 'awareness', [number, number]>>;
+  statRanges?: Partial<Record<'strength' | 'dexterity' | 'constitution' | 'perception', [number, number]>>;
   /** §2a per-spawn natural-armour spread, rolled like `statRanges`; absent = fixed `naturalArmor`. */
   naturalArmorRange?: [number, number];
   /** §2c lootpool id (database/items/lootpool.jsonc) — a geared humanoid draws a weapon/armour loadout at
@@ -184,35 +184,35 @@ function defaultEatsForDiet(diet: EntityDiet): FoodCategory[] {
  *  are given, the def's `stats` is the band MIDPOINT, used for display, the threat model, and the spawn
  *  fallback. Ranges are authored SYMMETRIC so the midpoint is the intended average. */
 function creatureMidStats(raw: RawCreature): {
-  brawn: number;
-  agility: number;
-  vigour: number;
-  awareness: number;
+  strength: number;
+  dexterity: number;
+  constitution: number;
+  perception: number;
 } {
   if (raw.stats)
-    return raw.stats as { brawn: number; agility: number; vigour: number; awareness: number };
+    return raw.stats as { strength: number; dexterity: number; constitution: number; perception: number };
   const sr = raw.statRanges as CreatureDefinition['statRanges'] | undefined;
   const mid = (r: [number, number] | undefined, fallback: number) =>
     r ? Math.round((r[0] + r[1]) / 2) : fallback;
   return {
-    brawn: mid(sr?.brawn, 10),
-    agility: mid(sr?.agility, 10),
-    vigour: mid(sr?.vigour, 10),
-    awareness: mid(sr?.awareness, 10)
+    strength: mid(sr?.strength, 10),
+    dexterity: mid(sr?.dexterity, 10),
+    constitution: mid(sr?.constitution, 10),
+    perception: mid(sr?.perception, 10)
   };
 }
 
 function toDefinition(raw: RawCreature): CreatureDefinition {
   const rs = creatureMidStats(raw);
   // MUST mirror baseVisionRange() in core/vision.ts (doubled sight range); fleeRange scales with it.
-  const visionRange = Math.round(4 + rs.awareness * 1.3);
+  const visionRange = Math.round(4 + rs.perception * 1.3);
   const stats: CreatureStats = {
-    brawn: rs.brawn,
-    agility: rs.agility,
-    vigour: rs.vigour,
-    awareness: rs.awareness,
-    health: rs.vigour * 5,
-    speed: Math.floor(1.5 + rs.agility * 0.35),
+    strength: rs.strength,
+    dexterity: rs.dexterity,
+    constitution: rs.constitution,
+    perception: rs.perception,
+    health: rs.constitution * 5,
+    speed: Math.floor(1.5 + rs.dexterity * 0.35),
     visionRange,
     fleeRange: Math.round(visionRange * 1.45)
   };
@@ -232,7 +232,7 @@ function toDefinition(raw: RawCreature): CreatureDefinition {
     predator,
     eats: (raw.eats as FoodCategory[] | undefined) ?? defaultEatsForDiet(diet),
     grazes: (raw.grazes as boolean | undefined) ?? diet === 'herbivore',
-    intellect: (raw.intellect as EntityIntelligence) ?? 'primitive',
+    intelligence: (raw.intelligence as EntityIntelligence) ?? 'primitive',
     nocturnalAggro: (raw.nocturnalAggro as boolean) ?? false,
     nightOnly: (raw.nightOnly as boolean) ?? false,
     pack: (raw.pack as [number, number]) ?? [1, 1],

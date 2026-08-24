@@ -3,7 +3,7 @@
 // The core stats say how hard a body CAN hit. Aptitudes say how well it fights: whether the blow
 // lands, how often, where, how it wrecks armour, and how well it evades. They are rolled per pawn
 // INDEPENDENTLY of the core stats — that independence is the whole point. While `hit_chance` was
-// `1 + (agility − 10) × 0.03`, agility bought damage, cadence, accuracy and crit at once, so the
+// `1 + (dexterity − 10) × 0.03`, dexterity bought damage, cadence, accuracy and crit at once, so the
 // weapon's named power stat was decoration and every build converged on the same stat.
 //
 // They are not new stats. `hit_chance`, `attack_speed`, `hit_precision`, `armor_damage`, `dodge` and
@@ -68,29 +68,29 @@ const round3 = (v: number) => Math.round(v * 1000) / 1000;
  * The decoupling exists to stop player builds converging on one stat — a creature has no build to
  * choose, its stat block IS its design, and a quick wolf must stay a quick wolf. So a mob's aptitudes
  * reproduce exactly the formulas the shipped stats used, which keeps every existing encounter's
- * pacing untouched: without this, every creature in the game sits at a flat 1.0 and low-agility
+ * pacing untouched: without this, every creature in the game sits at a flat 1.0 and low-dexterity
  * beasts silently get BETTER at landing blows.
  */
 export function creatureAptitudes(stats: {
-  brawn?: number;
-  agility?: number;
-  awareness?: number;
-  vigour?: number;
+  strength?: number;
+  dexterity?: number;
+  perception?: number;
+  constitution?: number;
 }): Aptitudes {
-  const agility = stats.agility ?? 10;
-  const brawn = stats.brawn ?? 10;
-  const awareness = stats.awareness ?? 10;
-  const vigour = stats.vigour ?? 10;
+  const dexterity = stats.dexterity ?? 10;
+  const strength = stats.strength ?? 10;
+  const perception = stats.perception ?? 10;
+  const constitution = stats.constitution ?? 10;
   return {
-    hit_chance: 1 + (agility - 10) * 0.03,
-    attack_speed: 1 + (agility - 10) * 0.03,
-    hit_precision: 1 + ((agility - 10) * 0.005 + (awareness - 10) * 0.0025) / 0.05,
-    armor_damage: 1 + (brawn - 10) * 0.02,
-    dodge: 1 + (agility - 10) * 0.02,
-    aim_accuracy: 1 + (awareness - 10) * 0.04,
-    // The old block curve was `0.03 + (vigour − 10) × 0.006` against a 0.06 base, so this reproduces a
-    // creature's shipped block chance exactly: 0.5 at vigour 10, 1.5 at vigour 20.
-    block: 0.5 + (vigour - 10) * 0.1
+    hit_chance: 1 + (dexterity - 10) * 0.03,
+    attack_speed: 1 + (dexterity - 10) * 0.03,
+    hit_precision: 1 + ((dexterity - 10) * 0.005 + (perception - 10) * 0.0025) / 0.05,
+    armor_damage: 1 + (strength - 10) * 0.02,
+    dodge: 1 + (dexterity - 10) * 0.02,
+    aim_accuracy: 1 + (perception - 10) * 0.04,
+    // The old block curve was `0.03 + (constitution − 10) × 0.006` against a 0.06 base, so this reproduces a
+    // creature's shipped block chance exactly: 0.5 at constitution 10, 1.5 at constitution 20.
+    block: 0.5 + (constitution - 10) * 0.1
   };
 }
 

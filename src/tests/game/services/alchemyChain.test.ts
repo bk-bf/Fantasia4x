@@ -338,7 +338,7 @@ describe('alchemy / magical-creature reagents', () => {
       })
     );
     s.command({ type: 'craftItem', payload: { itemId: 'tanglefoot_coating' } } as never); // slow coating T1
-    s.command({ type: 'craftItem', payload: { itemId: 'farsight_tonic' } } as never); // awareness tonic T1
+    s.command({ type: 'craftItem', payload: { itemId: 'farsight_tonic' } } as never); // perception tonic T1
     s.command({ type: 'craftItem', payload: { itemId: 'greater_farsight_tonic' } } as never); // T2 needs the base
     for (
       let i = 0;
@@ -355,7 +355,7 @@ describe('alchemy / magical-creature reagents', () => {
       `[ALCH lines] tanglefoot=${stk(s).tanglefoot_coating ?? 0} farsight=${stk(s).farsight_tonic ?? 0} greater_farsight=${stk(s).greater_farsight_tonic ?? 0}`
     );
     expect(stk(s).tanglefoot_coating ?? 0, 'slow coating brewed').toBeGreaterThan(0);
-    expect(stk(s).farsight_tonic ?? 0, 'awareness tonic brewed').toBeGreaterThan(0);
+    expect(stk(s).farsight_tonic ?? 0, 'perception tonic brewed').toBeGreaterThan(0);
     expect(
       stk(s).greater_farsight_tonic ?? 0,
       'T2 tonic brewed off the distilled-spirit base'
@@ -368,13 +368,13 @@ describe('alchemy / magical-creature reagents', () => {
     const poisoned = {
       id: 'p1',
       stats: {
-        brawn: 10,
-        agility: 10,
-        vigour: 10,
-        intellect: 10,
+        strength: 10,
+        dexterity: 10,
+        constitution: 10,
+        intelligence: 10,
         wisdom: 10,
         charisma: 10,
-        awareness: 10
+        perception: 10
       },
       traits: [],
       conditionTimers: { envenomed: 900, nausea: 600 }

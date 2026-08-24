@@ -246,7 +246,7 @@ export const MOB_CLOT_ROLL_INTERVAL = 750;
 export const MOB_BASE_CLOT_CHANCE = 0.7;
 /** A creature's bloodletting wounds clot at HALF its normal chance (plus the extra stage) — strong
  *  enough that one ragged cut is not a death sentence, weak enough that stacked bleeds still win. The
- *  `blood_clotting` stat scales the base, so a high-vigour great beast shrugs off what kills a goblin. */
+ *  `blood_clotting` stat scales the base, so a high-constitution great beast shrugs off what kills a goblin. */
 export const MOB_BLOODLETTING_CLOT_FACTOR = 0.5;
 
 /**

@@ -1652,7 +1652,7 @@ export const COMMANDS: Record<string, Cmd> = {
   }),
 
   /** DEBUG: bank a growth offer on a pawn right now (outside the seasonal cadence) — same roll as
-   *  an earned one, incl. the lineage-progression moment. `doubled` = birthday-brawn rolls. */
+   *  an earned one, incl. the lineage-progression moment. `doubled` = birthday-strength rolls. */
   devGrantGrowth: (s, p: { pawnId: string; doubled?: boolean }) => ({
     ...s,
     pawns: s.pawns.map((pw) => {
