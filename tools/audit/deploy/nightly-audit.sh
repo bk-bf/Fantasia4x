@@ -122,12 +122,14 @@ if [ "${AUDIT_NO_MON:-0}" = 1 ]; then
   say "AUDIT_NO_MON=1 — skipping the mon handoff"
 elif [ -x "$MON" ]; then
   say "--- handing the report to mon"
-  "$MON" run "Last night's code audit finished. Read it with:
+  # The pinned node matters in the prompt too: the session's own PATH resolves to v20,
+  # which has no node:sqlite, so a bare \`node\` would fail to open the ledger.
+  "$MON" run "Last night's code audit finished. Read it with (use this exact node):
 
-  node tools/audit/audit.mjs status
-  node tools/audit/audit.mjs findings
-  node tools/audit/audit.mjs na
-  node tools/audit/audit.mjs demote
+  $NODE tools/audit/audit.mjs status
+  $NODE tools/audit/audit.mjs findings
+  $NODE tools/audit/audit.mjs na
+  $NODE tools/audit/audit.mjs demote
 
 Say what changed since yesterday and what is worth acting on, in one paragraph a
 person can read on a phone. Lead with the most severe finding, not the newest.
