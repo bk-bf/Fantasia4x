@@ -10,7 +10,7 @@ import type { GameState, Pawn } from '$lib/game/core/types';
  * smelt gate are already driven headless in the Ore/Steel audits.
  */
 const stateWith = (buildings: Array<{ id: string; type: string; status: string }>) =>
-  ({ buildings } as unknown as GameState);
+  ({ buildings }) as unknown as GameState;
 
 describe('stations & capacity gates', () => {
   it('§109 maxCount is ENFORCED: a capped furniture type refuses the (maxCount+1)th', () => {
@@ -29,27 +29,64 @@ describe('stations & capacity gates', () => {
   it('§130 a cart raises the haul carry budget (held wheelbarrow/handcart via inventoryBonus)', () => {
     const base: Pawn = {
       id: 'p1',
-      stats: { brawn: 12, agility: 10, vigour: 10, intellect: 10, wisdom: 10, charisma: 10, awareness: 10 },
+      stats: {
+        brawn: 12,
+        agility: 10,
+        vigour: 10,
+        intellect: 10,
+        wisdom: 10,
+        charisma: 10,
+        awareness: 10
+      },
       equipment: {},
-      inventory: { items: {}, instances: [], weightKg: 0, maxWeightKg: 20, volumeL: 0, maxVolumeL: 20 }
+      inventory: {
+        items: {},
+        instances: [],
+        weightKg: 0,
+        maxWeightKg: 20,
+        volumeL: 0,
+        maxVolumeL: 20
+      }
     } as unknown as Pawn;
     const withCart = (cart: string): Pawn =>
-      ({ ...base, equipment: { mainHand: { itemId: cart, instanceId: 'c1', durability: 100 } } } as unknown as Pawn);
+      ({
+        ...base,
+        equipment: { mainHand: { itemId: cart, instanceId: 'c1', durability: 100 } }
+      }) as unknown as Pawn;
     const empty = {} as GameState;
     const bare = itemService.getCarryBudget(base, empty).maxWeightKg;
     const barrow = itemService.getCarryBudget(withCart('wheelbarrow'), empty).maxWeightKg;
     const cart = itemService.getCarryBudget(withCart('handcart'), empty).maxWeightKg;
-    console.log(`[CAP cart] carry budget kg: bare=${bare.toFixed(1)} wheelbarrow=${barrow.toFixed(1)} handcart=${cart.toFixed(1)}`);
-    expect(barrow, 'a wheelbarrow (+60kg inventoryBonus) raises the budget').toBeGreaterThan(bare + 50);
+    console.log(
+      `[CAP cart] carry budget kg: bare=${bare.toFixed(1)} wheelbarrow=${barrow.toFixed(1)} handcart=${cart.toFixed(1)}`
+    );
+    expect(barrow, 'a wheelbarrow (+60kg inventoryBonus) raises the budget').toBeGreaterThan(
+      bare + 50
+    );
     expect(cart, 'a handcart (+160kg) raises it more still').toBeGreaterThan(barrow);
   });
 
   it('§130 carry budget is ENFORCED on pickup: you can only take what fits', () => {
     const pawn: Pawn = {
       id: 'p2',
-      stats: { brawn: 10, agility: 10, vigour: 10, intellect: 10, wisdom: 10, charisma: 10, awareness: 10 },
+      stats: {
+        brawn: 10,
+        agility: 10,
+        vigour: 10,
+        intellect: 10,
+        wisdom: 10,
+        charisma: 10,
+        awareness: 10
+      },
       equipment: {},
-      inventory: { items: {}, instances: [], weightKg: 0, maxWeightKg: 20, volumeL: 0, maxVolumeL: 20 }
+      inventory: {
+        items: {},
+        instances: [],
+        weightKg: 0,
+        maxWeightKg: 20,
+        volumeL: 0,
+        maxVolumeL: 20
+      }
     } as unknown as Pawn;
     const empty = {} as GameState;
     const budgetKg = itemService.getCarryBudget(pawn, empty).maxWeightKg;
@@ -57,8 +94,15 @@ describe('stations & capacity gates', () => {
     const asked = 9999;
     const canTake = itemService.clampPickupQuantity(pawn, 'large_bones', asked, empty);
     const per = itemService.getItemById('large_bones')?.weightKg ?? 1;
-    console.log(`[CAP pickup] budget=${budgetKg.toFixed(1)}kg, large_bones=${per}kg → clamped ${asked}→${canTake}`);
-    expect(canTake, 'the pickup is clamped below the ask (budget-bound, not unlimited)').toBeLessThan(asked);
-    expect(canTake * per, 'and the taken load stays within the carry budget').toBeLessThanOrEqual(budgetKg + per);
+    console.log(
+      `[CAP pickup] budget=${budgetKg.toFixed(1)}kg, large_bones=${per}kg → clamped ${asked}→${canTake}`
+    );
+    expect(
+      canTake,
+      'the pickup is clamped below the ask (budget-bound, not unlimited)'
+    ).toBeLessThan(asked);
+    expect(canTake * per, 'and the taken load stays within the carry budget').toBeLessThanOrEqual(
+      budgetKg + per
+    );
   });
 });

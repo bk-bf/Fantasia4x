@@ -699,7 +699,7 @@
     "id"              : "make_copper_tack",
     "station"         : "stone_forge",
     "inputs"          : {"copper_bar": 1},
-    "outputs"         : {"copper_tack": 12},
+    "outputs"         : {"copper_tack": 400},
     "workAmount"      : 6,
     "toolTierRequired": 1
   },
@@ -707,7 +707,7 @@
     "id"              : "make_bronze_nail",
     "station"         : "casting_hearth",
     "inputs"          : {"bronze_bar": 1, "clay_mold": 1},
-    "outputs"         : {"bronze_nail": 12},
+    "outputs"         : {"bronze_nail": 300},
     "workAmount"      : 6,
     "toolTierRequired": 1
   },
@@ -1243,7 +1243,7 @@
     // flensing table, steel the sanguinary altar.
     "id"              : "make_iron_butchery_kit",
     "station"         : "anvil",
-    "inputs"          : {"iron_bar": 2, "category:leather": 1, "thread": 2, "iron_nail": 2},
+    "inputs"          : {"iron_bar": 2, "category:leather": 1, "thread": 2, "iron_nail": 10},
     "outputs"         : {"iron_butchery_kit": 1},
     "workAmount"      : 9,
     "toolTierRequired": 1,
@@ -1252,7 +1252,7 @@
   {
     "id"              : "make_steel_butchery_kit",
     "station"         : "anvil",
-    "inputs"          : {"category:steel": 2, "category:leather": 1, "thread": 2, "steel_rivet": 2},
+    "inputs"          : {"category:steel": 2, "category:leather": 1, "thread": 2, "steel_rivet": 10},
     "outputs"         : {"steel_butchery_kit": 1},
     "workAmount"      : 11,
     "toolTierRequired": 2,
@@ -1461,7 +1461,7 @@
     "id"              : "make_iron_nail",
     "station"         : "anvil",
     "inputs"          : {"iron_bar": 1},
-    "outputs"         : {"iron_nail": 12},
+    "outputs"         : {"iron_nail": 300},
     "workAmount"      : 6,
     "toolTierRequired": 1
   },
@@ -1469,9 +1469,25 @@
     "id"              : "make_steel_rivet",
     "station"         : "anvil",
     "inputs"          : {"category:steel": 1},
-    "outputs"         : {"steel_rivet": 12},
+    "outputs"         : {"steel_rivet": 300},
     "workAmount"      : 8,
     "toolTierRequired": 2
+  },
+  {
+    "id"              : "spin_wool_yarn",
+    "station"         : "spinning_wheel",
+    "inputs"          : {"category:wool": 2},
+    "outputs"         : {"wool_yarn": 2},
+    "workAmount"      : 3,
+    "toolTierRequired": 0
+  },
+  {
+    "id"              : "spin_cotton_thread",
+    "station"         : "spinning_wheel",
+    "inputs"          : {"cotton_fiber": 3},
+    "outputs"         : {"cotton_thread": 4},
+    "workAmount"      : 3,
+    "toolTierRequired": 0
   },
   {
     "id"               : "spin_thread",
@@ -1596,7 +1612,7 @@
   {
     "id"              : "make_wooden_chest",
     "station"         : "carpenter_bench",
-    "inputs"          : {"category:plank": 4, "iron_nail": 6},
+    "inputs"          : {"category:plank": 4, "iron_nail": 24},
     "outputs"         : {"wooden_chest": 1},
     "workAmount"      : 16,
     "toolTierRequired": 1
@@ -1624,7 +1640,7 @@
     "id"              : "make_linen_snapsack",
     "discipline"      : "weaving",
     "station"         : "makers_bench",
-    "inputs"          : {"linen_cloth": 3, "category:leather": 1},
+    "inputs"          : {"linen_cloth": 6, "category:leather": 1},
     "outputs"         : {"linen_snapsack": 1},
     "workAmount"      : 8,
     "toolTierRequired": 0
@@ -1642,6 +1658,7 @@
   // carry a melt, and the reason `fire_clay` stops being a brick ingredient and nothing else.
   {
     "id"              : "make_fireclay_crucible",
+    "discipline"      : "pottery",
     "station"         : "advanced_kiln",
     "inputs"          : {"fire_clay": 3},
     "outputs"         : {"fireclay_crucible": 1},
@@ -1663,7 +1680,7 @@
     "id"              : "make_leather_knapsack",
     "discipline"      : "leatherworking",
     "station"         : "makers_bench",
-    "inputs"          : {"category:leather": 5, "bronze_nail": 2},
+    "inputs"          : {"category:leather": 5, "bronze_nail": 12},
     "outputs"         : {"leather_knapsack": 1},
     "workAmount"      : 12,
     "toolTierRequired": 0,
@@ -1673,7 +1690,7 @@
     "id"              : "make_steel_riveted_knapsack",
     "discipline"      : "leatherworking",
     "station"         : "makers_bench",
-    "inputs"          : {"category:leather": 8, "category:plank": 1, "steel_rivet": 4},
+    "inputs"          : {"category:leather": 8, "category:plank": 1, "steel_rivet": 18},
     "outputs"         : {"steel_riveted_knapsack": 1},
     "workAmount"      : 20,
     "toolTierRequired": 2,
@@ -1723,7 +1740,7 @@
     "id"              : "make_iron_framed_pack",
     "discipline"      : "leatherworking",
     "station"         : "makers_bench",
-    "inputs"          : {"category:leather": 6, "category:plank": 1, "iron_nail": 4},
+    "inputs"          : {"category:leather": 6, "category:plank": 1, "iron_nail": 28},
     "outputs"         : {"iron_framed_pack": 1},
     "workAmount"      : 18,
     "toolTierRequired": 1,
@@ -1743,7 +1760,7 @@
     "id"              : "make_steel_framed_pack",
     "discipline"      : "leatherworking",
     "station"         : "makers_bench",
-    "inputs"          : {"category:leather": 9, "category:plank": 2, "steel_rivet": 6},
+    "inputs"          : {"category:leather": 9, "category:plank": 2, "steel_rivet": 30},
     "outputs"         : {"steel_framed_pack": 1},
     "workAmount"      : 26,
     "toolTierRequired": 2,
@@ -1772,7 +1789,7 @@
     "id"              : "make_leather_belt",
     "discipline"      : "leatherworking",
     "station"         : "makers_bench",
-    "inputs"          : {"category:leather": 3, "bronze_nail": 2},
+    "inputs"          : {"category:leather": 3, "bronze_nail": 6},
     "outputs"         : {"leather_belt": 1},
     "workAmount"      : 7,
     "toolTierRequired": 0,
@@ -1821,7 +1838,7 @@
     "id"              : "make_leather_sword_belt",
     "discipline"      : "leatherworking",
     "station"         : "makers_bench",
-    "inputs"          : {"category:leather": 3, "bronze_nail": 1},
+    "inputs"          : {"category:leather": 3, "bronze_nail": 6},
     "outputs"         : {"leather_sword_belt": 1},
     "workAmount"      : 8,
     "toolTierRequired": 0,
@@ -1839,7 +1856,7 @@
   {
     "id"              : "make_plated_war_belt",
     "station"         : "anvil",
-    "inputs"          : {"category:leather": 3, "category:steel": 1, "steel_rivet": 4},
+    "inputs"          : {"category:leather": 3, "category:steel": 1, "steel_rivet": 14},
     "outputs"         : {"plated_war_belt": 1},
     "workAmount"      : 18,
     "toolTierRequired": 2,
@@ -1849,7 +1866,7 @@
   {
     "id"              : "weave_linen",
     "station"         : "weaving_frame",
-    "inputs"          : {"thread": 3},
+    "inputs"          : {"thread": 5},
     "outputs"         : {"linen_cloth": 1},
     "workAmount"      : 4,
     "toolTierRequired": 0
@@ -1858,7 +1875,7 @@
   {
     "id"              : "weave_cotton",
     "station"         : "weaving_frame",
-    "inputs"          : {"cotton_fiber": 3},
+    "inputs"          : {"cotton_thread": 7},
     "outputs"         : {"cotton_cloth": 1},
     "workAmount"      : 4,
     "toolTierRequired": 0
@@ -1866,7 +1883,7 @@
   {
     "id"              : "reel_silk",
     "station"         : "weaving_frame",
-    "inputs"          : {"raw_silk": 2},
+    "inputs"          : {"raw_silk": 5},
     "outputs"         : {"silk_cloth": 1},
     "workAmount"      : 6,
     "toolTierRequired": 1
@@ -1883,7 +1900,7 @@
   {
     "id"              : "make_wool_cloak",
     "station"         : "weaving_frame",
-    "inputs"          : {"woolcloth": 3},
+    "inputs"          : {"woolcloth": 4},
     "outputs"         : {"wool_cloak": 1},
     "workAmount"      : 8,
     "toolTierRequired": 1
@@ -1892,7 +1909,7 @@
     "id"              : "make_arcane_robe",
     "station"         : "runic_loom",
     "researchRequired": "runic_inscription",
-    "inputs"          : {"silk_cloth": 4, "gem_dust": 2},
+    "inputs"          : {"silk_cloth": 5, "gem_dust": 2},
     "outputs"         : {"arcane_robe": 1},
     "workAmount"      : 16,
     "toolTierRequired": 2,
@@ -1901,7 +1918,7 @@
   {
     "id"              : "make_silk_robe",
     "station"         : "weaving_frame",
-    "inputs"          : {"silk_cloth": 3},
+    "inputs"          : {"silk_cloth": 5},
     "outputs"         : {"silk_robe": 1},
     "workAmount"      : 12,
     "toolTierRequired": 0,
@@ -2677,7 +2694,7 @@
   {
     "id"              : "make_linen_gambeson",
     "station"         : "weaving_frame",
-    "inputs"          : {"linen_cloth": 6},
+    "inputs"          : {"linen_cloth": 23},
     "outputs"         : {"linen_gambeson": 1},
     "workAmount"      : 12,
     "toolTierRequired": 0
@@ -2749,7 +2766,7 @@
   {
     "id"              : "make_mail_coif",
     "station"         : "anvil",
-    "inputs"          : {"mail_rings": 4, "linen_gambeson": 1},
+    "inputs"          : {"mail_rings": 10, "linen_gambeson": 1},
     "outputs"         : {"mail_coif": 1},
     "workAmount"      : 16,
     "toolTierRequired": 2,
@@ -2773,7 +2790,7 @@
   {
     "id"              : "make_mail_hauberk",
     "station"         : "anvil",
-    "inputs"          : {"mail_rings": 8, "linen_gambeson": 1},
+    "inputs"          : {"mail_rings": 42, "linen_gambeson": 1},
     "outputs"         : {"mail_hauberk": 1},
     "workAmount"      : 30,
     "toolTierRequired": 2,
@@ -3242,7 +3259,7 @@
   {
     "id"              : "make_wheelbarrow",
     "station"         : "sawtable",
-    "inputs"          : {"category:plank": 4, "wheel": 1, "iron_nail": 6},
+    "inputs"          : {"category:plank": 4, "wheel": 1, "iron_nail": 24},
     "outputs"         : {"wheelbarrow": 1},
     "workAmount"      : 120,
     "toolTierRequired": 1,
@@ -3251,7 +3268,7 @@
   {
     "id"              : "make_handcart",
     "station"         : "sawtable",
-    "inputs"          : {"category:plank": 8, "wheel": 2, "bronze_nail": 4},
+    "inputs"          : {"category:plank": 8, "wheel": 2, "bronze_nail": 40},
     "outputs"         : {"handcart": 1},
     "workAmount"      : 200,
     "toolTierRequired": 1,
@@ -3459,7 +3476,7 @@
   {
     "id"              : "make_storage_bin",
     "station"         : "carpenter_bench",
-    "inputs"          : {"category:plank": 6, "iron_nail": 8},
+    "inputs"          : {"category:plank": 6, "iron_nail": 72},
     "outputs"         : {"storage_bin": 1},
     "workAmount"      : 30,
     "toolTierRequired": 1
@@ -3467,7 +3484,7 @@
   {
     "id"              : "make_crate",
     "station"         : "carpenter_bench",
-    "inputs"          : {"category:plank": 4, "iron_nail": 4},
+    "inputs"          : {"category:plank": 4, "iron_nail": 40},
     "outputs"         : {"crate": 1},
     "workAmount"      : 18,
     "toolTierRequired": 1
@@ -3838,7 +3855,7 @@
   {
     "id"              : "weave_woolcloth",
     "station"         : "weaving_frame",
-    "inputs"          : {"category:wool": 3},
+    "inputs"          : {"wool_yarn": 3},
     "outputs"         : {"woolcloth": 1},
     "workAmount"      : 24,
     "toolTierRequired": 0
@@ -3945,7 +3962,7 @@
     "station"         : "anvil",
     "researchRequired": "iron_working",
     "inputs"          : {"iron_bar": 1},
-    "outputs"         : {"iron_wire": 2},
+    "outputs"         : {"iron_wire": 6},
     "workAmount"      : 14,
     "toolTierRequired": 2
   },
@@ -5416,7 +5433,7 @@
   {
     "id"              : "make_steel_halberd",
     "station"         : "anvil",
-    "inputs"          : {"category:steel": 2, "seasoned_haft": 1, "iron_nail": 2},
+    "inputs"          : {"category:steel": 2, "seasoned_haft": 1, "iron_nail": 22},
     "outputs"         : {"steel_halberd": 1},
     "workAmount"      : 17,
     "toolTierRequired": 2,
@@ -5462,7 +5479,7 @@
   {
     "id"              : "make_steel_greatflail",
     "station"         : "anvil",
-    "inputs"          : {"seasoned_haft": 1, "category:steel": 3, "iron_nail": 2},
+    "inputs"          : {"seasoned_haft": 1, "category:steel": 3, "iron_nail": 36},
     "outputs"         : {"steel_greatflail": 1},
     "workAmount"      : 26,
     "toolTierRequired": 2,
@@ -5472,7 +5489,7 @@
   {
     "id"              : "make_rune_lashing_greatflail",
     "station"         : "runecarver_bench",
-    "inputs"          : {"magic_alloy_bar": 2, "gem_dust": 1, "seasoned_haft": 1, "iron_nail": 2},
+    "inputs"          : {"magic_alloy_bar": 2, "gem_dust": 1, "seasoned_haft": 1, "iron_nail": 36},
     "outputs"         : {"rune_lashing_greatflail": 1},
     "workAmount"      : 36,
     "toolTierRequired": 2,
@@ -5571,7 +5588,7 @@
   {
     "id"              : "make_rune_etched_halberd",
     "station"         : "runecarver_bench",
-    "inputs"          : {"magic_alloy_bar": 2, "gem_dust": 1, "seasoned_haft": 1, "steel_rivet": 2},
+    "inputs"          : {"magic_alloy_bar": 2, "gem_dust": 1, "seasoned_haft": 1, "steel_rivet": 20},
     "outputs"         : {"rune_etched_halberd": 1},
     "workAmount"      : 36,
     "toolTierRequired": 2,
@@ -5591,7 +5608,7 @@
   {
     "id"              : "spin_silk_bowstring",
     "station"         : "spinning_wheel",
-    "inputs"          : {"raw_silk": 3},
+    "inputs"          : {"raw_silk": 1},
     "outputs"         : {"silk_bowstring": 1},
     "workAmount"      : 6,
     "toolTierRequired": 1
@@ -5649,7 +5666,7 @@
     "id"              : "make_composite_crossbow",
     "discipline"      : "woodworking",
     "station"         : "makers_bench",
-    "inputs"          : {"sanded_haft": 1, "oak_plank": 1, "curved_horn": 1, "sinew": 2, "bronze_nail": 2, "thread": 1},
+    "inputs"          : {"sanded_haft": 1, "oak_plank": 1, "curved_horn": 1, "sinew": 2, "bronze_nail": 26, "thread": 1},
     "outputs"         : {"composite_crossbow": 1},
     "workAmount"      : 16,
     "toolTierRequired": 1,
@@ -5658,7 +5675,7 @@
   {
     "id"              : "make_steel_arbalest",
     "station"         : "anvil",
-    "inputs"          : {"seasoned_haft": 1, "oak_plank": 2, "category:steel": 2, "steel_rivet": 4, "silk_bowstring": 1, "category:leather": 1},
+    "inputs"          : {"seasoned_haft": 1, "oak_plank": 2, "category:steel": 2, "steel_rivet": 36, "silk_bowstring": 1, "category:leather": 1},
     "outputs"         : {"steel_arbalest": 1},
     "workAmount"      : 24,
     "toolTierRequired": 2,
@@ -5667,7 +5684,7 @@
   {
     "id"              : "make_rune_cranked_arbalest",
     "station"         : "runecarver_bench",
-    "inputs"          : {"seasoned_haft": 1, "magic_alloy_bar": 1, "steel_rivet": 4, "silk_bowstring": 1, "enchant_thread": 1},
+    "inputs"          : {"seasoned_haft": 1, "magic_alloy_bar": 1, "steel_rivet": 34, "silk_bowstring": 1, "enchant_thread": 1},
     "outputs"         : {"rune_cranked_arbalest": 1},
     "workAmount"      : 38,
     "toolTierRequired": 2,
@@ -5967,7 +5984,7 @@
   {
     "id"              : "make_steel_vambraces",
     "station"         : "anvil",
-    "inputs"          : {"category:steel": 2, "boarhide": 1, "steel_rivet": 2},
+    "inputs"          : {"category:steel": 2, "boarhide": 1, "steel_rivet": 10},
     "outputs"         : {"steel_vambraces": 1},
     "workAmount"      : 20,
     "toolTierRequired": 3,
@@ -5977,7 +5994,7 @@
   {
     "id"              : "make_steel_greaves",
     "station"         : "anvil",
-    "inputs"          : {"category:steel": 2, "boarhide": 1, "steel_rivet": 2},
+    "inputs"          : {"category:steel": 2, "boarhide": 1, "steel_rivet": 14},
     "outputs"         : {"steel_greaves": 1},
     "workAmount"      : 24,
     "toolTierRequired": 3,
@@ -6037,7 +6054,7 @@
   {
     "id"              : "make_linen_robe",
     "station"         : "weaving_frame",
-    "inputs"          : {"linen_cloth": 3},
+    "inputs"          : {"linen_cloth": 7},
     "outputs"         : {"linen_robe": 1},
     "workAmount"      : 10,
     "toolTierRequired": 0,
@@ -6056,7 +6073,7 @@
   {
     "id"              : "make_quilted_jack",
     "station"         : "weaving_frame",
-    "inputs"          : {"linen_cloth": 10, "plant_fiber": 6},
+    "inputs"          : {"linen_cloth": 24, "plant_fiber": 6},
     "outputs"         : {"quilted_jack": 1},
     "workAmount"      : 24,
     "toolTierRequired": 0,
@@ -6074,7 +6091,7 @@
   {
     "id"              : "make_arming_doublet",
     "station"         : "weaving_frame",
-    "inputs"          : {"linen_cloth": 8, "plant_fiber": 4},
+    "inputs"          : {"linen_cloth": 20, "plant_fiber": 4},
     "outputs"         : {"arming_doublet": 1},
     "workAmount"      : 20,
     "toolTierRequired": 0,
@@ -6083,7 +6100,7 @@
   {
     "id"              : "make_open_burgonet",
     "station"         : "anvil",
-    "inputs"          : {"category:steel": 2, "steel_rivet": 2},
+    "inputs"          : {"category:steel": 2, "steel_rivet": 12},
     "outputs"         : {"open_burgonet": 1},
     "workAmount"      : 26,
     "toolTierRequired": 3,
@@ -6094,7 +6111,7 @@
   {
     "id"              : "make_munition_breastplate",
     "station"         : "anvil",
-    "inputs"          : {"category:steel": 4, "steel_rivet": 4},
+    "inputs"          : {"category:steel": 4, "steel_rivet": 44},
     "outputs"         : {"munition_breastplate": 1},
     "workAmount"      : 40,
     "toolTierRequired": 3,
@@ -6105,7 +6122,7 @@
   {
     "id"              : "make_splint_bracers",
     "station"         : "anvil",
-    "inputs"          : {"category:steel": 1, "steel_rivet": 4},
+    "inputs"          : {"category:steel": 1, "steel_rivet": 8},
     "outputs"         : {"splint_bracers": 1},
     "workAmount"      : 16,
     "toolTierRequired": 3,
@@ -6116,7 +6133,7 @@
   {
     "id"              : "make_splint_greaves",
     "station"         : "anvil",
-    "inputs"          : {"category:steel": 1, "steel_rivet": 4},
+    "inputs"          : {"category:steel": 1, "steel_rivet": 12},
     "outputs"         : {"splint_greaves": 1},
     "workAmount"      : 18,
     "toolTierRequired": 3,
@@ -6182,7 +6199,7 @@
   {
     "id"              : "make_rune_woven_robe",
     "station"         : "runic_loom",
-    "inputs"          : {"silk_cloth": 4, "enchant_thread": 3, "gem_dust": 1},
+    "inputs"          : {"silk_cloth": 9, "enchant_thread": 3, "gem_dust": 1},
     "outputs"         : {"rune_woven_robe": 1},
     "workAmount"      : 36,
     "toolTierRequired": 2,
@@ -6257,7 +6274,7 @@
   {
     "id"              : "make_boar_head",
     "station"         : "casting_hearth",
-    "inputs"          : {"boarhide": 1, "bronze_bar": 1, "bronze_nail": 2},
+    "inputs"          : {"boarhide": 1, "bronze_bar": 1, "bronze_nail": 8},
     "outputs"         : {"boar_head": 1},
     "workAmount"      : 11,
     "toolTierRequired": 0,
@@ -6266,7 +6283,7 @@
   {
     "id"              : "make_boar_gloves",
     "station"         : "casting_hearth",
-    "inputs"          : {"boarhide": 1, "bronze_bar": 1, "bronze_nail": 2},
+    "inputs"          : {"boarhide": 1, "bronze_bar": 1, "bronze_nail": 4},
     "outputs"         : {"boar_gloves": 1},
     "workAmount"      : 9,
     "toolTierRequired": 0,
@@ -6275,7 +6292,7 @@
   {
     "id"              : "make_boar_boots",
     "station"         : "casting_hearth",
-    "inputs"          : {"boarhide": 2, "bronze_bar": 2, "bronze_nail": 2},
+    "inputs"          : {"boarhide": 2, "bronze_bar": 2, "bronze_nail": 8},
     "outputs"         : {"boar_boots": 1},
     "workAmount"      : 11,
     "toolTierRequired": 0,
@@ -6302,7 +6319,7 @@
   {
     "id"              : "make_linen_cap",
     "station"         : "weaving_frame",
-    "inputs"          : {"linen_cloth": 2},
+    "inputs"          : {"linen_cloth": 3},
     "outputs"         : {"linen_cap": 1},
     "workAmount"      : 11,
     "toolTierRequired": 0,
@@ -6383,7 +6400,7 @@
   {
     "id"              : "make_iron_plate_bracers",
     "station"         : "anvil",
-    "inputs"          : {"boarhide": 1, "iron_bar": 3, "iron_nail": 2},
+    "inputs"          : {"boarhide": 1, "iron_bar": 3, "iron_nail": 10},
     "outputs"         : {"iron_plate_bracers": 1},
     "workAmount"      : 14,
     "toolTierRequired": 1,
@@ -6393,7 +6410,7 @@
   {
     "id"              : "make_iron_plate_greaves",
     "station"         : "anvil",
-    "inputs"          : {"boarhide": 1, "iron_bar": 3, "iron_nail": 2},
+    "inputs"          : {"boarhide": 1, "iron_bar": 3, "iron_nail": 14},
     "outputs"         : {"iron_plate_greaves": 1},
     "workAmount"      : 16,
     "toolTierRequired": 1,
@@ -6448,7 +6465,7 @@
   {
     "id"              : "make_quilted_head",
     "station"         : "weaving_frame",
-    "inputs"          : {"linen_cloth": 2},
+    "inputs"          : {"linen_cloth": 3},
     "outputs"         : {"quilted_head": 1},
     "workAmount"      : 14,
     "toolTierRequired": 1,
@@ -6529,7 +6546,7 @@
   {
     "id"              : "make_munition_half_plate_gloves",
     "station"         : "anvil",
-    "inputs"          : {"boarhide": 1, "category:steel": 1, "steel_rivet": 2},
+    "inputs"          : {"boarhide": 1, "category:steel": 1, "steel_rivet": 4},
     "outputs"         : {"munition_half_plate_gloves": 1},
     "workAmount"      : 15,
     "toolTierRequired": 2,
@@ -6539,7 +6556,7 @@
   {
     "id"              : "make_munition_half_plate_boots",
     "station"         : "anvil",
-    "inputs"          : {"boarhide": 2, "category:steel": 2, "steel_rivet": 2},
+    "inputs"          : {"boarhide": 2, "category:steel": 2, "steel_rivet": 6},
     "outputs"         : {"munition_half_plate_boots": 1},
     "workAmount"      : 17,
     "toolTierRequired": 2,
@@ -6666,7 +6683,7 @@
   {
     "id"              : "make_rune_stitched_bracers",
     "station"         : "runecarver_bench",
-    "inputs"          : {"prime_wolf_leather": 2, "magic_alloy_bar": 2, "steel_rivet": 2},
+    "inputs"          : {"prime_wolf_leather": 2, "magic_alloy_bar": 2, "steel_rivet": 8},
     "outputs"         : {"rune_stitched_bracers": 1},
     "workAmount"      : 20,
     "toolTierRequired": 3,
@@ -6675,7 +6692,7 @@
   {
     "id"              : "make_rune_stitched_gloves",
     "station"         : "runecarver_bench",
-    "inputs"          : {"prime_wolf_leather": 1, "magic_alloy_bar": 1, "steel_rivet": 2},
+    "inputs"          : {"prime_wolf_leather": 1, "magic_alloy_bar": 1, "steel_rivet": 4},
     "outputs"         : {"rune_stitched_gloves": 1},
     "workAmount"      : 18,
     "toolTierRequired": 3,
@@ -6684,7 +6701,7 @@
   {
     "id"              : "make_rune_stitched_greaves",
     "station"         : "runecarver_bench",
-    "inputs"          : {"prime_wolf_leather": 2, "magic_alloy_bar": 2, "steel_rivet": 2},
+    "inputs"          : {"prime_wolf_leather": 2, "magic_alloy_bar": 2, "steel_rivet": 10},
     "outputs"         : {"rune_stitched_greaves": 1},
     "workAmount"      : 22,
     "toolTierRequired": 3,
@@ -6693,7 +6710,7 @@
   {
     "id"              : "make_rune_stitched_boots",
     "station"         : "runecarver_bench",
-    "inputs"          : {"prime_wolf_leather": 2, "magic_alloy_bar": 2, "steel_rivet": 2},
+    "inputs"          : {"prime_wolf_leather": 2, "magic_alloy_bar": 2, "steel_rivet": 6},
     "outputs"         : {"rune_stitched_boots": 1},
     "workAmount"      : 20,
     "toolTierRequired": 3,
@@ -6780,7 +6797,7 @@
     "id": "make_sackcloth_tunic",
     "discipline": "weaving",
     "station": "weaving_frame",
-    "inputs": {"sackcloth": 3},
+    "inputs": {"sackcloth": 4},
     "outputs": {
       "sackcloth_tunic": 1
     },
@@ -6813,9 +6830,7 @@
     "id": "weave_sackcloth",
     "discipline": "weaving",
     "station": "weaving_frame",
-    "inputs": {
-      "plant_fiber": 4
-    },
+    "inputs": {"plant_fiber": 7},
     "outputs": {
       "sackcloth": 1
     },
@@ -6991,7 +7006,7 @@
     "id": "make_steel_gauntlets",
     "discipline": "metalworking",
     "station": "anvil",
-    "inputs": {"category:steel": 2, "boarhide": 1, "steel_rivet": 2},
+    "inputs": {"category:steel": 2, "boarhide": 1, "steel_rivet": 8},
     "outputs": {
       "steel_gauntlets": 1
     },
@@ -7003,7 +7018,7 @@
     "id": "make_steel_sabatons",
     "discipline": "metalworking",
     "station": "anvil",
-    "inputs": {"category:steel": 2, "boarhide": 1, "steel_rivet": 2},
+    "inputs": {"category:steel": 2, "boarhide": 1, "steel_rivet": 14},
     "outputs": {
       "steel_sabatons": 1
     },
@@ -7057,7 +7072,7 @@
     "id": "make_steel_heater_shield",
     "discipline": "metalworking",
     "station": "anvil",
-    "inputs": {"category:steel": 4, "category:plank": 2, "boarhide": 1, "steel_rivet": 4},
+    "inputs": {"category:steel": 4, "category:plank": 2, "boarhide": 1, "steel_rivet": 40},
     "outputs": {
       "steel_heater_shield": 1
     },

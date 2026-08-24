@@ -29,7 +29,10 @@ describe('mining tool-tier gate (iron/steel pick)', () => {
     const p = s.getState().pawns[0];
     const ox = (p.position?.x ?? 9) + 2;
     const oy = p.position?.y ?? 9;
-    s.command({ type: 'devSpawnResourceAt', payload: { resourceId: 'hematite', x: ox, y: oy } } as never);
+    s.command({
+      type: 'devSpawnResourceAt',
+      payload: { resourceId: 'hematite', x: ox, y: oy }
+    } as never);
     s.command({ type: 'designate', payload: { x: ox, y: oy, type: 'harvest' } } as never);
     for (let i = 0; i < 30 && (stk(s).hematite ?? 0) === 0; i++) s.tick(200);
     return stk(s).hematite ?? 0;

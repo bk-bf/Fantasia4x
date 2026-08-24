@@ -43,7 +43,7 @@ describe('carry aid chain — packs, belts and sheaths (HeadlessSession, real ti
           cured_deer_hide: 30,
           buckskin: 40,
           jackal_leather: 40,
-          bronze_nail: 20,
+          bronze_nail: 200,
           iron_bar: 20
         },
         seedEntities: false
@@ -106,8 +106,9 @@ describe('carry aid chain — packs, belts and sheaths (HeadlessSession, real ti
         items: {
           buckskin: 60,
           iron_bar: 20,
+          iron_nail: 200,
           oak_plank: 20,
-          steel_rivet: 40,
+          steel_rivet: 400,
           bloom_steel: 20,
           magic_alloy_bar: 10,
           gem_dust: 20,
@@ -137,7 +138,7 @@ describe('carry aid chain — packs, belts and sheaths (HeadlessSession, real ti
 
     console.log(
       `[CARRY-AID] turn=${session.getState().turn} ${made} ` +
-        `(buckskin ${stockOf(session).buckskin}/60, steel_rivet ${stockOf(session).steel_rivet}/40) ` +
+        `(buckskin ${stockOf(session).buckskin}/60, steel_rivet ${stockOf(session).steel_rivet}/400) ` +
         `carry ${before.maxWeightKg.toFixed(1)}kg → ${after.maxWeightKg.toFixed(1)}kg`
     );
 
@@ -169,7 +170,7 @@ describe('the pack grid — light / medium / heavy at one age (HeadlessSession, 
         pawns: [{ count: 6, skillLevel: 18 }],
         needsDisabled: ['hunger', 'fatigue'],
         buildings: [{ id: 'makers_bench' }],
-        items: { buckskin: 80, jackal_leather: 40, iron_bar: 20, iron_nail: 20, oak_plank: 20 },
+        items: { buckskin: 80, jackal_leather: 40, iron_bar: 20, iron_nail: 200, oak_plank: 20 },
         seedEntities: false
       })
     );

@@ -40,7 +40,9 @@ describe('butchery', () => {
     // pawn_carcass (no cannibalism) is the only intentionally un-butcherable carcass. rotten_carcass now
     // butchers into rotten meat/hide (butcher_rotten_carcass) for compost.
     const INTENTIONAL = new Set(['pawn_carcass']);
-    const carcasses = itemService.getItemsByType('material').filter((i) => i.category === 'carcass');
+    const carcasses = itemService
+      .getItemsByType('material')
+      .filter((i) => i.category === 'carcass');
     const dead: string[] = [];
     for (const c of carcasses) {
       if (INTENTIONAL.has(c.id)) continue;
@@ -51,7 +53,10 @@ describe('butchery', () => {
       `[BUTCH cov] ${carcasses.length} carcass items; un-butcherable (excl. rotten/pawn): ${dead.join(', ') || 'none'}`
     );
     // grimeling_carcass is a known content gap (2 creatures) — tolerate it, but nothing else may be dead.
-    expect(dead.filter((d) => d !== 'grimeling_carcass'), 'no unexpected dead carcass').toHaveLength(0);
+    expect(
+      dead.filter((d) => d !== 'grimeling_carcass'),
+      'no unexpected dead carcass'
+    ).toHaveLength(0);
   });
 
   it('physical: pawns butcher across tiers — game meat, humanoid remains, boss render & flense', async () => {
@@ -77,16 +82,28 @@ describe('butchery', () => {
         seedEntities: false
       })
     );
-    for (const id of ['rabbit_carcass', 'goblin_carcass', 'great_wolf_carcass', 'dire_wolf_carcass'])
+    for (const id of [
+      'rabbit_carcass',
+      'goblin_carcass',
+      'great_wolf_carcass',
+      'dire_wolf_carcass'
+    ])
       s.command({ type: 'craftItem', payload: { itemId: id } } as never);
-    for (let i = 0; i < 40 && !(stk(s).rabbit_meat > 0 && stk(s).wolf_meat > 0 && stk(s).medium_bones > 0); i++)
+    for (
+      let i = 0;
+      i < 40 && !(stk(s).rabbit_meat > 0 && stk(s).wolf_meat > 0 && stk(s).medium_bones > 0);
+      i++
+    )
       s.tick(400);
     console.log(
       `[BUTCH phys] rabbit_meat=${stk(s).rabbit_meat} goblin→medium_bones=${stk(s).medium_bones}/sinew=${stk(s).sinew} wolf_meat=${stk(s).wolf_meat} @turn ${s.getState().turn}`
     );
     expect(stk(s).rabbit_meat ?? 0, 'rabbit butchered to meat').toBeGreaterThan(0);
     expect(stk(s).medium_bones ?? 0, 'goblin rendered to remains (bones)').toBeGreaterThan(0);
-    expect(stk(s).wolf_meat ?? 0, 'great_wolf + dire_wolf rendered/flensed to meat').toBeGreaterThan(0);
+    expect(
+      stk(s).wolf_meat ?? 0,
+      'great_wolf + dire_wolf rendered/flensed to meat'
+    ).toBeGreaterThan(0);
   });
 
   it('yield bonus: a higher butchery tier renders more from the same carcass', async () => {
@@ -110,9 +127,13 @@ describe('butchery', () => {
     };
     const spot = await run([{ id: 'butcher_spot' }]); // T0, no bonus
     const flense = await run([{ id: 'butcher_spot' }, { id: 'flensing_table' }]); // T2, +45%
-    console.log(`[BUTCH yield] deer venison: butcher_spot=${spot} vs flensing_table(+45%)=${flense}`);
+    console.log(
+      `[BUTCH yield] deer venison: butcher_spot=${spot} vs flensing_table(+45%)=${flense}`
+    );
     expect(spot, 'deer butchered at butcher_spot').toBeGreaterThan(0);
-    expect(flense, 'flensing table renders MORE venison from the same carcass').toBeGreaterThan(spot);
+    expect(flense, 'flensing table renders MORE venison from the same carcass').toBeGreaterThan(
+      spot
+    );
   });
 
   it('tool gate: butchery now REQUIRES a knife, and flensing requires the tier-2 kit', async () => {
@@ -133,7 +154,10 @@ describe('butchery', () => {
       );
       for (const p of s.getState().pawns)
         for (const w of workService.getAllWorkCategories())
-          s.command({ type: 'setPawnLaborLevel', payload: { pawnId: p.id, workId: w.id, level: 3 } } as never);
+          s.command({
+            type: 'setPawnLaborLevel',
+            payload: { pawnId: p.id, workId: w.id, level: 3 }
+          } as never);
       s.command({ type: 'craftItem', payload: { itemId: 'rabbit_carcass' } } as never);
       s.command({ type: 'craftItem', payload: { itemId: 'dire_wolf_carcass' } } as never);
       for (let i = 0; i < 30; i++) s.tick(400);
@@ -165,7 +189,15 @@ describe('butchery', () => {
         needsDisabled: ['hunger', 'fatigue', 'thirst', 'hygiene'],
         buildings: [{ id: 'anvil' }],
         // stitched with spun thread + buckled with metal fasteners (not primitive cordage)
-        items: { iron_bar: 6, bloom_steel: 6, buckskin: 6, thread: 8, iron_nail: 4, steel_rivet: 4, spit_meat: 10 },
+        items: {
+          iron_bar: 6,
+          bloom_steel: 6,
+          buckskin: 6,
+          thread: 8,
+          iron_nail: 40,
+          steel_rivet: 40,
+          spit_meat: 10
+        },
         seedEntities: false
       })
     );
@@ -216,7 +248,12 @@ describe('butchery', () => {
       s.command({ type: 'craftItem', payload: { itemId: c } } as never);
     for (
       let i = 0;
-      i < 30 && !((stk(s).predator_claw ?? 0) >= 2 && (stk(s).antler_rack ?? 0) > 0 && (stk(s).curved_horn ?? 0) > 0);
+      i < 30 &&
+      !(
+        (stk(s).predator_claw ?? 0) >= 2 &&
+        (stk(s).antler_rack ?? 0) > 0 &&
+        (stk(s).curved_horn ?? 0) > 0
+      );
       i++
     )
       s.tick(400);
@@ -233,7 +270,11 @@ describe('butchery', () => {
     for (
       let i = 0;
       i < 30 &&
-      !((stk(s).fang_charm ?? 0) > 0 && (stk(s).fang_arrow ?? 0) > 0 && (stk(s).barbed_bone_arrow ?? 0) > 0);
+      !(
+        (stk(s).fang_charm ?? 0) > 0 &&
+        (stk(s).fang_arrow ?? 0) > 0 &&
+        (stk(s).barbed_bone_arrow ?? 0) > 0
+      );
       i++
     )
       s.tick(400);
@@ -242,12 +283,16 @@ describe('butchery', () => {
     );
     expect(stk(s).fang_charm ?? 0, 'great_fang + claws → fang charm').toBeGreaterThan(0);
     expect(stk(s).fang_arrow ?? 0, 'great_fang → fang-tipped arrows').toBeGreaterThan(0);
-    expect(stk(s).barbed_bone_arrow ?? 0, 'antler/horn/claw → barbed bone arrows').toBeGreaterThan(0);
+    expect(stk(s).barbed_bone_arrow ?? 0, 'antler/horn/claw → barbed bone arrows').toBeGreaterThan(
+      0
+    );
   });
 
   it('§B prestige-pelt rugs + claw totem exist with the right anatomy cost (furniture defs)', () => {
     const bld = (id: string) =>
-      buildingService.getBuildingById(id) as { id: string; buildingCost?: Record<string, number> } | undefined;
+      buildingService.getBuildingById(id) as
+        | { id: string; buildingCost?: Record<string, number> }
+        | undefined;
     const rugs: Array<[string, string]> = [
       ['dire_wolf_rug', 'dire_wolf_pelt'],
       ['cave_bear_rug', 'cave_bear_pelt'],

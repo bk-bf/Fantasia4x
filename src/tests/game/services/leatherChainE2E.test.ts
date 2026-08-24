@@ -121,8 +121,8 @@ describe('leather chain — physical pawn pipeline (HeadlessSession, real ticks)
         toolTier: 3,
         pawns: [{ count: 6, skillLevel: 12 }],
         needsDisabled: ['hunger', 'fatigue'],
-        buildings: [{ id: 'makers_bench' }, { id: 'weaving_frame' }],
-        items: { buckskin: 20, cordage: 20, goat_wool: 20, cured_deer_hide: 20 },
+        buildings: [{ id: 'makers_bench' }, { id: 'weaving_frame' }, { id: 'spinning_wheel' }],
+        items: { buckskin: 20, cordage: 20, goat_wool: 40, cured_deer_hide: 20 },
         seedEntities: false
       })
     );
@@ -138,12 +138,15 @@ describe('leather chain — physical pawn pipeline (HeadlessSession, real ticks)
       type: 'craftItem',
       payload: { itemId: 'brimmed_leather_hood', quantity: 1 }
     } as never); // category:leather
+    // Wool now goes fleece -> yarn -> cloth, the same two steps flax has always had.
+    session.command({ type: 'craftItem', payload: { itemId: 'wool_yarn', quantity: 3 } } as never);
+    for (let i = 0; i < 8 && !((stock().wool_yarn ?? 0) >= 3); i++) session.tick(500);
     session.command({ type: 'craftItem', payload: { itemId: 'woolcloth', quantity: 1 } } as never); // category:wool
     // Reserve → haul → stage → craft is a multi-tick pawn pipeline; give it room for both stations.
     for (let i = 0; i < 16 && !(stock().brimmed_leather_hood > 0 && stock().woolcloth > 0); i++)
       session.tick(500);
     console.log(
-      `[E2E-PIPELINE] after ${session.getState().turn} turns: brimmed_leather_hood=${stock().brimmed_leather_hood} (buckskin ${stock().buckskin}/20), woolcloth=${stock().woolcloth} (goat_wool ${stock().goat_wool}/20)`
+      `[E2E-PIPELINE] after ${session.getState().turn} turns: brimmed_leather_hood=${stock().brimmed_leather_hood} (buckskin ${stock().buckskin}/20), woolcloth=${stock().woolcloth} (goat_wool ${stock().goat_wool}/40, yarn ${stock().wool_yarn})`
     );
     expect(
       stock().brimmed_leather_hood ?? 0,
@@ -151,7 +154,7 @@ describe('leather chain — physical pawn pipeline (HeadlessSession, real ticks)
     ).toBeGreaterThan(0);
     expect(stock().buckskin, 'leather consumed').toBeLessThan(20);
     expect(stock().woolcloth ?? 0, 'pawn crafts a category:wool item').toBeGreaterThan(0);
-    expect(stock().goat_wool, 'wool consumed').toBeLessThan(20);
+    expect(stock().goat_wool, 'wool consumed').toBeLessThan(40);
   });
 
   // The two-step PASSIVE chain, physically: pawns haul hide+ash to the Curing Frame, it cures, then they

@@ -395,7 +395,22 @@ wastes almost nothing, while weaving withies throws most of every rod away. The 
 | joinery / sawn timber | **0.72** | sawdust and end-trim |
 | forging | **0.82** | scale and hammer-trim off the billet |
 | assembly / hafting | **0.95** | parts are fitted, not consumed |
+| spin / weave | **0.85** | selvedge trimmed off the edge; a cloth cannot outweigh its thread |
+| cut-and-sew (garments) | **0.87** | offcuts around the pattern — a gambeson is ~20 layers, so it needs ~23 cloth, not 6 |
+| flesh a hide | **0.83** | fat and membrane scraped off |
+| **cure a hide** | **0.55** | this is DRYING and must be the biggest loss in the leather chain |
+| tan | **0.85** | hide→leather, not counting the brine, which stays in the pit |
+| curry | **1.10** | working tallow INTO leather adds mass |
 | smelting, butchery, cooking, fine metalwork | **n/a** | these legitimately lose or gain mass; leave the authored weight |
+
+- [ ] **A fastener is a small part, not a spike.** A nail is **10 g**, a rivet 12 g, a tack 8 g. At
+      0.2 kg each they were railway spikes, which is why every recipe could only ask for two or three
+      before the fastener outweighed the thing — a 0.7 kg belt was 57% buckle-metal. A 4 kg bar draws
+      out to ~300 nails; a chest takes 25, a bin 72, a belt 6. **When a count looks absurdly low, check
+      the UNIT before you touch the count.**
+- [ ] **Every fibre is spun before it is woven.** Flax → thread, wool → yarn, cotton → cotton thread,
+      silk reeled. Wool and cotton used to reach the loom as raw fleece and raw boll, which left the
+      spinning wheel serving two recipes in the entire game. A loom takes yarn, never fleece.
 
 - [ ] **Check the constant against something it should NOT move.** The basketry and laid-fibre numbers
       above are trustworthy because `wicker_frame` (0.8 → 0.81) and `cordage` (0.2 → 0.23) came out of

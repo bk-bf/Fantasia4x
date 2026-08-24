@@ -248,7 +248,7 @@
     "description"      : "Downy rabbit fur. Warm out of all proportion to its weight, and about as tough as wet paper.",
     "color"            : "#D8C4A8",
     "amount"           : 0,
-    "weightKg"         : 0.3,
+    "weightKg"         : 0.12,
     "volumeL"          : 0.8,
     "material"         : { "label": "Coney Fur", "desc": "soft, very warm, flimsy", "building": { "durability": 0.85, "insulation": 0.18, "comfort": 0.1 }, "item": { "durability": 0.8, "weight": 0.75 } }
   },
@@ -263,7 +263,7 @@
     "description"      : "Patchy rat skin. Thin and quick to split, but it costs almost nothing.",
     "color"            : "#8A7A62",
     "amount"           : 0,
-    "weightKg"         : 0.4,
+    "weightKg"         : 0.08,
     "volumeL"          : 1,
     "material"         : { "label": "Vermin Hide", "desc": "poor, cheap", "building": { "durability": 0.8, "insulation": 0.04 }, "item": { "durability": 0.75, "weight": 0.9 } }
   },
@@ -504,7 +504,7 @@
     "description"      : "Ash- or salt-cured rabbit skin. Stable and slow to rot, ready for the tanning bucket.",
     "color"            : "#B89878",
     "amount"           : 0,
-    "weightKg"         : 1,
+    "weightKg"         : 0.14,
     "volumeL"          : 2
   },
   {
@@ -518,7 +518,7 @@
     "description"      : "Ash- or salt-cured rat skin. Stable and slow to rot, ready for the tanning bucket.",
     "color"            : "#B89878",
     "amount"           : 0,
-    "weightKg"         : 1,
+    "weightKg"         : 0.09,
     "volumeL"          : 2
   },
   {
@@ -532,7 +532,7 @@
     "description"      : "Ash- or salt-cured deer skin. Stable and slow to rot, ready for the tanning bucket.",
     "color"            : "#B89878",
     "amount"           : 0,
-    "weightKg"         : 1.5,
+    "weightKg"         : 0.71,
     "volumeL"          : 3
   },
   {
@@ -546,7 +546,7 @@
     "description"      : "Ash- or salt-cured goat skin. Stable and slow to rot, ready for the tanning bucket.",
     "color"            : "#B89878",
     "amount"           : 0,
-    "weightKg"         : 1.5,
+    "weightKg"         : 0.71,
     "volumeL"          : 3
   },
   {
@@ -560,7 +560,7 @@
     "description"      : "Ash- or salt-cured jackal skin. Stable and slow to rot, ready for the tanning bucket.",
     "color"            : "#B89878",
     "amount"           : 0,
-    "weightKg"         : 1.5,
+    "weightKg"         : 0.59,
     "volumeL"          : 3
   },
   {
@@ -574,7 +574,7 @@
     "description"      : "Ash- or salt-cured wolf skin. Stable and slow to rot, ready for the tanning bucket.",
     "color"            : "#B89878",
     "amount"           : 0,
-    "weightKg"         : 2,
+    "weightKg"         : 1.18,
     "volumeL"          : 4
   },
   {
@@ -588,7 +588,7 @@
     "description"      : "Ash- or salt-cured worg skin. Stable and slow to rot, ready for the tanning bucket.",
     "color"            : "#B89878",
     "amount"           : 0,
-    "weightKg"         : 2,
+    "weightKg"         : 1.29,
     "volumeL"          : 4
   },
   {
@@ -602,7 +602,7 @@
     "description"      : "Ash- or salt-cured boar skin. Stable and slow to rot, ready for the tanning bucket.",
     "color"            : "#B89878",
     "amount"           : 0,
-    "weightKg"         : 2,
+    "weightKg"         : 1.53,
     "volumeL"          : 4
   },
   {
@@ -616,7 +616,7 @@
     "description"      : "Ash- or salt-cured elk skin. Stable and slow to rot, ready for the tanning bucket.",
     "color"            : "#B89878",
     "amount"           : 0,
-    "weightKg"         : 2,
+    "weightKg"         : 1.41,
     "volumeL"          : 4
   },
   {
@@ -630,7 +630,7 @@
     "description"      : "Ash- or salt-cured aurochs skin. Stable and slow to rot, ready for the tanning bucket.",
     "color"            : "#B89878",
     "amount"           : 0,
-    "weightKg"         : 2.5,
+    "weightKg"         : 2.24,
     "volumeL"          : 5
   },
   {
@@ -644,7 +644,7 @@
     "description"      : "Ash- or salt-cured bear skin. Stable and slow to rot, ready for the tanning bucket.",
     "color"            : "#B89878",
     "amount"           : 0,
-    "weightKg"         : 2.5,
+    "weightKg"         : 2.35,
     "volumeL"          : 5
   },
   {
@@ -658,7 +658,7 @@
     "description"      : "Ash- or salt-cured cave bear skin. Stable and slow to rot, ready for the tanning bucket.",
     "color"            : "#B89878",
     "amount"           : 0,
-    "weightKg"         : 3,
+    "weightKg"         : 2.82,
     "volumeL"          : 6
   },
   {
@@ -672,7 +672,7 @@
     "description"      : "Ash- or salt-cured owlbear skin. Stable and slow to rot, ready for the tanning bucket.",
     "color"            : "#B89878",
     "amount"           : 0,
-    "weightKg"         : 3,
+    "weightKg"         : 2.12,
     "volumeL"          : 6
   },
   {
@@ -686,7 +686,7 @@
     "description"      : "Ash- or salt-cured sabretooth skin. Stable and slow to rot, ready for the tanning bucket.",
     "color"            : "#B89878",
     "amount"           : 0,
-    "weightKg"         : 3,
+    "weightKg"         : 1.65,
     "volumeL"          : 6
   },
   {
@@ -700,7 +700,7 @@
     "description"      : "Ash- or salt-cured mammoth skin. Stable and slow to rot, ready for the tanning bucket.",
     "color"            : "#B89878",
     "amount"           : 0,
-    "weightKg"         : 3,
+    "weightKg"         : 3.06,
     "volumeL"          : 6
   },
   {
@@ -714,7 +714,7 @@
     "description"      : "Ash- or salt-cured hippogriff skin. Stable and slow to rot, ready for the tanning bucket.",
     "color"            : "#B89878",
     "amount"           : 0,
-    "weightKg"         : 3,
+    "weightKg"         : 0.82,
     "volumeL"          : 6
   },
   {
@@ -728,7 +728,7 @@
     "description"      : "Ash- or salt-cured dire wolf skin. Stable and slow to rot, ready for the tanning bucket.",
     "color"            : "#B89878",
     "amount"           : 0,
-    "weightKg"         : 3,
+    "weightKg"         : 1.53,
     "volumeL"          : 6
   },
   {
@@ -1382,6 +1382,39 @@
     "weightKg"         : 4,
     "volumeL"          : 0.5
   },
+  // Wool and cotton reached the loom as raw fleece and raw boll, skipping the step flax has always
+  // had. Spinning is what turns a fibre into something a loom can take, and leaving it out is why the
+  // spinning wheel served two recipes in the whole game.
+  {
+    "id": "wool_yarn",
+    "charSpans": [ {"sheet": "items", "id": 158} ],
+    "name": "Wool Yarn",
+    "type": "material",
+    "category": "fiber",
+    "maxDurability": 120,
+    "deteriorationRate": 0.02,
+    "description": "Fleece carded straight and drawn onto the spindle. Springy, warm to handle, and the only form a loom will take wool in.",
+    "color": "#D8CBB0",
+    "amount": 0,
+    "weightKg": 0.15,
+    "volumeL": 0.3,
+    "value": 3
+  },
+  {
+    "id": "cotton_thread",
+    "charSpans": [ {"sheet": "items", "id": 158} ],
+    "name": "Cotton Thread",
+    "type": "material",
+    "category": "fiber",
+    "maxDurability": 120,
+    "deteriorationRate": 0.02,
+    "description": "Boll fibre picked clean of seed and spun fine. Takes dye better than flax and wears softer against skin.",
+    "color": "#EFE6D6",
+    "amount": 0,
+    "weightKg": 0.05,
+    "volumeL": 0.1,
+    "value": 3
+  },
   // ── Vessels for what an ordinary pot cannot hold ─────────────────────────
   // Ordinary fired earthenware, wood, glass and leather all fail somewhere: a melt is over 1000C, a
   // caustic humour eats leather and skin. These two are the answers, one mundane and one not.
@@ -1566,8 +1599,8 @@
     "description": "A handful of forged iron nails. Fasten planks into chests, furniture and frames. Drawn out on the smithy anvil.",
     "color": "#7A7E84",
     "amount": 0,
-    "weightKg": 0.2,
-    "volumeL": 0.1,
+    "weightKg": 0.01,
+    "volumeL": 0.004,
     "toolTierRequired": 1
   },
   {
@@ -1581,8 +1614,8 @@
     "description": "Soft copper hammered into short tacks. The first metal fastener, holding boards where cordage would only lash them.",
     "color": "#B87333",
     "amount": 0,
-    "weightKg": 0.2,
-    "volumeL": 0.1
+    "weightKg": 0.008,
+    "volumeL": 0.003
   },
   {
     "id": "bronze_nail",
@@ -1595,8 +1628,8 @@
     "description": "A handful of cast bronze nails and tacks. The bronze-age fastener, pins planks into doors, floors and furniture before iron is smelted.",
     "color": "#A8782E",
     "amount": 0,
-    "weightKg": 0.2,
-    "volumeL": 0.1,
+    "weightKg": 0.01,
+    "volumeL": 0.004,
     "toolTierRequired": 1
   },
   {
@@ -1610,8 +1643,8 @@
     "description": "Drawn steel rivets and bands. The high-tier fastener, binds reinforced walls, steel frames and runed apparatus where rope and nails would fail.",
     "color": "#9AA0A8",
     "amount": 0,
-    "weightKg": 0.3,
-    "volumeL": 0.1,
+    "weightKg": 0.012,
+    "volumeL": 0.005,
     "toolTierRequired": 2
   },
   {
@@ -17350,7 +17383,7 @@
     "description"      : "Armoured reptilian hide, ridged with bony scutes. Hardens into scale plate.",
     "color"            : "#4C5A3A",
     "amount"           : 0,
-    "weightKg"         : 3.5,
+    "weightKg"         : 3.06,
     "volumeL"          : 6,
     "toolTierRequired" : 0,
     "processingType"   : ["leatherworking"]
@@ -17785,8 +17818,8 @@
     "description": "Loose riveted iron rings, ready to be woven into a coif or hauberk. The heart of the mail sub-chain.",
     "color": "#888F98",
     "amount": 0,
-    "weightKg": 0.8,
-    "volumeL": 0.3,
+    "weightKg": 0.2,
+    "volumeL": 0.08,
     "processingType": ["metalworking"]
   },
   {
@@ -19027,7 +19060,7 @@
     "description": "Rabbit skin drawn clean of fat and membrane over the beam. It still needs curing before it will keep.",
     "color": "#B8916B",
     "amount": 0,
-    "weightKg": 1.0,
+    "weightKg": 0.25,
     "volumeL": 1.5,
     "tier": 1
   },
@@ -19040,7 +19073,7 @@
     "description": "Rat skin drawn clean of fat and membrane over the beam. It still needs curing before it will keep.",
     "color": "#B8916B",
     "amount": 0,
-    "weightKg": 1.0,
+    "weightKg": 0.17,
     "volumeL": 1.5,
     "tier": 1
   },
@@ -19053,7 +19086,7 @@
     "description": "Deer skin drawn clean of fat and membrane over the beam. It still needs curing before it will keep.",
     "color": "#B8916B",
     "amount": 0,
-    "weightKg": 1.0,
+    "weightKg": 1.24,
     "volumeL": 1.5,
     "tier": 1
   },
@@ -19066,7 +19099,7 @@
     "description": "Goat skin drawn clean of fat and membrane over the beam. It still needs curing before it will keep.",
     "color": "#B8916B",
     "amount": 0,
-    "weightKg": 1.0,
+    "weightKg": 1.24,
     "volumeL": 1.5,
     "tier": 1
   },
@@ -19092,7 +19125,7 @@
     "description": "Wolf skin drawn clean of fat and membrane over the beam. It still needs curing before it will keep.",
     "color": "#B8916B",
     "amount": 0,
-    "weightKg": 2.0,
+    "weightKg": 1.66,
     "volumeL": 3.0,
     "tier": 1
   },
@@ -19105,7 +19138,7 @@
     "description": "Worg skin drawn clean of fat and membrane over the beam. It still needs curing before it will keep.",
     "color": "#B8916B",
     "amount": 0,
-    "weightKg": 2.0,
+    "weightKg": 1.83,
     "volumeL": 3.0,
     "tier": 1
   },
@@ -19118,7 +19151,7 @@
     "description": "Boar skin drawn clean of fat and membrane over the beam. It still needs curing before it will keep.",
     "color": "#B8916B",
     "amount": 0,
-    "weightKg": 2.0,
+    "weightKg": 2.07,
     "volumeL": 3.0,
     "tier": 1
   },
@@ -19131,7 +19164,7 @@
     "description": "Elk skin drawn clean of fat and membrane over the beam. It still needs curing before it will keep.",
     "color": "#B8916B",
     "amount": 0,
-    "weightKg": 2.0,
+    "weightKg": 2.32,
     "volumeL": 3.0,
     "tier": 1
   },
@@ -19144,7 +19177,7 @@
     "description": "Aurochs skin drawn clean of fat and membrane over the beam. It still needs curing before it will keep.",
     "color": "#B8916B",
     "amount": 0,
-    "weightKg": 2.0,
+    "weightKg": 2.9,
     "volumeL": 3.0,
     "tier": 1
   },
@@ -19157,7 +19190,7 @@
     "description": "Bear skin drawn clean of fat and membrane over the beam. It still needs curing before it will keep.",
     "color": "#B8916B",
     "amount": 0,
-    "weightKg": 2.0,
+    "weightKg": 2.49,
     "volumeL": 3.0,
     "tier": 1
   },
@@ -19170,7 +19203,7 @@
     "description": "Cave Bear skin drawn clean of fat and membrane over the beam. It still needs curing before it will keep.",
     "color": "#B8916B",
     "amount": 0,
-    "weightKg": 2.0,
+    "weightKg": 8.3,
     "volumeL": 3.0,
     "tier": 1
   },
@@ -19183,7 +19216,7 @@
     "description": "Owlbear skin drawn clean of fat and membrane over the beam. It still needs curing before it will keep.",
     "color": "#B8916B",
     "amount": 0,
-    "weightKg": 2.0,
+    "weightKg": 2.9,
     "volumeL": 3.0,
     "tier": 1
   },
@@ -19196,7 +19229,7 @@
     "description": "Sabretooth skin drawn clean of fat and membrane over the beam. It still needs curing before it will keep.",
     "color": "#B8916B",
     "amount": 0,
-    "weightKg": 2.0,
+    "weightKg": 2.49,
     "volumeL": 3.0,
     "tier": 1
   },
@@ -19209,7 +19242,7 @@
     "description": "Mammoth skin drawn clean of fat and membrane over the beam. It still needs curing before it will keep.",
     "color": "#B8916B",
     "amount": 0,
-    "weightKg": 2.0,
+    "weightKg": 4.98,
     "volumeL": 3.0,
     "tier": 1
   },
@@ -19222,7 +19255,7 @@
     "description": "Hippogriff skin drawn clean of fat and membrane over the beam. It still needs curing before it will keep.",
     "color": "#B8916B",
     "amount": 0,
-    "weightKg": 2.0,
+    "weightKg": 2.07,
     "volumeL": 3.0,
     "tier": 1
   },
@@ -19235,7 +19268,7 @@
     "description": "Dire Wolf skin drawn clean of fat and membrane over the beam. It still needs curing before it will keep.",
     "color": "#B8916B",
     "amount": 0,
-    "weightKg": 2.0,
+    "weightKg": 4.98,
     "volumeL": 3.0,
     "tier": 1
   },
@@ -19250,7 +19283,7 @@
     "description": "Wolf leather curried supple with oil and worked to a fine, drapeable finish — the skin a warcloak or a great rug is worth cutting from.",
     "color": "#9C6B3F",
     "amount": 0,
-    "weightKg": 1.0,
+    "weightKg": 1.1,
     "volumeL": 1.6,
     "material": { "label": "Prime Wolf Leather", "desc": "curried, supple, tough", "building": { "durability": 1.3, "insulation": 0.12 }, "item": { "durability": 1.35, "weight": 0.95 } }
   },
@@ -19265,7 +19298,7 @@
     "description": "Worg leather curried supple with oil and worked to a fine, drapeable finish — the skin a warcloak or a great rug is worth cutting from.",
     "color": "#9C6B3F",
     "amount": 0,
-    "weightKg": 1.0,
+    "weightKg": 1.21,
     "volumeL": 1.6,
     "material": { "label": "Prime Worg Leather", "desc": "curried, supple, tough", "building": { "durability": 1.3, "insulation": 0.12 }, "item": { "durability": 1.35, "weight": 0.95 } }
   },
@@ -19280,7 +19313,7 @@
     "description": "Boar leather curried supple with oil and worked to a fine, drapeable finish — the skin a warcloak or a great rug is worth cutting from.",
     "color": "#9C6B3F",
     "amount": 0,
-    "weightKg": 1.0,
+    "weightKg": 1.43,
     "volumeL": 1.6,
     "material": { "label": "Prime Boarhide", "desc": "curried, supple, tough", "building": { "durability": 1.3, "insulation": 0.12 }, "item": { "durability": 1.35, "weight": 0.95 } }
   },
@@ -19295,7 +19328,7 @@
     "description": "Elk leather curried supple with oil and worked to a fine, drapeable finish — the skin a warcloak or a great rug is worth cutting from.",
     "color": "#9C6B3F",
     "amount": 0,
-    "weightKg": 1.0,
+    "weightKg": 1.32,
     "volumeL": 1.6,
     "material": { "label": "Prime Elk Leather", "desc": "curried, supple, tough", "building": { "durability": 1.3, "insulation": 0.12 }, "item": { "durability": 1.35, "weight": 0.95 } }
   },
@@ -19310,7 +19343,7 @@
     "description": "Aurochs leather curried supple with oil and worked to a fine, drapeable finish — the skin a warcloak or a great rug is worth cutting from.",
     "color": "#9C6B3F",
     "amount": 0,
-    "weightKg": 1.0,
+    "weightKg": 2.09,
     "volumeL": 1.6,
     "material": { "label": "Prime Oxhide", "desc": "curried, supple, tough", "building": { "durability": 1.3, "insulation": 0.12 }, "item": { "durability": 1.35, "weight": 0.95 } }
   },
@@ -19325,7 +19358,7 @@
     "description": "Bear leather curried supple with oil and worked to a fine, drapeable finish — the skin a warcloak or a great rug is worth cutting from.",
     "color": "#9C6B3F",
     "amount": 0,
-    "weightKg": 1.0,
+    "weightKg": 2.2,
     "volumeL": 1.6,
     "material": { "label": "Prime Bearhide", "desc": "curried, supple, tough", "building": { "durability": 1.3, "insulation": 0.12 }, "item": { "durability": 1.35, "weight": 0.95 } }
   },
@@ -19340,7 +19373,7 @@
     "description": "Cave Bear leather curried supple with oil and worked to a fine, drapeable finish — the skin a warcloak or a great rug is worth cutting from.",
     "color": "#9C6B3F",
     "amount": 0,
-    "weightKg": 1.0,
+    "weightKg": 2.64,
     "volumeL": 1.6,
     "material": { "label": "Prime Cave Bear Hide", "desc": "curried, supple, tough", "building": { "durability": 1.3, "insulation": 0.12 }, "item": { "durability": 1.35, "weight": 0.95 } }
   },
@@ -19355,7 +19388,7 @@
     "description": "Owlbear leather curried supple with oil and worked to a fine, drapeable finish — the skin a warcloak or a great rug is worth cutting from.",
     "color": "#9C6B3F",
     "amount": 0,
-    "weightKg": 1.0,
+    "weightKg": 1.98,
     "volumeL": 1.6,
     "material": { "label": "Prime Owlbear Leather", "desc": "curried, supple, tough", "building": { "durability": 1.3, "insulation": 0.12 }, "item": { "durability": 1.35, "weight": 0.95 } }
   },
@@ -19370,7 +19403,7 @@
     "description": "Sabretooth leather curried supple with oil and worked to a fine, drapeable finish — the skin a warcloak or a great rug is worth cutting from.",
     "color": "#9C6B3F",
     "amount": 0,
-    "weightKg": 1.0,
+    "weightKg": 1.54,
     "volumeL": 1.6,
     "material": { "label": "Prime Sabretooth Leather", "desc": "curried, supple, tough", "building": { "durability": 1.3, "insulation": 0.12 }, "item": { "durability": 1.35, "weight": 0.95 } }
   },
@@ -19385,7 +19418,7 @@
     "description": "Mammoth leather curried supple with oil and worked to a fine, drapeable finish — the skin a warcloak or a great rug is worth cutting from.",
     "color": "#9C6B3F",
     "amount": 0,
-    "weightKg": 1.0,
+    "weightKg": 2.86,
     "volumeL": 1.6,
     "material": { "label": "Prime Mammoth Leather", "desc": "curried, supple, tough", "building": { "durability": 1.3, "insulation": 0.12 }, "item": { "durability": 1.35, "weight": 0.95 } }
   },
@@ -19400,7 +19433,7 @@
     "description": "Hippogriff leather curried supple with oil and worked to a fine, drapeable finish — the skin a warcloak or a great rug is worth cutting from.",
     "color": "#9C6B3F",
     "amount": 0,
-    "weightKg": 1.0,
+    "weightKg": 0.77,
     "volumeL": 1.6,
     "material": { "label": "Prime Hippogriff Leather", "desc": "curried, supple, tough", "building": { "durability": 1.3, "insulation": 0.12 }, "item": { "durability": 1.35, "weight": 0.95 } }
   },
@@ -19415,7 +19448,7 @@
     "description": "Dire Wolf leather curried supple with oil and worked to a fine, drapeable finish — the skin a warcloak or a great rug is worth cutting from.",
     "color": "#9C6B3F",
     "amount": 0,
-    "weightKg": 1.0,
+    "weightKg": 1.43,
     "volumeL": 1.6,
     "material": { "label": "Prime Direwolf Leather", "desc": "curried, supple, tough", "building": { "durability": 1.3, "insulation": 0.12 }, "item": { "durability": 1.35, "weight": 0.95 } }
   },

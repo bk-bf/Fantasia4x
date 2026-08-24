@@ -117,7 +117,14 @@ describe('armour chain — physical pawn pipeline (HeadlessSession, real ticks)'
         pawns: [{ count: 6, skillLevel: 12 }],
         needsDisabled: ['hunger', 'fatigue'],
         buildings: [{ id: 'makers_bench' }, { id: 'craft_spot' }],
-        items: { cured_deer_hide: 20, deer_hide: 20, cordage: 20, branch: 30, jackal_leather: 20, sinew: 20 },
+        items: {
+          cured_deer_hide: 20,
+          deer_hide: 20,
+          cordage: 20,
+          branch: 30,
+          jackal_leather: 20,
+          sinew: 20
+        },
         seedEntities: false
       })
     );
@@ -148,9 +155,7 @@ describe('armour chain — physical pawn pipeline (HeadlessSession, real ticks)'
     );
     expect(made, 'pawns crafted a limb piece over real ticks').toBeGreaterThan(0);
     expect(stk().branch, 'branches consumed — arms are wicker work at this age').toBeLessThan(30);
-    expect(worn?.itemId, 'the crafted piece equips into the bracers slot').toBe(
-      'branch_bracers'
-    );
+    expect(worn?.itemId, 'the crafted piece equips into the bracers slot').toBe('branch_bracers');
   });
 
   it('pawns craft the iron limb line at an anvil', async () => {
