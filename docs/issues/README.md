@@ -29,6 +29,10 @@ audit finds it  ──▶  docs/issues/<slug>.md        status: open   ready: fa
 `ready: false` is the gate. Nothing the audit raises is worked on until a person flips it —
 the fixer never picks up an issue it wrote itself.
 
+Every fix attempt lands in `mon` under the **`fix`** tag, so it can be read and replied to
+from anywhere. An attempt that could not get green keeps its worktree and the session runs
+inside it, which means `mon steer` carries that same attempt forward instead of restarting.
+
 ## Frontmatter
 
 Every field the loop reads. Anything else is prose.
@@ -98,6 +102,8 @@ node tools/audit/audit.mjs publish           # unpublished + ready issues -> Git
 node tools/audit/audit.mjs board             # every issue, by status
 node tools/audit/fix.mjs --issue <slug>      # work one issue in a worktree, open a PR
 node tools/audit/fix.mjs --next              # the oldest ready issue
+node tools/audit/fix.mjs --next --keep       # leave the worktree to inspect
+node tools/audit/fix.mjs --next --no-mon     # skip the mon session
 ```
 
 ## Relationship to the other trackers
