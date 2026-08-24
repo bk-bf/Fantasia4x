@@ -31,7 +31,7 @@
     <div class="tip-formula">CARRY CAPACITY — {cap.size} · {cap.bodyWeight}kg</div>
     <div class="tip-row">
       weight = <span class="tv">{cap.bodyWeight}kg</span> ×
-      <span class="tv">{pct(cap.weight.loadFraction)}</span> load (STR {cap.brawn}){#if cap.weight.gear}
+      <span class="tv">{pct(cap.weight.loadFraction)}</span> load (STR {cap.strength}){#if cap.weight.gear}
         <span class="tv">{signed(cap.weight.gear)}</span> gear{/if} =
       <span class="tv">{r1(maxWeightKg)}</span> kg{#if wRaw < maxWeightKg}
         <span class="floor">(min 1)</span>{/if}

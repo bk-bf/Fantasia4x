@@ -331,9 +331,9 @@
         "rightVenomGland"        : {"size": 12, "bleedRatio": 0.03, "hitWeight": 0, "isPaired": true, "containedIn": "cephalothorax", "weapons": ["venom_bite", "greater-venom-bite"]},
         "suckingStomach"         : {"size": 12, "bleedRatio": 0.03, "hitWeight": 0, "containedIn": "cephalothorax"},
         // grants (TRAITS §0): each extra eye adds night vision (summed live over living eyes — lose an
-        // eye, lose the sight); the forward median-left eye also carries the +1 awareness the Spider
+        // eye, lose the sight); the forward median-left eye also carries the +1 perception the Spider
         // Eyes line confers (baked at pawn-gen). Native arachnids get the same from having these eyes.
-        "anteriorMedianLeftEye"  : {"size": 4, "bleedRatio": 0.005, "hitWeight": 0.05, "isPaired": true, "containedIn": "cephalothorax", "armor": 0.1, "grants": {"nightVision": 0.15, "awarenessBonus": 1}},
+        "anteriorMedianLeftEye"  : {"size": 4, "bleedRatio": 0.005, "hitWeight": 0.05, "isPaired": true, "containedIn": "cephalothorax", "armor": 0.1, "grants": {"nightVision": 0.15, "perceptionBonus": 1}},
         "anteriorMedianRightEye" : {"size": 4, "bleedRatio": 0.005, "hitWeight": 0.05, "isPaired": true, "containedIn": "cephalothorax", "armor": 0.1, "grants": {"nightVision": 0.15}},
         "anteriorLateralLeftEye" : {"size": 4, "bleedRatio": 0.005, "hitWeight": 0.05, "isPaired": true, "containedIn": "cephalothorax", "armor": 0.1, "grants": {"nightVision": 0.15}},
         "anteriorLateralRightEye": {"size": 4, "bleedRatio": 0.005, "hitWeight": 0.05, "isPaired": true, "containedIn": "cephalothorax", "armor": 0.1, "grants": {"nightVision": 0.15}},

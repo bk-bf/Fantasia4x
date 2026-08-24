@@ -355,7 +355,7 @@
       push('lineage', g.lineageNames);
       if (g.evoStage) push('evolution stage', g.evoStage);
       push('evolves into', g.evolvesTo);
-      for (const stat of ['brawn', 'agility', 'vigour', 'awareness', 'intellect', 'charisma']) {
+      for (const stat of ['strength', 'dexterity', 'constitution', 'perception', 'intelligence', 'charisma']) {
         const ab = stat.slice(0, 3).toUpperCase();
         const v = e[stat + 'Bonus'];
         if (v != null) push(ab, (v < 0 ? '−' : '+') + Math.abs(v), v < 0 ? 'bad' : 'good');

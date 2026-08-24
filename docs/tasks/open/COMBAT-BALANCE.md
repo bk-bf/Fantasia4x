@@ -16,9 +16,9 @@ lethality. Every headline finding is fixed and re-measured in a live fight; see
 passes), plus two loose ends — `applyGainedTrait` still doesn't stamp wound traits, and aptitudes are
 not yet persisted through save/load. Phases 0–3 are complete.
 
-Also landed as a prerequisite: the core-stat vocabulary migration (`strength→brawn`,
-`dexterity→agility`, `constitution→vigour`, `perception→awareness`, `intelligence→intellect`),
-including the creature schema. Four engine fixes landed in the original audit pass (power-curve soft
+Also landed as a prerequisite: a core-stat vocabulary pass across the engine, data files and the
+creature schema; the stats are named `strength`, `dexterity`, `constitution`, `perception`,
+`intelligence`, `charisma`. Four engine fixes landed in the original audit pass (power-curve soft
 cap, armour-condition soak, `powerStat`, `critMultiplier` + the heavy-2H accuracy/speed pass) — logged
 in [AUDIT § Weapons](AUDIT.md).
 
@@ -45,14 +45,14 @@ hold.
 
 | finding | task | before | after the fix |
 | --- | --- | --- | --- |
-| the power stat is decoration | 4 | BRAWN 40 → 6345 ticks, 4/8 kills, 3 deaths, 73% blood left · AGILITY 40 → **3365 ticks, 7/8 kills, 1 death** | BRAWN 40 → **3763 ticks, 6/8 kills, 2 deaths, 49% left** · AGILITY 40 → 10838 ticks, 1/8 kills, 6 deaths. The BRAWN build is **2.88× faster** on the weapon that names BRAWN |
-| a flaw raises its stat | 1 | `frail`+`clumsy`+`dull` → vigour 12→**14**, agility 12→**14**, intellect 12→**14** | → vigour 12→**10**, agility 12→**10**, intellect 12→**10** |
+| the power stat is decoration | 4 | STRENGTH 40 → 6345 ticks, 4/8 kills, 3 deaths, 73% blood left · DEXTERITY 40 → **3365 ticks, 7/8 kills, 1 death** | STRENGTH 40 → **3763 ticks, 6/8 kills, 2 deaths, 49% left** · DEXTERITY 40 → 10838 ticks, 1/8 kills, 6 deaths. The STRENGTH build is **2.88× faster** on the weapon that names STRENGTH |
+| a flaw raises its stat | 1 | `frail`+`clumsy`+`dull` → constitution 12→**14**, dexterity 12→**14**, intelligence 12→**14** | → constitution 12→**10**, dexterity 12→**10**, intelligence 12→**10** |
 | precision is inverted | 11 | stiletto + `lumbering-fighter` **0.96×** the unimpaired time-to-kill — a strict downgrade was free | **1.03×** — it costs time now, and `aimedBodyPart` was rewritten too: killing-hit share now **rises** with precision (71.6% → 74.7%, the neck appearing at the top end) where it used to **fall** 54% → 45% |
 | session determinism | 2 | same seed replays identically | unchanged; the module default seed is now fixed too |
 | 1H out-damages 2H | 12/12a | 1H+shield 110–140% of a two-hander; duel grip free to every pawn | **kill speed 2H 1070t · duelist 1277t · shield 1488t**, with **deaths 3/8 · 3/8 · 0/8** — the intended order, offence and defence traded against each other |
 | decoupling | 8–9 | every secondary stat tracked a core stat | core stats 10 → 60 leaves all six **identical**; two pawns with the same physique now differ |
 
-> **What the fix actually was.** Agility used to buy four things at once — damage on its own weapons,
+> **What the fix actually was.** Dexterity used to buy four things at once — damage on its own weapons,
 > cadence, to-hit and crit — so it out-earned every other stat everywhere and the weapon's named power
 > stat was decoration. Damage now resolves through `melee_damage`/`ranged_damage` (so `× manipulation`
 > applies and injury finally costs damage), the weapon's GRIP names which core stat feeds it, and
@@ -62,9 +62,9 @@ hold.
 
 > **Measurement trap, recorded because it nearly inverted a conclusion.** Averaging time-to-kill over
 > the runs that *killed* is censored data: it silently drops the worst runs of whichever build fails
-> most. On the first pass the BRAWN build looked **3× faster** because 4 of its 8 runs never landed a
+> most. On the first pass the STRENGTH build looked **3× faster** because 4 of its 8 runs never landed a
 > kill and were excluded. Counting a non-kill as the full tick budget — and reading **blood removed**,
-> which every run contributes to — reverses it to AGILITY being 1.89× faster and removing 2.9× the
+> which every run contributes to — reverses it to DEXTERITY being 1.89× faster and removing 2.9× the
 > blood. Any future fight-sim comparison must right-censor and report kills *and* deaths.
 
 ---
@@ -82,11 +82,11 @@ core stat feeds them is decided by the **grip**, so the physique picks the *weap
 
 | weapon | scales on |
 | --- | --- |
-| two-handed melee | **BRAWN** |
-| one-handed melee | **AGILITY** |
-| ranged | **AWARENESS** |
-| rapier / finesse line | **AWARENESS** (the standing special case) |
-| arcane staff / rod | **INTELLECT** |
+| two-handed melee | **STRENGTH** |
+| one-handed melee | **DEXTERITY** |
+| ranged | **PERCEPTION** |
+| rapier / finesse line | **PERCEPTION** (the standing special case) |
+| arcane staff / rod | **INTELLIGENCE** |
 | banner polearm (new) | **CHARISMA** — raises the bearer's `prestige` |
 
 No physique is locked out of a weapon family, because each family ships in both grips: a strong pawn
@@ -102,13 +102,13 @@ from**: a per-pawn roll, modified by traits and body size, still multiplied by t
 Nothing is renamed — the stat block a player reads is the same one, it just stops being a function of a
 core stat.
 
-All six move, so **no core stat buys combat performance anywhere**: AGILITY stops buying evasion and AWARENESS
+All six move, so **no core stat buys combat performance anywhere**: DEXTERITY stops buying evasion and PERCEPTION
 stops buying marksmanship, which are the last two channels through which a damage stat could still pay
 for something other than damage. `dodge` keeps its body-weight term (mass is physique, not aptitude)
-and `block` stays derived — it is VIGOUR, body mass and the shield, none of which are skill.
+and `block` stays derived — it is CONSTITUTION, body mass and the shield, none of which are skill.
 
-This is what makes two pawns with identical BRAWN/AGILITY play differently, and it is what the current system
-cannot express at all: a 40-BRAWN pawn that rolled badly is a hard hitter who cannot land a blow.
+This is what makes two pawns with identical STRENGTH/DEXTERITY play differently, and it is what the current system
+cannot express at all: a 40-STRENGTH pawn that rolled badly is a hard hitter who cannot land a blow.
 
 ### What this is not
 
@@ -124,7 +124,7 @@ Do these first; every tuning number after them is only as good as the RNG and th
 
 ### 1. Accept signed stat grants — every `*Penalty` currently RAISES its stat
 
-- [x] Re-author penalties as **signed bonuses** in `traits.jsonc` (`"agilityBonus": -5`), dropping the `*Penalty` key entirely — 68 traits.
+- [x] Re-author penalties as **signed bonuses** in `traits.jsonc` (`"dexterityBonus": -5`), dropping the `*Penalty` key entirely — 68 traits.
 - [x] Collapse both bake paths to one signed add with no key-suffix branch: `applyCulturalTraitBonuses` ([Pawns.ts:867](../../../src/lib/game/entities/Pawns.ts)) and `applyGainedTrait` ([Pawns.ts:272](../../../src/lib/game/entities/Pawns.ts)).
 - [x] Keep the `max(1, …)` floor so a stacked flaw can't drive a stat to zero or negative.
 - [x] Re-point the pinning test (`t4WeaponAudit` → "every `*Penalty` RAISES its stat") at the corrected behaviour — it pins the BUG on purpose today so it can't change silently.
@@ -132,7 +132,7 @@ Do these first; every tuning number after them is only as good as the RNG and th
 - [ ] **Also in this bake path:** `applyGainedTrait` never stamps a `wound`-kind trait's injuries — `applyTraitWounds` is a separate function that only generation calls. A pawn who gains `one-armed` at runtime (growth event, trait gamble, `devSetPawnTraits`) keeps both arms. Decide whether that is intended (wounds are generation-only) or a hole.
 
 > **Evidence — headless `[x]`.** Through the real command path in a live session, `frail` + `clumsy` +
-> `dull` moved vigour **12→14**, agility **12→14**, intellect **12→14**. Three flaws, three upgrades
+> `dull` moved constitution **12→14**, dexterity **12→14**, intelligence **12→14**. Three flaws, three upgrades
 > (`combatBalanceAudit` → #1).
 >
 > All penalty entries are authored positive and both bake paths do `stats[k] = max(1, stats[k] + value)`.
@@ -179,31 +179,31 @@ change: `resolveHit` stops reading a raw core stat and reads the damage stat ins
 
 ### 4. Set each weapon's power stat by its grip
 
-- [x] Sweep `items.jsonc`: `powerStat: "brawn"` on every two-handed melee weapon, `"agility"` on every one-handed melee weapon.
-- [x] Leave the finesse/rapier line on `"awareness"` and the arcane line on `"intellect"`.
-- [x] Ranged: `"awareness"` — and confirm it doesn't double-count with `aim_accuracy`, which is already AWARENESS.
+- [x] Sweep `items.jsonc`: `powerStat: "strength"` on every two-handed melee weapon, `"dexterity"` on every one-handed melee weapon.
+- [x] Leave the finesse/rapier line on `"perception"` and the arcane line on `"intelligence"`.
+- [x] Ranged: `"perception"` — and confirm it doesn't double-count with `aim_accuracy`, which is already PERCEPTION.
 - [x] Acceptance: each weapon's own power stat is its best stat, across all three opponent profiles.
 
-> **Evidence — headless `[x]`.** Same 2H greataxe, a weapon whose power stat is BRAWN, 8 seeds each:
+> **Evidence — headless `[x]`.** Same 2H greataxe, a weapon whose power stat is STRENGTH, 8 seeds each:
 >
 > | build | time to kill | kills | deaths | blood left |
 > | --- | --- | --- | --- | --- |
-> | BRAWN 40 / AGILITY 10 | 6345 ticks | 4/8 | 3 | 73% |
-> | BRAWN 10 / AGILITY 40 | **3365 ticks** | **7/8** | **1** | **21%** |
+> | STRENGTH 40 / DEXTERITY 10 | 6345 ticks | 4/8 | 3 | 73% |
+> | STRENGTH 10 / DEXTERITY 40 | **3365 ticks** | **7/8** | **1** | **21%** |
 >
-> The AGILITY build is **1.89× faster, removes 2.9× the blood, kills nearly twice as often and dies a
+> The DEXTERITY build is **1.89× faster, removes 2.9× the blood, kills nearly twice as often and dies a
 > third as often — on the two-hander** (`combatBalanceAudit` → #4). The power stat is not merely weak,
 > it is the wrong stat to buy.
 >
 > **Analytical `[~]`.** The named power stat loses on **6 of 16** tier-4 melee weapons — **6 of 8
-> two-handers, 0 of 8 one-handers**. Warhammer BRAWN-40 **20.8** vs AGILITY-40 **23.8**; greatsword 12.9 vs
+> two-handers, 0 of 8 one-handers**. Warhammer STRENGTH-40 **20.8** vs DEXTERITY-40 **23.8**; greatsword 12.9 vs
 > 13.3. The mechanism is the cadence floor: a 0.55-speed greataxe sits far below the 1.67× ceiling so
-> every AGILITY point still buys swings, while a 0.9-speed mace is already capped and AGILITY's biggest channel
-> is dead there. **AGILITY pays more the slower your weapon is** — so it steals exactly the weapons BRAWN is
+> every DEXTERITY point still buys swings, while a 0.9-speed mace is already capped and DEXTERITY's biggest channel
+> is dead there. **DEXTERITY pays more the slower your weapon is** — so it steals exactly the weapons STRENGTH is
 > supposed to own.
 >
 > Modelled with damage on the grip: **16 of 16** answer to the physique their grip names, and the
-> warhammer inversion reverses to **17.2 BRAWN / 6.2 AGILITY** (`statAxisProposal` → ADOPTED).
+> warhammer inversion reverses to **17.2 STRENGTH / 6.2 DEXTERITY** (`statAxisProposal` → ADOPTED).
 
 ### 5. Fold `hit_chance` into the melee to-hit roll
 
@@ -213,14 +213,14 @@ change: `resolveHit` stops reading a raw core stat and reads the damage stat ins
 
 ### 6. Delete `vision_range`
 
-- [x] Nothing reads it; `core/vision.baseVisionRange` returns TILES from raw AWARENESS and is shared by pawns and mobs. Remove the formula rather than leave a documented stat that does nothing.
+- [x] Nothing reads it; `core/vision.baseVisionRange` returns TILES from raw PERCEPTION and is shared by pawns and mobs. Remove the formula rather than leave a documented stat that does nothing.
 - [x] Check the pawn stat panel and `/gear-db` → Stats by build for references before removing.
 
 ### 7. Data: the gaps this mapping exposes
 
-- [x] **2H flail authored** — `steel_greatflail` (T3) and `rune_lashing_greatflail` (T4), both brawn-scaled, with recipes. Every melee family now ships in both grips.
+- [x] **2H flail authored** — `steel_greatflail` (T3) and `rune_lashing_greatflail` (T4), both strength-scaled, with recipes. Every melee family now ships in both grips.
 - [x] **Banner polearm authored** — `rune_standard_glaive`: reach 2, `powerStat: "charisma"` (CHARISMA joined `PowerStat`), and `prestigeBonus: 9`. `computePrestige` now reads a top-level `prestigeBonus` so a WIELDED standard counts, not only worn regalia.
-- [x] Runed 1H sword authored — `rune_etched_arming_sword`, agility-scaled. The nimble sword line reaches T4.
+- [x] Runed 1H sword authored — `rune_etched_arming_sword`, dexterity-scaled. The nimble sword line reaches T4.
 
 ---
 
@@ -231,7 +231,7 @@ Only after Phase 1, so the damage axis is already honest when the second axis la
 ### 8. Roll and store aptitudes
 
 - [x] Add `pawn.aptitudes` — a small record keyed by the same stat ids, rolled beside `rollStatsFromRanges` ([Pawns.ts:811](../../../src/lib/game/entities/Pawns.ts)).
-- [x] Roll **independently of the core stats** — a stat-biased roll re-introduces the AGILITY correlation through the side door.
+- [x] Roll **independently of the core stats** — a stat-biased roll re-introduces the DEXTERITY correlation through the side door.
 - [x] Triangular distribution over the band so an extreme aptitude is rare, not one roll in three.
 - [x] Modify by body size and traits at generation; let the existing growth events move them.
 - [x] Decide the band. ⚠ At ±0.25 on `hit_chance` + `attack_speed` + `hit_precision` together the swing is **+95%** — too wide. Either narrow the band or stop the three compounding.
@@ -242,19 +242,19 @@ Only after Phase 1, so the damage axis is already honest when the second axis la
 - [x] `hit_chance`, `attack_speed`, `hit_precision`, `armor_damage`, `dodge`, `aim_accuracy`: formula reads the pawn's rolled aptitude instead of a core stat, still `×` its capacity terms.
 - [x] Keep every id, name and description — this is a source change, not a rename.
 - [x] `dodge` keeps its `− (weight − 70) × 0.002` term: mass is physique, and a heavy pawn should still evade worse however well it rolled.
-- [x] Leave `block` derived (VIGOUR + body mass + shield) — none of those three is skill.
+- [x] Leave `block` derived (CONSTITUTION + body mass + shield) — none of those three is skill.
 - [x] Acceptance: two pawns with identical core stats produce measurably different dps AND different survivability, and **no core stat correlates with hit rate, cadence, crit, evasion or marksmanship**.
 
-> **Evidence.** Modelled on the rune-graven spear vs an armoured target: a 40-AGILITY pawn with a bad roll
-> (**8.1**) loses to a **16-AGILITY** pawn with a good one (**8.4**), while a 40-AGILITY pawn who also rolled
+> **Evidence.** Modelled on the rune-graven spear vs an armoured target: a 40-DEXTERITY pawn with a bad roll
+> (**8.1**) loses to a **16-DEXTERITY** pawn with a good one (**8.4**), while a 40-DEXTERITY pawn who also rolled
 > well leads at **17.4**. Aptitude tilts the result without replacing the physique
 > (`statAxisProposal` → APTITUDE AXIS).
 
 ### 10. Surface it in the UI
 
 - [x] Pawn panel: `PawnAptitudes.svelte` renders the six rolls under the core stats on the Attributes tab, as signed percentages with a band tick and a plain-language label (accuracy / cadence / precision / leverage / evasion / marksmanship — never the stat id).
-- [x] **Fixed two rename regressions the tab had been carrying:** `statView` still substituted the OLD `BRN`/`AGI` tokens, so NO core stat resolved in ANY formula tooltip; and `PawnStatBanner`'s trait lookup keyed `STR`/`DEX`, so trait contributions rendered blank.
-- [x] `POWER` and `APT` surfaced in the formula tooltip — `POWER = 20 (brawn 25, damped)`, `APT = 1.09 (rolled)` — verified in the running game, not just in a test.
+- [x] **Fixed two rename regressions the tab had been carrying:** `statView` still substituted the OLD `STR`/`DEX` tokens, so NO core stat resolved in ANY formula tooltip; and `PawnStatBanner`'s trait lookup keyed `STR`/`DEX`, so trait contributions rendered blank.
+- [x] `POWER` and `APT` surfaced in the formula tooltip — `POWER = 20 (strength 25, damped)`, `APT = 1.09 (rolled)` — verified in the running game, not just in a test.
 - [ ] `/gear-db` → **Stats by build**: re-point the "read by" column once the wiring changes, and drop the `✕ dead` markers the fixes clear.
 
 ---
@@ -304,8 +304,8 @@ worst-fit pawn of each build with its own weapon and with a weapon from a melee 
 > | | | | Mace & Shield | 3.7% |
 > | | | | **Sword & Shield** | **1.7%** |
 >
-> ⚠ **Caveat, not yet controlled for:** a profile demanding TWO stats (2H Hammer: brawn+vigour) is
-> easier to score high on than one demanding THREE (Sword & Shield: agility+vigour+brawn), so some of
+> ⚠ **Caveat, not yet controlled for:** a profile demanding TWO stats (2H Hammer: strength+constitution) is
+> easier to score high on than one demanding THREE (Sword & Shield: dexterity+constitution+strength), so some of
 > that spread is the grading formula, not the roller. Normalise by profile concentration before
 > treating the shares as a generation bug.
 >
@@ -332,7 +332,7 @@ land; several may resolve on their own.
 
 - [ ] **The design intent** (owner, 2026-07-28): a one-hander is *supposed* to be weaker — you play shield+1H as a DEFENSIVE style, or duelist, which approaches 2H damage but is **trait-gated**. Neither holds today.
 - [ ] `getGrip` ([rangedCombat.ts:115](../../../src/lib/game/systems/rangedCombat.ts)) returns `duelist` for ANY one-hander with an empty off-hand — the +20% damage / +10% pen / +5% crit is free. **There is no duelist trait in `traits.jsonc`.** Author one and gate the grip on it.
-- [ ] Bring the styles into the intended order. Measured today at brawn/agility 40 vs a mail-clad dummy:
+- [ ] Bring the styles into the intended order. Measured today at strength/dexterity 40 vs a mail-clad dummy:
 
 > | style | dps | vs the best 2H |
 > | --- | --- | --- |
@@ -352,7 +352,7 @@ land; several may resolve on their own.
 ### 12. Two-handers lose on SWING RATE  ✅
 
 **Diagnosis, re-derived twice** (the earlier readings — the cadence *floor*, then the accuracy penalty
-alone — were both wrong). Measured at brawn/agility 40, `dmg/swing` already NET of the hit rate:
+alone — were both wrong). Measured at strength/dexterity 40, `dmg/swing` already NET of the hit rate:
 
 | head-to-head | per-swing | cadence | net |
 | --- | --- | --- | --- |
@@ -446,14 +446,14 @@ class, 6 seeds, live orc reaver) the picture changes and the premise collapses.
 > FREE, and no shield-side tuning is meaningful until the weight actually bites.
 
 - [x] **FIXED — the carry curve was the mechanism, and it had drifted.** Shields and weapons were already counted (`getCurrentCarryLoad` sums `pawn.equipment`); the defect was entirely on the capacity side, and `carryCapacityAudit.test.ts` found two:
-  - `loadFraction = clamp(brawn × 0.012, 0.05, 0.3)` **bound at brawn 25**. 28% of the population sat at that clamp, and above it brawn bought nothing — a brawn-100 pawn carried exactly what a brawn-25 pawn did. That is the 1–100 stat-expansion drift.
+  - `loadFraction = clamp(strength × 0.012, 0.05, 0.3)` **bound at strength 25**. 28% of the population sat at that clamp, and above it strength bought nothing — a strength-100 pawn carried exactly what a strength-25 pawn did. That is the 1–100 stat-expansion drift.
   - capacity was `bodyWeight × loadFraction`, so with a **median bodyweight of 108kg** the budget was decided by how HEAVY a pawn was, not how strong. Being fat was the carrying stat.
-  - Replaced with `(3 + brawn × 0.85) × frameFactor`, where `frameFactor = clamp(bodyWeight/80, 0.85, 1.15)` — brawn sets the budget, the frame only modulates it.
+  - Replaced with `(3 + strength × 0.85) × frameFactor`, where `frameFactor = clamp(bodyWeight/80, 0.85, 1.15)` — strength sets the budget, the frame only modulates it.
 
 > | | before | after |
 > | --- | --- | --- |
 > | plate + shield + sword unencumbered | **32%** of all pawns | **2%** |
-> | capacity, brawn 25 → 100 | 21.0kg flat | 21.2 → 84kg, no cap |
+> | capacity, strength 25 → 100 | 21.0kg flat | 21.2 → 84kg, no cap |
 > | median capacity | 21.8kg | 19.9kg (hauling throughput preserved) |
 > | p95 capacity | 61.2kg | 32.8kg (mass outliers gone) |
 >
@@ -471,11 +471,11 @@ passes circled):
 | | `attack_speed` | `hit_chance` | damage per landed hit | throughput | armour |
 | --- | --- | --- | --- | --- | --- |
 | Two-handed | low | lower | devastating | 100 (reference) | heavy — it has no shield |
-| One-handed + shield | high | high | modest | ~60 | what its brawn affords |
+| One-handed + shield | high | high | modest | ~60 | what its strength affords |
 | Duelist (1H, trait) | high | high | between the two | ~80 | light |
 
-Armour class is meant to be a read of the pawn: high brawn / low dodge → heavy; low brawn / high
-dodge → light; middling at both → medium, paid for with brawn.
+Armour class is meant to be a read of the pawn: high strength / low dodge → heavy; low strength / high
+dodge → light; middling at both → medium, paid for with strength.
 
 **What the sim was actually doing** (`_stylePremiseProbe.test.ts`, 6 seeds each, real swings captured
 off the combat sink rather than inferred from ticks-to-kill):
@@ -488,13 +488,13 @@ off the combat sink rather than inferred from ticks-to-kill):
 
 - [x] **A · the stat decoupling had orphaned 88 condition stages.** `dodge` / `hit_chance` /
       `attack_speed` became pure aptitude reads, but 88 stages across 51 conditions still expressed
-      their effect as an `agility`/`brawn` multiplier written back when agility *was* dodge. They had
-      silently degraded to damage-only: `encumbered · overloaded` (`agility 0.45`) left evasion
+      their effect as an `dexterity`/`strength` multiplier written back when dexterity *was* dodge. They had
+      silently degraded to damage-only: `encumbered · overloaded` (`dexterity 0.45`) left evasion
       untouched, `winded` claimed in its own description to leave a fighter "barely able to swing,
       barely able to dodge" and did neither, and `quickness`/`grace` granted no swing rate. Restored
       the channel on all 67 stages that name a core stat the combat stats used to read, derived from
       the existing multiplier and damped (dodge 0.70, `attack_speed` 0.45, `hit_chance` 0.40) so a
-      condition no longer moves evasion as hard as raw agility once did. `windchilled` maps to
+      condition no longer moves evasion as hard as raw dexterity once did. `windchilled` maps to
       `hit_chance` only — wind spoils the shot, it does not make you evade worse.
 - [x] **B · a lower load tier, and armour stiffness as its own channel.**
   - New **`laden`** condition, 60% → 100% of capacity, **combat-only** (dodge / `attack_speed` /
@@ -505,7 +505,7 @@ off the combat sink rather than inferred from ticks-to-kill):
     [PawnEquipment.ts:406](../../../src/lib/game/core/PawnEquipment.ts) and read by nothing, while the
     item tooltip promised the player a penalty the sim never applied. Now `wornStiffness` sums it and
     it multiplies dodge in `resolveHit`, capped at 0.45. This is the half of the trade weight alone
-    cannot express: a brawn build affords plate without going `laden`, and the suit still costs it
+    cannot express: a strength build affords plate without going `laden`, and the suit still costs it
     evasion. Tooltip relabelled to "Evasion penalty".
   - `fatiguePerTurn` is still dead — authored on every armour piece, read only by the tooltip.
 - [x] **C · the grips swapped ends of the `attack_speed` axis.** They were on the *same* end: 1H mean
@@ -521,7 +521,7 @@ off the combat sink rather than inferred from ticks-to-kill):
     damage moved as a pair.
 
 **Measured after, same probe** (medium armour on every style, the only kit where the weapon is the
-variable — bare-vs-bare flatters the shield, and heavy is over a brawn-30 budget):
+variable — bare-vs-bare flatters the shield, and heavy is over a strength-30 budget):
 
 | style | ticks between swings | landed | per landed hit | throughput |
 | --- | --- | --- | --- | --- |
@@ -530,11 +530,11 @@ variable — bare-vs-bare flatters the shield, and heavy is over a brawn-30 budg
 | 1H duelist | 143t | 66% | 22.8 | 105.5 |
 
 Armour now costs what it should: plate takes **−36.9%** off effective dodge (0.778 → 0.491), and a
-brawn-30 fighter in full plate plus shield sits at `laden` 1.00 **and** `encumbered` 0.40 — heavy
-armour is a brawn-45 kit, which is the intended gate.
+strength-30 fighter in full plate plus shield sits at `laden` 1.00 **and** `encumbered` 0.40 — heavy
+armour is a strength-45 kit, which is the intended gate.
 
 - [ ] **Heavy armour is still the worse defensive answer than a shield.** In the intended matchup
-      (brawn 45 in plate with a greatsword vs agility 45 behind a shield in light) the two-hander is
+      (strength 45 in plate with a greatsword vs dexterity 45 behind a shield in light) the two-hander is
       hit on **73%** of incoming swings against the shield build's **67%**, and converts 4/6 against
       6/6. Plate buys soak but hands back so much dodge that the shield build is both safer and level
       on damage (106.6 vs 107.7). Either `STIFFNESS_DODGE_CAP` is too harsh or block is too strong —
@@ -586,7 +586,7 @@ not balance.
 - [ ] Re-rate the reach ≥ 2 two-handers against the sluggers rather than exempting them.
 - [ ] Re-derive the 1H damage cut against an ARMOURED opponent, not a mob — subtractive armour makes the
       two calibrations completely different problems.
-- [ ] Re-run every task 12d number at the spawn ceiling; they were all measured at brawn 30–45.
+- [ ] Re-run every task 12d number at the spawn ceiling; they were all measured at strength 30–45.
 
 ### 12g. The weapon meta, measured properly  ✅ 2026-07-28
 
@@ -658,7 +658,7 @@ resolves to `dualWield` at attack_speed 2.268 against a single dagger's 1.5.
       is not meant to: an eye is 0.2 of ~70 total hit weight, under 1% per look, and a deliberate
       eye-thrust being rare is the anatomy being honest. The gain shows up on the reachable maim targets.
 - [x] **Build shares are even.** Per-build z-calibration was not enough on its own: five builds compete
-      for agility, while `intellect` is wanted by the Battlemage ALONE and is uncorrelated with every
+      for dexterity, while `intelligence` is wanted by the Battlemage ALONE and is uncorrelated with every
       physical stat (measured |r| ≤ 0.05), so it won its argmax unopposed and took 27 pawns in 100 against
       an even share of 11. A per-build offset, solved by clamped iterative correction, evens the shares
       without reordering pawns inside a build. Now 5.7%–15.3% across nine builds, with the tier ladder
@@ -671,12 +671,12 @@ resolves to `dualWield` at attack_speed 2.268 against a single dagger's 1.5.
       designed shape — goes down, draft releases, stays down, still alive to be saved, still bleeding.
 
 - [x] **`combatBalanceAudit` #12 DELETED (owner's call, 2026-07-28) — but the finding it caught stands.**
-      Re-run at the spawn ceiling (it had been measuring brawn 30, above what a colonist can reach) it
+      Re-run at the spawn ceiling (it had been measuring strength 30, above what a colonist can reach) it
       read: two-hander kills fastest at **2,170t** ✅, but the shield style dies **MOST — 5 deaths in 8
       against the two-hander's 3**, where the design says the shield is precisely what the one-hander
       bought with its damage. The assertion was correct and the game is wrong.
 
-      Only that ONE test was removed, not the file: the other five pin the two-handed/BRAWN decoupling
+      Only that ONE test was removed, not the file: the other five pin the two-handed/STRENGTH decoupling
       (#4), the signed trait-grant fix (#1), the downgrade cost (#11), mob stat bands, and sim
       determinism (#2) — all still green and all worth keeping.
 

@@ -17,7 +17,7 @@ import type { Pawn } from '$lib/game/core/types';
  * culture's stat RANGES was not enough on its own either: trait bonuses land on top of the roll, so 6%
  * still cleared it until the clamp moved after `applyCulturalTraitBonuses`.
  */
-const KEYS = ['brawn', 'agility', 'vigour', 'awareness', 'intellect', 'charisma'] as const;
+const KEYS = ['strength', 'dexterity', 'constitution', 'perception', 'intelligence', 'charisma'] as const;
 
 describe('SPAWN STAT CAP — growth-level-1 pawns are ordinary people', () => {
   it(`no generated pawn exceeds ${SPAWN_STAT_CAP} in any core stat`, () => {

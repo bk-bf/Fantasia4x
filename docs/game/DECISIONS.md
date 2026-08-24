@@ -291,7 +291,7 @@ All callsites depend on the TypeScript interface, never on the Rust implementati
 
 #### Context
 
-The original pawn need system used two flat thresholds: `HUNGER_THRESHOLD = 70` (seek food from Idle) and `CRITICAL_HUNGER = 87` (interrupt active work). This produced pathological behaviour: a pawn working 1 tile from a campfire would stubbornly work until 87% hunger before eating, while a pawn working 60 tiles from food would interrupt at the same 87% and make a very long round-trip. Pawns routinely reached 100% hunger, collapsed from exhaustion, and then starved while asleep — the system had no spatial awareness.
+The original pawn need system used two flat thresholds: `HUNGER_THRESHOLD = 70` (seek food from Idle) and `CRITICAL_HUNGER = 87` (interrupt active work). This produced pathological behaviour: a pawn working 1 tile from a campfire would stubbornly work until 87% hunger before eating, while a pawn working 60 tiles from food would interrupt at the same 87% and make a very long round-trip. Pawns routinely reached 100% hunger, collapsed from exhaustion, and then starved while asleep — the system had no spatial perception.
 
 #### Decision
 
@@ -1284,7 +1284,7 @@ this as "ADR-031" before that number was taken).
 
 **Context.** A specialised sneak build — small, deft, lightly-armoured, one devastating opening
 strike, then break contact and re-approach — needs a "creature notices pawn" gate. The trap to avoid
-is a parallel spatial/awareness subsystem with its own per-tick sweep.
+is a parallel spatial/perception subsystem with its own per-tick sweep.
 
 **Decision.** Stealth is a **filter inserted at the existing `inVision` gate** in `entityAI.stepOne`:
 a pawn inside a mob's (light- and weather-shortened) vision range WITH line of sight must also pass

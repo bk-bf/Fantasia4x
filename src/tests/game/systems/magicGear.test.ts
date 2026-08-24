@@ -69,11 +69,11 @@ describe('§M magical conditions', () => {
       ].sort()
     );
     const CONSUMED = new Set([
-      'brawn',
-      'agility',
-      'vigour',
-      'awareness',
-      'intellect',
+      'strength',
+      'dexterity',
+      'constitution',
+      'perception',
+      'intelligence',
       'workEfficiency',
       'moveSpeed',
       'fatigueRate',
@@ -81,7 +81,7 @@ describe('§M magical conditions', () => {
       // The flat combat keys, all read by `Combat.conditionMult` — `dodge` in the evasion term,
       // `hitChance` on the to-hit roll, `attackSpeed` on the swing interval, `critChance` on the crit
       // roll. `quickness` and `grace` carry `attackSpeed` because a haste buff that granted only
-      // `agility` bought nothing but damage once the stats were decoupled.
+      // `dexterity` bought nothing but damage once the stats were decoupled.
       'dodge',
       'hitChance',
       'attackSpeed',
@@ -262,11 +262,11 @@ describe('§M regalia (combo & head jewelry)', () => {
 
 // Combat wiring: INT-scaled arcane damage + elemental resistance over resolveHit.
 const baseStats = {
-  brawn: 10,
-  agility: 10,
-  vigour: 10,
-  intellect: 10,
-  awareness: 10,
+  strength: 10,
+  dexterity: 10,
+  constitution: 10,
+  intelligence: 10,
+  perception: 10,
   charisma: 10
 };
 const limbs = () =>
@@ -298,7 +298,7 @@ function mob(creatureId: string, st: Partial<typeof baseStats>): Mob {
     creatureId,
     entityClass: 'animal',
     isAlive: true,
-    stats: { ...baseStats, agility: 2, ...st }, // low dodge → hits land
+    stats: { ...baseStats, dexterity: 2, ...st }, // low dodge → hits land
     traits: [],
     limbs: limbs(),
     conditions: [],
@@ -320,20 +320,20 @@ function avgHit(atk: Pawn, def: Mob): number {
 }
 
 describe('§M arcane staff damage rides INT', () => {
-  it('a high-INT mage out-damages a low-INT one with the same staff (like rapier→AWARENESS)', () => {
+  it('a high-INT mage out-damages a low-INT one with the same staff (like rapier→PERCEPTION)', () => {
     const goblin = mob('goblin', {});
-    const smart = avgHit(staffMage('ember_staff', { intellect: 20 }), goblin);
-    const dull = avgHit(staffMage('ember_staff', { intellect: 4 }), goblin);
+    const smart = avgHit(staffMage('ember_staff', { intelligence: 20 }), goblin);
+    const dull = avgHit(staffMage('ember_staff', { intelligence: 4 }), goblin);
     expect(smart).toBeGreaterThan(dull * 1.4);
   });
 });
 
 describe('§M elemental resistance mitigates staff damage', () => {
   it('a frost-resistant creature takes far less frost-staff damage than a frost-vulnerable one', () => {
-    const mage = staffMage('frost_staff', { intellect: 16 });
-    // mammoth: explicit frost 0.5 + high-VIGOUR base; viper: frost -0.3 (vulnerable) → clamps to 0 resist.
-    const onMammoth = avgHit(mage, mob('woolly_mammoth', { vigour: 24 }));
-    const onViper = avgHit(mage, mob('marsh_viper', { vigour: 5 }));
+    const mage = staffMage('frost_staff', { intelligence: 16 });
+    // mammoth: explicit frost 0.5 + high-CONSTITUTION base; viper: frost -0.3 (vulnerable) → clamps to 0 resist.
+    const onMammoth = avgHit(mage, mob('woolly_mammoth', { constitution: 24 }));
+    const onViper = avgHit(mage, mob('marsh_viper', { constitution: 5 }));
     expect(onMammoth).toBeLessThan(onViper * 0.7);
   });
 });

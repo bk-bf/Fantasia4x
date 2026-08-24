@@ -928,7 +928,7 @@ describe('ITEM-RULES R13 — a one-off antique word where a plain one exists', (
 });
 
 // ── R14: a carry aid gives you somewhere to put things, not stronger shoulders ──────────────────
-// Weight capacity is the BODY's — `(11 + 0.19 x brawn) x frameFactor`, and nothing you strap on
+// Weight capacity is the BODY's — `(11 + 0.19 x strength) x frameFactor`, and nothing you strap on
 // changes how much mass a pawn can bear. A pack that raised it was quietly saying a rucksack makes you
 // stronger. What a pack actually does is give bulk somewhere to ride, so worn aids grant VOLUME only.
 //

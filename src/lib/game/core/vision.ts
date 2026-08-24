@@ -1,6 +1,6 @@
 // Shared sight/vision model for BOTH pawns and mobs (§G light → sight).
 //
-// One awareness-based vision range, scaled by the tile's light level and dampened by the entity's
+// One perception-based vision range, scaled by the tile's light level and dampened by the entity's
 // night_vision (0 = fully affected by darkness, 1 = sees in the dark as well as by day). The same
 // light-dampening feeds the work-speed penalty (handleWorking) so a nocturnal entity neither sees
 // worse nor works slower at night. Light comes from EnvironmentService.computeTileLightLevel
@@ -47,15 +47,15 @@ function creatureHasNvPart(mob: Mob): boolean {
  *  the next couple of tiles. (Work uses its own 0.4 floor in lightWorkMultiplier.) */
 const VISION_LIGHT_FLOOR = 0.35;
 
-/** Base sight range in tiles from awareness — the SAME formula for pawns and mobs (unifies the old
+/** Base sight range in tiles from perception — the SAME formula for pawns and mobs (unifies the old
  *  pawn `vision_range` path and the per-creature `def.stats.visionRange`; matches the latter exactly,
  *  so entity daytime vision is unchanged). */
-export function baseVisionRange(awareness: number): number {
+export function baseVisionRange(perception: number): number {
   // ×2 the original (2 + per×0.65): doubled sight range so the LOS vision bubble shows meaningfully more.
-  // Shared by pawns AND mobs (awareness is set from a creature's `per` at spawn), so predator/prey
+  // Shared by pawns AND mobs (perception is set from a creature's `per` at spawn), so predator/prey
   // detection scales together and the balance is preserved. KEEP IN SYNC with Creatures.toDefinition's
   // `visionRange` (it mirrors this for the precomputed def.stats.visionRange + fleeRange).
-  return Math.round(4 + awareness * 1.3);
+  return Math.round(4 + perception * 1.3);
 }
 
 /** This entity's 0–1 night-vision (darkness immunity). Mobs read it from their creature def; pawns
@@ -121,7 +121,7 @@ export function effectiveVisionRange(
   weatherSightMul = 1,
   nightVision?: number
 ): number {
-  const base = baseVisionRange(entity.stats?.awareness ?? 10);
+  const base = baseVisionRange(entity.stats?.perception ?? 10);
   const nv = nightVision ?? getNightVision(entity);
   const lit = base * lightVisionMultiplier(lightLevel, nv);
   return Math.max(1, Math.round(lit * weatherSightMul));

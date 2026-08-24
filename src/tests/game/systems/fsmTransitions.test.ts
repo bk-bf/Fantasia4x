@@ -226,8 +226,8 @@ describe('FSM transitions & interrupt priority', () => {
         map: { w: 16, h: 16 },
         workReady: true,
         needsDisabled: ['hunger', 'fatigue', 'thirst', 'hygiene'],
-        // one deliberately frail pawn (low BRAWN/VIGOUR) that can't fight the goblins off
-        pawns: [{ count: 1, skillLevel: 5, stats: { brawn: 4, vigour: 6, agility: 8 } }],
+        // one deliberately frail pawn (low STRENGTH/CONSTITUTION) that can't fight the goblins off
+        pawns: [{ count: 1, skillLevel: 5, stats: { strength: 4, constitution: 6, dexterity: 8 } }],
         buildings: [{ id: 'campfire' }],
         items: { spit_meat: 10 },
         seedEntities: false
@@ -415,7 +415,7 @@ describe('FSM transitions & interrupt priority', () => {
         workReady: true, // caretaking labor on for everyone
         needsDisabled: ['hunger', 'fatigue', 'thirst', 'hygiene'],
         pawns: [
-          { count: 1, skillLevel: 5, stats: { brawn: 4, vigour: 6, agility: 8 } }, // frail victim
+          { count: 1, skillLevel: 5, stats: { strength: 4, constitution: 6, dexterity: 8 } }, // frail victim
           { count: 2, skillLevel: 20 } // able caretakers
         ],
         buildings: [{ id: 'hay_bed' }], // a rest building → shelter to carry to

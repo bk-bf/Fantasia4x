@@ -320,7 +320,7 @@
   .sidebar.transparent button {
     pointer-events: auto;
   }
-  /* Resting highlight behind every kingdom + resource line — the warm hover tint at ~1/3 brawn,
+  /* Resting highlight behind every kingdom + resource line — the warm hover tint at ~1/3 strength,
      faded to transparent at the left/right edges so it's a soft band, not a hard box. Hover still
      brightens to full intensity (wins on specificity). Mirrors the chronicle entries. */
   .sidebar.transparent .row,

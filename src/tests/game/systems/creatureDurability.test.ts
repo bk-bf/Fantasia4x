@@ -8,11 +8,11 @@ import type { GameState, Mob, Pawn } from '$lib/game/core/types';
 
 // naturalArmor soaks low-AP attacks, AP bites through, and bodyScale scales blood pool + natural-weapon damage. Drives the real resolveHit/makeMob — no mocks.
 const baseStats = {
-  brawn: 10,
-  agility: 2, // low dodge → most swings land, so totals are comparable
-  vigour: 10,
-  intellect: 8,
-  awareness: 8,
+  strength: 10,
+  dexterity: 2, // low dodge → most swings land, so totals are comparable
+  constitution: 10,
+  intelligence: 8,
+  perception: 8,
   charisma: 5
 };
 
@@ -59,7 +59,7 @@ function makeArmedPawn(itemId?: string, statsOver: Partial<typeof baseStats> = {
     isAlive: true,
     position: { x: 5, y: 5 },
     currentState: 'Fighting',
-    stats: { ...baseStats, brawn: 16, agility: 20, ...statsOver },
+    stats: { ...baseStats, strength: 16, dexterity: 20, ...statsOver },
     traits: [],
     equipment: itemId ? { mainHand: { itemId } } : {},
     limbs: fullLimbs(),
@@ -126,18 +126,18 @@ describe('big-creature durability (naturalArmor + bodyScale)', () => {
     // §2a stats now ROLL from the def band at spawn, so the pool derives from the ROLLED con:
     // pool = con × 5 × bodyScale (mammoth 3.5; rat has no bodyScale). Con lands in the def range
     // (mammoth [21,27] → mid 24; rat [3,5] → mid 4), so the pool tracks the individual, not a constant.
-    expect(mammoth.maxBloodVolume).toBe(Math.round(mammoth.stats.vigour * 5 * 3.5));
+    expect(mammoth.maxBloodVolume).toBe(Math.round(mammoth.stats.constitution * 5 * 3.5));
     expect(mammoth.maxHealth).toBe(mammoth.maxBloodVolume);
-    expect(rat.maxBloodVolume).toBe(rat.stats.vigour * 5);
+    expect(rat.maxBloodVolume).toBe(rat.stats.constitution * 5);
     // bodyScale really enlarges it: the mammoth's pool is ~3.5× a same-con creature's.
-    expect(mammoth.maxBloodVolume).toBeGreaterThan(mammoth.stats.vigour * 5 * 3);
+    expect(mammoth.maxBloodVolume).toBeGreaterThan(mammoth.stats.constitution * 5 * 3);
   });
 
   it('a big beast hits harder — bodyScale scales its natural-weapon damage', () => {
     // Equal stats → the only difference is bodyScale (mammoth 3.5 vs wolf 1.1) + its heavier weapons.
-    const mammoth = makeCreature('woolly_mammoth', { agility: 22 });
-    const wolf = makeCreature('wolf', { agility: 22 });
-    const target = makeCreature('giant_rat', { agility: 1 }); // bare flesh, low dodge
+    const mammoth = makeCreature('woolly_mammoth', { dexterity: 22 });
+    const wolf = makeCreature('wolf', { dexterity: 22 });
+    const target = makeCreature('giant_rat', { dexterity: 1 }); // bare flesh, low dodge
 
     const mammothDmg = totalDamage(mammoth as unknown as Pawn, target, 800, 7);
     const wolfDmg = totalDamage(wolf as unknown as Pawn, target, 800, 7);
@@ -146,7 +146,7 @@ describe('big-creature durability (naturalArmor + bodyScale)', () => {
   });
 
   it('blunt wounds do NOT bleed (crush is contusion-free) — only a severed stump gushes', () => {
-    const fists = makeArmedPawn(undefined, { brawn: 20 }); // unarmed → blunt fists/kick
+    const fists = makeArmedPawn(undefined, { strength: 20 }); // unarmed → blunt fists/kick
     const target = makeCreature('giant_rat');
     rng.reseed(11);
     // Blunt's payoff is raw damage + fractures, not blood: a non-destroying crush never opens a bleed.

@@ -368,7 +368,7 @@ export interface Building {
    *  light (no per-building code). A fuelled building (maxFuel>0) only glows while `lit`; a
    *  fuel-free one glows whenever complete. */
   lightRadius?: number;
-  /** Peak additive light brawn at the source. Defaults to the fire intensity (1.1). */
+  /** Peak additive light strength at the source. Defaults to the fire intensity (1.1). */
   lightIntensity?: number;
   /** Normalised RGB light colour [r,g,b] 0–1. Defaults to warm fire [1.0, 0.55, 0.22]. */
   lightColor?: [number, number, number];

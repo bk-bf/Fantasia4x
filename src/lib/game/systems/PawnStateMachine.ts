@@ -300,9 +300,9 @@ function finalizePawnDeath(
     cause,
     turn: gameState.turn,
     stats: {
-      brawn: pawn.stats.brawn ?? 10,
-      agility: pawn.stats.agility ?? 10,
-      intellect: pawn.stats.intellect ?? 10
+      strength: pawn.stats.strength ?? 10,
+      dexterity: pawn.stats.dexterity ?? 10,
+      intelligence: pawn.stats.intelligence ?? 10
     },
     // SOCIAL-LAYER: id + blood ties retained so a survivor's family tree still names the lost.
     id: pawn.id,
@@ -619,15 +619,15 @@ function tickConditions(pawn: Pawn, gameState: GameState): GameState {
   }
 
   // ── Weapon strain ← a mainHand weapon too heavy for the wielder (§2c) ──────
-  // A crude monster weapon carries a `wieldRequirement.brawn`; a pawn below it is `overmatched`
+  // A crude monster weapon carries a `wieldRequirement.strength`; a pawn below it is `overmatched`
   // (staged debuff — worse aim, softer blows, faster fatigue), set DIRECTLY from the RAW-STR shortfall
   // (raw, not conditioned, so the condition can't feed back into its own severity). Clears on unequip.
   {
     const mhReq = pawn.equipment?.mainHand
       ? itemService.getItemById(pawn.equipment.mainHand.itemId)?.weaponProperties?.wieldRequirement
-          ?.brawn
+          ?.strength
       : undefined;
-    driveWieldStrain(conditions, mhReq ? mhReq - pawn.stats.brawn : 0);
+    driveWieldStrain(conditions, mhReq ? mhReq - pawn.stats.strength : 0);
   }
 
   // ── Clotting ────────────────────────────────────────────────────────────────
@@ -735,7 +735,7 @@ function tickConditions(pawn: Pawn, gameState: GameState): GameState {
   infectionPressure = Math.min(infectionPressure, CARE_CONFIG.infectionRiskMax);
   const immune = Math.max(
     0,
-    Math.min(0.95, CARE_CONFIG.immuneResistBase + (pawn.stats.vigour - 10) * 0.02)
+    Math.min(0.95, CARE_CONFIG.immuneResistBase + (pawn.stats.constitution - 10) * 0.02)
   );
   const infIdx = conditions.findIndex((c) => c.id === 'infection');
   const curInf = infIdx >= 0 ? conditions[infIdx].severity : 0;

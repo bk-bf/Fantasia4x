@@ -16,11 +16,11 @@ function pawn(id: string, x: number, y: number, extra: Partial<Pawn> = {}): Pawn
     cultureId: 'c1',
     age: 30,
     stats: {
-      brawn: 10,
-      agility: 10,
-      vigour: 10,
-      intellect: 10,
-      awareness: 10,
+      strength: 10,
+      dexterity: 10,
+      constitution: 10,
+      intelligence: 10,
+      perception: 10,
       charisma: 10
     },
     traits: [],

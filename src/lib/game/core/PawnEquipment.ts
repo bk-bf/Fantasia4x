@@ -357,7 +357,7 @@ export function calculateItemBonuses(item: Item): Record<string, number> {
       switch (effect) {
         // Combat effects
         case 'combatPower':
-          bonuses.brawnBonus = Math.floor(value / 2);
+          bonuses.strengthBonus = Math.floor(value / 2);
           bonuses.combatBonus = value;
           break;
         case 'huntingBonus':
@@ -377,22 +377,22 @@ export function calculateItemBonuses(item: Item): Record<string, number> {
 
         // Defense effects
         case 'defense':
-          bonuses.vigourBonus = Math.floor(value / 3);
+          bonuses.constitutionBonus = Math.floor(value / 3);
           bonuses.defenseRating = value;
           break;
 
         // Movement effects
         case 'movementSpeed':
-          bonuses.agilityBonus = Math.floor(value * 2);
+          bonuses.dexterityBonus = Math.floor(value * 2);
           break;
 
         // Direct stat bonuses
-        case 'brawnBonus':
-        case 'agilityBonus':
-        case 'intellectBonus':
-        case 'awarenessBonus':
+        case 'strengthBonus':
+        case 'dexterityBonus':
+        case 'intelligenceBonus':
+        case 'perceptionBonus':
         case 'charismaBonus':
-        case 'vigourBonus':
+        case 'constitutionBonus':
           bonuses[effect] = value;
           break;
 
@@ -405,8 +405,8 @@ export function calculateItemBonuses(item: Item): Record<string, number> {
 
         // Special effects
         case 'magicalPower':
-          bonuses.intellectBonus = Math.floor(value / 2);
-          bonuses.awarenessBonus = Math.floor(value / 3);
+          bonuses.intelligenceBonus = Math.floor(value / 2);
+          bonuses.perceptionBonus = Math.floor(value / 3);
           break;
 
         default:
@@ -500,12 +500,12 @@ export function getEffectiveStats(pawn: Pawn): EntityStats {
   const equipmentBonuses = getEquipmentBonuses(pawn);
 
   return {
-    brawn: baseStats.brawn + (equipmentBonuses.brawnBonus || 0),
-    agility: baseStats.agility + (equipmentBonuses.agilityBonus || 0),
-    intellect: baseStats.intellect + (equipmentBonuses.intellectBonus || 0),
-    awareness: baseStats.awareness + (equipmentBonuses.awarenessBonus || 0),
+    strength: baseStats.strength + (equipmentBonuses.strengthBonus || 0),
+    dexterity: baseStats.dexterity + (equipmentBonuses.dexterityBonus || 0),
+    intelligence: baseStats.intelligence + (equipmentBonuses.intelligenceBonus || 0),
+    perception: baseStats.perception + (equipmentBonuses.perceptionBonus || 0),
     charisma: baseStats.charisma + (equipmentBonuses.charismaBonus || 0),
-    vigour: baseStats.vigour + (equipmentBonuses.vigourBonus || 0)
+    constitution: baseStats.constitution + (equipmentBonuses.constitutionBonus || 0)
   };
 }
 

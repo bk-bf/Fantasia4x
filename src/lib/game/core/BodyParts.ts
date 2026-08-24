@@ -23,7 +23,7 @@ export interface BodyPartDef {
   isCritical?: boolean;
   /** Natural-weapon ids this part enables (jaw → bite); usable only while a non-missing part enables it. */
   weapons?: string[];
-  /** Natural-armour share 0–1+: the plan sets the distribution, the creature's `naturalArmor` the brawn.
+  /** Natural-armour share 0–1+: the plan sets the distribution, the creature's `naturalArmor` the strength.
    *  A destroyed part takes its armour with it. */
   armor?: number;
   /** ADR-031: a major vessel (carotid/femoral). A penetrating organ-hit that finds it opens an
@@ -31,13 +31,13 @@ export interface BodyPartDef {
    *  rather than the instant kill a vital organ would be. */
   artery?: boolean;
   /** TRAITS §0 — permanent effects the part itself confers on whoever has it (a spider's extra eyes grant
-   *  night vision + awareness). This is how a GRAFTED organ pays out its buff without routing through a
+   *  night vision + perception). This is how a GRAFTED organ pays out its buff without routing through a
    *  condition: `nightVision` is summed live over the entity's LIVING parts (vision.ts) — lose the eye,
-   *  lose the sight; `awarenessBonus` (a core stat) is baked in once at pawn-gen from the grafted parts
+   *  lose the sight; `perceptionBonus` (a core stat) is baked in once at pawn-gen from the grafted parts
    *  (applyCulturalTraitBonuses). Only a part unique to the granting body carries it, so it never leaks to
    *  a plain humanoid eye. Conditional benefits (gills only help when wet) still use a hostParts condition.
    *  `stealth` is summed the same live way (core/stealth.ts) — a translucent membrane hides while it lives. */
-  grants?: { nightVision?: number; awarenessBonus?: number; stealth?: number };
+  grants?: { nightVision?: number; perceptionBonus?: number; stealth?: number };
 }
 
 interface CatalogPart {
@@ -52,7 +52,7 @@ interface CatalogPart {
   weapons?: string[];
   armor?: number;
   artery?: boolean;
-  grants?: { nightVision?: number; awarenessBonus?: number; stealth?: number };
+  grants?: { nightVision?: number; perceptionBonus?: number; stealth?: number };
 }
 interface PlanBlock {
   parts?: Record<string, CatalogPart>;

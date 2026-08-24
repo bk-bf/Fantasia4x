@@ -98,7 +98,7 @@ async function duel(opts: {
 async function kit(label: string, equip: string[], traits?: string[]) {
   const runs: Run[] = [];
   for (const seed of SEEDS)
-    runs.push({ ...(await duel({ seed, stats: { brawn: 30, agility: 30, vigour: 30 }, equip, traits })) });
+    runs.push({ ...(await duel({ seed, stats: { strength: 30, dexterity: 30, constitution: 30 }, equip, traits })) });
   const killed = runs.filter((r) => r.killed);
   return {
     label,

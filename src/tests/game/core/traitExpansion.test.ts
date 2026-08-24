@@ -20,12 +20,12 @@ function makePawn(id: string, traits: Trait[], pos?: { x: number; y: number }): 
     id,
     name: id,
     stats: {
-      brawn: 10,
-      agility: 10,
-      intellect: 10,
-      awareness: 10,
+      strength: 10,
+      dexterity: 10,
+      intelligence: 10,
+      perception: 10,
       charisma: 10,
-      vigour: 10
+      constitution: 10
     },
     physicalTraits: { height: 170, weight: 70, size: 'medium' },
     traits,

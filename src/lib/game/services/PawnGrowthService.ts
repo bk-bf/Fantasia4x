@@ -25,12 +25,12 @@ import { advanceAwakeningMeters, lineageGrowthEvent } from '$lib/game/core/Linea
 import { applyGainedTrait } from '$lib/game/entities/Pawns';
 
 const STAT_KEYS: StatKey[] = [
-  'brawn',
-  'agility',
-  'intellect',
-  'awareness',
+  'strength',
+  'dexterity',
+  'intelligence',
+  'perception',
   'charisma',
-  'vigour'
+  'constitution'
 ];
 
 const DAYS_PER_YEAR = DAYS_PER_SEASON * 4; // 4 seasons
