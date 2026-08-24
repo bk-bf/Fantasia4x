@@ -23,10 +23,11 @@ import { createBodyPlanLimbs } from '../systems/Combat';
 import { DEFAULT_PLAN, PART_DEF_MAP, containedParts } from '../core/BodyParts';
 import { SCARRING_CONFIG, makeScarInjury } from '../core/Wounds';
 import {
-  seedAwakeningPaths,
   getTraitById,
+  resolveTraitGamble,
   rollFlawTrait,
-  resolveTraitGamble
+  rollLineageTrait,
+  seedAwakeningPaths
 } from '../core/Lineages';
 import { KIN_INVERSE } from '../core/Social';
 import { itemDefById } from '../core/itemDefs';
@@ -395,6 +396,17 @@ export function applyConsumable(
       bake(trait);
       bake(rollFlawTrait(rand));
     }
+  }
+
+  // (ii-b) A voidshard AWAKENS A BLOODLINE. No gamble and no Faustian flaw: the thing is a 0.01%
+  // strike behind a runed pick, a boss's hoard, or a fortune paid to a caravan that likes you — the
+  // finding IS the gamble, and there is nothing left to punish. A pawn who already belongs to a
+  // bloodline gets nothing, so the shard is not wasted silently: `rollLineageTrait` returns undefined
+  // and the caller sees no change.
+  if (def.grantsLineage) {
+    const pool = Array.isArray(def.grantsLineage) ? def.grantsLineage : undefined;
+    const lineage = rollLineageTrait(next.traits, rand, pool);
+    if (lineage) bake(lineage);
   }
 
   // (iii) ALCHEMY-BUTCHERY-EXPANSION §A — RAW beast organ: no reward, only risk. Sicken the eater, and at

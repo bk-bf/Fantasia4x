@@ -1869,6 +1869,15 @@
     "researchRequired": "steel_making"
   },
   {
+    "id"              : "make_rune_etched_pick",
+    "station"         : "runecarver_bench",
+    "inputs"          : {"magic_alloy_bar": 2, "gem_dust": 2, "sanded_haft": 1},
+    "outputs"         : {"rune_etched_pick": 1},
+    "workAmount"      : 30,
+    "toolTierRequired": 2,
+    "researchRequired": "runic_inscription"
+  },
+  {
     "id"              : "make_rune_etched_belt",
     "station"         : "runecarver_bench",
     "inputs"          : {"category:leather": 4, "magic_alloy_bar": 1, "gem_dust": 2, "enchant_thread": 2},

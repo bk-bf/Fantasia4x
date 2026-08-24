@@ -505,6 +505,25 @@ export interface Item {
    * the organ into a `traitGamble` draught. Resolved in `applyConsumable`.
    */
   rawConsumeRisk?: { sickness?: string; flawChance?: number };
+
+  /**
+   * Consuming this AWAKENS A BLOODLINE: it bakes a lineage parent trait onto the eater and nothing
+   * else — no gamble, no Faustian flaw. Reserved for something the colony finds once, if ever.
+   *
+   * `true` draws from every lineage the pawn does not already carry; a list narrows the draw. This is
+   * deliberately NOT `traitGamble`, which is built around risk: a voidshard is a 0.01% strike behind a
+   * runed pick, a boss's hoard, or a fortune paid to a caravan that likes you — the finding IS the
+   * gamble, and there is nothing left to punish.
+   */
+  grantsLineage?: true | string[];
+
+  /**
+   * A caravan only carries this when relations with the sending kingdom are at least this warm
+   * (`KingdomRelation.score`, -100..100). Nothing else in the manifest is gated: a merchant will sell
+   * you steel the first time they meet you. This exists for the one or two things a kingdom parts
+   * with only for people it trusts — and then charges a fortune for.
+   */
+  tradeRelationsMin?: number;
   /**
    * ALCHEMY-BUTCHERY-EXPANSION §A: a brewed "transfusion" draught. Drinking it is a weighted GAMBLE (good
    * = a trait, no flaw / mixed = trait + flaw / bad = flaw only). `tier` (1–3, the draught's `ageTier` rung)
