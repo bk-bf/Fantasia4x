@@ -25,6 +25,22 @@ export interface LootSlot {
   pick: LootPick[];
 }
 
+/**
+ * What a geared humanoid is CARRYING rather than wearing: a phial of something, a coated blade's
+ * spare flask, a poultice. Each entry rolls its own `chance`, then a count in `count` (default 1),
+ * then a weighted pick.
+ *
+ * Rolled at DEATH rather than stored on the mob. Nothing in the sim drinks a potion mid-fight, so
+ * holding one on every raider would ship a per-mob array through the entity snapshot every flush
+ * (ENGINE-PERFORMANCE) to describe something only the corpse ever reveals. The pool still means what
+ * it says — this is what the enemy had on them — it is just resolved when you search the body.
+ */
+export interface LootCarry {
+  chance: number; // 0–1
+  count?: [number, number]; // inclusive min/max, default [1,1]
+  pick: LootPick[];
+}
+
 export interface LootPool {
   /** Per-piece chance to drop on death (0–1). */
   dropChance: number;
@@ -34,6 +50,8 @@ export interface LootPool {
   quality?: Array<[ItemQuality, number]>;
   /** Slot id → its draw. Keys are real EquipmentSlot ids. */
   slots: Partial<Record<EquipmentSlot, LootSlot>>;
+  /** Consumables the enemy had on them — potions, coatings, poultices. Resolved on death. */
+  carried?: LootCarry[];
 }
 
 type LootPoolFile = { pools: Record<string, LootPool> };
@@ -87,7 +105,34 @@ export function validateLootItemIds(exists: (id: string) => boolean): void {
         }
       }
     }
+    for (const carry of pool.carried ?? []) {
+      for (const p of carry.pick) {
+        if (!exists(p.id)) {
+          throw new Error(`lootpool "${poolId}" carried: unknown item id "${p.id}"`);
+        }
+      }
+    }
   }
+}
+
+/** What this enemy had on them: each `carried` entry rolls its chance, then a count, then a pick.
+ *  Returns stack-sized drops — a consumable is a plain quantity, not a tracked instance. */
+export function drawCarried(pool: LootPool, rng: Rng): Array<{ itemId: string; qty: number }> {
+  const out: Array<{ itemId: string; qty: number }> = [];
+  for (const carry of pool.carried ?? []) {
+    if (rng.random() >= carry.chance) continue;
+    const [lo, hi] = carry.count ?? [1, 1];
+    const qty = lo + Math.floor(rng.random() * (hi - lo + 1));
+    if (qty <= 0) continue;
+    const total = carry.pick.reduce((n, p) => n + (p.w ?? 1), 0);
+    let roll = rng.random() * total;
+    const chosen = carry.pick.find((p) => (roll -= p.w ?? 1) < 0) ?? carry.pick[0];
+    if (!chosen) continue;
+    const at = out.find((o) => o.itemId === chosen.id);
+    if (at) at.qty += qty;
+    else out.push({ itemId: chosen.id, qty });
+  }
+  return out;
 }
 
 export interface DrawnPiece {
