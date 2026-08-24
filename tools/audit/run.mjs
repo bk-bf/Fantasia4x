@@ -39,6 +39,8 @@ const log = (s) => {
   appendFileSync(LOG, line + '\n');
 };
 
+// Child audit CLI calls go through process.execPath, not a bare 'node': inside a systemd
+// unit PATH resolves to the system node (v20 here), which has no node:sqlite.
 function sh(cmd, args, { input, env, timeoutMs = 600_000 } = {}) {
   return new Promise((resolve) => {
     const p = spawn(cmd, args, { env: { ...process.env, ...env }, stdio: ['pipe', 'pipe', 'pipe'] });
@@ -69,7 +71,7 @@ async function worker(id, deadline) {
   let batches = 0, verdicts = 0, fails = 0, errors = 0;
 
   while (Date.now() < deadline) {
-    const next = await sh('node', [AUDIT, 'next', '--run', RUN_ID], { env });
+    const next = await sh(process.execPath, [AUDIT, 'next', '--run', RUN_ID], { env });
     if (next.code !== 0) { log(`[w${id}] next failed: ${next.err.trim()}`); errors++; break; }
 
     let task;
@@ -86,12 +88,12 @@ async function worker(id, deadline) {
       writeFileSync(respFile, await askModel(task.prompt));
     } catch (e) {
       log(`[w${id}] model error on ${task.symbol_key}: ${e.message}`);
-      await sh('node', [AUDIT, 'release'], { env });
+      await sh(process.execPath, [AUDIT, 'release'], { env });
       errors++;
       continue;
     }
 
-    const sub = await sh('node',
+    const sub = await sh(process.execPath,
       [AUDIT, 'submit', respFile, '--task', taskFile, '--run', RUN_ID, '--model', MODEL], { env });
     const accepted = Number(/accepted (\d+)/.exec(sub.out)?.[1] ?? 0);
     const rejected = Number(/rejected (\d+)/.exec(sub.out)?.[1] ?? 0);
@@ -107,7 +109,7 @@ async function worker(id, deadline) {
     }
 
     // A claim left behind by a rejected batch would otherwise sit until its lease expires.
-    if (accepted === 0) await sh('node', [AUDIT, 'release'], { env });
+    if (accepted === 0) await sh(process.execPath, [AUDIT, 'release'], { env });
     if (ONCE) break;
   }
   return { batches, verdicts, fails, errors };
@@ -126,4 +128,4 @@ const total = results.reduce((a, r) => ({
 }), { batches: 0, verdicts: 0, fails: 0, errors: 0 });
 
 log(`done — ${total.batches} batches, ${total.verdicts} verdicts, ${total.fails} fails, ${total.errors} errors`);
-await sh('node', [AUDIT, 'status']).then((r) => process.stdout.write(r.out));
+await sh(process.execPath, [AUDIT, 'status']).then((r) => process.stdout.write(r.out));
