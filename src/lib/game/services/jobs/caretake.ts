@@ -68,13 +68,27 @@ function needsTending(patient: Pawn, turn: number): boolean {
   return hasUntendedWound(patient, turn) || hasActiveInfection(patient);
 }
 
-/** Best medicine in the stockpile (highest `medicineQuality` with stock), or null. */
-function bestMedicine(gs: GameState): { id: string; quality: number } | null {
+/**
+ * Best medicine in stock for DRESSING A WOUND, honouring the patient's own tier ceiling.
+ *
+ * Two things are deliberately excluded:
+ *   · anything above `patient.medicineTierCap` — the player's instruction not to spend the good stuff
+ *     on this pawn. Unset means no ceiling.
+ *   · anything with `curesConditions` — a styptic pack, a splint, an antivenin. Those treat a NAMED
+ *     condition and are administered by hand from a caretaker's pack; letting the auto-tend grab one
+ *     because it happened to be in stock would burn the colony's only phial on a graze.
+ */
+function bestMedicine(gs: GameState, patient: Pawn): { id: string; quality: number } | null {
+  const cap = patient.medicineTierCap;
   let best: { id: string; quality: number } | null = null;
   for (const [id, amount] of Object.entries(gs.stockpile ?? {})) {
     if (amount <= 0) continue;
-    const q = itemService.getItemById(id)?.medicineQuality;
-    if (q && q > 0 && (!best || q > best.quality)) best = { id, quality: q };
+    const def = itemService.getItemById(id);
+    const q = def?.medicineQuality;
+    if (!q || q <= 0) continue;
+    if (def?.curesConditions?.length) continue; // condition medicine — the player administers it
+    if (cap != null && (def?.tier ?? 0) > cap) continue;
+    if (!best || q > best.quality) best = { id, quality: q };
   }
   return best;
 }
@@ -138,7 +152,7 @@ export function tendPatient(patient: Pawn, medic: Pawn, gs: GameState): GameStat
   const skill = pawnStatService.evaluateStat('caretaking_quality', medic) * TEND_SKILL_SCALE;
   const mood = medic.state?.mood ?? 50;
   const moodFactor = Math.max(0.3, Math.min(1.2, 0.6 + (mood / 100) * 0.6));
-  const med = bestMedicine(gs);
+  const med = bestMedicine(gs, patient);
   const shelter = shelterTendFactor(gs, patient.position.x, patient.position.y);
   const skillRoll = skill * moodFactor * (0.6 + rng.random() * 0.4);
   const quality = Math.max(0, Math.min(1, (skillRoll + (med?.quality ?? 0)) * shelter));

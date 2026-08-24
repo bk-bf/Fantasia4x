@@ -472,6 +472,16 @@ export interface Pawn {
    * Independent of normal fatigue sleep, which is unaffected by this setting.
    */
   restPolicy?: 'never' | 'shelter' | 'always';
+  /**
+   * Ceiling on the medicine an auto-tend may spend on THIS pawn (item `tier`). Undefined = no cap, so
+   * a caretaker reaches for the best in stock — which is the default and what most colonies want.
+   *
+   * It exists so Emberbloom Balm is not burned dressing a scratch. Wounds are dressed automatically
+   * under this cap; CONDITIONS are not managed here at all — those are administered by hand from a
+   * caretaker's own pack (`administerMedicine`), because guessing which of thirteen conditions the
+   * player wanted treated, with which of their limited phials, is not a decision the sim should make.
+   */
+  medicineTierCap?: number;
 
   /** FORCE WORK (emergency): when true, the pawn neglects ALL needs — hunger, thirst, fatigue,
    *  hygiene and wound recovery — and keeps working, never breaking off to eat/drink/rest. Can drive

@@ -542,6 +542,48 @@ export const COMMANDS: Record<string, Cmd> = {
       pw.id === p.pawnId ? { ...pw, combatStance: p.stance as never } : pw
     )
   }),
+  /** The player's ceiling on what an auto-tend may spend dressing THIS pawn's wounds. `null` clears it
+   *  (no ceiling — reach for the best in stock, the default). */
+  setPawnMedicineTier: (s, p: { pawnId: string; tier: number | null }) => ({
+    ...s,
+    pawns: s.pawns.map((pw) =>
+      pw.id === p.pawnId
+        ? { ...pw, medicineTierCap: p.tier == null ? undefined : Math.max(0, Math.round(p.tier)) }
+        : pw
+    )
+  }),
+
+  /**
+   * A caretaker gives a patient one dose of condition medicine OUT OF THEIR OWN PACK.
+   *
+   * Conditions are deliberately not automated: the sim would have to guess which of thirteen
+   * conditions the player wanted cleared and which of their few phials to spend on it. Instead the
+   * player equips a caretaker with what they expect to need and administers it deliberately — the
+   * medicine has to be ON the caretaker, and they have to be beside the patient.
+   */
+  administerMedicine: (s, p: { caretakerId: string; patientId: string; itemId: string }) => {
+    const ci = s.pawns.findIndex((pw) => pw.id === p.caretakerId);
+    const pi = s.pawns.findIndex((pw) => pw.id === p.patientId);
+    if (ci === -1 || pi === -1) return s;
+    const carer = s.pawns[ci];
+    const held = (carer.inventory?.items ?? {})[p.itemId] ?? 0;
+    if (held < 1) return s;
+    const def = itemService.getItemById(p.itemId);
+    if (!def?.curesConditions?.length) return s;
+    // Beside the patient — you cannot dose someone across the map.
+    const a = carer.position;
+    const b = s.pawns[pi].position;
+    if (!a || !b || !isAdjacent(a.x, a.y, b.x, b.y)) return s;
+
+    const pawns = s.pawns.slice();
+    pawns[pi] = applyConsumable(pawns[pi], p.itemId, Math.random);
+    const items = { ...(carer.inventory?.items ?? {}) };
+    items[p.itemId] = held - 1;
+    if (items[p.itemId] <= 0) delete items[p.itemId];
+    pawns[ci] = { ...carer, inventory: { ...(carer.inventory ?? { instances: [] }), items } };
+    return { ...s, pawns };
+  },
+
   setPawnRestPolicy: (s, p: { pawnId: string; policy: string }) => ({
     ...s,
     pawns: s.pawns.map((pw) => {
