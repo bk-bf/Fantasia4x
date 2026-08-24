@@ -9539,7 +9539,7 @@
   },
   {
     "id": "hide_arrow_sheath",
-    "charSpans": [ {"sheet": "items", "id": 158} ],
+    "charSpans": [ {"sheet": "items", "id": 137} ],
     "name": "Hide Quiver",
     "type": "tool",
     "category": "storage",
@@ -9558,7 +9558,7 @@
   },
   {
     "id": "leather_back_quiver",
-    "charSpans": [ {"sheet": "items", "id": 158} ],
+    "charSpans": [ {"sheet": "items", "id": 137} ],
     "name": "Leather Back Quiver",
     "type": "tool",
     "category": "storage",
@@ -9577,7 +9577,7 @@
   },
   {
     "id": "stiffened_war_quiver",
-    "charSpans": [ {"sheet": "items", "id": 158} ],
+    "charSpans": [ {"sheet": "items", "id": 137} ],
     "name": "Stiffened War Quiver",
     "type": "tool",
     "category": "storage",
@@ -9596,7 +9596,7 @@
   },
   {
     "id": "leather_bolt_case",
-    "charSpans": [ {"sheet": "items", "id": 158} ],
+    "charSpans": [ {"sheet": "items", "id": 137} ],
     "name": "Leather Bolt-Case",
     "type": "tool",
     "category": "storage",
@@ -9615,7 +9615,7 @@
   },
   {
     "id": "banded_bolt_quiver",
-    "charSpans": [ {"sheet": "items", "id": 158} ],
+    "charSpans": [ {"sheet": "items", "id": 137} ],
     "name": "Iron-Banded Bolt-Case",
     "type": "tool",
     "category": "storage",

@@ -51,6 +51,7 @@ type Recipe = {
   id: string;
   inputs?: Record<string, number>;
   outputs?: Record<string, number>;
+  inputAlternatives?: Record<string, number>[];
   dynamicRecipe?: Record<string, { acceptsCategory?: string; acceptsCategories?: string[] }>;
 };
 type Creature = {
@@ -1409,5 +1410,59 @@ describe('ITEM-RULES R20 — a cure below the runed age costs the patient someth
         .map((c) => `${i.id} grants "${c}", which is not a condition`)
     );
     expect(bad, bad.join('; ')).toEqual([]);
+  });
+});
+
+// ── R21: unmaking a thing never returns more than went into it ──────────────────────────────────
+// Reversible pairs are everywhere in the metal lines — melt a bar to molten, cast the molten back to
+// a bar — and each half is written on its own, so the two halves drift apart without anything
+// complaining. Bronze counted a 4kg bar as one unit of molten where every other metal counted it as
+// four, and one bar came back out of the round trip as two: an unbounded metal supply from a single
+// standing order. Any pair of recipes that can turn N of an item into more than N is the same defect.
+describe('ITEM-RULES R21 — a round trip through the crafting graph never gains mass', () => {
+  /** Every input set an order can actually run on, alternatives included. */
+  const OPS = RECIPES.flatMap((r) =>
+    [r.inputs, ...(r.inputAlternatives ?? [])]
+      .filter(Boolean)
+      .map((inp) => ({ id: r.id, inp: inp as Record<string, number>, out: r.outputs ?? {} }))
+  );
+
+  const byCat = new Map<string, string[]>();
+  for (const i of ITEMS)
+    if (i.category) byCat.set(i.category, [...(byCat.get(i.category) ?? []), i.id]);
+  /** A category slot stands for any of its members, so a loop through one still counts. */
+  const members = (key: string) =>
+    key.startsWith('category:') ? (byCat.get(key.slice('category:'.length)) ?? []) : [key];
+
+  it('no two recipes turn N of an item into more than N', () => {
+    const gains: string[] = [];
+    for (const seed of ITEMS.map((i) => i.id)) {
+      for (const a of OPS) {
+        const spent = Object.entries(a.inp)
+          .filter(([k]) => members(k).includes(seed))
+          .reduce((s, [, q]) => s + q, 0);
+        if (!spent) continue;
+        for (const b of OPS) {
+          if (!(seed in b.out)) continue;
+          // how many runs of b one run of a can feed, through whichever output they share
+          const bridges = Object.keys(a.out).filter((o) =>
+            Object.keys(b.inp).some((k) => members(k).includes(o))
+          );
+          if (!bridges.length) continue;
+          const runs = Math.min(
+            ...bridges.map((o) => {
+              const need = Object.entries(b.inp).find(([k]) => members(k).includes(o))?.[1] ?? 1;
+              return a.out[o] / need;
+            })
+          );
+          const back = runs * b.out[seed];
+          if (back > spent + 1e-9)
+            gains.push(
+              `${a.id} + ${b.id} turns ${spent}x ${seed} into ${back.toFixed(2)}x — an unbounded supply`
+            );
+        }
+      }
+    }
+    expect([...new Set(gains)], [...new Set(gains)].join('; ')).toEqual([]);
   });
 });
