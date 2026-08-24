@@ -19,6 +19,8 @@
   import HoverTip from '$lib/components/UI/HoverTip.svelte';
   import PawnStance from './PawnStance.svelte';
   import PawnRestPolicy from './PawnRestPolicy.svelte';
+  import PawnMedicinePolicy from './PawnMedicinePolicy.svelte';
+  import PawnAdminister from './PawnAdminister.svelte';
   import PawnForceWork from './PawnForceWork.svelte';
   import PawnGrowthPanel from './PawnGrowthPanel.svelte';
   import { DAYS_PER_SEASON } from '$lib/game/services/EnvironmentService';
@@ -148,6 +150,8 @@
   </div>
   <PawnStance {pawn} />
   <PawnRestPolicy {pawn} />
+  <PawnMedicinePolicy {pawn} />
+  <PawnAdminister {pawn} />
   <PawnForceWork {pawn} />
   <div class="row">
     <span class="lbl">WORK</span><span class="val">{taskSummary.workAssignment}</span>

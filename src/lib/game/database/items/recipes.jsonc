@@ -59,6 +59,87 @@
     "workAmount"      : 14,
     "toolTierRequired": 0
   },
+  // ── Targeted medicine ─────────────────────────────────────────────────────
+  {
+    "id"              : "make_styptic_pack",
+    "discipline"      : "herbalism",
+    "station"         : "makers_bench",
+    "inputs"          : {"bark": 2, "ash": 1, "linen_cloth": 1},
+    "outputs"         : {"styptic_pack": 3},
+    "workAmount"      : 4,
+    "toolTierRequired": 0,
+    "researchRequired": "leather_working"
+  },
+  {
+    "id"              : "make_charcoal_purge",
+    "discipline"      : "herbalism",
+    "station"         : "makers_bench",
+    "inputs"          : {"charcoal": 2, "category:herb": 1},
+    "outputs"         : {"charcoal_purge": 3},
+    "workAmount"      : 4,
+    "toolTierRequired": 0,
+    "researchRequired": "leather_working"
+  },
+  {
+    "id"              : "make_bonesetters_splint",
+    "discipline"      : "herbalism",
+    "station"         : "makers_bench",
+    "inputs"          : {"category:plank": 1, "linen_cloth": 2, "category:binding": 2},
+    "outputs"         : {"bonesetters_splint": 2},
+    "workAmount"      : 7,
+    "toolTierRequired": 1,
+    "researchRequired": "iron_working"
+  },
+  {
+    "id"              : "brew_fever_draught",
+    "discipline"      : "alchemy",
+    "station"         : "alchemy_lab",
+    "inputs"          : {"bark": 3, "category:herb": 2, "water": 2},
+    "outputs"         : {"fever_draught": 3},
+    "workAmount"      : 8,
+    "toolTierRequired": 1,
+    "researchRequired": "iron_working"
+  },
+  {
+    "id"              : "make_burn_dressing",
+    "discipline"      : "alchemy",
+    "station"         : "alchemy_lab",
+    "inputs"          : {"tallow": 1, "honey": 1, "linen_cloth": 2},
+    "outputs"         : {"burn_dressing": 3},
+    "workAmount"      : 8,
+    "toolTierRequired": 1,
+    "researchRequired": "iron_working"
+  },
+  {
+    "id"              : "make_warming_liniment",
+    "discipline"      : "alchemy",
+    "station"         : "alchemy_lab",
+    "inputs"          : {"tallow": 2, "distilled_spirit": 1, "category:herb": 1},
+    "outputs"         : {"warming_liniment": 3},
+    "workAmount"      : 8,
+    "toolTierRequired": 1,
+    "researchRequired": "iron_working"
+  },
+  {
+    "id"              : "brew_poppy_draught",
+    "discipline"      : "alchemy",
+    "station"         : "apothecary",
+    "inputs"          : {"category:herb": 3, "distilled_spirit": 1},
+    "outputs"         : {"poppy_draught": 3},
+    "workAmount"      : 12,
+    "toolTierRequired": 2,
+    "researchRequired": "steel_making"
+  },
+  {
+    "id"              : "make_field_surgeons_kit",
+    "discipline"      : "alchemy",
+    "station"         : "apothecary",
+    "inputs"          : {"spirit_tincture": 1, "linen_cloth": 2, "category:steel": 1, "category:binding": 2},
+    "outputs"         : {"field_surgeons_kit": 2},
+    "workAmount"      : 14,
+    "toolTierRequired": 2,
+    "researchRequired": "steel_making"
+  },
   // ── Medicine ladder ───────────────────────────────────────────────────────
   // Honey finally has a use: it is a real antibacterial dressing, which is what it was kept for.
   {
