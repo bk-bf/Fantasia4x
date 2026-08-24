@@ -150,7 +150,10 @@ journalctl --user -u fantasia-audit.service -n 40
 point — the source has to be current before the ledger is re-planned:
 
 1. `git fetch` + fast-forward `main` from origin
-2. merge `main` into `audit-ledger` in the worktree (aborts on conflict rather than guessing)
+2. merge `origin/audit-ledger` (tool changes pushed from another machine) and then
+   `main` (game code) into the worktree — both abort on conflict rather than guessing.
+   The branch accumulates local merge commits and is never pushed from the server, so it
+   will not fast-forward; that is why these are merges rather than a `pull --ff-only`.
 3. re-extract the codegraph — without it the reachability triggers stop firing, which reads
    as "the hot path is clean" rather than "nothing was asked about it"
 4. `audit index` + `audit plan` — verdicts whose code did not move stay `done`, so only the
