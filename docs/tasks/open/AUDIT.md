@@ -325,6 +325,24 @@ cadence, to-hit and crit alongside damage, so a weapon's named stat is the one t
       column branched on `armorProperties.armorType` before `inventoryBonus`, so every newly-classed
       pack and belt rendered `def 0` instead of what it grants. Carry is checked first now, with hip
       defence appended where the war-belt line has any.
+- [x] **Item weights are DERIVED from recipe mass, not picked by eye** (ITEM-RULES gate 3e). Measured
+      across 489 shaping recipes: the median kept only **42%** of its input mass and 238 kept under 40%,
+      so weights and recipes had never been reconciled. Retention is per PROCESS — one constant was the
+      flaw, since laid fibre keeps ~0.90 and withy work ~0.46. Calibration checked against two items the
+      model then did NOT move (`wicker_frame` 0.8→0.81, `cordage` 0.2→0.23, both from unrelated recipes).
+      **Applied: Carry-Basket 0.5 → 3.0 kg** (15 branch + 10 cordage is 6.5 kg of stock; it shipped
+      lighter than the cord alone), **Basket 1.2 → 1.9**, **Rope 0.5 → 1.1**. Balance held: the basket
+      still nets +5 kg / +16 L against a 15.7 kg early budget, well clear of the 9.4 kg laden line.
+- [ ] ⚠ **The derivation exposed three recipe-side defects it will not fix.** Where the derived weight
+      is absurd for the object, the RECIPE is the broken half:
+      - **Every small metal item eats a whole 4 kg bar** — Steel Stiletto derives to 4.8 kg, Copper
+        Dagger 3.7, Sewing Kit 3.4. A bar is stock you cut many pieces from; these recipes should yield
+        several or take a fraction. Largest single defect in the DB by item count.
+      - **Three bows have no wooden stave** — `make_war_bow`, `make_hunting_recurve` and `make_self_bow`
+        are `{sinew, thread}` only, deriving to 0.09 kg.
+      - **Jewellery**: `make_ruby_amulet` and its six siblings eat 2 gold bars each (derive to 7.1 kg).
+      - Also `wicker_vest` (30 cordage for a 2.5 kg vest → derives 4.8) and `wattle_buckler` (too thin,
+        derives 0.74 for a 2 kg shield).
 - [x] **Naming: the plainest accurate word wins** (new **R13**). Not a ban on period vocabulary —
       `greaves`/`bracers`/`cuirass`/`coif` are the genre's shared language and stay. It catches the
       one-off antique where an ordinary word exists: Hide Scrip → **Hide Pouch**, Leather Girdle →

@@ -2222,7 +2222,7 @@
     "description": "Strong laid rope, walked and twisted from many strands of cordage. Bears real load, well windlasses, rigging, heavy hauling.",
     "color": "#A8814E",
     "amount": 0,
-    "weightKg": 0.5,
+    "weightKg": 1.1,
     "volumeL": 0.8,
     "fuelValue": 6,
     "toolTierRequired": 0
@@ -2827,7 +2827,7 @@
     "description": "A woven basket lugged under one arm. The cheapest hauling aid there is: less to it than a backframe and it ties up a hand, but it doubles what comes back from a trip.",
     "color": "#C8A064",
     "amount": 0,
-    "weightKg": 0.5,
+    "weightKg": 3.0,
     "volumeL": 5,
     "tier"   : 0,
     "inventoryBonus": {"weightKg": 8.0, "volumeL": 16.0},
@@ -16803,7 +16803,7 @@
     "container"        : {"capacityL": 25, "capacityKg": 12},
     "color"            : "#B08A50",
     "amount"           : 0,
-    "weightKg"         : 1.2,
+    "weightKg"         : 1.9,
     "volumeL"          : 2,
     "processingType"   : ["crafting"]
   },

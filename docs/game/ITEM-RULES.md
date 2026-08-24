@@ -340,6 +340,41 @@ one loose — a stockpile tile, a pawn's bare hands, a `DroppedItem` — spills 
 - [ ] **A fluid needs a way in like anything else (R8)** — and its way in is usually a vessel plus a
       source, not a node. Water comes from a drink zone or a well; the brews come out of a cask.
 
+## Gate 3e — an item weighs what its recipe put into it
+
+A crafted item's `weightKg` is not a number picked to feel right. It is **derived from the mass of its
+ingredients**, the same way an armour class is derived from its metal-to-leather ratio rather than
+authored. Getting this wrong is invisible: a carrying basket woven from 15 branches and 10 cordage —
+6.5 kg of stock — shipped weighing 0.5 kg, which is less than the cord alone.
+
+**Retention is per PROCESS.** One constant across every recipe is the trap: laying rope from cordage
+wastes almost nothing, while weaving withies throws most of every rod away. The calibrated numbers:
+
+| process | keeps | why |
+| --- | --- | --- |
+| laid fibre (cordage, rope) | **0.90** | the twist takes up a little length, nothing is discarded |
+| textile (thread → cloth) | **0.92** | selvedge only |
+| basketry / wattle (withy work) | **0.46** | both ends of every rod are trimmed, rejects never reach the weave |
+| cut-and-sew (hide, cloth garments) | **0.75** | offcuts around the pattern |
+| joinery / sawn timber | **0.72** | sawdust and end-trim |
+| forging | **0.82** | scale and hammer-trim off the billet |
+| assembly / hafting | **0.95** | parts are fitted, not consumed |
+| smelting, butchery, cooking, fine metalwork | **n/a** | these legitimately lose or gain mass; leave the authored weight |
+
+- [ ] **Check the constant against something it should NOT move.** The basketry and laid-fibre numbers
+      above are trustworthy because `wicker_frame` (0.8 → 0.81) and `cordage` (0.2 → 0.23) came out of
+      unrelated recipes and barely moved. A retention that only ever confirms the item you tuned it on
+      is fitted, not calibrated.
+- [ ] **When the derived weight is ABSURD for the object, the RECIPE is the broken half.** This is the
+      rule's real value — it tells you which side to fix. A ruby amulet deriving to 7 kg means
+      `make_ruby_amulet` eating two gold bars is wrong, not that amulets are heavy. A war bow deriving
+      to 0.09 kg means its recipe has no wooden stave in it. Wicker Vest → 4.8 kg and Wattle Buckler →
+      0.74 kg are both recipe faults, not weight faults.
+- [ ] **Nothing worn or held moves without checking the tier ladder and the laden line.** Equipped
+      weight counts fully against the carry budget, an early pawn's is ~15.7 kg, and `laden` (which
+      costs evasion and swing rate) starts at 60% of it. A single primitive piece that would put a pawn
+      near that line on its own is wrong however honest its mass looks.
+
 ## Gate 4 — is it physically and mechanically consistent?
 
 - [ ] **Weight, defense and stiffness sit in the ladder** its neighbours already form. Compare
