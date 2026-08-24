@@ -589,6 +589,12 @@ gear, what closes one is a dose.**
       ⇒ `medium`, rigid metal plate ⇒ `heavy`. Class carries no combat effect on its own; the
       trade-off has to be real, and it lives in weight and `movementPenalty`.
 - [ ] It is **anatomically and physically plausible** first, mechanically convenient second.
+- [ ] **A reversible pair balances.** When a recipe unmakes what another makes — melt a bar to molten,
+      cast the molten back — the two halves are written separately and drift apart on their own. Read
+      them together and check the round trip returns exactly what it took. Bronze counted a 4kg bar as
+      one unit of molten where every other metal counted it as four, so a bar melted and recast came
+      back as two, and one standing order printed metal forever. **R21** walks every pair of recipes in
+      the file and fails any that turns N of an item into more than N.
 
 ## Gate 5 — can a colony actually build and wear it?
 
@@ -617,6 +623,7 @@ gear, what closes one is a dose.**
 | 3d | a worn carry aid grants volume only; weight comes from the body, and only a hand-hauled cart adds it (R14) | `itemRules.test.ts` |
 | 3 | no one-off antique word where a plain one exists, in a name or a description (R13) | `itemRules.test.ts` |
 | 3f | a cure below the runed age charges the patient a downside the sim applies (R20) | `itemRules.test.ts` |
+| 4 | no pair of recipes turns N of an item into more than N (R21) | `itemRules.test.ts` |
 | 3b | no branch of `/gear-db` claims a concept another branch already owns | by hand |
 | 5 | no recipe-less armour; slots resolve | `armourCoverage.test.ts` |
 | 5 | crafted and equipped by a real pawn | `armourChain.test.ts` |
