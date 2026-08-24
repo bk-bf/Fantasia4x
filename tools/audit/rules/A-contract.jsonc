@@ -1,0 +1,198 @@
+// Family A — contract drift.
+//
+// 31 of 34 ADRs are marked `checkable: false` in codegraph.config.json: the call graph
+// cannot express them, so nothing verifies them today. These rules are the residue.
+//
+// A rule belongs here only when the invariant is stated in an ADR and cannot be decided
+// by tsc, eslint, `graph:check`, a test, or the headless sim. The numeric half of ADR
+// conformance (a declared constant still holding its declared value) is deterministic and
+// lives in T0 — see `audit t0 adr-const`, not here.
+[
+  {
+    "id": "A02a",
+    "family": "contract",
+    "tier": "T2",
+    "title": "GameState written outside GameStateManager on the command path",
+    "authority": "docs/game/DECISIONS.md#adr-002",
+    "question": "Does this symbol assign to a GameState field directly, on a player-action or structural path (not a per-tick sim phase)? ADR-002 makes GameStateManager the sole mutation point; the amendment exempts hot per-tick phases, which mutate entity fields in place deliberately.",
+    "fail_requires": [
+      "file:line of the direct assignment",
+      "the field assigned",
+      "evidence this runs on a command/structural path rather than a per-tick sim phase"
+    ],
+    "not_a_finding": [
+      "assignment inside processNeedsTick, stepHunger, or a pawn FSM updater in pawn/handlers/* — the ADR-002 amendment exempts these on purpose",
+      "assignment to a local copy that is then handed to a GameStateManager method",
+      "assignment to a field of a freshly constructed object that is not yet part of state"
+    ],
+    "trigger": {
+      "all": [
+        { "kind_in": ["function", "method", "accessor"] },
+        { "flag": "assignsGameState" },
+        { "file_not_glob": ["src/lib/game/core/GameState.ts"] }
+      ]
+    },
+    "demotable": false,
+    "status": "active"
+  },
+  {
+    "id": "A03a",
+    "family": "contract",
+    "tier": "T2",
+    "title": "stat or efficiency number computed outside ModifierSystem",
+    "authority": "docs/game/DECISIONS.md#adr-003",
+    "question": "Does this symbol compute a bonus, penalty, multiplier or efficiency figure by hand instead of routing through ModifierSystem, or return such a figure without the sources[] breakdown ADR-003 requires?",
+    "fail_requires": [
+      "file:line of the hand-rolled calculation",
+      "which stat or efficiency it produces",
+      "the caller that consumes it as a modifier"
+    ],
+    "not_a_finding": [
+      "arithmetic inside ModifierSystem itself",
+      "a raw physical quantity (mass, volume, distance, tick count) that is not a stat modifier",
+      "a value that is passed into ModifierSystem as an input contribution rather than used directly"
+    ],
+    "trigger": {
+      "all": [
+        { "kind_in": ["function", "method"] },
+        { "layer_in": ["services", "systems", "entities", "ai"] },
+        { "matches": "(bonus|penalty|multiplier|modifier|efficiency|effectiveness)" },
+        { "not_matches": "ModifierSystem" }
+      ]
+    },
+    "demotable": false,
+    "status": "active"
+  },
+  {
+    "id": "A06a",
+    "family": "contract",
+    "tier": "T2",
+    "title": "logic added to a definitions-only core data file",
+    "authority": "docs/game/DECISIONS.md#adr-006",
+    "question": "Does this symbol perform computation, filtering or derivation inside a core/ data file, where ADR-006 allows only static definition arrays and objects?",
+    "fail_requires": [
+      "file:line of the computation",
+      "what it derives",
+      "the service that should own it"
+    ],
+    "not_a_finding": [
+      "a plain literal, a type guard, or a lookup table built once at module load with no branching",
+      "an accessor that only indexes into a definition array"
+    ],
+    "trigger": {
+      "all": [
+        { "file_glob": ["src/lib/game/core/**/*.ts"] },
+        { "kind_in": ["function", "method"] },
+        { "min_loc": 6 }
+      ]
+    },
+    "demotable": true,
+    "status": "active"
+  },
+  {
+    "id": "A16a",
+    "family": "contract",
+    "tier": "T2",
+    "title": "production path bypasses reserve-and-fetch",
+    "authority": "docs/game/DECISIONS.md#adr-016",
+    "question": "Does this symbol create, consume or count an item without it being a physical DroppedItem at a location — a virtual pool, an implicit spawn, or affordability read from anything other than availableFromDrops / ItemService.getAvailableQuantity?",
+    "fail_requires": [
+      "file:line of the virtual read or write",
+      "which of the four ADR-016 stages (reserve / fetch / craft / produce) it skips",
+      "what a pawn would observe going wrong in the sim"
+    ],
+    "not_a_finding": [
+      "a UI projection that only displays a total already derived from drops",
+      "a test fixture or headless scenario setup",
+      "the dormant processButchery path, which no item data triggers"
+    ],
+    "trigger": {
+      "all": [
+        { "kind_in": ["function", "method"] },
+        { "any": [{ "layer_in": ["services"] }, { "module_matches": "game/systems" }] },
+        { "matches": "(quantity|stock|amount|inventory|reserve|consume|spawnItem|addItem)" }
+      ]
+    },
+    "demotable": false,
+    "status": "active"
+  },
+  {
+    "id": "A17a",
+    "family": "contract",
+    "tier": "T2",
+    "title": "hand-written job.type switch instead of the JobDef registry",
+    "authority": "docs/game/DECISIONS.md#adr-017",
+    "question": "Does this symbol branch on a job type by hand — a switch, an if-chain, or a literal map — where ADR-017 requires the work-category, label and claim-gating to flow from jobs.jsonc via jobService.getJobWorkCategory?",
+    "fail_requires": [
+      "file:line of the branch",
+      "which JobDef field it duplicates",
+      "the job ids that would be missed when a new JobDef is added"
+    ],
+    "not_a_finding": [
+      "the JobService.handlers registry itself, which is the sanctioned binding point",
+      "a branch on the FSM-internal kinds eat / sleep / need, which are not colony jobs and have no JobDef"
+    ],
+    "trigger": {
+      "all": [
+        { "kind_in": ["function", "method"] },
+        { "matches": "(job\\.type|jobType|Job\\['type'\\])" },
+        { "not_matches": "getJobWorkCategory" }
+      ]
+    },
+    "demotable": true,
+    "status": "active"
+  },
+  {
+    "id": "A08a",
+    "family": "contract",
+    "tier": "T2",
+    "title": "spatial logic inlined instead of routed through the service interface",
+    "authority": "docs/game/DECISIONS.md#adr-008",
+    "question": "Does this symbol implement A* pathfinding, a nearest-entity query, or fog-of-war visibility inline, rather than calling it through PathfindingService / SpatialIndexService? graph:check catches a direct spatial-core import; it cannot catch a reimplementation.",
+    "fail_requires": [
+      "file:line of the inlined spatial computation",
+      "which service interface already exposes it",
+      "why this is spatial rather than pawn-state, needs, mood, work-priority or inventory logic"
+    ],
+    "not_a_finding": [
+      "a single distance or adjacency comparison",
+      "the service implementations themselves",
+      "pawn FSM, needs, mood, work priorities or inventory — explicitly out of scope per ADR-008"
+    ],
+    "trigger": {
+      "all": [
+        { "kind_in": ["function", "method"] },
+        { "matches": "(openSet|closedSet|heuristic|manhattan|euclidean|floodFill|bresenham|visibilit|lineOfSight|nearest)" },
+        { "file_not_glob": ["src/lib/game/services/Pathfinder*.ts", "src/lib/game/services/*Spatial*.ts"] }
+      ]
+    },
+    "demotable": false,
+    "status": "active"
+  },
+  {
+    "id": "A00a",
+    "family": "contract",
+    "tier": "T2",
+    "title": "doc comment contradicts the code",
+    "authority": "docs/game/DECISIONS.md",
+    "question": "Does this symbol's own doc comment describe behaviour the body does not have — a stated order, cadence, bound, unit or return contract that the code no longer honours?",
+    "fail_requires": [
+      "the sentence in the comment",
+      "the line of code that contradicts it",
+      "which of the two is wrong"
+    ],
+    "not_a_finding": [
+      "a comment that is merely incomplete or terse",
+      "a comment describing a caller's responsibility rather than this body"
+    ],
+    "trigger": {
+      "all": [
+        { "kind_in": ["function", "method"] },
+        { "matches": "/\\*\\*" },
+        { "min_loc": 12 }
+      ]
+    },
+    "demotable": false,
+    "status": "active"
+  }
+]

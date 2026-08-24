@@ -1,0 +1,13 @@
+[Unit]
+Description=Fantasia4x nightly code audit at 04:00 local
+
+[Timer]
+# The server's clock is UTC. The trailing timezone (systemd >= 252) holds this at 04:00 in
+# Berlin year-round; a UTC cron line drifts an hour at every DST change.
+OnCalendar=*-*-* 04:00:00 Europe/Berlin
+# A missed night (server down) runs once on the next boot instead of being skipped.
+Persistent=true
+RandomizedDelaySec=5m
+
+[Install]
+WantedBy=timers.target

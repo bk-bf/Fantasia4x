@@ -1,0 +1,61 @@
+// Family D — unit and frame correctness. Ticks vs turns, ms vs seconds, 0-1 vs 0-100,
+// per-pawn vs per-colony. The type system sees `number` for all of them.
+[
+  {
+    "id": "D01",
+    "family": "units",
+    "tier": "T2",
+    "title": "mixed units in one expression",
+    "authority": "docs/game/ARCHITECTURE.md#turn-order",
+    "question": "Does an arithmetic expression here combine two different units — ticks with turns, milliseconds with seconds, a 0-1 fraction with a 0-100 percentage, a per-tick rate with a per-turn total — without a conversion?",
+    "fail_requires": [
+      "the expression",
+      "the unit of each operand and where each came from",
+      "the magnitude of the resulting error"
+    ],
+    "not_a_finding": [
+      "a conversion that is present but written without a named constant",
+      "a dimensionless multiplier applied to a quantity",
+      "two values that share a unit despite differing names"
+    ],
+    "trigger": {
+      "all": [
+        { "kind_in": ["function", "method"] },
+        { "flag": "hasUnitWords" },
+        { "flag": "hasNumericLiteral" },
+        { "layer_in": ["services", "systems", "entities", "ai", "core"] },
+        { "min_loc": 5 }
+      ]
+    },
+    "demotable": false,
+    "status": "active"
+  },
+  {
+    "id": "D02",
+    "family": "units",
+    "tier": "T2",
+    "title": "unit absent from the name of a numeric parameter or return",
+    "authority": "AGENTS.md#use-the-codebase-terms",
+    "question": "Does this symbol take or return a bare number carrying a unit that its name does not state, where a caller could plausibly pass the wrong one?",
+    "fail_requires": [
+      "the parameter or return",
+      "its actual unit, and how you determined it",
+      "a caller that could pass the other unit without a type error"
+    ],
+    "not_a_finding": [
+      "a count of things, which has no unit",
+      "a name that already carries the unit by an established project convention (workAmount, ageTier, toolTier)",
+      "a private helper with a single call site in the same file"
+    ],
+    "trigger": {
+      "all": [
+        { "kind_in": ["function", "method"] },
+        { "exported": true },
+        { "flag": "hasUnitWords" },
+        { "layer_in": ["services", "systems", "core"] }
+      ]
+    },
+    "demotable": false,
+    "status": "active"
+  }
+]

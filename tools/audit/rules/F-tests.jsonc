@@ -1,0 +1,59 @@
+// Family F — the tests themselves. T2 exists to stay small, and it only can if T1 is
+// trustworthy. Coverage says "covered"; nothing says the assertion means anything.
+[
+  {
+    "id": "F01",
+    "family": "tests",
+    "tier": "T2",
+    "title": "test asserts less than the symbol promises",
+    "authority": "AGENTS.md#scope-tests-after-an-edit",
+    "question": "The tests covering this symbol: do they assert its actual contract — the values, ordering, bounds and failure modes its name and signature promise — or only that it runs, returns truthy, or does not throw?",
+    "fail_requires": [
+      "the test file and case",
+      "the part of the contract left unasserted",
+      "an input that would pass the test while the behaviour is wrong"
+    ],
+    "not_a_finding": [
+      "a smoke test that is explicitly labelled as one and sits alongside real assertions",
+      "a contract that is asserted in a headless scenario rather than a unit test"
+    ],
+    "trigger": {
+      "all": [
+        { "kind_in": ["function", "method"] },
+        { "tested": true },
+        { "exported": true }
+      ]
+    },
+    "demotable": false,
+    "status": "active"
+  },
+  {
+    "id": "F02",
+    "family": "tests",
+    "tier": "T2",
+    "title": "untested behaviour a cheap test would pin",
+    "authority": "AGENTS.md#scope-tests-after-an-edit",
+    "question": "Does this exported symbol have a branch, bound or ordering guarantee that no test covers and that a single cheap unit test would pin?",
+    "fail_requires": [
+      "the specific behaviour left unpinned",
+      "the input that exercises it",
+      "a proposed test name (the test itself is written on escalation, not here)"
+    ],
+    "not_a_finding": [
+      "a symbol whose behaviour is only meaningful over real ticks — that escalates to a headless scenario, not a unit test",
+      "a pure re-export or one-line delegation",
+      "a symbol already covered by a headless scenario"
+    ],
+    "trigger": {
+      "all": [
+        { "kind_in": ["function", "method"] },
+        { "tested": false },
+        { "exported": true },
+        { "min_loc": 12 },
+        { "layer_in": ["services", "systems", "core", "entities", "ai"] }
+      ]
+    },
+    "demotable": false,
+    "status": "active"
+  }
+]

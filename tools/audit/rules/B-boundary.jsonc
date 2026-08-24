@@ -1,0 +1,118 @@
+// Family B — boundary leaks. Player-facing text and backend ids.
+//
+// The greppable half of this family belongs in T0 (an ast-grep rule for a hand-rolled
+// `id.replace('_',' ')` humanizer, an eslint rule for `$:` in Svelte files). What is left
+// here needs a reader: whether a rendered expression is an id or a label, and whether a
+// sentence sells a mechanic instead of describing a thing.
+[
+  {
+    "id": "B01",
+    "family": "boundary",
+    "tier": "T2",
+    "title": "raw data id rendered in the UI",
+    "authority": "AGENTS.md#never-leak-ids-in-the-ui",
+    "question": "Does this markup or component render a backend id — a kebab-case item/building/research id, a limbmap limb or part key, a job type — where a human label belongs?",
+    "fail_requires": [
+      "file:line of the rendered expression",
+      "the id shape it emits (kebab-case, snake_case, camelCase limb key)",
+      "the label field or bodyLabels helper that should be used instead"
+    ],
+    "not_a_finding": [
+      "an id used as a Svelte {#each} key, a CSS class, a data- attribute or a test hook",
+      "an id passed to a lookup whose result is what actually renders",
+      "a dev-only route or debug overlay under src/routes/gear-db or a tools screen"
+    ],
+    "trigger": {
+      "any": [
+        {
+          "all": [
+            { "kind_in": ["markup"] },
+            { "flag": "rendersIdExpression" }
+          ]
+        },
+        { "flag": "handRolledHumanizer" }
+      ]
+    },
+    "demotable": true,
+    "status": "active"
+  },
+  {
+    "id": "B02",
+    "family": "boundary",
+    "tier": "T2",
+    "title": "dev jargon inside a player-facing string",
+    "authority": "AGENTS.md#never-leak-dev-jargon-into-player-facing-text",
+    "question": "Does a name / description / label / flavor string value in this data row contain an ADR number, a spec section reference, a file, field or function name, or design-note commentary?",
+    "fail_requires": [
+      "the exact offending substring",
+      "which key it sits under",
+      "a replacement that says the same thing in-world"
+    ],
+    "not_a_finding": [
+      "jargon in a // comment beside the entry, which is where it belongs",
+      "an in-world proper noun that merely resembles a code identifier"
+    ],
+    "trigger": {
+      "all": [
+        { "lang_in": ["jsonc"] },
+        { "flag": "hasPlayerFacingText" }
+      ]
+    },
+    "demotable": true,
+    "status": "active"
+  },
+  {
+    "id": "B03",
+    "family": "boundary",
+    "tier": "T2",
+    "title": "player-facing text instructs instead of describing",
+    "authority": "AGENTS.md#never-leak-dev-jargon-into-player-facing-text",
+    "question": "Does a description in this row tell the player what the thing is FOR rather than what it IS — a sales pitch, strategy advice, or a mechanics essay — instead of describing it in-world and letting the player draw the conclusion?",
+    "fail_requires": [
+      "the sentence",
+      "which part is instruction or salesmanship",
+      "an in-world rewrite of the same fact"
+    ],
+    "not_a_finding": [
+      "a concrete in-world consequence stated as fact",
+      "a tooltip on a numeric readout whose job is to name the number",
+      "a short factual clause about materials or origin"
+    ],
+    "trigger": {
+      "all": [
+        { "lang_in": ["jsonc"] },
+        { "matches": "\"description\"\\s*:" },
+        { "file_glob": ["src/lib/game/database/**/*.jsonc"] }
+      ]
+    },
+    "demotable": false,
+    "status": "active"
+  },
+  {
+    "id": "B04",
+    "family": "boundary",
+    "tier": "T2",
+    "title": "selection gesture commits instead of highlighting",
+    "authority": "AGENTS.md#selection-is-not-commitment",
+    "question": "Does this gesture handler execute the action on the gesture itself — a click or a drag-box release that designates, drafts, moves or hunts — instead of only highlighting the targets and surfacing a verb button for the player to press?",
+    "fail_requires": [
+      "file:line where the gesture handler performs the action",
+      "which action it commits",
+      "where the confirm step would go"
+    ],
+    "not_a_finding": [
+      "clearing a transient drag preview on release",
+      "the handler bound to the verb button itself",
+      "a gesture that only opens a panel or changes camera"
+    ],
+    "trigger": {
+      "all": [
+        { "kind_in": ["function", "method"] },
+        { "name_matches": "(?i)(mouseup|pointerup|dragend|release|commit|complete).*(mark|drag|select|box)|(mark|drag|select|box).*(up|end|release|commit|complete)" },
+        { "matches": "(designat|draft|hunt|harvest)" }
+      ]
+    },
+    "demotable": false,
+    "status": "active"
+  }
+]

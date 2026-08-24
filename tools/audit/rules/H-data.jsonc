@@ -1,0 +1,83 @@
+// Family H — definition rows. `itemRules.test.ts` and `armourCoverage.test.ts` already
+// own the mechanically checkable gates (R2 creature tier, R4 station age, coverage holes).
+// These are the gates that need a reader, and they route through the `items` skill.
+[
+  {
+    "id": "H01",
+    "family": "data",
+    "tier": "T2",
+    "title": "item tier implausible for what it is",
+    "authority": "docs/game/ITEM-RULES.md",
+    "question": "Is this row's tier defensible for the thing it describes — its materials, the technology its recipe implies, and the age its station belongs to — beyond the R2 and R4 checks the test suite already enforces?",
+    "fail_requires": [
+      "the tier as written",
+      "the material, technique or station that contradicts it",
+      "the tier it should carry"
+    ],
+    "not_a_finding": [
+      "a violation R2 or R4 already fails on — that is the test suite's job, not this rule's",
+      "a Boss-tier piece, which is thematic by design"
+    ],
+    "trigger": {
+      "all": [
+        { "lang_in": ["jsonc"] },
+        { "file_glob": ["src/lib/game/database/items/items.jsonc"] },
+        { "flag": "hasTier" }
+      ]
+    },
+    "demotable": false,
+    "status": "active"
+  },
+  {
+    "id": "H02",
+    "family": "data",
+    "tier": "T2",
+    "title": "name breaks the tier's naming progression",
+    "authority": "docs/game/ITEM-RULES.md",
+    "question": "Does this row's name read as the crude first iteration its tier implies, using a historical term rather than a modern or fantasy-inflated one, and does a species-named piece actually require that species' material?",
+    "fail_requires": [
+      "the name",
+      "which progression rule it breaks",
+      "a name that fits the tier"
+    ],
+    "not_a_finding": [
+      "a name already consistent with its tier's neighbours in the same slot",
+      "a Boss-tier name, which is thematic by design"
+    ],
+    "trigger": {
+      "all": [
+        { "lang_in": ["jsonc"] },
+        { "file_glob": ["src/lib/game/database/items/items.jsonc"] },
+        { "matches": "\"name\"\\s*:" }
+      ]
+    },
+    "demotable": false,
+    "status": "active"
+  },
+  {
+    "id": "H03",
+    "family": "data",
+    "tier": "T2",
+    "title": "generic line incomplete before a thematic alternative",
+    "authority": "docs/game/ITEM-RULES.md",
+    "question": "Is this a creature-derived or otherwise thematic piece for a slot whose plain material-named line at the same tier is not yet complete?",
+    "fail_requires": [
+      "the slot and tier",
+      "the generic pieces missing from that slot at that tier",
+      "the thematic piece that jumped the queue"
+    ],
+    "not_a_finding": [
+      "a Boss-tier piece, the sole exception, which must be thematic",
+      "a slot whose generic line is complete"
+    ],
+    "trigger": {
+      "all": [
+        { "lang_in": ["jsonc"] },
+        { "file_glob": ["src/lib/game/database/items/items.jsonc"] },
+        { "matches": "\"(slot|equipSlot|armourSlot)\"\\s*:" }
+      ]
+    },
+    "demotable": false,
+    "status": "active"
+  }
+]

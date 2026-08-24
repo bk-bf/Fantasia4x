@@ -59,3 +59,6 @@ static/audit/
 
 # Packed standalone dev tools (generated; see scripts/dev-tools/pack.mjs)
 .devtools-dist/
+
+# audit ledger (rebuildable; `pnpm audit export` writes the committed JSONL)
+tools/audit/.ledger/

@@ -1,0 +1,32 @@
+// Family G — code that cannot run. `graph:check` already reports orphans (nothing calls
+// it). What it cannot see is a branch inside a called symbol that no caller can satisfy.
+[
+  {
+    "id": "G01",
+    "family": "reachability",
+    "tier": "T2",
+    "title": "branch no caller can reach",
+    "authority": "docs/game/ARCHITECTURE.md",
+    "question": "Given every call site of this symbol, is there a branch here whose guard no caller can satisfy — an argument value never passed, a state combination the callers exclude, a type narrowing that is always one way?",
+    "fail_requires": [
+      "the branch",
+      "the guard that cannot hold",
+      "the call sites checked, and why none of them reach it"
+    ],
+    "not_a_finding": [
+      "a defensive guard against a value the type system allows even if current callers avoid it",
+      "a branch reachable from a test, a headless scenario or a dev route",
+      "a branch reachable through an exported entry point that external code could call"
+    ],
+    "trigger": {
+      "all": [
+        { "kind_in": ["function", "method"] },
+        { "min_callers": 1 },
+        { "min_loc": 15 },
+        { "matches": "(if\\s*\\(|switch\\s*\\()" }
+      ]
+    },
+    "demotable": false,
+    "status": "active"
+  }
+]

@@ -1,0 +1,85 @@
+// Family C — silent failure. A lookup misses, a default fills in, and the colony quietly
+// stops doing something. Headless catches this only when someone already suspected it
+// and wrote that scenario; the type system never catches it at all.
+[
+  {
+    "id": "C01",
+    "family": "silent-failure",
+    "tier": "T2",
+    "title": "default value masks a failed lookup",
+    "authority": "docs/tasks/open/AUDIT.md#stall-debugging",
+    "question": "Does a ?? or || default here substitute for a lookup that should have succeeded, so a missing definition, item or pawn becomes a plausible-looking zero, empty array or false instead of an error the caller can see?",
+    "fail_requires": [
+      "file:line of the default",
+      "what the lookup was supposed to return",
+      "the observable symptom in the sim when it misses (a pawn idling, an order never completing, a stat reading zero)"
+    ],
+    "not_a_finding": [
+      "a default for a genuinely optional field",
+      "a default on a value the caller checks immediately afterwards",
+      "an accumulator initialiser"
+    ],
+    "trigger": {
+      "all": [
+        { "kind_in": ["function", "method"] },
+        { "any_flag": ["hasNullishDefault", "hasOrDefault"] },
+        { "layer_in": ["services", "systems", "entities", "ai", "core"] }
+      ]
+    },
+    "demotable": false,
+    "status": "active"
+  },
+  {
+    "id": "C02",
+    "family": "silent-failure",
+    "tier": "T2",
+    "title": "caught error is discarded",
+    "authority": "docs/tasks/open/AUDIT.md#stall-debugging",
+    "question": "Does a catch block here discard the error without logging it, rethrowing, or putting the caller into a state that reflects the failure?",
+    "fail_requires": [
+      "file:line of the catch",
+      "what can throw inside the try",
+      "what the caller believes happened afterwards"
+    ],
+    "not_a_finding": [
+      "a catch that logs through the project's gated logger",
+      "a catch around a genuinely optional probe (feature detection, an optional file read) whose failure is the expected branch"
+    ],
+    "trigger": {
+      "all": [
+        { "kind_in": ["function", "method"] },
+        { "flag": "hasCatch" }
+      ]
+    },
+    "demotable": true,
+    "status": "active"
+  },
+  {
+    "id": "C03",
+    "family": "silent-failure",
+    "tier": "T2",
+    "title": "early return leaves the caller with no signal",
+    "authority": "docs/tasks/open/AUDIT.md#stall-debugging",
+    "question": "Does this symbol return early on a precondition failure without telling the caller anything — no return value distinction, no state change, no log — so the caller cannot distinguish 'did the work' from 'declined to'?",
+    "fail_requires": [
+      "file:line of the early return",
+      "the precondition that failed",
+      "the caller that cannot tell the difference"
+    ],
+    "not_a_finding": [
+      "a guard whose caller re-checks the same condition",
+      "a void tick handler where declining to act is the normal per-tick outcome",
+      "a return whose value already encodes the decline"
+    ],
+    "trigger": {
+      "all": [
+        { "kind_in": ["function", "method"] },
+        { "flag": "hasBareReturn" },
+        { "layer_in": ["services", "systems", "entities", "ai"] },
+        { "min_loc": 8 }
+      ]
+    },
+    "demotable": false,
+    "status": "active"
+  }
+]

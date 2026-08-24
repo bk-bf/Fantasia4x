@@ -1,0 +1,111 @@
+// Family E — per-tick cost. `perf.log` reports worker TPS in aggregate; it never says
+// which symbol paid for it. Triggers here are reachability-scoped, so the family only
+// fires on code the tick actually reaches.
+[
+  {
+    "id": "E01",
+    "family": "hot-path",
+    "tier": "T2",
+    "title": "allocation on the per-tick peace path",
+    "authority": "docs/tasks/open/ENGINE-PERFORMANCE.md",
+    "question": "Does this symbol allocate an object, array or closure on every tick when nothing is happening — the peace path, which is the common case — rather than lazily on first write?",
+    "fail_requires": [
+      "file:line of the allocation",
+      "the call path from processGameTurn or tickPawn",
+      "why it is not already guarded by a first-write or combat-only check"
+    ],
+    "not_a_finding": [
+      "an allocation behind a first-write / copy-on-write guard",
+      "an allocation reached only on the combat branch",
+      "the deliberate per-tick top-level state copy that the ADR-002 amendment relies on",
+      "an allocation in a phase that provably runs on a throttled cadence rather than every tick"
+    ],
+    "trigger": {
+      "all": [
+        { "kind_in": ["function", "method"] },
+        { "reachable_from": { "entries": ["processGameTurn", "tickPawn"], "max_hops": 4 } },
+        { "any_flag": ["allocatesArray", "spreadsObject", "allocatesLiteral", "deepClones"] }
+      ]
+    },
+    "demotable": false,
+    "status": "active"
+  },
+  {
+    "id": "E02",
+    "family": "hot-path",
+    "tier": "T2",
+    "title": "array reference churned every tick under a ref-keyed memo",
+    "authority": "docs/tasks/open/ENGINE-PERFORMANCE.md",
+    "question": "Does this symbol replace an array or map reference every tick that a ref-keyed memo downstream (pawnById, the terrain _terrainRev cache) uses as its cache key, silently forcing a rebuild?",
+    "fail_requires": [
+      "file:line where the reference is replaced",
+      "the memo that keys off it",
+      "what gets rebuilt as a result"
+    ],
+    "not_a_finding": [
+      "a replacement that only happens when the contents genuinely changed",
+      "a local array never observed outside this symbol"
+    ],
+    "trigger": {
+      "all": [
+        { "kind_in": ["function", "method"] },
+        { "reachable_from": { "entries": ["processGameTurn", "tickPawn"], "max_hops": 4 } },
+        { "matches": "(\\.map\\(|\\.filter\\(|=\\s*\\[)" }
+      ]
+    },
+    "demotable": false,
+    "status": "active"
+  },
+  {
+    "id": "E03",
+    "family": "hot-path",
+    "tier": "T2",
+    "title": "field added to the worker to main snapshot",
+    "authority": "docs/tasks/open/ENGINE-PERFORMANCE.md",
+    "question": "Does this symbol put a field or array into the worker-to-main snapshot that ships on every flush or can grow without bound (droppedItems, per-unit arrays), instead of a summary or a per-id delta?",
+    "fail_requires": [
+      "the field and where it is written into the snapshot",
+      "its growth behaviour over a long run",
+      "the summary or EntitySync delta that would carry the same information"
+    ],
+    "not_a_finding": [
+      "a fixed-size scalar summary",
+      "a field stripped again in entityProjection.ts",
+      "a field shipped only on an explicit request rather than every flush"
+    ],
+    "trigger": {
+      "all": [
+        { "kind_in": ["function", "method"] },
+        { "file_glob": ["src/lib/**/sim.worker.ts", "src/lib/**/simWorkerClient.ts", "src/lib/**/entityProjection.ts", "src/lib/**/*snapshot*.ts"] }
+      ]
+    },
+    "demotable": false,
+    "status": "active"
+  },
+  {
+    "id": "E04",
+    "family": "hot-path",
+    "tier": "T2",
+    "title": "ungated logging on the tick path",
+    "authority": "docs/game/DECISIONS.md#adr-011",
+    "question": "Does this symbol log on the per-tick path without the gate ADR-011 requires, so a normal run pays string formatting every tick?",
+    "fail_requires": [
+      "file:line of the log call",
+      "the tick path that reaches it",
+      "the gate that should wrap it"
+    ],
+    "not_a_finding": [
+      "a log behind the project's existing debug gate",
+      "a log on an error branch that does not run in a normal tick"
+    ],
+    "trigger": {
+      "all": [
+        { "kind_in": ["function", "method"] },
+        { "reachable_from": { "entries": ["processGameTurn", "tickPawn"], "max_hops": 4 } },
+        { "flag": "logs" }
+      ]
+    },
+    "demotable": true,
+    "status": "active"
+  }
+]
