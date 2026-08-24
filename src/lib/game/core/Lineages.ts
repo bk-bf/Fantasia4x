@@ -90,21 +90,33 @@ export function lineageParentTraits(): Trait[] {
   return ALL_TRAITS.filter((t) => t.lineageParent);
 }
 
-/** Draw one bloodline the pawn does not already belong to, optionally narrowed to `pool` (lineage
- *  ids). Undefined when they already carry one — a pawn has one bloodline, not a collection. */
-export function rollLineageTrait(
-  held: readonly { id?: string }[],
-  rand: () => number,
-  pool?: string[]
-): Trait | undefined {
-  const heldIds = new Set(held.map((t) => t.id));
+/**
+ * What a voidshard gives this pawn.
+ *
+ * NOT in a bloodline → it awakens one: the parent marker plus that lineage's first member, the same
+ * pair a natural awakening grants, so the shard is never a dud that only marks them.
+ *
+ * ALREADY in one → it carries them one rung FURTHER DOWN their own line: the next gainable member,
+ * free, skipping the deeds and the meter that would normally buy it. A second parent marker is not an
+ * option — `pawnLineage` reads the first one it finds, so two would make a pawn's bloodline ambiguous.
+ *
+ * Empty when there is nothing left to give (every member of their line already gained). The caller
+ * sees no change and can tell the player the shard would be wasted.
+ */
+export function rollLineageTrait(pawn: Pawn, rand: () => number, pool?: string[]): Trait[] {
+  const existing = pawnLineage(pawn);
+  if (existing) {
+    const next = gainableMembers(pawn, existing)[0];
+    return next ? [next] : [];
+  }
+  const owned = new Set((pawn.traits ?? []).map((t) => t.id));
   const candidates = lineageParentTraits().filter(
-    (t) => !heldIds.has(t.id) && (!pool?.length || pool.includes(t.lineageParent as string))
+    (t) => !owned.has(t.id) && (!pool?.length || pool.includes(t.lineageParent as string))
   );
-  // Already in a bloodline: a second marker would make `pawnLineage` ambiguous.
-  if (held.some((t) => PARENT_TRAIT_IDS.has(t.id as string))) return undefined;
-  if (!candidates.length) return undefined;
-  return candidates[Math.floor(rand() * candidates.length)];
+  if (!candidates.length) return [];
+  const parent = candidates[Math.floor(rand() * candidates.length)];
+  const first = gainableMembers(pawn, parent.lineageParent as string)[0];
+  return first ? [parent, first] : [parent];
 }
 
 /** Roll one Faustian flaw (a curated pure-penalty negative trait), or undefined if the pool is empty. */
@@ -254,6 +266,11 @@ function gainableMembers(pawn: Pawn, lineage: string): Trait[] {
   );
   return ALL_TRAITS.filter((t) => {
     if (!t.id || owned.has(t.id) || !t.lineage?.includes(lineage)) return false;
+    // NEVER another bloodline's parent marker. A parent carries its own `lineage` array, and where two
+    // bloodlines overlap (a werewolf line that also lists `beast`) the other parent reads as a member
+    // of this one — granting it would leave the pawn with two markers and make `pawnLineage`, which
+    // returns the FIRST it finds, answer differently depending on trait order.
+    if (t.lineageParent) return false;
     if (t.conflictGroup && ownedGroups.has(t.conflictGroup)) return false;
     // Don't grant a stage the pawn already advanced past / hasn't reached: only S1 or unstaged members
     // enter fresh; higher stages are reached by EVOLUTION, not granted outright.
