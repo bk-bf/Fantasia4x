@@ -2288,9 +2288,9 @@
   {
     "id": "milk", "charSpans": [ {"sheet": "items", "id": 41} ],
     "name": "Milk", "type": "food", "category": "food",
-    "description": "Drawn warm and useless by evening unless someone does something about it. Almost everything worth keeping starts here.",
+    "description": "Drawn warm and kept in the coolest corner of the house, where it has about a week before it turns. Almost everything worth keeping starts here.",
     "color": "#F0EDE2", "amount": 0, "weightKg": 1.0, "volumeL": 1.0,
-    "tier": 0, "nutrition": 35, "decaySeconds": 9000,
+    "tier": 0, "nutrition": 35, "decaySeconds": 2100,
     "maxDurability": 40, "deteriorationRate": 0.06
   },
   {

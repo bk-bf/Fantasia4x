@@ -627,11 +627,11 @@ class KingdomServiceImpl {
     if ((def.tier ?? 1) > tierCap) return false;
     if (def.id.endsWith('_carcass')) return false;
     if (def.category === 'natural_weapon' || def.category === 'organic') return false;
-    // A caravan is weeks on the road: it hauls grain, honey and preserves, never fresh meat or fish.
-    // `decaySeconds` is the game's own definition of "will not survive the journey". Rot is the END
-    // of that chain and so has no decay left to declare — refuse it by name, or a merchant arrives
-    // selling spoiled meat.
-    if (def.type === 'food' && (def.decaySeconds || def.id.startsWith('rotten_'))) return false;
+    // Perishables ARE traded. The sim does not run a spoilage clock on goods while a caravan is on the
+    // road, so refusing everything with a `decaySeconds` was a rule enforcing a simulation that does not
+    // exist — and it quietly emptied the manifest of milk, cheese, fresh meat and fish, which is most of
+    // what a real caravan carried. What a merchant will not sell is what has already turned.
+    if (def.id.startsWith('rotten_')) return false;
     return (
       def.type === 'material' ||
       def.type === 'consumable' ||
