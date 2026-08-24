@@ -34,10 +34,19 @@ describe('medicine — dressings are automatic, condition cures are not', () => 
   });
 
   it('conditions the game can inflict are actually treatable by something', () => {
-    const cured = new Set(meds().flatMap((m) => m.curesConditions ?? []));
+    // The answer pool is every item, not just the ones carrying a `medicineQuality` — an antidote
+    // tonic and a bone-knitting draught are neither of them dressings. And the answer to a broken
+    // bone is not a condition cure at all: `fractured` is re-derived from the limb tree every tick, so
+    // the only things that reach it are a dose that MENDS the fracture wound and a splint worn over it.
+    const all = allItemDefs();
+    const cured = new Set(all.flatMap((m: Item) => m.curesConditions ?? []));
+    const mended = new Set(all.flatMap((m: Item) => m.mendsWounds ?? []));
+    const splinted = all.some((m: Item) => (m.armorProperties?.boneHealMultiplier ?? 0) > 1);
     // The ones a fight or a wound produces — each needs an answer somewhere in the ladder.
-    for (const c of ['bleeding', 'fractured', 'infection', 'nausea', 'envenomed', 'burning'])
+    for (const c of ['bleeding', 'infection', 'nausea', 'envenomed', 'burning'])
       expect(cured.has(c), `nothing treats "${c}"`).toBe(true);
+    expect(mended.has('fracture'), 'no dose knits a broken bone').toBe(true);
+    expect(splinted, 'nothing worn speeds a broken bone').toBe(true);
   });
 
   it('a battlefield styptic trades tending quality for stopping the bleed', () => {

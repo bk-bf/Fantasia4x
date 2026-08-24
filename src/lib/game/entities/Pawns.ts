@@ -332,9 +332,13 @@ export function applyGainedTrait(pawn: Pawn, trait: Trait): void {
 
 /**
  * §2h — apply a CONSUMED item's effects to a pawn, returning a NEW pawn (or the same ref if nothing
- * applied, so the caller can skip decrementing stock). Two sinks, both reusing existing systems:
+ * applied, so the caller can skip decrementing stock). Sinks, all reusing existing systems:
  *   (i)  a timed potion buff — `grantsConditions` + `conditionDurationTurns` stamped onto
  *        `conditionTimers` (exactly like a cooked-meal buff), applying through the condition pipeline.
+ *   (i.b) `curesConditions` clears active condition TIMERS.
+ *   (i.c) `mendsWounds` clears INJURIES off the limb tree. The two are not interchangeable: a
+ *        condition derived from the body (`fractured`) is rebuilt from the limb tree every tick, so
+ *        clearing its timer does nothing at all.
  *   (ii) a beast-organ trait grant — `grantsTraitOnConsume` pushes the trait + bakes it via
  *        `applyGainedTrait`, THEN rolls a Faustian flaw (a curated negative trait) and bakes that too.
  * Clones `stats`/`traits` before baking so the in-place `applyGainedTrait` never mutates the caller's
@@ -375,6 +379,57 @@ export function applyConsumable(
       }
     if (cured) {
       next.conditionTimers = timers;
+      changed = true;
+    }
+  }
+
+  // (i.c) A wound-mending dose (a bone-knitting draught): drop every injury of the named wound types
+  // off the limb tree and give the part back the HP that injury was holding. The graded conditions
+  // that read the tree — `fractured` — re-derive themselves from it on the next tick, so nothing here
+  // touches them. `boneBroken` is recomputed for the same reason: the bone is whole again.
+  if (def.mendsWounds?.length && next.limbs?.length) {
+    const mend = new Set(def.mendsWounds);
+    let mended = false;
+    const limbs = next.limbs.map((limb) => {
+      const parts = limb.parts ?? [];
+      if (!parts.some((p) => p.injuries.some((w) => mend.has(w.type) && !w.permanent))) return limb;
+      mended = true;
+      const newParts = parts.map((part) => {
+        const kept = part.injuries.filter((w) => !(mend.has(w.type) && !w.permanent));
+        if (kept.length === part.injuries.length) return part;
+        const recovered = part.injuries.reduce(
+          (s, w) => (mend.has(w.type) && !w.permanent ? s + w.damage : s),
+          0
+        );
+        const permanentDamage = kept.reduce((s, w) => (w.permanent ? s + w.damage : s), 0);
+        return {
+          ...part,
+          injuries: kept,
+          health: Math.min(part.maxHp - permanentDamage, part.health + recovered),
+          boneBroken: false
+        };
+      });
+      return {
+        ...limb,
+        parts: newParts,
+        bleedRate: newParts.reduce(
+          (s, p) => s + p.injuries.reduce((ps, w) => ps + w.bleeding, 0),
+          0
+        )
+      };
+    });
+    if (mended) {
+      next.limbs = limbs;
+      let painTotal = 0;
+      const injuries: Injury[] = [];
+      for (const l of limbs)
+        for (const p of l.parts ?? [])
+          for (const w of p.injuries) {
+            painTotal += w.painContribution;
+            injuries.push(w);
+          }
+      next.injuries = injuries;
+      next.pain = Math.max(0, Math.min(100, Math.round(painTotal)));
       changed = true;
     }
   }

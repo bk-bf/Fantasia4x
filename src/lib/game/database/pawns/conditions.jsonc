@@ -1174,6 +1174,35 @@
         "charSpans": [ {"sheet": "font", "id": 19} ],
         "modifiers": {"strength": 0.8, "hitChance": 0.75, "moveSpeed": 0.85, "workEfficiency": 0.85}
     },
+    // ── Care and recovery ────────────────────────────────────────────────────
+    // `splinted` is pushed by a worn splint or cast through the ordinary equipped-item
+    // `grantsConditions` path, so it appears the tick the piece goes on and drops the tick it comes
+    // off. It is the READOUT and the price; the recovery itself is the piece's own
+    // `boneHealMultiplier`, applied to the bone under the parts it covers.
+    {
+        "id": "splinted",
+        "name": "Splinted",
+        "flags": ["physical", "injury"],
+        "transient": true,
+        "description": "A limb bound rigid so the bone under it can knit straight. It holds where the body wants to bend, and the whole arm or leg works around it until it comes off.",
+        "color": "#C8A870",
+        "floater": true,
+        "charSpans": [ {"sheet": "font", "id": 126} ],
+        "modifiers": {"dexterity": 0.9, "workEfficiency": 0.85, "moveSpeed": 0.92, "dodge": 0.93, "attackSpeed": 0.95}
+    },
+    // The price of a draught that knits bone in a day: the body does a week's mending in one and
+    // spends the whole of it sick and hurting. Stamped by the draught's `grantsConditions` window.
+    {
+        "id": "bone_ache",
+        "name": "Deep Ache",
+        "flags": ["physical", "injury"],
+        "transient": true,
+        "description": "A grinding ache set deep in the bone, as though the marrow itself were being worked. There is no lying still through it and no working through it either.",
+        "color": "#9A6B4F",
+        "floater": true,
+        "charSpans": [ {"sheet": "font", "id": 19} ],
+        "modifiers": {"strength": 0.8, "dexterity": 0.8, "workEfficiency": 0.55, "moveSpeed": 0.85, "fatigueRate": 1.3, "dodge": 0.83, "attackSpeed": 0.9, "hitChance": 0.88}
+    },
     // ── Racial trait conditions (ADR-023 · ADR-028) ──────────────────────────
     // The legible pill for a rare/epic/legendary body trait — pushed by syncTransientConditions for
     // every trait carrying the id as `selfCondition`, and the HUB for its combat capability:

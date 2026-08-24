@@ -95,6 +95,9 @@ export function effectsOf(i: any): string {
   if (i.hydration != null) out.push(`drink ${i.hydration}`);
   if (i.medicineQuality != null) out.push(`med ${i.medicineQuality}`);
   if (i.curesConditions?.length) out.push(`cures ${i.curesConditions.join('/')}`);
+  if (i.mendsWounds?.length) out.push(`mends ${i.mendsWounds.join('/')}`);
+  if (i.armorProperties?.boneHealMultiplier)
+    out.push(`bone x${i.armorProperties.boneHealMultiplier}`);
   if (i.grantsConditions?.length)
     out.push(
       `grants ${i.grantsConditions.join('/')}${i.conditionDurationTurns ? ` ${hrs(i.conditionDurationTurns)}` : ''}`

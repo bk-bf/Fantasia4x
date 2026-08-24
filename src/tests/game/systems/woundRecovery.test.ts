@@ -10,6 +10,7 @@ import {
   complete as completeCaretake
 } from '$lib/game/services/jobs/caretake';
 import { stepHunger } from '$lib/game/services/entity/entityLifecycle';
+import { applyConsumable } from '$lib/game/entities/Pawns';
 import { makeMob } from '$lib/game/services/entity/entitySpawning';
 import { getCreatureById } from '$lib/game/core/Creatures';
 import { buildHealthModel } from '$lib/components/UI/gameCanvas/selectionCard';
@@ -320,5 +321,113 @@ describe('wound recovery & bleeding', () => {
     expect(
       buildHealthModel(pawn).limbs.find((l) => l.label.toLowerCase().includes('torso'))
     ).toBeUndefined();
+  });
+});
+
+// ── Fracture care: a splint speeds the bone, only a dose closes the break ───────────────────────
+// Two mechanisms, deliberately separate. A worn splint multiplies the mending rate of the bone under
+// the parts it COVERS (armorProperties.boneHealMultiplier → healLimbs), which is what makes an arm
+// piece useless on a leg. A dose with `mendsWounds` reaches the limb tree itself — the only thing that
+// can, because `fractured` is re-derived from the tree every tick and `curesConditions` never gets
+// near it.
+describe('fracture care', () => {
+  const fracture = (dmg: number, part: string): Injury =>
+    ({
+      bodyPart: part,
+      type: 'fracture',
+      severity: 'serious',
+      damage: dmg,
+      bleeding: 0,
+      painContribution: 5,
+      infected: false,
+      treatedAt: 0,
+      treatmentQuality: 0.8
+    }) as Injury;
+
+  /** A pawn with a broken forearm, optionally wearing `splintId` on the given slot. */
+  const broken = (splintId?: string, slot: 'bracers' | 'greaves' = 'bracers'): Pawn => {
+    const base = combatService.applyInjury('p1', fracture(8, 'leftForearm'), state([makePawn()]))
+      .pawns[0];
+    if (!splintId) return base;
+    return {
+      ...base,
+      equipment: {
+        [slot]: { instanceId: 'i1', itemId: splintId, durability: 100 }
+      }
+    } as Pawn;
+  };
+
+  it('a splint on the broken arm knits it faster than no splint at all', () => {
+    let bare = broken();
+    let splinted = broken('wooden_arm_splint');
+    for (let i = 0; i < 2000; i++) {
+      bare = healWounds(bare, 1);
+      splinted = healWounds(splinted, 1);
+    }
+    const bareLeft = woundDamage(bare, 'leftForearm');
+    const splintLeft = woundDamage(splinted, 'leftForearm');
+    // 2.2x is what the item authors, so the mended amounts must be in that ratio, not merely ordered.
+    const ratio = (8 - splintLeft) / (8 - bareLeft);
+    expect(ratio, `splinted mended ${ratio.toFixed(2)}x what bare did`).toBeGreaterThan(2);
+  });
+
+  it('a cast beats a splint, and a leg splint does nothing for a broken arm', () => {
+    let splinted = broken('wooden_arm_splint');
+    let cast = broken('lime_arm_cast');
+    let wrongLimb = broken('wooden_leg_splint', 'greaves');
+    let bare = broken();
+    for (let i = 0; i < 2000; i++) {
+      splinted = healWounds(splinted, 1);
+      cast = healWounds(cast, 1);
+      wrongLimb = healWounds(wrongLimb, 1);
+      bare = healWounds(bare, 1);
+    }
+    expect(woundDamage(cast, 'leftForearm')).toBeLessThan(woundDamage(splinted, 'leftForearm'));
+    expect(woundDamage(wrongLimb, 'leftForearm')).toBeCloseTo(woundDamage(bare, 'leftForearm'), 5);
+  });
+
+  it('a splint speeds the BONE and not the flesh around it', () => {
+    const seed = (splint?: string) => {
+      const p = combatService.applyInjury(
+        'p1',
+        { ...cut(6), bodyPart: 'leftForearm' },
+        state([makePawn()])
+      ).pawns[0];
+      return splint
+        ? ({
+            ...p,
+            equipment: {
+              bracers: { instanceId: 'i1', itemId: 'wooden_arm_splint', durability: 100 }
+            }
+          } as Pawn)
+        : p;
+    };
+    let bare = seed();
+    let splinted = seed('wooden_arm_splint');
+    for (let i = 0; i < 500; i++) {
+      bare = healWounds(bare, 1);
+      splinted = healWounds(splinted, 1);
+    }
+    expect(woundDamage(splinted, 'leftForearm')).toBeCloseTo(woundDamage(bare, 'leftForearm'), 5);
+  });
+
+  it('a bone-knitting draught closes the break, and charges a day for it', () => {
+    const hurt = broken();
+    const after = applyConsumable(hurt, 'bonemeal_draught', () => 0.5);
+    const stillBroken = (after.limbs ?? []).some((l) =>
+      (l.parts ?? []).some((p) => p.injuries.some((w) => w.type === 'fracture'))
+    );
+    expect(stillBroken, 'the fracture is gone off the limb tree').toBe(false);
+    expect(after.conditionTimers?.bone_ache, 'and it costs a day of it').toBeGreaterThan(0);
+    expect(after.conditionTimers?.nausea).toBeGreaterThan(0);
+  });
+
+  it('the runed draught closes it for nothing', () => {
+    const after = applyConsumable(broken(), 'emberbloom_draught', () => 0.5);
+    const stillBroken = (after.limbs ?? []).some((l) =>
+      (l.parts ?? []).some((p) => p.injuries.some((w) => w.type === 'fracture'))
+    );
+    expect(stillBroken).toBe(false);
+    expect(Object.keys(after.conditionTimers ?? {}), 'no price at all').toEqual([]);
   });
 });
