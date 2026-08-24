@@ -2776,7 +2776,7 @@
   {
     "id"              : "make_mail_coif",
     "station"         : "anvil",
-    "inputs"          : {"mail_rings": 10, "linen_gambeson": 1},
+    "inputs"          : {"mail_rings": 14},
     "outputs"         : {"mail_coif": 1},
     "workAmount"      : 16,
     "toolTierRequired": 2,
@@ -2800,7 +2800,7 @@
   {
     "id"              : "make_mail_hauberk",
     "station"         : "anvil",
-    "inputs"          : {"mail_rings": 42, "linen_gambeson": 1},
+    "inputs"          : {"mail_rings": 58},
     "outputs"         : {"mail_hauberk": 1},
     "workAmount"      : 30,
     "toolTierRequired": 2,

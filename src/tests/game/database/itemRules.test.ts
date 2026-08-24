@@ -1196,3 +1196,64 @@ describe('ITEM-RULES R17 — a category pool prices its members by what they cos
     expect(values.size, 'binding members are not all worth the same').toBeGreaterThan(1);
   });
 });
+
+// ── R18: a material's NAME says what ONE unit is ────────────────────────────────────────────────
+// The unit and the name have to agree or every count in every recipe is misread. Both directions have
+// already shipped: `iron_nail` weighed 0.2 kg and was called "Iron Nails" (a keg — honest), then the
+// unit shrank to a single 10 g nail and the plural stayed, so "25x Iron Nails" read as 25 kegs.
+// `mail_rings` is the opposite — one unit really is ~290 rings, and calling it "Mail Rings" made a
+// coif look like it took ten rings when it takes nearly three thousand.
+describe('ITEM-RULES R18 — the name says what one unit is', () => {
+  const byId = new Map((ITEMS as Item[]).map((i) => [i.id, i]));
+  /** One unit is ONE object: the name must be singular. */
+  const SINGLE = ['iron_nail', 'bronze_nail', 'copper_tack', 'steel_rivet'];
+  /** One unit is MANY objects: the name must say so. */
+  const BATCH = ['mail_rings', 'small_bones', 'medium_bones', 'large_bones', 'huge_bones', 'feathers'];
+  const BATCH_WORD = /bundle|hank|sheaf|bones|feathers|remains|pips|cuttings|dust|meal/i;
+
+  it('a single-piece fastener is named in the singular', () => {
+    const bad = SINGLE.filter((id) => /s$/i.test(byId.get(id)?.name ?? '')).map(
+      (id) => `${id} is one ${byId.get(id)!.weightKg}kg piece but is called "${byId.get(id)!.name}"`
+    );
+    expect(bad, bad.join('; ')).toEqual([]);
+  });
+
+  it('a unit that is really a batch says so in its name', () => {
+    const bad = BATCH.filter((id) => !BATCH_WORD.test(byId.get(id)?.name ?? '')).map(
+      (id) =>
+        `${id} is a batch (${byId.get(id)!.weightKg}kg) but "${byId.get(id)!.name}" reads as one of them`
+    );
+    expect(bad, bad.join('; ')).toEqual([]);
+  });
+
+  it('the ring bundle is priced so a coif takes a historical number of rings', () => {
+    // ~0.7g a riveted ring; a coif is 3,000-6,000 of them. This is the check that would have caught
+    // "10x Mail Rings" if anyone had asked what ten of them actually WAS.
+    const bundle = byId.get('mail_rings')!.weightKg!;
+    const perCoif = (firstRecipe('mail_coif')!.inputs as Record<string, number>)['mail_rings'];
+    const rings = (bundle * perCoif * 1000) / 0.7;
+    expect(rings, `a coif comes to ${Math.round(rings)} rings`).toBeGreaterThan(2000);
+    expect(rings, `a coif comes to ${Math.round(rings)} rings`).toBeLessThan(7000);
+  });
+});
+
+// ── R19: a worn garment is never a component of another worn garment ────────────────────────────
+// The three torso layers ARE the combination mechanic — bodyBase under bodyMid under bodyOuter — so
+// building one into another destroys the piece the pawn is supposed to be wearing underneath and
+// charges them twice for it. `make_mail_hauberk` ate a linen gambeson, and `make_mail_coif` ate a
+// TORSO garment to make a head piece.
+describe('ITEM-RULES R19 — armour layers stack on the pawn, not inside the recipe', () => {
+  it('no recipe consumes a wearable piece to build another one', () => {
+    const worn = new Set(
+      (ITEMS as Item[])
+        .filter((i) => i.type === 'armor' && i.armorProperties?.armorType)
+        .map((i) => i.id)
+    );
+    const bad: string[] = [];
+    for (const r of RECIPES as unknown as { id: string; inputs?: Record<string, number> }[])
+      for (const k of Object.keys(r.inputs ?? {}))
+        if (worn.has(k))
+          bad.push(`${r.id} consumes ${k}, which is a garment a pawn wears — layer it, do not eat it`);
+    expect(bad, bad.join('; ')).toEqual([]);
+  });
+});

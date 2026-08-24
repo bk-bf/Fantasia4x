@@ -144,6 +144,20 @@ recipe states, at minimum:
       mass.** **R16** checks it for both families, with a wide band (a third of the product) so it
       catches order-of-magnitude errors rather than dictating balance. Mail rings and a bow's sinew
       backing are exempt: those ARE the piece, not what fastens it.
+- [ ] **A material's NAME says what ONE unit is.** The unit and the name must agree or every count in
+      every recipe is misread, and both directions have shipped. `iron_nail` weighed 0.2 kg and was
+      called "Iron Nails" — a keg, and honest; the unit then shrank to a single 10 g nail and the plural
+      stayed, so "25x Iron Nails" read as 25 kegs. `mail_rings` is the opposite: one unit really is
+      **~290 rings**, so the plural was right but nothing said it was a BATCH, and a coif taking "10x
+      Mail Rings" looked like ten rings when a historical coif is 3,000-6,000. It is now an **Iron
+      Ring-Bundle**, and its description says how many are in one. **R18** checks both directions, and
+      pins the coif's ring count to the historical band.
+- [ ] **A worn garment is never a COMPONENT of another worn garment.** The three torso layers are the
+      combination mechanic — bodyBase under bodyMid under bodyOuter — so building one into another
+      destroys the piece the pawn is meant to have on underneath and charges for it twice. Mail ate a
+      linen gambeson; the coif ate a TORSO garment to make a head piece. The mass comes back as what the
+      piece is actually made of: a coif is 14 ring-bundles (~4,000 rings), a hauberk 58 (~16,600).
+      **R19** enforces it.
 - [ ] **SIZE PROPAGATES DOWN THE CHAIN — every pool prices its members, not just binding.** A
       `category:` slot takes the cheapest member for a full unit, so `category:leather: 3` bought a
       jerkin with three scraps of coney fur. The leather pool spans **36x** (0.08 kg vermin hide to

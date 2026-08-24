@@ -1640,7 +1640,7 @@
   {
     "id": "iron_nail",
     "charSpans": [ {"sheet": "items", "id": 162} ],
-    "name": "Iron Nails",
+    "name": "Iron Nail",
     "type": "material",
     "category": "metal",
     "maxDurability": 250,
@@ -1655,7 +1655,7 @@
   {
     "id": "copper_tack",
     "charSpans": [ {"sheet": "items", "id": 162} ],
-    "name": "Copper Tacks",
+    "name": "Copper Tack",
     "type": "material",
     "category": "metal",
     "maxDurability": 140,
@@ -1669,7 +1669,7 @@
   {
     "id": "bronze_nail",
     "charSpans": [ {"sheet": "items", "id": 162} ],
-    "name": "Bronze Nails",
+    "name": "Bronze Nail",
     "type": "material",
     "category": "metal",
     "maxDurability": 180,
@@ -1684,7 +1684,7 @@
   {
     "id": "steel_rivet",
     "charSpans": [ {"sheet": "items", "id": 162} ],
-    "name": "Steel Rivets",
+    "name": "Steel Rivet",
     "type": "material",
     "category": "metal",
     "maxDurability": 400,
@@ -17896,12 +17896,12 @@
   {
     "id": "mail_rings",
     "charSpans": [ {"sheet": "items", "id": 138} ],
-    "name": "Mail Rings",
+    "name": "Iron Ring-Bundle",
     "type": "material",
     "category": "metal",
     "maxDurability": 200,
     "deteriorationRate": 0,
-    "description": "Loose riveted iron rings, ready to be woven into a coif or hauberk. The heart of the mail sub-chain.",
+    "description": "A hank of some three hundred rings, wound off the wire and cut, each one still open and waiting to be riveted shut. A coif swallows ten of these and a hauberk four times that.",
     "color": "#888F98",
     "amount": 0,
     "weightKg": 0.2,
