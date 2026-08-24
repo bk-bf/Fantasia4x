@@ -47,6 +47,11 @@ them.
 | **F** tests | A test that asserts less than the symbol promises; a cheap test that is missing |
 | **G** reachability | A branch no caller can satisfy |
 | **H** data | Item tier plausibility, naming progression, generic-before-thematic |
+| **S** single-source | A roster restated by hand, a correspondence held together by a comment, a label mapped twice, a data key read unvalidated |
+
+Family **S** was derived from [`core-stat-single-source`](../../docs/issues/core-stat-single-source.md),
+which was found by hand. It is the family most likely to be under-triggered rather than
+over-triggered — check its n/a rate before trusting a clean result.
 
 `docs/tasks/open/AUDIT.md` remains the tracker for **content and gameplay** audits driven
 through the headless sim. This ledger covers **code-level** checks. They do not overlap.
@@ -132,6 +137,55 @@ The hash triple is re-checked at submission: if the source moved while a batch w
 flight, the verdict is rejected and the item stays open. A worker can never write a verdict
 about code that no longer exists.
 
+## Phase 2 — findings become issues
+
+A finding is a verdict row. An issue is a unit of work. `audit issues` turns one into the
+other by grouping open findings by **(rule, two-path-segment module group)**: a rule firing
+forty times is one class of defect, and the class is what a fixer can close in a single PR.
+Each issue carries every citation the audit demanded before it would record a fail.
+
+```bash
+node tools/audit/audit.mjs issues --dry-run   # what would be written
+node tools/audit/audit.mjs issues             # write docs/issues/*.md
+node tools/audit/audit.mjs publish            # ready issues -> GitHub
+node tools/audit/audit.mjs board              # the board, by status
+```
+
+The board lives at [`docs/issues/`](../../docs/issues/README.md) and is **canonical**; the
+GitHub issue is a projection carrying the issue number back in `github:`. Publishing is
+idempotent — an issue with a number is edited, one without is created.
+
+Everything is raised `ready: false`. `ready` is the only gate between the audit and the
+repo, and only a person sets it: `publish` skips what is not ready, and the fixer will not
+touch it. An audit that raised its own work and then acted on it would be a loop with no
+one in it.
+
+Refreshing never overwrites an issue whose `origin: human`, and never reopens one that is
+`closed`.
+
+## Phase 3 — the fixer
+
+```bash
+node tools/audit/fix.mjs --next               # oldest ready issue
+node tools/audit/fix.mjs --issue <slug>       # a named one
+node tools/audit/fix.mjs --next --dry-run     # pick and print
+node tools/audit/fix.mjs --next --keep        # leave the worktree to inspect
+```
+
+One issue, one worktree off `origin/main`, one branch `fix/<slug>`, one PR. The prompt hands
+the model the issue and states plainly that AGENTS.md's "stop at a proposal" rule does not
+apply here — `ready: true` is the go-ahead — because otherwise every run ends with a plan and
+no diff. It is told not to commit, not to push, not to touch `docs/issues/`, and that
+`Out of scope` is binding.
+
+**Nothing is pushed unless `pnpm check` and `pnpm test:related` are green.** A run that
+cannot get there pushes nothing, comments the failure and the model's account on the GitHub
+issue, and returns the issue to `open`. A failed attempt leaves a record rather than a
+half-finished branch. The worktree is removed either way.
+
+Status moves `open → in-progress → in-review`, with `pr:` written back. Merging is yours;
+nothing here closes an issue.
+
 ## Nightly run on ubuntuserver
 
 `deploy/` holds a systemd user timer that runs the whole thing at 04:00 local and hands the
@@ -152,16 +206,18 @@ point — the source has to be current before the ledger is re-planned:
 1. `git fetch` + fast-forward `main` from origin
 2. merge `origin/audit-ledger` (tool changes pushed from another machine) and then
    `main` (game code) into the worktree — both abort on conflict rather than guessing.
-   The branch accumulates local merge commits and is never pushed from the server, so it
-   will not fast-forward; that is why these are merges rather than a `pull --ff-only`.
+   The branch accumulates local merge commits, so it will not fast-forward; that is why
+   these are merges rather than a `pull --ff-only`.
 3. re-extract the codegraph — without it the reachability triggers stop firing, which reads
    as "the hot path is clean" rather than "nothing was asked about it"
 4. `audit index` + `audit plan` — verdicts whose code did not move stay `done`, so only the
    diff is re-audited
 5. `run.mjs` until the budget runs out (3.5 h, 3 workers, sonnet by default)
-6. `mon run` with the night's numbers, so the report is readable from a phone
+6. `audit issues` — findings onto the board; the board is committed and pushed
+7. `audit publish` + `fix.mjs --next` ×`AUDIT_FIXES` — only touches `ready: true` issues
+8. `mon run` with the night's numbers, so the report is readable from a phone
 
-Steps 1–4 are deterministic and cost nothing; only step 5 spends tokens. A `flock` stops a
+Steps 1–4 and 6 are deterministic and cost nothing; steps 5 and 7 spend tokens. A `flock` stops a
 second night starting on top of an overrunning one.
 
 **Timezone.** The server's clock is UTC, so `OnCalendar` carries an explicit
@@ -175,7 +231,8 @@ second night starting on top of an overrunning one.
 `loginctl enable-linger` is set. `install.sh` says so if it is not.
 
 Environment overrides: `AUDIT_REPO` `AUDIT_TREE` `AUDIT_GRAPH` `AUDIT_NODE` `AUDIT_CLAUDE`
-`AUDIT_HOURS` `AUDIT_WORKERS` `AUDIT_MODEL` `AUDIT_MON` `AUDIT_TAG` `AUDIT_NO_MON`.
+`AUDIT_HOURS` `AUDIT_WORKERS` `AUDIT_MODEL` `AUDIT_FIX_MODEL` `AUDIT_FIXES` `AUDIT_MON`
+`AUDIT_TAG` `AUDIT_NO_MON` `AUDIT_NO_FIX`.
 
 ## Storage
 

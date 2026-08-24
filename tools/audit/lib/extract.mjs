@@ -143,8 +143,30 @@ function extractTs(text, file, { offset = 0, lang = 'ts', outerText = null } = {
         } else if (init && ts.isCallExpression(init) &&
                    /^(writable|readable|derived)$/.test(init.expression.getText(sf))) {
           push(node, d.name.text, 'store', null, isExported(node));
+        } else if (init && (ts.isArrayLiteralExpression(init) || ts.isObjectLiteralExpression(init))) {
+          // Module-level lookup tables -- the rosters and label maps that drift apart
+          // (docs/issues/core-stat-single-source.md). They are not functions, so nothing
+          // else here would emit them and family S would have nothing to audit.
+          const entries = ts.isArrayLiteralExpression(init) ? init.elements.length : init.properties.length;
+          if (entries >= 2 && node.parent && ts.isSourceFile(node.parent)) {
+            push(node, d.name.text, 'table', null, isExported(node));
+          }
+        } else if (init && ts.isAsExpression(init) &&
+                   (ts.isArrayLiteralExpression(init.expression) || ts.isObjectLiteralExpression(init.expression))) {
+          const inner = init.expression;
+          const entries = ts.isArrayLiteralExpression(inner) ? inner.elements.length : inner.properties.length;
+          if (entries >= 2 && node.parent && ts.isSourceFile(node.parent)) {
+            push(node, d.name.text, 'table', null, isExported(node));
+          }
         }
       }
+    }
+    else if (ts.isTypeAliasDeclaration(node) && node.name &&
+             ts.isUnionTypeNode(node.type) &&
+             node.type.types.length >= 2 &&
+             node.type.types.every((t) => ts.isLiteralTypeNode(t))) {
+      // A string-literal union is a roster too, and drifts from the arrays that restate it.
+      push(node, node.name.text, 'table', null, isExported(node));
     }
     ts.forEachChild(node, (c) => visit(c, className));
   };
