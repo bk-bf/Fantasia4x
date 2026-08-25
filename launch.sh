@@ -94,6 +94,24 @@ wait_for_port() {
   echo ""; echo "  dev server did not come up." >&2; return 1
 }
 
+scope_available() {
+  systemd-run --user --scope --quiet --collect --slice=app.slice -- true >/dev/null 2>&1
+}
+
+run_at_app_priority() {
+  if ! scope_available; then
+    echo "  launch.sh: no systemd user scope available — the game runs at this terminal's" >&2
+    echo "             priority (CPUWeight 20 under VS Code), not its own." >&2
+    "$@"
+    return
+  fi
+  echo "  [priority] own app.slice scope 'f4x-game-$$' at CPUWeight=100, outside the editor's."
+  systemd-run --user --scope --quiet --collect \
+    --unit="f4x-game-$$" --slice=app.slice \
+    -p CPUWeight=100 \
+    -- "$@"
+}
+
 run_isolated_electron() {
   local port="$1" server_flag="$2" shell_dir="$3"
   echo "  [electron · sandboxed] private net namespace — dev server on 127.0.0.1:$port is"
@@ -104,9 +122,9 @@ run_isolated_electron() {
     echo "    (need kernel.unprivileged_userns_clone=1). Falling back is unsafe; aborting." >&2
     return 1
   fi
-  F4X_NS_PORT="$port" F4X_NS_SERVER_FLAG="$server_flag" F4X_NS_SHELL_DIR="$shell_dir" \
-  F4X_NS_SCRIPT_DIR="$SCRIPT_DIR" F4X_NS_PLAY="$PLAY" \
-  unshare --user --map-root-user --net -- bash -s <<'NSEOF'
+  export F4X_NS_PORT="$port" F4X_NS_SERVER_FLAG="$server_flag" F4X_NS_SHELL_DIR="$shell_dir"
+  export F4X_NS_SCRIPT_DIR="$SCRIPT_DIR" F4X_NS_PLAY="$PLAY"
+  run_at_app_priority unshare --user --map-root-user --net -- bash -s <<'NSEOF'
     set -u
     log() { printf '  [ns %s] %s\n' "$(date +%T)" "$*" >&2; }
     log "entered user+net namespace; bringing loopback up"
@@ -235,7 +253,7 @@ if [[ -n "$SHELL_TARGET" ]]; then
   case "$SHELL_TARGET" in
     electron)
       echo "  [electron] V8/Chromium → http://localhost:$PORT (close window or Ctrl-C to stop)"
-      (cd "$SHELL_DIR" && SPIKE_URL="http://localhost:$PORT" F4X_PLAY="$PLAY" pnpm start)
+      (cd "$SHELL_DIR" && export SPIKE_URL="http://localhost:$PORT" F4X_PLAY="$PLAY" && run_at_app_priority pnpm start)
       ;;
     tauri)
       echo "  [tauri] WebKitGTK/JSC → http://127.0.0.1:$PORT (close window or Ctrl-C to stop)"
