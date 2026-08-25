@@ -1,6 +1,6 @@
 ---
 name: headless
-description: Drive the Fantasia4x headless sim to playtest, audit, or verify a system with real pawns over real ticks. Use for ANY "audit / playtest / verify / does this actually work end-to-end" request about game systems (crafting chains, jobs, needs, combat, production), and whenever a headless scenario stalls with pawns sitting Idle.
+description: Drive the Fantasia4x headless sim to playtest or verify a game system with real pawns over real ticks. Use for ANY "playtest / verify / headless / does this actually work end-to-end" request about game systems (crafting chains, jobs, needs, combat, production), and whenever a headless scenario stalls with pawns sitting Idle. For auditing the CODE rather than a game system, use the `audit` skill.
 ---
 
 # Headless playtesting
