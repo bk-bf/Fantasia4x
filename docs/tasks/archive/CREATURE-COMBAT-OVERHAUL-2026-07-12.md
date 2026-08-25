@@ -101,7 +101,7 @@ bronze/iron/steel pools are for **[KINGDOMS-TRADE](KINGDOMS-TRADE-2026-07-12.md)
 ### 2a–2d Engine + example data — ✅ LANDED (2026-07-10 → 07-11)
 
 Green: `pnpm check` 0 errors (732 files), the combat/spawn suites + new `lootPools.test.ts` /
-`wieldRequirement.test.ts` / artery tests (700 related pass), `threat:check` + `graph:check` ✓. The
+`wieldRequirement.test.ts` / artery tests (700 related pass), `threat:check` + the architecture checks of the time ✓. The
 **mechanics are complete**; the full 5×3 ladder DATA is what remains (concept ladders below).
 
 - [x] **§2a stats are RANGES — canonical.** `CreatureDefinition.statRanges` ({str/dex/con/per:[min,max]})
@@ -377,7 +377,7 @@ Everything else reuses existing `items.jsonc` ids. ✅ = authored 2026-07-11.
 
 ### 2g. Carcasses & the butchery economy (every variant → a carcass → drops)
 
-**Engine + reference slice — ✅ LANDED 2026-07-11** (`pnpm check`/`threat:check`/`graph:check` green,
+**Engine + reference slice — ✅ LANDED 2026-07-11** (`pnpm check`/`threat:check`/the architecture checks of the time green,
 + `haulForbidden.test.ts` dynamic-carcass case): the **dynamic-name boss carcass** hook
 (`dropCarcass` sets e.g. "Skarn, the Old Fang's Carcass" from the slain beast's ROLLED name when the carcass item is `dynamicName`),
 a **T5 boss creature** `old_fang` (wolf line, `great_wolf_carcass` dynamic trophy), the **magical drop
@@ -433,7 +433,7 @@ sinew}`) turns it into materials; higher butcher buildings (`dressing_stone` +25
 
 ### 2h. T4-5 MAGICAL DROPS — the beast-magic economy
 
-**Core LANDED 2026-07-12** (`pnpm check` 0 errors, `threat:check` 128/128, `graph:check` 0 errors,
+**Core LANDED 2026-07-12** (`pnpm check` 0 errors, `threat:check` 128/128, architecture checks 0 errors,
 `consumeItem.test.ts` + `lootPools.test.ts` green). **Correction to the old "no new mechanics" note
 below: there WAS a new mechanic — item consumption did not exist.** The old `useConsumable` read
 `pawn.state.health`/`.mood` (fields absent on the current pawn model) and `conditionDurationTurns` was
@@ -522,7 +522,7 @@ the trait system's grant path; magical gear reuses `grantsConditions` + `wieldRe
 - [x] Engine: two spawns of the same creature differ in stats/armour — ALL creatures now roll from `statRanges` bands (converted 2026-07-11; midpoints = old values, `threat:check` unchanged).
 - [x] Engine: a geared humanoid fights with its weapon + worn armour and drops a subset on death (drawLoadout → equip → dropMobGear; combat reads `equipment` unchanged). Live on `goblin` (`goblin_warband`) + `orc_reaver` (`orc_warband`).
 - [x] Engine: an under-strength colonist wielding looted monster gear is visibly punished via the `overmatched` condition (aim/damage/dodge/fatigue + a pill; `wieldRequirement.test.ts`), while the monster wields it freely.
-- [x] Data LANDED (2026-07-11): six full 5-tier ladders (71 variants + 6 stamped bases + old_fang) in `creatures.jsonc`; 7 lootpools; all §2f gear + natural weapons; tiered carcasses + butcher recipes + `flensing_table`/`sanguinary_altar`; tier spawn weights (T5 escalation-only). Gates: `pnpm check` 0 errors, `threat:check` 103/103, `graph:check` ✓, `variantLadder.test.ts` + full related suite green.
+- [x] Data LANDED (2026-07-11): six full 5-tier ladders (71 variants + 6 stamped bases + old_fang) in `creatures.jsonc`; 7 lootpools; all §2f gear + natural weapons; tiered carcasses + butcher recipes + `flensing_table`/`sanguinary_altar`; tier spawn weights (T5 escalation-only). Gates: `pnpm check` 0 errors, `threat:check` 103/103, architecture checks ✓, `variantLadder.test.ts` + full related suite green.
 - **Non-blocking (passive playtest, NOT a spec gate):** goblins read weird/annoying, orcs read heavy, orc loot only pays off on a strong pawn. The authored numbers get a balance pass tuned *during play* — detected passively while playing, not a gate on closing this spec.
 
 ---
@@ -666,7 +666,7 @@ only new code is stamping the famed roll onto the drawn instance at spawn.
 ## Sequencing & cross-cutting
 
 - **Order:** Phase 1 (mechanics — unblocks everything) → Phase 2 (content ladder + gear) → Phase 3 (world loop). Each phase is independently shippable.
-- **ADR:** ~~add when Phase 1 lands~~ → **ADR-031** added to `DECISIONS.md` + onboarded into `codegraph.config.json` `adrRules` (2026-07-10, `graph:check` adr-coverage ✓).
+- **ADR:** ~~add when Phase 1 lands~~ → **ADR-031** added to `DECISIONS.md` and to the ADR register of the time (2026-07-10, adr-coverage ✓).
 - **Docs to touch on completion:** `DESIGN.md` (combat mechanics), the archived `ENTITIES_SPAWNING` record + `ANIMAL-HUSBANDRY.md` (range rolls, lootpool, lair escalation), `TRAITS.md` (elite trait grants), `ROADMAP.md` (feature entry).
 
 ## Open questions (rolled up for refinement)

@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
 import { jobService } from '$lib/game/services/JobService';
 import jobsData from '$lib/game/database/pawns/jobs.jsonc';
 import type { JobDef } from '$lib/game/core/types';
@@ -7,8 +8,9 @@ import type { JobDef } from '$lib/game/core/types';
  * Drift guards for the data-driven job registry (ADR-017). jobs.jsonc is the single declarative
  * source for colony job types; JobService binds behaviour by id. These lock the two together so a
  * job can't be half-added (data without a handler, or a handler without data). The compiler already
- * enforces `JobPoolType ⊆ Job['type']` and that `handlers` covers every JobPoolType; `graph:check`
- * (rule `job-registry`) adds the jsonc ↔ `Job['type']` union cross-check from source.
+ * enforces `JobPoolType ⊆ Job['type']` and that `handlers` covers every JobPoolType; the union
+ * cross-check below reads `Job['type']` out of the source, because a jsonc id with no union member is
+ * a type error only at the places that happen to use it.
  */
 const defs = jobsData as unknown as JobDef[];
 
@@ -34,6 +36,15 @@ describe('job registry (jobs.jsonc ↔ JobService)', () => {
         'fill'
       ])
     );
+  });
+
+  it('every jobs.jsonc id is a member of the Job[\'type\'] union', () => {
+    // The union is a type: erased at runtime, so it is read from the source it is declared in.
+    const src = readFileSync('src/lib/game/core/types/jobs.ts', 'utf8');
+    const body = src.slice(src.indexOf('export interface Job {'));
+    const union = body.slice(body.indexOf('type:'), body.indexOf('targetX'));
+    const members = new Set([...union.matchAll(/'([a-z-]+)'/g)].map((m) => m[1]));
+    for (const d of defs) expect(members, `Job['type'] is missing '${d.id}'`).toContain(d.id);
   });
 
   it('every def is well-formed (id, label, and a work-category source or static category)', () => {

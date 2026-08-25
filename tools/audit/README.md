@@ -19,7 +19,7 @@ decide it.
 
 | Tier | Mechanism | Decides |
 | --- | --- | --- |
-| **T0** | `tsc`, `eslint`, `graph:check`, `audit t0` | syntax, types, structure, call edges, declared constants |
+| **T0** | `tsc`, `eslint`, `audit t0` | syntax, types, declared constants, architecture seams |
 | **T1** | the 197 vitest files, `HeadlessSession`, `perf.log` | behaviour that runs |
 | **T2** | the model loop | what a text-vs-code comparison or a whole-symbol reading decides |
 
@@ -39,7 +39,7 @@ them.
 
 | Family | What only a reader can decide |
 | --- | --- |
-| **A** contract | The 31 ADRs `codegraph.config.json` marks `checkable: false`, plus doc-vs-code drift |
+| **A** contract | ADR invariants stated in prose, which no script can decide, plus doc-vs-code drift |
 | **B** boundary | Ids and dev jargon in player-facing text; tone; selection-is-not-commitment |
 | **C** silent failure | A default masking a failed lookup; a discarded error; a signal-free early return |
 | **D** units | Ticks vs turns, ms vs seconds, 0–1 vs 0–100 |
@@ -88,16 +88,15 @@ record is archived. This ledger raises **code-level** findings into that same bo
 ```
 
 Trigger clauses: `file_glob` `file_not_glob` `kind_in` `lang_in` `layer_in` `group_in`
-`module_matches` `name_matches` `exported` `tested` `test_reachable` `max_test_depth`
-`min_loc` `max_loc` `flag` `any_flag` `no_flag` `matches` `not_matches` `reachable_from`
-`has_callers` `min_callers`, composed with `all` / `any` / `not`.
+`module_matches` `name_matches` `exported` `min_loc` `max_loc` `flag` `any_flag` `no_flag`
+`matches` `not_matches`, composed with `all` / `any` / `not`.
 
-`tested` is "a test file calls this symbol directly". Most of this suite runs through
-`buildScenario` / `HeadlessSession`, so what a test actually exercises sits one or more
-hops further in: `test_reachable` and `max_test_depth` read codegraph's `testDepth` (hops
-to the nearest directly-tested symbol) and are what a rule asking "is this untested?"
-should use. Asking with `tested` alone puts 271 symbols in front of an agent where
-`test_reachable` puts 79.
+Every clause reads the symbol's own text and metadata, both taken from the file it lives
+in. There is deliberately no clause for "is this reached from the tick loop" or "does a
+test cover this": those are questions about the rest of the repository, the rule states
+them, and the agent answers them by searching and citing `path:line`. A precomputed answer
+would be a second copy of the codebase to keep in step, and when it drifted the triggers
+would stop firing quietly — which reads as clean code rather than as an unasked question.
 
 ## Verdicts
 
@@ -129,13 +128,9 @@ node tools/audit/run.mjs --workers 4 --hours 8        # the overnight loop
 node tools/audit/run.mjs --once --model haiku         # one batch, for checking a rule
 ```
 
-`index` needs a current `codegraph` extract for the reachability and caller triggers; run
-`pnpm graph` first. It compares the extract's commit against HEAD and warns when they
-differ — a stale graph makes `reachable_from` under-fire, which reads as clean code rather
-than as an unasked question. It also reports how each node was matched: `exact` is
-one-to-one, `folded` is a codegraph node (a nested function, an object-literal method, a
-component) attributed to the symbol whose span contains it, and anything left over has no
-counterpart in this inventory at all and gets named.
+`index` re-reads every source file and rewrites the symbol inventory; `plan` crosses the
+active rules against it. A verdict survives both as long as its symbol's `content_hash` and
+its rule's `rule_hash` are unchanged, so only what actually moved is re-audited.
 
 ## Parallel workers
 
@@ -236,12 +231,10 @@ point — the source has to be current before the ledger is re-planned:
    there is no audit branch. A board commit whose push failed last night is rebased onto
    `origin/main` rather than treated as divergence, which would otherwise wedge every
    later run on `--ff-only`.
-2. re-extract the codegraph — without it the reachability triggers stop firing, which reads
-   as "the hot path is clean" rather than "nothing was asked about it"
-3. `audit index` + `audit plan` — verdicts whose code did not move stay `done`, so only the
+2. `audit index` + `audit plan` — verdicts whose code did not move stay `done`, so only the
    diff is re-audited
-4. `run.mjs` until the budget runs out (3.5 h, 3 workers, sonnet by default)
-5. `audit issues` — findings onto the board, committed to `main` and pushed. This is the
+3. `run.mjs` until the budget runs out (3.5 h, 3 workers, sonnet by default)
+4. `audit issues` — findings onto the board, committed to `main` and pushed. This is the
    only thing the nightly puts on `main`; it is markdown, and all of it `ready: false`.
 6. `fix.mjs --next` ×`AUDIT_FIXES` — only touches `ready: true` issues. Each attempt gets
    its own local branch and a review file; nothing is pushed.

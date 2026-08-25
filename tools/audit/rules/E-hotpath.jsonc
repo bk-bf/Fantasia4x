@@ -1,6 +1,10 @@
 // Family E — per-tick cost. `perf.log` reports worker TPS in aggregate; it never says
-// which symbol paid for it. Triggers here are reachability-scoped, so the family only
-// fires on code the tick actually reaches.
+// which symbol paid for it.
+//
+// Whether the tick loop reaches a symbol is not a trigger. The trigger narrows to code that
+// COULD be on it — right layer, allocating or logging — and the agent establishes reach by
+// searching for the callers and following them up to processGameTurn / tickPawn. A symbol
+// nothing reaches is `n/a` with the searches cited, never `pass`.
 [
   {
     "id": "E01",
@@ -8,22 +12,23 @@
     "tier": "T2",
     "title": "allocation on the per-tick peace path",
     "authority": "docs/tasks/open/ENGINE-PERFORMANCE.md",
-    "question": "Does this symbol allocate an object, array or closure on every tick when nothing is happening — the peace path, which is the common case — rather than lazily on first write?",
+    "question": "Establish first whether the per-tick loop reaches this symbol: search the repo for calls to it by name, follow those callers upward toward processGameTurn or tickPawn, and stop after 4 hops. If no path reaches it, the verdict is n/a with na_clause \"not reached from processGameTurn or tickPawn\" and the searches you ran as evidence. If it is reached: does this symbol allocate an object, array or closure on every tick when nothing is happening — the peace path, which is the common case — rather than lazily on first write?",
     "fail_requires": [
       "file:line of the allocation",
-      "the call path from processGameTurn or tickPawn",
+      "the call path from processGameTurn or tickPawn, as path:line references",
       "why it is not already guarded by a first-write or combat-only check"
     ],
     "not_a_finding": [
       "an allocation behind a first-write / copy-on-write guard",
       "an allocation reached only on the combat branch",
       "the deliberate per-tick top-level state copy that the ADR-002 amendment relies on",
-      "an allocation in a phase that provably runs on a throttled cadence rather than every tick"
+      "an allocation in a phase that provably runs on a throttled cadence rather than every tick",
+      "a symbol no call path reaches from processGameTurn or tickPawn — that is n/a, not pass"
     ],
     "trigger": {
       "all": [
         { "kind_in": ["function", "method"] },
-        { "reachable_from": { "entries": ["processGameTurn", "tickPawn"], "max_hops": 4 } },
+        { "layer_in": ["services", "systems", "entities", "ai", "core"] },
         { "any_flag": ["allocatesArray", "spreadsObject", "allocatesLiteral", "deepClones"] }
       ]
     },
@@ -36,20 +41,22 @@
     "tier": "T2",
     "title": "array reference churned every tick under a ref-keyed memo",
     "authority": "docs/tasks/open/ENGINE-PERFORMANCE.md",
-    "question": "Does this symbol replace an array or map reference every tick that a ref-keyed memo downstream (pawnById, the terrain _terrainRev cache) uses as its cache key, silently forcing a rebuild?",
+    "question": "Establish first whether the per-tick loop reaches this symbol: search the repo for calls to it by name, follow those callers upward toward processGameTurn or tickPawn, and stop after 4 hops. If no path reaches it, the verdict is n/a with na_clause \"not reached from processGameTurn or tickPawn\" and the searches you ran as evidence. If it is reached: does this symbol replace an array or map reference every tick that a ref-keyed memo downstream (pawnById, the terrain _terrainRev cache) uses as its cache key, silently forcing a rebuild?",
     "fail_requires": [
       "file:line where the reference is replaced",
+      "the call path from processGameTurn or tickPawn, as path:line references",
       "the memo that keys off it",
       "what gets rebuilt as a result"
     ],
     "not_a_finding": [
       "a replacement that only happens when the contents genuinely changed",
-      "a local array never observed outside this symbol"
+      "a local array never observed outside this symbol",
+      "a symbol no call path reaches from processGameTurn or tickPawn — that is n/a, not pass"
     ],
     "trigger": {
       "all": [
         { "kind_in": ["function", "method"] },
-        { "reachable_from": { "entries": ["processGameTurn", "tickPawn"], "max_hops": 4 } },
+        { "layer_in": ["services", "systems", "entities", "ai", "core"] },
         { "matches": "(\\.map\\(|\\.filter\\(|=\\s*\\[)" }
       ]
     },
@@ -88,20 +95,21 @@
     "tier": "T2",
     "title": "ungated logging on the tick path",
     "authority": "docs/game/DECISIONS.md#adr-011",
-    "question": "Does this symbol log on the per-tick path without the gate ADR-011 requires, so a normal run pays string formatting every tick?",
+    "question": "Establish first whether the per-tick loop reaches this symbol: search the repo for calls to it by name, follow those callers upward toward processGameTurn or tickPawn, and stop after 4 hops. If no path reaches it, the verdict is n/a with na_clause \"not reached from processGameTurn or tickPawn\" and the searches you ran as evidence. If it is reached: does this symbol log on the per-tick path without the gate ADR-011 requires, so a normal run pays string formatting every tick?",
     "fail_requires": [
       "file:line of the log call",
-      "the tick path that reaches it",
+      "the call path from processGameTurn or tickPawn, as path:line references",
       "the gate that should wrap it"
     ],
     "not_a_finding": [
       "a log behind the project's existing debug gate",
-      "a log on an error branch that does not run in a normal tick"
+      "a log on an error branch that does not run in a normal tick",
+      "a symbol no call path reaches from processGameTurn or tickPawn — that is n/a, not pass"
     ],
     "trigger": {
       "all": [
         { "kind_in": ["function", "method"] },
-        { "reachable_from": { "entries": ["processGameTurn", "tickPawn"], "max_hops": 4 } },
+        { "layer_in": ["services", "systems", "entities", "ai", "core"] },
         { "flag": "logs" }
       ]
     },

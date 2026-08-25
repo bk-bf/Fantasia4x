@@ -42,7 +42,7 @@ own "DONE" sections. Gate at the 06-16 archival: `check` 0 · `test` 246 · `lin
 
 - **P-1 · the `gs.item` legacy pool.** Resolved (ADR-016): `GameState.item` + `currentItem` store gone; all readers migrated to physical stock.
 - **P-6 · logging.** Resolved: scoped `no-console` ESLint rule over `src/lib/game/**` (allows `warn`/`error`, exempts `core/log.ts`) enforcing the `gatedConsole` shim.
-- **P-7 · ADR-008 boundary — PawnStateMachine reached across the WASM boundary.** Resolved: `PathfinderService` gained `isReady()` + an interface-typed `pathfinderService` singleton; the pawn AI routes through it and the direct `WasmPathfinderService` import is gone. `graph:check` confirms PawnStateMachine is off the ADR-008 list (6 other bypasses remain — tracked in the open review).
+- **P-7 · ADR-008 boundary — PawnStateMachine reached across the WASM boundary.** Resolved: `PathfinderService` gained `isReady()` + an interface-typed `pathfinderService` singleton; the pawn AI routes through it and the direct `WasmPathfinderService` import is gone. the architecture check of the time confirmed PawnStateMachine was off the ADR-008 list (6 other bypasses remain — tracked in the open review).
 
 ## Part IV — Playtest findings (resolved subset)
 
@@ -70,7 +70,7 @@ tests → dispatch table → file split), verified against the test suite at eac
 | `pawn/pawnStates.ts` | 28 | `PAWN_STATE` / `PawnStateName` |
 
 - `tickPawn`'s 15-case switch → a `Record<PawnState,Handler>` table (fan-out 16 → ~1; `tickPawn` 8 LOC).
-- Acyclic by construction (`pawnStates/pawnQueries ← pawnHelpers ← handlers ← dispatcher`); `graph:check` confirms no new cycle.
+- Acyclic by construction (`pawnStates/pawnQueries ← pawnHelpers ← handlers ← dispatcher`); the architecture check of the time confirmed no new cycle.
 - Behaviour locked first by `systems/pawnHandlers.test.ts` (8 tests on the public `tick()`); the move was a reviewed brace-span codemod (exact text relocation), verified against the suite.
 - **Port-to-Rust? No.** Branchy game logic (a switch fanning into 15 handlers that call back into TS services), no hot numeric inner loop — its cost was *coupling*, not computation. The Rust-shaped work already lives in Rust (`spatial-core::find_path`). Porting candidates are leaf-ish, numerically-heavy TS (world-gen noise, line-of-sight, large per-tile passes).
 - **Open remainder:** Step 5 (push the selection decisions in `handleIdle`/`checkNeedInterrupts` into `JobService`/`PawnService`) — tracked in the open review.

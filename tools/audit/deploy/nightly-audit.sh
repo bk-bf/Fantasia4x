@@ -2,23 +2,21 @@
 # Nightly code audit, run by fantasia-audit.timer on ubuntuserver.
 #
 # Order matters: the source has to be current before the ledger is re-planned, or the
-# night is spent auditing yesterday's code. Steps 1-4 are deterministic and cost nothing;
-# only step 5 spends tokens.
+# night is spent auditing yesterday's code. Steps 1-2 are deterministic and cost nothing;
+# only step 3 spends tokens.
 #
 #   1. pull main from origin
-#   2. re-extract the codegraph (reachability triggers read it)
-#   3. re-index + re-plan  -> verdicts whose code did not move stay done
-#   4. run the audit until the budget runs out
-#   5. raise confirmed findings onto the issue board, and commit it to main
-#   6. work any issue a person marked `ready: true` -> a local branch + a review file
-#   7. hand the result to mon so it can be read from anywhere
+#   2. re-index + re-plan  -> verdicts whose code did not move stay done
+#   3. run the audit until the budget runs out
+#   4. raise confirmed findings onto the issue board, and commit it to main
+#   5. work any issue a person marked `ready: true` -> a local branch + a review file
+#   6. hand the result to mon so it can be read from anywhere
 #
 # Everything runs in the main checkout on `main`. The audit's own output (the board) is the
 # only thing it commits there; a fix attempt goes to its own branch and is never pushed.
 #
 # Environment (all optional, defaults suit ubuntuserver):
 #   AUDIT_REPO      main checkout            ~/Projects/Fantasia4x
-#   AUDIT_GRAPH     codegraph checkout       ~/Projects/codegraph
 #   AUDIT_NODE      node >= 22.5             ~/.nvm/versions/node/v24.19.0/bin/node
 #   AUDIT_HOURS     token budget in hours    3.5
 #   AUDIT_WORKERS   parallel workers         3
@@ -32,7 +30,6 @@
 set -uo pipefail
 
 REPO="${AUDIT_REPO:-$HOME/Projects/Fantasia4x}"
-GRAPH="${AUDIT_GRAPH:-$HOME/Projects/codegraph}"
 NODE="${AUDIT_NODE:-$HOME/.nvm/versions/node/v24.19.0/bin/node}"
 HOURS="${AUDIT_HOURS:-3.5}"
 WORKERS="${AUDIT_WORKERS:-3}"
@@ -85,26 +82,14 @@ if ! git -C "$REPO" merge --ff-only --quiet origin/main 2>/dev/null; then
 fi
 say "main at $(git -C "$REPO" rev-parse --short main)"
 
-# --- 2. codegraph ------------------------------------------------------------
-# Without a current extract the reachability triggers silently stop firing, which reads as
-# "the hot path is clean" rather than "nothing was asked about it".
-# A failed extract used to be a warning, which meant the night carried on against
-# yesterday's graph and produced verdicts that looked clean because nothing was asked. The
-# extract is a precondition of the run, not a nicety, so it now stops the night.
-[ -d "$GRAPH" ] || die "no codegraph at $GRAPH — it is a precondition, not an optional extra"
-say "--- re-extracting codegraph"
-( cd "$REPO" && "$NODE" "$GRAPH/bin/codegraph.mjs" extract Fantasia4x ) \
-  || die "codegraph extract failed — refusing to audit against a stale graph"
-
-# --- 3. index + plan ---------------------------------------------------------
+# --- 2. index + plan ---------------------------------------------------------
 say "--- indexing"
-( cd "$REPO" && "$NODE" tools/audit/audit.mjs index --require-fresh ) \
-  || die "index failed, or the graph does not match HEAD"
+( cd "$REPO" && "$NODE" tools/audit/audit.mjs index ) || die "index failed"
 say "--- planning"
 ( cd "$REPO" && "$NODE" tools/audit/audit.mjs plan ) || die "plan failed"
 BEFORE=$( cd "$REPO" && "$NODE" tools/audit/audit.mjs status | sed -n 's/^work .*done \([0-9]*\) .*/\1/p' )
 
-# --- 4. the run --------------------------------------------------------------
+# --- 3. the run --------------------------------------------------------------
 say "--- auditing for ${HOURS}h with $WORKERS workers on $MODEL"
 ( cd "$REPO" && "$NODE" tools/audit/run.mjs \
     --workers "$WORKERS" --hours "$HOURS" --model "$MODEL" --run "nightly-$STAMP" )
@@ -116,7 +101,7 @@ say "run exited $RUN_RC"
 AFTER=$( cd "$REPO" && "$NODE" tools/audit/audit.mjs status | sed -n 's/^work .*done \([0-9]*\) .*/\1/p' )
 say "verdicts: ${BEFORE:-?} -> ${AFTER:-?}"
 
-# --- 5. raise onto the board -------------------------------------------------
+# --- 4. raise onto the board -------------------------------------------------
 # Everything lands as `ready: false`. Nothing is worked on until a person has read it and
 # flipped that, which is the only gate between the audit and the repo.
 say "--- raising findings onto the board"
@@ -141,7 +126,7 @@ else
 fi
 
 
-# --- 7. the fixer ------------------------------------------------------------
+# --- 5. the fixer ------------------------------------------------------------
 if [ "${AUDIT_NO_FIX:-0}" = 1 ]; then
   say "AUDIT_NO_FIX=1 — skipping phase 3"
 else

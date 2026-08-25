@@ -1,5 +1,5 @@
 // Shared hex-colour parsing — the ONE copy (was pasted into core/Terrains,
-// ResourceObjectService and webgl/fantasia-world; graph:check `duplicate` flagged it).
+// ResourceObjectService and webgl/fantasia-world).
 
 /** Parse a `#RRGGBB` hex colour into a normalised RGB (0–1) triple, or null if malformed/absent. */
 export function parseHexRgb01(hex: unknown): [number, number, number] | null {

@@ -236,7 +236,7 @@ client of the headless session**:
 
 - [x] **ADR-033** (DECISIONS.md) records the decision — headless as a **dev-only, in-thread driver over the
   existing engine + command registry**, guarded, single-session, invariants-not-goldens; registered in
-  `codegraph.config.json` `adrRules`.
+  the ADR register of the time.
 - [x] Done 2026-07-18: ARCHITECTURE.md §Headless Sim & Scenarios; ROADMAP row ticked.
 
 ## Acceptance criteria
@@ -246,4 +246,4 @@ client of the headless session**:
 - [x] All `COMMANDS` + the new `dev*` verbs reachable via `POST /api/sim/command` (unknown type → 400 with the known-verb list).
 - [x] Every era preset fast-forwards 1200 ticks and passes the §10 invariants; seed replay is byte-identical.
 - [x] The adapter-static production build emits **no `/api` output at all**; in dev without `--headless` the request is denied (desktop-shell guard 403s a browser-less client first; a shell-UA request hits the route guard's 404 — both layers deny). `./launch.sh` boots nothing extra.
-- [x] `pnpm check` green; `pnpm graph:check` `adr-coverage` green with ADR-033 registered. *(graph:check still exits 1 on a PRE-EXISTING `PawnStatService↔SocialService` cycle from the 2026-07-13 SOCIAL-LAYER work — predates and is unrelated to this spec.)*
+- [x] `pnpm check` green; the ADR-coverage check of the time green with ADR-033 registered. *(that checker still exited 1 on a PRE-EXISTING `PawnStatService↔SocialService` cycle from the 2026-07-13 SOCIAL-LAYER work — predates and is unrelated to this spec.)*

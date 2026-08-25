@@ -2178,7 +2178,7 @@
   /**
    * ADR-026: the ONLY full-map terrain build, called for the first build or a genuine new-map load
    * (worldMap ARRAY ref replaced). Delegates to the `terrainPaint.fullRebuildTerrain` seam — the single
-   * module codegraph allows to call buildGameGrid + computeHiddenMaskState — then assigns the result to
+   * module allowed to call buildGameGrid + computeHiddenMaskState (`audit t0` checks it) — then assigns the result to
    * component state and seeds every incremental baseline (mask state, building diff, blueprint, emitters).
    */
   function _fullRebuildTerrain(): void {

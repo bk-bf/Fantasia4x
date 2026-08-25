@@ -6,7 +6,8 @@
 // verifies it; the agent is left with the semantic half of the same ADR.
 
 import { readFileSync, existsSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { walkFiles } from './extract.mjs';
 
 const ADR_HEADING = /^#{2,4}\s*(ADR-\d+)\b.*$/gim;
@@ -79,30 +80,70 @@ export function adrConstDrift(root) {
   return { declared: declared.length, findings };
 }
 
-/** ADRs registered in codegraph.config.json but marked unverifiable -- the surface these
- *  T2 rules exist to cover. Reported so the gap stays visible rather than assumed closed. */
-export function adrCoverage(root, rules) {
-  const cfgPath = join(root, 'codegraph.config.json');
-  if (!existsSync(cfgPath)) return null;
-  const cfg = JSON.parse(readFileSync(cfgPath, 'utf8'));
-  const all = new Map();
-  for (const r of cfg.adrRules ?? []) {
-    const prev = all.get(r.adr);
-    all.set(r.adr, { adr: r.adr, checkable: (prev?.checkable ?? false) || r.checkable !== false });
-  }
+/** Every ADR the decisions doc declares, and whether a T2 rule covers it. The doc is the
+ *  register -- an ADR exists because it is written there, so the gap is measured against
+ *  that rather than against a second list somewhere else that can fall behind it. */
+export function adrCoverage(root, rules, doc = 'docs/game/DECISIONS.md') {
+  const path = join(root, doc);
+  if (!existsSync(path)) return null;
+  const text = readFileSync(path, 'utf8');
+  const declared = [...new Set([...text.matchAll(ADR_HEADING)].map((m) => m[1]))];
+  if (declared.length === 0) return null;
+
   const covered = new Set();
   for (const r of rules) {
     const m = /adr-?(\d+)/i.exec(r.authority ?? '') || /^A(\d{2})/.exec(r.id);
     if (m) covered.add(`ADR-${String(m[1]).padStart(3, '0')}`);
   }
-  const rows = [...all.values()].map((a) => ({
-    ...a,
-    t2Rule: covered.has(a.adr)
-  }));
+  // Headings are written ADR-001 or ADR-1; compare on the padded form.
+  const pad = (a) => `ADR-${a.slice(4).padStart(3, '0')}`;
+  const rows = declared.map((adr) => ({ adr, t2Rule: covered.has(pad(adr)) }));
   return {
     total: rows.length,
-    graphCheckable: rows.filter((r) => r.checkable).length,
     t2Covered: rows.filter((r) => r.t2Rule).length,
-    unguarded: rows.filter((r) => !r.checkable && !r.t2Rule).map((r) => r.adr)
+    unguarded: rows.filter((r) => !r.t2Rule).map((r) => r.adr)
   };
+}
+
+/** Drop comments, so prose naming a function is not read as a call to it. */
+const stripComments = (t) =>
+  t.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/(^|[^:])\/\/.*$/gm, '$1');
+
+/**
+ * Architecture seams, checked by reading the code rather than a map of it.
+ *
+ * A chokepoint is only a chokepoint while nothing routes around it, and routing around one
+ * is invisible in review: the new call site looks like every other call site. Each rule
+ * names a function (or a module) and the exact symbols allowed to reach it; every other
+ * symbol whose body calls it is a finding. Symbol bodies come from the same AST spans the
+ * ledger is built from, so "which function is this call inside" is exact.
+ */
+export function seamViolations(root, symbols) {
+  const rulePath = join(dirname(fileURLToPath(import.meta.url)), '..', 'seams.jsonc');
+  if (!existsSync(rulePath)) return { rules: 0, findings: [] };
+  const rules = JSON.parse(stripComments(readFileSync(rulePath, 'utf8')));
+  const findings = [];
+
+  for (const r of rules) {
+    const allow = new Set(r.allow ?? []);
+    if (r.kind === 'module') {
+      const re = new RegExp(`from\\s*['"\`][^'"\`]*${r.target}['"\`]`);
+      for (const abs of walkFiles(join(root, 'src'), ['.ts', '.svelte'])) {
+        const file = abs.slice(root.length + 1);
+        if (allow.has(file) || file.endsWith(`${r.target}.ts`)) continue;
+        if (re.test(stripComments(readFileSync(abs, 'utf8'))))
+          findings.push({ adr: r.adr, where: file, detail: r.msg });
+      }
+      continue;
+    }
+    const re = new RegExp(`(?:\\.|\\b)${r.target}\\s*\\(`);
+    for (const s of symbols) {
+      const id = `${s.file}::${s.className ? s.className + '.' : ''}${s.name}`;
+      if (allow.has(id) || s.name === r.target) continue;
+      if (re.test(stripComments(s.text ?? ''))) {
+        findings.push({ adr: r.adr, where: `${id}  ${s.file}:${s.startLine}`, detail: r.msg });
+      }
+    }
+  }
+  return { rules: rules.length, findings };
 }

@@ -67,7 +67,7 @@ each type's `tempDelta`. This pass turns wind into a graded, *directional* envir
 - **HUD**: the topbar readout now appends the wind degree + compass direction (e.g. `· fairly windy NE`).
 - **Tests/gates:** `windchill.test.ts` (stage thresholds, leeward falloff + direction flip, roof
   reduction, direction drift); `check` 0 new errors, `test` 486 passed, lint clean. Docs: DESIGN.md
-  (Weather & Environmental Exposure), ADR-025 + codegraph onboarding.
+  (Weather & Environmental Exposure), ADR-025 + its ADR register entry.
 
 **Shipped 2026-06-16 (earlier pass):**
 

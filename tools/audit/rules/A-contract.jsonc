@@ -1,12 +1,12 @@
 // Family A — contract drift.
 //
-// 31 of 34 ADRs are marked `checkable: false` in codegraph.config.json: the call graph
-// cannot express them, so nothing verifies them today. These rules are the residue.
+// Most ADRs state their invariant in prose, so no script decides them and these rules are
+// the residue. `audit t0` reports which of the decisions doc's ADRs still carry no rule.
 //
-// A rule belongs here only when the invariant is stated in an ADR and cannot be decided
-// by tsc, eslint, `graph:check`, a test, or the headless sim. The numeric half of ADR
-// conformance (a declared constant still holding its declared value) is deterministic and
-// lives in T0 — see `audit t0 adr-const`, not here.
+// A rule belongs here only when the invariant is stated in an ADR and cannot be decided by
+// tsc, eslint, a test, the headless sim, or a T0 check. The mechanical halves already live
+// in T0: a declared constant still holding its declared value (`adr-const`), and a
+// chokepoint nothing routes around (`adr-seams`, seams.jsonc).
 [
   {
     "id": "A02a",
@@ -148,7 +148,7 @@
     "tier": "T2",
     "title": "spatial logic inlined instead of routed through the service interface",
     "authority": "docs/game/DECISIONS.md#adr-008",
-    "question": "Does this symbol implement A* pathfinding, a nearest-entity query, or fog-of-war visibility inline, rather than calling it through PathfindingService / SpatialIndexService? graph:check catches a direct spatial-core import; it cannot catch a reimplementation.",
+    "question": "Does this symbol implement A* pathfinding, a nearest-entity query, or fog-of-war visibility inline, rather than calling it through PathfindingService / SpatialIndexService? Search for a direct spatial-core import first — that is a different, cruder problem; what this rule is for is a reimplementation, which no import check can see.",
     "fail_requires": [
       "file:line of the inlined spatial computation",
       "which service interface already exposes it",

@@ -90,11 +90,7 @@ pnpm test:related <files> # only tests importing the given source files (default
 pnpm test:changed         # only tests affected by the current git diff
 pnpm test:watch           # watch mode
 pnpm add:wasm             # rebuild spatial-core WASM → src/lib/spatial-core-pkg/
-pnpm graph                # (re)extract this project's graph via the standalone codegraph tool
-pnpm graph:serve          # codegraph viewer + JSON query API on http://localhost:5185
-pnpm graph:check          # architecture checks (ADRs/layers/cycles/god-modules/orphans)
-pnpm graph:snapshot       # save the current graph as a baseline
-pnpm graph:diff           # diff the graph against the saved baseline
+pnpm audit:t0             # deterministic checks: ADR constants, architecture seams, ADR coverage
 ```
 
 > **Scope tests after an edit — do NOT run the full ~800-test suite by default** (it taxes the
@@ -105,10 +101,6 @@ pnpm graph:diff           # diff the graph against the saved baseline
 > accumulates uncommitted changes — and editing a `forceRerunTrigger` file (`package.json`,
 > `vite.config.*`, `vitest.config.*`) makes it fall back to the full suite; prefer `test:related` in
 > those cases.
-
-> These `graph:*` scripts call the standalone codegraph CLI at `../codegraph`
-> (`node ../codegraph/bin/codegraph.mjs … Fantasia4x`) — it must be checked out as a
-> sibling of this repo. Override its location with `CODEGRAPH_DIR`.
 
 > **Headless/playtest/verify = drive the REAL sim → invoke the `headless` skill.** Any
 > "verify / playtest / headless / end-to-end" claim must come from `HeadlessSession` (or `./dev.sh --headless` + `/api/sim/*`)
@@ -123,59 +115,24 @@ pnpm graph:diff           # diff the graph against the saved baseline
 > wrong diagnoses ("passive stations are broken", "anvil needs a carried tool", "the ore chain is
 > broken"), every one of them a setup mistake that looks exactly like a game bug.
 
-## Codebase Graph (standalone `codegraph` tool)
+## Finding your way around the code
 
-The call-graph explorer + **JSON query API for agents** lives in its own repo at
-`../codegraph` (a sibling of this one). Fantasia4x is **onboarded** as a project
-via `codegraph.config.json` + `codegraph.descriptions.json` at this repo's root
-(the config declares the layer map and ADR rules; pure JSON — analysing the
-project never runs its code). Use the API to understand structure, find
-callers/callees, trace call paths, and spot hubs instead of grepping blind.
-Covers **TypeScript** (`src/lib`), **Svelte** components, and **Rust**
-(`spatial-core`) in one connected graph, so a call path can cross the WASM
-boundary. See `../codegraph/README.md`.
+There is no index, map or graph of this codebase to consult, deliberately: one existed, it
+drifted from the code, and a stale map answers "nothing found" in the same voice as
+"nothing is wrong". Read the code.
 
-- **Start it:** `pnpm graph:serve` (or `./launch.sh --debug`) → SvelteKit viewer
-  + API on http://localhost:5185. `--debug` also watches `src/lib` and
-  re-extracts on change; otherwise re-extract manually with `pnpm graph`.
-- **Query the API (agents).** CORS-open; `GET /api` is self-documenting. With one
-  project onboarded the default is Fantasia4x; otherwise append
-  `?project=Fantasia4x`. Responses are JSON.
-  - `/api/function?name=<id|Class.method|method>` — description, signature,
-    callers, callees. Ambiguous names return all matches.
-  - `/api/search?q=` · `/api/callers?name=` · `/api/callees?name=`
-  - `/api/path?from=&to=` — shortest call path (crosses the TS↔Rust boundary)
-  - `/api/module?name=` · `/api/modules` · `/api/hubs` · `/api/graph` · `/api/stats`
-  - Browse lists: `/api/functions` · `/api/calls` · `/api/files` (with
-    `sort=`/`group=`/`q=`/`kind=`/`exported=`/`tested=`/`cross=`/`limit=`)
-  - Insights: `/api/check` · `/api/recommendations` · `/api/port-candidates` ·
-    `/api/orphans`
-  - e.g. `curl 'localhost:5185/api/function?name=tickPawn'`
-    · `curl 'localhost:5185/api/path?from=processGameTurn&to=tickPawn'`
-- **Descriptions:** every function gets one (curated → JSDoc → inferred). Improve
-  specific ones by editing this repo's `codegraph.descriptions.json` (keyed
-  `module::Class.method` for functions, full module path for modules), then
-  re-extract.
-- **Guardrails:** `pnpm graph:check` enforces architecture rules (each checkable
-  ADR, layer direction, cycles, god-modules, orphans; exit 1 on violations —
-  CI-ready). `pnpm graph:snapshot` / `pnpm graph:diff` track structural change.
-
-### Onboarding an ADR into the graph checker
-
-Every ADR in `DECISIONS.md` must be registered in this repo's
-`codegraph.config.json` `adrRules`; `graph:check`'s `adr-coverage` rule flags any
-that isn't. When you add an ADR, add one JSON entry — either:
-
-- a **declarative** structural rule the call graph can verify, e.g.
-  `{ "adr": "ADR-0XX", "severity": "error", "title": "…", "type": "forbidden-callee-module", "module": "game/services/X", "msg": "…" }`
-  (see the existing `ADR-008` entry; a new rule **type** is added once in
-  `../codegraph/src/lib/core/analysis.mjs`'s `ADR_RULE_TYPES`), **or**
-- an acknowledgement that it isn't graph-expressible (most are design/runtime):
-  `{ "adr": "ADR-0XX", "checkable": false, "reason": "…" }`.
-
-Checkable ADRs then appear as their own rule in `graph:check`, the API
-(`/api/check`), and the viewer's Insights panel automatically — no other wiring
-needed.
+- **Where is X / who calls X** — Grep. The result is a line in a file you can read, and it
+  is true at the moment you run it.
+- **What breaks if I change X** — Grep for the name, read each call site, follow the ones
+  that matter upward. Include string keys and re-exports; neither looks like a call.
+- **Is X dead** — the same search, plus `src/tests` and the `.jsonc` data files, before you
+  conclude nothing reaches it.
+- **Is X tested** — Grep `src/tests` for the name, then for the scenario that would run it.
+  Most of the suite drives through `buildScenario` / `HeadlessSession` and never names its
+  subject, so "no direct hit" is not "untested".
+- **Architecture rules that a script can decide** — `pnpm audit:t0`: constants an ADR
+  declares against their real values, and the chokepoints in
+  `tools/audit/seams.jsonc` against every call site that reaches them.
 
 ## Performance Profiling & Debugging
 
@@ -236,7 +193,7 @@ Full architecture, design decisions, philosophy, and task tracking live in `docs
 ## When to Update
 
 - **ARCHITECTURE**: a new service, layer, or data flow is added or removed.
-- **DECISIONS**: a non-obvious design choice is made that future contributors would otherwise re-litigate. **Also onboard the ADR into the graph checker** (see below) — `pnpm graph:check` fails (`adr-coverage`) until you do.
+- **DECISIONS**: a non-obvious design choice is made that future contributors would otherwise re-litigate. `pnpm audit:t0` lists every ADR in the doc that no T2 rule covers; if the new one states a number or names a chokepoint, it belongs in `tools/audit/seams.jsonc` where a script decides it instead.
 - **DESIGN**: a gameplay mechanic, visual token, or layout rule is established or changed.
 - **ROADMAP**: a feature is planned, started, or completed.
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // audit — tiered, resumable, parallel-safe code audit over a symbol ledger.
 //
-//   audit index          rebuild the symbol inventory (spans, hashes, flags, call graph)
+//   audit index          rebuild the symbol inventory (spans, hashes, flags)
 //   audit plan           cross active rules against symbols -> the pending work set
 //   audit status         coverage: how much of the in-scope surface has a current verdict
 //   audit next           claim a batch and print the prompt for it (one symbol per call)
@@ -9,7 +9,7 @@
 //   audit release        return this worker's claims to the pool
 //   audit findings       open fails, most recent first
 //   audit na             n/a verdicts + per-rule n/a rate (rule-scope review)
-//   audit t0             deterministic checks (ADR constant drift, ADR coverage gap)
+//   audit t0             deterministic checks (ADR constant drift, architecture seams, coverage gap)
 //   audit demote         T2 rules that have earned a move down to T0
 //   audit issues         phase 2: confirmed findings -> docs/issues/*.md
 //   audit board          every issue on the board, by status
@@ -20,16 +20,14 @@ import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { hostname } from 'node:os';
-import { execFileSync } from 'node:child_process';
 
 import * as L from './lib/ledger.mjs';
 import { extractRepo, sliceOf } from './lib/extract.mjs';
-import * as G from './lib/graph.mjs';
 import { loadRules } from './lib/rules.mjs';
 import { makeContext, match } from './lib/triggers.mjs';
 import { buildPrompt } from './lib/prompt.mjs';
 import { parseResponse, validate } from './lib/verdict.mjs';
-import { adrConstDrift, adrCoverage } from './lib/t0.mjs';
+import { adrConstDrift, adrCoverage, seamViolations } from './lib/t0.mjs';
 import * as I from './lib/issues.mjs';
 import { groupFindings, upsertIssue } from './lib/raise.mjs';
 
@@ -37,7 +35,6 @@ const ROOT = process.env.AUDIT_ROOT || join(dirname(fileURLToPath(import.meta.ur
 // Stable by default so `audit release` can find this machine's claims across separate
 // CLI invocations. Parallel workers each set AUDIT_WORKER to something distinct.
 const WORKER = process.env.AUDIT_WORKER || hostname();
-const ENTRIES = ['processGameTurn', 'tickPawn'];
 
 const arg = (name, dflt) => {
   const i = process.argv.indexOf(`--${name}`);
@@ -48,108 +45,15 @@ const out = (s) => process.stdout.write(s + '\n');
 
 // --- index -------------------------------------------------------------------
 
-/** HEAD of the repo being audited, or null outside a checkout. */
-function gitHead() {
-  try {
-    return execFileSync('git', ['rev-parse', 'HEAD'], { cwd: ROOT, encoding: 'utf8' }).trim();
-  } catch {
-    return null;
-  }
-}
-/** Set by `index` when the graph describes a different revision. `--require-fresh` exits on it. */
-let GRAPH_STALE = false;
-
 function cmdIndex() {
   const db = L.open();
   const t0 = Date.now();
   const symbols = extractRepo(ROOT);
   out(`extracted ${symbols.length} symbols in ${Date.now() - t0} ms`);
 
-  const graph = G.loadGraph(ROOT);
-  let edges = [];
-  if (!graph) {
-    out(
-      `[warn] no codegraph extract at ${G.GRAPH_PATH} — reachability and caller triggers will not fire.`
-    );
-    out(`[warn] run \`pnpm graph\` first, or set CODEGRAPH_DIR.`);
-  } else {
-    const { map, matched, exact, enclosing, unmatched, total } = G.mapNodes(graph, symbols);
-    const e = G.edgesFor(graph, map);
-    edges = e.edges;
-    const tested = G.testedKeys(graph, map);
-    const depths = G.testDepths(graph, map);
-    for (const s of symbols) {
-      if (tested.has(s.key)) s.tested = true;
-      if (depths.has(s.key)) s.testDepth = depths.get(s.key);
-    }
-    const pct = ((matched / total) * 100).toFixed(0);
-    out(
-      `graph: ${matched}/${total} nodes mapped (${pct}%: ${exact} exact, ${enclosing} folded into an enclosing symbol), ` +
-        `${edges.length} edges (${e.internal} internal to one symbol, ${e.dropped} unmapped)`
-    );
-    // Exact staleness, rather than inferring it from a low match rate once the damage is
-    // done: the extract records the revision it was built from, so a graph describing other
-    // code can be named as such. A stale graph does not error anywhere downstream — the
-    // reachability and caller triggers simply stop firing, which reads as "the hot path is
-    // clean" rather than "nothing was asked about it".
-    const head = gitHead();
-    if (head && graph.commit && graph.commit !== head) {
-      out(`[warn] the codegraph extract was built from ${graph.commit.slice(0, 8)}, but HEAD is`);
-      out(`[warn] ${head.slice(0, 8)} — reachability and family F verdicts describe other code.`);
-      out(`[warn] re-run \`pnpm graph\` before trusting this run.`);
-      GRAPH_STALE = true;
-    } else if (graph.dirty) {
-      out(`[warn] the codegraph extract was built over uncommitted changes; it matches no commit.`);
-    }
-    // Staleness is already exact, above. What this names is the other thing a low map rate
-    // can mean: nodes describing code this inventory does not model at all, which carry
-    // reachability that never arrives here. Rust is the expected case; anything else is not.
-    const foreign = unmatched.filter((n) => !/\.rs$/.test(n.file));
-    if (foreign.length) {
-      const files = [...new Set(foreign.map((n) => n.file))].slice(0, 5);
-      out(
-        `[warn] ${foreign.length} codegraph node(s) map to no symbol here, so their call edges are`
-      );
-      out(`[warn] dropped: ${files.join(', ')}${files.length < foreign.length ? ', …' : ''}`);
-    }
-    // The `tested` flag comes from codegraph's heuristic. When it collapses, family F asks
-    // "is this untested?" about code that has tests -- noise, and it looks like coverage.
-    const fnCount = Math.max(
-      1,
-      symbols.filter((s) => s.kind === 'function' || s.kind === 'method').length
-    );
-    const testedRate = tested.size / fnCount;
-    const reached = symbols.filter((s) => s.testDepth != null).length;
-    out(
-      `graph: ${tested.size} symbols called from a test, ${reached} reached by one ` +
-        `(${((reached / fnCount) * 100).toFixed(0)}% of functions/methods)`
-    );
-    if (testedRate < 0.05) {
-      out(`[warn] almost nothing is marked tested despite the repo having test files —`);
-      out(
-        `[warn] codegraph's tested detection is not matching; family F verdicts will be unreliable.`
-      );
-    }
-  }
-
   L.replaceSymbols(db, symbols);
-  L.replaceEdges(db, edges);
-  const deps = G.depHashes(edges, symbols, L.sha);
-  L.setDepHashes(db, deps);
-  const reach = G.reachability(edges, symbols, ENTRIES);
-  L.replaceReach(db, reach);
-  for (const e of ENTRIES) {
-    out(`reach: ${reach.filter((r) => r.entry === e).length} symbols from ${e}`);
-  }
   db.prepare('INSERT OR REPLACE INTO meta (k,v) VALUES (?,?)').run('indexed_at', L.nowIso());
   out(`indexed.`);
-  // Unattended callers pass --require-fresh: a night spent auditing against a graph of other
-  // code produces verdicts that look clean because nothing was asked, which is worse than
-  // not running. Interactive use only gets the warning above.
-  if (GRAPH_STALE && process.argv.includes('--require-fresh')) {
-    out(`[fatal] --require-fresh: refusing to continue against a stale graph.`);
-    process.exit(2);
-  }
 }
 
 // --- plan --------------------------------------------------------------------
@@ -169,18 +73,7 @@ function cmdPlan() {
   loadRulesOrDie(db);
   const rules = L.activeRules(db, 'T2');
   const symbols = L.liveSymbols(db);
-  const edges = db
-    .prepare('SELECT caller, callee FROM symbol_edge')
-    .all()
-    .map((r) => [r.caller, r.callee]);
-  const reach = db.prepare('SELECT entry, symbol_key, hops FROM reach').all();
-
-  const ctx = makeContext({
-    symbols,
-    edges,
-    reach,
-    readSlice: (s) => sliceOf(ROOT, s)
-  });
+  const ctx = makeContext({ symbols, readSlice: (s) => sliceOf(ROOT, s) });
   const { items, misses } = match(rules, symbols, ctx);
   L.plan(db, items);
 
@@ -246,21 +139,8 @@ function cmdNext() {
 
   const symbol = db.prepare('SELECT * FROM symbol WHERE key=?').get(key);
   const rules = mine.map((m) => db.prepare('SELECT * FROM rule WHERE id=?').get(m.rule_id));
-  const callers = db
-    .prepare('SELECT s.* FROM symbol_edge e JOIN symbol s ON s.key=e.caller WHERE e.callee=?')
-    .all(key);
-  const callees = db
-    .prepare('SELECT s.* FROM symbol_edge e JOIN symbol s ON s.key=e.callee WHERE e.caller=?')
-    .all(key);
 
-  const prompt = buildPrompt({
-    root: ROOT,
-    symbol,
-    rules,
-    callers,
-    callees,
-    slice: sliceOf(ROOT, symbol)
-  });
+  const prompt = buildPrompt({ root: ROOT, symbol, rules, slice: sliceOf(ROOT, symbol) });
 
   const task = {
     worker: WORKER,
@@ -269,7 +149,6 @@ function cmdNext() {
     rules: mine.map((m) => ({
       rule_id: m.rule_id,
       content_hash: m.content_hash,
-      dep_hash: m.dep_hash,
       rule_hash: m.rule_hash
     })),
     prompt
@@ -312,7 +191,6 @@ function cmdSubmit() {
       r.rule_id,
       {
         content_hash: r.content_hash,
-        dep_hash: r.dep_hash,
         rule_hash: r.rule_hash
       }
     ])
@@ -418,16 +296,22 @@ function cmdT0() {
   for (const f of drift.findings) out(`  [${f.kind}] ${f.adr} ${f.name}: ${f.detail}`);
   if (drift.findings.length === 0) out('  no drift');
 
+  const seams = seamViolations(ROOT, extractRepo(ROOT));
+  out('');
+  out(`adr-seams: ${seams.rules} chokepoint(s) checked`);
+  for (const f of seams.findings) out(`  [seam] ${f.adr} ${f.where}: ${f.detail}`);
+  if (seams.findings.length === 0) out('  no violations');
+
   const cov = adrCoverage(ROOT, rules);
   if (cov) {
     out('');
     out(
-      `adr-coverage: ${cov.total} ADRs — ${cov.graphCheckable} verified by graph:check, ${cov.t2Covered} carry a T2 rule`
+      `adr-coverage: ${cov.total} ADRs in the decisions doc — ${cov.t2Covered} carry a T2 rule`
     );
-    if (cov.unguarded.length) out(`  no check of any kind: ${cov.unguarded.join(' ')}`);
+    if (cov.unguarded.length) out(`  no T2 rule: ${cov.unguarded.join(' ')}`);
   }
   db.close();
-  if (drift.findings.length && flag('strict')) process.exit(1);
+  if ((drift.findings.length || seams.findings.length) && flag('strict')) process.exit(1);
 }
 
 function cmdDemote() {

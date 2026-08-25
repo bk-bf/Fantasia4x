@@ -283,7 +283,7 @@ until a pawn with a **detection trait** (PER + sight + a new `stealthDetection` 
 fog-of-war / render-gate concern (ADR-008 spatial visibility territory) plus the inverse of §5, and wants its
 own pass. Also parks the **hearing/smell detection channel** (§5 realism upgrade). Out of scope for v1.
 
-## 11. ADR-031 draft (add to `DECISIONS.md` + onboard into `codegraph.config.json` when built)
+## 11. ADR-031 draft (add to `DECISIONS.md` when built)
 
 > ### ADR-031 [GAME]: Stealth as a Detection Filter on Existing Mob Vision (not a new subsystem)
 > **Status:** Proposed. **Context.** A specialised sneak build needs a "creature notices pawn" gate.
@@ -295,7 +295,7 @@ own pass. Also parks the **hearing/smell detection channel** (§5 realism upgrad
 > existing LOS-gated scan); `nearestPawn` gains a per-candidate stealth skip; the aggro-acquisition contract
 > changes (always-on, affects all pawns) → needs an encounter balance pass.
 >
-> `codegraph.config.json` `adrRules`: likely `{ "adr": "ADR-031", "checkable": false, "reason": "runtime
+> No static check is likely to fit: `{ "adr": "ADR-031", reason: "runtime
 > detection-roll behaviour, not a structural call-graph rule" }`.
 
 ## 12. Acceptance criteria
@@ -331,7 +331,7 @@ own pass. Also parks the **hearing/smell detection channel** (§5 realism upgrad
 - [ ] Encounter balance pass after always-on detection lands. *(OPEN — mobs no longer acquire pawns
   instantly: ~9 %/check at the vision border, ~34 % adjacent for a default pawn. Playtest wolf/goblin
   encounters and tune §13 dials in `core/stealth.ts`.)*
-- [x] ~~ADR-031~~ **ADR-032** written into `DECISIONS.md` + onboarded into `codegraph.config.json`.
+- [x] ~~ADR-031~~ **ADR-032** written into `DECISIONS.md`.
   *(2026-07-14 — the draft number was taken by hide wear.)*
 - [x] `docs/game/DESIGN.md` (combat/mechanics) + `ARCHITECTURE.md` (new `core/stealth.ts`) updated.
   *(2026-07-14.)*

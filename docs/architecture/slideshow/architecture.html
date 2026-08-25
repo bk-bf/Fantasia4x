@@ -578,7 +578,7 @@
             <div class="callout"><span class="h" style="color:var(--amber)">DENSE</span><p class="small">sim: 131 functions in just <b>4 files</b>. The worker boundary is concentrated — powerful, but heavy per file.</p></div>
           </div>
         </div>
-        <div class="footnote">bar length = total function count per group · source: codegraph extract, 294 modules</div>
+        <div class="footnote">bar length = total function count per group · source: a call-graph extract of the time, 294 modules</div>
       </section>
 
       <!-- CHOKEPOINTS -->
@@ -597,7 +597,7 @@
           </div>
           <div class="tension" style="margin-top:14px"><span class="h">◆ What it means</span>The centre of gravity is <b>lookups and randomness</b>, not any one subsystem. <span class="c">SeededRng.random</span> at 85 callers is why determinism is a project-wide contract: one un-seeded draw and every replay diverges.</div>
         </div>
-        <div class="footnote">ranked by inbound call count · codegraph /nodes sorted by inDegree</div>
+        <div class="footnote">ranked by inbound call count, from a call-graph extract of the time</div>
       </section>
 
       <!-- GOD MODULES -->
@@ -615,7 +615,7 @@
           </div>
           <div class="tension" style="margin-top:14px"><span class="h">◆ The honest read</span>Not all god-modules are bugs — <span class="c">commands</span> is a registry, a big flat list is <em>correct</em>. But <b>EnvironmentService, Combat and gameState</b> earn the flag: they each fuse concerns that could split. The graph agrees with what Part II found by reading the code.</div>
         </div>
-        <div class="footnote">codegraph check: “god-module” warns above 40 functions · 11 flagged, 0 errors</div>
+        <div class="footnote">architecture check of the time: “god-module” warned above 40 functions · 11 flagged, 0 errors</div>
       </section>
 
       <!-- LAYERING + SMELLS -->
@@ -634,7 +634,7 @@
           </div>
           <div class="tension" style="margin-top:12px"><span class="h">◆ The one to look at</span><b>183 component→service edges</b> contradict the stated rule (“components route through store actions, never call services directly”). Some are type-only imports — but it's worth a pass to see which are real reach-arounds.</div>
         </div>
-        <div class="footnote">codegraph check: 0 errors, 28 warnings · cycles ✓ clean · layers ✓ clean · ADR-008 ✓</div>
+        <div class="footnote">architecture check of the time: 0 errors, 28 warnings · cycles ✓ clean · layers ✓ clean · ADR-008 ✓</div>
       </section>
 
       <!-- ============ PART IV DIVIDER ============ -->
@@ -661,7 +661,7 @@
             <div class="tension"><span class="h">◆ hygiene</span><b>13 duplicated utils, 4 dead functions, a fossil <span class="c">systems/Research.ts</span></b> — a cheap consolidation pass.</div>
           </div>
         </div>
-        <div class="footnote">drawn from the AUDIT record + codegraph + the code sweeps behind Part II</div>
+        <div class="footnote">drawn from the AUDIT record + a call-graph extract of the time + the code sweeps behind Part II</div>
       </section>
 
       <!-- CLOSING -->

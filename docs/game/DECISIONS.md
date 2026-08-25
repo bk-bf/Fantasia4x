@@ -550,9 +550,8 @@ union member** — down from ~6 scattered edits with a duplicate.
 - Drift is guarded on three fronts: `JobPoolType ⊆ Job['type']` and "`handlers` covers every
   `JobPoolType`" are **compile-time** (a `Record<JobPoolType, JobHandler>` + a subset assertion);
   "`jobs.jsonc` ids === handler ids" is a **vitest** drift test (`jobRegistry.test.ts`).
-- Not graph-checkable: this is a *data-coverage* invariant (jsonc ↔ union ↔ registry), not a
-  call-edge one, so `graph:check` can't express it — registered `checkable: false` in `ADR_RULES`,
-  like the other runtime/data ADRs, with enforcement delegated to the test + compiler above.
+- Enforcement is the test plus the compiler above: `jobRegistry.test.ts` pins jsonc ids against the
+  handler registry and against the `Job['type']` union it reads out of `core/types/jobs.ts`.
 - Behaviour-preserving: the generator order, completion side-effects, and work-category results are
   identical (the only change is the dead `light` job's defunct mapping). 153 tests green.
 - Onboarding documented in `AGENTS.md` ("Adding a colony job").
@@ -847,8 +846,8 @@ generated once at module load, every colony was mono-racial, pawns carried a den
 **Consequences.** Old single-race saves migrate to a one-entry pool tagged onto existing pawns.
 The dead trait effect fields were pruned (only `nightVision` was genuinely consumed and was
 kept). New core data (`race-lore.jsonc`, trait `id`/`flavorLine`) follows ADR-006 (definitions,
-not logic). Drift on the generator is guarded by `Race.test.ts`. Not graph-checkable — a
-data/runtime decision, not a call-edge invariant.
+not logic). Drift on the generator is guarded by `Race.test.ts`. No static check decides it — a
+data/runtime decision, not a structural one.
 
 ---
 
@@ -895,8 +894,8 @@ blunt-as-trauma, fractures) needed the anatomy to actually vary per creature.
 set scalars (`naturalArmor` magnitude, `naturalWeapons` list). The single `naturalArmor` keeps
 species toughness distinct (the plan can't, being shared); a future per-creature part override can
 layer on top if the scalar feels coarse. `damage`/`baseDamage` weapon fields were consolidated to
-one canonical `damage`. Guarded by `bodyPlans.test.ts` + `fractures.test.ts`. Not graph-checkable —
-a data/runtime decision, not a call-edge invariant.
+one canonical `damage`. Guarded by `bodyPlans.test.ts` + `fractures.test.ts`. No static check decides it —
+a data/runtime decision, not a structural one.
 
 ### ADR-025 [GAME]: Graded Wind via `windchilled` + Per-Pawn Upwind Wind-Shadow
 
@@ -932,8 +931,8 @@ zone".
 500×500 map dense with mountain walls — large and rebuilt whenever wind direction changes (daily).
 Only pawns experience windchill and pawns are few (dozens), so an O(`WIND_SHADOW_LEN`) ray-march per
 pawn per tick is far cheaper and needs no invalidation. The thermal field stays precomputed (keyed on
-buildings, not the whole terrain). Guarded by `windchill.test.ts`. Not graph-checkable — a
-data/runtime decision, not a call-edge invariant.
+buildings, not the whole terrain). Guarded by `windchill.test.ts`. No static check decides it — a
+data/runtime decision, not a structural one.
 
 ### ADR-026 [GAME]: Incremental-Only Terrain — No Full-Map Rebuild on a Delta
 
@@ -971,10 +970,11 @@ neighbourhoods; a full O(map) traversal is permitted ONLY on a genuine new-map l
   holding a changed cell (`markTerrainChunksDirty`); every other visible chunk keeps its cached VBO. A
   full rebuild (no `dirtyTiles`) bumps the global `cacheVersion` as before.
 
-**Enforcement (graph-checkable).** A `restricted-callee` codegraph rule registered in
-`codegraph.config.json` flags any caller of `buildGameGrid` / `computeHiddenMaskState` other than
-`_fullRebuildTerrain`, so the per-delta path can never silently reintroduce a full rebuild — it's a
-`graph:check` gate like ADR-008. Also guarded at runtime by `hiddenMaskIncremental.test.ts`
+**Enforcement (deterministic).** A seam rule in `tools/audit/seams.jsonc` names every
+caller of `buildGameGrid` / `computeHiddenMaskState` other than `_fullRebuildTerrain`, so the
+per-delta path can never silently reintroduce a full rebuild. `pnpm audit:t0` runs it by scanning
+each symbol's body, so it reports the exact function a stray call sits in. Also guarded at runtime
+by `hiddenMaskIncremental.test.ts`
 (local mask update matches a fresh full BFS) and the building-diff path.
 
 ### ADR-027 [GAME]: Dense Glyph Overlays Render via the Cached Chunk Path — No Per-Frame Rebuild
@@ -1007,14 +1007,13 @@ routing them to `renderTerrainChunked` under their own chunk maps (`resourceChun
 - **No LOD drop.** Because the cached redraw is cheap at any zoom, resource glyphs draw at ALL zoom levels
   (the earlier `RESOURCE_OVERLAY_MIN_PX` cutoff was removed).
 
-**Enforcement (NOT graph-checkable — a perf counter instead).** This is a *runtime argument* property, not
-a call edge: `renderGrid` always contains both the cached and dynamic branches, and which runs depends on
-whether `chunkLayer`/`cacheVersion` is passed — a regression drops that argument without changing any graph
-edge. It is the same class as ADR-021's terrain cache (also `checkable: false`), so codegraph cannot gate
-it. Instead it's flagged by the **`resourceRebuilds=` counter in `perf.log`** (`renderer-core` tallies
+**Enforcement (no static check — a perf counter instead).** This is a *runtime argument* property, not
+an argument: `renderGrid` always contains both the cached and dynamic branches, and which runs depends on
+whether `chunkLayer`/`cacheVersion` is passed — a regression drops that argument without changing any call
+site's shape. It is the same class as ADR-021's terrain cache, so no static check gates it. Instead it's flagged by the **`resourceRebuilds=` counter in `perf.log`** (`renderer-core` tallies
 resource-chunk rebuilds/frame): ~0 on a steady pan when cached, but a nonzero value **every frame** the
 moment the overlay reverts to the per-frame rebuild path — the exact stutter, visible within one perf
-window. Registered in `codegraph.config.json` as `checkable: false` so `graph:check`'s `adr-coverage` rule
+window. `pnpm audit:t0` lists it among the ADRs no rule covers, so the gap stays visible
 accounts for it.
 
 ### ADR-028 [GAME]: Typed Trait Kinds + Condition Relationship Graph (TRAIT-SYSTEM-V2)
@@ -1133,10 +1132,10 @@ data edges.**
     age/ritual evolution walk (registry-tested for ordered chains). `evolutionTrigger` itself waits
     on the age system.
 
-**Enforcement (NOT graph-checkable).** A data-schema + payload-shape invariant, not a call-edge one:
+**Enforcement (no static check).** A data-schema + payload-shape invariant, not a call-site one:
 guarded by `traitRegistry.test.ts`, `conditionGraph.test.ts`/`conditionGraphData.test.ts`,
 `traitWounds.test.ts`, and `traitExpansion.test.ts` (combatMods/grafts/amputation/bleed-wound/aura).
-Registered in `codegraph.config.json` as `checkable: false`.
+No static check covers it; `pnpm audit:t0` lists it among the ADRs that carry no rule.
 
 ### ADR-029 [GAME]: Anatomy-Bound Natural Gear + Layered Subtractive Armour + Unified On-Hit Procs
 
@@ -1206,10 +1205,9 @@ limbmap `part.armor` (share→absolute intrinsic), `creature.naturalArmor` + the
 annotations. Bigger, but phased (coverage map + soak first). Natural gear finally has ONE model each:
 weapon = Item + `part.weapons`; armour = per-part additive layer.
 
-**Enforcement (NOT graph-checkable).** Data-schema + combat-runtime invariants, not call edges —
+**Enforcement (no static check).** Data-schema + combat-runtime invariants, not call sites —
 guarded by `partArmorReduction` unit tests (coverage, layering, full-stop, AP), `traitRegistry.test.ts`
-(armorMods/covers shape), and the proc tests. Registered in `codegraph.config.json` as
-`checkable: false`.
+(armorMods/covers shape), and the proc tests. No static check covers it.
 
 ### ADR-030 [GAME]: Desktop Wrapper — Electron over Tauri
 
@@ -1232,7 +1230,7 @@ webview, so nothing in the sim/render architecture changes with this choice.
 **Consequences.** Uniform V8 across all platforms (no three-engine perf spread to test against),
 Node available in the shell, at the cost of a larger bundle / +150–250 MB RAM (accepted — a desktop
 colony sim, not a web page). The ADR-020 rejection of *forking* Chromium still holds; using stock
-Electron does not. Not graph-checkable — a distribution/runtime decision, not a call-edge invariant.
+Electron does not. No static check decides it — a distribution/runtime decision, not a structural one.
 
 ### ADR-031 [GAME]: Precision-Routed Vitals + Per-Fight Natural-Hide Degradation
 
@@ -1274,7 +1272,7 @@ from the sent snapshot (`entityProjection.ts` ENTITY_DROP) — worker-only scrat
 
 **Consequences.** Signature tanks got their first `armorMods` (soft bellies on bear/owlbear/croc/
 quillback, hardened cephalothorax on the thornwood spider), so aimed attacks have authored weak
-points. Not graph-checkable — combat-runtime math + data-schema, not a call-edge invariant; guarded
+points. No static check decides it — combat-runtime math + data-schema, not a structural one; guarded
 by the combat suite (`combatSim`, `creatureDurability`, `entityProjection` tests).
 
 ### ADR-032 [GAME]: Stealth as a Detection Filter on Existing Mob Vision (not a new subsystem)
@@ -1370,7 +1368,7 @@ driver, the in-game `DebugMenu`, and the invariant suite. Late-game content beco
 seconds; the regression net stops going stale. Cost: a Node-target WASM path, one new dev-only route surface,
 and the discipline that headless stays in-thread and dev-only so it adds **zero** per-tick allocation or
 snapshot fields to the shipped browser/worker path (ENGINE-PERFORMANCE cross-check on any hot-path/boundary
-touch). Not graph-checkable — it's a dev-tooling/runtime-topology decision, not a call-edge invariant.
+touch). No static check decides it — it's a dev-tooling/runtime-topology decision, not a structural one.
 
 ---
 
@@ -1455,6 +1453,6 @@ Filling rides the hauling line as a `fill` job rather than becoming a new verb, 
 claim-gating and the UI all inherit it for free. Cost: every path that moves a craft input had to learn
 that an input can arrive as a tracked INSTANCE rather than a bulk count (fetch, staging, the supplied
 gate, input consumption), and a colony with no vessels genuinely cannot move a fluid — which is the
-point. Partly graph-checkable: the `withDrops` chokepoint is a forbidden-callee rule, registered in
-`codegraph.config.json`.
+point. Partly deterministic: the `withDrops` chokepoint is a seam rule in
+`tools/audit/seams.jsonc`, checked by `pnpm audit:t0`.
 

@@ -3,12 +3,11 @@
 -- Identity rules:
 --   symbol.key       line-independent: <file>::<Class.name>#<ordinal>
 --   symbol.content_hash  sha256 of the exact source slice
---   symbol.dep_hash      sha256 over the sorted content_hashes of 1-hop callees
 --   rule.rule_hash       sha256 over the rule's question + trigger + evidence contract
 --
--- A verdict is valid only for the (content_hash, dep_hash, rule_hash) triple it was
--- produced under. Any of the three changing re-opens the work item. That is the whole
--- invalidation model -- there is no "stale" flag to forget to set.
+-- A verdict is valid only for the (content_hash, rule_hash) pair it was produced under.
+-- Either changing re-opens the work item. That is the whole invalidation model -- there is
+-- no "stale" flag to forget to set.
 
 PRAGMA journal_mode = WAL;
 PRAGMA foreign_keys = ON;
@@ -29,8 +28,6 @@ CREATE TABLE IF NOT EXISTS symbol (
   class_name    TEXT,
   kind          TEXT NOT NULL,          -- function | method | component | store | accessor | markup | data-row
   exported      INTEGER NOT NULL DEFAULT 0,
-  tested        INTEGER NOT NULL DEFAULT 0,   -- a test file calls this directly
-  test_depth    INTEGER,                      -- hops to the nearest such symbol; NULL = no test reaches it
   start_line    INTEGER NOT NULL,
   end_line      INTEGER NOT NULL,
   start_byte    INTEGER NOT NULL,
@@ -38,7 +35,6 @@ CREATE TABLE IF NOT EXISTS symbol (
   loc           INTEGER NOT NULL,
   chars         INTEGER NOT NULL,
   content_hash  TEXT NOT NULL,
-  dep_hash      TEXT NOT NULL DEFAULT '',
   flags         TEXT NOT NULL DEFAULT '[]',   -- JSON array of computed facts
   signature     TEXT,
   first_seen    TEXT NOT NULL,
@@ -47,22 +43,6 @@ CREATE TABLE IF NOT EXISTS symbol (
 );
 CREATE INDEX IF NOT EXISTS symbol_file  ON symbol(file);
 CREATE INDEX IF NOT EXISTS symbol_alive ON symbol(alive);
-
--- 1-hop call edges between symbol keys (enrichment from codegraph; may be empty).
-CREATE TABLE IF NOT EXISTS symbol_edge (
-  caller TEXT NOT NULL,
-  callee TEXT NOT NULL,
-  PRIMARY KEY (caller, callee)
-);
-CREATE INDEX IF NOT EXISTS edge_callee ON symbol_edge(callee);
-
--- Distance from a named entry point, precomputed so triggers stay cheap.
-CREATE TABLE IF NOT EXISTS reach (
-  entry      TEXT NOT NULL,
-  symbol_key TEXT NOT NULL,
-  hops       INTEGER NOT NULL,
-  PRIMARY KEY (entry, symbol_key)
-);
 
 CREATE TABLE IF NOT EXISTS rule (
   id            TEXT PRIMARY KEY,
@@ -87,7 +67,6 @@ CREATE TABLE IF NOT EXISTS work (
   symbol_key   TEXT NOT NULL,
   rule_id      TEXT NOT NULL,
   content_hash TEXT NOT NULL,
-  dep_hash     TEXT NOT NULL,
   rule_hash    TEXT NOT NULL,
   state        TEXT NOT NULL DEFAULT 'pending',  -- pending | claimed | done
   attempts     INTEGER NOT NULL DEFAULT 0,
@@ -111,7 +90,6 @@ CREATE TABLE IF NOT EXISTS verdict (
   symbol_key    TEXT NOT NULL,
   rule_id       TEXT NOT NULL,
   content_hash  TEXT NOT NULL,
-  dep_hash      TEXT NOT NULL,
   rule_hash     TEXT NOT NULL,
   status        TEXT NOT NULL,           -- pass | fail | n/a | undecidable
   evidence      TEXT NOT NULL DEFAULT '[]',
@@ -127,7 +105,7 @@ CREATE TABLE IF NOT EXISTS verdict (
   created_at    TEXT NOT NULL
 );
 CREATE UNIQUE INDEX IF NOT EXISTS verdict_unique
-  ON verdict(symbol_key, rule_id, content_hash, dep_hash, rule_hash);
+  ON verdict(symbol_key, rule_id, content_hash, rule_hash);
 CREATE INDEX IF NOT EXISTS verdict_status ON verdict(status);
 CREATE INDEX IF NOT EXISTS verdict_rule   ON verdict(rule_id);
 

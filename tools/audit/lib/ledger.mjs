@@ -19,15 +19,7 @@ export function open(path = DB_PATH) {
   const db = new DatabaseSync(path);
   db.exec(readFileSync(join(TOOL_DIR, 'schema.sql'), 'utf8'));
   db.exec('PRAGMA busy_timeout = 10000');
-  migrate(db);
   return db;
-}
-
-// CREATE TABLE IF NOT EXISTS leaves an existing table alone, so a column added later never
-// appears in a ledger that already exists. SQLite has no ADD COLUMN IF NOT EXISTS.
-function migrate(db) {
-  const cols = new Set(db.prepare('PRAGMA table_info(symbol)').all().map((r) => r.name));
-  if (!cols.has('test_depth')) db.exec('ALTER TABLE symbol ADD COLUMN test_depth INTEGER');
 }
 
 // --- symbols -----------------------------------------------------------------
@@ -35,14 +27,14 @@ function migrate(db) {
 export function replaceSymbols(db, symbols) {
   const ts = nowIso();
   const up = db.prepare(`
-    INSERT INTO symbol (key,file,module,grp,layer,lang,name,class_name,kind,exported,tested,test_depth,
-                        start_line,end_line,start_byte,end_byte,loc,chars,content_hash,dep_hash,
+    INSERT INTO symbol (key,file,module,grp,layer,lang,name,class_name,kind,exported,
+                        start_line,end_line,start_byte,end_byte,loc,chars,content_hash,
                         flags,signature,first_seen,last_seen,alive)
-    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1)
     ON CONFLICT(key) DO UPDATE SET
       file=excluded.file, module=excluded.module, grp=excluded.grp, layer=excluded.layer,
       lang=excluded.lang, name=excluded.name, class_name=excluded.class_name, kind=excluded.kind,
-      exported=excluded.exported, tested=excluded.tested, test_depth=excluded.test_depth,
+      exported=excluded.exported,
       start_line=excluded.start_line, end_line=excluded.end_line,
       start_byte=excluded.start_byte, end_byte=excluded.end_byte,
       loc=excluded.loc, chars=excluded.chars, content_hash=excluded.content_hash,
@@ -63,8 +55,6 @@ export function replaceSymbols(db, symbols) {
         s.className ?? null,
         s.kind,
         s.exported ? 1 : 0,
-        s.tested ? 1 : 0,
-        s.testDepth ?? null,
         s.startLine,
         s.endLine,
         s.startByte,
@@ -72,51 +62,12 @@ export function replaceSymbols(db, symbols) {
         s.loc,
         s.chars,
         s.contentHash,
-        s.depHash ?? '',
         JSON.stringify(s.flags ?? []),
         s.signature ?? null,
         ts,
         ts
       );
     }
-    db.exec('COMMIT');
-  } catch (e) {
-    db.exec('ROLLBACK');
-    throw e;
-  }
-}
-
-export function setDepHashes(db, pairs) {
-  const up = db.prepare('UPDATE symbol SET dep_hash = ? WHERE key = ?');
-  db.exec('BEGIN IMMEDIATE');
-  try {
-    for (const [key, h] of pairs) up.run(h, key);
-    db.exec('COMMIT');
-  } catch (e) {
-    db.exec('ROLLBACK');
-    throw e;
-  }
-}
-
-export function replaceEdges(db, edges) {
-  db.exec('BEGIN IMMEDIATE');
-  try {
-    db.exec('DELETE FROM symbol_edge');
-    const ins = db.prepare('INSERT OR IGNORE INTO symbol_edge (caller,callee) VALUES (?,?)');
-    for (const [a, b] of edges) ins.run(a, b);
-    db.exec('COMMIT');
-  } catch (e) {
-    db.exec('ROLLBACK');
-    throw e;
-  }
-}
-
-export function replaceReach(db, rows) {
-  db.exec('BEGIN IMMEDIATE');
-  try {
-    db.exec('DELETE FROM reach');
-    const ins = db.prepare('INSERT OR REPLACE INTO reach (entry,symbol_key,hops) VALUES (?,?,?)');
-    for (const r of rows) ins.run(r.entry, r.key, r.hops);
     db.exec('COMMIT');
   } catch (e) {
     db.exec('ROLLBACK');
@@ -192,11 +143,11 @@ export function plan(db, matches) {
   try {
     db.exec('DELETE FROM work');
     const ins = db.prepare(`
-      INSERT INTO work (symbol_key, rule_id, content_hash, dep_hash, rule_hash, state)
-      VALUES (?,?,?,?,?, CASE WHEN EXISTS (
+      INSERT INTO work (symbol_key, rule_id, content_hash, rule_hash, state)
+      VALUES (?,?,?,?, CASE WHEN EXISTS (
         SELECT 1 FROM verdict v
          WHERE v.symbol_key = ? AND v.rule_id = ? AND v.content_hash = ?
-           AND v.dep_hash = ? AND v.rule_hash = ?
+           AND v.rule_hash = ?
       ) THEN 'done' ELSE 'pending' END)
     `);
     for (const m of matches) {
@@ -204,12 +155,10 @@ export function plan(db, matches) {
         m.symbol_key,
         m.rule_id,
         m.content_hash,
-        m.dep_hash,
         m.rule_hash,
         m.symbol_key,
         m.rule_id,
         m.content_hash,
-        m.dep_hash,
         m.rule_hash
       );
     }
@@ -322,12 +271,12 @@ export function submit(db, verdicts, { worker, runId, model }) {
   const rejected = [];
   const ins = db.prepare(`
     INSERT OR REPLACE INTO verdict
-      (symbol_key,rule_id,content_hash,dep_hash,rule_hash,status,evidence,na_clause,missing,
+      (symbol_key,rule_id,content_hash,rule_hash,status,evidence,na_clause,missing,
        summary,tier,model,worker,run_id,tokens,ms,created_at)
-    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`);
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`);
   const done = db.prepare(`UPDATE work SET state='done' WHERE symbol_key=? AND rule_id=?`);
   const unclaim = db.prepare('DELETE FROM claim WHERE symbol_key=? AND rule_id=?');
-  const cur = db.prepare(`SELECT content_hash, dep_hash, rule_hash FROM work
+  const cur = db.prepare(`SELECT content_hash, rule_hash FROM work
                            WHERE symbol_key=? AND rule_id=?`);
   db.exec('BEGIN IMMEDIATE');
   try {
@@ -336,7 +285,6 @@ export function submit(db, verdicts, { worker, runId, model }) {
       if (
         !w ||
         w.content_hash !== v.content_hash ||
-        w.dep_hash !== v.dep_hash ||
         w.rule_hash !== v.rule_hash
       ) {
         rejected.push({ ...v, reason: w ? 'hash moved since claim' : 'no such work item' });
@@ -346,7 +294,6 @@ export function submit(db, verdicts, { worker, runId, model }) {
         v.symbol_key,
         v.rule_id,
         v.content_hash,
-        v.dep_hash,
         v.rule_hash,
         v.status,
         JSON.stringify(v.evidence ?? []),
@@ -414,7 +361,7 @@ export function coverage(db) {
       `
     SELECT v.status, count(*) n FROM work w
       JOIN verdict v ON v.symbol_key=w.symbol_key AND v.rule_id=w.rule_id
-       AND v.content_hash=w.content_hash AND v.dep_hash=w.dep_hash AND v.rule_hash=w.rule_hash
+       AND v.content_hash=w.content_hash AND v.rule_hash=w.rule_hash
      GROUP BY v.status`
     )
     .all();
@@ -448,7 +395,7 @@ export function perRule(db) {
            sum(v.status='n/a') na
       FROM rule r LEFT JOIN work w ON w.rule_id = r.id
       LEFT JOIN verdict v ON v.symbol_key=w.symbol_key AND v.rule_id=w.rule_id
-       AND v.content_hash=w.content_hash AND v.dep_hash=w.dep_hash AND v.rule_hash=w.rule_hash
+       AND v.content_hash=w.content_hash AND v.rule_hash=w.rule_hash
      GROUP BY r.id ORDER BY r.id`
     )
     .all();

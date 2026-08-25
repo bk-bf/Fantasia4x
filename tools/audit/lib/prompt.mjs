@@ -1,9 +1,15 @@
 // The prompt is fixed. Same structure every batch, every night, every model: the symbol
-// slice, its immediate neighbours' signatures, the rules that triggered, and the excerpt
-// of the document each rule derives from. Nothing else -- no AGENTS.md, no repo wandering.
+// slice, the rules that triggered, and the excerpt of the document each rule derives from.
+// Nothing else -- no AGENTS.md.
 //
 // Identical inputs are what make verdicts comparable across runs, so swapping the model
 // is a measurable experiment rather than a reset.
+//
+// What the symbol's surroundings look like -- who calls it, whether a test covers it,
+// whether the tick loop reaches it -- is NOT supplied. The repository answers that, and the
+// agent reads the repository: it runs the searches itself and cites file:line for whatever
+// it claims. A precomputed map used to fill that in, and a map that has drifted from the
+// code says "nothing found" in exactly the voice of "nothing is wrong".
 
 import { readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
@@ -45,24 +51,31 @@ function authorityExcerpt(root, ref, cache) {
   return excerpt;
 }
 
-const neighbourLine = (s) =>
-  `  ${s.kind} ${s.class_name ? s.class_name + '.' : ''}${s.name}  ${(s.signature ?? '').slice(0, 120)}`;
-
-export function buildPrompt({ root, symbol, rules, callers, callees, slice }) {
+export function buildPrompt({ root, symbol, rules, slice }) {
   const cache = new Map();
   const lines = [];
 
   lines.push('# Audit one symbol against a fixed rule list');
   lines.push('');
   lines.push('You are auditing exactly ONE symbol. Answer only the rules listed below.');
-  lines.push('Do not read other files. Do not comment on anything the rules do not ask about.');
+  lines.push('Do not comment on anything the rules do not ask about.');
+  lines.push('');
+  lines.push('Some rules ask about code around this symbol — its callers, whether a test');
+  lines.push('covers it, whether the per-tick loop reaches it. Nothing here tells you that.');
+  lines.push('Search the repository and find out: Grep for the symbol name, read what turns');
+  lines.push('up, follow the callers upward as far as the rule needs. A search that returns');
+  lines.push('nothing is a result — say which pattern you ran. Never assume the answer from');
+  lines.push('the slice alone, and never guess: `undecidable` naming what you could not');
+  lines.push('establish beats a verdict you did not check.');
+  lines.push('');
+  lines.push('Every claim about a file other than this symbol carries `path:line`.');
   lines.push('');
   lines.push('## Symbol');
   lines.push('');
   lines.push(`- key: ${symbol.key}`);
   lines.push(`- file: ${symbol.file} lines ${symbol.start_line}-${symbol.end_line}`);
   lines.push(
-    `- kind: ${symbol.kind}  layer: ${symbol.layer ?? 'n/a'}  exported: ${!!symbol.exported}  covered by a test: ${!!symbol.tested}`
+    `- kind: ${symbol.kind}  layer: ${symbol.layer ?? 'n/a'}  exported: ${!!symbol.exported}`
   );
   lines.push('');
   lines.push(
@@ -71,22 +84,6 @@ export function buildPrompt({ root, symbol, rules, callers, callees, slice }) {
   lines.push(slice);
   lines.push('```');
   lines.push('');
-
-  if (callers.length || callees.length) {
-    lines.push('## Neighbours (signatures only — do not audit these)');
-    lines.push('');
-    if (callers.length) {
-      lines.push(`Callers (${callers.length}):`);
-      lines.push(...callers.slice(0, 25).map(neighbourLine));
-      if (callers.length > 25) lines.push(`  ...and ${callers.length - 25} more`);
-    }
-    if (callees.length) {
-      lines.push(`Callees (${callees.length}):`);
-      lines.push(...callees.slice(0, 25).map(neighbourLine));
-      if (callees.length > 25) lines.push(`  ...and ${callees.length - 25} more`);
-    }
-    lines.push('');
-  }
 
   lines.push('## Rules');
   lines.push('');
