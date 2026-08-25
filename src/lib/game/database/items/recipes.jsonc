@@ -1581,6 +1581,33 @@
   // `wooden_haft`; iron/steel need a SEASONED haft — carve+sand a batch (active), then soak the batch at
   // the passive soaking trough (the iron-age reward: load six, walk away). No soak → no robust iron tool.
   {
+    "id": "carve_emberwood_haft",
+    "discipline": "woodworking",
+    "station": "heartwood_joiner",
+    "inputs": { "emberwood_log": 1 },
+    "outputs": { "emberwood_haft": 4 },
+    "workAmount": 10,
+    "toolTierRequired": 3
+  },
+  {
+    "id": "carve_moonwood_haft",
+    "discipline": "woodworking",
+    "station": "heartwood_joiner",
+    "inputs": { "moonwood_log": 1 },
+    "outputs": { "moonwood_haft": 4 },
+    "workAmount": 10,
+    "toolTierRequired": 3
+  },
+  {
+    "id": "carve_heartwood_haft",
+    "discipline": "woodworking",
+    "station": "heartwood_joiner",
+    "inputs": { "heartwood_log": 1 },
+    "outputs": { "heartwood_haft": 4 },
+    "workAmount": 10,
+    "toolTierRequired": 3
+  },
+  {
     "id"              : "make_wooden_haft",
     "station"         : "sawtable",
     "inputs"          : {"branch": 1},
@@ -2495,7 +2522,7 @@
     "inputs": {"great_bone": 1, "cave_bear_pelt": 1, "category:thread": 3, "category:fastener": 8},
     "outputs": { "great_bone_helm": 1 },
     "workAmount": 26,
-    "toolTierRequired": 4
+    "toolTierRequired": 3
   },
   {
     "id": "make_great_bone_cuirass",
@@ -2504,7 +2531,7 @@
     "inputs": {"great_bone": 3, "cave_bear_pelt": 2, "direwolf_hackles": 1, "category:thread": 10, "category:fastener": 24},
     "outputs": { "great_bone_cuirass": 1 },
     "workAmount": 46,
-    "toolTierRequired": 4
+    "toolTierRequired": 3
   },
   {
     "id": "make_great_bone_vambraces",
@@ -2513,7 +2540,7 @@
     "inputs": {"great_bone": 1, "direwolf_hackles": 1, "category:leather": 1, "category:thread": 3},
     "outputs": { "great_bone_vambraces": 1 },
     "workAmount": 22,
-    "toolTierRequired": 4
+    "toolTierRequired": 3
   },
   {
     "id": "make_great_bone_greaves",
@@ -2522,7 +2549,7 @@
     "inputs": {"great_bone": 1, "cave_bear_pelt": 1, "category:leather": 1, "category:thread": 3},
     "outputs": { "great_bone_greaves": 1 },
     "workAmount": 24,
-    "toolTierRequired": 4
+    "toolTierRequired": 3
   },
   {
     "id": "make_great_bone_gauntlets",
@@ -2531,7 +2558,7 @@
     "inputs": {"great_bone": 1, "predator_claw": 2, "category:leather": 1, "category:thread": 2},
     "outputs": { "great_bone_gauntlets": 1 },
     "workAmount": 18,
-    "toolTierRequired": 4
+    "toolTierRequired": 3
   },
   {
     "id": "make_great_bone_sabatons",
@@ -2540,7 +2567,7 @@
     "inputs": {"great_bone": 1, "cave_bear_pelt": 1, "category:leather": 1, "category:thread": 2},
     "outputs": { "great_bone_sabatons": 1 },
     "workAmount": 20,
-    "toolTierRequired": 4
+    "toolTierRequired": 3
   },
   {
     "id": "make_great_tusk_impaler",
@@ -2549,16 +2576,16 @@
     "inputs": { "great_tusk": 1, "sanded_haft": 1, "category:thread": 3, "category:fastener": 6 },
     "outputs": { "great_tusk_impaler": 1 },
     "workAmount": 30,
-    "toolTierRequired": 4
+    "toolTierRequired": 3
   },
   {
     "id": "make_great_fang_javelin",
     "discipline": "bonecarving",
     "station": "runecarver_bench",
-    "inputs": { "great_fang": 1, "wooden_haft": 1, "category:thread": 2 },
+    "inputs": {"great_fang": 1, "wooden_haft": 1, "category:fastener": 5, "category:thread": 2},
     "outputs": { "great_fang_javelin": 1 },
     "workAmount": 18,
-    "toolTierRequired": 4
+    "toolTierRequired": 3
   },
   {
     "id": "make_great_fang_dirk",
@@ -2567,15 +2594,6 @@
     "inputs": { "great_fang": 1, "category:leather": 1, "category:thread": 1 },
     "outputs": { "great_fang_dirk": 1 },
     "workAmount": 14,
-    "toolTierRequired": 4
-  },
-  {
-    "id": "make_alpha_heart_rod",
-    "discipline": "alchemy",
-    "station": "runecarver_bench",
-    "inputs": { "alpha_heart": 1, "great_bone": 1, "direwolf_hackles": 2, "gem_dust": 1 },
-    "outputs": { "alpha_heart_rod": 1 },
-    "workAmount": 34,
     "toolTierRequired": 3
   },
   {
@@ -3619,7 +3637,7 @@
   {
     "id"              : "make_ember_staff",
     "station"         : "runecarver_bench",
-    "inputs"          : {"emberwood_log": 1, "cut_ruby": 1, "category:thread": 2},
+    "inputs": {"emberwood_haft": 1, "cut_ruby": 1, "category:fastener": 6, "category:thread": 2},
     "outputs"         : {"ember_staff": 1},
     "workAmount"      : 16,
     "toolTierRequired": 1,
@@ -3628,7 +3646,7 @@
   {
     "id"              : "make_frost_staff",
     "station"         : "runecarver_bench",
-    "inputs"          : {"moonwood_log": 1, "cut_sapphire": 1, "category:thread": 2},
+    "inputs": {"moonwood_haft": 1, "cut_sapphire": 1, "category:fastener": 6, "category:thread": 2},
     "outputs"         : {"frost_staff": 1},
     "workAmount"      : 16,
     "toolTierRequired": 1,
@@ -3637,7 +3655,7 @@
   {
     "id"              : "make_spark_staff",
     "station"         : "runecarver_bench",
-    "inputs"          : {"heartwood_log": 1, "cut_topaz": 1, "category:thread": 2},
+    "inputs": {"heartwood_haft": 1, "cut_topaz": 1, "category:fastener": 6, "category:thread": 2},
     "outputs"         : {"spark_staff": 1},
     "workAmount"      : 16,
     "toolTierRequired": 1,
@@ -3646,7 +3664,7 @@
   {
     "id"              : "make_pyre_staff",
     "station"         : "attunement_altar",
-    "inputs"          : {"emberwood_log": 1, "attuned_ruby": 1, "gold_bar": 1},
+    "inputs": {"emberwood_haft": 1, "attuned_ruby": 1, "gold_bar": 1, "category:fastener": 8},
     "outputs"         : {"pyre_staff": 1},
     "workAmount"      : 24,
     "toolTierRequired": 2,
@@ -3655,7 +3673,7 @@
   {
     "id"              : "make_rime_staff",
     "station"         : "attunement_altar",
-    "inputs"          : {"moonwood_log": 1, "attuned_sapphire": 1, "gold_bar": 1},
+    "inputs": {"moonwood_haft": 1, "attuned_sapphire": 1, "gold_bar": 1, "category:fastener": 8},
     "outputs"         : {"rime_staff": 1},
     "workAmount"      : 24,
     "toolTierRequired": 2,
@@ -3664,7 +3682,7 @@
   {
     "id"              : "make_tempest_staff",
     "station"         : "attunement_altar",
-    "inputs"          : {"heartwood_log": 1, "attuned_topaz": 1, "gold_bar": 1},
+    "inputs": {"heartwood_haft": 1, "attuned_topaz": 1, "gold_bar": 1, "category:fastener": 8},
     "outputs"         : {"tempest_staff": 1},
     "workAmount"      : 24,
     "toolTierRequired": 2,
@@ -4241,10 +4259,10 @@
     "id"              : "make_fang_reaver",
     "discipline"      : "bonecarving",
     "station"         : "runecarver_bench",
-    "inputs"          : {"great_fang": 1, "heartwood_log": 1, "category:thread": 7},
+    "inputs": {"great_fang": 1, "heartwood_haft": 1, "category:fastener": 10, "category:thread": 4},
     "outputs"         : {"fang_reaver": 1},
     "workAmount"      : 50,
-    "toolTierRequired": 4
+    "toolTierRequired": 3
   },
   {
     // §2h magical-beast gear: a cured dire-wolf pelt worked at the weaving frame → the Direwolf Warcloak
@@ -5349,7 +5367,7 @@
       "fang_charm": 1
     },
     "workAmount": 40,
-    "toolTierRequired": 4
+    "toolTierRequired": 3
   },
   {
     "id": "make_fang_arrow",
