@@ -110,10 +110,8 @@ pnpm graph:diff           # diff the graph against the saved baseline
 > (`node ../codegraph/bin/codegraph.mjs … Fantasia4x`) — it must be checked out as a
 > sibling of this repo. Override its location with `CODEGRAPH_DIR`.
 
-> **Audit/playtest/verify = drive the REAL sim → invoke the `headless` skill.** ("Audit" of the
-> CODE — the symbol ledger, `docs/issues/`, `docs/pr/` — is the `audit` skill instead; this one is
-> about whether a game system behaves.) Any "verify / audit /
-> playtest / end-to-end" claim must come from `HeadlessSession` (or `./dev.sh --headless` + `/api/sim/*`)
+> **Headless/playtest/verify = drive the REAL sim → invoke the `headless` skill.** Any
+> "verify / playtest / headless / end-to-end" claim must come from `HeadlessSession` (or `./dev.sh --headless` + `/api/sim/*`)
 > with real pawns over real ticks, and must state the mechanism + observed delta ("N ticks, stock X→Y").
 > Unit/service tests (`completeCraftOrder`, `canQueueCraft`, static reachability, `resolveHit` sampling)
 > are a **supplement, never a substitute** — they prove a function, not that the pawn-driven loop works.

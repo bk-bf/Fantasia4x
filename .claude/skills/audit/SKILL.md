@@ -1,6 +1,6 @@
 ---
 name: audit
-description: The Fantasia4x code-audit ledger, the issue board at docs/issues/, and the local review board at docs/pr/. Use when asked to run, resume, steer, extend or debug the audit; when reading or acting on a docs/issues/ entry; when reviewing a fix attempt or a fix/<slug> branch; when a nightly audit run is asked about, has stalled, or reported something; and BEFORE adding a rule, flipping `ready:`, or touching anything under tools/audit/.
+description: The Fantasia4x code-audit ledger, the issue board at docs/issues/, and the local review board at docs/pr/. Use when asked to run, resume, steer, extend or debug the audit; when reading or acting on a docs/issues/ entry; when reviewing a fix attempt or a fix/<slug> branch; when a nightly audit run is asked about, has stalled, or reported something; and BEFORE adding a rule, flipping `ready:`, or touching anything under tools/audit/. This is about the CODE; for auditing whether a GAME SYSTEM behaves (crafting chains, jobs, needs, combat), use the `headless` skill.
 ---
 
 # The audit loop
