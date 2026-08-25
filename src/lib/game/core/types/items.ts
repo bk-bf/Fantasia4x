@@ -395,6 +395,11 @@ export interface Item {
   // Food properties
   nutrition?: number;
 
+  /** Thirst points one LITRE of this fluid relieves — what makes it a DRINK. Absent/0 means the fluid
+   *  is not drinkable at all (molten bronze, tanning brine, a weapon coating). Water is the baseline;
+   *  a strong spirit is worth barely any of it, because drinking it is not how you rehydrate. */
+  hydration?: number;
+
   /** Alcohol: the one-shot mood lift granted when this drink is consumed; its presence marks the
    *  item as alcoholic (also applies a short `intoxicated` condition). 0/absent = sober. */
   intoxication?: number;

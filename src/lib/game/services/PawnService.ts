@@ -10,7 +10,7 @@ import type {
   ConditionStage
 } from '../core/types';
 import { consumeFromStockpiles } from '../core/GameState';
-import { takeOut, carriedWaterVessel } from '../core/vessels';
+import { takeOut, carriedDrinkVessel, hydrationOf } from '../core/vessels';
 import { pawnById } from '../core/pawnIndex';
 import { categorizeStats, getStatDescription } from '../entities/Pawns';
 import { pawnStatService } from './PawnStatService';
@@ -157,7 +157,6 @@ const RELAXATION_DECREASE_PER_SECOND = needNum('relaxation', 'decayRate', 0.13);
 const COMFORT_DECREASE_PER_SECOND = needNum('comfort', 'decayRate', 0.1);
 // §D auto-drink: thirst threshold to drink, and relief per unit of water.
 const AUTO_DRINK_THIRST = needNum('thirst', 'autoSatisfy', 70);
-const WATER_THIRST_RELIEF = needNum('thirst', 'relief', 65);
 // §D auto-wash: hygiene threshold to wash at water, and the cleanliness restored.
 const AUTO_WASH_HYGIENE = needNum('hygiene', 'autoSatisfy', 75);
 const WASH_HYGIENE_RELIEF = needNum('hygiene', 'relief', 70);
@@ -604,9 +603,12 @@ export class PawnServiceImpl implements PawnService {
 
   /**
    * §D auto-drink. A pawn whose thirst passes AUTO_DRINK_THIRST drinks:
-   *   1. from a vessel it is CARRYING (a waterskin on the belt — the reason to carry one), else
+   *   1. from a vessel it is CARRYING (a skin on the belt — the reason to carry one), else
    *   2. raw water if standing next to a river/lake tile (free, but a small hygiene hit), else
    *   3. nothing (thirst keeps climbing → dehydration condition).
+   *
+   * What it relieves is the drink's own `hydration` per litre, not a flat constant — so water is worth
+   * more than ale and far more than brandy, and a pawn that finds nothing gets nothing.
    * Mirrors auto-eat: a lightweight relief pass so thirst isn't a dead-end need.
    *
    * CONTAINERS-AND-FLUIDS §2 removed the step that used to sit at the top of that list — sipping the
@@ -620,16 +622,17 @@ export class PawnServiceImpl implements PawnService {
       if (pawn.isAlive === false) continue;
       if ((pawn.needs.thirst ?? 0) < AUTO_DRINK_THIRST) continue;
 
-      // 1. the pawn's own carried water
-      const skin = carriedWaterVessel(pawn);
+      // 1. the pawn's own carried drink — whatever it is, worth what a litre of it is worth
+      const skin = carriedDrinkVessel(pawn);
       if (skin) {
-        takeOut(skin, 'water', 1);
-        state = this.adjustThirst(pawn.id, -WATER_THIRST_RELIEF, 0, state);
+        const litres = Math.min(1, skin.litres);
+        takeOut(skin.inst, skin.itemId, litres);
+        state = this.adjustThirst(pawn.id, -litres * hydrationOf(skin.itemId), 0, state);
         continue;
       }
-      // 2. raw water from an adjacent river/lake tile
+      // 2. raw water from an adjacent river/lake tile — free, but untreated
       if (pawn.position && this.isNextToWater(pawn.position.x, pawn.position.y, state)) {
-        state = this.adjustThirst(pawn.id, -WATER_THIRST_RELIEF, 6, state); // +6 hygiene (untreated)
+        state = this.adjustThirst(pawn.id, -hydrationOf('water'), 6, state); // +6 hygiene (untreated)
       }
     }
     return state;

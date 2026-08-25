@@ -2260,7 +2260,7 @@
     "name": "Water",
     "type": "fluid",
     "category": "drink",
-    "hydration": 35,
+    "hydration": 65,
     "maxDurability": 100,
     "deteriorationRate": 0,
     "poisonChance": 0,
@@ -17442,6 +17442,7 @@
     "amount"           : 0,
     "weightKg"         : 1,
     "volumeL"          : 1,
+    "hydration"        : 45,
     "nutrition"        : 10,
     "intoxication"     : 8,
     "maxDurability"    : 200,
@@ -17459,6 +17460,7 @@
     "amount": 0,
     "weightKg": 0.8,
     "volumeL": 1,
+    "hydration": 60,
     "nutrition": 6,
     "poisonChance": 0.01,
     "maxDurability": 80,
@@ -17475,6 +17477,7 @@
     "amount"           : 0,
     "weightKg"         : 0.9,
     "volumeL"          : 1,
+    "hydration"        : 28,
     "nutrition"        : 8,
     "intoxication"     : 12,
     "maxDurability"    : 300,
@@ -17488,6 +17491,7 @@
     "name": "Birch Sap Wine", "type": "fluid", "category": "drink",
     "description": "Spring sap left in a covered crock until it works on its own. Thin, faintly sweet and barely strong enough to notice, which is all anyone expected of it.",
     "color": "#D9CFA0", "amount": 0, "weightKg": 1.0, "volumeL": 1.0, "tier": 0, "nutrition": 8,
+    "hydration": 45,
     "maxDurability": 120, "deteriorationRate": 0.006
   },
   {
@@ -17495,6 +17499,7 @@
     "name": "Mead", "type": "fluid", "category": "drink",
     "description": "Honey and water left to work through a whole summer. Sweet, heavy and strong enough that it was poured for oaths rather than for thirst.",
     "color": "#E0A93A", "amount": 0, "weightKg": 1.0, "volumeL": 1.0, "tier": 1, "nutrition": 16,
+    "hydration": 35,
     "maxDurability": 200, "deteriorationRate": 0.004, "researchRequired": "fermentation"
   },
   {
@@ -17502,6 +17507,7 @@
     "name": "Barley Beer", "type": "fluid", "category": "drink",
     "description": "Malted grain mashed, soured and drunk cloudy within the week. Thick enough to be counted as food by the people drinking it, and safer than the well.",
     "color": "#B87A2E", "amount": 0, "weightKg": 1.0, "volumeL": 1.0, "tier": 1, "nutrition": 14,
+    "hydration": 45,
     "maxDurability": 90, "deteriorationRate": 0.012, "researchRequired": "fermentation"
   },
   {
@@ -17509,6 +17515,7 @@
     "name": "Grape Wine", "type": "fluid", "category": "drink",
     "description": "Pressed, left on its skins, then racked off the lees into a bunged cask. It travels, it keeps, and it is the first thing this colony makes that another kingdom will want.",
     "color": "#6E2038", "amount": 0, "weightKg": 1.0, "volumeL": 1.0, "tier": 1, "nutrition": 12,
+    "hydration": 28,
     "maxDurability": 300, "deteriorationRate": 0.003, "researchRequired": "fermentation"
   },
   {
@@ -17516,6 +17523,7 @@
     "name": "Hopped Ale", "type": "fluid", "category": "drink",
     "description": "The same mash, bittered with hops that keep it drinkable for months instead of days. The invention that let beer be brewed somewhere other than where it was drunk.",
     "color": "#C08A34", "amount": 0, "weightKg": 1.0, "volumeL": 1.0, "tier": 2, "nutrition": 15,
+    "hydration": 42,
     "maxDurability": 260, "deteriorationRate": 0.004, "researchRequired": "distillation"
   },
   {
@@ -17523,6 +17531,7 @@
     "name": "Apple Brandy", "type": "fluid", "category": "drink",
     "description": "Cider run through the still twice and rested in oak until it stops biting. Small, strong and worth more by weight than anything else the orchard produces.",
     "color": "#B8712A", "amount": 0, "weightKg": 0.9, "volumeL": 1.0, "tier": 2, "nutrition": 20,
+    "hydration": 6,
     "maxDurability": 400, "deteriorationRate": 0.002, "researchRequired": "distillation"
   },
   {
@@ -17530,6 +17539,7 @@
     "name": "Grain Whisky", "type": "fluid", "category": "drink",
     "description": "Malt dried over peat smoke, distilled, and left in a charred cask for years while it turns from raw spirit into something worth waiting for.",
     "color": "#9A5B1E", "amount": 0, "weightKg": 0.9, "volumeL": 1.0, "tier": 3, "nutrition": 22,
+    "hydration": 5,
     "maxDurability": 600, "deteriorationRate": 0.001, "researchRequired": "master_alchemy"
   },
   {
@@ -17537,6 +17547,7 @@
     "name": "Fortified Wine", "type": "fluid", "category": "drink",
     "description": "Wine arrested mid-ferment with a measure of spirit, leaving it sweet and strong enough to cross an ocean without turning. Made to be shipped, not to be drunk at home.",
     "color": "#7A2A2A", "amount": 0, "weightKg": 1.0, "volumeL": 1.0, "tier": 3, "nutrition": 24,
+    "hydration": 15,
     "maxDurability": 700, "deteriorationRate": 0.001, "researchRequired": "master_alchemy"
   },
   {
@@ -17550,6 +17561,7 @@
     "amount"           : 0,
     "weightKg"         : 0.9,
     "volumeL"          : 1,
+    "hydration"        : 42,
     "nutrition"        : 8,
     "intoxication"     : 9,
     "maxDurability"    : 300,
