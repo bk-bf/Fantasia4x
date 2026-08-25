@@ -117,6 +117,7 @@ export interface BuildingService {
   // makers_bench 1 → …); a higher tier supersedes lower ones and crafts their recipes faster.
   stationTier(buildingType: string): number | undefined;
   butcheryTier(buildingType: string): number | undefined;
+  cookingTier(buildingType: string): number | undefined;
   craftingBonusOf(buildingType: string): number;
   butcheryYieldBonusOf(buildingType: string): number;
   stationFulfills(haveType: string, recipeStation: string): boolean;
@@ -466,6 +467,15 @@ export class BuildingServiceImpl implements BuildingService {
     return this.getBuildingById(buildingType)?.effects?.butcheryTier;
   }
 
+  /** Cooking tier of a station (effects.cookingTier); undefined for non-cooking stations. The hearth
+   *  ladder — campfire 0 → stone hearth 1 → brick hearth 2 → brick stove 3 → iron stove 4 → steel
+   *  range 5 — is its own family, like butchery, so a better stove never stands in for a forge. A
+   *  higher tier COOKS THE SAME DISHES faster and on less fuel; it unlocks nothing, because a colony
+   *  that could make pottage on day one should not lose the recipe when it builds a stove. */
+  cookingTier(buildingType: string): number | undefined {
+    return this.getBuildingById(buildingType)?.effects?.cookingTier;
+  }
+
   /** Crafting speed bonus of a station (effects.craftingBonus, e.g. 0.2 = +20%); 0 if none. */
   craftingBonusOf(buildingType: string): number {
     return this.getBuildingById(buildingType)?.effects?.craftingBonus ?? 0;
@@ -480,7 +490,12 @@ export class BuildingServiceImpl implements BuildingService {
   /** Overall rank of a station within whichever family it belongs to (generic crafting tier or the
    *  separate butchery tier) — drives "prefer the best station" in bestCraftStation. */
   private stationRank(buildingType: string): number {
-    return this.stationTier(buildingType) ?? this.butcheryTier(buildingType) ?? -1;
+    return (
+      this.stationTier(buildingType) ??
+      this.butcheryTier(buildingType) ??
+      this.cookingTier(buildingType) ??
+      -1
+    );
   }
 
   /**
@@ -497,7 +512,10 @@ export class BuildingServiceImpl implements BuildingService {
     if (needT !== undefined && haveT !== undefined && haveT >= needT) return true;
     const needB = this.butcheryTier(recipeStation);
     const haveB = this.butcheryTier(haveType);
-    return needB !== undefined && haveB !== undefined && haveB >= needB;
+    if (needB !== undefined && haveB !== undefined && haveB >= needB) return true;
+    const needC = this.cookingTier(recipeStation);
+    const haveC = this.cookingTier(haveType);
+    return needC !== undefined && haveC !== undefined && haveC >= needC;
   }
 
   /** Best complete building that can craft a recipe for `recipeStation` — highest rank wins (a shared

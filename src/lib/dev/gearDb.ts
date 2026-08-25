@@ -531,7 +531,8 @@ function ageOf(
   if (/^(throwing|sling|self|padded|linen|tallow|wattle|wicker)/.test(id)) return 'Primitive';
   return AGE_BY_TIER[Math.min(Math.max(tier, 0), 4)];
 }
-const AGE_BY_TIER: Age[] = ['Primitive', 'Bronze', 'Iron', 'Steel', 'Runed'];
+/** Item tier (0–4) → age. The one mapping; the item tree reads it too rather than keeping a second. */
+export const AGE_BY_TIER: Age[] = ['Primitive', 'Bronze', 'Iron', 'Steel', 'Runed'];
 
 function kindOf(item: any): GearKind | null {
   if (item.category === 'natural_weapon') return null;

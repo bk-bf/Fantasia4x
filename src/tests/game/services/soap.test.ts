@@ -12,9 +12,13 @@ async function run(soap: number) {
   const s = new HeadlessSession();
   await s.start(
     buildScenario({
-      seed: 44, map: { w: 16, h: 16 }, workReady: true, researchMaxTier: 9, toolTier: 3,
+      seed: 44,
+      map: { w: 16, h: 16 },
+      workReady: true,
+      researchMaxTier: 9,
+      toolTier: 3,
       pawns: [{ count: 3, skillLevel: 15 }],
-      needsDisabled: ['hunger', 'fatigue', 'thirst'],   // hygiene LEFT ON
+      needsDisabled: ['hunger', 'fatigue', 'thirst'], // hygiene LEFT ON
       buildings: [{ id: 'craft_spot' }, { id: 'well' }],
       items: soap ? { soap } : {},
       seedEntities: false
@@ -50,11 +54,16 @@ describe('soap', () => {
     const s2 = new HeadlessSession();
     await s2.start(
       buildScenario({
-        seed: 44, map: { w: 12, h: 12 }, workReady: true, researchMaxTier: 9, toolTier: 3,
+        seed: 44,
+        map: { w: 12, h: 12 },
+        workReady: true,
+        researchMaxTier: 9,
+        toolTier: 3,
         pawns: [{ count: 2, skillLevel: 15 }],
         needsDisabled: ['hunger', 'fatigue', 'thirst'],
         buildings: [{ id: 'craft_spot' }],
-        items: {}, seedEntities: false
+        items: {},
+        seedEntities: false
       })
     );
     s2.tick(50);
@@ -66,7 +75,9 @@ describe('soap', () => {
     const [a1, b1] = s2.getState().pawns as Pawn[];
     const aDelta = (a1.needs?.hygiene ?? 0) - a0;
     const bDelta = (b1.needs?.hygiene ?? 0) - b0;
-    console.log(`[SOAP] over 6000 ticks — clean pawn grime +${aDelta.toFixed(1)}, untreated pawn +${bDelta.toFixed(1)}`);
+    console.log(
+      `[SOAP] over 6000 ticks — clean pawn grime +${aDelta.toFixed(1)}, untreated pawn +${bDelta.toFixed(1)}`
+    );
     expect(aDelta, 'a clean pawn accrues no grime').toBeCloseTo(0, 1);
     expect(bDelta, 'an untreated one does').toBeGreaterThan(5);
   }, 300000);
