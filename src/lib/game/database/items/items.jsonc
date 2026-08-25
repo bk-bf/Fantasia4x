@@ -1865,9 +1865,9 @@
     "description": "The red metal run to liquid, skinned over with dark oxide that a stir breaks open. Pour it into a mould or let the hearth go cold and take it back as a bar.",
     "color": "#C87533",
     "amount": 0,
-    "weightKg": 1,
+    "weightKg": 8.9286,
     "volumeL": 0.112,
-    "value": 4,
+    "value": 35.7143,
     "heldBy": ["fireclay", "runed"]
   },
   {
@@ -1881,9 +1881,9 @@
     "description": "Runs at a heat that barely reddens the hearth, and pours thin and quick as water. Pour it into a mould or let the hearth go cold and take it back as a bar.",
     "color": "#BFC4C9",
     "amount": 0,
-    "weightKg": 1,
+    "weightKg": 7.2993,
     "volumeL": 0.137,
-    "value": 4,
+    "value": 29.1971,
     "heldBy": ["fireclay", "runed"]
   },
   {
@@ -1897,9 +1897,9 @@
     "description": "Copper and tin gone into one another for good. It fills a mould sharper than either alone, which is the whole reason for the alloy. Pour it into a mould or let the hearth go cold and take it back as a bar.",
     "color": "#B08D4F",
     "amount": 0,
-    "weightKg": 1,
+    "weightKg": 8.7719,
     "volumeL": 0.114,
-    "value": 4,
+    "value": 35.0877,
     "heldBy": ["fireclay", "runed"]
   },
   {
@@ -1913,9 +1913,9 @@
     "description": "Sullen, heavy and slow to move, giving off a fume nobody should be standing over. Pour it into a mould or let the hearth go cold and take it back as a bar.",
     "color": "#8C8F99",
     "amount": 0,
-    "weightKg": 1,
+    "weightKg": 11.3636,
     "volumeL": 0.088,
-    "value": 4,
+    "value": 45.4545,
     "heldBy": ["fireclay", "runed"]
   },
   {
@@ -1929,9 +1929,9 @@
     "description": "Bright to the point of hurting when the dross is drawn back off it. Pour it into a mould or let the hearth go cold and take it back as a bar.",
     "color": "#D6D9DE",
     "amount": 0,
-    "weightKg": 1,
+    "weightKg": 10.5263,
     "volumeL": 0.095,
-    "value": 4,
+    "value": 42.1053,
     "heldBy": ["fireclay", "runed"]
   },
   {
@@ -1945,9 +1945,9 @@
     "description": "So heavy it seems to lie lower in the crucible than it should. Nothing dulls it, not even the fire. Pour it into a mould or let the hearth go cold and take it back as a bar.",
     "color": "#E8C34A",
     "amount": 0,
-    "weightKg": 1,
+    "weightKg": 19.2308,
     "volumeL": 0.052,
-    "value": 4,
+    "value": 76.9231,
     "heldBy": ["fireclay", "runed"]
   },
   {
@@ -3571,7 +3571,7 @@
     "description"      : "Dark, near-black blood drawn hot from a pack-leader's heart. The alchemists say it still runs when the beast is long dead.",
     "color"            : "#5a1020",
     "amount"           : 0,
-    "weightKg"         : 0.5,
+    "weightKg"         : 1.25,
     "volumeL"          : 0.4
   },
   {
@@ -3585,7 +3585,7 @@
     "description"      : "A viscous amber humour from an owlbear's gut. Foul, potent, and prized by anyone brewing something that hardens flesh.",
     "color"            : "#b08a2a",
     "amount"           : 0,
-    "weightKg"         : 0.4,
+    "weightKg"         : 1.3333,
     "volumeL"          : 0.3
   },
   // §2h(ii) TRAIT-ORGANS — a rare boss/elite drop, eaten raw for a permanent gift with a price (a Faustian
@@ -3664,7 +3664,7 @@
     "description"      : "A hot, coppery draught that sets the pulse hammering. For a while fear falls away and the arm swings faster and harder.",
     "color"            : "#8a1818",
     "amount"           : 0,
-    "weightKg"         : 0.3,
+    "weightKg"         : 1,
     "volumeL"          : 0.3,
     "grantsConditions" : ["adrenal"],
     "conditionDurationTurns": 1200
@@ -3680,7 +3680,7 @@
     "description"      : "A thick amber tonic that settles heavy in the gut. For a while the flesh holds firm and the body tires slow.",
     "color"            : "#b0801a",
     "amount"           : 0,
-    "weightKg"         : 0.3,
+    "weightKg"         : 1,
     "volumeL"          : 0.3,
     "grantsConditions" : ["fortitude"],
     "conditionDurationTurns": 1200
@@ -3698,7 +3698,7 @@
     "description"      : "A warm, iron-rich cordial pressed from bloodroot. It puts the colour back in a grey face and steadies a failing body.",
     "color"            : "#a8202a",
     "amount"           : 0,
-    "weightKg"         : 0.3,
+    "weightKg"         : 1,
     "volumeL"          : 0.3,
     "grantsConditions" : ["vigor"],
     "conditionDurationTurns": 1200
@@ -3714,7 +3714,7 @@
     "description"      : "A cool infusion of dreamleaf that quiets the racing mind. The knots in a person loosen and the breath comes slow.",
     "color"            : "#8fb0a0",
     "amount"           : 0,
-    "weightKg"         : 0.3,
+    "weightKg"         : 1,
     "volumeL"          : 0.3,
     "grantsConditions" : ["soothed"],
     "conditionDurationTurns": 1200
@@ -3730,7 +3730,7 @@
     "description"      : "A luminous blue tincture drawn from glowcaps. The dark thins and the edges of things come clear where there is no light to see by.",
     "color"            : "#4fa8c0",
     "amount"           : 0,
-    "weightKg"         : 0.3,
+    "weightKg"         : 1,
     "volumeL"          : 0.3,
     "grantsConditions" : ["moonlit"],
     "conditionDurationTurns": 1200
@@ -3746,7 +3746,7 @@
     "description"      : "A distillation of madness-spore, thick and grey. It sets the blood roaring and the reason sleeping — for a while there is only the fight.",
     "color"            : "#7a7566",
     "amount"           : 0,
-    "weightKg"         : 0.3,
+    "weightKg"         : 1,
     "volumeL"          : 0.3,
     "grantsConditions" : ["berserk"],
     "conditionDurationTurns": 600
@@ -3764,7 +3764,7 @@
     "description"        : "A thick black paste of rendered venom-sac and nightshade, brushed along an edge. It clings to the steel and rides the next cut into the wound.",
     "color"              : "#2a2410",
     "amount"             : 0,
-    "weightKg"           : 0.2,
+    "weightKg"           : 1,
     "volumeL"            : 0.2,
     "coatingEffect"      : {"condition": "envenomed", "chance": 0.6, "durationHours": 2.5, "resist": "poison_resistance"},
     "coatingDurationHours": 6
@@ -3781,7 +3781,7 @@
     "description"      : "Acrid green humour wrung from a bog ooze, still faintly hissing. It eats at leather and skin alike, so it is kept in a sealed clay pot.",
     "color"            : "#6b7a2a",
     "amount"           : 0,
-    "weightKg"         : 0.3,
+    "weightKg"         : 1.5,
     "volumeL"          : 0.2,
     "heldBy": ["clay", "glass", "porcelain", "fireclay", "runed"]
   },
@@ -3796,7 +3796,7 @@
     "description"        : "Bog bile cooked down with nightshade into a clinging grey slime. Smeared on an edge, it turns the smallest cut foul and roils the stomach.",
     "color"              : "#4a5230",
     "amount"             : 0,
-    "weightKg"           : 0.2,
+    "weightKg"           : 1,
     "volumeL"            : 0.2,
     "heldBy": ["clay", "glass", "porcelain", "fireclay", "runed"],
     "coatingEffect"      : {"condition": "nausea", "chance": 0.6, "durationHours": 2.0, "resist": "poison_resistance"},
@@ -3814,7 +3814,7 @@
     "description"      : "A pack-heart boiled raw with bloodroot. It floods the veins with borrowed fury, and takes its own cut of the drinker in return.",
     "color"            : "#7a2a3a",
     "amount"           : 0,
-    "weightKg"         : 0.3,
+    "weightKg"         : 1,
     "volumeL"          : 0.3,
     "traitGamble"      : {"tier": 1, "traitPool": ["feral-adrenaline"], "flawSeverity": "harsh"}
   },
@@ -3830,7 +3830,7 @@
     "description"      : "The alpha-heart humour drawn off clean and cut with spirit. The fury runs truer now, though the body still pays.",
     "color"            : "#7a2a3a",
     "amount"           : 0,
-    "weightKg"         : 0.3,
+    "weightKg"         : 1,
     "volumeL"          : 0.3,
     "traitGamble"      : {"tier": 2, "traitPool": ["feral-adrenaline", "pack-fury"], "flawSeverity": "harsh"}
   },
@@ -3846,7 +3846,7 @@
     "description"      : "A distilled heart-essence, patient work of the apothecary. At its best it wakes the whole beast in a person, and asks little back.",
     "color"            : "#7a2a3a",
     "amount"           : 0,
-    "weightKg"         : 0.3,
+    "weightKg"         : 1,
     "volumeL"          : 0.3,
     "traitGamble"      : {"tier": 3, "traitPool": ["feral-adrenaline", "pack-fury", "bestial-might"], "flawSeverity": "mild"}
   },
@@ -3862,7 +3862,7 @@
     "description"      : "Ground hackles simmered in tallow. The skin thickens and dulls to pain, but the change comes rough.",
     "color"            : "#7a2a3a",
     "amount"           : 0,
-    "weightKg"         : 0.3,
+    "weightKg"         : 1,
     "volumeL"          : 0.3,
     "traitGamble"      : {"tier": 1, "traitPool": ["thick-hide"], "flawSeverity": "harsh"}
   },
@@ -3878,7 +3878,7 @@
     "description"      : "The hackle-humour rendered and refined. The hide sets harder, sometimes scaling over like a beast's own plate.",
     "color"            : "#7a2a3a",
     "amount"           : 0,
-    "weightKg"         : 0.3,
+    "weightKg"         : 1,
     "volumeL"          : 0.3,
     "traitGamble"      : {"tier": 2, "traitPool": ["thick-hide", "scaled-hide"], "flawSeverity": "harsh"}
   },
@@ -3894,7 +3894,7 @@
     "description"      : "A perfected toughening draught. At its finest the flesh turns near to iron, and the drinker walks away whole.",
     "color"            : "#7a2a3a",
     "amount"           : 0,
-    "weightKg"         : 0.3,
+    "weightKg"         : 1,
     "volumeL"          : 0.3,
     "traitGamble"      : {"tier": 3, "traitPool": ["thick-hide", "scaled-hide", "iron-skin"], "flawSeverity": "mild"}
   },
@@ -3910,7 +3910,7 @@
     "description"      : "Scent-glands mashed with nightshade. The urge to finish the kill sharpens, and something human dulls.",
     "color"            : "#7a2a3a",
     "amount"           : 0,
-    "weightKg"         : 0.3,
+    "weightKg"         : 1,
     "volumeL"          : 0.3,
     "traitGamble"      : {"tier": 1, "traitPool": ["killer-instinct"], "flawSeverity": "harsh"}
   },
@@ -3926,7 +3926,7 @@
     "description"      : "The glandular draught drawn off cleaner. The hands learn to tear as much as strike.",
     "color"            : "#7a2a3a",
     "amount"           : 0,
-    "weightKg"         : 0.3,
+    "weightKg"         : 1,
     "volumeL"          : 0.3,
     "traitGamble"      : {"tier": 2, "traitPool": ["killer-instinct", "rending-claws"], "flawSeverity": "harsh"}
   },
@@ -3942,7 +3942,7 @@
     "description"      : "A refined predator-essence. At its peak it lends the whole hunting beast, its teeth and its patience both.",
     "color"            : "#7a2a3a",
     "amount"           : 0,
-    "weightKg"         : 0.3,
+    "weightKg"         : 1,
     "volumeL"          : 0.3,
     "traitGamble"      : {"tier": 3, "traitPool": ["killer-instinct", "rending-claws", "feeding-fangs"], "flawSeverity": "mild"}
   },
@@ -3958,7 +3958,7 @@
     "description"      : "A third eye steeped in glowcap. The senses widen and swim, and the head aches for it.",
     "color"            : "#7a2a3a",
     "amount"           : 0,
-    "weightKg"         : 0.3,
+    "weightKg"         : 1,
     "volumeL"          : 0.3,
     "traitGamble"      : {"tier": 1, "traitPool": ["keen-senses"], "flawSeverity": "harsh"}
   },
@@ -3974,7 +3974,7 @@
     "description"      : "The pineal humour refined. The dark thins and the ears reach further, sometimes past what the mind wants to hear.",
     "color"            : "#7a2a3a",
     "amount"           : 0,
-    "weightKg"         : 0.3,
+    "weightKg"         : 1,
     "volumeL"          : 0.3,
     "traitGamble"      : {"tier": 2, "traitPool": ["keen-senses", "murk-eyes"], "flawSeverity": "harsh"}
   },
@@ -3990,7 +3990,7 @@
     "description"      : "A clarified sight-essence. At its clearest nothing moves unseen near the drinker, and the price is slight.",
     "color"            : "#7a2a3a",
     "amount"           : 0,
-    "weightKg"         : 0.3,
+    "weightKg"         : 1,
     "volumeL"          : 0.3,
     "traitGamble"      : {"tier": 3, "traitPool": ["keen-senses", "murk-eyes", "ambush-stillness"], "flawSeverity": "mild"}
   },
@@ -4006,7 +4006,7 @@
     "description"      : "A more potent, longer-lasting preparation of the potion of might, drawn off at the lab with finer reagents.",
     "color"            : "#7E57C2",
     "amount"           : 0,
-    "weightKg"         : 0.3,
+    "weightKg"         : 1,
     "volumeL"          : 0.3,
     "grantsConditions"  : ["might"],
     "conditionDurationTurns": 1920
@@ -4023,7 +4023,7 @@
     "description"      : "A masterfully refined, powerful preparation of the potion of might, drawn off at the apothecary with finer reagents.",
     "color"            : "#7E57C2",
     "amount"           : 0,
-    "weightKg"         : 0.3,
+    "weightKg"         : 1,
     "volumeL"          : 0.3,
     "grantsConditions"  : ["might"],
     "conditionDurationTurns": 3000
@@ -4040,7 +4040,7 @@
     "description"      : "A more potent, longer-lasting preparation of the draught of vigor, drawn off at the lab with finer reagents.",
     "color"            : "#7E57C2",
     "amount"           : 0,
-    "weightKg"         : 0.3,
+    "weightKg"         : 1,
     "volumeL"          : 0.3,
     "grantsConditions"  : ["vigor"],
     "conditionDurationTurns": 1920
@@ -4057,7 +4057,7 @@
     "description"      : "A masterfully refined, powerful preparation of the draught of vigor, drawn off at the apothecary with finer reagents.",
     "color"            : "#7E57C2",
     "amount"           : 0,
-    "weightKg"         : 0.3,
+    "weightKg"         : 1,
     "volumeL"          : 0.3,
     "grantsConditions"  : ["vigor"],
     "conditionDurationTurns": 3000
@@ -4074,7 +4074,7 @@
     "description"      : "A more potent, longer-lasting preparation of the elixir of grace, drawn off at the lab with finer reagents.",
     "color"            : "#7E57C2",
     "amount"           : 0,
-    "weightKg"         : 0.3,
+    "weightKg"         : 1,
     "volumeL"          : 0.3,
     "grantsConditions"  : ["grace"],
     "conditionDurationTurns": 1920
@@ -4091,7 +4091,7 @@
     "description"      : "A masterfully refined, powerful preparation of the elixir of grace, drawn off at the apothecary with finer reagents.",
     "color"            : "#7E57C2",
     "amount"           : 0,
-    "weightKg"         : 0.3,
+    "weightKg"         : 1,
     "volumeL"          : 0.3,
     "grantsConditions"  : ["grace"],
     "conditionDurationTurns": 3000
@@ -4108,7 +4108,7 @@
     "description"      : "A more potent, longer-lasting preparation of the tonic of fortitude, drawn off at the lab with finer reagents.",
     "color"            : "#7E57C2",
     "amount"           : 0,
-    "weightKg"         : 0.3,
+    "weightKg"         : 1,
     "volumeL"          : 0.3,
     "grantsConditions"  : ["fortitude"],
     "conditionDurationTurns": 1920
@@ -4125,7 +4125,7 @@
     "description"      : "A masterfully refined, powerful preparation of the tonic of fortitude, drawn off at the apothecary with finer reagents.",
     "color"            : "#7E57C2",
     "amount"           : 0,
-    "weightKg"         : 0.3,
+    "weightKg"         : 1,
     "volumeL"          : 0.3,
     "grantsConditions"  : ["fortitude"],
     "conditionDurationTurns": 3000
@@ -4142,7 +4142,7 @@
     "description"      : "A more potent, longer-lasting preparation of the bloodrage draught, drawn off at the lab with finer reagents.",
     "color"            : "#7E57C2",
     "amount"           : 0,
-    "weightKg"         : 0.3,
+    "weightKg"         : 1,
     "volumeL"          : 0.3,
     "grantsConditions"  : ["adrenal"],
     "conditionDurationTurns": 1920
@@ -4159,7 +4159,7 @@
     "description"      : "A masterfully refined, powerful preparation of the bloodrage draught, drawn off at the apothecary with finer reagents.",
     "color"            : "#7E57C2",
     "amount"           : 0,
-    "weightKg"         : 0.3,
+    "weightKg"         : 1,
     "volumeL"          : 0.3,
     "grantsConditions"  : ["adrenal"],
     "conditionDurationTurns": 3000
@@ -4176,7 +4176,7 @@
     "description"      : "A more potent, longer-lasting preparation of the ironhide tonic, drawn off at the lab with finer reagents.",
     "color"            : "#7E57C2",
     "amount"           : 0,
-    "weightKg"         : 0.3,
+    "weightKg"         : 1,
     "volumeL"          : 0.3,
     "grantsConditions"  : ["fortitude"],
     "conditionDurationTurns": 1920
@@ -4193,7 +4193,7 @@
     "description"      : "A masterfully refined, powerful preparation of the ironhide tonic, drawn off at the apothecary with finer reagents.",
     "color"            : "#7E57C2",
     "amount"           : 0,
-    "weightKg"         : 0.3,
+    "weightKg"         : 1,
     "volumeL"          : 0.3,
     "grantsConditions"  : ["fortitude"],
     "conditionDurationTurns": 3000
@@ -4210,7 +4210,7 @@
     "description"      : "A more potent, longer-lasting preparation of the vigor draught, drawn off at the lab with finer reagents.",
     "color"            : "#7E57C2",
     "amount"           : 0,
-    "weightKg"         : 0.3,
+    "weightKg"         : 1,
     "volumeL"          : 0.3,
     "grantsConditions"  : ["vigor"],
     "conditionDurationTurns": 1920
@@ -4227,7 +4227,7 @@
     "description"      : "A masterfully refined, powerful preparation of the vigor draught, drawn off at the apothecary with finer reagents.",
     "color"            : "#7E57C2",
     "amount"           : 0,
-    "weightKg"         : 0.3,
+    "weightKg"         : 1,
     "volumeL"          : 0.3,
     "grantsConditions"  : ["vigor"],
     "conditionDurationTurns": 3000
@@ -4244,7 +4244,7 @@
     "description"      : "A more potent, longer-lasting preparation of the calming draught, drawn off at the lab with finer reagents.",
     "color"            : "#7E57C2",
     "amount"           : 0,
-    "weightKg"         : 0.3,
+    "weightKg"         : 1,
     "volumeL"          : 0.3,
     "grantsConditions"  : ["soothed"],
     "conditionDurationTurns": 1920
@@ -4261,7 +4261,7 @@
     "description"      : "A masterfully refined, powerful preparation of the calming draught, drawn off at the apothecary with finer reagents.",
     "color"            : "#7E57C2",
     "amount"           : 0,
-    "weightKg"         : 0.3,
+    "weightKg"         : 1,
     "volumeL"          : 0.3,
     "grantsConditions"  : ["soothed"],
     "conditionDurationTurns": 3000
@@ -4278,7 +4278,7 @@
     "description"      : "A more potent, longer-lasting preparation of the nightglow draught, drawn off at the lab with finer reagents.",
     "color"            : "#7E57C2",
     "amount"           : 0,
-    "weightKg"         : 0.3,
+    "weightKg"         : 1,
     "volumeL"          : 0.3,
     "grantsConditions"  : ["moonlit"],
     "conditionDurationTurns": 1920
@@ -4295,7 +4295,7 @@
     "description"      : "A masterfully refined, powerful preparation of the nightglow draught, drawn off at the apothecary with finer reagents.",
     "color"            : "#7E57C2",
     "amount"           : 0,
-    "weightKg"         : 0.3,
+    "weightKg"         : 1,
     "volumeL"          : 0.3,
     "grantsConditions"  : ["moonlit"],
     "conditionDurationTurns": 3000
@@ -4312,7 +4312,7 @@
     "description"      : "A more potent, longer-lasting preparation of the frenzy draught, drawn off at the lab with finer reagents.",
     "color"            : "#7E57C2",
     "amount"           : 0,
-    "weightKg"         : 0.3,
+    "weightKg"         : 1,
     "volumeL"          : 0.3,
     "grantsConditions"  : ["berserk"],
     "conditionDurationTurns": 960
@@ -4329,7 +4329,7 @@
     "description"      : "A masterfully refined, powerful preparation of the frenzy draught, drawn off at the apothecary with finer reagents.",
     "color"            : "#7E57C2",
     "amount"           : 0,
-    "weightKg"         : 0.3,
+    "weightKg"         : 1,
     "volumeL"          : 0.3,
     "grantsConditions"  : ["berserk"],
     "conditionDurationTurns": 1500
@@ -4346,7 +4346,7 @@
     "description"      : "A more potent, longer-lasting preparation of the venom coating, drawn off at the lab with finer reagents.",
     "color"            : "#7E57C2",
     "amount"           : 0,
-    "weightKg"         : 0.3,
+    "weightKg"         : 1,
     "volumeL"          : 0.3,
     "coatingEffect"     : {"condition": "envenomed", "chance": 0.75, "durationHours": 3.5, "resist": "poison_resistance"},
     "coatingDurationHours": 10
@@ -4363,7 +4363,7 @@
     "description"      : "A masterfully refined, powerful preparation of the venom coating, drawn off at the apothecary with finer reagents.",
     "color"            : "#7E57C2",
     "amount"           : 0,
-    "weightKg"         : 0.3,
+    "weightKg"         : 1,
     "volumeL"          : 0.3,
     "coatingEffect"     : {"condition": "envenomed", "chance": 0.8999999999999999, "durationHours": 5.0, "resist": "poison_resistance"},
     "coatingDurationHours": 16
@@ -4380,7 +4380,7 @@
     "description"      : "A more potent, longer-lasting preparation of the caustic coating, drawn off at the lab with finer reagents.",
     "color"            : "#7E57C2",
     "amount"           : 0,
-    "weightKg"         : 0.3,
+    "weightKg"         : 1,
     "volumeL"          : 0.3,
     "heldBy": ["clay", "glass", "porcelain", "fireclay", "runed"],
     "coatingEffect"     : {"condition": "nausea", "chance": 0.75, "durationHours": 3.0, "resist": "poison_resistance"},
@@ -4398,7 +4398,7 @@
     "description"      : "A masterfully refined, powerful preparation of the caustic coating, drawn off at the apothecary with finer reagents.",
     "color"            : "#7E57C2",
     "amount"           : 0,
-    "weightKg"         : 0.3,
+    "weightKg"         : 1,
     "volumeL"          : 0.3,
     "heldBy": ["clay", "glass", "porcelain", "fireclay", "runed"],
     "coatingEffect"     : {"condition": "nausea", "chance": 0.8999999999999999, "durationHours": 4.0, "resist": "poison_resistance"},
@@ -17716,9 +17716,9 @@
     "description": "Bark-tannin pickle, salt, ash-lye and water steeped for days. The soak liquor a tanning bucket burns through to turn cured hide into leather.",
     "color": "#6E5326",
     "amount": 0,
-    "weightKg": 1,
+    "weightKg": 0.6667,
     "volumeL": 1.5,
-    "fuelValue": 12,
+    "fuelValue": 8,
     "fuelHeat": 1,
     "processingType": ["crafting"]
   },
@@ -17733,10 +17733,10 @@
     "description": "A fierce double-strength tannin liquor of oak-gall and hardwood ash. Hot enough to bite into thick beast hide, ordinary brine can't.",
     "color": "#4A360F",
     "amount": 0,
-    "weightKg": 1.2,
+    "weightKg": 0.8,
     "volumeL": 1.5,
     "heldBy": ["wood", "clay", "glass", "porcelain", "fireclay", "runed"],
-    "fuelValue": 16,
+    "fuelValue": 10.6667,
     "fuelHeat": 3,
     "processingType": ["crafting"]
   },
@@ -18844,7 +18844,7 @@
     "description"      : "Boiled-down plant and berry colour. Stains cloth and leather for prestige goods.",
     "color"            : "#9C27B0",
     "amount"           : 0,
-    "weightKg"         : 0.2,
+    "weightKg"         : 1,
     "volumeL"          : 0.2,
     "processingType"   : ["crafting"]
   },
@@ -18874,7 +18874,7 @@
     "description": "A red draught that floods the limbs with strength. Grants Might for a time once drunk.",
     "color": "#D03040",
     "amount": 0,
-    "weightKg": 0.3,
+    "weightKg": 1,
     "volumeL": 0.3,
     "grantsConditions": ["might"],
     "conditionDurationTurns": 1200
@@ -18890,7 +18890,7 @@
     "description": "A green tonic that banishes fatigue and steadies the wind. Grants Vigor for a time.",
     "color": "#40A030",
     "amount": 0,
-    "weightKg": 0.3,
+    "weightKg": 1,
     "volumeL": 0.3,
     "grantsConditions": ["vigor"],
     "conditionDurationTurns": 1200
@@ -18906,7 +18906,7 @@
     "description": "A clear silver elixir that quickens the step and the eye. Grants Grace for a time, offsets the load of heavy armour.",
     "color": "#80C0E0",
     "amount": 0,
-    "weightKg": 0.3,
+    "weightKg": 1,
     "volumeL": 0.3,
     "grantsConditions": ["grace"],
     "conditionDurationTurns": 1200
@@ -18922,7 +18922,7 @@
     "description": "A dark, bitter tonic that hardens flesh against harm. Grants Fortitude for a time.",
     "color": "#8060A0",
     "amount": 0,
-    "weightKg": 0.3,
+    "weightKg": 1,
     "volumeL": 0.3,
     "grantsConditions": ["fortitude"],
     "conditionDurationTurns": 1200
@@ -18994,7 +18994,7 @@
       "description": "A stringy amber gum boiled from pine resin and fat, daubed thick along an edge. Where it catches, it drags at sinew and gums a leg to slowness.",
       "color": "#6b5a2a",
       "amount": 0,
-      "weightKg": 0.2,
+      "weightKg": 1,
       "volumeL": 0.2,
       "coatingEffect": {
         "condition": "hamstrung",
@@ -19021,7 +19021,7 @@
       "description": "A more potent, longer-lasting preparation of the tanglefoot coating, drawn off at the lab with finer reagents.",
       "color": "#7E57C2",
       "amount": 0,
-      "weightKg": 0.2,
+      "weightKg": 1,
       "volumeL": 0.2,
       "coatingEffect": {
         "condition": "hamstrung",
@@ -19048,7 +19048,7 @@
       "description": "A masterfully refined, powerful preparation of the tanglefoot coating, drawn off at the apothecary with finer reagents.",
       "color": "#7E57C2",
       "amount": 0,
-      "weightKg": 0.2,
+      "weightKg": 1,
       "volumeL": 0.2,
       "coatingEffect": {
         "condition": "hamstrung",
@@ -19074,7 +19074,7 @@
       "description": "A grey unguent of mandrake and madness-spore that smells of an open grave. The wound it rides carries a wave of unreasoning fear into the blood.",
       "color": "#4a3a6a",
       "amount": 0,
-      "weightKg": 0.2,
+      "weightKg": 1,
       "volumeL": 0.2,
       "coatingEffect": {
         "condition": "cowed",
@@ -19101,7 +19101,7 @@
       "description": "A more potent, longer-lasting preparation of the dread coating, drawn off at the lab with finer reagents.",
       "color": "#7E57C2",
       "amount": 0,
-      "weightKg": 0.2,
+      "weightKg": 1,
       "volumeL": 0.2,
       "coatingEffect": {
         "condition": "cowed",
@@ -19128,7 +19128,7 @@
       "description": "A masterfully refined, powerful preparation of the dread coating, drawn off at the apothecary with finer reagents.",
       "color": "#7E57C2",
       "amount": 0,
-      "weightKg": 0.2,
+      "weightKg": 1,
       "volumeL": 0.2,
       "coatingEffect": {
         "condition": "cowed",
@@ -19154,7 +19154,7 @@
       "description": "A pale blue infusion of glowcap that pricks the senses awake. The world sharpens at its edges and little escapes the eye.",
       "color": "#4a80c0",
       "amount": 0,
-      "weightKg": 0.3,
+      "weightKg": 1,
       "volumeL": 0.3,
       "grantsConditions": [
         "keen_senses"
@@ -19178,7 +19178,7 @@
       "description": "A more potent, longer-lasting preparation of the farsight tonic, drawn off at the lab with finer reagents.",
       "color": "#7E57C2",
       "amount": 0,
-      "weightKg": 0.3,
+      "weightKg": 1,
       "volumeL": 0.3,
       "grantsConditions": [
         "keen_senses"
@@ -19202,7 +19202,7 @@
       "description": "A masterfully refined, powerful preparation of the farsight tonic, drawn off at the apothecary with finer reagents.",
       "color": "#7E57C2",
       "amount": 0,
-      "weightKg": 0.3,
+      "weightKg": 1,
       "volumeL": 0.3,
       "grantsConditions": [
         "keen_senses"
@@ -19225,7 +19225,7 @@
       "description": "A bitter charcoal draught that scours the gut. It settles a churning stomach and draws the sickness out.",
       "color": "#3a8a5a",
       "amount": 0,
-      "weightKg": 0.3,
+      "weightKg": 1,
       "volumeL": 0.3,
       "grantsConditions": [
         "toxin_immune"
@@ -19252,7 +19252,7 @@
       "description": "A more potent, longer-lasting preparation of the antivenin tonic, drawn off at the lab with finer reagents.",
       "color": "#7E57C2",
       "amount": 0,
-      "weightKg": 0.3,
+      "weightKg": 1,
       "volumeL": 0.3,
       "grantsConditions": [
         "toxin_immune"
@@ -19280,7 +19280,7 @@
       "description": "A masterfully refined, powerful preparation of the antivenin tonic, drawn off at the apothecary with finer reagents.",
       "color": "#7E57C2",
       "amount": 0,
-      "weightKg": 0.3,
+      "weightKg": 1,
       "volumeL": 0.3,
       "grantsConditions": [
         "toxin_immune"
@@ -19308,7 +19308,7 @@
       "description": "A sweet cordial of dreamleaf steeped with plenty of pressed berries. It unknots a tired body and lifts a low head.",
       "color": "#7aa0b0",
       "amount": 0,
-      "weightKg": 0.3,
+      "weightKg": 1,
       "volumeL": 0.3,
       "grantsConditions": [
         "refreshed"
@@ -19332,7 +19332,7 @@
       "description": "A more potent, longer-lasting preparation of the restful tonic, drawn off at the lab with finer reagents.",
       "color": "#7E57C2",
       "amount": 0,
-      "weightKg": 0.3,
+      "weightKg": 1,
       "volumeL": 0.3,
       "grantsConditions": [
         "refreshed"
@@ -19356,7 +19356,7 @@
       "description": "A masterfully refined, powerful preparation of the restful tonic, drawn off at the apothecary with finer reagents.",
       "color": "#7E57C2",
       "amount": 0,
-      "weightKg": 0.3,
+      "weightKg": 1,
       "volumeL": 0.3,
       "grantsConditions": [
         "refreshed"
@@ -19379,7 +19379,7 @@
       "description": "A fine grit of river sand worked into rendered fat, rubbed the length of a blade. It draws a wicked edge that bites deep and leaves a wound slow to close.",
       "color": "#8a8a80",
       "amount": 0,
-      "weightKg": 0.2,
+      "weightKg": 1,
       "volumeL": 0.2,
       "coatingEffect": {
         "chance": 0,
@@ -19404,7 +19404,7 @@
       "description": "A more potent, longer-lasting preparation of the honing oil, drawn off at the lab with finer reagents.",
       "color": "#7E57C2",
       "amount": 0,
-      "weightKg": 0.2,
+      "weightKg": 1,
       "volumeL": 0.2,
       "coatingEffect": {
         "chance": 0,
@@ -19429,7 +19429,7 @@
       "description": "A masterfully refined, powerful preparation of the honing oil, drawn off at the apothecary with finer reagents.",
       "color": "#7E57C2",
       "amount": 0,
-      "weightKg": 0.2,
+      "weightKg": 1,
       "volumeL": 0.2,
       "coatingEffect": {
         "chance": 0,
@@ -19472,7 +19472,7 @@
       "description": "A clear, biting liquor drawn off the still and filtered through charcoal. It carries an alchemist's essences far better than water or wine.",
       "color": "#d8e0e8",
       "amount": 0,
-      "weightKg": 0.3,
+      "weightKg": 1,
       "volumeL": 0.3,
       "heldBy": ["wood", "clay", "glass", "porcelain", "fireclay", "runed"]
     },

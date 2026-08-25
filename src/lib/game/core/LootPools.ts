@@ -3,6 +3,7 @@
 // PURE weighted-draw logic (no ItemService/rng singleton dependency — the caller passes an rng and
 // resolves item durability), so the draw is unit-testable in isolation.
 import lootpoolRaw from '../database/items/lootpool.jsonc';
+import { isFluidId, servingL } from './vessels';
 import { rollFamedIdentity } from './famedNames';
 import type { EquipmentSlot, ItemQuality } from './types/items';
 
@@ -128,9 +129,13 @@ export function drawCarried(pool: LootPool, rng: Rng): Array<{ itemId: string; q
     let roll = rng.random() * total;
     const chosen = carry.pick.find((p) => (roll -= p.w ?? 1) < 0) ?? carry.pick[0];
     if (!chosen) continue;
+    // A `count` on a carried entry is a number of OBJECTS — two phials, three flasks. Fluids are
+    // stocked in litres, so a phial's worth is its serving, and a pick list may mix a fluid with a
+    // solid under one shared count.
+    const drawn = isFluidId(chosen.id) ? qty * servingL(chosen.id) : qty;
     const at = out.find((o) => o.itemId === chosen.id);
-    if (at) at.qty += qty;
-    else out.push({ itemId: chosen.id, qty });
+    if (at) at.qty += drawn;
+    else out.push({ itemId: chosen.id, qty: drawn });
   }
   return out;
 }

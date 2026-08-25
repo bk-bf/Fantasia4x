@@ -8,7 +8,7 @@ import { perTick, ticksFromSeconds } from '../../../core/time';
 import { consumeFromStockpiles, availableQuantityFromDrops } from '../../../core/GameState';
 import { PAWN_STATE, type PawnStateName } from '../pawnStates';
 import { tileHasBody } from '../carry';
-import { takeOut, isFluidId, unitsToLitres } from '../../../core/vessels';
+import { isFluidId, takeOut } from '../../../core/vessels';
 import type { ItemInstance } from '../../../core/types';
 import {
   isAdjacent,
@@ -107,7 +107,7 @@ function startEatingFromInventory(
     const items = { ...(p.inventory?.items ?? {}) };
     for (const m of meal) {
       if (isFluidId(m.id)) {
-        let litres = unitsToLitres(m.id, m.units);
+        let litres = m.units;
         for (const inst of p.inventory?.instances ?? []) {
           if (litres <= 0) break;
           litres -= takeOut(inst, m.id, litres);

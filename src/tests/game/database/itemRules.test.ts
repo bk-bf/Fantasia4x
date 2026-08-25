@@ -1466,3 +1466,53 @@ describe('ITEM-RULES R21 — a round trip through the crafting graph never gains
     expect([...new Set(gains)], [...new Set(gains)].join('; ')).toEqual([]);
   });
 });
+
+// ── R22: a fluid is authored in litres ──────────────────────────────────────────────────────────
+// Fluids are counted in LITRES everywhere — recipes, loot, stockpile totals, vessels — so a fluid
+// definition reads differently from a solid one: `weightKg` is the mass of one LITRE (its density)
+// and `volumeL` is one SERVING. Authoring a phial the solid way (`weightKg: 0.3, volumeL: 0.3`) still
+// parses, and yields a fluid a third the weight of water whose recipe costs a third of a litre.
+// Density is the tell, because a real liquid sits between light spirits and molten gold.
+describe('ITEM-RULES R22 — a fluid states a density and a serving, and its batch fits its station', () => {
+  const FLUIDS = ITEMS.filter((i) => i.type === 'fluid');
+
+  it('every fluid weighs a believable amount per litre', () => {
+    const bad = FLUIDS.filter((i) => !(i.weightKg && i.weightKg >= 0.5 && i.weightKg <= 20)).map(
+      (i) =>
+        `${i.id} has weightKg ${i.weightKg} — for a fluid that is kilograms per LITRE, so this reads as ` +
+        `${(i.weightKg ?? 0) < 0.5 ? 'lighter than any real liquid' : 'denser than molten gold'}. ` +
+        `A per-serving weight belongs in volumeL's serving, not here.`
+    );
+    expect(bad, bad.join('; ')).toEqual([]);
+  });
+
+  it('every fluid states a serving a vessel could actually pour', () => {
+    const bad = FLUIDS.filter((i) => !(i.volumeL && i.volumeL > 0 && i.volumeL <= 2)).map(
+      (i) =>
+        `${i.id} has volumeL ${i.volumeL} — one serving, and nothing drinks or doses 2 L at once`
+    );
+    expect(bad, bad.join('; ')).toEqual([]);
+  });
+
+  it('a batch of fluid fits the station it is poured into', () => {
+    const capacity = new Map(
+      (BUILDINGS as { id?: string; fluidCapacityL?: number }[])
+        .filter((b) => b.id)
+        .map((b) => [b.id as string, b.fluidCapacityL ?? 0])
+    );
+    const isFluid = new Set(FLUIDS.map((i) => i.id));
+    const bad: string[] = [];
+    for (const r of RECIPES as (Recipe & { station?: string })[]) {
+      const litres = Object.entries(r.outputs ?? {})
+        .filter(([o]) => isFluid.has(o))
+        .reduce((s, [, q]) => s + q, 0);
+      if (litres <= 0) continue;
+      const cap = capacity.get(r.station ?? '') ?? 0;
+      if (cap > 0 && litres > cap)
+        bad.push(
+          `${r.id} pours ${litres} L into ${r.station}, which holds ${cap} L — the overflow spills`
+        );
+    }
+    expect(bad, bad.join('; ')).toEqual([]);
+  });
+});

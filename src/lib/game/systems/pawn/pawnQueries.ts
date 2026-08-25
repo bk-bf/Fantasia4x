@@ -8,7 +8,7 @@
  * architecture is unchanged and so each is trivially unit-testable.
  */
 import type { GameState, Pawn, ItemInstance } from '../../core/types';
-import { litresToUnits } from '../../core/vessels';
+
 import ITEMS_DATABASE from '../../database/items/items.jsonc';
 import RARITIES from '../../database/items/rarities.jsonc';
 import { consumeFromStockpiles } from '../../core/GameState';
@@ -174,7 +174,7 @@ export function carriedEdibles(pawn: Pawn): Record<string, number> {
   const sip = (inst: ItemInstance | undefined) => {
     for (const e of inst?.contents ?? []) {
       if (e.litres == null) continue;
-      items[e.itemId] = (items[e.itemId] ?? 0) + Math.floor(litresToUnits(e.itemId, e.litres));
+      items[e.itemId] = (items[e.itemId] ?? 0) + e.litres;
     }
   };
   for (const inst of pawn.inventory?.instances ?? []) sip(inst);
