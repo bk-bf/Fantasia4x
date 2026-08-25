@@ -2,7 +2,7 @@
 // handlers. Extracted from JobService (P-4, ADR-017 handler split): these resolve where an order's
 // workstation is and whether the inputs / build materials reserved for an owner are staged on it.
 import type { CraftingInProgress, GameState, PlacedBuilding } from '../../core/types';
-import { heldQuantity, isFluidId, litresToUnits } from '../../core/vessels';
+import { heldQuantity, isFluidId } from '../../core/vessels';
 
 /** ADR-016: tile coords of an order's chosen workstation, or null if it's gone. */
 export function stationTileFor(
@@ -41,14 +41,14 @@ export function stagedQty(
       (b) => b.id === order.stationBuildingId && b.x === station.x && b.y === station.y
     );
     const litres = (body?.fluidContents ?? []).find((e) => e.itemId === itemId)?.litres ?? 0;
-    if (litres > 0) q += litresToUnits(itemId, litres);
+    if (litres > 0) q += litres;
   }
   for (const d of gs.droppedItems ?? []) {
     if (!d.stored || d.reservedFor !== order.id) continue;
     if (d.x !== station.x || d.y !== station.y) continue;
     if (d.resourceId === itemId) q += d.quantity;
     const held = heldQuantity(d.instance, itemId);
-    if (held > 0) q += isFluidId(itemId) ? litresToUnits(itemId, held) : held;
+    if (held > 0) q += held;
   }
   return q;
 }

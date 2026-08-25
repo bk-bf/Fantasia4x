@@ -22,37 +22,35 @@
 //   that would place one on the ground, in a stockpile or in a pawn's bare hands spills it — see
 //   `spillsIfLoose`, which every DroppedItem/stockpile entry point asks before writing.
 
-import type { Item, ItemInstance, PawnEquipment, VesselContent } from './types';
+import type { Item, ItemInstance, Pawn, PawnEquipment, VesselContent } from './types';
 import { allItemDefs, itemDefById } from './itemDefs';
 
-/** Density fallback when a fluid def gives no weight/volume — water, near enough, for everything. */
+/** Density fallback when a fluid def gives no weight — water, near enough, for everything. */
 const DEFAULT_FLUID_KG_PER_L = 1;
 
 /**
- * Litres in ONE recipe/stockpile UNIT of a fluid — its `volumeL`, i.e. the dose. Recipes, loot tables
- * and craft outputs all count in units ("water": 1, "potion_of_might": 1); vessels store litres. This
- * is the one conversion between the two vocabularies, so a 0.3 L phial of potion and a 1 L measure of
- * water can share every code path without either number being a lie.
+ * A FLUID IS COUNTED IN LITRES, everywhere: recipes, loot tables, craft outputs, stockpile totals and
+ * vessel contents all speak the same number, so there is no conversion to get wrong.
+ *
+ * Two fields on a fluid definition carry that:
+ *
+ *   `weightKg`  kilograms of ONE LITRE — its density. Water 1, molten bronze 8.8, molten gold 19.3.
+ *   `volumeL`   litres in one SERVING — the phial a pawn drinks, the flask a coating is applied from.
+ *               Effects (`conditionDurationTurns`, `poisonChance`, `medicineQuality`…) are per serving.
+ *
+ * Litres, not doses, because pouring is volumetric: a mould cavity, a crucible and a waterskin are all
+ * measured in litres, and counting a fluid in per-item doses made the same integer mean a different
+ * volume in every metal.
  */
-export function litresPerUnit(itemId: string): number {
+
+/** Litres in one serving — a drink, a dose, one application. Bulk fluids simply pour by the litre. */
+export function servingL(itemId: string): number {
   return itemDefById(itemId)?.volumeL || 1;
 }
 
-/** Recipe/stockpile units → litres. */
-export function unitsToLitres(itemId: string, units: number): number {
-  return Math.round(units * litresPerUnit(itemId) * 1000) / 1000;
-}
-
-/** Litres → recipe/stockpile units (fractional; callers floor when they need whole doses). */
-export function litresToUnits(itemId: string, litres: number): number {
-  return Math.round((litres / litresPerUnit(itemId)) * 1000) / 1000;
-}
-
-/** Kilograms per litre of a fluid, from its def's weight-per-dose over its dose volume. */
+/** Kilograms per litre of a fluid. */
 function fluidDensity(itemId: string): number {
-  const def = itemDefById(itemId);
-  if (!def?.weightKg || !def.volumeL) return DEFAULT_FLUID_KG_PER_L;
-  return def.weightKg / def.volumeL;
+  return itemDefById(itemId)?.weightKg || DEFAULT_FLUID_KG_PER_L;
 }
 
 // ── what a thing IS ─────────────────────────────────────────────────────────
@@ -60,6 +58,57 @@ function fluidDensity(itemId: string): number {
 /** A fluid: pourable, measured in litres, and unable to exist outside a vessel. */
 export function isFluidId(itemId: string): boolean {
   return itemDefById(itemId)?.type === 'fluid';
+}
+
+/** Every vessel a pawn has to hand: the tracked items in its pack, and anything it is wearing. */
+function carriedInstances(pawn: Pawn): ItemInstance[] {
+  const out: ItemInstance[] = [];
+  for (const inst of pawn.inventory?.instances ?? []) if (inst) out.push(inst);
+  for (const inst of Object.values(pawn.equipment ?? {})) if (inst) out.push(inst);
+  return out;
+}
+
+/**
+ * Everything this pawn has to hand, by item id — the bulk stacks in its pack PLUS whatever is inside
+ * the vessels it carries or wears, one nested level down (`putIn` refuses to go deeper).
+ *
+ * A fluid is NEVER a bulk stack: `spillsIfLoose` means it only exists inside a vessel. So anything
+ * that searches only `inventory.items` for a carried potion, tonic or coating concludes the pawn has
+ * none — which is how the antivenins came to be invisible to the medicine panel. Solids in a vessel
+ * count too: woundwort in a pouch is still woundwort. Fluids answer in litres, solids in units.
+ */
+export function carriedQuantities(pawn: Pawn): Record<string, number> {
+  const out: Record<string, number> = { ...(pawn.inventory?.items ?? {}) };
+  const add = (e: VesselContent) => {
+    const qty = e.litres ?? e.amount ?? 0;
+    if (qty > 0) out[e.itemId] = (out[e.itemId] ?? 0) + qty;
+  };
+  for (const inst of carriedInstances(pawn)) {
+    for (const e of inst.contents ?? []) {
+      add(e);
+      for (const nested of e.instance?.contents ?? []) add(nested);
+    }
+  }
+  for (const [id, q] of Object.entries(out)) if (q <= 0) delete out[id];
+  return out;
+}
+
+/**
+ * The vessel this pawn is carrying that holds `itemId`, or null when it is a plain stack in the pack.
+ * Fullest first, so a dose comes out of the phial that can spare it rather than the one with a
+ * splash left.
+ */
+export function carrierOf(pawn: Pawn, itemId: string): ItemInstance | null {
+  let best: ItemInstance | null = null;
+  let most = 0;
+  for (const inst of carriedInstances(pawn)) {
+    const held = heldQuantity(inst, itemId);
+    if (held > most) {
+      most = held;
+      best = inst;
+    }
+  }
+  return best;
 }
 
 /** The vessel block of an item id, or null when the item holds nothing (most items). */
@@ -156,7 +205,7 @@ export function roomFor(inst: ItemInstance, itemId: string, qty: number): number
   const def = itemDefById(itemId);
   const fluid = def?.type === 'fluid';
 
-  // Fluids are asked for in LITRES (the caller converts doses with `unitsToLitres`); solids in units.
+  // Fluids are asked for in LITRES — the same number the caller already holds; solids in units.
   const perVolume = fluid ? 1 : (def?.volumeL ?? 0.2);
   let room = perVolume > 0 ? (v.capacityL - usedCapacityL(inst)) / perVolume : qty;
 
@@ -314,14 +363,40 @@ export function carriedWaterVessel(pawn: {
   inventory?: { instances?: ItemInstance[] };
   equipment?: PawnEquipment;
 }): ItemInstance | null {
-  let best: ItemInstance | null = null;
-  let bestL = 0;
+  return carriedDrinkVessel(pawn)?.inst ?? null;
+}
+
+/** Thirst points one litre of this fluid relieves. 0 for anything that is not a drink. */
+export function hydrationOf(itemId: string): number {
+  const def = itemDefById(itemId);
+  return def?.type === 'fluid' ? (def.hydration ?? 0) : 0;
+}
+
+/** A DRINK is any fluid that states what a litre of it does for thirst. */
+export function isDrinkId(itemId: string): boolean {
+  return hydrationOf(itemId) > 0;
+}
+
+/**
+ * The best drink this pawn is carrying — in its pack or worn — and which fluid it is. Ranked by the
+ * thirst it can actually relieve (litres × hydration), so a skin of water beats a mouthful of wine
+ * and a pawn does not try to rehydrate on whisky while carrying water.
+ */
+export function carriedDrinkVessel(pawn: {
+  inventory?: { instances?: ItemInstance[] };
+  equipment?: PawnEquipment;
+}): { inst: ItemInstance; itemId: string; litres: number } | null {
+  let best: { inst: ItemInstance; itemId: string; litres: number } | null = null;
+  let bestWorth = 0;
   const consider = (inst: ItemInstance | undefined) => {
     if (!inst) return;
-    const held = heldQuantity(inst, 'water');
-    if (held > bestL) {
-      best = inst;
-      bestL = held;
+    for (const e of inst.contents ?? []) {
+      const litres = e.litres ?? 0;
+      const worth = litres * hydrationOf(e.itemId);
+      if (worth > bestWorth) {
+        best = { inst, itemId: e.itemId, litres };
+        bestWorth = worth;
+      }
     }
   };
   for (const inst of pawn.inventory?.instances ?? []) consider(inst);

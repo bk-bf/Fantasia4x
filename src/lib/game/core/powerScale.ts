@@ -23,7 +23,7 @@ export const STAT_SCALE = 10;
  */
 export const POWER_SOFT_CAP = 30;
 
-/** Damage multiplier from the attack's power attribute (brawn / agility / awareness / intellect). */
+/** Damage multiplier from the attack's power attribute (strength / dexterity / perception / intelligence). */
 export function powerScale(stat: number): number {
   if (stat <= STAT_SCALE) return Math.max(0, stat / STAT_SCALE);
   const over = stat - STAT_SCALE;
@@ -32,11 +32,11 @@ export function powerScale(stat: number): number {
 
 /**
  * Which core stat drives an attack's damage. The weapon names it (`weaponProperties.powerStat`); the
- * fallbacks cover the older shorthands — an arcane staff channels on INTELLECT, a finesse thrust is
- * placed by AWARENESS, a standard is carried on CHARISMA (its bearer's presence is the point of it),
+ * fallbacks cover the older shorthands — an arcane staff channels on INTELLIGENCE, a finesse thrust is
+ * placed by PERCEPTION, a standard is carried on CHARISMA (its bearer's presence is the point of it),
  * and everything else is driven by the body.
  */
-export type PowerStat = 'brawn' | 'agility' | 'awareness' | 'intellect' | 'charisma';
+export type PowerStat = 'strength' | 'dexterity' | 'perception' | 'intelligence' | 'charisma';
 export function powerStatOf(
   wp:
     | {
@@ -48,9 +48,9 @@ export function powerStatOf(
     | undefined
 ): PowerStat {
   if (wp?.powerStat) return wp.powerStat as PowerStat;
-  if (wp?.arcane) return 'intellect';
-  if (wp?.finesse) return 'awareness';
-  return 'brawn';
+  if (wp?.arcane) return 'intelligence';
+  if (wp?.finesse) return 'perception';
+  return 'strength';
 }
 
 /**

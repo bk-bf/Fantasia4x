@@ -236,6 +236,7 @@ describe('butchery', () => {
           great_fang: 3,
           branch: 16,
           cordage: 16,
+          thread: 20,
           sinew: 16,
           feathers: 16,
           spit_meat: 10

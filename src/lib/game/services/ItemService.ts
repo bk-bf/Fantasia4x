@@ -52,6 +52,13 @@ const BUILDING_DEFS_FOR_ITEMS = buildingsData as unknown as import('../core/type
 // into BuildingService). Re-exported for existing importers.
 export { itemMatchesCostCategory } from '../core/itemDefs';
 
+/** How many units of a `category:` cost ONE of this item satisfies (see `Item.craftValue`). A crude
+ *  material is worth a fraction, so the slot consumes more of it. Defaults to 1. */
+function craftValueOf(item: { craftValue?: number } | undefined | null): number {
+  const v = item?.craftValue;
+  return typeof v === 'number' && v > 0 ? v : 1;
+}
+
 // §B Durability defaults — every item weathers when left exposed (loose, unsheltered).
 // Explicit `deteriorationRate`/`maxDurability` on an item override these. Rate 0 = weather-immune.
 const DEFAULT_MAX_DURABILITY = 100;
@@ -220,17 +227,17 @@ const DETERIORATION_RATE_BY_CATEGORY: Record<string, number> = {
   natural_weapon: 0 // innate attacks: never real dropped items, but immune for safety
 };
 
-/** Carry budget: `(CARRY_BASE_KG + brawn × CARRY_KG_PER_BRAWN) × frameFactor`.
+/** Carry budget: `(CARRY_BASE_KG + strength × CARRY_KG_PER_STRENGTH) × frameFactor`.
  *  HIGH BASE, GENTLE SLOPE — calibrated against the growth ladder (ceiling 60, spawn cap 20) at both
- *  ends at once: a median SPAWN pawn (brawn 12) comfortably fields the light set plus a weapon
+ *  ends at once: a median SPAWN pawn (strength 12) comfortably fields the light set plus a weapon
  *  (~11.6kg budget), while the steel heavy set (16.6kg) stays an EARNED milestone at ~90% of capacity
- *  at brawn 40, with medium arriving around brawn 30. A steep slope from a low base (tried first)
+ *  at strength 40, with medium arriving around strength 30. A steep slope from a low base (tried first)
  *  gated steel correctly but starved the floor — spawn pawns were encumbered by cloth alone; the old
- *  0.85/brawn slope let a spawn pawn wear plate. Strength decides the CLASS you wear; it no longer
+ *  0.85/strength slope let a spawn pawn wear plate. Strength decides the CLASS you wear; it no longer
  *  decides whether you can dress at all. */
 const CARRY_BASE_KG = 11;
-const CARRY_KG_PER_BRAWN = 0.19;
-/** The frame only MODULATES the brawn budget — a bigger body carries a little more, but mass can
+const CARRY_KG_PER_STRENGTH = 0.19;
+/** The frame only MODULATES the strength budget — a bigger body carries a little more, but mass can
  *  never stand in for strength (which is what the old bodyWeight-multiplied formula allowed). */
 const CARRY_FRAME_REF_KG = 80;
 const CARRY_FRAME_MIN = 0.85;
@@ -244,7 +251,7 @@ export interface CarryCapacityBreakdown {
   height: number;
   /** Body mass in kg — the realistic driver of carry capacity. */
   bodyWeight: number;
-  brawn: number;
+  strength: number;
   /** Realistic carry weight = bodyWeight × loadFraction (a STR-dependent % of body mass) + gear. */
   weight: {
     bodyWeight: number;
@@ -253,7 +260,7 @@ export interface CarryCapacityBreakdown {
     gear: number;
     total: number;
   };
-  /** Carry volume = bodyWeight × a frame fraction (brawn-independent bulk) + gear. */
+  /** Carry volume = bodyWeight × a frame fraction (strength-independent bulk) + gear. */
   volume: { bodyWeight: number; fraction: number; capacity: number; gear: number; total: number };
   gearSources: { name: string; weightKg: number; volumeL: number }[];
 }
@@ -322,7 +329,7 @@ export interface ItemService {
 
   // Carry capacity
   getCarryBudget(pawn: Pawn, state: GameState): { maxWeightKg: number; maxVolumeL: number };
-  /** Itemised carry-budget breakdown (body mass × brawn-scaled load fraction + gear) — single
+  /** Itemised carry-budget breakdown (body mass × strength-scaled load fraction + gear) — single
    *  source of truth for the CAPACITIES panel and the CARRYING header so the UI can show the maths. */
   getCarryCapacityBreakdown(pawn: Pawn): CarryCapacityBreakdown;
   canAddToInventory(pawn: Pawn, itemId: string, qty: number, state: GameState): boolean;
@@ -526,10 +533,9 @@ export class ItemServiceImpl implements ItemService {
     // the COMBINED quantity is in stock (the resolveActiveCost sum-path mirrors this).
     const demand: Record<string, number> = {};
     for (const [slotKey, slot] of Object.entries(recipe.dynamicRecipe)) {
-      const cats = recipeService.slotCategories(slot);
       const candidates = ITEMS_DATABASE.filter(
         (i) =>
-          cats.some((c) => itemMatchesCostCategory(i, c)) &&
+          recipeService.slotAccepts(slot, i) &&
           this.getAvailableQuantity(i.id, gameState) >= (demand[i.id] ?? 0) + slot.quantity
       );
       if (!candidates.length) return null;
@@ -559,16 +565,20 @@ export class ItemServiceImpl implements ItemService {
         const cat = key.slice('category:'.length);
         let need = qty;
         for (const item of ITEMS_DATABASE) {
-          if (need <= 0) break;
+          if (need <= 1e-9) break;
           if (!itemMatchesCostCategory(item, cat)) continue;
           const avail = this.getAvailableQuantity(item.id, gameState) - (used[item.id] ?? 0);
           if (avail <= 0) continue;
-          const take = Math.min(avail, need);
+          // A crude material satisfies only a fraction of a unit, so more of it is consumed for the
+          // same slot — cordage is a quarter of a seam, thread is a whole one. Without this the
+          // cheapest member always wins and a category slot costs nothing.
+          const worth = craftValueOf(item);
+          const take = Math.min(avail, Math.ceil(need / worth));
           out[item.id] = (out[item.id] ?? 0) + take;
           used[item.id] = (used[item.id] ?? 0) + take;
-          need -= take;
+          need -= take * worth;
         }
-        if (need > 0) return null;
+        if (need > 1e-9) return null;
       } else {
         const avail = this.getAvailableQuantity(key, gameState) - (used[key] ?? 0);
         if (avail < qty) return null;
@@ -586,8 +596,9 @@ export class ItemServiceImpl implements ItemService {
     for (const [key, qty] of Object.entries(cost)) {
       if (key.startsWith('category:')) {
         const cat = key.slice('category:'.length);
-        const rep = ITEMS_DATABASE.find((i) => itemMatchesCostCategory(i, cat))?.id ?? key;
-        out[rep] = (out[rep] ?? 0) + qty;
+        const repItem = ITEMS_DATABASE.find((i) => itemMatchesCostCategory(i, cat));
+        const rep = repItem?.id ?? key;
+        out[rep] = (out[rep] ?? 0) + Math.ceil(qty / craftValueOf(repItem));
       } else {
         out[key] = (out[key] ?? 0) + qty;
       }
@@ -720,21 +731,21 @@ export class ItemServiceImpl implements ItemService {
     const height = pawn.physicalTraits?.height ?? 170;
     const bodyWeight = pawn.physicalTraits?.weight ?? 70;
     const size = sizeFromHeight(height);
-    const str = pawn.stats.brawn ?? 10;
+    const str = pawn.stats.strength ?? 10;
 
-    // WHAT A PAWN CAN BEAR — brawn-led, mass-modulated.
+    // WHAT A PAWN CAN BEAR — strength-led, mass-modulated.
     //
-    // This used to be `bodyWeight × clamp(brawn × 0.012, 0.05, 0.3)`, which broke twice over once the
+    // This used to be `bodyWeight × clamp(strength × 0.012, 0.05, 0.3)`, which broke twice over once the
     // core stats expanded to a 1–100 band:
-    //   • the 0.30 clamp BOUND AT BRAWN 25, so every pawn from 25 to 100 carried exactly the same —
-    //     a quarter of the population sat at the cap and brawn bought nothing above it;
+    //   • the 0.30 clamp BOUND AT STRENGTH 25, so every pawn from 25 to 100 carried exactly the same —
+    //     a quarter of the population sat at the cap and strength bought nothing above it;
     //   • capacity scaled linearly with body mass, so the budget was decided by how HEAVY a pawn was
     //     rather than how strong. With a median bodyweight of ~108kg that handed a weak, fat pawn a
     //     bigger budget than a lean strong one, and let any build wear plate + shield regardless.
     //
-    // Now brawn sets the budget directly and the frame only modulates it: a bigger body carries a
+    // Now strength sets the budget directly and the frame only modulates it: a bigger body carries a
     // little more, but it cannot substitute for strength.
-    const carried = CARRY_BASE_KG + str * CARRY_KG_PER_BRAWN;
+    const carried = CARRY_BASE_KG + str * CARRY_KG_PER_STRENGTH;
     const frameFactor = Math.min(
       CARRY_FRAME_MAX,
       Math.max(CARRY_FRAME_MIN, bodyWeight / CARRY_FRAME_REF_KG)
@@ -815,7 +826,7 @@ export class ItemServiceImpl implements ItemService {
     weight.total = Math.max(1, weight.capacity + weight.gear);
     volume.total = Math.max(1, volume.capacity + volume.gear);
 
-    return { size, height, bodyWeight, brawn: str, weight, volume, gearSources };
+    return { size, height, bodyWeight, strength: str, weight, volume, gearSources };
   }
 
   /**

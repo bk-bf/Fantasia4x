@@ -43,7 +43,7 @@ function pawn(wetness = 0): Pawn {
     state: { health: 100, mood: 50, isWorking: false, isSleeping: false, isEating: false },
     conditions: [],
     traits: [],
-    stats: { brawn: 10, agility: 10, vigour: 10, awareness: 10, intellect: 10 },
+    stats: { strength: 10, dexterity: 10, constitution: 10, perception: 10, intelligence: 10 },
     limbs: [],
     injuries: []
   } as unknown as Pawn;

@@ -30,13 +30,13 @@ describe('stations & capacity gates', () => {
     const base: Pawn = {
       id: 'p1',
       stats: {
-        brawn: 12,
-        agility: 10,
-        vigour: 10,
-        intellect: 10,
+        strength: 12,
+        dexterity: 10,
+        constitution: 10,
+        intelligence: 10,
         wisdom: 10,
         charisma: 10,
-        awareness: 10
+        perception: 10
       },
       equipment: {},
       inventory: {
@@ -70,13 +70,13 @@ describe('stations & capacity gates', () => {
     const pawn: Pawn = {
       id: 'p2',
       stats: {
-        brawn: 10,
-        agility: 10,
-        vigour: 10,
-        intellect: 10,
+        strength: 10,
+        dexterity: 10,
+        constitution: 10,
+        intelligence: 10,
         wisdom: 10,
         charisma: 10,
-        awareness: 10
+        perception: 10
       },
       equipment: {},
       inventory: {
@@ -104,5 +104,49 @@ describe('stations & capacity gates', () => {
     expect(canTake * per, 'and the taken load stays within the carry budget').toBeLessThanOrEqual(
       budgetKg + per
     );
+  });
+});
+
+describe('a soil bed can be laid from the soil you DUG', () => {
+  // Digging turns up real loam 1-2 at a time. Before this it went nowhere: the `lay_*` beds only ever
+  // wanted dirt + compost + fertiliser, so a colonist could dig good soil out of a riverbank and be
+  // left holding it. The made route stays the default; the dug route is what makes the spade worth it.
+  const withStock = (stock: Record<string, number>): GameState =>
+    ({
+      seed: 1,
+      turn: 0,
+      droppedItems: Object.entries(stock).map(([resourceId, quantity], i) => ({
+        id: `s${i}`,
+        resourceId,
+        quantity,
+        x: 0,
+        y: 0,
+        stored: true
+      })),
+      buildings: [],
+      completedResearch: []
+    }) as unknown as GameState;
+
+  it('pays from dug loam when there is no compost in the colony', () => {
+    expect(buildingService.resolveBuildingCost('lay_loam', withStock({ loam: 6 }))).toEqual({
+      loam: 6
+    });
+  });
+
+  it('still prefers the made route when both are affordable', () => {
+    const both = withStock({ loam: 6, fertiliser: 2, compost: 2, blue_clay: 2, dirt: 4 });
+    expect(buildingService.resolveBuildingCost('lay_loam', both)).not.toHaveProperty('loam');
+  });
+
+  it('falls through to a LATER alternative, not just the first', () => {
+    // `lay_loam` accepts loam, or richer soil at a discount. With only terra preta in stock the
+    // resolver has to reach the third entry — the bug this test exists for returned null at the first.
+    expect(buildingService.resolveBuildingCost('lay_loam', withStock({ terra_preta: 3 }))).toEqual({
+      terra_preta: 3
+    });
+  });
+
+  it('is unaffordable when neither route can be paid', () => {
+    expect(buildingService.resolveBuildingCost('lay_loam', withStock({ loam: 1 }))).toBeNull();
   });
 });

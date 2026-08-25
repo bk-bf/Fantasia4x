@@ -156,7 +156,7 @@ const WIRING: Record<string, { wiring: Wiring; where: string; engineFormula?: st
     wiring: 'mirrored',
     where:
       'Combat reads calcMaxStamina (entities/Pawns.ts), a raw-stat copy — the × moving × blood_pumping capacity terms of the design formula are dropped',
-    engineFormula: 'maxStamina = 50 + (VIGOUR − 10) × 4 + (AGILITY − 10) × 2'
+    engineFormula: 'maxStamina = 50 + (CONSTITUTION − 10) × 4 + (DEXTERITY − 10) × 2'
   },
   stamina_recovery_rate: {
     wiring: 'wired',
@@ -168,12 +168,12 @@ const WIRING: Record<string, { wiring: Wiring; where: string; engineFormula?: st
     where:
       'PawnService.getMoveSpeed keeps its OWN curve — a different shape from the design formula, not just a copy',
     engineFormula:
-      'tiles/s = 4 × clamp(0.5 + AGILITY/20, 0.4, 1.8) × load × legs × needs × conditions'
+      'tiles/s = 4 × clamp(0.5 + DEXTERITY/20, 0.4, 1.8) × load × legs × needs × conditions'
   },
   carry_weight: {
     wiring: 'mirrored',
-    where: 'ItemService.getCarryCapacityBreakdown recomputes the same fraction from raw BRAWN',
-    engineFormula: 'capacity kg = bodyWeight × clamp(BRAWN × 0.012, 0.05, 0.3)'
+    where: 'ItemService.getCarryCapacityBreakdown recomputes the same fraction from raw STRENGTH',
+    engineFormula: 'capacity kg = bodyWeight × clamp(STRENGTH × 0.012, 0.05, 0.3)'
   }
 };
 
@@ -252,7 +252,7 @@ interface Profile {
   maxCrit: number;
   avgStamina: number;
   reloads: boolean;
-  /** Every ranged weapon bypasses BRAWN (crossbow / sling) — the draw is mechanical. */
+  /** Every ranged weapon bypasses STRENGTH (crossbow / sling) — the draw is mechanical. */
   allMechanical: boolean;
   powerStats: string[];
 }
@@ -318,7 +318,7 @@ function cellsFor(b: BuildClass): Record<string, StatCell> {
   c.melee_damage = melee
     ? cell(
         'primary',
-        `every swing multiplies by it — scales on ${p.powerStats.join(' / ') || 'BRN'}`
+        `every swing multiplies by it — scales on ${p.powerStats.join(' / ') || 'STR'}`
       )
     : cell('none', `shots take their damage from the ammo, not a melee multiplier — ${arsenal}`);
   c.hit_chance = melee
@@ -373,7 +373,7 @@ function cellsFor(b: BuildClass): Record<string, StatCell> {
   c.block = p.hasShield
     ? cell('primary', 'carries a shield — block resolves before evasion and stops the blow cold')
     : p.wearsHeavy
-      ? cell('secondary', 'no shield, but mass and vigour still stop some blows')
+      ? cell('secondary', 'no shield, but mass and constitution still stop some blows')
       : cell('none', 'no shield — bare block is a rounding error');
   c.knockdown_resistance = p.wearsHeavy
     ? cell('primary', 'holds ground under blows meant to stagger it')

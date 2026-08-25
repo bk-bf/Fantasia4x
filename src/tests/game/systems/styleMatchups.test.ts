@@ -36,7 +36,7 @@ import type { EntityStats, Pawn } from '$lib/game/core/types';
 const SEEDS = [11, 23, 37, 41, 59, 71];
 const MAX_TICKS = 14_000;
 /** Equal skill on both sides — the kit is the only variable. Spawn ceiling, so it reflects real pawns. */
-const EQUAL: Partial<EntityStats> = { brawn: 20, agility: 20, vigour: 20, awareness: 20 };
+const EQUAL: Partial<EntityStats> = { strength: 20, dexterity: 20, constitution: 20, perception: 20 };
 
 const KIT = {
   naked: [] as string[],
@@ -230,7 +230,7 @@ describe('STYLE MATCHUPS — equal skill, kit as the only variable', () => {
       )
     );
     console.log(
-      `[FLOOR] ${SEEDS.length} seeds, both pawns at the spawn ceiling (brawn/agility/vigour 20)\n` +
+      `[FLOOR] ${SEEDS.length} seeds, both pawns at the spawn ceiling (strength/dexterity/constitution 20)\n` +
         out.map(render).join('\n')
     );
     const armoured = out[0];

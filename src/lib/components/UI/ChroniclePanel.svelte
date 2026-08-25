@@ -245,7 +245,7 @@
     /* Re-enable pointer events on entries so they stay hoverable (HoverTip) / clickable over the
        click-through aside; the empty gaps below still pass through to the map. */
     pointer-events: auto;
-    /* A resting highlight behind every line — the same warm hover tint at ~1/3 brawn, but faded
+    /* A resting highlight behind every line — the same warm hover tint at ~1/3 strength, but faded
        to transparent at the left/right edges so it's a soft band, not a hard box. */
     background: linear-gradient(
       to right,

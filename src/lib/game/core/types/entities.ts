@@ -415,7 +415,7 @@ export interface Pawn {
   /** Blood volume; 0 = dead. Starts at maxBloodVolume. */
   bloodVolume?: number;
   /**
-   * Maximum blood pool — derived from weight and vigour.
+   * Maximum blood pool — derived from weight and constitution.
    * Formula: round(weight × 1.4 + (CON − 10) × 2).
    * A 70kg pawn with CON 10 ≈ 98; heavier/tougher pawns go up to ~140.
    */
@@ -472,6 +472,16 @@ export interface Pawn {
    * Independent of normal fatigue sleep, which is unaffected by this setting.
    */
   restPolicy?: 'never' | 'shelter' | 'always';
+  /**
+   * Ceiling on the medicine an auto-tend may spend on THIS pawn (item `tier`). Undefined = no cap, so
+   * a caretaker reaches for the best in stock — which is the default and what most colonies want.
+   *
+   * It exists so Emberbloom Balm is not burned dressing a scratch. Wounds are dressed automatically
+   * under this cap; CONDITIONS are not managed here at all — those are administered by hand from a
+   * caretaker's own pack (`administerMedicine`), because guessing which of thirteen conditions the
+   * player wanted treated, with which of their limited phials, is not a decision the sim should make.
+   */
+  medicineTierCap?: number;
 
   /** FORCE WORK (emergency): when true, the pawn neglects ALL needs — hunger, thirst, fatigue,
    *  hygiene and wound recovery — and keeps working, never breaking off to eat/drink/rest. Can drive
@@ -542,7 +552,16 @@ export interface Pawn {
   activeJob?: {
     /** Phase 5: 'harvest'|'construct'|'craft'|'haul'|'fetch' use work-point jobs; 'need' for eat/sleep;
      *  'rescue' is a carry job (walk→lift→carry a downed colonist to shelter, FSM-driven). */
-    type: 'harvest' | 'construct' | 'craft' | 'haul' | 'fetch' | 'need' | 'deconstruct' | 'plant' | 'rescue';
+    type:
+      | 'harvest'
+      | 'construct'
+      | 'craft'
+      | 'haul'
+      | 'fetch'
+      | 'need'
+      | 'deconstruct'
+      | 'plant'
+      | 'rescue';
     /** Phase 5a: id of the Job in gameState.jobs[] (null for need-type jobs) */
     jobId?: string;
     targetX: number;
@@ -559,6 +578,9 @@ export interface Pawn {
     targetState?: string; // for MovingToNeed, which state to enter on arrival
     turnsInState?: number; // for Eating/Sleeping duration tracking
     hungerToRecover?: number; // total hunger to restore over the eating duration
+    /** thirst the drink already paid for restores over the drinking duration — decided on the first
+     *  sip, because that is when the litre is actually swallowed. 0 means nothing was found to drink. */
+    drinkRelief?: number;
     depositX?: number; // haul / fetch: destination x for deposit / staging
     depositY?: number; // haul / fetch: destination y for deposit / staging
     /** ADR-009 step 2: when set, the pawn is detouring to grab the required tool BEFORE the job —

@@ -35,8 +35,11 @@ export const SLOT_LAYER: Partial<Record<EquipmentSlot, number>> = {
   bodyOuter: 0,
   head: 0,
   bodyMid: 1,
-  bracers: 1,
-  greaves: 1,
+  // A vambrace and a greave are the OUTERMOST thing on their limb — there is nothing worn over them,
+  // and the padding they strap onto sits underneath (an arming garment declares `gambeson` and files
+  // itself deeper). They resolve first in the mitigation walk for the same reason.
+  bracers: 0,
+  greaves: 0,
   belt: 1,
   bodyBase: 2,
   gloves: 2,

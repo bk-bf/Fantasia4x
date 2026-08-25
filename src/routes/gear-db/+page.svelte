@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { effectsOf } from '$lib/dev/itemTree';
   import ItemTree from '$lib/dev/ItemTree.svelte';
 
   // DEV TOOL — data-driven BUILD database. Reads the derived catalogue from $lib/dev/gearDb (which
@@ -280,6 +281,10 @@
       if (val !== null && val !== undefined && val !== '')
         rows.push({ label, val: String(val), tone });
     };
+    // WHAT IT DOES, first and unconditionally. Without this a herbal tea and a cup of water render
+    // identically: the rest of this function is per-KIND (weapon damage, armour defence) and simply has
+    // no branch for "grants a condition" or "cures one".
+    push('effects', effectsOf(g.raw ?? {}), 'good');
     const e = g.raw?.effects ?? {};
     const mults = (obj: Record<string, number> | undefined, suffix = '') => {
       if (!obj) return;
@@ -355,7 +360,14 @@
       push('lineage', g.lineageNames);
       if (g.evoStage) push('evolution stage', g.evoStage);
       push('evolves into', g.evolvesTo);
-      for (const stat of ['brawn', 'agility', 'vigour', 'awareness', 'intellect', 'charisma']) {
+      for (const stat of [
+        'strength',
+        'dexterity',
+        'constitution',
+        'perception',
+        'intelligence',
+        'charisma'
+      ]) {
         const ab = stat.slice(0, 3).toUpperCase();
         const v = e[stat + 'Bonus'];
         if (v != null) push(ab, (v < 0 ? '−' : '+') + Math.abs(v), v < 0 ? 'bad' : 'good');
@@ -480,8 +492,6 @@
         : g.craftable
           ? 'craftable'
           : 'wild/boss';
-
-
 </script>
 
 <div class="build-db">

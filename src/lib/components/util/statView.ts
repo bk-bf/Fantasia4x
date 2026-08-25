@@ -57,11 +57,11 @@ const RES_KEY: Record<string, string> = {
 const BASELINE = {
   id: '__statbaseline__',
   stats: {
-    brawn: 10,
-    agility: 10,
-    vigour: 10,
-    awareness: 10,
-    intellect: 10,
+    strength: 10,
+    dexterity: 10,
+    constitution: 10,
+    perception: 10,
+    intelligence: 10,
     charisma: 10
   },
   physicalTraits: { weight: 70, height: 170, size: 'medium' }
@@ -152,7 +152,7 @@ function derivation(s: StatDef, pawn: Pawn, ctx: StatContext): Deriv {
         { name: 'bodyWeight', value: `${ctx.carry.bodyWeight}kg` },
         {
           name: 'loadFraction',
-          value: `${Math.round(ctx.carry.weight.loadFraction * 100)}% (STR ${ctx.carry.brawn})`
+          value: `${Math.round(ctx.carry.weight.loadFraction * 100)}% (STR ${ctx.carry.strength})`
         },
         { name: 'gear', value: signed(ctx.carry.weight.gear) }
       ],
@@ -187,11 +187,11 @@ function derivation(s: StatDef, pawn: Pawn, ctx: StatContext): Deriv {
   const sm = ctx.condStatMult;
   const eff = (base: number, mult: number) => (mult === 1 ? base : Math.round(base * mult));
   // These MUST match PawnStatService.FORMULA_VARS — the tokens the formulas actually use.
-  add('BRAWN', eff(st.brawn, sm.brawn));
-  add('AGILITY', eff(st.agility, sm.agility));
-  add('VIGOUR', eff(st.vigour, sm.vigour));
-  add('AWARENESS', eff(st.awareness, sm.awareness));
-  add('INTELLECT', eff(st.intellect, sm.intellect));
+  add('STRENGTH', eff(st.strength, sm.strength));
+  add('DEXTERITY', eff(st.dexterity, sm.dexterity));
+  add('CONSTITUTION', eff(st.constitution, sm.constitution));
+  add('PERCEPTION', eff(st.perception, sm.perception));
+  add('INTELLIGENCE', eff(st.intelligence, sm.intelligence));
   add('CHARISMA', st.charisma);
   add('weight', pawn.physicalTraits?.weight ?? 70);
   add('height', pawn.physicalTraits?.height ?? 170);

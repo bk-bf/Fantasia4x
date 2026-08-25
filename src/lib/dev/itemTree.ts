@@ -20,10 +20,25 @@ import { gearClassOf } from '../game/core/gearClass';
 import itemsData from '../game/database/items/items.jsonc';
 import recipesData from '../game/database/items/recipes.jsonc';
 import buildingsData from '../game/database/world/buildings.jsonc';
-import { GEAR, AGES, rowForAny, type Age, type BuildClass, type GearRow } from './gearDb';
+import {
+  GEAR,
+  AGES,
+  rowForAny,
+  type Age,
+  type BuildClass,
+  type GearRow,
+  AGE_BY_TIER
+} from './gearDb';
 import lootpoolData from '../game/database/items/lootpool.jsonc';
 import creaturesData from '../game/database/pawns/creatures.jsonc';
-import { AGE_NAMES, blameStation, chainAgeOf } from './chainAge';
+import {
+  AGE_NAMES,
+  blameStation,
+  chainAgeOf,
+  CARCASS_TIER,
+  hasRecipe,
+  NODE_TOOL_AGE
+} from './chainAge';
 import { SLOT_LAYER } from '../game/core/armorCoverage';
 import type { EquipmentSlot } from '../game/core/types';
 
@@ -61,24 +76,167 @@ for (const c of creaturesData as any[]) {
   SPECIES_OF_POOL.set(pool, word.charAt(0).toUpperCase() + word.slice(1));
 }
 const DROPPER_OF_ITEM = new Map<string, string>();
+/** item id → the tier of the EASIEST creature that drops it. What a thing nobody CRAFTS costs you is
+ *  the fight you have to win for it, so that fight is where its age comes from. */
+const DROPPER_TIER = new Map<string, number>();
 {
+  // creature tier, reached through the pool each creature rolls on
+  const tierOfPool = new Map<string, number>();
+  for (const c of creaturesData as any[]) {
+    if (!c?.lootPool) continue;
+    const t = Number(c.tier ?? 1);
+    const seen = tierOfPool.get(c.lootPool);
+    if (seen === undefined || t < seen) tierOfPool.set(c.lootPool, t);
+  }
   const pools = ((lootpoolData as { pools?: Record<string, any> }).pools ?? {}) as Record<
     string,
     any
   >;
   for (const [poolId, pool] of Object.entries(pools)) {
     const who = SPECIES_OF_POOL.get(poolId) ?? poolId.split('_')[0];
+    const tier = tierOfPool.get(poolId);
+    const note = (id: string) => {
+      if (!DROPPER_OF_ITEM.has(id))
+        DROPPER_OF_ITEM.set(id, who.charAt(0).toUpperCase() + who.slice(1));
+      if (tier === undefined) return;
+      const seen = DROPPER_TIER.get(id);
+      if (seen === undefined || tier < seen) DROPPER_TIER.set(id, tier);
+    };
     for (const slot of Object.values<any>(pool?.slots ?? {}))
-      for (const pick of slot?.pick ?? [])
-        if (pick?.id && !DROPPER_OF_ITEM.has(pick.id))
-          DROPPER_OF_ITEM.set(pick.id, who.charAt(0).toUpperCase() + who.slice(1));
+      for (const pick of slot?.pick ?? []) if (pick?.id) note(pick.id);
+    for (const carry of pool?.carried ?? [])
+      for (const pick of carry?.pick ?? []) if (pick?.id) note(pick.id);
   }
 }
 
 /** Chain age → the same age vocabulary the build tables use. */
 const AGE_OF_CHAIN: Age[] = ['Primitive', 'Copper', 'Bronze', 'Iron', 'Steel', 'Runed'];
-const ageOf = (item: any): Age =>
-  gearById.get(item.id)?.age ?? AGE_OF_CHAIN[chainAgeOf(item.id)] ?? 'Primitive';
+/**
+ * Creature tier (1–5) → the age at which a colony can realistically take one down, and therefore the
+ * age of anything only that creature yields. Indexed by tier, so [0] is unused. The two lowest tiers
+ * are both stone-age hunting — a rabbit and a wolf are day-one problems — and a tier-5 boss sits at
+ * the top of the ladder rather than one rung short of it, which is what plain subtraction gave.
+ */
+const CREATURE_AGE = [0, 0, 0, 2, 3, 5];
+/**
+ * An item's age, in the order the answer is actually trustworthy:
+ *
+ *   1. the gear tables, when this is a piece of gear they already ranked;
+ *   2. an EXPLICIT `tier` on the item — an author saying where the thing belongs;
+ *   3. the workshop ladder its ingredients need.
+ *
+ * (3) alone was the whole rule, and it reads 0 — Primitive — for anything with NO RECIPE at all.
+ * That is right for a foraged berry and wrong for everything you can only ever be given: `voidshard`
+ * is mined at a hundredth of a percent with a runed pick and dropped by humanoid bosses, has no
+ * recipe, and so filed itself under the stone age.
+ */
+/**
+ * AGE IS DERIVED, NEVER DECLARED. It is when a colony can first have the thing, and that is decided
+ * by the hardest step in getting it: the latest workshop in its chain, the ages of everything that
+ * chain consumes, or — for what nobody makes — the hunt or the dig that yields it.
+ *
+ * `tier` is NOT consulted, and that is the whole point. Tier is a separate axis (a quality rank on
+ * armour, the ADR-009 TOOL tier on a tool) living in its own column, and reading it as an age is what
+ * made `stone_axe` — a tier-1 woodcutting tool knapped at a craft spot — announce itself as bronze,
+ * and put flint and bone arrows in the bronze age beside cast ones. 211 items disagreed that way.
+ */
+const ageOf = (item: any): Age => {
+  const gear = gearById.get(item.id)?.age;
+  if (gear) return gear;
+  if (hasRecipe(item.id)) return AGE_OF_CHAIN[chainAgeOf(item.id)] ?? 'Primitive';
+  // Nothing makes it. Then its age is what it costs to GET: the beast you had to put down, or the
+  // ground it came out of (a foraged berry and a picked-up ruby are both there from turn one).
+  const beast = CARCASS_TIER.get(item.id) ?? DROPPER_TIER.get(item.id);
+  if (beast !== undefined) return AGE_OF_CHAIN[CREATURE_AGE[Math.min(Math.max(beast, 1), 5)]];
+  // Dug, not made — but a deposit can still refuse a pick that cannot bite it, and that refusal is
+  // the age. A corundum sits behind a steel pick and its infused twin behind a runed one.
+  const dig = NODE_TOOL_AGE.get(item.id);
+  if (dig !== undefined) return AGE_OF_CHAIN[dig];
+  return AGE_OF_CHAIN[chainAgeOf(item.id)] ?? 'Primitive';
+};
+
+/**
+ * WHAT THE ITEM DOES — everything the sim actually reads off it, in one line.
+ *
+ * The `stat` column carries a single headline number, which meant a herbal tea and a cup of water were
+ * indistinguishable in the tables: nothing surfaced the conditions an item grants or clears, what a
+ * coating inflicts, what a draught gambles, or what a fluid needs to be held in. Auditing content you
+ * cannot see is guesswork, so this is deliberately exhaustive rather than pretty.
+ */
+/** Bare feet are the baseline every boot is measured against — mirrors `BAREFOOT_MOVE_FACTOR` in
+ *  PawnService, which is what actually moves the pawn. */
+const BAREFOOT_MOVE_FACTOR = 0.9;
+
+export function effectsOf(i: any): string {
+  const out: string[] = [];
+  const hrs = (turns: number) => `${Math.round(turns * 10) / 10}t`;
+  if (i.nutrition != null) out.push(`food ${i.nutrition}`);
+  if (i.hydration != null) out.push(`drink ${i.hydration}/L`);
+  if (i.medicineQuality != null) out.push(`med ${i.medicineQuality}`);
+  if (i.curesConditions?.length) out.push(`cures ${i.curesConditions.join('/')}`);
+  if (i.mendsWounds?.length) out.push(`mends ${i.mendsWounds.join('/')}`);
+  if (i.armorProperties?.boneHealMultiplier)
+    out.push(`bone x${i.armorProperties.boneHealMultiplier}`);
+  if (i.grantsConditions?.length)
+    out.push(
+      `grants ${i.grantsConditions.join('/')}${i.conditionDurationTurns ? ` ${hrs(i.conditionDurationTurns)}` : ''}`
+    );
+  if (i.grantsTraitOnConsume) out.push(`trait ${i.grantsTraitOnConsume}`);
+  if (i.grantsLineage) out.push('awakens a bloodline');
+  if (i.traitGamble)
+    out.push(`gamble t${i.traitGamble.tier} → ${(i.traitGamble.traitPool ?? []).join('/')}`);
+  if (i.rawConsumeRisk)
+    out.push(
+      `raw risk${i.rawConsumeRisk.sickness ? ` ${i.rawConsumeRisk.sickness}` : ''}${
+        i.rawConsumeRisk.flawChance ? ` ${Math.round(i.rawConsumeRisk.flawChance * 100)}% flaw` : ''
+      }`
+    );
+  const ce = i.coatingEffect;
+  if (ce)
+    out.push(
+      ce.condition
+        ? `coats ${ce.condition} ${Math.round((ce.chance ?? 0) * 100)}%${ce.durationHours ? ` ${ce.durationHours}h` : ''}`
+        : `coats bleed ×${ce.bleedMult}`
+    );
+  if (i.preservationMethod) out.push(i.preservationMethod);
+  if (i.decaySeconds) out.push(`spoils ${Math.round(i.decaySeconds / 300)}d`);
+  if (i.container?.material) out.push(`${i.container.material} vessel`);
+  if (i.craftValue != null && i.craftValue !== 1) out.push(`worth ${i.craftValue}/unit`);
+  if (i.fuelValue) out.push(`fuel ${i.fuelValue}`);
+  const tb = i.toolBoost;
+  if (tb)
+    out.push(
+      `tool ${[tb.speed && `spd×${tb.speed}`, tb.yield && `yld×${tb.yield}`, tb.quality && `qly×${tb.quality}`].filter(Boolean).join(' ')}`
+    );
+  const ab = i.aimBonuses;
+  if (ab)
+    out.push(
+      `aim ${[ab.accuracy && `+${ab.accuracy}acc`, ab.speed && `+${ab.speed}spd`, ab.range && `+${ab.range}rng`].filter(Boolean).join(' ')}`
+    );
+  if (i.quiver) out.push(`draw +${i.quiver.drawSpeed} (${i.quiver.ammoCategory})`);
+  if (i.inventoryBonus) {
+    const { weightKg = 0, volumeL = 0 } = i.inventoryBonus;
+    out.push(weightKg ? `carry +${weightKg}kg/+${volumeL}L` : `holds +${volumeL}L`);
+  }
+  const ap = i.armorProperties;
+  if (ap?.stealthMod) out.push(`stealth ${ap.stealthMod > 0 ? '+' : ''}${ap.stealthMod}`);
+  // FOOTWEAR reads against BARE FEET, not against nothing: anything on the foot beats bare soles on
+  // broken ground, and a heavy sole gives some of that back. Showing only the penalty hid the whole
+  // benefit — a light boot printed no movement line at all while being the fastest thing you can wear.
+  if (ap?.sightPenalty) out.push(`sight −${Math.round(ap.sightPenalty * 100)}%`);
+  if (ap?.equipmentSlot === 'boots' || ap?.equipmentSlot === 'socks') {
+    const gain = (1 - (ap.movementPenalty ?? 0)) / BAREFOOT_MOVE_FACTOR - 1;
+    out.push(`move ${gain >= 0 ? '+' : '−'}${Math.abs(Math.round(gain * 1000) / 10)}%`);
+  } else if (ap?.movementPenalty) {
+    out.push(`move −${Math.round(ap.movementPenalty * 100)}%`);
+  }
+  if (ap?.fatiguePerTurn) out.push(`fatigue +${ap.fatiguePerTurn}`);
+  if (ap?.coldResistance) out.push(`cold +${ap.coldResistance}`);
+  if (ap?.heatResistance) out.push(`heat +${ap.heatResistance}`);
+  const oh = i.onHitCondition;
+  if (oh) out.push(`on hit ${oh.condition} ${Math.round((oh.chance ?? 0) * 100)}%`);
+  return out.join(' · ');
+}
 
 export interface TreeItem {
   id: string;
@@ -89,6 +247,10 @@ export interface TreeItem {
   tier: number | null;
   /** The one number that matters for this kind — defence, damage, nutrition, comfort… */
   stat: string;
+  /** Everything the sim reads off this item — conditions, cures, coatings, boosts. See `effectsOf`. */
+  effects: string;
+  /** Which vessel materials may hold this fluid — its own axis, not one of its effects. */
+  heldBy: string;
   /** light / medium / heavy / shield — it left the tree when layers took that level. */
   cls: string;
   weightKg: number;
@@ -134,8 +296,33 @@ const CLASS_LABEL: Record<string, string> = {
 // most needs to see — it is why three stone-age garments come to one bronze jerkin. The tree nests by
 // layer, outermost first, using the same depths the mitigation walk itself reads.
 const LAYER_LABEL = ['outer layer', 'mid layer', 'base layer', 'under layer'];
-const layerOf = (slot: string): string =>
-  LAYER_LABEL[SLOT_LAYER[slot as EquipmentSlot] ?? 1] ?? 'mid layer';
+/**
+ * Which layer a piece sits at. The SLOT is only a fallback: a piece that declares an `armorLayer`
+ * knows better than its slot does. An arming coif occupies the head slot but its whole purpose is to
+ * be padding UNDER a helm, and filing it as outer layer put the softest thing in the kit on the
+ * outside of it.
+ */
+const LAYER_OF_ARMOR_LAYER: Record<string, number> = {
+  gambeson: 2, // padding worn under everything
+  cloth: 2,
+  mail: 1,
+  plate: 0,
+  under: 3
+};
+/** Padding — the only thing that goes UNDER a limb piece. Anything else on an arm or a leg is the
+ *  outermost thing there, mail included: nothing is worn over a bracer. */
+const PADDING = new Set(['gambeson', 'cloth', 'under']);
+const layerOf = (slot: string, armorLayer?: string): string => {
+  const limb = slot === 'bracers' || slot === 'greaves';
+  if (limb) return LAYER_LABEL[armorLayer && PADDING.has(armorLayer) ? 2 : 0];
+  return (
+    LAYER_LABEL[
+      (armorLayer ? LAYER_OF_ARMOR_LAYER[armorLayer] : undefined) ??
+        SLOT_LAYER[slot as EquipmentSlot] ??
+        1
+    ] ?? 'mid layer'
+  );
+};
 
 // A weapon's family comes from the build gearDb ALREADY classified it into — one classifier, not a
 // second name-regex quietly disagreeing with it. `pilum`, `francisca` and `framea` all landed in an
@@ -225,6 +412,35 @@ const MATERIAL_LINE: Record<string, string> = {
 const materialLine = (cat: string) =>
   MATERIAL_LINE[cat] ?? (/_seed$/.test(cat) ? 'seeds' : prettify(cat));
 
+/**
+ * The STAGE a material has reached along its own line. Several lines are a processing ladder, and
+ * filing them by raw category alone put a hide and the leather tanned from it on one undivided shelf
+ * — 82 items deep, with the age column carrying all of the meaning. The stage IS the ladder, so it
+ * becomes the level and each rung gets its own age spine.
+ */
+function materialStage(i: any, line: string): string[] {
+  const id = String(i.id ?? '');
+  if (line === 'hide & leather') {
+    if (/^fleshed_/.test(id)) return ['fleshed'];
+    if (/^cured_/.test(id)) return ['cured'];
+    if (/^raw_|_hide$/.test(id) && !/^cured_/.test(id)) return ['raw'];
+    return ['tanned'];
+  }
+  if (line === 'gems & crystal') {
+    if (/^attuned_/.test(id)) return ['attuned'];
+    if (/^infused_/.test(id)) return ['infused'];
+    if (/^cut_/.test(id)) return ['cut'];
+    if (/dust$/.test(id)) return ['ground'];
+    return ['rough'];
+  }
+  if (line === 'stone & masonry') {
+    if (/_block$|_tile$|brick/.test(id)) return ['cut & fired'];
+    if (/concrete|mortar|plaster/.test(id)) return ['bound'];
+    return ['quarried'];
+  }
+  return [];
+}
+
 /** Crafted and dropped are different things to a player: one is a plan, the other is a hunt. They
  *  split BEFORE sets, so a craftable one-off never sits next to enemy loot. */
 function sourceBranch(i: any): string[] {
@@ -233,7 +449,19 @@ function sourceBranch(i: any): string[] {
   return who ? ['dropped', who] : ['dropped', 'unclaimed'];
 }
 
-const perishable = (i: any) => (i.decaySeconds || i.decaysTo ? 'perishable' : 'keeps');
+/**
+ * How a food is KEPT, not merely whether it rots. The old `keeps / perishable` split was a lie by
+ * omission — almost everything under "keeps" also rots, just slower — and it told the reader nothing
+ * about the technique that bought the time. Fresh food and finished meals are their own shelves
+ * because neither was preserved at all.
+ */
+const preservation = (i: any): string => {
+  if (i.preservationMethod) return `${i.preservationMethod}`;
+  if (i.category === 'meal') return 'cooked to order';
+  // Legacy preserved goods that predate the field, read off the name rather than guessed from decay.
+  if (/dried|smoked|salted|cured|pickled/i.test(`${i.id} ${i.name ?? ''}`)) return 'dried';
+  return 'fresh';
+};
 
 // ── the path each item files itself under ───────────────────────────────────
 //
@@ -241,6 +469,21 @@ const perishable = (i: any) => (i.decaySeconds || i.decaysTo ? 'perishable' : 'k
 // puts age directly under the branch (an audit reads "what does Bronze offer for this slot"); every
 // other branch puts its conceptual line first and age beneath it, because "all the fuels, by age" is
 // the question there rather than "everything the bronze age has".
+/**
+ * What a food IS, as one clean partition. This used to be TWO levels — a preservation word and then
+ * the raw `category` — which double-counted: an item with `category: "food"` built a shelf called
+ * Food underneath the branch called Food, "fresh > Spoiled" filed rot as fresh, and the raw category
+ * put a Carcass shelf in the larder holding the only two carcasses in the game typed as food.
+ *
+ * One axis, in the order that decides what the thing is for: cooked, kept, or raw.
+ */
+function foodBranch(i: any): string[] {
+  if (i.category === 'spoiled') return ['Spoiled'];
+  if (i.category === 'meal') return ['Cooked dishes'];
+  if (i.preservationMethod) return ['Preserved', prettify(String(i.preservationMethod))];
+  return [prettify(i.category ?? 'other')];
+}
+
 function pathOf(i: any): string[] {
   const ap = i.armorProperties;
   const wp = i.weaponProperties;
@@ -253,7 +496,7 @@ function pathOf(i: any): string[] {
       age,
       ...sourceBranch(i),
       ap.armorSet ? prettify(ap.armorSet) : 'no set',
-      layerOf(ap.equipmentSlot ?? ap.slot ?? ''),
+      layerOf(ap.equipmentSlot ?? ap.slot ?? '', ap.armorLayer),
       COVERAGE[ap.equipmentSlot ?? ap.slot] ?? prettify(ap.equipmentSlot ?? 'unplaced')
     ];
   }
@@ -301,7 +544,7 @@ function pathOf(i: any): string[] {
   }
 
   if (i.type === 'food' || i.nutrition != null)
-    return ['Consumables', 'Food', perishable(i), prettify(i.category ?? 'food'), age];
+    return ['Consumables', 'Food', ...foodBranch(i), age];
   if (i.medicineQuality != null) return ['Consumables', 'Medicine', age];
   // The coatings and tinctures all became FLUIDS; what still carries `category: reagent` here is beast
   // ORGANS, eaten whole for the trait gamble. Calling that shelf "Coatings & tinctures" was a leftover
@@ -318,7 +561,8 @@ function pathOf(i: any): string[] {
     const work = i.toolBoost?.workType ?? i.category ?? 'other';
     return ['Tools', prettify(String(work)), age];
   }
-  return ['Materials', materialLine(String(i.category ?? 'other')), age];
+  const line = materialLine(String(i.category ?? 'other'));
+  return ['Materials', line, ...materialStage(i, line), age];
 }
 
 /**
@@ -353,12 +597,17 @@ function statOf(i: any): string {
   if (ap?.armorType) return `def ${ap.defense ?? 0}`;
   if (wp) return `dmg ${wp.damage ?? '—'}${wp.damageType ? ` ${wp.damageType}` : ''}`;
   if (i.ammoProperties) return `dmg ${i.ammoProperties.damage ?? '—'}`;
-  // A drinkable food is BOTH: what it feeds and how much of the vessel it takes. Both numbers matter
-  // when you are deciding whether a skin of ale is worth the litre it costs to carry.
+  // A drink is usually BOTH — ale feeds and it quenches — so these accumulate rather than returning
+  // on the first match, which is what made every drink show only one of its two numbers.
+  const feeds: string[] = [];
   if (i.nutrition != null)
-    return i.type === 'fluid' ? `food ${i.nutrition} · ${i.volumeL ?? 1} L` : `food ${i.nutrition}`;
-  if (i.hydration != null) return `drink ${i.hydration}`;
-  if (i.medicineQuality != null) return `med ${i.medicineQuality}`;
+    feeds.push(i.type === 'fluid' ? `food ${i.nutrition}/L` : `food ${i.nutrition}`);
+  if (i.hydration != null) feeds.push(`drink ${i.hydration}/L`);
+  if (i.medicineQuality != null) feeds.push(`med ${i.medicineQuality}`);
+  if (feeds.length) {
+    if (i.type === 'fluid') feeds.push(`${i.volumeL ?? 1} L per serving`);
+    return feeds.join(' · ');
+  }
   if (i.toolBoost) {
     const b = i.toolBoost;
     const parts = [
@@ -373,7 +622,7 @@ function statOf(i: any): string {
 
   if (i.container)
     return `holds ${i.container.capacityL} L${i.container.capacityKg ? ` / ${i.container.capacityKg} kg` : ''}`;
-  if (i.type === 'fluid') return `${i.volumeL ?? 1} L per measure`;
+  if (i.type === 'fluid') return `${i.weightKg ?? 1} kg/L · ${i.volumeL ?? 1} L per serving`;
   if (i.fuelValue) return `fuel ${i.fuelValue}`;
   return '—';
 }
@@ -390,6 +639,8 @@ export const TREE_ITEMS: TreeItem[] = items
       ageRank: AGES.indexOf(ageOf(i)),
       tier: i.tier ?? null,
       stat: statOf(i),
+      effects: effectsOf(i),
+      heldBy: (i.heldBy ?? []).map(prettify).join(' / '),
       cls: CLASS_LABEL[(i.armorProperties ?? {}).armorType] ?? '',
       weightKg: i.weightKg ?? 0,
       source: (gearById.get(i.id) ?? rowForAny(i)).source,
@@ -424,6 +675,22 @@ export interface TreeNode {
 // everything". `no set` and `drop only` are not kits at all — loose pieces and enemy loot can never
 // be complete, so they carry no marker.
 const KIT_PARTS = ['head', 'torso', 'arms', 'hands', 'legs', 'feet'];
+/** item id → which KIT_PARTS its `covers` list actually protects. */
+const COVERED_PARTS = new Map<string, Set<string>>();
+for (const i of items as any[]) {
+  const covers: string[] = i?.armorProperties?.covers ?? [];
+  if (!covers.length) continue;
+  const parts = new Set<string>();
+  for (const c of covers) {
+    if (/Shoulder|UpperArm|Forearm/i.test(c)) parts.add('arms');
+    else if (/Hand|Finger|Thumb/i.test(c)) parts.add('hands');
+    else if (/UpperLeg|LowerLeg|Hip/i.test(c)) parts.add('legs');
+    else if (/Foot|Toe/i.test(c)) parts.add('feet');
+    else if (/head|skull|face|neck/i.test(c)) parts.add('head');
+    else if (/chest|abdomen|torso/i.test(c)) parts.add('torso');
+  }
+  if (parts.size) COVERED_PARTS.set(i.id, parts);
+}
 const NOT_A_KIT = new Set(['no set', 'drop only']);
 const coverageOf = (label: string) => (label.startsWith('torso') ? 'torso' : label);
 function missingOf(node: TreeNode, rootLabel: string): string[] {
@@ -435,6 +702,10 @@ function missingOf(node: TreeNode, rootLabel: string): string[] {
   const present = new Set<string>();
   (function walk(n: TreeNode) {
     if (!n.children.length) present.add(coverageOf(n.label));
+    // A garment protects what it says it COVERS, not merely the slot it occupies. A doublet has
+    // sleeves and a hauberk has a skirt, so a set carrying one is not missing arms just because
+    // nothing sits in the bracers slot — that is a spurious hole an auditor then goes hunting for.
+    for (const it of n.items) for (const p of COVERED_PARTS.get(it.id) ?? []) present.add(p);
     n.children.forEach(walk);
   })(node);
   return KIT_PARTS.filter((p) => !present.has(p));
@@ -534,7 +805,17 @@ export const ITEM_TREE = buildTree();
 // already answer better. Clicking a column re-orders the rows INSIDE every shelf, so "heaviest first"
 // means "heaviest in each line", which is the comparison an audit is actually making.
 
-export type SortKey = 'name' | 'tier' | 'cls' | 'age' | 'stat' | 'weightKg' | 'source' | 'gatedBy';
+export type SortKey =
+  | 'name'
+  | 'tier'
+  | 'cls'
+  | 'age'
+  | 'stat'
+  | 'effects'
+  | 'heldBy'
+  | 'weightKg'
+  | 'source'
+  | 'gatedBy';
 
 /** The header row, in table order. `num` right-aligns, matching the cells. */
 export const SORT_COLUMNS: { key: SortKey; label: string; num?: boolean }[] = [
@@ -543,6 +824,8 @@ export const SORT_COLUMNS: { key: SortKey; label: string; num?: boolean }[] = [
   { key: 'cls', label: 'Class' },
   { key: 'age', label: 'Age' },
   { key: 'stat', label: 'Stat' },
+  { key: 'effects', label: 'Effects' },
+  { key: 'heldBy', label: 'Held by' },
   { key: 'weightKg', label: 'kg', num: true },
   { key: 'source', label: 'Made at' },
   { key: 'gatedBy', label: 'Gated by' }
@@ -566,6 +849,8 @@ function valueOf(it: TreeItem, key: SortKey): number | string {
       return it.ageRank;
     case 'stat':
       return statNumber(it.stat);
+    case 'effects':
+      return it.effects;
     default:
       return it[key] ?? '';
   }

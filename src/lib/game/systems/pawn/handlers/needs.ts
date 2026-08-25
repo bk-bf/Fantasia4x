@@ -8,7 +8,7 @@ import { perTick, ticksFromSeconds } from '../../../core/time';
 import { consumeFromStockpiles, availableQuantityFromDrops } from '../../../core/GameState';
 import { PAWN_STATE, type PawnStateName } from '../pawnStates';
 import { tileHasBody } from '../carry';
-import { takeOut, isFluidId, unitsToLitres } from '../../../core/vessels';
+import { carriedDrinkVessel, hydrationOf, isFluidId, takeOut } from '../../../core/vessels';
 import type { ItemInstance } from '../../../core/types';
 import {
   isAdjacent,
@@ -45,7 +45,7 @@ import {
   HUNGER_THRESHOLD,
   ROUTE_TO_DRINK_THIRST,
   findNearestWaterTarget,
-  carriedWaterVessel,
+  findNearestStoredDrink,
   SLEEP_WAKE_THRESHOLD_HUNGRY,
   SLEEP_WAKE_THRESHOLD_FED,
   needsRecovery,
@@ -53,7 +53,6 @@ import {
   goIdle,
   mutatePawn,
   advancePawnOrders,
-  DRINK_NEED_RELIEF,
   SOCIALISE_TURNS,
   SOCIALISE_RELAXATION_RELIEF,
   LOUNGE_TURNS,
@@ -107,7 +106,7 @@ function startEatingFromInventory(
     const items = { ...(p.inventory?.items ?? {}) };
     for (const m of meal) {
       if (isFluidId(m.id)) {
-        let litres = unitsToLitres(m.id, m.units);
+        let litres = m.units;
         for (const inst of p.inventory?.instances ?? []) {
           if (litres <= 0) break;
           litres -= takeOut(inst, m.id, litres);
@@ -247,6 +246,9 @@ function grabFoodAt(gameState: GameState, pawn: Pawn, x: number, y: number): Gam
 /** One drink is a litre — `water`'s dose is 1 L, so this is the same measure the recipes use. */
 const DRINK_LITRES = 1;
 
+/** How long a wash WITH SOAP holds the grime off — one in-game day. */
+const CLEAN_TICKS = ticksFromSeconds(300);
+
 /** Is the pawn standing at a river/drink zone or a well? Then the drink is free. */
 function atNaturalWater(pawn: Pawn, gs: GameState): boolean {
   const target = findNearestWaterTarget(pawn, gs, 'drink');
@@ -255,12 +257,15 @@ function atNaturalWater(pawn: Pawn, gs: GameState): boolean {
 }
 
 /**
- * §D: drink at the reached target over DRINK_TURNS (not instant — mirrors eating). The thirst relief
- * is spread evenly across the duration; a litre is paid on the first sip.
+ * §D: drink at the reached target over DRINK_TURNS (not instant — mirrors eating). What is swallowed
+ * is paid for on the first sip, and the thirst it relieves is that drink's `hydration` per litre —
+ * spread evenly across the duration. A pawn that finds nothing to drink relieves NOTHING: the relief
+ * used to be applied unconditionally, so a colony with no water at all had the same thirst curve as
+ * one with forty litres, and stored water was a resource spent for no benefit.
  *
  * CONTAINERS-AND-FLUIDS §2 — where that litre comes from, in order: the pawn's OWN carried vessel
  * (the reason to carry a waterskin at all), then the river or well it walked to, which costs the
- * colony nothing, and only failing both the colony's stored water. A pawn standing at a river never
+ * colony nothing, and only failing both the colony's stored drink. A pawn standing at a river never
  * drains the barrels back home.
  */
 export function handleDrinking(pawn: Pawn, gameState: GameState): GameState {
@@ -268,22 +273,40 @@ export function handleDrinking(pawn: Pawn, gameState: GameState): GameState {
   const turnsInState = (activeJob?.turnsInState ?? 0) + 1;
   const duration = DRINK_TURNS;
   let state = gameState;
+  // Thirst relieved by the whole drink — decided on the first sip and carried for the rest of it on
+  // the job. A resumed drink that carries no figure (a save written before drinks were paid for)
+  // reads 0 and ends here; the pawn is still thirsty, so it re-decides and drinks properly.
+  let relief = activeJob?.drinkRelief ?? 0;
   if (turnsInState === 1) {
-    const skin = carriedWaterVessel(pawn);
+    relief = 0;
+    const skin = carriedDrinkVessel(pawn);
     if (skin) {
+      const litres = Math.min(DRINK_LITRES, skin.litres);
+      relief = litres * hydrationOf(skin.itemId);
       state = mutatePawn(state, pawn.id, (p) => {
         const drink = (inst: ItemInstance | undefined) => {
-          if (inst?.instanceId === skin.instanceId) takeOut(inst, 'water', DRINK_LITRES);
+          if (inst?.instanceId === skin.inst.instanceId) takeOut(inst, skin.itemId, litres);
         };
         for (const inst of p.inventory?.instances ?? []) drink(inst);
         for (const inst of Object.values(p.equipment ?? {})) drink(inst);
       });
-    } else if (!atNaturalWater(pawn, state) && (state.stockpile?.['water'] ?? 0) > 0) {
-      state = consumeFromStockpiles(state, { water: 1 });
+    } else if (atNaturalWater(pawn, state)) {
+      // A river or well is bottomless and costs the colony nothing.
+      relief = DRINK_LITRES * hydrationOf('water');
+    } else {
+      // Whatever the colony has in stock, wherever the pawn walked to.
+      const stored = findNearestStoredDrink(pawn, state);
+      const available = stored ? (state.stockpile?.[stored.itemId] ?? 0) : 0;
+      if (stored && available > 0) {
+        const litres = Math.min(DRINK_LITRES, available);
+        relief = litres * hydrationOf(stored.itemId);
+        state = consumeFromStockpiles(state, { [stored.itemId]: litres });
+      }
     }
   }
-  const reliefPerTurn = DRINK_NEED_RELIEF / duration;
-  const done = turnsInState >= duration;
+  const reliefPerTurn = relief / duration;
+  // Nothing to drink at what it walked to — stop rather than mime it for the full duration.
+  const done = turnsInState >= duration || relief <= 0;
   if (turnsInState === 1)
     gameLogger.log(
       state.turn,
@@ -314,7 +337,8 @@ export function handleDrinking(pawn: Pawn, gameState: GameState): GameState {
           targetY: p.position?.y ?? activeJob?.targetY ?? 0,
           progress: turnsInState / duration,
           timeRequired: duration,
-          turnsInState
+          turnsInState,
+          drinkRelief: relief
         };
   });
 }
@@ -478,27 +502,42 @@ export function handleWashing(pawn: Pawn, gameState: GameState): GameState {
   const turnsInState = (activeJob?.turnsInState ?? 0) + 1;
   const duration = WASH_TURNS;
   const reliefPerTurn = WASH_NEED_RELIEF / duration;
+  // A bar of soap turns a rinse into a proper wash: the same relief, but the grime stays off for a
+  // day afterwards (`clean` holds hygieneRate at 0) instead of starting to build again immediately.
+  // Spent on the first turn, and only when the colony actually has some — soap is a luxury, not a
+  // requirement, and washing without it works exactly as it always did.
+  let state = gameState;
+  let soaped = false;
+  if (turnsInState === 1 && (gameState.stockpile?.['soap'] ?? 0) >= 1) {
+    state = consumeFromStockpiles(gameState, { soap: 1 });
+    soaped = true;
+  }
   const done = turnsInState >= duration;
   if (turnsInState === 1)
     gameLogger.log(
-      gameState.turn,
+      state.turn,
       'NEED-CHECK',
       () =>
-        `${pawn.name} starts washing hygiene=${(pawn.needs?.hygiene ?? 0).toFixed(1)} at ${fmtPos(pawn)}`
+        `${pawn.name} starts washing${soaped ? ' with soap' : ''} hygiene=${(pawn.needs?.hygiene ?? 0).toFixed(1)} at ${fmtPos(pawn)}`
     );
   if (done)
     gameLogger.log(
-      gameState.turn,
+      state.turn,
       'NEED-CHECK',
       () =>
         `${pawn.name} finished washing hygiene=${Math.max(0, (pawn.needs?.hygiene ?? 0) - reliefPerTurn).toFixed(1)} at ${fmtPos(pawn)}`
     );
-  return mutatePawn(gameState, pawn.id, (p) => {
+  return mutatePawn(state, pawn.id, (p) => {
     // Gate the pawn at the water tile for the whole task (see handleDrinking).
     p.path = [];
     p.isMoving = false;
     p.needs.hygiene = Math.max(0, (p.needs.hygiene ?? 0) - reliefPerTurn);
-    p.needs.lastWash = gameState.turn;
+    p.needs.lastWash = state.turn;
+    if (soaped)
+      p.conditionTimers = {
+        ...(p.conditionTimers ?? {}),
+        clean: Math.max(p.conditionTimers?.clean ?? 0, CLEAN_TICKS)
+      };
     p.currentState = done ? PAWN_STATE.IDLE : PAWN_STATE.WASHING;
     p.activeJob = done
       ? undefined

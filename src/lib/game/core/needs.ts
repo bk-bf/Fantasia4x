@@ -399,14 +399,14 @@ export function driveEncumbrance(conditions: EntityCondition[], loadRatio: numbe
   setLoadCondition(conditions, 'encumbered', span(ENC_BURDEN_START, ENC_OVERLOAD_FULL));
 }
 
-/** STRENGTH shortfall (weapon `wieldRequirement.brawn` − wielder STR) at which weapon-strain is
+/** STRENGTH shortfall (weapon `wieldRequirement.strength` − wielder STR) at which weapon-strain is
  *  maxed. A STR-8 pawn on a STR-22 orc slab (shortfall 14) is fully overmatched. */
 export const WIELD_STRAIN_FULL = 14;
 
-/** Set the `overmatched` condition's severity DIRECTLY from a wielder's brawn shortfall vs the
+/** Set the `overmatched` condition's severity DIRECTLY from a wielder's strength shortfall vs the
  *  equipped weapon's `wieldRequirement` (CREATURE-COMBAT-OVERHAUL §2c) — INSTANTANEOUS, like
  *  `driveEncumbrance`. `shortfall` ≤ 0 (meets the bar / no requirement) clears it. The staged condition
- *  carries the whole debuff (hitChance/brawn/dodge/fatigueRate), flowing through the same
+ *  carries the whole debuff (hitChance/strength/dodge/fatigueRate), flowing through the same
  *  conditionStatMultipliers/conditionHitMult combat reads as encumbrance — so the penalty is data-driven
  *  AND player-visible (a pill), not inline combat math. Mutates in place; the common case allocates nothing. */
 export function driveWieldStrain(conditions: EntityCondition[], shortfall: number): void {
@@ -485,11 +485,13 @@ export function conditionNeedMultipliers(conditions: EntityCondition[]): {
   fatigueRate: number;
   thirstRate: number;
   relaxationRate: number;
+  hygieneRate: number;
 } {
   let hungerRate = 1;
   let fatigueRate = 1;
   let thirstRate = 1;
   let relaxationRate = 1; // < 1 = relaxation decays slower (the `comfortable` condition boosts it)
+  let hygieneRate = 1; // 0 = grime stops accruing entirely (the `clean` a bar of soap buys)
   for (const c of conditions) {
     const stage = getConditionCurrentStage(c);
     if (stage) {
@@ -497,9 +499,10 @@ export function conditionNeedMultipliers(conditions: EntityCondition[]): {
       fatigueRate *= stage.modifiers.fatigueRate ?? 1;
       thirstRate *= stage.modifiers.thirstRate ?? 1;
       relaxationRate *= stage.modifiers.relaxationRate ?? 1;
+      hygieneRate *= stage.modifiers.hygieneRate ?? 1;
     }
   }
-  return { hungerRate, fatigueRate, thirstRate, relaxationRate };
+  return { hungerRate, fatigueRate, thirstRate, relaxationRate, hygieneRate };
 }
 
 /**
@@ -512,35 +515,38 @@ export function transientNeedMultipliers(ids: ReadonlyArray<string>): {
   hungerRate: number;
   fatigueRate: number;
   thirstRate: number;
+  hygieneRate: number;
 } {
   let hungerRate = 1;
   let fatigueRate = 1;
   let thirstRate = 1;
+  let hygieneRate = 1;
   for (const id of ids) {
     const m = TRANSIENT_BY_ID.get(id)?.modifiers;
     if (m) {
       hungerRate *= m.hungerRate ?? 1;
       fatigueRate *= m.fatigueRate ?? 1;
       thirstRate *= m.thirstRate ?? 1;
+      hygieneRate *= m.hygieneRate ?? 1;
     }
   }
-  return { hungerRate, fatigueRate, thirstRate };
+  return { hungerRate, fatigueRate, thirstRate, hygieneRate };
 }
 
 export interface StatMultipliers {
-  brawn: number;
-  agility: number;
-  vigour: number;
-  awareness: number;
-  intellect: number;
+  strength: number;
+  dexterity: number;
+  constitution: number;
+  perception: number;
+  intelligence: number;
 }
 /** Shared identity result returned for the common (no-condition) case — never mutated. */
 const NO_STAT_MULT: StatMultipliers = Object.freeze({
-  brawn: 1,
-  agility: 1,
-  vigour: 1,
-  awareness: 1,
-  intellect: 1
+  strength: 1,
+  dexterity: 1,
+  constitution: 1,
+  perception: 1,
+  intelligence: 1
 });
 
 /**
@@ -558,19 +564,19 @@ export function conditionStatMultipliers(entity: {
   const tconds = entity.transientConditions;
   if ((!conds || conds.length === 0) && (!tconds || tconds.length === 0)) return NO_STAT_MULT;
   const out: StatMultipliers = {
-    brawn: 1,
-    agility: 1,
-    vigour: 1,
-    awareness: 1,
-    intellect: 1
+    strength: 1,
+    dexterity: 1,
+    constitution: 1,
+    perception: 1,
+    intelligence: 1
   };
   const apply = (m?: ConditionModifiers) => {
     if (!m) return;
-    if (m.brawn != null) out.brawn *= m.brawn;
-    if (m.agility != null) out.agility *= m.agility;
-    if (m.vigour != null) out.vigour *= m.vigour;
-    if (m.awareness != null) out.awareness *= m.awareness;
-    if (m.intellect != null) out.intellect *= m.intellect;
+    if (m.strength != null) out.strength *= m.strength;
+    if (m.dexterity != null) out.dexterity *= m.dexterity;
+    if (m.constitution != null) out.constitution *= m.constitution;
+    if (m.perception != null) out.perception *= m.perception;
+    if (m.intelligence != null) out.intelligence *= m.intelligence;
   };
   for (const c of conds ?? []) apply(getConditionCurrentStage(c)?.modifiers);
   for (const id of tconds ?? []) apply(TRANSIENT_BY_ID.get(id)?.modifiers);

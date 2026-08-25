@@ -12,16 +12,13 @@ import type {
 import { rng } from './rng';
 import { mergeConditions } from './carcassCondition';
 import {
-  vesselAllows,
-  isFluidId,
-  litresToUnits,
-  takeOut,
   heldQuantity,
-  litresPerUnit,
-  putIn,
+  isFluidId,
   pickVesselFor,
-  unitsToLitres,
+  putIn,
+  takeOut,
   vesselAccepts,
+  vesselAllows,
   vesselOf
 } from './vessels';
 import { allItemDefs, itemDefById } from './itemDefs';
@@ -261,7 +258,7 @@ export function colonyStock(
   for (const b of buildings ?? []) {
     if (!b.fluidContents?.length) continue;
     for (const e of b.fluidContents) {
-      const qty = e.litres != null ? litresToUnits(e.itemId, e.litres) : (e.amount ?? 0);
+      const qty = e.litres ?? e.amount ?? 0;
       if (qty > 0) agg[e.itemId] = (agg[e.itemId] ?? 0) + qty;
     }
   }
@@ -273,7 +270,7 @@ function creditVesselContents(agg: Record<string, number>, d: DroppedItem): void
   const contents = d.instance?.contents;
   if (!contents?.length) return;
   for (const e of contents) {
-    const qty = e.litres != null ? litresToUnits(e.itemId, e.litres) : (e.amount ?? 0);
+    const qty = e.litres ?? e.amount ?? 0;
     if (qty > 0) agg[e.itemId] = (agg[e.itemId] ?? 0) + qty;
   }
 }
@@ -294,7 +291,7 @@ export function availableQuantityFromDrops(
     if (d.resourceId === itemId) total += d.quantity;
     // A fluid is never a stack of its own — what the colony has is what its vessels hold.
     const held = heldQuantity(d.instance, itemId);
-    if (held > 0) total += isFluidId(itemId) ? litresToUnits(itemId, held) : held;
+    if (held > 0) total += held;
   }
   return total;
 }
@@ -355,7 +352,7 @@ export function reserveForOrder(
       const held = heldQuantity(d.instance, itemId);
       if (held > 0) {
         drops.push({ ...d, reservedFor: orderId });
-        remaining -= isFluidId(itemId) ? held / litresPerUnit(itemId) : held;
+        remaining -= held;
       } else {
         drops.push(d);
       }
@@ -617,7 +614,7 @@ function creditFluid(
   x: number,
   y: number
 ): void {
-  let remainingL = unitsToLitres(itemId, units);
+  let remainingL = units;
 
   for (let i = 0; i < drops.length && remainingL > 0; i++) {
     const d = drops[i];
@@ -708,12 +705,12 @@ function drawFromVessel(
   const held = heldQuantity(d.instance, itemId);
   if (held <= 0 || !d.instance) return remaining;
   const fluid = isFluidId(itemId);
-  const wantNative = fluid ? remaining * litresPerUnit(itemId) : remaining;
+  const wantNative = remaining;
   const inst = { ...d.instance, contents: d.instance.contents?.map((e) => ({ ...e })) };
   const got = takeOut(inst, itemId, Math.min(held, wantNative));
   if (got <= 0) return remaining;
   drops[i] = { ...d, instance: inst };
-  return remaining - (fluid ? got / litresPerUnit(itemId) : got);
+  return remaining - got;
 }
 
 /**

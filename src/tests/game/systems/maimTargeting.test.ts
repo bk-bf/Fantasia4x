@@ -98,7 +98,7 @@ describe('MAIM TARGETING — does a precise fighter value disabling a foe?', () 
               {
                 count: 1,
                 drafted: true,
-                stats: { brawn: 30, agility: 30, vigour: 30 },
+                stats: { strength: 30, dexterity: 30, constitution: 30 },
                 equip: ['steel_longsword']
               }
             ],

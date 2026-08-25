@@ -121,6 +121,7 @@ describe('armour chain — physical pawn pipeline (HeadlessSession, real ticks)'
           cured_deer_hide: 20,
           deer_hide: 20,
           cordage: 20,
+          thread: 20,
           branch: 30,
           jackal_leather: 20,
           sinew: 20
@@ -171,7 +172,7 @@ describe('armour chain — physical pawn pipeline (HeadlessSession, real ticks)'
         pawns: [{ count: 6, skillLevel: 16 }],
         needsDisabled: ['hunger', 'fatigue'],
         buildings: [{ id: 'anvil' }],
-        items: { iron_bar: 30, buckskin: 20, boarhide: 20, cordage: 20, sinew: 20 },
+        items: { iron_bar: 30, buckskin: 20, boarhide: 20, cordage: 20, thread: 20, sinew: 20 },
         seedEntities: false
       })
     );

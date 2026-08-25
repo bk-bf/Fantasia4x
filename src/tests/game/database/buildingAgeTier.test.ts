@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import buildingsData from '$lib/game/database/world/buildings.jsonc';
+import { AGE_NAMES, BUILDING_AGE, blameStation, chainAgeOf } from '$lib/dev/chainAge';
 
 /**
  * §F age-tier audit — every building carries an `ageTier` ("age:tier", e.g. "runed:3"), and a building
@@ -84,5 +85,32 @@ describe('building ageTier audit', () => {
       violations,
       `advanced buildings using primitive raw filler:\n  ${violations.join('\n  ')}`
     ).toEqual([]);
+  });
+});
+
+// ── the other direction: a building cannot be older than what it is built from ──────────────────
+// The rule above stops an advanced building being lashed together from branches. Nothing stopped the
+// reverse, which is the one that actually broke the tables: the Clay Oven declared `primitive:1` and
+// cost 25 FIRED BRICKS, which come out of a copper-age kiln. Everything baked in it — every pie, the
+// bread — then inherited "primitive" from a station a stone-age colony could never lay. Six other
+// buildings had the same shape, including the Apothecary, which called itself iron while needing gem
+// dust off a RUNED bench, and so filed the whole grand-coating line two ages early.
+describe('a building is at least as late as its own materials', () => {
+  it('no building declares an age earlier than what it is built from', () => {
+    const bad: string[] = [];
+    for (const b of BUILDINGS) {
+      if (!b.id || !b.buildingCost) continue;
+      const declared = BUILDING_AGE.get(b.id) ?? 0;
+      for (const k of Object.keys(b.buildingCost)) {
+        if (k.startsWith('category:')) continue; // a pool takes its cheapest member; it gates nothing
+        const needed = chainAgeOf(k);
+        if (needed > declared)
+          bad.push(
+            `${b.id} is ${AGE_NAMES[declared]} but needs ${k} — ${AGE_NAMES[needed]} work ` +
+              `(${blameStation(k) || 'no station'}). Raise its ageTier or build it from something earlier.`
+          );
+      }
+    }
+    expect(bad, bad.join('; ')).toEqual([]);
   });
 });

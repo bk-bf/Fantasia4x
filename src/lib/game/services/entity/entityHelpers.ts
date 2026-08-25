@@ -766,7 +766,7 @@ export function isPawnDetected(
   } else if (e && turn < e.at) {
     return false; // failed roll cached; next attempt not due yet
   }
-  const score = detectionScore(mob.stats?.awareness ?? 10, tileLight, getNightVision(mob));
+  const score = detectionScore(mob.stats?.perception ?? 10, tileLight, getNightVision(mob));
   const stealth = pawnStatService.evaluateStat('stealth', pawn);
   const proximityFrac = 1 - distToPawn / Math.max(1, visionRange);
   if (rng.random() < detectionChance(score, stealth, proximityFrac)) {

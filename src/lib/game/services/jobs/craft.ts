@@ -26,10 +26,8 @@ import {
   defaultFilterFor,
   heldQuantity,
   isFluidId,
-  litresToUnits,
   putIn,
   takeOut,
-  unitsToLitres,
   vesselOf
 } from '../../core/vessels';
 import { memoryService } from '../MemoryService';
@@ -55,7 +53,7 @@ function stationHeldUnits(gs: GameState, order: CraftingInProgress, itemId: stri
   if (!isFluidId(itemId) || !order.stationBuildingId) return 0;
   const b = (gs.buildings ?? []).find((x) => x.id === order.stationBuildingId);
   const litres = (b?.fluidContents ?? []).find((e) => e.itemId === itemId)?.litres ?? 0;
-  return litres > 0 ? litresToUnits(itemId, litres) : 0;
+  return litres > 0 ? litres : 0;
 }
 
 /**
@@ -318,8 +316,14 @@ export function completeCraftOrder(
     const yieldScale = conditionMult * yieldMult;
     if (yieldScale !== 1) {
       const scaled = qty * yieldScale;
-      const whole = Math.floor(scaled);
-      qty = whole + (rng.random() < scaled - whole ? 1 : 0);
+      if (isFluidId(outId)) {
+        // A fluid is measured in litres and pours in fractions, so it takes the multiplier straight.
+        // Flooring it with the carry below would round a 0.4 L render of bile to nothing or to 1 L.
+        qty = Math.round(scaled * 1000) / 1000;
+      } else {
+        const whole = Math.floor(scaled);
+        qty = whole + (rng.random() < scaled - whole ? 1 : 0);
+      }
     }
     // §F cooked-meal quality: FOOD outputs are scaled by a rolled quality tier (cooking_quality →
     // 0.8×–1.8× via qualityMultiplier) — bulk food carries no per-unit identity, so meal quality
@@ -327,8 +331,12 @@ export function completeCraftOrder(
     // is an rng "carry" so even single-portion meals benefit on average (not just batches).
     if (rollQuality && itemService.getItemById(outId)?.category === 'food') {
       const scaled = qty * qualityMultiplier(rollQuality());
-      const whole = Math.floor(scaled);
-      qty = Math.max(1, whole + (rng.random() < scaled - whole ? 1 : 0));
+      if (isFluidId(outId)) {
+        qty = Math.round(scaled * 1000) / 1000;
+      } else {
+        const whole = Math.floor(scaled);
+        qty = Math.max(1, whole + (rng.random() < scaled - whole ? 1 : 0));
+      }
     }
     outputs[outId] = (outputs[outId] ?? 0) + qty;
   }
@@ -562,7 +570,7 @@ function captureFluid(
   next: DroppedItem[],
   state: GameState
 ): { state: GameState; lost: number } {
-  let remainingL = unitsToLitres(outId, qty);
+  let remainingL = qty;
 
   // 1 — the station itself.
   const placed = (state.buildings ?? []).find(
@@ -612,7 +620,7 @@ function captureFluid(
 
   return {
     state: buildings === state.buildings ? state : { ...state, buildings },
-    lost: Math.round(litresToUnits(outId, remainingL) * 1000) / 1000
+    lost: Math.round(remainingL * 1000) / 1000
   };
 }
 
@@ -638,7 +646,7 @@ function drainStationFluidInputs(
     const inVessels = remaining
       .filter((d) => d.reservedFor === entry.id)
       .reduce((sum, d) => sum + heldQuantity(d.instance, itemId), 0);
-    let needL = unitsToLitres(itemId, units) - inVessels;
+    let needL = units - inVessels;
     if (needL <= 1e-6) continue;
     contents ??= (placed.fluidContents ?? []).map((e) => ({ ...e }));
     const held = contents.find((e: FluidEntry) => e.itemId === itemId);
@@ -674,9 +682,9 @@ function consumeStagedInputs(gs: GameState, entry: CraftingInProgress): DroppedI
     };
     for (const [itemId, units] of Object.entries(want)) {
       if (units <= 0) continue;
-      const native = isFluidId(itemId) ? unitsToLitres(itemId, units) : units;
+      const native = units;
       const got = takeOut(inst, itemId, native);
-      if (got > 0) want[itemId] = units - (isFluidId(itemId) ? litresToUnits(itemId, got) : got);
+      if (got > 0) want[itemId] = units - got;
     }
     const { reservedFor, ...rest } = d;
     void reservedFor;

@@ -71,11 +71,11 @@ describe('broken bone effects', () => {
     ({
       id: 'p',
       stats: {
-        brawn: 10,
-        agility: 10,
-        vigour: 10,
-        awareness: 10,
-        intellect: 10,
+        strength: 10,
+        dexterity: 10,
+        constitution: 10,
+        perception: 10,
+        intelligence: 10,
         charisma: 10
       },
       limbs: [
@@ -149,10 +149,10 @@ describe('broken bone effects', () => {
     expect(conditions.some((x) => x.id === 'fractured')).toBe(false);
   });
 
-  it('the `fractured` condition crushes BRAWN/AGILITY (core stats), so combat suffers too', () => {
+  it('the `fractured` condition crushes STRENGTH/DEXTERITY (core stats), so combat suffers too', () => {
     const broken = pawnWithBrokenArm(true);
     broken.conditions = [{ id: 'fractured', severity: 1 }];
-    // melee_damage reads BRAWN; with the fracture crushing brawn it must fall below the intact value.
+    // melee_damage reads STRENGTH; with the fracture crushing strength it must fall below the intact value.
     const intactDmg = pawnStatService.evaluateStat('melee_damage', pawnWithBrokenArm(true));
     const brokenDmg = pawnStatService.evaluateStat('melee_damage', broken);
     expect(brokenDmg).toBeLessThan(intactDmg);

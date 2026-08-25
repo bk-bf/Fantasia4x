@@ -24,17 +24,17 @@
     { key: 'mobHunger', label: 'Creature hunger' }
   ];
   const STAT_KEYS: StatKey[] = [
-    'brawn',
-    'agility',
-    'intellect',
-    'awareness',
+    'strength',
+    'dexterity',
+    'intelligence',
+    'perception',
     'charisma',
-    'vigour'
+    'constitution'
   ];
 
   let presetId = $state(SCENARIO_PRESETS[0]?.id ?? '');
   let pawnId = $state('');
-  let statKey = $state<StatKey>('brawn');
+  let statKey = $state<StatKey>('strength');
   let statValue = $state(15);
   let skillLevel = $state(20);
   let equipItemId = $state(ITEMS[0]?.id ?? '');

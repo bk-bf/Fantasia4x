@@ -3,7 +3,7 @@
 import type { GameState, Mob, MobState, DroppedItem, ItemInstance } from '../../core/types';
 import { getCreatureById } from '../../core/Creatures';
 import { stampForeignVessel } from '../../core/vessels';
-import { getLootPool } from '../../core/LootPools';
+import { drawCarried, getLootPool } from '../../core/LootPools';
 import { itemService } from '../ItemService';
 import { rng } from '../../core/rng';
 import { SECONDS_PER_TICK, perTick } from '../../core/time';
@@ -404,11 +404,13 @@ function dropMobGear(
   mob: Mob,
   def: ReturnType<typeof getCreatureById>
 ): GameState {
-  if (!mob.equipment || !def?.lootPool) return state;
+  // A pool is enough on its own: an unarmed raider can still be carrying a phial, so this must not
+  // bail on a missing `equipment` before the carried roll below has run.
+  if (!def?.lootPool) return state;
   const pool = getLootPool(def.lootPool);
   if (!pool) return state;
   const drops: DroppedItem[] = [];
-  for (const [slot, inst] of Object.entries(mob.equipment) as [
+  for (const [slot, inst] of Object.entries(mob.equipment ?? {}) as [
     string,
     ItemInstance | undefined
   ][]) {
@@ -425,6 +427,18 @@ function dropMobGear(
       instance: stampForeignVessel(inst),
       quality: inst.quality,
       durability: inst.durability,
+      forbidden: true
+    });
+  }
+  // …and whatever they were carrying. A raider with a phial of something on their belt leaves it on
+  // the body; unlike worn gear this is a plain stack, so it needs no instance and no durability.
+  for (const c of drawCarried(pool, rng)) {
+    drops.push({
+      id: `loot-carry-${mob.id}-${c.itemId}-${state.turn}`,
+      resourceId: c.itemId,
+      x: mob.x,
+      y: mob.y,
+      quantity: c.qty,
       forbidden: true
     });
   }

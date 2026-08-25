@@ -44,6 +44,9 @@
     "rate"           : 0.7,
     "autoSatisfy"    : 70,
     "seek"           : 82,
+    // Thirst relief is NOT read from here — each drink states its own `hydration` (thirst per litre)
+    // in items.jsonc, so water is worth more than ale and far more than brandy. Kept only as the value
+    // water carries.
     "relief"         : 65,
     "durationSeconds": 2,
     "moodBands"      : [ {"atOrAbove": 90, "effect": "need_parched"}, {"atOrAbove": 75, "effect": "need_thirsty"} ]

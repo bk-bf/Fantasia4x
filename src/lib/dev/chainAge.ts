@@ -36,6 +36,29 @@ for (const b of buildingsData as any[]) {
   if (b?.id) BUILDING_AGE.set(b.id, age < 0 ? 0 : age);
 }
 
+/** item id → the age of the PICK a node demands before it will give the thing up. A node has no
+ *  workshop behind it, but it can still be gated: a corundum will not come out of the rock for a
+ *  copper pick. Tool tiers 0–4 are stone, copper, iron, steel and runed. */
+export const NODE_TOOL_AGE = new Map<string, number>();
+{
+  const TOOL_AGE = [0, 1, 3, 4, 5]; // stone → primitive, copper → copper, iron, steel, runed
+  (function scan(o: unknown): void {
+    if (Array.isArray(o)) return o.forEach(scan);
+    if (!o || typeof o !== 'object') return;
+    const n = o as Record<string, any>;
+    const inter = n.interaction;
+    const tier = inter?.toolRequirement?.minTier;
+    if (typeof tier === 'number')
+      for (const y of inter.yields ?? [])
+        if (typeof y?.itemId === 'string') {
+          const age = TOOL_AGE[Math.min(Math.max(tier, 0), 4)];
+          const seen = NODE_TOOL_AGE.get(y.itemId);
+          if (seen === undefined || age < seen) NODE_TOOL_AGE.set(y.itemId, age);
+        }
+    for (const v of Object.values(n)) scan(v);
+  })(resourcesData);
+}
+
 /** Everything a map node yields — foraged or mined, so no workshop stands behind it. */
 export const nodeItems = new Set<string>();
 (function walk(o: unknown): void {
@@ -48,6 +71,17 @@ export const nodeItems = new Set<string>();
 /** Carcasses come off a corpse, not out of a building. */
 export const carcassItems = new Set<string>();
 for (const c of creaturesData as any[]) if (c?.carcassItemId) carcassItems.add(c.carcassItemId);
+
+/** carcass id → the tier of the EASIEST creature that drops it. A carcass has no recipe, so the
+ *  workshop walk prices every one of them at nothing and files a cave bear beside a rabbit. What it
+ *  actually costs is the hunt, and the creature already states that. */
+export const CARCASS_TIER = new Map<string, number>();
+for (const c of creaturesData as any[]) {
+  if (!c?.carcassItemId) continue;
+  const t = Number(c.tier ?? 1);
+  const seen = CARCASS_TIER.get(c.carcassItemId);
+  if (seen === undefined || t < seen) CARCASS_TIER.set(c.carcassItemId, t);
+}
 
 const recipesByOutput = new Map<string, any[]>();
 for (const r of recipes)
@@ -69,6 +103,10 @@ const poolMembers = (key: string): string[] => {
   // The pseudo-categories resolve by id, exactly as the sim's matcher does.
   if (cat === 'plank' || cat === 'log')
     return items.filter((i: any) => String(i?.id ?? '').endsWith(`_${cat}`)).map((i: any) => i.id);
+  if (cat === 'fastener')
+    return items
+      .filter((i: any) => /_nail$|_rivet$|_tack$/.test(String(i?.id ?? '')))
+      .map((i: any) => i.id);
   return (byCategory.get(cat) ?? []).filter((id) => {
     const t = itemById.get(id)?.type;
     return t !== 'armor' && t !== 'weapon' && t !== 'tool';
@@ -113,6 +151,39 @@ for (let pass = 0; pass < 30; pass++) {
   }
   if (!changed) break;
 }
+
+/** Does anything in the game MAKE this? Distinguishes "its chain is primitive" from "it has no chain",
+ *  which `chainAgeOf` returns 0 for alike. Without the difference a mined gem and a stone-age craft
+ *  are indistinguishable, and the age of the first one has to come from somewhere else. */
+export const hasRecipe = (id: string): boolean => recipesByOutput.has(id);
+
+/** Parts that only come off a TIER 4+ beast, at the altar where such a thing is flensed. Anything
+ *  whose chain eats one of these is boss work whoever swung the hammer — the fang decides that, not
+ *  the smith. */
+export const BOSS_PARTS = new Set([
+  'great_fang',
+  'great_tusk',
+  'great_bone',
+  'alpha_heart',
+  'alpha_ichor',
+  'direwolf_hackles',
+  'owlbear_pineal',
+  'sabretooth_glands'
+]);
+
+/** Does this item's chain consume something only a boss beast yields? Walks the whole chain, so a
+ *  weapon built from a component built from a fang still counts. */
+export const usesBossPart = (id: string, seen = new Set<string>()): boolean => {
+  if (BOSS_PARTS.has(id)) return true;
+  if (seen.has(id)) return false;
+  seen.add(id);
+  for (const r of recipesByOutput.get(id) ?? [])
+    for (const k of ingredientsOf(r)) {
+      if (k.startsWith('category:')) continue;
+      if (usesBossPart(k, seen)) return true;
+    }
+  return false;
+};
 
 /** The latest station age anywhere in this item's production chain (0 = needs no workshop at all). */
 export const chainAgeOf = (id: string): ChainAge => chain.get(id) ?? 0;

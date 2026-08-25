@@ -16,11 +16,11 @@ const pawn = (stats: Partial<Record<string, number>>, extra: Partial<Pawn> = {})
     limbs: [],
     injuries: [],
     stats: {
-      brawn: 10,
-      agility: 10,
-      intellect: 10,
-      awareness: 10,
-      vigour: 10,
+      strength: 10,
+      dexterity: 10,
+      intelligence: 10,
+      perception: 10,
+      constitution: 10,
       wisdom: 10,
       charisma: 10,
       ...stats
@@ -64,8 +64,8 @@ describe('per-subjob work stats', () => {
   });
 
   it('core stats are only a small supplement — a huge stat spread barely moves the needle', () => {
-    const weak = pawn({ brawn: 6, agility: 6 });
-    const mighty = pawn({ brawn: 20, agility: 20 });
+    const weak = pawn({ strength: 6, dexterity: 6 });
+    const mighty = pawn({ strength: 20, dexterity: 20 });
     const weakSpeed = pawnStatService.getWorkModifiers(weak, 'construction').speed;
     const mightySpeed = pawnStatService.getWorkModifiers(mighty, 'construction').speed;
     expect(mightySpeed).toBeGreaterThan(weakSpeed); // still a nudge…
@@ -73,7 +73,7 @@ describe('per-subjob work stats', () => {
   });
 
   it('a subjob with no own stat inherits the parent category (Build = construction)', () => {
-    const p = pawn({ brawn: 14, agility: 8 });
+    const p = pawn({ strength: 14, dexterity: 8 });
     const cat = pawnStatService.getWorkModifiers(p, 'construction').speed;
     const build = pawnStatService.getWorkModifiers(p, 'construct', undefined, 'construction').speed;
     expect(build).toBeCloseTo(cat);
