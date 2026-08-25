@@ -12315,6 +12315,7 @@
       "equipmentSlot"  : "head",
       "armorLayer"     : "gambeson",
       "armorValue"     : 4,
+      "stealthMod": 0.02,
       "fatiguePerTurn" : 0.10,
       "movementPenalty": 0.0,
       "coldResistance" : 0.06
@@ -12456,6 +12457,7 @@
       "slot"           : "gloves",
       "equipmentSlot"  : "gloves",
       "armorValue"     : 3,
+      "stealthMod": 0.02,
       "fatiguePerTurn" : 0.05,
       "movementPenalty": 0.0,
       "coldResistance" : 0.05
@@ -12483,7 +12485,7 @@
       "slot"           : "boots",
       "equipmentSlot"  : "boots",
       "armorValue"     : 2,
-      "fatiguePerTurn" : 0.05,
+      "stealthMod": 0.02,
       "movementPenalty": 0.0,
       "coldResistance" : 0.06
     }
@@ -12653,8 +12655,7 @@
       "slot"           : "boots",
       "equipmentSlot"  : "boots",
       "armorValue"     : 6,
-      "fatiguePerTurn" : 0.15,
-      "movementPenalty": 0.05
+      "movementPenalty": 0.06
     }
   },
   // ── ADR-029 limb armour (pauldrons / bracers / greaves) — one set per tech age, derived from that
@@ -12927,7 +12928,6 @@
       "slot"           : "boots",
       "equipmentSlot"  : "boots",
       "armorValue"     : 2,
-      "fatiguePerTurn" : 0.05,
       "movementPenalty": 0.0,
       "coldResistance": 0.06
     }
@@ -13531,6 +13531,7 @@
       "slot"           : "head",
       "equipmentSlot"  : "head",
       "armorValue"     : 3,
+      "stealthMod": 0.02,
       "fatiguePerTurn" : 0.08,
       "movementPenalty": 0.0
     }
@@ -13557,6 +13558,7 @@
       "slot"           : "bodyBase",
       "equipmentSlot"  : "bodyBase",
       "armorValue"     : 6,
+      "stealthMod": 0.02,
       "fatiguePerTurn" : 0.11,
       "movementPenalty": 0.0
     }
@@ -13583,6 +13585,7 @@
       "slot"           : "bracers",
       "equipmentSlot"  : "bracers",
       "armorValue"     : 2,
+      "stealthMod": 0.02,
       "fatiguePerTurn" : 0.06,
       "movementPenalty": 0.0
     }
@@ -13609,6 +13612,7 @@
       "slot"           : "gloves",
       "equipmentSlot"  : "gloves",
       "armorValue"     : 2,
+      "stealthMod": 0.02,
       "fatiguePerTurn" : 0.06,
       "movementPenalty": 0.0
     }
@@ -13635,6 +13639,7 @@
       "slot"           : "greaves",
       "equipmentSlot"  : "greaves",
       "armorValue"     : 2,
+      "stealthMod": 0.02,
       "fatiguePerTurn" : 0.06,
       "movementPenalty": 0.0
     }
@@ -13661,7 +13666,7 @@
       "slot"           : "boots",
       "equipmentSlot"  : "boots",
       "armorValue"     : 2,
-      "fatiguePerTurn" : 0.06,
+      "stealthMod": 0.02,
       "movementPenalty": 0.0
     }
   },
@@ -13739,8 +13744,7 @@
       "slot"           : "boots",
       "equipmentSlot"  : "boots",
       "armorValue"     : 3,
-      "fatiguePerTurn" : 0.08,
-      "movementPenalty": 0.02
+      "movementPenalty": 0.0
     }
   },
   {
@@ -13791,7 +13795,6 @@
       "slot"           : "boots",
       "equipmentSlot"  : "boots",
       "armorValue"     : 1,
-      "fatiguePerTurn" : 0.05,
       "movementPenalty": 0.0
     }
   },
@@ -13869,7 +13872,6 @@
       "slot"           : "boots",
       "equipmentSlot"  : "boots",
       "armorValue"     : 1,
-      "fatiguePerTurn" : 0.05,
       "movementPenalty": 0.0
     }
   },
@@ -13895,6 +13897,7 @@
       "slot"           : "head",
       "equipmentSlot"  : "head",
       "armorValue"     : 6,
+      "stealthMod": 0.03,
       "fatiguePerTurn" : 0.11,
       "movementPenalty": 0.0
     }
@@ -13921,6 +13924,7 @@
       "slot"           : "bodyBase",
       "equipmentSlot"  : "bodyBase",
       "armorValue"     : 10,
+      "stealthMod": 0.03,
       "fatiguePerTurn" : 0.16,
       "movementPenalty": 0.0
     }
@@ -13947,6 +13951,7 @@
       "slot"           : "bracers",
       "equipmentSlot"  : "bracers",
       "armorValue"     : 4,
+      "stealthMod": 0.03,
       "fatiguePerTurn" : 0.09,
       "movementPenalty": 0.0
     }
@@ -13973,6 +13978,7 @@
       "slot"           : "gloves",
       "equipmentSlot"  : "gloves",
       "armorValue"     : 3,
+      "stealthMod": 0.03,
       "fatiguePerTurn" : 0.08,
       "movementPenalty": 0.0
     }
@@ -13999,6 +14005,7 @@
       "slot"           : "greaves",
       "equipmentSlot"  : "greaves",
       "armorValue"     : 4,
+      "stealthMod": 0.03,
       "fatiguePerTurn" : 0.09,
       "movementPenalty": 0.0
     }
@@ -14025,7 +14032,7 @@
       "slot"           : "boots",
       "equipmentSlot"  : "boots",
       "armorValue"     : 3,
-      "fatiguePerTurn" : 0.08,
+      "stealthMod": 0.03,
       "movementPenalty": 0.0
     }
   },
@@ -14210,7 +14217,6 @@
       "slot"           : "boots",
       "equipmentSlot"  : "boots",
       "armorValue"     : 3,
-      "fatiguePerTurn" : 0.08,
       "movementPenalty": 0.0
     }
   },
@@ -14288,7 +14294,6 @@
       "slot"           : "boots",
       "equipmentSlot"  : "boots",
       "armorValue"     : 2,
-      "fatiguePerTurn" : 0.06,
       "movementPenalty": 0.0
     }
   },
@@ -14314,6 +14319,7 @@
       "slot"           : "head",
       "equipmentSlot"  : "head",
       "armorValue"     : 8,
+      "stealthMod": 0.04,
       "fatiguePerTurn" : 0.14,
       "movementPenalty": 0.0
     }
@@ -14340,6 +14346,7 @@
       "slot"           : "bodyBase",
       "equipmentSlot"  : "bodyBase",
       "armorValue"     : 15,
+      "stealthMod": 0.04,
       "fatiguePerTurn" : 0.22,
       "movementPenalty": 0.0
     }
@@ -14366,6 +14373,7 @@
       "slot"           : "bracers",
       "equipmentSlot"  : "bracers",
       "armorValue"     : 6,
+      "stealthMod": 0.04,
       "fatiguePerTurn" : 0.11,
       "movementPenalty": 0.0
     }
@@ -14392,6 +14400,7 @@
       "slot"           : "gloves",
       "equipmentSlot"  : "gloves",
       "armorValue"     : 4,
+      "stealthMod": 0.04,
       "fatiguePerTurn" : 0.09,
       "movementPenalty": 0.0
     }
@@ -14418,6 +14427,7 @@
       "slot"           : "greaves",
       "equipmentSlot"  : "greaves",
       "armorValue"     : 6,
+      "stealthMod": 0.04,
       "fatiguePerTurn" : 0.11,
       "movementPenalty": 0.0
     }
@@ -14444,7 +14454,7 @@
       "slot"           : "boots",
       "equipmentSlot"  : "boots",
       "armorValue"     : 4,
-      "fatiguePerTurn" : 0.09,
+      "stealthMod": 0.04,
       "movementPenalty": 0.0
     }
   },
@@ -14496,8 +14506,7 @@
       "slot"           : "boots",
       "equipmentSlot"  : "boots",
       "armorValue"     : 4,
-      "fatiguePerTurn" : 0.09,
-      "movementPenalty": 0.02
+      "movementPenalty": 0.0
     }
   },
   {
@@ -14629,7 +14638,6 @@
       "slot"           : "boots",
       "equipmentSlot"  : "boots",
       "armorValue"     : 4,
-      "fatiguePerTurn" : 0.09,
       "movementPenalty": 0.0
     }
   },
@@ -14681,7 +14689,6 @@
       "slot"           : "boots",
       "equipmentSlot"  : "boots",
       "armorValue"     : 3,
-      "fatiguePerTurn" : 0.08,
       "movementPenalty": 0.0
     }
   },
@@ -14707,6 +14714,7 @@
       "slot"           : "head",
       "equipmentSlot"  : "head",
       "armorValue"     : 11,
+      "stealthMod": 0.05,
       "fatiguePerTurn" : 0.17,
       "movementPenalty": 0.0
     }
@@ -14733,6 +14741,7 @@
       "slot"           : "bodyBase",
       "equipmentSlot"  : "bodyBase",
       "armorValue"     : 20,
+      "stealthMod": 0.05,
       "fatiguePerTurn" : 0.28,
       "movementPenalty": 0.0
     }
@@ -14759,6 +14768,7 @@
       "slot"           : "bracers",
       "equipmentSlot"  : "bracers",
       "armorValue"     : 8,
+      "stealthMod": 0.05,
       "fatiguePerTurn" : 0.14,
       "movementPenalty": 0.0
     }
@@ -14785,6 +14795,7 @@
       "slot"           : "gloves",
       "equipmentSlot"  : "gloves",
       "armorValue"     : 6,
+      "stealthMod": 0.05,
       "fatiguePerTurn" : 0.11,
       "movementPenalty": 0.0
     }
@@ -14811,6 +14822,7 @@
       "slot"           : "greaves",
       "equipmentSlot"  : "greaves",
       "armorValue"     : 8,
+      "stealthMod": 0.05,
       "fatiguePerTurn" : 0.14,
       "movementPenalty": 0.0
     }
@@ -14837,7 +14849,7 @@
       "slot"           : "boots",
       "equipmentSlot"  : "boots",
       "armorValue"     : 6,
-      "fatiguePerTurn" : 0.11,
+      "stealthMod": 0.05,
       "movementPenalty": 0.0
     }
   },
@@ -14941,8 +14953,7 @@
       "slot"           : "boots",
       "equipmentSlot"  : "boots",
       "armorValue"     : 5,
-      "fatiguePerTurn" : 0.1,
-      "movementPenalty": 0.02
+      "movementPenalty": 0.0
     }
   },
   {
@@ -15074,7 +15085,6 @@
       "slot"           : "boots",
       "equipmentSlot"  : "boots",
       "armorValue"     : 5,
-      "fatiguePerTurn" : 0.1,
       "movementPenalty": 0.0
     }
   },
@@ -15126,7 +15136,6 @@
       "slot"           : "boots",
       "equipmentSlot"  : "boots",
       "armorValue"     : 3,
-      "fatiguePerTurn" : 0.08,
       "movementPenalty": 0.0
     }
   },
@@ -20443,7 +20452,6 @@
       "equipmentSlot": "socks",
       "armorLayer": "gambeson",
       "armorValue": 1,
-      "fatiguePerTurn": 0.03,
       "movementPenalty": 0.0,
       "armorSet": "sackcloth",
       "coldResistance": 0.05
@@ -20930,8 +20938,7 @@
       "equipmentSlot": "boots",
       "armorLayer": "mail",
       "armorValue": 3,
-      "fatiguePerTurn": 0.076,
-      "movementPenalty": 0.0
+      "movementPenalty": 0.004
     }
   },
     {
@@ -20994,8 +21001,7 @@
       "equipmentSlot": "boots",
       "armorLayer": "plate",
       "armorValue": 9,
-      "fatiguePerTurn": 0.148,
-      "movementPenalty": 0.0
+      "movementPenalty": 0.04
     }
   },
     {
@@ -21058,8 +21064,7 @@
       "equipmentSlot": "boots",
       "armorLayer": "plate",
       "armorValue": 11,
-      "fatiguePerTurn": 0.172,
-      "movementPenalty": 0.0
+      "movementPenalty": 0.028
     }
   },
   // ── Shields: the Steel and Runed ages had NONE, and the whole line offered one shape. These
@@ -21707,7 +21712,6 @@
       "equipmentSlot": "boots",
       "armorLayer": "gambeson",
       "armorValue": 1,
-      "fatiguePerTurn": 0.02,
       "movementPenalty": 0.0,
       "coldResistance": 0.01
     }
