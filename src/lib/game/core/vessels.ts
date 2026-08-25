@@ -25,34 +25,32 @@
 import type { Item, ItemInstance, PawnEquipment, VesselContent } from './types';
 import { allItemDefs, itemDefById } from './itemDefs';
 
-/** Density fallback when a fluid def gives no weight/volume — water, near enough, for everything. */
+/** Density fallback when a fluid def gives no weight — water, near enough, for everything. */
 const DEFAULT_FLUID_KG_PER_L = 1;
 
 /**
- * Litres in ONE recipe/stockpile UNIT of a fluid — its `volumeL`, i.e. the dose. Recipes, loot tables
- * and craft outputs all count in units ("water": 1, "potion_of_might": 1); vessels store litres. This
- * is the one conversion between the two vocabularies, so a 0.3 L phial of potion and a 1 L measure of
- * water can share every code path without either number being a lie.
+ * A FLUID IS COUNTED IN LITRES, everywhere: recipes, loot tables, craft outputs, stockpile totals and
+ * vessel contents all speak the same number, so there is no conversion to get wrong.
+ *
+ * Two fields on a fluid definition carry that:
+ *
+ *   `weightKg`  kilograms of ONE LITRE — its density. Water 1, molten bronze 8.8, molten gold 19.3.
+ *   `volumeL`   litres in one SERVING — the phial a pawn drinks, the flask a coating is applied from.
+ *               Effects (`conditionDurationTurns`, `poisonChance`, `medicineQuality`…) are per serving.
+ *
+ * Litres, not doses, because pouring is volumetric: a mould cavity, a crucible and a waterskin are all
+ * measured in litres, and counting a fluid in per-item doses made the same integer mean a different
+ * volume in every metal.
  */
-export function litresPerUnit(itemId: string): number {
+
+/** Litres in one serving — a drink, a dose, one application. Bulk fluids simply pour by the litre. */
+export function servingL(itemId: string): number {
   return itemDefById(itemId)?.volumeL || 1;
 }
 
-/** Recipe/stockpile units → litres. */
-export function unitsToLitres(itemId: string, units: number): number {
-  return Math.round(units * litresPerUnit(itemId) * 1000) / 1000;
-}
-
-/** Litres → recipe/stockpile units (fractional; callers floor when they need whole doses). */
-export function litresToUnits(itemId: string, litres: number): number {
-  return Math.round((litres / litresPerUnit(itemId)) * 1000) / 1000;
-}
-
-/** Kilograms per litre of a fluid, from its def's weight-per-dose over its dose volume. */
+/** Kilograms per litre of a fluid. */
 function fluidDensity(itemId: string): number {
-  const def = itemDefById(itemId);
-  if (!def?.weightKg || !def.volumeL) return DEFAULT_FLUID_KG_PER_L;
-  return def.weightKg / def.volumeL;
+  return itemDefById(itemId)?.weightKg || DEFAULT_FLUID_KG_PER_L;
 }
 
 // ── what a thing IS ─────────────────────────────────────────────────────────
@@ -156,7 +154,7 @@ export function roomFor(inst: ItemInstance, itemId: string, qty: number): number
   const def = itemDefById(itemId);
   const fluid = def?.type === 'fluid';
 
-  // Fluids are asked for in LITRES (the caller converts doses with `unitsToLitres`); solids in units.
+  // Fluids are asked for in LITRES — the same number the caller already holds; solids in units.
   const perVolume = fluid ? 1 : (def?.volumeL ?? 0.2);
   let room = perVolume > 0 ? (v.capacityL - usedCapacityL(inst)) / perVolume : qty;
 

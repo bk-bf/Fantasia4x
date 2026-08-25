@@ -76,12 +76,12 @@
   {"id": "brew_hopped_ale", "station": "fermenter", "inputs": {"malt": 3, "category:herb": 2, "water": 4}, "outputs": {"hopped_ale": 4}, "workAmount": 10, "toolTierRequired": 1, "researchRequired": "distillation", "passive": true},
   {"id": "distil_apple_brandy", "discipline": "alchemy", "station": "alchemy_lab", "inputs": {"cider": 6}, "outputs": {"apple_brandy": 2}, "workAmount": 14, "toolTierRequired": 1, "researchRequired": "distillation"},
   {"id": "distil_grain_whisky", "discipline": "alchemy", "station": "alchemy_lab", "inputs": {"malt": 6, "peat": 2}, "outputs": {"grain_whisky": 2}, "workAmount": 20, "toolTierRequired": 2, "researchRequired": "master_alchemy"},
-  {"id": "make_fortified_wine", "discipline": "alchemy", "station": "alchemy_lab", "inputs": {"grape_wine": 4, "distilled_spirit": 1}, "outputs": {"fortified_wine": 4}, "workAmount": 14, "toolTierRequired": 2, "researchRequired": "master_alchemy"},
+  {"id": "make_fortified_wine", "discipline": "alchemy", "station": "alchemy_lab", "inputs": {"grape_wine": 4, "distilled_spirit": 0.3}, "outputs": {"fortified_wine": 4}, "workAmount": 14, "toolTierRequired": 2, "researchRequired": "master_alchemy"},
 
   {"id": "make_tooth_necklace", "discipline": "bonecarving", "station": "craft_spot", "inputs": {"predator_claw": 3, "category:binding": 1}, "outputs": {"tooth_necklace": 1}, "workAmount": 4, "toolTierRequired": 0},
   {"id": "make_bone_circlet", "discipline": "bonecarving", "station": "bone_carvers_bench", "inputs": {"medium_bones": 2, "category:binding": 1}, "outputs": {"bone_circlet": 1}, "workAmount": 6, "toolTierRequired": 0},
-  {"id": "make_bronze_torc", "station": "casting_hearth", "inputs": {"molten_bronze": 4, "clay_mold": 1}, "outputs": {"bronze_torc": 1}, "workAmount": 10, "toolTierRequired": 1, "researchRequired": "bronze_working"},
-  {"id": "make_bronze_arm_ring", "station": "casting_hearth", "inputs": {"molten_bronze": 4, "clay_mold": 1}, "outputs": {"bronze_arm_ring": 2}, "workAmount": 8, "toolTierRequired": 1, "researchRequired": "bronze_working"},
+  {"id": "make_bronze_torc", "station": "casting_hearth", "inputs": {"molten_bronze": 0.456, "clay_mold": 1}, "outputs": {"bronze_torc": 1}, "workAmount": 10, "toolTierRequired": 1, "researchRequired": "bronze_working"},
+  {"id": "make_bronze_arm_ring", "station": "casting_hearth", "inputs": {"molten_bronze": 0.456, "clay_mold": 1}, "outputs": {"bronze_arm_ring": 2}, "workAmount": 8, "toolTierRequired": 1, "researchRequired": "bronze_working"},
   {"id": "make_iron_signet_ring", "station": "anvil", "inputs": {"iron_bar": 1}, "outputs": {"iron_signet_ring": 4}, "workAmount": 10, "toolTierRequired": 1, "researchRequired": "iron_working"},
   {"id": "make_silver_pendant", "station": "anvil", "inputs": {"silver_bar": 1}, "outputs": {"silver_pendant": 4}, "workAmount": 12, "toolTierRequired": 1, "researchRequired": "iron_working"},
   {"id": "make_filigree_diadem", "station": "anvil", "inputs": {"silver_bar": 1, "iron_wire": 1}, "outputs": {"filigree_diadem": 2}, "workAmount": 20, "toolTierRequired": 2, "researchRequired": "steel_making"},
@@ -155,7 +155,7 @@
     "id"              : "brew_bonemeal_draught",
     "discipline"      : "alchemy",
     "station"         : "apothecary",
-    "inputs"          : {"bone_meal": 2, "category:herb": 2, "distilled_spirit": 1},
+    "inputs"          : {"bone_meal": 2, "category:herb": 2, "distilled_spirit": 0.3},
     "outputs"         : {"bonemeal_draught": 2},
     "workAmount"      : 16,
     "toolTierRequired": 2,
@@ -165,7 +165,7 @@
     "id"              : "brew_emberbloom_draught",
     "discipline"      : "alchemy",
     "station"         : "apothecary",
-    "inputs"          : {"emberbloom": 2, "gem_dust": 1, "distilled_spirit": 1},
+    "inputs"          : {"emberbloom": 2, "gem_dust": 1, "distilled_spirit": 0.3},
     "outputs"         : {"emberbloom_draught": 2},
     "workAmount"      : 22,
     "toolTierRequired": 2,
@@ -195,7 +195,7 @@
     "id"              : "make_warming_liniment",
     "discipline"      : "alchemy",
     "station"         : "alchemy_lab",
-    "inputs"          : {"tallow": 2, "distilled_spirit": 1, "category:herb": 1},
+    "inputs"          : {"tallow": 2, "distilled_spirit": 0.3, "category:herb": 1},
     "outputs"         : {"warming_liniment": 3},
     "workAmount"      : 8,
     "toolTierRequired": 1,
@@ -205,7 +205,7 @@
     "id"              : "brew_poppy_draught",
     "discipline"      : "alchemy",
     "station"         : "apothecary",
-    "inputs"          : {"category:herb": 3, "distilled_spirit": 1},
+    "inputs"          : {"category:herb": 3, "distilled_spirit": 0.3},
     "outputs"         : {"poppy_draught": 3},
     "workAmount"      : 12,
     "toolTierRequired": 2,
@@ -237,7 +237,7 @@
     "id"              : "brew_spirit_tincture",
     "discipline"      : "alchemy",
     "station"         : "alchemy_lab",
-    "inputs"          : {"distilled_spirit": 1, "woundwort": 2, "category:herb": 2},
+    "inputs"          : {"distilled_spirit": 0.3, "woundwort": 2, "category:herb": 2},
     "outputs"         : {"spirit_tincture": 3},
     "workAmount"      : 8,
     "toolTierRequired": 1,
@@ -483,7 +483,7 @@
     "id"               : "tan_coney_fur",
     "station"          : "tanning_bucket_station",
     "passive"          : true,
-    "inputs"           : {"cured_rabbit_pelt": 1, "tanning_brine": 1},
+    "inputs"           : {"cured_rabbit_pelt": 1, "tanning_brine": 1.5},
     "outputs"          : {"coney_fur": 1},
     "workAmount"       : 40,
     "toolTierRequired" : 0
@@ -492,7 +492,7 @@
     "id"               : "tan_vermin_hide",
     "station"          : "tanning_bucket_station",
     "passive"          : true,
-    "inputs"           : {"cured_rat_pelt": 1, "tanning_brine": 1},
+    "inputs"           : {"cured_rat_pelt": 1, "tanning_brine": 1.5},
     "outputs"          : {"vermin_hide": 1},
     "workAmount"       : 40,
     "toolTierRequired" : 0
@@ -501,7 +501,7 @@
     "id"               : "tan_buckskin",
     "station"          : "tanning_bucket_station",
     "passive"          : true,
-    "inputs"           : {"cured_deer_hide": 1, "tanning_brine": 1},
+    "inputs"           : {"cured_deer_hide": 1, "tanning_brine": 1.5},
     "outputs"          : {"buckskin": 1},
     "workAmount"       : 48,
     "toolTierRequired" : 0
@@ -510,7 +510,7 @@
     "id"               : "tan_kidskin",
     "station"          : "tanning_bucket_station",
     "passive"          : true,
-    "inputs"           : {"cured_goat_hide": 1, "tanning_brine": 1},
+    "inputs"           : {"cured_goat_hide": 1, "tanning_brine": 1.5},
     "outputs"          : {"kidskin": 1},
     "workAmount"       : 48,
     "toolTierRequired" : 0
@@ -519,7 +519,7 @@
     "id"               : "tan_jackal_leather",
     "station"          : "tanning_bucket_station",
     "passive"          : true,
-    "inputs"           : {"cured_jackal_hide": 1, "tanning_brine": 1},
+    "inputs"           : {"cured_jackal_hide": 1, "tanning_brine": 1.5},
     "outputs"          : {"jackal_leather": 1},
     "workAmount"       : 48,
     "toolTierRequired" : 0
@@ -528,7 +528,7 @@
     "id"               : "tan_wolf_leather",
     "station"          : "tanning_bucket_station",
     "passive"          : true,
-    "inputs"           : {"cured_wolf_hide": 1, "tanning_brine": 1},
+    "inputs"           : {"cured_wolf_hide": 1, "tanning_brine": 1.5},
     "outputs"          : {"wolf_leather": 1},
     "workAmount"       : 56,
     "toolTierRequired" : 0
@@ -537,7 +537,7 @@
     "id"               : "tan_worg_leather",
     "station"          : "tanning_bucket_station",
     "passive"          : true,
-    "inputs"           : {"cured_worg_hide": 1, "tanning_brine": 1},
+    "inputs"           : {"cured_worg_hide": 1, "tanning_brine": 1.5},
     "outputs"          : {"worg_leather": 1},
     "workAmount"       : 56,
     "toolTierRequired" : 0
@@ -546,7 +546,7 @@
     "id"               : "tan_boarhide",
     "station"          : "tanning_bucket_station",
     "passive"          : true,
-    "inputs"           : {"cured_boar_hide": 1, "tanning_brine": 1},
+    "inputs"           : {"cured_boar_hide": 1, "tanning_brine": 1.5},
     "outputs"          : {"boarhide": 1},
     "workAmount"       : 56,
     "toolTierRequired" : 0
@@ -555,7 +555,7 @@
     "id"               : "tan_elk_leather",
     "station"          : "tanning_bucket_station",
     "passive"          : true,
-    "inputs"           : {"cured_elk_hide": 1, "tanning_brine": 1},
+    "inputs"           : {"cured_elk_hide": 1, "tanning_brine": 1.5},
     "outputs"          : {"elk_leather": 1},
     "workAmount"       : 56,
     "toolTierRequired" : 0
@@ -564,7 +564,7 @@
     "id"               : "tan_oxhide",
     "station"          : "tanning_bucket_station",
     "passive"          : true,
-    "inputs"           : {"cured_aurochs_hide": 1, "tanning_brine": 2},
+    "inputs"           : {"cured_aurochs_hide": 1, "tanning_brine": 3},
     "outputs"          : {"oxhide": 1},
     "workAmount"       : 64,
     "toolTierRequired" : 0
@@ -573,7 +573,7 @@
     "id"               : "tan_bearhide",
     "station"          : "tanning_bucket_station",
     "passive"          : true,
-    "inputs"           : {"cured_bear_pelt": 1, "tanning_brine": 2},
+    "inputs"           : {"cured_bear_pelt": 1, "tanning_brine": 3},
     "outputs"          : {"bearhide": 1},
     "workAmount"       : 64,
     "toolTierRequired" : 0
@@ -582,7 +582,7 @@
     "id"               : "tan_cave_bear_hide",
     "station"          : "beast_tanning_bucket",
     "passive"          : true,
-    "inputs"           : {"cured_cave_bear_pelt": 1, "beast_brine": 1},
+    "inputs"           : {"cured_cave_bear_pelt": 1, "beast_brine": 1.5},
     "outputs"          : {"cave_bear_hide": 1},
     "workAmount"       : 120,
     "toolTierRequired" : 1
@@ -591,7 +591,7 @@
     "id"               : "tan_owlbear_leather",
     "station"          : "beast_tanning_bucket",
     "passive"          : true,
-    "inputs"           : {"cured_owlbear_pelt": 1, "beast_brine": 1},
+    "inputs"           : {"cured_owlbear_pelt": 1, "beast_brine": 1.5},
     "outputs"          : {"owlbear_leather": 1},
     "workAmount"       : 120,
     "toolTierRequired" : 1
@@ -600,7 +600,7 @@
     "id"               : "tan_sabretooth_leather",
     "station"          : "beast_tanning_bucket",
     "passive"          : true,
-    "inputs"           : {"cured_sabretooth_pelt": 1, "beast_brine": 1},
+    "inputs"           : {"cured_sabretooth_pelt": 1, "beast_brine": 1.5},
     "outputs"          : {"sabretooth_leather": 1},
     "workAmount"       : 120,
     "toolTierRequired" : 1
@@ -609,7 +609,7 @@
     "id"               : "tan_mammoth_leather",
     "station"          : "beast_tanning_bucket",
     "passive"          : true,
-    "inputs"           : {"cured_mammoth_fur": 1, "beast_brine": 1},
+    "inputs"           : {"cured_mammoth_fur": 1, "beast_brine": 1.5},
     "outputs"          : {"mammoth_leather": 1},
     "workAmount"       : 120,
     "toolTierRequired" : 1
@@ -618,7 +618,7 @@
     "id"               : "tan_hippogriff_leather",
     "station"          : "beast_tanning_bucket",
     "passive"          : true,
-    "inputs"           : {"cured_hippogriff_hide": 1, "beast_brine": 1},
+    "inputs"           : {"cured_hippogriff_hide": 1, "beast_brine": 1.5},
     "outputs"          : {"hippogriff_leather": 1},
     "workAmount"       : 120,
     "toolTierRequired" : 1
@@ -627,7 +627,7 @@
     "id"               : "tan_direwolf_leather",
     "station"          : "beast_tanning_bucket",
     "passive"          : true,
-    "inputs"           : {"cured_dire_wolf_pelt": 1, "beast_brine": 1},
+    "inputs"           : {"cured_dire_wolf_pelt": 1, "beast_brine": 1.5},
     "outputs"          : {"direwolf_leather": 1},
     "workAmount"       : 120,
     "toolTierRequired" : 1
@@ -809,7 +809,7 @@
     "station"          : "stone_forge",
     "inputs"           : {"malachite": 3},
     "inputAlternatives": [{"azurite": 3}, {"chalcopyrite": 5}, {"copper_bar": 1}],
-    "outputs"          : {"molten_copper": 4},
+    "outputs"          : {"molten_copper": 0.448},
     "workAmount"       : 8,
     "toolTierRequired" : 1,
     "passive"          : true
@@ -817,7 +817,7 @@
   {
     "id"              : "cast_copper_bar",
     "station"         : "stone_forge",
-    "inputs"          : {"molten_copper": 4, "clay_mold": 1},
+    "inputs"          : {"molten_copper": 0.448, "clay_mold": 1},
     "outputs"         : {"copper_bar": 1},
     "workAmount"      : 4,
     "toolTierRequired": 1,
@@ -867,7 +867,7 @@
     "station"          : "stone_forge",
     "inputs"           : {"cassiterite": 3},
     "inputAlternatives": [{"tin_bar": 1}],
-    "outputs"          : {"molten_tin": 4},
+    "outputs"          : {"molten_tin": 0.548},
     "workAmount"       : 8,
     "toolTierRequired" : 1,
     "passive"          : true
@@ -875,7 +875,7 @@
   {
     "id"              : "cast_tin_bar",
     "station"         : "stone_forge",
-    "inputs"          : {"molten_tin": 4, "clay_mold": 1},
+    "inputs"          : {"molten_tin": 0.548, "clay_mold": 1},
     "outputs"         : {"tin_bar": 1},
     "workAmount"      : 4,
     "toolTierRequired": 1,
@@ -886,7 +886,7 @@
     "station"          : "casting_hearth",
     "inputs"           : {"copper_bar": 7, "tin_bar": 1},
     "inputAlternatives": [{"bronze_bar": 8}],
-    "outputs"          : {"molten_bronze": 32},
+    "outputs"          : {"molten_bronze": 3.648},
     "workAmount"       : 10,
     "toolTierRequired" : 1,
     "passive"          : true
@@ -894,7 +894,7 @@
   {
     "id"              : "cast_bronze_bar",
     "station"         : "casting_hearth",
-    "inputs"          : {"molten_bronze": 4, "clay_mold": 1},
+    "inputs"          : {"molten_bronze": 0.456, "clay_mold": 1},
     "outputs"         : {"bronze_bar": 1},
     "workAmount"      : 5,
     "toolTierRequired": 1,
@@ -911,7 +911,7 @@
   {
     "id"              : "make_bronze_nail",
     "station"         : "casting_hearth",
-    "inputs"          : {"molten_bronze": 4, "clay_mold": 1},
+    "inputs"          : {"molten_bronze": 0.456, "clay_mold": 1},
     "outputs"         : {"bronze_nail": 300},
     "workAmount"      : 6,
     "toolTierRequired": 1
@@ -931,7 +931,7 @@
     "station"          : "stone_forge",
     "inputs"           : {"galena": 3},
     "inputAlternatives": [{"lead_bar": 1}],
-    "outputs"          : {"molten_lead": 5},
+    "outputs"          : {"molten_lead": 0.44},
     "workAmount"       : 8,
     "toolTierRequired" : 1,
     "passive"          : true
@@ -939,7 +939,7 @@
   {
     "id"              : "cast_lead_bar",
     "station"         : "stone_forge",
-    "inputs"          : {"molten_lead": 5, "clay_mold": 1},
+    "inputs"          : {"molten_lead": 0.44, "clay_mold": 1},
     "outputs"         : {"lead_bar": 1},
     "workAmount"      : 4,
     "toolTierRequired": 1,
@@ -950,7 +950,7 @@
     "station"          : "stone_forge",
     "inputs"           : {"lead_bar": 3, "bone_meal": 1},
     "inputAlternatives": [{"silver_bar": 1}],
-    "outputs"          : {"molten_silver": 4},
+    "outputs"          : {"molten_silver": 0.38},
     "workAmount"       : 16,
     "toolTierRequired" : 1,
     "passive"          : true
@@ -958,7 +958,7 @@
   {
     "id"              : "cast_silver_bar",
     "station"         : "stone_forge",
-    "inputs"          : {"molten_silver": 4, "clay_mold": 1},
+    "inputs"          : {"molten_silver": 0.38, "clay_mold": 1},
     "outputs"         : {"silver_bar": 1},
     "workAmount"      : 5,
     "toolTierRequired": 1,
@@ -969,7 +969,7 @@
     "station"          : "stone_forge",
     "inputs"           : {"native_gold": 3},
     "inputAlternatives": [{"electrum": 4}, {"gold_bar": 1}],
-    "outputs"          : {"molten_gold": 4},
+    "outputs"          : {"molten_gold": 0.208},
     "workAmount"       : 10,
     "toolTierRequired" : 1,
     "passive"          : true
@@ -977,7 +977,7 @@
   {
     "id"              : "cast_gold_bar",
     "station"         : "stone_forge",
-    "inputs"          : {"molten_gold": 4, "clay_mold": 1},
+    "inputs"          : {"molten_gold": 0.208, "clay_mold": 1},
     "outputs"         : {"gold_bar": 1},
     "workAmount"      : 5,
     "toolTierRequired": 1,
@@ -1231,7 +1231,7 @@
   {
     "id"              : "make_tile_mold",
     "station"         : "casting_hearth",
-    "inputs"          : {"molten_bronze": 4, "clay_mold": 1},
+    "inputs"          : {"molten_bronze": 0.456, "clay_mold": 1},
     "outputs"         : {"tile_mold": 1},
     "workAmount"      : 6,
     "toolTierRequired": 1
@@ -2214,7 +2214,7 @@
   {
     "id"              : "make_bronze_punch_dagger",
     "station"         : "casting_hearth",
-    "inputs"          : {"molten_bronze": 4, "clay_mold": 1, "medium_bones": 1, "category:leather": 1},
+    "inputs"          : {"molten_bronze": 0.456, "clay_mold": 1, "medium_bones": 1, "category:leather": 1},
     "outputs"         : {"bronze_punch_dagger": 1},
     "workAmount"      : 6,
     "toolTierRequired": 1,
@@ -2223,7 +2223,7 @@
   {
     "id"              : "make_leaf_blade_spear",
     "station"         : "casting_hearth",
-    "inputs"          : {"wooden_haft": 1, "molten_bronze": 4, "clay_mold": 1, "category:leather": 1},
+    "inputs"          : {"wooden_haft": 1, "molten_bronze": 0.456, "clay_mold": 1, "category:leather": 1},
     "outputs"         : {"leaf_blade_spear": 1},
     "workAmount"      : 8,
     "toolTierRequired": 1,
@@ -2243,7 +2243,7 @@
   {
     "id"              : "make_cast_bronze_hatchet",
     "station"         : "casting_hearth",
-    "inputs"          : {"wooden_haft": 1, "molten_bronze": 4, "clay_mold": 1, "category:leather": 1},
+    "inputs"          : {"wooden_haft": 1, "molten_bronze": 0.456, "clay_mold": 1, "category:leather": 1},
     "outputs"         : {"cast_bronze_hatchet": 1},
     "workAmount"      : 8,
     "toolTierRequired": 1,
@@ -2745,7 +2745,7 @@
   {
     "id"              : "make_cast_sling_bullet",
     "station"         : "casting_hearth",
-    "inputs"          : {"molten_copper": 4, "clay_mold": 1},
+    "inputs"          : {"molten_copper": 0.448, "clay_mold": 1},
     "outputs"         : {"cast_sling_bullet": 8},
     "workAmount"      : 4,
     "toolTierRequired": 1
@@ -2950,7 +2950,7 @@
   {
     "id"              : "make_cast_bronze_skullcap",
     "station"         : "casting_hearth",
-    "inputs"          : {"molten_bronze": 4, "clay_mold": 1},
+    "inputs"          : {"molten_bronze": 0.456, "clay_mold": 1},
     "outputs"         : {"cast_bronze_skullcap": 1},
     "workAmount"      : 8,
     "toolTierRequired": 1,
@@ -3737,7 +3737,7 @@
     "station"         : "brewing_barrel",
     "passive"         : true,
     "inputs"          : {"bark": 3, "salt": 1, "ash": 1, "water": 2},
-    "outputs"         : {"tanning_brine": 2},
+    "outputs"         : {"tanning_brine": 3},
     "workAmount"      : 60,
     "toolTierRequired": 0
   },
@@ -3747,7 +3747,7 @@
     "station"         : "brewing_barrel",
     "passive"         : true,
     "inputs"          : {"bark": 4, "salt": 2, "ash": 2, "water": 3},
-    "outputs"         : {"beast_brine": 1},
+    "outputs"         : {"beast_brine": 1.5},
     "workAmount"      : 96,
     "toolTierRequired": 0
   },
@@ -3776,7 +3776,7 @@
     "id"              : "make_owlbear_meat",
     "station"         : "butcher_spot",
     "inputs"          : {"owlbear_carcass": 1},
-    "outputs"         : {"owlbear_meat": 16, "owlbear_pelt": 2, "owlbear_bile": 1, "large_bones": 16, "raw_sinew": 14, "predator_claw": 1},
+    "outputs"         : {"owlbear_meat": 16, "owlbear_pelt": 2, "owlbear_bile": 0.3, "large_bones": 16, "raw_sinew": 14, "predator_claw": 1},
     "workAmount"      : 60,
     "toolTierRequired": 0
   },
@@ -3785,7 +3785,7 @@
     "id"              : "make_dire_wolf",
     "station"         : "flensing_table",
     "inputs"          : {"dire_wolf_carcass": 1},
-    "outputs"         : {"wolf_meat": 10, "dire_wolf_pelt": 2, "alpha_ichor": 1, "large_bones": 10, "raw_sinew": 8, "predator_claw": 2},
+    "outputs"         : {"wolf_meat": 10, "dire_wolf_pelt": 2, "alpha_ichor": 0.4, "large_bones": 10, "raw_sinew": 8, "predator_claw": 2},
     "workAmount"      : 50,
     "toolTierRequired": 2
   },
@@ -3793,7 +3793,7 @@
     "id"              : "make_cave_bear",
     "station"         : "flensing_table",
     "inputs"          : {"cave_bear_carcass": 1},
-    "outputs"         : {"bear_meat": 22, "cave_bear_pelt": 2, "owlbear_bile": 1, "large_bones": 18, "raw_sinew": 16, "tallow": 3, "predator_claw": 2},
+    "outputs"         : {"bear_meat": 22, "cave_bear_pelt": 2, "owlbear_bile": 0.3, "large_bones": 18, "raw_sinew": 16, "tallow": 3, "predator_claw": 2},
     "workAmount"      : 80,
     "toolTierRequired": 2
   },
@@ -3828,7 +3828,7 @@
     "id"              : "flense_great_wolf",
     "station"         : "sanguinary_altar",
     "inputs"          : {"great_wolf_carcass": 1},
-    "outputs"         : {"wolf_meat": 14, "dire_wolf_pelt": 3, "alpha_ichor": 2, "alpha_heart": 1, "direwolf_hackles": 1, "great_fang": 1, "large_bones": 10, "raw_sinew": 8, "predator_claw": 2},
+    "outputs"         : {"wolf_meat": 14, "dire_wolf_pelt": 3, "alpha_ichor": 0.8, "alpha_heart": 1, "direwolf_hackles": 1, "great_fang": 1, "large_bones": 10, "raw_sinew": 8, "predator_claw": 2},
     "workAmount"      : 80,
     "toolTierRequired": 2
   },
@@ -3844,7 +3844,7 @@
     "id"              : "flense_great_bear",
     "station"         : "sanguinary_altar",
     "inputs"          : {"great_bear_carcass": 1},
-    "outputs"         : {"bear_meat": 26, "cave_bear_pelt": 3, "owlbear_bile": 2, "owlbear_pineal": 1, "sabretooth_glands": 1, "great_bone": 2, "great_fang": 1, "tallow": 5, "predator_claw": 2},
+    "outputs"         : {"bear_meat": 26, "cave_bear_pelt": 3, "owlbear_bile": 0.6, "owlbear_pineal": 1, "sabretooth_glands": 1, "great_bone": 2, "great_fang": 1, "tallow": 5, "predator_claw": 2},
     "workAmount"      : 100,
     "toolTierRequired": 2
   },
@@ -3897,7 +3897,7 @@
     "id"              : "render_grimeling",
     "station"         : "butcher_spot",
     "inputs"          : {"grimeling_carcass": 1},
-    "outputs"         : {"caustic_bile": 2, "plant_fiber": 2},
+    "outputs"         : {"caustic_bile": 0.4, "plant_fiber": 2},
     "workAmount"      : 14,
     "toolTierRequired": 0
   },
@@ -4301,7 +4301,7 @@
     "station"          : "alchemy_lab",
     "inputs"           : {"wild_berries": 3, "water": 1},
     "inputAlternatives": [ {"thyme": 3, "water": 1}, {"mint": 3, "water": 1}, {"wild_sage": 3, "water": 1} ],
-    "outputs"          : {"dye": 2},
+    "outputs"          : {"dye": 0.4},
     "workAmount"       : 14,
     "toolTierRequired" : 1,
     "researchRequired" : "basic_alchemy"
@@ -4321,7 +4321,7 @@
     "id"              : "brew_potion_of_might",
     "station"         : "alchemy_lab",
     "inputs"          : {"woundwort": 2, "gem_dust": 1, "glassware": 1},
-    "outputs"         : {"potion_of_might": 1},
+    "outputs"         : {"potion_of_might": 0.3},
     "workAmount"      : 24,
     "toolTierRequired": 1
   },
@@ -4329,7 +4329,7 @@
     "id"              : "brew_draught_of_vigor",
     "station"         : "alchemy_lab",
     "inputs"          : {"woundwort": 2, "gem_dust": 1, "glassware": 1},
-    "outputs"         : {"draught_of_vigor": 1},
+    "outputs"         : {"draught_of_vigor": 0.3},
     "workAmount"      : 24,
     "toolTierRequired": 1
   },
@@ -4337,7 +4337,7 @@
     "id"              : "brew_elixir_of_grace",
     "station"         : "alchemy_lab",
     "inputs"          : {"woundwort": 2, "gem_dust": 1, "glassware": 1},
-    "outputs"         : {"elixir_of_grace": 1},
+    "outputs"         : {"elixir_of_grace": 0.3},
     "workAmount"      : 24,
     "toolTierRequired": 1
   },
@@ -4345,7 +4345,7 @@
     "id"              : "brew_tonic_of_fortitude",
     "station"         : "alchemy_lab",
     "inputs"          : {"woundwort": 2, "gem_dust": 1, "glassware": 1},
-    "outputs"         : {"tonic_of_fortitude": 1},
+    "outputs"         : {"tonic_of_fortitude": 0.3},
     "workAmount"      : 24,
     "toolTierRequired": 1
   },
@@ -4354,16 +4354,16 @@
   {
     "id"              : "brew_bloodrage_draught",
     "station"         : "alchemy_lab",
-    "inputs"          : {"alpha_ichor": 1, "woundwort": 1, "glassware": 1},
-    "outputs"         : {"bloodrage_draught": 1},
+    "inputs"          : {"alpha_ichor": 0.4, "woundwort": 1, "glassware": 1},
+    "outputs"         : {"bloodrage_draught": 0.3},
     "workAmount"      : 30,
     "toolTierRequired": 1
   },
   {
     "id"              : "brew_ironhide_tonic",
     "station"         : "alchemy_lab",
-    "inputs"          : {"owlbear_bile": 1, "woundwort": 1, "glassware": 1},
-    "outputs"         : {"ironhide_tonic": 1},
+    "inputs"          : {"owlbear_bile": 0.3, "woundwort": 1, "glassware": 1},
+    "outputs"         : {"ironhide_tonic": 0.3},
     "workAmount"      : 30,
     "toolTierRequired": 1
   },
@@ -4373,7 +4373,7 @@
     "id"              : "brew_vigor_draught",
     "station"         : "alchemy_lab",
     "inputs"          : {"bloodroot": 2, "woundwort": 1, "glassware": 1},
-    "outputs"         : {"vigor_draught": 1},
+    "outputs"         : {"vigor_draught": 0.3},
     "workAmount"      : 28,
     "toolTierRequired": 1
   },
@@ -4381,7 +4381,7 @@
     "id"              : "brew_calming_draught",
     "station"         : "alchemy_lab",
     "inputs"          : {"dreamleaf": 2, "woundwort": 1, "glassware": 1},
-    "outputs"         : {"calming_draught": 1},
+    "outputs"         : {"calming_draught": 0.3},
     "workAmount"      : 28,
     "toolTierRequired": 1
   },
@@ -4389,7 +4389,7 @@
     "id"              : "brew_nightglow_draught",
     "station"         : "alchemy_lab",
     "inputs"          : {"glowcap": 2, "woundwort": 1, "glassware": 1},
-    "outputs"         : {"nightglow_draught": 1},
+    "outputs"         : {"nightglow_draught": 0.3},
     "workAmount"      : 28,
     "toolTierRequired": 1
   },
@@ -4397,7 +4397,7 @@
     "id"              : "brew_frenzy_draught",
     "station"         : "alchemy_lab",
     "inputs"          : {"spore_of_madness": 1, "mandrake": 1, "glassware": 1},
-    "outputs"         : {"frenzy_draught": 1},
+    "outputs"         : {"frenzy_draught": 0.3},
     "workAmount"      : 32,
     "toolTierRequired": 1
   },
@@ -4405,8 +4405,8 @@
   {
     "id"              : "brew_caustic_coating",
     "station"         : "alchemy_lab",
-    "inputs"          : {"caustic_bile": 2, "nightshade_bolete": 1, "glassware": 1},
-    "outputs"         : {"caustic_coating": 3},
+    "inputs"          : {"caustic_bile": 0.4, "nightshade_bolete": 1, "glassware": 1},
+    "outputs"         : {"caustic_coating": 0.6},
     "workAmount"      : 12,
     "toolTierRequired": 1
   },
@@ -4414,7 +4414,7 @@
     "id"              : "brew_venom_coating",
     "station"         : "alchemy_lab",
     "inputs"          : {"venom_sac": 1, "nightshade_bolete": 1, "glassware": 1},
-    "outputs"         : {"venom_coating": 2},
+    "outputs"         : {"venom_coating": 0.4},
     "workAmount"      : 30,
     "toolTierRequired": 1
   },
@@ -4422,8 +4422,8 @@
   {
     "id"              : "brew_greater_potion_of_might",
     "station"         : "alchemy_lab",
-    "inputs"          : {"woundwort": 3, "glassware": 1, "distilled_spirit": 1},
-    "outputs"         : {"greater_potion_of_might": 1},
+    "inputs"          : {"woundwort": 3, "glassware": 1, "distilled_spirit": 0.3},
+    "outputs"         : {"greater_potion_of_might": 0.3},
     "workAmount"      : 12,
     "toolTierRequired": 1
   },
@@ -4431,15 +4431,15 @@
     "id"              : "brew_grand_potion_of_might",
     "station"         : "apothecary",
     "inputs"          : {"woundwort": 3, "glassware": 1, "mandrake": 1, "purified_catalyst": 1},
-    "outputs"         : {"grand_potion_of_might": 1},
+    "outputs"         : {"grand_potion_of_might": 0.3},
     "workAmount"      : 16,
     "toolTierRequired": 2
   },
   {
     "id"              : "brew_greater_draught_of_vigor",
     "station"         : "alchemy_lab",
-    "inputs"          : {"woundwort": 3, "glassware": 1, "distilled_spirit": 1},
-    "outputs"         : {"greater_draught_of_vigor": 1},
+    "inputs"          : {"woundwort": 3, "glassware": 1, "distilled_spirit": 0.3},
+    "outputs"         : {"greater_draught_of_vigor": 0.3},
     "workAmount"      : 12,
     "toolTierRequired": 1
   },
@@ -4447,15 +4447,15 @@
     "id"              : "brew_grand_draught_of_vigor",
     "station"         : "apothecary",
     "inputs"          : {"woundwort": 3, "glassware": 1, "mandrake": 1, "purified_catalyst": 1},
-    "outputs"         : {"grand_draught_of_vigor": 1},
+    "outputs"         : {"grand_draught_of_vigor": 0.3},
     "workAmount"      : 16,
     "toolTierRequired": 2
   },
   {
     "id"              : "brew_greater_elixir_of_grace",
     "station"         : "alchemy_lab",
-    "inputs"          : {"woundwort": 3, "glassware": 1, "distilled_spirit": 1},
-    "outputs"         : {"greater_elixir_of_grace": 1},
+    "inputs"          : {"woundwort": 3, "glassware": 1, "distilled_spirit": 0.3},
+    "outputs"         : {"greater_elixir_of_grace": 0.3},
     "workAmount"      : 12,
     "toolTierRequired": 1
   },
@@ -4463,15 +4463,15 @@
     "id"              : "brew_grand_elixir_of_grace",
     "station"         : "apothecary",
     "inputs"          : {"woundwort": 3, "glassware": 1, "mandrake": 1, "purified_catalyst": 1},
-    "outputs"         : {"grand_elixir_of_grace": 1},
+    "outputs"         : {"grand_elixir_of_grace": 0.3},
     "workAmount"      : 16,
     "toolTierRequired": 2
   },
   {
     "id"              : "brew_greater_tonic_of_fortitude",
     "station"         : "alchemy_lab",
-    "inputs"          : {"woundwort": 3, "glassware": 1, "distilled_spirit": 1},
-    "outputs"         : {"greater_tonic_of_fortitude": 1},
+    "inputs"          : {"woundwort": 3, "glassware": 1, "distilled_spirit": 0.3},
+    "outputs"         : {"greater_tonic_of_fortitude": 0.3},
     "workAmount"      : 12,
     "toolTierRequired": 1
   },
@@ -4479,47 +4479,47 @@
     "id"              : "brew_grand_tonic_of_fortitude",
     "station"         : "apothecary",
     "inputs"          : {"woundwort": 3, "glassware": 1, "mandrake": 1, "purified_catalyst": 1},
-    "outputs"         : {"grand_tonic_of_fortitude": 1},
+    "outputs"         : {"grand_tonic_of_fortitude": 0.3},
     "workAmount"      : 16,
     "toolTierRequired": 2
   },
   {
     "id"              : "brew_greater_bloodrage_draught",
     "station"         : "alchemy_lab",
-    "inputs"          : {"alpha_ichor": 2, "woundwort": 1, "glassware": 1, "distilled_spirit": 1},
-    "outputs"         : {"greater_bloodrage_draught": 1},
+    "inputs"          : {"alpha_ichor": 0.8, "woundwort": 1, "glassware": 1, "distilled_spirit": 0.3},
+    "outputs"         : {"greater_bloodrage_draught": 0.3},
     "workAmount"      : 12,
     "toolTierRequired": 1
   },
   {
     "id"              : "brew_grand_bloodrage_draught",
     "station"         : "apothecary",
-    "inputs"          : {"alpha_ichor": 2, "woundwort": 1, "glassware": 1, "mandrake": 1, "purified_catalyst": 1},
-    "outputs"         : {"grand_bloodrage_draught": 1},
+    "inputs"          : {"alpha_ichor": 0.8, "woundwort": 1, "glassware": 1, "mandrake": 1, "purified_catalyst": 1},
+    "outputs"         : {"grand_bloodrage_draught": 0.3},
     "workAmount"      : 16,
     "toolTierRequired": 2
   },
   {
     "id"              : "brew_greater_ironhide_tonic",
     "station"         : "alchemy_lab",
-    "inputs"          : {"owlbear_bile": 2, "woundwort": 1, "glassware": 1, "distilled_spirit": 1},
-    "outputs"         : {"greater_ironhide_tonic": 1},
+    "inputs"          : {"owlbear_bile": 0.6, "woundwort": 1, "glassware": 1, "distilled_spirit": 0.3},
+    "outputs"         : {"greater_ironhide_tonic": 0.3},
     "workAmount"      : 12,
     "toolTierRequired": 1
   },
   {
     "id"              : "brew_grand_ironhide_tonic",
     "station"         : "apothecary",
-    "inputs"          : {"owlbear_bile": 2, "woundwort": 1, "glassware": 1, "mandrake": 1, "purified_catalyst": 1},
-    "outputs"         : {"grand_ironhide_tonic": 1},
+    "inputs"          : {"owlbear_bile": 0.6, "woundwort": 1, "glassware": 1, "mandrake": 1, "purified_catalyst": 1},
+    "outputs"         : {"grand_ironhide_tonic": 0.3},
     "workAmount"      : 16,
     "toolTierRequired": 2
   },
   {
     "id"              : "brew_greater_vigor_draught",
     "station"         : "alchemy_lab",
-    "inputs"          : {"bloodroot": 3, "woundwort": 1, "glassware": 1, "distilled_spirit": 1},
-    "outputs"         : {"greater_vigor_draught": 1},
+    "inputs"          : {"bloodroot": 3, "woundwort": 1, "glassware": 1, "distilled_spirit": 0.3},
+    "outputs"         : {"greater_vigor_draught": 0.3},
     "workAmount"      : 12,
     "toolTierRequired": 1
   },
@@ -4527,15 +4527,15 @@
     "id"              : "brew_grand_vigor_draught",
     "station"         : "apothecary",
     "inputs"          : {"bloodroot": 3, "woundwort": 1, "glassware": 1, "mandrake": 1, "purified_catalyst": 1},
-    "outputs"         : {"grand_vigor_draught": 1},
+    "outputs"         : {"grand_vigor_draught": 0.3},
     "workAmount"      : 16,
     "toolTierRequired": 2
   },
   {
     "id"              : "brew_greater_calming_draught",
     "station"         : "alchemy_lab",
-    "inputs"          : {"dreamleaf": 3, "woundwort": 1, "glassware": 1, "distilled_spirit": 1},
-    "outputs"         : {"greater_calming_draught": 1},
+    "inputs"          : {"dreamleaf": 3, "woundwort": 1, "glassware": 1, "distilled_spirit": 0.3},
+    "outputs"         : {"greater_calming_draught": 0.3},
     "workAmount"      : 12,
     "toolTierRequired": 1
   },
@@ -4543,15 +4543,15 @@
     "id"              : "brew_grand_calming_draught",
     "station"         : "apothecary",
     "inputs"          : {"dreamleaf": 3, "woundwort": 1, "glassware": 1, "mandrake": 1, "purified_catalyst": 1},
-    "outputs"         : {"grand_calming_draught": 1},
+    "outputs"         : {"grand_calming_draught": 0.3},
     "workAmount"      : 16,
     "toolTierRequired": 2
   },
   {
     "id"              : "brew_greater_nightglow_draught",
     "station"         : "alchemy_lab",
-    "inputs"          : {"glowcap": 3, "woundwort": 1, "glassware": 1, "distilled_spirit": 1},
-    "outputs"         : {"greater_nightglow_draught": 1},
+    "inputs"          : {"glowcap": 3, "woundwort": 1, "glassware": 1, "distilled_spirit": 0.3},
+    "outputs"         : {"greater_nightglow_draught": 0.3},
     "workAmount"      : 12,
     "toolTierRequired": 1
   },
@@ -4559,15 +4559,15 @@
     "id"              : "brew_grand_nightglow_draught",
     "station"         : "apothecary",
     "inputs"          : {"glowcap": 3, "woundwort": 1, "glassware": 1, "mandrake": 1, "purified_catalyst": 1},
-    "outputs"         : {"grand_nightglow_draught": 1},
+    "outputs"         : {"grand_nightglow_draught": 0.3},
     "workAmount"      : 16,
     "toolTierRequired": 2
   },
   {
     "id"              : "brew_greater_frenzy_draught",
     "station"         : "alchemy_lab",
-    "inputs"          : {"spore_of_madness": 2, "mandrake": 1, "glassware": 1, "distilled_spirit": 1},
-    "outputs"         : {"greater_frenzy_draught": 1},
+    "inputs"          : {"spore_of_madness": 2, "mandrake": 1, "glassware": 1, "distilled_spirit": 0.3},
+    "outputs"         : {"greater_frenzy_draught": 0.3},
     "workAmount"      : 12,
     "toolTierRequired": 1
   },
@@ -4575,15 +4575,15 @@
     "id"              : "brew_grand_frenzy_draught",
     "station"         : "apothecary",
     "inputs"          : {"spore_of_madness": 2, "mandrake": 1, "glassware": 1, "nightshade_bolete": 1, "purified_catalyst": 1},
-    "outputs"         : {"grand_frenzy_draught": 1},
+    "outputs"         : {"grand_frenzy_draught": 0.3},
     "workAmount"      : 16,
     "toolTierRequired": 2
   },
   {
     "id"              : "brew_greater_venom_coating",
     "station"         : "alchemy_lab",
-    "inputs"          : {"venom_sac": 2, "nightshade_bolete": 1, "glassware": 1, "distilled_spirit": 1},
-    "outputs"         : {"greater_venom_coating": 1},
+    "inputs"          : {"venom_sac": 2, "nightshade_bolete": 1, "glassware": 1, "distilled_spirit": 0.3},
+    "outputs"         : {"greater_venom_coating": 0.3},
     "workAmount"      : 12,
     "toolTierRequired": 1
   },
@@ -4591,23 +4591,23 @@
     "id"              : "brew_grand_venom_coating",
     "station"         : "apothecary",
     "inputs"          : {"venom_sac": 2, "nightshade_bolete": 1, "glassware": 1, "mandrake": 1, "purified_catalyst": 1},
-    "outputs"         : {"grand_venom_coating": 1},
+    "outputs"         : {"grand_venom_coating": 0.3},
     "workAmount"      : 16,
     "toolTierRequired": 2
   },
   {
     "id"              : "brew_greater_caustic_coating",
     "station"         : "alchemy_lab",
-    "inputs"          : {"caustic_bile": 3, "nightshade_bolete": 1, "glassware": 1, "distilled_spirit": 1},
-    "outputs"         : {"greater_caustic_coating": 1},
+    "inputs"          : {"caustic_bile": 0.6, "nightshade_bolete": 1, "glassware": 1, "distilled_spirit": 0.3},
+    "outputs"         : {"greater_caustic_coating": 0.3},
     "workAmount"      : 12,
     "toolTierRequired": 1
   },
   {
     "id"              : "brew_grand_caustic_coating",
     "station"         : "apothecary",
-    "inputs"          : {"caustic_bile": 3, "nightshade_bolete": 1, "glassware": 1, "mandrake": 1, "purified_catalyst": 1},
-    "outputs"         : {"grand_caustic_coating": 1},
+    "inputs"          : {"caustic_bile": 0.6, "nightshade_bolete": 1, "glassware": 1, "mandrake": 1, "purified_catalyst": 1},
+    "outputs"         : {"grand_caustic_coating": 0.3},
     "workAmount"      : 16,
     "toolTierRequired": 2
   },
@@ -4617,7 +4617,7 @@
     "id"              : "brew_crude_feral_draught",
     "station"         : "alchemy_lab",
     "inputs"          : {"alpha_heart": 1, "woundwort": 1, "glassware": 1},
-    "outputs"         : {"crude_feral_draught": 1},
+    "outputs"         : {"crude_feral_draught": 0.3},
     "workAmount"      : 10,
     "toolTierRequired": 1
   },
@@ -4625,7 +4625,7 @@
     "id"              : "brew_feral_transfusion",
     "station"         : "apothecary",
     "inputs"          : {"alpha_heart": 1, "woundwort": 2, "gem_dust": 1, "glassware": 1},
-    "outputs"         : {"feral_transfusion": 1},
+    "outputs"         : {"feral_transfusion": 0.3},
     "workAmount"      : 16,
     "toolTierRequired": 1
   },
@@ -4633,7 +4633,7 @@
     "id"              : "brew_alpha_essence",
     "station"         : "apothecary",
     "inputs"          : {"alpha_heart": 1, "woundwort": 2, "gem_dust": 2, "mandrake": 1, "glassware": 1},
-    "outputs"         : {"alpha_essence": 1},
+    "outputs"         : {"alpha_essence": 0.3},
     "workAmount"      : 22,
     "toolTierRequired": 2
   },
@@ -4641,7 +4641,7 @@
     "id"              : "brew_crude_hide_draught",
     "station"         : "alchemy_lab",
     "inputs"          : {"direwolf_hackles": 1, "woundwort": 1, "glassware": 1},
-    "outputs"         : {"crude_hide_draught": 1},
+    "outputs"         : {"crude_hide_draught": 0.3},
     "workAmount"      : 10,
     "toolTierRequired": 1
   },
@@ -4649,7 +4649,7 @@
     "id"              : "brew_hide_transfusion",
     "station"         : "apothecary",
     "inputs"          : {"direwolf_hackles": 1, "woundwort": 2, "gem_dust": 1, "glassware": 1},
-    "outputs"         : {"hide_transfusion": 1},
+    "outputs"         : {"hide_transfusion": 0.3},
     "workAmount"      : 16,
     "toolTierRequired": 1
   },
@@ -4657,7 +4657,7 @@
     "id"              : "brew_ironhide_essence",
     "station"         : "apothecary",
     "inputs"          : {"direwolf_hackles": 1, "woundwort": 2, "gem_dust": 2, "mandrake": 1, "glassware": 1},
-    "outputs"         : {"ironhide_essence": 1},
+    "outputs"         : {"ironhide_essence": 0.3},
     "workAmount"      : 22,
     "toolTierRequired": 2
   },
@@ -4665,7 +4665,7 @@
     "id"              : "brew_crude_predator_draught",
     "station"         : "alchemy_lab",
     "inputs"          : {"sabretooth_glands": 1, "woundwort": 1, "glassware": 1},
-    "outputs"         : {"crude_predator_draught": 1},
+    "outputs"         : {"crude_predator_draught": 0.3},
     "workAmount"      : 10,
     "toolTierRequired": 1
   },
@@ -4673,7 +4673,7 @@
     "id"              : "brew_predator_transfusion",
     "station"         : "apothecary",
     "inputs"          : {"sabretooth_glands": 1, "woundwort": 2, "gem_dust": 1, "glassware": 1},
-    "outputs"         : {"predator_transfusion": 1},
+    "outputs"         : {"predator_transfusion": 0.3},
     "workAmount"      : 16,
     "toolTierRequired": 1
   },
@@ -4681,7 +4681,7 @@
     "id"              : "brew_sabretooth_essence",
     "station"         : "apothecary",
     "inputs"          : {"sabretooth_glands": 1, "woundwort": 2, "gem_dust": 2, "mandrake": 1, "glassware": 1},
-    "outputs"         : {"sabretooth_essence": 1},
+    "outputs"         : {"sabretooth_essence": 0.3},
     "workAmount"      : 22,
     "toolTierRequired": 2
   },
@@ -4689,7 +4689,7 @@
     "id"              : "brew_crude_sight_draught",
     "station"         : "alchemy_lab",
     "inputs"          : {"owlbear_pineal": 1, "woundwort": 1, "glassware": 1},
-    "outputs"         : {"crude_sight_draught": 1},
+    "outputs"         : {"crude_sight_draught": 0.3},
     "workAmount"      : 10,
     "toolTierRequired": 1
   },
@@ -4697,7 +4697,7 @@
     "id"              : "brew_sight_transfusion",
     "station"         : "apothecary",
     "inputs"          : {"owlbear_pineal": 1, "woundwort": 2, "gem_dust": 1, "glassware": 1},
-    "outputs"         : {"sight_transfusion": 1},
+    "outputs"         : {"sight_transfusion": 0.3},
     "workAmount"      : 16,
     "toolTierRequired": 1
   },
@@ -4705,7 +4705,7 @@
     "id"              : "brew_third_eye_essence",
     "station"         : "apothecary",
     "inputs"          : {"owlbear_pineal": 1, "woundwort": 2, "gem_dust": 2, "mandrake": 1, "glassware": 1},
-    "outputs"         : {"third_eye_essence": 1},
+    "outputs"         : {"third_eye_essence": 0.3},
     "workAmount"      : 22,
     "toolTierRequired": 2
   },
@@ -4794,7 +4794,7 @@
       "charcoal": 1
     },
     "outputs": {
-      "distilled_spirit": 1
+      "distilled_spirit": 0.3
     },
     "workAmount": 24,
     "toolTierRequired": 1
@@ -4821,7 +4821,7 @@
       "glassware": 1
     },
     "outputs": {
-      "tanglefoot_coating": 2
+      "tanglefoot_coating": 0.4
     },
     "workAmount": 20,
     "toolTierRequired": 1
@@ -4831,11 +4831,11 @@
     "station": "alchemy_lab",
     "inputs": {
       "resin": 2,
-      "distilled_spirit": 1,
+      "distilled_spirit": 0.3,
       "glassware": 1
     },
     "outputs": {
-      "greater_tanglefoot_coating": 2
+      "greater_tanglefoot_coating": 0.4
     },
     "workAmount": 12,
     "toolTierRequired": 1
@@ -4849,7 +4849,7 @@
       "glassware": 1
     },
     "outputs": {
-      "grand_tanglefoot_coating": 2
+      "grand_tanglefoot_coating": 0.4
     },
     "workAmount": 16,
     "toolTierRequired": 2
@@ -4863,7 +4863,7 @@
       "glassware": 1
     },
     "outputs": {
-      "dread_coating": 2
+      "dread_coating": 0.4
     },
     "workAmount": 20,
     "toolTierRequired": 1
@@ -4874,11 +4874,11 @@
     "inputs": {
       "mandrake": 1,
       "spore_of_madness": 1,
-      "distilled_spirit": 1,
+      "distilled_spirit": 0.3,
       "glassware": 1
     },
     "outputs": {
-      "greater_dread_coating": 2
+      "greater_dread_coating": 0.4
     },
     "workAmount": 12,
     "toolTierRequired": 1
@@ -4893,7 +4893,7 @@
       "glassware": 1
     },
     "outputs": {
-      "grand_dread_coating": 2
+      "grand_dread_coating": 0.4
     },
     "workAmount": 16,
     "toolTierRequired": 2
@@ -4907,7 +4907,7 @@
       "glassware": 1
     },
     "outputs": {
-      "farsight_tonic": 1
+      "farsight_tonic": 0.3
     },
     "workAmount": 28,
     "toolTierRequired": 1
@@ -4917,11 +4917,11 @@
     "station": "alchemy_lab",
     "inputs": {
       "glowcap": 2,
-      "distilled_spirit": 1,
+      "distilled_spirit": 0.3,
       "glassware": 1
     },
     "outputs": {
-      "greater_farsight_tonic": 1
+      "greater_farsight_tonic": 0.3
     },
     "workAmount": 12,
     "toolTierRequired": 1
@@ -4935,7 +4935,7 @@
       "glassware": 1
     },
     "outputs": {
-      "grand_farsight_tonic": 1
+      "grand_farsight_tonic": 0.3
     },
     "workAmount": 16,
     "toolTierRequired": 2
@@ -4949,7 +4949,7 @@
       "glassware": 1
     },
     "outputs": {
-      "antivenin_tonic": 1
+      "antivenin_tonic": 0.3
     },
     "workAmount": 28,
     "toolTierRequired": 1
@@ -4960,11 +4960,11 @@
     "inputs": {
       "charcoal": 1,
       "woundwort": 1,
-      "distilled_spirit": 1,
+      "distilled_spirit": 0.3,
       "glassware": 1
     },
     "outputs": {
-      "greater_antivenin_tonic": 1
+      "greater_antivenin_tonic": 0.3
     },
     "workAmount": 12,
     "toolTierRequired": 1
@@ -4979,7 +4979,7 @@
       "glassware": 1
     },
     "outputs": {
-      "grand_antivenin_tonic": 1
+      "grand_antivenin_tonic": 0.3
     },
     "workAmount": 16,
     "toolTierRequired": 2
@@ -4993,7 +4993,7 @@
       "glassware": 1
     },
     "outputs": {
-      "restful_tonic": 1
+      "restful_tonic": 0.3
     },
     "workAmount": 28,
     "toolTierRequired": 1
@@ -5004,11 +5004,11 @@
     "inputs": {
       "dreamleaf": 1,
       "wild_berries": 1,
-      "distilled_spirit": 1,
+      "distilled_spirit": 0.3,
       "glassware": 1
     },
     "outputs": {
-      "greater_restful_tonic": 1
+      "greater_restful_tonic": 0.3
     },
     "workAmount": 12,
     "toolTierRequired": 1
@@ -5023,7 +5023,7 @@
       "glassware": 1
     },
     "outputs": {
-      "grand_restful_tonic": 1
+      "grand_restful_tonic": 0.3
     },
     "workAmount": 16,
     "toolTierRequired": 2
@@ -5036,7 +5036,7 @@
       "sand": 2
     },
     "outputs": {
-      "honing_oil": 2
+      "honing_oil": 0.4
     },
     "workAmount": 18,
     "toolTierRequired": 1
@@ -5047,10 +5047,10 @@
     "inputs": {
       "tallow": 1,
       "sand": 2,
-      "distilled_spirit": 1
+      "distilled_spirit": 0.3
     },
     "outputs": {
-      "keen_edge_oil": 2
+      "keen_edge_oil": 0.4
     },
     "workAmount": 12,
     "toolTierRequired": 1
@@ -5064,7 +5064,7 @@
       "purified_catalyst": 1
     },
     "outputs": {
-      "razors_grace": 2
+      "razors_grace": 0.4
     },
     "workAmount": 16,
     "toolTierRequired": 2
@@ -5466,7 +5466,7 @@
   {
     "id"              : "make_bronze_leaf_sword",
     "station"         : "casting_hearth",
-    "inputs"          : {"molten_bronze": 4, "clay_mold": 1, "category:leather": 1},
+    "inputs"          : {"molten_bronze": 0.456, "clay_mold": 1, "category:leather": 1},
     "outputs"         : {"bronze_leaf_sword": 1},
     "workAmount"      : 9,
     "toolTierRequired": 1,
@@ -5475,7 +5475,7 @@
   {
     "id"              : "make_bronze_flanged_mace",
     "station"         : "casting_hearth",
-    "inputs"          : {"molten_bronze": 4, "clay_mold": 1, "wooden_haft": 1, "category:leather": 1},
+    "inputs"          : {"molten_bronze": 0.456, "clay_mold": 1, "wooden_haft": 1, "category:leather": 1},
     "outputs"         : {"bronze_flanged_mace": 1},
     "workAmount"      : 9,
     "toolTierRequired": 1,
@@ -5484,7 +5484,7 @@
   {
     "id"              : "make_bronze_socketed_spear",
     "station"         : "casting_hearth",
-    "inputs"          : {"molten_bronze": 4, "clay_mold": 1, "wooden_haft": 1, "cordage": 4},
+    "inputs"          : {"molten_bronze": 0.456, "clay_mold": 1, "wooden_haft": 1, "cordage": 4},
     "outputs"         : {"bronze_socketed_spear": 1},
     "workAmount"      : 8,
     "toolTierRequired": 1,
@@ -5493,7 +5493,7 @@
   {
     "id"              : "make_bronze_cleaver",
     "station"         : "casting_hearth",
-    "inputs"          : {"molten_bronze": 8, "clay_mold": 1, "category:leather": 1},
+    "inputs"          : {"molten_bronze": 0.912, "clay_mold": 1, "category:leather": 1},
     "outputs"         : {"bronze_cleaver": 1},
     "workAmount"      : 10,
     "toolTierRequired": 1,
@@ -5502,7 +5502,7 @@
   {
     "id"              : "make_bronze_chain_flail",
     "station"         : "casting_hearth",
-    "inputs"          : {"molten_bronze": 8, "clay_mold": 1, "wooden_haft": 1, "category:leather": 1},
+    "inputs"          : {"molten_bronze": 0.912, "clay_mold": 1, "wooden_haft": 1, "category:leather": 1},
     "outputs"         : {"bronze_chain_flail": 1},
     "workAmount"      : 12,
     "toolTierRequired": 1,
@@ -5511,7 +5511,7 @@
   {
     "id"              : "make_bronze_rapier",
     "station"         : "casting_hearth",
-    "inputs"          : {"molten_bronze": 4, "clay_mold": 1, "category:leather": 1},
+    "inputs"          : {"molten_bronze": 0.456, "clay_mold": 1, "category:leather": 1},
     "outputs"         : {"bronze_rapier": 1},
     "workAmount"      : 11,
     "toolTierRequired": 1,
@@ -5520,7 +5520,7 @@
   {
     "id"              : "make_bronze_great_leaf_sword",
     "station"         : "casting_hearth",
-    "inputs"          : {"molten_bronze": 8, "clay_mold": 1, "sanded_haft": 1, "category:leather": 1},
+    "inputs"          : {"molten_bronze": 0.912, "clay_mold": 1, "sanded_haft": 1, "category:leather": 1},
     "outputs"         : {"bronze_great_leaf_sword": 1},
     "workAmount"      : 14,
     "toolTierRequired": 1,
@@ -5529,7 +5529,7 @@
   {
     "id"              : "make_bronze_greatcleaver",
     "station"         : "casting_hearth",
-    "inputs"          : {"molten_bronze": 12, "clay_mold": 1, "sanded_haft": 1, "category:leather": 1},
+    "inputs"          : {"molten_bronze": 1.368, "clay_mold": 1, "sanded_haft": 1, "category:leather": 1},
     "outputs"         : {"bronze_greatcleaver": 1},
     "workAmount"      : 15,
     "toolTierRequired": 1,
@@ -5538,7 +5538,7 @@
   {
     "id"              : "make_bronze_double_axe",
     "station"         : "casting_hearth",
-    "inputs"          : {"molten_bronze": 12, "clay_mold": 1, "sanded_haft": 1, "cordage": 4},
+    "inputs"          : {"molten_bronze": 1.368, "clay_mold": 1, "sanded_haft": 1, "cordage": 4},
     "outputs"         : {"bronze_double_axe": 1},
     "workAmount"      : 15,
     "toolTierRequired": 1,
@@ -5547,7 +5547,7 @@
   {
     "id"              : "make_bronze_maul",
     "station"         : "casting_hearth",
-    "inputs"          : {"molten_bronze": 12, "clay_mold": 1, "sanded_haft": 1, "category:leather": 1},
+    "inputs"          : {"molten_bronze": 1.368, "clay_mold": 1, "sanded_haft": 1, "category:leather": 1},
     "outputs"         : {"bronze_maul": 1},
     "workAmount"      : 14,
     "toolTierRequired": 1,
@@ -5556,7 +5556,7 @@
   {
     "id"              : "make_bronze_capped_staff",
     "station"         : "casting_hearth",
-    "inputs"          : {"molten_bronze": 4, "clay_mold": 1, "sanded_haft": 2},
+    "inputs"          : {"molten_bronze": 0.456, "clay_mold": 1, "sanded_haft": 2},
     "outputs"         : {"bronze_capped_staff": 1},
     "workAmount"      : 6,
     "toolTierRequired": 1,
@@ -5927,7 +5927,7 @@
   {
     "id"              : "make_bronze_javelin",
     "station"         : "casting_hearth",
-    "inputs"          : {"molten_bronze": 4, "clay_mold": 1, "wooden_haft": 1},
+    "inputs"          : {"molten_bronze": 0.456, "clay_mold": 1, "wooden_haft": 1},
     "outputs"         : {"bronze_javelin": 2},
     "workAmount"      : 6,
     "toolTierRequired": 1,
@@ -6038,7 +6038,7 @@
   {
     "id"              : "make_bronze_arrow",
     "station"         : "casting_hearth",
-    "inputs"          : {"branch": 1, "molten_bronze": 4, "clay_mold": 1, "category:binding": 1, "feathers": 1},
+    "inputs"          : {"branch": 1, "molten_bronze": 0.456, "clay_mold": 1, "category:binding": 1, "feathers": 1},
     "inputAlternatives": [{"branch": 1, "bronze_bar": 1, "clay_mold": 1, "sinew": 1, "chicken_feathers": 1}],
     "outputs"         : {"bronze_arrow": 8},
     "workAmount"      : 5,

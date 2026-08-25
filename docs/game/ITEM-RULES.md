@@ -589,6 +589,15 @@ gear, what closes one is a dose.**
       ⇒ `medium`, rigid metal plate ⇒ `heavy`. Class carries no combat effect on its own; the
       trade-off has to be real, and it lives in weight and `movementPenalty`.
 - [ ] It is **anatomically and physically plausible** first, mechanically convenient second.
+- [ ] **A fluid is authored in litres.** Fluids are counted in litres everywhere — recipes, loot,
+      stockpile totals, vessels — so a fluid definition reads differently from a solid one:
+      `weightKg` is the mass of ONE LITRE (its density: water 1, molten bronze 8.8, molten gold 19.3)
+      and `volumeL` is one SERVING (the phial that gets drunk, the flask a coating is brushed from).
+      Effects are per serving; `nutrition`, `value` and `fuelValue` are per litre. Writing a phial the
+      solid way (`weightKg: 0.3` beside `volumeL: 0.3`) still parses and gives a liquid a third the
+      weight of water. **R22** checks the density band, the serving size, and that a batch fits the
+      station it pours into.
+
 - [ ] **A reversible pair balances.** When a recipe unmakes what another makes — melt a bar to molten,
       cast the molten back — the two halves are written separately and drift apart on their own. Read
       them together and check the round trip returns exactly what it took. Bronze counted a 4kg bar as
@@ -624,6 +633,7 @@ gear, what closes one is a dose.**
 | 3 | no one-off antique word where a plain one exists, in a name or a description (R13) | `itemRules.test.ts` |
 | 3f | a cure below the runed age charges the patient a downside the sim applies (R20) | `itemRules.test.ts` |
 | 4 | no pair of recipes turns N of an item into more than N (R21) | `itemRules.test.ts` |
+| 4 | a fluid states a density and a serving; its batch fits its station (R22) | `itemRules.test.ts` |
 | 3b | no branch of `/gear-db` claims a concept another branch already owns | by hand |
 | 5 | no recipe-less armour; slots resolve | `armourCoverage.test.ts` |
 | 5 | crafted and equipped by a real pawn | `armourChain.test.ts` |

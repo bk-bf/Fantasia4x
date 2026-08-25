@@ -11,7 +11,7 @@
   import type { Item, ItemInstance, Pawn } from '$lib/game/core/types';
   import { itemService } from '$lib/game/services/ItemService';
   import { gameState } from '$lib/stores/gameState';
-  import { litresToUnits, vesselOf } from '$lib/game/core/vessels';
+  import { servingL, vesselOf } from '$lib/game/core/vessels';
 
   let { pawn }: { pawn: Pawn } = $props();
 
@@ -39,8 +39,7 @@
             vesselName: vessel?.name ?? inst.itemId,
             // Fluids read in litres because that is what the vessel measures; solids in units.
             amount: e.litres != null ? `${e.litres} L` : `×${e.amount}`,
-            doses:
-              e.litres != null ? Math.floor(litresToUnits(e.itemId, e.litres)) : (e.amount ?? 0),
+            doses: e.litres != null ? Math.floor(e.litres / servingL(e.itemId)) : (e.amount ?? 0),
             kind: usableKind(def)
           };
         })

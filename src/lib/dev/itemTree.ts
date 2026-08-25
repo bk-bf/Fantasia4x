@@ -438,10 +438,12 @@ function statOf(i: any): string {
   if (ap?.armorType) return `def ${ap.defense ?? 0}`;
   if (wp) return `dmg ${wp.damage ?? '—'}${wp.damageType ? ` ${wp.damageType}` : ''}`;
   if (i.ammoProperties) return `dmg ${i.ammoProperties.damage ?? '—'}`;
-  // A drinkable food is BOTH: what it feeds and how much of the vessel it takes. Both numbers matter
-  // when you are deciding whether a skin of ale is worth the litre it costs to carry.
+  // A drinkable food is BOTH: what a litre feeds and how big one serving is. Both numbers matter when
+  // you are deciding whether a skin of ale is worth the litre it costs to carry.
   if (i.nutrition != null)
-    return i.type === 'fluid' ? `food ${i.nutrition} · ${i.volumeL ?? 1} L` : `food ${i.nutrition}`;
+    return i.type === 'fluid'
+      ? `food ${i.nutrition}/L · ${i.volumeL ?? 1} L per serving`
+      : `food ${i.nutrition}`;
   if (i.hydration != null) return `drink ${i.hydration}`;
   if (i.medicineQuality != null) return `med ${i.medicineQuality}`;
   if (i.toolBoost) {
@@ -458,7 +460,7 @@ function statOf(i: any): string {
 
   if (i.container)
     return `holds ${i.container.capacityL} L${i.container.capacityKg ? ` / ${i.container.capacityKg} kg` : ''}`;
-  if (i.type === 'fluid') return `${i.volumeL ?? 1} L per measure`;
+  if (i.type === 'fluid') return `${i.weightKg ?? 1} kg/L · ${i.volumeL ?? 1} L per serving`;
   if (i.fuelValue) return `fuel ${i.fuelValue}`;
   return '—';
 }
