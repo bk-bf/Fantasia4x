@@ -1,17 +1,9 @@
-<!-- PawnStatBanner.svelte — the six core-stat chips (STR DEX CON INT PER CHA), showing the
-     condition-adjusted (effective) value with a signed delta. The single source of truth for the
-     stat grid: rendered by the Attributes tab (PawnAttributes) and the Status tab (via PawnStatsBar,
-     which adds the name header), plus anywhere else the core attributes are shown. -->
 <script lang="ts">
   import type { Pawn } from '$lib/game/core/types';
   import { conditionStatMultipliers } from '$lib/game/core/rules/body/conditions';
   export let pawn: Pawn;
 
-  // Active conditions (shock, malnutrition, hypothermia…) scale the RAW attributes. Show the
-  // EFFECTIVE value so the banner matches the crippled body the sim actually uses, with a signed
-  // delta + a tooltip naming the base × multiplier — that's the "stat loss" surfaced on the pawn tab.
   $: sm = conditionStatMultipliers(pawn);
-  // PAWN-GROWTH: 4th tuple field is the stat key — drives the ★ (favoured) marker + growth cap lookup.
   $: cells = [
     ['STR', pawn.stats.strength, sm.strength, 'strength'],
     ['DEX', pawn.stats.dexterity, sm.dexterity, 'dexterity'],
@@ -27,8 +19,6 @@
   const eff = (base: number, mult: number) => Math.round(base * mult);
   const pct = (mult: number) => `${mult < 1 ? '−' : '+'}${Math.abs(Math.round((mult - 1) * 100))}%`;
 
-  // Trait contributions to a core stat (baked into pawn.stats at generation, so surfaced here for the
-  // hover breakdown — "+2 Sturdy, −1 Stocky"). ADR-023.
   const STAT_KEY: Record<string, string> = {
     STR: 'strength',
     DEX: 'dexterity',
@@ -42,7 +32,7 @@
     const parts: string[] = [];
     for (const t of pawn.traits ?? []) {
       const e = t.effects as Record<string, number> | undefined;
-      const net = e?.[`${key}Bonus`] ?? 0; // signed: a flaw authors a negative bonus
+      const net = e?.[`${key}Bonus`] ?? 0;
       if (net) parts.push(`${net > 0 ? '+' : '−'}${Math.abs(net)} ${t.name}`);
     }
     return parts.join(', ');
@@ -94,20 +84,17 @@
     gap: 1px;
     padding: 2px 0;
   }
-  /* PAWN-GROWTH: value, ★, and growth cap sit on one baseline-aligned row ("18 ★ /72"). */
   .stat-val-row {
     display: flex;
     align-items: baseline;
     gap: 3px;
   }
-  /* Dim growth ceiling to the right of the live value. */
   .stat-cap {
     font-size: 9px;
     line-height: 1;
     color: var(--text-dim);
     opacity: 0.7;
   }
-  /* Favoured ("talent") stat: a small star right next to the value. */
   .fav-star {
     font-size: 9px;
     line-height: 1;

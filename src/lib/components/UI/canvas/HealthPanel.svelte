@@ -1,10 +1,3 @@
-<!--
-  HealthPanel — pop-up body-health readout for a selected pawn/mob (NT-U1). Mirrors
-  BuildingFuelPanel: it floats above the info card and the parent owns the open/close toggle
-  (passed as `open`) and the HEALTH button that flips it. Read-only — the body is the shared
-  HealthReadout (blood + pain for the whole body, then every damaged limb with its bleed rate and
-  injured sub-parts' HP + wounds); this component only adds the floating pop-up chrome.
--->
 <script lang="ts">
   import type { HealthModel } from '$lib/components/UI/hud/SelectedEntityCard.svelte';
   import { autohideScroll } from '$lib/actions/autohideScroll';
@@ -27,7 +20,6 @@
 </div>
 
 <style>
-  /* Pop-up framing copied from BuildingFuelPanel so the two HUD pop-ups match. */
   .health-panel {
     position: absolute;
     bottom: calc(100% + 4px);
@@ -46,9 +38,6 @@
     font-size: 10px;
     line-height: 1.5;
     z-index: 20;
-    /* Auto-hiding scrollbar via the shared `autohideScroll` action (it toggles `.is-scrolling`), so the
-       bar never clutters the readout when it isn't needed. Gutter reserved so rows don't reflow. The
-       bespoke #7a5e28 thumb keeps this floating panel's darker palette (matches its border). */
     scrollbar-gutter: stable;
     scrollbar-width: thin;
     scrollbar-color: transparent transparent;
@@ -58,8 +47,6 @@
       max-height 200ms ease,
       scrollbar-color 0.3s ease;
   }
-  /* `is-scrolling` is toggled at runtime by the autohideScroll action — :global so Svelte doesn't
-     prune it as an "unused" selector. */
   .health-panel:global(.is-scrolling),
   .health-panel:hover {
     scrollbar-color: #7a5e28 transparent;

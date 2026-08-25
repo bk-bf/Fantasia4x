@@ -1,9 +1,3 @@
-/**
- * ResourceGeneratorService.ts
- * Populates tile-level resource amounts on the world map after generation.
- * Ported from Celestia: world/generation/resource_gen.gd
- */
-
 import type { WorldTile } from '../core/types';
 import type { ResourceObjectDef } from './ResourceObjectService';
 import { resourceObjectService, isGrowableResource } from './ResourceObjectService';
@@ -11,38 +5,18 @@ import { SUBTERRAINS, SUBTERRAIN_FALLBACK, pickChar, isSpawnableTile } from '../
 import { makeSeededRng } from '../core/util/rng';
 import { STARTING_BUBBLE_RADIUS, MIN_LAIR_SPACING } from './entity/entityConstants';
 
-/**
- * Subterrains whose resources form CLUSTERS rather than per-tile scatter: each connected blob of
- * the subterrain is filled with a SINGLE resource (a hematite vein, a coal seam…), chosen once
- * for the whole blob. These subterrains are also never empty.
- */
 const CLUSTERED_SUBTYPES = new Set(['mineral_deposit']);
 
-// §3b lair-guardian placement: how far from an attractor a guardian den may sit (nearest empty spawnable
-// tile wins → "adjacent"), and the chance an eligible attractor neighbourhood gets one (usually, but some
-// groves stay unguarded free finds).
 const GUARD_SEARCH_RADIUS = 6;
 const GUARD_CHANCE = 0.4;
-// §1e buried treasure: chance a lair (den or §3b guardian) gets a `buried_hoard` denned on the nearest
-// empty tile beside it — "clear the guardian, then dig the prize" (adjacent, so it's diggable under aggro).
 const HOARD_CHANCE = 0.35;
 
-/** Deterministic integer-range RNG: the shared seeded xorshift float gen (core/rng) scaled to
- *  [min, max] inclusive. Same sequence as before — the float gen is byte-identical to the old inline
- *  xorshift, so resource placement for a given seed is unchanged. */
 function makeRng(seed: number) {
   const rand = makeSeededRng(seed);
   return (min: number, max: number): number => Math.floor(rand() * (max - min + 1)) + min;
 }
 
 class ResourceGeneratorServiceImpl {
-  /**
-   * Mutates the worldMap in-place to add resource amounts per tile.
-   * Called once after generateWorld().
-   * @param baseSeed  — the same seed used for world generation
-   * @param opts.exclude — resource ids the random scatter must NOT place (the menu preview excludes the
-   *   magical groves so its deliberately-placed ring is the SOLE source of them; real play omits this).
-   */
   generateResources(
     worldMap: WorldTile[][],
     baseSeed: number,
@@ -53,70 +27,44 @@ class ResourceGeneratorServiceImpl {
     const defs = opts?.exclude ? all.filter((d) => !opts.exclude!.has(d.id)) : all;
     const rng = makeRng(resourceSeed);
 
-    // Lair-free spawn zone: never scatter a lair den within STARTING_BUBBLE_RADIUS of the map centre
-    // (where the colony starts — see spawnPawnsOnMap). Pairs with the time-boxed entity bubble so the
-    // den is neither physically generated NOR repopulated next to the player at spawn. Permanent for
-    // the initial map; lairs may still GROW near the centre later (tickLairs, once the bubble lifts).
     const mapH = worldMap.length;
     const mapW = worldMap[0]?.length ?? 0;
     const cx = Math.floor(mapW / 2);
     const cy = Math.floor(mapH / 2);
     const lairFreeR2 = STARTING_BUBBLE_RADIUS * STARTING_BUBBLE_RADIUS;
 
-    // Pass 1 — per-tile scatter for ordinary subterrains (trees, plants, surface stone, …).
     for (const row of worldMap) {
       for (const tile of row) {
         const baseSubType = tile.subType;
-        if (CLUSTERED_SUBTYPES.has(baseSubType)) continue; // handled as clusters in pass 2
+        if (CLUSTERED_SUBTYPES.has(baseSubType)) continue;
 
         const dx = tile.x - cx;
         const dy = tile.y - cy;
         const lairBlocked = dx * dx + dy * dy <= lairFreeR2;
 
         for (const def of defs) {
-          if (def.lair && lairBlocked) continue; // keep dens out of the spawn bubble (try other defs)
+          if (def.lair && lairBlocked) continue;
           const chance = def.spawn.subterrains[baseSubType] ?? 0;
           if (chance <= 0) continue;
           if (rng(0, 100000) / 100000 >= chance) continue;
           this.placeResource(tile, def, rng);
-          // One primary object per tile keeps biome->terrain->object flow predictable.
           break;
         }
       }
     }
 
-    // Pass 2 — clusters: each connected blob of a clustered subterrain (mineral_deposit) is a
-    // single-resource deposit (a whole hematite vein / coal seam), not a mix scattered per tile.
     this.fillResourceClusters(worldMap, defs, rng);
 
-    // Pass 3 — lair guardians (PRODUCTION-CHAIN-IIII §3b): den a matching lair ADJACENT to placed
-    // rare-material attractors, so a dangerous pack guards the reward. Runs last so every attractor is
-    // already down; consumes rng after passes 1-2 so their placement is byte-identical for a given seed.
     this.placeLairGuardians(worldMap, defs, rng, cx, cy, lairFreeR2);
 
-    // Pass 4 — buried treasure (PRODUCTION-CHAIN-IIII §1e/Phase C): den a `buried_hoard` beside some
-    // lairs (dens AND the §3b guardians just placed), the dragon-on-its-hoard — clear the pack, then dig.
-    // Runs last so both die-cast passes are already down; rng consumed after pass 3 keeps them stable.
     this.placeBuriedHoards(worldMap, defs, rng, cx, cy, lairFreeR2);
   }
 
-  /**
-   * Force a single resource object onto a tile (scripted / art-directed placement, e.g. the menu-preview
-   * magical groves). Clears any existing resources on the tile first so the node isn't visually clobbered
-   * by an earlier scatter pass. Deterministic in `seed`. Reuses the same `placeResource` as world-gen so
-   * the node's physics/visual baking can't drift from the procedural path.
-   */
   placeSingleResource(tile: WorldTile, def: ResourceObjectDef, seed: number): void {
     tile.resources = {};
     this.placeResource(tile, def, makeRng(seed));
   }
 
-  /**
-   * Turn the mineral_deposit blobs the world generator produces into proper single-mineral veins:
-   * each connected deposit blob gets ONE resource, and is GROWN to a 3–8 tile cluster by spreading
-   * that same mineral into adjacent mountain tiles (carving the vein out of the surrounding rock /
-   * walls). Eliminates the lone scattered ore tiles — every deposit is a cluster.
-   */
   private fillResourceClusters(
     worldMap: WorldTile[][],
     defs: ResourceObjectDef[],
@@ -125,7 +73,7 @@ class ResourceGeneratorServiceImpl {
     const h = worldMap.length;
     const w = worldMap[0]?.length ?? 0;
     const visited = new Uint8Array(h * w);
-    const claimed = new Uint8Array(h * w); // tiles already assigned to some cluster
+    const claimed = new Uint8Array(h * w);
     const idx = (x: number, y: number) => y * w + x;
     const inBounds = (x: number, y: number) => x >= 0 && y >= 0 && x < w && y < h;
 
@@ -135,7 +83,6 @@ class ResourceGeneratorServiceImpl {
         const subType = worldMap[y][x].subType;
         if (!CLUSTERED_SUBTYPES.has(subType)) continue;
 
-        // BFS the connected mineral_deposit blob (the cluster seed).
         const cluster: WorldTile[] = [];
         const queue: WorldTile[] = [worldMap[y][x]];
         visited[idx(x, y)] = 1;
@@ -155,7 +102,6 @@ class ResourceGeneratorServiceImpl {
         const chosen = this.pickGuaranteedResource(subType, defs, rng);
         if (!chosen) continue;
 
-        // Grow the cluster to a target size by spreading into adjacent (unclaimed) mountain tiles.
         const target = rng(3, 8);
         for (let qi = 0; qi < queue.length && cluster.length < target; qi++) {
           const cur = queue[qi];
@@ -163,12 +109,8 @@ class ResourceGeneratorServiceImpl {
             if (cluster.length >= target) break;
             if (!inBounds(nx, ny) || claimed[idx(nx, ny)]) continue;
             const nt = worldMap[ny][nx];
-            if (nt.terrainType !== 'mountain') continue; // keep veins in the mountains
+            if (nt.terrainType !== 'mountain') continue;
             claimed[idx(nx, ny)] = 1;
-            // Carve the vein INTO the rock: the grown tile becomes mineral_deposit so the ore renders on
-            // a deposit base, never on bare `cave` floor (the reported bug). It's already non-walkable
-            // once the ore is placed, and mining reverts it to cave (harvestSubType). Mark it visited so
-            // the outer blob scan doesn't re-seed this now-deposit tile as a fresh cluster.
             nt.subType = 'mineral_deposit';
             visited[idx(nx, ny)] = 1;
             cluster.push(nt);
@@ -176,7 +118,6 @@ class ResourceGeneratorServiceImpl {
           }
         }
 
-        // Fill the whole cluster with the one mineral (clearing any wall placed in pass 1).
         for (const t of cluster) {
           t.resources = {};
           this.placeResource(t, chosen, rng);
@@ -185,14 +126,6 @@ class ResourceGeneratorServiceImpl {
     }
   }
 
-  /**
-   * PRODUCTION-CHAIN-IIII §3b — den a matching lair ADJACENT to each placed attractor resource. For every
-   * lair def that declares `lairAttractors`, a placed attractor (a witchwood/soulwood grove, a frostheart
-   * pine, a bonewood snag) has a chance to get one of its guardian lairs on the nearest empty, spawnable,
-   * out-of-spawn-bubble tile within GUARD_SEARCH_RADIUS. "Tier matches tier" reads through the existing
-   * lair→creature bind (a predator_den by a soulwood grove seeds the bear/owlbear line). Adjacent, not on:
-   * the grove tile is untouched, so a bold player can risk-harvest under the pack's aggro or clear the den.
-   */
   private placeLairGuardians(
     worldMap: WorldTile[][],
     defs: ResourceObjectDef[],
@@ -201,7 +134,6 @@ class ResourceGeneratorServiceImpl {
     cy: number,
     bubbleR2: number
   ): void {
-    // attractor resource id → guardian lair defs drawn to it
     const wantedBy = new Map<string, ResourceObjectDef[]>();
     for (const d of defs) {
       if (!d.lair || !d.lairAttractors?.length) continue;
@@ -242,9 +174,7 @@ class ResourceGeneratorServiceImpl {
           }
         }
         if (!guardians) continue;
-        // usually guarded, but not always (some rare finds stay free)
         if (rng(0, 100000) / 100000 >= GUARD_CHANCE) continue;
-        // one guardian per neighbourhood — don't stack a den next to an already-denned attractor
         if (hasLairNear(x, y, MIN_LAIR_SPACING)) continue;
         const spot = this.findGuardSpot(worldMap, x, y, cx, cy, bubbleR2);
         if (!spot) continue;
@@ -254,12 +184,6 @@ class ResourceGeneratorServiceImpl {
     }
   }
 
-  /**
-   * §1e/Phase C — for each lair tile, roll `HOARD_CHANCE` to den a `buried_hoard` on the nearest empty
-   * tile beside it (reusing `findGuardSpot`). The one-resource-per-tile map model can't put the hoard ON
-   * the den tile, so it sits ADJACENT (diggable under the pack's aggro, or after clearing) — the same
-   * "beside, not on" placement the §3b guardians use. No-op if the `buried_hoard` def isn't loaded.
-   */
   private placeBuriedHoards(
     worldMap: WorldTile[][],
     defs: ResourceObjectDef[],
@@ -291,8 +215,6 @@ class ResourceGeneratorServiceImpl {
     }
   }
 
-  /** Nearest empty, spawnable (walkable forest/plains/swamp), out-of-bubble land tile within
-   *  GUARD_SEARCH_RADIUS of the attractor at (ax,ay) — the "adjacent" den spot (never ON the attractor). */
   private findGuardSpot(
     worldMap: WorldTile[][],
     ax: number,
@@ -307,13 +229,13 @@ class ResourceGeneratorServiceImpl {
       const row = worldMap[ay + dy];
       if (!row) continue;
       for (let dx = -GUARD_SEARCH_RADIUS; dx <= GUARD_SEARCH_RADIUS; dx++) {
-        if (dx === 0 && dy === 0) continue; // never on the attractor
+        if (dx === 0 && dy === 0) continue;
         const t = row[ax + dx];
         if (!t || !isSpawnableTile(t)) continue;
-        if (Object.keys(t.resources).length > 0) continue; // empty tile only (don't clobber a resource)
+        if (Object.keys(t.resources).length > 0) continue;
         const bdx = t.x - cx;
         const bdy = t.y - cy;
-        if (bdx * bdx + bdy * bdy <= bubbleR2) continue; // keep guardians out of the start bubble
+        if (bdx * bdx + bdy * bdy <= bubbleR2) continue;
         const d = dx * dx + dy * dy;
         if (d < bestD) {
           bestD = d;
@@ -324,7 +246,6 @@ class ResourceGeneratorServiceImpl {
     return best;
   }
 
-  /** 4-neighbours of (x,y) in a seeded-random order, so grown clusters take organic shapes. */
   private neighbors4(
     x: number,
     y: number,
@@ -343,32 +264,22 @@ class ResourceGeneratorServiceImpl {
     return n;
   }
 
-  /** Place a resource object on a tile and update its physics from the resource definition. */
   private placeResource(
     tile: WorldTile,
     def: ResourceObjectDef,
     rng: (min: number, max: number) => number
   ): void {
     tile.resources[def.id] = rng(def.nodeAmountRange[0], def.nodeAmountRange[1]);
-    // §F: growable plants spawn at a RANDOM 60–100% maturity so the world isn't uniformly full-grown
-    // (growth scales harvest yield + shows in the panel). The 60% floor matches the forage regrow gate
-    // (MIN_FORAGE_GROWTH) so a freshly-spawned wild plant is always foragable at least once — below it,
-    // a never-foraged node would be permanently locked (wild growth only recovers via yield regrowth).
     if (isGrowableResource(def)) {
       (tile.growth ??= {})[def.id] = rng(60, 100);
     }
-    // walkable comes directly from the resource; movementCost falls back to the objectSubType
-    // subterrain so slow-but-passable resources still apply cost.
     const resourceSub = SUBTERRAINS[def.subterrain] ?? SUBTERRAIN_FALLBACK;
     tile.ascii = pickChar(resourceSub, tile.x, tile.y);
     tile.walkable = def.walkable ?? resourceSub.walkable;
-    // Bake combat LoS (Part VII): purely data-driven, mirroring `walkable` — the resource's own
-    // `blocksSight` flag (rock / ore / gem nodes set it true; trees/bushes don't), else its subterrain's.
     tile.blocksSight = def.blocksSight ?? resourceSub.blocksSight ?? false;
     tile.movementCost = resourceSub.movementCost;
   }
 
-  /** Weighted pick (by `subType` spawn chance) among resources that can spawn on `subType`. */
   private pickGuaranteedResource(
     subType: string,
     defs: ResourceObjectDef[],

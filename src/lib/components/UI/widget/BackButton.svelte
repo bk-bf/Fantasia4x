@@ -1,10 +1,3 @@
-<!--
-  BackButton — the single shared "return to map" control for every overlay-screen header
-  (Work / Crafting / Construction / Entities / Exploration…). Each screen used to hand-roll its own
-  `.hdr-btn` and they drifted (different sizes / colours / padding); this is the one chokepoint so the
-  back affordance is identical across tabs. Defaults to going back to the main map; pass `onClick` to
-  override (e.g. a nested sub-view that pops one level).
--->
 <script lang="ts">
   import { uiState } from '$lib/stores/uiState';
 
@@ -15,8 +8,6 @@
 <button class="back-btn" onclick={handle} title="Back to map">‹ {label}</button>
 
 <style>
-  /* margin-left:auto floats it to the trailing edge of any flex header — works whether it's a direct
-     child of `.screen-hdr` or nested in a `.hdr-tools` group (no free space there → it's a no-op). */
   .back-btn {
     margin-left: auto;
     padding: 2px 10px;

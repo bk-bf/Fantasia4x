@@ -1,9 +1,3 @@
-<!--
-  SaveListRow — one row in the SaveListMenu. In LOAD mode, clicking the row loads that save. In SAVE mode,
-  clicking it OVERWRITES that save with the current game (two-step "Overwrite?" confirm, since it replaces a
-  checkpoint). The corner ✕ deletes the save (its own confirm), available in both modes. Shows the colony
-  summary, an Auto/Manual badge (which kind of save wrote it last), and the date+time it was taken.
--->
 <script lang="ts">
   import type { SaveEntry } from '$lib/stores/saveManager';
 
@@ -15,11 +9,10 @@
   }: {
     save: SaveEntry;
     mode?: 'load' | 'save';
-    onActivate: () => void; // load (load mode) or overwrite (save mode)
+    onActivate: () => void;
     onDelete: () => void;
   } = $props();
 
-  // Only one inline confirm is shown at a time.
   let confirm = $state<'none' | 'delete' | 'overwrite'>('none');
 
   function activate() {
@@ -38,8 +31,6 @@
     });
   }
 
-  // Copy the world-gen seed to the clipboard (the app-shell disables text selection, so a button is the
-  // only way to grab it). stopPropagation so the click never falls through to the row's load/overwrite.
   let copied = $state(false);
   let copyTimer: ReturnType<typeof setTimeout> | undefined;
   async function copySeed(e: MouseEvent) {
@@ -49,7 +40,6 @@
     try {
       await navigator.clipboard.writeText(text);
     } catch {
-      // Fallback for a non-secure context where navigator.clipboard is unavailable.
       const ta = document.createElement('textarea');
       ta.value = text;
       ta.style.position = 'fixed';
@@ -58,9 +48,7 @@
       ta.select();
       try {
         document.execCommand('copy');
-      } catch {
-        /* best-effort */
-      }
+      } catch {}
       ta.remove();
     }
     copied = true;
@@ -153,7 +141,6 @@
     display: flex;
     align-items: baseline;
     gap: 8px;
-    /* Leave room for the absolutely-positioned ✕ (top-right) so the right-aligned badge can't clip it. */
     padding-right: 22px;
   }
   .culture {
@@ -175,7 +162,6 @@
     border-radius: 3px;
     padding: 1px 5px;
   }
-  /* An autosave reads a touch warmer so it's distinguishable at a glance from a deliberate snapshot. */
   .badge.auto {
     color: var(--accent-hi);
     border-color: var(--accent-hi);
@@ -190,8 +176,6 @@
     font-size: 11px;
     color: var(--text-muted);
   }
-  /* Copy-seed pill, floated bottom-right over the main button (which shows the date bottom-left). It's a
-     sibling of .main — not nested — so it's valid + its click never triggers a load/overwrite. */
   .seed {
     position: absolute;
     bottom: 6px;

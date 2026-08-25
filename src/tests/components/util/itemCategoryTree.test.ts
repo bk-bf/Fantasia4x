@@ -50,7 +50,6 @@ describe('itemCategoryTree.buildCategoryTree', () => {
     const weapons = tree.find((n) => n.key === 'weapons');
     expect(weapons).toBeDefined();
     expect(collectItemIds(weapons!).sort()).toEqual(items.map((i) => i.id).sort());
-    // melee → cutting + blunt leaves exist under weapons
     const melee = weapons!.children.find((c) => c.key === 'melee');
     expect(melee!.children.map((c) => c.key).sort()).toEqual(['blunt', 'cutting']);
   });

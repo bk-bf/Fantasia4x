@@ -1,13 +1,9 @@
-<!-- StatBar.svelte — the one reusable meter bar: LABEL [████░░░░] VALUE.
-     Used for needs, conditions, item freshness/condition, blood/stamina — one style everywhere. -->
 <script lang="ts">
   export let label: string;
-  export let value: number; // current value
+  export let value: number;
   export let max = 100;
   export let color: string;
-  /** Right-hand readout. Defaults to the rounded value; pass e.g. "72/100" or "72%" to override. */
   export let valueText: string | null = null;
-  /** Optional hover tooltip on the whole row (e.g. a drying-rate breakdown). */
   export let title: string | null = null;
   export let width = 8;
 

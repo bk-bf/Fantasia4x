@@ -1,17 +1,8 @@
-<!--
-  CreditsScroll — the cinematic, film-style rolling credits, opened from the title screen (MainMenu).
-
-  A single column rolls up from below the fold and off the top, on a continuous loop (you can close
-  any time). Credits the author, the games that inspired Fantasia4x, and every bundled asset author
-  (kept in sync with AUDIO-CREDITS.md + the CC-BY Bitlands tileset). Top/bottom gradient masks give the
-  vignette fade. Closes on ✕ / backdrop / Escape; respects prefers-reduced-motion (static scroll).
--->
 <script lang="ts">
   import { fade } from 'svelte/transition';
 
   let { onClose }: { onClose: () => void } = $props();
 
-  // Structured so a new asset/inspiration is a one-line edit, never a markup change.
   const credits: { role: string; lines: string[] }[] = [
     { role: 'A 4X Colony Chronicle', lines: [] },
     { role: 'Design & Code', lines: ['bk'] },
@@ -91,7 +82,7 @@
   .credits-overlay {
     position: fixed;
     inset: 0;
-    z-index: 1100; /* above the menu (1000), same band as SettingsModal */
+    z-index: 1100;
     background: var(--bg);
     font-family: var(--font-mono);
     overflow: hidden;
@@ -105,12 +96,11 @@
     padding: 0;
   }
 
-  /* The roll happens inside this full-screen window; top/bottom masks fade text at the edges. */
   .viewport {
     position: absolute;
     inset: 0;
     overflow: hidden;
-    pointer-events: none; /* clicks fall through to the backdrop → close */
+    pointer-events: none;
     -webkit-mask-image: linear-gradient(transparent, #000 16%, #000 84%, transparent);
     mask-image: linear-gradient(transparent, #000 16%, #000 84%, transparent);
   }
@@ -127,7 +117,6 @@
     text-align: center;
     animation: roll 58s linear infinite;
   }
-  /* Starts entirely below the fold (vh), ends entirely above (its own height) — length-independent. */
   @keyframes roll {
     from {
       transform: translateY(100vh);
@@ -201,7 +190,6 @@
     opacity: 0.6;
   }
 
-  /* No auto-roll for reduced-motion users — pin it readable at the top and let them scroll. */
   @media (prefers-reduced-motion: reduce) {
     .viewport {
       overflow-y: auto;

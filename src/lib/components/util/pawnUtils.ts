@@ -3,8 +3,6 @@ import { jobService } from '$lib/game/services/JobService';
 import { itemService } from '$lib/game/services/ItemService';
 import { resourceObjectDefById } from '$lib/game/core/defs/resourceObjects';
 
-/** Human name for a harvest-node or item id — resource-object nodes (berry_bush) via their displayName,
- *  otherwise the item def name, never the raw id. */
 function resourceLabel(id: string | undefined): string {
   if (!id) return 'resource';
   return (
@@ -19,8 +17,6 @@ export interface PawnTaskSummary {
   workAssignment: string;
 }
 
-/** Job → labor work-category key. Single source of truth lives in JobService (jobs.jsonc); this is
- *  a thin pass-through so the UI and the sim never drift apart (the old duplicated switch is gone). */
 function getWorkKeyForJob(job: Job): string {
   return jobService.getJobWorkCategory(job);
 }
@@ -51,8 +47,6 @@ function describeJob(job: Job): string {
 function describeActiveJob(job: Pawn['activeJob']): string {
   if (!job) return 'idle';
 
-  // NOTE: the active job's targetX/targetY are stripped from the worker→main projection
-  // (entityProjection.ts), so they're always undefined here — never render active-job coords.
   switch (job.type) {
     case 'harvest':
       return `harvest ${resourceLabel(job.resourceId)}`;
@@ -133,8 +127,6 @@ export function getPawnTaskSummary(pawn: Pawn, gameState: GameState): PawnTaskSu
   const assignedWork = workAssignment?.currentWork ?? pawn.currentWork ?? null;
   const nextJob = getNextAvailableJob(pawn, gameState);
 
-  // When sleeping near a shelter, show which building the pawn is sleeping at.
-  // activeJob.targetX/Y points to the building position (set by handleTired).
   if (pawn.currentState?.toLowerCase() === 'sleeping' && pawn.activeJob) {
     const shelterBuilding = gameState.buildings?.find(
       (b) =>
@@ -200,20 +192,7 @@ export function getHealthDescription(health: number): string {
   return 'Critical condition';
 }
 
-/**
- * Thresholds for the two needs that are NOISE most of the time.
- *
- * The map's info panel is a glance — every bar it carries costs attention, so wetness and relaxation
- * only earn a row once they are actually saying something. The pawn screen is the opposite: it is where
- * you go to read the whole pawn, so it shows them unconditionally, dry and rested included.
- *
- * Shared here so the two surfaces cannot drift apart, which is exactly what had happened: the info
- * panel showed relaxation always, and the pawn screen hid it unless it was already dire.
- */
-/** Relaxation at or above this is fine — the info panel omits the bar. Matches its own colour ramp,
- *  which turns from green at 50. */
 export const RELAXATION_NOTEWORTHY = 50;
-/** Any wetness at all is worth a row: being damp is a cold risk, and dry is the default. */
 export const WETNESS_NOTEWORTHY = 0;
 
 export function getNeedColor(needValue: number): string {
@@ -326,7 +305,6 @@ export function formatEffectValue(
     return `${effectValue}`;
   }
   if (effectValue && typeof effectValue === 'object') {
-    // Work-modifier map ({ foraging: 1.1, hunting: 1.2 }) — never leak "[object Object]".
     const axis = workAxisLabel(effectName);
     return Object.entries(effectValue)
       .map(([workType, mult]) => {
@@ -338,10 +316,6 @@ export function formatEffectValue(
   return String(effectValue);
 }
 
-/**
- * Human label for a work-modifier effect key: `workSpeed` → "speed",
- * `workEfficiency` → "efficiency"; non-`work` keys are humanised verbatim.
- */
 export function workAxisLabel(effectName: string): string {
   return effectName.startsWith('work')
     ? effectName.slice(4).toLowerCase()

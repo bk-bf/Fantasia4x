@@ -4,12 +4,6 @@ import { HeadlessSession } from '$lib/game/headless/HeadlessSession';
 import { carriedQuantities, carrierOf } from '$lib/game/core/rules/gear/vessels';
 import type { Pawn } from '$lib/game/core/types';
 
-/**
- * A fluid medicine has to survive the whole trip: off the tile, into a caretaker's pack, and out
- * again as one dose. Two things used to break it — `pickUpFromTile` credited a bulk count and threw
- * the vessel instance away with everything in it, and the administer path searched only the bulk
- * stacks, where a fluid can never be.
- */
 describe('a fluid medicine on a caretaker', () => {
   it('survives pickup, is found by the panel search, and is spent when administered', async () => {
     const s = new HeadlessSession();
@@ -31,8 +25,6 @@ describe('a fluid medicine on a caretaker', () => {
     const near = (a?: { x: number; y: number }, b?: { x: number; y: number }) =>
       !!a && !!b && Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y)) <= 1;
 
-    // Wait for two pawns to stand together AND a stored phial to exist — then act without ticking,
-    // or a hauler carries the vessel back to a stockpile between the pickup and the dose.
     let carer: Pawn | undefined, patient: Pawn | undefined, phialId: string | undefined;
     for (let i = 0; i < 60; i++) {
       s.tick(100);

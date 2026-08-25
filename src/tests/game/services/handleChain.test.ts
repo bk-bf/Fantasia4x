@@ -3,19 +3,13 @@ import { buildScenario } from '$lib/game/headless/Scenario';
 import { HeadlessSession } from '$lib/game/headless/HeadlessSession';
 import { workService } from '$lib/game/services/WorkService';
 
-/**
- * HANDLE CHAIN (carpentry) — a metal tool wants a real handle, not a green stick. Drive the REAL sim:
- * pawns carve+sand a batch of hafts at the sawtable (active woodworking), then the passive soaking
- * trough seasons the batch (the iron-age reward: load many, walk away). No soak → no seasoned haft →
- * no robust iron tool. Verifies the whole active→passive handle pipeline over real ticks.
- */
 describe('tool/weapon handle chain (woodworking → soak)', () => {
   it('pawns carve+sand hafts, then the trough seasons a batch (active + passive, real ticks)', async () => {
     const session = new HeadlessSession();
     await session.start(
       buildScenario({
         seed: 11,
-        map: { w: 20, h: 20 }, // flat → every tile reachable
+        map: { w: 20, h: 20 },
         researchMaxTier: 9,
         toolTier: 3,
         infiniteFuel: true,
@@ -34,22 +28,19 @@ describe('tool/weapon handle chain (woodworking → soak)', () => {
         } as never);
     const stk = () => (session.getState().stockpile ?? {}) as Record<string, number>;
 
-    // Copper/bronze tier: a single carved haft.
     session.command({
       type: 'craftItem',
       payload: { itemId: 'wooden_haft', quantity: 1 }
     } as never);
     for (let i = 0; i < 8 && !(stk().wooden_haft > 0); i++) session.tick(400);
 
-    // Iron tier: carve+sand a BATCH (one active job → 6 sanded hafts)…
     session.command({
       type: 'craftItem',
       payload: { itemId: 'sanded_haft', quantity: 1 }
     } as never);
     for (let i = 0; i < 10 && !(stk().sanded_haft > 0); i++) session.tick(400);
-    const sandedMade = stk().sanded_haft ?? 0; // capture BEFORE the soak consumes them
+    const sandedMade = stk().sanded_haft ?? 0;
 
-    // …then SEASON the batch at the passive trough (soak six at once, walk away).
     session.command({
       type: 'craftItem',
       payload: { itemId: 'seasoned_haft', quantity: 1 }
@@ -80,12 +71,10 @@ describe('tool/weapon handle chain (woodworking → soak)', () => {
         researchMaxTier: 9,
         toolTier: 3,
         infiniteFuel: true,
-        workReady: true, // stocks the anvil's forging tool
+        workReady: true,
         pawns: [{ count: 6, skillLevel: 16 }],
         needsDisabled: ['hunger', 'fatigue'],
         buildings: [{ id: 'anvil' }],
-        // seasoned hafts + iron + a leather grip on hand → the axe should forge; no branch stocked, so
-        // it can ONLY succeed by consuming the crafted handle (a green stick is no longer accepted).
         items: { iron_bar: 8, buckskin: 8, seasoned_haft: 4 },
         seedEntities: false
       })

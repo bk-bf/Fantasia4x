@@ -1,12 +1,3 @@
-<!--
-  BuildingStoragePanel — §F per-building storage-bin item filter, copied from BuildingFuelPanel's shape.
-  Given the selected storage building it edits that building's `storageSettings.allowedItemIds` via a
-  command. The candidate universe is the building's DEFAULT scope: a specialized bin (storageFilter)
-  lists only the items it can hold; a general store lists every non-hidden item. "Allowed" defaults to
-  the whole candidate set (no override); any tick writes an explicit id list, which the haul engine then
-  treats as the bin's filter. Reuses the shared ItemFilterChecklist (grouped + searchable). The parent
-  owns open/close (the card's FILTER button).
--->
 <script lang="ts">
   import { gameState } from '$lib/stores/gameState.js';
   import type { PlacedBuilding, Item, ZonePriority } from '$lib/game/core/types.js';
@@ -16,8 +7,6 @@
 
   let { building, open = false }: { building: PlacedBuilding; open?: boolean } = $props();
 
-  // Haul-fill priority: pawns top up higher-priority stores before lower ones (same scale as a
-  // stockpile zone — see zonePriorityRankAt, which now honours a bin's storageSettings.priority).
   const PRIORITIES: { value: ZonePriority; label: string }[] = [
     { value: 'low', label: 'Low' },
     { value: 'normal', label: 'Normal' },
@@ -33,12 +22,8 @@
     });
   }
 
-  // Non-hidden items only (internal items like natural weapons are never haul targets) — same universe
-  // the stockpile-zone filter uses.
   const ALL_ITEMS = (itemsData as unknown as Item[]).filter((i) => !i.hidden);
 
-  // Candidate universe = what this store CAN hold: a specialized bin narrows to its `storageFilter`
-  // (categories OR explicit item ids); a general store offers everything.
   const candidateItems = $derived.by((): Item[] => {
     const filter = buildingService.getBuildingById(building.type)?.storageFilter;
     if (!filter || filter.length === 0) return ALL_ITEMS;
@@ -47,7 +32,6 @@
   });
   const candidateIds = $derived(candidateItems.map((i) => i.id));
 
-  // Effective allow-set: an explicit override (even empty) wins; otherwise everything in scope is on.
   const allowed = $derived.by((): Set<string> => {
     const override = building.storageSettings?.allowedItemIds;
     return new Set(override ?? candidateIds);

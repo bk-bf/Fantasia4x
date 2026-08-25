@@ -1,42 +1,3 @@
-// Weather (SEASONS_WEATHER Subsystem 4) — the single data source. Loaded by EnvironmentService.
-//
-// Two halves in one file:
-//   • types[]  — the LABELLED weather states the rest of the game reads via `weather.type`: each a
-//                leaf of effects + visuals ("what does `storm` feel/look like").
-//   • the chains (precip / wind / grid …) — when each type is active. Weather is TWO independent
-//                Markov chains whose product DERIVES the displayed type:
-//                  PRECIP axis (wet) : dry → drizzle → rain → heavy_rain   (+ snow / fog / heat_wave)
-//                  WIND   axis       : calm → breezy → windy → gale
-//                They evolve separately, so a dry gale, a calm shower, and a windy rain all arise
-//                naturally — a windy day never depends on it raining. `storm`/`blizzard` live ONLY in
-//                the bottom-right corner (heavy precip AND a gale at once), gated by BOTH chains'
-//                weights, so wind can never force a storm on its own.
-//
-//   default — the starting / fallback weather id (also the dry-calm derivation).
-//
-//   types[] fields:
-//     overlay       — UI animation the WeatherCanvas draws:
-//                     "none" | "rain" | "snow" | "fog" | "leaves" | "dust" | "snowdust". Visual only.
-//     particleColor — [r,g,b] 0–255 tint for "leaves"/"dust" particles (green spring vs red autumn).
-//     windStrength  — inherent windiness 0–1; drives the overlay slant (combined with ambient wind).
-//                     Default 0.2 (0.6 if "heavy").
-//     sightMul      — environmental sight multiplier 0–1 (1 = clear); fog/storm shorten detection
-//                     range for BOTH pawns and mobs (folds into effectiveVisionRange). Default 1.
-//     panelSaturation — side-panel colour saturation while active (1 = normal, <1 = washed-out).
-//     heavy         — harder wind / slant + longer streaks on the overlay.
-//     fallSpeed     — overlay particle fall speed px/sec. Default 680 rain / 80 snow.
-//     density       — overlay particle count per megapixel (before intensity/zoom). Default 160/80.
-//     intensity     — 0–1; drives overlay opacity AND (× density) particle count.
-//     tempDelta     — °C added to effective temperature (cold/heat exposure). Windy cold = windchill;
-//                     summer wind is a small negative = cooling relief in the heat.
-//     fatigueMul / hungerMul — multipliers on those need rates.
-//     moveCostMul   — movement-cost multiplier (gameplay hook).
-//     mood          — MOOD-REWORK: a mood-effect ID (mood.jsonc `effects`, e.g. "weather_storm") applied
-//                     while this weather holds — the effect's label + value feed each pawn's mood target
-//                     (a roof softens a negative one). Defined in mood.jsonc, referenced here.
-//     moistureBonus — added to tile wetness % while active (soaks pawns); negative dries (heat wave).
-//     tint          — normalised RGB multiplied into the ambient tint.
-//     severity      — chronicle severity on onset: "info" | "warning".
 {
   "default": "clear",
   "types"  : [
@@ -336,22 +297,6 @@
     }
   ],
 
-  // ─── EVOLUTION: the two orthogonal chains whose product derives `type` above ───
-  //   <chain>.default       — starting / fallback state id.
-  //   <chain>.durationRange — [min,max] ticks a state holds before it's re-rolled.
-  //   transitions[]         — weighted neighbours: { to, chance } fixed weight; { to, seasonPrecip }
-  //                           pulls the season's precipitation as the weight; seasons:[...] gates by
-  //                           season; the leftover weight (1 − Σ) is the chance the state persists.
-  //                           `phase` gates a branch to one travel direction of the precip ladder
-  //                           (rising vs. falling).
-  //   wind.bands            — the 0–1 ambient-wind scalar's range per wind level; the scalar
-  //                           random-walks INSIDE its level's band, so the readout always matches the
-  //                           level (and thus the derived type).
-  //   ladders               — ordered rungs used by the storm-corner step-down (calming both axes).
-  //   stormCorner           — derived types that, once reached, break next roll: both chains step one
-  //                           rung toward calm (the front passes, leaving stiller, clearer skies).
-  //   grid                  — (precip × wind) → display type id. "$season_windy" expands to the active
-  //                           season's windy variant (spring_windy / … / winter_windy).
   "precip": {
     "default"      : "dry",
     "durationRange": [50, 400],
@@ -359,9 +304,6 @@
       {
         "id"         : "dry",
         "transitions": [
-          // Precipitation ONSET happens in every season (weighted by that season's `precipitation`);
-          // whether it FALLS as rain or snow is decided by temperature at derive time (deriveWeatherType),
-          // not gated here — so a sub-0 spring night snows and a winter thaw rains. heat_wave stays summer.
           { "to": "drizzle",   "seasonPrecip": true },
           { "to": "heat_wave", "chance": 0.08, "seasons": ["summer"] },
           { "to": "fog",       "chance": 0.05 }
@@ -370,12 +312,10 @@
       {
         "id"         : "drizzle",
         "transitions": [
-          // Building UP from dry: can still develop into rain or simply linger/clear.
           { "to": "rain",       "chance": 0.3,  "phase": "rising" },
           { "to": "dry",        "chance": 0.15, "phase": "rising" },
           { "to": "fog",        "chance": 0.08, "phase": "rising" },
           { "to": "foggy_rain", "chance": 0.08, "phase": "rising" },
-          // Easing DOWN from rain: the front is passing — strongly clears, slight chance to relapse.
           { "to": "dry",        "chance": 0.65, "phase": "falling" },
           { "to": "rain",       "chance": 0.35, "phase": "falling" }
         ]
@@ -383,7 +323,6 @@
       {
         "id"         : "rain",
         "transitions": [
-          // ~60% eases off (35 drizzle / 25 dry), ~25% intensifies, leftover persists.
           { "to": "drizzle",    "chance": 0.35 },
           { "to": "dry",        "chance": 0.25 },
           { "to": "heavy_rain", "chance": 0.25 }
@@ -392,8 +331,6 @@
       {
         "id"         : "heavy_rain",
         "transitions": [
-          // Eases toward drizzle/dry; the leftover ~25% stays heavy. (No storm here — storm is the
-          // heavy_rain × gale corner, decided by the wind chain.)
           { "to": "drizzle", "chance": 0.35 },
           { "to": "dry",     "chance": 0.25 },
           { "to": "rain",    "chance": 0.15 }
@@ -467,7 +404,6 @@
       {
         "id"         : "gale",
         "transitions": [
-          // Symmetric to the rain descent: a gale spends itself back toward calm.
           { "to": "windy",  "chance": 0.45 },
           { "to": "breezy", "chance": 0.25 },
           { "to": "calm",   "chance": 0.1 }

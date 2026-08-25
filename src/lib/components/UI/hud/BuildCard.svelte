@@ -1,5 +1,3 @@
-<!-- BuildCard.svelte — compact card for a buildable/craftable, styled like the pawn TRAITS cards:
-     left accent · sprite icon + name + badge · cost (slot) · action. Shared by Buildings/Crafting. -->
 <script lang="ts">
   import SpriteIcon from '../widget/SpriteIcon.svelte';
   import HoverTip from '../tooltip/HoverTip.svelte';
@@ -7,7 +5,6 @@
   import BuildingStatTooltip from '../tooltip/BuildingStatTooltip.svelte';
   import type { Item, Recipe, Building } from '$lib/game/core/types';
 
-  // Show the full description in a hover panel, but only when it's actually clamped/truncated.
   let descTip: { x: number; y: number } | null = null;
   function onDescEnter(e: MouseEvent) {
     const el = e.currentTarget as HTMLElement;
@@ -20,7 +17,6 @@
     descTip = null;
   }
 
-  // Stat/ability breakdown for gear: shown when hovering a card that carries a `statItem`.
   let statTip: { x: number; y: number } | null = null;
   function onStatEnter(e: MouseEvent) {
     if (hasStats) statTip = { x: e.clientX, y: e.clientY };
@@ -37,50 +33,27 @@
   export let name: string;
   export let charSpans: CharSpan[] | undefined = undefined;
   export let description: string | null = null;
-  /** Accent + icon tint (rgb/hex), usually the def's fg colour. */
   export let tint = 'var(--accent)';
   export let badge: string | null = null;
-  /** Work units the job costs (recipe/building workAmount). Shown as a small chip. */
   export let workAmount: number | null = null;
-  /** Required workstation display name (recipe.station). Omitted for hand-craftable recipes. */
   export let station: string | null = null;
-  /** Required tool tier (recipe.toolTierRequired). Shown only when the recipe is tool-gated (>0). */
   export let toolTier: number | null = null;
-  /** Whether the colony's current tool level satisfies {toolTier}; unmet tiers render in red. */
   export let toolMet = true;
-  /** Required NAMED tool for this recipe (recipe `toolRequirement` → a specific implement, e.g. a Clay
-   *  Cooking Pot for stews). Distinct from the numeric {toolTier}; shown so the player knows a stew
-   *  needs a pot even though the recipe is tier-0. Omitted when the recipe needs no named tool. */
   export let requiredTool: string | null = null;
-  /** Whether the colony holds {requiredTool}; unmet renders in red with a "(none)" suffix. */
   export let requiredToolMet = true;
   export let actionLabel: string;
   export let actionEnabled = true;
-  /** ok = buildable/craftable, missing = can't afford, blocked = unmet requirement,
-   *  pending = queueable now but will wait for materials. */
   export let variant: 'ok' | 'missing' | 'blocked' | 'pending' = 'ok';
   export let onAction: () => void;
-  /** When set, render a +N quantity button group (each queues that many) INSTEAD of the single
-   *  action button. Used by crafting to batch-queue orders. */
   export let quantities: number[] | null = null;
   export let onQuantity: ((n: number) => void) | null = null;
-  /** Item whose combat/gear stats + abilities pop in a hover breakdown (weapons/armour/tools/food). */
   export let statItem: Item | null = null;
-  /** Producing recipe + chosen ingredients — feeds per-material stat/nutrition deltas to the tooltip. */
   export let statRecipe: Recipe | null = null;
   export let statIngredients: Record<string, string> = {};
-  /** Building def whose effects/enabled-recipes pop in a hover breakdown (buildings tab). */
   export let buildingDef: Building | null = null;
-  /** Chosen `category:` build materials (costKey → itemId) — feeds per-material stat deltas
-   *  (durability/beauty/comfort/insulation) into the building hover breakdown. */
   export let statMaterials: Record<string, string> = {};
-  /** Work category (labor) the craft belongs to — e.g. "Butchery" / "Leatherworking" / "General
-   *  Crafting". Set by the crafting screen; its presence ALSO forces the item hover panel on for every
-   *  recipe (so even a plain good with no combat/gear stats still gets a hover with its job line). */
   export let jobLabel: string | null = null;
 
-  // Fire the header hover when there's an item/building breakdown worth showing — OR a jobLabel (every
-  // crafting recipe, even a plain one, gets a hover panel carrying at least its job line).
   $: hasItemStats =
     !!statItem &&
     (!!statItem.weaponProperties ||
@@ -90,7 +63,6 @@
       statItem.medicineQuality != null ||
       statItem.decaySeconds != null ||
       Object.keys(statItem.effects ?? {}).length > 0);
-  // The item tooltip shows for any stat-bearing item, or for any craft card (jobLabel present).
   $: showItemTip = !!statItem && (hasItemStats || !!jobLabel);
   $: hasStats = showItemTip || !!buildingDef;
 </script>

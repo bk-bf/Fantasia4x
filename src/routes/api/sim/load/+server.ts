@@ -1,7 +1,3 @@
-/**
- * POST /api/sim/load — boot the headless session from a snapshot previously dumped by
- * /api/sim/save (replaces any live session). (HEADLESS-SIM / ADR-033)
- */
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { guardHeadless, createSession } from '$lib/server/simSession';

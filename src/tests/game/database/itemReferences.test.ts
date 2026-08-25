@@ -4,12 +4,6 @@ import resourcesData from '$lib/game/database/world/resources.jsonc';
 import recipesData from '$lib/game/database/items/recipes.jsonc';
 import type { Item } from '$lib/game/core/types';
 
-// Referential integrity: every item id referenced anywhere in the data (resource yields, recipe
-// inputs/outputs) MUST resolve to a real entry in items.jsonc — the single source of item defs.
-// A dangling id silently vanishes from the carry UI / stockpile (the `{#if def}` skip), so we fail
-// loud HERE instead of letting it slip into the game. This is the test side of the same guarantee
-// the loud UI placeholder gives at runtime (PawnInventory CarryItemCard).
-
 const ITEMS = itemsData as unknown as Item[];
 const itemIds = new Set(ITEMS.map((i) => i.id));
 
@@ -50,7 +44,6 @@ describe('recipes.jsonc inputs/outputs resolve to real items', () => {
       inputs?: Record<string, number>;
       inputAlternatives?: Record<string, number>[];
       outputs?: Record<string, number>;
-      // dynamicRecipe slots reference a CATEGORY, not a concrete id — not validated here.
     };
     const recipes = recipesData as unknown as Recipe[];
     const missing: string[] = [];
@@ -63,8 +56,6 @@ describe('recipes.jsonc inputs/outputs resolve to real items', () => {
       for (const m of maps) {
         if (!m) continue;
         for (const id of Object.keys(m)) {
-          // `category:<cat>` slots (e.g. category:plank = "any plank") are resolved to concrete items
-          // at craft time, not authored ids — skip them here.
           if (id.startsWith('category:')) continue;
           if (!itemIds.has(id)) missing.push(`${r.id} → ${id}`);
         }

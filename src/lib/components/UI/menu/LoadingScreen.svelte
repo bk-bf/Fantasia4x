@@ -1,22 +1,8 @@
-<!--
-  LoadingScreen — the single full-screen loading overlay.
-
-  Shown by +page.svelte while `!bootReveal`, i.e. through the whole boot: save load → WebGL init
-  (which happens BEHIND this overlay, once storeReady mounts the game-container) → a paused warmup
-  linger that hides the worker-boot/WebGL-init GC.
-
-  Indeterminate sliding bar (the SAME compositor-driven transform animation as the worldgen overlay in
-  CustomMapMenu — it keeps moving even while the main thread is busy with boot work), under a rotating
-  carousel of immersive flavour/hint notes so the brief wait teaches a little about the world. The
-  parent unmounts this the instant `bootReveal` fires. Phase text (when present) is the `loadingStatus`.
--->
 <script lang="ts">
   import { fade } from 'svelte/transition';
   import { onMount } from 'svelte';
   import { loadingStatus } from '$lib/stores/gameState';
 
-  // Immersive notes — short, in-world hints drawn from real mechanics so they read as lore, not a
-  // tutorial wall. Shown one at a time, rotating, so even a quick boot flashes something evocative.
   const TIPS = [
     'A colonist who collapses is down, not dead — send a caretaker before the bleeding wins.',
     'Wounds bleed by the second. Tend them and a small ✚ marks the mend.',
@@ -34,7 +20,6 @@
     'Build a workbench before you dream of fine goods; crude comes before clever.'
   ];
 
-  // Shuffle once so a short load still varies between launches, then advance with wraparound.
   let order = TIPS.map((_, i) => i);
   for (let i = order.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -42,7 +27,7 @@
   }
   let cursor = $state(0);
   let tip = $state(TIPS[order[0]]);
-  let fading = $state(false); // brief cross-fade between notes
+  let fading = $state(false);
 
   onMount(() => {
     const id = setInterval(() => {
@@ -88,10 +73,8 @@
     color: var(--accent-hi);
     font-size: 19px;
     letter-spacing: 0.5em;
-    text-indent: 0.5em; /* balance the trailing letter-spacing */
+    text-indent: 0.5em;
   }
-  /* Indeterminate sliding bar — identical to CustomMapMenu's worldgen overlay. The fill animates on
-     `transform` so the compositor keeps it moving even while the main thread is blocked during boot. */
   .bar {
     position: relative;
     width: 260px;
@@ -123,7 +106,6 @@
     letter-spacing: 0.15em;
     min-height: 1em;
   }
-  /* Rotating immersive note — quiet, italic, dim; a short opacity dip between lines reads as a fade. */
   .tip {
     color: var(--text-dim);
     font-size: 13px;
@@ -139,7 +121,6 @@
   .tip.fading {
     opacity: 0;
   }
-  /* Respect reduced-motion: stop the slide, keep the bar visible as a static indicator. */
   @media (prefers-reduced-motion: reduce) {
     .fill {
       animation: none;

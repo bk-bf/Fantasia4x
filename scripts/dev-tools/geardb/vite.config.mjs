@@ -7,10 +7,6 @@ import { fileURLToPath } from 'node:url';
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(HERE, '../../..');
 
-/**
- * Minimal JSONC comment stripper — mirrors the one in vite.config.ts so the data databases
- * (items.jsonc, …) import the same way in this standalone build as they do in the app.
- */
 function stripJsoncComments(src) {
   let out = '';
   let i = 0;
@@ -52,11 +48,6 @@ function jsoncPlugin() {
   };
 }
 
-/**
- * Build-time port of `src/routes/gear-db/+page.server.ts`: the same read of static/audit/*.json,
- * baked into the bundle as a virtual module instead of run per request. Kept deliberately in step
- * with that loader — if the audits change shape, both move together.
- */
 function readAudit() {
   const dir = join(ROOT, 'static/audit');
   if (!existsSync(dir)) return null;
@@ -68,7 +59,6 @@ function readAudit() {
     try {
       generated = JSON.parse(readFileSync(join(dir, 'index.json'), 'utf8')).generated ?? '';
     } catch {
-      /* an unreadable index is not worth failing the build over */
     }
   }
   for (const f of readdirSync(dir).filter((f) => f.endsWith('.json') && f !== 'index.json')) {
@@ -76,7 +66,7 @@ function readAudit() {
     try {
       d = JSON.parse(readFileSync(join(dir, f), 'utf8'));
     } catch {
-      continue; // a half-written file from a run still in flight
+      continue;
     }
     if (d.kind === 'creatures') creatures.push(...(d.rows ?? []));
     else if (f.startsWith('weapon-meta-')) meta[String(d.CLASS ?? d.armour)] = d;
@@ -97,8 +87,6 @@ function auditDataPlugin() {
 
 export default defineConfig({
   root: HERE,
-  // configFile: false keeps the app's svelte.config.js (and its `kit` section) out of this build —
-  // there is no SvelteKit here, only the component.
   plugins: [svelte({ configFile: false, preprocess: vitePreprocess() }), jsoncPlugin(), auditDataPlugin()],
   resolve: {
     alias: {
@@ -109,7 +97,6 @@ export default defineConfig({
   build: {
     outDir: resolve(ROOT, '.devtools-dist/geardb'),
     emptyOutDir: true,
-    // One JS chunk and one CSS file, so the packer has exactly two things to inline.
     cssCodeSplit: false,
     assetsInlineLimit: Number.MAX_SAFE_INTEGER,
     rollupOptions: { output: { inlineDynamicImports: true } }

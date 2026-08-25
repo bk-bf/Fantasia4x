@@ -1,9 +1,3 @@
-<!--
-  KingdomDetail.svelte — detail pane of the Kingdoms pokédex (KINGDOMS-TRADE §2).
-  Renders only the lore tiers the colony has EARNED (hidden knowledge xp); locked tiers show as
-  teasers. Mutable facets (leader/wealth/famed items) render from the known-facts snapshot and grey
-  out once contact goes stale ("as last you knew") — immutable tiers don't rot.
--->
 <script lang="ts">
   import type { Culture, Kingdom, KingdomRelation } from '$lib/game/core/types';
   import { COLONY_RELATION_ID } from '$lib/game/core/types';
@@ -77,7 +71,6 @@
 </script>
 
 <div class="detail">
-  <!-- Tier 0 — first contact -->
   <div class="hdr-row">
     <h2 class="k-name">{kingdom.name}</h2>
     {#if colonyRel}
@@ -107,7 +100,6 @@
     {/each}
   </div>
 
-  <!-- Tier 1 — leader & wealth (mutable → known snapshot, greys when stale) -->
   <div class="section">
     <div class="sec-hdr">| COURT & COFFERS</div>
     {#if tier >= 1 && known}
@@ -125,7 +117,6 @@
     {/if}
   </div>
 
-  <!-- Tier 2 — seat & settlements (immutable) -->
   <div class="section">
     <div class="sec-hdr">| LANDS</div>
     {#if tier >= 2}
@@ -141,7 +132,6 @@
     {/if}
   </div>
 
-  <!-- Tier 3 — history & figures (immutable). A small place has little of either. -->
   <div class="section">
     <div class="sec-hdr">| CHRONICLE</div>
     {#if tier >= 3}
@@ -163,7 +153,6 @@
     {/if}
   </div>
 
-  <!-- Tier 4 — famed items (mutable → known snapshot, greys when stale). A hamlet has none. -->
   <div class="section">
     <div class="sec-hdr">| FAMED WORKS</div>
     {#if tier >= 4 && known}

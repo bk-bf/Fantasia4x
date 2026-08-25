@@ -1,20 +1,5 @@
-// Conditions — every transient or lasting state a pawn/mob can be in. One list, two shapes
-// discriminated by a plain `transient` BOOL (no string parsing):
-//   persistent (no `transient` flag) → tracked `severity` (0–1) in `pawn.conditions` that
-//                  worsens/recovers through `stages` and can be lethal (malnutrition, hypothermia…).
-//   "transient": true → re-derived each tick into `pawn.transientConditions` (ids); a flat `modifiers`
-//                  block, no severity/stages; clears itself when its cause goes away.
-//
-// modifiers (all MULTIPLIERS, 1.0 = no change): the base-stat keys — strength / dexterity /
-// constitution / perception / intelligence — scale the RAW attribute EVERYWHERE it's read (combat
-// damage/hit/dodge/resistance, carry, every work formula), so a severe condition genuinely cripples
-// the body. workEfficiency / moveSpeed / hungerRate / fatigueRate / dodge / hitChance stack ON TOP.
 [
     {
-        // The LOWER load tier (60% → 100% of capacity), and the reason armour class is a real choice:
-        // a full kit is affordable long before it is free. Deliberately combat-only — no moveSpeed, no
-        // workEfficiency — so a pawn hauling a full pack across the map is never slowed for it. Stacks
-        // UNDER `encumbered`: past capacity this stays pinned at max and the harsher tier lands on top.
         "id": "laden",
         "name": "Laden",
         "flags": ["physical", "load"],
@@ -102,7 +87,6 @@
     {
         "id": "windchilled",
         "name": "Windchilled",
-        // MOOD-REWORK: a standing mood-target offset while this condition holds (PawnService.computeMoodTarget).
         "mood": "cond_windchilled",
         "flags": ["environmental", "wind"],
         "charSpans": [ {"sheet": "font", "id": 126} ],
@@ -246,7 +230,6 @@
             "safe"        : 100,
             "rateCritical": 0.0002,
             "rateMax"     : 0.0005,
-            // 1% severity recovered per in-game 30 min: 1 day = 300s → 30 min = 6.25s → 0.01/6.25.
             "recovery"    : 0.0016,
             "onsetDelay"  : 300
         },
@@ -629,17 +612,7 @@
             }
         ]
     },
-    // ── Transient conditions ("transient": true) ─────────────────────────────
-    // No severity/stages: re-derived fresh each tick from the pawn's state (see
-    // PawnStateMachine.syncTransientConditions) and stored as plain ids in `pawn.transientConditions`;
-    // they appear/clear on their own when their cause does. `transient: true` is the bool discriminant
-    // vs the persistent conditions above (which omit it). modifiers are multipliers.
     {
-        // Info-only tell (empty modifiers — never touches stats): surfaces that the body is losing blood
-        // and HOW URGENT it is, staged off the blood-out ETA (severity derived in syncTransientConditions
-        // as 1 − hoursToEmpty/8, so minor ≈ >4h, severe ≈ 4h, fatal ≈ 1.2h — the same ETA shown on the
-        // Blood pill). Clears on its own the moment the wounds clot. The actual blood drain / death lives
-        // in PawnStateMachine; this is purely the at-a-glance readout.
         "id": "bleeding",
         "name": "Bleeding",
         "mood": "cond_bleeding",
@@ -677,25 +650,12 @@
         "description": "Overwhelmed by pain, incapacitated and out of the fight, a body on the ground. Recovers only as the pain subsides.",
         "color": "#b71c1c",
         "floater": true,
-        // CP437 25 = ↓ down arrow — matches the red collapse floater (WorldEffectsLayer), tinted red by
-        // the pill via the condition's `color`.
         "charSpans": [ {"sheet": "font", "id": 25} ],
-        // Status-animation priority — the downed ↓ glyph beats every other state tell (winded, sleeping):
-        // being out of the fight is the most important thing to read at a glance.
         "priority": 100,
-        // Data-driven link: while active this condition forces the pawn's FSM into COLLAPSED and gates
-        // all other behaviour (PawnStateMachine reads `fsmState` instead of hardcoding the state).
         "fsmState": "Collapsed",
-        // Being down is enforced by the FSM (dropped job, released draft, action gate) — so the only
-        // modifier that carries weight is zeroing evasion, so a downed body is trivially hit. The old
-        // dexterity/strength/moveSpeed/workEfficiency cuts were dead weight the FSM already covers.
         "modifiers": {"dodge": 0.0}
     },
     {
-        // A two-handed weapon carried with a shield still on the off-arm — allowed, never forbidden, but
-        // clumsy: the two foul each other. Modifiers scale the DERIVED combat values directly (dodge, aim,
-        // speed, damage, crit) rather than the base attributes (Combat.conditionMult). Granted by
-        // syncTransientConditions when mainHand is twoHanded AND the off-hand is occupied.
         "id"         : "fouled_guard",
         "name"       : "Fouled Guard",
         "flags"      : ["combat"],
@@ -734,9 +694,6 @@
         "color": "#ff7043",
         "floater": true,
         "charSpans": [ {"sheet": "items", "id": 25} ],
-        // Onset at the exhaustion CEILING — a body normally rests (pawn seeks rest at fatigue 72, mob at
-        // 60) long before this, so the debuff only bites when something keeps it awake to the cap. Pawns
-        // and mobs both read this number; the "not while sleeping" suppression lives in code.
         "needOnset": {"need": "fatigue", "atOrAbove": 100},
         "modifiers": {"strength": 0.7, "dexterity": 0.7, "perception": 0.8, "workEfficiency": 0.5, "moveSpeed": 0.5, "dodge": 0.79, "attackSpeed": 0.865, "hitChance": 0.92}
     },
@@ -761,13 +718,7 @@
         "color": "#4FA3D1",
         "floater": true,
         "charSpans": [ {"sheet": "font", "id": 247} ],
-        // Onset at the FULL wetness meter (100) for EVERY entity — pawns and mobs run the same meter
-        // (EnvironmentService.accrueWetness). Susceptibility differs only in FILL RATE, gated by the
-        // `wetness_resistance` stat (fur/hide/fitness) — NOT a different threshold.
         "needOnset": {"need": "wetness", "atOrAbove": 100},
-        // TRAIT-SYSTEM-V2 §5: soaked + a maxed cold meter → a per-second chance to catch a chill that
-        // seeds/escalates hypothermia (the former inline WET_CHILL). DRIVEN by tickConditions via
-        // conditionGraph.fireTriggers — behaviour-identical to the old hardcoded block.
         "flags": ["environmental", "cold-vector"],
         "triggers": [
             {
@@ -808,8 +759,6 @@
         "color"      : "#8d6e63",
         "floater"    : true,
         "charSpans"  : [ {"sheet": "font", "id": 177} ],
-        // Onset when the `hygiene` need maxes out. PAWN-ONLY: creatures have no washing behaviour, so the
-        // mob lifecycle never derives `filthy` (no hygiene need) — this threshold is read only by pawns.
         "needOnset"  : {"need": "hygiene", "atOrAbove": 100},
         "modifiers"  : {"workEfficiency": 0.85}
     },
@@ -873,12 +822,6 @@
         "modifiers": {"hygieneRate": 0.0}
     },
     {
-        // FURNITURE-COMFORT — a positive, tiered, severity-decaying condition (modeled on `intoxicated`).
-        // Granted by a high `comfort` need; deepens the longer a pawn stays comfortable and lingers as an
-        // afterglow when they leave. Each stage slows fatigue (`fatigueRate`) and speeds relaxation recovery
-        // (`relaxationRate`, wired into the relaxation need decay), and it lifts mood (`cond_comfortable`).
-        // COMFORT — a timed buff stamped on waking from a real BED (never from the bare ground), like a
-        // meal buff. Rested limbs work a touch better and tire a touch slower.
         "id": "well_rested",
         "name": "Well Rested",
         "mood": "cond_well_rested",
@@ -895,8 +838,6 @@
         "flags": ["comfort"],
         "description": "Settled somewhere soft and warm. The body unwinds, tires more slowly, and the ease of it seeps into the mood.",
         "color": "#C8A86A",
-        // Driven by the (inverted) `comfort` need: severity accrues while comfort ≥ 70 (faster the snugger,
-        // toward 100), recovers below it. No `lethalSeverity` → a pure positive buff, never fatal.
         "driver": {"need": "comfort", "onset": 70, "safe": 70, "rateCritical": 0.003, "rateMax": 0.006, "recovery": 0.004, "onsetDelay": 0},
         "stages": [
             {"label": "content",  "minSeverity": 0,    "color": "#D8BE86", "modifiers": {"fatigueRate": 0.97, "relaxationRate": 0.90}},
@@ -934,12 +875,6 @@
             "thirstRate"    : 1.6,
             "fatigueRate"   : 1.4, "dodge": 0.79, "attackSpeed": 0.865, "hitChance": 0.88}
     },
-    // ── Food buffs ("transient": true, applied on eat) ───────────────────────
-    // Stamped onto conditionTimers when a meal carrying a `mealBuff` is eaten (see
-    // pawnQueries.applyMealBuff), exactly like nausea/intoxication — they decrement each tick and
-    // auto-clear. The POINT is that meal classes differ in PURPOSE, not just nutrition: a stew is
-    // endurance fare, a pie is fortifying, fruit lifts morale, herbs aid recovery. Kept deliberately
-    // SUBTLE (≈5–10%) — a good meal is an edge, not a mandatory optimisation loop. modifiers = multipliers.
     {
         "id"         : "well_fed",
         "name"       : "Well Fed",
@@ -952,9 +887,6 @@
         "modifiers"  : {"workEfficiency": 1.05}
     },
     {
-        // RALLY: stamped when a comrade talks a broken pawn back to its feet (systems/pawn/rally). Its
-        // `mood` gives a modest lift (cond_rallied), and while its timer holds, shouldRollBreakdown is
-        // suppressed — the grace window that stops a rally→re-break yo-yo. Purely a timed buff, no stat mods.
         "id"         : "rallied",
         "name"       : "Rallied",
         "mood"       : "cond_rallied",
@@ -1057,10 +989,6 @@
         "modifiers"  : {"workEfficiency": 0.6}
     },
     {
-        // MOOD: a full mental break. Stamped as a timed condition (rolled span) when a miserable pawn
-        // fails its moral check; while it holds, the FSM forces the pawn into the Breakdown state and
-        // refuses the draft (`fsmState` + the incapacitated flag, exactly like collapse). It clears on
-        // its own when the timer runs out, and the pawn stands up with a wave of catharsis (mood_catharsis).
         "id"         : "mental_breakdown",
         "name"       : "Breaking Down",
         "flags"      : ["mood", "incapacitated"],
@@ -1069,17 +997,10 @@
         "color"      : "#7E57C2",
         "floater"    : true,
         "charSpans"  : [ {"sheet": "font", "id": 31} ],
-        // Priority just under collapse (100) — a body on the ground still reads first, but a breakdown
-        // outranks every ordinary state tell.
         "priority"   : 90,
-        // Default coping substate; the onset overrides it with the rolled kind (Crying/Hiding/Panicking).
         "fsmState"   : "Crying",
         "modifiers"  : {}
     },
-    // ── On-hit combat effects (inflicted by creature natural weapons) ─────────
-    // Timed transient debuffs applied when a venom/feeding/screech/tongue natural weapon lands (see
-    // the weapon's `onHitEffect` in items.jsonc). Stored via conditionTimers like knockdown, so they
-    // decrement each tick and auto-clear. Trigger chance is reduced by the named resistance stat.
     {
         "id": "envenomed",
         "audio": "envenomed",
@@ -1090,8 +1011,6 @@
         "color": "#7CB342",
         "floater": true,
         "charSpans": [ {"sheet": "font", "id": 21} ],
-        // TRAIT-SYSTEM-V2 §5: the venom churns the stomach — while envenomed, a small per-second chance
-        // to also turn nauseous (a NEW secondary the graph enables; nausea decays on its own).
         "triggers": [ {"to": "nausea", "chance": 0.015, "durationHours": 1.5} ],
         "modifiers": {
             "strength"      : 0.6,
@@ -1101,9 +1020,6 @@
             "moveSpeed"     : 0.8,
             "fatigueRate"   : 1.3, "dodge": 0.72, "attackSpeed": 0.82, "hitChance": 0.84}
     },
-    // (RETIRED — TRAIT-LIBRARY-EXPANSION §3b: `bloodletting` is now a PHYSICAL bleed-wound. A
-    // bleed-weapon (item `bleedWound` chance) marks the inflicted injury `noSelfClot`: it bleeds at
-    // full rate until a caretaker dresses it — a real wound in the health panel, not a timed pill.)
     {
         "id": "disoriented",
         "audio": "disoriented",
@@ -1128,11 +1044,6 @@
         "charSpans": [ {"sheet": "font", "id": 15} ],
         "modifiers": {"dexterity": 0.4, "moveSpeed": 0.0, "dodge": 0.58, "attackSpeed": 0.73, "hitChance": 0.76}
     },
-    // ── Weapon-signature on-hit effects (crafted-weapon `onHitEffect`) ────────
-    // Same timed-transient machinery as the creature effects above, but inflicted by HELD weapons: a
-    // spear shoves (knockback → the displacement is CODE in Combat.ts; this is its recovery-of-footing
-    // marker), a devastating warhammer rattles the skull, a great cleaver maims the legs. Onset chance
-    // is reduced by the matching resistance stat named on the weapon's onHitEffect.
     {
         "id": "staggered",
         "audio": "knockdown",
@@ -1169,8 +1080,6 @@
         "charSpans": [ {"sheet": "font", "id": 3} ],
         "modifiers": {"moveSpeed": 0.4, "dexterity": 0.75, "dodge": 0.825, "attackSpeed": 0.888, "hitChance": 0.9}
     },
-    // ALCHEMY-BUTCHERY-EXPANSION §C — a DREAD coating's on-hit mark: the nerve breaks, the arm loses
-    // its conviction and the feet want to be elsewhere. Onset cut by mental resistance (INT).
     {
         "id": "cowed",
         "audio": "disoriented",
@@ -1183,11 +1092,6 @@
         "charSpans": [ {"sheet": "font", "id": 19} ],
         "modifiers": {"strength": 0.8, "hitChance": 0.75, "moveSpeed": 0.85, "workEfficiency": 0.85}
     },
-    // ── Care and recovery ────────────────────────────────────────────────────
-    // `splinted` is pushed by a worn splint or cast through the ordinary equipped-item
-    // `grantsConditions` path, so it appears the tick the piece goes on and drops the tick it comes
-    // off. It is the READOUT and the price; the recovery itself is the piece's own
-    // `boneHealMultiplier`, applied to the bone under the parts it covers.
     {
         "id": "splinted",
         "name": "Splinted",
@@ -1199,8 +1103,6 @@
         "charSpans": [ {"sheet": "font", "id": 126} ],
         "modifiers": {"dexterity": 0.9, "workEfficiency": 0.85, "moveSpeed": 0.92, "dodge": 0.93, "attackSpeed": 0.95}
     },
-    // The price of a draught that knits bone in a day: the body does a week's mending in one and
-    // spends the whole of it sick and hurting. Stamped by the draught's `grantsConditions` window.
     {
         "id": "bone_ache",
         "name": "Deep Ache",
@@ -1212,16 +1114,6 @@
         "charSpans": [ {"sheet": "font", "id": 19} ],
         "modifiers": {"strength": 0.8, "dexterity": 0.8, "workEfficiency": 0.55, "moveSpeed": 0.85, "fatigueRate": 1.3, "dodge": 0.83, "attackSpeed": 0.9, "hitChance": 0.88}
     },
-    // ── Racial trait conditions (ADR-023 · ADR-028) ──────────────────────────
-    // The legible pill for a rare/epic/legendary body trait — pushed by syncTransientConditions for
-    // every trait carrying the id as `selfCondition`, and the HUB for its combat capability:
-    // `grantsNaturalWeapon` (item ids) / `grantsNaturalArmor` (0–100 defense). Natural ARMOR is gear
-    // (TRAIT-SYSTEM-V2 §3): `carryPenalty` (0–1) eats that FRACTION of the pawn's carry CAPACITY (worn
-    // always → less spare load; never added kg, which could encumber a weak pawn while bare) and `mode`
-    // decides how it meets worn armour — "stack" ADDS to the worn soak (armor under the clothes),
-    // "replace" competes best-of as the blocked slot's layer.
-    // `photosynthesis`/`light_sensitive` are ENVIRONMENT-GATED (pushed only while active) and
-    // `burning` is a combat DoT applied via onHitEffect (conditionTimers).
     {
         "id"         : "feathered",
         "name"       : "Feathered",
@@ -1253,9 +1145,6 @@
         "modifiers"  : {}
     },
     {
-        // LINEAGES-II §1/§2 — stamped when `needs.bloodHunger` hits 100. `fsmState` SEIZES the pawn
-        // into the uncontrollable hunt (the collapse precedent): draft refused, the FSM chases and
-        // devours/drains the nearest living thing — colonists included — until fed.
         "id"         : "bloodthirst",
         "name"       : "Bloodthirst",
         "flags"      : ["cultural", "need"],
@@ -1336,8 +1225,6 @@
         "floater"     : true,
         "charSpans"   : [ {"sheet": "font", "id": 15} ],
         "flags"       : ["racial", "environmental"],
-        // TRAIT-SYSTEM-V2 §5: environment-gated — active (and draining hunger) only under an open sky
-        // in bright daylight. Read by syncTransientConditions via conditionGraph.evaluatePredicate.
         "activateWhen": {"unsheltered": true, "meter": "ambientLight", "atOrAbove": 0.95},
         "modifiers"   : {}
     },
@@ -1350,7 +1237,6 @@
         "floater"     : true,
         "charSpans"   : [ {"sheet": "font", "id": 15} ],
         "flags"       : ["racial", "environmental"],
-        // TRAIT-SYSTEM-V2 §5: environment-gated — active only while unsheltered in daylight.
         "activateWhen": {"unsheltered": true, "meter": "ambientLight", "atOrAbove": 0.7},
         "modifiers"   : {"strength": 0.85, "dexterity": 0.85, "perception": 0.85, "dodge": 0.895, "attackSpeed": 0.933, "hitChance": 0.94}
     },
@@ -1365,10 +1251,6 @@
         "charSpans": [ {"sheet": "font", "id": 15} ],
         "modifiers": {"dexterity": 0.9, "moveSpeed": 0.9, "workEfficiency": 0.85, "dodge": 0.93, "attackSpeed": 0.955, "hitChance": 0.96}
     },
-    // ── TRAIT-LIBRARY-EXPANSION §4.0: the shared blood-feast buff ─────────────
-    // Stamped on ANY feeder (pawn or mob) whose blood-draining bite lands its drain (Combat
-    // applyOneOnHitEffect). Strong but short (~30 in-game min) and NON-REFRESHING while active —
-    // it must lapse before another feed rearms it (the anti-perma-keep cooldown).
     {
         "id": "feasted",
         "name": "Feasted",
@@ -1380,10 +1262,6 @@
         "charSpans": [ {"sheet": "items", "id": 84} ],
         "modifiers": {"strength": 1.2, "dexterity": 1.15, "constitution": 1.15, "moveSpeed": 1.1, "workEfficiency": 1.1, "dodge": 1.105, "attackSpeed": 1.068, "hitChance": 1.06}
     },
-    // ── TRAIT-LIBRARY-EXPANSION §3b/§3c: staged natural-gear conditions ──────
-    // One pill per stage of each weapon/armor line (the trait's selfCondition). Armor carries
-    // grantsNaturalArmor + carryPenalty + mode; weapons carry grantsNaturalWeapon + hostParts.
-    // ── §3e utility natural gear: slot-cost apparatus, host-gated, no defense ──
     {
         "id"         : "budding_winged",
         "name"       : "Budding Wings",
@@ -1449,11 +1327,7 @@
         "charSpans"  : [ {"sheet": "items", "id": 195} ],
         "modifiers"  : {}
     },
-    // ── LINEAGES-II §1 — the werewolf transform ─────────────────────────────────────────────────────
     {
-        // ACTIVE only on full-moon nights (fullMoon + dark), via the marker trait's selfCondition. The
-        // condition IS the transform: the stat swing, the full dark-sight (grants), and the gate the
-        // transform-only claws check (`naturalWeaponsWhen: "werewolf"`). Lifts at moonset on its own.
         "id"         : "werewolf",
         "name"       : "Transformed",
         "flags"      : ["cultural", "transform"],
@@ -1468,8 +1342,6 @@
         "grants"     : {"nightVision": 1.0}
     },
     {
-        // Lunar Aggression — a deeper fury RIDING the transform (requires it active): harder blows,
-        // little patience for work.
         "id"         : "lunar_aggression",
         "name"       : "Lunar Fury",
         "flags"      : ["cultural", "combat"],
@@ -1482,7 +1354,6 @@
         "activateWhen": {"hasCondition": "werewolf"},
         "modifiers"  : {"strength": 1.15, "workEfficiency": 0.6}
     },
-    // ── LINEAGES §5 — lineage-trait conditions (the granted object carries the numbers, §0) ──────────
     {
         "id"         : "bounding_gait",
         "name"       : "Bounding Gait",
@@ -1494,8 +1365,6 @@
         "modifiers"  : {"moveSpeed": 1.15}
     },
     {
-        // Can't Settle — ACTIVE while the pawn is under a roof (the reversed-shelter cost): rest sours
-        // and work drags indoors; step outside and it lifts.
         "id"         : "restless_under_roof",
         "name"       : "Restless",
         "flags"      : ["cultural", "passive"],
@@ -1507,7 +1376,6 @@
         "modifiers"  : {"fatigueRate": 1.2, "workEfficiency": 0.95}
     },
     {
-        // Pack Fury — stamped on ALLIES within the bearer's aura radius while a fight is on.
         "id"         : "pack_fury",
         "name"       : "Pack Fury",
         "flags"      : ["cultural", "combat"],
@@ -1520,8 +1388,6 @@
         "modifiers"  : {"strength": 1.1}
     },
     {
-        // Torpid Blood (amphibian) — ACTIVE while cold exposure builds: the cold-blooded body slows,
-        // sluggish hands and feet until it warms.
         "id"         : "cold_torpor",
         "name"       : "Torpid",
         "flags"      : ["cultural", "environmental"],
@@ -1533,8 +1399,6 @@
         "modifiers"  : {"dexterity": 0.85, "moveSpeed": 0.85, "workEfficiency": 0.9, "dodge": 0.895, "attackSpeed": 0.933, "hitChance": 0.94}
     },
     {
-        // Parched Skin — ACTIVE while the amphibian's skin has gone dry (low wetness): the body wilts
-        // until it is soaked again.
         "id"         : "parched_skin",
         "name"       : "Parched",
         "flags"      : ["cultural", "environmental"],
@@ -1545,7 +1409,6 @@
         "activateWhen": {"need": "wetness", "atOrBelow": 10},
         "modifiers"  : {"strength": 0.9, "dexterity": 0.9, "dodge": 0.93, "attackSpeed": 0.955, "hitChance": 0.96}
     },
-    // ── Passive affinity pills (resistances live on the TRAIT; the pill is the readout) ──
     {
         "id"         : "toxin_immune",
         "name"       : "Toxin-Immune",
@@ -1574,7 +1437,6 @@
         "description": "Reads the dark by its echoes, a shout paints the whole room.",
         "color"      : "#5C6BC0",
         "charSpans"  : [ {"sheet": "font", "id": 247} ],
-        // §0: the echolocation TRAIT's dark-sight lives here on its pill (condition `grants`).
         "grants"     : {"nightVision": 1.0},
         "modifiers"  : {}
     },    {
@@ -1597,11 +1459,6 @@
         "charSpans"  : [ {"sheet": "font", "id": 21} ],
         "modifiers"  : {}
     },
-    // ── TRAIT-LIBRARY-EXPANSION §6b: trigger-conditioned trait pills ──────────
-    // Each is a trait's selfCondition, ACTIVE only while its `activateWhen` predicate holds (the
-    // buff/debuff form) or carrying a `triggers` edge that fires a follow-up while active (the
-    // proc form: Anemic → shock is the flagship). Pure data — the condition graph already
-    // evaluates every predicate/meter used here.
     {
         "id"          : "hydro_vigor",
         "name"        : "Hydro-Vigor",
@@ -1911,12 +1768,6 @@
         "triggers"    : [ {"to": "nausea", "chance": 0.015, "durationHours": 1.5} ],
         "modifiers"   : {}
     },
-    // ── Magical buffs ("magical": true) — PRODUCTION-CHAIN-II §M ──────────────
-    // Passive buffs granted by worn attuned gear (and, later, by MAGIC-SKILLS spells/skill nodes
-    // through the SAME pipeline). Pushed into transientConditions by syncTransientConditions while the
-    // granting item is equipped; they auto-clear on unequip. Now that conditions carry base-stat keys,
-    // each gem boosts its thematic ATTRIBUTE (so the bonus flows through combat + every formula), with
-    // a smaller work/move bonus on top. The "magical" flag is for UI/lore and a future dispel hook.
     {
         "id"         : "might",
         "name"       : "Might",

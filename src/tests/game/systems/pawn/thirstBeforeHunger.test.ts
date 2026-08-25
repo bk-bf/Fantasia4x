@@ -2,13 +2,6 @@ import { describe, it, expect } from 'vitest';
 import { selectIdleNeed, selectInterruptNeed } from '$lib/game/systems/pawn/needSelection';
 import type { GameState, Pawn } from '$lib/game/core/types';
 
-/**
- * Regression: a pawn that is BOTH hungry and thirsty must drink first when a drink zone is at least
- * as close as the food it would walk to fetch — dehydration kills sooner than starvation. The bug:
- * pawns standing next to a drink zone marched off to a distant food stockpile to eat and died of
- * thirst, because hunger was checked before thirst unconditionally. Now a distance check between the
- * two lethal needs decides, thirst-first on ties.
- */
 function pawn(hunger: number, thirst: number, pos = { x: 1, y: 1 }): Pawn {
   return {
     id: 'p1',
@@ -19,7 +12,6 @@ function pawn(hunger: number, thirst: number, pos = { x: 1, y: 1 }): Pawn {
   } as unknown as Pawn;
 }
 
-/** drinkAt / foodAt are tile coords; food sits in a stockpile drop the pawn would fetch. */
 function makeState(p: Pawn, drinkAt: { x: number; y: number }, foodAt: { x: number; y: number }) {
   return {
     seed: 1,
@@ -61,9 +53,6 @@ describe('thirst-before-hunger distance check', () => {
   it('still walks to the drink zone even when the colony has water stored elsewhere', () => {
     const gs = makeState(pawn(80, 85), { x: 0, y: 1 }, { x: 10, y: 10 });
     gs.stockpile = { bread: 5, water: 3 };
-    // CONTAINERS-AND-FLUIDS §2: `stockpile.water` is no longer a number a pawn can sip from wherever
-    // it stands — those three litres are in a barrel somewhere. A thirsty pawn with nothing on its
-    // belt goes to the water, exactly as it would with the colony bone dry.
     expect(selectIdleNeed(gs.pawns[0], gs)?.kind).toBe('water');
   });
 
@@ -83,7 +72,6 @@ describe('thirst-before-hunger distance check', () => {
     } as never;
     const choice = selectIdleNeed(gs.pawns[0], gs);
     expect(choice?.kind).toBe('water');
-    // Routed in place — no path assigned, because the water is already on the pawn's belt.
     const routed = choice?.kind === 'water' ? choice.routedState : undefined;
     expect(routed?.pawns[0].path ?? []).toHaveLength(0);
   });

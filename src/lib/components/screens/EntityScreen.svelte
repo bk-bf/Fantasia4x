@@ -13,7 +13,6 @@
   let mobs = $derived(($gameState.mobs ?? []).filter((m) => m.state !== 'Corpse'));
   let corpses = $derived(($gameState.mobs ?? []).filter((m) => m.state === 'Corpse'));
 
-  // Live name/type/state search (the Crafting tab's filter, shared via SearchBar).
   let query = $state('');
   let term = $derived(query.trim().toLowerCase());
   let filteredMobs = $derived(
@@ -33,9 +32,6 @@
   let hostileCount = $derived(mobs.filter((m) => m.entityClass === 'mob').length);
   let neutralCount = $derived(mobs.filter((m) => m.entityClass === 'animal').length);
 
-  // Expansion is controlled ONLY by the ▸ caret (toggleExpand). Selecting / camera-focusing a mob
-  // (row click, or selecting it on the map) must NOT auto-expand its health panel. Persisted so the
-  // expanded row survives toggling the tab.
   let expandedId = $state<string | null>(persisted('entities.expanded', null));
   $effect(() => persist('entities.expanded', expandedId));
 
@@ -44,8 +40,6 @@
   }
 
   function focus(m: Mob) {
-    // Pan only (selectTile=false) — we select this specific mob by id, which the map canvas mirrors;
-    // a tile-pick could grab a different entity sharing the tile.
     uiState.focusMapOn(m.x, m.y, false);
     uiState.selectMob(m.id);
   }
@@ -82,7 +76,6 @@
   }
 
   function painPct(m: Mob): number {
-    // Mobs don't track pain yet; derive from health loss as a proxy.
     if (!m.maxHealth || m.maxHealth <= 0) return 0;
     return Math.round(((m.maxHealth - m.health) / m.maxHealth) * 100);
   }
@@ -116,7 +109,6 @@
     <div class="empty">No entities match "{query}".</div>
   {:else}
     <div class="table">
-      <!-- Header -->
       <div class="table-hdr">
         <span class="col-name">ENTITY</span>
         <span class="col-type">TYPE</span>

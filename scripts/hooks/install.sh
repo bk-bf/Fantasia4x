@@ -1,6 +1,4 @@
 #!/usr/bin/env bash
-# Install Fantasia4x git hooks (tracked in scripts/hooks/) into this checkout's .git/hooks.
-# Idempotent. .git/hooks isn't version-controlled, so re-run this in a fresh clone / worktree.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"

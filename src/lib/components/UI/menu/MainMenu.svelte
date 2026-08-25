@@ -1,10 +1,3 @@
-<!--
-  MainMenu — the title screen (New / Load / Settings / Credits / Exit over a live world backdrop),
-  rendered by +page.svelte while `appPhase === 'menu'`. Layout:
-    • a huge engraved-serif FANTASIA wordmark (Cinzel, --font-display) in the upper-left corner,
-    • the slogan + version/credit left-aligned beneath it at a proportionally larger size,
-    • the menu entries stacked down the left border.
--->
 <script lang="ts">
   import { onMount } from 'svelte';
   import { fade } from 'svelte/transition';
@@ -23,25 +16,17 @@
   let showCredits = $state(false);
   const isDesktop = typeof navigator !== 'undefined' && /electron/i.test(navigator.userAgent ?? '');
 
-  // ── Sun/moon glow tracking the preview world's day/night cycle ──────────────────────────────────
-  // The warm "sun" glow rises at dawn on the left, arcs up to a noon peak, and sets on the right; then a
-  // cooler/whiter "moon" glow rises on the left at dusk, tracks low along the top border, and sets on the
-  // right by dawn. Positions/opacities are derived from `getTimeOfDay` (the same clock that lights the
-  // scene), so the glow stays in lock-step with the backdrop's day/night.
-  const DAWN = 0.25; // timeOfDay: sun up
-  const DUSK = 0.78; // timeOfDay: sun down
-  const NIGHT_LEN = 1 - DUSK + DAWN; // wraps midnight
+  const DAWN = 0.25;
+  const DUSK = 0.78;
+  const NIGHT_LEN = 1 - DUSK + DAWN;
   const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
-  // Fade an arc's opacity in over its first 12% and out over its last 12%, so rise/set are smooth.
   const edgeFade = (prog: number) => clamp01(Math.min(prog, 1 - prog) / 0.12);
 
   const tod = $derived(getTimeOfDay($gameState?.turn ?? 0));
   const isDay = $derived(tod >= DAWN && tod <= DUSK);
   const sunProg = $derived(clamp01((tod - DAWN) / (DUSK - DAWN)));
   const moonProg = $derived(clamp01(((((tod - DUSK) % 1) + 1) % 1) / NIGHT_LEN));
-  // On a RAIN launch the sky is overcast — hide the sun glow entirely (the moon still shows at night).
   const isRaining = $derived(weatherOverlayKind($gameState?.weather?.type) === 'rain');
-  // Sun: x left→right, y arcs high at noon (lower % = higher on screen). Moon: x left→right, low along top.
   const sunX = $derived(8 + sunProg * 84);
   const sunY = $derived(38 - Math.sin(sunProg * Math.PI) * 24);
   const sunO = $derived(isDay && !isRaining ? edgeFade(sunProg) : 0);
@@ -69,13 +54,10 @@
 </script>
 
 <div class="main-menu" transition:fade={{ duration: 200 }}>
-  <!-- Live atmospheric world behind the menu — mounts once the preview worker is ticking. -->
   {#if $menuPreviewReady}
     <MenuPreviewBackdrop />
   {/if}
 
-  <!-- Day/night "reverse shadow" glows radiating into the map: a warm sun arcing across by day, a cool
-       moon tracking the top border by night (positions/opacity driven by the preview time-of-day). -->
   <div class="sun-glow" aria-hidden="true" style="left:{sunX}%; top:{sunY}%; opacity:{sunO};"></div>
   <div
     class="moon-glow"
@@ -129,15 +111,12 @@
     overflow: hidden;
   }
 
-  /* Sun/moon ward-glows bleeding into the map — soft "reverse shadows" tracking the day/night cycle.
-     left/top/opacity are set inline from the time-of-day; the short transition smooths the ~15Hz steps.
-     Both sit above the backdrop (DOM order) but below .content (z-index 1), so the text stays crisp. */
   .sun-glow,
   .moon-glow {
     position: absolute;
     width: 80vmin;
     height: 80vmin;
-    transform: translate(-50%, -50%); /* left/top position the CENTRE */
+    transform: translate(-50%, -50%);
     border-radius: 50%;
     pointer-events: none;
     transition:
@@ -153,7 +132,6 @@
       transparent 64%
     );
   }
-  /* Moon: colder, lighter, whiter than the sun. */
   .moon-glow {
     background: radial-gradient(
       circle,
@@ -163,20 +141,18 @@
     );
   }
 
-  /* Everything hugs the upper-left: huge wordmark in the corner, text + buttons left-aligned beneath. */
   .content {
     position: absolute;
     top: 5vh;
     left: 3.5vw;
-    z-index: 1; /* above the live map backdrop (z-index 0) */
+    z-index: 1;
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    gap: 0.75em; /* roomier spacing between the wordmark, slogan and credit lines */
+    gap: 0.75em;
     max-width: 94vw;
   }
 
-  /* Huge engraved-serif wordmark (Cinzel) — ~1/5 of the viewport tall — in the upper-left corner. */
   .title {
     font-family: var(--font-display);
     color: var(--accent-hi);
@@ -185,7 +161,6 @@
     font-weight: 700;
     letter-spacing: 0.04em;
     margin: 0;
-    /* Warm glow + a soft dark drop-shadow underneath so the wordmark lifts off the busy map. */
     text-shadow:
       0 0 28px rgba(240, 136, 40, 0.35),
       0 6px 16px rgba(0, 0, 0, 0.75);
@@ -193,10 +168,9 @@
 
   .subtitle {
     color: var(--text);
-    font-family: var(--font-display); /* same engraved serif as the FANTASIA wordmark */
+    font-family: var(--font-display);
     font-size: clamp(18px, 2vw, 30px);
     letter-spacing: 0.1em;
-    /* Thin black outline hugging the glyphs so they read over the busy map. */
     text-shadow:
       -1px -1px 0 rgba(0, 0, 0, 0.95),
       1px -1px 0 rgba(0, 0, 0, 0.95),
@@ -204,14 +178,12 @@
       1px 1px 0 rgba(0, 0, 0, 0.95);
   }
 
-  /* Version + tileset credit, in the cursive script (kept) — kept small, a disclaimer never the slogan. */
   .credit-line {
     font-family: var(--font-script);
     font-weight: 600;
     color: var(--text);
     font-size: clamp(13px, 1.15vw, 17px);
     letter-spacing: 0.04em;
-    /* Thin black outline to match the slogan above it. */
     text-shadow:
       -1px -1px 0 rgba(0, 0, 0, 0.95),
       1px -1px 0 rgba(0, 0, 0, 0.95),
@@ -224,13 +196,10 @@
     flex-direction: column;
     align-items: flex-start;
     gap: 10px;
-    margin-top: 7vh; /* dropped further below the credit line */
-    /* Day/night + weather/season hue, exactly like the in-game info panel (see +page.svelte). */
+    margin-top: 7vh;
     filter: url(#ambient-tint);
   }
 
-  /* Colours copied verbatim from the in-game info panel (SelectedEntityCard) so the buttons read — and
-     day/night-tint — identically to it: warm panel fill + bronze border, gold-on-hover. */
   .menu-btn {
     min-width: 320px;
     padding: 13px 22px;

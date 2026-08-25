@@ -23,8 +23,6 @@
     season: 'SEA'
   };
 
-  // Readable, in-world category names for the hover panel (the compact row keeps the
-  // 3-letter tag; the tooltip speaks the chronicler's language).
   const CATEGORY_LABEL: Record<string, string> = {
     work: 'Labour',
     building: 'Construction',
@@ -59,7 +57,6 @@
 
   let expandedId: string | null = null;
 
-  // SOCIAL-LAYER: an assembled conversation carried in `details.lines` — expandable like combat.
   function socialLines(entry: ActivityLogEntry): { name: string; text: string }[] {
     if (entry.type !== 'social') return [];
     const lines = entry.details?.lines;
@@ -67,25 +64,18 @@
   }
 
   function handleClick(entry: ActivityLogEntry) {
-    // Toggle combat breakdown expansion
     if (entry.type === 'combat' && entry.combatBreakdown && entry.combatBreakdown.length > 0) {
       expandedId = expandedId === entry.id ? null : entry.id;
     }
-    // Toggle conversation expansion
     if (socialLines(entry).length > 0) {
       expandedId = expandedId === entry.id ? null : entry.id;
     }
-    // Focus map on the event location. If the entry names an entity we select it by id below, so pan
-    // only (selectTile=false) to avoid the tile-pick overriding that id; otherwise let the jump
-    // select-by-tile (click-here semantics) so the location still gets a highlight.
     const willSelectEntity = !!(entry.entityIds && entry.entityIds.length > 0);
     if (entry.focusX !== undefined && entry.focusY !== undefined) {
       uiState.focusMapOn(entry.focusX, entry.focusY, !willSelectEntity);
     }
-    // Select first entity involved
     if (willSelectEntity) {
       const firstId = entry.entityIds![0];
-      // Heuristic: pawn IDs usually don't start with 'mob-'
       if (firstId.startsWith('mob-')) {
         uiState.selectMob(firstId);
       } else {
@@ -94,8 +84,6 @@
     }
   }
 
-  // Immersive hover panel (reuses the shared HoverTip styling) — replaces the old raw
-  // `title` dump of ids / severity / pixel coords that read like a debug print.
   let hoverEntry: ActivityLogEntry | null = null;
   let hoverX = 0;
   let hoverY = 0;
@@ -216,11 +204,6 @@
     overflow: hidden;
   }
 
-  /* "Hide sidebars" mode (top-bar settings): float fully transparently over the map — no backdrop,
-     so the viewport stays unobstructed. Warm ambient-tinted text, crispened by a thin 1px black
-     outline and popped by a heavy dark drop shadow under the glyphs. The aside box is click-through
-     (set in +page); the entries below re-enable pointer-events so they stay hoverable (HoverTip).
-     Mirrors ResourceSidebar. */
   .panel.transparent {
     background: transparent;
     text-shadow:
@@ -242,11 +225,7 @@
   }
   .panel.transparent .entry {
     border-bottom: none;
-    /* Re-enable pointer events on entries so they stay hoverable (HoverTip) / clickable over the
-       click-through aside; the empty gaps below still pass through to the map. */
     pointer-events: auto;
-    /* A resting highlight behind every line — the same warm hover tint at ~1/3 strength, but faded
-       to transparent at the left/right edges so it's a soft band, not a hard box. */
     background: linear-gradient(
       to right,
       transparent,
@@ -255,20 +234,12 @@
       transparent
     );
   }
-  /* Hover still brightens to the full hover intensity (wins on specificity over the resting band). */
   .panel.transparent .entry:hover {
     background: var(--bg-hover);
   }
-  /* Nested combat-breakdown rows are siblings of .entry (not .entry themselves), so the click-through
-     aside leaves them with no pointer-events — re-enable so they stay hoverable like the parent lines
-     (their own .line:hover then solidifies the background). */
   .panel.transparent :global(.breakdown) {
     pointer-events: auto;
   }
-  /* Every control in the floating panel stays clickable over the click-through aside — the minimise
-     (.hdr-icon-btn), clear (.clear-btn) and the collapsed restore arrow (.restore-btn). Listing
-     buttons wholesale (not one class at a time) is what stops a new header button silently going dead
-     in cinematic mode. */
   .panel.transparent button {
     pointer-events: auto;
   }
@@ -327,8 +298,6 @@
     cursor: default;
   }
 
-  /* ── Collapsed strip (minimised) — a thin bar with just the restore arrow. The right-panel
-     column is narrowed to match by +page.svelte (.right-panel.minimized). ── */
   .panel.collapsed {
     align-items: center;
     padding-top: 4px;
@@ -351,7 +320,6 @@
     border-color: var(--border-hi);
     background: var(--bg-hover);
   }
-  /* .log-list is the ScrollArea viewport (overflow + auto-hiding bar live in ScrollArea). */
   .panel :global(.log-list) {
     flex: 1;
     padding: 2px 0;
@@ -395,7 +363,6 @@
     font-size: 11px;
   }
 
-  /* severity overrides */
   .sev-ok .msg {
     color: var(--pos);
   }
@@ -426,8 +393,6 @@
     border-bottom: none;
   }
 
-  /* Immersive hover panel — slotted into the shared HoverTip, so these styles ride along
-     under the parent's scope. */
   .tip-head {
     display: flex;
     justify-content: space-between;
@@ -459,7 +424,6 @@
     margin-top: 2px;
     font-style: italic;
   }
-  /* SOCIAL-LAYER: expanded conversation lines under a social entry. */
   .convo {
     padding: 3px 8px 5px 40px;
     border-bottom: 1px solid var(--border);

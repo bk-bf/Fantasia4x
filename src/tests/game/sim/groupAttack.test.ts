@@ -2,10 +2,6 @@ import { describe, it, expect } from 'vitest';
 import { COMMANDS } from '$lib/game/sim/commands';
 import type { GameState, Pawn } from '$lib/game/core/types';
 
-// A drafted GROUP right-clicking a mob orders every marked drafted pawn to attack it at once (the
-// `attackTargetWith` command). Each gets an `attack` draftTarget pointing at the same mob; the per-tick
-// draft pass then spreads them onto distinct adjacent tiles (surround). This locks the command's gating.
-
 const pawn = (id: string, drafted: boolean, extra: Partial<Pawn> = {}): Pawn =>
   ({
     id,
@@ -48,9 +44,9 @@ describe('attackTargetWith — group surround-and-attack order', () => {
     });
     const dt = (id: string) => out.pawns.find((p) => p.id === id)!.draftTarget;
     expect(dt('drafted')).toEqual({ type: 'attack', targetId: 'mob-1', targetType: 'mob' });
-    expect(dt('notlisted')).toBeUndefined(); // not in the list → untouched
-    expect(dt('undrafted')).toBeUndefined(); // must be drafted
-    expect(dt('collapsed')).toBeUndefined(); // can't be marched
-    expect(dt('dead')).toBeUndefined(); // dead
+    expect(dt('notlisted')).toBeUndefined();
+    expect(dt('undrafted')).toBeUndefined();
+    expect(dt('collapsed')).toBeUndefined();
+    expect(dt('dead')).toBeUndefined();
   });
 });

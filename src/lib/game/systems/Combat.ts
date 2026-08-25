@@ -71,7 +71,6 @@ import {
 import { kingdomService } from '../services/KingdomService';
 import { socialService } from '../services/SocialService';
 import { memoryService } from '../services/MemoryService';
-// Re-exported below for callers that import these via Combat.
 import {
   PART_DEF_MAP,
   rollBodyPart,
@@ -91,27 +90,22 @@ import {
 } from '../core/defs/bodyParts';
 import { coversPart, ARMOUR_SLOTS, SLOT_LAYER } from '../core/rules/gear/armorCoverage';
 
-/** Armour share for a part with no explicit `armor` in limbmap — mid value, neither bare nor plated. */
 const DEFAULT_ARMOR_SHARE = 0.5;
 export { PART_DEF_MAP, createDefaultBodyParts, createBodyPlanLimbs };
 
-/** The limb in this entity's OWN tree that holds a given part (a part's parent limb varies by body plan). */
 function limbOfPart(entity: Pawn | Mob, partId: BodyPartId): LimbState | undefined {
   return (entity.limbs ?? []).find((l) => (l.parts ?? []).some((p) => p.id === partId));
 }
 
-/** The body plan of a defender (creatures carry `limbMap`; pawns are humanoid). */
 function planOf(entity: Pawn | Mob): string {
   if ('creatureId' in entity) return getCreatureById(entity.creatureId)?.limbMap ?? DEFAULT_PLAN;
   return DEFAULT_PLAN;
 }
 
-/** Is the anatomy actually modelled (limbs carry parts)? Sparse test fixtures use empty parts and skip part-gating. */
 function hasModelledAnatomy(entity: Pawn | Mob): boolean {
   return (entity.limbs ?? []).some((l) => (l.parts?.length ?? 0) > 0);
 }
 
-/** Can still hold a hand weapon — false only when hands are modelled and all gone. */
 function hasUsableHand(entity: Pawn | Mob): boolean {
   let sawHand = false;
   for (const limb of entity.limbs ?? []) {
@@ -122,200 +116,116 @@ function hasUsableHand(entity: Pawn | Mob): boolean {
       }
     }
   }
-  return !sawHand; // no modelled hands → don't block; modelled-but-all-gone → can't wield
+  return !sawHand;
 }
 
-// Combat only needs the transient conditions (winded → dodge).
 const TRANSIENT_CONDITIONS_DB = (
   conditionsData as unknown as Array<ConditionDef | TransientConditionDef>
 ).filter((d): d is TransientConditionDef => d.transient === true);
 
-// ── Tuning constants ─────────────────────────────────────────────────────────
-/** Bone-fracture roll on a hit to a boned part: blunt cracks bone far more readily (× bluntMod);
- *  chance scales with the blow vs the part's boneHp, capped. A broken bone cripples without severing. */
 const FRACTURE_BLUNT_BASE = 0.6;
 const FRACTURE_OTHER_BASE = 0.12;
 const FRACTURE_BLUNT_CAP = 0.85;
 const FRACTURE_OTHER_CAP = 0.3;
-/** Every blow lands a DOUBLE wound: a flesh crush/cut plus an INDEPENDENT load on the bone beneath.
- *  The bone takes a share of the RAW force by damage class (blunt drives through, × bluntMod), shielded
- *  by worn armour but NOT by the flesh's own toughness. */
 const BONE_TRANSFER_BLUNT = 0.7;
 const BONE_TRANSFER_OTHER = 0.2;
-/** ± spread on the transmitted bone load, so flesh and bone depth vary independently per blow. */
 const BONE_DAMAGE_VARIANCE = 0.4;
-/** Organ-penetration roll on a hit to a body cavity — the soft-tissue twin of the fracture roll, also
- *  independent of the flesh wound. Penetrating wounds find organs readily; blunt only on a hard hit.
- *  Organs sit deeper than bone, so chances/transfers sit below the fracture ones. The all-or-nothing
- *  cascade when the cavity itself is destroyed (cascadeSeveredContents) is separate. */
 const ORGAN_PENETRATE_BASE = 1.0;
 const ORGAN_BLUNT_BASE = 0.18;
 const ORGAN_PENETRATE_CAP = 0.5;
 const ORGAN_BLUNT_CAP = 0.18;
-/** Share of the blow's RAW force driven inward to an organ, by damage class; shielded by worn armour. */
 const ORGAN_TRANSFER_PENETRATING = 0.55;
 const ORGAN_TRANSFER_BLUNT = 0.25;
-/** ± spread on the transmitted organ load (mirrors bone). */
 const ORGAN_DAMAGE_VARIANCE = 0.4;
-/** ADR-031: precision finds the vital DIRECTLY — the organ-penetration and fracture chances are each
- *  multiplied by (1 + precision × K), where precision is the attacker's full crit chance (hit_precision
- *  stat + the weapon's critMod, the same number that drives crits and gap-aiming). A deft fighter (or a
- *  crit-prone stiletto) beats armour by PLACEMENT — the kidney thrust, the cracked femur — while the
- *  existing caps still bound the result. hit_precision runs ~0.05 base → ~0.11 high DEX/PER, so organ
- *  routing gains ~+30–65% and fractures ~+20–45% at the top end. Organs weigh heavier than bone:
- *  precision is a blade guided into a gap more than force driven through it. */
 const K_PRECISION_ORGAN = 6;
 const K_PRECISION_FRACTURE = 4;
-/** ADR-031 natural-hide degradation: blows chip a creature's per-part hide the same way they wreck worn
- *  armour (weapon `armorDamage` × the attacker's `armor_damage` stat — one wear model for both). The
- *  wear is PER-FIGHT scratch, not permanent maiming: it expires once no chip has landed for this many
- *  ticks (~an in-game hour, mirroring MOB_CLOT_ROLL_INTERVAL — the beast's hide "settles" as it
- *  recovers), so a sustained fight progressively opens a tank up but a fled bear resets. */
 const HIDE_WEAR_RESET_TICKS = 750;
-// The damage-power curve moved to core/powerScale so the stat engine can resolve the POWER token
-// without importing Combat (which imports it). Re-exported here for existing callers.
 export { powerScale, STAT_SCALE } from '../core/rules/body/powerScale';
 import { powerScale } from '../core/rules/body/powerScale';
-/** How strongly `bodyScale` boosts natural-weapon damage: damageMult = 1 + (bodyScale − 1) × this. */
 const NATURAL_DAMAGE_BODYSCALE_FACTOR = 0.5;
-/** Mob base damage when it has no weapon. */
 const MOB_BASE_DAMAGE = 5;
-/** Damage multiplier applied on a critical hit. */
 const CRIT_MULTIPLIER = 1.5;
-/** Upper bound on total crit chance (base stat + weapon critMod). */
 const CRIT_CHANCE_CAP = 0.6;
-// COLLAPSE_CONSCIOUSNESS (the down threshold) is the shared constant in core/needs — pawns and mobs
-// go DOWN into the recoverable `collapse` condition at the same band (no instant kill).
-// Blunt knockdown duration scales with the blow; floors at one attack interval so it reliably costs
-// the target its next swing, capped so a huge hit (or a swarm refreshing it) can't stun-lock.
 const KNOCKDOWN_FLOOR_TURNS = 72;
 const KNOCKDOWN_TURNS_PER_DAMAGE = 4;
 const KNOCKDOWN_MAX_TURNS = 240;
-/** Keepalive floor for the `collapse` timer — the state machines refresh it each tick while
- *  unconscious and clear it on recovery; NOT the real down-time. */
 const COLLAPSE_KEEPALIVE_TURNS = 2;
-/** A pawn's innate attacks — ids of `natural_weapon` items; deliberately weak vs crafted gear. */
 const PAWN_NATURAL_WEAPON_IDS = ['fists', 'kick'];
-/** Buff stamped on a feeder after a successful blood DRAIN; non-refreshing while active. */
 const FEASTED_CONDITION = 'feasted';
 const FEASTED_DURATION_HOURS = 0.5;
-/** Base attack interval in ticks, scaled by the attack_speed stat. */
 const BASE_ATTACK_INTERVAL_TICKS = 120;
-/** Minimum ticks between attacks regardless of attack_speed (caps the fastest attacker). */
 const MIN_ATTACK_INTERVAL_TICKS = 72;
-/** Stamina drained per auto-attack when a weapon defines no `staminaCost` of its own. */
 const ATTACK_STAMINA_COST = 2;
-/** Transient condition id for the winded state (latches at 0 stamina, clears at full). */
 const WINDED = 'winded';
-/** While actively fighting, stamina regenerates at this fraction of the full rate, so a
- *  sustained melee drains down to winded; a winded/resting entity recovers at the full rate. */
 const COMBAT_REGEN_FRACTION = 0.2;
 
-/** Fatigue penalty on stamina: 1.0× at fatigue 0 → 1.3× at 100. Recovery is DIVIDED by this, drain
- *  MULTIPLIED — the single channel by which fatigue degrades stamina (no double counting). */
 const FATIGUE_STAMINA_MAX = 1.3;
 function fatigueStaminaFactor(e: Pawn | Mob): number {
   const fatigue = Math.max(0, Math.min(100, e.needs?.fatigue ?? 0));
   return 1 + (FATIGUE_STAMINA_MAX - 1) * (fatigue / 100);
 }
 
-// ── Public types ─────────────────────────────────────────────────────────────
 export interface HitResult {
   hit: boolean;
-  /** Negated by the defender's shield: fully stopped (blocked) or deflected into a free riposte
-   *  (parried). Both mean hit=false + damage 0, but read distinctly for the floater/log and (parry) to
-   *  trigger the counter-attack in performAttack. */
   blocked?: boolean;
   parried?: boolean;
   bodyPart: BodyPartId | null;
-  /** Final damage after armour reduction (and crit multiplier, if any). */
   damage: number;
   injury: Injury | null;
   knockdown: boolean;
-  /** True when this swing rolled a critical hit. */
   crit: boolean;
   damageType: DamageType;
-  /** Attack used this swing (weapon name / natural-weapon id). */
   weaponId: string;
-  /** Stamina this swing drained — deducted by the caller regardless of hit/miss. */
   staminaCost: number;
   partRemainingHp?: number;
   partMaxHp?: number;
-  /** Secondary BONE wound (fracture roll succeeded), applied alongside the soft-tissue injury. */
   fractureInjury?: Injury | null;
-  /** Secondary ORGAN wound (organ-penetration roll succeeded), applied alongside the flesh injury. */
   organInjury?: Injury | null;
 }
 
 export interface CombatService {
-  /** Advance all active combats one tick; called from GameEngineImpl after the entity step. */
   tickCombat(state: GameState, dtMs: number): GameState;
-  /** Pure hit resolution: roll to-hit, pick body part, compute damage & injury. */
   resolveHit(attacker: Pawn | Mob, defender: Pawn | Mob, state: GameState): HitResult;
-  /** Apply an already-resolved Injury to a pawn, updating limb tree + conditions.
-   *  `knockdown` applies a short blunt-stagger status when the swing rolled one. */
   applyInjury(pawnId: string, injury: Injury, state: GameState, knockdown?: boolean): GameState;
-  /** Apply an already-resolved Injury to a mob, updating limb tree + conditions. */
   applyInjuryToMob(mobId: string, injury: Injury, state: GameState, knockdown?: boolean): GameState;
-  /** Stub — not implemented yet. */
   triggerSkill(skillId: string, casterId: string, targetId: string, state: GameState): GameState;
 }
-
-// ── Helpers ──────────────────────────────────────────────────────────────────
 
 interface AttackProfile {
   str: number;
   dex: number;
   baseDamage: number;
   accuracy: number;
-  /** Where this weapon wants the blow to land — see `WeaponProperties.partPreference`. */
   partPreference?: Record<string, number>;
   damageType: DamageType;
   bluntMod: number;
-  /** Flat 0–1 chance to stun (knock down) on hit, regardless of damage type (maces/hammers). */
   stunChance: number;
   armorPen: number;
-  /** Which attack was rolled this swing (weapon name / natural-weapon id) — for logs & floaters. */
   weaponId: string;
-  /** Stamina this particular attack drains. */
   staminaCost: number;
-  /** Crit chance this attack adds on top of the attacker's base hit_precision stat. */
   critMod: number;
-  /** Finesse weapon (rapier): melee damage scales with PERCEPTION, not STRENGTH. */
   finesse: boolean;
-  /** Arcane weapon (elemental staff): damage scales with INTELLIGENCE, not STRENGTH. */
   arcane: boolean;
-  /** Explicit power attribute for the damage roll; overrides the finesse/arcane shorthands. */
   powerStat?: PowerStat;
-  /** Damage multiplier on a critical hit — a precision weapon's crit bites deeper. */
   critMultiplier?: number;
-  /** Chance (0–1) a landed open wound is marked unclottable — it bleeds until dressed. */
   bloodletting?: number;
 }
 
-/** Precomputed attack used in place of `attackerProfile` for a ranged shot, so `resolveHit`
- *  stays a single code path. Built once per shot. */
 export interface RangedOverride {
   profile: AttackProfile;
-  /** Additive hit-chance points: ammo accuracy − distance penalty×100 − cover×100. */
   hitMod: number;
-  /** When false (crossbow/sling), damage does NOT scale with STR. */
   strScaled: boolean;
-  /** Armour condition the AMMUNITION strips per hit (before the attacker's `armor_damage` stat).
-   *  Undefined = fall back to the by-damage-type ranged default. */
   armorDamage?: number;
 }
 
 type WeaponProps = NonNullable<Item['weaponProperties']>;
 
-/** One natural-weapon candidate this swing could roll. */
 interface WeaponCandidate {
   id: string;
   wp: WeaponProps;
   bloodletting?: number;
 }
 
-/** Weighted pick over a candidate pool (weaponProperties.weight, default 1). */
 function pickWeightedWeapon(candidates: WeaponCandidate[]): WeaponCandidate {
   const total = candidates.reduce((s, c) => s + Math.max(0, c.wp.weight ?? 1), 0);
   if (total <= 0) return candidates[candidates.length - 1];
@@ -327,7 +237,6 @@ function pickWeightedWeapon(candidates: WeaponCandidate[]): WeaponCandidate {
   return candidates[candidates.length - 1];
 }
 
-/** Build an attack profile from a resolved weaponProperties block. */
 function profileFromWeapon(
   str: number,
   dex: number,
@@ -339,9 +248,6 @@ function profileFromWeapon(
     str,
     dex,
     baseDamage: wp.damage,
-    // A weapon that INSISTS on a location is harder to land — going for the head over a guard, or the
-    // throat, is not the same swing as taking whatever presents itself. Charged here so the cost can
-    // never be authored away: it is derived from the preference itself.
     accuracy: (wp.accuracy ?? 0) - preferenceTotal(wp.partPreference) * PREFERENCE_ACCURACY_COST,
     partPreference: wp.partPreference,
     damageType: dtype,
@@ -358,84 +264,43 @@ function profileFromWeapon(
   };
 }
 
-/** Attributes a weapon's damage roll can key off. */
 export type PowerStat = 'strength' | 'dexterity' | 'perception' | 'intelligence' | 'charisma';
 
-/** Bonus the DUELIST grip adds to damage/armorPen/crit — one-handed, off-hand free, and gated on the
- *  `duelist` trait (see rangedCombat.getGrip). Calibrated so the style lands at ~80% of a two-hander's
- *  output while shield-and-one-hander sits at ~60%: the one-hander is the defensive choice, and the
- *  duel grip is what buys the damage back. */
 const DUELIST_DAMAGE_MULT = 1.28;
 const DUELIST_ARMOR_PEN = 0.1;
 const DUELIST_CRIT = 0.05;
-/** Bonus a two-handed grip adds. */
 const TWOHAND_DAMAGE_MULT = 1.15;
 const TWOHAND_ARMOR_PEN = 0.05;
 
-/**
- * DUAL WIELD — a matched pair of daggers, the assassin's grip.
- *
- * Two points working together do not hit harder; they work FASTER and find gaps far more often, which
- * is why the payout is almost entirely in swing rate and precision rather than damage. The wielder has
- * given up the shield AND the free hand, so there is nothing defensive to show for it — the whole case
- * is that a second blade keeps the pressure on and eventually slips into something that matters.
- */
 const DUAL_SPEED_MULT = 1.4;
 const DUAL_CRIT = 0.08;
 const DUAL_ARMOR_PEN = 0.08;
 const DUAL_DAMAGE_MULT = 1.05;
-// SHIELD DEFENCE (block/parry). A shield is now its OWN negation axis (the `block` stat + the shield's
-// `blockBonus`), NOT a dodge boost — so a heavy tank negates where it can't evade. Block is all-or-nothing.
-const BLOCK_CAP = 0.65; // hard ceiling on total block chance
-/** The blow force at which block chance is UNMODIFIED — a solid, ordinary hit. Below it a shield does
- *  better than its printed chance, above it worse, hyperbolically. Scaled per shield by `blockBonus`. */
+const BLOCK_CAP = 0.65;
 const BLOCK_FORCE_REF = 40;
-/** Floor/ceiling on that scaling, so a monstrous blow is never unblockable and a feeble one is never
- *  auto-blocked. */
 const BLOCK_FORCE_MIN = 0.35;
 const BLOCK_FORCE_MAX = 1.4;
-const PARRY_CAP = 0.4; // hard ceiling on parry chance
-const RANGED_BLOCK_MULT = 0.5; // a shield stops fewer projectiles than melee blows
-// Weight on a weapon's flat `accuracy` in the melee hit roll — ×2 so the accurate-vs-brutish weapon
-// axis actually moves hit chance. Ranged uses `hitMod` instead, so launchers are unaffected.
+const PARRY_CAP = 0.4;
+const RANGED_BLOCK_MULT = 0.5;
 const MELEE_ACCURACY_WEIGHT = 2;
-/** Melee hit chance = BASE + DEX edge − dodge edge (+ weapon accuracy), × condition — ~60% at parity. */
 const BASE_MELEE_HIT = 60;
-/** Hit-chance points per attacker DEX above 10. Kept SYMMETRIC with the defender's dodge term so a
- *  parity fight stays ~60% hit / 40% dodge at any stat magnitude. */
 const DEX_HIT_WEIGHT = 1;
-/** Converts the `hit_chance` stat (a multiplier around 1.0) back onto the to-hit POINT scale. 100/3
- *  keeps the shipped curve exactly: the stat is `1 + (DEXTERITY − 10) × 0.03`, so at dexterity 40 it is
- *  1.9 → +30 points, which is what `(dex − 10) × DEX_HIT_WEIGHT` used to give. */
 const HIT_CHANCE_WEIGHT = 100 / 3;
-/** Hit-chance points removed per +1.0 of defender `dodge` above the 1.0 baseline. */
 const DODGE_HIT_WEIGHT = 50;
-/** Dodge lost per point of NATURAL armour — heavy hide is dead weight that evades worse. Worn armour
- *  is separate and costs dodge on TWO channels: its `movementPenalty` (see `wornStiffness`, paid even
- *  by a wearer strong enough to carry it) and its weight through the staged `laden`/`encumbered`
- *  conditions. */
 const NATURAL_ARMOR_DODGE_DRAG = 0.01;
-/** Default projectile particle style per ammo bucket when the ammo item doesn't author its own. */
 const PROJECTILE_BY_CATEGORY: Record<string, string> = {
   arrow: 'arrow',
   bolt: 'bolt',
   sling_stone: 'stone'
 };
-/** Min ticks between repeated "No ammo" floats for the same pawn — avoids per-tick spam. */
 const NOAMMO_NOTIFY_COOLDOWN = 90;
-// Encumbrance is not a combat-local hook: the staged `encumbered` condition's dodge/hitChance
-// modifiers flow through conditionDodgeMult / conditionHitMult below.
 
-/** Apply the MELEE grip's offensive modifier to a built profile (duelist + two-hand add offense; a
- *  shield trades offense for the defender-side dodge bonus, applied separately in resolveHit). */
 function applyMeleeGrip(p: AttackProfile, grip: MeleeGrip): AttackProfile {
   if (grip === 'duelist') {
     p.baseDamage *= DUELIST_DAMAGE_MULT;
     p.armorPen = clamp(p.armorPen + DUELIST_ARMOR_PEN, 0, 1);
     p.critMod += DUELIST_CRIT;
   } else if (grip === 'dualWield') {
-    // The speed half lives in `equippedWeaponSpeedMult` — the interval is built from the attack_speed
-    // stat, not from this profile.
     p.baseDamage *= DUAL_DAMAGE_MULT;
     p.armorPen = clamp(p.armorPen + DUAL_ARMOR_PEN, 0, 1);
     p.critMod += DUAL_CRIT;
@@ -446,21 +311,9 @@ function applyMeleeGrip(p: AttackProfile, grip: MeleeGrip): AttackProfile {
   return p;
 }
 
-/** A pawn's unarmed pool = its cultural natural weapons ahead of the default fists/kick, so a
- *  clawed/fanged culture swings its body weapon when unarmed (or forced unarmed by a trait's
- *  `blocksSlots`). ADR-023: the weapon ids live on the trait's `selfCondition` DEF
- *  (`grantsNaturalWeapon`) — the body condition IS the source, so the health pill and the swing can't
- *  drift. Empty cultural set → the plain fists/kick default. */
 function pawnNaturalWeaponIds(attacker: Pawn): string[] {
-  // ADR-029: a pawn's natural-weapon ids live on its TRAITS (`naturalWeapons`, the mirror of a
-  // creature's def list). Anatomy-gating happens downstream in attackerProfile via the SAME
-  // `enabledNaturalWeapons`/`BOUND_NATURAL_WEAPONS` filter creatures use — every natural weapon id is
-  // listed on its host part in limbmap (jaw→bite, head→goring-horns…), so losing the part loses the
-  // weapon with no separate hostParts bookkeeping.
   const extra: string[] = [];
   for (const t of attacker.traits ?? []) {
-    // LINEAGES-II §1: a transform-gated weapon set only exists while its condition holds (Moonlit
-    // Claws under the `werewolf` transform).
     if (
       t.naturalWeaponsWhen &&
       !(attacker.transientConditions ?? []).includes(t.naturalWeaponsWhen) &&
@@ -472,16 +325,11 @@ function pawnNaturalWeaponIds(attacker: Pawn): string[] {
   return extra.length > 0 ? [...extra, ...PAWN_NATURAL_WEAPON_IDS] : PAWN_NATURAL_WEAPON_IDS;
 }
 
-/** A weapon item's bloodletting proc chance (ADR-029 `onHitWound` list; 0 when absent). */
 function bloodlettingChance(item: Item | undefined): number | undefined {
   const c = item?.onHitWound?.find((w) => w.wound === 'bloodletting')?.chance;
   return c && c > 0 ? c : undefined;
 }
 
-/** ALCHEMY-BUTCHERY-EXPANSION §C SHARPNESS coating: the `bleedMult` on an equipped, unexpired coating
- *  whose `coatingEffect` carries no condition (a honing oil, not a venom). Multiplies the SWUNG weapon's
- *  own bloodletting proc — so it can only sharpen a weapon already built to cut (a maul's 0 stays 0).
- *  1 when the attacker holds no sharpness coating on the weapon actually swung. */
 function sharpnessBleedMult(
   attacker: Pawn | Mob,
   weaponId: string | undefined,
@@ -490,44 +338,34 @@ function sharpnessBleedMult(
   if (!weaponId || !('equipment' in attacker)) return 1;
   const mh = attacker.equipment?.mainHand;
   if (!mh?.coating || mh.coating.expiresAtTurn <= turn) return 1;
-  // The swing's `weaponId` is the profile's label — the item NAME for a crafted weapon — so match the
-  // coated mainHand by id OR name to confirm THIS weapon was the one actually swung (not a natural attack).
   const wpItem = itemService.getItemById(mh.itemId);
   if (weaponId !== mh.itemId && weaponId !== wpItem?.name) return 1;
   const m = itemService.getItemById(mh.coating.itemId)?.coatingEffect?.bleedMult;
   return typeof m === 'number' && m > 0 ? m : 1;
 }
 
-/** LINEAGES §4: credit a PAWN's kill toward its awakening deeds, by the victim's creature family and
- *  whether the killing blow was unarmed (fists / a natural weapon, not a crafted one). Mobs never accrue
- *  deeds (they don't grow lineages). Cheap: a couple of map lookups on a kill event. */
 function creditKillDeeds(
   attacker: Pawn | Mob,
   victim: Mob,
   weaponId?: string,
   turn?: number
 ): void {
-  if ('creatureId' in attacker) return; // attacker is a mob → no deeds
+  if ('creatureId' in attacker) return;
   const def = getCreatureById(victim.creatureId);
   if (!def) return;
   const deeds = (attacker.deeds ??= {});
   const bump = (k: string) => (deeds[k] = (deeds[k] ?? 0) + 1);
-  if (def.audio === 'canine') bump('kill:canine'); // werewolf
-  if (def.limbMap === 'arachnid') bump('kill:arachnid'); // arachnid
+  if (def.audio === 'canine') bump('kill:canine');
+  if (def.limbMap === 'arachnid') bump('kill:arachnid');
   const item = weaponId ? itemService.getItemById(weaponId) : undefined;
   const unarmed = !weaponId || item?.category === 'natural_weapon';
-  if (unarmed && (def.bodyScale ?? 1) >= 1.3) bump('unarmedBigKill'); // beast
-  // Arachnid hunter's-patience deeds: the prey died while envenomed / while held fast.
+  if (unarmed && (def.bodyScale ?? 1) >= 1.3) bump('unarmedBigKill');
   const timers = victim.conditionTimers;
   if (timers?.envenomed && timers.envenomed > 0) bump('venomKills');
   if (timers?.ensnared && timers.ensnared > 0) bump('ensnaredKills');
-  // Werewolf: a kill made in the dark (LINEAGES-II §1 nightKills).
   if (turn !== undefined && getAmbientLight(turn) < 0.35) bump('nightKills');
 }
 
-/** Summed wielded-weapon damage bonus from traits' `combatMods.melee_damage` (Giant's Grip, Dragon's
- *  Might…). Each is a multiplier (1.15 = +15%); we sum the deltas so two traits stack additively, as
- *  before. Applied only while a weapon is equipped. 0 for mobs and traitless pawns. */
 function weaponBonusDamage(attacker: Pawn | Mob): number {
   if (!('traits' in attacker)) return 0;
   let bonus = 0;
@@ -538,44 +376,24 @@ function weaponBonusDamage(attacker: Pawn | Mob): number {
   return bonus;
 }
 
-/** Resolve the attack used for one swing. An equipped weapon wins; otherwise a
- *  weighted roll over the attacker's `natural_weapon` items (creature def, or a
- *  pawn's cultural/bare hands/feet); finally an unarmed fallback. Both gear paths
- *  resolve through the same ItemService lookup. `distTiles` (§3b breath weapons):
- *  when the target stands beyond arm's reach, only natural weapons whose `reach`
- *  covers the gap may be rolled — a reach-3 dragonfire strikes where claws can't. */
 function attackerProfile(attacker: Pawn | Mob, distTiles = 1): AttackProfile {
-  // Conditions cripple the attacker's raw STR/DEX here (damage scales with STR, the to-hit with DEX),
-  // so a shocked/frostbitten/envenomed fighter genuinely hits softer and misses more — not just "works
-  // slower". Dodge/crit/attack-speed already flow through evaluateStat, which applies the same penalty.
   const sm = conditionStatMultipliers(attacker);
   const str = attacker.stats.strength * sm.strength;
   const dex = attacker.stats.dexterity * sm.dexterity;
 
-  // Equipped weapon (pawns; future-proofed for armed mobs) — but only if a hand can still hold it.
-  // Lose both hands and the weapon drops; you fall through to natural attacks / the thrash fallback.
   if ('equipment' in attacker && attacker.equipment?.mainHand && hasUsableHand(attacker)) {
     const mh = attacker.equipment.mainHand;
     const item = itemService.getItemById(mh.itemId);
     if (item?.weaponProperties) {
-      // §Q: a Masterwork blade hits harder — scale the quality-relevant fields by the stamped tier.
-      // §I: a Famed blade explodes those fields ×2–5 on top of its tier.
       const wp = scaleWeaponQuality(item.weaponProperties, mh.quality, mh.famedStatMult);
       const p = profileFromWeapon(str, dex, wp, item.name ?? 'weapon');
-      p.bloodletting = bloodlettingChance(item); // §3b: a deep-cutting blade leaves unclottable wounds
-      // ADR-023: a cultural `weaponBonus` (Giant's Grip) rides the wielded weapon only.
+      p.bloodletting = bloodlettingChance(item);
       const wb = weaponBonusDamage(attacker);
       if (wb) p.baseDamage *= 1 + wb;
-      // §2c wielding requirement: a crude, massive weapon (orc greataxe) punishes an under-strength
-      // wielder. The penalty is carried by the `overmatched` CONDITION (driven per-tick from the
-      // wieldRequirement shortfall in PawnStateMachine) — it flows into `str`/`dex` (conditionStat-
-      // Multipliers) and the to-hit (conditionHitMult) here automatically, so no inline math is needed.
-      return applyMeleeGrip(p, getGrip(attacker)); // BB grip: duelist/2H add offense (melee only)
+      return applyMeleeGrip(p, getGrip(attacker));
     }
   }
 
-  // Natural weapons: ids from the creature def, or the pawn's cultural+default set. Resolve
-  // each to its item and weighted-pick one for this swing.
   const ids =
     'creatureId' in attacker
       ? (getCreatureById(attacker.creatureId)?.naturalWeapons ?? [])
@@ -586,23 +404,16 @@ function attackerProfile(attacker: Pawn | Mob, distTiles = 1): AttackProfile {
     if (it?.weaponProperties)
       candidates.push({ id, wp: it.weaponProperties, bloodletting: bloodlettingChance(it) });
   }
-  // Part-gating: a natural weapon is usable only while a surviving part enables it (a jaw to bite, a paw
-  // to claw…). Unbound weapons stay always-available. Skipped for un-modelled fixtures (empty parts).
   let usable = candidates;
   if (candidates.length > 0 && hasModelledAnatomy(attacker)) {
     const enabled = enabledNaturalWeapons(attacker.limbs);
     usable = candidates.filter((c) => enabled.has(c.id) || !BOUND_NATURAL_WEAPONS.has(c.id));
   }
-  // §3b reach gate: beyond arm's reach only a natural weapon whose `reach` covers the gap can strike
-  // (dragonfire reach 3 behaves like a spear); adjacent keeps the full pool.
   if (distTiles > 1) usable = usable.filter((c) => (c.wp.reach ?? 1) >= distTiles);
   if (usable.length > 0) {
     const chosen = pickWeightedWeapon(usable);
     const p = profileFromWeapon(str, dex, chosen.wp, chosen.id);
-    p.bloodletting = chosen.bloodletting; // §3b: raking claws / feeding fangs leave unclottable wounds
-    // A big beast hits proportionally harder: scale natural-weapon base damage by the creature's
-    // `bodyScale`, SOFTENED so a mammoth (scale 3.5) maims (≈2.25×) without one-shotting a limb —
-    // one field drives both its blood pool (entitySpawning) and its hitting power.
+    p.bloodletting = chosen.bloodletting;
     if ('creatureId' in attacker) {
       const scale = getCreatureById(attacker.creatureId)?.bodyScale ?? 1;
       if (scale !== 1) p.baseDamage *= 1 + (scale - 1) * NATURAL_DAMAGE_BODYSCALE_FACTOR;
@@ -610,9 +421,6 @@ function attackerProfile(attacker: Pawn | Mob, distTiles = 1): AttackProfile {
     return p;
   }
 
-  // Thrash fallback (desperate body-blow) — no usable weapon left: every natural weapon's part is gone
-  // (a jawless, clawless, legless wreck) or a disarmed pawn with no hands. Weak blunt, but the fight
-  // still resolves rather than stalling on a creature that can't act.
   return {
     str,
     dex,
@@ -630,15 +438,6 @@ function attackerProfile(attacker: Pawn | Mob, distTiles = 1): AttackProfile {
   };
 }
 
-/**
- * Compute the defender's physical damage resistance for a given damage type.
- * Sources: cultural trait general damageReduction + type-specific resistance + base stat contribution.
- * Clamped 0–0.90 (can never fully negate damage from this layer alone).
- */
-// Damage type → the resistance stat shown in the attributes tab. ONE source of truth: combat soaks
-// exactly the value the player sees (no hidden inline copy that could drift). `evaluateStat` folds the
-// stat formula + cultural-trait resistance bonus; any condition that saps the underlying stat flows
-// through automatically (and matches the tab).
 const DAMAGE_RESISTANCE_STAT: Record<DamageType, string> = {
   cutting: 'cutting_resistance',
   piercing: 'piercing_resistance',
@@ -649,31 +448,15 @@ const DAMAGE_RESISTANCE_STAT: Record<DamageType, string> = {
 };
 
 function physicalResistance(defender: Pawn | Mob, damageType: DamageType): number {
-  // Base = the attributes-tab resistance stat (formula + cultural-trait bonus), not a duplicated formula.
   let res = pawnStatService.evaluateStat(DAMAGE_RESISTANCE_STAT[damageType], defender);
 
-  // §M per-creature resistances/vulnerabilities (creatures.jsonc) — thematic on top (negative =
-  // vulnerable). Mobs/animals only; not a pawn stat, so it lives here rather than in the stat engine.
   if ('creatureId' in defender) {
     res += getCreatureById(defender.creatureId)?.resistances?.[damageType] ?? 0;
   }
 
-  // Cultural trait resistances (physical + elemental) are folded into the stat by evaluateStat above
-  // (PawnStatService.RESISTANCE_TRAIT_KEY) — no separate flat `damageReduction` layer anymore. The
-  // "armor-like" trait mitigation now lives in partArmorReduction as per-part `naturalArmor` soak.
   return clamp(res, 0, 0.9);
 }
 
-/**
- * How much of a worn piece's `defense` still soaks, by its CONDITION. A battered hauberk is split
- * rings and a caved-in helm is a dented shell: `0.5 + 0.5 × condition`, so a pristine piece soaks
- * fully, a half-wrecked one soaks 75%, and a piece one hit from shattering soaks half.
- *
- * This is what makes `armorDamage` a live combat stat rather than an economic one. Before it, armour
- * protected at 100% right up to condition 0 and then vanished, so a hammer had to land the full
- * strip (11 hits on orc plate) to see any return — and the target always died first.
- * Missing durability (test fixtures, freshly minted instances) reads as pristine.
- */
 function conditionSoakFactor(inst: ItemInstance, item: Item): number {
   const max = item.maxDurability ?? 0;
   if (max <= 0 || inst.durability == null) return 1;
@@ -689,13 +472,6 @@ function partArmorReduction(
 ): number {
   const def = PART_DEF_MAP[partId];
   if (!def || rawDamage <= 0) return 0;
-  // ADR-029: layered SUBTRACTIVE mitigation. `armorPen` is a flat BYPASS fraction — that share of the
-  // weapon's damage IGNORES armour entirely (a bodkin's 25% slips through any plate); only the
-  // remaining (1 − armorPen) share is blockable, and each covering layer subtracts its FULL defense
-  // (in DAMAGE POINTS) from it, outermost → in, remainder passing inward. Armour can fully negate the
-  // blockable share (a 3-dmg punch does nothing to a bear's hide) — damage comes from finding a
-  // low-armour part (eye/throat/belly), a piercing weapon's bypass, or out-powering the plate. Worn
-  // pieces only count where they COVER the struck part (`coversPart`); natural hide is the innermost layer.
   let blockable = rawDamage * (1 - armorPen);
   if ('equipment' in defender && defender.equipment) {
     const worn: { layer: number; defense: number }[] = [];
@@ -705,7 +481,6 @@ function partArmorReduction(
       const item = itemService.getItemById(inst.itemId);
       const baseAp = item?.armorProperties;
       if (!item || !baseAp || !coversPart(item, slot, partId)) continue;
-      // §Q/§I: Masterwork/Famed scale the armour value by the stamped tier before it soaks.
       const scaled = scaleArmorQuality(baseAp, inst.quality, inst.famedStatMult);
       worn.push({
         layer: SLOT_LAYER[slot] ?? 1,
@@ -729,8 +504,6 @@ function partArmorReduction(
   return clamp((rawDamage - through) / rawDamage, 0, 1);
 }
 
-/** A defender's raw natural-armour scalar (hide/plate "weight") — a mob's `naturalArmor` or the sum of a
- *  pawn's trait `naturalArmor`. Drives the innate dodge drag (heavy hide = sluggish), NOT per-part soak. */
 function entityNaturalArmor(defender: Pawn | Mob): number {
   if ('creatureId' in defender)
     return defender.naturalArmorOverride ?? getCreatureById(defender.creatureId)?.naturalArmor ?? 0;
@@ -739,11 +512,6 @@ function entityNaturalArmor(defender: Pawn | Mob): number {
   return s;
 }
 
-/** Sum of worn armour's authored `movementPenalty` — plate 0.10, great helm 0.05, brigandine 0.05,
- *  every light piece 0. This is the STIFFNESS of a suit, independent of what the wearer can carry: a
- *  strength build affords plate without going `laden`, but the suit still costs it evasion. That is what
- *  makes light armour the right answer for a dodge build rather than a strictly worse one.
- *  Read directly off equipment — worn gear never reaches `evaluateStat`. Mobs wear nothing → 0. */
 function wornStiffness(defender: Pawn | Mob): number {
   const eq = (defender as Pawn).equipment as Record<string, ItemInstance | undefined> | undefined;
   if (!eq) return 0;
@@ -755,14 +523,8 @@ function wornStiffness(defender: Pawn | Mob): number {
   }
   return s;
 }
-/** Cap on the dodge lost to worn stiffness, so no pile of gear can zero evasion outright. */
 const STIFFNESS_DODGE_CAP = 0.45;
 
-/** Natural-armour DAMAGE POINTS at a part: a creature's hide (`naturalArmor`) or a pawn's cultural traits
- *  (ADR-029 `naturalArmor` sugar), the scalar distributed by the part's `share`, PLUS any explicit
- *  per-part `armorMods` (carapace back-heavy, soft belly). ADR-031: when `turn` is given, a mob's
- *  ACTIVE per-part hide wear (`hideWear`, chipped by blows this fight) is subtracted — worn-down hide
- *  soaks less until the fight ends and the wear expires. Floored at 0. */
 function naturalArmorPoints(
   defender: Pawn | Mob,
   share: number,
@@ -773,7 +535,6 @@ function naturalArmorPoints(
   let mods = 0;
   if ('creatureId' in defender) {
     const c = getCreatureById(defender.creatureId);
-    // §2a: an individual elite's rolled hide toughness (naturalArmorOverride) supersedes the def scalar.
     scalar = defender.naturalArmorOverride ?? c?.naturalArmor ?? 0;
     for (const m of c?.armorMods ?? [])
       if (armorModHits(defender, m.target, partId)) mods += m.defense;
@@ -792,22 +553,17 @@ function naturalArmorPoints(
   return scalar * share + mods;
 }
 
-/** A mob's live hide wear at a part — 0 unless a chip landed within the reset window (per-fight scratch). */
 function activeHideWear(mob: Mob, partId: BodyPartId, turn: number): number {
   if (!mob.hideWear || mob.hideWearAt == null) return 0;
-  if (turn - mob.hideWearAt > HIDE_WEAR_RESET_TICKS) return 0; // fight over — hide has settled
+  if (turn - mob.hideWearAt > HIDE_WEAR_RESET_TICKS) return 0;
   return mob.hideWear[partId] ?? 0;
 }
 
-/** Does an `armorMods` target — a part id, a limb-group id, or `'all'` — apply to `partId`? */
 function armorModHits(defender: Pawn | Mob, target: string, partId: BodyPartId): boolean {
   if (target === 'all' || target === partId) return true;
   return limbOfPart(defender, partId)?.id === target;
 }
 
-/** Total armour DAMAGE POINTS protecting a part (worn covering pieces + natural hide) — the "how plated
- *  is this spot" scan behind ADR-029 aimed targeting. Mirrors partArmorReduction's layer collection
- *  without running the subtraction. */
 export function partArmorPoints(defender: Pawn | Mob, partId: BodyPartId, turn?: number): number {
   const def = PART_DEF_MAP[partId];
   if (!def) return 0;
@@ -820,23 +576,12 @@ export function partArmorPoints(defender: Pawn | Mob, partId: BodyPartId, turn?:
       if (!item?.armorProperties || !coversPart(item, slot, partId)) continue;
       pts +=
         scaleArmorQuality(item.armorProperties, inst.quality, inst.famedStatMult).defense *
-        conditionSoakFactor(inst, item); // mirrors partArmorReduction so aiming sees the real armour
+        conditionSoakFactor(inst, item);
     }
   }
   return pts + naturalArmorPoints(defender, def.armor ?? DEFAULT_ARMOR_SHARE, partId, turn);
 }
 
-/** ADR-029 skill-biased hit location (the CDDA crit-zone loop): roll the struck part as usual, but at
- *  `precision` — the attacker's full crit chance (`hit_precision` stat + weapon critMod, computed by the
- *  caller) — roll two extra candidate locations and take the LEAST ARMOURED: a skilled fighter works
- *  the gaps (eye/throat/belly) instead of clanging off the plate. One chance, two payoffs: a "crit"
- *  is both the damage spike AND the eye for openings; capacity-dimmed sight/consciousness aim worse. */
-/**
- * How much a hit HERE can contribute to a kill. A rolled external part never carries `isVital` itself —
- * the carotid is inside the neck, the heart inside the chest — so a part is worth aiming at for what it
- * CONTAINS, plus how hard it bleeds. A hand contains nothing and barely bleeds; the neck is an artery
- * under thin cover.
- */
 export function partLethality(partId: BodyPartId): number {
   const cached = _lethalityCache.get(partId);
   if (cached !== undefined) return cached;
@@ -856,35 +601,12 @@ export function partLethality(partId: BodyPartId): number {
 }
 const _lethalityCache = new Map<BodyPartId, number>();
 
-/**
- * How much taking this location out DISABLES a fighter, as opposed to killing it.
- *
- * Lethality alone is an oversimplification of what a skilled fighter aims at: a foe who cannot see,
- * cannot hold a weapon, or cannot close is out of the fight, and got there far cheaper than killing
- * them. `partLethality` scores an eye at 1.06 — the lowest of any location, because it holds no organ
- * and barely bleeds — while destroying one drops `sight` to 0.35, and `sight` multiplies `hit_chance`,
- * `aim_accuracy` AND `hit_precision`. Under lethality alone a precise fighter would never once go for
- * the eyes.
- *
- * Derived from the SAME id patterns `calculateCapacityValue` uses to build the capacities, so this
- * needs no new authoring and cannot drift from the anatomy: whatever a body plan calls its eyes/arms/
- * legs, both sides read it the same way. Weighted by how much of a fighter each capacity carries —
- * `manipulation` gates damage, attack_speed, hit_chance and armor_damage; `sight` gates the three
- * accuracy stats and is the cheapest to take (an eye has 10 hp and almost no armour); `moving` gates
- * dodge and the ability to disengage.
- */
-// Calibrated against the real lethality scale, where an exposed chest is 3.72, a head 3.24, a neck
-// 2.86 and a bare upper leg 2.98. Maiming is meant to be a genuine SECOND option, never the dominant
-// one: going for the kill on an exposed vital still wins, and the eye only floats to the top once the
-// chest is behind plate — which is exactly when blinding IS the right answer.
-const MAIM_SIGHT = 2.4; // eye → 3.46, just under an exposed chest and well clear of any limb
-const MAIM_MANIPULATION = 2; // hand/arm → 3.30
-const MAIM_MOVING = 1; // foot/leg → ~2.48
+const MAIM_SIGHT = 2.4;
+const MAIM_MANIPULATION = 2;
+const MAIM_MOVING = 1;
 export function partIncapacitation(partId: BodyPartId): number {
   const cached = _maimCache.get(partId);
   if (cached !== undefined) return cached;
-  // The location itself plus whatever it contains — an eye scores as an eye whether it is struck
-  // directly or reached through the socket.
   const ids: string[] = [partId, ...organsOf(partId)];
   let score = 0;
   if (ids.some((id) => /eye/i.test(id))) score += MAIM_SIGHT;
@@ -895,50 +617,19 @@ export function partIncapacitation(partId: BodyPartId): number {
 }
 const _maimCache = new Map<BodyPartId, number>();
 
-/**
- * COMBAT VALUE of a location — how much a fight is decided by wrecking it.
- *
- * A fight is not decided by killing. Most end in COLLAPSE, and long before that they are decided by
- * degrading what the other body can still do: a foe who cannot see, cannot hold a weapon or cannot
- * close has lost, whatever their blood volume. Scoring a weapon by kills therefore measures the tail of
- * a fight and misses the part that decided it.
- *
- * So a location is worth what it contributes on BOTH axes at once: `partLethality` (organs it holds,
- * how hard it bleeds) plus `partIncapacitation` (the combat capacities it gates — sight, manipulation,
- * movement). An eye scores 3.46 against a bare thigh's 2.48 not because taking an eye kills, but
- * because it ends the other fighter as a fighter.
- *
- * Damage is scored against the part's OWN size, so wrecking half a hand and half a chest count as
- * halves of their respective values — a big weapon does not get credit for overkilling a finger.
- */
 export function partCombatValue(partId: BodyPartId): number {
   return partLethality(partId) + partIncapacitation(partId);
 }
 
-/** How much ONE point of armour discounts a part's worth to a precise attacker. Armour is a discount,
- *  not a veto: dividing by it outright is what used to walk the blow off a covered chest onto a bare
- *  thigh — on an armoured target the lethal parts ARE the covered ones. Calibrated against the real
- *  `partArmorPoints` scale (mail + helm ≈ 8–12 points), so a mailed chest still outranks a bare leg. */
 const PRECISION_ARMOUR_DISCOUNT = 0.05;
-/** Candidate locations a searching attacker considers. Fractional above the base three, so a very
- *  precise fighter can find a SMALL target (the neck is ~1.5% of the hit table) that three rolls
- *  almost never turn up. */
-/** Total insistence of a weapon's `partPreference`, i.e. how much of the time it refuses to take
- *  whatever it finds. */
 function preferenceTotal(pref: Record<string, number> | undefined): number {
   if (!pref) return 0;
   let t = 0;
   for (const k in pref) t += pref[k] ?? 0;
   return Math.min(1, t);
 }
-/** To-hit POINTS surrendered per 1.0 of insistence. On the 60-point melee base, a flail asking for the
- *  head 10% of the time gives up 4 points (~7% of its hit chance) — which is the whole reason a flail
- *  is a wild weapon and a mace is a reliable one. */
 const PREFERENCE_ACCURACY_COST = 40;
 
-/** Redirect a landed blow onto the location the weapon was going for, if the defender still has it.
- *  Matched by substring so `neck` also finds a `carotid` inside it, and a plan that names its parts
- *  differently still resolves without per-creature authoring. */
 function preferredPart(
   defender: Pawn | Mob,
   pref: Record<string, number> | undefined
@@ -961,43 +652,15 @@ function preferredPart(
 }
 
 const PRECISION_CANDIDATES = 3;
-/** Extra looks a fully precise fighter buys on top of the base three.
- *
- *  Widened from 6 when `hit_precision` was re-curved: the gate this scales against (crit chance) used
- *  to top out near 0.06, so the whole span bought a third of one extra look and precision searched no
- *  harder than clumsiness. It now reaches ~0.42 on a crit-heavy weapon, which at 14 is ~9 looks against
- *  a poor fighter's 3.7.
- *
- *  This does NOT make the eyes a common target and is not meant to. An eye is 0.2 of roughly 70 total
- *  hit weight — under 1% per look — so even a searching fighter finds one only occasionally. That is
- *  the anatomy being honest: a deliberate eye-thrust is a rare, exceptional thing. What the extra looks
- *  really buy is the reachable maim targets (hands, arms, legs), which is where the measured effect
- *  shows up. */
 const PRECISION_CANDIDATE_SPAN = 14;
 
-/**
- * Where a blow lands. A precise fighter does not merely find bare skin — it finds the spot that TAKES
- * THE FOE OUT OF THE FIGHT, whether that is by killing them or by leaving them unable to see, hold a
- * weapon or close the distance. Score each candidate by lethality PLUS incapacitation, discounted by
- * what covers it, and let precision buy how many candidates get considered.
- *
- * Two corrections are baked in here, both of which made precision actively counterproductive:
- *   • task 11 — scoring by armour alone made it ANTI-lethal, walking a dagger off the chest onto a
- *     bare extremity.
- *   • task 12e — scoring by lethality alone made it blind to MAIMING, so the eyes (the cheapest
- *     decisive target on the body) ranked dead last.
- */
 function aimedBodyPart(defender: Pawn | Mob, precision: number, turn?: number): BodyPartId {
   const plan = planOf(defender);
   let best = rollBodyPartOf(defender.limbs, plan);
-  // Precision is the chance the fighter gets to CHOOSE at all; above that it widens the choice.
   if (precision <= 0 || rng.random() >= precision) return best;
   const exact = PRECISION_CANDIDATES + precision * PRECISION_CANDIDATE_SPAN;
   const rolls = Math.floor(exact) + (rng.random() < exact - Math.floor(exact) ? 1 : 0);
   if (rolls <= 1) return best;
-  // Worth = what a hit here BUYS — a step toward the kill plus a step toward disabling — over what it
-  // costs to reach through armour. Scoring lethality alone made a blinding thrust the worst choice on
-  // the board.
   const worth = (id: BodyPartId) =>
     (partLethality(id) + partIncapacitation(id)) /
     (1 + partArmorPoints(defender, id, turn) * PRECISION_ARMOUR_DISCOUNT);
@@ -1019,26 +682,11 @@ function currentPartHealth(defender: Pawn | Mob, partId: BodyPartId, defMaxHp: n
   return partState?.health ?? defMaxHp;
 }
 
-// ── Implementation ────────────────────────────────────────────────────────────
 class CombatServiceImpl implements CombatService {
-  /** True only for the duration of `tickCombat`. While set, the per-hit entity appliers write the
-   *  changed entity into its array SLOT in place instead of rebuilding the whole array via `.map()` —
-   *  a 420-mob wave was doing dozens of full-array rebuilds per tick (the engagement-wave alloc tax,
-   *  ADR-002 hot-phase amendment). Outside combat (public `applyInjury*`, called immutably by tests)
-   *  it stays false → immutable rebuild. */
   private _combatWorking = false;
-  /** COPY-ON-WRITE flags: whether `next.mobs`/`next.pawns` have been cloned into a PRIVATE array this
-   *  tick yet. The arrays are cloned LAZILY on the first hit that writes to them (not upfront) so a
-   *  peace tick — the overwhelmingly common case — allocates nothing (cloning both 420-mob + pawns
-   *  arrays every tick regardless of combat was itself a perf regression). Reset each `tickCombat`. */
   private _mobsOwned = false;
   private _pawnsOwned = false;
 
-  /** Write `updated` back into its array. In combat-working mode: clone the target array ONCE on first
-   *  write (copy-on-write — the caller threads the returned state forward), then overwrite the slot in
-   *  place; outside combat, rebuild immutably. Either way `updated` is a NEW object, so cold-field refs
-   *  stay fresh for the snapshot diff AND the index-aligned fresh-corpse diff (`handleFreshCombatCorpses`)
-   *  still sees the old object in `preCombatState` vs the new one here. */
   private spliceEntity<T extends Pawn | Mob>(
     state: GameState,
     id: string,
@@ -1080,8 +728,6 @@ class CombatServiceImpl implements CombatService {
     override?: RangedOverride,
     guaranteed = false
   ): HitResult {
-    // Kept whole (not just destructured) so the damage roll can read the weapon's `powerStat` and
-    // `critMultiplier` without threading two more locals through.
     const profile = override
       ? override.profile
       : attackerProfile(attacker, this.entityDistance(attacker, defender));
@@ -1101,17 +747,12 @@ class CombatServiceImpl implements CombatService {
     } = profile;
 
     const ranged = !!override;
-    // The blow's FORCE, computed before the shield answers because how hard it lands is what decides
-    // whether a shield can stop it. Independent of which body part is struck, so hoisting is free.
     const raw =
       override && !override.strScaled
         ? baseDamage
         : baseDamage *
           pawnStatService.evaluateStat(override ? 'ranged_damage' : 'melee_damage', attacker);
 
-    // SHIELD DEFENCE — the shield answers BEFORE evasion. Melee: PARRY (turn the blow aside → free
-    // guaranteed counter in performAttack) then BLOCK (stop it cold). Ranged: block only, halved. A
-    // guaranteed riposte skips this entirely (it can't itself be parried/blocked → no recursion).
     if (!guaranteed) {
       const pc = ranged ? 0 : this.parryChanceOf(defender);
       if (pc > 0 && rng.random() < pc)
@@ -1120,26 +761,12 @@ class CombatServiceImpl implements CombatService {
       if (bc > 0 && rng.random() < bc)
         return this.negatedHit(weaponId, staminaCost, damageType, 'blocked');
     }
-    // Evasion uses the `dodge` stat (DEX − weight, × moving) rather than raw dexterity, so injury,
-    // load, and the winded penalty (× 0.5) all lower it. ×20 keeps baseline parity with the old
-    // `defDex × 2` term (dodge ≈ 1.0 at DEX 10 → 20).
-    // Natural-armour weight is an innate dodge drag (heavy-hided beasts evade worse) — subtracted from
-    // the base dodge before condition/shield scaling, floored at 0.
     const armorDrag = entityNaturalArmor(defender) * NATURAL_ARMOR_DODGE_DRAG;
     const defDodge =
       Math.max(0, pawnStatService.evaluateStat('dodge', defender) - armorDrag) *
       (1 - Math.min(STIFFNESS_DODGE_CAP, wornStiffness(defender))) *
-      this.conditionMult(defender, 'dodge'); // injuries, winded, load, fouled guard (easier to hit)
+      this.conditionMult(defender, 'dodge');
 
-    // MELEE gets the sane base (BASE_MELEE_HIT ± skill/dodge edges). RANGED keeps its OWN calibrated
-    // curve — its `hitMod` IS rangedAccuracyMod (aim_accuracy + distance + cover), layered on the
-    // original dexterity/dodge terms; don't double-buff it with the melee base. The attacker's
-    // encumbrance spoils aim either way (conditionHitMult < 1 when encumbered/winded).
-    //
-    // COMBAT-BALANCE task 5: melee accuracy is the `hit_chance` STAT, not a raw core stat. That is what
-    // routes `× sight × manipulation` into melee — a blinded or one-armed fighter now misses — and what
-    // lets the stat be re-sourced to a rolled aptitude without touching this line again. The weight
-    // converts the stat's multiplier back onto the to-hit point scale the curve was calibrated on.
     const toHit = override
       ? dex * 3 + accuracy * MELEE_ACCURACY_WEIGHT + (override.hitMod ?? 0) - defDodge * 20
       : BASE_MELEE_HIT +
@@ -1161,16 +788,6 @@ class CombatServiceImpl implements CombatService {
       };
     }
 
-    // Roll a hit location from the DEFENDER's own LIVE body tree (a wolf rolls paws/tail, not fingers;
-    // §3d a pawn's GRAFTED wings/tail are hittable; an already-severed part can't be struck again).
-    // Falls back to the static plan table for entities without a modelled tree (test fixtures).
-    // Crit: base hit_precision stat (DEX/PER + capacities) plus this weapon's critMod.
-    // A crit multiplies the post-mitigation damage — so a high-crit build with a
-    // high-crit weapon spikes hard.
-    // STEALTH strike: a pawn the defending creature has NOT detected multiplies its hit_precision
-    // (before the weapon's critMod adds) — the one devastating opening blow that finds an eye or the
-    // throat. Melee and ranged share this path, so a sneak-shot gets it too. The landed hit then
-    // auto-reveals (performAttack), so the bonus never applies to the second swing.
     const stealthStrike =
       'entityClass' in defender &&
       !('entityClass' in attacker) &&
@@ -1185,60 +802,33 @@ class CombatServiceImpl implements CombatService {
     );
     const crit = rng.random() < critChance;
 
-    // ADR-029 skill-biased location: under the SUBTRACTIVE model an armoured part can fully negate a
-    // weak hit, so a skilled fighter must FIND THE GAP — at the SAME hit_precision that governs crits
-    // (stats.jsonc: DEX/PER × consciousness × sight, + the weapon's critMod, so a crit-prone stiletto
-    // finds gaps more often), the attacker rolls extra candidate locations and takes the least-armoured
-    // one (eye/throat/belly over plate).
-    // The weapon's own preference answers FIRST: a flail comes over the guard at the head and a dagger
-    // goes for the throat whether or not the wielder is skilled enough to pick a target deliberately.
-    // Its accuracy cost is already paid in `attackerProfile`.
     const partId =
       preferredPart(defender, profile.partPreference) ??
       aimedBodyPart(defender, critChance, state.turn);
     const partDef = PART_DEF_MAP[partId]!;
-    // The defender's part may be bodyScale-scaled; severity/fracture use its ACTUAL maxHp.
     const partMaxHp =
       limbOfPart(defender, partId)?.parts?.find((p) => p.id === partId)?.maxHp ?? partDef.maxHp;
 
-    // `raw` (the blow's force) was computed above, before the shield answered — see the block roll.
-    // COMBAT-BALANCE task 3: the multiplier is `melee_damage` / `ranged_damage` rather than a raw core
-    // stat, so the formulas' `× manipulation` applies and a mangled arm costs damage. The stat's POWER
-    // token resolves the weapon's own power stat and damps it through powerScale, so the curve is
-    // unchanged. Ranged with `strScaled: false` (crossbow/sling) bypasses it — the mechanism did the
-    // work, not the shooter.
     const armorRed = partArmorReduction(defender, partId, armorPen, raw, state.turn);
     const physRes = physicalResistance(defender, damageType);
     const mitigated = raw * (1 - armorRed) * (1 - physRes);
-    // A precision weapon can author a bigger crit multiplier: the stiletto's whole case is that the
-    // thrust which finds the gap is the one that ends it.
     const critMult = profile.critMultiplier ?? CRIT_MULTIPLIER;
     const scaled = mitigated * (crit ? critMult : 1) * this.conditionMult(attacker, 'weaponDamage');
-    // ADR-029: armour can FULLY stop a weak hit — 0 damage (was floored at 1). A 0 means the blow
-    // clanged off; the wound below is a no-op (severity/bleed/fracture all gate on hpMissing > 0).
     const final = scaled <= 0 ? 0 : Math.max(1, Math.round(scaled));
 
     const prevHealth = currentPartHealth(defender, partId, partMaxHp);
     const newHealth = Math.max(0, prevHealth - final);
     const hpMissing = (partMaxHp - newHealth) / partMaxHp;
 
-    // This-hit wound increment. The damage type picks the wound (cut/puncture/crush/
-    // burn); accumulation, final severity, bleed rate and pain are computed when the
-    // wound is merged into the part (applyInjury) — same-type hits stack into one.
     const woundDef = woundForDamageType(damageType);
     const injury: Injury = {
       bodyPart: partId,
       type: woundDef.id as Injury['type'],
       severity: severityFromFrac(hpMissing),
       damage: final,
-      // Bleed cue: an open-wound type (cut/puncture) OR any hit that blows the part off (stump gush).
       bleeding: (woundDef.bleedMod > 0 || hpMissing >= 1.0) && hpMissing > 0 ? 1 : 0,
       painContribution: 0,
       infected: false,
-      // §3b bleed-weapon: at the weapon's `bloodletting` chance, the open wound never self-clots — it
-      // flows until a caretaker dresses it (the physical successor of `bloodletting`). §C: a sharpness
-      // coating on the swung weapon multiplies that chance (capped) — only ever amplifying a weapon that
-      // already cuts, since a crush wound (bleedMod 0) is gated out below regardless.
       ...(bloodletting &&
       woundDef.bleedMod > 0 &&
       hpMissing > 0 &&
@@ -1248,8 +838,6 @@ class CombatServiceImpl implements CombatService {
         : {})
     };
 
-    // Knockdown/stun: blunt hits roll chance from damage vs constitution, PLUS the weapon's flat
-    // `stunChance` (maces/hammers stun regardless of damage type). Reduced by knockdown_resistance.
     const defCon = defender.stats.constitution ?? 10;
     const stunResist = clamp(
       pawnStatService.evaluateStat('knockdown_resistance', defender),
@@ -1264,27 +852,17 @@ class CombatServiceImpl implements CombatService {
     );
     const knockdown = knockChance > 0 && rng.random() * 100 < knockChance;
 
-    // Fracture roll: the blow ALSO loads the bone beneath the flesh wound, INDEPENDENTLY of the flesh crush
-    // (see BONE_TRANSFER_*). The fracture is a SEPARATE wound on the SKELETON the struck flesh wraps
-    // (head→skull, forearm→forearmBone, chest→ribcage). Enough accumulated bone damage BREAKS it
-    // (cripples the limb without severing — see _applyInjuryToEntity / boneBroken). A soft part with no
-    // skeleton child (abdomen, eyes, organs) routes nowhere and can't fracture.
     let fractureInjury: Injury | null = null;
     const boneTargetId = skeletonPartOf(partId);
     if (boneTargetId != null && hpMissing > 0) {
       const isBlunt = damageType === 'blunt';
-      const boneHp = BONE_FRACTION * partMaxHp; // the bone's break budget, scaled to this creature
-      // Bone load is rolled from the RAW force, not the flesh `final`: type-based transfer, shielded by
-      // worn armour but not flesh toughness, with a per-blow variance — so the two depths diverge.
+      const boneHp = BONE_FRACTION * partMaxHp;
       const transfer = isBlunt ? BONE_TRANSFER_BLUNT * bluntMod : BONE_TRANSFER_OTHER;
       const variance = 1 + (rng.random() * 2 - 1) * BONE_DAMAGE_VARIANCE;
       const boneDamage = Math.max(
         1,
         Math.round(raw * transfer * (1 - armorRed) * (crit ? CRIT_MULTIPLIER : 1) * variance)
       );
-      // Chance scales with how hard the BONE was loaded (not the flesh crush), capped so it's never sure.
-      // ADR-031: precision (the same critChance driving crits/gap-aiming) multiplies it — a placed blow
-      // lands square on the bone.
       const fractureChance = clamp(
         (isBlunt ? FRACTURE_BLUNT_BASE : FRACTURE_OTHER_BASE) *
           (boneDamage / boneHp) *
@@ -1296,8 +874,6 @@ class CombatServiceImpl implements CombatService {
         fractureInjury = {
           bodyPart: boneTargetId,
           type: 'fracture',
-          // Severity against the bone's break budget — overwritten on merge by recomputeWound, but kept
-          // consistent for the single-hit/test path.
           severity: severityFromFrac(boneDamage / boneHp),
           damage: boneDamage,
           bleeding: 0,
@@ -1307,25 +883,16 @@ class CombatServiceImpl implements CombatService {
       }
     }
 
-    // Organ-penetration roll: a deep blow into a body cavity can reach an organ inside, INDEPENDENTLY of
-    // the flesh wound — the soft-tissue twin of the fracture roll above. A shallow laceration across the
-    // abdomen wall just chips the container HP; only a thrust / hard hit finds the kidney or liver. (The
-    // destruction cascade still takes ALL contents when the cavity itself is gone — that path is separate.)
     let organInjury: Injury | null = null;
     const organCandidates = organsOf(partId);
     if (organCandidates.length > 0 && hpMissing > 0) {
       const isPenetrating = damageType === 'piercing' || damageType === 'cutting';
       const transfer = isPenetrating ? ORGAN_TRANSFER_PENETRATING : ORGAN_TRANSFER_BLUNT;
       const variance = 1 + (rng.random() * 2 - 1) * ORGAN_DAMAGE_VARIANCE;
-      // Force driven inward this blow — shielded by worn armour (not flesh toughness), exactly like bone load.
       const organDamage = Math.max(
         1,
         Math.round(raw * transfer * (1 - armorRed) * (crit ? CRIT_MULTIPLIER : 1) * variance)
       );
-      // Chance scales with that inward force vs the CAVITY's mass (a small thrust into a big torso rarely
-      // finds an organ; a hard deep blow does), capped so an organ hit is never a sure thing.
-      // ADR-031: precision multiplies it — the deft thrust is GUIDED to the kidney/carotid, so a skilled
-      // fighter beats a tank's hide by placement where a mook's identical force glances off.
       const organChance = clamp(
         (isPenetrating ? ORGAN_PENETRATE_BASE : ORGAN_BLUNT_BASE) *
           (organDamage / partMaxHp) *
@@ -1334,8 +901,6 @@ class CombatServiceImpl implements CombatService {
         isPenetrating ? ORGAN_PENETRATE_CAP : ORGAN_BLUNT_CAP
       );
       if (rng.random() < organChance) {
-        // Which organ the blow found — weighted by size (a bigger organ is a bigger target), among the ones
-        // this defender ACTUALLY still has (body plans vary; a destroyed organ is no longer there to hit).
         const present = organCandidates
           .map((id) => limbOfPart(defender, id)?.parts?.find((p) => p.id === id && !p.isMissing))
           .filter((p): p is BodyPartState => p != null);
@@ -1352,17 +917,12 @@ class CombatServiceImpl implements CombatService {
           }
           organInjury = {
             bodyPart: chosen.id,
-            type: injury.type, // same damage class as the flesh wound (puncture / cut / crush)
-            // Provisional severity vs the organ's own HP — recomputeWound overwrites it on apply/merge.
+            type: injury.type,
             severity: severityFromFrac(organDamage / chosen.maxHp),
             damage: organDamage,
             bleeding: 0,
             painContribution: 0,
             infected: false,
-            // ADR-031: a nicked ARTERY (carotid/femoral) never self-clots — it flows until a caretaker
-            // dresses it (the physical successor of `bloodletting`), so finding the throat/femoral is a
-            // slow bleed-out kill. Only matters when the wound actually bleeds (a piercing/cutting hit;
-            // a blunt crush has bleedMod 0 so the flag is inert). recomputeWound carries the flag on merge.
             ...(PART_DEF_MAP[chosen.id]?.artery ? { bloodletting: true } : {})
           };
         }
@@ -1381,8 +941,6 @@ class CombatServiceImpl implements CombatService {
       damageType,
       weaponId,
       staminaCost,
-      // Round for display only: per-tick fractional healing leaves part HP at e.g. 41.00001…, which
-      // leaked into the combat chronicle as "41.00001616999995/70". Sim math keeps the raw value.
       partRemainingHp: Math.round(newHealth),
       partMaxHp: partDef.maxHp
     };
@@ -1398,14 +956,9 @@ class CombatServiceImpl implements CombatService {
     const partDef = PART_DEF_MAP[injury.bodyPart];
     if (!partDef) return state;
 
-    // The limb that holds this part — found in the entity's OWN tree (plan-agnostic), falling back to
-    // the plan's structural mapping so a part absent from a sparse tree (test fixtures) is still created.
     const targetLimbId =
       limbOfPart(entity, injury.bodyPart)?.id ?? parentLimbOf(planOf(entity), injury.bodyPart);
 
-    // ── Update limb tree: merge this hit into the part's same-type wound ──────
-    // A severed container takes its contents (cascadeSeveredContents → gutted chest takes heart/lungs).
-    // Whether the resulting body is dead is decided ONCE below by lethalAnatomyCause(limbs).
     const limbs: LimbState[] = (entity.limbs ?? []).map((limb) => {
       if (limb.id !== targetLimbId) return limb;
 
@@ -1421,25 +974,14 @@ class CombatServiceImpl implements CombatService {
               isMissing: false,
               injuries: []
             };
-      // The part's ACTUAL (bodyScale-scaled) maxHp — set at spawn — drives severity, accum cap, and the
-      // bone-break threshold, NOT the default-scale catalog value.
       const maxHp = prev.maxHp || partDef.maxHp;
 
-      // Fracture HP handling. A distinct `skeleton` bone (hitWeight 0 — never struck directly) is pure
-      // bone, so a fracture is the ONLY thing that damages it: chip its HP 1:1 with the accumulated bone
-      // damage, so the bar empties exactly as the bone breaks (no more "full HP + serious fracture"). A
-      // `bone: true` flesh-wrapped bone (skull) already lost HP to the crush from the same blow, so ITS
-      // fracture stays break-only (no double-chip). Non-structural soft wounds reduce HP as before.
       const isStructural = woundById(injury.type)?.structural === true;
       const chipsBone = isStructural && partDef.skeleton === true;
 
-      // Stack: one wound per type per part. Same-type hits accumulate damage and
-      // escalate severity (5 crushes → one severe crush) instead of piling up.
       const wIdx = prev.injuries.findIndex((w) => w.type === injury.type);
       const prevW = wIdx >= 0 ? prev.injuries[wIdx] : undefined;
       const accum = Math.min((prevW?.damage ?? 0) + injury.damage, maxHp);
-      // §3b: a bleed-weapon hit makes the (merged) wound unclottable — OR the flags so a raking-claw
-      // follow-up on an ordinary cut upgrades it, and an ordinary hit never clears an existing flag.
       const mergePrev =
         injury.bloodletting && !prevW?.bloodletting
           ? { ...(prevW ?? { infected: false }), bloodletting: true }
@@ -1458,7 +1000,7 @@ class CombatServiceImpl implements CombatService {
           : [...prev.injuries, merged];
 
       const newHp = chipsBone
-        ? Math.max(0, maxHp - accum) // pure bone: HP == remaining fracture budget
+        ? Math.max(0, maxHp - accum)
         : isStructural
           ? prev.health
           : Math.max(0, prev.health - injury.damage);
@@ -1466,7 +1008,6 @@ class CombatServiceImpl implements CombatService {
       const updatedPart: BodyPartState = {
         ...prev,
         health: newHp,
-        // Soft-tissue destruction SEVERS the part; structural (fracture) destruction BREAKS the bone.
         isMissing: prev.isMissing || (merged.severity === 'destroyed' && !isStructural),
         boneBroken:
           prev.boneBroken ||
@@ -1478,21 +1019,12 @@ class CombatServiceImpl implements CombatService {
           ? existing.map((p, i) => (i === idx ? updatedPart : p))
           : [...existing, updatedPart];
 
-      // Containment cascade: when this part is DESTROYED, everything nested inside it goes too — a gutted
-      // abdomen takes liver/stomach/kidneys, a caved-in chest takes heart/lungs/spine/ribcage. "Destroyed"
-      // is EITHER severed (soft-tissue blown clean off → isMissing) OR caved in to 0 HP. The HP arm is the
-      // fix for the "0-HP chest, pristine heart" regression: a chest beaten to 0 by MIXED wound types (a
-      // serious crush + a serious puncture — neither alone reaching 'destroyed'/sever) left its organs
-      // intact inside a flattened cavity, a walking corpse. cascadeSeveredContents is idempotent (it skips
-      // contents already gone), so re-running it while the part sits at 0 HP is a harmless no-op.
       const cascade =
         updatedPart.isMissing || updatedPart.health <= 0
           ? cascadeSeveredContents(mergedParts, updatedPart.id)
           : { parts: mergedParts, lostVital: false };
       const newParts = cascade.parts;
 
-      // Bleed rate = sum of all current part-wound bleed (falls as wounds heal),
-      // and the root-limb health is the mass-weighted health of its parts.
       const totalBleed = newParts.reduce(
         (sum, p) => sum + p.injuries.reduce((s, w) => s + w.bleeding, 0),
         0
@@ -1505,8 +1037,6 @@ class CombatServiceImpl implements CombatService {
       return { ...limb, parts: newParts, health: rolledHealth, bleedRate: totalBleed };
     });
 
-    // ── Entity-level fields. Pain is the SUM of all active wounds (so it falls as
-    //    wounds heal), and the flat injuries list mirrors the merged part wounds. ──
     let painTotal = 0;
     const newInjuries: Injury[] = [];
     for (const l of limbs) {
@@ -1519,21 +1049,12 @@ class CombatServiceImpl implements CombatService {
     }
     const newPain = clamp(Math.round(painTotal), 0, 100);
 
-    // (Blood loss no longer writes a `blood_loss` condition — it folds into `shock`, derived from
-    // pain OR blood-loss fraction in tickConditions/stepHunger. Combat leaves `conditions` untouched.)
-
-    // Transient conditions. Knockdown = a blunt stagger scaled by the blow (this swing rolled one).
-    // Collapse = loss of consciousness (pain + blood loss + organ damage, via the
-    // capacity), kept active while it stays low; the pawn state machine clears it as
-    // the pawn recovers. Deliberately distinct: a stagger is momentary, a collapse
-    // ends the fight.
     const consciousness =
       pawnStatService.computeCapacities({ ...entity, limbs, injuries: newInjuries } as T)
         .consciousness ?? 1;
     const collapsed = consciousness < COLLAPSE_CONSCIOUSNESS;
     const durations = { ...(entity.conditionTimers ?? {}) };
     if (knockdown) {
-      // Floor (reliably costs the next attack) + scale by this blow's blunt damage, capped.
       const kd = Math.min(
         KNOCKDOWN_MAX_TURNS,
         KNOCKDOWN_FLOOR_TURNS + Math.round(injury.damage * KNOCKDOWN_TURNS_PER_DAMAGE)
@@ -1543,11 +1064,10 @@ class CombatServiceImpl implements CombatService {
     if (collapsed) durations.collapse = Math.max(durations.collapse ?? 0, COLLAPSE_KEEPALIVE_TURNS);
     const transientConditions = [...(entity.transientConditions ?? [])];
     const cpos = this.entityPos(entity);
-    let condTier = 1; // stack each new condition label below the damage number (tier × ~13px)
+    let condTier = 1;
     for (const id of ['knockdown', 'collapse']) {
       if ((durations[id] ?? 0) > 0 && !transientConditions.includes(id)) {
         transientConditions.push(id);
-        // Newly latched this hit → pop its floater (below the damage number performAttack emits).
         this.emitConditionFloat(cpos.x, cpos.y, id, 13 * condTier++);
       }
     }
@@ -1561,15 +1081,6 @@ class CombatServiceImpl implements CombatService {
       transientConditions
     };
 
-    // Resolution: lethal anatomy is instant death — a destroyed vital organ (hit directly, crushed to
-    // 0 HP, or taken when its container was gutted) or a head/torso at 0 HP. ONE shared rule
-    // (lethalAnatomyCause), identical to the per-tick pawn/mob reapers, so a body that's dead by the
-    // reaper's standard never survives the blow that made it so. Otherwise a collapse takes the entity
-    // out of the fight WITHOUT killing it — a mob goes DOWN into the recoverable `Collapsed` state (the
-    // same one starvation uses), exactly like a pawn. Death comes ONLY from lethal anatomy or from
-    // bleeding out (blood ≤ 0, handled per-tick in entityLifecycle) — NOT from a single blunt blow that
-    // merely tips an already-shocked creature under the consciousness floor. A downed mob lies there and
-    // recovers as consciousness climbs, bleeds out, or is finished off (willFinishOffDowned).
     if (lethalAnatomyCause(limbs)) {
       if (entityType === 'pawn') {
         (updated as Pawn).isAlive = false;
@@ -1587,8 +1098,6 @@ class CombatServiceImpl implements CombatService {
       (updated as Mob).huntTargetId = undefined;
     }
 
-    // LINEAGES-II §4: a crushing blow ENDURED feeds the crustacean awakening (meter-pawns only — the
-    // lineagePaths gate keeps this off every ordinary hit).
     if (
       entityType === 'pawn' &&
       (updated as Pawn).lineagePaths?.length &&
@@ -1613,18 +1122,14 @@ class CombatServiceImpl implements CombatService {
     return this._applyInjuryToEntity(mob, injury, state, 'mob', knockdown);
   }
 
-  // ── Combat feedback helpers ────────────────────────────────────────────────
-  /** Display name for the Chronicle / floating text. */
   private entityName(e: Pawn | Mob): string {
     if ('entityClass' in e) {
-      // A T5 boss carries a procedural legend name (e.name); ordinary mobs read the def name.
       const base = e.name ?? getCreatureById(e.creatureId)?.name;
       return base ? `${base} #${e.debugId ?? e.id.slice(-4)}` : e.id;
     }
     return e.name;
   }
 
-  /** Live tile coordinate of an entity (mobs carry x/y, pawns a position object). */
   private entityPos(e: Pawn | Mob): { x: number; y: number } {
     if ('entityClass' in e) return { x: e.x, y: e.y };
     return { x: e.position?.x ?? -1, y: e.position?.y ?? -1 };
@@ -1635,8 +1140,6 @@ class CombatServiceImpl implements CombatService {
     simLog.pushCombatText({ worldX: x, worldY: y, text, kind, dy });
   }
 
-  /** Pop a data-driven condition label (name + colour from conditions.jsonc) the tick a flagged
-   *  condition latches. No-op for unflagged conditions, so callers can fire it unconditionally. */
   private emitConditionFloat(x: number, y: number, id: string, dy?: number): void {
     if (x < 0 || y < 0) return;
     const f = getConditionFloater(id);
@@ -1653,18 +1156,6 @@ class CombatServiceImpl implements CombatService {
     if (sound) simLog.pushCombatSound({ sound, worldX: x, worldY: y });
   }
 
-  /**
-   * Resolve one swing from attacker → target: roll, apply injury, surface floating
-   * text + engagement log, and report a kill. Returns the updated state plus the
-   * stamina this swing drained (deducted by the caller regardless of hit/miss).
-   * Misses are surfaced too (as a "dodge") so the defender's evasion is visible.
-   */
-  /**
-   * The entity standing one tile BEYOND the target, on the line from the attacker through it — who a
-   * pierce-through thrust runs into. Steps one further along the (rounded) attack direction and looks
-   * for anything alive on that tile, the attacker excepted. Nothing there ⇒ the thrust hits air, which
-   * is the common case and costs one tile lookup.
-   */
   private entityBehind(
     attacker: Pawn | Mob,
     target: Pawn | Mob,
@@ -1699,8 +1190,6 @@ class CombatServiceImpl implements CombatService {
     const result = this.resolveHit(attacker, target, state, override, guaranteed);
     const pos = this.entityPos(target);
 
-    // KINGDOMS-TRADE §3: a colonist raising a hand against a kingdom's party member is an act of
-    // war — the sending kingdom flips hostile immediately (relation floored; -200 clamps to -100).
     if (!('entityClass' in attacker) && 'entityClass' in target && (target as Mob).kingdomId) {
       const kid = (target as Mob).kingdomId!;
       const rel = kingdomService.colonyRelationTo(state, kid);
@@ -1709,8 +1198,6 @@ class CombatServiceImpl implements CombatService {
       }
     }
 
-    // SOCIAL-LAYER §1: a colonist striking a fellow colonist (a brawl, a stray blow) sours the
-    // pair hard. Only landed hits count — a parried swing leaves no wound to resent.
     if (
       result.hit &&
       !('entityClass' in attacker) &&
@@ -1720,10 +1207,6 @@ class CombatServiceImpl implements CombatService {
       state = socialService.onFriendlyFire(state, attacker as Pawn, target as Pawn);
     }
 
-    // STEALTH auto-reveal: a pawn's LANDED hit on a creature marks the pawn detected by it — and by
-    // its packmates nearby (same lair brood / kingdom party — the yelp carries), so there is no
-    // chain-backstab: to strike from stealth again the pawn must break contact, leave vision, and
-    // let the pack forget. A whiffed swing reveals nothing (the crit bonus only pays on hits anyway).
     if (result.hit && !('entityClass' in attacker) && 'entityClass' in target) {
       const struck = target as Mob;
       revealPawnToMob(struck, attacker.id, turn);
@@ -1738,23 +1221,17 @@ class CombatServiceImpl implements CombatService {
       }
     }
 
-    // Visual lunge: thrust the attacker glyph toward the struck tile and snap it back
-    // (renderer-only; emitted for hit AND miss so the swing reads regardless of outcome).
     const apos = this.entityPos(attacker);
     const ldx = pos.x - apos.x;
     const ldy = pos.y - apos.y;
     const lmag = Math.hypot(ldx, ldy) || 1;
     simLog.pushAttackLunge({ attackerId: attacker.id, dirX: ldx / lmag, dirY: ldy / lmag });
-    // Weapon swing SFX (hit or miss) — the weapon / natural-weapon `audio` archetype at the struck tile.
     const swingSound = itemService.getItemById(result.weaponId)?.audio;
     if (swingSound) simLog.pushCombatSound({ sound: swingSound, worldX: pos.x, worldY: pos.y });
 
     const attackerName = this.entityName(attacker);
     const targetName = this.entityName(target);
     const isTargetMob = 'entityClass' in target;
-    // Chronicle-scope: only log this engagement if the colony could see it (any pawn within sight range
-    // of the struck tile). A pawn-vs-mob fight is always witnessed (the pawn is at/adjacent to `pos`); a
-    // wildlife brawl off across the map drops out, so the chronicle stays the colony's own record.
     const witnessed = isWitnessedByColony(
       state.pawns,
       pos.x,
@@ -1763,9 +1240,6 @@ class CombatServiceImpl implements CombatService {
       weatherSightMul(state.weather?.type)
     );
 
-    // Parried → the swing is turned aside AND the defender earns an IMMEDIATE free counter that lands
-    // for certain (the riposte skips the target's own parry/block/dodge, so it can't recurse). Blocked →
-    // simply stopped cold. Both cost the attacker the swing's stamina; neither leaves a wound.
     if (result.parried) {
       this.emitFloat(pos.x, pos.y, 'dodge', 'PARRY');
       state = this.performAttack(target, attacker, state, turn, undefined, true).state;
@@ -1775,7 +1249,6 @@ class CombatServiceImpl implements CombatService {
       this.emitFloat(pos.x, pos.y, 'dodge', 'BLOCK');
       return { state, staminaCost: result.staminaCost };
     }
-    // Miss → no injury, but log + show the dodge. The swing still cost stamina.
     if (!result.hit) {
       this.emitFloat(pos.x, pos.y, 'dodge', 'dodge');
       if (witnessed)
@@ -1795,7 +1268,6 @@ class CombatServiceImpl implements CombatService {
             weapon: result.weaponId
           }
         );
-      // Combat bark: a colonist who whiffs curses under their breath.
       if (!('entityClass' in attacker) && attacker.isAlive !== false)
         socialService.combatBark(attacker as Pawn, 'miss', targetName, turn);
       return { state, staminaCost: result.staminaCost };
@@ -1806,10 +1278,6 @@ class CombatServiceImpl implements CombatService {
       ? this.applyInjuryToMob(target.id, result.injury, state, result.knockdown)
       : this.applyInjury(target.id, result.injury, state, result.knockdown);
 
-    // PIERCETHROUGH — the thrust carries on into whoever is standing directly behind the target, one
-    // tile further along the same line, and strikes the SAME body part for a fraction of the damage.
-    // This is the pike's whole case: it is a weapon for a RANK, not a duel, and it does nothing extra
-    // when the enemy comes at you one at a time.
     const pierce = itemService.getItemById(result.weaponId)?.weaponProperties?.pierceThrough ?? 0;
     if (pierce > 0 && result.bodyPart) {
       const behind = this.entityBehind(attacker, target, next);
@@ -1829,7 +1297,6 @@ class CombatServiceImpl implements CombatService {
       }
     }
 
-    // A fracture from the same blow lands as a second (bone) wound — no extra knockdown.
     if (result.fractureInjury) {
       next = isTargetMob
         ? this.applyInjuryToMob(target.id, result.fractureInjury, next, false)
@@ -1839,8 +1306,6 @@ class CombatServiceImpl implements CombatService {
       if (fxSound) simLog.pushCombatSound({ sound: fxSound, worldX: pos.x, worldY: pos.y });
     }
 
-    // An organ-penetration from the same blow lands as a third (internal) wound — no extra knockdown. The
-    // organ's HP loss flows into its capacity (kidney → blood_filtration, lung → breathing) via PawnStatService.
     if (result.organInjury) {
       next = isTargetMob
         ? this.applyInjuryToMob(target.id, result.organInjury, next, false)
@@ -1848,12 +1313,8 @@ class CombatServiceImpl implements CombatService {
       this.emitFloat(pos.x, pos.y, 'fracture', 'Organ hit!', 26);
     }
 
-    // SHIELD BASH — a shield in the attacker's off-hand turns a landed MELEE blow into control (stagger /
-    // knockdown / shove), higher tiers only. Melee only (ranged has no override-less swing here).
     if (!override) next = this.applyShieldBash(next, attacker, target, isTargetMob, pos, apos);
 
-    // Floating text: damage number — a rolled crit OR a part-wrecking hit reads as
-    // 'crit'; plus a secondary knockdown / bleed cue.
     const critFloater =
       result.crit ||
       result.injury.severity === 'critical' ||
@@ -1864,10 +1325,6 @@ class CombatServiceImpl implements CombatService {
       critFloater ? 'crit' : 'damage',
       result.crit ? `-${result.injury.damage}!` : `-${result.injury.damage}`
     );
-    // Secondary bleed cue shares the struck tile + spawn instant with the damage number above, so
-    // push it DOWN ~13px to stack below it. Knockdown/collapse now surface as data-driven condition
-    // floaters from _applyInjuryToEntity (same tier), so suppress the bleed cue when knocked down to
-    // avoid two labels colliding on the same row.
     if (!result.knockdown && result.injury.bleeding > 0)
       this.emitFloat(pos.x, pos.y, 'bleed', 'bleed', 13);
 
@@ -1897,13 +1354,6 @@ class CombatServiceImpl implements CombatService {
     const justDied =
       !!after && (after.isAlive === false || ('state' in after && after.state === 'Corpse'));
 
-    // A wounded charger (chargesWhenWounded — mammoth, aurochs, boar…) turns on whoever just struck it,
-    // PAWN or MOB, instead of standing inert. This mirrors the melee-hunt hand-off (handleHunting) but
-    // fires for ANY hit — ranged, drafted, or another creature — so a placid grazer actually retaliates
-    // (previously it only fought back when a MELEE hunter reached adjacency). It locks the attacker
-    // (huntTargetId) and engages: Attacking if the attacker is adjacent (a melee blow), else Alerted so it
-    // closes the gap (a ranged shot). Left alone if already Attacking, or Fleeing (a badly-hurt beast that
-    // has already broken off keeps running rather than yo-yoing between fight and flight).
     if (isTargetMob && after && !justDied) {
       const victim = after as Mob;
       const victimDef = getCreatureById(victim.creatureId);
@@ -1942,8 +1392,6 @@ class CombatServiceImpl implements CombatService {
         pos.y,
         result.weaponId
       );
-      // PAWN-MEMORY: a colonist's kill is talked about — nearby pawns remember who dropped what, and
-      // may bring it up in banter (on the spot or later). Only a COLONY pawn's kill (mobs have entityClass).
       if (!('entityClass' in attacker) && attacker.isAlive !== false) {
         memoryService.recordAroundKind(next, pos.x, pos.y, attacker.id, 'combat', {
           subjectName: attackerName.split(' ')[0],
@@ -1951,8 +1399,6 @@ class CombatServiceImpl implements CombatService {
         });
       }
     }
-    // PAWN-MEMORY: a devastating but NON-fatal blow a colonist lands is also worth remembering — the
-    // day so-and-so near split the boar in two (recalled later like the kill). Kills are handled above.
     if (
       witnessed &&
       !justDied &&
@@ -1965,27 +1411,18 @@ class CombatServiceImpl implements CombatService {
       memoryService.recordAroundKind(next, pos.x, pos.y, attacker.id, 'combat', {
         subjectName: attackerName.split(' ')[0],
         detail: targetName,
-        memorability: 0.4 // a savage blow — notable, but a shade below a clean kill
+        memorability: 0.4
       });
     }
-    // Combat barks (colony pawns only): the attacker crows over a landed blow or a finishing one; a
-    // wounded colonist cries out (unless the blow felled them — the dead don't bark).
     if (!('entityClass' in attacker) && attacker.isAlive !== false)
       socialService.combatBark(attacker as Pawn, justDied ? 'kill' : 'hit', targetName, turn);
     if (!isTargetMob && !justDied && (target as Pawn).isAlive !== false)
       socialService.combatBark(target as Pawn, 'hurt', attackerName, turn);
-    // LINEAGES §4: a pawn's kill feeds the Beast/Werewolf/Arachnid awakening deeds (regardless of whether
-    // the colony saw it). By creature family + whether the killing blow was unarmed (fists / natural weapon).
     if (justDied && isTargetMob && 'traits' in attacker)
       creditKillDeeds(attacker, target as Mob, result.weaponId, turn);
-    // SOCIAL-LAYER §1: colonists who stood together when the beast fell share the bond — every pawn
-    // near the kill gets pairwise `battle_forged` points (deduped inside to once per pair per day).
     if (justDied && isTargetMob && !('entityClass' in attacker)) {
       next = socialService.onFoughtTogether(next, attacker as Pawn, pos.x, pos.y);
     }
-    // On-hit status effect: venom/bleed/screech/tongue natural weapons roll to inflict a timed
-    // transient condition (mitigated by the defender's resistance stat). Applied to the post-injury
-    // state so it stacks onto the same target update.
     const afterEffect = this.applyOnHitEffect(
       next,
       attacker,
@@ -1995,13 +1432,10 @@ class CombatServiceImpl implements CombatService {
       pos
     );
 
-    // Spear KNOCKBACK: a landed reach-weapon hit may shove the target back one tile (STR-scaled). Not
-    // for a ranged shot (no `override`) — only a melee thrust in contact/reach drives someone back.
     const afterKnock = override
       ? afterEffect
       : this.applyKnockback(afterEffect, attacker, target, isTargetMob, result.weaponId, apos);
 
-    // Every landed blow chips condition: the attacker's weapon + the defender's struck armour.
     const armorLoss = this.computeArmorDamage(
       attacker,
       result.damageType,
@@ -2009,8 +1443,6 @@ class CombatServiceImpl implements CombatService {
       override?.armorDamage
     );
     let worn = this.applyGearWear(afterKnock, attacker, target, armorLoss);
-    // ADR-031: the same blow chips a creature's NATURAL hide at the struck part (per-fight wear,
-    // subtracted from its soak by naturalArmorPoints) — the attrition counter to a subtractive tank.
     if (isTargetMob && armorLoss > 0 && result.bodyPart) {
       worn = this.chipNaturalHide(worn, target.id, result.bodyPart, armorLoss, turn);
     }
@@ -2020,11 +1452,6 @@ class CombatServiceImpl implements CombatService {
     };
   }
 
-  /** ADR-031 natural-hide degradation: accumulate `loss` armour points of PER-FIGHT wear on the struck
-   *  part of a mob's hide, capped at that part's full natural soak (wear can open the hide fully, never
-   *  push it negative). Stale wear from a previous fight (outside HIDE_WEAR_RESET_TICKS) is discarded
-   *  before the new chip. Event-rate (landed hits only) and routed through spliceEntity, so it respects
-   *  the copy-on-write combat path — a peace tick allocates nothing. */
   private chipNaturalHide(
     state: GameState,
     mobId: string,
@@ -2036,7 +1463,6 @@ class CombatServiceImpl implements CombatService {
     if (!mob || mob.isAlive === false || mob.state === 'Corpse') return state;
     const partDef = PART_DEF_MAP[partId];
     if (!partDef) return state;
-    // Full (un-worn) soak at this part — the wear ceiling. No natural armour here → nothing to chip.
     const base = naturalArmorPoints(mob, partDef.armor ?? DEFAULT_ARMOR_SHARE, partId);
     if (base <= 0) return state;
     const stale = mob.hideWearAt == null || turn - mob.hideWearAt > HIDE_WEAR_RESET_TICKS;
@@ -2048,12 +1474,6 @@ class CombatServiceImpl implements CombatService {
     return this.spliceEntity(state, mobId, { ...mob, hideWear, hideWearAt: turn }, true);
   }
 
-  /**
-   * Apply every on-hit condition a landed melee blow can inflict: the held/natural weapon's own
-   * `onHitCondition` (rides the swung weapon — including the natural fang/breath items a trait grants).
-   * TRAITS §0: procs live ONLY on the weapon item now, never on the trait, so a venom bite behaves the
-   * same however it was granted. No-op when nothing procs / target is down.
-   */
   private applyOnHitEffect(
     state: GameState,
     attacker: Pawn | Mob,
@@ -2065,9 +1485,6 @@ class CombatServiceImpl implements CombatService {
     const effects: OnHitCondition[] = [];
     const weaponEff = weaponId ? itemService.getItemById(weaponId)?.onHitCondition : undefined;
     if (weaponEff) effects.push(weaponEff);
-    // PRODUCTION-CHAIN-IIII §2 weapon coating: a coated mainHand weapon lends an EXTRA on-hit proc (the
-    // coating item's `coatingEffect`) ON TOP of the weapon's own, while unexpired. Only the equipped
-    // weapon actually swung can be coated (weaponId === mainHand.itemId excludes natural weapons).
     const mh = 'equipment' in attacker ? attacker.equipment?.mainHand : undefined;
     if (mh?.coating && mh.itemId === weaponId && mh.coating.expiresAtTurn > state.turn) {
       const coatEff = itemService.getItemById(mh.coating.itemId)?.coatingEffect;
@@ -2079,13 +1496,6 @@ class CombatServiceImpl implements CombatService {
     return s;
   }
 
-  /**
-   * Roll ONE `onHitEffect` against the defender and, on success, apply the named condition as a timed
-   * transient (conditionTimers — same machinery as knockdown, so it surfaces in transientConditions and
-   * decrements/clears on its own). The trigger chance is reduced by the defender's `resist` stat
-   * (stats.jsonc); an optional `bloodDrain` also bleeds bloodVolume, feeding shock. No-op when the
-   * target is already down.
-   */
   private applyOneOnHitEffect(
     state: GameState,
     eff: OnHitCondition,
@@ -2100,9 +1510,6 @@ class CombatServiceImpl implements CombatService {
     if (!target || target.isAlive === false) return state;
     if (isMob && (target as Mob).state === 'Corpse') return state;
 
-    // Resistance → trigger reduction. `resist` names a 0-baseline `*_resistance` stat (poison/
-    // piercing/mental/blunt), which evaluates to ~0 at the baseline stat and rises with it — used
-    // directly as the fraction by which the trigger chance is cut.
     let resistFrac = 0;
     if (eff.resist) {
       resistFrac = clamp(pawnStatService.evaluateStat(eff.resist, target), 0, 0.9);
@@ -2110,7 +1517,6 @@ class CombatServiceImpl implements CombatService {
     const chance = clamp(eff.chance * (1 - resistFrac), 0, 1);
     if (rng.random() >= chance) return state;
 
-    // Target-side condition (optional — §3b: a pure feeding proc carries only bloodDrain).
     let timers = target.conditionTimers ?? {};
     let transientConditions = target.transientConditions ?? [];
     if (eff.condition) {
@@ -2123,8 +1529,6 @@ class CombatServiceImpl implements CombatService {
         transientConditions = [...transientConditions, eff.condition];
     }
 
-    // Optional blood drain (proboscis/feeding) → reduce bloodVolume; the low blood now drives `shock`
-    // in tickConditions/stepHunger (the old `blood_loss` condition is gone), so no condition write here.
     let bloodVolume = target.bloodVolume;
     let fed = false;
     if (eff.bloodDrain && eff.bloodDrain > 0) {
@@ -2140,18 +1544,10 @@ class CombatServiceImpl implements CombatService {
       transientConditions,
       bloodVolume
     };
-    // The on-hit condition (envenomed / disoriented / ensnared…) just triggered → pop its data-driven
-    // floater. Third tier (below the damage number AND any bleed/knockdown cue from the same hit) so a
-    // weapon's on-hit label doesn't pile onto either of them.
     if (eff.condition) this.emitConditionFloat(pos.x, pos.y, eff.condition, 39);
 
     let s = this.spliceEntity(state, targetId, updated as Pawn | Mob, isMob);
-    // §4.0 shared blood-feast: a successful DRAIN feeds the drinker — stamp the strong, ~30-min
-    // `feasted` buff on the ATTACKER. Non-refreshing (only while absent), so it can't be perma-kept
-    // by chain-feeding; it must lapse before another feed rearms it. Shared by every feeding weapon
-    // (bloodsucking fangs / proboscis / vampiric bites), pawn and mob alike.
     if (fed && attacker && attacker.isAlive !== false) {
-      // LINEAGES §4: a PAWN drinking HUMANOID blood feeds the vampiric awakening deed.
       if (!('creatureId' in attacker)) {
         const humanoidTarget =
           !isMob ||
@@ -2192,16 +1588,11 @@ class CombatServiceImpl implements CombatService {
     return s;
   }
 
-  /** Melee reach in tiles for the entity's ACTIVE weapon: a mainHand melee weapon's `reach` (a reach-2
-   *  polearm strikes and holds one tile away), else the LONGEST reach among its usable natural weapons
-   *  (§3b: a reach-3 dragonfire engages like a spear), else 1 (adjacent). A ranged weapon's `reach` is
-   *  its bow-butt melee fallback — not a pole reach — so it never extends here. */
   private meleeReach(entity: Pawn | Mob): number {
     if ('equipment' in entity && entity.equipment?.mainHand && hasUsableHand(entity)) {
       const wp = itemService.getItemById(entity.equipment.mainHand.itemId)?.weaponProperties;
       if (wp && !isRangedWeaponProps(wp)) return Math.max(1, wp.reach ?? 1);
     }
-    // Natural weapons (unarmed): the longest reach among the granted set — host-part-gated for pawns.
     const ids =
       'creatureId' in entity
         ? (getCreatureById(entity.creatureId)?.naturalWeapons ?? [])
@@ -2214,8 +1605,6 @@ class CombatServiceImpl implements CombatService {
     return reach;
   }
 
-  /** Chebyshev tile distance between two combatants (1 = adjacent); 1 when either has no position
-   *  (entityPos returns −1/−1 for an unplaced pawn — test fixtures fight "in contact"). */
   private entityDistance(a: Pawn | Mob, b: Pawn | Mob): number {
     const ap = this.entityPos(a);
     const bp = this.entityPos(b);
@@ -2223,9 +1612,6 @@ class CombatServiceImpl implements CombatService {
     return Math.max(1, Math.max(Math.abs(ap.x - bp.x), Math.abs(ap.y - bp.y)));
   }
 
-  /** SHIELD BASH — a shield in the WIELDER'S off-hand adds control to a landed MELEE blow: chances to
-   *  stagger, knock down (timed conditions, cut by knockdown_resistance) or shove the target back one
-   *  tile. Bucklers carry none; heavier shields do. Rolls are independent (a heavy blow can do several). */
   private applyShieldBash(
     state: GameState,
     attacker: Pawn | Mob,
@@ -2277,13 +1663,6 @@ class CombatServiceImpl implements CombatService {
     return state;
   }
 
-  /**
-   * Spear KNOCKBACK: on a landed reach-weapon hit whose weapon carries `knockback`, roll a STR-scaled
-   * chance to shove the target one tile directly away from the attacker. The push only takes if the
-   * tile behind is in-bounds, walkable and unoccupied — otherwise the blow simply connects. On success
-   * the target is displaced and marked `staggered` (a brief footing-loss transient; the displacement
-   * itself is the real effect). Chance = base + STR advantage, cut by the target's knockdown_resistance.
-   */
   private applyKnockback(
     state: GameState,
     attacker: Pawn | Mob,
@@ -2293,7 +1672,6 @@ class CombatServiceImpl implements CombatService {
     apos: { x: number; y: number },
     baseOverride?: number
   ): GameState {
-    // Base push chance: an explicit override (shield bash) else the weapon's own `knockback`.
     const base =
       baseOverride ??
       (weaponId ? (itemService.getItemById(weaponId)?.weaponProperties?.knockback ?? 0) : 0);
@@ -2304,14 +1682,12 @@ class CombatServiceImpl implements CombatService {
     if (!tgt || tgt.isAlive === false) return state;
     if (isMob && (tgt as Mob).state === 'Corpse') return state;
 
-    // +2% push chance per point of STR advantage; cut by the target's knockdown_resistance (bracing/mass).
     const atkStr = attacker.stats.strength * conditionStatMultipliers(attacker).strength;
     const defStr = tgt.stats.strength * conditionStatMultipliers(tgt).strength;
     const resist = clamp(pawnStatService.evaluateStat('knockdown_resistance', tgt), 0, 0.9);
     const chance = clamp((base + (atkStr - defStr) * 0.02) * (1 - resist), 0, 0.75);
     if (rng.random() >= chance) return state;
 
-    // Push one tile along the attacker→target unit vector.
     const tpos = this.entityPos(tgt);
     const sx = Math.sign(tpos.x - apos.x);
     const sy = Math.sign(tpos.y - apos.y);
@@ -2321,7 +1697,6 @@ class CombatServiceImpl implements CombatService {
     const map = state.worldMap;
     if (ny < 0 || nx < 0 || ny >= map.length || nx >= (map[0]?.length ?? 0)) return state;
     if (map[ny][nx]?.walkable === false) return state;
-    // Blocked if another living entity already stands on the destination tile.
     const occupied =
       state.pawns.some(
         (p) => p.isAlive !== false && p.position?.x === nx && p.position?.y === ny
@@ -2332,7 +1707,6 @@ class CombatServiceImpl implements CombatService {
         false);
     if (occupied) return state;
 
-    // Displace + stamp the staggered marker (timed transient, decrements/clears like knockdown).
     const timers = { ...(tgt.conditionTimers ?? {}) };
     timers.staggered = Math.max(timers.staggered ?? 0, ticksFromGameHours(0.15));
     const transientConditions = (tgt.transientConditions ?? []).includes('staggered')
@@ -2350,8 +1724,6 @@ class CombatServiceImpl implements CombatService {
     return this.spliceEntity(state, target.id, moved as Pawn | Mob, isMob);
   }
 
-  /** The worn-armour slot with the highest `defense` (the piece that takes a blow — mirrors
-   *  partArmorReduction's best-of selection). Null if the entity wears no armour. Pawn OR geared mob. */
   private bestArmorSlot(entity: Pawn | Mob): string | null {
     const slots = ['bodyOuter', 'bodyMid', 'bodyBase', 'head', 'gloves', 'boots'];
     const eq = entity.equipment as Record<string, ItemInstance | undefined> | undefined;
@@ -2370,15 +1742,11 @@ class CombatServiceImpl implements CombatService {
     return best;
   }
 
-  /** Immutably reduce one equipped instance's durability by `loss` (floored at 0). Pawn OR mob. */
   private decrEquipDurability<T extends Pawn | Mob>(entity: T, slot: string, loss: number): T {
     const eq = entity.equipment as Record<string, ItemInstance | undefined> | undefined;
     const inst = eq?.[slot];
     if (!eq || !inst) return entity;
     const dur = Math.max(0, (inst.durability ?? 0) - loss);
-    // Condition 0 = the item SHATTERS: remove it from the slot so it's no longer worn/usable (mirrors
-    // the tool-wear break in harvest.ts — a worn-out item must leave the equipment doll, not linger at
-    // cond 0). Covers both the attacker's mainHand weapon and the defender's struck armour.
     if (dur <= 0) {
       const next = { ...eq };
       delete next[slot];
@@ -2387,10 +1755,6 @@ class CombatServiceImpl implements CombatService {
     return { ...entity, equipment: { ...eq, [slot]: { ...inst, durability: dur } } };
   }
 
-  /** ON A HIT: wear the attacker's main-hand weapon and the defender's struck armour piece by their
-   *  `durabilityLossPerCombatHit` (pawns AND geared humanoid mobs, §2c). Routed through `spliceEntity`
-   *  so it rides the copy-on-write combat path (no unconditional array rebuild); no-op when neither side
-   *  carries wearing gear. */
   private applyGearWear(
     state: GameState,
     attacker: Pawn | Mob,
@@ -2398,7 +1762,6 @@ class CombatServiceImpl implements CombatService {
     armorLoss: number
   ): GameState {
     let next = state;
-    // The attacker's weapon wears from use (its own durabilityLossPerCombatHit).
     const weaponInst = 'equipment' in attacker ? attacker.equipment?.mainHand : undefined;
     const weaponLoss = weaponInst
       ? (itemService.getItemById(weaponInst.itemId)?.durabilityLossPerCombatHit ?? 0)
@@ -2417,8 +1780,6 @@ class CombatServiceImpl implements CombatService {
         );
       }
     }
-    // The defender's struck armour takes `armorLoss` — the WEAPON's armorDamage × the attacker's
-    // armor_damage stat (computed by the caller), so a hammer caves plate fast, a cleaver barely scratches.
     if (armorLoss > 0 && 'equipment' in defender) {
       const isMob = 'creatureId' in defender;
       const live = isMob
@@ -2437,18 +1798,12 @@ class CombatServiceImpl implements CombatService {
     return next;
   }
 
-  /** Default armour condition stripped per hit, by damage type, when a weapon doesn't author its own
-   *  `armorDamage`: blunt crushes armour, piercing punches small holes, cutting skids off it. */
   private static readonly DEFAULT_ARMOR_DAMAGE: Record<string, number> = {
     blunt: 4,
     piercing: 2,
     cutting: 1.5
   };
 
-  /** Armour condition this swing strips: weapon.armorDamage (or the by-type default) × the attacker's
-   *  STR-driven `armor_damage` stat. A ranged shot pierces rather than wrecks → much less, and it is
-   *  the HEAD that decides: `ammoArmorDamage` (the projectile's own) wins over the by-type default,
-   *  so a hardened quarrel wrecks mail the same bow's broadhead would only scratch. */
   private computeArmorDamage(
     attacker: Pawn | Mob,
     damageType: DamageType,
@@ -2457,7 +1812,7 @@ class CombatServiceImpl implements CombatService {
   ): number {
     const stat = pawnStatService.evaluateStat('armor_damage', attacker);
     const byType = CombatServiceImpl.DEFAULT_ARMOR_DAMAGE[damageType] ?? 2;
-    if (isRanged) return (ammoArmorDamage ?? byType * 0.4) * stat; // arrows pierce, they don't cave armour
+    if (isRanged) return (ammoArmorDamage ?? byType * 0.4) * stat;
     const wp =
       'equipment' in attacker && attacker.equipment?.mainHand
         ? itemService.getItemById(attacker.equipment.mainHand.itemId)?.weaponProperties
@@ -2465,8 +1820,6 @@ class CombatServiceImpl implements CombatService {
     return (wp?.armorDamage ?? byType) * stat;
   }
 
-  /** Nearest living hostile mob within `maxRange` tiles of a pawn (auto-engagement; ranged
-   *  acquisition passes the weapon range, melee passes 1 = adjacent). */
   private nearestHostileInRange(pawn: Pawn, mobs: Mob[], maxRange: number): Mob | undefined {
     if (!pawn.position) return undefined;
     const px = pawn.position.x;
@@ -2475,10 +1828,6 @@ class CombatServiceImpl implements CombatService {
     let bestDist = Infinity;
     for (const m of mobs) {
       if (m.isAlive === false || m.state === 'Corpse') continue;
-      // A downed (Collapsed) mob is out of the fight — disengage rather than beat an unconscious body
-      // (it recovers / bleeds out / is finished by a hungry predator). Mirrors the collapsed-pawn skip.
-      // A drafted ATTACK order or a work-Hunt (huntTargetId) bypasses this acquire, so the player or a
-      // committed hunter can still finish a downed quarry.
       if (m.state === 'Collapsed') continue;
       const hostile = m.entityClass === 'mob' || m.state === 'Attacking' || m.state === 'Alerted';
       if (!hostile) continue;
@@ -2491,7 +1840,6 @@ class CombatServiceImpl implements CombatService {
     return best;
   }
 
-  /** Binary cover: 0.20 if the target hugs a sight-blocker (a non-walkable neighbour tile). Read-only. */
   private rangedCoverPenalty(state: GameState, x: number, y: number): number {
     const map = state.worldMap;
     const h = map.length;
@@ -2508,7 +1856,6 @@ class CombatServiceImpl implements CombatService {
     return 0;
   }
 
-  /** Build the ranged attack profile (weapon + ammo bonuses) and hit modifier for one shot (§VI-1). */
   private buildRangedOverride(
     pawn: Pawn,
     rw: RangedWeapon,
@@ -2517,8 +1864,6 @@ class CombatServiceImpl implements CombatService {
     coverPenalty: number
   ): RangedOverride {
     const rawWp = itemService.getItemById(rw.itemId)?.weaponProperties;
-    // §Q: a Masterwork bow shoots harder/truer — scale the quality-relevant fields by the tier.
-    // §I: a Famed bow explodes them ×2–5 on top of its tier.
     const wp = rawWp ? scaleWeaponQuality(rawWp, rw.quality, rw.famedStatMult) : undefined;
     const profile = profileFromWeapon(
       pawn.stats.strength,
@@ -2526,18 +1871,12 @@ class CombatServiceImpl implements CombatService {
       wp ?? { damage: 1, attackSpeed: 1, range: rw.range },
       rw.itemName
     );
-    // Damage comes from the AMMUNITION, not the launcher: the arrowhead's `damage` × the bow's draw
-    // power (war bow ≫ self bow on the same arrow). A bow/crossbow/sling authors `damage: 0`, so a shot
-    // with no ammo would do nothing. THROWN weapons (no ammo) keep their own `damage` — they ARE the
-    // projectile. The ammo also picks the wound type (broadhead → cutting/bleed, bodkin → piercing/AP).
     if (ammo) {
       const drawPower = rawWp?.drawPower ?? 1;
       profile.baseDamage = (ammo.props.damage ?? 0) * drawPower + (ammo.props.damageBonus ?? 0);
       if (ammo.props.damageType) profile.damageType = ammo.props.damageType;
     }
     profile.armorPen = clamp(profile.armorPen + (ammo?.props.armorPen ?? 0), 0, 1);
-    // Hit chance: the PER-driven `aim_accuracy` stat + flat gear/ammo accuracy − a LINEAR distance
-    // penalty − cover. (Replaces the old optimal-band curve with the requested linear falloff.)
     const hitMod = rangedAccuracyMod(
       pawnStatService.evaluateStat('aim_accuracy', pawn),
       sumAimBonuses(pawn).accuracy,
@@ -2548,11 +1887,6 @@ class CombatServiceImpl implements CombatService {
     return { profile, hitMod, strScaled: rw.strScaled, armorDamage: ammo?.props.armorDamage };
   }
 
-  /**
-   * Attempt one ranged shot. Returns the new state + stamina cost if it fired, or null when the
-   * target is out of range / out of sight / out of ammo / off-cadence (the FSM then closes to melee).
-   * Records ammo spend + a recovery drop into the caller's collections (applied once in the merge).
-   */
   private tryRangedShot(
     pawn: Pawn,
     target: Pawn | Mob,
@@ -2564,12 +1898,8 @@ class CombatServiceImpl implements CombatService {
     ammoUpdates: Map<string, { itemId: string; newQty: number }>,
     recovered: DroppedItem[]
   ): { state: GameState; staminaCost: number } | null {
-    // Effective range = STR-scaled weapon reach + gear, capped by vision — subsumes the range/sight cap.
-    if (dist > effectiveRangedRange(pawn, rw)) return null; // out of range/sight — close (FSM)
+    if (dist > effectiveRangedRange(pawn, rw)) return null;
 
-    // Part VII occlusion: a wall / natural rock on the shooter→target line blocks the shot. Cheap
-    // bounded Bresenham over the baked `blocksSight` tile flag — null here makes the FSM close to
-    // break the line of fire (no WASM raycast; ADR-008 untouched).
     if (
       pawn.position &&
       !hasLineOfSight(state.worldMap, pawn.position.x, pawn.position.y, tpos.x, tpos.y)
@@ -2577,16 +1907,12 @@ class CombatServiceImpl implements CombatService {
       return null;
     }
 
-    // Ammo: weapons with an ammoCategory need a matching stack; self-thrown weapons (no category)
-    // fire freely for now (true self-consume is deferred — see the spec's Open Questions).
     let ammo: AmmoPick | null = null;
     if (rw.ammoCategory) {
       ammo = pickAmmo(pawn, rw.ammoCategory);
-      if (!ammo) return null; // out of ammo — fall back to closing/melee
+      if (!ammo) return null;
     }
 
-    // Aim cadence = AIM time (aim_speed/DEX, distance-scaled, draw gear) + SPAN time (reload_speed/DEX,
-    // crossbow crank only). The DEX SPEED axis governs both; PER governs precision (accuracy/range).
     const attackSpeed = Math.max(
       0.5,
       pawnStatService.evaluateStat('attack_speed', pawn) * this.conditionMult(pawn, 'attackSpeed')
@@ -2600,7 +1926,6 @@ class CombatServiceImpl implements CombatService {
       rw.reload,
       dist,
       pawnStatService.evaluateStat('aim_speed', pawn),
-      // General aim gear (bracers…) + the category-aware quiver draw bonus / no-quiver pack penalty.
       sumAimBonuses(pawn).speed + drawSpeedModifier(pawn, rw.ammoCategory),
       pawnStatService.evaluateStat('reload_speed', pawn)
     );
@@ -2610,7 +1935,6 @@ class CombatServiceImpl implements CombatService {
     const override = this.buildRangedOverride(pawn, rw, ammo, dist, cover);
     const atk = this.performAttack(pawn, target, state, turn, override);
 
-    // Cosmetic: animate the shot flying shooter → target (the hit already resolved hitscan above).
     if (pawn.position) {
       simLog.pushProjectile({
         fromX: pawn.position.x,
@@ -2627,7 +1951,6 @@ class CombatServiceImpl implements CombatService {
       const have = pawn.inventory?.items?.[ammo.itemId] ?? 0;
       const newQty = Math.max(0, have - 1);
       ammoUpdates.set(pawn.id, { itemId: ammo.itemId, newQty });
-      // One-time chronicle line as the quiver runs dry — the pawn then closes to melee/bow-butt.
       if (newQty === 0) {
         const ammoName = (itemService.getItemById(ammo.itemId)?.name ?? 'ammunition').toLowerCase();
         simLog.logEvent({
@@ -2647,9 +1970,6 @@ class CombatServiceImpl implements CombatService {
         });
       }
     } else if (!rw.channeled) {
-      // Thrown self-consume (RANGED-COMBAT spec): the spear/stone leaves the hand and lands on the
-      // target tile as a recoverable drop; the slot empties so the pawn falls back to melee/closing
-      // until it re-arms. The drop rides the same collected-once recovery array as spent ammo.
       atk.state = this.clearEquipSlot(atk.state, pawn.id, rw.slot);
       recovered.push({
         id: `thrown-${rw.itemId}-${turn}-${tpos.x}-${tpos.y}-${Math.floor(rng.random() * 1e6)}`,
@@ -2659,16 +1979,11 @@ class CombatServiceImpl implements CombatService {
         quantity: 1
       });
     }
-    // §M channeled staff: no ammo and NOT self-consumed — it stays in hand. Its mana is the
-    // `staminaCost` already drained by performAttack (winded = out of mana), so nothing to spend here.
     return atk;
   }
 
-  /** Per-pawn last-turn a "No ammo" float was shown (throttle so it doesn't fire every tick). */
   private _noAmmoNotified = new Map<string, number>();
 
-  /** Floating "No ammo" over a ranged pawn that wants to fire but has none — reuses the combat-text
-   *  overlay channel, throttled per pawn. */
   private notifyNoAmmo(pawn: Pawn, turn: number): void {
     if (!pawn.position) return;
     const last = this._noAmmoNotified.get(pawn.id) ?? -Infinity;
@@ -2682,8 +1997,6 @@ class CombatServiceImpl implements CombatService {
     });
   }
 
-  /** Remove the item in `slot` from a pawn's equipment (immutable, mirrors decrEquipDurability). Used
-   *  for thrown-weapon self-consume — the weapon physically left the hand. */
   private clearEquipSlot(state: GameState, pawnId: string, slot: string): GameState {
     return {
       ...state,
@@ -2697,18 +2010,15 @@ class CombatServiceImpl implements CombatService {
     };
   }
 
-  /** True while an entity is knocked down OR collapsed and cannot swing this tick. */
   private isKnockedDown(e: Pawn | Mob): boolean {
     const d = e.conditionTimers;
     return (d?.knockdown ?? 0) > 0 || (d?.collapse ?? 0) > 0;
   }
 
-  /** True while an entity is winded (stamina bottomed out) — can't attack until stamina refills. */
   private isWinded(e: Pawn | Mob): boolean {
     return (e.conditionTimers?.winded ?? 0) > 0;
   }
 
-  /** True while an entity is actively engaged in melee (throttles stamina regen mid-fight). */
   private isFighting(e: Pawn | Mob): boolean {
     if ('currentState' in e) {
       return (
@@ -2720,10 +2030,6 @@ class CombatServiceImpl implements CombatService {
     return (e as Mob).state === 'Attacking';
   }
 
-  /** Product of all active condition (transient + persistent) `key` modifiers — the general form behind
-   *  every combat modifier a condition carries (dodge, hitChance, attackSpeed, weaponDamage, critChance).
-   *  Scales the DERIVED combat value directly, never a base attribute (winded → dodge 0.5; a fouled 2H
-   *  guard → all five at 0.5). 1 = nothing active carries the key. */
   private conditionMult(e: Pawn | Mob, key: string): number {
     let m = 1;
     for (const id of e.transientConditions ?? []) {
@@ -2739,29 +2045,18 @@ class CombatServiceImpl implements CombatService {
     return m;
   }
 
-  /** The equipped off-hand SHIELD item def (armorType 'shield'), or undefined. */
   private shieldDef(e: Pawn | Mob): Item | undefined {
     const eq = 'equipment' in e ? e.equipment : undefined;
     const off = eq?.offHand ? itemService.getItemById(eq.offHand.itemId) : undefined;
     return off?.armorProperties?.armorType === 'shield' ? off : undefined;
   }
 
-  /**
-   * Chance (0..BLOCK_CAP) to FULLY stop a blow: the `block` stat (constitution + body mass) + the shield's
-   * flat `blockBonus`, halved vs a ranged attack, never weight-penalized — the heavy tank's negation.
-   *
-   * SCALED BY THE INCOMING FORCE: a shield turns a glancing cut aside easily and a descending maul
-   * barely at all. Without this, a shield negated a greataxe exactly as often as a knife, which made
-   * "stop it cold" strictly better the harder the game hit — the opposite of how a shield behaves.
-   */
   private blockChance(defender: Pawn | Mob, ranged: boolean, incoming = BLOCK_FORCE_REF): number {
     const shield = this.shieldDef(defender)?.armorProperties;
     const bonus = shield?.blockBonus ?? 0;
     const base =
       (pawnStatService.evaluateStat('block', defender) + bonus) *
       this.conditionMult(defender, 'block');
-    // A sturdier shield holds against a heavier blow: its own `blockBonus` raises the force it shrugs
-    // off, so a boss shield stops what a buckler does not.
     const ref = BLOCK_FORCE_REF * (1 + bonus);
     const forceFactor = clamp(
       (2 * ref) / (ref + Math.max(0, incoming)),
@@ -2771,12 +2066,10 @@ class CombatServiceImpl implements CombatService {
     return clamp(base * forceFactor * (ranged ? RANGED_BLOCK_MULT : 1), 0, BLOCK_CAP);
   }
 
-  /** Melee parry chance from the shield's `parryChance` (0 without a shield). */
   private parryChanceOf(defender: Pawn | Mob): number {
     return clamp(this.shieldDef(defender)?.armorProperties?.parryChance ?? 0, 0, PARRY_CAP);
   }
 
-  /** A blow the defender's shield stops cold (blocked) or turns aside (parried): hit=false, no damage. */
   private negatedHit(
     weaponId: string,
     staminaCost: number,
@@ -2798,14 +2091,6 @@ class CombatServiceImpl implements CombatService {
     };
   }
 
-  /**
-   * Per-tick stamina regen + winded latch for one entity. Drives the "fight until winded, then
-   * pass turns until recovered" loop: regen the full `stamina_recovery_rate` while winded/resting
-   * (throttled to a fraction while actively fighting so a melee actually depletes); on hitting 0
-   * latch `winded`; clear it only once stamina is back to full. Persists through
-   * `conditionTimers.winded` (so `syncTransientConditions` keeps it on pawns) and mirrors it into
-   * `transientConditions` (mobs don't run that sync) so the moveSpeed/dodge modifiers apply.
-   */
   private tickStaminaAndWinded<T extends Pawn | Mob>(e: T): T {
     if (e.isAlive === false) return e;
     const max = e.maxStamina ?? calcMaxStamina(e.stats);
@@ -2815,10 +2100,6 @@ class CombatServiceImpl implements CombatService {
 
     let stamina = postDrain;
     if (postDrain < max) {
-      // `stamina_recovery_rate` is a PER-SECOND value (like every other rate — mob flee drain,
-      // needs via perTick); scale it to this tick. Previously the raw per-second number was added
-      // every tick (~60×), so stamina refilled in ~1s and `winded` never bit (N-2).
-      // Fatigue slows recovery (rate ÷ factor) — a tired entity catches its breath slower.
       const rate =
         perTick(pawnStatService.evaluateStat('stamina_recovery_rate', e)) / fatigueStaminaFactor(e);
       const eff = winded || !this.isFighting(e) ? rate : rate * COMBAT_REGEN_FRACTION;
@@ -2831,11 +2112,9 @@ class CombatServiceImpl implements CombatService {
     const durations = { ...(e.conditionTimers ?? {}) };
     let transientConditions = e.transientConditions ?? [];
     if (winded) {
-      durations.winded = 2; // refresh so the per-tick duration decrement never expires the latch
+      durations.winded = 2;
       if (!transientConditions.includes(WINDED)) {
         transientConditions = [...transientConditions, WINDED];
-        // Rising edge (just ran out of breath) → pop the floater. No damage number accompanies it
-        // (separate from a swing), so it sits at the entity's own row (dy 0).
         const wpos = this.entityPos(e);
         this.emitConditionFloat(wpos.x, wpos.y, WINDED);
       }
@@ -2859,26 +2138,17 @@ class CombatServiceImpl implements CombatService {
   }
 
   private _tickCombat(state: GameState): GameState {
-    // `next` starts as the caller's state; the per-hit appliers clone the pawns/mobs arrays COPY-ON-
-    // WRITE on the first write (see `spliceEntity`) and write slots in place thereafter. A peace tick
-    // never writes → never clones → zero allocation. The clone (when it happens) means combat never
-    // mutates the caller's `state` (GameEngineImpl's `preCombatState`), which is index-diffed against
-    // the result to spawn carcasses (`handleFreshCombatCorpses`).
     let next: GameState = state;
-    // Track stamina mutations for attacking entities (id → new stamina value).
     const mobStaminaUpdates = new Map<string, number>();
     const pawnStaminaUpdates = new Map<string, number>();
-    // RANGED-COMBAT: ammo spent this tick (pawnId → new stack qty) and recovered projectiles to drop,
-    // both applied once in the final merge (§VI-1/§VI-3: no per-shot pawns-array rebuild, bounded drops).
     const pawnAmmoUpdates = new Map<string, { itemId: string; newQty: number }>();
     const recoveredAmmo: DroppedItem[] = [];
 
-    // ── Mob attacks ──────────────────────────────────────────────────────
     const mobs = state.mobs ?? [];
     for (const mob of mobs) {
       if (mob.state !== 'Attacking' || mob.isAlive === false) continue;
       if (this.isKnockedDown(mob)) continue;
-      if (this.isWinded(mob)) continue; // out of breath — pass turns until stamina recovers
+      if (this.isWinded(mob)) continue;
       const attackSpeed = Math.max(0.5, pawnStatService.evaluateStat('attack_speed', mob));
       const interval = Math.max(
         MIN_ATTACK_INTERVAL_TICKS,
@@ -2888,16 +2158,11 @@ class CombatServiceImpl implements CombatService {
 
       const curStamina = mob.stamina ?? mob.maxStamina ?? 50;
 
-      // Determine target: huntTargetId mob first, then nearest pawn, then nearest mob
       let target: Pawn | Mob | undefined;
       if (mob.huntTargetId) {
         target = mobs.find((m) => m.id === mob.huntTargetId && m.isAlive !== false);
       }
       if (!target) {
-        // Skip collapsed pawns by default — a downed pawn is no longer a target, so the mob disengages
-        // rather than beating an unconscious body (spec: a collapsed pawn is carried off or bleeds out).
-        // EXCEPTION: a hungry predator finishes it off (willFinishOffDowned) — the same predicate the FSM
-        // uses to decide whether to keep engaging, so the two never disagree (one holds, the other skips).
         const mobDef = getCreatureById(mob.creatureId);
         const finisher = mobDef ? willFinishOffDowned(mob.needs?.hunger ?? 0, mobDef) : false;
         target = state.pawns.find(
@@ -2910,10 +2175,6 @@ class CombatServiceImpl implements CombatService {
         );
       }
       if (!target) {
-        // Retaliate ONLY against a mob that is actually attacking US (its huntTargetId points back at
-        // this mob) — never swing at a same-faction ally merely because it's adjacent. Without this an
-        // Attacking mob whose pawn target stepped out of reach clubbed whatever neighbour was nearest
-        // (the harpies-fighting-each-other bug). Allies don't target us, so they're never hit.
         target = mobs.find(
           (m) =>
             m.id !== mob.id &&
@@ -2927,26 +2188,20 @@ class CombatServiceImpl implements CombatService {
 
       const atk = this.performAttack(mob, target, next, state.turn);
       next = atk.state;
-      // Fatigue raises the effective drain (cost × factor) — a tired attacker winds faster.
       mobStaminaUpdates.set(
         mob.id,
         Math.max(0, curStamina - atk.staminaCost * fatigueStaminaFactor(mob))
       );
     }
 
-    // ── Pawn attacks (drafted order OR auto-engaged Fighting state) ───────
     for (const pawn of state.pawns) {
       if (pawn.isAlive === false || !pawn.position) continue;
       if (this.isKnockedDown(pawn)) continue;
-      if (this.isWinded(pawn)) continue; // out of breath — pass turns until stamina recovers
+      if (this.isWinded(pawn)) continue;
 
-      // RANGED-COMBAT: a ranged pawn acquires hostiles out to its weapon range; a melee pawn out to its
-      // weapon reach (a reach-2 polearm engages one tile away, not just adjacent).
       const rw = getRangedWeapon(pawn);
       const acquireRange = rw ? effectiveRangedRange(pawn, rw) : this.meleeReach(pawn);
 
-      // Resolve the pawn's target: an explicit draft order, or — for an undrafted pawn the FSM has
-      // put into Fighting — the nearest hostile within reach (melee adjacent, or ranged weapon range).
       let target: Pawn | Mob | undefined;
       if (pawn.drafted && pawn.draftTarget?.type === 'attack') {
         const dt = pawn.draftTarget;
@@ -2955,7 +2210,6 @@ class CombatServiceImpl implements CombatService {
             ? mobs.find((m) => m.id === dt.targetId && m.isAlive !== false)
             : state.pawns.find((p) => p.id === dt.targetId && p.isAlive !== false);
         if (!target) {
-          // Target dead — clear the stale draft order.
           next = {
             ...next,
             pawns: next.pawns.map((p) => (p.id === pawn.id ? { ...p, draftTarget: undefined } : p))
@@ -2963,15 +2217,11 @@ class CombatServiceImpl implements CombatService {
           continue;
         }
       } else if (pawn.drafted) {
-        // NT-4: a drafted pawn with no explicit attack order (idle, holding, or mid-move) still
-        // defends itself — it swings at the nearest hostile in reach instead of standing inert
-        // when the player walks it up to an enemy. No hostile in reach → nothing to do.
         target = this.nearestHostileInRange(pawn, mobs, acquireRange);
         if (!target) continue;
       } else if (pawn.currentState === 'Fighting') {
         target = this.nearestHostileInRange(pawn, mobs, acquireRange);
       } else if (pawn.currentState === 'BloodHunt' && pawn.huntTargetId) {
-        // LINEAGES-II: the lose-control hunt swings at its acquired quarry — beast OR colonist.
         target =
           mobs.find(
             (m) => m.id === pawn.huntTargetId && m.isAlive !== false && m.state !== 'Corpse'
@@ -2981,8 +2231,6 @@ class CombatServiceImpl implements CombatService {
           );
         if (!target) continue;
       } else if (pawn.currentState === 'Hunting' && pawn.huntTargetId) {
-        // Work-driven hunt: swing at the marked quarry (a neutral animal isn't a
-        // "hostile", so it must be targeted explicitly rather than via nearestAdjacentHostile).
         target = mobs.find((m) => m.id === pawn.huntTargetId && m.isAlive !== false);
       } else {
         continue;
@@ -2996,21 +2244,15 @@ class CombatServiceImpl implements CombatService {
       );
       const curStamina = pawn.stamina ?? pawn.maxStamina ?? 50;
 
-      // A draft order can FORCE melee: a ranged pawn told to "Target (melee)" skips the shot path,
-      // closes (via _processDraftOrders' stopDist=1) and swings in contact instead.
       const forceMelee =
         !!pawn.drafted && pawn.draftTarget?.type === 'attack' && pawn.draftTarget.mode === 'melee';
-      const rangedAuto = !!rw && !forceMelee; // a ranged pawn engaging at range (not opt-in melee)
+      const rangedAuto = !!rw && !forceMelee;
 
-      // Out of ammo + auto-ranged: warn (floating, throttled) and HOLD. It does NOT auto-close or
-      // auto-swing in melee — engaging in melee is always opt-in ("Target (melee)"), so a fragile
-      // shooter isn't dragged into a fight it can't win. Catches both at-range and in-contact.
       if (rangedAuto && !hasViableAmmo(pawn, rw)) {
         this.notifyNoAmmo(pawn, state.turn);
         continue;
       }
 
-      // ── Ranged: fire at a target beyond melee but within range (on cadence; ammo present). ──
       if (rangedAuto && tdist > 1) {
         const shot = this.tryRangedShot(
           pawn,
@@ -3030,15 +2272,11 @@ class CombatServiceImpl implements CombatService {
             Math.max(0, curStamina - shot.staminaCost * fatigueStaminaFactor(pawn))
           );
         }
-        continue; // out of range/sight/ammo → the FSM closes; never a melee swing at distance
+        continue;
       }
 
-      // ── Melee: requires the target within weapon reach (1 = adjacent; a reach-2 polearm strikes one
-      //    tile away). A ranged weapon in contact swings as a (weak) melee weapon via its own melee
-      //    profile (bow stave / crossbow stock / sling pommel) — no special bow-butt path. ──
       if (tdist > this.meleeReach(pawn)) continue;
 
-      // Attack cadence — scaled by attack_speed stat.
       const pawnAttackSpeed = Math.max(
         0.5,
         pawnStatService.evaluateStat('attack_speed', pawn) * this.conditionMult(pawn, 'attackSpeed')
@@ -3051,20 +2289,12 @@ class CombatServiceImpl implements CombatService {
 
       const atk = this.performAttack(pawn, target, next, state.turn);
       next = atk.state;
-      // Fatigue raises the effective drain (armour load tires you via the `encumbered` condition's
-      // fatigueRate → the fatigue need → fatigueStaminaFactor — one channel, no double-count).
       pawnStaminaUpdates.set(
         pawn.id,
         Math.max(0, curStamina - atk.staminaCost * fatigueStaminaFactor(pawn))
       );
     }
 
-    // Apply this tick's attack-drain, then regen + winded latch for EVERY alive entity (so a winded
-    // one recovers even after the fight ends). #2 (ENGINE-PERFORMANCE): tickStaminaAndWinded already
-    // returns the SAME ref for a full/not-winded entity (the common case), so rebuild each array
-    // COPY-ON-WRITE — only allocate (and only once) if some entity actually changed. At peace nothing
-    // changes → zero array allocation, vs the old unconditional double `.map`. (Inner evaluateStat is
-    // now cached by #1.) Kept immutable — no mutation risk in the combat phase.
     const tickAll = <T extends Pawn | Mob>(arr: T[], drain: Map<string, number>): T[] => {
       let out: T[] | null = null;
       for (let i = 0; i < arr.length; i++) {
@@ -3084,7 +2314,6 @@ class CombatServiceImpl implements CombatService {
       pawns: tickAll(next.pawns, pawnStaminaUpdates)
     };
 
-    // RANGED-COMBAT: apply ammo spend (decrement the fired stack) — gated, so no rebuild at peace.
     if (pawnAmmoUpdates.size > 0) {
       next = {
         ...next,
@@ -3098,7 +2327,6 @@ class CombatServiceImpl implements CombatService {
         })
       };
     }
-    // Recovered projectiles drop on the struck tiles (haulable like any drop). §VI-3: appended once.
     if (recoveredAmmo.length > 0) {
       next = { ...next, droppedItems: [...(next.droppedItems ?? []), ...recoveredAmmo] };
     }
@@ -3106,7 +2334,6 @@ class CombatServiceImpl implements CombatService {
     return next;
   }
 
-  /** Deferred — stub; wired by MAGIC-SKILLS spec. */
   triggerSkill(
     _skillId: string,
     _casterId: string,

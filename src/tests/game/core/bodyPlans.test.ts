@@ -14,7 +14,6 @@ import { rng } from '$lib/game/core/util/rng';
 import { pawnStatService } from '$lib/game/services/PawnStatService';
 import type { Mob } from '$lib/game/core/types';
 
-// Body plans (limbmap.jsonc): plan-appropriate anatomy per creature category; the map supplies structure + default part sizes only.
 describe('body plans', () => {
   it('the humanoid plan is the 6-limb arms/legs body with fingers + toes', () => {
     const limbs = createBodyPlanLimbs(DEFAULT_PLAN, 1);
@@ -44,7 +43,6 @@ describe('body plans', () => {
   });
 
   it('each plan carries a brain-like + heart-like organ so the capacity model resolves', () => {
-    // the resolver matches organs by pattern, so a plan may use its own anatomy's names (synganglion, tubularHeart).
     for (const plan of [
       'humanoid',
       'quadruped',
@@ -70,7 +68,6 @@ describe('body plans', () => {
     expect(clawed).not.toContain('frontLeftHoof');
     expect(hooved).toContain('frontLeftHoof');
     expect(hooved).not.toContain('frontLeftPaw');
-    // both reuse the same shared leg segment (declared on the quadruped plan).
     expect(clawed).toContain('frontLeftShoulder');
     expect(hooved).toContain('frontLeftShoulder');
   });
@@ -90,17 +87,13 @@ describe('body plans', () => {
     expect(big.flatMap((l) => l.parts!).find((p) => p.id === 'frontLeftPaw')!.maxHp).toBe(
       paw(base).maxHp * 2
     );
-    // health is seeded to the scaled maxHp (full).
     expect(paw(big).health).toBe(paw(big).maxHp);
   });
 
   it('rollBodyPart respects the plan — a quadruped never rolls a humanoid finger', () => {
     rng.reseed(7);
     const planParts = new Set(
-      Object.values(
-        // every outer part of the quadruped plan
-        createBodyPlanLimbs('quadruped', 1).flatMap((l) => l.parts!.map((p) => p.id))
-      )
+      Object.values(createBodyPlanLimbs('quadruped', 1).flatMap((l) => l.parts!.map((p) => p.id)))
     );
     for (let i = 0; i < 500; i++) {
       const part = rollBodyPart('quadruped');
@@ -118,10 +111,9 @@ describe('body plans', () => {
   it('the skull is the BONE (skeleton), the head is the flesh that holds the brain; a broken skull is not death', () => {
     const skull = PART_DEF_MAP['skull']!;
     expect(skull.skeleton).toBe(true);
-    expect(skull.isCritical).toBeUndefined(); // a bone is never instant-death
+    expect(skull.isCritical).toBeUndefined();
     expect(skull.containedIn).toBe('head');
     expect(PART_DEF_MAP['head']!.skeleton).toBeUndefined();
-    // The brain lives in the FLESH head, so tearing the head apart (not cracking the skull) is what kills.
     expect(PART_DEF_MAP['brain']!.containedIn).toBe('head');
     expect(PART_DEF_MAP['brain']!.isVital).toBe(true);
   });
@@ -156,24 +148,22 @@ describe('body plans', () => {
       const crippled = markMissing(noHands, ['leftFoot', 'rightFoot', 'skull']);
       const wc = enabledNaturalWeapons(crippled);
       expect(wc.has('fists')).toBe(false);
-      expect(wc.has('kick')).toBe(false); // → attacker falls back to thrash
+      expect(wc.has('kick')).toBe(false);
     });
 
     it('natural armour is distributed per part (armoured trunk, soft belly, exposed eyes); every rollable part has a share', () => {
       const chest = PART_DEF_MAP['chest']!.armor!;
       const belly = PART_DEF_MAP['abdomen']!.armor!;
       const eye = PART_DEF_MAP['leftEye']!.armor!;
-      expect(chest).toBeGreaterThan(belly); // soft belly is a weak spot
-      expect(belly).toBeGreaterThan(eye); // eyes barely armoured
-      expect(PART_DEF_MAP['cephalothorax']!.armor).toBe(1.0); // chitin carapace
-      // Every part that can be ROLLED as a hit location carries an armour share (no gaps).
+      expect(chest).toBeGreaterThan(belly);
+      expect(belly).toBeGreaterThan(eye);
+      expect(PART_DEF_MAP['cephalothorax']!.armor).toBe(1.0);
       for (const def of Object.values(PART_DEF_MAP)) {
         if (def && def.hitWeight > 0) expect(typeof def.armor).toBe('number');
       }
     });
 
     it("a quadruped that loses its mouth can't bite but still claws with a surviving paw", () => {
-      // bite comes from the whole mouth (jaw + snout); destroy both to lose it.
       const limbs = markMissing(createBodyPlanLimbs('quadruped', 1), [
         'jaw',
         'snout',
@@ -181,12 +171,11 @@ describe('body plans', () => {
       ]);
       const w = enabledNaturalWeapons(limbs);
       expect(w.has('bite')).toBe(false);
-      expect(w.has('claw')).toBe(true); // the OTHER front paw still claws
+      expect(w.has('claw')).toBe(true);
     });
   });
 });
 
-// The single death rule shared by combat + the per-tick reapers; a CRUSHED vital (0 HP, not severed) must be lethal.
 describe('lethalAnatomyCause', () => {
   const torsoOf = (limbs: ReturnType<typeof createBodyPlanLimbs>) =>
     limbs.find((l) => l.id === 'torso')!;
@@ -198,7 +187,7 @@ describe('lethalAnatomyCause', () => {
   it('a CRUSHED heart (0 HP, NOT severed) is lethal — the jackal bug', () => {
     const limbs = createBodyPlanLimbs(DEFAULT_PLAN, 1);
     const heart = torsoOf(limbs).parts!.find((p) => p.id === 'heart')!;
-    heart.health = 0; // caved in by crush, isMissing stays false
+    heart.health = 0;
     expect(heart.isMissing).toBe(false);
     expect(lethalAnatomyCause(limbs)).toBe('critical_limb');
   });
@@ -227,7 +216,7 @@ describe('lethalAnatomyCause', () => {
     const torso = torsoOf(limbs);
     const chest = torso.parts!.find((p) => p.id === 'chest')!;
     const heart = torso.parts!.find((p) => p.id === 'heart')!;
-    chest.health = 0; // caved in, not severed
+    chest.health = 0;
     expect(chest.isMissing).toBe(false);
     expect(heart.health).toBeGreaterThan(0);
     expect(torso.health).toBeGreaterThan(0);
@@ -241,7 +230,6 @@ describe('lethalAnatomyCause', () => {
   });
 });
 
-// Limbmap audit: venom_bite is bound to the venom glands (not the fangs), the snake has kidneys, and an amorphous body enables its listed weapon.
 describe('species-specific organ + weapon wiring', () => {
   const kill = (
     limbs: ReturnType<typeof createBodyPlanLimbs>,
@@ -266,8 +254,6 @@ describe('species-specific organ + weapon wiring', () => {
     }) as unknown as Mob;
 
   it('ADR-031: the neck holds an unclottable carotid the organ roll can find (across beast plans)', () => {
-    // The soft `neck` gap is on every standard beast plan; its only organ is the carotid, flagged
-    // `artery` so a penetrating hit opens an unclottable (bloodletting) bleed rather than an instant kill.
     for (const plan of ['humanoid', 'quadruped', 'avian', 'amphibian', 'serpentine']) {
       const parts = createBodyPlanLimbs(plan, 1).flatMap((l) => l.parts!.map((p) => p.id));
       expect(parts).toContain('neck');
@@ -275,7 +261,7 @@ describe('species-specific organ + weapon wiring', () => {
     }
     expect(organsOf('neck')).toContain('carotidArtery');
     expect(PART_DEF_MAP['carotidArtery']!.artery).toBe(true);
-    expect(PART_DEF_MAP['carotidArtery']!.isVital).toBe(false); // a slit throat is a slow kill, not instant
+    expect(PART_DEF_MAP['carotidArtery']!.isVital).toBe(false);
   });
 
   it('ADR-031: the humanoid groin holds an unclottable femoral artery', () => {
@@ -288,9 +274,9 @@ describe('species-specific organ + weapon wiring', () => {
   it('a viper carries venom glands + kidneys, with venom_bite bound to the glands (not the fangs)', () => {
     const parts = createBodyPlanLimbs('serpentine', 1).flatMap((l) => l.parts!.map((p) => p.id));
     expect(parts.filter((id) => /venomGland/i.test(id)).length).toBe(2);
-    expect(parts.filter((id) => /kidney/i.test(id)).length).toBe(2); // staggered fore/hind kidneys
-    expect(parts).not.toContain('spine'); // orphaned mammalian spine dropped (the vertebrae are the skeleton)
-    expect(PART_DEF_MAP['fangs']!.weapons).toEqual(['bite']); // venom moved OFF the fangs
+    expect(parts.filter((id) => /kidney/i.test(id)).length).toBe(2);
+    expect(parts).not.toContain('spine');
+    expect(PART_DEF_MAP['fangs']!.weapons).toEqual(['bite']);
     expect(PART_DEF_MAP['leftVenomGland']!.weapons).toContain('venom_bite');
   });
 
@@ -301,8 +287,8 @@ describe('species-specific organ + weapon wiring', () => {
     const deglanded = enabledNaturalWeapons(
       kill(createBodyPlanLimbs('serpentine', 1), (id) => /venomGland/i.test(id))
     );
-    expect(deglanded.has('venom_bite')).toBe(false); // venom apparatus gone → no envenoming strike
-    expect(deglanded.has('bite')).toBe(true); // the fangs still bite
+    expect(deglanded.has('venom_bite')).toBe(false);
+    expect(deglanded.has('bite')).toBe(true);
   });
 
   it("the snake's kidneys drive blood_filtration (no longer a silent 100%)", () => {
@@ -313,12 +299,12 @@ describe('species-specific organ + weapon wiring', () => {
       entity(kill(createBodyPlanLimbs('serpentine', 1), (id) => /kidney/i.test(id)))
     ).blood_filtration;
     expect(full).toBeCloseTo(1.0);
-    expect(noKidney).toBeCloseTo(0.0); // both staggered kidneys gone → no filtration → heal_rate 0
+    expect(noKidney).toBeCloseTo(0.0);
   });
 
   it('an amorphous body (grimeling) can claw — its outer mass enables the weapon (no dead-weapon thrash)', () => {
     const w = enabledNaturalWeapons(createBodyPlanLimbs('amorphous', 1));
-    expect(w.has('claw')).toBe(true); // the grimeling's listed weapon now resolves
-    expect(w.has('spectral_strike')).toBe(true); // the wraith's weapon is still enabled too
+    expect(w.has('claw')).toBe(true);
+    expect(w.has('spectral_strike')).toBe(true);
   });
 });

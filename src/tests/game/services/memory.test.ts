@@ -1,5 +1,3 @@
-// PAWN-MEMORY tests: recording around witnesses, weighted recall + wear-out, decay/pruning, and that
-// a recalled memory builds a grounded dialog line (naming the subject + detail).
 import { describe, it, expect, beforeEach } from 'vitest';
 import { memoryService, MEMORABILITY } from '$lib/game/services/MemoryService';
 import { runConversation, combatBark } from '$lib/game/services/social/conversations';
@@ -47,8 +45,8 @@ describe('recordAround', () => {
     }));
     expect(near.memories?.length).toBe(1);
     expect(near.memories?.[0].subjectId).toBe('doer');
-    expect(doer.memories ?? []).toHaveLength(0); // the subject doesn't remember ribbing themselves
-    expect(far.memories ?? []).toHaveLength(0); // out of sight
+    expect(doer.memories ?? []).toHaveLength(0);
+    expect(far.memories ?? []).toHaveLength(0);
   });
 });
 
@@ -69,7 +67,7 @@ describe('recall', () => {
     ];
     const got = memoryService.recall(a, b, 100);
     expect(got).toBeDefined();
-    expect(got!.told).toBe(1); // recall bumps the retell counter
+    expect(got!.told).toBe(1);
     memoryService.recall(a, b, 100);
     expect(a.memories![0].told).toBe(2);
   });
@@ -79,12 +77,12 @@ describe('prune', () => {
   it('drops a faded trivial memory but keeps historic forever', () => {
     const p = pawn('p', 0, 0);
     p.memories = [
-      { kind: 'idled', turn: 0, memorability: MEMORABILITY.idled }, // trivial, ~4-day window
-      { kind: 'death', turn: 0, subjectName: 'Old Sib', memorability: MEMORABILITY.death } // historic
+      { kind: 'idled', turn: 0, memorability: MEMORABILITY.idled },
+      { kind: 'death', turn: 0, subjectName: 'Old Sib', memorability: MEMORABILITY.death }
     ];
-    const changed = memoryService.prune(p, DAY * 10); // 10 days later
+    const changed = memoryService.prune(p, DAY * 10);
     expect(changed).toBe(true);
-    expect(p.memories!.map((m) => m.kind)).toEqual(['death']); // trivial gone, historic pinned
+    expect(p.memories!.map((m) => m.kind)).toEqual(['death']);
   });
 });
 
@@ -100,9 +98,8 @@ describe('condition onset → affliction memory', () => {
     expect(near.memories?.[0].kind).toBe('affliction');
     expect(near.memories?.[0].subjectName).toBe('Bram');
     expect(near.memories?.[0].detail).toBe('half freeze to death');
-    expect(sufferer.memories ?? []).toHaveLength(0); // the sufferer isn't a witness to their own affliction
+    expect(sufferer.memories ?? []).toHaveLength(0);
     expect(far.memories ?? []).toHaveLength(0);
-    // already present last tick (in prevStages) → not an onset, no new memory
     const near2 = pawn('near2', 6, 5);
     const state2 = { turn: 10, pawns: [sufferer, near2] } as unknown as GameState;
     memoryService.recordConditionOnsets(
@@ -120,10 +117,9 @@ describe('combat barks', () => {
     for (const kind of ['hit', 'miss', 'hurt', 'kill'] as const) {
       const line = combatBark(kind, 'the boar');
       expect(line.length).toBeGreaterThan(0);
-      expect(line).not.toContain('{foe}'); // placeholder always resolved
-      expect(line.length).toBeLessThan(40); // barks stay short — no drawn-out speeches
+      expect(line).not.toContain('{foe}');
+      expect(line.length).toBeLessThan(40);
     }
-    // no foe supplied → {foe} slots fall back to "it", never a leftover placeholder
     expect(combatBark('hurt')).not.toContain('{foe}');
   });
 });
@@ -160,10 +156,10 @@ describe('recall → grounded dialog line', () => {
         recall: { memory, ago: 'the other day' }
       }
     );
-    expect(out.category).toBe('banter'); // botch borrows banter's tone
+    expect(out.category).toBe('banter');
     expect(out.lines).toHaveLength(3);
-    expect(out.lines[0].text).toContain('Bram'); // every botch opener names the subject...
-    expect(out.lines[0].text).toContain('a crooked stool'); // ...and the item
+    expect(out.lines[0].text).toContain('Bram');
+    expect(out.lines[0].text).toContain('a crooked stool');
     expect(out.subject).toBe('Bram and a crooked stool');
   });
 });

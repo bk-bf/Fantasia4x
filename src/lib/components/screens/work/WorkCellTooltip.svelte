@@ -18,26 +18,16 @@
   interface Props {
     pawn: Pawn;
     wc: WorkCategory;
-    /** speed / yield / quality from pawnStatService.getWorkModifiers — the single work model.
-     * yield/quality are null for jobs that don't have that axis (e.g. hauling = speed only).
-     * Hunting isn't a work skill: `speed` carries its combat RATING and yield/quality are null. */
     mods: { speed: number; yield: number | null; quality: number | null };
     rank: CellRank;
     level: 0 | 1 | 2 | 3 | 4;
-    /** Header name override — a subjob cell passes the subjob's name (e.g. "Repair") while its stats
-     *  still come from the parent category (`wc`). Defaults to the category name. */
     name?: string;
     x: number;
     y: number;
-    /** Pinned (clicked open) — the panel becomes pointer-interactive; dismissal is handled by the pin
-     *  controller. Defaults false so plain-hover callers are unchanged. */
     pinned?: boolean;
   }
   let { pawn, wc, mods, rank, level, name, x, y, pinned = false }: Props = $props();
 
-  // The work screen lives inside `.overlay-panel`, which sets `filter` (making it
-  // the containing block for fixed positioning) and `overflow: hidden`. Both would
-  // mis-position and clip this box, so we portal it onto <body> to escape them.
   function portal(node: HTMLElement) {
     document.body.appendChild(node);
     return {
@@ -50,8 +40,6 @@
   const mult = (n: number) => `×${n.toFixed(2)}`;
   const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
-  // Non-skill tasks (hunting = combat + haul, hauling = carrying) aren't learned work skills — no
-  // speed/yield/quality, no experience level, no medal. The cell lists the DRIVING stats instead.
   let nonSkill = $derived(NON_SKILL_TASKS[wc.id]);
   let relevantStats = $derived.by(() => {
     if (!nonSkill) return [];
@@ -64,14 +52,10 @@
       if (s.statId === 'carry_volume')
         return { label: s.label, text: `${Math.round(carry!.volume.total)} L` };
       const v = pawnStatService.evaluateStat(s.statId, pawn);
-      // hit_precision is a small chance (~0.05), not a ~1.0 multiplier — show it raw.
       return { label: s.label, text: s.statId === 'hit_precision' ? v.toFixed(3) : mult(v) };
     });
   });
 
-  // Single headline efficiency = product of the axes this job actually has (absent
-  // axes are null → treated as 1). An average pawn reads 100%. Drives medal ranking too.
-  // (Suppressed for non-skill tasks — they have no single "efficiency".)
   let eff = $derived(mods.speed * (mods.yield ?? 1) * (mods.quality ?? 1));
 
   let stats = $derived(
@@ -84,8 +68,6 @@
   );
   let skill = $derived(pawn.skills?.[wc.id] ?? 0);
 
-  // Cultural-trait contributions to this job, read straight from the explicit trait data
-  // (workSpeed / workYield / workQuality). Shown as a true +/- percentage.
   type TraitMod = { name: string; axis: string; pct: number };
   let traitMods = $derived.by(() => {
     const out: TraitMod[] = [];
@@ -104,9 +86,6 @@
     return out;
   });
 
-  // Held tool boost (equipped OR carried) for this category — its additive speed/yield is already
-  // folded into mods.speed/yield above; this itemises WHICH tool and by how much, so the player can
-  // confirm the bonus is applying (and that a carried tool counts, not just an equipped one).
   let toolMod = $derived.by(() => {
     const t = pawnStatService.heldToolFor(pawn, wc.id);
     if (!t) return null;
@@ -117,8 +96,6 @@
     };
   });
 
-  // Active conditions that drag work throughput (hungry, dehydration, infection…). Their
-  // `workEfficiency` multiplier already folds into `mods.speed`; this just itemises WHY.
   let condMods = $derived.by(() => {
     const out: { name: string; pct: number }[] = [];
     for (const v of getActiveConditionViews(pawn)) {
@@ -130,7 +107,6 @@
     return out;
   });
 
-  // Flip the box to the cursor's left/upper side when near a viewport edge.
   let flipX = $derived(typeof window !== 'undefined' && x > window.innerWidth - 280);
   let flipY = $derived(typeof window !== 'undefined' && y > window.innerHeight - 240);
   let style = $derived(
@@ -243,7 +219,6 @@
     color: var(--text);
     pointer-events: none;
   }
-  /* Pinned: frozen + clickable (nested content reachable), with a faint accent outline. */
   .tip.pinned {
     pointer-events: auto;
     box-shadow:

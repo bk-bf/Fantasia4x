@@ -35,40 +35,24 @@ import { seedWorkLevels, rollWorkStyle } from '../core/rules/body/workExperience
 import { rng } from '../core/util/rng';
 import { rollAptitudes } from '../core/rules/body/aptitudes';
 
-// Module-level counter for sequential debug IDs across all generated pawns.
 let _pawnDebugIdCounter = 1;
 
-/** Reset the debug-id counter (fresh run / scenario build — ADR-033 replay determinism: without
- *  this, a second build in the same process numbers its pawns where the first left off). */
 export function resetPawnDebugIds(): void {
   _pawnDebugIdCounter = 1;
 }
 
-/** Stamina pool derived from constitution and dexterity — shared by Pawn and Mob. */
 export function calcMaxStamina(stats: EntityStats): number {
   return 50 + (stats.constitution - 10) * 4 + (stats.dexterity - 10) * 2;
 }
 
-/**
- * Blood pool recovery rate per second when not bleeding.
- * Formula matches blood_regeneration ability: 1.0 + (CON − 10) × 0.08.
- * Base rate 0.05 /s gives ~0→100 in 2000 s at CON 10; scales with CON.
- */
 export function calcBloodRegenRate(stats: EntityStats): number {
   return (1.0 + (stats.constitution - 10) * 0.08) * 0.05;
 }
 
-/** Blood pool derived from body weight and constitution. */
 export function calcMaxBloodVolume(physicalTraits: { weight: number }, stats: EntityStats): number {
   return Math.round(physicalTraits.weight * 1.4 + (stats.constitution - 10) * 2);
 }
 
-// ── TRAIT-SYSTEM-V2 §4: wound-granter traits ──────────────────────────────────
-// A `wound`-kind trait (one-eyed, hard-of-hearing, bad back) stamps a REAL, permanent, healed-over
-// injury on the freshly-rolled body — it shows in the health tab and flows through the body model
-// (a destroyed eye halves `sight`; a lost ear dulls `hearing`), never a hidden stat fudge.
-
-/** For a paired part (leftEye/rightEar…), flip to its twin half the time — variety, not a mechanic. */
 function maybeFlipPairedSide(partId: string): string {
   const twin = partId.startsWith('left')
     ? 'right' + partId.slice(4)
@@ -78,20 +62,12 @@ function maybeFlipPairedSide(partId: string): string {
   return twin && PART_DEF_MAP[twin] && rng.random() < 0.5 ? twin : partId;
 }
 
-/**
- * TRAIT-LIBRARY-EXPANSION §3d — à-la-carte body composition: graft the limbs a trait declares
- * (`grafts: [{limb, parts}]`) onto the pawn's (freshly built, privately owned) limb tree, pulling part
- * defs from the GLOBAL limbmap catalog (any plan's parts are addressable — avian wings, quadruped tail…).
- * A grafted limb is a REAL limb: hittable (rollBodyPartOf reads the live tree), losable, and the host
- * for the trait's natural gear. Runs BEFORE bodyMods/wounds so those apply to the full body. Idempotent
- * per limb id (two wing traits can't double-graft).
- */
 export function applyTraitGrafts(pawn: Pawn): void {
   const limbs = pawn.limbs;
   if (!limbs) return;
   for (const trait of pawn.traits ?? []) {
     for (const g of trait.grafts ?? []) {
-      if (limbs.some((l) => l.id === g.limb)) continue; // already present (plan or earlier graft)
+      if (limbs.some((l) => l.id === g.limb)) continue;
       const parts = g.parts
         .filter((pid) => PART_DEF_MAP[pid])
         .map((pid) => {
@@ -105,30 +81,16 @@ export function applyTraitGrafts(pawn: Pawn): void {
   }
 }
 
-/**
- * Apply every drawn `wound`-kind trait's injuries to the pawn's (freshly built, privately owned)
- * limb tree, then mirror the flat `injuries`/`pain` fields the way Combat does after a hit.
- * NEVER LETHAL (locked decision 2026-07-06): vital/critical parts are refused outright, and
- * `destroyed` is downgraded to `critical` on any part that CONTAINS others (no severed-container
- * cascade — a newborn can't spawn dead) or on a pure bone (fracture-only).
- * §5a lost limbs: a spec with `amputate: true` instead removes the WHOLE parent limb (a true old
- * amputation — every part missing, limb.isMissing, one permanent stump wound on the named part);
- * refused on limbs holding a vital/critical organ (head/torso stay whole — the same non-lethal cap).
- */
 export function applyTraitWounds(pawn: Pawn, only?: Trait): void {
   const limbs = pawn.limbs;
   if (!limbs) return;
   let stamped = false;
-  // `only` restricts the pass to ONE trait — the gained-later path (`applyGainedTrait`). Stamping is
-  // not idempotent (each call pushes a fresh injury), so a trait gained mid-life must never re-run the
-  // whole set or every wound the pawn was born with is stamped a second time.
   for (const trait of only ? [only] : (pawn.traits ?? [])) {
     for (const spec of trait.wounds ?? []) {
       const partId = maybeFlipPairedSide(spec.part);
       if (spec.amputate) {
         const limb = limbs.find((l) => l.parts?.some((p) => p.id === partId));
         if (!limb || limb.isMissing) continue;
-        // Non-lethal cap: never amputate a limb whose parts include a vital/critical organ.
         if (
           (limb.parts ?? []).some(
             (p) => PART_DEF_MAP[p.id]?.isVital || PART_DEF_MAP[p.id]?.isCritical
@@ -145,7 +107,7 @@ export function applyTraitWounds(pawn: Pawn, only?: Trait): void {
           type: spec.type ?? 'cut',
           severity: 'destroyed',
           damage: stumpPart.maxHp,
-          bleeding: 0, // an OLD amputation — long since healed over
+          bleeding: 0,
           painContribution: 0,
           infected: false,
           clotProgress: 3,
@@ -159,11 +121,8 @@ export function applyTraitWounds(pawn: Pawn, only?: Trait): void {
         continue;
       }
       const def = PART_DEF_MAP[partId];
-      if (!def || def.isVital || def.isCritical) continue; // heart/brain: never stampable
+      if (!def || def.isVital || def.isCritical) continue;
       let severity = spec.severity;
-      // Non-lethal cap on `destroyed`: a pure bone can't sever, and a container whose closure holds a
-      // VITAL organ is downgraded (a newborn can't spawn dead). A container of only NON-vital parts
-      // (a hand with its fingers, a foot with its toes — §5a) may be destroyed: its contents go with it.
       let cascadeIds: Set<string> | null = null;
       if (severity === 'destroyed' && (containedParts(partId).size > 0 || def.skeleton)) {
         const contents = containedParts(partId);
@@ -177,8 +136,6 @@ export function applyTraitWounds(pawn: Pawn, only?: Trait): void {
       const part = limb?.parts?.find((p) => p.id === partId);
       if (!limb || !part || part.isMissing) continue;
       const baseType = spec.type ?? 'cut';
-      // Lesser severities become a proper SCAR entry ("Old Scar"/"Old Burn"…, §0b); a `destroyed` part is
-      // a lost STUMP, not a scar, so it keeps the base wound type. Both draw HP/pain from SCARRING_CONFIG.
       const wound: Injury =
         severity === 'destroyed'
           ? {
@@ -198,7 +155,6 @@ export function applyTraitWounds(pawn: Pawn, only?: Trait): void {
       part.injuries.push(wound);
       part.health = Math.max(0, part.maxHp - wound.damage);
       if (severity === 'destroyed') part.isMissing = true;
-      // §5a: a destroyed non-vital container takes its contents with it (a lost hand takes the fingers).
       if (cascadeIds) {
         for (const p of limb.parts ?? []) {
           if (cascadeIds.has(p.id) && !p.isMissing) {
@@ -207,7 +163,6 @@ export function applyTraitWounds(pawn: Pawn, only?: Trait): void {
           }
         }
       }
-      // Roll the limb's health up from its parts (same mass-weighted formula as Combat).
       const partMaxTotal = (limb.parts ?? []).reduce((s, p) => s + p.maxHp, 0);
       const partHealthTotal = (limb.parts ?? []).reduce((s, p) => s + p.health, 0);
       if (partMaxTotal > 0) limb.health = Math.round((partHealthTotal / partMaxTotal) * 100);
@@ -215,7 +170,6 @@ export function applyTraitWounds(pawn: Pawn, only?: Trait): void {
     }
   }
   if (!stamped) return;
-  // Mirror the flat injuries list + pain total exactly like Combat._applyInjuryToEntity.
   const flat: Injury[] = [];
   let painTotal = 0;
   for (const l of limbs) {
@@ -230,22 +184,12 @@ export function applyTraitWounds(pawn: Pawn, only?: Trait): void {
   pawn.pain = Math.max(0, Math.min(100, Math.round(painTotal)));
 }
 
-/** Sum a drawn trait set's `bodyMod` body-weight deltas (heavy bones add mass). Applied to the rolled
- *  weight BEFORE the blood pool is derived, so a heavy-boned pawn carries a proportionally larger pool. */
 function traitBodyWeightDelta(traits: Trait[]): number {
   let delta = 0;
   for (const t of traits) for (const m of t.bodyMods ?? []) delta += m.weightKg ?? 0;
   return delta;
 }
 
-/**
- * Apply every drawn `bodyMod`-kind trait's structural changes to the pawn's (freshly built, privately
- * owned) limb tree — scaling matching parts' maxHp so the effect lives in the real body model:
- * `skeleton` targets raise/lower the fracture budget (dense vs brittle bone), `flesh` targets the
- * wound tolerance of the soft padding (thick vs thin hide). Full health is preserved (maxHp and health
- * scale together), so capacities read normal until the part is actually hurt. Body-weight deltas are
- * folded in earlier (traitBodyWeightDelta), before the blood pool is derived.
- */
 export function applyTraitBodyMods(pawn: Pawn): void {
   const limbs = pawn.limbs;
   if (!limbs) return;
@@ -265,30 +209,19 @@ export function applyTraitBodyMods(pawn: Pawn): void {
           if (!matches) continue;
           const full = part.health >= part.maxHp;
           part.maxHp = Math.max(1, Math.round(part.maxHp * m.hpMult));
-          if (full) part.health = part.maxHp; // freshly generated → keep it topped up
+          if (full) part.health = part.maxHp;
         }
       }
     }
   }
 }
 
-/**
- * LINEAGES §3 — apply a trait GAINED after generation (lineage growth / stage evolution) to a pawn whose
- * `traits` already includes it. Live-read effects (resistances, nightVision, work/combat mults) need
- * nothing — being in `traits` is enough. This bakes the ONE-SHOT effects that generation would have:
- * core-stat deltas, grafted limbs (+ their part-granted core stats), and bodyMod HP scaling. Mutates in
- * place (the growth path already mutates the pawn per-day).
- */
 export function applyGainedTrait(pawn: Pawn, trait: Trait): void {
-  // Core-stat grants — ONE signed add, no key-suffix branch (as applyCulturalTraitBonuses does at gen).
-  // A flaw authors a negative `*Bonus`; the floor keeps a stacked pile of them off zero.
   for (const [k, v] of Object.entries(trait.effects ?? {})) {
     if (typeof v !== 'number' || !k.endsWith('Bonus')) continue;
     const s = k.replace('Bonus', '').toLowerCase() as keyof EntityStats;
     if (pawn.stats[s] !== undefined) pawn.stats[s] = Math.max(1, pawn.stats[s] + v);
   }
-  // Grafts — applyTraitGrafts is idempotent per limb id, so running the all-traits pass only adds the
-  // new limb; then credit this trait's grafted parts' core-stat grants (spider-eyes → +perception).
   if (trait.grafts?.length) {
     applyTraitGrafts(pawn);
     for (const g of trait.grafts)
@@ -297,19 +230,12 @@ export function applyGainedTrait(pawn: Pawn, trait: Trait): void {
         if (typeof per === 'number') pawn.stats.perception += per;
       }
   }
-  // TRAIT-SYSTEM-V2 §4: a `wound`-kind trait stamps a REAL permanent injury on the body. Generation
-  // does this through `applyTraitWounds`; gaining one later has to as well, or a pawn who becomes
-  // `one-eyed` keeps both eyes and the trait is a name with no body behind it. Scoped to THIS trait —
-  // the full pass would re-stamp everything the pawn was born with.
   if (trait.wounds?.length) applyTraitWounds(pawn, trait);
-  // LINEAGES-II §3: gained spinnerets start the silk trickle.
   if (trait.grafts?.some((g) => g.parts.includes('spinneret'))) pawn.silkSpinner = true;
-  // LINEAGES-II: a gained blood-need trait (grown into a lineage later in life) starts its meter.
   if (trait.bloodNeed) {
     pawn.bloodNeedKind = trait.bloodNeed;
     if (pawn.needs && pawn.needs.bloodHunger === undefined) pawn.needs.bloodHunger = 0;
   }
-  // BodyMod HP scaling for THIS trait only (applyTraitBodyMods multiplies per trait → not idempotent).
   for (const m of trait.bodyMods ?? []) {
     if (m.hpMult == null || m.hpMult === 1) continue;
     for (const limb of pawn.limbs ?? [])
@@ -330,23 +256,6 @@ export function applyGainedTrait(pawn: Pawn, trait: Trait): void {
   }
 }
 
-/**
- * §2h — apply a CONSUMED item's effects to a pawn, returning a NEW pawn (or the same ref if nothing
- * applied, so the caller can skip decrementing stock). Sinks, all reusing existing systems:
- *   (i)  a timed potion buff — `grantsConditions` + `conditionDurationTurns` stamped onto
- *        `conditionTimers` (exactly like a cooked-meal buff), applying through the condition pipeline.
- *   (i.b) `curesConditions` clears active condition TIMERS.
- *   (i.c) `mendsWounds` clears INJURIES off the limb tree. The two are not interchangeable: a
- *        condition derived from the body (`fractured`) is rebuilt from the limb tree every tick, so
- *        clearing its timer does nothing at all.
- *   (ii) a beast-organ trait grant — `grantsTraitOnConsume` pushes the trait + bakes it via
- *        `applyGainedTrait`, THEN rolls a Faustian flaw (a curated negative trait) and bakes that too.
- * Clones `stats`/`traits` before baking so the in-place `applyGainedTrait` never mutates the caller's
- * pawn. A duplicate organ (pawn already has the trait) is a no-op — returns the original ref.
- *
- * `durationMult` (PROD-CHAIN-IIII §G) scales a timed buff's length — the caller passes the drinker's
- * alchemy work-quality so a trained alchemist draws a longer effect out of the same draught. 1 = no scale.
- */
 export function applyConsumable(
   pawn: Pawn,
   itemId: string,
@@ -358,7 +267,6 @@ export function applyConsumable(
   const next: Pawn = { ...pawn, stats: { ...pawn.stats }, traits: [...(pawn.traits ?? [])] };
   let changed = false;
 
-  // (i) Timed potion buff. §G: the duration scales with the drinker's alchemy proficiency.
   if (def.grantsConditions?.length && def.conditionDurationTurns) {
     const timers = { ...(next.conditionTimers ?? {}) };
     const duration = Math.round(def.conditionDurationTurns * durationMult);
@@ -367,8 +275,6 @@ export function applyConsumable(
     changed = true;
   }
 
-  // (i.b) ALCHEMY-BUTCHERY-EXPANSION §C — antidote tonic: clear the listed active conditions (a cure for
-  // the venom/caustic coatings). Runs alongside any grantsConditions window (e.g. a brief toxin_immune).
   if (def.curesConditions?.length && next.conditionTimers) {
     const timers = { ...next.conditionTimers };
     let cured = false;
@@ -383,10 +289,6 @@ export function applyConsumable(
     }
   }
 
-  // (i.c) A wound-mending dose (a bone-knitting draught): drop every injury of the named wound types
-  // off the limb tree and give the part back the HP that injury was holding. The graded conditions
-  // that read the tree — `fractured` — re-derive themselves from it on the next tick, so nothing here
-  // touches them. `boneBroken` is recomputed for the same reason: the bone is whole again.
   if (def.mendsWounds?.length && next.limbs?.length) {
     const mend = new Set(def.mendsWounds);
     let mended = false;
@@ -442,8 +344,6 @@ export function applyConsumable(
     }
   };
 
-  // (ii) Permanent trait grant + Faustian flaw (legacy `grantsTraitOnConsume` — kept for any item still
-  // using it; the beast organs were moved to the raw-risk + brewed-gamble path below).
   if (def.grantsTraitOnConsume) {
     const trait = getTraitById(def.grantsTraitOnConsume);
     const alreadyHas = next.traits.some((t) => t.id === trait?.id);
@@ -453,20 +353,11 @@ export function applyConsumable(
     }
   }
 
-  // (ii-b) A voidshard AWAKENS A BLOODLINE. No gamble and no Faustian flaw: the thing is a 0.01%
-  // strike behind a runed pick, a boss's hoard, or a fortune paid to a caravan that likes you — the
-  // finding IS the gamble, and there is nothing left to punish. A pawn who already belongs to a
-  // bloodline gets nothing, so the shard is not wasted silently: `rollLineageTrait` returns undefined
-  // and the caller sees no change.
   if (def.grantsLineage) {
     const pool = Array.isArray(def.grantsLineage) ? def.grantsLineage : undefined;
-    // Awakens a bloodline, or — if the pawn already has one — carries them a rung further down it for
-    // free. Either way the shard is never wasted on someone who simply "already qualifies".
     for (const t of rollLineageTrait(next, rand, pool)) bake(t);
   }
 
-  // (iii) ALCHEMY-BUTCHERY-EXPANSION §A — RAW beast organ: no reward, only risk. Sicken the eater, and at
-  // `flawChance` inflict a random Faustian flaw. The GOOD trait comes only from the brewed draught below.
   if (def.rawConsumeRisk) {
     const { sickness, flawChance = 0 } = def.rawConsumeRisk;
     if (sickness) {
@@ -478,8 +369,6 @@ export function applyConsumable(
     if (rand() < flawChance) bake(rollFlawTrait(rand));
   }
 
-  // (iv) ALCHEMY-BUTCHERY-EXPANSION §A — brewed trait draught: a weighted gamble. Odds + trait draw scale
-  // with the draught tier and the drinker's alchemy proficiency (`durationMult` folds that in).
   if (def.traitGamble) {
     const { trait, flaw } = resolveTraitGamble(
       def.traitGamble,
@@ -493,8 +382,6 @@ export function applyConsumable(
   return changed ? next : pawn;
 }
 
-/** A pawn's origin + life story (BACKGROUNDS), rolled before the pawn so the backgrounds can bias the
- *  trait draw and seed experience/standing. Omitted → a plain culture-only pawn (back-compat). */
 export interface PawnOrigin {
   homeKingdomId?: string;
   age?: number;
@@ -502,39 +389,21 @@ export interface PawnOrigin {
   adulthood?: Background;
 }
 
-/** Roll a single pawn from a specific culture (stats within the culture's ranges, traits copied,
- *  culture identity stamped). Shared by single-culture and mixed-colony generation. An optional
- *  {@link PawnOrigin} adds a homeland + childhood/adulthood backgrounds (BACKGROUNDS). */
 export function buildPawnFromCulture(culture: Culture, index: number, origin?: PawnOrigin): Pawn {
   const baseStats = rollStatsFromRanges(culture.statRanges);
-  // Roll the base physique FIRST — it gates physically-contradictory traits (ADR-028 `requires`: no
-  // Gaunt on a 250 kg mass), so the trait draw needs to know weight/height.
   const physicalTraits = rollPhysicalTraits(culture.physicalTraits);
-  // ADR-023: each pawn draws its OWN trait set (guaranteed identity + 1–2 mundane pool + 0–2 personal,
-  // physique-gated), so same-culture pawns differ. BACKGROUNDS bias the personal draw. Stats then fold
-  // in the drawn traits' bonuses.
   const affinity = origin ? backgroundTraitAffinity(origin.childhood, origin.adulthood) : undefined;
   const traits = drawPawnTraits(culture, physicalTraits, affinity);
-  // Trait bonuses land ON TOP of the rolled range, so the spawn ceiling has to be enforced HERE, after
-  // them — capping the culture's ranges alone still let a trait push a stat over (measured: 6% of
-  // pawns, topping out at 23). The floor keeps a stacked-negative draw from producing a stat so low
-  // that capacity formulas read as a corpse.
   const finalStats = clampSpawnStats(applyCulturalTraitBonuses(baseStats, traits));
-  // TRAIT-SYSTEM-V2 §1: bodyMod weight (heavy bones) mass folded in AFTER the draw (it doesn't change
-  // the base build the gate reads) but BEFORE the blood pool is derived from weight.
   physicalTraits.weight += traitBodyWeightDelta(traits);
   const maxBloodVolume = calcMaxBloodVolume(physicalTraits, finalStats);
   const maxStamina = calcMaxStamina(finalStats);
-  // PAWN-GROWTH: talent-star fav stats + per-stat growth ceilings, a rolled adult age, and a fixed
-  // random birthday (age++ + a doubled growth offer land on it).
   const { maxStats, favStats } = rollGrowthProfile(finalStats, culture.statRanges);
   const age = origin?.age ?? rng.int(16, 45);
-  // BACKGROUNDS: seed base experience, then add the backgrounds' starting-experience bands + standing.
   const skills = origin
     ? applyBackgroundExperience(seedWorkLevels(), origin.childhood, origin.adulthood)
     : seedWorkLevels();
   const basePrestige = origin ? backgroundPrestige(origin.childhood, origin.adulthood) : 0;
-  // Sex is rolled 50/50; the name is drawn to match it.
   const sex: 'male' | 'female' = rng.chance(0.5) ? 'male' : 'female';
 
   const pawn: Pawn = {
@@ -543,8 +412,6 @@ export function buildPawnFromCulture(culture: Culture, index: number, origin?: P
     name: generatePawnName(sex),
     sex,
     stats: finalStats,
-    // COMBAT-BALANCE tasks 8–9: the second combat axis, rolled INDEPENDENTLY of the stats above. Two
-    // pawns with the same physique are not the same fighter.
     aptitudes: rollAptitudes(physicalTraits.weight),
     maxStats,
     favStats,
@@ -574,73 +441,45 @@ export function buildPawnFromCulture(culture: Culture, index: number, origin?: P
       isEating: false
     },
     currentState: 'Idle',
-    // WORK-EXPERIENCE: per-category experience levels (bell-curve + 0–2 talent categories, plus any
-    // BACKGROUND experience) and the innate speed↔finesse style — the base drivers of the work stats.
     skills,
     workStyle: rollWorkStyle(),
-    // Survival & Health
     isAlive: true,
     maxBloodVolume,
     bloodVolume: maxBloodVolume,
     conditions: [],
-    // Combat — stamina
     stamina: maxStamina,
     maxStamina,
-    // Pawns are the humanoid body plan (limbmap.jsonc) at bodyScale 1.0.
     limbs: createBodyPlanLimbs(DEFAULT_PLAN, 1)
   };
 
-  // §3d graft trait-declared limbs (wings/tail/beak) FIRST so bodyMods/wounds see the full body, then
-  // TRAIT-SYSTEM-V2 §1: apply bodyMod structural changes (dense/brittle bone, thick/thin hide) to the
-  // limb tree, THEN stamp any wound-kind traits as real permanent injuries (against the adjusted maxHp).
   applyTraitGrafts(pawn);
   applyTraitBodyMods(pawn);
   applyTraitWounds(pawn);
-  // LINEAGES §4: a standalone gateway trait (claws/spider-eyes/… drawn without a lineage parent) seeds
-  // its awakening meters, so the pawn can grow into a lineage through committed play.
   seedAwakeningPaths(pawn);
-  // LINEAGES-II §1/§2: cache the blood need so the per-tick paths gate on ONE field (not a trait scan).
   const bloodNeed = (pawn.traits ?? []).find((t) => t.bloodNeed)?.bloodNeed;
   if (bloodNeed) {
     pawn.bloodNeedKind = bloodNeed;
     if (pawn.needs) pawn.needs.bloodHunger = 0;
   }
-  // LINEAGES-II §3: cache the grafted-spinnerets flag (same one-field gate for the hourly silk trickle).
   if ((pawn.traits ?? []).some((t) => t.grafts?.some((g) => g.parts.includes('spinneret'))))
     pawn.silkSpinner = true;
 
   return pawn;
 }
 
-/** Generate `count` pawns from a single culture (back-compat: extra-pawn backfill path). */
 export function generatePawns(culture: Culture, count = 3): Pawn[] {
   return Array.from({ length: count }, (_, i) => buildPawnFromCulture(culture, i));
 }
 
-// SOCIAL-LAYER §2: chance for each rolled pawn to arrive tied to an earlier one. Sparse by
-// design — most colonists start unrelated; the tree just isn't empty on turn 1.
 const KIN_LINK_CHANCE = 0.1;
 
-/**
- * SOCIAL-LAYER: a family bond's starting WARMTH — the kin contribution to the relationship seed.
- * Biased warm (blood usually counts for something), but family can sour: ~12% are estranged/hated,
- * ~18% cool/distant, the rest close. So a founder can have a brother they love or a father they
- * can't stand — kinship is a strong bias, never a guarantee.
- */
 export function rollKinWarmth(): number {
   const r = rng.random();
-  if (r < 0.12) return rng.int(-70, -30); // estranged / hated
-  if (r < 0.3) return rng.int(-25, 15); // cool / distant
-  return rng.int(30, 85); // close
+  if (r < 0.12) return rng.int(-70, -30);
+  if (r < 0.3) return rng.int(-25, 15);
+  return rng.int(30, 85);
 }
 
-/**
- * SOCIAL-LAYER §2: the starting-kin pass. Each pawn (after the first) has a small chance to be
- * tied to an earlier SAME-CULTURE pawn — sibling on a close age gap, parent/child on a wide one
- * (13–15 years fits neither, so no link) — sharing that family's surname and `familyId`. Mutates
- * the freshly-rolled pawns in place; kin ids reference `pawn.id`, so any later re-id pass must
- * run {@link remapKinIds}.
- */
 export function linkStartingKin(pawns: Pawn[]): void {
   for (let i = 1; i < pawns.length; i++) {
     if (!rng.chance(KIN_LINK_CHANCE)) continue;
@@ -649,7 +488,7 @@ export function linkStartingKin(pawns: Pawn[]): void {
     if (candidates.length === 0) continue;
     const q = rng.pick(candidates);
     const gap = Math.abs((p.age ?? 25) - (q.age ?? 25));
-    let qIsToP: KinKind; // what q is to p
+    let qIsToP: KinKind;
     let pIsToQ: KinKind;
     if (gap <= 12) {
       qIsToP = 'sibling';
@@ -661,25 +500,18 @@ export function linkStartingKin(pawns: Pawn[]): void {
     } else {
       continue;
     }
-    // One family, one surname (q's line wins; p keeps their given name).
     const familyId = q.familyId ?? `family-${q.id}`;
     q.familyId = familyId;
     p.familyId = familyId;
     const surname = q.name.split(' ').slice(-1)[0];
     const given = p.name.split(' ')[0];
     p.name = `${given} ${surname}`;
-    const warmth = rollKinWarmth(); // one bond, one warmth on both sides
+    const warmth = rollKinWarmth();
     p.kin = [...(p.kin ?? []), { pawnId: q.id, kind: qIsToP, warmth }];
     q.kin = [...(q.kin ?? []), { pawnId: p.id, kind: pIsToQ, warmth }];
   }
 }
 
-/**
- * SOCIAL-LAYER §2: rewrite kin ids after a re-id pass (migrant waves re-id twice: wave-unique ids
- * in the pending event, fresh colony ids on commit). Ties whose target is not in `idMap` — a
- * sibling the player turned away — are dropped. Replaces the `kin` array (snapshot cold-field
- * contract).
- */
 export function remapKinIds(pawns: Pawn[], idMap: Map<string, string>): void {
   for (const p of pawns) {
     if (!p.kin || p.kin.length === 0) continue;
@@ -693,29 +525,16 @@ export function remapKinIds(pawns: Pawn[], idMap: Map<string, string>): void {
   }
 }
 
-// SOCIAL-LAYER: the off-colony family web per founder. `ageDelta` (added to the founder's age) is
-// banded BY GENERATION with NON-OVERLAPPING ranges, so ages always read right up and down the tree:
-// grandparents older than parents/aunts-uncles, who are older than the founder's own generation
-// (siblings/cousins), who are older than the next one down (children/nieces-nephews). No relative can
-// come out older than the generation above it. ~25 years a generation, ±spread that never crosses.
 const WORLD_KIN_PLAN: { kind: KinKind; count: [number, number]; ageDelta: [number, number] }[] = [
-  { kind: 'grandparent', count: [0, 1], ageDelta: [40, 56] }, // gen +2
-  { kind: 'parent', count: [1, 2], ageDelta: [18, 30] }, // gen +1
-  { kind: 'auntuncle', count: [0, 2], ageDelta: [18, 30] }, // gen +1
-  { kind: 'sibling', count: [0, 2], ageDelta: [-12, 12] }, // gen 0
-  { kind: 'cousin', count: [0, 2], ageDelta: [-12, 12] }, // gen 0
-  { kind: 'child', count: [0, 1], ageDelta: [-30, -18] }, // gen −1
-  { kind: 'nibling', count: [0, 1], ageDelta: [-30, -18] } // gen −1 (a sibling's child)
+  { kind: 'grandparent', count: [0, 1], ageDelta: [40, 56] },
+  { kind: 'parent', count: [1, 2], ageDelta: [18, 30] },
+  { kind: 'auntuncle', count: [0, 2], ageDelta: [18, 30] },
+  { kind: 'sibling', count: [0, 2], ageDelta: [-12, 12] },
+  { kind: 'cousin', count: [0, 2], ageDelta: [-12, 12] },
+  { kind: 'child', count: [0, 1], ageDelta: [-30, -18] },
+  { kind: 'nibling', count: [0, 1], ageDelta: [-30, -18] }
 ];
 
-/**
- * SOCIAL-LAYER: generate each founder's OFF-COLONY family — full people who live out in the world
- * (`GameState.worldPawns`), tied back to the founder with a rolled {@link rollKinWarmth} (so a
- * relative can be dear or loathed). They share the founder's homeland (a stateless founder's kin
- * get a random realm so they can still travel in) and surname. Mutates each founder's `kin` in
- * place; returns the world-pawn records. Inert — never simulated; only their `lastSeenTurn` ever
- * changes, and only on a caravan/visitor arrival.
- */
 export function generateWorldKin(
   founders: Pawn[],
   culturePool: Culture[],
@@ -733,7 +552,6 @@ export function generateWorldKin(
     const surname = founder.name.split(' ').slice(-1)[0];
     for (const plan of WORLD_KIN_PLAN) {
       let n = rng.int(plan.count[0], plan.count[1]);
-      // A too-young founder has no grown-generation-down kin yet.
       if (plan.kind === 'child' && founderAge < 30) n = 0;
       if (plan.kind === 'nibling' && founderAge < 22) n = 0;
       for (let k = 0; k < n; k++) {
@@ -742,9 +560,8 @@ export function generateWorldKin(
         const id = `world-${fi}-${seq++}`;
         const kin = buildPawnFromCulture(culture, 0, { age, homeKingdomId });
         kin.id = id;
-        kin.name = `${kin.name.split(' ')[0]} ${surname}`; // one family line
+        kin.name = `${kin.name.split(' ')[0]} ${surname}`;
         const warmth = rollKinWarmth();
-        // `plan.kind` = what the world pawn is TO the founder; the reciprocal is its inverse.
         founder.kin = [...(founder.kin ?? []), { pawnId: id, kind: plan.kind, warmth }];
         kin.kin = [{ pawnId: founder.id, kind: KIN_INVERSE[plan.kind], warmth }];
         world.push(kin);
@@ -754,12 +571,6 @@ export function generateWorldKin(
   return world;
 }
 
-/**
- * Generate a fully-mixed starting colony. With a kingdom pool (`opts.kingdoms`), each pawn is rolled
- * KINGDOM-FIRST (BACKGROUNDS): a homeland is picked, their people drawn from its culture mix, and a
- * childhood/adulthood rolled to fit — so founders read as people from places. Without it (tests,
- * back-compat), each pawn is just a random pool culture with no origin or background.
- */
 export function generateColonyPawns(
   culturePool: Culture[],
   count = 5,
@@ -774,8 +585,6 @@ export function generateColonyPawns(
     linkStartingKin(plain);
     return plain;
   }
-  // `founders`: the starting colony — apply the founder-rarity background weights so a fresh colony
-  // doesn't roll worldly/noble founders who over-fill the pokédex. Migrants use the normal weights.
   const forFounder = opts?.founders === true;
   const pawns = Array.from({ length: count }, (_, i) => {
     const { homeKingdomId, culture } = rollOrigin(culturePool, kingdoms);
@@ -784,12 +593,10 @@ export function generateColonyPawns(
     const { childhood, adulthood } = rollBackgrounds(home, age, forFounder);
     return buildPawnFromCulture(culture, i, { homeKingdomId, age, childhood, adulthood });
   });
-  // SOCIAL-LAYER §2: sparse starting kin (shared surname + family) among the fresh roster.
   linkStartingKin(pawns);
   return pawns;
 }
 
-// UPDATED: Simplified categorization focused on basic abilities
 export function categorizeStats(
   stats: Record<string, { value: number; sources: string[] }>
 ): Record<string, string[]> {
@@ -804,21 +611,16 @@ export function categorizeStats(
   Object.keys(stats).forEach((statName) => {
     const lowerName = statName.toLowerCase();
 
-    // Skills
     if (lowerName.startsWith('skill_')) {
       categories['Skills'].push(statName);
-    }
-    // Basic Physical abilities
-    else if (
+    } else if (
       lowerName.includes('carry') ||
       lowerName.includes('movement') ||
       lowerName.includes('swimming') ||
       lowerName.includes('vision')
     ) {
       categories['Basic Physical'].push(statName);
-    }
-    // Basic Mental abilities
-    else if (
+    } else if (
       lowerName.includes('learning') ||
       lowerName.includes('social') ||
       lowerName.includes('intuition') ||
@@ -826,22 +628,17 @@ export function categorizeStats(
       lowerName.includes('experience')
     ) {
       categories['Basic Mental'].push(statName);
-    }
-    // Basic Survival abilities
-    else if (
+    } else if (
       lowerName.includes('health') ||
       lowerName.includes('disease') ||
       lowerName.includes('vitality')
     ) {
       categories['Basic Survival'].push(statName);
-    }
-    // Everything else goes to Special (ModifierSystem handled abilities)
-    else {
+    } else {
       categories['Special'].push(statName);
     }
   });
 
-  // Remove empty categories
   Object.keys(categories).forEach((category) => {
     if (categories[category].length === 0) {
       delete categories[category];
@@ -851,31 +648,26 @@ export function categorizeStats(
   return categories;
 }
 
-// SIMPLIFIED: Basic stat descriptions only
 export function getStatDescription(
   statName: string,
   statData: { value: number; sources: string[] }
 ): string {
   const descriptions: Record<string, string> = {
-    // Basic Physical
     carryCapacity: 'Maximum weight that can be carried (kg)',
     movementSpeed: 'Movement points per turn',
     swimmingSpeed: 'Movement speed in water',
     visionRange: 'Maximum sight distance (meters)',
 
-    // Basic Mental
     learningSpeed: 'Multiplier for skill development',
     socialInfluence: 'Effectiveness in diplomacy and trade',
     intuition: 'Ability to detect danger and opportunities',
     knowledgeStorage: 'Capacity to store information',
     experienceGain: 'Rate of learning from practical activities',
 
-    // Basic Survival
     healthRegenRate: 'Health points recovered per turn',
     diseaseResistance: 'Resistance to illness and poison',
     vitality: 'Overall health and constitution',
 
-    // Skills
     skill_mining: 'Experience in mineral extraction',
     skill_woodcutting: 'Experience in wood harvesting',
     skill_crafting: 'Experience in item creation',
@@ -886,7 +678,6 @@ export function getStatDescription(
     skill_construction: 'Experience in building structures'
   };
 
-  // Handle generic skill descriptions
   if (statName.startsWith('skill_')) {
     const skillName = statName.replace('skill_', '');
     return descriptions[statName] || `Experience in ${skillName}`;
@@ -895,13 +686,8 @@ export function getStatDescription(
   return descriptions[statName] || 'Special stat with unique effects';
 }
 
-// --- Existing utility functions (unchanged) ---
-
-/** Floor on a spawned stat. A stacked-negative trait draw could otherwise land a stat at 1, which reads
- *  through the capacity formulas as a body that can barely function before anything has happened to it. */
 export const SPAWN_STAT_FLOOR = 4;
 
-/** Clamp every core stat into the growth-level-1 band. See `SPAWN_STAT_CAP` for why the ceiling exists. */
 function clampSpawnStats(stats: EntityStats): EntityStats {
   const out = { ...stats } as unknown as Record<string, number>;
   for (const k of STAT_KEYS) {
@@ -922,7 +708,6 @@ function rollStatsFromRanges(statRanges: Record<string, [number, number]>): Enti
   return stats as EntityStats;
 }
 
-/** The six core-attribute keys. */
 const STAT_KEYS: (keyof EntityStats)[] = [
   'strength',
   'dexterity',
@@ -932,25 +717,16 @@ const STAT_KEYS: (keyof EntityStats)[] = [
   'constitution'
 ];
 
-/**
- * PAWN-GROWTH: roll a pawn's favoured ("talent-star") stats (a random 0–2 of them) + per-stat growth
- * ceilings. Favoured stats are drawn weighted toward the culture's strongest stats (widest [min,max] = its
- * focus), then get the highest caps (~85–100); the rest cap ~62–82. Every cap sits at least +15 above
- * the rolled stat so there's always room to grow. Caps are what a stat can climb to over many events.
- */
 function rollGrowthProfile(
   finalStats: EntityStats,
   statRanges: Record<string, [number, number]>
 ): { maxStats: EntityStats; favStats: (keyof EntityStats)[] } {
-  // Weight fav selection toward the culture's focus stats (wider range ⇒ higher weight), so a warlike
-  // culture tends to favour STR/CON — but any stat can be a pawn's talent.
   const pool: (keyof EntityStats)[] = [];
   for (const stat of STAT_KEYS) {
     const [min, max] = statRanges[stat] ?? [10, 15];
-    const weight = 1 + Math.max(0, Math.round((max - min + (max - 18)) / 3)); // focus stats weigh more
+    const weight = 1 + Math.max(0, Math.round((max - min + (max - 18)) / 3));
     for (let i = 0; i < weight; i++) pool.push(stat);
   }
-  // 0–2 favoured stats: some pawns have no innate talent, most have one, a few have two.
   const favCount = rng.int(0, 2);
   const favStats: (keyof EntityStats)[] = [];
   let guard = 0;
@@ -962,10 +738,6 @@ function rollGrowthProfile(
   const maxStats = {} as EntityStats;
   for (const stat of STAT_KEYS) {
     const isFav = favStats.includes(stat);
-    // Growth ceiling: 60 is the ABSOLUTE cap and only a talent reaches it. Ordinary stats top out in
-    // the 40s–low 50s. Re-banded down from 62–82 / 85–100: the old bands made strength 80+ routine, which
-    // trivialised every carry/requirement gate (steel plate wearable at spawn) and pushed the top end
-    // into god-like territory — a legend at 60 is superhuman enough.
     const base = isFav ? rng.int(50, 60) : rng.int(40, 55);
     maxStats[stat] = Math.max(base, finalStats[stat] + 15);
   }
@@ -977,7 +749,6 @@ function applyCulturalTraitBonuses(baseStats: EntityStats, traits: Trait[]): Ent
 
   traits.forEach((trait) => {
     Object.entries(trait.effects).forEach(([effectName, effectValue]) => {
-      // ONE signed add. A flaw authors a negative `*Bonus`; the floor keeps a stacked pile off zero.
       if (effectName.endsWith('Bonus') && typeof effectValue === 'number') {
         const statName = effectName.replace('Bonus', '').toLowerCase() as keyof EntityStats;
         if (modifiedStats[statName] !== undefined) {
@@ -985,8 +756,6 @@ function applyCulturalTraitBonuses(baseStats: EntityStats, traits: Trait[]): Ent
         }
       }
     });
-    // TRAITS §0 — a bodyMod trait's GRAFTED parts pay out their own core-stat bonus (spider eyes → +1
-    // perception), baked here from the part catalog rather than a rider on the trait's effects.
     for (const g of trait.grafts ?? [])
       for (const partId of g.parts) {
         const per = PART_DEF_MAP[partId]?.grants?.perceptionBonus;
@@ -1006,8 +775,6 @@ function rollPhysicalTraits(culturePhysicalTraits: any): any {
     size: size
   };
 }
-// Sex-keyed given-name pools — `generatePawnName` draws from the pool matching the pawn's sex so a
-// name reads with its bearer. (Surnames are shared.)
 const MALE_FIRST_NAMES = [
   'Brom',
   'Dain',
@@ -1126,6 +893,3 @@ function generatePawnName(sex?: 'male' | 'female'): string {
 
   return `${firstName} ${surname}`;
 }
-
-// --- Business logic moved to PawnService.ts ---
-// All need management, state updates, and turn processing now handled by PawnService

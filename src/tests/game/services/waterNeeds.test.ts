@@ -2,11 +2,6 @@ import { describe, it, expect } from 'vitest';
 import { pawnService } from '$lib/game/services/PawnService';
 import type { GameState, Pawn } from '$lib/game/core/types';
 
-/**
- * §D water needs — thirst & hygiene accrue each tick in processNeedsTick (like hunger),
- * and high values pressure mood. (Drinking/washing AI + dehydration→collapse are the
- * remaining Stage-4 piece; meals already quench some thirst so it isn't a no-relief penalty.)
- */
 function pawn(needs: Partial<Pawn['needs']> = {}): Pawn {
   return {
     id: 'p1',

@@ -1,6 +1,3 @@
-<!-- PawnMedicinePolicy.svelte — the ceiling on what an auto-tend may spend dressing THIS pawn's
-     wounds. Conditions are not managed here: those are administered by hand from a caretaker's pack
-     (see PawnAdminister), because the sim should not be guessing which phial the player meant. -->
 <script lang="ts">
   import type { Pawn } from '$lib/game/core/types';
   import { gameState } from '$lib/stores/gameState';

@@ -4,8 +4,6 @@
 
   export let turns: CombatTurnEntry[];
 
-  // Newest swing first, so a live engagement trails from the top — no scrolling to follow.
-  // Each swing is narrated into a vivid sentence (verb scaled by damage + injury severity).
   $: ordered = [...turns].reverse().map((t) => ({ t, n: describeSwing(t) }));
 </script>
 
@@ -55,7 +53,6 @@
     border-left: 2px solid var(--border-hi);
     line-height: 1.4;
   }
-  /* Left accent tracks how grievous the blow was, so a wall of swings reads at a glance. */
   .line.t-critical {
     border-left-color: #ff8c44;
   }
@@ -70,14 +67,11 @@
   .line.miss {
     opacity: 0.55;
   }
-  /* The killing blow — brightest accent + a faint glow so it reads as the climax. */
   .line.fatal {
     border-left-color: #ff2a1a;
     background: rgba(255, 42, 26, 0.12);
     box-shadow: inset 2px 0 0 #ff2a1a;
   }
-  /* Hover solidifies the row's background like the parent chronicle entries (.entry:hover). Placed
-     after the tier/crit/fatal backgrounds (equal specificity) so it wins on source order. */
   .line:hover {
     background: var(--bg-hover);
   }
@@ -89,8 +83,6 @@
     gap: 4px;
     font-size: 10px;
   }
-  /* Detail row sits under the header, indented — uses vertical space instead of
-     crowding the narrow log column. */
   .detail {
     display: flex;
     flex-wrap: wrap;
@@ -110,7 +102,6 @@
   .who.atk {
     color: var(--accent-hi);
   }
-  /* The vivid verb, coloured by how nasty the hit was. */
   .verb {
     font-weight: 600;
     color: var(--text);
@@ -173,8 +164,6 @@
     color: #fff;
     background: #cc2222;
   }
-  /* Wound this swing inflicted — coloured by severity. Light text on darker, saturated backgrounds so
-     the label stays legible (the old near-black text washed out under the panel's night/weather tint). */
   .tag.wound {
     text-transform: capitalize;
     color: #f4ecd8;

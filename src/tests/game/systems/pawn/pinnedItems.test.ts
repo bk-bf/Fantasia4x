@@ -3,9 +3,6 @@ import { depositInventory } from '$lib/game/systems/pawn/pawnHauling';
 import { COMMANDS } from '$lib/game/sim/commands';
 import type { GameState, Pawn } from '$lib/game/core/types';
 
-// Pinned-item feature: a pawn never deposits a pinned carried item (it keeps it in hand); everything
-// else is deposited normally. The togglePin command flips the per-pawn pinnedItems set.
-
 function makeWorld(w: number, h: number): GameState['worldMap'] {
   return Array.from({ length: h }, (_, y) =>
     Array.from({ length: w }, (_, x) => ({ x, y, walkable: true }))
@@ -40,8 +37,8 @@ describe('pinned carried items are never deposited', () => {
     const pawn = hauler({ wood: 5, stone_axe: 1 }, ['stone_axe']);
     const out = depositInventory(pawn, makeState(pawn));
     const kept = out.pawns[0].inventory.items;
-    expect(kept.stone_axe).toBe(1); // pinned — kept
-    expect(kept.wood ?? 0).toBe(0); // non-pinned — deposited
+    expect(kept.stone_axe).toBe(1);
+    expect(kept.wood ?? 0).toBe(0);
   });
 
   it('with no pins, everything is deposited (inventory emptied)', () => {
@@ -51,7 +48,7 @@ describe('pinned carried items are never deposited', () => {
   });
 
   it('dropCarriedItem puts the whole stack on the pawn tile, empties it, and clears the pin', () => {
-    const s = makeState(hauler({ wood: 5 }, ['wood'])); // pawn at (0,0); stockpile tiles are 1,0/2,0
+    const s = makeState(hauler({ wood: 5 }, ['wood']));
     const out = COMMANDS.dropCarriedItem(s, { pawnId: 'h', itemId: 'wood' });
     expect(out.pawns[0].inventory.items.wood ?? 0).toBe(0);
     expect(out.pawns[0].pinnedItems).not.toContain('wood');

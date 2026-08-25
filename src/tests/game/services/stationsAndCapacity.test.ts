@@ -3,22 +3,14 @@ import { buildingService } from '$lib/game/services/BuildingService';
 import { itemService } from '$lib/game/services/ItemService';
 import type { GameState, Pawn } from '$lib/game/core/types';
 
-/**
- * Stations & capacity gates (§109 maxCount, §130 carts). These assert the REAL gate functions
- * (`canBuildBuilding`, `getCarryBudget`) that the sim enforces — the same "test the actual gate"
- * approach as the tool-tier and armour-coverage audits. Passive⚙ pawnless production and the cold-fuel
- * smelt gate are already driven headless in the Ore/Steel audits.
- */
 const stateWith = (buildings: Array<{ id: string; type: string; status: string }>) =>
   ({ buildings }) as unknown as GameState;
 
 describe('stations & capacity gates', () => {
   it('§109 maxCount is ENFORCED: a capped furniture type refuses the (maxCount+1)th', () => {
-    const type = 'bear_rug'; // buildingState.maxCount = 4
+    const type = 'bear_rug';
     const mk = (n: number) =>
       stateWith(Array.from({ length: n }, (_, i) => ({ id: `br${i}`, type, status: 'complete' })));
-    // meetsStateRestrictions is the unique/maxCount gate specifically (canBuildBuilding ALSO checks
-    // resources/research/population, which a bare state lacks — so isolate the count gate here).
     const at3 = buildingService.meetsStateRestrictions(type, mk(3));
     const at4 = buildingService.meetsStateRestrictions(type, mk(4));
     console.log(`[CAP maxCount] bear_rug maxCount gate @3=${at3} @4(cap)=${at4}`);
@@ -90,7 +82,6 @@ describe('stations & capacity gates', () => {
     } as unknown as Pawn;
     const empty = {} as GameState;
     const budgetKg = itemService.getCarryBudget(pawn, empty).maxWeightKg;
-    // large_bones weigh ~1kg each; ask for far more than the budget allows and confirm the pickup clamps.
     const asked = 9999;
     const canTake = itemService.clampPickupQuantity(pawn, 'large_bones', asked, empty);
     const per = itemService.getItemById('large_bones')?.weightKg ?? 1;
@@ -108,9 +99,6 @@ describe('stations & capacity gates', () => {
 });
 
 describe('a soil bed can be laid from the soil you DUG', () => {
-  // Digging turns up real loam 1-2 at a time. Before this it went nowhere: the `lay_*` beds only ever
-  // wanted dirt + compost + fertiliser, so a colonist could dig good soil out of a riverbank and be
-  // left holding it. The made route stays the default; the dug route is what makes the spade worth it.
   const withStock = (stock: Record<string, number>): GameState =>
     ({
       seed: 1,
@@ -139,8 +127,6 @@ describe('a soil bed can be laid from the soil you DUG', () => {
   });
 
   it('falls through to a LATER alternative, not just the first', () => {
-    // `lay_loam` accepts loam, or richer soil at a discount. With only terra preta in stock the
-    // resolver has to reach the third entry — the bug this test exists for returned null at the first.
     expect(buildingService.resolveBuildingCost('lay_loam', withStock({ terra_preta: 3 }))).toEqual({
       terra_preta: 3
     });

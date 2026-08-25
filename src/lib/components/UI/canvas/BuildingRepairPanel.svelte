@@ -1,4 +1,3 @@
-<!-- Per-building repair settings pop-up; parent owns the open/close toggle. -->
 <script lang="ts">
   import { gameState } from '$lib/stores/gameState.js';
   import type { RepairSettings, PlacedBuilding, Pawn, Item } from '$lib/game/core/types.js';
@@ -21,7 +20,6 @@
 
   $: repairSettings = (building.repairSettings ?? {}) as RepairSettings;
   $: repairThresholdPct = Math.max(0, Math.min(100, repairSettings.repairThresholdPct ?? 30));
-  // Untouched building falls back to its default repair set; an explicit list — even empty — is honoured.
   $: allowedMaterialSet = resolveAllowedRepairIds(building);
   $: selectedRepairPawnFilters = repairSettings.allowedRepairPawnIds ?? [];
 

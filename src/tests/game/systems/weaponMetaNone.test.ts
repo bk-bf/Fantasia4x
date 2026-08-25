@@ -2,18 +2,6 @@ import { describe, it, expect } from 'vitest';
 import { appendFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { ARMOUR, STYLES, duel } from './weaponMetaHarness';
 
-/**
- * ARMOUR SWEEP — target wearing NONE, attacker always naked.
- *
- * One armour class per FILE, deliberately. Vitest runs the tests inside a file sequentially in a single
- * worker, so the whole sweep as one file used exactly one core and left seven idle on an 8-core box
- * (~45 minutes). Split like this the four classes run at once, and the sweep costs what its slowest
- * class costs. The sim's one-live-session-per-process rule (HeadlessSession) is why the parallelism has
- * to come from separate processes rather than concurrent tests.
- *
- * Writes its ranking to `.debug/weapon-meta-none.json` so the cross-class movement table (which
- * style climbs when the target armours up) can still be assembled from the four separate runs.
- */
 const CLASS = 'none';
 const SEEDS = [11, 23, 37];
 const PROGRESS = '.debug/weapon-meta-progress.log';
@@ -32,9 +20,7 @@ describe(`WEAPON META — target in none armour`, () => {
     let done = 0;
     try {
       mkdirSync('.debug', { recursive: true });
-    } catch {
-      /* ignore */
-    }
+    } catch {}
 
     for (const A of STYLES)
       for (const B of STYLES) {
@@ -44,17 +30,13 @@ describe(`WEAPON META — target in none armour`, () => {
           if (r.aWon) won[A.label]++;
           dealt[A.label].dmg += r.aDamage;
           dealt[A.label].hits += r.aHits;
-          // Vitest buffers a test's console output until the test ENDS, so a sweep this long looks
-          // frozen from outside; writing straight to disk is what makes `tail -f` work.
           if (++done % 50 === 0 || done === total)
             try {
               appendFileSync(
                 PROGRESS,
                 `  [none] ${done} of ${total} (${((done / total) * 100).toFixed(1)}%)\n`
               );
-            } catch {
-              /* progress reporting must never fail the audit */
-            }
+            } catch {}
         }
       }
 
@@ -72,9 +54,7 @@ describe(`WEAPON META — target in none armour`, () => {
         `.debug/weapon-meta-${CLASS}.json`,
         JSON.stringify({ CLASS, fights, ranked }, null, 1)
       );
-    } catch {
-      /* ignore */
-    }
+    } catch {}
 
     console.log(
       `[ARMOUR SWEEP · target in NONE] attacker always naked, ${fights} fights each\n` +

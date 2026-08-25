@@ -10,13 +10,12 @@ import {
   FAMED_ENCHANT_POOL
 } from '$lib/game/core/gen/famedNames';
 
-// PRODUCTION-CHAIN-III §I — the pure, deterministic core of the Famed-item feature.
 describe('famed items (§I) — procedural identity + roll math', () => {
   it('generates a non-empty name and multi-clause history', () => {
     const rand = mulberry32(42);
     const name = generateFamedName(rand);
     const history = generateFamedHistory(rand);
-    expect(name).toMatch(/, /); // "<Name>, <epithet>"
+    expect(name).toMatch(/, /);
     expect(name.length).toBeGreaterThan(5);
     expect(history).toMatch(/Forged by/);
     expect(history.length).toBeGreaterThan(10);
@@ -42,7 +41,7 @@ describe('famed items (§I) — procedural identity + roll math', () => {
       const e = rollFamedEnchants(rand);
       expect(e.length).toBeGreaterThanOrEqual(1);
       expect(e.length).toBeLessThanOrEqual(3);
-      expect(new Set(e).size).toBe(e.length); // distinct
+      expect(new Set(e).size).toBe(e.length);
       for (const id of e) expect(FAMED_ENCHANT_POOL).toContain(id);
     }
   });
@@ -58,7 +57,7 @@ describe('famed items (§I) — procedural identity + roll math', () => {
     const N = 200000;
     for (let i = 0; i < N; i++) if (rollFamed(2.0, true, rand)) famed++;
     const rate = famed / N;
-    expect(rate).toBeGreaterThan(0); // reachable
-    expect(rate).toBeLessThan(0.05); // but a rare jackpot, not a tier you target
+    expect(rate).toBeGreaterThan(0);
+    expect(rate).toBeLessThan(0.05);
   });
 });

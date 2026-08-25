@@ -28,7 +28,6 @@
   export let pawn: Pawn;
   export let gameState: GameState;
 
-  // PAWN-GROWTH: name the pawn's fixed birthday (season + day within it) for the AGE row's tooltip.
   const SEASONS = ['Spring', 'Summer', 'Autumn', 'Winter'];
   $: birthdayLabel =
     pawn.birthDayOfYear != null
@@ -39,12 +38,10 @@
 
   $: taskSummary = getPawnTaskSummary(pawn, gameState);
   $: moveSpeed = pawnService.getMoveSpeed(pawn);
-  // Culture overhaul: surface the pawn's culture + archetype (colonies are mixed now).
   $: culture = gameState.culturePool?.find((r) => r.id === pawn.cultureId);
   $: cultureLabel = pawn.cultureName
     ? `${pawn.cultureName}${culture?.archetype ? ` · ${culture.archetype}` : ''}`
     : 'unknown';
-  // BACKGROUNDS: homeland + life story. Home kingdom name (or "no fixed homeland" for the stateless).
   $: homeKingdom = pawn.homeKingdomId
     ? gameState.kingdoms?.find((k) => k.id === pawn.homeKingdomId)
     : undefined;
@@ -53,8 +50,6 @@
     : 'no fixed homeland';
   $: childhood = getBackgroundById(pawn.childhoodId);
   $: adulthood = getBackgroundById(pawn.adulthoodId);
-  // Background hover tooltip (custom HoverTip — native `title` doesn't show reliably in the app shell):
-  // the immersive flavour + what the background shaped, following the cursor.
   let bgTip: { x: number; y: number; bg: Background } | null = null;
   function bgEnter(e: MouseEvent, bg: Background | undefined) {
     if (bg) bgTip = { x: e.clientX, y: e.clientY, bg };
@@ -86,11 +81,9 @@
   }
 </script>
 
-<!-- Pawn Overview -->
 <div class="pawn-overview">
   <div class="section-hdr">| STATUS</div>
 
-  <!-- PAWN-GROWTH: pending growth offer(s) surface here for the pick-two. -->
   <PawnGrowthPanel {pawn} />
 
   <div class="row">
@@ -179,7 +172,7 @@
       >{sizeFromHeight(pawn.physicalTraits.height)}</span
     >
   </div>
-  <!-- SOCIAL-LAYER §7: the EFFECTIVE mood (ambient drift + event moods like grief or a hot meal). -->
+
   <div class="row">
     <span class="lbl">MOOD</span>
     <span class="val" style="color: {getMoodColor(effectiveMood(pawn, gameState.turn))}"

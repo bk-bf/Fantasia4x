@@ -21,8 +21,8 @@ describe('seed hunger grace (no turn-0 hunt stampede)', () => {
   it('a game-start seeded mob is satiated — hunger sits negative (below the eat threshold)', () => {
     for (let i = 0; i < 50; i++) {
       const h = makeMob(predator, 0, 0, 0, SEED_HUNGER_GRACE).needs.hunger;
-      expect(h).toBeLessThan(0); // overflowing-full
-      expect(h).toBeGreaterThanOrEqual(-HUNGER_EAT_THRESHOLD); // spread width preserved (§S5 desync)
+      expect(h).toBeLessThan(0);
+      expect(h).toBeGreaterThanOrEqual(-HUNGER_EAT_THRESHOLD);
     }
   });
 

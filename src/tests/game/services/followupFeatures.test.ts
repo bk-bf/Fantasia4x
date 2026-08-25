@@ -25,9 +25,6 @@ function makeState(partial: Partial<GameState> = {}): GameState {
   } as unknown as GameState;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// R5 — carry-budget enforcement
-// ─────────────────────────────────────────────────────────────────────────────
 describe('R5 carry-budget pickup clamp', () => {
   const pawn = (size: string, str: number): Pawn =>
     ({
@@ -39,7 +36,6 @@ describe('R5 carry-budget pickup clamp', () => {
     }) as unknown as Pawn;
 
   it('clamps a stack to what fits the weight/volume budget', () => {
-    // medium/str10 budget ≈ 5 kg / 8 L; rabbit_carcass is 1.5 kg / 3 L → volume caps at 2.
     const can = itemService.clampPickupQuantity(
       pawn('medium', 10),
       'rabbit_carcass',
@@ -51,12 +47,9 @@ describe('R5 carry-budget pickup clamp', () => {
   });
 
   it('always allows ≥1 — a single over-budget item (carcass) is carried in the hands', () => {
-    // tiny/str1 budget clamps to the 1 kg / 1 L floor; a 1.5 kg carcass would compute 0, but a
-    // pawn must still be able to hand-carry one.
     expect(itemService.clampPickupQuantity(pawn('tiny', 1), 'rabbit_carcass', 1, makeState())).toBe(
       1
     );
-    // Unconditional: even a pawn already near capacity can still take 1 of an over-budget item.
     const loaded = {
       id: 'p',
       stats: { strength: 1 },
@@ -68,9 +61,6 @@ describe('R5 carry-budget pickup clamp', () => {
   });
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Building-material hauling
-// ─────────────────────────────────────────────────────────────────────────────
 describe('building-material hauling (ADR-016)', () => {
   const building = () =>
     ({
@@ -122,14 +112,10 @@ describe('building-material hauling (ADR-016)', () => {
 
     gs = jobService.advanceJob(construct!.id, 5, gs);
     expect(gs.buildings.find((b) => b.id === 'b1')?.status).toBe('complete');
-    // Staged materials consumed by completing construction.
     expect((gs.droppedItems ?? []).some((d) => d.reservedFor === 'b1')).toBe(false);
   });
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Passive furnaces
-// ─────────────────────────────────────────────────────────────────────────────
 describe('passive furnaces (ADR-016)', () => {
   it('classifies furnace stations as passive, workshops as active', () => {
     expect(recipeService.isPassiveStation('bloomery')).toBe(true);
@@ -213,15 +199,12 @@ describe('passive furnaces (ADR-016)', () => {
   });
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Station tiers (craft_spot → Crude Workbench) + bootstrap closure
-// ─────────────────────────────────────────────────────────────────────────────
 describe('station tiers + bootstrap (ADR-016 / ADR-009)', () => {
   it('a higher-tier generic station supersedes a lower one; specialised stations need exact match', () => {
-    expect(buildingService.stationFulfills('makers_bench', 'craft_spot')).toBe(true); // tier 1 ≥ 0
-    expect(buildingService.stationFulfills('craft_spot', 'makers_bench')).toBe(false); // tier 0 < 1
-    expect(buildingService.stationFulfills('craft_spot', 'craft_spot')).toBe(true); // exact
-    expect(buildingService.stationFulfills('sawtable', 'craft_spot')).toBe(false); // specialised
+    expect(buildingService.stationFulfills('makers_bench', 'craft_spot')).toBe(true);
+    expect(buildingService.stationFulfills('craft_spot', 'makers_bench')).toBe(false);
+    expect(buildingService.stationFulfills('craft_spot', 'craft_spot')).toBe(true);
+    expect(buildingService.stationFulfills('sawtable', 'craft_spot')).toBe(false);
   });
 
   it('craftingBonus: the Crude Workbench is faster than the craft_spot', () => {
@@ -240,11 +223,8 @@ describe('station tiers + bootstrap (ADR-016 / ADR-009)', () => {
   });
 
   it('bootstrap: stone_axe/stone_hammer knap at the free tier-0 craft_spot, so the Crude Workbench is buildable', () => {
-    // The axe/hammer knap at the free tier-0 craft_spot (tagged `knapping`) — no longer crafted only at
-    // the bench whose build cost lists them, so the circular dependency is broken.
     expect(recipeService.getRecipeForItem('stone_axe')?.station).toBe('craft_spot');
     expect(recipeService.getRecipeForItem('stone_hammer')?.station).toBe('craft_spot');
-    // And a craft_spot recipe is satisfiable when only the higher-tier bench is built.
     const gs = {
       buildings: [{ id: 'mb', type: 'makers_bench', x: 0, y: 0, status: 'complete' }]
     } as unknown as GameState;
@@ -252,9 +232,6 @@ describe('station tiers + bootstrap (ADR-016 / ADR-009)', () => {
   });
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// R4 — ADR-009 tool gating (colony-stock, step 1)
-// ─────────────────────────────────────────────────────────────────────────────
 describe('R4 tool gating (ADR-009)', () => {
   const makePawn = () => ({ id: 'p', position: { x: 0, y: 0 } }) as unknown as Pawn;
   const woodcutJob = {
@@ -298,9 +275,6 @@ describe('R4 tool gating (ADR-009)', () => {
   });
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// R7 — isWorking / currentWork derived from the FSM + job, not the dead priority sort
-// ─────────────────────────────────────────────────────────────────────────────
 describe('R7 working-state derivation', () => {
   const mkPawn = (over: Record<string, any> = {}) =>
     ({
@@ -342,9 +316,6 @@ describe('R7 working-state derivation', () => {
   });
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// ADR-009 step 2 — per-pawn tool gating (a pawn must carry the tool; minTier enforced)
-// ─────────────────────────────────────────────────────────────────────────────
 describe('ADR-009 step 2 — per-pawn tool gating', () => {
   const withTool = (itemId: string) =>
     ({
@@ -396,9 +367,6 @@ describe('ADR-009 step 2 — per-pawn tool gating', () => {
   });
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// ADR-009 step 2 — CRAFT-tool gating (data-driven via the recipe's station building)
-// ─────────────────────────────────────────────────────────────────────────────
 describe('ADR-009 step 2 — craft-tool gating (station-derived)', () => {
   const withKnife = () =>
     ({
@@ -415,7 +383,6 @@ describe('ADR-009 step 2 — craft-tool gating (station-derived)', () => {
       inventory: { items: {}, instances: [] }
     }) as unknown as Pawn;
 
-  // make_rabbit_meat is at butcher_spot → buildings.jsonc gates it on butchery (a knife).
   const butcherJob = {
     id: 'bj',
     type: 'craft',
@@ -438,7 +405,6 @@ describe('ADR-009 step 2 — craft-tool gating (station-derived)', () => {
       recipeService.getRecipeForItem('rabbit_meat')
     );
     expect(req).toEqual({ workType: 'butchery', minTier: 0 });
-    // A craft_spot recipe (cordage) has no station tool → null.
     expect(
       recipeService.toolRequirementForRecipe(recipeService.getRecipeForItem('cordage'))
     ).toBeNull();
@@ -450,7 +416,7 @@ describe('ADR-009 step 2 — craft-tool gating (station-derived)', () => {
       craftingQueue: [order],
       stockpile: { flint_knife: 1 }
     });
-    expect(jobService.getAvailableJobs(bare(), stocked).map((j) => j.id)).toContain('bj'); // auto-grab
+    expect(jobService.getAvailableJobs(bare(), stocked).map((j) => j.id)).toContain('bj');
     expect(
       jobService
         .getAvailableJobs(
@@ -464,18 +430,15 @@ describe('ADR-009 step 2 — craft-tool gating (station-derived)', () => {
   });
 
   it('metalworking (anvil) is gated, but the bootstrap green-wood tongs are tool-free → no soft-lock', () => {
-    // An anvil recipe inherits the anvil's metalworking gate.
     expect(
       recipeService.toolRequirementForRecipe(recipeService.getRecipeForItem('short_seax'))
     ).toEqual({
       workType: 'metalworking',
       minTier: 0
     });
-    // The bootstrap tongs themselves need NO tool (craft_spot), so the gate can never soft-lock.
     expect(
       recipeService.toolRequirementForRecipe(recipeService.getRecipeForItem('wooden_tongs'))
     ).toBeNull();
-    // …and green-wood tongs (tier 0) satisfy the metalworking gate.
     const tongsPawn = {
       equipment: { belt: { instanceId: 't', itemId: 'wooden_tongs', durability: 18 } },
       inventory: { items: {}, instances: [] }
@@ -484,9 +447,6 @@ describe('ADR-009 step 2 — craft-tool gating (station-derived)', () => {
   });
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Mining tool gating — mountain walls/cliffs need a pick (bugfix), outcrops don't
-// ─────────────────────────────────────────────────────────────────────────────
 describe('mining tool gating (bugfix)', () => {
   const mineJob = (resourceId: string) =>
     ({
@@ -509,8 +469,6 @@ describe('mining tool gating (bugfix)', () => {
     }) as unknown as Pawn;
 
   it('mountain_wall requires a mining tool (was tool-free — pawns mined walls barehanded)', () => {
-    // minTier 0 = the basic (stone) pick — still tool-gated, not barehanded. (Tin re-tier: stone_pick
-    // dropped to tier 0, so every stone-mineable node is minTier 0; only cassiterite stays minTier 1.)
     expect(
       jobService.requiredToolForJob(mineJob('mountain_wall'), makeState({ designations }))
     ).toEqual({ workType: 'mining', minTier: 0 });
@@ -523,8 +481,6 @@ describe('mining tool gating (bugfix)', () => {
   });
 
   it('TIN (cassiterite) requires a COPPER pick — a stone pick is too soft (bronze gate)', () => {
-    // The metallurgical progression gate: stone gets you copper ore + coal, but tin — and thus bronze —
-    // needs a copper pick first. cassiterite stays minTier 1; stone_pick is tier 0, copper_pick tier 1.
     expect(
       jobService.requiredToolForJob(mineJob('cassiterite'), makeState({ designations }))
     ).toEqual({
@@ -560,9 +516,6 @@ describe('mining tool gating (bugfix)', () => {
   });
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Tools are carried + held in hand, not belted (bugfix)
-// ─────────────────────────────────────────────────────────────────────────────
 describe('tool carry / slot (bugfix)', () => {
   it('a tool equips to the hand, not the belt (belt is for belts)', () => {
     const axe = itemService.getItemById('stone_axe')!;
@@ -578,6 +531,6 @@ describe('tool carry / slot (bugfix)', () => {
     const withPick = addInstanceToInventory(bare, 'stone_pick');
     expect(withPick.inventory.instances.some((i) => i.itemId === 'stone_pick')).toBe(true);
     expect((withPick.equipment as Record<string, unknown>).belt).toBeUndefined();
-    expect(jobService.pawnHasToolFor(withPick, 'mining', 0)).toBe(true); // stone_pick is tier 0 (tin re-tier)
+    expect(jobService.pawnHasToolFor(withPick, 'mining', 0)).toBe(true);
   });
 });

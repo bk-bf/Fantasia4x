@@ -1,4 +1,3 @@
-<!-- PawnInventory.svelte — shows items the pawn is currently carrying -->
 <script lang="ts">
   import type { Pawn, Item, ItemInstance } from '$lib/game/core/types';
   import ITEMS_DATABASE from '$lib/game/database/items/items.jsonc';
@@ -13,20 +12,12 @@
 
   export let pawn: Pawn;
 
-  // Which carried vessel has its allow-list panel open (one at a time). Legacy-reactive component,
-  // so a plain `let` is the reactive form here.
   let openVessel: string | null = null;
 
   $: pinned = new Set(pawn.pinnedItems ?? []);
-  // Pinned items sort to the top; otherwise stable order.
   $: carried = Object.entries(pawn.inventory?.items ?? {})
     .filter(([, qty]) => qty > 0)
     .sort(([a], [b]) => (pinned.has(b) ? 1 : 0) - (pinned.has(a) ? 1 : 0));
-  // Every tracked instance in the pack — a fetched/carried TOOL or weapon (axe, hammer, pick), a
-  // hauled carcass, or a rescued colonist being carried as a `carried_pawn` body. Tools live in
-  // `inventory.instances` (not the bulk count map), so without listing all instances a carried axe
-  // was invisible in the carry UI. Each unit is one row (instances aren't stackable — they have
-  // per-unit durability/quality).
   $: carriedInstances = pawn.inventory?.instances ?? [];
 
   function instanceLabel(inst: ItemInstance): string {
@@ -74,10 +65,8 @@
     <div class="empty">nothing carried</div>
   {:else}
     <div class="card-grid">
-      <!-- Tracked instances: tools/weapons (kept in hand), named carcasses, and carried colonists. -->
       {#each carriedInstances as inst (inst.instanceId)}
         {#if inst.itemId === 'carried_pawn'}
-          <!-- A live colonist riding in the pack — no stat card, just a "set down" control. -->
           <div class="card pawn-card">
             <button
               class="setdown"
@@ -109,15 +98,13 @@
               <VesselFilterPanel {inst} onClose={() => (openVessel = null)} />
             {/if}
           {:else}
-            <!-- No def for this id — surface it LOUDLY rather than skipping silently. The raw id is
-                 shown on purpose: it's a data bug (a dangling itemId) and the id is the only clue. -->
             <div class="card unknown-card" title="No items.jsonc entry for this id — data bug.">
               ⚠ unknown item<br /><code>{inst.itemId}</code>
             </div>
           {/if}
         {/if}
       {/each}
-      <!-- Bulk stackable goods (the count map) — pinnable so they're never auto-deposited. -->
+
       {#each carried as [itemId, qty]}
         {@const def = itemService.getItemById(itemId)}
         {#if def}
@@ -134,7 +121,6 @@
             dropTitle="Drop now — put this stack down on the pawn's tile."
           />
         {:else}
-          <!-- Loud fallback for a dangling bulk id (see above). Never silently drop carried goods. -->
           <div class="card unknown-card" title="No items.jsonc entry for this id — data bug.">
             ⚠ unknown item<br /><code>{itemId}</code> ×{qty}
           </div>
@@ -176,7 +162,6 @@
     padding: 0 2px;
   }
 
-  /* Loud fallback for a carried id with no items.jsonc def — a data bug made visible. */
   .unknown-card {
     border: 1px solid var(--neg, #e05a5a);
     background: var(--bg-panel);
@@ -193,7 +178,6 @@
     word-break: break-all;
   }
 
-  /* The carried-colonist card — a person, not an item, so it shows no stat panel. */
   .pawn-card {
     position: relative;
     border: 1px solid var(--accent-hi, #ffd24a);

@@ -1,12 +1,3 @@
-<!--
-  SaveListMenu — the save picker: a scrollable list of every save (autosave + manual snapshots), newest
-  first. Two modes:
-    • 'load' (Load Game, from MainMenu/PauseMenu) — a row loads on click; its ✕ deletes it.
-    • 'save' (pause-menu "Save Game") — a "+ New Save" action writes a fresh snapshot; clicking a row
-      OVERWRITES that save with the current game (confirmed). Either way the popup closes and reports back.
-  New Game is a separate action (it doesn't pick from here). Reuses the modal scaffolding from SettingsModal
-  (overlay + scrim + <button> backdrop + Escape/✕ close).
--->
 <script lang="ts">
   import { onMount } from 'svelte';
   import { fade, scale } from 'svelte/transition';
@@ -29,7 +20,6 @@
   }
   onMount(refresh);
 
-  // startGame flips appPhase → 'game', which unmounts the menu (and this popup with it).
   function load(id: string) {
     gameState.startGame('load', id);
   }
@@ -38,7 +28,6 @@
     await refresh();
   }
 
-  // ── save mode ──
   async function newSave() {
     if (busy) return;
     busy = true;
@@ -166,7 +155,6 @@
   .close:hover {
     color: var(--accent-hi);
   }
-  /* Primary "new save" action — reads as the recommended path; sits above the overwrite list. */
   .new-save {
     width: 100%;
     margin-bottom: 12px;
@@ -203,7 +191,7 @@
     gap: 8px;
     overflow-y: auto;
     scrollbar-width: thin;
-    padding-right: 4px; /* breathing room so the scrollbar doesn't sit on the rows */
+    padding-right: 4px;
   }
   .empty {
     color: var(--text-muted);

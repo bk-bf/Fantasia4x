@@ -13,12 +13,8 @@ import {
 } from '$lib/game/services/EnvironmentService';
 import { driveWindchill, getConditionCurrentStage } from '$lib/game/core/rules/body/conditions';
 
-// Graded wind: five degrees (slightly→extremely windy) drive the staged `windchilled` condition;
-// roofs and the lee of impassable tiles (walls/mountains) shelter a tile from the wind.
-
 const NO_THERMAL: ThermalSample = { warmth: 0, insulation: 0, weatherProtection: 0, roofed: false };
 
-/** N×N walkable grid; `blocked` tiles (["y,x"]) are impassable (walls/mountains). */
 function grid(n: number, blocked: string[] = []): WorldTile[][] {
   const set = new Set(blocked);
   const rows: WorldTile[][] = [];
@@ -57,8 +53,8 @@ const gale = (windDir = 0): WeatherState => ({
 
 describe('ambientWind — open-field wind 0–1', () => {
   it('is the stronger of the type windStrength and the live wind scalar', () => {
-    expect(ambientWind(gale())).toBeCloseTo(0.9); // wind 0.9 > clear windStrength
-    expect(ambientWind(undefined)).toBeGreaterThanOrEqual(0); // no weather → calm-ish default
+    expect(ambientWind(gale())).toBeCloseTo(0.9);
+    expect(ambientWind(undefined)).toBeGreaterThanOrEqual(0);
     expect(ambientWind({ type: 'clear', intensity: 0, turnsRemaining: 1, wind: 0 })).toBeLessThan(
       0.5
     );
@@ -70,34 +66,31 @@ describe('windVector / windDirLabel — 8-way compass', () => {
     expect(windVector(0)).toEqual({ dx: 0, dy: -1 });
     expect(windVector(2)).toEqual({ dx: 1, dy: 0 });
     expect(windDirLabel(0)).toBe('N');
-    expect(windDirLabel(8)).toBe('N'); // wraps
+    expect(windDirLabel(8)).toBe('N');
     expect(windDirLabel(-1)).toBe('NW');
   });
 });
 
 describe('windShelterAt — downwind shadow of an impassable tile', () => {
-  // Wind blows toward N (dir 0); upwind is south (+y). A wall SOUTH of a tile shelters it.
   it('is full directly leeward of a wall and falls off with distance', () => {
-    const map = grid(8, ['5,3']); // wall at (x=3, y=5)
-    const close = windShelterAt(3, 4, 0, map); // one tile downwind (north) of the wall
-    const far = windShelterAt(3, 2, 0, map); // three tiles downwind
-    expect(close).toBeCloseTo(1); // tucked right behind it → full shelter
+    const map = grid(8, ['5,3']);
+    const close = windShelterAt(3, 4, 0, map);
+    const far = windShelterAt(3, 2, 0, map);
+    expect(close).toBeCloseTo(1);
     expect(far).toBeGreaterThan(0);
-    expect(far).toBeLessThan(close); // fades with distance
+    expect(far).toBeLessThan(close);
   });
 
   it('gives no shelter in the open or on the upwind side of the wall', () => {
     const map = grid(8, ['5,3']);
-    expect(windShelterAt(0, 0, 0, map)).toBe(0); // nowhere near the wall
-    expect(windShelterAt(3, 6, 0, map)).toBe(0); // SOUTH of the wall = upwind, exposed
+    expect(windShelterAt(0, 0, 0, map)).toBe(0);
+    expect(windShelterAt(3, 6, 0, map)).toBe(0);
   });
 
   it('moves the sheltered side when the wind direction changes', () => {
     const map = grid(8, ['4,4']);
-    // Wind toward N (0): south neighbour sheltered, north neighbour not.
     expect(windShelterAt(4, 3, 0, map)).toBeCloseTo(1);
     expect(windShelterAt(4, 5, 0, map)).toBe(0);
-    // Wind toward S (4): the lee flips to the north neighbour.
     expect(windShelterAt(4, 5, 4, map)).toBeCloseTo(1);
     expect(windShelterAt(4, 3, 4, map)).toBe(0);
   });
@@ -109,15 +102,15 @@ describe('effectiveWindAt — ambient cut by roof + lee', () => {
     const open = effectiveWindAt(2, 2, gale(), NO_THERMAL, map);
     const roofed = effectiveWindAt(2, 2, gale(), { ...NO_THERMAL, weatherProtection: 1 }, map);
     expect(open).toBeCloseTo(0.9);
-    expect(roofed).toBe(0); // fully roofed → no wind
+    expect(roofed).toBe(0);
   });
 
   it('the lee of a wall reduces felt wind below the open field', () => {
     const map = grid(8, ['5,3']);
     const open = effectiveWindAt(0, 0, gale(), NO_THERMAL, map);
-    const lee = effectiveWindAt(3, 4, gale(), NO_THERMAL, map); // directly behind the wall
+    const lee = effectiveWindAt(3, 4, gale(), NO_THERMAL, map);
     expect(lee).toBeLessThan(open);
-    expect(lee).toBeCloseTo(0); // full shelter directly leeward
+    expect(lee).toBeCloseTo(0);
   });
 });
 
@@ -127,7 +120,6 @@ describe('driveWindchill — effective wind → staged condition (direct, not ac
     driveWindchill(c, 0.1);
     expect(c.find((x) => x.id === 'windchilled')).toBeUndefined();
 
-    // A merely "slightly windy" world (≈ the calm baseline ambient wind) no longer chills.
     driveWindchill(c, 0.3);
     expect(c.find((x) => x.id === 'windchilled')).toBeUndefined();
 
@@ -136,7 +128,7 @@ describe('driveWindchill — effective wind → staged condition (direct, not ac
     expect(w).toBeDefined();
     expect(w!.severity).toBeGreaterThan(0);
 
-    driveWindchill(c, 0.05); // sheltered → calm
+    driveWindchill(c, 0.05);
     expect(c.find((x) => x.id === 'windchilled')).toBeUndefined();
   });
 
@@ -162,8 +154,8 @@ describe('driveWindchill — effective wind → staged condition (direct, not ac
     expect(stage!.lifeThreatening).toBeFalsy();
     expect(stage!.modifiers.strength).toBeUndefined();
     expect(stage!.modifiers.constitution).toBeUndefined();
-    expect(stage!.modifiers.dexterity).toBeLessThan(1); // buffeted: aim/balance
-    expect(stage!.modifiers.moveSpeed).toBeLessThan(1); // walking into the wind
+    expect(stage!.modifiers.dexterity).toBeLessThan(1);
+    expect(stage!.modifiers.moveSpeed).toBeLessThan(1);
   });
 });
 

@@ -1,53 +1,23 @@
-// jobs.jsonc — the colony WORK TAXONOMY (single source of truth for "what colony work exists").
-// One block: an ordered list of colony job TYPES (verbs). Each has a generate/complete handler bound
-// by id in JobService's handler registry; these are the Job['type'] members, and the generators run in
-// this order. Construction's Build/Demolish/Repair are three verbs sharing workCategory "construction" —
-// they nest in the Work tab as its subjobs (a category with >1 verb is splittable).
-//
-// The `craft` verb is special: every craft runs through its ONE handler, and its `disciplines` field is
-// the craft DISCIPLINE TREE — what a craft counts as, chosen from its STATION (the `station` matcher: an
-// effects-flag name, `a|b` = either flag, or the special `foodOutput`). Each discipline PARENT is a
-// Work-tab category that expands into leaf disciplines exactly like Construction → Build/Repair/Demolish.
-// A leaf carries its own `<id>_speed`/`_quality` stats + tools, falling back per-axis to its parent (as
-// repair_* falls back to construction_*). A flat discipline (metalworking) has no leaves. Disciplines are
-// NOT Job['type']s and have no handler. `disciplineTree.ts` parses this; craftDiscipline.ts routes by it.
-//
-// Adding a verb: (1) an entry here, (2) a generate/complete binding in JobService's handlers, (3) the id
-// in Job['type'] (core/types). `graph:check` (rule job-registry) fails if the three drift. NOT listed:
-// eat/sleep/need — FSM-internal activeJob kinds, never generated into the colony job pool.
-//
-// `audio` = work-SFX override (audio/manifest.ts WORK_SFX). Omitted on `harvest` so it resolves per
-// harvested resource → woodcutting / mining / foraging. Carrying jobs (haul/fetch/refuel) stay silent.
 [
   { "id": "harvest",     "label": "Harvest",  "workCategorySource": "designation", "claimGate": "harvestTool" },
   { "id": "haul",        "label": "Haul",     "workCategory": "hauling", "lightAffected": false },
   { "id": "construct",   "label": "Build",    "workCategory": "construction", "audio": "construction" },
   { "id": "deconstruct", "label": "Demolish", "workCategory": "construction", "audio": "construction" },
   { "id": "fetch",       "label": "Fetch",    "workCategory": "hauling", "lightAffected": false },
-  // Filling a vessel rides the hauling line: same work category, same pawns, and it ends like every
-  // haul — carrying the thing back to a stockpile. Only what a vessel's own filter allows is poured.
   { "id": "fill",        "label": "Fill",     "workCategory": "hauling", "lightAffected": false },
   {
     "id": "craft", "label": "Craft", "workCategory": "crafting", "workCategorySource": "recipe-output",
     "claimGate": "craftTool", "audio": "crafting",
     "disciplines": [
-      // Flat discipline — no leaves; an anvil/forge order counts as metalworking directly.
       { "id": "metalworking", "label": "Metalworking", "station": "smithingEnabled|smeltingEnabled" },
 
-      // Carpentry — planks, furniture, bows, and (progressively) tool/weapon HAFTS: carve → sand a
-      // handle here, then season it at the passive soaking trough. Flat discipline.
       { "id": "woodworking", "label": "Woodworking", "station": "woodworkingEnabled" },
 
-      // Soft goods. Leaf id `leatherworking` is legacy (keeps its existing stats/tools/traits) — it is the
-      // Leatherwork leaf of Tailoring. Weaving is the thread/fabric line (stays useful late game).
       { "id": "tailoring", "label": "Tailoring", "subjobs": [
         { "id": "leatherworking", "label": "Leatherwork", "station": "leatherworkingEnabled" },
         { "id": "weaving",        "label": "Weaving",     "station": "weavingEnabled" }
       ] },
 
-      // One hard-material-shaping skill across the whole game: chipped tools (early) → dressed blocks
-      // (mid) → cut gems (late), plus bone/antler/ivory carving — so the stone specialist never goes
-      // obsolete (bone tools/weapons persist well past the stone age).
       { "id": "stoneworking", "label": "Stoneworking", "subjobs": [
         { "id": "knapping",    "label": "Knapping",    "station": "knappingEnabled" },
         { "id": "masonry",     "label": "Masonry",     "station": "masonryEnabled" },
@@ -55,11 +25,8 @@
         { "id": "bonecarving", "label": "Bonecarving", "station": "bonecarvingEnabled" }
       ] },
 
-      // Ceramics: clay thrown/formed and kiln-fired — pots, jugs, bricks, tiles, urns, porcelain, glass.
       { "id": "pottery", "label": "Pottery", "station": "potteryEnabled" },
 
-      // One food-craft family. `meals` (stews/roasts) is the prepared-food leaf a `food`/`meal` output
-      // routes to; butchery (carcass → meat/hide/bone) sits here too.
       { "id": "cooking", "label": "Cooking", "subjobs": [
         { "id": "meals",    "label": "Meals",    "station": "cookingEnabled" },
         { "id": "butchery", "label": "Butchery", "station": "butcheringEnabled" },
@@ -67,8 +34,6 @@
         { "id": "brewing",  "label": "Brewing",  "station": "brewingEnabled" }
       ] },
 
-      // Reagent craft. Herbalism = plant-prep (poultices/salves, feeds the caretaking medicine pass);
-      // potions = the alchemy-lab reagent line (leaf id keeps the legacy `alchemyEnabled` routing).
       { "id": "alchemy", "label": "Alchemy", "subjobs": [
         { "id": "herbalism", "label": "Herbalism", "station": "herbalismEnabled" },
         { "id": "potions",   "label": "Potions",   "station": "alchemyEnabled|arcane" }

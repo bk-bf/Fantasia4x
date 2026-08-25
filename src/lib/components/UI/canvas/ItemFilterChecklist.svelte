@@ -1,12 +1,3 @@
-<!--
-  ItemFilterChecklist — shared, NESTED category-grouped item allow-list with a compact search box +
-  toolbar, used by the fuel / food / repair / storage / stockpile filter panels. Items are bucketed
-  into a human-labelled taxonomy tree (itemCategoryTree.ts — Tools / Weapons→Melee→Cutting / … —
-  never a raw category id, AGENTS "never leak ids"). Every node has a tri-state header checkbox that
-  toggles its whole subtree at once and is collapsible. The toolbar adds collapse/expand-all and
-  copy/paste of the current allow-list (shared across panels via filterClipboard). The component owns
-  no policy — it takes the current `allowed` set and emits the full next id list via `onChange`.
--->
 <script lang="ts">
   import type { Item } from '$lib/game/core/types.js';
   import {
@@ -33,7 +24,6 @@
 
   const tree = $derived(buildCategoryTree(items, { query }));
 
-  // Subtree allow-counts, memoized per node path so each row's tri-state is one lookup.
   const counts = $derived.by(() => {
     const m = new Map<string, { allowed: number; total: number }>();
     const visit = (node: TreeNode) => {
@@ -80,8 +70,8 @@
 
   function toggleCollapseAll() {
     const next: Record<string, boolean> = {};
-    if (anyExpanded) for (const id of allNodeIds()) next[id] = true; // collapse everything
-    collapsed = next; // else clears → everything expanded
+    if (anyExpanded) for (const id of allNodeIds()) next[id] = true;
+    collapsed = next;
   }
 
   function copyFilter() {
@@ -95,7 +85,6 @@
     onChange(clip.filter((id) => here.has(id)));
   }
 
-  // Reflect partial-selection on a node checkbox (DOM-only `indeterminate` property).
   function indet(node: HTMLInputElement, partial: boolean) {
     node.indeterminate = partial;
     return {

@@ -15,12 +15,10 @@
   }
 </script>
 
-<!-- Equipment and Inventory -->
 <div class="equipment-section" id="equipment">
   <h3>| EQUIPMENT &amp; INVENTORY</h3>
 
   <div class="gear-columns">
-    <!-- Currently Equipped -->
     <div class="equipped-items">
       <h4>Currently Equipped:</h4>
       <EquipmentDoll
@@ -36,7 +34,6 @@
       />
     </div>
 
-    <!-- Carried Items -->
     <div class="inventory-items">
       <PawnInventory {pawn} />
     </div>

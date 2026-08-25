@@ -2,19 +2,6 @@ import { describe, it, expect } from 'vitest';
 import { buildScenario } from '$lib/game/headless/Scenario';
 import { HeadlessSession } from '$lib/game/headless/HeadlessSession';
 
-/**
- * TIME-BASED PROGRESSION AUDIT (headless, real ticks). Drives the four passive clocks the sim runs
- * over droppedItems + buildings and proves each one's REALISM GATE, not just that it ticks:
- *   • spoilage  — food rots to `decaysTo`; a sub-zero tile FREEZES it (no rot).
- *   • drying    — cures where warm+dry (progress accrues); a cold tile (<12°C) stalls it.
- *   • deterioration — a LOOSE stack weathers (durability falls); a STORED one is sheltered.
- *   • building condition — a structure wears under weather; a storm wears it far faster than clear sky.
- *
- * Plains baked temp = 10°C base + season offset: spring −5→5°C (drying stalls), summer +16→26°C
- * (dries + spoils), winter −18→−8°C (freezes spoilage). Scenario `items` land STORED on the all-map
- * stockpile; loose stacks need the stockpile zone removed first (see the deterioration block).
- */
-
 const warm = (s: HeadlessSession) => {
   s.command({ type: 'setSeason', payload: { season: 'summer' } } as never);
   s.command({ type: 'setWeather', payload: { type: 'clear' } } as never);
@@ -27,7 +14,6 @@ const stk = (s: HeadlessSession) => (s.getState().stockpile ?? {}) as Record<str
 
 describe('time-based progression', () => {
   it('spoilage: food rots when warm, FREEZES when sub-zero', async () => {
-    // WARM: common_carp (decaySeconds 300 ≈ 18000 ticks/unit) rots to rotten_food at 26°C.
     const s = new HeadlessSession();
     await s.start(
       buildScenario({
@@ -47,7 +33,6 @@ describe('time-based progression', () => {
     expect(stk(s).common_carp ?? 0, 'carp partly rotted').toBeLessThan(6);
     expect(stk(s).rotten_food ?? 0, 'produced rotten_food').toBeGreaterThan(0);
 
-    // FROZEN: same food at winter −8°C does not rot at all.
     const f = new HeadlessSession();
     await f.start(
       buildScenario({
@@ -86,7 +71,7 @@ describe('time-based progression', () => {
       })
     );
     warm(warmS);
-    for (let i = 0; i < 12; i++) warmS.tick(400); // ~4800 ticks
+    for (let i = 0; i < 12; i++) warmS.tick(400);
     const warmDry = (drops(warmS, 'plant_fiber')[0]?.drying as number) ?? 0;
 
     const coldS = new HeadlessSession();
@@ -100,7 +85,7 @@ describe('time-based progression', () => {
         seedEntities: false
       })
     );
-    coldS.command({ type: 'setSeason', payload: { season: 'spring' } } as never); // 5°C < 12 floor
+    coldS.command({ type: 'setSeason', payload: { season: 'spring' } } as never);
     coldS.command({ type: 'setWeather', payload: { type: 'clear' } } as never);
     for (let i = 0; i < 12; i++) coldS.tick(400);
     const coldDry = (drops(coldS, 'plant_fiber')[0]?.drying as number) ?? 0;
@@ -113,8 +98,6 @@ describe('time-based progression', () => {
   });
 
   it('deterioration: LOOSE stack weathers (storm >> clear), STORED one sheltered', async () => {
-    // NO pawns — otherwise they'd HAUL the loose stack onto a stockpile (→ stored → exempt) and there'd
-    // be nothing left to weather. Returns [looseDurability, storedGotAWearField].
     const run = async (weatherType: string): Promise<[number, boolean]> => {
       const s = new HeadlessSession();
       await s.start(
@@ -122,14 +105,11 @@ describe('time-based progression', () => {
           seed: 23,
           map: { w: 14, h: 14 },
           pawns: [],
-          items: { branch: 10 }, // branch: no decaySeconds, no driesTo → ONLY deteriorates
+          items: { branch: 10 },
           seedEntities: false
         })
       );
       s.command({ type: 'setWeather', payload: { type: weatherType } } as never);
-      // Free ONE tile from the map-wide stockpile so a spawned stack stays LOOSE (not auto-absorbed as
-      // stored). The whole-map `designateRect('stockpile')` writes no instance id, so clearDesignation
-      // on the tile — which deletes its zoneTiles entry — is the way to un-stockpile it.
       const lx = 3;
       const ly = 3;
       s.command({ type: 'clearDesignation', payload: { x: lx, y: ly } } as never);
@@ -141,7 +121,7 @@ describe('time-based progression', () => {
         drops(s, 'branch').find((d) => !d.stored),
         'loose stack exists'
       ).toBeTruthy();
-      for (let i = 0; i < 20; i++) s.tick(400); // 8000 ticks → ~13 deterioration passes
+      for (let i = 0; i < 20; i++) s.tick(400);
       const looseNow = drops(s, 'branch').find((d) => !d.stored) as
         | Record<string, unknown>
         | undefined;
@@ -157,12 +137,10 @@ describe('time-based progression', () => {
     );
     expect(clearDur, 'loose branch wears even in clear weather').toBeLessThan(120);
     expect(stormDur, 'storm weathers a loose stack faster than clear').toBeLessThan(clearDur);
-    // A stored stack never gets a durability field written (sheltered — the step skips it entirely).
     expect(clearWornStored || stormWornStored, 'stored branch never weathered').toBe(false);
   });
 
   it('fuel: pawns load a campfire, it burns down per tick and dies COLD at empty', async () => {
-    // Real refuel loop (NOT infiniteFuel): pawns haul firewood → auto-light → burn to empty → go cold.
     const s = new HeadlessSession();
     await s.start(
       buildScenario({
@@ -172,7 +150,6 @@ describe('time-based progression', () => {
         pawns: [{ count: 4, skillLevel: 15 }],
         needsDisabled: ['hunger', 'fatigue', 'thirst'],
         buildings: [{ id: 'campfire' }],
-        // dry_firewood fuelValue 24 → ≤48 fuel, drains at 1/60 per tick; plant_fiber is the tinder to light it.
         items: { dry_firewood: 2, plant_fiber: 4 },
         seedEntities: false
       })
@@ -192,10 +169,10 @@ describe('time-based progression', () => {
       const f = fire();
       const fuel = f?.fuel ?? 0;
       if (f?.lit) everLit = true;
-      if (f?.lit && fuel < prevFuel) dippedWhileLit = true; // fuel fell tick-over-tick while burning
+      if (f?.lit && fuel < prevFuel) dippedWhileLit = true;
       peakFuel = Math.max(peakFuel, fuel);
       prevFuel = fuel;
-      if (everLit && fuel === 0) break; // burned out
+      if (everLit && fuel === 0) break;
     }
     const end = fire();
     console.log(
@@ -223,8 +200,7 @@ describe('time-based progression', () => {
         })
       );
       s.command({ type: 'setWeather', payload: { type: weatherType } } as never);
-      for (let i = 0; i < 4; i++) s.tick(400); // ~1600 ticks — short enough the storm roof survives
-      // A collapsed (0%) roof is REMOVED from the list, so a missing building reads as 0, not 100.
+      for (let i = 0; i < 4; i++) s.tick(400);
       const b = (s.getState().buildings ?? []).find(
         (x) => (x as { type: string }).type === 'thatch_roof'
       ) as { condition?: number } | undefined;
@@ -245,11 +221,11 @@ describe('time-based progression', () => {
       buildScenario({
         seed: 26,
         map: { w: 16, h: 16 },
-        workReady: true, // construction labor on for the repair job
+        workReady: true,
         pawns: [{ count: 4, skillLevel: 15 }],
         needsDisabled: ['hunger', 'fatigue', 'thirst'],
         buildings: [{ id: 'thatch_roof' }],
-        items: { hay: 20, branch: 20 }, // thatch_roof repairMaterials
+        items: { hay: 20, branch: 20 },
         seedEntities: false
       })
     );
@@ -257,12 +233,9 @@ describe('time-based progression', () => {
       (s.getState().buildings ?? []).find((b) => (b as { type: string }).type === 'thatch_roof') as
         | { condition?: number }
         | undefined;
-    // Wear it down a little under storm (stays well above 0 — a few hundred ticks).
     s.command({ type: 'setWeather', payload: { type: 'storm' } } as never);
     for (let i = 0; i < 2; i++) s.tick(300);
     const worn = roof()?.condition ?? 100;
-    // Force the repair to qualify by raising the threshold above the worn %, then calm the sky so wear
-    // doesn't outrun the repair while we watch it.
     s.command({ type: 'setAllBuildingsRepairThreshold', payload: { pct: 100 } } as never);
     s.command({ type: 'setWeather', payload: { type: 'clear' } } as never);
     const hay0 = (stk(s).hay ?? 0) + (stk(s).branch ?? 0);

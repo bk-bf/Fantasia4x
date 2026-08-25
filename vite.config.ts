@@ -4,7 +4,6 @@ import wasm from 'vite-plugin-wasm';
 import path from 'path';
 import fs from 'fs';
 
-// Walks up from dir until it finds a .git DIRECTORY (worktrees have a .git FILE — skip those).
 function findGitRoot(dir: string): string {
   const gitPath = path.join(dir, '.git');
   if (fs.existsSync(gitPath) && fs.statSync(gitPath).isDirectory()) return dir;
@@ -13,7 +12,6 @@ function findGitRoot(dir: string): string {
   return findGitRoot(parent);
 }
 
-/** Minimal JSONC comment stripper — handles // and block comments, string-aware. */
 function stripJsoncComments(src: string): string {
   let out = '';
   let i = 0;
@@ -47,27 +45,12 @@ function stripJsoncComments(src: string): string {
   return out;
 }
 
-// Marker stamped into the User-Agent by the desktop shells (Electron main.js, Tauri tauri.conf.json).
-// Fantasia4x is a GAME, not a website: the dev/preview server must refuse to hand the playable app to
-// a plain browser tab (a stray Zen session-restore, a bookmark…). Only the desktop shell — which sends
-// this marker — gets through. Browser access is still possible on purpose via F4X_ALLOW_BROWSER=true
-// (dev.sh sets it for --profiler / --browser, since Firefox profiling needs a real browser).
 const SHELL_UA_MARKER = 'Fantasia4xShell';
 
 function desktopShellGuardPlugin(): Plugin {
   const allowBrowser = process.env.F4X_ALLOW_BROWSER === 'true';
-  // Dev tooling under /dev/ (spritesheet-viewer, …) is only reachable when the server is started in
-  // debug mode — i.e. `./dev.sh --debug`, the way the Electron spike is run for debugging. Without it,
-  // those paths stay behind the desktop-shell guard like everything else.
   const debugMode = process.env.VITE_DEBUG_MODE === 'true';
-  // Headless-sim routes (ADR-033): `./dev.sh --headless` drives the sim via curl/agents — no shell
-  // UA there, so exempt /api/sim/ when headless mode is on (the routes themselves 404 without it).
   const headlessMode = process.env.VITE_HEADLESS === '1';
-  // Dev-tools session (dev.sh --tools / launch.sh --tools): the /gear-db browser route is allowlisted
-  // WITHOUT lifting the guard for the game. Unlike F4X_ALLOW_BROWSER (which opens everything, game
-  // included, for profiling), this keeps the game's root document 403 — opening the bare server URL
-  // must NEVER launch the game — while letting the dev route + the Vite/SvelteKit module graph it needs
-  // through so it can hydrate in a plain browser.
   const toolsMode = process.env.VITE_TOOLS_MODE === 'true';
   const guard = (
     req: { url?: string; headers: Record<string, string | string[] | undefined> },
@@ -79,15 +62,9 @@ function desktopShellGuardPlugin(): Plugin {
     next: () => void
   ) => {
     if (allowBrowser) return next();
-    // In debug mode only: standalone dev tools under /dev/ (spritesheet-viewer, …) open in a plain
-    // browser — they aren't the game, so let them through, along with the static tileset BMPs they load
-    // (/tilesets/). Those are just images; the playable app (root document + bundle) stays guarded.
     const url = req.url || '';
     if (debugMode && (url.startsWith('/dev/') || url.startsWith('/tilesets/'))) return next();
     if (headlessMode && url.startsWith('/api/sim/')) return next();
-    // Tools mode: allow the /gear-db dev route + the Vite/SvelteKit module graph it loads to hydrate,
-    // but NOT the game. The game entry is the root document ('/'); it is never in this list, so a
-    // browser hitting '/' still gets the 403 "runs in the desktop app" page.
     if (
       toolsMode &&
       (url === '/gear-db' ||
@@ -95,12 +72,10 @@ function desktopShellGuardPlugin(): Plugin {
         url.startsWith('/gear-db?') ||
         url.startsWith('/dev/') ||
         url.startsWith('/tilesets/') ||
-        url.startsWith('/@') || // /@vite/, /@fs/, /@id/ — Vite dev module requests
+        url.startsWith('/@') ||
         url.startsWith('/node_modules/') ||
         url.startsWith('/.svelte-kit/') ||
         url.startsWith('/src/') ||
-        // Balance-audit results (static/audit/*.json), read by the gear-db AUDIT tab. Generated data,
-        // not game content — and the tab is useless without it.
         url.startsWith('/audit/') ||
         url.startsWith('/favicon'))
     )
@@ -144,9 +119,6 @@ function jsoncPlugin(): Plugin {
   };
 }
 
-// App version, read from package.json at config time and injected as a compile-time constant so the
-// title-screen credit line always matches the shipped build (build.sh pins package.json to the release
-// tag, so this tracks the release without a second hardcoded string to forget).
 const APP_VERSION = JSON.parse(
   fs.readFileSync(path.join(findGitRoot(process.cwd()), 'package.json'), 'utf-8')
 ).version;
@@ -156,17 +128,11 @@ export default defineConfig({
     __APP_VERSION__: JSON.stringify(APP_VERSION)
   },
   plugins: [desktopShellGuardPlugin(), jsoncPlugin(), wasm(), sveltekit()],
-  // The sim worker (ADR-021) is a module worker that dynamic-imports the WASM spatial core, which
-  // needs code-splitting — unsupported by Vite's default IIFE worker format. ES format + the wasm
-  // and jsonc plugins (the worker's import graph pulls .jsonc databases) make it bundle correctly.
   worker: {
     format: 'es',
     plugins: () => [jsoncPlugin(), wasm()]
   },
   server: {
-    // HMR is OFF by default so an agent editing the tree never reloads a live playtest
-    // (dev.sh/launch.sh only set F4X_HMR=true when --hmr is passed). `false` disables both
-    // hot updates and full-page reloads; `undefined` restores Vite's default behaviour.
     hmr: process.env.F4X_HMR === 'true' ? undefined : false,
     fs: {
       allow: [findGitRoot(process.cwd())]

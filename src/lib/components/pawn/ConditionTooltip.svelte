@@ -1,7 +1,3 @@
-<!-- ConditionTooltip.svelte — the shared condition hover panel (name + severity, life-threatening warn,
-     description, FROM sources, EFFECT modifiers). Extracted from ConditionChips so the health-tab
-     condition chips AND the trait card's "＋ <condition>" pill render the IDENTICAL tooltip from a
-     ConditionView. Presentation only — the caller supplies the positioned box (HoverTip). -->
 <script lang="ts">
   import type { ConditionView } from '$lib/components/util/conditionInfo';
   let { view }: { view: ConditionView } = $props();

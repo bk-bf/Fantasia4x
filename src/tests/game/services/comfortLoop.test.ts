@@ -2,8 +2,6 @@ import { describe, it, expect } from 'vitest';
 import { buildScenario } from '$lib/game/headless/Scenario';
 import { HeadlessSession } from '$lib/game/headless/HeadlessSession';
 
-// HEADLESS end-to-end: an uncomfortable idle pawn seeks a SEAT, lounges, refills the `comfort` need, and
-// gains the tiered `comfortable` condition. Drives the REAL sim (pawn FSM + need decay + condition driver).
 describe('comfort loop — headless (pawn lounges on a seat → comfort fills → comfortable condition)', () => {
   it('a pawn with low comfort paths to a seat, lounges, and becomes comfortable', async () => {
     const state = buildScenario({
@@ -11,10 +9,9 @@ describe('comfort loop — headless (pawn lounges on a seat → comfort fills �
       map: { w: 18, h: 18 },
       researchMaxTier: 9,
       toolTier: 3,
-      // start uncomfortable (below seek 35); freeze survival needs so nothing else pulls the pawn away.
       pawns: [{ count: 2, skillLevel: 10, needs: { comfort: 20, hunger: 5, fatigue: 5 } as never }],
       needsDisabled: ['hunger', 'fatigue'],
-      buildings: [{ id: 'couch' }], // a real seat (comfort 0.7, buildingProperties.seat)
+      buildings: [{ id: 'couch' }],
       seedEntities: false
     });
     const session = new HeadlessSession();
@@ -40,7 +37,6 @@ describe('comfort loop — headless (pawn lounges on a seat → comfort fills �
     expect(hasComfortable(), 'comfortable condition granted at high comfort').toBe(true);
   });
 
-  // The copper-tier seat (gated by the `copper_tack` fastener) must work as a seat like any other.
   it('the copper-tier tacked_chair is a usable seat (pawn lounges on it)', async () => {
     const session = new HeadlessSession();
     await session.start(
@@ -53,7 +49,7 @@ describe('comfort loop — headless (pawn lounges on a seat → comfort fills �
           { count: 2, skillLevel: 10, needs: { comfort: 20, hunger: 5, fatigue: 5 } as never }
         ],
         needsDisabled: ['hunger', 'fatigue'],
-        buildings: [{ id: 'tacked_chair' }], // the ONLY seat — comfort must come from it
+        buildings: [{ id: 'tacked_chair' }],
         seedEntities: false
       })
     );
@@ -67,7 +63,6 @@ describe('comfort loop — headless (pawn lounges on a seat → comfort fills �
     expect(comfort(), 'copper-tier seat refills comfort').toBeGreaterThan(70);
   });
 
-  // Beds grant comfort while sleeping AND leave `well_rested` on waking (never from bare ground).
   it('a pawn sleeping in a bed gains comfort and wakes well_rested', async () => {
     const session = new HeadlessSession();
     await session.start(
@@ -76,12 +71,11 @@ describe('comfort loop — headless (pawn lounges on a seat → comfort fills �
         map: { w: 18, h: 18 },
         researchMaxTier: 9,
         toolTier: 3,
-        // fatigue just over the sleep threshold so the pawn beds down AND wakes within the tick budget.
         pawns: [
           { count: 2, skillLevel: 10, needs: { comfort: 20, fatigue: 78, hunger: 5 } as never }
         ],
         needsDisabled: ['hunger'],
-        buildings: [{ id: 'feather_bed' }], // comfort 0.4 — no seats, so comfort can ONLY come from the bed
+        buildings: [{ id: 'feather_bed' }],
         seedEntities: false
       })
     );
@@ -105,13 +99,11 @@ describe('comfort loop — headless (pawn lounges on a seat → comfort fills �
     expect(rested, 'woke well_rested').toBe(true);
   });
 
-  // Pawns are drawn to the HIGHEST gatheringLevel: a hall table (3) out-draws a campfire (1).
   it('a socialising pawn picks the highest-level gathering place (table over campfire)', async () => {
     const session = new HeadlessSession();
     await session.start(
       buildScenario({
         seed: 11,
-        // Flat map so the explicit tiles below are guaranteed walkable (a generated map rejects them).
         map: { w: 18, h: 18, preset: 'flat' },
         researchMaxTier: 9,
         toolTier: 3,
@@ -119,8 +111,6 @@ describe('comfort loop — headless (pawn lounges on a seat → comfort fills �
           { count: 2, skillLevel: 10, needs: { relaxation: 10, hunger: 5, fatigue: 5 } as never }
         ],
         needsDisabled: ['hunger', 'fatigue'],
-        // Pawns spawn ~(9,9). The level-1 campfire sits RIGHT NEXT to them, the level-3 table far across
-        // the map — so walking to the table proves LEVEL beats proximity, not just "nearest wins".
         buildings: [
           { id: 'campfire', x: 10, y: 10 },
           { id: 'wooden_table', x: 16, y: 16 }

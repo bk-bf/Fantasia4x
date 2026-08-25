@@ -6,18 +6,6 @@ import { createDefaultBodyParts } from '$lib/game/core/defs/bodyParts';
 import { rng } from '$lib/game/core/util/rng';
 import type { GameState, Pawn } from '$lib/game/core/types';
 
-/**
- * BALANCE SWEEP — what each combat stat is actually worth, per weapon, in damage per second.
- *
- * Drives the real `combatService.resolveHit` (armour soak, body parts, crit, grip, wounds) and the
- * real cadence path (`attack_speed` stat → Combat's clamped attack interval). Nothing is re-derived
- * here: the only arithmetic this file owns is dps = mean damage per swing × swings per second.
- *
- * It exists to answer one question: does a stat investment blur the lines between weapon classes —
- * can a high-DEXTERITY pawn make a two-hander behave like a duelist's blade, or vice versa?
- */
-
-// Combat's cadence constants, mirrored (they are module-private). Kept in sync by `cadence caps`.
 const BASE_ATTACK_INTERVAL_TICKS = 120;
 const MIN_ATTACK_INTERVAL_TICKS = 72;
 const TPS = 60;
@@ -40,7 +28,6 @@ const fullLimbs = () =>
     parts: createDefaultBodyParts(id)
   }));
 
-/** Overrides are a loose bag so a test can stamp equipment slots the Pawn type keys strictly. */
 function makePawn(over: Record<string, unknown> = {}): Pawn {
   return {
     id: 'atk',
@@ -63,8 +50,6 @@ function makePawn(over: Record<string, unknown> = {}): Pawn {
   } as unknown as Pawn;
 }
 
-/** Attacker holding `weaponId`. `offHand` controls the GRIP: a shield (1H+shield), nothing (duelist)
- *  or undefined for a two-hander, which takes the twoHanded grip from the weapon itself. */
 function armed(weaponId: string, stats: Partial<typeof baseStats>, offHand?: string): Pawn {
   return makePawn({
     stats: { ...baseStats, ...stats },
@@ -75,10 +60,6 @@ function armed(weaponId: string, stats: Partial<typeof baseStats>, offHand?: str
   });
 }
 
-/**
- * Temporarily patch an item's weaponProperties in the live ItemService map, run `fn`, restore. Used
- * to price a PROPOSED change against the shipped numbers in the same run, without touching the data.
- */
 function withWeaponPatch<T>(patches: Record<string, Record<string, unknown>>, fn: () => T): T {
   const saved: Record<string, Record<string, unknown>> = {};
   for (const [id, fields] of Object.entries(patches)) {
@@ -101,7 +82,6 @@ function withWeaponPatch<T>(patches: Record<string, Record<string, unknown>>, fn
   }
 }
 
-/** Debug targets: a bare dummy, a mail-clad dummy, and an evasive dummy. All DEXTERITY-controlled. */
 function dummy(kind: 'bare' | 'armoured' | 'evasive'): Pawn {
   const eq =
     kind === 'armoured'
@@ -119,7 +99,6 @@ function dummy(kind: 'bare' | 'armoured' | 'evasive'): Pawn {
 
 const emptyState = { turn: 0, pawns: [], mobs: [], worldMap: [] } as unknown as GameState;
 
-/** Swings per second at this pawn's cadence, through Combat's real clamp. */
 function swingsPerSec(pawn: Pawn): number {
   const speed = Math.max(0.5, pawnStatService.evaluateStat('attack_speed', pawn));
   const interval = Math.max(
@@ -129,7 +108,6 @@ function swingsPerSec(pawn: Pawn): number {
   return TPS / interval;
 }
 
-/** Mean damage per swing ATTEMPT (misses count as 0) over `n` reseeded swings, and the hit rate. */
 function sample(attacker: Pawn, defender: Pawn, n = 3000, seed = 1234) {
   rng.reseed(seed);
   let dmg = 0;
@@ -160,7 +138,6 @@ function dps(weaponId: string, stats: Partial<typeof baseStats>, target: Pawn, o
 
 const f = (x: number, w = 6, d = 1) => x.toFixed(d).padStart(w);
 
-// The steel band is the only age where every family is populated, so the matrix uses it.
 const STEEL = [
   { id: 'steel_stiletto', label: 'stiletto (dagger)', off: undefined },
   { id: 'steel_rapier', label: 'rapier (finesse)', off: undefined },
@@ -180,9 +157,6 @@ const STEEL = [
 
 describe('weapon × stat sweep (real resolveHit + real cadence)', () => {
   it('cadence caps: the attack_speed APTITUDE stops paying past the interval floor', () => {
-    // Cadence is the rolled `attack_speed` aptitude now, not a core stat (COMBAT-BALANCE task 9). The
-    // clamp is unchanged, and it is the weapon's own speed that decides how much headroom a good roll
-    // has left: a 1.5-speed dagger is already at the ceiling, a 0.6-speed greatsword never reaches it.
     const rows: string[] = [];
     const withApt = (id: string, apt: number) =>
       swingsPerSec(makePawn({
@@ -196,9 +170,8 @@ describe('weapon × stat sweep (real resolveHit + real cadence)', () => {
     }
     console.log('[CADENCE]\n' + rows.join('\n'));
     const capped = TPS / MIN_ATTACK_INTERVAL_TICKS;
-    expect(withApt('steel_stiletto', 1.15)).toBeCloseTo(capped, 2); // fast weapon: already capped
-    expect(withApt('steel_greatsword', 1.15)).toBeLessThan(capped); // slow weapon: still climbing
-    // …and no core stat moves it at all — that is the decoupling.
+    expect(withApt('steel_stiletto', 1.15)).toBeCloseTo(capped, 2);
+    expect(withApt('steel_greatsword', 1.15)).toBeLessThan(capped);
     expect(swingsPerSec(armed('steel_stiletto', { dexterity: 60 }))).toBeCloseTo(
       swingsPerSec(armed('steel_stiletto', { dexterity: 10 })),
       5
@@ -250,8 +223,6 @@ describe('weapon × stat sweep (real resolveHit + real cadence)', () => {
   });
 
   it('class identity holds: armour is what separates the families, not throughput', () => {
-    // The design contract: a dagger is a soft-target weapon. Whatever its dps against bare flesh, a
-    // mailed target must blunt it far harder than it blunts an armour weapon (mace/hammer).
     const bare = dummy('bare');
     const mail = dummy('armoured');
     const stats = { strength: 25, dexterity: 25 };
@@ -270,9 +241,6 @@ describe('weapon × stat sweep (real resolveHit + real cadence)', () => {
   });
 
   it('every weapon scales on the stat its GRIP names, at the same slope', () => {
-    // COMBAT-BALANCE task 4: the weapon's `powerStat` decides which core stat feeds `melee_damage` —
-    // two-handed → strength, one-handed → dexterity, finesse → perception, arcane → intelligence. Each scales
-    // identically on its own axis; the damage number is the only difference.
     const t = dummy('bare');
     const lines = ['[POWER STAT] each weapon swept on the stat it actually scales with'];
     lines.push('weapon                stat      10      20      30      45      60');
@@ -288,26 +256,14 @@ describe('weapon × stat sweep (real resolveHit + real cadence)', () => {
       lines.push(label.padEnd(18) + stat.slice(0, 3).toUpperCase().padEnd(6) + cells);
     }
     console.log(lines.join('\n'));
-    // Each triples-and-more on its own stat: the finesse/arcane path is not a weaker slope, just a
-    // different axis. (Ranged/channeled weapons resolve through the melee path here, at reach.)
     const lo = dps('steel_rapier', { perception: 10 }, t).dps;
     const hi = dps('steel_rapier', { perception: 60 }, t).dps;
-    // …and the stats it does NOT name do nothing for it.
     const offAxis = dps('steel_rapier', { strength: 60, dexterity: 60 }, t).dps;
     expect(Math.abs(offAxis - lo) / lo).toBeLessThan(0.1);
-    // Bounded by the power soft cap (powerScale(60) = 2.875), not by the weapon — which is the point:
-    // one damped channel, and no undamped second one to outrun it.
     expect(hi / lo).toBeGreaterThan(2.5);
   });
 
   it('the damage term is soft-capped in the power stat, and DEXTERITY now out-scales it', () => {
-    // Was: `raw = baseDamage × powerStat / 10`, written for a "~5–22" stat range while pawns actually
-    // grow to caps of 62–100 — a silent ×6–×10 multiplier. `powerScale` now damps everything above the
-    // baseline (POWER_SOFT_CAP), bounded at 4×.
-    //
-    // The consequence this test pins: the cap INVERTED the stat economy. STRENGTH buys one damped channel;
-    // DEXTERITY buys three that are not damped (cadence to the interval floor, +1 to-hit per point, crit).
-    // Both slopes are asserted so neither side can drift without the other being reconsidered.
     const t = dummy('bare');
     const strGain =
       dps('steel_longsword', { strength: 60, dexterity: 20 }, t, 'iron_boss_shield').dps /
@@ -316,17 +272,12 @@ describe('weapon × stat sweep (real resolveHit + real cadence)', () => {
       dps('steel_longsword', { strength: 20, dexterity: 60 }, t, 'iron_boss_shield').dps /
       dps('steel_longsword', { strength: 20, dexterity: 10 }, t, 'iron_boss_shield').dps;
     console.log(`[SLOPE] longsword dps ×${strGain.toFixed(2)} from STRENGTH 10→60, ×${dexGain.toFixed(2)} from DEXTERITY 10→60`);
-    // A longsword is ONE-HANDED, so dexterity is its power stat and strength does nothing for it. The cap
-    // bounds the one channel that remains — there is no longer a second, undamped one to outrun it.
     expect(dexGain, 'the power term is bounded (was ×6.04 before the soft cap)').toBeLessThan(3.5);
     expect(dexGain, 'the power stat still pays').toBeGreaterThan(2);
     expect(Math.abs(strGain - 1), 'strength does nothing for a one-hander').toBeLessThan(0.15);
   });
 
   it('defence matrix: three dodge tiers × three block tiers, who pulls ahead', () => {
-    // Dodge is DEXTERITY-driven on the defender; block is CONSTITUTION + shield `blockBonus`, rolled BEFORE the
-    // to-hit (a block negates the swing outright). They punish different weapons: dodge punishes low
-    // accuracy, block punishes low per-hit damage (a blocked swing is a wasted swing either way).
     const DODGE: [string, number][] = [
       ['low', 1],
       ['med', 20],
@@ -358,9 +309,6 @@ describe('weapon × stat sweep (real resolveHit + real cadence)', () => {
   });
 
   it('precision: how often each weapon crits, and how much of its damage that is', () => {
-    // hit_precision = (0.05 + (DEXTERITY−10)×0.005 + (PERCEPTION−10)×0.0025) + the weapon's critMod, uncapped by
-    // cadence. It also biases LOCATION (aimedBodyPart rolls extra candidates and takes the least
-    // armoured), so precision pays twice: more crits AND softer places to put them.
     const t = dummy('armoured');
     const lines = ['[PRECISION] crit chance and share of total damage, vs mail'];
     lines.push('weapon               DEX20 crit  DEX45 crit   dps@20   dps@45   dps gain from crit*');
@@ -370,7 +318,6 @@ describe('weapon × stat sweep (real resolveHit + real cadence)', () => {
         0.05 + (dex - 10) * 0.005 + (per - 10) * 0.0025 + (wp.critMod ?? 0);
       const d20 = dps(w.id, { strength: 30, dexterity: 20 }, t, w.off).dps;
       const d45 = dps(w.id, { strength: 30, dexterity: 45 }, t, w.off).dps;
-      // Crit is a flat ×1.5 on the mitigated hit, so its damage share ≈ 0.5c / (1 + 0.5c).
       const share = (c: number) => (0.5 * c) / (1 + 0.5 * c);
       lines.push(
         w.label.padEnd(20) +
@@ -384,11 +331,7 @@ describe('weapon × stat sweep (real resolveHit + real cadence)', () => {
     expect(true).toBe(true);
   });
 
-
   it('PROPOSAL B — two-handers hit less often and swing slower', () => {
-    // Weapon `accuracy` enters the to-hit at MELEE_ACCURACY_WEIGHT (×2), so accuracy −8 is −16 points
-    // off a base of 60. Speed is cut a further ~15% on top. Priced against an EVASIVE target, where a
-    // to-hit penalty bites hardest.
     const TWOH = ['steel_greatsword', 'steel_greataxe', 'steel_warhammer', 'steel_greatcleaver'];
     const patch = Object.fromEntries(
       TWOH.map((id) => [
@@ -415,7 +358,6 @@ describe('weapon × stat sweep (real resolveHit + real cadence)', () => {
       }
       console.log(lines.join('\n'));
     }
-    // A 1H sword is the control: unpatched, so any convergence is the two-hander coming down.
     const t = dummy('evasive');
     const sword = dps('steel_longsword', { strength: 30, dexterity: 60 }, t, 'iron_boss_shield').dps;
     const gsNow = dps('steel_greatsword', { strength: 30, dexterity: 60 }, t).dps;
@@ -428,16 +370,7 @@ describe('weapon × stat sweep (real resolveHit + real cadence)', () => {
     expect(gsProp).toBeLessThan(gsNow);
   });
 
-
   it('STEALTH ceiling: a DEXTERITY-built assassin opening from the dark', () => {
-    // The worry with a DEXTERITY-scaled, high-crit-multiplier dagger is the opening blow. Combat gives an
-    // undetected attacker STEALTH_STRIKE_MULT (×3.5) on `hit_precision`, but the total is then held
-    // by CRIT_CHANCE_CAP (0.6) — so the ceiling is a 60% chance at the weapon's critMultiplier, once,
-    // because the landed hit auto-reveals and the second swing is an ordinary swing.
-    //
-    // resolveHit's stealth branch needs a MOB defender (`entityClass`) that has not detected the
-    // attacker, so this prices the ceiling arithmetically from the same constants rather than
-    // pretending a pawn dummy is a mob.
     const STEALTH_MULT = 3.5;
     const CAP = 0.6;
     const lines = ['[STEALTH] opening-blow ceiling, DEXTERITY 45 assassin (PERCEPTION 20)'];
@@ -456,9 +389,6 @@ describe('weapon × stat sweep (real resolveHit + real cadence)', () => {
     }
     console.log(lines.join('\n'));
 
-    // The opening blow is the whole gamble: it must beat a longsword's opener clearly, and still not
-    // read as a one-shot. Both bounds are asserted so a later crit-multiplier bump can't quietly
-    // break either side.
     const wp = itemService.getItemById('steel_stiletto')!.weaponProperties!;
     const precision = 0.05 + (45 - 10) * 0.005 + (20 - 10) * 0.0025;
     const sneak = Math.min(CAP, precision * STEALTH_MULT + (wp.critMod ?? 0));
@@ -466,11 +396,6 @@ describe('weapon × stat sweep (real resolveHit + real cadence)', () => {
     expect(opening, 'the opening blow is a real spike').toBeGreaterThan(1.5);
     expect(opening, 'but still under 2.5× — it opens a fight, it does not end one').toBeLessThan(2.5);
 
-    // Sustained, at EQUAL stat investment. This is the fairness test that matters, because DEXTERITY pays
-    // a dagger four ways (damage, cadence, to-hit, crit) where STRENGTH pays a two-hander only one — so a
-    // DEXTERITY-scaled dagger triple-dips and the crit multiplier has to be priced against that, not on its
-    // own. A specialist SHOULD win a straight damage race it has fully committed to; what it must not
-    // do is win it by a landslide while also being the fastest and most accurate thing on the field.
     for (const kind of ['bare', 'armoured'] as const) {
       const t = dummy(kind);
       const assassin = dps('steel_stiletto', { strength: 10, dexterity: 60, perception: 20 }, t).dps;
@@ -478,16 +403,11 @@ describe('weapon × stat sweep (real resolveHit + real cadence)', () => {
       console.log(
         `[STEALTH] sustained vs ${kind}, equal investment — DEXTERITY-60 assassin ${assassin.toFixed(1)} dps vs STRENGTH-60 greatsword ${greatsword.toFixed(1)} dps (×${(assassin / greatsword).toFixed(2)})`
       );
-      // The residual edge is NOT the dagger's crit: at critMultiplier 1.5 it already sits ~1.2× the
-      // greatsword, because DEXTERITY buys four things and STRENGTH buys one. Closing it properly means taming
-      // the uncapped `baseDamage × stat / STAT_SCALE` term, not shaving the dagger again.
       expect(assassin / greatsword, 'the assassin does not run away with the damage race').toBeLessThan(1.5);
     }
   });
 
   it('CALIBRATION — what critMultiplier the dagger can carry before it is oppressive', () => {
-    // Priced against the same STRENGTH-60 greatsword benchmark, so the number is chosen from data rather
-    // than taste. The shipped value should sit inside the band this prints.
     const bare = dummy('bare');
     const mail = dummy('armoured');
     const gsBare = dps('steel_greatsword', { strength: 60, dexterity: 20 }, bare).dps;
@@ -510,9 +430,6 @@ describe('weapon × stat sweep (real resolveHit + real cadence)', () => {
   });
 
   it('armour attrition: condition stripped per LANDED hit, and what that is worth now', () => {
-    // Why the first fight table looked backwards: a dagger left the orc with LESS armour than a
-    // warhammer did. Armour loss is per LANDED HIT, so a fast weapon in a long fight accumulates
-    // what a slow weapon lands twice and wins with. Per-hit is the honest comparison.
     const t = dummy('armoured');
     const lines = ['[ARMOUR ATTRITION] at STRENGTH 30 (armor_damage stat ×1.4), vs a 200-condition plate'];
     lines.push('weapon                armourDmg/hit   hits to strip   hits/sec   seconds to strip');
@@ -535,7 +452,6 @@ describe('weapon × stat sweep (real resolveHit + real cadence)', () => {
   });
 
   it('condition now scales soak: a battered hauberk stops less than a fresh one', () => {
-    // The change that makes armour damage matter mid-fight: defense × (0.5 + 0.5 × condition).
     const mk = (durability: number) =>
       makePawn({
         id: 'dummy',

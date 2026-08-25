@@ -1,6 +1,3 @@
-// Vague, non-numeric ability descriptions for a pawn (migrant-wave modal). Thresholds come from
-// core/Culture.ts's `statBucket` — single source.
-
 import type { Pawn } from '$lib/game/core/types';
 import { statBucket } from '$lib/game/core/gen/culture';
 
@@ -14,7 +11,6 @@ const STATS = [
 ] as const;
 type StatKey = (typeof STATS)[number];
 
-/** Flattering phrase for a notably-high stat (`strong` vs the stronger `mighty` wording). */
 const POSITIVE: Record<StatKey, { strong: string; mighty: string }> = {
   strength: { strong: 'strong-armed', mighty: 'immensely powerful' },
   dexterity: { strong: 'deft-handed', mighty: 'remarkably nimble' },
@@ -24,7 +20,6 @@ const POSITIVE: Record<StatKey, { strong: string; mighty: string }> = {
   charisma: { strong: 'personable', mighty: 'magnetic in company' }
 };
 
-/** Caveat phrase for a notably-low (`frail`) stat. */
 const FRAIL: Record<StatKey, string> = {
   strength: 'weak-limbed',
   dexterity: 'clumsy',
@@ -39,7 +34,6 @@ export interface PawnBlurb {
   weaknesses: string[];
 }
 
-/** Up to three standout strengths (highest first) and any glaring frailties. Never exposes numbers. */
 export function describePawnAbilities(pawn: Pawn): PawnBlurb {
   const stats = pawn.stats;
   const ranked = STATS.map((k) => {

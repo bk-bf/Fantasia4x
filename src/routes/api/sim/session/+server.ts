@@ -1,12 +1,3 @@
-/**
- * /api/sim/session — create / inspect / dispose the headless session (HEADLESS-SIM / ADR-033).
- *
- *   POST   { preset?: string } | { spec: ScenarioSpec } | { snapshot: HeadlessSnapshot }
- *   GET    → { active, label, turn, presets[] }
- *   DELETE → dispose
- *
- * Dev-only + `--headless` opt-in (404 otherwise); nothing boots until the first POST.
- */
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import {

@@ -1,6 +1,3 @@
-<!-- ConditionChips.svelte — the pawn-tab CONDITIONS row: one tinted sprite-icon chip per active
-     condition (persistent + transient), with a cursor-following hover panel (HoverTip) that explains
-     the condition, where the pawn got it from, and what it does. Derivation lives in conditionInfo.ts. -->
 <script lang="ts">
   import SpriteIcon from '$lib/components/UI/widget/SpriteIcon.svelte';
   import HoverTip from '$lib/components/UI/tooltip/HoverTip.svelte';

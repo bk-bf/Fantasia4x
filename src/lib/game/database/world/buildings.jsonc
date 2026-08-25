@@ -230,8 +230,6 @@
     "buildingState": {"isUnique": false, "maxCount": 6}
   },
   {
-    // ALCHEMY-BUTCHERY-EXPANSION §B — prestige-pelt trophy rugs: a beauty+comfort sink for the boss
-    // pelts, finer than the plain bear rug (a competing use alongside the warcloaks).
     "id": "dire_wolf_rug",
     "ageTier": "iron:3",
     "name": "Dire Wolf Rug",
@@ -289,7 +287,6 @@
     "buildingState": {"isUnique": false, "maxCount": 4}
   },
   {
-    // §B — a predator-claw trophy: the beauty sink for the anatomy-pass `predator_claw` drop.
     "id": "claw_totem",
     "ageTier": "primitive:3",
     "name": "Claw Totem",
@@ -425,8 +422,6 @@
     "buildingState": {"isUnique": false}
   },
   {
-    // ALCHEMY-BUTCHERY-EXPANSION §B/§D — the station that turns big-beast bone/tusk/ivory into weapons + carved
-    // trophies, so a boss's anatomy has somewhere to go.
     "id": "bone_carvers_bench",
     "ageTier": "primitive:3",
     "workstation"     : true,
@@ -447,7 +442,6 @@
     "buildingState": {"isUnique": false}
   },
   {
-    // ALCHEMY-BUTCHERY-EXPANSION §B — an ivory trophy: a beauty sink for `ivory` (carved from great tusks).
     "id": "ivory_idol",
     "ageTier": "iron:1",
     "name": "Ivory Idol",
@@ -1317,10 +1311,6 @@
     "effects"           : {"movementCost": 1},
     "storageCapacity"   : {}
   },
-  // INDOOR FLOORS — walkable tiles that quicken movement (`floorSpeed` multiplies the tile's move-cost,
-  // <1 = faster) and keep an entity off the wet ground (`floorDryness` 0–1 cuts how wet the tile reads).
-  // Baked onto the tile by BuildingService.applyBuildingFootprint; read by MovementSystem + the wetness
-  // ticks. NOT streets — they don't bias pathing; pair with a roof to also stay dry in the rain.
   {
     "id": "packed_earth_floor",
     "ageTier": "primitive:1",
@@ -1580,8 +1570,6 @@
     "storageCapacity": {},
     "buildingState": {"isUnique": false}
   },
-  // ── Comfort furniture ladder (seats a pawn LOUNGES at to fill the `comfort` need; higher material
-  // grade → more comfort/beauty via material.building). `seat: true` marks a sit-able piece. ──
   {
     "id": "log_stool",
     "ageTier": "primitive:2",
@@ -1852,10 +1840,6 @@
     "buildingState": {"isUnique": false, "maxCount": 1}
   },
   {
-    // ── PRODUCTION-CHAIN-II §F — Compost Bin ──────────────────────────────────────────────────
-    // A passive bin (like the charcoal clamp): pawns haul rotten food/meat/hide/carcass + hay to it
-    // and it rots them down into `compost` over time (the make_compost recipe, recipes.jsonc). Compost
-    // is the gating material for the Soil-Works builds below — rot + scraps become your best soil.
     "id": "compost_bin",
     "ageTier": "primitive:2",
     "passive": true,
@@ -1877,9 +1861,6 @@
     "buildingState": {"isUnique": false, "maxCount": 4}
   },
   {
-    // Soil-Works terraform builds (§F F3): a one-shot "build the dirt". Pawns haul the soil amendment
-    // to the tile, work it in, and on completion the tile's subType is raised (jobs/construct.complete
-    // reads `terraformSubType`) and the build removes itself. Compost is the gate — each tier needs more.
     "id": "lay_poor_soil",
     "ageTier": "primitive:1",
     "name": "Lay Poor Soil",
@@ -1967,7 +1948,6 @@
     "storageCapacity": {},
     "buildingState": {"isUnique": false}
   },
-  // ── PRODUCTION-CHAIN-II §F8 — the food chain: quern (mill), oven (bake), fermenter (brew) ───────
   {
     "id": "quern",
     "ageTier": "primitive:1",
@@ -2118,9 +2098,6 @@
     "storageCapacity": {},
     "buildingState": {"isUnique": false, "maxCount": 4}
   },
-  // ════════════════════════════════════════════════════════════════════════════════════════════
-  // PRODUCTION-CHAIN-III §B — Carpentry tier + tanning buckets (passive furnaces) + brewing barrel
-  // ════════════════════════════════════════════════════════════════════════════════════════════
   {
     "id": "carpenter_bench",
     "ageTier": "iron:1",
@@ -2273,13 +2250,6 @@
     "storageCapacity": {},
     "buildingState": {"isUnique": false}
   },
-  // TODO (mechanical power — deferred): waterwheel + windmill (power sources), axle/gearbox
-  //   transmission segments, and powered workstations (powered_mill, powered_sawmill, trip_hammer).
-  //   Approved model: 1b axle-chain network (flood-fill connectivity from an active source through
-  //   adjacent axle tiles; a workstation adjacent to a live segment is powered) + powered stations run
-  //   at HAND-SPEED when unpowered and gain a speed bonus when connected. The `mechanism` item is the
-  //   connector/build component. Needs an engine power-network service + a craft-speed hook (guarded
-  //   layer) — build when ready.
   {
     "id": "tanning_bucket_station",
     "ageTier": "bronze:3",
@@ -2346,9 +2316,6 @@
     "storageCapacity": {},
     "buildingState": {"isUnique": false, "maxCount": 6}
   },
-  // ════════════════════════════════════════════════════════════════════════════════════════════
-  // PRODUCTION-CHAIN-III §G — Alchemy lab (chemistry's replacement: potions, dyes, soap, tannin)
-  // ════════════════════════════════════════════════════════════════════════════════════════════
   {
     "id": "alchemy_lab",
     "ageTier": "bronze:2",
@@ -2371,8 +2338,6 @@
     "buildingState": {"isUnique": false, "maxCount": 2}
   },
   {
-    // ALCHEMY-BUTCHERY-EXPANSION §D — the advanced alchemy station (tier 3). Gates the high-tier trait
-    // transfusions and best potions; its tier is what makes T3 brews possible (better gamble odds + pool).
     "id": "apothecary",
     "ageTier": "iron:2",
     "workstation"     : true,
@@ -2393,10 +2358,6 @@
     "storageCapacity": {},
     "buildingState": {"isUnique": false, "maxCount": 2}
   },
-  // ════════════════════════════════════════════════════════════════════════════════════════════
-  // PRODUCTION-CHAIN-III §B.3 — Infused capstone stations: base cost doubled + gem-dust, gated
-  // runic_inscription. Each adds a speed+quality bonus AND unlocks its magic recipe family.
-  // ════════════════════════════════════════════════════════════════════════════════════════════
   {
     "id": "manaforge",
     "ageTier": "runed:3",
@@ -2523,12 +2484,6 @@
     "storageCapacity": {},
     "buildingState": {"isUnique": false, "maxCount": 2}
   },
-  // ════════════════════════════════════════════════════════════════════════════════════════════
-  // PRODUCTION-CHAIN-III §H — Fortification (data-only; reuses wall walkability + the existing ranged
-  // cover mechanic: an adjacent solid tile grants a defender cover). Combat traps + auto-fire
-  // stationary weapons (ballista/scorpion/rune_trap/arcane_turret) are DEFERRED — they need new
-  // combat code (trap-damages-mob, turret targeting/ammo) and gate on mobs-attack-buildings (NOTES).
-  // ════════════════════════════════════════════════════════════════════════════════════════════
   {
     "id": "palisade",
     "ageTier": "primitive:2",
@@ -2587,11 +2542,6 @@
     "effects": {"movementCost": 1, "weatherProtection": 0.7},
     "storageCapacity": {}
   },
-  // ════════════════════════════════════════════════════════════════════════════════════════════
-  // PRODUCTION-CHAIN-III §D — Resin tap (plank/bronze tier). Resin is a GATE material: chopping a
-  // conifer drops only a rough 0–1 trickle; this passive tap is the reliable supply, slowly drawing
-  // pitch from bark/conifer logs (reuses the passive-furnace recipe timer, like the brewing barrel).
-  // ════════════════════════════════════════════════════════════════════════════════════════════
   {
     "id": "resin_tap",
     "ageTier": "bronze:1",

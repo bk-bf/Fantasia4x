@@ -1,8 +1,3 @@
-<!--
-  SettingRow — one labelled control in the SettingsModal. Renders the control itself (checkbox / select
-  / disabled placeholder slider) so the row + control styling lives in one place, keeping the parent
-  modal small. Driven by props, not snippets, so its scoped CSS reaches the controls.
--->
 <script lang="ts">
   type Option = { value: string; label: string };
   let {
@@ -19,12 +14,10 @@
     onInput
   }: {
     label: string;
-    /** Faint trailing note, e.g. "— coming soon" on the disabled audio placeholders. */
     sub?: string;
     type: 'checkbox' | 'select' | 'slider';
     checked?: boolean;
     value?: string;
-    /** Slider position 0–100. Used (with onInput) for a live slider; ignored when disabled. */
     sliderValue?: number;
     options?: Option[];
     disabled?: boolean;
@@ -103,15 +96,10 @@
     width: 130px;
     cursor: pointer;
   }
-  /* Disabled "coming soon" slider — dim it, and keep the app pointer (inherited from the row) rather
-     than the OS not-allowed cursor; inputs are excluded from the global app-cursor rule, so opt in. */
   input[type='range']:disabled {
     cursor: inherit;
     opacity: 0.5;
   }
-  /* Retro-terminal dropdown — mirrors the construction material picker / fuel panel: flat dark field,
-     thin border that warms to orange on hover/focus (the global option styling in app.css handles the
-     popup list + kills the native blue). */
   .opt-select {
     background: var(--bg);
     color: var(--accent-hi);

@@ -13,10 +13,6 @@ import loreData from '../../database/social/kingdom-lore.jsonc';
 import { rng } from '../util/rng';
 import { clamp } from '../util/math';
 
-// Fork of the culture generator (core/Culture.ts) for the world's political layer
-// (KINGDOMS-TRADE). Kingdoms are downstream from the culture pool: each is a weighted
-// blend of existing cultures — no new cultures are minted here.
-
 const LORE = loreData as unknown as {
   nameStems: string[];
   scaleTiers: { polities: string[]; forms: string[] }[];
@@ -42,7 +38,6 @@ const LORE = loreData as unknown as {
   famedItemEpithets: string[];
 };
 
-// ── Scale = wealth. Per-tier [min,max] counts, indexed by wealthIdx 0 (hamlet) .. 4 (empire). ──
 const HISTORY_COUNT: [number, number][] = [
   [0, 1],
   [1, 1],
@@ -86,7 +81,6 @@ const VILLAGE_COUNT: [number, number][] = [
   [8, 20]
 ];
 
-/** The "town and up" threshold: index ≥ 2 gets grand naming/leaders/epithets/history. */
 const GRAND_TIER = 2;
 
 function countFor(table: [number, number][], idx: number): number {
@@ -94,12 +88,8 @@ function countFor(table: [number, number][], idx: number): number {
   return rng.int(lo, hi);
 }
 
-// ─── Knowledge tiers ─────────────────────────────────────────────────────────
-
-/** Hidden-xp thresholds unlocking lore tiers 0–4 (tier 0 = first contact). */
 export const KNOWLEDGE_TIER_THRESHOLDS = [0, 25, 60, 110, 180];
 
-/** Lore tier (0–4) the colony has earned about a kingdom. */
 export function knowledgeTier(knowledge: number): number {
   let tier = 0;
   for (let i = KNOWLEDGE_TIER_THRESHOLDS.length - 1; i >= 0; i--) {
@@ -111,8 +101,6 @@ export function knowledgeTier(knowledge: number): number {
   return tier;
 }
 
-// ─── Wealth bands ────────────────────────────────────────────────────────────
-
 export const WEALTH_BANDS: WealthBand[] = [
   'destitute',
   'modest',
@@ -121,7 +109,6 @@ export const WEALTH_BANDS: WealthBand[] = [
   'opulent'
 ];
 
-/** Player-facing labels — never render the band id raw. */
 export const WEALTH_BAND_LABEL: Record<WealthBand, string> = {
   destitute: 'Destitute',
   modest: 'Modest',
@@ -130,14 +117,12 @@ export const WEALTH_BAND_LABEL: Record<WealthBand, string> = {
   opulent: 'Opulent'
 };
 
-/** Step a wealth band up/down one rung (drift), clamped to the scale. */
 export function stepWealthBand(band: WealthBand, dir: 1 | -1): WealthBand {
   const i = clamp(WEALTH_BANDS.indexOf(band) + dir, 0, WEALTH_BANDS.length - 1);
   return WEALTH_BANDS[i];
 }
 
 function rollWealthBand(raider: boolean): WealthBand {
-  // Raiders skew poor — plunder doesn't compound like trade does.
   const weights = raider ? [40, 35, 20, 5, 0] : [15, 30, 30, 18, 7];
   const total = weights.reduce((s, w) => s + w, 0);
   let roll = rng.random() * total;
@@ -147,8 +132,6 @@ function rollWealthBand(raider: boolean): WealthBand {
   }
   return 'modest';
 }
-
-// ─── Naming & lore pieces ────────────────────────────────────────────────────
 
 function slugify(name: string): string {
   return name
@@ -161,8 +144,6 @@ function fill(template: string, slots: Record<string, string>): string {
   return template.replace(/\{(\w+)\}/g, (m, key) => slots[key] ?? m);
 }
 
-/** Name a kingdom by its scale (wealthIdx): a hamlet is "the Steading of Crag", an empire "the Crag
- *  Imperium". Returns the polity word too (for the {polity_lower} history slot). */
 function generateKingdomName(raider: boolean, wealthIdx: number): { name: string; polity: string } {
   const stem = rng.pick(LORE.nameStems);
   const polity = rng.pick(
@@ -174,8 +155,6 @@ function generateKingdomName(raider: boolean, wealthIdx: number): { name: string
   return { name: fill(form, { stem, polity }), polity };
 }
 
-/** Roll a leader name, titled to the kingdom's scale (a hamlet has a Reeve, an empire an Emperor).
- *  Also used by the runtime drift (succession). */
 export function generateLeaderName(raider: boolean, wealthIdx = 3): string {
   const title = rng.pick(
     raider ? LORE.raiderLeaderTitles : LORE.leaderTitlesByTier[clamp(wealthIdx, 0, 4)]
@@ -185,7 +164,6 @@ export function generateLeaderName(raider: boolean, wealthIdx = 3): string {
   return `${title} ${given}${epithet}`;
 }
 
-/** Roll a famed-item name — also used by the runtime drift (treasures change hands). */
 export function generateFamedItemName(): string {
   const material = rng.pick(LORE.famedItemMaterials);
   const type = rng.pick(LORE.famedItemTypes);
@@ -238,14 +216,10 @@ function generateHistory(
   return pickSome(bank, countFor(HISTORY_COUNT, wealthIdx)).map((t) => fill(t, slots));
 }
 
-// ─── Culture composition ─────────────────────────────────────────────────────
-
 function generateCultureMix(cultures: Culture[]): KingdomCultureShare[] {
-  // Mono → multi spectrum: most kingdoms lean on 1–2 cultures, a few are true blends.
   const roll = rng.random();
   const n = Math.min(cultures.length, roll < 0.35 ? 1 : roll < 0.7 ? 2 : roll < 0.9 ? 3 : 4);
   const picked = pickSome(cultures, n);
-  // First pick gets a dominance boost so even blends usually have a visible majority.
   const raws = picked.map((_, i) => rng.range(0.3, 1) * (i === 0 ? 2 : 1));
   const total = raws.reduce((s, w) => s + w, 0);
   return picked
@@ -253,14 +227,8 @@ function generateCultureMix(cultures: Culture[]): KingdomCultureShare[] {
     .sort((a, b) => b.weight - a.weight);
 }
 
-// ─── Public API ──────────────────────────────────────────────────────────────
-
-/** Generate one procedural kingdom as a weighted blend of the given culture pool. Scale (a poor
- *  hamlet vs a grand empire) is the wealth band: naming, leader title, epithet, history tone,
- *  settlement counts, and how much lore exists all follow it. */
 export function generateKingdom(cultures: Culture[], alwaysHostile = false): Kingdom {
   const raider = alwaysHostile;
-  // Wealth FIRST — it is the scale, so naming/leaders/lore all read from it.
   const wealthBand = rollWealthBand(raider);
   const wealthIdx = WEALTH_BANDS.indexOf(wealthBand);
   const { name, polity } = generateKingdomName(raider, wealthIdx);
@@ -299,7 +267,6 @@ export function generateKingdom(cultures: Culture[], alwaysHostile = false): Kin
   };
 }
 
-/** Preroll the world's ~20 kingdoms; a handful are always-hostile raiding parties. */
 export function generateKingdomPool(cultures: Culture[], count = 20): Kingdom[] {
   const hostileCount = Math.min(count, rng.int(2, 4));
   const pool: Kingdom[] = [];
@@ -328,14 +295,12 @@ function makeRelation(a: string, b: string, score: number): KingdomRelation {
   return { a, b, score: s, disposition: dispositionForScore(s) };
 }
 
-/** Score between two cultures per the culture relation graph (same culture = strong kinship). */
 function cultureScore(aId: string, bId: string, relations: CultureRelation[]): number {
   if (aId === bId) return 60;
   const rel = relations.find((r) => (r.a === aId && r.b === bId) || (r.a === bId && r.b === aId));
   return rel?.score ?? 0;
 }
 
-/** Weighted-average culture affinity between two kingdoms' member mixes. */
 function mixAffinity(a: Kingdom, b: Kingdom, relations: CultureRelation[]): number {
   let score = 0;
   for (const sa of a.cultureMix) {
@@ -346,11 +311,6 @@ function mixAffinity(a: Kingdom, b: Kingdom, relations: CultureRelation[]): numb
   return score;
 }
 
-/**
- * Derive the kingdom relation graph from member-culture dispositions, then jitter.
- * Includes colony↔kingdom rows keyed by COLONY_RELATION_ID, seeded from the colony's
- * home culture. Always-hostile raiders pin to −100 with everyone.
- */
 export function generateKingdomRelations(
   kingdoms: Kingdom[],
   cultureRelations: CultureRelation[],
@@ -369,7 +329,6 @@ export function generateKingdomRelations(
       relations.push(makeRelation(a.id, b.id, score));
     }
   }
-  // Colony rows — seeded from the home culture vs each kingdom's mix.
   for (const k of kingdoms) {
     if (k.relationBias === 'always_hostile') {
       relations.push(makeRelation(COLONY_RELATION_ID, k.id, -100));
@@ -384,7 +343,6 @@ export function generateKingdomRelations(
   return relations;
 }
 
-/** Look up the symmetric relation between two participants (kingdom ids or the colony). */
 export function findKingdomRelation(
   relations: KingdomRelation[],
   a: string,

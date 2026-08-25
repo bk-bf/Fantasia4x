@@ -3,7 +3,6 @@ import { gameEngine } from '$lib/game/systems/GameEngineImpl';
 import { drainTileDeltas, clearTileDeltas } from '$lib/game/core/state/tileDeltas';
 import type { GameState, WorldTile } from '$lib/game/core/types';
 
-// processResourceRegrowth must mutate only expired tiles in place and ship them as worldMap deltas — never replace the worldMap ref.
 function tile(over: Partial<WorldTile>): WorldTile {
   return {
     x: 0,
@@ -15,7 +14,6 @@ function tile(over: Partial<WorldTile>): WorldTile {
   } as WorldTile;
 }
 
-// Drive the private per-tick phase against a hand-built state (no browser/worker needed).
 function runRegrowth(worldMap: WorldTile[][], turn: number): void {
   const eng = gameEngine as unknown as {
     gameState: Partial<GameState>;
@@ -39,9 +37,9 @@ describe('processResourceRegrowth (in-place + deltas)', () => {
 
     runRegrowth(worldMap, 10);
 
-    expect(t.resources.berry_bush).toBeGreaterThanOrEqual(1); // regrew
-    expect(t.resourceCooldowns?.berry_bush).toBeUndefined(); // cooldown removed
-    expect(worldMap[0][0]).toBe(t); // same tile object — mutated in place, not replaced
+    expect(t.resources.berry_bush).toBeGreaterThanOrEqual(1);
+    expect(t.resourceCooldowns?.berry_bush).toBeUndefined();
+    expect(worldMap[0][0]).toBe(t);
   });
 
   it('emits exactly the changed tiles as deltas (unexpired tiles untouched)', () => {
@@ -66,7 +64,6 @@ describe('processResourceRegrowth (in-place + deltas)', () => {
     expect(deltas).toHaveLength(1);
     expect(deltas![0]).toMatchObject({ y: 0, x: 1 });
     expect(deltas![0].tile).toBe(hot);
-    // the still-cooling tile was left alone
     expect(cold.resources.berry_bush).toBe(0);
     expect(cold.resourceCooldowns?.berry_bush).toBe(999);
   });
@@ -79,7 +76,6 @@ describe('processResourceRegrowth (in-place + deltas)', () => {
   });
 
   it('compound keys: partial recovery (count=1) while a sibling yield still cools, then full restore', () => {
-    // Two per-yield cooldowns for the same resource: one expired, one not → partial recovery.
     const t = tile({
       x: 0,
       y: 0,
@@ -88,11 +84,10 @@ describe('processResourceRegrowth (in-place + deltas)', () => {
     });
     runRegrowth([[t]], 10);
 
-    expect(t.resourceCooldowns?.['oak_tree:wood']).toBeUndefined(); // expired yield cleared
-    expect(t.resourceCooldowns?.['oak_tree:bark']).toBe(999); // sibling still cooling
-    expect(t.resources.oak_tree).toBe(1); // partial — node available, count pinned to 1
+    expect(t.resourceCooldowns?.['oak_tree:wood']).toBeUndefined();
+    expect(t.resourceCooldowns?.['oak_tree:bark']).toBe(999);
+    expect(t.resources.oak_tree).toBe(1);
 
-    // Now expire the sibling too → full restore, all cooldowns gone.
     clearTileDeltas();
     runRegrowth([[t]], 1000);
     expect(t.resourceCooldowns?.['oak_tree:bark']).toBeUndefined();

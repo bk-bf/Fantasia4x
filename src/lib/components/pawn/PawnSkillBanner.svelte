@@ -1,6 +1,3 @@
-<!-- PawnSkillBanner.svelte — WORK-EXPERIENCE fork of PawnStatBanner: one chip per work category
-     showing the pawn's experience LEVEL, a compact XP bar beneath it, and the exact
-     current / needed XP toward the next level. Rendered above the Work screen's skills table. -->
 <script lang="ts">
   import type { Pawn } from '$lib/game/core/types';
   import { WORK_CATEGORIES } from '$lib/game/core/defs/work';

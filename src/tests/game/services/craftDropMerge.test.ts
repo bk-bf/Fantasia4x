@@ -4,12 +4,6 @@ import { itemService } from '$lib/game/services/ItemService';
 import { recipeService } from '$lib/game/services/RecipeService';
 import type { GameState, DroppedItem } from '$lib/game/core/types';
 
-/**
- * Render-side FPS regression guard: repeated craft completions at a NON-stockpile station must fold
- * their plain bulk outputs into a single loose pile per resource on the station tile, instead of
- * spawning a fresh stack every completion. Otherwise `droppedItems` grows unbounded and the per-frame
- * item overlay (overlayDroppedItems) re-iterates them all every frame, collapsing FPS while TPS holds.
- */
 function order(id: string): any {
   return {
     id,
@@ -32,7 +26,6 @@ function baseState(): GameState {
     y: 5,
     status: 'complete'
   } as any;
-  // Two staged log inputs, one reserved per order — the station tile (5,5) is NOT a stockpile.
   const drops: DroppedItem[] = [
     {
       id: 'in1',
@@ -68,13 +61,10 @@ describe('craft output drop merge (non-stockpile station)', () => {
 
     const fw = (gs.droppedItems ?? []).filter((d) => d.resourceId === 'green_firewood');
     const branch = (gs.droppedItems ?? []).filter((d) => d.resourceId === 'branch');
-    // One stack each (merged), not two.
     expect(fw).toHaveLength(1);
     expect(branch).toHaveLength(1);
-    // Quantities accumulate: split_firewood yields 6 firewood + 2 branch per run, ×2 runs.
     expect(fw[0].quantity).toBe(12);
     expect(branch[0].quantity).toBe(4);
-    // Both staged inputs consumed.
     expect((gs.droppedItems ?? []).some((d) => d.resourceId === 'pine_log')).toBe(false);
   });
 });

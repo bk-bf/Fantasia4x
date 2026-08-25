@@ -1,4 +1,3 @@
-<!-- Shared trait-card grid used by both the pawn STATUS tab and the CULTURE detail tab. -->
 <script lang="ts">
   import type { Trait, Pawn, Item } from '$lib/game/core/types';
   import { naturalGearForTrait, type NaturalGearMeta } from '$lib/components/util/naturalGear';
@@ -19,7 +18,6 @@
   import { conditionViewForId, traitGrantLines } from '$lib/components/util/conditionInfo';
   import { createPinnable } from '$lib/components/util/pinnable.svelte';
 
-  // Trait effect key → its stats.jsonc derived stat id, so the pill can open the attributes-tab tooltip.
   const EFFECT_TO_STAT: Record<string, string> = {
     coldResistance: 'cold_resistance',
     fireResistance: 'fire_resistance',
@@ -35,7 +33,6 @@
     healRate: 'heal_rate',
     nightVision: 'night_vision'
   };
-  // Resistances a covering folds into its gear tooltip — skip these as standalone pills on a gear trait.
   const GEAR_FOLDED_RES = new Set([
     'coldResistance',
     'fireResistance',
@@ -44,7 +41,6 @@
     'blunt_resistance'
   ]);
 
-  // What a core stat drives — shown when a stat pill is hovered.
   const STAT_DRIVES: Record<string, string> = {
     strength: 'melee damage, carry weight, and heavy labour (mining, woodcutting, construction)',
     dexterity: 'accuracy, dodge, attack & aim speed, and fine work (crafting, cooking)',
@@ -60,14 +56,10 @@
     pawn = undefined
   }: {
     traits: Trait[];
-    /** When set (culture view), the first N traits are the culture's shared identity; the rest vary per pawn. */
     guaranteedCount?: number;
-    /** The owning pawn (STATUS tab only). Lets a wound trait's hover cite the actual wounded side —
-     *  the applier flips left/right per pawn. Absent (culture view) the hover stays side-agnostic. */
     pawn?: Pawn;
   } = $props();
 
-  // Same medal ranking as the work tab, so a work pill's WorkCellTooltip shows the true ★/▾.
   let workRank = $derived.by<Record<string, CellRank>>(() => {
     if (!pawn) return {};
     const eff: Record<string, number> = {};
@@ -78,10 +70,8 @@
     return rankWorkCells(eff);
   });
 
-  // Per-pawn stat context for the attributes-tab tooltip; null in the culture view (no pawn).
   let statCtx = $derived(pawn ? buildStatContext(pawn) : null);
 
-  // The trait's `rarity` is a rarities.jsonc id.
   const RARITIES = raritiesData as { id: string; name: string; color: string }[];
   const RARITY_COLOR: Record<string, string> = Object.fromEntries(
     RARITIES.map((r) => [r.id, r.color])
@@ -118,27 +108,19 @@
     ring2: 'Ring'
   };
 
-  // A pill = a short LABEL + a VALUE, like the health-tab StatPills. `kind` routes a pill's hover to
-  // its own breakdown panel; plain pills (no kind) just show their `tip` text.
   type Tag = {
     label: string;
     value: string;
     type: 'pos' | 'neg' | 'neutral';
     tip?: string;
     kind?: 'gear' | 'work' | 'attr' | 'cond';
-    /** kind 'cond' — a granted/aura condition id + its "FROM" label; hover shows the shared ConditionTooltip. */
     condId?: string;
     condSource?: string;
-    /** kind 'cond' — the granting trait's effect lines, folded into the condition tooltip so they
-     *  aren't also shown as separate pills next to the COND pill. */
     condGrants?: string[];
-    /** kind 'gear' — the natural weapon/armor item fed to ItemStatTooltip (the SAME gear-tab tooltip). */
     gearItem?: Item;
-    /** kind 'gear' — the innate / evolution-stage / carry-cost extras for the tooltip's NATURAL block. */
     gearNatural?: NaturalGearMeta;
     workId?: string;
     statId?: string;
-    /** Extra rows for an `info`-style hover (condition modifiers, wound detail, bodyMod prose…). */
     info?: { title?: string; desc?: string; rows?: { k: string; v: string }[] };
   };
 
@@ -147,24 +129,18 @@
     neg: '#c65a3a',
     neutral: '#b8965a'
   };
-  // Wound data names a canonical side but the applier may flip it — the card shows the side-agnostic organ.
   const woundPartLabel = (id: string) => partLabel(id).replace(/^(left|right) /i, '');
   const stripSide = (id: string) => id.replace(/^(left|right)/i, '').toLowerCase();
-  // The applier may have flipped the wound's side — match the pawn's real permanent wound by organ
-  // family (leftEye ↔ rightEye); falls back to the spec's canonical part.
   function actualWoundPart(specPart: string): string {
     if (!pawn) return specPart;
     const base = stripSide(specPart);
     const hit = (pawn.injuries ?? []).find((w) => w.permanent && stripSide(w.bodyPart) === base);
     return hit?.bodyPart ?? specPart;
   }
-  // Hover label: the real sided part when we have the pawn (STATUS tab), else side-agnostic (culture view).
   const woundHoverLabel = (specPart: string) =>
     pawn ? partLabel(actualWoundPart(specPart)) : woundPartLabel(specPart);
-  // Human label for which parts a body-structure trait reshapes.
   const bodyModPartLabel = (target: string) =>
     target === 'skeleton' ? 'bones' : target === 'flesh' ? 'hide' : woundPartLabel(target);
-  // Prose for a single bodyMod, explaining the mechanical change (fracture / wound tolerance).
   function bodyModDesc(m: { target: string; hpMult?: number; weightKg?: number }): string {
     const bits: string[] = [];
     if (m.hpMult != null && m.hpMult !== 1) {
@@ -198,11 +174,7 @@
     const tags: Tag[] = [];
     const gear = naturalGearForTrait(trait);
     const cond = trait.selfCondition ? getTransientConditionDef(trait.selfCondition) : undefined;
-    // A pure condition-granting trait (no natural gear): its `effects` fold into the one COND tooltip
-    // instead of showing as separate pills beside it.
     const isCondTrait = !gear && !!cond;
-    // Natural gear: one pill; hovering shows the same ItemStatTooltip the gear tab uses — the whole
-    // breakdown lives there, not in redundant standalone pills.
     if (gear) {
       tags.push({
         label: gear.kind === 'weapon' ? 'NAT WEAP' : 'NAT ARM',
@@ -213,8 +185,6 @@
         gearNatural: gear.natural
       });
     } else if (cond) {
-      // One "COND <name>" pill opening the same ConditionTooltip the health tab uses; what it grants
-      // and what triggers it live in that tooltip, not as separate pills.
       tags.push({
         label: 'COND',
         value: cond.name.toLowerCase(),
@@ -225,7 +195,6 @@
         condGrants: traitGrantLines(trait)
       });
     }
-    // An aura radiates a condition to everyone within its radius.
     if (trait.aura) {
       const auraCond = getTransientConditionDef(trait.aura.condition);
       tags.push({
@@ -237,7 +206,6 @@
         condSource: `${trait.name} — radiates to ${trait.aura.affects} within ${trait.aura.radius} tiles`
       });
     }
-    // Grafts: the trait grows a real, losable limb.
     for (const g of trait.grafts ?? [])
       tags.push({
         label: 'grows',
@@ -245,7 +213,6 @@
         type: 'pos',
         tip: `Grows a real ${limbLabel(g.limb)} — a losable limb, and the trait's power goes with it.`
       });
-    // The permanent injury stamped at generation (human part label, never the raw id).
     for (const w of trait.wounds ?? [])
       tags.push({
         label: woundPartLabel(w.part),
@@ -253,7 +220,6 @@
         type: 'neg',
         tip: `Old ${w.severity} ${woundHoverLabel(w.part)} — a permanent scar: it never heals and can't be treated.`
       });
-    // Intrinsic body-structure change — one pill per part-group + a weight pill.
     for (const m of trait.bodyMods ?? []) {
       if (m.hpMult != null && m.hpMult !== 1) {
         const pct = Math.round((m.hpMult - 1) * 100);
@@ -279,9 +245,6 @@
         type: 'neg',
         tip: `This body can't wear: ${blockedLabels(trait).join(', ')}.`
       });
-    // §3 evolution stage is shown in the natural-gear tooltip's NATURAL block (via `gear.natural`),
-    // not as its own pill. A COND trait's effects are folded into its condition tooltip (condGrants
-    // above), so they DON'T also show as standalone pills — skip the whole effect→pill loop for it.
     if (!isCondTrait)
       for (const [name, value] of Object.entries(trait.effects || {})) {
         if (name.endsWith('Bonus') && typeof value === 'number') {
@@ -295,7 +258,6 @@
           });
         } else if (name.endsWith('Penalty') && typeof value === 'number') {
           const stat = name.replace('Penalty', '');
-          // A penalty is stored positive — render it SIGNED so it reads "CHA -1".
           tags.push({
             label: STAT_ABBR[stat] ?? stat,
             value: `-${value}`,
@@ -304,8 +266,6 @@
             statId: stat
           });
         } else if (name === 'combatMods' && value && typeof value === 'object') {
-          // §1 combat combos: each key is a stats.jsonc COMBAT stat (hit_chance, dodge…) → its pill routes
-          // to the SAME attributes-tab tooltip (kind 'attr'), value is a bare signed % (no "combat mods" tail).
           for (const [statId, mul] of Object.entries(value as Record<string, number>)) {
             const pct = Math.round((mul - 1) * 100);
             tags.push({
@@ -328,10 +288,7 @@
             });
           }
         } else if (typeof value === 'number' && value !== 0) {
-          // A covering's resistance is already in its gear tooltip — don't also list it as its own pill.
           if (gear && GEAR_FOLDED_RES.has(name)) continue;
-          // Resistances / nightVision / healRate — a 0-baseline stat shown as a signed percentage. Routed
-          // to the SAME attributes-tab stat tooltip (kind 'attr') via the derived stat id it maps to.
           const label = name
             .replace(/_/g, ' ')
             .replace(/([A-Z])/g, ' $1')
@@ -352,14 +309,10 @@
     return tags;
   }
 
-  // ── Tooltip data ───────────────────────────────────────────────────────────
   function blockedLabels(t: Trait): string[] {
     return (t.blocksSlots ?? []).map((s) => SLOT_LABEL[s] ?? s);
   }
 
-  // TWO hover panels (never both): the CARD shows flavor; a PILL shows its own breakdown. A pill sits
-  // inside the card, so its hover suppresses the card panel — no more listing flavor + weapon detail twice.
-  // The card panel is hover-only; the pill panel is PINNABLE (click sticks it — prep for nested tooltips).
   let hoveredCard = $state<{ trait: Trait; x: number; y: number } | null>(null);
   const pill = createPinnable<Tag>();
   function showCard(trait: Trait, e: MouseEvent) {
@@ -424,8 +377,6 @@
   {/each}
 </div>
 
-<!-- PANEL 1 — CARD hover shows ONLY flavor (name, rarity·scope, description, flavour). Suppressed while a
-     pill is hovered, so flavor never shows alongside a pill's breakdown. -->
 {#if hoveredCard && !pill.active}
   {@const t = hoveredCard.trait}
   <HoverTip x={hoveredCard.x} y={hoveredCard.y}>
@@ -438,8 +389,6 @@
   </HoverTip>
 {/if}
 
-<!-- PANEL 2 — PILL hover routes to its own breakdown: a natural weapon → the real item stat tooltip; a
-     work pill → the work-model breakdown; a stat pill → the attribute breakdown; anything else → its detail. -->
 {#if pill.active}
   {@const tag = pill.active}
   {#if tag.kind === 'gear'}
@@ -480,7 +429,6 @@
     {@const view =
       pawn && statCtx && isDerivedStat(sid) ? computeStatView(sid, pawn, statCtx) : null}
     {#if view}
-      <!-- Resistance / heal_rate: the IDENTICAL attributes-tab panel (shared StatTooltip). -->
       <HoverTip x={pill.x} y={pill.y} pinned={pill.pinned}>
         <div class="tip-name" style="text-transform: capitalize">
           {view.name}<span class="tip-val">{tag.value}</span>
@@ -488,7 +436,6 @@
         <StatTooltip {view} />
       </HoverTip>
     {:else}
-      <!-- Core stat (STR/DEX) — no stats.jsonc formula panel; show what it drives + this pawn's value. -->
       <HoverTip x={pill.x} y={pill.y} pinned={pill.pinned}>
         <div class="tip-name">
           {sid.charAt(0).toUpperCase() + sid.slice(1)}<span class="tip-val">{tag.value}</span>
@@ -518,7 +465,6 @@
     padding: 6px 8px;
   }
 
-  /* Rarity-coloured accent + a faint tinted border, so a supernatural/legendary pull reads apart. */
   .trait-card {
     display: flex;
     background: var(--bg-panel);
@@ -585,8 +531,6 @@
     gap: 2px;
     margin-top: 3px;
   }
-  /* Exactly the health-tab StatPills look: no border, dark tinted fill, dim uppercase LABEL + bright
-     bold VALUE, tinted per polarity (green bonus / red penalty). */
   .chip {
     display: flex;
     align-items: center;
@@ -612,7 +556,6 @@
     font-weight: bold;
   }
 
-  /* Tooltip frame/position/clamping comes from the shared HoverTip; only the content is styled here. */
   .tip-name {
     font-weight: 600;
     letter-spacing: 0.03em;
@@ -620,7 +563,6 @@
   .tip-name.neg {
     color: var(--neg);
   }
-  /* Muted value appended to a pill-panel header (e.g. "Strength +2", "Crafting +15% spd"). */
   .tip-val {
     color: var(--text-muted);
     font-weight: normal;

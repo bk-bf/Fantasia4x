@@ -1,4 +1,3 @@
-<!-- Pop-up natural-armour readout for a selected creature; parent owns the open/close toggle. -->
 <script lang="ts">
   import type { ArmorModel } from '$lib/components/UI/hud/SelectedEntityCard.svelte';
   import { autohideScroll } from '$lib/actions/autohideScroll';
@@ -96,7 +95,6 @@
     justify-content: space-between;
     padding-left: 8px;
   }
-  /* Thin spots read brighter/greener — marked, never captioned. */
   .armor-row.weak {
     color: #7fbf5f;
   }

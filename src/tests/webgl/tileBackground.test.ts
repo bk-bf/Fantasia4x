@@ -3,12 +3,6 @@ import { buildGameGrid } from '$lib/webgl/fantasia-world';
 import { SUBTERRAINS } from '$lib/game/core/defs/terrains';
 import type { WorldTile } from '$lib/game/core/types';
 
-/**
- * The map background must be uniform: a resource is a glyph drawn over the terrain, never its own
- * background block. Regression for trees leaking green ([0.07,0.1,0.03]) into the tile background —
- * which lingered after harvest while the tile sat on cooldown. The tile background must always equal
- * the subterrain background regardless of resource presence / depletion state.
- */
 function tile(over: Partial<WorldTile>): WorldTile {
   return {
     x: 0,
@@ -21,7 +15,7 @@ function tile(over: Partial<WorldTile>): WorldTile {
 }
 
 describe('tilemap background uniformity', () => {
-  const grassBg = SUBTERRAINS['grass'].bg; // dirt-brown [0.08, 0.06, 0.03]
+  const grassBg = SUBTERRAINS['grass'].bg;
 
   it('an active tree resource renders over the subterrain background, not the tree green bg', () => {
     const grid = buildGameGrid([[tile({ subType: 'grass', resources: { oak_tree: 3 } })]]);
@@ -50,12 +44,6 @@ describe('tilemap background uniformity', () => {
   });
 });
 
-/**
- * Ground-layer suppression: a resource that does NOT set `showGroundBelow` (the default) blanks the
- * terrain ground glyph so the resource (in the overlay) reads over the flat background — no dirt
- * showing through. `showGroundBelow` resources (ore veins) keep the ground glyph so the grey rock-wall
- * base composites beneath the coloured vein. See fantasia-world.applyTileToGrid / resolveActiveResource.
- */
 describe('layered terrain ground suppression', () => {
   it('an opaque resource (grass patch) blanks the terrain ground glyph', () => {
     const grid = buildGameGrid([[tile({ subType: 'grass', resources: { grass_patch: 1 } })]]);
@@ -68,8 +56,6 @@ describe('layered terrain ground suppression', () => {
   });
 
   it('an ore vein (showGroundBelow) keeps the grey rock-wall base glyph beneath it', () => {
-    // Explicit all-visible mask: the lone non-walkable ore tile would otherwise read as enclosed
-    // interior rock (hidden → blank) under the flood-fill.
     const grid = buildGameGrid(
       [[tile({ subType: 'mineral_deposit', resources: { hematite: 3 } })]],
       undefined,

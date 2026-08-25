@@ -1,46 +1,26 @@
-// needsDefs — the loader for needs.jsonc, the per-need behaviour registry. Leaf module (no service
-// deps) so PawnService (accrual rates, mood bands), pawnHelpers (thresholds, relief, durations), and
-// PawnStateMachine (bloodHunger) all resolve their tuning from one place. Values are authored in
-// in-game SECONDS / need points; callers convert rates/durations to tick-space at their use site, exactly
-// as they did when these were inline constants — so nothing about the per-tick hot path changes.
 import needsData from '../../database/pawns/needs.jsonc';
 
-/** A mood band on a need: applies while the need is past `atOrAbove` (survival) / `atOrBelow`
- *  (relaxation), and references a mood effect id from mood.jsonc. */
 export interface NeedMoodBand {
   atOrAbove?: number;
   atOrBelow?: number;
   effect: string;
 }
 
-/** One need's behaviour block. Every field is optional — a need only declares what applies to it
- *  (survival needs have `rate`, `relaxation` has `decayRate`, bloodHunger has its lineage feeding knobs). */
 export interface NeedDef {
-  /** The FSM state(s) that satisfy this need (e.g. relaxation → ["Socialising"]). Owned here, kept OUT of
-   *  states.jsonc so they aren't declared twice; the state registry's drift test reads this. */
   states?: string[];
-  /** Per-second build rate (survival needs). */
   rate?: number;
-  /** Per-second decay rate (`relaxation`, inverted: 100 = entertained → 0). */
   decayRate?: number;
-  /** Abandon work to satisfy the need at/above this (relaxation: at/below). */
   seek?: number;
-  /** Opportunistic top-up threshold while already at the water/well. */
   autoSatisfy?: number;
-  /** Need points removed (survival) / restored (relaxation) by one full satisfy session. */
   relief?: number;
-  /** How long a satisfy session takes (in-game seconds). */
   durationSeconds?: number;
-  // hunger
   eatDurationSeconds?: number;
   eatGroundDurationSeconds?: number;
-  // fatigue
   sleepDurationSeconds?: number;
   sleepGroundDurationSeconds?: number;
   groundRecoveryPerSecond?: number;
   wakeThresholdFed?: number;
   wakeThresholdHungry?: number;
-  // bloodHunger (LINEAGES-II)
   fillPerGameHour?: number;
   feedThreshold?: number;
   feedRadius?: number;
@@ -51,23 +31,16 @@ export interface NeedDef {
 
 const NEEDS = needsData as unknown as Record<string, NeedDef>;
 
-/** All need defs keyed by `Pawn.needs` field (also the mood-band source PawnService iterates). */
 export const NEEDS_DB: Readonly<Record<string, NeedDef>> = NEEDS;
 
-/** One need's def (empty object if unknown — callers read a specific field with a fallback). */
 export function needDef(id: string): NeedDef {
   return NEEDS[id] ?? {};
 }
 
-/** The FSM states OWNED by a need (the union of every need's `states`) — e.g. Hungry, Eating, Sleeping,
- *  Drinking, Washing, Socialising… These live here, not in states.jsonc (which registers only the
- *  structural states); the state-registry drift test reads this to enforce the split. */
 export const NEED_OWNED_STATES: ReadonlySet<string> = new Set(
   Object.values(NEEDS).flatMap((d) => d.states ?? [])
 );
 
-/** Read one numeric field off a need, with a fallback if the field (or the need) is absent. Keeps the
- *  call sites terse: `needNum('thirst', 'rate', 0.7)`. */
 export function needNum(id: string, field: keyof NeedDef, fallback: number): number {
   const v = NEEDS[id]?.[field];
   return typeof v === 'number' ? v : fallback;

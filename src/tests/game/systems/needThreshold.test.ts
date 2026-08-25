@@ -26,7 +26,7 @@ const campfire = (x: number, y: number) =>
 describe('rest-source distance', () => {
   it('measures Manhattan distance to the nearest shelter', () => {
     const gs = makeState({ buildings: [bed(10, 0), bed(3, 4)] });
-    expect(distFromPointToNearestRestSource(0, 0, gs)).toBe(7); // 3+4 is closest
+    expect(distFromPointToNearestRestSource(0, 0, gs)).toBe(7);
   });
 
   it('returns 0 when there is no shelter (sleep in place)', () => {
@@ -36,11 +36,9 @@ describe('rest-source distance', () => {
 });
 
 describe('D8: fatigue lookahead reads REST sources, hunger reads FOOD sources', () => {
-  // Queued job sits next to a bed but far from the campfire: fatigue sees a short rest distance, hunger a long food distance.
   const gs = makeState({
     jobs: [{ id: 'j1', type: 'haul', targetX: 1, targetY: 0, claimedBy: null } as any],
     buildings: [bed(2, 0), campfire(40, 0)],
-    // stock a real food item so computeMinQueueFoodDist doesn't short-circuit to null
     stockpile: { wild_berries: 10 }
   });
 
@@ -69,7 +67,6 @@ describe('ADR-010 computeAdjustedNeedThreshold', () => {
   const BASE = 72;
 
   it('no queue (null) applies full pressure: base minus the full reduction', () => {
-    // laborLevel 2 (default) → no priority shift; null dist → pressure 1 → -5 pts.
     expect(computeAdjustedNeedThreshold(BASE, 2, null)).toBe(BASE - 5);
   });
 
@@ -78,7 +75,6 @@ describe('ADR-010 computeAdjustedNeedThreshold', () => {
   });
 
   it('higher labor priority raises the threshold (harder to interrupt)', () => {
-    // level 4 → +8 priority shift, dist 0 → no queue reduction.
     expect(computeAdjustedNeedThreshold(BASE, 4, 0)).toBe(BASE + 8);
   });
 

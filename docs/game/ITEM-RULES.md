@@ -330,8 +330,8 @@ carrying no `tier` at all, which put a tier-3 bear's hide in the stone-age colum
       Bracers", not "Bear-Hide Bracers". A generic recipe with a specific name is the same lie in the
       other direction.
 - [ ] A weapon may legitimately be named for its **quarry** rather than its material (a boar spear is
-      a spear *for* boar). Say so in a `//` comment beside the entry so the next audit does not read
-      it as a violation.
+      a spear *for* boar). Add it to the quarry-named list below so the next audit does not read
+      it as a violation. Quarry-named so far: **Steel Boar-Spear**.
 - [ ] The tier reads in the name: a tier-0 piece uses a crude, historically-real term ("Hide
       Foot-Wraps"), never a term that could belong to a later tier. See the naming rules in AGENTS.md.
 - [ ] **MATERIAL, then item type.** That is the shape: `Fireclay Crucible`, `Iron-Ringed Belt`,

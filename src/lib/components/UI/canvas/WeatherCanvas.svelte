@@ -21,16 +21,14 @@
   let ctx: CanvasRenderingContext2D | null = null;
   let raf = 0;
   let lastT = 0;
-  // [WX-PERF] profiler gate: only in debug mode or debug/log builds — zero cost otherwise.
   const _DBG_BUILD =
     import.meta.env.VITE_DEBUG_MODE === 'true' || import.meta.env.VITE_DEBUG_LOG === 'true';
   let _wxDbg = _DBG_BUILD;
   const _unsubWxDbg = debugMode.subscribe((v) => (_wxDbg = _DBG_BUILD || v));
-  let fogTime = 0; // seconds accumulator driving the fog's slow gust/shift
+  let fogTime = 0;
   let ro: ResizeObserver | undefined;
   let reduceMotion = false;
 
-  // Ambient light/tint from the day/night cycle; fog/leaf colours multiply by these so they dim at night.
   let ambLight = 1;
   let ambTint: [number, number, number] = [1, 1, 1];
   const unsubAmbient = gameState.subscribe((gs) => {
@@ -40,55 +38,43 @@
   });
 
   let mode: Mode = 'none';
-  let intensity = 0; // 0–1
-  let windStrength = 0.2; // 0–1, type windStrength combined with ambient wind, from weather.jsonc
-  let fallSpeed = 680; // px/sec, from weather.jsonc
-  let density = 160; // particles per megapixel, from weather.jsonc
-  let particleColor: [number, number, number] = [200, 120, 60]; // leaves/dust tint, from weather.jsonc
+  let intensity = 0;
+  let windStrength = 0.2;
+  let fallSpeed = 680;
+  let density = 160;
+  let particleColor: [number, number, number] = [200, 120, 60];
 
-  // Wind-derived slant (px sideways per px fallen) and sideways drift (px/sec); negative = leftward.
   const rainSlant = () => -(0.12 + windStrength * 0.8);
   const sideDrift = () => 8 + windStrength * 120;
   const isDots = () => mode === 'snow' || mode === 'dust' || mode === 'snowdust';
   const isRain = () => mode === 'rain' || mode === 'foggy_rain';
 
-  // foggy_rain composites rain drops (in `parts`) with a separate, small pool of slow fog blobs.
   let fogBlobs: Particle[] = [];
 
-  // zoomInFrac: 0 at the active map's own fully-zoomed-out extreme, 1 fully zoomed in — measured
-  // against the real per-map zoom range so big maps keep scaling past a small map's floor.
-  let tileSize = 8; // current zoom (px per tile), from the camera store
-  let zoomMin = 8; // zoom-out floor (fitTileSize), from cameraZoomRange
-  let zoomMax = 40; // zoom-in ceiling (MAX_TILE_W), from cameraZoomRange
+  let tileSize = 8;
+  let zoomMin = 8;
+  let zoomMax = 40;
   const zoomInFrac = () => {
     const span = Math.max(1, zoomMax - zoomMin);
     return Math.max(0, Math.min(1, (tileSize - zoomMin) / span));
   };
 
-  // Particles shrink as you zoom out so far-out weather reads as fine mist, not screen-huge blobs.
-  const sizeMul = () => 0.3 + zoomInFrac() * 1.0; // ~0.3× fully out → 1.3× fully in
+  const sizeMul = () => 0.3 + zoomInFrac() * 1.0;
 
-  // Count rises as size shrinks — smaller particles cost less fillrate, so density can grow while
-  // the per-frame draw cost stays bounded (see targetCount's fillrate-aware cap).
-  const densityMul = () => 0.8 + (1 - zoomInFrac()) * 1.6; // 0.8× fully in → 2.4× fully out
+  const densityMul = () => 0.8 + (1 - zoomInFrac()) * 1.6;
 
-  // Below SUBPIXEL_TILE px/tile drops are sub-pixel and per-particle overhead (not fillrate) dominates
-  // the frame — hard-attenuate the count down to a 0.2× floor to avoid the zoom-out FPS crater.
-  const SUBPIXEL_TILE = 4; // px per tile (matches GameCanvas's FREEZE_TILE_PX)
+  const SUBPIXEL_TILE = 4;
   const subpixelAtten = () => Math.max(0.2, Math.min(1, tileSize / SUBPIXEL_TILE));
 
-  // Render into a buffer at this fraction of the CSS-pixel size (browser upscales; weather is soft so
-  // the drop is invisible, but full-screen ops cost ~RENDER_SCALE² the fillrate). Drawing stays in CSS
-  // coords via a matching ctx transform.
   const RENDER_SCALE = 0.6;
 
   interface Particle {
     x: number;
     y: number;
-    len: number; // rain streak length
-    spd: number; // px/sec downward
-    r: number; // snow flake radius
-    ph: number; // snow sway phase
+    len: number;
+    spd: number;
+    r: number;
+    ph: number;
   }
   let parts: Particle[] = [];
 
@@ -103,16 +89,12 @@
     const bh = Math.max(1, Math.round(ch * RENDER_SCALE));
     if (canvas.width !== bw) canvas.width = bw;
     if (canvas.height !== bh) canvas.height = bh;
-    // Setting canvas.width/height resets the context — reapply the draw-in-CSS-coords transform.
     ctx.setTransform(RENDER_SCALE, 0, 0, RENDER_SCALE, 0, 0);
   }
 
-  // CSS-pixel drawing dimensions (all particle code works in CSS coords).
   const cssW = () => (canvas ? canvas.width / RENDER_SCALE : 0);
   const cssH = () => (canvas ? canvas.height / RENDER_SCALE : 0);
 
-  /** A big, soft, slow-drifting haze cloud blob (shared by `fog` and the veil under `foggy_rain`).
-   *  `spd` is horizontal drift; `r` the base radius; `ph` a bob phase; `len` a radius-breathing phase. */
   function makeFogBlob(w: number, h: number): Particle {
     const dir = Math.random() < 0.5 ? -1 : 1;
     return {
@@ -125,30 +107,26 @@
     };
   }
 
-  /** Reseed a particle's fields IN PLACE — called every frame on respawn, so it must not allocate. */
   function setParticle(p: Particle, w: number, h: number, atTop: boolean): void {
     if (isRain()) {
-      // Seed across a width extended by the slant so drops still cover the bottom-right corner.
       p.x = Math.random() * (w + Math.abs(rainSlant()) * h);
       p.y = atTop ? -20 - Math.random() * 40 : Math.random() * h;
       p.len = 9 + Math.random() * 13 + windStrength * 12;
-      p.spd = fallSpeed * (0.7 + Math.random() * 0.6); // ±variance around the data fall speed
+      p.spd = fallSpeed * (0.7 + Math.random() * 0.6);
       p.r = 0;
       p.ph = 0;
       return;
     }
     if (mode === 'leaves') {
-      // Leaves: extended seed width (like rain) so the wind-blown corner stays covered.
       p.x = Math.random() * (w + sideDrift() * 2);
       p.y = atTop ? -20 - Math.random() * 40 : Math.random() * h;
-      p.len = 2 + Math.random() * 2; // half-length of the leaf
+      p.len = 2 + Math.random() * 2;
       p.spd = fallSpeed * (0.6 + Math.random() * 0.8);
       p.r = 2 + Math.random() * 2;
       p.ph = Math.random() * TWO_PI;
       return;
     }
-    // dots: snow / snowdust / dust — a falling, wind-drifting speck.
-    p.x = Math.random() * (w + sideDrift() * 1.5); // extend for the sideways drift's covered corner
+    p.x = Math.random() * (w + sideDrift() * 1.5);
     p.y = atTop ? -10 - Math.random() * 30 : Math.random() * h;
     p.len = 0;
     p.spd = fallSpeed * (0.6 + Math.random() * 0.9);
@@ -163,25 +141,18 @@
     return p;
   }
 
-  /** How many particles we want right now: data `density` (per megapixel) × intensity × zoom-out, capped. */
   function targetCount(): number {
     if (!canvas || mode === 'none') return 0;
     const w = cssW();
     const h = cssH();
     if (w <= 0 || h <= 0) return 0;
-    // Fog is a handful of big overlapping blobs, not a per-pixel particle field (no zoom scaling).
     if (mode === 'fog') return Math.min(40, Math.max(10, Math.round((w * h) / 95_000)));
-    const perPx = density / 1_000_000; // density is per-megapixel for readable data values
-    // Fillrate-aware cap: draw cost ≈ count × particle size, so shrinking particles afford more of
-    // them for the same budget; clamped so it never explodes if sizeMul gets tiny.
+    const perPx = density / 1_000_000;
     const cap = Math.min(2400, Math.round(1600 / Math.max(0.45, sizeMul())));
     const want = Math.min(cap, Math.floor(w * h * perPx * (0.5 + intensity) * densityMul()));
-    // Sub-pixel zoom-out: cut the count hard (per-particle overhead, not fillrate, is the cost there).
     return Math.round(want * subpixelAtten());
   }
 
-  /** Grow/shrink the pool toward the target — adds/removes only the delta, so zoom/intensity/resize
-   *  changes are gradual (no full-respawn pop). Existing drops keep falling. */
   function reconcile() {
     if (!canvas) return;
     const target = targetCount();
@@ -194,7 +165,6 @@
     while (parts.length < target) parts.push(makeParticle(w, h, false));
   }
 
-  /** Full rebuild — only on a mode switch (rain↔snow), where the particle kind changes. */
   function spawn() {
     parts = [];
     reconcile();
@@ -207,22 +177,21 @@
   function frame(t: number) {
     raf = requestAnimationFrame(frame);
     if (!ctx || mode === 'none') return;
-    const _wxGap = _wxDbg && lastT ? t - lastT : 0; // DEBUG: raw inter-frame gap (the stutter metric)
+    const _wxGap = _wxDbg && lastT ? t - lastT : 0;
     const dt = lastT ? Math.min(0.05, (t - lastT) / 1000) : 0.016;
     lastT = t;
-    const _wxT0 = _wxDbg ? performance.now() : 0; // DEBUG: draw-time start
+    const _wxT0 = _wxDbg ? performance.now() : 0;
     const w = cssW();
     const h = cssH();
     ctx.clearRect(0, 0, w, h);
 
     if (isRain()) {
-      // foggy_rain lays a soft fog veil BEHIND the rain first, then the drops fall over it.
       if (mode === 'foggy_rain') {
         ensureFogBlobs();
         renderFog(w, h, fogBlobs, dt, 0.85);
       }
-      const wind = rainSlant(); // horizontal slant (px per px fallen), wind-driven
-      const s = sizeMul(); // zoom-driven streak length (shorter zoomed out → finer rain)
+      const wind = rainSlant();
+      const s = sizeMul();
       ctx.strokeStyle = `rgba(180, 205, 235, ${0.25 + 0.35 * intensity})`;
       ctx.lineWidth = 1.1;
       ctx.lineCap = 'round';
@@ -233,27 +202,24 @@
         ctx.lineTo(p.x + wind * len, p.y + len);
         p.y += p.spd * dt;
         p.x += wind * p.spd * dt;
-        if (p.y > h) setParticle(p, w, h, true); // recycle in place — no per-frame allocation
+        if (p.y > h) setParticle(p, w, h, true);
       }
       ctx.stroke();
     } else if (isDots()) {
-      // snow / snowdust / dust — falling specks with wind-driven sideways drift + a gentle sway.
-      // snowdust (blowing snow) and dust drift hard sideways; plain snow only when it's windy.
       const drift = sideDrift() * (mode === 'snowdust' ? 1.4 : 1);
-      // Dust is coloured debris (dim it by ambient so it doesn't glow at night); snow stays white.
       const [cr, cg, cb] =
         mode === 'dust'
           ? particleColor.map((c, i) => Math.round(c * ambLight * ambTint[i]))
           : [255, 255, 255];
       const baseA = mode === 'dust' ? 0.3 + 0.28 * intensity : 0.5 + 0.4 * intensity;
-      const s = sizeMul(); // zoom-driven speck radius (smaller zoomed out → finer flurry)
+      const s = sizeMul();
       ctx.fillStyle = `rgba(${cr}, ${cg}, ${cb}, ${baseA})`;
       ctx.beginPath();
       for (const p of parts) {
         p.ph += dt;
         p.y += p.spd * dt;
         p.x += drift * dt;
-        const dx = Math.sin(p.ph * 1.6) * 6; // gentle sway
+        const dx = Math.sin(p.ph * 1.6) * 6;
         const drawX = p.x + dx;
         const r = p.r * s;
         ctx.moveTo(drawX + r, p.y);
@@ -267,23 +233,20 @@
       }
       ctx.fill();
     } else if (mode === 'leaves') {
-      // Tumbling leaves/petals in the type's particleColor, dimmed by ambient light so they don't glow
-      // at night; `swirl` (wind × intensity) makes strong wind read as chaotic swirl, not steady fall.
       const drift = sideDrift();
       const scale = sizeMul();
       const swirl = windStrength * Math.max(0.3, intensity);
       const cr = Math.round(particleColor[0] * ambLight * ambTint[0]);
       const cg = Math.round(particleColor[1] * ambLight * ambTint[1]);
       const cb = Math.round(particleColor[2] * ambLight * ambTint[2]);
-      // Build the fillStyle string ONCE per frame, not per leaf — per-leaf string churn caused GC stutter.
       ctx.fillStyle = `rgba(${cr}, ${cg}, ${cb}, ${0.55 + 0.35 * intensity})`;
       for (const p of parts) {
-        p.ph += dt * (1.8 + swirl * 2.6); // faster tumble in high wind
-        p.y += p.spd * dt + Math.sin(p.ph * 1.3) * swirl * 55 * dt; // updraughts/downdraughts
-        p.x += (drift + Math.sin(p.ph) * (24 + swirl * 90)) * dt; // gusty sideways flutter
+        p.ph += dt * (1.8 + swirl * 2.6);
+        p.y += p.spd * dt + Math.sin(p.ph * 1.3) * swirl * 55 * dt;
+        p.x += (drift + Math.sin(p.ph) * (24 + swirl * 90)) * dt;
         const sway = Math.sin(p.ph * 0.8) * (8 + swirl * 22);
         const drawX = p.x + sway;
-        const wobble = 0.45 + 0.55 * Math.abs(Math.cos(p.ph)); // tumble → width pinches as it spins
+        const wobble = 0.45 + 0.55 * Math.abs(Math.cos(p.ph));
         const rad = p.len * scale;
         ctx.save();
         ctx.translate(drawX, p.y);
@@ -292,18 +255,16 @@
         ctx.ellipse(0, 0, rad, rad * wobble, 0, 0, TWO_PI);
         ctx.fill();
         ctx.restore();
-        if (p.y > h + 8) setParticle(p, w, h, true); // recycle in place — no per-frame allocation
+        if (p.y > h + 8) setParticle(p, w, h, true);
         if (p.x > w + 16) p.x = -16;
         else if (p.x < -16) p.x = w + 16;
       }
     } else if (mode === 'fog') {
       renderFog(w, h, parts, dt, 1);
     }
-    // DEBUG: frame profiler — logs hiccup gaps + a ~2s summary. Debug-mode gated.
     if (_wxDbg) wxProfile(_wxGap, performance.now() - _wxT0);
   }
 
-  // ── DEBUG weather profiler (see frame) ──────────────────────────────────────────────────────────
   let _wxN = 0;
   let _wxDrawSum = 0;
   let _wxDrawMax = 0;
@@ -338,8 +299,6 @@
     }
   }
 
-  /** Rolling-haze layer (flat veil + big soft radial blobs), shared by `fog` (blobs = `parts`) and
-   *  the lighter veil under `foggy_rain` (blobs = `fogBlobs`, scaled by `alphaScale`). */
   function renderFog(w: number, h: number, blobs: Particle[], dt: number, alphaScale: number) {
     if (!ctx) return;
     fogTime += dt;
@@ -373,7 +332,6 @@
     }
   }
 
-  /** Keep the foggy_rain veil's blob pool at a screen-sized count (independent of zoom, like fog). */
   function ensureFogBlobs() {
     if (!canvas) return;
     const target = Math.min(18, Math.max(4, Math.round((cssW() * cssH()) / 220_000)));
@@ -386,7 +344,6 @@
   }
 
   const unsub = currentWeather.subscribe((wx) => {
-    // Overlay kind and all visual params come from weather.jsonc — a new weather type needs no code here.
     const next: Mode = weatherOverlayKind(wx?.type);
     intensity = Math.max(0.2, Math.min(1, wx?.intensity ?? 0));
     windStrength = ambientWind(wx ?? undefined);
@@ -395,27 +352,25 @@
     particleColor = weatherParticleColor(wx?.type) ?? particleColor;
     const changed = next !== mode;
     mode = next;
-    if (mode !== 'foggy_rain') fogBlobs = []; // free the veil pool when not in foggy rain
+    if (mode !== 'foggy_rain') fogBlobs = [];
     if (mode === 'none') {
       clear();
       parts = [];
     } else if (canvas) {
       resize();
       if (changed) {
-        spawn(); // full rebuild on a rain↔snow switch
+        spawn();
         lastT = 0;
       } else {
-        reconcile(); // intensity/heavy change — adjust count, keep existing drops
+        reconcile();
       }
     }
   });
 
-  // Reconcile on every zoom step so density ramps smoothly with no respawn pop (size re-scales at draw time).
   const unsubZoom = cameraTileSize.subscribe((ts) => {
     tileSize = ts;
     if (mode !== 'none') reconcile();
   });
-  // The zoom range shifts when the map size changes — re-anchor the floor/ceiling.
   const unsubZoomRange = cameraZoomRange.subscribe((r) => {
     zoomMin = r.min;
     zoomMax = r.max;
@@ -433,7 +388,6 @@
     });
     ro.observe(canvas);
     if (mode !== 'none') spawn();
-    // Reduced-motion: skip the animation loop entirely (no precipitation rather than a static smear).
     if (!reduceMotion) raf = requestAnimationFrame(frame);
   });
 

@@ -1,21 +1,10 @@
-/**
- * Headless snapshot serialization (HEADLESS-SIM / ADR-033) — a GameState as a plain-JSON document.
- *
- * Mirrors saveManager's persistence shape (dynamic slice + worldMap split, tile pathfinding/ascii
- * scratch stripped) WITHOUT importing the store layer — saveManager is IndexedDB/Svelte-store bound
- * and its strip/hydrate helpers are private. Keep the stripped field list in sync with saveManager's
- * `SavedTile` (`gCost`/`hCost`/`fCost`/`parent`/`ascii` — runtime-only, re-derived on load).
- */
 import type { GameState, WorldTile } from '../core/types';
 
 type SavedTile = Omit<WorldTile, 'gCost' | 'hCost' | 'fCost' | 'parent' | 'ascii'>;
 
 export interface HeadlessSnapshot {
-  /** Snapshot format version (bump on breaking shape changes). */
   v: 1;
-  /** The GameState minus its worldMap. */
   dynamic: Omit<GameState, 'worldMap'>;
-  /** The worldMap with runtime-only tile scratch stripped. */
   world: SavedTile[][];
 }
 

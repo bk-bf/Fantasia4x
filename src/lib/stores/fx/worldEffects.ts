@@ -1,9 +1,6 @@
-// World-space effects layer store: GameCanvas writes overlay positions, WorldEffectsLayer renders.
 import { writable } from 'svelte/store';
 import type { CombatTextKind } from '$lib/game/core/util/logSink';
 
-/** Anchored, looping glyph float pinned to a tile/entity (sleep Zzz, recovery ✚, campfire sparks…);
- *  `kind` selects the inner glyphs + animation in WorldEffectsLayer. */
 export type GlyphFloatKind = 'sleep' | 'rest' | 'collapse' | 'winded' | 'campfire' | 'trade';
 export interface GlyphFloat {
   id: string;
@@ -16,34 +13,30 @@ export interface ProgressOverlay {
   id: string;
   left: number;
   top: number;
-  progress: number; // 0–1
+  progress: number;
 }
 
-/** Ambient per-tile particle effect (e.g. a lair's smoke). `effect` selects the animation in
- *  WorldEffectsLayer; position is screen-space like every other overlay. */
 export interface ParticleOverlay {
   id: string;
   left: number;
   top: number;
-  effect: string; // 'smoke' | …
+  effect: string;
 }
 
-/** A ranged projectile in flight: its head's current screen position (lerped shooter→target each
- *  frame by GameCanvas), travel `angle` for orienting the glyph/trail, and `progress` (≥1 = impact). */
 export interface ProjectileOverlay {
   id: string;
   left: number;
   top: number;
-  angle: number; // degrees, travel direction
-  effect: string; // 'arrow' | 'bolt' | 'stone' | 'spear'
-  progress: number; // 0–1 flight; ≥1 → render the impact puff
+  angle: number;
+  effect: string;
+  progress: number;
 }
 
 export interface HealthOverlay {
   id: string;
   left: number;
   top: number;
-  health: number; // 0–1 fraction
+  health: number;
   type: 'pawn' | 'mob';
 }
 
@@ -57,9 +50,7 @@ export interface FloatingTextOverlay {
   left: number;
   top: number;
   text: string;
-  /** Mirrors the sim's CombatTextKind (single source — includes the `social` speech-bubble kind). */
   kind: CombatTextKind;
-  /** Explicit colour for data-driven `kind: 'condition'` labels (else the per-kind CSS colour). */
   color?: string;
 }
 

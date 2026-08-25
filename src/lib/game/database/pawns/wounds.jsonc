@@ -1,28 +1,5 @@
-// Wound definitions (COMBAT-SYSTEM). A wound is produced by a damage type and
-// accumulates on the struck body part: repeated same-type hits stack into ONE wound
-// whose severity escalates with total damage (5 crushes → one severe crush), rather
-// than piling up as separate entries.
-//
-// Per wound (all data-driven — no hardcoded combat tables):
-//   fromDamageType — the DamageType that inflicts this wound (Combat maps hit → wound)
-//   bleedMod       — 0–1 scale on open-wound bleed (cutting bleeds hardest, blunt none)
-//   painPerDamage  — pain per accumulated HP of this wound (× 2 on a vital part)
-//   healDifficulty — multiplier on heal time (burns/punctures mend slower than cuts)
-//
-// healing — how wounds mend over time:
-//   baseHealPerTick    — part HP recovered per tick at heal_rate 1.0 (per wound)
-//   sleeping/wellFed/goodMood multipliers stack onto the heal_rate stat so a rested,
-//   fed, content pawn recovers far faster than a starving, miserable one.
 {
   "healing": {
-    // Tissue heal is SLOW (weeks): a −3/4 wound on a pawn resting on bare ground takes ~3 in-game
-    // weeks to fully close. The sleeping/shelter/well-fed/good-mood multipliers and a caretaker's
-    // dressing (treatedHealMultiplier) stack on top, so attentive care cuts that to a few days — but
-    // a neglected wound lingers for weeks. (Bleeding is decoupled — it clots over hours, see Combat.)
-    // Calibrated to match the mob natural-mend rate (MOB_WOUND_HEAL_PER_TICK 0.00024 in
-    // entityLifecycle); the pawn↔mob asymmetry is the UNTENDED_SERIOUS_HEAL_MUL stall (pawns need
-    // care, animals heal wild), NOT a different base. (Was 0.0000035 — ~68× too low, a units typo:
-    // an untended serious wound healed ~0.013 HP/day, i.e. effectively never closed.)
     "baseHealPerTick"   :  0.00024,
     "sleepingMultiplier":  2.5 ,
     "wellFedHunger"     : 40   ,
@@ -30,44 +7,18 @@
     "goodMood"          : 65   ,
     "goodMoodMultiplier":  1.3
   },
-  // Caretaking & infection. A tend rolls quality 0–1 (medical_skill × mood × variance);
-  // quality scales how much faster treated wounds heal, how long the tend lasts, and how
-  // strongly it suppresses infection. Untended open wounds build infection pressure each
-  // tick; the immune system (CON) pushes back. Infection is the `infection` condition.
   "care"   : {
     "tendIntervalTicks"       :   240     ,
     "treatmentDurationTicks"  :  1800     ,
     "treatedHealMultiplier"   :     2.5   ,
     "minTendQuality"          :     0.05  ,
-    // Wounds must be ~2.5 in-game days old (18000 ticks/day) before they can fester — a fresh
-    // injury never infects on the spot; infection is a days-later threat of neglect.
-    "infectionIncubationTicks": 45000     ,  // TODO: Cosider replacing this with a full health immunity stat system
-    // Infection severity rates are PER SECOND (applied via perTick in PawnStateMachine, like the need
-    // drivers) — NOT per 60Hz tick. A single untended open wound on an average-CON (immune 0.35) pawn
-    // festers to lethal over ~1 in-game WEEK post-incubation: 0.0007 × (1−0.35) ≈ 4.6e-4/s → ~2200s →
-    // ~7.3 days (1 day = 300s). The cap (~2 wounds) shortens that to ~3.7 days. Recovery (all wounds
-    // tended or closed) clears it in ~1–2 days. (Was added RAW per tick → ~30–60s to lethal — the bug.)
+    "infectionIncubationTicks": 45000     ,
     "infectionRiskPerWound"   :     0.0007,
     "infectionRiskMax"        :     0.0014,
     "infectionRecovery"       :     0.002,
-    // Infection severity removed by ONE successful tend (× tend quality) — the ACTIVE cure a
-    // caretaker applies once the festering wounds are dressed, stacked on top of the passive
-    // per-second immune recovery. A discrete per-tend cut (not a rate): at quality ~0.5 a tend
-    // clears ~0.17 severity, so a serious (0.5) infection needs a few tends — repeated care, not
-    // an instant cure. Bump toward 1.0 to make a single good tend near-curative.
     "infectionTreatment"      :     0.35,
     "immuneResistBase"        :     0.35
   },
-  // Scarring (TRAITS §0b) — a wound that fully mends may leave a PERMANENT scar (its `scarType` entry
-  // below). Rolled ONCE, at the moment the wound closes (healLimbs drop point):
-  //   chance = baseChanceBySeverity[PEAK severity] × wound scarChanceMult
-  //            × (1 − tendReduction × treatmentQuality) × (infected ? infectedMult : 1), capped.
-  // Peak severity (Injury.peakSeverity) is used because severity decays as the wound heals — the wound
-  // that nearly took the limb is the one that marks it. One scar per type per part.
-  // damageFrac/pain also drive trait-stamped spawn scars (applyTraitWounds) — the old hardcoded
-  // SPAWN_WOUND_DAMAGE_FRAC/SPAWN_WOUND_PAIN tables now live here. A scar is healed-over tissue, NOT a
-  // fresh battle wound, so it shaves at most ~10% of the part (`destroyed` = the part is simply gone);
-  // its real teeth is the chronic pain.
   "scarring": {
     "baseChanceBySeverity": { "minor": 0.02, "serious": 0.08, "critical": 0.2 },
     "tendReduction"       : 0.7,
@@ -77,10 +28,6 @@
     "pain"                : { "minor": 0, "serious": 3, "critical": 6, "destroyed": 0 }
   },
   "wounds" : [
-    // Per wound: `scarType` names the permanent scar entry this wound leaves (also the entry a
-    // wound-kind trait stamps at pawn-gen); `canScar` gates the organic close-time roll (fracture:
-    // trait-stamp only — a knitted bone doesn't convert on its own); `scarChanceMult` scales the
-    // roll (burns scar worst, bruising mostly fades).
     {
       "id"            : "cut",
       "name"          : "Cut",
@@ -106,9 +53,6 @@
       "id"            : "crush",
       "name"          : "Crush",
       "fromDamageType": "blunt",
-      // Blunt trauma does NOT open an external bleed — a crush wound is pure pain + tissue damage. Its
-      // payoff is RAW DAMAGE: heavy bludgeons crater part HP and blow limbs clean off in a few blows.
-      // A severed/blown-off limb DOES gush (the open stump) — see SEVERED_STUMP_BLEED_MOD in Combat.
       "bleedMod"      : 0.0,
       "painPerDamage" : 0.9,
       "healDifficulty": 1.4,
@@ -117,10 +61,6 @@
       "scarType"      : "crush_scar"
     },
     {
-      // Bone fracture — a SECONDARY wound from heavy (esp. blunt) trauma, tracked apart from the soft-
-      // tissue crush/cut. `structural: true` means destroying it BREAKS the bone (cripples the limb) but
-      // does NOT sever the limb. No external bleed, brutal pain, and it knits over WEEKS (healDifficulty
-      // 4×). fromDamageType "none" → never auto-mapped from a hit; Combat applies it on a fracture roll.
       "id"            : "fracture",
       "name"          : "Fracture",
       "fromDamageType": "none",
@@ -128,8 +68,6 @@
       "painPerDamage" : 1.2,
       "healDifficulty": 4.0,
       "structural"    : true,
-      // A knitted bone leaves no skin scar — no organic close-time roll. A trait may still stamp a
-      // permanent old-fracture (degenerative bad back) via `scarType`.
       "canScar"       : false,
       "scarType"      : "fracture_scar"
     },
@@ -166,11 +104,6 @@
       "scarChanceMult": 1.2,
       "scarType"      : "scorch_scar"
     },
-    // ── Scars (TRAITS §0b) — permanent, healed-over marks. Reached two ways: an organic close-time
-    // roll converts a mended wound into its `scarType`, and a `wound`-kind trait stamps one at pawn-gen.
-    // Uncareable (skipped by heal/tend/infection), so they never mend away. `fromDamageType: "none"`:
-    // never auto-mapped from a live hit. Low bleed/pain — the tissue closed long ago; the chronic ache
-    // rides on the scarring.pain table, not painPerDamage.
     {
       "id"            : "cut_scar",
       "name"          : "Old Scar",

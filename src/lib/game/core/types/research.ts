@@ -1,5 +1,3 @@
-// Research and lore types. Split out of core/types.ts (P-4); re-exported via the barrel.
-
 import type { EntityStats } from './culture';
 
 export interface ResearchProject {
@@ -10,41 +8,33 @@ export interface ResearchProject {
   tier: number;
   currentProgress?: number;
 
-  // Prerequisites
   prerequisites: string[];
 
-  // Scroll Requirements (replaces knowledgeCost)
-  scrollRequirement?: Record<string, number>; // bark_scrolls, hide_scrolls, parchment, etc.
+  scrollRequirement?: Record<string, number>;
 
-  // Material Requirements (actual crafting materials)
-  materialRequirement?: Record<string, number>; // copper_ingot, iron_ore, etc.
+  materialRequirement?: Record<string, number>;
 
-  // Building and Tool Requirements
   buildingRequired?: string;
   toolRequirement?: string;
-  toolTierRequired?: number; // Matches item system
+  toolTierRequired?: number;
 
-  // Population Requirements
   populationRequired?: number;
 
-  // Stat Requirements
   statRequirements?: {
     minStats?: Partial<EntityStats>;
     maxStats?: Partial<EntityStats>;
   };
 
-  // What this research unlocks
   unlocks: {
-    toolTierRequired?: number; // Matches item system naming
+    toolTierRequired?: number;
     buildingLevel?: number;
     armyLevel?: number;
     weaponLevel?: number;
     buildings?: string[];
-    items?: string[]; // Items unlocked by this research
-    abilities?: string[]; // Abilities unlocked
-    effects?: Record<string, number>; // Stat bonuses and effects
+    items?: string[];
+    abilities?: string[];
+    effects?: Record<string, number>;
   };
 
-  // Research timing
   researchTime: number;
 }

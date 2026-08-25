@@ -1,5 +1,3 @@
-<!-- FilterTabs.svelte — the pawn-tab style bar, reused as category/workshop filters.
-     A single row that scrolls horizontally when there are more tabs than fit (no wrap). -->
 <script lang="ts">
   export let tabs: { id: string; label: string; count?: number }[];
   export let selected: string;
@@ -23,11 +21,11 @@
     overflow-y: hidden;
     background: var(--bg);
     border-bottom: 2px solid var(--border-hi);
-    scrollbar-width: none; /* Firefox — scroll, no visible bar */
+    scrollbar-width: none;
     -ms-overflow-style: none;
   }
   .filter-tabs::-webkit-scrollbar {
-    display: none; /* WebKit/Electron */
+    display: none;
   }
   .filter-tab {
     flex-shrink: 0;

@@ -12,7 +12,6 @@ import { itemDefById } from '../../defs/items';
 import { emptyOut, isFluidId } from './vessels';
 import { withDrops } from '../../state/stockpile';
 
-/** Default carry budget for a pawn with no stats/equipment. */
 const DEFAULT_MAX_WEIGHT_KG = 20;
 const DEFAULT_MAX_VOLUME_L = 20;
 
@@ -31,12 +30,6 @@ export function createPawnEquipment(): PawnEquipment {
   return {};
 }
 
-/**
- * Count how many of each item id are currently EQUIPPED across all pawns. Equipping "borrows" an
- * item from the shared colony stockpile without decrementing it, so the equip UI's available pool is
- * `stockpile − equipped`. Exposed for the equip screen to derive that pool reactively (INV-1: the
- * pool is no longer written into pawn.inventory.items).
- */
 export function equippedItemCounts(pawns: Pawn[]): Record<string, number> {
   const counts: Record<string, number> = {};
   for (const pawn of pawns) {
@@ -47,15 +40,12 @@ export function equippedItemCounts(pawns: Pawn[]): Record<string, number> {
   return counts;
 }
 
-/** One worn garment's cold/heat resistance contribution (0–1 each), with its display name. */
 export interface WornThermalSource {
   name: string;
   cold: number;
   heat: number;
 }
 
-/** Per-garment cold/heat resistance (SEASONS_WEATHER) from a pawn's worn armour — the breakdown behind
- *  {@link equippedTemperatureResistance}, so the health-tab tolerance tooltip can itemise each piece. */
 export function equippedTemperatureSources(pawn: Pawn): WornThermalSource[] {
   const out: WornThermalSource[] = [];
   for (const inst of Object.values(pawn.equipment ?? {})) {
@@ -71,10 +61,6 @@ export function equippedTemperatureSources(pawn: Pawn): WornThermalSource[] {
   return out;
 }
 
-/**
- * Sum cold/heat resistance (0–1 each) from a pawn's worn armour (SEASONS_WEATHER). Added on top of
- * the CON-derived cold_resistance/fire_resistance stats when computing temperature exposure.
- */
 export function equippedTemperatureResistance(pawn: Pawn): { cold: number; heat: number } {
   let cold = 0;
   let heat = 0;
@@ -85,55 +71,34 @@ export function equippedTemperatureResistance(pawn: Pawn): { cold: number; heat:
   return { cold, heat };
 }
 
-/** Derive which equipment slot an item belongs to based on its type/properties. */
 export function getEquipmentSlot(item: Item): EquipmentSlot | null {
   if (item.armorProperties?.equipmentSlot) return item.armorProperties.equipmentSlot;
   switch (item.type) {
     case 'weapon': {
-      // RANGED-COMBAT: a thrown weapon (ranged, no ammo bucket, one-handed) is worn in the OFF hand so
-      // it pairs with a melee main-hand — the hybrid STR/PER build, instead of a shield. Mirrors
-      // `rangedCombat.isThrownWeaponProps` (inlined: core/ must not import upward from systems/).
       const wp = item.weaponProperties;
       const thrown = !!wp && (wp.range ?? 0) > 1 && !wp.ammoCategory && !wp.twoHanded;
       return thrown ? 'offHand' : 'mainHand';
     }
     case 'armor':
-      // `slot` and `equipmentSlot` are the same union and must agree (asserted by itemRules /
-      // armourCoverage), so `slot` answers directly. The skin layer is the safe default for an entry
-      // that authored neither.
       return item.armorProperties?.slot ?? 'bodyBase';
     case 'tool':
-      // A tool is held in hand, not worn on the belt — the belt slot is for belts/pouches
-      // (inventoryBonus carry containers). Pawns carry tools in their inventory and only equip one
-      // to the hand when actually working a tool-gated job (see handlers/work).
       return 'mainHand';
     default:
       return null;
   }
 }
 
-/** Equipment slots a pawn's cultural traits forbid (ADR-023 `blocksSlots`) — a clawed/furred/horned
- *  body can't wear gear there. The gear tab greys these; equip is refused. Empty for a plain pawn. */
 export function blockedSlots(pawn: Pawn): Set<EquipmentSlot> {
   const set = new Set<EquipmentSlot>();
   for (const t of pawn.traits ?? []) for (const s of t.blocksSlots ?? []) set.add(s);
   return set;
 }
 
-/** Slots that come as a PAIR: equipping an item whose canonical slot is the key fills the partner
- *  slot when the canonical one is already occupied and the partner is free (so a pawn wears two
- *  rings). Only rings pair today. */
 const PAIRED_SLOTS: Partial<Record<EquipmentSlot, EquipmentSlot>> = { ring: 'ring2' };
 
-/** The actual slot this item should occupy on THIS pawn — like `getEquipmentSlot`, but for a paired
- *  slot (rings) it returns the free partner when the primary is taken, so a second ring goes to
- *  `ring2` instead of swapping out the first. Falls back to the primary (swap) when both are full. */
 export function resolveEquipSlot(pawn: Pawn, item: Item): EquipmentSlot | null {
   const base = getEquipmentSlot(item);
   if (!base) return null;
-  // A second dagger goes to the OFF hand rather than swapping out the first — the same
-  // occupancy-aware rule as a second ring, and what makes the matched pair (`dualWield`) equippable at
-  // all. Both blades must be `offHandable`, so a dagger can never displace a real weapon or a shield.
   if (base === 'mainHand' && item.weaponProperties?.offHandable && !pawn.equipment?.offHand) {
     const held = pawn.equipment?.mainHand;
     const heldWp = held ? itemDefById(held.itemId)?.weaponProperties : undefined;
@@ -144,12 +109,6 @@ export function resolveEquipSlot(pawn: Pawn, item: Item): EquipmentSlot | null {
   return base;
 }
 
-/**
- * Move ONE unit of a tile/stockpile drop into a pawn's matching equipment slot, returning the new
- * state (or the state unchanged if the drop / item / slot can't be resolved). Any item already in that
- * slot is dropped at the pawn. This is the SINGLE source of truth for equip-from-ground, shared by the
- * instant `equipFromTile` command and the drafted "walk over, then equip" order (applied on arrival).
- */
 export function equipDropToPawn(
   state: GameState,
   pawnId: string,
@@ -163,21 +122,14 @@ export function equipDropToPawn(
   const pawnIdx = state.pawns.findIndex((pw) => pw.id === pawnId);
   if (pawnIdx < 0) return state;
   const pawn = state.pawns[pawnIdx];
-  // An explicit `targetSlot` (e.g. the player chose Off Hand) wins; otherwise auto-resolve — which is
-  // occupancy-aware, sending a 2nd ring to the free `ring2` slot instead of swapping the first.
   const slot = targetSlot ?? resolveEquipSlot(pawn, item);
   if (!slot) return state;
-  // ADR-023: the body forbids this slot (claws fill the hands, horns the crown…) — refuse the equip.
   if (blockedSlots(pawn).has(slot)) return state;
   const instance: ItemInstance = drop.instance ?? {
     instanceId: `${item.id}-${pawnId}-t${state.turn}`,
     itemId: item.id,
-    // §M a tougher material (oak/sturdy leather ×1.3, ironwood ×1.7) gives the item more durability to
-    // wear through; a flimsy one (pine/silk) less.
     durability: Math.round((item.maxDurability ?? 100) * (drop.matDur ?? 1)),
-    // §M carry the material weight multiplier onto the instance (heavier hide → heavier to carry).
     ...(drop.matWeight !== undefined && drop.matWeight !== 1 ? { matWeight: drop.matWeight } : {}),
-    // §Q: carry the stack's craft-quality tier onto the equipped instance (like durability).
     ...(drop.quality !== undefined ? { quality: drop.quality } : {})
   };
   const px = pawn.position?.x ?? drop.x;
@@ -211,13 +163,6 @@ export function equipDropToPawn(
   return { ...withDrops(state, drops), pawns };
 }
 
-/**
- * Carry ONE unit of a tile/stockpile drop in the pawn's pack as a TRACKED instance (not the bulk
- * `inventory.items` count map). Instances are the only inventory form the tool system reads — both the
- * work boost (`heldToolBoost`) and the claim gate (`pawnHasToolFor`) scan `inventory.instances` — and
- * they survive a stockpile deposit, so a tool kept this way stays with the pawn instead of being
- * dropped. Used by the drafted "Carry … (inventory)" order so a carried tool actually boosts work.
- */
 export function carryDropToInventory(state: GameState, pawnId: string, dropId: string): GameState {
   const drop = (state.droppedItems ?? []).find((d) => d.id === dropId);
   if (!drop) return state;
@@ -229,8 +174,6 @@ export function carryDropToInventory(state: GameState, pawnId: string, dropId: s
   const instance: ItemInstance = drop.instance ?? {
     instanceId: `${item.id}-${pawnId}-t${state.turn}`,
     itemId: item.id,
-    // §M a tougher material (oak/sturdy leather ×1.3, ironwood ×1.7) gives the item more durability to
-    // wear through; a flimsy one (pine/silk) less.
     durability: Math.round((item.maxDurability ?? 100) * (drop.matDur ?? 1)),
     ...(drop.quality !== undefined ? { quality: drop.quality } : {})
   };
@@ -249,25 +192,13 @@ export function carryDropToInventory(state: GameState, pawnId: string, dropId: s
 export function canEquipItem(_pawn: Pawn, itemId: string): boolean {
   const item = itemDefById(itemId);
   if (!item) return false;
-  // Whether the item is in stock is the equip UI's concern (it only lists in-stock items, minus
-  // what's already equipped). Here we only answer "does this item type have an equip slot" — so
-  // availability no longer reads pawn.inventory.items (which is the pawn's CARRIED goods, not the
-  // colony equip pool — INV-1).
   return getEquipmentSlot(item) !== null;
 }
 
-/**
- * Add one tracked instance of `itemId` to the pawn's CARRIED inventory (`inventory.instances`), not a
- * worn slot. Used for tools a pawn fetches for a tool-gated job: the job gate (`pawnHasToolFor`)
- * accepts a carried tool, so the pawn keeps it in inventory rather than occupying the belt slot.
- * Deposit + craft-staging both preserve `instances`, so the carried tool isn't dropped at a stockpile.
- */
 export function addInstanceToInventory(pawn: Pawn, itemId: string, turn?: number): Pawn {
   const item = itemDefById(itemId);
   if (!item) return pawn;
   const instance: ItemInstance = {
-    // Turn-stamped when the caller has one (tick path — keeps a scenario replay byte-identical,
-    // ADR-033); wall-clock only as the no-context fallback.
     instanceId: `${itemId}-${pawn.id}-${turn !== undefined ? `t${turn}` : Date.now()}`,
     itemId,
     durability: item.maxDurability ?? 100
@@ -279,23 +210,13 @@ export function addInstanceToInventory(pawn: Pawn, itemId: string, turn?: number
   };
 }
 
-/**
- * CONTAINERS-AND-FLUIDS §3 — a worn vessel holds nothing. The moment a quiver (or any other vessel
- * that has a worn slot) goes on, whatever was inside it moves into the pawn's own pack and the vessel
- * reverts to what it has always been while worn: a carry aid granting `inventoryBonus`. That keeps
- * ammo in normal inventory — which is what the ranged draw-speed model reads — while still letting the
- * same quiver be a real container when it is set down or hauled.
- *
- * Fluids are the exception the type exists for: a pack is a loose place, so a fluid poured into one
- * spills. Nothing sensible ever puts water in a quiver; this is the structural refusal, not a feature.
- */
 function drainWornVesselIntoPack(pawn: Pawn, worn: ItemInstance): Pawn {
   if (!worn.contents?.length) return pawn;
   const inv = pawn.inventory ?? { items: {}, instances: [] };
   const items = { ...(inv.items ?? {}) };
   const instances = [...(inv.instances ?? [])];
   for (const entry of emptyOut(worn)) {
-    if (isFluidId(entry.itemId)) continue; // spills — a fluid cannot exist loose in a pack
+    if (isFluidId(entry.itemId)) continue;
     if (entry.instance) instances.push(entry.instance);
     else items[entry.itemId] = (items[entry.itemId] ?? 0) + (entry.amount ?? 0);
   }
@@ -308,24 +229,20 @@ export function equipItem(pawn: Pawn, itemId: string, turn?: number): Pawn {
 
   const slot = resolveEquipSlot(pawn, item);
   if (!slot) return pawn;
-  if (blockedSlots(pawn).has(slot)) return pawn; // ADR-023: body forbids this slot
+  if (blockedSlots(pawn).has(slot)) return pawn;
 
   let updatedPawn = { ...pawn };
 
-  // Unequip current item in slot if exists
   if (updatedPawn.equipment[slot]) {
     updatedPawn = unequipItem(updatedPawn, slot);
   }
 
-  // Create ItemInstance for the equipped item (turn-stamped when the caller has one — ADR-033
-  // replay determinism; wall-clock only as the no-context fallback)
   const instance: ItemInstance = {
     instanceId: `${itemId}-${pawn.id}-${turn !== undefined ? `t${turn}` : Date.now()}`,
     itemId,
     durability: item.maxDurability ?? 100
   };
 
-  // Equip the item
   updatedPawn.equipment = {
     ...updatedPawn.equipment,
     [slot]: instance
@@ -339,7 +256,6 @@ export function unequipItem(pawn: Pawn, slot: EquipmentSlot): Pawn {
 
   const updatedPawn = { ...pawn };
 
-  // Remove from equipment
   updatedPawn.equipment = {
     ...updatedPawn.equipment,
     [slot]: undefined
@@ -351,11 +267,9 @@ export function unequipItem(pawn: Pawn, slot: EquipmentSlot): Pawn {
 export function calculateItemBonuses(item: Item): Record<string, number> {
   const bonuses: Record<string, number> = {};
 
-  // Convert all item effects to pawn bonuses
   Object.entries(item.effects || {}).forEach(([effect, value]) => {
     if (typeof value === 'number') {
       switch (effect) {
-        // Combat effects
         case 'combatPower':
           bonuses.strengthBonus = Math.floor(value / 2);
           bonuses.combatBonus = value;
@@ -367,7 +281,6 @@ export function calculateItemBonuses(item: Item): Record<string, number> {
           bonuses.armorPiercing = value;
           break;
 
-        // Crafting effects
         case 'craftingSpeed':
           bonuses.craftingBonus = value;
           break;
@@ -375,18 +288,15 @@ export function calculateItemBonuses(item: Item): Record<string, number> {
           bonuses.toolEfficiency = value;
           break;
 
-        // Defense effects
         case 'defense':
           bonuses.constitutionBonus = Math.floor(value / 3);
           bonuses.defenseRating = value;
           break;
 
-        // Movement effects
         case 'movementSpeed':
           bonuses.dexterityBonus = Math.floor(value * 2);
           break;
 
-        // Direct stat bonuses
         case 'strengthBonus':
         case 'dexterityBonus':
         case 'intelligenceBonus':
@@ -396,34 +306,29 @@ export function calculateItemBonuses(item: Item): Record<string, number> {
           bonuses[effect] = value;
           break;
 
-        // Resistance effects
         case 'fireResistance':
         case 'coldResistance':
         case 'crushResistance':
           bonuses[effect] = value;
           break;
 
-        // Special effects
         case 'magicalPower':
           bonuses.intelligenceBonus = Math.floor(value / 2);
           bonuses.perceptionBonus = Math.floor(value / 3);
           break;
 
         default:
-          // Pass through any other numeric effects
           bonuses[effect] = value;
       }
     }
   });
 
-  // Weapon-specific bonuses
   if (item.type === 'weapon' && item.weaponProperties) {
     bonuses.attackDamage = item.weaponProperties.damage;
     bonuses.attackSpeed = item.weaponProperties.attackSpeed;
     bonuses.attackRange = item.weaponProperties.range;
   }
 
-  // Armor-specific bonuses
   if (item.type === 'armor' && item.armorProperties) {
     bonuses.defenseRating = item.armorProperties.defense;
     bonuses.movementPenalty = item.armorProperties.movementPenalty || 0;
@@ -473,11 +378,6 @@ export function removeItemFromInventory(pawn: Pawn, itemId: string, quantity: nu
   return updatedPawn;
 }
 
-// §2h: item consumption moved to `entities/Pawns.applyConsumable` (timed potion buffs + beast-organ
-// trait grants), driven by the `useConsumableItem` command. The old stub here read `pawn.state.health`/
-// `.mood` — fields that don't exist on the current pawn model, so it was dead.
-
-// Calculate total equipment bonuses for a pawn
 export function getEquipmentBonuses(pawn: Pawn): Record<string, number> {
   const totalBonuses: Record<string, number> = {};
 
@@ -494,7 +394,6 @@ export function getEquipmentBonuses(pawn: Pawn): Record<string, number> {
   return totalBonuses;
 }
 
-// Get effective stats including equipment bonuses
 export function getEffectiveStats(pawn: Pawn): EntityStats {
   const baseStats = { ...pawn.stats };
   const equipmentBonuses = getEquipmentBonuses(pawn);
@@ -509,7 +408,6 @@ export function getEffectiveStats(pawn: Pawn): EntityStats {
   };
 }
 
-// Damage equipment over time (by slot)
 export function damageEquipment(pawn: Pawn, slot: EquipmentSlot, damage: number = 1): Pawn {
   const inst = pawn.equipment[slot];
   if (!inst) return pawn;
@@ -518,7 +416,6 @@ export function damageEquipment(pawn: Pawn, slot: EquipmentSlot, damage: number 
   const newDurability = Math.max(0, inst.durability - damage);
 
   if (newDurability <= 0) {
-    // Item breaks — unequip it
     return {
       ...pawn,
       equipment: {
@@ -536,5 +433,5 @@ export function damageEquipment(pawn: Pawn, slot: EquipmentSlot, damage: number 
     }
   };
 
-  void def; // suppress unused warning — kept for future break notifications
+  void def;
 }

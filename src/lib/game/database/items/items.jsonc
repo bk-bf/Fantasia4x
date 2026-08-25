@@ -77,9 +77,6 @@
     "decaySeconds": 1200,
     "decaysTo": "rotten_food"
   },
-  // ── Medicine: one rung is not a ladder, and a scalar is not a treatment ───
-  // `medicineQuality` scales a tend; `curesConditions` clears a named condition outright. Together
-  // they let a medicine be GOOD AT ONE THING and poor at the rest, which is what a field kit is.
   {
     "id": "styptic_pack",
     "charSpans": [ {"sheet": "items", "id": 71} ],
@@ -98,12 +95,6 @@
     "medicineQuality": 0.25,
     "curesConditions": ["bleeding"]
   },
-  // ── Fracture care: bind it, then knit it ─────────────────────────────────
-  // A splint is WORN, not swallowed. It occupies the limb's armour slot, pushes the `splinted`
-  // condition while it is on, and multiplies the mending rate of the bone under every part it
-  // `covers` (armorProperties.boneHealMultiplier → healWounds). It never closes a break: the weeks
-  // are still weeks, there are just fewer of them. Which limb it helps is which limb it covers, so
-  // an arm piece does nothing for a leg and neither reaches the skull or the ribs.
   {
     "id": "wooden_arm_splint",
     "charSpans": [ {"sheet": "items", "id": 155} ],
@@ -154,9 +145,6 @@
       "movementPenalty": 0.12
     }
   },
-  // A cast is poured, not strapped: it takes the shape of whatever it is packed around, so it reaches
-  // the small bones a batten cannot and holds far harder. What it buys in grip it gives back in
-  // brittleness — one solid blow and it is so much rubble (maxDurability is a quarter of a splint's).
   {
     "id": "lime_arm_cast",
     "charSpans": [ {"sheet": "items", "id": 155} ],
@@ -207,9 +195,6 @@
       "movementPenalty": 0.18
     }
   },
-  // Knitting a break OUTRIGHT is a dose, not a dressing, and the steel age buys it at a price: the
-  // bone comes good and the body spends the next day paying for the hurry (`mendsWounds` clears the
-  // injury, `grantsConditions` charges for it).
   {
     "id": "bonemeal_draught",
     "charSpans": [ {"sheet": "items", "id": 71} ],
@@ -356,10 +341,6 @@
     "medicineQuality": 1.35,
     "curesConditions": ["bleeding", "pain_shock"]
   },
-  // ── Medicine: a ladder, not three foraged weeds ───────────────────────────
-  // `bestMedicine` takes the highest `medicineQuality` in stock and scales the tend roll by it, so a
-  // colony that never advances its medicine treats a mangled pawn with chewed leaves forever. Each
-  // rung is what that age could actually put on a wound.
   {
     "id": "honey_salve",
     "charSpans": [ {"sheet": "items", "id": 71} ],
@@ -571,10 +552,6 @@
     "weightKg"         : 1.5,
     "volumeL"          : 3.5
   },
-  // ── Per-animal leathers (PRODUCTION-CHAIN — hide/leather identity split) ──────────────────────────
-  // Each hide tans to its OWN leather, all `category: leather` so any fills a generic slot; identity is
-  // carried by `material.item` (durability/weight into the crafted item) + `material.building`
-  // (insulation/comfort/beauty into furniture). "Wrong" leather still works, it just makes a worse item.
   {
     "id"               : "coney_fur",
     "charSpans"        : [ {"sheet": "items", "id": 152} ],
@@ -844,7 +821,6 @@
     "volumeL"          : 2.6,
     "material"         : { "label": "Direwolf Leather", "desc": "prime, warm, fine", "building": { "durability": 1.25, "insulation": 0.18, "comfort": 0.15, "beauty": 0.2 }, "item": { "durability": 1.25, "weight": 1 } }
   },
-  // ── Cured hides (per species) — stable intermediate between curing and tanning ──
   {
     "id"               : "cured_rabbit_pelt",
     "charSpans"        : [ {"sheet": "items", "id": 152} ],
@@ -1750,9 +1726,6 @@
     "weightKg"         : 4,
     "volumeL"          : 0.5
   },
-  // Wool and cotton reached the loom as raw fleece and raw boll, skipping the step flax has always
-  // had. Spinning is what turns a fibre into something a loom can take, and leaving it out is why the
-  // spinning wheel served two recipes in the whole game.
   {
     "id": "raw_sinew",
     "charSpans": [ {"sheet": "items", "id": 158} ],
@@ -1800,9 +1773,6 @@
     "volumeL": 0.1,
     "value": 3
   },
-  // ── Vessels for what an ordinary pot cannot hold ─────────────────────────
-  // Ordinary fired earthenware, wood, glass and leather all fail somewhere: a melt is over 1000C, a
-  // caustic humour eats leather and skin. These two are the answers, one mundane and one not.
   {
     "id": "fireclay_crucible",
     "charSpans": [ {"sheet": "items", "id": 41} ],
@@ -1836,10 +1806,6 @@
     "researchRequired": "runic_inscription",
     "toolTierRequired": 1
   },
-  // ── Molten metal: the cast line's intermediate ────────────────────────────
-  // Copper, tin, bronze, lead, silver and gold are MELTED and poured; iron and steel are worked solid
-  // at an anvil, because no pre-industrial hearth reaches iron's 1538C. That is why the bronze age
-  // casts and the iron age forges, and it is why only these six have a molten form.
   {
     "id": "molten_copper",
     "charSpans": [ {"sheet": "items", "id": 71} ],
@@ -1939,9 +1905,6 @@
   {
     "id"               : "iron_bar",
     "charSpans"        : [ {"sheet": "items", "id": 23} ],
-    // Named plainly, like every other bar in the game. It came out of a bloomery, but a furnace is a
-    // process and gear is named for its MATERIAL — the slag freckling in the description is what tells
-    // the player where it came from. `wrought_iron` beside it is the finery's cleaner answer.
     "name"             : "Iron Bar",
     "type"             : "material",
     "category"         : "iron",
@@ -1956,8 +1919,6 @@
     "material"         : { "label": "Iron", "desc": "soft, tough, slaggy", "item": { "durability": 1 } }
   },
   {
-    // The finery's output: pig iron with the carbon burned back out. Cleaner than a bloom because the
-    // slag is worked out under the hammer — a DISTINCT item so it never shadows the bloomery's recipe.
     "id"               : "wrought_iron",
     "charSpans"        : [ {"sheet": "items", "id": 23} ],
     "name"             : "Wrought Iron",
@@ -2110,11 +2071,6 @@
     "volumeL"          : 0.4
   },
   {
-    // ── Iron & steel family (STEEL-REALISM rework) ────────────────────────────────────────────────
-    // Bases (NOT steel): pig_iron is brittle high-carbon straight off the blast furnace, castable only;
-    // iron_bar is wrought iron (bloomery, or pig iron decarburised at the finery) — soft, tough, weldable.
-    // The five steels below + crucible_steel share `category: steel`, so any of them fills a steel slot;
-    // which one you use is felt through `material.item` (a blade of mild steel is a poor blade).
     "id"               : "pig_iron",
     "charSpans"        : [ {"sheet": "items", "id": 23} ],
     "name"             : "Pig Iron",
@@ -2256,8 +2212,6 @@
     "weightKg": 1,
     "volumeL": 1
   },
-  // ── Portable water containers (nested liquid: `container` def + per-instance `contents` fill). Filled
-  //    at a drink zone; pawns sip from a carried one, and a filled container supplies a recipe's water. ─
   {
     "id": "waterskin",
     "charSpans": [ {"sheet": "items", "id": 71} ],
@@ -2335,11 +2289,6 @@
     "fuelValue"        : 4,
     "toolTierRequired" : 0
   },
-  // ── Preserved food: the real answer to winter ─────────────────────────────
-  // Every method below is a step further from "eat it before it turns". `decaySeconds` is the whole
-  // point of the category — a ham keeps for a season, fresh venison for days — so each rung buys time
-  // with labour, salt, smoke or a cellar. Nothing here is runed; a colony can only out-eat a winter
-  // with technique it actually earned.
   {
     "id": "smoked_fish", "charSpans": [ {"sheet": "items", "id": 67} ],
     "name": "Smoked Fish", "type": "food", "category": "preserve",
@@ -3160,10 +3109,6 @@
     "processingType": ["woodcutting"]
   },
   {
-    // ── COPPER — the Chalcolithic stepping stone. The FIRST metal: better bite than knapped stone,
-    //    but soft — it dents and blunts fast (high deterioration), and won't touch iron ore. Bronze (an
-    //    alloy of this + tin) is the harder upgrade above. Hafted simply on a branch (the sawtable and its
-    //    shaped `wooden_haft` are a bronze-age thing). Tier 1 (clears soft-ore gates, not iron's tier 2).
     "id": "copper_axe",
     "charSpans": [ {"sheet": "items", "id": 204} ],
     "name": "Copper Axe",
@@ -3586,10 +3531,6 @@
     "decaySeconds"     : 600,
     "decaysTo"         : "rotten_carcass"
   },
-  // ── CREATURE MAGICAL DROPS + BOSS CARCASS (CREATURE-COMBAT-OVERHAUL §2g/§2h) ──────────────────────
-  // T5 boss trophy: a DYNAMIC-name carcass ("Old Fang's Carcass", like a pawn corpse) — dropCarcass sets
-  // the name from the slain beast. Butchers (§2g pool) into prime hide + a magical reagent. The magical
-  // materials (§2h) are wild-drop only, feeding the alchemy + magical-gear sinks. Numbers want a balance pass.
   {
     "id"               : "great_wolf_carcass",
     "charSpans"        : [ {"sheet": "items", "id": 138} ],
@@ -3651,9 +3592,6 @@
     "weightKg"         : 1.3333,
     "volumeL"          : 0.3
   },
-  // §2h(ii) TRAIT-ORGANS — a rare boss/elite drop, eaten raw for a permanent gift with a price (a Faustian
-  // flaw rolls alongside). `grantsTraitOnConsume` points at an existing traits.jsonc trait; they don't
-  // spoil once extracted at the altar. Consumed via the pawn panel's USE action (useConsumableItem).
   {
     "id"               : "alpha_heart",
     "charSpans"        : [ {"sheet": "items", "id": 1} ],
@@ -3714,8 +3652,6 @@
     "volumeL"          : 0.2,
     "rawConsumeRisk": {"sickness": "nausea", "flawChance": 0.5}
   },
-  // §2h(i) BEAST-REAGENT POTIONS — brewed from a boss reagent at the alchemy_lab, drunk for a timed buff
-  // (grantsConditions + conditionDurationTurns → conditionTimers, like a meal buff). Consumed via USE.
   {
     "id"               : "bloodrage_draught",
     "charSpans"        : [ {"sheet": "items", "id": 71} ],
@@ -3748,8 +3684,6 @@
     "grantsConditions" : ["fortitude"],
     "conditionDurationTurns": 1200
   },
-  // ── PRODUCTION-CHAIN-IIII §2 — mystical-flora draughts: a foraged crop/fungus brewed at the alchemy_lab
-  //    into a timed condition. Duration scales with the drinker's alchemy proficiency (§G). ──
   {
     "id"               : "vigor_draught",
     "charSpans"        : [ {"sheet": "items", "id": 71} ],
@@ -3814,8 +3748,6 @@
     "grantsConditions" : ["berserk"],
     "conditionDurationTurns": 600
   },
-  // ── PRODUCTION-CHAIN-IIII §2 — weapon coating: brushed onto a pawn's mainHand (applyWeaponCoating),
-  //    it lends the blade a timed on-hit envenom proc ON TOP of the weapon's own. Wears off by time. ──
   {
     "id"                 : "venom_coating",
     "charSpans"          : [ {"sheet": "items", "id": 71} ],
@@ -3833,7 +3765,6 @@
     "coatingDurationHours": 6
   },
   {
-    // Grimeling (Bog Ooze) alchemy reagent — the caustic humour of the muck, rendered at the butcher spot.
     "id"               : "caustic_bile",
     "charSpans"        : [ {"sheet": "items", "id": 1} ],
     "name"             : "Caustic Bile",
@@ -4493,8 +4424,6 @@
       "movementPenalty": 0.01
     }
   },
-  // ── PRODUCTION-CHAIN-IIII §2 — crystal enchant gear: a star-shard set with a beast's pineal, worn to
-  //    sharpen the senses. The crafted twin of a boss famed-drop; a magical material + creature drop. ──
   {
     "id"               : "stargazer_circlet",
     "charSpans"        : [ {"sheet": "items", "id": 138} ],
@@ -4521,7 +4450,6 @@
       "movementPenalty": 0
     }
   },
-  // ── §2g elite/boss carcasses + prime materials + §2h magical drops (full ladder pass) ─────────────
   {
     "id"               : "dire_wolf_carcass",
     "charSpans"        : [ {"sheet": "items", "id": 138} ],
@@ -4909,10 +4837,6 @@
     "decaySeconds"     : 450,
     "decaysTo"         : "rotten_carcass"
   },
-  // ── Expansion-roster carcasses (DF/DCSS/D&D creatures) ───────────────────────
-  // Standard carcass structure, reused. TODO: per-carcass butchery YIELDS (creature-specific meat,
-  // hide, bone) are NOT wired yet — see recipes.jsonc. Until then these can be hunted + decay but
-  // not yet processed into distinct products.
   {
     "id"               : "aurochs_carcass",
     "charSpans"        : [ {"sheet": "items", "id": 138} ],
@@ -5273,8 +5197,6 @@
     "decaySeconds"     : 540,
     "decaysTo"         : "rotten_carcass"
   },
-  // ── Butchery products ───────────────────────────────────────────────────────
-  // Creature-specific meats
   {
     "id"               : "wolf_meat",
     "charSpans"        : [ {"sheet": "items", "id": 67} ],
@@ -5414,7 +5336,6 @@
     "decaySeconds"     : 450,
     "decaysTo"         : "rotten_meat"
   },
-  // Creature-specific hides / pelts
   {
     "id"               : "rabbit_pelt",
     "charSpans"        : [ {"sheet": "items", "id": 152} ],
@@ -5593,7 +5514,6 @@
     "toolTierRequired" : 0,
     "processingType"   : ["leatherworking"]
   },
-  // Size-based bones (alternative sources via craftingCostAlternatives)
   {
     "id"               : "small_bones",
     "charSpans"        : [ {"sheet": "items", "id": 138} ],
@@ -5642,7 +5562,6 @@
     "toolTierRequired" : 0,
     "processingType"   : ["crafting"]
   },
-  // ── Spoiled / rotten items ──────────────────────────────────────────────────
   {
     "id"               : "rotten_food",
     "charSpans"        : [ {"sheet": "items", "id": 69} ],
@@ -5691,9 +5610,6 @@
     "weightKg"         : 10,
     "volumeL"          : 15
   },
-  // ── Pawn corpse (R10) — spawned at a pawn's death tile; carries the dead pawn's gear is
-  //    dropped separately. `dynamicName` → the drop reads "<Name>'s Corpse". Heavy: needs hauling
-  //    (one per trip with the carry budget), pending future burial mechanics.
   {
     "id"               : "pawn_carcass",
     "charSpans"        : [ {"sheet": "items", "id": 138} ],
@@ -5708,11 +5624,6 @@
     "weightKg"         : 40,
     "volumeL"          : 50
   },
-  // ── Carried colonist (rescue) — a LIVE downed pawn while it rides in a rescuer's arms. Hidden
-  //    (never craftable/listed) like a natural weapon; `dynamicName` so the instance reads the
-  //    victim's name (reusing the carcass pattern). Heavy: a body fills the carrier's whole carry
-  //    budget, so they can't also haul goods. The real pawn entity stays in `gs.pawns` (hidden via
-  //    `carriedBy`) as the restore source — this item is its visible, capacity-counted stand-in.
   {
     "id"               : "carried_pawn",
     "charSpans"        : [ {"sheet": "items", "id": 138} ],
@@ -5728,7 +5639,6 @@
     "weightKg"         : 45,
     "volumeL"          : 55
   },
-  // ── Tier 1 butchery tool ─────────────────────────────────────────────────────
   {
     "id": "bone_cleaver",
     "charSpans": [ {"sheet": "items", "id": 206} ],
@@ -5750,8 +5660,6 @@
     "effects": {"butcheryYieldBonus": 0.25}
   },
   {
-    // A KIT, not a blade: a leather roll of skinning knives, hooks and a saw. Deliberately NOT a
-    // standalone cleaver, so it never reads as (or competes with) the cleaver weapon line.
     "id": "iron_butchery_kit",
     "charSpans": [ {"sheet": "items", "id": 20} ],
     "name": "Butcher's Kit",
@@ -5792,10 +5700,6 @@
     "effects": {"butcheryYieldBonus": 0.55}
   },
   {
-    // ── Tailoring / leatherwork TOOLS (durable, non-organic → they give SPEED; the organic inputs —
-    //    fat, oil — give the QUALITY). Fleshing scraper: the flesh step. Currier's kit: the curry step.
-    //    Sewing kit / tailor's kit: sewing gear (leather and cloth). No separate handle chain — the
-    //    branch is the haft inline, like the axes/kits already do.
     "id": "bone_fleshing_scraper",
     "charSpans": [ {"sheet": "items", "id": 206} ],
     "name": "Bone Fleshing Scraper",
@@ -5910,9 +5814,6 @@
     "processingType": ["leatherworking", "weaving"]
   },
   {
-    // ── Tool / weapon HAFTS (carpentry). A raw branch is fine for a stone tool, but an iron head wants
-    //    a proper handle: carve → sand → SOAK-season. The seasoned haft is the gate for robust iron+
-    //    tools (a green stick would split). Higher-tier handles carry a §M material durability bump.
     "id": "wooden_haft",
     "charSpans": [ {"sheet": "items", "id": 159} ],
     "name": "Wooden Haft",
@@ -6055,14 +5956,6 @@
     "toolBoost": {"speed": 1.0},
     "processingType": ["metalworking"]
   },
-  // ── Natural weapons ─────────────────────────────────────────────────────────
-  // Innate attacks for pawns and creatures — a gear category, resolved through the
-  // same item lookup as crafted weapons (ItemService.getItemById). Never crafted
-  // (no craftingCost → excluded from crafting) and never in inventory (so they
-  // don't appear in the equip picker). Shared and reused across creatures: STR
-  // scaling (baseDamage × STR / 10 in Combat) makes a wolf's bite hit harder than a
-  // rabbit's. weaponProperties: weight = relative roll frequency per swing,
-  // staminaCost = stamina drained, critMod = added to the attacker's hit_precision.
   {
     "id": "fists",
     "audio": "blunt",
@@ -6370,7 +6263,6 @@
     "onHitCondition": {"condition": "envenomed", "chance": 0.5, "durationHours": 2.5, "resist": "poison_resistance"}
   },
   {
-    // §2f: elite venom (spider/viper T3+) — the same fangs, a far stronger dose.
     "id": "greater-venom-bite",
     "audio": "venom",
     "charSpans": [ {"sheet": "items", "id": 1} ],
@@ -6394,7 +6286,6 @@
     "onHitCondition": {"condition": "envenomed", "chance": 0.65, "durationHours": 3.5, "resist": "poison_resistance"}
   },
   {
-    // §2f: megafauna T4-5 — a crushing overrun that caves armour in.
     "id": "trample",
     "audio": "blunt",
     "charSpans": [ {"sheet": "items", "id": 1} ],
@@ -6419,7 +6310,6 @@
     }
   },
   {
-    // §2f: serpentine T4 — coils that pin the prey while the fangs work.
     "id": "constrict",
     "audio": "reptile",
     "charSpans": [ {"sheet": "items", "id": 1} ],
@@ -6441,7 +6331,6 @@
     "onHitCondition": {"condition": "ensnared", "chance": 0.35, "durationHours": 0.3, "resist": "blunt_resistance"}
   },
   {
-    // §2f: quillback T3+ — a rattling volley of loosed quills, striking where claws can't reach.
     "id": "quill-volley",
     "audio": "whoosh",
     "charSpans": [ {"sheet": "items", "id": 1} ],
@@ -6527,10 +6416,6 @@
     },
     "onHitCondition": {"condition": "ensnared", "chance": 0.45, "durationHours": 0.25, "resist": "blunt_resistance"}
   },
-  // ── Racial natural weapons (ADR-023) ──────────────────────────────────────
-  // Body weapons granted to PAWNS by supernatural/legendary racial traits (RacialTrait.naturalWeapons),
-  // swung only when unarmed (or forced unarmed by a trait's blocksSlots). Same schema/lookup as creature
-  // natural weapons; unbound (no body-plan `weapons` entry) so they stay always-available on a humanoid.
   {
     "id": "rending-claws",
     "audio": "slash",
@@ -6555,8 +6440,6 @@
     "onHitWound": [ {"wound": "bloodletting", "chance": 0.25} ]
   },
   {
-    // LINEAGES-II §1 — the werewolf's transform claws: only swung while the `werewolf` condition
-    // holds (the trait carries `naturalWeaponsWhen`); stronger than any waking claw.
     "id": "moonlit-claws",
     "audio": "slash",
     "charSpans": [ {"sheet": "items", "id": 0} ],
@@ -6697,14 +6580,6 @@
     },
     "onHitCondition": {"condition": "burning", "chance": 0.7, "durationHours": 1.5, "resist": "fire_resistance"}
   },
-  // ── TRAIT-LIBRARY-EXPANSION §3b staged natural weapons ─────────────────────
-  // New rungs of the staged weapon lines (claws/fangs/horns/tusks/venom/breath/talons/beak) plus the
-  // §3e utility weapons. Same schema as the racial block above: hidden, amount 0, unbound unless a
-  // limbmap part hosts them; binding runs through the granting condition's hostParts. Item-level
-  // `bleedWound` = chance a landed open wound is unclottable (bleeds until dressed — the physical
-  // successor of the retired `bloodletting` condition). Breath weapons carry `reach` (a spear-like
-  // ranged strike; TODO: upgrade dragonfire's reach 3 to a true AoE cone) + `knockback`, deal FIRE
-  // damage (a real burn wound) and proc the `burning` DoT.
   {
     "id"              : "blunt-claws",
     "audio"           : "slash",
@@ -7182,7 +7057,6 @@
       "resist"       : "lightning_resistance"
     }
   },
-  // ── Phase B: carry containers ─────────────────────────────────────────────
   {
     "id": "hide_tool_roll",
     "charSpans": [ {"sheet": "items", "id": 20} ],
@@ -7251,9 +7125,6 @@
     "inventoryBonus"   : {"weightKg": 0, "volumeL": 18},
     "armorProperties"  : {"armorType": "light", "defense": 0, "equipmentSlot": "back2"}
   },
-  // ── Carry aids: the pack ladder above the wicker frame ────────────────────
-  // back2 is the LOAD slot, so a pack and a quiver compete for it. Each rung is named for what it
-  // is made of and how it is built; the runed one closes the line.
   {
     "id": "leather_knapsack",
     "charSpans": [ {"sheet": "items", "id": 20} ],
@@ -7308,11 +7179,6 @@
     "inventoryBonus": {"weightKg": 0, "volumeL": 70},
     "armorProperties": {"armorType": "medium", "defense": 0, "equipmentSlot": "back2"}
   },
-  // ── The pack grid: three classes per age, from the leather unlock upward ──
-  // A pack is where the load actually goes (a belt holds a pouch, not a week's stores), so this is the
-  // ladder that carries the capacity. The class is the trade, not a label: a SATCHEL is a soft bag that
-  // costs nothing to wear, a KNAPSACK is the fitted middle, a FRAME PACK takes the largest load and
-  // charges movement and fatigue for it.
   {
     "id": "framed_leather_pack",
     "charSpans": [ {"sheet": "items", "id": 20} ],
@@ -7457,9 +7323,6 @@
     "inventoryBonus": {"weightKg": 0, "volumeL": 100},
     "armorProperties": {"armorType": "heavy", "defense": 0, "equipmentSlot": "back2", "movementPenalty": 0.06, "fatiguePerTurn": 0.02, "stealthMod": -0.08}
   },
-  // ── Carry aids: belts, the carrying line ──────────────────────────────────
-  // Only one belt is worn, so these compete with the sheath line below. These are the carrying
-  // choice: no plate on them, and everything goes into capacity.
   {
     "id": "leather_belt",
     "charSpans": [ {"sheet": "items", "id": 20} ],
@@ -7532,10 +7395,6 @@
     "inventoryBonus": {"weightKg": 0, "volumeL": 16},
     "armorProperties": {"armorType": "medium", "defense": 0, "equipmentSlot": "belt"}
   },
-  // ── Carry aids: sheaths, the fighting line ────────────────────────────────
-  // Same belt slot, opposite trade: little capacity, but the piece covers the hips and nothing on it
-  // swings or knocks. `stealthMod` is authored rather than derived so the fitted ones read as quiet
-  // instead of taking the default weight drag.
   {
     "id": "hide_knife_sheath",
     "charSpans": [ {"sheet": "items", "id": 137} ],
@@ -7607,7 +7466,6 @@
     "inventoryBonus": {"weightKg": 0, "volumeL": 6},
     "armorProperties": {"armorType": "heavy", "defense": 4, "equipmentSlot": "belt", "stealthMod": 0.0}
   },
-  // ── Phase B: Tier 0 weapons ───────────────────────────────────────────────
   {
     "id": "flint_handaxe",
     "audio": "slash",
@@ -7660,7 +7518,6 @@
       "movementPenalty": 0.0
     }
   },
-  // ── Phase B: Tier 0.5 weapons ─────────────────────────────────────────────
   {
     "id": "bone_knife",
     "audio": "pierce",
@@ -7754,7 +7611,6 @@
       "staminaCost"     : 1
     }
   },
-  // ── Phase B: Tier 1 weapons ───────────────────────────────────────────────
   {
     "id": "bronze_punch_dagger",
     "audio": "pierce",
@@ -7913,8 +7769,6 @@
       "movementPenalty": 0.0
     }
   },
-  // The unfaced sibling of the round shield above: same two boards, no hide. The facing is what keeps
-  // a struck board from walking apart at the seams, so dropping it costs durability, not block.
   {
     "id": "plank_round_shield",
     "charSpans": [ {"sheet": "items", "id": 144} ],
@@ -7939,7 +7793,6 @@
       "movementPenalty": 0.0
     }
   },
-  // ── Phase B: Tier 2 weapons ───────────────────────────────────────────────
   {
     "id": "short_seax",
     "audio": "slash",
@@ -8034,12 +7887,6 @@
     },
     "onHitWound": [ {"wound": "bloodletting", "chance": 0.2} ]
   },
-  // ── CREATURE GEAR (CREATURE-COMBAT-OVERHAUL §2c) ─────────────────────────────────────────────
-  // Wild-drop only (no `researchRequired`, no recipe): worn by monster humanoids via their lootpool,
-  // NOT craftable by the colony — a meaningful step apart from human gear. ORC weapons are crude,
-  // massive, crushing, and carry a `wieldRequirement` (a scrawny looter flails; you must field a STRONG
-  // pawn). GOBLIN weapons are light/weird/nasty (status procs, no strength bar). Sprites reuse
-  // thematically-close item ids (PLACEHOLDER — TODO distinct art). Damage/drop numbers want a balance pass.
   {
     "id": "orc_cleaver",
     "audio": "slash",
@@ -8286,7 +8133,6 @@
       "movementPenalty" : 0.01
     }
   },
-  // ── Higher-tier monster gear (§2f: orc_warhost / orc_warlord_hoard / goblin_warren / kobold / gnoll) ──
   {
     "id": "gravemaker",
     "audio": "slash",
@@ -9651,9 +9497,6 @@
     },
     "aimBonuses": {"speed": 0.1}
   },
-  // STEALTH §8 — the precision ranged pair: sneak-shot crits ride the same hit_precision path as a
-  // dagger, so a high-critMod launcher IS the ranged assassin class. Both trade raw punch for
-  // placement (low damage/drawPower, high critMod).
   {
     "id": "blowgun",
     "audio": "bow",
@@ -9827,7 +9670,6 @@
     },
     "aimBonuses": {"accuracy": 10}
   },
-  // STEALTH §8 — blowgun ammunition. Low flat damage; the class leans on the sneak-shot crit.
   {
     "id"            : "blow_dart",
     "charSpans"     : [ {"sheet": "items", "id": 196} ],
@@ -10164,8 +10006,6 @@
     "container": {"material": "leather", "capacityL": 5, "capacityKg": 4},
     "quiver": {"ammoCategory": "bolt", "drawSpeed": 0.30}
   },
-  // Bone and antler are butchered, dried and carved at a bench, so they sit a band above knapped
-  // stone. These two hold the Primitive rung the bone line vacated.
   {
     "id": "stone_club",
     "audio": "blunt",
@@ -10231,12 +10071,6 @@
       "twoHanded"       : false, "offHandable": true
     }
   },
-  // ── WEAPON-COVERAGE PASS ──────────────────────────────────────────────────
-  // Sword, mace and spear are the CORE line: every age carries one. Everything else (axe, cleaver,
-  // flail, rapier, all two-handers, all launchers) is a specialty that opens at a later age. No new
-  // two-handed weapon below bronze; no craftable flail below bronze.
-  //
-  // Copper: soft. It casts a head or a point and holds a shape, not an edge.
   {
     "id": "copper_shortsword",
     "audio": "slash",
@@ -10360,7 +10194,6 @@
       "twoHanded"       : false
     }
   },
-  // Bronze: the first alloy that holds a long blade, and the age two-handers open at.
   {
     "id": "bronze_leaf_sword",
     "audio": "slash",
@@ -10722,7 +10555,6 @@
       "twoHanded"       : true
     }
   },
-  // Iron.
   {
     "id": "iron_cleaver",
     "audio": "slash",
@@ -10920,7 +10752,6 @@
       "twoHanded"       : true
     }
   },
-  // Steel.
   {
     "id": "steel_broadaxe",
     "audio": "slash",
@@ -11082,7 +10913,6 @@
       "twoHanded"       : true
     }
   },
-  // Rune-etched: the last craftable step, cut at a runecarver's bench in magic alloy.
   {
     "id": "rune_etched_axe",
     "audio": "slash",
@@ -11645,12 +11475,6 @@
       "twoHanded"       : true
     }
   },
-  // ── LAUNCHERS ─────────────────────────────────────────────────────────────
-  // A bow, a sling and a crossbow are gated by their PARTS, not by an age of metal: a turned grip or
-  // stock from the haft line, and a string good enough for the draw. A crossbow adds cast fasteners
-  // for the lock. Any launcher fires any ammunition of its kind; the launcher multiplies what the
-  // projectile brings (weaponProperties.drawPower), so an old bow with a new head still gains, and a
-  // new bow with an old head still beats the old bow.
   {
     "id": "sinew_backed_bow",
     "audio": "bow",
@@ -11972,7 +11796,6 @@
     },
     "aimBonuses": {"speed": 0.3, "accuracy": 2}
   },
-  // Thrown: carried in the off hand beside a melee weapon, gone once it leaves the hand.
   {
     "id": "bronze_javelin",
     "audio": "bow",
@@ -12138,9 +11961,6 @@
     },
     "aimBonuses": {"accuracy": 6, "range": 2}
   },
-  // ── ONE-HANDED ARCANE ─────────────────────────────────────────────────────
-  // A rod holds the same channelled fire as a staff at a lower yield, and leaves the other hand for a
-  // shield.
   {
     "id": "cinder_rod",
     "audio": "spectral",
@@ -12386,9 +12206,6 @@
     },
     "aimBonuses": {"accuracy": 6, "range": 3}
   },
-  // ── AMMUNITION ────────────────────────────────────────────────────────────
-  // Cheap next to the launcher and made of whatever the age smelts. `armorDamage` is what the head
-  // strips off armour condition per hit, separate from the wound it opens.
   {
     "id": "bronze_arrow",
     "charSpans": [ {"sheet": "items", "id": 196} ],
@@ -12588,7 +12405,6 @@
       "movementPenalty": 0.0
     }
   },
-  // ── Phase B: Tier 0 armour ────────────────────────────────────────────────
   {
     "id": "wicker_vest",
     "charSpans": [ {"sheet": "items", "id": 9} ],
@@ -12674,7 +12490,6 @@
       "heatResistance" : 0.04
     }
   },
-  // ── Phase B: Tier 1 armour ────────────────────────────────────────────────
   {
     "id": "linen_gambeson",
     "charSpans": [ {"sheet": "items", "id": 7} ],
@@ -12732,9 +12547,6 @@
       "coldResistance" : 0.1
     }
   },
-  // STEALTH §8 — the one garment that HELPS stealth (explicit positive stealthMod; every other
-  // worn piece derives a weight penalty in core/stealth.ts). Near-zero protection on purpose:
-  // the sneak build wears little or nothing, and this is the deliberate exception.
   {
     "id": "soot_darkened_jerkin",
     "charSpans": [ {"sheet": "items", "id": 8} ],
@@ -13098,7 +12910,6 @@
       "coldResistance" : 0.06
     }
   },
-  // ── Phase B: Tier 2 armour ────────────────────────────────────────────────
   {
     "id": "mail_coif",
     "charSpans": [ {"sheet": "items", "id": 83} ],
@@ -13177,8 +12988,6 @@
       "slot"           : "bodyMid",
       "equipmentSlot"  : "bodyMid",
       "armorLayer"     : "mail",
-      // ADR-029: a hauberk's skirt-and-sleeve reach — unlike a vest (slot default: chest+abdomen), the
-      // mail also covers the shoulders, upper arms and hips. This IS the mail-shirt vs vest difference.
       "covers"         : [
         "chest",         "abdomen",       "leftShoulder",  "rightShoulder", "leftUpperArm",  "rightUpperArm",
         "leftHip",       "rightHip"
@@ -13268,9 +13077,6 @@
       "movementPenalty": 0.06
     }
   },
-  // ── ADR-029 limb armour (pauldrons / bracers / greaves) — one set per tech age, derived from that
-  //    age's chest piece at ~1/3 its defense. Coverage comes from the slot defaults (SLOT_COVERAGE):
-  //    pauldrons→shoulders, bracers→arms, greaves→legs. Sprite ids are PLACEHOLDERS (items/12).
   {
     "id": "cured_hide_skirt",
     "charSpans": [ {"sheet": "items", "id": 12} ],
@@ -13511,11 +13317,6 @@
       "movementPenalty": 0.0
     }
   },
-  // ── Armour expansion: the coverage holes the armour audit found. Every tech age now has a
-  //    full 8-slot line in at least one class (head / neck / torso / shoulders / arms / hands /
-  //    legs / feet), EXCEPT the heavy harnesses, whose bare neck, hands and feet are deliberate:
-  //    a precision weapon beating a knight through the gaps is the counterplay, and mixing a
-  //    lighter gorget or gauntlet back in costs weight. Sprite ids reuse the existing vocabulary.
   {
     "id": "cured_hide_boots",
     "charSpans": [ {"sheet": "items", "id": 146} ],
@@ -14150,11 +13951,6 @@
       "coldResistance": 0.18
     }
   },
-  // ── The 20-set matrix (docs/game/ITEM-RULES.md): five kits per age from Bronze, each named
-  //    for the animal or fabric it is cut from, and each class produced by its recipe RATIO —
-  //    fabric-only for mages, leather-dominant for light, 1:1 for medium, metal-dominant for
-  //    heavy. Heavy sets carry no gloves or boots on purpose; those are padded from the
-  //    lighter lines of an earlier age, which is the price of wearing plate.
   {
     "id": "jackal_head",
     "charSpans": [ {"sheet": "items", "id": 80} ],
@@ -15740,7 +15536,6 @@
       "movementPenalty": 0.0
     }
   },
-  // ── Phase B: raw materials ────────────────────────────────────────────────
   {
     "id"               : "sinew",
     "charSpans"        : [ {"sheet": "items", "id": 158} ],
@@ -15776,8 +15571,6 @@
     "name": "Spider Silk Thread",
     "type": "material",
     "category": "binding",
-    // Steel-age not because a wheel could not spin it, but because of what you have to kill to get a
-    // basket of raw silk: the thornwood spider and the great weaver are late hunts.
     "tier": 3,
     "craftValue": 2,
     "description": "Drawn off a weaver's hoard and doubled on the wheel. Thinner than linen thread and it will not part under a load that snaps sinew.",
@@ -15820,12 +15613,6 @@
     "volumeL"          : 0.4,
     "material"         : { "label": "Linen", "desc": "breathable, plain", "building": { "comfort": 0.05 }, "item": { "durability": 1 } }
   },
-  // ═══════════════════════════════════════════════════════════════════════════
-  // PRODUCTION-CHAIN-II §M — Magical Resources & Gear
-  // ═══════════════════════════════════════════════════════════════════════════
-  // Ancient woods — premium `magic_wood` species (one per rare grove), same shape as the mundane
-  // `*_log` woods but with an `affinity` hook. A material-property (`material.item`) edge for their
-  // niche via the crafted item's durability/weight. Gathered with an axe like any tree.
   {
     "id": "heartwood_log",
     "charSpans": [ {"sheet": "items", "id": 225} ],
@@ -15976,9 +15763,6 @@
     "gatheringTypes": ["woodcutting"],
     "material"         : { "label": "Emberwood", "desc": "ember-warm", "building": { "durability": 1.2, "insulation": 0.15 }, "item": { "durability": 1.2 } }
   },
-  // ── PRODUCTION-CHAIN-IIII §1a/§1b — mystical flora: wild magical crops & fungi, foraged from rare
-  //    biome-keyed nodes. Alchemy reagents (§2). Preserved materials — they do NOT spoil (no decaySeconds;
-  //    a slow deteriorationRate is ordinary wear, not rot). ──
   {
     "id": "bloodroot",
     "charSpans": [ {"sheet": "items", "id": 1} ],
@@ -16107,9 +15891,6 @@
     "maxDurability": 100,
     "gatheringTypes": ["foraging"]
   },
-  // ── PRODUCTION-CHAIN-IIII §1d — crystal formations: mined mineral rarities, the enchant/gem-dust++
-  //    tier. `mana_crystal` refines into gem-dust; `star_shard` is an enchant material; `voidshard` is a
-  //    cursed reagent awaiting its (blocked) recipes. ──
   {
     "id": "mana_crystal",
     "charSpans": [ {"sheet": "items", "id": 31} ],
@@ -16140,8 +15921,6 @@
     "deteriorationRate": 0,
     "maxDurability": 0
   },
-  // The only thing that bites a voidshard cluster out of the rock. tier 4, so `colonyToolTier`
-  // satisfies the cluster's `minTier: 4` mining gate — nothing below the runed age touches it.
   {
     "id": "rune_etched_pick",
     "charSpans": [ {"sheet": "items", "id": 161} ],
@@ -16173,8 +15952,6 @@
     "value": 4000,
     "grantsLineage": true,
     "tradeRelationsMin": 75,
-    // Runed: there is no recipe for one, so nothing in the chain could place it — it is mined at a
-    // hundredth of a percent with a runed pick, or taken off a humanoid boss.
     "tier": 4,
     "description": "A shard of black glass that drinks the light around its edges and gives a cold nothing back. Power sits in it, and a price sits beside the power.",
     "color": "#1a1420",
@@ -16184,8 +15961,6 @@
     "deteriorationRate": 0,
     "maxDurability": 0
   },
-  // ── Magic-wood planks — the runed-age structural filler. Each magic log dressed into boards at the
-  //    heartwood_joiner; replaces raw logs / mundane planks in runed buildings. ──
   {
     "id": "heartwood_plank",
     "charSpans": [ {"sheet": "items", "id": 225} ],
@@ -16264,9 +16039,6 @@
     "toolTierRequired": 2,
     "material"         : { "label": "Emberwood", "desc": "ember-warm to the touch", "building": { "durability": 1.2, "insulation": 0.2 }, "item": { "durability": 1.2 } }
   },
-  // ── Crystals — per mineral: normal (trade) + infused (enchant) raw, then cut/attuned gems,
-  //    then a ring + amulet that grant the mineral's magical buff condition while worn. ──
-  // RUBY → Might (strength / labour)
   {
     "id"               : "ruby",
     "charSpans"        : [ {"sheet": "items", "id": 30} ],
@@ -16323,10 +16095,6 @@
     "volumeL"          : 0.05,
     "deteriorationRate": 0
   },
-  // ── Regalia below the runed age ───────────────────────────────────────────
-  // Every piece of jewellery in the game sat at Runed, so a colony had no way to mark anyone until it
-  // could cut gems. These are what people actually wore first: teeth, cast metal, a signet.
-  // No armour value — regalia soaks nothing, it says something.
   {
     "id": "tooth_necklace", "charSpans": [ {"sheet": "items", "id": 4} ],
     "name": "Tooth Necklace", "type": "armor", "category": "regalia",
@@ -16431,7 +16199,6 @@
     "maxDurability": 200,
     "deteriorationRate": 0.002
   },
-  // SAPPHIRE → Insight (focused work)
   {
     "id"               : "sapphire",
     "charSpans"        : [ {"sheet": "items", "id": 30} ],
@@ -16522,7 +16289,6 @@
     "maxDurability"    : 200,
     "deteriorationRate": 0.002
   },
-  // EMERALD → Vigor (endurance)
   {
     "id"               : "emerald",
     "charSpans"        : [ {"sheet": "items", "id": 30} ],
@@ -16613,7 +16379,6 @@
     "maxDurability"    : 200,
     "deteriorationRate": 0.002
   },
-  // TOPAZ → Quickness (speed / dodge)
   {
     "id"               : "topaz",
     "charSpans"        : [ {"sheet": "items", "id": 30} ],
@@ -16704,7 +16469,6 @@
     "maxDurability"    : 200,
     "deteriorationRate": 0.002
   },
-  // AMETHYST → Keen Senses (perception / dodge)
   {
     "id"               : "amethyst",
     "charSpans"        : [ {"sheet": "items", "id": 30} ],
@@ -16795,7 +16559,6 @@
     "maxDurability"    : 200,
     "deteriorationRate": 0.002
   },
-  // CITRINE → Charm (ease / appetite)
   {
     "id"               : "citrine",
     "charSpans"        : [ {"sheet": "items", "id": 30} ],
@@ -16886,7 +16649,6 @@
     "maxDurability"    : 200,
     "deteriorationRate": 0.002
   },
-  // MOONSTONE → Moonlit (calm / sure footing)
   {
     "id": "moonstone",
     "charSpans": [ {"sheet": "items", "id": 30} ],
@@ -16977,15 +16739,6 @@
     "maxDurability"    : 200,
     "deteriorationRate": 0.002
   },
-  // ═══════════════════════════════════════════════════════════════════════════
-  // §M REGALIA — combo & head jewelry (the "magic boosts vs metal armour" loadout fork). All set with
-  // ATTUNED gems at the lapidary (gate: attunement) and grant transient buff conditions while worn.
-  //   • CROWNS/CIRCLETS/DIADEMS sit in `head` — the same slot as a helm — so a buff crown means NO helm
-  //     (the explicit head-armour trade). Token defense only.
-  //   • TORCS/PENDANTS use the `amulet` (neck-jewelry) slot; COMBO RINGS use `ring`.
-  //   • Combo pieces list TWO conditions (two attuned gems): one slot, two buffs — strong but costly.
-  // `grace` (dodge) / `fortitude` (endurance) are the defensive buffs — magic as an alternative to armour.
-  // ── Crowns / circlets / diadems (head slot; competes with helmets) ──
   {
     "id": "scholars_circlet",
     "charSpans": [ {"sheet": "items", "id": 33} ],
@@ -17078,7 +16831,6 @@
     "maxDurability": 220,
     "deteriorationRate": 0.002
   },
-  // ── Necklaces / torcs / pendants (amulet slot) ──
   {
     "id": "gold_torc",
     "charSpans": [ {"sheet": "items", "id": 33} ],
@@ -17147,18 +16899,6 @@
     "maxDurability": 200,
     "deteriorationRate": 0.002
   },
-  // (Rings stay SINGLE-buff — the 7 elemental `<gem>_ring`s above. Two ring slots (`ring`/`ring2`) mean
-  //  you wear two of them, so the weaker single buffs go on rings; the two-buff combos are amulet/crown
-  //  only. No combo rings by design.)
-  // ═══════════════════════════════════════════════════════════════════════════
-  // §M ARCANE STAVES — INT-scaled (`arcane`) CHANNELED (`channeled`) ranged elemental weapons. They
-  // fire on the ranged circuit (aim_accuracy/aim_speed/aim_range) but draw NO ammo: each shot pays
-  // `staminaCost` as MANA (winded = out of mana) and the staff stays in hand. Element = the socketed
-  // crystal (damageType fire/frost/lightning → fire/cold/lightning resistance); wood = the shaft.
-  // Two tiers per element mirror iron→steel: T1 (Runecarver's Bench, cut crystal) → T2 (Attunement
-  // Altar, attuned crystal + gold; also grants the attuned gem's passive buff while wielded). §Q quality
-  // is stamped (type:weapon) and auto-scales the shot via scaleWeaponQuality.
-  // ── FIRE (ruby + emberwood) → burn ──
   {
     "id": "ember_staff",
     "audio": "spectral",
@@ -17228,7 +16968,6 @@
     },
     "aimBonuses": {"accuracy": 4, "range": 2}
   },
-  // ── FROST (sapphire + moonwood) → frostbite ──
   {
     "id": "frost_staff",
     "audio": "spectral",
@@ -17298,7 +17037,6 @@
     },
     "aimBonuses": {"accuracy": 4, "range": 2}
   },
-  // ── STORM/LIGHTNING (topaz + heartwood) → scorch ──
   {
     "id": "spark_staff",
     "audio": "spectral",
@@ -17368,12 +17106,6 @@
     },
     "aimBonuses": {"accuracy": 5, "range": 3}
   },
-  // ── PRODUCTION-CHAIN-II §L — Bulk Logistics ──────────────────────────────────────────────
-  // `wheel` is the crafted intermediate. wheelbarrow/handcart are two-handed `tool`s: equipping one
-  // fills the hands (mainHand) — so the pawn can't wield a weapon (Combat falls back to unarmed) —
-  // and grants a big `inventoryBonus`, raising the SAME carry budget belts/baskets use (no separate
-  // bulk pool). Self-weight is low: the wheels bear the load, the pusher just steers. Overloading
-  // still costs move-speed via the load→encumbrance term in PawnService.getMoveSpeed.
   {
     "id"               : "wheel",
     "charSpans"        : [ {"sheet": "items", "id": 33} ],
@@ -17426,10 +17158,6 @@
     "inventoryBonus": {"weightKg": 160, "volumeL": 240},
     "armorProperties": {"armorType": "heavy", "defense": 0}
   },
-  // ── PRODUCTION-CHAIN-II §F — Soil & fertilizer ───────────────────────────────────────────────
-  // The "different types of dirt" (NOTES.md): dug from fertile tiles (F2), hauled, and consumed by
-  // the Soil-Works builds (F3) to raise an infertile tile's fertility. `compost` (F7) is the gating
-  // amendment that turns loam into terra preta. Heavy materials; soil doesn't rot.
   {
     "id"               : "dirt",
     "charSpans"        : [ {"sheet": "items", "id": 33} ],
@@ -17521,9 +17249,6 @@
     "volumeL": 1,
     "deteriorationRate": 0.005
   },
-  // ── PRODUCTION-CHAIN-II §F — Crop seeds ──────────────────────────────────────────────────────
-  // Sown in a grow zone (the `plant` job) to grow the matching crop; first obtained by foraging wild
-  // crops (each wild plant now drops a few seeds). Light, slow-spoiling.
   {
     "id"               : "grain_seed",
     "charSpans"        : [ {"sheet": "items", "id": 118} ],
@@ -17732,7 +17457,6 @@
     "volumeL"          : 0.05,
     "deteriorationRate": 0.004
   },
-  // ── PRODUCTION-CHAIN-II §F — Cultivated crop products (the harvest of a grown crop) ──────────
   {
     "id": "wheat",
     "charSpans": [ {"sheet": "items", "id": 113} ],
@@ -17749,8 +17473,6 @@
     "maxDurability": 80,
     "deteriorationRate": 0.05
   },
-  // Individual cultivated crops (no generic "vegetables"/"fruit" buckets). Each shares a family
-  // category (vegetable/legume/fruit/herb) so cooking recipes accept the family via acceptsCategory.
   {
     "id"               : "cabbage",
     "charSpans"        : [ {"sheet": "items", "id": 113} ],
@@ -17995,8 +17717,6 @@
     "maxDurability"    : 120,
     "deteriorationRate": 0.03
   },
-  // ── PRODUCTION-CHAIN-II §F8 — Milling, baking, brewing (the food chain) ──────────────────────
-  // Quern → flour; Oven → bread/pies; Fermenter (passive) → malt → ale, fruit → wine, apples → cider.
   {
     "id"               : "flour",
     "charSpans"        : [ {"sheet": "items", "id": 113} ],
@@ -18238,9 +17958,6 @@
     "maxDurability"    : 300,
     "deteriorationRate": 0.004
   },
-  // ── Drink: a ladder, and names that say what is in the cup ────────────────
-  // "Wine" is a category, not a drink. Every rung below is a real historical answer to the same
-  // problem — water you cannot trust — and each needs something the age before it did not have.
   {
     "id": "birch_sap_wine", "charSpans": [ {"sheet": "items", "id": 71} ],
     "name": "Birch Sap Wine", "type": "fluid", "category": "drink",
@@ -18322,9 +18039,6 @@
     "maxDurability"    : 300,
     "deteriorationRate": 0.005
   },
-  // ════════════════════════════════════════════════════════════════════════════════════════════
-  // PRODUCTION-CHAIN-III §D — Resin & Glue (the binder chain)
-  // ════════════════════════════════════════════════════════════════════════════════════════════
   {
     "id": "resin",
     "charSpans": [ {"sheet": "items", "id": 71} ],
@@ -18385,13 +18099,6 @@
     "volumeL": 0.3,
     "processingType": ["crafting"]
   },
-  // ════════════════════════════════════════════════════════════════════════════════════════════
-  // PRODUCTION-CHAIN-III §B — Carpentry: buckets, barrels, and tanning brine (the bucket's "fuel")
-  // ════════════════════════════════════════════════════════════════════════════════════════════
-  // ── CONTAINERS-AND-FLUIDS §3: the general-goods vessels. These hold ITEMS, not just fluid, so they
-  //    carry no `accepts` — a bin takes whatever its own allow-list is opened up to. A vessel standing
-  //    on a stockpile tile is what makes that tile dense, which is why the ladder runs basket → bucket
-  //    /barrel → bin/crate/chest across three woodworking ages. ─────────────────────────────────────
   {
     "id"               : "basket",
     "charSpans"        : [ {"sheet": "items", "id": 41} ],
@@ -18507,9 +18214,6 @@
     "fuelHeat": 3,
     "processingType": ["crafting"]
   },
-  // ════════════════════════════════════════════════════════════════════════════════════════════
-  // PRODUCTION-CHAIN-III §E — Beast meat, hides & byproducts (closing the carcass-yield gap)
-  // ════════════════════════════════════════════════════════════════════════════════════════════
   {
     "id"               : "aurochs_meat",
     "charSpans"        : [ {"sheet": "items", "id": 67} ],
@@ -18715,7 +18419,6 @@
     "volumeL"          : 0.6,
     "processingType"   : ["crafting"]
   },
-  // Beast-grade RAW hides (drop from the §E peak beasts; feed the multi-step beast-leather chain)
   {
     "id"               : "aurochs_hide",
     "charSpans"        : [ {"sheet": "items", "id": 152} ],
@@ -18842,9 +18545,6 @@
     "toolTierRequired" : 0,
     "processingType"   : ["leatherworking"]
   },
-  // Beast-leather chain intermediates: raw → cured → tanned (beast_brine). There is no fourth
-  // "hardening" step — butcher, cure, tan is already three waits, and a bigger boar is what a
-  // better hide comes from, not a longer process.
   {
     "id"               : "scale_plate",
     "charSpans"        : [ {"sheet": "items", "id": 152} ],
@@ -18860,12 +18560,6 @@
     "craftValue": 1.91,
     "volumeL"          : 4
   },
-  // ════════════════════════════════════════════════════════════════════════════════════════════
-  // PRODUCTION-CHAIN-III §E.2 — Wool ≠ leather: the soft-goods / furniture material line
-  // ════════════════════════════════════════════════════════════════════════════════════════════
-  // ── Wool (source-graded soft goods) — 5 fleeces, tiered by how hard the animal is to take. All
-  // `category: wool` so any fills a wool slot; identity is the `material.building` comfort/insulation
-  // (furniture) + `material.item` durability (cloth). Coarser fleece = bulk warmth; finer = comfort. ──
   {
     "id"               : "coney_wool",
     "charSpans"        : [ {"sheet": "items", "id": 158} ],
@@ -18965,7 +18659,6 @@
     "processingType"   : ["weaving"],
     "material"         : { "label": "Wool", "desc": "+warm, +comfort", "building": { "comfort": 0.2, "insulation": 0.15 }, "item": { "durability": 1.05 } }
   },
-  // ── Fabric extension — cotton & silk cloth, plush stuffing, and mage garments ──────────────────
   {
     "id"               : "cotton_seed",
     "charSpans"        : [ {"sheet": "items", "id": 113} ],
@@ -19107,9 +18800,6 @@
       "magicResistance": 0.35
     }
   },
-  // ════════════════════════════════════════════════════════════════════════════════════════════
-  // PRODUCTION-CHAIN-III §C — Construction: the wall-material ladder (mortar → concrete → magic-dust)
-  // ════════════════════════════════════════════════════════════════════════════════════════════
   {
     "id"               : "quicklime",
     "charSpans"        : [ {"sheet": "items", "id": 11} ],
@@ -19215,10 +18905,6 @@
     "volumeL": 1.5,
     "processingType": ["masonry"]
   },
-  // ════════════════════════════════════════════════════════════════════════════════════════════
-  // PRODUCTION-CHAIN-III §F — Armour breadth: wire/ring sub-chain, scale, steel plate, beast/bone peak
-  // (no civilian apparel — armour is the only worn layer; the only cost is encumbrance, already wired)
-  // ════════════════════════════════════════════════════════════════════════════════════════════
   {
     "id"               : "iron_wire",
     "charSpans"        : [ {"sheet": "items", "id": 138} ],
@@ -19422,8 +19108,6 @@
       "intimidation"   : 4
     }
   },
-  // §F.3 prestige regalia — body pieces that trade defence/encumbrance for prestige (SOCIAL-LAYER
-  // drives the effect; the head/amulet regalia line already exists).
   {
     "id": "ceremonial_plate",
     "charSpans": [ {"sheet": "items", "id": 11} ],
@@ -19506,10 +19190,6 @@
       "coldResistance" : 0.12
     }
   },
-  // ════════════════════════════════════════════════════════════════════════════════════════════
-  // PRODUCTION-CHAIN-III §G — Alchemy & Potions (replaces "chemistry"). Potions ride the condition
-  // pipeline (§M buff pool); the active drink→timed-condition use-action is a scoped follow-up.
-  // ════════════════════════════════════════════════════════════════════════════════════════════
   {
     "id": "clay_alembic",
     "charSpans": [ {"sheet": "items", "id": 41} ],
@@ -19729,9 +19409,6 @@
     "grantsConditions": ["fortitude"],
     "conditionDurationTurns": 1200
   },
-  // ════════════════════════════════════════════════════════════════════════════════════════════
-  // PRODUCTION-CHAIN-III §B.3 — Magic-material families unlocked by the infused capstone stations
-  // ════════════════════════════════════════════════════════════════════════════════════════════
   {
     "id": "magic_alloy_bar",
     "charSpans": [ {"sheet": "items", "id": 138} ],
@@ -20512,7 +20189,6 @@
       ]
     },
 
-  // ===== Active leather chain: fleshed hides + prime (curried) beast leathers (§A) =====
   {
     "id": "fleshed_rabbit_hide",
     "charSpans": [ {"sheet": "items", "id": 5} ],
@@ -20925,9 +20601,6 @@
     "volumeL": 1.6,
     "material": { "label": "Prime Direwolf Leather", "desc": "curried, supple, tough", "building": { "durability": 1.3, "insulation": 0.12 }, "item": { "durability": 1.35, "weight": 0.95 } }
   },
-  // ── Sackcloth: the stone age's clothing line. Woven from gathered fibre at the frame — no
-  //    spinning wheel, no animal killed — so a colony can dress itself on its first day. Turns a
-  //    thorn and the cold, and nothing more than that.
   {
     "id": "sackcloth_hood",
     "charSpans": [
@@ -21083,8 +20756,6 @@
       "weaving"
     ]
   },
-  // ── Set holes closed: the archer line had no leg armour at ANY age, the padded line no sleeves
-  //    and no hose at ANY age, and every plate kit stopped at the wrist and the ankle.
   {
     "id": "deer_greaves",
     "charSpans": [
@@ -21505,9 +21176,6 @@
       "movementPenalty": 0.028
     }
   },
-  // ── Shields: the Steel and Runed ages had NONE, and the whole line offered one shape. These
-  //    differ on an axis, not a tier — the buckler parries what it cannot cover, the heater covers
-  //    everything and moves like a door.
   {
     "id": "iron_buckler",
     "charSpans": [
@@ -21602,9 +21270,6 @@
       "bashKnockdown": 0.1
     }
   },
-  // ── Faction loot: gear you can only take off a body, filed by the SPECIES that carries it. None
-  //    of these sets is complete and none of them ever will be — that is what makes them loot and
-  //    not a kit the player can plan around.
   {
     "id": "goblin_scrap_cap",
     "charSpans": [
@@ -22055,8 +21720,6 @@
       "movementPenalty": 0.0
     }
   },
-  // ── Wicker & branch: the stone age's ARMOUR, as opposed to its clothing. Woven green and lashed,
-  //    it breaks instead of the bone under it and is meant to be rebuilt, not repaired.
   {
     "id": "branch_bracers",
     "charSpans": [
@@ -22121,8 +21784,6 @@
       "movementPenalty": 0.0
     }
   },
-  // ── Bark sandals: the cheapest thing between a sole and the ground. An afternoon's work, gone
-  //    in a season.
   {
     "id": "bark_sandals",
     "charSpans": [

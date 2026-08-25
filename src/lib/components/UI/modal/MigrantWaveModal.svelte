@@ -6,9 +6,6 @@
   let { event, onResolve }: { event: MigrantWaveEvent; onResolve: (ids: string[]) => void } =
     $props();
 
-  // Per-candidate accept toggle — each hopeful starts accepted; the player turns away the ones they
-  // don't want, then commits. Nothing joins until Confirm (selection is not commitment). `overrides`
-  // holds only the flipped ids; `isAccepted` defaults the rest to true.
   let overrides = $state<Record<string, boolean>>({});
   const isAccepted = (id: string) => overrides[id] ?? true;
   const acceptedCount = $derived(event.candidates.filter((c) => isAccepted(c.id)).length);

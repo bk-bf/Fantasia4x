@@ -1,4 +1,3 @@
-// PRODUCTION-CHAIN-II §Q (R8) — quality roll, stat scaling, stamp-on-output, and display.
 import { describe, it, expect } from 'vitest';
 import {
   rollCraftQuality,
@@ -16,7 +15,6 @@ import { itemService } from '$lib/game/services/ItemService';
 import type { GameState } from '$lib/game/core/types';
 
 describe('rollCraftQuality', () => {
-  // Average the tier over many seeded rolls — the axis sets where the distribution centres.
   const meanTier = (axis: number, n = 4000): number => {
     const rand = mulberry32(1234);
     let sum = 0;
@@ -33,8 +31,8 @@ describe('rollCraftQuality', () => {
   });
 
   it('a poor/rushed craft floors near Crude–Standard; a master craft reaches the top tiers', () => {
-    expect(meanTier(0.7)).toBeLessThan(1.2); // novice: Crude/Standard band
-    expect(meanTier(2.0)).toBeGreaterThan(3.5); // master (levelBase 2.0): Masterwork-ish
+    expect(meanTier(0.7)).toBeLessThan(1.2);
+    expect(meanTier(2.0)).toBeGreaterThan(3.5);
   });
 
   it('Legendary is reachable for a master but rare for a mid-level crafter', () => {
@@ -44,26 +42,23 @@ describe('rollCraftQuality', () => {
       for (let i = 0; i < 4000; i++) if (rollCraftQuality(axis, rand) === 5) legendary++;
       return legendary / 4000;
     };
-    expect(rolls(1.0)).toBeLessThan(0.02); // competent mid-level almost never
-    expect(rolls(2.1)).toBeGreaterThan(0.1); // master with a finesse edge regularly
+    expect(rolls(1.0)).toBeLessThan(0.02);
+    expect(rolls(2.1)).toBeGreaterThan(0.1);
   });
 
   it('maps the axis to the expected band at neutral jitter (rand=0.5: jitter 0, no long tail)', () => {
-    // WORK-EXPERIENCE bands: the axis is levelBase(level 1–50) × style — novice ≈ 0.6 rolls Crude,
-    // a competent mid-level ≈ 1.0 rolls Standard, a master ≈ 2.0 rolls Masterwork; Legendary needs
-    // the top of the curve (finesse-leaning master ≈ 2.5) or the jitter/long-tail.
     const mid = () => 0.5;
-    expect(rollCraftQuality(0.6, mid)).toBe(0); // Crude — fresh novice
-    expect(rollCraftQuality(1.0, mid)).toBe(1); // Standard — competent mid-level
-    expect(rollCraftQuality(1.4, mid)).toBe(2); // Fine — seasoned artisan
-    expect(rollCraftQuality(1.7, mid)).toBe(3); // Superior — expert
-    expect(rollCraftQuality(2.0, mid)).toBe(4); // Masterwork — master
-    expect(rollCraftQuality(2.3, mid)).toBe(5); // Legendary — finesse-leaning master
+    expect(rollCraftQuality(0.6, mid)).toBe(0);
+    expect(rollCraftQuality(1.0, mid)).toBe(1);
+    expect(rollCraftQuality(1.4, mid)).toBe(2);
+    expect(rollCraftQuality(1.7, mid)).toBe(3);
+    expect(rollCraftQuality(2.0, mid)).toBe(4);
+    expect(rollCraftQuality(2.3, mid)).toBe(5);
   });
 
   it('jitter can push an identical crafter a band up or down', () => {
-    expect(rollCraftQuality(0.9, () => 0)).toBe(0); // 0.9 − 0.18 = 0.72 < 0.8 → Crude
-    expect(rollCraftQuality(1.1, () => 0.999)).toBeGreaterThanOrEqual(2); // +0.18 → Fine+
+    expect(rollCraftQuality(0.9, () => 0)).toBe(0);
+    expect(rollCraftQuality(1.1, () => 0.999)).toBeGreaterThanOrEqual(2);
   });
 
   it('clamps to 0..5', () => {
@@ -80,7 +75,7 @@ describe('quality tier accessors', () => {
   it('multiplier rises with tier; Standard/undefined = 1.0', () => {
     expect(qualityMultiplier(undefined)).toBe(1.0);
     expect(qualityMultiplier(STANDARD_QUALITY)).toBe(1.0);
-    expect(qualityMultiplier(0)).toBeLessThan(1.0); // Crude penalty
+    expect(qualityMultiplier(0)).toBeLessThan(1.0);
     expect(qualityMultiplier(5)).toBeGreaterThan(qualityMultiplier(2));
   });
 
@@ -114,13 +109,12 @@ describe('stat scaling (consume side)', () => {
       range: 0,
       reach: 1
     };
-    const fine = scaleWeaponQuality(wp, 2); // ×1.15
+    const fine = scaleWeaponQuality(wp, 2);
     expect(fine.damage).toBeCloseTo(10 * 1.15);
     expect(fine.damMax).toBeCloseTo(12 * 1.15);
     expect(fine.accuracy).toBeCloseTo(5 * 1.15);
     expect(fine.critMod).toBeCloseTo(0.1 * 1.15);
     expect(fine.armorPenetration).toBeCloseTo(0.2 * 1.15);
-    // intrinsic — not scaled
     expect(fine.attackSpeed).toBe(1);
     expect(fine.reach).toBe(1);
     expect(fine.range).toBe(0);
@@ -134,10 +128,10 @@ describe('stat scaling (consume side)', () => {
 
   it('scaleArmorQuality scales defense/armorValue', () => {
     const ap = { defense: 20, armorValue: 8, movementPenalty: 0.1 };
-    const master = scaleArmorQuality(ap, 4); // ×1.5
+    const master = scaleArmorQuality(ap, 4);
     expect(master.defense).toBeCloseTo(30);
     expect(master.armorValue).toBeCloseTo(12);
-    expect(master.movementPenalty).toBe(0.1); // intrinsic
+    expect(master.movementPenalty).toBe(0.1);
   });
 
   it('Crude weapon is weaker than Standard', () => {
@@ -145,29 +139,25 @@ describe('stat scaling (consume side)', () => {
     expect(scaleWeaponQuality(wp, 0).damage).toBeLessThan(10);
   });
 
-  // PRODUCTION-CHAIN-III §I — the Famed stat-explosion layers ×2–5 OVER the §Q tier multiplier.
   it('famedStatMult explodes weapon stats on top of the quality tier', () => {
     const wp = { damage: 10, attackSpeed: 1, range: 0 };
-    // Masterwork (×1.5) × Famed ×3 = ×4.5
     const famedMaster = scaleWeaponQuality(wp, 4, 3);
     expect(famedMaster.damage).toBeCloseTo(10 * 1.5 * 3);
-    expect(famedMaster.attackSpeed).toBe(1); // intrinsic — still unscaled
+    expect(famedMaster.attackSpeed).toBe(1);
   });
 
   it('famedStatMult explodes armour value on top of the quality tier', () => {
     const ap = { defense: 20, armorValue: 8 };
-    const famedFine = scaleArmorQuality(ap, 2, 2.5); // ×1.15 × 2.5
+    const famedFine = scaleArmorQuality(ap, 2, 2.5);
     expect(famedFine.defense).toBeCloseTo(20 * 1.15 * 2.5);
     expect(famedFine.armorValue).toBeCloseTo(8 * 1.15 * 2.5);
   });
 
   it('famed on a no-tier (Standard) item still explodes; absent famedStatMult keeps the no-alloc path', () => {
     const wp = { damage: 10, attackSpeed: 1, range: 0 };
-    // Standard tier (×1.0) but Famed ×4 → ×4, and a fresh object (not the same ref)
     const famedStd = scaleWeaponQuality(wp, STANDARD_QUALITY, 4);
     expect(famedStd.damage).toBeCloseTo(40);
     expect(famedStd).not.toBe(wp);
-    // No famedStatMult + Standard → SAME object (hot-path invariant preserved)
     expect(scaleWeaponQuality(wp, STANDARD_QUALITY)).toBe(wp);
     expect(scaleWeaponQuality(wp, STANDARD_QUALITY, 0)).toBe(wp);
   });
@@ -209,11 +199,10 @@ describe('stamp on craft output', () => {
     expect(drop?.quality).toBeUndefined();
   });
 
-  // WORK-EXPERIENCE Phase B: a batch rolls EACH unit separately — one drop per rolled tier.
   it('a ×3 batch rolls per unit and splits into per-tier stacks', () => {
     const order = makeOrder('stone_axe');
     (order as { quantity: number }).quantity = 3;
-    const seq = [0, 1, 1]; // Crude, Standard, Standard
+    const seq = [0, 1, 1];
     let i = 0;
     const gs = completeCraftOrder(order, baseState(order), () => seq[i++ % seq.length] as 0 | 1);
     const drops = (gs.droppedItems ?? []).filter((d) => d.resourceId === 'stone_axe');

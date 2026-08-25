@@ -1,10 +1,3 @@
-/**
- * GET /api/sim/state?projection=summary|dynamic|full — read the headless session's state.
- *   summary (default) — the human/agent-readable colony overview (small, greppable)
- *   dynamic           — the full GameState minus its worldMap (~everything that changes)
- *   full              — everything, worldMap included (MBs — ask for it deliberately)
- * (HEADLESS-SIM / ADR-033)
- */
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { guardHeadless, currentSession } from '$lib/server/simSession';

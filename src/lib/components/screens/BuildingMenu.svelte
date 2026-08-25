@@ -21,8 +21,6 @@
   let buildings: PlacedBuilding[] = [];
   let completedResearch: string[] = [];
 
-  // UI-only section grouping via classify() — the engine `category` field (used for work
-  // bonuses) is never repurposed to drive the menu layout.
   const SECTION_ORDER = [
     'FIRE & COOKING',
     'WORKSHOPS',
@@ -84,10 +82,8 @@
   $: allBuildingsInProgress = buildings.filter((b) => b.status !== 'complete');
   $: campfires = buildings.filter((b) => b.type === 'campfire' && b.status === 'complete');
 
-  // Locked buildings are hidden entirely; `_devResearchGateOff` (DEBUG tab) shows them too.
   $: unlockedDefs = ALL_BUILDING_DEFS.filter(
     (b) =>
-      // Engine-placed defs (e.g. the natural mountain_roof) never appear in the menu.
       !b.notBuildable &&
       ($gameState?._devResearchGateOff ||
         !b.researchRequired ||
@@ -99,7 +95,6 @@
     defs: unlockedDefs.filter((b) => classify(b) === label)
   })).filter((s) => s.defs.length > 0);
 
-  // Active tab ('ZONES' or a section); falls back if the remembered section no longer exists.
   let selectedSection = persisted('building.section', '');
   $: if (
     selectedSection !== 'ZONES' &&
@@ -117,11 +112,8 @@
     ? unlockedDefs.filter((b) => b.name.toLowerCase().includes(searchTerm))
     : (activeSection?.defs ?? []);
 
-  // Legacy compat
   $: availableBuildings = unlockedDefs;
 
-  // Show AVAILABLE (unreserved) stock — the same number the affordability gate spends.
-  // The raw `stockpile` mirror counts reserved stacks too, so it reads sufficient but isn't spendable.
   $: availStock = availableAggregateFromDrops($gameState?.droppedItems);
   $: getItemAmount = (itemId: string): number => availStock[itemId] ?? 0;
 
@@ -129,8 +121,6 @@
     return buildings.filter((b) => b.type === buildingId && b.status === 'complete').length;
   };
 
-  // A `category:<cat>` slot accepts any item of that category, so it has no single
-  // stock count — sum the stockpile across every item in the category.
   $: getCostHave = (id: string): number => {
     if (id.startsWith('category:')) {
       const cat = id.slice('category:'.length);
@@ -139,7 +129,6 @@
     return getItemAmount(id);
   };
 
-  // Player's material pick per building def for `category:` cost slots: buildingId → costKey → itemId.
   let selectedMaterials: Record<string, Record<string, string>> = {};
   function setMaterial(buildingId: string, costKey: string, itemId: string) {
     const forBuilding = { ...(selectedMaterials[buildingId] ?? {}) };
@@ -147,7 +136,6 @@
     else delete forBuilding[costKey];
     selectedMaterials = { ...selectedMaterials, [buildingId]: forBuilding };
   }
-  // Candidate items for a `category:<cat>` slot — in-stock first, then the rest of the category.
   function categoryItemsFor(costKey: string) {
     const cat = costKey.slice('category:'.length);
     return itemService
@@ -156,8 +144,6 @@
       .sort((a, b) => (getItemAmount(b.id) > 0 ? 1 : 0) - (getItemAmount(a.id) > 0 ? 1 : 0));
   }
 
-  // resolveBuildingCost reads physical AVAILABLE stock and resolves `category:*` slots —
-  // the stockpile mirror double-counts reserved stacks and can't, so don't use it here.
   $: canAfford = (building: Building): boolean =>
     !!$gameState && buildingService.resolveBuildingCost(building.id, $gameState) !== null;
 
@@ -184,8 +170,6 @@
       return;
     }
 
-    // placeBuilding RESERVES the cost (pawns fetch it to the site); consumed on
-    // construction completion, not here. (0,0) — abstract/off-map.
     gameState.command({
       type: 'placeBuilding',
       payload: { bid: building.id, x: 0, y: 0 },
@@ -201,7 +185,6 @@
     gameState.command({ type: 'togglePausedBuilding', payload: { id: buildingId }, save: true });
   }
 
-  // Drag-reorder the in-progress build queue → persist the new order (drives fetch/haul priority).
   let dragId: string | null = null;
   function onBuildDrop(targetId: string) {
     const order = allBuildingsInProgress.map((b) => b.id);
@@ -298,7 +281,6 @@
       />
     </div>
 
-    <!-- Active construction queue — drag chips to reorder (= haul priority) -->
     {#if allBuildingsInProgress.length > 0}
       <div class="build-jobs queue-top">
         <div class="jobs-hdr">| ACTIVE BUILD JOBS ({allBuildingsInProgress.length})</div>
@@ -526,7 +508,6 @@
     border-top: 1px solid var(--border);
     margin-top: 4px;
   }
-  /* Queue sits between tabs and cards — separator below, not above. */
   .build-jobs.queue-top {
     padding: 5px 8px;
     border-top: none;
@@ -557,7 +538,6 @@
     overflow: hidden;
     font-size: 11px;
   }
-  /* Build chips are draggable to reorder; fire chips reuse .job-chip but aren't draggable. */
   .queue-top .job-chip {
     cursor: grab;
   }

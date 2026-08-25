@@ -1,14 +1,13 @@
 <script lang="ts">
-  // Fix imports - use the correct functions from Log.ts
   import {
     recentActivity,
     workActivity,
     eventActivity,
     criticalActivity,
-    logActivity, // Use the actual function from Log.ts
-    logSystem, // Convenience function
-    logWork, // Convenience function
-    logBuilding // Convenience function
+    logActivity,
+    logSystem,
+    logWork,
+    logBuilding
   } from '$lib/stores/Log';
   import { gameState } from '$lib/stores/gameState';
   import { threatPulse, alertPulse } from '$lib/stores/uiState';
@@ -19,10 +18,6 @@
 
   let logFilter: 'all' | 'work' | 'events' | 'critical' = 'all';
 
-  // Alert attention cue: when a threat sighting OR a colony-welfare emergency (malnutrition/dehydration
-  // worsening, a death) fires while the chronicle is MINIMISED (closed), pulse the toggle button until
-  // the player opens it. Opening acknowledges the current pulse; a later alert (a newer timestamp)
-  // re-pulses. (The entry itself flashes once via the `pulse` flag below.)
   let toggleAlerting = false;
   let ackPulse = 0;
   $: latestPulse = Math.max($threatPulse, $alertPulse);
@@ -32,7 +27,6 @@
     ackPulse = latestPulse;
   }
 
-  // Get appropriate activity log based on filter
   $: currentActivityLog = (() => {
     switch (logFilter) {
       case 'work':
@@ -122,19 +116,16 @@
     return pawn ? pawn.name : `Pawn ${pawnId.slice(0, 4)}`;
   }
 
-  // Close on Escape key
   function handleKeydown(event: KeyboardEvent) {
     if (event.key === 'Escape' && isOpen) {
       isOpen = false;
     }
   }
 
-  // Add some test logs if none exist
   onMount(() => {
     if ($recentActivity.length === 0) {
       console.log('🧪 Adding test activity logs...');
 
-      // Use logSystem for system events
       logSystem(
         'Settlement founded',
         'Your civilization begins its journey at the starting location',
@@ -142,10 +133,8 @@
         'info'
       );
 
-      // Use logWork for work activities
       logWork('pawn_1', 'Started foraging', 'berry bushes', 'Collected 3 wild berries', 1);
 
-      // Use logBuilding for building activities
       logBuilding(
         'Constructed shelter',
         'basic hut',
@@ -154,7 +143,6 @@
         'pawn_2'
       );
 
-      // Use logActivity for custom events
       logActivity({
         turn: 2,
         type: 'event',
@@ -165,7 +153,6 @@
         severity: 'warning'
       });
 
-      // Use logActivity for crafting
       logActivity({
         turn: 3,
         type: 'crafting',
@@ -183,7 +170,6 @@
 
 <svelte:window on:keydown={handleKeydown} />
 
-<!-- Toggle Button - Always visible -->
 <button
   class="log-toggle-btn"
   on:click={toggleLog}
@@ -210,7 +196,6 @@
       role="dialog"
       aria-label="Activity Log"
     >
-      <!-- Header -->
       <div class="log-header">
         <h3>📋 Settlement Chronicle</h3>
         <div class="header-controls">
@@ -224,7 +209,6 @@
         </div>
       </div>
 
-      <!-- Content -->
       <div class="log-content">
         {#if currentActivityLog.length === 0}
           <div class="no-activity">
@@ -274,17 +258,16 @@
 {/if}
 
 <style>
-  /* Toggle Button - Fixed to bottom-right corner */
   .log-toggle-btn {
     position: fixed;
-    bottom: 20px; /* Changed from top: 50% to bottom */
+    bottom: 20px;
     right: 20px;
     z-index: 1000;
     background: rgba(0, 0, 0, 0.8);
     border: 2px solid #4caf50;
     color: #4caf50;
-    font-size: 0.9em; /* Smaller font */
-    padding: 10px 15px; /* Normal horizontal padding */
+    font-size: 0.9em;
+    padding: 10px 15px;
     border-radius: 8px;
     cursor: pointer;
     transition: all 0.3s ease;
@@ -293,7 +276,6 @@
     font-weight: bold;
     text-transform: uppercase;
     letter-spacing: 1px;
-    /* Removed vertical writing mode */
   }
 
   .log-toggle-btn:hover,
@@ -301,10 +283,9 @@
     background: rgba(76, 175, 80, 0.3);
     box-shadow: 0 0 20px rgba(76, 175, 80, 0.4);
     transform: scale(1.05);
-    bottom: 18px; /* Slight lift on hover */
+    bottom: 18px;
   }
 
-  /* Threat alert: a mob spotted a colonist while the chronicle is minimised — pulse red until opened. */
   .log-toggle-btn.alerting {
     border-color: #ff5252;
     color: #ff5252;
@@ -322,7 +303,6 @@
     }
   }
 
-  /* Overlay Backdrop - More transparent */
   .log-overlay-backdrop {
     position: fixed;
     top: 0;
@@ -336,7 +316,6 @@
     align-items: stretch;
   }
 
-  /* Log Panel - More transparent */
   .log-overlay-panel {
     width: 33.333vw;
     height: 100vh;
@@ -350,7 +329,6 @@
     -webkit-backdrop-filter: blur(15px);
   }
 
-  /* Header - More transparent */
   .log-header {
     display: flex;
     justify-content: space-between;
@@ -408,7 +386,6 @@
     box-shadow: 0 0 10px rgba(244, 67, 54, 0.3);
   }
 
-  /* Content */
   .log-content {
     flex: 1;
     overflow-y: auto;
@@ -455,7 +432,6 @@
     background: rgba(211, 47, 47, 0.15);
   }
 
-  /* Threat-sighted line: flash once when it lands so the eye catches it (keyed `each` → runs per entry). */
   .activity-entry.pulse {
     animation: threat-entry-flash 2.4s ease-out 1;
   }
@@ -544,7 +520,6 @@
     text-shadow: 0 0 2px rgba(0, 0, 0, 0.8);
   }
 
-  /* Responsive */
   @media (max-width: 768px) {
     .log-overlay-panel {
       width: 50vw;

@@ -1,7 +1,3 @@
-<!-- PawnAttributes.svelte — compact table of ALL stats.jsonc stats for a pawn.
-     Hover a cell to see its formula with the pawn's own numbers substituted in.
-     The per-stat computation + tooltip now live in the SHARED statView module + StatTooltip component,
-     so the trait card's stat/resistance pill renders the identical panel (no more baked-in duplication). -->
 <script lang="ts">
   import type { Pawn } from '$lib/game/core/types';
   import statsData from '$lib/game/database/pawns/stats.jsonc';
@@ -18,18 +14,12 @@
   } from '$lib/components/util/statView';
 
   export let pawn: Pawn;
-  /** Soft-highlight the stats related to this work category (its *_speed/yield/quality plus the
-   *  capacities those formulas use). Set by clicking a column in the work-priority grid. */
   export let highlightCategory: string | null = null;
-  /** WORK-EXPERIENCE UI split: which stats.jsonc categories this instance renders. The pawn
-   *  Attributes tab shows the body (physical/capacity/combat/resistance); the Work screen's pawn
-   *  detail shows only the work skills — no more identical table in both places. */
   export let categories: string[] = ['physical', 'capacity', 'combat', 'resistance', 'work'];
 
   const STATS = statsData as unknown as StatDef[];
   const CAPACITY_IDS = STATS.filter((s) => s.category === 'capacity').map((s) => s.id);
 
-  // Stats relevant to the highlighted work category: its work stats + the capacities they depend on.
   $: relevant = (() => {
     const set = new Set<string>();
     if (!highlightCategory) return set;
@@ -53,13 +43,8 @@
     work: 'WORK'
   };
 
-  // Per-pawn derived state (capacities, carry, condition multipliers) computed ONCE, shared by every cell.
   $: ctx = buildStatContext(pawn);
 
-  // The hover tooltip opens below its cell; on low rows that clips past the panel's scroll viewport. A
-  // Svelte action measures against the nearest scrollable ancestor on enter and flips the tooltip ABOVE
-  // the cell when there isn't room below (CSS `.cell.up .tip`). An action (vs an on:mouseenter handler)
-  // keeps it off the a11y static-interaction path.
   function flipTip(cell: HTMLElement) {
     const onEnter = () => {
       const tip = cell.querySelector<HTMLElement>('.tip');
@@ -74,7 +59,6 @@
         clip && clip !== document.body
           ? clip.getBoundingClientRect()
           : ({ top: 0, bottom: window.innerHeight } as DOMRect);
-      // Tip is display:none until hover — make it briefly measurable (uncapped), then restore.
       const prev = tip.style.cssText;
       tip.style.visibility = 'hidden';
       tip.style.display = 'block';
@@ -85,10 +69,8 @@
       const margin = 6;
       const below = cr.bottom - r.bottom - margin;
       const above = r.top - cr.top - margin;
-      // Open downward if it fits, else upward if it fits, else whichever side has more room.
       const up = tipH <= below ? false : tipH <= above ? true : above > below;
       cell.classList.toggle('up', up);
-      // Never overrun the viewport: cap to the chosen side's space (the tip scrolls if longer).
       const avail = up ? above : below;
       tip.style.maxHeight = tipH > avail ? `${Math.max(60, avail)}px` : '';
     };
@@ -104,10 +86,6 @@
     }))
     .filter((g) => g.stats.length > 0);
 
-  // buildRows takes the reactive values (pawn, ctx, relevant) as args purely so Svelte tracks them as
-  // dependencies and recomputes the whole table on any change (function calls hide deps from the compiler).
-  // The rolled combat axis. Player-facing label + one line on what it does, never the raw id.
-  // `mass` marks the two the body-size tilt touches (rollAptitudes), so the tooltip can say so.
   const APT_META: Record<string, { label: string; desc: string; mass?: boolean }> = {
     hit_chance: { label: 'accuracy', desc: 'How reliably a swing finds its mark.' },
     attack_speed: { label: 'attack speed', desc: 'How quickly blows follow one another.' },
@@ -136,9 +114,6 @@
         view: computeStatView(s.id, pawn, ctx) as StatView
       }))
     }));
-    // APTITUDES as a category of its own, built into the same grid rather than bolted above it as a
-    // separate widget — they are numbers about this pawn like any other, so they get the same cell,
-    // the same value formatting and the same hover breakdown.
     if (categories.includes('combat'))
       rows.unshift({
         label: 'APTITUDES',
@@ -156,8 +131,6 @@
 </script>
 
 <div class="attrs">
-  <!-- Core attributes show on EVERY view (they still supplement the work formulas); the work view
-       adds the experience-level banner (WORK-EXPERIENCE) between them and the skills table. -->
   <PawnStatBanner {pawn} />
   {#if categories.includes('work')}
     <PawnSkillBanner {pawn} />
@@ -238,14 +211,11 @@
     color: var(--text);
     font-size: 11px;
     line-height: 1.5;
-    /* auto (not none) so an over-tall tip — capped by flipTip — can be scrolled to read */
     pointer-events: auto;
   }
   .cell:hover .tip {
     display: block;
   }
-  /* Low rows: flipTip toggles `.up` (via JS, hence :global) to flip the tooltip above the
-     cell so it doesn't clip past the panel's scroll viewport. */
   .cell:global(.up) .tip {
     top: auto;
     bottom: 100%;

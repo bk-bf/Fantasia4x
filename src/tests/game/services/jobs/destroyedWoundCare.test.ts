@@ -3,11 +3,6 @@ import { isUncareable } from '$lib/game/core/defs/wounds';
 import { hasUntendedWound } from '$lib/game/services/jobs/caretake';
 import type { Injury, Pawn } from '$lib/game/core/types';
 
-/**
- * ADR-028 fix: a DESTROYED part that has stopped bleeding is a lost limb — dressing does nothing and it
- * can't regrow. It must NOT count as an untended wound (that spun an infinite tend loop) nor drive
- * infection. A destroyed part that STILL bleeds is a live emergency and is cared for until it clots.
- */
 const wound = (over: Partial<Injury>): Injury => ({
   bodyPart: 'leftHand',
   type: 'crush',
@@ -38,14 +33,13 @@ const pawnWith = (w: Injury): Pawn =>
 describe('destroyed non-bleeding wounds are uncareable', () => {
   it('isUncareable: destroyed + not bleeding = true; destroyed + bleeding = false; permanent = true', () => {
     expect(isUncareable(wound({ bleeding: 0 }))).toBe(true);
-    expect(isUncareable(wound({ bleeding: 5 }))).toBe(false); // still gushing → treat it
-    expect(isUncareable(wound({ severity: 'serious', bleeding: 0 }))).toBe(false); // a real wound to dress
+    expect(isUncareable(wound({ bleeding: 5 }))).toBe(false);
+    expect(isUncareable(wound({ severity: 'serious', bleeding: 0 }))).toBe(false);
     expect(isUncareable(wound({ permanent: true }))).toBe(true);
   });
 
   it('hasUntendedWound ignores a lost (destroyed, non-bleeding) limb — no infinite tend', () => {
     expect(hasUntendedWound(pawnWith(wound({ bleeding: 0 })), 100)).toBe(false);
-    // …but a still-bleeding destroyed stump IS an emergency.
     expect(hasUntendedWound(pawnWith(wound({ bleeding: 8 })), 100)).toBe(true);
   });
 });

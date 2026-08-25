@@ -3,13 +3,13 @@
   export let icon: string = '';
   export let name: string = '';
   export let description: string = '';
-  export let progress: number = 0; // 0 to 1
+  export let progress: number = 0;
   export let timeRemaining: string = '';
   export let onCancel: () => void;
   export let cancelTitle: string = 'Cancel task';
   export let accentColor: string = '#ffa726';
-  export let compact: boolean = false; // NEW: compact mode for stacking
-  export let showDescription: boolean = true; // NEW: toggle description
+  export let compact: boolean = false;
+  export let showDescription: boolean = true;
 </script>
 
 <div class="current-task" class:compact style="--accent: {accentColor}">
@@ -39,11 +39,10 @@
     padding: 20px;
     border-left: 4px solid var(--accent, #ffa726);
     margin-bottom: 20px;
-    flex: 1; /* NEW: Allow flexible sizing */
-    min-width: 0; /* NEW: Prevent flex overflow */
+    flex: 1;
+    min-width: 0;
   }
 
-  /* NEW: Compact mode styles */
   .current-task.compact {
     padding: 12px;
     margin-bottom: 10px;
@@ -66,7 +65,6 @@
     margin-bottom: 10px;
   }
 
-  /* NEW: Compact header adjustments */
   .compact .progress-header {
     gap: 6px;
     margin-bottom: 6px;
@@ -83,7 +81,7 @@
   .progress-name {
     flex: 1;
     font-weight: bold;
-    white-space: nowrap; /* NEW: Prevent wrapping in compact mode */
+    white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
@@ -91,7 +89,7 @@
   .progress-time {
     color: var(--accent, #ffa726);
     font-size: 0.9em;
-    white-space: nowrap; /* NEW: Prevent wrapping */
+    white-space: nowrap;
   }
 
   .compact .progress-time {
@@ -108,7 +106,7 @@
     cursor: pointer;
     font-size: 0.8em;
     transition: all 0.2s ease;
-    flex-shrink: 0; /* NEW: Prevent button shrinking */
+    flex-shrink: 0;
   }
 
   .compact .cancel-btn {

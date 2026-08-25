@@ -1,7 +1,4 @@
 <script lang="ts">
-  /** SOCIAL-LAYER: the RELATIONS tab — the pawn's blood ties (colony kin AND off-colony family out
-   *  in the world, shown "as last you knew" with staleness) plus its standing with every colonist
-   *  it has a history with (stage badge, score bar, story tags, romance). */
   import type { GameState, Pawn, PawnRelationship, RelationTag } from '$lib/game/core/types';
   import {
     kinLabel,
@@ -20,11 +17,10 @@
   export let gameState: GameState;
   export let onSelect: (p: Pawn) => void = () => {};
 
-  // Which relationship rows have their point breakdown expanded (keyed by canonical pair).
   let expanded = new Set<string>();
   function toggle(key: string) {
     expanded.has(key) ? expanded.delete(key) : expanded.add(key);
-    expanded = expanded; // nudge Svelte reactivity
+    expanded = expanded;
   }
 
   const TAG_LABEL: Record<RelationTag, string> = {
@@ -53,7 +49,6 @@
   $: world = new Map((gameState.worldPawns ?? []).map((p) => [p.id, p]));
   $: kingdomName = new Map((gameState.kingdoms ?? []).map((k) => [k.id, k.name]));
 
-  // Blood ties: colony kin (selectable) + off-colony family (viewed as last known, with staleness).
   $: kinRows = (pawn.kin ?? []).map((tie) => {
     const alive = living.get(tie.pawnId);
     const dead = fallen.get(tie.pawnId);
@@ -66,13 +61,12 @@
           ? null
           : dayIndexForTurn(gameState.turn) - dayIndexForTurn(away.lastSeenTurn);
     }
-    // Gender the kin word by the relative's own sex (Father vs Mother, Aunt vs Uncle…).
     const relativeSex = (alive ?? away)?.sex;
     return {
       kind: kinLabel(tie.kind, relativeSex),
       name: alive?.name ?? away?.name ?? (dead ? `${dead.name} †` : 'Lost to memory'),
       target: alive && alive.isAlive !== false ? alive : null,
-      away, // off-colony record (or undefined)
+      away,
       home: away?.homeKingdomId ? (kingdomName.get(away.homeKingdomId) ?? 'a far realm') : null,
       stale: away ? isKinStale(sinceDays) : false,
       seen: sinceDays,
@@ -130,7 +124,7 @@
       {#each rels as { r, other } (r.pawnA + r.pawnB)}
         {@const key = relKey(r.pawnA, r.pawnB)}
         {@const isOpen = expanded.has(key)}
-        <!-- The whole card toggles the history breakdown; the name still selects the pawn. -->
+
         <div
           class="rel-row clickable"
           class:open={isOpen}
@@ -203,7 +197,6 @@
     padding: 1px 0;
     flex-wrap: wrap;
   }
-  /* Off-colony kin the colony hasn't heard from in ~a month render greyed — "as you last knew". */
   .kin-row.stale {
     opacity: 0.55;
   }

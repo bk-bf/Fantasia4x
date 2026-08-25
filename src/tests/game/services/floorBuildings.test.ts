@@ -44,10 +44,8 @@ describe('indoor floor buildings', () => {
   });
 
   it('the wetness model (sanity) reads a soaking rainy tile that a floor would cut below soak', () => {
-    // Not floor-specific (floor dryness is applied at the wetness tick, not in tileWetness), but pins
-    // the math the floor relies on: dryness×tileWet pushes a soaked reading toward dry.
-    const muddy = tileWetness(80, undefined); // base ground wetness 80 (no weather)
-    expect(muddy * (1 - 0.9)).toBeLessThan(muddy); // a 0.9-dryness floor cuts it to ~8
+    const muddy = tileWetness(80, undefined);
+    expect(muddy * (1 - 0.9)).toBeLessThan(muddy);
     expect(muddy * (1 - 0.9)).toBeCloseTo(8);
   });
 });

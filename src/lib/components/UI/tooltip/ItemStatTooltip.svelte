@@ -1,6 +1,3 @@
-<!-- ItemStatTooltip.svelte — combat/gear stat + ability breakdown for a craftable, shown on hover
-     before crafting. Reuses the work-tab job-priority tooltip format (WorkCellTooltip): portaled
-     panel, header line, label/value rows, and a separated MODIFIERS/ABILITIES block. -->
 <script lang="ts">
   import type { Item, Recipe, EquipmentSlot } from '$lib/game/core/types';
   import type { NaturalGearMeta } from '$lib/components/util/naturalGear';
@@ -13,7 +10,6 @@
   import { WORK_CATEGORIES } from '$lib/game/core/defs/work';
   import { TURNS_PER_DAY } from '$lib/game/services/EnvironmentService';
 
-  // decaySeconds is authored in in-game seconds; one in-game day = TURNS_PER_DAY (300) of them.
   const spoilDuration = (s: number): string => {
     const days = s / TURNS_PER_DAY;
     if (days >= 1)
@@ -21,7 +17,6 @@
     const hours = days * 24;
     return `${hours >= 1 ? Math.round(hours) : hours.toFixed(1)} hr`;
   };
-  // Qualitative spoilage speed (shelf life in days), so the player gets an at-a-glance read.
   const spoilSpeed = (s: number): string => {
     const days = s / TURNS_PER_DAY;
     return days <= 1 ? 'Fast' : days <= 5 ? 'Moderate' : 'Slow';
@@ -31,20 +26,11 @@
     item: Item;
     x: number;
     y: number;
-    /** Producing recipe + chosen ingredients — drives the per-material stat/nutrition deltas. */
     recipe?: Recipe | null;
     selectedIngredients?: Record<string, string>;
-    /** Work category (labor) this craft belongs to — "Butchery" / "Leatherworking" / "General
-     *  Crafting" / "Cooking" … Shown as the first row so the player knows which job performs it. */
     jobLabel?: string | null;
-    /** Natural-gear extras (innate / evolution stage / carry cost) — rendered in a NATURAL block.
-     *  Null for normal craftables, so their tooltip is unchanged. */
     natural?: NaturalGearMeta | null;
-    /** Pinned (clicked open) — the panel becomes pointer-interactive; dismissal is handled by the pin
-     *  controller. Defaults false so plain-hover callers are unchanged. */
     pinned?: boolean;
-    /** §2 weapon coating active on the hovered equipped instance (name + on-hit effect) — rendered as a
-     *  COATED block. Null/omitted for uncoated items and non-instance callers. */
     coating?: { name: string; effect: string } | null;
   }
   let {
@@ -59,27 +45,22 @@
     coating = null
   }: Props = $props();
 
-  // Names of the chosen materials, for the section header.
   let matNames = $derived(
     Object.values(selectedIngredients)
       .map((id) => itemService.getItemById(id)?.name ?? id.replace(/_/g, ' '))
       .join(', ')
   );
-  // §M generic material-property summaries (durability/beauty/weight…) for the chosen materials.
   let matNotes = $derived(
     Object.values(selectedIngredients)
       .map((id) => getMaterialProperty(id))
       .filter((m): m is NonNullable<typeof m> => !!m)
       .map((m) => `${m.label}: ${m.desc}`)
   );
-  // §M the COMPUTED multipliers the chosen material(s) stamp onto the crafted item (leather, plank, …):
-  // durability and carry weight — the numbers the game actually applies, shown like the building tooltip.
   let matItemMods = $derived(
     Object.values(selectedIngredients).length
       ? aggregateMaterialMods(Object.values(selectedIngredients), 'item')
       : { durability: 1, weight: 1 }
   );
-  // Dynamic-recipe variant nutrition tweak (e.g. cooked-meat-over-venison), added to base nutrition.
   let nutritionBonus = $derived.by(() => {
     if (!recipe?.dynamicRecipe) return 0;
     let sum = 0;
@@ -99,7 +80,6 @@
   }
 
   const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
-  // ADR-029: the parts a worn piece protects, as a concise side-agnostic list ("chest, shoulder, forearm").
   const coversSummary = (parts: string[]): string => {
     const seen = new Set<string>();
     const out: string[] = [];
@@ -119,7 +99,6 @@
 
   type Row = { label: string; val: string };
 
-  // The headline shown next to the name (the item's defining number).
   let headline = $derived.by(() => {
     const wp = item.weaponProperties;
     const ap = item.armorProperties;
@@ -164,7 +143,6 @@
               .trim()
           )
         });
-      // ADR-029: which body parts this piece actually protects (a breastplate ≠ head cover).
       const covers = slot ? coveredParts(item, slot as EquipmentSlot) : [];
       if (covers.length) out.push({ label: 'Covers', val: coversSummary(covers) });
       if (ap.armorLayer) out.push({ label: 'Layer', val: cap(ap.armorLayer) });
@@ -179,8 +157,6 @@
     }
 
     if (item.type === 'tool' && item.toolBoost) {
-      // Name the actual work(s) the tool serves instead of a bare "Work speed". A tool boosts only
-      // the work categories that LIST it in `toolsRequired` (Work.ts) — the same list that gates them.
       const works = WORK_CATEGORIES.filter(
         (c) => c.toolsRequired?.includes(item.id) || c.boostTools?.includes(item.id)
       ).map((c) => c.name);
@@ -200,7 +176,6 @@
     }
     if (item.medicineQuality != null)
       out.push({ label: 'Medicine quality', val: pct(item.medicineQuality) });
-    // A vessel's readout is what it HOLDS, not a preservation aura it no longer has.
     if (item.container)
       out.push({
         label: 'Holds',
@@ -211,7 +186,6 @@
       });
     if (item.fuelValue != null) out.push({ label: 'Fuel value', val: `${item.fuelValue}` });
 
-    // Spoilage (decaySeconds): shelf life (duration) + qualitative speed + what it rots into.
     if (item.decaySeconds != null) {
       out.push({ label: 'Spoils in', val: spoilDuration(item.decaySeconds) });
       out.push({ label: 'Spoilage', val: spoilSpeed(item.decaySeconds) });
@@ -230,8 +204,6 @@
     return out;
   });
 
-  // FARMING — when this item is a crop's SEED or its harvested PRODUCE, surface the crop's grow window
-  // (temp / water / soil / time) so the requirements read off either the seed bag or the harvest stack.
   let farming = $derived.by((): { crop: string; rows: Row[] } | null => {
     const c = resourceObjectService.getCropForItem(item.id);
     if (!c?.def.crop) return null;
@@ -247,12 +219,9 @@
     return { crop: c.def.displayName, rows };
   });
 
-  // Generic effects map (e.g. consumables / gear stat tweaks) → the MODIFIERS block.
   let effects = $derived(Object.entries(item.effects ?? {}));
-  // Ability grants from COMBAT-SYSTEM weapon tags.
   let abilities = $derived(item.weaponProperties?.tags ?? []);
 
-  // Flip the box to the cursor's left/upper side when near a viewport edge (same as WorkCellTooltip).
   let flipX = $derived(typeof window !== 'undefined' && x > window.innerWidth - 280);
   let flipY = $derived(typeof window !== 'undefined' && y > window.innerHeight - 260);
   let style = $derived(
@@ -386,7 +355,6 @@
     color: var(--text);
     pointer-events: none;
   }
-  /* Pinned: frozen + clickable (nested content reachable), with a faint accent outline. */
   .tip.pinned {
     pointer-events: auto;
     box-shadow:
@@ -427,7 +395,6 @@
   .tip-lbl {
     color: var(--text-dim);
   }
-  /* The job/work-category line sits just under the header, set apart with a soft rule + accent value. */
   .tip-job {
     border-bottom: 1px solid var(--border);
     padding-bottom: 3px;

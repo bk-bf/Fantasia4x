@@ -1,20 +1,12 @@
-/* filepath: src/lib/game/grid.ts */
-/**
- * Game Grid System - Efficient tile storage and viewport culling
- * Implements sparse grid storage with fast lookups and batch operations
- */
-
 import type { TileData, RGB, Vec2, Viewport } from './tile-types.js';
 import { GridCoords, TileFactory, TilePerformance } from './tile-types.js';
 
-// Grid update event for reactive UI
 export interface GridUpdateEvent {
   type: 'single' | 'batch' | 'clear';
   tiles: TileData[];
   viewport?: Viewport;
 }
 
-// Batch update for performance optimization
 export interface BatchUpdate {
   x: number;
   y: number;
@@ -24,7 +16,6 @@ export interface BatchUpdate {
   animationOffset?: Vec2;
 }
 
-// Grid statistics for performance monitoring
 export interface GridStats {
   totalTiles: number;
   visibleTiles: number;
@@ -34,9 +25,6 @@ export interface GridStats {
   operationsPerSecond: number;
 }
 
-/**
- * High-performance game grid with sparse storage and viewport culling
- */
 export class GameGrid {
   private tiles: Map<string, TileData> = new Map();
   private dirtyTiles: Set<string> = new Set();
@@ -44,92 +32,60 @@ export class GameGrid {
   private operationCount = 0;
   private operationStartTime = Date.now();
 
-  // Grid dimensions (for bounds checking). Recomputed LAZILY: a removal can only shrink the bounds,
-  // and recomputing then is an O(n) scan of the whole tile Map — doing it on every removeTile turned a
-  // whole-map delta (e.g. a snow-thaw wave, ~195k removals) into O(n²) and froze the main thread. So a
-  // removal just flags the bounds stale; getBounds() rescans once, on demand (nothing reads it per-tick).
   private bounds: { min: Vec2; max: Vec2 } | null = null;
   private boundsDirty = false;
 
-  // Event listeners for reactive updates
   private listeners: ((event: GridUpdateEvent) => void)[] = [];
 
-  constructor() {
-    // (no per-construction logging — buildGameGrid news a GameGrid on every terrain rebuild, so this
-    // fired several times/sec and spammed the console during play.)
-  }
+  constructor() {}
 
-  /**
-   * Set a tile at the given coordinates
-   * Efficient single-tile updates with dirty tracking
-   */
   setTile(x: number, y: number, tile: TileData): void {
     const key = GridCoords.toKey(x, y);
 
-    // Ensure position matches coordinates
     tile.position = { x, y };
     tile.dirty = true;
     tile.lastUpdated = Date.now();
 
-    // Store tile and mark as dirty
     this.tiles.set(key, tile);
     this.dirtyTiles.add(key);
 
-    // Update bounds
     this.updateBounds(x, y);
 
-    // Track performance
     TilePerformance.recordUpdate();
     this.recordOperation();
 
-    // Notify listeners
     this.notifyListeners({
       type: 'single',
       tiles: [tile]
     });
   }
 
-  /**
-   * Get a tile at the given coordinates
-   * Returns undefined for empty tiles (sparse storage)
-   */
   getTile(x: number, y: number): TileData | undefined {
     const key = GridCoords.toKey(x, y);
     return this.tiles.get(key);
   }
 
-  /**
-   * Check if a tile exists at the given coordinates
-   */
   hasTile(x: number, y: number): boolean {
     const key = GridCoords.toKey(x, y);
     return this.tiles.has(key);
   }
 
-  /**
-   * Remove a tile at the given coordinates
-   */
   removeTile(x: number, y: number): boolean {
     const key = GridCoords.toKey(x, y);
     const removed = this.tiles.delete(key);
 
     if (removed) {
       this.dirtyTiles.delete(key);
-      this.boundsDirty = true; // shrink is O(n); defer to getBounds() instead of paying it per removal
+      this.boundsDirty = true;
       this.recordOperation();
     }
 
     return removed;
   }
 
-  /**
-   * Get all tiles visible within the specified viewport
-   * Implements efficient viewport culling for rendering
-   */
   getVisibleTiles(viewport: Viewport): TileData[] {
     const visibleTiles: TileData[] = [];
 
-    // Only check tiles within viewport bounds
     for (let y = viewport.y; y < viewport.y + viewport.height; y++) {
       for (let x = viewport.x; x < viewport.x + viewport.width; x++) {
         const tile = this.getTile(x, y);
@@ -142,10 +98,6 @@ export class GameGrid {
     return visibleTiles;
   }
 
-  /**
-   * Get all dirty tiles that need re-rendering
-   * Used for efficient incremental updates
-   */
   getDirtyTiles(): TileData[] {
     const dirty: TileData[] = [];
 
@@ -159,9 +111,6 @@ export class GameGrid {
     return dirty;
   }
 
-  /**
-   * Clear all dirty flags after rendering
-   */
   clearDirtyFlags(): void {
     for (const key of this.dirtyTiles) {
       const tile = this.tiles.get(key);
@@ -172,10 +121,6 @@ export class GameGrid {
     this.dirtyTiles.clear();
   }
 
-  /**
-   * Batch update multiple tiles for performance
-   * More efficient than multiple setTile calls
-   */
   batchUpdate(updates: BatchUpdate[]): void {
     const updatedTiles: TileData[] = [];
 
@@ -183,34 +128,28 @@ export class GameGrid {
       const key = GridCoords.toKey(update.x, update.y);
       let tile = this.tiles.get(key);
 
-      // Create new tile if it doesn't exist
       if (!tile) {
         tile = TileFactory.createEmpty(update.x, update.y);
         TilePerformance.recordCreation();
       }
 
-      // Apply updates
       if (update.char !== undefined) tile.char = update.char;
       if (update.foreground) tile.foreground = update.foreground;
       if (update.background) tile.background = update.background;
       if (update.animationOffset) tile.animationOffset = update.animationOffset;
 
-      // Mark as updated
       tile.dirty = true;
       tile.lastUpdated = Date.now();
 
-      // Store and track
       this.tiles.set(key, tile);
       this.dirtyTiles.add(key);
       updatedTiles.push(tile);
 
-      // Update bounds
       this.updateBounds(update.x, update.y);
     }
 
     this.recordOperation();
 
-    // Single notification for all updates
     this.notifyListeners({
       type: 'batch',
       tiles: updatedTiles
@@ -219,9 +158,6 @@ export class GameGrid {
     console.log(`📦 Batch updated ${updates.length} tiles`);
   }
 
-  /**
-   * Fill a rectangular area with the same tile
-   */
   fillArea(
     x: number,
     y: number,
@@ -249,20 +185,14 @@ export class GameGrid {
     console.log(`🎨 Filled ${width}x${height} area at (${x}, ${y}) with '${char}'`);
   }
 
-  /**
-   * Clear all tiles from the grid
-   */
   clear(): void {
-    // The per-frame pawn overlay grid calls this every animation frame and has
-    // no listeners, so skip the tile-array copy + notify unless someone is
-    // actually listening. (No console log here — it ran 60+×/sec as spam.)
     const hasListeners = this.listeners.length > 0;
     const clearedTiles = hasListeners ? Array.from(this.tiles.values()) : [];
 
     this.tiles.clear();
     this.dirtyTiles.clear();
     this.bounds = null;
-    this.boundsDirty = false; // empty grid → bounds are definitively null, nothing to reconcile
+    this.boundsDirty = false;
     this.recordOperation();
 
     if (hasListeners) {
@@ -273,28 +203,18 @@ export class GameGrid {
     }
   }
 
-  /**
-   * Get grid boundaries (min/max coordinates with tiles)
-   */
   getBounds(): { min: Vec2; max: Vec2 } | null {
     if (this.boundsDirty) {
-      this.recalculateBounds(); // pay the O(n) scan once, here, not per removal
+      this.recalculateBounds();
       this.boundsDirty = false;
     }
     return this.bounds ? { ...this.bounds } : null;
   }
 
-  /**
-   * Get all tiles in the grid
-   * Warning: Can be expensive for large grids
-   */
   getAllTiles(): TileData[] {
     return Array.from(this.tiles.values());
   }
 
-  /**
-   * Get tiles in a specific region
-   */
   getTilesInRegion(x: number, y: number, width: number, height: number): TileData[] {
     const tiles: TileData[] = [];
 
@@ -310,16 +230,13 @@ export class GameGrid {
     return tiles;
   }
 
-  /**
-   * Get performance statistics
-   */
   getStats(): GridStats {
     const now = Date.now();
     const timeSinceStart = (now - this.operationStartTime) / 1000;
 
     return {
       totalTiles: this.tiles.size,
-      visibleTiles: 0, // Updated by getVisibleTiles()
+      visibleTiles: 0,
       dirtyTiles: this.dirtyTiles.size,
       memoryUsageMB: this.estimateMemoryUsage(),
       lastUpdateTime: this.lastUpdateTime,
@@ -327,13 +244,9 @@ export class GameGrid {
     };
   }
 
-  /**
-   * Subscribe to grid update events
-   */
   subscribe(listener: (event: GridUpdateEvent) => void): () => void {
     this.listeners.push(listener);
 
-    // Return unsubscribe function
     return () => {
       const index = this.listeners.indexOf(listener);
       if (index >= 0) {
@@ -342,19 +255,14 @@ export class GameGrid {
     };
   }
 
-  /**
-   * Create a test grid pattern showing all CP437 characters for development
-   */
   createTestPattern(width: number = 80, height: number = 50): void {
     console.log(`🎨 Creating ${width}x${height} test pattern with all CP437 characters...`);
 
-    // Generate all CP437 characters (256 total)
     const allChars: string[] = [];
     for (let i = 0; i < 256; i++) {
       if (i === 0) {
-        allChars.push(' '); // Null character as space
+        allChars.push(' ');
       } else if (i < 32) {
-        // Control characters - use their CP437 graphic representations
         const controlChars = [
           ' ',
           '☺',
@@ -395,24 +303,23 @@ export class GameGrid {
       }
     }
 
-    // Rich color palette for visual variety
     const colors = [
-      { r: 1.0, g: 1.0, b: 1.0 }, // White
-      { r: 1.0, g: 0.0, b: 0.0 }, // Red
-      { r: 0.0, g: 1.0, b: 0.0 }, // Green
-      { r: 0.0, g: 0.0, b: 1.0 }, // Blue
-      { r: 1.0, g: 1.0, b: 0.0 }, // Yellow
-      { r: 1.0, g: 0.0, b: 1.0 }, // Magenta
-      { r: 0.0, g: 1.0, b: 1.0 }, // Cyan
-      { r: 1.0, g: 0.5, b: 0.0 }, // Orange
-      { r: 0.5, g: 0.0, b: 1.0 }, // Purple
-      { r: 0.0, g: 0.5, b: 0.0 }, // Dark Green
-      { r: 0.5, g: 0.5, b: 0.5 }, // Gray
-      { r: 1.0, g: 0.5, b: 0.5 }, // Light Red
-      { r: 0.5, g: 1.0, b: 0.5 }, // Light Green
-      { r: 0.5, g: 0.5, b: 1.0 }, // Light Blue
-      { r: 1.0, g: 1.0, b: 0.5 }, // Light Yellow
-      { r: 0.8, g: 0.8, b: 0.8 } // Light Gray
+      { r: 1.0, g: 1.0, b: 1.0 },
+      { r: 1.0, g: 0.0, b: 0.0 },
+      { r: 0.0, g: 1.0, b: 0.0 },
+      { r: 0.0, g: 0.0, b: 1.0 },
+      { r: 1.0, g: 1.0, b: 0.0 },
+      { r: 1.0, g: 0.0, b: 1.0 },
+      { r: 0.0, g: 1.0, b: 1.0 },
+      { r: 1.0, g: 0.5, b: 0.0 },
+      { r: 0.5, g: 0.0, b: 1.0 },
+      { r: 0.0, g: 0.5, b: 0.0 },
+      { r: 0.5, g: 0.5, b: 0.5 },
+      { r: 1.0, g: 0.5, b: 0.5 },
+      { r: 0.5, g: 1.0, b: 0.5 },
+      { r: 0.5, g: 0.5, b: 1.0 },
+      { r: 1.0, g: 1.0, b: 0.5 },
+      { r: 0.8, g: 0.8, b: 0.8 }
     ];
 
     const updates: BatchUpdate[] = [];
@@ -420,10 +327,8 @@ export class GameGrid {
 
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
-        // Cycle through all CP437 characters sequentially
         const char = allChars[charIndex % allChars.length];
 
-        // Change colors every 16 characters to create visual blocks
         const colorIndex = Math.floor(charIndex / 16) % colors.length;
 
         updates.push({
@@ -431,7 +336,7 @@ export class GameGrid {
           y,
           char: char,
           foreground: colors[colorIndex],
-          background: { r: 0, g: 0, b: 0 } // Transparent background
+          background: { r: 0, g: 0, b: 0 }
         });
 
         charIndex++;
@@ -447,8 +352,6 @@ export class GameGrid {
     console.log(`   🎨 Color blocks: ${Math.floor(totalChars / 16)} different color regions`);
     console.log(`   💾 Memory usage: ${this.tiles.size} stored tiles`);
   }
-
-  // Private helper methods
 
   private updateBounds(x: number, y: number): void {
     if (!this.bounds) {
@@ -480,7 +383,6 @@ export class GameGrid {
   }
 
   private estimateMemoryUsage(): number {
-    // Rough estimate: 200 bytes per tile (includes object overhead)
     const bytesPerTile = 200;
     return (this.tiles.size * bytesPerTile) / (1024 * 1024);
   }

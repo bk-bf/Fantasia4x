@@ -36,7 +36,6 @@ describe('combat narration', () => {
   });
 
   it('escalates the tier when one blow eats half the limb', () => {
-    // 35 of a 60-hp part is >50% → minor wound class still reads "serious".
     expect(narrationTier(swing({ woundSeverity: 'minor', damage: 35, partMaxHp: 60 }))).toBe(
       'serious'
     );

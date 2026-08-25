@@ -2,10 +2,6 @@ import { describe, it, expect } from 'vitest';
 import type { GameState, WorldTile } from '$lib/game/core/types';
 import { isHarvestableTileNow, MIN_FORAGE_GROWTH } from '$lib/game/services/jobs/filters';
 
-// Regression: marking a forage node still below the regrow floor used to paint a harvest marker that
-// the job generator silently skipped — a phantom designation no pawn ever worked (pawns idled with an
-// empty queue). isHarvestableTileNow is the shared gate the mark command + UI now enforce, so it must
-// agree with jobs/harvest.ts `generate`: forage gated below MIN_FORAGE_GROWTH, felling never gated.
 function tileWith(resourceId: string, amount: number, growth: number): Pick<GameState, 'worldMap'> {
   const tile = {
     resources: { [resourceId]: amount },

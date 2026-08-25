@@ -1,12 +1,3 @@
-<!--
-  HealthReadout — the shared body-health readout: a row of compact stat pills (blood, pain, cold/heat
-  exposure + tolerance, combat-readiness — each with a hover breakdown), then every damaged limb with
-  its bleed rate and injured sub-parts' HP + wounds. Pure presentation off a `HealthModel` (built by
-  selectionCard.buildHealthModel).
-
-  Used by BOTH the floating in-game info-card popup (HealthPanel — which wraps this in its pop-up
-  chrome) and the Pawns-tab BODY section (PawnHealth), so the two read identically.
--->
 <script lang="ts">
   import type { HealthModel } from '$lib/components/UI/hud/SelectedEntityCard.svelte';
   import { healthPctColor } from './healthColors';
@@ -68,8 +59,6 @@
                   >
                 {/each}
               {:else}
-                <!-- Destroyed (0 HP or severed): the part is gone — the scar/wound lines no longer
-                     apply, so a single "gone" replaces them (matches the engine's isMissing || health<=0). -->
                 <span class="hp-wound">· gone</span>
               {/if}
             </div>
@@ -81,8 +70,6 @@
 {/if}
 
 <style>
-  /* The readout carries the warm dark-panel palette so it reads identically in the floating popup and
-     the Pawns-tab BODY section. */
   .health-readout {
     font-family: var(--font-mono);
     font-size: 10px;
@@ -129,13 +116,11 @@
   .hp-warn {
     color: #ee8844;
   }
-  /* A tended wound: a small green `+` after the wound text — at a glance, "a caretaker has treated this". */
   .hp-treated {
     color: #68a030;
     font-weight: bold;
     margin-left: 2px;
   }
-  /* A destroyed sub-part (0 HP) is gone — grey the whole row so it reads as lost, not active. */
   .hp-gone,
   .hp-gone .hp-part-name,
   .hp-gone .hp-part-hp,

@@ -26,7 +26,6 @@
     pawns: Pawn[];
     workAssignments: Record<string, WorkAssignment>;
     selectedPawn?: string | null;
-    /** Work category whose header is clicked → highlights related stats in the attributes grid. */
     selectedColumn?: string | null;
   }
   let {
@@ -40,17 +39,11 @@
     selectedColumn = selectedColumn === id ? null : id;
   }
 
-  // Top-level Work-tab categories = every WorkCategory EXCEPT the craft-discipline leaves
-  // (leatherworking, butchery): those appear only as subjobs of their parent (Tailoring, Cooking).
   const TOP_CATEGORIES = WORK_CATEGORIES.filter((wc) => !jobService.isCraftSubjob(wc.id));
 
-  // ── Subjobs: a splittable category (Construction = Build/Demolish/Repair, Tailoring =
-  // Leatherwork/Weaving, Cooking = Meals/Butchery/Baking/Brewing) can be right-click-EXPANDED to rank
-  // its sub-tasks WITHIN the parent. ────────────────────────────────────────────────────────────────
   const subjobsByCat: Record<string, { id: string; label: string }[]> = {};
   for (const wc of TOP_CATEGORIES) subjobsByCat[wc.id] = jobService.getSubjobsForCategory(wc.id);
 
-  // Which splittable columns are currently expanded (persisted across tab toggles).
   let expanded = $state<string[]>(persisted('work.expandedCols', []) ?? []);
   $effect(() => persist('work.expandedCols', expanded));
   function toggleExpand(catId: string) {
@@ -63,8 +56,6 @@
     | { kind: 'cat'; catId: string; name: string; abbr: string; splittable: boolean }
     | { kind: 'sub'; catId: string; subId: string; label: string; abbr: string };
 
-  // Flattened column list: each category, plus its subjob columns when expanded. Drives BOTH the
-  // header row and every pawn row, so they can't drift.
   let columns = $derived.by<Col[]>(() => {
     const cols: Col[] = [];
     for (const wc of TOP_CATEGORIES) {
@@ -90,8 +81,6 @@
     return cols;
   });
 
-  // A subjob's effective level for a pawn: its explicit override if set, else the parent category level
-  // (inherited — shown dimmed). The assignment ranks an inherited subjob alongside its parent.
   function getSubjobLevel(
     pawnId: string,
     catId: string,
@@ -115,24 +104,16 @@
     updatePawnLaborLevel(pawnId, workId, ((cur + dir + 5) % 5) as 0 | 1 | 2 | 3 | 4);
   }
 
-  // Speed / yield / quality per pawn/work from the single stats.jsonc model — drives both
-  // the medal ranking (by throughput = speed × yield) and the hover tooltip.
   type WorkMods = { speed: number; yield: number | null; quality: number | null };
   let modMap = $derived.by(() => {
-    // Touch $gameState so this recomputes as pawns' state (needs/conditions) changes.
     void $gameState.turn;
     const map: Record<string, Record<string, WorkMods>> = {};
     for (const pawn of pawns) {
       const row: Record<string, WorkMods> = {};
       for (const wc of TOP_CATEGORIES) {
-        // Subjob mods: each reads its own `*_speed`/quality with the category as per-axis fallback, so
-        // an expanded cell + its tooltip show the pawn's actual aptitude for THAT subjob.
         const subs = subjobsByCat[wc.id];
         for (const sj of subs)
           row[sj.id] = pawnStatService.getWorkModifiers(pawn, sj.id, undefined, wc.id);
-        // A craft grouping-parent (Tailoring, Cooking) is NOT a skill — its leaves are. Show the pawn's
-        // BEST leaf so the column still reflects their top aptitude in that family. A flat category (or
-        // Construction, whose verbs share its skill) reads its own skill directly.
         if (subs.length && jobService.isGroupingParent(wc.id)) {
           const tput = (m: WorkMods) => m.speed * (m.yield ?? 1) * (m.quality ?? 1);
           row[wc.id] = subs.reduce(
@@ -153,24 +134,17 @@
     for (const pawn of pawns) {
       const eff: Record<string, number> = {};
       for (const wc of TOP_CATEGORIES) {
-        // Non-skill tasks (hunting = combat, hauling = carrying) are excluded from the best/weakest
-        // medal ranking — they're not learned skills, so ranking them alongside crafts is nonsense
-        // (and hunting, being combat-driven, was topping every colonist). Leaving them out of `eff`
-        // also stops them diluting the real skills' ranking.
         if (wc.id in NON_SKILL_TASKS) continue;
         const m = modMap[pawn.id]?.[wc.id];
         eff[wc.id] = m ? m.speed * (m.yield ?? 1) * (m.quality ?? 1) : 0;
       }
       const ranked = rankWorkCells(eff);
-      // Give the excluded tasks a neutral (unranked) entry so cell/tooltip lookups still resolve.
       for (const id of Object.keys(NON_SKILL_TASKS)) ranked[id] = { best: -1, worst: -1 };
       map[pawn.id] = ranked;
     }
     return map;
   });
 
-  // `workId` is always the parent CATEGORY (the tooltip's stats come from it). For a subjob cell we
-  // also carry the subjob's id + name so the header reads the subjob ("Repair"), not its parent.
   let tip = $state<{
     pawnId: string;
     workId: string;
@@ -348,8 +322,6 @@
     padding: 0;
     text-align: center;
   }
-  /* Equal fixed width on both end columns so the work grid is centered
-     between them in the 100%-wide table. */
   .name-hdr,
   .state-hdr {
     text-align: left;
@@ -374,7 +346,6 @@
     background: color-mix(in srgb, var(--accent-hi) 18%, transparent);
   }
   .work-hdr.splittable {
-    /* a faint underline cue that this column expands on right-click */
     text-decoration: underline dotted color-mix(in srgb, var(--text-dim) 60%, transparent);
     text-underline-offset: 2px;
   }
@@ -383,7 +354,6 @@
     margin-left: 1px;
     opacity: 0.7;
   }
-  /* Subjob columns read as children of the category to their left. */
   .work-hdr.sub-hdr {
     font-size: 10px;
     color: var(--text-muted, #6a7a8a);
@@ -394,7 +364,6 @@
     background: color-mix(in srgb, var(--accent-hi) 5%, transparent);
     border-left-style: dashed !important;
   }
-  /* An inherited (un-overridden) subjob cell is dimmed — it just follows its parent category. */
   .cell-btn.inherited {
     opacity: 0.4;
   }

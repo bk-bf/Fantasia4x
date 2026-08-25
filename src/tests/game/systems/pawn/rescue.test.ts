@@ -38,7 +38,6 @@ describe('rescuePawn command (drafted carry order)', () => {
     const n = out.pawns.find((p) => p.id === 'near')!;
     expect(n.drafted).toBe(true);
     expect(n.draftTarget).toMatchObject({ type: 'rescue', victimId: 'v', auto: true });
-    // The far pawn is untouched.
     expect(out.pawns.find((p) => p.id === 'far')!.draftTarget).toBeUndefined();
   });
 
@@ -50,7 +49,7 @@ describe('rescuePawn command (drafted carry order)', () => {
   });
 
   it('no-ops when the target is not collapsed', () => {
-    const victim = pawn('v', 5, 5); // Idle, not collapsed
+    const victim = pawn('v', 5, 5);
     const helper = pawn('h', 6, 5);
     const out = COMMANDS.rescuePawn(state([victim, helper], [bed(10, 10)]), { victimId: 'v' });
     expect(out.pawns.find((p) => p.id === 'h')!.draftTarget).toBeUndefined();
@@ -82,7 +81,6 @@ describe('carried-pawn cargo (pawn/carry)', () => {
     const inst = (c.inventory?.instances ?? []).find((i) => i.itemId === CARRIED_PAWN_ITEM);
     expect(inst).toBeDefined();
     expect(inst!.name).toContain('Vale');
-    // The body has real weight → it eats carry budget.
     expect(itemService.getCurrentCarryLoad(c, gs).weightKg).toBeGreaterThan(0);
   });
 
@@ -108,7 +106,6 @@ describe('carried-pawn cargo (pawn/carry)', () => {
     });
     const victim = pawn('v', 5, 6, { currentState: PAWN_STATE.COLLAPSED });
     let gs = pickUpPawn(state([carrier, victim]), 'c', 'v');
-    // Carrier is re-ordered (e.g. MOVE) — its rescue order is gone.
     gs = {
       ...gs,
       pawns: gs.pawns.map((p) =>
@@ -119,16 +116,15 @@ describe('carried-pawn cargo (pawn/carry)', () => {
     const c = gs.pawns.find((p) => p.id === 'c')!;
     const v = gs.pawns.find((p) => p.id === 'v')!;
     expect(v.carriedBy).toBeUndefined();
-    expect(v.position).toEqual({ x: 8, y: 8 }); // set down where the carrier stood
+    expect(v.position).toEqual({ x: 8, y: 8 });
     expect((c.inventory?.instances ?? []).some((i) => i.itemId === CARRIED_PAWN_ITEM)).toBe(false);
   });
 
   it('nearestShelterTile skips a bed already occupied by another pawn (one body per shelter)', () => {
-    const occupant = pawn('sleeper', 10, 10); // standing on the only bed
+    const occupant = pawn('sleeper', 10, 10);
     const carrier = pawn('c', 9, 10);
     const gs = state([occupant, carrier], [bed(10, 10)]);
-    expect(nearestShelterTile(gs, 9, 10)).toBeNull(); // the lone bed is taken
-    // A second, free bed is chosen instead.
+    expect(nearestShelterTile(gs, 9, 10)).toBeNull();
     const gs2 = state([occupant, carrier], [bed(10, 10), bed(8, 10)]);
     expect(nearestShelterTile(gs2, 9, 10)).toEqual({ x: 8, y: 10 });
   });

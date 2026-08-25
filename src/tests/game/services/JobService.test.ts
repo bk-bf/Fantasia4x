@@ -2,7 +2,6 @@ import { describe, it, expect } from 'vitest';
 import { jobService } from '$lib/game/services/JobService';
 import type { GameState, Job, Pawn } from '$lib/game/core/types';
 
-/** Build a minimal GameState carrying only the fields the job pipeline touches. */
 function makeState(partial: Partial<GameState> = {}): GameState {
   return {
     jobs: [],
@@ -55,20 +54,15 @@ describe('JobService claim / release', () => {
     const released = jobService.releaseJob('pawn-a', 'job-1', gs);
     expect(released.jobs[0].claimedBy).toBeNull();
 
-    // After release, a living pawn sees it as available again.
     const avail = jobService.getAvailableJobs(makePawn('pawn-b'), released);
     expect(avail.map((j) => j.id)).toContain('job-1');
   });
 
   it('a job left claimed by a (now absent) pawn is NOT available to others — the D2 leak', () => {
-    // Regression guard: a claim that is never released blocks every other pawn.
-    // killPawn (PawnStateMachine) and the drafted-skip path must reset claimedBy to null;
-    // this test documents the failure mode that fix prevents.
     const gs = makeState({ jobs: [makeJob({ claimedBy: 'dead-pawn' })] });
     const avail = jobService.getAvailableJobs(makePawn('pawn-b'), gs);
     expect(avail.map((j) => j.id)).not.toContain('job-1');
 
-    // Releasing the dead pawn's claim (what killPawn now does) makes it workable again.
     const fixed = {
       ...gs,
       jobs: gs.jobs.map((j) => (j.claimedBy === 'dead-pawn' ? { ...j, claimedBy: null } : j))
@@ -93,14 +87,13 @@ describe('JobService subjobs (Work-tab fine-tuning)', () => {
         .map((s) => s.id)
         .sort()
     ).toEqual(['construct', 'deconstruct', 'repair'].sort());
-    // refuel and fill are carrying chores — both sit under hauling with haul/fetch.
     expect(
       jobService
         .getSubjobsForCategory('hauling')
         .map((s) => s.id)
         .sort()
     ).toEqual(['fetch', 'haul', 'refuel', 'fill'].sort());
-    expect(jobService.getSubjobsForCategory('crafting')).toEqual([]); // 1:1, nothing to expand
+    expect(jobService.getSubjobsForCategory('crafting')).toEqual([]);
   });
 
   it('ranks a higher subjob ahead of its sibling WITHIN the same parent category', () => {
@@ -116,8 +109,6 @@ describe('JobService subjobs (Work-tab fine-tuning)', () => {
   });
 
   it('a subjob level NEVER lifts a job above a different category (cross-category guard)', () => {
-    // construction=normal with repair=urgent; hauling=high. The haul must still outrank the repair —
-    // repair's high subjob only matters among construction jobs.
     const gs = makeState({
       jobs: [makeJob({ id: 'j-haul', type: 'haul' }), makeJob({ id: 'j-repair', type: 'repair' })],
       workAssignments: withLabor({ construction: 2, repair: 4, hauling: 3 })
@@ -182,7 +173,6 @@ describe('JobService reserve-and-fetch crafting (ADR-016)', () => {
   }
 
   it('emits a fetch job (not a craft job) while inputs are still in the stockpile', () => {
-    // Reserved input sits on a stockpile tile (2,0), NOT the station tile (5,5).
     const reserved = {
       id: 'd-wood',
       resourceId: 'wood',
@@ -200,7 +190,6 @@ describe('JobService reserve-and-fetch crafting (ADR-016)', () => {
     expect(fetchJob!.droppedItemId).toBe('d-wood');
     expect(fetchJob!.stationX).toBe(5);
     expect(fetchJob!.stationY).toBe(5);
-    // No craft job yet — inputs are not staged on the station.
     expect(out.jobs.find((j) => j.type === 'craft')).toBeUndefined();
   });
 
@@ -223,7 +212,6 @@ describe('JobService reserve-and-fetch crafting (ADR-016)', () => {
     expect(craftJob!.workRequired).toBe(10);
     expect(craftJob!.targetX).toBe(5);
     expect(craftJob!.targetY).toBe(5);
-    // No fetch job — everything is already staged.
     expect(out.jobs.find((j) => j.type === 'fetch')).toBeUndefined();
   });
 
@@ -247,10 +235,8 @@ describe('JobService reserve-and-fetch crafting (ADR-016)', () => {
 
     gs = jobService.advanceJob(craftJob.id, 10, gs);
 
-    expect(gs.craftingQueue).toHaveLength(0); // queue drained
-    // Staged input consumed — no reservedFor drop survives.
+    expect(gs.craftingQueue).toHaveLength(0);
     expect((gs.droppedItems ?? []).some((d) => d.reservedFor === 'cq-1')).toBe(false);
-    // Output is a physical drop ON the station tile (qty = 1 output × quantity 3).
     const produced = (gs.droppedItems ?? []).find(
       (d) => d.resourceId === 'test_widget' && d.x === 5 && d.y === 5
     );
