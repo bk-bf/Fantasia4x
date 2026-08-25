@@ -28,9 +28,9 @@ function state(buildings: PlacedBuilding[], drops: DroppedItem[] = []): GameStat
 }
 
 describe('storage bins — capacity', () => {
-  it('a larder cupboard tile holds 12 distinct piles; a bare tile holds 1', () => {
+  it('a larder cupboard tile holds 20 distinct piles; a bare tile holds 1', () => {
     const gs = state([bin('larder_cupboard', 3, 3)]);
-    expect(tilePileCapacity(gs, 3, 3)).toBe(12);
+    expect(tilePileCapacity(gs, 3, 3)).toBe(20);
     expect(tilePileCapacity(gs, 9, 9)).toBe(1);
   });
 

@@ -8,7 +8,7 @@ import { buildingService } from '$lib/game/services/BuildingService';
  * better stove finishes them sooner on less wood. Cooking is its own station family, so a stove never
  * stands in for a forge and a forge never bakes.
  */
-const LADDER = ['campfire', 'hearth', 'brick_hearth', 'brick_stove', 'iron_stove', 'steel_range'];
+const LADDER = ['campfire', 'hearth', 'brick_hearth', 'brick_stove', 'iron_stove', 'steel_stove'];
 
 describe('the cooking ladder', () => {
   it('every rung is a strict improvement on the one below', () => {
@@ -46,7 +46,7 @@ describe('the cooking ladder', () => {
     }
   });
 
-  it('a colony with only a steel range still cooks a campfire stew — headless', async () => {
+  it('a colony with only a steel stove still cooks a campfire stew — headless', async () => {
     const s = new HeadlessSession();
     await s.start(
       buildScenario({
@@ -58,7 +58,7 @@ describe('the cooking ladder', () => {
         infiniteFuel: true,
         pawns: [{ count: 4, skillLevel: 20 }],
         needsDisabled: ['hunger', 'fatigue', 'thirst', 'hygiene'],
-        buildings: [{ id: 'steel_range' }], // NO campfire anywhere
+        buildings: [{ id: 'steel_stove' }], // NO campfire anywhere
         items: { venison: 20, cabbage: 20, turnip: 20 },
         seedEntities: false
       })
@@ -68,8 +68,8 @@ describe('the cooking ladder', () => {
     s.command({ type: 'craftItem', payload: { itemId: 'small_stew', quantity: 2 } } as never);
     for (let i = 0; i < 25 && (stk().small_stew ?? 0) < 1; i++) s.tick(400);
     console.log(
-      `[COOK] steel range only → small_stew ${stk().small_stew ?? 0} (a campfire recipe)`
+      `[COOK] steel stove only → small_stew ${stk().small_stew ?? 0} (a campfire recipe)`
     );
-    expect(stk().small_stew ?? 0, 'the range cooked a campfire dish').toBeGreaterThan(0);
+    expect(stk().small_stew ?? 0, 'the stove cooked a campfire dish').toBeGreaterThan(0);
   }, 200000);
 });

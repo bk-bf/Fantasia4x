@@ -8,6 +8,18 @@ import { recipeService } from '$lib/game/services/RecipeService';
 import conditionsData from '$lib/game/database/pawns/conditions.jsonc';
 import type { GameState, Mob, Pawn } from '$lib/game/core/types';
 
+/** Cutting is grinding, and the abrasive has to out-scratch the stone: sand takes the quartzes, emery
+ *  the harder beryls, and only a corundum lap touches a ruby. Attuning is the runed bench's job. */
+const CUT_AT: Record<string, string> = {
+  moonstone: 'lapidary_bench',
+  amethyst: 'lapidary_bench',
+  citrine: 'lapidary_bench',
+  emerald: 'emery_bench',
+  topaz: 'emery_bench',
+  ruby: 'faceting_lathe',
+  sapphire: 'faceting_lathe'
+};
+
 const MAGICAL_CONDS = (
   conditionsData as Array<{
     id: string;
@@ -159,10 +171,10 @@ describe('§M item & recipe integrity', () => {
       }
     };
     for (const m of MINERALS) {
-      check(`cut_${m}`, 'lapidary_bench');
-      check(`attuned_${m}`, 'lapidary_bench');
-      check(`${m}_ring`, 'lapidary_bench');
-      check(`${m}_amulet`, 'lapidary_bench');
+      check(`cut_${m}`, CUT_AT[m]);
+      check(`attuned_${m}`, 'attunement_bench');
+      check(`${m}_ring`, 'attunement_bench');
+      check(`${m}_amulet`, 'attunement_bench');
     }
   });
 });
@@ -246,7 +258,7 @@ describe('§M regalia (combo & head jewelry)', () => {
       for (const c of def!.grantsConditions!) expect(magicalIds.has(c), `${id}→${c}`).toBe(true);
       const r = recipeService.getRecipeForItem(id);
       expect(r, id).toBeDefined();
-      expect(r!.station).toBe('lapidary_bench');
+      expect(r!.station).toBe('attunement_bench');
       for (const ref of [...Object.keys(r!.inputs), ...Object.keys(r!.outputs)])
         expect(refResolves(ref), `recipe ${id} ref ${ref}`).toBe(true);
     }

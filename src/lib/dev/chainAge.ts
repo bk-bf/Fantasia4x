@@ -49,6 +49,17 @@ export const nodeItems = new Set<string>();
 export const carcassItems = new Set<string>();
 for (const c of creaturesData as any[]) if (c?.carcassItemId) carcassItems.add(c.carcassItemId);
 
+/** carcass id → the tier of the EASIEST creature that drops it. A carcass has no recipe, so the
+ *  workshop walk prices every one of them at nothing and files a cave bear beside a rabbit. What it
+ *  actually costs is the hunt, and the creature already states that. */
+export const CARCASS_TIER = new Map<string, number>();
+for (const c of creaturesData as any[]) {
+  if (!c?.carcassItemId) continue;
+  const t = Number(c.tier ?? 1);
+  const seen = CARCASS_TIER.get(c.carcassItemId);
+  if (seen === undefined || t < seen) CARCASS_TIER.set(c.carcassItemId, t);
+}
+
 const recipesByOutput = new Map<string, any[]>();
 for (const r of recipes)
   for (const o of Object.keys(r?.outputs ?? {}))

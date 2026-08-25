@@ -118,6 +118,7 @@ export interface BuildingService {
   stationTier(buildingType: string): number | undefined;
   butcheryTier(buildingType: string): number | undefined;
   cookingTier(buildingType: string): number | undefined;
+  lapidaryTier(buildingType: string): number | undefined;
   craftingBonusOf(buildingType: string): number;
   butcheryYieldBonusOf(buildingType: string): number;
   stationFulfills(haveType: string, recipeStation: string): boolean;
@@ -476,6 +477,14 @@ export class BuildingServiceImpl implements BuildingService {
     return this.getBuildingById(buildingType)?.effects?.cookingTier;
   }
 
+  /** Lapidary tier (effects.lapidaryTier) — its own family, like cooking and butchery. The rungs are
+   *  abrasives: a sand wheel 0 → an emery wheel 1 → a gem-dust lap 2 → the attunement bench 3, which
+   *  is the only one that does anything magical. Cutting a stone is grinding, not sorcery, so the
+   *  mundane rungs start in the bronze age and each one bites a harder stone than the last. */
+  lapidaryTier(buildingType: string): number | undefined {
+    return this.getBuildingById(buildingType)?.effects?.lapidaryTier;
+  }
+
   /** Crafting speed bonus of a station (effects.craftingBonus, e.g. 0.2 = +20%); 0 if none. */
   craftingBonusOf(buildingType: string): number {
     return this.getBuildingById(buildingType)?.effects?.craftingBonus ?? 0;
@@ -494,6 +503,7 @@ export class BuildingServiceImpl implements BuildingService {
       this.stationTier(buildingType) ??
       this.butcheryTier(buildingType) ??
       this.cookingTier(buildingType) ??
+      this.lapidaryTier(buildingType) ??
       -1
     );
   }
@@ -515,7 +525,10 @@ export class BuildingServiceImpl implements BuildingService {
     if (needB !== undefined && haveB !== undefined && haveB >= needB) return true;
     const needC = this.cookingTier(recipeStation);
     const haveC = this.cookingTier(haveType);
-    return needC !== undefined && haveC !== undefined && haveC >= needC;
+    if (needC !== undefined && haveC !== undefined && haveC >= needC) return true;
+    const needL = this.lapidaryTier(recipeStation);
+    const haveL = this.lapidaryTier(haveType);
+    return needL !== undefined && haveL !== undefined && haveL >= needL;
   }
 
   /** Best complete building that can craft a recipe for `recipeStation` — highest rank wins (a shared
