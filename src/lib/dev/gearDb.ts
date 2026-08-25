@@ -16,7 +16,7 @@ import researchData from '../game/database/progression/research.jsonc';
 import traitsData from '../game/database/pawns/traits.jsonc';
 import creaturesData from '../game/database/pawns/creatures.jsonc';
 import lootpoolData from '../game/database/items/lootpool.jsonc';
-import { carcassItems, nodeItems } from './chainAge';
+import { carcassItems, nodeItems, hasRecipe, chainAgeOf } from './chainAge';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 const items = itemsData as any[];
@@ -509,10 +509,13 @@ function ageOf(
   // A high-tier LOOT piece is a boss drop, whatever it is forged from — checked before the material
   // words so `iron_tide_greataxe` reads as Boss, not as an iron-age craftable.
   if (!craftable && tier >= 4) return 'Boss';
-  // An EXPLICIT `tier` outranks every keyword guess below. The keywords read a material out of the
-  // NAME, which stops working the moment gear is named for the animal it came off: `boarhide_jerkin`
-  // contains "hide", and the keyword rule filed a tier-1 bronze-age piece under Primitive. Data
-  // first; the guesswork below is only for entries that declare nothing.
+  // AGE IS DERIVED. If something makes this, the chain says when a colony can first hold it — the
+  // latest workshop in it and the ages of everything it consumes. `tier` is deliberately NOT asked:
+  // it is a different axis (a quality rank here, the ADR-009 TOOL tier on a tool) and reading it as
+  // an age filed a flint arrow in the bronze age and a knapped stone axe alongside cast bronze.
+  if (hasRecipe(id)) return AGE_OF_CHAIN[chainAgeOf(id)] ?? 'Primitive';
+  // Nothing makes it, so the keyword guesses below are all that is left for a drop that named no
+  // research. `tierDeclared` still decides there, because a drop has no chain to read.
   if (tierDeclared) return AGE_BY_TIER[Math.min(Math.max(tier, 0), 4)];
   if (/staff$|rune|arcane/.test(id)) return 'Runed';
   // Material words match ANYWHERE in the id, not just at the front: `gnoll_flint_axe` and
@@ -532,6 +535,8 @@ function ageOf(
   return AGE_BY_TIER[Math.min(Math.max(tier, 0), 4)];
 }
 /** Item tier (0–4) → age. The one mapping; the item tree reads it too rather than keeping a second. */
+export /** Chain age index → age name. The derivation's own vocabulary. */
+const AGE_OF_CHAIN: Age[] = ['Primitive', 'Copper', 'Bronze', 'Iron', 'Steel', 'Runed'];
 export const AGE_BY_TIER: Age[] = ['Primitive', 'Bronze', 'Iron', 'Steel', 'Runed'];
 
 function kindOf(item: any): GearKind | null {

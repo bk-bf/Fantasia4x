@@ -31,7 +31,14 @@ import {
 } from './gearDb';
 import lootpoolData from '../game/database/items/lootpool.jsonc';
 import creaturesData from '../game/database/pawns/creatures.jsonc';
-import { AGE_NAMES, blameStation, chainAgeOf, CARCASS_TIER } from './chainAge';
+import {
+  AGE_NAMES,
+  blameStation,
+  chainAgeOf,
+  CARCASS_TIER,
+  hasRecipe,
+  NODE_TOOL_AGE
+} from './chainAge';
 import { SLOT_LAYER } from '../game/core/armorCoverage';
 import type { EquipmentSlot } from '../game/core/types';
 
@@ -69,22 +76,48 @@ for (const c of creaturesData as any[]) {
   SPECIES_OF_POOL.set(pool, word.charAt(0).toUpperCase() + word.slice(1));
 }
 const DROPPER_OF_ITEM = new Map<string, string>();
+/** item id → the tier of the EASIEST creature that drops it. What a thing nobody CRAFTS costs you is
+ *  the fight you have to win for it, so that fight is where its age comes from. */
+const DROPPER_TIER = new Map<string, number>();
 {
+  // creature tier, reached through the pool each creature rolls on
+  const tierOfPool = new Map<string, number>();
+  for (const c of creaturesData as any[]) {
+    if (!c?.lootPool) continue;
+    const t = Number(c.tier ?? 1);
+    const seen = tierOfPool.get(c.lootPool);
+    if (seen === undefined || t < seen) tierOfPool.set(c.lootPool, t);
+  }
   const pools = ((lootpoolData as { pools?: Record<string, any> }).pools ?? {}) as Record<
     string,
     any
   >;
   for (const [poolId, pool] of Object.entries(pools)) {
     const who = SPECIES_OF_POOL.get(poolId) ?? poolId.split('_')[0];
+    const tier = tierOfPool.get(poolId);
+    const note = (id: string) => {
+      if (!DROPPER_OF_ITEM.has(id))
+        DROPPER_OF_ITEM.set(id, who.charAt(0).toUpperCase() + who.slice(1));
+      if (tier === undefined) return;
+      const seen = DROPPER_TIER.get(id);
+      if (seen === undefined || tier < seen) DROPPER_TIER.set(id, tier);
+    };
     for (const slot of Object.values<any>(pool?.slots ?? {}))
-      for (const pick of slot?.pick ?? [])
-        if (pick?.id && !DROPPER_OF_ITEM.has(pick.id))
-          DROPPER_OF_ITEM.set(pick.id, who.charAt(0).toUpperCase() + who.slice(1));
+      for (const pick of slot?.pick ?? []) if (pick?.id) note(pick.id);
+    for (const carry of pool?.carried ?? [])
+      for (const pick of carry?.pick ?? []) if (pick?.id) note(pick.id);
   }
 }
 
 /** Chain age → the same age vocabulary the build tables use. */
 const AGE_OF_CHAIN: Age[] = ['Primitive', 'Copper', 'Bronze', 'Iron', 'Steel', 'Runed'];
+/**
+ * Creature tier (1–5) → the age at which a colony can realistically take one down, and therefore the
+ * age of anything only that creature yields. Indexed by tier, so [0] is unused. The two lowest tiers
+ * are both stone-age hunting — a rabbit and a wolf are day-one problems — and a tier-5 boss sits at
+ * the top of the ladder rather than one rung short of it, which is what plain subtraction gave.
+ */
+const CREATURE_AGE = [0, 0, 0, 2, 3, 5];
 /**
  * An item's age, in the order the answer is actually trustworthy:
  *
@@ -97,13 +130,28 @@ const AGE_OF_CHAIN: Age[] = ['Primitive', 'Copper', 'Bronze', 'Iron', 'Steel', '
  * is mined at a hundredth of a percent with a runed pick and dropped by humanoid bosses, has no
  * recipe, and so filed itself under the stone age.
  */
+/**
+ * AGE IS DERIVED, NEVER DECLARED. It is when a colony can first have the thing, and that is decided
+ * by the hardest step in getting it: the latest workshop in its chain, the ages of everything that
+ * chain consumes, or — for what nobody makes — the hunt or the dig that yields it.
+ *
+ * `tier` is NOT consulted, and that is the whole point. Tier is a separate axis (a quality rank on
+ * armour, the ADR-009 TOOL tier on a tool) living in its own column, and reading it as an age is what
+ * made `stone_axe` — a tier-1 woodcutting tool knapped at a craft spot — announce itself as bronze,
+ * and put flint and bone arrows in the bronze age beside cast ones. 211 items disagreed that way.
+ */
 const ageOf = (item: any): Age => {
   const gear = gearById.get(item.id)?.age;
   if (gear) return gear;
-  if (typeof item.tier === 'number') return AGE_BY_TIER[Math.min(Math.max(item.tier, 0), 4)];
-  // A carcass costs a HUNT, not a workshop — price it by the creature, or every one reads Primitive.
-  const beast = CARCASS_TIER.get(item.id);
-  if (beast !== undefined) return AGE_BY_TIER[Math.min(Math.max(beast - 1, 0), 4)];
+  if (hasRecipe(item.id)) return AGE_OF_CHAIN[chainAgeOf(item.id)] ?? 'Primitive';
+  // Nothing makes it. Then its age is what it costs to GET: the beast you had to put down, or the
+  // ground it came out of (a foraged berry and a picked-up ruby are both there from turn one).
+  const beast = CARCASS_TIER.get(item.id) ?? DROPPER_TIER.get(item.id);
+  if (beast !== undefined) return AGE_OF_CHAIN[CREATURE_AGE[Math.min(Math.max(beast, 1), 5)]];
+  // Dug, not made — but a deposit can still refuse a pick that cannot bite it, and that refusal is
+  // the age. A corundum sits behind a steel pick and its infused twin behind a runed one.
+  const dig = NODE_TOOL_AGE.get(item.id);
+  if (dig !== undefined) return AGE_OF_CHAIN[dig];
   return AGE_OF_CHAIN[chainAgeOf(item.id)] ?? 'Primitive';
 };
 
@@ -115,6 +163,10 @@ const ageOf = (item: any): Age => {
  * coating inflicts, what a draught gambles, or what a fluid needs to be held in. Auditing content you
  * cannot see is guesswork, so this is deliberately exhaustive rather than pretty.
  */
+/** Bare feet are the baseline every boot is measured against — mirrors `BAREFOOT_MOVE_FACTOR` in
+ *  PawnService, which is what actually moves the pawn. */
+const BAREFOOT_MOVE_FACTOR = 0.9;
+
 export function effectsOf(i: any): string {
   const out: string[] = [];
   const hrs = (turns: number) => `${Math.round(turns * 10) / 10}t`;
@@ -168,7 +220,15 @@ export function effectsOf(i: any): string {
   }
   const ap = i.armorProperties;
   if (ap?.stealthMod) out.push(`stealth ${ap.stealthMod > 0 ? '+' : ''}${ap.stealthMod}`);
-  if (ap?.movementPenalty) out.push(`move −${Math.round(ap.movementPenalty * 100)}%`);
+  // FOOTWEAR reads against BARE FEET, not against nothing: anything on the foot beats bare soles on
+  // broken ground, and a heavy sole gives some of that back. Showing only the penalty hid the whole
+  // benefit — a light boot printed no movement line at all while being the fastest thing you can wear.
+  if (ap?.equipmentSlot === 'boots' || ap?.equipmentSlot === 'socks') {
+    const gain = (1 - (ap.movementPenalty ?? 0)) / BAREFOOT_MOVE_FACTOR - 1;
+    out.push(`move ${gain >= 0 ? '+' : '−'}${Math.abs(Math.round(gain * 1000) / 10)}% vs barefoot`);
+  } else if (ap?.movementPenalty) {
+    out.push(`move −${Math.round(ap.movementPenalty * 100)}%`);
+  }
   if (ap?.fatiguePerTurn) out.push(`fatigue +${ap.fatiguePerTurn}`);
   if (ap?.coldResistance) out.push(`cold +${ap.coldResistance}`);
   if (ap?.heatResistance) out.push(`heat +${ap.heatResistance}`);

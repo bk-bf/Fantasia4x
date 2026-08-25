@@ -3,12 +3,22 @@ import buildingsData from '$lib/game/database/world/buildings.jsonc';
 import recipesData from '$lib/game/database/items/recipes.jsonc';
 import { TREE_ITEMS } from '$lib/dev/itemTree';
 import { CARCASS_TIER, nodeItems } from '$lib/dev/chainAge';
+import lootpoolData from '$lib/game/database/items/lootpool.jsonc';
 import itemsData from '$lib/game/database/items/items.jsonc';
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 const BUILDINGS = buildingsData as any[];
 const RECIPES = recipesData as any[];
 const ITEMS = itemsData as any[];
+/** every item id any loot pool can hand out — a drop is a way in, and therefore an age. */
+const DROPS = new Set<string>();
+(function scan(o: unknown): void {
+  if (Array.isArray(o)) return o.forEach(scan);
+  if (!o || typeof o !== 'object') return;
+  const n = o as Record<string, any>;
+  if (typeof n.id === 'string' && (n.w !== undefined || n.weight !== undefined)) DROPS.add(n.id);
+  for (const v of Object.values(n)) scan(v);
+})(lootpoolData);
 const byId = new Map(BUILDINGS.map((b) => [b.id, b]));
 
 /**
@@ -104,6 +114,7 @@ describe('every item can say which age it belongs to', () => {
       'honey',
       'terra_preta',
       'sheep_fleece',
+      'milk',
       'common_carp',
       'river_trout',
       'dried_meat',
@@ -116,10 +127,13 @@ describe('every item can say which age it belongs to', () => {
     const bad = TREE_ITEMS.filter((r) => {
       const def = ITEMS.find((i: any) => i.id === r.id);
       if (!def || NATURAL(r) || OFF_LADDER.has(r.id)) return false;
-      if (typeof def.tier === 'number') return false;
+      // `tier` is NOT an age source. It is a separate axis in its own column — a quality rank on
+      // armour, the ADR-009 tool tier on a tool — and reading it as an age is what put a knapped
+      // stone axe in the bronze age. An item still has to say where it actually comes from.
       if (producers.has(r.id)) return false;
       if (CARCASS_TIER.has(r.id)) return false;
       if (nodeItems.has(r.id)) return false;
+      if (DROPS.has(r.id)) return false; // something in the world drops it
       return true;
     }).map(
       (r) =>
