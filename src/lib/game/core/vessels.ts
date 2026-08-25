@@ -22,7 +22,7 @@
 //   that would place one on the ground, in a stockpile or in a pawn's bare hands spills it — see
 //   `spillsIfLoose`, which every DroppedItem/stockpile entry point asks before writing.
 
-import type { Item, ItemInstance, PawnEquipment, VesselContent } from './types';
+import type { Item, ItemInstance, Pawn, PawnEquipment, VesselContent } from './types';
 import { allItemDefs, itemDefById } from './itemDefs';
 
 /** Density fallback when a fluid def gives no weight — water, near enough, for everything. */
@@ -58,6 +58,57 @@ function fluidDensity(itemId: string): number {
 /** A fluid: pourable, measured in litres, and unable to exist outside a vessel. */
 export function isFluidId(itemId: string): boolean {
   return itemDefById(itemId)?.type === 'fluid';
+}
+
+/** Every vessel a pawn has to hand: the tracked items in its pack, and anything it is wearing. */
+function carriedInstances(pawn: Pawn): ItemInstance[] {
+  const out: ItemInstance[] = [];
+  for (const inst of pawn.inventory?.instances ?? []) if (inst) out.push(inst);
+  for (const inst of Object.values(pawn.equipment ?? {})) if (inst) out.push(inst);
+  return out;
+}
+
+/**
+ * Everything this pawn has to hand, by item id — the bulk stacks in its pack PLUS whatever is inside
+ * the vessels it carries or wears, one nested level down (`putIn` refuses to go deeper).
+ *
+ * A fluid is NEVER a bulk stack: `spillsIfLoose` means it only exists inside a vessel. So anything
+ * that searches only `inventory.items` for a carried potion, tonic or coating concludes the pawn has
+ * none — which is how the antivenins came to be invisible to the medicine panel. Solids in a vessel
+ * count too: woundwort in a pouch is still woundwort. Fluids answer in litres, solids in units.
+ */
+export function carriedQuantities(pawn: Pawn): Record<string, number> {
+  const out: Record<string, number> = { ...(pawn.inventory?.items ?? {}) };
+  const add = (e: VesselContent) => {
+    const qty = e.litres ?? e.amount ?? 0;
+    if (qty > 0) out[e.itemId] = (out[e.itemId] ?? 0) + qty;
+  };
+  for (const inst of carriedInstances(pawn)) {
+    for (const e of inst.contents ?? []) {
+      add(e);
+      for (const nested of e.instance?.contents ?? []) add(nested);
+    }
+  }
+  for (const [id, q] of Object.entries(out)) if (q <= 0) delete out[id];
+  return out;
+}
+
+/**
+ * The vessel this pawn is carrying that holds `itemId`, or null when it is a plain stack in the pack.
+ * Fullest first, so a dose comes out of the phial that can spare it rather than the one with a
+ * splash left.
+ */
+export function carrierOf(pawn: Pawn, itemId: string): ItemInstance | null {
+  let best: ItemInstance | null = null;
+  let most = 0;
+  for (const inst of carriedInstances(pawn)) {
+    const held = heldQuantity(inst, itemId);
+    if (held > most) {
+      most = held;
+      best = inst;
+    }
+  }
+  return best;
 }
 
 /** The vessel block of an item id, or null when the item holds nothing (most items). */

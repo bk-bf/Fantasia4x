@@ -49,7 +49,16 @@ import {
   availableAggregateFromDrops,
   withDrops
 } from '../core/GameState';
-import { emptyOut, heldQuantity, isFluidId, roomFor, servingL, takeOut } from '../core/vessels';
+import {
+  carriedQuantities,
+  carrierOf,
+  emptyOut,
+  heldQuantity,
+  isFluidId,
+  roomFor,
+  servingL,
+  takeOut
+} from '../core/vessels';
 import { equipItem, unequipItem, equipDropToPawn } from '../core/PawnEquipment';
 import { rng } from '../core/rng';
 import { pickUpFromTile } from '../systems/pawn/pawnHauling';
@@ -559,8 +568,9 @@ export const COMMANDS: Record<string, Cmd> = {
     const pi = s.pawns.findIndex((pw) => pw.id === p.patientId);
     if (ci === -1 || pi === -1) return s;
     const carer = s.pawns[ci];
-    const held = (carer.inventory?.items ?? {})[p.itemId] ?? 0;
-    if (held < 1) return s;
+    // Search the pack AND the vessels — the antivenins are fluids, so they are never a bulk stack.
+    const held = carriedQuantities(carer)[p.itemId] ?? 0;
+    if (held < doseOf(p.itemId)) return s;
     const def = itemService.getItemById(p.itemId);
     if (!def?.curesConditions?.length && !def?.mendsWounds?.length) return s;
     // Beside the patient — you cannot dose someone across the map.
@@ -569,9 +579,16 @@ export const COMMANDS: Record<string, Cmd> = {
     if (!a || !b || !isAdjacent(a.x, a.y, b.x, b.y)) return s;
 
     const pawns = s.pawns.slice();
-    pawns[pi] = applyConsumable(pawns[pi], p.itemId, Math.random);
+    const before = pawns[pi];
+    pawns[pi] = applyConsumable(before, p.itemId, Math.random);
+    // Nothing applied (the patient has none of what this clears) — keep the dose rather than burn it.
+    if (pawns[pi] === before) return s;
+    // Spend it from wherever it actually is: a vessel if one holds it, the bulk stack otherwise.
+    const vessel = carrierOf(carer, p.itemId);
+    if (vessel)
+      return drainCarriedDose({ ...s, pawns }, p.caretakerId, vessel.instanceId, p.itemId);
     const items = { ...(carer.inventory?.items ?? {}) };
-    items[p.itemId] = held - 1;
+    items[p.itemId] = (items[p.itemId] ?? 0) - doseOf(p.itemId);
     if (items[p.itemId] <= 0) delete items[p.itemId];
     pawns[ci] = { ...carer, inventory: { ...(carer.inventory ?? { instances: [] }), items } };
     return { ...s, pawns };
@@ -1973,13 +1990,17 @@ function drainCarriedDose(
     ...s,
     pawns: s.pawns.map((p) => {
       if (p.id !== pawnId) return p;
-      const instances = (p.inventory?.instances ?? []).map((i) => {
+      const drain = (i: ItemInstance): ItemInstance => {
         if (i.instanceId !== instanceId) return i;
         const copy: ItemInstance = { ...i, contents: i.contents?.map((e) => ({ ...e })) };
         takeOut(copy, itemId, want);
         return copy;
-      });
-      return { ...p, inventory: { ...(p.inventory ?? { items: {} }), instances } };
+      };
+      const instances = (p.inventory?.instances ?? []).map(drain);
+      const equipment = Object.fromEntries(
+        Object.entries(p.equipment ?? {}).map(([slot, i]) => [slot, i ? drain(i) : i])
+      ) as typeof p.equipment;
+      return { ...p, equipment, inventory: { ...(p.inventory ?? { items: {} }), instances } };
     })
   };
 }

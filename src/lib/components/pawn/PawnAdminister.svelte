@@ -6,6 +6,7 @@
 <script lang="ts">
   import type { Pawn, Item } from '$lib/game/core/types';
   import { itemService } from '$lib/game/services/ItemService';
+  import { carriedQuantities, isFluidId, servingL } from '$lib/game/core/vessels';
   import { gameState } from '$lib/stores/gameState';
   import { conditionViewForId } from '$lib/components/util/conditionInfo';
   import { woundById } from '$lib/game/core/Wounds';
@@ -21,14 +22,21 @@
     ];
   }
 
-  /** What the caretaker is CARRYING that clears a named condition or mends a wound. */
+  /** What the caretaker is CARRYING that clears a named condition or mends a wound — the bulk stacks
+      AND what is inside the vessels on them, since a tonic is a fluid and never sits loose in a pack.
+      A fluid's quantity is litres, so it is shown as the number of whole doses that is worth. */
   const doses = $derived(
-    Object.entries(pawn.inventory?.items ?? {})
+    Object.entries(carriedQuantities(pawn))
       .filter(([id, qty]) => {
         const def = itemService.getItemById(id);
         return qty > 0 && !!def && clears(def).length > 0;
       })
-      .map(([id, qty]) => ({ id, qty, def: itemService.getItemById(id) as Item }))
+      .map(([id, qty]) => ({
+        id,
+        qty: isFluidId(id) ? Math.floor(qty / servingL(id)) : qty,
+        def: itemService.getItemById(id) as Item
+      }))
+      .filter((d) => d.qty > 0)
   );
 
   /** Anyone standing next to them — you cannot dose someone across the map. */

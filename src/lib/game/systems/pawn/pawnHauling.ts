@@ -13,6 +13,7 @@ import {
   tilePileCapacity,
   tileStoredPileCount
 } from '../../core/GameState';
+import { usedWeightKg } from '../../core/vessels';
 import { manhattan } from '../../core/distance';
 import { occupancyService } from '../../services/OccupancyService';
 import { itemService } from '../../services/ItemService';
@@ -108,6 +109,10 @@ export function pickUpFromTile(
   const reduceQty = new Map<string, number>();
   const removeIds = new Set<string>();
   const gained: Record<string, number> = {};
+  // A drop carrying an `instance` is a TRACKED item — a vessel with something in it, a weapon with a
+  // quality roll, a famed piece. Crediting it as a bulk count throws the instance away, and with it
+  // whatever the vessel was holding: a picked-up waterskin became an empty `waterskin: 1`.
+  const takenInstances: ItemInstance[] = [];
   let tookAny = false;
 
   for (const d of cands) {
@@ -121,6 +126,18 @@ export function pickUpFromTile(
     // Floor of one: never let capacity block picking up a single (possibly heavy) unit.
     if (take <= 0 && !tookAny && remCap >= 1) take = 1;
     if (take <= 0) continue;
+    // A tracked drop moves whole or not at all — half a vessel is not a thing, and splitting it would
+    // have to invent a second instance to hold the other half of its contents.
+    if (d.instance) {
+      if (take < d.quantity) continue;
+      tookAny = true;
+      takenInstances.push(d.instance);
+      remW -= usedWeightKg(d.instance) + take * perW;
+      remV -= take * perV;
+      remCap -= take;
+      removeIds.add(d.id);
+      continue;
+    }
     tookAny = true;
     gained[d.resourceId] = (gained[d.resourceId] ?? 0) + take;
     remW -= take * perW;
@@ -150,7 +167,10 @@ export function pickUpFromTile(
     const inv = p.inventory ?? { ...EMPTY_INVENTORY };
     const items = { ...inv.items };
     for (const [rid, q] of Object.entries(gained)) items[rid] = (items[rid] ?? 0) + q;
-    return { ...p, inventory: { ...inv, items } };
+    const instances = takenInstances.length
+      ? [...(inv.instances ?? []), ...takenInstances]
+      : inv.instances;
+    return { ...p, inventory: { ...inv, items, instances } };
   });
   const after = pawns.find((p) => p.id === pawnId)?.inventory?.items ?? {};
   // ITEM-DBG: a pickup happened — log which drop ids were consumed, what was gained, and the pawn's
