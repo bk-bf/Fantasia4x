@@ -2,7 +2,7 @@
 
 # SOFT-GOODS CRAFTING — tailoring, realistic per-animal leather & discipline specialisation
 
-> **Related:** [AUDIT.md](../open/AUDIT.md) · [DESIGN](../../game/DESIGN.md) · [DECISIONS](../../game/DECISIONS.md)
+> **Related:** [AUDIT (archived)](AUDIT-2026-08-25.md) · [DESIGN](../../game/DESIGN.md) · [DECISIONS](../../game/DECISIONS.md)
 
 **Status (2026-07-26): ✅ DONE + ARCHIVED.** Built end-to-end, full suite 1148, headless-verified. §E (class/build
 gear coverage) continues in the AUDIT class/build audit → [ROADMAP 8c](../open/ROADMAP.md). Original brief below.
@@ -91,7 +91,7 @@ bonecarving} · pottery · cooking{meals, butchery, baking, brewing} · alchemy{
       every craft discipline, not construction/harvest).
 
 ## E. Class/build-driven gear & apparel coverage
-Gear is designed **build-first**, not as a free list: the **class/build map ([AUDIT.md](AUDIT.md) §1)** is the driver
+Gear is designed **build-first**, not as a free list: the **class/build map ([AUDIT (archived)](AUDIT-2026-08-25.md) §1)** is the driver
 and the GATE — every apparel/weapon add (early-mid fills AND boss-themed high-end) must earn its place by filling a
 gap in the grid, deliberately slotted to a build.
 - [ ] **Build the grid `build × tier`** (bruiser/duelist/marksman/tank/scout/artisan/medic/face × primitive1-3 →
@@ -138,9 +138,9 @@ gap in the grid, deliberately slotted to a build.
       (`cave_bear_plate`/`direwolf_warcloak`) requires `prime_<leather>`; regular gear uses `category:leather`
       (prime qualifies). No per-animal beds exist. *(Rug→cured-fur realism is a minor tracked follow-up in AUDIT §3.)*
 - [x] Oddball homes — RESOLVED (accepted): candle/torch → cooking; compost/fertiliser/resin → alchemy.
-- [ ] Sewn iron+ gear kit-gating per-piece — **tracked in [AUDIT.md](AUDIT.md) §3 follow-ups** (recipe sweep; needs a
+- [ ] Sewn iron+ gear kit-gating per-piece — **tracked in [AUDIT (archived)](AUDIT-2026-08-25.md) §3 follow-ups** (recipe sweep; needs a
       `weaving` WORK_CATEGORY for cloth-apparel gating).
-- [ ] End-to-end headless sweep of ALL new recipes/items/buildings — **tracked in [AUDIT.md](AUDIT.md) §3** (`craftAllNew.test.ts`).
+- [ ] End-to-end headless sweep of ALL new recipes/items/buildings — **tracked in [AUDIT (archived)](AUDIT-2026-08-25.md) §3** (`craftAllNew.test.ts`).
 
 ## Acceptance (headless-verified)
 - [x] A hide can't become leather without the ACTIVE flesh step (flint knife can't flesh — a t1 fleshing tool is needed).

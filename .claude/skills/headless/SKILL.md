@@ -96,8 +96,8 @@ chain is broken") that were all setup, not defects.
 
 ## Finishing
 
-- Record the outcome in `docs/tasks/open/AUDIT.md` with the mechanism and delta, and tick the box only
-  if it was genuinely headless-verified.
+- Record the outcome on the `docs/issues/` entry the run was driving, with the mechanism and delta.
+  Tick a remediation box only if it was genuinely headless-verified.
 - Keep a genuinely valuable scenario as a permanent regression test (`oreChain.test.ts`,
   `steelChain.test.ts`, `leatherChainE2E.test.ts` are the precedent). Delete `_`-prefixed probes.
 - Scope tests with `pnpm test:related <edited files>`, not the full suite.

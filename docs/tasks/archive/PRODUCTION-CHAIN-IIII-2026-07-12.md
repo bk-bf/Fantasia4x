@@ -289,7 +289,7 @@ byte-identical seed replay, recipe/craft/building suites green.
 
 #### Hide → leather variety split
 - [x] **17 per-animal leathers replace the 6 abstract tiers** (thin/light/sturdy/heavy/thick/beast_leather
-      removed): `coney_fur` (rabbit) … `direwolf_leather` (dire wolf) — see the source table in AUDIT.md.
+      removed): `coney_fur` (rabbit) … `direwolf_leather` (dire wolf) — see the source table in AUDIT-2026-08-25.md.
       Each `category:leather`, identity carried by graded `material.item` (durability/weight → crafted item)
       + `material.building` (insulation/comfort/beauty → furniture). `scale_plate` (croc) + `boiled_leather`
       stay their own material lines.

@@ -223,5 +223,5 @@ the freshly built asset byte-for-byte.
 
 ## Finishing
 
-- Tick the row in `docs/tasks/open/AUDIT.md` with the mechanism and delta.
+- Tick the remediation box on the `docs/issues/` entry with the mechanism and delta.
 - Update `docs/game/ITEM-RULES.md` if a **rule** changed — not merely because items changed.

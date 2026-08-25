@@ -1,6 +1,6 @@
 # Armour & Clothing Pass
 
-> **Related:** [../../game/ITEM-RULES.md](../../game/ITEM-RULES.md) · [AUDIT.md](AUDIT.md) · [ROADMAP.md](ROADMAP.md) · [../../game/DESIGN.md](../../game/DESIGN.md)
+> **Related:** [../../game/ITEM-RULES.md](../../game/ITEM-RULES.md) · [AUDIT (archived)](../archive/AUDIT-2026-08-25.md) · [ROADMAP.md](ROADMAP.md) · [../../game/DESIGN.md](../../game/DESIGN.md)
 
 Everything below was found by reading the gear tables, not by a test. Each section names the rule that
 should have caught it, and adds that rule where one is missing — the point of the pass is that the
