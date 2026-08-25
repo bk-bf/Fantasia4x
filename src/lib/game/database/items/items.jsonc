@@ -12409,9 +12409,147 @@
     "aimBonuses": {"range": 1, "accuracy": 2}
   },
   {
+    "id": "bronze_crested_helm",
+    "charSpans": [{ "sheet": "items", "id": 144 }],
+    "name": "Crested Bronze Helm",
+    "type": "armor",
+    "category": "metal",
+    "tier": 1,
+    "deteriorationRate": 0.006,
+    "description": "Beaten from one sheet with only a T of an opening for the eyes and mouth, and a horsehair crest riveted along the crown. Almost nothing gets through it. You will not hear a flanker and you will not see one either.",
+    "color": "#8C8C94",
+    "amount": 0,
+    "weightKg": 3.2,
+    "volumeL": 2.6,
+    "maxDurability": 160,
+    "durabilityLossPerCombatHit": 4,
+    "armorProperties": {
+      "defense": 15,
+      "armorType": "heavy",
+      "armorLayer": "plate",
+      "slot": "head",
+      "equipmentSlot": "head",
+      "armorValue": 15,
+      "sightPenalty": 0.34,
+      "movementPenalty": 0.03,
+      "fatiguePerTurn": 0.14,
+      "heatResistance": -0.08,
+      "prestigeBonus": 3
+    }
+  },
+  {
+    "id": "spangenhelm",
+    "charSpans": [{ "sheet": "items", "id": 144 }],
+    "name": "Spangenhelm",
+    "type": "armor",
+    "category": "metal",
+    "tier": 2,
+    "deteriorationRate": 0.006,
+    "description": "Four iron plates riveted to a browband and a spanning frame, open at the face. It costs a quarter of what a raised helm does and leaves your eyes and ears where they can be used.",
+    "color": "#8C8C94",
+    "amount": 0,
+    "weightKg": 1.6,
+    "volumeL": 1.6,
+    "maxDurability": 200,
+    "durabilityLossPerCombatHit": 4,
+    "armorProperties": {
+      "defense": 13,
+      "armorType": "medium",
+      "armorLayer": "plate",
+      "slot": "head",
+      "equipmentSlot": "head",
+      "armorValue": 13,
+      "sightPenalty": 0.04,
+      "movementPenalty": 0.0,
+      "fatiguePerTurn": 0.07
+    }
+  },
+  {
+    "id": "kettle_hat",
+    "charSpans": [{ "sheet": "items", "id": 144 }],
+    "name": "Kettle Hat",
+    "type": "armor",
+    "category": "metal",
+    "tier": 2,
+    "deteriorationRate": 0.006,
+    "description": "A broad iron brim on a shallow bowl, worn by anyone who spends the day under something that might fall on them. Sheds a downward blow and a downpour alike; the brim is exactly where a sideways cut wants to be.",
+    "color": "#8C8C94",
+    "amount": 0,
+    "weightKg": 1.9,
+    "volumeL": 2.2,
+    "maxDurability": 200,
+    "durabilityLossPerCombatHit": 4,
+    "armorProperties": {
+      "defense": 14,
+      "armorType": "medium",
+      "armorLayer": "plate",
+      "slot": "head",
+      "equipmentSlot": "head",
+      "armorValue": 14,
+      "sightPenalty": 0.09,
+      "movementPenalty": 0.0,
+      "fatiguePerTurn": 0.08
+    }
+  },
+  {
+    "id": "sallet",
+    "charSpans": [{ "sheet": "items", "id": 144 }],
+    "name": "Sallet",
+    "type": "armor",
+    "category": "metal",
+    "tier": 3,
+    "deteriorationRate": 0.006,
+    "description": "A tailed skull with a slit at the brow, worn with the chin covered by a separate bevor. Drop your head and the slit closes to nothing; lift it and you can see the field.",
+    "color": "#8C8C94",
+    "amount": 0,
+    "weightKg": 2.2,
+    "volumeL": 2.2,
+    "maxDurability": 240,
+    "durabilityLossPerCombatHit": 4,
+    "armorProperties": {
+      "defense": 19,
+      "armorType": "heavy",
+      "armorLayer": "plate",
+      "slot": "head",
+      "equipmentSlot": "head",
+      "armorValue": 19,
+      "sightPenalty": 0.18,
+      "movementPenalty": 0.02,
+      "fatiguePerTurn": 0.1
+    }
+  },
+  {
+    "id": "barbute",
+    "charSpans": [{ "sheet": "items", "id": 144 }],
+    "name": "Barbute",
+    "type": "armor",
+    "category": "metal",
+    "tier": 3,
+    "deteriorationRate": 0.006,
+    "description": "Raised from a single plate with a T-slot cut down the face, following the skull so closely there is nothing for a point to catch. What it gives up in coverage it gives back in what you can see coming.",
+    "color": "#8C8C94",
+    "amount": 0,
+    "weightKg": 2.4,
+    "volumeL": 2.3,
+    "maxDurability": 240,
+    "durabilityLossPerCombatHit": 4,
+    "armorProperties": {
+      "defense": 20,
+      "armorType": "heavy",
+      "armorLayer": "plate",
+      "slot": "head",
+      "equipmentSlot": "head",
+      "armorValue": 20,
+      "sightPenalty": 0.14,
+      "movementPenalty": 0.02,
+      "fatiguePerTurn": 0.11,
+      "prestigeBonus": 2
+    }
+  },
+  {
     "id": "cast_bronze_skullcap",
     "charSpans": [ {"sheet": "items", "id": 81} ],
-    "name": "Cast Bronze Skullcap",
+    "name": "Cast Bronze Cervelliere",
     "type": "armor",
     "category": "metal",
     "deteriorationRate": 0.01,
@@ -12514,6 +12652,7 @@
       "equipmentSlot"  : "head",
       "armorLayer"     : "mail",
       "armorValue"     : 10,
+      "sightPenalty": 0.05,
       "fatiguePerTurn" : 0.25,
       "movementPenalty": 0.0
     }
@@ -12541,6 +12680,7 @@
       "equipmentSlot"  : "head",
       "armorLayer"     : "plate",
       "armorValue"     : 16,
+      "sightPenalty": 0.08,
       "fatiguePerTurn" : 0.30,
       "movementPenalty": 0.0
     }
@@ -12962,7 +13102,7 @@
   {
     "id": "copper_scale_cap",
     "charSpans": [ {"sheet": "items", "id": 81} ],
-    "name": "Copper Scale Cap",
+    "name": "Copper Scale Helm",
     "type": "armor",
     "category": "metal",
     "deteriorationRate": 0.008,
@@ -12982,6 +13122,7 @@
       "equipmentSlot"  : "head",
       "armorLayer"     : "mail",
       "armorValue"     : 8,
+      "sightPenalty": 0.03,
       "fatiguePerTurn" : 0.15,
       "movementPenalty": 0.02
     }
@@ -13097,6 +13238,91 @@
     }
   },
   {
+    "id": "arming_cap",
+    "charSpans": [{ "sheet": "items", "id": 143 }],
+    "name": "Arming Coif",
+    "type": "armor",
+    "category": "cloth",
+    "tier": 3,
+    "deteriorationRate": 0.006,
+    "description": "A quilted cap tied under the chin, cut deep enough to sit beneath a helm without shifting. It takes the ring of a blow that the steel above it stopped.",
+    "color": "#C7BBA0",
+    "amount": 0,
+    "weightKg": 0.6,
+    "volumeL": 0.7,
+    "maxDurability": 180,
+    "durabilityLossPerCombatHit": 6,
+    "armorProperties": {
+      "defense": 5,
+      "armorType": "light",
+      "armorLayer": "gambeson",
+      "armorSet": "arming",
+      "slot": "head",
+      "equipmentSlot": "head",
+      "armorValue": 5,
+      "movementPenalty": 0.0,
+      "fatiguePerTurn": 0.07,
+      "stealthMod": 0
+    }
+  },
+  {
+    "id": "arming_doublet",
+    "charSpans": [{ "sheet": "items", "id": 143 }],
+    "name": "Arming Doublet",
+    "type": "armor",
+    "category": "cloth",
+    "tier": 3,
+    "deteriorationRate": 0.006,
+    "description": "Densely quilted linen with mail voiders sewn into the armpits and inside the elbows, and waxed points laid along the shoulders and hips to tie plate to. It is the garment plate is hung from; worn alone it is a warm coat that stops a knife.",
+    "color": "#C7BBA0",
+    "amount": 0,
+    "weightKg": 5.0,
+    "volumeL": 4.0,
+    "maxDurability": 180,
+    "durabilityLossPerCombatHit": 6,
+    "armorProperties": {
+      "defense": 13,
+      "armorType": "light",
+      "armorLayer": "gambeson",
+      "armorSet": "arming",
+      "slot": "bodyBase",
+      "equipmentSlot": "bodyBase",
+      "armorValue": 13,
+      "movementPenalty": 0.0,
+      "fatiguePerTurn": 0.07,
+      "coldResistance": 0.1,
+      "stealthMod": 0
+    }
+  },
+  {
+    "id": "arming_hose",
+    "charSpans": [{ "sheet": "items", "id": 143 }],
+    "name": "Arming Hose",
+    "type": "armor",
+    "category": "cloth",
+    "tier": 3,
+    "deteriorationRate": 0.006,
+    "description": "Quilted hose with points at the waist, cut to take the weight of greaves without binding at the knee.",
+    "color": "#C7BBA0",
+    "amount": 0,
+    "weightKg": 1.2,
+    "volumeL": 1.0,
+    "maxDurability": 180,
+    "durabilityLossPerCombatHit": 6,
+    "armorProperties": {
+      "defense": 5,
+      "armorType": "light",
+      "armorLayer": "gambeson",
+      "armorSet": "arming",
+      "slot": "greaves",
+      "equipmentSlot": "greaves",
+      "armorValue": 5,
+      "movementPenalty": 0.0,
+      "fatiguePerTurn": 0.07,
+      "stealthMod": 0
+    }
+  },
+  {
     "id": "quilted_jack",
     "charSpans": [ {"sheet": "items", "id": 7} ],
     "name": "Quilted Linen Jack",
@@ -13147,6 +13373,7 @@
       "equipmentSlot"  : "head",
       "armorLayer"     : "plate",
       "armorValue"     : 15,
+      "sightPenalty": 0.06,
       "fatiguePerTurn" : 0.3,
       "movementPenalty": 0.03
     }
@@ -13282,6 +13509,7 @@
       "equipmentSlot"  : "head",
       "armorLayer"     : "plate",
       "armorValue"     : 26,
+      "sightPenalty": 0.2,
       "fatiguePerTurn" : 0.35,
       "movementPenalty": 0.04
     }
@@ -13456,7 +13684,7 @@
   {
     "id": "jackal_head",
     "charSpans": [ {"sheet": "items", "id": 80} ],
-    "name": "Jackal-Leather Cap",
+    "name": "Jackal-Leather Coif",
     "type": "armor",
     "category": "leather",
     "deteriorationRate": 0.01,
@@ -13617,7 +13845,7 @@
   {
     "id": "boar_head",
     "charSpans": [ {"sheet": "items", "id": 80} ],
-    "name": "Boarhide Cap",
+    "name": "Boarhide Helm",
     "type": "armor",
     "category": "metal",
     "deteriorationRate": 0.01,
@@ -13745,7 +13973,7 @@
   {
     "id": "linen_cap",
     "charSpans": [ {"sheet": "items", "id": 80} ],
-    "name": "Linen Cap",
+    "name": "Linen Coif",
     "type": "armor",
     "category": "cloth",
     "deteriorationRate": 0.01,
@@ -13822,7 +14050,7 @@
   {
     "id": "wolf_head",
     "charSpans": [ {"sheet": "items", "id": 80} ],
-    "name": "Wolf-Leather Cap",
+    "name": "Wolf-Leather Coif",
     "type": "armor",
     "category": "leather",
     "deteriorationRate": 0.008,
@@ -14035,7 +14263,7 @@
   {
     "id": "elk_head",
     "charSpans": [ {"sheet": "items", "id": 80} ],
-    "name": "Elk-Leather Cap",
+    "name": "Elk-Leather Coif",
     "type": "armor",
     "category": "leather",
     "deteriorationRate": 0.008,
@@ -14167,7 +14395,7 @@
   {
     "id": "quilted_head",
     "charSpans": [ {"sheet": "items", "id": 80} ],
-    "name": "Quilted Linen Cap",
+    "name": "Quilted Linen Coif",
     "type": "armor",
     "category": "cloth",
     "deteriorationRate": 0.008,
@@ -14244,7 +14472,7 @@
   {
     "id": "sabretooth_head",
     "charSpans": [ {"sheet": "items", "id": 80} ],
-    "name": "Sabretooth-Leather Cap",
+    "name": "Sabretooth-Leather Coif",
     "type": "armor",
     "category": "leather",
     "deteriorationRate": 0.006,
@@ -14456,7 +14684,7 @@
   {
     "id": "owlbear_head",
     "charSpans": [ {"sheet": "items", "id": 80} ],
-    "name": "Owlbear-Pelt Cap",
+    "name": "Owlbear-Pelt Coif",
     "type": "armor",
     "category": "leather",
     "deteriorationRate": 0.006,
@@ -14588,7 +14816,7 @@
   {
     "id": "direwolf_head",
     "charSpans": [ {"sheet": "items", "id": 80} ],
-    "name": "Direwolf-Pelt Cap",
+    "name": "Direwolf-Pelt Coif",
     "type": "armor",
     "category": "leather",
     "deteriorationRate": 0.004,
@@ -14852,7 +15080,7 @@
   {
     "id": "hippogriff_head",
     "charSpans": [ {"sheet": "items", "id": 80} ],
-    "name": "Hippogriff-Feather Cap",
+    "name": "Hippogriff-Feather Coif",
     "type": "armor",
     "category": "leather",
     "deteriorationRate": 0.004,
@@ -18621,6 +18849,7 @@
       "equipmentSlot"   : "head",
       "armorLayer"      : "plate",
       "armorValue"      : 22,
+      "sightPenalty": 0.4,
       "fatiguePerTurn"  : 0.4,
       "movementPenalty" : 0.05,
       "visionProtection": 0.1,
@@ -18706,6 +18935,7 @@
       "equipmentSlot"  : "head",
       "armorLayer"     : "plate",
       "armorValue"     : 18,
+      "sightPenalty": 0.26,
       "fatiguePerTurn" : 0.3,
       "movementPenalty": 0.03,
       "prestigeBonus"  : 3,
@@ -20507,40 +20737,7 @@
       "coldResistance": 0.12
     }
   },
-    {
-    "id": "linen_sleeves",
-    "charSpans": [
       {
-        "sheet": "items",
-        "id": 7
-      }
-    ],
-    "name": "Linen Sleeves",
-    "type": "armor",
-    "category": "cloth",
-    "deteriorationRate": 0.01,
-    "description": "Loose linen sleeves that tie to the shoulder, worn where a mail sleeve would otherwise chafe raw.",
-    "color": "#E8E0C8",
-    "amount": 0,
-    "weightKg": 0.4,
-    "volumeL": 0.6,
-    "tier": 1,
-    "maxDurability": 70,
-    "durabilityLossPerCombatHit": 33,
-    "armorProperties": {
-      "defense": 2,
-      "armorType": "light",
-      "armorSet": "linen",
-      "slot": "bracers",
-      "equipmentSlot": "bracers",
-      "armorLayer": "gambeson",
-      "armorValue": 2,
-      "fatiguePerTurn": 0.064,
-      "movementPenalty": 0.0,
-      "coldResistance": 0.05
-    }
-  },
-    {
     "id": "linen_hose",
     "charSpans": [
       {
@@ -20573,40 +20770,7 @@
       "coldResistance": 0.06
     }
   },
-    {
-    "id": "quilted_sleeves",
-    "charSpans": [
       {
-        "sheet": "items",
-        "id": 7
-      }
-    ],
-    "name": "Quilted Linen Sleeves",
-    "type": "armor",
-    "category": "cloth",
-    "deteriorationRate": 0.01,
-    "description": "Channels of stuffed linen from shoulder to wrist. They soak a blow that has already spent itself on something harder.",
-    "color": "#C4B08A",
-    "amount": 0,
-    "weightKg": 0.6,
-    "volumeL": 1.0,
-    "tier": 2,
-    "maxDurability": 130,
-    "durabilityLossPerCombatHit": 27,
-    "armorProperties": {
-      "defense": 3,
-      "armorType": "light",
-      "armorSet": "quilted",
-      "slot": "bracers",
-      "equipmentSlot": "bracers",
-      "armorLayer": "gambeson",
-      "armorValue": 3,
-      "fatiguePerTurn": 0.076,
-      "movementPenalty": 0.0,
-      "coldResistance": 0.08
-    }
-  },
-    {
     "id": "quilted_hose",
     "charSpans": [
       {
@@ -20639,40 +20803,7 @@
       "coldResistance": 0.1
     }
   },
-        {
-    "id": "rune_woven_sleeves",
-    "charSpans": [
-      {
-        "sheet": "items",
-        "id": 158
-      }
-    ],
-    "name": "Rune-Woven Sleeves",
-    "type": "armor",
-    "category": "cloth",
-    "deteriorationRate": 0.01,
-    "description": "Silk sleeves shot through with enchanted thread; the weave stiffens under a strike and falls slack again.",
-    "color": "#8890D8",
-    "amount": 0,
-    "weightKg": 0.4,
-    "volumeL": 0.6,
-    "tier": 4,
-    "maxDurability": 300,
-    "durabilityLossPerCombatHit": 10,
-    "armorProperties": {
-      "defense": 4,
-      "armorType": "light",
-      "armorSet": "rune_woven",
-      "slot": "bracers",
-      "equipmentSlot": "bracers",
-      "armorLayer": "gambeson",
-      "armorValue": 4,
-      "fatiguePerTurn": 0.088,
-      "movementPenalty": 0.0,
-      "coldResistance": 0.1
-    }
-  },
-    {
+          {
     "id": "rune_woven_hose",
     "charSpans": [
       {
@@ -21002,7 +21133,7 @@
         "id": 84
       }
     ],
-    "name": "Goblin Scrap Cap",
+    "name": "Goblin Scrap Helm",
     "type": "armor",
     "category": "combat",
     "deteriorationRate": 0.03,
@@ -21162,7 +21293,7 @@
         "id": 84
       }
     ],
-    "name": "Kobold Dig-Cap",
+    "name": "Kobold Delver's Helm",
     "type": "armor",
     "category": "combat",
     "deteriorationRate": 0.03,
@@ -21343,6 +21474,7 @@
       "equipmentSlot": "head",
       "armorLayer": "plate",
       "armorValue": 20,
+      "sightPenalty": 0.3,
       "fatiguePerTurn": 0.31,
       "movementPenalty": 0.0
     }

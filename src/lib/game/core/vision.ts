@@ -7,6 +7,7 @@
 // (day/night ambient + nearby fire emitters); this module never recomputes it.
 
 import type { Pawn, Mob } from './types';
+import { itemDefById } from './itemDefs';
 import { getCreatureById } from './Creatures';
 import { PART_DEF_MAP } from './BodyParts';
 import { getTransientConditionDef } from './needs';
@@ -112,6 +113,23 @@ export function lightVisionMultiplier(lightLevel: number, nightVision: number): 
   );
 }
 
+/**
+ * How much of its sight the gear a pawn is WEARING costs it. A helmet's real trade-off is not weight,
+ * it is the slot you look through: a great helm stops almost everything and shows you almost nothing,
+ * while a kettle hat is worse armour you can still see out of. Summed over worn pieces and floored so
+ * a full harness never blinds outright.
+ */
+function wornSightFactor(entity: Pawn | Mob): number {
+  const eq = (entity as Pawn).equipment;
+  if (!eq) return 1;
+  let lost = 0;
+  for (const inst of Object.values(eq)) {
+    if (!inst) continue;
+    lost += itemDefById(inst.itemId)?.armorProperties?.sightPenalty ?? 0;
+  }
+  return Math.max(0.35, 1 - lost);
+}
+
 /** Effective sight range (tiles) for a pawn or mob at the given tile light level. `weatherSightMul`
  *  (1 = clear; <1 for fog/rain/storm — SEASONS_WEATHER) shortens detection on top of the light
  *  dampening, for BOTH pawns and mobs. Floors at 1. */
@@ -124,7 +142,7 @@ export function effectiveVisionRange(
   const base = baseVisionRange(entity.stats?.perception ?? 10);
   const nv = nightVision ?? getNightVision(entity);
   const lit = base * lightVisionMultiplier(lightLevel, nv);
-  return Math.max(1, Math.round(lit * weatherSightMul));
+  return Math.max(1, Math.round(lit * weatherSightMul * wornSightFactor(entity)));
 }
 
 /** Chebyshev distance — the grid metric the FSM uses for sight (a diagonal counts as 1). */

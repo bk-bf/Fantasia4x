@@ -178,6 +178,12 @@ export interface DynamicIngredientSlot {
   /** Items in ANY of these categories are accepted (e.g. a stew slot taking meat/fish/vegetable/legume).
    *  Read both fields through `recipeService.slotCategories(slot)` so callers never branch. */
   acceptsCategories?: string[];
+  /**
+   * Item ids or categories this slot REFUSES, even though they match `acceptsCategor(y|ies)`. The
+   * accept list says what shape of material fits; this says which ones are not good enough. A seam
+   * on a late piece takes the binding pool but not cordage — you do not stitch a gambeson with rope.
+   */
+  excludes?: string[];
   /** Units consumed from the chosen ingredient */
   quantity: number;
   /**
@@ -762,7 +768,13 @@ export interface Item {
     armorValue?: number; // damage absorbed per hit from this layer
     fatiguePerTurn?: number; // fatigue drain per turn while worn
     equipmentSlot?: EquipmentSlot;
-    movementPenalty?: number; // 0.0 to 1.0, where 0.3 = 30% movement penalty
+    movementPenalty?: number;
+    /**
+     * Fraction of SIGHT RANGE this piece costs while worn (0.35 = a third of the world gone). The
+     * helmet trade-off: everything that closes around the face buys its protection with what you can
+     * see out of it. Summed across worn pieces in `effectiveVisionRange`, floored at a third.
+     */
+    sightPenalty?: number; // 0.0 to 1.0, where 0.3 = 30% movement penalty
 
     // Resistance properties
     slashResistance?: number;
