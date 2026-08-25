@@ -101,7 +101,7 @@
     "populationRequired": 1,
     "researchRequired": null,
     "upkeepCost": {},
-    "effects": {"craftingEnabled": true, "tier": 1, "craftingBonus": 0.2},
+    "effects": { "tailoringTier": 0, "craftingEnabled": true, "tier": 1, "craftingBonus": 0.2},
     "storageCapacity": {},
     "buildingState": {"isUnique": false, "maxCount": 3}
   },
@@ -611,6 +611,27 @@
     "buildingState": {"isUnique": false}
   },
   {
+    "id": "outfitters_bench",
+    "ageTier": "steel:1",
+    "workstation": true,
+    "name": "Outfitter's Bench",
+    "color": "#9A7B4F",
+    "charSpans": [{ "sheet": "items", "id": 143 }],
+    "transparentBg": true,
+    "description": "A long bench with a stitching horse at one end and a pattern rack at the other, laid out so a whole harness can be cut, fitted and laced without moving it. What a currier's bench does for one hide, this does for a set.",
+    "category": "production",
+    "buildingCost": {
+      "category:plank": 14,
+      "category:steel": 2,
+      "steel_rivet": 24,
+      "category:leather": 4
+    },
+    "workAmount": 30,
+    "toolTierRequired": 3,
+    "populationRequired": 1,
+    "effects": { "tailoringTier": 3, "craftingBonus": 0.55, "craftingEnabled": true }
+  },
+  {
     "id": "curriers_bench",
     "ageTier": "iron:1",
     "workstation"     : true,
@@ -626,7 +647,7 @@
     "populationRequired": 1,
     "researchRequired": "iron_working",
     "upkeepCost": {},
-    "effects": {"leatherworkingEnabled": true, "craftingEnabled": true},
+    "effects": { "tailoringTier": 2, "craftingBonus": 0.45, "leatherworkingEnabled": true, "craftingEnabled": true},
     "storageCapacity": {},
     "buildingState": {"isUnique": false}
   },
@@ -1715,7 +1736,7 @@
     "populationRequired": 1,
     "researchRequired"  : null,
     "upkeepCost"        : {},
-    "effects"           : {"weavingEnabled": true, "craftingEnabled": true},
+    "effects"           : { "tailoringTier": 1, "craftingBonus": 0.3, "weavingEnabled": true, "craftingEnabled": true},
     "storageCapacity"   : {},
     "buildingState"     : {"isUnique": false}
   },
@@ -2439,7 +2460,7 @@
     "populationRequired": 1,
     "researchRequired": "runic_inscription",
     "upkeepCost": {},
-    "effects": {"weavingEnabled": true, "craftingEnabled": true, "tier": 3, "craftingBonus": 0.4, "arcane": 1},
+    "effects": { "tailoringTier": 4, "weavingEnabled": true, "craftingEnabled": true, "tier": 3, "craftingBonus": 0.7, "arcane": 1},
     "storageCapacity": {},
     "buildingState": {"isUnique": false, "maxCount": 2}
   },

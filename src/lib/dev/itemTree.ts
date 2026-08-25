@@ -296,8 +296,33 @@ const CLASS_LABEL: Record<string, string> = {
 // most needs to see — it is why three stone-age garments come to one bronze jerkin. The tree nests by
 // layer, outermost first, using the same depths the mitigation walk itself reads.
 const LAYER_LABEL = ['outer layer', 'mid layer', 'base layer', 'under layer'];
-const layerOf = (slot: string): string =>
-  LAYER_LABEL[SLOT_LAYER[slot as EquipmentSlot] ?? 1] ?? 'mid layer';
+/**
+ * Which layer a piece sits at. The SLOT is only a fallback: a piece that declares an `armorLayer`
+ * knows better than its slot does. An arming coif occupies the head slot but its whole purpose is to
+ * be padding UNDER a helm, and filing it as outer layer put the softest thing in the kit on the
+ * outside of it.
+ */
+const LAYER_OF_ARMOR_LAYER: Record<string, number> = {
+  gambeson: 2, // padding worn under everything
+  cloth: 2,
+  mail: 1,
+  plate: 0,
+  under: 3
+};
+/** Padding — the only thing that goes UNDER a limb piece. Anything else on an arm or a leg is the
+ *  outermost thing there, mail included: nothing is worn over a bracer. */
+const PADDING = new Set(['gambeson', 'cloth', 'under']);
+const layerOf = (slot: string, armorLayer?: string): string => {
+  const limb = slot === 'bracers' || slot === 'greaves';
+  if (limb) return LAYER_LABEL[armorLayer && PADDING.has(armorLayer) ? 2 : 0];
+  return (
+    LAYER_LABEL[
+      (armorLayer ? LAYER_OF_ARMOR_LAYER[armorLayer] : undefined) ??
+        SLOT_LAYER[slot as EquipmentSlot] ??
+        1
+    ] ?? 'mid layer'
+  );
+};
 
 // A weapon's family comes from the build gearDb ALREADY classified it into — one classifier, not a
 // second name-regex quietly disagreeing with it. `pilum`, `francisca` and `framea` all landed in an
@@ -471,7 +496,7 @@ function pathOf(i: any): string[] {
       age,
       ...sourceBranch(i),
       ap.armorSet ? prettify(ap.armorSet) : 'no set',
-      layerOf(ap.equipmentSlot ?? ap.slot ?? ''),
+      layerOf(ap.equipmentSlot ?? ap.slot ?? '', ap.armorLayer),
       COVERAGE[ap.equipmentSlot ?? ap.slot] ?? prettify(ap.equipmentSlot ?? 'unplaced')
     ];
   }
@@ -650,6 +675,22 @@ export interface TreeNode {
 // everything". `no set` and `drop only` are not kits at all — loose pieces and enemy loot can never
 // be complete, so they carry no marker.
 const KIT_PARTS = ['head', 'torso', 'arms', 'hands', 'legs', 'feet'];
+/** item id → which KIT_PARTS its `covers` list actually protects. */
+const COVERED_PARTS = new Map<string, Set<string>>();
+for (const i of items as any[]) {
+  const covers: string[] = i?.armorProperties?.covers ?? [];
+  if (!covers.length) continue;
+  const parts = new Set<string>();
+  for (const c of covers) {
+    if (/Shoulder|UpperArm|Forearm/i.test(c)) parts.add('arms');
+    else if (/Hand|Finger|Thumb/i.test(c)) parts.add('hands');
+    else if (/UpperLeg|LowerLeg|Hip/i.test(c)) parts.add('legs');
+    else if (/Foot|Toe/i.test(c)) parts.add('feet');
+    else if (/head|skull|face|neck/i.test(c)) parts.add('head');
+    else if (/chest|abdomen|torso/i.test(c)) parts.add('torso');
+  }
+  if (parts.size) COVERED_PARTS.set(i.id, parts);
+}
 const NOT_A_KIT = new Set(['no set', 'drop only']);
 const coverageOf = (label: string) => (label.startsWith('torso') ? 'torso' : label);
 function missingOf(node: TreeNode, rootLabel: string): string[] {
@@ -661,6 +702,10 @@ function missingOf(node: TreeNode, rootLabel: string): string[] {
   const present = new Set<string>();
   (function walk(n: TreeNode) {
     if (!n.children.length) present.add(coverageOf(n.label));
+    // A garment protects what it says it COVERS, not merely the slot it occupies. A doublet has
+    // sleeves and a hauberk has a skirt, so a set carrying one is not missing arms just because
+    // nothing sits in the bracers slot — that is a spurious hole an auditor then goes hunting for.
+    for (const it of n.items) for (const p of COVERED_PARTS.get(it.id) ?? []) present.add(p);
     n.children.forEach(walk);
   })(node);
   return KIT_PARTS.filter((p) => !present.has(p));

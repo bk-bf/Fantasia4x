@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import buildingsData from '$lib/game/database/world/buildings.jsonc';
 import recipesData from '$lib/game/database/items/recipes.jsonc';
 import { TREE_ITEMS } from '$lib/dev/itemTree';
-import { CARCASS_TIER, nodeItems } from '$lib/dev/chainAge';
+import { AGE_NAMES, BUILDING_AGE, CARCASS_TIER, nodeItems } from '$lib/dev/chainAge';
 import lootpoolData from '$lib/game/database/items/lootpool.jsonc';
 import { itemMatchesCostCategory } from '$lib/game/core/itemDefs';
 import { recipeItemMatchesCategory } from '$lib/game/services/RecipeService';
@@ -197,6 +197,70 @@ describe('helmets are not caps', () => {
       .map(
         (i) => `${i.id} is called "${i.name}" — name it a helm, a coif, or whatever it actually is`
       );
+    expect(bad, bad.join('; ')).toEqual([]);
+  });
+});
+
+/**
+ * The boss band is the top of every weapon line, and it is only meaningful if it covers all of them.
+ * It sat at ONE family — axe — while being described as complete, because nothing asked.
+ */
+describe('the boss tier covers every weapon family', () => {
+  it('each weapon family has at least one boss piece', () => {
+    const fam = new Map<string, Set<string>>();
+    for (const r of TREE_ITEMS) {
+      if (r.path[0] !== 'Weapons') continue;
+      const f = r.path[2] ?? '?';
+      (fam.get(f) ?? fam.set(f, new Set()).get(f)!).add(r.age);
+    }
+    const bare = [...fam].filter(([, ages]) => !ages.has('Boss')).map(([f]) => f);
+    expect(bare, `no boss weapon for: ${bare.join(', ')}`).toEqual([]);
+  });
+});
+
+/**
+ * A loot slot hands out what goes IN that slot. Merging a gauntlet into the greaves pick list parses
+ * fine and rolls a hand piece onto a shin — the kind of mistake that only shows up as a pawn wearing
+ * something absurd.
+ */
+describe('loot slots hand out gear for that slot', () => {
+  it('every pick sits in the slot it is filed under', () => {
+    const byId = new Map(
+      (ITEMS as Array<{ id: string; armorProperties?: { equipmentSlot?: string } }>).map((i) => [
+        i.id,
+        i
+      ])
+    );
+    const bad: string[] = [];
+    const pools = (lootpoolData as { pools?: Record<string, any> }).pools ?? {};
+    for (const [pid, pool] of Object.entries<any>(pools))
+      for (const [slot, def] of Object.entries<any>(pool?.slots ?? {})) {
+        if (slot === 'mainHand' || slot === 'offHand') continue; // weapons, not slotted armour
+        for (const pick of def?.pick ?? []) {
+          const worn = byId.get(pick.id)?.armorProperties?.equipmentSlot;
+          if (worn && worn !== slot)
+            bad.push(`${pid}.${slot} hands out ${pick.id}, which is worn on ${worn}`);
+        }
+      }
+    expect(bad, bad.join('; ')).toEqual([]);
+  });
+});
+
+/**
+ * A boss piece is what a colony can only have by putting down something enormous. If one can be
+ * stitched at a primitive workbench then the material was the only gate, and a fang on a stone bench
+ * is just a fang — the whole band is given away.
+ */
+describe('boss gear is runed work', () => {
+  it('no boss piece is craftable below a runed workstation', () => {
+    const boss = new Set(TREE_ITEMS.filter((r) => r.age === 'Boss').map((r) => r.id));
+    const bad: string[] = [];
+    for (const r of RECIPES) {
+      const out = Object.keys(r.outputs ?? {})[0];
+      if (!out || !boss.has(out)) continue;
+      const age = BUILDING_AGE.get(r.station ?? '') ?? 0;
+      if (age < 5) bad.push(`${out} is made at ${r.station} — ${AGE_NAMES[age]} work, not runed`);
+    }
     expect(bad, bad.join('; ')).toEqual([]);
   });
 });

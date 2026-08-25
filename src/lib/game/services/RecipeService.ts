@@ -16,7 +16,7 @@ export function recipeItemMatchesCategory(
   if (cat === 'fastener')
     return /_nail$|_rivet$|_tack$/.test(item.id) && item.type !== 'weapon' && item.type !== 'tool';
   if (cat === 'thread')
-    return item.category === 'binding' && ((item as { craftValue?: number }).craftValue ?? 0) >= 1;
+    return item.category === 'binding' && !/^cordage$|^rope$|_rope$|_cordage$/.test(item.id);
   // Never a finished weapon/armour/tool — their `category` doubles as an armour class (see itemDefs).
   if (item.type === 'armor' || item.type === 'weapon' || item.type === 'tool') return false;
   return item.category === cat;

@@ -2489,6 +2489,96 @@
     "toolTierRequired": 0
   },
   {
+    "id": "make_great_bone_helm",
+    "discipline": "leatherworking",
+    "station": "runic_loom",
+    "inputs": {"great_bone": 1, "cave_bear_pelt": 1, "category:thread": 3, "category:fastener": 8},
+    "outputs": { "great_bone_helm": 1 },
+    "workAmount": 26,
+    "toolTierRequired": 4
+  },
+  {
+    "id": "make_great_bone_cuirass",
+    "discipline": "leatherworking",
+    "station": "runic_loom",
+    "inputs": {"great_bone": 3, "cave_bear_pelt": 2, "direwolf_hackles": 1, "category:thread": 10, "category:fastener": 24},
+    "outputs": { "great_bone_cuirass": 1 },
+    "workAmount": 46,
+    "toolTierRequired": 4
+  },
+  {
+    "id": "make_great_bone_vambraces",
+    "discipline": "leatherworking",
+    "station": "runic_loom",
+    "inputs": {"great_bone": 1, "direwolf_hackles": 1, "category:leather": 1, "category:thread": 3},
+    "outputs": { "great_bone_vambraces": 1 },
+    "workAmount": 22,
+    "toolTierRequired": 4
+  },
+  {
+    "id": "make_great_bone_greaves",
+    "discipline": "leatherworking",
+    "station": "runic_loom",
+    "inputs": {"great_bone": 1, "cave_bear_pelt": 1, "category:leather": 1, "category:thread": 3},
+    "outputs": { "great_bone_greaves": 1 },
+    "workAmount": 24,
+    "toolTierRequired": 4
+  },
+  {
+    "id": "make_great_bone_gauntlets",
+    "discipline": "leatherworking",
+    "station": "runic_loom",
+    "inputs": {"great_bone": 1, "predator_claw": 2, "category:leather": 1, "category:thread": 2},
+    "outputs": { "great_bone_gauntlets": 1 },
+    "workAmount": 18,
+    "toolTierRequired": 4
+  },
+  {
+    "id": "make_great_bone_sabatons",
+    "discipline": "leatherworking",
+    "station": "runic_loom",
+    "inputs": {"great_bone": 1, "cave_bear_pelt": 1, "category:leather": 1, "category:thread": 2},
+    "outputs": { "great_bone_sabatons": 1 },
+    "workAmount": 20,
+    "toolTierRequired": 4
+  },
+  {
+    "id": "make_great_tusk_impaler",
+    "discipline": "smithing",
+    "station": "manaforge",
+    "inputs": { "great_tusk": 1, "sanded_haft": 1, "category:thread": 3, "category:fastener": 6 },
+    "outputs": { "great_tusk_impaler": 1 },
+    "workAmount": 30,
+    "toolTierRequired": 4
+  },
+  {
+    "id": "make_great_fang_javelin",
+    "discipline": "bonecarving",
+    "station": "runecarver_bench",
+    "inputs": { "great_fang": 1, "wooden_haft": 1, "category:thread": 2 },
+    "outputs": { "great_fang_javelin": 1 },
+    "workAmount": 18,
+    "toolTierRequired": 4
+  },
+  {
+    "id": "make_great_fang_dirk",
+    "discipline": "bonecarving",
+    "station": "runecarver_bench",
+    "inputs": { "great_fang": 1, "category:leather": 1, "category:thread": 1 },
+    "outputs": { "great_fang_dirk": 1 },
+    "workAmount": 14,
+    "toolTierRequired": 4
+  },
+  {
+    "id": "make_alpha_heart_rod",
+    "discipline": "alchemy",
+    "station": "runecarver_bench",
+    "inputs": { "alpha_heart": 1, "great_bone": 1, "direwolf_hackles": 2, "gem_dust": 1 },
+    "outputs": { "alpha_heart_rod": 1 },
+    "workAmount": 34,
+    "toolTierRequired": 3
+  },
+  {
     "id"              : "make_great_bone_maul",
     "discipline"      : "bonecarving",
     "station"         : "bone_carvers_bench",
@@ -4150,11 +4240,11 @@
   {
     "id"              : "make_fang_reaver",
     "discipline"      : "bonecarving",
-    "station"         : "makers_bench",
+    "station"         : "runecarver_bench",
     "inputs"          : {"great_fang": 1, "heartwood_log": 1, "category:thread": 7},
     "outputs"         : {"fang_reaver": 1},
     "workAmount"      : 50,
-    "toolTierRequired": 2
+    "toolTierRequired": 4
   },
   {
     // §2h magical-beast gear: a cured dire-wolf pelt worked at the weaving frame → the Direwolf Warcloak
@@ -5253,13 +5343,13 @@
   {
     "id": "make_fang_charm",
     "discipline"      : "bonecarving",
-    "station": "bone_carvers_bench",
+    "station": "runecarver_bench",
     "inputs": {"great_fang": 1, "predator_claw": 2, "cordage": 8},
     "outputs": {
       "fang_charm": 1
     },
     "workAmount": 40,
-    "toolTierRequired": 1
+    "toolTierRequired": 4
   },
   {
     "id": "make_fang_arrow",
