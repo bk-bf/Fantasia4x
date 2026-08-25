@@ -2,6 +2,7 @@
   {
     "id": "campfire",
     "ageTier": "primitive:1",
+    "workstation"     : true,
     "name": "Campfire",
     "color": "#FF6600",
     "charSpans": [ {"sheet": "tiles", "id": 14} ],
@@ -30,6 +31,7 @@
   {
     "id": "hearth",
     "ageTier": "primitive:1",
+    "workstation"     : true,
     "name": "Stone Hearth",
     "color": "#FF7722",
     "charSpans": [ {"sheet": "tiles", "id": 14} ],
@@ -59,6 +61,7 @@
   {
     "id": "craft_spot",
     "ageTier": "primitive:1",
+    "workstation"     : true,
     "name": "Craft Spot",
     "color": "#C8A064",
     "charSpans": [ {"sheet": "buildings", "id": 1} ],
@@ -78,6 +81,7 @@
   {
     "id": "makers_bench",
     "ageTier": "primitive:2",
+    "workstation"     : true,
     "name": "Primitive Workbench",
     "color": "#8B6914",
     "charSpans": [ {"sheet": "items", "id": 46} ],
@@ -104,6 +108,7 @@
   {
     "id": "butcher_spot",
     "ageTier": "primitive:2",
+    "workstation"     : true,
     "name": "Butcher Spot",
     "color": "#C62828",
     "charSpans": [ {"sheet": "buildings", "id": 39} ],
@@ -125,6 +130,7 @@
   {
     "id": "dressing_stone",
     "ageTier": "primitive:2",
+    "workstation"     : true,
     "name": "Dressing Stone",
     "color": "#8D6E63",
     "charSpans": [ {"sheet": "buildings", "id": 39} ],
@@ -143,14 +149,15 @@
   },
   {
     "id": "flensing_table",
-    "ageTier": "bronze:1",
+    "ageTier": "iron:1",
+    "workstation"     : true,
     "name": "Flensing Table",
     "color": "#9E4A3A",
     "charSpans": [ {"sheet": "buildings", "id": 39} ],
     "transparentBg": true,
     "description": "A broad iron-topped table with flensing hooks, gambrels and a keen array of blades. Strips a great carcass to the last scrap — 45% more from every kill, and the only spot that renders an elite beast's prime hide and rarer humours whole (CREATURE-COMBAT-OVERHAUL §2g).",
     "category": "production",
-    "buildingCost": {"category:log": 4, "iron_bar": 4, "cordage": 4},
+    "buildingCost": {"category:log": 4, "iron_bar": 4, "category:fastener": 8},
     "workAmount": 40,
     "toolTierRequired": 2,
     "toolRequirement": {"workType": "butchery", "minTier": 2},
@@ -165,6 +172,7 @@
   {
     "id": "sanguinary_altar",
     "ageTier": "runed:1",
+    "workstation"     : true,
     "name": "Sanguinary Altar",
     "color": "#8A2A4A",
     "charSpans": [ {"sheet": "buildings", "id": 39} ],
@@ -204,7 +212,7 @@
   },
   {
     "id": "trophy_mount",
-    "ageTier": "primitive:3",
+    "ageTier": "iron:3",
     "name": "Trophy Mount",
     "color": "#D8CFC0",
     "charSpans": [ {"sheet": "items", "id": 138} ],
@@ -225,7 +233,7 @@
     // ALCHEMY-BUTCHERY-EXPANSION §B — prestige-pelt trophy rugs: a beauty+comfort sink for the boss
     // pelts, finer than the plain bear rug (a competing use alongside the warcloaks).
     "id": "dire_wolf_rug",
-    "ageTier": "primitive:3",
+    "ageTier": "iron:3",
     "name": "Dire Wolf Rug",
     "color": "#5A5048",
     "charSpans": [ {"sheet": "items", "id": 138} ],
@@ -244,7 +252,7 @@
   },
   {
     "id": "cave_bear_rug",
-    "ageTier": "primitive:3",
+    "ageTier": "iron:3",
     "name": "Cave Bear Rug",
     "color": "#6A4E38",
     "charSpans": [ {"sheet": "items", "id": 138} ],
@@ -303,6 +311,7 @@
   {
     "id": "chopping_block",
     "ageTier": "primitive:2",
+    "workstation"     : true,
     "name": "Splitting Stump",
     "color": "#8B6914",
     "charSpans": [ {"sheet": "buildings", "id": 39} ],
@@ -322,6 +331,7 @@
   {
     "id": "sawtable",
     "ageTier": "bronze:1",
+    "workstation"     : true,
     "name": "Sawpit",
     "color": "#B87333",
     "charSpans": [ {"sheet": "tiles", "id": 7} ],
@@ -342,6 +352,7 @@
     "id": "pottery_kiln",
     "ageTier": "copper:1",
     "passive": true,
+    "workstation"     : true,
     "name": "Potter's Kiln",
     "color": "#A0522D",
     "charSpans": [ {"sheet": "items", "id": 172} ],
@@ -369,6 +380,7 @@
     "id": "advanced_kiln",
     "ageTier": "copper:2",
     "passive": true,
+    "workstation"     : true,
     "name": "Fire-brick Kiln",
     "color": "#B5651D",
     "charSpans": [ {"sheet": "items", "id": 172} ],
@@ -395,6 +407,7 @@
   {
     "id": "masons_bench",
     "ageTier": "copper:2",
+    "workstation"     : true,
     "name": "Stonecutter's Banker",
     "color": "#9E8E8A",
     "charSpans": [ {"sheet": "items", "id": 22} ],
@@ -416,6 +429,7 @@
     // trophies, so a boss's anatomy has somewhere to go.
     "id": "bone_carvers_bench",
     "ageTier": "primitive:3",
+    "workstation"     : true,
     "name": "Bone Carver's Bench",
     "color": "#B8A88A",
     "charSpans": [ {"sheet": "items", "id": 22} ],
@@ -456,6 +470,7 @@
     "id": "charcoal_pit",
     "ageTier": "primitive:2",
     "passive": true,
+    "workstation"     : true,
     "name": "Charcoal Pit",
     "color": "#2B2B2B",
     "charSpans": [ {"sheet": "tiles", "id": 98} ],
@@ -476,6 +491,7 @@
   {
     "id": "ropewalk",
     "ageTier": "primitive:3",
+    "workstation"     : true,
     "name": "Ropewalk",
     "color": "#A8814E",
     "charSpans": [ {"sheet": "buildings", "id": 39} ],
@@ -515,6 +531,7 @@
   {
     "id"              : "cheese_basin",
     "ageTier"         : "bronze:1",
+    "workstation"     : true,
     "name"            : "Cheese Basin",
     "color"           : "#D8CBA6",
     "charSpans"       : [ {"sheet": "items", "id": 42} ],
@@ -522,7 +539,7 @@
     "description"     : "Coopered staves pitched tight, the same work as a bucket, with a straining cloth tied across the mouth. Milk goes in, the whey drains off, and what stays behind is pressed and salted until it will keep a winter.",
     "category"        : "production",
     "passive"         : true,
-    "buildingCost"    : {"category:plank": 4, "resin": 2, "cordage": 2},
+    "buildingCost"    : {"category:plank": 4, "category:fastener": 6, "resin": 2},
     "workAmount"      : 14,
     "toolTierRequired": 0,
     "populationRequired": 1
@@ -530,6 +547,8 @@
   {
     "id"              : "smoking_rack",
     "ageTier"         : "primitive:2",
+    "workstation"     : true,
+    "storage"         : true,
     "name"            : "Smoking Rack",
     "color"           : "#7E5B3A",
     "charSpans"       : [ {"sheet": "items", "id": 5} ],
@@ -552,6 +571,8 @@
   {
     "id": "drying_rack",
     "ageTier": "primitive:2",
+    "workstation"     : true,
+    "storage"         : true,
     "name": "Drying Rack",
     "color": "#9C5A3C",
     "charSpans": [ {"sheet": "items", "id": 5} ],
@@ -572,6 +593,7 @@
   {
     "id": "hide_rack",
     "ageTier": "primitive:2",
+    "workstation"     : true,
     "name": "Curing Frame",
     "color": "#9A7B4F",
     "charSpans": [ {"sheet": "items", "id": 5} ],
@@ -591,6 +613,7 @@
   {
     "id": "curriers_bench",
     "ageTier": "iron:1",
+    "workstation"     : true,
     "name": "Currier's Bench",
     "color": "#8D6E63",
     "charSpans": [ {"sheet": "items", "id": 5} ],
@@ -610,6 +633,7 @@
   {
     "id": "soaking_trough",
     "ageTier": "iron:1",
+    "workstation"     : true,
     "name": "Soaking Trough",
     "color": "#6B7A8F",
     "charSpans": [ {"sheet": "items", "id": 5} ],
@@ -630,6 +654,7 @@
   {
     "id": "stone_forge",
     "ageTier": "copper:2",
+    "workstation"     : true,
     "name": "Smelting Hearth",
     "color": "#FF5722",
     "charSpans": [ {"sheet": "items", "id": 192} ],
@@ -659,6 +684,7 @@
     "id": "bloomery",
     "ageTier": "iron:1",
     "passive": true,
+    "workstation"     : true,
     "name": "Bloomery Furnace",
     "color": "#B71C1C",
     "charSpans": [ {"sheet": "items", "id": 172} ],
@@ -686,6 +712,7 @@
   {
     "id": "anvil",
     "ageTier": "iron:1",
+    "workstation"     : true,
     "name": "Smithy",
     "color": "#607D8B",
     "charSpans": [ {"sheet": "items", "id": 6} ],
@@ -707,6 +734,7 @@
   {
     "id": "casting_hearth",
     "ageTier": "bronze:1",
+    "workstation"     : true,
     "name": "Casting Hearth",
     "color": "#CD7F32",
     "charSpans": [ {"sheet": "items", "id": 192} ],
@@ -735,6 +763,7 @@
   {
     "id": "finery_forge",
     "ageTier": "iron:2",
+    "workstation"     : true,
     "name": "Finery Forge",
     "color": "#8E3B2E",
     "charSpans": [ {"sheet": "items", "id": 172} ],
@@ -764,6 +793,7 @@
     "id": "cementation_furnace",
     "ageTier": "iron:2",
     "passive": true,
+    "workstation"     : true,
     "name": "Cementation Furnace",
     "color": "#7A4E38",
     "charSpans": [ {"sheet": "items", "id": 172} ],
@@ -790,6 +820,7 @@
   {
     "id": "puddling_furnace",
     "ageTier": "steel:1",
+    "workstation"     : true,
     "name": "Puddling Furnace",
     "color": "#6E4A3A",
     "charSpans": [ {"sheet": "items", "id": 172} ],
@@ -857,11 +888,12 @@
   {
     "id": "larder_cupboard",
     "ageTier": "bronze:1",
+    "storage"         : true,
     "name": "Larder Cupboard",
     "color": "#9A7B4F",
     "charSpans": [ {"sheet": "items", "id": 42} ],
     "transparentBg": true,
-    "description": "A clay-lined plank cupboard kept cool and shaded, a proper stocked larder. The bulk generalist: many stacks under one roof, with the cool lining holding food a good while.",
+    "description": "A clay-lined plank cupboard, shelved top to bottom and kept cool and shaded. Storage only — nothing is made in here; the shelves just hold more of it than anything else the colony can build, and the cool lining slows the turn.",
     "category": "furniture",
     "buildingCost": {"category:plank": 8, "blue_clay": 4},
     "workAmount": 24,
@@ -869,13 +901,15 @@
     "populationRequired": 1,
     "researchRequired": "food_preservation",
     "upkeepCost": {},
-    "effects": {"storageStacks": 12, "preservation": 0.2},
+    "effects": {"storageStacks": 20, "preservation": 0.2},
     "storageCapacity": {},
     "buildingState": {"isUnique": false, "maxCount": 30}
   },
   {
     "id": "hay_rack",
     "ageTier": "primitive:2",
+    "workstation"     : true,
+    "storage"         : true,
     "name": "Hay Rack",
     "color": "#D4B44A",
     "charSpans": [ {"sheet": "items", "id": 177} ],
@@ -896,6 +930,7 @@
   {
     "id": "meat_larder",
     "ageTier": "primitive:2",
+    "storage"         : true,
     "name": "Meat Hooks",
     "color": "#9A4A40",
     "charSpans": [ {"sheet": "buildings", "id": 49} ],
@@ -916,6 +951,7 @@
   {
     "id": "rope_granary",
     "ageTier": "primitive:3",
+    "storage"         : true,
     "name": "Rope-Hung Granary",
     "color": "#C0A24A",
     "charSpans": [ {"sheet": "items", "id": 173} ],
@@ -939,6 +975,7 @@
   {
     "id": "root_clamp",
     "ageTier": "primitive:2",
+    "storage"         : true,
     "name": "Root Clamp",
     "color": "#7A5A38",
     "charSpans": [ {"sheet": "plants", "id": 213} ],
@@ -1666,6 +1703,7 @@
   {
     "id"                : "weaving_frame",
     "ageTier"           : "primitive:3",
+    "workstation"     : true,
     "name"              : "Weaving Frame",
     "color"             : "#C8A050",
     "charSpans"         : [ {"sheet": "buildings", "id": 39} ],
@@ -1684,6 +1722,7 @@
   {
     "id": "lapidary_bench",
     "ageTier": "runed:1",
+    "workstation"     : true,
     "name": "Lapidary Bench",
     "color": "#A060D0",
     "charSpans": [ {"sheet": "buildings", "id": 39} ],
@@ -1703,6 +1742,7 @@
   {
     "id": "runecarver_bench",
     "ageTier": "runed:1",
+    "workstation"     : true,
     "name": "Runecarver's Bench",
     "color": "#6B4E8C",
     "charSpans": [ {"sheet": "buildings", "id": 39} ],
@@ -1722,6 +1762,7 @@
   {
     "id": "attunement_altar",
     "ageTier": "runed:2",
+    "workstation"     : true,
     "name": "Attunement Altar",
     "color": "#9050D0",
     "charSpans": [ {"sheet": "tiles", "id": 14} ],
@@ -1749,6 +1790,7 @@
     "id": "compost_bin",
     "ageTier": "primitive:2",
     "passive": true,
+    "workstation"     : true,
     "name": "Compost Bin",
     "color": "#5A4326",
     "charSpans": [ {"sheet": "items", "id": 41} ],
@@ -1860,6 +1902,7 @@
   {
     "id": "quern",
     "ageTier": "primitive:1",
+    "workstation"     : true,
     "name": "Quern",
     "color": "#8A8079",
     "charSpans": [ {"sheet": "items", "id": 136} ],
@@ -1879,6 +1922,7 @@
   {
     "id"              : "brick_hearth",
     "ageTier"         : "copper:1",
+    "workstation"     : true,
     "name"            : "Brick Hearth",
     "color"           : "#B0552F",
     "charSpans"       : [ {"sheet": "tiles", "id": 14} ],
@@ -1900,6 +1944,7 @@
   {
     "id"              : "brick_stove",
     "ageTier"         : "bronze:1",
+    "workstation"     : true,
     "name"            : "Brick Stove",
     "color"           : "#B0552F",
     "charSpans"       : [ {"sheet": "tiles", "id": 14} ],
@@ -1921,6 +1966,7 @@
   {
     "id"              : "iron_stove",
     "ageTier"         : "iron:1",
+    "workstation"     : true,
     "name"            : "Iron Stove",
     "color"           : "#B0552F",
     "charSpans"       : [ {"sheet": "tiles", "id": 14} ],
@@ -1940,9 +1986,10 @@
     "effects"         : {"cookingTier": 4, "craftingBonus": 0.6, "warmth": 1.2, "cookingEnabled": true, "boilingEnabled": true, "isFire": 1}
   },
   {
-    "id"              : "steel_range",
+    "id"              : "steel_stove",
     "ageTier"         : "steel:1",
-    "name"            : "Steel Range",
+    "workstation"     : true,
+    "name"            : "Steel Stove",
     "color"           : "#B0552F",
     "charSpans"       : [ {"sheet": "tiles", "id": 14} ],
     "transparentBg"   : true,
@@ -1962,7 +2009,8 @@
   },
   {
     "id": "oven",
-    "ageTier": "primitive:1",
+    "ageTier": "copper:1",
+    "workstation"     : true,
     "name": "Clay Oven",
     "color": "#9C5A2E",
     "charSpans": [ {"sheet": "items", "id": 172} ],
@@ -1983,6 +2031,7 @@
     "id": "fermenter",
     "ageTier": "bronze:1",
     "passive": true,
+    "workstation"     : true,
     "name": "Fermenter",
     "color": "#6E4B2A",
     "charSpans": [ {"sheet": "items", "id": 24} ],
@@ -2006,6 +2055,7 @@
   {
     "id": "carpenter_bench",
     "ageTier": "iron:1",
+    "workstation"     : true,
     "name": "Carpenter's Bench",
     "color": "#A07840",
     "charSpans": [ {"sheet": "buildings", "id": 39} ],
@@ -2025,6 +2075,7 @@
   {
     "id": "potters_wheel",
     "ageTier": "copper:1",
+    "workstation"     : true,
     "name": "Potter's Wheel",
     "color": "#B07840",
     "charSpans": [ {"sheet": "buildings", "id": 39} ],
@@ -2044,6 +2095,7 @@
   {
     "id": "spinning_wheel",
     "ageTier": "bronze:1",
+    "workstation"     : true,
     "name": "Spinning Wheel",
     "color": "#B5824A",
     "charSpans": [ {"sheet": "buildings", "id": 39} ],
@@ -2063,6 +2115,7 @@
   {
     "id": "porcelain_workshop",
     "ageTier": "copper:2",
+    "workstation"     : true,
     "name": "Porcelain Workshop",
     "color": "#E0DCD2",
     "charSpans": [ {"sheet": "buildings", "id": 39} ],
@@ -2082,6 +2135,7 @@
   {
     "id": "blast_furnace",
     "ageTier": "steel:1",
+    "workstation"     : true,
     "name": "Blast Furnace",
     "color": "#7A6A5A",
     "charSpans": [ {"sheet": "tiles", "id": 14} ],
@@ -2107,6 +2161,7 @@
   {
     "id": "crucible_steelworks",
     "ageTier": "steel:1",
+    "workstation"     : true,
     "name": "Fire-brick Steelworks",
     "color": "#8A7A6A",
     "charSpans": [ {"sheet": "tiles", "id": 14} ],
@@ -2132,6 +2187,7 @@
   {
     "id": "clockwork_bench",
     "ageTier": "steel:1",
+    "workstation"     : true,
     "name": "Clockwork Bench",
     "color": "#A07840",
     "charSpans": [ {"sheet": "buildings", "id": 39} ],
@@ -2157,8 +2213,9 @@
   //   layer) — build when ready.
   {
     "id": "tanning_bucket_station",
-    "ageTier": "primitive:3",
+    "ageTier": "bronze:3",
     "passive": true,
+    "workstation"     : true,
     "name": "Tanning Pit",
     "color": "#9A7B4F",
     "charSpans": [ {"sheet": "buildings", "id": 39} ],
@@ -2180,6 +2237,7 @@
     "id": "beast_tanning_bucket",
     "ageTier": "iron:1",
     "passive": true,
+    "workstation"     : true,
     "name": "Beast Tanning Pit",
     "color": "#6E5326",
     "charSpans": [ {"sheet": "buildings", "id": 39} ],
@@ -2201,6 +2259,7 @@
     "id": "brewing_barrel",
     "ageTier": "bronze:1",
     "passive": true,
+    "workstation"     : true,
     "name": "Steeping Vat",
     "color": "#8B6B45",
     "charSpans": [ {"sheet": "buildings", "id": 39} ],
@@ -2224,6 +2283,7 @@
   {
     "id": "alchemy_lab",
     "ageTier": "bronze:2",
+    "workstation"     : true,
     "name": "Alchemy Lab",
     "color": "#7E57C2",
     "charSpans": [ {"sheet": "buildings", "id": 39} ],
@@ -2246,13 +2306,14 @@
     // transfusions and best potions; its tier is what makes T3 brews possible (better gamble odds + pool).
     "id": "apothecary",
     "ageTier": "iron:2",
+    "workstation"     : true,
     "name": "Apothecary",
     "color": "#5E35B1",
     "charSpans": [ {"sheet": "buildings", "id": 39} ],
     "transparentBg": true,
     "description": "A cabinet of tinctures, a fractioning still and a cold slab for handling humours. Where a plain lab boils, this draws essences off clean, the work that turns a beast's organ into a controlled draught.",
     "category": "production",
-    "buildingCost": {"clay_alembic": 2, "glassware": 4, "fired_brick": 10, "gem_dust": 2},
+    "buildingCost": {"clay_alembic": 2, "glassware": 4, "fired_brick": 10, "category:steel": 2},
     "workAmount": 60,
     "toolTierRequired": 2,
     "populationRequired": 1,
@@ -2270,6 +2331,7 @@
   {
     "id": "manaforge",
     "ageTier": "runed:3",
+    "workstation"     : true,
     "name": "Manaforge",
     "color": "#B060E0",
     "charSpans": [ {"sheet": "tiles", "id": 14} ],
@@ -2289,6 +2351,7 @@
   {
     "id": "runic_crucible",
     "ageTier": "runed:3",
+    "workstation"     : true,
     "name": "Runic Crucible",
     "color": "#9C7CC0",
     "charSpans": [ {"sheet": "tiles", "id": 14} ],
@@ -2315,6 +2378,7 @@
   {
     "id": "runic_loom",
     "ageTier": "runed:3",
+    "workstation"     : true,
     "name": "Runic Loom",
     "color": "#C090E0",
     "charSpans": [ {"sheet": "buildings", "id": 39} ],
@@ -2334,6 +2398,7 @@
   {
     "id"                : "glyph_cutters_banker",
     "ageTier"           : "runed:3",
+    "workstation"     : true,
     "name"              : "Glyph-Cutter's Banker",
     "color"             : "#8C6CB0",
     "charSpans"         : [ {"sheet": "buildings", "id": 39} ],
@@ -2352,6 +2417,7 @@
   {
     "id": "arcane_alembic",
     "ageTier": "runed:3",
+    "workstation"     : true,
     "name": "Arcane Alembic",
     "color": "#9050C0",
     "charSpans": [ {"sheet": "buildings", "id": 39} ],
@@ -2371,6 +2437,7 @@
   {
     "id": "heartwood_joiner",
     "ageTier": "runed:3",
+    "workstation"     : true,
     "name": "Heartwood Joiner",
     "color": "#A07840",
     "charSpans": [ {"sheet": "buildings", "id": 39} ],
@@ -2460,6 +2527,7 @@
     "id": "resin_tap",
     "ageTier": "bronze:1",
     "passive": true,
+    "workstation"     : true,
     "name": "Resin Tap",
     "color": "#C68A2E",
     "charSpans": [ {"sheet": "buildings", "id": 39} ],
