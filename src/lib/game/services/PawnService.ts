@@ -404,6 +404,7 @@ export class PawnServiceImpl implements PawnService {
     hunger: number;
     fatigue: number;
     thirstRate: number;
+    hygieneRate: number;
   } {
     const transientConditions = getActiveTransientConditions(pawn);
 
@@ -413,17 +414,21 @@ export class PawnServiceImpl implements PawnService {
     let hungerRate = transientConditions.reduce((r, e) => r * (e.modifiers.hungerRate ?? 1), 1);
     let fatigueRate = transientConditions.reduce((r, e) => r * (e.modifiers.fatigueRate ?? 1), 1);
     let thirstRate = transientConditions.reduce((r, e) => r * (e.modifiers.thirstRate ?? 1), 1);
+    // `clean` sets this to 0 — a proper wash with soap holds the grime off for a day.
+    let hygieneRate = transientConditions.reduce((r, e) => r * (e.modifiers.hygieneRate ?? 1), 1);
 
     // Also apply persistent condition-stage rate modifiers (e.g. malnutrition increases hunger rate).
     const condMults = conditionNeedMultipliers(pawn.conditions ?? []);
     hungerRate *= condMults.hungerRate;
     fatigueRate *= condMults.fatigueRate;
     thirstRate *= condMults.thirstRate;
+    hygieneRate *= condMults.hygieneRate;
 
     return {
       hunger: this.getHungerIncreasePerTurn(pawn) * hungerRate,
       fatigue: this.getRestIncreasePerTurn(pawn) * fatigueRate,
-      thirstRate
+      thirstRate,
+      hygieneRate
     };
   }
 
@@ -521,7 +526,7 @@ export class PawnServiceImpl implements PawnService {
         : Math.min(100, (needs.thirst ?? 0) + THIRST_INCREASE_PER_SECOND * rate.thirstRate * dt);
       const hygiene = disHygiene
         ? (needs.hygiene ?? 0)
-        : Math.min(100, (needs.hygiene ?? 0) + HYGIENE_INCREASE_PER_SECOND * dt);
+        : Math.min(100, (needs.hygiene ?? 0) + HYGIENE_INCREASE_PER_SECOND * rate.hygieneRate * dt);
 
       // SEASONS_WEATHER wetness: soak fast on wet (>50%) tiles (roofs keep tiles dry — tileWetness
       // already cuts the rain contribution under cover); a fully-wet tile is instant. Off wet ground

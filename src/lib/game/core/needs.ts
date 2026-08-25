@@ -485,11 +485,13 @@ export function conditionNeedMultipliers(conditions: EntityCondition[]): {
   fatigueRate: number;
   thirstRate: number;
   relaxationRate: number;
+  hygieneRate: number;
 } {
   let hungerRate = 1;
   let fatigueRate = 1;
   let thirstRate = 1;
   let relaxationRate = 1; // < 1 = relaxation decays slower (the `comfortable` condition boosts it)
+  let hygieneRate = 1; // 0 = grime stops accruing entirely (the `clean` a bar of soap buys)
   for (const c of conditions) {
     const stage = getConditionCurrentStage(c);
     if (stage) {
@@ -497,9 +499,10 @@ export function conditionNeedMultipliers(conditions: EntityCondition[]): {
       fatigueRate *= stage.modifiers.fatigueRate ?? 1;
       thirstRate *= stage.modifiers.thirstRate ?? 1;
       relaxationRate *= stage.modifiers.relaxationRate ?? 1;
+      hygieneRate *= stage.modifiers.hygieneRate ?? 1;
     }
   }
-  return { hungerRate, fatigueRate, thirstRate, relaxationRate };
+  return { hungerRate, fatigueRate, thirstRate, relaxationRate, hygieneRate };
 }
 
 /**
@@ -512,19 +515,22 @@ export function transientNeedMultipliers(ids: ReadonlyArray<string>): {
   hungerRate: number;
   fatigueRate: number;
   thirstRate: number;
+  hygieneRate: number;
 } {
   let hungerRate = 1;
   let fatigueRate = 1;
   let thirstRate = 1;
+  let hygieneRate = 1;
   for (const id of ids) {
     const m = TRANSIENT_BY_ID.get(id)?.modifiers;
     if (m) {
       hungerRate *= m.hungerRate ?? 1;
       fatigueRate *= m.fatigueRate ?? 1;
       thirstRate *= m.thirstRate ?? 1;
+      hygieneRate *= m.hygieneRate ?? 1;
     }
   }
-  return { hungerRate, fatigueRate, thirstRate };
+  return { hungerRate, fatigueRate, thirstRate, hygieneRate };
 }
 
 export interface StatMultipliers {
