@@ -74,7 +74,8 @@ export function validate(parsed, { expectedRules, symbolKey, hashes }) {
   }
 
   for (const r of expectedRules) {
-    if (!seen.has(r.id)) rejected.push({ rule_id: r.id, reason: 'no verdict returned for this rule' });
+    if (!seen.has(r.id))
+      rejected.push({ rule_id: r.id, reason: 'no verdict returned for this rule' });
   }
   return { ok, rejected };
 }

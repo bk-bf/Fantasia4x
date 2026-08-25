@@ -45,10 +45,29 @@ export function replaceSymbols(db, symbols) {
     db.exec(`UPDATE symbol SET alive = 0`);
     for (const s of symbols) {
       up.run(
-        s.key, s.file, s.module ?? null, s.group ?? null, s.layer ?? null, s.lang,
-        s.name, s.className ?? null, s.kind, s.exported ? 1 : 0, s.tested ? 1 : 0,
-        s.startLine, s.endLine, s.startByte, s.endByte, s.loc, s.chars, s.contentHash,
-        s.depHash ?? '', JSON.stringify(s.flags ?? []), s.signature ?? null, ts, ts
+        s.key,
+        s.file,
+        s.module ?? null,
+        s.group ?? null,
+        s.layer ?? null,
+        s.lang,
+        s.name,
+        s.className ?? null,
+        s.kind,
+        s.exported ? 1 : 0,
+        s.tested ? 1 : 0,
+        s.startLine,
+        s.endLine,
+        s.startByte,
+        s.endByte,
+        s.loc,
+        s.chars,
+        s.contentHash,
+        s.depHash ?? '',
+        JSON.stringify(s.flags ?? []),
+        s.signature ?? null,
+        ts,
+        ts
       );
     }
     db.exec('COMMIT');
@@ -124,10 +143,20 @@ export function upsertRules(db, rules) {
   try {
     for (const r of rules) {
       up.run(
-        r.id, r.family, r.tier ?? 'T2', r.title, r.authority ?? null, r.question,
-        JSON.stringify(r.fail_requires ?? []), JSON.stringify(r.not_a_finding ?? []),
-        JSON.stringify(r.trigger ?? {}), r.demotable === false ? 0 : 1,
-        r.status ?? 'active', r.demoted_to ?? null, ruleHash(r), ts
+        r.id,
+        r.family,
+        r.tier ?? 'T2',
+        r.title,
+        r.authority ?? null,
+        r.question,
+        JSON.stringify(r.fail_requires ?? []),
+        JSON.stringify(r.not_a_finding ?? []),
+        JSON.stringify(r.trigger ?? {}),
+        r.demotable === false ? 0 : 1,
+        r.status ?? 'active',
+        r.demoted_to ?? null,
+        ruleHash(r),
+        ts
       );
     }
     db.exec('COMMIT');
@@ -162,8 +191,18 @@ export function plan(db, matches) {
       ) THEN 'done' ELSE 'pending' END)
     `);
     for (const m of matches) {
-      ins.run(m.symbol_key, m.rule_id, m.content_hash, m.dep_hash, m.rule_hash,
-              m.symbol_key, m.rule_id, m.content_hash, m.dep_hash, m.rule_hash);
+      ins.run(
+        m.symbol_key,
+        m.rule_id,
+        m.content_hash,
+        m.dep_hash,
+        m.rule_hash,
+        m.symbol_key,
+        m.rule_id,
+        m.content_hash,
+        m.dep_hash,
+        m.rule_hash
+      );
     }
     db.exec(`
       DELETE FROM claim WHERE NOT EXISTS (
@@ -182,7 +221,10 @@ export function plan(db, matches) {
  *  prompt, so paying for it once per symbol instead of once per rule is where the batching
  *  saving comes from. Safe across processes: BEGIN IMMEDIATE takes the write lock, and the
  *  per-row `changes()` check means two workers cannot both win the same item. */
-export function claimBatch(db, { worker, runId, limit = 40, leaseMinutes = 30, file = null, symbol = null }) {
+export function claimBatch(
+  db,
+  { worker, runId, limit = 40, leaseMinutes = 30, file = null, symbol = null }
+) {
   const ts = Date.now();
   const claimedAt = new Date(ts).toISOString();
   const expiresAt = new Date(ts + leaseMinutes * 60_000).toISOString();
@@ -199,19 +241,34 @@ export function claimBatch(db, { worker, runId, limit = 40, leaseMinutes = 30, f
     let target = symbol;
     if (!target) {
       target = file
-        ? db.prepare(`
+        ? db
+            .prepare(
+              `
             SELECT w.symbol_key k FROM work w JOIN symbol s ON s.key = w.symbol_key
              WHERE w.state = 'pending' AND s.file = ?
-             ORDER BY w.symbol_key LIMIT 1`).get(file)?.k
-        : db.prepare(`
+             ORDER BY w.symbol_key LIMIT 1`
+            )
+            .get(file)?.k
+        : db
+            .prepare(
+              `
             SELECT symbol_key k FROM work
-             WHERE state = 'pending' ORDER BY symbol_key LIMIT 1`).get()?.k;
+             WHERE state = 'pending' ORDER BY symbol_key LIMIT 1`
+            )
+            .get()?.k;
     }
-    if (!target) { db.exec('COMMIT'); return []; }
+    if (!target) {
+      db.exec('COMMIT');
+      return [];
+    }
 
-    const pick = db.prepare(`
+    const pick = db
+      .prepare(
+        `
       SELECT * FROM work WHERE state = 'pending' AND symbol_key = ?
-       ORDER BY rule_id LIMIT ?`).all(target, limit);
+       ORDER BY rule_id LIMIT ?`
+      )
+      .all(target, limit);
 
     const mark = db.prepare(`UPDATE work SET state='claimed', attempts=attempts+1
                               WHERE symbol_key=? AND rule_id=? AND state='pending'`);
@@ -267,15 +324,34 @@ export function submit(db, verdicts, { worker, runId, model }) {
   try {
     for (const v of verdicts) {
       const w = cur.get(v.symbol_key, v.rule_id);
-      if (!w || w.content_hash !== v.content_hash || w.dep_hash !== v.dep_hash ||
-          w.rule_hash !== v.rule_hash) {
+      if (
+        !w ||
+        w.content_hash !== v.content_hash ||
+        w.dep_hash !== v.dep_hash ||
+        w.rule_hash !== v.rule_hash
+      ) {
         rejected.push({ ...v, reason: w ? 'hash moved since claim' : 'no such work item' });
         continue;
       }
-      ins.run(v.symbol_key, v.rule_id, v.content_hash, v.dep_hash, v.rule_hash, v.status,
-              JSON.stringify(v.evidence ?? []), v.na_clause ?? null, v.missing ?? null,
-              v.summary ?? null, v.tier ?? 'T2', model ?? null, worker ?? null,
-              runId ?? null, v.tokens ?? null, v.ms ?? null, ts);
+      ins.run(
+        v.symbol_key,
+        v.rule_id,
+        v.content_hash,
+        v.dep_hash,
+        v.rule_hash,
+        v.status,
+        JSON.stringify(v.evidence ?? []),
+        v.na_clause ?? null,
+        v.missing ?? null,
+        v.summary ?? null,
+        v.tier ?? 'T2',
+        model ?? null,
+        worker ?? null,
+        runId ?? null,
+        v.tokens ?? null,
+        v.ms ?? null,
+        ts
+      );
       done.run(v.symbol_key, v.rule_id);
       unclaim.run(v.symbol_key, v.rule_id);
       accepted.push(v);
@@ -301,8 +377,15 @@ export function openFindings(db, verdicts) {
       const row = vid.get(v.symbol_key, v.rule_id, v.content_hash);
       if (!row) continue;
       const id = `${v.rule_id}:${sha(v.symbol_key)}`;
-      ins.run(id, row.id, v.symbol_key, v.rule_id, v.summary ?? '',
-              JSON.stringify(v.evidence ?? []), ts);
+      ins.run(
+        id,
+        row.id,
+        v.symbol_key,
+        v.rule_id,
+        v.summary ?? '',
+        JSON.stringify(v.evidence ?? []),
+        ts
+      );
     }
     db.exec('COMMIT');
   } catch (e) {
@@ -317,20 +400,39 @@ export function coverage(db) {
   const total = db.prepare(`SELECT count(*) n FROM work`).get().n;
   const done = db.prepare(`SELECT count(*) n FROM work WHERE state='done'`).get().n;
   const claimed = db.prepare(`SELECT count(*) n FROM work WHERE state='claimed'`).get().n;
-  const byStatus = db.prepare(`
+  const byStatus = db
+    .prepare(
+      `
     SELECT v.status, count(*) n FROM work w
       JOIN verdict v ON v.symbol_key=w.symbol_key AND v.rule_id=w.rule_id
        AND v.content_hash=w.content_hash AND v.dep_hash=w.dep_hash AND v.rule_hash=w.rule_hash
-     GROUP BY v.status`).all();
+     GROUP BY v.status`
+    )
+    .all();
   const symbols = db.prepare(`SELECT count(*) n FROM symbol WHERE alive=1`).get().n;
-  const touched = db.prepare(`
-    SELECT count(DISTINCT w.symbol_key) n FROM work w WHERE w.state='done'`).get().n;
+  const touched = db
+    .prepare(
+      `
+    SELECT count(DISTINCT w.symbol_key) n FROM work w WHERE w.state='done'`
+    )
+    .get().n;
   const inScope = db.prepare(`SELECT count(DISTINCT symbol_key) n FROM work`).get().n;
-  return { total, done, claimed, pending: total - done - claimed, byStatus, symbols, inScope, touched };
+  return {
+    total,
+    done,
+    claimed,
+    pending: total - done - claimed,
+    byStatus,
+    symbols,
+    inScope,
+    touched
+  };
 }
 
 export function perRule(db) {
-  return db.prepare(`
+  return db
+    .prepare(
+      `
     SELECT r.id, r.family, r.title, r.status, r.demotable,
            sum(w.state='done') done, count(*) total,
            sum(v.status='fail') fails, sum(v.status='undecidable') undecidable,
@@ -338,5 +440,7 @@ export function perRule(db) {
       FROM rule r LEFT JOIN work w ON w.rule_id = r.id
       LEFT JOIN verdict v ON v.symbol_key=w.symbol_key AND v.rule_id=w.rule_id
        AND v.content_hash=w.content_hash AND v.dep_hash=w.dep_hash AND v.rule_hash=w.rule_hash
-     GROUP BY r.id ORDER BY r.id`).all();
+     GROUP BY r.id ORDER BY r.id`
+    )
+    .all();
 }

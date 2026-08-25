@@ -9,11 +9,27 @@ export const RULES_DIR = join(TOOL_DIR, 'rules');
 
 export function stripJsonc(text) {
   let out = '';
-  let inStr = false, esc = false, inLine = false, inBlock = false;
+  let inStr = false,
+    esc = false,
+    inLine = false,
+    inBlock = false;
   for (let i = 0; i < text.length; i++) {
-    const c = text[i], n = text[i + 1];
-    if (inLine) { if (c === '\n') { inLine = false; out += c; } continue; }
-    if (inBlock) { if (c === '*' && n === '/') { inBlock = false; i++; } continue; }
+    const c = text[i],
+      n = text[i + 1];
+    if (inLine) {
+      if (c === '\n') {
+        inLine = false;
+        out += c;
+      }
+      continue;
+    }
+    if (inBlock) {
+      if (c === '*' && n === '/') {
+        inBlock = false;
+        i++;
+      }
+      continue;
+    }
     if (inStr) {
       out += c;
       if (esc) esc = false;
@@ -21,8 +37,16 @@ export function stripJsonc(text) {
       else if (c === '"') inStr = false;
       continue;
     }
-    if (c === '/' && n === '/') { inLine = true; i++; continue; }
-    if (c === '/' && n === '*') { inBlock = true; i++; continue; }
+    if (c === '/' && n === '/') {
+      inLine = true;
+      i++;
+      continue;
+    }
+    if (c === '/' && n === '*') {
+      inBlock = true;
+      i++;
+      continue;
+    }
     if (c === '"') inStr = true;
     out += c;
   }
@@ -47,9 +71,12 @@ export function loadRules(dir = RULES_DIR) {
     for (const r of parsed) {
       for (const k of REQUIRED) if (!r[k]) errors.push(`${f}: rule ${r.id ?? '?'} missing ${k}`);
       if (r.tier && !TIERS.has(r.tier)) errors.push(`${f}: rule ${r.id} bad tier ${r.tier}`);
-      if (r.status && !STATUSES.has(r.status)) errors.push(`${f}: rule ${r.id} bad status ${r.status}`);
+      if (r.status && !STATUSES.has(r.status))
+        errors.push(`${f}: rule ${r.id} bad status ${r.status}`);
       if (!Array.isArray(r.fail_requires) || r.fail_requires.length === 0) {
-        errors.push(`${f}: rule ${r.id} needs a non-empty fail_requires -- a fail with no evidence contract is unfalsifiable`);
+        errors.push(
+          `${f}: rule ${r.id} needs a non-empty fail_requires -- a fail with no evidence contract is unfalsifiable`
+        );
       }
       rules.push({ tier: 'T2', status: 'active', demotable: true, ...r, _file: f });
     }

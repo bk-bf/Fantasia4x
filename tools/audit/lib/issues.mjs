@@ -10,8 +10,18 @@ import { join } from 'node:path';
 export const ISSUES_DIR = (root) => join(root, 'docs', 'issues');
 
 const SCALARS = new Set([
-  'id', 'title', 'status', 'kind', 'severity', 'ready', 'origin',
-  'github', 'branch', 'pr', 'created', 'updated'
+  'id',
+  'title',
+  'status',
+  'kind',
+  'severity',
+  'ready',
+  'origin',
+  'github',
+  'branch',
+  'pr',
+  'created',
+  'updated'
 ]);
 const LISTS = new Set(['rules', 'files', 'symbols']);
 
@@ -39,8 +49,13 @@ export function parseFrontmatter(text) {
     if (!kv) continue;
     const [, key, rest] = kv;
     if (rest === '' || rest === '[]') {
-      if (LISTS.has(key)) { data[key] = []; listKey = key; }
-      else { data[key] = null; listKey = null; }
+      if (LISTS.has(key)) {
+        data[key] = [];
+        listKey = key;
+      } else {
+        data[key] = null;
+        listKey = null;
+      }
       continue;
     }
     listKey = null;
@@ -69,16 +84,37 @@ function needsQuote(s) {
 const emit = (v) => (needsQuote(v) ? JSON.stringify(v) : String(v));
 
 export function serializeFrontmatter(data) {
-  const order = ['id', 'title', 'status', 'kind', 'severity', 'ready', 'origin',
-                 'rules', 'files', 'symbols', 'github', 'branch', 'pr', 'created', 'updated'];
-  const keys = [...order.filter((k) => k in data), ...Object.keys(data).filter((k) => !order.includes(k))];
+  const order = [
+    'id',
+    'title',
+    'status',
+    'kind',
+    'severity',
+    'ready',
+    'origin',
+    'rules',
+    'files',
+    'symbols',
+    'github',
+    'branch',
+    'pr',
+    'created',
+    'updated'
+  ];
+  const keys = [
+    ...order.filter((k) => k in data),
+    ...Object.keys(data).filter((k) => !order.includes(k))
+  ];
   const out = ['---'];
   for (const k of keys) {
     const v = data[k];
     if (v === undefined || v === null) continue;
     if (Array.isArray(v)) {
       if (v.length === 0) out.push(`${k}: []`);
-      else { out.push(`${k}:`); for (const x of v) out.push(`  - ${emit(x)}`); }
+      else {
+        out.push(`${k}:`);
+        for (const x of v) out.push(`  - ${emit(x)}`);
+      }
     } else {
       out.push(`${k}: ${emit(v)}`);
     }

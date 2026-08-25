@@ -58,7 +58,9 @@ function cmdIndex() {
   const graph = G.loadGraph(ROOT);
   let edges = [];
   if (!graph) {
-    out(`[warn] no codegraph extract at ${G.GRAPH_PATH} — reachability and caller triggers will not fire.`);
+    out(
+      `[warn] no codegraph extract at ${G.GRAPH_PATH} — reachability and caller triggers will not fire.`
+    );
     out(`[warn] run \`pnpm graph\` first, or set CODEGRAPH_DIR.`);
   } else {
     const { map, matched, total } = G.mapNodes(graph, symbols);
@@ -67,17 +69,25 @@ function cmdIndex() {
     const tested = G.testedKeys(graph, map);
     for (const s of symbols) if (tested.has(s.key)) s.tested = true;
     const pct = ((matched / total) * 100).toFixed(0);
-    out(`graph: ${matched}/${total} nodes mapped (${pct}%), ${edges.length} edges, ${e.dropped} unmapped`);
+    out(
+      `graph: ${matched}/${total} nodes mapped (${pct}%), ${edges.length} edges, ${e.dropped} unmapped`
+    );
     if (matched / total < 0.8) {
-      out(`[warn] low map rate — the codegraph extract (${graph.generatedAt}) is likely stale; re-run \`pnpm graph\`.`);
+      out(
+        `[warn] low map rate — the codegraph extract (${graph.generatedAt}) is likely stale; re-run \`pnpm graph\`.`
+      );
     }
     // The `tested` flag comes from codegraph's heuristic. When it collapses, family F asks
     // "is this untested?" about code that has tests -- noise, and it looks like coverage.
-    const testedRate = tested.size / Math.max(1, symbols.filter((s) => s.kind === 'function' || s.kind === 'method').length);
+    const testedRate =
+      tested.size /
+      Math.max(1, symbols.filter((s) => s.kind === 'function' || s.kind === 'method').length);
     out(`graph: ${tested.size} symbols marked tested`);
     if (testedRate < 0.05) {
       out(`[warn] almost nothing is marked tested despite the repo having test files —`);
-      out(`[warn] codegraph's tested detection is not matching; family F verdicts will be unreliable.`);
+      out(
+        `[warn] codegraph's tested detection is not matching; family F verdicts will be unreliable.`
+      );
     }
   }
 
@@ -111,11 +121,16 @@ function cmdPlan() {
   loadRulesOrDie(db);
   const rules = L.activeRules(db, 'T2');
   const symbols = L.liveSymbols(db);
-  const edges = db.prepare('SELECT caller, callee FROM symbol_edge').all().map((r) => [r.caller, r.callee]);
+  const edges = db
+    .prepare('SELECT caller, callee FROM symbol_edge')
+    .all()
+    .map((r) => [r.caller, r.callee]);
   const reach = db.prepare('SELECT entry, symbol_key, hops FROM reach').all();
 
   const ctx = makeContext({
-    symbols, edges, reach,
+    symbols,
+    edges,
+    reach,
     readSlice: (s) => sliceOf(ROOT, s)
   });
   const { items, misses } = match(rules, symbols, ctx);
@@ -128,7 +143,9 @@ function cmdPlan() {
     for (const r of rules) {
       const hit = items.filter((i) => i.rule_id === r.id).length;
       const m = [...(misses.get(r.id) ?? new Map())].sort((a, b) => b[1] - a[1]).slice(0, 3);
-      out(`  ${r.id.padEnd(6)} ${String(hit).padStart(5)} matched   top misses: ${m.map(([k, n]) => `${k} (${n})`).join('; ')}`);
+      out(
+        `  ${r.id.padEnd(6)} ${String(hit).padStart(5)} matched   top misses: ${m.map(([k, n]) => `${k} (${n})`).join('; ')}`
+      );
     }
   }
 }
@@ -142,14 +159,20 @@ function cmdStatus() {
   const pct = cov.total ? ((cov.done / cov.total) * 100).toFixed(1) : '0.0';
   out(`indexed at ${indexed}`);
   out(`symbols ${cov.symbols}   in scope ${cov.inScope}`);
-  out(`work ${cov.total}   done ${cov.done} (${pct}%)   claimed ${cov.claimed}   pending ${cov.pending}`);
+  out(
+    `work ${cov.total}   done ${cov.done} (${pct}%)   claimed ${cov.claimed}   pending ${cov.pending}`
+  );
   out('');
   for (const s of cov.byStatus) out(`  ${s.status.padEnd(13)} ${s.n}`);
   out('');
   out('per rule:');
-  out(`  ${'rule'.padEnd(7)}${'family'.padEnd(16)}${'done/total'.padEnd(14)}${'fail'.padEnd(7)}${'undec'.padEnd(7)}n/a`);
+  out(
+    `  ${'rule'.padEnd(7)}${'family'.padEnd(16)}${'done/total'.padEnd(14)}${'fail'.padEnd(7)}${'undec'.padEnd(7)}n/a`
+  );
   for (const r of L.perRule(db)) {
-    out(`  ${r.id.padEnd(7)}${(r.family ?? '').padEnd(16)}${`${r.done ?? 0}/${r.total ?? 0}`.padEnd(14)}${String(r.fails ?? 0).padEnd(7)}${String(r.undecidable ?? 0).padEnd(7)}${r.na ?? 0}`);
+    out(
+      `  ${r.id.padEnd(7)}${(r.family ?? '').padEnd(16)}${`${r.done ?? 0}/${r.total ?? 0}`.padEnd(14)}${String(r.fails ?? 0).padEnd(7)}${String(r.undecidable ?? 0).padEnd(7)}${r.na ?? 0}`
+    );
   }
 }
 
@@ -160,7 +183,9 @@ function cmdNext() {
   const runId = arg('run', null);
   const limit = Number(arg('rules', 40));
   const batch = L.claimBatch(db, {
-    worker: WORKER, runId, limit,
+    worker: WORKER,
+    runId,
+    limit,
     leaseMinutes: Number(arg('lease', 30)),
     symbol: arg('symbol', null)
   });
@@ -173,13 +198,20 @@ function cmdNext() {
 
   const symbol = db.prepare('SELECT * FROM symbol WHERE key=?').get(key);
   const rules = mine.map((m) => db.prepare('SELECT * FROM rule WHERE id=?').get(m.rule_id));
-  const callers = db.prepare(
-    'SELECT s.* FROM symbol_edge e JOIN symbol s ON s.key=e.caller WHERE e.callee=?').all(key);
-  const callees = db.prepare(
-    'SELECT s.* FROM symbol_edge e JOIN symbol s ON s.key=e.callee WHERE e.caller=?').all(key);
+  const callers = db
+    .prepare('SELECT s.* FROM symbol_edge e JOIN symbol s ON s.key=e.caller WHERE e.callee=?')
+    .all(key);
+  const callees = db
+    .prepare('SELECT s.* FROM symbol_edge e JOIN symbol s ON s.key=e.callee WHERE e.caller=?')
+    .all(key);
 
   const prompt = buildPrompt({
-    root: ROOT, symbol, rules, callers, callees, slice: sliceOf(ROOT, symbol)
+    root: ROOT,
+    symbol,
+    rules,
+    callers,
+    callees,
+    slice: sliceOf(ROOT, symbol)
   });
 
   const task = {
@@ -203,7 +235,10 @@ function cmdNext() {
 function cmdSubmit() {
   const db = L.open();
   const file = process.argv[3];
-  if (!file) { out('usage: audit submit <response.json> [--task <task.json>]'); process.exit(2); }
+  if (!file) {
+    out('usage: audit submit <response.json> [--task <task.json>]');
+    process.exit(2);
+  }
   const taskFile = arg('task', null);
   const raw = readFileSync(file, 'utf8');
 
@@ -214,22 +249,41 @@ function cmdSubmit() {
     symbolKey = t.symbol_key;
     ruleIds = t.rules.map((r) => r.rule_id);
   }
-  if (!symbolKey) { out('need --symbol <key> or --task <task.json>'); process.exit(2); }
+  if (!symbolKey) {
+    out('need --symbol <key> or --task <task.json>');
+    process.exit(2);
+  }
 
-  const claimed = db.prepare(
-    `SELECT * FROM work WHERE symbol_key=? AND state='claimed'`).all(symbolKey);
+  const claimed = db
+    .prepare(`SELECT * FROM work WHERE symbol_key=? AND state='claimed'`)
+    .all(symbolKey);
   const rows = ruleIds ? claimed.filter((c) => ruleIds.includes(c.rule_id)) : claimed;
   const expectedRules = rows.map((r) => db.prepare('SELECT * FROM rule WHERE id=?').get(r.rule_id));
-  const hashes = new Map(rows.map((r) => [r.rule_id, {
-    content_hash: r.content_hash, dep_hash: r.dep_hash, rule_hash: r.rule_hash
-  }]));
+  const hashes = new Map(
+    rows.map((r) => [
+      r.rule_id,
+      {
+        content_hash: r.content_hash,
+        dep_hash: r.dep_hash,
+        rule_hash: r.rule_hash
+      }
+    ])
+  );
 
   let parsed;
-  try { parsed = parseResponse(raw); }
-  catch (e) { out(`[reject] ${e.message}`); process.exit(1); }
+  try {
+    parsed = parseResponse(raw);
+  } catch (e) {
+    out(`[reject] ${e.message}`);
+    process.exit(1);
+  }
 
   const { ok, rejected } = validate(parsed, { expectedRules, symbolKey, hashes });
-  const res = L.submit(db, ok, { worker: WORKER, runId: arg('run', null), model: arg('model', null) });
+  const res = L.submit(db, ok, {
+    worker: WORKER,
+    runId: arg('run', null),
+    model: arg('model', null)
+  });
   L.openFindings(db, res.accepted);
 
   out(`accepted ${res.accepted.length}  rejected ${rejected.length + res.rejected.length}`);
@@ -249,12 +303,19 @@ function cmdRelease() {
 function cmdFindings() {
   const db = L.open();
   const state = arg('state', 'open');
-  const rows = db.prepare(`
+  const rows = db
+    .prepare(
+      `
     SELECT f.*, s.file, s.start_line, r.title FROM finding f
       JOIN symbol s ON s.key = f.symbol_key
       JOIN rule r ON r.id = f.rule_id
-     WHERE f.state = ? ORDER BY f.created_at DESC LIMIT ?`).all(state, Number(arg('limit', 50)));
-  if (rows.length === 0) { out(`no ${state} findings`); return; }
+     WHERE f.state = ? ORDER BY f.created_at DESC LIMIT ?`
+    )
+    .all(state, Number(arg('limit', 50)));
+  if (rows.length === 0) {
+    out(`no ${state} findings`);
+    return;
+  }
   for (const f of rows) {
     out(`${f.rule_id}  ${f.file}:${f.start_line}`);
     out(`  ${f.summary}`);
@@ -267,15 +328,26 @@ function cmdFindings() {
 // rate is scoped too broadly and should have its trigger tightened.
 function cmdNa() {
   const db = L.open();
-  const rows = db.prepare(`
+  const rows = db
+    .prepare(
+      `
     SELECT v.rule_id, v.symbol_key, v.na_clause, s.file, s.start_line, r.title
       FROM verdict v JOIN symbol s ON s.key = v.symbol_key JOIN rule r ON r.id = v.rule_id
      WHERE v.status = 'n/a'
-     ORDER BY v.rule_id, v.created_at DESC LIMIT ?`).all(Number(arg('limit', 40)));
-  if (rows.length === 0) { out('no n/a verdicts'); return; }
-  const rates = db.prepare(`
+     ORDER BY v.rule_id, v.created_at DESC LIMIT ?`
+    )
+    .all(Number(arg('limit', 40)));
+  if (rows.length === 0) {
+    out('no n/a verdicts');
+    return;
+  }
+  const rates = db
+    .prepare(
+      `
     SELECT rule_id, sum(status='n/a') na, count(*) total FROM verdict
-     GROUP BY rule_id HAVING na > 0 ORDER BY (na * 1.0 / total) DESC`).all();
+     GROUP BY rule_id HAVING na > 0 ORDER BY (na * 1.0 / total) DESC`
+    )
+    .all();
   out('n/a rate per rule (high means the trigger is too broad):');
   for (const r of rates) {
     out(`  ${r.rule_id.padEnd(7)}${r.na}/${r.total}  ${((r.na / r.total) * 100).toFixed(0)}%`);
@@ -301,7 +373,9 @@ function cmdT0() {
   const cov = adrCoverage(ROOT, rules);
   if (cov) {
     out('');
-    out(`adr-coverage: ${cov.total} ADRs — ${cov.graphCheckable} verified by graph:check, ${cov.t2Covered} carry a T2 rule`);
+    out(
+      `adr-coverage: ${cov.total} ADRs — ${cov.graphCheckable} verified by graph:check, ${cov.t2Covered} carry a T2 rule`
+    );
     if (cov.unguarded.length) out(`  no check of any kind: ${cov.unguarded.join(' ')}`);
   }
   db.close();
@@ -311,23 +385,31 @@ function cmdT0() {
 function cmdDemote() {
   const db = L.open();
   const min = Number(arg('min', 3));
-  const rows = db.prepare(`
+  const rows = db
+    .prepare(
+      `
     SELECT v.rule_id, r.title, count(*) fires, count(DISTINCT s.file) files
       FROM verdict v JOIN rule r ON r.id=v.rule_id JOIN symbol s ON s.key=v.symbol_key
      WHERE v.status='fail' AND r.demotable=1 AND r.status='active'
-     GROUP BY v.rule_id HAVING fires >= ? ORDER BY fires DESC`).all(min);
-  if (rows.length === 0) { out(`no rule has ${min}+ fails yet`); return; }
+     GROUP BY v.rule_id HAVING fires >= ? ORDER BY fires DESC`
+    )
+    .all(min);
+  if (rows.length === 0) {
+    out(`no rule has ${min}+ fails yet`);
+    return;
+  }
   out(`rules eligible to move down to T0 (>= ${min} fails, marked demotable):`);
   for (const r of rows) {
     out(`  ${r.rule_id}  ${r.fires} fails across ${r.files} files — ${r.title}`);
-    const ev = db.prepare(`SELECT summary FROM verdict WHERE rule_id=? AND status='fail' LIMIT 3`).all(r.rule_id);
+    const ev = db
+      .prepare(`SELECT summary FROM verdict WHERE rule_id=? AND status='fail' LIMIT 3`)
+      .all(r.rule_id);
     for (const e of ev) out(`      e.g. ${e.summary}`);
   }
   out('');
   out('Write the semgrep/ast-grep rule, then set status "demoted" + demoted_to in the rule file.');
   out('Its verdicts stay in the ledger as the record of why it moved.');
 }
-
 
 // --- phase 2: findings -> issues -> GitHub -----------------------------------
 
@@ -336,12 +418,17 @@ function cmdIssues() {
   const { rules } = loadRules();
   const byId = new Map(rules.map((r) => [r.id, r]));
   const groups = groupFindings(db);
-  if (groups.length === 0) { out('no open findings to raise'); return; }
+  if (groups.length === 0) {
+    out('no open findings to raise');
+    return;
+  }
 
   if (flag('dry-run')) {
     out(`${groups.length} issue(s) would be written:`);
     for (const g of groups) {
-      out(`  ${g.rule_id.padEnd(6)} ${String(g.findings.length).padStart(3)} finding(s)  ${g.group}`);
+      out(
+        `  ${g.rule_id.padEnd(6)} ${String(g.findings.length).padStart(3)} finding(s)  ${g.group}`
+      );
     }
     return;
   }
@@ -350,18 +437,27 @@ function cmdIssues() {
   for (const g of groups) {
     const r = upsertIssue(ROOT, g, byId);
     counts[r.action] = (counts[r.action] ?? 0) + 1;
-    if (r.action === 'created') out(`  created  docs/issues/${r.id}.md  (${g.findings.length} findings)`);
-    else if (r.action === 'updated') out(`  updated  docs/issues/${r.id}.md  (${g.findings.length} findings)`);
+    if (r.action === 'created')
+      out(`  created  docs/issues/${r.id}.md  (${g.findings.length} findings)`);
+    else if (r.action === 'updated')
+      out(`  updated  docs/issues/${r.id}.md  (${g.findings.length} findings)`);
   }
   out('');
-  out(Object.entries(counts).map(([k, v]) => `${k}: ${v}`).join('  '));
+  out(
+    Object.entries(counts)
+      .map(([k, v]) => `${k}: ${v}`)
+      .join('  ')
+  );
   out('');
   out('All raised as `ready: false`. Nothing is worked on until you flip that.');
 }
 
 function cmdPublish() {
   const issues = I.listIssues(ROOT);
-  if (issues.length === 0) { out('no issues on the board'); return; }
+  if (issues.length === 0) {
+    out('no issues on the board');
+    return;
+  }
 
   const bad = issues.flatMap((i) => I.validate(i).map((e) => `${i.data.id ?? i.path}: ${e}`));
   if (bad.length) {
@@ -371,30 +467,45 @@ function cmdPublish() {
     process.exit(1);
   }
 
-  if (!GH.available(ROOT)) { out('gh is not authenticated here'); process.exit(1); }
+  if (!GH.available(ROOT)) {
+    out('gh is not authenticated here');
+    process.exit(1);
+  }
 
   // Publishing an unread issue would put the audit's raw output in front of anyone watching
   // the repo. `ready` is the same gate the fixer uses.
   const only = arg('id', null);
-  const wanted = issues.filter((i) =>
-    (only ? i.data.id === only : i.data.ready === true) && i.data.status !== 'closed');
+  const wanted = issues.filter(
+    (i) => (only ? i.data.id === only : i.data.ready === true) && i.data.status !== 'closed'
+  );
   if (wanted.length === 0) {
     out(only ? `no issue with id ${only}` : 'no issue is marked ready: true');
     return;
   }
 
-  GH.ensureLabels(ROOT, wanted.flatMap((i) => I.labelsFor(i.data)));
+  GH.ensureLabels(
+    ROOT,
+    wanted.flatMap((i) => I.labelsFor(i.data))
+  );
 
   for (const issue of wanted) {
     const repoPath = `docs/issues/${issue.data.id}.md`;
     const body = I.githubBody(issue, { repoPath });
     const labels = I.labelsFor(issue.data);
-    if (flag('dry-run')) { out(`  would publish ${issue.data.id} (${issue.data.github ? 'edit #' + issue.data.github : 'create'})`); continue; }
+    if (flag('dry-run')) {
+      out(
+        `  would publish ${issue.data.id} (${issue.data.github ? 'edit #' + issue.data.github : 'create'})`
+      );
+      continue;
+    }
 
     if (issue.data.github) {
       const r = GH.editIssue(ROOT, issue.data.github, { title: issue.data.title, body, labels });
-      out(r.ok ? `  updated  #${issue.data.github}  ${issue.data.id}`
-               : `  [fail]   #${issue.data.github}  ${r.err}`);
+      out(
+        r.ok
+          ? `  updated  #${issue.data.github}  ${issue.data.id}`
+          : `  [fail]   #${issue.data.github}  ${r.err}`
+      );
     } else {
       const r = GH.createIssue(ROOT, { title: issue.data.title, body, labels });
       if (r.ok) {
@@ -409,10 +520,14 @@ function cmdPublish() {
 
 function cmdBoard() {
   const issues = I.listIssues(ROOT);
-  if (issues.length === 0) { out('no issues on the board'); return; }
+  if (issues.length === 0) {
+    out('no issues on the board');
+    return;
+  }
   const order = { critical: 0, high: 1, medium: 2, low: 3 };
   for (const status of I.STATUSES) {
-    const rows = issues.filter((i) => i.data.status === status)
+    const rows = issues
+      .filter((i) => i.data.status === status)
       .sort((a, b) => (order[a.data.severity] ?? 9) - (order[b.data.severity] ?? 9));
     if (rows.length === 0) continue;
     out(`${status} (${rows.length})`);
@@ -429,7 +544,10 @@ function cmdBoard() {
     out('');
   }
   const errs = issues.flatMap((i) => I.validate(i).map((e) => `${i.data.id ?? i.path}: ${e}`));
-  if (errs.length) { for (const e of errs) out(`[invalid] ${e}`); process.exit(1); }
+  if (errs.length) {
+    for (const e of errs) out(`[invalid] ${e}`);
+    process.exit(1);
+  }
 }
 
 function cmdExport() {
@@ -437,9 +555,15 @@ function cmdExport() {
   const dir = join(dirname(fileURLToPath(import.meta.url)), 'ledger');
   mkdirSync(dir, { recursive: true });
   const verdicts = db.prepare('SELECT * FROM verdict ORDER BY id').all();
-  writeFileSync(join(dir, 'verdicts.jsonl'), verdicts.map((v) => JSON.stringify(v)).join('\n') + '\n');
+  writeFileSync(
+    join(dir, 'verdicts.jsonl'),
+    verdicts.map((v) => JSON.stringify(v)).join('\n') + '\n'
+  );
   const findings = db.prepare('SELECT * FROM finding ORDER BY created_at').all();
-  writeFileSync(join(dir, 'findings.jsonl'), findings.map((v) => JSON.stringify(v)).join('\n') + '\n');
+  writeFileSync(
+    join(dir, 'findings.jsonl'),
+    findings.map((v) => JSON.stringify(v)).join('\n') + '\n'
+  );
   out(`exported ${verdicts.length} verdicts, ${findings.length} findings to tools/audit/ledger/`);
 }
 
@@ -458,15 +582,32 @@ function cmdRules() {
 }
 
 const commands = {
-  index: cmdIndex, plan: cmdPlan, status: cmdStatus, next: cmdNext, submit: cmdSubmit,
-  release: cmdRelease, findings: cmdFindings, t0: cmdT0, demote: cmdDemote, na: cmdNa,
-  export: cmdExport, rules: cmdRules,
-  issues: cmdIssues, publish: cmdPublish, board: cmdBoard
+  index: cmdIndex,
+  plan: cmdPlan,
+  status: cmdStatus,
+  next: cmdNext,
+  submit: cmdSubmit,
+  release: cmdRelease,
+  findings: cmdFindings,
+  t0: cmdT0,
+  demote: cmdDemote,
+  na: cmdNa,
+  export: cmdExport,
+  rules: cmdRules,
+  issues: cmdIssues,
+  publish: cmdPublish,
+  board: cmdBoard
 };
 
 const cmd = process.argv[2];
 if (!cmd || !commands[cmd]) {
-  out(readFileSync(fileURLToPath(import.meta.url), 'utf8').split('\n').slice(1, 15).join('\n').replace(/^\/\/ ?/gm, ''));
+  out(
+    readFileSync(fileURLToPath(import.meta.url), 'utf8')
+      .split('\n')
+      .slice(1, 15)
+      .join('\n')
+      .replace(/^\/\/ ?/gm, '')
+  );
   process.exit(cmd ? 2 : 0);
 }
 commands[cmd]();

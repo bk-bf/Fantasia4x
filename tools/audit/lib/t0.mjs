@@ -42,7 +42,10 @@ export function adrConstDrift(root) {
     const text = readFileSync(abs, 'utf8');
     for (const name of names) {
       if (!text.includes(name)) continue;
-      const re = new RegExp(`\\b(?:const|let|readonly|static)\\s+${name}\\s*(?::[^=]+)?=\\s*(-?\\d+(?:\\.\\d+)?)`, 'g');
+      const re = new RegExp(
+        `\\b(?:const|let|readonly|static)\\s+${name}\\s*(?::[^=]+)?=\\s*(-?\\d+(?:\\.\\d+)?)`,
+        'g'
+      );
       let m;
       while ((m = re.exec(text)) !== null) {
         const line = text.slice(0, m.index).split('\n').length;
@@ -56,13 +59,18 @@ export function adrConstDrift(root) {
   for (const d of declared) {
     const found = defs.get(d.name);
     if (!found || found.length === 0) {
-      findings.push({ ...d, kind: 'undefined-in-source', detail: 'the ADR declares it; no source file defines it' });
+      findings.push({
+        ...d,
+        kind: 'undefined-in-source',
+        detail: 'the ADR declares it; no source file defines it'
+      });
       continue;
     }
     for (const f of found) {
       if (Number(f.value) !== Number(d.value)) {
         findings.push({
-          ...d, kind: 'value-drift',
+          ...d,
+          kind: 'value-drift',
           detail: `${d.adr} says ${d.value}, ${f.file}:${f.line} says ${f.value}`
         });
       }
