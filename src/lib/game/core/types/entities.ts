@@ -552,7 +552,16 @@ export interface Pawn {
   activeJob?: {
     /** Phase 5: 'harvest'|'construct'|'craft'|'haul'|'fetch' use work-point jobs; 'need' for eat/sleep;
      *  'rescue' is a carry job (walk→lift→carry a downed colonist to shelter, FSM-driven). */
-    type: 'harvest' | 'construct' | 'craft' | 'haul' | 'fetch' | 'need' | 'deconstruct' | 'plant' | 'rescue';
+    type:
+      | 'harvest'
+      | 'construct'
+      | 'craft'
+      | 'haul'
+      | 'fetch'
+      | 'need'
+      | 'deconstruct'
+      | 'plant'
+      | 'rescue';
     /** Phase 5a: id of the Job in gameState.jobs[] (null for need-type jobs) */
     jobId?: string;
     targetX: number;
@@ -569,6 +578,9 @@ export interface Pawn {
     targetState?: string; // for MovingToNeed, which state to enter on arrival
     turnsInState?: number; // for Eating/Sleeping duration tracking
     hungerToRecover?: number; // total hunger to restore over the eating duration
+    /** thirst the drink already paid for restores over the drinking duration — decided on the first
+     *  sip, because that is when the litre is actually swallowed. 0 means nothing was found to drink. */
+    drinkRelief?: number;
     depositX?: number; // haul / fetch: destination x for deposit / staging
     depositY?: number; // haul / fetch: destination y for deposit / staging
     /** ADR-009 step 2: when set, the pawn is detouring to grab the required tool BEFORE the job —

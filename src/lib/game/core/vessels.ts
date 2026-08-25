@@ -363,14 +363,40 @@ export function carriedWaterVessel(pawn: {
   inventory?: { instances?: ItemInstance[] };
   equipment?: PawnEquipment;
 }): ItemInstance | null {
-  let best: ItemInstance | null = null;
-  let bestL = 0;
+  return carriedDrinkVessel(pawn)?.inst ?? null;
+}
+
+/** Thirst points one litre of this fluid relieves. 0 for anything that is not a drink. */
+export function hydrationOf(itemId: string): number {
+  const def = itemDefById(itemId);
+  return def?.type === 'fluid' ? (def.hydration ?? 0) : 0;
+}
+
+/** A DRINK is any fluid that states what a litre of it does for thirst. */
+export function isDrinkId(itemId: string): boolean {
+  return hydrationOf(itemId) > 0;
+}
+
+/**
+ * The best drink this pawn is carrying — in its pack or worn — and which fluid it is. Ranked by the
+ * thirst it can actually relieve (litres × hydration), so a skin of water beats a mouthful of wine
+ * and a pawn does not try to rehydrate on whisky while carrying water.
+ */
+export function carriedDrinkVessel(pawn: {
+  inventory?: { instances?: ItemInstance[] };
+  equipment?: PawnEquipment;
+}): { inst: ItemInstance; itemId: string; litres: number } | null {
+  let best: { inst: ItemInstance; itemId: string; litres: number } | null = null;
+  let bestWorth = 0;
   const consider = (inst: ItemInstance | undefined) => {
     if (!inst) return;
-    const held = heldQuantity(inst, 'water');
-    if (held > bestL) {
-      best = inst;
-      bestL = held;
+    for (const e of inst.contents ?? []) {
+      const litres = e.litres ?? 0;
+      const worth = litres * hydrationOf(e.itemId);
+      if (worth > bestWorth) {
+        best = { inst, itemId: e.itemId, litres };
+        bestWorth = worth;
+      }
     }
   };
   for (const inst of pawn.inventory?.instances ?? []) consider(inst);
