@@ -3,11 +3,6 @@ import { jobService } from '$lib/game/services/JobService';
 import { designationService } from '$lib/game/services/DesignationService';
 import type { GameState, Job, Pawn } from '$lib/game/core/types';
 
-// Regression: harvesting/chopping a resource that sits on a stockpile tile must NOT destroy the
-// stockpile zone. Standing zones live in `zoneTiles`; one-shot action orders live in
-// `designations`. Completing a woodcut order clears only the order — the zone survives. (Before
-// the split both shared a single-value-per-tile map, so the zone vanished on harvest.)
-
 function makeState(partial: Partial<GameState> = {}): GameState {
   return {
     seed: 1,
@@ -72,11 +67,8 @@ describe('harvest on a stockpile tile preserves the zone', () => {
 
     const out = jobService.advanceJob('wc', 1, gs);
 
-    // The stockpile zone survives the chop…
     expect(out.zoneTiles?.['0,0']).toEqual(['stockpile']);
-    // …while the one-shot woodcut order is cleared.
     expect(out.designations['0,0']).toBeUndefined();
-    // And the felled tree drops onto the stockpile (absorbed as stored).
     expect((out.droppedItems ?? []).some((d) => d.stored)).toBe(true);
   });
 

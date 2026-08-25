@@ -1,17 +1,11 @@
-<!--
-  TradeModal.svelte — the barter screen (KINGDOMS-TRADE §4). Item-to-item barter with a running
-  balance: assemble an offer from the caravan's wares and the colony's stock, then press TRADE.
-  Nothing moves until the button — selection is not commitment. Prices are shifted by the
-  negotiating pawn's `trade` stat and kingdom relations; gold bars anchor at face value.
--->
 <script lang="ts">
   import { fade, scale } from 'svelte/transition';
   import { gameState } from '$lib/stores/gameState';
   import { uiState } from '$lib/stores/uiState';
   import { kingdomService } from '$lib/game/services/KingdomService';
   import { pawnStatService } from '$lib/game/services/PawnStatService';
-  import { availableAggregateFromDrops } from '$lib/game/core/GameState';
-  import { itemDefById } from '$lib/game/core/itemDefs';
+  import { availableAggregateFromDrops } from '$lib/game/core/state/stockpile';
+  import { itemDefById } from '$lib/game/core/defs/items';
   import TradeColumn from './TradeColumn.svelte';
   import type { TradeRow } from './TradeColumn.svelte';
 
@@ -20,14 +14,12 @@
   const pawn = $derived($gameState.pawns.find((p) => p.id === session?.pawnId) ?? null);
   const kingdom = $derived($gameState.kingdoms?.find((k) => k.id === party?.kingdomId) ?? null);
 
-  // The caravan may pack up (or be lost) while the screen is open — close with it.
   $effect(() => {
     if (session && (!party || !pawn)) uiState.closeTrade();
   });
 
   const tradeStat = $derived(pawn ? pawnStatService.evaluateStat('trade', pawn) : 1);
 
-  // Offer assembly — cleared on commit/close. Maps itemId → quantity offered.
   let receiveOffer = $state<Record<string, number>>({});
   let giveOffer = $state<Record<string, number>>({});
 

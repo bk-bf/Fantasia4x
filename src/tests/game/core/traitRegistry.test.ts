@@ -1,13 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import { DUELIST_TRAIT_ID } from '$lib/game/systems/rangedCombat';
-import { TRAIT_DATABASE } from '$lib/game/core/Culture';
-import { getTransientConditionDef } from '$lib/game/core/needs';
-import { PART_DEF_MAP, BOUND_NATURAL_WEAPONS } from '$lib/game/core/BodyParts';
+import { TRAIT_DATABASE } from '$lib/game/core/gen/culture';
+import { getTransientConditionDef } from '$lib/game/core/rules/body/conditions';
+import { PART_DEF_MAP, BOUND_NATURAL_WEAPONS } from '$lib/game/core/defs/bodyParts';
 import raritiesData from '$lib/game/database/items/rarities.jsonc';
 import type { Trait } from '$lib/game/core/types';
 
-// Every trait + legendary sub-capability.
-// The catalog is FLAT since the LINEAGES-II heritage flatten (no nested bundles).
 const ALL: Trait[] = TRAIT_DATABASE;
 const RARITY_IDS = new Set((raritiesData as { id: string }[]).map((r) => r.id));
 const KINDS = new Set(['stat', 'attribute', 'naturalGear', 'passive', 'wound', 'bodyMod']);
@@ -25,9 +23,6 @@ const STAT_KEYS = new Set([
   'charismaPenalty',
   'constitutionPenalty'
 ]);
-// ADR-028 NAMING LAW: a stat/attribute trait's NAME must not evoke a natural weapon/armor or a losable
-// body part — those imply a body-model mechanic the abstract trait lacks. Only body-touching kinds
-// (bodyMod/naturalGear/passive/wound) may carry an anatomical name.
 const ANATOMY_NAME_RE =
   /\b(bone|boned|skin|skinned|hide|scale|scaled|shell|carapace|claw|clawed|horn|horned|fang|fanged|tusk|eyed|one-eyed|ear|winged|feather|feathered|furred|joint|jointed)\b/i;
 
@@ -67,8 +62,6 @@ describe('TRAIT-SYSTEM-V2 trait registry', () => {
   it('kind matches payload: bodyMod modifies the body, naturalGear links a granting condition', () => {
     for (const t of ALL) {
       if (t.kind === 'bodyMod') {
-        // A bodyMod reshapes the body — either by tuning existing parts (bodyMods[]) or by GRAFTING
-        // new limbs/parts (grafts[], e.g. Spider Eyes). Needs at least one of the two.
         expect(
           (t.bodyMods?.length ?? 0) + (t.grafts?.length ?? 0),
           `${t.id} bodyMod needs bodyMods[] or grafts[]`
@@ -81,23 +74,17 @@ describe('TRAIT-SYSTEM-V2 trait registry', () => {
           ).toBe(true);
       }
       if (t.kind === 'naturalGear') {
-        // ADR-029: gear lives on the TRAIT — a natural weapon list, an armour magnitude (scalar or
-        // per-part armorMods), or a host-gated UTILITY selfCondition (wings → moveSpeed while a wing
-        // survives). The old condition indirection (grantsNaturalWeapon/grantsNaturalArmor) is retired.
         const utilityCond = t.selfCondition ? getTransientConditionDef(t.selfCondition) : undefined;
         const utility =
           !!utilityCond?.hostParts?.length && Object.keys(utilityCond?.modifiers ?? {}).length > 0;
         const grants =
           !!t.naturalWeapons?.length || !!t.naturalArmor || !!t.armorMods?.length || utility;
         expect(grants, `${t.id} naturalGear grants nothing`).toBe(true);
-        // §3 natural armor IS gear: it eats a carry-capacity fraction (0<p<1).
         if (t.naturalArmor || t.armorMods?.length) {
           const p = t.carryPenalty ?? 0;
           expect(p, `${t.id} armor needs a carryPenalty`).toBeGreaterThan(0);
           expect(p, `${t.id} carryPenalty must stay < 1`).toBeLessThan(1);
         }
-        // ADR-029: every natural weapon id must be a real item AND be bound to a limbmap part
-        // (part.weapons is the source + host-gate — an unbound id would be un-hosted/ungated).
         for (const id of t.naturalWeapons ?? []) {
           expect(BOUND_NATURAL_WEAPONS.has(id), `${t.id} weapon ${id} not bound to any part`).toBe(
             true
@@ -105,7 +92,6 @@ describe('TRAIT-SYSTEM-V2 trait registry', () => {
         }
       }
       if (t.kind === 'wound') {
-        // §4: the affliction IS the injury — a wounds payload, no stat fudge riding along.
         expect(t.wounds?.length, `${t.id} wound-kind needs wounds[]`).toBeGreaterThan(0);
         expect(Object.keys(t.effects ?? {}), `${t.id} wound-kind must carry no effects`).toEqual(
           []
@@ -113,7 +99,6 @@ describe('TRAIT-SYSTEM-V2 trait registry', () => {
         for (const w of t.wounds ?? []) {
           const def = PART_DEF_MAP[w.part];
           expect(def, `${t.id} wound part ${w.part} not in limbmap`).toBeTruthy();
-          // Non-lethal at spawn: never stamp a vital/critical part.
           expect(def?.isVital || def?.isCritical, `${t.id} targets vital ${w.part}`).toBeFalsy();
         }
       }
@@ -125,38 +110,26 @@ describe('TRAIT-SYSTEM-V2 trait registry', () => {
       if (t.rarity === 'rare' || t.rarity === 'epic' || t.rarity === 'mythic') {
         const capable =
           !!t.selfCondition ||
-          !!t.triggeredCondition || // a meter-triggered condition (berserker rage) is a capability
-          !!t.lineage?.length || // LINEAGES: a marker's capability is the tree it opens
-          !!t.naturalWeapons?.length || // ADR-029: a natural weapon is a capability
+          !!t.triggeredCondition ||
+          !!t.lineage?.length ||
+          !!t.naturalWeapons?.length ||
           !!t.naturalArmor ||
           !!t.armorMods?.length ||
-          !!t.aura || // §6a: an aura is a capability
-          (t.grafts?.length ?? 0) > 0 || // §3d: growing a real limb is a capability
-          (t.bodyMods?.length ?? 0) > 0 || // an epic body transformation (stone bones) is a capability
-          // TRAIT-LIBRARY-EXPANSION §1/§2: a SIGNIFICANT stat/attribute payload (the ±3/±5 rungs and
-          // the significant combos deliberately sit at rare/epic) is a legitimate high-rarity pull —
-          // as is an affinity passive's payload (nocturnal's night sight) or a covering/affinity's typed
-          // resistances (ever-warm), now that those live on the TRAIT (effects / the resistances block).
-          // COMBAT-BALANCE 12a: the duel grip is unlocked by a TRAIT, and that unlock (+28% damage,
-          // +10% pen, +5% crit) is its whole payload — it carries no `effects` block because the
-          // capability lives in `getGrip`, not in the stat engine.
+          !!t.aura ||
+          (t.grafts?.length ?? 0) > 0 ||
+          (t.bodyMods?.length ?? 0) > 0 ||
           t.id === DUELIST_TRAIT_ID ||
           ((t.kind === 'stat' || t.kind === 'attribute' || t.kind === 'passive') &&
             (Object.keys(t.effects ?? {}).length > 0 ||
               Object.keys(t.resistances ?? {}).length > 0));
         expect(capable, `${t.id} (${t.rarity}) carries no capability`).toBe(true);
       }
-      // LINEAGES flat model: a legendary/mythic non-stat trait must be a lineage MARKER (`lineage`
-      // set — the tree it opens IS the capability). The §2d grand STAT pulls (Paragon Blood /
-      // Godtouched) are deliberate single traits — exempt. Nested bundles no longer exist.
       if ((t.rarity === 'legendary' || t.rarity === 'mythic') && t.kind !== 'stat')
         expect(!!t.lineage?.length, `${t.id} ${t.rarity} must be a lineage marker`).toBe(true);
     }
-    // every evolvesTo target exists
     const ids = new Set(ALL.map((t) => t.id));
     for (const t of ALL)
       if (t.evolvesTo) expect(ids.has(t.evolvesTo), `evolvesTo ${t.evolvesTo}`).toBe(true);
-    // §3a stage chains are ordered: a staged trait's evolvesTo target is the NEXT stage.
     const byId = new Map(ALL.map((t) => [t.id, t]));
     for (const t of ALL) {
       if (t.stage && t.evolvesTo) {
@@ -170,8 +143,6 @@ describe('TRAIT-SYSTEM-V2 trait registry', () => {
   });
 
   it('TRAITS §0: resistances live in the `resistances` block, never in `effects`', () => {
-    // §0a: a resistance is carried by the dedicated `resistances` block on coverings/affinities — NEVER
-    // smuggled into the generic `effects` bag (where it read as a free-floating pawn-wide stat rider).
     const RESISTANCE_KEYS = [
       'fireResistance',
       'coldResistance',
@@ -194,8 +165,6 @@ describe('TRAIT-SYSTEM-V2 trait registry', () => {
   });
 
   it('TRAITS §0: a granter kind carries NO effects — the granted object has the numbers (claw family exempt)', () => {
-    // Owner exemption: a hand-REPLACEMENT's manipulation cost/benefit stays on the gear trait (claws,
-    // pincers, plating) — everything else routes through the weapon item / condition / part grants.
     const EXEMPT = new Set([
       'rending-claws',
       'ripping-talons',
@@ -214,9 +183,6 @@ describe('TRAIT-SYSTEM-V2 trait registry', () => {
   });
 
   it('TRAITS §0: a trait never carries a weapon proc or a raw damage rider (procs live on the weapon item)', () => {
-    // §0 forbidden fields: the old trait-level `onHitCondition` (venom/flame "rides your steel" — a
-    // double-proc that duplicated the fang weapon's own proc) and `weaponBonus` (folded into
-    // `combatMods.melee_damage`). The Trait type no longer declares them; assert no DATA smuggles them.
     for (const t of ALL) {
       const raw = t as unknown as Record<string, unknown>;
       expect(
@@ -261,7 +227,6 @@ describe('TRAIT-SYSTEM-V2 trait registry', () => {
           6
         );
       }
-      // §3d grafts reference real limbmap parts.
       for (const g of t.grafts ?? [])
         for (const pid of g.parts)
           expect(PART_DEF_MAP[pid], `${t.id} grafts unknown part ${pid}`).toBeTruthy();
@@ -272,21 +237,18 @@ describe('TRAIT-SYSTEM-V2 trait registry', () => {
     const byId = Object.fromEntries(ALL.filter((t) => t.id).map((t) => [t.id!, t]));
     const ws = (id: string) =>
       (byId[id]?.effects as { workSpeed?: Record<string, number> })?.workSpeed;
-    expect(ws('iron-skin')?.mining).toBeUndefined(); // metallic skin ≠ mining
-    expect(ws('frost-born')?.fishing).toBeUndefined(); // cold resistance ≠ fishing skill
+    expect(ws('iron-skin')?.mining).toBeUndefined();
+    expect(ws('frost-born')?.fishing).toBeUndefined();
     expect(ws('strong-backed')?.mining).toBeUndefined();
     expect(ws('feathered')?.foraging).toBeUndefined();
     expect(ws('berserker-blood')?.hunting).toBeUndefined();
     expect(ws('nocturnal')?.hunting).toBeUndefined();
-    // waterborn→fishing is LOGICAL and stays (the mundane water-affinity trait forked off amphibious)
     expect(ws('waterborn')?.fishing).toBeGreaterThan(1);
   });
 
   it('flaw tier: every negative-rarity trait is a pure downside (no upside effect)', () => {
     for (const t of ALL) {
       if (t.rarity !== 'negative') continue;
-      // A flaw's effects must contain NO positive term. Core-stat grants are SIGNED now, so a flaw's
-      // `*Bonus` has to be negative — the key no longer tells you the direction, the value does.
       for (const [k, v] of Object.entries(t.effects ?? {})) {
         if (typeof v === 'number')
           expect(v <= 0, `${t.id} (flaw) has an upside: ${k}=${v}`).toBe(true);

@@ -1,13 +1,10 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { spawnKingdomParty, despawnKingdomParty } from '$lib/game/services/entity/kingdomParties';
 import { kingdomService } from '$lib/game/services/KingdomService';
-import { generateCulturePool, generateCultureRelations } from '$lib/game/core/Culture';
-import { generateKingdomPool, generateKingdomRelations } from '$lib/game/core/Kingdom';
-import { rng } from '$lib/game/core/rng';
+import { generateCulturePool, generateCultureRelations } from '$lib/game/core/gen/culture';
+import { generateKingdomPool, generateKingdomRelations } from '$lib/game/core/gen/kingdom';
+import { rng } from '$lib/game/core/util/rng';
 import type { GameState, Kingdom } from '$lib/game/core/types';
-
-// KINGDOMS-TRADE §3: party spawn/despawn + the daily arrival scheduler. Exercises the new
-// kingdom_* creature defs (body plans, natural weapons) and the guard_* lootpools end-to-end.
 
 function plainsState(): GameState {
   const worldMap = Array.from({ length: 80 }, (_, y) =>
@@ -36,7 +33,6 @@ function withKingdoms(state: GameState): { state: GameState; kingdom: Kingdom } 
   const cultureRelations = generateCultureRelations(cultures);
   const kingdoms = generateKingdomPool(cultures, 8);
   const kingdomRelations = generateKingdomRelations(kingdoms, cultureRelations, cultures[0].id);
-  // Warm every colony relation so an eligible sender always exists.
   for (const r of kingdomRelations) if (r.a === 'colony' || r.b === 'colony') r.score = 50;
   const friendly = kingdoms.find((k) => k.relationBias === 'derived')!;
   return {
@@ -60,13 +56,11 @@ describe('spawnKingdomParty', () => {
     expect(members.some((m) => m.partyRole === 'guard')).toBe(true);
     for (const m of members) {
       expect(m.kingdomId).toBe(kingdom.id);
-      // Goal-directed march toward the colony (no leash).
       expect(m.state).toBe('Traveling');
       expect(m.travelGoalX).toBeDefined();
       expect(m.travelGoalY).toBeDefined();
       expect(m.lairId).toBeUndefined();
     }
-    // Guards drew a wealth-rung loadout from the guard_* pools.
     const guards = members.filter((m) => m.partyRole === 'guard');
     expect(guards.some((g) => g.equipment && Object.keys(g.equipment).length > 0)).toBe(true);
     expect(party.stock).toEqual([{ itemId: 'copper_bar', qty: 5 }]);
@@ -89,22 +83,18 @@ describe('kingdomService.processKingdomsDaily — arrival scheduling', () => {
     state = kingdomService.processKingdomsDaily(state);
     expect(state.nextKingdomVisitTurn).toBeGreaterThan(0);
 
-    // Fast-forward to the due date and run the daily pass again.
     state = { ...state, turn: state.nextKingdomVisitTurn! };
     state = kingdomService.processKingdomsDaily(state);
     expect(state.pendingEvent?.kind).toBe('kingdom-arrival');
     expect(state.kingdomParties).toHaveLength(1);
     const party = state.kingdomParties![0];
     expect((state.mobs ?? []).filter((m) => m.partyId === party.id).length).toBeGreaterThan(0);
-    // The sender is discovered with first-contact knowledge, and the clock is rearmed.
     const sender = state.kingdoms!.find((k) => k.id === party.kingdomId)!;
     expect(sender.discovered).toBe(true);
     expect(sender.knowledge).toBeGreaterThan(0);
-    // RACE-SYSTEM Phase 2: first contact introduces the sender's dominant culture to the pokédex.
     const dominant = sender.cultureMix[0]?.cultureId;
     expect(state.culturePool!.find((c) => c.id === dominant)?.discovered).toBe(true);
     expect(state.nextKingdomVisitTurn).toBeGreaterThan(state.turn);
-    // A caravan always leads its manifest with gold bars (the barter anchor).
     if (party.kind === 'caravan') {
       expect(party.stock[0]?.itemId).toBe('gold_bar');
     }

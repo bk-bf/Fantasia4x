@@ -2,7 +2,6 @@ import { describe, it, expect } from 'vitest';
 import { pawnStateMachineService } from '$lib/game/systems/PawnStateMachine';
 import type { GameState, Pawn } from '$lib/game/core/types';
 
-// Drives the public tick(); the WASM pathfinder is never initialised in tests, so the "can't path / eat-in-place / stay put" branches are the deterministic ones pinned here.
 function makePawn(over: Partial<Pawn> = {}): Pawn {
   return {
     id: 'p1',
@@ -78,7 +77,6 @@ describe('PawnStateMachine handler behaviour locks', () => {
         pawns: [makePawn({ currentState: 'Idle', needs: needs({ hunger: 85 }) })],
         stockpile: {}
       });
-      // No food → stays Idle (and, with the pathfinder unavailable in tests, never picks work).
       expect(tick1(gs).pawns[0].currentState).toBe('Idle');
     });
 
@@ -163,22 +161,18 @@ describe('PawnStateMachine handler behaviour locks', () => {
     it('fetches stockpiled food into its pack, then eats it from inventory (no ethereal stockpile)', () => {
       const gs = makeState({
         pawns: [makePawn({ currentState: 'Hungry', needs: needs({ hunger: 85 }) })],
-        // Physical food sitting on the pawn's tile (5,5); the aggregate mirrors the stored drop.
         droppedItems: [
           { id: 'd1', resourceId: 'wild_oats', x: 5, y: 5, quantity: 5, stored: true } as never
         ],
-        stockpile: { wild_oats: 5 } // nutrition 39 → 2 units cover the 75-point deficit
+        stockpile: { wild_oats: 5 }
       });
-      // Tick 1: standing on the food → it picks a serving up into its pack, re-evaluating as Hungry.
       const afterPickup = tick1(gs);
       expect(afterPickup.pawns[0].currentState).toBe('Hungry');
       const carried = afterPickup.pawns[0].inventory?.items?.wild_oats ?? 0;
       expect(carried).toBeGreaterThan(0);
-      // Tick 2: carrying food, no campfire → eats it in place FROM ITS OWN INVENTORY.
       const out = tick1(afterPickup);
       expect(out.pawns[0].currentState).toBe('Eating');
       expect(out.pawns[0].activeJob?.hungerToRecover ?? 0).toBeGreaterThan(0);
-      // The food came out of the pawn's pack, not teleported from the colony aggregate.
       expect(out.pawns[0].inventory?.items?.wild_oats ?? 0).toBeLessThan(carried);
     });
 
@@ -191,7 +185,6 @@ describe('PawnStateMachine handler behaviour locks', () => {
     });
 
     it('does NOT eat from the ethereal aggregate when no physical drop is reachable', () => {
-      // Aggregate says there's food but no DroppedItem exists — the pawn must not consume it out of thin air.
       const gs = makeState({
         pawns: [makePawn({ currentState: 'Hungry', needs: needs({ hunger: 85 }) })],
         droppedItems: [],
@@ -200,7 +193,7 @@ describe('PawnStateMachine handler behaviour locks', () => {
       const out = tick1(gs);
       expect(out.pawns[0].currentState).toBe('Idle');
       expect(out.pawns[0].currentState).not.toBe('Eating');
-      expect(out.stockpile.wild_oats).toBe(5); // nothing consumed from the ethereal pool
+      expect(out.stockpile.wild_oats).toBe(5);
     });
   });
 });

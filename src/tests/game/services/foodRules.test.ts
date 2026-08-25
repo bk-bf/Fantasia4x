@@ -12,7 +12,7 @@ import {
 describe('foodRules — colony food filter', () => {
   it('the default eat-list EXCLUDES rotten food and raw carcasses', () => {
     const def = new Set(getDefaultAllowedFoodIds());
-    expect(def.has('wild_berries')).toBe(true); // normal food allowed
+    expect(def.has('wild_berries')).toBe(true);
     expect(def.has('rotten_food')).toBe(false);
     expect(def.has('rotten_meat')).toBe(false);
     expect(def.has('rabbit_carcass')).toBe(false);
@@ -29,10 +29,8 @@ describe('foodRules — colony food filter', () => {
   it('a raw carcass is edible (nutrition derived from body mass), normal food uses its own nutrition', () => {
     expect(isCarcass({ id: 'rabbit_carcass' })).toBe(true);
     expect(isCarcass({ id: 'wild_berries' })).toBe(false);
-    // rabbit_carcass: weight 1.5kg × 2 = 3; bear_carcass: 60 × 2 = 120
     expect(edibleNutrition({ id: 'rabbit_carcass', weightKg: 1.5 })).toBe(3);
     expect(edibleNutrition({ id: 'bear_carcass', weightKg: 60 })).toBe(120);
-    // explicit nutrition wins over the carcass derivation / default
     expect(edibleNutrition({ id: 'wild_berries', nutrition: 3 })).toBe(3);
     expect(edibleNutrition({ id: 'x', nutrition: 0 })).toBe(0);
     expect(isEdibleFood({ id: 'rabbit_carcass', category: 'food' } as never)).toBe(true);
@@ -52,7 +50,7 @@ describe('foodRules — colony food filter', () => {
     expect(resolveAllowedFoodIds({ allowedFoodItemIds: ['wild_berries'] })).toEqual(
       new Set(['wild_berries'])
     );
-    expect(resolveAllowedFoodIds({ allowedFoodItemIds: [] }).size).toBe(0); // "eat nothing"
+    expect(resolveAllowedFoodIds({ allowedFoodItemIds: [] }).size).toBe(0);
     expect(resolveAllowedFoodIds(undefined)).toEqual(new Set(getDefaultAllowedFoodIds()));
   });
 });

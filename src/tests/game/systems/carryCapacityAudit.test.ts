@@ -1,21 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { generateCulture } from '$lib/game/core/Culture';
+import { generateCulture } from '$lib/game/core/gen/culture';
 import { generatePawns } from '$lib/game/entities/Pawns';
 import { itemService } from '$lib/game/services/ItemService';
-import { rng } from '$lib/game/core/rng';
+import { rng } from '$lib/game/core/util/rng';
 import type { GameState, Pawn } from '$lib/game/core/types';
-
-/**
- * CARRY-CAPACITY AUDIT — can a pawn actually afford the kit its build wants?
- *
- * The armour audit found that a one-handed pawn wears full plate AND a shield without ever becoming
- * encumbered, which erases the trade the design rests on: heavy armour is supposed to demand STRENGTH,
- * and a one-handed build's dominant stat is DEXTERITY. This measures whether the capacity curve
- * actually enforces that, across pawns drawn the way a real game draws them.
- *
- * Load already counts everything worn AND wielded (`getCurrentCarryLoad` sums `pawn.equipment`), so
- * shields and weapons do pay their weight. The question is entirely the CAPACITY side.
- */
 
 const KITS: Record<string, string[]> = {
   light: [
@@ -37,7 +25,6 @@ const kg = (ids: string[]) =>
 
 const state = { turn: 0 } as unknown as GameState;
 
-/** Encumbrance bands the condition uses: the ratio of load to capacity. */
 const band = (ratio: number) =>
   ratio <= 0.75 ? 'free' : ratio <= 1.0 ? 'comfortable' : ratio <= 1.25 ? 'burdened' : 'overloaded';
 
@@ -71,9 +58,6 @@ describe('CARRY CAPACITY — does the curve gate heavy armour on strength?', () 
       `             bodyweight median ${q(weights, 0.5).toFixed(0)}kg · capacity median ${q(caps, 0.5).toFixed(1)}kg (p5 ${q(caps, 0.05).toFixed(1)} · p95 ${q(caps, 0.95).toFixed(1)})`
     );
 
-    // The old formula was `bodyWeight × clamp(strength × 0.012, 0.05, 0.3)` and that clamp BOUND at
-    // strength 25 — above it strength bought nothing, and mass decided the budget. Pin that it is gone: two
-    // pawns of the same body but very different strength must now differ.
     const body = { physicalTraits: { weight: 80, height: 170 }, equipment: {} };
     const capAt = (b: number) =>
       itemService.getCarryCapacityBreakdown({ ...body, stats: { strength: b } } as unknown as Pawn)
@@ -82,10 +66,6 @@ describe('CARRY CAPACITY — does the curve gate heavy armour on strength?', () 
       `             strength still pays above 25: cap(25) ${capAt(25).toFixed(1)}kg → cap(60) ${capAt(60).toFixed(1)}kg ` +
         `(was flat at the 0.30 clamp)`
     );
-    // The magnitude is deliberately GENTLE (high base, 0.19/strength slope): strength decides which
-    // armour CLASS you wear, not whether you can dress at all, and a strength-60 legend is superhuman
-    // rather than a beast of burden. What must never come back is the old clamp where strength bought
-    // nothing at all past 25 — so pin a real, meaningful gain, not the old steep one.
     expect(capAt(60), 'strength must keep paying past the old clamp').toBeGreaterThan(capAt(25) * 1.25);
 
     rows.push('');
@@ -124,7 +104,6 @@ describe('CARRY CAPACITY — does the curve gate heavy armour on strength?', () 
     }
     console.log(rows.join('\n'));
 
-    // The design claim under test: a heavy kit must be something MOST pawns cannot simply wear.
     const heavyOk = afford['1H + shield + HEAVY'].free + afford['1H + shield + HEAVY'].comfortable;
     console.log(
       `\n  → ${((heavyOk / pop.length) * 100).toFixed(0)}% of ALL pawns can wear plate + shield + sword unencumbered.` +

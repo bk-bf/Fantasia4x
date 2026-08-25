@@ -3,11 +3,6 @@ import { buildScenario } from '$lib/game/headless/Scenario';
 import { HeadlessSession } from '$lib/game/headless/HeadlessSession';
 import type { Pawn } from '$lib/game/core/types';
 
-/**
- * Soap used to be a craftable with no effect at all — two tallow and two ash for an item the sim
- * never read. A wash with soap now stamps `clean`, which holds `hygieneRate` at 0 for a day, so the
- * grime that a river rinse only postpones actually stays off.
- */
 async function run(soap: number) {
   const s = new HeadlessSession();
   await s.start(
@@ -18,7 +13,7 @@ async function run(soap: number) {
       researchMaxTier: 9,
       toolTier: 3,
       pawns: [{ count: 3, skillLevel: 15 }],
-      needsDisabled: ['hunger', 'fatigue', 'thirst'], // hygiene LEFT ON
+      needsDisabled: ['hunger', 'fatigue', 'thirst'],
       buildings: [{ id: 'craft_spot' }, { id: 'well' }],
       items: soap ? { soap } : {},
       seedEntities: false
@@ -48,9 +43,6 @@ describe('soap', () => {
     expect(withSoap.soapLeft, 'washing actually spent soap').toBeLessThan(20);
     expect(withSoap.cleanTicks, 'pawns carried the Clean condition').toBeGreaterThan(0);
     expect(without.cleanTicks, 'and never do without soap').toBe(0);
-    // Comparing colony-wide mean grime is too noisy to assert on — pawns wash rarely, so the two runs
-    // land within a hair of each other. What is actually being claimed is narrower and checkable: a
-    // pawn carrying `clean` accrues no grime at all.
     const s2 = new HeadlessSession();
     await s2.start(
       buildScenario({

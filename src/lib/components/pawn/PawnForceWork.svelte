@@ -83,7 +83,6 @@
     color: var(--bg);
     font-weight: 600;
   }
-  /* The FORCE side, when active, reads as a danger state (it can kill the pawn). */
   .seg-btn.danger.active {
     background: var(--neg, #c0392b);
     color: #fff;

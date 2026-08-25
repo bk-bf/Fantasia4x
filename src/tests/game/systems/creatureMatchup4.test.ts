@@ -1,12 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { runShard, shardOf, WEAPONS, SEEDS, ARMOUR_KEYS } from './creatureMatchupHarness';
 
-/**
- * WEAPON x CREATURE, shard 4 of 8 — see `creatureMatchupHarness.ts` for the design.
- *
- * One shard per file so the eight run at once. Shards are round-robin over the creature list, so each
- * gets a mix of tiers and they finish at about the same time.
- */
 describe('WEAPON x CREATURE — shard 4', () => {
   it('every weapon against this shard of the real hostile creatures', async () => {
     const rows = await runShard(4);

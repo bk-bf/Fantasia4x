@@ -1,36 +1,15 @@
-/**
- * simWorkerClient — main-thread side of the sim worker (ADR-021, sim→Worker).
- *
- * Two things:
- *  1. `verifyWasmInWorker()` — W1 standalone WASM-in-worker check (console, dev).
- *  2. `simWorkerBridge` — the sim runs here (ADR-021 W4 complete): spawns the sim worker, forwards
- *     commands + lifecycle, and reassembles the worker's snapshots into the store projection. This is
- *     now the ONLY sim path in the browser (`USE_SIM_WORKER` = `isClientRuntime`); the `?simworker`
- *     opt-in flag is retired.
- */
-import { isClientRuntime } from '../core/runtime';
+import { isClientRuntime } from '../core/util/runtime';
 import { realSimLogSink } from '../../stores/simLogBridge';
 import {
   markRenderTileDirty,
   markSnowRenderTileDirty,
   clearRenderTileDeltas
-} from '../../components/UI/gameCanvas/mainTileDeltas';
+} from '../../components/UI/canvas/mainTileDeltas';
 import { batchLogReplay } from '../../stores/Log';
-import { vlog, setVerboseLogging } from '../core/logSink';
+import { vlog, setVerboseLogging } from '../core/util/logSink';
 import type { SimLogEvent, EntitySync } from './simProtocol';
 import type { GameState, Pawn, Mob, WorldTile, DroppedItem } from '../core/types';
 
-/**
- * Apply a per-entity sync (W2b) onto a per-id mirror, returning the reconstructed array in order.
- * A `full` resync replaces the mirror; otherwise slim upserts are merged onto the mirror (so cold
- * fields persist between resyncs), full upserts (newly-seen ids) replace, and `removed` ids are
- * reaped. Each merge makes a NEW object so downstream reactivity still fires.
- */
-// Update the per-id mirror from a delta — upserts MERGED (pawns/mobs: hot+cold split) or REPLACED
-// wholesale (`replace`=drops, sent as a complete slim object), removed deleted, `full` resets it.
-// Split out from the array rebuild so a PAUSED client can keep the mirror in sync CHEAPLY (no array,
-// no render) — a per-id EntitySync cannot skip frames (a later frame's `order` references ids whose
-// upsert rode an earlier frame, so dropping a frame strands them → `mirror.get` undefined → crash).
 function updateEntityMirror<T extends { id: string }>(
   mirror: Map<string, T>,
   sync: EntitySync<T>,
@@ -52,8 +31,6 @@ function updateEntityMirror<T extends { id: string }>(
   for (const id of sync.removed) mirror.delete(id);
 }
 
-// Reconstruct the ordered array after updating the mirror. `.filter` is defensive: a healthy delta
-// keeps `order ⊆ mirror`, but a stranded id must never crash a downstream `.filter(d => d.stored)`.
 function applyEntitySync<T extends { id: string }>(
   mirror: Map<string, T>,
   sync: EntitySync<T>
@@ -100,43 +77,18 @@ export function verifyWasmInWorker(): void {
   w.postMessage({ kind: 'wasm-check' });
 }
 
-/**
- * The sim ALWAYS runs in the worker now (ADR-021 W4 complete — the `?simworker` opt-in flag is
- * retired). True in any browser runtime; false only under SSR/tests (no worker, no tick loop), where
- * the engine is driven directly by the test/headless caller.
- */
 export const USE_SIM_WORKER: boolean = isClientRuntime;
 
-/**
- * Bridge to the sim worker. The worker owns GameState + the tick loop; this forwards commands and
- * lifecycle, caches the (rarely-sent) worldMap, and reattaches it to each snapshot before handing a
- * full GameState to the store projection.
- */
 class SimWorkerBridge {
   private w: Worker | null = null;
   private worldMap: GameState['worldMap'] = [];
-  /** Mirror of the worker's sent state, rebuilt from sectional diffs (W2). Each snapshot carries
-   *  only the top-level fields whose ref changed; unchanged sections are reused from here, so they
-   *  aren't re-cloned across the boundary. Reset on init to match the worker's `lastSent` baseline. */
   private lastState: Partial<GameState> = {};
-  /** Per-id entity mirrors (W2b): pawns/mobs arrive as slim-per-flush + periodic full resync, merged
-   *  here so cold fields persist between resyncs. Reset on init to match the worker's id baselines. */
   private pawnMirror = new Map<string, Pawn>();
   private mobMirror = new Map<string, Mob>();
-  /** Per-id mirror of dropped items, rebuilt from the `drops` per-id sync (W2b-style). */
   private dropMirror = new Map<string, DroppedItem>();
-  /** Store hook: full state projection per snapshot. `flush` = update held value AND notify+save
-   *  (~15Hz); between flushes only the held value is refreshed (per-tick positions for the renderer). */
   onState: ((s: GameState, flush: boolean) => void) | null = null;
-  /** Store hook: a requested full state (for explicit save). */
   onFullState: ((s: GameState) => void) | null = null;
-  /** Mirror of the worker's paused flag. While true the client DROPS per-tick (non-commit) snapshots
-   *  so the renderer can't be raced by in-flight tick frames after the user hits pause (the worker
-   *  takes up to one batch to actually stop). Commit snapshots — command results + the pause hand-off
-   *  — are always applied so player actions while paused still render. */
   private paused = false;
-  /** Settings → Debug mode: mirror of the verbose-logging gate. Re-sent on every (re)init so a freshly
-   *  spawned worker inherits the current setting. */
   private verbose = false;
 
   start(): void {
@@ -148,13 +100,10 @@ class SimWorkerBridge {
 
   init(state: GameState, seed: number, opts?: { preview?: boolean }): void {
     this.worldMap = state.worldMap;
-    this.lastState = {}; // matches the worker resetting its sectional-diff baseline on init
+    this.lastState = {};
     this.pawnMirror.clear();
     this.mobMirror.clear();
     this.dropMirror.clear();
-    // `preview` (menu backdrop) makes the engine run a gutted turn; the real boot omits it ⇒ false.
-    // `verbose` rides the init payload so a freshly spawned worker has the correct gate from its very
-    // first tick (no dependence on a follow-up message landing before logging starts).
     this.w?.postMessage({
       kind: 'init',
       state,
@@ -169,17 +118,12 @@ class SimWorkerBridge {
   setSpeed(speed: number): void {
     this.w?.postMessage({ kind: 'setSpeed', speed });
   }
-  /** Settings → Debug mode toggle: enable/disable the verbose sim traces at runtime. Flips both the
-   *  worker's gate (where the per-tick sim runs) and this thread's own gate (main-thread `vlog` calls,
-   *  e.g. the ITEM-DBG receive trace). */
   setVerbose(on: boolean): void {
     this.verbose = on;
-    setVerboseLogging(on); // main-thread copy
+    setVerboseLogging(on);
     this.w?.postMessage({ kind: 'setVerbose', on });
   }
   setPaused(paused: boolean): void {
-    // Set the client gate FIRST (synchronously) so any tick snapshots already queued from the worker
-    // are dropped on arrival — the render freezes the instant the user clicks, not a batch later.
     this.paused = paused;
     this.w?.postMessage({ kind: 'setPaused', paused });
   }
@@ -201,30 +145,14 @@ class SimWorkerBridge {
     events?: SimLogEvent[];
   }): void {
     if (m.kind === 'snapshot') {
-      // Apply worldMap + lastState + per-id mirrors on EVERY frame so the delta protocol stays
-      // consistent (frames can't be skipped — see updateEntityMirror).
       if (m.worldMap) {
         this.worldMap = m.worldMap;
-        // ADR-026: a full worldMap send (worldgen / game-load) → GameCanvas does a full rebuild that
-        // repaints every cell, so any pending per-tile coords are moot (mirrors worker clearTileDeltas).
         clearRenderTileDeltas();
       } else if (m.worldMapDelta) {
-        // Merge each SLIM delta tile (§D) onto the full cached tile: only render/movement fields are
-        // shipped during harvest; the rest are preserved from the cached tile (they don't change on a
-        // regrowth/harvest delta). Cheap vs. re-cloning full tiles; renderer rebuilds off _terrainRev.
         for (const d of m.worldMapDelta) {
           const row = this.worldMap[d.y];
           if (row) {
-            // ADR-026: record the coord so GameCanvas repaints ONLY this cell (no whole-map scan).
-            // `k: 1` = snow/ice-only change → route to the snow channel, so a snow-onset wave
-            // repaints just the blended snow layer instead of re-baking terrain+resource cells.
             if (d.k === 1) {
-              // PERF: a whole-map snow onset/melt ships ~one delta PER TILE in a single snapshot. The
-              // slim snow delta carries only snow/ice, so MUTATE the cached mirror tile in place rather
-              // than cloning a fresh full tile per delta — the spread allocated ~150k tiles/snapshot,
-              // whose GC + copy was an ~800ms main-thread stall (the snow "hiccup"). Safe: the mirror is
-              // the main thread's own copy (the worker owns its GameState separately), and snow repaint
-              // is driven by the dirty COORD below, not by tile identity. (ADR-002 hot-path exception.)
               Object.assign(row[d.x], d.tile);
               markSnowRenderTileDirty(d.y, d.x);
             } else {
@@ -234,16 +162,8 @@ class SimWorkerBridge {
           }
         }
       }
-      // Merge the sectional diff onto the mirror: changed fields overwrite, unchanged ones keep
-      // their refs (no re-clone). pawns/mobs are reconstructed from their per-entity mirrors and
-      // worldMap from its own cache. A new top-level object each flush keeps the store reactive.
       this.lastState = { ...this.lastState, ...(m.state as object) };
 
-      // While paused, keep the per-id mirrors CURRENT (so the delta protocol stays valid) but skip the
-      // O(entities) array rebuild + render notify — this freezes the renderer the instant the user
-      // pauses without it being raced by in-flight tick frames. Commit frames (command results + the
-      // pause hand-off) fall through and render. (Replaces the old "drop the whole frame", which
-      // stranded per-id upserts → undefined holes → the currentStockpile `d.stored` crash.)
       if (this.paused && !m.commit) {
         if (m.pawns) updateEntityMirror(this.pawnMirror, m.pawns, false);
         if (m.mobs) updateEntityMirror(this.mobMirror, m.mobs, false);
@@ -251,10 +171,6 @@ class SimWorkerBridge {
         return;
       }
 
-      // ITEM-DBG: confirm the main thread actually RECEIVED a pawn's inventory upsert (the other end
-      // of the worker's "SYNC→main shipped" line). Worker shipped + here received = the change reached
-      // the store, so a still-empty carry card is a render bug. Worker shipped but NO line here = the
-      // delta was lost in transit (dropped/raced flush). Cheap: only fires on a real inventory upsert.
       if (m.pawns && 'upserts' in m.pawns) {
         for (const u of m.pawns.upserts) {
           if (u && 'inventory' in u) {
@@ -279,9 +195,6 @@ class SimWorkerBridge {
         m.flush ?? true
       );
     } else if (m.kind === 'simlog') {
-      // Replay the worker's buffered chronicle/combat-text calls against the real (DOM) sink. Wrap the
-      // whole batch so the chronicle store fires ONE notification for the lot (a combat flood otherwise
-      // re-ran every derived view + panel per event — the engagement-start FPS dip).
       const sink = realSimLogSink as unknown as Record<string, (...a: unknown[]) => unknown>;
       const events = m.events ?? [];
       batchLogReplay(() => {
@@ -298,11 +211,8 @@ class SimWorkerBridge {
 
 export const simWorkerBridge = new SimWorkerBridge();
 
-// Dev convenience: callable from the browser console as `verifyWasmInWorker()`.
 if (isClientRuntime && import.meta.env.DEV) {
   (globalThis as Record<string, unknown>).verifyWasmInWorker = verifyWasmInWorker;
-  // R1 sim-core benchmark: `await runSimCoreBench()` (lazy — bench code stays out of the bundle
-  // until invoked). Optional args: (entities, width, height, ticks, reps).
   (globalThis as Record<string, unknown>).runSimCoreBench = async (...args: number[]) =>
     (await import('../sim-core/bench')).runSimCoreBench(...args);
 }

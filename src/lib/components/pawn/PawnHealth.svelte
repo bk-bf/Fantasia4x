@@ -1,10 +1,7 @@
-<!-- PawnHealth.svelte — Pawns-tab BODY section. Renders the SHARED HealthReadout (the same richer
-     readout the in-game info-card HEALTH pop-up uses: blood + bleed-out ETA, cold/heat, pain, combat
-     readiness, then every damaged limb with its injured sub-parts' HP + wounds). -->
 <script lang="ts">
   import type { Pawn } from '$lib/game/core/types';
-  import { buildHealthModel } from '$lib/components/UI/gameCanvas/selectionCard';
-  import HealthReadout from '$lib/components/UI/gameCanvas/HealthReadout.svelte';
+  import { buildHealthModel } from '$lib/components/UI/canvas/selectionCard';
+  import HealthReadout from '$lib/components/UI/canvas/HealthReadout.svelte';
 
   let { pawn }: { pawn: Pawn } = $props();
 

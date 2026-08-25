@@ -1,23 +1,9 @@
-// manifest.ts — the data-driven audio definition layer (the "what plays when", separate from the
-// AudioService "how"). Maps music SCENES → track playlists, and resolves the nature AMBIENT beds
-// from the live weather + day/night state. All files live under static/audio/ and are served at
-// /audio/... (same-origin in dev via Vite, bundled from static/ in a production build — so this works
-// identically in the browser and inside the Electron webview, no IPC).
-//
-// Adding/renaming a track: drop the file in static/audio/{music,ambient}/, update the path here, and
-// (for CC-BY) add the attribution to AUDIO-CREDITS.md. Nothing else references the filenames.
-
 import type { Season } from '$lib/game/core/types';
 
-/** Music layer — exactly one scene is active at a time (priority resolved in AudioController). */
 export type MusicScene = 'menu' | 'day' | 'night' | 'combat';
 
-/** Nature ambient beds — several can layer simultaneously (e.g. rain + wind), each with its own gain. */
 export type AmbientBed = 'birds-day' | 'night-crickets' | 'wind' | 'rain' | 'rain-heavy' | 'forest';
 
-// Files are organised static/audio/music/<bucket>/<scene>/ where <bucket> is `all` (year-round) or a
-// season id (spring/summer/autumn/winter), and <scene> is menu/combat/day/night. Menu + combat are
-// season-agnostic, so they only live under `all`.
 const MENU = ['/audio/music/all/menu/menu.ogg', '/audio/music/all/menu/menu-kingdom.ogg'];
 const COMBAT = [
   '/audio/music/all/combat/combat-1.ogg',
@@ -27,10 +13,6 @@ const COMBAT = [
   '/audio/music/all/combat/combat-5.ogg'
 ];
 
-// Day + night each play SHARED (year-round, under all/) tracks plus the ACTIVE season's own tracks, so
-// e.g. a winter day layers a winter-flavoured piece on top of the year-round day music. To give a
-// season its own track: drop the file in static/audio/music/<season>/{day,night}/ and add its path to
-// that season's list below. The seasonal pools start mostly empty — shared tracks carry every season.
 const DAY_SHARED = [
   '/audio/music/all/day/day-1.ogg',
   '/audio/music/all/day/day-2.ogg',
@@ -61,13 +43,6 @@ const NIGHT_SEASONAL: Record<Season, string[]> = {
   winter: []
 };
 
-/**
- * Resolve a scene's playlist. menu/combat are season-agnostic; day/night combine their SHARED pool
- * with the active season's own tracks. A scene with multiple tracks is played as a shuffled sequence
- * (AudioService advances on track end); a single-track scene effectively loops. Keep entries in sync
- * with the files in static/audio/music/ — a missing file just fails to load (Howler onloaderror), it
- * won't crash the app.
- */
 export function playlistFor(scene: MusicScene, season?: Season): string[] {
   switch (scene) {
     case 'menu':
@@ -81,24 +56,15 @@ export function playlistFor(scene: MusicScene, season?: Season): string[] {
   }
 }
 
-/** Looping campfire crackle, played for any lit fire building (campfire/hearth/furnace/…) in earshot.
- *  Driven by AudioController.evalFire → audioService.setFireLevel; volume scales with zoom + viewport. */
 export const FIRE_LOOP = '/audio/ambient/fire.ogg';
 
-/** Subtle UI feedback one-shots (hover/click on buttons). Played globally by AudioController's
- *  delegated listeners via audioService.playUi. Kenney UI SFX (CC0). */
 export const UI_SFX = {
   hover: '/audio/ui/hover.ogg',
   click: '/audio/ui/click.ogg'
 } as const;
 
-/** Alert one-shot: a trumpet/bugle call fired ONCE when a hostile mob first spots a colonist (the
- *  threatPulse signal). Played by AudioController via audioService.playUi — non-spatial (a colony-wide
- *  alarm, not tied to the camera), so it reads at full volume regardless of where the sighting happens.
- *  Public-domain US Army "Attention" bugle call. */
 export const THREAT_ALERT_SFX = '/audio/ui/threat-alert.ogg';
 
-/** Bed id → looping source file. */
 export const AMBIENT_FILES: Record<AmbientBed, string> = {
   'birds-day': '/audio/ambient/birds-day.ogg',
   'night-crickets': '/audio/ambient/night-crickets.ogg',
@@ -108,10 +74,8 @@ export const AMBIENT_FILES: Record<AmbientBed, string> = {
   forest: '/audio/ambient/forest.ogg'
 };
 
-/** Target gains for each currently-audible bed (0–1). Beds omitted from the map fade to silence. */
 export type AmbientLayers = Partial<Record<AmbientBed, number>>;
 
-// ── Human labels (for the now-playing / debug UI — raw filenames + bed ids are backend refs only). ──
 export const SCENE_LABELS: Record<MusicScene, string> = {
   menu: 'Menu',
   day: 'Day',
@@ -152,18 +116,10 @@ export const AMBIENT_LABELS: Record<AmbientBed, string> = {
   forest: 'Forest'
 };
 
-/** Display title for a music track url (falls back to the bare filename). */
 export function trackLabel(url: string | null): string {
   if (!url) return '—';
   return TRACK_LABELS[url] ?? url.split('/').pop() ?? url;
 }
-
-// ── Creature SFX ────────────────────────────────────────────────────────────────────────────────
-// Per-creature vocalisations, keyed by a small ARCHETYPE id (a `creatures.jsonc` "audio" value). Many
-// creatures share an archetype (every canine → "canine"). These play as INTERMITTENT ONE-SHOTS whose
-// volume + trigger rate scale with on-screen audibility (zoom + viewport proximity + count) —
-// computed in AudioController, played by audioService.playSfx. Each archetype lists 1+ clips; a random
-// one fires per trigger. Files live in static/audio/creatures/<id>/N.ogg.
 
 export type CreatureSoundId =
   | 'fowl'
@@ -218,17 +174,9 @@ export const CREATURE_SOUND_LABELS: Record<CreatureSoundId, string> = {
   rustle: 'Rustle'
 };
 
-/** Clips for an archetype id, or [] if the id is unknown. */
 export function creatureClips(id: string | undefined): string[] {
   return id && id in CREATURE_SFX ? CREATURE_SFX[id as CreatureSoundId] : [];
 }
-
-// ── Work SFX ──────────────────────────────────────────────────────────────────────────────────────
-// Medieval labour sounds keyed by WORK CATEGORY (Work.ts ids — woodcutting, mining, …). A working
-// pawn's category is resolved via jobService.getJobWorkCategory (which reads jobs.jsonc + the harvested
-// resource), so one `harvest` job still splits into woodcutting / mining / foraging by what's chopped.
-// jobs.jsonc JobDefs may also set an explicit `audio` override (jobService.getJobAudio), checked first.
-// Played as intermittent one-shots (chop… chop…) whose volume + rate scale with zoom + viewport.
 
 const workClips = (id: string, n: number): string[] =>
   Array.from({ length: n }, (_, i) => `/audio/work/${id}/${i + 1}.ogg`);
@@ -251,33 +199,23 @@ export const WORK_SOUND_LABELS: Record<string, string> = {
   planting: 'Planting'
 };
 
-/** Work clips for a category/override id, or [] if none exists for it. */
 export function workClipsFor(id: string | undefined): string[] {
   return id && id in WORK_SFX ? WORK_SFX[id] : [];
 }
-
-// ── Combat SFX ──────────────────────────────────────────────────────────────────────────────────
-// One-shots fired per weapon swing (the item's `audio` archetype — slash/blunt/pierce/bow, or a
-// natural-weapon cue like bite/venom/screech) and per combat-condition onset (the condition's `audio`
-// — knockdown/fracture/…). Emitted by Combat via simLog.pushCombatSound → combatSounds store, played
-// by AudioController at a volume scaled by zoom + viewport (so distant brawls stay quiet).
 
 const combatClips = (id: string, n: number): string[] =>
   Array.from({ length: n }, (_, i) => `/audio/combat/${id}/${i + 1}.ogg`);
 
 export const COMBAT_SFX: Record<string, string[]> = {
-  // weapon swings
   slash: combatClips('slash', 2),
   pierce: combatClips('pierce', 2),
   blunt: combatClips('blunt', 2),
   bow: combatClips('bow', 2),
-  // natural weapons
   bite: combatClips('bite', 2),
   venom: combatClips('venom', 2),
   screech: combatClips('screech', 2),
   spectral: combatClips('spectral', 2),
   tongue: combatClips('tongue', 1),
-  // combat-condition onsets
   knockdown: combatClips('knockdown', 1),
   fracture: combatClips('fracture', 1),
   shock: combatClips('shock', 1),
@@ -287,24 +225,15 @@ export const COMBAT_SFX: Record<string, string[]> = {
   bloodletting: combatClips('bloodletting', 1)
 };
 
-/** Combat clips for a sound id, or [] if none exists for it. */
 export function combatClipsFor(id: string | undefined): string[] {
   return id && id in COMBAT_SFX ? COMBAT_SFX[id] : [];
 }
 
-// Weather-type → bed grouping. Mirrors the overlay/windStrength semantics in weather.jsonc so the
-// audio bed matches what the player sees: precipitation overlays → rain bed; windy/gale/blizzard →
-// wind bed. (Kept as plain sets so a new weather id simply falls through to the calm default.)
 const RAIN_LIGHT = new Set(['drizzle', 'foggy_rain']);
 const RAIN_MED = new Set(['rain', 'windy_rain']);
 const RAIN_HEAVY = new Set(['heavy_rain', 'storm']);
 const WINDY = new Set(['spring_windy', 'summer_windy', 'autumn_windy', 'winter_windy', 'gale']);
 
-/**
- * Resolve the ambient bed mix from the live environment. `intensity` is weather.intensity (0–1) and
- * scales the precipitation beds so a drizzle is quieter than a downpour; the calm birds/crickets/forest
- * beds use fixed gentle gains. Returns target gains AudioService crossfades toward.
- */
 export function resolveAmbient(opts: {
   weatherType: string;
   isNight: boolean;
@@ -314,7 +243,6 @@ export function resolveAmbient(opts: {
   const i = Math.max(0, Math.min(1, intensity));
   const layers: AmbientLayers = {};
 
-  // Precipitation beds (mutually exclusive tiers), scaled by intensity.
   if (RAIN_HEAVY.has(weatherType)) {
     layers['rain-heavy'] = 0.55 + 0.35 * i;
   } else if (RAIN_MED.has(weatherType)) {
@@ -323,27 +251,24 @@ export function resolveAmbient(opts: {
     layers.rain = 0.25 + 0.25 * i;
   }
 
-  // Wind bed — windy/gale weathers, plus a layer under heavy rain/storm and blizzards/winter wind.
   if (WINDY.has(weatherType) || weatherType === 'blizzard') {
     layers.wind = weatherType === 'gale' || weatherType === 'blizzard' ? 0.6 : 0.35;
   } else if (RAIN_HEAVY.has(weatherType) || weatherType === 'windy_rain') {
     layers.wind = 0.3;
   }
 
-  // Calm bed — only when there's no heavy precipitation drowning it out.
   const calm = !RAIN_HEAVY.has(weatherType) && weatherType !== 'storm';
   if (calm) {
     if (weatherType === 'snow') {
-      layers.wind = Math.max(layers.wind ?? 0, 0.2); // soft snow hiss
+      layers.wind = Math.max(layers.wind ?? 0, 0.2);
     } else if (weatherType === 'fog') {
-      layers.forest = 0.18; // muffled stillness
+      layers.forest = 0.18;
     } else if (isNight) {
       layers['night-crickets'] = 0.45;
     } else if (weatherType === 'clear' || weatherType === 'heat_wave') {
       layers['birds-day'] = 0.4;
       layers.forest = 0.2;
     } else {
-      // windy-but-dry daytime — keep a faint forest under the wind.
       layers.forest = isNight ? 0 : 0.15;
     }
   }

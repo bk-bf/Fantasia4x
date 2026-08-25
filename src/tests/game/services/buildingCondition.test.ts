@@ -2,14 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { buildingService } from '$lib/game/services/BuildingService';
 import type { GameState, PlacedBuilding } from '$lib/game/core/types';
 
-/**
- * Refactor Stage 1 (PRODUCTION-CHAIN-EXPANSION §B building wear).
- * Complete buildings whose def has `conditionDecayPerTurn` lose condition each tick;
- * `repairBuilding` restores them to 100 by consuming a fraction of the build cost.
- * `branch_wall` carries conditionDecayPerTurn 0.5 and buildingCost {branch:8, plant_fiber:4}.
- */
 function makeState(buildings: PlacedBuilding[], stockpile: Record<string, number> = {}): GameState {
-  // Stage 2: items live as `stored` DroppedItems on tiles; the aggregate is summed from them.
   const droppedItems = Object.entries(stockpile).map(([id, qty], i) => ({
     id: `stored-${id}`,
     resourceId: id,
@@ -43,7 +36,7 @@ describe('BuildingService condition (refactor Stage 1)', () => {
   it('decays a complete building with conditionDecayPerTurn', () => {
     const out = buildingService.stepBuildingCondition(makeState([wall()]));
     expect(out.buildings![0].condition).toBeLessThan(100);
-    expect(out.buildings![0].condition).toBeGreaterThan(99); // tiny per-tick amount
+    expect(out.buildings![0].condition).toBeGreaterThan(99);
   });
 
   it('removes a building that wears down to 0% condition (breakage)', () => {
@@ -62,8 +55,6 @@ describe('BuildingService condition (refactor Stage 1)', () => {
   });
 
   it('applies default wear to a costed building with no explicit decay rate', () => {
-    // Every real (cost-bearing) building now deteriorates + is repairable; a hearth has a build cost
-    // but no explicit conditionDecayPerTurn, so it wears at the default rate.
     const out = buildingService.stepBuildingCondition(makeState([wall({ type: 'hearth' })]));
     expect(out.buildings![0].condition).toBeLessThan(100);
   });
@@ -72,7 +63,6 @@ describe('BuildingService condition (refactor Stage 1)', () => {
     const gs = makeState([wall({ condition: 40 })], { branch: 10, cordage: 10 });
     const out = buildingService.repairBuilding('b1', gs);
     expect(out.buildings![0].condition).toBe(100);
-    // 25% of branch_wall {branch:8, cordage:8} = {branch:2, cordage:2}
     expect(out.stockpile['branch']).toBe(8);
     expect(out.stockpile['cordage']).toBe(8);
   });

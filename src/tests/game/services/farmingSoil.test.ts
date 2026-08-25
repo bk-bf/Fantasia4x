@@ -9,10 +9,8 @@ import {
   generate as harvestGenerate
 } from '$lib/game/services/jobs/harvest';
 import { isGrowableResource } from '$lib/game/services/ResourceObjectService';
-import { SUBTERRAINS, soilFertilityPct } from '$lib/game/core/Terrains';
+import { SUBTERRAINS, soilFertilityPct } from '$lib/game/core/defs/terrains';
 import type { GameState, Job } from '$lib/game/core/types';
-
-// PRODUCTION-CHAIN-II §F — soil buildings (terraform) + compost + seeds + wild-crop seed yield.
 
 describe('§F crop seeds', () => {
   it('each per-crop seed exists, and its category is its own id (so a grow zone can target it)', () => {
@@ -31,8 +29,6 @@ describe('§F crop seeds', () => {
       'mint_seed',
       'prize_seed'
     ]) {
-      // Per-crop seed categories (ADR cropping expansion): the grow-zone filter grid picks a seed by
-      // category, so each seed's category equals its own id rather than a shared "seed" bucket.
       expect(itemService.getItemById(id)?.category).toBe(id);
     }
   });
@@ -49,7 +45,6 @@ describe('§F wild crops drop a few seeds when harvested', () => {
     expect(
       resourceObjectService.calculateYield('berry_bush', undefined, undefined, 'harvest')
     ).toHaveProperty('berry_seed');
-    // Each wild crop is its own plant, dropping its OWN vegetable + matching seed (no grab-bag plant).
     for (const [resId, seed] of [
       ['wild_turnip', 'turnip_seed'],
       ['wild_cabbage', 'cabbage_seed'],
@@ -69,7 +64,6 @@ describe('§F compost bin', () => {
     const bin = buildingService.getBuildingById('compost_bin');
     expect(bin?.passive).toBe(true);
     expect(itemService.getItemById('compost')?.category).toBe('soil');
-    // make_compost inputs must be real items (rotten matter + hay).
     for (const id of ['rotten_food', 'hay', 'rotten_meat', 'rotten_carcass', 'rotten_hide']) {
       expect(itemService.getItemById(id)).toBeTruthy();
     }
@@ -89,10 +83,8 @@ describe('§F Soil-Works terraform builds', () => {
       expect(def.terraformSubType).toBe(sub);
       expect(SUBTERRAINS[sub]).toBeTruthy();
       expect(def.effects?.farming).toBe(1);
-      // higher soils cost compost (poor soil is the cheap entry)
       if (id !== 'lay_poor_soil') expect(def.buildingCost?.compost).toBeGreaterThan(0);
     }
-    // fertility actually rises along the chain
     expect(soilFertilityPct({ subType: 'tall_grass' })).toBe(50);
     expect(soilFertilityPct({ subType: 'terra_preta' })).toBe(100);
   });
@@ -119,7 +111,6 @@ describe('§F Soil-Works terraform builds', () => {
       pawns: [],
       buildingCounts: {}
     } as unknown as GameState;
-    // fix the grid so [1][1] is the building's tile
     (gs.worldMap as unknown as Record<number, Record<number, typeof tile>>)[1][1] = tile;
 
     const job = {
@@ -131,9 +122,9 @@ describe('§F Soil-Works terraform builds', () => {
     } as unknown as Job;
     const next = constructComplete(job, gs);
 
-    expect(next.worldMap[1][1].subType).toBe('deep_grass'); // rich soil
+    expect(next.worldMap[1][1].subType).toBe('deep_grass');
     expect(soilFertilityPct(next.worldMap[1][1])).toBe(75);
-    expect((next.buildings ?? []).find((b) => b.id === 'b1')).toBeUndefined(); // build consumed
+    expect((next.buildings ?? []).find((b) => b.id === 'b1')).toBeUndefined();
   });
 });
 
@@ -165,7 +156,6 @@ describe('§F crops + planting', () => {
     const y = resourceObjectService.calculateYield('crop_wheat', undefined, undefined, 'harvest');
     expect(y).toHaveProperty('wheat');
     expect(y).toHaveProperty('grain_seed');
-    // prize crop needs terra preta (tier 4)
     expect(resourceObjectService.getById('crop_pumpkin')!.crop?.minSoil).toBe(4);
   });
 
@@ -173,7 +163,7 @@ describe('§F crops + planting', () => {
     const tile = {
       x: 2,
       y: 0,
-      subType: 'tall_grass', // loam, 50% — wheat (minSoil 1) plants fine
+      subType: 'tall_grass',
       terrainType: 'plains',
       walkable: true,
       moisture: 40,
@@ -197,8 +187,8 @@ describe('§F crops + planting', () => {
     const next = plantComplete(job, gs);
 
     const t = next.worldMap[0][2];
-    expect(t.resources.crop_wheat).toBe(0); // immature — count 0 until growth reaches 100%
-    expect(t.growth?.crop_wheat).toBe(0); // sown at 0%, climbs via processCropGrowth under good conditions
+    expect(t.resources.crop_wheat).toBe(0);
+    expect(t.growth?.crop_wheat).toBe(0);
   });
 });
 
@@ -218,7 +208,7 @@ describe('§F resource growth/maturity', () => {
       'harvest',
       0
     );
-    expect(Object.keys(none).length).toBe(0); // 0% growth → no harvest
+    expect(Object.keys(none).length).toBe(0);
     const full = resourceObjectService.calculateYield(
       'grass_patch',
       undefined,
@@ -321,12 +311,10 @@ describe('§F soil exhaustion from farming', () => {
       );
     };
 
-    // pumpkin fertilityCost 10, WEAR_PER_TIER 100 → 10 harvests per tier drop (generous, since the
-    // crop is BLOCKED from replanting the moment terra preta drops below tier 4).
-    for (let i = 0; i < 9; i++) reap(); // wear 90 — still terra preta
+    for (let i = 0; i < 9; i++) reap();
     expect(gs.worldMap[0][0].subType).toBe('terra_preta');
-    reap(); // 100 → drop a tier
-    expect(gs.worldMap[0][0].subType).toBe('deep_grass'); // worn down to rich soil
+    reap();
+    expect(gs.worldMap[0][0].subType).toBe('deep_grass');
     expect(soilFertilityPct(gs.worldMap[0][0])).toBe(75);
   });
 });

@@ -1,8 +1,7 @@
-// Sex on spawn: ordinary creatures roll a 50/50 sex; `sex: false` creatures (wraiths/oozes) get none.
 import { describe, it, expect, beforeEach } from 'vitest';
 import { makeMob } from '$lib/game/services/entity/entitySpawning';
-import { getCreatureById } from '$lib/game/core/Creatures';
-import { rng } from '$lib/game/core/rng';
+import { getCreatureById } from '$lib/game/core/defs/creatures';
+import { rng } from '$lib/game/core/util/rng';
 
 beforeEach(() => rng.reseed(20260713));
 
@@ -19,7 +18,7 @@ describe('mob sex on spawn', () => {
   it('a sex:false creature (wraith / ooze) spawns with no sex', () => {
     for (const id of ['shadow_wraith', 'greater_wraith', 'grimeling', 'grime_horror']) {
       const def = getCreatureById(id)!;
-      expect(def.sex).toBe(false); // flag loaded from creatures.jsonc
+      expect(def.sex).toBe(false);
       for (let i = 0; i < 20; i++) expect(makeMob(def, 0, 0, i).sex).toBeUndefined();
     }
   });

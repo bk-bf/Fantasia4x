@@ -1,7 +1,3 @@
-/**
- * POST /api/sim/save — dump the headless session as a JSON snapshot (tile scratch stripped).
- * Pipe to a file and later POST it to /api/sim/load to resume. (HEADLESS-SIM / ADR-033)
- */
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { guardHeadless, currentSession } from '$lib/server/simSession';

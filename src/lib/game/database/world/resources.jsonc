@@ -1,15 +1,4 @@
-// resources.jsonc — Harvestable world resource node definitions.
-// charSpans: glyph source — [{sheet,from,to}] range | [{sheet,id}] tile | [{literal}] char.
-// spawn.subterrains: subterrain id → per-tile spawn chance. Placement is first-match-wins in array
-//   order, so rare defs (groves, lairs) are listed before common fillers (trees, grass).
-// interaction.workAmount: total work-points, 1 pt/sec at base rate (a day ≈ 300 turns).
-// toolRequirement: null = bare hands | {workType, minTier}; tier 0 = any tool of that workType.
-// yields[].skillMultiplier: bonus items per skill level; regrowthTurns: refill delay (persistent nodes).
-// persistent: node regrows; harvestDepletes: yield-only removal; harvestSubType: subterrain left after harvest.
 [
-  // ─────────────────────────────────────────────────────────────────────────
-  // ANCIENT-WOOD GROVES — rare; listed first so common trees/grass don’t claim their tiles
-  // ─────────────────────────────────────────────────────────────────────────
   {
     "id"              : "heartwood_grove",
     "roofSupport"     : true,
@@ -200,12 +189,6 @@
       "harvestDepletes": true
     }
   },
-  // ─────────────────────────────────────────────────────────────────────────
-  // PRODUCTION-CHAIN-IIII §1c — DEEP-FOREST MAGICAL TIMBER. Rarer than the four groves above and found
-  // ONLY in the mossy floor of a deep_forest core (keyed to the `mossy_ground` subterrain, which
-  // only the variant produces). soulwood is listed first (rarest) so it gets its independent roll before
-  // witchwood on a shared mossy tile. Higher woodcut tier + workAmount than the common groves.
-  // ─────────────────────────────────────────────────────────────────────────
   {
     "id"              : "soulwood_grove",
     "roofSupport"     : true,
@@ -305,8 +288,6 @@
     }
   },
   {
-    // §1c frostheart_pine — mountain frost-pine (grows on the cold mountain-interior `cave` floor; no
-    // tundra biome yet, so the mountain is its home). Yields frostheart_timber for frost-tinged gear.
     "id"              : "frostheart_pine",
     "roofSupport"     : true,
     "displayName"     : "Frostheart Pine",
@@ -350,7 +331,6 @@
     }
   },
   {
-    // §1c bonewood_snag — a pale standing dead tree in the swamp. Light timber that "takes venom well".
     "id"              : "bonewood_snag",
     "roofSupport"     : true,
     "displayName"     : "Bonewood Snag",
@@ -393,13 +373,7 @@
       "harvestDepletes": true
     }
   },
-  // ─────────────────────────────────────────────────────────────────────────
-  // PRODUCTION-CHAIN-IIII §1a/§1b — mystical flora: wild magical crops & fungi. Forage nodes, biome-keyed,
-  // grove-rare↓, slow regrowth. Alchemy reagents that also draw prey→predators→lairs. Listed early (with
-  // the §1c trees) so they get first pick on their subterrains before common ground-cover claims a tile.
-  // ─────────────────────────────────────────────────────────────────────────
   {
-    // §1a bloodroot — a red taproot of plains/forest verges; vitality/regen reagent.
     "id"              : "bloodroot",
     "displayName"     : "Bloodroot",
     "subterrain"      : "bush",
@@ -422,7 +396,6 @@
     }
   },
   {
-    // §1a dreamleaf — silver-backed leaves of forest & swamp margins; sleep/calm reagent.
     "id"              : "dreamleaf",
     "displayName"     : "Dreamleaf",
     "subterrain"      : "bush",
@@ -445,7 +418,6 @@
     }
   },
   {
-    // §1a mandrake — a screaming forked root of the deep forest edge; painkiller + trait-elixir base.
     "id"              : "mandrake",
     "displayName"     : "Mandrake",
     "subterrain"      : "bush",
@@ -468,7 +440,6 @@
     }
   },
   {
-    // §1a emberbloom — a smouldering coal-red flower of the mountain heights; fire-affinity reagent.
     "id"              : "emberbloom",
     "displayName"     : "Emberbloom",
     "subterrain"      : "rocky",
@@ -492,7 +463,6 @@
     }
   },
   {
-    // §1b glowcap — a cold-lit fungus of dark swamp & forest floor; light-craft + night-sight reagent.
     "id"              : "glowcap",
     "displayName"     : "Glowcap",
     "subterrain"      : "mushroom_patch",
@@ -515,7 +485,6 @@
     }
   },
   {
-    // §1b nightshade_bolete — a black-weeping toxic bolete of the swamp; venom reagent.
     "id"              : "nightshade_bolete",
     "displayName"     : "Nightshade Bolete",
     "subterrain"      : "mushroom_patch",
@@ -537,7 +506,6 @@
     }
   },
   {
-    // §1b witch_morel — a shape-shifting honeycombed cap of the damp forest; the enchant catalyst.
     "id"              : "witch_morel",
     "displayName"     : "Witch's Morel",
     "subterrain"      : "mushroom_patch",
@@ -559,7 +527,6 @@
     }
   },
   {
-    // §1b spore_of_madness — a drifting-spore puffball of the deep swamp; rare frenzy reagent.
     "id"              : "spore_of_madness",
     "displayName"     : "Spore of Madness",
     "subterrain"      : "mushroom_patch",
@@ -581,12 +548,7 @@
       "regrowthTurns"  : 5000
     }
   },
-  // ─────────────────────────────────────────────────────────────────────────
-  // PRODUCTION-CHAIN-IIII §1d — crystal formations: mined mineral rarities (rarer than ore). Deplete on
-  // harvest (no regrowth). Cluster in the mountain interior; the enchant/gem-dust++ tier.
-  // ─────────────────────────────────────────────────────────────────────────
   {
-    // §1d mana_crystal_vent — a humming violet vein deep in the mountain; grinds into rich gem-dust.
     "id"              : "mana_crystal_vent",
     "displayName"     : "Mana Crystal Vent",
     "subterrain"      : "crystal_formation",
@@ -611,7 +573,6 @@
     }
   },
   {
-    // §1d star_geode — a fallen-star geode in the high rock; an enchant material + a gem roll.
     "id"              : "star_geode",
     "displayName"     : "Star Geode",
     "subterrain"      : "crystal_formation",
@@ -636,7 +597,6 @@
     }
   },
   {
-    // §1d voidshard_cluster — a light-drinking black cluster in the deep dark; a cursed reagent (rarest).
     "id"              : "voidshard_cluster",
     "displayName"     : "Voidshard Cluster",
     "subterrain"      : "crystal_formation",
@@ -657,13 +617,7 @@
       "yields"         : [ {"itemId": "voidshard", "min": 1, "max": 1, "skillId": "mining", "skillMultiplier": 0.06} ]
     }
   },
-  // ─────────────────────────────────────────────────────────────────────────
-  // PRODUCTION-CHAIN-IIII §1e — diggable treasure: buried caches surfaced by the EXISTING dig verb (like
-  // clay/soil). One-shot (persistent:false, deplete), high variance. `buried_hoard` is also denned near a
-  // lair at world-gen (ResourceGeneratorService.placeBuriedHoards) — clear the guardian, then dig.
-  // ─────────────────────────────────────────────────────────────────────────
   {
-    // §1e barrow_cache — an old grave-mound of the plains & forest; bones + grave-goods.
     "id"              : "barrow_cache",
     "displayName"     : "Barrow Mound",
     "subterrain"      : "dirt",
@@ -691,7 +645,6 @@
     }
   },
   {
-    // §1e buried_hoard — a hoard buried near a den; gold, gems, a rare reagent.
     "id"              : "buried_hoard",
     "displayName"     : "Disturbed Earth",
     "subterrain"      : "dirt",
@@ -719,7 +672,6 @@
     }
   },
   {
-    // §1e sunken_relic — a drowned relic in the swamp; an enchant material, with a curse risk (voidshard).
     "id"              : "sunken_relic",
     "displayName"     : "Sunken Cairn",
     "subterrain"      : "mud",
@@ -746,11 +698,6 @@
       "harvestDepletes": true
     }
   },
-  // ─────────────────────────────────────────────────────────────────────────
-  // LAIRS / NESTS — `lair: true`; rare, listed first. Each placed tile seeds one bound pack of the
-  // creature whose `lair` (creatures.jsonc) matches this id. DESTROY razes the den via the harvest
-  // path (non-persistent node).
-  // ─────────────────────────────────────────────────────────────────────────
   {
     "id"              : "wolf_den",
     "displayName"     : "Wolf Den",
@@ -762,8 +709,6 @@
     "charSpans"       : [ {"sheet": "crops", "id": 83} ],
     "fg"              : "#808799",
     "bg"              : "#17120a",
-    // Base plains/forest scatter HALVED (§3b): frost-pine guardians now den wolves near the mountains, so
-    // random forest/plains dens are rarer to keep total lairs from over-inflating (see placeLairGuardians).
     "spawn"           : {
       "subterrains": {"grass": 0.00003, "deep_grass": 0.000045, "tall_grass": 0.000035, "dirt": 0.00003}
     },
@@ -789,9 +734,6 @@
     "charSpans"       : [ {"sheet": "plants", "id": 167} ],
     "fg"              : "#8c4a3d",
     "bg"              : "#17120a",
-    // Forest base scatter cut to ~40% (§3b): the deep-forest groves now den most predator packs as
-    // guardians, so random forest dens are rarer — keeps forests from over-filling with lairs. Swamp
-    // (moss) weight kept (no grove guardians there).
     "spawn"           : { "subterrains": {"deep_grass": 0.00003, "grass": 0.00002, "moss": 0.00015} },
     "nodeAmountRange" : [1, 1],
     "designationTypes": ["harvest"],
@@ -838,9 +780,6 @@
     "charSpans"       : [ {"sheet": "crops", "id": 197} ],
     "fg"              : "#668057",
     "bg"              : "#17120a",
-    // Swamps are SMALL, so a grove-rare weight left most maps with zero swamp lairs — the swamp read as
-    // safe, not the contested danger zone it should be. Bumped ~13x so a modest bog reliably seeds 1-2
-    // nests (bog/mud are the swamp core; per-tile probability x the swamp's few-hundred tiles ~ 1-2).
     "spawn"           : { "subterrains": {"bog": 0.0026, "mud": 0.0022, "clay": 0.0018} },
     "nodeAmountRange" : [1, 1],
     "designationTypes": ["harvest"],
@@ -897,9 +836,6 @@
       "yields"         : []
     }
   },
-  // ─────────────────────────────────────────────────────────────────────────
-  // WOODCUTTING — living trees: woodcut (axe) fells for logs; forage (bare hands) regrows quickly
-  // ─────────────────────────────────────────────────────────────────────────
   {
     "id"              : "pine_tree",
     "roofSupport"     : true,
@@ -1056,7 +992,6 @@
     "subterrain"      : "tree",
     "walkable"        : false,
     "charSpans"       : [ {"sheet": "plants", "id": 26}, {"sheet": "plants", "id": 24} ],
-    // seasonVariants: autumn recolours the canopy; winter swaps to the leafless pool (season-driven, not snow)
     "seasonVariants"  : {
       "autumn": {"detail": "#d9b13a"},
       "winter": {
@@ -1328,7 +1263,6 @@
       }
     ]
   },
-  // Forage picks apples sustainably; woodcut fells for apple_log (wild counterpart of crop_apples).
   {
     "id"              : "apple_tree",
     "roofSupport"     : true,
@@ -1901,9 +1835,6 @@
       }
     ]
   },
-  // ─────────────────────────────────────────────────────────────────────────
-  // MINING — SURFACE DEPOSITS
-  // ─────────────────────────────────────────────────────────────────────────
   {
     "id"              : "stone_outcrop",
     "roofSupport"     : true,
@@ -1917,7 +1848,6 @@
     "spawn"           : { "subterrains": {"cave": 0.07, "dirt": 0.015, "savanna": 0.02, "grass": 0.01} },
     "nodeAmountRange" : [5, 10],
     "designationTypes": ["harvest"],
-    // Hand-scavenged (no tool) so a fresh colony can bootstrap its first tools; deeper deposits stay pick-gated.
     "interaction"     : {
       "action"         : "scavenge",
       "workCategory"   : "mining",
@@ -1931,9 +1861,6 @@
       ]
     }
   },
-  // ─────────────────────────────────────────────────────────────────────────
-  // FORAGING — PLANTS
-  // ─────────────────────────────────────────────────────────────────────────
   {
     "id"              : "wildflower_patch",
     "displayName"     : "Wildflower Patch",
@@ -2145,10 +2072,6 @@
       ]
     }
   },
-  // ─────────────────────────────────────────────────────────────────────────
-  // FORAGING — BERRIES & GRAINS
-  // (wetland & savanna ground cover lives in the GROUND COVER block at the end of this file)
-  // ─────────────────────────────────────────────────────────────────────────
   {
     "id"              : "berry_bush",
     "displayName"     : "Berry Bush",
@@ -2226,7 +2149,6 @@
       "regrowthTurns"  : 3000
     }
   },
-  // Wild crops each drop their OWN vegetable + that vegetable’s seed (no grab-bag).
   {
     "id"              : "wild_cabbage",
     "displayName"     : "Wild Cabbage",
@@ -2469,9 +2391,6 @@
       "regrowthTurns"  : 2800
     }
   },
-  // ─────────────────────────────────────────────────────────────────────────
-  // MINING — ORE VEINS  (mountain / mineral_deposit subterrain)
-  // ─────────────────────────────────────────────────────────────────────────
   {
     "id"              : "malachite",
     "displayName"     : "Malachite",
@@ -2760,9 +2679,6 @@
       "yields"         : [ {"itemId": "salt", "min": 1, "max": 4, "skillId": "mining", "skillMultiplier": 0.2} ]
     }
   },
-  // ─────────────────────────────────────────────────────────────────────────
-  // TERRAIN WALLS — fill the remaining mountain tiles as the default identity
-  // ─────────────────────────────────────────────────────────────────────────
   {
     "id"              : "mountain_wall",
     "roofSupport"     : true,
@@ -2774,7 +2690,6 @@
     "charSpans"       : [ {"sheet": "plants", "id": 210} ],
     "fg"              : "#9e855e",
     "bg"              : "#17120a",
-    // Rolled before cliff_wall: 0.58 here + 0.98 on the misses ≈ 58/41 mix, ~99% wall coverage.
     "spawn"           : { "subterrains": {"cave": 0.58} },
     "nodeAmountRange" : [4, 8],
     "designationTypes": ["harvest"],
@@ -2817,9 +2732,6 @@
       ]
     }
   },
-  // ─────────────────────────────────────────────────────────────────────────
-  // GROUND COVER — placed last so all rarer resources get first pick per tile
-  // ─────────────────────────────────────────────────────────────────────────
   {
     "id"              : "grass_patch",
     "displayName"     : "Grass Patch",
@@ -3002,8 +2914,6 @@
     }
   },
   {
-    // Ground-cover for the quicksand subterrain — you can still scrape sand from it (every subterrain has
-    // a corresponding resource). Slow, unpleasant work, matching the tile's high movement cost.
     "id"              : "quicksand",
     "displayName"     : "Quicksand",
     "subterrain"      : "quicksand",
@@ -3049,9 +2959,6 @@
     }
   },
   {
-    // Ground-cover for the deep_forest mossy floor (mossy_ground subterrain) — the counterpart of
-    // deep_grass_patch/moss/savanna: paints the mossy visual and gives a forage yield, so a mossy_ground
-    // tile is never bare (the rare witchwood/soulwood groves roll first; this fills the rest).
     "id"              : "forest_moss",
     "displayName"     : "Forest Moss",
     "subterrain"      : "mossy_ground",
@@ -3116,7 +3023,6 @@
       ]
     }
   },
-  // Rare refractory seam — placed before blue_clay so it gets first pick on clay tiles.
   {
     "id"              : "fire_clay",
     "displayName"     : "Fire Clay",
@@ -3175,10 +3081,6 @@
       ]
     }
   },
-  // ═══════════════════════════════════════════════════════════════════════════
-  // CRYSTAL NODES — normal crystal (1–2) + occasional magic-infused (0–1); deliberately NOT on
-  // mineral_deposit, so they stay out of the ore/coal/salt vein pool
-  // ═══════════════════════════════════════════════════════════════════════════
   {
     "id"              : "ruby_node",
     "displayName"     : "Ruby Crystals",
@@ -3449,11 +3351,6 @@
       ]
     }
   },
-  // ═══════════════════════════════════════════════════════════════════════════
-  // CULTIVATED CROPS — never spawn naturally; the plant job places one on a grow-zone tile (seed
-  // matches crop.seedItem, soil tier ≥ crop.minSoil), then it matures over crop.growthTurns scaled
-  // by fertility × wetness at plant time. Annuals deplete on harvest; berries/herbs persist and regrow.
-  // ═══════════════════════════════════════════════════════════════════════════
   {
     "id"              : "crop_wheat",
     "displayName"     : "Wheat",

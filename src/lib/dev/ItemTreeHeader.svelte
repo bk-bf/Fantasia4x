@@ -1,7 +1,3 @@
-<!-- ItemTreeHeader.svelte — DEV TOOL. The item tree's sticky, sortable header row.
-     Its own component because the sort control carries its own styling and ItemTree.svelte is at the
-     200-line component budget; the sort MODEL (which columns exist, how a column compares) lives in
-     itemTree.ts, so this file only draws the buttons and reports clicks. -->
 <script lang="ts">
   import { SORT_COLUMNS, type SortKey } from './itemTree';
 

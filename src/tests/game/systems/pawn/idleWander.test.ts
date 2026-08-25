@@ -1,10 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { tryWanderStep } from '$lib/game/systems/pawn/pawnHelpers';
-import { rng } from '$lib/game/core/rng';
+import { rng } from '$lib/game/core/util/rng';
 import type { GameState, Pawn } from '$lib/game/core/types';
-
-// Idle pawns amble one tile at a time instead of standing frozen — natural milling, and it
-// keeps idlers off build-site approach tiles (the construct deadlock). Mirrors the mob mover.
 
 function makeWorld(
   w: number,
@@ -42,14 +39,12 @@ describe('idle wander', () => {
     const moved = stepped!.pawns.find((p) => p.id === 'p')!;
     expect(moved.path?.length).toBe(1);
     const dest = moved.path![0];
-    // One tile away from the origin (a single adjacent step).
     expect(Math.max(Math.abs(dest.x - 5), Math.abs(dest.y - 5))).toBe(1);
   });
 
   it('never moves a pawn boxed in by non-walkable tiles', () => {
     rng.reseed(2);
     const pawn = idleAt('p', 5, 5);
-    // Wall off all 8 neighbours.
     const walls: Array<[number, number]> = [];
     for (let dy = -1; dy <= 1; dy++)
       for (let dx = -1; dx <= 1; dx++) if (dx || dy) walls.push([5 + dx, 5 + dy]);
@@ -72,7 +67,6 @@ describe('idle wander', () => {
   it('does not step onto a tile held by another body', () => {
     rng.reseed(4);
     const pawn = idleAt('p', 5, 5);
-    // Block 7 of 8 neighbours with terrain; leave only (6,5) open, but park a body there.
     const open: [number, number] = [6, 5];
     const walls: Array<[number, number]> = [];
     for (let dy = -1; dy <= 1; dy++)
@@ -83,7 +77,6 @@ describe('idle wander', () => {
       }
     const blocker = idleAt('b', open[0], open[1]);
     const state = makeState([pawn, blocker], walls);
-    // The only walkable neighbour is occupied → the pawn stays put.
     for (let i = 0; i < 1000; i++) expect(tryWanderStep(pawn, state)).toBeNull();
   });
 });

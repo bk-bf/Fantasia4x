@@ -1,17 +1,3 @@
-// buildStats.ts — DEV TOOL (not a game system). Derives, per build, WHICH pawn stats actually
-// decide its fights, and pairs each with the formula that produces it.
-//
-// Two formulas exist for most combat stats and they are not always the same one:
-//   • the DESIGN formula in `stats.jsonc` (what the stat says it is), and
-//   • the ENGINE term in Combat.ts / rangedCombat.ts (what the fight actually reads).
-// Where the engine never reads the stat, or keeps its own copy of the curve, that is recorded here
-// rather than hidden — a stat whose formula no fight consults is the thing this table exists to show.
-//
-// Relevance is derived from the build's own gear wherever the data can decide it (armour weight
-// classes it can wear, its weapons' armour damage / crit / stamina / reload), so it tracks the
-// .jsonc instead of a hand-kept list. Role facts the data cannot express (a shield build blocks; an
-// assassin opens from stealth) are marked as coming from the build spec.
-
 import statsData from '../game/database/pawns/stats.jsonc';
 import { GEAR, BUILDS, type BuildClass, type GearRow } from './gearDb';
 
@@ -23,42 +9,32 @@ const statDefs = statsData as {
 }[];
 
 export type Wiring = 'wired' | 'mirrored' | 'dead';
-/** Where the stat's NUMBER comes from — the second axis the rebuild introduced. */
 export type Source = 'rolled' | 'derived';
 export type Rank = 'primary' | 'secondary' | 'none';
 
 export interface StatInfo {
   id: string;
   label: string;
-  /** stats.jsonc `primaryStat` — the base stat the design formula keys off. */
   primaryStat: string | null;
-  /** The stats.jsonc expression. */
   formula: string;
   description: string;
-  /** Whether a fight actually reads this stat. */
   wiring: Wiring;
-  /** Where the engine consumes it, or why it doesn't. */
   where: string;
-  /** The term the engine really evaluates, when it differs from (or elaborates) the design formula. */
   engineFormula: string | null;
-  /** `rolled` = a per-pawn aptitude no core stat touches; `derived` = computed from stats/body/gear. */
   source: Source;
 }
 
 export interface StatCell {
   rank: Rank;
-  /** What made it that rank — a measured number where the gear decided it, the spec otherwise. */
   why: string;
 }
 
 export interface BuildStatRow {
   build: BuildClass;
-  /** Distinct damage-scaling stats across the build's weapons (weaponProperties.powerStat). */
   powerStats: string[];
   cells: Record<string, StatCell>;
 }
 
-/** COMBAT-BALANCE tasks 8–9: the stats whose value is ROLLED per pawn, not derived from a core stat. */
 const ROLLED = new Set([
   'hit_chance',
   'attack_speed',
@@ -69,11 +45,6 @@ const ROLLED = new Set([
   'block'
 ]);
 
-// ── engine wiring ───────────────────────────────────────────────────────────
-// Verified against the callsites, not assumed: `wired` has an evaluateStat() call in a combat path;
-// `mirrored` means the engine recomputes the same idea from raw stats in its own function (so
-// trait/condition/capacity layers the stat engine would fold in are silently dropped); `dead` means
-// nothing in a fight reads it at all.
 const WIRING: Record<string, { wiring: Wiring; where: string; engineFormula?: string }> = {
   hit_precision: {
     wiring: 'wired',
@@ -198,7 +169,6 @@ const LABEL: Record<string, string> = {
   carry_weight: 'carry'
 };
 
-/** Column layout: the stats a fight turns on, grouped by what they decide. */
 export const STAT_GROUPS: { label: string; stats: string[] }[] = [
   {
     label: 'Offence',
@@ -233,7 +203,6 @@ export const STAT_INFO: Record<string, StatInfo> = (() => {
   return out;
 })();
 
-// ── per-build gear profile ──────────────────────────────────────────────────
 const num = (v: number | null | undefined) => v ?? 0;
 const weaponsOf = (b: BuildClass) =>
   GEAR.filter((g) => g.kind === 'weapon' && g.classes.includes(b));
@@ -245,14 +214,12 @@ interface Profile {
   hasShield: boolean;
   wearsHeavy: boolean;
   wearsLight: boolean;
-  /** Ranged weapons as a share of the build's arsenal — a whole build, not a per-weapon verdict. */
   rangedShare: number;
   ranged: boolean;
   maxArmorDmg: number;
   maxCrit: number;
   avgStamina: number;
   reloads: boolean;
-  /** Every ranged weapon bypasses STRENGTH (crossbow / sling) — the draw is mechanical. */
   allMechanical: boolean;
   powerStats: string[];
 }
@@ -264,8 +231,6 @@ function profileOf(b: BuildClass): Profile {
   const rangedWeapons = weapons.filter(
     (w) => num(w.range) > 1 || w.raw?.weaponProperties?.ammoCategory
   );
-  // By SHARE, not unanimously: one odd entry shouldn't reclassify a build (goblin_firepot authors
-  // range 0, which would otherwise read the whole throwing build as melee).
   const rangedShare = weapons.length ? rangedWeapons.length / weapons.length : 0;
   const stam = weapons.map((w) => num(w.stamina)).filter((s) => s > 0);
   return {
@@ -279,8 +244,6 @@ function profileOf(b: BuildClass): Profile {
     maxArmorDmg: Math.max(0, ...weapons.map((w) => num(w.armorDmg))),
     maxCrit: Math.max(0, ...weapons.map((w) => num(w.crit))),
     avgStamina: stam.length ? stam.reduce((a, c) => a + c, 0) / stam.length : 0,
-    // `reload: 1` is the no-span default every launcher carries; only a real mechanism (a crossbow at
-    // 3–5) adds a spanning step for reload_speed to shorten.
     reloads: weapons.some((w) => num(w.raw?.weaponProperties?.reload) > 1),
     allMechanical:
       rangedWeapons.length > 0 &&
@@ -296,8 +259,6 @@ function profileOf(b: BuildClass): Profile {
 const P: Record<string, Profile> = {};
 for (const b of BUILDS) P[b] = profileOf(b);
 
-// Thresholds are stated as a SHARE of the best build in the catalogue, so they move with the data
-// instead of pinning a magic number that a rebalance would quietly invalidate.
 const topArmorDmg = Math.max(...BUILDS.map((b) => P[b].maxArmorDmg));
 const topCrit = Math.max(...BUILDS.map((b) => P[b].maxCrit));
 const topStamina = Math.max(...BUILDS.map((b) => P[b].avgStamina));
@@ -314,7 +275,6 @@ function cellsFor(b: BuildClass): Record<string, StatCell> {
   const c: Record<string, StatCell> = {};
   const arsenal = `${Math.round(p.rangedShare * 100)}% of its weapons are ranged`;
 
-  // ── offence ──
   c.melee_damage = melee
     ? cell(
         'primary',
@@ -341,7 +301,6 @@ function cellsFor(b: BuildClass): Record<string, StatCell> {
         ? cell('primary', `built to wreck armour: ${pctOf(p.maxArmorDmg, topArmorDmg)}`)
         : cell('secondary', `some armour wear: ${pctOf(p.maxArmorDmg, topArmorDmg)}`);
 
-  // ── ranged ──
   const rangedOnly = (why: string, rank: Rank = 'primary') =>
     p.ranged ? cell(rank, why) : cell('none', 'melee build — never fires a shot');
   c.aim_accuracy = rangedOnly('the whole to-hit roll for a shot');
@@ -361,7 +320,6 @@ function cellsFor(b: BuildClass): Record<string, StatCell> {
         ? cell('none', 'a channelled bolt carries no draw — its damage scales on INT')
         : cell('primary', 'draw/throw power behind the shot');
 
-  // ── defence ──
   c.dodge = p.wearsLight
     ? cell(
         'primary',
@@ -385,7 +343,6 @@ function cellsFor(b: BuildClass): Record<string, StatCell> {
         ? cell('secondary', 'light enough to approach unseen for the opening hit')
         : cell('none', 'too loud and too heavy to go unnoticed');
 
-  // ── upkeep ──
   const stamRank: Rank = share(p.avgStamina, topStamina) >= 0.6 ? 'primary' : 'secondary';
   const stamWhy = `average ${round1(p.avgStamina)} stamina per swing (${pctOf(p.avgStamina, topStamina)})`;
   c.stamina = cell(stamRank, stamWhy);

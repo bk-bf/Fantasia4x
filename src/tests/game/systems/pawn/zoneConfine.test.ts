@@ -3,9 +3,6 @@ import type { GameState, WorldTile, ZoneInstance } from '$lib/game/core/types';
 import { allowedTilesForPawn, nearestAllowedTile } from '$lib/game/systems/pawn/zoneConfine';
 import { buildPathfindingGridsConfined } from '$lib/game/services/PathfinderService';
 
-// Minimal GameState slice — allowedTilesForPawn only reads zoneInstances + designationZoneId. New object
-// refs each call so the memo doesn't bleed between cases. The `restrictTiles` arg is the flat tile→id
-// shorthand; it's wrapped into the layered `{ tile: { restrict: id } }` shape the real state uses.
 function stateWith(
   zoneInstances: ZoneInstance[],
   restrictTiles: Record<string, string>
@@ -49,13 +46,11 @@ describe('zone confinement — allowedTilesForPawn', () => {
   });
 
   it('treats an assigned-but-unpainted zone as no confinement (null), not a frozen empty area', () => {
-    const s = stateWith([restrictZone('z1', ['p1'])], {}); // assigned, but zero tiles painted
+    const s = stateWith([restrictZone('z1', ['p1'])], {});
     expect(allowedTilesForPawn(s, 'p1')).toBeNull();
   });
 
   it('keeps a restrict tile that also belongs to another zone (overlap no longer steals it)', () => {
-    // Tile (1,1) is in restrict zone z1 AND a stockpile — both layers coexist on the same tile, so the
-    // restrict confinement still includes it (the bug that stranded confined pawns Idle).
     const s = {
       zoneInstances: [restrictZone('z1', ['p1'])],
       designationZoneId: {
@@ -84,25 +79,18 @@ describe('zone confinement — nearestAllowedTile (the walk-home target for an o
 });
 
 describe('zone confinement — buildPathfindingGridsConfined', () => {
-  // 3×3 all-walkable map.
   const worldMap: WorldTile[][] = Array.from({ length: 3 }, () =>
     Array.from({ length: 3 }, () => ({ walkable: true, movementCost: 1 }) as unknown as WorldTile)
   );
 
   it('walls off every tile outside the allowed set, keeping the start tile walkable', () => {
-    const allowed = new Set(['0,0', '1,0']); // not including the start at (2,2)
-    const { walkable, width } = buildPathfindingGridsConfined(
-      worldMap,
-      new Set(),
-      allowed,
-      2,
-      2 // start
-    );
+    const allowed = new Set(['0,0', '1,0']);
+    const { walkable, width } = buildPathfindingGridsConfined(worldMap, new Set(), allowed, 2, 2);
     const at = (x: number, y: number) => walkable[y * width + x];
-    expect(at(0, 0)).toBe(1); // allowed → walkable
-    expect(at(1, 0)).toBe(1); // allowed → walkable
-    expect(at(2, 2)).toBe(1); // start always kept walkable
-    expect(at(2, 0)).toBe(0); // outside allowed → walled
-    expect(at(1, 1)).toBe(0); // outside allowed → walled
+    expect(at(0, 0)).toBe(1);
+    expect(at(1, 0)).toBe(1);
+    expect(at(2, 2)).toBe(1);
+    expect(at(2, 0)).toBe(0);
+    expect(at(1, 1)).toBe(0);
   });
 });

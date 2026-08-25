@@ -4,7 +4,7 @@ import recipesData from '$lib/game/database/items/recipes.jsonc';
 import { TREE_ITEMS } from '$lib/dev/itemTree';
 import { AGE_NAMES, BUILDING_AGE, CARCASS_TIER, nodeItems } from '$lib/dev/chainAge';
 import lootpoolData from '$lib/game/database/items/lootpool.jsonc';
-import { itemMatchesCostCategory } from '$lib/game/core/itemDefs';
+import { itemMatchesCostCategory } from '$lib/game/core/defs/items';
 import { recipeItemMatchesCategory } from '$lib/game/services/RecipeService';
 import itemsData from '$lib/game/database/items/items.jsonc';
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -12,7 +12,6 @@ import itemsData from '$lib/game/database/items/items.jsonc';
 const BUILDINGS = buildingsData as any[];
 const RECIPES = recipesData as any[];
 const ITEMS = itemsData as any[];
-/** every item id any loot pool can hand out — a drop is a way in, and therefore an age. */
 const DROPS = new Set<string>();
 (function scan(o: unknown): void {
   if (Array.isArray(o)) return o.forEach(scan);
@@ -23,11 +22,6 @@ const DROPS = new Set<string>();
 })(lootpoolData);
 const byId = new Map(BUILDINGS.map((b) => [b.id, b]));
 
-/**
- * A building is a WORKSTATION (things are made at it), a STORAGE fixture (things are kept in it), or
- * both — and it must say which. Nothing said which, so recipes drifted onto storage: cheese was
- * pressed in a cupboard and hams cured on the Meat Hooks, which is a rail for hanging carcasses.
- */
 describe('workstations and storage are different things', () => {
   it('every recipe is hosted by a declared workstation', () => {
     const bad = RECIPES.filter((r) => r.station && !byId.get(r.station)?.workstation).map(
@@ -55,11 +49,6 @@ describe('workstations and storage are different things', () => {
   });
 });
 
-/**
- * The /gear-db tree's levels have to partition. A level repeating a word already used by ANY ancestor
- * is not a distinction — "Consumables ▸ Food ▸ fresh ▸ Food" told the reader nothing twice — and a
- * catch-all label ("food", "other", "misc") is the absence of a category wearing one's clothes.
- */
 describe('the item tree partitions cleanly', () => {
   const paths = new Set<string>();
   for (const r of TREE_ITEMS)
@@ -81,11 +70,7 @@ describe('the item tree partitions cleanly', () => {
   });
 
   it('no shelf is named after the absence of a category', () => {
-    // 'food' is not on this list: "Consumables ▸ Food" is a real branch. What was wrong was the
-    // SECOND Food underneath it, and the repeat rule above is what catches that.
     const VAGUE = new Set(['other', 'misc', 'general', 'item', 'thing', 'stuff', 'consumable']);
-    // Root branches name the whole kind and are allowed to; it is the SHELVES under them that have
-    // to distinguish something.
     const bad = [...paths].filter(
       (p) => p.includes(' > ') && VAGUE.has(norm(p.split(' > ').pop()!))
     );
@@ -93,23 +78,10 @@ describe('the item tree partitions cleanly', () => {
   });
 });
 
-/**
- * WHERE AN AGE COMES FROM. An item is placed in an age by, in order: the gear tables, an explicit
- * `tier`, the creature whose carcass it is, or the workshop ladder its recipe needs. An item with
- * NONE of those does not get "unknown" — it silently reads Primitive, which is how the voidshard
- * filed itself in the stone age and every cave bear carcass sat beside a rabbit's.
- *
- * A raw material dug or foraged off a map node genuinely IS available from turn one, so nodes are a
- * legitimate fourth source. Everything else has to say where it belongs.
- */
 describe('every item can say which age it belongs to', () => {
   it('nothing falls back to Primitive for want of an answer', () => {
     const producers = new Set(RECIPES.flatMap((r: any) => Object.keys(r.outputs ?? {})));
-    // A creature's attacks are not things a colony can have, and they never enter the age ladder.
     const NATURAL = (r: { path: string[] }) => r.path[0] === 'Natural weapons';
-    // Sources the game HAS but that are not recipes, nodes or carcasses: a rack that dries meat by
-    // decay, a shorn sheep, a hooked fish, a river, a hive. Each is a real way in — they are listed
-    // rather than guessed so a genuinely sourceless item cannot hide among them.
     const OFF_LADDER = new Set([
       'water',
       'hay',
@@ -129,13 +101,10 @@ describe('every item can say which age it belongs to', () => {
     const bad = TREE_ITEMS.filter((r) => {
       const def = ITEMS.find((i: any) => i.id === r.id);
       if (!def || NATURAL(r) || OFF_LADDER.has(r.id)) return false;
-      // `tier` is NOT an age source. It is a separate axis in its own column — a quality rank on
-      // armour, the ADR-009 tool tier on a tool — and reading it as an age is what put a knapped
-      // stone axe in the bronze age. An item still has to say where it actually comes from.
       if (producers.has(r.id)) return false;
       if (CARCASS_TIER.has(r.id)) return false;
       if (nodeItems.has(r.id)) return false;
-      if (DROPS.has(r.id)) return false; // something in the world drops it
+      if (DROPS.has(r.id)) return false;
       return true;
     }).map(
       (r) =>
@@ -146,13 +115,6 @@ describe('every item can say which age it belongs to', () => {
   });
 });
 
-/**
- * `itemMatchesCostCategory` (itemDefs) and `recipeItemMatchesCategory` (RecipeService) are the same
- * rule written twice — the second exists only to break an import cycle. Two copies drift, and the
- * drift is invisible: the RecipeService copy silently lacked `fastener` for a while, so a slot the
- * sim would fill did not advertise itself in the used-by index. Held together by a test rather than
- * by remembering.
- */
 describe('the two category matchers agree', () => {
   it('every item × category answers the same in both', () => {
     const cats = [
@@ -185,7 +147,6 @@ describe('the two category matchers agree', () => {
   });
 });
 
-/** A cap keeps the sun off. A thing that stops a blade is a helm, a coif or a cervelliere. */
 describe('helmets are not caps', () => {
   it('nothing worn on the head is called a cap', () => {
     const bad = (
@@ -201,10 +162,6 @@ describe('helmets are not caps', () => {
   });
 });
 
-/**
- * The boss band is the top of every weapon line, and it is only meaningful if it covers all of them.
- * It sat at ONE family — axe — while being described as complete, because nothing asked.
- */
 describe('the boss tier covers every weapon family', () => {
   it('each weapon family has at least one boss piece', () => {
     const fam = new Map<string, Set<string>>();
@@ -213,10 +170,6 @@ describe('the boss tier covers every weapon family', () => {
       const f = r.path[2] ?? '?';
       (fam.get(f) ?? fam.set(f, new Set()).get(f)!).add(r.age);
     }
-    // The caster line is deliberately held out for now. A boss rod has to come off something that
-    // fits what it does, and the only fire-themed creature in the game is a goblin caster in a warband
-    // pool — not a beast anyone harvests. Until there is one, a rod built from a wolf's heart is a
-    // worse answer than no rod.
     const ON_HOLD = new Set(['staff & rod']);
     const bare = [...fam]
       .filter(([f, ages]) => !ages.has('Boss') && !ON_HOLD.has(f))
@@ -225,11 +178,6 @@ describe('the boss tier covers every weapon family', () => {
   });
 });
 
-/**
- * A loot slot hands out what goes IN that slot. Merging a gauntlet into the greaves pick list parses
- * fine and rolls a hand piece onto a shin — the kind of mistake that only shows up as a pawn wearing
- * something absurd.
- */
 describe('loot slots hand out gear for that slot', () => {
   it('every pick sits in the slot it is filed under', () => {
     const byId = new Map(
@@ -242,7 +190,7 @@ describe('loot slots hand out gear for that slot', () => {
     const pools = (lootpoolData as { pools?: Record<string, any> }).pools ?? {};
     for (const [pid, pool] of Object.entries<any>(pools))
       for (const [slot, def] of Object.entries<any>(pool?.slots ?? {})) {
-        if (slot === 'mainHand' || slot === 'offHand') continue; // weapons, not slotted armour
+        if (slot === 'mainHand' || slot === 'offHand') continue;
         for (const pick of def?.pick ?? []) {
           const worn = byId.get(pick.id)?.armorProperties?.equipmentSlot;
           if (worn && worn !== slot)
@@ -253,11 +201,6 @@ describe('loot slots hand out gear for that slot', () => {
   });
 });
 
-/**
- * A boss piece is what a colony can only have by putting down something enormous. If one can be
- * stitched at a primitive workbench then the material was the only gate, and a fang on a stone bench
- * is just a fang — the whole band is given away.
- */
 describe('boss gear is runed work', () => {
   it('no boss piece is craftable below a runed workstation', () => {
     const boss = new Set(TREE_ITEMS.filter((r) => r.age === 'Boss').map((r) => r.id));
@@ -272,12 +215,6 @@ describe('boss gear is runed work', () => {
   });
 });
 
-/**
- * A recipe can ask for a better tool than the colony currently holds. It cannot ask for one that does
- * not exist — that is not a hard recipe, it is an unbuildable one, and it reads identically in the
- * tables. Tier-4 tools exist only for mining and storage; demanding tier 4 for leatherwork silently
- * removed eleven boss recipes from the game.
- */
 describe('every recipe asks for a tool that exists', () => {
   it('no toolTierRequired exceeds the best tool made for that work', () => {
     const best = new Map<string, number>();
@@ -296,22 +233,9 @@ describe('every recipe asks for a tool that exists', () => {
   });
 });
 
-/**
- * STRUCTURAL INTEGRITY. A hafted weapon is three things: a head, a worked shaft, and the joint that
- * holds one to the other. Two failures kept slipping through and both read as plausible recipes:
- *
- *   a RAW LOG standing in for a shaft — a log is a tree section, not a turned haft, and putting one
- *   straight into a weapon skips the whole woodworking step; and
- *
- *   BINDING AS THE JOINT — a fang lashed to a stick with thread is not a weapon, it is a fang and a
- *   stick. Thread wraps a joint; a socket, a ferrule or rivets make one.
- *
- * A bow is exempt from the first: its stave IS the shaped wood, there is no separate haft to make.
- */
 describe('hafted weapons are structurally sound', () => {
   const isWeapon = (id: string) =>
     (ITEMS as Array<{ id: string; type?: string }>).find((i) => i.id === id)?.type === 'weapon';
-  // a bow, a recurve, a sling: the stave IS the shaped wood, there is no separate haft
   const BOWS = /bow|recurve|sling|crossbow|arbalest/;
 
   it('no weapon is built straight out of a raw log', () => {
@@ -346,11 +270,6 @@ describe('hafted weapons are structurally sound', () => {
   });
 });
 
-/**
- * Magical wood is runed material, and working it is runed work. Carving an emberwood haft on a
- * bronze-age saw priced the whole magical-haft chain at bronze and handed the arcane weapon line a
- * back door — the Heartwood Joiner exists for precisely this.
- */
 describe('magical wood is worked at a runed bench', () => {
   it('nothing consumes an arcane wood below a runed station', () => {
     const ARCANE_WOOD = /^(emberwood|moonwood|heartwood|witchwood|ironwood)_(log|plank|haft)$/;

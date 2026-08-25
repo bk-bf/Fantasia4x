@@ -4,13 +4,8 @@ import { HeadlessSession } from '$lib/game/headless/HeadlessSession';
 import { recipeService } from '$lib/game/services/RecipeService';
 import { itemService } from '$lib/game/services/ItemService';
 import { buildingService } from '$lib/game/services/BuildingService';
-import { vesselAccepts } from '$lib/game/core/vessels';
+import { vesselAccepts } from '$lib/game/core/rules/gear/vessels';
 
-/**
- * ORE AUDIT — the non-ferrous chains (copper/tin/bronze, lead→silver by cupellation, gold) plus the
- * cross-cutting invariants the steel rework established: no dead metal, no shadowed producer, and every
- * smelter actually gated on fuel + heat.
- */
 const SMELTERS = [
   'stone_forge',
   'casting_hearth',
@@ -48,9 +43,6 @@ describe('ore chains — audit', () => {
       'silver_bar',
       'gold_bar',
       'pig_iron',
-      // The melts are reached two ways — from ore and by remelting a finished bar — but that is ONE
-      // recipe with `inputAlternatives`, not two producers. If it ever becomes two, the second is
-      // unreachable from the craft card and the remelt loop silently dies.
       'molten_copper',
       'molten_tin',
       'molten_bronze',
@@ -71,7 +63,6 @@ describe('ore chains — audit', () => {
     const cupel = recipeService.getRecipeById('cupel_silver')!;
     expect(cupel.inputs).toHaveProperty('lead_bar');
     expect(cupel.inputs).toHaveProperty('bone_meal');
-    // galena smelts to a LEAD MELT; it must NOT also yield silver directly
     expect(Object.keys(recipeService.getRecipeById('smelt_lead')!.outputs)).toEqual([
       'molten_lead'
     ]);
@@ -90,7 +81,6 @@ describe('ore chains — audit', () => {
       ore in (r.inputs ?? {})
         ? (r.inputs as Record<string, number>)[ore]
         : ((r.inputAlternatives ?? []).find((a) => ore in a)?.[ore] as number);
-    // malachite ~57% Cu, azurite ~55% — comparable; chalcopyrite ~35% and needs roasting → costs more.
     expect(qty('chalcopyrite')).toBeGreaterThan(qty('malachite'));
     expect(qty('chalcopyrite')).toBeGreaterThan(qty('azurite'));
   });
@@ -106,17 +96,16 @@ describe('ore chains — audit', () => {
     }
   });
 
-  // HEADLESS: pawns actually run the non-ferrous chains end to end.
   it('pawns smelt copper/tin/lead, cupel silver, and cast bronze over real ticks', async () => {
     const s = new HeadlessSession();
     await s.start(
       buildScenario({
         seed: 11,
-        map: { w: 20, h: 20 }, // flat default → every tile reachable
+        map: { w: 20, h: 20 },
         researchMaxTier: 9,
         toolTier: 3,
         infiniteFuel: true,
-        workReady: true, // all labor on + a tool for every ADR-009 gate
+        workReady: true,
         pawns: [{ count: 6, skillLevel: 20 }],
         needsDisabled: ['hunger', 'fatigue'],
         buildings: [{ id: 'stone_forge' }, { id: 'casting_hearth' }],
@@ -141,7 +130,6 @@ describe('ore chains — audit', () => {
       for (let i = 0; i < rounds && !done(); i++) s.tick(400);
     };
 
-    // LEG 1 — ore to MELT. Nothing casts until there is liquid metal in the hearth.
     craft('molten_copper');
     craft('molten_tin');
     craft('molten_gold');
@@ -154,18 +142,13 @@ describe('ore chains — audit', () => {
       gold: stk().molten_gold ?? 0
     };
 
-    // LEG 2 — pour it into bar moulds. This is also the leftover loop: metal left in the crucible
-    // goes back to stock as a bar rather than being lost.
     craft('copper_bar');
     craft('tin_bar');
     craft('gold_bar');
     craft('lead_bar', 4);
     until(() => (stk().lead_bar ?? 0) >= 3 && (stk().copper_bar ?? 0) > cu0);
-    // Read copper HERE: leg 3 alloys bronze, which eats 7 copper bars, so the net after it is lower
-    // than the start even though a bar was genuinely cast.
     const copperAfterCast = stk().copper_bar ?? 0;
 
-    // LEG 3 — the alloy and the cupel, each of which melts its own stock first.
     craft('molten_bronze');
     craft('molten_silver');
     until(() => (stk().molten_bronze ?? 0) >= 4 && (stk().molten_silver ?? 0) >= 4, 30);
@@ -182,22 +165,17 @@ describe('ore chains — audit', () => {
         `native_gold ${stk().native_gold}/30 | turn=${s.getState().turn}`
     );
 
-    // The melt leg is real, not skipped: ore was consumed and liquid metal existed in the hearth.
     expect(stk().malachite, 'copper smelted from ore').toBeLessThan(60);
     expect(stk().galena, 'lead smelted from ore').toBeLessThan(60);
     expect(stk().cassiterite, 'tin smelted from cassiterite').toBeLessThan(60);
     expect(melt.copper, 'molten copper existed before any bar was cast').toBeGreaterThan(0);
     expect(melt.lead, 'molten lead existed before any bar was cast').toBeGreaterThan(0);
-    // …and the cast leg turned it back into solid stock.
     expect(copperAfterCast, 'copper cast from the melt').toBeGreaterThan(cu0);
     expect(stk().lead_bar ?? 0, 'lead cast from the melt').toBeGreaterThan(0);
     expect(stk().gold_bar ?? 0, 'gold cast from the melt').toBeGreaterThan(0);
     expect(stk().bronze_bar ?? 0, 'bronze alloyed and cast').toBeGreaterThan(0);
     expect(stk().silver_bar ?? 0, 'silver cupelled out of lead and cast').toBeGreaterThan(0);
   });
-  // A melt is 1000C+ and there is no vessel in the game that can hold one. Left unguarded the fill job
-  // would happily send a pawn to ladle molten copper into a leather waterskin, because an empty vessel
-  // volunteers for whatever a queued order is short of.
   it('nothing portable will carry a melt — a waterskin does not fetch molten copper', async () => {
     const s = new HeadlessSession();
     await s.start(
@@ -218,7 +196,6 @@ describe('ore chains — audit', () => {
     const stk = () => (s.getState().stockpile ?? {}) as Record<string, number>;
     s.command({ type: 'craftItem', payload: { itemId: 'molten_copper', quantity: 1 } } as never);
     for (let i = 0; i < 10 && !((stk().molten_copper ?? 0) > 0); i++) s.tick(400);
-    // A cast is queued and short of nothing but the melt — the strongest pull the fill job ever gets.
     s.command({ type: 'craftItem', payload: { itemId: 'copper_bar', quantity: 1 } } as never);
     for (let i = 0; i < 8; i++) s.tick(400);
 
@@ -234,12 +211,8 @@ describe('ore chains — audit', () => {
       `[MELT-CONTAINMENT] copper_bar=${stk().copper_bar} forge=${JSON.stringify(forge.fluidContents)} ` +
         `vessels holding a melt: ${carried.length} loose, ${inPacks.length} carried`
     );
-    // CONTROL — the refusal has to be about containment, not about fill being dead. The same skin that
-    // will not take copper takes water, and `vesselChain` proves skins really do fill over real ticks.
     expect(vesselAccepts('waterskin', 'water'), 'a skin still takes an ordinary fluid').toBe(true);
     expect(vesselAccepts('waterskin', 'molten_copper'), 'and refuses a melt').toBe(false);
-    // …and the refusal is about the MATERIAL, not about melts being untouchable: the two vessels made
-    // of something that survives one do take it.
     expect(vesselAccepts('fireclay_crucible', 'molten_copper'), 'fireclay holds a melt').toBe(true);
     expect(vesselAccepts('rune_sealed_flask', 'molten_copper'), 'a runed flask holds a melt').toBe(
       true
@@ -250,7 +223,6 @@ describe('ore chains — audit', () => {
     expect(vesselAccepts('clay_jug', 'caustic_bile'), 'a sealed clay pot does').toBe(true);
     expect(carried, 'no vessel on the ground is holding a melt').toHaveLength(0);
     expect(inPacks, 'no pawn is carrying a melt').toHaveLength(0);
-    // …and the cast still worked, because the metal was in the hearth all along.
     expect(stk().copper_bar ?? 0, 'the cast ran from the station body').toBeGreaterThan(0);
   });
 });
@@ -269,7 +241,6 @@ describe('crucibles — the vessel that CAN carry a melt (HeadlessSession, real 
         pawns: [{ count: 6, skillLevel: 20 }],
         needsDisabled: ['hunger', 'fatigue'],
         buildings: [{ id: 'stone_forge' }, { id: 'advanced_kiln' }],
-        // Wooden buckets are present throughout and must never be the thing that carries it.
         items: { malachite: 40, fire_clay: 20, clay_mold: 20, wooden_bucket: 4, waterskin: 4 },
         seedEntities: false
       })
@@ -296,7 +267,6 @@ describe('crucibles — the vessel that CAN carry a melt (HeadlessSession, real 
       0
     );
     expect(stk().fire_clay, 'fire clay consumed').toBeLessThan(20);
-    // Whatever ends up holding a melt, it is never the wood or the leather.
     expect(holders.filter((h) => h === 'wooden_bucket' || h === 'waterskin')).toEqual([]);
   });
 });

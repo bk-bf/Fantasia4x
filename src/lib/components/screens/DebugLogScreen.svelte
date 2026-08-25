@@ -1,17 +1,4 @@
-<!--
-  DebugLogScreen — in-game viewer for the unified log. Mounted by +page.svelte only when the DEBUG tab
-  is present: under dev.sh/launch.sh --debug (VITE_DEBUG_MODE) or the standalone --log flag
-  (VITE_DEBUG_LOG, composable with --profiler/--electron), OR at runtime in a shipped/--play build when
-  the player enables Settings → Debug mode ($debugMode) — which also flips the verbose gate that
-  produces these traces (see core/logSink setVerboseLogging).
-
-  Reads the store (chronicle ⊕ diagnostics via `allLogEntries`), not a live file/SSE tap — so it
-  streams in realtime, survives tab close/reopen, never leaks (the stores are bounded + persisted),
-  and works under the sim worker (the worker forwards log calls to these stores). Filter by
-  category/severity/text. The agent fetches the same data after the fact from `.debug/<category>.log`.
--->
 <script module lang="ts">
-  // Filter prefs survive tab close/reopen (the panel is destroyed when you leave the tab).
   let lastTag = 'ALL';
   let lastSeverity = 'ALL';
   let lastSearch = '';
@@ -21,10 +8,10 @@
 <script lang="ts">
   import { allLogEntries, clearDebugLog } from '$lib/stores/Log';
   import DebugLogControls from './DebugLogControls.svelte';
-  import ScrollArea from '$lib/components/UI/ScrollArea.svelte';
+  import ScrollArea from '$lib/components/UI/widget/ScrollArea.svelte';
 
   const SEVERITIES = ['ALL', 'critical', 'error', 'warning', 'success', 'info'] as const;
-  const RENDER_CAP = 600; // lines actually painted
+  const RENDER_CAP = 600;
 
   let filterTag = $state(lastTag);
   let filterSeverity = $state(lastSeverity);
@@ -55,13 +42,11 @@
     return out.slice(-RENDER_CAP);
   });
 
-  // Drop a stale category filter when it no longer matches any entry.
   $effect(() => {
     if (filterTag !== 'ALL' && !knownTags.includes(filterTag as (typeof knownTags)[number]))
       filterTag = 'ALL';
   });
 
-  // Autoscroll to newest as content arrives.
   $effect(() => {
     const _ = filtered.length;
     if (autoscroll && bodyEl) {
@@ -133,7 +118,6 @@
     min-height: 0;
     font-family: var(--font-mono);
   }
-  /* .body is the ScrollArea viewport (overflow + auto-hiding bar live in ScrollArea). */
   .debug-log :global(.body) {
     flex: 1;
     min-height: 0;

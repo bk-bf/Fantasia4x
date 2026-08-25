@@ -1,22 +1,3 @@
-// memories.jsonc — the PAWN-MEMORY registry (MemoryService). Pawns record notable things they WITNESS
-// and later RECALL them in dialog (on the spot, at the campfire later, or both). This file owns
-// EVERYTHING about a memory KIND in one place:
-//   memorability  — 0–1 base weight: how long it stays recallable + how strongly it's weighted.
-//                   ≥0.9 = historic (never pruned). Trivial fades in days, notable weeks, significant a
-//                   season. (death overrides this per witness by their bond — see SocialService.)
-//   category      — which dialog category's tone + relationship/mood deltas the recall borrows.
-//   witnessRadius — tiles around the event within which pawns pick the memory up.
-//   lines         — the recall exchange: {subject} = who it's about, {detail} = the item/foe/affliction,
-//                   {ago} = how long ago, {name} = the listener. All PLAYER-FACING.
-//
-// The RECORDING itself lives in code (each event site knows its own subject/detail): combat kills
-// (Combat.ts), deaths (SocialService.onPawnDeath), craft quality (jobs/craft.ts), idle streaks + the
-// daily prune (SocialService), and condition onsets (PawnStateMachine → fromCondition below). This file
-// drives their tuning + words, not their existence.
-//
-// fromCondition — MOOD-REWORK/PAWN-MEMORY §3: a floater-flagged persistent condition ONSETTING on a
-//   pawn mints an `affliction` memory on nearby witnesses (subject = the afflicted). `detail` is the
-//   verb phrase the line uses ("You see {subject} {detail}?"), `memorability` its weight.
 {
   "kinds": {
     "death": {

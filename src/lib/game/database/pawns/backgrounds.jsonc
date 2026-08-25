@@ -1,28 +1,3 @@
-// Pawn backgrounds (KINGDOMS-TRADE / BACKGROUNDS). A pawn has a CHILDHOOD (always) and, if adult
-// (≥18), an ADULTHOOD the childhood makes reachable. Cohesion, unlike RimWorld's free pairing: a
-// childhood `opens` a set of life-path TAGS, and an adulthood is only reachable if its `requires`
-// tag was opened by that childhood, so "street urchin to court scholar" can't happen but
-// "street urchin to cutpurse" can. Backgrounds also gate on the HOME KINGDOM (wealth/scale, raider)
-// so a story fits where the pawn was raised. core/Backgrounds.ts loads and rolls these.
-//
-// PLAYER-FACING strings: concrete, grounded lore, no em dashes, no "X if not Y" idiom. `description`
-// is the ONE flavour line. The "what this shapes" hover list is GENERATED from the effect fields
-// (core/Backgrounds.ts describeBackgroundEffects); `knows` is the ONE authored effect string, a
-// concrete and DISTINCT phrase of what this life taught the pawn about home. Effect fields:
-//   knows           - concrete phrase for the "Knows ..." effect line (distinct per background)
-//   traitAffinity   - trait ids (traits.jsonc) weighted UP in the pawn's personal-trait draw
-//   traitGuaranteed - trait id(s) forced in (respecting CONFLICT_GROUPS / physique gates)
-//   experience      - work category to [min,max] STARTING experience level added on top of the roll
-//   prestige        - [min,max] inherent standing (basePrestige) added at birth
-//   homeKnowledge   - [min,max] xp this bg contributes to the pawn's HOME kingdom (childhood+adult sum)
-//   worldliness     - # of OTHER kingdoms this bg gives partial knowledge of (travelled lives > 0)
-//   worldKnowledge  - [min,max] xp per secondary kingdom
-//
-// `founderWeight` - draw weight for a STARTING colonist (falls back to `weight`). 0 = a founder is
-// never this; low = rare at colony start. Migrants ignore it. Keeps a fresh colony off worldly/noble
-// founders who over-fill the pokédex.
-//
-// Life-path tags: martial · learned · wilderness · labor · craft · social · crime · faith
 {
   "childhoods": [
     {

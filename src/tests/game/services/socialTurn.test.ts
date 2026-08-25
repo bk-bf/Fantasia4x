@@ -1,10 +1,8 @@
-// SOCIAL-LAYER service tests: the daily social pass (relationships forming from shared work,
-// conversations, standing moods, breaks), the death/grief hook, and the starting-kin pass.
 import { describe, it, expect, beforeEach } from 'vitest';
 import { socialService } from '$lib/game/services/SocialService';
 import { linkStartingKin, remapKinIds } from '$lib/game/entities/Pawns';
-import { findRelationship } from '$lib/game/core/Social';
-import { rng } from '$lib/game/core/rng';
+import { findRelationship } from '$lib/game/core/rules/social/social';
+import { rng } from '$lib/game/core/util/rng';
 import type { GameState, Pawn, PawnRelationship } from '$lib/game/core/types';
 
 function pawn(id: string, x: number, y: number, extra: Partial<Pawn> = {}): Pawn {
@@ -36,7 +34,7 @@ function pawn(id: string, x: number, y: number, extra: Partial<Pawn> = {}): Pawn
 
 function stateWith(pawns: Pawn[], extra: Partial<GameState> = {}): GameState {
   return {
-    turn: 18000, // exactly one day in
+    turn: 18000,
     pawns,
     cultureRelations: [{ a: 'c1', b: 'c2', score: -70, disposition: 'hostile' }],
     jobs: [],
@@ -66,12 +64,11 @@ describe('relationship seeding through the service', () => {
       tags: ['rescued_by'],
       label: 'A rescue',
       kind: 'rescue'
-    }); // rescue
+    });
     const rel = findRelationship(s.relationships, 'pawn-1', 'pawn-2')!;
-    expect(rel.score).toBe(15 + 18); // same-culture seed + rescue
+    expect(rel.score).toBe(15 + 18);
     expect(rel.tags).toContain('rescued_by');
     expect(rel.points.history).toBe(18);
-    // the moment is logged: the same-people seed baseline + the rescue line
     expect(rel.log?.some((e) => e.kind === 'seed')).toBe(true);
     expect(rel.log?.some((e) => e.kind === 'rescue' && e.delta === 18)).toBe(true);
   });
@@ -79,14 +76,12 @@ describe('relationship seeding through the service', () => {
   it('meetColony gives every living pair at least a Strangers row, idempotently', () => {
     const a = pawn('pawn-1', 5, 5);
     const b = pawn('pawn-2', 6, 5, { cultureId: 'c2' });
-    const c = pawn('pawn-3', 40, 40, { cultureId: 'c3' }); // far away — colonists have still met
+    const c = pawn('pawn-3', 40, 40, { cultureId: 'c3' });
     const gone = pawn('pawn-4', 5, 6, { isAlive: false });
     const s1 = socialService.meetColony(stateWith([a, b, c, gone]));
-    expect(s1.relationships).toHaveLength(3); // the three living pairs, none for the dead
-    // unrelated cultures meet as strangers; same-culture pairs seed warmer (+15, acquaintances)
+    expect(s1.relationships).toHaveLength(3);
     expect(findRelationship(s1.relationships, 'pawn-2', 'pawn-3')!.stage).toBe('strangers');
-    expect(findRelationship(s1.relationships, 'pawn-1', 'pawn-2')!.stage).toBe('rivals'); // hostile seed
-    // idempotent: nothing missing → the SAME state ref back, no row duplicated or reset
+    expect(findRelationship(s1.relationships, 'pawn-1', 'pawn-2')!.stage).toBe('rivals');
     const s2 = socialService.meetColony(s1);
     expect(s2).toBe(s1);
   });
@@ -104,17 +99,15 @@ describe('processSocialTurn (daily pass)', () => {
     const s1 = socialService.processSocialTurn(s0);
     const rel = findRelationship(s1.relationships, 'pawn-1', 'pawn-2')!;
     expect(rel).toBeDefined();
-    // same-culture seed +15, worked-together +0.5, plus any conversation delta on top
     expect(rel.score).toBeGreaterThanOrEqual(15);
     expect(rel.points.history).toBeGreaterThan(0);
   });
 
   it('proximity dialog: pawns within 2 tiles chat (logged), far-apart pawns do not', () => {
     const a = pawn('pawn-1', 5, 5);
-    const b = pawn('pawn-2', 6, 5); // adjacent
-    const far = pawn('pawn-3', 60, 60); // out of range
+    const b = pawn('pawn-2', 6, 5);
+    const far = pawn('pawn-3', 60, 60);
     let s = stateWith([a, b, far]);
-    // run the throttled dialog tick a few times; cooldowns pace it, so step the clock between
     for (let k = 0; k < 8; k++) {
       s = { ...s, turn: (k + 1) * 90 };
       s = socialService.processDialogTick(s);
@@ -124,10 +117,8 @@ describe('processSocialTurn (daily pass)', () => {
     const talks = (near!.log ?? []).filter((e) => e.kind === 'talk');
     expect(talks.length).toBeGreaterThan(0);
     expect(talks[0].label.length).toBeGreaterThan(0);
-    // the dialog transcript is stored on the event (for the Relations-tab nested log)
     expect(talks[0].lines?.length).toBeGreaterThan(0);
     expect(talks[0].lines![0].text.length).toBeGreaterThan(0);
-    // the far pawn never came within range → no dialog rows with it
     expect(findRelationship(s.relationships, 'pawn-1', 'pawn-3')).toBeUndefined();
     expect(findRelationship(s.relationships, 'pawn-2', 'pawn-3')).toBeUndefined();
   });
@@ -136,16 +127,14 @@ describe('processSocialTurn (daily pass)', () => {
     const a = pawn('pawn-1', 5, 5);
     const b = pawn('pawn-2', 6, 5);
     let s = stateWith([a, b]);
-    // fire many ticks within the cooldown window (25s * 60 = 1500 ticks) at 90-tick spacing
     let chats = 0;
     for (let k = 0; k < 15; k++) {
-      s = { ...s, turn: (k + 1) * 90 }; // up to turn 1350 < 1500 cooldown
+      s = { ...s, turn: (k + 1) * 90 };
       const before = findRelationship(s.relationships, 'pawn-1', 'pawn-2')?.log?.length ?? 0;
       s = socialService.processDialogTick(s);
       const after = findRelationship(s.relationships, 'pawn-1', 'pawn-2')?.log?.length ?? 0;
       if (after > before) chats++;
     }
-    // seed row aside, at most ONE actual dialog inside a single cooldown window
     expect(chats).toBeLessThanOrEqual(1);
   });
 
@@ -155,7 +144,7 @@ describe('processSocialTurn (daily pass)', () => {
     let s = stateWith([a, b]);
     let sawBattleTalk = false;
     for (let k = 0; k < 30 && !sawBattleTalk; k++) {
-      s = { ...s, turn: (k + 1) * 2000 }; // step past the pair cooldown each time
+      s = { ...s, turn: (k + 1) * 2000 };
       s = socialService.processDialogTick(s);
       const log = findRelationship(s.relationships, 'pawn-1', 'pawn-2')?.log ?? [];
       if (log.some((e) => /under arms|before the fight/i.test(e.label))) sawBattleTalk = true;
@@ -172,14 +161,13 @@ describe('processSocialTurn (daily pass)', () => {
     let s = stateWith([a, b]);
     for (let day = 0; day < 4; day++) {
       s = { ...s, turn: 18000 * (day + 1) };
-      // keep them working side by side each day
       s.pawns.forEach((p) => (p.state = { ...p.state, isWorking: true }));
       s = socialService.processSocialTurn(s);
     }
     const rel = findRelationship(s.relationships, 'pawn-1', 'pawn-2')!;
     const timeEntries = (rel.log ?? []).filter((e) => e.label === 'Time spent together');
-    expect(timeEntries).toHaveLength(1); // one rolling total, not one per day
-    expect(timeEntries[0].delta).toBeGreaterThan(0.5); // accumulated across the days
+    expect(timeEntries).toHaveLength(1);
+    expect(timeEntries[0].delta).toBeGreaterThan(0.5);
   });
 
   it('a rock-bottom pawn goes on a break and refuses work', () => {
@@ -195,12 +183,11 @@ describe('processSocialTurn (daily pass)', () => {
 
   it('standing bands are re-evaluated, expired moods pruned', () => {
     const a = pawn('pawn-1', 5, 5, {
-      moodModifiers: [{ id: 'hot-meal', label: 'Ate a hot meal', value: 8, expiresAt: 10 }] // long expired
+      moodModifiers: [{ id: 'hot-meal', label: 'Ate a hot meal', value: 8, expiresAt: 10 }]
     });
     const s1 = socialService.processSocialTurn(stateWith([a]));
     const after = s1.pawns.find((p) => p.id === 'pawn-1')!;
     expect(after.moodModifiers?.some((m) => m.id === 'hot-meal')).toBe(false);
-    // bare-handed pawn with no equipment reads as ragged (standing band)
     expect(after.moodModifiers?.some((m) => m.id === 'prestige-band')).toBe(true);
   });
 });
@@ -221,12 +208,10 @@ describe('onPawnDeath (grief hook)', () => {
     };
     const s0 = stateWith([dead, friend, bystander, farAway], { relationships: [rel] });
     const s1 = socialService.onPawnDeath(s0, dead);
-    // the friend carries the grief
     const grieving = s1.pawns.find((p) => p.id === 'pawn-2')!;
     expect(grieving.moodModifiers?.some((m) => m.id === 'grief:pawn-1' && m.value === -25)).toBe(
       true
     );
-    // the far pawn does not witness-bond; the two nearby do
     expect(findRelationship(s1.relationships, 'pawn-1', 'pawn-2')).toBeUndefined();
     const witnessBond = findRelationship(s1.relationships, 'pawn-2', 'pawn-3');
     expect(witnessBond).toBeDefined();
@@ -260,12 +245,9 @@ describe('starting kin (linkStartingKin / remapKinIds)', () => {
     for (const p of linked) {
       for (const tie of p.kin!) {
         const q = byId.get(tie.pawnId)!;
-        // symmetric back-tie
         expect(q.kin!.some((t) => t.pawnId === p.id)).toBe(true);
-        // shared family + surname
         expect(p.familyId).toBe(q.familyId);
         expect(p.name.split(' ').slice(-1)[0]).toBe(q.name.split(' ').slice(-1)[0]);
-        // plausible age gap for the tie kind
         const gap = Math.abs((p.age ?? 0) - (q.age ?? 0));
         if (tie.kind === 'sibling') expect(gap).toBeLessThanOrEqual(12);
         else expect(gap).toBeGreaterThanOrEqual(16);
@@ -281,10 +263,8 @@ describe('starting kin (linkStartingKin / remapKinIds)', () => {
         { pawnId: 'pawn-2', kind: 'parent' }
       ]
     });
-    // only pawn-1 makes the cut
     remapKinIds([a], new Map([['pawn-1', 'pawn-9']]));
     expect(a.kin).toEqual([{ pawnId: 'pawn-9', kind: 'sibling' }]);
-    // and a pawn whose every tie is dropped loses the family marker
     const b = pawn('pawn-0', 0, 0, {
       familyId: 'family-x',
       kin: [{ pawnId: 'gone', kind: 'child' }]

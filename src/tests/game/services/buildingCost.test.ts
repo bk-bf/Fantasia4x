@@ -2,13 +2,6 @@ import { describe, it, expect } from 'vitest';
 import { buildingService } from '$lib/game/services/BuildingService';
 import type { GameState } from '$lib/game/core/types';
 
-/**
- * §A any-rock stations — `category:<cat>` building-cost slots resolve to ANY items of that
- * category (the building-cost analogue of a recipe's acceptsCategory). The `hearth` costs
- * `{ "category:stone": 8, branch: 4 }`, so it builds from any mix of granite/limestone/…/slate.
- */
-// ADR-016: building cost is paid from AVAILABLE stored drops (reserved-for-craft stacks
-// excluded), so seed physical stored drops — not just the derived `stockpile` aggregate.
 function gs(stock: Record<string, number>): GameState {
   const droppedItems = Object.entries(stock).map(([resourceId, quantity], i) => ({
     id: `stored-${resourceId}-${i}`,
@@ -50,7 +43,6 @@ describe('§A category building-cost (resolveBuildingCost)', () => {
   });
 
   it('spends the player-chosen material first for a category slot (materialOverride)', () => {
-    // Plenty of both rocks; choosing slate must spend slate, not the auto-pick (granite).
     const out = buildingService.resolveBuildingCost(
       'hearth',
       gs({ granite: 10, slate: 10, branch: 4 }),
@@ -60,7 +52,6 @@ describe('§A category building-cost (resolveBuildingCost)', () => {
   });
 
   it('auto-fills the shortfall when the chosen material runs short', () => {
-    // Only 5 slate available for an 8 slot → spend all 5 slate, top up the remaining 3 from granite.
     const out = buildingService.resolveBuildingCost(
       'hearth',
       gs({ granite: 10, slate: 5, branch: 4 }),

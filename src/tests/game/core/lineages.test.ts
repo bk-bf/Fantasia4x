@@ -5,26 +5,22 @@ import {
   lineageGrowthEvent,
   AWAKENING_DEFS,
   LINEAGE_DEFS
-} from '$lib/game/core/Lineages';
-import { feedOnVictim, sateBloodHunger } from '$lib/game/core/Lineages';
-import { rng } from '$lib/game/core/rng';
-import { drawPawnTraits } from '$lib/game/core/Culture';
+} from '$lib/game/core/defs/lineages';
+import { feedOnVictim, sateBloodHunger } from '$lib/game/core/defs/lineages';
+import { rng } from '$lib/game/core/util/rng';
+import { drawPawnTraits } from '$lib/game/core/gen/culture';
 import { createBodyPlanLimbs } from '$lib/game/systems/Combat';
 import type { Culture, Pawn, Trait } from '$lib/game/core/types';
-
-// LINEAGES §4 foundation — the awakening-meter mechanism + growth-event decision logic. Content
-// (beast-heritage etc.) lands in Phase 2; here we exercise the mechanism with real awakening data.
 
 const pawn = (over: Partial<Pawn> = {}): Pawn =>
   ({ id: 'p', isAlive: true, stats: { perception: 10 }, traits: [], ...over }) as unknown as Pawn;
 
-// A standalone gateway trait: rolls awakening meters toward two lineages (beast + werewolf).
 const clawGateway: Trait = {
   name: 'Beast Claws',
   description: '',
   kind: 'naturalGear',
   lineageExclusive: false,
-  awakens: ['devour-raw-meat', 'moon-bathing'] // beast + werewolf
+  awakens: ['devour-raw-meat', 'moon-bathing']
 } as Trait;
 
 describe('LINEAGES §4 awakening meters', () => {
@@ -42,15 +38,12 @@ describe('LINEAGES §4 awakening meters', () => {
     expect(p.lineagePaths?.length).toBe(2);
     const lineages = p.lineagePaths!.map((x) => x.lineage).sort();
     expect(lineages).toEqual(['beast', 'werewolf']);
-    // Targets sit inside the condition's rolled range (devour-raw-meat 40..80).
     const beast = p.lineagePaths!.find((x) => x.lineage === 'beast')!;
     expect(beast.target).toBeGreaterThanOrEqual(40);
     expect(beast.target).toBeLessThanOrEqual(80);
   });
 
   it('a many-condition gateway still seeds ONE meter per lineage (a random condition each)', () => {
-    // The real Rending Claws gateway lists 6 conditions (3 beast + 3 werewolf) → exactly 2 meters,
-    // and WHICH deed each meter tracks varies pawn to pawn.
     const fullClaws: Trait = {
       name: 'Rending Claws',
       description: '',
@@ -69,7 +62,6 @@ describe('LINEAGES §4 awakening meters', () => {
     seedAwakeningPaths(p);
     expect(p.lineagePaths?.length).toBe(2);
     expect(p.lineagePaths!.map((x) => x.lineage).sort()).toEqual(['beast', 'werewolf']);
-    // The rolled condition genuinely varies with the stream.
     const seen = new Set<string>();
     for (let seed = 1; seed <= 30; seed++) {
       rng.reseed(seed);
@@ -90,7 +82,7 @@ describe('LINEAGES §4 awakening meters', () => {
     } as Trait;
     const p = pawn({ traits: [clawGateway, fur] });
     seedAwakeningPaths(p);
-    expect(p.lineagePaths?.length).toBe(2); // beast + werewolf once each, not four bars
+    expect(p.lineagePaths?.length).toBe(2);
     expect(new Set(p.lineagePaths!.map((x) => x.lineage)).size).toBe(2);
   });
 
@@ -98,21 +90,17 @@ describe('LINEAGES §4 awakening meters', () => {
     const p = pawn({ traits: [clawGateway], deeds: {} });
     seedAwakeningPaths(p);
     const beast = p.lineagePaths!.find((x) => x.lineage === 'beast')!;
-    // Do the deed → meter climbs and tracks the day.
     p.deeds!.ateRawMeat = 10;
     advanceAwakeningMeters(p, 100);
     expect(beast.value).toBe(10);
     expect(beast.lastFedDay).toBe(100);
-    // Idle within the grace window → no decay.
     advanceAwakeningMeters(p, 102);
     expect(beast.value).toBe(10);
-    // Idle past the grace window → decays.
     advanceAwakeningMeters(p, 110);
     expect(beast.value).toBeLessThan(10);
   });
 
   it('gateway draw cap: at most TWO gateways per pawn, and a second is rare (~1 in 20)', () => {
-    // A culture whose pool is nothing but gateways — without the cap every pawn would draw two.
     const gw = (id: string, lineages: string[]): Trait =>
       ({
         id,
@@ -138,27 +126,25 @@ describe('LINEAGES §4 awakening meters', () => {
       rng.reseed(seed);
       const drawn = drawPawnTraits(culture);
       const gateways = drawn.filter((t) => t.lineageExclusive === false).length;
-      expect(gateways).toBeLessThanOrEqual(2); // never a third competing line
+      expect(gateways).toBeLessThanOrEqual(2);
       if (gateways === 2) twos++;
     }
-    expect(twos).toBeGreaterThan(0); // possible…
-    expect(twos / 300).toBeLessThan(0.2); // …but genuinely rare
+    expect(twos).toBeGreaterThan(0);
+    expect(twos / 300).toBeLessThan(0.2);
   });
 
   it('a FULL meter LOCKS — it never decays, even after long idle (awaits the growth event)', () => {
     const p = pawn({ traits: [clawGateway], deeds: {} });
     seedAwakeningPaths(p);
     const beast = p.lineagePaths!.find((x) => x.lineage === 'beast')!;
-    p.deeds!.ateRawMeat = beast.target; // fill it exactly
+    p.deeds!.ateRawMeat = beast.target;
     advanceAwakeningMeters(p, 100);
     expect(beast.value).toBe(beast.target);
-    // Many idle days later → still full (locked), not decayed.
     advanceAwakeningMeters(p, 500);
     expect(beast.value).toBe(beast.target);
   });
 
   it('a full meter AWAKENS the pawn: grants the lineage parent + its first member', () => {
-    // Inject a minimal beast lineage into the pool via the pawn's own gateway → parent + member.
     const parent: Trait = {
       id: 'beast-heritage',
       name: 'Beast',
@@ -172,10 +158,6 @@ describe('LINEAGES §4 awakening meters', () => {
       kind: 'naturalGear',
       lineage: ['beast']
     } as Trait;
-    // Point the beast lineage's parent at our fixture and register the member in the catalog via a
-    // pawn that already lists them is not enough — so we drive lineageGrowthEvent with a pawn whose
-    // meter is full and whose lineage parent resolves. We simulate by pre-granting nothing and relying
-    // on the real catalog; instead assert the awaken PATH triggers by checking a hand-built full meter.
     const p = pawn({
       traits: [clawGateway],
       lineagePaths: [
@@ -190,9 +172,6 @@ describe('LINEAGES §4 awakening meters', () => {
         }
       ]
     });
-    // Parent trait for LINEAGE_DEFS[0] ('beast') resolves only if beast-heritage exists in the catalog.
-    // Until Phase 2 content lands it does not, so awaken no-ops gracefully (no throw) and the meter
-    // stays — this asserts the mechanism is safe ahead of content.
     const applied: Trait[] = [];
     const res = lineageGrowthEvent(p, (t) => applied.push(t));
     expect(['awaken', 'none', 'evolve', 'grow']).toContain(res.kind);
@@ -200,7 +179,6 @@ describe('LINEAGES §4 awakening meters', () => {
   });
 
   it('Beast content: a FULL meter awakens the pawn → beast-heritage + a first beast member', () => {
-    // Real Beast content now exists (beast-heritage parent + members tagged lineage:["beast"]).
     const gateway: Trait = {
       id: 'rending-claws',
       name: 'Rending Claws',
@@ -236,10 +214,10 @@ describe('LINEAGES §4 awakening meters', () => {
     expect(res.kind).toBe('awaken');
     expect(res.lineage).toBe('beast');
     expect(res.added).toContain('beast-heritage');
-    expect(res.added.length).toBe(2); // parent + first member (the payoff)
+    expect(res.added.length).toBe(2);
     expect(p.traits!.some((t) => t.id === 'beast-heritage')).toBe(true);
-    expect(p.lineagePaths).toBeUndefined(); // turned — no more awakening
-    expect(applied.length).toBe(2); // both granted traits had their effects applied
+    expect(p.lineagePaths).toBeUndefined();
+    expect(applied.length).toBe(2);
   });
 
   it('Beast content: a born beast pawn GROWS a new member at a growth event', () => {
@@ -268,7 +246,6 @@ describe('LINEAGES §4 awakening meters', () => {
       if (res.kind === 'grow') {
         grew = true;
         expect(res.lineage).toBe('beast');
-        // the grown trait is a real beast member and is now on the pawn
         expect(p.traits!.length).toBe(2);
       }
     }
@@ -276,7 +253,6 @@ describe('LINEAGES §4 awakening meters', () => {
   });
 
   it('a staged trait EVOLVES to its next rung at a growth event', () => {
-    // spider-eyes-lesser (S1) → spider-eyes (S2) is a real staged line in traits.jsonc.
     const s1: Trait = {
       id: 'spider-eyes-lesser',
       name: 'Extra Eye',
@@ -286,8 +262,6 @@ describe('LINEAGES §4 awakening meters', () => {
       evolvesTo: 'spider-eyes'
     } as Trait;
     const p = pawn({ traits: [s1] });
-    // Force the evolve roll to fire by seeding a stream that lands under EVOLVE_CHANCE; retry seeds
-    // until an evolve happens (deterministic within the loop).
     let evolved = false;
     for (let seed = 1; seed < 200 && !evolved; seed++) {
       const q = pawn({ traits: [{ ...s1 }] });
@@ -306,7 +280,6 @@ describe('LINEAGES §4 awakening meters', () => {
   });
 });
 
-// ── LINEAGES-II §2 — the vampiric feeding primitive ──────────────────────────
 describe('vampiric feeding (feedOnVictim)', () => {
   it('stamps a small neck puncture + drains blood on the victim, and sates the feeder', () => {
     const feeder = {
@@ -323,13 +296,11 @@ describe('vampiric feeding (feedOnVictim)', () => {
       limbs: createBodyPlanLimbs('humanoid', 1)
     } as unknown as Pawn;
     feedOnVictim(feeder, victim, 1000);
-    // Victim: lighter by 12 blood, with a real (bleeding, clottable) puncture on the neck.
     expect(victim.bloodVolume).toBe(88);
     const neck = victim.limbs!.flatMap((l) => l.parts ?? []).find((p) => p.id === 'neck')!;
     const bite = neck.injuries.find((w) => w.type === 'puncture')!;
     expect(bite).toBeTruthy();
-    expect(bite.permanent).toBeUndefined(); // it heals like any wound
-    // Feeder: sated — the meter resets and the bloodthirst rage lifts (control returns next tick).
+    expect(bite.permanent).toBeUndefined();
     expect(feeder.needs!.bloodHunger).toBe(0);
     expect(feeder.conditionTimers!.bloodthirst).toBeUndefined();
   });

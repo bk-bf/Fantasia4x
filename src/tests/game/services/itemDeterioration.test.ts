@@ -2,18 +2,9 @@ import { describe, it, expect } from 'vitest';
 import { itemService, DETERIORATION_GLOBAL_SCALE } from '$lib/game/services/ItemService';
 import type { GameState, DroppedItem } from '$lib/game/core/types';
 
-/**
- * §B (PRODUCTION-CHAIN-EXPANSION) durable-goods deterioration — count-down model.
- * A loose stack (`stored !== true`) loses `deteriorationRate × DETERIORATION_GLOBAL_SCALE × elapsedTicks`
- * durability from its `maxDurability` pool (default 100); destroyed at 0. Stored items take no
- * exposure damage. The global scale stretches lifespans to days/weeks; the caller throttles the
- * step to run every N ticks and passes that N as `elapsedTicks`.
- * `pine_log` carries deteriorationRate 0.05 and an explicit maxDurability in the item DB.
- */
 const PINE = itemService.getItemById('pine_log')!;
-const RATE = PINE.deteriorationRate!; // 0.05
+const RATE = PINE.deteriorationRate!;
 const MAXD = PINE.maxDurability ?? 100;
-/** Effective durability lost per elapsed tick after the global scale. */
 const PER_TICK = RATE * DETERIORATION_GLOBAL_SCALE;
 
 function makeState(dropped: DroppedItem[]): GameState {
@@ -53,8 +44,6 @@ describe('ItemService.stepItemDeterioration (§B, count-down durability)', () =>
   });
 
   it('lifespan ≈ maxDurability / (rate × scale) ticks', () => {
-    // Drive it with a large elapsedTicks per call so the test stays fast; total ticks to destruction
-    // should land within one step of the analytic lifespan.
     const STEP = 2000;
     const expectedTicks = MAXD / PER_TICK;
     let gs = makeState([drop({})]);

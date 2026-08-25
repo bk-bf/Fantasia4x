@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { combatService } from '$lib/game/systems/Combat';
 import { healWounds } from '$lib/game/systems/PawnStateMachine';
-import { rollWoundClotting, healLimbs } from '$lib/game/core/Wounds';
+import { rollWoundClotting, healLimbs } from '$lib/game/core/defs/wounds';
 import { needsRecovery } from '$lib/game/systems/pawn/pawnHelpers';
 import { selectIdleNeed } from '$lib/game/systems/pawn/needSelection';
 import {
@@ -12,12 +12,11 @@ import {
 import { stepHunger } from '$lib/game/services/entity/entityLifecycle';
 import { applyConsumable } from '$lib/game/entities/Pawns';
 import { makeMob } from '$lib/game/services/entity/entitySpawning';
-import { getCreatureById } from '$lib/game/core/Creatures';
-import { buildHealthModel } from '$lib/components/UI/gameCanvas/selectionCard';
-import { rng } from '$lib/game/core/rng';
+import { getCreatureById } from '$lib/game/core/defs/creatures';
+import { buildHealthModel } from '$lib/components/UI/canvas/selectionCard';
+import { rng } from '$lib/game/core/util/rng';
 import type { GameState, Injury, Pawn } from '$lib/game/core/types';
 
-// Wounds mend at full rate only while resting; untended serious wounds stall; dressing quality is shelter-gated. Drives the real services — no mocks.
 const stats = {
   strength: 12,
   dexterity: 12,
@@ -75,7 +74,6 @@ const woundDamage = (p: Pawn, part: string): number =>
 
 describe('wound recovery & bleeding', () => {
   it('a resting pawn heals far faster than an active one (activity gate)', () => {
-    // Minor wound (10 on the 80-HP chest = frac 0.125) so the severity stall doesn't apply.
     const seed = () =>
       combatService.applyInjury('p1', { ...cut(10), bodyPart: 'chest' }, state([makePawn()]));
     let resting = seed().pawns[0];
@@ -87,18 +85,16 @@ describe('wound recovery & bleeding', () => {
     }
     const restingHealed = 10 - woundDamage(resting, 'chest');
     const activeHealed = 10 - woundDamage(active, 'chest');
-    expect(restingHealed).toBeGreaterThan(activeHealed * 3); // rest mends multiples faster
+    expect(restingHealed).toBeGreaterThan(activeHealed * 3);
   });
 
   it('an untended serious wound stalls (needs dressing) but a tended one mends', () => {
-    // 50 on the 80-HP chest = frac 0.625 → serious. Rest both; only dressing closes it.
     let untended = combatService.applyInjury(
       'p1',
       { ...cut(50), bodyPart: 'chest' },
       state([makePawn()])
     ).pawns[0];
     const tendedPawn = { ...untended };
-    // Mark the wound tended at high quality.
     tendedPawn.limbs = tendedPawn.limbs!.map((l) => ({
       ...l,
       parts: (l.parts ?? []).map((p) => ({
@@ -113,7 +109,7 @@ describe('wound recovery & bleeding', () => {
     }
     const untendedHealed = 50 - woundDamage(untended, 'chest');
     const tendedHealed = 50 - woundDamage(tended, 'chest');
-    expect(tendedHealed).toBeGreaterThan(untendedHealed * 3); // dressing is what closes a real wound
+    expect(tendedHealed).toBeGreaterThan(untendedHealed * 3);
   });
 
   it('dressing quality is much lower in the open than on a bed', () => {
@@ -141,17 +137,16 @@ describe('wound recovery & bleeding', () => {
       tendPatient(inOpen.pawns[0], inOpen.pawns[0], inOpen)
         .pawns[0].limbs!.flatMap((l) => l.parts ?? [])
         .find((p) => p.id === 'chest')!.injuries[0].treatmentQuality ?? 0;
-    expect(bedQ).toBeGreaterThan(openQ * 2); // shelter is what makes a dressing viable
+    expect(bedQ).toBeGreaterThan(openQ * 2);
   });
 
   it('caretake job is generated for a resting wounded patient and tends on completion', () => {
-    const patient = makePawn(); // Sleeping
+    const patient = makePawn();
     let gs = combatService.applyInjury('p1', { ...cut(50), bodyPart: 'chest' }, state([patient]));
     const jobs = generateCaretake([], gs);
     const job = jobs.find((j) => j.type === 'caretake' && j.patientId === 'p1');
     expect(job).toBeTruthy();
     expect(job!.targetX).toBe(5);
-    // Completing the job (a claimed medic dresses the wound) stamps a treatment on the patient.
     rng.reseed(3);
     gs = {
       ...gs,
@@ -172,7 +167,6 @@ describe('wound recovery & bleeding', () => {
       state([makePawn()])
     );
     gs = combatService.applyInjury('p1', { ...cut(30), bodyPart: 'leftHand' }, gs);
-    // Force a deterministic bleed order: the chest wound bleeds harder than the hand wound.
     gs = {
       ...gs,
       pawns: gs.pawns.map((p) => ({
@@ -198,9 +192,9 @@ describe('wound recovery & bleeding', () => {
     const parts = after.pawns[0].limbs!.flatMap((l) => l.parts ?? []);
     const chest = parts.find((p) => p.id === 'chest')!.injuries[0];
     const hand = parts.find((p) => p.id === 'leftHand')!.injuries[0];
-    expect(chest.treatedAt).toBeDefined(); // the worst (most-bleeding) wound is dressed first
-    expect(chest.bleeding).toBe(0); // dressing stops its bleed
-    expect(hand.treatedAt).toBeUndefined(); // the lesser wound is left for the next pass
+    expect(chest.treatedAt).toBeDefined();
+    expect(chest.bleeding).toBe(0);
+    expect(hand.treatedAt).toBeUndefined();
     expect(hand.bleeding).toBe(2);
   });
 
@@ -216,7 +210,6 @@ describe('wound recovery & bleeding', () => {
       state([makePawn()])
     ).pawns[0];
     expect(needsRecovery(serious)).toBe(true);
-    // A tiny non-serious, barely-bleeding scratch shouldn't pull a pawn off work.
     expect(needsRecovery(minor)).toBe(false);
   });
 
@@ -229,7 +222,6 @@ describe('wound recovery & bleeding', () => {
       ).pawns[0];
     const never = wounded('never');
     const always = wounded('always');
-    // 'never' → no auto-rest (accepts the slow active heal); 'always' → lies down to recover.
     expect(selectIdleNeed(never, state([never]))).toBeNull();
     expect(selectIdleNeed(always, state([always]))?.kind).toBe('sleep');
   });
@@ -246,8 +238,8 @@ describe('wound recovery & bleeding', () => {
     }
     const after = woundDamage(gs.mobs![0] as unknown as Pawn, 'chest');
     const bleedAfter = (gs.mobs![0].limbs ?? []).reduce((s, l) => s + (l.bleedRate ?? 0), 0);
-    expect(after).toBeLessThan(before); // wound mended somewhat
-    expect(bleedAfter).toBeLessThan(bleedBefore + 1e-9); // bleed tapered, never grew
+    expect(after).toBeLessThan(before);
+    expect(bleedAfter).toBeLessThan(bleedBefore + 1e-9);
   });
 
   it('a mob does NOT heal its wounds while in combat (no mid-fight insta-regen)', () => {
@@ -259,7 +251,6 @@ describe('wound recovery & bleeding', () => {
       gs = { ...gs, turn: i };
       gs = stepHunger(gs);
     }
-    // Attacking → the heal pass is skipped, so the chip wound persists.
     expect(woundDamage(gs.mobs![0] as unknown as Pawn, 'chest')).toBe(before);
   });
 
@@ -267,17 +258,15 @@ describe('wound recovery & bleeding', () => {
     (p.limbs ?? []).reduce((s, l) => s + (l.bleedRate ?? 0), 0);
 
   it('a successful clot roll stops a minor wound (1 stage); a serious wound needs 2', () => {
-    // Minor wound → 1 clot stage fully stops the bleed.
     const minor = combatService.applyInjury(
       'p1',
       { ...cut(5), bodyPart: 'leftHand' },
       state([makePawn()])
     ).pawns[0];
     expect(totalBleed(minor)).toBeGreaterThan(0);
-    rollWoundClotting(minor.limbs!, 1.0, 1); // forced success
+    rollWoundClotting(minor.limbs!, 1.0, 1);
     expect(totalBleed(minor)).toBe(0);
 
-    // Serious wound → first stage only halves the bleed; it takes a second to fully clot.
     const serious = combatService.applyInjury(
       'p1',
       { ...cut(50), bodyPart: 'chest' },
@@ -306,7 +295,7 @@ describe('wound recovery & bleeding', () => {
     expect(totalBleed(gs.pawns[0])).toBeGreaterThan(0);
     rng.reseed(1);
     gs = tendPatient(gs.pawns[0], gs.pawns[0], gs);
-    expect(totalBleed(gs.pawns[0])).toBe(0); // dressing is the reliable stop
+    expect(totalBleed(gs.pawns[0])).toBe(0);
   });
 
   it('a fully-healed part drops out of the body model (UI auto-hide)', () => {
@@ -316,7 +305,6 @@ describe('wound recovery & bleeding', () => {
       state([makePawn()])
     ).pawns[0];
     expect(buildHealthModel(pawn).limbs.length).toBeGreaterThan(0);
-    // Big baseHeal drives the wound to full closure directly, isolating snap-to-full + auto-hide from the balance rate.
     pawn = { ...pawn, limbs: healLimbs(pawn.limbs!, 50, 1, false) };
     expect(
       buildHealthModel(pawn).limbs.find((l) => l.label.toLowerCase().includes('torso'))
@@ -324,12 +312,6 @@ describe('wound recovery & bleeding', () => {
   });
 });
 
-// ── Fracture care: a splint speeds the bone, only a dose closes the break ───────────────────────
-// Two mechanisms, deliberately separate. A worn splint multiplies the mending rate of the bone under
-// the parts it COVERS (armorProperties.boneHealMultiplier → healLimbs), which is what makes an arm
-// piece useless on a leg. A dose with `mendsWounds` reaches the limb tree itself — the only thing that
-// can, because `fractured` is re-derived from the tree every tick and `curesConditions` never gets
-// near it.
 describe('fracture care', () => {
   const fracture = (dmg: number, part: string): Injury =>
     ({
@@ -344,7 +326,6 @@ describe('fracture care', () => {
       treatmentQuality: 0.8
     }) as Injury;
 
-  /** A pawn with a broken forearm, optionally wearing `splintId` on the given slot. */
   const broken = (splintId?: string, slot: 'bracers' | 'greaves' = 'bracers'): Pawn => {
     const base = combatService.applyInjury('p1', fracture(8, 'leftForearm'), state([makePawn()]))
       .pawns[0];
@@ -366,7 +347,6 @@ describe('fracture care', () => {
     }
     const bareLeft = woundDamage(bare, 'leftForearm');
     const splintLeft = woundDamage(splinted, 'leftForearm');
-    // 2.2x is what the item authors, so the mended amounts must be in that ratio, not merely ordered.
     const ratio = (8 - splintLeft) / (8 - bareLeft);
     expect(ratio, `splinted mended ${ratio.toFixed(2)}x what bare did`).toBeGreaterThan(2);
   });

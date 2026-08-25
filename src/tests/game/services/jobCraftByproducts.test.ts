@@ -4,16 +4,9 @@ import { itemService } from '$lib/game/services/ItemService';
 import { recipeService } from '$lib/game/services/RecipeService';
 import type { GameState } from '$lib/game/core/types';
 
-/**
- * Recipe registry Stage C + ADR-016 — a completed craft job runs its producing recipe and emits
- * ALL outputs (primary + byproducts) as physical drops ON the station tile, NOT into the legacy
- * `gs.item` pool. `split_firewood` (recipes.jsonc): 1 log → 3 green_firewood + 2 branch.
- */
 function makeState(): GameState {
   const greenFirewood = itemService.getItemById('green_firewood')!;
   const recipe = recipeService.getRecipeForItem('green_firewood')!;
-  // split_firewood sources its log via a dynamicRecipe slot now; a real queued order carries the
-  // concrete chosen log. Use pine_log as that concrete fill, staged on the station tile.
   const slot = Object.values(recipe.dynamicRecipe ?? {})[0];
   const inputId = Object.keys(recipe.inputs)[0] ?? 'pine_log';
   const perRun = recipe.inputs[inputId] ?? slot.quantity;
@@ -68,9 +61,8 @@ describe('craft completion emits recipe byproducts as station drops (Stage C + A
     const drops = gs.droppedItems ?? [];
     const fw = drops.find((d) => d.resourceId === 'green_firewood' && d.x === 5 && d.y === 5);
     const branch = drops.find((d) => d.resourceId === 'branch' && d.x === 5 && d.y === 5);
-    expect(fw?.quantity).toBe(12); // 6 per craft × quantity 2
-    expect(branch?.quantity).toBe(4); // 2 per craft × quantity 2
-    // Staged input consumed; queue drained.
+    expect(fw?.quantity).toBe(12);
+    expect(branch?.quantity).toBe(4);
     expect(drops.some((d) => d.reservedFor === 'cq1')).toBe(false);
     expect(gs.craftingQueue).toHaveLength(0);
   });

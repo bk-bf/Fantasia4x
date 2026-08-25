@@ -1,12 +1,10 @@
-// Entity lifecycle — hunger/fatigue/blood-loss tick, death → corpse conversion, carcass drops, and
-// corpse decay. Extracted from EntityService (P-4).
 import type { GameState, Mob, MobState, DroppedItem, ItemInstance } from '../../core/types';
-import { getCreatureById } from '../../core/Creatures';
-import { stampForeignVessel } from '../../core/vessels';
-import { drawCarried, getLootPool } from '../../core/LootPools';
+import { getCreatureById } from '../../core/defs/creatures';
+import { stampForeignVessel } from '../../core/rules/gear/vessels';
+import { drawCarried, getLootPool } from '../../core/defs/loot';
 import { itemService } from '../ItemService';
-import { rng } from '../../core/rng';
-import { SECONDS_PER_TICK, perTick } from '../../core/time';
+import { rng } from '../../core/util/rng';
+import { SECONDS_PER_TICK, perTick } from '../../core/util/time';
 import {
   conditionNeedMultipliers,
   transientNeedMultipliers,
@@ -18,25 +16,25 @@ import {
   syncFractureConditions,
   driveWindchill,
   TIRED_FATIGUE_THRESHOLD
-} from '../../core/needs';
+} from '../../core/rules/body/conditions';
 import {
   creatureExposureAt,
   accrueWetness,
   getAmbientLight,
   weatherSightMul
 } from '../EnvironmentService';
-import { isWitnessedByColony } from '../../core/vision';
-import { absorbDropIfOnStockpileTile } from '../../core/GameState';
+import { isWitnessedByColony } from '../../core/rules/body/vision';
+import { absorbDropIfOnStockpileTile } from '../../core/state/stockpile';
 import { pawnStatService } from '../PawnStatService';
-import { simLog } from '../../core/logSink';
-import { lethalAnatomyCause } from '../../core/BodyParts';
+import { simLog } from '../../core/util/logSink';
+import { lethalAnatomyCause } from '../../core/defs/bodyParts';
 import {
   healLimbsInPlace,
   rollWoundClotting,
   MOB_CLOT_ROLL_INTERVAL,
   MOB_BASE_CLOT_CHANCE,
   MOB_BLOODLETTING_CLOT_FACTOR
-} from '../../core/Wounds';
+} from '../../core/defs/wounds';
 import { entityName, mobInLiveRegion, isThinkTick } from './entityHelpers';
 import {
   BASE_HUNGER_PER_SECOND,
@@ -49,39 +47,20 @@ import {
   AI_THROTTLE_TICKS
 } from './entityConstants';
 
-/** Per-tick natural wound mend for creatures (no rest gate, no tending). Tuned so a beast recovers a
- *  limb from ~half HP to full in ~1 in-game week — hardy wild healing, much faster per-HP than a pawn's
- *  (a pawn's lingering wounds need care), but still days-to-weeks, not the old "heals off in a minute". */
 const MOB_WOUND_HEAL_PER_TICK = 0.00024;
-/** Run the mob wound-mend once every N ticks (applying N× the per-tick rate) instead of every tick.
- *  Healing 0.02/tick is "days to close" anyway, so a periodic pass is gameplay-equivalent, and it cuts
- *  the heal work (+ the cache-invalidating ref bump) ~N× across a large wounded-mob population. Paired
- *  with the in-place mend (healLimbsInPlace) this kills the per-tick allocation cliff (ENGINE-PERF). */
 const MOB_HEAL_INTERVAL = 15;
 
 export function stepHunger(state: GameState): GameState {
   const mobs = state.mobs;
   if (!mobs || mobs.length === 0) return state;
   const { turn } = state;
-  // HEADLESS-SIM `devToggleNeed` mobHunger kill-switch: freeze the whole mob metabolism (hunger,
-  // fatigue, forage/starve escalation). Bleed-out/death handling below is skipped too — the toggle
-  // is a debug tool for isolating pawn behaviour from mob churn, not a partial sim mode.
   if (state._needsDisabled?.mobHunger === true) return state;
 
-  // M3 (ENGINE-PERFORMANCE ★ ACTIVE): mutate mob fields IN PLACE (no per-mob {...mob} spread).
-  // Deaths are captured explicitly in `justDied` because the old new-object-vs-old diff used for
-  // carcass drops (`mobs[i].state !== next[i].state`) can't work once the object is mutated.
-  // Per-mob only (hunger/blood/health) — no cross-mob dependency, so order/snapshot semantics are
-  // unaffected (unlike the FSM stepEntities, which is left immutable on purpose).
   let changed = false;
   const justDied: Mob[] = [];
 
-  // §LOD temporal throttle — mirrors stepEntities. Inside the complexity bubble, hunger ticks every
-  // tick. Outside, it advances only on the mob's staggered think-tick, batched by AI_THROTTLE_TICKS so
-  // the long-run rate is unchanged — the mob just gets hungry in coarse steps instead of 60Hz.
   const livePawns = state.pawns.filter((p) => p.position && p.isAlive !== false);
-  const lodActive = livePawns.length > 0; // no pawns ⇒ no bubble centre ⇒ sim everything (test/game-over)
-  // Chronicle-scope: a death is only logged if a colonist could see the tile it happened on (range only).
+  const lodActive = livePawns.length > 0;
   const witnessAmbient = getAmbientLight(turn);
   const witnessWeatherMul = weatherSightMul(state.weather?.type);
   const deathWitnessed = (x: number, y: number) =>
@@ -89,23 +68,15 @@ export function stepHunger(state: GameState): GameState {
   for (const mob of mobs) {
     if (mob.state === 'Corpse' || mob.isAlive === false) continue;
     const inBubble = !lodActive || mobInLiveRegion(mob, livePawns, LIVE_RADIUS);
-    // A BLEEDING mob is processed EVERY tick (even off-bubble) so its bleed-out is PROMPT — it dies of
-    // blood loss the tick blood crosses 0, not up to ~1s late on its next throttled think (which let a
-    // bleeding-out mob linger near-collapse and get its death mis-attributed to a stray combat poke). The
-    // `< maxBV` short-circuit skips the limb scan for the full-blood majority, preserving the throttle
-    // saving (healthy off-bubble mobs still skip).
     const maxBV = mob.maxBloodVolume ?? 100;
     const bleeding =
       (mob.bloodVolume ?? maxBV) < maxBV &&
       (mob.limbs?.some((l) => (l.bleedRate ?? 0) > 0) ?? false);
     if (!inBubble && !isThinkTick(mob.id, turn) && !bleeding) continue;
-    const tickScale = inBubble || bleeding ? 1 : AI_THROTTLE_TICKS; // batch off-bubble hunger; bleeding = per-tick
+    const tickScale = inBubble || bleeding ? 1 : AI_THROTTLE_TICKS;
     const def = getCreatureById(mob.creatureId);
     if (!def) continue;
 
-    // Diet affects how fast hunger accrues. `none` (e.g. shadow_wraith) never gets hungry. Carnivores
-    // (the hunters) burn slowest of the eaters: hunting is unreliable, so a fast clock had them starving
-    // between kills — a real meal (a corpse/carcass) then carries them a long way.
     const dietMult =
       def.diet === 'none'
         ? 0
@@ -113,13 +84,10 @@ export function stepHunger(state: GameState): GameState {
           ? 0.65
           : def.diet === 'herbivore'
             ? 0.5
-            : 0.7; // omnivore
+            : 0.7;
 
     const condMults = conditionNeedMultipliers(mob.conditions ?? []);
-    // Body size drives appetite via the same data-driven `hunger_rate` stat as pawns.
     const sizeRate = pawnStatService.evaluateStat('hunger_rate', mob);
-    // Laired hostiles run a slow metabolism (def.hungerRate < 1) so a leashed pack penned near its
-    // lair isn't on a starvation clock — they idle their territory instead of starving and roaming.
     const lairHungerMult = def.hungerRate ?? 1;
     const hungerDelta =
       BASE_HUNGER_PER_SECOND *
@@ -132,9 +100,6 @@ export function stepHunger(state: GameState): GameState {
     const fatigueDelta =
       BASE_FATIGUE_PER_SECOND * SECONDS_PER_TICK * condMults.fatigueRate * tickScale;
 
-    // Eating PAUSES hunger (×0) and Sleeping SLOWS it (×0.33) — both pulled from the SAME conditions.jsonc
-    // `eating`/`sleeping` modifiers pawns use (transientNeedMultipliers), not a hardcoded constant, so the
-    // rates can't drift. Fatigue still RECOVERS while sleeping (a restorative, not just halted accrual).
     const sleepingNow = mob.state === 'Sleeping';
     const stateCond =
       mob.state === 'Sleeping' ? 'sleeping' : mob.state === 'Eating' ? 'eating' : null;
@@ -144,50 +109,30 @@ export function stepHunger(state: GameState): GameState {
       ? Math.max(0, mob.needs.fatigue - SLEEP_RECOVERY_PER_SECOND * SECONDS_PER_TICK * tickScale)
       : Math.min(100, mob.needs.fatigue + fatigueDelta);
 
-    // ── Clotting ──────────────────────────────────────────────────────────────────
-    // Same lucky-roll model as pawns, but BUFFED: creatures can't be dressed, so they roll HOURLY at a
-    // higher base chance (MOB_* constants) and reliably self-stabilise within ~an in-game hour after a
-    // fight. Mutates the limb objects in place (M3 — no per-tick alloc).
     const limbs = mob.limbs;
     if (limbs && (inBubble ? turn % MOB_CLOT_ROLL_INTERVAL === 0 : true)) {
-      // Off-bubble: roll EVERY think (the mob's only cadence) but scale the per-roll chance down so the
-      // expected clot rate over an interval matches the bubble's single per-interval roll.
       const clotChance =
         Math.min(
           0.95,
           Math.max(0, MOB_BASE_CLOT_CHANCE * pawnStatService.evaluateStat('blood_clotting', mob))
         ) * (inBubble ? 1 : tickScale / MOB_CLOT_ROLL_INTERVAL);
-      // Clotting mutates limb objects in place → bump mob.limbs ref so the worker re-ships the
-      // updated bleed/clot state to the body panel (ref-diff cold sync).
       if (rollWoundClotting(limbs, clotChance, turn, MOB_BLOODLETTING_CLOT_FACTOR))
         mob.limbs = limbs.slice();
     }
 
-    // ── Blood loss ──────────────────────────────────────────────────────────────────
     const totalBleedRate = (limbs ?? []).reduce((sum, l) => sum + (l.bleedRate ?? 0), 0);
     let bloodVolume = mob.bloodVolume ?? maxBV;
 
     if (totalBleedRate > 0) {
       bloodVolume = Math.max(0, bloodVolume - perTick(totalBleedRate) * tickScale);
     } else if (bloodVolume < maxBV) {
-      // Slow regeneration when not bleeding (~2000s to full recovery).
       bloodVolume = Math.min(maxBV, bloodVolume + perTick(0.05) * tickScale);
     }
 
-    // (The redundant `blood_loss` condition is gone — low blood now drives `shock` directly, below.)
-    // Operate on the LIVE conditions array (no per-tick copy); we flip mob.conditions to a new ref
-    // only when the in-place mutations below change it, so the worker's cold-field ref-diff re-ships
-    // it to the UI only on change (not every tick).
     const conditions = (mob.conditions ??= []);
-    // Pre-tick stages of flagged persistent conditions (e.g. shock) — to float a label on change.
     const prevStages = snapshotConditionStages(conditions);
     const condSigBefore = conditionsSig(conditions);
 
-    // ── Need-driven conditions (malnutrition ← hunger) — the SAME data-driven model as pawns ──
-    // Malnutrition onsets only at a maxed hunger (100) and accrues slowly (conditions.jsonc), so a starving mob keeps
-    // acting (trying to hunt/forage) for in-game DAYS, growing progressively weaker, and only dies
-    // when malnutrition reaches lethal severity. The severe stage trips the FSM into Collapsed
-    // (entityAI). Mobs carry no `thirst` need, so dehydration never onsets.
     const lethalCondition = driveNeedConditions(
       conditions,
       {
@@ -214,7 +159,6 @@ export function stepHunger(state: GameState): GameState {
       continue;
     }
 
-    // Death by blood loss.
     if (bloodVolume <= 0) {
       if (deathWitnessed(mob.x, mob.y))
         simLog.logEntityDeath(mob.id, entityName(mob), 'blood_loss', turn, mob.x, mob.y);
@@ -230,8 +174,6 @@ export function stepHunger(state: GameState): GameState {
       continue;
     }
 
-    // Lethal anatomy — destroyed vital organ (incl. a crushed-to-0 heart) or a head/torso reduced to
-    // 0 HP. ONE shared rule (core/BodyParts.lethalAnatomyCause) so combat + this reaper agree.
     if (lethalAnatomyCause(limbs)) {
       if (deathWitnessed(mob.x, mob.y))
         simLog.logEntityDeath(mob.id, entityName(mob), 'critical_limb', turn, mob.x, mob.y);
@@ -247,23 +189,11 @@ export function stepHunger(state: GameState): GameState {
       continue;
     }
 
-    // Creatures can't dress wounds — they heal them OFF slowly over days (no tending, no severity
-    // stall). MUTATED IN PLACE + throttled: the old immutable healLimbs rebuild ran every tick for
-    // every wounded mob, and under sustained mob-vs-mob predation that growing wounded population
-    // GC-thrashed TPS off a cliff (it had re-immutabled the de-immutabled M3 mob phase — ENGINE-PERF).
-    // healLimbsInPlace mends the live limb objects (no deep alloc); the ref is only bumped (shallow
-    // slice) when something actually healed, to invalidate the limbs-identity capacity cache.
-    // No mending while in combat — a fighting/threatened mob doesn't knit wounds (mirrors the pawn
-    // rule: healWounds is skipped while inMelee). Otherwise a tanky creature out-regenerates the chip
-    // damage of a drawn-out fight and is effectively unkillable (the "mammoth insta-heals" report).
     const inCombat =
       mob.state === 'Attacking' ||
       mob.state === 'Alerted' ||
       mob.state === 'Hunting' ||
       mob.state === 'Fleeing';
-    // Off-bubble mobs only reach stepHunger on their think-tick (every tickScale ticks), so they'd
-    // almost never land on the turn%INTERVAL gate — fire EACH think with tickScale× the per-tick heal
-    // instead; bubble mobs keep the cheap interval-gating (avoids per-tick heal-scan + limbs ref-bump).
     if (limbs && !inCombat && (inBubble ? turn % MOB_HEAL_INTERVAL === 0 : true)) {
       const healed = healLimbsInPlace(
         limbs,
@@ -276,30 +206,15 @@ export function stepHunger(state: GameState): GameState {
         for (const l of limbs)
           for (const p of l.parts ?? []) for (const w of p.injuries) pain += w.painContribution;
         mob.pain = Math.max(0, Math.min(100, Math.round(pain)));
-        mob.limbs = limbs.slice(); // ref bump → capacity cache recomputes against the healed body
+        mob.limbs = limbs.slice();
       }
     }
 
-    // ── Shock ──────────────────────────────────────────────────────────────────
-    // Graded `fractured` condition synced from the limb tree — crushes the mob's STR/DEX on
-    // top of the manipulation/moving capacity hit, same as pawns; cleared as the bones knit.
-    // ENGINE-PERFORMANCE-II: skip the per-tick limb/part scan for HEALTHY mobs. A fracture is a
-    // structural (painful) wound, so `pain == 0` AND no existing `fractured` condition ⇒ there's
-    // nothing to sync (the scan would just confirm worst = 0). The `fractured`-condition check still
-    // runs the sync once more to CLEAR a condition the tick a bone finishes knitting. 958 mobs ×
-    // O(parts) every tick → ~0 in the common (uninjured) case — it was 6.2% of the worker.
     if (limbs && ((mob.pain ?? 0) > 0 || conditions.some((c) => c.id === 'fractured')))
       syncFractureConditions(conditions, limbs);
 
-    // Pain-shock + hypovolemia (split 2026-07-08) — SAME rule as pawns (applyShock): pain drives
-    // `pain_shock`, blood loss drives `hypovolemia`, each half the old unified debuff. mob.pain is kept
-    // current by combat + the heal block above.
     applyShock(conditions, mob.pain ?? 0, 1 - bloodVolume / maxBV);
 
-    // `tired` (Exhausted) transient — high fatigue crushes a creature's STR/DEX exactly as it does a
-    // pawn's (the pawn derives it in syncTransientConditions, which mobs don't run). Re-derived each
-    // tick; reconcile ONLY 'tired' so the combat-managed timer transients (knockdown/winded/on-hit
-    // venom…) on mob.transientConditions are left untouched.
     const wantTired = !sleepingNow && newFatigue >= TIRED_FATIGUE_THRESHOLD;
     if (wantTired !== (mob.transientConditions ?? []).includes('tired')) {
       const tc = (mob.transientConditions ?? []).filter((id) => id !== 'tired');
@@ -307,12 +222,6 @@ export function stepHunger(state: GameState): GameState {
       mob.transientConditions = tc;
     }
 
-    // ── Weather exposure (windchilled / wet) ─────────────────────────────────────
-    // Creatures feel the wind and the wet too, on a slow cadence (100+ mobs → don't recompute wind shelter
-    // every tick). `windchilled` is the persistent condition (snapped from felt wind, hardier MOB_WIND_ONSET).
-    // `wet` is the SAME metered model as pawns: mob.needs.wetness fills (accrueWetness) toward 100 on a wet
-    // tile — fill rate slowed by the wetness_resistance stat (a woolly/hardy beast soaks slower) — and onsets
-    // at the FULL meter (100), uniform with pawns. No shelter (wild) → slow exposed dry (drySpeed 0).
     if (inBubble ? turn % MOB_WEATHER_INTERVAL === 0 : true) {
       const tile = state.worldMap[mob.y]?.[mob.x];
       const { wind, wetness: rawTileWet } = creatureExposureAt(
@@ -322,10 +231,8 @@ export function stepHunger(state: GameState): GameState {
         state.worldMap,
         tile?.moisture ?? 0
       );
-      // A constructed floor keeps a creature off the wet ground too (same as pawns).
       const tileWet = tile?.floor ? rawTileWet * (1 - tile.floor.dryness) : rawTileWet;
       driveWindchill(conditions, wind, MOB_WIND_ONSET);
-      // dt = in-game seconds this exposure pass covers (the in-bubble interval, or the off-bubble think gap).
       const dt = (inBubble ? MOB_WEATHER_INTERVAL : tickScale) * SECONDS_PER_TICK;
       const wetRes = pawnStatService.evaluateStat('wetness_resistance', mob);
       const wet = accrueWetness(mob.needs.wetness ?? 0, tileWet, dt, wetRes, 0);
@@ -341,37 +248,23 @@ export function stepHunger(state: GameState): GameState {
     mob.needs.hunger = newHunger;
     mob.needs.fatigue = newFatigue;
     mob.bloodVolume = bloodVolume;
-    // Flip to a NEW conditions ref only when this tick changed it (worker ref-diff → live pill);
-    // `conditions` IS mob.conditions, so an unchanged tick leaves the ref untouched and ships nothing.
     if (conditionsSig(conditions) !== condSigBefore) mob.conditions = conditions.slice();
-    // Float a label for any flagged persistent condition (shock) that onset / changed stage this tick.
     emitPersistentConditionFloaters(prevStages, conditions, mob.x, mob.y);
     changed = true;
   }
 
   if (!changed) return state;
-  // New array ref (entities mutated in place) keeps the mob-subset memos invalidating correctly.
   let result: GameState = { ...state, mobs: mobs.slice() };
-  // Drop a carcass item for every mob that just died this tick.
   for (const dead of justDied) result = dropCarcass(result, dead);
   return result;
 }
 
-// ===== DECAY ===================================================================
-
-/** Drop a carcass DroppedItem at the mob's position when it dies. */
 export function dropCarcass(state: GameState, mob: Mob): GameState {
   const def = getCreatureById(mob.creatureId);
   const carcassId = def?.carcassItemId;
-  if (!carcassId) return state; // no carcass for this creature (e.g. shadow_wraith)
+  if (!carcassId) return state;
   const id = `carcass-${mob.id}-${state.turn}`;
-  // Fold the corpse's remaining mass (mob.intactness, eaten down by scavengers) onto the carcass as its
-  // starting CONDITION — a half-stripped corpse drops a half-condition carcass (less butchery yield).
   const condition = Math.round(Math.max(0, Math.min(1, mob.intactness ?? 1)) * 100);
-  // §2g: a `dynamicName` carcass (T5 boss trophy) reads the slain beast's name — "Old Fang's Carcass" —
-  // like a pawn corpse. The per-drop name override is resolved by getItemDisplayName; a static carcass
-  // keeps the def name. (A per-spawn PROCEDURAL boss name is a later boss-naming feature; today this
-  // reads the creature def's — already a distinctive name for an authored boss.)
   const carcassName = itemService.getItemById(carcassId)?.dynamicName
     ? itemService.makeDynamicName(carcassId, mob.name ?? def?.name ?? mob.creatureId)
     : undefined;
@@ -383,29 +276,19 @@ export function dropCarcass(state: GameState, mob: Mob): GameState {
     quantity: 1,
     unitConditions: [condition],
     ...(carcassName ? { name: carcassName } : {}),
-    // A wild kill is not colony-made — forbid hauling by default so pawns don't trek into danger to
-    // retrieve it. The player allows it (per stack) from the carcass's info card once it's safe.
     forbidden: true
   };
   let next: GameState = { ...state, droppedItems: [...(state.droppedItems ?? []), drop] };
   next = absorbDropIfOnStockpileTile(next, id);
-  // §2c: a geared humanoid drops a subset of its worn kit (each piece rolls the pool's dropChance),
-  // carrying the rolled quality + the durability it was worn down to in the fight.
   next = dropMobGear(next, mob, def);
   return next;
 }
 
-/** CREATURE-COMBAT-OVERHAUL §2c — drop a mob's worn equipment on death. Each equipped, non-shattered
- *  piece independently rolls the lootpool's `dropChance`; a survivor lands on the ground as a tracked
- *  DroppedItem carrying its ItemInstance (quality + remaining durability). Forbidden by default like a
- *  wild carcass, so pawns don't trek into danger to retrieve it. No-op for an unarmed mob. */
 function dropMobGear(
   state: GameState,
   mob: Mob,
   def: ReturnType<typeof getCreatureById>
 ): GameState {
-  // A pool is enough on its own: an unarmed raider can still be carrying a phial, so this must not
-  // bail on a missing `equipment` before the carried roll below has run.
   if (!def?.lootPool) return state;
   const pool = getLootPool(def.lootPool);
   if (!pool) return state;
@@ -414,7 +297,7 @@ function dropMobGear(
     string,
     ItemInstance | undefined
   ][]) {
-    if (!inst || inst.durability <= 0) continue; // empty slot or shattered mid-fight — nothing to drop
+    if (!inst || inst.durability <= 0) continue;
     if (rng.random() >= pool.dropChance) continue;
     drops.push({
       id: `loot-drop-${mob.id}-${slot}-${state.turn}`,
@@ -422,16 +305,12 @@ function dropMobGear(
       x: mob.x,
       y: mob.y,
       quantity: 1,
-      // CONTAINERS-AND-FLUIDS §1: a vessel taken off a corpse keeps whatever it was carrying and is
-      // allowed nothing else, so no hauler tips it out to repurpose it as a colony water skin.
       instance: stampForeignVessel(inst),
       quality: inst.quality,
       durability: inst.durability,
       forbidden: true
     });
   }
-  // …and whatever they were carrying. A raider with a phial of something on their belt leaves it on
-  // the body; unlike worn gear this is a plain stack, so it needs no instance and no durability.
   for (const c of drawCarried(pool, rng)) {
     drops.push({
       id: `loot-carry-${mob.id}-${c.itemId}-${state.turn}`,
@@ -451,27 +330,20 @@ export function removeDead(state: GameState): GameState {
   if (!mobs || mobs.length === 0) return state;
 
   const kept = mobs.filter((m) => {
-    if (m.health <= 0 && m.state !== 'Corpse') return true; // becomes corpse below
+    if (m.health <= 0 && m.state !== 'Corpse') return true;
     if (m.state === 'Corpse' && m.diedAt !== undefined) {
-      // A fully-scavenged corpse (no meat left) is culled at once — it's no longer food, so keeping it
-      // to its TTL would only pad the per-tick mobs[] array (the extended CORPSE_DECAY_TICKS buys time
-      // for INTACT kills to be reached, not for stripped ones to linger).
       if ((m.intactness ?? 1) <= 0) return false;
       return state.turn - m.diedAt < CORPSE_DECAY_TICKS;
     }
     return true;
   });
 
-  // Convert freshly-killed entities to corpses.
   let changed = kept.length !== mobs.length;
   const finalized = kept.map((m) => {
     if (m.health <= 0 && m.state !== 'Corpse') {
       changed = true;
-      // Attribute the death so the log says "died of …" rather than the old
-      // misfire where a starving entity "started fleeing" just before dying.
       const cause =
         m.needs.hunger >= 95 ? 'starvation' : (m.bloodVolume ?? 1) <= 0 ? 'blood_loss' : 'injuries';
-      // Chronicle-scope: only log the death if a colonist could see the tile (range only).
       if (
         isWitnessedByColony(
           state.pawns,
@@ -495,7 +367,6 @@ export function removeDead(state: GameState): GameState {
 
   if (!changed) return state;
   let result: GameState = { ...state, mobs: finalized };
-  // Drop a carcass item for each mob freshly converted to Corpse this pass.
   for (let i = 0; i < kept.length; i++) {
     if (kept[i].state !== 'Corpse' && finalized[i].state === 'Corpse') {
       result = dropCarcass(result, finalized[i]);

@@ -2,7 +2,6 @@ import { describe, it, expect } from 'vitest';
 import { pawnStateMachineService } from '$lib/game/systems/PawnStateMachine';
 import type { GameState, Pawn } from '$lib/game/core/types';
 
-// Drafted pawns must still run the health sim (bleed/heal/collapse/death); only the FSM is skipped.
 function makePawn(over: Partial<Pawn> = {}): Pawn {
   return {
     id: 'p1',
@@ -25,7 +24,7 @@ function makePawn(over: Partial<Pawn> = {}): Pawn {
     state: { mood: 50, health: 100, isWorking: false, isEating: false, isSleeping: false },
     limbs: [
       { id: 'head', health: 100, bleedRate: 0, parts: [] },
-      { id: 'torso', health: 60, bleedRate: 60, parts: [] }, // bleeding (~1 blood/tick)
+      { id: 'torso', health: 60, bleedRate: 60, parts: [] },
       { id: 'left_arm', health: 100, bleedRate: 0, parts: [] },
       { id: 'right_arm', health: 100, bleedRate: 0, parts: [] },
       { id: 'left_leg', health: 100, bleedRate: 0, parts: [] },

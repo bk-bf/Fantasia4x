@@ -1,43 +1,27 @@
 <script lang="ts">
-  // EXPLORE tab — a ledger of EVERY resource node on each DISCOVERED tile (name, type, amount,
-  // location). Modeled on EntityScreen (same table/row/focus-on-click pattern) with the shared
-  // SearchBar (the Crafting tab's search filter).
-  //
-  // Scale: a forested map has tens of thousands of nodes, so this does two things to stay cheap:
-  //   1. Virtualised rendering — only the rows inside the scroll viewport become DOM (a windowed
-  //      slice over a tall spacer), so the full 20k+ list scrolls smoothly without 20k DOM nodes.
-  //   2. Background-cached rows — the O(map) scan lives in the `discoveredResources` store, which
-  //      rebuilds lazily in idle time on a turn-bucket dirty flag (warmed from game start in
-  //      +page.svelte). Opening the tab just reads the ready cache instead of scanning on mount, so
-  //      there's no click-to-open delay. `ensureDiscoveredResources()` is a first-open safety net.
   import { onMount } from 'svelte';
   import { uiState } from '$lib/stores/uiState';
-  import BackButton from '$lib/components/UI/BackButton.svelte';
+  import BackButton from '$lib/components/UI/widget/BackButton.svelte';
   import {
     discoveredResources,
     ensureDiscoveredResources,
     type ResourceRow
   } from '$lib/stores/discoveredResources';
-  import SearchBar from '../UI/SearchBar.svelte';
+  import SearchBar from '../UI/widget/SearchBar.svelte';
 
   onMount(ensureDiscoveredResources);
 
   let rows = $derived($discoveredResources);
 
   let typeCount = $derived(new Set(rows.map((r) => r.id)).size);
-  // Total node count per resource type — shown (uniformly) on every row of that type, instead of the
-  // per-tile node "amount" which varied meaninglessly row to row.
   let countById = $derived.by(() => {
     const m = new Map<string, number>();
     for (const r of rows) m.set(r.id, (m.get(r.id) ?? 0) + 1);
     return m;
   });
 
-  // SearchBar persists this text across tab toggles via its cacheKey (see SearchBar.svelte).
   let query = $state('');
   let term = $derived(query.trim().toLowerCase());
-  // Match the display name, the work-type, AND the internal id — so searching e.g. "grove" finds the
-  // ancient-wood groves even though their display name is "Heartwood Tree" (id `heartwood_grove`).
   let filtered = $derived(
     term
       ? rows.filter(
@@ -46,9 +30,8 @@
       : rows
   );
 
-  // ── Virtualisation: render only the rows visible in the scroll viewport ──
-  const ROW_H = 20; // px; must match .row-main height
-  const OVERSCAN = 8; // extra rows above/below the viewport to hide scroll seams
+  const ROW_H = 20;
+  const OVERSCAN = 8;
   let scrollEl: HTMLDivElement | undefined = $state();
   let scrollTop = $state(0);
   let viewportH = $state(480);
@@ -90,8 +73,6 @@
     {#if filtered.length === 0}
       <div class="empty">No resources match "{query}".</div>
     {:else}
-      <!-- Virtualised scroll body: a tall spacer sized to the full list, with only the visible
-           window of rows absolutely positioned inside it. -->
       <div class="scroll" bind:this={scrollEl} bind:clientHeight={viewportH} onscroll={onScroll}>
         <div class="spacer" style="height:{filtered.length * ROW_H}px">
           {#each slice as r, i (r.id + '@' + r.x + ',' + r.y)}

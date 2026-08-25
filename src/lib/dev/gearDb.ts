@@ -1,14 +1,3 @@
-// gearDb.ts — DEV TOOL (not a game system). Reads the real item/recipe/building/research/trait
-// databases and derives a flat, auto-classified BUILD catalogue for the /gear-db browser route.
-// Nothing here runs in the sim; it exists so the build audit is data-driven instead of hand-curated.
-//
-// Builds are WEAPON-DEFINED (Battle-Brothers style): a weapon maps to exactly one build by its
-// damage type + handedness + finesse/arcane + family. Armour maps by weight class to the builds that
-// favour it. Traits map by the combat stat/effect they touch. Crafting/healing/gather traits are
-// NOT builds — they are general pawn skills (→ 'General'), since any build can also craft or heal.
-//
-// It imports the same .jsonc the game does (vite jsonc plugin), so it stays in sync with the data.
-
 import itemsData from '../game/database/items/items.jsonc';
 import recipesData from '../game/database/items/recipes.jsonc';
 import buildingsData from '../game/database/world/buildings.jsonc';
@@ -26,41 +15,33 @@ const research = researchData as any[];
 const traits = traitsData as any[];
 
 export type BuildClass =
-  // one-handed + shield (STR frontline)
   | 'Sword & Shield'
   | 'Axe & Shield'
   | 'Mace & Shield'
   | 'Cleaver & Shield'
   | 'Flail & Shield'
   | 'Spear & Shield'
-  // one-handed duel-grip, no shield / free off-hand (needs the Duelist trait — Workstream B)
   | 'Sword (Duelist)'
   | 'Axe (Duelist)'
   | 'Mace (Duelist)'
   | 'Cleaver (Duelist)'
   | 'Flail (Duelist)'
   | 'Spear (Duelist)'
-  // two-handed (STR)
   | 'Greatsword (2H)'
   | '2H Cleaver'
   | '2H Axe'
   | '2H Hammer'
   | 'Polearm (2H)'
-  // pure defensive anchor (heaviest armour + shield, taunt/provoke — Workstream B)
   | 'Pure Tank'
-  // finesse
   | 'Fencer (Rapier)'
   | 'Assassin (Dagger)'
-  // ranged
   | 'Archer (Bow)'
   | 'Crossbowman'
   | 'Skirmisher (Throwing)'
   | 'Slinger (Sling)'
-  // arcane / caster
   | 'Battlemage (1H Staff)'
   | 'War-Caster (2H Staff)'
   | 'Stunwaller (2H Staff)'
-  // non-build (crafting/healing/social skills)
   | 'General';
 
 export type BuildCategory =
@@ -71,13 +52,9 @@ export type BuildCategory =
   | 'ranged'
   | 'caster'
   | 'general';
-/** `material` is deliberately NOT in `KINDS` and never enters `GEAR` — the build catalogue is about
- *  gear. It exists so the item tree can hand a raw material to the SAME tooltip the build tables use
- *  instead of growing a second one that would drift away from it. */
 export type GearKind = 'weapon' | 'armor' | 'tool' | 'ammo' | 'medicine' | 'trait' | 'material';
 export type TraitGating = 'ungated' | 'cultural' | 'lineage' | 'flaw';
 
-// ── build groups (used by the classifiers) ──────────────────────────────────
 const SHIELD_BUILDS: BuildClass[] = [
   'Sword & Shield',
   'Axe & Shield',
@@ -111,7 +88,6 @@ const RANGED: BuildClass[] = [
 ];
 const PER_BUILDS: BuildClass[] = ['Fencer (Rapier)', ...RANGED];
 const CASTERS: BuildClass[] = ['Battlemage (1H Staff)', 'War-Caster (2H Staff)'];
-// Light-medium / dodge-based builds (duelists live here too — heavy armour claps their speed).
 const NIMBLE: BuildClass[] = [
   'Assassin (Dagger)',
   'Fencer (Rapier)',
@@ -120,7 +96,6 @@ const NIMBLE: BuildClass[] = [
   'Stunwaller (2H Staff)'
 ];
 
-// Every real build (order = display order). 'General' is deliberately excluded — it is not a build.
 export const BUILDS: BuildClass[] = [
   ...SHIELD_BUILDS,
   ...DUELIST,
@@ -149,8 +124,6 @@ export const BUILD_CAT: Record<string, BuildCategory> = (() => {
   return m;
 })();
 
-// Collapse a multi-build support list into readable group labels for the UI (filter still uses the
-// full array). e.g. all frontline + fencer + assassin → "all melee".
 const GROUP_LABELS: [BuildClass[], string][] = [
   [MELEE_ALL, 'all melee'],
   [FRONTLINE, 'frontline'],
@@ -173,14 +146,6 @@ export function describeClasses(cs: BuildClass[]): string {
   return labels.join(' · ');
 }
 
-/** Two DIFFERENT kinds of setless armour, which were previously lumped as "one-offs":
- *  `DROPPED` has no recipe at all — enemy gear you can only take off a corpse, never plan for;
- *  `UNAFFILIATED` is craftable but belongs to no kit. Only the second is a candidate for folding into
- *  a set later, so the tables must not conflate them. */
-/** Who actually drops a given item, and how often. Creatures point at a `lootPool`; a pool lists a
- *  pick-list per equipment slot with weights. Effective chance = pool.dropChance x slot.chance x the
- *  pick's share of its slot's weight. Without this the tables could only say "wild / boss", which
- *  names nothing you could go hunt. */
 export interface DropSource {
   creature: string;
   tier: number;
@@ -237,7 +202,6 @@ export const UNAFFILIATED = '__unaffiliated';
 export const AGES = ['Primitive', 'Copper', 'Bronze', 'Iron', 'Steel', 'Runed', 'Boss'] as const;
 export type Age = (typeof AGES)[number];
 
-// Formal per-build spec — the design intent to check the implementation against. Hand-authored.
 export interface BuildSpec {
   goal: string;
   requires: string;
@@ -396,10 +360,8 @@ export interface GearRow {
   id: string;
   name: string;
   kind: GearKind;
-  cls: BuildClass; // primary build (for display/sort/colour)
-  classes: BuildClass[]; // every build this is FOR — filtered on
-  /** Builds that can wear the piece but are not its target. Empty for weapons, shields and plate.
-   *  The coverage grid draws these only where a build's own kit leaves a region bare. */
+  cls: BuildClass;
+  classes: BuildClass[];
   fallbackClasses: BuildClass[];
   age: Age;
   ageRank: number;
@@ -409,7 +371,6 @@ export interface GearRow {
   research: string | null;
   craftable: boolean;
   recipe: RecipeInfo | null;
-  // weapon / ammo
   dmg: number | null;
   damMin: number | null;
   damMax: number | null;
@@ -417,7 +378,6 @@ export interface GearRow {
   ap: number | null;
   armorDmg: number | null;
   crit: number | null;
-  /** Damage multiplier on a crit — a precision weapon authors a bigger one (default 1.5). */
   critMult: number | null;
   accuracy: number | null;
   atkSpeed: number | null;
@@ -429,50 +389,39 @@ export interface GearRow {
   twoHanded: boolean | null;
   onHit: string | null;
   wieldStr: number | null;
-  // armor
   defense: number | null;
   armorType: string | null;
   slot: string | null;
-  bodyPart: string | null; // canonical body slot the piece equips to
-  /** Creatures that drop this, best chance first. Empty when nothing drops it. */
+  bodyPart: string | null;
   droppedBy: DropSource[];
-  /** Where it comes from — a station, or the world: `forage / mine`, `hunt`, `innate`, `drop only`.
-   *  Recipes are only ONE of four sources; reading them alone called 250 obtainable things missing. */
   source: string;
-  /** The SET this piece belongs to (`steel_plate`, `munition_half_plate`…), or null for a
-   *  deliberate one-off — a boss drop, a ceremonial piece. Lets the tables group a kit into one
-   *  row instead of scattering six torso pieces across a tier with no way to tell them apart. */
   armorSet: string | null;
   setLabel: string | null;
   movePen: number | null;
   stealthMod: number | null;
   block: number | null;
-  // tool
   boostSpeed: number | null;
   boostYield: number | null;
   boostQuality: number | null;
   work: string | null;
-  // medicine
   medicine: number | null;
-  // trait
   effect: string | null;
   gating: TraitGating | null;
   scope: string | null;
-  rarity: string | null; // raw data value (may be the pseudo-"negative")
+  rarity: string | null;
   rarityRank: number;
-  polarity: 'positive' | 'negative'; // derived from the effects, NOT the rarity field
-  gradeRarity: string | null; // real rarity (common…mythic); "negative"-rarity flaws derived by magnitude
+  polarity: 'positive' | 'negative';
+  gradeRarity: string | null;
   gradeRank: number;
   lineageNames: string | null;
   evolvesTo: string | null;
-  evoStage: number; // 0 = base, +1 per step down an evolution chain
-  desc: string | null; // player-facing description
-  raw: any; // the source item/trait object — for the info panel to format its fields directly
+  evoStage: number;
+  desc: string | null;
+  raw: any;
 }
 
 export const REAL_RARITIES = ['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythic'] as const;
 
-// ── lookup maps ─────────────────────────────────────────────────────────────
 const prettify = (id: string) =>
   id
     .replace(/^category:/, '')
@@ -485,14 +434,11 @@ const researchName = new Map<string, string>();
 for (const r of research) if (r?.id) researchName.set(r.id, r.name ?? prettify(r.id));
 const itemName = new Map<string, string>();
 for (const it of items) if (it?.id) itemName.set(it.id, it.name ?? prettify(it.id));
-// EVERY output, not just the first: butchery yields meat AND hide AND sinew AND bones from one
-// recipe, and indexing only `outs[0]` made every byproduct read as having no source at all.
 const recipeByOutput = new Map<string, any>();
 for (const rec of recipes)
   for (const out of Object.keys(rec?.outputs ?? {}))
     if (!recipeByOutput.has(out)) recipeByOutput.set(out, rec);
 
-// ── derivations ─────────────────────────────────────────────────────────────
 function ageOf(
   id: string,
   researchId: string | null,
@@ -506,40 +452,20 @@ function ageOf(
   if (r === 'iron_working') return 'Iron';
   if (r === 'bronze_working') return 'Bronze';
   if (r === 'copper_smelting') return 'Copper';
-  // A high-tier LOOT piece is a boss drop, whatever it is forged from — checked before the material
-  // words so `iron_tide_greataxe` reads as Boss, not as an iron-age craftable.
-  // The BOSS band is what a colony can only have by putting down something enormous. That is usually
-  // loot, but it is equally a blade forged from the fang of the thing — the fang decides, not the
-  // smith. Restricting it to drop-only left every crafted boss weapon out of its own band.
   if (tier >= 4 && (!craftable || usesBossPart(id))) return 'Boss';
-  // AGE IS DERIVED. If something makes this, the chain says when a colony can first hold it — the
-  // latest workshop in it and the ages of everything it consumes. `tier` is deliberately NOT asked:
-  // it is a different axis (a quality rank here, the ADR-009 TOOL tier on a tool) and reading it as
-  // an age filed a flint arrow in the bronze age and a knapped stone axe alongside cast bronze.
   if (hasRecipe(id)) return AGE_OF_CHAIN[chainAgeOf(id)] ?? 'Primitive';
-  // Nothing makes it, so the keyword guesses below are all that is left for a drop that named no
-  // research. `tierDeclared` still decides there, because a drop has no chain to read.
   if (tierDeclared) return AGE_BY_TIER[Math.min(Math.max(tier, 0), 4)];
   if (/staff$|rune|arcane/.test(id)) return 'Runed';
-  // Material words match ANYWHERE in the id, not just at the front: `gnoll_flint_axe` and
-  // `gnoll_bone_cleaver` are stone-age pieces that happen to carry a faction prefix.
   if (/steel|clockwork/.test(id)) return 'Steel';
   if (/iron/.test(id)) return 'Iron';
   if (/bronze/.test(id)) return 'Bronze';
   if (/copper/.test(id)) return 'Copper';
-  // Bone and antler are butchered, dried and carved at a bench — a band above knapped stone. The
-  // bigger pieces (a two-handed maul, a cleaver) land in bronze rather than copper. Above tier 2 the
-  // material stops deciding: `fang_reaver` is a legendary craft, not a bone-age club.
   if (tier <= 2 && /bone|antler|fang/.test(id)) return tier >= 2 ? 'Bronze' : 'Copper';
   if (/flint|stone|wood|rawhide|raw_hide|hide|leaf/.test(id)) return 'Primitive';
-  // Ambiguous words that only mean "primitive" at the FRONT of an id — a `staff_sling` is a later
-  // build than a `sling`, and `padded`/`wicker` name a piece rather than a material.
   if (/^(throwing|sling|self|padded|linen|tallow|wattle|wicker)/.test(id)) return 'Primitive';
   return AGE_BY_TIER[Math.min(Math.max(tier, 0), 4)];
 }
-/** Item tier (0–4) → age. The one mapping; the item tree reads it too rather than keeping a second. */
-export /** Chain age index → age name. The derivation's own vocabulary. */
-const AGE_OF_CHAIN: Age[] = ['Primitive', 'Copper', 'Bronze', 'Iron', 'Steel', 'Runed'];
+export const AGE_OF_CHAIN: Age[] = ['Primitive', 'Copper', 'Bronze', 'Iron', 'Steel', 'Runed'];
 export const AGE_BY_TIER: Age[] = ['Primitive', 'Bronze', 'Iron', 'Steel', 'Runed'];
 
 function kindOf(item: any): GearKind | null {
@@ -552,10 +478,6 @@ function kindOf(item: any): GearKind | null {
   return null;
 }
 
-// Weapon → exactly one weapon-build, by stats + family keywords.
-/** A weapon may simply SAY what it is. The regexes below read the family out of the id, which works
- *  until a weapon is named for what it does rather than what it is — `flenser` is a cleaver, and no
- *  amount of pattern matching on its name will discover that. A declared family wins. */
 const FAMILY_CLASS: Record<string, { one: BuildClass; two: BuildClass }> = {
   sword: { one: 'Sword & Shield', two: 'Greatsword (2H)' },
   axe: { one: 'Axe & Shield', two: '2H Axe' },
@@ -580,9 +502,7 @@ function classifyWeapon(item: any, wp: any): BuildClass {
   const two = !!wp.twoHanded;
   const pierce = dt === 'piercing' || dt === 'pierce';
   const has = (re: RegExp) => re.test(id);
-  // A rod is the same channelled magic in one hand, bought at a lower yield to keep a shield.
   if (wp.arcane) return two ? 'War-Caster (2H Staff)' : 'Battlemage (1H Staff)';
-  // Same test the engine uses (`rangedCombat.isRangedWeaponProps`): melee authors range 0–1.
   const ranged =
     wp.ammoCategory ||
     wp.drawPower != null ||
@@ -600,7 +520,6 @@ function classifyWeapon(item: any, wp: any): BuildClass {
   const fast = (wp.attackSpeed ?? 1) >= 1.2;
   if (!two && has(/dagger|knife|rondel|stiletto|shank|punch|dirk/)) return 'Assassin (Dagger)';
   if (!two && pierce && light && fast && !has(/spear|pike/)) return 'Assassin (Dagger)';
-  // A plain shod staff: no edge, no magic, all cadence and stun.
   if (two && has(/staff/)) return 'Stunwaller (2H Staff)';
   if (has(/flail/)) return 'Flail & Shield';
   if (has(/maul|warhammer|hammer/)) return two ? '2H Hammer' : 'Mace & Shield';
@@ -611,29 +530,18 @@ function classifyWeapon(item: any, wp: any): BuildClass {
   if (has(/greatsword/)) return 'Greatsword (2H)';
   if (has(/sword|seax|spatha|estoc|rapier|blade|sabre|saber|falchion/))
     return two ? 'Greatsword (2H)' : 'Sword & Shield';
-  // fallback by damage type + handedness
   if (two) return dt === 'blunt' ? '2H Hammer' : pierce ? 'Polearm (2H)' : 'Greatsword (2H)';
   return dt === 'blunt' ? 'Mace & Shield' : pierce ? 'Spear & Shield' : 'Sword & Shield';
 }
 
-/** Armour answers TWO questions, and lumping them together is what emptied half the table: which
- *  builds is this piece FOR, and which builds would put it on anyway. A build with no kit of its own
- *  at an age does not fight naked — the stone age offers hide, and a swordsman wears hide — but the
- *  weight-class map handed every primitive piece to the nimble builds, so eleven of the twenty-seven
- *  columns read "no armour exists at this age" while the pieces sat one column over.
- *  `ideal` is the kit meant for the build; `fallback` is what it settles for. The grid surfaces a
- *  fallback only where the ideal kit leaves a region bare, so a filled age stays clean. */
 export interface ArmorFit {
   ideal: BuildClass[];
   fallback: BuildClass[];
 }
 const othersThan = (ideal: BuildClass[]): BuildClass[] => BUILDS.filter((b) => !ideal.includes(b));
 
-// Armour → the builds whose weight/role favour it, plus the ones that would wear it for want of better.
 function classifyArmor(item: any): ArmorFit {
   const ap = item.armorProperties;
-  // A shield claims the off-hand, so the two-handers and the duel-grip builds cannot hold one at all.
-  // That is a real exclusion, not a preference — no fallback.
   if (ap?.armorType === 'shield')
     return { ideal: [...SHIELD_BUILDS, 'Pure Tank', 'Battlemage (1H Staff)'], fallback: [] };
   const fit = (ideal: BuildClass[]): ArmorFit => ({ ideal, fallback: othersThan(ideal) });
@@ -646,9 +554,6 @@ function classifyArmor(item: any): ArmorFit {
     return fit([...CASTERS]);
   switch (ap?.armorType) {
     case 'heavy':
-      // The one class with no fallback list: plate does not "beat nothing" for a duelist or an archer,
-      // it takes away the speed the build is made of. They also have a light line at every single age,
-      // so they are never the ones staring at an empty cell.
       return { ideal: [...FRONTLINE, 'Pure Tank'], fallback: [] };
     case 'medium':
       return fit([...FRONTLINE, ...DUELIST, 'Fencer (Rapier)']);
@@ -659,7 +564,6 @@ function classifyArmor(item: any): ArmorFit {
   }
 }
 
-// 1H melee weapons serve both their "& Shield" build and their duel-grip (no-shield) variant.
 const DUELIST_OF: Partial<Record<BuildClass, BuildClass>> = {
   'Sword & Shield': 'Sword (Duelist)',
   'Axe & Shield': 'Axe (Duelist)',
@@ -675,20 +579,12 @@ function classifyItem(item: any, kind: GearKind): ArmorFit {
     if (!wp) return { ideal: ['General'], fallback: [] };
     const base = classifyWeapon(item, wp);
     const duel = DUELIST_OF[base];
-    // A 1H melee weapon also serves its duel-grip variant AND Pure Tank (which has no bespoke weapon —
-    // it wields a shield and whichever 1H turns out least stamina-hungry once balanced).
     return { ideal: duel ? [base, duel, 'Pure Tank'] : [base], fallback: [] };
   }
   if (kind === 'armor') return classifyArmor(item);
-  return { ideal: ['General'], fallback: [] }; // tool / medicine — pawn skills, not builds
+  return { ideal: ['General'], fallback: [] };
 }
 
-// Canonical body slots, in head→feet order. Used to show where a piece equips and which parts a
-// build has NO armour for at a given age.
-// The slot model, in the order a kit is read. Torso is the only THREE-layer region — plate over mail
-// over a gambeson is a real decision with a real weight cost. Shoulder and neck slots were removed
-// (they only ever held one obvious piece per tier); the shoulders ride on the torso layers' coverage
-// and the neck on the head piece's, so both stay protected without padding the count.
 export const BODY_PARTS = [
   'head',
   'torso-outer',
@@ -733,7 +629,6 @@ function bodyPartOf(slot: string | null): string | null {
   }
 }
 
-/** Core-stat display abbreviations, matching the pawn panels. */
 const SCALE_ABBR: Record<string, GearRow['scaling']> = {
   strength: 'STR',
   dexterity: 'DEX',
@@ -761,9 +656,6 @@ function recipeInfo(rec: any): RecipeInfo | null {
   push(rec.inputs);
   if (rec.dynamicRecipe)
     for (const slot of Object.values<any>(rec.dynamicRecipe)) {
-      // A slot may be authored either way round — `acceptsCategory` for one, `acceptsCategories` for
-      // several. Reading only the singular printed the literal word "material" for every plural slot,
-      // so a three-ingredient stew read as "1x material" three times over.
       const cats: string[] =
         slot.acceptsCategories ?? (slot.acceptsCategory ? [slot.acceptsCategory] : []);
       inputs.push({
@@ -786,9 +678,6 @@ function recipeInfo(rec: any): RecipeInfo | null {
   };
 }
 
-/** Items that appear by TIME rather than by work: `driesTo` cures plant fibre into hay and meat into
- *  dried meat on a rack, `decaysTo` turns anything left too long into something rotten. Neither is a
- *  recipe, and reading recipes alone made both look like content nobody could ever get. */
 const DRIED_FROM = new Map<string, string>();
 const ROTTED_FROM = new Map<string, string>();
 for (const i of items) {
@@ -798,23 +687,17 @@ for (const i of items) {
   if (typeof i?.decaysTo === 'string' && !ROTTED_FROM.has(i.decaysTo))
     ROTTED_FROM.set(i.decaysTo, i.id);
 }
-// Drying also runs at the CATEGORY level, and those rules live in code rather than in the item defs
-// (`ItemService.CATEGORY_DRYING`): any meat dries to dried meat, any fruit to dried fruit. Mirrored
-// here so the audit does not report two staples as unobtainable.
 for (const [cat, out] of [
   ['meat', 'dried_meat'],
   ['fruit', 'dried_fruit']
 ] as const)
   if (!DRIED_FROM.has(out)) DRIED_FROM.set(out, `any ${cat}`);
 
-/** Drawn from the world rather than made: a river, a lake, a well. */
 const GATHERED = new Map<string, string>([
   ['water', 'river / lake / well'],
   ['terra_preta', 'dug from rich soil']
 ]);
 
-/** Where an item actually comes from. A map node is foraged or mined, a carcass comes off a kill, a
- *  natural weapon is part of the animal, enemy gear is taken off a body — and only then, a recipe. */
 function sourceOf(item: any, rec: any, drops: DropSource[]): string {
   if (item.category === 'natural_weapon') return 'innate';
   if (nodeItems.has(item.id)) return 'forage / mine';
@@ -822,7 +705,6 @@ function sourceOf(item: any, rec: any, drops: DropSource[]): string {
   if (DRIED_FROM.has(item.id)) return `dries from ${DRIED_FROM.get(item.id)}`;
   if (ROTTED_FROM.has(item.id)) return 'spoilage';
   if (GATHERED.has(item.id)) return GATHERED.get(item.id)!;
-  // things the SIM makes, not the player: a downed colonist over a shoulder, a corpse on the ground
   if (/^(carried_pawn|pawn_carcass)$/.test(item.id)) return 'the sim';
   if (rec)
     return !rec.station || rec.station === 'craft_spot'
@@ -835,7 +717,6 @@ function toRow(item: any, forcedKind?: GearKind): GearRow | null {
   const kind = forcedKind ?? kindOf(item);
   if (!kind) return null;
   const rec = recipeByOutput.get(item.id) ?? null;
-  // The RECIPE is the only research gate — items no longer carry one (it was a second, drifting copy).
   const researchId = rec?.researchRequired ?? null;
   const tier = item.tier ?? 0;
   const craftable = !!rec;
@@ -916,7 +797,6 @@ function toRow(item: any, forcedKind?: GearKind): GearRow | null {
   };
 }
 
-// ── traits ──────────────────────────────────────────────────────────────────
 const STAT_ABBR: Record<string, string> = {
   strength: 'STR',
   dexterity: 'DEX',
@@ -932,8 +812,7 @@ const rarityRank = (r: string) => {
   return i < 0 ? 0 : i;
 };
 
-// Evolution chains: a base trait names the higher trait it grows into (evolvesTo). Stage = depth.
-const evolvesParent = new Map<string, string>(); // child id → parent id
+const evolvesParent = new Map<string, string>();
 for (const t of traits) if (t?.id && t?.evolvesTo) evolvesParent.set(t.evolvesTo, t.id);
 const evoStageCache = new Map<string, number>();
 function evoStage(id: string, seen = new Set<string>()): number {
@@ -946,9 +825,6 @@ function evoStage(id: string, seen = new Set<string>()): number {
   return s;
 }
 
-// Polarity from the EFFECTS, not the rarity field: a trait is negative only when every non-zero
-// effect is a downside (all penalties / debuff multipliers) — this catches all-penalty curse traits
-// like Accursed Blood (rarity "epic") that the raw rarity would otherwise hide among positives.
 function traitPolarity(t: any): 'positive' | 'negative' {
   if (t.kind === 'wound') return 'negative';
   const e = t.effects ?? {};
@@ -972,10 +848,6 @@ function traitPolarity(t: any): 'positive' | 'negative' {
   return neg && !pos ? 'negative' : 'positive';
 }
 
-// The rarity a trait occupies in the REAL rarity table. Graded traits keep their rarity (so an
-// all-penalty epic like Accursed Blood stays epic, just on the negative side). The flat "negative"
-// pool (ungraded mundane flaws) is graded by the magnitude of its penalty so it spreads across the
-// same table instead of collapsing into a fake "flaw" rarity.
 function flawMagnitude(t: any): number {
   const e = t.effects ?? {};
   let m = 0;
@@ -984,7 +856,7 @@ function flawMagnitude(t: any): number {
     else if (v && typeof v === 'object')
       for (const mv of Object.values(v)) if (typeof mv === 'number' && mv < 1) m += (1 - mv) * 6;
   }
-  if (t.kind === 'wound') m += 5; // a permanent injury is a heavy flaw even with no stat block
+  if (t.kind === 'wound') m += 5;
   return m;
 }
 function gradeRarityOf(t: any): string {
@@ -1011,7 +883,6 @@ function traitGating(t: any): TraitGating {
   return 'cultural';
 }
 
-// Trait → the build(s) its stat/effect keys support. Work/heal/CHA-only traits touch no build → General.
 function classifyTrait(t: any): BuildClass[] {
   const e = t.effects ?? {};
   const set = new Set<BuildClass>();
@@ -1138,7 +1009,6 @@ function traitRow(t: any): GearRow {
   };
 }
 
-// point-free would hand `map`'s INDEX to the new second parameter — pass the item only
 const itemRows = items.map((i) => toRow(i)).filter((r): r is GearRow => r !== null);
 const traitRows = traits.filter((t) => t?.id && t?.name).map(traitRow);
 export const GEAR: GearRow[] = [...itemRows, ...traitRows];
@@ -1155,8 +1025,6 @@ export interface BuildSummary {
   gaps: string[];
 }
 
-// "Extract builds": aggregate the whole catalogue by archetype so each build's real support is tracked
-// from the data, not hand-listed. Powers the tool's By-build overview.
 export function buildSummaries(): BuildSummary[] {
   return BUILDS.map((build) => {
     const rows = GEAR.filter((g) => g.classes.includes(build));
@@ -1190,6 +1058,4 @@ export function buildSummaries(): BuildSummary[] {
   });
 }
 
-/** A row for ANY item, including the materials, food and drink the gear catalogue does not carry.
- *  Same shape ⇒ the item tree reuses the build tables' tooltip verbatim. */
 export const rowForAny = (item: any): GearRow => toRow(item, kindOf(item) ?? 'material')!;

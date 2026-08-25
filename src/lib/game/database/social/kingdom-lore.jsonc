@@ -1,15 +1,4 @@
-// Kingdom lore database, phrase banks for procedural kingdom generation (KINGDOMS-TRADE).
-// Consumed by core/Kingdom.ts. All strings here are PLAYER-FACING: in-world tone, no dev jargon,
-// no em dashes, concrete over abstract. Templates use {slot} placeholders filled by the generator:
-// {stem} {polity} {leader} {capital} {polity_lower}.
-//
-// SCALE = WEALTH. A kingdom's wealthBand (destitute..opulent, index 0..4) is also its scale and
-// influence: index 0 is a poor hamlet, index 4 a grand empire. Naming, leader titles, epithets,
-// history tone, settlement counts, and how much lore exists all scale off that index. `scaleTiers`,
-// `leaderTitlesByTier` are indexed 0..4; `epithetsSmall`/`epithetsGrand` and `humbleHistory`/
-// `grandHistory` split at index 2 (town).
 {
-  // ── Naming by scale ───────────────────────────────────────────────────────
   "nameStems": [
     "Ashen", "Briar", "Cinder", "Dun", "Ebon", "Fallow", "Gale", "Hollow",
     "Iron", "Karst", "Lorn", "Mistral", "Norn", "Oster", "Pale", "Quill",
@@ -28,11 +17,9 @@
     { "polities": ["Empire", "Imperium", "Hegemony", "Crown"],
       "forms": ["the {stem} {polity}", "{polity} of {stem}"] }
   ],
-  // Raider bands name themselves the same at any size: no thrones, no charters.
   "raiderPolities": ["Horde", "Reavers", "Wolves", "Blades", "Scourge", "Riders"],
   "raiderNameForms": ["{stem} {polity}", "The {stem} {polity}"],
 
-  // ── Epithet & temperament (tier 0) ────────────────────────────────────────
   "epithetsSmall": [
     "a wind-scoured cluster of turf roofs and stubborn people",
     "a valley too poor to raid and too far to tax",
@@ -81,7 +68,6 @@
     "no oaths with outsiders, only truces that expire"
   ],
 
-  // ── Leaders by scale (tier 1) ─────────────────────────────────────────────
   "leaderTitlesByTier": [
     ["Elder", "Reeve", "Headman", "Headwoman", "Warden"],
     ["Elder", "Reeve", "Bailiff", "Speaker", "Warden"],
@@ -102,7 +88,6 @@
     "the Quiet", "the Magnificent", "Half-Crowned", "the Wanderer"
   ],
 
-  // ── Seat & settlements (tier 2) ───────────────────────────────────────────
   "capitalPrefixes": [
     "Hart", "Grim", "Wester", "Stone", "Fair", "Black", "High", "Old",
     "Salt", "Winter", "Gold", "Raven", "Bright", "Marsh", "Thorn", "Kings"
@@ -112,9 +97,6 @@
     "keep", "spire", "march", "fell", "harbour", "cross", "vale", "gate"
   ],
 
-  // ── History (tier 3) ──────────────────────────────────────────────────────
-  // {leader} {capital} {polity_lower} filled at generation. Small places get humble history,
-  // town-and-up get grand history.
   "humbleHistory": [
     "A bad winter some years back halved the households, and they still ration firewood in autumn out of plain habit.",
     "A landslide took the old road, and the detour has added a day to every journey since.",
@@ -140,7 +122,6 @@
     "A dozen kingdoms have declared them destroyed, and the declarations are read aloud, and mocked, around their fires."
   ],
 
-  // ── Notable figures (tier 3) ──────────────────────────────────────────────
   "figureRoles": [
     "a war-scholar whose treatises are read by enemy generals",
     "a masked judge who rides circuit between the villages",
@@ -152,7 +133,6 @@
     "a chronicler whose honesty has survived four reigns"
   ],
 
-  // ── Famed items (tier 4) ──────────────────────────────────────────────────
   "famedItemMaterials": [
     "Emberwrought", "Moonsilver", "Oathbound", "Winterforged", "Serpentine",
     "Gilded", "Runemarked", "Stormtempered", "Bone-Inlaid", "Duskglass"

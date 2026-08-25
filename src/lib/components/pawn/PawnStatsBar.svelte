@@ -1,6 +1,3 @@
-<!-- PawnStatsBar.svelte — pawn name header + the shared core-attribute grid; spans the full status
-     panel width. The grid itself is PawnStatBanner (the SAME component the Attributes tab uses), so
-     both tabs show identical condition-adjusted values + deltas — one panel, one source of truth. -->
 <script lang="ts">
   import type { Pawn } from '$lib/game/core/types';
   import PawnStatBanner from './PawnStatBanner.svelte';

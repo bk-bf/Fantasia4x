@@ -2,15 +2,10 @@ import { describe, it, expect } from 'vitest';
 import { buildScenario } from '$lib/game/headless/Scenario';
 import { HeadlessSession } from '$lib/game/headless/HeadlessSession';
 import { pawnService } from '$lib/game/services/PawnService';
-import { stealthAdditives } from '$lib/game/core/stealth';
+import { stealthAdditives } from '$lib/game/core/rules/body/stealth';
 import type { Pawn } from '$lib/game/core/types';
 import itemsData from '$lib/game/database/items/items.jsonc';
 
-/**
- * Footwear acts on MOVEMENT, not fatigue — boots decide how a pawn walks, not how tired the day
- * leaves them. And the three build lines are separate: plate is the melee line, the marksman sets are
- * the ranged line, and the predator pelts are the stealth line.
- */
 async function pawnWith(equip: string[]): Promise<Pawn> {
   const s = new HeadlessSession();
   await s.start(

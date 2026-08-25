@@ -4,10 +4,6 @@ import { HeadlessSession } from '$lib/game/headless/HeadlessSession';
 
 type S = { stockpile?: Record<string, number> };
 
-/**
- * The smoking rack, the cheese basin and the throw-then-fire pottery split are new stations, and the
- * sandwiches and tarts are new dishes. Each is only real once a pawn has made one over real ticks.
- */
 describe('the new stations actually run', () => {
   it('pawns smoke meat on the rack, press cheese in the basin, and fire a jug', async () => {
     const s = new HeadlessSession();

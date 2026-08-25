@@ -2,12 +2,6 @@ import { describe, it, expect } from 'vitest';
 import { recipeService } from '$lib/game/services/RecipeService';
 import { craftDiscipline } from '$lib/game/services/jobs/craftDiscipline';
 
-/**
- * §D — generic `crafting` is DISSOLVED: every craft must route to a real discipline (via its recipe
- * `discipline` tag, its station's flag, a food output → meals, or a `toolRequirement.workType`). This
- * guard fails the moment a recipe is added with no route, so a new craft can't silently fall into a
- * dead generic bucket — it must declare where it belongs.
- */
 describe('generic crafting is dissolved — every recipe routes to a discipline', () => {
   it('no recipe falls back to generic crafting', () => {
     const orphans: string[] = [];

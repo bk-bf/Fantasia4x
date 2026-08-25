@@ -4,17 +4,9 @@ import { itemService } from '$lib/game/services/ItemService';
 import { recipeService } from '$lib/game/services/RecipeService';
 import type { GameState } from '$lib/game/core/types';
 
-/**
- * ADR-016 queue-without-materials: a craft order can be queued `pending` (no input reservations) when
- * the materials aren't stocked. `reservePendingCraftOrders` retries reservation each tick and clears
- * `pending` ATOMICALLY — only once the FULL input set is reservable. Until then the order generates no
- * fetch/craft jobs and the stock stays free.
- */
 function makeState(stockQty: number): GameState {
   const greenFirewood = itemService.getItemById('green_firewood')!;
   const recipe = recipeService.getRecipeForItem('green_firewood')!;
-  // split_firewood sources its log via a dynamicRecipe slot now; a queued order carries the concrete
-  // chosen log (pine_log here).
   const slot = Object.values(recipe.dynamicRecipe ?? {})[0];
   const inputId = Object.keys(recipe.inputs)[0] ?? 'pine_log';
   const perRun = recipe.inputs[inputId] ?? slot.quantity;
@@ -22,7 +14,6 @@ function makeState(stockQty: number): GameState {
   const needed = perRun * quantity;
 
   const station = { id: 'cb-1', type: recipe.station, x: 5, y: 5, status: 'complete' } as any;
-  // Free (unreserved) stored stock sitting on a stockpile tile.
   const drop =
     stockQty > 0
       ? [{ id: 'd-free', resourceId: inputId, x: 9, y: 9, quantity: stockQty, stored: true }]

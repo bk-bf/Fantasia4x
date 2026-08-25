@@ -1,8 +1,3 @@
-<!--
-  DebugLogControls — header bar for DebugLogScreen: category/severity/text filters,
-  autoscroll toggle, clear, and a shown/total counter. Pure view; all filter state is
-  bound back to the parent.
--->
 <script lang="ts">
   let {
     filterTag = $bindable(),

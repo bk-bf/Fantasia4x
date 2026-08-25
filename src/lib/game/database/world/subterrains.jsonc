@@ -1,23 +1,4 @@
-// subterrains.jsonc — Ground-layer visual and movement definitions.
-//
-// Schema:
-//   id           — unique subterrain key
-//   displayName  — label shown in UI
-//   walkable     — whether pawns can enter this tile
-//   movementCost — movement point multiplier (1 = base speed)
-//   charSpans    — glyph source: [{sheet,from,to}] | [{sheet,id}] | [{literal}]
-//   fg / bg      — `#rrggbb` hex render colours (parsed to RGB 0–1 at load)
-//   biomes       — per-biome detail-noise range [min, max] that maps to this subterrain
-//                  (null = unbounded on that side; absent = not used in biome assignment)
 [
-  // ── PRODUCTION-CHAIN-II §F: SOIL LADDER ──────────────────────────────────────────────────────
-  // The grass-density subterrains the world-gen noise places ARE the soil-fertility ladder (NOTES.md):
-  // the SUBTERRAIN is the dirt/soil underneath (its own shade of brown, darker = richer), and the
-  // GRASS lives only as a resource object on top (grass_patch/tall_grass_patch/deep_grass_patch). So a
-  // tile reads "Plains, Loam, Tall Grass" — soil + the plant growing on it — not "Tall Grass, Tall
-  // Grass". The ids stay (`grass`/`tall_grass`/`deep_grass`, referenced by resource spawn tables +
-  // `soilFertilityPct`), but they now NAME the soil. Fertility: barren 0 · poor 25 · loam 50 · rich 75
-  // · terra preta 100 (terraform-only). See core/Terrains.ts soilFertilityPct.
   {
     "id"          : "dirt",
     "displayName" : "Barren Dirt",
@@ -26,28 +7,19 @@
     "charSpans"   : [ {"sheet": "tiles", "from": 64, "to": 71} ],
     "fg"          : "#856b47",
     "bg"          : "#17120a",
-    // PLAINS-ONLY: forest (and deep_forest, which inherits it) no longer surfaces barren dirt — its low
-    // band is deep_grass instead (see below). Only open plains show bare dirt patches.
     "biomes"      : { "plains": [null, -0.4] }
   },
   {
-    "id"          : "grass",  // soil tier 1 (25%) — Poor Soil; the grass_patch resource paints the green on top
+    "id"          : "grass",
     "displayName" : "Poor Soil",
     "walkable"    : true,
     "movementCost": 1,
     "charSpans"   : [ {"sheet": "tiles", "from": 64, "to": 71} ],
     "fg"          : "#785e3d",
     "bg"          : "#17120a",
-    // PLAINS-ONLY now (distinctiveness): forest no longer uses the poor grass tier — its grassy band is
-    // deep_grass (Rich Soil) instead, so a forest reads as lush and a plain as open grassland.
     "biomes"      : { "plains": [-0.4, 0.18] }
   },
   {
-    // PRODUCTION-CHAIN-IIII §1c — old-growth floor found ONLY in the deep_forest core (a distinct
-    // subterrain the variant carves out: listed before deep_grass so it wins in its detail band, and it
-    // declares only deep_forest so normal forest never shows it). Its exclusivity is what lets the rare
-    // magical timber (witchwood/soulwood) spawn in the deep core and nowhere else — resources key off
-    // subterrain, so a deep_forest-only subterrain gives a deep_forest-only resource.
     "id"          : "mossy_ground",
     "displayName" : "Mossy Forest Ground",
     "walkable"    : true,
@@ -58,20 +30,17 @@
     "biomes"      : { "deep_forest": [0.55, null] }
   },
   {
-    "id"          : "deep_grass",  // soil tier 3 (75%) — Rich Soil; the deep_grass_patch resource paints the green
+    "id"          : "deep_grass",
     "displayName" : "Rich Soil",
     "walkable"    : true,
     "movementCost": 1.5,
     "charSpans"   : [ {"sheet": "tiles", "from": 64, "to": 71} ],
     "fg"          : "#634d30",
     "bg"          : "#17120a",
-    // FOREST-ONLY, and covers the ENTIRE forest grassy band up to terra_preta (was [0.25,0.97], now the
-    // full [null,0.97]) so forest never falls back to barren dirt — deep_grass is THE forest soil (also
-    // inherited by deep_forest, where it fills everything below the mossy_ground band).
     "biomes"      : { "forest": [null, 0.97] }
   },
   {
-    "id"          : "tall_grass",  // soil tier 2 (50%) — Loam; the tall_grass_patch resource paints the green
+    "id"          : "tall_grass",
     "displayName" : "Loam",
     "walkable"    : true,
     "movementCost": 1.3,
@@ -81,9 +50,6 @@
     "biomes"      : { "plains": [0.25, 0.7] }
   },
   {
-    // soil tier 4 (100%) — Terra Preta, the richest soil. Spawns naturally but VERY rare (a thin sliver
-    // at the top of the forest noise, carved from deep_grass: [0.97, null] ≈ 1.5% of forest tiles); also
-    // the terraform-earned peak (F3, Soil-Works build). Capped at mid brown (darkest shade).
     "id"          : "terra_preta",
     "displayName" : "Terra Preta",
     "walkable"    : true,
@@ -98,7 +64,7 @@
     "displayName" : "Savanna",
     "walkable"    : true,
     "movementCost": 1.2,
-    "charSpans"   : [ {"sheet": "tiles", "from": 64, "to": 71} ],  // dirt tile — savanna resource paints the visual
+    "charSpans"   : [ {"sheet": "tiles", "from": 64, "to": 71} ],
     "fg"          : "#754d17",
     "bg"          : "#17120a",
     "biomes"      : { "plains": [0.7, null] }
@@ -181,7 +147,7 @@
     "displayName" : "Moss",
     "walkable"    : true,
     "movementCost": 1.5,
-    "charSpans"   : [ {"sheet": "tiles", "from": 72, "to": 79} ],  // grass tile — moss resource paints the visual
+    "charSpans"   : [ {"sheet": "tiles", "from": 72, "to": 79} ],
     "fg"          : "#754d17",
     "bg"          : "#17120a",
     "biomes"      : { "swamp": [0.5, 0.7] }
@@ -191,7 +157,7 @@
     "displayName" : "Mud",
     "walkable"    : true,
     "movementCost": 3,
-    "charSpans"   : [ {"sheet": "tiles", "from": 64, "to": 71} ],  // dirt tile — mud resource paints the visual
+    "charSpans"   : [ {"sheet": "tiles", "from": 64, "to": 71} ],
     "fg"          : "#754d17",
     "bg"          : "#17120a",
     "biomes"      : { "swamp": [null, -0.2] }
@@ -201,7 +167,7 @@
     "displayName" : "Bog",
     "walkable"    : true,
     "movementCost": 3.5,
-    "charSpans"   : [ {"sheet": "tiles", "from": 64, "to": 71} ],  // dirt tile — bog resource paints the visual
+    "charSpans"   : [ {"sheet": "tiles", "from": 64, "to": 71} ],
     "fg"          : "#754d17",
     "bg"          : "#17120a",
     "biomes"      : { "swamp": [-0.2, 0.2] }
@@ -211,7 +177,7 @@
     "displayName" : "Clay",
     "walkable"    : true,
     "movementCost": 2.8,
-    "charSpans"   : [ {"sheet": "tiles", "from": 64, "to": 71} ],  // dirt tile — clay resource paints the visual
+    "charSpans"   : [ {"sheet": "tiles", "from": 64, "to": 71} ],
     "fg"          : "#754d17",
     "bg"          : "#17120a",
     "biomes"      : { "swamp": [0.2, 0.5] }
@@ -227,9 +193,6 @@
     "biomes"      : { "swamp": [0.7, null] }
   },
   {
-    // Water subterrains are placed by WorldGenerator's decoupled water field (Terrains.getWaterLevel),
-    // NOT by biome detail-noise — so they carry no "biomes" key. They previously keyed off swamp/river,
-    // which confined water almost entirely to swamps. Kept in the dict so generateWorld can name them.
     "id"          : "shallow_water",
     "displayName" : "Shallow Water",
     "walkable"    : true,
@@ -267,22 +230,15 @@
     "biomes"      : { "river": [null, null] }
   },
   {
-    // Transparent walkable base the wall resources (mountain_wall/cliff_wall) sit on for their
-    // while-standing render. No longer painted as open mountain floor — that's `cave` now — so it
-    // carries no biome range and only appears as a resource's render substrate.
     "id"          : "rocky",
     "displayName" : "Rocky Ground",
     "walkable"    : true,
     "movementCost": 2.5,
-    "charSpans"   : [ {"literal": " "} ],  // transparent — visual comes from mountain_wall resource
+    "charSpans"   : [ {"literal": " "} ],
     "fg"          : "#9e855e",
     "bg"          : "#17120a"
   },
   {
-    // The walkable mountain INTERIOR floor — the "soil" of the mountain. Walls, ore, gems and stone
-    // outcrops are resource objects sitting ON cave floor; mining one reveals this walkable floor
-    // (resources set `harvestSubType: "cave"`). Covers the mountain's low+mid detail band; the
-    // high band [0.57, null] is `mineral_deposit` (ore veins).
     "id"          : "cave",
     "displayName" : "Cave",
     "walkable"    : true,
@@ -299,7 +255,7 @@
     "movementCost": 2.8,
     "charSpans": [
       {"sheet": "plants", "id": 210}
-    ],  // mountain-wall rock base; ore resources paint a small glowing coloured vein on top
+    ],
     "fg": "#9e855e",
     "bg": "#17120a",
     "biomes": { "mountain": [0.57, null] }

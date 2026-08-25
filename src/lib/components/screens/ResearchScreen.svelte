@@ -5,13 +5,12 @@
   import { buildingService } from '$lib/game/services/BuildingService';
   import { itemService } from '$lib/game/services/ItemService';
   import { onDestroy } from 'svelte';
-  import CurrentTask from '$lib/components/UI/CurrentTask.svelte';
+  import CurrentTask from '$lib/components/UI/hud/CurrentTask.svelte';
 
   let culture: any = null;
   let availableResearch: any[] = [];
   let completedResearch: string[] = [];
   let currentResearch: any = null;
-  // Item fetching methods
   $: getItemAmount = (itemId: string): number => $gameState?.stockpile?.[itemId] ?? 0;
 
   $: getInventoryAmount = (itemId: string): number => $gameState?.stockpile?.[itemId] ?? 0;
@@ -25,7 +24,6 @@
     currentResearch = state.currentResearch || null;
 
     if (culture) {
-      // ✅ Use service method instead
       availableResearch = researchService.getAvailableResearch(state);
     }
   });
@@ -61,13 +59,13 @@
   function getTierColor(tier: number): string {
     switch (tier) {
       case 0:
-        return '#4CAF50'; // Green - basic
+        return '#4CAF50';
       case 1:
-        return '#2196F3'; // Blue - advanced
+        return '#2196F3';
       case 2:
-        return '#9C27B0'; // Purple - expert
+        return '#9C27B0';
       default:
-        return '#607D8B'; // Grey - unknown
+        return '#607D8B';
     }
   }
 
@@ -84,7 +82,6 @@
   function canStartResearch(research: any): boolean {
     if (currentResearch) return false;
 
-    // ✅ Use service method
     return researchService.canStartResearch(research.id, $gameState);
   }
 </script>
@@ -92,7 +89,6 @@
 <div class="research-screen">
   <div class="screen-hdr">| RESEARCH</div>
 
-  <!-- Materials -->
   <div class="section-hdr sub">| MATERIALS</div>
   {#each ['bark_scrolls', 'hide_scrolls', 'parchment', 'scholars_ink', 'research_notes'] as materialId}
     {@const amount = getInventoryAmount(materialId)}
@@ -107,7 +103,6 @@
     {/if}
   {/each}
 
-  <!-- Current Research -->
   <div class="section-hdr sub">| ACTIVE RESEARCH</div>
   {#if currentResearch}
     <div class="row">
@@ -136,7 +131,6 @@
     <div class="row"><span class="muted">no active research</span></div>
   {/if}
 
-  <!-- Available Research -->
   <div class="section-hdr">| AVAILABLE ({availableResearch.length})</div>
   {#each availableResearch as research}
     <div class="research-item">
@@ -191,7 +185,6 @@
         </div>
       {/if}
 
-      <!-- Unlocks -->
       {#if research.unlocks}
         {#if research.unlocks.buildings?.length > 0}
           <div class="row">
@@ -355,7 +348,6 @@
     border-bottom: 1px solid var(--border);
   }
 
-  /* Research items */
   .research-item {
     border-bottom: 1px solid var(--border);
     padding-bottom: 2px;

@@ -1,62 +1,38 @@
 /// <reference lib="webworker" />
-/**
- * sim.worker.ts — the simulation worker. Owns the canonical GameState and runs the whole tick
- * loop OFF the render thread, so the main thread renders at the display rate regardless of sim
- * cost. Protocol: see simProtocol.ts. Commands arrive as serializable {type,payload}; state goes
- * back as snapshots (worldMap omitted when unchanged). WASM inits in the worker; save = post the
- * full state on request.
- */
-import { isClientRuntime } from '../core/runtime';
+import { isClientRuntime } from '../core/util/runtime';
 import { pathfinderService } from '../services/PathfinderService';
-import { GameStateManager } from '../core/GameState';
+import { GameStateManager } from '../core/state/GameStateManager';
 import { gameEngine } from '../systems/GameEngineImpl';
-import { rng } from '../core/rng';
+import { rng } from '../core/util/rng';
 import { resetUnreachableJobs } from '../systems/PawnStateMachine';
-import { TICKS_PER_SECOND } from '../core/time';
-import { setSimLogSink, simLog, setVerboseLogging, type SimLogSink } from '../core/logSink';
+import { TICKS_PER_SECOND } from '../core/util/time';
+import { setSimLogSink, simLog, setVerboseLogging, type SimLogSink } from '../core/util/logSink';
 import { applySimCommand } from './commands';
 import { projectSentEntity } from './entityProjection';
 import type { SimLogEvent, EntitySync } from './simProtocol';
-import { drainTileDeltasBudgeted, clearTileDeltas } from '../core/tileDeltas';
-import { carcassConditionByType } from '../core/carcassCondition';
-import { buildingsVisualSig } from '../core/buildingSig';
-import { gameLogger } from '../dev/gameLogger';
+import { drainTileDeltasBudgeted, clearTileDeltas } from '../core/state/tileDeltas';
+import { carcassConditionByType } from '../core/rules/world/carcassCondition';
+import { buildingsVisualSig } from '../core/state/buildingSig';
+import { gameLogger } from '../debug/gameLogger';
 import type { GameState, Pawn, Mob, WorldTile, DroppedItem } from '../core/types';
 
 const TICK_MS = 1000 / TICKS_PER_SECOND;
-// Batch governed by a WALL-CLOCK budget, not a tick count (a fixed step cap can lock the worker
-// with no snapshots posted → stutter). Run ticks until the budget is spent, then yield so
-// snapshots keep flowing. The budget must be ≥ ~one tick-cost so a backlogged worker runs ticks
-// BACK-TO-BACK and actually uses its capacity; 1× still self-limits via the accumulator.
 const BATCH_BUDGET_MS = 16;
-const MAX_STEPS_PER_BATCH = 120; // hard safety only; the budget is the real limiter
-// Cap carried backlog so high speed CARRIES across batches (drives more ticks) without spiralling
-// into ever-longer locked catch-up; past the cap we're best-effort behind realtime.
+const MAX_STEPS_PER_BATCH = 120;
 const MAX_BACKLOG_MS = 150;
 
 let speed = 1;
 let paused = true;
-// perf sampler (~1 Hz): a low-rate TPS/load line into the `perf` log category. Cheap (one entry/sec).
 let perfTicksAccum = 0;
 let perfWindowStart = 0;
 let accMs = 0;
 let lastBatch = 0;
 let loop: ReturnType<typeof setInterval> | null = null;
 let lastWorldMap: GameState['worldMap'] | null = null;
-// Terrain-rebuild signal: structured-clone gives the main thread NEW refs every snapshot, defeating
-// its ref-based "did terrain change?" check. In the worker, immutable updates preserve unchanged
-// refs, so a reliable revision is computed here and the renderer rebuilds terrain only when it bumps.
 let terrainRev = 0;
-// Snow/ice revision — a SEPARATE signal so a whole-map snow-onset wave repaints ONLY the blended
-// snow layer and never bumps terrainRev (whose handler re-bakes terrain + resource cells).
 let snowRev = 0;
-/** Max SNOW/ice tile deltas shipped per flush — a whole-map onset/melt is spread over several
- *  snapshots so the main-thread merge never stalls (see drainTileDeltasBudgeted). */
 const SNOW_DELTA_BUDGET_PER_FLUSH = 3000;
-// A SEPARATE, cheap signal for the 2D designation overlay: designation churn must never force the
-// full terrain rebuild (their icons are drawn on a separate 2D canvas).
 let designationRev = 0;
-// Probe counters: what TRIGGERED a terrain-rev bump per [SNAP] window (see SNAP_SIZE_LOG).
 let _trigWM = 0,
   _trigDelta = 0,
   _trigBSig = 0,
@@ -71,10 +47,6 @@ function post(msg: unknown) {
   (self as unknown as Worker).postMessage(msg);
 }
 
-// --- sim-log forwarding (combat text + chronicle) ---------------------------------------------
-// The real SimLogSink (chronicle + combatFeedback) lives in the store/DOM layer and can't run in
-// the worker, so calls are buffered and replayed on the main thread (simWorkerClient). Without this
-// the worker's sink stays the no-op default → floating combat text + chronicle silently vanish.
 let logBuffer: SimLogEvent[] = [];
 function flushLog() {
   if (logBuffer.length === 0) return;
@@ -88,7 +60,6 @@ function installForwardingLogSink() {
       logBuffer.push({ m, a });
     };
   setSimLogSink({
-    // logActivity returns an id; nothing in the sim consumes it, so '' is safe.
     logActivity: (...a: unknown[]) => {
       logBuffer.push({ m: 'logActivity', a });
       return '';
@@ -107,31 +78,13 @@ function installForwardingLogSink() {
   } as SimLogSink);
 }
 
-/**
- * Last-sent ref per top-level GameState field (the W2 sectional diff). Reset on `init`. The bridge
- * keeps the mirror copy; the two stay in lock-step because postMessage is ordered + reliable.
- * pawns/mobs/worldMap are handled by dedicated paths and excluded here.
- */
 let lastSent: Record<string, unknown> = {};
 const SECTIONAL_SKIP = new Set(['pawns', 'mobs', 'worldMap', 'droppedItems']);
 
-// ── Dropped-item sync ──────────────────────────────────────────────────────────────────────────
-// Like pawns/mobs, droppedItems rides its own per-id channel — but with WHOLE-OBJECT ref-diff (drops
-// are recreated immutably only when they change), so an unchanging pile ships NOTHING per flush. This
-// is what kills the carcass-FPS cost: previously the whole array (with its growing per-unit
-// `unitConditions`) was re-referenced every tick by stepItemDecay and re-cloned across the boundary
-// EVERY flush; now only the stacks that actually changed ship, and the throttled decay (DECAY_INTERVAL
-// _TICKS) makes that rare. The drop is sent WHOLE (incl. `unitConditions`) because the autosave
-// persists this projected state — stripping it would silently lose carcass spoilage across save/load;
-// the panels avoid re-scanning it by reading the `_carcassCondition` summary instead. `lastDropRefs`
-// holds each id's last-SENT object ref; a mismatch (or new id) re-ships that stack.
 const lastDropRefs = new Map<string, DroppedItem>();
 let lastDropIds = new Set<string>();
-// Last droppedItems array ref we computed `_carcassCondition` from — recompute only on a real change.
 let lastDropsArrRef: DroppedItem[] | undefined = undefined;
 
-/** Per-id ref-diff sync for drops: only stacks whose object ref changed since last flush ship; `order`
- *  re-establishes array order; `removed` reaps picked-up/rotted ids. */
 function syncDrops(arr: readonly DroppedItem[]): EntitySync<DroppedItem> {
   const upserts: DroppedItem[] = [];
   const order: string[] = new Array(arr.length);
@@ -152,10 +105,6 @@ function syncDrops(arr: readonly DroppedItem[]): EntitySync<DroppedItem> {
   return { upserts, removed, order };
 }
 
-// ── W2b per-entity sync ───────────────────────────────────────────────────────────────────────
-// Heavy/static fields dropped from the per-flush SLIM projection and only re-sent on a periodic
-// FULL resync. Everything NOT listed (position, needs, state, path, combat scalars…) stays fresh at
-// the flush rate; these deep/rarely-changing trees are what made the full-entity clone expensive.
 const PAWN_COLD = new Set<string>([
   'inventory',
   'equipment',
@@ -167,9 +116,6 @@ const PAWN_COLD = new Set<string>([
   'injuries',
   'conditions',
   'conditionTimers',
-  // SOCIAL-LAYER: family ties + event moods + break state — change on the daily social pass or on
-  // rare events, always by REF REPLACEMENT (never in-place), so the cold ref-diff ships them only
-  // the flush they actually change.
   'kin',
   'moodModifiers',
   'socialBreak'
@@ -182,15 +128,8 @@ const MOB_COLD = new Set<string>([
   'injuries',
   'conditions',
   'conditionTimers',
-  // §2c a geared humanoid's worn loadout — cold (changes only on gear wear/shatter), read by the
-  // selected-entity card. Ships on change like the pawn `equipment` cold field.
   'equipment',
-  // §2e a T5 boss's rolled legend name — set once at spawn, read by the card/hover/log. Cold.
   'name',
-  // ENGINE-PERFORMANCE-II §S4: per-frame the renderer reads only x/y/id/state/isAlive/eatProgress/
-  // health/maxHealth/creatureId/path off a mob; these scalars are worker-AI- or selected-card-only and
-  // change rarely for a typical idle mob, so ship them ONLY on change (the selected card reads the
-  // mirror's last value). At 958 mobs this trims the every-flush hot payload that the snapshot clones.
   'stateSince',
   'targetPawnId',
   'diedAt',
@@ -202,29 +141,14 @@ const MOB_COLD = new Set<string>([
   'bloodVolume',
   'maxBloodVolume'
 ]);
-// Mob fields that must ship EVERY flush because they're mutated IN PLACE (ADR-002) — their object ref
-// never changes, so a ref-diff would silently go stale. `needs` (hunger/fatigue drained in place by
-// entityLifecycle.stepHunger) is the only one; everything else on a mob is a scalar (value-compared,
-// safe under in-place mutation) or a REPLACED object (transientConditions/path/conditions/limbs — new
-// ref on change). Drives the field-level ref-diff in syncEntities for mobs (mobs=374KB→~80KB).
 const MOB_VOLATILE = new Set<string>(['needs']);
-// Cold-field sync = per-field REF-DIFF (replaces the old staggered RESYNC_EVERY round-robin, which
-// left the selected-pawn detail panels ≤2s stale — pill/health/gear lagging the sim). Each cold
-// field is re-sent ONLY the flush its object ref changes; healthy entities ship nothing, so the
-// mirror is always current and panels are instant on open (no on-open/subscription dance needed).
-// Hinges on cold fields taking a NEW ref when they change: combat + the command path already do;
-// the two in-place spots (pawn tickConditions, mob stepHunger) slice-on-change. `lastColdRefs` holds
-// each entity's last-SENT ref per cold field; a mismatch (or a newly-seen id) re-ships that field.
 const lastPawnCold = new Map<string, Record<string, unknown>>();
 const lastMobCold = new Map<string, Record<string, unknown>>();
-// TEMP §D: log the snapshot payload size breakdown (~every 2s) to find which field dominates the
-// structured-clone. Set false / remove once the heavy field is identified.
 const SNAP_SIZE_LOG = false;
 let flushSeq = 0;
 let lastPawnIds = new Set<string>();
 let lastMobIds = new Set<string>();
 
-/** Project an entity to its slim form (all fields except the cold set). */
 function slimEntity<T extends { id: string }>(
   e: T,
   cold: Set<string>
@@ -234,21 +158,6 @@ function slimEntity<T extends { id: string }>(
   return o as Partial<T> & { id: string };
 }
 
-// §D entity-baseline lever — see entityProjection.ts. The per-flush entity payload is dominated by
-// `needs` (~150B) + `activeJob` (~117B) + `state`; projectSentEntity drops the worker-only sub-fields
-// the main thread never reads (needs `lastX` timestamps; activeJob ids/coords/scratch) and truncates
-// `path`, rewriting the SENT object only — the worker's canonical state + saves stay intact.
-
-/**
- * Project a worldMap tile to ONLY the fields the main thread reads — render
- * (subType/resources/resourceCooldowns), movement preview (movementCost/walkable), GameCanvas
- * (type/terrainType) — plus identity. Everything else (A* scratch gCost/hCost/fCost/parent, ascii,
- * discovered/density/moisture/temperature/territoryOwner) is worker/sim-only, so it's dropped from
- * the worldMapDelta to shrink the post/onmessage structured-clone during HARVEST (§D — the harvest
- * cliff: hundreds of tiles change/s, each was shipped as a full WorldTile, cloned out + back in). The
- * bridge MERGES this onto its full cached tile, so dropped fields keep their values — safe because
- * none of them change on a regrowth/harvest delta.
- */
 const TILE_RENDER_FIELDS = [
   'x',
   'y',
@@ -273,15 +182,6 @@ function slimTile(tile: WorldTile): Partial<WorldTile> {
   return o as Partial<WorldTile>;
 }
 
-/**
- * Build the per-entity sync for one array via per-field REF-DIFF. Every upsert carries the slim hot
- * projection (position/needs/state/combat scalars — always fresh) PLUS any cold field whose object
- * ref differs from what was last sent for that entity (`lastCold`). A newly-seen id ships ALL cold
- * fields (baseline so the mirror is never missing one). Cold fields that didn't change ship nothing,
- * so an idle/healthy entity costs only its hot scalars — and the moment a cold field DOES change
- * (combat/heal/command, or the slice-on-change in tickConditions/stepHunger flips the ref) it's
- * re-sent that same flush. Plus `removed`/`order`; `projectSentEntity` trims the sent hot fields.
- */
 function syncEntities<T extends { id: string }>(
   arr: readonly T[],
   prevIds: Set<string>,
@@ -302,12 +202,6 @@ function syncEntities<T extends { id: string }>(
     if (!refs) lastCold.set(e.id, (refs = {}));
     let o: Record<string, unknown>;
     if (volatile) {
-      // Field-level ref-diff over EVERY field (hot+cold unified): ship `id`, the `volatile` fields
-      // (mutated IN PLACE, so ref-diff can't see their change — always send), and any other field whose
-      // value/ref changed since last SENT. Scalars compare by value (safe even when mutated in place);
-      // objects compare by ref (the mob FSM REPLACES them on change). The client merges {...prev,...u},
-      // so omitted = unchanged. Cuts the every-flush "all hot fields × all mobs" payload (374KB) to
-      // "needs + what actually moved" — most mobs ship just {id, needs} (~80KB at 900 mobs).
       o = { id: e.id };
       for (const k in e) {
         if (k === 'id') continue;
@@ -318,7 +212,6 @@ function syncEntities<T extends { id: string }>(
         }
       }
     } else {
-      // Slim hot projection (all hot fields wholesale), then add each cold field whose ref changed.
       o = slimEntity(e, cold) as Record<string, unknown>;
       for (const k of cold) {
         const v = er[k];
@@ -342,42 +235,14 @@ function syncEntities<T extends { id: string }>(
   return { upserts, removed, order };
 }
 
-/**
- * Publish state to the main thread at the ~15Hz UI-push (flush) rate. Posting EVERY tick was tried
- * and reverted: structured-cloning the full ~290-entity snapshot 50×/s overwhelmed the main thread's
- * deserialize and crashed FPS to ~7. The freeze-frames the per-tick attempt was meant to fix were
- * actually the terrain-rebuild storm (now handled by `_terrainRev` below), not position-update rate
- * — so 15Hz snapshots are fine.
- *
- * W2 sectional diff: rather than re-cloning the WHOLE state every flush (profiled at ~38% of sim
- * time — `post` structured-clone + the `{...rest}` spread), send ONLY the top-level fields whose
- * ref changed since the last flush. Immutable updates give changed sections a new ref and leave
- * untouched ones (buildings, designations, research, settings, …) ref-stable, so those are skipped
- * and the bridge reuses its cached copy — no re-clone across the boundary. pawns/mobs change every
- * tick so they still flow; worldMap stays special-cased (38k tiles, sent only when its ref changes).
- */
-// `commit` marks a snapshot that originates from a COMMAND result (or the pause hand-off), not a sim
-// tick. The main thread drops non-commit snapshots while paused (so the renderer can't be raced by
-// in-flight tick frames), but always applies commit ones so player actions while paused still render.
 function publish(state: GameState, flush: boolean, commit = false) {
   if (!flush) return;
   const worldMapChanged = state.worldMap !== lastWorldMap;
   lastWorldMap = state.worldMap;
-  // In-place tile mutations (resource regrowth) don't flip the worldMap ref — they accumulate as
-  // deltas. A full worldMap send already carries them, so drain-and-discard in that case; otherwise
-  // ship the deltas. Either way a visible terrain change must bump _terrainRev (renderer rebuild).
-  // Cap SNOW deltas shipped per flush so a whole-map onset/melt (or the debug slider) staggers across
-  // snapshots instead of landing ~150k deltas in one postMessage (the ~800ms main-thread merge stall).
-  // Terrain deltas are never capped. See drainTileDeltasBudgeted.
   const tileDeltas = worldMapChanged
     ? (clearTileDeltas(), null)
     : drainTileDeltasBudgeted(SNOW_DELTA_BUDGET_PER_FLUSH);
   const bSig = buildingsVisualSig(state.buildings);
-  // Terrain rebuild trigger — designations AND standing-zone tints are DELIBERATELY excluded: both are
-  // painted on GameCanvas's 2D overlay now (buildGameGrid renders neither), so their churn must not
-  // force the 38k-tile rebuild (the dominant harvest dip, trace §D; and the zone-commit hitch).
-  // Snow/ice-only deltas are ALSO excluded — they bump snowRev instead, repainting only the blended
-  // snow layer (a snow-onset wave touches most of the map; re-baking terrain for it was the hiccup).
   const cWM = state.worldMap !== prevWM;
   const cDelta = tileDeltas !== null && tileDeltas.some((d) => d.kind === 'terrain');
   const cSnow = tileDeltas !== null && tileDeltas.some((d) => d.kind === 'snow');
@@ -391,9 +256,7 @@ function publish(state: GameState, flush: boolean, commit = false) {
     if (cDelta) _trigDelta++;
     if (cBSig) _trigBSig++;
   }
-  // A full worldMap send re-derives the whole snow layer too (GameCanvas full-rebuild path).
   if (cWM || cSnow) snowRev++;
-  // Designation icons + zone tints share the cheap 2D-overlay redraw rev.
   if (state.designations !== prevDesignations || cZone) {
     designationRev++;
     if (state.designations !== prevDesignations) {
@@ -408,20 +271,17 @@ function publish(state: GameState, flush: boolean, commit = false) {
   const delta: Record<string, unknown> = {};
   const src = state as unknown as Record<string, unknown>;
   for (const k in state) {
-    if (SECTIONAL_SKIP.has(k)) continue; // pawns/mobs → EntitySync; worldMap → its own cache
+    if (SECTIONAL_SKIP.has(k)) continue;
     const v = src[k];
     if (v !== lastSent[k]) {
       delta[k] = v;
       lastSent[k] = v;
     }
   }
-  delta._terrainRev = terrainRev; // always present; renderer's terrain-rebuild trigger
-  delta._snowRev = snowRev; // snow/ice layer repaint trigger (decoupled from terrain)
-  delta._designationRev = designationRev; // renderer's cheap 2D designation-overlay redraw trigger
+  delta._terrainRev = terrainRev;
+  delta._snowRev = snowRev;
+  delta._designationRev = designationRev;
 
-  // Drops ride their own per-id channel (slim, no per-unit arrays). Recompute the small per-type
-  // carcass-condition summary only when the droppedItems array ref actually changed (throttled decay /
-  // pickup / kill) — most flushes ship neither a drop upsert nor a fresh summary.
   const drops = syncDrops(state.droppedItems ?? []);
   if (state.droppedItems !== lastDropsArrRef) {
     lastDropsArrRef = state.droppedItems;
@@ -430,11 +290,6 @@ function publish(state: GameState, flush: boolean, commit = false) {
 
   flushSeq++;
   const pawns = syncEntities(state.pawns, lastPawnIds, PAWN_COLD, lastPawnCold);
-  // ITEM-DBG: which pawns' `inventory` cold-field actually SHIPPED to the main thread this flush —
-  // it only ships the flush its object ref changes (a pickup/deposit/drop). If item.log shows a pickup
-  // but NO matching "SYNC→main shipped inventory" line follows, the change never crossed the worker
-  // boundary → the carry card stays stale (the "items vanish from inventory" bug). Cheap: the inner
-  // body runs only on the rare flush an inventory ref changed.
   if (gameLogger.isEnabled && 'upserts' in pawns) {
     for (const u of pawns.upserts) {
       if (u && 'inventory' in u) {
@@ -448,8 +303,6 @@ function publish(state: GameState, flush: boolean, commit = false) {
     }
   }
   const mobs = syncEntities(state.mobs ?? [], lastMobIds, MOB_COLD, lastMobCold, MOB_VOLATILE);
-  // `k: 1` marks a SNOW-ONLY delta (tile.snow/ice moved, nothing else) so the bridge routes its coord
-  // to the snow repaint channel instead of the terrain one. Terrain deltas omit it (slim clone).
   const wmDelta = tileDeltas
     ? tileDeltas.map((d) =>
         d.kind === 'snow'
@@ -458,10 +311,6 @@ function publish(state: GameState, flush: boolean, commit = false) {
       )
     : undefined;
 
-  // §D snapshot-size probe (kept, gated off via SNAP_SIZE_LOG): `post`/`onmessage` are 100% native
-  // structured-clone, so the only way to see WHICH field dominates the clone is to measure the
-  // serialized payload. Sampled ~every 2s; `[SNAP]` lines show per-component bytes + the biggest
-  // `state`-delta fields. Snapshot bloat is a recurring trap (ENGINE-PERFORMANCE) — this is the tool.
   if (SNAP_SIZE_LOG && flushSeq % 30 === 0) {
     const sz = (x: unknown) => {
       try {
@@ -482,7 +331,6 @@ function publish(state: GameState, flush: boolean, commit = false) {
         `mobs=${(sz(mobs) / 1000).toFixed(1)}k wmDelta=${(sz(wmDelta) / 1000).toFixed(1)}k ` +
         `| top state fields: ${topFields}`
     );
-    // Per-field breakdown of ONE slim pawn → tells us exactly which fields to demote to the cold set.
     const sp = ('upserts' in pawns ? pawns.upserts[0] : pawns.full?.[0]) as
       | Record<string, unknown>
       | undefined;
@@ -496,7 +344,6 @@ function publish(state: GameState, flush: boolean, commit = false) {
       // eslint-disable-next-line no-console -- gated snapshot-size probe
       console.info(`[SNAP-PAWN] one slim pawn = ${sz(sp)}B · fields(bytes): ${pf}`);
     }
-    // Which trigger fired the terrain rebuild over the last ~30 flushes (~2s)?
     // eslint-disable-next-line no-console -- gated snapshot-size probe
     console.info(
       `[TRIG] terrain bumps/30flush: worldMapDelta=${_trigDelta} worldMapRef=${_trigWM} ` +
@@ -512,8 +359,6 @@ function publish(state: GameState, flush: boolean, commit = false) {
     mobs,
     drops,
     worldMap: worldMapChanged ? state.worldMap : undefined,
-    // Slim each changed tile to the render/movement fields (§D) — the heavy part of the harvest-time
-    // post/onmessage cost was cloning full WorldTiles for every changed tile.
     worldMapDelta: wmDelta,
     flush,
     commit
@@ -541,19 +386,14 @@ function batch() {
     }
     accMs -= TICK_MS;
     steps++;
-    // Budget check AFTER a tick so every batch makes ≥1 tick of progress, then yields.
     if (performance.now() - start >= BATCH_BUDGET_MS) break;
   }
-  // Compute-bound: clamp (don't zero) the carried backlog so a higher speed keeps driving extra
-  // ticks across batches, while bounding it so it can't spiral into ever-longer locked catch-up.
   if (accMs > MAX_BACKLOG_MS) accMs = MAX_BACKLOG_MS;
 
-  // ── perf sampler (~1 Hz) ──
   perfTicksAccum += steps;
   if (perfWindowStart === 0) perfWindowStart = now;
   const perfElapsed = now - perfWindowStart;
   if (perfElapsed >= 1000) {
-    // Skip windows bloated by a pause/stall (they'd report a bogus TPS).
     if (perfElapsed < 3000 && perfTicksAccum > 0) {
       const tps = Math.round((perfTicksAccum * 1000) / perfElapsed);
       const gs = gameEngine.getGameState();
@@ -567,14 +407,13 @@ function batch() {
     perfWindowStart = now;
   }
 
-  flushLog(); // ship combat-text/chronicle emitted during this batch's ticks
+  flushLog();
 }
 
 self.onmessage = async (e: MessageEvent) => {
   const msg = e.data;
   switch (msg?.kind) {
     case 'wasm-check': {
-      // W1 verifier (kept).
       let ready = false;
       let error: string | undefined;
       try {
@@ -590,54 +429,42 @@ self.onmessage = async (e: MessageEvent) => {
       rng.reseed(msg.seed ?? 0);
       resetUnreachableJobs();
       installForwardingLogSink();
-      // Apply the verbose gate as part of init so this worker's per-tick traces are correctly on/off
-      // from the first tick (Settings → Debug mode; rides the init payload).
       setVerboseLogging(!!msg.verbose);
       gameEngine.setGameStateManager(new GameStateManager(msg.state));
-      // Menu-preview backdrop runs a gutted turn; the real boot omits `preview` ⇒ false, so the
-      // New/Load re-init cleanly clears it back to the full sim.
       gameEngine.setPreviewMode(!!msg.preview);
-      gameEngine.setOutputSink(publish); // per-tick → snapshot
-      gameEngine.setCommitSink((s) => publish(s, true, true)); // command result → snapshot (commit)
+      gameEngine.setOutputSink(publish);
+      gameEngine.setCommitSink((s) => publish(s, true, true));
       await pathfinderService.init();
       lastWorldMap = (msg.state as GameState).worldMap;
-      lastSent = {}; // reset the sectional-diff baseline so the first publish sends every field
-      flushSeq = 0; // first publish sends every entity full (empty id baseline → all "newly-seen")
+      lastSent = {};
+      flushSeq = 0;
       lastPawnIds = new Set();
       lastMobIds = new Set();
-      lastPawnCold.clear(); // drop cold-ref baselines so the first publish re-ships every cold field
+      lastPawnCold.clear();
       lastMobCold.clear();
-      lastDropRefs.clear(); // drop the per-id drop baseline so the first publish re-ships every stack
+      lastDropRefs.clear();
       lastDropIds = new Set();
-      lastDropsArrRef = undefined; // force a fresh _carcassCondition on the first publish
+      lastDropsArrRef = undefined;
       lastBatch = performance.now();
       if (!loop) loop = setInterval(batch, 16);
       post({ kind: 'ready' });
-      // Push the initial state straight back so the main projection is populated. Mark it commit so it
-      // ALWAYS applies even if the game boots paused (else the client's paused gate would drop it → blank).
       publish(msg.state, true, true);
       break;
     }
     case 'command':
       gameEngine.applyCommand((s) => applySimCommand(s, msg.cmd), msg.cmd.save ?? false);
-      flushLog(); // a command (e.g. a draft attack) can emit combat text outside the batch loop
+      flushLog();
       break;
     case 'setSpeed':
       speed = msg.speed;
       break;
     case 'setVerbose':
-      // Settings → Debug mode toggle: flip the worker's verbose gate so the per-tick sim traces
-      // (needs/AI/jobs/items) start/stop forwarding to the chronicle + .debug logs at runtime.
       setVerboseLogging(!!msg.on);
-      // ALWAYS-ON confirmation (bypasses the gate it just set) so the change is visible in the DEBUG
-      // tab — the worker actually received and applied the toggle, not just the main thread.
       {
         let turn = 0;
         try {
           turn = gameEngine.getGameState().turn;
-        } catch {
-          /* setVerbose can arrive before init; turn 0 is fine for the confirmation line. */
-        }
+        } catch {}
         simLog.logEvent({
           category: 'system',
           turn,
@@ -649,8 +476,6 @@ self.onmessage = async (e: MessageEvent) => {
     case 'setPaused':
       paused = msg.paused;
       if (!paused) lastBatch = performance.now();
-      // On PAUSE, ship one authoritative frame (commit) so the main thread's displayed state lands
-      // EXACTLY on the paused sim — any in-flight tick snapshots it dropped are reconciled here.
       else publish(gameEngine.getGameState(), true, true);
       break;
     case 'requestSave':

@@ -1,13 +1,3 @@
-// Fantasia4x — Build Distance status bar badge.
-//
-// Shows commits since the last v* release tag, read live from scripts/build-distance.sh --json.
-// Green/dim under the cap, yellow approaching (>=90%) and over the cap (informational only — no hard
-// gate). Refreshes on every commit (watches .git/logs/HEAD), the instant a release is cut (build.sh
-// --push touches .git/build-distance-refresh), when the window regains focus, and on a slow fallback
-// poll. Click to refresh and, when overdue, get the exact tag command to cut a release.
-//
-// Plain JS, no build step. Install by symlinking this folder into ~/.vscode/extensions (see README.md).
-
 const vscode = require('vscode');
 const { execFile } = require('child_process');
 const path = require('path');
@@ -20,7 +10,6 @@ let timer;
 function workspaceRoot() {
   const folders = vscode.workspace.workspaceFolders;
   if (!folders || !folders.length) return null;
-  // Prefer the folder that actually has our script (handles multi-root workspaces).
   for (const f of folders) {
     if (fs.existsSync(path.join(f.uri.fsPath, 'scripts', 'build-distance.sh'))) return f.uri.fsPath;
   }
@@ -82,8 +71,6 @@ function runInTerminal(root, command) {
   buildTerminal.sendText(command);
 }
 
-// Clicking the badge opens a menu to trigger a build or a release straight from the editor. The build
-// itself runs in an integrated terminal so its output (and the release confirmation prompts) is visible.
 async function onClick() {
   refresh();
   const root = workspaceRoot();
@@ -136,10 +123,6 @@ function activate(context) {
     vscode.commands.registerCommand('fantasia4x.buildDistance.refresh', onClick)
   );
 
-  // Refresh the moment a commit lands (.git/logs/HEAD is appended on every commit / checkout / reset),
-  // the moment a release is cut (build.sh --push touches .git/build-distance-refresh once the new v* tag
-  // exists — creating a tag doesn't move HEAD, so the reset wouldn't otherwise show until the poll),
-  // when the window regains focus, and on a slow fallback poll.
   const root = workspaceRoot();
   if (root) {
     for (const rel of ['.git/logs/HEAD', '.git/build-distance-refresh']) {

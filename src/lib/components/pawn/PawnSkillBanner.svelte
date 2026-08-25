@@ -1,11 +1,12 @@
-<!-- PawnSkillBanner.svelte — WORK-EXPERIENCE fork of PawnStatBanner: one chip per work category
-     showing the pawn's experience LEVEL, a compact XP bar beneath it, and the exact
-     current / needed XP toward the next level. Rendered above the Work screen's skills table. -->
 <script lang="ts">
   import type { Pawn } from '$lib/game/core/types';
-  import { WORK_CATEGORIES } from '$lib/game/core/Work';
-  import { SKILL_CATEGORIES, MAX_WORK_LEVEL, xpToNext } from '$lib/game/core/workExperience';
-  import { ABBR } from '$lib/utils/workUtils';
+  import { WORK_CATEGORIES } from '$lib/game/core/defs/work';
+  import {
+    SKILL_CATEGORIES,
+    MAX_WORK_LEVEL,
+    xpToNext
+  } from '$lib/game/core/rules/body/workExperience';
+  import { ABBR } from '$lib/components/util/workUtils';
   export let pawn: Pawn;
 
   const NAME: Record<string, string> = Object.fromEntries(

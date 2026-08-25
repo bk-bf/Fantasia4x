@@ -5,21 +5,12 @@ import { itemService } from '$lib/game/services/ItemService';
 import { workService } from '$lib/game/services/WorkService';
 import { buildingService } from '$lib/game/services/BuildingService';
 
-/**
- * BUTCHERY AUDIT (headless). A carcass (item `category:carcass`) is butchered through the craft pipeline:
- * `craftItem({itemId: <carcass>})` dispatches by the carcass to its recipe at the best-built station
- * (`resolveCarcassRecipe`, ranked by `butcheryTier`); the output is scaled by the station's
- * `butcheryYieldBonus` × the carcass's `conditionMult` (spoilage). Stations: butcher_spot (T0),
- * dressing_stone (T1 +25%), flensing_table (T2 +45%), sanguinary_altar (T3 +45%).
- */
-
 const BUTCHERY_STATIONS = [
   { id: 'butcher_spot' },
   { id: 'dressing_stone' },
   { id: 'flensing_table' },
   { id: 'sanguinary_altar' }
 ];
-// A butchery tool for every tier the gate can ask for: T0 knives, T1 cleaver, T2/T3 kits (flensing/altar).
 const KNIVES = { flint_knife: 3, bone_cleaver: 3, iron_butchery_kit: 3, steel_butchery_kit: 3 };
 const stk = (s: HeadlessSession) => (s.getState().stockpile ?? {}) as Record<string, number>;
 
@@ -37,8 +28,6 @@ describe('butchery', () => {
       })
     );
     const gs = s.getState();
-    // pawn_carcass (no cannibalism) is the only intentionally un-butcherable carcass. rotten_carcass now
-    // butchers into rotten meat/hide (butcher_rotten_carcass) for compost.
     const INTENTIONAL = new Set(['pawn_carcass']);
     const carcasses = itemService
       .getItemsByType('material')
@@ -52,7 +41,6 @@ describe('butchery', () => {
     console.log(
       `[BUTCH cov] ${carcasses.length} carcass items; un-butcherable (excl. rotten/pawn): ${dead.join(', ') || 'none'}`
     );
-    // grimeling_carcass is a known content gap (2 creatures) — tolerate it, but nothing else may be dead.
     expect(
       dead.filter((d) => d !== 'grimeling_carcass'),
       'no unexpected dead carcass'
@@ -72,10 +60,10 @@ describe('butchery', () => {
         needsDisabled: ['hunger', 'fatigue', 'thirst', 'hygiene'],
         buildings: BUTCHERY_STATIONS,
         items: {
-          rabbit_carcass: 2, // T0 game → rabbit_meat
-          goblin_carcass: 2, // T0 humanoid → bones/sinew only (no meat)
-          great_wolf_carcass: 2, // T1 boss render → wolf_meat
-          dire_wolf_carcass: 2, // T2 flense → wolf_meat + rare
+          rabbit_carcass: 2,
+          goblin_carcass: 2,
+          great_wolf_carcass: 2,
+          dire_wolf_carcass: 2,
           ...KNIVES,
           spit_meat: 10
         },
@@ -125,8 +113,8 @@ describe('butchery', () => {
       for (let i = 0; i < 30 && (stk(s).venison ?? 0) === 0; i++) s.tick(400);
       return stk(s).venison ?? 0;
     };
-    const spot = await run([{ id: 'butcher_spot' }]); // T0, no bonus
-    const flense = await run([{ id: 'butcher_spot' }, { id: 'flensing_table' }]); // T2, +45%
+    const spot = await run([{ id: 'butcher_spot' }]);
+    const flense = await run([{ id: 'butcher_spot' }, { id: 'flensing_table' }]);
     console.log(
       `[BUTCH yield] deer venison: butcher_spot=${spot} vs flensing_table(+45%)=${flense}`
     );
@@ -137,7 +125,6 @@ describe('butchery', () => {
   });
 
   it('tool gate: butchery now REQUIRES a knife, and flensing requires the tier-2 kit', async () => {
-    // Precise tool control → workReady:false (no auto-stocked knife); enable labor by hand.
     const run = async (tools: Record<string, number>) => {
       const s = new HeadlessSession();
       await s.start(
@@ -161,12 +148,11 @@ describe('butchery', () => {
       s.command({ type: 'craftItem', payload: { itemId: 'rabbit_carcass' } } as never);
       s.command({ type: 'craftItem', payload: { itemId: 'dire_wolf_carcass' } } as never);
       for (let i = 0; i < 30; i++) s.tick(400);
-      // rabbit_meat = T0 butchery happened; alpha_ichor = dire_wolf FLENSED (make_dire_wolf, minTier 2).
       return { rabbit: stk(s).rabbit_meat ?? 0, flense: stk(s).alpha_ichor ?? 0 };
     };
-    const none = await run({}); // NO knife
-    const t0 = await run({ flint_knife: 2 }); // T0 knife
-    const t2 = await run({ iron_butchery_kit: 2 }); // T2 kit
+    const none = await run({});
+    const t0 = await run({ flint_knife: 2 });
+    const t2 = await run({ iron_butchery_kit: 2 });
     console.log(
       `[BUTCH gate] no-tool{rabbit:${none.rabbit},flense:${none.flense}} T0-knife{${t0.rabbit},${t0.flense}} T2-kit{${t2.rabbit},${t2.flense}}`
     );
@@ -188,7 +174,6 @@ describe('butchery', () => {
         pawns: [{ count: 5, skillLevel: 20 }],
         needsDisabled: ['hunger', 'fatigue', 'thirst', 'hygiene'],
         buildings: [{ id: 'anvil' }],
-        // stitched with spun thread + buckled with metal fasteners (not primitive cordage)
         items: {
           iron_bar: 6,
           bloom_steel: 6,
@@ -213,9 +198,6 @@ describe('butchery', () => {
   });
 
   it('§B anatomy pass: claws/antlers/horns DROP from butchery and each feeds ≥1 craft — headless', async () => {
-    // The distinctive parts that were dead drops. Butcher a wolf (claws), a deer (antlers) and a goat
-    // (horns) at the butcher spot, then craft every consumer: fang-and-claw charm, fang arrows, and the
-    // barbed bone arrow that any of claw/antler/horn feeds.
     const s = new HeadlessSession();
     await s.start(
       buildScenario({
@@ -224,8 +206,6 @@ describe('butchery', () => {
         workReady: true,
         researchMaxTier: 9,
         toolTier: 3,
-        // Ordinary-skill butchers: a single-unit anatomy drop (1 antler/horn per carcass) must survive
-        // regardless of butcher skill — skill yield is a bonus-only floor(≥1), never a drop-losing penalty.
         pawns: [{ count: 6, skillLevel: 20 }],
         needsDisabled: ['hunger', 'fatigue', 'thirst', 'hygiene'],
         buildings: [{ id: 'butcher_spot' }, { id: 'makers_bench' }, { id: 'bone_carvers_bench' }],
@@ -244,7 +224,7 @@ describe('butchery', () => {
         seedEntities: false
       })
     );
-    s.command({ type: 'craftItem', payload: { itemId: 'wolf_carcass', quantity: 2 } } as never); // 2 claws for the charm
+    s.command({ type: 'craftItem', payload: { itemId: 'wolf_carcass', quantity: 2 } } as never);
     for (const c of ['deer_carcass', 'mountain_goat_carcass'])
       s.command({ type: 'craftItem', payload: { itemId: c } } as never);
     for (
@@ -265,7 +245,6 @@ describe('butchery', () => {
     expect(stk(s).antler_rack ?? 0, 'deer butchery drops antlers').toBeGreaterThan(0);
     expect(stk(s).curved_horn ?? 0, 'goat butchery drops horns').toBeGreaterThan(0);
 
-    // Now every consumer: fang-and-claw charm, fang arrows, and the barbed bone arrow (antler/horn/claw).
     for (const item of ['fang_charm', 'fang_arrow', 'barbed_bone_arrow'])
       s.command({ type: 'craftItem', payload: { itemId: item } } as never);
     for (

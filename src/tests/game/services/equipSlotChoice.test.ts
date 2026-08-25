@@ -1,14 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { equipDropToPawn, carryDropToInventory } from '$lib/game/core/PawnEquipment';
+import { equipDropToPawn, carryDropToInventory } from '$lib/game/core/rules/gear/equipment';
 import { pawnStatService } from '$lib/game/services/PawnStatService';
 import { jobService } from '$lib/game/services/JobService';
 import type { GameState, Pawn } from '$lib/game/core/types';
 
-/**
- * Equip-system fixes: (1) an explicit target slot lets the player put gear in the OFF hand (not just
- * the auto-resolved main hand); (2) a tool CARRIED in inventory still grants its work boost, and
- * `heldToolFor` itemises which tool + how much (drives the work-tab tooltip line).
- */
 const pawnWith = (over: Partial<Pawn> = {}): Pawn =>
   ({
     id: 'p1',
@@ -64,8 +59,8 @@ describe('equip slot choice + carried-tool boost', () => {
     const out = carryDropToInventory(stateWithDrop(), 'p1', 'd1');
     const inv = out.pawns[0].inventory;
     expect(inv.instances.map((i) => i.itemId)).toContain('flint_knife');
-    expect(inv.items.flint_knife ?? 0).toBe(0); // not in the bulk count map
-    expect(out.droppedItems).toHaveLength(0); // drop consumed
+    expect(inv.items.flint_knife ?? 0).toBe(0);
+    expect(out.droppedItems).toHaveLength(0);
   });
 
   it('a tool in the bulk items count map is still recognised by the boost AND the gate', () => {

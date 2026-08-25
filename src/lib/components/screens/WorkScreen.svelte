@@ -1,17 +1,15 @@
 <script lang="ts">
   import { gameState } from '$lib/stores/gameState';
   import { uiState } from '$lib/stores/uiState';
-  import BackButton from '$lib/components/UI/BackButton.svelte';
+  import BackButton from '$lib/components/UI/widget/BackButton.svelte';
   import WorkPriorities from '$lib/components/screens/work/WorkPriorities.svelte';
   import PopulationOverview from '$lib/components/screens/work/PopulationOverview.svelte';
   import { persisted, persist } from '$lib/stores/uiPersist';
 
   let pawns = $derived($gameState.pawns ?? []);
   let workAssignments = $derived($gameState.workAssignments ?? {});
-  // Restored across tab toggles; an incoming global pawn selection still overrides below.
   let selectedPawn = $state<string | null>(persisted('work.pawn', null));
   let selected = $derived(pawns.find((p) => p.id === selectedPawn) ?? null);
-  // Clicking a work-priority column highlights the related stats in the attributes grid below.
   let selectedColumn = $state<string | null>(persisted('work.column', null));
 
   $effect(() => {

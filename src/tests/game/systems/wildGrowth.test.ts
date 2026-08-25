@@ -1,16 +1,15 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { gameEngine } from '$lib/game/systems/GameEngineImpl';
 import { complete as completeHarvest } from '$lib/game/services/jobs/harvest';
-import { clearTileDeltas, drainTileDeltas } from '$lib/game/core/tileDeltas';
+import { clearTileDeltas, drainTileDeltas } from '$lib/game/core/state/tileDeltas';
 import {
   addWildGrowth,
   clearWildGrowth,
   wildGrowthSize,
   RESOURCE_VISIBLE_GROWTH
-} from '$lib/game/core/wildGrowth';
+} from '$lib/game/core/rules/world/wildGrowth';
 import type { GameState, Job, WorldTile } from '$lib/game/core/types';
 
-// A harvest resets a `regrowsFromZero` node to growth 0; processWildGrowth climbs 0→100 in place and restores the count at maturity.
 function tile(over: Partial<WorldTile>): WorldTile {
   return {
     x: 0,
@@ -66,15 +65,14 @@ describe('gradual wild-plant regrowth (regrowsFromZero)', () => {
     const t = tile({ resources: { berry_bush: 4 }, growth: { berry_bush: 100 } });
     completeHarvest(harvestJob('berry_bush'), baseState([[t]], 50));
 
-    expect(t.resources.berry_bush).toBe(0); // node consumed
-    expect(t.growth?.berry_bush).toBe(0); // reset to bare soil
-    expect(t.resourceCooldowns?.berry_bush).toBeUndefined(); // gradual regrow, NOT a binary cooldown
-    expect(t.subType).toBe('bush'); // soil/subtype untouched — never forced to barren dirt
-    expect(wildGrowthSize()).toBe(1); // tile enrolled in the regrow work-list
+    expect(t.resources.berry_bush).toBe(0);
+    expect(t.growth?.berry_bush).toBe(0);
+    expect(t.resourceCooldowns?.berry_bush).toBeUndefined();
+    expect(t.subType).toBe('bush');
+    expect(wildGrowthSize()).toBe(1);
   });
 
   it('climbs growth in place while immature, then restores the count + leaves the work-list at maturity', () => {
-    // Full maturity takes tens of thousands of ticks — assert the climb over a window, then jump to the cusp.
     const r = tile({
       subType: 'savanna',
       resources: { wild_barley: 0 },
@@ -84,37 +82,34 @@ describe('gradual wild-plant regrowth (regrowsFromZero)', () => {
     const map = [[r]];
 
     for (let i = 0; i < 5000; i++) runWildGrowth(map, i);
-    expect(r.growth!.wild_barley).toBeGreaterThan(0); // advancing in place
-    expect(r.growth!.wild_barley).toBeLessThan(100); // not matured partway through
-    expect(r.resources.wild_barley).toBe(0); // no nodes until it matures
-    expect(wildGrowthSize()).toBe(1); // still regrowing
+    expect(r.growth!.wild_barley).toBeGreaterThan(0);
+    expect(r.growth!.wild_barley).toBeLessThan(100);
+    expect(r.resources.wild_barley).toBe(0);
+    expect(wildGrowthSize()).toBe(1);
 
-    r.growth!.wild_barley = 100 - 1e-9; // on the cusp — any positive increment matures it
+    r.growth!.wild_barley = 100 - 1e-9;
     runWildGrowth(map, 5001);
     expect(r.growth!.wild_barley).toBe(100);
-    expect(r.resources.wild_barley).toBeGreaterThanOrEqual(1); // count restored — harvestable again
-    expect(wildGrowthSize()).toBe(0); // done — removed from the work-list
+    expect(r.resources.wild_barley).toBeGreaterThanOrEqual(1);
+    expect(wildGrowthSize()).toBe(0);
   });
 
   it('appears (ships a delta) only when growth crosses the visible threshold, not every tick', () => {
     const r = tile({ subType: 'grass', resources: { grass_patch: 5 }, growth: { grass_patch: 5 } });
-    // count must be 0 while regrowing — 5 above was just to satisfy the helper shape; reset it.
     r.resources.grass_patch = 0;
     addWildGrowth(0, 0);
     const map = [[r]];
 
-    // A tick well below the threshold → still bare soil, no visual change, no delta.
     clearTileDeltas();
     runWildGrowth(map, 0);
     expect(r.growth!.grass_patch).toBeGreaterThan(5);
     expect(r.growth!.grass_patch).toBeLessThan(RESOURCE_VISIBLE_GROWTH);
     expect(drainTileDeltas()).toBeNull();
 
-    // Nudge it to the cusp and tick → it crosses the threshold and the fade-in ships exactly one delta.
     r.growth!.grass_patch = RESOURCE_VISIBLE_GROWTH - 0.001;
     clearTileDeltas();
     runWildGrowth(map, 1);
     expect(r.growth!.grass_patch).toBeGreaterThanOrEqual(RESOURCE_VISIBLE_GROWTH);
-    expect(drainTileDeltas()).not.toBeNull(); // the plant fading in shipped a delta
+    expect(drainTileDeltas()).not.toBeNull();
   });
 });

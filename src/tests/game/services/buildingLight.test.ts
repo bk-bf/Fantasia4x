@@ -2,9 +2,6 @@ import { describe, it, expect } from 'vitest';
 import { buildingLight, lightingService, FIRE_INTENSITY } from '$lib/game/services/LightingService';
 import { computeTileLightLevel } from '$lib/game/services/EnvironmentService';
 
-// Light is data-driven: any building with a `lightRadius` in buildings.jsonc emits, fuelled ones
-// only while lit. The hearth used to be dark (only `campfire` was hardcoded); now it throws light.
-
 const fire = (type: string, lit: boolean, x = 0, y = 0) =>
   ({ id: `${type}-${x}-${y}`, type, status: 'complete', lit, x, y }) as any;
 
@@ -42,8 +39,8 @@ describe('data-driven building light', () => {
   it('collectEmitters returns one emitter per lit light-building', () => {
     const emitters = lightingService.collectEmitters([
       fire('hearth', true, 5, 5),
-      fire('campfire', false, 9, 9), // unlit → excluded
-      fire('craft_spot', true, 1, 1) // no light → excluded
+      fire('campfire', false, 9, 9),
+      fire('craft_spot', true, 1, 1)
     ]);
     expect(emitters).toHaveLength(1);
     expect(emitters[0]).toMatchObject({ x: 5, y: 5, radius: 7 });

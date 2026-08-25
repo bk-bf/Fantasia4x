@@ -1,10 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { getMaterialProperty, aggregateMaterialMods } from '$lib/game/core/materialProperties';
+import { getMaterialProperty, aggregateMaterialMods } from '$lib/game/core/defs/materials';
 
-/**
- * §M material properties — a dynamic build/craft material shifts the finished building's / item's
- * stats. These pin the data + the aggregation used by the building condition tick and craft durability.
- */
 describe('material properties', () => {
   it('tougher materials carry a >1 durability mult, flimsy ones <1', () => {
     expect(getMaterialProperty('oak_plank')?.item?.durability).toBeGreaterThan(1);
@@ -25,10 +21,8 @@ describe('material properties', () => {
   it('aggregateMaterialMods multiplies durability/weight and sums beauty/comfort/insulation', () => {
     const oak = aggregateMaterialMods(['oak_plank'], 'item');
     expect(oak.durability).toBeCloseTo(1.25);
-    // two materials' durability multiply together
     const both = aggregateMaterialMods(['oak_plank', 'ash_plank'], 'item');
     expect(both.durability).toBeCloseTo(1.25 * 1.2);
-    // beauty is additive on the building target
     const marble = aggregateMaterialMods(['marble_block'], 'building');
     expect(marble.beauty).toBeGreaterThan(0);
   });
