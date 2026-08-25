@@ -21,10 +21,6 @@ import { itemService } from '$lib/game/services/ItemService';
 import { recipeService } from '$lib/game/services/RecipeService';
 import type { GameState, Mob, Pawn } from '$lib/game/core/types';
 
-/**
- * RANGED-COMBAT headless suite — drives the REAL combatService.tickCombat to prove a bow-armed pawn
- * strikes a mob beyond melee reach, consumes ammo, holds fire without ammo, and bow-butts in contact.
- */
 const stats = {
   strength: 14,
   dexterity: 16,
@@ -79,14 +75,14 @@ function makeGoblin(over: Partial<Mob> = {}): Mob {
     id: 'g1',
     creatureId: 'goblin',
     entityClass: 'mob',
-    state: 'Wander', // passive: never swings back, so only the archer acts
+    state: 'Wander',
     stateSince: 0,
     isAlive: true,
     x: 5,
-    y: 8, // 3 tiles south — beyond melee reach (1), inside self_bow range (6)
+    y: 8,
     health: 35,
     maxHealth: 35,
-    stats: { ...stats, dexterity: 2 }, // low dodge → shots land
+    stats: { ...stats, dexterity: 2 },
     traits: [],
     bloodVolume: 100,
     maxBloodVolume: 100,
@@ -101,7 +97,6 @@ function makeGoblin(over: Partial<Mob> = {}): Mob {
   } as unknown as Mob;
 }
 
-/** A low-dodge pawn wearing a mail hauberk (bodyMid), so blows land + chew its armour. */
 function makeArmored(id: string): Pawn {
   return makeArcher({
     id,
@@ -114,7 +109,6 @@ function makeArmored(id: string): Pawn {
   } as unknown as Partial<Pawn>);
 }
 
-/** A drafted attacker swinging `weapon` at pawn `targetId`, standing adjacent to the armoured defender. */
 function makeMeleeAttacker(id: string, weapon: string, targetId: string): Pawn {
   return makeArcher({
     id,
@@ -135,7 +129,6 @@ describe('rangedCombat helpers', () => {
   it('classifies the self_bow as ranged and melee weapons as not', () => {
     expect(isRangedWeaponProps(itemService.getItemById('self_bow')?.weaponProperties)).toBe(true);
     expect(getRangedWeapon(makeArcher())?.itemId).toBe('self_bow');
-    // A pawn holding a melee weapon (or nothing) has no ranged weapon.
     expect(getRangedWeapon(makeArcher({ equipment: {} } as Partial<Pawn>))).toBeNull();
   });
 
@@ -155,9 +148,8 @@ describe('rangedCombat helpers', () => {
   it('accuracy falls off LINEARLY with distance and rewards the aim stat', () => {
     const near = rangedAccuracyMod(1.0, 0, 0, 2, 0);
     const far = rangedAccuracyMod(1.0, 0, 0, 8, 0);
-    expect(near).toBeGreaterThan(far); // farther = less likely
-    expect(near - far).toBeCloseTo((8 - 2) * 2.5, 5); // strictly linear in distance
-    // A higher aim_accuracy stat lifts the whole curve; cover lowers it.
+    expect(near).toBeGreaterThan(far);
+    expect(near - far).toBeCloseTo((8 - 2) * 2.5, 5);
     expect(rangedAccuracyMod(1.4, 0, 0, 4, 0)).toBeGreaterThan(rangedAccuracyMod(1.0, 0, 0, 4, 0));
     expect(rangedAccuracyMod(1.0, 0, 0, 4, 0.2)).toBeLessThan(rangedAccuracyMod(1.0, 0, 0, 4, 0));
   });
@@ -171,28 +163,22 @@ describe('rangedCombat helpers', () => {
     );
     expect(aimIntervalTicks(90, 3, 4, 1.0, 0, 1.0)).toBeGreaterThan(
       aimIntervalTicks(90, 1, 4, 1.0, 0, 1.0)
-    ); // crossbow span
+    );
   });
 
   it('shot cadence is floored at the melee cap (72) and averages near melee — never tick-rate', () => {
-    // A high-DEXTERITY, aim-geared archer at close range would collapse to ~27 ticks without the floor.
     expect(aimIntervalTicks(75, 1, 2, 1.8, 0.8, 1.0)).toBe(72);
-    // A typical combat archer (DEXTERITY ~15) lands near melee's ~104-tick interval, not tens of ticks.
     const typical = aimIntervalTicks(104, 1, 4, 1.2, 0, 1.2);
     expect(typical).toBeGreaterThanOrEqual(72);
     expect(typical).toBeLessThan(160);
-    // A crossbow's windlass keeps it well slower than the floor (no accidental clamp).
     expect(aimIntervalTicks(104, 3, 4, 1.2, 0, 1.0)).toBeGreaterThan(200);
   });
 
   it('reload_speed (DEXTERITY) shortens only a crossbow span — bows ignore it (the build fork)', () => {
-    // reload 3 = crossbow: a defter loader (higher reload_speed) spans faster.
     expect(aimIntervalTicks(90, 3, 4, 1.0, 0, 1.4)).toBeLessThan(
       aimIntervalTicks(90, 3, 4, 1.0, 0, 0.8)
     );
-    // reload 1 = bow: no span step, so reload_speed makes no difference.
     expect(aimIntervalTicks(90, 1, 4, 1.0, 0, 1.4)).toBe(aimIntervalTicks(90, 1, 4, 1.0, 0, 0.8));
-    // aim_speed (DEXTERITY) still governs the AIM portion regardless.
     expect(aimIntervalTicks(90, 3, 4, 1.5, 0, 1.0)).toBeLessThan(
       aimIntervalTicks(90, 3, 4, 1.0, 0, 1.0)
     );
@@ -203,7 +189,6 @@ describe('rangedCombat helpers', () => {
     const sharp = makeArcher({ stats: { ...stats, perception: 22 } } as Partial<Pawn>);
     const rw = getRangedWeapon(low)!;
     expect(effectiveRangedRange(sharp, rw)).toBeGreaterThan(effectiveRangedRange(low, rw));
-    // Never exceeds the pawn's own vision range.
     expect(effectiveRangedRange(sharp, rw)).toBeLessThanOrEqual(pawnVisionRange(sharp));
   });
 
@@ -211,14 +196,14 @@ describe('rangedCombat helpers', () => {
     const geared = makeArcher({
       equipment: {
         mainHand: { itemId: 'self_bow', durability: 80 },
-        gloves: { itemId: 'leather_vambraces', durability: 50 }, // speed 0.2
-        back: { itemId: 'leather_cloak', durability: 60 } // range 1, accuracy 2
+        gloves: { itemId: 'leather_vambraces', durability: 50 },
+        back: { itemId: 'leather_cloak', durability: 60 }
       }
     } as Partial<Pawn>);
     const b = sumAimBonuses(geared);
-    expect(b.speed).toBeGreaterThan(0); // bracers
-    expect(b.range).toBeGreaterThanOrEqual(2); // self_bow(1) + cloak(1)
-    expect(b.accuracy).toBeGreaterThanOrEqual(5); // self_bow(3) + cloak(2)
+    expect(b.speed).toBeGreaterThan(0);
+    expect(b.range).toBeGreaterThanOrEqual(2);
+    expect(b.accuracy).toBeGreaterThanOrEqual(5);
   });
 
   it('routes thrown weapons to the OFF hand and bows to the main hand (one-handed hybrid)', () => {
@@ -232,25 +217,19 @@ describe('rangedCombat helpers', () => {
   it('the SHOT damage comes from ammo × drawPower; the bow’s own damage is only its weak melee stave', () => {
     const bow = itemService.getItemById('self_bow')!.weaponProperties!;
     const warBow = itemService.getItemById('war_bow')!.weaponProperties!;
-    // The launcher's `damage`/`damageType` is now its MELEE profile (a blunt stave) — small, and
-    // IGNORED by the shot (buildRangedOverride replaces baseDamage with ammo × drawPower).
-    expect(bow.damageType).toBe('blunt'); // melee stave, not the piercing shot
-    expect(bow.damage).toBeLessThanOrEqual(6); // weak in melee
-    expect(warBow.drawPower!).toBeGreaterThan(bow.drawPower!); // war bow drives the same arrow harder
-    expect(itemService.getItemById('flint_arrow')!.ammoProperties!.damage!).toBeGreaterThan(0); // the arrow carries the kill
+    expect(bow.damageType).toBe('blunt');
+    expect(bow.damage).toBeLessThanOrEqual(6);
+    expect(warBow.drawPower!).toBeGreaterThan(bow.drawPower!);
+    expect(itemService.getItemById('flint_arrow')!.ammoProperties!.damage!).toBeGreaterThan(0);
   });
 
   it('quivers route by ammo: arrows to the BACK LOAD slot (blocks a pack), bolts to the BELT (keeps it)', () => {
-    // `back2` is the load slot, shared with packs and frames, so an arrow quiver still costs the pack.
-    // `back` now carries only the GARMENT (a cloak), which is why the split happened: a marksman can
-    // wear the cloak AND the quiver, but still chooses between the quiver and a pack.
     expect(getEquipmentSlot(itemService.getItemById('leather_back_quiver')!)).toBe('back2');
     expect(getEquipmentSlot(itemService.getItemById('linen_snapsack')!)).toBe('back2');
     expect(getEquipmentSlot(itemService.getItemById('leather_cloak')!)).toBe('back');
     expect(getEquipmentSlot(itemService.getItemById('leather_bolt_case')!)).toBe('belt');
     expect(itemService.getItemById('leather_back_quiver')!.quiver?.ammoCategory).toBe('arrow');
     expect(itemService.getItemById('leather_bolt_case')!.quiver?.ammoCategory).toBe('bolt');
-    // Later-age quivers draw faster than earlier ones.
     expect(itemService.getItemById('stiffened_war_quiver')!.quiver!.drawSpeed).toBeGreaterThan(
       itemService.getItemById('hide_arrow_sheath')!.quiver!.drawSpeed
     );
@@ -267,10 +246,9 @@ describe('rangedCombat helpers', () => {
       equipment: { mainHand: { itemId: 'self_bow' } }
     } as unknown as Partial<Pawn>);
 
-    expect(drawSpeedModifier(quivered, 'arrow')).toBeCloseTo(0.25, 5); // ready quiver → fast
-    expect(drawSpeedModifier(packed, 'arrow')).toBeLessThan(0); // arrows stowed in a pack → fumble
-    expect(drawSpeedModifier(bare, 'arrow')).toBe(0); // on the belt / planted → neutral
-    // Item-type specific: sling stones (and thrown) never take the pack penalty, need no quiver.
+    expect(drawSpeedModifier(quivered, 'arrow')).toBeCloseTo(0.25, 5);
+    expect(drawSpeedModifier(packed, 'arrow')).toBeLessThan(0);
+    expect(drawSpeedModifier(bare, 'arrow')).toBe(0);
     expect(drawSpeedModifier(packed, 'sling_stone')).toBe(0);
     expect(drawSpeedModifier(packed, undefined)).toBe(0);
   });
@@ -285,14 +263,14 @@ describe('ranged combat (headless tickCombat)', () => {
       if ((state.mobs![0].injuries?.length ?? 0) > 0) injured = true;
     }
     expect(injured).toBe(true);
-    expect(state.pawns[0].inventory.items.flint_arrow).toBeLessThan(20); // ammo consumed
+    expect(state.pawns[0].inventory.items.flint_arrow).toBeLessThan(20);
   });
 
   it('auto-engage: a DRAFTED ranged pawn with ammo looses arrows at its target', () => {
     const archer = makeArcher({
       drafted: true,
       currentState: 'Idle',
-      draftTarget: { type: 'attack', targetType: 'mob', targetId: 'g1' } // no mode → auto-ranged
+      draftTarget: { type: 'attack', targetType: 'mob', targetId: 'g1' }
     } as unknown as Partial<Pawn>);
     let state = makeState([archer], [makeGoblin()]);
     for (let t = 0; t < 400; t++) state = combatService.tickCombat({ ...state, turn: t }, 16);
@@ -305,9 +283,8 @@ describe('ranged combat (headless tickCombat)', () => {
       currentState: 'Idle',
       draftTarget: { type: 'attack', targetType: 'mob', targetId: 'g1', mode: 'melee' }
     } as unknown as Partial<Pawn>);
-    let state = makeState([archer], [makeGoblin()]); // goblin 3 tiles away (out of melee reach)
+    let state = makeState([archer], [makeGoblin()]);
     for (let t = 0; t < 400; t++) state = combatService.tickCombat({ ...state, turn: t }, 16);
-    // It refuses to shoot (force-melee) and can't reach (movement is the engine's job) → ammo intact.
     expect(state.pawns[0].inventory.items.flint_arrow).toBe(20);
   });
 
@@ -328,8 +305,6 @@ describe('ranged combat (headless tickCombat)', () => {
   });
 
   it('an OUT-OF-AMMO ranged pawn in contact does NOT auto-melee (engaging is opt-in)', () => {
-    // Empty quiver + goblin adjacent (5,6): unlike a stocked bow (which bow-butts), the out-of-ammo
-    // shooter holds and warns rather than auto-swinging the stave — it stays safe until told to melee.
     const archer = makeArcher({
       inventory: {
         items: {},
@@ -354,38 +329,24 @@ describe('ranged combat (headless tickCombat)', () => {
   });
 
   it('a bow in contact melees with its own (weak, blunt) stave profile — not the piercing shot', () => {
-    // Goblin adjacent (5,6): the bow can't fire into contact, so it swings as a blunt stave via the
-    // NORMAL melee path (self_bow now authors melee damage=4/blunt) → a crush wound, not a puncture.
     let state = makeState([makeArcher()], [makeGoblin({ y: 6 })]);
     let bluntWound = false;
     for (let t = 0; t < 2000 && !bluntWound; t++) {
       state = combatService.tickCombat({ ...state, turn: t }, 16);
       const wounds = state.mobs![0].injuries ?? [];
-      if (wounds.some((w) => w.type === 'crush')) bluntWound = true; // blunt → crush wound
+      if (wounds.some((w) => w.type === 'crush')) bluntWound = true;
     }
     expect(bluntWound).toBe(true);
   });
 
   it('armorDamage differentiates the archetypes: hammer ≫ mace ≫ … ≫ cleaver', () => {
     const ad = (id: string) => itemService.getItemById(id)!.weaponProperties!.armorDamage;
-    expect(ad('steel_warhammer')!).toBeGreaterThan(ad('steel_mace')!); // hammer wrecks armour most
-    expect(ad('steel_mace')!).toBeGreaterThan(ad('steel_cleaver')!); // mace dents, cleaver barely scratches
-    expect(ad('steel_cleaver')!).toBeLessThanOrEqual(2); // a cleaver is made for flesh, not steel
+    expect(ad('steel_warhammer')!).toBeGreaterThan(ad('steel_mace')!);
+    expect(ad('steel_mace')!).toBeGreaterThan(ad('steel_cleaver')!);
+    expect(ad('steel_cleaver')!).toBeLessThanOrEqual(2);
   });
 
   it('a hammer strips a foe’s armour far faster than a cleaver (armour damage ≠ flesh damage)', () => {
-    // Reseed identically before each run so the hit/dodge rolls match — isolating the weapon difference
-    // (the test is rng-order-fragile otherwise). Give the armour a HUGE durability pool so it never
-    // shatters (condition 0 now removes it from the slot), and measure the WEAR RATE: the hammer caves
-    // plate far faster, so its armour ends with much less remaining than the cleaver's.
-    //
-    // Two fixture hazards make this measure something else entirely if left alone:
-    //  • the ATTACKER's weapon needs a durability — `decrEquipDurability` reads `durability ?? 0`, so an
-    //    instance without one shatters on its first landed hit and the pawn punches out the rest of the
-    //    run. Fist wear (blunt default 4) then swamps the weapon's own armorDamage.
-    //  • the DEFENDER must survive the window. Wear only accrues on a landed hit, so a defender that
-    //    dies stops the clock — and the hammer, the harder hitter, ends the fight first. Left mortal,
-    //    the run measures time-to-kill and reports the hammer as the GENTLER weapon.
     const armored = (id: string) => {
       const p = makeArmored(id);
       p.equipment.bodyMid!.durability = 100_000;
@@ -415,12 +376,12 @@ describe('ranged combat (headless tickCombat)', () => {
     for (let t = 0; t < 3000; t++) c = combatService.tickCombat({ ...c, turn: t }, 16);
     const cleaverArmor = c.pawns.find((p) => p.id === 'cd')!.equipment.bodyMid!.durability!;
 
-    expect(hammerArmor).toBeLessThan(cleaverArmor); // the hammer caves the plate; the cleaver barely scratches it
+    expect(hammerArmor).toBeLessThan(cleaverArmor);
   });
 
   it('POWER STAT: a rapier scales melee damage with PERCEPTION, a one-handed sword with DEXTERITY', () => {
     const empty = makeState([], []);
-    const defender = makeGoblin({ stats: { ...stats, dexterity: 2 } }); // low dodge → hits land
+    const defender = makeGoblin({ stats: { ...stats, dexterity: 2 } });
     const avgDmg = (weapon: string, st: Partial<typeof stats>) => {
       const atk = makeArcher({
         equipment: { mainHand: { itemId: weapon } },
@@ -437,19 +398,15 @@ describe('ranged combat (headless tickCombat)', () => {
       }
       return hits ? total / hits : 0;
     };
-    // Rapier (finesse): high PERCEPTION massively out-damages low PERCEPTION at the SAME strength.
     expect(avgDmg('steel_rapier', { strength: 10, perception: 20 })).toBeGreaterThan(
       avgDmg('steel_rapier', { strength: 10, perception: 4 }) * 1.4
     );
-    // Longsword: ONE-HANDED, so the grip names DEXTERITY (COMBAT-BALANCE task 4). PERCEPTION does nothing
-    // for it, and dexterity is the driver.
     const swHiPer = avgDmg('steel_longsword', { dexterity: 10, perception: 20 });
     const swLoPer = avgDmg('steel_longsword', { dexterity: 10, perception: 4 });
     expect(Math.abs(swHiPer - swLoPer) / swHiPer).toBeLessThan(0.2);
     expect(avgDmg('steel_longsword', { dexterity: 20 })).toBeGreaterThan(
       avgDmg('steel_longsword', { dexterity: 4 }) * 1.4
     );
-    // …and STRENGTH no longer drives a one-hander at all — that is the grip mapping working.
     const swHiStr = avgDmg('steel_longsword', { dexterity: 10, strength: 20 });
     const swLoStr = avgDmg('steel_longsword', { dexterity: 10, strength: 5 });
     expect(Math.abs(swHiStr - swLoStr) / swHiStr).toBeLessThan(0.2);
@@ -457,15 +414,11 @@ describe('ranged combat (headless tickCombat)', () => {
 
   it('daggers are fast, crit-heavy and accurate; specialists are iron+ gated', () => {
     const wp = (id: string) => itemService.getItemById(id)!.weaponProperties!;
-    expect(wp('steel_stiletto').attackSpeed).toBeGreaterThan(1.3); // very fast
-    expect(wp('steel_stiletto').critMod!).toBeGreaterThan(0.1); // crit-heavy
-    // A precision blade carries a real accuracy bonus — enough to cover what its neck
-    // preference charges — but stays under the rapier line at the same tier.
+    expect(wp('steel_stiletto').attackSpeed).toBeGreaterThan(1.3);
+    expect(wp('steel_stiletto').critMod!).toBeGreaterThan(0.1);
     expect(wp('iron_rondel').accuracy!).toBeGreaterThan(0);
     expect(wp('steel_stiletto').accuracy!).toBeGreaterThan(0);
     expect(wp('steel_stiletto').accuracy!).toBeLessThan(wp('steel_rapier').accuracy!);
-    // The specialists never appear at bronze — gated by research on their recipe (iron at the
-    // earliest, the rest at steel).
     const research = (id: string) => recipeService.getRecipeForItem(id)?.researchRequired;
     for (const id of ['iron_warhammer', 'iron_greatsword', 'iron_estoc'])
       expect(research(id)).toBe('iron_working');
@@ -474,7 +427,7 @@ describe('ranged combat (headless tickCombat)', () => {
   });
 
   it('classifies the melee GRIP from the hands (2H / shield / duelist / one-handed)', () => {
-    const twoH = makeArcher(); // self_bow is twoHanded
+    const twoH = makeArcher();
     const duelist = makeArcher({
       equipment: { mainHand: { itemId: 'bone_knife' } }
     } as unknown as Partial<Pawn>);
@@ -484,20 +437,14 @@ describe('ranged combat (headless tickCombat)', () => {
     const dualWield = makeArcher({
       equipment: { mainHand: { itemId: 'bone_knife' }, offHand: { itemId: 'bone_knife' } }
     } as unknown as Partial<Pawn>);
-    // COMBAT-BALANCE 12a: the duel grip is a TRAINED style. An empty off-hand alone no longer buys it —
-    // it used to, which handed every pawn in the game the bonus for free.
     const trained = makeArcher({
       equipment: { mainHand: { itemId: 'bone_knife' } },
       traits: [{ id: 'duelist', name: 'Duelist', effects: {} }]
     } as unknown as Partial<Pawn>);
     expect(getGrip(twoH)).toBe('twoHanded');
-    expect(getGrip(duelist)).toBe('oneHanded'); // 1H + free off-hand, but UNTRAINED
-    expect(getGrip(trained)).toBe('duelist'); // …the trait is what unlocks it
+    expect(getGrip(duelist)).toBe('oneHanded');
+    expect(getGrip(trained)).toBe('duelist');
     expect(getGrip(shield)).toBe('shield');
-    // COMBAT-BALANCE 12g: a matched PAIR of daggers is its own grip. This used to read `oneHanded` —
-    // the off hand was occupied by something that was not a shield, so the second blade did nothing at
-    // all and two daggers were strictly WORSE than one (it only blocked the duel grip). Both blades must
-    // be `offHandable`, so this can never fire for a sword-and-buckler-substitute.
     expect(getGrip(dualWield)).toBe('dualWield');
   });
 
@@ -505,9 +452,9 @@ describe('ranged combat (headless tickCombat)', () => {
     const fighter = makeArcher({
       equipment: { mainHand: { itemId: 'bone_knife', durability: 60 } }
     } as unknown as Partial<Pawn>);
-    let state = makeState([fighter], [makeGoblin({ y: 6 })]); // goblin adjacent + passive → the pawn lands hits
+    let state = makeState([fighter], [makeGoblin({ y: 6 })]);
     for (let t = 0; t < 2000; t++) state = combatService.tickCombat({ ...state, turn: t }, 16);
-    expect(state.pawns[0].equipment.mainHand!.durability).toBeLessThan(60); // every landed blow chips it
+    expect(state.pawns[0].equipment.mainHand!.durability).toBeLessThan(60);
   });
 
   it('the arrowhead picks the wound type — a broadhead cuts (bleeds), not pierces', () => {
@@ -525,14 +472,12 @@ describe('ranged combat (headless tickCombat)', () => {
     let cut = false;
     for (let t = 0; t < 2000 && !cut; t++) {
       state = combatService.tickCombat({ ...state, turn: t }, 16);
-      if ((state.mobs![0].injuries ?? []).some((w) => w.type === 'cut')) cut = true; // cutting → cut wound
+      if ((state.mobs![0].injuries ?? []).some((w) => w.type === 'cut')) cut = true;
     }
     expect(cut).toBe(true);
   });
 
   it('hybrid: a melee main-hand + off-hand throwing spear throws at range, melees up close', () => {
-    // Sword (bone_knife) main-hand + throwing_spear off-hand — getRangedWeapon finds the off-hand
-    // thrown weapon, and the melee main-hand suppresses the bow-butt.
     const hybrid = makeArcher({
       equipment: {
         mainHand: { itemId: 'bone_knife', durability: 60 },
@@ -550,22 +495,18 @@ describe('ranged combat (headless tickCombat)', () => {
     expect(getRangedWeapon(hybrid)?.itemId).toBe('throwing_spear');
     expect(hasMeleeMainHand(hybrid)).toBe(true);
 
-    // Mob 3 tiles away (spear range 4) → it throws; thrown weapons need no ammo stack. Thrown
-    // self-consume: the spear leaves the off-hand on the throw and lands as a recoverable drop.
     let state = makeState([hybrid], [makeGoblin()]);
     let threw = false;
     for (let t = 0; t < 2000 && !threw; t++) {
       state = combatService.tickCombat({ ...state, turn: t }, 16);
-      if (!state.pawns[0].equipment?.offHand) threw = true; // spear left the hand
+      if (!state.pawns[0].equipment?.offHand) threw = true;
     }
     expect(threw).toBe(true);
-    // the thrown spear dropped (recoverable) rather than vanishing
     expect((state.droppedItems ?? []).some((d) => d.resourceId === 'throwing_spear')).toBe(true);
   });
 });
 
 describe('Part VII — line-of-sight occlusion', () => {
-  // Build a w×h grid; cells in `walls` (as "x,y") carry the baked `blocksSight` flag.
   const grid = (w: number, h: number, walls: string[] = []) => {
     const set = new Set(walls);
     return Array.from({ length: h }, (_, y) =>
@@ -582,9 +523,7 @@ describe('Part VII — line-of-sight occlusion', () => {
   });
 
   it('an occluder ON either endpoint does NOT block (shooter cover / target hugging a wall)', () => {
-    // wall on the target tile
     expect(hasLineOfSight(grid(6, 1, ['5,0']), 0, 0, 5, 0)).toBe(true);
-    // wall on the shooter tile
     expect(hasLineOfSight(grid(6, 1, ['0,0']), 0, 0, 5, 0)).toBe(true);
   });
 

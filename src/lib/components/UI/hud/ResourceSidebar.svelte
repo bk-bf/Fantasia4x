@@ -19,29 +19,22 @@
 
   type StockItem = { id: string; name: string; amount: number; color?: string };
 
-  // Click a resource → jump the camera to a physical stack of it (like the chronicle jumps to an entity).
-  // Cycles through every on-ground stack of that item on repeated clicks, so the player can sweep them all.
   const lastJumpIdx: Record<string, number> = {};
   function jumpToItemStack(itemId: string) {
     const stacks = ($gameState?.droppedItems ?? []).filter((d) => d.resourceId === itemId);
-    if (stacks.length === 0) return; // nothing physical on the map (e.g. an abstract/derived total)
-    stacks.sort((a, b) => a.y - b.y || a.x - b.x); // stable order so cycling is predictable
+    if (stacks.length === 0) return;
+    stacks.sort((a, b) => a.y - b.y || a.x - b.x);
     const idx = ((lastJumpIdx[itemId] ?? -1) + 1) % stacks.length;
     lastJumpIdx[itemId] = idx;
     const s = stacks[idx];
-    uiState.focusMapOn(s.x, s.y, true); // pan + select the tile → the item stack's card opens
+    uiState.focusMapOn(s.x, s.y, true);
   }
 
-  // ── Live state ────────────────────────────────────────────────────────────
   const stockpile = $derived($currentStockpile as StockItem[]);
   const culture = $derived($currentCulture);
-  // POPULATION reflects the live pawn count (culture.population is stale).
   const population = $derived($gameState?.pawns?.length ?? 0);
-  // Per-carcass-type average condition (0–100) — the INTACT bar's source. Computed worker-side and
-  // shipped on the snapshot (`_carcassCondition`) so the per-unit arrays never cross the boundary.
   const carcassIntactness = $derived($gameState?._carcassCondition ?? {});
 
-  // ── Recent +/- deltas (fade out after 2.5s) ────────────────────────────────
   let itemChanges = $state<Record<string, number>>({});
   const prevAmounts: Record<string, number> = {};
   const timers: Record<string, ReturnType<typeof setTimeout>> = {};
@@ -64,16 +57,12 @@
     }
   });
 
-  // ── Group resources into the shared nested taxonomy (itemCategoryTree) ───────
-  // Built from the held resources' item DEFS (so the weapon/tool/food sub-trees resolve); when "hide
-  // empty" is off, every known category is seeded so empty branches still show. Amounts/deltas are
-  // looked up per-leaf from the live stockpile.
   const amountById = $derived(new Map(stockpile.map((s) => [s.id, s])));
   const tree = $derived.by((): TreeNode[] => {
     const defs: Item[] = [];
     for (const s of stockpile) {
       const def = itemService.getItemById(s.id);
-      if (!def || def.hidden) continue; // internal items (natural weapons…) never show as resources
+      if (!def || def.hidden) continue;
       defs.push(def);
     }
     const seedLeaves = $hideEmptyResourceCategories
@@ -92,7 +81,6 @@
     return ids;
   }
 
-  // ── Collapse state: persisted set of COLLAPSED node-path ids (default: expanded) ─
   const collapsed = $derived(new Set($collapsedResourceCategories));
   const allExpanded = $derived(tree.length > 0 && allNodeIds().every((id) => !collapsed.has(id)));
 
@@ -189,7 +177,6 @@
       onclick={() => resourcesMinimized.set(false)}>›</button
     >
   {:else if culture}
-    <!-- Sticky header block: Kingdom + Resources header never scroll away. -->
     <div class="sticky-top">
       <div class="section-hdr">| KINGDOM</div>
       <div class="rows">
@@ -232,7 +219,6 @@
       </div>
     </div>
 
-    <!-- Scrolling category list (nested taxonomy) -->
     <ScrollArea class="res-area">
       {#each tree as root (root.path.join('/'))}
         {@render resNode(root, 0)}
@@ -253,11 +239,9 @@
     color: var(--text);
     display: flex;
     flex-direction: column;
-    overflow: hidden; /* the inner .res-area scrolls, not the whole sidebar */
+    overflow: hidden;
   }
 
-  /* ── Collapsed strip (minimised) — just the restore arrow; the left-panel column is narrowed
-     to match by +page.svelte (.left-panel.minimized). ── */
   .sidebar.collapsed {
     align-items: center;
     padding-top: 4px;
@@ -281,12 +265,6 @@
     background: var(--bg-hover);
   }
 
-  /* "Hide sidebars" mode (top-bar settings): the panel floats fully transparently over the map.
-     No backdrop — the whole point is an unobstructed viewport. The text keeps its warm (ambient-
-     tinted, brightness-lifted) hue, crispened by a thin 1px black outline and popped against the
-     colourful map by a heavy dark drop shadow concentrated underneath the glyphs. Drop the title
-     fill + separators. The aside box is click-through (set in +page) so empty gaps pass to the map;
-     the content rows below re-enable pointer-events so they stay hoverable. */
   .sidebar.transparent {
     background: transparent;
     text-shadow:
@@ -312,17 +290,12 @@
   .sidebar.transparent .cat-hdr {
     border-bottom: none;
   }
-  /* Re-enable pointer events on the actual content rows so they stay hoverable/clickable over the
-     click-through aside; the empty gaps still pass clicks + hover through to the map. */
   .sidebar.transparent .row,
   .sidebar.transparent .res-row,
   .sidebar.transparent .cat-hdr,
   .sidebar.transparent button {
     pointer-events: auto;
   }
-  /* Resting highlight behind every kingdom + resource line — the warm hover tint at ~1/3 strength,
-     faded to transparent at the left/right edges so it's a soft band, not a hard box. Hover still
-     brightens to full intensity (wins on specificity). Mirrors the chronicle entries. */
   .sidebar.transparent .row,
   .sidebar.transparent .res-row {
     background: linear-gradient(
@@ -338,7 +311,6 @@
     background: var(--bg-hover);
   }
 
-  /* Kingdom + Resources header stay pinned at the top. */
   .sticky-top {
     flex-shrink: 0;
   }
@@ -431,14 +403,11 @@
     color: var(--accent-hi);
   }
 
-  /* Scrolling resource area — the ScrollArea viewport (overflow + auto-hiding bar live in ScrollArea;
-     its reserved gutter keeps right-aligned amounts from jumping when the thumb appears). */
   .sidebar :global(.res-area) {
     flex: 1;
     padding: 2px 0;
   }
 
-  /* Category block header (collapsible — nesting mirrors the chronicle panel). */
   .cat-hdr {
     display: flex;
     align-items: baseline;
@@ -483,12 +452,12 @@
   }
 
   .res-row {
-    position: relative; /* anchors the absolutely-positioned delta gutter */
+    position: relative;
     display: flex;
     align-items: baseline;
-    padding: 1px 8px 1px 24px; /* left gutter holds the delta + nesting indent */
+    padding: 1px 8px 1px 24px;
     gap: 3px;
-    cursor: pointer; /* click → jump to a stack of this item on the map */
+    cursor: pointer;
   }
   .res-row:hover {
     background: var(--bg-hover);
@@ -518,7 +487,6 @@
     font-size: 11px;
   }
 
-  /* Delta floats in the left gutter so it never reflows the name/amount. */
   .delta {
     position: absolute;
     left: 3px;

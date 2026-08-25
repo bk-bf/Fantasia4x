@@ -10,19 +10,17 @@
 
   $: needs = pawn.needs;
   $: conditionViews = getActiveConditionViews(pawn);
-  // All needs are flat 0–100.
   $: hungerPct = Math.round(needs.hunger);
   $: fatiguePct = Math.round(needs.fatigue);
   $: thirstPct = Math.round(needs.thirst ?? 0);
   $: hygienePct = Math.round(needs.hygiene ?? 0);
   $: wetnessPct = Math.round(needs.wetness ?? 0);
-  // 100 = entertained, so this one counts DOWN as the pawn gets bored.
   $: relaxPct = Math.round(needs.relaxation ?? 100);
   function getWetColor(pct: number): string {
-    if (pct < 25) return '#7a8a90'; // dry — muted
-    if (pct < 50) return '#4fa3d1'; // damp
-    if (pct < 90) return '#2980c0'; // wet
-    return '#c86030'; // soaked — chill risk
+    if (pct < 25) return '#7a8a90';
+    if (pct < 50) return '#4fa3d1';
+    if (pct < 90) return '#2980c0';
+    return '#c86030';
   }
   function wetDesc(pct: number): string {
     return pct < 25 ? 'dry' : pct < 50 ? 'damp' : pct < 90 ? 'wet' : 'soaked';
@@ -42,7 +40,6 @@
     if (pct >= 30) return '#c8a030';
     return '#c86030';
   }
-  // Relaxation is INVERTED (100 = entertained). Only shown once it drops low (autohide); green→amber→red.
   function getRelaxationColor(pct: number): string {
     if (pct >= 50) return 'var(--pos)';
     if (pct >= 20) return '#c8a030';
@@ -86,10 +83,6 @@
     <span class="desc">{getNeedDescription('hygiene', hygienePct)}</span>
   </div>
 
-  <!-- WETNESS and RELAXATION are UNCONDITIONAL here. The map's info panel hides them until they have
-       something to say (a glance should not carry a dry pawn's wetness bar), but this screen is where
-       you come to read the whole pawn, so a need that is currently fine still has to be legible as
-       fine. Thresholds live in pawnUtils so the two surfaces cannot drift. -->
   <div class="need-row">
     <span class="lbl">WETNESS</span>
     <span class="block-bar" style="color: {getWetColor(wetnessPct)}">{blockBar(wetnessPct)}</span>
@@ -171,15 +164,6 @@
   <ConditionChips views={conditionViews} />
 
   <AwakeningMeters {pawn} />
-
-  <!-- TODO: draft-control mode will re-enable direct REST/EAT/WORK/IDLE commands later.
-  <div class="btn-row">
-    <button class="act-btn">REST</button>
-    <button class="act-btn">EAT</button>
-    <button class="act-btn">WORK</button>
-    <button class="act-btn">IDLE</button>
-  </div>
-  -->
 </div>
 
 <style>

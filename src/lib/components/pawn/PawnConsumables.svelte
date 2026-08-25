@@ -1,6 +1,3 @@
-<!-- PawnConsumables.svelte — §2h: colony-stock potions & beast-organs this pawn can DRINK/EAT. Drawing
-     from colony stock (not the pawn's pack), the USE action makes THIS pawn consume one, applying its
-     timed buff (potion) or permanent trait grant + Faustian flaw (organ) via the useConsumableItem cmd. -->
 <script lang="ts">
   import type { Pawn, Item } from '$lib/game/core/types';
   import { itemService } from '$lib/game/services/ItemService';
@@ -8,8 +5,6 @@
 
   let { pawn }: { pawn: Pawn } = $props();
 
-  // A stock item is "usable here" if it's drinkable for a timed buff, grants a trait on eating, OR is a
-  // weapon coating (brushed onto the pawn's mainHand).
   function isConsumable(def: Item | undefined): boolean {
     if (!def) return false;
     return (
@@ -26,8 +21,6 @@
         const def = itemService.getItemById(id) as Item;
         const traitId = def.grantsTraitOnConsume;
         const isCoating = !!def.coatingEffect;
-        // An organ whose trait the pawn already carries is a no-op (the command won't spend it); a
-        // coating needs a mainHand weapon to brush onto.
         const alreadyGained = !!traitId && (pawn.traits ?? []).some((t) => t.id === traitId);
         const noWeapon = isCoating && !pawn.equipment?.mainHand;
         return { id, qty, def, isOrgan: !!traitId, isCoating, alreadyGained, noWeapon };

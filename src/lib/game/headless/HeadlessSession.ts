@@ -1,16 +1,3 @@
-/**
- * HeadlessSession — the in-thread driver for a headless, API-steerable sim (HEADLESS-SIM / ADR-033).
- *
- * Owns its OWN `new GameEngineImpl()` (never the exported singleton, so it can't fight a browser
- * client's engine if both load in one dev process) and drives it synchronously — no worker, no
- * postMessage: a command applies and the very next line can read the result back. This mirrors the
- * worker's `init` bootstrap (reseed → resetUnreachableJobs → manager → pathfinder) minus the
- * transport, so a headless trajectory matches what the browser would compute for the same seed.
- *
- * ONE LIVE SESSION PER PROCESS (v1): `rng` is a module singleton — two interleaved sessions would
- * clobber each other's stream and break determinism. The API route layer enforces the singleton;
- * this class just documents it. Dev-only: nothing in the shipped browser/worker path imports this.
- */
 import { GameEngineImpl } from '../systems/GameEngineImpl';
 import type { TurnProcessingResult } from '../systems/GameEngine';
 import { GameStateManager } from '../core/state/GameStateManager';
@@ -31,9 +18,6 @@ export interface TraceLine {
   message: string;
 }
 
-/** A capturing SimLogSink for headless: buffers the gated diagnostic firehose (`logEvent`, the
- *  `vlog` category stream — ai/needs/job/…) into a ring so a caller can drain it. Everything else is a
- *  no-op (headless has no renderer/chronicle). Headless can afford the buffer the GUI can't. */
 function makeCaptureSink(buf: TraceLine[], cap: number): SimLogSink {
   const noop = () => {};
   return {
@@ -60,20 +44,15 @@ export class HeadlessSession {
   private started = false;
   private traceBuf: TraceLine[] | null = null;
 
-  /** Boot the session from a ready GameState (a scenario build or a hydrated snapshot). */
   async start(state: GameState): Promise<void> {
     rng.reseed(state.seed);
     resetUnreachableJobs();
-    // A fresh worker gets clean module state by construction; an in-process session must clear the
-    // worker-transient cooldown maps itself or a previous run's history perturbs this one.
     resetSocialTransients();
     this.engine.setGameStateManager(new GameStateManager(state));
     await pathfinderService.init();
     this.started = true;
   }
 
-  /** Advance the sim `n` ticks. Returns the LAST tick's result + the turn reached; any tick error
-   *  aborts the loop (the engine already catches internally and reports via `errors`). */
   tick(n = 1): { turn: number; ticked: number; result: TurnProcessingResult } {
     this.assertStarted();
     let result: TurnProcessingResult = {
@@ -91,35 +70,24 @@ export class HeadlessSession {
     return { turn: this.engine.getGameState().turn, ticked, result };
   }
 
-  /** Apply one registry command (`sim/commands.ts` COMMANDS — player verbs and `dev*` alike),
-   *  synchronously, through the engine's single-writer path. */
   command(cmd: SimCommand): void {
     this.assertStarted();
     this.engine.applyCommand((s) => applySimCommand(s, cmd), false);
   }
 
-  /** Shallow-copy snapshot of the live state (engine state is replaced wholesale per tick). */
   getState(): GameState {
     this.assertStarted();
     return this.engine.getGameState();
   }
 
-  /** Serializable snapshot (tile scratch stripped) — dump to JSON, reload with `loadSnapshot`. */
   snapshot(): HeadlessSnapshot {
     return toSnapshot(this.getState());
   }
 
-  /** Boot from a previously-dumped snapshot. */
   async loadSnapshot(snap: HeadlessSnapshot): Promise<void> {
     await this.start(fromSnapshot(snap));
   }
 
-  /**
-   * Turn on the FSM firehose (HEADLESS-SIM logging). Installs an in-memory capture sink + verbose
-   * logging, and optionally pins the per-entity FSM tracer to a creature type / id-suffix — so the
-   * capture records, every tick, WHICH branch ran (`via=…`) and each state transition, plus
-   * per-function timing (see `drainTiming`). Off in the GUI/prod sim (nothing calls this).
-   */
   enableTrace(opts?: { creature?: string; id?: string; capacity?: number }): void {
     this.traceBuf = [];
     setSimLogSink(makeCaptureSink(this.traceBuf, opts?.capacity ?? 50_000));
@@ -127,13 +95,11 @@ export class HeadlessSession {
     if (opts?.creature || opts?.id) setEntityTrace({ creature: opts.creature, id: opts.id });
   }
 
-  /** Stop tracing (clears the entity trace target + verbose gate). Keeps the buffered lines. */
   disableTrace(): void {
     setEntityTrace(null);
     setVerboseLogging(false);
   }
 
-  /** Drain buffered trace lines (optionally filtered by category, e.g. 'ai'), newest last. Clears the buffer. */
   drainLogs(opts?: { category?: string; limit?: number }): TraceLine[] {
     if (!this.traceBuf) return [];
     let lines = this.traceBuf;
@@ -143,7 +109,6 @@ export class HeadlessSession {
     return lines;
   }
 
-  /** Per-function wall-time table (label, calls, ms), busiest first. Clears it. */
   drainTiming(): Array<{ label: string; calls: number; ms: number }> {
     return drainEntityTiming();
   }

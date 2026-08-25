@@ -1,18 +1,8 @@
-<!-- ItemPills.svelte — a row of compact, item-coloured pills (e.g. a resource's harvest yields, or
-     a recipe's ingredients/outputs). Each pill shows the item's sprite glyph, an optional quantity,
-     and its name, tinted toward the item's own colour. Hovering a pill opens a cursor-following
-     floating "item card" (HoverTip) with the item's description, where it's used in crafting/building
-     recipes, and its base freshness / condition lifespans. The card view model is built lazily on
-     hover via buildItemInfo. -->
 <script lang="ts" module>
   export interface ItemPillView {
-    /** Item id to resolve name/colour/sprite + the hover card. */
     itemId: string;
-    /** Optional quantity label shown before the name (e.g. "×2", "1–3"). */
     qty?: string;
-    /** Optional secondary text shown after the name, dimmer (e.g. a "(have)" stock count). */
     sub?: string;
-    /** Dim the pill — e.g. a recipe ingredient the colony can't currently afford. */
     dim?: boolean;
   }
 </script>
@@ -100,8 +90,6 @@
     gap: 2px;
     margin-top: 1px;
   }
-  /* Brown-amber aesthetic, tinted toward the item's own colour. Kept tight so a row of pills is
-     no bulkier than the plain "name ×n" text it replaced. */
   .item-pill {
     display: flex;
     align-items: center;
@@ -114,7 +102,6 @@
     line-height: 1;
     cursor: help;
   }
-  /* Unaffordable ingredient — dimmed so it reads as "can't make this yet". */
   .item-pill.dim {
     opacity: 0.4;
   }
@@ -158,7 +145,6 @@
     color: var(--text-dim);
     font-style: italic;
   }
-  /* Farming rows — label (dim) on the left, value on the right, like the env readout. */
   .tip-farm {
     display: flex;
     justify-content: space-between;

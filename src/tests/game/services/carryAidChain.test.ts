@@ -4,10 +4,6 @@ import { HeadlessSession } from '$lib/game/headless/HeadlessSession';
 import { itemService } from '$lib/game/services/ItemService';
 import type { GameState, Pawn } from '$lib/game/core/types';
 
-// Carry aids are worn gear whose only job is to raise what a pawn can shoulder, so a recipe that
-// exists is not the claim — a pawn wearing the thing and carrying more is. Two runs: the leather
-// half of the ladder at a workbench, and the metal/runed half at the smithy and the runecarver.
-
 const stockOf = (s: HeadlessSession) => (s.getState().stockpile ?? {}) as Record<string, number>;
 
 const budget = (state: GameState, pawnId: string) => {
@@ -37,8 +33,6 @@ describe('carry aid chain — packs, belts and sheaths (HeadlessSession, real ti
         pawns: [{ count: 6, skillLevel: 16 }],
         needsDisabled: ['hunger', 'fatigue'],
         buildings: [{ id: 'makers_bench' }],
-        // Cured hide AND tanned leather: the primitive rung is cut from hide, the bronze rung and up
-        // need the tanning chain, which is exactly the gate R4 now enforces.
         items: {
           cured_deer_hide: 30,
           sinew: 60,
@@ -86,9 +80,7 @@ describe('carry aid chain — packs, belts and sheaths (HeadlessSession, real ti
       'leather_knapsack'
     );
     expect(worn?.belt?.itemId, 'a belt goes on the belt').toBe('ringed_belt');
-    // R14: nothing WORN raises what a pawn can bear, so the weight budget must not move at all.
     expect(after.maxWeightKg - before.maxWeightKg).toBe(0);
-    // 32 L from the bronze-age knapsack + 11 L from the iron-ringed belt.
     expect(after.maxVolumeL - before.maxVolumeL).toBeCloseTo(43, 1);
   });
 
@@ -195,7 +187,6 @@ describe('the pack grid — light / medium / heavy at one age (HeadlessSession, 
     for (const itemId of ids) {
       session.command({ type: 'equipPawnItem', payload: { pawnId, itemId } } as never);
       const now = budget(session.getState(), pawnId);
-      // R14 again, on the live pawn: the weight budget does not move for anything worn.
       expect(now.maxWeightKg).toBeCloseTo(base.maxWeightKg, 1);
       carried[itemId] = now.maxVolumeL - base.maxVolumeL;
     }
@@ -206,7 +197,6 @@ describe('the pack grid — light / medium / heavy at one age (HeadlessSession, 
 
     for (const id of ids)
       expect(stockOf(session)[id] ?? 0, `${id} is craftable`).toBeGreaterThan(0);
-    // Each class is worn in turn (back2 swaps), so the delta is that piece alone.
     expect(carried.iron_buckled_satchel).toBeCloseTo(30, 1);
     expect(carried.iron_buckled_knapsack).toBeCloseTo(42, 1);
     expect(carried.iron_framed_pack).toBeCloseTo(60, 1);

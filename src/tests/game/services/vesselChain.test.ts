@@ -8,17 +8,8 @@ import { itemService } from '$lib/game/services/ItemService';
 import BUILDINGS from '$lib/game/database/world/buildings.jsonc';
 import type { GameState, ItemInstance } from '$lib/game/core/types';
 
-/**
- * CONTAINERS-AND-FLUIDS, driven through the real sim rather than asserted about functions.
- *
- * The two claims worth proving are the two the spec is actually about: that a fluid physically MOVES
- * — river → vessel → stockpile → a pawn's throat, over real ticks, with real pawns doing the walking —
- * and that a fluid physically CANNOT lie about loose, whatever tries to put it there.
- */
-
 const stk = (s: HeadlessSession) => (s.getState().stockpile ?? {}) as Record<string, number>;
 
-/** Every vessel in the colony that is holding something, wherever it is. */
 function loadedVessels(gs: GameState): ItemInstance[] {
   const out: ItemInstance[] = [];
   for (const d of gs.droppedItems ?? []) if (d.instance?.contents?.length) out.push(d.instance);
@@ -39,8 +30,6 @@ describe('containers & fluids — a vessel physically carries water (HeadlessSes
         workReady: true,
         pawns: [{ count: 4, skillLevel: 12 }],
         needsDisabled: ['hunger', 'fatigue', 'hygiene'],
-        // A well IS the drink source — no river needed on a flat test map, and it's the same code path
-        // (`findNearestWaterTarget` treats a well and a painted drink zone identically).
         buildings: [{ id: 'well' }],
         items: { waterskin: 2 },
         seedEntities: false
@@ -53,7 +42,6 @@ describe('containers & fluids — a vessel physically carries water (HeadlessSes
           payload: { pawnId: p.id, workId: w.id, level: 3 }
         } as never);
 
-    // A freshly made vessel allows NOTHING — that is the default, and it is why nothing happens yet.
     const skins = () =>
       (s.getState().droppedItems ?? [])
         .filter((d) => d.resourceId === 'waterskin' && d.instance)
@@ -70,7 +58,6 @@ describe('containers & fluids — a vessel physically carries water (HeadlessSes
       'nobody fills a vessel the player has not opened up — that is the whole trigger'
     ).toBe(0);
 
-    // The player allows water on both skins. THAT is what queues the work.
     for (const inst of skins())
       s.command({
         type: 'setVesselFilter',
@@ -89,16 +76,11 @@ describe('containers & fluids — a vessel physically carries water (HeadlessSes
     expect(litres, 'a pawn walked to the well and filled a skin').toBeGreaterThan(0);
     expect(stk(s).water ?? 0, 'and what a vessel holds is colony stock').toBeGreaterThan(0);
 
-    // …and the water is drinkable where it is. Parch one pawn and hand it the skin.
     const gs0 = s.getState();
     const drinker = gs0.pawns[0];
-    // Count the WHOLE colony's water, not one skin's: haulers are still filling the second skin, so a
-    // single-vessel reading would go UP while the drinker is emptying its own.
     const waterHeld = (g: GameState) =>
       loadedVessels(g).reduce((n, v) => n + heldQuantity(v, 'water'), 0);
     const before = waterHeld(gs0);
-    // Parch it. There is no dev command for a single need, and the FSM mutates needs in place anyway
-    // (ADR-002 amendment), so setting the meter directly is the same thing the sim does every tick.
     drinker.needs.thirst = 95;
     let drank = false;
     for (let i = 0; i < 30 && !drank; i++) {
@@ -122,7 +104,6 @@ describe('containers & fluids — a vessel physically carries water (HeadlessSes
       pawns: [],
       buildings: [],
       droppedItems: [
-        // Somebody tries to lay a stack of water on a stockpile tile, the way any pre-fluid code would.
         { id: 'loose-water', resourceId: 'water', x: 2, y: 2, quantity: 9, stored: true }
       ],
       stockpile: {},
@@ -132,7 +113,6 @@ describe('containers & fluids — a vessel physically carries water (HeadlessSes
       )
     } as unknown as GameState;
 
-    // Any drops-mutating path goes through `withDrops`; crediting the stockpile is one of them.
     const out = addToStockpileZone(gs, '2,2', { stone: 1 });
     expect(
       (out.droppedItems ?? []).some((d) => d.resourceId === 'water'),
@@ -140,7 +120,6 @@ describe('containers & fluids — a vessel physically carries water (HeadlessSes
     ).toBe(false);
     expect(out.stockpile?.water ?? 0, 'and it is not in the ledger either').toBe(0);
 
-    // Crediting a fluid deliberately is a different thing entirely: it arrives IN something.
     const credited = addToStockpileZone(gs, '2,2', { water: 4 });
     const minted = (credited.droppedItems ?? []).filter((d) => d.instance?.contents?.length);
     expect(minted.length, 'a deliberate credit mints the vessel(s) it arrives in').toBeGreaterThan(
@@ -156,8 +135,6 @@ describe('containers & fluids — a vessel physically carries water (HeadlessSes
 
 describe('containers & fluids — what happens when there is nowhere to put it', () => {
   it('a station brewed past its own capacity SPILLS the overflow rather than growing a bigger belly', () => {
-    // The butcher spot catches 5 L. Butchering into a full one loses what will not fit — which is what
-    // makes emptying it (or keeping a vessel standing on it) the player's problem rather than nobody's.
     const cap = (BUILDINGS as { id?: string; fluidCapacityL?: number }[]).find(
       (b) => b.id === 'butcher_spot'
     )?.fluidCapacityL;
@@ -184,7 +161,6 @@ describe('containers & fluids — what happens when there is nowhere to put it',
       )
     } as unknown as GameState;
 
-    // Nothing on the tile can take it and the basin is brim-full, so the only honest outcome is loss.
     const before = gs.buildings![0].fluidContents!.reduce((n, e) => n + (e.litres ?? 0), 0);
     const after = addToStockpileZone(gs, '2,2', { stone: 1 });
     expect(
@@ -198,8 +174,6 @@ describe('containers & fluids — what happens when there is nowhere to put it',
   });
 
   it('a vessel worn out by the weather takes its contents with it', () => {
-    // §B: a LOOSE stack weathers down its durability pool and is destroyed at 0. A vessel is a stack
-    // like any other, and what is inside it is not exempt from the jug shattering.
     const skin: ItemInstance = {
       instanceId: 'skin-doomed',
       itemId: 'waterskin',
@@ -219,7 +193,7 @@ describe('containers & fluids — what happens when there is nowhere to put it',
           x: 2,
           y: 2,
           quantity: 1,
-          stored: false, // loose = exposed to the elements
+          stored: false,
           durability: 0.0001,
           instance: skin
         }
@@ -243,8 +217,6 @@ describe('containers & fluids — what happens when there is nowhere to put it',
   });
 
   it('food in an OPEN vessel still rots; a sealed one holds the clock', () => {
-    // Being in a container is not a licence to never spoil. `wooden_bucket` is open, `wooden_chest`
-    // is not — same food, same ticks, opposite outcomes.
     const berries = () => [{ itemId: 'wild_berries', amount: 4 }];
     const build = (vesselId: string) =>
       ({
@@ -281,7 +253,6 @@ describe('containers & fluids — what happens when there is nowhere to put it',
         'wild_berries'
       );
 
-    // Long enough for raw meat's decaySeconds to fire several times over.
     const ticks = 60 * 60 * 24;
     const open = itemService.stepItemDecay(build('wooden_bucket'), ticks);
     const sealed = itemService.stepItemDecay(build('wooden_chest'), ticks);
@@ -411,8 +382,6 @@ describe('containers & fluids — DF-style stockpiles: goods go INTO the bin', (
 });
 
 describe('containers & fluids — a vessel is not a loophole in the world', () => {
-  // The rule, once, for every idle-item process: an OPEN vessel is transparent to the world and a
-  // SEALED one shuts it out. Spoilage and drying both go through it, in both directions.
   const withVessel = (vesselId: string, contents: unknown) =>
     ({
       turn: 1,

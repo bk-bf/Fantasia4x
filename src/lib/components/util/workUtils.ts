@@ -2,8 +2,6 @@ import type { Pawn, WorkAssignment } from '$lib/game/core/types';
 import { stateLabel as stateDefLabel } from '$lib/game/core/defs/states';
 import { resourceObjectDefById } from '$lib/game/core/defs/resourceObjects';
 
-/** A pawn's labor level (0–4) for a work id: a `laborSettings` override wins, else the legacy 0–12
- *  `workPriorities` value bucketed. Single source for the work tab and WorkCellTooltip. */
 export function getPawnLaborLevel(
   a: WorkAssignment | undefined,
   workId: string
@@ -34,11 +32,6 @@ export const LABOR_COLORS: Record<number, string> = {
 };
 export const LVL_NAMES = ['Off', 'Low', 'Normal', 'High', 'Urgent'] as const;
 
-// Work categories that are NOT learned skills — their effectiveness comes from other systems, so
-// they're excluded from the "best/weakest skill" medal ranking and the cell tooltip shows their
-// driving stats (not a speed/yield/quality). Hunting resolves as combat + haul; hauling is carrying.
-// `stats` are the derived stats.jsonc ids surfaced in the tooltip (carry_weight/volume are special-
-// cased there since they're not plain stat ids).
 export const NON_SKILL_TASKS: Record<string, { label: string; statId: string }[]> = {
   hunting: [
     { label: 'Hit chance', statId: 'hit_chance' },
@@ -109,22 +102,19 @@ export function needBar(val: number): string {
   return '█'.repeat(f) + '░'.repeat(10 - f);
 }
 
-// Best/worst job markers: medal star on a pawn's three best jobs, chevron on the two weakest.
 export const STAR_MARK = '★';
-export const STAR_COLORS = ['#ffd24a', '#cbd2d8', '#cd7f32']; // gold, silver, bronze
+export const STAR_COLORS = ['#ffd24a', '#cbd2d8', '#cd7f32'];
 export const STAR_TIERS = ['Best job', '2nd best', '3rd best'] as const;
 
 export const WORST_MARK = '▾';
-export const WORST_COLORS = ['#e0533d', '#8a4038']; // worst, 2nd worst
+export const WORST_COLORS = ['#e0533d', '#8a4038'];
 export const WORST_TIERS = ['Weakest job', '2nd weakest'] as const;
 
-/** Per-cell medal/penalty rank: -1 means unranked, otherwise tier index. */
 export interface CellRank {
-  best: number; // 0=gold, 1=silver, 2=bronze, -1 none
-  worst: number; // 0=worst, 1=2nd worst, -1 none
+  best: number;
+  worst: number;
 }
 
-/** Tag the top three and bottom two work efficiencies; medals win so a cell never carries both. */
 export function rankWorkCells(effByWork: Record<string, number>): Record<string, CellRank> {
   const ids = Object.keys(effByWork);
   const result: Record<string, CellRank> = {};

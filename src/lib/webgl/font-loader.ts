@@ -1,9 +1,3 @@
-/* filepath: src/lib/webgl/font-loader.ts */
-/**
- * Font Loading Utilities
- * Handles font loading, validation, and fallback management
- */
-
 import type { FontAtlas } from './types.js';
 import { FontAtlasGenerator, createMonospaceFontAtlas } from './font-atlas.js';
 
@@ -14,9 +8,6 @@ export interface FontLoadOptions {
   debug?: boolean;
 }
 
-/**
- * Font Manager - handles loading and caching of font atlases
- */
 export class FontManager {
   private atlasCache = new Map<string, FontAtlas>();
   private debug: boolean;
@@ -25,13 +16,9 @@ export class FontManager {
     this.debug = debug;
   }
 
-  /**
-   * Load a font atlas with fallback support
-   */
   async loadFontAtlas(options: FontLoadOptions): Promise<FontAtlas> {
     const cacheKey = `${options.fontFamily}-${options.fontSize}`;
 
-    // Check cache first
     if (this.atlasCache.has(cacheKey)) {
       if (this.debug) {
         console.log(`📋 Using cached font atlas: ${cacheKey}`);
@@ -47,14 +34,12 @@ export class FontManager {
     let atlas: FontAtlas | null = null;
 
     try {
-      // Try primary font
       if (await this.isFontAvailable(options.fontFamily)) {
         atlas = await generator.generateAtlas(options.fontFamily, options.fontSize);
       } else if (this.debug) {
         console.warn(`⚠️ Primary font not available: ${options.fontFamily}`);
       }
 
-      // Try fallback fonts
       if (!atlas && options.fallbackFonts) {
         for (const fallbackFont of options.fallbackFonts) {
           if (await this.isFontAvailable(fallbackFont)) {
@@ -67,7 +52,6 @@ export class FontManager {
         }
       }
 
-      // Ultimate fallback to generic monospace
       if (!atlas) {
         atlas = await generator.generateAtlas('monospace', options.fontSize);
         if (this.debug) {
@@ -75,7 +59,6 @@ export class FontManager {
         }
       }
 
-      // Cache the result
       this.atlasCache.set(cacheKey, atlas);
 
       if (this.debug) {
@@ -88,30 +71,22 @@ export class FontManager {
     }
   }
 
-  /**
-   * Check if a font is available in the browser
-   */
   async isFontAvailable(fontFamily: string): Promise<boolean> {
     try {
-      // Create a test canvas
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
 
       if (!ctx) return false;
 
-      // Set canvas size
       canvas.width = 100;
       canvas.height = 50;
 
-      // Test with a reference font (monospace is always available)
       ctx.font = '20px monospace';
       const referenceWidth = ctx.measureText('mmmmm').width;
 
-      // Test with the target font
       ctx.font = `20px ${fontFamily}, monospace`;
       const testWidth = ctx.measureText('mmmmm').width;
 
-      // If widths are different, the font is available
       const available = Math.abs(testWidth - referenceWidth) > 1;
 
       if (this.debug) {
@@ -129,16 +104,10 @@ export class FontManager {
     }
   }
 
-  /**
-   * Get character info from a loaded atlas
-   */
   getCharacterInfo(atlas: FontAtlas, char: string) {
-    return atlas.characters.get(char) || atlas.characters.get(' '); // Fallback to space
+    return atlas.characters.get(char) || atlas.characters.get(' ');
   }
 
-  /**
-   * Preload common roguelike fonts
-   */
   async preloadRoguelikeFonts(): Promise<FontAtlas[]> {
     const commonFonts: FontLoadOptions[] = [
       {
@@ -162,9 +131,6 @@ export class FontManager {
     return Promise.all(promises);
   }
 
-  /**
-   * Clear the atlas cache
-   */
   clearCache(): void {
     this.atlasCache.clear();
     if (this.debug) {
@@ -172,9 +138,6 @@ export class FontManager {
     }
   }
 
-  /**
-   * Get cache statistics
-   */
   getCacheStats() {
     return {
       size: this.atlasCache.size,
@@ -183,7 +146,6 @@ export class FontManager {
   }
 }
 
-// Default font configurations for different use cases
 export const FONT_PRESETS = {
   ROGUELIKE_CLASSIC: {
     fontFamily: 'DejaVu Sans Mono',
@@ -202,9 +164,6 @@ export const FONT_PRESETS = {
   }
 } as const;
 
-/**
- * Quick function to load a preset font atlas
- */
 export async function loadPresetFont(
   preset: keyof typeof FONT_PRESETS,
   debug: boolean = false
@@ -213,7 +172,4 @@ export async function loadPresetFont(
   return manager.loadFontAtlas(FONT_PRESETS[preset]);
 }
 
-/**
- * Global font manager instance
- */
 export const globalFontManager = new FontManager();

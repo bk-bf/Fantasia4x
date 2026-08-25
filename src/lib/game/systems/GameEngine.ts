@@ -33,16 +33,12 @@ export interface GameEngineConfig {
 
 export interface GameEngine {
   processGameTurn(): TurnProcessingResult;
-  /** Advance the sim by one tick (turn = 1 tick; the whole pipeline runs every tick). */
   processTick(): void;
   updateStores(): void;
-  /** Single-writer entry point: apply a user-action command (updater) to canonical state. */
   applyCommand(updater: (state: GameState) => GameState, save: boolean): void;
 
   getGameState(): GameState;
   updateGameState(updates: Partial<GameState>): SystemInteractionResult;
-
-  // UI-facing lookups live in GameCoordinator, not here — this interface stays a turn coordinator.
 
   setGameStateManager(manager: any): void;
 }

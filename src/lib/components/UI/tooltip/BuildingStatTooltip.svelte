@@ -1,6 +1,3 @@
-<!-- BuildingStatTooltip.svelte — hover breakdown for a building card: build info, effects (sleep
-     regen / crafting bonus / comfort…), key properties, and the crafting recipes the building
-     enables as a workstation. Reuses the work-tab job-priority tooltip format (WorkCellTooltip). -->
 <script lang="ts">
   import type { Building } from '$lib/game/core/types';
   import { recipeService } from '$lib/game/services/RecipeService';
@@ -9,21 +6,17 @@
 
   interface Props {
     building: Building;
-    /** Chosen `category:` build materials (costKey → itemId) — drives the per-material stat section. */
     materials?: Record<string, string>;
     x: number;
     y: number;
   }
   let { building, materials = {}, x, y }: Props = $props();
 
-  // §M Per-material stat deltas for the CHOSEN build materials: durability (multiplier) plus additive
-  // beauty / comfort / insulation. Empty when nothing is picked (the slot is still "any …").
   let matIds = $derived(Object.values(materials).filter(Boolean));
   let matNames = $derived(
     matIds.map((id) => getMaterialProperty(id)?.label ?? id.replace(/_/g, ' ')).join(', ')
   );
   let matMods = $derived(matIds.length ? aggregateMaterialMods(matIds, 'building') : null);
-  // Rows for the MATERIAL section: a signed/×-formatted line per non-neutral stat.
   let matRows = $derived.by(() => {
     const out: { label: string; val: string; good: boolean }[] = [];
     if (!matMods) return out;
@@ -59,13 +52,10 @@
         .trim()
         .toLowerCase()
     );
-  // Fractions (0.8, 0.2) read as percentages; integers (population, knowledge) stay raw.
   const fmt = (v: number) => (Number.isInteger(v) ? `${v}` : `${Math.round(v * 100)}%`);
 
-  // Internal/bookkeeping effect keys that shouldn't surface as player-facing rows.
   const SKIP_EFFECTS = new Set(['tier', 'movementCost', 'roof', 'window']);
 
-  // Build-cost-independent info rows.
   let infoRows = $derived.by(() => {
     const out: { label: string; val: string }[] = [];
     if (building.workAmount != null) out.push({ label: 'Work', val: `${building.workAmount}` });
@@ -78,7 +68,6 @@
     return out;
   });
 
-  // Effects → labelled rows. *Enabled flags become capability tags; numeric effects format above.
   let effectRows = $derived.by(() => {
     const out: { label: string; val: string }[] = [];
     for (const [key, v] of Object.entries(building.effects ?? {})) {
@@ -93,7 +82,6 @@
     return out;
   });
 
-  // Curated building properties (housing / knowledge / production…).
   let propRows = $derived.by(() => {
     const p = building.buildingProperties;
     if (!p) return [] as { label: string; val: string }[];
@@ -110,7 +98,6 @@
     return out;
   });
 
-  // Recipes this building enables as a workstation → the items it lets you craft.
   let enables = $derived.by(() => {
     const names: string[] = [];
     const seen = new Set<string>();

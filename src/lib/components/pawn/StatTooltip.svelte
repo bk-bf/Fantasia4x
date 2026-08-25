@@ -1,7 +1,3 @@
-<!-- StatTooltip.svelte — the shared stat breakdown panel (formula with this pawn's numbers, value vs the
-     average, description, and trait contributions). Extracted from PawnAttributes so the attributes tab
-     AND the trait card's stat/resistance pill render the IDENTICAL panel. Presentation only: the caller
-     supplies the positioned box (the attributes cell's own .tip, or the trait card's HoverTip). -->
 <script lang="ts">
   import type { StatView } from '$lib/components/util/statView';
   let { view }: { view: StatView } = $props();

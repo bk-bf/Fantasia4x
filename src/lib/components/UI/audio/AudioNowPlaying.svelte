@@ -1,9 +1,3 @@
-<!--
-  AudioNowPlaying — a small read-only "now playing" panel for the DEBUG menu. Subscribes to the
-  audioService `nowPlaying` store and shows the live music scene + track and the active ambient (SFX)
-  beds with their gains. Purely diagnostic — no transport controls (volume lives in Settings).
-  Track/bed labels route through manifest label maps so no raw filename/id leaks into the UI.
--->
 <script lang="ts">
   import StatBar from '../widget/StatBar.svelte';
   import { nowPlaying } from '$lib/audio/AudioService';
@@ -18,14 +12,12 @@
   {#if !$nowPlaying.unlocked}
     <p class="locked">Audio locked — click anywhere in the game to start playback.</p>
   {:else}
-    <!-- Music -->
     <div class="np-music">
       <span class="np-note">♪</span>
       <span class="np-title">{trackLabel($nowPlaying.track)}</span>
       {#if $nowPlaying.scene}<span class="np-scene">{SCENE_LABELS[$nowPlaying.scene]}</span>{/if}
     </div>
 
-    <!-- Ambient / SFX beds -->
     <div class="np-group-label">Ambient SFX</div>
     {#if $nowPlaying.ambient.length === 0}
       <p class="np-none">— none —</p>
@@ -42,7 +34,6 @@
       {/each}
     {/if}
 
-    <!-- Creature SFX (viewport/zoom audibility) -->
     <div class="np-group-label">Creatures (audibility)</div>
     {#if $nowPlaying.creatures.length === 0}
       <p class="np-none">— none in earshot —</p>
@@ -59,7 +50,6 @@
       {/each}
     {/if}
 
-    <!-- Work SFX (viewport/zoom audibility) -->
     <div class="np-group-label">Work (audibility)</div>
     {#if $nowPlaying.work.length === 0}
       <p class="np-none">— none in earshot —</p>
@@ -86,7 +76,6 @@
       />
     {/if}
 
-    <!-- Volume buses -->
     <div class="np-group-label">Volume</div>
     <StatBar
       label="Master"

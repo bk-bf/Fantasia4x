@@ -2,13 +2,6 @@ import { describe, it, expect } from 'vitest';
 import { buildScenario } from '$lib/game/headless/Scenario';
 import { HeadlessSession } from '$lib/game/headless/HeadlessSession';
 
-/**
- * TOOL-TIER PARITY audit (§310), headless. A parity sweep found the ore nodes for iron/lead/gold/gems and
- * the magic vents demand mining `minTier: 2–3`, but only `stone_pick` (tier 0, post tin re-tier) existed — so the entire iron
- * age + gems were UN-MINEABLE (the butchery-gate bug class, uncaught because the ore audit stocked ore
- * directly). Fix: added `iron_pick` (tier 2) + `steel_pick` (tier 3). This drives the gate on a real hematite
- * node: a stone pick can't touch it, an iron pick can.
- */
 const stk = (s: HeadlessSession) => (s.getState().stockpile ?? {}) as Record<string, number>;
 
 describe('mining tool-tier gate (iron/steel pick)', () => {
@@ -20,12 +13,11 @@ describe('mining tool-tier gate (iron/steel pick)', () => {
         map: { w: 18, h: 18 },
         researchMaxTier: 9,
         needsDisabled: ['hunger', 'fatigue', 'thirst', 'hygiene'],
-        pawns: [{ count: 4, skillLevel: 20 }], // founders default to mining labor level 2
+        pawns: [{ count: 4, skillLevel: 20 }],
         items: { [tool]: 3, spit_meat: 10 },
         seedEntities: false
       })
     );
-    // spawn a hematite ore vein a couple of tiles from the pawn cluster and mark it for harvest.
     const p = s.getState().pawns[0];
     const ox = (p.position?.x ?? 9) + 2;
     const oy = p.position?.y ?? 9;

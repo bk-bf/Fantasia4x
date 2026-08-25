@@ -5,8 +5,6 @@ import { itemService } from '$lib/game/services/ItemService';
 import { ENC_OVERLOAD_FULL } from '$lib/game/core/rules/body/conditions';
 import type { GameState, Pawn, DroppedItem, Job } from '$lib/game/core/types';
 
-// A real-ish pawn so the carry budget (body mass × STRENGTH load fraction) computes. STRENGTH 10, 70 kg body
-// → ~8.4 kg / ~9.1 L budget; the haul ceiling is ENC_OVERLOAD_FULL (1.4×) of that.
 const makePawn = (x: number, y: number): Pawn =>
   ({
     id: 'p1',
@@ -48,8 +46,8 @@ const haulJob = (droppedItemId: string, d: DroppedItem): Job =>
 describe('haul.complete — cross-resource + 3×3 sweep', () => {
   it('clears a mixed pile on the same tile in one trip (cross-resource)', () => {
     const pawn = makePawn(1, 1);
-    const branch = drop('d_b', 'branch', 1, 1, 3); // 0.3 kg / 1.2 L each
-    const fiber = drop('d_f', 'plant_fiber', 1, 1, 5); // 0.05 kg / 0.2 L each
+    const branch = drop('d_b', 'branch', 1, 1, 3);
+    const fiber = drop('d_f', 'plant_fiber', 1, 1, 5);
     const gs = makeState(pawn, [branch, fiber]);
 
     const out = completeHaul(haulJob('d_b', branch), gs);
@@ -62,15 +60,14 @@ describe('haul.complete — cross-resource + 3×3 sweep', () => {
   it('sweeps loose drops on the 8 neighbouring tiles, not just the exact tile', () => {
     const pawn = makePawn(1, 1);
     const onTile = drop('d_b', 'branch', 1, 1, 2);
-    const adjacent = drop('d_f', 'plant_fiber', 2, 1, 4); // Chebyshev 1
-    const far = drop('d_far', 'plant_fiber', 4, 1, 4); // Chebyshev 3 — out of reach
+    const adjacent = drop('d_f', 'plant_fiber', 2, 1, 4);
+    const far = drop('d_far', 'plant_fiber', 4, 1, 4);
     const gs = makeState(pawn, [onTile, adjacent, far]);
 
     const out = completeHaul(haulJob('d_b', onTile), gs);
     const inv = out.pawns[0].inventory!.items;
     expect(inv.branch).toBe(2);
     expect(inv.plant_fiber).toBe(4);
-    // The far drop is untouched.
     expect((out.droppedItems ?? []).find((d) => d.id === 'd_far')?.quantity).toBe(4);
   });
 
@@ -81,7 +78,7 @@ describe('haul.complete — cross-resource + 3×3 sweep', () => {
 
     const cap1 = itemService.clampPickupQuantity(pawn, 'branch', 100, gs, 1);
     const cap14 = itemService.clampPickupQuantity(pawn, 'branch', 100, gs, ENC_OVERLOAD_FULL);
-    expect(cap14).toBeGreaterThan(cap1); // 1.4× lets the hauler carry more
+    expect(cap14).toBeGreaterThan(cap1);
 
     const out = completeHaul(haulJob('d_b', big), gs);
     expect(out.pawns[0].inventory!.items.branch).toBe(cap14);
@@ -89,16 +86,13 @@ describe('haul.complete — cross-resource + 3×3 sweep', () => {
 
   it('does not sweep drops the stockpile filter rejects', () => {
     const pawn = makePawn(1, 1);
-    const branch = drop('d_b', 'branch', 1, 1, 2); // primitive
-    const fiber = drop('d_f', 'plant_fiber', 1, 1, 4); // primitive
+    const branch = drop('d_b', 'branch', 1, 1, 2);
+    const fiber = drop('d_f', 'plant_fiber', 1, 1, 4);
     const gs = makeState(pawn, [branch, fiber], {
       zoneInstances: [
         { id: 'z1', type: 'stockpile', filter: { allowedCategories: ['wood'], blockedItems: [] } }
       ]
     } as unknown as Partial<GameState>);
-    // The job's own drop is still taken (the player created the haul job), but the cross-resource
-    // top-up only pulls stockpile-accepted resources — neither primitive item qualifies for a
-    // wood-only stockpile, so the fiber is left on the ground.
     const out = completeHaul(haulJob('d_b', branch), gs);
     expect((out.droppedItems ?? []).find((d) => d.id === 'd_f')?.quantity).toBe(4);
   });
@@ -115,7 +109,7 @@ describe('stockpileAcceptsDrop', () => {
         { id: 'z1', type: 'stockpile', filter: { allowedCategories: ['wood'], blockedItems: [] } }
       ]
     } as unknown as Partial<GameState>);
-    expect(stockpileAcceptsDrop(gs, 'branch')).toBe(false); // branch is 'primitive'
+    expect(stockpileAcceptsDrop(gs, 'branch')).toBe(false);
   });
 });
 
@@ -134,7 +128,7 @@ describe('opportunisticHaulPickup', () => {
     const pawn = makePawn(2, 2);
     const gs = makeState(pawn, [drop('d1', 'branch', 2, 2, 2)], { zoneTiles: {} });
     const out = opportunisticHaulPickup(gs, 'p1');
-    expect(out).toBe(gs); // unchanged reference
+    expect(out).toBe(gs);
   });
 
   it('leaves forbidden drops alone', () => {
@@ -153,7 +147,6 @@ describe('pickUpFromTile defaults (right-click pickup unchanged)', () => {
     const adjacent = drop('d2', 'plant_fiber', 2, 1, 3);
     const gs = makeState(pawn, [forbidden, adjacent]);
     const out = pickUpFromTile(gs, 'p1', 1, 1);
-    // forbidden taken (no skipForbidden), adjacent ignored (radius 0).
     expect(out.pawns[0].inventory!.items.plant_fiber).toBe(3);
     expect((out.droppedItems ?? []).find((d) => d.id === 'd2')?.quantity).toBe(3);
   });

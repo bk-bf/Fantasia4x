@@ -1,30 +1,17 @@
-<!-- StatPills.svelte — a row of compact stat pills in the same tight brown-amber theme as the crafting
-     material pills (ItemPills), tintable per pill. Each pill shows a short label + value; hovering opens
-     the shared cursor-following HoverTip with a detailed breakdown (description, formula, and the
-     contributing factors). Used by the health tab for blood / pain / exposure / tolerance / combat. -->
 <script lang="ts" module>
   export interface StatPillRow {
     label: string;
     value: string;
   }
   export interface StatPillView {
-    /** Short pill label, e.g. "Hit", "Blood", "Cold". */
     label: string;
-    /** Formatted value shown on the pill, e.g. "×0.95", "82%", "≤−11°". */
     value: string;
-    /** Pill tint (CSS colour). Defaults to the amber material-pill look. */
     color?: string;
-    /** Dim/penalty styling. */
     warn?: boolean;
-    /** Tooltip header (defaults to the label). */
     title?: string;
-    /** Italic description line in the tooltip. */
     desc?: string;
-    /** Symbolic formula line (monospace), for stat-derived pills. */
     formula?: string;
-    /** Breakdown rows (factor → value). */
     rows?: StatPillRow[];
-    /** Render a group separator BEFORE this pill (starts a new cluster — health | temp | combat). */
     sep?: boolean;
   }
 </script>
@@ -88,7 +75,6 @@
     gap: 2px;
     padding: 2px 8px 3px;
   }
-  /* Same tight brown-amber pill as the crafting material pills, tinted toward each pill's colour. */
   .stat-pill {
     display: flex;
     align-items: center;
@@ -105,8 +91,6 @@
   .stat-pill.warn {
     background: color-mix(in srgb, var(--pill) 22%, rgba(40, 12, 6, 0.92));
   }
-  /* Horizontal rule between pill clusters (health / temp / combat). Full width so it forces the next
-     cluster onto its own row, the way the combat block used to sit under a top border. */
   .pill-sep {
     flex-basis: 100%;
     width: 100%;

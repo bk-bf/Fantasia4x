@@ -1,13 +1,4 @@
-/* filepath: src/lib/webgl/shaders.ts */
-/**
- * WebGL shader compilation and management system
- * Handles shader loading, compilation, program linking, and uniform/attribute caching
- */
-
 import type { ShaderProgram } from './types.js';
-// Inline the shader source at build time (Vite ?raw) so it ships inside the JS bundle. A runtime
-// fetch('/src/lib/webgl/shaders/*.glsl') only works against the dev server — in a production/static
-// build (Electron app://, any static host) those source paths 404 and WebGL init fails.
 import vertexShaderSource from './shaders/vertex.glsl?raw';
 import fragmentShaderSource from './shaders/fragment.glsl?raw';
 
@@ -34,10 +25,6 @@ export class ShaderManager {
     this.debug = debug;
   }
 
-  /**
-   * Load shader source from external files (for development)
-   * In production, shaders would be bundled with the app
-   */
   async loadShaderSource(vertexPath: string, fragmentPath: string): Promise<ShaderSource> {
     try {
       const [vertexResponse, fragmentResponse] = await Promise.all([
@@ -59,9 +46,6 @@ export class ShaderManager {
     }
   }
 
-  /**
-   * Create and compile a shader program from source code
-   */
   createProgram(
     name: string,
     vertexSource: string,
@@ -70,13 +54,11 @@ export class ShaderManager {
     const gl = this.gl;
 
     try {
-      // Compile vertex shader
       const vertexShader = this.compileShader(gl.VERTEX_SHADER, vertexSource, `${name}_vertex`);
       if (!vertexShader) {
         return { success: false, error: 'Vertex shader compilation failed' };
       }
 
-      // Compile fragment shader
       const fragmentShader = this.compileShader(
         gl.FRAGMENT_SHADER,
         fragmentSource,
@@ -87,7 +69,6 @@ export class ShaderManager {
         return { success: false, error: 'Fragment shader compilation failed' };
       }
 
-      // Create and link program
       const program = gl.createProgram();
       if (!program) {
         gl.deleteShader(vertexShader);
@@ -99,7 +80,6 @@ export class ShaderManager {
       gl.attachShader(program, fragmentShader);
       gl.linkProgram(program);
 
-      // Check linking status
       if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
         const error = gl.getProgramInfoLog(program);
         gl.deleteProgram(program);
@@ -111,7 +91,6 @@ export class ShaderManager {
         };
       }
 
-      // Validate program
       gl.validateProgram(program);
       if (!gl.getProgramParameter(program, gl.VALIDATE_STATUS)) {
         const warning = gl.getProgramInfoLog(program);
@@ -120,11 +99,9 @@ export class ShaderManager {
         }
       }
 
-      // Cache uniform and attribute locations
       const shaderProgram = this.cacheLocations(program, name);
       this.programs.set(name, shaderProgram);
 
-      // Clean up individual shaders (they're now linked into the program)
       gl.deleteShader(vertexShader);
       gl.deleteShader(fragmentShader);
 
@@ -141,9 +118,6 @@ export class ShaderManager {
     }
   }
 
-  /**
-   * Compile a single shader
-   */
   private compileShader(type: number, source: string, name: string): WebGLShader | null {
     const gl = this.gl;
     const shader = gl.createShader(type);
@@ -156,7 +130,6 @@ export class ShaderManager {
     gl.shaderSource(shader, source);
     gl.compileShader(shader);
 
-    // Check compilation status
     if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
       const error = gl.getShaderInfoLog(shader);
       const shaderType = type === gl.VERTEX_SHADER ? 'VERTEX' : 'FRAGMENT';
@@ -164,31 +137,24 @@ export class ShaderManager {
       console.error(`❌ ${shaderType} shader compilation failed (${name}):`);
       console.error(error);
 
-      // Enhanced error reporting with line numbers
       this.reportShaderErrors(source, error || '', name);
 
       gl.deleteShader(shader);
       return null;
     }
 
-    // Cache the shader
     this.shaderCache.set(name, shader);
     return shader;
   }
 
-  /**
-   * Cache uniform and attribute locations for efficient access
-   */
   private cacheLocations(program: WebGLProgram, name: string): ShaderProgram {
     const gl = this.gl;
     const uniforms = new Map<string, WebGLUniformLocation>();
     const attributes = new Map<string, number>();
 
-    // Get number of active uniforms and attributes
     const numUniforms = gl.getProgramParameter(program, gl.ACTIVE_UNIFORMS);
     const numAttributes = gl.getProgramParameter(program, gl.ACTIVE_ATTRIBUTES);
 
-    // Cache all uniform locations
     for (let i = 0; i < numUniforms; i++) {
       const uniformInfo = gl.getActiveUniform(program, i);
       if (uniformInfo) {
@@ -199,7 +165,6 @@ export class ShaderManager {
       }
     }
 
-    // Cache all attribute locations
     for (let i = 0; i < numAttributes; i++) {
       const attributeInfo = gl.getActiveAttrib(program, i);
       if (attributeInfo) {
@@ -217,22 +182,18 @@ export class ShaderManager {
     };
   }
 
-  /**
-   * Enhanced error reporting with line numbers and context
-   */
   private reportShaderErrors(source: string, error: string, name: string): void {
     const lines = source.split('\n');
 
     console.group(`🔍 Shader Error Details: ${name}`);
 
-    // Parse error message for line numbers
     const errorLines = error.split('\n');
     const lineRegex = /ERROR: \d+:(\d+):/;
 
     errorLines.forEach((errorLine) => {
       const match = errorLine.match(lineRegex);
       if (match) {
-        const lineNum = parseInt(match[1]) - 1; // Convert to 0-based
+        const lineNum = parseInt(match[1]) - 1;
         if (lineNum >= 0 && lineNum < lines.length) {
           console.error(`Line ${lineNum + 1}: ${lines[lineNum]}`);
         }
@@ -243,16 +204,12 @@ export class ShaderManager {
     console.groupEnd();
   }
 
-  /**
-   * Log program information for debugging
-   */
   private logProgramInfo(shaderProgram: ShaderProgram): void {
     console.group('🔧 Shader Program Info');
 
     console.log('Uniforms:', Array.from(shaderProgram.uniforms.keys()));
     console.log('Attributes:', Array.from(shaderProgram.attributes.keys()));
 
-    // Log WebGL limits for context
     const gl = this.gl;
     console.log('WebGL Limits:', {
       maxVertexAttribs: gl.getParameter(gl.MAX_VERTEX_ATTRIBS),
@@ -263,16 +220,10 @@ export class ShaderManager {
     console.groupEnd();
   }
 
-  /**
-   * Get a cached shader program
-   */
   getProgram(name: string): ShaderProgram | undefined {
     return this.programs.get(name);
   }
 
-  /**
-   * Use a shader program
-   */
   useProgram(name: string): boolean {
     const shaderProgram = this.programs.get(name);
     if (!shaderProgram) {
@@ -284,9 +235,6 @@ export class ShaderManager {
     return true;
   }
 
-  /**
-   * Set uniform values with type safety
-   */
   setUniform(
     programName: string,
     uniformName: string,
@@ -308,18 +256,16 @@ export class ShaderManager {
 
     const gl = this.gl;
 
-    // Handle different uniform types
     if (typeof value === 'number') {
-      // Check if this is a sampler uniform (texture unit)
       if (
         uniformName.includes('u_') &&
         (uniformName.includes('Atlas') ||
           uniformName.includes('Texture') ||
           uniformName.includes('sampler'))
       ) {
-        gl.uniform1i(location, value); // Use integer for samplers
+        gl.uniform1i(location, value);
       } else {
-        gl.uniform1f(location, value); // Use float for other single values
+        gl.uniform1f(location, value);
       }
     } else if (Array.isArray(value) || value instanceof Float32Array) {
       switch (value.length) {
@@ -350,9 +296,6 @@ export class ShaderManager {
     return true;
   }
 
-  /**
-   * Get attribute location
-   */
   getAttributeLocation(programName: string, attributeName: string): number {
     const program = this.programs.get(programName);
     if (!program) {
@@ -363,9 +306,6 @@ export class ShaderManager {
     return program.attributes.get(attributeName) ?? -1;
   }
 
-  /**
-   * Hot reload a shader program (for development)
-   */
   async reloadProgram(name: string, vertexPath?: string, fragmentPath?: string): Promise<boolean> {
     if (!vertexPath || !fragmentPath) {
       console.error('Shader paths required for hot reload');
@@ -389,18 +329,13 @@ export class ShaderManager {
     }
   }
 
-  /**
-   * Clean up resources
-   */
   dispose(): void {
     const gl = this.gl;
 
-    // Delete all programs
     this.programs.forEach(({ program }) => {
       gl.deleteProgram(program);
     });
 
-    // Delete cached shaders
     this.shaderCache.forEach((shader) => {
       gl.deleteShader(shader);
     });
@@ -414,9 +349,6 @@ export class ShaderManager {
   }
 }
 
-/**
- * Convenience function to create a basic tile renderer shader program
- */
 export async function createTileRendererShaders(
   gl: WebGL2RenderingContext,
   debug: boolean = false
@@ -425,8 +357,6 @@ export async function createTileRendererShaders(
   const shaderManager = new ShaderManager(gl, debug);
 
   try {
-    // Shader sources are bundled at build time (?raw imports above) — no runtime fetch, so this works
-    // in dev and in static/Electron builds alike.
     const shaderSource: ShaderSource = {
       vertex: vertexShaderSource,
       fragment: fragmentShaderSource

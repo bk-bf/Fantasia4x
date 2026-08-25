@@ -22,10 +22,8 @@ describe('Culture overhaul — pool generation', () => {
     for (const r of pool) {
       expect(r.archetype).toBeTruthy();
       expect(r.lore.epithet).toBeTruthy();
-      // 3–4 sentence paragraph — sanity-check it's real prose, not an empty template.
       expect(r.lore.description.length).toBeGreaterThan(120);
       expect(r.lore.description).toContain(r.name);
-      // ADR-023: a culture has a mundane variety pool each pawn draws from (+ optional identity traits).
       expect(r.culturalTraitPool.length).toBeGreaterThanOrEqual(1);
       expect(Array.isArray(r.guaranteedTraits)).toBe(true);
     }
@@ -46,7 +44,7 @@ describe('Culture overhaul — pool generation', () => {
   it('generateCultureRelations produces a symmetric, fully-connected relation set', () => {
     const pool = generateCulturePool(6);
     const rel = generateCultureRelations(pool);
-    expect(rel).toHaveLength((6 * 5) / 2); // one per unordered pair
+    expect(rel).toHaveLength((6 * 5) / 2);
     for (const r of rel) {
       expect(r.score).toBeGreaterThanOrEqual(-100);
       expect(r.score).toBeLessThanOrEqual(100);

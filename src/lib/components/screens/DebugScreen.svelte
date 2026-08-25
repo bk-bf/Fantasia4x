@@ -1,9 +1,3 @@
-<!--
-  DebugScreen — the DEBUG tab. Two sub-tabs (MENU / LOG) in the same underline-indicator style as
-  the Pawn tab's STATUS / ATTRIBUTES / GEAR: MENU = DebugMenu (spawn/weather/season/brush buttons),
-  LOG = the unified log viewer. Mounted by +page only when the DEBUG tab is present (dev.sh/launch.sh
-  --debug or the standalone --log flag).
--->
 <script lang="ts">
   import DebugMenu from './DebugMenu.svelte';
   import DebugLogScreen from './DebugLogScreen.svelte';
@@ -46,7 +40,6 @@
     min-height: 0;
   }
 
-  /* Section tabs — underline-indicator style, matching the Pawn tab. */
   .debug-tabs {
     display: flex;
     flex-shrink: 0;

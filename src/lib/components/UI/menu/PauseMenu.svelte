@@ -1,12 +1,3 @@
-<!--
-  PauseMenu — the in-game Escape overlay. Opened by ESC on the main map (+page.svelte gates it behind
-  the existing blueprint/designation/panel cancels), closed by Resume or ESC again. The game is
-  paused while it's up (+page restores the prior pause state on resume).
-
-  Entries: Resume · Save Game (opens the save picker — New Save or overwrite an existing one; flashes a
-  transient confirmation) · Load Game (opens the save list) · Settings (inline toggles, mirroring the title
-  menu) · Exit to Main Menu (flush → reload to the title) · Quit to Desktop (flush → close; desktop only).
--->
 <script lang="ts">
   import { fade, scale } from 'svelte/transition';
   import { gameState } from '$lib/stores/gameState';
@@ -22,8 +13,6 @@
   let busy = $state(false);
   const isDesktop = typeof navigator !== 'undefined' && /electron/i.test(navigator.userAgent ?? '');
 
-  // The save picker (SaveListMenu, save mode) handles New Save vs overwrite, then calls back here so the
-  // button flashes confirmation.
   function onSaved() {
     saved = true;
     setTimeout(() => (saved = false), 1600);
@@ -32,8 +21,6 @@
   async function exitToMenu() {
     if (busy) return;
     busy = true;
-    // Flush the ACTIVE save (not a new snapshot) so nothing is lost, then reload — but force the menu so a
-    // --debug launch (which skips the menu at boot) still lands on the title rather than straight back in.
     await gameState.goToMainMenu();
   }
 

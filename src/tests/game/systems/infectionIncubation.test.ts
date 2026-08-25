@@ -3,8 +3,6 @@ import { pawnStateMachineService } from '$lib/game/systems/PawnStateMachine';
 import { CARE_CONFIG } from '$lib/game/core/defs/wounds';
 import type { GameState, Pawn, Injury } from '$lib/game/core/types';
 
-// A fresh open+untended wound must not fester until it is `infectionIncubationTicks` old (~2.5 in-game days).
-
 function makePawn(injury: Injury): Pawn {
   return {
     id: 'p1',
@@ -25,7 +23,6 @@ function makePawn(injury: Injury): Pawn {
     skills: {},
     needs: { hunger: 10, fatigue: 10, thirst: 0, hygiene: 0, sleep: 0, lastSleep: 0, lastMeal: 0 },
     state: { mood: 50, health: 100, isWorking: false, isEating: false, isSleeping: false },
-    // One open (serious), untended wound on a torso part — no bleeding, so blood loss can't interfere.
     limbs: [
       { id: 'head', health: 100, bleedRate: 0, parts: [] },
       {
@@ -80,7 +77,6 @@ const hasInfection = (gs: GameState) =>
 
 describe('infection incubation grace', () => {
   it('a fresh open+untended wound does NOT infect before incubation', () => {
-    // age = 100 ticks, well under the incubation window
     const out = pawnStateMachineService.tick(makeState(makePawn(openWound), 1 + 100));
     expect(hasInfection(out)).toBe(false);
   });

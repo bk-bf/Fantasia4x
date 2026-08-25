@@ -3,10 +3,6 @@ import { handleDrinking, handleWashing, handleEating } from '$lib/game/systems/p
 import { PAWN_STATE } from '$lib/game/systems/pawn/pawnStates';
 import type { GameState, Pawn } from '$lib/game/core/types';
 
-// A pawn drinking/washing must stay GATED at the water tile until the task completes — it can enter
-// the state while still carrying a movement path (e.g. interrupted mid-job next to water), and must
-// not walk off mid-task (player report). The handlers clear path/isMoving every tick.
-
 function drinkingPawn(state: string, withDrink = true): Pawn {
   return {
     id: 'p',
@@ -14,8 +10,6 @@ function drinkingPawn(state: string, withDrink = true): Pawn {
     isAlive: true,
     position: { x: 5, y: 5 },
     needs: { hunger: 0, fatigue: 0, thirst: 80, hygiene: 80 },
-    // A skin on the belt, so the pawn has something to actually drink. Without it the handler now
-    // ends the task immediately rather than miming a drink — thirst relief has to be paid for.
     inventory: withDrink
       ? {
           items: {},
@@ -28,7 +22,6 @@ function drinkingPawn(state: string, withDrink = true): Pawn {
           ]
         }
       : { items: {}, instances: [] },
-    // Residual movement from however it entered the state.
     path: [
       { x: 6, y: 5 },
       { x: 7, y: 5 }
@@ -42,8 +35,6 @@ function drinkingPawn(state: string, withDrink = true): Pawn {
       targetY: 5,
       progress: 0,
       timeRequired: 120,
-      // 0 so the handler runs its FIRST sip — that is the tick that finds the drink, pays for it and
-      // records what it is worth. Starting at 1 would resume a drink no first sip ever set up.
       turnsInState: 0
     }
   } as unknown as Pawn;
@@ -59,7 +50,7 @@ describe('drinking/washing gate the pawn in place', () => {
       stateWith(drinkingPawn(PAWN_STATE.DRINKING))
     );
     const p = out.pawns[0];
-    expect(p.currentState).toBe(PAWN_STATE.DRINKING); // still drinking (1/120 done)
+    expect(p.currentState).toBe(PAWN_STATE.DRINKING);
     expect(p.path?.length ?? 0).toBe(0);
     expect(p.isMoving).toBe(false);
   });

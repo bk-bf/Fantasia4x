@@ -2,10 +2,6 @@ import { describe, it, expect } from 'vitest';
 import { selectIdleNeed, selectInterruptNeed } from '$lib/game/systems/pawn/needSelection';
 import type { GameState, Pawn } from '$lib/game/core/types';
 
-/**
- * FORCE WORK: a pawn with `forceWork` neglects every need — the idle AND mid-job need selectors both
- * return null even at high hunger, so the FSM keeps the pawn working instead of breaking off to eat.
- */
 const starving = (over: Partial<Pawn> = {}): Pawn =>
   ({
     id: 'p1',
@@ -15,7 +11,6 @@ const starving = (over: Partial<Pawn> = {}): Pawn =>
     ...over
   }) as unknown as Pawn;
 
-// Food in stock so a NORMAL starving pawn would choose to eat (the control case).
 const gs = { stockpile: { spit_meat: 5 }, pawns: [] } as unknown as GameState;
 
 describe('force work neglects needs', () => {

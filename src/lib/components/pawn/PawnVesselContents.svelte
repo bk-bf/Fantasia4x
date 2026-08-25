@@ -1,12 +1,3 @@
-<!--
-  What the vessels in THIS pawn's pack are holding, and what it can do with it right there. A phial of
-  potion on a pawn's belt is no use to anybody if the only way to drink it is to haul it back to the
-  stockpile first, so the same DRINK / COAT actions the colony-stock list offers are offered here,
-  spending the dose out of the carried vessel instead of the colony's stock.
-
-  Water is the exception, and deliberately: drinking is a NEED, so it routes through the FSM as a
-  drink order rather than resolving instantly — the pawn stops what it is doing and takes a drink.
--->
 <script lang="ts">
   import type { Item, ItemInstance, Pawn } from '$lib/game/core/types';
   import { itemService } from '$lib/game/services/ItemService';
@@ -15,7 +6,6 @@
 
   let { pawn }: { pawn: Pawn } = $props();
 
-  /** A fluid the pawn can act on: a timed draught, a trait-granting essence, or a weapon coating. */
   function usableKind(def: Item | undefined): 'drink' | 'consume' | 'coat' | null {
     if (!def) return null;
     if (def.id === 'water') return 'drink';
@@ -37,7 +27,6 @@
             inst,
             def,
             vesselName: vessel?.name ?? inst.itemId,
-            // Fluids read in litres because that is what the vessel measures; solids in units.
             amount: e.litres != null ? `${e.litres} L` : `×${e.amount}`,
             doses: e.litres != null ? Math.floor(e.litres / servingL(e.itemId)) : (e.amount ?? 0),
             kind: usableKind(def)
@@ -49,8 +38,6 @@
 
   function act(row: (typeof rows)[number]) {
     if (row.kind === 'drink') {
-      // A need, not an instant effect — the pawn walks off the job and drinks, out of the very skin
-      // it is carrying (handleDrinking reaches for a carried vessel before anything else).
       gameState.command({
         type: 'setPawnDraftTarget',
         payload: {

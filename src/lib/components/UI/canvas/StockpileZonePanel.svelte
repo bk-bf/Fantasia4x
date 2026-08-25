@@ -1,16 +1,3 @@
-<!--
-  StockpileZonePanel — the per-item haul-filter pop-up for a stockpile zone. The zone's INFO CARD is
-  the shared SelectedEntityCard (built in GameCanvas, same chrome as pawn/mob/building); this is only
-  the FILTER fly-out it opens, mirroring BuildingStoragePanel under a storage bin (same
-  absolute-above-the-card layout, `open` toggle owned by the parent, stopPropagation).
-
-  Reuses the shared ItemFilterChecklist (nested taxonomy + search + collapse-all + copy/paste) so the
-  stockpile-zone and storage-bin filters are the SAME UI — no bespoke duplicate. Filter model: the
-  checklist works on a checked-id SET; this converts to/from the canonical ZoneFilter the haul engine
-  reads — {allowedCategories:[], blockedItems:[]} = "all" (no filter); any restriction materializes to
-  the full category list + an explicit blockedItems set, so a single unchecked item (or a fully
-  unchecked zone) is representable without the empty=all overload.
--->
 <script lang="ts">
   import { gameState } from '$lib/stores/gameState';
   import { itemService } from '$lib/game/services/ItemService';
@@ -32,8 +19,6 @@
     open?: boolean;
   } = $props();
 
-  // Haul-fill priority: pawns top up higher-priority zones before lower ones (and only spill into a
-  // lower zone once the higher is full). Drives findNearestDepositPoint / depositInventory ordering.
   const PRIORITIES: { value: ZonePriority; label: string }[] = [
     { value: 'low', label: 'Low' },
     { value: 'normal', label: 'Normal' },
@@ -48,9 +33,6 @@
     });
   }
 
-  // CONTAINERS-AND-FLUIDS §3 — how many bins/barrels/baskets this stockpile keeps. Haulers bring
-  // containers in until it has that many, then pack goods INTO them instead of laying another loose
-  // pile. 0 keeps whatever is already here and fetches nothing, which is the old behaviour exactly.
   function setContainerBudget(n: number) {
     gameState.command({
       type: 'setInstanceContainerBudget',
@@ -59,12 +41,10 @@
     });
   }
 
-  // Static item universe (non-hidden — internal items like natural weapons are never haul targets).
   const ALL_ITEMS = (itemsData as unknown as Item[]).filter((i) => !i.hidden);
   const ALL_IDS = ALL_ITEMS.map((i) => i.id);
   const ALL_CATEGORIES = itemService.getAllCategories();
 
-  // True engine semantics (matches jobs/filters.itemMatchesFilter + the haul empty-cats short-circuit).
   function isChecked(id: string): boolean {
     if (filter.allowedCategories.length === 0) return true;
     const cat = itemService.getItemById(id)?.category;
@@ -76,11 +56,10 @@
   const allChecked = $derived(checkedCount === ALL_IDS.length);
   const noneChecked = $derived(checkedCount === 0);
 
-  /** Serialize a desired checked-set back to the canonical {allowedCategories, blockedItems}. */
   function commit(checked: Set<string>) {
     const next: ZoneFilter =
       checked.size >= ALL_IDS.length
-        ? { allowedCategories: [], blockedItems: [] } // canonical "all"
+        ? { allowedCategories: [], blockedItems: [] }
         : {
             allowedCategories: [...ALL_CATEGORIES],
             blockedItems: ALL_IDS.filter((id) => !checked.has(id))
@@ -158,7 +137,6 @@
 </div>
 
 <style>
-  /* Fly-out above the zone card — same chrome/positioning as BuildingStoragePanel under a bin. */
   .zfp {
     position: absolute;
     bottom: calc(100% + 4px);

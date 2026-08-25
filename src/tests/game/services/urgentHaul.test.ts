@@ -2,11 +2,6 @@ import { describe, it, expect } from 'vitest';
 import { jobService } from '$lib/game/services/JobService';
 import type { GameState, WorldTile, Pawn, DroppedItem } from '$lib/game/core/types';
 
-/**
- * Urgent-haul: a stack flagged `urgent` (via the item card's URGENT HAUL button → `setDropUrgent`)
- * gets its haul job stamped `urgent` and sorted to the TOP of every pawn's available-job list, ahead
- * of labor level and distance. Flag also bypasses the stockpile-capacity cap.
- */
 function tile(x: number, y: number): WorldTile {
   return { x, y, walkable: true, subType: 'grass', resources: {} } as unknown as WorldTile;
 }
@@ -25,7 +20,6 @@ function baseState(droppedItems: DroppedItem[], jobs: GameState['jobs'] = []): G
     jobs,
     worldMap: wm,
     designations: {},
-    // one free stockpile tile so haul jobs are allowed
     zoneTiles: { '0,1': ['stockpile'] },
     buildings: [],
     droppedItems,
@@ -47,12 +41,11 @@ describe('urgent haul', () => {
   it('sorts an urgent haul ahead of a CLOSER normal haul', () => {
     const out = jobService.generateJobs(
       baseState([
-        drop({ id: 'near', x: 1, y: 0, urgent: false }), // closer to the pawn
-        drop({ id: 'far', x: 2, y: 0, urgent: true }) // farther, but urgent
+        drop({ id: 'near', x: 1, y: 0, urgent: false }),
+        drop({ id: 'far', x: 2, y: 0, urgent: true })
       ])
     );
     const avail = jobService.getAvailableJobs(pawnAt(0, 0), out);
-    // Both are haul jobs; without urgency the closer "near" would come first.
     expect(avail[0].droppedItemId).toBe('far');
     expect(avail[0].urgent).toBe(true);
   });
@@ -60,7 +53,6 @@ describe('urgent haul', () => {
   it('syncs the flag onto an already-queued haul job when urgency is toggled', () => {
     const first = jobService.generateJobs(baseState([drop({ id: 'd', urgent: false })]));
     expect((first.jobs ?? []).find((j) => j.type === 'haul')?.urgent).toBeUndefined();
-    // Player flips it urgent; re-running generation must update the existing job (not duplicate).
     const flipped = jobService.generateJobs({
       ...first,
       droppedItems: [drop({ id: 'd', urgent: true })]
@@ -71,7 +63,6 @@ describe('urgent haul', () => {
   });
 
   it('creates an urgent haul even when the stockpile is at capacity', () => {
-    // Pre-fill the single stockpile slot worth of capacity with an existing haul job so the cap is hit.
     const existing = [
       {
         id: 'haul-existing',

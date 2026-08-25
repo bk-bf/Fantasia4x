@@ -1,12 +1,4 @@
 #!/usr/bin/env node
-/**
- * profile-window.mjs — split the sim-worker JS self-time into an EARLY (startup) window vs the
- * STEADY-state remainder, to isolate the startup-cluster cost (ENGINE-PERFORMANCE startup ramp).
- *
- *   node scripts/profile-window.mjs [file.json] [earlySeconds=6] [topN=20]
- *
- * Functions ranked HIGH in EARLY but low in STEADY are the startup-specific hotspots.
- */
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -33,7 +25,6 @@ const { stackTable: ST, frameTable: FT, funcTable: FN, stringArray: SA } = p.sha
 const isJS = FN.isJS;
 const nameOf = (fn) => SA[FN.name[fn]] ?? '?';
 
-/** deepest-JS-frame self-time, restricted to samples with t0 <= time < t1 */
 function jsSelfWindow(thread, t0, t1) {
   const S = thread.samples;
   const time = S.time;
@@ -66,8 +57,6 @@ function topRows({ self, total }) {
     .map(([fn, w]) => [nameOf(fn).slice(0, 38), ((100 * w) / (total || 1)).toFixed(1)]);
 }
 
-// Pick the busiest DOM Worker whose ACTUALLY-SAMPLED functions include a sim marker (the shared
-// funcTable contains every function, so it can't be used to identify the thread).
 let sim = null;
 let bestActive = -1;
 for (const t of p.threads) {
@@ -112,8 +101,6 @@ for (const [n, v] of er) {
   if (d >= 1.5) console.log(`  +${d.toFixed(1)}%  ${n}  (early ${v}% vs steady ${sv}%)`);
 }
 
-// Raw DEEPEST-leaf frames (incl. native/GC/wasm) for the early window — reveals where the non-JS
-// startup time actually goes (GC pauses, wasm pathfinding, structured-clone, scene setup).
 function leafFrames(thread, t0, t1) {
   const S = thread.samples;
   const time = S.time;

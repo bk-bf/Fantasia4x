@@ -10,13 +10,7 @@ import { initialGameState } from '$lib/stores/gameState';
 import { rng } from '$lib/game/core/util/rng';
 import type { GameState, WorldTile } from '$lib/game/core/types';
 
-/**
- * HEADLESS-SIM Phase 0 (ADR-033) — the go/no-go gate: the WASM pathfinder must load and return
- * real paths under Node (it used to be hard-gated to `isClientRuntime`, so `findPath` returned []
- * headless and nothing could move). Verifies (a) init + a raw A* detour, (b) a pawn actually
- * NAVIGATING across a generated map inside a pure Node `processGameTurn` loop.
- */
-const SEED = 0xad33; // arbitrary fixed seed — the whole spike is deterministic
+const SEED = 0xad33;
 
 beforeAll(async () => {
   await pathfinderService.init();
@@ -28,7 +22,6 @@ describe('WASM pathfinder under Node (Phase 0 spike)', () => {
   });
 
   it('finds a detour around a wall on a synthetic grid', () => {
-    // 5×5, all walkable except a vertical wall at x=2 with a gap at y=4.
     const w = 5;
     const h = 5;
     const walkable = new Uint8Array(w * h).fill(1);
@@ -36,9 +29,8 @@ describe('WASM pathfinder under Node (Phase 0 spike)', () => {
     for (let y = 0; y < 4; y++) walkable[y * w + 2] = 0;
 
     const path = pathfinderService.findPath(walkable, costs, w, h, 0, 0, 4, 0);
-    expect(path.length).toBeGreaterThan(4); // forced detour down through the gap
+    expect(path.length).toBeGreaterThan(4);
     expect(path[path.length - 1]).toEqual({ x: 4, y: 0 });
-    // Every step must be on a walkable tile.
     for (const p of path) expect(walkable[p.y * w + p.x]).toBe(1);
   });
 
@@ -46,8 +38,6 @@ describe('WASM pathfinder under Node (Phase 0 spike)', () => {
     rng.reseed(SEED);
     const world = generateWorld(32, 32, SEED);
 
-    // Pick a start + a goal ≥8 tiles apart that A* itself confirms are connected, so the test
-    // exercises movement, not world-connectivity luck.
     const grids = buildPathfindingGrids(world as WorldTile[][]);
     const pick = findConnectedPair(world as WorldTile[][], grids, 8);
     expect(pick, 'no connected walkable pair found on the generated map').not.toBeNull();
@@ -69,7 +59,6 @@ describe('WASM pathfinder under Node (Phase 0 spike)', () => {
     };
     state = workService.ensureDefaultWorkAssignments(state);
 
-    // Draft + issue a MOVE order through the real command registry (the same path the UI uses).
     const pawnId = state.pawns[0].id;
     state = applySimCommand(state, { type: 'toggleDraft', payload: { pawnId } });
     state = applySimCommand(state, {
@@ -94,8 +83,6 @@ describe('WASM pathfinder under Node (Phase 0 spike)', () => {
 
     const finalPos = engine.getGameState().pawns[0].position!;
     const endDist = chebyshev(finalPos, goal);
-    // Hard success: arrived. Soft floor (diagnosable failure): it must at least have moved most of
-    // the way — a dead pathfinder leaves endDist === startDist and fails loudly here.
     expect(endDist, `pawn stalled at ${JSON.stringify(finalPos)} (start dist ${startDist})`).toBe(
       0
     );
@@ -107,7 +94,6 @@ function chebyshev(a: { x: number; y: number }, b: { x: number; y: number }): nu
   return Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y));
 }
 
-/** First walkable start + goal pair ≥ minDist apart with a confirmed A* route between them. */
 function findConnectedPair(
   world: WorldTile[][],
   grids: { walkable: Uint8Array; costs: Float32Array; width: number; height: number },

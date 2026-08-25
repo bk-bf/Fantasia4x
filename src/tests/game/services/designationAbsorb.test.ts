@@ -2,9 +2,6 @@ import { describe, it, expect } from 'vitest';
 import { designationService } from '$lib/game/services/DesignationService';
 import type { GameState, DroppedItem } from '$lib/game/core/types';
 
-// A stockpile is just a place designation — painting one over loose items on the ground should
-// treat them as stored immediately (no haul). Inverse of the deposit-time absorption trigger.
-
 const loose = (p: Partial<DroppedItem>): DroppedItem =>
   ({ id: 'l', resourceId: 'branch', x: 0, y: 0, quantity: 5, stored: false, ...p }) as DroppedItem;
 
@@ -37,7 +34,7 @@ describe('paint stockpile over loose items absorbs them (DesignationService)', (
     const byId = (id: string) => out.droppedItems!.find((d) => d.id === id)!;
     expect(byId('in1').stored).toBe(true);
     expect(byId('in2').stored).toBe(true);
-    expect(byId('out').stored).toBe(false); // outside the rect — untouched
+    expect(byId('out').stored).toBe(false);
     expect(out.stockpile).toEqual({ granite: 4, branch: 3 });
   });
 
@@ -48,7 +45,7 @@ describe('paint stockpile over loose items absorbs them (DesignationService)', (
     ]);
     const out = designationService.designate(5, 5, 'stockpile', gs);
     const piles = out.droppedItems!.filter((d) => d.resourceId === 'branch');
-    expect(piles).toHaveLength(1); // merged, not two stacks
+    expect(piles).toHaveLength(1);
     expect(piles[0].quantity).toBe(8);
   });
 

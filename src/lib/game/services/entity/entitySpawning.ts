@@ -1,5 +1,3 @@
-// Entity spawning — initial seeding + periodic DF-style spawner, biome-weighted and capped.
-// Extracted from EntityService (P-4). The former `this.idCounter` is now a module-level counter.
 import type { GameState, Mob, MobState, EntityStats, EntityNeeds } from '../../core/types';
 import { CREATURES, type CreatureDefinition } from '../../core/defs/creatures';
 import { getAmbientLight } from '../EnvironmentService';
@@ -47,19 +45,10 @@ import { getCreatureById } from '../../core/defs/creatures';
 
 let idCounter = 0;
 
-/** Reset the mob id/debug counter (fresh run / scenario build — ADR-033 replay determinism:
- *  without this, a second build in the same process numbers its mobs where the first left off). */
 export function resetMobIdCounter(): void {
   idCounter = 0;
 }
 
-/** Opening-game safety bubble: true while (x,y) sits within `STARTING_BUBBLE_RADIUS` of the colony AND
- *  the game is still in its first month. Gates every lair-spawn path (seed / repopulate / grow) so no
- *  den lands on the player's doorstep before they can arm up. Measured against the ACTUAL placed pawns,
- *  not the map centre — on mountainous maps `spawnPawnsOnMap` lands the colony on the nearest walkable
- *  tile, which can be far from the centre, so a centre-anchored bubble would leave the pawns exposed.
- *  Falls back to the map centre only when no pawn has a position yet (e.g. menu preview). Exported for
- *  unit testing. */
 export function inStartingBubble(state: GameState, x: number, y: number): boolean {
   if (state.turn >= STARTING_BUBBLE_TURNS) return false;
   const r2 = STARTING_BUBBLE_RADIUS * STARTING_BUBBLE_RADIUS;
@@ -73,7 +62,6 @@ export function inStartingBubble(state: GameState, x: number, y: number): boolea
     if (dx * dx + dy * dy <= r2) return true;
   }
   if (anyPawnPlaced) return false;
-  // Fallback: no placed pawns — keep the legacy centre-anchored bubble.
   const map = state.worldMap;
   const cx = Math.floor((map[0]?.length ?? 0) / 2);
   const cy = Math.floor(map.length / 2);
@@ -82,36 +70,25 @@ export function inStartingBubble(state: GameState, x: number, y: number): boolea
   return dx * dx + dy * dy <= r2;
 }
 
-// Soft tether radius (tiles, Chebyshev) for a menu-preview prey herd's invisible anchor — small enough
-// that each corner herd reads as one tight cluster, large enough that they still graze/wander visibly
-// within it. Menu-only (see seedMenuHerds + the leash in entityAI.stepAnimal).
 const HERD_ANCHOR_RANGE = 6;
 
-// Menu backdrop wildlife: exactly FOUR medium herds, one tucked into each corner of the on-screen view,
-// framing the central title/menu. Corner anchors as map fractions — the menu zooms in 2× and centres on
-// the map centre, so the visible window is ≈ x[0.25,0.75] × y[0.27,0.72]; these sit just inside it,
-// clear of the central UI. A small per-herd jitter keeps the four off a perfect rectangle (natural).
 const MENU_HERD_CORNERS: ReadonlyArray<readonly [number, number]> = [
-  [0.31, 0.34], // upper-left
-  [0.69, 0.34], // upper-right
-  [0.31, 0.66], // lower-left
-  [0.69, 0.66] // lower-right
+  [0.31, 0.34],
+  [0.69, 0.34],
+  [0.31, 0.66],
+  [0.69, 0.66]
 ];
-const MENU_HERD_CORNER_JITTER = 0.03; // ± map-fraction wobble on each corner anchor
-const MENU_HERD_SIZE_MIN = 6; // similar medium herd sizes (animals per corner)
+const MENU_HERD_CORNER_JITTER = 0.03;
+const MENU_HERD_SIZE_MIN = 6;
 const MENU_HERD_SIZE_MAX = 9;
 
-// MM2 backdrop wildlife: instead of four corner herds, several SMALL herds spread across the CENTRE on a
-// jittered grid — so the animals read as scattered through the middle without collapsing into one clump.
 const MENU_SCATTER_COLS = 3;
-const MENU_SCATTER_ROWS = 2; // 3×2 = 6 spread cluster anchors
-const MENU_SCATTER_REGION = { x0: 0.28, x1: 0.72, y0: 0.26, y1: 0.74 }; // central map fractions
-const MENU_SCATTER_JITTER = 0.06; // ± map-fraction wobble per anchor (keeps the grid from reading rigid)
-const MENU_SCATTER_HERD_MIN = 3; // small clusters
+const MENU_SCATTER_ROWS = 2;
+const MENU_SCATTER_REGION = { x0: 0.28, x1: 0.72, y0: 0.26, y1: 0.74 };
+const MENU_SCATTER_JITTER = 0.06;
+const MENU_SCATTER_HERD_MIN = 3;
 const MENU_SCATTER_HERD_MAX = 5;
 
-/** Spawn a `size`-strong herd of `def` anchored at `origin` (invisible lair ⇒ the leash in stepAnimal
- *  keeps it a cluster). Pack-mates spread to adjacent spawnable tiles. Appends to `seeded`. */
 function pushHerd(
   state: GameState,
   seeded: Mob[],
@@ -136,8 +113,6 @@ function pushHerd(
   }
 }
 
-/** Nearest spawnable tile to (cx,cy), searched outward in expanding Chebyshev rings (≤12). Used to land
- *  a menu corner anchor on walkable wildlife land even if the exact corner tile is a grove/edge. */
 function nearestSpawnable(
   state: GameState,
   cx: number,
@@ -147,7 +122,7 @@ function nearestSpawnable(
   for (let r = 0; r <= 12; r++) {
     for (let dy = -r; dy <= r; dy++) {
       for (let dx = -r; dx <= r; dx++) {
-        if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue; // ring perimeter only
+        if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
         const x = cx + dx;
         const y = cy + dy;
         if (isSpawnableTile(map[y]?.[x])) return { x, y };
@@ -157,12 +132,6 @@ function nearestSpawnable(
   return null;
 }
 
-/**
- * Seed the menu backdrop's wildlife: four medium herds, one per corner, each anchored (invisible lair)
- * so it stays a tight cluster in its corner (leash in entityAI.stepAnimal). One species per corner from
- * a shuffled prey roster (variety), jittered position + size so it reads as a natural scene rather than
- * four identical blobs. No periodic top-up runs in preview, so this fixed cast persists.
- */
 function seedMenuHerds(state: GameState, dayCreatures: CreatureDefinition[]): GameState {
   const map = state.worldMap;
   const h = map.length;
@@ -183,11 +152,6 @@ function seedMenuHerds(state: GameState, dayCreatures: CreatureDefinition[]): Ga
   return { ...state, mobs: [...(state.mobs ?? []), ...seeded] };
 }
 
-/**
- * MM2 backdrop wildlife: several SMALL herds spread across the centre on a jittered grid (see the
- * MENU_SCATTER_* constants) — animals scattered through the middle without forming one big clump. Each
- * cluster is anchored (leash keeps it tight); the spread-out anchors keep the clusters distinct.
- */
 function seedMenuHerdsScattered(state: GameState, dayCreatures: CreatureDefinition[]): GameState {
   const map = state.worldMap;
   const h = map.length;
@@ -219,13 +183,6 @@ function seedMenuHerdsScattered(state: GameState, dayCreatures: CreatureDefiniti
   return { ...state, mobs: [...(state.mobs ?? []), ...seeded] };
 }
 
-/**
- * Seed the initial wild population. Normal play (no `packsOverride`) scales the count with map AREA
- * via `targetEntityCount` — a 500×500 map seeds ~325 entities — and stops once the total target is
- * reached. The roster is cycled evenly so the species mix is diverse and hostiles stay the minority.
- * An explicit `packsOverride` (profiler/dev) keeps the legacy fixed-pack behaviour + flat caps for
- * benchmark comparability.
- */
 export function seedInitialEntities(
   state: GameState,
   packsOverride?: number,
@@ -233,20 +190,11 @@ export function seedInitialEntities(
 ): GameState {
   if ((state.mobs?.length ?? 0) > 0) return state;
   const preyOnly = opts?.preyOnly ?? false;
-  // Free-roaming pool EXCLUDES laired hostiles — those come only from their lair tiles (seedLairs).
-  // So this area-scaled seeding is now pure wildlife (prey + neutral roamers). The menu-preview's
-  // `preyOnly` additionally drops any free-roaming predator so the backdrop never spawns a hunt.
-  // §2e: the initial seed places ONE pack of EACH distinct creature (variety), which would otherwise
-  // put a T3-T5 ELITE/BOSS on a fresh map (a day-1 direboar/great_boar for a non-laired species). Cap
-  // the initial roster at COMMON tiers (T1-T2 + un-laddered, `tier ?? 2`); elites emerge later via the
-  // tier-weighted ambient spawner, and bosses only via Phase-3 lair escalation.
   const dayCreatures = CREATURES.filter(
     (c) => !c.nightOnly && !c.lair && (c.tier ?? 2) < 3 && (!preyOnly || !c.predator)
   );
   if (dayCreatures.length === 0) return state;
 
-  // MENU-PREVIEW: a hand-framed cast, not the area-scaled wildlife of real play. Default = four corner
-  // herds (MM1); `scatter` = several small herds spread across the centre (MM2).
   if (preyOnly)
     return opts?.scatter
       ? seedMenuHerdsScattered(state, dayCreatures)
@@ -255,20 +203,14 @@ export function seedInitialEntities(
   const h = state.worldMap.length;
   const w = state.worldMap[0]?.length ?? 0;
   const fixed = packsOverride !== undefined;
-  // Total population target (null = no total cap → fixed-pack profiler path runs exactly `packs`).
   const target = fixed ? null : targetEntityCount(w, h);
   const caps = fixed ? { hostile: MAX_HOSTILE, neutral: MAX_NEUTRAL } : populationCaps(w, h);
-  // Generous pack count: avg pack ≈ 4, so target/2 packs guarantees the total target is the real
-  // limit (we break on it), not the pack count.
   const packs = fixed ? packsOverride! : Math.ceil(target! / 2);
 
   const seeded: Mob[] = [];
   let hostile = 0;
   let neutral = 0;
 
-  // Guarantee variety: attempt one pack of EACH distinct day creature first (shuffled), then cycle
-  // the roster for the remaining slots. Without this, the seeded RNG could pick the same few
-  // creatures every time, so a species like wolf would "never spawn anymore".
   const shuffled = [...dayCreatures].sort(() => rng.random() - 0.5);
   const picks: CreatureDefinition[] = Array.from(
     { length: packs },
@@ -286,8 +228,6 @@ export function seedInitialEntities(
     const [packMin, packMax] = def.pack;
     const packSize = packMin + Math.floor(rng.random() * (packMax - packMin + 1));
     for (let i = 0; i < packSize; i++) {
-      // Pack-mates spread to an adjacent tile only if it's also spawnable, else stack on origin —
-      // never spill onto water/mountain.
       let tile = origin;
       if (i > 0) {
         const cand = findNearbyWalkable(state, origin.x, origin.y);
@@ -299,14 +239,11 @@ export function seedInitialEntities(
     }
   }
 
-  // Laired hostiles: one bound pack per lair tile (skipped on the fixed/profiler path for benchmark
-  // stability, and on the prey-only menu preview). These are the SOLE source of laired hostiles.
   const lairMobs = fixed || preyOnly ? [] : seedLairs(state, SEED_HUNGER_GRACE);
 
   return { ...state, mobs: [...(state.mobs ?? []), ...seeded, ...lairMobs] };
 }
 
-/** Set of resource ids flagged `lair: true`. */
 function lairResourceIds(): Set<string> {
   return new Set(
     resourceObjectService
@@ -316,7 +253,6 @@ function lairResourceIds(): Set<string> {
   );
 }
 
-/** Day creatures bound to each lair id (nightOnly excluded — they spawn via the periodic spawner). */
 function creaturesByLair(lairIds: Set<string>): Map<string, CreatureDefinition[]> {
   const byLair = new Map<string, CreatureDefinition[]>();
   for (const c of CREATURES) {
@@ -329,14 +265,8 @@ function creaturesByLair(lairIds: Set<string>): Map<string, CreatureDefinition[]
   return byLair;
 }
 
-/** §2e tier spawn rarity: relative pick weight by ladder `tier` (1 = chaff … 5 = boss). Untiered
- *  creatures count as the T2 baseline. **T5 is 0** — a boss NEVER arrives via the ambient spawner or a
- *  fresh den; it is Phase-3 escalation-only (until that lands, bosses exist for dev-spawn/testing). */
 export const TIER_SPAWN_WEIGHT: Record<number, number> = { 1: 1.6, 2: 1.0, 3: 0.3, 4: 0.1, 5: 0 };
 
-/** Weighted pick over a creature pool by ladder tier (seeded rng). Returns undefined when the pool is
- *  empty or all-zero-weight (e.g. only bosses). Replaces the old uniform `pool[floor(random*len)]` in
- *  every spawn path, so T1 chaff dominates, elites are rare, and T5 never ambient-spawns. */
 export function pickWeightedByTier(pool: CreatureDefinition[]): CreatureDefinition | undefined {
   let total = 0;
   for (const c of pool) total += TIER_SPAWN_WEIGHT[c.tier ?? 2] ?? 1;
@@ -349,13 +279,6 @@ export function pickWeightedByTier(pool: CreatureDefinition[]): CreatureDefiniti
   return undefined;
 }
 
-/** SPECIES-first pick for a MIXED-species pool (a shared lair): choose a SPECIES uniformly, then the
- *  individual within it by tier weight (`pickWeightedByTier`). This keeps every species EQUALLY likely
- *  no matter how deep its ladder is — without it, a species with 13 variants (bear/spider) drowned out
- *  its lair-mates with only 2 (hippogriff/owlbear/sabretooth): 41% vs ~6% of every `predator_den` seed.
- *  A creature with no `species` is its own singleton group. Falls back to a whole-pool weighted pick if
- *  the chosen species yields nothing (e.g. a boss-only group), so it still returns a non-boss when one
- *  exists — and returns undefined only when the whole pool is empty/all-boss (preserves the T5-never rule). */
 export function pickSpeciesThenTier(pool: CreatureDefinition[]): CreatureDefinition | undefined {
   if (pool.length === 0) return undefined;
   const bySpecies = new Map<string, CreatureDefinition[]>();
@@ -370,13 +293,6 @@ export function pickSpeciesThenTier(pool: CreatureDefinition[]): CreatureDefinit
   return pickWeightedByTier(bySpecies.get(key)!) ?? pickWeightedByTier(pool);
 }
 
-/**
- * CREATURE-COMBAT §3a escalated breed pick. An escalated den (level ≥ 1) breeds UP its ladder: species-
- * first (fairness), then the variant of the group closest to the target tier `2 + level` (preferring the
- * highest tier ≤ target). A **T5 boss** is only reachable at `LAIR_MAX_ESCALATION` AND when no boss is
- * already bound to this den (`bossAlive`) — so the marquee threat is a rare climax, not a boss flood.
- * `level ≤ 0` falls back to the normal tier-weighted pick.
- */
 export function pickEscalatedCreature(
   pool: CreatureDefinition[],
   level: number,
@@ -384,7 +300,6 @@ export function pickEscalatedCreature(
 ): CreatureDefinition | undefined {
   if (level <= 0 || pool.length === 0) return pickSpeciesThenTier(pool);
   const target = level >= LAIR_MAX_ESCALATION && !bossAlive ? 5 : Math.min(2 + level, 4);
-  // species-first for the same lair-mate fairness as pickSpeciesThenTier
   const bySpecies = new Map<string, CreatureDefinition[]>();
   for (const c of pool) {
     const k = c.species ?? c.id;
@@ -394,8 +309,6 @@ export function pickEscalatedCreature(
   }
   const keys = [...bySpecies.keys()];
   const group = bySpecies.get(keys[Math.floor(rng.random() * keys.length)])!;
-  // Closest tier to target, preferring the highest tier that does NOT exceed it (a den at target T4 that
-  // has no T4 variant falls to T3, not up to a T5 boss).
   let best: CreatureDefinition | undefined;
   let bestScore = Infinity;
   for (const c of group) {
@@ -409,8 +322,6 @@ export function pickEscalatedCreature(
   return best ?? pickSpeciesThenTier(pool);
 }
 
-/** Spawn one bound pack of `def` anchored at (lairX,lairY) with the given lairId. The first mob sits
- *  on the lair tile, the rest spread to adjacent spawnable land. Every member is leashed to the lair. */
 function spawnPackAt(
   state: GameState,
   def: CreatureDefinition,
@@ -444,9 +355,6 @@ function spawnPackAt(
   return out;
 }
 
-/** Spawn `count` new hunters bound to an EXISTING lair — used by weekly growth to enlarge a living den.
- *  Unlike a fresh pack, every new hunter spreads to nearby walkable land (the den tile is likely already
- *  occupied by the current pack). */
 function spawnBoundMobs(
   state: GameState,
   def: CreatureDefinition,
@@ -476,20 +384,12 @@ function spawnBoundMobs(
   return out;
 }
 
-/** Stable per-lair day-of-week slot (0..LAIR_BREED_WEEK_DAYS-1) from a hash of the lair id, so dens breed
- *  on staggered days instead of all firing on one synchronized weekly tick. */
 function lairWeekSlot(lairId: string): number {
   let h = 0;
   for (let i = 0; i < lairId.length; i++) h = (h * 31 + lairId.charCodeAt(i)) | 0;
   return ((h % LAIR_BREED_WEEK_DAYS) + LAIR_BREED_WEEK_DAYS) % LAIR_BREED_WEEK_DAYS;
 }
 
-/**
- * Seed one bound pack at every lair tile (resources.jsonc `lair: true`). Each pack is anchored to its
- * lair (stable `lairId`, `lairX/Y`, `lairRange` from the creature def) and stays leashed there — see
- * the territory checks in entityAI.stepHostile. A mob NEVER adopts another lair, so packs can't drift
- * onto a neighbour's lair and reclaim/extend it.
- */
 function seedLairs(state: GameState, hungerGrace = 0): Mob[] {
   const lairIds = lairResourceIds();
   if (lairIds.size === 0) return [];
@@ -510,11 +410,10 @@ function seedLairs(state: GameState, hungerGrace = 0): Mob[] {
         }
       }
       if (!lairResId) continue;
-      // Opening-game bubble: leave doorstep dens dormant (worldgen keeps the resource; no pack yet).
       if (inStartingBubble(state, x, y)) continue;
       const candidates = byLair.get(lairResId);
       if (!candidates || candidates.length === 0) continue;
-      const def = pickSpeciesThenTier(candidates); // §2e species-first + tier rarity (fair to every lair-mate; T5 never seeds a den)
+      const def = pickSpeciesThenTier(candidates);
       if (!def) continue;
       seeded.push(...spawnPackAt(state, def, x, y, `lair-${lairResId}-${x}-${y}`, hungerGrace));
     }
@@ -522,12 +421,6 @@ function seedLairs(state: GameState, hungerGrace = 0): Mob[] {
   return seeded;
 }
 
-/**
- * Lair lifecycle, ticked once per in-game day (LAIR_TICK_INTERVAL). Two slow, RNG-paced behaviours:
- *  • REPOPULATE — an emptied (pack fully wiped) but UN-destroyed lair re-occupies after ~weeks.
- *  • GROW — while below the world cap (maxLairCount), a new lair grows on a random eligible grass/bush
- *    tile after ~weeks; never on the same tile as before. Destroying a lair tile stops both for it.
- */
 export function tickLairs(state: GameState): GameState {
   if (state.turn % LAIR_TICK_INTERVAL !== 0) return state;
   const lairIds = lairResourceIds();
@@ -537,7 +430,6 @@ export function tickLairs(state: GameState): GameState {
   const w = map[0]?.length ?? 0;
   if (w === 0) return state;
 
-  // Daily full-map scan for live lair tiles (resource amount > 0) — amortised, cheap per-tick.
   const lairTiles: { x: number; y: number; resId: string; lairId: string }[] = [];
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
@@ -552,8 +444,6 @@ export function tickLairs(state: GameState): GameState {
     }
   }
 
-  // Alive bound-mob count per lairId (+ which lairs already have a living T5 boss, so §3a never breeds a
-  // second one on top).
   const aliveByLair = new Map<string, number>();
   const bossByLair = new Set<string>();
   for (const m of state.mobs ?? []) {
@@ -563,17 +453,13 @@ export function tickLairs(state: GameState): GameState {
     }
   }
 
-  // §3a lair-age escalation: rebuild the per-lair level map from the LIVE lairs (so a destroyed den's
-  // entry is dropped). A living, un-cleared den outside the bubble climbs one level on a daily roll; a
-  // cleared den (pack wiped) resets to base. Only non-zero levels are kept, so the map stays sparse.
   const prevEsc = state.lairEscalation ?? {};
   const esc: Record<string, number> = {};
   for (const lt of lairTiles) {
-    if (inStartingBubble(state, lt.x, lt.y)) continue; // dormant dens don't escalate
+    if (inStartingBubble(state, lt.x, lt.y)) continue;
     const alive = aliveByLair.get(lt.lairId) ?? 0;
     let level = prevEsc[lt.lairId] ?? 0;
-    if (alive === 0)
-      level = 0; // cleared → reset to base
+    if (alive === 0) level = 0;
     else if (level < LAIR_MAX_ESCALATION && rng.random() < LAIR_ESCALATION_CHANCE) level += 1;
     if (level > 0) esc[lt.lairId] = level;
   }
@@ -582,23 +468,15 @@ export function tickLairs(state: GameState): GameState {
   const newMobs: Mob[] = [];
   const dayIndex = Math.floor(state.turn / LAIR_TICK_INTERVAL);
 
-  // Breed new hunters. A lair keeps producing its themed hunters on its OWN weekly slot (staggered by a
-  // hash of its id, so dens don't all breed on one synchronized tick) regardless of whether the current
-  // pack is alive. The weekly chance is DENSITY-SCALED — reliable at an empty/small den, ~0 as it nears
-  // LAIR_MAX_POP — so a neglected, well-fed den can creep up toward a real threat while the map as a whole
-  // doesn't flood. An emptied den returns as a fresh starter pack; a living one grows by a single hunter.
   for (const lt of lairTiles) {
-    if (inStartingBubble(state, lt.x, lt.y)) continue; // stay dormant inside the opening-game bubble
-    if (dayIndex % LAIR_BREED_WEEK_DAYS !== lairWeekSlot(lt.lairId)) continue; // not this lair's day
+    if (inStartingBubble(state, lt.x, lt.y)) continue;
+    if (dayIndex % LAIR_BREED_WEEK_DAYS !== lairWeekSlot(lt.lairId)) continue;
     const alive = aliveByLair.get(lt.lairId) ?? 0;
-    if (alive >= LAIR_MAX_POP) continue; // at the per-den ceiling
+    if (alive >= LAIR_MAX_POP) continue;
     const breedChance = LAIR_BREED_BASE * (1 - alive / LAIR_MAX_POP);
     if (rng.random() >= breedChance) continue;
     const cands = byLair.get(lt.resId);
     if (!cands || cands.length === 0) continue;
-    // §3a: an escalated den breeds UP its ladder (pickEscalatedCreature); a base den keeps the normal
-    // tier-weighted pick. A repopulate-from-empty (alive === 0) already reset to base above, so it seeds
-    // a fresh starter pack, never an escalated one — you cleared it, it's back to base.
     const level = esc[lt.lairId] ?? 0;
     const def =
       level > 0
@@ -610,21 +488,17 @@ export function tickLairs(state: GameState): GameState {
         ? spawnPackAt(state, def, lt.x, lt.y, lt.lairId)
         : spawnBoundMobs(state, def, lt.x, lt.y, lt.lairId, 1))
     );
-    // Spawning the boss SPENDS the buildup: reset this den to base so it must re-accrue for the next one
-    // (prevents a maxed den flooding bosses as they die).
     if ((def.tier ?? 2) >= 5) {
       delete esc[lt.lairId];
       bossByLair.add(lt.lairId);
     }
   }
 
-  // Grow a NEW lair somewhere on the map (~1/month via LAIR_GROW_CHANCE), toward the world cap and no
-  // closer than MIN_LAIR_SPACING to an existing den.
   if (lairTiles.length < maxLairCount(w, h) && rng.random() < LAIR_GROW_CHANCE) {
     const placed = tryPlaceNewLair(state, lairTiles);
     if (placed) {
       const cands = byLair.get(placed.resId);
-      const def = cands && cands.length > 0 ? pickSpeciesThenTier(cands) : undefined; // §2e species-first + tier rarity
+      const def = cands && cands.length > 0 ? pickSpeciesThenTier(cands) : undefined;
       if (def) {
         newMobs.push(
           ...spawnPackAt(
@@ -639,21 +513,17 @@ export function tickLairs(state: GameState): GameState {
     }
   }
 
-  // Escalation map changed if any level was added/removed/bumped vs last tick.
   const prevKeys = Object.keys(prevEsc);
   const escChanged =
     prevKeys.length !== Object.keys(esc).length ||
     prevKeys.some((k) => prevEsc[k] !== esc[k]) ||
     Object.keys(esc).some((k) => esc[k] !== prevEsc[k]);
 
-  if (newMobs.length === 0 && !escChanged) return state; // worldMap mutations shipped via markTileDirty
+  if (newMobs.length === 0 && !escChanged) return state;
   const mobs = newMobs.length ? [...(state.mobs ?? []), ...newMobs] : state.mobs;
   return { ...state, mobs, lairEscalation: esc };
 }
 
-/** Try to place ONE new lair on a random eligible grass/bush tile (a lair def's own spawn subterrains).
- *  Mutates the tile's resources IN PLACE + ships a tile delta (mirrors harvest.ts). Returns the placed
- *  tile, or null if no clean spot was found in a bounded number of tries. */
 function tryPlaceNewLair(
   state: GameState,
   existingLairs: { x: number; y: number }[]
@@ -671,27 +541,19 @@ function tryPlaceNewLair(
     const y = EDGE_BUFFER + Math.floor(rng.random() * (h - 2 * EDGE_BUFFER));
     const tile = map[y]?.[x];
     if (!tile) continue;
-    if (inStartingBubble(state, x, y)) continue; // no new dens on the doorstep during the first month
+    if (inStartingBubble(state, x, y)) continue;
     if (!subs.includes(tile.subType)) continue;
     if (!isSpawnableTile(tile)) continue;
-    // Spacing: never grow a den within MIN_LAIR_SPACING (Chebyshev) of an existing one — no clusters.
     if (existingLairs.some((l) => chebyshev(l.x, l.y, x, y) < MIN_LAIR_SPACING)) continue;
     const res = tile.resources;
-    // Keep it clean: don't grow onto a tile already carrying a resource (incl. another lair).
     if (res && Object.keys(res).some((k) => (res[k] ?? 0) > 0)) continue;
     tile.resources = { ...(tile.resources ?? {}), [def.id]: 1 };
-    markTileDirty(y, x, tile); // lairs are walkable, so no walkability patch needed
+    markTileDirty(y, x, tile);
     return { x, y, resId: def.id };
   }
   return null;
 }
 
-/**
- * Debug spawner: force `count` mobs onto the map regardless of the current mob count or caps
- * (the in-game debug menu's "spawn entities" button). When `creatureId` is given, spawns that
- * species; otherwise picks day-creatures at random. Each spawn lands on a biome-valid tile away
- * from the colony (falls back to a nearby walkable). Worker-safe — pure transform.
- */
 export function devSpawnMobs(state: GameState, count = 5, creatureId?: string): GameState {
   const pool = creatureId
     ? CREATURES.filter((c) => c.id === creatureId)
@@ -704,12 +566,6 @@ export function devSpawnMobs(state: GameState, count = 5, creatureId?: string): 
     const origin = findSpawnTile(state, def) ?? findNearbyWalkable(state, 0, 0);
     if (!origin) continue;
     const mob = makeMob(def, origin.x, origin.y, state.turn);
-    // A HUNTER needs a lair, or the leash give-up (stepEntities' territorial pull-home) never fires —
-    // the leash is gated on `lairId != null`, so a lairless hunter that chases prey onto an unreachable
-    // tile stays wedged in Hunting forever (found via the headless creature monitor). Natural spawns are
-    // always laired (seedLairs / spawnPackAt); the dev tool skipped it. Anchor each dev hunter's lair to
-    // its own spawn tile with the def's leash radius (same convention as spawnPackAt). Turn-derived id so
-    // a scenario build replays byte-identically (ADR-033).
     if (def.predator || def.diet === 'carnivore') {
       mob.lairId = `dev-lair-${def.id}-${origin.x}-${origin.y}-t${state.turn}`;
       mob.lairX = origin.x;
@@ -722,9 +578,6 @@ export function devSpawnMobs(state: GameState, count = 5, creatureId?: string): 
   return { ...state, mobs: [...(state.mobs ?? []), ...seeded] };
 }
 
-/** DEBUG (HEADLESS-SIM): spawn ONE mob of `creatureId` at a chosen tile (or the nearest walkable) —
- *  the controlled-placement counterpart to devSpawnMobs, so a test can stand a hostile next to an armed
- *  pawn. Predators get a lair anchored at the spawn (same as devSpawnMobs) so the leash give-up works. */
 export function devSpawnMobAt(
   state: GameState,
   creatureId: string,
@@ -746,10 +599,7 @@ export function devSpawnMobAt(
   return { ...state, mobs: [...(state.mobs ?? []), mob] };
 }
 
-// ===== SPAWNING =================================================================
-
 export function spawnEntities(state: GameState, opts?: { preyOnly?: boolean }): GameState {
-  // Only roll on the spawn-check cadence to keep per-tick cost ~zero.
   if (state.turn % SPAWN_CHECK_INTERVAL !== 0) return state;
 
   const mobs = state.mobs ?? [];
@@ -761,8 +611,6 @@ export function spawnEntities(state: GameState, opts?: { preyOnly?: boolean }): 
   const hostileCount = live.filter((m) => m.entityClass === 'mob').length;
   const neutralCount = live.filter((m) => m.entityClass === 'animal').length;
 
-  // Area-scaled caps from the live map. The total guard keeps the population near the map's target
-  // instead of letting both per-class caps stack to a larger combined total.
   const caps = populationCaps(state.worldMap[0]?.length ?? 0, state.worldMap.length);
   if (live.length >= caps.total) return state;
 
@@ -778,8 +626,6 @@ export function spawnEntities(state: GameState, opts?: { preyOnly?: boolean }): 
   const packSize = packMin + Math.floor(rng.random() * (packMax - packMin + 1));
   const newMobs: Mob[] = [];
   for (let i = 0; i < packSize; i++) {
-    // Pack-mates spread to an adjacent tile, but only if it's also spawnable — otherwise they stack
-    // on the (already-validated) origin rather than spilling onto water/mountain.
     let tile = origin;
     if (i > 0) {
       const cand = findNearbyWalkable(state, origin.x, origin.y);
@@ -795,17 +641,13 @@ export function pickSpawnCreature(
   isNight: boolean,
   preyOnly = false
 ): CreatureDefinition | undefined {
-  // Laired hostiles never spawn via the periodic spawner — their population is fixed by lair tiles.
-  // `preyOnly` (menu preview) further drops predators so the backdrop stays a peaceful graze.
   const pool = CREATURES.filter(
     (c) => !c.lair && (!c.nightOnly || isNight) && (!preyOnly || !c.predator)
   );
   if (pool.length === 0) return undefined;
-  return pickWeightedByTier(pool); // §2e tier rarity: T1 chaff common, elites rare, T5 never
+  return pickWeightedByTier(pool);
 }
 
-/** Any mountain tile within Chebyshev radius `r` of (x, y)? Used to keep mountain-edge grazers near
- *  the peaks they belong to (mountains themselves aren't spawnable). */
 function isNearMountain(map: GameState['worldMap'], x: number, y: number, r: number): boolean {
   for (let dy = -r; dy <= r; dy++) {
     for (let dx = -r; dx <= r; dx++) {
@@ -832,12 +674,9 @@ export function findSpawnTile(
     const tile = map[y]?.[x];
     if (!tile) continue;
     if (def.spawnsInMountain) {
-      // Mountain dwellers (incorporeal wraiths): any mountain tile, even non-walkable rock.
       if (tile.terrainType !== 'mountain') continue;
     } else {
-      // Hard rule: creatures only spawn on walkable forest/plains/swamp land — never water/mountain.
       if (!isSpawnableTile(tile)) continue;
-      // Mountain-edge grazers: must also be within range of a mountain tile.
       if (
         def.maxMountainDistance !== undefined &&
         !isNearMountain(map, x, y, def.maxMountainDistance)
@@ -847,10 +686,8 @@ export function findSpawnTile(
 
     const weight = def.biomeWeights[tile.terrainType] ?? 0;
     if (weight <= 0) continue;
-    // Probabilistic accept by biome weight (max weight 1.2 → clamp).
     if (rng.random() > Math.min(1, weight)) continue;
 
-    // Keep spawns away from the colony.
     const tooClose = pawnPositions.some(
       (p) => Math.abs(p.x - x) < MIN_PAWN_DISTANCE && Math.abs(p.y - y) < MIN_PAWN_DISTANCE
     );
@@ -871,13 +708,7 @@ export function makeMob(
   const initialState: MobState = def.behaviour === 'passive' ? 'Grazing' : 'Wander';
   const sizeClass: 'large' | 'medium' | 'small' =
     def.stats.strength >= 14 ? 'large' : def.stats.strength >= 6 ? 'medium' : 'small';
-  // bodyScale (default 1.0) enlarges the creature's blood/health POOL so a big beast soaks a whole
-  // squad's hits before bleeding out — the durability half of the big-creature fix (the shared body-part
-  // HP table is intentionally NOT rescaled; naturalArmor + this larger pool carry it). RANGED note: this
-  // is the same field that softly scales its natural-weapon damage in Combat.attackerProfile.
   const bodyScale = def.bodyScale ?? 1;
-  // §2a per-spawn stat spread: a named core stat rolls uniformly in its [min,max] band (seeded), else
-  // the fixed def value. Base creatures author no `statRanges` → identical to before (fixed stats).
   const sr = def.statRanges;
   const stats: EntityStats = {
     strength: rollStatRange(sr?.strength, def.stats.strength),
@@ -887,31 +718,16 @@ export function makeMob(
     intelligence: def.behaviour === 'passive' ? 4 : 8,
     charisma: 5
   };
-  // COMBAT-BALANCE tasks 8–9: a creature's combat aptitudes come from its OWN stat block, not from a
-  // roll — its stats are its design. This reproduces the pre-decoupling formulas exactly, so encounter
-  // pacing is unchanged while pawns move onto the rolled axis.
   const aptitudes = creatureAptitudes(stats);
-  // Blood/health pool tracks the ROLLED constitution (con×5), so a tougher individual soaks more — for a
-  // base creature (no range) this equals the old def.stats.health.
   const scaledHealth = Math.round(stats.constitution * 5 * bodyScale);
-  // §2a per-spawn natural-armour spread (individual elites vary in hide toughness); absent = fixed.
   const naturalArmorOverride = def.naturalArmorRange
     ? Math.round(
         def.naturalArmorRange[0] +
           rng.random() * (def.naturalArmorRange[1] - def.naturalArmorRange[0])
       )
     : undefined;
-  // §2c a geared humanoid draws its worn loadout (quality + condition rolled) from its lootpool.
   const equipment = def.lootPool ? equipFromLootPool(def.lootPool) : undefined;
-  // ENGINE-PERFORMANCE-II §S5: STAGGER initial hunger across mobs. Spawning every mob at hunger 0 made
-  // them all cross HUNGER_EAT_THRESHOLD on the SAME tick → a synchronized hunt→combat wave that collapsed
-  // TPS (the engagement-wave spike). A uniform spread over [0, threshold) desyncs the first hunt: each
-  // mob reaches the threshold at a different time, so hunts (and thus combat) smear across the fill
-  // window instead of firing all at once. Deterministic (seeded rng). Fatigue gets a smaller spread so
-  // sleep/wake cycles desync too.
   const needs: EntityNeeds = {
-    // §S5 stagger over [0, threshold); minus `hungerGrace` for the game-start seed so the band sits
-    // negative (satiated) and predators don't hunt until they climb back to the eat threshold.
     hunger: rng.random() * HUNGER_EAT_THRESHOLD - hungerGrace,
     fatigue: rng.random() * 20,
     sleep: 0,
@@ -923,9 +739,7 @@ export function makeMob(
     debugId: idCounter++,
     creatureId: def.id,
     entityClass: def.entityClass,
-    // PAWN-GROWTH: a rolled age (display-only flavour — creatures don't grow like pawns).
     age: rng.int(1, 12),
-    // Sex rolled 50/50 at spawn (display flavour) — unless the creature is sexless (wraith/ooze).
     sex: def.sex === false ? undefined : rng.chance(0.5) ? 'male' : 'female',
     x,
     y,
@@ -939,7 +753,6 @@ export function makeMob(
     conditions: [],
     stats,
     aptitudes,
-    // ── Full health/survival parity with Pawn ────────────────────────────────────────
     bloodVolume: scaledHealth,
     maxBloodVolume: scaledHealth,
     isAlive: true,
@@ -947,12 +760,7 @@ export function makeMob(
     skills: {},
     stamina: calcMaxStamina(stats),
     maxStamina: calcMaxStamina(stats),
-    // Anatomy from the creature's body plan (limbmap.jsonc — wolves get paws + a tail, not fingers),
-    // with each part's HP scaled by bodyScale (bigger beast = bigger, tougher limbs).
     limbs: createBodyPlanLimbs(def.limbMap ?? DEFAULT_PLAN, bodyScale),
-    // ── Combat & stat parity with Pawn ───────────────────────────────────────────
-    // CreatureDefinition has no explicit size; derive a size class from strength
-    // (bear str 22 → large, wolf 12 → medium, rabbit 1 → small).
     physicalTraits: {
       height: sizeClass === 'large' ? 180 : sizeClass === 'medium' ? 140 : 80,
       weight: sizeClass === 'large' ? 90 : sizeClass === 'medium' ? 50 : 20,
@@ -963,32 +771,22 @@ export function makeMob(
     aggroRange: def.behaviour === 'aggressive' ? 8 : 3,
     attackCooldown: 0,
     conditionTimers: {},
-    // §4.0 shared lineage lines: resolve the creature def's trait ids to full Trait defs (an
-    // orc_reaver carries Adrenal S1) — the stat/resistance/weaponBonus/combatMods effects flow
-    // through the same `'traits' in entity` reads as a pawn's.
     ...(def.traits?.length
       ? {
           traits: def.traits.map((id) => TRAIT_DATABASE.find((t) => t.id === id)).filter((t) => !!t)
         }
       : {}),
-    // §2a/§2c spawn-rolled extras (omitted for a plain base creature).
     ...(naturalArmorOverride !== undefined ? { naturalArmorOverride } : {}),
     ...(equipment ? { equipment } : {}),
-    // §2e T5 bosses get a procedurally rolled legend name (mirrors the pawn name system) so every boss
-    // is unique — the creature def keeps a generic name ("Great Wolf") for menus / the threat table.
     ...(def.tier === 5 ? { name: generateBossName(def.species) } : {})
   };
 }
 
-/** §2a: roll a core stat from its optional [min,max] band (seeded), else the fixed value. */
 function rollStatRange(range: [number, number] | undefined, fallback: number): number {
   if (!range) return fallback;
   return Math.round(range[0] + rng.random() * (range[1] - range[0]));
 }
 
-/** §2c: build a mob's worn equipment from a lootpool — draw the loadout, then stamp each drawn piece
- *  with a rolled quality tier + a worn starting durability (conditionRange × the item's max). Returns
- *  undefined when the pool is missing/empty so a mob without gear carries no `equipment` field. */
 export function equipFromLootPool(poolId: string): PawnEquipment | undefined {
   const pool = getLootPool(poolId);
   if (!pool) return undefined;
@@ -997,15 +795,13 @@ export function equipFromLootPool(poolId: string): PawnEquipment | undefined {
   const eq: Record<string, ItemInstance> = {};
   for (const p of pieces) {
     const item = itemService.getItemById(p.itemId);
-    if (!item) continue; // defensive — ids are validated at load (validateLootItemIds)
+    if (!item) continue;
     const maxDur = item.maxDurability ?? 100;
     const inst: ItemInstance = {
       instanceId: `loot-${p.itemId}-${idCounter}-${Math.floor(rng.random() * 1e6)}`,
       itemId: p.itemId,
       durability: Math.max(1, Math.round(maxDur * rollCondition(pool, rng))),
       quality: p.quality,
-      // §4b: a famed boss weapon spawns already carrying its rolled legend (name/history/×2–5 stat
-      // mult/enchants) — combat reads `famedStatMult`, and death drops the whole instance via dropMobGear.
       ...(p.famed ? { famed: true, ...p.famed } : {})
     };
     eq[p.slot] = inst;
@@ -1013,7 +809,4 @@ export function equipFromLootPool(poolId: string): PawnEquipment | undefined {
   return Object.keys(eq).length > 0 ? (eq as PawnEquipment) : undefined;
 }
 
-// Validate every lootpool item id against ItemService at module load — a typo must fail loud, not
-// silently ship an unarmed raider. (LootPools validates slot keys; item-id validation needs
-// ItemService, which lives in this layer.) No-op while the pools are empty.
 validateLootItemIds((id) => itemService.getItemById(id) != null);

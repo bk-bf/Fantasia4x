@@ -1,12 +1,3 @@
-// KingdomService (KINGDOMS-TRADE) — the world political layer's runtime logic:
-//   · daily facet drift (leaders die, wealth shifts, famed items change hands) — what makes
-//     revealed knowledge go stale (§2)
-//   · hidden knowledge xp + contact snapshots (tiered lore reveal, staleness)
-//   · visitor/caravan cadence + arrival scheduling, weighted by relations AND colony wealth (§3)
-//   · barter pricing: item values shifted by the trading pawn's `trade` stat and by kingdom
-//     relations — gold bars anchor (skill/relation-independent) (§4)
-// Runs once per in-game DAY from the engine's events phase — never per tick (no hot-path cost).
-
 import type {
   CaravanGood,
   GameState,
@@ -46,12 +37,8 @@ import events from '../database/social/events.jsonc';
 
 const TICKS_PER_DAY = TURNS_PER_DAY * TICKS_PER_SECOND;
 
-/** Mutable-facet knowledge greys out after ~a month without contact (§2). */
 const STALE_AFTER_TICKS = 30 * TICKS_PER_DAY;
 
-/** Arrival-scheduling tuning (cadence, backoffs, trade-split) — data-driven, see
- *  database/social/events.jsonc. One clock paces both visitors and caravans; the shared cadence + backoffs
- *  live under `visitors`, the caravan upgrade chance under `caravan`. */
 const ARRIVAL = events as {
   visitors: {
     baseCadenceDays: number;
@@ -69,20 +56,15 @@ const ARRIVAL = events as {
 };
 const V = ARRIVAL.visitors;
 
-/** Knowledge xp awards. */
 export const KNOWLEDGE_XP = {
-  arrival: 6, // a party arrives and is received
-  presencePerDay: 2, // pawns mingle while a party is on the map
-  tradeCompleted: 8 // a barter deal closed (scaled by the pawn's trade stat)
+  arrival: 6,
+  presencePerDay: 2,
+  tradeCompleted: 8
 };
 
-/** Colony-wealth tier 0–4 (mirrors kingdom wealth bands) from total stockpile value. */
 const WEALTH_TIER_THRESHOLDS = [0, 300, 1000, 3000, 8000];
 
 class KingdomServiceImpl {
-  // ─── Daily tick (events phase) ─────────────────────────────────────────────
-
-  /** Everything kingdom-flavoured that happens once per in-game day. */
   processKingdomsDaily(state: GameState): GameState {
     if (!state.kingdoms || state.kingdoms.length === 0) return state;
     let s = state;
@@ -92,7 +74,6 @@ class KingdomServiceImpl {
     return s;
   }
 
-  /** Mutable facets drift: successions, fortunes, treasures changing hands (§1/§2). */
   private driftFacets(state: GameState): GameState {
     let changed = false;
     const kingdoms = state.kingdoms!.map((k) => {
@@ -128,7 +109,6 @@ class KingdomServiceImpl {
     return changed ? { ...state, kingdoms } : state;
   }
 
-  /** Party upkeep: passive contact/knowledge while present, departure on schedule or wipe. */
   private tickParties(state: GameState): GameState {
     const parties = state.kingdomParties;
     if (!parties || parties.length === 0) return state;
@@ -145,11 +125,9 @@ class KingdomServiceImpl {
     return s;
   }
 
-  /** Roll the next visitor/caravan arrival when the cadence clock comes due (§3). */
   private maybeScheduleArrival(state: GameState): GameState {
     const turn = state.turn;
     if (state.nextKingdomVisitTurn == null) {
-      // First-ever clock: give the young colony a few quiet days.
       return {
         ...state,
         nextKingdomVisitTurn:
@@ -157,7 +135,6 @@ class KingdomServiceImpl {
       };
     }
     if (turn < state.nextKingdomVisitTurn) return state;
-    // One party at a time, and never while another decision is pending.
     if (state.pendingEvent || (state.kingdomParties?.length ?? 0) > 0) {
       return { ...state, nextKingdomVisitTurn: turn + V.busyBackoffDays * TICKS_PER_DAY };
     }
@@ -166,8 +143,6 @@ class KingdomServiceImpl {
     if (eligible.length === 0) {
       return { ...state, nextKingdomVisitTurn: turn + V.noSenderBackoffDays * TICKS_PER_DAY };
     }
-    // Relation-weighted pick — friendlier kingdoms visit more often, and a realm where the colony
-    // has kin pulls a little harder (a relative nudges the caravan this way).
     const weights = eligible.map(
       (e) =>
         Math.max(1, e.relation.score + 40) +
@@ -184,8 +159,6 @@ class KingdomServiceImpl {
       }
     }
 
-    // Only a town-or-larger power (prosperous+) mounts a trade caravan across the map; small
-    // hamlets and villages send friendly visitors, not wares. Scale = influence.
     const canTrade = WEALTH_BANDS.indexOf(picked.kingdom.lore.wealthBand) >= 2;
     const kind: KingdomParty['kind'] =
       canTrade && rng.random() < ARRIVAL.caravan.tradeChance ? 'caravan' : 'visitor';
@@ -201,8 +174,6 @@ class KingdomServiceImpl {
     }
     let s = spawned.state;
     s = this.recordContact(s, picked.kingdom.id, KNOWLEDGE_XP.arrival);
-    // SOCIAL-LAYER: a founder's off-colony relative may travel with the party (refresh their
-    // "last known" + rename the lead mob to them).
     s = this.reuniteKin(s, picked.kingdom.id, spawned.party);
     const lead = this.partyLead(s, spawned.party);
     this.logArrival(
@@ -226,12 +197,6 @@ class KingdomServiceImpl {
     return s;
   }
 
-  /**
-   * DEBUG: force a visitor or caravan to arrive NOW, ignoring the cadence and eligibility gates
-   * (the DEBUG tab's "trigger event" buttons). For a caravan it prefers a town-or-larger power (one
-   * that actually has wares); otherwise any non-raider kingdom. Returns state unchanged only if
-   * there are no non-raider kingdoms at all.
-   */
   forceArrival(state: GameState, kind?: KingdomParty['kind']): GameState {
     const nonRaider = (state.kingdoms ?? []).filter((k) => k.relationBias !== 'always_hostile');
     if (nonRaider.length === 0) return state;
@@ -273,9 +238,6 @@ class KingdomServiceImpl {
     };
   }
 
-  /** Chronicle the moment a party crosses onto the map (mirrors the migrant-wave "approaches" log).
-   *  `focus` (the trader/lead mob's tile + id) makes the entry click-to-jump: pan the camera to the
-   *  party and select its lead. */
   private logArrival(
     turn: number,
     kingdomName: string,
@@ -296,14 +258,11 @@ class KingdomServiceImpl {
     });
   }
 
-  /** The lead mob (trader, or first member) of a spawned party, for camera focus / selection. */
   private partyLead(state: GameState, party: KingdomParty): Mob | undefined {
     const id = party.traderMobId ?? party.mobIds[0];
     return (state.mobs ?? []).find((m) => m.id === id);
   }
 
-  /** SOCIAL-LAYER: off-colony relatives (`worldPawns`) who live in `kingdomId` and are kin to a
-   *  LIVING colony pawn — the pool a caravan from that realm might carry home. */
   private colonyKinInKingdom(state: GameState, kingdomId: string): Pawn[] {
     const worldKin = (state.worldPawns ?? []).filter((w) => w.homeKingdomId === kingdomId);
     if (worldKin.length === 0) return [];
@@ -315,27 +274,20 @@ class KingdomServiceImpl {
     return worldKin.filter((w) => kinIds.has(w.id));
   }
 
-  /** SOCIAL-LAYER: with a bias, seat one of the colony's relatives from `kingdomId` in the arriving
-   *  party — refresh their "last known" snapshot (staleness), rename the lead mob to them, tag the
-   *  party, and post the news. No-op when the realm holds no colony kin (or the roll declines). */
   private reuniteKin(state: GameState, kingdomId: string, party: KingdomParty): GameState {
     const candidates = this.colonyKinInKingdom(state, kingdomId);
     if (candidates.length === 0 || rng.random() > 0.6) return state;
     const visitor = rng.pick(candidates);
     const turn = state.turn;
-    // Whose relative, and what tie (for the chronicle + card wording).
     const founder = state.pawns.find((p) => (p.kin ?? []).some((k) => k.pawnId === visitor.id));
     const tie = founder?.kin?.find((k) => k.pawnId === visitor.id);
     const phrase =
       founder && tie
         ? kinRelationPhrase(tie.kind, founder.name.split(' ')[0], visitor.sex)
         : 'a relative';
-    // Refresh staleness (new worldPawns ref so the slim sectional diff ships it — this is the ONLY
-    // time worldPawns changes after gen, and it's daily-gated).
     const worldPawns = (state.worldPawns ?? []).map((p) =>
       p.id === visitor.id ? { ...p, lastSeenTurn: turn } : p
     );
-    // Rename the lead mob to the relative + tag its tie.
     const leadId = party.traderMobId ?? party.mobIds[0];
     const mobs = (state.mobs ?? []).map((m) =>
       m.id === leadId ? { ...m, name: visitor.name, worldKinRelation: phrase } : m
@@ -358,21 +310,18 @@ class KingdomServiceImpl {
     return { ...state, worldPawns, mobs, kingdomParties };
   }
 
-  /** Non-hostile kingdoms with a colony relation — raiders never visit or trade. */
   private eligibleSenders(state: GameState): { kingdom: Kingdom; relation: KingdomRelation }[] {
     const out: { kingdom: Kingdom; relation: KingdomRelation }[] = [];
     for (const k of state.kingdoms ?? []) {
       if (k.relationBias === 'always_hostile') continue;
       const rel = findKingdomRelation(state.kingdomRelations ?? [], COLONY_RELATION_ID, k.id);
       if (!rel) continue;
-      // Neutral-or-better sends caravans/visitors; wary/hostile stay away (raids are future work).
       if (rel.score <= -20) continue;
       out.push({ kingdom: k, relation: rel });
     }
     return out;
   }
 
-  /** Cadence squeeze: wealthier colonies and warmer relations pull more frequent parties. */
   private nextCadenceTicks(state: GameState, relationScore: number, wealthTier: number): number {
     const freq = clamp(
       1 - V.cadenceWealthSqueeze * wealthTier - relationScore / V.cadenceRelationDivisor,
@@ -386,11 +335,6 @@ class KingdomServiceImpl {
     );
   }
 
-  // ─── Knowledge & contact (§2) ──────────────────────────────────────────────
-
-  /** Positive contact: discover, gain knowledge xp, refresh the known-facts snapshot + clock.
-   *  Also grows the CULTURE pokédex (RACE-SYSTEM Phase 2): meeting a kingdom's people introduces
-   *  their dominant culture on first contact; the rest of the mix once the colony is familiar. */
   recordContact(state: GameState, kingdomId: string, xp: number): GameState {
     let contacted: Kingdom | undefined;
     const kingdoms = (state.kingdoms ?? []).map((k) => {
@@ -432,18 +376,11 @@ class KingdomServiceImpl {
     };
   }
 
-  /** True when the mutable facets should render greyed — "as last you knew" (§2). */
   isKnowledgeStale(kingdom: Kingdom, turn: number): boolean {
     if (kingdom.lastContactTurn == null) return true;
     return turn - kingdom.lastContactTurn > STALE_AFTER_TICKS;
   }
 
-  /**
-   * SEEDED knowledge (BACKGROUNDS) — a founder/migrant remembers their homeland (and places they
-   * travelled) from before they arrived. Like {@link recordContact} but capped below "complete" and
-   * with **no `lastContactTurn`**, so the mutable facets render immediately as a stale memory
-   * ("as last you knew") until real contact refreshes them.
-   */
   seedKnowledge(state: GameState, kingdomId: string, xp: number, via?: string): GameState {
     if (xp <= 0) return state;
     let seeded: Kingdom | undefined;
@@ -454,7 +391,6 @@ class KingdomServiceImpl {
         discovered: true,
         knownVia: k.knownVia ?? via,
         knowledge: Math.min(SEED_KNOWLEDGE_CAP, k.knowledge + xp),
-        // deliberately NO lastContactTurn — a remembered homeland reads as out of date.
         known: k.known ?? {
           leaderName: k.lore.leaderName,
           wealthBand: k.lore.wealthBand,
@@ -468,7 +404,6 @@ class KingdomServiceImpl {
       return seeded;
     });
     if (!seeded) return state;
-    // Grow the culture pokédex the same way contact does (RACE-SYSTEM Phase 2).
     const familiar = knowledgeTier(seeded.knowledge) >= 2;
     const metCultureIds = new Set(
       (familiar ? seeded.cultureMix : seeded.cultureMix.slice(0, 1)).map((s) => s.cultureId)
@@ -490,18 +425,6 @@ class KingdomServiceImpl {
     };
   }
 
-  /**
-   * Seed the colony's kingdom knowledge from a set of pawns' backgrounds — their home kingdom (grew
-   * up there) plus, if `includeWorldliness`, a few OTHER kingdoms that travelled backgrounds know.
-   * Run at colony gen and when migrants join. Knowledge is shared/colony-level and persists once
-   * learned.
-   *
-   * **Founders skip worldliness** (`includeWorldliness: false`): a founding colonist remembers their
-   * homeland, but the "I've heard of three far realms" flavour is what made a 5-person colony start
-   * knowing a whole atlas — so a fresh colony learns only where its founders are actually FROM.
-   * Migrants keep worldliness (a wandering newcomer genuinely brings word of distant places, and
-   * they trickle in one at a time rather than flooding the pokédex).
-   */
   seedKingdomKnowledgeFromPawns(
     state: GameState,
     pawns: Pawn[],
@@ -533,8 +456,6 @@ class KingdomServiceImpl {
     return s;
   }
 
-  // ─── Relations ─────────────────────────────────────────────────────────────
-
   colonyRelationTo(state: GameState, kingdomId: string): KingdomRelation | undefined {
     return findKingdomRelation(state.kingdomRelations ?? [], COLONY_RELATION_ID, kingdomId);
   }
@@ -551,15 +472,11 @@ class KingdomServiceImpl {
     return { ...state, kingdomRelations: relations };
   }
 
-  /** A colonist harmed a kingdom's entity — an act of war against the sender (§3). */
   onKingdomMobKilled(state: GameState, mob: Mob): GameState {
     if (!mob.kingdomId) return state;
     return this.adjustColonyRelation(state, mob.kingdomId, -45);
   }
 
-  // ─── Colony wealth (§3) ────────────────────────────────────────────────────
-
-  /** Total base value of the colony stockpile. */
   colonyWealth(state: GameState): number {
     let total = 0;
     for (const [itemId, qty] of Object.entries(state.stockpile ?? {})) {
@@ -571,7 +488,6 @@ class KingdomServiceImpl {
     return Math.round(total);
   }
 
-  /** Colony wealth tier 0–4 — caps caravan goods quality and pulls frequency. */
   colonyWealthTier(state: GameState): number {
     const wealth = this.colonyWealth(state);
     let tier = 0;
@@ -584,10 +500,6 @@ class KingdomServiceImpl {
     return tier;
   }
 
-  // ─── Caravan stock (§3/§4) ─────────────────────────────────────────────────
-
-  /** A caravan only hauls wares up to the tier the colony can plausibly afford —
-   *  and never beyond what its kingdom's wealth supports. */
   generateCaravanStock(
     kingdom: Kingdom,
     colonyWealthTier: number,
@@ -598,7 +510,6 @@ class KingdomServiceImpl {
     const tradeable = allItemDefs().filter((d) => this.isTradeableDef(d, tierCap, relationScore));
     if (tradeable.length === 0) return [];
     const lines = rng.int(6, 10 + kingdomWealthIdx);
-    // Gold bars lead the manifest — the stable intermediate for settling lopsided deals (§4).
     const stock: CaravanGood[] = [
       { itemId: 'gold_bar', qty: kingdomWealthIdx * 3 + rng.int(1, 4) }
     ];
@@ -617,20 +528,13 @@ class KingdomServiceImpl {
     return stock;
   }
 
-  /** Public because the item audit asks the SIM whether a thing can ever be bought, rather than
-   *  keeping a second copy of this rule that would quietly drift from it (ITEM-RULES R8). */
   isTradeableDef(def: Item, tierCap: number, relationScore = 0): boolean {
     if (def.hidden) return false;
-    // The one or two things a kingdom parts with only for people it trusts.
     if (def.tradeRelationsMin != null && relationScore < def.tradeRelationsMin) return false;
-    if (def.type === 'currency') return false; // gold rides the party's `gold` float
+    if (def.type === 'currency') return false;
     if ((def.tier ?? 1) > tierCap) return false;
     if (def.id.endsWith('_carcass')) return false;
     if (def.category === 'natural_weapon' || def.category === 'organic') return false;
-    // Perishables ARE traded. The sim does not run a spoilage clock on goods while a caravan is on the
-    // road, so refusing everything with a `decaySeconds` was a rule enforcing a simulation that does not
-    // exist — and it quietly emptied the manifest of milk, cheese, fresh meat and fish, which is most of
-    // what a real caravan carried. What a merchant will not sell is what has already turned.
     if (def.id.startsWith('rotten_')) return false;
     return (
       def.type === 'material' ||
@@ -642,14 +546,6 @@ class KingdomServiceImpl {
     );
   }
 
-  // ─── Barter pricing (§4) ───────────────────────────────────────────────────
-
-  /**
-   * Effective unit price of a good in a deal with `kingdomId`, negotiated by a pawn whose
-   * `trade` stat is `tradeStat` (≈0.8–2.0). `side` is from the COLONY's view: goods the colony
-   * RECEIVES cost more, goods it GIVES fetch less — the spread narrows with skill + relations.
-   * Gold bars anchor: their value ignores both (§4 — the most liquid barter good).
-   */
   effectiveTradePrice(
     state: GameState,
     kingdomId: string,
@@ -668,7 +564,6 @@ class KingdomServiceImpl {
   }
 
   private qualityMult(quality: number | undefined): number {
-    // Mirrors core/itemQuality tiers without importing the full table here.
     const mults = [0.8, 1.0, 1.15, 1.3, 1.5, 1.8];
     return mults[clamp(quality ?? 1, 0, 5)];
   }

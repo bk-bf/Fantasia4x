@@ -1,9 +1,3 @@
-/* filepath: src/lib/webgl/texture-manager.ts */
-/**
- * WebGL Texture Management System
- * Handles texture creation, uploading, and GPU memory management
- */
-
 import type { FontAtlas } from './types.js';
 
 export interface TextureOptions {
@@ -21,12 +15,9 @@ export interface TextureInfo {
   format: number;
   type: number;
   id: string;
-  memoryUsage: number; // bytes
+  memoryUsage: number;
 }
 
-/**
- * Texture Manager - handles WebGL texture creation and management
- */
 export class TextureManager {
   private gl: WebGL2RenderingContext;
   private textures = new Map<string, TextureInfo>();
@@ -42,9 +33,6 @@ export class TextureManager {
     }
   }
 
-  /**
-   * Create a WebGL texture from font atlas data
-   */
   createFontAtlasTexture(atlas: FontAtlas, options: TextureOptions = {}): WebGLTexture | null {
     const textureId = `font-atlas-${atlas.fontFamily}-${atlas.fontSize}`;
 
@@ -52,7 +40,6 @@ export class TextureManager {
       console.log(`🔄 Creating font atlas texture: ${textureId}`);
     }
 
-    // Check if texture already exists
     if (this.textures.has(textureId)) {
       if (this.debug) {
         console.log(`📋 Using cached font atlas texture: ${textureId}`);
@@ -69,50 +56,41 @@ export class TextureManager {
     }
 
     try {
-      // Bind texture
       gl.bindTexture(gl.TEXTURE_2D, texture);
 
-      // Set texture parameters optimized for font atlases
-      const filtering = options.filtering || 'nearest'; // Crisp pixel-perfect text
+      const filtering = options.filtering || 'nearest';
       const wrapping = options.wrapping || 'clamp';
 
-      // Configure filtering
       const minFilter = filtering === 'nearest' ? gl.NEAREST : gl.LINEAR;
       const magFilter = filtering === 'nearest' ? gl.NEAREST : gl.LINEAR;
 
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, minFilter);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, magFilter);
 
-      // Configure wrapping
       const wrapMode = this.getWrapMode(wrapping);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, wrapMode);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, wrapMode);
 
-      // Upload texture data
-      // Font atlases are typically single-channel (luminance) for memory efficiency
       const format = gl.RGBA;
       const type = gl.UNSIGNED_BYTE;
 
-      // Convert ImageData to RGBA format if needed
       const textureData = this.convertImageDataToRGBA(atlas.texture);
 
       gl.texImage2D(
         gl.TEXTURE_2D,
-        0, // mip level
-        format, // internal format
+        0,
+        format,
         atlas.atlasWidth,
         atlas.atlasHeight,
-        0, // border (must be 0)
-        format, // format
-        type, // type
+        0,
+        format,
+        type,
         textureData
       );
 
-      // Calculate memory usage
-      const bytesPerPixel = 4; // RGBA
+      const bytesPerPixel = 4;
       const memoryUsage = atlas.atlasWidth * atlas.atlasHeight * bytesPerPixel;
 
-      // Store texture info
       const textureInfo: TextureInfo = {
         texture,
         width: atlas.atlasWidth,
@@ -126,7 +104,6 @@ export class TextureManager {
       this.textures.set(textureId, textureInfo);
       this.totalMemoryUsage += memoryUsage;
 
-      // Unbind texture
       gl.bindTexture(gl.TEXTURE_2D, null);
 
       if (this.debug) {
@@ -146,9 +123,6 @@ export class TextureManager {
     }
   }
 
-  /**
-   * Create a texture from raw image data
-   */
   createTextureFromImageData(
     data: ImageData | Uint8Array,
     width: number,
@@ -169,27 +143,21 @@ export class TextureManager {
     try {
       gl.bindTexture(gl.TEXTURE_2D, texture);
 
-      // Configure texture parameters
       this.configureTextureParameters(options);
 
-      // Determine format and type
       const { format, internalFormat, type } = this.getTextureFormat(options.format || 'rgba');
 
-      // Upload data
       const textureData = data instanceof ImageData ? data.data : data;
 
       gl.texImage2D(gl.TEXTURE_2D, 0, internalFormat, width, height, 0, format, type, textureData);
 
-      // Generate mipmaps if requested
       if (options.generateMipmap) {
         gl.generateMipmap(gl.TEXTURE_2D);
       }
 
-      // Calculate memory usage
       const bytesPerPixel = this.getBytesPerPixel(options.format || 'rgba');
       const memoryUsage = width * height * bytesPerPixel;
 
-      // Store texture info
       const textureInfo: TextureInfo = {
         texture,
         width,
@@ -221,9 +189,6 @@ export class TextureManager {
     }
   }
 
-  /**
-   * Bind a texture to a texture unit
-   */
   bindTexture(textureId: string, unit: number = 0): boolean {
     const textureInfo = this.textures.get(textureId);
     if (!textureInfo) {
@@ -237,16 +202,10 @@ export class TextureManager {
     return true;
   }
 
-  /**
-   * Get texture info by ID
-   */
   getTextureInfo(textureId: string): TextureInfo | undefined {
     return this.textures.get(textureId);
   }
 
-  /**
-   * Delete a texture and free memory
-   */
   deleteTexture(textureId: string): boolean {
     const textureInfo = this.textures.get(textureId);
     if (!textureInfo) {
@@ -265,9 +224,6 @@ export class TextureManager {
     return true;
   }
 
-  /**
-   * Get memory usage statistics
-   */
   getMemoryStats() {
     return {
       totalTextures: this.textures.size,
@@ -281,9 +237,6 @@ export class TextureManager {
     };
   }
 
-  /**
-   * Clean up all textures
-   */
   dispose(): void {
     const gl = this.gl;
 
@@ -298,8 +251,6 @@ export class TextureManager {
       console.log('🧹 TextureManager disposed');
     }
   }
-
-  // Private helper methods
 
   private getWrapMode(wrapping: string): number {
     const gl = this.gl;
@@ -320,14 +271,12 @@ export class TextureManager {
     const filtering = options.filtering || 'linear';
     const wrapping = options.wrapping || 'clamp';
 
-    // Configure filtering
     const minFilter = filtering === 'nearest' ? gl.NEAREST : gl.LINEAR;
     const magFilter = filtering === 'nearest' ? gl.NEAREST : gl.LINEAR;
 
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, minFilter);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, magFilter);
 
-    // Configure wrapping
     const wrapMode = this.getWrapMode(wrapping);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, wrapMode);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, wrapMode);
@@ -369,32 +318,18 @@ export class TextureManager {
   }
 
   private convertImageDataToRGBA(imageData: ImageData): Uint8Array {
-    // Convert ImageData.data (Uint8ClampedArray) to Uint8Array
     return new Uint8Array(imageData.data);
   }
 }
 
-/**
- * Utility functions for texture management
- */
-
-/**
- * Check if texture size is power of 2 (optimal for GPU)
- */
 export function isPowerOfTwo(value: number): boolean {
   return (value & (value - 1)) === 0;
 }
 
-/**
- * Get next power of 2 size
- */
 export function nextPowerOfTwo(value: number): number {
   return Math.pow(2, Math.ceil(Math.log2(value)));
 }
 
-/**
- * Validate texture dimensions for WebGL compatibility
- */
 export function validateTextureDimensions(
   width: number,
   height: number,

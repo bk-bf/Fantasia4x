@@ -1,5 +1,4 @@
 <script module lang="ts">
-  // Shared per-sheet canvas cache (magenta → transparent), loaded lazily.
   const _sheetCache = new Map<string, HTMLCanvasElement | null>();
   const _sheetWaiters = new Map<string, Set<() => void>>();
 
@@ -7,7 +6,6 @@
     const cached = _sheetCache.get(name);
     if (cached) return cached;
     if (_sheetCache.has(name)) {
-      // still loading — queue a redraw for when it's ready
       (
         _sheetWaiters.get(name) ?? (_sheetWaiters.set(name, new Set()), _sheetWaiters.get(name)!)
       ).add(onReady);
@@ -39,8 +37,6 @@
   }
 </script>
 
-<!-- SpriteIcon.svelte — renders one cell of a bitlands sprite sheet (12×18, 16-col) as a small
-     tinted canvas. Feed it a def's `charSpans`; used for building/crafting card icons. -->
 <script lang="ts">
   type CharSpan = { sheet?: string; id?: number; from?: number; to?: number; literal?: string };
 
@@ -54,7 +50,6 @@
   const CELL_H = 18;
   const COLS = 16;
 
-  // Module-level cache of magenta-keyed sheet canvases, shared across all icons.
   const span = $derived((charSpans ?? []).find((s) => s.sheet && (s.id != null || s.from != null)));
   const literal = $derived((charSpans ?? []).find((s) => s.literal)?.literal ?? null);
 
@@ -68,7 +63,7 @@
     node.width = CELL_W;
     node.height = CELL_H;
     ctx.clearRect(0, 0, CELL_W, CELL_H);
-    const sheet = getSheet(span.sheet, draw); // re-draws once the sheet finishes loading
+    const sheet = getSheet(span.sheet, draw);
     if (!sheet) return;
     const id = span.id ?? span.from ?? 0;
     const col = id % COLS;
@@ -84,7 +79,6 @@
   }
 
   $effect(() => {
-    // re-run on span/tint change (and once canvasEl is bound)
     void span;
     void tint;
     void canvasEl;

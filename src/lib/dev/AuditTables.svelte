@@ -1,16 +1,3 @@
-<!-- AuditTables.svelte — DEV TOOL. The headless balance-audit results, as sortable tables.
-
-     The audits are real HeadlessSession runs (ADR-033): buildScenario, real pawns, real ticks, one live
-     session per process. What they were missing is a way to LOOK at the output — a wall of console text
-     in a 40-minute log is not inspectable, so every claim had to be relayed second-hand.
-
-     Data is read off disk by `gear-db/+page.server.ts`, so the numbers are in the HTML at first paint.
-     Written by the audits, pulled off the remote runner with `./audit.sh --fetch`. Nothing here computes
-     balance; it only displays what the sim measured.
-
-     ONE table per question, with the armour class as a COLUMN rather than three near-identical tables
-     stacked down the page — the whole point is comparing a weapon across armour classes, and that is
-     unreadable when the rows are in different tables. Sub-tabs switch between questions. -->
 <script lang="ts">
   import SortableTable from './SortableTable.svelte';
   import type { Column } from './sortableTable';
@@ -67,7 +54,6 @@
 
   const creatures = $derived(audit?.creatures ?? []);
 
-  // ── weapon summary across every creature and armour class ─────────────────
   interface WeaponAgg {
     weapon: string;
     effect: number;
@@ -81,7 +67,6 @@
     heavy: number;
     armourCost: number;
   }
-  /** A creature with this much hide or more counts as armoured for the soft/armoured split. */
   const THICK_HIDE = 26;
   const weaponAgg = $derived.by<WeaponAgg[]>(() => {
     if (!creatures.length) return [];
@@ -182,7 +167,6 @@
     }
   ];
 
-  // ── the full matchup grid ─────────────────────────────────────────────────
   const ARM_ORDER = ['none', 'light', 'medium', 'heavy'];
   const matchupCols: Column<CreatureRow>[] = [
     { key: 'weapon', label: 'weapon', get: (r) => r.weapon },
@@ -226,7 +210,6 @@
     }
   ];
 
-  // ── one flat row per weapon × armour class ────────────────────────────────
   interface FlatFit {
     weapon: string;
     armour: string;
@@ -257,8 +240,6 @@
           ratio: p > 0 ? s / p : 0,
           kills: of('suited')?.wins ?? 0,
           fights: src.fights,
-          // Landed hits behind the suited number — the honesty column. A handful of hits means the
-          // row is noise, however confident the decimals look.
           landed: of('suited')?.landed ?? 0
         });
       }
@@ -333,7 +314,6 @@
     }
   ];
 
-  // ── one flat row per style × armour class ─────────────────────────────────
   interface FlatMeta {
     style: string;
     armour: string;
@@ -379,7 +359,6 @@
     }
   ];
 
-  // ── how each style moves when the target armours up ───────────────────────
   interface MoveRow {
     style: string;
     bare: number;

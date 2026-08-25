@@ -3,10 +3,6 @@ import { complete as completeHaul } from '$lib/game/services/jobs/haul';
 import { pickUpFromTile, depositInventory } from '$lib/game/systems/pawn/pawnHauling';
 import type { GameState, Pawn, DroppedItem, Job } from '$lib/game/core/types';
 
-// Trace a LOG through the full physical haul cycle and assert mass is conserved at every step.
-// "what happens to a log when a pawn picks one up" — if a log ever vanishes, exactly one of these
-// asserts fails and pinpoints the step.
-
 const makePawn = (x: number, y: number): Pawn =>
   ({
     id: 'p1',
@@ -25,7 +21,6 @@ const makeState = (pawn: Pawn, drops: DroppedItem[], partial: Partial<GameState>
     pawns: [pawn],
     droppedItems: drops,
     zoneInstances: [],
-    // A 2-tile stockpile NOT under the pawn, so deposit must physically place the log there.
     zoneTiles: { '5,5': ['stockpile'], '6,5': ['stockpile'] },
     ...partial
   }) as unknown as GameState;
@@ -48,7 +43,6 @@ describe('log pickup puts the log in the pawn inventory (not the void)', () => {
     const pawn = makePawn(1, 1);
     const gs = makeState(pawn, [logDrop('d1', 2)]);
     const out = pickUpFromTile(gs, 'p1', 1, 1, { looseOnly: true });
-    // Everything that left the ground must be on the pawn.
     expect(carriedLogs(out) + looseLogs(out)).toBe(2);
     expect(carriedLogs(out)).toBeGreaterThan(0);
   });
@@ -79,26 +73,25 @@ describe('depositInventory lays a carried log into the stockpile (the step with 
     pawn.inventory = { items: { yew_log: 3 }, instances: [] } as unknown as Pawn['inventory'];
     const gs = makeState(pawn, []);
     const out = depositInventory(pawn, gs);
-    expect(storedLogs(out)).toBe(3); // landed physically in the stockpile
-    expect(carriedLogs(out)).toBe(0); // no longer carried
+    expect(storedLogs(out)).toBe(3);
+    expect(carriedLogs(out)).toBe(0);
   });
 
   it('FULL CYCLE: ground → carry → deposit conserves every log', () => {
-    const pawn = makePawn(5, 5); // adjacent to the stockpile tiles
-    const gs = makeState(pawn, [logDrop('d1', 3, 5, 6)]); // 3 logs on the ground next to the pile
+    const pawn = makePawn(5, 5);
+    const gs = makeState(pawn, [logDrop('d1', 3, 5, 6)]);
     const picked = pickUpFromTile(gs, 'p1', 5, 6, { looseOnly: true });
     const carried = carriedLogs(picked);
     expect(carried).toBeGreaterThan(0);
 
     const deposited = depositInventory(picked.pawns[0], picked);
-    // Total logs in the world (loose + carried + stored) is unchanged: started at 3, still 3.
     expect(looseLogs(deposited) + carriedLogs(deposited) + storedLogs(deposited)).toBe(3);
   });
 });
 
 describe('THE STOCKPILE IS PHYSICAL — deposit requires being on/adjacent to it', () => {
   it('a pawn ON a stockpile tile deposits into it (stored)', () => {
-    const pawn = makePawn(5, 5); // standing on a stockpile tile
+    const pawn = makePawn(5, 5);
     pawn.inventory = { items: { yew_log: 3 }, instances: [] } as unknown as Pawn['inventory'];
     const out = depositInventory(pawn, makeState(pawn, []));
     expect(storedLogs(out)).toBe(3);
@@ -106,13 +99,12 @@ describe('THE STOCKPILE IS PHYSICAL — deposit requires being on/adjacent to it
   });
 
   it('a pawn FAR from the stockpile sets the load down LOOSE (no ethereal teleport)', () => {
-    const pawn = makePawn(0, 0); // nowhere near the stockpile at (5,5)/(6,5)
+    const pawn = makePawn(0, 0);
     pawn.inventory = { items: { yew_log: 3 }, instances: [] } as unknown as Pawn['inventory'];
     const out = depositInventory(pawn, makeState(pawn, []));
-    // The stockpile was NOT credited; the logs are loose on the pawn's own tile, still in the world.
     expect(storedLogs(out)).toBe(0);
     expect(looseLogs(out)).toBe(3);
     expect((out.droppedItems ?? []).every((d) => d.x === 0 && d.y === 0)).toBe(true);
-    expect(carriedLogs(out)).toBe(0); // no longer in the pawn's hands
+    expect(carriedLogs(out)).toBe(0);
   });
 });

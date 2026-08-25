@@ -10,8 +10,6 @@ import { rng } from '../core/util/rng';
 import { gameLogger } from '../debug/gameLogger';
 import { isGameDebug } from '../core/util/log';
 
-// Def table + types moved to core/resourceObjectDefs.ts ("data files are definitions"; lets the
-// renderer read defs without importing this service). Re-exported so existing importers keep working.
 export {
   isGrowableResource,
   RESOURCE_OBJECT_DEFS,
@@ -31,15 +29,9 @@ class ResourceObjectServiceImpl {
     return resourceObjectDefById(resourceId);
   }
 
-  /** Lazily-built map: item id → the cultivated crop it belongs to, as its SEED or harvested PRODUCE. */
   private cropByItem: Map<string, { def: ResourceObjectDef; role: 'seed' | 'produce' }> | null =
     null;
 
-  /**
-   * The cultivated crop an ITEM relates to — its SEED (`crop.seedItem`) or its harvested PRODUCE (a reap
-   * yield) — so the item tooltip can surface the crop's grow window (temp/water/soil) for both. Seeds win
-   * when an id is both (a crop yields its own seed). `undefined` for items that aren't tied to a crop.
-   */
   getCropForItem(itemId: string): { def: ResourceObjectDef; role: 'seed' | 'produce' } | undefined {
     if (!this.cropByItem) {
       const m = new Map<string, { def: ResourceObjectDef; role: 'seed' | 'produce' }>();
@@ -67,16 +59,9 @@ class ResourceObjectServiceImpl {
     const interaction = dtype
       ? (this.getInteractionByDesignationType(resourceId, dtype) ?? def.interaction)
       : def.interaction;
-    // `workAmount` is the direct work-point requirement (1:1, like a building's `workAmount`) — the
-    // authored value in resources.jsonc IS the work, no hidden multiplier. At BASE_WORK_RATE 1 pt/s a
-    // pawn clears `workAmount` work-points in `workAmount` sim-seconds (≈ workAmount × 4.8 in-game min).
     return interaction.workAmount;
   }
 
-  /**
-   * Return the interaction matching the given designation type, or the primary
-   * `interaction` as a fallback when no per-type override exists.
-   */
   getInteractionByDesignationType(
     resourceId: string,
     dtype: DesignationType
@@ -90,11 +75,6 @@ class ResourceObjectServiceImpl {
     return def.interaction;
   }
 
-  /**
-   * The `regrowsFromZero` interaction for this resource (carries the 0→100 `regrowthTurns` the gradual
-   * growth pass advances at), or `undefined` if the node uses the binary cooldown / depletes. Checks
-   * `interactions[]` first (a grass patch's cut twin), then the primary `interaction`.
-   */
   getRegrowsFromZeroInteraction(resourceId: string): ResourceInteractionDef | undefined {
     const def = this.getById(resourceId);
     if (!def) return undefined;
@@ -103,7 +83,6 @@ class ResourceObjectServiceImpl {
     return def.interaction.regrowsFromZero ? def.interaction : undefined;
   }
 
-  /** True when any of this resource's interactions resets growth to 0 and regrows gradually. */
   isRegrowsFromZero(resourceId: string): boolean {
     return this.getRegrowsFromZeroInteraction(resourceId) !== undefined;
   }
@@ -113,7 +92,6 @@ class ResourceObjectServiceImpl {
     pawn?: Pawn,
     availableItemIds?: Set<string>,
     dtype?: DesignationType,
-    /** §F: node maturity 0–100 (tile.growth) — scales the harvest down on under-grown nodes. */
     growthPct: number = 100
   ): Record<string, number> {
     const def = this.getById(resourceId);
@@ -124,27 +102,14 @@ class ResourceObjectServiceImpl {
       : def.interaction;
 
     const result: Record<string, number> = {};
-    // Wire stats.jsonc work yield into harvest output. getWorkModifiers is the single source —
-    // the `*_yield` formula already folds in cultural trait workYield (see PawnStatService).
     const statYieldMult = pawn
       ? (pawnStatService.getWorkModifiers(pawn, interaction.workCategory).yield ?? 1)
       : 1;
-    // §F: an under-grown node (low growth%) yields proportionally less — but never zero on a real harvest.
     const growthMult = Math.max(0, Math.min(1, growthPct / 100));
     for (const y of interaction.yields) {
       if (availableItemIds && !availableItemIds.has(y.itemId)) continue;
       const roll = this.randomInt(y.min, y.max);
-      // WORK-EXPERIENCE: the old per-yield `skillId × skillMultiplier` bonus path is retired — the
-      // pawn's experience level already drives yield through the SAME `*_yield` axis as everything
-      // else (statYieldMult above, via the SKILL token), so a second skill multiplier here would
-      // double-count the level (ADR-015: one work model). The def fields stay parsed but unread.
-      // Yield multiplier produces a float (e.g. roll 3 × 1.2 = 3.6) — round UP so a bonus
-      // never silently rounds away.
       const amount = Math.max(0, Math.ceil(roll * statYieldMult * growthMult));
-      // YIELD-DBG: per-item harvest breakdown (config the build sees + every multiplier). A kept
-      // debug tool — gated behind gameDebug() so it's off by default but toggleable when probing
-      // yields (grep YIELD-DBG .debug/pawns.log). See dev-memory: yield-dbg-debug-tool.
-      // statx already includes level SKILL + trait workYield (folded into getWorkModifiers).
       if (isGameDebug()) {
         gameLogger.log(
           0,
@@ -158,7 +123,6 @@ class ResourceObjectServiceImpl {
       }
     }
 
-    // Only fall back to a raw resource drop when no yields are defined at all
     if (Object.keys(result).length === 0 && interaction.yields.length === 0) {
       result[resourceId] = 1;
     }

@@ -1,8 +1,3 @@
-<!--
-  TradeColumn.svelte — one side of the barter table (KINGDOMS-TRADE §4): the caravan's wares or
-  the colony's stock. Each row shows what's there, its unit price in this deal, and the counter
-  for how many are in the current offer. Selection is not commitment — the TRADE button commits.
--->
 <script lang="ts">
   export interface TradeRow {
     itemId: string;

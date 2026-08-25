@@ -1,8 +1,3 @@
-/**
- * Built-in scenario presets (HEADLESS-SIM / ADR-033) — the eras you can't reach by playing an hour.
- * Pure data: both the `/api/sim` driver and the in-game DebugMenu pick from this one list, so the
- * two fronts can never drift. Ids are backend-only; the `label` is what a UI shows.
- */
 import type { ScenarioSpec } from '../Scenario';
 
 export interface ScenarioPreset {

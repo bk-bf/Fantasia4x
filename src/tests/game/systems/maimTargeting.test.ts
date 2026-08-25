@@ -7,20 +7,6 @@ import { partLethality, partIncapacitation, PART_DEF_MAP } from '$lib/game/syste
 import type { CombatTurnEntry } from '$lib/game/core/defs/events';
 import type { BodyPartId, Mob, Pawn } from '$lib/game/core/types';
 
-/**
- * MAIM TARGETING — a fight is won by taking the foe OUT of it, not only by killing them.
- *
- * Every precision audit up to now scored a hit by how much it contributed to a KILL, and measured the
- * result in ticks-to-kill. Both are the same oversimplification: a foe who cannot see, cannot hold a
- * weapon, or cannot close is finished as a combatant long before they are dead, and got there far
- * cheaper. The eyes are the sharpest case — 10 hp, almost no armour, and losing one drops `sight` to
- * 0.35, which multiplies `hit_chance`, `aim_accuracy` and `hit_precision` at once — yet they scored
- * LOWEST of any location under lethality alone, because an eye holds no organ and barely bleeds.
- *
- * Part 1 pins the target ranking. Part 2 drives the real sim and counts what the fighter actually did
- * to the body, so the claim rests on swings the engine really resolved.
- */
-
 const worth = (id: BodyPartId) => partLethality(id) + partIncapacitation(id);
 
 describe('MAIM TARGETING — does a precise fighter value disabling a foe?', () => {
@@ -61,18 +47,12 @@ describe('MAIM TARGETING — does a precise fighter value disabling a foe?', () 
 
     const eye = ids.find((id) => /eye/i.test(id));
     expect(eye, 'the humanoid plan must have a hittable eye').toBeDefined();
-    // A thigh is the control: big, bleeds a bit, holds nothing, disables nothing much. Before this
-    // change an eye scored 1.06 against it and was the worst target on the board.
     const thigh = ids.find((id) => /thigh|upperLeg/i.test(id));
     if (thigh)
       expect(worth(eye!), 'an eye must outrank a bare thigh').toBeGreaterThan(worth(thigh));
-    // …but taking an eye must NOT outrank going for the kill on an exposed vital. Maiming is a real
-    // option, not the new dominant one.
     const chest = ids.find((id) => /chest|torso/i.test(id));
     if (chest)
       expect(worth(chest), 'a chest must still outrank an eye').toBeGreaterThan(worth(eye!));
-    // A hand disables (manipulation gates damage, attack_speed, hit_chance and armor_damage) without
-    // killing, so it must beat the thigh too.
     const hand = ids.find((id) => /hand/i.test(id));
     if (hand && thigh) expect(worth(hand)).toBeGreaterThan(worth(thigh));
   });
@@ -81,7 +61,6 @@ describe('MAIM TARGETING — does a precise fighter value disabling a foe?', () 
     const SEEDS = [11, 23, 37, 41];
     const MAX_TICKS = 12_000;
 
-    /** Run one duel and count what the pawn's swings did to the mob's body. */
     async function fight(precisionApt: number) {
       let eyeHits = 0;
       let limbHits = 0;
@@ -108,12 +87,8 @@ describe('MAIM TARGETING — does a precise fighter value disabling a foe?', () 
           })
         );
         const me = (s.getState().pawns as Pawn[])[0];
-        // Drive the aptitude directly — this is the axis under test, and rolling for it would make the
-        // comparison a coin flip rather than a controlled one.
         me.aptitudes = { ...(me.aptitudes ?? {}), hit_precision: precisionApt };
         if (seed === SEEDS[0])
-          // The resolved stat, not the raw roll — `hit_precision` is `0.05 × APT × consciousness ×
-          // sight`, so this is the actual probability a swing gets to CHOOSE its target at all.
           console.log(
             `  precision aptitude ${precisionApt} → hit_precision resolves to ` +
               `${pawnStatService.evaluateStat('hit_precision', (s.getState().pawns as Pawn[])[0]).toFixed(4)}`
@@ -200,8 +175,6 @@ describe('MAIM TARGETING — does a precise fighter value disabling a foe?', () 
           .join('\n')
     );
 
-    // The fight must actually produce hits — a zero here means the scenario is broken, not that the
-    // targeting is conservative.
     expect(dull.landed + sharp.landed, 'no swings landed at all').toBeGreaterThan(0);
   }, 900_000);
 });

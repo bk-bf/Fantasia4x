@@ -1,4 +1,3 @@
-<!-- Per-building refuel settings pop-up; parent owns the open/close toggle. -->
 <script lang="ts">
   import { gameState } from '$lib/stores/gameState.js';
   import type { FuelSettings, PlacedBuilding, Pawn, Item } from '$lib/game/core/types.js';
@@ -27,13 +26,11 @@
     0,
     Math.min(100, selectedFuelSettings.refuelThresholdPct ?? 30)
   );
-  // Untouched building falls back to the default burn-list; an explicit list — even empty — is honoured.
   $: allowedFuelSet = resolveAllowedFuelIds(selectedFuelSettings);
   $: selectedRefuelPawnFilters = selectedFuelSettings.allowedRefuelPawnIds ?? [];
 
   $: refuelReq = getRefuelRequirements(building.type);
   $: tinderName = itemService.getItemById(refuelReq.tinderItemId)?.name ?? refuelReq.tinderItemId;
-  // Tinder lights the fire, never burns as bulk fuel — so it's hidden from the filter, not toggleable.
   $: fuelFilterItems = FUEL_ITEMS.filter((item) => item.id !== refuelReq.tinderItemId);
   $: tinderStock = ($gameState.stockpile ?? {})[refuelReq.tinderItemId] ?? 0;
   $: maxFuel = buildingService.getBuildingById(building.type)?.maxFuel ?? 60;
@@ -52,13 +49,10 @@
     updateSelectedBuildingFuelSettings({ refuelThresholdPct: Math.max(0, Math.min(100, nextPct)) });
   }
 
-  // Every fuel-filter action writes an EXPLICIT id list — no "empty = all" sentinel.
-
   function allowAllFuels() {
     updateSelectedBuildingFuelSettings({ allowedFuelItemIds: FUEL_ITEMS.map((item) => item.id) });
   }
 
-  // Prefer the building's own default burn-list; fall back to the global default set.
   function resetFuelToDefault() {
     const def = buildingService.getBuildingById(building.type);
     const ids = def?.defaultAllowedFuelItemIds?.length
@@ -227,7 +221,6 @@
     position: absolute;
     bottom: calc(100% + 4px);
     left: 0;
-    /* width matches the info card's 300px cap */
     width: 100%;
     max-width: 340px;
     opacity: 0;
@@ -240,7 +233,6 @@
     color: #d4a860;
     font-size: 10px;
     z-index: 20;
-    /* Day/night hue + weather desaturation, matching the other chrome panels. */
     filter: url(#ambient-tint);
     transition:
       opacity 140ms ease,

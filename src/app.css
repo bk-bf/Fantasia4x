@@ -1,12 +1,3 @@
-/* ===== BUNDLED, SELF-HOSTED FONTS (static/fonts) =====
-   The whole UI ships its own fonts so the look NEVER depends on what a given OS happens to have
-   installed. Two faces:
-   • Cousine (Apache-2.0, static/fonts/cousine-LICENSE.txt) — the terminal monospace for all UI text.
-     It is METRIC-COMPATIBLE with Courier New, so it's a drop-in: nothing reflows. Aliased 'Fantasia Mono'.
-   • Dancing Script (SIL OFL 1.1, static/fonts/dancing-script-OFL.txt) — the cursive menu credit line.
-     Aliased 'Fantasia Script'.
-   Use them everywhere via the --font-mono / --font-script variables below; system fonts are only a
-   last-ditch fallback if a woff2 ever fails to load. */
 @font-face {
   font-family: 'Fantasia Mono';
   src: url('/fonts/cousine-400.woff2') format('woff2');
@@ -28,8 +19,6 @@
   font-style: normal;
   font-display: swap;
 }
-/* Engraved Roman/epic serif (Cinzel) — a fantasy-title display face that reads heroic without being
-   cursive. Used for big wordmarks (e.g. the MM2 menu logo) via --font-display. */
 @font-face {
   font-family: 'Fantasia Display';
   src: url('/fonts/cinzel-700.woff2') format('woff2');
@@ -39,7 +28,6 @@
 }
 
 :root {
-  /* Single source of truth for the UI font stacks — bundled first, system mono only as a safety net. */
   --font-mono: 'Fantasia Mono', 'Courier New', monospace;
   --font-script: 'Fantasia Script', 'Segoe Script', 'Brush Script MT', cursive;
   --font-display: 'Fantasia Display', 'Cinzel', 'Trajan Pro', Georgia, serif;
@@ -58,11 +46,6 @@
   --pos: #68b030;
   --neg: #c83018;
   --tab-active: #c04818;
-  /* Triangle pointer (replaces the OS black arrow / map crosshair): flat brown #161009, no gradient.
-     Points up-left at the normal mouse-cursor angle — apex (tip) at top-left, isosceles & SYMMETRIC
-     about the up-left↔down-right diagonal (base corners 12,23 & 23,12 mirror across y=x), ELONGATED
-     along that axis with a wider base/hypotenuse. Thin light UI-brown outline so the dark fill stays
-     visible on dark backgrounds. Hotspot at the apex tip (2,2). */
   --app-cursor: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='26' height='26' viewBox='0 0 26 26'><polygon points='2,2 12,23 23,12' fill='%23161009' stroke='%237a5e28' stroke-width='1.4' stroke-linejoin='round'/></svg>")
     2 2;
 }
@@ -81,12 +64,6 @@ body {
   overflow: hidden;
 }
 
-/* App-wide pointer: the stylised brown triangle instead of the OS black arrow. This is a game window,
-   not a document — force the ONE pointer everywhere so buttons / links / clickable rows never flip to
-   the OS hand cursor on hover. `!important` + the universal selector beat component-scoped
-   `cursor: pointer` (Svelte-scoped rules out-specify a plain global one). Text fields keep the I-beam.
-   Disabled controls also keep this one pointer — an unclickable button shouldn't flip to a
-   `not-allowed` cursor (component `cursor: not-allowed` rules are intentionally overridden here). */
 body {
   cursor: var(--app-cursor), default;
 }
@@ -105,10 +82,6 @@ textarea,
   padding: 0;
 }
 
-/* App-shell hardening — this is a game window, not a document. Disable accidental text selection
-   (the stray blue drag-highlight) and native image drag everywhere, then re-enable selection only
-   where the user genuinely types or needs to copy text (form fields + anything tagged .selectable,
-   e.g. the debug log). Works in the browser dev build and the Electron shell alike. */
 html {
   -webkit-user-select: none;
   user-select: none;
@@ -137,12 +110,6 @@ img {
   background: var(--border-hi);
 }
 
-/* ── Native form controls → retro-terminal orange ──────────────────────────────
-   Every <select> dropdown (settings popup, construction material picker, log filters…) shipped with
-   the browser's default blue focus ring + blue option highlight, which clashed with the warm palette.
-   Pin the accent to orange and style the popup options so the dropdown matches the panels around it.
-   (Electron/Chromium — the ship target — honours <option> background/colour; Firefox ignores the popup
-   styling but still gets the orange focus + accent.) */
 select {
   accent-color: var(--accent);
 }
@@ -162,19 +129,12 @@ option:hover {
   color: #fff;
 }
 
-/* ── Tab panels: sticky header + auto-hide scrollbars ──────────────────────────
-   Every tab screen (Pawn/Work/Culture/…) headers it with `.screen-hdr`. Pin it to the
-   top of its scroll area so it never scrolls away. */
 .screen-hdr {
   position: sticky;
   top: 0;
   z-index: 5;
 }
 
-/* Inside the tab overlay panel the scrollbar thumb stays invisible until the element is
-   actively scrolling — the `is-scrolling` class is toggled by the autohideScroll action
-   (src/lib/actions/autohideScroll.ts). The 3px track is always reserved, so revealing the
-   thumb never reflows content. */
 .overlay-panel ::-webkit-scrollbar-thumb {
   background: transparent;
   transition: background 0.2s ease;
@@ -182,7 +142,6 @@ option:hover {
 .overlay-panel .is-scrolling::-webkit-scrollbar-thumb {
   background: var(--border-hi);
 }
-/* Firefox fallback (Electron/V8 is the ship target, but keep the dev canary tidy). */
 .overlay-panel :where(*) {
   scrollbar-width: thin;
   scrollbar-color: transparent transparent;

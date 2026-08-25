@@ -1,10 +1,3 @@
-<!--
-  DebugGodmode — HEADLESS-SIM (ADR-033) godmode sub-panel of the DEBUG tab: scenario presets,
-  per-need accrual freezes, per-pawn stat/skill/growth/equip grants, and instant research. Extracted
-  from DebugMenu (200-line component rule); dispatches the same worker-safe `dev*` commands the
-  /api/sim driver uses, so the browser and curl steer the sim through one registry.
-  Styling mirrors DebugMenu (BuildingFuelPanel visual language).
--->
 <script lang="ts">
   import { gameState } from '$lib/stores/gameState';
   import { SCENARIO_PRESETS } from '$lib/game/headless/scenarios/presets';
@@ -124,7 +117,6 @@
 </section>
 
 <style>
-  /* Mirrors DebugMenu's section styling (shared DEBUG-tab visual language). */
   section {
     display: flex;
     flex-direction: column;

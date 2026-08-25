@@ -1,11 +1,3 @@
-<!--
-  GameOverScreen — full-screen permadeath overlay.
-
-  Shown by +page.svelte when `isGameOver` (the colony roster is empty — every colonist has died).
-  The load path never resurrects a wiped save, so this is a terminal state: the only way forward is
-  Restart, which discards the dead save and boots a fresh mixed colony (gameState.resetGame).
-  Pauses the sim on mount so mobs don't keep wandering an empty colony behind the overlay.
--->
 <script lang="ts">
   import { onMount } from 'svelte';
   import { fade } from 'svelte/transition';
@@ -13,7 +5,6 @@
   import { dayIndexForTurn } from '$lib/game/services/EnvironmentService';
 
   const lost = $derived($gameState.deadPawns?.length ?? 0);
-  // Turns are ticks; surface elapsed in-game days for a human-readable "survived" figure.
   const days = $derived(Math.max(1, dayIndexForTurn($currentTurn ?? 0)));
 
   onMount(() => {
@@ -42,7 +33,7 @@
   .game-over {
     position: fixed;
     inset: 0;
-    z-index: 1001; /* above the loading overlay (1000) */
+    z-index: 1001;
     background: var(--bg);
     display: flex;
     align-items: center;

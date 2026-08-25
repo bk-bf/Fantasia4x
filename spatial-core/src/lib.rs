@@ -2,11 +2,7 @@ use std::collections::BinaryHeap;
 use std::cmp::Reverse;
 use wasm_bindgen::prelude::*;
 
-// ──────────────────────────────────────────────────────────────────────────────
-// Helpers
-// ──────────────────────────────────────────────────────────────────────────────
 
-/// Wrapper so f32 is usable as a `BinaryHeap` key (min-heap via `Reverse`).
 #[derive(Clone, Copy, PartialEq)]
 struct F32Ord(f32);
 
@@ -24,8 +20,6 @@ impl Ord for F32Ord {
     }
 }
 
-/// Octile heuristic: `dx + dy + (√2 - 2) * min(dx, dy)` with unit cost = 1.
-/// Admissible when all tile movement costs are >= 1.
 #[inline]
 fn octile(ax: u32, ay: u32, bx: u32, by: u32) -> f32 {
     let dx = ax.abs_diff(bx) as f32;
@@ -34,21 +28,7 @@ fn octile(ax: u32, ay: u32, bx: u32, by: u32) -> f32 {
     dx + dy + (std::f32::consts::SQRT_2 - 2.0) * min_d
 }
 
-// ──────────────────────────────────────────────────────────────────────────────
-// Public WASM export
-// ──────────────────────────────────────────────────────────────────────────────
 
-/// A* pathfinder with octile heuristic and 8-direction movement.
-///
-/// # Arguments
-/// * `walkable` – flat `u8` array, length `width*height`; `1` = walkable, `0` = blocked
-/// * `costs`    – flat `f32` movement-cost array, same layout; `1.0` = plains baseline
-/// * `width`, `height` – grid dimensions
-/// * `sx`, `sy` – start tile
-/// * `ex`, `ey` – end tile
-///
-/// Returns interleaved `[x0,y0, x1,y1, …]` pairs (u32) for the found path,
-/// or an empty vec if no path exists or the search limit is hit.
 #[wasm_bindgen]
 pub fn find_path(
     walkable: &[u8],
@@ -59,16 +39,12 @@ pub fn find_path(
     sy: u32,
     ex: u32,
     ey: u32,
-    // Per-call node-expansion cap. 0 = the default full-grid budget (long pawn cross-map paths). Mob
-    // callers pass a tight cap so an UNREACHABLE goal bails fast instead of sweeping the whole connected
-    // region (a 130k-tile open component was ~6.7ms/fail — the fleeing-prey perf cliff).
     max_iter: u32,
 ) -> Vec<u32> {
     let w = width as usize;
     let h = height as usize;
     let n = w * h;
 
-    // Bounds / walkability guards
     if sx as usize >= w
         || sy as usize >= h
         || ex as usize >= w
@@ -88,23 +64,18 @@ pub fn find_path(
         return vec![sx, sy];
     }
 
-    // Search limit: the caller's per-call cap, or (0) the full-grid default for long cross-map paths.
-    // (The old formula (w*h/10*1500/10000) gave only ~144 for a 120×80 map — far too low.)
     let cap = if max_iter == 0 { (w * h).min(100_000) as u32 } else { max_iter };
 
-    // g_cost per node (f32, initialized to +∞)
     let mut g: Vec<f32> = vec![f32::INFINITY; n];
     let mut parent: Vec<u32> = vec![u32::MAX; n];
     g[start] = 0.0;
 
-    // Min-heap: (Reverse(f_cost), flat_index)
     let mut open: BinaryHeap<(Reverse<F32Ord>, u32)> = BinaryHeap::new();
     open.push((Reverse(F32Ord(octile(sx, sy, ex, ey))), start as u32));
 
-    // 8-direction offsets: 4 cardinal first, 4 diagonal
     const DIRS: [(i32, i32); 8] = [
-        (0, -1), (1, 0), (0, 1), (-1, 0),   // cardinal
-        (1, -1), (1, 1), (-1, 1), (-1, -1), // diagonal
+        (0, -1), (1, 0), (0, 1), (-1, 0),
+        (1, -1), (1, 1), (-1, 1), (-1, -1),
     ];
 
     let mut iters = 0u32;
@@ -133,11 +104,9 @@ pub fn find_path(
                 continue;
             }
 
-            // Diagonal wall-cut prevention:
-            // allow diagonal only when at least one orthogonal neighbour is walkable
             if dx != 0 && dy != 0 {
-                let ortho1 = cy as usize * w + nx as usize; // (nx, cy)
-                let ortho2 = ny as usize * w + cx as usize; // (cx, ny)
+                let ortho1 = cy as usize * w + nx as usize;
+                let ortho2 = ny as usize * w + cx as usize;
                 if walkable[ortho1] == 0 && walkable[ortho2] == 0 {
                     continue;
                 }
@@ -158,20 +127,7 @@ pub fn find_path(
     vec![]
 }
 
-// ──────────────────────────────────────────────────────────────────────────────
-// Nearest-entity batch query (ENGINE-PERFORMANCE-II §S1, ADR-008)
-// ──────────────────────────────────────────────────────────────────────────────
 
-/// For each query point, return the index (into `points`) of the nearest point within `max_dist`,
-/// or `-1` if none. Builds a uniform grid over `points` (cell = `max_dist`) so each query scans a
-/// 3×3 block of cells — turning the entity AI's O(queries × points) nearest scans into O(N · nearby).
-///
-/// * `points`   – flat `[x0,y0, x1,y1, …]` candidate positions (e.g. all predators)
-/// * `queries`  – flat `[qx0,qy0, …]` query positions (e.g. all prey)
-/// * `max_dist` – search radius in tile units
-///
-/// Points within ~`EPS` of a query (the same / co-located entity) are skipped, so a prey that is
-/// itself also a predator never returns itself.
 #[wasm_bindgen]
 pub fn nearest_each(points: &[f32], queries: &[f32], max_dist: f32) -> Vec<i32> {
     let np = points.len() / 2;
@@ -182,7 +138,6 @@ pub fn nearest_each(points: &[f32], queries: &[f32], max_dist: f32) -> Vec<i32> 
     }
     let cell = if max_dist >= 1.0 { max_dist } else { 1.0 };
 
-    // Bounding box over the candidate points.
     let mut minx = f32::INFINITY;
     let mut miny = f32::INFINITY;
     let mut maxx = f32::NEG_INFINITY;
@@ -198,7 +153,6 @@ pub fn nearest_each(points: &[f32], queries: &[f32], max_dist: f32) -> Vec<i32> 
     let gw = (((maxx - minx) / cell).floor() as usize) + 1;
     let gh = (((maxy - miny) / cell).floor() as usize) + 1;
 
-    // Bucket point indices into grid cells.
     let mut buckets: Vec<Vec<u32>> = vec![Vec::new(); gw * gh];
     for i in 0..np {
         let cx = (((points[2 * i] - minx) / cell).floor() as usize).min(gw - 1);
@@ -244,8 +198,6 @@ pub fn nearest_each(points: &[f32], queries: &[f32], max_dist: f32) -> Vec<i32> 
 }
 
 fn reconstruct(parent: &[u32], start: usize, end: usize, w: usize) -> Vec<u32> {
-    // Reconstruct as node indices first, then reverse node order.
-    // Reversing a flat [x,y,x,y,...] list corrupts coordinate pairing.
     let mut rev_nodes: Vec<usize> = Vec::new();
     let mut cur = end;
     rev_nodes.push(cur);
@@ -261,7 +213,6 @@ fn reconstruct(parent: &[u32], start: usize, end: usize, w: usize) -> Vec<u32> {
 
     rev_nodes.reverse();
 
-    // Match engine expectation: path excludes start tile, contains next steps only.
     let mut path: Vec<u32> = Vec::with_capacity((rev_nodes.len().saturating_sub(1)) * 2);
     for &node in rev_nodes.iter().skip(1) {
         path.push((node % w) as u32);

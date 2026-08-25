@@ -1,4 +1,3 @@
-<!-- Building readout shared by the hover panel and the clicked card, so the two can't drift. -->
 <script lang="ts">
   import { buildingService } from '$lib/game/services/BuildingService';
   import { itemService } from '$lib/game/services/ItemService';
@@ -19,13 +18,9 @@
     showHeader = true
   }: {
     building: PlacedBuilding;
-    /** Clicked card: show comfort/beauty, refund, refuel requirement + "won't refuel" warning. */
     detailed?: boolean;
-    /** Stored drops physically in this bin (storage buildings only). */
     binContents?: DroppedItem[];
-    /** Needed for the refuel-feasibility check (detailed only). */
     gameState?: GameState | null;
-    /** False when embedded in SelectedEntityCard, whose shell already renders the name/status header. */
     showHeader?: boolean;
   } = $props();
 
@@ -39,7 +34,6 @@
       : `complete${building.deconstructQueued ? ' ⊢ demolish' : ''}`
   );
   const isBin = $derived(((bDef?.effects?.storageStacks ?? 0) as number) > 0 && !isBlueprint);
-  // Amenity = def comfort/beauty + the chosen material's contribution.
   const amenity = $derived.by(() => {
     const mm = building.materials
       ? aggregateMaterialMods(Object.values(building.materials), 'building')

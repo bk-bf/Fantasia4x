@@ -3,11 +3,6 @@ import { itemService } from '$lib/game/services/ItemService';
 import { recipeService } from '$lib/game/services/RecipeService';
 import type { GameState } from '$lib/game/core/types';
 
-/**
- * §5 casting molds are single-use raw material. A *casting* recipe (bronze cast at the casting
- * hearth) lists `clay_mold` among its inputs and consumes one per craft — the mold is broken to
- * free the casting. Smelted bars and *forged* iron/steel gear use no mold at all.
- */
 const moldInputs = (itemId: string) =>
   Object.keys(recipeService.getRecipeForItem(itemId)?.inputs ?? {});
 
@@ -30,7 +25,6 @@ function state(stock: Record<string, number>): GameState {
 
 describe('§5 casting consumes a single-use clay mold', () => {
   it('cast metals and cast items list clay_mold as a consumed input', () => {
-    // Cast bars (poured into a mold) + shaped bronze casts.
     for (const id of [
       'copper_bar',
       'tin_bar',
@@ -52,8 +46,6 @@ describe('§5 casting consumes a single-use clay mold', () => {
   });
 
   it('a casting recipe is unaffordable without a clay mold in stock', () => {
-    // A cast piece is POURED, so what it consumes is the melt — the bar is one step further back
-    // (`smelt_copper` takes a bar as an alternative and gives 4 measures of molten copper).
     expect(itemService.hasRequiredMaterials('cast_sling_bullet', state({ molten_copper: 4 }))).toBe(
       false
     );

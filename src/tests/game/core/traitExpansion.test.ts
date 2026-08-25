@@ -14,7 +14,6 @@ const byId = (id: string): Trait => {
   return t;
 };
 
-/** Minimal live pawn fixture (humanoid body, default stats). */
 function makePawn(id: string, traits: Trait[], pos?: { x: number; y: number }): Pawn {
   return {
     id,
@@ -44,11 +43,10 @@ describe('TRAIT-LIBRARY-EXPANSION mechanics', () => {
 
   it('§1 combatMods multiply the matching combat stat (and only combat stats)', () => {
     const base = makePawn('p-base', []);
-    const buffed = makePawn('p-buffed', [byId('sure-handed')]); // hit_chance ×1.15, crit ×1.2
+    const buffed = makePawn('p-buffed', [byId('sure-handed')]);
     const b0 = pawnStatService.evaluateStat('hit_chance', base);
     const b1 = pawnStatService.evaluateStat('hit_chance', buffed);
     expect(b1).toBeCloseTo(b0 * 1.15, 5);
-    // a non-combat stat is untouched
     expect(pawnStatService.evaluateStat('movement_speed', buffed)).toBeCloseTo(
       pawnStatService.evaluateStat('movement_speed', base),
       5
@@ -61,7 +59,6 @@ describe('TRAIT-LIBRARY-EXPANSION mechanics', () => {
     const wing = p.limbs!.find((l) => l.id === 'left_wing');
     expect(wing, 'left_wing grafted').toBeTruthy();
     expect(wing!.parts!.some((x) => x.id === 'leftWing')).toBe(true);
-    // keeps its humanoid feet — composition, not a plan swap
     expect(p.limbs!.some((l) => l.id === 'left_leg')).toBe(true);
   });
 
@@ -86,7 +83,6 @@ describe('TRAIT-LIBRARY-EXPANSION mechanics', () => {
     expect(gone.length, 'exactly one arm gone').toBe(1);
     expect(gone[0].bleedRate).toBe(0);
     expect(gone[0].parts!.every((x) => x.isMissing)).toBe(true);
-    // torso/head untouched
     expect(p.limbs!.find((l) => l.id === 'torso')!.isMissing).toBe(false);
   });
 
@@ -105,10 +101,8 @@ describe('TRAIT-LIBRARY-EXPANSION mechanics', () => {
       bloodletting: true
     };
     forearm.injuries.push(wound);
-    // 200 guaranteed clot rolls (chance 1.0) — an ordinary wound would fully clot instantly
     for (let i = 0; i < 200; i++) rollWoundClotting(limbs, 1.0, i);
     expect(wound.clotProgress ?? 0).toBe(0);
-    // the flag survives the merge/recompute path (same sticky rule as `permanent`)
     const merged = recomputeWound('leftForearm', 'cut', 20, wound, 10, forearm.maxHp);
     expect(merged.bloodletting).toBe(true);
     expect(merged.bleeding).toBeGreaterThan(0);
@@ -116,24 +110,20 @@ describe('TRAIT-LIBRARY-EXPANSION mechanics', () => {
 
   it('§6a auras: a throttled pass stamps the condition on pawns in radius (linger), not beyond', () => {
     const emitter = makePawn('p-emit', [byId('aura-might')], { x: 10, y: 10 });
-    const near = makePawn('p-near', [], { x: 12, y: 12 }); // chebyshev 2 ≤ radius 4
-    const far = makePawn('p-far', [], { x: 20, y: 20 }); // chebyshev 10 > radius 4
+    const near = makePawn('p-near', [], { x: 12, y: 12 });
+    const far = makePawn('p-far', [], { x: 20, y: 20 });
     const state = { turn: 360, pawns: [emitter, near, far], mobs: [] } as unknown as GameState;
-    tickAuras(state); // 360 % 180 === 0 → the pass runs
+    tickAuras(state);
     expect(near.conditionTimers?.might ?? 0).toBeGreaterThan(0);
     expect(near.transientConditions).toContain('might');
     expect(far.conditionTimers?.might ?? 0).toBe(0);
-    expect(emitter.conditionTimers?.might ?? 0).toBe(0); // never self-buffs
-    // off-cadence tick: no-op
+    expect(emitter.conditionTimers?.might ?? 0).toBe(0);
     const near2 = makePawn('p-near2', [], { x: 11, y: 11 });
     tickAuras({ turn: 361, pawns: [emitter, near2], mobs: [] } as unknown as GameState);
     expect(near2.conditionTimers?.might ?? 0).toBe(0);
   });
 
   it('§4 heritages (LINEAGES-II §4 flatten): each marker is a pure lineage identity with a member pool', () => {
-    // The old nested-subCapability bundles are GONE — a heritage is now a legendary/mythic MARKER
-    // (`lineage` set, no payload) whose members are top-level traits tagged with its lineage id,
-    // grown at seasonal growth events.
     const markers: Array<[string, string]> = [
       ['stoneblood-heritage', 'stoneblood'],
       ['echoborn-heritage', 'echoborn'],
@@ -152,8 +142,6 @@ describe('TRAIT-LIBRARY-EXPANSION mechanics', () => {
       expect(t, id).toBeTruthy();
       expect(t!.rarity === 'legendary' || t!.rarity === 'mythic', `${id} rarity`).toBe(true);
       expect(t!.lineage?.includes(lineage), `${id} lineage tag`).toBe(true);
-      // The field is gone from the Trait type (flat model, compile-enforced) — this guards the DATA:
-      // raw jsonc could still smuggle a nested bundle past the compiler.
       expect(
         (t as unknown as Record<string, unknown>).subCapabilities,
         `${id} must carry NO nested bundle`
@@ -162,7 +150,6 @@ describe('TRAIT-LIBRARY-EXPANSION mechanics', () => {
       const members = TRAIT_DATABASE.filter((m) => m.id !== id && m.lineage?.includes(lineage));
       expect(members.length, `${lineage} needs a member pool to grow`).toBeGreaterThan(0);
     }
-    // the Blighted dark mirror still houses the §2d grand curses — as top-level lineage members
     const accursed3 = TRAIT_DATABASE.find((x) => x.id === 'accursed-blood-3');
     const accursed5 = TRAIT_DATABASE.find((x) => x.id === 'accursed-blood-5');
     expect(accursed3?.lineage).toContain('blighted');

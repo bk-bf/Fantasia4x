@@ -1,12 +1,3 @@
-<!--
-  EnvReadout — the shared, colour-coded environment line (light · temp · wet · wind) used by EVERY
-  tile/building info panel (hover tile, hover building, clicked building) so they can't drift. Tile-
-  specific extras (fertility, snow, growth, roofed) stay in their own panel; this is just the common
-  weather atoms. `nowrap` so temp never wraps under the rest.
-
-  `debugTemp` (Settings → Debug mode): the season-baked base the SIM actually reads (`seasonBakedTemp`)
-  shown as `(N°)` next to the temp — a one-glance check that the simulation and the displayed temp agree.
--->
 <script lang="ts">
   let {
     light,
@@ -15,15 +6,10 @@
     wind,
     debugTemp = null
   }: {
-    /** 0–1 ambient light at the tile. */
     light: number;
-    /** Effective °C shown in the panel (already rounded by the caller). */
     temp: number;
-    /** 0–100 tile wetness. */
     wet: number;
-    /** Wind word ("somewhat" / "slightly" / …) or '' for calm. Rendered as "<word> windy". */
     wind: string;
-    /** Debug-only: the sim's season-baked base °C, or null to hide. */
     debugTemp?: number | null;
   } = $props();
 </script>

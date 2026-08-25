@@ -1,7 +1,3 @@
-// statView.ts — the single source of a pawn stat's "view": its value, the formula with THIS pawn's
-// numbers substituted, the baseline trend, the description, and the trait contributions. Extracted out of
-// PawnAttributes (where it was baked in) so BOTH the attributes tab AND the trait card's stat/resistance
-// pill render the IDENTICAL breakdown through the shared <StatTooltip> — one computation, no duplication.
 import type { Pawn } from '$lib/game/core/types';
 import { APTITUDE_MIN, APTITUDE_MAX, type AptitudeId } from '$lib/game/core/rules/body/aptitudes';
 import statsData from '$lib/game/database/pawns/stats.jsonc';
@@ -28,17 +24,15 @@ const WORK_SPEED_IDS = new Set(
   STATS.filter((s) => s.category === 'work' && s.id.endsWith('_speed')).map((s) => s.id)
 );
 
-// Stats where a LOWER number is the better outcome — trend colouring inverts for these.
 const LOWER_BETTER = new Set(['hunger_rate', 'fatigue_rate', 'pain']);
-const COOL = ['#9ccc65', '#43a047', '#2196f3']; // light green → green → blue (better)
-const WARM = ['#e0a64a', '#e07a4f', '#e04f4f']; // amber → orange → red (worse)
+const COOL = ['#9ccc65', '#43a047', '#2196f3'];
+const WARM = ['#e0a64a', '#e07a4f', '#e04f4f'];
 const NEUTRAL = 'var(--text-dim)';
 const band = (m: number): number => (m >= 2.0 ? 2 : m >= 1.5 ? 1 : m >= 1.15 ? 0 : -1);
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
 const signed = (n: number) => (n >= 0 ? '+' : '−') + round2(Math.abs(n));
 
-// A DERIVED stat id → the trait `effects` key that live-adds to it (resistances / heal_rate).
 const RES_KEY: Record<string, string> = {
   cutting_resistance: 'cutting_resistance',
   piercing_resistance: 'piercing_resistance',
@@ -55,8 +49,6 @@ const RES_KEY: Record<string, string> = {
   night_vision: 'nightVision'
 };
 
-// Neutral reference pawn — all stats 10, average body, uninjured. Every stat is coloured by how far THIS
-// pawn sits above/below it. Constant → computed once at module load.
 const BASELINE = {
   id: '__statbaseline__',
   stats: {
@@ -72,8 +64,6 @@ const BASELINE = {
 const baseCaps = pawnStatService.computeCapacities(BASELINE);
 const baseCarry = itemService.getCarryCapacityBreakdown(BASELINE);
 
-/** Per-pawn derived state the views read — computed ONCE per pawn, then shared across every stat's view
- *  (so a 40-row grid doesn't recompute capacities/carry/conditions 40 times). */
 export interface StatContext {
   capacities: Record<string, number>;
   carry: ReturnType<typeof itemService.getCarryCapacityBreakdown>;
@@ -116,7 +106,6 @@ function baseRaw(id: string): number {
   return pawnStatService.evaluateStat(id, BASELINE);
 }
 
-// Body capacities display as a fraction of healthy (1.00 = full); pain stays raw; everything else raw.
 function val(id: string, pawn: Pawn, ctx: StatContext): number {
   const raw = actualRaw(id, pawn, ctx);
   if (id in ctx.capacities && id !== 'pain') {
@@ -136,11 +125,7 @@ function unit(id: string): string {
 }
 
 type Deriv = { formula: string; vars: { name: string; value: string }[]; description: string };
-/** Symbolic formula + ONLY the variables it uses, filled with this pawn's numbers. Capacities have no
- *  real formula, so surface their organ breakdown (the description) + an injury note instead. */
 function derivation(s: StatDef, pawn: Pawn, ctx: StatContext): Deriv {
-  // §G night_vision is grouped as a capacity but is trait-summed (not organ-derived), so skip the generic
-  // capacity boilerplate and show its own description + the cultural contributions (via RES_KEY → traitMods).
   if (s.id === 'night_vision') {
     return {
       formula: 'Σ cultural night-vision grants (capped at 1.0)',
@@ -174,7 +159,7 @@ function derivation(s: StatDef, pawn: Pawn, ctx: StatContext): Deriv {
   }
   if (s.id in ctx.capacities) {
     return {
-      formula: s.description, // the organ breakdown, e.g. "brain × 0.5 + heart × 0.15 + …"
+      formula: s.description,
       vars: [],
       description:
         s.id === 'pain'
@@ -189,7 +174,6 @@ function derivation(s: StatDef, pawn: Pawn, ctx: StatContext): Deriv {
   const st = pawn.stats;
   const sm = ctx.condStatMult;
   const eff = (base: number, mult: number) => (mult === 1 ? base : Math.round(base * mult));
-  // These MUST match PawnStatService.FORMULA_VARS — the tokens the formulas actually use.
   add('STRENGTH', eff(st.strength, sm.strength));
   add('DEXTERITY', eff(st.dexterity, sm.dexterity));
   add('CONSTITUTION', eff(st.constitution, sm.constitution));
@@ -198,14 +182,10 @@ function derivation(s: StatDef, pawn: Pawn, ctx: StatContext): Deriv {
   add('CHARISMA', st.charisma);
   add('weight', pawn.physicalTraits?.weight ?? 70);
   add('height', pawn.physicalTraits?.height ?? 170);
-  // WORK-EXPERIENCE: the SKILL token = the pawn's experience level in this work category × its
-  // speed↔finesse style weight — shown with the level so the number is legible.
   if (/\bSKILL\b/.test(s.formula)) {
     const info = pawnStatService.workSkillInfo(s.id, pawn);
     if (info) vars.push({ name: 'SKILL', value: `${round2(info.factor)} (Lv ${info.level})` });
   }
-  // COMBAT-BALANCE task 3: the POWER token — the equipped weapon's own core stat, damped by the power
-  // curve. Named so the player can see WHICH stat the weapon in hand is actually paying out on.
   if (/\bPOWER\b/.test(s.formula)) {
     const mh = pawn.equipment?.mainHand;
     const wp = mh ? itemService.getItemById(mh.itemId)?.weaponProperties : undefined;
@@ -217,7 +197,6 @@ function derivation(s: StatDef, pawn: Pawn, ctx: StatContext): Deriv {
       value: `${round2(powerToken(raw * mult))} (${key} ${eff(raw, mult)}, damped)`
     });
   }
-  // COMBAT-BALANCE tasks 8–9: the APT token — this pawn's ROLLED aptitude for THIS stat.
   if (/\bAPT\b/.test(s.formula)) {
     vars.push({ name: 'APT', value: `${round2(aptitudeOf(pawn, s.id))} (rolled)` });
   }
@@ -227,8 +206,6 @@ function derivation(s: StatDef, pawn: Pawn, ctx: StatContext): Deriv {
   return { formula: s.formula, vars, description: s.description };
 }
 
-/** Trait contributions to a DERIVED stat (resistances/heal_rate live-added by evaluateStat; work
- *  speed/yield/quality by getWorkModifiers) — surfaced as a true +/- percentage. */
 function traitMods(statId: string, pawn: Pawn): { name: string; text: string; pos: boolean }[] {
   const out: { name: string; text: string; pos: boolean }[] = [];
   for (const t of pawn.traits ?? []) {
@@ -273,7 +250,7 @@ function trend(id: string, pawn: Pawn, ctx: StatContext): { glyph: string; color
   } else {
     mult = a / b;
   }
-  const good = LOWER_BETTER.has(id) ? 1 / mult : mult; // >1 = better than average
+  const good = LOWER_BETTER.has(id) ? 1 / mult : mult;
   const up = band(good);
   if (up >= 0) return { glyph: '▲', color: COOL[up] };
   const down = band(1 / good);
@@ -281,7 +258,6 @@ function trend(id: string, pawn: Pawn, ctx: StatContext): { glyph: string; color
   return { glyph: '–', color: NEUTRAL };
 }
 
-/** The fully-rendered view of a stat for THIS pawn — everything <StatTooltip> needs, nothing UI-specific. */
 export interface StatView {
   id: string;
   name: string;
@@ -295,16 +271,6 @@ export interface StatView {
   traitMods: { name: string; text: string; pos: boolean }[];
 }
 
-/**
- * A rolled APTITUDE as a `StatView`, so it renders through the same cell + `StatTooltip` as every other
- * stat instead of getting its own bespoke widget.
- *
- * Aptitudes are not stats.jsonc entries — they are the `APT` INPUT to `hit_chance`, `attack_speed` and
- * the rest. But to a player they are the same kind of thing (a number about this pawn with a reason
- * behind it), so they get the same treatment: a value, a formula, the numbers that went into it, and a
- * comparison against the average pawn. The band is fixed (`APTITUDE_MIN`..`APTITUDE_MAX`), so "average"
- * is exactly 1.00.
- */
 export function computeAptitudeView(
   id: AptitudeId,
   pawn: Pawn,
@@ -314,7 +280,6 @@ export function computeAptitudeView(
 ): StatView {
   const v = pawn.aptitudes?.[id] ?? 1;
   const pct = Math.round((v - 1) * 100);
-  // Same shape as `trend`, but against a fixed 1.00 average rather than a species baseline.
   const mult = v;
   const up = band(mult);
   const down = band(1 / mult);
@@ -343,18 +308,14 @@ export function computeAptitudeView(
     vars,
     description,
     trend: tr,
-    // An aptitude is rolled, not derived, so no trait feeds it — the trait modifiers a player is
-    // looking for show up on the STAT this aptitude drives, not here.
     traitMods: []
   };
 }
 
-/** Is `statId` a real stats.jsonc stat (has a rich view), vs a core attribute (STR/DEX) that isn't? */
 export function isDerivedStat(statId: string): boolean {
   return STAT_BY_ID.has(statId);
 }
 
-/** Compute a stat's full view for `pawn`. Returns null for a non-stats.jsonc id (e.g. a core attribute). */
 export function computeStatView(statId: string, pawn: Pawn, ctx: StatContext): StatView | null {
   const s = STAT_BY_ID.get(statId);
   if (!s) return null;

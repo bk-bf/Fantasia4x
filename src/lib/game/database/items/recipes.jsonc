@@ -1,12 +1,3 @@
-// recipes.jsonc — First-class crafting recipes (PRODUCTION-CHAIN-EXPANSION recipe registry).
-//
-// THE single source of recipes. items.jsonc holds pure materials only — no crafting data.
-// A recipe transforms `inputs` (or any one `inputAlternatives` set) into `outputs` (primary
-// product + byproducts) at a `station` (workshopType / building id; omitted = anywhere/craft_spot).
-// `dynamicRecipe` carries category-slot variants (e.g. spit_meat over any `meat`).
-//
-// Schema: id · station? · inputs · inputAlternatives? · outputs · workAmount ·
-//         toolTierRequired? · researchRequired? · buildingRequired? · populationRequired? · dynamicRecipe?
 [
   {
     "id"               : "split_firewood",
@@ -59,7 +50,6 @@
     "workAmount"      : 14,
     "toolTierRequired": 0
   },
-  // ── Preservation, drink and regalia ───────────────────────────────────────
   {"id": "smoke_fish", "discipline": "cooking", "station": "smoking_rack", "inputs": {"category:fish": 3, "salt": 1}, "outputs": {"smoked_fish": 3}, "workAmount": 5, "toolTierRequired": 0, "passive": true},
   {
     "id"              : "smoke_meat",
@@ -129,7 +119,6 @@
   {"id": "make_silver_pendant", "station": "anvil", "inputs": {"silver_bar": 1}, "outputs": {"silver_pendant": 4}, "workAmount": 12, "toolTierRequired": 1, "researchRequired": "iron_working"},
   {"id": "make_filigree_diadem", "station": "anvil", "inputs": {"silver_bar": 1, "iron_wire": 1}, "outputs": {"filigree_diadem": 2}, "workAmount": 20, "toolTierRequired": 2, "researchRequired": "steel_making"},
   {"id": "make_gold_chain_of_office", "station": "anvil", "inputs": {"gold_bar": 1}, "outputs": {"gold_chain_of_office": 2}, "workAmount": 24, "toolTierRequired": 2, "researchRequired": "steel_making"},
-  // ── Targeted medicine ─────────────────────────────────────────────────────
   {
     "id"              : "make_styptic_pack",
     "discipline"      : "herbalism",
@@ -150,10 +139,6 @@
     "toolTierRequired": 0,
     "researchRequired": "leather_working"
   },
-  // ── Fracture care ─────────────────────────────────────────────────────────
-  // Splints and casts are WORN gear, so they are made where woodwork and dressing are made, not
-  // brewed. The wooden pair are bronze-age because a batten needs a sawpit; the limed pair are iron
-  // because a cast is set at an apothecary out of burnt limestone.
   {
     "id"              : "make_wooden_arm_splint",
     "discipline"      : "herbalism",
@@ -264,8 +249,6 @@
     "toolTierRequired": 2,
     "researchRequired": "steel_making"
   },
-  // ── Medicine ladder ───────────────────────────────────────────────────────
-  // Honey finally has a use: it is a real antibacterial dressing, which is what it was kept for.
   {
     "id"              : "make_honey_salve",
     "discipline"      : "herbalism",
@@ -296,7 +279,6 @@
     "toolTierRequired": 2,
     "researchRequired": "steel_making"
   },
-  // Emberbloom stops being a flower nothing picks.
   {
     "id"              : "make_emberbloom_balm",
     "discipline"      : "alchemy",
@@ -333,8 +315,6 @@
     "toolTierRequired": 0
   },
   {
-    // A fully-spoiled carcass (any species decays to `rotten_carcass`) is still butcherable — but it
-    // yields only rotten meat + rotten hide + bones, feedstock for compost/fertiliser, not good meat.
     "id"              : "butcher_rotten_carcass",
     "station"         : "butcher_spot",
     "inputs"          : {"rotten_carcass": 1},
@@ -342,7 +322,6 @@
     "workAmount"      : 20,
     "toolTierRequired": 0
   },
-  // ── Curing (passive, Curing Frame): raw hide + ash/salt → a stable cured hide, per species ──
   {
     "id"               : "make_cured_rabbit_pelt",
     "station"          : "hide_rack",
@@ -513,7 +492,6 @@
     "workAmount"       : 90,
     "toolTierRequired" : 1
   },
-  // ── Tanning (passive, bucket): cured hide soaked in brine → that species' own leather ──
   {
     "id"               : "tan_coney_fur",
     "station"          : "tanning_bucket_station",
@@ -724,10 +702,6 @@
       }
     }
   },
-  // STEW (campfire): a pot of mixed ingredients — meat, fish, garden veg, legumes, a pinch of herbs.
-  // Each slot takes ONE ingredient from the stew pool and the cook picks them, so the dish names itself
-  // from what went in ("Venison & Cabbage Stew"). Tiers add slots (2 → 3 → 4 distinct ingredients), more
-  // nutrition, and a longer `hearty_meal` buff. Output items carry `dynamicName: true` (see items.jsonc).
   {
     "id"              : "make_small_stew",
     "station"         : "campfire",
@@ -816,8 +790,6 @@
       }
     }
   },
-  // BREW HERB TEA (campfire): herbs steeped in hot water → a calming `soothed` drink (the cooked outlet
-  // for thyme/mint/sage). Eaten via the meal path like ale/wine, so its meal buff fires on consumption.
   {
     "id"              : "brew_herb_tea",
     "station"         : "campfire",
@@ -834,11 +806,6 @@
       }
     }
   },
-  // TODO(honey): a fruit compote / stewed-fruit treat (fruit ×3 + honey → a `refreshed` morale dish) once
-  // beekeeping (ENTITIES D) makes honey obtainable. Fruit currently has no cooked outlet besides pies/wine.
-  // Copper, tin, bronze, lead, silver and gold MELT and are poured. Iron and steel are worked
-  // solid at an anvil: no pre-industrial hearth reaches iron's 1538C, which is exactly why the
-  // bronze age casts and the iron age forges.
   {
     "id"               : "smelt_copper",
     "station"          : "stone_forge",
@@ -858,9 +825,6 @@
     "toolTierRequired": 1,
     "passive"         : true
   },
-  // ── Copper tools/weapon — the Chalcolithic stepping stone (research `copper_smelting`, forged at the
-  // copper-age Smelting Hearth from a bar + a plain branch haft; no wooden_haft until the bronze-age
-  // sawtable). Fills the empty stone→iron rung for the axe/pick/knife; soft, so they wear fast.
   {
     "id"              : "make_copper_axe",
     "station"         : "stone_forge",
@@ -1019,8 +983,6 @@
     "passive"         : true
   },
   {
-    // STEEL-REALISM: the finery forge's REAL job is decarburising brittle pig iron back into soft,
-    // tough WROUGHT iron — it never made steel. (It used to output steel_bar, which was inverted.)
     "id"              : "refine_wrought_iron",
     "station"         : "finery_forge",
     "passive"         : true,
@@ -1082,8 +1044,6 @@
       }
     }
   },
-  // make_dried_meat removed — meat now cures into dried_meat PASSIVELY on the drying rack (or any warm,
-  // dry spot) via ItemService.stepDrying (item `category:meat` → driesTo dried_meat). No worked recipe.
   {
     "id"              : "make_oak_plank",
     "station"         : "sawtable",
@@ -1338,8 +1298,6 @@
     "toolTierRequired": 0
   },
   {
-    // Tier-0 (craft_spot): the axe must be knappable at the free ground spot, since the Crude
-    // Workbench's own build cost lists a stone_axe — a higher-tier bench crafts it faster.
     "id"              : "make_stone_axe",
     "discipline"      : "knapping",
     "station"         : "craft_spot",
@@ -1349,7 +1307,6 @@
     "toolTierRequired": 0
   },
   {
-    // Tier-0 (craft_spot): same reason — the Crude Workbench's build cost lists a stone_hammer.
     "id"              : "make_stone_hammer",
     "discipline"      : "knapping",
     "station"         : "craft_spot",
@@ -1359,7 +1316,6 @@
     "toolTierRequired": 0
   },
   {
-    // Tier-1 (Crude Workbench): the first tool that can break rock/ore — gates mining (coal, clay).
     "id"              : "make_stone_pick",
     "discipline"      : "knapping",
     "station"         : "craft_spot",
@@ -1369,7 +1325,6 @@
     "toolTierRequired": 0
   },
   {
-    // Tier-1 (Crude Workbench): gates planting/tilling (digging_stick is the cruder alternative).
     "id"              : "make_stone_hoe",
     "discipline"      : "knapping",
     "station"         : "craft_spot",
@@ -1413,16 +1368,6 @@
     "workAmount"      : 10,
     "toolTierRequired": 0
   },
-  // Butchery multi-yield (ADR-016 follow-up): one butcher run on a carcass yields meat + hide/pelt +
-  // bones together, instead of the old one-product-per-carcass recipes (which each consumed a whole
-  // carcass for just the meat OR the hide OR the bones). The separate hide/pelt/bone butcher recipes
-  // were removed — those outputs now ride the single meat recipe per carcass.
-  //
-  // §2g (CREATURE-COMBAT-OVERHAUL, 2026-07-11): the whole roster is now butcherable — the expansion
-  // carcasses got recipes here (humanoid-kin yield bones/sinew, NO meat; the viper keeps its venom
-  // sac), elite T3-4 carcasses process at the flensing_table, and T5 boss trophies split into a
-  // mundane RENDER (butcher_spot) vs the full magical FLENSE (sanguinary_altar). The ONE deliberate
-  // exception: grimeling (an ooze leaves nothing to flense — no recipe, decay only).
   {
     "id"              : "make_wolf_meat",
     "station"         : "butcher_spot",
@@ -1497,10 +1442,6 @@
     "toolTierRequired": 0
   },
   {
-    // Butchery KITS (a bagged toolset, not a weapon): forged blades, a leather roll STITCHED with spun
-    // thread and buckled with metal FASTENERS. Age-appropriate binding (thread + nails/rivets), not
-    // primitive cordage — the thread gates the kit behind spinning (flax/wool/silk). Iron gates the
-    // flensing table, steel the sanguinary altar.
     "id"              : "make_iron_butchery_kit",
     "station"         : "anvil",
     "inputs"          : {"iron_bar": 2, "category:leather": 1, "category:thread": 2, "iron_nail": 10},
@@ -1518,10 +1459,6 @@
     "toolTierRequired": 2,
     "researchRequired": "steel_making"
   },
-  // ── Tailoring / leatherwork tools ───────────────────────────────────────
-  // The bone fleshing scraper is knappable at the free craft spot from butchery bone, so a colony can
-  // always make its first fleshing tool and never soft-lock the (now-active) leather chain. Iron/steel
-  // are the forged upgrades. Handles are the branch inline — no separate handle chain.
   {
     "id"              : "make_bone_fleshing_scraper",
     "discipline"      : "bonecarving",
@@ -1576,10 +1513,6 @@
     "toolTierRequired": 2,
     "researchRequired": "steel_making"
   },
-  // ── Tool / weapon HAFTS (carpentry) ─────────────────────────────────────
-  // A raw branch hafts a STONE tool; a metal head wants a carved handle. Copper/bronze use a carved
-  // `wooden_haft`; iron/steel need a SEASONED haft — carve+sand a batch (active), then soak the batch at
-  // the passive soaking trough (the iron-age reward: load six, walk away). No soak → no robust iron tool.
   {
     "id": "carve_emberwood_haft",
     "discipline": "woodworking",
@@ -1632,10 +1565,6 @@
     "workAmount"      : 5,
     "toolTierRequired": 0
   },
-  // ── Metalworking tools (the forge/anvil craft-tool gate) ──────────────────
-  // Crude green-wood tongs are knappable at the free craft spot with NO tool, so a colony can make
-  // its first metalworking tool and never soft-lock the (tool-gated) forge/anvil. Iron/steel tongs
-  // are the durable upgrades, forged once you already hold a pair.
   {
     "id"              : "make_wooden_tongs",
     "discipline"      : "woodworking",
@@ -1799,8 +1728,6 @@
     "id"               : "spin_thread",
     "station"          : "spinning_wheel",
     "inputs"           : {"flax_fiber": 2},
-    // Spun from plant fibre, wool, OR spider raw_silk — so butchering thornwood spiders (harvest_thornwood_silk
-    // → raw_silk) feeds the thread chain, a silk-thread gate on top of flax/wool.
     "inputAlternatives": [ {"category:wool": 2}, {"raw_silk": 2} ],
     "outputs"          : {"thread": 3},
     "workAmount"       : 3,
@@ -1842,11 +1769,7 @@
     "workAmount"      : 10,
     "toolTierRequired": 2
   },
-  // ── The steel family (STEEL-REALISM). Each is a real historical process, not a tier of one ingot:
-  // carburise a bloom (rough), bake wrought iron in charcoal (blister), fold that even (shear), melt it
-  // sealed (crucible), fold iron THROUGH steel (pattern-welded), or puddle pig iron in bulk (mild).
   {
-    // Carburising the bloom in the hearth — the earliest steel, uneven but available at the iron age.
     "id"               : "make_bloom_steel",
     "station"          : "bloomery",
     "passive"          : true,
@@ -1857,7 +1780,6 @@
     "toolTierRequired" : 1
   },
   {
-    // Cementation: wrought iron packed in charcoal and baked for days. Passive + slow by nature.
     "id"              : "bake_blister_steel",
     "station"         : "cementation_furnace",
     "passive"         : true,
@@ -1867,7 +1789,6 @@
     "toolTierRequired": 2
   },
   {
-    // Shear steel: cut, stack and forge-weld blister until the carbon runs even. Pure anvil labour.
     "id"              : "forge_shear_steel",
     "station"         : "anvil",
     "inputs"          : {"blister_steel": 2},
@@ -1876,7 +1797,6 @@
     "toolTierRequired": 2
   },
   {
-    // Pattern welding: soft wrought iron folded through hard steel. The most labour per bar of anything.
     "id"               : "forge_pattern_welded",
     "station"          : "anvil",
     "inputs"           : {"category:iron": 2, "shear_steel": 1},
@@ -1886,7 +1806,6 @@
     "toolTierRequired" : 2
   },
   {
-    // Puddling: stirring the carbon out of pig iron in quantity. Cheap per bar, needs the blast tier.
     "id"              : "puddle_mild_steel",
     "station"         : "puddling_furnace",
     "inputs"          : {"pig_iron": 3, "limestone": 2},
@@ -1895,8 +1814,6 @@
     "toolTierRequired": 2
   },
   {
-    // STEEL-REALISM: a blast furnace reduces ORE to brittle high-carbon PIG IRON — it never took bars in
-    // and poured steel out (the old recipe also produced 3 bars from 2, more mass out than in).
     "id"               : "smelt_pig_iron",
     "discipline"      : "metalworking",
     "station"          : "blast_furnace",
@@ -1923,7 +1840,6 @@
     "workAmount"      : 16,
     "toolTierRequired": 1
   },
-  // ── Phase B: carry containers ─────────────────────────────────────────────
   {
     "id"              : "make_hide_scrip",
     "discipline"      : "leatherworking",
@@ -1960,8 +1876,6 @@
     "workAmount"      : 6,
     "toolTierRequired": 0
   },
-  // Refractory clay fired hard enough to sit in a hearth full of liquid metal. The one vessel that can
-  // carry a melt, and the reason `fire_clay` stops being a brick ingredient and nothing else.
   {
     "id"              : "make_fireclay_crucible",
     "discipline"      : "pottery",
@@ -1971,7 +1885,6 @@
     "workAmount"      : 10,
     "toolTierRequired": 1
   },
-  // Glass bound by a glyph cut into its own surface. Holds anything, which is what the runed age buys.
   {
     "id"              : "make_rune_sealed_flask",
     "station"         : "runecarver_bench",
@@ -1981,7 +1894,6 @@
     "toolTierRequired": 1,
     "researchRequired": "runic_inscription"
   },
-  // ── Carry aids: packs above the wicker frame ──────────────────────────────
   {
     "id"              : "make_leather_knapsack",
     "discipline"      : "leatherworking",
@@ -2011,7 +1923,6 @@
     "toolTierRequired": 1,
     "researchRequired": "runic_inscription"
   },
-  // ── The pack grid: light / medium / heavy at every age from leather up ────
   {
     "id"              : "make_framed_leather_pack",
     "discipline"      : "leatherworking",
@@ -2090,7 +2001,6 @@
     "toolTierRequired": 1,
     "researchRequired": "runic_inscription"
   },
-  // ── Carry aids: belts, the carrying line ──────────────────────────────────
   {
     "id"              : "make_leather_belt",
     "discipline"      : "leatherworking",
@@ -2139,7 +2049,6 @@
     "toolTierRequired": 1,
     "researchRequired": "runic_inscription"
   },
-  // ── Carry aids: sheaths, the fighting line ────────────────────────────────
   {
     "id"              : "make_hide_knife_sheath",
     "discipline"      : "leatherworking",
@@ -2177,7 +2086,6 @@
     "toolTierRequired": 2,
     "researchRequired": "steel_making"
   },
-  // ── Phase B: linen production ─────────────────────────────────────────────
   {
     "id"              : "weave_linen",
     "station"         : "weaving_frame",
@@ -2186,7 +2094,6 @@
     "workAmount"      : 4,
     "toolTierRequired": 0
   },
-  // ── Fabric extension: cotton / silk cloth, plush cushions, mage garments ───
   {
     "id"              : "weave_cotton",
     "station"         : "weaving_frame",
@@ -2239,11 +2146,6 @@
     "toolTierRequired": 0,
     "discipline"      : "weaving"
   },
-  // Sinew is no longer rendered from a whole carcass on its own — that destroyed an entire animal for
-  // just tendon. It now drops as a BYPRODUCT of butchering any medium/large animal (see the per-carcass
-  // meat recipes above: venison/wolf/boar/goat +1, bear/elk +2), matching the "one butcher run yields
-  // meat + hide + bones [+ sinew] together" consolidation. Small animals (rabbit/chicken/rat) yield none.
-  // ── Phase B: Tier 0 weapon recipes ───────────────────────────────────────
   {
     "id"              : "make_flint_handaxe",
     "discipline"      : "knapping",
@@ -2262,7 +2164,6 @@
     "workAmount"      : 4,
     "toolTierRequired": 0
   },
-  // ── Phase B: Tier 0.5 weapon recipes ─────────────────────────────────────
   {
     "id"              : "make_bone_knife",
     "discipline"      : "bonecarving",
@@ -2301,7 +2202,6 @@
       }
     }
   },
-  // ── Phase B: Tier 1 weapon recipes ───────────────────────────────────────
   {
     "id"              : "make_bronze_punch_dagger",
     "station"         : "casting_hearth",
@@ -2421,7 +2321,6 @@
       }
     }
   },
-  // ── Phase B: Tier 2 weapon recipes ───────────────────────────────────────
   {
     "id"              : "make_short_seax",
     "station"         : "anvil",
@@ -2784,7 +2683,6 @@
     "workAmount"      : 3,
     "toolTierRequired": 0
   },
-  // STEALTH §8 — the precision-ranged pair + darts.
   {
     "id"              : "make_blowgun",
     "discipline"      : "woodworking",
@@ -3022,7 +2920,6 @@
       }
     }
   },
-  // ── Phase B: Tier 0 armour recipes ────────────────────────────────────────
   {
     "id"              : "make_wicker_vest",
     "discipline"      : "weaving",
@@ -3054,7 +2951,6 @@
       }
     }
   },
-  // STEALTH §8 — the one stealth-positive garment (soot-blacked, near-zero protection).
   {
     "id"              : "make_soot_darkened_jerkin",
     "discipline"      : "leatherworking",
@@ -3086,7 +2982,6 @@
       }
     }
   },
-  // ── Phase B: Tier 1 armour recipes ────────────────────────────────────────
   {
     "id"              : "make_linen_gambeson",
     "station"         : "weaving_frame",
@@ -3207,7 +3102,6 @@
       }
     }
   },
-  // ── Phase B: Tier 2 armour recipes ────────────────────────────────────────
   {
     "id"              : "make_mail_coif",
     "station"         : "anvil",
@@ -3286,13 +3180,6 @@
       }
     }
   },
-  // ═══════════════════════════════════════════════════════════════════════════
-  // PRODUCTION-CHAIN-II §M — Lapidary Bench
-  //   1) trade-gem cutting (normal crystal → cut gem)  — gate: arcane_lapidary
-  //   2) attunement       (infused crystal → attuned gem) — gate: attunement
-  //   3) assembly         (attuned gem + gold/silver → ring/amulet) — gate: attunement
-  // ═══════════════════════════════════════════════════════════════════════════
-  // 1) Trade-gem cutting
   {
     "id"              : "cut_ruby_recipe",
     "station"         : "faceting_lathe",
@@ -3356,7 +3243,6 @@
     "toolTierRequired": 1,
     "researchRequired": "arcane_lapidary"
   },
-  // 2) Attunement (infused → attuned gem)
   {
     "id"              : "attune_ruby",
     "station"         : "attunement_bench",
@@ -3420,7 +3306,6 @@
     "toolTierRequired": 1,
     "researchRequired": "attunement"
   },
-  // 3a) Rings (1 attuned gem + 1 gold bar)
   {
     "id"              : "make_ruby_ring",
     "station"         : "attunement_bench",
@@ -3484,7 +3369,6 @@
     "toolTierRequired": 1,
     "researchRequired": "attunement"
   },
-  // 3b) Amulets (larger gem — 2 attuned gems + 2 gold bars → stronger loadout piece, neck slot)
   {
     "id"              : "make_ruby_amulet",
     "station"         : "attunement_bench",
@@ -3548,11 +3432,6 @@
     "toolTierRequired": 1,
     "researchRequired": "attunement"
   },
-  // ═══════════════════════════════════════════════════════════════════════════
-  // §M REGALIA — crowns/circlets (head slot, vs helmets), torcs/pendants (amulet) & combo rings (ring).
-  // All set with ATTUNED gems at the lapidary; combos take two gems → two buff conditions.
-  // ═══════════════════════════════════════════════════════════════════════════
-  // 4a) Crowns / circlets / diadems (head slot — competes with a helmet)
   {
     "id"              : "make_scholars_circlet",
     "station"         : "attunement_bench",
@@ -3589,7 +3468,6 @@
     "toolTierRequired": 1,
     "researchRequired": "attunement"
   },
-  // 4b) Necklaces / torcs / pendants (amulet)
   {
     "id"              : "make_gold_torc",
     "station"         : "attunement_bench",
@@ -3626,14 +3504,6 @@
     "toolTierRequired": 1,
     "researchRequired": "attunement"
   },
-  // (No combo rings — rings stay single-buff (the 7 `make_<gem>_ring`s above); two ring slots let a
-  //  pawn wear two, so weaker single buffs go on rings while combos are amulet/crown only.)
-  // ═══════════════════════════════════════════════════════════════════════════
-  // §M ARCANE STAVES — INT-scaled channeled elemental ranged weapons. Two tiers mirror iron→steel:
-  //   T1 — Runecarver's Bench: magic-wood stave + a CUT crystal      (gate: arcane_lapidary)
-  //   T2 — Attunement Altar:   magic-wood stave + an ATTUNED crystal + gold (gate: attunement)
-  // Element = crystal (ruby→fire, sapphire→frost, topaz→lightning); T2 also grants the gem's buff.
-  // ═══════════════════════════════════════════════════════════════════════════
   {
     "id"              : "make_ember_staff",
     "station"         : "runecarver_bench",
@@ -3688,10 +3558,6 @@
     "toolTierRequired": 2,
     "researchRequired": "attunement"
   },
-  // ═══════════════════════════════════════════════════════════════════════════
-  // PRODUCTION-CHAIN-II §L — Bulk Logistics: wheel sub-chain + pawn-pushed carts
-  // ═══════════════════════════════════════════════════════════════════════════
-  // The wheel forges its iron rim at the anvil (iron_working); the carts assemble at the sawtable.
   {
     "id"              : "make_wheel",
     "station"         : "sawtable",
@@ -3719,11 +3585,6 @@
     "toolTierRequired": 1,
     "researchRequired": "iron_working"
   },
-  // ═══════════════════════════════════════════════════════════════════════════
-  // PRODUCTION-CHAIN-II §F — Compost (passive): rot + hay → compost, the soil-gating amendment
-  // ═══════════════════════════════════════════════════════════════════════════
-  // Passive bin (no pawn job — ADR-016): pawns haul the inputs, the bin rots them down over ~days.
-  // Any spoiled organic matter works (inputAlternatives), always with hay as the carbon bulk.
   {
     "id"               : "make_compost",
     "discipline"      : "alchemy",
@@ -3739,8 +3600,6 @@
     "workAmount"       : 48,
     "toolTierRequired" : 0
   },
-  // Post-processing step (HSK depth): raw compost is concentrated + aged into potent fertiliser. 3:1 —
-  // fertiliser is the expensive amendment the complex soils (loam→terra preta) are built from.
   {
     "id"              : "make_fertiliser",
     "discipline"      : "alchemy",
@@ -3751,9 +3610,6 @@
     "workAmount"      : 60,
     "toolTierRequired": 0
   },
-  // ── PRODUCTION-CHAIN-II §F8 — milling, baking, brewing ───────────────────────────────────────
-  // MILL (quern): any grain (wheat / rye / foraged wild oats) → flour. ~3 grain : 2 flour after the bran
-  // is sifted out. Category-slotted so every grain mills, and a new grain is wired in automatically.
   {
     "id"               : "mill_flour",
     "station"          : "quern",
@@ -3762,9 +3618,6 @@
     "workAmount"       : 8,
     "toolTierRequired" : 0
   },
-  // BAKE (oven): flour + water → bread; flour + meat (+ veg) → pies. A whole loaf takes a real sack of
-  // flour (6) — ~9 grain in total, so cooking roughly CONSERVES the grain's food energy (a loaf ≈ the
-  // grain that went in) rather than conjuring calories; its value is being safe, digestible and filling.
   {
     "id"              : "bake_bread",
     "station"         : "oven",
@@ -3773,10 +3626,6 @@
     "workAmount"      : 18,
     "toolTierRequired": 0
   },
-  // PIE (oven): an upgrade over bread — the flour gate makes even a simple pie a higher-tier good. The
-  // filling is a free pick from meat/fish/veg/fruit, so a pie names itself ("Apple Pie", "Venison & Onion
-  // Pie"). Tiers add fillings (1 → 2 → 3 distinct) + flour, climbing the meal buff (nourished → fortified).
-  // Fruit fillings make a sweet pie; meat/veg a savoury one — same recipe, the ingredients tell the story.
   {
     "id"              : "make_simple_sandwich",
     "discipline"      : "cooking",
@@ -3901,9 +3750,6 @@
       }
     }
   },
-  // TODO(honey): a sweetened pie / honey-glazed pie variant (flour + fruit + honey → a `refreshed`/treat
-  // pie) once beekeeping (ENTITIES D) makes honey obtainable. Skipped now — honey has no source yet.
-  // BREW (fermenter, passive timers): any grain → malt → ale; grapes/apples/berries → wine; apples → cider.
   {
     "id"              : "malt_grain",
     "station"         : "fermenter",
@@ -3932,7 +3778,6 @@
     "workAmount"       : 72,
     "toolTierRequired" : 0
   },
-  // cider — pressed apples fermented sharp. (Mead was removed pending beekeeping for a honey source.)
   {
     "id"              : "ferment_cider",
     "station"         : "fermenter",
@@ -3942,9 +3787,6 @@
     "workAmount"      : 72,
     "toolTierRequired": 0
   },
-  // ════════════════════════════════════════════════════════════════════════════════════════════
-  // PRODUCTION-CHAIN-III §D — Resin & Glue
-  // ════════════════════════════════════════════════════════════════════════════════════════════
   {
     "id"               : "grind_bone_meal",
     "station"          : "quern",
@@ -3971,11 +3813,6 @@
     "workAmount"       : 24,
     "toolTierRequired" : 0
   },
-  // ════════════════════════════════════════════════════════════════════════════════════════════
-  // PRODUCTION-CHAIN-III §B — Carpentry: buckets & barrels (carpenter_bench), brine (brewing_barrel)
-  // ════════════════════════════════════════════════════════════════════════════════════════════
-  // ── CONTAINERS-AND-FLUIDS §3 — the general-goods vessel ladder. Basketry first (withies and a
-  //    craft spot), then stave work once there are sawn planks, then joined boxes at the bench. ──
   {
     "id"              : "make_basket",
     "discipline"      : "weaving",
@@ -4039,9 +3876,6 @@
     "workAmount"      : 96,
     "toolTierRequired": 0
   },
-  // ════════════════════════════════════════════════════════════════════════════════════════════
-  // PRODUCTION-CHAIN-III §E — Butchery yields for new carcasses (closing the ENTITIES Phase B gap)
-  // ════════════════════════════════════════════════════════════════════════════════════════════
   {
     "id"              : "make_aurochs_meat",
     "station"         : "butcher_spot",
@@ -4059,8 +3893,6 @@
     "toolTierRequired": 0
   },
   {
-    // §2h: the owlbear is an effective T3-4 beast, so a full butcher (at a flensing_table, tool-tier 2)
-    // also extracts a magical reagent (owlbear_bile) — "old creature wired into the new economy".
     "id"              : "make_owlbear_meat",
     "station"         : "butcher_spot",
     "inputs"          : {"owlbear_carcass": 1},
@@ -4068,7 +3900,6 @@
     "workAmount"      : 60,
     "toolTierRequired": 0
   },
-  // ── §2g ELITE butchery (flensing_table) — T3-4 carcasses give prime pelts + the first magical drops.
   {
     "id"              : "make_dire_wolf",
     "station"         : "flensing_table",
@@ -4101,9 +3932,6 @@
     "workAmount"      : 45,
     "toolTierRequired": 2
   },
-  // ── §2g T5 BOSS butchery — TWO recipes per trophy: a mundane RENDER at the butcher spot (meat +
-  // bones, the rare humours ruined) vs the full FLENSE at the sanguinary_altar (prime pelt + 2-3
-  // magical drops incl. an enchant material). The altar investment is what makes a boss kill pay.
   {
     "id"              : "render_great_wolf",
     "station"         : "butcher_spot",
@@ -4168,9 +3996,6 @@
     "workAmount"      : 80,
     "toolTierRequired": 2
   },
-  // ── §2g "old ones wired in": the roster's remaining carcasses become butcherable. Humanoid-kin
-  // yield NO meat (bones/sinew only — the colony doesn't eat people-shaped things); the viper's venom
-  // gland survives the knife. Grimelings stay unbutcherable (an ooze leaves nothing to flense).
   {
     "id"              : "make_goblin_remains",
     "station"         : "butcher_spot",
@@ -4180,8 +4005,6 @@
     "toolTierRequired": 0
   },
   {
-    // A magical creature yields an ALCHEMY reagent, not meat: rendering a bog ooze gives its caustic
-    // humour (+ the fibrous matter in the muck). Feeds brew_caustic_coating.
     "id"              : "render_grimeling",
     "station"         : "butcher_spot",
     "inputs"          : {"grimeling_carcass": 1},
@@ -4245,7 +4068,6 @@
     "workAmount"      : 8,
     "toolTierRequired": 0
   },
-  // ── §2h magical-beast gear (boss materials + magical timber → condition-granting gear, §2c-gated).
   {
     "id"              : "make_cave_bear_plate",
     "station"         : "anvil",
@@ -4265,8 +4087,6 @@
     "toolTierRequired": 3
   },
   {
-    // §2h magical-beast gear: a cured dire-wolf pelt worked at the weaving frame → the Direwolf Warcloak
-    // (grants Might while worn). The crafted twin of a boss famed-drop; the tool-tier gate keeps it late.
     "id"              : "make_direwolf_warcloak",
     "station"         : "weaving_frame",
     "inputs"          : {"prime_direwolf_leather": 2, "category:thread": 6},
@@ -4274,8 +4094,6 @@
     "workAmount"      : 40,
     "toolTierRequired": 1
   },
-  // PRODUCTION-CHAIN-IIII §2 — crystal enchant gear: a star-shard (§1d) set with an owlbear pineal (§2h
-  // beast drop) and bound with witch's morel → the Stargazer's Circlet (grants keen senses while worn).
   {
     "id"              : "make_stargazer_circlet",
     "station"         : "attunement_altar",
@@ -4349,7 +4167,6 @@
     "workAmount"      : 20,
     "toolTierRequired": 0
   },
-  // Beast-grade leather: raw → cured (hide_rack) → tanned in BEAST brine (beast bucket) → hardened.
   {
     "id"              : "tan_scale_plate",
     "station"         : "beast_tanning_bucket",
@@ -4359,11 +4176,6 @@
     "workAmount"      : 120,
     "toolTierRequired": 1
   },
-  // ════════════════════════════════════════════════════════════════════════════════════════════
-  // PRODUCTION-CHAIN-III §E.2 — Wool line (soft goods). The 5 source fleeces (§E butchery + live-shear)
-  // are graded at source, so there is no refine ladder: any wool weaves straight to cloth, the finer the
-  // fleece the better the cloth (material multiplier). Raw wool is itself the bedding/padding material.
-  // ════════════════════════════════════════════════════════════════════════════════════════════
   {
     "id"              : "weave_woolcloth",
     "station"         : "weaving_frame",
@@ -4372,9 +4184,6 @@
     "workAmount"      : 24,
     "toolTierRequired": 0
   },
-  // ════════════════════════════════════════════════════════════════════════════════════════════
-  // PRODUCTION-CHAIN-III §C — Construction chain: mortar → concrete → magic-dust concrete
-  // ════════════════════════════════════════════════════════════════════════════════════════════
   {
     "id"              : "burn_quicklime",
     "discipline"      : "masonry",
@@ -4419,7 +4228,6 @@
     "workAmount"       : 24,
     "toolTierRequired" : 2
   },
-  // Magic age (runic_inscription): gem_dust is ground from INFUSED gems only — never normal cut gems.
   {
     "id"               : "grind_gem_dust",
     "station"          : "attunement_bench",
@@ -4437,8 +4245,6 @@
     "workAmount"       : 20,
     "toolTierRequired" : 1
   },
-  // PRODUCTION-CHAIN-IIII §1d — a mined mana_crystal grinds into a richer yield of gem-dust than any cut
-  // gem (the "refined gem-dust++" sink for the crystal-vent tier).
   {
     "id"               : "grind_mana_crystal",
     "station"          : "attunement_bench",
@@ -4457,9 +4263,6 @@
     "workAmount"      : 32,
     "toolTierRequired": 2
   },
-  // ════════════════════════════════════════════════════════════════════════════════════════════
-  // PRODUCTION-CHAIN-III §F — Armour: mail wire/ring sub-chain, scale, steel plate, beast/bone, regalia
-  // ════════════════════════════════════════════════════════════════════════════════════════════
   {
     "id"              : "draw_iron_wire",
     "station"         : "anvil",
@@ -4551,9 +4354,6 @@
     "workAmount"      : 36,
     "toolTierRequired": 0
   },
-  // ════════════════════════════════════════════════════════════════════════════════════════════
-  // PRODUCTION-CHAIN-III §G — Alchemy: vessels, mundane products (dye/soap/tannin), and potions
-  // ════════════════════════════════════════════════════════════════════════════════════════════
   {
     "id"              : "fire_clay_alembic",
     "discipline"      : "pottery",
@@ -4603,8 +4403,6 @@
     "toolTierRequired": 1,
     "researchRequired": "basic_alchemy"
   },
-  // Potions — gem-dust gives potency, glassware is the bottle. gem_dust is itself runic-gated, so
-  // potions naturally sit in the magic ages. Quality (alchemy_quality stat) will scale duration later.
   {
     "id"              : "brew_potion_of_might",
     "station"         : "alchemy_lab",
@@ -4637,8 +4435,6 @@
     "workAmount"      : 24,
     "toolTierRequired": 1
   },
-  // §2h(i) beast-reagent potions — a boss reagent IS the potency (replaces gem_dust), brewed into a
-  // timed combat draught. The reagent only comes off a T4-5 beast (butchered at the sanguinary_altar).
   {
     "id"              : "brew_bloodrage_draught",
     "station"         : "alchemy_lab",
@@ -4655,8 +4451,6 @@
     "workAmount"      : 30,
     "toolTierRequired": 1
   },
-  // PRODUCTION-CHAIN-IIII §2 — mystical-flora draughts: a foraged crop/fungus (§1a/§1b) is the potency,
-  // brewed at the alchemy_lab into a timed condition. Duration scales with the drinker's alchemy (§G).
   {
     "id"              : "brew_vigor_draught",
     "station"         : "alchemy_lab",
@@ -4689,7 +4483,6 @@
     "workAmount"      : 32,
     "toolTierRequired": 1
   },
-  // §2 weapon coating — rendered venom-sac + nightshade → a paste brushed onto a blade (applyWeaponCoating).
   {
     "id"              : "brew_caustic_coating",
     "station"         : "alchemy_lab",
@@ -4706,7 +4499,6 @@
     "workAmount"      : 30,
     "toolTierRequired": 1
   },
-  // ALCHEMY-BUTCHERY-EXPANSION §C — Greater (T2) / Grand (T3) tiers of the existing brews.
   {
     "id"              : "brew_greater_potion_of_might",
     "station"         : "alchemy_lab",
@@ -4899,8 +4691,6 @@
     "workAmount"      : 16,
     "toolTierRequired": 2
   },
-  // ALCHEMY-BUTCHERY-EXPANSION §A — beast-organ trait TRANSFUSIONS (3-tier ladder per organ; drinking
-  // is a gamble resolved by traitGamble). T1 at the alchemy lab, T2/T3 at the apothecary (tier 3 station).
   {
     "id"              : "brew_crude_feral_draught",
     "station"         : "alchemy_lab",
@@ -4997,9 +4787,6 @@
     "workAmount"      : 22,
     "toolTierRequired": 2
   },
-  // ════════════════════════════════════════════════════════════════════════════════════════════
-  // PRODUCTION-CHAIN-III §B.3 — Magic recipe families gated to the infused capstone stations
-  // ════════════════════════════════════════════════════════════════════════════════════════════
   {
     "id"              : "smelt_magic_alloy",
     "station"         : "runic_crucible",
@@ -5029,8 +4816,6 @@
     "workAmount"       : 32,
     "toolTierRequired" : 2
   },
-  // §D resin tap — the reliable resin source (vs the rough 0–1 woodcut trickle). Passive + slow on
-  // purpose: resin is a gate material, so the tap draws pitch from conifer bark/logs over time.
   {
     "id"               : "tap_resin",
     "discipline"      : "alchemy",
@@ -5044,10 +4829,6 @@
   }
 ,
   {
-    // Crush the cane and boil its juice down to coarse sugar — the concentrated fermentable behind the
-    // distilled-spirit chain (sugar cane is a foraged wetland reed, resources.jsonc `sugarcane`). Boiling
-    // the juice down needs a cooking vessel: gated on the clay cooking pot (cooking `toolRequirement`,
-    // same container tool the stews use), so a colony with no pot cannot refine sugar.
     "id": "refine_sugar",
     "station": "campfire",
     "inputs": {
@@ -5437,7 +5218,6 @@
     "researchRequired": "steel_making"
   },
 
-  // ===== Active leather chain: flesh (§A step 1) + curry (§A step 4) recipes =====
   {
     "id"              : "make_fleshed_rabbit_hide",
     "station"         : "hide_rack",
@@ -5712,8 +5492,6 @@
     "researchRequired": "iron_working"
   }
   ,
-  // ── WEAPON-COVERAGE PASS ──────────────────────────────────────────────────
-  // Copper: forged at the stone forge, no mould needed for a flat head or a rolled socket.
   {
     "id"              : "make_copper_shortsword",
     "station"         : "stone_forge",
@@ -5750,7 +5528,6 @@
     "toolTierRequired": 0,
     "researchRequired": "copper_smelting"
   },
-  // Bronze: cast to shape in a mould at the hearth.
   {
     "id"              : "make_bronze_leaf_sword",
     "station"         : "casting_hearth",
@@ -5850,7 +5627,6 @@
     "toolTierRequired": 1,
     "researchRequired": "bronze_working"
   },
-  // Iron.
   {
     "id"              : "make_iron_cleaver",
     "station"         : "anvil",
@@ -5905,7 +5681,6 @@
     "toolTierRequired": 1,
     "researchRequired": "iron_working"
   },
-  // Steel.
   {
     "id"              : "make_steel_broadaxe",
     "station"         : "anvil",
@@ -5951,7 +5726,6 @@
     "toolTierRequired": 2,
     "researchRequired": "steel_making"
   },
-  // Rune-etched: magic alloy over a seasoned haft, cut at the runecarver's bench.
   {
     "id"              : "make_rune_etched_axe",
     "station"         : "runecarver_bench",
@@ -6106,8 +5880,6 @@
     "toolTierRequired": 2,
     "researchRequired": "runic_inscription"
   },
-  // Launchers: a turned grip or stock, a string good enough for the draw, and for a crossbow the
-  // cast fasteners that hold the lock together.
   {
     "id"              : "make_sinew_backed_bow",
     "discipline"      : "woodworking",
@@ -6203,7 +5975,6 @@
     "toolTierRequired": 1,
     "researchRequired": "runic_inscription"
   },
-  // Thrown: made in twos and threes, meant to be spent.
   {
     "id"              : "make_bronze_javelin",
     "station"         : "casting_hearth",
@@ -6250,7 +6021,6 @@
     "toolTierRequired": 2,
     "researchRequired": "runic_inscription"
   },
-  // One-handed arcane: a cut stone in a collar on a short rod.
   {
     "id"              : "make_cinder_rod",
     "station"         : "runecarver_bench",
@@ -6314,7 +6084,6 @@
     "toolTierRequired": 2,
     "researchRequired": "mythic_attunement"
   },
-  // Ammunition: a fraction of the launcher's cost, in whatever the age smelts.
   {
     "id"              : "make_bronze_arrow",
     "station"         : "casting_hearth",
@@ -6402,12 +6171,6 @@
     "workAmount"      : 2,
     "toolTierRequired": 0
   },
-  // ── Armour expansion recipes. The limb lines (pauldrons / bracers / greaves) shipped as item
-  //    definitions with no recipe at ANY age, so shoulders, arms and legs were unprotectable in
-  //    play even though the combat probes force-equipped them; those come first. Then the new
-  //    pieces that close the per-age coverage gaps. Ages gate on their own metal research and
-  //    station: stone_forge/copper_smelting, casting_hearth/bronze_working, anvil/iron_working,
-  //    anvil/steel_making, runecarver_bench/runic_inscription.
   {
     "id"              : "make_cured_hide_skirt",
     "station"         : "makers_bench",
@@ -6729,7 +6492,6 @@
     "discipline"      : "weaving",
     "researchRequired": "runic_inscription"
   },
-  // ── recipes for the 20-set matrix ──
   {
     "id"              : "make_jackal_head",
     "station"         : "makers_bench",
@@ -7276,7 +7038,6 @@
     "discipline"      : "weaving",
     "researchRequired": "runic_inscription"
   },
-  // ── Sackcloth line (stone age clothing) ──
   {
     "id": "make_sackcloth_hood",
     "discipline": "weaving",
@@ -7332,7 +7093,6 @@
     "workAmount": 6,
     "toolTierRequired": 0
   },
-  // ── Set-hole pieces ──
   {
     "id": "make_deer_greaves",
     "discipline": "leatherworking",
@@ -7488,7 +7248,6 @@
     "toolTierRequired": 3,
     "researchRequired": "runic_inscription"
   },
-  // ── Shields ──
   {
     "id": "make_iron_buckler",
     "discipline": "metalworking",
@@ -7524,7 +7283,6 @@
     "toolTierRequired": 3,
     "researchRequired": "runic_inscription"
   },
-  // ── Wicker & branch line ──
   {
     "id": "make_branch_bracers",
     "discipline": "woodworking",
@@ -7553,7 +7311,6 @@
     "workAmount": 5,
     "toolTierRequired": 0
   },
-  // ── Bark sandals ──
   {
     "id": "make_bark_sandals",
     "discipline": "woodworking",
@@ -7568,7 +7325,6 @@
     "workAmount": 3,
     "toolTierRequired": 0
   },
-  // ── Water carriers that existed as items with no way to make them ──
   {
     "id": "make_waterskin",
     "discipline": "leatherworking",

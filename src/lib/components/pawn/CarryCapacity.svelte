@@ -1,5 +1,3 @@
-<!-- CarryCapacity.svelte — the "[w/W kg · v/V L]" load readout + the capacity-breakdown hover tooltip
-     for the CARRYING header. Split out of PawnInventory to keep it within the component-size limit. -->
 <script lang="ts">
   import type { Pawn } from '$lib/game/core/types';
   import { itemService } from '$lib/game/services/ItemService';
@@ -7,16 +5,12 @@
 
   export let pawn: Pawn;
 
-  // Derive load + budget from the service (single source of truth = item defs). The cached
-  // pawn.inventory.weightKg is a write-only initial-shape field that is never updated on
-  // inventory mutation, so reading it showed a stale 0.0 (review R5 / playtest 2026-06-13).
   $: cap = itemService.getCarryCapacityBreakdown(pawn);
   $: load = itemService.getCurrentCarryLoad(pawn, $gameState);
   $: maxWeightKg = cap.weight.total;
   $: maxVolumeL = cap.volume.total;
   $: weightKg = load.weightKg;
   $: volumeL = load.volumeL;
-  // Raw (pre-floor) sums — when below 1 the budget is clamped to the 1.0 minimum.
   $: wRaw = cap.weight.capacity + cap.weight.gear;
   $: vRaw = cap.volume.capacity + cap.volume.gear;
 

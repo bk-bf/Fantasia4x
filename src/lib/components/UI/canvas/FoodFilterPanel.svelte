@@ -1,9 +1,3 @@
-<!--
-  FoodFilterPanel — colony-wide "what may pawns eat" filter, surfaced via the FOOD button on the pawn
-  info card (mirrors BuildingFuelPanel's fuel-item checklist). Self-contained: edits gs.foodSettings
-  through the setFoodSettings command. The parent (GameCanvas) owns the open/close toggle (`open`) and
-  the FOOD button that flips it. Unlike fuel (per-building), the food policy is ONE colony-wide list.
--->
 <script lang="ts">
   import { gameState } from '$lib/stores/gameState.js';
   import type { FoodSettings, Item } from '$lib/game/core/types.js';
@@ -20,22 +14,16 @@
 
   export let open = false;
 
-  // Every edible item (incl. raw carcasses + rotten food, which sit unchecked by default). The
-  // checklist groups them by category and sorts within each group.
   const FOOD_ITEMS = (itemsData as unknown as Item[]).filter(isEdibleFood);
-  const FOOD_SETTINGS_ICON_REF: HudSpriteIconRef = { sheet: 'items', id: 127 }; // berries glyph
+  const FOOD_SETTINGS_ICON_REF: HudSpriteIconRef = { sheet: 'items', id: 127 };
 
   $: foodSettings = ($gameState.foodSettings ?? {}) as FoodSettings;
-  // Effective eat-list: an untouched policy falls back to the default (no rotten/carcasses); an explicit
-  // list — even empty — is honoured. Same resolution selectFoodForMeal uses, so the ticks match reality.
   $: allowedFoodSet = resolveAllowedFoodIds(foodSettings);
 
   function update(updates: Partial<FoodSettings>) {
     gameState.command({ type: 'setFoodSettings', payload: { updates }, save: true });
   }
 
-  // Every food-filter action writes an EXPLICIT id list (the new allow-list), so the colony is from
-  // then on under manual control — no "unset = default" sentinel to fight.
   function resetToDefault() {
     update({ allowedFoodItemIds: [...getDefaultAllowedFoodIds()] });
   }

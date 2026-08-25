@@ -6,7 +6,6 @@ import {
   type CropWindow
 } from '$lib/game/core/rules/world/cropHealth';
 
-// A hardy cold-spring crop (rye-like) vs. its window.
 const win: CropWindow = { minSoil: 1, minTemp: -8, maxTemp: 30, minMoisture: 25, maxMoisture: 70 };
 const healthy = { soilTier: 2, temp: 5, moisture: 40, snow: 0 };
 
@@ -24,11 +23,10 @@ describe('cropHealth', () => {
   });
 
   it('scales cold severity by degrees below minTemp', () => {
-    const mild = cropHealth(win, { ...healthy, temp: -10 }).severity; // 2° below
-    const hard = cropHealth(win, { ...healthy, temp: -18 }).severity; // 10° below
+    const mild = cropHealth(win, { ...healthy, temp: -10 }).severity;
+    const hard = cropHealth(win, { ...healthy, temp: -18 }).severity;
     expect(mild).toBe(2);
     expect(hard).toBe(10);
-    // Colder ⇒ faster decline, both clamped into the per-day band.
     expect(cropLossPerDay(hard)).toBeGreaterThan(cropLossPerDay(mild));
   });
 

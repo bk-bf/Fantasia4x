@@ -1,22 +1,3 @@
-/**
- * R1 spike benchmark (ENGINE-PERFORMANCE ★ ACTIVE) — the go/no-go gate for the Rust-SoA core.
- *
- * Runs ONE representative hot loop (per-entity needs decay + one-step movement with a chunked-grid
- * tile-cost read) at target scale and times four implementations doing the **identical** work:
- *
- *   1. Rust-SoA          — the proposed core (`SimWorld.bench_step`, over wasm SoA buffers)
- *   2. JS-SoA            — same data layout, in JS over plain typed arrays  → isolates language delta
- *   3. JS-OOP (mutate)   — array of entity objects, mutated in place        → isolates SoA vs objects
- *   4. JS-OOP (immutable)— spreads new entity+needs objects each tick       → the CURRENT engine style
- *
- * So: (3 vs 4) = the allocation tax the current code pays; (2 vs 3) = the SoA layout win; (1 vs 2) =
- * what Rust buys on top. Run from the browser console: `await runSimCoreBench()`.
- *
- * Honest-comparison notes: all four read tile cost from the same chunk-major addressing; all run the
- * same tick count after a warmup; Rust runs the loop entirely in wasm (one boundary crossing) and
- * the JS variants in a JS loop — i.e. pure per-tick COMPUTE, no per-tick JS↔wasm marshalling (that
- * boundary is an R3 concern, measured separately there). Numbers are this machine's V8 + wasm.
- */
 import {
   SimWorldView,
   CHUNK,
@@ -51,7 +32,6 @@ export interface BenchResult {
   ratios: Record<string, number>;
 }
 
-/** Chunk-major tile index (mirrors SimWorldView.tileIndex) over a plain JS tile-cost array. */
 function tileIdx(x: number, y: number, chunksX: number): number {
   return (
     (((y / CHUNK) | 0) * chunksX + ((x / CHUNK) | 0)) * CHUNK * CHUNK +
@@ -65,7 +45,6 @@ function median(ms: number[]): number {
   return s[s.length >> 1];
 }
 
-/** Time `fn` over `reps` runs (each running the full tick count), return median ms per single run. */
 function timeRuns(fn: () => number, reps: number): number {
   let sink = 0;
   const samples: number[] = [];
@@ -79,10 +58,6 @@ function timeRuns(fn: () => number, reps: number): number {
   return median(samples);
 }
 
-/**
- * Run the R1 benchmark. Defaults to the target scale (500 entities, 1000×1000, 600 ticks ≈ 10
- * sim-seconds). Logs a table to the console + perf.log and returns the structured result.
- */
 export async function runSimCoreBench(
   entities = 500,
   width = 1000,
@@ -92,7 +67,6 @@ export async function runSimCoreBench(
 ): Promise<BenchResult> {
   const chunksX = Math.ceil(width / CHUNK);
 
-  // ── 1. Rust-SoA (real wasm core) ────────────────────────────────────────────────────────────
   const view = await SimWorldView.create(entities + 16, width, height);
   for (let i = 0; i < entities; i++) {
     const slot = view.spawn();
@@ -100,10 +74,9 @@ export async function runSimCoreBench(
     view.setI32(I_Y, slot, (i * 197) % height);
     view.setF32(F_HUNGER, slot, 10);
   }
-  view.benchStep(ticks); // warmup
+  view.benchStep(ticks);
   const rust = timeRuns(() => view.benchStep(ticks), reps);
 
-  // ── 2. JS-SoA (same layout, plain typed arrays) ──────────────────────────────────────────────
   const cap = entities + 16;
   const f32 = new Float32Array(NF32 * cap);
   const i32 = new Int32Array(NI32 * cap);
@@ -122,9 +95,9 @@ export async function runSimCoreBench(
       for (let i = 0; i < entities; i++) {
         if (u8[U_ALIVE * cap + i] === 0) continue;
         f32[F_HUNGER * cap + i] = Math.min(100, f32[F_HUNGER * cap + i] + 0.1);
-        f32[1 * cap + i] = Math.min(100, f32[1 * cap + i] + 0.05); // fatigue
-        f32[3 * cap + i] = Math.min(100, f32[3 * cap + i] + 0.08); // thirst
-        f32[4 * cap + i] = Math.min(100, f32[4 * cap + i] + 0.02); // hygiene
+        f32[1 * cap + i] = Math.min(100, f32[1 * cap + i] + 0.05);
+        f32[3 * cap + i] = Math.min(100, f32[3 * cap + i] + 0.08);
+        f32[4 * cap + i] = Math.min(100, f32[4 * cap + i] + 0.02);
         const ncc = f32[F_NEXT_CELL_COST * cap + i] - 1;
         if (ncc <= 0) {
           const [dx, dy] = DIRS[i & 7];
@@ -146,7 +119,6 @@ export async function runSimCoreBench(
   jsSoa();
   const jsSoaMs = timeRuns(jsSoa, reps);
 
-  // ── 3 & 4. JS-OOP ────────────────────────────────────────────────────────────────────────────
   type Ent = {
     x: number;
     y: number;
@@ -169,7 +141,6 @@ export async function runSimCoreBench(
       dir: i & 7
     }));
 
-  // 3. mutate in place
   const entsM = makeEnts();
   const jsOopMut = () => {
     let cs = 0;
@@ -201,7 +172,6 @@ export async function runSimCoreBench(
   jsOopMut();
   const jsOopMutMs = timeRuns(jsOopMut, reps);
 
-  // 4. immutable spread each tick (the current engine's pattern) — fresh array of fresh objects
   const jsOopImm = () => {
     let cs = 0;
     let ents = makeEnts();

@@ -1,9 +1,3 @@
-/**
- * DELETE /api/logs
- *
- * Clears all .debug/*.log files (dev-only).
- */
-
 import { readdirSync, unlinkSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import type { RequestHandler } from './$types';

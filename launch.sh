@@ -1,59 +1,15 @@
 #!/usr/bin/env bash
-# launch.sh — start main + all .worktrees/launch/* dev servers with debug mode.
-# Ctrl-C kills them all.
-#
-# --tools: browsable DEV-TOOLS session — the Vite server with the /gear-db dev route ALLOWLISTED in
-#   the desktop-shell guard (VITE_TOOLS_MODE), so a plain browser can open it. The GAME itself stays
-#   guarded — opening the bare server URL still 403s to the "runs in the desktop app" page, never the
-#   game. Serves the /gear-db gear database (data-driven from items/recipes.jsonc) PLUS the static
-#   spritesheet viewer one port above. Hot-reload is ON (edit a .jsonc, the table re-renders). It kills
-#   whatever holds the ports first, so re-running it is a clean RESTART. ./launch.sh --tools
-#
-# --profiler: focused profiling session — launches ONLY the main server in the heavy
-#   profiler sandbox (./dev.sh --profiler), skipping the worktree fan-out.
-# --electron / --tauri: wrap a SINGLE main server in a desktop webview for the cross-engine
-#   TPS spike (V8/Chromium vs WebKitGTK/JSC). Combinable with --debug (default) or --profiler;
-#   skips the worktree fan-out (the shell points at one port). Closing the window stops the server.
-#     ./launch.sh --debug --electron      ./launch.sh --profiler --tauri
-# --log: add the in-game DEBUG log tab + verbose firehose (no other dev UI) to any launch — handy
-#   to watch the log under --profiler/--electron, e.g. ./launch.sh --profiler --electron --log.
-# --play: clean PLAYER launch (shell only) — drops --debug so the game opens at the MAIN MENU with
-#   the DEBUG tab hidden, the way an alpha build looks. Still served by the live dev server, so
-#   bug-fixes are a reload away (no rebuild). Immersive playtesting: ./launch.sh --electron --play.
-# RELOAD: Vite hot-reload / live page-reload is OFF for every launch.sh server, so an agent editing the
-#   tree never reloads a live playtest. Manual browser reload (F5 / Ctrl+R / Ctrl+Shift+R) and DevTools
-#   are gated inside the Electron shell on the in-app Debug setting: a --play build blocks them until you
-#   tick Debug mode in Settings; --debug/--profiler leave them reachable. (To opt a raw dev.sh server
-#   back into hot-reload outside launch.sh, run `./dev.sh --hmr` directly.)
-# SANDBOXING (electron): ON BY DEFAULT. The dev server AND Electron run inside a private Linux network
-#   namespace (rootless `unshare --net`), so the dev-server port exists ONLY inside that namespace and
-#   is physically UNREACHABLE from your browser (or any other host process) as a URL — the game is the
-#   only thing that can talk to it. The vite.config 403 guard is a bouncer; this removes the door.
-#   - --net-host: OPT OUT — run on normal host networking (the old behaviour). Needed when you want the
-#     CDP debug port (:9222) reachable for the electron-debug MCP, or any outbound network in-app.
-#   - --profiler implies --net-host automatically (the profiler/CDP workflow needs host access);
-#     pass --sandbox to force isolation even under --profiler.
-#   Electron runs with --no-sandbox in this mode (Chromium can't nest its sandbox in the user ns).
-#     ./launch.sh --electron            (sandboxed by default)
-#     ./launch.sh --electron --net-host (host networking — CDP/profiling reachable)
-# SPRITESHEET VIEWER (desktop-shell launches): alongside any --electron/--tauri launch, a tiny static
-#   file server (python3 http.server, rooted at static/) starts on :5174 serving the /dev/ spritesheet
-#   viewer (http://localhost:5174/dev/spritesheet-viewer.html) — the game server itself is shell-only/
-#   sandboxed. It is NOT a second Vite (that would thrash the shared dep cache and slow startup).
-# codegraph is a separate always-on systemd user service (see codegraph_hint below).
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PIDS=()
 
-# pnpm lives in the user-local npm prefix, which isn't on a non-login shell's PATH (dev.sh does the
-# same at its top). Without this the electron-deps bootstrap below fails with "pnpm: command not found".
 export PATH="$HOME/.npm-global/bin:$PATH"
 
 PROFILER=false
 LOG=false
 PLAY=false
 TOOLS=false
-SANDBOX=auto   # auto = default ON for electron (OFF under --profiler); --sandbox forces on, --net-host forces off
+SANDBOX=auto
 SHELL_TARGET=""
 for arg in "$@"; do
   case "$arg" in
@@ -68,10 +24,6 @@ for arg in "$@"; do
   esac
 done
 
-# Autobootstrap a fresh checkout/worktree. install.sh does all the NETWORK-dependent setup (deps,
-# WASM, electron shell); it MUST run here on the host, because a sandboxed electron launch below
-# starts the dev server inside a network-isolated namespace where any install fails with ENETUNREACH.
-# install.sh is idempotent — only invoke it when a required artifact is actually missing.
 needs_bootstrap() {
   [[ -d "$SCRIPT_DIR/node_modules" ]]              || return 0
   [[ -d "$SCRIPT_DIR/.svelte-kit" ]]               || return 0
@@ -87,32 +39,24 @@ if needs_bootstrap; then
   "$SCRIPT_DIR/install.sh" || { echo "launch.sh: install.sh failed; aborting." >&2; exit 1; }
   echo ""
 fi
-# Suffixes appended to a server's dev.sh flag set (dev.sh parses multiple flags). HMR is never passed
-# here, so launch.sh servers always run with hot-reload OFF — an agent editing the tree never reloads a
-# live playtest. (Run `./dev.sh --hmr` directly to opt a standalone server back in.)
 LOG_FLAG=""; [[ "$LOG" == true ]] && LOG_FLAG=" --log"
 
 cleanup() {
   [[ ${#PIDS[@]} -eq 0 ]] && return
   echo ""
   echo "Stopping all dev servers..."
-  kill -CONT "${PIDS[@]}" 2>/dev/null || true  # wake any Ctrl-Z'd child so it can exit
+  kill -CONT "${PIDS[@]}" 2>/dev/null || true
   kill "${PIDS[@]}" 2>/dev/null || true
   wait 2>/dev/null || true
-  PIDS=()  # idempotent: a second cleanup (e.g. Ctrl-C then normal return) no-ops
+  PIDS=()
   echo "Done."
 }
 trap cleanup INT TERM
 
 launch() {
-  # `extra` is the dev.sh flag set. Defaults to --debug (the normal launch.sh experience) ONLY when
-  # $3 is UNSET; an explicit empty "" is honoured as a CLEAN run (the `--play` player launch) — hence
-  # `-` not `:-`, so "" doesn't collapse back to --debug. The profiler branch passes "--profiler".
   local dir="$1" label="$2" extra="${3---debug}"
   local port=5173
   [[ -f "$dir/.devport" ]] && port=$(< "$dir/.devport")
-  # A Ctrl-Z'd previous launch leaves a suspended server holding the port:
-  # dev.sh then reports "already running" but nothing serves. Resume it.
   local holders stopped
   holders=$(lsof -ti tcp:$port 2>/dev/null)
   if [[ -n "$holders" ]]; then
@@ -129,11 +73,6 @@ launch() {
   sleep 0.3
 }
 
-# Standalone spritesheet viewer: a tiny STATIC file server on 5174, rooted at static/, so a plain
-# browser can open the /dev/ viewer while the desktop-shell game server (5173) is sandboxed. The viewer
-# is self-contained HTML + <img> loads of /tilesets/*.bmp — both live under static/ — so it needs NO
-# Vite. (A second Vite against this same root thrashes the shared node_modules/.vite dep cache and makes
-# startup crawl; a static server sidesteps that entirely.) Tracked in PIDS so cleanup stops it; quiet.
 start_spritesheet_viewer() {
   local vport="${1:-5174}"
   if ! command -v python3 >/dev/null 2>&1; then
@@ -145,10 +84,6 @@ start_spritesheet_viewer() {
   echo "  [spritesheet] http://localhost:$vport/dev/spritesheet-viewer.html"
 }
 
-# codegraph now runs as its own always-on systemd user service, decoupled from
-# this script — no file watcher, rebuilt on demand via the ↻ button in its header,
-# so it never competes with playtesting/profiling. We only print a pointer here.
-#   manage it with:  systemctl --user {status,restart,stop} codegraph
 codegraph_hint() {
   if systemctl --user is-active --quiet codegraph.service 2>/dev/null; then
     echo "  [codegraph] http://localhost:5185  (systemd --user service; ↻ in header rebuilds)"
@@ -167,10 +102,6 @@ wait_for_port() {
   echo ""; echo "  dev server did not come up." >&2; return 1
 }
 
-# Run the dev server + Electron together inside a private (rootless) network namespace so the dev
-# server's port is unreachable from the host browser — only the in-ns Electron can see it. Both
-# processes share the namespace's isolated loopback; nothing outside (Zen, curl, another tab) can
-# route to it. Values are passed via env to dodge nested-quoting in the unshared bash.
 run_isolated_electron() {
   local port="$1" server_flag="$2" shell_dir="$3"
   echo "  [electron · sandboxed] private net namespace — dev server on 127.0.0.1:$port is"
@@ -198,8 +129,6 @@ run_isolated_electron() {
     SRV=$!
     cleanup_ns() { kill "$SRV" 2>/dev/null; wait 2>/dev/null; }
     trap 'cleanup_ns; exit 0' INT TERM
-    # Wait (in-ns) for the dev server to answer — any HTTP status counts (the 403 guard still responds).
-    # Bail early if the server process dies, and announce success/timeout, so a stall here is never silent.
     log "waiting for dev server on http://127.0.0.1:$F4X_NS_PORT/ (up to 60s) …"
     up=false
     for i in $(seq 1 120); do
@@ -215,11 +144,7 @@ run_isolated_electron() {
       cleanup_ns; exit 1
     fi
     cd "$F4X_NS_SHELL_DIR" || { cleanup_ns; exit 1; }
-    # No session bus is reachable inside the net namespace; without this Chromium autolaunches one and
-    # blocks ~25s per dbus-dependent probe ("Failed to connect to the bus: Did not receive a reply"),
-    # which reads as a freeze at startup. `disabled:` is the GLib sentinel that suppresses autolaunch.
     export DBUS_SESSION_BUS_ADDRESS=disabled:
-    # --no-sandbox: Chromium can't create its own sandbox nested inside this user namespace.
     log "launching electron → http://127.0.0.1:$F4X_NS_PORT …"
     SPIKE_URL="http://127.0.0.1:$F4X_NS_PORT" F4X_PLAY="$F4X_NS_PLAY" ./node_modules/.bin/electron . --no-sandbox
     log "electron exited (status $?)"
@@ -227,28 +152,20 @@ run_isolated_electron() {
 NSEOF
 }
 
-# Browsable dev-tools session: the Vite server with the desktop-shell guard lifted (so a plain
-# browser can open /gear-db and friends) + the static spritesheet viewer one port above. Kills
-# whatever holds the ports first, so re-running --tools is a clean restart. Hot-reload ON.
 if [[ "$TOOLS" == true ]]; then
   PORT=5173
   [[ -f "$SCRIPT_DIR/.devport" ]] && PORT=$(< "$SCRIPT_DIR/.devport")
-  VPORT=$((PORT + 1))   # spritesheet viewer sits one port above the dev server (avoids the clash)
+  VPORT=$((PORT + 1))
 
   echo "Fantasia4x — dev tools (browsable, hot-reload)"
   echo ""
-  # Clean restart: free the ports so a re-run relaunches instead of hitting "already running".
-  # Loop + escalate to -9 until BOTH ports are actually free (a plain kill can leave a ghost that
-  # dev.sh then reports as "already running", serving nothing new).
-  # NB: `lsof -ti tcp:A tcp:B` (multi-arg) returns nothing — lsof needs ONE port per invocation, so
-  # query each port separately and combine.
   port_holders() { { lsof -ti tcp:"$PORT"; lsof -ti tcp:"$VPORT"; } 2>/dev/null; }
   announced=false
   for _ in 1 2 3 4; do
     holders=$(port_holders)
     [[ -z "$holders" ]] && break
     if [[ "$announced" == false ]]; then echo "  restarting — stopping servers on :$PORT/:$VPORT"; announced=true; fi
-    kill -CONT $holders 2>/dev/null || true   # wake any Ctrl-Z'd holder so it can die
+    kill -CONT $holders 2>/dev/null || true
     kill $holders 2>/dev/null || true
     sleep 0.7
     holders=$(port_holders)
@@ -256,9 +173,6 @@ if [[ "$TOOLS" == true ]]; then
     sleep 0.4
   done
 
-  # dev.sh --tools allowlists ONLY the /gear-db dev route in the vite.config guard (VITE_TOOLS_MODE) —
-  # it does NOT lift the guard for the game, so opening the bare server URL never launches it. --hmr
-  # keeps hot-reload on so an edited .jsonc re-renders.
   launch "$SCRIPT_DIR" "dev-server" "--hmr --tools"
   wait_for_port "$PORT" || { cleanup; exit 1; }
   start_spritesheet_viewer "$VPORT"
@@ -272,12 +186,8 @@ if [[ "$TOOLS" == true ]]; then
   exit 0
 fi
 
-# Desktop webview shell over a single main server (cross-engine TPS spike).
 if [[ -n "$SHELL_TARGET" ]]; then
   SHELL_DIR="$SCRIPT_DIR/desktop-spike/$SHELL_TARGET"
-  # Per-worktree gap: each git worktree has its own (untracked) node_modules, so a fresh worktree's
-  # spike has none. Auto-install on first run instead of erroring — `--ignore-workspace` keeps the
-  # standalone spike out of the monorepo workspace hoisting.
   if [[ ! -d "$SHELL_DIR/node_modules" ]]; then
     echo "launch.sh: $SHELL_TARGET deps not installed — installing (first run in this worktree)…" >&2
     (cd "$SHELL_DIR" && pnpm install --ignore-workspace) || {
@@ -285,9 +195,6 @@ if [[ -n "$SHELL_TARGET" ]]; then
       exit 1
     }
   fi
-  # The electron binary is unpacked by a postinstall script that pnpm 10 skips unless approved (the
-  # spike package.json allowlists it via pnpm.onlyBuiltDependencies). Guard anyway: if the runtime
-  # isn't unpacked, run electron's installer directly so the shell always launches.
   if [[ "$SHELL_TARGET" == electron && ! -x "$SHELL_DIR/node_modules/electron/dist/electron" ]]; then
     echo "launch.sh: unpacking electron runtime…" >&2
     (cd "$SHELL_DIR" && node node_modules/electron/install.js) || {
@@ -295,10 +202,6 @@ if [[ -n "$SHELL_TARGET" ]]; then
       exit 1
     }
   fi
-  # --profiler boots WITHOUT --debug so the sim profiles clean (no verbose firehose). Add --log to
-  # surface the DEBUG log tab + firehose on demand (e.g. ./launch.sh --profiler --electron --log).
-  # --play: clean PLAYER build — NO --debug, so the MAIN MENU shows and the DEBUG tab is hidden; an
-  # immersive playtest over the live dev server, so bug-fixes are still just a reload away.
   SERVER_FLAG="--debug"; [[ "$PROFILER" == true ]] && SERVER_FLAG="--profiler"
   [[ "$PLAY" == true ]] && SERVER_FLAG=""
   SERVER_FLAG="$SERVER_FLAG$LOG_FLAG"
@@ -306,8 +209,6 @@ if [[ -n "$SHELL_TARGET" ]]; then
   PORT=5173
   [[ -f "$SCRIPT_DIR/.devport" ]] && PORT=$(< "$SCRIPT_DIR/.devport")
 
-  # Resolve sandboxing: default ON for electron, OFF under --profiler (needs CDP/host), forced by
-  # --sandbox / --net-host. Only electron supports it.
   SBX=false
   if [[ "$SHELL_TARGET" == electron ]]; then
     case "$SANDBOX" in
@@ -331,8 +232,6 @@ if [[ -n "$SHELL_TARGET" ]]; then
   codegraph_hint
   start_spritesheet_viewer
 
-  # Sandboxed electron: the dev server is started INSIDE the network namespace (not on the host), so
-  # skip the host-side launch/wait_for_port entirely and hand off to the isolated runner.
   if [[ "$SHELL_TARGET" == electron && "$SBX" == true ]]; then
     echo ""
     run_isolated_electron "$PORT" "$SERVER_FLAG" "$SHELL_DIR"
@@ -350,9 +249,6 @@ if [[ -n "$SHELL_TARGET" ]]; then
       ;;
     tauri)
       echo "  [tauri] WebKitGTK/JSC → http://127.0.0.1:$PORT (close window or Ctrl-C to stop)"
-      # Tauri polls devUrl literally — override the hardcoded conf to the real .devport AND force
-      # IPv4: here `localhost` resolves to ::1 first, but `vite --host` binds 0.0.0.0 (IPv4 only),
-      # so a `localhost` poll hits an unserved ::1 and hangs on "Waiting for frontend dev server".
       (cd "$SHELL_DIR" && pnpm tauri dev -c "{\"build\":{\"devUrl\":\"http://127.0.0.1:$PORT\"}}")
       ;;
   esac
@@ -360,7 +256,6 @@ if [[ -n "$SHELL_TARGET" ]]; then
   exit 0
 fi
 
-# Profiler sandbox: a single focused server, no worktree fan-out.
 if [[ "$PROFILER" == true ]]; then
   echo "Fantasia4x — profiler sandbox (main server only)"
   echo ""

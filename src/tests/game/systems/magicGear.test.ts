@@ -1,4 +1,3 @@
-// Passive magical buffs via conditions: gear grants transient magical conditions while worn.
 import { describe, it, expect } from 'vitest';
 import { syncTransientConditions } from '$lib/game/systems/PawnStateMachine';
 import { equipItem } from '$lib/game/core/rules/gear/equipment';
@@ -8,8 +7,6 @@ import { recipeService } from '$lib/game/services/RecipeService';
 import conditionsData from '$lib/game/database/pawns/conditions.jsonc';
 import type { GameState, Mob, Pawn } from '$lib/game/core/types';
 
-/** Cutting is grinding, and the abrasive has to out-scratch the stone: sand takes the quartzes, emery
- *  the harder beryls, and only a corundum lap touches a ruby. Attuning is the runed bench's job. */
 const CUT_AT: Record<string, string> = {
   moonstone: 'lapidary_bench',
   amethyst: 'lapidary_bench',
@@ -39,7 +36,6 @@ function pawnWearing(slot: string, itemId: string): Pawn {
   } as unknown as Pawn;
 }
 
-/** A recipe ref is either a concrete item id or a `category:` POOL — a pool resolves to its members. */
 function refResolves(ref: string): boolean {
   if (!ref.startsWith('category:')) return itemService.getItemById(ref) != null;
   return itemService.getItemsByCategory(ref.slice('category:'.length)).length > 0;
@@ -96,10 +92,6 @@ describe('§M magical conditions', () => {
       'moveSpeed',
       'fatigueRate',
       'hungerRate',
-      // The flat combat keys, all read by `Combat.conditionMult` — `dodge` in the evasion term,
-      // `hitChance` on the to-hit roll, `attackSpeed` on the swing interval, `critChance` on the crit
-      // roll. `quickness` and `grace` carry `attackSpeed` because a haste buff that granted only
-      // `dexterity` bought nothing but damage once the stats were decoupled.
       'dodge',
       'hitChance',
       'attackSpeed',
@@ -109,7 +101,6 @@ describe('§M magical conditions', () => {
       expect(c.transient).toBe(true);
       const keys = Object.keys(c.modifiers);
       expect(keys.length).toBeGreaterThan(0);
-      // every modifier key is one the engine actually consumes, and is an actual buff (not 1.0)
       for (const k of keys) {
         expect(CONSUMED.has(k)).toBe(true);
         expect(c.modifiers[k]).not.toBe(1);
@@ -158,7 +149,6 @@ describe('§M item & recipe integrity', () => {
       expect(r, itemId).toBeDefined();
       expect(r!.station).toBe(station);
       for (const id of [...Object.keys(r!.inputs), ...Object.keys(r!.outputs)]) {
-        // A `category:` slot names a POOL, not an item — resolve it to its members instead.
         if (id.startsWith('category:')) {
           const cat = id.slice('category:'.length);
           expect(
@@ -179,7 +169,6 @@ describe('§M item & recipe integrity', () => {
   });
 });
 
-// Arcane staves — INT-scaled channeled elemental ranged weapons over two workbench tiers.
 const T1_STAVES = ['ember_staff', 'frost_staff', 'spark_staff'] as const;
 const T2_STAVES = ['pyre_staff', 'rime_staff', 'tempest_staff'] as const;
 const STAFF_ELEMENT: Record<string, string> = {
@@ -201,9 +190,9 @@ describe('§M arcane staves', () => {
       expect(wp.arcane, id).toBe(true);
       expect(wp.channeled, id).toBe(true);
       expect(wp.twoHanded, id).toBe(true);
-      expect(wp.range, id).toBeGreaterThan(1); // ranged
-      expect(wp.ammoCategory, id).toBeUndefined(); // channels mana, not ammo
-      expect(wp.staminaCost, id).toBeGreaterThan(0); // mana per cast
+      expect(wp.range, id).toBeGreaterThan(1);
+      expect(wp.ammoCategory, id).toBeUndefined();
+      expect(wp.staminaCost, id).toBeGreaterThan(0);
       expect(STAFF_ELEMENT[id]).toBe(wp.damageType);
     }
   });
@@ -213,7 +202,6 @@ describe('§M arcane staves', () => {
       const def = itemService.getItemById(id)!;
       expect(def.grantsConditions?.length, id).toBeGreaterThan(0);
     }
-    // wielding a Pyre Staff in the main hand grants Might (gear-grant scan covers held weapons)
     const synced = syncTransientConditions({
       id: 'mage',
       equipment: { mainHand: { instanceId: 'i', itemId: 'pyre_staff', durability: 180 } },
@@ -234,7 +222,6 @@ describe('§M arcane staves', () => {
   });
 });
 
-// Regalia — combo & head jewelry (the magic-vs-armour loadout fork).
 const REGALIA: Record<string, { slot: string; conds: string[] }> = {
   scholars_circlet: { slot: 'head', conds: ['insight'] },
   champions_crown: { slot: 'head', conds: ['might', 'quickness'] },
@@ -266,13 +253,13 @@ describe('§M regalia (combo & head jewelry)', () => {
 
   it('two single-buff rings fill both ring slots and stack their buffs (no swap)', () => {
     let pawn = { id: 'r', equipment: {}, transientConditions: [] } as unknown as Pawn;
-    pawn = equipItem(pawn, 'ruby_ring'); // → ring
-    pawn = equipItem(pawn, 'sapphire_ring'); // → ring2 (first ring stays put)
+    pawn = equipItem(pawn, 'ruby_ring');
+    pawn = equipItem(pawn, 'sapphire_ring');
     expect(pawn.equipment.ring?.itemId).toBe('ruby_ring');
     expect(pawn.equipment.ring2?.itemId).toBe('sapphire_ring');
     const synced = syncTransientConditions(pawn);
-    expect(synced.transientConditions).toContain('might'); // ruby
-    expect(synced.transientConditions).toContain('insight'); // sapphire
+    expect(synced.transientConditions).toContain('might');
+    expect(synced.transientConditions).toContain('insight');
   });
 
   it('crowns occupy the head slot — a buff crown means no helm', () => {
@@ -288,7 +275,6 @@ describe('§M regalia (combo & head jewelry)', () => {
   });
 });
 
-// Combat wiring: INT-scaled arcane damage + elemental resistance over resolveHit.
 const baseStats = {
   strength: 10,
   dexterity: 10,
@@ -326,7 +312,7 @@ function mob(creatureId: string, st: Partial<typeof baseStats>): Mob {
     creatureId,
     entityClass: 'animal',
     isAlive: true,
-    stats: { ...baseStats, dexterity: 2, ...st }, // low dodge → hits land
+    stats: { ...baseStats, dexterity: 2, ...st },
     traits: [],
     limbs: limbs(),
     conditions: [],
@@ -359,7 +345,6 @@ describe('§M arcane staff damage rides INT', () => {
 describe('§M elemental resistance mitigates staff damage', () => {
   it('a frost-resistant creature takes far less frost-staff damage than a frost-vulnerable one', () => {
     const mage = staffMage('frost_staff', { intelligence: 16 });
-    // mammoth: explicit frost 0.5 + high-CONSTITUTION base; viper: frost -0.3 (vulnerable) → clamps to 0 resist.
     const onMammoth = avgHit(mage, mob('woolly_mammoth', { constitution: 24 }));
     const onViper = avgHit(mage, mob('marsh_viper', { constitution: 5 }));
     expect(onMammoth).toBeLessThan(onViper * 0.7);

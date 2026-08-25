@@ -7,7 +7,6 @@
 
   interface Props {
     pawn: Pawn;
-    /** Work category whose related stats should be soft-highlighted in the attributes grid. */
     highlightCategory?: string | null;
   }
   let { pawn, highlightCategory = null }: Props = $props();
@@ -52,8 +51,7 @@
     >{Math.round(pawn.needs.hygiene ?? 0)}%</span
   >
 </div>
-<!-- WORK-EXPERIENCE UI split: the Work screen shows only the work skills (incl. caretaking
-     speed/quality); the body stats live on the pawn Attributes tab. -->
+
 <div class="section-hdr sub">| WORK SKILLS</div>
 <PawnAttributes {pawn} {highlightCategory} categories={['work']} />
 

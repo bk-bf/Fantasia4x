@@ -3,11 +3,6 @@ import { handleTired } from '$lib/game/systems/pawn/handlers/needs';
 import { PAWN_STATE } from '$lib/game/systems/pawn/pawnStates';
 import type { GameState, Pawn, PlacedBuilding } from '$lib/game/core/types';
 
-// Regression: a TIRED pawn whose only bed is unreachable must lie down and sleep on the ground rather
-// than freezing in TIRED forever (the old code logged "unreachable, retrying" and returned unchanged).
-// In the test env the pathfinder isn't initialised, so tryAssignSleepPath returns null for any bed —
-// i.e. every bed is "unreachable" — which is precisely the branch this fix covers.
-
 function pawn(extra: Partial<Pawn> = {}): Pawn {
   return {
     id: 'p1',
@@ -41,7 +36,6 @@ describe('handleTired — falls back to ground sleep when the bed is unreachable
     const out = handleTired(p, stateWith(p, [bed()]));
     const after = out.pawns[0];
     expect(after.currentState).toBe(PAWN_STATE.SLEEPING);
-    // Slept where it stands, NOT at the unreachable bed's (5,5).
     expect(after.activeJob?.targetX).toBe(0);
     expect(after.activeJob?.targetY).toBe(0);
     expect(after.path).toEqual([]);

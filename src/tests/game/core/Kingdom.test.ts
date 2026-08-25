@@ -30,7 +30,6 @@ describe('KINGDOMS-TRADE — kingdom pool generation', () => {
       expect(k.knowledge).toBe(0);
       expect(k.discovered).toBeFalsy();
     }
-    // Scale = wealth: a grand kingdom has deep lore, a small poor one is sparse.
     const idx = (k: (typeof pool)[number]) => WEALTH_BANDS.indexOf(k.lore.wealthBand);
     const grand = pool.filter((k) => idx(k) >= 3);
     const small = pool.filter((k) => idx(k) <= 1);
@@ -40,7 +39,6 @@ describe('KINGDOMS-TRADE — kingdom pool generation', () => {
         k.lore.famedItems.created.length + k.lore.famedItems.held.length
       ).toBeGreaterThanOrEqual(1);
     }
-    // Small places are meant to be unremarkable: at least one carries no famed works at all.
     expect(
       small.some((k) => k.lore.famedItems.created.length + k.lore.famedItems.held.length === 0)
     ).toBe(true);

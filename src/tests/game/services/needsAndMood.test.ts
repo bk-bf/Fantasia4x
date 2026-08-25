@@ -2,15 +2,6 @@ import { describe, it, expect } from 'vitest';
 import { buildScenario } from '$lib/game/headless/Scenario';
 import { HeadlessSession } from '$lib/game/headless/HeadlessSession';
 
-/**
- * NEEDS & MOOD AUDIT (headless, real ticks). The tick-by-tick heart of the colony sim, previously only
- * unit-covered (`moodBreakdown.test.ts`). Drives the real loop: needs build/decay each tick, cross their
- * `seek` threshold, pull the pawn into the satisfying FSM state, and feed `moodBands` into a mood that
- * eases toward `computeMoodTarget`; at mood ≤25/15/5 a once-per-game-hour (750-tick) moral check can drop
- * a pawn into an uncontrollable `mental_breakdown`. Needs are set at spawn (`ScenarioPawnGroup.needs`) and
- * frozen with `needsDisabled`. Sim starts at NIGHT.
- */
-
 const need = (s: HeadlessSession, i: number, k: string) =>
   (s.getState().pawns[i] as unknown as { needs?: Record<string, number> }).needs?.[k] ?? 0;
 const mood = (s: HeadlessSession, i: number) =>
@@ -24,7 +15,7 @@ describe('needs & mood', () => {
         seed: 31,
         map: { w: 14, h: 14 },
         workReady: true,
-        pawns: [{ count: 2, skillLevel: 10, needs: { hunger: 85 } }], // seek = 70
+        pawns: [{ count: 2, skillLevel: 10, needs: { hunger: 85 } }],
         items: { spit_meat: 20 },
         seedEntities: false
       })
@@ -47,13 +38,12 @@ describe('needs & mood', () => {
         seed: 32,
         map: { w: 14, h: 14 },
         workReady: true,
-        pawns: [{ count: 2, skillLevel: 10, needs: { fatigue: 92 } }], // seek = 72
+        pawns: [{ count: 2, skillLevel: 10, needs: { fatigue: 92 } }],
         buildings: [{ id: 'hay_bed' }],
         items: { spit_meat: 10 },
         seedEntities: false
       })
     );
-    // Run a FULL sleep→wake cycle (well_rested is granted on WAKING from a bed, not mid-sleep).
     let wellRestedSeen = 0;
     let minFatigue = 92;
     const states = new Set<string>();
@@ -79,8 +69,8 @@ describe('needs & mood', () => {
         seed: 33,
         map: { w: 14, h: 14 },
         workReady: true,
-        pawns: [{ count: 2, skillLevel: 10, needs: { thirst: 92 } }], // seek = 82
-        buildings: [{ id: 'well' }], // effects.waterSource
+        pawns: [{ count: 2, skillLevel: 10, needs: { thirst: 92 } }],
+        buildings: [{ id: 'well' }],
         seedEntities: false
       })
     );
@@ -96,8 +86,8 @@ describe('needs & mood', () => {
         seed: 37,
         map: { w: 14, h: 14 },
         workReady: true,
-        pawns: [{ count: 2, skillLevel: 10, needs: { hygiene: 94 } }], // seek = 88
-        buildings: [{ id: 'well' }], // a well now draws water for washing too (not just drinking)
+        pawns: [{ count: 2, skillLevel: 10, needs: { hygiene: 94 } }],
+        buildings: [{ id: 'well' }],
         seedEntities: false
       })
     );
@@ -113,7 +103,6 @@ describe('needs & mood', () => {
         seed: 38,
         map: { w: 14, h: 14 },
         workReady: true,
-        // relaxation inverted (100 = entertained); seek at/below 30. Spawn bored, with a fire to gather at.
         pawns: [{ count: 3, skillLevel: 10, needs: { relaxation: 12 } }],
         buildings: [{ id: 'campfire' }],
         items: { spit_meat: 10, dry_firewood: 4, plant_fiber: 6 },
@@ -137,7 +126,6 @@ describe('needs & mood', () => {
       buildScenario({
         seed: 34,
         map: { w: 14, h: 14 },
-        // pawn 0 miserable (needs maxed + FROZEN so the target stays low); pawn 1 content (low needs).
         pawns: [
           { count: 1, needs: { hunger: 98, fatigue: 96, thirst: 95, hygiene: 92 } },
           { count: 1, needs: { hunger: 5, fatigue: 5, thirst: 5, hygiene: 5 } }
@@ -148,7 +136,7 @@ describe('needs & mood', () => {
     );
     const m0 = () => mood(s, 0);
     const m1 = () => mood(s, 1);
-    for (let i = 0; i < 8; i++) s.tick(150); // let mood ease toward target
+    for (let i = 0; i < 8; i++) s.tick(150);
     console.log(
       `[NM mood] miserable pawn mood=${m0().toFixed(1)} vs content pawn mood=${m1().toFixed(1)} (base 50)`
     );
@@ -162,7 +150,6 @@ describe('needs & mood', () => {
       buildScenario({
         seed: 35,
         map: { w: 18, h: 18 },
-        // Whole colony pinned at rock-bottom needs (frozen) → mood target near the floor → moral checks fire.
         pawns: [
           {
             count: 10,
@@ -184,7 +171,7 @@ describe('needs & mood', () => {
     let broke = 0;
     let minMood = 50;
     for (let i = 0; i < 40; i++) {
-      s.tick(400); // 16000 ticks ≈ 21 game-hours → ~21 moral checks per pawn
+      s.tick(400);
       for (const p of s.getState().pawns as unknown as Array<Record<string, unknown>>) {
         minMood = Math.min(minMood, (p.state as { mood?: number })?.mood ?? 50);
         const timer = (p.conditionTimers as Record<string, number>)?.mental_breakdown ?? 0;
@@ -206,7 +193,7 @@ describe('needs & mood', () => {
         seed: 36,
         map: { w: 14, h: 14 },
         workReady: true,
-        pawns: [{ count: 2, skillLevel: 10, needs: { comfort: 8 } }], // inverted: seek at/below 35
+        pawns: [{ count: 2, skillLevel: 10, needs: { comfort: 8 } }],
         buildings: [{ id: 'log_stool' }],
         items: { spit_meat: 10 },
         seedEntities: false

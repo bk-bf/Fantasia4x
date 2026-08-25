@@ -1,5 +1,3 @@
-// SOCIAL-LAYER pure-helper tests: the stage ladder + hysteresis, cultural seeding (the RACE-SYSTEM
-// Phase 1 acceptance regression), and effective-mood math.
 import { describe, it, expect } from 'vitest';
 import {
   effectiveMood,
@@ -36,10 +34,8 @@ describe('stage ladder', () => {
   });
 
   it('is hysteretic: a pair on the boundary does not flicker', () => {
-    // Acquaintances begin at 15. From strangers, 16 is NOT enough (needs 15+3).
     expect(stageForScore(16, 'strangers')).toBe('strangers');
     expect(stageForScore(18, 'strangers')).toBe('acquaintances');
-    // And once acquaintances, dipping to 14 does not demote (needs < 15-3).
     expect(stageForScore(14, 'acquaintances')).toBe('acquaintances');
     expect(stageForScore(11, 'acquaintances')).toBe('strangers');
   });
@@ -79,12 +75,12 @@ describe('cultural seeding (RACE-SYSTEM Phase 1 regression)', () => {
     const warm = pawnOf('a', 'c-orc', {
       kin: [{ pawnId: 'b', kind: 'sibling', warmth: 60 }]
     } as Partial<Pawn>);
-    expect(seedScore(warm, pawnOf('b', 'c-orc'), relations)).toBe(15 + 60); // close kin
+    expect(seedScore(warm, pawnOf('b', 'c-orc'), relations)).toBe(15 + 60);
     const estranged = pawnOf('a', 'c-orc', {
       kin: [{ pawnId: 'b', kind: 'sibling', warmth: -55 }]
     } as Partial<Pawn>);
     const seed = seedScore(estranged, pawnOf('b', 'c-orc'), relations);
-    expect(seed).toBe(15 - 55); // same people +15, but the bond is poison
+    expect(seed).toBe(15 - 55);
     expect(rawStageForScore(seed)).toBe('rivals');
   });
 });
@@ -98,8 +94,8 @@ describe('kin labels are gendered by the relative’s sex', () => {
     expect(kinLabel('auntuncle', 'female')).toBe('Aunt');
     expect(kinLabel('nibling', 'male')).toBe('Nephew');
     expect(kinLabel('grandparent', 'female')).toBe('Grandmother');
-    expect(kinLabel('cousin', 'male')).toBe('Cousin'); // no gendered form
-    expect(kinLabel('parent')).toBe('Parent'); // unknown sex → neutral
+    expect(kinLabel('cousin', 'male')).toBe('Cousin');
+    expect(kinLabel('parent')).toBe('Parent');
   });
 
   it('phrases the possessive with the relative’s gendered word', () => {
@@ -110,7 +106,7 @@ describe('kin labels are gendered by the relative’s sex', () => {
 
 describe('off-colony kin staleness', () => {
   it('is stale when never seen or a month has passed', () => {
-    expect(isKinStale(null)).toBe(true); // never seen since the founder emigrated
+    expect(isKinStale(null)).toBe(true);
     expect(isKinStale(5)).toBe(false);
     expect(isKinStale(30)).toBe(false);
     expect(isKinStale(31)).toBe(true);
@@ -118,8 +114,6 @@ describe('off-colony kin staleness', () => {
 });
 
 describe('effective mood', () => {
-  // MOOD-REWORK: effectiveMood is now just the pawn's eased state.mood, clamped. Modifiers no longer
-  // layer on at read time — they feed the TARGET the mood eases toward (PawnService.computeMoodTarget).
   it('returns the eased state.mood, ignoring modifiers (they feed the target, not the read)', () => {
     const p = pawnOf('a', 'c1', {
       state: { mood: 42, isWorking: false, isSleeping: false, isEating: false },
@@ -144,9 +138,9 @@ describe('moodModifierValue (fade-to-zero)', () => {
   it('standing bands hold full value; expiring thoughts fade linearly to zero', () => {
     expect(moodModifierValue({ id: 's', label: 's', value: 5, expiresAt: 0 }, 999)).toBe(5);
     const thought = { id: 't', label: 't', value: -10, expiresAt: 100, startedAt: 0 };
-    expect(moodModifierValue(thought, 0)).toBe(-10); // full at start
-    expect(moodModifierValue(thought, 50)).toBeCloseTo(-5, 5); // half faded
-    expect(moodModifierValue(thought, 100)).toBe(0); // expired
+    expect(moodModifierValue(thought, 0)).toBe(-10);
+    expect(moodModifierValue(thought, 50)).toBeCloseTo(-5, 5);
+    expect(moodModifierValue(thought, 100)).toBe(0);
     expect(moodModifierValue(thought, 200)).toBe(0);
   });
 });

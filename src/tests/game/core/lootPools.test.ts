@@ -1,8 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { drawLoadout, rollCondition, type LootPool } from '$lib/game/core/defs/loot';
 
-// A seeded, deterministic rng stub — feeds a fixed sequence, wrapping. Lets us assert the pure draw
-// logic (slot chance gate → weighted pick → quality roll) without the game rng singleton.
 function seq(values: number[]) {
   let i = 0;
   return { random: () => values[i++ % values.length] };
@@ -29,15 +27,12 @@ const POOL: LootPool = {
 
 describe('lootpool draw', () => {
   it('fills a slot only when the chance roll passes, then weighted-picks + rolls quality', () => {
-    // mainHand: chance 0.9 → pass at 0.1; pick roll 0.0 → first (sword); quality roll 0.0 → first (1).
-    // bodyOuter: chance 0.3 → FAIL at 0.9 (skipped).
     const drawn = drawLoadout(POOL, seq([0.1, 0.0, 0.0, 0.9]));
     expect(drawn).toHaveLength(1);
     expect(drawn[0]).toMatchObject({ slot: 'mainHand', itemId: 'sword', quality: 1 });
   });
 
   it('skips a slot whose chance roll fails', () => {
-    // mainHand chance 0.9 → FAIL only at ≥0.9; feed 0.95 → both slots skipped (bodyOuter 0.3 fails at 0.95).
     const drawn = drawLoadout(POOL, seq([0.95, 0.95]));
     expect(drawn).toHaveLength(0);
   });
@@ -60,7 +55,6 @@ describe('lootpool draw', () => {
   });
 
   it('§4b: a famed-flagged pick rolls a legend identity onto the drawn piece', () => {
-    // A guaranteed boss signature: chance 1, single famed pick, dropChance 1.
     const bossPool: LootPool = {
       dropChance: 1,
       slots: { mainHand: { chance: 1, pick: [{ id: 'iron_tide', w: 1, famed: true }] } }

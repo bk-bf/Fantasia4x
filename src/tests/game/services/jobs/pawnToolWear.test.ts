@@ -2,11 +2,6 @@ import { describe, it, expect } from 'vitest';
 import { wearWorkingPawnTool } from '$lib/game/services/jobs/harvest';
 import type { GameState, Pawn } from '$lib/game/core/types';
 
-// ADR-009 step 2 — the WORKING pawn's tool wears per tool-gated action, whether it's EQUIPPED or just
-// CARRIED in the pack (both pass the tool gate and boost work). A carried stone_axe (maxDurability 30,
-// durabilityLossPerAction 2) must dull and eventually break, then leave the pack so a fresh one is
-// fetched. Regression: carried tools used to never wear (only the equipment slot was checked).
-
 function stateWith(pawn: Pawn): GameState {
   return { turn: 0, pawns: [pawn] } as unknown as GameState;
 }
@@ -31,7 +26,7 @@ const equippedAxe = (durability: number): Pawn =>
 describe('wearWorkingPawnTool — carried + equipped tools', () => {
   it('wears a CARRIED tool by durabilityLossPerAction', () => {
     const out = wearWorkingPawnTool('h', 'woodcutting', stateWith(carryingAxe(30)));
-    expect(out.pawns[0].inventory.instances[0].durability).toBe(28); // 30 − 2
+    expect(out.pawns[0].inventory.instances[0].durability).toBe(28);
   });
 
   it('removes the carried tool when it breaks (≤0), so the gate re-fires', () => {

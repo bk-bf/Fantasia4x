@@ -1,12 +1,3 @@
-<!-- SortableTable.svelte — the gear-db table chrome, as a component.
-
-     Extracted rather than copied: the catalogue's table (sticky uppercase headers, click-to-sort with a
-     direction arrow, right-aligned tabular numerics, hover row tint) was inline in `gear-db/+page.svelte`,
-     and the audit tab needs exactly the same thing. Column descriptors keep the same shape the catalogue
-     already uses — `{ key, label, numeric, get, disp }` — so migrating that page onto this later is a
-     swap rather than a rewrite.
-
-     Sorting is on `get(row)`, so a column can sort by a raw number while displaying something formatted. -->
 <script lang="ts" generics="T">
   import type { Column } from './sortableTable';
 
@@ -25,10 +16,7 @@
     initialSort?: string;
     initialDir?: 1 | -1;
     caption?: string;
-    /** Stable key per row. Without it rows are keyed by index, which is fine for a static table but
-     *  loses element identity when the list is filtered. */
     rowKey?: (row: T) => string;
-    /** Makes rows clickable — the catalogue uses it to select an entry across tables. */
     onRowClick?: (row: T) => void;
     rowSelected?: (row: T) => boolean;
   } = $props();
@@ -40,8 +28,6 @@
     if (sortKey === key) sortDir = sortDir === 1 ? -1 : 1;
     else {
       sortKey = key;
-      // A numeric column is nearly always most useful biggest-first on the first click; a text one
-      // reads better A–Z. Matches how the catalogue behaves.
       sortDir = columns.find((c) => c.key === key)?.numeric ? -1 : 1;
     }
   }
@@ -52,8 +38,6 @@
     return rows.slice().sort((a, b) => {
       const av = col.get(a);
       const bv = col.get(b);
-      // Blanks sort LAST whichever way the column is pointing — an empty cell is absent data, not a
-      // small value, and letting it lead a descending sort buries the rows that matter.
       if (av == null && bv == null) return 0;
       if (av == null) return 1;
       if (bv == null) return -1;

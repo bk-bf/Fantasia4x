@@ -7,35 +7,8 @@ import { getGrip } from '$lib/game/systems/rangedCombat';
 import { pawnStatService } from '$lib/game/services/PawnStatService';
 import type { EntityStats, Pawn } from '$lib/game/core/types';
 
-/**
- * STYLE MATCHUPS — pawn against pawn, equal skill, kit as the only variable.
- *
- * This replaces an earlier comparison that was a CATEGORY ERROR: it scored "heavy armour" against
- * "shield" as if they were rival answers to the same question. They are not. Armour is a MITIGATION
- * layer — it changes what a landed blow does. A shield belongs to the NEGATION layer alongside dodge —
- * it changes whether the blow lands at all. A two-hander in plate is supposed to be hit more often
- * than a shield user; that is the trade it took, not a defect.
- *
- * The questions that actually matter:
- *
- *   1. FLOOR — a heavy-armoured two-hander must not be worse off than a NAKED pawn with a shield. A
- *      bare shield user keeps full dodge (no stiffness, no load) and can hold out a surprisingly long
- *      time, which is fine — provided that when the two-hander does connect, the blow decides things.
- *      So this measures both sides: outcome, and what one landed hit is worth.
- *
- *   2. CYCLE — the intended rock-paper-scissors, loosely: 1H+shield > 2H > polearm 2H > 1H+shield.
- *      "Loosely" is the operative word. In a real game two sides rarely meet at equal stats, gear and
- *      numbers, and potions/coatings let the player push the odds — so this checks the TENDENCY over
- *      seeds, never that a matchup is a lock.
- *
- * Stats are pinned at the spawn ceiling (20) rather than the 30–45 used by the older fixtures: real
- * colonists cannot exceed it at growth level 1, and balance read at stats no pawn can reach is not
- * balance.
- */
-
 const SEEDS = [11, 23, 37, 41, 59, 71];
 const MAX_TICKS = 14_000;
-/** Equal skill on both sides — the kit is the only variable. Spawn ceiling, so it reflects real pawns. */
 const EQUAL: Partial<EntityStats> = { strength: 20, dexterity: 20, constitution: 20, perception: 20 };
 
 const KIT = {
@@ -72,7 +45,6 @@ interface Duel {
   b: Tally;
 }
 
-/** One duel: two drafted pawns, identical stats, each ordered onto the other. */
 async function duel(seed: number, A: Side, B: Side): Promise<Duel> {
   const s = new HeadlessSession();
   await s.start(
@@ -207,9 +179,6 @@ const POLEARM: Side = { label: 'polearm 2H (halberd)', equip: ['steel_halberd'] 
 
 describe('STYLE MATCHUPS — equal skill, kit as the only variable', () => {
   it('FLOOR: an armoured two-hander against a NAKED shield user', async () => {
-    // The comparison that is actually diagnostic. The bare shield user keeps full dodge — no stiffness,
-    // no load — so holding out a while is expected and fine. What must NOT happen is the armoured
-    // two-hander coming off worse than an opponent wearing nothing.
     const out: Row[] = [];
     out.push(
       await matchup(
@@ -240,14 +209,10 @@ describe('STYLE MATCHUPS — equal skill, kit as the only variable', () => {
         `  one landed two-hander blow is worth ${armoured.aStats.perHit.toFixed(1)} (biggest ${armoured.aStats.biggest.toFixed(0)}) ` +
         `against ${armoured.bStats.perHit.toFixed(1)} coming back.`
     );
-    // Wearing plate must be better than wearing nothing, holding the weapon fixed. If this inverts,
-    // the stiffness/load cost of armour has overshot its mitigation.
     expect(
       armoured.aWins,
       'plate must not make a two-hander worse off than wearing nothing'
     ).toBeGreaterThanOrEqual(out[1].aWins);
-    // And the two-hander's landed blow must genuinely decide things — that is the whole compensation
-    // for being hit more often.
     expect(
       armoured.aStats.perHit,
       'a landed two-hander blow must hit far harder than what comes back'
@@ -255,15 +220,6 @@ describe('STYLE MATCHUPS — equal skill, kit as the only variable', () => {
   }, 1_800_000);
 
   it('ROUND ROBIN: every steel weapon and style against every other, NO ARMOUR', async () => {
-    // NO ARMOUR on anyone, deliberately. With armour on, ADR-029 subtractive mitigation subtracts about
-    // the same number from every blow, which crushes every light weapon into the same 5-to-8 damage band
-    // and makes the whole table a ranking of raw weapon damage. Nothing about style survives that. Armour
-    // has not been overhauled yet, so measuring styles through it measures the armour instead.
-    //
-    // Every steel-tier melee weapon is here, not one sword per class. One-handers are run in BOTH of
-    // their real configurations — behind a shield, and as a trained duelist with the hand free — because
-    // those are different builds, not the same weapon twice. The assassin is a matched PAIR of daggers
-    // (the `dualWield` grip), and the fencer is a duelist, since a rapier is a one-hander with no shield.
     const ONE_H = [
       ['longsword', 'steel_longsword'],
       ['mace', 'steel_mace'],
@@ -290,7 +246,6 @@ describe('STYLE MATCHUPS — equal skill, kit as the only variable', () => {
       ...TWO_H.map(([n, id]) => ({ label: `${n} (2H)`, equip: [id] }))
     ];
 
-    // The matched pair has to actually reach both hands, or this whole row is measuring one dagger.
     {
       const s = new HeadlessSession();
       await s.start(
@@ -363,7 +318,6 @@ describe('STYLE MATCHUPS — equal skill, kit as the only variable', () => {
         ranked.join('\n')
     );
 
-    // The matchups the design cares about, pulled out of the grid so they are readable.
     const look = (a: string, b: string) =>
       `  ${a} vs ${b}: ${wins[a]?.[b] ?? '?'}–${wins[b]?.[a] ?? '?'}`;
     console.log(
@@ -387,8 +341,6 @@ describe('STYLE MATCHUPS — equal skill, kit as the only variable', () => {
   }, 3_600_000);
 
   it('CYCLE: 1H+shield > 2H > polearm 2H > 1H+shield, loosely', async () => {
-    // All three in the armour their own build would plausibly field, so the cycle is read between
-    // STYLES rather than between armour classes.
     const shield: Side = {
       ...SHIELD_1H,
       label: '1H+shield · medium',
@@ -411,8 +363,6 @@ describe('STYLE MATCHUPS — equal skill, kit as the only variable', () => {
       `\n  intended tendency: 1H+shield > 2H > polearm > 1H+shield\n` +
         `  measured: ${out.map(leg).join('  |  ')}`
     );
-    // A cycle only exists if every leg RESOLVES. A matchup that never produces a winner says the fight
-    // is stalling, not that it is balanced.
     for (const r of out)
       expect(r.aWins + r.bWins, `${r.A} vs ${r.B} never resolved`).toBeGreaterThan(0);
   }, 1_800_000);

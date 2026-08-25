@@ -3,14 +3,6 @@ import { applyResourceToGrid, buildResourceOverlay } from '$lib/webgl/fantasia-w
 import { GameGrid } from '$lib/webgl/game-grid';
 import type { WorldTile } from '$lib/game/core/types';
 
-/**
- * Resources render in a SEPARATE transparent overlay (no longer baked into the terrain grid), split
- * into a SHORT layer (drawn beneath entities) and a TALL layer (`renderScale > 1`, drawn above entities
- * so a pawn behind it is occluded). The split + per-tile `scale` are kept as infrastructure, but on
- * this branch NO resource opts into `renderScale`, so everything routes to the short layer and the tall
- * layer stays empty (trees render at their normal one-cell bitlands size). Ported from Fantasia4x-ultica
- * (ee9e77d2 + a4c89a21).
- */
 function tile(over: Partial<WorldTile>): WorldTile {
   return {
     x: 0,
@@ -33,7 +25,6 @@ describe('resource overlay short/tall split', () => {
     const shortCell = short.getTile(0, 0)!;
     expect(shortCell.char).not.toBe(' ');
     expect(shortCell.scale).toBeUndefined();
-    // Two-colour split: mundane trees carry a `detail` tint (brown trunk via fg, green canopy via detail).
     expect(shortCell.detail).toBeDefined();
     expect(tall.getTile(0, 0)!.char).toBe(' ');
   });

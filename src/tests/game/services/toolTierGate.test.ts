@@ -4,12 +4,6 @@ import { buildingService } from '$lib/game/services/BuildingService';
 import { colonyToolTier } from '$lib/game/core/state/stockpile';
 import type { GameState, DroppedItem } from '$lib/game/core/types';
 
-/**
- * ADR-009 tool-tier gate. `toolTierRequired` on a building/recipe must be satisfied by a crafted/owned
- * tool of that tier — NOT only by research-granted `currentToolLevel`. Regression for the BLOCKED bug:
- * a fresh colony holding a stone_axe (tier 1) and all ingredients couldn't build the tier-1 Splitting
- * Stump because the gate read `currentToolLevel` (0 without research).
- */
 function makeState(drops: DroppedItem[], currentToolLevel = 0): GameState {
   return {
     seed: 1,
@@ -30,7 +24,7 @@ describe('ADR-009 colony tool-tier gate', () => {
       { id: 'a', resourceId: 'stone_axe', x: 0, y: 0, quantity: 1, stored: true }
     ]);
     expect(gs.currentToolLevel).toBe(0);
-    expect(colonyToolTier(gs)).toBe(1); // stone_axe is tier 1
+    expect(colonyToolTier(gs)).toBe(1);
   });
 
   it('still honours research-granted currentToolLevel when no tools are owned', () => {
@@ -39,7 +33,6 @@ describe('ADR-009 colony tool-tier gate', () => {
   });
 
   it('owning a tier-1 tool satisfies a tier-1 building gate (Splitting Stump)', () => {
-    // chopping_block: buildingCost {category:log: 1, stone_axe: 1}, toolTierRequired 1.
     const gs = makeState([
       { id: 'a', resourceId: 'stone_axe', x: 0, y: 0, quantity: 1, stored: true },
       { id: 'l', resourceId: 'oak_log', x: 0, y: 0, quantity: 5, stored: true }

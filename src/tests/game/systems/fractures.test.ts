@@ -5,54 +5,47 @@ import { pawnStatService } from '$lib/game/services/PawnStatService';
 import { syncFractureConditions } from '$lib/game/core/rules/body/conditions';
 import type { EntityCondition, LimbState, Pawn } from '$lib/game/core/types';
 
-// Heavy/blunt trauma can break a limb's bone — cripples without severing; the RNG fracture roll itself lives in Combat.performAttack.
 describe('fracture anatomy + wound data', () => {
   it('there is ONE bone type: every bone is a hidden skeleton element whose whole HP is its break budget', () => {
-    // The forearm is a SOFT segment wrapping its real bone, the ulna (proper anatomy — no `*Bone` names).
     const ulna = PART_DEF_MAP['leftUlna']!;
     expect(ulna.skeleton).toBe(true);
     expect(ulna.boneHp).toBeGreaterThan(0);
-    expect(ulna.boneHp!).toBe(ulna.maxHp); // pure bone: whole HP IS the fracture budget
-    // The `skull` IS the hidden bone; the `head` is the flesh outer that wraps it.
+    expect(ulna.boneHp!).toBe(ulna.maxHp);
     const skull = PART_DEF_MAP['skull']!;
     expect(skull.skeleton).toBe(true);
     expect(skull.boneHp!).toBe(skull.maxHp);
     expect(skull.containedIn).toBe('head');
-    expect(PART_DEF_MAP['mandible']!.containedIn).toBe('jaw'); // jaw flesh → mandible
-    expect(PART_DEF_MAP['head']!.boneHp).toBeUndefined(); // the head flesh is not bone
-    expect(PART_DEF_MAP['skullBone']).toBeUndefined(); // the lazy name never exists
-    expect(PART_DEF_MAP['leftForearm']!.boneHp).toBeUndefined(); // the flesh segment itself is not bone
-    expect(PART_DEF_MAP['leftEye']!.boneHp).toBeUndefined(); // eyes have no bone
-    expect(PART_DEF_MAP['heart']!.boneHp).toBeUndefined(); // organs have no bone
+    expect(PART_DEF_MAP['mandible']!.containedIn).toBe('jaw');
+    expect(PART_DEF_MAP['head']!.boneHp).toBeUndefined();
+    expect(PART_DEF_MAP['skullBone']).toBeUndefined();
+    expect(PART_DEF_MAP['leftForearm']!.boneHp).toBeUndefined();
+    expect(PART_DEF_MAP['leftEye']!.boneHp).toBeUndefined();
+    expect(PART_DEF_MAP['heart']!.boneHp).toBeUndefined();
   });
 
   it('the chest is a SOFT wall (no bone); the ribcage beneath it is the skeleton', () => {
-    // The chest wraps organs and takes soft-tissue wounds, but it is NOT bone — it can't fracture.
     expect(PART_DEF_MAP['chest']!.boneHp).toBeUndefined();
     expect(PART_DEF_MAP['chest']!.skeleton).toBeUndefined();
-    // The ribcage is a distinct internal skeleton: fracture-only (never struck directly) and bone-bearing.
     const ribcage = PART_DEF_MAP['ribcage']!;
     expect(ribcage.skeleton).toBe(true);
     expect(ribcage.boneHp).toBeGreaterThan(0);
-    expect(ribcage.hitWeight).toBe(0); // internal — never rolled as a direct hit, so no cut/puncture/crush
-    expect(ribcage.containedIn).toBe('chest'); // severed with the chest
+    expect(ribcage.hitWeight).toBe(0);
+    expect(ribcage.containedIn).toBe('chest');
   });
 
   it('a hit FRACTURES the skeleton: the flesh part routes its fracture to the bone it wraps', () => {
-    expect(skeletonPartOf('chest')).toBe('ribcage'); // torso wall → ribcage
-    expect(skeletonPartOf('leftForearm')).toBe('leftUlna'); // arm flesh → ulna
-    expect(skeletonPartOf('leftFoot')).toBe('leftMetatarsus'); // foot flesh → metatarsus
-    expect(skeletonPartOf('head')).toBe('skull'); // head flesh → skull (the bone keeps its name)
-    expect(skeletonPartOf('abdomen')).toBeUndefined(); // soft, boneless → can't fracture
+    expect(skeletonPartOf('chest')).toBe('ribcage');
+    expect(skeletonPartOf('leftForearm')).toBe('leftUlna');
+    expect(skeletonPartOf('leftFoot')).toBe('leftMetatarsus');
+    expect(skeletonPartOf('head')).toBe('skull');
+    expect(skeletonPartOf('abdomen')).toBeUndefined();
     expect(skeletonPartOf('leftEye')).toBeUndefined();
   });
 
   it('no BONE is instant-death: a broken skull/ribcage cripples, only tearing the flesh container kills', () => {
-    // Bones are never `critical` — death comes from destroying the flesh container holding the vital organ.
     expect(PART_DEF_MAP['skull']!.isCritical).toBeUndefined();
     expect(PART_DEF_MAP['ribcage']!.isCritical).toBeUndefined();
     expect(PART_DEF_MAP['leftForearm']!.isCritical).toBeUndefined();
-    // The only `critical` part is a vital CORE (the amorphous essence), not a bone.
     expect(PART_DEF_MAP['essence']!.isCritical).toBe(true);
   });
 
@@ -60,8 +53,7 @@ describe('fracture anatomy + wound data', () => {
     const f = woundById('fracture')!;
     expect(f.structural).toBe(true);
     expect(f.bleedMod).toBe(0);
-    expect(f.healDifficulty).toBeGreaterThan(2); // weeks
-    // Blunt crush itself no longer bleeds either (its payoff is raw damage / limb removal).
+    expect(f.healDifficulty).toBeGreaterThan(2);
     expect(woundById('crush')!.bleedMod).toBe(0);
   });
 });
@@ -106,7 +98,6 @@ describe('broken bone effects', () => {
 
   it('syncFractureConditions drives a GRADED `fractured` condition from bone damage, clearing on heal', () => {
     const conditions: EntityCondition[] = [];
-    // The ulna's whole maxHp (35) is the break budget, so 35 damage = fully broken.
     const limbs = [
       {
         id: 'left_arm',
@@ -136,14 +127,12 @@ describe('broken bone effects', () => {
     syncFractureConditions(conditions, limbs);
     const c = conditions.find((x) => x.id === 'fractured');
     expect(c).toBeDefined();
-    expect(c!.severity).toBe(1); // fully broken = max severity
+    expect(c!.severity).toBe(1);
 
-    // A hairline crack (low damage) → graded LOW severity.
     limbs[0].parts![0].injuries[0].damage = 5;
     syncFractureConditions(conditions, limbs);
     expect(conditions.find((x) => x.id === 'fractured')!.severity).toBeCloseTo(5 / 35, 2);
 
-    // Heals away → condition removed.
     limbs[0].parts![0].injuries = [];
     syncFractureConditions(conditions, limbs);
     expect(conditions.some((x) => x.id === 'fractured')).toBe(false);
@@ -152,7 +141,6 @@ describe('broken bone effects', () => {
   it('the `fractured` condition crushes STRENGTH/DEXTERITY (core stats), so combat suffers too', () => {
     const broken = pawnWithBrokenArm(true);
     broken.conditions = [{ id: 'fractured', severity: 1 }];
-    // melee_damage reads STRENGTH; with the fracture crushing strength it must fall below the intact value.
     const intactDmg = pawnStatService.evaluateStat('melee_damage', pawnWithBrokenArm(true));
     const brokenDmg = pawnStatService.evaluateStat('melee_damage', broken);
     expect(brokenDmg).toBeLessThan(intactDmg);

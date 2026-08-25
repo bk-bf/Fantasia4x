@@ -26,9 +26,6 @@
   import { TICKS_PER_SECOND } from '$lib/game/core/util/time';
   import { onMount, onDestroy } from 'svelte';
 
-  // Map-generation mode: render the SAME iconic bar (title + frame), but swap the live HUD readouts
-  // (date / season / weather / turn / perf / pause / speed) for a clean "Map Generation" label —
-  // none of that is meant to be computing while the player is still shaping the world.
   export let mapGen = false;
 
   let isPaused = false;
@@ -36,17 +33,13 @@
   let currentTurnValue = 0;
   let currentScreen = 'main';
 
-  // ===== PERFORMANCE TRACKERS =====
-  let fps = 0; // render frames/sec (from the WebGL canvas)
-  let tps = 0; // simulation ticks/sec (measured from the turn counter)
+  let fps = 0;
+  let tps = 0;
 
-  // ===== IN-GAME CALENDAR =====
-  const TURNS_PER_DAY = 300; // 1 in-game day = 300 in-game seconds; turn counts ticks
+  const TURNS_PER_DAY = 300;
   const DAYS_PER_MONTH = 30;
   const MONTHS_PER_YEAR = 12;
 
-  // 12 months = 4 seasons × early/mid/late. The year starts in spring, matching the season
-  // system (seasons.jsonc daysPerSeason=90 → 3 months/season), so month and HUD season agree.
   const MONTH_NAMES = [
     'Early Spring',
     'Mid Spring',
@@ -77,7 +70,6 @@
   ];
 
   function turnToGameDate(turn: number) {
-    // turn counts simulation ticks; the calendar is denominated in in-game seconds.
     const seconds = turn / TICKS_PER_SECOND;
     const totalDays = Math.floor(seconds / TURNS_PER_DAY);
     const hour = Math.floor(((seconds % TURNS_PER_DAY) / TURNS_PER_DAY) * 24);
@@ -99,8 +91,6 @@
     };
   }
 
-  // Phase-of-day label, keyed off the in-game hour. Boundaries roughly track the ambient
-  // light keyframes in EnvironmentService (dawn glow ~06:00, dusk ~18:00, deepest night ~00:00).
   function hourToDayPhase(hour: number): string {
     if (hour === 23 || hour === 0) return 'Midnight';
     if (hour <= 4) return 'Night';
@@ -109,23 +99,18 @@
     if (hour <= 13) return 'Midday';
     if (hour <= 17) return 'Afternoon';
     if (hour <= 20) return 'Evening';
-    return 'Night'; // 21–22
+    return 'Night';
   }
 
   $: gameDate = turnToGameDate(currentTurnValue);
   $: dayPhase = hourToDayPhase(gameDate.hour);
 
-  // Celestial readout (LINEAGES-II §1): the sun's state + the lunar counter's phase, next to the time
-  // of day. The full moon matters — moon-marked pawns answer to it.
   $: moonName = moonPhaseName(dayIndexForTurn(currentTurnValue));
   $: sunUp = isSunUp(gameDate.hour);
   $: sunPhase = sunPhaseName(gameDate.hour);
 
-  // ===== SEASON & WEATHER READOUT (SEASONS_WEATHER) — labels are data-driven (seasons/weather.jsonc) =====
   $: weatherLabel = getWeatherLabel($currentWeather?.type);
   $: tempLabel = $currentAvgTemperature !== undefined ? `${$currentAvgTemperature}°C` : '';
-  // Open-field wind degree + compass direction. The five degrees mirror the `windchilled` stages; a
-  // pawn's actual windchill is cut by roofs and the lee of walls (per-tile), but this is the ambient.
   $: windVal = ambientWind($currentWeather ?? undefined);
   $: windWord = windDegreeWord(windVal);
   $: windLabel = windWord ? `${windWord} windy ${windDirLabel($currentWeather?.windDir)}` : '';
@@ -136,22 +121,16 @@
   const unsubUI = uiState.subscribe((s) => (currentScreen = s.currentScreen));
   const unsubFps = renderFps.subscribe((v) => (fps = v));
 
-  // Measure real simulation throughput by sampling the tick counter. Sampled at 250ms (matching the
-  // renderer's FPS push) and EMA-smoothed: the turn counter only advances on a worker flush (~15Hz),
-  // so a raw once-per-second delta jittered ±~66ms at each window boundary and lagged the FPS readout.
   let tpsTimer: ReturnType<typeof setInterval> | undefined;
   let lastSampleTurn = 0;
   let lastSampleTime = 0;
-  let tpsEma = 0; // smoothed TPS
-  const TPS_SAMPLE_MS = 250; // match the FPS push cadence so both numbers update in lockstep
-  const TPS_ALPHA = 0.3; // EMA weight — calm, but tracks a speed change in ~1s
+  let tpsEma = 0;
+  const TPS_SAMPLE_MS = 250;
+  const TPS_ALPHA = 0.3;
 
   onMount(async () => {
     if (!browser) return;
-    // Wait for the IndexedDB save to be loaded and applied before advancing turns.
     await savedStateReady;
-    // Start turns; WASM pathfinder loads in the background.
-    // pathfinderService.findPath returns [] when not ready — handled gracefully.
     gameState.startAutoTurns();
     pathfinderService.init().catch((err) => {
       console.warn('[WASM] Pathfinder failed to load — pawns will stay idle until resolved:', err);
@@ -165,7 +144,6 @@
       const dTurn = currentTurnValue - lastSampleTurn;
       lastSampleTurn = currentTurnValue;
       lastSampleTime = now;
-      // Paused → no throughput; snap to 0 and reset the average so it ramps cleanly on resume.
       if (isPaused) {
         tpsEma = 0;
         tps = 0;
@@ -220,7 +198,7 @@
       >{gameDate.dayStr}/{gameDate.monthStr}/{gameDate.yearStr} {gameDate.hourStr}:00</span
     >
     <span class="bi phase" title="Time of day">{dayPhase}</span>
-    <!-- The sun's arc while it's up (tonight's moon in the tooltip); the moon's phase at night. -->
+
     <span
       class="bi celestial"
       class:fullmoon={!sunUp && moonName === 'Full Moon'}
@@ -335,7 +313,7 @@
     white-space: nowrap;
   }
   .bi.celestial.fullmoon {
-    color: #e8d878; /* the full moon stands out — moon-marked pawns answer to it */
+    color: #e8d878;
   }
   .bi.turn {
     color: var(--text-muted);

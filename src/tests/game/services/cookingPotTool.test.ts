@@ -5,11 +5,6 @@ import { itemService } from '$lib/game/services/ItemService';
 import { WORK_CATEGORIES } from '$lib/game/core/defs/work';
 import type { GameState, Job, Pawn } from '$lib/game/core/types';
 
-/**
- * The clay cooking pot is wired as a proper ADR-009 craft tool for the stews: each stew recipe
- * declares a `cooking` toolRequirement and the Cooking work category lists `clay_cooking_pot`, so a
- * stew craft job is only claimable when a pot is held or in colony stock (auto-grabbed en route).
- */
 function makeState(partial: Partial<GameState> = {}): GameState {
   return {
     jobs: [],
@@ -62,7 +57,7 @@ describe('cooking pot as a craft tool', () => {
   });
 
   it('a stew craft job is NOT claimable without a cooking pot in the colony', () => {
-    const gs = stewOrderState({}); // no pot anywhere
+    const gs = stewOrderState({});
     const avail = jobService.getAvailableJobs(pawn(), gs);
     expect(avail.some((j) => j.craftQueueId === 'o1')).toBe(false);
   });

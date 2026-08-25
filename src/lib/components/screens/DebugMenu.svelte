@@ -1,9 +1,3 @@
-<!--
-  DebugMenu — left pane of the DEBUG tab (menu | log). Dev-only buttons that dispatch the
-  worker-safe `dev*` commands in sim/commands.ts: spawn items / pawns / entities, change weather &
-  season, and arm map click-brushes (regrow / spawn building / spawn resource). The click-brushes
-  drop you onto the map; clicking a tile applies the brush until you stop it.
--->
 <script lang="ts">
   import { gameState } from '$lib/stores/gameState';
   import { uiState } from '$lib/stores/uiState';
@@ -28,11 +22,10 @@
   const label = (d: { name?: string; displayName?: string; id: string }) =>
     d.name ?? d.displayName ?? d.id;
 
-  // Selections
   let itemId = $state(ITEMS[0]?.id ?? '');
   let itemAmount = $state(50);
   let pawnCount = $state(1);
-  let creatureId = $state(''); // '' = random
+  let creatureId = $state('');
   let entityCount = $state(5);
   let buildingId = $state(BUILDINGS[0]?.id ?? '');
   let resourceId = $state(RESOURCES[0]?.id ?? '');
@@ -51,7 +44,6 @@
     cmd('setSeason', { season: v === '' ? null : (v as Season) });
   }
 
-  // Time-of-day presets (fraction of day; 0=midnight, 0.5=noon) for testing weather at day/night.
   const TIME_OF_DAY: { label: string; value: number }[] = [
     { label: 'Dawn', value: 0.3 },
     { label: 'Day (noon)', value: 0.5 },
@@ -168,7 +160,6 @@
     </label>
   </section>
 
-  <!-- HEADLESS-SIM (ADR-033): scenario presets, need freezes, pawn godmode, instant research. -->
   <DebugGodmode />
 
   <section>
@@ -262,11 +253,6 @@
   </section>
 </div>
 
-<!--
-  Visual language taken from BuildingFuelPanel (the fuel info panel): dark amber/brown terminal
-  palette, Courier New, uppercase block labels with top-border separators, and the `fuel-mini-btn`
-  button + `fuel-threshold-num` input/select treatment.
--->
 <style>
   .menu {
     display: flex;

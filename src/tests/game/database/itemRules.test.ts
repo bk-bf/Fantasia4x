@@ -11,42 +11,6 @@ import { AGE_CEILING, AGE_NAMES, blameStation, chainAgeOf } from '$lib/dev/chain
 import { gearClassOf } from '$lib/game/core/rules/gear/gearClass';
 import { vesselAccepts } from '$lib/game/core/rules/gear/vessels';
 
-// The machine-checkable subset of docs/game/ITEM-RULES.md.
-//
-// R1 every craftable equipment item declares a `tier`. A missing one is not "unset" — `gearDb.ageOf`
-//    falls back to `tier ?? 0`, so an untiered late-game piece files itself into the STONE AGE. That
-//    is how `cave_bear_plate`, which demands a tier-3 Cave Bear's hide, came to read as Primitive.
-// R2 an item's tier is >= the BAND of the hardest creature its recipe DEMANDS BY NAME. Otherwise the
-//    player is shown a piece whose materials are a hundred turns out of reach. Creature `tier` runs
-//    0..5 and item `tier` runs 0..4 — one band wider — so the two go through `bandOf` instead of being
-//    compared directly, which is what made the first pass of this rule over-report.
-// R3 a species noun in the id means the recipe requires that species' material, and vice versa.
-// R8 EVERY item can be got. Recipes are one of six ways in — a map node, a carcass, a natural weapon,
-//    enemy loot, decay/drying, or a caravan — and an item that matches none of them is content the
-//    player can see and never hold. "A caravan" is not a flag on the item: it asks the SIM, through
-//    `kingdomService.isTradeableDef`, whether a caravan could ever stock the thing. One rule, checked
-//    where it actually lives, instead of a marker an author can assert about their own item.
-// R6 a fastener is a real component or it is not listed at all. Sewing thread is not a line item: the
-//    sinew that closes a seam comes off the animal the piece is cut from, and nobody sews leather with
-//    rope. Cordage stays only where it IS the structure (wicker, wattle, bark). Rivets, nails, mail
-//    rings and enchanted thread stay — those are countable manufactured parts.
-// R7 hide is not leather. A name saying "hide" must be cut from something in the `hide` line, and one
-//    saying "leather" from tanned leather. The steel-age sabretooth set called itself hide while being
-//    made of `sabretooth_leather`; R5 waved it through because its map treats the two words as one.
-// R5 a MATERIAL word in the name is a material the recipe actually uses. "Oiled Leather Cloak" with
-//    no oil in it, an "Antler War Club" carved from large bones, a "Bronze Punch Dagger" cast from a
-//    copper bar. R3 catches the same lie about CREATURES; nothing caught it about materials, and it
-//    was found three times by eye before this rule existed.
-// R4 an item's tier is >= the age of the LATEST STATION its whole ingredient chain needs. R2 catches
-//    a beast that is out of reach; nothing caught a *workshop* that is. A tier-0 linen cap looked
-//    innocent until you followed linen back through thread to the SPINNING WHEEL, a bronze-age
-//    building — so the stone-age hide set's head piece could not be made in the stone age. The whole
-//    bronze boarhide line had the same shape, hanging off an iron-age tanning bucket.
-//
-// A `category:`/dynamic slot gates NOTHING (it takes the cheapest member of the pool), and a material
-// that also drops off a map node is available from turn one — `plant_fiber` is foraged AND butchered
-// off a Bog Ooze. Both were false-positive factories in the first pass of this audit.
-
 type Recipe = {
   id: string;
   inputs?: Record<string, number>;
@@ -73,7 +37,6 @@ for (const r of RECIPES)
   for (const o of Object.keys(r.outputs ?? {}))
     recipesByOutput.set(o, [...(recipesByOutput.get(o) ?? []), r]);
 
-/** Everything a map node yields — obtainable from turn one, whatever else also drops it. */
 const nodeItems = new Set<string>();
 (function walk(o: unknown): void {
   if (Array.isArray(o)) return o.forEach(walk);
@@ -85,7 +48,6 @@ const nodeItems = new Set<string>();
 type Prov = { tier: number; threat: number; name: string; species: string };
 const NONE: Prov = { tier: 0, threat: 0, name: '', species: '' };
 
-/** carcass id → the EASIEST creature that drops it. */
 const carcass = new Map<string, Prov>();
 for (const c of CREATURES) {
   if (!c.carcassItemId) continue;
@@ -102,7 +64,6 @@ for (const c of CREATURES) {
 const concreteInputs = (r: Recipe) =>
   Object.keys(r.inputs ?? {}).filter((k) => !k.startsWith('category:'));
 
-/** Fixed point: the hardest creature an item's CONCRETE ingredient chain demands. */
 const prov = new Map<string, Prov>();
 for (const i of ITEMS) prov.set(i.id, nodeItems.has(i.id) ? NONE : (carcass.get(i.id) ?? NONE));
 for (let pass = 0; pass < 30; pass++) {
@@ -126,11 +87,7 @@ for (let pass = 0; pass < 30; pass++) {
   if (!changed) break;
 }
 
-/** Size and place words are not species — `great_helm` and `bearded_axe` are not beast-named. */
 const ADJECTIVES = new Set([
-  // Not a species — a GROUP noun, and the only reason it reaches this set is that `pack_alpha` and
-  // `kingdom_pack_beast` are creature ids. Left in, every backpack in the game reads as beast-named
-  // and R3 demands a creature the recipe was never going to name.
   'pack',
   'great',
   'giant',
@@ -168,8 +125,6 @@ const EQUIPMENT = ITEMS.filter(
 );
 const CRAFTABLE = EQUIPMENT.filter((i) => recipesByOutput.has(i.id));
 
-/** A creature's tier expressed on the ITEM tier scale. Creature tiers run 0..5 (a fawn at 1, a Great
- *  Bear at 5); item tiers run 0..4 (primitive..runed), so the beast band sits one step lower. */
 const bandOf = (creatureTier: number) => Math.max(0, creatureTier - 1);
 
 const hardestCreature = (id: string): { p: Prov; via: string | null } => {
@@ -187,22 +142,9 @@ const hardestCreature = (id: string): { p: Prov; via: string | null } => {
   return { p, via };
 };
 
-// ── Pre-existing debt, named rather than silently tolerated. Each entry is a decision waiting on the
-//    designer (re-tier it, rename it, or accept it as Boss-tier), NOT an approved exemption. This list
-//    must only ever SHRINK — a new item may not join it.
-const R1_DEBT = new Set<string>([
-  // Empty. Every craftable equipment item now declares a tier; the 31 that did not were all filing
-  // themselves into the Primitive age off the `tier ?? 0` fallback.
-]);
-const R2_DEBT = new Set([
-  // A tier-2 maul demanding a Great Bear's bone (creature tier 5 ⇒ item band 4). Genuinely mis-tiered:
-  // either it belongs at tier 4, or it should be built from ordinary large bones.
-  'great_bone_maul'
-]);
-const R3_DEBT = new Set([
-  'layered_boarhide_plate', // "beast leather" but the recipe takes any leather
-  'steel_boar_spear' // named for its quarry, not its material — historically fine, confirm and comment
-]);
+const R1_DEBT = new Set<string>([]);
+const R2_DEBT = new Set(['great_bone_maul']);
+const R3_DEBT = new Set(['layered_boarhide_plate', 'steel_boar_spear']);
 
 describe('ITEM-RULES R1 — every craftable equipment item declares a tier', () => {
   it('no new untiered equipment', () => {
@@ -266,16 +208,7 @@ describe('ITEM-RULES R3 — a species in the name means that species in the reci
   });
 });
 
-// ── R4: how deep in the workshop ladder an item's materials actually sit ────────────────────────
-// The walk itself lives in `$lib/dev/chainAge` so the /gear-db item tree and this assertion read the
-// SAME numbers — two copies of it would drift, and the drift would be invisible.
-
 const R4_DEBT = new Set<string>([
-  // THE CASTER WEAPON LINE IS THE SAME LIE `arcane_robe` TOLD, thirteen times over: every staff, rod
-  // and scepter is carved on a RUNED bench or altar while claiming tier 1-3, so a caster's whole
-  // "progression" is one age wearing four hats. Fixing it is a design decision, not a data edit —
-  // the line has to move up to the age it is actually made in, and the tiers it vacates need real
-  // early staves (a carved wooden rod, a bone-topped stave) to replace it. Until then, named here.
   'cinder_rod',
   'hoarfrost_rod',
   'storm_rod',
@@ -289,8 +222,6 @@ const R4_DEBT = new Set<string>([
   'rime_staff',
   'tempest_staff',
   'manaforge_greatstaff',
-  // Already on R2_DEBT for demanding a Great Bear's bone; the sanguinary altar says the same thing
-  // twice. Both go away together when it is re-tiered.
   'great_bone_maul'
 ]);
 
@@ -316,11 +247,6 @@ describe('ITEM-RULES R4 — tier is not below the workshop its materials need', 
   });
 });
 
-// ── R5: a name may only claim a material the chain actually contains ────────────────────────────
-// The haystack is the FULL transitive chain, not the immediate inputs: "Hippogriff-Feather Boots" are
-// cut from prime hippogriff leather, tanned from a hide whose own name is "Feathered Hide". A fixed
-// one- or two-hop window calls that a lie. Construction words (quilted, splint, scale, riveted, cast)
-// are not materials and are deliberately absent from this map.
 const CLAIMS: Record<string, string[]> = {
   oiled: ['oil', 'tallow', 'grease', 'fat'],
   waxed: ['wax'],
@@ -376,9 +302,7 @@ function chainWords(k: string, seen: Set<string> = new Set()): string {
     .join(' ')}`;
 }
 
-const R5_DEBT = new Set<string>([
-  // Empty. A name that claims a material is a promise about the recipe; keep them in step.
-]);
+const R5_DEBT = new Set<string>([]);
 
 describe('ITEM-RULES R5 — a material in the name is a material in the recipe', () => {
   const offenders = () => {
@@ -414,16 +338,12 @@ describe('ITEM-RULES R5 — a material in the name is a material in the recipe',
   });
 });
 
-// ── R6/R7 shared lookups ────────────────────────────────────────────────────────────────────────
 type ArmourItem = Item & {
   armorProperties?: { armorType?: string; equipmentSlot?: string; slot?: string };
 };
-// Anything with a weight class that a pawn WEARS: armour, and now the worn carry aids. Weapons derive
-// their class instead of authoring it, and they are not sewn, so they stay out of the fastener rules.
 const WEARABLE = (ITEMS as ArmourItem[]).filter(
   (i) => i.armorProperties?.armorType && !i.weaponProperties && recipesByOutput.has(i.id)
 );
-/** How much binding a piece of this size takes. A glove and a cuirass are not lashed with equal cord. */
 const BINDING_SIZE: Record<string, number> = {
   head: 1,
   gloves: 1,
@@ -442,18 +362,7 @@ const BINDINGS = ['cordage', 'thread', 'sinew', 'enchant_thread'];
 const slotOf = (i: ArmourItem) => i.armorProperties?.equipmentSlot ?? i.armorProperties?.slot ?? '';
 
 describe('ITEM-RULES R6 — a sewn piece lists the binding that holds it together', () => {
-  // This rule used to say the opposite, and its stated reason was that listing a fastener "made the
-  // player stockpile bookkeeping". That was true when one cordage was 200g and one nail was 200g — a
-  // fastener was a heavy, annoying thing to haul, so banning it from 122 recipes bought something.
-  // The unit is fixed now (a nail is 10g, a bar draws to 300), the bookkeeping objection is gone, and
-  // what the ban left behind was a hide cap made of two hides and nothing else.
-  //
-  // What survives from the old rule: you do not sew leather with ROPE. Cordage is a lashing, not a
-  // seam, and it belongs only where it IS the structure.
   const STRUCTURAL = /branch|withy|wicker|wattle|bark|hay|straw/;
-  // `category:thread` is the binding pool with the lashings taken out — cordage is not a seam, and a
-  // late piece is sewn with spun thread or not at all. Both keys are seams; they differ in how low
-  // they will stoop.
   const SEAM = [
     'category:binding',
     'category:thread',
@@ -473,7 +382,6 @@ describe('ITEM-RULES R6 — a sewn piece lists the binding that holds it togethe
     'copper_tack',
     'mail_rings'
   ];
-  /** How much binding a piece of this size takes. A glove and a cuirass are not sewn with equal thread. */
   const BINDING_SIZE: Record<string, number> = {
     head: 1,
     gloves: 1,
@@ -501,7 +409,6 @@ describe('ITEM-RULES R6 — a sewn piece lists the binding that holds it togethe
         ...Object.keys(ins),
         ...Object.values(rec.dynamicRecipe ?? {}).map((d) => d.acceptsCategory ?? '')
       ].join(' ');
-      // Wood and metal pieces are pegged, riveted or forged rather than stitched.
       if (
         !/leather|hide|pelt|fur|buckskin|kidskin|cloth|linen|wool|silk|cotton|sackcloth/.test(keys)
       )
@@ -517,8 +424,6 @@ describe('ITEM-RULES R6 — a sewn piece lists the binding that holds it togethe
     for (const i of WEARABLE) {
       const rec = firstRecipe(i.id)!;
       const ins = (rec.inputs ?? {}) as Record<string, number>;
-      // Cordage moved INTO the binding pool when its unit shrank to a thong; `rope` at 1.1kg is
-      // still rope, and nothing is sewn with it.
       if (ins['rope'] === undefined) continue;
       const keys = [
         ...Object.keys(ins),
@@ -531,14 +436,9 @@ describe('ITEM-RULES R6 — a sewn piece lists the binding that holds it togethe
   });
 
   it('a binding slot names the CATEGORY, so any threading will do', () => {
-    // A cured hood does not become impossible to craft because the colony has linen thread and no
-    // sinew. Naming one material in a seam slot is the same mistake as a `category:leather` piece
-    // demanding one species.
     const bad: string[] = [];
     for (const i of WEARABLE) {
       const ins = (firstRecipe(i.id)!.inputs ?? {}) as Record<string, number>;
-      // A RUNED piece is woven WITH enchanted thread; that is what its name claims and R5 enforces,
-      // so naming the material there is the point rather than a mistake.
       if (/rune/.test(i.id)) continue;
       for (const k of ['sinew', 'thread', 'enchant_thread', 'cotton_thread'])
         if (ins[k] !== undefined)
@@ -556,8 +456,6 @@ describe('ITEM-RULES R6 — a sewn piece lists the binding that holds it togethe
   });
 });
 
-// R7 asks whether a NAME tells the truth about its material, which has nothing to do with whether the
-// piece soaks damage — so it runs over every craftable, not just `WEARABLE`.
 const NAMED_MATERIAL = CRAFTABLE.filter((i) => recipesByOutput.has(i.id)) as ArmourItem[];
 
 describe('ITEM-RULES R7 — hide is not leather', () => {
@@ -569,8 +467,6 @@ describe('ITEM-RULES R7 — hide is not leather', () => {
         ...Object.keys(rec.inputs ?? {}),
         ...Object.values(rec.dynamicRecipe ?? {}).map((s) => s.acceptsCategory ?? '')
       ];
-      // `boarhide`/`oxhide` are LEATHERS whose own name carries "hide" — a piece named for them is
-      // telling the truth, so the material's name counts, not just its category.
       const words = keys
         .map((k) => `${k} ${ITEM_BY_ID.get(k)?.category ?? ''} ${ITEM_BY_ID.get(k)?.name ?? ''}`)
         .join(' ')
@@ -585,7 +481,6 @@ describe('ITEM-RULES R7 — hide is not leather', () => {
   });
 });
 
-// ── R8: nothing is unobtainable ─────────────────────────────────────────────────────────────────
 import lootpoolData from '$lib/game/database/items/lootpool.jsonc';
 
 const NODE_ITEMS = new Set<string>();
@@ -614,18 +509,11 @@ for (const i of ITEMS as (Item & { driesTo?: string | { itemId?: string }; decay
   if (dry) TIMED.add(dry);
   if (typeof i.decaysTo === 'string') TIMED.add(i.decaysTo);
 }
-// category-level drying lives in ItemService, not in the item defs
 ['dried_meat', 'dried_fruit'].forEach((x) => TIMED.add(x));
 
-/** Produced by the sim itself, not by the player: a corpse, a colonist over a shoulder, water. */
 const SIM_MADE = new Set(['pawn_carcass', 'carried_pawn', 'water', 'terra_preta']);
 
-const R8_DEBT = new Set<string>([
-  // Fresh fish: a caravan will not haul it (R8 asks the sim, and `isTradeableDef` refuses perishable
-  // food), and there is no fishing system to catch it. Obtainable the day fishing lands, not before.
-  'common_carp',
-  'river_trout'
-]);
+const R8_DEBT = new Set<string>(['common_carp', 'river_trout']);
 
 describe('ITEM-RULES R8 — every item has a way in', () => {
   it('nothing is visible in the tables and impossible to hold', () => {
@@ -640,7 +528,6 @@ describe('ITEM-RULES R8 — every item has a way in', () => {
           !SIM_MADE.has(i.id) &&
           !R8_DEBT.has(i.id) &&
           i.category !== 'natural_weapon' &&
-          // the top tier cap a caravan can ever reach, so this asks "could ANY caravan carry it"
           !kingdomService.isTradeableDef(i as Item, 5)
       )
       .map(
@@ -651,18 +538,6 @@ describe('ITEM-RULES R8 — every item has a way in', () => {
     expect(bad, bad.join('; ')).toEqual([]);
   });
 });
-
-// ── CONTAINERS-AND-FLUIDS ───────────────────────────────────────────────────
-//
-// R9  a VESSEL states a real capacity, and is not simultaneously a carry aid. Three different things
-//     wore the word "container" before this pass — a carry aid raises what a pawn can shoulder, a
-//     vessel holds items, a fixture is a building — and an item is exactly one of them. A `container`
-//     block with no `capacityL` is a jug that holds nothing, which is the same lie as armour claiming
-//     a material it never uses.
-// R10 a fluid recipe OUTPUT has somewhere to be poured. A fluid cannot lie on the ground, so a recipe
-//     that makes one at a station with no body of its own is producing something the sim will refuse
-//     to place — the batch is silently lost. Every fluid-output recipe must name a station that
-//     declares a `fluidCapacityL`.
 
 const VESSELS = (ITEMS as (Item & { inventoryBonus?: unknown })[]).filter((i) => i.container);
 
@@ -676,10 +551,6 @@ describe('ITEM-RULES R9 — a vessel holds a stated amount, and is only one kind
   });
 
   it('nothing is both a vessel and a carry aid', () => {
-    // A worn quiver is the one place these two ideas meet, and they are kept apart in TIME rather than
-    // in the data: its `container` is what it holds when it is set down, its `inventoryBonus` what it
-    // grants when it is worn, and equipping it moves the contents into the pack. Anything else
-    // carrying both fields is an author conflating the two.
     const bad = VESSELS.filter((i) => i.inventoryBonus && !i.quiver).map(
       (i) =>
         `${i.id} is both a vessel (container) and a carry aid (inventoryBonus) — pick one; ` +
@@ -711,13 +582,6 @@ describe('ITEM-RULES R10 — a fluid output is always caught', () => {
   });
 });
 
-// R11 a container ITEM and a storage BUILDING never share a noun. Three pairs used to collide —
-//     `storage_chest`/`wooden_chest`, `salting_barrel`/`wooden_barrel`, `wicker_basket`/`woven_basket` —
-//     and "put it in the chest" meant two different things depending on which panel you were in. The
-//     rule that settles it: an ITEM you can pick up takes the bare vessel noun (Bucket, Barrel, Bin,
-//     Crate, Basket, Chest, Jug, Urn); a BUILDING you cannot takes a fitted place-name that says so
-//     (Larder Cupboard, Meat Hooks, Rope-Hung Granary, Root Clamp, Drying Rack, Hay Rack).
-
 const VESSEL_NOUNS = [
   'bucket',
   'barrel',
@@ -738,10 +602,6 @@ const VESSEL_NOUNS = [
 
 describe('ITEM-RULES R11 — a container item and a storage building never share a noun', () => {
   it('no building that holds anything is named after a vessel a pawn could pick up', () => {
-    // Every building that STORES or holds FLUID, not just the storage bins — the first pass only
-    // checked `storageStacks` and let "Tanning Bucket" (a building) sit next to "Tanning Bucket" (an
-    // item) and "Brewing Barrel" next to "Barrel". Pit, vat, trough, rack and larder name no item and
-    // never will, because they are fixed by definition; those are a fixture's vocabulary.
     const bad = (
       BUILDINGS as {
         id?: string;
@@ -789,20 +649,10 @@ describe('ITEM-RULES R11 — a container item and a storage building never share
   });
 });
 
-// ── R12: light / medium / heavy means the same thing on every piece of gear ─────────────────────
-// The class used to live on armour alone, so a loadout could only be read a piece at a time and
-// nothing said that a frame pack and a greatsword are the same KIND of choice. Now every worn or held
-// item answers to it — armour and carry aids author it, weapons derive it from mass and grip.
-//
-// Authoring a label is only worth anything if the numbers under it agree, so the second assertion is
-// the real one: inside one slot at one age, a heavier class must actually cost more to wear AND carry
-// more for it. That is what stops a "heavy" pack that is lighter and roomier than the light one.
 describe('ITEM-RULES R12 — the weight class is the same axis on armour, carry aids and weapons', () => {
   const RANK: Record<string, number> = { light: 0, medium: 1, heavy: 2 };
 
   it('every craftable weapon and worn carry aid resolves to a class', () => {
-    // Regalia is deliberately outside the axis: a ring is not a light/medium/heavy choice, it soaks
-    // nothing and costs nothing to wear, which is why it files under its own branch in /gear-db.
     const bad = CRAFTABLE.filter((i) => i.weaponProperties || i.inventoryBonus)
       .filter((i) => !gearClassOf(i as Item))
       .map((i) => `${i.id} is worn or held and has no weight class`);
@@ -818,13 +668,6 @@ describe('ITEM-RULES R12 — the weight class is the same axis on armour, carry 
   });
 
   it('within one slot and age, a heavier class costs more to wear and buys more for it', () => {
-    // The class is a PRICE: what the piece costs to have on you. So the invariant is cost-side, and it
-    // holds across both belt lines — a plated war-belt is heavy because there is steel on it, even
-    // though a tool-belt out-carries it. What the extra cost buys may be capacity OR protection, but it
-    // has to buy something, or the class is a label with nothing under it.
-    //
-    // Quivers sit out: their job is draw speed, their capacity is incidental, and ranking a war quiver
-    // against a rucksack compares two things that were never alternatives.
     const aids = (ITEMS as Item[]).filter(
       (i) =>
         i.inventoryBonus &&
@@ -838,7 +681,6 @@ describe('ITEM-RULES R12 — the weight class is the same axis on armour, carry 
       bucket.set(key, [...(bucket.get(key) ?? []), i]);
     }
     const cls = (i: Item) => i.armorProperties!.armorType as string;
-    // What a worn aid buys is VOLUME (see R14) or protection — never weight, which is the body's.
     const buys = (i: Item) =>
       Math.max(i.inventoryBonus?.volumeL ?? 0, (i.armorProperties?.defense ?? 0) * 10);
     const bad: string[] = [];
@@ -868,9 +710,6 @@ describe('ITEM-RULES R12 — the weight class is the same axis on armour, carry 
   });
 
   it('a belt never out-holds the crudest backpack', () => {
-    // A belt is a small load that costs nothing and stays on while a quiver owns the back; a pack is
-    // where bulk actually goes. Pinned to the smallest pack in the game rather than a typed constant,
-    // so the two ladders cannot drift past each other unnoticed.
     const packFloor = Math.min(
       ...(ITEMS as Item[])
         .filter(
@@ -889,12 +728,6 @@ describe('ITEM-RULES R12 — the weight class is the same axis on armour, carry 
   });
 });
 
-// ── R13: the plainest accurate word wins ────────────────────────────────────────────────────────
-// This is NOT a ban on period vocabulary. `greaves`, `bracers`, `cuirass`, `coif` and `jerkin` are the
-// genre's shared language — used across dozens of pieces, learned once, and there is no plain synonym
-// that says the same thing. What this catches is the one-off obscurity in a slot where an ordinary word
-// already exists: a "scrip" is a pouch, a "girdle" is a belt, a "snapsack" is a satchel. Reaching for
-// the antique word there costs the player comprehension and buys nothing.
 describe('ITEM-RULES R13 — a one-off antique word where a plain one exists', () => {
   const PLAINER: Record<string, string> = {
     scrip: 'pouch',
@@ -931,7 +764,6 @@ describe('ITEM-RULES R13 — a one-off antique word where a plain one exists', (
         .toLowerCase()
         .replace(/[^a-z ]/g, ' ')
         .split(/\s+/)) {
-        // `budget`/`wallet` are ordinary English in a sentence; only their ITEM-NAME sense is antique.
         if (PLAINER[word] && !['budget', 'wallet', 'frog'].includes(word))
           bad.push(`${i.id} description says "${word}" — plainly, ${PLAINER[word]}`);
       }
@@ -940,15 +772,6 @@ describe('ITEM-RULES R13 — a one-off antique word where a plain one exists', (
   });
 });
 
-// ── R14: a carry aid gives you somewhere to put things, not stronger shoulders ──────────────────
-// Weight capacity is the BODY's — `(11 + 0.19 x strength) x frameFactor`, and nothing you strap on
-// changes how much mass a pawn can bear. A pack that raised it was quietly saying a rucksack makes you
-// stronger. What a pack actually does is give bulk somewhere to ride, so worn aids grant VOLUME only.
-//
-// The single exception is a load carried IN HAND that puts its weight on the ground instead of on the
-// wearer: a barrow, a handcart. Those really do raise what one person can move, and they cost a hand
-// to do it. That is also what keeps carts necessary — dense goods (bars, ore) bind on weight, which no
-// pack will ever help with, while bulky goods (timber, pelts, food) bind on volume.
 describe('ITEM-RULES R14 — worn carry aids grant volume, never weight', () => {
   it('nothing worn raises what a pawn can bear', () => {
     const bad = (ITEMS as Item[])
@@ -967,7 +790,6 @@ describe('ITEM-RULES R14 — worn carry aids grant volume, never weight', () => 
   });
 
   it('every worn carry aid still grants SOMETHING', () => {
-    // Stripping the weight must not leave a piece that does nothing at all.
     const bad = (ITEMS as Item[])
       .filter((i) => i.inventoryBonus && recipesByOutput.has(i.id))
       .filter((i) => (i.inventoryBonus?.volumeL ?? 0) <= 0 && !(i.armorProperties?.defense ?? 0))
@@ -986,12 +808,6 @@ describe('ITEM-RULES R14 — worn carry aids grant volume, never weight', () => 
   });
 });
 
-// ── R15: a fluid says what may hold it, by MATERIAL ────────────────────────────────────────────
-// The allow-list used to run one way only — a vessel said what it accepted — so a leather waterskin
-// declaring `accepts: ['fluid']` would take molten copper at 1085C, and a basket with no list at all
-// took anything. A fluid now names the vessel MATERIALS that can hold it (`heldBy`) and every vessel
-// says what it is made of (`container.material`), so the rule reads as the physical fact it is rather
-// than as a tag someone invented. A new vessel is safe by default.
 describe('ITEM-RULES R15 — a fluid states what material may hold it', () => {
   const FLUIDS = (ITEMS as Item[]).filter((i) => i.type === 'fluid');
   const VESSELS_ALL = (ITEMS as Item[]).filter((i) => i.container);
@@ -1004,8 +820,6 @@ describe('ITEM-RULES R15 — a fluid states what material may hold it', () => {
   });
 
   it('a fluid only names materials some vessel could actually be made of, or none at all', () => {
-    // Naming a material nothing is made of is fine and deliberate (fireclay is the crucible that does
-    // not exist yet) — but it must be a real material word, not a typo that silently allows nothing.
     const KNOWN = new Set([
       'wood',
       'leather',
@@ -1047,8 +861,6 @@ describe('ITEM-RULES R15 — a fluid states what material may hold it', () => {
     expect(melts.length, 'the cast line exists').toBeGreaterThan(0);
     for (const m of melts) {
       expect(m.heldBy, `${m.id} must say what can hold it`).toEqual(['fireclay', 'runed']);
-      // Exactly the two that exist for it — a fireclay crucible, and the runed flask that holds
-      // anything. Nothing made of wood, leather, glass or ordinary earthenware may take a melt.
       const carriers = VESSELS_ALL.filter((v) => vesselAccepts(v.id, m.id)).map(
         (v) => v.container?.material
       );
@@ -1057,9 +869,6 @@ describe('ITEM-RULES R15 — a fluid states what material may hold it', () => {
   });
 
   it('a fluid nothing can carry is only ever asked for at a station that holds it', () => {
-    // If no vessel can bring it, the only way it reaches a craft is by already being in that station's
-    // body. Asking for one anywhere else is an order that can never be supplied — the deadlock the
-    // melt/cast pair hit before station-held fluid counted as staged.
     const holds = new Set(
       (BUILDINGS as { id?: string; fluidCapacityL?: number }[])
         .filter((b) => b.id && (b.fluidCapacityL ?? 0) > 0)
@@ -1085,15 +894,6 @@ describe('ITEM-RULES R15 — a fluid states what material may hold it', () => {
   });
 });
 
-// ── R16: what holds a thing together is a believable share of the thing ─────────────────────────
-// One law for BOTH families, because they failed the same way. A nail was 0.2 kg, so a 3 kg chest
-// carried 1.2 kg of nails; a seam was picked off a hand-written size table, so a cap took the same
-// binding as an 18 kg plate took three of. In both cases the COUNT looked plausible and the MASS was
-// nonsense, and nothing was checking the mass.
-//
-// The band is deliberately wide — a mail hauberk really is mostly rings, a frame pack really is mostly
-// leather. What it catches is the order-of-magnitude error: fastenings that outweigh the object, or
-// that round down to a token.
 describe('ITEM-RULES R16 — a fastening is a believable share of what it fastens', () => {
   const UNIT: Record<string, number> = {};
   for (const i of ITEMS as Item[]) if (i.weightKg) UNIT[i.id] = i.weightKg;
@@ -1116,7 +916,6 @@ describe('ITEM-RULES R16 — a fastening is a believable share of what it fasten
     'copper_tack',
     'mail_rings'
   ];
-  // Mail is not FASTENED with rings, it is MADE of them; a bow's sinew backing is the same.
   const IS_THE_PIECE = /mail_|_backed_bow|weave_|spin_|reel_|dry_sinew/;
 
   it('no fastening outweighs a third of the thing it holds together', () => {
@@ -1140,8 +939,6 @@ describe('ITEM-RULES R16 — a fastening is a believable share of what it fasten
   });
 
   it('every binding material weighs what a thread weighs', () => {
-    // The moment one of them is four times the others, every recipe that uses it is silently wrong —
-    // which is exactly what `enchant_thread` at 0.2kg did to the whole rune-woven line.
     const units = (ITEMS as Item[])
       .filter((i) => i.category === 'binding')
       .map((i) => i.weightKg ?? 0);
@@ -1153,12 +950,6 @@ describe('ITEM-RULES R16 — a fastening is a believable share of what it fasten
   });
 });
 
-// ── R17: a category pool spanning ages must price its members ───────────────────────────────────
-// A `category:` slot takes whatever is cheapest to hand. That is fair when the members cost the same
-// to produce and a lie when they do not: `cordage` is plaited at a craft spot on turn one, `sinew`
-// needs a carcass and a drying rack, `thread` a bronze-age wheel, `enchant_thread` five steps ending
-// at a runed loom. Priced one-for-one the cheapest always wins and the slot is free — which is exactly
-// what a hide hood costing "1 binding" meant when that binding could be a single cord.
 describe('ITEM-RULES R17 — a category pool prices its members by what they cost to have', () => {
   const pool = (cat: string) => (ITEMS as Item[]).filter((i) => i.category === cat);
 
@@ -1173,15 +964,11 @@ describe('ITEM-RULES R17 — a category pool prices its members by what they cos
 
   it('the crude material is worth less than the worked one', () => {
     const v = (id: string) => (ITEMS as Item[]).find((i) => i.id === id)?.craftValue ?? 1;
-    // turn-one cord < carcass-and-rack sinew < bronze-age spun thread
     expect(v('cordage'), 'cordage is the crudest').toBeLessThan(v('sinew'));
     expect(v('sinew'), 'sinew is cruder than spun thread').toBeLessThan(v('thread'));
   });
 
   it('every pool whose members differ in SIZE prices them', () => {
-    // The leather pool ran 0.08kg (coney fur) to 2.86kg (mammoth) — a 36x spread — and a slot asking
-    // for "3 leather" took three scraps of vermin fur for a jerkin. Size has to propagate down the
-    // chain or a category slot quietly becomes the cheapest thing in it.
     const CATS = ['leather', 'cured_hide', 'meat', 'vegetable', 'wood', 'plank', 'log', 'wool'];
     const bad: string[] = [];
     for (const cat of CATS) {
@@ -1204,25 +991,14 @@ describe('ITEM-RULES R17 — a category pool prices its members by what they cos
   });
 
   it('a pool whose members span more than one age is not priced flat', () => {
-    // The failure this catches is subtle: someone adds a late-age material to an early-age pool and
-    // every recipe using that slot silently gets cheaper, because the new member is never chosen but
-    // the old cheap one is still worth a full unit.
     const values = new Set(pool('binding').map((i) => i.craftValue ?? 1));
     expect(values.size, 'binding members are not all worth the same').toBeGreaterThan(1);
   });
 });
 
-// ── R18: a material's NAME says what ONE unit is ────────────────────────────────────────────────
-// The unit and the name have to agree or every count in every recipe is misread. Both directions have
-// already shipped: `iron_nail` weighed 0.2 kg and was called "Iron Nails" (a keg — honest), then the
-// unit shrank to a single 10 g nail and the plural stayed, so "25x Iron Nails" read as 25 kegs.
-// `mail_rings` is the opposite — one unit really is ~290 rings, and calling it "Mail Rings" made a
-// coif look like it took ten rings when it takes nearly three thousand.
 describe('ITEM-RULES R18 — the name says what one unit is', () => {
   const byId = new Map((ITEMS as Item[]).map((i) => [i.id, i]));
-  /** One unit is ONE object: the name must be singular. */
   const SINGLE = ['iron_nail', 'bronze_nail', 'copper_tack', 'steel_rivet'];
-  /** One unit is MANY objects: the name must say so. */
   const BATCH = [
     'mail_rings',
     'small_bones',
@@ -1249,8 +1025,6 @@ describe('ITEM-RULES R18 — the name says what one unit is', () => {
   });
 
   it('the ring bundle is priced so a coif takes a historical number of rings', () => {
-    // ~0.7g a riveted ring; a coif is 3,000-6,000 of them. This is the check that would have caught
-    // "10x Mail Rings" if anyone had asked what ten of them actually WAS.
     const bundle = byId.get('mail_rings')!.weightKg!;
     const perCoif = (firstRecipe('mail_coif')!.inputs as Record<string, number>)['mail_rings'];
     const rings = (bundle * perCoif * 1000) / 0.7;
@@ -1259,11 +1033,6 @@ describe('ITEM-RULES R18 — the name says what one unit is', () => {
   });
 });
 
-// ── R19: a worn garment is never a component of another worn garment ────────────────────────────
-// The three torso layers ARE the combination mechanic — bodyBase under bodyMid under bodyOuter — so
-// building one into another destroys the piece the pawn is supposed to be wearing underneath and
-// charges them twice for it. `make_mail_hauberk` ate a linen gambeson, and `make_mail_coif` ate a
-// TORSO garment to make a head piece.
 describe('ITEM-RULES R19 — armour layers stack on the pawn, not inside the recipe', () => {
   it('no recipe consumes a wearable piece to build another one', () => {
     const worn = new Set(
@@ -1282,7 +1051,6 @@ describe('ITEM-RULES R19 — armour layers stack on the pawn, not inside the rec
   });
 });
 
-// ── Voidshard: the one thing a colony might never see ───────────────────────────────────────────
 describe('voidshard — every way in is a hard one', () => {
   const shard = (ITEMS as Item[]).find((i) => i.id === 'voidshard')!;
 
@@ -1307,31 +1075,13 @@ describe('voidshard — every way in is a hard one', () => {
   });
 });
 
-// ── R20: an early consumable buys its effect; a runed one is handed it ──────────────────────────
-// A dose that removes something the colony would otherwise have to wait out is the strongest thing a
-// consumable can do, and in the early ages it has to be paid for — the medicine of a stone or bronze
-// age worked by making the patient sicker on the way to making them better. Charcoal Purge described
-// exactly that ("brings the poison back up with it") while clearing nausea AND envenom for nothing,
-// which is the shape this catches: prose that promises a trade the effects never charge.
-//
-// What counts as PAYMENT is a downside the sim actually applies — a `grantsConditions` window naming
-// a condition that is a net penalty, or a `rawConsumeRisk`. A grim description is not payment, and
-// neither is a low `medicineQuality` (the tend path skips condition medicine outright, so that number
-// is never read on one of these).
-//
-// The exemption is the RUNED age and only the runed age. A clean, instant, costless cure is what the
-// last age is FOR — it is the reward for reaching it, and an earlier one that acts the same way has
-// quietly handed the player the endgame answer at bronze.
 describe('ITEM-RULES R20 — a cure below the runed age costs the patient something', () => {
   const RUNED = AGE_NAMES.indexOf('runed');
-  /** Modifier keys where a number BELOW 1 is a benefit, not a penalty (a slower hunger clock is good). */
   const LOWER_IS_BETTER = new Set(['hungerRate', 'fatigueRate', 'thirstRate', 'pain']);
   type CondDef = { id: string; modifiers?: Record<string, number> };
   const CONDS = conditionsData as unknown as CondDef[];
   const COND_BY_ID = new Map(CONDS.map((c) => [c.id, c]));
 
-  /** Does this condition leave the pawn worse off overall? Counted rather than all-or-nothing: nausea
-   *  slows the hunger clock while wrecking six other things, and it is plainly not a reward. */
   const isPenalty = (id: string): boolean => {
     const m = COND_BY_ID.get(id)?.modifiers ?? {};
     let bad = 0;
@@ -1345,7 +1095,6 @@ describe('ITEM-RULES R20 — a cure below the runed age costs the patient someth
     return bad > good;
   };
 
-  /** Anything eaten, drunk or administered — the whole consumable surface, not just the medicine shelf. */
   const CONSUMABLES = (ITEMS as Item[]).filter(
     (i) =>
       i.type === 'consumable' ||
@@ -1354,33 +1103,18 @@ describe('ITEM-RULES R20 — a cure below the runed age costs the patient someth
       i.curesConditions?.length ||
       i.mendsWounds?.length
   );
-  /** A dose that REMOVES something outright, rather than adding a timed effect on top. */
   const cures = (i: Item) => [...(i.curesConditions ?? []), ...(i.mendsWounds ?? [])];
   const pays = (i: Item) =>
     !!(i as { rawConsumeRisk?: unknown }).rawConsumeRisk ||
     !!(i.conditionDurationTurns && (i.grantsConditions ?? []).some(isPenalty));
 
-  // Named rather than silently tolerated, exactly like R1/R2/R4's lists. Six of these declare a cure
-  // that lands on nothing — see the audit in the R20 notes — and charging a price for an effect that
-  // does not happen makes the item worse than free. The cure has to work before it can cost anything,
-  // so they wait on that, not on a one-line data edit. This list may only ever SHRINK.
   const R20_DEBT = new Set([
-    // Cure never fires: `bleeding` is re-derived from the limb tree every tick and is never written to
-    // `conditionTimers`, which is the only place `curesConditions` reaches.
     'styptic_pack',
     'field_surgeons_kit',
-    // Cure never fires: `infection` and `hypothermia` are graded persistent conditions on
-    // `pawn.conditions`; `feverburn`/`frostbrittle` are racial triggers re-derived from the pawn's own
-    // traits — and feverburn is a BENEFIT, so clearing it would be a downgrade if it worked.
     'fever_draught',
     'warming_liniment',
-    // Partly fires: `concussed` is a real timer, `pain_shock` is derived from the pain meter and
-    // `pain_maddened` is another racial benefit.
     'poppy_draught',
-    // Fires, and is genuinely free: a bronze-age burn dressing puts the fire out at no cost.
     'burn_dressing',
-    // Fires, and is genuinely free: the first two rungs of the antidote ladder clear the venom AND hand
-    // out a timed immunity. What they should charge is a balance decision about venom counterplay.
     'antivenin_tonic',
     'greater_antivenin_tonic'
   ]);
@@ -1413,8 +1147,6 @@ describe('ITEM-RULES R20 — a cure below the runed age costs the patient someth
   });
 
   it('a downside condition is one the sim can actually apply', () => {
-    // A `grantsConditions` id that matches no condition def is a cost that never lands, and it looks
-    // identical to a real one in the data.
     const bad = CONSUMABLES.flatMap((i) =>
       (i.grantsConditions ?? [])
         .filter((c) => !COND_BY_ID.has(c))
@@ -1424,14 +1156,7 @@ describe('ITEM-RULES R20 — a cure below the runed age costs the patient someth
   });
 });
 
-// ── R21: unmaking a thing never returns more than went into it ──────────────────────────────────
-// Reversible pairs are everywhere in the metal lines — melt a bar to molten, cast the molten back to
-// a bar — and each half is written on its own, so the two halves drift apart without anything
-// complaining. Bronze counted a 4kg bar as one unit of molten where every other metal counted it as
-// four, and one bar came back out of the round trip as two: an unbounded metal supply from a single
-// standing order. Any pair of recipes that can turn N of an item into more than N is the same defect.
 describe('ITEM-RULES R21 — a round trip through the crafting graph never gains mass', () => {
-  /** Every input set an order can actually run on, alternatives included. */
   const OPS = RECIPES.flatMap((r) =>
     [r.inputs, ...(r.inputAlternatives ?? [])]
       .filter(Boolean)
@@ -1441,7 +1166,6 @@ describe('ITEM-RULES R21 — a round trip through the crafting graph never gains
   const byCat = new Map<string, string[]>();
   for (const i of ITEMS)
     if (i.category) byCat.set(i.category, [...(byCat.get(i.category) ?? []), i.id]);
-  /** A category slot stands for any of its members, so a loop through one still counts. */
   const members = (key: string) =>
     key.startsWith('category:') ? (byCat.get(key.slice('category:'.length)) ?? []) : [key];
 
@@ -1455,7 +1179,6 @@ describe('ITEM-RULES R21 — a round trip through the crafting graph never gains
         if (!spent) continue;
         for (const b of OPS) {
           if (!(seed in b.out)) continue;
-          // how many runs of b one run of a can feed, through whichever output they share
           const bridges = Object.keys(a.out).filter((o) =>
             Object.keys(b.inp).some((k) => members(k).includes(o))
           );
@@ -1478,12 +1201,6 @@ describe('ITEM-RULES R21 — a round trip through the crafting graph never gains
   });
 });
 
-// ── R22: a fluid is authored in litres ──────────────────────────────────────────────────────────
-// Fluids are counted in LITRES everywhere — recipes, loot, stockpile totals, vessels — so a fluid
-// definition reads differently from a solid one: `weightKg` is the mass of one LITRE (its density)
-// and `volumeL` is one SERVING. Authoring a phial the solid way (`weightKg: 0.3, volumeL: 0.3`) still
-// parses, and yields a fluid a third the weight of water whose recipe costs a third of a litre.
-// Density is the tell, because a real liquid sits between light spirits and molten gold.
 describe('ITEM-RULES R22 — a fluid states a density and a serving, and its batch fits its station', () => {
   const FLUIDS = ITEMS.filter((i) => i.type === 'fluid');
 

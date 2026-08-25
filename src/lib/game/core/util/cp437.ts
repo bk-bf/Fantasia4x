@@ -1,13 +1,4 @@
-// IBM PC Code Page 437: byte value (0–255) → Unicode character.
-// Bytes 32–126 are identical to ASCII; the rest follow the CP437 spec.
-//
-// Single source of truth shared by the WebGL atlas loader (which registers each
-// bitlands_tiles.bmp cell under CP437_TO_UNICODE[cellIndex]) and Terrains.ts's tiles
-// charSpan resolver T(n). They MUST agree or a tiles `{sheet,id}` renders the wrong
-// (or a blank) cell — which is why the dev spritesheet-viewer's raw cell index must map
-// straight through here.
 export const CP437_TO_UNICODE: readonly string[] = [
-  // 0x00–0x1F  (control codes rendered as graphics in CP437)
   '\u0000',
   '\u263A',
   '\u263B',
@@ -40,7 +31,6 @@ export const CP437_TO_UNICODE: readonly string[] = [
   '\u2194',
   '\u25B2',
   '\u25BC',
-  // 0x20–0x7E  (printable ASCII — identical to Unicode)
   ' ',
   '!',
   '"',
@@ -136,9 +126,7 @@ export const CP437_TO_UNICODE: readonly string[] = [
   '|',
   '}',
   '~',
-  // 0x7F
   '\u2302',
-  // 0x80–0xFF  (CP437 extended characters)
   '\u00C7',
   '\u00FC',
   '\u00E9',

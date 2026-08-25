@@ -1,6 +1,3 @@
-<!-- ItemTreeNode.svelte — DEV TOOL. One level of the item tree: a group header row that folds, then
-     its child groups, then its own leaf items. Recursive; ItemTree.svelte owns the open/selected
-     state so folding is consistent across the whole tree and survives a filter. -->
 <script lang="ts">
   import Self from './ItemTreeNode.svelte';
   import type { TreeNode } from './itemTree';
@@ -25,7 +22,6 @@
   } = $props();
 
   const shut = $derived(!open[node.key]);
-  // The indent is the whole point of the thing — depth reads as position, not as decoration.
   const pad = $derived(6 + node.depth * 13);
 </script>
 
@@ -39,8 +35,7 @@
       title={shut ? `expand ${node.label}` : `collapse ${node.label}`}
       >{shut ? '▸' : '▾'}&nbsp;{node.label}<i>{node.count}</i></button
     >
-    <!-- Same marker the build grid uses: what this kit does NOT cover, spelled out rather than left
-         for the reader to count six children and work out which one is absent. -->
+
     {#each node.missing as m (m)}<span class="miss">– {m}</span>{/each}
   </td>
 </tr>
@@ -107,7 +102,6 @@
     opacity: 0.55;
     margin-left: 6px;
   }
-  /* Each level cools off, so depth is readable at a glance without counting indents. */
   .d1 .head {
     color: #a8c8b0;
     background: #1b2620;
@@ -168,8 +162,6 @@
   .stat {
     color: #b8a06a;
   }
-  /* Everything the sim reads off the item. Long by design — the tooltip carries the full string when
-     it is clipped, because an audit needs to see the whole thing. */
   .held {
     color: var(--text-dim, #8a8a8a);
     white-space: nowrap;

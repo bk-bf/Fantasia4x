@@ -51,7 +51,7 @@ describe('setPawnRestPolicy — "no rest" wakes a resting pawn immediately', () 
       const out = COMMANDS.setPawnRestPolicy(stateWith(pawn()), { pawnId: 'p1', policy });
       const p = out.pawns[0];
       expect(p.restPolicy).toBe(policy);
-      expect(p.currentState).toBe(PAWN_STATE.SLEEPING); // left asleep
+      expect(p.currentState).toBe(PAWN_STATE.SLEEPING);
     }
   });
 

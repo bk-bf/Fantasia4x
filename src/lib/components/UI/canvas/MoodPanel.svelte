@@ -1,19 +1,9 @@
-<!--
-  MoodPanel — pop-up mood readout for a selected pawn (MOOD-REWORK). Mirrors HealthPanel: it floats
-  above the info card, the parent owns the open/close toggle (`open`) and the MOOD button that flips it.
-  Read-only — shows the pawn's CURRENT (eased) mood, the TARGET it is easing toward, and every signed
-  contribution behind that target (benefits green, debuffs red). Sourced from
-  `pawnService.getMoodBreakdown` (= `computeMoodTarget`).
--->
 <script lang="ts">
   import type { MoodModel } from '$lib/components/UI/hud/SelectedEntityCard.svelte';
   import { autohideScroll } from '$lib/actions/autohideScroll';
 
   let { mood, open = false }: { mood: MoodModel | undefined; open?: boolean } = $props();
 
-  // MOOD-REWORK: every contribution to the target, benefits on top and debuffs below. Same-label
-  // contributions are merged (summed) so the keyed {#each} below can never see a duplicate key — two
-  // sources can legitimately share a label (e.g. two traits), which would otherwise crash the block.
   const contributions = $derived.by(() => {
     const merged = new Map<string, number>();
     for (const c of mood?.contributions ?? [])
@@ -71,7 +61,6 @@
 </div>
 
 <style>
-  /* Pop-up framing copied from HealthPanel so the HUD pop-ups match. */
   .mood-panel {
     position: absolute;
     bottom: calc(100% + 4px);

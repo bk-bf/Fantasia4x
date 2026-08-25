@@ -1,5 +1,3 @@
-// Wires the sim's log/feedback sink (core/logSink, default no-op) to the real Svelte stores.
-// Imported for its side effect from `stores/gameState.ts`, so it runs before any tick.
 import { setSimLogSink, type SimLogSink } from '$lib/game/core/util/logSink';
 import { logActivity, logDiag, logEntityDeath, logCombatSwing, logCombatKill } from './Log';
 import { combatFeedback } from './fx/combatFeedback';
@@ -9,8 +7,6 @@ import { projectiles } from './fx/projectiles';
 import { requestThreatPause, requestDeathPause } from './gameState';
 import { threatPulse, alertPulse } from './uiState';
 
-/** The real (store-backed) sink. Exported so the sim-worker bridge can replay buffered `simlog`
- *  events against it — the off-thread sim can't reach the DOM, so it forwards sink calls here. */
 export const realSimLogSink: SimLogSink = {
   logActivity,
   logEvent: logDiag,
@@ -21,7 +17,6 @@ export const realSimLogSink: SimLogSink = {
   pushCombatSound: (req) => combatSounds.push(req),
   pushProjectile: (req) => projectiles.push(req),
   logEntityDeath,
-  // Mob spotted a colonist: auto-pause (if enabled) + pulsing chronicle alert.
   threatAlert: (mobId, mobName, pawnName, turn, focusX, focusY) => {
     requestThreatPause();
     logActivity({
@@ -39,7 +34,6 @@ export const realSimLogSink: SimLogSink = {
     });
     threatPulse.set(Date.now());
   },
-  // Malnutrition/dehydration worsened a stage: pulsing warning + alert bugle. No auto-pause.
   vitalAlert: (_pawnId, pawnName, vital, stageLabel, turn, focusX, focusY) => {
     const label = vital === 'malnutrition' ? 'Malnutrition' : 'Dehydration';
     logActivity({
@@ -57,8 +51,6 @@ export const realSimLogSink: SimLogSink = {
     });
     alertPulse.set(Date.now());
   },
-  // Colonist died: auto-pause + pulse + bugle. The per-path death log already wrote the narrative
-  // entry; this only makes the permadeath unmissable. Fired once from the shared finaliser.
   pawnDeath: (pawnId, pawnName, cause, turn, focusX, focusY) => {
     requestDeathPause();
     logActivity({

@@ -1,10 +1,3 @@
-/* filepath: src/lib/webgl/renderer-core.ts */
-/**
- * Core WebGL2 Renderer — generic tile-based renderer
- * Adapted from Exiled for Fantasia4x. No game-specific imports.
- * Game data is injected via setGrid() / setViewport().
- */
-
 import { createOrthographicMatrix, PerformanceTimer } from './utils.js';
 import { ShaderManager, createTileRendererShaders } from './shaders.js';
 import { createSquareCellAtlas, loadBitlandsAtlas } from './font-atlas.js';
@@ -28,14 +21,9 @@ export interface RenderStats {
   frameTime: number;
   drawCalls: number;
   vertexCount: number;
-  /** Per-pass CPU time (ms) — terrain vs entity overlay — for the profiler render breakdown. */
   terrainMs: number;
   overlayMs: number;
-  /** DEBUG: terrain chunks (re)built+uploaded this frame (0 = fully cached). */
   terrainRebuilds: number;
-  /** DEBUG / regression flag: resource-overlay chunks (re)built this frame across the short + tall
-   *  layers. Should be ~0 on a steady pan (fully cached); a nonzero value EVERY frame means the
-   *  resource overlay has regressed to the per-frame rebuild path — the zoom-out pan stutter. */
   resourceRebuilds: number;
 }
 
@@ -55,93 +43,48 @@ export class WebGLRendererCore {
   private timer: PerformanceTimer;
   private stats: RenderStats;
 
-  // Tile dimensions (pixels per tile)
   private tileWidth: number;
   private tileHeight: number;
 
-  // Viewport in tile coordinates
   private viewTileX = 0;
   private viewTileY = 0;
 
-  // Subsystem managers
   private webglState: WebGLStateManager;
   private shaderManager: ShaderManager | null = null;
   private textureManager: TextureManager | null = null;
   private characterRenderer: CharacterRenderer | null = null;
   private gridRenderer: GridRenderer | null = null;
 
-  // Resources
   private fontAtlas: FontAtlas | null = null;
   private fontTexture: WebGLTexture | null = null;
 
-  // Whether a pre-baked PNG tileset is active (skip atlas regeneration on zoom)
   private tilesetLoaded = false;
 
-  // External grid data
   private gameGrid: GameGrid | null = null;
-  // Bumped every time the terrain grid is replaced; lets the grid renderer
-  // cache the static terrain vertex buffer and skip per-frame regeneration.
   private gridVersion = 0;
-  // Sparse entity-overlay grid (pawns, mobs) rendered as an alpha-blended pass on
-  // top of the terrain grid so entities never destroy the terrain glyph in their
-  // cell and can slide smoothly between tiles.
   private overlayGrid: GameGrid | null = null;
-  // Dropped/stored items live in their OWN overlay grid, rendered between terrain
-  // and entities. Items are a separate single-glyph grid so a pawn standing on an
-  // item's tile composites on top of it instead of overwriting the item glyph
-  // (which is what happened when both shared one grid).
   private itemOverlayGrid: GameGrid | null = null;
-  // Completed buildings live in their OWN overlay grid, rendered between the terrain
-  // and the item overlay. Drawing a building as a glyph-only alpha pass (rather than
-  // baking it into the opaque terrain cell) lets the floor/ground sprite beneath show
-  // through the building sprite's transparent pixels — two stacked sprites, exactly
-  // how items composite over terrain. (Floors and roofs stay baked in the terrain grid.)
   private buildingOverlayGrid: GameGrid | null = null;
-  // Snow/ice weather layer — a sparse grid of per-cell translucent washes (backgroundAlpha) + snow
-  // sprites, drawn BLENDED above the short-resource overlay (buries grass/dirt) but below buildings/
-  // items/pawns/tall trees (which poke out of the blanket). It has its OWN content version + chunk
-  // dirty stream (snowVersion / markSnowChunksDirty) so snow/ice bucket crossings never re-vertex
-  // terrain or resource chunks —
-  // decoupling weather churn from the ADR-026 terrain path entirely.
   private snowGrid: GameGrid | null = null;
   private snowVersion = 0;
-  // Resources (grass/bushes/ore/crops) live in their OWN transparent overlay, rendered FIRST in the
-  // overlay group (terrain → resources → buildings → items → pawns) — so a plant glyph composites over
-  // the actual ground sprite instead of being baked over a flat near-black bg.
   private resourceOverlayGrid: GameGrid | null = null;
-  // TALL resources (trees) render in their OWN pass AFTER entities, so a pawn standing on the tile
-  // behind a tree is occluded by the (oversized) canopy instead of drawing over it.
   private resourceTallOverlayGrid: GameGrid | null = null;
 
-  // Day/night ambient (Phase A — EnvironmentService drives these each turn).
-  // Applied as the u_ambient fragment uniform, combined with the baked additive
-  // point light, so ambient changes never rebuild the terrain vertex buffer.
   private ambientLight = 1.0;
   private ambientTint: [number, number, number] = [1.0, 1.0, 1.0];
 
-  // Whether flickering point lights (campfires) are currently lit. Drives the
-  // terrain cache's light-refresh gating so a fire-free map never rebuilds.
   private dynamicLight = false;
 
-  // Version of the emitter SET. The baked a_light is flicker-free, so the terrain
-  // buffer is only regenerated when this changes (a campfire toggled/moved).
   private lightVersion = 0;
 
-  // Per-tile dynamic POINT lighting (Phase A2). The sampler bakes ONLY the
-  // additive point-light contribution into the a_light vertex attribute; the
-  // global ambient is added per-fragment via the u_ambient uniform.
   private lightSampler:
     | ((wx: number, wy: number, time: number) => [number, number, number])
     | null = null;
-  // Bounding box (world tiles) enclosing all lit emitters' reach. `undefined`
-  // until first set; `null` once set with no emitters lit. Lets the bake skip
-  // sampling tiles that no campfire can reach.
   private lightBounds:
     | { minX: number; minY: number; maxX: number; maxY: number }
     | null
     | undefined = undefined;
 
-  // Initialization promise
   private initPromise: Promise<boolean>;
 
   constructor(options: RendererOptions) {
@@ -178,13 +121,6 @@ export class WebGLRendererCore {
     return this.initPromise;
   }
 
-  /**
-   * Inject the game grid to render. Call whenever the world changes.
-   *
-   * ADR-026: pass `dirtyTiles` for an INCREMENTAL terrain update — only the chunks holding those tiles
-   * re-vertex (every other visible chunk keeps its cached VBO). Omit it for a full rebuild (new map /
-   * first build), which bumps the global cacheVersion and re-vertexes every visible chunk.
-   */
   setGrid(grid: GameGrid, dirtyTiles?: ReadonlyArray<{ x: number; y: number }>): void {
     this.gameGrid = grid;
     if (dirtyTiles && dirtyTiles.length > 0) {
@@ -194,12 +130,6 @@ export class WebGLRendererCore {
     }
   }
 
-  /**
-   * Inject the snow/ice weather grid (drawn blended between terrain and resources). Mirrors setGrid's
-   * ADR-026 contract: pass `dirtyTiles` for an INCREMENTAL update (only the snow chunks holding those
-   * tiles re-vertex); omit for a full replace (new map / full weather rebuild), which bumps the snow
-   * layer's own content version. Neither path ever touches terrain/resource chunks.
-   */
   setSnowGrid(grid: GameGrid | null, dirtyTiles?: ReadonlyArray<{ x: number; y: number }>): void {
     this.snowGrid = grid;
     if (dirtyTiles && dirtyTiles.length > 0) {
@@ -209,81 +139,54 @@ export class WebGLRendererCore {
     }
   }
 
-  /** Inject the entity-overlay grid (pawns/mobs) rendered on top of the terrain. */
   setOverlayGrid(grid: GameGrid | null): void {
     this.overlayGrid = grid;
   }
 
-  /** Inject the item-overlay grid, rendered between the terrain and entities. */
   setItemOverlayGrid(grid: GameGrid | null): void {
     this.itemOverlayGrid = grid;
   }
 
-  /** Inject the building-overlay grid, rendered between the terrain and items. */
   setBuildingOverlayGrid(grid: GameGrid | null): void {
     this.buildingOverlayGrid = grid;
   }
 
-  /** Inject the (short) resource-overlay grid (grass/bushes/ore/crops), rendered first over the terrain ground. */
   setResourceOverlayGrid(grid: GameGrid | null): void {
     this.resourceOverlayGrid = grid;
   }
 
-  /** Inject the TALL resource-overlay grid (trees), rendered after entities so it occludes pawns behind it. */
   setResourceTallOverlayGrid(grid: GameGrid | null): void {
     this.resourceTallOverlayGrid = grid;
   }
 
-  /** Set the top-left viewport tile position. */
   setViewTileOffset(x: number, y: number): void {
     this.viewTileX = x;
     this.viewTileY = y;
   }
 
-  /** Update ambient light values; called each turn from the game canvas. */
   setAmbient(light: number, tint: [number, number, number]): void {
     this.ambientLight = light;
     this.ambientTint = tint;
   }
 
-  /**
-   * Declare whether any flickering point-light emitters are currently lit. When
-   * false the terrain cache treats baked point light as a constant 0 and never
-   * rebuilds for lighting; when true it refreshes the lit subset at ~10 Hz.
-   */
   setDynamicLight(active: boolean): void {
     this.dynamicLight = active;
   }
 
-  /**
-   * Set the emitter-set version. Bumped by the canvas whenever a campfire is
-   * lit/extinguished/moved so the terrain vertex buffer rebakes its (static)
-   * point light exactly once per change — flicker is a per-fragment uniform.
-   */
   setLightVersion(version: number): void {
     this.lightVersion = version;
   }
 
-  /**
-   * Set the bounding box (world tiles) that encloses every lit emitter's reach,
-   * or null when nothing is lit. The terrain bake samples point light only for
-   * tiles overlapping this box, so a small campfire costs a small box of work.
-   */
   setLightBounds(bounds: { minX: number; minY: number; maxX: number; maxY: number } | null): void {
     this.lightBounds = bounds;
   }
 
-  /**
-   * Provide the per-tile light sampler (Phase A2). The grid renderer queries it
-   * at every tile corner to bake dynamic lighting into the a_light attribute.
-   */
   setLightSampler(
     sampler: ((wx: number, wy: number, time: number) => [number, number, number]) | null
   ): void {
     this.lightSampler = sampler;
   }
 
-  /** Change tile pixel dimensions (used for zoom). Regenerates atlas only when the integer cell size changes (skipped for bitmap tilesets). */
   setTileSize(w: number, h: number): void {
     const prevCellSize = Math.round(this.tileWidth);
     this.tileWidth = w;
@@ -293,13 +196,10 @@ export class WebGLRendererCore {
     }
   }
 
-  // Prevent overlapping async atlas reloads
   private atlasReloadPending = false;
   private atlasReloadQueued: number | null = null;
 
-  /** Regenerate the font atlas at the given cell size and upload to GPU directly (no TextureManager cache). */
   private async reloadAtlasForCellSize(cellSize: number): Promise<void> {
-    // If already loading, just queue the latest size — process after current finishes
     if (this.atlasReloadPending) {
       this.atlasReloadQueued = cellSize;
       return;
@@ -312,7 +212,6 @@ export class WebGLRendererCore {
 
       const newAtlas = await createSquareCellAtlas(cellSize, this.debug);
 
-      // Allocate raw GL texture — bypass TextureManager to avoid stale cache issues
       const newTexture = gl.createTexture();
       if (!newTexture) return;
 
@@ -333,7 +232,6 @@ export class WebGLRendererCore {
         newAtlas.texture.data
       );
 
-      // Swap in atomically
       if (this.fontTexture) gl.deleteTexture(this.fontTexture);
       this.fontTexture = newTexture;
       this.fontAtlas = newAtlas;
@@ -342,7 +240,6 @@ export class WebGLRendererCore {
       console.warn('Atlas reload failed:', err);
     } finally {
       this.atlasReloadPending = false;
-      // Process any size change that arrived while we were loading
       if (this.atlasReloadQueued !== null) {
         const next = this.atlasReloadQueued;
         this.atlasReloadQueued = null;
@@ -360,7 +257,6 @@ export class WebGLRendererCore {
       this.shaderManager = await createTileRendererShaders(gl, this.debug);
       if (!this.shaderManager) throw new Error('Shader init failed');
 
-      // Load all bitlands sheets into a unified atlas
       try {
         this.fontAtlas = await loadBitlandsAtlas(12, 18, this.debug);
         this.tilesetLoaded = true;
@@ -423,9 +319,6 @@ export class WebGLRendererCore {
     if (!this.shaderManager.useProgram('tileRenderer')) return;
     this.shaderManager.setUniform('tileRenderer', 'u_projection', this.projectionMatrix);
 
-    // Pan AND zoom are shader uniforms now: terrain geometry is baked once at a
-    // fixed BASE_TILE_PX size, then shifted (u_viewOffset) and scaled (u_zoom)
-    // here — so neither scrolling nor zooming ever rebuilds the vertex buffer.
     this.shaderManager.setUniform('tileRenderer', 'u_viewOffset', [
       this.viewTileX * BASE_TILE_PX,
       this.viewTileY * BASE_TILE_PX
@@ -434,15 +327,11 @@ export class WebGLRendererCore {
       this.tileWidth / BASE_TILE_PX,
       this.tileHeight / BASE_TILE_PX
     ]);
-    // Global day/night ambient is a uniform too, combined per-fragment with the
-    // baked additive point light, so ambient changes never rebuild the buffer.
     this.shaderManager.setUniform('tileRenderer', 'u_ambient', [
       this.ambientLight * this.ambientTint[0],
       this.ambientLight * this.ambientTint[1],
       this.ambientLight * this.ambientTint[2]
     ]);
-    // Global fire-flicker multiplier for the baked (static) point light. Cheap
-    // per-frame uniform so a lit campfire animates without rebaking any vertices.
     const flickerTime = performance.now() / 1000;
     this.shaderManager.setUniform(
       'tileRenderer',
@@ -465,13 +354,9 @@ export class WebGLRendererCore {
 
     const lightTime = performance.now() / 1000;
 
-    // Terrain pass — opaque, fills every cell background. Rendered as viewport-culled CHUNKS (§E):
-    // geometry is camera-independent (world-space verts + u_viewOffset/u_zoom), so only the chunks
-    // overlapping the viewport are built/drawn and panning just changes which chunks are visible.
     this.shaderManager.setUniform('tileRenderer', 'u_glyphOnly', 0);
     const tTerrain = performance.now();
     const gridStats = this.gridRenderer.renderGrid(this.gameGrid, {
-      // Geometry baked at the fixed base size; zoom comes from u_zoom.
       tileWidth: BASE_TILE_PX,
       tileHeight: BASE_TILE_PX,
       viewportX: this.viewTileX,
@@ -486,17 +371,10 @@ export class WebGLRendererCore {
       cacheVersion: this.gridVersion
     });
     this.stats.terrainMs = performance.now() - tTerrain;
-    this.stats.terrainRebuilds = this.gridRenderer.chunksRebuiltLastRender; // DEBUG
+    this.stats.terrainRebuilds = this.gridRenderer.chunksRebuiltLastRender;
     this.stats.drawCalls++;
     this.stats.vertexCount += gridStats.tilesRendered * 6;
 
-    // Overlay passes — alpha-blended on top of the terrain so the tile underneath keeps rendering and
-    // motion can be sub-tile. Draw order is
-    //   terrain → snow WASH → resources(short) → snow SPRITES → buildings → items → entities → trees.
-    // The snow layer is drawn TWICE from its one cached VBO: the translucent WASH (background-only)
-    // sits BENEATH the resource glyphs so grass/bushes/mountain-walls render on top of it (never
-    // flattened to solid white); the snow SPRITES (glyph-only) sit ABOVE the resources so deep snow
-    // reads as snow tiles. Both stay BELOW buildings/items/pawns/tall-trees, which poke out.
     if (
       this.overlayGrid ||
       this.itemOverlayGrid ||
@@ -509,15 +387,11 @@ export class WebGLRendererCore {
       gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
       this.shaderManager.setUniform('tileRenderer', 'u_glyphOnly', 1);
       const tOverlay = performance.now();
-      // 1. Snow/ice WASH — background-only, BENEATH resources. u_bgOnly emits just the per-cell white/
-      //    ice wash (no glyph); resource glyphs drawn next composite on top, so a mountain wall keeps
-      //    its glyph instead of becoming a solid-white block. Reset u_bgOnly right after.
       if (this.snowGrid) {
         this.shaderManager.setUniform('tileRenderer', 'u_bgOnly', 1);
         this.drawSnowGrid(viewportTilesW, viewportTilesH, lightTime);
         this.shaderManager.setUniform('tileRenderer', 'u_bgOnly', 0);
       }
-      // 2. Short resources (grass/bushes/ground-cover; dense → viewport-culled) over the wash.
       this.renderGlyphOverlay(
         this.resourceOverlayGrid,
         viewportTilesW,
@@ -526,14 +400,9 @@ export class WebGLRendererCore {
         true,
         'resource'
       );
-      // 3. Snow SPRITES — glyph-only (u_glyphOnly already 1), ABOVE resources: the 44/45/46 snow tiles
-      //    draw over the ground cover so deep snow buries grass, while the WASH beneath keeps light
-      //    snow translucent. Same cached 'snow' VBO as the wash pass — a pure re-draw, no re-vertex.
       if (this.snowGrid) {
         this.drawSnowGrid(viewportTilesW, viewportTilesH, lightTime);
       }
-      // 4. Then buildings, items, entities. TALL resources (trees) LAST so the oversized canopy occludes
-      // pawns/mobs standing on tiles behind the tree.
       this.renderGlyphOverlay(this.buildingOverlayGrid, viewportTilesW, viewportTilesH, lightTime);
       this.renderGlyphOverlay(this.itemOverlayGrid, viewportTilesW, viewportTilesH, lightTime);
       this.renderGlyphOverlay(this.overlayGrid, viewportTilesW, viewportTilesH, lightTime);
@@ -553,10 +422,6 @@ export class WebGLRendererCore {
     }
   }
 
-  /** Draw the snow/ice grid from its cached 'snow' chunk VBO. Called TWICE per frame — once bg-only
-   *  (the wash, beneath resources) and once glyph-only (the sprites, above resources); the caller sets
-   *  the u_bgOnly / u_glyphOnly mode. Both calls reuse the same cached buffer (same snowVersion), so the
-   *  second is a pure re-draw with no re-vertex. */
   private drawSnowGrid(viewportTilesW: number, viewportTilesH: number, lightTime: number): void {
     if (!this.snowGrid || !this.gridRenderer) return;
     const s = this.gridRenderer.renderGrid(this.snowGrid, {
@@ -578,11 +443,6 @@ export class WebGLRendererCore {
     this.stats.vertexCount += s.tilesRendered * 6;
   }
 
-  /** Render one glyph-only overlay grid (no-op when null). Caller sets up blend + u_glyphOnly.
-   *  Sparse overlays (pawns/items/buildings: a handful of cells) use renderAllTiles. The DENSE
-   *  resource overlays (a full forest of cells) pass a `chunkLayer` so renderGrid takes the CACHED
-   *  chunked path — built on change (same gridVersion/lightVersion/dirty as terrain), not per frame —
-   *  which is what makes zoomed-out panning cheap while keeping every tree/plant glyph. */
   private renderGlyphOverlay(
     grid: GameGrid | null,
     viewportTilesW: number,
@@ -593,8 +453,6 @@ export class WebGLRendererCore {
   ): void {
     if (!grid || !this.gridRenderer) return;
     const stats = this.gridRenderer.renderGrid(grid, {
-      // Geometry baked at the fixed base size; zoom comes from u_zoom. The
-      // overlay's sub-tile animationOffset is likewise in base-tile pixels.
       tileWidth: BASE_TILE_PX,
       tileHeight: BASE_TILE_PX,
       viewportX: this.viewTileX,
@@ -605,15 +463,10 @@ export class WebGLRendererCore {
       lightTime,
       litBounds: this.lightBounds,
       renderAllTiles: !viewportCulled,
-      // Cached resource layers ride terrain's content/light versions (they rebuild together from the
-      // same changed tiles in redrawOverlayNow → setGrid), so a stale glyph can't outlive a terrain edit.
       ...(chunkLayer
         ? { chunkLayer, cacheVersion: this.gridVersion, lightVersion: this.lightVersion }
         : {})
     });
-    // Regression flag: for a cached resource layer, tally the chunks that had to rebuild this pass.
-    // On a steady pan this stays ~0; a nonzero value every frame means the cache broke (per-frame
-    // rebuild path) — surfaced as `resourceRebuilds=` in perf.log. See ADR-027.
     if (chunkLayer) this.stats.resourceRebuilds += this.gridRenderer.chunksRebuiltLastRender;
     this.stats.drawCalls++;
     this.stats.vertexCount += stats.tilesRendered * 6;
@@ -667,12 +520,6 @@ export class WebGLRendererCore {
   }
 }
 
-/**
- * Global fire-flicker scalar in [0.85, 1.0] applied as the u_lightFlicker uniform.
- * Mirrors LightingService.fireFlicker(time, 0) so the baked-vs-uniform split stays
- * visually consistent. A single shared phase animates all lit campfires together,
- * which is a negligible visual trade for eliminating per-frame vertex rebakes.
- */
 function fireFlickerGlobal(time: number): number {
   const n = Math.sin(time * 6.0) * 0.5 + Math.sin(time * 11.3) * 0.5;
   return 0.85 + 0.15 * (0.5 + 0.5 * n);

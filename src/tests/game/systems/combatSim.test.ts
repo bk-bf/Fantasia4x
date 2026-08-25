@@ -8,11 +8,6 @@ import { itemService } from '$lib/game/services/ItemService';
 import { recipeService } from '$lib/game/services/RecipeService';
 import type { GameState, Injury, Mob, Pawn } from '$lib/game/core/types';
 
-/**
- * Headless combat-sim: drives the REAL combatService.tickCombat over a hand-built
- * state to lock in the COMBAT-SYSTEM behaviours — an undrafted Fighting pawn swings
- * back at an adjacent hostile, and a mob in Attacking state damages an adjacent pawn.
- */
 const stats = {
   strength: 14,
   dexterity: 16,
@@ -22,10 +17,6 @@ const stats = {
   charisma: 10
 };
 
-// The combat rebalance made bare fists claw-tier (8 dmg), so a full-strength pawn now BEATS a passive
-// goblin to death. The down-not-kill / collapse tests below need the low-damage regime they were built
-// for, so they use a deliberately weak (STRENGTH 5) attacker — raw ≈ 8 × 0.5 = 4, matching the old
-// str14 × fists3 ≈ 4.2 — which downs via cumulative pain instead of destroying a limb.
 const weakStats = { ...stats, strength: 5, dexterity: 20 };
 
 function makePawn(over: Partial<Pawn> = {}): Pawn {
@@ -66,7 +57,7 @@ function makeGoblin(over: Partial<Mob> = {}): Mob {
     stateSince: 0,
     isAlive: true,
     x: 5,
-    y: 6, // adjacent to the pawn at (5,5)
+    y: 6,
     health: 35,
     maxHealth: 35,
     stats: { ...stats, dexterity: 4 },
@@ -97,7 +88,7 @@ function makeState(pawns: Pawn[], mobs: Mob[]): GameState {
 
 describe('combat sim (headless tickCombat)', () => {
   it('an undrafted Fighting pawn swings back at an adjacent hostile', () => {
-    let state = makeState([makePawn()], [makeGoblin({ state: 'Wander' })]); // mob passive so only the pawn attacks
+    let state = makeState([makePawn()], [makeGoblin({ state: 'Wander' })]);
     let mobInjured = false;
     for (let t = 0; t < 1500 && !mobInjured; t++) {
       state = { ...state, turn: t };
@@ -108,10 +99,6 @@ describe('combat sim (headless tickCombat)', () => {
   });
 
   it('a wounded charger (chargesWhenWounded) retaliates against its attacker — the mammoth bug', () => {
-    // A placid grazer (boar / mammoth / aurochs) in Wander that a pawn strikes must LOCK the attacker and
-    // fight back (huntTargetId + Attacking) instead of standing inert. Regression: attacking a woolly
-    // mammoth never proc'd a counter — only the melee-hunt handler ever set a placid grazer's retaliation,
-    // so a drafted or ranged hit left it passive.
     let state = makeState([makePawn()], [makeGoblin({ creatureId: 'boar', state: 'Wander' })]);
     let retaliated = false;
     for (let t = 0; t < 1500 && !retaliated; t++) {
@@ -124,8 +111,6 @@ describe('combat sim (headless tickCombat)', () => {
   });
 
   it('a non-charger (no chargesWhenWounded) is NOT flipped into combat by a hit — the gate holds', () => {
-    // Retaliation is opt-in via chargesWhenWounded; a plain goblin never adopts its attacker as a
-    // huntTargetId through this path (tickCombat only ever downs it under the beating).
     let state = makeState([makePawn({ stats: weakStats })], [makeGoblin({ state: 'Wander' })]);
     for (let t = 0; t < 400; t++) {
       state = { ...state, turn: t };
@@ -135,10 +120,6 @@ describe('combat sim (headless tickCombat)', () => {
   });
 
   it('part damage accumulates and a sustained beating DOWNS a mob via pain collapse (not instant death)', () => {
-    // Pawn-only attacker (goblin Wandering, so it never swings back). Vital organs (hitWeight 0) are
-    // never directly struck, so the only resolution is cumulative pain/shock → COLLAPSE. Combat collapse
-    // now DOWNS a mob into the recoverable Collapsed state (not instant death — that's blood-0/vital only,
-    // handled in entityLifecycle, which tickCombat doesn't run). So we assert it's downed, not killed.
     let state = makeState([makePawn({ stats: weakStats })], [makeGoblin({ state: 'Wander' })]);
     let accumulated = false;
     let maxPain = 0;
@@ -148,26 +129,21 @@ describe('combat sim (headless tickCombat)', () => {
       state = combatService.tickCombat(state, 16);
       const g = state.mobs![0];
       maxPain = Math.max(maxPain, g.pain ?? 0);
-      // Total HP lost across all body parts — stays 0 under the old bug (parts never
-      // persisted); grows once damage actually accumulates.
       const lost = (g.limbs ?? []).reduce(
         (s, l) => s + (l.parts ?? []).reduce((ps, p) => ps + (p.maxHp - p.health), 0),
         0
       );
       if (lost > 15) accumulated = true;
       if (g.state === 'Collapsed') downed = true;
-      expect(g.isAlive).not.toBe(false); // never INSTANT-killed by the beating — only downed
+      expect(g.isAlive).not.toBe(false);
     }
-    expect(accumulated).toBe(true); // bug fix: part damage persists and accumulates
-    expect(downed).toBe(true); // the fight resolves via collapse → DOWNED (Collapsed), not killed
-    expect(maxPain).toBeGreaterThan(30); // …with pain a real driver of the downing
+    expect(accumulated).toBe(true);
+    expect(downed).toBe(true);
+    expect(maxPain).toBeGreaterThan(30);
   });
 
   it('a near-collapse (low-blood) mob takes a light blow and DOWNS, never instant-dies (the 3-dmg-punch regression)', () => {
-    // Field repro: a jackal in deep hypovolemic shock (it had won a brutal fight, blood critically low)
-    // took a 3-dmg blunt punch and INSTANTLY died — a collapse mis-counted as a kill. Combat collapse must
-    // DOWN a mob (recoverable Collapsed), never kill it; death is blood-0 / destroyed-vital ONLY.
-    const shocked = makeGoblin({ state: 'Wander', bloodVolume: 22, pain: 40 }); // ~78% blood lost → faint
+    const shocked = makeGoblin({ state: 'Wander', bloodVolume: 22, pain: 40 });
     let state = makeState([makePawn({ stats: weakStats })], [shocked]);
     let sawCollapsed = false;
     for (let t = 0; t < 600; t++) {
@@ -175,20 +151,13 @@ describe('combat sim (headless tickCombat)', () => {
       state = combatService.tickCombat(state, 16);
       const g = state.mobs![0];
       if (g.state === 'Collapsed') sawCollapsed = true;
-      expect(g.isAlive).not.toBe(false); // a light blow never instant-kills…
-      expect(g.state).not.toBe('Corpse'); // …it goes DOWN, doesn't die
+      expect(g.isAlive).not.toBe(false);
+      expect(g.state).not.toBe('Corpse');
     }
-    expect(sawCollapsed).toBe(true); // the shock + blow downed it (recoverable), as it should
+    expect(sawCollapsed).toBe(true);
   });
 
   it('tickCombat leaves its INPUT state arrays/objects intact (status-change diff stays valid)', () => {
-    // Perf: tickCombat clones the pawns/mobs arrays once and writes updated entities into the clone's
-    // slots in place (no per-hit full-array rebuild). GameEngineImpl diffs preCombatState vs the result
-    // by index (handleFreshCombatCorpses, etc.) — that ONLY works if tickCombat never writes through to
-    // its input. Drive a pawn beating a passive goblin until it DOWNS (Collapsed — the status-change the
-    // clone must isolate now that collapse no longer instant-kills) and assert the input is untouched.
-    // Weak (STRENGTH 5) attacker so the beating DOWNS the goblin (pain → Collapsed) as the isolation vehicle,
-    // instead of killing it — buffed fists would otherwise beat this passive target to death.
     let state = makeState([makePawn({ stats: weakStats })], [makeGoblin({ state: 'Wander' })]);
     let validated = false;
     for (let t = 0; t < 12000 && !validated; t++) {
@@ -199,10 +168,9 @@ describe('combat sim (headless tickCombat)', () => {
       const result = combatService.tickCombat(input, 16);
       const resultMob = result.mobs![0];
       if (upBefore && resultMob.state === 'Collapsed') {
-        // Status-change tick: the result diverged, but the input snapshot must be byte-for-byte unchanged.
-        expect(result.mobs).not.toBe(inputMobs); // arrays diverged (clone, not in-place on input)
-        expect(input.mobs![0]).toBe(inputMob); // same input object ref…
-        expect(inputMob.state).not.toBe('Collapsed'); // …still standing in the input
+        expect(result.mobs).not.toBe(inputMobs);
+        expect(input.mobs![0]).toBe(inputMob);
+        expect(inputMob.state).not.toBe('Collapsed');
         validated = true;
       }
       state = result;
@@ -211,7 +179,6 @@ describe('combat sim (headless tickCombat)', () => {
   });
 
   it('an Attacking mob damages the adjacent pawn', () => {
-    // Accurate mob vs low-dodge pawn so hits land reliably regardless of rng sequence.
     const target = makePawn({ currentState: 'Idle', stats: { ...stats, dexterity: 3 } });
     let state = makeState([target], [makeGoblin({ stats: { ...stats, dexterity: 16 } })]);
     let pawnInjured = false;
@@ -225,7 +192,7 @@ describe('combat sim (headless tickCombat)', () => {
 
   it('rolls between a pawn’s natural weapons (fists/kick) with per-weapon stamina', () => {
     const attacker = makePawn();
-    const defender = makeGoblin({ stats: { ...stats, dexterity: 2 } }); // low dodge → lots of hits
+    const defender = makeGoblin({ stats: { ...stats, dexterity: 2 } });
     const empty = makeState([], []);
     const seen = new Set<string>();
     const staminaByWeapon = new Map<string, number>();
@@ -234,15 +201,12 @@ describe('combat sim (headless tickCombat)', () => {
       seen.add(r.weaponId);
       staminaByWeapon.set(r.weaponId, r.staminaCost);
     }
-    // Both bare-handed attacks should turn up across 400 swings.
     expect(seen.has('fists')).toBe(true);
     expect(seen.has('kick')).toBe(true);
-    // Kicks cost more stamina than jabs (per-weapon staminaCost surfaced).
     expect(staminaByWeapon.get('kick')!).toBeGreaterThan(staminaByWeapon.get('fists')!);
   });
 
   it('lands critical hits for a high-crit attacker (stat + weapon critMod)', () => {
-    // High DEXTERITY/PERCEPTION pawn → high base hit_precision; low-dodge target → mostly hits.
     const attacker = makePawn({ stats: { ...stats, dexterity: 22, perception: 22 } });
     const defender = makeGoblin({ stats: { ...stats, dexterity: 1 } });
     const empty = makeState([], []);
@@ -258,8 +222,6 @@ describe('combat sim (headless tickCombat)', () => {
   });
 
   it('a blow lands a DOUBLE wound whose flesh and bone depths are INDEPENDENT (blunt cracks bone, blades rarely do)', () => {
-    // High-STRENGTH attacker, near-zero-dodge target → lots of landed hits. The pawn's hands offer fists
-    // (blunt) and claw (cutting); resolveHit rolls between them, so one run samples both damage classes.
     const attacker = makePawn({ stats: { ...stats, strength: 22, dexterity: 20 } });
     const defender = makeGoblin({ stats: { ...stats, dexterity: 1 } });
     const empty = makeState([], []);
@@ -279,39 +241,32 @@ describe('combat sim (headless tickCombat)', () => {
         fractures++;
         if (isBlunt) bluntFractures++;
         else if (r.damageType === 'cutting') cutFractures++;
-        // Bone load is rolled independently of the flesh crush — NOT the old hardwired-equal value.
         if (r.injury && r.fractureInjury.damage !== r.injury.damage) diverged++;
       }
     }
-    expect(fractures).toBeGreaterThan(20); // blunt blows crack bone
-    expect(diverged / fractures).toBeGreaterThan(0.8); // flesh vs bone depth decoupled
-    // Blunt shock drives through to bone FAR more readily than a cut does, per landed hit.
+    expect(fractures).toBeGreaterThan(20);
+    expect(diverged / fractures).toBeGreaterThan(0.8);
     expect(bluntFractures / Math.max(1, bluntHits)).toBeGreaterThan(
       cutFractures / Math.max(1, cutHits)
     );
   });
 
   it('organsOf lists a cavity’s internal organs, and nothing for a part with none', () => {
-    // The penetration-targeting source of truth: a cavity exposes its soft internal organs (hitWeight 0,
-    // not the skeleton); a limb segment or the hand expose none, so a hit there can never reach an organ.
     expect(organsOf('abdomen')).toEqual(
       expect.arrayContaining(['leftKidney', 'rightKidney', 'liver', 'stomach'])
     );
     expect(organsOf('chest')).toEqual(expect.arrayContaining(['heart', 'leftLung', 'rightLung']));
-    expect(organsOf('chest')).not.toContain('ribcage'); // the bone is the fracture path, not an organ
-    expect(organsOf('leftForearm')).toEqual([]); // only a skeleton inside → nothing to penetrate to
-    expect(organsOf('leftHand')).toEqual([]); // fingers are external sub-parts (hitWeight > 0), not organs
+    expect(organsOf('chest')).not.toContain('ribcage');
+    expect(organsOf('leftForearm')).toEqual([]);
+    expect(organsOf('leftHand')).toEqual([]);
   });
 
   it('a deep blow can reach an organ inside a cavity — penetrating finds them, blunt rarely ruptures', () => {
-    // A high-STRENGTH pawn batters a near-zero-dodge defender that carries a FULL humanoid body plan (so its
-    // organs actually exist to be struck). Run once with a CUTTING weapon (penetrating) and once with a
-    // BLUNT one (shallow) to prove the asymmetry: a thrust/slash reaches organs, a battering rarely does.
     const empty = makeState([], []);
     function organStats(weaponId: string) {
       const attacker = makePawn({
         stats: { ...stats, strength: 22, dexterity: 20 },
-        limbs: createBodyPlanLimbs('humanoid', 1), // real hands → the equipped weapon is actually wielded
+        limbs: createBodyPlanLimbs('humanoid', 1),
         equipment: { mainHand: { itemId: weaponId, instanceId: 'w1', durability: 100 } }
       });
       const defender = makePawn({
@@ -328,28 +283,23 @@ describe('combat sim (headless tickCombat)', () => {
         hits++;
         if (r.organInjury) {
           organ++;
-          // An organ wound only ever lands on an organ INSIDE the struck cavity — never a flesh/limb part.
           if (PART_DEF_MAP[r.organInjury.bodyPart]?.containedIn !== r.bodyPart) misTargeted++;
         }
       }
       return { hits, organ, misTargeted };
     }
-    const pen = organStats('stone_chopper'); // cutting → penetrating
-    const blunt = organStats('stone_club'); // blunt → shallow (a spear is piercing; it belongs above)
+    const pen = organStats('stone_chopper');
+    const blunt = organStats('stone_club');
 
-    expect(pen.organ).toBeGreaterThan(0); // penetrating blows DO reach organs
-    expect(pen.misTargeted).toBe(0); // and only ever an organ contained in the struck cavity
+    expect(pen.organ).toBeGreaterThan(0);
+    expect(pen.misTargeted).toBe(0);
     expect(blunt.misTargeted).toBe(0);
-    // Penetrating wounds find organs FAR more readily, per landed hit, than blunt force ruptures one — so a
-    // shallow battering craters the abdomen HP while the kidneys stay intact (the realism this whole fix is for).
     expect(pen.organ / Math.max(1, pen.hits)).toBeGreaterThan(
       blunt.organ / Math.max(1, blunt.hits)
     );
   });
 
   it('melee lands a sane ~60% at parity (no more ~80% dodge whiff-slog)', () => {
-    // Evenly-matched DEXTERITY-10 combatants. The old formula (DEXTERITY×3 − dodge×20, no base) gave ~10% here,
-    // so fights never resolved; the rebased formula centres parity near 60%.
     const attacker = makePawn({ id: 'atk', stats: { ...stats, dexterity: 10 } });
     const defender = makePawn({ id: 'def', stats: { ...stats, dexterity: 10 } });
     const empty = makeState([], []);
@@ -362,9 +312,6 @@ describe('combat sim (headless tickCombat)', () => {
   });
 
   it('§121 per-part armor: a covered part is mitigated, an UNCOVERED part bypasses (same pawn, one cuirass)', async () => {
-    // A pawn wearing only a body cuirass (covers the torso, not the limbs). Over many hits, blows that
-    // land on a COVERED part are soaked; blows on an UNCOVERED limb take (near-)full damage — proving
-    // armour mitigates per-struck-part, not as a flat body-wide shield. Bucketed by `coversPart` itself.
     const { coversPart } = await import('$lib/game/core/rules/gear/armorCoverage');
     const { itemService } = await import('$lib/game/services/ItemService');
     const cuirass = itemService.getItemById('plate_cuirass')!;
@@ -401,9 +348,6 @@ describe('combat sim (headless tickCombat)', () => {
   });
 
   it('§Q quality flows into combat: a Masterwork blade hits harder than a Crude one (resolveHit)', () => {
-    // The downstream half of the pawn-skill audit: a higher §Q tier (from a skilled crafter) scales the
-    // equipped weapon's stats through the SAME resolveHit path a real fight uses. Same weapon, same pawns,
-    // only the stamped instance quality differs.
     const empty = makeState([], []);
     const avgDamage = (quality: 0 | 4) => {
       const attacker = makePawn({
@@ -431,10 +375,6 @@ describe('combat sim (headless tickCombat)', () => {
   });
 
   it('SHARPNESS coating multiplies bleed on a cutting weapon but CANNOT bleed a maul (§C)', () => {
-    // A honing oil (`razors_grace`, bleedMult 3.0) multiplies the SWUNG weapon's own bloodletting proc.
-    // Multiplicative by design: a steel longsword (base bloodletting 0.18) leaves far more non-clotting
-    // wounds when coated; a great bone maul (crush, NO bloodletting proc, bleedMod 0) leaves ZERO however
-    // keen the oil — the guard the design requires (blunt weapons never gain sword-like bleed).
     const empty = makeState([], []);
     const bloodlettingRate = (weaponId: string, coated: boolean) => {
       const attacker = makePawn({
@@ -472,17 +412,13 @@ describe('combat sim (headless tickCombat)', () => {
   });
 
   it('a Hunting pawn attacks its marked quarry even though the prey is neutral', () => {
-    // A huntable deer is NOT a "hostile" (the Fighting/auto-engage path would ignore it), so this proves
-    // the work-driven hunt path: a pawn in Hunting with huntTargetId set swings at that specific mob and
-    // DROPS it (Collapsed). The huntTargetId path keeps striking even a downed quarry (a committed hunter
-    // finishes it), and the actual death/corpse to butcher comes from bleed-out in entityLifecycle.
     const hunter = makePawn({ currentState: 'Hunting', huntTargetId: 'deer1' });
     const prey = makeGoblin({
       id: 'deer1',
       entityClass: 'animal',
-      state: 'Wander', // peaceful — never attacks back
+      state: 'Wander',
       markedForHunt: true,
-      stats: { ...stats, dexterity: 2 } // low dodge so swings land
+      stats: { ...stats, dexterity: 2 }
     });
     let state = makeState([hunter], [prey]);
     let downed = false;
@@ -496,8 +432,6 @@ describe('combat sim (headless tickCombat)', () => {
   });
 
   it('a drafted pawn with NO attack order auto-engages an adjacent hostile (NT-4)', () => {
-    // Player walked a drafted pawn next to a hostile but never issued an attack order.
-    // It must still defend itself rather than stand inert — damage the adjacent goblin.
     const guard = makePawn({ drafted: true, draftTarget: undefined, currentState: 'Idle' });
     const goblin = makeGoblin({ state: 'Attacking', stats: { ...stats, dexterity: 2 } });
     let state = makeState([guard], [goblin]);
@@ -516,14 +450,13 @@ describe('combat sim (headless tickCombat)', () => {
   });
 
   it('a winded entity cannot attack — it passes turns instead (stamina gate)', () => {
-    // Pawn out of breath (winded latched, stamina 0) standing next to a goblin: it must NOT swing.
     const winded = makePawn({
       currentState: 'Fighting',
       stamina: 0,
       maxStamina: 50,
       conditionTimers: { winded: 2 }
     });
-    const goblin = makeGoblin({ state: 'Wander', stats: { ...stats, dexterity: 1 } }); // peaceful, won't hit back
+    const goblin = makeGoblin({ state: 'Wander', stats: { ...stats, dexterity: 1 } });
     let state = makeState([winded], [goblin]);
     for (let t = 0; t < 10; t++) {
       state = { ...state, turn: t };
@@ -534,12 +467,11 @@ describe('combat sim (headless tickCombat)', () => {
       (s, l) => s + (l.parts ?? []).reduce((ps, p) => ps + (p.maxHp - p.health), 0),
       0
     );
-    expect(hpLost).toBe(0); // never swung while winded
-    expect((state.pawns[0].conditionTimers?.winded ?? 0) > 0).toBe(true); // still winded (stamina ≪ max)
+    expect(hpLost).toBe(0);
+    expect((state.pawns[0].conditionTimers?.winded ?? 0) > 0).toBe(true);
   });
 
   it('a winded entity recovers stamina each turn and un-winds at full', () => {
-    // Small pool so the test reaches full quickly; resting (not Fighting, no enemy) → full regen rate.
     const winded = makePawn({
       currentState: 'Idle',
       stamina: 0,
@@ -552,8 +484,8 @@ describe('combat sim (headless tickCombat)', () => {
       state = combatService.tickCombat(state, 16);
     }
     const p = state.pawns[0];
-    expect(p.stamina).toBe(1); // recovered to full
-    expect(p.conditionTimers?.winded ?? 0).toBe(0); // latch cleared
+    expect(p.stamina).toBe(1);
+    expect(p.conditionTimers?.winded ?? 0).toBe(0);
     expect(p.transientConditions ?? []).not.toContain('winded');
   });
 });
@@ -577,9 +509,8 @@ describe('wound system (stacking + healing)', () => {
     const finger = state
       .mobs![0].limbs!.find((l) => l.id === 'left_arm')!
       .parts!.find((p) => p.id === 'leftLittleFinger')!;
-    expect(finger.injuries).toHaveLength(1); // merged, not 5
+    expect(finger.injuries).toHaveLength(1);
     expect(finger.injuries[0].type).toBe('crush');
-    // little finger maxHp 8; 5×2 = 10 capped at 8 → fully destroyed (severity escalated)
     expect(finger.injuries[0].severity).toBe('destroyed');
     expect(state.mobs![0].pain ?? 0).toBeGreaterThan(0);
   });
@@ -598,7 +529,6 @@ describe('wound system (stacking + healing)', () => {
     let state = makeState([makePawn({ currentState: 'Idle' })], []);
     state = combatService.applyInjury('p1', { ...crush(20), bodyPart: 'chest' }, state);
     state = combatService.applyInjury('p1', { ...crush(20), bodyPart: 'leftUpperLeg' }, state);
-    // Tend the chest wound only (treatedAt now, high quality).
     const pawn: Pawn = {
       ...state.pawns[0],
       limbs: state.pawns[0].limbs!.map((l) => ({
@@ -624,8 +554,6 @@ describe('wound system (stacking + healing)', () => {
   });
 
   it('tending consumes the best medicine and boosts treatment quality', () => {
-    // Wound a pawn, then tend with a Chewed Poultice in the stockpile. The patient rests on a bed
-    // (treatmentBonus) so the dressing is viable — off-shelter it would be heavily penalised.
     let state = makeState([makePawn({ currentState: 'Sleeping' })], []) as GameState;
     state = combatService.applyInjury('p1', { ...crush(20), bodyPart: 'chest' }, state);
     state = {
@@ -643,22 +571,18 @@ describe('wound system (stacking + healing)', () => {
       ]
     } as unknown as GameState;
 
-    // The patient self-tends here (single pawn); in play a separate Caretaking pawn claims the job.
     const after = tendPatient(state.pawns[0], state.pawns[0], state);
     const wound = after.pawns[0].limbs!.flatMap((l) => l.parts ?? []).find((p) => p.id === 'chest')!
       .injuries[0];
-    // Poultice medicineQuality 0.5 → treated, and quality is at least that.
     expect(wound.treatmentQuality ?? 0).toBeGreaterThanOrEqual(0.5);
     expect(wound.treatedAt).toBeDefined();
-    // …and the dose was consumed.
     expect(after.stockpile.chewed_poultice ?? 0).toBe(0);
   });
 
-  // ── Containment cascade: a severed container takes the parts nested inside it ──
   const sever = (bodyPart: string): Injury => ({
     bodyPart,
     type: 'cut',
-    severity: 'minor', // recomputed up to 'destroyed' once damage ≥ the part's maxHp
+    severity: 'minor',
     damage: 999,
     bleeding: 0,
     painContribution: 0,
@@ -676,9 +600,7 @@ describe('wound system (stacking + healing)', () => {
       expect(torsoPart(pawn, organ).isMissing).toBe(true);
       expect(torsoPart(pawn, organ).health).toBe(0);
     }
-    // No VITAL organ lives in the abdomen, so it is not instant death — the pawn is gutted but alive.
     expect(pawn.isAlive).not.toBe(false);
-    // Sibling organs in a DIFFERENT container (the chest) are untouched.
     expect(torsoPart(pawn, 'heart').isMissing).toBe(false);
   });
 
@@ -692,11 +614,7 @@ describe('wound system (stacking + healing)', () => {
   });
 
   it('a chest driven to 0 HP by MIXED wound types still guts the organs (no single wound severed it)', () => {
-    // The field regression: a chest beaten to 0/160 by a serious crush + a serious puncture — NEITHER
-    // wound alone reaching the 'destroyed' severity that flags isMissing — left heart & lungs pristine
-    // inside the flattened cavity. Drive exactly that: two different sub-lethal wound types summing past
-    // the chest's HP, with no single type ≥ maxHp (so isMissing stays false), and assert the organs go.
-    const chestHp = 80; // humanoid chest size at bodyScale 1
+    const chestHp = 80;
     let state = makeState([makePawn({ limbs: createBodyPlanLimbs('humanoid', 1) })], []);
     state = combatService.applyInjury('p1', { ...crush(chestHp * 0.6), bodyPart: 'chest' }, state);
     state = combatService.applyInjury(
@@ -706,11 +624,11 @@ describe('wound system (stacking + healing)', () => {
     );
     const pawn = state.pawns[0];
     const chest = torsoPart(pawn, 'chest');
-    expect(chest.health).toBeLessThanOrEqual(0); // caved in…
-    expect(chest.isMissing).toBe(false); // …but NOT severed — each wound was only 'serious'
-    expect(torsoPart(pawn, 'heart').health).toBe(0); // organs gutted by the HP-trigger cascade
+    expect(chest.health).toBeLessThanOrEqual(0);
+    expect(chest.isMissing).toBe(false);
+    expect(torsoPart(pawn, 'heart').health).toBe(0);
     expect(torsoPart(pawn, 'leftLung').isMissing).toBe(true);
-    expect(pawn.isAlive).toBe(false); // a destroyed-vital body is dead (lethalAnatomyCause)
+    expect(pawn.isAlive).toBe(false);
   });
 
   it('the poultice recipe and medicine items are well-formed', () => {
@@ -718,14 +636,11 @@ describe('wound system (stacking + healing)', () => {
     const poultice = itemService.getItemById('chewed_poultice');
     expect(herb?.medicineQuality).toBeGreaterThan(0);
     expect(poultice?.medicineQuality).toBeGreaterThan(herb!.medicineQuality!);
-    // recipe now lives in the registry (recipes.jsonc), not inline on the item
     const recipe = recipeService.getRecipeForItem('chewed_poultice');
-    expect(recipe?.inputs?.woundwort).toBeGreaterThan(0); // recipe references the herb
+    expect(recipe?.inputs?.woundwort).toBeGreaterThan(0);
   });
 
   it('wounds heal over time, restoring HP and lowering pain to zero', () => {
-    // Tissue heal is weeks-slow now, so use a tiny wound — over a long rest it still fully clears and
-    // pain returns to 0 (the point of the test). Resting (Sleeping) → full-rate mend.
     let state = makeState([makePawn({ currentState: 'Sleeping' })], []);
     state = combatService.applyInjury('p1', { ...crush(1), bodyPart: 'chest' }, state);
     let pawn = state.pawns[0];

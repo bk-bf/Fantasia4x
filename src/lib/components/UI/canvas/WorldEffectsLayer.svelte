@@ -1,57 +1,20 @@
-<!-- WorldEffectsLayer: sits above tiles (z-index 5) but below popup panels (z-index 10).
-     All in-world animations and fullscreen shader overlays are docked here.
-
-     ── VISUAL-EFFECT HIERARCHY (three tiers, lowest → highest) ─────────────────────────────────
-       1. GLOW / LIGHTING  — LightingService.collectResourceEmitters bakes per-tile point lights
-          into the WebGL tile-light field (terrain SHADING, not an overlay). Use for: a thing that
-          should LIGHT its surroundings (campfire, lava, glowing grove). Onboard: add a `glow` block
-          to the resource/building def — no render code.
-       2. WEATHER          — WeatherCanvas: one pooled fullscreen 2D-canvas particle field, zoom-
-          reactive (subscribes cameraTileSize → scales count/size). Use for: GLOBAL atmosphere
-          (rain, snow, dust). Onboard: extend the weather data + WeatherCanvas draw modes.
-       3. WORLD EFFECTS    — THIS layer: per-entity / per-tile CSS overlays positioned in screen
-          space by GameCanvas.updateWorldEffectOverlays (which owns viewX/tileWidth). Use for:
-          a LOCAL animation pinned to one tile/entity (Zzz, progress bar, health bar, combat float,
-          lair smoke/flies/fog). Onboard a new effect — reuse these existing circuits:
-            a) add an overlay type + setter to worldEffects.ts (the store);
-            b) populate it in GameCanvas.updateWorldEffectOverlays (project tile→screen px there);
-            c) render + animate it below (CSS keyframes).
-          Lair particle effects additionally read `fxScale` (cameraTileSize / BASE_TILE) so they
-          shrink/grow WITH the map zoom — never giant blobs when zoomed out. -->
 <script lang="ts">
   import { worldEffects } from '$lib/stores/fx/worldEffects';
   import { cameraTileSize } from '$lib/stores/cameraView';
   import { gameState } from '$lib/stores/gameState';
-  const isPaused = gameState.isPaused; // freeze floater animations while paused
+  const isPaused = gameState.isPaused;
   import { environmentService, getAmbientLight } from '$lib/game/services/EnvironmentService';
   import { weatherEffects, showDialogBubbles } from '$lib/stores/uiPrefs';
   import WeatherCanvas from './WeatherCanvas.svelte';
 
-  // Lair effects are authored at this reference tile size (px); fxScale tracks the live zoom so a
-  // "3-tile-wide" plume stays 3 tiles at any zoom instead of a fixed pixel size (the weather canvas
-  // scales the same way). Clamped so it never vanishes or becomes absurd at the zoom extremes.
   const BASE_TILE = 20;
 
-  // Per-entity floats (Zzz / ✚ / ↓, craft progress bars, campfire sparks) are authored at BASE_TILE px;
-  // without scaling they stay a fixed pixel size while the tiles shrink on zoom-out, so a busy colony
-  // tiles the whole screen with overlays. Track the live zoom so each stays ~1 tile across at any zoom
-  // (shrinks out, grows in), clamped. (Lair PARTICLE effects compute their own fxScale separately.)
   $: floatScale = Math.max(0.25, Math.min(1.5, $cameraTileSize / BASE_TILE));
 
-  // Floating combat text (damage numbers + condition labels) reads as cluttered at full zoom-in, so
-  // cap its scale 20% below the other floats' 1.5 ceiling (1.5 × 0.8 = 1.2). Lower zooms are unchanged
-  // (floatScale is already < 1.2 there); only the max-zoom end shrinks.
   $: combatFloatScale = Math.min(floatScale, 1.2);
 </script>
 
-<!-- `paused` freezes every floater animation (combat text, dialog bubbles, glyph loops) in place
-     while the game is paused — visual freeze in lockstep with the frozen lifetime clock (animClock). -->
 <div class="world-effects-layer" class:paused={$isPaused}>
-  <!-- ── World-Space Animations (positions derived from tile coordinates) ──────── -->
-
-  <!-- Anchored looping glyph floats — ONE each-block over a `kind`-discriminated array (was four
-       near-identical blocks for sleep / recovery / collapse / campfire). All share this positioning +
-       zoom-scaling wrapper; only the inner glyph cluster + its CSS animation differ per kind. -->
   {#each $worldEffects.glyphFloats as float (float.kind + float.id)}
     {@const xf = `transform: translate(${float.left}px, ${float.top}px) translateX(-50%) scale(${floatScale});`}
     {#if float.kind === 'sleep'}
@@ -62,7 +25,6 @@
         ><span class="zzz-z" style="animation-delay:1.4s">z</span>
       </div>
     {:else if float.kind === 'rest'}
-      <!-- Recovery: same rising stagger as the Zzz of sleep, but red ✚ crosses (a wounded-resting tell). -->
       <div class="rest-float" style={xf}>
         <span class="rest-cross" style="animation-delay:0s">✚</span><span
           class="rest-cross"
@@ -70,7 +32,6 @@
         ><span class="rest-cross" style="animation-delay:1.4s">✚</span>
       </div>
     {:else if float.kind === 'collapse'}
-      <!-- Collapsed/downed: same rising stagger as the Zzz of sleep, but red ↓ arrows (emergency tell). -->
       <div class="collapse-float" style={xf}>
         <span class="collapse-arrow" style="animation-delay:0s">↓</span><span
           class="collapse-arrow"
@@ -78,8 +39,6 @@
         ><span class="collapse-arrow" style="animation-delay:1.4s">↓</span>
       </div>
     {:else if float.kind === 'winded'}
-      <!-- Winded/out-of-breath: the SAME rising stagger as collapse, but BLUE ↓ arrows — an exhausted
-           (not downed) tell, so it reads as "catching its breath", distinct from the red collapse emergency. -->
       <div class="winded-float" style={xf}>
         <span class="winded-arrow" style="animation-delay:0s">↓</span><span
           class="winded-arrow"
@@ -95,8 +54,6 @@
         <span class="spark s5">·</span>
       </div>
     {:else if float.kind === 'trade'}
-      <!-- KINGDOMS-TRADE §4: the caravan trader's interaction mark — a gold "?" bobbing overhead,
-           the tell that this figure can be approached (right-click → Trade). -->
       <div class="trade-float" style={xf}>
         <span class="trade-mark">?</span>
       </div>
@@ -112,13 +69,9 @@
     </div>
   {/each}
 
-  <!-- Ambient per-tile particle effects — grim lair "tells". -->
   {#each $worldEffects.particleOverlays as overlay (overlay.id)}
     {@const fxScale = Math.max(0.35, Math.min(1.8, $cameraTileSize / BASE_TILE))}
-    <!-- Dim with the day/night cycle so these read as PARTICLES, not light sources — they must not
-         glow in the dark (that's the separate `glow` lighting tier's job). Use the ambient light
-         DIRECTLY (no extra floor): getAmbientLight already bottoms at 0.15 — the SAME value the WebGL
-         terrain dims to at night — so the effect tracks the world instead of sitting brighter than it. -->
+
     {@const amb = getAmbientLight(environmentService.ambientTurn($gameState))}
     {@const xf = `transform: translate(${overlay.left}px, ${overlay.top}px) translateX(-50%) scale(${fxScale}); filter: brightness(${amb});`}
     {#if overlay.effect === 'smoke'}
@@ -160,7 +113,6 @@
     {/if}
   {/each}
 
-  <!-- ── Ranged projectiles — a travelling particle streak + an impact puff on arrival ───── -->
   {#each $worldEffects.projectileOverlays as o (o.id)}
     {#if o.progress < 1}
       <div
@@ -191,10 +143,6 @@
     </div>
   {/each}
 
-  <!-- ── Draft target lines ────────────────────────────────────────────────────── -->
-  <!-- All draft lines share ONE full-screen SVG. Previously each line was its own 100%×100% <svg>,
-       so a group move spawned N full-viewport compositing layers repainting every frame — that
-       starved the main-thread sim loop and tanked TPS (see ENGINE-PERFORMANCE.md, render-boundary). -->
   {#if $worldEffects.draftTargetOverlays.length > 0}
     <svg
       class="draft-target-line"
@@ -217,16 +165,8 @@
     </svg>
   {/if}
 
-  <!-- ── Floating combat text (damage / miss / dodge / crit / bleed) ───────────── -->
-  <!-- Damage numbers and data-driven condition labels (winded, envenomed…) — share the same zoom
-       scaling as the other per-tile floats so they shrink/grow with the map instead of staying a fixed
-       pixel size (a wall of full-size text when zoomed out on a busy fight). The rise/fade keyframe
-       animates margin-top, so this scale() on the inline transform is preserved throughout. -->
   {#each $worldEffects.floatingTextOverlays as overlay (overlay.id)}
     {#if overlay.kind === 'social'}
-      <!-- Dialog line nested in a transparent bubble: an invisible min-box that reserves space so
-           stacked conversations (GameCanvas de-overlaps their positions) never clip into each other.
-           Suppressed when the player turns off "Dialog bubbles" in Settings. -->
       {#if $showDialogBubbles}
         <div
           class="social-bubble"
@@ -247,9 +187,6 @@
     {/if}
   {/each}
 
-  <!-- ── Fullscreen Weather Overlay (SEASONS_WEATHER) ──────────────────────────── -->
-  <!-- Rain/snow particle system on a 2D canvas — reads the weather store itself, idles when clear.
-       Gated on the Settings "Weather effects" toggle; unmounting it costs nothing when off. -->
   {#if $weatherEffects}
     <WeatherCanvas />
   {/if}
@@ -259,18 +196,13 @@
   .world-effects-layer {
     position: absolute;
     inset: 0;
-    /* Above canvas tiles, below overlay panels (z-index: 10) */
     z-index: 5;
     pointer-events: none;
     overflow: hidden;
   }
-  /* PAUSE: freeze every floater/glyph animation in the layer (the lifetime clock is frozen in
-     parallel via animClock, so they resume together on unpause). */
   .world-effects-layer.paused :global(*) {
     animation-play-state: paused !important;
   }
-
-  /* ── Working progress bar ───────────────────────────────────────────────────── */
 
   .pawn-progress-float {
     position: absolute;
@@ -281,15 +213,12 @@
     background: rgba(32, 24, 10, 0.85);
     border: 1px solid #705020;
     pointer-events: none;
-    /* centering + positioning via inline style transform: translate(X,Y) translateX(-50%) */
   }
 
   .pawn-progress-fill {
     height: 100%;
     background: linear-gradient(90deg, #4ab85a, #8ad66a);
   }
-
-  /* ── Zzz sleeping animation ──────────────────────────────────────────────────── */
 
   .zzz-float {
     position: absolute;
@@ -298,7 +227,6 @@
     pointer-events: none;
     display: flex;
     gap: 1px;
-    /* centering + positioning via inline style transform: translate(X,Y) translateX(-50%) */
   }
 
   .zzz-z {
@@ -309,10 +237,6 @@
     opacity: 0;
     animation: zzz-rise 2.1s ease-out infinite;
     text-shadow: 0 0 4px #334;
-    /* Promote to its own compositor layer so the looping opacity/transform
-       animation composites on the GPU instead of re-rasterising the blurred
-       text-shadow every frame — this is what tanked FPS at night when many
-       pawns slept at once. */
     will-change: transform, opacity;
   }
 
@@ -334,16 +258,12 @@
     }
   }
 
-  /* ── Trade mark — the caravan trader's persistent gold "?" (KINGDOMS-TRADE §4): a gentle bob,
-     NOT the rising fade of the status tells, because it's a standing invitation, not a state. ── */
-
   .trade-float {
     position: absolute;
     left: 0;
     top: 0;
     pointer-events: none;
     display: flex;
-    /* centering + positioning via inline style transform: translate(X,Y) translateX(-50%) scale(...) */
   }
 
   .trade-mark {
@@ -366,9 +286,6 @@
     }
   }
 
-  /* ── Recovery (wounded, lying down) — the SAME rising stagger as the Zzz of sleep / the ↓ of collapse,
-     but red ✚ crosses, so a resting wounded pawn animates like the other lying-down tells. ── */
-
   .rest-float {
     position: absolute;
     left: 0;
@@ -376,7 +293,6 @@
     pointer-events: none;
     display: flex;
     gap: 1px;
-    /* centering + positioning via inline style transform: translate(X,Y) translateX(-50%) scale(...) */
   }
 
   .rest-cross {
@@ -385,14 +301,10 @@
     font-size: 9px;
     font-weight: bold;
     opacity: 0;
-    /* Reuse the Zzz rise (opacity + translateY + scale) — colour/glyph are the only difference. */
     animation: zzz-rise 2.1s ease-out infinite;
     text-shadow: 0 0 4px #a00;
     will-change: transform, opacity;
   }
-
-  /* ── Collapsed (downed: pain / blood loss / starvation) — the SAME rising stagger as the Zzz of sleep,
-     but red ↓ arrows: a fainted pawn reads as an emergency yet animates like the sleep tell it replaces. ── */
 
   .collapse-float {
     position: absolute;
@@ -401,7 +313,6 @@
     pointer-events: none;
     display: flex;
     gap: 1px;
-    /* centering + positioning via inline style transform: translate(X,Y) translateX(-50%) scale(...) */
   }
 
   .collapse-arrow {
@@ -410,10 +321,7 @@
     font-size: 12px;
     font-weight: bold;
     opacity: 0;
-    /* Reuse the Zzz rise (opacity + translateY + scale) — colour/glyph are the only difference. */
     animation: zzz-rise 2.1s ease-out infinite;
-    /* The thin ↓ glyph reads lighter than the heavy ✚ recovery cross, so thicken its stroke with
-       same-colour offset shadows (on top of the red emergency glow) to match that visual weight. */
     text-shadow:
       0.6px 0 0 #e23b3b,
       -0.6px 0 0 #e23b3b,
@@ -423,9 +331,6 @@
     will-change: transform, opacity;
   }
 
-  /* ── Winded (stamina spent) — the SAME rising stagger as collapse, but BLUE ↓ arrows: a conscious,
-     out-of-breath pawn/mob catching its breath, distinct from the red collapse emergency. ── */
-
   .winded-float {
     position: absolute;
     left: 0;
@@ -433,7 +338,6 @@
     pointer-events: none;
     display: flex;
     gap: 1px;
-    /* centering + positioning via inline style transform: translate(X,Y) translateX(-50%) scale(...) */
   }
 
   .winded-arrow {
@@ -442,9 +346,7 @@
     font-size: 12px;
     font-weight: bold;
     opacity: 0;
-    /* Reuse the Zzz rise (opacity + translateY + scale) — colour/glyph are the only difference. */
     animation: zzz-rise 2.1s ease-out infinite;
-    /* Same stroke-thickening as the collapse ↓ (the thin glyph reads light), but in blue. */
     text-shadow:
       0.6px 0 0 #4aa3ff,
       -0.6px 0 0 #4aa3ff,
@@ -454,8 +356,6 @@
     will-change: transform, opacity;
   }
 
-  /* ── Campfire fire animation ─────────────────────────────────────────────────── */
-
   .fire-sparks {
     position: absolute;
     left: 0;
@@ -463,7 +363,6 @@
     pointer-events: none;
     width: 0;
     height: 0;
-    /* centering + positioning via inline style transform: translate(X,Y) translateX(-50%) */
   }
 
   .spark {
@@ -473,8 +372,6 @@
     font-weight: bold;
     opacity: 0;
     animation: fire-rise 1.1s ease-out infinite;
-    /* Same reasoning as .zzz-z: keep the blurred spark text-shadow off the
-       per-frame raster path by compositing on the GPU. */
     will-change: transform, opacity;
   }
 
@@ -527,7 +424,6 @@
     }
   }
 
-  /* Lair smoke — soft blurred shade-block haze that drifts up and dissipates. */
   .lair-smoke {
     position: absolute;
     left: 0;
@@ -593,7 +489,6 @@
     }
   }
 
-  /* Shared positioning for every lair particle effect (placed via inline transform). */
   .lair-fx {
     position: absolute;
     left: 0;
@@ -603,7 +498,6 @@
     height: 0;
   }
 
-  /* ── Ranged projectiles — the inline transform places + rotates so local +x is travel dir. ─── */
   .projectile {
     position: absolute;
     left: 0;
@@ -613,7 +507,6 @@
     pointer-events: none;
     will-change: transform;
   }
-  /* Trail: a soft streak fading from the tail (transparent) up to the head (colour), behind origin. */
   .proj-trail {
     position: absolute;
     left: 0;
@@ -647,7 +540,6 @@
   .fx-spear {
     --proj-color: #cdbf9a;
   }
-  /* §M arcane staff bolts — elemental colours; brighter heads/trails than mundane shot. */
   .fx-fireball {
     --proj-color: #ff7a2a;
   }
@@ -692,8 +584,6 @@
   .fx-bolt .proj-trail {
     width: 18px;
   }
-  /* Impact: a quick radial puff that expands and fades once on arrival. The wrapper carries the
-   *  inline translate so the inner element's scale animation doesn't clobber the position. */
   .proj-impact-wrap {
     position: absolute;
     left: 0;
@@ -724,7 +614,6 @@
     }
   }
 
-  /* ── flies (wolf den — carrion buzz): tiny dark specks jittering over the den ── */
   .fly {
     position: absolute;
     font-family: var(--font-mono);
@@ -734,8 +623,6 @@
     opacity: 0.85;
     will-change: transform;
   }
-  /* Each fly has its OWN erratic path + speed (no shared keyframe), so the swarm darts chaotically
-     instead of tracing one synchronised criss-cross. Paths stay within ~±10px of the den. */
   .fly.f1 {
     animation: fly1 0.62s linear infinite;
   }
@@ -857,9 +744,6 @@
     }
   }
 
-  /* Soft volumetric fog blob — a blurred radial-gradient cloud (bloodmist / miasma). Centered on
-     the tile (negative left/top = half its own size), large enough to spill into neighbours; two
-     layers (a/b) drift against each other so the fog churns rather than pulsing uniformly. */
   .fog {
     position: absolute;
     border-radius: 50%;
@@ -876,7 +760,6 @@
     );
     filter: blur(7px);
   }
-  /* ~2-3 tile radius (at BASE_TILE 20): a broad seething pool of blood-haze around the den. */
   .blood-a {
     width: 124px;
     height: 92px;
@@ -945,7 +828,6 @@
     }
   }
 
-  /* ── feathers (harpy roost): pale shed feathers drifting DOWN, swaying ── */
   .feather {
     position: absolute;
     font-family: var(--font-mono);
@@ -996,8 +878,6 @@
     }
   }
 
-  /* ── Health bar overlays ───────────────────────────────────────────────────── */
-
   .health-bar-float {
     position: absolute;
     left: 0;
@@ -1022,8 +902,6 @@
     background: linear-gradient(90deg, #cc3322, #ee5544);
   }
 
-  /* ── Floating combat text ──────────────────────────────────────────────────── */
-
   .combat-float {
     position: absolute;
     left: 0;
@@ -1036,14 +914,10 @@
     text-shadow:
       0 0 3px #000,
       0 1px 2px #000;
-    /* GPU-composite the rise/fade so the blurred text-shadow isn't re-rasterised
-       every frame (same reasoning as .zzz-z / .spark). */
     will-change: transform, opacity;
     animation: combat-float-rise 0.9s ease-out forwards;
   }
 
-  /* The keyframe rise stacks ON TOP of the inline translate() that positions the
-     label over its tile, so the base position still tracks the camera each frame. */
   @keyframes combat-float-rise {
     0% {
       opacity: 0;
@@ -1085,22 +959,15 @@
     color: #ffcc44;
     font-size: 11px;
   }
-  /* Bone break — amber so it reads as a serious wound, but sized like the other status floaters (10px,
-     matching dodge) rather than the 14px crit damage-number emphasis it used to borrow. */
   .combat-float.fracture {
     color: #ff9944;
     font-size: 11px;
   }
-  /* Data-driven condition labels (winded, envenomed, …): colour set inline from conditions.jsonc;
-     slightly smaller + italic so they read as a status cue, distinct from the damage number. */
   .combat-float.condition {
     color: #cccccc;
     font-size: 11px;
     font-style: italic;
   }
-  /* Transparent spacer around a dialog line — no background/border, just a reserved min box that
-     keeps two speech lines from clipping when their speakers stack vertically (GameCanvas pushes the
-     positions apart by roughly this box's height). */
   .social-bubble {
     position: absolute;
     left: 0;
@@ -1114,16 +981,11 @@
     align-items: flex-start;
     pointer-events: none;
   }
-  /* Inside the bubble the line flows in the flex box (not absolutely positioned like a bare float),
-     so its own drift/dwell animation moves the text within the reserved space. */
   .social-bubble .combat-float.social {
     position: relative;
     left: auto;
     top: auto;
   }
-  /* SOCIAL-LAYER conversation lines: plain WHITE cursive text (no bubble), dwelling long enough to
-     read (duration must match SOCIAL_TTL_MS in combatFeedback.ts) and gently drifting. A strong
-     shadow keeps it legible over the map without a background box. */
   .combat-float.social {
     color: #ffffff;
     font-size: 10px;

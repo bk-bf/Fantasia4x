@@ -1,21 +1,3 @@
-// itemTree.ts — DEV TOOL. EVERY item in items.jsonc, filed into a nested tree.
-//
-// The flat tables could not answer the question an audit actually asks: "what does this age offer for
-// this slot, and what is missing next to it". A list of 888 rows sorted by one column hides that; a
-// path does not. Each item declares where it belongs — Armour ▸ Bronze ▸ jackal_hide ▸ light ▸ head —
-// and the tree is built by inserting paths, so a new item files itself and a hole shows up as a level
-// with one child instead of six.
-//
-// Ages: EQUIPMENT reuses `gearDb`'s age so this tree and the build grid never disagree. Everything
-// else (materials, food, drink, reagents) is priced by the WORKSHOP its chain needs — `chainAge` —
-// because a material has no tier of its own and its own station lies (linen cloth is woven at a
-// primitive frame from thread spun on a bronze-age wheel).
-//
-// Age is a LEVEL of the tree: Armour ▸ Bronze ▸ crafted ▸ set ▸ layer ▸ what it covers. It is also a
-// column on the row, but the nesting is what answers the question an audit asks — "what does this age
-// offer for this slot, and what sits empty beside it" — because a level with one child instead of six
-// IS the hole, visible without reading a row.
-
 import { gearClassOf } from '../game/core/rules/gear/gearClass';
 import itemsData from '../game/database/items/items.jsonc';
 import recipesData from '../game/database/items/recipes.jsonc';
@@ -55,7 +37,6 @@ const prettify = (id: string) =>
 const buildingName = new Map<string, string>();
 for (const b of buildingsData as any[]) if (b?.id) buildingName.set(b.id, b.name ?? prettify(b.id));
 
-// EVERY output — one butchery recipe produces meat, hide, sinew and bones together.
 const recipeByOutput = new Map<string, any>();
 for (const r of recipes)
   for (const out of Object.keys(r?.outputs ?? {}))
@@ -63,24 +44,16 @@ for (const r of recipes)
 
 const gearById = new Map(GEAR.map((g) => [g.id, g]));
 
-// ── who drops what ──────────────────────────────────────────────────────────
-// "drop only" as one flat bucket said nothing you could act on. A kobold dropping a goblin vest and
-// an orc dropping his own warplate are different facts, and the species is the one that matters:
-// it names the thing you have to go and kill.
 const SPECIES_OF_POOL = new Map<string, string>();
 for (const c of creaturesData as any[]) {
   const pool = c?.lootPool;
   if (!pool || SPECIES_OF_POOL.has(pool)) continue;
-  // the pool's own name carries the faction far more reliably than any one creature that rolls on it
   const word = String(pool).split('_')[0];
   SPECIES_OF_POOL.set(pool, word.charAt(0).toUpperCase() + word.slice(1));
 }
 const DROPPER_OF_ITEM = new Map<string, string>();
-/** item id → the tier of the EASIEST creature that drops it. What a thing nobody CRAFTS costs you is
- *  the fight you have to win for it, so that fight is where its age comes from. */
 const DROPPER_TIER = new Map<string, number>();
 {
-  // creature tier, reached through the pool each creature rolls on
   const tierOfPool = new Map<string, number>();
   for (const c of creaturesData as any[]) {
     if (!c?.lootPool) continue;
@@ -109,62 +82,19 @@ const DROPPER_TIER = new Map<string, number>();
   }
 }
 
-/** Chain age → the same age vocabulary the build tables use. */
 const AGE_OF_CHAIN: Age[] = ['Primitive', 'Copper', 'Bronze', 'Iron', 'Steel', 'Runed'];
-/**
- * Creature tier (1–5) → the age at which a colony can realistically take one down, and therefore the
- * age of anything only that creature yields. Indexed by tier, so [0] is unused. The two lowest tiers
- * are both stone-age hunting — a rabbit and a wolf are day-one problems — and a tier-5 boss sits at
- * the top of the ladder rather than one rung short of it, which is what plain subtraction gave.
- */
 const CREATURE_AGE = [0, 0, 0, 2, 3, 5];
-/**
- * An item's age, in the order the answer is actually trustworthy:
- *
- *   1. the gear tables, when this is a piece of gear they already ranked;
- *   2. an EXPLICIT `tier` on the item — an author saying where the thing belongs;
- *   3. the workshop ladder its ingredients need.
- *
- * (3) alone was the whole rule, and it reads 0 — Primitive — for anything with NO RECIPE at all.
- * That is right for a foraged berry and wrong for everything you can only ever be given: `voidshard`
- * is mined at a hundredth of a percent with a runed pick and dropped by humanoid bosses, has no
- * recipe, and so filed itself under the stone age.
- */
-/**
- * AGE IS DERIVED, NEVER DECLARED. It is when a colony can first have the thing, and that is decided
- * by the hardest step in getting it: the latest workshop in its chain, the ages of everything that
- * chain consumes, or — for what nobody makes — the hunt or the dig that yields it.
- *
- * `tier` is NOT consulted, and that is the whole point. Tier is a separate axis (a quality rank on
- * armour, the ADR-009 TOOL tier on a tool) living in its own column, and reading it as an age is what
- * made `stone_axe` — a tier-1 woodcutting tool knapped at a craft spot — announce itself as bronze,
- * and put flint and bone arrows in the bronze age beside cast ones. 211 items disagreed that way.
- */
 const ageOf = (item: any): Age => {
   const gear = gearById.get(item.id)?.age;
   if (gear) return gear;
   if (hasRecipe(item.id)) return AGE_OF_CHAIN[chainAgeOf(item.id)] ?? 'Primitive';
-  // Nothing makes it. Then its age is what it costs to GET: the beast you had to put down, or the
-  // ground it came out of (a foraged berry and a picked-up ruby are both there from turn one).
   const beast = CARCASS_TIER.get(item.id) ?? DROPPER_TIER.get(item.id);
   if (beast !== undefined) return AGE_OF_CHAIN[CREATURE_AGE[Math.min(Math.max(beast, 1), 5)]];
-  // Dug, not made — but a deposit can still refuse a pick that cannot bite it, and that refusal is
-  // the age. A corundum sits behind a steel pick and its infused twin behind a runed one.
   const dig = NODE_TOOL_AGE.get(item.id);
   if (dig !== undefined) return AGE_OF_CHAIN[dig];
   return AGE_OF_CHAIN[chainAgeOf(item.id)] ?? 'Primitive';
 };
 
-/**
- * WHAT THE ITEM DOES — everything the sim actually reads off it, in one line.
- *
- * The `stat` column carries a single headline number, which meant a herbal tea and a cup of water were
- * indistinguishable in the tables: nothing surfaced the conditions an item grants or clears, what a
- * coating inflicts, what a draught gambles, or what a fluid needs to be held in. Auditing content you
- * cannot see is guesswork, so this is deliberately exhaustive rather than pretty.
- */
-/** Bare feet are the baseline every boot is measured against — mirrors `BAREFOOT_MOVE_FACTOR` in
- *  PawnService, which is what actually moves the pawn. */
 const BAREFOOT_MOVE_FACTOR = 0.9;
 
 export function effectsOf(i: any): string {
@@ -220,9 +150,6 @@ export function effectsOf(i: any): string {
   }
   const ap = i.armorProperties;
   if (ap?.stealthMod) out.push(`stealth ${ap.stealthMod > 0 ? '+' : ''}${ap.stealthMod}`);
-  // FOOTWEAR reads against BARE FEET, not against nothing: anything on the foot beats bare soles on
-  // broken ground, and a heavy sole gives some of that back. Showing only the penalty hid the whole
-  // benefit — a light boot printed no movement line at all while being the fastest thing you can wear.
   if (ap?.sightPenalty) out.push(`sight −${Math.round(ap.sightPenalty * 100)}%`);
   if (ap?.equipmentSlot === 'boots' || ap?.equipmentSlot === 'socks') {
     const gain = (1 - (ap.movementPenalty ?? 0)) / BAREFOOT_MOVE_FACTOR - 1;
@@ -245,27 +172,18 @@ export interface TreeItem {
   age: Age;
   ageRank: number;
   tier: number | null;
-  /** The one number that matters for this kind — defence, damage, nutrition, comfort… */
   stat: string;
-  /** Everything the sim reads off this item — conditions, cures, coatings, boosts. See `effectsOf`. */
   effects: string;
-  /** Which vessel materials may hold this fluid — its own axis, not one of its effects. */
   heldBy: string;
-  /** light / medium / heavy / shield — it left the tree when layers took that level. */
   cls: string;
   weightKg: number;
-  /** Where it comes from: a station name, "forage / hunt", or "drop only". */
   source: string;
-  /** The station whose age set this item's chain age — why it sits in the age it does. */
   gatedBy: string;
   desc: string;
-  /** The catalogue row for this item — what the build tables' tooltip renders. Built for EVERY item,
-   *  including the materials and food `GEAR` does not carry, so there is one tooltip, not two. */
   row: GearRow;
   raw: any;
 }
 
-// ── slot / coverage vocabulary ──────────────────────────────────────────────
 const COVERAGE: Record<string, string> = {
   head: 'head',
   bodyOuter: 'torso — outer',
@@ -292,25 +210,14 @@ const CLASS_LABEL: Record<string, string> = {
   shield: 'shield'
 };
 
-// Armour is SUBTRACTIVE and layers ADD (ADR-029), so what stacks on top of what is the thing an audit
-// most needs to see — it is why three stone-age garments come to one bronze jerkin. The tree nests by
-// layer, outermost first, using the same depths the mitigation walk itself reads.
 const LAYER_LABEL = ['outer layer', 'mid layer', 'base layer', 'under layer'];
-/**
- * Which layer a piece sits at. The SLOT is only a fallback: a piece that declares an `armorLayer`
- * knows better than its slot does. An arming coif occupies the head slot but its whole purpose is to
- * be padding UNDER a helm, and filing it as outer layer put the softest thing in the kit on the
- * outside of it.
- */
 const LAYER_OF_ARMOR_LAYER: Record<string, number> = {
-  gambeson: 2, // padding worn under everything
+  gambeson: 2,
   cloth: 2,
   mail: 1,
   plate: 0,
   under: 3
 };
-/** Padding — the only thing that goes UNDER a limb piece. Anything else on an arm or a leg is the
- *  outermost thing there, mail included: nothing is worn over a bracer. */
 const PADDING = new Set(['gambeson', 'cloth', 'under']);
 const layerOf = (slot: string, armorLayer?: string): string => {
   const limb = slot === 'bracers' || slot === 'greaves';
@@ -324,9 +231,6 @@ const layerOf = (slot: string, armorLayer?: string): string => {
   );
 };
 
-// A weapon's family comes from the build gearDb ALREADY classified it into — one classifier, not a
-// second name-regex quietly disagreeing with it. `pilum`, `francisca` and `framea` all landed in an
-// "other" bucket while gearDb knew perfectly well what they were.
 const FAMILY_OF_CLASS: Partial<Record<BuildClass, string>> = {
   'Sword & Shield': 'sword',
   'Sword (Duelist)': 'sword',
@@ -412,12 +316,6 @@ const MATERIAL_LINE: Record<string, string> = {
 const materialLine = (cat: string) =>
   MATERIAL_LINE[cat] ?? (/_seed$/.test(cat) ? 'seeds' : prettify(cat));
 
-/**
- * The STAGE a material has reached along its own line. Several lines are a processing ladder, and
- * filing them by raw category alone put a hide and the leather tanned from it on one undivided shelf
- * — 82 items deep, with the age column carrying all of the meaning. The stage IS the ladder, so it
- * becomes the level and each rung gets its own age spine.
- */
 function materialStage(i: any, line: string): string[] {
   const id = String(i.id ?? '');
   if (line === 'hide & leather') {
@@ -441,42 +339,19 @@ function materialStage(i: any, line: string): string[] {
   return [];
 }
 
-/** Crafted and dropped are different things to a player: one is a plan, the other is a hunt. They
- *  split BEFORE sets, so a craftable one-off never sits next to enemy loot. */
 function sourceBranch(i: any): string[] {
   if (recipeByOutput.has(i.id)) return ['crafted'];
   const who = DROPPER_OF_ITEM.get(i.id);
   return who ? ['dropped', who] : ['dropped', 'unclaimed'];
 }
 
-/**
- * How a food is KEPT, not merely whether it rots. The old `keeps / perishable` split was a lie by
- * omission — almost everything under "keeps" also rots, just slower — and it told the reader nothing
- * about the technique that bought the time. Fresh food and finished meals are their own shelves
- * because neither was preserved at all.
- */
 const preservation = (i: any): string => {
   if (i.preservationMethod) return `${i.preservationMethod}`;
   if (i.category === 'meal') return 'cooked to order';
-  // Legacy preserved goods that predate the field, read off the name rather than guessed from decay.
   if (/dried|smoked|salted|cured|pickled/i.test(`${i.id} ${i.name ?? ''}`)) return 'dried';
   return 'fresh';
 };
 
-// ── the path each item files itself under ───────────────────────────────────
-//
-// Branches say what a thing IS; the AGE level under them says when the colony can have it. Equipment
-// puts age directly under the branch (an audit reads "what does Bronze offer for this slot"); every
-// other branch puts its conceptual line first and age beneath it, because "all the fuels, by age" is
-// the question there rather than "everything the bronze age has".
-/**
- * What a food IS, as one clean partition. This used to be TWO levels — a preservation word and then
- * the raw `category` — which double-counted: an item with `category: "food"` built a shelf called
- * Food underneath the branch called Food, "fresh > Spoiled" filed rot as fresh, and the raw category
- * put a Carcass shelf in the larder holding the only two carcasses in the game typed as food.
- *
- * One axis, in the order that decides what the thing is for: cooked, kept, or raw.
- */
 function foodBranch(i: any): string[] {
   if (i.category === 'spoiled') return ['Spoiled'];
   if (i.category === 'meal') return ['Cooked dishes'];
@@ -500,13 +375,11 @@ function pathOf(i: any): string[] {
       COVERAGE[ap.equipmentSlot ?? ap.slot] ?? prettify(ap.equipmentSlot ?? 'unplaced')
     ];
   }
-  // Worn but soaks nothing: rings, amulets, crowns, torcs.
   if (i.type === 'armor')
     return ['Regalia & jewellery', COVERAGE[ap?.equipmentSlot] ?? 'worn', age];
 
   if (i.category === 'ammunition' || i.ammoProperties)
     return ['Ammo', prettify(i.ammoProperties?.ammoCategory ?? i.ammoCategory ?? 'other'), age];
-  // One child named the same thing as its parent is a level that tells the reader nothing.
   if (i.category === 'natural_weapon') return ['Natural weapons', age];
   if (wp)
     return [
@@ -517,17 +390,6 @@ function pathOf(i: any): string[] {
       wp.twoHanded ? 'two-handed' : 'one-handed'
     ];
 
-  // CONTAINERS-AND-FLUIDS: three separate branches for three separate things, and they sit beside
-  // Armour/Shields/Weapons because a player choosing a loadout is choosing between them.
-  //
-  //   Carry aids — WORN. They raise what a pawn can shoulder and hold nothing. Filed by the slot they
-  //                occupy, because the loadout trade-off (a back quiver blocks a pack) is the point.
-  //   Vessels    — NOT worn. Nesting and capacity only; what they hold is what they are for.
-  //   Fluids     — cannot exist outside one of the above.
-  //
-  // Fluids split by what the fluid is FOR, never by its raw `category`. Those category words —
-  // "reagent", "organic" — are the same words Materials files its own lines under, so reusing them
-  // put a shelf called "Reagent" in two branches meaning two different things.
   if (i.type === 'fluid') return ['Fluids', fluidPurpose(i), age];
   if (i.inventoryBonus) {
     const slot = i.armorProperties?.equipmentSlot ?? i.armorProperties?.slot;
@@ -546,14 +408,10 @@ function pathOf(i: any): string[] {
   if (i.type === 'food' || i.nutrition != null)
     return ['Consumables', 'Food', ...foodBranch(i), age];
   if (i.medicineQuality != null) return ['Consumables', 'Medicine', age];
-  // The coatings and tinctures all became FLUIDS; what still carries `category: reagent` here is beast
-  // ORGANS, eaten whole for the trait gamble. Calling that shelf "Coatings & tinctures" was a leftover
-  // pointing at a shelf that had moved.
   if (i.type === 'consumable' && i.category === 'reagent')
     return ['Consumables', 'Beast organs', age];
   if (i.type === 'consumable') {
     const cat = String(i.category ?? 'other');
-    // A shelf called "Consumable" inside a branch called Consumables says nothing twice.
     return ['Consumables', cat === 'consumable' ? 'Other' : prettify(cat), age];
   }
 
@@ -565,12 +423,6 @@ function pathOf(i: any): string[] {
   return ['Materials', line, ...materialStage(i, line), age];
 }
 
-/**
- * What a fluid is FOR — the question a player is actually asking when they open the branch. Read off
- * the fields the sim itself reads, so a new fluid files itself: nutrition (or being water) means you
- * drink it, a timed condition or a trait grant means you quaff it for the effect, a `coatingEffect`
- * means it goes on a blade, and everything left over is something a workshop eats.
- */
 function fluidPurpose(i: any): string {
   if (i.coatingEffect) return 'Coatings & oils';
   if (i.nutrition != null || i.id === 'water') return 'Drink';
@@ -579,17 +431,11 @@ function fluidPurpose(i: any): string {
   return 'Industrial';
 }
 
-/** The single number worth showing for a row, chosen by what the item IS. */
 function statOf(i: any): string {
   const ap = i.armorProperties;
   const wp = i.weaponProperties;
   if (ap?.armorType === 'shield') return `block ${Math.round((ap.blockBonus ?? 0) * 100)}%`;
-  // A carry aid answers to the same light/medium/heavy class as armour now, so it HAS an `armorType`.
-  // What the row has to say is still what the piece grants — the carry, plus hip defence where the
-  // war-belt line has any. Checked before the armour branch or every pack reads `def 0`.
   if (i.inventoryBonus) {
-    // Worn aids are volume-only (R14), so the weight half is shown ONLY by the hand-hauled line that
-    // actually has one. Printing "+0kg" on every pack in the game is noise, not information.
     const { weightKg = 0, volumeL = 0 } = i.inventoryBonus;
     const carry = weightKg ? `carry +${weightKg}kg / +${volumeL}L` : `holds +${volumeL} L`;
     return ap?.defense ? `${carry} · def ${ap.defense}` : carry;
@@ -597,8 +443,6 @@ function statOf(i: any): string {
   if (ap?.armorType) return `def ${ap.defense ?? 0}`;
   if (wp) return `dmg ${wp.damage ?? '—'}${wp.damageType ? ` ${wp.damageType}` : ''}`;
   if (i.ammoProperties) return `dmg ${i.ammoProperties.damage ?? '—'}`;
-  // A drink is usually BOTH — ale feeds and it quenches — so these accumulate rather than returning
-  // on the first match, which is what made every drink show only one of its two numbers.
   const feeds: string[] = [];
   if (i.nutrition != null)
     feeds.push(i.type === 'fluid' ? `food ${i.nutrition}/L` : `food ${i.nutrition}`);
@@ -617,8 +461,6 @@ function statOf(i: any): string {
     ].filter(Boolean);
     if (parts.length) return parts.join(' ');
   }
-  // A carry aid is read by what it GRANTS; a vessel by what it HOLDS. Checked in that order, because a
-  // quiver has both blocks and while worn it is the carry aid.
 
   if (i.container)
     return `holds ${i.container.capacityL} L${i.container.capacityKg ? ` / ${i.container.capacityKg} kg` : ''}`;
@@ -653,7 +495,6 @@ export const TREE_ITEMS: TreeItem[] = items
     };
   });
 
-// ── the tree itself ─────────────────────────────────────────────────────────
 export interface TreeNode {
   key: string;
   label: string;
@@ -661,21 +502,10 @@ export interface TreeNode {
   count: number;
   children: TreeNode[];
   items: TreeItem[];
-  /** Coverage cells this kit does NOT fill — the same "– legs" marker the build grid carries, at the
-   *  level where a complete kit is actually defined. */
   missing: string[];
 }
 
-// What a KIT must cover, using the build grid's rule: six cells, and the three torso layers collapse
-// to one — a kit needs *a* torso piece, not one per layer (plate over mail over a gambeson is the
-// layering, not two holes). Cloak, pack and belt are carry slots and never count as coverage.
-//
-// The marker sits on the SET, not on the class beneath it: `Iron Mail` is one kit with a heavy
-// hauberk and medium limbs, and asking each class-node separately invented "heavy kit missing
-// everything". `no set` and `drop only` are not kits at all — loose pieces and enemy loot can never
-// be complete, so they carry no marker.
 const KIT_PARTS = ['head', 'torso', 'arms', 'hands', 'legs', 'feet'];
-/** item id → which KIT_PARTS its `covers` list actually protects. */
 const COVERED_PARTS = new Map<string, Set<string>>();
 for (const i of items as any[]) {
   const covers: string[] = i?.armorProperties?.covers ?? [];
@@ -695,24 +525,17 @@ const NOT_A_KIT = new Set(['no set', 'drop only']);
 const coverageOf = (label: string) => (label.startsWith('torso') ? 'torso' : label);
 function missingOf(node: TreeNode, rootLabel: string): string[] {
   if (rootLabel !== 'Armour' || NOT_A_KIT.has(node.label)) return [];
-  // Armour ▸ age ▸ crafted ▸ SET  (or ▸ dropped ▸ species ▸ SET)
   if (node.depth !== 3 && node.depth !== 4) return [];
-  // a set node is the one whose children are layers
   if (!node.children.some((c) => LAYER_LABEL.includes(c.label))) return [];
   const present = new Set<string>();
   (function walk(n: TreeNode) {
     if (!n.children.length) present.add(coverageOf(n.label));
-    // A garment protects what it says it COVERS, not merely the slot it occupies. A doublet has
-    // sleeves and a hauberk has a skirt, so a set carrying one is not missing arms just because
-    // nothing sits in the bracers slot — that is a spurious hole an auditor then goes hunting for.
     for (const it of n.items) for (const p of COVERED_PARTS.get(it.id) ?? []) present.add(p);
     n.children.forEach(walk);
   })(node);
   return KIT_PARTS.filter((p) => !present.has(p));
 }
 
-/** Ages sort by the real ladder — Primitive before Bronze because it IS before it, not because P
- *  precedes B; layers by the body's own order; everything else alphabetically, catch-alls last. */
 const TRAILING = ['no set', 'drop only', 'other', 'unplaced'];
 function sortNodes(nodes: TreeNode[]): TreeNode[] {
   return nodes.sort((a, b) => {
@@ -729,9 +552,6 @@ function sortNodes(nodes: TreeNode[]): TreeNode[] {
   });
 }
 
-/** Top level in the order an audit reads it, not alphabetically. A label missing from this list falls
- *  to the end, which is where the three CONTAINERS-AND-FLUIDS branches landed until they were placed:
- *  carry aids belong with the WORN kit, next to the armour they compete with for a slot. */
 const ROOT_ORDER = [
   'Armour',
   'Carry aids',
@@ -783,9 +603,6 @@ export function buildTree(rows: TreeItem[] = TREE_ITEMS): TreeNode {
         return (ai < 0 ? 99 : ai) - (bi < 0 ? 99 : bi);
       });
     else sortNodes(n.children);
-    // Age first, then tier, then name. With age as a LEVEL every row on a shelf shares one, so this
-    // usually reduces to tier-then-name — but it keeps the unsorted order identical either way, which
-    // is what `naturalOrder` (the sort's "off" position) promises.
     n.items.sort(
       (a, b) =>
         a.ageRank - b.ageRank || (a.tier ?? 0) - (b.tier ?? 0) || a.name.localeCompare(b.name)
@@ -797,13 +614,6 @@ export function buildTree(rows: TreeItem[] = TREE_ITEMS): TreeNode {
 }
 
 export const ITEM_TREE = buildTree();
-
-// ── column sorting ──────────────────────────────────────────────────────────
-//
-// Sorting is per SHELF, not across the whole table: the tree's whole value is that position tells you
-// what a thing is, and a global flat sort would throw that away to answer a question the flat tables
-// already answer better. Clicking a column re-orders the rows INSIDE every shelf, so "heaviest first"
-// means "heaviest in each line", which is the comparison an audit is actually making.
 
 export type SortKey =
   | 'name'
@@ -817,7 +627,6 @@ export type SortKey =
   | 'source'
   | 'gatedBy';
 
-/** The header row, in table order. `num` right-aligns, matching the cells. */
 export const SORT_COLUMNS: { key: SortKey; label: string; num?: boolean }[] = [
   { key: 'name', label: 'Item' },
   { key: 'tier', label: 'Tier', num: true },
@@ -831,7 +640,6 @@ export const SORT_COLUMNS: { key: SortKey; label: string; num?: boolean }[] = [
   { key: 'gatedBy', label: 'Gated by' }
 ];
 
-/** The leading number in a stat readout ("def 12", "holds 3 L") — what the column is really about. */
 function statNumber(stat: string): number {
   const m = /-?\d+(?:\.\d+)?/.exec(stat);
   return m ? parseFloat(m[0]) : Number.NEGATIVE_INFINITY;
@@ -843,8 +651,6 @@ function valueOf(it: TreeItem, key: SortKey): number | string {
       return it.tier ?? -1;
     case 'weightKg':
       return it.weightKg ?? 0;
-    // Sorting by age means sorting the ladder, not the alphabet — Bronze comes after Primitive
-    // because it does, not because B follows P.
     case 'age':
       return it.ageRank;
     case 'stat':
@@ -856,18 +662,10 @@ function valueOf(it: TreeItem, key: SortKey): number | string {
   }
 }
 
-/** The default order a shelf falls back to — the sort's "off" position: age, then tier, then name. */
 export function naturalOrder(a: TreeItem, b: TreeItem): number {
   return a.ageRank - b.ageRank || (a.tier ?? 0) - (b.tier ?? 0) || a.name.localeCompare(b.name);
 }
 
-/**
- * The value a GROUP sorts by: the best value among everything under it, where "best" means the one
- * that would come first under the current direction — the earliest age when sorting up, the latest
- * when sorting down. That is what makes a sort visible at all here. Most shelves hold a single age, so
- * ordering only the rows inside them left the headings alphabetical and the whole table looking
- * unsorted; a set of Primitive pieces has to be able to move above a set of Iron ones.
- */
 function aggregateOf(node: TreeNode, key: SortKey, dir: 1 | -1): number | string | null {
   let best: number | string | null = null;
   const consider = (v: number | string) => {
@@ -886,11 +684,6 @@ function aggregateOf(node: TreeNode, key: SortKey, dir: 1 | -1): number | string
   return best;
 }
 
-/**
- * A copy of the tree ordered by one column — GROUPS and rows alike. A copy rather than a re-sort in
- * place because the built tree is shared with the search view and the fold state is keyed off it.
- * With no column chosen this is the tree exactly as `buildTree` left it.
- */
 export function sortTree(node: TreeNode, key: SortKey | null, dir: 1 | -1): TreeNode {
   const cmp = rowComparator(key, dir);
   const clone = (n: TreeNode, natural: number): TreeNode & { _n: number } => ({
@@ -902,14 +695,7 @@ export function sortTree(node: TreeNode, key: SortKey | null, dir: 1 | -1): Tree
   const out = clone(node, 0);
   if (!key) return out;
 
-  // The TOP level is a table of contents, not data: it is the deliberate order an audit reads in
-  // (ROOT_ORDER), and letting a column throw Regalia to the bottom because its earliest piece is
-  // late-age would undo that for no gain. Sorting starts one level in — at the AGE shelves and below.
   (function orderGroups(n: TreeNode, isRoot: boolean) {
-    // The AGE level is the tree's spine. Sorting by weight or defence must not shuffle it into
-    // "Boss, Iron, Steel, Runed, Copper, Bronze, Primitive" — that answers no question and costs the
-    // reader the one ordering they can navigate by. Ages hold the ladder for every column EXCEPT the
-    // age column itself, which is exactly the case where flipping them is the point.
     const holdsAges = key !== 'age' && n.children.some((c) => AGES.includes(c.label as Age));
     if (isRoot || holdsAges) {
       n.children.forEach((c) => orderGroups(c, false));
@@ -918,13 +704,11 @@ export function sortTree(node: TreeNode, key: SortKey | null, dir: 1 | -1): Tree
     n.children.sort((a, b) => {
       const av = aggregateOf(a, key, dir);
       const bv = aggregateOf(b, key, dir);
-      // A branch holding nothing sortable sinks, whichever way the column points.
       if (av === null || bv === null) return av === null ? (bv === null ? 0 : 1) : -1;
       const d =
         typeof av === 'number' && typeof bv === 'number'
           ? av - bv
           : String(av).localeCompare(String(bv));
-      // Ties keep the shelf order the tree was built with, so equal groups never shuffle about.
       return d
         ? d * dir
         : (a as TreeNode & { _n: number })._n - (b as TreeNode & { _n: number })._n;
@@ -934,11 +718,6 @@ export function sortTree(node: TreeNode, key: SortKey | null, dir: 1 | -1): Tree
   return out;
 }
 
-/**
- * Comparator for a chosen column, or the natural ladder when nothing is chosen. Ties always fall back
- * to the ladder, so the order is stable and a column with a lot of equal values (every Class is
- * "light") still reads early-to-late underneath instead of shuffling.
- */
 export function rowComparator(
   key: SortKey | null,
   dir: 1 | -1

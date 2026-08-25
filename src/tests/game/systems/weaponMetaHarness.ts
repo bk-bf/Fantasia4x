@@ -5,40 +5,9 @@ import { setSimLogSink } from '$lib/game/core/util/logSink';
 import type { CombatTurnEntry } from '$lib/game/core/defs/events';
 import type { EntityStats, Pawn } from '$lib/game/core/types';
 
-/**
- * Shared harness for the weapon-meta sweeps — which weapon beats which, and how armour on the TARGET changes the answer.
- *
- * NOT a `.test.ts`, so vitest never collects it: it is imported by the sweep files that are.
- *
- * The sweeps live in SEPARATE FILES on purpose. Vitest parallelises across files and runs the tests
- * inside one file sequentially, in a single worker — so the whole sweep as one file pinned exactly
- * one core no matter how many forks were allowed (measured: 8-core box, load average 1.01, seven
- * cores idle, ~45 minutes). One file per armour class turns that into one core each, running at once.
- *
- * Two separate questions:
- *
- *   1. ARMOUR SWEEP — every style, naked, against every other style wearing each armour class. The
- *      thing being tested is whether the meta SPLITS: light fast one-handers strongest against
- *      unarmoured targets, two-handers strongest against armoured ones. If it does, that split is the
- *      balance, and no weapon needs a flat buff.
- *
- *   2. HEAD TO HEAD — every style against every other, nobody armoured, reported as a matchup grid
- *      rather than a single win total. A style with a poor overall record can still be a COUNTER: if
- *      most of what it wins comes from one or two specific opponents, that is a build with a purpose,
- *      not a weak build. Twin daggers are the case this exists to catch.
- *
- * Both sides always have identical stats at the spawn ceiling, so the weapon and the free hand are the
- * only variables.
- */
-
 export const MAX_TICKS = 14_000;
 export const EQUAL: Partial<EntityStats> = { strength: 20, dexterity: 20, constitution: 20, perception: 20 };
 
-/**
- * Live progress file. Vitest buffers a test's console output until the test ENDS, so a sweep this long
- * looks frozen from the outside; writing straight to disk sidesteps the interception entirely and lets
- * the run be watched with `tail -f`.
- */
 const PROGRESS = '.debug/weapon-meta-progress.log';
 let _done = 0;
 let _total = 0;
@@ -48,7 +17,6 @@ const startProgress = (label: string, total: number) => {
   try {
     writeFileSync(PROGRESS, `${label} — ${total} fights to run\n`, { flag: 'a' });
   } catch {
-    /* progress reporting must never fail the audit */
   }
 };
 const step = (what: string) => {
@@ -58,7 +26,6 @@ const step = (what: string) => {
   try {
     appendFileSync(PROGRESS, `  ${_done} of ${_total} fights (${pct}%)   ${what}\n`);
   } catch {
-    /* ignore */
   }
 };
 
@@ -114,7 +81,6 @@ export interface Duel {
   aSwings: number;
 }
 
-/** One duel. `defenderArmour` is added to side B only — side A always fights naked. */
 export async function duel(
   seed: number,
   A: Side,

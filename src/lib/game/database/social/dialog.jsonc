@@ -1,33 +1,4 @@
-// dialog.jsonc — flavor-line banks + relationship effects for the pawn dialog system (SOCIAL-LAYER §3).
-// Pawns strike up a dialog when they come within a couple of tiles of each other (proximity-triggered;
-// SocialService.processDialogTick). Each CATEGORY carries both its lines AND its relationship EFFECT:
-//   goodDelta  — relationship score change on a warm/successful exchange
-//   badDelta   — relationship score change when it lands wrong
-//   goodChance — base chance it goes well (charm/mood/temperament tilt it; argue/insult never do)
-//   moodGood / moodBad — MOOD-REWORK: mood-effect IDs (mood.jsonc `effects`, e.g. "talk_banter_good")
-//                for the "thought" the exchange leaves on BOTH talkers — the effect's label ({name} =
-//                the other talker) + value become a faded thought (SocialService.applyDialogMood). `null`
-//                = no thought (argue/insult have no positive one).
-//
-// COHERENCE — lines are authored as BEATS, not shuffled from separate pools. A beat is one complete
-// little exchange: an `open` (speaker A) + a matched `good`/`bad` { reply (B), close (A) }, so the
-// three lines always FIT (a weather opener draws a weather reply, not a non-sequitur). The outcome
-// roll picks the good or bad branch of the SAME beat.
-//
-// GRAPH — a beat may carry `next: { good?: [refs] }`: on a warm exchange it can flow into a follow-on
-// beat (a deeper turn) drawn from another category. A ref is "category" (a random beat there) or
-// "category:beatId" (a specific one). This is what lets small talk warm into real talk.
-//
-// MEMORY — each category may list `callbacks`: opener lines used when this pair spoke RECENTLY
-// (SocialService stores the last subject on the relationship). They reference `{subject}` so a later
-// dialog carries the SAME thread on ("You still chewing on {subject}?") instead of starting cold.
-//
-// Placeholders: {name} = the OTHER speaker's first name, {subject} = a draw from `subjects` (or the
-// remembered one, for callbacks), {weather} / {season} = the live sky and season.
-// All strings are PLAYER-FACING. Categories: small_talk · banter · deep_talk · flirt · comfort ·
-// argue · insult · battle_talk (battle_talk fires when both are drafted for a fight).
 {
-  // What pawns talk about. Kept concrete and small-world: the colony, the land, the work.
   "subjects": [
     "the last hunt",
     "the state of the stores",
@@ -362,10 +333,6 @@
       ]
     }
   },
-  // COMBAT BARKS — short single-line reactions BARKED mid-fight (SocialService.combatBark), NOT a
-  // drawn-out exchange: nobody holds a conversation fighting for their life. Emitted from Combat.ts on
-  // a landed blow (hit), a whiff (miss), taking a wound (hurt), or a finishing blow (kill), throttled +
-  // occasional. `{foe}` = what they're fighting (the boar, a raider). Player-facing; keep them TERSE.
   "combatBarks": {
     "hit": ["Take that!", "Ha!", "Down!", "Got you!", "Feel that?", "Back, {foe}!", "For the colony!"],
     "miss": ["Damn it!", "Hold still!", "Slippery thing.", "Again, then.", "Stand and fight!", "Tsk."],

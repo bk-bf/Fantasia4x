@@ -2,9 +2,6 @@
   import { effectsOf } from '$lib/dev/itemTree';
   import ItemTree from '$lib/dev/ItemTree.svelte';
 
-  // DEV TOOL — data-driven BUILD database. Reads the derived catalogue from $lib/dev/gearDb (which
-  // imports the real items/recipes/buildings/research/traits .jsonc), so it stays in sync with the
-  // data. Two views: the build × age grids, and the item tree over every entry in items.jsonc.
   import { page } from '$app/state';
   import {
     GEAR,
@@ -32,7 +29,6 @@
 
   const summaries = buildSummaries();
 
-  // Coverage grid: build × kind × age → the actual items (precomputed once; GEAR is static).
   const cellMap = new Map<string, GearRow[]>();
   for (const g of GEAR) {
     if (g.kind !== 'weapon' && g.kind !== 'armor') continue;
@@ -42,8 +38,6 @@
       arr.push(g);
     }
   }
-  // Armour groups by SET (one-offs last, then tier/name); everything else stays tier-then-name. Six
-  // steel torso pieces in one cell are unreadable until the kit they belong to is what orders them.
   for (const arr of cellMap.values())
     arr.sort(
       (a, b) =>
@@ -55,8 +49,6 @@
   const cell = (build: string, gkind: 'weapon' | 'armor', age: string) =>
     cellMap.get(`${build}|${gkind}|${age}`) ?? [];
 
-  // The same grid keyed off fallbackClasses — armour a build can wear but that was not made for it.
-  // Sturdiest first, so picking the head of the list picks the best stopgap.
   const fbMap = new Map<string, GearRow[]>();
   for (const g of GEAR) {
     if (g.kind !== 'armor') continue;
@@ -69,17 +61,11 @@
   for (const arr of fbMap.values())
     arr.sort((a, b) => (b.defense ?? 0) - (a.defense ?? 0) || a.tier - b.tier);
 
-  // What a build must have covered at an age. The three torso layers collapse to ONE requirement —
-  // a build needs *a* torso piece, not one per layer — and cloak/pack are carry, not protection, so
-  // neither counts as a coverage gap.
   const COVERAGE_PARTS = ['head', 'torso', 'arms', 'hands', 'legs', 'feet'] as const;
   const coverageOf = (p: string | null) => (p?.startsWith('torso') ? 'torso' : p);
   const missingParts = (items: GearRow[]) =>
     COVERAGE_PARTS.filter((p) => !items.some((it) => coverageOf(it.bodyPart) === p));
 
-  /** What a build borrows at an age: for each region its own line does not cover, the sturdiest piece
-   *  it could still put on. One per region — a stopgap, not a shopping list — so an age whose kit is
-   *  complete borrows nothing and the cell stays clean. */
   const FALLBACK = '__fallback';
   const fallbackFill = (build: string, age: string, own: GearRow[]): GearRow[] => {
     const gaps = missingParts(own);
@@ -90,8 +76,6 @@
       .filter((it): it is GearRow => !!it);
   };
 
-  /** A cell's pieces grouped into their sets, in the order the cell is already sorted. One-offs
-   *  collect into a single trailing group so they fold away together. */
   const setGroups = (items: GearRow[]): { key: string; label: string; items: GearRow[] }[] => {
     const out: { key: string; label: string; items: GearRow[] }[] = [];
     for (const it of items) {
@@ -111,9 +95,6 @@
     a.name.localeCompare(b.name);
   const allTraits = (build: string) =>
     GEAR.filter((g) => g.kind === 'trait' && g.classes.includes(build as never)).sort(byEvoRarity);
-  // Traits at a given rarity — positives first, then flaws (red); flaws graded INTO the real rarity
-  // columns (no separate flaw column). excludeLineage pulls lineage-marked traits out (they get their
-  // own column when the lineage column is toggled on).
   const raritycell = (build: string, rarity: string, excludeLineage = false) =>
     allTraits(build)
       .filter((t) => t.gradeRarity === rarity && (!excludeLineage || !t.lineageNames))
@@ -129,9 +110,6 @@
       );
   let showLineageCol = $state(false);
 
-  // Sets COLLAPSE rather than hide: the set name stays on screen as its own control and its pieces
-  // fold in under it. Collapsing keys off the SET, so folding `steel_plate` folds it in every cell it
-  // appears in — a kit is one thing wherever it shows up.
   let collapsedSets = $state<Record<string, boolean>>({});
   const setKey = (g: GearRow) => g.armorSet ?? UNAFFILIATED;
   const toggleSet = (k: string) => (collapsedSets[k] = !collapsedSets[k]);
@@ -142,11 +120,9 @@
     (['armor', 'trait', 'stats', 'all'] as string[]).includes(pBview) ? (pBview as BView) : 'weapon'
   );
 
-  // Which stats decide each build's fights, and the formula behind each. Static — GEAR is static.
   const statRows = buildStatRows();
   const RANK_GLYPH: Record<Rank, string> = { primary: '●', secondary: '○', none: '·' };
 
-  // Cross-table multi-select: click any item/trait to highlight every instance of it in the table.
   let sel = $state<Record<string, boolean>>({});
   const selCount = $derived(Object.keys(sel).length);
   function toggleSel(id: string) {
@@ -155,7 +131,6 @@
       selOrder = selOrder.filter((x) => x !== id);
       return;
     }
-    // More than three columns stops being readable, so the oldest pick drops out.
     if (compare && selOrder.length >= COMPARE_MAX) {
       const [oldest, ...rest] = selOrder;
       delete sel[oldest];
@@ -169,27 +144,13 @@
     selOrder = [];
   };
 
-  /**
-   * COMPARE — a popup that lays the picked items out as columns of ONE grid.
-   *
-   * Alignment has to be structural: separate floating panels can never be trusted to line up (they
-   * carry their own content heights and get nudged by viewport clamping), whereas one grid shares its
-   * rows by construction. The popup is size-capped and scrolls internally, so it cannot clip off-screen
-   * either, and it minimises to its title bar when it is in the way.
-   */
   const COMPARE_MAX = 3;
   let compare = $state(false);
   let compareMin = $state(false);
-  /** Click order, so the columns read in the order they were picked. */
   let selOrder = $state<string[]>([]);
   const compareRows = $derived(
     selOrder.map((id) => GEAR.find((g) => g.id === id)).filter((g): g is GearRow => !!g)
   );
-  /**
-   * Union of every field label across the picks, so each column lines up even when one weapon omits a
-   * field another has. A label the first pick lacks (a stiletto has no `stun`) is spliced in next to its
-   * neighbour from the row that does have it — appending would dump it at the bottom, away from its block.
-   */
   const compareLabels = $derived.by(() => {
     const order: string[] = [];
     for (const g of compareRows) {
@@ -207,10 +168,8 @@
   });
   const cellFor = (g: GearRow, label: string) => infoRows(g).find((r) => r.label === label) ?? null;
 
-  // Hover / info panel: a formatted, colour-coded breakdown of any item, trait, or build.
   let hovered = $state<GearRow | null>(null);
   let hoveredBuild = $state<string | null>(null);
-  /** A stat's formula panel — `why` is set when the hover came from a build's cell rather than a header. */
   let hoveredStat = $state<{ info: StatInfo; build: string | null; why: string | null } | null>(
     null
   );
@@ -220,9 +179,6 @@
     hx = e.clientX;
     hy = e.clientY;
   }
-  // Action that keeps the floating tooltip fully on-screen: drop it near the cursor, then measure its
-  // real size and clamp it back inside the viewport (a plain clamp, not a binary up/down flip). Re-runs
-  // via `update` whenever the cursor position or the hovered target changes.
   function place(node: HTMLElement, _param: unknown) {
     const reposition = () => {
       if (typeof window === 'undefined') return;
@@ -273,7 +229,6 @@
     val: string;
     tone: 'good' | 'bad' | 'info';
   }
-  /** Combat's cadence ceiling: BASE_ATTACK_INTERVAL_TICKS / MIN_ATTACK_INTERVAL_TICKS (120/72). */
   const CADENCE_CAP = 120 / 72;
   function infoRows(g: GearRow): InfoRow[] {
     const rows: InfoRow[] = [];
@@ -281,9 +236,6 @@
       if (val !== null && val !== undefined && val !== '')
         rows.push({ label, val: String(val), tone });
     };
-    // WHAT IT DOES, first and unconditionally. Without this a herbal tea and a cup of water render
-    // identically: the rest of this function is per-KIND (weapon damage, armour defence) and simply has
-    // no branch for "grants a condition" or "cures one".
     push('effects', effectsOf(g.raw ?? {}), 'good');
     const e = g.raw?.effects ?? {};
     const mults = (obj: Record<string, number> | undefined, suffix = '') => {
@@ -291,7 +243,6 @@
       for (const [k, v] of Object.entries(obj)) push(k + suffix, '×' + v, v >= 1 ? 'good' : 'bad');
     };
     if (g.kind === 'weapon' || g.kind === 'ammo') {
-      // ── DAMAGE, all of it together ──
       push(
         'damage',
         g.dmg != null
@@ -299,12 +250,6 @@
           : null,
         'good'
       );
-      // Audit numbers. Paper dps is damage × the weapon's own speed. It is only reachable while the
-      // wielder is slow enough: the weapon's speed multiplies the attack_speed stat and Combat floors
-      // the interval at MIN_ATTACK_INTERVAL_TICKS, so cadence stops improving at
-      // BASE_ATTACK_INTERVAL_TICKS / MIN = 120/72 ≈ 1.67. Past that a fast weapon gains nothing and
-      // only per-hit damage counts, which is what "capped" shows. Read both beside pen and armour
-      // damage: a dagger wins on paper, loses at the cap, and never opens armour either way.
       const dps = g.dmg != null && g.atkSpeed != null ? g.dmg * g.atkSpeed : null;
       push('dps (dmg × speed)', dps != null ? dps.toFixed(1) : null, 'good');
       push('dps capped (1.67×)', g.dmg != null ? (g.dmg * CADENCE_CAP).toFixed(1) : null, 'good');
@@ -316,15 +261,12 @@
       push('crit', g.crit != null ? pct(g.crit) : null, 'good');
       push('crit multiplier', g.critMult != null ? '×' + g.critMult.toFixed(1) : null, 'good');
       push('scales with', g.scaling);
-      // ── vs ARMOUR ──
       push('armour pen', g.ap != null ? pct(g.ap) : null, 'good');
       push('armour damage', g.armorDmg, 'good');
-      // ── LANDING IT ──
       push('accuracy', g.accuracy, g.accuracy != null && g.accuracy < 0 ? 'bad' : 'good');
       push('attack speed', g.atkSpeed);
       push('stun', g.stun != null ? pct(g.stun) : null, 'good');
       push('on-hit', g.onHit, 'bad');
-      // ── COST & HANDLING ──
       push('stamina / hit', g.stamina, 'bad');
       push(
         'stamina / sec',
@@ -402,8 +344,6 @@
         push('discipline', g.recipe.discipline);
         push('inputs', g.recipe.inputs.map((i) => `${i.qty}× ${i.name}`).join(', ') || null);
       } else {
-        // Name the creatures, not the word "wild". A drop the player cannot attribute to an animal
-        // is a drop they cannot go get.
         if (g.droppedBy.length) {
           const top = g.droppedBy.slice(0, 5);
           const more = g.droppedBy.length - top.length;
@@ -425,7 +365,6 @@
     return rows;
   }
 
-  // Autocomplete: type to find any weapon/armour/trait; ↑↓ to cycle, Enter/click to highlight it.
   let acq = $state('');
   let acIdx = $state(0);
   const acMatches = $derived.by(() => {
@@ -462,7 +401,6 @@
     } else if (e.key === 'Escape') acq = '';
   }
 
-  // Initial view from the URL (?view=audit) so SSR + deep-links agree.
   const params = page.url?.searchParams ?? new URLSearchParams();
   let view = $state<'builds' | 'audit'>(params.get('view') === 'audit' ? 'audit' : 'builds');
 
@@ -910,8 +848,6 @@
   {/if}
 
   {#if compare}
-    <!-- Size-capped and scrolled internally, so it can never run off-screen however many rows the
-         picks produce. Minimised it collapses to just this title bar. -->
     <section class="cmp" class:min={compareMin}>
       <header class="cmp-bar">
         <span class="cmp-title">compare {compareRows.length}/{COMPARE_MAX}</span>
@@ -979,7 +915,6 @@
 </div>
 
 <style>
-  /* app.html forces html,body{overflow:hidden}; this route is its own full-viewport scroll container. */
   .build-db {
     position: fixed;
     inset: 0;
@@ -1145,7 +1080,6 @@
     color: #6d6653;
   }
 
-  /* build × age coverage grid */
   .tabs.sub {
     margin-bottom: 10px;
   }
@@ -1209,7 +1143,6 @@
   .setgrp {
     margin: 2px 0 3px;
   }
-  /* The set name IS the control: click to fold its pieces in under it. */
   .setname {
     display: inline-block;
     font: inherit;
@@ -1243,7 +1176,6 @@
     border-color: #6d5038;
     color: #d0a984;
   }
-  /* drop-only gear is not a plan, it is loot — read it apart from craftable unaffiliated pieces */
   .setname.dropped {
     color: #9a7f9c;
     background: #241a26;
@@ -1253,7 +1185,6 @@
     border-color: #5c456a;
     color: #c0a2c4;
   }
-  /* borrowed from another line to plug a hole — muted, so it never reads as this build's own kit */
   .setname.fb {
     color: #7f8a92;
     background: #1c2126;
@@ -1263,7 +1194,6 @@
     border-color: #4a5762;
     color: #a3b1bb;
   }
-  /* the nesting: pieces sit indented beneath their set, against a rule that ties them to it */
   .setitems {
     margin: 1px 0 0 5px;
     padding-left: 6px;
@@ -1300,7 +1230,6 @@
     color: #9a9279;
   }
 
-  /* stats-by-build matrix */
   table.stats th.stath {
     text-align: center;
     font-size: 10px;
@@ -1363,7 +1292,6 @@
     border-color: #d8ab52;
   }
 
-  /* autocomplete */
   .ac {
     position: relative;
     max-width: 460px;
@@ -1422,7 +1350,6 @@
     white-space: nowrap;
   }
 
-  /* info tooltip / panel */
   .tab.info-toggle {
     margin-left: auto;
   }
@@ -1442,7 +1369,6 @@
     pointer-events: none;
     font-size: 12.5px;
   }
-  /* A formula is a line of code — it needs the room a stat block doesn't. */
   .tooltip.wide {
     width: 440px;
   }
@@ -1451,10 +1377,6 @@
     line-height: 1.45;
     word-break: break-word;
   }
-  /* ── COMPARE POPUP ─────────────────────────────────────────────────────────
-     Docked bottom-right, capped in both axes and scrolled internally, so no amount of content can
-     push it off-screen. The body is ONE grid: a label gutter plus an equal column per pick, which is
-     what makes the rows line up across items by construction rather than by positioning luck. */
   .cmp {
     position: fixed;
     right: 12px;

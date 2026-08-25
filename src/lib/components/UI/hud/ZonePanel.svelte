@@ -1,4 +1,3 @@
-<!-- ZonePanel.svelte — Per-instance zone designation controls shown in the Building tab -->
 <script lang="ts">
   import { uiState } from '$lib/stores/uiState';
   import { gameState } from '$lib/stores/gameState';
@@ -16,11 +15,6 @@
     ...new Set(ITEMS_DATABASE.map((i) => i.category).filter(Boolean))
   ].sort();
 
-  // Sowable crops drive the GROW zone's picker — a seed/crop list, NOT the stockpile category grid.
-  // The zone filter still stores the seed's `category` in `allowedCategories` (the sow logic in
-  // jobs/plant.ts matches a seed by category), so a grow zone restricts which crops get sown. We show
-  // the crop's human `displayName` and feed the toggle only the SEED categories (not every item
-  // category) as its universe, so clear/invert math operates on the crop set alone.
   const CROP_SEEDS: { name: string; category: string }[] = (() => {
     const byCat = new Map<string, string>();
     for (const d of resourceObjectService.getAll()) {
@@ -35,7 +29,6 @@
   })();
   const SEED_CATEGORIES: string[] = CROP_SEEDS.map((c) => c.category);
 
-  /** A grow zone filters by crop seed; everything else (stockpile) filters by item category. */
   const filterUniverse = (type: string) => (type === 'grow' ? SEED_CATEGORIES : ALL_CATEGORIES);
 
   const ZONE_DEFS: {
@@ -45,9 +38,7 @@
     desc: string;
     color: string;
     filterable?: boolean;
-    /** Restriction zone: carries a pawn assignment (the PAWNS panel) instead of an item filter. */
     pawnAssignable?: boolean;
-    /** Renders a tile-background tint on the map (so the "color" toggle is meaningful). */
     tinted?: boolean;
   }[] = [
     {
@@ -101,16 +92,12 @@
   let activeInstId = $derived($uiState.activeZoneInstanceId);
   let designationActive = $derived($uiState.designationActive);
 
-  /** Which zone instance currently has its filter panel open (null = none). */
   let openFilterInstance = $state<string | null>(null);
-  /** Which restriction zone currently has its PAWNS-assignment panel open (null = none). */
   let openPawnsInstance = $state<string | null>(null);
 
-  /** Count tiles per zone instance. */
   let instanceTileCounts = $derived(
     (() => {
       const counts: Record<string, number> = {};
-      // Each tile holds one instance id per zone layer (type); count every layer toward its instance.
       for (const layers of Object.values($gameState.designationZoneId ?? {})) {
         for (const instId of Object.values(layers ?? {})) {
           counts[instId] = (counts[instId] ?? 0) + 1;
@@ -120,20 +107,12 @@
     })()
   );
 
-  /** Create a new zone instance and immediately enter painting mode. */
   function newZone(type: ZoneInstanceType) {
     const existing = ($gameState.zoneInstances ?? []).filter((z) => z.type === type).length;
     const def = ZONE_DEFS.find((d) => d.type === type)!;
     const label = `${def.label[0]}${def.label.slice(1).toLowerCase()} ${existing + 1}`;
-    // The id is generated here so paint mode can activate immediately (the worker command is
-    // fire-and-forget — no round-trip to read back a worker-assigned id).
     const id = `${type}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
     gameState.command({ type: 'createZoneInstance', payload: { type, label, id }, save: true });
-    // Inherit the surrounding hidden state: if every existing tinted zone is currently hidden, the new
-    // zone is born hidden too. Otherwise it would default to visible and, since drawing reveals ALL
-    // zones regardless of colorHidden, it'd be the one zone that stays revealed after you exit the tool
-    // while the rest re-hide. The colour stays revealed during drawing either way (the map gates the
-    // tint on designation mode), then re-hides on exit alongside the others.
     if (allColorsHidden) {
       gameState.command({
         type: 'setZoneColorHidden',
@@ -144,18 +123,14 @@
     uiState.activateDesignation(type, id);
   }
 
-  /** Toggle painting mode for an existing instance. */
   function paintZone(type: string, instanceId: string) {
     if (designationActive && activeInstId === instanceId) {
       uiState.deactivateDesignation();
     } else {
-      // All zones reveal while a drawing tool is active (the map gates the tint on designation mode),
-      // then auto-restore their hidden state on exit — so no colour flag is touched here.
       uiState.activateDesignation(type, instanceId);
     }
   }
 
-  /** Delete a zone instance and all its tiles. */
   function removeZone(instanceId: string) {
     gameState.command({ type: 'removeZoneInstance', payload: { instanceId }, save: true });
     if (openFilterInstance === instanceId) openFilterInstance = null;
@@ -171,7 +146,6 @@
     openPawnsInstance = openPawnsInstance === instanceId ? null : instanceId;
   }
 
-  /** Assign / unassign a pawn to a restriction zone (reuses the filter-panel UX, pawns instead of items). */
   function toggleZonePawn(instanceId: string, pawnId: string) {
     gameState.command({ type: 'toggleZonePawn', payload: { instanceId, pawnId }, save: true });
   }
@@ -188,11 +162,9 @@
     gameState.command({ type: 'clearInstanceFilter', payload: { instanceId }, save: true });
   }
 
-  /** Tinted (map-colored) zone instances — the ones the color toggles apply to. */
   let tintedInstances = $derived(
     ($gameState.zoneInstances ?? []).filter((z) => defOf(z.type)?.tinted)
   );
-  /** True only when every tinted zone is currently hidden (drives the master button label). */
   let allColorsHidden = $derived(
     tintedInstances.length > 0 && tintedInstances.every((z) => z.colorHidden)
   );
@@ -225,7 +197,6 @@
     {/if}
   </div>
 
-  <!-- Zone types as build cards: the action spawns a new zone and enters painting mode -->
   <div class="card-grid">
     {#each ZONE_DEFS as def}
       {@const count = ($gameState.zoneInstances ?? []).filter((z) => z.type === def.type).length}
@@ -249,7 +220,6 @@
     {/each}
   </div>
 
-  <!-- Per-instance management: paint / filter / delete -->
   {#if ($gameState.zoneInstances ?? []).length > 0}
     <div class="section-sub zones-hdr">
       <span>| ACTIVE ZONES</span>
@@ -493,8 +463,6 @@
     }
   }
 
-  /* ── Instance cards (match the build cards above) ── */
-
   .zone-card {
     display: flex;
     background: var(--bg-panel);
@@ -586,8 +554,6 @@
   .zbtn.del:hover {
     background: color-mix(in srgb, #c44 20%, transparent);
   }
-
-  /* ── Filter panel ───────────────────────────────── */
 
   .filter-panel {
     margin: -2px 0 0.6rem 0.75rem;

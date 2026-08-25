@@ -1,17 +1,3 @@
-<!--
-  SettingsModal — the shared settings popup, opened from BOTH the title screen (MainMenu) and the
-  in-game ESC menu (PauseMenu). Replaces the old hand-duplicated two-checkbox inline panels.
-
-  Every control is wired to a persisted preference (uiPrefs.ts) that takes effect live:
-    • Audio (master/music/ambient/sfx) — volume buses read live by AudioController.svelte → audioService
-    • Weather effects / Day-night UI tint — graphics toggles (WeatherCanvas mount / #ambient-tint filter)
-    • Cinematic layout — hideSidebars
-    • Default game speed — speed a new game starts at
-    • Autosave — gates the debounced scheduleSave
-    • Debug mode — reveals the in-game DEBUG tab
-  Closes on ✕ / backdrop / Escape.
-  (Returning to the title is the pause menu's "Exit to Main Menu" — it works under --debug too.)
--->
 <script lang="ts">
   import { fade, scale } from 'svelte/transition';
   import { onMount } from 'svelte';
@@ -38,10 +24,6 @@
 
   let { onClose }: { onClose: () => void } = $props();
 
-  // Window mode — driven by the Fullscreen API (works in the Electron/Chromium renderer with no IPC).
-  // It reflects the ACTUAL window state rather than a stored pref, because a browser/Chromium can't be
-  // forced into fullscreen without a user gesture, so persisting it across launches wouldn't be honoured.
-  // The dropdown stays in sync if the user toggles fullscreen elsewhere (F11 / Esc) via fullscreenchange.
   let windowMode = $state<'windowed' | 'fullscreen'>('windowed');
   function syncWindowMode() {
     windowMode = document.fullscreenElement ? 'fullscreen' : 'windowed';
@@ -55,9 +37,7 @@
     try {
       if (mode === 'fullscreen') await document.documentElement.requestFullscreen();
       else if (document.fullscreenElement) await document.exitFullscreen();
-    } catch {
-      /* a fullscreen request can be rejected (no user gesture / disallowed) — leave the window as-is */
-    }
+    } catch {}
   }
 
   function onKey(e: KeyboardEvent) {
@@ -71,7 +51,6 @@
 <svelte:window onkeydown={onKey} />
 
 <div class="settings-overlay" transition:fade={{ duration: 120 }}>
-  <!-- Real <button> backdrop (a11y-clean click-to-close) behind the panel; Escape also closes. -->
   <button class="backdrop" aria-label="Close settings" onclick={onClose}></button>
   <div
     class="settings-panel"
@@ -226,7 +205,7 @@
   .settings-overlay {
     position: fixed;
     inset: 0;
-    z-index: 1400; /* topmost modal — above pause (900), menu (1000), the Custom Map popup (1200/1300) */
+    z-index: 1400;
     background: rgba(6, 4, 2, 0.72);
     display: flex;
     align-items: center;
@@ -242,7 +221,7 @@
     padding: 0;
   }
   .settings-panel {
-    position: relative; /* above the backdrop button */
+    position: relative;
     z-index: 1;
     display: flex;
     flex-direction: column;
@@ -252,10 +231,6 @@
     background: var(--bg-panel);
     border: 1px solid var(--border-hi);
     box-shadow: 0 0 28px rgba(0, 0, 0, 0.6);
-    /* Same day/night/season/weather hue the in-game panels wear — the global #ambient-tint
-       feColorMatrix (defined in +page.svelte, driven by EnvironmentService) multiplies the
-       modal's RGB so the settings popup bleeds the world's current colour. Goes neutral when the
-       "Day/night UI tint" pref is off (identity matrix). */
     filter: url(#ambient-tint);
   }
   .hdr {
@@ -284,10 +259,6 @@
   .close:hover {
     color: var(--accent-hi);
   }
-  /* .body is the ScrollArea viewport (overflow + auto-hiding bar live in ScrollArea); here we only
-     size it and lay out its sections. :global because the element lives in ScrollArea's scope.
-     Bleed it into the panel's right padding so the scrollbar rides the panel edge, then re-pad the
-     content the same amount — otherwise the bar crowds the right-aligned checkboxes. */
   .settings-panel :global(.body) {
     display: flex;
     flex-direction: column;

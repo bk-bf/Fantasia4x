@@ -1,7 +1,7 @@
 <script lang="ts">
   export let title: string = 'Current Tasks';
   export let layout: 'vertical' | 'horizontal' | 'grid' = 'horizontal';
-  export let maxColumns: number = 2; // For grid layout
+  export let maxColumns: number = 2;
 </script>
 
 <div class="task-container">
@@ -48,7 +48,6 @@
     gap: 10px;
   }
 
-  /* Responsive adjustments */
   @media (max-width: 768px) {
     .tasks-wrapper.horizontal {
       flex-direction: column;

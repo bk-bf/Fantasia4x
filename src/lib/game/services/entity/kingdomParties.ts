@@ -1,8 +1,3 @@
-// Kingdom visiting parties (KINGDOMS-TRADE §3) — spawn/despawn of visitor and caravan parties.
-// A party is a group of kingdom-flagged Mobs (trader/guards/visitors/pack beasts) that arrives at
-// the map edge with a leash anchor just outside the colony, lingers a couple of days, then leaves.
-// The party record itself (wares, lifecycle) lives on GameState.kingdomParties.
-
 import type {
   CaravanGood,
   GameState,
@@ -23,13 +18,11 @@ import events from '../../database/social/events.jsonc';
 
 const TICKS_PER_DAY = TURNS_PER_DAY * TICKS_PER_SECOND;
 
-/** Party tuning (stay length, size, camp distance) — data-driven, see database/social/events.jsonc. */
 const EVENTS = events as {
   visitors: { partySize: [number, number]; stayDays: number; anchorRing: [number, number] };
   caravan: { stayDays: number; anchorRing: [number, number] };
 };
 
-/** Caravan guard gear rung per the sending kingdom's wealth (lootpool.jsonc guard_* pools). */
 export const GUARD_POOL_BY_WEALTH: Record<WealthBand, string> = {
   destitute: 'guard_scraps',
   modest: 'guard_bronze',
@@ -51,7 +44,6 @@ function colonyCenter(state: GameState): { x: number; y: number } {
   return { x: Math.round(sx / positioned.length), y: Math.round(sy / positioned.length) };
 }
 
-/** Ring-search for a walkable tile between minR and maxR tiles of (cx,cy). */
 function findWalkableNear(
   map: WorldTile[][],
   cx: number,
@@ -69,30 +61,28 @@ function findWalkableNear(
   return null;
 }
 
-/** A walkable tile within the outer BORDER band of the map — where a caravan enters from. Prefers
- *  the edge nearest the colony's side so the march isn't absurdly long, but any walkable edge works. */
 function findMapEdgeTile(map: WorldTile[][]): { x: number; y: number } | null {
   const h = map.length;
   const w = map[0]?.length ?? 0;
   if (w === 0 || h === 0) return null;
-  const BAND = 4; // how deep from the very edge is still "the edge"
+  const BAND = 4;
   for (let attempt = 0; attempt < 300; attempt++) {
     let x: number;
     let y: number;
     switch (rng.int(0, 3)) {
-      case 0: // top
+      case 0:
         x = rng.int(0, w - 1);
         y = rng.int(0, BAND);
         break;
-      case 1: // bottom
+      case 1:
         x = rng.int(0, w - 1);
         y = rng.int(h - 1 - BAND, h - 1);
         break;
-      case 2: // left
+      case 2:
         x = rng.int(0, BAND);
         y = rng.int(0, h - 1);
         break;
-      default: // right
+      default:
         x = rng.int(w - 1 - BAND, w - 1);
         y = rng.int(0, h - 1);
         break;
@@ -102,7 +92,6 @@ function findMapEdgeTile(map: WorldTile[][]): { x: number; y: number } | null {
   return null;
 }
 
-/** Free tiles around a start point for placing the party members as a cluster. */
 function clusterTiles(
   map: WorldTile[][],
   start: { x: number; y: number },
@@ -158,11 +147,6 @@ function partyRoster(kingdom: Kingdom, kind: KingdomParty['kind']): MemberSpec[]
   ];
 }
 
-/**
- * Spawn a visiting party from `kingdom`. Members enter at the MAP EDGE and are given a goal-directed
- * march ('Traveling' state, `travelGoal` = an anchor near the colony), so they walk straight in and
- * then settle (Wander) to mill and trade until departure. No leash.
- */
 export function spawnKingdomParty(
   state: GameState,
   kingdom: Kingdom,
@@ -172,13 +156,9 @@ export function spawnKingdomParty(
 ): { state: GameState; party: KingdomParty } | null {
   const map = state.worldMap;
   const center = colonyCenter(state);
-  // Anchor: where the party settles to mill and trade — a ring from the colony so it camps at a
-  // respectful distance instead of sitting on top of the colonists (spec §3).
   const ring = kind === 'caravan' ? EVENTS.caravan.anchorRing : EVENTS.visitors.anchorRing;
   const anchor = findWalkableNear(map, center.x, center.y, ring[0], ring[1]);
   if (!anchor) return null;
-  // Entry: a walkable tile at the MAP EDGE, so the party visibly marches the map to reach the colony.
-  // Fall back to a far-from-colony ring, then the anchor, if the edge is all water/mountain.
   const entry = findMapEdgeTile(map) ?? findWalkableNear(map, center.x, center.y, 40, 90) ?? anchor;
 
   const roster = partyRoster(kingdom, kind);
@@ -197,15 +177,10 @@ export function spawnKingdomParty(
     mob.kingdomId = kingdom.id;
     mob.partyId = partyId;
     mob.partyRole = spec.role;
-    // The human members (traders, guards, visitors) are working adults, not the 1-12 creature-flavour
-    // age makeMob rolls — a 6-year-old caravan guard was possible. Pack beasts stay on the animal roll.
     if (spec.role !== 'pack') mob.age = rng.int(18, 60);
-    // Goal-directed march (no leash): head straight for the anchor near the colony, then settle
-    // (Wander) on arrival — the 'Traveling' FSM state.
     mob.state = 'Traveling';
     mob.travelGoalX = anchor.x;
     mob.travelGoalY = anchor.y;
-    // Guards draw the wealth-appropriate rung, overriding the def's default pool.
     if (spec.lootPool) mob.equipment = equipFromLootPool(spec.lootPool) ?? mob.equipment;
     members.push(mob);
   }
@@ -234,7 +209,6 @@ export function spawnKingdomParty(
   };
 }
 
-/** Remove a party from the map — live members leave (despawn); corpses stay where they fell. */
 export function despawnKingdomParty(state: GameState, partyId: string): GameState {
   const party = state.kingdomParties?.find((p) => p.id === partyId);
   if (!party) return state;

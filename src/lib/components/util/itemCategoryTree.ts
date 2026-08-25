@@ -1,19 +1,5 @@
-/**
- * itemCategoryTree — the single source of truth for grouping items into a nested, human-labelled
- * category taxonomy. The raw `items.jsonc` `category` is a flat ~60-value string soup (with 14
- * one-item `*_seed` categories); this collapses it into a readable tree:
- *
- *   Tools · Weapons (Melee→Cutting/Blunt/Piercing, Ranged→…, Ammunition, Shields, Natural) ·
- *   Consumables (Food→Meat/Produce/Meals, Drinks, Medicine, Spoiled) · Seeds · Materials · Goods
- *
- * Like `bodyLabels.ts`, this is the ONE chokepoint that turns backend ids into player-facing labels —
- * panels render `node.label`, never a raw category id (AGENTS "never leak ids in the UI"). Used by
- * `ItemFilterChecklist`, `StockpileZonePanel`, and `ResourceSidebar` so categories read identically
- * everywhere.
- */
 import type { Item } from '$lib/game/core/types.js';
 
-/** Tool item-categories that are work-category bound (Work.ts `toolsRequired`). */
 const TOOL_CATEGORIES = new Set([
   'woodcutting',
   'digging',
@@ -28,9 +14,7 @@ const TOOL_CATEGORIES = new Set([
   'metalworking'
 ]);
 
-/** Flat-category → fixed path, for everything that isn't resolved by item-shape (combat/seeds). */
 const STATIC_CATEGORY_PATH: Record<string, string[]> = {
-  // consumables
   meat: ['consumables', 'food', 'meat'],
   fish: ['consumables', 'food', 'meat'],
   fruit: ['consumables', 'food', 'produce'],
@@ -45,7 +29,6 @@ const STATIC_CATEGORY_PATH: Record<string, string[]> = {
   drink: ['consumables', 'drinks'],
   medicine: ['consumables', 'medicine'],
   spoiled: ['consumables', 'spoiled'],
-  // materials
   wood: ['materials', 'wood'],
   magic_wood: ['materials', 'wood'],
   stone: ['materials', 'stone'],
@@ -63,7 +46,6 @@ const STATIC_CATEGORY_PATH: Record<string, string[]> = {
   organic: ['materials', 'organic'],
   carcass: ['materials', 'organic'],
   soil: ['materials', 'soil'],
-  // goods
   jewelry: ['goods', 'jewelry'],
   light: ['goods', 'light'],
   fuel: ['goods', 'fuel'],
@@ -71,7 +53,6 @@ const STATIC_CATEGORY_PATH: Record<string, string[]> = {
   primitive: ['goods', 'primitive']
 };
 
-/** Resolve a combat item into a weapons sub-path using its `weaponProperties`. */
 function combatPath(item: Item): string[] {
   if (/shield/.test(item.id)) return ['weapons', 'shields'];
   const w = item.weaponProperties;
@@ -80,7 +61,6 @@ function combatPath(item: Item): string[] {
   return ['weapons', ranged ? 'ranged' : 'melee', dmg];
 }
 
-/** Ordered node-key path for an item, e.g. `['weapons','melee','cutting']`. */
 export function categoryPath(item: Item): string[] {
   const cat = item.category || 'other';
   if (cat === 'combat') return combatPath(item);
@@ -91,11 +71,6 @@ export function categoryPath(item: Item): string[] {
   return STATIC_CATEGORY_PATH[cat] ?? ['other'];
 }
 
-/**
- * Best-effort path from a bare category STRING (no item shape) — used only to seed empty branches
- * (e.g. ResourceSidebar's "show all categories"). Combat can't be sub-typed without an item, so it
- * seeds the generic `weapons` parent; real weapon items still create the melee/ranged leaves.
- */
 export function categoryKeyPath(category: string): string[] {
   if (category === 'combat') return ['weapons'];
   if (category === 'ammunition') return ['weapons', 'ammunition'];
@@ -105,7 +80,6 @@ export function categoryKeyPath(category: string): string[] {
   return STATIC_CATEGORY_PATH[category] ?? ['other'];
 }
 
-/** Human label per node key. Fallback = humanized key (Title Case, underscores → spaces). */
 export const CATEGORY_LABELS: Record<string, string> = {
   tools: 'Tools',
   weapons: 'Weapons',
@@ -146,7 +120,6 @@ export const CATEGORY_LABELS: Record<string, string> = {
   other: 'Other'
 };
 
-/** Fixed display order for top-level groups; anything else falls to the end, then alpha. */
 const TOP_ORDER = ['tools', 'weapons', 'consumables', 'seeds', 'materials', 'goods', 'other'];
 
 export function labelFor(key: string): string {
@@ -154,14 +127,10 @@ export function labelFor(key: string): string {
 }
 
 export type TreeNode = {
-  /** This node's key (last path segment). */
   key: string;
-  /** Player-facing label. */
   label: string;
-  /** Full path from the root, e.g. `['weapons','melee','cutting']` — a stable per-node id. */
   path: string[];
   children: TreeNode[];
-  /** Items directly bucketed at this node (leaf). Parents normally have none. */
   items: Item[];
 };
 
@@ -170,11 +139,6 @@ function orderKey(key: string): number {
   return i === -1 ? TOP_ORDER.length : i;
 }
 
-/**
- * Build the nested category tree from the items present. Empty branches don't appear (matching the
- * old flat behaviour). Top level is sorted by `TOP_ORDER` then alpha; deeper levels alpha by label;
- * leaf items by name. `opts.query` filters items by name (case-insensitive) before building.
- */
 export function buildCategoryTree(
   items: Item[],
   opts: { query?: string; seedLeaves?: string[][] } = {}
@@ -195,7 +159,6 @@ export function buildCategoryTree(
     return node;
   }
 
-  // Seed empty branches first (so categories with no items still appear when requested).
   for (const path of opts.seedLeaves ?? []) ensure(path);
 
   for (const item of items) {
@@ -213,7 +176,6 @@ export function buildCategoryTree(
   return roots;
 }
 
-/** Flatten a node's whole subtree into its leaf item ids (for tri-state toggles / counts). */
 export function collectItemIds(node: TreeNode): string[] {
   const ids: string[] = [];
   const walk = (n: TreeNode) => {

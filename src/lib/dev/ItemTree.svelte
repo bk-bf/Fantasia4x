@@ -1,10 +1,3 @@
-<!-- ItemTree.svelte — DEV TOOL. Every item in items.jsonc as one nested, foldable table.
-
-     The flat catalogue could not answer what an audit asks — "what does this age offer for this slot,
-     and what sits empty beside it". Nesting answers it by position: Armour ▸ Bronze ▸ jackal_hide ▸
-     light ▸ head. A tier with one child instead of six IS the hole, visible without reading a row.
-
-     Taxonomy lives in itemTree.ts so a new item files itself; this file only draws it. -->
 <script lang="ts">
   import ItemTreeNode from './ItemTreeNode.svelte';
   import ItemTreeHeader from './ItemTreeHeader.svelte';
@@ -18,8 +11,6 @@
   } from './itemTree';
   import type { GearRow } from './gearDb';
 
-  // The build tables already own a positioned, styled tooltip; the page hands its handlers down so
-  // hovering a tree row raises THAT one rather than a second copy that would drift from it.
   let { onhover, onout }: { onhover: (row: GearRow, e: MouseEvent) => void; onout: () => void } =
     $props();
 
@@ -30,10 +21,6 @@
   const toggle = (key: string) => (open[key] = !open[key]);
   const select = (id: string) => (sel[id] ? delete sel[id] : (sel[id] = true));
 
-  // Column sort. It reorders the GROUP HEADINGS as well as the rows (see itemTree.sortTree) — a shelf
-  // usually holds one age, so ordering only the rows inside it left the table looking unsorted. Three
-  // clicks on a heading cycle ascending → descending → back to the natural order, so there is always
-  // a way out of a sort without hunting for a reset button.
   let sortKey = $state<SortKey | null>(null);
   let sortDir = $state<1 | -1>(1);
   function sortBy(key: SortKey) {
@@ -47,8 +34,6 @@
     }
   }
 
-  // Filtering rebuilds the tree from the surviving rows rather than hiding cells: a branch that keeps
-  // nothing disappears with its heading, so the counts on screen are always true.
   const needle = $derived(q.trim().toLowerCase());
   const tree = $derived(
     needle
@@ -63,7 +48,6 @@
       : ITEM_TREE
   );
 
-  // What is actually drawn: the filtered tree, ordered by whichever column is active.
   const view = $derived(sortTree(tree, sortKey, sortDir));
 
   const everyKey = (n: TreeNode, out: string[] = []): string[] => {
@@ -79,7 +63,6 @@
     open = next;
   };
   const collapseAll = () => (open = {});
-  // A search with nothing unfolded shows only headings; open everything it kept.
   $effect(() => {
     if (needle) expandAll();
   });
