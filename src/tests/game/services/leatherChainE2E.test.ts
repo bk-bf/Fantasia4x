@@ -27,8 +27,6 @@ const CONSUMERS = recipeService
       usesCat('category:cured_hide')(r)
   );
 
-// Provision a colony that can afford everything: every station these recipes need, all research/tools,
-// and 999 of every material/food/consumable so only the STATION/research/tool gates are under test.
 function provisioned(): GameState {
   const stations = new Set<string>();
   for (const r of [...CURE, ...TAN, ...CONSUMERS]) if (r.station) stations.add(r.station);
@@ -133,7 +131,6 @@ describe('leather chain — physical pawn pipeline (HeadlessSession, real ticks)
         seedEntities: false
       })
     );
-    // Founders default to no enabled labor in a headless scenario — turn it on so they work the queue.
     for (const p of session.getState().pawns)
       for (const w of workService.getAllWorkCategories())
         session.command({
@@ -144,12 +141,10 @@ describe('leather chain — physical pawn pipeline (HeadlessSession, real ticks)
     session.command({
       type: 'craftItem',
       payload: { itemId: 'brimmed_leather_hood', quantity: 1 }
-    } as never); // category:leather
-    // Wool now goes fleece -> yarn -> cloth, the same two steps flax has always had.
+    } as never);
     session.command({ type: 'craftItem', payload: { itemId: 'wool_yarn', quantity: 3 } } as never);
     for (let i = 0; i < 8 && !((stock().wool_yarn ?? 0) >= 3); i++) session.tick(500);
-    session.command({ type: 'craftItem', payload: { itemId: 'woolcloth', quantity: 1 } } as never); // category:wool
-    // Reserve → haul → stage → craft is a multi-tick pawn pipeline; give it room for both stations.
+    session.command({ type: 'craftItem', payload: { itemId: 'woolcloth', quantity: 1 } } as never);
     for (let i = 0; i < 16 && !(stock().brimmed_leather_hood > 0 && stock().woolcloth > 0); i++)
       session.tick(500);
     console.log(
@@ -164,20 +159,17 @@ describe('leather chain — physical pawn pipeline (HeadlessSession, real ticks)
     expect(stock().goat_wool, 'wool consumed').toBeLessThan(40);
   });
 
-  // The two-step PASSIVE chain, physically: pawns haul hide+ash to the Curing Frame, it cures, then they
-  // haul the cured hide + brine to the tanning bucket and it tans. Now provable — the earlier stall was
-  // unreachable starting stock on a generated map, not a passive-station defect.
   it('pawns physically cure a hide then tan it into leather (two passive stations, real ticks)', async () => {
     const session = new HeadlessSession();
     await session.start(
       buildScenario({
         seed: 11,
-        map: { w: 20, h: 20 }, // flat by default → every tile reachable
+        map: { w: 20, h: 20 },
         researchMaxTier: 9,
         toolTier: 3,
         pawns: [{ count: 6, skillLevel: 12 }],
         needsDisabled: ['hunger', 'fatigue'],
-        workReady: true, // stocks a fleshing tool for the ACTIVE flesh step (§A)
+        workReady: true,
         buildings: [{ id: 'hide_rack' }, { id: 'tanning_bucket_station' }],
         items: { deer_hide: 20, ash: 40, tanning_brine: 20 },
         seedEntities: false
@@ -190,21 +182,18 @@ describe('leather chain — physical pawn pipeline (HeadlessSession, real ticks)
           payload: { pawnId: p.id, workId: w.id, level: 3 }
         } as never);
     const stk = () => (session.getState().stockpile ?? {}) as Record<string, number>;
-    // §A: the ACTIVE flesh step now comes FIRST — a raw hide must be scraped clean before it can cure.
     session.command({
       type: 'craftItem',
       payload: { itemId: 'fleshed_deer_hide', quantity: 1 }
     } as never);
     for (let i = 0; i < 16 && !(stk().fleshed_deer_hide > 0); i++) session.tick(400);
     const fleshed = stk().fleshed_deer_hide ?? 0;
-    // …then cure the FLESHED hide at the rack…
     session.command({
       type: 'craftItem',
       payload: { itemId: 'cured_deer_hide', quantity: 1 }
     } as never);
     for (let i = 0; i < 16 && !(stk().cured_deer_hide > 0); i++) session.tick(400);
     const cured = stk().cured_deer_hide ?? 0;
-    // …then tan that cured hide into buckskin at the bucket (brine consumed as a real input).
     session.command({ type: 'craftItem', payload: { itemId: 'buckskin', quantity: 1 } } as never);
     for (let i = 0; i < 16 && !(stk().buckskin > 0); i++) session.tick(400);
     console.log(
@@ -224,7 +213,7 @@ describe('leather chain — physical pawn pipeline (HeadlessSession, real ticks)
         map: { w: 20, h: 20 },
         researchMaxTier: 9,
         toolTier: 3,
-        workReady: true, // stocks a leatherworking tool that clears both the flesh (t1) and curry (t2) gates
+        workReady: true,
         pawns: [{ count: 6, skillLevel: 16 }],
         needsDisabled: ['hunger', 'fatigue'],
         buildings: [
@@ -247,14 +236,13 @@ describe('leather chain — physical pawn pipeline (HeadlessSession, real ticks)
       session.command({ type: 'craftItem', payload: { itemId: item, quantity: 1 } } as never);
       for (let i = 0; i < 16 && !(stk()[item] > 0); i++) session.tick(400);
     };
-    step('fleshed_wolf_hide'); // active flesh
-    step('cured_wolf_hide'); // passive cure (of the FLESHED hide)
-    step('wolf_leather'); // passive tan
-    step('prime_wolf_leather'); // ACTIVE curry at the currier's bench — the beast-tier gate
+    step('fleshed_wolf_hide');
+    step('cured_wolf_hide');
+    step('wolf_leather');
+    step('prime_wolf_leather');
     console.log(
       `[BEAST-CHAIN] fleshed_wolf=${stk().fleshed_wolf_hide} cured_wolf=${stk().cured_wolf_hide} wolf_leather=${stk().wolf_leather} prime_wolf_leather=${stk().prime_wolf_leather} fat=${stk().tallow}/20`
     );
-    // The whole animal-identity chain survives: a WOLF hide drives a WOLF-named prime leather.
     expect(
       stk().prime_wolf_leather ?? 0,
       'curry produced prime wolf leather (2 active steps for a beast)'

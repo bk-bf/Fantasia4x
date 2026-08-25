@@ -4,19 +4,14 @@ import { HeadlessSession } from '$lib/game/headless/HeadlessSession';
 import { recipeService } from '$lib/game/services/RecipeService';
 import { itemService } from '$lib/game/services/ItemService';
 import { completeCraftOrder } from '$lib/game/services/jobs/craft';
-import { getEquipmentSlot } from '$lib/game/core/PawnEquipment';
-import { ARMOUR_SLOTS } from '$lib/game/core/armorCoverage';
+import { getEquipmentSlot } from '$lib/game/core/rules/gear/equipment';
+import { ARMOUR_SLOTS } from '$lib/game/core/rules/gear/armorCoverage';
 import type { EquipmentSlot, GameState, Item } from '$lib/game/core/types';
-
-// The armour expansion, verified where it actually matters: can a colony REACH these pieces.
-// Every limb line (bracers/greaves) previously had an items.jsonc entry and no recipe, so
-// the combat probes measured armour no pawn could ever put on.
 
 const ARMOUR = itemService
   .getItemsByType('armor')
   .filter((i) => i.armorProperties?.armorType && i.armorProperties.armorType !== 'shield');
 
-/** Provision a colony that can afford everything, so only the station/research/tool gates are live. */
 function provisioned(): GameState {
   const stations = new Set<string>();
   for (const i of ARMOUR) {
@@ -61,7 +56,7 @@ describe('armour reaches the craft card (provisioned colony, recipe gating live)
   it('every wearable armour piece queues AND produces its output', () => {
     const fail: string[] = [];
     for (const i of ARMOUR) {
-      if (!recipeService.getRecipeForItem(i.id)) continue; // loot-only; armourCoverage.test guards that set
+      if (!recipeService.getRecipeForItem(i.id)) continue;
       if (!itemService.canQueueCraft(i.id, state)) {
         fail.push(`${i.id}: canQueueCraft=false`);
         continue;
@@ -80,7 +75,6 @@ describe('armour reaches the craft card (provisioned colony, recipe gating live)
   });
 
   it('every limb and extremity slot has a craftable piece', () => {
-    // The regression this file exists for: shoulders/arms/legs had zero craftable pieces at any age.
     const craftableIn = (slot: EquipmentSlot) =>
       ARMOUR.filter(
         (i) => i.armorProperties!.equipmentSlot === slot && recipeService.getRecipeForItem(i.id)
@@ -92,9 +86,6 @@ describe('armour reaches the craft card (provisioned colony, recipe gating live)
   });
 
   it('every wearable piece resolves to a slot the mitigation walk visits', () => {
-    // A piece whose slot is not in ARMOUR_SLOTS is stored under a key `mitigationAt` never reads, so
-    // it soaks nothing however good its `defense` is. `stargazer_circlet` shipped exactly that way.
-    // `back` is exempt: a cloak deliberately soaks nothing and pays out in warmth and carry instead.
     const bad = ARMOUR.filter((i) => {
       const slot = getEquipmentSlot(i as Item);
       if (slot === 'back') return false;
@@ -135,7 +126,6 @@ describe('armour chain — physical pawn pipeline (HeadlessSession, real ticks)'
       payload: { itemId: 'branch_bracers', quantity: 1 }
     } as never);
     for (let i = 0; i < 16 && !(stk().branch_bracers > 0); i++) session.tick(400);
-    // …and a piece from the new species-named Bronze light set, to prove the rework is craftable.
     session.command({
       type: 'craftItem',
       payload: { itemId: 'jackal_bracers', quantity: 1 }

@@ -1,6 +1,3 @@
-// Zones, designations, and building types. Split out of core/types.ts (P-4); re-exported via the
-// barrel.
-
 import type { VesselContent } from './items';
 
 export type DesignationType =
@@ -11,44 +8,24 @@ export type DesignationType =
   | 'mine'
   | 'haul'
   | 'clear'
-  // ── PRODUCTION-CHAIN-II §F: dig — strip a fertile tile for its soil (the harvest-vs-cut twin) ──
   | 'dig'
   | 'stockpile'
-  // ── PRODUCTION-CHAIN-EXPANSION §D: water/hygiene zones ──
   | 'drink'
   | 'wash'
-  // ── PRODUCTION-CHAIN-II §F: growing zone — pawns sow the zone's seed onto eligible soil ──
   | 'grow'
-  // ── Restriction zone — confines its assigned pawns to its tiles (RimWorld-style allowed area) ──
   | 'restrict';
 
-/** Zone types that support item-category filtering. */
-// Paintable zone-instance types. 'harvest'/'stockpile' carry an item filter; 'drink'/'wash' are
-// pure location designations (no filter) that pawns route to for thirst/hygiene; 'grow' carries a
-// seed filter (which crop to plant).
 export type FilterableZoneType = 'harvest' | 'stockpile' | 'drink' | 'wash' | 'grow';
 
-/** Every paintable zone-instance type: the item/seed-filterable ones plus 'restrict' (which carries a
- *  pawn assignment instead of an item filter). */
 export type ZoneInstanceType = FilterableZoneType | 'restrict';
 
-/**
- * DF-style category filter for a zone type.
- * An empty `allowedCategories` means "allow everything".
- */
 export interface ZoneFilter {
-  /** Item categories that are allowed. Empty = no filter (all categories pass). */
   allowedCategories: string[];
-  /** Specific item IDs to block regardless of their category. */
   blockedItems: string[];
 }
 
-/** Haul-fill priority for a stockpile zone: pawns top up higher-priority zones before lower ones
- *  (and only spill into a lower zone once the higher one is full). 'normal' is the default. */
 export type ZonePriority = 'low' | 'normal' | 'preferred' | 'urgent';
 
-/** Numeric rank for {@link ZonePriority} — higher fills first. Exported so the haul-destination sort
- *  and the UI dropdown share one source of truth. */
 export const ZONE_PRIORITY_RANK: Record<ZonePriority, number> = {
   low: 0,
   normal: 1,
@@ -56,131 +33,70 @@ export const ZONE_PRIORITY_RANK: Record<ZonePriority, number> = {
   urgent: 3
 };
 
-/** A named, individually-filterable zone instance (e.g. "Forage 1", "Stockpile 2", "Restrict 1"). */
 export interface ZoneInstance {
   id: string;
   type: ZoneInstanceType;
   label: string;
   filter: ZoneFilter;
-  /** Stockpile zones only: haul-fill priority (see {@link ZonePriority}). Undefined = 'normal'. */
   priority?: ZonePriority;
-  /**
-   * CONTAINERS-AND-FLUIDS §3 (DF's "max bins/barrels") — stockpile zones only: a CAP on how many
-   * vessels this stockpile will hold, so one zone cannot hoard every barrel the colony owns.
-   *
-   * Undefined or 0 means no cap, which is the old behaviour exactly — the control only ever takes
-   * capacity away. What makes a bin actually swallow goods is the bin's OWN allow-list, and a vessel
-   * set down in a filtered stockpile is seeded from that zone's filter, so telling a stockpile "food
-   * only" tells its barrels the same thing without a second round of clicking.
-   */
   containerBudget?: number;
-  /** View-only: when true, this zone's tint is suppressed on the map. Persisted with the save. */
   colorHidden?: boolean;
-  /** RESTRICT zones only: pawns confined to this zone's tiles. A pawn's allowed area is the UNION of
-   *  every restrict zone it's assigned to; a pawn in no restrict zone roams the whole map. `filter` is
-   *  unused for restrict zones. */
   assignedPawnIds?: string[];
 }
 
-/**
- * A named stockpile zone. Items physically live here — the colony aggregate
- * (GameState.stockpile) is always the sum of all zone inventories.
- * A zone with an empty `tiles` array is a virtual/non-spatial zone (catch-all).
- */
 export interface StockpileZone {
   id: string;
   name: string;
-  /** "x,y" map tile keys that belong to this zone. */
   tiles: string[];
   filter: ZoneFilter;
-  /** Items stored here. Sum across all zones == GameState.stockpile. */
   inventory: Record<string, number>;
 }
 
 export interface FuelSettings {
-  /** Refuel only when current fuel is below this percentage (0-100). */
   refuelThresholdPct?: number;
-  /** Restrict fuel inputs to these item IDs. Empty/undefined means any fuel item. */
   allowedFuelItemIds?: string[];
-  /** Restrict refuel jobs to these pawn IDs. Empty/undefined means any pawn. */
   allowedRefuelPawnIds?: string[];
-  /** When true, no new refuel jobs are generated for this building. */
   paused?: boolean;
 }
 
-/** Per-building repair controls — mirrors {@link FuelSettings}; edited by the REPAIR fly-out. */
 export interface RepairSettings {
-  /** Repair only once condition falls below this percentage (0-100). Default 100 (repair any wear). */
   repairThresholdPct?: number;
-  /** Restrict the materials a repair may consume to these item IDs (the "flat pool" — any allowed item
-   *  counts toward the proportional cost). Empty/undefined means the building's default repair set. */
   allowedMaterialItemIds?: string[];
-  /** Restrict repair jobs to these pawn IDs. Empty/undefined means any pawn. */
   allowedRepairPawnIds?: string[];
-  /** When true, no new repair jobs are generated for this building. */
   paused?: boolean;
 }
 
 export interface StorageSettings {
-  /**
-   * §F storage bins — explicit per-building allow-list of item IDs this store accepts. `undefined`
-   * means "use the building's default": a specialized bin's `storageFilter` (categories), or accept
-   * everything for a general store. An explicit list — even empty — is honoured (empty = take nothing).
-   */
   allowedItemIds?: string[];
-  /** Haul-fill priority for this storage bin (same scale as a stockpile zone). Pawns top up
-   *  higher-priority stores first. Undefined = 'normal'. See {@link ZonePriority}. */
   priority?: ZonePriority;
 }
 
 export interface PlacedBuilding {
-  id: string; // unique instance id
-  type: string; // building definition id (matches Building.id)
+  id: string;
+  type: string;
   x: number;
   y: number;
   status: 'planned' | 'under_construction' | 'complete';
-  progress: number; // 0–1 (legacy; use workDone/workRequired for placed buildings)
-  paused?: boolean; // construction paused by player
-  /** §M chosen materials per `category:` cost slot (slotKey → itemId), recorded at placement so the
-   *  building's stats reflect what it was built from (oak vs pine, granite vs marble). */
+  progress: number;
+  paused?: boolean;
   materials?: Record<string, string>;
-  // Phase 5c: work-point construction
-  workRequired?: number; // = buildDef.workAmount
-  workDone?: number; // accumulated work points
-  materialsDelivered?: boolean; // materials consumed from stockpile?
-  // Phase 6: fuel / lighting state
-  fuel?: number; // current fuel units remaining
-  lit?: boolean; // campfire is burning right now
-  /** Heat rating (fuelHeat units, ~1–5) of the fuel currently loaded — set on refuel from the energy-
-   *  weighted mix. Gates smelting (vs def.minFuelHeat) and scales radiated warmth. 0/undefined = cold. */
+  workRequired?: number;
+  workDone?: number;
+  materialsDelivered?: boolean;
+  fuel?: number;
+  lit?: boolean;
   fireHeat?: number;
-  /** Burn-longevity multiplier (≥1) from the loaded fuel's `burnDuration`; the station drains
-   *  `fuelConsumptionRate / burnFactor` per tick, so denser fuel lasts longer. Undefined = 1×. */
   burnFactor?: number;
-  /** Fuel item ids in the currently-loaded bed, dominant (most units) first — set on refuel from the
-   *  consumed mix (tinder excluded). Display-only ("what's burning" in the building panel). */
   fuelItemIds?: string[];
-  fuelSettings?: FuelSettings; // optional per-building refuel controls
-  storageSettings?: StorageSettings; // §F optional per-building storage-bin item filter
-  repairSettings?: RepairSettings; // optional per-building repair controls (threshold / materials / pawns)
-  // Deconstruction
-  deconstructQueued?: boolean; // player has queued this building for demolition
-  deconstructWorkRequired?: number; // work points to demolish (½ workAmount)
-  deconstructWorkDone?: number; // accumulated demolition work points
-  // Shelter assignment
-  assignedPawnId?: string; // pawn who owns this shelter; only they will use it
-  // Quality from construction work stat
-  quality?: number; // 0.1–2.0+ multiplier from construction_quality stat
-  // §B/refactor Stage 1: per-instance structural condition.
-  /** 0–100; 100 = pristine. Decays for buildings with a def `conditionDecayPerTurn`; restored by repair. Undefined = treat as full. */
+  fuelSettings?: FuelSettings;
+  storageSettings?: StorageSettings;
+  repairSettings?: RepairSettings;
+  deconstructQueued?: boolean;
+  deconstructWorkRequired?: number;
+  deconstructWorkDone?: number;
+  assignedPawnId?: string;
+  quality?: number;
   condition?: number;
-  /**
-   * CONTAINERS-AND-FLUIDS §2 — what this station is holding in its own body, for the buildings that
-   * realistically ARE a vessel: a steeping vat full of brine, a cask of ale still working, a trough of
-   * water. Only buildings whose def states a `fluidCapacityL` ever have this. It counts toward the
-   * colony's stock exactly as a barrel on a stockpile tile does, so brewing a batch is not a hole in
-   * the ledger; pawns draw it into a carried vessel with an ordinary fetch.
-   */
   fluidContents?: VesselContent[];
 }
 
@@ -189,55 +105,28 @@ export interface Building {
   name: string;
   description: string;
 
-  // Visual representation
   emoji?: string;
   color?: string;
-  /** Glyph source descriptors for map rendering (resolved via resolveCharSpans). */
   charSpans?: Array<{ sheet?: string; id?: number; from?: number; to?: number; literal?: string }>;
-  /** When true, the building keeps the UNDERLYING terrain tile's background instead of painting `bg`
-   *  — so a flat marker like a sleeping spot blends into whatever ground it was placed on. */
   transparentBg?: boolean;
 
-  /** Whether pawns/mobs can enter this building's tile. Defaults to true (passable
-   *  furniture, spots, beds, doors). Set false for solid structures — walls, furnaces,
-   *  fires — so a COMPLETED one blocks movement and pathfinding routes around it. Blueprints
-   *  stay walkable; the flag is applied to the tile only on completion, restored on deconstruct
-   *  (worldMap.walkable is persisted, so it survives save/load). */
   walkable?: boolean;
 
-  /** Whether a COMPLETED building blocks combat line-of-sight (RANGED-COMBAT Part VII). Set true ONLY
-   *  for walls — a campfire/furnace/window is non-walkable but see-through, so this is independent of
-   *  `walkable`. Baked onto the tile's `blocksSight` flag on completion, cleared on deconstruct. */
   blocksSight?: boolean;
 
-  /** Hide this def from the build menu — it is placed by the engine, never by the player (e.g. the
-   *  natural `mountain_roof` spawned when overhead rock is mined out). */
   notBuildable?: boolean;
 
-  // Construction requirements
-  buildingCost: Record<string, number>; // Renamed from 'cost' to match item system
-  /**
-   * Alternative cost sets — ANY ONE may be paid in place of `buildingCost`, mirroring a recipe's
-   * `inputAlternatives`. The case it exists for: a soil bed is normally *made* (dirt + compost +
-   * fertiliser), but a colonist who dug real loam out of a riverbank should be able to lay THAT
-   * instead of composting their way to the same thing. Resolved in `resolveBuildingCost`, which tries
-   * the main cost first and falls through the alternatives in order.
-   */
+  buildingCost: Record<string, number>;
   buildingCostAlternatives?: Record<string, number>[];
   workAmount: number;
-  toolTierRequired: number; // Matches item system progression
-  /** ADR-009 step 2 — craft-tool gate: a pawn must carry a qualifying tool to WORK a craft job at
-   *  this station (mirrors resources.jsonc's harvest `toolRequirement`). The recipe's station maps
-   *  here; a per-recipe `Recipe.toolRequirement` overrides it. Omitted = station needs no tool. */
+  toolTierRequired: number;
   toolRequirement?: { workType: string; minTier: number };
   populationRequired: number;
 
-  // Prerequisites
   researchRequired: string | null;
-  tier: number; // Technology level (0-2) matching item progression
+  tier: number;
   rarity: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
 
-  // Building categories - expanded for comprehensive system
   category:
     | 'housing'
     | 'production'
@@ -252,85 +141,59 @@ export interface Building {
     | 'structure'
     | 'shelter';
 
-  // Operational costs and maintenance
-  upkeepCost: Record<string, number>; // Daily/periodic resource consumption
+  upkeepCost: Record<string, number>;
 
-  // Building effects and bonuses
-  effects: Record<string, number>; // General effects (populationCapacity, weatherProtection, etc.)
-  productionBonus: Record<string, number>; // Specific item production bonuses
+  effects: Record<string, number>;
+  productionBonus: Record<string, number>;
 
-  // Storage capabilities
-  storageCapacity: Record<string, number>; // Storage for different item categories
-  /**
-   * §F storage bins — a specialized store (hay rack, meat hooks, salting barrel…) restricts what its
-   * tile accepts. Entries are matched as item CATEGORIES or explicit item IDs (so `hay`, miscategorised
-   * as "primitive", can still be the sole content of a hay rack). Absent/empty = a GENERAL store that
-   * takes anything (like the wicker basket). Only meaningful alongside `effects.storageStacks`.
-   */
+  storageCapacity: Record<string, number>;
   storageFilter?: string[];
 
-  // Building-specific properties
   buildingProperties?: {
-    // Housing properties
     populationCapacity?: number;
     weatherProtection?: number;
     morale?: number;
     defenseBonus?: number;
-    /** SOCIAL: a GATHERING PLACE (campfire, hearth) — pawns nearby are in a sociable context, so
-     *  drawn-out dialog can happen here even mid-day and leans warmer (SocialService.processDialogTick). */
     gathering?: boolean;
-    /** SOCIAL: how good a gathering place this is (default 1). Pawns are drawn to the HIGHEST-level
-     *  reachable one — campfire 1 < hearth 2 ≈ hewn table 2 < planked hall table 3. */
     gatheringLevel?: number;
-    /** COMFORT: a SEAT (chair/bench/couch/stool) — an idle, uncomfortable pawn paths here and LOUNGES to
-     *  fill the `comfort` need; fill rate scales with THAT SEAT's own comfort (never ambient). */
     seat?: boolean;
 
-    // Production properties
     craftingSpeed?: number;
     qualityBonus?: number;
     efficiency?: number;
-    specialization?: string[]; // What this building specializes in
+    specialization?: string[];
 
-    // Knowledge properties
     knowledgeGeneration?: number;
     researchSpeed?: number;
     scholarCapacity?: number;
 
-    // Military properties
     defensiveStrength?: number;
     troopCapacity?: number;
     militaryTraining?: number;
 
-    // Food properties
     foodProduction?: number;
     preservationBonus?: number;
     nutritionBonus?: number;
 
-    // Commerce properties
     tradeBonus?: number;
     wealthGeneration?: number;
     marketCapacity?: number;
 
-    // Magical properties
     magicalPower?: number;
     spellcasting?: number;
     enchantmentBonus?: number;
 
-    // Environmental effects
     temperatureControl?: number;
     weatherResistance?: number;
     naturalHarmony?: number;
 
-    // Special abilities
     uniqueAbilities?: string[];
     passiveEffects?: Record<string, number>;
     activeAbilities?: Record<string, any>;
   };
 
-  // Upgrade system
   upgradeOptions?: {
-    upgradeTo?: string; // ID of upgraded building
+    upgradeTo?: string;
     upgradeCost?: Record<string, number>;
     upgradeTime?: number;
     upgradeRequirements?: {
@@ -340,90 +203,58 @@ export interface Building {
     };
   };
 
-  // Building interactions
   synergies?: {
-    adjacencyBonus?: Record<string, number>; // Bonuses when built near specific buildings
-    networkEffects?: Record<string, number>; // Bonuses based on number of similar buildings
-    chainBonus?: string[]; // Buildings that enhance this one's effects
+    adjacencyBonus?: Record<string, number>;
+    networkEffects?: Record<string, number>;
+    chainBonus?: string[];
   };
 
-  // Conditional requirements and effects
   conditionalEffects?: {
-    condition: string; // e.g., "population > 50", "has_building:marketplace"
+    condition: string;
     effects: Record<string, number>;
   }[];
 
-  // Building state management
   buildingState?: {
-    isUnique?: boolean; // Can only build one
-    maxCount?: number; // Maximum number allowed
-    requiresLocation?: string; // Specific terrain/location requirements
-    environmentalNeeds?: string[]; // Environmental requirements
+    isUnique?: boolean;
+    maxCount?: number;
+    requiresLocation?: string;
+    environmentalNeeds?: string[];
   };
 
-  // Phase 6: fire / storage / rest semantics
-  requiresLighting?: boolean; // must be lit before use (e.g. campfire)
-  maxFuel?: number; // maximum fuel units it can hold
-  /** CONTAINERS-AND-FLUIDS §2 — litres of fluid this station holds in its own body (a steeping vat, a
-   *  brewing cask, a water trough). A fluid-output recipe worked here pours straight into the station
-   *  instead of needing a vessel staged on the tile; the level shows in `PlacedBuilding.fluidContents`
-   *  and counts in the colony stock. Omitted = the station holds no fluid and a recipe that makes one
-   *  must have a vessel with room staged on it. */
+  requiresLighting?: boolean;
+  maxFuel?: number;
   fluidCapacityL?: number;
-  fuelConsumptionRate?: number; // fuel units burned per turn when lit
-  // ── Dynamic point lighting (data-driven; see LightingService / EnvironmentService) ──
-  /** Falloff radius in tiles. PRESENCE is the toggle: any building with `lightRadius` emits
-   *  light (no per-building code). A fuelled building (maxFuel>0) only glows while `lit`; a
-   *  fuel-free one glows whenever complete. */
+  fuelConsumptionRate?: number;
   lightRadius?: number;
-  /** Peak additive light strength at the source. Defaults to the fire intensity (1.1). */
   lightIntensity?: number;
-  /** Normalised RGB light colour [r,g,b] 0–1. Defaults to warm fire [1.0, 0.55, 0.22]. */
   lightColor?: [number, number, number];
-  // ── PRODUCTION-CHAIN-EXPANSION §2/§5/§F: heat, flux, molds, storage ──
-  /** §B structural wear/turn for complete instances. EXPLICIT `0` = IMMUNE (never decays — tile/mountain
-   *  roofs). `undefined` = use the default wear rate IF the building has a build cost (so every real
-   *  building deteriorates + is repairable); a free/marker building with no cost never decays. */
   conditionDecayPerTurn?: number;
-  /** Repair-material allow-list (flat pool — any of these may be consumed for a repair). Undefined =
-   *  default to the build-cost item ids (with `category:` slots expanded). e.g. a thatch roof lists
-   *  hay + branch + plant_fiber so plant fiber can stand in for hay. */
   repairMaterials?: string[];
-  tileCapacityBonus?: number; // refactor Stage 2: extra item capacity this building grants to its tile (§F storage)
-  minFuelHeat?: number; // station won't operate below this fuel heat rating (§2)
-  passive?: boolean; // ADR-016: a furnace that transforms loaded inputs over time with no pawn job
-  /** PRODUCTION-CHAIN-II §F (Soil Works): a one-shot terraform build. On completion it rewrites the
-   *  tile's `subType` to this subterrain (raising soil fertility) and then removes itself — "replace
-   *  the dirt". Handled in jobs/construct.complete. */
+  tileCapacityBonus?: number;
+  minFuelHeat?: number;
+  passive?: boolean;
   terraformSubType?: string;
-  fluxPerBatch?: number; // limestone flux consumed per smelt batch (bloomery, §5)
-  moldRequired?: string; // clay/metal mold consumed/worn per cast (§5/§G)
+  fluxPerBatch?: number;
+  moldRequired?: string;
   fuelRequirements?: {
     tinderItemId?: string;
     tinderAmount?: number;
   };
-  /** PRODUCTION-CHAIN-III §B.2: the fuel-filter allow-list this building starts with — seeded into a
-   *  placed building's `fuelSettings.allowedFuelItemIds` at placement (the player can still edit it).
-   *  Two uses: a HARD restriction (a tanning bucket burns only `tanning_brine`/`beast_brine`, never
-   *  firewood) and a SANE default (a campfire/hearth burns everyday wood/turf, with logs/bark/coal as
-   *  manual emergency picks). Empty/undefined = the global default burn-list. */
   defaultAllowedFuelItemIds?: string[];
-  isStorage?: boolean; // colonists can retrieve food/items here
-  isRest?: boolean; // colonists can sleep here
+  isStorage?: boolean;
+  isRest?: boolean;
 
-  // Integration with item system
   itemInteractions?: {
-    consumes?: Record<string, number>; // Items consumed during operation
-    produces?: Record<string, number>; // Items produced over time
-    transforms?: Record<string, string>; // Item transformation recipes
-    requires?: string[]; // Specific items needed for operation
+    consumes?: Record<string, number>;
+    produces?: Record<string, number>;
+    transforms?: Record<string, string>;
+    requires?: string[];
   };
 
-  // Event system integration
   eventTriggers?: {
-    onConstruction?: string[]; // Events triggered when built
-    onOperation?: string[]; // Events triggered during operation
-    onUpgrade?: string[]; // Events triggered when upgraded
-    onDestruction?: string[]; // Events triggered when destroyed
+    onConstruction?: string[];
+    onOperation?: string[];
+    onUpgrade?: string[];
+    onDestruction?: string[];
   };
 }

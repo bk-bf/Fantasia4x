@@ -1,9 +1,3 @@
-/**
- * pawnHauling — the ADR-016 reserve-and-fetch deposit pipeline, extracted from pawnHelpers
- * (hotspot follow-up). Finds the deposit point, stages a fetched craft order's inputs ON its
- * station tile, and deposits a pawn's inventory into the nearest stockpile zone. Consumed by the
- * work-state handlers; depends only on core/services + goIdle, so the import graph stays acyclic.
- */
 import type { GameState, Pawn, ItemInstance } from '../../core/types';
 import {
   addToStockpileZone,
@@ -12,17 +6,17 @@ import {
   storageTileKeys,
   tilePileCapacity,
   tileStoredPileCount
-} from '../../core/GameState';
-import { usedWeightKg } from '../../core/vessels';
-import { manhattan } from '../../core/distance';
+} from '../../core/state/stockpile';
+import { usedWeightKg } from '../../core/rules/gear/vessels';
+import { manhattan } from '../../core/util/distance';
 import { occupancyService } from '../../services/OccupancyService';
 import { itemService } from '../../services/ItemService';
 import { storageAcceptsDrop, storageTileAcceptsDrop } from '../../services/jobs/haul';
 import { zonePriorityRankAt } from '../../services/DesignationService';
-import { ENC_OVERLOAD_FULL } from '../../core/needs';
-import { gameLogger } from '../../dev/gameLogger';
-import { rng } from '../../core/rng';
-import { mergeConditions } from '../../core/carcassCondition';
+import { ENC_OVERLOAD_FULL } from '../../core/rules/body/conditions';
+import { gameLogger } from '../../debug/gameLogger';
+import { rng } from '../../core/util/rng';
+import { mergeConditions } from '../../core/rules/world/carcassCondition';
 import { PAWN_STATE } from './pawnStates';
 import { goIdle } from './pawnHelpers';
 import { isCarriedPawnInstance } from './carry';
@@ -36,34 +30,8 @@ const EMPTY_INVENTORY = {
   maxVolumeL: 20
 } as const;
 
-/**
- * Ticks a load set DOWN loose by `dropLooseAtPawn` (stockpile unreachable) is skipped by `haul.generate`
- * before it may be re-targeted. Without it the same unreachable pawn re-grabs the pile and drops it again
- * every tick — the floor-shuffle. Long enough to break the per-tick storm, short enough that the goods
- * resume hauling soon after a route opens. ~10 in-game seconds at 60 TPS.
- */
 export const REHAUL_COOLDOWN_TICKS = 600;
 
-/**
- * Pick up ground items at tile (x,y) into a pawn's inventory, clamped by its weight/volume carry
- * budget (belt/back containers raise it). Pure + worker-safe — used by the right-click "pick up"
- * context menu (a specific `dropId`) and the drafted "haul to stockpile" loop (every loose drop on
- * the tile). Items that don't fit stay on the ground for another trip.
- *
- * @param opts.dropId       restrict to one DroppedItem (the menu lists drops individually)
- * @param opts.resourceId   restrict to one resource id
- * @param opts.maxQty       cap the TOTAL units taken across matching drops (default: all that fit)
- * @param opts.looseOnly    ignore `stored` (stockpiled) drops — used by haul so it never re-grabs stock
- * @param opts.radius       Chebyshev radius around (x,y) to sweep (default 0 = the tile itself)
- * @param opts.capFactor    carry-budget multiplier (default 1; haul passes ENC_OVERLOAD_FULL to overfill)
- * @param opts.skipForbidden ignore player-forbidden drops (auto-haul respects the lock; right-click doesn't)
- * @param opts.skipCooling  ignore drops on a re-haul cooldown (auto-haul respects it; right-click doesn't)
- * @param opts.acceptTest   predicate gating which resourceIds may be taken (e.g. stockpileAcceptsDrop)
- *
- * Always lets the pawn take at least ONE unit (mirrors `itemService.clampPickupQuantity`'s floor) so
- * a single over-budget item is never un-pickable. Recomputes `stockpile` since a picked-up `stored`
- * drop reduces colony stock.
- */
 export function pickUpFromTile(
   gs: GameState,
   pawnId: string,
@@ -109,9 +77,6 @@ export function pickUpFromTile(
   const reduceQty = new Map<string, number>();
   const removeIds = new Set<string>();
   const gained: Record<string, number> = {};
-  // A drop carrying an `instance` is a TRACKED item — a vessel with something in it, a weapon with a
-  // quality roll, a famed piece. Crediting it as a bulk count throws the instance away, and with it
-  // whatever the vessel was holding: a picked-up waterskin became an empty `waterskin: 1`.
   const takenInstances: ItemInstance[] = [];
   let tookAny = false;
 
@@ -123,11 +88,8 @@ export function pickUpFromTile(
     const byW = perW > 0 ? Math.floor(remW / perW) : d.quantity;
     const byV = perV > 0 ? Math.floor(remV / perV) : d.quantity;
     let take = Math.min(d.quantity, byW, byV, remCap);
-    // Floor of one: never let capacity block picking up a single (possibly heavy) unit.
     if (take <= 0 && !tookAny && remCap >= 1) take = 1;
     if (take <= 0) continue;
-    // A tracked drop moves whole or not at all — half a vessel is not a thing, and splitting it would
-    // have to invent a second instance to hold the other half of its contents.
     if (d.instance) {
       if (take < d.quantity) continue;
       tookAny = true;
@@ -173,8 +135,6 @@ export function pickUpFromTile(
     return { ...p, inventory: { ...inv, items, instances } };
   });
   const after = pawns.find((p) => p.id === pawnId)?.inventory?.items ?? {};
-  // ITEM-DBG: a pickup happened — log which drop ids were consumed, what was gained, and the pawn's
-  // inventory BEFORE and AFTER so we can confirm the item physically entered the worker's inventory.
   gameLogger.log(
     gs.turn,
     'ITEM-DBG',
@@ -185,14 +145,6 @@ export function pickUpFromTile(
   return { ...withDrops(gs, droppedItems), pawns };
 }
 
-/**
- * Opportunistic hauling: when a pawn finishes a job standing next to loose goods (e.g. a woodcutter
- * on the tile it just felled), it grabs the stockpile-bound drops on its tile + the 8 neighbours and
- * carries them off (overfilling to the encumbrance ceiling) instead of leaving them for a separate
- * later haul trip. No-op (returns the state unchanged) when there's no stockpile to deliver to or
- * nothing qualifying within reach — the caller checks whether the pawn ended up carrying anything.
- * Cheap: bails before the pickup scan if no stockpile zone exists.
- */
 export function opportunisticHaulPickup(gs: GameState, pawnId: string): GameState {
   if (storageTileKeys(gs).length === 0) return gs;
   const pawn = gs.pawns.find((p) => p.id === pawnId);
@@ -218,7 +170,6 @@ const NEIGHBORS8: ReadonlyArray<readonly [number, number]> = [
   [1, 1]
 ];
 
-/** Storage building types that accept deposited resources. */
 export const DEPOSIT_TYPES = [
   'storage_rack',
   'campfire',
@@ -229,19 +180,6 @@ export const DEPOSIT_TYPES = [
   'hay_bed'
 ];
 
-/**
- * Find where a hauling pawn should walk to deposit its load. Priority: stockpile zones →
- * designated storage buildings → any complete building.
- *
- * PT-1 fix: within each tier we return the nearest **standable** tile (walkable terrain, not
- * occupied by another body) — for a stockpile that's the zone tile itself (the pawn stands on
- * it), for a building it's a free tile adjacent to it (you can't stand on the building). The old
- * code returned the nearest tile by Manhattan distance regardless of whether the pawn could
- * actually stand there, so the path ended 1–2 tiles short on a blocked/occupied tile and the
- * pawn "deposited in place" every run — a visible stutter. If nothing in the chosen tier is
- * standable we fall back to the nearest tile anyway (deposit-in-place beats stranding the goods).
- * Returns null only when there's nowhere at all (depositInventory then credits the general zone).
- */
 export function findNearestDepositPoint(
   pawn: Pawn,
   gs: GameState
@@ -252,20 +190,13 @@ export function findNearestDepositPoint(
   const standable = (x: number, y: number) =>
     !!gs.worldMap?.[y]?.[x]?.walkable && !occupancyService.isBlocked(gs, x, y, pawn.id);
 
-  // ── Tier 1: stockpile zones + storage bins. Walk to the highest-PRIORITY zone that still has room,
-  // nearest tile within it; only spill to a lower-priority zone once the higher ones are full (zone
-  // fill-priority — the player's low/normal/preferred/urgent setting). `hasRoom` is item-agnostic here
-  // (free pile slot); the exact per-item placement is re-checked in depositInventory. ──
   type Cand = { x: number; y: number; dist: number; prio: number; room: boolean };
   let best: Cand | null = null;
   let nearestAny: { x: number; y: number; dist: number } | null = null;
-  // Higher priority wins; among equal priority prefer a tile with room; then nearest.
   const better = (a: Cand, b: Cand | null): boolean => {
     if (!b) return true;
-    if (a.room !== b.room && a.prio === b.prio) return a.room; // same zone-prio → room breaks ties
+    if (a.room !== b.room && a.prio === b.prio) return a.room;
     if (a.room !== b.room) {
-      // A roomy lower-prio tile still loses to a roomy higher-prio one; a full higher-prio tile loses
-      // to a roomy lower-prio one (don't strand goods at a full preferred zone).
       if (a.room && !b.room) return true;
       if (!a.room && b.room) return false;
     }
@@ -287,9 +218,8 @@ export function findNearestDepositPoint(
     if (better(cand, best)) best = cand;
   }
   if (best) return { x: best.x, y: best.y };
-  if (nearestAny) return { x: nearestAny.x, y: nearestAny.y }; // occupied stockpile — deposit in place
+  if (nearestAny) return { x: nearestAny.x, y: nearestAny.y };
 
-  // ── Tier 2 + 3: storage buildings, then any complete building — stand ADJACENT. ──
   const approach = (buildings: typeof gs.buildings) => {
     let best: { x: number; y: number; dist: number } | null = null;
     for (const b of buildings ?? []) {
@@ -310,10 +240,6 @@ export function findNearestDepositPoint(
   return approach(gs.buildings);
 }
 
-/**
- * ADR-016: destination tile for a reservation owner — a craft order's chosen workstation, or
- * (when the owner is a building under construction) the build site itself. Null if it's gone.
- */
 export function orderStationTile(ownerId: string, gs: GameState): { x: number; y: number } | null {
   const order = (gs.craftingQueue ?? []).find((o) => o.id === ownerId);
   if (order) {
@@ -323,31 +249,18 @@ export function orderStationTile(ownerId: string, gs: GameState): { x: number; y
     );
     return b ? { x: b.x, y: b.y } : null;
   }
-  // Building-material owner: stage at the build site (any not-yet-complete building).
   const bld = (gs.buildings ?? []).find((b) => b.id === ownerId);
   return bld ? { x: bld.x, y: bld.y } : null;
 }
 
-/**
- * What the craft order an instance is being carried for actually asked for. A build site is not
- * consulted: building materials are bulk costs, never tracked instances, so there is nothing of this
- * shape to stage for one.
- */
 function orderInputs(ownerId: string, gs: GameState): Record<string, number> {
   return (gs.craftingQueue ?? []).find((o) => o.id === ownerId)?.inputs ?? {};
 }
 
-/**
- * ADR-016: stage everything the pawn is carrying for a craft order as `stored reservedFor` drops
- * ON the order's station tile (merging with any input stack already staged there), clear the
- * pawn's inventory + carry marker, and idle. Once every input is staged the craft job opens
- * (JobService._orderSupplied). Falls back to a normal stockpile deposit if the station vanished.
- */
 export function stageInventoryAtStation(pawn: Pawn, orderId: string, gs: GameState): GameState {
   const station = orderStationTile(orderId, gs);
   const inv = pawn.inventory?.items ?? {};
   if (!station) {
-    // Order/station gone — don't strand the goods: clear the marker and deposit normally.
     const cleared = {
       ...gs,
       pawns: gs.pawns.map((p) => (p.id === pawn.id ? { ...p, carryingForOrder: undefined } : p))
@@ -367,8 +280,6 @@ export function stageInventoryAtStation(pawn: Pawn, orderId: string, gs: GameSta
         d.x === station.x &&
         d.y === station.y
     );
-    // CARCASS FRESHNESS: re-attach the per-unit conditions the pawn carried for this carcass, so the
-    // staged drop butchery reads carries the spoilage the fetched carcass had (not a flat "fresh").
     const carried = pawn.carriedUnitConditions?.[resourceId];
     const conds = carried?.slice(0, qty);
     if (idx >= 0) {
@@ -400,13 +311,6 @@ export function stageInventoryAtStation(pawn: Pawn, orderId: string, gs: GameSta
     }
   }
 
-  // CONTAINERS-AND-FLUIDS §1: an input can travel as a tracked INSTANCE rather than a bulk count —
-  // a vessel with the fluid inside it, or an empty phial the recipe consumes as a component. Set those
-  // down at the station too. Without this the barrel of brine (or the glassware) stays in the hauler's
-  // pack, the order never reads as supplied, and the colony's stock silently walks around with a pawn.
-  //
-  // Only what THIS ORDER asked for is set down. A pawn's own tools are instances too, and it keeps
-  // them: it needs the hammer to do the work it just carried the nails for.
   const wantedHere = new Set(Object.keys(orderInputs(orderId, gs)));
   const stagedVesselIds = new Set<string>();
   for (const inst of pawn.inventory?.instances ?? []) {
@@ -446,7 +350,6 @@ export function stageInventoryAtStation(pawn: Pawn, orderId: string, gs: GameSta
                 maxVolumeL: 20
               }),
               items: {},
-              // Tools and empty vessels stay in hand; only the loaded vessels were set down.
               instances: (p.inventory?.instances ?? []).filter(
                 (i) => !stagedVesselIds.has(i.instanceId)
               )
@@ -458,13 +361,6 @@ export function stageInventoryAtStation(pawn: Pawn, orderId: string, gs: GameSta
   return next;
 }
 
-/**
- * Set a carried load DOWN on the pawn's own tile as LOOSE drops (re-haulable), keeping pinned bulk
- * goods and non-depositable instances (tools, a carried colonist) in hand. Used when a pawn must
- * release its load but is NOT physically at a stockpile — so the goods stay real objects in the world
- * instead of teleporting into a pile the pawn never reached (the ethereal-stockpile bug). The dropped
- * stacks get a fresh haul job like any other loose drop once a reachable stockpile exists.
- */
 function dropLooseAtPawn(
   pawn: Pawn,
   gs: GameState,
@@ -474,8 +370,6 @@ function dropLooseAtPawn(
 ): GameState {
   const px = pawn.position?.x ?? 0;
   const py = pawn.position?.y ?? 0;
-  // Cool the set-down stack so haul.generate doesn't re-target it next tick (the floor-shuffle loop):
-  // the pawn that just failed to reach a stockpile from this tile can't reach it next tick either.
   const rehaulCooldownUntil = gs.turn + REHAUL_COOLDOWN_TICKS;
   const newDropped = [...(gs.droppedItems ?? [])];
   for (const [resourceId, qty] of Object.entries(inv)) {
@@ -490,7 +384,6 @@ function dropLooseAtPawn(
       rehaulCooldownUntil
     });
   }
-  // Identity instances (named carcasses) drop as their own loose named stacks; tools / carried pawns stay.
   const keptInstances: ItemInstance[] = [];
   for (const instance of carriedInstances) {
     if (isCarriedPawnInstance(instance) || !itemService.getItemById(instance.itemId)?.dynamicName) {
@@ -536,15 +429,11 @@ function dropLooseAtPawn(
   };
 }
 
-/** Transfer everything in pawn.inventory into the correct stockpile zone. */
 export function depositInventory(pawn: Pawn, gs: GameState): GameState {
-  // ADR-016: a pawn carrying fetched inputs stages them ON its order's station, not the stockpile.
   if (pawn.carryingForOrder) {
     return stageInventoryAtStation(pawn, pawn.carryingForOrder, gs);
   }
   const inv = pawn.inventory?.items ?? {};
-  // Identity-tracked carried items (dynamicName instances, e.g. carcasses) are deposited too — so a
-  // pawn hauling ONLY a carcass (empty `items` map) must not short-circuit to idle.
   const carriedInstances = pawn.inventory?.instances ?? [];
   const hasDepositableInstance = carriedInstances.some(
     (i) =>
@@ -553,19 +442,11 @@ export function depositInventory(pawn: Pawn, gs: GameState): GameState {
   );
   if (Object.keys(inv).length === 0 && !hasDepositableInstance) return goIdle(pawn, gs);
 
-  // Pinned items are never deposited — the pawn keeps carrying them (player request). Deposit
-  // everything else; the pinned subset is written back into the pawn's inventory below.
   const pinned = new Set(pawn.pinnedItems ?? []);
 
-  // Collect all stockpile tile coordinates, ordered NEAREST-FIRST to the pawn so items land
-  // where the pawn actually dropped them (its current tile / the one it walked to), not on
-  // whatever tile happens to come first in designation-iteration order (the old "top row" bug).
   const px = pawn.position?.x ?? 0;
   const py = pawn.position?.y ?? 0;
   const distToPawn = (x: number, y: number) => manhattan(x, y, px, py);
-  // Zone fill-priority: higher-priority stockpile tiles are tried first (firstTileFor picks the first
-  // accepting tile with a free slot), so a roomy preferred zone fills before a normal/low one; distance
-  // breaks ties within a priority. Falls back to pure distance when all zones share the default.
   const stockpileTiles = storageTileKeys(gs)
     .map((key) => {
       const [x, y] = key.split(',').map(Number);
@@ -573,26 +454,15 @@ export function depositInventory(pawn: Pawn, gs: GameState): GameState {
     })
     .sort((a, b) => b.prio - a.prio || distToPawn(a.x, a.y) - distToPawn(b.x, b.y));
   const stockpileTileKeys = new Set(stockpileTiles.map((t) => t.key));
-  // Distinct stored piles already on each storage tile — incremented as we lay new piles below so a
-  // dense bin (capacity > 1) accepts several stacks while a plain tile fills after one.
   const pileCount = new Map<string, number>();
   for (const d of gs.droppedItems ?? [])
     if (d.stored && stockpileTileKeys.has(`${d.x},${d.y}`))
       pileCount.set(`${d.x},${d.y}`, (pileCount.get(`${d.x},${d.y}`) ?? 0) + 1);
-  // Nearest storage tile that has a free pile slot AND whose store accepts this resource (a specialized
-  // bin only takes its category; a general store/zone takes anything). Used for both the counted items
-  // and the named instances below so neither lands in a bin that would reject it.
   const firstTileFor = (resourceId: string) =>
     stockpileTiles.find(
       (t) => (pileCount.get(t.key) ?? 0) < t.cap && storageTileAcceptsDrop(gs, t.x, t.y, resourceId)
     );
 
-  // THE STOCKPILE IS PHYSICAL — a pawn may only deposit into a stockpile it is standing ON or directly
-  // ADJACENT to (Chebyshev ≤ 1). Crediting the globally-NEAREST stockpile tile from a distance was the
-  // "ethereal stockpile" bug: a pawn picked an item up and the goods teleported into the pile with no
-  // visible carry. When a stockpile zone EXISTS but the pawn hasn't physically reached it, we DON'T
-  // touch the stockpile — the carried load is set down LOOSE on the pawn's own tile (a real, re-haulable
-  // object) so it stays in the world and gets hauled properly. The no-zone early-game path falls through.
   const atStockpile =
     stockpileTiles.length > 0 &&
     stockpileTiles.some((t) => Math.max(Math.abs(t.x - px), Math.abs(t.y - py)) <= 1);
@@ -601,17 +471,13 @@ export function depositInventory(pawn: Pawn, gs: GameState): GameState {
   }
 
   const newDropped = [...(gs.droppedItems ?? [])];
-  // Track IDs of newly created unstored drops so we can trigger absorption below.
   const newDropIds: string[] = [];
-  // Track which items landed on a physical tile (for fallback accounting).
   const placed = new Set<string>();
 
   for (const [resourceId, qty] of Object.entries(inv)) {
     if (qty <= 0) continue;
-    if (pinned.has(resourceId)) continue; // keep pinned items — never deposited
+    if (pinned.has(resourceId)) continue;
 
-    // Existing pile of this resource — highest zone-priority first, then nearest (stacking avoids a
-    // new slot); and the best free accepting tile (stockpileTiles is priority-then-distance sorted).
     const existingStoredDrop = newDropped
       .filter(
         (d) => d.stored && d.resourceId === resourceId && stockpileTileKeys.has(`${d.x},${d.y}`)
@@ -622,9 +488,6 @@ export function depositInventory(pawn: Pawn, gs: GameState): GameState {
           distToPawn(a.x, a.y) - distToPawn(b.x, b.y)
       )[0];
     const freeTile = firstTileFor(resourceId);
-    // Zone fill-priority: top up the existing pile UNLESS a free tile sits in a strictly HIGHER-priority
-    // zone — then start a fresh pile there so the preferred zone fills first. Equal priority prefers the
-    // existing pile (no new slot consumed).
     const exPrio = existingStoredDrop
       ? zonePriorityRankAt(gs, existingStoredDrop.x, existingStoredDrop.y)
       : -1;
@@ -634,14 +497,12 @@ export function depositInventory(pawn: Pawn, gs: GameState): GameState {
       tile = { x: existingStoredDrop.x, y: existingStoredDrop.y };
     } else if (freeTile) {
       tile = { x: freeTile.x, y: freeTile.y };
-      pileCount.set(freeTile.key, (pileCount.get(freeTile.key) ?? 0) + 1); // claim the slot
+      pileCount.set(freeTile.key, (pileCount.get(freeTile.key) ?? 0) + 1);
     } else if (existingStoredDrop) {
       tile = { x: existingStoredDrop.x, y: existingStoredDrop.y };
     }
 
     if (tile) {
-      // Create an UNSTORED drop at the tile — the absorption trigger below
-      // will detect it, mark it stored, and credit the zone.
       const id = `deposit-${resourceId}-t${gs.turn}-${rng.random().toString(36).slice(2, 5)}`;
       newDropIds.push(id);
       newDropped.push({ id, resourceId, x: tile.x, y: tile.y, quantity: qty, stored: false });
@@ -649,22 +510,12 @@ export function depositInventory(pawn: Pawn, gs: GameState): GameState {
     }
   }
 
-  // Identity-tracked instances (dynamicName, e.g. named carcasses) are laid into the stockpile as
-  // individual, NON-stacking stored drops so each keeps its per-pawn name. Ordinary tracked items
-  // (tools/weapons the pawn keeps) stay in hand. A carcass with nowhere to go also stays in hand.
-  // Reuses the same `pileCount`/`firstTileWithRoom` slot accounting so each named pile takes one slot.
   const keptInstances: ItemInstance[] = [];
   for (const instance of carriedInstances) {
-    // A carried colonist is a LIVE pawn riding in the pack — never lay a person into a stockpile.
-    // It's set down as a restored pawn by the rescue order / reconcile, not deposited (pawn/carry.ts).
     if (isCarriedPawnInstance(instance)) {
       keptInstances.push(instance);
       continue;
     }
-    // CONTAINERS-AND-FLUIDS §1: a LOADED vessel is deposited like a named carcass — it is stock, not
-    // a tool the pawn keeps. An empty one stays in hand (a waterskin is personal kit). Without this a
-    // pawn that fetched a barrel to fill and then found nowhere to fill it from would carry the
-    // colony's whole brine supply around forever, and the ledger would read zero.
     const depositable =
       itemService.getItemById(instance.itemId)?.dynamicName || !!instance.contents?.length;
     if (!depositable) {
@@ -673,7 +524,7 @@ export function depositInventory(pawn: Pawn, gs: GameState): GameState {
     }
     const freeTile = firstTileFor(instance.itemId);
     if (!freeTile) {
-      keptInstances.push(instance); // no room / no accepting store — keep carrying it
+      keptInstances.push(instance);
       continue;
     }
     pileCount.set(freeTile.key, (pileCount.get(freeTile.key) ?? 0) + 1);
@@ -706,7 +557,6 @@ export function depositInventory(pawn: Pawn, gs: GameState): GameState {
               volumeL: 0,
               maxVolumeL: 20
             }),
-            // Keep pinned items in hand; everything else was just deposited.
             items: Object.fromEntries(
               Object.entries(inv).filter(([rid, qty]) => pinned.has(rid) && qty > 0)
             ),
@@ -717,9 +567,6 @@ export function depositInventory(pawn: Pawn, gs: GameState): GameState {
   );
 
   gameLogger.log(gs.turn, 'JOB-EVT', `${pawn.name} deposited inventory: ${JSON.stringify(inv)}`);
-  // ITEM-DBG: deposit — the pawn's position (must be ON/ADJACENT to the stockpile now), what left its
-  // hands, and the NEW stored-drop ids on the stockpile tiles. If `pos` is ever >1 tile from every
-  // stored drop id below, the adjacency gate leaked (it shouldn't — non-adjacent deposits drop loose).
   gameLogger.log(
     gs.turn,
     'ITEM-DBG',
@@ -727,14 +574,11 @@ export function depositInventory(pawn: Pawn, gs: GameState): GameState {
       `(pinned kept: ${JSON.stringify(Object.fromEntries(Object.entries(inv).filter(([rid]) => pinned.has(rid))))})`
   );
 
-  // Trigger-based absorption: each new drop sitting on a stockpile tile is absorbed
-  // immediately — marked stored and credited to the zone — without a separate scan.
   let state: GameState = { ...gs, pawns: newPawns, droppedItems: newDropped };
   for (const id of newDropIds) {
     state = absorbDropIfOnStockpileTile(state, id);
   }
 
-  // Fallback for items that had no available tile (rare): credit directly to the general zone.
   const unplaced: Record<string, number> = {};
   for (const [resourceId, qty] of Object.entries(inv)) {
     if (qty > 0 && !placed.has(resourceId)) unplaced[resourceId] = qty;

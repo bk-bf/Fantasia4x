@@ -1,15 +1,7 @@
-<!--
-  What one vessel is allowed to be filled with. Built on the same ItemFilterChecklist the fuel and
-  stockpile panels use, because a nested container needs the detailed version of this control, not a
-  category grid — a waterskin is set to water, not to "drinks".
-
-  A vessel starts allowing nothing. Ticking an item here is what sends a pawn to go and fill it, and
-  APPLY TO ALL promotes the list to the default every future vessel of this kind is born with.
--->
 <script lang="ts">
   import type { Item, ItemInstance } from '$lib/game/core/types';
   import { gameState } from '$lib/stores/gameState.js';
-  import ItemFilterChecklist from '$lib/components/UI/gameCanvas/ItemFilterChecklist.svelte';
+  import ItemFilterChecklist from '$lib/components/UI/canvas/ItemFilterChecklist.svelte';
   import itemsData from '$lib/game/database/items/items.jsonc';
   import { itemService } from '$lib/game/services/ItemService';
   import {
@@ -19,7 +11,7 @@
     vesselAccepts,
     vesselFilterOf,
     vesselOf
-  } from '$lib/game/core/vessels';
+  } from '$lib/game/core/rules/gear/vessels';
 
   let { inst, onClose }: { inst: ItemInstance; onClose: () => void } = $props();
 
@@ -27,8 +19,6 @@
 
   const def = $derived(itemService.getItemById(inst.itemId));
   const vessel = $derived(vesselOf(inst.itemId));
-  // Only what this KIND of vessel can physically hold is offered — the player can widen the list, never
-  // make a jug hold logs.
   const candidates = $derived(ALL_ITEMS.filter((i) => vesselAccepts(inst.itemId, i.id)));
   const allowed = $derived(new Set(vesselFilterOf(inst)));
   const usedL = $derived(usedCapacityL(inst));

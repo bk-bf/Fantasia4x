@@ -10,12 +10,6 @@ import {
   type FitResult
 } from './weaponPawnFitHarness';
 
-/**
- * WEAPON × PAWN FIT — target in MEDIUM armour.
- *
- * One armour class per file so the three run at once; see `weaponPawnFitHarness.ts` for the design and
- * for why the armour-at-hit-location column exists (the hammer question).
- */
 const CLASS = 'medium';
 
 describe('WEAPON x PAWN FIT — target in medium armour', () => {
@@ -35,8 +29,6 @@ describe('WEAPON x PAWN FIT — target in medium armour', () => {
     const lines = WEAPONS.map(([label]) => {
       const r = rows[label];
       const suited = r.suited!;
-      // Armour actually present where this weapon's blows landed — low means it is finding gaps and
-      // its penetration is going to waste; high means it is earning its penetration.
       const armAt = suited.landed ? suited.armourAtHits / suited.landed : 0;
       const gain = suited.wins - (r.poor?.wins ?? 0);
       return (
@@ -49,8 +41,6 @@ describe('WEAPON x PAWN FIT — target in medium armour', () => {
       );
     });
 
-    // Structured output for the gear-db AUDIT tab — the tables are unreadable as a wall of console
-    // text, and the point of an audit is that the numbers can be looked at rather than narrated.
     try {
       mkdirSync('.debug/audit', { recursive: true });
       writeFileSync(
@@ -74,8 +64,6 @@ describe('WEAPON x PAWN FIT — target in medium armour', () => {
                     landed: x.landed,
                     swings: x.swings,
                     perHit: x.landed ? x.damage / x.landed : 0,
-                    // The headline number: combat value wrecked per 1000 ticks. Kills are kept only as
-                    // a secondary column — a fight is decided long before anyone dies.
                     effectPer1k: x.ticks ? (x.effect / x.ticks) * 1000 : 0
                   };
                 })
@@ -86,9 +74,7 @@ describe('WEAPON x PAWN FIT — target in medium armour', () => {
           1
         )
       );
-    } catch {
-      /* the audit must never fail on a reporting problem */
-    }
+    } catch {}
 
     console.log(
       `[WEAPON x PAWN FIT · target in MEDIUM] ${fights} fights per cell, wins and damage per landed hit\n` +
@@ -97,7 +83,6 @@ describe('WEAPON x PAWN FIT — target in medium armour', () => {
         lines.join('\n')
     );
 
-    // Every weapon must at least be usable by the pawn built for it.
     for (const [label] of WEAPONS)
       expect(rows[label].suited, `${label} produced no result`).toBeDefined();
   }, 3_600_000);

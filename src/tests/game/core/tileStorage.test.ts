@@ -8,14 +8,9 @@ import {
   addToStockpileZone,
   consumeFromStockpiles,
   absorbDropIfOnStockpileTile
-} from '$lib/game/core/GameState';
+} from '$lib/game/core/state/stockpile';
 import type { GameState, DroppedItem, PlacedBuilding } from '$lib/game/core/types';
 
-/**
- * Stage 2 Step 1 — additive per-tile storage helpers (no behavior change yet).
- * Items physically live as `stored` DroppedItems on tiles; a tile's capacity is
- * BASE + Σ tileCapacityBonus of complete buildings on it.
- */
 const drop = (p: Partial<DroppedItem>): DroppedItem =>
   ({ id: 'd', resourceId: 'granite', x: 0, y: 0, quantity: 10, stored: true, ...p }) as DroppedItem;
 
@@ -29,8 +24,8 @@ describe('per-tile storage helpers (Stage 2 Step 1)', () => {
       drop({ resourceId: 'granite', quantity: 5 }),
       drop({ resourceId: 'granite', quantity: 3 }),
       drop({ resourceId: 'branch', quantity: 7 }),
-      drop({ resourceId: 'branch', quantity: 4, stored: false }), // loose: excluded
-      drop({ resourceId: 'slate', quantity: 0 }) // empty: excluded
+      drop({ resourceId: 'branch', quantity: 4, stored: false }),
+      drop({ resourceId: 'slate', quantity: 0 })
     ]);
     expect(agg).toEqual({ granite: 8, branch: 7 });
   });
@@ -40,13 +35,12 @@ describe('per-tile storage helpers (Stage 2 Step 1)', () => {
       drop({ x: 2, y: 2, quantity: 5 }),
       drop({ x: 2, y: 2, resourceId: 'branch', quantity: 4 }),
       drop({ x: 9, y: 9, quantity: 99 }),
-      drop({ x: 2, y: 2, quantity: 100, stored: false }) // loose: not counted
+      drop({ x: 2, y: 2, quantity: 100, stored: false })
     ]);
     expect(tileStoredQuantity(gs, 2, 2)).toBe(9);
   });
 
   it('tileCapacity = base + storage building bonus on that tile', () => {
-    // A real storage building adds tileCapacityBonus; here use an ad-hoc def-less building → base only.
     const gs = state(
       [],
       [
@@ -73,8 +67,6 @@ describe('per-tile storage helpers (Stage 2 Step 1)', () => {
 });
 
 describe('drops-authoritative storage core (Stage 2 flip)', () => {
-  // Standing zones (stockpile) now live in `zoneTiles`; one-shot action orders stay in
-  // `designations`. Split the test's `desig` map accordingly.
   const withDesig = (drops: DroppedItem[], desig: Record<string, string> = {}): GameState => {
     const designations: Record<string, string> = {};
     const zoneTiles: Record<string, string[]> = {};
@@ -139,8 +131,6 @@ describe('drops-authoritative storage core (Stage 2 flip)', () => {
     expect(absorbDropIfOnStockpileTile(gs, 'loose')).toBe(gs);
   });
 
-  // R10: identity-tracked drops (named carcasses) must NOT merge into a counted pile — each keeps
-  // its per-pawn name so it can be buried/identified individually.
   it('absorbDropIfOnStockpileTile keeps a named drop distinct instead of merging', () => {
     const gs = withDesig(
       [
@@ -166,9 +156,9 @@ describe('drops-authoritative storage core (Stage 2 flip)', () => {
     );
     const out = absorbDropIfOnStockpileTile(gs, 'c2');
     const carcasses = out.droppedItems!.filter((x) => x.resourceId === 'pawn_carcass');
-    expect(carcasses).toHaveLength(2); // not merged
+    expect(carcasses).toHaveLength(2);
     expect(out.droppedItems!.find((x) => x.id === 'c2')!.stored).toBe(true);
     expect(carcasses.map((c) => c.name).sort()).toEqual(["Jax's Carcass", "Vale's Carcass"]);
-    expect(out.stockpile['pawn_carcass']).toBe(2); // aggregate count still correct
+    expect(out.stockpile['pawn_carcass']).toBe(2);
   });
 });

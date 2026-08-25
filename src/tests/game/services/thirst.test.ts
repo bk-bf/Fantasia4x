@@ -3,12 +3,6 @@ import { buildScenario } from '$lib/game/headless/Scenario';
 import { HeadlessSession } from '$lib/game/headless/HeadlessSession';
 import type { Pawn } from '$lib/game/core/types';
 
-/**
- * Thirst has to be paid for and has to be reachable. Two defects lived here: the relief was applied
- * whether or not anything was drunk (a colony with nothing had the same thirst curve as one with forty
- * litres), and the only drink targets were rivers, painted zones and wells — so barrels of water in a
- * stockpile were unreachable and everyone died standing next to them.
- */
 async function run(label: string, items: Record<string, number>) {
   const s = new HeadlessSession();
   await s.start(
@@ -19,8 +13,8 @@ async function run(label: string, items: Record<string, number>) {
       researchMaxTier: 9,
       toolTier: 3,
       pawns: [{ count: 3, skillLevel: 15 }],
-      needsDisabled: ['hunger', 'fatigue', 'hygiene'], // thirst LEFT ON
-      buildings: [{ id: 'craft_spot' }], // NO well, NO river: colony stock only
+      needsDisabled: ['hunger', 'fatigue', 'hygiene'],
+      buildings: [{ id: 'craft_spot' }],
       items,
       seedEntities: false
     })
@@ -54,8 +48,6 @@ describe('thirst is paid for, and colony drink is reachable', () => {
     expect(ale.stock.ale ?? 0, 'and was drunk').toBeLessThan(40);
   }, 200000);
 
-  // Peak thirst is noisy (it depends which pawn is mid-walk when you look); the mean over the run is
-  // the stable read, and it is what shows a litre of water going further than a litre of anything else.
   it('a litre of water goes further than a litre of ale or spirits', async () => {
     const mean = async (id: string) => {
       const s = new HeadlessSession();

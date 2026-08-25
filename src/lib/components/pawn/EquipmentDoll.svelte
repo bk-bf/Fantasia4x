@@ -1,11 +1,10 @@
-<!-- EquipmentDoll.svelte — paper-doll grid of equipment slots (RPG-style boxes) -->
 <script lang="ts">
   import type { Pawn, EquipmentSlot, Item } from '$lib/game/core/types';
   import { gameCoordinator } from '$lib/game/systems/GameCoordinator';
-  import ItemStatTooltip from '$lib/components/UI/ItemStatTooltip.svelte';
-  import SpriteIcon from '$lib/components/UI/SpriteIcon.svelte';
-  import { qualityPrefix, qualityColor } from '$lib/game/core/itemQuality';
-  import { blockedSlots } from '$lib/game/core/PawnEquipment';
+  import ItemStatTooltip from '$lib/components/UI/tooltip/ItemStatTooltip.svelte';
+  import SpriteIcon from '$lib/components/UI/widget/SpriteIcon.svelte';
+  import { qualityPrefix, qualityColor } from '$lib/game/core/rules/gear/itemQuality';
+  import { blockedSlots } from '$lib/game/core/rules/gear/equipment';
   import { naturalGearForTrait, type NaturalGearMeta } from '$lib/components/util/naturalGear';
   import { gameState } from '$lib/stores/gameState';
 
@@ -23,7 +22,6 @@
 
   const isPinned = (itemId: string) => (pawn.pinnedItems ?? []).includes(itemId);
 
-  // Order here drives nothing visually — grid-area placement (CSS) lays out the doll.
   const SLOTS: { slot: EquipmentSlot; label: string }[] = [
     { slot: 'head', label: 'Head' },
     { slot: 'mainHand', label: 'Main Hand' },
@@ -48,20 +46,13 @@
     return pawn.equipment?.[slot];
   }
 
-  // ADR-023: slots a cultural body trait forbids (claws fill the hands, horns the crown…) — greyed out.
   const blocked = $derived(blockedSlots(pawn));
 
-  // ADR-023 / TRAIT-SYSTEM-V2 §3 natural gear: a trait's natural weapon/armor (resolved via its
-  // `selfCondition` grants). A blocking trait LOCKS its item into its primary blocked slot (claws in
-  // Main Hand, fur on Mid); a non-blocking one (fangs, scaled hide) surfaces as an innate BADGE that
-  // layers with worn gear. `tip` feeds the same ItemStatTooltip real gear uses on hover — the weapon's
-  // actual item def, or a synthesized armor def carrying the condition's defense + weight.
   type Nat = { name: string; sub: string; tip?: Item; meta?: NaturalGearMeta };
   const natural = $derived.by(() => {
     const occupants: Partial<Record<EquipmentSlot, Nat>> = {};
     const badges: Nat[] = [];
     for (const t of pawn.traits ?? []) {
-      // Shared builder — the SAME tooltip-ready Item the trait card's gear pill uses (one source).
       const g = naturalGearForTrait(t);
       if (!g) continue;
       const entry: Nat = { name: g.name, sub: g.sub, tip: g.item, meta: g.natural };
@@ -73,8 +64,6 @@
   });
 
   const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
-  // §2 weapon coating: the active coating on an equipped weapon (name + on-hit effect), for the tooltip.
-  // Null when the slot has no unexpired coating.
   function activeCoating(it: { coating?: { itemId: string; expiresAtTurn: number } } | undefined) {
     if (!it?.coating || it.coating.expiresAtTurn <= $gameState.turn) return null;
     const cDef = gameCoordinator.getItemById(it.coating.itemId);
@@ -85,8 +74,6 @@
     };
   }
 
-  // Hover popup — the same stat/ability breakdown shown on craftable cards (ItemStatTooltip),
-  // portaled to the cursor while hovering a filled slot.
   let statTip: {
     item: Item;
     natural?: NaturalGearMeta;
@@ -247,7 +234,6 @@
     border-color: var(--accent);
     background: var(--bg-panel);
   }
-  /* ADR-023: a cultural trait forbids this slot — greyed and struck through, not equippable. */
   .slot-box.blocked {
     border-style: dashed;
     opacity: 0.35;
@@ -262,7 +248,6 @@
   .blocked-mk {
     color: var(--text-muted);
   }
-  /* ADR-023: a natural weapon/armor locked into a body-blocked slot — occupied, but not removable. */
   .slot-box.natural {
     border-color: var(--pos, #68b030);
     border-style: solid;
@@ -283,7 +268,6 @@
     text-align: center;
   }
 
-  /* Innate weapons/armor that layer with worn gear (fangs, scaled hide) — badges under the doll. */
   .innate-strip {
     display: flex;
     flex-wrap: wrap;
@@ -313,12 +297,10 @@
     text-transform: uppercase;
     color: var(--text-dim);
   }
-  /* Filled slots show the pin (top-left) + unequip (top-right) — clear the label past the pin. */
   .slot-box.filled .slot-lbl {
     padding: 0 12px;
   }
 
-  /* The item tile fills the slot's body so the sprite — not dead space — is the focus. */
   .icon-wrap {
     flex: 1;
     display: flex;

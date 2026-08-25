@@ -5,18 +5,9 @@ import { buildScenario } from '$lib/game/headless/Scenario';
 import { SCENARIO_PRESETS, getScenarioPreset } from '$lib/game/headless/scenarios/presets';
 import type { GameState, Pawn } from '$lib/game/core/types';
 
-/**
- * HEADLESS-SIM Phase 5 (ADR-033) — the invariant regression suite. Fast-forwards era scenarios and
- * asserts PROPERTIES, not exact numbers, so rebalances don't stale it: numbers change constantly,
- * but negative wood, NaN stats, a frozen pawn, or a starving pawn beside a full pantry are never
- * intended. Runs the REAL engine (WASM pathfinder incl.) headless — this is the late-game coverage
- * ordinary play never reaches.
- */
-
-const TICKS = 1200; // 20 in-game seconds per era run — enough for jobs/needs/combat to move
+const TICKS = 1200;
 const CHECK_EVERY = 100;
 
-// States a pawn may legitimately hold for a long stretch without moving.
 const RESTFUL = new Set([
   'Idle',
   'Sleeping',
@@ -41,14 +32,12 @@ function assertFiniteNumbers(obj: Record<string, unknown>, path: string): void {
 }
 
 function checkCoreInvariants(state: GameState, label: string): void {
-  // No resource ever negative — the stockpile aggregate and every physical drop.
   for (const [id, amt] of Object.entries(state.stockpile ?? {})) {
     expect(amt, `${label}: stockpile[${id}] negative`).toBeGreaterThanOrEqual(0);
   }
   for (const d of state.droppedItems ?? []) {
     expect(d.quantity, `${label}: drop ${d.id} negative quantity`).toBeGreaterThanOrEqual(0);
   }
-  // No NaN/Infinity in pawn stats or need meters.
   for (const p of state.pawns) {
     assertFiniteNumbers(p.stats as unknown as Record<string, unknown>, `${label}:${p.name}.stats`);
     assertFiniteNumbers(p.needs as unknown as Record<string, unknown>, `${label}:${p.name}.needs`);
@@ -60,7 +49,6 @@ function checkCoreInvariants(state: GameState, label: string): void {
   }
 }
 
-/** Track per-pawn freeze: same non-restful state + same tile for `limit` consecutive ticks. */
 class FreezeTracker {
   private last = new Map<string, { sig: string; since: number }>();
   check(state: GameState, tick: number, limit: number, label: string): void {
@@ -155,7 +143,6 @@ describe('era invariants under fast-forward', () => {
     const s0 = buildScenario(getScenarioPreset('war-party')!.spec);
     const hunger0 = s0.pawns.map((p) => p.needs.hunger);
     const { state } = await runEra('war-party');
-    // Frozen needs actually froze: hunger meters of the still-living never accrued.
     for (const p of state.pawns) {
       if (p.isAlive === false) continue;
       const i = s0.pawns.findIndex((q) => q.id === p.id);
@@ -177,9 +164,7 @@ describe('era invariants under fast-forward', () => {
       expect(result.success).toBe(true);
     }
     const s = session.getState();
-    // Nobody died of the pantry being ignored…
     expect(s.pawns.filter((p) => p.isAlive !== false).length).toBe(6);
-    // …because food actually got eaten.
     const foodEaten =
       (s.stockpile['bread'] ?? 0) < bread0 ||
       s.pawns.some((p) => p.needs.hunger < 90 || p.state.isEating);
@@ -187,7 +172,7 @@ describe('era invariants under fast-forward', () => {
   });
 
   it('seed replay is byte-identical (same scenario, same ticks ⇒ same state)', async () => {
-    const spec = getScenarioPreset('bronze-colony')!.spec; // no `equip` → fully deterministic ids
+    const spec = getScenarioPreset('bronze-colony')!.spec;
     const run = async () => {
       const session = new HeadlessSession();
       await session.start(buildScenario(spec));

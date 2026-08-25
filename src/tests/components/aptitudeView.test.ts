@@ -1,14 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { computeAptitudeView } from '$lib/components/util/statView';
-import { APTITUDE_IDS } from '$lib/game/core/aptitudes';
+import { APTITUDE_IDS } from '$lib/game/core/rules/body/aptitudes';
 import type { Pawn } from '$lib/game/core/types';
 
-/**
- * The rolled aptitudes render through the SAME attributes cell and `StatTooltip` as every other stat,
- * which means `computeAptitudeView` has to return a complete `StatView` — a bespoke widget beside the
- * table was the thing this replaced. Every field the tooltip reads is checked here, because a missing
- * one degrades silently to a blank line rather than an error.
- */
 const pawn = (apt?: Record<string, number>) =>
   ({
     aptitudes: apt,
@@ -24,15 +18,14 @@ describe('aptitude stat view', () => {
       'blurb',
       false
     );
-    expect(v.name).toBe('accuracy'); // a label, never the raw id
+    expect(v.name).toBe('accuracy');
     expect(v.value).toBe(1.12);
     expect(v.unit).toBe('×');
-    expect(v.base).toBe(1); // the band is fixed, so "average" is exactly 1.00
+    expect(v.base).toBe(1);
     expect(v.formula).toBeTruthy();
     expect(v.description).toBe('blurb');
     expect(v.trend.glyph).toBeTruthy();
     expect(v.trend.color).toBeTruthy();
-    // The roll and the band it came from — the "where" line of the tooltip.
     expect(v.vars.map((x) => x.name)).toContain('rolled');
     expect(v.vars.map((x) => x.name)).toContain('band');
   });

@@ -2,11 +2,6 @@ import { describe, it, expect } from 'vitest';
 import { COMMANDS } from '$lib/game/sim/commands';
 import type { GameState, Kingdom, KingdomParty, Pawn } from '$lib/game/core/types';
 
-// KINGDOMS-TRADE §4: the barter commit. Locks the caravan-side acceptance rule (received value must
-// be covered by given value, priced by the pawn's `trade` stat with gold anchoring), the physical
-// item movement (stored drops in, stored drops out), and the contact side-effects (knowledge +
-// goodwill on a completed deal).
-
 const kingdom = (): Kingdom => ({
   id: 'k1',
   name: 'Test Kingdom',
@@ -77,14 +72,11 @@ describe('executeTrade — barter commit', () => {
       give: [{ itemId: 'gold_bar', qty: 1 }],
       receive: [{ itemId: 'copper_bar', qty: 2 }]
     });
-    // Colony: one gold bar left the stored pile, two copper bars materialised as stored stock.
     expect(out.stockpile.gold_bar).toBe(2);
     expect(out.stockpile.copper_bar).toBe(2);
-    // Caravan: copper down, the given gold absorbed into its manifest.
     const pt = out.kingdomParties![0];
     expect(pt.stock.find((g) => g.itemId === 'copper_bar')?.qty).toBe(8);
     expect(pt.stock.find((g) => g.itemId === 'gold_bar')?.qty).toBe(1);
-    // Contact: discovered + knowledge xp + a goodwill bump.
     const k = out.kingdoms![0];
     expect(k.discovered).toBe(true);
     expect(k.knowledge).toBeGreaterThan(0);
@@ -100,7 +92,7 @@ describe('executeTrade — barter commit', () => {
       give: [],
       receive: [{ itemId: 'copper_bar', qty: 2 }]
     });
-    expect(out).toBe(s); // rejected — nothing moved
+    expect(out).toBe(s);
   });
 
   it('offers beyond actual stock are rejected outright', () => {
@@ -116,14 +108,13 @@ describe('executeTrade — barter commit', () => {
 
   it('gold anchors: its price is identical in both directions, regardless of relations', () => {
     const s = stateWith(3, [{ itemId: 'gold_bar', qty: 3 }]);
-    // Swapping a gold bar for a gold bar is always exactly balanced — the deal is acceptable.
     const out = COMMANDS.executeTrade(s, {
       partyId: 'party-k1-1',
       pawnId: 'p1',
       give: [{ itemId: 'gold_bar', qty: 1 }],
       receive: [{ itemId: 'gold_bar', qty: 1 }]
     });
-    expect(out).not.toBe(s); // accepted
-    expect(out.stockpile.gold_bar).toBe(3); // net zero
+    expect(out).not.toBe(s);
+    expect(out.stockpile.gold_bar).toBe(3);
   });
 });

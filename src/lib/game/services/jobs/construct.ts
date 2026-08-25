@@ -1,39 +1,26 @@
-// Construct job handler (ADR-017). Opens a construct job for an incomplete building once its reserved
-// build materials are staged on the site (ADR-016) and, on completion, marks the building complete,
-// wires construction quality into durability, consumes the staged materials, and blocks the tile if
-// the building is solid. Extracted from JobService (P-4 handler split).
 import type { GameState, Job } from '../../core/types';
-// Gated console shim — see core/log.ts. Silences per-tick log/debug/warn unless gameDebug(true).
-import { gatedConsole as console } from '../../core/log';
+import { gatedConsole as console } from '../../core/util/log';
 import { buildingService } from '../BuildingService';
 import { pawnStatService } from '../PawnStatService';
 import { buildingSupplied } from './staging';
-import { SUBTERRAINS, SUBTERRAIN_FALLBACK, terrainBlocksSight } from '../../core/Terrains';
-import { markTileDirty } from '../../core/tileDeltas';
+import { SUBTERRAINS, SUBTERRAIN_FALLBACK, terrainBlocksSight } from '../../core/defs/terrains';
+import { markTileDirty } from '../../core/state/tileDeltas';
 import { patchPathfindingWalkable } from '../PathfinderService';
 
 export function generate(jobs: Job[], gs: GameState): Job[] {
-  // Remove construct jobs for buildings that no longer exist, are complete, or are paused (pausing
-  // stops active construction; workDone is preserved and the job re-opens on resume).
   jobs = jobs.filter((j) => {
     if (j.type !== 'construct') return true;
     const b = (gs.buildings ?? []).find((b) => b.id === j.buildingId);
     return b && b.status !== 'complete' && !b.paused;
   });
 
-  // Add new construct jobs for incomplete buildings
   for (const building of gs.buildings ?? []) {
     if (building.status === 'complete') continue;
     if (building.paused) continue;
     if (!building.x && !building.y && building.x !== 0 && building.y !== 0) continue;
 
-    // Phase 6: zero-workRequired buildings were already completed by BuildingService.placeBuilding
-    // (buildTime === 0 → status 'complete' on placement), so they won't reach here.
-    // Extra guard just in case:
     if ((building.workRequired ?? 1) === 0) continue;
 
-    // ADR-016: don't open the construct job until all reserved build materials are staged on
-    // the site (pawns fetch them first). The materials are consumed on completion.
     if (!buildingSupplied(building, gs)) continue;
 
     const exists = jobs.some((j) => j.type === 'construct' && j.buildingId === building.id);
@@ -60,9 +47,6 @@ export function complete(job: Job, gs: GameState): GameState {
   const building = (gs.buildings ?? []).find((b) => b.id === job.buildingId);
   if (!building) return gs;
 
-  // PRODUCTION-CHAIN-II §F (Soil Works): a terraform build is one-shot — it rewrites the tile's soil
-  // (subType) and then removes ITSELF (it's the act of laying soil, not a standing structure). Reuses
-  // the in-place tile-write + delta path that harvest.ts uses for the base-subterrain restore.
   const def = buildingService.getBuildingById(building.type);
   if (def?.terraformSubType) {
     const sub = SUBTERRAINS[def.terraformSubType] ?? SUBTERRAIN_FALLBACK;
@@ -78,7 +62,6 @@ export function complete(job: Job, gs: GameState): GameState {
     console.log(
       `[JobService] Terraform complete: ${building.type} at (${building.x},${building.y}) → subType ${def.terraformSubType}`
     );
-    // Remove the build (consumed) + its staged materials; the soil change IS the product.
     return {
       ...gs,
       buildings: (gs.buildings ?? []).filter((b) => b.id !== building.id),
@@ -86,7 +69,6 @@ export function complete(job: Job, gs: GameState): GameState {
     };
   }
 
-  // Wire stats.jsonc construction quality into building durability
   const pawn = gs.pawns.find((p) => p.id === job.claimedBy);
   const qualityMult = pawn
     ? (pawnStatService.getWorkModifiers(pawn, 'construction').quality ?? 1)
@@ -104,18 +86,14 @@ export function complete(job: Job, gs: GameState): GameState {
       : b
   );
 
-  // Keep buildingCounts in sync for legacy compatibility
   const newCounts = { ...(gs.buildingCounts ?? {}) };
   newCounts[building.type] = (newCounts[building.type] ?? 0) + 1;
 
-  // ADR-016: the build materials staged on the site (reserved to this building) are consumed
-  // by completing the construction.
   const newDropped = (gs.droppedItems ?? []).filter((d) => d.reservedFor !== building.id);
 
   console.log(
     `[JobService] Construction complete: ${building.type} (${building.id}) quality=${qualityMult.toFixed(2)}`
   );
-  // A solid building (def.walkable === false) now blocks its tile — pathfinding routes around it.
   return buildingService.applyBuildingFootprint(
     { ...gs, buildings: newBuildings, buildingCounts: newCounts, droppedItems: newDropped },
     { ...building, status: 'complete' },

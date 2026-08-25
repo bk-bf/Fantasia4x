@@ -1,12 +1,10 @@
-// SOCIAL-LAYER: off-colony family generation — founders get a wider family web out in the world,
-// tied back with rolled warmth, whose standing seeds through the normal relationship path.
 import { describe, it, expect, beforeEach } from 'vitest';
 import { generateColonyPawns, generateWorldKin } from '$lib/game/entities/Pawns';
-import { generateCulturePool, generateCultureRelations } from '$lib/game/core/Culture';
-import { generateKingdomPool, generateKingdomRelations } from '$lib/game/core/Kingdom';
+import { generateCulturePool, generateCultureRelations } from '$lib/game/core/gen/culture';
+import { generateKingdomPool, generateKingdomRelations } from '$lib/game/core/gen/kingdom';
 import { socialService } from '$lib/game/services/SocialService';
-import { findRelationship } from '$lib/game/core/Social';
-import { rng } from '$lib/game/core/rng';
+import { findRelationship } from '$lib/game/core/rules/social/social';
+import { rng } from '$lib/game/core/util/rng';
 import type { GameState } from '$lib/game/core/types';
 
 function world() {
@@ -28,23 +26,18 @@ describe('generateWorldKin', () => {
     expect(worldKin.length).toBeGreaterThan(0);
     const byId = new Map(worldKin.map((w) => [w.id, w]));
     for (const w of worldKin) {
-      // each world pawn ties back to exactly one founder, with a warmth on both sides
       expect(w.kin?.length).toBe(1);
       const tie = w.kin![0];
       expect(typeof tie.warmth).toBe('number');
       const founder = founders.find((f) => f.id === tie.pawnId);
       expect(founder).toBeDefined();
-      // the founder holds the reciprocal tie with the SAME warmth
       const back = founder!.kin?.find((k) => k.pawnId === w.id);
       expect(back).toBeDefined();
       expect(back!.warmth).toBe(tie.warmth);
-      // lives somewhere in the world (a kingdom) and shares the founder's surname
       expect(w.homeKingdomId).toBeTruthy();
       expect(w.name.split(' ').slice(-1)[0]).toBe(founder!.name.split(' ').slice(-1)[0]);
-      // sex is rolled so the kin word can gender (Father/Mother…)
       expect(w.sex === 'male' || w.sex === 'female').toBe(true);
     }
-    // 50/50 roll produces a mix across the whole web (not all one sex)
     const males = worldKin.filter((w) => w.sex === 'male').length;
     expect(males).toBeGreaterThan(0);
     expect(males).toBeLessThan(worldKin.length);
@@ -55,7 +48,6 @@ describe('generateWorldKin', () => {
     const founders = generateColonyPawns(cultures, 5, { kingdoms, founders: true });
     const worldKin = generateWorldKin(founders, cultures, kingdoms);
     const byId = new Map(founders.map((f) => [f.id, f]));
-    // `founder.kin` entry for a world pawn carries what THAT PAWN is TO the founder (plan.kind).
     const kindToFounder = (founder: (typeof founders)[number], wId: string) =>
       founder.kin!.find((k) => k.pawnId === wId)!.kind;
     for (const w of worldKin) {
@@ -66,16 +58,15 @@ describe('generateWorldKin', () => {
         case 'grandparent':
         case 'parent':
         case 'auntuncle':
-          expect(wAge).toBeGreaterThan(fAge); // an elder generation is older than the founder
+          expect(wAge).toBeGreaterThan(fAge);
           break;
         case 'child':
         case 'nibling':
-          expect(wAge).toBeLessThan(fAge); // a younger generation is younger
+          expect(wAge).toBeLessThan(fAge);
           break;
       }
       expect(wAge).toBeGreaterThanOrEqual(1);
     }
-    // within a founder: every grandparent is older than every parent/aunt-uncle
     for (const founder of founders) {
       const kin = worldKin.filter((w) => w.kin![0].pawnId === founder.id);
       const grand = kin
@@ -101,12 +92,11 @@ describe('generateWorldKin', () => {
     } as unknown as GameState;
 
     const seeded = socialService.seedFamilyRelationships(state);
-    // every world-kin tie has a relationship row whose score reflects its warmth (some negative)
     let checked = 0;
     let sawNegative = false;
     for (const f of founders) {
       for (const tie of f.kin ?? []) {
-        if (!worldKin.some((w) => w.id === tie.pawnId)) continue; // world kin only
+        if (!worldKin.some((w) => w.id === tie.pawnId)) continue;
         const rel = findRelationship(seeded.relationships, f.id, tie.pawnId);
         expect(rel).toBeDefined();
         checked++;
@@ -114,7 +104,6 @@ describe('generateWorldKin', () => {
       }
     }
     expect(checked).toBeGreaterThan(0);
-    // across a whole colony's extended web, at least one relative is on poor terms
     expect(sawNegative).toBe(true);
   });
 });

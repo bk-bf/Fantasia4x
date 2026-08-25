@@ -3,7 +3,6 @@ import { generate as generateHaulJobs } from '$lib/game/services/jobs/haul';
 import { dropCarcass } from '$lib/game/services/entity/entityLifecycle';
 import type { GameState, Job, DroppedItem, Mob } from '$lib/game/core/types';
 
-// A bare GameState with one stockpile tile to haul into and the given loose drops.
 function stateWithDrops(drops: DroppedItem[]): GameState {
   return {
     droppedItems: drops,
@@ -45,7 +44,7 @@ describe('haul forbidden lockout', () => {
         droppedItemId: 'd1',
         workRequired: 1,
         workDone: 0,
-        claimedBy: 'p1' // already claimed / en route
+        claimedBy: 'p1'
       }
     ];
     const jobs = generateHaulJobs(existing, stateWithDrops([looseDrop('d1', { forbidden: true })]));
@@ -55,18 +54,14 @@ describe('haul forbidden lockout', () => {
 
 describe('dropCarcass', () => {
   it('marks a wild carcass forbidden by default', () => {
-    // wolf is a stock creature with a carcassItemId; any creature that drops a carcass works.
     const mob = { id: 'm1', creatureId: 'wolf', x: 7, y: 7, intactness: 1 } as unknown as Mob;
     const out = dropCarcass(stateWithDrops([]), mob);
     const carcass = (out.droppedItems ?? []).find((d) => d.id.startsWith('carcass-m1'));
-    // Only assert the flag when this creature actually drops a carcass (carcassItemId present).
     if (carcass) expect(carcass.forbidden).toBe(true);
     else expect(out.droppedItems ?? []).toHaveLength(0);
   });
 
   it('§2g/§2e: a T5 boss drops a DYNAMIC-name trophy carcass reading its rolled legend name', () => {
-    // A boss (great_wolf → great_wolf_carcass, dynamicName) carries its per-spawn procedural `name`
-    // ("Skarn, the Old Fang") → the drop reads "<that>'s Great Wolf Carcass".
     const mob = {
       id: 'b1',
       creatureId: 'great_wolf',
@@ -80,7 +75,6 @@ describe('dropCarcass', () => {
     )!;
     expect(boss.resourceId).toBe('great_wolf_carcass');
     expect(boss.name).toContain('Skarn, the Old Fang');
-    // A STATIC carcass (wolf → wolf_carcass) carries no per-drop name override.
     const wolf = { id: 'w1', creatureId: 'wolf', x: 7, y: 7, intactness: 1 } as unknown as Mob;
     const plain = (dropCarcass(stateWithDrops([]), wolf).droppedItems ?? []).find((d) =>
       d.id.startsWith('carcass-w1')

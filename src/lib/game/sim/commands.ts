@@ -1,23 +1,3 @@
-/**
- * commands.ts — the serializable command registry (ADR-021 W3).
- *
- * The single source of truth for "a player/dev action = a pure `(state, payload) => state`",
- * keyed by a string id. Both the main thread (current) and the sim worker (after cutover) import
- * this and apply commands to whichever copy of state they own — so the command LOGIC lives in one
- * worker-safe place and only the *dispatch target* changes at cutover.
- *
- * **Worker-safety rule:** everything imported here must run in a worker — no `$app/environment`,
- * no DOM, no Svelte. Pure core/service transforms only.
- *
- * Each former `gameState.update((s) => fn(s))` call site moved its `fn` here under a name; the site
- * now calls `gameState.command({ type, payload, save })`. On the main thread that's still
- * `applyCommand` (behaviour identical); the worker will postMessage instead.
- *
- * **All player/dev mutations are converted** (W4 complete). The two former request-response holdouts
- * are now fire-and-forget: `createZoneInstance` takes a caller-generated id (the caller needs it
- * immediately for paint mode, so no reply is required), and `craftItem` moved here wholesale from
- * GameCoordinator. State-REPLACING actions (regenWorld/resetGame) re-init the worker instead.
- */
 import type {
   GameState,
   Pawn,
@@ -48,7 +28,7 @@ import {
   absorbDropIfOnStockpileTile,
   availableAggregateFromDrops,
   withDrops
-} from '../core/GameState';
+} from '../core/state/stockpile';
 import {
   carriedQuantities,
   carrierOf,
@@ -58,26 +38,26 @@ import {
   roomFor,
   servingL,
   takeOut
-} from '../core/vessels';
-import { equipItem, unequipItem, equipDropToPawn } from '../core/PawnEquipment';
-import { rng } from '../core/rng';
+} from '../core/rules/gear/vessels';
+import { equipItem, unequipItem, equipDropToPawn } from '../core/rules/gear/equipment';
+import { rng } from '../core/util/rng';
 import { pickUpFromTile } from '../systems/pawn/pawnHauling';
 import { PAWN_STATE } from '../systems/pawn/pawnStates';
-import { isUncontrollable } from '../core/stateDefs';
+import { isUncontrollable } from '../core/defs/states';
 import { killPawn } from '../systems/PawnStateMachine';
 import { hasShelter } from '../systems/pawn/handlers/rescue';
 import { dropCarriedPawn, freeDropTileNear, CARRIED_PAWN_ITEM } from '../systems/pawn/carry';
-import { manhattan } from '../core/distance';
+import { manhattan } from '../core/util/distance';
 import { designationService } from '../services/DesignationService';
 import { buildingService } from '../services/BuildingService';
 import { itemService } from '../services/ItemService';
 import { recipeService } from '../services/RecipeService';
 import { pawnStatService } from '../services/PawnStatService';
-import { getTraitById } from '../core/Lineages';
+import { getTraitById } from '../core/defs/lineages';
 import { applyGainedTrait } from '../entities/Pawns';
 import { researchService } from '../services/ResearchService';
-import { devSpawnLooseItems, devDestroyAllItems } from '../dev/devWorld';
-import { gameLogger } from '../dev/gameLogger';
+import { devSpawnLooseItems, devDestroyAllItems } from '../debug/devWorld';
+import { gameLogger } from '../debug/gameLogger';
 import { generatePawns, applyConsumable, remapKinIds } from '../entities/Pawns';
 import { pawnGrowthService } from '../services/PawnGrowthService';
 import { devSpawnMobs, devSpawnMobAt } from '../services/entity/entitySpawning';
@@ -91,16 +71,15 @@ import {
   ICE_WALKABLE,
   ICE_WATER_MOVE_COST
 } from '../services/EnvironmentService';
-import { SUBTERRAINS, SUBTERRAIN_FALLBACK } from '../core/Terrains';
+import { SUBTERRAINS, SUBTERRAIN_FALLBACK } from '../core/defs/terrains';
 import { resourceObjectService } from '../services/ResourceObjectService';
 import { patchPathfindingWalkable } from '../services/PathfinderService';
 import { occupancyService } from '../services/OccupancyService';
 import { assignDraftMovePath } from '../services/draftMovePath';
-import { markTileDirty } from '../core/tileDeltas';
-import { simLog } from '../core/logSink';
+import { markTileDirty } from '../core/state/tileDeltas';
+import { simLog } from '../core/util/logSink';
 import type { SimCommand } from './simProtocol';
 
-/** Spiral out from (cx,cy) for the nearest walkable, un-occupied tile (worker-safe pawn placement). */
 function nearestFreeTile(
   worldMap: GameState['worldMap'],
   cx: number,
@@ -113,7 +92,7 @@ function nearestFreeTile(
   for (let r = 0; r <= maxR; r++) {
     for (let dy = -r; dy <= r; dy++) {
       for (let dx = -r; dx <= r; dx++) {
-        if (Math.abs(dx) !== r && Math.abs(dy) !== r) continue; // ring only
+        if (Math.abs(dx) !== r && Math.abs(dy) !== r) continue;
         const x = cx + dx;
         const y = cy + dy;
         if (x < 0 || y < 0 || x >= w || y >= h) continue;
@@ -127,13 +106,6 @@ function nearestFreeTile(
   return null;
 }
 
-/**
- * Achtung-style line formation: spread `pawns` evenly along the segment A→B. Slot i sits at
- * A + (i/(N−1))·(B−A) (a single pawn goes to B, the release tile). Pawns are SORTED by their projection
- * onto the line so they keep their left→right order and don't cross, then each slot snaps to the nearest
- * free walkable tile. Returns pawnId → destination. Shared by the `movePawnsLine` command and the live
- * client-side aim preview (GameCanvas), so the dots you drag match where they actually go.
- */
 export function lineFormationTargets(
   worldMap: GameState['worldMap'],
   pawns: Pawn[],
@@ -159,7 +131,7 @@ export function lineFormationTargets(
       Math.round(ay + dirY * t),
       claimed
     );
-    if (!free) break; // map exhausted — leave the rest
+    if (!free) break;
     claimed.add(`${free.x},${free.y}`);
     targets.set(sorted[i].id, free);
   }
@@ -168,14 +140,6 @@ export function lineFormationTargets(
 
 type Cmd = (state: GameState, payload: any) => GameState;
 
-/**
- * Set a tracked ItemInstance (tool / weapon / armour) DOWN as a loose drop on `pos`, preserving its
- * durability / quality / per-instance name (a worn axe isn't reset to pristine), and absorb it if that
- * tile is a stockpile. The SINGLE drop path shared by the carry-card ↓ (`dropCarriedItem`) AND the
- * equipment-doll unequip ✕ (`unequipPawnItem`). The unequip path used to clear the slot WITHOUT this
- * and silently DESTROYED the item — both must go through here so they can never diverge again. The
- * caller has already removed the instance from its source (inventory.instances or the equipment slot).
- */
 function setInstanceDownOnTile(
   s: GameState,
   pawnId: string,
@@ -199,11 +163,7 @@ function setInstanceDownOnTile(
   return absorbDropIfOnStockpileTile(next, drop.id);
 }
 
-/** Registry. Add a command here + call `gameState.command({ type, payload, save })` at the site. */
 export const COMMANDS: Record<string, Cmd> = {
-  // ── items / stockpile ──────────────────────────────────────────────────────
-  /** `tileKey` ("x,y") pins WHERE the stock lands. Without it the generic fallback takes the first
-   *  storage tile it scans — which, with a whole-map stockpile, can be an unreachable map-edge pocket. */
   addItem: (s, p: { itemId: string; amount: number; tileKey?: string }) =>
     addToStockpileZone(s, p.tileKey ?? null, { [p.itemId]: p.amount }),
   consumeGlobalItem: (s, p: { itemId: string; quantity: number }) => {
@@ -212,26 +172,16 @@ export const COMMANDS: Record<string, Cmd> = {
     return consumeFromStockpiles(s, { [p.itemId]: p.quantity });
   },
 
-  // ── pawns ──────────────────────────────────────────────────────────────────
-  /** PAWN-GROWTH: accept the player's pick-two on a pawn's oldest pending growth offer — raise the two
-   *  chosen stats by their rolled gains (capped at each stat's `maxStats`) and drop the offer. */
   applyPawnGrowth: (s, p: { pawnId: string; stats: StatKey[] }) => ({
     ...s,
     pawns: s.pawns.map((pw) =>
       pw.id === p.pawnId ? pawnGrowthService.applyGrowthChoice(pw, p.stats) : pw
     )
   }),
-  /** Set, QUEUE (`append: true` — Shift), or clear (`target: null`) a pawn's order (DRAFTED-JOB-ORDERS
-   *  §8/§9). The active order is `draftTarget` (the manual-queue head); `append` pushes behind it into
-   *  `manualQueue` instead of replacing. A plain set replaces the head and clears the pending queue. A
-   *  clear drops all orders, releases any job this pawn had force-claimed, and idles it (§6). For a MOVE
-   *  target the A* path is computed right here so the preview line traces the real route immediately —
-   *  even while paused (the per-tick draft pass would otherwise be the first to path it). */
   setPawnDraftTarget: (s, p: { pawnId: string; target: unknown; append?: boolean }) => {
     const target = (p.target as PawnOrder | null) ?? null;
     let gs: GameState;
     if (p.append && target) {
-      // Shift-queue: append behind the active head (or become the head if there is none yet).
       gs = {
         ...s,
         pawns: s.pawns.map((pw) => {
@@ -242,7 +192,6 @@ export const COMMANDS: Record<string, Cmd> = {
         })
       };
     } else if (target) {
-      // Replace: new head, drop the pending queue.
       gs = {
         ...s,
         pawns: s.pawns.map((pw) =>
@@ -250,7 +199,6 @@ export const COMMANDS: Record<string, Cmd> = {
         )
       };
     } else {
-      // Clear: drop all orders, release any force-claimed job back to the pool, and idle the pawn.
       const jobs = (s.jobs ?? []).some((j) => j.claimedBy === p.pawnId)
         ? s.jobs.map((j) => (j.claimedBy === p.pawnId ? { ...j, claimedBy: null } : j))
         : s.jobs;
@@ -293,8 +241,6 @@ export const COMMANDS: Record<string, Cmd> = {
         : pw
     )
   }),
-  /** MARK multi-select: draft (or, with `drafted:false`, undraft) every listed living pawn at once,
-   *  clearing any current job/target. */
   draftPawns: (s, p: { ids: string[]; drafted?: boolean }) => {
     const draft = p.drafted !== false;
     return {
@@ -313,24 +259,18 @@ export const COMMANDS: Record<string, Cmd> = {
       )
     };
   },
-  /** Auto rescue (right-click a collapsed colonist, no pawn selected): commandeer the NEAREST able pawn
-   *  to carry the downed one to shelter. It DRAFTS that pawn with an `auto` `rescue` order (drafted →
-   *  it won't wander off mid-carry; the order un-drafts it again on drop). No-op when the victim isn't
-   *  collapsed, is already being carried, the colony has no shelter, or no one's free. A drafted carrier
-   *  the player picked themselves uses `setPawnDraftTarget` instead (GameCanvas), not this. */
   rescuePawn: (s, p: { victimId: string }) => {
     const victim = s.pawns.find((pw) => pw.id === p.victimId);
     if (!victim || victim.isAlive === false || !victim.position) return s;
     if (victim.currentState !== PAWN_STATE.COLLAPSED) return s;
-    if (victim.carriedBy) return s; // already in someone's arms
-    if (!hasShelter(s)) return s; // nowhere to take them
+    if (victim.carriedBy) return s;
+    if (!hasShelter(s)) return s;
     if (
       s.pawns.some(
         (pw) => pw.draftTarget?.type === 'rescue' && pw.draftTarget.victimId === p.victimId
       )
     )
-      return s; // already being carried/dispatched
-    // Nearest pawn that can actually go: alive, on-map, not already drafted, not busy with its own crisis.
+      return s;
     const BUSY = new Set<string>([
       PAWN_STATE.COLLAPSED,
       PAWN_STATE.CRYING,
@@ -354,7 +294,6 @@ export const COMMANDS: Record<string, Cmd> = {
     }
     if (!rescuerId) return s;
     const id = rescuerId;
-    // Release any pool job the rescuer had claimed so it isn't stranded.
     const jobs = (s.jobs ?? []).some((j) => j.claimedBy === id)
       ? (s.jobs ?? []).map((j) => (j.claimedBy === id ? { ...j, claimedBy: null } : j))
       : s.jobs;
@@ -376,15 +315,12 @@ export const COMMANDS: Record<string, Cmd> = {
       )
     };
   },
-  /** MARK multi-move: spread the listed drafted pawns onto distinct walkable tiles around (x,y) so
-   *  they don't all path to (and fight over) one cell. Each pawn claims the nearest free tile via a
-   *  spiral from the target, the centre tile going to the first pawn. */
   movePawnsFormation: (s, p: { ids: string[]; x: number; y: number }) => {
     const claimed = new Set<string>();
     const targets = new Map<string, { x: number; y: number }>();
     for (const id of p.ids) {
       const tile = nearestFreeTile(s.worldMap, p.x, p.y, claimed);
-      if (!tile) break; // map exhausted — leave the rest where they are
+      if (!tile) break;
       claimed.add(`${tile.x},${tile.y}`);
       targets.set(id, tile);
     }
@@ -397,8 +333,6 @@ export const COMMANDS: Record<string, Cmd> = {
           : pw;
       })
     };
-    // Path each pawn now (shared solid-body occupancy snapshot) so all the preview lines trace their
-    // real routes the instant the order lands — paused or running.
     const occ = occupancyService.blockedTiles(gs);
     for (const [id, t] of targets) {
       const pawn = gs.pawns.find((pw) => pw.id === id);
@@ -408,8 +342,6 @@ export const COMMANDS: Record<string, Cmd> = {
     }
     return gs;
   },
-  /** Achtung-style line move: spread the listed drafted pawns evenly along the segment (ax,ay)→(bx,by)
-   *  — see lineFormationTargets. Same paths-now behaviour as movePawnsFormation. */
   movePawnsLine: (s, p: { ids: string[]; ax: number; ay: number; bx: number; by: number }) => {
     const pawns = s.pawns.filter(
       (pw) =>
@@ -434,12 +366,6 @@ export const COMMANDS: Record<string, Cmd> = {
     }
     return gs;
   },
-  /** MARK group attack: order every listed drafted pawn to attack the SAME target (a mob or pawn) — the
-   *  right-click-a-mob-with-a-drafted-group order. Each pawn paths to the target and stops at adjacency
-   *  (melee) / weapon range (auto-ranged); the per-tick draft pass routes them on the shared occupancy
-   *  grid, so they fan onto distinct adjacent tiles and SURROUND it instead of stacking. Mode is auto per
-   *  pawn (a shooter holds range, a melee pawn closes in) — mirrors a single `setPawnDraftTarget` attack,
-   *  just applied to the whole group. Collapsed/dead/undrafted pawns in the list are skipped. */
   attackTargetWith: (s, p: { ids: string[]; targetId: string; targetType: 'pawn' | 'mob' }) => ({
     ...s,
     pawns: s.pawns.map((pw) =>
@@ -458,18 +384,12 @@ export const COMMANDS: Record<string, Cmd> = {
         : pw
     )
   }),
-  /** Force the listed colonists to immediately take the NEAREST available job of a kind (Build /
-   *  Harvest), overriding idle wandering, work-priority and restrict-zone gating — the manual "do this
-   *  now" override behind the right-click BUILD / HARVEST verbs. The pawn claims the job, paths to an
-   *  adjacent tile on the UNCONFINED grid (so a confined pawn can still reach it), and starts working;
-   *  the normal FSM handles arrival, work and completion from there. */
   forcePawnJob: (s, p: { ids: string[]; jobType: 'construct' | 'harvest' }) => {
     let gs = s;
     for (const id of p.ids) {
       const pawn = gs.pawns.find((pw) => pw.id === id);
       if (!pawn?.position || pawn.isAlive === false) continue;
       const { x: px, y: py } = pawn.position;
-      // Nearest unclaimed (or already-ours) job of the requested kind.
       let best: Job | null = null;
       let bestD = Infinity;
       for (const j of gs.jobs ?? []) {
@@ -506,7 +426,6 @@ export const COMMANDS: Record<string, Cmd> = {
       const setPawn = (patch: Partial<Pawn>): void => {
         gs = { ...gs, pawns: gs.pawns.map((pw) => (pw.id === id ? { ...pw, ...patch } : pw)) };
       };
-      // Adjacent already → start working this tick; else path to an adjacent approach (unconfined).
       if (isAdjacent(px, py, target.targetX, target.targetY)) {
         setPawn({
           currentState: PAWN_STATE.WORKING as never,
@@ -525,7 +444,7 @@ export const COMMANDS: Record<string, Cmd> = {
         py
       );
       if (!approach) {
-        claim(null); // nowhere to stand to work it — release so others can try
+        claim(null);
         continue;
       }
       gs = assignDraftMovePath(gs, pawn, approach.x, approach.y, blocked);
@@ -544,8 +463,6 @@ export const COMMANDS: Record<string, Cmd> = {
       pw.id === p.pawnId ? { ...pw, combatStance: p.stance as never } : pw
     )
   }),
-  /** The player's ceiling on what an auto-tend may spend dressing THIS pawn's wounds. `null` clears it
-   *  (no ceiling — reach for the best in stock, the default). */
   setPawnMedicineTier: (s, p: { pawnId: string; tier: number | null }) => ({
     ...s,
     pawns: s.pawns.map((pw) =>
@@ -555,25 +472,15 @@ export const COMMANDS: Record<string, Cmd> = {
     )
   }),
 
-  /**
-   * A caretaker gives a patient one dose of condition medicine OUT OF THEIR OWN PACK.
-   *
-   * Conditions are deliberately not automated: the sim would have to guess which of thirteen
-   * conditions the player wanted cleared and which of their few phials to spend on it. Instead the
-   * player equips a caretaker with what they expect to need and administers it deliberately — the
-   * medicine has to be ON the caretaker, and they have to be beside the patient.
-   */
   administerMedicine: (s, p: { caretakerId: string; patientId: string; itemId: string }) => {
     const ci = s.pawns.findIndex((pw) => pw.id === p.caretakerId);
     const pi = s.pawns.findIndex((pw) => pw.id === p.patientId);
     if (ci === -1 || pi === -1) return s;
     const carer = s.pawns[ci];
-    // Search the pack AND the vessels — the antivenins are fluids, so they are never a bulk stack.
     const held = carriedQuantities(carer)[p.itemId] ?? 0;
     if (held < doseOf(p.itemId)) return s;
     const def = itemService.getItemById(p.itemId);
     if (!def?.curesConditions?.length && !def?.mendsWounds?.length) return s;
-    // Beside the patient — you cannot dose someone across the map.
     const a = carer.position;
     const b = s.pawns[pi].position;
     if (!a || !b || !isAdjacent(a.x, a.y, b.x, b.y)) return s;
@@ -581,9 +488,7 @@ export const COMMANDS: Record<string, Cmd> = {
     const pawns = s.pawns.slice();
     const before = pawns[pi];
     pawns[pi] = applyConsumable(before, p.itemId, Math.random);
-    // Nothing applied (the patient has none of what this clears) — keep the dose rather than burn it.
     if (pawns[pi] === before) return s;
-    // Spend it from wherever it actually is: a vessel if one holds it, the bulk stack otherwise.
     const vessel = carrierOf(carer, p.itemId);
     if (vessel)
       return drainCarriedDose({ ...s, pawns }, p.caretakerId, vessel.instanceId, p.itemId);
@@ -599,9 +504,6 @@ export const COMMANDS: Record<string, Cmd> = {
     pawns: s.pawns.map((pw) => {
       if (pw.id !== p.pawnId) return pw;
       const next = { ...pw, restPolicy: p.policy as never };
-      // "No rest" takes effect IMMEDIATELY: if the pawn is mid-nap (or walking to a bed), roll it
-      // straight back to Idle so the next tick re-picks work — rather than letting handleSleeping run
-      // the nap down to its wake threshold first.
       if (
         p.policy === 'never' &&
         (pw.currentState === PAWN_STATE.SLEEPING ||
@@ -616,9 +518,6 @@ export const COMMANDS: Record<string, Cmd> = {
       return next;
     })
   }),
-  /** FORCE WORK toggle: when enabled, the pawn neglects every need and keeps working. Like "no rest",
-   *  it takes effect IMMEDIATELY — a pawn currently acting on a need (eating / drinking / sleeping /
-   *  walking to one) is rolled back to Idle so the next tick re-picks work instead of finishing the need. */
   setPawnForceWork: (s, p: { pawnId: string; forceWork: boolean }) => ({
     ...s,
     pawns: s.pawns.map((pw) => {
@@ -660,7 +559,6 @@ export const COMMANDS: Record<string, Cmd> = {
   unequipPawnItem: (s, p: { pawnId: string; slot: string }) => {
     const pawn = s.pawns.find((pw) => pw.id === p.pawnId);
     const inst = pawn?.equipment?.[p.slot as EquipmentSlot];
-    // Clear the slot. (unequipItem only removes from the doll — on its own it would DESTROY the item.)
     const afterUnequip: GameState = {
       ...s,
       pawns: s.pawns.map((pw) =>
@@ -668,26 +566,17 @@ export const COMMANDS: Record<string, Cmd> = {
       )
     };
     if (!pawn?.position || !inst) return afterUnequip;
-    // Set the just-unequipped item DOWN on the pawn's tile via the SAME drop path as the carry-card ↓,
-    // so the worn item lands on the ground (preserving durability/quality) instead of vanishing.
     return setInstanceDownOnTile(afterUnequip, p.pawnId, pawn.position, inst);
   },
   useConsumableItem: (s, p: { pawnId: string; itemId: string; vesselInstanceId?: string }) => {
     const idx = s.pawns.findIndex((pw) => pw.id === p.pawnId);
     if (idx === -1) return s;
-    // CONTAINERS-AND-FLUIDS: a potion is a FLUID now, so the dose may be in a phial on this pawn's own
-    // belt rather than in the colony's stock. Drawing from the carried vessel is the same action from
-    // the player's side; only where the dose is paid from differs.
     if (!p.vesselInstanceId && !stockedDose(s, p.itemId)) return s;
     if (p.vesselInstanceId && !carriedDose(s, p.pawnId, p.vesselInstanceId, p.itemId)) return s;
     const pawns = s.pawns.slice();
     const before = pawns[idx];
-    // §G: a timed draught lasts longer for a skilled alchemist — pass the drinker's alchemy work-quality
-    // (~0.8–1.8) as the duration multiplier. Trait-organs ignore it (no timed condition).
     const alchemyQuality =
       pawnStatService.getWorkModifiers(before, 'alchemy', undefined, 'crafting').quality ?? 1;
-    // §2h: apply the drink/eat effect (timed condition and/or trait grant + Faustian flaw). If nothing
-    // applied (e.g. a duplicate organ), keep the item — don't burn stock for a no-op.
     pawns[idx] = applyConsumable(before, p.itemId, () => rng.random(), alchemyQuality);
     if (pawns[idx] === before) return s;
     return p.vesselInstanceId
@@ -695,9 +584,6 @@ export const COMMANDS: Record<string, Cmd> = {
       : consumeFromStockpiles({ ...s, pawns }, { [p.itemId]: doseOf(p.itemId) });
   },
 
-  /** §2 weapon coating: brush a colony-stock coating onto THIS pawn's mainHand weapon, stamping a timed
-   *  `coating` on the instance (its on-hit proc rides the blade until `expiresAtTurn`). No-op — keeps the
-   *  item — if the pawn holds no mainHand weapon or the id isn't a coating. Re-coating overwrites. */
   applyWeaponCoating: (s, p: { pawnId: string; itemId: string; vesselInstanceId?: string }) => {
     const idx = s.pawns.findIndex((pw) => pw.id === p.pawnId);
     if (idx === -1) return s;
@@ -705,9 +591,9 @@ export const COMMANDS: Record<string, Cmd> = {
     if (p.vesselInstanceId && !carriedDose(s, p.pawnId, p.vesselInstanceId, p.itemId)) return s;
     const pawn = s.pawns[idx];
     const mh = pawn.equipment?.mainHand;
-    if (!mh) return s; // nothing equipped to coat
+    if (!mh) return s;
     const def = itemService.getItemById(p.itemId);
-    if (!def?.coatingEffect) return s; // not a coating
+    if (!def?.coatingEffect) return s;
     const expiresAtTurn = s.turn + ticksFromGameHours(def.coatingDurationHours ?? 6);
     const pawns = s.pawns.slice();
     pawns[idx] = {
@@ -722,8 +608,6 @@ export const COMMANDS: Record<string, Cmd> = {
       : consumeFromStockpiles({ ...s, pawns }, { [p.itemId]: doseOf(p.itemId) });
   },
 
-  /** Toggle a player "pin" on an item id for one pawn: pinned carried items are never deposited
-   *  during hauling (the pawn keeps them) and sort to the top of the gear lists. */
   togglePinItem: (s, p: { pawnId: string; itemId: string }) => ({
     ...s,
     pawns: s.pawns.map((pw) => {
@@ -738,20 +622,14 @@ export const COMMANDS: Record<string, Cmd> = {
     })
   }),
 
-  /** Drop a carried item NOW: the whole stack lands as a loose drop on the pawn's tile (absorbed
-   *  if that tile is a stockpile) and leaves the pawn's hands. Overrides a pin (explicit player act),
-   *  so the pin is cleared too. */
   dropCarriedItem: (s, p: { pawnId: string; itemId: string; instanceId?: string }) => {
     const pawn = s.pawns.find((pw) => pw.id === p.pawnId);
     if (!pawn?.position) return s;
-    // Carried colonist: an inventory "body" is a LIVE pawn — set it down (restored, on a FREE tile) and
-    // end the carry, rather than spawning a `carried_pawn` item on the ground. Reuses the same drop UI.
     if (p.itemId === CARRIED_PAWN_ITEM) {
       const victim = s.pawns.find((pw) => pw.carriedBy === p.pawnId);
       if (!victim) return s;
       const tile = freeDropTileNear(s, pawn.position.x, pawn.position.y, victim.id);
       let gs = dropCarriedPawn(s, p.pawnId, victim.id, tile.x, tile.y);
-      // Clear the rescue order so the carrier doesn't immediately walk back and re-grab the body.
       gs = {
         ...gs,
         pawns: gs.pawns.map((pw) =>
@@ -762,13 +640,9 @@ export const COMMANDS: Record<string, Cmd> = {
       };
       return gs;
     }
-    // Tracked instance (a carried tool/weapon/armour — held in `inventory.instances`, not the bulk
-    // count map). Drop that specific unit, preserving its durability/quality so a worn axe isn't reset
-    // to pristine on the ground.
     if (p.instanceId) {
       const inst = pawn.inventory?.instances?.find((i) => i.instanceId === p.instanceId);
       if (!inst) return s;
-      // Remove the unit from the pack (+ un-pin once none remain), then set it down via the shared drop.
       const afterRemove: GameState = {
         ...s,
         pawns: s.pawns.map((pw) => {
@@ -776,7 +650,6 @@ export const COMMANDS: Record<string, Cmd> = {
           const instances = (pw.inventory?.instances ?? []).filter(
             (i) => i.instanceId !== p.instanceId
           );
-          // Only un-pin the itemId once the pawn carries no more units of it (bulk or instance).
           const stillHeld =
             instances.some((i) => i.itemId === p.itemId) ||
             (pw.inventory?.items?.[p.itemId] ?? 0) > 0;
@@ -793,9 +666,6 @@ export const COMMANDS: Record<string, Cmd> = {
     }
     const qty = pawn?.inventory?.items?.[p.itemId] ?? 0;
     if (qty <= 0) {
-      // ITEM-DBG: the player asked to drop an item the WORKER's pawn doesn't actually hold. If this
-      // fires while the carry card shows the item, the main-thread inventory mirror is STALE (the
-      // cold-field sync didn't deliver the change) — i.e. a sync bug, not a sim bug.
       gameLogger.log(
         s.turn,
         'ITEM-DBG',
@@ -831,11 +701,9 @@ export const COMMANDS: Record<string, Cmd> = {
         };
       })
     };
-    // If the pawn is standing on a stockpile tile, the dropped stack is absorbed (stored) immediately.
     return absorbDropIfOnStockpileTile(next, drop.id);
   },
 
-  // ── mobs ───────────────────────────────────────────────────────────────────
   toggleHuntMark: (s, p: { mobId: string }) => ({
     ...s,
     mobs: (s.mobs ?? []).map((m) =>
@@ -847,7 +715,6 @@ export const COMMANDS: Record<string, Cmd> = {
     mobs: (s.mobs ?? []).map((m) => (p.ids.includes(m.id) ? { ...m, markedForHunt: true } : m))
   }),
 
-  // ── buildings ──────────────────────────────────────────────────────────────
   placeBuilding: (
     s,
     p: { bid: string; x: number; y: number; materials?: Record<string, string> }
@@ -861,7 +728,6 @@ export const COMMANDS: Record<string, Cmd> = {
       s
     ),
   cancelBuilding: (s, p: { id: string }) => buildingService.cancelBuilding(p.id, s),
-  /** BuildingMenu's refund-and-remove (distinct from the service cancel above). */
   cancelBuildingRefund: (s, p: { buildingId: string }) => {
     const placed = (s.buildings ?? []).find((b) => b.id === p.buildingId);
     if (!placed) return s;
@@ -891,23 +757,9 @@ export const COMMANDS: Record<string, Cmd> = {
         : b
     )
   }),
-  /**
-   * CONTAINERS-AND-FLUIDS §1 — set what ONE vessel is allowed to be filled with. Finds the instance
-   * wherever it is: lying as a drop, in a pack, or on a belt. Setting a list is the whole trigger for
-   * filling — allowing `water` on a waterskin is what queues the job that goes and fills it.
-   *
-   * Nothing is ever poured away here. Contents the new list no longer allows simply stay put until
-   * some other vessel that allows them has room to take them; tipping a vessel out is `emptyVessel`.
-   */
   setVesselFilter: (s, p: { instanceId: string; allowedItemIds: string[] }) =>
     mapVesselInstance(s, p.instanceId, (inst) => ({ ...inst, filter: [...p.allowedItemIds] })),
 
-  /**
-   * CONTAINERS-AND-FLUIDS §1 — promote a list to the colony default for this KIND of vessel, so every
-   * waterskin the colony makes from now on is born allowing water. Existing vessels keep their own
-   * lists: a barrel of somebody else's wine bought off a caravan is not re-purposed behind the
-   * player's back.
-   */
   setVesselFilterDefault: (s, p: { vesselItemId: string; allowedItemIds: string[] }) => ({
     ...s,
     vesselFilterDefaults: {
@@ -916,14 +768,6 @@ export const COMMANDS: Record<string, Cmd> = {
     }
   }),
 
-  /**
-   * CONTAINERS-AND-FLUIDS §2 — send a pawn to draw a station's fluid into an empty vessel by hand.
-   * The automatic fills answer the player's standing allow-lists and a queued order's demand; this is
-   * the one-off: "there is ale in that cask, go and bottle some". It picks the nearest free empty
-   * vessel in the colony that can hold the fluid, and mints the ordinary two-leg `fill` job for it —
-   * marked `manual` so the generator does not cull it for failing the filter test it was never meant
-   * to pass. No-op when the station is dry or the colony has nothing to put it in.
-   */
   drawFluidFromStation: (s, p: { buildingId: string; itemId: string; pawnId?: string }) => {
     const b = (s.buildings ?? []).find((x) => x.id === p.buildingId && x.status === 'complete');
     const held = (b?.fluidContents ?? []).find((e) => e.itemId === p.itemId)?.litres ?? 0;
@@ -966,11 +810,6 @@ export const COMMANDS: Record<string, Cmd> = {
     };
   },
 
-  /**
-   * CONTAINERS-AND-FLUIDS §1 — tip a vessel out on the ground. This DESTROYS what is in it (a fluid
-   * poured on the floor is gone), which is exactly why it is a deliberate order off the action menu
-   * and never something a job does on its own to make room.
-   */
   emptyVessel: (s, p: { instanceId: string }) =>
     mapVesselInstance(s, p.instanceId, (inst) => {
       const next = { ...inst };
@@ -978,7 +817,6 @@ export const COMMANDS: Record<string, Cmd> = {
       return next;
     }),
 
-  /** Per-building repair controls (threshold / material allow-list / pawns / pause) — the REPAIR fly-out. */
   setBuildingRepairSettings: (s, p: { id: string; updates: Record<string, unknown> }) => ({
     ...s,
     buildings: (s.buildings ?? []).map((b) =>
@@ -987,8 +825,6 @@ export const COMMANDS: Record<string, Cmd> = {
         : b
     )
   }),
-  /** Push one building's repair threshold onto EVERY building — the REPAIR fly-out's "apply to all"
-   *  (saves re-setting the same condition % per building by hand). */
   setAllBuildingsRepairThreshold: (s, p: { pct: number }) => ({
     ...s,
     buildings: (s.buildings ?? []).map((b) => ({
@@ -996,7 +832,6 @@ export const COMMANDS: Record<string, Cmd> = {
       repairSettings: { ...((b.repairSettings ?? {}) as object), repairThresholdPct: p.pct }
     }))
   }),
-  /** §F storage bins — set a store building's per-item filter (the FILTER fly-out on its card). */
   setBuildingStorageSettings: (s, p: { id: string; updates: Record<string, unknown> }) => ({
     ...s,
     buildings: (s.buildings ?? []).map((b) =>
@@ -1005,16 +840,11 @@ export const COMMANDS: Record<string, Cmd> = {
         : b
     )
   }),
-  /** Colony-wide food filter (which items pawns may eat) — set by the food panel on the pawn card. */
   setFoodSettings: (s, p: { updates: Partial<FoodSettings> }) => ({
     ...s,
     foodSettings: { ...(s.foodSettings ?? {}), ...p.updates }
   }),
 
-  // ── designations / zones ─────────────────────────────────────────────────────
-  // A harvest-style mark is rejected on a tile with nothing harvestable RIGHT NOW (e.g. a forage node
-  // still below the regrow floor) so it can't paint a phantom marker that never becomes a workable job
-  // (isHarvestableTileNow returns true for non-harvest designations, so zones are unaffected).
   designate: (s, p: { x: number; y: number; type: string; instanceId?: string }) =>
     isHarvestableTileNow(s, p.x, p.y, p.type as DesignationType)
       ? designationService.designate(p.x, p.y, p.type as never, s, p.instanceId)
@@ -1029,20 +859,12 @@ export const COMMANDS: Record<string, Cmd> = {
     ),
   clearDesignation: (s, p: { x: number; y: number }) =>
     designationService.clearDesignation(p.x, p.y, s),
-  /** Cancel ONLY the action order (harvest/woodcut/forage) on a tile, leaving any restrict/stockpile/
-   *  grow zone the tile belongs to intact. Use this — not `clearDesignation` — for harvest-mark cancel,
-   *  so cancelling a harvest inside a restrict zone doesn't evict the tile from the zone. */
   clearActionDesignation: (s, p: { x: number; y: number }) =>
     designationService.clearActionDesignation(p.x, p.y, s),
-  /** Clear the designation on each listed tile (the targeted inverse of designateTiles — cancels only
-   *  the marked tiles, not every tile of a resource type). */
   clearDesignationTiles: (s, p: { tiles: [number, number][] }) =>
     p.tiles.reduce((cur, [tx, ty]) => designationService.clearDesignation(tx, ty, cur), s),
-  /** Action-only variant of clearDesignationTiles — cancels harvest orders on the listed tiles without
-   *  touching any standing zones they sit in. */
   clearActionDesignationTiles: (s, p: { tiles: [number, number][] }) =>
     p.tiles.reduce((cur, [tx, ty]) => designationService.clearActionDesignation(tx, ty, cur), s),
-  /** Clear every designated tile holding this resource (symmetric inverse of bulk MARK). */
   clearDesignationsForResource: (s, p: { resourceId: string }) =>
     designationService.clearDesignationsForResource(p.resourceId, s),
   clearRect: (s, p: { x1: number; y1: number; x2: number; y2: number }) =>
@@ -1051,13 +873,10 @@ export const COMMANDS: Record<string, Cmd> = {
     s,
     p: { x1: number; y1: number; x2: number; y2: number; type: string; instanceId?: string }
   ) => designationService.designateRect(p.x1, p.y1, p.x2, p.y2, p.type as never, s, p.instanceId),
-  // The caller generates the id (it needs it immediately to enter paint mode) and passes it in,
-  // so this is fire-and-forget instead of the old request-response that returned a new id.
   createZoneInstance: (s, p: { type: ZoneInstanceType; label: string; id: string }) =>
     designationService.createZoneInstanceWithId(p.type, p.label, p.id, s),
   removeZoneInstance: (s, p: { instanceId: string }) =>
     designationService.removeZoneInstance(p.instanceId, s),
-  /** RESTRICT zones: toggle a pawn's membership (which pawns are confined to this zone). */
   toggleZonePawn: (s, p: { instanceId: string; pawnId: string }) =>
     designationService.toggleZonePawn(p.instanceId, p.pawnId, s),
   toggleInstanceCategory: (
@@ -1068,27 +887,20 @@ export const COMMANDS: Record<string, Cmd> = {
     designationService.clearInstanceFilter(p.instanceId, s),
   setInstanceFilter: (s, p: { instanceId: string; filter: ZoneFilter }) =>
     designationService.setInstanceFilter(p.instanceId, p.filter, s),
-  /** Set a stockpile zone's haul-fill priority (low/normal/preferred/urgent) — pawns top up higher
-   *  zones before spilling into lower ones (see findNearestDepositPoint / depositInventory). */
   setInstancePriority: (s, p: { instanceId: string; priority: ZonePriority }) =>
     designationService.setInstancePriority(p.instanceId, p.priority, s),
-  /** CONTAINERS-AND-FLUIDS §3 — how many bins/barrels/baskets a stockpile keeps (DF's max-bins). */
   setInstanceContainerBudget: (s, p: { instanceId: string; containerBudget: number }) => ({
     ...s,
     zoneInstances: (s.zoneInstances ?? []).map((z) =>
       z.id === p.instanceId ? { ...z, containerBudget: p.containerBudget } : z
     )
   }),
-  /** Toggle a loose stack's haul lockout (DroppedItem.forbidden). Forbidden stacks are skipped by the
-   *  haul generator and any in-flight haul for them is pruned next tick (see jobs/haul.ts). */
   setDropForbidden: (s, p: { dropId: string; forbidden: boolean }) => ({
     ...s,
     droppedItems: (s.droppedItems ?? []).map((d) =>
       d.id === p.dropId ? { ...d, forbidden: p.forbidden } : d
     )
   }),
-  /** Flag a loose stack as URGENT to haul — its haul job sorts to the top of every pawn's queue and is
-   *  created even when the stockpile is otherwise at capacity (see jobs/haul.ts + getAvailableJobs). */
   setDropUrgent: (s, p: { dropId: string; urgent: boolean }) => ({
     ...s,
     droppedItems: (s.droppedItems ?? []).map((d) =>
@@ -1100,26 +912,18 @@ export const COMMANDS: Record<string, Cmd> = {
   setAllZoneColorHidden: (s, p: { hidden: boolean }) =>
     designationService.setAllColorHidden(p.hidden, s),
 
-  // ── research / crafting ──────────────────────────────────────────────────────
   startResearch: (s, p: { researchId: string }) => researchService.startResearch(p.researchId, s),
   cancelResearch: (s) => ({ ...s, currentResearch: undefined }),
   cancelCrafting: (s, p: { queueId: string }) => {
     const next = releaseReservation(s, p.queueId);
     return { ...next, craftingQueue: (next.craftingQueue || []).filter((q) => q.id !== p.queueId) };
   },
-  /** Drag-move a crafting order: optionally re-pin it to a different physical workstation
-   *  (`stationBuildingId`) and reposition it before `beforeId` (or to the end). Array position drives
-   *  priority — craft.ts works one order per station in queue order. Re-pinning recomputes
-   *  `workRequired` for the new station's crafting bonus and rescales `workDone` so the progress %
-   *  carries over; the reserve-and-fetch system re-routes any staged inputs to the new station tile.
-   *  A station change to a building that can't fulfil the recipe (or doesn't exist) is ignored. */
   moveCraftOrder: (s, p: { queueId: string; stationBuildingId?: string; beforeId?: string }) => {
     const queue = s.craftingQueue ?? [];
     const idx = queue.findIndex((o) => o.id === p.queueId);
     if (idx < 0) return s;
     let order = queue[idx];
 
-    // Re-pin to a new station (validated against the recipe's required station type).
     if (p.stationBuildingId && p.stationBuildingId !== order.stationBuildingId) {
       const target = (s.buildings ?? []).find(
         (b) => b.id === p.stationBuildingId && b.status === 'complete'
@@ -1152,16 +956,12 @@ export const COMMANDS: Record<string, Cmd> = {
     else rest.push(order);
     return { ...s, craftingQueue: rest };
   },
-  /** Toggle the paused flag on a crafting order (chip pause button). */
   toggleCraftPaused: (s, p: { queueId: string }) => ({
     ...s,
     craftingQueue: (s.craftingQueue ?? []).map((o) =>
       o.id === p.queueId ? { ...o, paused: !o.paused } : o
     )
   }),
-  /** Drag-reorder the in-progress construction queue. `orderedIds` is the new order of the incomplete
-   *  builds; their relative order drives fetch/haul priority (fetch.ts/construct.ts iterate buildings in
-   *  array order). Completed buildings keep their slots — only the in-progress slots are refilled. */
   reorderBuilds: (s, p: { orderedIds: string[] }) => {
     const all = s.buildings ?? [];
     const byId = new Map(all.map((b) => [b.id, b]));
@@ -1178,8 +978,6 @@ export const COMMANDS: Record<string, Cmd> = {
     });
     return { ...s, buildings: next };
   },
-  /** Queue a crafting order (ADR-016 reserve-and-fetch). Moved here from GameCoordinator so it runs
-   *  on the worker's canonical state instead of the stale main-thread projection. */
   craftItem: (
     s,
     p: { itemId: string; quantity?: number; selectedIngredients?: Record<string, string> }
@@ -1187,19 +985,11 @@ export const COMMANDS: Record<string, Cmd> = {
     const quantity = p.quantity ?? 1;
     const item = itemService.getItemById(p.itemId);
     if (!item) return s;
-    // Allow queueing without the materials in stock — only the non-material gates (station/tools/
-    // research/population/mold) block queueing. A materials-short order is created `pending` and the
-    // engine reserves its inputs once they're stocked (reservePendingOrders).
     if (!itemService.canQueueCraft(p.itemId, s)) return s;
-    // Resolve the EXACT producing recipe. Butchery: a carcass is an INPUT with no producing recipe —
-    // dispatch by the carcass to its butchery recipe (best built station). Else the item's recipe.
     const recipe = item.isCarcass
       ? itemService.resolveCarcassRecipe(item.id, s)
       : recipeService.getRecipeForItem(item.id);
     if (!recipe) return s;
-    // Input cost: butchery consumes the carcass (recipe.inputs); a normal craft resolves its (possibly
-    // dynamic) cost. resolveActiveCost returns null for a dynamic recipe whose chosen ingredient isn't
-    // stocked → fall back to the static/base cost so it can queue pending materials.
     const resolved = item.isCarcass
       ? {}
       : (p.selectedIngredients ?? itemService.autoSelectIngredients(p.itemId, s) ?? {});
@@ -1228,8 +1018,6 @@ export const COMMANDS: Record<string, Cmd> = {
         break;
       }
     }
-    // Materials short → queue the order `pending` with NO reservations held (release the partial
-    // ones). The engine reserves its inputs once they're stocked (reservePendingOrders).
     if (!allReserved) gs = releaseReservation(gs, orderId);
     const order: CraftingInProgress = {
       id: orderId,
@@ -1248,14 +1036,8 @@ export const COMMANDS: Record<string, Cmd> = {
     return { ...gs, craftingQueue: [...(gs.craftingQueue ?? []), order] };
   },
 
-  // ── equipment / dev ──────────────────────────────────────────────────────────
-  /** Equip a loose item off a tile onto a pawn (ADR-016: the swapped-out item drops back). */
-  // Instant equip-from-ground (no movement). The drafted equip ORDER walks the pawn over first and
-  // then applies this same `equipDropToPawn` on arrival (see GameEngineImpl._processDraftOrders).
   equipFromTile: (s, p: { pawnId: string; dropId: string }) =>
     equipDropToPawn(s, p.pawnId, p.dropId),
-  /** Pick `quantity` units of a specific tile drop straight into a pawn's inventory (instant, like
-   *  equipFromTile). Carry budget is respected — only what fits is taken (floor of 1). */
   pickUpItemFromTile: (s, p: { pawnId: string; dropId: string; quantity: number }) => {
     const drop = (s.droppedItems ?? []).find((d) => d.id === p.dropId);
     if (!drop) return s;
@@ -1264,8 +1046,6 @@ export const COMMANDS: Record<string, Cmd> = {
       maxQty: Math.max(1, Math.floor(p.quantity))
     });
   },
-  /** Order a (drafted) pawn to shuttle the loose stack on a tile to the nearest stockpile. The
-   *  draft-haul branch in _processDraftOrders carries one budget-load at a time until it's clear. */
   haulTileToStockpile: (s, p: { pawnId: string; x: number; y: number }) => ({
     ...s,
     pawns: s.pawns.map((pw) =>
@@ -1275,8 +1055,6 @@ export const COMMANDS: Record<string, Cmd> = {
   devSpawnAllItems: (s, p: { amount?: number }) => devSpawnLooseItems(s, p.amount ?? 500),
   devClearAllItems: (s) => devDestroyAllItems(s),
 
-  // ── debug menu (in-game DEBUG tab) ───────────────────────────────────────────
-  /** Spawn a loose pile of one item id on a chosen tile (or near the colony when x/y omitted). */
   devSpawnItem: (s, p: { itemId: string; amount?: number; x?: number; y?: number }) => {
     const item = itemService.getItemById(p.itemId);
     if (!item) return s;
@@ -1287,7 +1065,6 @@ export const COMMANDS: Record<string, Cmd> = {
     const x = p.x ?? start.x;
     const y = p.y ?? start.y;
     const drop = {
-      // Turn-derived id (not Date.now()) so a scenario build replays byte-identically (ADR-033).
       id: `dev-spawn-${p.itemId}-${x}-${y}-t${s.turn}`,
       resourceId: p.itemId,
       x,
@@ -1301,7 +1078,6 @@ export const COMMANDS: Record<string, Cmd> = {
     );
   },
 
-  /** Spawn `count` fresh pawns of the colony's culture, placed on walkable tiles near map centre. */
   devSpawnPawns: (s, p: { count?: number }) => {
     const pawns = generatePawns(s.culture, p.count ?? 1);
     const w = s.worldMap[0]?.length ?? 0;
@@ -1319,8 +1095,6 @@ export const COMMANDS: Record<string, Cmd> = {
     return { ...s, pawns: [...s.pawns, ...placed] };
   },
 
-  /** Resolve a pending migrant wave: accept the candidates whose ids are in `acceptedIds` (place them
-   *  near the colony), drop the rest, and clear the event. An empty list = reject-all / dismiss. */
   commitMigrants: (s, p: { acceptedIds?: string[] }) => {
     const ev = s.pendingEvent;
     if (!ev || ev.kind !== 'migrant-wave') return { ...s, pendingEvent: undefined };
@@ -1335,7 +1109,6 @@ export const COMMANDS: Record<string, Cmd> = {
     const occupied = new Set<string>(
       s.pawns.filter((pw) => pw.position).map((pw) => `${pw.position!.x},${pw.position!.y}`)
     );
-    // Re-id to fresh, collision-free colony ids (candidates carried wave-unique `migrant-*` ids).
     const existingIds = new Set(s.pawns.map((pw) => pw.id));
     let n = s.pawns.length;
     const commitIds = new Map<string, string>();
@@ -1348,8 +1121,6 @@ export const COMMANDS: Record<string, Cmd> = {
       occupied.add(`${pos.x},${pos.y}`);
       return { ...c, id, position: pos, path: [], pathIndex: 0 };
     });
-    // SOCIAL-LAYER §2: repoint wave-internal kin ids at the fresh colony ids; a tie to a candidate
-    // the player turned away is dropped (that sibling walked on).
     remapKinIds(placed, commitIds);
 
     simLog.logActivity({
@@ -1364,20 +1135,13 @@ export const COMMANDS: Record<string, Cmd> = {
       severity: 'success'
     });
 
-    // BACKGROUNDS: a new arrival brings knowledge of their homeland (and places they travelled).
     const joined: GameState = { ...s, pawns: [...s.pawns, ...placed], pendingEvent: undefined };
-    // SOCIAL-LAYER: the newcomers are introduced around — at least a Strangers row with everyone.
     return socialService.meetColony(kingdomService.seedKingdomKnowledgeFromPawns(joined, placed));
   },
 
-  /** KINGDOMS-TRADE §3: dismiss the arrival announcement — the party is already on the map. */
   acknowledgeKingdomArrival: (s) =>
     s.pendingEvent?.kind === 'kingdom-arrival' ? { ...s, pendingEvent: undefined } : s,
 
-  /** KINGDOMS-TRADE §4: commit a barter deal with a caravan. `give` leaves the colony stockpile,
-   *  `receive` leaves the caravan's stock; the caravan only accepts a deal whose received value
-   *  (priced by the negotiating pawn's `trade` stat + relations; gold anchors) covers what it hands
-   *  over. Completing a deal deepens contact (knowledge xp) and warms relations. */
   executeTrade: (
     s,
     p: {
@@ -1392,7 +1156,6 @@ export const COMMANDS: Record<string, Cmd> = {
     const pawn = s.pawns.find((pw) => pw.id === p.pawnId && pw.isAlive !== false);
     if (!pawn) return s;
 
-    // Merge duplicate lines, then validate both sides against actual stock.
     const giveMap: Record<string, number> = {};
     for (const l of p.give) {
       if (l.qty <= 0) return s;
@@ -1404,8 +1167,6 @@ export const COMMANDS: Record<string, Cmd> = {
       receiveMap[l.itemId] = (receiveMap[l.itemId] ?? 0) + l.qty;
     }
     if (Object.keys(giveMap).length === 0 && Object.keys(receiveMap).length === 0) return s;
-    // Validate against UNRESERVED stored stock (ADR-016) — the raw stockpile mirror counts stacks
-    // already reserved for craft orders, which consumeFromStockpiles will rightly refuse to touch.
     const available = availableAggregateFromDrops(s.droppedItems ?? []);
     for (const [id, qty] of Object.entries(giveMap)) {
       if ((available[id] ?? 0) < qty) return s;
@@ -1414,7 +1175,6 @@ export const COMMANDS: Record<string, Cmd> = {
       if ((party.stock.find((g) => g.itemId === id)?.qty ?? 0) < qty) return s;
     }
 
-    // Price the deal from the caravan's side — the trading pawn's skill narrows the spread.
     const tradeStat = pawnStatService.evaluateStat('trade', pawn);
     const sumValue = (map: Record<string, number>, side: 'give' | 'receive') =>
       Object.entries(map).reduce(
@@ -1426,7 +1186,6 @@ export const COMMANDS: Record<string, Cmd> = {
       );
     if (sumValue(giveMap, 'give') < sumValue(receiveMap, 'receive')) return s;
 
-    // Move the goods.
     let next: GameState = s;
     if (Object.keys(giveMap).length > 0) next = consumeFromStockpiles(next, giveMap);
     if (Object.keys(receiveMap).length > 0) next = addToStockpileZone(next, null, receiveMap);
@@ -1447,7 +1206,6 @@ export const COMMANDS: Record<string, Cmd> = {
       )
     };
 
-    // A completed deal is the deepest contact there is — knowledge + goodwill.
     next = kingdomService.recordContact(
       next,
       party.kingdomId,
@@ -1468,25 +1226,17 @@ export const COMMANDS: Record<string, Cmd> = {
     return next;
   },
 
-  /** Force-spawn `count` mobs (ignores caps / current count). Optional specific creature id. */
   devSpawnEntities: (s, p: { count?: number; creatureId?: string }) =>
     devSpawnMobs(s, p.count ?? 5, p.creatureId),
 
-  /** DEBUG: spawn one mob of `creatureId` at a chosen tile (controlled placement, e.g. a hostile next
-   *  to an armed pawn for a combat test). */
   devSpawnMobAt: (s, p: { creatureId: string; x: number; y: number }) =>
     devSpawnMobAt(s, p.creatureId, p.x, p.y),
 
-  /** DEBUG: force a kingdom party (trade caravan or friendly visitors) to arrive now. */
   devTriggerKingdomArrival: (s, p: { kind?: 'caravan' | 'visitor' }) =>
     kingdomService.forceArrival(s, p.kind),
 
-  /** DEBUG: force a migrant wave now (guaranteed non-empty). */
   devTriggerMigrantWave: (s) => rollMigrantWave(s, true),
 
-  /** DEBUG insta-kill: kill the pawn OR mob with `id`. Pawns die immediately (killPawn → corpse +
-   *  gear drop + chronicle). Mobs are set to 0 health so the entity lifecycle reaps them to a corpse
-   *  (+ carcass) on the next tick. Targeted from the kill click-brush (GameCanvas). */
   devKillEntity: (s, p: { id: string }) => {
     const pawn = (s.pawns ?? []).find((pw) => pw.id === p.id && pw.isAlive !== false);
     if (pawn) return killPawn(pawn, 'combat', s);
@@ -1496,12 +1246,6 @@ export const COMMANDS: Record<string, Cmd> = {
     return s;
   },
 
-  /** DEBUG resurrect: bring back the dead colonist at tile (x,y) — targeted by the resurrect
-   *  click-brush (click a corpse). A pawn still in the array (just died, not yet reaped) is FULLY
-   *  restored in place — wounds/conditions cleared, blood/limbs topped up, needs reset — so it doesn't
-   *  immediately re-die. Otherwise the `pawn_carcass` drop on the tile is revived: a fresh body keeping
-   *  the dead pawn's name is spawned there and the carcass + its `deadPawns` record are cleared (the
-   *  original instance's limbs/traits/skills are gone — it was already reaped). */
   devResurrectAt: (s, p: { x: number; y: number }) => {
     const revive = (pw: (typeof s.pawns)[number]) => ({
       ...pw,
@@ -1530,7 +1274,6 @@ export const COMMANDS: Record<string, Cmd> = {
       }))
     });
 
-    // 1. A dead pawn still on the array at this tile (same-turn death) → revive in place.
     const dead = (s.pawns ?? []).find(
       (pw) => pw.isAlive === false && pw.position?.x === p.x && pw.position?.y === p.y
     );
@@ -1539,7 +1282,6 @@ export const COMMANDS: Record<string, Cmd> = {
       return {
         ...s,
         pawns: (s.pawns ?? []).map((pw) => (pw.id === dead.id ? revive(pw) : pw)),
-        // Clear this pawn's corpse drop + memorial so the body doesn't linger alongside the revived pawn.
         droppedItems: (s.droppedItems ?? []).filter(
           (d) => !(d.resourceId === 'pawn_carcass' && d.id.startsWith(`corpse-${dead.id}-`))
         ),
@@ -1547,13 +1289,10 @@ export const COMMANDS: Record<string, Cmd> = {
       };
     }
 
-    // 2. Otherwise revive the pawn_carcass sitting on this tile (the reaped case): spawn a fresh body
-    //    with the same name, remove the carcass + its memorial record.
     const carcass = (s.droppedItems ?? []).find(
       (d) => d.resourceId === 'pawn_carcass' && d.x === p.x && d.y === p.y
     );
     if (!carcass) return s;
-    // makeDynamicName stamps "<Name>'s Carcass" — strip the trailing possessive to recover the name.
     const name = (carcass.name ?? '').replace(/'s [^']*$/, '') || 'Revenant';
     const occupied = new Set<string>(
       (s.pawns ?? []).filter((pw) => pw.position).map((pw) => `${pw.position!.x},${pw.position!.y}`)
@@ -1569,43 +1308,27 @@ export const COMMANDS: Record<string, Cmd> = {
     };
   },
 
-  /** Set the weather to a fixed type (sticky — won't re-roll until changed again). */
   setWeather: (s, p: { type: string }) => ({ ...s, weather: makeWeather(p.type) }),
 
-  /** Override the season (null/undefined resumes the natural turn-derived cycle). */
   setSeason: (s, p: { season: Season | null }) => ({ ...s, _debugSeason: p.season ?? undefined }),
 
-  /** Override the rendered time-of-day (fraction [0,1); null resumes the natural turn-derived cycle).
-   *  Visual only — the sim turn keeps ticking; this just freezes the ambient light/tint for testing. */
   setTimeOfDay: (s, p: { timeOfDay: number | null }) => ({
     ...s,
     _debugTimeOfDay: p.timeOfDay ?? undefined
   }),
 
-  /** DEBUG: turn research gating off/on. When on, research-locked recipes & buildings show in the
-   *  Crafting/Building tabs and can be queued/built without their prerequisite research. */
   setResearchGateOff: (s, p: { off: boolean }) => ({
     ...s,
     _devResearchGateOff: p.off || undefined
   }),
 
-  /** DEBUG: freeze time-based decay so dev-spawned stuff survives a test. `deterioration` = weather
-   *  wear on buildings + loose items; `spoilage` = food/carcass rot. `off:true` freezes, `off:false`
-   *  resumes. Rides gameState so a worker or headless session both honour it. */
   devToggleDecay: (s, p: { kind: 'deterioration' | 'spoilage'; off: boolean }) => {
     const key = p.kind === 'spoilage' ? '_devFreezeSpoilage' : '_devFreezeDeterioration';
     return { ...s, [key]: p.off || undefined };
   },
 
-  /** DEBUG: give every fuel station infinite fuel — held full, lit and at its hottest, with the
-   *  fuel/heat smelt gate skipped. Lets a headless test drive smelting/baking without also having to
-   *  haul fuel and light fires (a separate system with its own audit). */
   devInfiniteFuel: (s, p: { on: boolean }) => ({ ...s, _devInfiniteFuel: p.on || undefined }),
 
-  // ── HEADLESS-SIM (ADR-033) godmode verbs — scenario spin-up + debug steering ─────────────
-
-  /** DEBUG: set a pawn's base stats (merge). Each set value also raises that stat's `maxStats`
-   *  growth ceiling to at least the new value, so a granted stat isn't immediately capped away. */
   devSetPawnStats: (s, p: { pawnId: string; stats: Partial<EntityStats> }) => ({
     ...s,
     pawns: s.pawns.map((pw) => {
@@ -1621,24 +1344,12 @@ export const COMMANDS: Record<string, Cmd> = {
     })
   }),
 
-  /**
-   * DEBUG: give a pawn an exact trait list, by id from `traits.jsonc`. Unknown ids are dropped.
-   *
-   * A trait's `combatMods`/resistances/nightVision are read live off `pawn.traits` every
-   * `evaluateStat`, so being in the list is enough. Its ONE-SHOT effects are not: core-stat deltas,
-   * grafted limbs and bodyMod HP scaling are baked once when the trait is acquired. That baking is
-   * exactly what a growth event does, so this routes through the SAME `applyGainedTrait` the
-   * lineage-growth path uses (`PawnGrowthService`) rather than re-deriving a partial copy of it —
-   * a dev-assigned trait then behaves identically to one grown into. Set stats first if you do both.
-   */
   devSetPawnTraits: (s, p: { pawnId: string; traitIds: string[] }) => {
     const traits = p.traitIds.map((id) => getTraitById(id)).filter((t): t is Trait => !!t);
     return {
       ...s,
       pawns: s.pawns.map((pw) => {
         if (pw.id !== p.pawnId) return pw;
-        // `applyGainedTrait` mutates in place (the growth path already does), so clone everything it
-        // reaches before letting it run: stats, the limb/part tree, needs, and the trait list itself.
         const next: Pawn = {
           ...pw,
           traits: [...traits],
@@ -1652,8 +1363,6 @@ export const COMMANDS: Record<string, Cmd> = {
     };
   },
 
-  /** DEBUG: set a pawn's work-skill levels (WORK-EXPERIENCE, clamped 1–50; resets that skill's
-   *  in-level XP so the bar reads clean). Keys are work-category ids from Work.ts. */
   devSetPawnSkills: (s, p: { pawnId: string; skills: Record<string, number> }) => ({
     ...s,
     pawns: s.pawns.map((pw) => {
@@ -1668,10 +1377,6 @@ export const COMMANDS: Record<string, Cmd> = {
     })
   }),
 
-  /** DEBUG: give a pawn a lineage BLOOD NEED (LINEAGES-II vampire/werewolf) so the bloodHunger →
-   *  bloodthirst → BLOOD_HUNT loop can be driven headless. `kind` 'humanoid' = vampiric (feeds on
-   *  colonists), 'carcass' = feeds on kills; optional `bloodHunger` seeds the meter (100 = ready to rage
-   *  on the next hourly tick); `rage` stamps the bloodthirst condition immediately (seizes the FSM now). */
   devSetBloodNeed: (
     s,
     p: { pawnId: string; kind: 'carcass' | 'humanoid'; bloodHunger?: number; rage?: boolean }
@@ -1688,9 +1393,6 @@ export const COMMANDS: Record<string, Cmd> = {
     })
   }),
 
-  /** DEBUG: set the per-unit FRESHNESS condition (0–100) on every dropped stack of a carcass resource, so
-   *  the spoilage → butchery-yield scaling (`conditionMult`, craft.ts) can be driven headless. Scenario
-   *  carcasses spawn fresh (no `unitConditions`); this stamps the freshness meter a real kill would carry. */
   devSetDropCondition: (s, p: { resourceId: string; condition: number }) => ({
     ...s,
     droppedItems: (s.droppedItems ?? []).map((d) =>
@@ -1703,8 +1405,6 @@ export const COMMANDS: Record<string, Cmd> = {
     )
   }),
 
-  /** DEBUG: bank a growth offer on a pawn right now (outside the seasonal cadence) — same roll as
-   *  an earned one, incl. the lineage-progression moment. `doubled` = birthday-strength rolls. */
   devGrantGrowth: (s, p: { pawnId: string; doubled?: boolean }) => ({
     ...s,
     pawns: s.pawns.map((pw) => {
@@ -1715,9 +1415,6 @@ export const COMMANDS: Record<string, Cmd> = {
     })
   }),
 
-  /** DEBUG: complete research instantly — one id, or the whole tree (`all: true`). Runs the REAL
-   *  completion path (`researchService.completeResearch`) so tool-tier bumps and unlock lists apply
-   *  exactly as if researched. */
   devUnlockResearch: (s, p: { researchId?: string; all?: boolean }) => {
     if (p.all) {
       let gs = s;
@@ -1730,16 +1427,11 @@ export const COMMANDS: Record<string, Cmd> = {
     return researchService.completeResearch(p.researchId, s);
   },
 
-  /** DEBUG: set the research-granted tool-tier floor (`currentToolLevel`). The colony's effective
-   *  tier is still the max of this and the best physical tool in stock (ADR-009 `colonyToolTier`). */
   devSetToolTier: (s, p: { tier: number }) => ({
     ...s,
     currentToolLevel: Math.max(0, Math.round(p.tier))
   }),
 
-  /** DEBUG: freeze/resume one need's per-tick accrual (HEADLESS-SIM per-need toggles). `off: true`
-   *  freezes the need at its current value; `off: false` resumes. The map rides gameState so the
-   *  worker and a headless session both honour it (see `_needsDisabled`). */
   devToggleNeed: (s, p: { need: DisableableNeed; off: boolean }) => {
     const cur = { ...(s._needsDisabled ?? {}) };
     if (p.off) cur[p.need] = true;
@@ -1747,13 +1439,11 @@ export const COMMANDS: Record<string, Cmd> = {
     return { ...s, _needsDisabled: Object.keys(cur).length > 0 ? cur : undefined };
   },
 
-  /** Instantly place a complete building on a tile (no cost, no construction work). */
   devSpawnBuildingAt: (s, p: { buildingId: string; x: number; y: number }) => {
     const def = buildingService.getBuildingById(p.buildingId);
     if (!def) return s;
     if (s.worldMap?.[p.y]?.[p.x]?.walkable === false) return s;
     const placed: PlacedBuilding = {
-      // Turn-derived id (not Date.now()) so a scenario build replays byte-identically (ADR-033).
       id: `${p.buildingId}-${p.x}-${p.y}-t${s.turn}`,
       type: p.buildingId,
       status: 'complete',
@@ -1768,7 +1458,6 @@ export const COMMANDS: Record<string, Cmd> = {
     return buildingService.applyBuildingFootprint(state, placed, true);
   },
 
-  /** Place a resource node on a tile (full node amount), updating walkability from its def. */
   devSpawnResourceAt: (s, p: { resourceId: string; x: number; y: number }) => {
     const def = resourceObjectService.getById(p.resourceId);
     const tile = s.worldMap?.[p.y]?.[p.x];
@@ -1783,7 +1472,6 @@ export const COMMANDS: Record<string, Cmd> = {
     return { ...s };
   },
 
-  /** Regrow a tile's resources: clear any cooldowns and restore every present/cooling node to full. */
   devRegrowTileAt: (s, p: { x: number; y: number }) => {
     const tile = s.worldMap?.[p.y]?.[p.x];
     if (!tile) return s;
@@ -1810,11 +1498,6 @@ export const COMMANDS: Record<string, Cmd> = {
     return { ...s };
   },
 
-  /** Debug: set snow cover across the whole map to `value` (0–100), scaled per tile by its wetness
-   *  (wetter = whiter) so you can eyeball the non-uniform cover. 0 clears it. One-shot full-map pass. */
-  /** Debug: set every tile's soil MOISTURE (0–100) — the static field crop growth reads (`cropHealth`
-   *  min/maxMoisture). Lets a headless test drive crop growth on a flat map without a rain-fed generated
-   *  world (mirrors devSetMapSnow/devSetMapIce). One-shot full-map pass. */
   devSetMapMoisture: (s, p: { value: number }) => {
     const v = Math.max(0, Math.min(100, p.value ?? 0));
     for (const row of s.worldMap) {
@@ -1826,14 +1509,11 @@ export const COMMANDS: Record<string, Cmd> = {
     }
     return { ...s };
   },
-  /** Debug: set every walkable tile's soil SUBTYPE (e.g. `terra_preta` = tier 4), so any crop's `minSoil`
-   *  is met on a flat test map without hauling terraform builds. Rewrites walkable/movementCost/blocksSight
-   *  from the subterrain def (mirrors the terraform apply in jobs/construct). */
   devSetMapSoil: (s, p: { subType: string }) => {
     const sub = SUBTERRAINS[p.subType] ?? SUBTERRAIN_FALLBACK;
     for (const row of s.worldMap) {
       for (const tile of row) {
-        if (!tile.walkable) continue; // only soil-bearing ground
+        if (!tile.walkable) continue;
         tile.subType = p.subType;
         tile.walkable = sub.walkable;
         tile.movementCost = sub.movementCost;
@@ -1844,9 +1524,6 @@ export const COMMANDS: Record<string, Cmd> = {
     }
     return { ...s };
   },
-  /** Debug: FAITHFUL crop-growth time-compression (see `_devCropGrowthScale`). Scales BOTH the growth
-   *  advance and the wither loss, so the gate's mature/never-mature verdict is preserved — a test drives
-   *  REAL maturation through the real per-tick `cropHealth` gate in 1/factor the ticks, never bypassing it. */
   devCropGrowthScale: (s, p: { factor: number }) => ({
     ...s,
     _devCropGrowthScale: Math.max(1, p.factor || 1)
@@ -1860,23 +1537,16 @@ export const COMMANDS: Record<string, Cmd> = {
         const next = v <= 0 ? 0 : Math.max(0, Math.min(100, Math.round(v * factor)));
         if (next === (tile.snow ?? 0)) continue;
         tile.snow = next;
-        // 'snow' kind — full-map instant snow repaints only the blended snow layer (the stress case
-        // the layer exists for), never the terrain/resource grids.
         markTileDirty(tile.y, tile.x, tile, 'snow');
       }
     }
     return { ...s };
   },
 
-  /** Debug: set ice cover across the whole map to `value` (0–100), capped per tile by its wetness so
-   *  only wet ground / open water freezes thick (mirrors the real freeze ceiling). 0 clears it. A water
-   *  tile crossing ICE_WALKABLE flips to walkable-but-slippery (and back), keeping the A* grid in sync —
-   *  so you can also test frozen-water traversal, not just the visual. One-shot full-map pass. */
   devSetMapIce: (s, p: { value: number }) => {
     const v = Math.max(0, Math.min(100, p.value ?? 0));
     for (const row of s.worldMap) {
       for (const tile of row) {
-        // Match the sim gate: only walkable ground / open water freeze; dry impassable rock never ices.
         const canFreeze = tile.walkable || tile.type === 'water';
         const wetCeiling = Math.min(100, tileWetness(tile.moisture ?? 0, s.weather));
         const next = !canFreeze || v <= 0 ? 0 : Math.min(wetCeiling, v);
@@ -1897,7 +1567,6 @@ export const COMMANDS: Record<string, Cmd> = {
             patchPathfindingWalkable(tile.x, tile.y, false);
           }
         }
-        // 'snow' kind — the ice glaze lives in the blended snow layer (see accumulateSnow).
         markTileDirty(tile.y, tile.x, tile, 'snow');
       }
     }
@@ -1905,7 +1574,6 @@ export const COMMANDS: Record<string, Cmd> = {
   }
 };
 
-/** Apply a serializable command to a state, returning the new state. Unknown ids are a no-op. */
 export function applySimCommand(state: GameState, cmd: SimCommand): GameState {
   const fn = COMMANDS[cmd.type];
   if (!fn) {
@@ -1915,11 +1583,6 @@ export function applySimCommand(state: GameState, cmd: SimCommand): GameState {
   return fn(state, cmd.payload);
 }
 
-/**
- * Rewrite one vessel instance wherever it lives — a drop on the ground, a pack, or a worn slot — and
- * hand back the new state. Vessels move constantly, so a command that could only reach one of those
- * three places would work until the moment a pawn picked the thing up.
- */
 function mapVesselInstance(
   s: GameState,
   instanceId: string,
@@ -1959,7 +1622,6 @@ function mapVesselInstance(
   return { ...withDrops(s, drops), pawns };
 }
 
-/** Is there at least one whole dose of `itemId` in the vessel this pawn is carrying? */
 function carriedDose(s: GameState, pawnId: string, instanceId: string, itemId: string): boolean {
   const pawn = s.pawns.find((p) => p.id === pawnId);
   const inst = (pawn?.inventory?.instances ?? []).find((i) => i.instanceId === instanceId);
@@ -1968,17 +1630,14 @@ function carriedDose(s: GameState, pawnId: string, instanceId: string, itemId: s
   return isFluidId(itemId) ? held >= servingL(itemId) : held >= 1;
 }
 
-/** Litres (fluid) or units (solid) in ONE dose — what a single drink, application or draught spends. */
 function doseOf(itemId: string): number {
   return isFluidId(itemId) ? servingL(itemId) : 1;
 }
 
-/** Is there a whole dose of `itemId` in colony stock? */
 function stockedDose(s: GameState, itemId: string): boolean {
   return ((s.stockpile ?? {})[itemId] ?? 0) >= doseOf(itemId);
 }
 
-/** Spend one dose out of a carried vessel — the pack-side twin of `consumeFromStockpiles`. */
 function drainCarriedDose(
   s: GameState,
   pawnId: string,

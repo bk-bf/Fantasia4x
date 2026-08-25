@@ -1,13 +1,9 @@
 <script lang="ts">
-  // LINEAGES §4 — a pawn's active awakening meters, shown ONLY while a meter is being fed (value > 0),
-  // and hidden again when it lapses back to empty (like the drying meter). Fills → the pawn will turn to
-  // that lineage at its next growth event.
   import type { Pawn } from '$lib/game/core/types';
-  import { awakeningLabel, lineageDef } from '$lib/game/core/Lineages';
+  import { awakeningLabel, lineageDef } from '$lib/game/core/defs/lineages';
 
   export let pawn: Pawn;
 
-  // Only meters with real progress surface; a full one reads "READY".
   $: active = (pawn.lineagePaths ?? []).filter((p) => p.value > 0);
 
   function blockBar(pct: number, width = 16): string {

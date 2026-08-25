@@ -1,35 +1,14 @@
 import { HeadlessSession } from '$lib/game/headless/HeadlessSession';
 import { buildScenario } from '$lib/game/headless/Scenario';
-import { setSimLogSink } from '$lib/game/core/logSink';
+import { setSimLogSink } from '$lib/game/core/util/logSink';
 import { itemService } from '$lib/game/services/ItemService';
 import { partCombatValue } from '$lib/game/systems/Combat';
 import { appendFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import creaturesData from '$lib/game/database/pawns/creatures.jsonc';
-import type { CombatTurnEntry } from '$lib/game/core/Events';
+import type { CombatTurnEntry } from '$lib/game/core/defs/events';
 import type { BodyPartId, EntityStats, Mob, Pawn } from '$lib/game/core/types';
 
-/**
- * WEAPON × CREATURE — every weapon against the enemies that are actually in the game.
- *
- * Until now every sweep fought a DUMMY: another colonist with sword and shield. That answers "which
- * weapon beats a colonist", which is not a question the game ever asks. Real opponents differ in the
- * ways that decide a weapon's worth — natural armour (hide vs plate), body scale, wildly different
- * stat blocks, and body PLANS that are not humanoid, so the hit table and the parts worth wrecking are
- * different too.
- *
- * Scored by COMBAT VALUE wrecked per 1000 ticks, not kills: a fight is decided by degrading what the
- * other body can still do, and most end in collapse long before anything dies.
- *
- * SHARDED across files. Vitest parallelises across files and runs the tests inside one file
- * sequentially in a single worker, so the whole sweep in one file pins exactly one core — measured at
- * ~115 minutes of CPU for the full matrix, which is 15 across eight cores if it is split and 115 if it
- * is not. The sim's one-live-session-per-process rule (HeadlessSession) means the parallelism has to
- * come from separate processes, which is what the fork pool gives.
- */
-
 const MAX_TICKS = 14_000;
-/** Enough fights per cell that a row is not noise. The 3 the earlier sweeps used left some cells
- *  resting on 3 landed hits, where a suited and a poor pawn scored identically by coincidence. */
 export const SEEDS = [11, 23, 37, 41, 59, 71, 83, 97, 103, 127];
 
 interface CreatureDef {
@@ -42,21 +21,14 @@ interface CreatureDef {
   naturalArmorRange?: [number, number];
 }
 
-/** The hide the creature actually fights with — variants declare a range instead of a flat value. */
 export const creatureHide = (c: CreatureDef): number =>
   c.naturalArmor ?? (c.naturalArmorRange ? (c.naturalArmorRange[0] + c.naturalArmorRange[1]) / 2 : 0);
 const ALL = creaturesData as unknown as CreatureDef[];
 
-/** Every creature that will actually pick a fight — the ones a colonist meets as an enemy. */
 export const HOSTILES: CreatureDef[] = ALL.filter((c) => c && c.behaviour === 'aggressive').sort(
   (a, b) => (a.tier ?? 0) - (b.tier ?? 0) || a.id.localeCompare(b.id)
 );
 
-/**
- * The pawn's OWN armour is part of the matrix, not a constant. It decides how long the pawn survives
- * and therefore how many blows it gets to land, so a weapon's effectiveness against a given creature is
- * a different number in a shirt than in plate — which is exactly the thing worth knowing.
- */
 export const ARMOUR: Record<string, string[]> = {
   none: [],
   light: [
@@ -71,18 +43,13 @@ export const ARMOUR: Record<string, string[]> = {
 };
 export const ARMOUR_KEYS = Object.keys(ARMOUR);
 
-/** Round-robin shards, so every shard gets a mix of tiers and they finish at about the same time.
- *  Slicing by tier instead would put all 18 tier-4 creatures in one shard and leave cores idle. */
 export const SHARDS = 8;
 export const shardOf = (n: number) => HOSTILES.filter((_, i) => i % SHARDS === n);
 
-/** One row of the sweep: the weapon plus everything else that makes the grip real. */
 export interface Loadout {
   label: string;
   itemId: string;
-  /** Extra items in the hands beside the weapon — a shield, or the second dagger. */
   alsoEquip?: string[];
-  /** Trait ids granted to the pawn — the duel grip is trained, not just an empty off-hand. */
   traits?: string[];
 }
 
@@ -105,9 +72,6 @@ const ONE_HANDERS: [string, string][] = [
   ['rapier', 'steel_rapier']
 ];
 
-/** Every 1H weapon fights TWICE — with a shield and as a trained duelist — because a bare 1H with an
- *  empty, untrained off-hand is the neutral grip no player actually fields. The daggers equip two, so
- *  the row really is the dual-wield grip and not one stiletto swung one-handed. */
 export const WEAPONS: Loadout[] = [
   ...TWO_HANDERS.map(([label, itemId]) => ({ label, itemId })),
   ...ONE_HANDERS.flatMap(([name, itemId]) => [
@@ -117,7 +81,6 @@ export const WEAPONS: Loadout[] = [
   { label: 'twin daggers', itemId: 'steel_stiletto', alsoEquip: ['steel_stiletto'] }
 ];
 
-/** The weapon's own power stat — the grip names it, and a suited pawn maxes exactly that one. */
 function powerStatOf(itemId: string): keyof EntityStats {
   const wp = itemService.getItemById(itemId)?.weaponProperties;
   if (wp?.powerStat) return wp.powerStat as keyof EntityStats;
@@ -126,9 +89,6 @@ function powerStatOf(itemId: string): keyof EntityStats {
   return 'strength';
 }
 
-/** A pawn built for this weapon, at the SPAWN CEILING of 20 — above it describes a colonist who cannot
- *  exist at growth level 1. Concentrated in the stat the weapon uses rather than raised across the
- *  board, so the comparison is about fit and not about a bigger stat budget. */
 function suitedStats(itemId: string): Partial<EntityStats> {
   const s: Partial<EntityStats> = {
     strength: 11,
@@ -144,7 +104,6 @@ function suitedStats(itemId: string): Partial<EntityStats> {
 
 export interface Matchup {
   weapon: string;
-  /** What the PAWN was wearing — see `ARMOUR`. */
   armour: string;
   creature: string;
   tier: number;
@@ -159,7 +118,6 @@ export interface Matchup {
 
 const PROGRESS = '.debug/weapon-meta-progress.log';
 
-/** One loadout against one creature, over every seed. */
 export async function runMatchup(
   loadout: Loadout,
   creature: CreatureDef,
@@ -195,7 +153,7 @@ export async function runMatchup(
     );
     const me = (s.getState().pawns as Pawn[])[0];
     const mob = s.getState().mobs?.[0] as Mob | undefined;
-    if (!mob) continue; // a creature the scenario cannot place is skipped, not counted as a loss
+    if (!mob) continue;
     const myName = me.name;
 
     setSimLogSink({
@@ -217,7 +175,6 @@ export async function runMatchup(
         landed++;
         damage += sw.damage ?? 0;
         if (!sw.bodyPart) return;
-        // Against the part's OWN size, so a maul gets no credit for overkilling a paw.
         const maxHp = sw.partMaxHp ?? 0;
         const frac = maxHp > 0 ? Math.min(1, (sw.damage ?? 0) / maxHp) : 0;
         effect += frac * partCombatValue(sw.bodyPart as BodyPartId);
@@ -269,8 +226,6 @@ export async function runMatchup(
   };
 }
 
-/** Run one shard and write its rows. Progress goes straight to disk — vitest buffers a test's console
- *  output until the test ENDS, so a long sweep looks frozen from outside otherwise. */
 export async function runShard(shard: number): Promise<Matchup[]> {
   const creatures = shardOf(shard);
   const rows: Matchup[] = [];
@@ -279,7 +234,6 @@ export async function runShard(shard: number): Promise<Matchup[]> {
   try {
     mkdirSync('.debug/audit', { recursive: true });
   } catch {
-    /* ignore */
   }
   for (const c of creatures)
     for (const loadout of WEAPONS)
@@ -292,7 +246,6 @@ export async function runShard(shard: number): Promise<Matchup[]> {
               `  [creatures ${shard}] ${done} of ${total} matchups (${((done / total) * 100).toFixed(0)}%)\n`
             );
           } catch {
-            /* progress reporting must never fail the audit */
           }
       }
   try {
@@ -301,7 +254,6 @@ export async function runShard(shard: number): Promise<Matchup[]> {
       JSON.stringify({ kind: 'creatures', shard, fights: SEEDS.length, rows }, null, 1)
     );
   } catch {
-    /* ignore */
   }
   return rows;
 }

@@ -1,12 +1,9 @@
 <script lang="ts">
-  /** SOCIAL-LAYER: the toggleable point breakdown for one relationship — its recent history
-   *  (what happened, when, how many points each moment gave), newest first. */
   import type { PawnRelationship, RelationEventKind } from '$lib/game/core/types';
   import { dayIndexForTurn } from '$lib/game/services/EnvironmentService';
 
   export let rel: PawnRelationship;
 
-  // Per-kind accent so the ledger reads at a glance (grief purple, strife red, warmth green…).
   const KIND_COLOR: Record<RelationEventKind, string> = {
     seed: '#8a8a8a',
     talk: '#6aa0d0',
@@ -19,11 +16,9 @@
     romance: '#e06699'
   };
 
-  // Newest first; each `time` line is a rolled-up running total, the rest are discrete moments.
   $: entries = [...(rel.log ?? [])].reverse();
   $: sign = (n: number) => (n >= 0 ? '+' : '') + (Math.round(n * 10) / 10).toString();
 
-  // Which dialog entries have their transcript expanded (a talk entry carries `lines`).
   let openLines = new Set<number>();
   function toggleLines(i: number) {
     openLines.has(i) ? openLines.delete(i) : openLines.add(i);
@@ -36,7 +31,6 @@
     {#each entries as e, i}
       {@const hasLines = !!(e.lines && e.lines.length)}
       {#if hasLines}
-        <!-- A dialog entry — click to reveal the transcript. -->
         <button
           class="brk-row has-lines"
           class:open={openLines.has(i)}
@@ -89,7 +83,6 @@
     font-size: 11px;
     line-height: 1.4;
   }
-  /* Reset the button-flavoured (dialog) rows to look like the plain ones. */
   button.brk-row {
     width: 100%;
     background: none;
@@ -106,7 +99,6 @@
   .brk-row.has-lines:hover {
     background: rgba(255, 255, 255, 0.04);
   }
-  /* The dialog transcript nested under an expanded talk entry. */
   .transcript {
     margin: 1px 0 3px 58px;
     padding-left: 6px;

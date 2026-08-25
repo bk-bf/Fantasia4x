@@ -4,12 +4,12 @@ import {
   rollBackgrounds,
   getBackgroundById,
   ADULT_AGE
-} from '$lib/game/core/Backgrounds';
-import { generateCulturePool, generateCultureRelations } from '$lib/game/core/Culture';
-import { generateKingdomPool, generateKingdomRelations } from '$lib/game/core/Kingdom';
+} from '$lib/game/core/defs/backgrounds';
+import { generateCulturePool, generateCultureRelations } from '$lib/game/core/gen/culture';
+import { generateKingdomPool, generateKingdomRelations } from '$lib/game/core/gen/kingdom';
 import { generateColonyPawns } from '$lib/game/entities/Pawns';
 import { kingdomService } from '$lib/game/services/KingdomService';
-import { rng } from '$lib/game/core/rng';
+import { rng } from '$lib/game/core/util/rng';
 import type { GameState, Kingdom } from '$lib/game/core/types';
 
 function world(seed = 20260713) {
@@ -36,7 +36,6 @@ describe('BACKGROUNDS — origin & cohesion rules', () => {
         expect(k.cultureMix.some((m) => m.cultureId === culture.id)).toBe(true);
       }
     }
-    // Most founders have a homeland; a minority are stateless (~STATELESS_CHANCE).
     expect(kingdomOrigins).toBeGreaterThan(140);
     expect(kingdomOrigins).toBeLessThan(200);
   });
@@ -111,7 +110,6 @@ describe('BACKGROUNDS — pawn generation & seeded knowledge', () => {
     const { cultures, kingdoms } = world();
     const founders = generateColonyPawns(cultures, 300, { kingdoms, founders: true });
     expect(founders.some((p) => p.adulthoodId === 'court_scholar')).toBe(false);
-    // Migrants (no founder rarity) CAN still be a court scholar.
     const migrants = generateColonyPawns(cultures, 400, { kingdoms });
     expect(migrants.some((p) => p.adulthoodId === 'court_scholar')).toBe(true);
   });
@@ -129,7 +127,6 @@ describe('BACKGROUNDS — pawn generation & seeded knowledge', () => {
       s = kingdomService.seedKingdomKnowledgeFromPawns(s, pawns);
       return (s.kingdoms ?? []).filter((k) => k.discovered).length;
     };
-    // Average over a handful of seeds — founders should trend to fewer known realms.
     let founderTotal = 0;
     let openTotal = 0;
     for (let seed = 1; seed <= 12; seed++) {
@@ -156,12 +153,10 @@ describe('BACKGROUNDS — pawn generation & seeded knowledge', () => {
     const knownHomes = (state.kingdoms ?? []).filter((k: Kingdom) => k.discovered);
     expect(knownHomes.length).toBeGreaterThan(0);
     for (const k of knownHomes) {
-      // Every discovered kingdom carries real knowledge and reads as a stale memory (no contact turn).
       expect(k.knowledge).toBeGreaterThan(0);
       expect(k.lastContactTurn).toBeUndefined();
       expect(kingdomService.isKnowledgeStale(k, 0)).toBe(true);
     }
-    // At least the founders' actual homelands are known.
     for (const homeId of homes) {
       expect(state.kingdoms!.find((k) => k.id === homeId)?.discovered).toBe(true);
     }

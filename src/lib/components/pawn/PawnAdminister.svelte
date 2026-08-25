@@ -1,20 +1,13 @@
-<!-- PawnAdminister.svelte — condition medicine THIS pawn is carrying, and who they can give it to.
-     Conditions are managed by hand on purpose: the sim would have to guess which of thirteen
-     conditions the player wanted cleared and which of their few phials to spend, so instead you
-     equip a caretaker with what you expect to need and dose someone deliberately. Wounds are the
-     automatic half — see PawnMedicinePolicy. -->
 <script lang="ts">
   import type { Pawn, Item } from '$lib/game/core/types';
   import { itemService } from '$lib/game/services/ItemService';
-  import { carriedQuantities, isFluidId, servingL } from '$lib/game/core/vessels';
+  import { carriedQuantities, isFluidId, servingL } from '$lib/game/core/rules/gear/vessels';
   import { gameState } from '$lib/stores/gameState';
   import { conditionViewForId } from '$lib/components/util/conditionInfo';
-  import { woundById } from '$lib/game/core/Wounds';
+  import { woundById } from '$lib/game/core/defs/wounds';
 
   let { pawn }: { pawn: Pawn } = $props();
 
-  /** Human labels for everything a dose can clear: named conditions, and the injuries it knits.
-      Never the raw ids — those are backend reference. */
   function clears(def: Item): string[] {
     return [
       ...(def.curesConditions ?? []).map((c) => conditionViewForId(c)?.name ?? c),
@@ -22,9 +15,6 @@
     ];
   }
 
-  /** What the caretaker is CARRYING that clears a named condition or mends a wound — the bulk stacks
-      AND what is inside the vessels on them, since a tonic is a fluid and never sits loose in a pack.
-      A fluid's quantity is litres, so it is shown as the number of whole doses that is worth. */
   const doses = $derived(
     Object.entries(carriedQuantities(pawn))
       .filter(([id, qty]) => {
@@ -39,7 +29,6 @@
       .filter((d) => d.qty > 0)
   );
 
-  /** Anyone standing next to them — you cannot dose someone across the map. */
   const adjacent = $derived(
     ($gameState.pawns ?? []).filter((p) => {
       if (p.id === pawn.id || p.isAlive === false) return false;
@@ -50,7 +39,6 @@
     })
   );
 
-  /** What this patient actually has that the dose would clear — so the label can say so. */
   function treats(def: Item, patient: Pawn): string[] {
     const active = new Set(Object.keys(patient.conditionTimers ?? {}));
     const carried = new Set<string>();
@@ -156,7 +144,6 @@
   .give:hover {
     color: var(--text, #d8d8d8);
   }
-  /* The dose would actually do something for this patient. */
   .give.relevant {
     color: var(--accent, #9ec96a);
     border-color: var(--accent, #9ec96a);

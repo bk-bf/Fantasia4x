@@ -3,12 +3,6 @@ import { isRestBuildingType, findNearestRestBuilding } from '$lib/game/systems/p
 import { PAWN_STATE } from '$lib/game/systems/pawn/pawnStates';
 import type { GameState, Pawn } from '$lib/game/core/types';
 
-/**
- * Regression: every bed in buildings.jsonc must count as a rest building, so a tired pawn routes to
- * an available bed instead of collapsing on the bare ground beside it. The old hardcoded REST_TYPES
- * list drifted — hide_bed / leather_bed / feather_bed were missing — so pawns slept on the ground next
- * to a finished bed. Rest-capability is now derived from the def's sleep effect.
- */
 describe('rest-building recognition (data-driven)', () => {
   it('recognises EVERY bed type, not just the two the old list named', () => {
     for (const id of ['sleeping_spot', 'hay_bed', 'hide_bed', 'leather_bed', 'feather_bed']) {
@@ -33,7 +27,6 @@ describe('rest-building recognition (data-driven)', () => {
     } as unknown as Pawn;
   }
 
-  // A finished leather_bed a few tiles away — one of the types the old list ignored.
   function stateWithBed(p: Pawn, bedType: string): GameState {
     const tiles = Array.from({ length: 6 }, (_, y) =>
       Array.from({ length: 6 }, (_, x) => ({ x, y, type: 'land', walkable: true }))
@@ -49,9 +42,6 @@ describe('rest-building recognition (data-driven)', () => {
     } as unknown as GameState;
   }
 
-  // findNearestRestBuilding is the bed-selection chokepoint handleTired routes through; it returning
-  // the bed (rather than null → ground sleep) is exactly what the REST_TYPES drift broke. Every
-  // formerly-missing bed type must now be selected.
   it.each(['hide_bed', 'leather_bed', 'feather_bed'])(
     'selects a %s as the nearest rest building (was ignored before)',
     (bedType) => {

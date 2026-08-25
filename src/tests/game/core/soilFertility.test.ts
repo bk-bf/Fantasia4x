@@ -5,12 +5,8 @@ import {
   SOIL_TIER_NAME,
   SOIL_ITEM_BY_TIER,
   SUBTYPE_BY_SOIL_TIER
-} from '$lib/game/core/Terrains';
+} from '$lib/game/core/defs/terrains';
 import { itemService } from '$lib/game/services/ItemService';
-
-// PRODUCTION-CHAIN-II §F P1 — fertility is a 0–100% value (5 steps), depicted like wetness, derived
-// from the grass-density subterrain (no tile.soil field): bare dirt → 0%, grass → 25%, tall_grass →
-// 50%, deep_grass → 75%, terra preta (terraform-earned) → 100%.
 
 describe('§F soil fertility derives from the grass subterrain', () => {
   it('maps grass density → fertility % in 25-point steps', () => {

@@ -2,24 +2,13 @@ import { describe, it, expect } from 'vitest';
 import { buildScenario } from '$lib/game/headless/Scenario';
 import { HeadlessSession } from '$lib/game/headless/HeadlessSession';
 import { craftWorkCategory, craftDiscipline } from '$lib/game/services/jobs/craftDiscipline';
-import { scaleWeaponQuality } from '$lib/game/core/itemQuality';
+import { scaleWeaponQuality } from '$lib/game/core/rules/gear/itemQuality';
 import { itemService } from '$lib/game/services/ItemService';
 
-/**
- * PAWN SKILL EFFECTS audit (headless). Drives the REAL sim to check the skill→work loop:
- *  - skill SPEEDS a craft (getWorkModifiers.speed, work.ts per-tick rate)
- *  - skill RAISES output quality (§Q rollCraftQuality off getWorkModifiers.quality → per-drop tier)
- *  - butchery-craft yield vs skill (finding), + recipe→discipline routing (craftDiscipline)
- *  - zero-skill pawn still completes a T0 craft (no bootstrap deadlock)
- *  - quality flows into combat stats (scaleWeaponQuality — the function resolveHit calls)
- * Skill level is seeded per pawn-group (`skillLevel`/`skills` → devSetPawnSkills). levelBase(1)=0.6 …
- * levelBase(25)=1.0 (neutral) … levelBase(50)=2.0, so 1 vs 50 is a ~3.3× skill span.
- */
 const stk = (s: HeadlessSession) => (s.getState().stockpile ?? {}) as Record<string, number>;
 type Drop = { resourceId: string; quantity: number; quality?: number };
 const drops = (s: HeadlessSession) =>
   (s.getState() as { droppedItems?: Drop[] }).droppedItems ?? [];
-// Mean §Q tier across every crafted stack of `id` (quality-bearing drops never fold; undefined = Standard 1).
 const meanQuality = (s: HeadlessSession, id: string) => {
   let q = 0;
   let n = 0;
@@ -58,8 +47,8 @@ describe('pawn skill effects', () => {
       }
       return ticks;
     };
-    const slow = await ticksToCordage(1, 6); // unskilled
-    const fast = await ticksToCordage(50, 6); // master crafter
+    const slow = await ticksToCordage(1, 6);
+    const fast = await ticksToCordage(50, 6);
     console.log(`[SKILL speed] ticks to 6 cordage: skill1=${slow} vs skill50=${fast}`);
     expect(fast, 'a master crafter reaches the target in fewer ticks').toBeLessThan(slow);
   });
@@ -74,7 +63,7 @@ describe('pawn skill effects', () => {
           workReady: true,
           pawns: [{ count: 4, skillLevel }],
           needsDisabled: ['hunger', 'fatigue', 'thirst', 'hygiene'],
-          buildings: [{ id: 'craft_spot' }], // flint tools knap here, tagged `knapping` (§D)
+          buildings: [{ id: 'craft_spot' }],
           items: { flint_shard: 60, branch: 60, cordage: 160, spit_meat: 10 },
           seedEntities: false
         })
@@ -98,10 +87,6 @@ describe('pawn skill effects', () => {
   });
 
   it('butchery SKILL is a yield BONUS: master renders more, unskilled still gets the full base', async () => {
-    // craft.ts scales butchery output by the STATION bonus × the working pawn's `butchery_yield` axis,
-    // FLOORED at ×1 — so a skilled butcher renders more, but an unskilled one still gets the full recipe
-    // drop (never a sub-1 penalty that would round a qty-1 signature drop away). Only butchery has a yield
-    // axis, so ordinary crafts are untouched.
     const venisonFor = async (butchery: number) => {
       const s = new HeadlessSession();
       await s.start(
@@ -127,10 +112,6 @@ describe('pawn skill effects', () => {
     console.log(
       `[SKILL butchery-yield] venison: butchery1=${unskilled} (base) vs butchery50=${master} (bonus)`
     );
-    // The FLOOR: an unskilled butcher renders AT LEAST the full recipe base (venison 10 at butcher_spot),
-    // NOT a reduced amount — so a qty-1 rare drop can never be rounded away by low skill. (It renders a
-    // little MORE than 10 here because the workReady butchery KIT's yield boost now applies — a good kit
-    // helps regardless of skill; the point is the floor, never a sub-1 penalty.)
     expect(
       unskilled,
       'unskilled butcher gets the full base drop or more (no sub-1 penalty)'
@@ -139,8 +120,6 @@ describe('pawn skill effects', () => {
       master,
       'a skilled butcher renders MORE off the same carcass than an unskilled one'
     ).toBeGreaterThan(unskilled);
-    // recipe→discipline routing: a butcher-spot carcass order routes to the `butchery` LEAF discipline
-    // (its own *_speed/_quality/_yield stats + tools apply), which nests under the Cooking parent category.
     expect(craftDiscipline({ item: { id: 'venison' }, stationType: 'butcher_spot' })).toBe(
       'butchery'
     );
@@ -159,7 +138,7 @@ describe('pawn skill effects', () => {
         seed: 93,
         map: { w: 16, h: 16 },
         workReady: true,
-        pawns: [{ count: 3, skillLevel: 1 }], // rock-bottom skill
+        pawns: [{ count: 3, skillLevel: 1 }],
         needsDisabled: ['hunger', 'fatigue', 'thirst', 'hygiene'],
         buildings: [{ id: 'craft_spot' }],
         items: { plant_fiber: 30, spit_meat: 10 },
@@ -178,8 +157,6 @@ describe('pawn skill effects', () => {
   });
 
   it('quality flows DOWNSTREAM: §Q tier scales the weapon stats resolveHit reads', () => {
-    // scaleWeaponQuality is the exact function Combat.attackerProfile calls on the equipped weapon's
-    // stamped tier (Combat.ts §Q). A Crude blade is strictly weaker, a Masterwork strictly stronger.
     const wp = itemService.getItemById('steel_longsword')?.weaponProperties;
     expect(wp, 'steel_longsword has weapon properties').toBeTruthy();
     const dmg = (tier: 0 | 1 | 4) => scaleWeaponQuality(wp!, tier).damage ?? 0;

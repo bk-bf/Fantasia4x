@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { evaluatePredicate, fireTriggers, type GraphContext } from '$lib/game/core/conditionGraph';
+import {
+  evaluatePredicate,
+  fireTriggers,
+  type GraphContext
+} from '$lib/game/core/rules/body/conditionGraph';
 import type { ConditionTrigger } from '$lib/game/core/types/health';
 
 function ctx(over: Partial<GraphContext> = {}): GraphContext {
@@ -59,7 +63,7 @@ describe('conditionGraph.fireTriggers', () => {
     chance: 0.5,
     severity: 0.05
   };
-  const shockEdge: ConditionTrigger = { to: 'shock', when: { meter: 'pain', atOrAbove: 80 } }; // deterministic
+  const shockEdge: ConditionTrigger = { to: 'shock', when: { meter: 'pain', atOrAbove: 80 } };
 
   it('no triggers → shared empty array (no allocation)', () => {
     expect(fireTriggers(undefined, ctx(), always, false)).toHaveLength(0);
@@ -76,10 +80,10 @@ describe('conditionGraph.fireTriggers', () => {
     expect(fireTriggers([wetChill], eligible, always, false)).toEqual([
       { to: 'hypothermia', severity: 0.05 }
     ]);
-    expect(fireTriggers([wetChill], eligible, never, false)).toHaveLength(0); // roll failed
+    expect(fireTriggers([wetChill], eligible, never, false)).toHaveLength(0);
     expect(
       fireTriggers([wetChill], ctx({ needs: { coldExposure: 50 } }), always, false)
-    ).toHaveLength(0); // predicate failed
+    ).toHaveLength(0);
   });
   it('per:onset edges only fire on the onset tick', () => {
     const onsetEdge: ConditionTrigger = { to: 'panic', per: 'onset' };

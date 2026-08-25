@@ -1,18 +1,4 @@
 #!/usr/bin/env node
-/**
- * profile-self.mjs — headless reader for Firefox Profiler JSON exports (ENGINE-PERFORMANCE).
- *
- * Replaces the in-game `[PROF]`/`profCount` instrumentation (which itself starved perf): record in
- * the Firefox Profiler, "Download" the profile, drop the .json in `.debug/`, then:
- *
- *   node scripts/profile-self.mjs                 # newest .debug/*profile*.json, sim worker
- *   node scripts/profile-self.mjs <file.json>     # a specific export
- *   node scripts/profile-self.mjs <file> 40       # top 40 rows
- *
- * Prints true JS SELF-time per function (each sample attributed to its deepest `isJS` frame, so
- * native/JIT leaves like `fun_b4df0` collapse into the JS function actually running) for every
- * active worker thread, flagging the sim worker (the one running the game tick).
- */
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -75,7 +61,7 @@ for (const t of p.threads) {
   if (t.name !== 'DOM Worker') continue;
   const { self, total, idle } = jsSelf(t);
   const active = total - idle;
-  if (active < 50) continue; // skip idle workers
+  if (active < 50) continue;
   const names = new Set([...self.keys()].map(nameOf));
   const isSim = SIM_MARKERS.some((m) => names.has(m));
   console.log(

@@ -1,9 +1,3 @@
-<!--
-  CultureScreen.svelte — the "pokédex" of known cultures.
-  Left: list of discovered cultures (populated as the colony hosts / encounters them).
-  Right: full detail for the selected culture (lore, physique ranges, stat ranges + boosts,
-  traits, inter-culture relations). Detail rendering lives in CultureDetail.svelte (200-LOC rule).
--->
 <script lang="ts">
   import { onDestroy } from 'svelte';
   import { discoveredCultures, cultureRelations, gameState } from '$lib/stores/gameState';
@@ -14,13 +8,11 @@
   let cultures: Culture[] = [];
   let relations: CultureRelation[] = [];
   let pawns: Pawn[] = [];
-  // Restored across tab toggles; the guard below falls back to a valid culture if it's gone.
   let selectedId: string | null = persisted('culture.selected', null);
   $: persist('culture.selected', selectedId);
 
   const unsubCultures = discoveredCultures.subscribe((v) => {
     cultures = v;
-    // Keep a valid selection: default to the home culture / first known culture.
     if (!selectedId || !cultures.some((r) => r.id === selectedId)) {
       selectedId = cultures[0]?.id ?? null;
     }
@@ -45,7 +37,6 @@
     <div class="empty">no cultures known yet</div>
   {:else}
     <div class="body">
-      <!-- Left: known-culture list -->
       <nav class="culture-list">
         {#each cultures as culture}
           <button
@@ -60,7 +51,6 @@
         {/each}
       </nav>
 
-      <!-- Right: detail -->
       <div class="culture-detail-pane">
         {#if selected}
           <CultureDetail

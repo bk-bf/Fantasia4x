@@ -1,26 +1,3 @@
-// needs.jsonc — per-need definitions (keyed by the `Pawn.needs` field). The single data home for how
-// each need BEHAVES: how fast it builds/decays, the thresholds that pull a pawn off work to satisfy it,
-// how much a session relieves, how long that session takes, and how it colours MOOD.
-//
-// Units are authored the same way the code always authored them (see core/time.ts): RATES are per
-// in-game SECOND, DURATIONS are in in-game SECONDS (the sim converts both to tick-space at load), and
-// thresholds/relief are 0–100 need points. The loader (core/needsDefs.ts) resolves these into the same
-// module constants PawnService / pawnHelpers used before, so the per-tick hot path still reads plain
-// numbers — only the VALUES moved out of code into here.
-//
-//   states          — the FSM state(s) that SATISFY this need (e.g. relaxation → Socialising, hunger → Hungry,
-//                      Eating). This is where those states are OWNED — they are deliberately kept OUT of
-//                      states.jsonc (which registers only the structural states) so they aren't declared
-//                      twice; stateRegistry.test.ts derives its need-owned set from here.
-//   rate/decayRate  — per-second build (survival needs) or decay (`relaxation`, inverted: 100 = entertained)
-//   seek            — abandon work to go satisfy the need at/above this (relaxation: at/below)
-//   autoSatisfy     — opportunistic top-up threshold when already at the water/well (drink/wash)
-//   relief          — need points removed (survival) / restored (relaxation) by one full session
-//   durationSeconds — how long a satisfy session takes
-//   moodBands       — each band references a mood effect id (mood.jsonc `effects`), SEVERE-FIRST
-//
-// NOT here (stay in code): the hunger (~0.54×hunger_rate) and fatigue (~0.32×fatigue_rate) BASE build
-// rates — they're stat/trait-derived formulas, not flat numbers (see PawnService.getHungerIncreasePerTurn).
 {
   "hunger"     : {
     "states": ["Hungry", "Eating"],
@@ -44,9 +21,6 @@
     "rate"           : 0.7,
     "autoSatisfy"    : 70,
     "seek"           : 82,
-    // Thirst relief is NOT read from here — each drink states its own `hydration` (thirst per litre)
-    // in items.jsonc, so water is worth more than ale and far more than brandy. Kept only as the value
-    // water carries.
     "relief"         : 65,
     "durationSeconds": 2,
     "moodBands"      : [ {"atOrAbove": 90, "effect": "need_parched"}, {"atOrAbove": 75, "effect": "need_thirsty"} ]
@@ -71,11 +45,6 @@
       {"atOrBelow": 12, "effect": "need_restless"       }
     ]
   },
-  // comfort (FURNITURE-COMFORT) — inverted like relaxation (100 = comfortable). Decays each tick; an idle
-  // pawn below `seek` paths to the best free SEAT and LOUNGES, filling it (per-tick fill scales with the
-  // seat's comfort amenity — a couch fills faster than a stool). High comfort grants the tiered
-  // `comfortable` condition (slower fatigue + faster relaxation + mood). Distinct from the temperature
-  // `tempRange` band. NOTE: not the same axis as relaxation (social) — good furniture, not company.
   "comfort"    : {
     "states"         : ["Lounging"],
     "decayRate"      : 0.10,
@@ -86,8 +55,6 @@
       {"atOrBelow": 10, "effect": "need_uncomfortable"}
     ]
   },
-  // bloodHunger (LINEAGES-II) — the vampire/werewolf feeding need. Only pawns with a `bloodNeedKind`
-  // carry it; it fills on the hourly lineage cadence (PawnStateMachine). No mood bands.
   "bloodHunger": {
     "fillPerGameHour"  :   2,
     "feedThreshold"    :  70,

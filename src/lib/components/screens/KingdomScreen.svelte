@@ -1,9 +1,3 @@
-<!--
-  KingdomScreen.svelte — the "pokédex" of known kingdoms (KINGDOMS-TRADE §2).
-  Left: list of kingdoms the colony has a relationship with (encountered via visitors/caravans).
-  Right: tier-gated detail — the entry visibly GROWS as the colony learns. Forked from
-  CultureScreen; detail rendering lives in kingdom/KingdomDetail.svelte (200-LOC rule).
--->
 <script lang="ts">
   import { onDestroy } from 'svelte';
   import {
@@ -15,11 +9,10 @@
   } from '$lib/stores/gameState';
   import type { Culture, Kingdom, KingdomRelation } from '$lib/game/core/types';
   import { COLONY_RELATION_ID } from '$lib/game/core/types';
-  import { knowledgeTier } from '$lib/game/core/Kingdom';
+  import { knowledgeTier } from '$lib/game/core/gen/kingdom';
   import KingdomDetail from './kingdom/KingdomDetail.svelte';
   import { persisted, persist } from '$lib/stores/uiPersist';
 
-  // How deeply the colony knows a kingdom, in plain words (tiers 0–4).
   const ACQUAINTANCE = ['strangers', 'acquainted', 'familiar', 'well known', 'deeply known'];
 
   let known: Kingdom[] = [];
@@ -38,7 +31,6 @@
   const unsubRel = kingdomRelations.subscribe((v) => (relations = v));
   const unsubCultures = culturePool.subscribe((v) => (cultures = v));
   const unsubTurn = currentTurn.subscribe((v) => (turn = v));
-  // Kingdoms any living colonist calls home (BACKGROUNDS) → colonist name(s), marked in the list.
   let homelandBy = new Map<string, string[]>();
   const unsubState = gameState.subscribe((s) => {
     const m = new Map<string, string[]>();
@@ -50,7 +42,6 @@
     }
     homelandBy = m;
   });
-  // Compact "whose homeland": one name, or "Name +N" when several colonists share it.
   const homeLabel = (names: string[]) =>
     names.length === 1 ? names[0] : `${names[0]} +${names.length - 1}`;
 

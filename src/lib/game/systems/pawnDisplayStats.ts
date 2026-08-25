@@ -1,7 +1,3 @@
-/**
- * Pawn DISPLAY stats — the `{ value, sources[] }` ability map the UI renders.
- * Pure presentation support: the sim never reads these values.
- */
 import type { GameState, Pawn } from '../core/types';
 import { modifierSystem } from './ModifierSystem';
 
@@ -11,8 +7,6 @@ export function calculatePawnStats(
 ): Record<string, { value: number; sources: string[] }> {
   const stats: Record<string, { value: number; sources: string[] }> = {};
 
-  // Work speed/yield/quality is NOT here — it lives solely in stats.jsonc via
-  // pawnStatService.getWorkModifiers.
   if (gameState) {
     const equipmentResults = modifierSystem.calculateEquipmentBonuses(pawn);
     Object.entries(equipmentResults).forEach(([effectName, result]) => {
@@ -32,11 +26,10 @@ export function calculatePawnStats(
   }
 
   const baseStats = getBaseStats(pawn);
-  const totalStats = getTotalStats(baseStats, {}, {}); // ModifierSystem handles bonuses above
+  const totalStats = getTotalStats(baseStats, {}, {});
 
   addSkillAbilities(stats, pawn);
 
-  // Only basic derived abilities that don't conflict with ModifierSystem
   addBasicPhysicalAbilities(stats, totalStats);
   addBasicMentalAbilities(stats, totalStats);
   addBasicSurvivalAbilities(stats, totalStats);

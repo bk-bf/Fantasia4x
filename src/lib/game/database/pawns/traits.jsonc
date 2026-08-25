@@ -1,51 +1,4 @@
-// Trait Database (ADR-023 · TRAIT-SYSTEM-V2 · ADR-028). ONE list, each trait tagged with:
-//   scope  : "cultural" (physiology, drawn from a CULTURE's pool / identity) | "personal" (temperament, an
-//            INDIVIDUAL pawn carries regardless of culture). NOTE: a few individual afflictions (one-eyed /
-//            hard-of-hearing / bad-back + the temperament ones) sit under the cultural section but are
-//            scope:"personal" — the flag is authoritative, not the grouping.
-//   rarity : rarities.jsonc scale — negative | common | uncommon | rare | epic | legendary. A BUDGET
-//            (§2): how many attribute categories it may touch + polarity. "negative" = a pure-downside
-//            FLAW (frail/clumsy/one-eyed…), drawn as an individual Gaussian-COUNT layer (Culture.ts —
-//            most pawns get none, a rare wretch four), NEVER culture identity. common/uncommon = the
-//            mundane variety pool; rare/epic = a rare culture-identity CAPABILITY; legendary = a bundle.
-//            Drives the card accent colour (flaw = dark red); NOT shown as a naked "supernatural" label.
-//   kind   : the payload shape + validator path — STRICTLY separated (ADR-028, no mixing):
-//            "stat"       — ONLY core-stat *Bonus/*Penalty deltas (baked at pawn-gen).
-//            "attribute"  — ONLY derived stats.jsonc mods (workSpeed/Yield/Quality, resistances,
-//                           nightVision, healRate). NEVER a core-stat rider.
-//            "bodyMod"    — modifies the limbmap BODY directly (bone/flesh HP + body weight), so a
-//                           dense-boned pawn genuinely fractures harder — not a blunt_resistance fudge.
-//            "naturalGear"— a natural weapon/armor via a selfCondition (§3). Armor = gear (weight →
-//                           encumbrance); a natural WEAPON is bound to limbmap parts (hostParts) so a
-//                           pawn that loses the limb loses the weapon, exactly like a creature.
-//            "passive"    — a permanent full-body condition: aura / affinity / covering / proc (§3).
-//            "wound"      — a real permanent injury at generation (one-eyed → a destroyed eye, §4).
-//            Reserved TODO: behavioral / needs / transformation.
-//   Enforced by traitRegistry.test.ts.
-//
-// NAMING LAW (ADR-028): a `stat`/`attribute` trait's NAME must be mundane + generic and MUST NOT evoke
-//   a natural weapon/armor or a losable body part (bone/skin/hide/scale/claw/horn/fang/eye/ear/feather…)
-//   — those imply a body-model mechanic the abstract trait does NOT have, misleading the player. Only
-//   bodyMod/naturalGear/passive/wound traits (which DO touch the body) may carry an anatomical name.
-//
-// Selection (Culture.ts): each CULTURE rolls its identity — ~85% mundane-only, ~15% a rare/epic capability,
-// ~2.5% legendary — plus a small mundane pool (3–4). Each PAWN draws AT SPAWN up to 2 cultural (guaranteed
-// identity first, then the culture pool) + up to 3 personal → ≤5 traits, so same-culture pawns differ.
-//
-// evolvesTo : groundwork for trait evolution — a base names the higher-rarity trait it grows into
-//   (frost-loving → frost-born, adrenaline → berserker-blood). No runtime mechanic yet.
-//
-// effects keys (consumed): stat *Bonus/*Penalty (pawn-gen, stat-kind ONLY); workSpeed/workYield/
-//   workQuality; fire/cold/poison/disease/mental/lightning/shadow/wetnessResistance + healRate; the three
-//   physical *_resistance keys; nightVision. "selfCondition" links a capability trait to its permanent
-//   condition PILL (which carries grantsNaturalWeapon/grantsNaturalArmor/hostParts). "bodyMods" is the
-//   bodyMod payload; "wounds" the wound payload; "blocksSlots" the gear gate. (§0: procs live on the
-//   weapon item, never the trait; a wielded-damage bonus is combatMods.melee_damage; resistances are the
-//   `resistances` block — NOT effects. LINEAGES-II: the catalog is FLAT — no nested bundles; a
-//   legendary/mythic marker's tree is its `lineage`-tagged members, grown at seasonal growth events.)
 [
-    // ══ CULTURAL · MUNDANE — the physiology majority (small quirks, many negative) ═══
-    // — small positives / trade-offs (pure core-stat → generic names) —
     {
         "id"         : "sturdy",
         "scope"      : "cultural",
@@ -107,7 +60,6 @@
         "flavorLine" : "understanding comes to them quickly, almost before the asking",
         "effects"    : {"intelligenceBonus": 2, "constitutionBonus": -1}
     },
-    // — bodyMod: intrinsic body-structure (real limbmap changes, §1) —
     {
         "id"         : "thick-skinned",
         "scope"      : "cultural",
@@ -140,7 +92,6 @@
         "flavorLine" : "fever and foul water that fell other folk barely slow them",
         "effects": {"workYield": {"foraging": 1.15}}, "resistances": {"poison": 0.2, "disease": 0.2}
     },
-    // — evolution BASES (mundane seeds of a supernatural, ADR-023 evolvesTo) —
     {
         "id": "frost-loving",
         "scope": "cultural",
@@ -210,7 +161,6 @@
         "effects"    : {"healRate": 0.2},
         "evolvesTo"  : "regenerative"
     },
-    // — mundane NEGATIVES (the contrast layer; weighted common) —
     {
         "id"         : "frail",
         "scope"      : "cultural",
@@ -283,8 +233,6 @@
         "flavorLine" : "the far hills are only a smear of colour to them",
         "effects"    : {"perceptionBonus": -2}
     },
-    // — personal afflictions (WOUND granters, §4): the injury IS real, applied at gen (applyTraitWounds),
-    //   so its handicap flows through the body model (sight/hearing capacities, part health) —
     {
         "id"         : "one-eyed",
         "scope"      : "personal",
@@ -380,7 +328,6 @@
         "flavorLine" : "they meet the ground flat and heavy at every step",
         "effects"    : {"dexterityBonus": -1}
     },
-    // — "really shitty" commons (§2): a deeper negative pull, kind-clean (two core OR two derived) —
     {
         "id"         : "sluggard",
         "scope"      : "cultural",
@@ -441,7 +388,6 @@
         "flavorLine" : "delicate work seems to fight them at every turn",
         "effects"    : { "workSpeed": {"crafts": 0.85, "construction": 0.95} }
     },
-    // ══ PERSONAL — temperament / aptitude, one INDIVIDUAL pawn at a time ═══════════
     {
         "id"         : "industrious",
         "scope"      : "personal",
@@ -552,8 +498,6 @@
         "description": "Turns from blood and gore, poor at the butcher's block or a bloody sickbed.",
         "effects"    : { "workSpeed": {"butchery": 0.75, "caretaking": 0.85} }
     },
-    // ══ CULTURAL · SUPERNATURAL — RARE culture powers, each worn as a permanent condition ══
-    // Coverings (feathers/fur) that grant a resistance are `passive`; armour/weapons are `naturalGear`.
     {
         "id"           : "feathered",
         "scope"        : "cultural",
@@ -601,8 +545,6 @@
         "kind"         : "naturalGear",
         "stage"        : 2,
         "evolvesTo"    : "ripping-talons",
-        // LINEAGES: a beast/werewolf gateway — may roll standalone (lineageExclusive:false), seeding an
-        // awakening meter toward EITHER bloodline; the deeds the pawn does decide which it turns into.
         "lineage"      : ["beast", "werewolf"],
         "lineageExclusive": false,
         "awakens"      : ["devour-raw-meat", "devour-carcass", "wild-kills", "moon-bathing", "cull-canines", "night-hunter"],
@@ -610,17 +552,9 @@
         "description"  : "Curved claws for hands, devastating unarmed, but useless at a workbench.",
         "flavorLine"   : "in place of fingers they bear long, hooked claws that open flesh like cloth",
         "naturalWeapons": ["rending-claws"],
-        // Stage 2: blocks gloves only — still clumsy enough to grip a weapon. Tools work from the
-        // inventory, so mainHand stays free. Apex (stage 3) blocks the weapon hands, see ripping-talons.
         "blocksSlots"  : ["gloves"],
-        // dexterityPenalty folds the retired `clawed` condition's DEX ×0.95 (clumsy claw-hands).
         "effects"      : { "dexterityBonus": -1, "workSpeed": {"crafts": 0.75, "leatherworking": 0.8, "construction": 0.85} }
     },
-    // ══ LINEAGE · BEAST (LINEAGES §5) — feral-predator blood: always-on power at the cost of a wild
-    //    life. The parent is the identity marker a pawn holds once born into or awakened to the line;
-    //    members are tagged `lineage:["beast"]` and grown at seasonal growth events. (Claw line + fur are
-    //    tagged in place above; the mechanic-heavy members — savage bite, pack fury, beast eyes, carnivore
-    //    gut, reversed shelter — land with their subsystems in a later pass.) ══
     {
         "id"          : "beast-heritage",
         "scope"       : "cultural",
@@ -634,8 +568,6 @@
             { "id": "devour-raw-meat", "deed": "ateRawMeat",       "range": [40, 80],   "label": "Eat raw meat" },
             { "id": "devour-carcass",  "deed": "ateCarcass",       "range": [12, 24],   "label": "Devour a raw carcass" },
             { "id": "wild-kills",      "deed": "unarmedBigKill",   "range": [8, 16],    "label": "Land an unarmed killing blow on big game" },
-            // "Live on raw flesh alone" is counted in MEALS on the same ateRawMeat counter (~3 raw meals
-            // a day for a season and a half ⇒ a 220–300 target), not tracked diet-days.
             { "id": "raw-living",      "deed": "ateRawMeat",       "range": [220, 300], "label": "Live on raw flesh alone" },
             { "id": "sleep-wild",      "deed": "sleptUnsheltered", "range": [20, 40],   "label": "Sleep in the open wild" }
         ],
@@ -747,10 +679,6 @@
         "aura"        : { "condition": "pack_fury", "radius": 3, "affects": "allies" },
         "effects"     : {}
     },
-    // STEALTH §7a — the beast fork: a soft-footed prowler OR a thick-pelted tank, never both. The
-    // tanky path is the EXISTING downy-coat→thick-fur→winter-mane chain (its `naturalArmor` now
-    // drags stealth down via core/stealth.ts, so the pelt itself vetoes the prowl — no matted-hide
-    // duplicate needed), and constant-howling can veto the stealth path outright.
     {
         "id"          : "padded-prowl",
         "scope"       : "cultural",
@@ -773,9 +701,6 @@
         "flavorLine"  : "even asleep they mutter and grumble at something",
         "effects"     : { "stealth": -1.5 }
     },
-    // ── LINEAGE MARKERS (LINEAGES §1) — the identity a pawn holds once born into or awakened to the
-    //    bloodline. Pure markers: members carry the payloads. Werewolf's transform set, Vampiric's
-    //    feeding and the rest of their catalogs land with their subsystems (LINEAGES-II). ──
     {
         "id"          : "werewolf-heritage",
         "scope"       : "cultural",
@@ -879,7 +804,6 @@
         "flavorLine"  : "they sit very still, and watch, and wait",
         "effects"     : {}
     },
-    // ── LINEAGE MEMBERS · Arachnid / Amphibian / Vampiric (data-only set; the rest with LINEAGES-II) ──
     {
         "id"          : "arachnid-agility",
         "scope"       : "cultural",
@@ -957,8 +881,6 @@
         "description" : "Eyes made for silted water and moonless bogs, the murk is no curtain to them.",
         "effects"     : {"nightVision": 0.5}
     },
-    // STEALTH §7b — colour-shifting camouflage (attribute: the ability, not the organ — ADR-028
-    // naming law keeps "skin" out of the NAME; the id predates the law and stays for stability).
     {
         "id"          : "chameleon-skin",
         "scope"       : "cultural",
@@ -970,12 +892,6 @@
         "flavorLine"  : "against the reeds you lose them entirely",
         "effects"     : { "stealth": 0.5 }
     },
-    // STEALTH §7b FUTURE — slime lineage (not in the lineage roster yet). The strongest stealth
-    // additive (a half-see-through body); ship it when the slime lineage lands:
-    // { "id": "translucent-skin", "scope": "cultural", "rarity": "rare", "kind": "attribute",
-    //   "lineage": ["slime"], "name": "Translucent Guise",
-    //   "description": "Light passes half through them; at a distance they are little more than a smear of the wall behind.",
-    //   "flavorLine": "you only catch them by the wet gleam", "effects": { "stealth": 0.6 } },
     {
         "id"           : "torpid-blood",
         "scope"        : "cultural",
@@ -1012,7 +928,6 @@
         "grafts"      : [ { "limb": "spinnerets", "parts": ["spinneret"] } ],
         "effects"     : {}
     },
-    // STEALTH §7b — the ambush hunter's stillness.
     {
         "id"          : "ambush-stillness",
         "scope"       : "cultural",
@@ -1058,8 +973,6 @@
         "description" : "A strength that was not earned and does not tire the way honest muscle does.",
         "effects"     : {"strengthBonus": 2}
     },
-    // STEALTH §7b — a dusk-shroud: moderate, strongest in the dark the line already loves (night
-    // synergy is free — creature vision ranges shrink after dark).
     {
         "id"          : "duskshroud",
         "scope"       : "cultural",
@@ -1072,8 +985,6 @@
         "effects"     : { "stealth": 0.3 }
     },
     {
-        // (id distinct from the old vampiric bundle's nested "sun-cursed" subcap — that bundle flattens
-        // into this lineage in LINEAGES-II.)
         "id"           : "sun-scorned",
         "scope"        : "cultural",
         "rarity"       : "negative",
@@ -1211,7 +1122,6 @@
         "description"  : "A creature of the night, sees in pitch dark as by day, but drowses under the sun.",
         "flavorLine"   : "they come alive under the stars and drowse beneath the sun",        "effects"      : {"nightVision": 1.0}
     },
-    // ══ CULTURAL · LEGENDARY — very rare; a bundle, each sub-capability rolled per pawn ══
     {
         "id"          : "dragon-heritage",
         "scope"       : "cultural",
@@ -1227,15 +1137,6 @@
         "effects"     : {}, "resistances": {"fire": 0.25}
     },
 
-    // ═══════════════════════════════════════════════════════════════════════════
-    // ══ TRAIT-LIBRARY-EXPANSION (spec: docs/tasks/open/TRAIT-LIBRARY-EXPANSION.md) ══
-    // §1 · Attribute-combo traits — never a lone axis: every combo pairs two logically-linked
-    // stats.jsonc axes, with a moderate (±15%) and a significant (±40-50%) rung on both sides.
-    // Combat combos use `effects.combatMods` (combat statId → multiplier, the combat twin of
-    // workSpeed). Resistances are EARNED, never granted by an abstract attribute — they live on
-    // §3 coverings (naturalGear) and passive affinities only.
-    // ═══════════════════════════════════════════════════════════════════════════
-    // ── §1 · CAPACITY/SUPPORT combos ─────────────────────────────────────────
     {
         "id"         : "nurturing",
         "scope"      : "personal",
@@ -1308,7 +1209,6 @@
         "description": "Useless past dusk, they'll sit on their hands until dawn.",
         "effects"    : { "nightVision": -0.5, "workSpeed": {"foraging": 0.7} }
     },
-    // ── §1 · PASSIVE affinities (resistance is legitimate here — never on an abstract attribute) ──
     {
         "id"           : "hardy-gut",
         "scope"        : "cultural",
@@ -1335,7 +1235,6 @@
         "selfCondition": "weak_gutted",
         "effects"      : {}
     },
-    // ── §1 · COMBAT combos (combatMods: multiplier on the matching combat stat) ──
     {
         "id"         : "sure-handed",
         "scope"      : "personal",
@@ -1381,8 +1280,6 @@
         "description": "A shifting, hard-to-pin target that keeps its feet.",
         "effects"    : { "combatMods": {"dodge": 1.15, "knockdown_resistance": 1.15} }
     },
-    // STEALTH §7b — the generic (non-lineage) stealth aptitude, so a small vanilla race can build
-    // toward the sneak too. (light-footed above is the dodge cousin; this one is the quiet cousin.)
     {
         "id"         : "soft-tread",
         "scope"      : "personal",
@@ -1538,10 +1435,6 @@
         "description": "Give them a bow and they still need to be near enough to touch, nothing they loose carries.",
         "effects"    : { "combatMods": {"aim_range": 0.6, "aim_speed": 0.8} }
     },
-    // ── §1 · WORK specialists — one 4-card set per work type (speed + yield/quality) so pawns can
-    //    be genuine specialists. Convention: ➕mod ×1.15/1.15 (uncommon) · ➕sig ×1.4/1.5 (rare) ·
-    //    ➖mod ×0.9/0.9 · ➖sig ×0.6/0.5 (negative). Existing one-offs (waterborn→fishing,
-    //    greenthumb→planting, curious/incurious→research) fold into these lines via conflict groups. ──
     {
         "id"         : "forager",
         "scope"      : "personal",
@@ -2109,11 +2002,6 @@
         "description": "Things go to them broken and come back worse.",
         "effects"    : { "workSpeed": {"repair": 0.6}, "workQuality": {"repair": 0.5} }
     },
-    // ═══════════════════════════════════════════════════════════════════════════
-    // §2 · Core-stat progressions — single-stat ladders (±1/±3/±5), trade-offs,
-    // two-stat combined swings, and the all-stats grand pulls (+5 all = legendary).
-    // Positives climb common → uncommon → rare; every pure minus is flaw-tier.
-    // ═══════════════════════════════════════════════════════════════════════════
     {
         "id"         : "str-plus-1",
         "scope"      : "cultural",
@@ -2444,7 +2332,6 @@
         "description": "Empties a bench just by sitting on it.",
         "effects"    : {"charismaBonus": -5}
     },
-    // ── §2b · Stat trade-offs (+N / −N: net-neutral, cheap, shaped) ─────────────
     {
         "id"         : "str-for-dex-1",
         "scope"      : "cultural",
@@ -2535,7 +2422,6 @@
         "description": "Brilliant, and chilly with it.",
         "effects"    : {"intelligenceBonus": 3, "charismaBonus": -3}
     },
-    // ── §2c · Two-stat combined swings (both up, or both down) ──────────────────
     {
         "id"         : "str-dex-plus-1",
         "scope"      : "cultural",
@@ -2867,8 +2753,6 @@
         "description": "Little left of either strength or sense.",
         "effects"    : {"constitutionBonus": -5, "intelligenceBonus": -5}
     },
-    // ── §2d · All-stats grand pulls (+5 all = legendary · +3 mythic · +1 epic; the deep curses live
-    //    inline under the Blighted heritage as its sub-capabilities — the dark mirror, §4) ──
     {
         "id"         : "all-plus-1",
         "scope"      : "cultural",
@@ -2936,12 +2820,6 @@
             "charismaBonus"    : -1
         }
     },
-    // ═══════════════════════════════════════════════════════════════════════════
-    // §3 · Staged natural gear — every weapon/armor line has 3 stages (S1 uncommon → S2 rare →
-    // S3 epic), chained by `evolvesTo` + a `stage` flag (data only for now — a later age/ritual
-    // system walks the chain). Existing traits (rending-claws, gore-horns, venomous, thick-fur,
-    // scaled-hide/iron-skin, feathered) got stage flags and slot in as their line's rungs.
-    // ═══════════════════════════════════════════════════════════════════════════
     {
         "id"           : "budding-claws",
         "scope"        : "cultural",
@@ -2966,9 +2844,7 @@
         "description": "Great hooked talons in place of hands, devastating unarmed, hopeless at a bench, and the wounds they leave will not close unaided.",
         "flavorLine": "their hands are a raptor's killing tools",
         "naturalWeapons": ["ripping-talons"],
-        // Stage 3 apex: the talons are too big to grip anything — no gloves, and no weapon/shield either.
         "blocksSlots": ["gloves", "mainHand", "offHand"],
-        // dexterityPenalty folds the retired `taloned` condition's DEX ×0.92 (killing tools, not hands).
         "effects": { "dexterityBonus": -1, "workSpeed": {"crafts": 0.7, "leatherworking": 0.75, "construction": 0.8} }
     },
     {
@@ -3222,7 +3098,6 @@
         "naturalWeapons": ["rending-beak"],
         "effects"      : {}
     },
-    // ── §3c · Armor coverings (resistance rides the covering, never an abstract number) ──
     {
         "id"           : "thick-hide",
         "scope"        : "cultural",
@@ -3333,8 +3208,6 @@
         "carryPenalty": 0.05,
         "effects": {}, "resistances": {"cold": 0.4, "wetness": 0.3}
     },
-    // ── §3e · Utility natural gear — slot-cost apparatus, host-gated, no defense. A grafted wing
-    //    is a REAL limb (§3d): hittable, losable — shear it and the benefit goes with it. ──
     {
         "id"           : "budding-wings",
         "scope"        : "cultural",
@@ -3529,11 +3402,6 @@
         "grafts"       : [ { "limb": "extra_eyes", "parts": ["anteriorMedianLeftEye", "anteriorMedianRightEye", "anteriorLateralLeftEye", "anteriorLateralRightEye"] } ],
         "effects"      : {}
     },
-    // ═══════════════════════════════════════════════════════════════════════════
-    // §5a · Lost limbs — the destroyed-limb pulls (wound kind, permanent, non-lethal).
-    // `amputate` removes the WHOLE limb (a true old amputation); a destroyed non-vital
-    // container (hand/foot) takes its contents. Paired parts flip sides for variety.
-    // ═══════════════════════════════════════════════════════════════════════════
     {
         "id"         : "one-armed",
         "scope"      : "personal",
@@ -3639,9 +3507,6 @@
         "wounds"     : [ {"part": "jaw", "severity": "serious", "type": "crush"} ],
         "effects"    : {}
     },
-    // ── §5b · Permanent scars — 3 severities × 4 regions × elemental variant (cut / burn /
-    //    frostbite; torso adds crush). Trait-stamped ⇒ permanent: never heal off, render as
-    //    "old ⟨type⟩ scar" in the health panel, effects flow through the body model. ──
     {
         "id"         : "arm-scar-minor",
         "scope"      : "personal",
@@ -4008,13 +3873,6 @@
         ],
         "effects"    : {}
     },
-    // ═══════════════════════════════════════════════════════════════════════════
-    // §6b · Trigger-conditioned traits — the trait grants a selfCondition whose `activateWhen`
-    // predicate keys it to live pawn state (wet/cold/hot/dark/pain/bloodloss/…), or whose
-    // `triggers` edge fires a follow-up (Anemic → shock). One positive + one negative per
-    // affliction, each tied to a lineage. Pure data on the existing condition graph.
-    // The trait card surfaces the condition as a "+ pill" with its tooltip (UI).
-    // ═══════════════════════════════════════════════════════════════════════════
     {
         "id"           : "hydro-vigor",
         "scope"        : "cultural",
@@ -4267,15 +4125,6 @@
         "selfCondition": "ravenous_hunger",
         "effects"      : {}
     },
-    // ═══════════════════════════════════════════════════════════════════════════
-    // §4 · The eleven heritage LINEAGES (flattened, LINEAGES-II) — each is a pure MARKER trait
-    // (legendary/mythic, `lineage` set) whose members are top-level traits tagged with the lineage id.
-    // A born-in pawn gets the marker + ONE random S1 member (Culture.drawPawnTraits); the rest of the
-    // tree is grown at seasonal growth events (lineageGrowthEvent). Member LINES are shared across
-    // lineages where logical (adrenaline rides beast/werewolf alike), and AURAS appear ONLY here —
-    // rare, lineage-gated, mutually exclusive (one conflict group), finite radius, throttled +
-    // lingering application.
-    // ═══════════════════════════════════════════════════════════════════════════
     {
         "id"          : "stoneblood-heritage",
         "scope"       : "cultural",
@@ -4452,8 +4301,6 @@
         "effects"     : {}, "resistances": {"poison": 0.4, "disease": 0.4}
     },
 
-    // ══ LINEAGES-II §4 — members flattened out of the old heritage bundles (each was a nested
-    //    subCapability; now a top-level trait its lineage GROWS at seasonal growth events) ══
     {
         "id"           : "gilled",
         "rarity"      : "rare",
@@ -4487,9 +4334,6 @@
         "effects": {}, "resistances": {"wetness": 0.4, "cold": 0.15, "fire": -0.2}
     },
     {
-        // The vampiric feeding need (LINEAGES-II §2): the blood-hunger meter fills over days; the pawn
-        // feeds on a nearby colonist of its own accord (neck puncture + blood drain). Left unfed, the
-        // `bloodthirst` condition is stamped by the meter at 100 and the pawn hunts uncontrollably.
         "id"           : "blood-hunger",
         "rarity"       : "negative",
         "lineage"      : ["vampiric"],
@@ -4502,8 +4346,6 @@
         "effects"      : {}
     },
     {
-        // The werewolf's twin (LINEAGES-II §1): sated by killing and devouring — raw meat and whole
-        // carcasses push the meter back down. A stocked corpse larder is legitimate counter-play.
         "id"           : "carcass-hunger",
         "rarity"       : "negative",
         "lineage"      : ["werewolf"],
@@ -4792,9 +4634,7 @@
         "name"         : "Crushing Claws",
         "description"  : "Massive shell-plated pincers, a crushing grip, useless with a crafted tool.",
         "naturalWeapons": ["crusher-claw"],
-        // Unstaged (not a stage-3 line), so it blocks gloves only — mainHand/offHand stay free.
         "blocksSlots"  : ["gloves"],
-        // dexterityPenalty folds the retired `crusher_clawed` condition's DEX ×0.92 (pincers).
         "effects"      : { "dexterityBonus": -1, "workSpeed": {"crafts": 0.75, "leatherworking": 0.8} }
     },
     {

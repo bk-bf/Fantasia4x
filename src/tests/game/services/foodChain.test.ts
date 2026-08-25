@@ -9,18 +9,15 @@ import {
   applyMealBuff,
   mealPoisonChance
 } from '$lib/game/systems/pawn/pawnQueries';
-import { decayIntoxication } from '$lib/game/core/needs';
+import { decayIntoxication } from '$lib/game/core/rules/body/conditions';
 import conditionsData from '$lib/game/database/pawns/conditions.jsonc';
 import type { GameState, Pawn } from '$lib/game/core/types';
-
-// PRODUCTION-CHAIN-II §F8 — milling, baking, brewing + alcohol as a mood good.
 
 describe('§F8 food-chain items', () => {
   it('flour/malt are organic intermediates; bread/pie are prepared meals', () => {
     expect(itemService.getItemById('flour')?.category).toBe('organic');
     expect(itemService.getItemById('malt')?.category).toBe('organic');
     expect(itemService.getItemById('bread')?.nutrition ?? 0).toBeGreaterThan(0);
-    // Cooked dishes group under `meal` now (the overloaded `food` category was split up).
     expect(itemService.getItemById('bread')?.category).toBe('meal');
     expect(itemService.getItemById('meat_pie')?.category).toBe('meal');
   });
@@ -52,7 +49,6 @@ describe('§F8 stations + recipes', () => {
       expect(r.station).toBe('fermenter');
       expect(r.passive).toBe(true);
     }
-    // The chain links up: any grain → flour → bread, any grain → malt → ale (category-slotted).
     expect(recipeService.getRecipeById('mill_flour')?.inputs).toHaveProperty('category:grain');
     expect(recipeService.getRecipeById('malt_grain')?.inputs).toHaveProperty('category:grain');
     expect(recipeService.getRecipeById('brew_ale')?.inputs).toHaveProperty('malt');
@@ -68,11 +64,9 @@ describe('§F8 alcohol = mood good', () => {
         stages?: Array<{ label: string; modifiers: { pain?: number } }>;
       }>
     ).find((c) => c.id === 'intoxicated')!;
-    expect(intox.transient).toBeUndefined(); // persistent (severity-driven)
+    expect(intox.transient).toBeUndefined();
     expect(intox.stages?.length ?? 0).toBeGreaterThanOrEqual(3);
-    // every stage numbs pain (< 1), more so the drunker
     expect(intox.stages!.every((s) => (s.modifiers.pain ?? 1) < 1)).toBe(true);
-    // the deepest stage also dims consciousness (can black out)
     const last = intox.stages![intox.stages!.length - 1] as {
       modifiers: { consciousness?: number };
     };
@@ -89,7 +83,6 @@ describe('§F8 alcohol = mood good', () => {
     expect(pawn.state.mood).toBeGreaterThan(50);
     const sev = pawn.conditions!.find((c) => c.id === 'intoxicated')!.severity;
     expect(sev).toBeGreaterThan(0);
-    // a tick of decay lowers it
     decayIntoxication(pawn.conditions!);
     expect(pawn.conditions!.find((c) => c.id === 'intoxicated')!.severity).toBeLessThan(sev);
   });
@@ -130,34 +123,29 @@ describe('§F8 food poisoning', () => {
   });
 
   it('a low-rarity cooked dish is poisonier than a higher-rarity one (rarities.jsonc poisonMult)', () => {
-    // dried_meat (common, base 0.03) vs salted_meat (uncommon, base 0.02) — rarity widens the gap.
     expect(mealPoisonChance([{ id: 'dried_meat', units: 1 }])).toBeGreaterThan(
       mealPoisonChance([{ id: 'salted_meat', units: 1 }])
     );
   });
 
   it('eating tainted food can stamp nausea/dysentery; resistance ≥ 1 grants immunity', () => {
-    // Force the worst case (rotten meat, 0.85) over many servings, zero resistance → a hit is certain.
     const sick = { conditionTimers: {} } as unknown as Pawn;
     applyFoodPoisoning(sick, [{ id: 'rotten_meat', units: 20 }], 0);
     const timers = sick.conditionTimers ?? {};
     expect((timers.nausea ?? 0) + (timers.dysentery ?? 0)).toBeGreaterThan(0);
 
-    // A fully poison-immune pawn (res ≥ 1) never gets sick — chance is multiplied to 0.
     const immune = { conditionTimers: {} } as unknown as Pawn;
     applyFoodPoisoning(immune, [{ id: 'rotten_meat', units: 20 }], 1);
     expect(Object.keys(immune.conditionTimers ?? {}).length).toBe(0);
   });
 });
 
-// §F8 — mixed-ingredient dishes (stew/pie) + meal buffs.
 describe('§F8 mixed dishes & meal buffs', () => {
   it('stews are multi-slot dishes over a mixed pool; tiers add slots (2 → 3 → 4)', () => {
     const slots = (id: string) => Object.keys(recipeService.getRecipeById(id)!.dynamicRecipe!);
     expect(slots('make_small_stew').length).toBe(2);
     expect(slots('make_fine_stew').length).toBe(3);
     expect(slots('make_lavish_stew').length).toBe(4);
-    // each slot accepts the full stew pool (not meat-only)
     const slot = Object.values(recipeService.getRecipeById('make_small_stew')!.dynamicRecipe!)[0];
     for (const c of ['meat', 'fish', 'vegetable', 'legume', 'herb'])
       expect(recipeService.slotCategories(slot)).toContain(c);
@@ -193,7 +181,7 @@ describe('§F8 mixed dishes & meal buffs', () => {
       ingredient2: 'venison',
       ingredient3: 'venison'
     });
-    expect(cost).toEqual({ venison: 3 }); // 1 per slot, summed — not overwritten to 1
+    expect(cost).toEqual({ venison: 3 });
   });
 
   it('each cooked dish carries a mealBuff whose condition exists and is transient', () => {
@@ -215,10 +203,8 @@ describe('§F8 mixed dishes & meal buffs', () => {
       expect(buff, id).toBeTruthy();
       expect(buffIds.has(buff!.condition), `${id} → ${buff!.condition}`).toBe(true);
     }
-    // tiers map to the right purpose: stew = endurance, hearty pie = fortification
     expect(itemService.getItemById('lavish_stew')!.mealBuff!.condition).toBe('hearty_meal');
     expect(itemService.getItemById('hearty_pie')!.mealBuff!.condition).toBe('fortified');
-    // herbal tea is the cooked outlet for herbs → soothed (recovery)
     expect(itemService.getItemById('herbal_tea')!.mealBuff!.condition).toBe('soothed');
     expect(
       recipeService.slotCategories(

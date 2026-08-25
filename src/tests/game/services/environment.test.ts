@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { SeededRng } from '$lib/game/core/rng';
-import { TICKS_PER_SECOND } from '$lib/game/core/time';
-import { moodEffect } from '$lib/game/core/moodEffects';
+import { SeededRng } from '$lib/game/core/util/rng';
+import { TICKS_PER_SECOND } from '$lib/game/core/util/time';
+import { moodEffect } from '$lib/game/core/defs/moods';
 import type { WorldTile, WeatherType, WeatherState } from '$lib/game/core/types';
 import {
   TURNS_PER_DAY,
@@ -50,7 +50,7 @@ import {
   SEASON_LABELS,
   type ThermalSample
 } from '$lib/game/services/EnvironmentService';
-import { tempRange, driveTemperatureConditions } from '$lib/game/core/needs';
+import { tempRange, driveTemperatureConditions } from '$lib/game/core/rules/body/conditions';
 import type { EntityCondition, PlacedBuilding } from '$lib/game/core/types';
 
 function bld(
@@ -99,7 +99,6 @@ describe('EnvironmentService — seasons (Phase B)', () => {
     expect(seasonForTurn(TICKS_PER_SEASON).season).toBe('summer');
     expect(seasonForTurn(2 * TICKS_PER_SEASON).season).toBe('autumn');
     expect(seasonForTurn(3 * TICKS_PER_SEASON).season).toBe('winter');
-    // 4 seasons = one full year → back to spring.
     expect(seasonForTurn(4 * TICKS_PER_SEASON).season).toBe('spring');
   });
 
@@ -108,7 +107,6 @@ describe('EnvironmentService — seasons (Phase B)', () => {
     expect(seasonForTurn(TICKS_PER_DAY * (DAYS_PER_SEASON - 1)).seasonDay).toBe(
       DAYS_PER_SEASON - 1
     );
-    // day 30 rolls into the next season at day 0.
     expect(seasonForTurn(TICKS_PER_DAY * DAYS_PER_SEASON)).toEqual({
       season: 'summer',
       seasonDay: 0
@@ -154,13 +152,11 @@ describe('EnvironmentService — temperature (Phase B, PERF-1)', () => {
   it('strips impassable tiles and averages only walkable land', () => {
     const cliff = tile('mountain');
     cliff.walkable = false;
-    cliff.temperature = 99; // a stale baked value that must be cleared
+    cliff.temperature = 99;
     const map = [[tile('plains'), cliff]];
     const mean = recomputeWorldTemperature(map, 'summer');
-    // Walkable plains keeps a baked temp; the impassable cliff is stripped to undefined.
     expect(map[0][0].temperature).toBe(biomeBaseTemp('plains') + SEASONS.summer.tempOffset);
     expect(map[0][1].temperature).toBeUndefined();
-    // The returned mean ignores the impassable tile entirely (no cold-cliff drag).
     expect(mean).toBe(biomeBaseTemp('plains') + SEASONS.summer.tempOffset);
   });
 });
@@ -267,7 +263,6 @@ describe('EnvironmentService — weather (Phase C)', () => {
     const frozenTypes = new Set<WeatherType>();
     const warmTypes = new Set<WeatherType>();
     for (let i = 0; i < 500; i++) {
-      // freezing=true → the wet branch falls as snow; freezing=false → as drizzle. Independent of season.
       frozenTypes.add(
         advanceWeatherForDay(
           { type: 'clear', intensity: 0, turnsRemaining: 0 },
@@ -304,10 +299,10 @@ describe('EnvironmentService — weather (Phase C)', () => {
   });
 
   it('weatherFreezing has hysteresis: snow ≤ −1°C, rain ≥ +1°C, prior phase holds between', () => {
-    expect(weatherFreezing(-3, false)).toBe(true); // cold → snow
-    expect(weatherFreezing(5, true)).toBe(false); // warm → rain
-    expect(weatherFreezing(0, true)).toBe(true); // dead zone holds prior (was frozen)
-    expect(weatherFreezing(0, false)).toBe(false); // dead zone holds prior (was thawed)
+    expect(weatherFreezing(-3, false)).toBe(true);
+    expect(weatherFreezing(5, true)).toBe(false);
+    expect(weatherFreezing(0, true)).toBe(true);
+    expect(weatherFreezing(0, false)).toBe(false);
   });
 
   it('tileWetness reads down as ice covers the tile (frozen ≠ wet)', () => {
@@ -320,9 +315,6 @@ describe('EnvironmentService — weather (Phase C)', () => {
   });
 
   it('the wind readout never contradicts the derived type ("rain · extremely windy" is impossible)', () => {
-    // The whole point of the orthogonal model: a calm-axis precip type (clear/rain/heavy_rain/snow) has
-    // a windy/gale cell that routes to windy_rain/storm/winter_windy/blizzard/gale, so it can only ever
-    // co-occur with calm or breezy wind. Its readout must therefore never reach "very"/"extremely".
     const calmAxis = new Set(['clear', 'rain', 'heavy_rain', 'snow']);
     const rng = new SeededRng(42);
     let w: WeatherState = { type: 'clear', intensity: 0, turnsRemaining: 0 };
@@ -335,8 +327,6 @@ describe('EnvironmentService — weather (Phase C)', () => {
   });
 
   it('wind is independent of precip: dry windy days AND calm showers both occur', () => {
-    // Orthogonality: over a long evolution we should see pure-wind dry types (a *_windy / gale with no
-    // rain) AND pure-wet types at calm wind (rain / drizzle) — a windy day never depends on it raining.
     const rng = new SeededRng(8);
     let w: WeatherState = { type: 'clear', intensity: 0, turnsRemaining: 0 };
     const seen = new Set<WeatherType>();
@@ -351,8 +341,6 @@ describe('EnvironmentService — weather (Phase C)', () => {
   });
 
   it('a storm breaks: reaching the storm corner steps BOTH axes toward calm', () => {
-    // storm = heavy_rain (precip peak) × gale (wind peak). On the next re-roll the front passes and both
-    // chains step one rung down — heavy_rain→rain, gale→windy — so (rain, windy) derives windy_rain.
     const w = advanceWeatherForDay(
       {
         type: 'storm',
@@ -385,7 +373,6 @@ describe('EnvironmentService — weather (Phase C)', () => {
 
 describe('EnvironmentService — per-tile display fields (HUD)', () => {
   it('tileTemperature = biome base + season offset + weather delta', () => {
-    // Same turn for both calls so the diurnal swing is identical and the weather delta is isolated.
     const base = tileTemperature('plains', 'spring', 0, {
       type: 'clear',
       intensity: 0,
@@ -397,7 +384,6 @@ describe('EnvironmentService — per-tile display fields (HUD)', () => {
       turnsRemaining: 0
     });
     expect(cold).toBeLessThan(base);
-    // winter is colder than summer for the same tile.
     expect(tileTemperature('plains', 'winter', 0, undefined)).toBeLessThan(
       tileTemperature('plains', 'summer', 0, undefined)
     );
@@ -405,19 +391,16 @@ describe('EnvironmentService — per-tile display fields (HUD)', () => {
 
   it('diurnal swing: pre-dawn is colder than mid-afternoon, and is flat at season=undefined×0 reference', () => {
     const ticksPerDay = TURNS_PER_DAY * TICKS_PER_SECOND;
-    const preDawn = Math.round(0.21 * ticksPerDay); // ~05:00, the curve trough
-    const afternoon = Math.round(0.625 * ticksPerDay); // ~15:00, the curve crest
-    // The diurnal delta itself dips below 0 pre-dawn and rises above 0 mid-afternoon.
+    const preDawn = Math.round(0.21 * ticksPerDay);
+    const afternoon = Math.round(0.625 * ticksPerDay);
     expect(diurnalTempDelta(preDawn, 'summer')).toBeLessThan(0);
     expect(diurnalTempDelta(afternoon, 'summer')).toBeGreaterThan(0);
     expect(diurnalTempDelta(afternoon, 'summer')).toBeGreaterThan(
       diurnalTempDelta(preDawn, 'summer')
     );
-    // Summer swings harder than winter (clear/dry vs. cloud-blanketed) for the same time of day.
     expect(diurnalTempDelta(afternoon, 'summer')).toBeGreaterThan(
       diurnalTempDelta(afternoon, 'winter')
     );
-    // It flows through into the tile's effective temperature: afternoon plains are warmer than pre-dawn.
     expect(tileTemperature('plains', 'summer', afternoon, undefined)).toBeGreaterThan(
       tileTemperature('plains', 'summer', preDawn, undefined)
     );
@@ -453,7 +436,6 @@ describe('EnvironmentService — per-tile display fields (HUD)', () => {
 
 describe('EnvironmentService — weather mood', () => {
   it('clear skies lift mood, storms depress it', () => {
-    // MOOD-REWORK: weather `mood` is now an effect id (mood.jsonc); resolve to its value.
     const val = (type: string) =>
       moodEffect(weatherEffects({ type, intensity: 0, turnsRemaining: 0 }).mood)?.value ?? 0;
     expect(val('clear')).toBeGreaterThan(0);
@@ -462,11 +444,10 @@ describe('EnvironmentService — weather mood', () => {
   });
 
   it('celestialMoodEffect fires the sky windows (dawn / dusk / full moon), else null', () => {
-    const D = TURNS_PER_DAY * TICKS_PER_SECOND; // ticks in a day
-    expect(celestialMoodEffect(Math.round(0.28 * D))).toBe('celestial_dawn'); // rising sun
-    expect(celestialMoodEffect(Math.round(0.86 * D))).toBe('celestial_dusk'); // setting sun
-    expect(celestialMoodEffect(Math.round(0.5 * D))).toBeNull(); // midday
-    // deep night on a full-moon day (15) → the moon; new-moon day (0) → nothing.
+    const D = TURNS_PER_DAY * TICKS_PER_SECOND;
+    expect(celestialMoodEffect(Math.round(0.28 * D))).toBe('celestial_dawn');
+    expect(celestialMoodEffect(Math.round(0.86 * D))).toBe('celestial_dusk');
+    expect(celestialMoodEffect(Math.round(0.5 * D))).toBeNull();
     expect(isFullMoon(15)).toBe(true);
     expect(celestialMoodEffect(15 * D + Math.round(0.95 * D))).toBe('celestial_full_moon');
     expect(celestialMoodEffect(Math.round(0.95 * D))).toBeNull();
@@ -483,26 +464,23 @@ describe('Temperature comfort + exposure (hypothermia / heat stroke)', () => {
   it('exposure is 0 inside the comfort band and grows outside it', () => {
     expect(coldExposure(20, 5)).toBe(0);
     expect(heatExposure(20, 30)).toBe(0);
-    expect(coldExposure(-5, 5)).toBeGreaterThan(0); // 10°C below comfort
-    expect(heatExposure(45, 30)).toBeGreaterThan(0); // 15°C above comfort
-    expect(coldExposure(-100, 5)).toBe(100); // clamped
-    expect(heatExposure(200, 30)).toBe(100); // clamped
+    expect(coldExposure(-5, 5)).toBeGreaterThan(0);
+    expect(heatExposure(45, 30)).toBeGreaterThan(0);
+    expect(coldExposure(-100, 5)).toBe(100);
+    expect(heatExposure(200, 30)).toBe(100);
   });
 
   it('driveTemperatureConditions onsets hypothermia under sustained cold and recovers in warmth', () => {
     const conditions: EntityCondition[] = [];
-    // High cold exposure for many ticks → hypothermia appears and climbs.
     for (let i = 0; i < 500; i++) driveTemperatureConditions(conditions, 100, 0);
     const cold = conditions.find((c) => c.id === 'hypothermia');
     expect(cold).toBeDefined();
     expect(cold!.severity).toBeGreaterThan(0);
-    // No exposure → it recovers back toward 0 and clears.
     for (let i = 0; i < 5000; i++) driveTemperatureConditions(conditions, 0, 0);
     expect(conditions.find((c) => c.id === 'hypothermia')).toBeUndefined();
   });
 
   it('a half-full exposure meter never onsets the condition — it needs a FULL (100) meter', () => {
-    // The meter exists for a reason: cold/heat at 50% must NOT apply the condition (onset = 100).
     const cold: EntityCondition[] = [];
     for (let i = 0; i < 5000; i++) driveTemperatureConditions(cold, 50, 0);
     expect(cold.find((c) => c.id === 'hypothermia')).toBeUndefined();
@@ -522,14 +500,13 @@ describe('Temperature comfort + exposure (hypothermia / heat stroke)', () => {
 
 describe('Thermal model — fire warmth, roof shelter, effective temperature', () => {
   it('effectiveTemperature: roof weather protection blocks the weather swing', () => {
-    expect(effectiveTemperature(10, -20, NO_THERMAL)).toBe(-10); // exposed: full delta
+    expect(effectiveTemperature(10, -20, NO_THERMAL)).toBe(-10);
     expect(
       effectiveTemperature(10, -20, { ...NO_THERMAL, weatherProtection: 1, roofed: true })
-    ).toBe(10); // fully protected: no delta
+    ).toBe(10);
   });
 
   it('effectiveTemperature: insulation pulls the interior toward the neutral baseline', () => {
-    // base 35°C, full insulation → neutral 15°C
     expect(effectiveTemperature(35, 0, { ...NO_THERMAL, insulation: 1, roofed: true })).toBe(15);
   });
 
@@ -541,9 +518,7 @@ describe('Thermal model — fire warmth, roof shelter, effective temperature', (
     const fire = [bld('campfire', 5, 5, { lit: true })];
     expect(computeThermalAt(5, 5, fire).warmth).toBeGreaterThan(0);
     expect(computeThermalAt(6, 5, fire).warmth).toBeGreaterThan(0);
-    // campfire lightRadius is 6 → a tile 7 away gets nothing.
     expect(computeThermalAt(5, 12, fire).warmth).toBe(0);
-    // closer is warmer than farther.
     expect(computeThermalAt(5, 5, fire).warmth).toBeGreaterThan(
       computeThermalAt(8, 5, fire).warmth
     );
@@ -558,7 +533,6 @@ describe('Thermal model — fire warmth, roof shelter, effective temperature', (
     expect(at.roofed).toBe(true);
     expect(at.insulation).toBeGreaterThan(0);
     expect(at.weatherProtection).toBeGreaterThan(0);
-    // a neighbouring tile is not roofed.
     expect(computeThermalAt(4, 3, [bld('thatch_roof', 3, 3)]).roofed).toBe(false);
   });
 
@@ -568,18 +542,16 @@ describe('Thermal model — fire warmth, roof shelter, effective temperature', (
     expect(isRoofedTile(9, 9)).toBe(false);
     expect(thermalAt(1, 1).roofed).toBe(true);
     expect(thermalAt(1, 1).warmth).toBeGreaterThan(0);
-    rebuildThermalField([]); // reset shared singleton so later tests see a clean field
+    rebuildThermalField([]);
     expect(isRoofedTile(1, 1)).toBe(false);
   });
 
   it('tileTemperature/tileWetness factor a thermal sample (roof keeps a tile warmer + drier)', () => {
     const roof: ThermalSample = { warmth: 0, insulation: 0.5, weatherProtection: 1, roofed: true };
     const rain = { type: 'heavy_rain' as const, intensity: 0.75, turnsRemaining: 0 };
-    // Under a roof during winter rain, the tile is warmer than fully exposed.
     expect(tileTemperature('plains', 'winter', 0, rain, roof)).toBeGreaterThan(
       tileTemperature('plains', 'winter', 0, rain, NO_THERMAL)
     );
-    // …and drier (rain kept out).
     expect(tileWetness(biomeBaseMoisture('plains'), rain, roof)).toBeLessThan(
       tileWetness(biomeBaseMoisture('plains'), rain, NO_THERMAL)
     );
@@ -590,8 +562,8 @@ describe('EnvironmentService — data-driven weather/season metadata (jsonc)', (
   it('weather labels come from the data file', () => {
     expect(weatherLabel('rain')).toBe('Rain');
     expect(weatherLabel('heavy_rain')).toBe('Heavy rain');
-    expect(weatherLabel(undefined)).toBe('Clear skies'); // falls back to default
-    expect(weatherLabel('not_a_weather')).toBe('Clear skies'); // unknown → default
+    expect(weatherLabel(undefined)).toBe('Clear skies');
+    expect(weatherLabel('not_a_weather')).toBe('Clear skies');
   });
 
   it('overlay kind + heavy flag are data-driven (drives the particle canvas)', () => {
@@ -608,7 +580,7 @@ describe('EnvironmentService — data-driven weather/season metadata (jsonc)', (
   });
 
   it('panel saturation is data-driven — fog washes panels out the most', () => {
-    expect(weatherPanelSaturation('clear')).toBe(1); // default, no field
+    expect(weatherPanelSaturation('clear')).toBe(1);
     expect(weatherPanelSaturation('heat_wave')).toBe(1);
     expect(weatherPanelSaturation('fog')).toBe(0.68);
     expect(weatherPanelSaturation('fog')).toBeLessThan(weatherPanelSaturation('rain'));
@@ -620,8 +592,7 @@ describe('EnvironmentService — data-driven weather/season metadata (jsonc)', (
     expect(weatherFallSpeed('heavy_rain')).toBe(950);
     expect(weatherFallSpeed('snow')).toBe(80);
     expect(weatherDensity('rain')).toBe(160);
-    expect(weatherDensity('heavy_rain')).toBe(240); // heavier rain = more drops
-    // Unknown type → falls back to clear's def; clear's overlay is 'none' → no particles (0/0).
+    expect(weatherDensity('heavy_rain')).toBe(240);
     expect(weatherFallSpeed('not_a_weather')).toBe(0);
     expect(weatherDensity('not_a_weather')).toBe(0);
   });
@@ -648,14 +619,12 @@ describe('EnvironmentService — environment tint (Subsystem 2/5)', () => {
   });
 });
 
-// ── Lunar counter (LINEAGES-II §1) — the moon is a pure function of the absolute day ──
 describe('lunar cycle', () => {
   it('cycles through all 8 phases over one 30-day month, starting at New Moon', () => {
     expect(moonPhaseName(0)).toBe('New Moon');
     const seen = new Set<string>();
     for (let d = 0; d < LUNAR_CYCLE_DAYS; d++) seen.add(moonPhaseName(d));
     expect(seen.size).toBe(MOON_PHASES.length);
-    // Deterministic wrap: day N and day N+cycle agree (save/load-safe, no drifting counter).
     expect(moonPhaseIndex(7)).toBe(moonPhaseIndex(7 + LUNAR_CYCLE_DAYS * 3));
   });
 
@@ -665,7 +634,6 @@ describe('lunar cycle', () => {
     expect(isFullMoon(15)).toBe(true);
     expect(isFullMoon(16)).toBe(true);
     expect(isFullMoon(17)).toBe(false);
-    // Exactly 3 full-moon days per cycle.
     let full = 0;
     for (let d = 0; d < LUNAR_CYCLE_DAYS; d++) if (isFullMoon(d)) full++;
     expect(full).toBe(3);
@@ -686,6 +654,6 @@ describe('lunar cycle', () => {
     expect(sunPhaseName(12)).toBe('High Sun');
     expect(sunPhaseName(15)).toBe('Sinking Sun');
     expect(sunPhaseName(18)).toBe('Sunset');
-    expect(sunPhaseName(22)).toBeUndefined(); // the moon holds the slot at night
+    expect(sunPhaseName(22)).toBeUndefined();
   });
 });

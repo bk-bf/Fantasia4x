@@ -147,7 +147,7 @@ Do these first; every tuning number after them is only as good as the RNG and th
 
 ### 2. The sim RNG defaults to a non-deterministic seed
 
-- [x] `new SeededRng()` falls back to `Date.now() ^ Math.random()` ([rng.ts:52](../../../src/lib/game/core/rng.ts)) — decide whether the module singleton should default to a fixed seed instead.
+- [x] `new SeededRng()` falls back to `Date.now() ^ Math.random()` ([rng.ts:52](../../../src/lib/game/core/util/rng.ts)) — decide whether the module singleton should default to a fixed seed instead.
 - [x] Reseed in `lairEscalation.test.ts` (fails ~1 run in 3 in isolation).
 - [ ] Sweep the suite for other tests that drive sim code without reseeding.
 
@@ -213,7 +213,7 @@ change: `resolveHit` stops reading a raw core stat and reads the damage stat ins
 
 ### 6. Delete `vision_range`
 
-- [x] Nothing reads it; `core/vision.baseVisionRange` returns TILES from raw PERCEPTION and is shared by pawns and mobs. Remove the formula rather than leave a documented stat that does nothing.
+- [x] Nothing reads it; `core/rules/body/vision.baseVisionRange` returns TILES from raw PERCEPTION and is shared by pawns and mobs. Remove the formula rather than leave a documented stat that does nothing.
 - [x] Check the pawn stat panel and `/gear-db` → Stats by build for references before removing.
 
 ### 7. Data: the gaps this mapping exposes
@@ -502,7 +502,7 @@ off the combat sink rather than inferred from ticks-to-kill):
     it and it cannot read as a punishment for carrying the day's logs. `encumbered` keeps its old
     100% → 140% band and stacks on top.
   - `armorProperties.movementPenalty` was a **dead field** — written into a bonuses object in
-    [PawnEquipment.ts:406](../../../src/lib/game/core/PawnEquipment.ts) and read by nothing, while the
+    [PawnEquipment.ts:406](../../../src/lib/game/core/rules/gear/equipment.ts) and read by nothing, while the
     item tooltip promised the player a penalty the sim never applied. Now `wornStiffness` sums it and
     it multiplies dodge in `resolveHit`, capped at 0.45. This is the half of the trade weight alone
     cannot express: a strength build affords plate without going `laden`, and the suit still costs it
@@ -665,7 +665,7 @@ resolves to `dualWield` at attack_speed 2.268 against a single dagger's 1.5.
       still spread S 8% / A 13% / B 18% / C 25% / D 19% / F 17%.
 - [x] **The collapse test was asserting the wrong thing.** A downed pawn with nobody to tend it does not
       get back up, and should not: pawn clotting is deliberately sparse so that "bleeding stays a
-      treat-or-die threat… leaving room for a caretaker to make it (or not)" ([Wounds.ts:236](../../../src/lib/game/core/Wounds.ts)),
+      treat-or-die threat… leaving room for a caretaker to make it (or not)" ([Wounds.ts:236](../../../src/lib/game/core/defs/wounds.ts)),
       and the scenario has exactly ONE pawn. Traced to 72,000 ticks the arc is real and not a hang: blood
       98.6% → 33.6%, bleeding clots, an untended infection starts climbing. The test now asserts the
       designed shape — goes down, draft releases, stays down, still alive to be saved, still bleeding.

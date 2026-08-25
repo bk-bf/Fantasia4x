@@ -1,16 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { itemService } from '$lib/game/services/ItemService';
 import { rebuildThermalField } from '$lib/game/services/EnvironmentService';
-import { SECONDS_PER_TICK } from '$lib/game/core/time';
+import { SECONDS_PER_TICK } from '$lib/game/core/util/time';
 import type { GameState, DroppedItem, PlacedBuilding, WorldTile } from '$lib/game/core/types';
 
-/**
- * Stage 4 — §1 wood seasoning + §C spoilage.
- * Drying: green_firewood at Chebyshev distance EXACTLY 2 from a lit fire seasons into
- * dry_firewood; adjacent (1) or far (3+) stacks don't. Decay: every perishable stack accrues a
- * spoilage clock at full speed and rots into its decaysTo (preservation via cold is owned by the
- * temperature system, not storage buildings).
- */
 const fire = (x: number, y: number): PlacedBuilding =>
   ({
     id: `f${x}`,
@@ -74,8 +67,6 @@ describe('§1 wood seasoning (stepDrying)', () => {
 });
 
 describe('hay-making (stepDrying: plant_fiber → hay)', () => {
-  // plains: 15°C / 30% moisture (warm + dry); swamp: 18°C / 80% (wet). turn 10800 = mid-afternoon
-  // (warmest of the diurnal swing), so plains clears the 12°C drying floor.
   const tile = (terrainType: string, moisture: number): WorldTile =>
     ({ terrainType, moisture }) as unknown as WorldTile;
   const fiber = (p: Partial<DroppedItem>): DroppedItem =>
@@ -86,7 +77,7 @@ describe('hay-making (stepDrying: plant_fiber → hay)', () => {
     buildings: PlacedBuilding[] = [],
     turn = 10800
   ): GameState {
-    rebuildThermalField(buildings); // reset the module thermal field → deterministic temps
+    rebuildThermalField(buildings);
     return {
       seed: 1,
       turn,
@@ -163,7 +154,6 @@ describe('hay-making (stepDrying: plant_fiber → hay)', () => {
     expect(out.droppedItems![0].resourceId).toBe('dried_fruit');
   });
 
-  // Mutual exclusion: a stack is EITHER curing OR spoiling, never both (priority reserved > dry > spoil).
   it('actively drying meat does not spoil', () => {
     const out = itemService.stepItemDecay(
       hayState([drop({ resourceId: 'venison', x: 0, y: 0 })], [tile('plains', 30)])
@@ -183,8 +173,8 @@ describe('hay-making (stepDrying: plant_fiber → hay)', () => {
       [drop({ resourceId: 'venison', x: 0, y: 0, reservedFor: 'order-1', drying: 100 })],
       [tile('plains', 30)]
     );
-    expect(itemService.stepDrying(gs).droppedItems![0].drying).toBe(100); // not drying
-    expect(itemService.stepItemDecay(gs).droppedItems![0].decayAcc ?? 0).toBe(0); // not spoiling
+    expect(itemService.stepDrying(gs).droppedItems![0].drying).toBe(100);
+    expect(itemService.stepItemDecay(gs).droppedItems![0].decayAcc ?? 0).toBe(0);
   });
 });
 

@@ -1,9 +1,3 @@
-<!--
-  PawnGrowthPanel — the Battle-Brothers-style "growth" pick-two (PAWN-GROWTH). Shown in the Status tab
-  when a pawn has a banked growth offer (survived a season, or its birthday — a birthday offer's rolls
-  are DOUBLED). Every stat shows its rolled gain; the player keeps TWO. Applying raises those stats
-  (capped at each stat's growth ceiling) and reveals the next offer if more are queued.
--->
 <script lang="ts">
   import type { Pawn, StatKey } from '$lib/game/core/types';
   import { gameState } from '$lib/stores/gameState';
@@ -26,7 +20,6 @@
   const capOf = (k: StatKey) => pawn.maxStats?.[k] ?? Infinity;
   const projected = (k: StatKey) => Math.min(capOf(k), pawn.stats[k] + gainOf(k));
 
-  // Selection resets whenever the offer identity changes (a new one surfaced after applying).
   let selected = $state<StatKey[]>([]);
   $effect(() => {
     void offer;

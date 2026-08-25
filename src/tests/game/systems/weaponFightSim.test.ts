@@ -3,36 +3,17 @@ import { HeadlessSession } from '$lib/game/headless/HeadlessSession';
 import { buildScenario } from '$lib/game/headless/Scenario';
 import type { Mob, Pawn } from '$lib/game/core/types';
 
-/**
- * FIGHT SIM — total damage over a real fight, not damage per second.
- *
- * DPS ignores three things that decide actual fights: a swing that is blocked or dodged is wasted
- * entirely, armour condition falls as it is struck and SHATTERS at zero (Combat.decrEquipDurability
- * removes the piece from the doll), and precision biases where the blow lands. This drives the real
- * loop — HeadlessSession, drafted colonists, `attackTargetWith`, real ticks — and reports time to
- * kill plus what the target was still wearing when it died.
- *
- * Preflight per the headless skill: flat map (default), needs frozen, `seedEntities: false` so the
- * only mob is the one under test, and the fight is driven by an explicit draft order because the sim
- * starts at night and mobs are vision-gated.
- */
-
-const CREATURE = 'orc_reaver'; // geared humanoid: draws worn armour from `orc_warband`, so it can be stripped
+const CREATURE = 'orc_reaver';
 
 interface Outcome {
   ticks: number;
   killed: boolean;
-  /** Fraction of the target's blood pool still left when the fight ended. */
   bloodPct: number;
-  /** Armour condition remaining, as a fraction of what it spawned with. */
   armourPct: number;
-  /** Tick at which the last worn piece shattered (Combat removes it at condition 0). */
   strippedAt: number | null;
-  /** Blood lost in the first 600 ticks, i.e. before armour attrition can matter. */
   early: number;
 }
 
-/** ONE drafted colonist against ONE mob, so the weapon is the only variable. */
 async function duel(weaponId: string, offHand: string | undefined, maxTicks = 12_000): Promise<Outcome> {
   const s = new HeadlessSession();
   await s.start(
@@ -93,7 +74,6 @@ async function duel(weaponId: string, offHand: string | undefined, maxTicks = 12
   };
 }
 
-/** Total condition across worn armour pieces (a piece at 0 is removed from the doll by Combat). */
 function armourCondition(m: Mob | undefined): number {
   const eq = (m?.equipment ?? {}) as Record<string, { itemId: string; durability?: number } | undefined>;
   let sum = 0;
@@ -113,12 +93,6 @@ const CONTENDERS: [string, string, string | undefined][] = [
   ['greatcleaver 2H', 'steel_greatcleaver', undefined]
 ];
 
-/**
- * The trait piles the analytical sweep (`t4WeaponAudit.test.ts`) ranked as the most dangerous, taken
- * back into the real loop to see whether the paper multiplier survives contact with a live fight.
- * `whirlwind` and `giants-grip` are the two epics that top every stack; the `*-plus-5` line is the
- * flat stat pile; `lumbering-fighter` is the worst flaw found.
- */
 const TRAIT_PILES: [string, string[]][] = [
   ['baseline (no traits)', []],
   ['whirlwind', ['whirlwind']],
@@ -207,7 +181,6 @@ describe('fight sim — total damage over a real fight (HeadlessSession)', () =>
       }
       console.log(lines.join('\n'));
 
-      // The sim ran a real fight: a real pawn damaged a real mob over real ticks.
       const anyProgress = results.some(([, r]) => r.killed || r.bloodPct < 100);
       expect(anyProgress, 'the drafted colonist engaged and damaged the orc').toBe(true);
     }
@@ -217,11 +190,6 @@ describe('fight sim — total damage over a real fight (HeadlessSession)', () =>
     'TRAIT CONFIRMATION — the audit’s worst trait piles, in a real fight',
     { timeout: 300_000 },
     async () => {
-      // Time to kill is the honest measure here: the analytical sweep prices dps, but a fight also
-      // spends swings on misses, blocks and a target that fights back. A pile that halves the clock
-      // is doing in the loop what the sweep said it would.
-      // A top-tier weapon kills this orc in a handful of swings, so ONE seed is noise: whether those
-      // two or three swings crit decides the whole run. Every cell is the mean over SEEDS runs.
       const SEEDS = [4242, 7, 1013, 55, 909, 31337, 64, 2718];
       const meanTicks = async (weapon: string, ids: string[]) => {
         let sum = 0;
@@ -241,7 +209,6 @@ describe('fight sim — total damage over a real fight (HeadlessSession)', () =>
         }
         console.log(lines.join('\n'));
       }
-      // The pile must be a real, visible advantage in the loop, not just on paper.
       const plain = await meanTicks('rune_slotted_stiletto', []);
       const stacked = await meanTicks('rune_slotted_stiletto', TRAIT_PILES[4][1]);
       console.log(`[TRAITS] stiletto worst-5 pile: ${plain.toFixed(0)} → ${stacked.toFixed(0)} mean ticks`);

@@ -5,18 +5,14 @@ import type {
   SystemInteractionResult
 } from './GameEngine';
 import type { GameState, WorldTile } from '../core/types';
-import { GameStateManager } from '../core/GameState';
+import { GameStateManager } from '../core/state/GameStateManager';
 import {
   peekRegrowthTurn,
   popRegrowth,
   pushRegrowth,
   minCooldownExpiry,
   rebuildRegrowthQueue
-} from '../core/regrowthQueue';
-// NB: the engine no longer imports the Svelte store — its per-tick output goes through an
-// injected `outputSink` (set by the store on the main thread; postMessage in the sim worker).
-// This severs the only engine→store coupling, the prerequisite for running the sim off-thread
-// (ENGINE-PERFORMANCE ADR-021 / sim→Worker W0).
+} from '../core/rules/world/regrowthQueue';
 import { workService } from '../services/WorkService';
 import { itemService } from '../services/ItemService';
 import { recipeService } from '../services/RecipeService';
@@ -24,7 +20,7 @@ import { pawnService } from '../services/PawnService';
 import { pawnGrowthService } from '../services/PawnGrowthService';
 import { buildingService } from '../services/BuildingService';
 import { researchService } from '../services/ResearchService';
-import { WORK_CATEGORIES } from '../core/Work';
+import { WORK_CATEGORIES } from '../core/defs/work';
 import buildingsData from '../database/world/buildings.jsonc';
 
 import { pawnStateMachineService, reapDeadPawns } from './PawnStateMachine';
@@ -44,7 +40,7 @@ import {
 } from './pawn/carry';
 import { tendPatient, hasUntendedWound, TEND_WORK } from '../services/jobs/caretake';
 import { MIN_FORAGE_GROWTH } from '../services/jobs/filters';
-import { equipDropToPawn, carryDropToInventory } from '../core/PawnEquipment';
+import { equipDropToPawn, carryDropToInventory } from '../core/rules/gear/equipment';
 import { jobService, BASE_WORK_RATE } from '../services/JobService';
 import { pawnStatService } from '../services/PawnStatService';
 import { resourceObjectService } from '../services/ResourceObjectService';
@@ -53,7 +49,7 @@ import { readMobPathStats } from '../services/entity/entityHelpers';
 import { maybeRebuildConnectivity } from '../services/entity/connectivity';
 import { combatService } from './Combat';
 import { getRangedWeapon, effectiveRangedRange, hasViableAmmo } from './rangedCombat';
-import { TICKS_PER_SECOND, ticksFromSeconds, perTick } from '../core/time';
+import { TICKS_PER_SECOND, ticksFromSeconds, perTick } from '../core/util/time';
 import {
   buildPathfindingGridsSoftBlocked,
   patchPathfindingWalkable,
@@ -61,11 +57,11 @@ import {
 } from '../services/PathfinderService';
 import { occupancyService } from '../services/OccupancyService';
 import { assignDraftMovePath } from '../services/draftMovePath';
-import { isGameDebug, gatedConsole } from '../core/log';
+import { isGameDebug, gatedConsole } from '../core/util/log';
 import type { WorkCategory } from '../core/types';
 import type { Pawn, PawnOrder } from '../core/types';
 import { advanceJobOneTick } from './pawn/handlers/work';
-import { rng } from '../core/rng';
+import { rng } from '../core/util/rng';
 import {
   seasonForTurn,
   dayIndexForTurn,
@@ -88,67 +84,29 @@ import {
   fermentTempRate
 } from '../services/EnvironmentService';
 import { zoneTileKeys } from '../services/DesignationService';
-import { soilTierForTile } from '../core/Terrains';
-import { cropHealth, cropLossPerDay } from '../core/cropHealth';
-import { markTileDirty } from '../core/tileDeltas';
+import { soilTierForTile } from '../core/defs/terrains';
+import { cropHealth, cropLossPerDay } from '../core/rules/world/cropHealth';
+import { markTileDirty } from '../core/state/tileDeltas';
 import {
   RESOURCE_VISIBLE_GROWTH,
   rebuildWildGrowth,
   wildGrowthSize,
   wildGrowthEntries,
   removeWildGrowth
-} from '../core/wildGrowth';
-import { simLog, vlog, isVerboseLogging } from '../core/logSink';
+} from '../core/rules/world/wildGrowth';
+import { simLog, vlog, isVerboseLogging } from '../core/util/logSink';
 
 const AVAILABLE_BUILDINGS = buildingsData as unknown as import('../core/types').Building[];
 
-/**
- * How many sim ticks pass between UI store notifications. The sim runs at
- * TICKS_PER_SECOND (60); notifying every 4th tick pushes UI updates at ~15 Hz.
- * The WebGL renderer interpolates pawn motion every animation frame, so movement
- * stays smooth regardless. Between notifications the engine still refreshes the
- * store's held value each tick (via pushFromEngine), so `get(gameState)` reads a
- * current projection. The engine — not the store — is the single writer of
- * canonical state (P-2); user actions reach it as commands (see applyCommand).
- */
-/** UI flush cadence in REAL milliseconds (~15 Hz) — wall-clock so it's independent of TPS. */
 const UI_PUSH_MS = 1000 / 15;
-/** Menu-backdrop flush cadence (~5 Hz) — the preview only animates a slow day/night + weather, and the
- *  particle/terrain layers render on their OWN rAF, so it doesn't need 15 Hz snapshots. Throttling here
- *  cuts the main-thread reactive churn (store notify → ambient/panel-tint recompute → glow style writes)
- *  that was feeding the periodic ~44 ms major-GC pauses behind the weather stutter. */
 const PREVIEW_PUSH_MS = 1000 / 5;
-/** Item-deterioration runs every N ticks (not every tick): durability lifespans are days/weeks, so
- *  weathering all loose items every tick is wasted work + array churn. 600 ticks ≈ 0.8 in-game hour. */
 const DETERIORATION_INTERVAL_TICKS = 600;
-/** Spoilage (`stepItemDecay`) runs every N ticks for the same reason: a decay clock is days-long, but
- *  per-tick it re-references the whole `droppedItems` (+ `stockpile`) array — which, because the array
- *  isn't in the snapshot ref-diff's skip set, ships + structured-clones across the worker→render
- *  boundary EVERY flush (the carcass-FPS regression). 60 ticks ≈ 1 s: invisible for spoilage, but cuts
- *  the ref-churn (and thus the cross-boundary clone) ~60×. Erosion is scaled by the elapsed ticks. */
 const DECAY_INTERVAL_TICKS = 60;
-/** SOCIAL-LAYER: the proximity dialog check runs every N ticks (NOT per tick) — pawns strike up a
- *  chat when they pass within a couple of tiles. 90 ticks ≈ 1.5 s: frequent enough that the player
- *  sees interactions happen, cheap enough that the pairwise scan (≤50 pawns) is negligible, and
- *  cooldowns inside the tick keep it from flooding. Off the hot path, like the decay/kingdom ticks. */
 const DIALOG_INTERVAL_TICKS = 90;
-/** Drying (`stepDrying`) runs every N ticks for the same reason as spoilage: a drying clock is
- *  days-long, so per-tick re-referencing of the whole `droppedItems` array is wasted churn. 60 ticks
- *  ≈ 1 s — invisible for drying. Accrual is scaled by the elapsed ticks. */
 const DRYING_INTERVAL_TICKS = 60;
-/** Job-board reconcile cadence (ADR-022). `generateJobs` rebuilds the board from current world
- *  sources — a self-healing, emission-derived pass — but that's wasted at 60 Hz when designations/
- *  buildings/drops change far slower. Running it every 6 ticks caps job-appearance latency at ≤6
- *  ticks (~0.1 in-game-sec — imperceptible, so no per-event "kick" is needed) while cutting the scan
- *  to ~1/6 the cost. Claim/advance/complete still run every tick (independent of this pass), so
- *  claimed/in-progress jobs are untouched between rebuilds. */
 const JOB_GENERATION_INTERVAL_TICKS = 6;
-/** How many ticks to accumulate before logging the per-phase ms breakdown to perf.log (verbose only). */
 const PHASE_LOG_TICKS = 120;
 
-/** DRAFTED-JOB-ORDERS §9: an active drafted order just finished — pop the next MANUAL-queue entry into
- *  the head (or clear both when empty). Returns the immutable `{ draftTarget, manualQueue }` patch to
- *  spread onto the pawn (the drafted executor rebuilds pawn objects rather than mutating in place). */
 function popOrder(p: Pawn): {
   draftTarget: PawnOrder | undefined;
   manualQueue: PawnOrder[] | undefined;
@@ -162,63 +120,24 @@ function popOrder(p: Pawn): {
 export class GameEngineImpl implements GameEngine {
   private gameState: GameState | null = null;
   private gameStateManager: GameStateManager | null = null;
-  // ENGINE-PERFORMANCE-II §S2: the worldMap ref the regrowth min-heap was last (re)built from. A change
-  // (load / regen) triggers a one-time rebuild; during play the ref is stable so the heap is incremental.
   private _lastRegrowthWorldMap: WorldTile[][] | null = null;
-  // The worldMap ref the wild-growth work-list was last (re)built from (same incremental contract as the
-  // regrowth heap above): rebuild once on a map REPLACE; during play the ref is stable so it's additive.
   private _lastWildGrowthWorldMap: WorldTile[][] | null = null;
   private config: GameEngineConfig;
   private lastTurnProcessed = 0;
-  /** `performance.now()` of the last UI flush — throttles notify/snapshot to ~15 Hz (UI_PUSH_MS). */
   private lastFlushMs = 0;
-  /**
-   * The season the worldMap temperatures were last recomputed for (SEASONS_WEATHER Phase B).
-   * `undefined` until the first non-empty recompute, so a fresh world (temperature: 0) and a
-   * reloaded save both get their temperatures populated on the first tick — and a season change
-   * triggers exactly one in-place recompute (PERF-1), not one per tick.
-   */
   private temperatureSeason: import('../core/types').Season | undefined = undefined;
-  /** Cached coords of a guaranteed-WALKABLE tile used to probe whether the map is baked for the current
-   *  season. Walkable-only because impassable tiles now carry no temperature (stripped at bake time);
-   *  re-found when a new map loads or the cached tile is no longer walkable. */
   private tempProbe: { x: number; y: number } | undefined = undefined;
-  /** Set by processEnvironment on a real season transition; consumed by the end-of-turn event phase
-   *  so a migrant wave rolls once per season boundary while respecting the events-last turn order. */
   private _seasonJustTransitioned = false;
-  /** PAWN-GROWTH: absolute day index last processed for the per-day growth cadence (fires once/day). */
   private _lastGrowthDay: number | undefined = undefined;
-  /** Hysteresis latch for the rain⇄snow weather phase (SEASONS_WEATHER ice) — held across ticks so
-   *  precipitation doesn't flicker type in the −1…+1°C dead zone around freezing. */
   private weatherFreezing = false;
-  /** Rolling row cursor for the chunked snow/ice scan — the map is swept a band at a time across ticks
-   *  (see the snow phase) instead of one atomic whole-map pass that hitched the worker at high speed. */
   private _snowScanRow = 0;
-  /** Per-phase wall-clock accumulator (ms) + tick count for the periodic perf breakdown logged to
-   *  `.debug/perf.log` (verbose only). Names which tick phase is eating time so a regression is located
-   *  by measurement, not guesswork. Reset each window. */
   private _phaseMs: Record<string, number> = {};
   private _phaseTicks = 0;
-  /** Whether the per-phase perf instrumentation is active this tick — mirrors the Settings → Debug-mode
-   *  verbose toggle, refreshed once per tick. When off, `timed()` is a passthrough (zero overhead) and the
-   *  periodic breakdown / O(map) walkable scan never runs. */
   private _dbg = false;
-  /** Average baked tile temperature (biome + season, no weather) — combined with the live weather
-   *  delta into `gameState.avgTemperature` for the HUD. Set whenever temperatures are recomputed. */
   private avgTileTemp: number | undefined = undefined;
-  /**
-   * Per-tick output sink (ENGINE-PERFORMANCE ADR-021, sim→Worker W0). The engine no longer imports
-   * the Svelte store; the owner injects how to publish each tick's state — on the main thread that's
-   * `pushFromEngine` (store), in the sim worker it'll postMessage a snapshot. `flush` mirrors the old
-   * UI-push throttle (notify subscribers this tick).
-   */
   private outputSink: ((state: GameState, flush: boolean) => void) | null = null;
-  /** Command-path commit sink (P-2 user actions). Same decoupling as outputSink. */
   private commitSink: ((state: GameState, save: boolean) => void) | null = null;
 
-  /** Menu-preview mode (set via the worker `init` message). When true, `processGameTurn` branches to
-   *  the slim `processPreviewTurn` — environment + prey-only entity step only — so the main-menu
-   *  backdrop costs almost nothing. The real PEACE hot path below is left completely untouched. */
   private previewMode = false;
 
   setPreviewMode(v: boolean): void {
@@ -244,12 +163,6 @@ export class GameEngineImpl implements GameEngine {
     };
   }
 
-  // UI-facing coordination (getById lookups, craftItem, startResearch, work assignment…) lives in
-  // GameCoordinator (P-2b) — this class stays a turn coordinator + state owner. Mutating UI actions
-  // reach canonical state via applyCommand (P-2).
-
-  /** Run `fn`, accumulating its wall-clock into `_phaseMs[label]` ONLY when Debug mode is on (`_dbg`);
-   *  otherwise a zero-overhead passthrough. Drives the perf breakdown logged in `processGameTurn`. */
   private timed(label: string, fn: () => void): void {
     if (!this._dbg) {
       fn();
@@ -271,27 +184,15 @@ export class GameEngineImpl implements GameEngine {
     }
 
     try {
-      // P-2: no store read-back. The engine owns canonical state; user actions already mutated
-      // it via applyCommand, so there is nothing to re-sync. Shallow-copy before bumping the
-      // counter so the object last committed to the store (same reference) is never mutated in
-      // place. (gameState.turn counts ticks.)
       this.gameState = { ...this.gameState, turn: this.gameState.turn + 1 };
 
-      // Menu-preview backdrop: run only the atmospheric phases and bail before the full sim — see
-      // processPreviewTurn. Branches out HERE so none of the per-tick hot path below changes.
       if (this.previewMode) return this.processPreviewTurn();
 
-      // Phase runner — when Debug mode is on, times each phase into `_phaseMs` and logs a sorted ms
-      // breakdown to perf.log every PHASE_LOG_TICKS, so a per-tick regression is LOCATED by measurement.
-      // When off, `timed()` is a straight passthrough (no perf cost) and nothing below logs. Refreshed once
-      // per tick from the live verbose/Debug-mode gate.
       this._dbg = isVerboseLogging();
       const dbg = this._dbg;
       const acc = this._phaseMs;
       const t = (label: string, fn: () => void): void => this.timed(label, fn);
 
-      // Living-world environment (SEASONS_WEATHER Phase B/C): advance season + weather and refresh
-      // tile temperature BEFORE needs tick, so the need-rate hot path reads current values.
       t('environment', () => this.processEnvironment());
 
       t('needsTick', () => {
@@ -300,14 +201,10 @@ export class GameEngineImpl implements GameEngine {
         this.gameState = pawnService.processAutoWash(this.gameState!);
       });
       t('itemDecay', () => {
-        // Throttled (see DECAY_INTERVAL_TICKS): spoil that many ticks' worth in one pass instead of
-        // re-referencing the whole droppedItems array every tick (which churns the snapshot diff).
         if (this.gameState!.turn % DECAY_INTERVAL_TICKS === 0)
           this.gameState = itemService.stepItemDecay(this.gameState!, DECAY_INTERVAL_TICKS);
       });
       t('itemDeterioration', () => {
-        // Throttled (see DETERIORATION_INTERVAL_TICKS): apply that many ticks of wear in one pass
-        // instead of rebuilding the dropped-items array every tick for a sliver of durability.
         if (this.gameState!.turn % DETERIORATION_INTERVAL_TICKS === 0)
           this.gameState = itemService.stepItemDeterioration(
             this.gameState!,
@@ -315,8 +212,6 @@ export class GameEngineImpl implements GameEngine {
           );
       });
       t('drying', () => {
-        // Throttled like decay (see DRYING_INTERVAL_TICKS): cure that many ticks' worth in one pass
-        // instead of re-referencing the whole droppedItems array every tick.
         if (this.gameState!.turn % DRYING_INTERVAL_TICKS === 0)
           this.gameState = itemService.stepDrying(this.gameState!, DRYING_INTERVAL_TICKS);
       });
@@ -324,14 +219,9 @@ export class GameEngineImpl implements GameEngine {
         this.gameState = researchService.processResearchTick(this.gameState!);
       });
       t('pendingCrafts', () => {
-        // ADR-016 queue-without-materials: reserve inputs for `pending` orders as soon as the stock
-        // exists (cheap no-op guard when none are pending). Runs unthrottled so a stocked order isn't
-        // stalled waiting on the next generateJobs cadence.
         this.gameState = jobService.reservePendingCraftOrders(this.gameState!);
       });
       t('generateJobs', () => {
-        // ADR-022: throttled reconcile (every JOB_GENERATION_INTERVAL_TICKS). The board persists
-        // between passes; only its sync against world sources is amortised.
         if (this.gameState!.turn % JOB_GENERATION_INTERVAL_TICKS === 0)
           this.gameState = jobService.generateJobs(this.gameState!);
       });
@@ -355,28 +245,18 @@ export class GameEngineImpl implements GameEngine {
         this.gameState = combatService.tickCombat(this.gameState!, 1000 / TICKS_PER_SECOND);
         this.gameState = entityService.handleFreshCombatCorpses(preCombatState, this.gameState!);
       });
-      // End-of-turn reaper: finalise any combat death that bypassed killPawn (drop corpse + gear,
-      // record it) and remove all dead pawns from pawns[] so they leave the UI (NT-2).
       t('reapDead', () => {
         this.gameState = reapDeadPawns(this.gameState!);
       });
-      // World-event phase (turn order: events last). Currently only the season-boundary migrant wave:
-      // roll it once when a season just transitioned, unless an event is already awaiting the player.
       t('events', () => {
         if (this._seasonJustTransitioned && !this.gameState!.pendingEvent) {
           this.gameState = rollMigrantWave(this.gameState!);
         }
         this._seasonJustTransitioned = false;
-        // KINGDOMS-TRADE: once per in-game day — facet drift, party upkeep, arrival scheduling.
-        // Daily-gated, so it adds zero per-tick cost on the hot path.
         if (this.gameState!.turn % (TURNS_PER_DAY * TICKS_PER_SECOND) === 0) {
           this.gameState = kingdomService.processKingdomsDaily(this.gameState!);
-          // SOCIAL-LAYER: the daily social pass — ambient drift, standing moods, romance upkeep,
-          // break checks. Same zero-per-tick-cost daily gate.
           this.gameState = socialService.processSocialTurn(this.gameState!);
         }
-        // SOCIAL-LAYER: proximity dialog — pawns chat when they pass close by. Throttled (not per
-        // tick) so the player sees interactions without taxing the hot path.
         if (this.gameState!.turn % DIALOG_INTERVAL_TICKS === 0) {
           this.gameState = socialService.processDialogTick(this.gameState!);
         }
@@ -385,11 +265,6 @@ export class GameEngineImpl implements GameEngine {
 
       this.lastTurnProcessed = this.gameState.turn;
       t('mgrUpdate', () => this.gameStateManager!.updateState(this.gameState!));
-      // Throttled UI push — WALL-CLOCK gated, not tick-gated. The old `% UI_PUSH_INTERVAL` (4 ticks)
-      // assumed 60 TPS; once the sim ran at 80+ (and fluctuating) TPS it flushed at 20+ Hz tracking
-      // the tick rate, so the main thread's snapshot deserialize/notify/GC load swung with TPS →
-      // FPS sawtooth. Capping to ~15 Hz of real time decouples UI cost from TPS (the renderer
-      // interpolates positions from get() every frame, so UI never needs faster).
       t('uiPush', () => {
         const nowMs = performance.now();
         const flush = nowMs - this.lastFlushMs >= UI_PUSH_MS;
@@ -397,8 +272,6 @@ export class GameEngineImpl implements GameEngine {
         this.outputSink?.(this.gameState!, flush);
       });
 
-      // Periodic per-phase breakdown → perf.log (verbose only): avg ms/tick per phase over the window,
-      // sorted heaviest-first, so the dominant phase is named directly instead of guessed.
       if (dbg && ++this._phaseTicks >= PHASE_LOG_TICKS) {
         const ticks = this._phaseTicks;
         const line = Object.entries(acc)
@@ -406,8 +279,6 @@ export class GameEngineImpl implements GameEngine {
           .map(([k, ms]) => `${k}=${(ms / ticks).toFixed(3)}`)
           .join(' ');
         vlog('perf', this.gameState.turn, `PHASE-MS/tick over ${ticks}t: ${line}`);
-        // Mob A* breakdown: calls/tick, unreachable-fail %, ms/tick, avg tiles/path — distinguishes
-        // "too many paths" from "ruinous unreachable searches". Plus the live walkable/total tile count.
         const p = readMobPathStats();
         let walkable = 0;
         let total = 0;
@@ -443,32 +314,16 @@ export class GameEngineImpl implements GameEngine {
     }
   }
 
-  /**
-   * Slim per-tick loop for the main-menu backdrop preview (see `previewMode`). Advances only the
-   * atmospheric, consequence-free systems the menu wants:
-   *   • environment — weather Markov roll + day/night light (no tile-state consequence).
-   *   • entity step — FSM wander/graze + movement for the four fixed corner herds (no spawner).
-   * Deliberately OMITTED vs the full turn: needs/items/research/jobs/buildings/passiveProd/pawns,
-   * resource regrowth, crop growth, combat. Also skips `tickLairs` (no lairs), `stepHunger` and
-   * `removeDead` — preview prey never starve or die, so there are no carcasses and no array churn;
-   * they just graze and wander indefinitely.
-   */
   private processPreviewTurn(): TurnProcessingResult {
     try {
       this.processEnvironment();
 
-      // No periodic spawner here: the backdrop's cast is a FIXED set of four corner herds seeded once
-      // (seedMenuHerds). Topping up would add stray packs and break the framed four-herd composition;
-      // preview prey never die, so the seeded herds persist. Just step their FSM + movement.
       this.gameState = entityService.stepEntities(this.gameState!);
       this.gameState = entityService.advanceMobMovement(this.gameState!);
 
       this.lastTurnProcessed = this.gameState!.turn;
       this.gameStateManager!.updateState(this.gameState!);
 
-      // Wall-clock-gated UI push, throttled to ~5 Hz for the backdrop (PREVIEW_PUSH_MS) — the day/night
-      // and weather move over minutes and the visible layers redraw on their own rAF, so a slower flush
-      // is invisible but cuts the per-snapshot main-thread allocation that drove the GC stutter.
       const nowMs = performance.now();
       const flush = nowMs - this.lastFlushMs >= PREVIEW_PUSH_MS;
       if (flush) this.lastFlushMs = nowMs;
@@ -485,32 +340,17 @@ export class GameEngineImpl implements GameEngine {
     }
   }
 
-  /**
-   * Living-world environment update (SEASONS_WEATHER Phases B & C).
-   *
-   * - Season/seasonDay are derived from the turn and written only when they change.
-   * - On a season change (or first non-empty tick), tile temperatures are recomputed IN PLACE
-   *   (PERF-1: no `worldMap.map()`, no ref flip → `worldMapRef` stays 0; temperature is worker-only
-   *   so it is not shipped as a tile delta — PERF-2).
-   * - Weather is re-rolled once per in-game day (midnight boundary), so at most one new WeatherState
-   *   object per day rides the sectional snapshot — negligible churn (PERF-4: season/weather are
-   *   cheap top-level scalars, never per-tile worldMap fields).
-   */
   private processEnvironment(): void {
     const gs = this.gameState;
     if (!gs) return;
 
     const derived = seasonForTurn(gs.turn);
-    // Debug override (in-game debug menu): force a season but keep the natural day index.
     const season = gs._debugSeason ?? derived.season;
     const seasonDay = derived.seasonDay;
     if (season !== gs.season) {
       const prevSeason = gs.season;
       gs.season = season;
-      // Chronicle the turn of the season — skip the initial undefined→first-season assignment on a
-      // fresh world (turn 0), which isn't a transition the player witnessed.
       if (prevSeason) {
-        // A real season boundary (~every 3 months): flag it so the events phase rolls a migrant wave.
         this._seasonJustTransitioned = true;
         simLog.logActivity({
           turn: gs.turn,
@@ -524,15 +364,6 @@ export class GameEngineImpl implements GameEngine {
     }
     if (seasonDay !== gs.seasonDay) gs.seasonDay = seasonDay;
 
-    // Recompute tile temperatures when the cache isn't valid for the current season. Gating on the
-    // SEASON ALONE was the hypothermia bug: `tile.temperature` is a worker-only field, so a fresh
-    // world AND every reloaded save / re-init arrives with an unbaked map. If that showed up while
-    // `temperatureSeason` already equalled the season, the bake was skipped and pawns froze. Instead,
-    // probe one tile against the canonical baked value (`seasonBakedTemp`): O(1) per tick, true after a
-    // harvest (tiles are spread, temperature preserved) so no needless rescan, and false for a season
-    // change OR a fresh/reloaded map — both of which then trigger exactly one rebake. The probe MUST be
-    // a walkable tile: impassable tiles now carry no temperature (stripped), so probing one would never
-    // match and would rebake every tick.
     if (gs.worldMap.length > 0) {
       let probe = this.tempProbe ? gs.worldMap[this.tempProbe.y]?.[this.tempProbe.x] : undefined;
       if (!probe?.walkable) {
@@ -557,20 +388,14 @@ export class GameEngineImpl implements GameEngine {
       }
     }
 
-    // Rain⇄snow PHASE follows the live global air temperature (biome+season mean + diurnal swing, weather-
-    // independent so there's no feedback loop), with hysteresis so it doesn't flicker around 0°C. A wet
-    // precip spell then falls as snow whenever it's freezing — including a sub-0 spring/autumn night.
     const globalAirTemp = (this.avgTileTemp ?? 10) + diurnalTempDelta(gs.turn, gs.season);
     const freezing = weatherFreezing(globalAirTemp, this.weatherFreezing);
     this.weatherFreezing = freezing;
 
-    // Weather: one Markov step per in-game day at midnight. Skipped in the menu-preview backdrop —
-    // it pins a fixed pleasant breeze (spring_windy) and must never wander into fog/storm.
     const ticksPerDay = TURNS_PER_DAY * TICKS_PER_SECOND;
     if (!this.previewMode && gs.turn % ticksPerDay === 0 && gs.weather) {
       const prevType = gs.weather.type;
       gs.weather = advanceWeatherForDay(gs.weather, season, rng, freezing);
-      // Chronicle only an actual change of weather type (a spell merely running down isn't news).
       if (gs.weather.type !== prevType) {
         simLog.logActivity({
           turn: gs.turn,
@@ -583,15 +408,11 @@ export class GameEngineImpl implements GameEngine {
       }
     }
 
-    // Live intraday rain⇄snow re-derive: the SAME spell snows overnight and rains by a warm afternoon as
-    // the air crosses freezing. Reassign only on change to keep the weather sectional snapshot quiet.
     if (!this.previewMode && gs.weather) {
       const liveType = rederiveWeatherType(gs.weather, season, freezing);
       if (liveType !== gs.weather.type) gs.weather = { ...gs.weather, type: liveType };
     }
 
-    // HUD readout: average effective map temperature = baked tile average + live weather delta.
-    // Assigned only on change to keep the sectional snapshot quiet (PERF-4: a cheap top-level scalar).
     if (this.avgTileTemp !== undefined) {
       const avg = Math.round(
         this.avgTileTemp +
@@ -601,20 +422,12 @@ export class GameEngineImpl implements GameEngine {
       if (avg !== gs.avgTemperature) gs.avgTemperature = avg;
     }
 
-    // Snow + ice: a slow (hourly) IN-PLACE pass — snow builds while snowing & below freezing; ice freezes
-    // a tile's own moisture below freezing; both melt above. Only bucket-crossing tiles ship a delta.
-    // `patchPathfindingWalkable` keeps the A* grid in sync when a water tile freezes solid or thaws.
-    // CHUNKED: a whole-map scan run as one atomic tick hitched the worker (an O(map) tick can't be
-    // time-sliced by the batch budget, and at 4× it recurred 4× more often — the snow-onset freeze).
-    // Instead we sweep a band of rows each tick so the map is fully covered every ~snowInterval ticks:
-    // each tile still updates ~once/hour, and the onset delta wave is spread across the sweep, not
-    // dumped in one tick. `hours` = the real time between a row's successive touches (one full sweep).
     const snowInterval = Math.max(1, Math.floor(ticksPerDay / 24));
     const H = gs.worldMap.length;
     if (H > 0) {
       const rowsPerTick = Math.max(1, Math.ceil(H / snowInterval));
-      const sweepTicks = Math.ceil(H / rowsPerTick); // ticks for one full-map pass
-      const hours = sweepTicks / (ticksPerDay / 24); // in-game hours a row accrues per touch
+      const sweepTicks = Math.ceil(H / rowsPerTick);
+      const hours = sweepTicks / (ticksPerDay / 24);
       const startRow = this._snowScanRow >= H ? 0 : this._snowScanRow;
       const endRow = Math.min(H, startRow + rowsPerTick);
       this.timed('env:snowIce', () =>
@@ -632,54 +445,31 @@ export class GameEngineImpl implements GameEngine {
       this._snowScanRow = endRow >= H ? 0 : endRow;
     }
 
-    // Rebuild the fire-warmth + roof-shelter field once per tick (before needs/conditions read it).
-    // Passing worldMap folds in §M grove thermal auras (emberwood warms / moonwood cools) — cached,
-    // re-scanned only on a worldMap ref change, so this stays O(buildings) per tick.
     this.timed('env:thermal', () => rebuildThermalField(gs.buildings, gs.worldMap));
 
-    // Walkable-connectivity components for AI target selection (reachable() gating) — rebuilt on a slow
-    // cadence (mining / build / ice freeze-thaw are the only things that change it) + on a map ref change.
     this.timed('env:connectivity', () => maybeRebuildConnectivity(gs.worldMap, gs.turn));
   }
 
-  /**
-   * Restore resources on tiles whose regrowth cooldown has expired.
-   * Handles two key formats:
-   *  - Simple:   `"resourceId"` → whole-resource cooldown (berry_bush, wildflower, etc.)
-   *  - Compound: `"resourceId:itemId"` → per-yield cooldown (tree bark vs wood)
-   *
-   * For compound keys, the resource partially restores (count = 1) when the first
-   * yield recovers so a new job can be claimed.  Full restoration happens once all
-   * per-yield cooldowns for that resource have cleared.
-   */
   private processResourceRegrowth(): void {
     if (!this.gameState) return;
     const gs = this.gameState;
 
-    // ENGINE-PERFORMANCE-II §S2: drain a min-heap of cooldown expiries instead of scanning all 562,500
-    // tiles (750²) EVERY tick. Rebuild the heap on a worldMap REPLACE (load / regen / test — the ref
-    // changed); during play the ref is stable and new cooldowns are pushed at the harvest set-site.
     if (gs.worldMap !== this._lastRegrowthWorldMap) {
       rebuildRegrowthQueue(gs.worldMap);
       this._lastRegrowthWorldMap = gs.worldMap;
     }
-    // O(1) common case: nothing is due this tick.
     if (peekRegrowthTurn() > gs.turn) return;
 
-    // ADR-002 amendment + ADR-021 §4c: mutate the handful of expired tiles IN PLACE and ship them as
-    // worldMap *deltas* (markTileDirty) — no full-map re-clone. Drain every entry due this tick.
     while (peekRegrowthTurn() <= gs.turn) {
       const e = popRegrowth()!;
       const tile = gs.worldMap[e.y]?.[e.x];
       const cooldowns = tile?.resourceCooldowns;
-      if (!tile || !cooldowns) continue; // stale entry (tile cleared / re-harvested / already done)
+      if (!tile || !cooldowns) continue;
 
-      // Collect the keys expiring this turn (snapshot before we start deleting).
       let expiredKeys: string[] | null = null;
       for (const k in cooldowns) {
         if (gs.turn >= cooldowns[k]) (expiredKeys ??= []).push(k);
       }
-      // Stale: this entry's cooldown is already gone; remaining (future) ones are already queued.
       if (!expiredKeys) continue;
 
       let tileChanged = false;
@@ -687,11 +477,9 @@ export class GameEngineImpl implements GameEngine {
         const isCompound = key.includes(':');
 
         if (isCompound) {
-          // Compound key: "resourceId:itemId"
           const colonIdx = key.indexOf(':');
           const resourceId = key.slice(0, colonIdx);
 
-          // Remove this yield's cooldown, then check whether any others for this resource remain.
           delete cooldowns[key];
           let anyStillCooling = false;
           for (const k in cooldowns) {
@@ -703,42 +491,36 @@ export class GameEngineImpl implements GameEngine {
 
           const def = resourceObjectService.getById(resourceId);
           if (anyStillCooling) {
-            // Partial recovery — make node available (count = 1) so a job can be
-            // created, but only the non-cooled yields will actually be harvested.
             tile.resources[resourceId] = 1;
             gatedConsole.log(
               `[Regrowth] ${key} at (${tile.x},${tile.y}) recovered (partial — other yields still cooling)`
             );
           } else {
-            // All yields recovered — full random restore.
             const [minAmt, maxAmt] = def?.nodeAmountRange ?? [1, 3];
             const newResourceCount = minAmt + Math.floor(rng.random() * (maxAmt - minAmt + 1));
             tile.resources[resourceId] = newResourceCount;
-            if (tile.growth) tile.growth[resourceId] = 100; // §F: fully regrown ⇒ 100% maturity
-            // Restore blocking for non-walkable resources that have fully regrown.
+            if (tile.growth) tile.growth[resourceId] = 100;
             if (def?.walkable === false) {
               tile.walkable = false;
-              tile.blocksSight = def.blocksSight ?? false; // re-close LoS for a regrown rock node (Part VII)
-              patchPathfindingWalkable(tile.x, tile.y, false); // keep memoized A* grid in sync (worldMap ref unchanged)
+              tile.blocksSight = def.blocksSight ?? false;
+              patchPathfindingWalkable(tile.x, tile.y, false);
             }
             gatedConsole.log(
               `[Regrowth] ${resourceId} at (${tile.x},${tile.y}) fully restored ×${newResourceCount}`
             );
           }
         } else {
-          // Simple whole-resource cooldown.
           const def = resourceObjectService.getById(key);
           const [minAmt, maxAmt] = def?.nodeAmountRange ?? [1, 3];
           const restored = minAmt + Math.floor(rng.random() * (maxAmt - minAmt + 1));
 
           delete cooldowns[key];
           tile.resources[key] = restored;
-          if (tile.growth) tile.growth[key] = 100; // §F: fully regrown ⇒ 100% maturity
-          // Restore blocking for non-walkable resources that have regrown.
+          if (tile.growth) tile.growth[key] = 100;
           if (def?.walkable === false) {
             tile.walkable = false;
-            tile.blocksSight = def.blocksSight ?? false; // re-close LoS for a regrown rock node (Part VII)
-            patchPathfindingWalkable(tile.x, tile.y, false); // keep memoized A* grid in sync (worldMap ref unchanged)
+            tile.blocksSight = def.blocksSight ?? false;
+            patchPathfindingWalkable(tile.x, tile.y, false);
           }
           gatedConsole.log(`[Regrowth] ${key} at (${tile.x},${tile.y}) regrew ×${restored}`);
         }
@@ -747,32 +529,18 @@ export class GameEngineImpl implements GameEngine {
 
       if (tileChanged) markTileDirty(e.y, e.x, tile);
 
-      // Re-queue this tile for its next-soonest remaining cooldown (if any).
       const nextMin = minCooldownExpiry(cooldowns);
       if (nextMin !== Infinity) pushRegrowth(nextMin, e.x, e.y);
     }
-
-    // worldMap mutated in place (ref unchanged) → the snapshot publisher ships the marked tiles as a
-    // delta and bumps _terrainRev. No `this.gameState` reassignment, no full-map re-clone.
   }
 
-  /**
-   * PRODUCTION-CHAIN-II §F — advance sown crops toward maturity. Iterates ONLY grow-zone tiles
-   * (farm-bounded, not the whole map) and grows each immature crop ONLY while its tile meets ALL of
-   * the crop's needs (fertility / wetness / temperature / light — tracked per crop in resources.jsonc).
-   * Conditions unmet ⇒ growth stalls. At 100% the crop becomes harvestable (count → nodeAmount). Wild
-   * plants don't use this — their growth is event-based (world-gen roll + harvest reset + timed regrow).
-   * In-place tile mutation + delta (ADR-002 amendment), like processResourceRegrowth.
-   */
   private processCropGrowth(): void {
     if (!this.gameState) return;
     const gs = this.gameState;
     const growTiles = zoneTileKeys(gs, 'grow');
     if (growTiles.length === 0) return;
     const rate = seasonRegrowthMultiplier(gs.season);
-    const ticksPerDay = TURNS_PER_DAY * TICKS_PER_SECOND; // for the gradual cold-decline rate
-    // Debug (HEADLESS-SIM): faithful growth time-compression — scales BOTH the advance and the wither
-    // loss below, so the gate's mature/never-mature verdict is unchanged (see `_devCropGrowthScale`).
+    const ticksPerDay = TURNS_PER_DAY * TICKS_PER_SECOND;
     const growthScale = gs._devCropGrowthScale ?? 1;
 
     for (const key of growTiles) {
@@ -784,14 +552,11 @@ export class GameEngineImpl implements GameEngine {
       if (!tile || !growth) continue;
 
       for (const id in growth) {
-        if (growth[id] >= 100) continue; // mature crops wait to be reaped; frost only kills the immature
+        if (growth[id] >= 100) continue;
         const def = resourceObjectService.getById(id);
         const c = def?.crop;
         if (!c) continue;
 
-        // Prebuilt field (rebuilt in processEnvironment, earlier this tick) — includes fire warmth,
-        // roof shelter AND §M grove auras, so a frost-tender crop is shielded near an emberwood grove
-        // (and chilled near a moonwood one).
         const thermal = thermalAt(x, y);
         const temp = tileTemperature(tile.terrainType, gs.season, gs.turn, gs.weather, thermal);
         const m = tile.moisture ?? 0;
@@ -801,9 +566,6 @@ export class GameEngineImpl implements GameEngine {
           moisture: m,
           snow: tile.snow ?? 0
         });
-        // Soil that can no longer carry the crop (its tier dropped below minSoil) is INSTANT death —
-        // reset to 1% (never 0) so it doesn't read as a harvested cycle (no soil wear) and the map can't
-        // churn itself barren.
         if (health.soilDead) {
           if (growth[id] !== 1) {
             growth[id] = 1;
@@ -812,9 +574,6 @@ export class GameEngineImpl implements GameEngine {
           }
           continue;
         }
-        // Cold / heat / snow / drought are GRADUAL stresses: the bed withers over days — faster the
-        // further past its window — and recovers on a warm afternoon. It bottoms out at 1% (count
-        // cleared = dead), never below, so a withered plot still never charges soil wear.
         if (health.severity > 0) {
           const loss = (cropLossPerDay(health.severity) / ticksPerDay) * growthScale;
           const next = Math.max(1, growth[id] - loss);
@@ -825,34 +584,20 @@ export class GameEngineImpl implements GameEngine {
           }
           continue;
         }
-        // Light is a non-lethal STALL: a roofed (sunless) crop survives but doesn't grow.
         if (c.needsLight && thermal.roofed) continue;
 
-        // Advance toward 100% at the base rate (season-scaled). In place — no per-tick allocation.
         const totalTicks = Math.max(1, ticksFromSeconds(c.growthTurns) / rate);
         const next = Math.min(100, growth[id] + (100 / totalTicks) * growthScale);
         growth[id] = next;
         if (next >= 100 && (tile.resources[id] ?? 0) <= 0) {
           const [mn, mx] = def!.nodeAmountRange ?? [1, 1];
-          tile.resources[id] = mn + Math.floor(rng.random() * (mx - mn + 1)); // matured → harvestable
+          tile.resources[id] = mn + Math.floor(rng.random() * (mx - mn + 1));
         }
         markTileDirty(y, x, tile);
       }
     }
   }
 
-  /**
-   * Regrow wild ground cover (berry bushes, wild grain, grass) GRADUALLY after a harvest/graze reset
-   * it to growth 0%. Unlike `processResourceRegrowth` (a binary cooldown that snaps a tree/rock node
-   * back), each `regrowsFromZero` plant climbs 0→100 over its `regrowthTurns` (season-scaled) so the
-   * tile reads as bare soil, then the plant fades back in past RESOURCE_VISIBLE_GROWTH; at 100% its
-   * count is restored (harvestable again).
-   *
-   * Iterates ONLY the bounded `wildGrowth` work-list (the handful of tiles currently recovering), never
-   * the whole map (ENGINE-PERFORMANCE — no per-tick O(map) pass); the peace path (empty list) is free.
-   * A tile delta ships only when growth crosses a visual bucket (≈5%) or matures — NOT every tick — so
-   * the gradual climb never floods the worker→main snapshot. In-place mutation + delta (ADR-002 amendment).
-   */
   private processWildGrowth(): void {
     if (!this.gameState) return;
     const gs = this.gameState;
@@ -863,8 +608,6 @@ export class GameEngineImpl implements GameEngine {
     if (wildGrowthSize() === 0) return;
 
     const rate = seasonRegrowthMultiplier(gs.season);
-    // Ship a delta only when the rendered appearance changes: below the visible threshold the tile is
-    // bare soil (bucket -1); above it, dim in ~5% steps.
     const DIRTY_BUCKET = 5;
     const visualBucket = (g: number) =>
       g < RESOURCE_VISIBLE_GROWTH ? -1 : Math.floor(g / DIRTY_BUCKET);
@@ -881,14 +624,10 @@ export class GameEngineImpl implements GameEngine {
         const g = growth[id];
         if (g >= 100) continue;
         const interaction = resourceObjectService.getRegrowsFromZeroInteraction(id);
-        if (!interaction?.regrowthTurns) continue; // not a gradual-regrow plant
+        if (!interaction?.regrowthTurns) continue;
         const totalTicks = Math.max(1, ticksFromSeconds(interaction.regrowthTurns) / rate);
         const next = Math.min(100, g + 100 / totalTicks);
         growth[id] = next;
-        // Harvestable once it climbs past the forage floor (count restored there, not at 100%), then it
-        // keeps maturing to 100 for a fuller yield. This aligns the count, the render-visibility line and
-        // the forage gate at MIN_FORAGE_GROWTH, so a cut plant takes exactly ONE pass and isn't
-        // re-harvestable until it has regrown past the floor (the multi-pass-grass fix).
         if (next >= MIN_FORAGE_GROWTH && (tile.resources[id] ?? 0) <= 0) {
           const [mn, mx] = resourceObjectService.getById(id)?.nodeAmountRange ?? [1, 1];
           tile.resources[id] = mn + Math.floor(rng.random() * (mx - mn + 1));
@@ -902,12 +641,8 @@ export class GameEngineImpl implements GameEngine {
 
   private debugLogPawns(): void {
     if (!this.gameState) return;
-    // Per-pawn debug dump — only when hot-path debugging is explicitly enabled
-    // (gameDebug(true)). Off by default so it costs nothing in normal play.
     if (!isGameDebug()) return;
     const gs = this.gameState;
-    // The pipeline runs TICKS_PER_SECOND times per second — log at most once per
-    // in-game second to avoid flooding the console.
     if (gs.turn % TICKS_PER_SECOND !== 0) return;
     const T = gs.turn;
     const wasmReady = pathfinderService.isReady();
@@ -941,14 +676,9 @@ export class GameEngineImpl implements GameEngine {
 
   private _processDraftOrders(state: GameState): GameState {
     let gs = state;
-    // Solid bodies routed around (shared occupancy). Positions don't change within
-    // this loop — assignPath only sets the path — so one snapshot serves every pawn;
-    // each pawn's own start tile and its goal are kept walkable per call below.
     const blocked = occupancyService.blockedTiles(gs);
     for (const pawn of gs.pawns) {
       if (pawn.isAlive === false || !pawn.drafted || !pawn.draftTarget || !pawn.position) continue;
-      // A collapsed (unconscious) pawn can't be marched anywhere — never path it toward a draft target
-      // (it's un-drafted on collapse anyway; this guards the transition tick so it never crawls).
       if (pawn.currentState === 'Collapsed') continue;
       const target = pawn.draftTarget;
       if (target.type === 'move') {
@@ -962,13 +692,6 @@ export class GameEngineImpl implements GameEngine {
           };
           continue;
         }
-        // A move target is STATIC: once a route to it exists, movement just advances along it —
-        // re-running A* every tick recomputes the identical path and (per call) slices the whole
-        // walkable grid, which scales with map size (250k tiles @ 500×500). Skip the re-path while the
-        // pawn still holds a live route whose end is this target; recovery is automatic — movement drops
-        // the path when it empties (arrival) or stays blocked (MAX_BLOCKED_TICKS), and the empty path
-        // fails this guard next tick → re-path. (Soft-body occupancy means a transient body on the path
-        // routes around at the movement layer, not a wall, so a stale-by-a-tick path is safe.)
         const route = pawn.path;
         const end = route && route.length > 0 ? route[route.length - 1] : undefined;
         const hasLiveRoute =
@@ -977,8 +700,6 @@ export class GameEngineImpl implements GameEngine {
           end.x === target.x &&
           end.y === target.y;
         if (hasLiveRoute) continue;
-        // Shared with the draft-move commands so a move order computed at command time (even paused)
-        // traces the same route this tick would (see draftMovePath.ts).
         gs = assignDraftMovePath(gs, pawn, target.x, target.y, blocked);
       } else if (target.type === 'attack') {
         let tx = -1,
@@ -1009,12 +730,6 @@ export class GameEngineImpl implements GameEngine {
         if (tx < 0 || ty < 0) continue;
         const dx = Math.abs(pawn.position.x - tx);
         const dy = Math.abs(pawn.position.y - ty);
-        // Stop distance, re-evaluated each tick:
-        //  • melee → hold at weapon REACH (1 = adjacent; a reach-2 polearm halts one tile off so it can
-        //    strike without closing). A force-melee ranged pawn (rw set, mode 'melee') bow-butts at 1.
-        //  • auto-ranged WITH ammo → hold at weapon range and shoot.
-        //  • auto-ranged OUT of ammo → hold POSITION (Infinity): it never auto-closes — keeping a
-        //    fragile shooter safe; engaging in melee is opt-in via "Target (melee)".
         const rw = getRangedWeapon(pawn);
         const rangedAuto = !!rw && target.mode !== 'melee';
         const meleeReach = rw
@@ -1032,7 +747,6 @@ export class GameEngineImpl implements GameEngine {
               ? Math.max(1, Math.floor(effectiveRangedRange(pawn, rw!)))
               : meleeReach;
         if (Math.max(dx, dy) <= stopDist) {
-          // In position (in weapon range / adjacent) — stop moving, let the combat tick attack.
           if (pawn.isMoving) {
             gs = pawnService.assignPath(pawn.id, [], gs);
           }
@@ -1060,9 +774,6 @@ export class GameEngineImpl implements GameEngine {
           }
         }
       } else if (target.type === 'haul') {
-        // Drafted "haul to stockpile": shuttle the loose stack on (target.x, target.y) to the
-        // nearest stockpile a budget-load at a time. Pinned items don't count as cargo (they're
-        // never deposited), so they can't stall the loop.
         const pinned = new Set(pawn.pinnedItems ?? []);
         const carrying = Object.entries(pawn.inventory?.items ?? {}).some(
           ([id, q]) => q > 0 && !pinned.has(id)
@@ -1100,40 +811,30 @@ export class GameEngineImpl implements GameEngine {
         };
 
         if (carrying) {
-          // Deposit phase — walk to the nearest stockpile and unload.
           const dp = findNearestDepositPoint(pawn, gs);
           if (!dp) {
-            clearHaul(); // nowhere to deliver — abandon
+            clearHaul();
           } else if (pawn.position.x === dp.x && pawn.position.y === dp.y) {
             gs = pawnService.assignPath(pawn.id, [], gs);
             const here = gs.pawns.find((p) => p.id === pawn.id);
-            // depositInventory keeps draftTarget, so the next tick fetches the next load.
             if (here) gs = depositInventory(here, gs);
           } else {
             walkTo(dp.x, dp.y);
           }
         } else if (srcHasLoose) {
-          // Pickup phase — walk ADJACENT to the source and grab a budget-load of loose goods. Standing
-          // on a neighbouring tile suffices (radius 1 scan), so the pawn needn't stand on the stack
-          // (DRAFTED-JOB-ORDERS §10).
           const atSrc =
             (pawn.position.x === target.x && pawn.position.y === target.y) ||
             isAdjacent(pawn.position.x, pawn.position.y, target.x, target.y);
           if (atSrc) {
             gs = pawnService.assignPath(pawn.id, [], gs);
-            // radius 0: pickUpFromTile grabs from the TARGET tile regardless of where the pawn stands,
-            // so an adjacent pawn still takes exactly this stack (no over-grab of neighbouring stacks).
             gs = pickUpFromTile(gs, pawn.id, target.x, target.y, { looseOnly: true });
           } else {
             gs = this._draftWalk(gs, pawn, target.x, target.y);
           }
         } else {
-          clearHaul(); // nothing carried and the source is clear — done
+          clearHaul();
         }
       } else if (target.type === 'equip') {
-        // Drafted "fetch + equip": walk ADJACENT to the drop's tile, then equip one unit and advance the
-        // manual queue. Select-then-act (not an instant teleport-equip). Standing on ANY neighbouring
-        // tile is enough — no need to squeeze onto the item (DRAFTED-JOB-ORDERS §10).
         const drop = (gs.droppedItems ?? []).find((d) => d.id === target.dropId && d.quantity > 0);
         const clearEquip = () => {
           gs = {
@@ -1146,31 +847,22 @@ export class GameEngineImpl implements GameEngine {
           ((pawn.position.x === drop.x && pawn.position.y === drop.y) ||
             isAdjacent(pawn.position.x, pawn.position.y, drop.x, drop.y));
         if (!drop) {
-          clearEquip(); // the item is gone (taken / decayed) — abandon the order
+          clearEquip();
         } else if (atDrop) {
           gs = pawnService.assignPath(pawn.id, [], gs);
-          // `slot === 'inventory'` carries one unit in the pack as a TRACKED instance (a tool kept off
-          // the hand — instances are what the tool boost/gate read, and they survive deposits); an
-          // explicit equipment slot (or auto-resolve when omitted) wears/wields it.
           gs =
             target.slot === 'inventory'
               ? carryDropToInventory(gs, pawn.id, target.dropId)
               : equipDropToPawn(gs, pawn.id, target.dropId, target.slot);
           clearEquip();
         } else {
-          gs = this._draftWalk(gs, pawn, drop.x, drop.y); // routes to an adjacent approach tile
+          gs = this._draftWalk(gs, pawn, drop.x, drop.y);
         }
       } else if (target.type === 'rescue') {
-        // Drafted "carry to shelter": walk to the COLLAPSED victim, pick it up as CARGO (a named
-        // `carried_pawn` item — pawn/carry.ts; the body appears in the pack + eats carry budget), haul
-        // it to the nearest shelter and lay it down. Same pick-up→carry→drop shape as hauling goods to a
-        // stockpile. `reconcileCarriedPawns` is the safety net if this order is dropped mid-carry — the
-        // body is set down on the spot, so it can never get stranded.
         const endRescue = () => {
           gs = {
             ...gs,
             pawns: gs.pawns.map((p) =>
-              // `auto` rescues commandeered an idle pawn (rescuePawn command) — hand it back when done.
               p.id === pawn.id
                 ? { ...p, ...popOrder(p), drafted: target.auto ? false : p.drafted }
                 : p
@@ -1180,7 +872,6 @@ export class GameEngineImpl implements GameEngine {
         const victim = gs.pawns.find((p) => p.id === target.victimId);
         const carrying = victim?.carriedBy === pawn.id;
         const here = pawn.position;
-        // Set the body down beside the carrier (never ON it) — a free, walkable tile.
         const setDownBeside = () => {
           const t = freeDropTileNear(gs, here.x, here.y, target.victimId);
           gs = dropCarriedPawn(gs, pawn.id, target.victimId, t.x, t.y);
@@ -1189,9 +880,8 @@ export class GameEngineImpl implements GameEngine {
           if (carrying) setDownBeside();
           endRescue();
         } else if (!carrying) {
-          // Reach phase — walk to the downed pawn; pick it up on arrival.
           if (victim.currentState !== 'Collapsed') {
-            endRescue(); // recovered before we got there
+            endRescue();
           } else if (
             isAdjacent(here.x, here.y, victim.position.x, victim.position.y) ||
             (here.x === victim.position.x && here.y === victim.position.y)
@@ -1202,10 +892,9 @@ export class GameEngineImpl implements GameEngine {
             gs = this._draftWalk(gs, pawn, victim.position.x, victim.position.y);
           }
         } else {
-          // Carry phase — head to the nearest shelter and set the body down on arrival.
           const dest = nearestShelterTile(gs, here.x, here.y);
           if (!dest) {
-            setDownBeside(); // no free shelter — set the body down on a clear tile, don't stack it
+            setDownBeside();
             endRescue();
           } else if (
             (here.x === dest.x && here.y === dest.y) ||
@@ -1219,10 +908,6 @@ export class GameEngineImpl implements GameEngine {
           }
         }
       } else if (target.type === 'tend') {
-        // Drafted "emergency care": walk adjacent to the patient and dress its untended wounds ONE AT A
-        // TIME (worst/most-bleeding first — the same per-wound tendPatient the auto caretake job runs),
-        // pacing each tend off the medic's `caretaking` work speed so it's never an instant heal; clear
-        // the order once nothing untended remains.
         const patient = gs.pawns.find((p) => p.id === target.patientId);
         const clearTend = () => {
           gs = {
@@ -1242,8 +927,6 @@ export class GameEngineImpl implements GameEngine {
             )
           };
         };
-        // Per-wound work window (ticks) at the medic's caretaking speed — also the denominator for the
-        // synthetic progress bar shown while the medic holds the bedside between dressings.
         const perWoundTurns = (medic: Pawn) =>
           Math.max(
             1,
@@ -1266,15 +949,12 @@ export class GameEngineImpl implements GameEngine {
           !patient.position ||
           !hasUntendedWound(patient, gs.turn)
         ) {
-          clearTend(); // gone / dead / nothing left to dress
+          clearTend();
         } else if (
           isAdjacent(pawn.position.x, pawn.position.y, patient.position.x, patient.position.y) ||
           (pawn.position.x === patient.position.x && pawn.position.y === patient.position.y)
         ) {
-          gs = pawnService.assignPath(pawn.id, [], gs); // stand at the bedside
-          // Dress one wound when the per-wound timer is due (first arrival = immediately), then arm the
-          // next window. Between windows the medic holds position and its progress bar fills toward the
-          // next dressing, so a single order visibly tends every wound rather than looking finished/idle.
+          gs = pawnService.assignPath(pawn.id, [], gs);
           if (target.nextTendTurn === undefined || gs.turn >= target.nextTendTurn) {
             const medic = gs.pawns.find((p) => p.id === pawn.id)!;
             gs = tendPatient(patient, medic, gs);
@@ -1295,11 +975,6 @@ export class GameEngineImpl implements GameEngine {
           gs = this._draftWalk(gs, pawn, patient.position.x, patient.position.y);
         }
       } else if (target.type === 'forceJob') {
-        // Force-work an ALREADY-GENERATED colony job to completion (DRAFTED-JOB-ORDERS §3.3). A drafted
-        // pawn doesn't run handleWorking, so the work loop is hand-driven here through the SHARED
-        // advance helper (advanceJobOneTick). One order = one job: on completion the manual queue
-        // advances (popOrder). Walks to an adjacent approach tile via _draftWalk (correct for an
-        // unwalkable resource/building/station target).
         const job = (gs.jobs ?? []).find((j) => j.id === target.jobId);
         const dropOrder = () => {
           let next = gs;
@@ -1310,20 +985,19 @@ export class GameEngineImpl implements GameEngine {
           };
         };
         if (!job) {
-          dropOrder(); // completed / cancelled — advance the queue
+          dropOrder();
         } else {
           const atSite =
-            (job.targetX === 0 && job.targetY === 0) || // abstract building placed off-map
+            (job.targetX === 0 && job.targetY === 0) ||
             (pawn.position.x === job.targetX && pawn.position.y === job.targetY) ||
             isAdjacent(pawn.position.x, pawn.position.y, job.targetX, job.targetY);
           if (!atSite) {
             gs = this._draftWalk(gs, pawn, job.targetX, job.targetY);
           } else {
-            gs = pawnService.assignPath(pawn.id, [], gs); // stop at the work tile
+            gs = pawnService.assignPath(pawn.id, [], gs);
             gs = jobService.claimJob(pawn.id, job.id, gs);
             gs = advanceJobOneTick(pawn, job, job.id, gs);
             if (!(gs.jobs ?? []).some((j) => j.id === job.id)) {
-              // Job finished this tick — advance the manual queue.
               gs = {
                 ...gs,
                 pawns: gs.pawns.map((p) => (p.id === pawn.id ? { ...p, ...popOrder(p) } : p))
@@ -1336,19 +1010,10 @@ export class GameEngineImpl implements GameEngine {
     return gs;
   }
 
-  /** Route `pawn` toward (tx,ty) for the non-combat draft orders (rescue/tend) and assign the path.
-   *  Uses `tryAssignPath`, which routes to an ADJACENT approach tile — so a (tx,ty) that's an unwalkable
-   *  building (a bed/shelter the body is carried to) is still reachable. No-op when already adjacent or
-   *  unreachable (the caller's own adjacency check then acts / the order waits). */
   private _draftWalk(gs: GameState, pawn: Pawn, tx: number, ty: number): GameState {
     return tryAssignPath(pawn, tx, ty, gs) ?? gs;
   }
 
-  /**
-   * PAWN-GROWTH: run the seasonal/birthday stat-growth cadence once per in-game day. Gated on the
-   * whole-day boundary (`dayIndexForTurn`) so the ~4-offers-a-year logic fires exactly once per day,
-   * not every tick. First tick just latches the current day (no burst).
-   */
   private processGrowth(): void {
     const gs = this.gameState;
     if (!gs) return;
@@ -1358,64 +1023,43 @@ export class GameEngineImpl implements GameEngine {
       return;
     }
     if (day === this._lastGrowthDay) return;
-    // Process each elapsed day (normally exactly one) so a large tick jump can't skip a birthday.
     for (let d = this._lastGrowthDay + 1; d <= day; d++) pawnGrowthService.processDay(gs, d);
     this._lastGrowthDay = day;
   }
 
   private processPawns(): void {
     const tp = (_label: string, fn: () => void): void => fn();
-    // Draft orders: pathfind and assign movement before the movement step
     if (this.gameState!.pawns?.some((p) => p.drafted && p.draftTarget)) {
       tp('p.draft', () => {
         this.gameState = this._processDraftOrders(this.gameState!);
       });
     }
-    // Movement advances every tick (smooth, terrain-cost aware). Run it before
-    // the state machine so hasReachedDestination is fresh.
     if (this.gameState!.pawns?.some((p) => p.isMoving)) {
       tp('p.movement', () => {
         this.gameState = pawnService.processMovement({ ...this.gameState! });
       });
     }
-    // Phase 4a: run state machine (after movement so hasReachedDestination is fresh)
     tp('p.stateMachine', () => {
       this.gameState = pawnStateMachineService.tick(this.gameState!);
     });
-    // COORDINATION: Delegate all pawn processing to PawnService
     tp('p.clearTemp', () => {
       this.gameState = pawnService.clearTemporaryPawnStates(this.gameState!);
     });
-    // R7: derive isWorking/currentWork from the FSM state ONCE, before processPawnTurn reads
-    // isWorking for mood. (The old duplicate post-call was removed.)
     tp('p.syncWork', () => {
       this.gameState = workService.syncPawnWorkingStates(this.gameState!);
     });
-    // Phase 5e: automatic needs now handled by PawnStateMachine (HUNGRY/TIRED states).
     tp('p.pawnTurn', () => {
       this.gameState = pawnService.processPawnTurn(this.gameState!);
     });
-    // Carry safety net: lay down any carried body whose carrier stopped carrying it (un-drafted,
-    // re-ordered, dead) so a rescued pawn can never vanish. Cheap no-op when no one is carrying anyone.
     tp('p.reconcileCarry', () => {
       this.gameState = reconcileCarriedPawns(this.gameState!);
     });
-    // One-body-per-tile safety net: nudge apart any two bodies sharing a tile (a stale save or a future
-    // slip past the set-down/movement rules). Throttled — overlaps are rare and resolving within ~0.5 s
-    // is fine — so the O(bodies) scan + its Set don't allocate on the peace path every tick.
     tp('p.deOverlap', () => {
       if (((this.gameState!.turn ?? 0) & 31) === 0)
         this.gameState = separateStackedBodies(this.gameState!);
     });
   }
 
-  /**
-   * ADR-016 passive furnaces: a loaded furnace (bloomery/kiln/charcoal pit) transforms its
-   * staged inputs over time WITHOUT a pawn working it — gated by the station being lit (fuel
-   * present) for fuel-burning furnaces. Each supplied passive order accrues work each tick and,
-   * on reaching workRequired, completes through the same path as a pawn-worked craft (staged
-   * inputs destroyed → outputs spawned on the station). Pawns still fetch the inputs + fuel.
-   */
   private processPassiveProduction(): void {
     if (!this.gameState) return;
     const queue = this.gameState.craftingQueue ?? [];
@@ -1426,9 +1070,6 @@ export class GameEngineImpl implements GameEngine {
     let changed = false;
 
     for (const order of [...queue]) {
-      // Per-RECIPE passive flag (data-driven): a recipe marked `passive` in recipes.jsonc produces
-      // here without a pawn job, even at a mixed station (stone_forge smelts passively but its
-      // shaping recipes stay pawn-worked). `isPassive` falls back to the legacy passive-station set.
       if (
         !recipeService.isPassive(
           order.recipeId
@@ -1442,24 +1083,13 @@ export class GameEngineImpl implements GameEngine {
         (b) => b.id === order.stationBuildingId && b.status === 'complete'
       );
       if (!station) continue;
-      // Inputs must be fully loaded onto the furnace first.
       if (!jobService.isOrderSupplied(order, state)) continue;
-      // Gated by fuel/heat: a fuel-burning furnace must be lit AND hot enough. The station now
-      // accepts any fuel (no refuel filter); whether it can smelt is decided HERE — its tracked
-      // `fireHeat` (from the fuel it was fired with) must meet the def's `minFuelHeat`. A bloomery
-      // stoked with green wood stays lit but too cold to smelt, so the order stalls until hotter
-      // fuel arrives. Furnaces without a fuel tank (e.g. charcoal_pit, where the loaded wood IS the
-      // fuel) run as soon as they're loaded.
       const def = AVAILABLE_BUILDINGS.find((d) => d.id === station.type);
       if ((def?.maxFuel ?? 0) > 0 && !state._devInfiniteFuel) {
         if (!station.lit) continue;
         if ((station.fireHeat ?? 0) < (def?.minFuelHeat ?? 0)) continue;
       }
 
-      // Fermentation is temperature-gated: yeast only works in an optimal band, so a fermenter runs at
-      // full speed when temperate, slower at the shoulders, and STALLS when too cold or too hot. Scales
-      // the passive work this tick by the station tile's effective temperature. Non-fermentation
-      // passive stations (kilns, furnaces, brine barrels) carry no `fermentation` flag → rate 1.
       let workRate = 1;
       if (def?.effects?.fermentation) {
         const tile = state.worldMap?.[station.y]?.[station.x];
@@ -1470,7 +1100,7 @@ export class GameEngineImpl implements GameEngine {
           state.weather
         );
         workRate = fermentTempRate(temp);
-        if (workRate <= 0) continue; // too cold or too hot — no progress this tick
+        if (workRate <= 0) continue;
       }
 
       const newDone = (order.workDone ?? 0) + perTick(PASSIVE_WORK_PER_SECOND) * workRate;
@@ -1491,19 +1121,12 @@ export class GameEngineImpl implements GameEngine {
   }
 
   private processBuildings(): void {
-    // Building construction is handled by the job system (construct jobs) + ADR-016 material
-    // hauling; the legacy buildingQueue/processBuildingQueue countdown was deleted (R6).
-
-    // Process any buildings queued for deconstruction — remove and refund materials
     this.gameState = buildingService.processDeconstructionQueue(this.gameState!);
 
-    // Phase 6: tick campfire fuel consumption
     this.gameState = this._processCampfireFuel(this.gameState!);
 
-    // Refactor Stage 1: structural condition decay (opt-in per building def)
     this.gameState = buildingService.stepBuildingCondition(this.gameState!);
 
-    // §E Trapping: complete traps roll their catch chance
     this.gameState = buildingService.stepTraps(this.gameState!);
   }
 
@@ -1513,22 +1136,17 @@ export class GameEngineImpl implements GameEngine {
       const buildingDef = AVAILABLE_BUILDINGS.find((def) => def.id === b.type);
       if (!buildingDef?.maxFuel || !buildingDef.fuelConsumptionRate) return b;
       if (b.status !== 'complete') return b;
-      // DEV (`devInfiniteFuel`): hold every fuel station full, lit and at its hottest so a headless test
-      // can drive smelting/baking WITHOUT also exercising the haul-fuel-and-light loop. Not a game rule.
       if (gs._devInfiniteFuel) {
         const heat = Math.max(buildingDef.minFuelHeat ?? 0, 5);
         if (b.lit && b.fuel === buildingDef.maxFuel && b.fireHeat === heat) return b;
         changed = true;
         return { ...b, lit: true, fuel: buildingDef.maxFuel, fireHeat: heat, burnFactor: 1 };
       }
-      // Auto-light: campfire ignites itself whenever it has fuel.
       if (!b.lit && (b.fuel ?? 0) > 0) {
         changed = true;
         return { ...b, lit: true };
       }
       if (!b.lit) return b;
-      // §D burn-longevity: denser fuel (high `burnDuration` → high `burnFactor`) drains slower, so a
-      // tank of charcoal/coke outlasts one of green wood and pawns refuel far less often.
       const burnFactor = b.burnFactor ?? 1;
       const newFuel = Math.max(
         0,
@@ -1537,7 +1155,6 @@ export class GameEngineImpl implements GameEngine {
       const newLit = newFuel > 0;
       if (newFuel === b.fuel && newLit === b.lit) return b;
       changed = true;
-      // Burnt out → the fire goes cold: clear its heat/longevity so warmth + smelt gating stop.
       return newLit
         ? { ...b, fuel: newFuel, lit: newLit }
         : { ...b, fuel: newFuel, lit: newLit, fireHeat: 0, burnFactor: 1 };
@@ -1546,22 +1163,11 @@ export class GameEngineImpl implements GameEngine {
     return { ...gs, buildings: newBuildings };
   }
 
-  // ===== HELPER METHODS =====
-
   updateStores(): void {
     if (!this.gameState) return;
-    // Engine is the single writer (P-2): commit canonical state to the store as a projection
-    // (notify + debounced save). Routing through updateWithSave would just bounce back here.
     this.commitSink?.(this.gameState, true);
   }
 
-  /**
-   * P-2 single-writer entry point for user actions. A user action is a *command*: an updater
-   * applied to the engine's canonical state. The engine applies it, keeps the GameStateManager
-   * in sync, and commits the result to the store as a read-only projection (the store never
-   * mutates state itself). `save` mirrors the previous store split — updateWithSave passes
-   * true, update/set pass false (the next tick's throttled push persists them regardless).
-   */
   applyCommand(updater: (state: GameState) => GameState, save: boolean): void {
     if (!this.gameState) return;
     this.gameState = updater(this.gameState);
@@ -1569,25 +1175,16 @@ export class GameEngineImpl implements GameEngine {
     this.commitSink?.(this.gameState, save);
   }
 
-  /**
-   * Legacy alias. The whole pipeline now runs on a single uniform tick, so a
-   * "tick" and a "turn" are the same step — both are processGameTurn().
-   */
   processTick(): void {
     this.processGameTurn();
   }
 
-  /** Patch just the worldMap in the engine's internal state (used by regenWorld). */
   patchWorldMap(worldMap: import('../core/types').WorldTile[][]): void {
     if (this.gameState) this.gameState = { ...this.gameState, worldMap };
   }
 
-  // ===== STATE MANAGEMENT =====
-
   getGameState(): GameState {
     if (!this.gameState) throw new Error('GameState not initialized');
-    // Engine state is treated as immutable (replaced wholesale each tick/command, never mutated
-    // in place), so a shallow copy is a safe snapshot — no need to deep-clone the 240×160 map.
     return { ...this.gameState };
   }
 
@@ -1615,15 +1212,12 @@ export class GameEngineImpl implements GameEngine {
     return { success: true };
   }
 
-  // ===== INTEGRATION =====
-
   setGameStateManager(manager: GameStateManager): void {
     this.gameStateManager = manager;
     this.gameState = manager.getState();
   }
 
   integrateServices(services: any): void {
-    // COORDINATION: Services are integrated through direct imports
     gatedConsole.log('[GameEngine] Services integrated:', Object.keys(services || {}));
   }
 
@@ -1660,7 +1254,6 @@ export class GameEngineImpl implements GameEngine {
   }
 }
 
-// Export singleton
 export const gameEngine = new GameEngineImpl();
 
 export function initializeGameEngine(gameStateManager: GameStateManager): GameEngineImpl {

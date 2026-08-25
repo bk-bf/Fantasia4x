@@ -3,11 +3,6 @@ import { buildScenario } from '$lib/game/headless/Scenario';
 import { HeadlessSession } from '$lib/game/headless/HeadlessSession';
 import { buildingService } from '$lib/game/services/BuildingService';
 
-/**
- * The hearth ladder is a SPEED and FUEL ladder, not a key ring. Every rung cooks the same dishes; a
- * better stove finishes them sooner on less wood. Cooking is its own station family, so a stove never
- * stands in for a forge and a forge never bakes.
- */
 const LADDER = ['campfire', 'hearth', 'brick_hearth', 'brick_stove', 'iron_stove', 'steel_stove'];
 
 describe('the cooking ladder', () => {
@@ -58,7 +53,7 @@ describe('the cooking ladder', () => {
         infiniteFuel: true,
         pawns: [{ count: 4, skillLevel: 20 }],
         needsDisabled: ['hunger', 'fatigue', 'thirst', 'hygiene'],
-        buildings: [{ id: 'steel_stove' }], // NO campfire anywhere
+        buildings: [{ id: 'steel_stove' }],
         items: { venison: 20, cabbage: 20, turnip: 20 },
         seedEntities: false
       })

@@ -1,81 +1,48 @@
-/* filepath: src/lib/game/tile.ts */
-/**
- * Tile data types and utilities for the game grid system
- * Defines the structure and behavior of individual tiles
- */
-
-/**
- * Fixed pixel size each tile's geometry is baked at. Zoom is applied as a shader
- * uniform (u_zoom = actualTileSize / BASE_TILE_PX) rather than baked into vertex
- * positions, so changing zoom never rebuilds the terrain vertex buffer.
- */
 export const BASE_TILE_PX = 16;
 
-// Core color type
 export interface RGB {
   r: number;
   g: number;
   b: number;
 }
 
-// 2D Vector type for positions and offsets
 export interface Vec2 {
   x: number;
   y: number;
 }
 
-// Viewport definition for culling calculations
 export interface Viewport {
-  x: number; // Top-left corner X
-  y: number; // Top-left corner Y
-  width: number; // Width in tiles
-  height: number; // Height in tiles
+  x: number;
+  y: number;
+  width: number;
+  height: number;
 }
 
-// Core tile data structure
 export interface TileData {
-  char: string; // Character to display (CP437 or Unicode)
-  foreground: RGB; // Text color
-  background: RGB; // Background color
-  // Per-cell background OPACITY (0–1, default 1). Rides the a_background vec4's alpha channel. Opaque
-  // layers (terrain) leave it at 1; a blended pass (the snow/ice weather layer) uses fractional values
-  // so a cell can wash the layers beneath it toward `background` — the smooth snow blanket — without
-  // being baked into the terrain grid. Ignored wherever blending is off (the opaque terrain pass).
+  char: string;
+  foreground: RGB;
+  background: RGB;
   backgroundAlpha?: number;
-  detail?: RGB; // Highlight/detail color for 3-color tint (defaults to foreground)
-  outline?: RGB; // Outline color drawn around the glyph edges (omit = no outline)
-  position: { x: number; y: number }; // Grid position
-  animationOffset?: Vec2; // Optional offset for smooth animations
-  rotation?: 0 | 90 | 180 | 270; // UV rotation in degrees (clockwise)
-  // Render scale in TILE UNITS (1 = one cell; 2 = two cells wide/tall). Oversized sprites (trees,
-  // large beasts) anchor at the base cell's BOTTOM-CENTER and overflow upward + sideways, so the
-  // trunk/feet stay on the owning tile while the canopy/body rises into the tiles above. Omit/1 = the
-  // normal one-cell quad (terrain, ordinary entities) — identical to the pre-scale geometry.
+  detail?: RGB;
+  outline?: RGB;
+  position: { x: number; y: number };
+  animationOffset?: Vec2;
+  rotation?: 0 | 90 | 180 | 270;
   scale?: number;
-  dirty?: boolean; // Marks tile for re-rendering
-  lastUpdated?: number; // Timestamp of last modification
+  dirty?: boolean;
+  lastUpdated?: number;
 }
 
-// Grid coordinate utilities
 export class GridCoords {
-  /**
-   * Convert grid coordinates to a string key for Map storage
-   */
   static toKey(x: number, y: number): string {
     return `${x},${y}`;
   }
 
-  /**
-   * Parse a coordinate key back to x,y values
-   */
   static fromKey(key: string): { x: number; y: number } {
     const [x, y] = key.split(',').map(Number);
     return { x, y };
   }
 
-  /**
-   * Check if a coordinate is within a viewport
-   */
   static isInViewport(x: number, y: number, viewport: Viewport): boolean {
     return (
       x >= viewport.x &&
@@ -85,9 +52,6 @@ export class GridCoords {
     );
   }
 
-  /**
-   * Calculate the bounding box that contains all given coordinates
-   */
   static getBounds(coords: Vec2[]): { min: Vec2; max: Vec2 } | null {
     if (coords.length === 0) return null;
 
@@ -109,28 +73,18 @@ export class GridCoords {
     };
   }
 
-  /**
-   * Calculate distance between two grid coordinates
-   */
   static distance(a: Vec2, b: Vec2): number {
     const dx = b.x - a.x;
     const dy = b.y - a.y;
     return Math.sqrt(dx * dx + dy * dy);
   }
 
-  /**
-   * Calculate Manhattan distance between two grid coordinates
-   */
   static manhattanDistance(a: Vec2, b: Vec2): number {
     return Math.abs(b.x - a.x) + Math.abs(b.y - a.y);
   }
 }
 
-// Color utilities
 export class ColorUtils {
-  /**
-   * Create an RGB color from individual components
-   */
   static rgb(r: number, g: number, b: number): RGB {
     return {
       r: Math.max(0, Math.min(1, r)),
@@ -139,9 +93,6 @@ export class ColorUtils {
     };
   }
 
-  /**
-   * Create an RGB color from hex string
-   */
   static fromHex(hex: string): RGB {
     const clean = hex.replace('#', '');
     const r = parseInt(clean.substr(0, 2), 16) / 255;
@@ -150,9 +101,6 @@ export class ColorUtils {
     return { r, g, b };
   }
 
-  /**
-   * Convert RGB to hex string
-   */
   static toHex(color: RGB): string {
     const r = Math.round(color.r * 255)
       .toString(16)
@@ -166,9 +114,6 @@ export class ColorUtils {
     return `#${r}${g}${b}`;
   }
 
-  /**
-   * Interpolate between two colors
-   */
   static lerp(a: RGB, b: RGB, t: number): RGB {
     const clampedT = Math.max(0, Math.min(1, t));
     return {
@@ -178,9 +123,6 @@ export class ColorUtils {
     };
   }
 
-  /**
-   * Predefined color palette for common use
-   */
   static readonly PALETTE = {
     BLACK: { r: 0, g: 0, b: 0 },
     WHITE: { r: 1, g: 1, b: 1 },
@@ -194,15 +136,11 @@ export class ColorUtils {
     ORANGE: { r: 1, g: 0.5, b: 0 },
     PURPLE: { r: 0.5, g: 0, b: 1 },
     LIME: { r: 0.5, g: 1, b: 0 },
-    TRANSPARENT: { r: 0, g: 0, b: 0 } // For transparent backgrounds
+    TRANSPARENT: { r: 0, g: 0, b: 0 }
   } as const;
 }
 
-// Tile factory functions for common tile types
 export class TileFactory {
-  /**
-   * Create a basic tile with character and colors
-   */
   static createTile(
     x: number,
     y: number,
@@ -220,30 +158,18 @@ export class TileFactory {
     };
   }
 
-  /**
-   * Create a wall tile
-   */
   static createWall(x: number, y: number): TileData {
     return this.createTile(x, y, '#', ColorUtils.PALETTE.GRAY, ColorUtils.PALETTE.BLACK);
   }
 
-  /**
-   * Create a floor tile
-   */
   static createFloor(x: number, y: number): TileData {
     return this.createTile(x, y, '.', ColorUtils.PALETTE.GRAY, ColorUtils.PALETTE.TRANSPARENT);
   }
 
-  /**
-   * Create a player tile
-   */
   static createPlayer(x: number, y: number): TileData {
     return this.createTile(x, y, '@', ColorUtils.PALETTE.YELLOW, ColorUtils.PALETTE.TRANSPARENT);
   }
 
-  /**
-   * Create an empty/air tile
-   */
   static createEmpty(x: number, y: number): TileData {
     return this.createTile(
       x,
@@ -255,7 +181,6 @@ export class TileFactory {
   }
 }
 
-// Performance monitoring for tile operations
 export class TilePerformance {
   private static tileCreations = 0;
   private static tileUpdates = 0;

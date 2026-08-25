@@ -1,0 +1,248 @@
+<script lang="ts">
+  import type { SaveEntry } from '$lib/stores/saveManager';
+
+  let {
+    save,
+    mode = 'load',
+    onActivate,
+    onDelete
+  }: {
+    save: SaveEntry;
+    mode?: 'load' | 'save';
+    onActivate: () => void;
+    onDelete: () => void;
+  } = $props();
+
+  let confirm = $state<'none' | 'delete' | 'overwrite'>('none');
+
+  function activate() {
+    if (mode === 'save') confirm = 'overwrite';
+    else onActivate();
+  }
+
+  const seasonCap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+  function fmtWhen(ms: number): string {
+    return new Date(ms).toLocaleString(undefined, {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  }
+
+  let copied = $state(false);
+  let copyTimer: ReturnType<typeof setTimeout> | undefined;
+  async function copySeed(e: MouseEvent) {
+    e.stopPropagation();
+    if (save.meta.seed == null) return;
+    const text = String(save.meta.seed);
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      try {
+        document.execCommand('copy');
+      } catch {}
+      ta.remove();
+    }
+    copied = true;
+    clearTimeout(copyTimer);
+    copyTimer = setTimeout(() => (copied = false), 1200);
+  }
+</script>
+
+<div class="row">
+  <button class="main" onclick={activate}>
+    <div class="top">
+      <span class="culture">{save.meta.cultureName}</span>
+      <span class="badge" class:auto={save.meta.kind === 'auto'}>
+        {save.meta.kind === 'auto' ? 'Autosave' : 'Manual'}
+      </span>
+    </div>
+    <div class="sub">
+      {seasonCap(save.meta.season)} · Day {save.meta.day} · {save.meta.population} colonist{save
+        .meta.population === 1
+        ? ''
+        : 's'}
+    </div>
+    <div class="when">{fmtWhen(save.meta.savedAt)}</div>
+  </button>
+
+  {#if save.meta.seed != null}
+    <button class="seed" class:copied title="Copy world-gen seed" onclick={copySeed}>
+      {copied ? 'Copied ✓' : `Seed ${save.meta.seed} ⧉`}
+    </button>
+  {/if}
+
+  {#if confirm === 'overwrite'}
+    <div class="confirm">
+      <span>Overwrite?</span>
+      <button
+        class="cbtn yes"
+        onclick={() => {
+          confirm = 'none';
+          onActivate();
+        }}>Yes</button
+      >
+      <button class="cbtn" onclick={() => (confirm = 'none')}>No</button>
+    </div>
+  {:else if confirm === 'delete'}
+    <div class="confirm">
+      <span>Delete?</span>
+      <button
+        class="cbtn yes"
+        onclick={() => {
+          confirm = 'none';
+          onDelete();
+        }}>Yes</button
+      >
+      <button class="cbtn" onclick={() => (confirm = 'none')}>No</button>
+    </div>
+  {:else}
+    <button class="del" aria-label="Delete save" onclick={() => (confirm = 'delete')}>✕</button>
+  {/if}
+</div>
+
+<style>
+  .row {
+    position: relative;
+  }
+  .main {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 9px 11px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: var(--font-mono);
+    text-align: left;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+    transition:
+      background 0.12s,
+      border-color 0.12s,
+      box-shadow 0.12s;
+  }
+  .main:hover {
+    background: var(--bg-hover);
+    border-color: var(--border-hi);
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.5);
+  }
+  .top {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding-right: 22px;
+  }
+  .culture {
+    color: var(--accent-hi);
+    font-size: 15px;
+    font-weight: 700;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .badge {
+    margin-left: auto;
+    flex: none;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 1px 5px;
+  }
+  .badge.auto {
+    color: var(--accent-hi);
+    border-color: var(--accent-hi);
+    opacity: 0.7;
+  }
+  .sub {
+    font-size: 12px;
+    color: var(--text);
+    letter-spacing: 0.03em;
+  }
+  .when {
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+  .seed {
+    position: absolute;
+    bottom: 6px;
+    right: 8px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.03em;
+    padding: 1px 6px;
+    cursor: pointer;
+    transition:
+      color 0.12s,
+      border-color 0.12s;
+  }
+  .seed:hover {
+    color: var(--text);
+    border-color: var(--border-hi);
+  }
+  .seed.copied {
+    color: var(--accent-hi);
+    border-color: var(--accent-hi);
+  }
+  .del {
+    position: absolute;
+    top: 6px;
+    right: 8px;
+    width: 18px;
+    height: 18px;
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-size: 13px;
+    line-height: 1;
+    cursor: pointer;
+  }
+  .del:hover {
+    color: var(--neg, #c0392b);
+  }
+  .confirm {
+    position: absolute;
+    inset: 0 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 10px;
+    background: rgba(6, 4, 2, 0.92);
+    border-radius: 0 6px 6px 0;
+    font-size: 11px;
+    color: var(--text);
+  }
+  .cbtn {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    padding: 2px 7px;
+    cursor: pointer;
+  }
+  .cbtn.yes:hover {
+    color: var(--neg, #c0392b);
+    border-color: var(--neg, #c0392b);
+  }
+  .cbtn:hover {
+    border-color: var(--border-hi);
+  }
+</style>

@@ -2,13 +2,6 @@ import { describe, it, expect } from 'vitest';
 import { buildScenario } from '$lib/game/headless/Scenario';
 import { HeadlessSession } from '$lib/game/headless/HeadlessSession';
 
-/**
- * SPOILED-CARCASS YIELD audit (headless, §233). A carcass carries a per-unit FRESHNESS meter
- * (`unitConditions` 0–100) that erodes over time (decayAll, ItemService); butchery output is scaled by
- * `conditionMult = unitConditions[0]/100` (craft.ts) — so a stale carcass renders less meat. At full rot
- * a carcass decays to `rotten_carcass`, which now butchers into rotten meat/hide (compost feedstock).
- * Scenario carcasses spawn fresh, so `devSetDropCondition` stamps the meter a real kill would carry.
- */
 const stk = (s: HeadlessSession) => (s.getState().stockpile ?? {}) as Record<string, number>;
 
 describe('carcass spoilage → butchery yield', () => {
@@ -22,7 +15,7 @@ describe('carcass spoilage → butchery yield', () => {
           workReady: true,
           researchMaxTier: 9,
           toolTier: 3,
-          pawns: [{ count: 4, skillLevel: 25 }], // fixed skill so butchery_yield is constant across runs
+          pawns: [{ count: 4, skillLevel: 25 }],
           needsDisabled: ['hunger', 'fatigue', 'thirst', 'hygiene'],
           buildings: [{ id: 'butcher_spot' }],
           items: { deer_carcass: 1, spit_meat: 10 },
@@ -37,15 +30,14 @@ describe('carcass spoilage → butchery yield', () => {
       for (let i = 0; i < 25 && (stk(s).venison ?? 0) === 0; i++) s.tick(400);
       return stk(s).venison ?? 0;
     };
-    const fresh = await venisonAt(100); // full freshness
-    const stale = await venisonAt(40); // 60% spoiled
+    const fresh = await venisonAt(100);
+    const stale = await venisonAt(40);
     console.log(`[SPOIL yield] venison: fresh(100%)=${fresh} vs stale(40%)=${stale}`);
     expect(fresh, 'a fresh carcass renders meat').toBeGreaterThan(0);
     expect(
       stale,
       'a 40%-fresh carcass renders clearly less — spoilage scales the yield'
     ).toBeLessThan(fresh);
-    // roughly proportional: 40% freshness should land near 40% of the fresh yield (allow rng-carry slack).
     expect(stale).toBeGreaterThanOrEqual(Math.floor(fresh * 0.25));
     expect(stale).toBeLessThanOrEqual(Math.ceil(fresh * 0.6));
   });
@@ -64,7 +56,7 @@ describe('carcass spoilage → butchery yield', () => {
         seedEntities: false
       })
     );
-    s.command({ type: 'setSeason', payload: { season: 'summer' } } as never); // warm → carcasses rot
+    s.command({ type: 'setSeason', payload: { season: 'summer' } } as never);
     s.command({
       type: 'devSetDropCondition',
       payload: { resourceId: 'deer_carcass', condition: 100 }
@@ -80,7 +72,7 @@ describe('carcass spoilage → butchery yield', () => {
       return d?.unitConditions?.[0] ?? -1;
     };
     const before = cond();
-    for (let i = 0; i < 30; i++) s.tick(400); // ~12000 ticks of warm rot
+    for (let i = 0; i < 30; i++) s.tick(400);
     const after = cond();
     console.log(`[SPOIL clock] deer_carcass freshness ${before} → ${after} over ~12000 warm ticks`);
     expect(before, 'started fresh').toBe(100);

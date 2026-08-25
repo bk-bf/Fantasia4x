@@ -3,28 +3,10 @@ import { HeadlessSession } from '$lib/game/headless/HeadlessSession';
 import { buildScenario } from '$lib/game/headless/Scenario';
 import type { EntityStats, Mob, Pawn } from '$lib/game/core/types';
 
-/**
- * ARMOUR × STYLE AUDIT — the shield question, tested the way it has to be tested.
- *
- * The earlier style comparison put both pawns in NO armour, which is the one configuration where the
- * shield answer is guaranteed to look best: with nothing else stopping blows, the only mitigation in
- * the fight was the shield. The real trade is a whole KIT:
- *
- *   • a two-hander has both hands full, so it spends its whole encumbrance budget on ARMOUR;
- *   • a shield user spends part of that budget on the shield, so it wears LIGHTER armour or eats the
- *     encumbrance penalty that claps its stats.
- *
- * So every style is run in every armour class it could plausibly field, against a live mob, and the
- * comparison is kit-vs-kit rather than weapon-vs-weapon.
- *
- * Preflight (headless skill): flat map, needs frozen, `seedEntities: false`, explicit draft order.
- */
-
 const CREATURE = 'orc_reaver';
 const MAX_TICKS = 12_000;
 const SEEDS = [11, 23, 37, 41, 59, 71];
 
-/** Full sets by weight class — head/body/limbs, so encumbrance is real rather than a single piece. */
 const KITS: Record<string, string[]> = {
   none: [],
   light: ['linen_gambeson', 'leather_coif', 'rawhide_shoulder_pads', 'rawhide_arm_wraps', 'rawhide_leg_wraps'],
@@ -102,9 +84,7 @@ async function kit(label: string, equip: string[], traits?: string[]) {
   const killed = runs.filter((r) => r.killed);
   return {
     label,
-    // Censored: a run that never killed counts the full budget (see combatBalanceAudit's note).
     ticks: runs.reduce((a, r) => a + (r.killed ? r.ticks : MAX_TICKS), 0) / runs.length,
-    // Uncensored, among kills — "how fast does it kill", a different question from "does it win".
     killTicks: killed.length ? killed.reduce((a, r) => a + r.ticks, 0) / killed.length : NaN,
     kills: killed.length,
     deaths: runs.filter((r) => !r.survived).length,
@@ -121,14 +101,10 @@ const row = (r: Awaited<ReturnType<typeof kit>>) =>
 describe('ARMOUR × STYLE — the shield trade, kit vs kit', () => {
   it('every style in every armour class it could field', async () => {
     const out: Awaited<ReturnType<typeof kit>>[] = [];
-    // A two-hander has both hands full: its whole budget goes on armour, so run it up to heavy.
     for (const w of ['light', 'medium', 'heavy'])
       out.push(await kit(`2H greatsword · ${w}`, ['steel_greatsword', ...KITS[w]]));
-    // A shield user spends part of the budget on the shield. Run the same ladder so the encumbrance
-    // cost of doing BOTH is visible rather than assumed.
     for (const w of ['light', 'medium', 'heavy'])
       out.push(await kit(`1H+shield · ${w}`, ['steel_longsword', 'iron_boss_shield', ...KITS[w]]));
-    // The duel grip trades the shield for damage — same ladder again.
     for (const w of ['light', 'medium'])
       out.push(await kit(`1H duelist · ${w}`, ['steel_longsword', ...KITS[w]], ['duelist']));
 
@@ -142,8 +118,6 @@ describe('ARMOUR × STYLE — the shield trade, kit vs kit', () => {
     const safest = out.slice().sort((a, b) => a.deaths - b.deaths || a.ticks - b.ticks)[0];
     console.log(`\n  fastest encounter: ${best.label}\n  safest: ${safest.label}`);
 
-    // Every kit must be able to win at least sometimes — a configuration that never kills is broken,
-    // not a trade-off.
     for (const r of out) expect(r.kills, `${r.label} never killed`).toBeGreaterThan(0);
   }, 1_800_000);
 });

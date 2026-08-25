@@ -1,26 +1,18 @@
 import type { ResearchProject, EntityStats, GameState } from '../core/types';
-import { consumeFromStockpiles, availableQuantityFromDrops } from '../core/GameState';
+import { consumeFromStockpiles, availableQuantityFromDrops } from '../core/state/stockpile';
 import researchData from '../database/progression/research.jsonc';
-import { perTick } from '../core/time';
-// Gated console shim — see core/log.ts. Silences per-tick log/debug/warn unless
-// gameDebug(true); console.error still surfaces.
-import { gatedConsole as console } from '../core/log';
+import { perTick } from '../core/util/time';
+import { gatedConsole as console } from '../core/util/log';
 
 const RESEARCH_DATABASE = researchData as unknown as ResearchProject[];
 
-/**
- * ResearchService - Clean interface for research progression and management
- * Separates business logic from data definitions
- */
 export interface ResearchService {
-  // Query Methods
   getResearchById(id: string): ResearchProject | undefined;
   getAllResearch(): ResearchProject[];
   getResearchByCategory(category: string): ResearchProject[];
   getResearchByTier(tier: number): ResearchProject[];
   getAvailableResearch(gameState: GameState): ResearchProject[];
 
-  // Validation Methods
   canStartResearch(researchId: string, gameState: GameState): boolean;
   hasPrerequisites(researchId: string, gameState: GameState): boolean;
   hasRequiredScrolls(researchId: string, gameState: GameState): boolean;
@@ -28,7 +20,6 @@ export interface ResearchService {
   hasRequiredBuilding(researchId: string, gameState: GameState): boolean;
   hasRequiredPopulation(researchId: string, gameState: GameState): boolean;
 
-  // Calculation Methods
   calculateResearchProgress(
     researchId: string,
     gameState: GameState
@@ -39,7 +30,6 @@ export interface ResearchService {
   };
   calculateResearchTime(researchId: string, gameState: GameState): number;
 
-  // Research Management
   getResearchRequirements(researchId: string): {
     scrolls: Record<string, number>;
     materials: Record<string, number>;
@@ -55,17 +45,12 @@ export interface ResearchService {
     toolTier: number;
   };
 
-  // Research Processing
   startResearch(researchId: string, gameState: GameState): GameState;
   completeResearch(researchId: string, gameState: GameState): GameState;
   processCurrentResearch(gameState: GameState): GameState;
-  /** Continuous research accrual for one tick (+perTick(1) of researchTime). */
   processResearchTick(gameState: GameState): GameState;
 }
 
-/**
- * ResearchService Implementation
- */
 export class ResearchServiceImpl implements ResearchService {
   getResearchById(id: string): ResearchProject | undefined {
     return RESEARCH_DATABASE.find((research) => research.id === id);
@@ -85,10 +70,8 @@ export class ResearchServiceImpl implements ResearchService {
 
   getAvailableResearch(gameState: GameState): ResearchProject[] {
     return RESEARCH_DATABASE.filter((research) => {
-      // Already completed
       if (gameState.completedResearch.includes(research.id)) return false;
 
-      // Check if can start
       return this.canStartResearch(research.id, gameState);
     });
   }
@@ -97,7 +80,6 @@ export class ResearchServiceImpl implements ResearchService {
     const research = this.getResearchById(researchId);
     if (!research) return false;
 
-    // Check all requirements
     return (
       this.hasPrerequisites(researchId, gameState) &&
       this.hasRequiredScrolls(researchId, gameState) &&
@@ -163,7 +145,6 @@ export class ResearchServiceImpl implements ResearchService {
     const materialsNeeded: Record<string, number> = {};
     let canStart = true;
 
-    // Check scroll requirements
     if (research.scrollRequirement) {
       Object.entries(research.scrollRequirement).forEach(([scrollId, required]) => {
         const available = availableQuantityFromDrops(gameState.droppedItems, scrollId);
@@ -174,7 +155,6 @@ export class ResearchServiceImpl implements ResearchService {
       });
     }
 
-    // Check material requirements
     if (research.materialRequirement) {
       Object.entries(research.materialRequirement).forEach(([materialId, required]) => {
         const available = availableQuantityFromDrops(gameState.droppedItems, materialId);
@@ -198,14 +178,12 @@ export class ResearchServiceImpl implements ResearchService {
 
     let time = research.researchTime;
 
-    // Apply research speed bonuses from buildings
     const researchBuildings = ['scroll_hut', 'learning_hall', 'scholars_workshop'];
     let speedBonus = 1.0;
 
     researchBuildings.forEach((buildingId) => {
       const count = gameState.buildingCounts[buildingId] || 0;
       if (count > 0) {
-        // Each research building provides speed bonus
         switch (buildingId) {
           case 'scroll_hut':
             speedBonus *= 1.2;
@@ -298,7 +276,6 @@ export class ResearchServiceImpl implements ResearchService {
         ? consumeFromStockpiles({ ...gameState }, consumables)
         : { ...gameState };
 
-    // Set current research
     newState.currentResearch = {
       ...research,
       currentProgress: 0
@@ -313,20 +290,16 @@ export class ResearchServiceImpl implements ResearchService {
 
     const newState = { ...gameState };
 
-    // Add to completed research
     if (!newState.completedResearch.includes(researchId)) {
       newState.completedResearch.push(researchId);
     }
 
-    // Apply unlocks
     const unlocks = this.getResearchUnlocks(researchId);
 
-    // Update tool tier
     if (unlocks.toolTier > newState.currentToolLevel) {
       newState.currentToolLevel = unlocks.toolTier;
     }
 
-    // Add unlocked items to available research
     if (unlocks.items.length > 0) {
       newState.availableResearch = [
         ...newState.availableResearch,
@@ -334,7 +307,6 @@ export class ResearchServiceImpl implements ResearchService {
       ];
     }
 
-    // Clear current research
     newState.currentResearch = undefined;
 
     return newState;
@@ -343,10 +315,6 @@ export class ResearchServiceImpl implements ResearchService {
   processCurrentResearch(gameState: GameState): GameState {
     console.log('[ResearchService] Processing current research');
 
-    // Process current research - scroll-based progression
-    // PER-TURN RATE (+1/turn). Accrual now happens smoothly each tick via
-    // processResearchTick(); this whole-step variant is kept for any caller that
-    // still wants to advance a full turn at once.
     if (gameState.currentResearch) {
       const updatedCurrentResearch = {
         ...gameState.currentResearch,
@@ -354,11 +322,9 @@ export class ResearchServiceImpl implements ResearchService {
       };
 
       if (updatedCurrentResearch.currentProgress >= updatedCurrentResearch.researchTime) {
-        // Research completed - use the completeResearch method
         console.log('[ResearchService] Research completed:', updatedCurrentResearch.id);
         return this.completeResearch(updatedCurrentResearch.id, gameState);
       } else {
-        // Research still in progress
         return {
           ...gameState,
           currentResearch: updatedCurrentResearch
@@ -369,13 +335,6 @@ export class ResearchServiceImpl implements ResearchService {
     return gameState;
   }
 
-  /**
-   * Continuous research accrual for ONE simulation tick (60 Hz): adds
-   * perTick(1) of scroll progress and completes mid-stream once the
-   * threshold is reached. Over a full turn this nets +1 progress — identical
-   * pacing to the legacy per-turn step, just smooth (and save-safe: currentProgress
-   * is already a plain number).
-   */
   processResearchTick(gameState: GameState): GameState {
     if (!gameState.currentResearch) return gameState;
 
@@ -393,5 +352,4 @@ export class ResearchServiceImpl implements ResearchService {
   }
 }
 
-// Export singleton instance
 export const researchService = new ResearchServiceImpl();

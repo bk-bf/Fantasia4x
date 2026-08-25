@@ -1,16 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import { buildScenario } from '$lib/game/headless/Scenario';
 import { HeadlessSession } from '$lib/game/headless/HeadlessSession';
-import { resolveTraitGamble } from '$lib/game/core/Lineages';
+import { resolveTraitGamble } from '$lib/game/core/defs/lineages';
 import { itemService } from '$lib/game/services/ItemService';
 import { applyConsumable } from '$lib/game/entities/Pawns';
 import type { Pawn } from '$lib/game/core/types';
 
-/**
- * ALCHEMY / MATERIAL-SINK AUDIT (headless). Magical creatures should yield ALCHEMY reagents (not plain
- * meat). Grimeling (Bog Ooze) previously had NO butchery recipe; now render_grimeling → caustic_bile →
- * brew_caustic_coating (a nausea coating). Drives the whole chain with real pawns.
- */
 const stk = (s: HeadlessSession) => (s.getState().stockpile ?? {}) as Record<string, number>;
 
 describe('alchemy / magical-creature reagents', () => {
@@ -37,11 +32,9 @@ describe('alchemy / magical-creature reagents', () => {
         seedEntities: false
       })
     );
-    // 1. render the bog ooze → caustic_bile
     s.command({ type: 'craftItem', payload: { itemId: 'grimeling_carcass' } } as never);
     for (let i = 0; i < 20 && (stk(s).caustic_bile ?? 0) === 0; i++) s.tick(400);
     const bile = stk(s).caustic_bile ?? 0;
-    // 2. brew the coating from the bile
     s.command({ type: 'craftItem', payload: { itemId: 'caustic_coating' } } as never);
     for (let i = 0; i < 20 && (stk(s).caustic_coating ?? 0) === 0; i++) s.tick(400);
     console.log(
@@ -57,20 +50,19 @@ describe('alchemy / magical-creature reagents', () => {
       traitPool: ['feral-adrenaline', 'pack-fury', 'bestial-might'],
       flawSeverity: tier >= 3 ? ('mild' as const) : ('harsh' as const)
     });
-    // Deterministic sampler: sweep r∈[0,1) so "good" = trait && no flaw.
     const goodRate = (tier: number, alch: number) => {
       let good = 0;
       const N = 200;
       for (let i = 0; i < N; i++) {
         let k = 0;
-        const seq = [(i + 0.5) / N, 0.9, 0.1]; // r for outcome, then pool draw, then flaw
+        const seq = [(i + 0.5) / N, 0.9, 0.1];
         const { trait, flaw } = resolveTraitGamble(spec(tier), alch, () => seq[k++] ?? 0.5);
         if (trait && !flaw) good++;
       }
       return good / N;
     };
-    const lo = goodRate(1, 0); // crude draught, novice
-    const hi = goodRate(3, 1); // apothecary essence, master
+    const lo = goodRate(1, 0);
+    const hi = goodRate(3, 1);
     console.log(
       `[ALCH gamble] clean-good rate: T1/novice=${lo.toFixed(2)} vs T3/master=${hi.toFixed(2)}`
     );
@@ -104,7 +96,6 @@ describe('alchemy / magical-creature reagents', () => {
     type P = { id: string; traits?: Array<{ id: string }> };
     const traitsOf = (i: number) =>
       ((s.getState().pawns[i] as unknown as P).traits ?? []).map((t) => t.id);
-    // RAW eat: pawn 0 swallows the heart raw — must NOT gain feral-adrenaline (the old freebie).
     const raw0 = traitsOf(0).length;
     s.command({
       type: 'useConsumableItem',
@@ -116,7 +107,6 @@ describe('alchemy / magical-creature reagents', () => {
       `[ALCH raw] raw alpha_heart → traits ${raw0}→${rawTraits.length} (${rawTraits.slice(-2).join(',') || 'none'})`
     );
 
-    // BREW the T3 essence, then feed it to several pawns — the gamble should land a pool trait somewhere.
     s.command({ type: 'craftItem', payload: { itemId: 'alpha_essence', quantity: 3 } } as never);
     for (let i = 0; i < 25 && (stk(s).alpha_essence ?? 0) < 3; i++) s.tick(400);
     expect(stk(s).alpha_essence ?? 0, 'alpha_essence brewed at the apothecary').toBeGreaterThan(0);
@@ -153,7 +143,7 @@ describe('alchemy / magical-creature reagents', () => {
         seedEntities: false
       })
     );
-    s.command({ type: 'craftItem', payload: { itemId: 'ivory' } } as never); // carve_ivory
+    s.command({ type: 'craftItem', payload: { itemId: 'ivory' } } as never);
     s.command({ type: 'craftItem', payload: { itemId: 'great_bone_maul' } } as never);
     for (let i = 0; i < 25 && !((stk(s).ivory ?? 0) > 0 && (stk(s).great_bone_maul ?? 0) > 0); i++)
       s.tick(400);
@@ -165,7 +155,6 @@ describe('alchemy / magical-creature reagents', () => {
   });
 
   it('§C potion tiers: every effect is a 3-tier ladder with a rising effect + station gate', () => {
-    // Effect magnitude (buff duration / coating chance) strictly rises T1 → T2 → T3.
     const dur = (id: string) =>
       (itemService.getItemById(id) as { conditionDurationTurns?: number })
         ?.conditionDurationTurns ?? 0;
@@ -176,7 +165,6 @@ describe('alchemy / magical-creature reagents', () => {
       expect(t2, `${base}: T2 > T1`).toBeGreaterThan(t1);
       expect(t3, `${base}: T3 > T2`).toBeGreaterThan(t2);
     }
-    // Coatings: proc chance rises up the ladder.
     const ch = (id: string) =>
       (itemService.getItemById(id) as { coatingEffect?: { chance?: number } })?.coatingEffect
         ?.chance ?? 0;
@@ -249,7 +237,6 @@ describe('alchemy / magical-creature reagents', () => {
         seedEntities: false
       })
     );
-    // crush cane → sugar (the processing step), then ferment the mash and distill it into spirit
     s.command({ type: 'craftItem', payload: { itemId: 'sugar', quantity: 2 } } as never);
     for (let i = 0; i < 20 && (stk(s).sugar ?? 0) < 2; i++) s.tick(400);
     const sugar = stk(s).sugar ?? 0;
@@ -278,8 +265,6 @@ describe('alchemy / magical-creature reagents', () => {
   });
 
   it('§C container-tool gate: refine_sugar needs a clay cooking pot — blocks without, works with (headless A/B)', async () => {
-    // Boiling cane juice down needs a vessel. The ONLY difference between the two runs is a clay cooking
-    // pot in stock — cooking labor is force-enabled in both — so a 0-vs-positive split isolates the gate.
     const run = async (withPot: boolean) => {
       const s = new HeadlessSession();
       await s.start(
@@ -337,9 +322,9 @@ describe('alchemy / magical-creature reagents', () => {
         seedEntities: false
       })
     );
-    s.command({ type: 'craftItem', payload: { itemId: 'tanglefoot_coating' } } as never); // slow coating T1
-    s.command({ type: 'craftItem', payload: { itemId: 'farsight_tonic' } } as never); // perception tonic T1
-    s.command({ type: 'craftItem', payload: { itemId: 'greater_farsight_tonic' } } as never); // T2 needs the base
+    s.command({ type: 'craftItem', payload: { itemId: 'tanglefoot_coating' } } as never);
+    s.command({ type: 'craftItem', payload: { itemId: 'farsight_tonic' } } as never);
+    s.command({ type: 'craftItem', payload: { itemId: 'greater_farsight_tonic' } } as never);
     for (
       let i = 0;
       i < 25 &&
@@ -363,8 +348,6 @@ describe('alchemy / magical-creature reagents', () => {
   });
 
   it('§C antidote tonic CURES an active poison (the counter to the venom/caustic coatings)', () => {
-    // A pawn carrying an active envenomed + nausea timer drinks a grand antivenin → both cleared, and a
-    // toxin_immune window stamped. The counterplay the new coating threats needed.
     const poisoned = {
       id: 'p1',
       stats: {

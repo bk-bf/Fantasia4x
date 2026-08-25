@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { getConditionDefById, CONDITION_IDS_WITH_TRIGGERS } from '$lib/game/core/needs';
+import {
+  getConditionDefById,
+  CONDITION_IDS_WITH_TRIGGERS
+} from '$lib/game/core/rules/body/conditions';
 import conditionsData from '$lib/game/database/pawns/conditions.jsonc';
 import type { ConditionDef, TransientConditionDef } from '$lib/game/core/types/health';
 
@@ -34,7 +37,6 @@ describe('condition graph data (TRAIT-SYSTEM-V2 §5)', () => {
     expect(wet?.when).toMatchObject({ need: 'coldExposure', atOrAbove: 100 });
     const venom = getConditionDefById('envenomed')?.triggers?.find((t) => t.to === 'nausea');
     expect(venom).toMatchObject({ to: 'nausea', durationHours: 1.5 });
-    // nausea is a transient (timer) target — the apply path stamps conditionTimers, not severity.
     expect((getConditionDefById('nausea') as TransientConditionDef).transient).toBe(true);
   });
 

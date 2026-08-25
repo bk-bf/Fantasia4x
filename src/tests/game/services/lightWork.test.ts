@@ -2,13 +2,6 @@ import { describe, it, expect } from 'vitest';
 import { pawnStatService } from '$lib/game/services/PawnStatService';
 import type { Pawn } from '$lib/game/core/types';
 
-/**
- * §G light → work (unified via the sight capacity, not a parallel mechanic). A lightMultiplier
- * passed into computeCapacities scales the `sight` capacity linearly (sight = baseSight × light),
- * and every `*_speed` formula multiplies by sight — so darkness slows work through the existing
- * stats.jsonc model. (Verified earlier: this path was previously dormant — lightMultiplier was
- * never supplied — so there is no duplicate mechanic.)
- */
 const pawn = (): Pawn =>
   ({
     limbs: [],

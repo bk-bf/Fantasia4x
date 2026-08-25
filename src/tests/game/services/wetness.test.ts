@@ -9,11 +9,6 @@ import type {
   PlacedBuilding
 } from '$lib/game/core/types';
 
-// SEASONS_WEATHER — pawn wetness meter: soaks over time on wet (>50%) tiles (rain raises tile
-// wetness), dries off when warm/sheltered. Roofs keep the tile under them dry. Base tile wetness is
-// baked into `tile.moisture` at world-gen (distance-to-water falloff); here we seed it from the biome
-// baseline so far-from-water tiles read their terrain floor.
-
 function tile(terrainType: string, temperature = 15): WorldTile {
   return {
     x: 0,
@@ -59,21 +54,17 @@ const HEAVY_RAIN: WeatherState = { type: 'heavy_rain', intensity: 0.75, turnsRem
 const CLEAR: WeatherState = { type: 'clear', intensity: 0, turnsRemaining: 999 };
 
 describe('pawn wetness (SEASONS_WEATHER)', () => {
-  beforeEach(() => rebuildThermalField([])); // no fires/roofs unless a test sets them
+  beforeEach(() => rebuildThermalField([]));
 
   it('soaks over time when standing on a wet (>50%, <100%) tile in the rain — not instant', () => {
-    // plains (baseMoisture 30) + heavy_rain (+35) = 65% wet → above the >50% soak threshold but
-    // below 100%, so it fills gradually (~1 in-game hour) rather than instantly.
     const out = run(state(pawn(0), tile('plains'), HEAVY_RAIN), 1);
-    expect(out.pawns[0].needs.wetness!).toBeGreaterThan(0); // started rising
-    expect(out.pawns[0].needs.wetness!).toBeLessThan(5); // but only a little after one tick
-    // A >50% tile fills the meter in ~1 in-game hour (12.5s); a couple of hours of rain is well soaked.
+    expect(out.pawns[0].needs.wetness!).toBeGreaterThan(0);
+    expect(out.pawns[0].needs.wetness!).toBeLessThan(5);
     const soaked = run(state(pawn(0), tile('plains'), HEAVY_RAIN), 8000);
     expect(soaked.pawns[0].needs.wetness!).toBeGreaterThan(50);
   });
 
   it('a fully-wet (100%) tile soaks the pawn instantly', () => {
-    // swamp (baseMoisture 80) + heavy_rain (+35) clamps to 100% wet → full meter in a single tick.
     const out = run(state(pawn(0), tile('swamp'), HEAVY_RAIN), 1);
     expect(out.pawns[0].needs.wetness!).toBe(100);
   });
@@ -89,12 +80,9 @@ describe('pawn wetness (SEASONS_WEATHER)', () => {
   });
 
   it('dries FASTER when warm', () => {
-    // Temperature is derived live from terrain + SEASON (seasonBakedTemp — one source shared with the
-    // HUD), not a per-tile cache, so warm vs cold is driven by the season: plains in summer (+15 →
-    // 30 °C) dries faster than plains in winter (−20 → −5 °C).
     const warm = run(state(pawn(80), tile('plains'), CLEAR, 'summer'), 500).pawns[0].needs.wetness!;
     const cold = run(state(pawn(80), tile('plains'), CLEAR, 'winter'), 500).pawns[0].needs.wetness!;
-    expect(warm).toBeLessThan(cold); // warmth evaporates more
+    expect(warm).toBeLessThan(cold);
   });
 
   it('a roof keeps the tile dry → a pawn under it does not soak in the rain', () => {

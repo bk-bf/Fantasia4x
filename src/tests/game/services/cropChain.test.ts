@@ -1,16 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { buildScenario } from '$lib/game/headless/Scenario';
 import { HeadlessSession } from '$lib/game/headless/HeadlessSession';
-import { soilTierForTile } from '$lib/game/core/Terrains';
-
-/**
- * CROPS AUDIT (headless, real ticks). A `grow` zone drives sowing: for each soil-eligible tile whose
- * seed is in stock, `plant.ts` queues a plant job; on completion the crop is sown IMMATURE (growth 0),
- * then `processCropGrowth` advances it toward 100% — GATED by soil tier / temp / moisture / light
- * (`cropHealth`) — and at 100% the tile becomes harvestable. Flat 'grass' tiles are soil tier 1
- * (fertility 25) so a `minSoil:1` crop (wheat) plants directly; growth needs moisture ≥25 & temp in
- * range, so the test forces summer (26°C) + `devSetMapMoisture`.
- */
+import { soilTierForTile } from '$lib/game/core/defs/terrains';
 
 type Tile = {
   subType: string;
@@ -19,7 +10,6 @@ type Tile = {
 };
 const tileAt = (s: HeadlessSession, x: number, y: number) =>
   (s.getState().worldMap as unknown as Tile[][])[y][x];
-// Max growth% of crop_wheat across the grow rect (x1..x2, y1..y2).
 const maxGrowth = (s: HeadlessSession, r: number[]) => {
   let g = 0;
   for (let y = r[1]; y <= r[3]; y++)
@@ -68,8 +58,8 @@ describe('crops', () => {
   });
 
   it('growth: climbs with moisture+warmth, STALLS when dry (cropHealth gate)', async () => {
-    const wet = await sownColony(40); // in range (25–70)
-    const dry = await sownColony(5); // below minMoisture 25
+    const wet = await sownColony(40);
+    const dry = await sownColony(5);
     for (let i = 0; i < 30; i++) {
       wet.tick(300);
       dry.tick(300);
@@ -84,7 +74,6 @@ describe('crops', () => {
   });
 
   it('full cycle: radish matures to 100%, becomes harvestable, is reaped into stock', async () => {
-    // Radish is the fastest crop (growthTurns 900). Small zone → few crops to mature + reap.
     const s = new HeadlessSession();
     await s.start(
       buildScenario({
@@ -97,17 +86,14 @@ describe('crops', () => {
         seedEntities: false
       })
     );
-    // Radish is a COOL-season crop (maxTemp 28) — summer afternoons overheat it. Spring (5°C, within its
-    // −5…28 window) fits, and spring's 1.2× growth rate is the fastest.
     s.command({ type: 'setSeason', payload: { season: 'spring' } } as never);
     s.command({ type: 'setWeather', payload: { type: 'clear' } } as never);
     s.command({ type: 'devSetMapMoisture', payload: { value: 45 } } as never);
-    const zone = [7, 7, 8, 8]; // 2×2
+    const zone = [7, 7, 8, 8];
     s.command({
       type: 'designateRect',
       payload: { x1: zone[0], y1: zone[1], x2: zone[2], y2: zone[3], type: 'grow' }
     } as never);
-    // Grow until at least one radish tile is mature (growth 100 + a harvestable count).
     const matureTile = () => {
       for (let y = zone[1]; y <= zone[3]; y++)
         for (let x = zone[0]; x <= zone[2]; x++) {
@@ -118,13 +104,12 @@ describe('crops', () => {
       return null;
     };
     let mat: { x: number; y: number } | null = null;
-    for (let i = 0; i < 200 && !(mat = matureTile()); i++) s.tick(500); // up to 100k ticks
+    for (let i = 0; i < 200 && !(mat = matureTile()); i++) s.tick(500);
     console.log(
       `[CROP mature] radish matured at ${mat ? `(${mat.x},${mat.y})` : 'NONE'} by turn ${s.getState().turn}; count=${mat ? tileAt(s, mat.x, mat.y).resources?.crop_radish : 0}`
     );
     expect(mat, 'a radish tile reached 100% and set a harvestable count').toBeTruthy();
 
-    // Reap it: designate harvest on the mature tiles, then let pawns work them.
     const radish0 = (s.getState().stockpile as Record<string, number>).radish ?? 0;
     for (let y = zone[1]; y <= zone[3]; y++)
       for (let x = zone[0]; x <= zone[2]; x++)
@@ -155,7 +140,6 @@ describe('crops', () => {
         workReady: true,
         pawns: [{ count: 5, skillLevel: 20 }],
         needsDisabled: ['hunger', 'fatigue', 'thirst', 'hygiene'],
-        // lay_loam cost + surplus so staging never starves
         items: { fertiliser: 8, compost: 8, blue_clay: 8, dirt: 16, spit_meat: 10 },
         seedEntities: false
       })
@@ -163,11 +147,10 @@ describe('crops', () => {
     const tx = 7;
     const ty = 7;
     const before = tileAt(s, tx, ty);
-    const beforeSub = before.subType; // snapshot: tiles mutate IN PLACE, so the ref changes under us
+    const beforeSub = before.subType;
     const tier0 = soilTierForTile({ subType: beforeSub });
     expect(beforeSub, 'starts as plain grass (tier 1)').toBe('grass');
     s.command({ type: 'placeBuilding', payload: { bid: 'lay_loam', x: tx, y: ty } } as never);
-    // Stage materials + construct + the one-shot terraform apply (self-removing building).
     for (let i = 0; i < 40 && tileAt(s, tx, ty).subType === 'grass'; i++) s.tick(300);
     const after = tileAt(s, tx, ty);
     const tier1 = soilTierForTile(after);
@@ -178,11 +161,6 @@ describe('crops', () => {
     expect(tier1, 'soil tier rose (fertility 25→50)').toBeGreaterThan(tier0);
   });
 
-  // ALL 17 crops, end to end: each is planted from its OWN seed on terra_preta (tier 4 ⇒ every minSoil
-  // met), GROWS for real under a season inside its temp window (growth climbs off the floor), then is
-  // matured (lever — the multi-day clock itself is proven real by the radish full-cycle above) and REAPED
-  // into its OWN yield item. Season per crop from its temp window (baked: spring 5°C, summer 26°C,
-  // autumn 7°C ± ~7 diurnal); moisture 55 is inside EVERY crop's [minMoisture, maxMoisture].
   const CROPS: Array<{ id: string; seed: string; yield: string; season: string }> = [
     { id: 'crop_wheat', seed: 'grain_seed', yield: 'wheat', season: 'summer' },
     { id: 'crop_beans', seed: 'bean_seed', yield: 'beans', season: 'summer' },
@@ -218,10 +196,8 @@ describe('crops', () => {
     );
     s.command({ type: 'setSeason', payload: { season: c.season } } as never);
     s.command({ type: 'setWeather', payload: { type: 'clear' } } as never);
-    s.command({ type: 'devSetMapSoil', payload: { subType: 'terra_preta' } } as never); // tier 4 ⇒ any minSoil
+    s.command({ type: 'devSetMapSoil', payload: { subType: 'terra_preta' } } as never);
     s.command({ type: 'devSetMapMoisture', payload: { value: 55 } } as never);
-    // 20× FAITHFUL growth speed: scales advance AND wither together, so the per-tick cropHealth gate's
-    // verdict is unchanged — a crop that can't net-mature in its window STILL never reaches 100%.
     s.command({ type: 'devCropGrowthScale', payload: { factor: 20 } } as never);
     const zone = [6, 6, 7, 7];
     s.command({
@@ -243,11 +219,8 @@ describe('crops', () => {
           g = Math.max(g, tileAt(s, x, y).growth?.[c.id] ?? 0);
       return g;
     };
-    // 1–2. PLANT from seed, then GROW to REAL 100% through the real per-tick gate (compressed 20×, not
-    // bypassed). Cap ≈ full real growthTurns × 60 / 20 with margin; a crop that CAN'T mature hits the cap.
     let mat: { x: number; y: number } | null = null;
-    for (let i = 0; i < 120 && !(mat = mature()); i++) s.tick(500); // up to 60k ticks ≈ 1.2M real ticks @20×
-    // 3. REAP the real-matured crop into its OWN yield item.
+    for (let i = 0; i < 120 && !(mat = mature()); i++) s.tick(500);
     const stk = () => (s.getState().stockpile ?? {}) as Record<string, number>;
     const y0 = mat ? (stk()[c.yield] ?? 0) : 0;
     if (mat) {

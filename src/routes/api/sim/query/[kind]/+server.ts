@@ -1,15 +1,3 @@
-/**
- * GET /api/sim/query/{pawns|jobs|recipes|research|buildings|map} — targeted read views backed by
- * the real service query getters (HEADLESS-SIM / ADR-033 §7).
- *
- *   pawns                       — full per-pawn detail (stats, skills, needs, equipment)
- *   jobs?pawn=<id>              — the job pool; with `pawn`, that pawn's claimable jobs
- *                                 (jobService.getAvailableJobs — the real claim/tool gate)
- *   recipes                     — craftable now (itemService.getCraftableItems) + the queue
- *   research                    — available now / current / completed (researchService)
- *   buildings                   — buildable now (buildingService.getAvailableBuildings) + placed
- *   map?x=&y=&r=8               — a tile window (slim tiles; whole map only via state?projection=full)
- */
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { guardHeadless, currentSession } from '$lib/server/simSession';

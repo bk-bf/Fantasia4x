@@ -116,8 +116,6 @@ describe('steel chain', () => {
     expect(fail, fail.join('\n')).toEqual([]);
   });
 
-  // HEADLESS: pawns actually smelt + bake the chain over real ticks (fuel handled by `infiniteFuel`,
-  // which deliberately takes the haul-fuel-and-light loop out of scope — that has its own audit).
   it('pawns physically smelt iron at the bloomery and bake blister steel at the cementation furnace', async () => {
     const s = new HeadlessSession();
     await s.start(
@@ -144,8 +142,6 @@ describe('steel chain', () => {
     const ore0 = stk().hematite ?? 0;
     s.command({ type: 'craftItem', payload: { itemId: 'iron_bar', quantity: 1 } } as never);
     s.command({ type: 'craftItem', payload: { itemId: 'blister_steel', quantity: 1 } } as never);
-    // NB: the cementation order EATS iron_bar (2) while the bloomery makes 1, so net iron_bar can dip —
-    // assert on the ore actually consumed by the smelt, not on the shared iron_bar balance.
     for (let i = 0; i < 16 && !(stk().blister_steel > 0 && (stk().hematite ?? 0) < ore0); i++)
       s.tick(400);
     console.log(
@@ -155,8 +151,6 @@ describe('steel chain', () => {
     expect(stk().blister_steel ?? 0, 'cementation baked blister steel').toBeGreaterThan(0);
   });
 
-  // Anvil-side steps, physically. The craftTool gate passes when the pawn holds a metalworking tool OR
-  // the colony has one in stock (auto-grabbed en route) — so stock the hammer/tongs and let them work.
   it('pawns physically forge shear steel and pattern-welded steel at the anvil', async () => {
     const s = new HeadlessSession();
     await s.start(

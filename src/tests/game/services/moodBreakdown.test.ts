@@ -2,11 +2,6 @@ import { describe, it, expect } from 'vitest';
 import { pawnService } from '$lib/game/services/PawnService';
 import type { GameState, Pawn, PlacedBuilding } from '$lib/game/core/types';
 
-/**
- * MOOD-REWORK — getMoodBreakdown surfaces the pawn's CURRENT (eased) mood, the TARGET it eases toward,
- * and the itemised signed contributions behind that target. These lock the sign of each contribution
- * and that `target` = clamp(50 + Σ contributions) — the single source of truth mood moves toward.
- */
 function pawn(
   needs: Partial<Pawn['needs']> = {},
   state: Partial<Pawn['state']> = {},
@@ -54,7 +49,7 @@ describe('MOOD-REWORK getMoodBreakdown', () => {
     const p = pawn();
     const out = pawnService.getMoodBreakdown(p, makeState(p));
     expect(out.contributions.every((c) => c.value >= 0)).toBe(true);
-    expect(out.mood).toBe(50); // the eased value (state.mood)
+    expect(out.mood).toBe(50);
     expect(out.target).toBeGreaterThanOrEqual(50);
   });
 
@@ -62,7 +57,6 @@ describe('MOOD-REWORK getMoodBreakdown', () => {
     const p = pawn({ thirst: 95, hygiene: 90 });
     const out = pawnService.getMoodBreakdown(p, makeState(p));
     expect(out.target).toBe(Math.max(0, Math.min(100, Math.round(50 + sum(out.contributions)))));
-    // Parched (-10) and Filthy (-4) both fire.
     expect(out.contributions.find((c) => c.label === 'Parched')?.value).toBe(-10);
     expect(out.contributions.find((c) => c.label === 'Filthy')?.value).toBe(-4);
   });
@@ -74,7 +68,6 @@ describe('MOOD-REWORK getMoodBreakdown', () => {
     expect(out.target).toBeLessThan(50);
   });
 
-  // Ambient mood comes from BEAUTY only. A bear rug is handsome (beauty 0.4), so being near it lifts mood.
   it('pleasant surroundings (nearby beautiful furniture) add a positive contribution', () => {
     const rug = {
       id: 'r1',
@@ -91,8 +84,6 @@ describe('MOOD-REWORK getMoodBreakdown', () => {
     expect(pleasant!.value).toBeGreaterThan(0);
   });
 
-  // COMFORT IS NOT AMBIENT: a couch is comfort-only (0.7) with no beauty, so merely STANDING near it
-  // must not lift mood — a pawn earns comfort by sitting in it (handleLounging), not by walking past.
   it('a comfort-only piece (couch) gives no ambient lift — comfort is never ambient', () => {
     const couch = {
       id: 'c1',
@@ -109,11 +100,10 @@ describe('MOOD-REWORK getMoodBreakdown', () => {
   });
 
   it('a full moon lifts mood — unless the pawn is sheltered (negatedBy)', () => {
-    const D = 300 * 60; // ticks per in-game day
-    const fullMoonNight = 15 * D + Math.round(0.95 * D); // day 15 (full moon), deep night
+    const D = 300 * 60;
+    const fullMoonNight = 15 * D + Math.round(0.95 * D);
     const outdoor = pawnService.getMoodBreakdown(pawn(), makeState(pawn(), [], fullMoonNight));
     expect(outdoor.contributions.find((c) => c.label === 'A full moon')?.value).toBe(5);
-    // Sheltered under a roof → the moon isn't visible, so the effect is negated.
     const sheltered = pawn({}, {}, { transientConditions: ['sheltered'] });
     const out = pawnService.getMoodBreakdown(sheltered, makeState(sheltered, [], fullMoonNight));
     expect(out.contributions.find((c) => c.label === 'A full moon')).toBeUndefined();
@@ -129,13 +119,10 @@ describe('MOOD-REWORK getMoodBreakdown', () => {
         ]
       }
     );
-    // full weight at the moment it lands
     const atStart = pawnService.getMoodBreakdown(p, makeState(p, [], 0));
     expect(atStart.contributions.find((c) => c.label === 'Grieving')?.value).toBe(-12);
-    // ~half faded halfway through its life
     const atHalf = pawnService.getMoodBreakdown(p, makeState(p, [], 100));
     expect(atHalf.contributions.find((c) => c.label === 'Grieving')?.value).toBeCloseTo(-6, 5);
-    // gone once expired
     const afterExpiry = pawnService.getMoodBreakdown(p, makeState(p, [], 200));
     expect(afterExpiry.contributions.find((c) => c.label === 'Grieving')).toBeUndefined();
   });

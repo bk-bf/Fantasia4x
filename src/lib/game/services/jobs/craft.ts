@@ -1,8 +1,3 @@
-// Craft job handler (ADR-016 / ADR-017). Opens a craft job at the workstation tile once an order's
-// inputs are staged there (passive furnaces produce without a pawn job) and, on completion, runs the
-// producing recipe: destroy staged inputs, spawn outputs on the station tile, apply mold wear, drain
-// the queue. `completeCraftOrder` is also called directly for passive furnace production. Extracted
-// from JobService (P-4 handler split).
 import type {
   CraftingInProgress,
   GameState,
@@ -12,16 +7,15 @@ import type {
   DroppedItem,
   PlacedBuilding
 } from '../../core/types';
-// Gated console shim — see core/log.ts. Silences per-tick log/debug/warn unless gameDebug(true).
-import { gatedConsole as console } from '../../core/log';
+import { gatedConsole as console } from '../../core/util/log';
 import { itemService } from '../ItemService';
 import { recipeService } from '../RecipeService';
 import { pawnStatService } from '../PawnStatService';
 import { buildingService } from '../BuildingService';
 import { craftDiscipline, disciplineParent } from './craftDiscipline';
-import { rollCraftQuality, qualityMultiplier } from '../../core/itemQuality';
-import { rollFamed, rollFamedIdentity } from '../../core/famedNames';
-import { itemDefById } from '../../core/itemDefs';
+import { rollCraftQuality, qualityMultiplier } from '../../core/rules/gear/itemQuality';
+import { rollFamed, rollFamedIdentity } from '../../core/gen/famedNames';
+import { itemDefById } from '../../core/defs/items';
 import {
   defaultFilterFor,
   heldQuantity,
@@ -29,26 +23,22 @@ import {
   putIn,
   takeOut,
   vesselOf
-} from '../../core/vessels';
+} from '../../core/rules/gear/vessels';
 import { memoryService } from '../MemoryService';
-import { aggregateMaterialMods } from '../../core/materialProperties';
+import { aggregateMaterialMods } from '../../core/defs/materials';
 import {
   absorbDropIfOnStockpileTile,
   reserveForOrder,
   releaseReservation,
   withDrops
-} from '../../core/GameState';
-import { rng } from '../../core/rng';
+} from '../../core/state/stockpile';
+import { rng } from '../../core/util/rng';
 import { stationTileFor, orderSupplied } from './staging';
 import { wearWorkingPawnTool } from './harvest';
 
-/** The exact recipe an order runs — its stamped `recipeId` (butchery-by-carcass, alt-station recipes)
- *  or, for legacy/simple orders, the item's first producing recipe. Never re-resolve by output item
- *  alone: a shared output (meat from several carcasses, steel from two furnaces) shadows all but one. */
 const recipeForOrder = (o: CraftingInProgress) =>
   o.recipeId ? recipeService.getRecipeById(o.recipeId) : recipeService.getRecipeForItem(o.item.id);
 
-/** How much of a FLUID input the order's own station is already holding, in recipe units. */
 function stationHeldUnits(gs: GameState, order: CraftingInProgress, itemId: string): number {
   if (!isFluidId(itemId) || !order.stationBuildingId) return 0;
   const b = (gs.buildings ?? []).find((x) => x.id === order.stationBuildingId);
@@ -56,12 +46,6 @@ function stationHeldUnits(gs: GameState, order: CraftingInProgress, itemId: stri
   return litres > 0 ? litres : 0;
 }
 
-/**
- * Queue-without-materials (ADR-016): a `pending` craft order holds no input reservations. Each tick
- * we retry reserving its full input set ATOMICALLY — only when every input is reservable do we commit
- * the reservations and clear `pending`, at which point the fetch/craft generators take over. A partial
- * reservation is discarded so the stock stays free for other (already-active) orders meanwhile.
- */
 export function reservePendingOrders(gs: GameState): GameState {
   const queue = gs.craftingQueue ?? [];
   if (!queue.some((o) => o.pending)) return gs;
@@ -73,11 +57,6 @@ export function reservePendingOrders(gs: GameState): GameState {
     let trial = state;
     let allReserved = true;
     for (const [id, q] of Object.entries(order.inputs)) {
-      // A fluid the order's OWN station is already holding needs no reservation — it is in the vessel
-      // the craft happens in, and no hauler can carry it off. Only the shortfall has to be fetched.
-      // Without this a melt-then-cast pair never leaves `pending`: the metal is in the crucible, the
-      // reservation walk only sees haulable stacks, and the order waits forever for a bucket of
-      // molten copper that nobody should ever be carrying.
       const need = q - stationHeldUnits(trial, order, id);
       if (need <= 0) continue;
       const res = reserveForOrder(trial, id, need, order.id);
@@ -88,11 +67,10 @@ export function reservePendingOrders(gs: GameState): GameState {
       }
     }
     if (!allReserved) {
-      // Discard the partial reservations (they only ever touched the throwaway `trial`).
       releaseReservation(trial, order.id);
-      return order; // still pending
+      return order;
     }
-    state = trial; // commit
+    state = trial;
     changed = true;
     const { pending: _drop, ...rest } = order;
     return rest;
@@ -102,43 +80,26 @@ export function reservePendingOrders(gs: GameState): GameState {
 }
 
 export function generate(jobs: Job[], gs: GameState): Job[] {
-  // Remove craft jobs for queue entries that no longer exist or are paused (pausing stops active work;
-  // workDone on the order is preserved, the job re-opens on resume).
   jobs = jobs.filter((j) => {
     if (j.type !== 'craft') return true;
     const order = (gs.craftingQueue ?? []).find((e) => e.id === j.craftQueueId);
     return !!order && !order.paused;
   });
 
-  // Real queue priority: a physical workstation works ONE order at a time, in queue (array) order.
-  // `stationsBusy` holds the station building ids that already own an active craft job — pre-seeded
-  // from in-progress craft jobs (don't preempt started work / waste workDone), then claimed by the
-  // earliest supplied order as we walk the queue. Hand-craftable orders (no station building) aren't
-  // gated — they have no shared station to serialise on. Keyed by stationBuildingId so two physical
-  // stations of the same type still run in parallel.
   const stationsBusy = new Set<string>();
   for (const j of jobs) {
     if (j.type !== 'craft' || !j.buildingId) continue;
     stationsBusy.add(j.buildingId);
   }
 
-  // Add a craft job only once the order's inputs are fully staged on its station tile, and
-  // target that tile so the pawn actually walks to the workstation to craft (ADR-016).
   for (const order of gs.craftingQueue ?? []) {
     if (!order.id) continue;
-    // Paused: no craft job, and (by skipping before the station-busy claim) it doesn't block later
-    // orders queued at the same station.
     if (order.paused) continue;
-    // ADR-016 passive furnaces: no pawn-worked craft job — the station produces it over time
-    // (GameEngineImpl.processPassiveProduction). Inputs are still fetched/staged as usual. Honour
-    // per-RECIPE `passive` (not just passive STATIONS) so a mixed station like stone_forge/hearth can
-    // smelt/render passively while its shaping/cooking recipes stay pawn-worked.
     if (
       recipeService.isPassive(recipeForOrder(order)) ||
       recipeService.isPassiveStation(order.stationType)
     )
       continue;
-    // Skip this order if a higher-priority (earlier-queued) order already holds its station.
     if (order.stationBuildingId && stationsBusy.has(order.stationBuildingId)) continue;
     const station = stationTileFor(order, gs);
     if (!station) continue;
@@ -167,32 +128,14 @@ export function complete(job: Job, gs: GameState): GameState {
   if (!job.craftQueueId) return gs;
   const entry = (gs.craftingQueue ?? []).find((e) => e.id === job.craftQueueId);
   if (!entry) return gs;
-  // §Q (R8): roll the output's quality tier from the working pawn's quality work-axis (stats.jsonc —
-  // WORK-EXPERIENCE: experience-level driven, plus the sight/manipulation/consciousness capacities,
-  // so a wounded or in-the-dark worker produces worse work through the existing model). Passive
-  // furnace production has no working pawn (handled by completeCraftOrder's undefined default →
-  // Standard). The quality axis is the DISCIPLINE's `*_quality` (cooking for a meal, metalworking at
-  // an anvil, leatherworking at a tannery, alchemy at a lab, butchery at a butcher spot, else generic
-  // crafting) — same resolution JobService uses for the labor category, so priority and quality can't
-  // drift. A skilled cook also stretches ingredients into more nourishing portions (tier scales meal
-  // yield). The ROLL is handed down as a closure so a batch rolls EACH unit separately (Phase B).
   let rollQuality: (() => ItemQuality) | undefined;
-  // §I: the vanishingly-rare Famed roll ABOVE the quality tiers — only a pawn-worked craft can hit it
-  // (passive furnaces never Famed), and only a master, boosted at an arcane/infused station. Returns the
-  // legend identity when it hits, else null.
   let rollFamedFn: (() => ReturnType<typeof rollFamedIdentity> | null) | undefined;
   const pawn = job.claimedBy ? gs.pawns.find((p) => p.id === job.claimedBy) : undefined;
-  // PAWN-MEMORY: track the best/worst tier this pawn rolls across the batch — a masterwork or a botch
-  // is a memory nearby pawns pick up and may bring up later (a boast, or a ribbing about a fumble).
   let bestTier = -1;
   let worstTier = 6;
-  // Pawn-skill yield: the working pawn's `*_yield` work-axis scales the OUTPUT (like harvest yield in
-  // ResourceObjectService). Only butchery defines a yield axis, so this is 1 for every other discipline
-  // and for passive furnaces (no pawn) — i.e. a skilled butcher renders more off a carcass, on top of the
-  // station's `butcheryYieldBonus`; ordinary crafts are untouched.
   let skillYieldMult = 1;
   if (pawn) {
-    const discipline = craftDiscipline(entry); // the LEAF (so butchery_yield fires; falls back to parent)
+    const discipline = craftDiscipline(entry);
     const mods = pawnStatService.getWorkModifiers(
       pawn,
       discipline,
@@ -200,10 +143,6 @@ export function complete(job: Job, gs: GameState): GameState {
       disciplineParent(discipline)
     );
     const axis = mods.quality ?? 1;
-    // A yield BONUS only (floored at 1): a skilled butcher renders MORE off a carcass, but a poor one
-    // still gets the full base drop — never a penalty. Critical because the signature drops (great_fang,
-    // boss organs, ivory, antler/horn) come off as a SINGLE unit; a sub-1 multiplier would round them
-    // away entirely, so an unskilled butcher could lose the boss trophy. Skill is upside, not a tax.
     skillYieldMult = Math.max(1, mods.yield ?? 1);
     rollQuality = () => {
       const q = rollCraftQuality(axis, () => rng.random());
@@ -224,7 +163,6 @@ export function complete(job: Job, gs: GameState): GameState {
       rollFamed(axis, arcane, () => rng.random()) ? rollFamedIdentity(() => rng.random()) : null;
   }
   let state = completeCraftOrder(entry, gs, rollQuality, rollFamedFn, skillYieldMult);
-  // Record the craft memory once the tiers are known (Masterwork+ → masterwork; Awful → botch).
   if (pawn && pawn.position && bestTier >= 0) {
     const itemName = itemDefById(entry.item.id)?.name ?? 'their work';
     const who = pawn.name.split(' ')[0];
@@ -238,7 +176,7 @@ export function complete(job: Job, gs: GameState): GameState {
         {
           subjectName: who,
           detail: itemName,
-          memorability: bestTier >= 5 ? 0.9 : undefined // a Legendary is historic; else the def's base
+          memorability: bestTier >= 5 ? 0.9 : undefined
         }
       );
     } else if (worstTier === 0) {
@@ -248,21 +186,11 @@ export function complete(job: Job, gs: GameState): GameState {
       });
     }
   }
-  // ADR-009 step 2: wear the WORKING pawn's craft tool (e.g. the knife used at a butcher spot /
-  // tannery). Only the pawn-worked path wears a tool — passive furnace production has no pawn.
   const req = recipeService.toolRequirementForRecipe(recipeForOrder(entry));
   if (req && job.claimedBy) state = wearWorkingPawnTool(job.claimedBy, req.workType, state);
   return state;
 }
 
-/**
- * ADR-016: complete a craft ORDER (independent of a pawn job) — destroy the inputs staged on
- * its station, spawn outputs on the station tile, apply mold wear, and remove the order. Used
- * by both the pawn-worked craft completion (complete) and passive furnace production
- * (GameEngineImpl.processPassiveProduction).
- */
-/** Output item types that carry a per-stack §Q quality tier (instance-bearing equipment & tools).
- *  Bulk materials/consumables stack freely and don't carry per-unit quality (batch-quality open Q). */
 const QUALITY_STAMPED_TYPES = new Set(['weapon', 'armor', 'tool']);
 
 export function completeCraftOrder(
@@ -270,22 +198,13 @@ export function completeCraftOrder(
   gs: GameState,
   rollQuality?: () => ItemQuality,
   rollFamedFn?: () => ReturnType<typeof rollFamedIdentity> | null,
-  // The working pawn's `*_yield` skill multiplier on output (1 for non-butchery / passive furnaces).
   skillYieldMult = 1
 ): GameState {
-  // Recipe registry (Stage C): a craft completion runs the producing recipe once per queued
-  // unit and emits ALL its outputs — the primary product plus any byproducts (e.g. splitting
-  // a log yields firewood AND branches; charcoal burns yield ash).
   const itemId = entry.item.id;
   const quantity = entry.quantity ?? 1;
-  // Use the order's EXACT recipe (butchery-by-carcass etc.) — NOT getRecipeForItem(itemId), which for a
-  // carcass order (item = carcass, an input) would find no recipe and wrongly emit the carcass itself.
   const recipe = recipeForOrder(entry);
   const recipeOutputs: Record<string, number> = recipe ? recipe.outputs : { [itemId]: 1 };
 
-  // Butchery: the consumed carcass's CONDITION (its top unit — see core/carcassCondition.ts) scales the
-  // meat/pelt yield, so a half-eaten or spoiled carcass gives less. Read it off the reserved carcass
-  // input staged for this order (destroyed below); 1.0 for ordinary crafts with no carcass input.
   const carcassInput = (gs.droppedItems ?? []).find(
     (d) =>
       d.reservedFor === entry.id &&
@@ -294,12 +213,6 @@ export function completeCraftOrder(
   );
   const conditionMult = carcassInput ? (carcassInput.unitConditions![0] ?? 100) / 100 : 1;
 
-  // Butchery YIELD: a better-equipped butcher STATION (Dressing Stone +25%, Flensing Table / Sanguinary
-  // Altar +45%) AND a more skilled butcher (the working pawn's `butchery_yield` skill axis, passed as
-  // `skillYieldMult`) both render more meat/hide/bone from the same carcass. Station read off the ACTUAL
-  // station the order ran at (stationBuildingId), not the authored one — the player may have re-pinned it.
-  // Station bonus is 0 for non-butchery stations and skillYieldMult is 1 for non-butchery disciplines
-  // (only butchery defines a yield axis), so ordinary crafts stay a clean ×1 no-op.
   const actualStationType = entry.stationBuildingId
     ? (gs.buildings ?? []).find((b) => b.id === entry.stationBuildingId)?.type
     : (entry.stationType ?? undefined);
@@ -310,25 +223,16 @@ export function completeCraftOrder(
   const outputs: Record<string, number> = {};
   for (const [outId, outQty] of Object.entries(recipeOutputs)) {
     let qty = outQty * quantity;
-    // Carcass condition (spoilage) and the butchery station's yield bonus both scale the output
-    // (floor + rng "carry" so a fractional multiplier still pays off proportionally per unit rather
-    // than rounding away). yieldMult is 1 for non-butchery crafts, so this is a no-op for them.
     const yieldScale = conditionMult * yieldMult;
     if (yieldScale !== 1) {
       const scaled = qty * yieldScale;
       if (isFluidId(outId)) {
-        // A fluid is measured in litres and pours in fractions, so it takes the multiplier straight.
-        // Flooring it with the carry below would round a 0.4 L render of bile to nothing or to 1 L.
         qty = Math.round(scaled * 1000) / 1000;
       } else {
         const whole = Math.floor(scaled);
         qty = whole + (rng.random() < scaled - whole ? 1 : 0);
       }
     }
-    // §F cooked-meal quality: FOOD outputs are scaled by a rolled quality tier (cooking_quality →
-    // 0.8×–1.8× via qualityMultiplier) — bulk food carries no per-unit identity, so meal quality
-    // lands as nourishment YIELD at cook time rather than a per-stack tier. The fractional remainder
-    // is an rng "carry" so even single-portion meals benefit on average (not just batches).
     if (rollQuality && itemService.getItemById(outId)?.category === 'food') {
       const scaled = qty * qualityMultiplier(rollQuality());
       if (isFluidId(outId)) {
@@ -341,30 +245,16 @@ export function completeCraftOrder(
     outputs[outId] = (outputs[outId] ?? 0) + qty;
   }
 
-  // ADR-016: destroy the inputs staged on the station (the reserved drops carried here), then
-  // spawn the outputs as drops ON the station tile. If the tile is a stockpile they're absorbed;
-  // otherwise they sit on the station until a hauler stores them — exactly the physical model.
-  // §M material durability: the dynamic material this craft consumed (oak vs pine plank, sturdy vs thin
-  // leather) scales the finished item's durability. Read it off the reserved inputs before they're
-  // destroyed below; 1 (neutral) when nothing material was used.
   const matMods = aggregateMaterialMods(
     (gs.droppedItems ?? []).filter((d) => d.reservedFor === entry.id).map((d) => d.resourceId),
     'item'
   );
   const matDur = matMods.durability;
-  // §M material weight: a piece made from a heavier hide (mammoth ×1.35) carries heavier than one from a
-  // light one (coney ×0.75). Stamped like matDur; applied against def.weightKg in getCurrentCarryLoad.
   const matWeight = matMods.weight;
 
   const station = stationTileFor(entry, gs);
-  // CONTAINERS-AND-FLUIDS §2: the staged inputs are destroyed — EXCEPT a vessel that carried a fluid
-  // input here. Emptying a barrel of brine into the tanning bucket does not consume the barrel; the
-  // fluid is drawn out and the vessel is released, standing on the station for the next hauler.
   const droppedItems = consumeStagedInputs(gs, entry);
   const newQueue = (gs.craftingQueue ?? []).filter((e) => e.id !== entry.id);
-  // …and whatever the recipe still wants that the STATION was holding in its own body comes out of
-  // there (see `stagedQty`). Staged vessels are drained first, so a barrel carried in is emptied
-  // before the vat dips into its own stock.
   const drainedBuildings = drainStationFluidInputs(gs, entry, droppedItems);
   let state: GameState = {
     ...gs,
@@ -378,9 +268,6 @@ export function completeCraftOrder(
     const next = [...(state.droppedItems ?? [])];
     for (const [outId, qty] of Object.entries(outputs)) {
       if (qty <= 0) continue;
-      // CONTAINERS-AND-FLUIDS §2: a fluid can never be set down as a stack. It is poured — into the
-      // station's own body when the station IS a vessel (a steeping vat, a brewing cask), otherwise
-      // into a vessel staged on the tile that allows it. Whatever will not fit is lost, and says so.
       if (isFluidId(outId)) {
         const captured = captureFluid(outId, qty, entry, station, next, state);
         state = captured.state;
@@ -391,9 +278,6 @@ export function completeCraftOrder(
           );
         continue;
       }
-      // A newly made VESSEL is born with the colony's default allow-list for its kind (usually
-      // nothing), and rides an instance so that list and anything later poured into it survive
-      // hauling and storage. One instance per unit — two jugs are two jugs.
       if (vesselOf(outId)) {
         for (let i = 0; i < qty; i++) {
           const id = `craft-${outId}-${station.x}-${station.y}-t${gs.turn}-${rng.random().toString(36).slice(2, 5)}`;
@@ -417,25 +301,13 @@ export function completeCraftOrder(
         }
         continue;
       }
-      // §Q: stamp rolled tiers onto instance-bearing equipment/tools only; bulk byproducts go plain.
       const stamp =
         rollQuality !== undefined &&
         QUALITY_STAMPED_TYPES.has(itemService.getItemById(outId)?.type ?? '');
-      // §F8: the PRIMARY output of a mixed-ingredient dish gets a composed per-instance name
-      // ("Venison & Cabbage Stew"). A named drop won't fold into a counted pile (GameState.ts) — each
-      // distinct dish stays its own stack, which is the intent for a self-naming meal.
       const dishName =
         outId === itemId
           ? itemService.composeDynamicDishName(itemId, entry.selectedIngredients)
           : undefined;
-      // PERF (render-side FPS): a plain bulk output folds into an existing LOOSE pile of the same
-      // resource already sitting on the station tile, instead of spawning a fresh stack every
-      // completion. Without this, a station crafted repeatedly off any stockpile (e.g. a chopping_block
-      // turning logs → firewood) piles up dozens of redundant same-tile stacks — `droppedItems` grows
-      // unbounded and the per-frame item overlay (overlayDroppedItems, no viewport cull) iterates +
-      // re-resolves them all every frame, tanking FPS while the sim TPS stays flat. (Stockpile tiles
-      // already merge via absorbDropIfOnStockpileTile; this is the non-stockpile case.) Identity-bearing
-      // drops — §Q quality, dish name, tracked instance, per-unit carcass conditions — never fold.
       const plain = !stamp && !dishName;
       if (plain) {
         const mergeIdx = next.findIndex(
@@ -457,11 +329,6 @@ export function completeCraftOrder(
         }
       }
       if (stamp) {
-        // WORK-EXPERIENCE Phase B: a batch rolls EACH unit's tier separately — a ×3 order can come
-        // out 1 Crude + 2 Standard instead of three copies of one lucky roll. One drop per rolled
-        // tier (same-tier units share a stack; quality-bearing drops never fold into loose piles).
-        // §I: each unit also rolls the Famed tail; a Famed unit peels out into its OWN unique drop
-        // (name/history/stat-mult/enchants), never folded into a tier stack.
         const byTier = new Map<ItemQuality, number>();
         const famedUnits: Array<{ q: ItemQuality; id: ReturnType<typeof rollFamedIdentity> }> = [];
         for (let i = 0; i < qty; i++) {
@@ -487,9 +354,6 @@ export function completeCraftOrder(
         }
         for (const { q, id: identity } of famedUnits) {
           const id = `craft-${outId}-${station.x}-${station.y}-t${gs.turn}-${rng.random().toString(36).slice(2, 5)}`;
-          // A Famed unit rides a full ItemInstance (like a mob's famed drop via dropMobGear) — an
-          // instance-bearing drop never stack-merges, so the legend keeps its unique identity through
-          // haul/stockpile and carries straight onto the equipped/carried instance on pickup.
           const instance: ItemInstance = {
             instanceId: `famed-${outId}-${station.x}-${station.y}-t${gs.turn}-${rng.random().toString(36).slice(2, 5)}`,
             itemId: outId,
@@ -531,37 +395,15 @@ export function completeCraftOrder(
     state = { ...state, droppedItems: next };
     for (const id of newDropIds) state = absorbDropIfOnStockpileTile(state, id);
   } else {
-    // Station vanished mid-craft — fall back to crediting the general stockpile so output isn't lost.
     state = itemService.addItems(outputs, state);
   }
-
-  // §5 casting molds are single-use raw material: a casting recipe lists `clay_mold` in its
-  // inputs and consumes it like any other ingredient (the mold is broken to free the casting).
-  // No separate wear pass — input consumption already spent it.
 
   console.log(
     `[JobService] Crafting complete: ${itemId} ×${outputs[itemId] ?? 0} (${Object.keys(outputs).length} output types) at station ${entry.stationBuildingId ?? '—'}`
   );
-  // Recompute the colony ledger once, at the end. A completion can change stock in three ways at
-  // once — inputs spent, outputs laid down, and (CONTAINERS-AND-FLUIDS §2) a fluid poured into the
-  // station's own body — and only `withDrops` counts all three.
   return withDrops(state, state.droppedItems ?? []);
 }
 
-/**
- * CONTAINERS-AND-FLUIDS §2 — put a fluid output somewhere it can legally be. In order:
- *
- *   1. the STATION's own body, when its def states a `fluidCapacityL` — a steeping vat holds its own
- *      brine, a cask its own ale, and that fluid counts in the colony's stock where it stands;
- *   2. a VESSEL on the station tile that allows this fluid and has room — first one reserved for this
- *      order, then any other vessel sitting there;
- *   3. nowhere, in which case it SPILLS and is gone. A colony that keeps butchering into a full catch
- *      basin, or brewing into a full cask, loses the overflow — the station does not silently grow a
- *      bigger belly, and the sim will not invent a puddle to hold it. Emptying the station (or keeping
- *      vessels standing on it) is the player's job, and the warning below says so.
- *
- * Returns the state with the fluid placed and how many UNITS could not be placed.
- */
 function captureFluid(
   outId: string,
   qty: number,
@@ -572,7 +414,6 @@ function captureFluid(
 ): { state: GameState; lost: number } {
   let remainingL = qty;
 
-  // 1 — the station itself.
   const placed = (state.buildings ?? []).find(
     (b) => b.id === entry.stationBuildingId && b.status === 'complete'
   );
@@ -595,7 +436,6 @@ function captureFluid(
     }
   }
 
-  // 2 — vessels standing on the station tile, this order's own staged ones first.
   if (remainingL > 0) {
     const onTile = next
       .map((d, i) => ({ d, i }))
@@ -609,8 +449,6 @@ function captureFluid(
         ...d.instance!,
         contents: d.instance!.contents?.map((e) => ({ ...e }))
       };
-      // The craft's own output is what this vessel was staged FOR, so the player's allow-list is not
-      // asked here — only what the vessel can physically hold.
       const poured = putIn(inst, outId, remainingL);
       if (poured <= 0) continue;
       next[i] = { ...d, instance: inst };
@@ -624,13 +462,6 @@ function captureFluid(
   };
 }
 
-/**
- * Draw a recipe's fluid inputs out of the station's OWN body for whatever the staged vessels did not
- * already cover. The counterpart to `stagedQty` counting that fluid as supplied: a melt sits in the
- * crucible it was made in, and the cast pours straight out of it.
- *
- * Returns a new buildings array, or null when nothing was drawn (the common case — no allocation).
- */
 function drainStationFluidInputs(
   gs: GameState,
   entry: CraftingInProgress,
@@ -642,7 +473,6 @@ function drainStationFluidInputs(
   let contents: FluidEntry[] | null = null;
   for (const [itemId, units] of Object.entries(entry.inputs ?? {})) {
     if (!isFluidId(itemId) || units <= 0) continue;
-    // What the staged vessels standing on the tile still hold for this order is spent first.
     const inVessels = remaining
       .filter((d) => d.reservedFor === entry.id)
       .reduce((sum, d) => sum + heldQuantity(d.instance, itemId), 0);
@@ -660,13 +490,6 @@ function drainStationFluidInputs(
   return (gs.buildings ?? []).map((b) => (b.id === placed.id ? { ...b, fluidContents: kept } : b));
 }
 
-/**
- * Spend the inputs an order staged on its station. A plain stack is destroyed outright; a VESSEL has
- * exactly the fluid the recipe asked for drawn out of it and then survives, unreserved, on the tile.
- *
- * Only the recipe's own inputs come out — a barrel carried here for two litres of brine goes home
- * still holding the rest of what was in it.
- */
 function consumeStagedInputs(gs: GameState, entry: CraftingInProgress): DroppedItem[] {
   const want: Record<string, number> = { ...(entry.inputs ?? {}) };
   const out: DroppedItem[] = [];
@@ -675,7 +498,7 @@ function consumeStagedInputs(gs: GameState, entry: CraftingInProgress): DroppedI
       out.push(d);
       continue;
     }
-    if (!d.instance?.contents?.length) continue; // a plain staged stack — consumed
+    if (!d.instance?.contents?.length) continue;
     const inst: ItemInstance = {
       ...d.instance,
       contents: d.instance.contents.map((e) => ({ ...e }))

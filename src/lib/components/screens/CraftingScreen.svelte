@@ -1,46 +1,37 @@
 <script lang="ts">
   import { gameState, currentCulture } from '$lib/stores/gameState';
-  import BuildCard from '$lib/components/UI/BuildCard.svelte';
-  import ItemPills, { type ItemPillView } from '$lib/components/UI/ItemPills.svelte';
-  import FilterTabs from '$lib/components/UI/FilterTabs.svelte';
-  import SearchBar from '$lib/components/UI/SearchBar.svelte';
+  import BuildCard from '$lib/components/UI/hud/BuildCard.svelte';
+  import ItemPills, { type ItemPillView } from '$lib/components/UI/widget/ItemPills.svelte';
+  import FilterTabs from '$lib/components/UI/widget/FilterTabs.svelte';
+  import SearchBar from '$lib/components/UI/widget/SearchBar.svelte';
   import { persisted, persist } from '$lib/stores/uiPersist';
-  import BackButton from '$lib/components/UI/BackButton.svelte';
+  import BackButton from '$lib/components/UI/widget/BackButton.svelte';
   import ITEMS_DATABASE from '$lib/game/database/items/items.jsonc';
   import { itemService } from '$lib/game/services/ItemService';
   import { recipeService } from '$lib/game/services/RecipeService';
   import { buildingService } from '$lib/game/services/BuildingService';
   import { jobService } from '$lib/game/services/JobService';
-  import { getMaterialProperty } from '$lib/game/core/materialProperties';
-  import { WORK_CATEGORIES } from '$lib/game/core/Work';
-  import { releaseReservation } from '$lib/game/core/GameState';
-  import { categoryPath, labelFor } from '$lib/utils/itemCategoryTree';
+  import { getMaterialProperty } from '$lib/game/core/defs/materials';
+  import { WORK_CATEGORIES } from '$lib/game/core/defs/work';
+  import { releaseReservation } from '$lib/game/core/state/stockpile';
+  import { categoryPath, labelFor } from '$lib/components/util/itemCategoryTree';
   import { onDestroy } from 'svelte';
   import type { Item } from '$lib/game/core/types';
 
-  // Recipe registry: per-item recipe lookups (static DBs — plain functions, not reactive).
   const recipeOf = (itemId: string) => recipeService.getRecipeForItem(itemId);
-  // `category:plank`-style slots are expanded to a representative concrete item for display so the
-  // cost row shows a real material name, never a raw `category:` key.
   const costOf = (itemId: string): Record<string, number> =>
     itemService.calculateCraftingCost(itemId);
-  /** Byproduct outputs (excluding the primary item) for display. */
   const byproductsOf = (itemId: string): [string, number][] => {
     const r = recipeOf(itemId);
     if (!r) return [];
     return Object.entries(r.outputs).filter(([id]) => id !== itemId);
   };
   const primaryQtyOf = (itemId: string): number => recipeOf(itemId)?.outputs[itemId] ?? 1;
-  /** Required workstation display name for a recipe, or null when hand-craftable (no station). */
   const stationNameOf = (itemId: string): string | null => {
     const stationId = recipeOf(itemId)?.station;
     if (!stationId) return null;
     return buildingService.getBuildingById(stationId)?.name ?? stationId.replace(/_/g, ' ');
   };
-  /** Named implement a recipe REQUIRES to be worked (recipe/station `toolRequirement` → the work
-   *  category's gating tool, e.g. a Clay Cooking Pot for stews). Surfaced on the card so the player
-   *  knows why a stew won't cook without a pot — the requirement is otherwise invisible (toolTier is 0)
-   *  and doesn't block queuing. `met` = the colony holds one (in stock or carried by a pawn). */
   const requiredToolOf = (itemId: string): { name: string; met: boolean } | null => {
     const req = recipeService.toolRequirementForRecipe(recipeOf(itemId));
     if (!req) return null;
@@ -59,24 +50,18 @@
         (gs.pawns ?? []).some((p) => jobService.pawnHasToolFor(p, req.workType, minTier)));
     return { name, met };
   };
-  /** Human label for the WORK CATEGORY (labor) a craft belongs to — the recipe/station tool-requirement
-   *  workType (Butchery / Leatherworking / Metalworking / …), with Cooking for food and General Crafting
-   *  as the catch-all. Surfaced in the recipe's hover panel so the player knows which labor performs it. */
   const workName = (id: string): string =>
     WORK_CATEGORIES.find((c) => c.id === id)?.name ?? id.replace(/_/g, ' ');
   function jobLabelOf(item: Item): string {
     if (item.category === 'carcass') return 'Butchery';
     const req = recipeService.toolRequirementForRecipe(recipeOf(item.id));
     if (req?.workType) return workName(req.workType);
-    // Mirror JobService._jobTypeToWorkKey: a food/edible craft is Cooking, everything else General Crafting.
     const t = String(item.type ?? '');
     const c = item.category ?? '';
     if (t === 'food' || ['food', 'cooking', 'drink', 'meat'].includes(c)) return 'Cooking';
     return 'General Crafting';
   }
 
-  // §M One-line "what this ingredient brings" note under a chosen dish slot: the dynamic-recipe
-  // variant's nutrition tweak (food) and/or the material's stat property (crafted-gear materials).
   function dishSlotNote(itemId: string, slotKey: string, ingredientId: string): string | null {
     const parts: string[] = [];
     const variant = recipeOf(itemId)?.dynamicRecipe?.[slotKey]?.variants?.[ingredientId];
@@ -92,39 +77,24 @@
   let completedResearch: string[] = [];
   let currentPopulation = 0;
 
-  // Read item amounts directly from the stockpile aggregate — the single source of truth.
-  // gameState.item is a legacy no-op array (addToItemArray is a stub) and must not be used.
   $: itemMap = $gameState?.stockpile ?? {};
 
-  // Per-carcass-type average condition (0–100) — drives the badge + yield-pill scaling below. Computed
-  // worker-side and shipped on the snapshot (`_carcassCondition`); no per-unit arrays cross the boundary.
   $: carcassConditions = $gameState?._carcassCondition ?? {};
 
   $: getItemAmount = (itemId: string): number => itemMap[itemId] || 0;
 
-  // All unlocked recipes — split by workshop in template.
-  // Filtered by research + population only (not materials/tools/building) so recipes are always
-  // visible for built stations; the per-item craftable flag controls the CRAFT button.
   $: allCraftableItems = $gameState
     ? (ITEMS_DATABASE as Item[]).filter((item) => {
-        // Include carcass items for butchery (dispatched by carcass → its butchery recipe).
         if (item.category === 'carcass') return true;
-        // Include items with a producing recipe (authored or synthesised)
         const recipe = recipeOf(item.id);
         if (!recipe) return false;
-        // Butchery OUTPUTS (meat/hide/bone) are obtained from the CARCASS card, not crafted directly —
-        // suppress their redundant item cards. A recipe that consumes a carcass IS a butchery recipe.
         if (
           Object.keys(recipe.inputs ?? {}).some(
             (i) => itemService.getItemById(i)?.category === 'carcass'
           )
         )
           return false;
-        // Dedup byproducts: only a recipe's PRIMARY (first) output gets a card. Otherwise a recipe that
-        // also yields branches/sawdust/ash is listed a SECOND time under that byproduct's category (the
-        // "Green Firewood" duplicate — split_firewood's branch byproduct rendered its own card set).
         if (Object.keys(recipe.outputs ?? {})[0] !== item.id) return false;
-        // DEBUG `_devResearchGateOff`: show research-locked recipes too (toggle in the DEBUG tab).
         if (
           !$gameState._devResearchGateOff &&
           recipe.researchRequired &&
@@ -139,11 +109,6 @@
 
   $: firstCraftingInProgress = craftingQueue.length > 0 ? craftingQueue[0] : null;
 
-  // Craft tabs: the shared stockpile-filter taxonomy (itemCategoryTree), used as FLAT tabs at the LEAF
-  // level — no parent→child nesting (e.g. Goods→Primitive shows just "Primitive"). Gear is kept coarse:
-  // weapons/tools/armour are split by MATERIAL in the data, so they'd scatter into material tabs —
-  // route those by function (Melee/Ranged Weapons, Ammunition, Tools, Armor) instead. Jewelry (worn,
-  // but its own tab) is pulled out before the armour fold. Order: gear → consumables → materials → goods.
   const CRAFT_TAB_ORDER: string[] = [
     labelFor('tools'),
     labelFor('melee'),
@@ -168,27 +133,20 @@
     labelFor('light')
   ];
   function craftCategory(item: Item): string {
-    // Worn jewelry (rings/amulets/crowns) — its own tab, though it's type:armor in the data.
     if (item.category === 'jewelry') return 'Jewelry';
-    // Armour is categorised by MATERIAL (leather/metal/cloth…), so route by type — not categoryPath,
-    // which would scatter it into the material tabs.
     if (String(item.type) === 'armor') return 'Armor';
     const path = categoryPath(item);
     if (path[0] === 'weapons') {
       if (path[1] === 'shields') return 'Armor';
       if (path[1] === 'melee') return labelFor('melee');
-      if (path[1] === 'ranged') return labelFor('ranged'); // incl. arcane staves
+      if (path[1] === 'ranged') return labelFor('ranged');
       if (path[1] === 'ammunition') return labelFor('ammunition');
       return labelFor('weapons');
     }
-    if (path[0] === 'tools') return labelFor('tools'); // collapse every work-type tool into one tab
-    // Everything else (materials / goods / consumables / food): the deepest leaf label.
+    if (path[0] === 'tools') return labelFor('tools');
     return labelFor(path[path.length - 1]);
   }
 
-  // A craftable card. A SINGLE-slot dynamic recipe (e.g. spit_meat over any meat) expands into one
-  // entry per available ingredient (pick by picking a card). A MULTI-slot dish (stew/pie) renders ONE
-  // card with a per-slot ingredient picker (see `slots`); the chosen ids drive the cost + composed name.
   type DishSlot = { key: string; label: string; quantity: number; options: Item[] };
   type CraftEntry = {
     key: string;
@@ -197,20 +155,16 @@
     description: string | null;
     category: string;
     selectedIngredients?: Record<string, string>;
-    /** Extra inputs contributed by the chosen dynamic ingredient(s). */
     dynamicCost: Record<string, number>;
-    /** Multi-slot dish: the per-slot pickers to render in the card body. */
     slots?: DishSlot[];
   };
 
-  // Per-dish manual ingredient selection: dish itemId → slotKey → chosen ingredient itemId.
-  // The player picks each slot; an empty/partial selection leaves the card a non-craftable placeholder.
   let dishSel: Record<string, Record<string, string>> = {};
   function setDishSlot(itemId: string, slotKey: string, ingredientId: string) {
     const cur = { ...(dishSel[itemId] ?? {}) };
     if (ingredientId) cur[slotKey] = ingredientId;
     else delete cur[slotKey];
-    dishSel = { ...dishSel, [itemId]: cur }; // reassign → craftEntries recompute
+    dishSel = { ...dishSel, [itemId]: cur };
   }
 
   function entriesFor(
@@ -234,14 +188,9 @@
 
     const slotEntries = Object.entries(recipe.dynamicRecipe);
 
-    // MULTI-slot dish → one card with a picker per slot. The composed name/cost come from the live
-    // selection; all slots must be chosen before it's craftable (a partial pick stays a placeholder).
     if (slotEntries.length > 1) {
       const slots: DishSlot[] = slotEntries.map(([key, slot]) => {
         const cats = recipeService.slotCategories(slot);
-        // EVERY individual ingredient of the slot's categories (venison, rabbit, trout, …), not just
-        // what's in stock — full ingredient control, in-stock sorted first, exactly like the building
-        // material picker. Out-of-stock picks just render the slot short (MISSING/QUEUE), same as a wall.
         const seen = new Set<string>();
         const options = cats
           .flatMap((c) => itemService.getItemsByCategory(c))
@@ -273,11 +222,8 @@
       ];
     }
 
-    // Single-slot dynamic recipe → a card per in-stock ingredient (the established shape).
     const [slotKey, slot] = slotEntries[0];
     const cats = recipeService.slotCategories(slot);
-    // Dedupe by id across cats; getItemsByCategory is pseudo-category aware (`log`/`plank` match by id
-    // suffix, not item.category — logs share the `wood` category with planks/beams).
     const variantItems = [
       ...new Map(
         cats.flatMap((c) => itemService.getItemsByCategory(c)).map((i) => [i.id, i])
@@ -285,7 +231,6 @@
     ];
     const inStock = variantItems.filter((vi) => (amounts[vi.id] ?? 0) >= slot.quantity);
     if (inStock.length === 0) {
-      // Empty larder: one discoverability card with the recipe's default identity (renders MISSING).
       return [
         {
           key: item.id,
@@ -313,8 +258,6 @@
 
   $: craftEntries = allCraftableItems.flatMap((i) => entriesFor(i, itemMap, dishSel));
 
-  // Tabs present in the current craftable set, ordered by CRAFT_TAB_ORDER; any leaf not in that list
-  // (a category we didn't pre-order) is appended alphabetically so nothing silently disappears.
   $: presentCats = new Set(craftEntries.map((e) => e.category));
   $: orderedCats = [
     ...CRAFT_TAB_ORDER.filter((c) => presentCats.has(c)),
@@ -326,8 +269,6 @@
     entries: craftEntries.filter((e) => e.category === cat)
   }));
 
-  // Restored across tab toggles (persist helper); the guard below falls back to the first category if
-  // the remembered one no longer exists (e.g. research changed the available list).
   let selectedCat = persisted('crafting.cat', '');
   $: if (craftCategories.length && !craftCategories.some((c) => c.id === selectedCat)) {
     selectedCat = craftCategories[0].id;
@@ -335,8 +276,6 @@
   $: persist('crafting.cat', selectedCat);
   $: activeCat = craftCategories.find((c) => c.id === selectedCat) ?? craftCategories[0];
 
-  // Live search. When the query is non-empty it spans every category (tabs are bypassed);
-  // otherwise the active category's entries are shown.
   let searchQuery = '';
   $: searchTerm = searchQuery.trim().toLowerCase();
   $: displayedEntries = searchTerm
@@ -369,17 +308,9 @@
   }
 
   function cancelCrafting(queueId: string) {
-    // ADR-016: nothing was consumed at queue time — releaseReservation frees the (reserved or
-    // staged) inputs, then the order is dropped (by id). See commands.ts `cancelCrafting`.
     gameState.command({ type: 'cancelCrafting', payload: { queueId } });
   }
 
-  // Active queue as per-physical-station LANES. A lane = one complete workstation building. We show a
-  // lane for every complete station that CAN host a queued order — the in-use ones AND idle lower/
-  // alternate tiers — so tasks can be dragged between e.g. Crafting Spot 1 and Crafting Spot 2, or from
-  // a Workbench back onto a Craft Spot (lower tiers coexist, never vanish once a higher tier exists).
-  // Orders with no resolvable station fall into a Hand Crafting lane. Array order within a lane is the
-  // live priority (craft.ts runs one order per station in order).
   $: buildingsList = $gameState?.buildings ?? [];
   const stationTypeOf = (qi: any): string | null => {
     const b = buildingsList.find(
@@ -388,10 +319,6 @@
     return b ? b.type : null;
   };
   $: craftLanes = (() => {
-    // Surface a lane for every complete station that CAN host a queued order — including idle lower or
-    // alternate tiers that currently hold nothing. A Craft Spot must stay a usable target after a
-    // Workbench is built (they coexist): auto-assign prefers the top tier, but the player can still
-    // drag an order onto the Craft Spot. Orders whose required station isn't built fall to Hand Crafting.
     const hostIds = new Set<string>();
     let hasHand = false;
     for (const qi of craftingQueue) {
@@ -432,9 +359,6 @@
     return lanes;
   })();
 
-  // Drag a chip onto another chip (re-pin to its station + order before it) or onto a lane (re-pin to
-  // that station, append). The single moveCraftOrder command does reassign + reorder; re-pinning
-  // rescales workDone so the progress % carries over.
   let dragId: string | null = null;
   function moveOnChip(targetId: string, stationId: string | null) {
     const id = dragId;
@@ -449,7 +373,7 @@
   function moveOnLane(stationId: string | null) {
     const id = dragId;
     dragId = null;
-    if (!id || stationId === null) return; // Hand lane isn't a re-pin target.
+    if (!id || stationId === null) return;
     gameState.command({
       type: 'moveCraftOrder',
       payload: { queueId: id, stationBuildingId: stationId },
@@ -467,7 +391,6 @@
     <BackButton />
   </div>
 
-  <!-- Category tabs: pick a category, see its recipes. Sticky so they stay reachable on scroll. -->
   {#if craftCategories.length > 0}
     <div class="filter-bar">
       <div class="filter-bar-tabs">
@@ -485,8 +408,6 @@
       />
     </div>
 
-    <!-- Active crafting queue — one lane per physical workstation. Drag chips to reorder within a lane
-         (= priority) or between same-type lanes (= which spot does it). Sits between tabs and cards. -->
     {#if craftingQueue.length > 0}
       <div class="build-jobs">
         <div class="jobs-hdr">| CRAFTING QUEUE ({craftingQueue.length})</div>
@@ -644,8 +565,6 @@
               <ItemPills pills={yieldPills} />
             {:else}
               {#if entry.slots}
-                <!-- Multi-slot dish: pick each ingredient. The dish names itself from the picks and is
-                     craftable once every slot is chosen. -->
                 <div class="dish-pickers">
                   {#each entry.slots as s (s.key)}
                     {@const sel = dishSel[item.id]?.[s.key] ?? ''}
@@ -685,7 +604,6 @@
                   >any {dynNeed} <span class="cost-qty">×1</span></span
                 >
               {:else if costPills.length === 0 && !entry.slots}
-                <!-- A multi-slot dish's ingredient pickers ARE its cost, so "free" must not show there. -->
                 <span class="muted-text">free</span>
               {/if}
               {#if primaryQtyOf(item.id) > 1 || byproductsOf(item.id).length > 0}
@@ -719,7 +637,6 @@
     padding: 5px 8px;
   }
 
-  /* Sticky filter + search bar — stays pinned while the card grid scrolls under it. */
   .filter-bar {
     position: sticky;
     top: 0;
@@ -733,7 +650,6 @@
     flex: 1 1 auto;
     min-width: 0;
   }
-  /* FilterTabs renders its own bottom border; the wrapper owns it here. */
   .filter-bar-tabs :global(.filter-tabs) {
     border-bottom: none;
   }
@@ -771,7 +687,6 @@
     color: var(--accent);
   }
 
-  /* Recipe outputs row (→ pills) sits below the ingredient pills. */
   .cost-out {
     display: flex;
     align-items: center;
@@ -783,9 +698,6 @@
     opacity: 0.6;
   }
 
-  /* Multi-slot dish ingredient pickers (stew/pie) — the SAME "any X" dropdown pattern as the building
-     material picker (BuildingMenu .mat-select), so picking a stew's meat reads like picking a wall's
-     plank. */
   .dish-pickers {
     display: flex;
     flex-direction: column;
@@ -812,7 +724,6 @@
   .mat-select:focus {
     border-color: var(--accent-hi);
   }
-  /* An unchosen slot reads as a dashed, dimmed prompt so it's obvious it still needs a pick. */
   .mat-select.unset {
     border-style: dashed;
     color: var(--text-dim);
@@ -820,7 +731,6 @@
   .cost-have {
     opacity: 0.6;
   }
-  /* §M chosen-ingredient effect line under a picker (nutrition / material stat). */
   .mat-effect {
     display: block;
     color: #7e9fbf;
@@ -842,7 +752,6 @@
     color: var(--text-dim);
   }
 
-  /* ── Active crafting queue (compact chips, between tabs and cards; split by workstation) ── */
   .build-jobs {
     padding: 5px 8px;
     border-bottom: 1px solid var(--border);
@@ -854,22 +763,17 @@
     letter-spacing: 0.08em;
     padding: 0 0 4px;
   }
-  /* One drop-zone lane per physical workstation. Generous padding + a min-height give the lane a
-     forgiving hit area so a chip doesn't need pinpoint release to land in it. */
   .craft-lane {
     border: 1px solid transparent;
     border-radius: 2px;
     padding: 3px 6px 6px;
     margin-bottom: 3px;
   }
-  /* While dragging, station lanes light up as valid drop targets (dashed border + faint fill so the
-     whole lane area — header, chips, and the slack below — reads as one big droppable zone). */
   .craft-lane.lane-active {
     border-color: var(--border-hi);
     border-style: dashed;
     background: color-mix(in srgb, var(--accent) 6%, transparent);
   }
-  /* Per-workstation sub-header above each lane's chips. */
   .jobs-station {
     color: var(--text-dim);
     font-size: 10px;
@@ -893,7 +797,6 @@
     flex-wrap: wrap;
     align-content: flex-start;
     gap: 4px;
-    /* Slack below the chips so the lane stays an easy drop target even with a single chip. */
     min-height: 26px;
   }
   .job-chip {
@@ -916,12 +819,10 @@
     border-style: dashed;
     opacity: 0.7;
   }
-  /* Paused order — dimmed, halted (no fill animation), progress held. */
   .job-chip.paused {
     border-style: dotted;
     opacity: 0.6;
   }
-  /* Highlight valid drop targets while a chip is being dragged. */
   .job-chip.drag-over:hover {
     border-color: var(--accent-hi);
   }

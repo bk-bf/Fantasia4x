@@ -1,30 +1,5 @@
-// Pawn stat definitions. Work-category definitions live in Work.ts (WORK_CATEGORIES).
-// "category" — UI grouping: "combat" | "physical" | "resistance" | "capacity" | "work" | "social"
-// "formula"  — expression evaluated at runtime; tokens:
-//                STRENGTH DEXTERITY CONSTITUTION PERCEPTION INTELLIGENCE CHARISMA weight height  (base stats / physique)
-//                consciousness manipulation sight moving blood_pumping blood_filtration
-//                breathing digestion talking hearing pain  (body capacities, 0–1)
-//                prestige  (standing from worn regalia — SocialService; 0 unadorned)
-//                SKILL  (work stats only — WORK-EXPERIENCE: the pawn's experience-level base for
-//                        that work category, levelBase(level 1–50) × the pawn's speed↔finesse
-//                        style weight; see core/workExperience.ts. 1.0 for non-work formulas.)
-//              Non-capacity formulas multiply by relevant capacities so limb damage
-//              cascades into stat reduction. Example: dodge = (1.0 + (DEXTERITY−10)×0.02) × moving
-//              clamp(x, lo, hi) is the one supported function (hard floors/caps, e.g. stealth's
-//              DEXTERITY gate — zero below the floor, not merely small).
-//              Work formulas: SKILL is the BASE; core stats are only a small tertiary supplement
-//              (STRENGTH+DEXTERITY → speed, INTELLIGENCE+PERCEPTION → yield, all four → quality; ≈ +0.27 max at stat 100).
 [
-    // ── Combat ────────────────────────────────────────────────────────────────────
     {
-        // Was a flat `0.05 × APT`, which meant a superbly precise fighter chose its target on 6.1% of
-        // landed blows against a poor one's 4.5% — a 1.6-point spread across the whole aptitude band,
-        // so no build could ever be played toward finding a gap. The curve is now CONVEX in the roll:
-        // anchored at the bottom of the band (0.045 at APT 0.85, i.e. unchanged), it reaches 0.20 at
-        // the top — a top-precision fighter picks where the blow goes on one landed hit in five, and a
-        // poor one gains nothing. `** 5` is the exponent that maps the band onto exactly that range;
-        // `/ 0.85` is the anchor, so the low end pivots rather than shifts. Clamped because traits can
-        // push the aptitude past the roll band and the curve is steep out there.
         "id": "hit_precision",
         "category": "combat",
         "primaryStat": "dexterity",
@@ -60,16 +35,6 @@
         "description": "evasion (× moving; heavier = harder to dodge)"
     },
     {
-        // The other negation axis (Combat.blockChance): a CHANCE (0–1) to fully stop a melee blow,
-        // NOT weight-penalized (heavier braces BETTER — opposite of dodge) and never × moving, so a
-        // plate-and-shield tank negates even when it can't dodge. Bare-handed this is small; a shield's
-        // `blockBonus` is the bulk of it. Halved vs ranged. Clamped to the cap in Combat.
-        //
-        // Was `0.03 + (CONSTITUTION − 10) × 0.006`, which made block a THIRD thing a core stat bought, the
-        // exact convergence the two-axis split exists to stop — and reading a raw stat as a skill is
-        // what it is: catching a blow on a shield is training, not constitution. Now the skill half is
-        // an APT roll like dodge, and the two things that genuinely are physical (frame, shield) stay.
-        // 0.06 is the old curve's value at the median rolled constitution, so the median pawn is unchanged.
         "id"         : "block",
         "category"   : "combat",
         "primaryStat": "constitution",
@@ -77,9 +42,6 @@
         "description": "block chance (body mass; a shield adds the bulk of it)"
     },
     {
-        // STEALTH base (Layer A): sizeFactor (weight, dominant) × dexterityGate (hard zero below DEXTERITY 8)
-        // × moving. Traits/part grants/armour stealthMod layer on top in core/stealth.ts (Layer B),
-        // folded in by evaluateStat — so reading this stat gives the FULL stealth value.
         "id"         : "stealth",
         "category"   : "combat",
         "primaryStat": "dexterity",
@@ -93,8 +55,6 @@
         "formula"    : "(1.0 + (CONSTITUTION − 10) × 0.025) × consciousness",
         "description": "resistance to stagger (× consciousness; dazed = easier to knock down)"
     },
-    // vision_range was deleted (COMBAT-BALANCE task 6): nothing read it. Sight range is
-    // core/vision.baseVisionRange — round(4 + perception × 1.3) TILES, shared by pawns and mobs.
     {
         "id"         : "attack_speed",
         "category"   : "combat",
@@ -102,8 +62,6 @@
         "formula"    : "APT × manipulation",
         "description": "attack cadence multiplier, higher = faster strikes (× manipulation, × the equipped weapon's own attackSpeed — a light blade darts, a heavy maul swings slow)"
     },
-    // ── Ranged — PERCEPTION = precision axis (aim_accuracy + aim_range), DEXTERITY = speed axis (aim_speed +
-    //    reload_speed); STRENGTH is melee/throw power only, never an aiming stat.
     {
         "id": "aim_accuracy",
         "category": "combat",
@@ -146,9 +104,6 @@
         "formula": "(1.0 + (CONSTITUTION − 10) × 0.05) × blood_filtration",
         "description": "wound recovery speed multiplier (× blood_filtration, kidneys drive recovery; NOT × consciousness: an unconscious body still knits, often harder). Boosted further by rest, food, and mood"
     },
-    // WORK-EXPERIENCE: the old `medical_skill` physical stat is gone — tend quality now rides the
-    // caretaking WORK skill (`caretaking_quality` below, level-driven like every other craft).
-    // ── Physical ──────────────────────────────────────────────────────────────────
     {
         "id"         : "movement_speed",
         "category"   : "physical",
@@ -209,8 +164,6 @@
         "id": "carry_weight",
         "category": "capacity",
         "primaryStat": "strength",
-        // Computed in ItemService.getCarryCapacityBreakdown, not the formula engine. Strength-led,
-        // frame-modulated: strength sets the budget, body size only nudges it.
         "formula": "(11 + STRENGTH × 0.19) × frameFactor",
         "description": "maximum carry weight in kg, set by raw strength; a bigger frame carries a little more, but mass can never stand in for muscle"
     },
@@ -218,12 +171,10 @@
         "id"              : "carry_volume",
         "category"        : "capacity",
         "primaryStat"     : "constitution",
-        // Also computed in ItemService.getCarryCapacityBreakdown, not the formula engine.
         "carryVolumePerKg": 0.13,
         "formula"         : "bodyWeight × carryVolumePerKg",
         "description"     : "maximum carry volume in litres, a fixed fraction of body mass (frame bulk)"
     },
-    // ── Resistance ────────────────────────────────────────────────────────────────
     {
         "id"         : "cutting_resistance",
         "category"   : "resistance",
@@ -301,8 +252,6 @@
         "formula"    : "(0.0 + (INTELLIGENCE − 10) × 0.015) × consciousness",
         "description": "mental resistance (× consciousness)"
     },
-    // ── Work ──────────────────────────────────────────────────────────────────────
-    // Per work type: speed (completion rate), yield (amount per completion), quality (output grade).
     {
         "id"         : "foraging_speed",
         "category"   : "work",
@@ -345,10 +294,6 @@
         "formula"    : "SKILL × (1.0 + (INTELLIGENCE − 10) × 0.0015 + (PERCEPTION − 10) × 0.0015) × manipulation",
         "description": "ore per vein (× manipulation)"
     },
-    // Deliberately NO `hunting_speed`/`_yield`/`_quality`: hunting is NOT a work skill — the task is
-    // mark quarry → walk → fight it as normal combat → haul the carcass. It has no work formula and
-    // no experience level. In the work grid it's excluded from the best/weakest medal ranking
-    // (workUtils.NON_SKILL_TASKS) and its tooltip lists the driving combat stats instead of a speed.
     {
         "id"         : "butchery_speed",
         "category"   : "work",
@@ -426,7 +371,6 @@
         "formula"    : "SKILL × (1.0 + (STRENGTH − 10) × 0.0007 + (DEXTERITY − 10) × 0.0007 + (INTELLIGENCE − 10) × 0.0007 + (PERCEPTION − 10) × 0.0007) × ((manipulation + sight) / 2)",
         "description": "leather quality (× ((manipulation + sight) / 2))"
     },
-    // ── Tailoring PARENT (soft goods): fallback for the Weaving leaf; Leatherwork has its own above.
     {
         "id"         : "tailoring_speed",
         "category"   : "work",
@@ -441,7 +385,6 @@
         "formula"    : "SKILL × (1.0 + (STRENGTH − 10) × 0.0007 + (DEXTERITY − 10) × 0.0007 + (INTELLIGENCE − 10) × 0.0007 + (PERCEPTION − 10) × 0.0007) × ((manipulation + sight) / 2)",
         "description": "cloth / garment quality (× ((manipulation + sight) / 2))"
     },
-    // ── Woodworking (carpentry): planks, furniture, hafts.
     {
         "id"         : "woodworking_speed",
         "category"   : "work",
@@ -456,7 +399,6 @@
         "formula"    : "SKILL × (1.0 + (STRENGTH − 10) × 0.0007 + (DEXTERITY − 10) × 0.0007 + (INTELLIGENCE − 10) × 0.0007 + (PERCEPTION − 10) × 0.0007) × ((manipulation + sight) / 2)",
         "description": "joinery / haft quality (× ((manipulation + sight) / 2))"
     },
-    // ── Pottery (ceramics): forming + kiln work.
     {
         "id"         : "pottery_speed",
         "category"   : "work",
@@ -471,7 +413,6 @@
         "formula"    : "SKILL × (1.0 + (STRENGTH − 10) × 0.0007 + (DEXTERITY − 10) × 0.0007 + (INTELLIGENCE − 10) × 0.0007 + (PERCEPTION − 10) × 0.0007) × ((manipulation + sight) / 2)",
         "description": "ceramic / glass quality (× ((manipulation + sight) / 2))"
     },
-    // ── Stoneworking PARENT: fallback for the Knapping / Masonry / Lapidary / Bonecarving leaves.
     {
         "id"         : "stoneworking_speed",
         "category"   : "work",
@@ -486,9 +427,6 @@
         "formula"    : "SKILL × (1.0 + (STRENGTH − 10) × 0.0007 + (DEXTERITY − 10) × 0.0007 + (INTELLIGENCE − 10) × 0.0007 + (PERCEPTION − 10) × 0.0007) × ((manipulation + sight + consciousness) / 3)",
         "description": "cut / dressed-stone quality (× ((manipulation + sight + consciousness) / 3))"
     },
-    // ── Craft-discipline LEAF work skills — each an INDEPENDENT skill (a weaver never levels a
-    //    leatherworker); own formula tuned to the craft, own SKILL level. Fall back to the parent only
-    //    for an axis they do not define.
     {
         "id"         : "knapping_speed",
         "category"   : "work",
@@ -664,8 +602,6 @@
         "formula"    : "SKILL × (1.0 + (STRENGTH − 10) × 0.0007 + (DEXTERITY − 10) × 0.0007 + (INTELLIGENCE − 10) × 0.0007 + (PERCEPTION − 10) × 0.0007) × ((manipulation + sight) / 2)",
         "description": "building durability (× ((manipulation + sight) / 2))"
     },
-    // ── Construction SUBJOBS — keyed by job-type id, resolved per-axis with fallback to the parent
-    //    `construction_*` (so `construct`/Build inherits, no entry needed); all share the construction skill.
     {
         "id"         : "repair_speed",
         "category"   : "work",
@@ -723,10 +659,6 @@
         "description": "meal nutrition / taste (× ((manipulation + sight + consciousness) / 3))"
     },
     {
-        // WORK-EXPERIENCE: hauling is NOT a learned skill (no SKILL token, no experience level) —
-        // it's carrying, driven by carry capacity (STRENGTH) and movement (DEXTERITY), so core stats are the
-        // FULL driver here, not a tertiary supplement. × ((moving + manipulation) / 2): legs to walk,
-        // hands to hold.
         "id"         : "hauling_speed",
         "category"   : "work",
         "primaryStat": "strength",
@@ -734,9 +666,6 @@
         "description": "hauling speed — carry capacity (strength) + movement (dexterity), × ((moving + manipulation) / 2)"
     },
     {
-        // Hauling SUBJOB — `haul`/Haul itself inherits hauling_* (no entry needed).
-        // Hauling subjob — also a non-skill carry task (no SKILL token). Nimble shuttle runs favour
-        // movement (DEXTERITY) over load (STRENGTH), the inverse lean of bulk hauling.
         "id"         : "fetch_speed",
         "category"   : "work",
         "primaryStat": "dexterity",
@@ -765,17 +694,12 @@
         "description": "treatment speed (× ((manipulation + sight) / 2))"
     },
     {
-        // WORK-EXPERIENCE: replaces the old `medical_skill` physical stat — a tend's treatment roll
-        // now rides this axis (jobs/caretake.ts scales it back into the 0–1 tend band).
         "id"         : "caretaking_quality",
         "category"   : "work",
         "primaryStat": "intelligence",
         "formula"    : "SKILL × (1.0 + (STRENGTH − 10) × 0.0007 + (DEXTERITY − 10) × 0.0007 + (INTELLIGENCE − 10) × 0.0007 + (PERCEPTION − 10) × 0.0007) × ((manipulation + sight + consciousness) / 3)",
         "description": "treatment quality — how cleanly a wound is dressed and how soundly the care takes (× ((manipulation + sight + consciousness) / 3))"
     },
-    // ── Body Capacities ───────────────────────────────────────────────────────────
-    // Derived from organ health (not parent limb health); paired organs: one destroyed ≠ 0.
-    // Order matters: pain, sight, hearing must be computed before consciousness.
     {
         "id"         : "pain",
         "category"   : "capacity",
@@ -860,7 +784,6 @@
         "formula"    : "1.0",
         "description": "jaw × 0.9 + 0.10 baseline (groan/whisper)"
     },
-    // ── Social ────────────────────────────────────────────────────────────────────
     {
         "id"         : "trade",
         "category"   : "social",
@@ -875,8 +798,6 @@
         "formula"    : "(1.0 + (CHARISMA − 10) × 0.025 + prestige × 0.004) × ((talking + 1) / 2)",
         "description": "the knack for reaching someone who has come apart and steadying them with a word — warmth carries it, a name that commands respect lends weight, and a clear voice drives it home (× ((talking + 1) / 2))"
     },
-    // SOCIAL-LAYER §5: `intact` is the whole-body scan capacity (fraction of parts still whole and
-    // unscarred, PawnStatService). Beauty gates romantic attraction and colours how others react.
     {
         "id"         : "beauty",
         "category"   : "social",
@@ -884,8 +805,6 @@
         "formula"    : "(0.4 + 0.6 × intact) × (1.0 + (CHARISMA − 10) × 0.04)",
         "description": "the face and bearing the world sees before a word is spoken; charm brightens it, and every scar and missing piece takes its toll"
     },
-    // SOCIAL-LAYER §6: the lazily-computed `prestige` token surfaced as its own readout — inherent
-    // station (basePrestige) plus worn regalia, scaled by quality and fame.
     {
         "id"         : "prestige",
         "category"   : "social",

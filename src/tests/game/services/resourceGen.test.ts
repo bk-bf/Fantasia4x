@@ -3,11 +3,6 @@ import { resourceGeneratorService } from '$lib/game/services/ResourceGeneratorSe
 import { resourceObjectService } from '$lib/game/services/ResourceObjectService';
 import type { WorldTile } from '$lib/game/core/types';
 
-/**
- * Bug fix: a `mineral_deposit` tile must NEVER be empty — it always holds a metal ore, coal, or
- * salt (the generator force-fills it if the independent spawn rolls all miss). Other subterrains
- * may legitimately be empty.
- */
 function tile(subType: string, x: number, y: number, terrainType = subType): WorldTile {
   return {
     x,
@@ -30,7 +25,6 @@ const VALID_FILL = new Set(
 
 describe('ResourceGenerator — mineral_deposit guarantee + clustering', () => {
   it('a connected mineral_deposit blob fills as ONE mineral (cluster), never empty', () => {
-    // A contiguous 8×6 block of mineral_deposit = one connected component = one mineral vein.
     for (let seed = 1; seed <= 6; seed++) {
       const map: WorldTile[][] = Array.from({ length: 6 }, (_, y) =>
         Array.from({ length: 8 }, (_, x) => tile('mineral_deposit', x, y))
@@ -40,7 +34,6 @@ describe('ResourceGenerator — mineral_deposit guarantee + clustering', () => {
       const firstId = Object.keys(all[0].resources).filter((k) => all[0].resources[k] > 0)[0];
       expect(firstId, `empty blob seed ${seed}`).toBeDefined();
       expect(VALID_FILL.has(firstId)).toBe(true);
-      // every tile in the blob carries the SAME resource (a uniform cluster, no scatter)
       for (const t of all) {
         const ids = Object.keys(t.resources).filter((k) => t.resources[k] > 0);
         expect(ids).toEqual([firstId]);
@@ -50,14 +43,12 @@ describe('ResourceGenerator — mineral_deposit guarantee + clustering', () => {
 
   it('grows a lone mineral_deposit tile into a 3–8 tile single-mineral cluster', () => {
     for (let seed = 1; seed <= 6; seed++) {
-      // 9×9 mountain (cave floor) field with one mineral_deposit tile at the centre.
       const map: WorldTile[][] = Array.from({ length: 9 }, (_, y) =>
         Array.from({ length: 9 }, (_, x) =>
           tile(x === 4 && y === 4 ? 'mineral_deposit' : 'cave', x, y, 'mountain')
         )
       );
       resourceGeneratorService.generateResources(map, seed * 31);
-      // tiles carrying an ore/coal/salt mineral (the mountain walls on the other cave tiles are excluded)
       const oreTiles = map
         .flat()
         .filter((t) =>
@@ -73,7 +64,6 @@ describe('ResourceGenerator — mineral_deposit guarantee + clustering', () => {
   });
 
   it('separate blobs can hold different minerals', () => {
-    // Two blobs separated by a non-mineral gap column → two independent clusters.
     const map: WorldTile[][] = Array.from({ length: 4 }, (_, y) =>
       Array.from({ length: 9 }, (_, x) => tile(x === 4 ? 'cave' : 'mineral_deposit', x, y))
     );
@@ -82,7 +72,6 @@ describe('ResourceGenerator — mineral_deposit guarantee + clustering', () => {
     const rightId = Object.keys(map[0][8].resources)[0];
     expect(VALID_FILL.has(leftId)).toBe(true);
     expect(VALID_FILL.has(rightId)).toBe(true);
-    // left blob uniform
     for (let y = 0; y < 4; y++)
       for (let x = 0; x < 4; x++) expect(Object.keys(map[y][x].resources)).toEqual([leftId]);
   });
@@ -92,6 +81,6 @@ describe('ResourceGenerator — mineral_deposit guarantee + clustering', () => {
     expect(VALID_FILL.has('rock_salt')).toBe(true);
     expect(VALID_FILL.has('hematite')).toBe(true);
     expect(VALID_FILL.has('stone_outcrop')).toBe(false);
-    expect(VALID_FILL.has('amethyst_node')).toBe(false); // crystal nodes aren't mineral-vein fill
+    expect(VALID_FILL.has('amethyst_node')).toBe(false);
   });
 });

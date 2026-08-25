@@ -35,6 +35,7 @@ ADR-028 [GAME]: Typed Trait Kinds + Condition Relationship Graph (TRAIT-SYSTEM-V
 ADR-029 [GAME]: Anatomy-Bound Natural Gear + Layered Subtractive Armour + Unified On-Hit Procs (2026-07-08, Accepted)
 ADR-030 [GAME]: Desktop Wrapper — Electron over Tauri (2026-07-09, Accepted)
 ADR-033 [GAME]: Headless, API-Driven Sim — dev-only in-thread driver over the existing engine + command registry (2026-07-18, Accepted — implemented same day)
+ADR-035 [ARCH]: `core/` Is Bucketed by KIND of Module — types / defs / state / rules / gen / util (2026-08-25, Accepted)
 
 ---
 
@@ -68,7 +69,7 @@ Direct field assignment to `GameState` objects produced hard-to-trace bugs and i
 
 #### Decision
 
-`GameStateManager` (in `core/GameState.ts`) is the sole mutation point. It uses spread-operator updates (`{ ...state, ...patch }`) to produce new state objects. Services and the engine call its methods; nothing else writes to state.
+`GameStateManager` (in `core/state/stockpile.ts`) is the sole mutation point. It uses spread-operator updates (`{ ...state, ...patch }`) to produce new state objects. Services and the engine call its methods; nothing else writes to state.
 
 #### Consequences
 
@@ -352,10 +353,10 @@ adjustedThreshold = baseThreshold
 
 #### Decision
 
-**1. Gated logger (`core/log.ts`).** A module-level `enabled` flag (default `false`) backs `glog`/`gdebug`/`gwarn` (no-ops unless enabled) and a `gatedConsole` object `{ log, debug, info, warn }` plus an always-live `error`. Hot-path modules silence all per-tick logging with **one line** that shadows the global `console` for the whole file:
+**1. Gated logger (`core/util/log.ts`).** A module-level `enabled` flag (default `false`) backs `glog`/`gdebug`/`gwarn` (no-ops unless enabled) and a `gatedConsole` object `{ log, debug, info, warn }` plus an always-live `error`. Hot-path modules silence all per-tick logging with **one line** that shadows the global `console` for the whole file:
 
 ```typescript
-import { gatedConsole as console } from '../core/log';
+import { gatedConsole as console } from '../core/util/log';
 ```
 
 No call sites change. Applied to the per-tick services: `WorkService`, `PawnService`, `JobService`, `ResearchService`, `LocationServices`. Toggle at runtime from the dev console with `gameDebug(true)` (exposed via `globalThis.gameDebug = setGameDebug`); `isGameDebug()` gates any remaining heavy log-building (e.g. `GameEngineImpl.debugLogPawns()`).
@@ -385,7 +386,7 @@ Combat is RimWorld-inspired (legible body-part HP + a capacity system already dr
 
 #### Decision
 
-**1. Wounds merge by type per part (`wounds.jsonc` + `core/Wounds.ts`).** One wound per damage type per body part; same-type hits accumulate damage and **escalate severity** (5 crushes → one severe/destroyed crush), rather than piling up. This diverges from RimWorld's discrete model deliberately — it is more readable and arguably more realistic (repeated trauma to one spot *should* compound). Pain = Σ active wound contributions, so it falls as wounds heal. Balance lever: severity is a fraction of part max-HP, tunable per part; if limbs are lost too fast, raise thresholds.
+**1. Wounds merge by type per part (`wounds.jsonc` + `core/defs/wounds.ts`).** One wound per damage type per body part; same-type hits accumulate damage and **escalate severity** (5 crushes → one severe/destroyed crush), rather than piling up. This diverges from RimWorld's discrete model deliberately — it is more readable and arguably more realistic (repeated trauma to one spot *should* compound). Pain = Σ active wound contributions, so it falls as wounds heal. Balance lever: severity is a fraction of part max-HP, tunable per part; if limbs are lost too fast, raise thresholds.
 
 **2. Downing = the `consciousness` capacity, not a separate pain number.** A pawn/mob collapses when `consciousness < 0.3` (recovers > 0.45). The capacity's pain term was strengthened (`painMult = 1 − effectivePain`) so ~80 pain ≈ 0.3 consciousness — matching the old behaviour — but blood loss and organ damage now lower it on top, so a wounded pawn faints sooner. Collapse is distinct from a short blunt **knockdown** (separate status). Mobs are defeated on collapse (no capture system yet); pawns go down and recover as wounds heal.
 
@@ -868,7 +869,7 @@ blunt-as-trauma, fractures) needed the anatomy to actually vary per creature.
   per-plan blocks (`parts` + `limbs`), merged into one global `PART_DEF_MAP` at load. Seven body
   plans (humanoid · quadruped · quadruped_hooved · amphibian · avian · serpentine · arachnid ·
   winged_humanoid · amorphous); a creature picks one via `limbMap` (default `humanoid`), pawns are
-  humanoid. `core/BodyParts.ts` builds per-plan hit-roll tables; `rollBodyPart(plan)` and the
+  humanoid. `core/defs/bodyParts.ts` builds per-plan hit-roll tables; `rollBodyPart(plan)` and the
   capacity model (`moving`/`manipulation` aggregate the plan's leg/arm limbs) are plan-aware.
   `LimbId`/`BodyPartId` are loosened to `string` (data-driven ids). Parent-limb is resolved from
   the entity's own tree, not a global field (a part's parent limb varies by plan).
@@ -1293,7 +1294,7 @@ skipped by `nearestPawn`, so a stealther can't body-block aggro for a visible al
 
 - **The stealth value is two-layered, mirroring night vision**: a `stealth` stat in `stats.jsonc`
   (`sizeFactor(weight) × dexGate(hard zero ≤ DEX 8) × moving` — the formula engine gained `clamp()`
-  for the hard gate) plus flat additives summed in `core/stealth.ts` (trait `effects.stealth`,
+  for the hard gate) plus flat additives summed in `core/rules/body/stealth.ts` (trait `effects.stealth`,
   living-part `grants.stealth`, worn `armorProperties.stealthMod` or a derived −0.03/kg weight drag,
   and −0.04 per point of trait `naturalArmor` — the beast tanky↔stealth fork falls out of the pelt
   itself). `evaluateStat('stealth', pawn)` folds both layers (same stat-specific augmentation
@@ -1316,7 +1317,7 @@ for every pawn (a default pawn is ~9 % per check at the vision border, ~34 % adj
 longer acquire instantly — headless FSM tests stamp their fixtures as pre-detected, and an encounter
 balance pass is owed. Sight-only detection makes dull-eyed predators easy to sneak and sharp-eyed
 grazers hard; the hearing/smell channel is parked for Phase 2 along with screen-invisible stealthy
-creatures. Guarded by `core/stealth.test.ts` (layers, roll math, §9 constraint audit) and
+creatures. Guarded by `tests/game/core/stealth.test.ts` (layers, roll math, §9 constraint audit) and
 `traitRegistry.test.ts`.
 
 ---
@@ -1345,7 +1346,7 @@ already runs DOM-free (`GameEngineImpl.processGameTurn` is a pure reducer; Vites
 
 - **In-thread, synchronous** — the worker is fire-and-forget; a request/response API needs apply-then-read, so
   the session calls the engine directly and reads `getState()` back.
-- **Single active session per process (v1)** — `core/rng.ts` is a module singleton; interleaving sessions
+- **Single active session per process (v1)** — `core/util/rng.ts` is a module singleton; interleaving sessions
   would clobber the shared RNG stream and break determinism. Multi-session deferred.
 - **Reachability** is served by the Scenario builder (generalises `dev/profilerScenario.ts`) + an expanded
   `dev*`/godmode surface (grant stats/skills, spawn gear, unlock research, **per-need on/off toggles** via a
@@ -1404,7 +1405,7 @@ stockable that gate would have flipped and pawns would have stopped walking to t
   only sit inside a vessel that accepts it, and `withDrops` — the single chokepoint every
   drops-mutating path goes through — spills any fluid that reaches the ground, whatever put it there.
   The rule cannot be forgotten at a callsite because no callsite gets to decide it.
-- **One level of nesting**, enforced in `core/vessels.ts` rather than by convention. A jug in a crate
+- **One level of nesting**, enforced in `core/rules/gear/vessels.ts` rather than by convention. A jug in a crate
   is fine; a jug in a crate in a cart is a recursion nobody can debug and a save-size problem.
 - **A worn vessel holds nothing.** Equipping a quiver moves its contents into the pawn's pack and it
   reverts to granting `inventoryBonus`. This is what keeps ammo in ordinary inventory, which is what
@@ -1456,3 +1457,70 @@ gate, input consumption), and a colony with no vessels genuinely cannot move a f
 point. Partly deterministic: the `withDrops` chokepoint is a seam rule in
 `tools/audit/seams.jsonc`, checked by `pnpm audit:t0`.
 
+
+---
+
+### ADR-035 [ARCH]: `core/` Is Bucketed by KIND of Module — types / defs / state / rules / gen / util
+
+- **Date**: 2026-08-25
+- **Status**: Accepted
+
+#### Context
+
+`core/` had grown to 58 flat modules under two naming conventions (`Creatures.ts` beside
+`itemDefs.ts`, both jsonc loaders). The directory held three unrelated kinds of module in one
+namespace: type declarations, jsonc database loaders, and pure simulation math. ARCHITECTURE.md
+described core as "types, static databases, GameStateManager", which about 25 modules contradicted —
+`needs.ts` alone was 614 lines of condition engine. The docs had drifted far enough to name four
+files (`Items.ts`, `Buildings.ts`, `Research.ts`, `Locations.ts`) that no longer existed.
+
+Grouping by SUBJECT (`core/item/`, `core/pawn/`…) was rejected: subjects already have a home in
+`services/`, and every subject needs a type, a loader and some math, so subject folders would
+reproduce the same three-kinds-in-one-namespace problem one level down.
+
+#### Decision
+
+`core/` is split by what a module IS, not what it is about. Six buckets, nothing at the root except
+the `types.ts` barrel:
+
+- `types/` — domain type modules; the `core/types.ts` barrel re-exports them.
+- `defs/` — one module per `database/*.jsonc`: parse once, expose an O(1) lookup, no logic.
+- `state/` — `GameStateManager` (the only mutation surface), the stockpile/tile-storage query
+  surface, and the per-tick indexes.
+- `rules/` — pure simulation math, grouped `body/` · `gear/` · `world/` · `social/`.
+- `gen/` — procedural generators (culture, kingdom, boss names, famed-item identity).
+- `util/` — domain-free primitives (math, seeded RNG, grid distance, line of sight, colour, CP437,
+  timing, logging).
+
+All filenames are camelCase; the sole PascalCase file is `state/GameStateManager.ts`, named after the
+class it exports (the same convention `services/` uses). A `defs/` module is named after its jsonc
+source, not after the domain noun: `defs/items.ts` loads `items.jsonc`.
+
+The old `GameState.ts` split along the seam already present in it: the 130-line class became
+`state/GameStateManager.ts`, and the ~25 free functions about zones, reservations and tile capacity
+became `state/stockpile.ts`. They were not split further — the tile-capacity and zone helpers share
+private state (`STORAGE_BIN_FILTER`, `pickStorageTile`) and separating them would introduce a cycle.
+
+`core/defs/disciplines.ts` moved to `core/defs/disciplines.ts`. Its own header already
+described it as "a pure leaf module (data only — no service imports)", and it was the target of the
+one genuine core→services import in the repo (`workExperience.ts`); relocating it removed the
+violation rather than papering over it.
+
+#### Consequences
+
+Where a new module goes is now a question about the module, not about taste: it declares types, or it
+loads a jsonc file, or it touches `GameState`, or it is pure math, or it generates content, or it is
+a primitive. A reviewer can reject a misplaced file without arguing about subject boundaries.
+
+`core/` no longer imports from `services/` at all, so the layer direction is clean end to end and
+ADR-001's ordering holds without exception. The `rules/` bucket makes explicit what ADR-006 left
+implicit: core holds pure math as well as definitions, and that is intended — the alternative was
+duplicating it into both `services/` and `systems/`.
+
+Cost: ~600 import specifiers were rewritten across ~200 files, and every doc or spec that cited an old
+`core/*.ts` path is now stale. Live docs were updated; `docs/tasks/archive/` was deliberately left
+alone, since a dated record should keep describing the tree as it was.
+
+Not graph-checkable as a structural rule — "a module lives in the bucket matching its kind" is a
+judgement about content, not a call edge. The parts that ARE checkable (core must not call services;
+layer direction) are already enforced by the `layers` rule.

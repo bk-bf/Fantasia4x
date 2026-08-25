@@ -2,24 +2,12 @@ import { describe, it, expect } from 'vitest';
 import { combatService } from '$lib/game/systems/Combat';
 import { itemService } from '$lib/game/services/ItemService';
 import { pawnStatService } from '$lib/game/services/PawnStatService';
-import { createDefaultBodyParts } from '$lib/game/core/BodyParts';
+import { createDefaultBodyParts } from '$lib/game/core/defs/bodyParts';
 import { applyGainedTrait } from '$lib/game/entities/Pawns';
-import { rng } from '$lib/game/core/rng';
+import { rng } from '$lib/game/core/util/rng';
 import itemsData from '$lib/game/database/items/items.jsonc';
 import traitsData from '$lib/game/database/pawns/traits.jsonc';
 import type { GameState, Pawn, Trait } from '$lib/game/core/types';
-
-/**
- * TIER-4 WEAPON AUDIT — which stat and which trait break which weapon.
- *
- * Every top-tier weapon is swept against three real opponents, first across the core stats and then
- * across every combat-relevant trait, so the outliers are ranked from measurement instead of taste.
- * Drives the real `resolveHit` (armour soak, crit, grip, body parts) and the real cadence path
- * (`attack_speed` through Combat's interval clamp); the only arithmetic here is
- * dps = mean damage per swing × swings per second.
- *
- * The headless confirmation of the worst offenders lives in `weaponFightSim.test.ts`.
- */
 
 const BASE_ATTACK_INTERVAL_TICKS = 120;
 const MIN_ATTACK_INTERVAL_TICKS = 72;
@@ -71,7 +59,6 @@ function makePawn(over: Record<string, unknown> = {}): Pawn {
   } as unknown as Pawn;
 }
 
-/** Every craftable/lootable tier-4 weapon that resolves through the MELEE path. */
 const T4 = ITEMS.filter(
   (i) => i.tier === 4 && i.weaponProperties && i.category !== 'natural_weapon'
 ).map((i) => ({
@@ -84,7 +71,6 @@ const T4 = ITEMS.filter(
 }));
 const T4_MELEE = T4.filter((w) => !w.ranged);
 
-/** Off-hand for the grip a weapon is actually built around: a shield for 1H, nothing for 2H. */
 const offHandFor = (w: { twoHanded: boolean; id: string }) =>
   w.twoHanded || /stiletto|rapier/.test(w.id) ? undefined : 'iron_boss_shield';
 
@@ -97,20 +83,10 @@ function armed(weaponId: string, stats: Partial<Stats>, offHand?: string, traits
       ...(offHand ? { offHand: { itemId: offHand, instanceId: 'o', durability: 999 } } : {})
     }
   });
-  // A trait's `combatMods` are read live off `pawn.traits`, but its core-stat deltas, grafts and
-  // bodyMod HP scaling are ONE-SHOT, baked when the trait is acquired. Route through the same
-  // `applyGainedTrait` the growth path uses so the audit prices what the engine actually does —
-  // including its sign convention for `*Penalty` (see the AUDIT finding on that).
   for (const t of traits) applyGainedTrait(pawn, t);
   return pawn;
 }
 
-/**
- * Three real opponents drawn from gear the game actually fields, not abstractions:
- *  • `raider`  — light foe, leather, low dodge: the common fight.
- *  • `knight`  — heavy plate + great helm: the armour check.
- *  • `duelist` — high DEXTERITY, shield, no plate: the dodge + block check.
- */
 const OPPONENTS = {
   raider: () =>
     makePawn({
@@ -158,9 +134,6 @@ const f = (x: number, w = 7, d = 1) => x.toFixed(d).padStart(w);
 
 describe('trait baking — a gained trait is a born trait', () => {
   it('a runtime-gained trait is NOT dead: applyGainedTrait bakes what generation would', () => {
-    // The growth path (`PawnGrowthService` → `lineageGrowthEvent`) pushes the trait then calls
-    // `applyGainedTrait`, which is also what the trait-gamble/consume path and `devSetPawnTraits` use.
-    // So a trait acquired at turn 40,000 lands the same stat deltas as one rolled at generation.
     const gain = TRAITS.find((t) => t.id === 'str-dex-plus-5');
     const plain = armed('rune_sung_greatsword', { strength: 20, dexterity: 20 });
     const grown = armed('rune_sung_greatsword', { strength: 20, dexterity: 20 }, undefined, [
@@ -174,9 +147,6 @@ describe('trait baking — a gained trait is a born trait', () => {
   });
 
   it('a flaw LOWERS its stat — core-stat grants are signed, with no `*Penalty` key left', () => {
-    // Both bake paths (`applyCulturalTraitBonuses` at generation, `applyGainedTrait` at runtime) now do
-    // ONE signed add. A flaw authors a negative `*Bonus`; the `*Penalty` key is gone, which is what
-    // makes the sign impossible to get wrong again.
     const leftovers = TRAITS.flatMap((t) =>
       Object.keys((t.effects ?? {}) as Record<string, unknown>).filter((k) => k.endsWith('Penalty'))
     );
@@ -189,7 +159,7 @@ describe('trait baking — a gained trait is a born trait', () => {
     );
     expect(negatives.length, 'flaws are authored as negative bonuses').toBeGreaterThan(50);
 
-    const clumsy = TRAITS.find((t) => t.id === 'clumsy'); // dexterityBonus: -2
+    const clumsy = TRAITS.find((t) => t.id === 'clumsy');
     const plain = armed('rune_slotted_stiletto', { dexterity: 20 });
     const cursed = armed('rune_slotted_stiletto', { dexterity: 20 }, undefined, [
       clumsy as unknown as Trait
@@ -203,8 +173,6 @@ describe('trait baking — a gained trait is a born trait', () => {
 
 describe('tier-4 weapon audit — stats', { timeout: 600_000 }, () => {
   it('the power-stat soft cap holds the damage term inside a sane band', () => {
-    // The fix for the runaway `baseDamage × stat / 10` term. Early-game values barely move; the
-    // growth ceiling is bounded instead of multiplying weapon damage tenfold.
     const rows = [10, 16, 20, 30, 45, 60, 100].map((s) => {
       const w = armed('rune_sung_greatsword', { strength: s }, undefined);
       const d = dpsOf(w, OPPONENTS.knight());
@@ -217,8 +185,6 @@ describe('tier-4 weapon audit — stats', { timeout: 600_000 }, () => {
   });
 
   it('STAT SWEEP — dps per T4 weapon per stat, against three real opponents', () => {
-    // Which stat is worth the most on which weapon. A weapon whose best stat is not its power stat is
-    // being carried by cadence or to-hit rather than by what it is supposed to be about.
     for (const opp of Object.keys(OPPONENTS) as OppKey[]) {
       const lines = [`[STAT SWEEP vs ${opp}]   dps at stat 40 (all others 10) — ★ = the weapon's power stat`];
       lines.push('weapon                      STRENGTH     DEXTERITY     CONSTITUTION     PERCEPTION     INT   best');
@@ -239,8 +205,6 @@ describe('tier-4 weapon audit — stats', { timeout: 600_000 }, () => {
   });
 
   it('STAT OUTLIERS — the single most damaging stat point in the game', () => {
-    // Marginal dps per +10 on each stat, ranked across every T4 weapon and opponent. The top of this
-    // list is where a stat is doing more than its share.
     const rows: { weapon: string; stat: string; opp: string; gain: number }[] = [];
     for (const opp of Object.keys(OPPONENTS) as OppKey[]) {
       for (const w of T4_MELEE) {
@@ -264,7 +228,6 @@ describe('tier-4 weapon audit — stats', { timeout: 600_000 }, () => {
   });
 });
 
-/** Combat-relevant traits: anything that moves a core stat or a combat stat multiplier. */
 const COMBAT_TRAITS = TRAITS.filter((t) => {
   const e = t.effects ?? {};
   return (
@@ -278,7 +241,6 @@ const COMBAT_TRAITS = TRAITS.filter((t) => {
 });
 
 const AUDIT_STATS = { strength: 30, dexterity: 30, constitution: 30, perception: 30, intelligence: 30 };
-/** Smaller sample for the trait matrix: it is 100× bigger than the stat sweep and only needs a ranking. */
 const TRAIT_N = 400;
 
 interface TraitCell {
@@ -290,10 +252,6 @@ interface TraitCell {
   gain: number;
   pct: number;
 }
-/**
- * trait × weapon × opponent, computed ONCE (both trait tests read it). Baselines are memoised per
- * (weapon, opponent) — recomputing them per trait was most of the cost and none of the information.
- */
 let traitMatrix: TraitCell[] | null = null;
 function buildTraitMatrix(): TraitCell[] {
   if (traitMatrix) return traitMatrix;
@@ -327,8 +285,6 @@ function buildTraitMatrix(): TraitCell[] {
 
 describe('tier-4 weapon audit — traits', { timeout: 900_000 }, () => {
   it('TRAIT SWEEP — every combat trait priced on every T4 weapon', () => {
-    // One trait at a time on an otherwise identical stat-30 pawn, so the delta IS the trait. Ranked
-    // by the worst case it produces anywhere, which is what "most broken" means in practice.
     const worst = [...buildTraitMatrix()].sort((a, b) => b.pct - a.pct);
     const seen = new Set<string>();
     const top = worst.filter((r) => (seen.has(r.trait) ? false : (seen.add(r.trait), true))).slice(0, 15);
@@ -352,8 +308,6 @@ describe('tier-4 weapon audit — traits', { timeout: 900_000 }, () => {
   });
 
   it('TRAIT STACKS — the worst combination a single pawn can legally carry', () => {
-    // Traits stack multiplicatively on the combat stats and additively on the core stats, so the
-    // question is not "which trait is strongest" but "what does the best legal pile do".
     const matrix = buildTraitMatrix();
     const byId = new Map(COMBAT_TRAITS.map((t) => [t.id as string, t]));
     const lines = ['[TRAIT STACKS] best five-trait pile per archetype weapon, vs each opponent'];

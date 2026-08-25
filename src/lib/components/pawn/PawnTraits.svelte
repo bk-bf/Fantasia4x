@@ -1,5 +1,3 @@
-<!-- PawnTraits.svelte — the pawn STATUS tab's trait section. Thin wrapper over the shared
-     TraitCards grid (also used by the culture tab) so there's one source of truth for trait rendering. -->
 <script lang="ts">
   import type { Pawn } from '$lib/game/core/types';
   import TraitCards from './TraitCards.svelte';

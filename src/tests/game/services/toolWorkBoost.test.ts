@@ -2,8 +2,6 @@ import { describe, it, expect } from 'vitest';
 import { pawnStatService } from '$lib/game/services/PawnStatService';
 import type { Pawn } from '$lib/game/core/types';
 
-// A held tool ADDS its items.jsonc `toolBoost.speed`/`.yield` to the matching work category's
-// modifier (getWorkModifiers). Works whether the tool is equipped or carried in inventory.
 const base = (): Pawn =>
   ({
     limbs: [],
@@ -37,8 +35,8 @@ describe('tool work boost (additive, items.jsonc toolBoost)', () => {
   it('a carried stone_pick adds to mining speed AND yield', () => {
     const bareM = pawnStatService.getWorkModifiers(base(), 'mining');
     const pickM = pawnStatService.getWorkModifiers(carrying('stone_pick'), 'mining');
-    expect(pickM.speed).toBeCloseTo(bareM.speed + 0.75); // stone_pick toolBoost.speed (½ of steel)
-    expect(pickM.yield!).toBeCloseTo(bareM.yield! + 0.6); // stone_pick toolBoost.yield (½ of steel)
+    expect(pickM.speed).toBeCloseTo(bareM.speed + 0.75);
+    expect(pickM.yield!).toBeCloseTo(bareM.yield! + 0.6);
   });
 
   it('an equipped tool boosts identically to a carried one', () => {
@@ -83,7 +81,6 @@ describe('tool work boost (additive, items.jsonc toolBoost)', () => {
 
   it('no held tool → no boost', () => {
     const bareM = pawnStatService.getWorkModifiers(base(), 'mining');
-    // A non-tool carried item does not boost.
     const withRock = carrying('small_stone');
     expect(pawnStatService.getWorkModifiers(withRock, 'mining').speed).toBeCloseTo(bareM.speed);
   });

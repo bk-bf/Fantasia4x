@@ -3,35 +3,16 @@ import { HeadlessSession } from '$lib/game/headless/HeadlessSession';
 import { buildScenario } from '$lib/game/headless/Scenario';
 import type { EntityStats, Mob, Pawn } from '$lib/game/core/types';
 
-/**
- * COMBAT-BALANCE AUDIT — the open findings, checked against the REAL sim.
- *
- * Every claim in `docs/tasks/open/COMBAT-BALANCE.md` was first measured analytically (resolveHit
- * sweeps). This file re-checks the ones a fight can settle, through `HeadlessSession`: drafted
- * colonists, a live mob, real ticks, the real command path. A finding that survives here is `[x]` in
- * the doc; one that only a sweep shows stays `[~]`.
- *
- * It also serves as the post-rename regression gate — the core-stat rename touched every stat on
- * every pawn and mob, so "the sim still fights correctly" is itself a claim that needs a fight.
- *
- * Preflight (headless skill): flat map (default, every tile reachable), needs frozen,
- * `seedEntities: false` so the only mob is the one under test, and combat is driven by an explicit
- * draft order because the sim starts at night and mobs are vision-gated.
- */
-
 const CREATURE = 'orc_reaver';
 const MAX_TICKS = 12_000;
 
 interface Duel {
   ticks: number;
   killed: boolean;
-  /** Fraction of the mob's blood pool left when the fight ended (100 = untouched). */
   bloodPct: number;
-  /** Did the colonist survive? A build can lose by dying, not only by failing to kill. */
   survived: boolean;
 }
 
-/** ONE drafted colonist vs ONE mob. The only variables are the ones a caller passes. */
 async function duel(opts: {
   seed?: number;
   stats: Partial<EntityStats>;
@@ -91,7 +72,6 @@ async function duel(opts: {
   };
 }
 
-/** Mean over several seeds — a single fight ends in a handful of swings and is far too noisy. */
 async function meanDuel(
   label: string,
   opts: Parameters<typeof duel>[0],
@@ -99,15 +79,9 @@ async function meanDuel(
 ) {
   const runs: Duel[] = [];
   for (const seed of seeds) runs.push(await duel({ ...opts, seed }));
-  // RIGHT-CENSORED: a run that never killed counts as the full budget. Averaging over the kills only
-  // flatters whichever build fails most — it silently drops its worst runs.
   const ticks = runs.reduce((a, r) => a + (r.killed ? r.ticks : MAX_TICKS), 0) / runs.length;
-  // Ticks among the runs that DID kill — answers "how fast does it kill", which is a different
-  // question from "does it win the encounter" (the censored mean above). A glass cannon can lead on
-  // this and still lose overall by dying; reporting only one of the two hides exactly that trade.
   const killed = runs.filter((r) => r.killed);
   const killTicks = killed.length ? killed.reduce((a, r) => a + r.ticks, 0) / killed.length : NaN;
-  // Blood removed is the UNBIASED measure: every run contributes, kill or not.
   const blood = runs.reduce((a, r) => a + r.bloodPct, 0) / runs.length;
   return {
     label,
@@ -148,8 +122,6 @@ describe('COMBAT-BALANCE audit — live sim', () => {
     console.log(
       `[GATE] ${CREATURE} spawned strength ${st.strength} · dexterity ${st.dexterity} · constitution ${st.constitution} · perception ${st.perception}`
     );
-    // The rename's real failure mode: a key that no longer matches falls through to the 10 fallback
-    // on EVERY creature, which no unit assertion would catch.
     expect(st.strength).toBeGreaterThan(10);
     expect(
       [st.strength, st.dexterity, st.constitution, st.perception].every((v) => Number.isFinite(v) && v > 0)
@@ -164,14 +136,10 @@ describe('COMBAT-BALANCE audit — live sim', () => {
     for (let i = 0; i < 30 && (s.getState().mobs?.[0]?.isAlive ?? false); i++) s.tick(40);
     const after = s.getState().mobs?.[0]?.bloodVolume ?? 0;
     console.log(`[GATE] blood ${Math.round(before)} → ${Math.round(after)} over ≤1200 ticks`);
-    expect(after).toBeLessThan(before); // damage still lands post-rename
+    expect(after).toBeLessThan(before);
   }, 120_000);
 
   it('#4 LANDED — a two-hander answers to STRENGTH, the stat it names', async () => {
-    // The doc's headline finding, in a real fight. Same greataxe, same aptitudes, only the physique
-    // differs — and the weapon's own power stat is STRENGTH. Before tasks 3–5 and 9 the DEXTERITY build won
-    // this outright (1.89× faster, 2.9× the blood) because dexterity bought cadence, to-hit and crit on
-    // top of damage. It buys none of them now.
     const equip = ['steel_greataxe'];
     const strong = await meanDuel('STRENGTH 40 / DEXTERITY 10 (2H greataxe)', {
       stats: { strength: 40, dexterity: 10, constitution: 30 },
@@ -186,15 +154,11 @@ describe('COMBAT-BALANCE audit — live sim', () => {
       `  → the STRENGTH build is ${(nimble.ticks / strong.ticks).toFixed(2)}× faster and removes ` +
         `${((100 - strong.blood) / (100 - nimble.blood)).toFixed(1)}× the blood, on a weapon whose power stat is STRENGTH`
     );
-    // The stat the weapon names is now the stat that wins with it — on time-to-kill AND on damage done.
     expect(strong.ticks).toBeLessThan(nimble.ticks);
     expect(100 - strong.blood).toBeGreaterThan(100 - nimble.blood);
   }, 600_000);
 
   it('#11 a strict downgrade now costs time', async () => {
-    // `lumbering-fighter` is attack_speed ×0.6 AND hit_precision ×0.75 — an unambiguous downgrade that
-    // used to make a stiletto FASTER (ratio 0.96×). Both stats are aptitudes now, so the trait's
-    // multipliers bite a stable base instead of one inflated by the wielder's dexterity.
     const equip = ['steel_stiletto'];
     const plain = await meanDuel('stiletto, unimpaired', {
       stats: { strength: 20, dexterity: 40, constitution: 30 },
@@ -209,8 +173,6 @@ describe('COMBAT-BALANCE audit — live sim', () => {
     console.log(
       `  → crippled/unimpaired time-to-kill ratio ${(crippled.ticks / plain.ticks).toFixed(2)}× (should be > 1)`
     );
-    // A strict downgrade must cost time. NOTE: `aimedBodyPart` still scores by armour alone — task 11
-    // proper (lethality scoring) is NOT done; this passes because the stats feeding it were fixed.
     expect(crippled.ticks).toBeGreaterThan(plain.ticks);
   }, 600_000);
 
@@ -227,7 +189,6 @@ describe('COMBAT-BALANCE audit — live sim', () => {
     );
     const id = (s.getState().pawns as Pawn[])[0].id;
     const before = { ...(s.getState().pawns as Pawn[])[0].stats };
-    // frail = constitutionBonus −2 · clumsy = dexterityBonus −2 · dull = intelligenceBonus −2 (task 1, signed)
     s.command({
       type: 'devSetPawnTraits',
       payload: { pawnId: id, traitIds: ['frail', 'clumsy', 'dull'] }
@@ -237,15 +198,12 @@ describe('COMBAT-BALANCE audit — live sim', () => {
       `[#1 SIGNED GRANTS] frail+clumsy+dull → constitution ${before.constitution}→${after.constitution} · ` +
         `dexterity ${before.dexterity}→${after.dexterity} · intelligence ${before.intelligence}→${after.intelligence}`
     );
-    // Every one of them is a flaw, and every one of them now costs what it says it costs.
     expect(after.constitution).toBeLessThan(before.constitution);
     expect(after.dexterity).toBeLessThan(before.dexterity);
     expect(after.intelligence).toBeLessThan(before.intelligence);
   }, 120_000);
 
   it('#2 the sim itself is deterministic — the same seed replays identically', async () => {
-    // The RNG finding is about the module DEFAULT seed, not the session: a scenario that pins its
-    // seed must still replay byte-for-byte, or no tuning number above is trustworthy.
     const a = await duel({
       seed: 909,
       stats: { strength: 30, dexterity: 20, constitution: 30 },

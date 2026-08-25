@@ -35,7 +35,7 @@ describe('truncateSentPath (§D entity projection)', () => {
       draftTarget: { type: 'move', x: 9, y: 0 }
     };
     truncateSentPath(o);
-    expect(o.path).toBe(full); // same ref, untouched
+    expect(o.path).toBe(full);
     expect(o.pathIndex).toBe(2);
   });
 
@@ -50,7 +50,7 @@ describe('truncateSentPath (§D entity projection)', () => {
     const short = cells(2);
     const o: Record<string, unknown> = { path: short, pathIndex: 0 };
     truncateSentPath(o);
-    expect(o.path).toBe(short); // same ref — skipped the slice
+    expect(o.path).toBe(short);
   });
 
   it('is a no-op when there is no path or an empty path', () => {
@@ -80,7 +80,6 @@ describe('projectSentEntity (§D entity projection — drop worker-only sub-fiel
     const o: Record<string, unknown> = { id: 'p1', needs: { ...canonicalNeeds } };
     projectSentEntity(o);
     expect(o.needs).toEqual({ hunger: 50, fatigue: 30, sleep: 10, thirst: 40, hygiene: 20 });
-    // thirst (fastest-drifting) and hygiene (shown live in the work list) are NOT demoted.
     expect((o.needs as Record<string, unknown>).thirst).toBe(40);
     expect((o.needs as Record<string, unknown>).hygiene).toBe(20);
   });
@@ -109,10 +108,10 @@ describe('projectSentEntity (§D entity projection — drop worker-only sub-fiel
     const needs = { hunger: 5, lastMeal: 99 };
     const activeJob = { type: 'craft', progress: 0.1, jobId: 'j1' };
     const e = { id: 'p1', needs, activeJob };
-    const o: Record<string, unknown> = { ...e }; // shallow clone, as the worker does for full sends
+    const o: Record<string, unknown> = { ...e };
     projectSentEntity(o);
-    expect(needs).toEqual({ hunger: 5, lastMeal: 99 }); // untouched
-    expect(activeJob).toEqual({ type: 'craft', progress: 0.1, jobId: 'j1' }); // untouched
+    expect(needs).toEqual({ hunger: 5, lastMeal: 99 });
+    expect(activeJob).toEqual({ type: 'craft', progress: 0.1, jobId: 'j1' });
     expect(o.needs).not.toBe(needs);
     expect(o.activeJob).not.toBe(activeJob);
   });
@@ -132,12 +131,10 @@ describe('projectSentEntity (§D entity projection — drop worker-only sub-fiel
     };
     projectSentEntity(o);
     expect(o.jobQueue).toBeUndefined();
-    expect(o.state).toEqual({ mood: 60, health: 90 }); // mood/health kept; booleans dropped
+    expect(o.state).toEqual({ mood: 60, health: 90 });
   });
 
   it("leaves a mob's STRING state intact (not turned into a char-indexed object)", () => {
-    // Regression: omit() over a string `for…in`s its char-indices → {0:'C',…} → "[object Object]"
-    // in the mob HUD. Mobs carry a MobState string, not the pawn's object state.
     const o: Record<string, unknown> = { id: 'm1', state: 'Collapsed' };
     projectSentEntity(o);
     expect(o.state).toBe('Collapsed');

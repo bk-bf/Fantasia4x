@@ -1,8 +1,3 @@
-// src/lib/webgl/types.ts
-/**
- * Core WebGL2 type definitions for the tile renderer
- */
-
 export interface RGB {
   r: number;
   g: number;
@@ -49,7 +44,6 @@ export interface ShaderProgram {
   attributes: Map<string, number>;
 }
 
-// Font Atlas Types
 export interface CharacterInfo {
   char: string;
   x: number;

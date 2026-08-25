@@ -2,13 +2,6 @@ import { describe, it, expect } from 'vitest';
 import { amenityAt, AMENITY_RADIUS, buildingComfortOf } from '$lib/game/systems/pawn/pawnHelpers';
 import type { PlacedBuilding } from '$lib/game/core/types';
 
-/**
- * §M room amenity — BEAUTY (+insulation) of complete furniture within AMENITY_RADIUS of a tile, used to
- * speed rest (handleSleeping) and wound healing (healWounds). The build material feeds in via `materials`.
- *
- * COMFORT is deliberately NOT ambient: a pawn gets comfort by USING a piece (lounging on the seat,
- * sleeping in the bed), read per-building via `buildingComfortOf` — never by standing near one.
- */
 const b = (
   type: string,
   x: number,

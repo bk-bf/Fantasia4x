@@ -1,11 +1,3 @@
-/**
- * FSM trace control (HEADLESS-SIM / ADR-033).
- *   POST /api/sim/trace  { creature?, id?, capacity? }  → start tracing (verbose + entity pin)
- *   POST /api/sim/trace  { off: true }                  → stop
- *   GET  /api/sim/trace?category=ai&limit=200           → drain buffered trace lines
- *   GET  /api/sim/trace?timing=1                        → drain per-function timing table
- * Dev-only + --headless (404 otherwise).
- */
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { guardHeadless, currentSession } from '$lib/server/simSession';

@@ -1,16 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { pawnStatService } from '$lib/game/services/PawnStatService';
 import { jobService } from '$lib/game/services/JobService';
-import { SKILL_CATEGORIES, workSkillCategory } from '$lib/game/core/workExperience';
+import { SKILL_CATEGORIES, workSkillCategory } from '$lib/game/core/rules/body/workExperience';
 import type { Pawn, Job } from '$lib/game/core/types';
 
-/**
- * Per-subjob work stats (Work-tab fine-tuning): each splittable subjob reads its own
- * `<subjob>_speed`/`_quality` from stats.jsonc, with a per-axis fallback to the parent category.
- * WORK-EXPERIENCE: per-pawn variety now comes from the experience LEVEL (a subjob reads its
- * parent category's level via the SKILL token) and the innate speed↔finesse work style — core
- * stats are only a small supplement.
- */
 const pawn = (stats: Partial<Record<string, number>>, extra: Partial<Pawn> = {}): Pawn =>
   ({
     limbs: [],
@@ -46,8 +39,7 @@ describe('per-subjob work stats', () => {
       undefined,
       'construction'
     ).speed;
-    expect(repairMaster).toBeGreaterThan(repairNovice * 2); // levelBase 0.6ish → ~1.8
-    // and the parent's own speed moves in lockstep with the same level
+    expect(repairMaster).toBeGreaterThan(repairNovice * 2);
     const buildMaster = pawnStatService.getWorkModifiers(master, 'construction').speed;
     expect(buildMaster).toBeGreaterThan(
       pawnStatService.getWorkModifiers(novice, 'construction').speed
@@ -68,8 +60,8 @@ describe('per-subjob work stats', () => {
     const mighty = pawn({ strength: 20, dexterity: 20 });
     const weakSpeed = pawnStatService.getWorkModifiers(weak, 'construction').speed;
     const mightySpeed = pawnStatService.getWorkModifiers(mighty, 'construction').speed;
-    expect(mightySpeed).toBeGreaterThan(weakSpeed); // still a nudge…
-    expect(mightySpeed / weakSpeed).toBeLessThan(1.1); // …but never the driver
+    expect(mightySpeed).toBeGreaterThan(weakSpeed);
+    expect(mightySpeed / weakSpeed).toBeLessThan(1.1);
   });
 
   it('a subjob with no own stat inherits the parent category (Build = construction)', () => {
@@ -81,9 +73,7 @@ describe('per-subjob work stats', () => {
 
   it('quality is null when neither the subjob nor its category defines one (fetch under hauling)', () => {
     const p = pawn({});
-    // hauling has no `hauling_quality`, so fetch has nothing to inherit → null.
     expect(pawnStatService.getWorkModifiers(p, 'fetch', undefined, 'hauling').quality).toBeNull();
-    // repair defines its own quality.
     expect(
       pawnStatService.getWorkModifiers(p, 'repair', undefined, 'construction').quality
     ).not.toBeNull();
@@ -93,18 +83,16 @@ describe('per-subjob work stats', () => {
     expect(jobService.getJobWorkStatKey(job('repair'))).toBe('repair');
     expect(jobService.getJobWorkStatKey(job('construct'))).toBe('construct');
     expect(jobService.getJobWorkStatKey(job('fetch'))).toBe('fetch');
-    expect(jobService.getJobWorkStatKey(job('craft'))).toBe('crafting'); // 1:1, no subjob split
+    expect(jobService.getJobWorkStatKey(job('craft'))).toBe('crafting');
   });
 });
 
 describe('craft-discipline leaves are INDEPENDENT skills', () => {
   it('each leaf trains itself — a weaver never levels leatherworking (and vice versa)', () => {
-    // The learn-by-doing target: a craft trains its LEAF skill, so the two do not bleed into each other.
     expect(workSkillCategory('weaving')).toBe('weaving');
     expect(workSkillCategory('leatherworking')).toBe('leatherworking');
     expect(workSkillCategory('butchery')).toBe('butchery');
     expect(workSkillCategory('baking')).toBe('baking');
-    // …but a VERB subjob still shares its parent (repair rides construction), unchanged.
     expect(workSkillCategory('repair')).toBe('construction');
   });
 
@@ -140,7 +128,6 @@ describe('craft-discipline leaves are INDEPENDENT skills', () => {
       undefined,
       'tailoring'
     ).speed;
-    // Master weaver, novice leatherworker — the gap proves the skills are read independently.
     expect(weave).toBeGreaterThan(leather * 2);
   });
 });

@@ -1,7 +1,3 @@
-/**
- * POST /api/sim/tick?n=60 — advance the headless session n ticks (default 1, cap 100k).
- * Synchronous in-thread: the response carries the turn actually reached. (HEADLESS-SIM / ADR-033)
- */
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { guardHeadless, currentSession } from '$lib/server/simSession';

@@ -1,5 +1,3 @@
-// Cached ledger of every discovered resource node (EXPLORE tab). The scan is O(map) — too slow for
-// the tab-open click path — so rows rebuild in idle time, gated by a turn-bucket dirty flag.
 import { writable, get } from 'svelte/store';
 import { gameState } from './gameState';
 import { uiState } from './uiState';
@@ -10,7 +8,7 @@ export interface ResourceRow {
   id: string;
   name: string;
   color: string;
-  type: string; // work category (woodcutting / mining / foraging …) or "lair"
+  type: string;
   amount: number;
   x: number;
   y: number;
@@ -22,7 +20,6 @@ function rgb(c: [number, number, number]): string {
   return `rgb(${Math.round(c[0] * 255)}, ${Math.round(c[1] * 255)}, ${Math.round(c[2] * 255)})`;
 }
 
-// One row per resource present on each discovered tile, sorted by name then position.
 function buildRows(worldMap: WorldTile[][]): ResourceRow[] {
   const out: ResourceRow[] = [];
   for (const line of worldMap ?? []) {
@@ -36,8 +33,6 @@ function buildRows(worldMap: WorldTile[][]): ResourceRow[] {
           id,
           name: def?.displayName ?? id.replace(/_/g, ' '),
           color: def?.fg ? rgb(def.fg) : 'var(--text-dim)',
-          // Lairs read as "lair" (not their harvest workCategory "foraging") — clearer, and lets the
-          // search term "lair" match every den/nest/warren even though their names don't contain it.
           type: def?.lair ? 'lair' : (def?.interaction?.workCategory ?? '—'),
           amount,
           x: t.x,
@@ -50,7 +45,6 @@ function buildRows(worldMap: WorldTile[][]): ResourceRow[] {
   return out;
 }
 
-// Rebuild at most once per REFRESH_TURNS-turn bucket — the ledger only shifts meaningfully across turns.
 const REFRESH_TURNS = 15;
 let builtBucket = -1;
 let scheduled = false;
@@ -67,12 +61,8 @@ function rebuildNow() {
   discoveredResources.set(buildRows(s.worldMap ?? []));
 }
 
-// Only maintain the ledger while the EXPLORE tab is OPEN — closed means no rebuilds; opening
-// rebuilds once if stale, then keeps it fresh.
 let exploreOpen = false;
 
-// Scan is deferred to idle time so it never blocks a frame or the sim; coalesced via `scheduled`
-// so a burst of turns books one rebuild.
 function maybeScheduleRebuild(turn: number) {
   if (!exploreOpen) return;
   const bucket = Math.floor(turn / REFRESH_TURNS);
@@ -84,10 +74,8 @@ function maybeScheduleRebuild(turn: number) {
   });
 }
 
-// App-lifetime subscription — there is one gameState.
 gameState.subscribe((s) => maybeScheduleRebuild(s.turn ?? 0));
 
-// Rebuild on the EXPLORE tab opening if the cache is stale.
 uiState.subscribe((s) => {
   const open = s.currentScreen === 'exploration';
   if (open && !exploreOpen) {
@@ -97,8 +85,6 @@ uiState.subscribe((s) => {
   exploreOpen = open;
 });
 
-/** Synchronous rebuild only if the cache has never been built — mount-time safety net so a first
- *  open before the idle warm-up still shows data. */
 export function ensureDiscoveredResources(): void {
   if (builtBucket === -1) rebuildNow();
 }

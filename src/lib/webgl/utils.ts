@@ -1,11 +1,3 @@
-// src/lib/webgl/utils.ts
-/**
- * WebGL utility functions for error handling and context management
- */
-
-/**
- * Check if WebGL2 is supported in the current browser
- */
 export function isWebGL2Supported(): boolean {
   try {
     const canvas = document.createElement('canvas');
@@ -16,9 +8,6 @@ export function isWebGL2Supported(): boolean {
   }
 }
 
-/**
- * Get detailed WebGL support information for debugging
- */
 export function getWebGLInfo(gl: WebGL2RenderingContext): Record<string, string> {
   return {
     vendor: gl.getParameter(gl.VENDOR) || 'Unknown',
@@ -30,9 +19,6 @@ export function getWebGLInfo(gl: WebGL2RenderingContext): Record<string, string>
   };
 }
 
-/**
- * Create orthographic projection matrix for 2D rendering
- */
 export function createOrthographicMatrix(
   left: number,
   right: number,
@@ -70,9 +56,6 @@ export function createOrthographicMatrix(
   return matrix;
 }
 
-/**
- * Check for WebGL errors and log them with context
- */
 export function checkWebGLError(gl: WebGL2RenderingContext, operation: string): boolean {
   const error = gl.getError();
   if (error !== gl.NO_ERROR) {
@@ -83,9 +66,6 @@ export function checkWebGLError(gl: WebGL2RenderingContext, operation: string): 
   return false;
 }
 
-/**
- * Convert WebGL error code to human-readable name
- */
 function getWebGLErrorName(gl: WebGL2RenderingContext, error: number): string {
   switch (error) {
     case gl.NO_ERROR:
@@ -107,9 +87,6 @@ function getWebGLErrorName(gl: WebGL2RenderingContext, error: number): string {
   }
 }
 
-/**
- * Format bytes into human-readable string
- */
 export function formatBytes(bytes: number): string {
   if (bytes === 0) return '0 Bytes';
   const k = 1024;
@@ -118,9 +95,6 @@ export function formatBytes(bytes: number): string {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
 
-/**
- * Performance timer for measuring render operations
- */
 export class PerformanceTimer {
   private startTime: number = 0;
   private lastFrameTime: number = 0;
@@ -134,20 +108,6 @@ export class PerformanceTimer {
     return performance.now() - this.startTime;
   }
 
-  /**
-   * Returns a smoothed frames-per-second estimate.
-   *
-   * Uses an exponential moving average of per-frame deltas instead of a
-   * 1-second frame-count bucket. The bucket approach only updates once per
-   * second and swings wildly whenever a single heavy frame (GC, a simulation
-   * burst, a terrain rebuild) lands on the boundary, making the readout look
-   * far less stable than the game actually is. The EMA reacts smoothly and
-   * tracks perceived smoothness. Only genuinely pathological gaps (>2s — a
-   * backgrounded tab or a debugger pause) are ignored; everything else feeds
-   * the average so SUSTAINED slowness reads as slow. (A previous 250ms cutoff
-   * discarded every frame once the game dropped below 4fps, freezing the readout
-   * at the last healthy value — i.e. it lied exactly when it mattered.)
-   */
   updateFPS(): number {
     const now = performance.now();
 
@@ -159,15 +119,12 @@ export class PerformanceTimer {
     const dt = now - this.lastFrameTime;
     this.lastFrameTime = now;
 
-    // Ignore only true pauses (tab background / debugger). A steady 1fps has
-    // dt≈1000ms and MUST register, so the threshold has to sit well above any
-    // real-but-slow frame time.
     if (dt <= 0 || dt > 2000) {
       return this.smoothedFps;
     }
 
     const instantaneous = 1000 / dt;
-    const alpha = 0.1; // responsive but stable
+    const alpha = 0.1;
     this.smoothedFps =
       this.smoothedFps === 0
         ? instantaneous

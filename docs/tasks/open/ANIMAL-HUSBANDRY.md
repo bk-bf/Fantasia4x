@@ -105,7 +105,7 @@ effective handling skill against the creature's **`wilderness`**.
   `primitive`/`animal` → feed-tameable; **`sentient` (pawn-level) → recruit/negotiate only** via the
   KINGDOMS-TRADE social path. This is the same tier that escalates a kingdom's roster over time.
 
-- [ ] Add `taming` work category (`core/Work.ts`) + `feed` job (`jobs.jsonc` + `JobService` handler +
+- [ ] Add `taming` work category (`core/defs/work.ts`) + `feed` job (`jobs.jsonc` + `JobService` handler +
       `Job['type']`).
 - [ ] Rename `tameResistance` → `wilderness`; add `favoriteTameFood: string[]` to `CreatureDefinition`
       and populate it across `creatures.jsonc` (wolf/worg raw meats, rabbit a veggie, …).

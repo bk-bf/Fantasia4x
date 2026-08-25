@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Culture, CultureRelation } from '$lib/game/core/types';
-  import StatBar from '$lib/components/UI/StatBar.svelte';
+  import StatBar from '$lib/components/UI/widget/StatBar.svelte';
   import TraitCards from '$lib/components/pawn/TraitCards.svelte';
 
   export let culture: Culture;
@@ -17,14 +17,10 @@
     'charisma'
   ];
 
-  // Sum of cultural-trait stat bonuses for a given stat (so the screen can show the effective
-  // range a pawn actually rolls into). Mirrors applyCulturalTraitBonuses' summation.
   function traitStatBonus(r: Culture, stat: string): number {
     let b = 0;
-    // Only GUARANTEED identity traits shift the culture's baseline every member shares; pool traits are
-    // per-pawn variety, so they don't move the culture-wide stat range shown here.
     for (const t of r.guaranteedTraits) {
-      b += (t.effects as Record<string, number>)[`${stat}Bonus`] ?? 0; // signed
+      b += (t.effects as Record<string, number>)[`${stat}Bonus`] ?? 0;
 
     }
     return b;
@@ -44,7 +40,6 @@
     hostile: '#E53935'
   };
 
-  // Relations from this culture to OTHER known cultures (never reveal undiscovered ones).
   $: relViews = relations
     .filter((rel) => rel.a === culture.id || rel.b === culture.id)
     .map((rel) => {
@@ -60,7 +55,7 @@
 </script>
 
 <div class="detail">
-  <!-- Lore -->
+
   <div class="section-hdr">| {culture.name.toUpperCase()} — {culture.lore.epithet}</div>
   <p class="lore-desc">{culture.lore.description}</p>
   <div class="row">
@@ -82,7 +77,7 @@
     <span class="lbl">BELIEF</span><span class="val small">{culture.lore.belief}</span>
   </div>
 
-  <!-- Physique ranges -->
+
   <div class="section-hdr">| PHYSIQUE <span class="hint">(rolled per pawn)</span></div>
   <div class="row">
     <span class="lbl">BUILD</span><span class="val">{culture.physicalTraits.size}</span>
@@ -100,7 +95,7 @@
     >
   </div>
 
-  <!-- Stat ranges + trait boosts -->
+
   <div class="section-hdr">| STATS <span class="hint">(each pawn rolls in range)</span></div>
   {#each STAT_ORDER as stat}
     {#if culture.statRanges[stat]}
@@ -120,8 +115,7 @@
     {/if}
   {/each}
 
-  <!-- Traits: guaranteed identity every member shares, then the pool pawns may individually draw.
-       Rendered by the SHARED TraitCards grid (same component the pawn status tab uses). -->
+
   <div class="section-hdr">
     | TRAITS ({culture.guaranteedTraits.length} identity + {culture.culturalTraitPool.length} possible)
   </div>
@@ -130,7 +124,7 @@
     guaranteedCount={culture.guaranteedTraits.length}
   />
 
-  <!-- Relations -->
+
   {#if relViews.length > 0}
     <div class="section-hdr">| RELATIONS</div>
     {#each relViews as rv}

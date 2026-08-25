@@ -1,9 +1,7 @@
-/** pawn/handlers/work — work state handlers, extracted from PawnStateMachine (hotspot step 2). Each
- *  is a plain (pawn, gameState) => GameState function; the dispatcher wires them into the table. */
 import type { GameState, Pawn, Job } from '../../../core/types';
-import { gameLogger } from '../../../dev/gameLogger';
-import { manhattan } from '../../../core/distance';
-import { perTick } from '../../../core/time';
+import { gameLogger } from '../../../debug/gameLogger';
+import { manhattan } from '../../../core/util/distance';
+import { perTick } from '../../../core/util/time';
 import { jobService, BASE_WORK_RATE } from '../../../services/JobService';
 import { pawnStatService } from '../../../services/PawnStatService';
 import { pathfinderService } from '../../../services/PathfinderService';
@@ -35,13 +33,10 @@ import {
   addInstanceToInventory,
   equipDropToPawn,
   carryDropToInventory
-} from '../../../core/PawnEquipment';
-import { withDrops } from '../../../core/GameState';
+} from '../../../core/rules/gear/equipment';
+import { withDrops } from '../../../core/state/stockpile';
 import { handleForcedConsume, handleForcedDrink } from './needs';
 
-/** DRAFTED-JOB-ORDERS §8: force-equip / carry a specific dropped item NOW (an undrafted manual order).
- *  Walk to the drop's tile (IDLE arrival re-enters handleIdle); on adjacency wear/wield it into `slot`
- *  (or carry one unit in the pack when slot === 'inventory'), then advance the manual queue. */
 function handleForcedEquip(
   pawn: Pawn,
   gameState: GameState,
@@ -72,11 +67,11 @@ function handleForcedEquip(
           progress: 0,
           timeRequired: 1,
           turnsInState: 0,
-          targetState: PAWN_STATE.IDLE // arrive → IDLE → handleIdle re-runs the order (now adjacent)
+          targetState: PAWN_STATE.IDLE
         };
       });
     }
-    return mutatePawn(gameState, pawn.id, advancePawnOrders); // unreachable — abandon
+    return mutatePawn(gameState, pawn.id, advancePawnOrders);
   }
 
   const equipped =
@@ -86,11 +81,6 @@ function handleForcedEquip(
   return mutatePawn(equipped, pawn.id, advancePawnOrders);
 }
 
-/** DRAFTED-JOB-ORDERS §3.4: shared work-advance core. Compute the pawn's work-speed for `job` (a raw
- *  colony `Job` or the pawn's `activeJob` both satisfy the work-key shape) and advance that job by one
- *  tick's worth of work-points. The job auto-completes inside `advanceJob` when workDone reaches
- *  workRequired. Used by BOTH the FSM `handleWorking` and the drafted `forceJob` executor so the
- *  work-speed math lives in ONE place. */
 export function advanceJobOneTick(
   pawn: Pawn,
   job: {
@@ -103,12 +93,8 @@ export function advanceJobOneTick(
   jobId: string,
   gameState: GameState
 ): GameState {
-  // Subjobs (build/repair/demolish/refuel, haul/fetch) read their OWN `*_speed` when stats.jsonc
-  // defines one, falling back per-axis to the parent category — so a repair runs at repair_speed.
   const workCategory = jobService.getJobWorkCategory(job, gameState);
   const workStatKey = jobService.getJobWorkStatKey(job, gameState);
-  // WORK-EXPERIENCE: the pawn's experience level is already folded into the work-speed multiplier
-  // (the SKILL token), so there's no separate skill term here (that would double-count it).
   const workSpeedMult = pawnStatService.getWorkModifiers(
     pawn,
     workStatKey,
@@ -116,24 +102,20 @@ export function advanceJobOneTick(
     workCategory
   ).speed;
   const workPoints = BASE_WORK_RATE * workSpeedMult;
-  // workPoints is authored PER SECOND; deliver one tick's worth so an N-second job takes N seconds.
   return jobService.advanceJob(jobId, perTick(workPoints), gameState);
 }
 
 export function handleHauling(pawn: Pawn, gameState: GameState): GameState {
-  // ADR-016 fetch-carry: items picked up for a craft order go to that order's station tile
-  // (and are staged there with reservedFor), not to the nearest stockpile.
   if (pawn.carryingForOrder) {
     const station = orderStationTile(pawn.carryingForOrder, gameState);
     if (!station) {
-      // Station/order gone — stageInventoryAtStation handles the fallback (deposit to stockpile).
       return depositInventory(pawn, gameState);
     }
     if (pawn.position && isAdjacent(pawn.position.x, pawn.position.y, station.x, station.y)) {
-      return depositInventory(pawn, gameState); // stages at station
+      return depositInventory(pawn, gameState);
     }
     const afterPath = pawn.position ? tryAssignPath(pawn, station.x, station.y, gameState) : null;
-    if (!afterPath) return depositInventory(pawn, gameState); // unreachable — stage in place fallback
+    if (!afterPath) return depositInventory(pawn, gameState);
     return mutatePawn(afterPath, pawn.id, (p) => {
       p.currentState = PAWN_STATE.MOVING_TO_DEPOSIT;
       p.activeJob = {
@@ -148,10 +130,8 @@ export function handleHauling(pawn: Pawn, gameState: GameState): GameState {
     });
   }
 
-  // Pawn just picked up an item and needs to find a deposit point
   const deposit = findNearestDepositPoint(pawn, gameState);
   if (!deposit) {
-    // No building to deposit at — drop straight to stockpile
     return depositInventory(pawn, gameState);
   }
 
@@ -186,8 +166,6 @@ export function handleMovingToDeposit(pawn: Pawn, gameState: GameState): GameSta
   const activeJob = pawn.activeJob;
   if (!activeJob) return depositInventory(pawn, gameState);
 
-  // Recover from a path dropped after being blocked too long; if the deposit point is
-  // now unreachable, drop the goods in place rather than freezing.
   const recovered = repathStuckMover(pawn, gameState);
   if (recovered === 'unreachable') return depositInventory(pawn, gameState);
   if (recovered) return recovered;
@@ -207,11 +185,6 @@ export function handleMovingToDeposit(pawn: Pawn, gameState: GameState): GameSta
         })
       );
     }
-    // Path ended SHORT of the stockpile (the target tile got occupied, etc.). Do NOT set the load
-    // down out here — that was the ethereal-deposit leak (goods credited to a stockpile the pawn never
-    // reached). Re-enter HAULING to re-find the deposit point and path again, so the pawn stays
-    // MOTIVATED to physically reach the stockpile. A genuinely unreachable stockpile is caught by
-    // repathStuckMover above (→ load set down loose on the ground, never teleported).
     return mutatePawn(gameState, pawn.id, (p) => {
       p.currentState = PAWN_STATE.HAULING;
       p.hasReachedDestination = false;
@@ -222,25 +195,10 @@ export function handleMovingToDeposit(pawn: Pawn, gameState: GameState): GameSta
 }
 
 export function handleIdle(pawn: Pawn, gameState: GameState): GameState {
-  // Need-target selection (hunger / thirst→drink / hygiene→wash / fatigue) is decided by
-  // needSelection; the handler only applies the resulting state transition (P-4b).
   const idleNeed = selectIdleNeed(pawn, gameState);
   if (idleNeed) return applyNeed(pawn, gameState, idleNeed);
 
-  // ADR-016 / haul recovery: a pawn that is still carrying items (a fetch or haul interrupted
-  // by a need) must deliver them before taking new work — otherwise the goods, and for a fetch
-  // the reservation they represent, would be stranded in its hands. handleHauling routes a
-  // fetch-carry to its order's station (carryingForOrder) and a plain haul to the stockpile.
-  // Pinned items are kept in hand and never deposited, so they must NOT trigger haul-recovery —
-  // otherwise a pawn carrying only pinned items would loop Idle→Hauling→deposit(keeps)→Idle forever.
   const pinnedSet = new Set(pawn.pinnedItems ?? []);
-  // CONTAINERS-AND-FLUIDS §2: a fetched fluid input rides in a VESSEL, which is a tracked instance and
-  // never appears in the bulk `items` map — so a pawn carrying a barrel of brine for a craft order read
-  // as empty-handed here and went straight back to job selection, leaving the colony's brine walking
-  // around in its pack. `carryingForOrder` is the honest test for "this pawn owes a delivery".
-  // A LOADED vessel is stock in a pawn's hands, and stock belongs in a stockpile: a pawn that has just
-  // filled a flask at the vat has to carry it home before taking new work, exactly as it would with an
-  // armful of planks. (An empty vessel is personal kit and stays in hand — `depositInventory` keeps it.)
   const owesDelivery =
     !!pawn.carryingForOrder ||
     (pawn.inventory?.instances ?? []).some((i) => !!i.contents?.length) ||
@@ -249,15 +207,8 @@ export function handleIdle(pawn: Pawn, gameState: GameState): GameState {
     return transitionTo(pawn, PAWN_STATE.HAULING, gameState);
   }
 
-  // Don't pick jobs until the pathfinder is ready — prevents endless pick/release cycles
   if (!pathfinderService.isReady()) return gameState;
 
-  // ── MANUAL orders (DRAFTED-JOB-ORDERS §8) ──────────────────────────────────────────────────────
-  // The manual-queue head (`draftTarget`) is honoured HERE — after survival needs (selectIdleNeed,
-  // above) but BEFORE autonomous job selection, and ignoring work-zone confinement (the player ordered
-  // it explicitly). Eat/drink/equip route to their own handlers; a `forceJob` pins the forced job as
-  // `forcedJob` and falls through to the shared claim/path code below. Non-undrafted orders (move/
-  // attack/haul/rescue/tend belong to the drafted executor) are dropped so they can't stall an idler.
   const order = pawn.draftTarget;
   let forcedJob: Job | undefined;
   if (order) {
@@ -268,9 +219,6 @@ export function handleIdle(pawn: Pawn, gameState: GameState): GameState {
       forcedJob = (gameState.jobs ?? []).find(
         (j) => j.id === order.jobId && (j.claimedBy === null || j.claimedBy === pawn.id)
       );
-      // Job gone / taken by someone else, or tool-gated with no tool anywhere in stock: drop the order
-      // (advance the queue) rather than loop claiming-and-releasing forever. A tool that DOES exist is
-      // fetched by the normal tool-fetch detour below.
       const toolReq = forcedJob ? jobService.requiredToolForJob(forcedJob, gameState) : null;
       const toolBlocked =
         !!toolReq &&
@@ -287,29 +235,18 @@ export function handleIdle(pawn: Pawn, gameState: GameState): GameState {
     }
   }
 
-  // SOCIAL-LAYER §7: a pawn in a mental break refuses colony work until it passes. It still eats,
-  // drinks and sleeps (needs above) and delivers what it carries, but claims no jobs — a forced
-  // work order is dropped rather than looping at the queue head. It ambles instead of working.
   if (pawn.socialBreak && gameState.turn < pawn.socialBreak.until) {
     if (forcedJob) return mutatePawn(gameState, pawn.id, advancePawnOrders);
     return tryWanderStep(pawn, gameState) ?? gameState;
   }
 
-  // Restriction zones: a confined (non-drafted) pawn may only claim jobs whose target tile lies inside
-  // its allowed area, so it never grabs out-of-zone work and then churns failing to path there. Built
-  // once here (only for confined pawns) so the isReachable predicate is O(1) per candidate.
-  // A forced job overrides confinement — the player pointed at that tile explicitly.
   const allowedZone = pawn.drafted || forcedJob ? null : allowedTilesForPawn(gameState, pawn.id);
 
-  // If confined and currently OUTSIDE the allowed area (zone freshly drawn away from the pawn), march it
-  // back IN before considering any work — drawing a restriction zone should walk the pawn there, not
-  // freeze it. assignDraftMovePath uses the normal (unconfined) grid so the route home isn't walled off;
-  // once the pawn re-enters the zone, confinement re-applies. Skip while it's already striding home.
   if (allowedZone && pawn.position && !allowedZone.has(`${pawn.position.x},${pawn.position.y}`)) {
     if (pawn.isMoving && (pawn.path?.length ?? 0) > 0) return gameState;
     const home = nearestAllowedTile(allowedZone, pawn.position.x, pawn.position.y);
     if (home) return assignDraftMovePath(gameState, pawn, home.x, home.y);
-    return gameState; // no reachable allowed tile — stay put rather than churn
+    return gameState;
   }
 
   const jobsById = allowedZone ? new Map(gameState.jobs.map((j) => [j.id, j])) : null;
@@ -318,19 +255,12 @@ export function handleIdle(pawn: Pawn, gameState: GameState): GameState {
     const j = jobsById.get(id);
     if (!j) return true;
     if (allowedZone.has(`${j.targetX},${j.targetY}`)) return true;
-    // A pawn works a job from an ADJACENT tile, and the target itself can be an UNWALKABLE tile it
-    // never stands on — a wall/solid-building blueprint (built from beside it) or a resource node. So
-    // the job is workable from inside the zone if ANY neighbour of the target is in-zone. Confinement
-    // still holds: pathing stays on allowed tiles, so the pawn only ever STANDS inside the zone.
     for (let dy = -1; dy <= 1; dy++)
       for (let dx = -1; dx <= 1; dx++)
         if ((dx || dy) && allowedZone.has(`${j.targetX + dx},${j.targetY + dy}`)) return true;
     return false;
   };
 
-  // Job-target selection (which job + the need-lookahead queue preview) is decided by JobService;
-  // the handler injects the pawn-system reachability memory and only applies the result (P-4b). A
-  // forced job (DRAFTED-JOB-ORDERS §8) skips selection/hunt/wander entirely — it IS the chosen job.
   const { job, queuePreview } = forcedJob
     ? { job: forcedJob, queuePreview: pawn.jobQueue ?? [] }
     : jobService.selectJobForPawn(pawn, gameState, {
@@ -339,21 +269,14 @@ export function handleIdle(pawn: Pawn, gameState: GameState): GameState {
       });
 
   if (!forcedJob) {
-    // Hunting competes with normal work by labor level: a player-marked huntable mob is
-    // pursued when the pawn's hunting priority is at least as high as its best available job.
     const hunt = tryStartHunt(pawn, gameState, job ?? null);
     if (hunt) return hunt;
   }
 
-  // Nothing to do right now — amble about rather than stand frozen. Keeps idlers from
-  // permanently camping a build-site approach tile (the construct deadlock) and reads as
-  // natural milling. Still IDLE, so a job appearing next tick is picked up immediately.
   if (!job) return tryWanderStep(pawn, gameState) ?? gameState;
 
   let gs = jobService.claimJob(pawn.id, job.id, gameState);
 
-  // Rescue is a CARRY job (like haul, no tool / no work-accrual): claim it and enter the Rescuing FSM
-  // state — handleRescuing walks to the downed colonist, lifts it, and carries it to shelter.
   if (job.type === 'rescue') {
     return mutatePawn(gs, pawn.id, (p) => {
       p.currentState = PAWN_STATE.RESCUING;
@@ -371,9 +294,6 @@ export function handleIdle(pawn: Pawn, gameState: GameState): GameState {
     });
   }
 
-  // ADR-009 step 2: if this is a tool-gated job and the pawn isn't already holding the tool, detour
-  // to grab one from colony stock first (carried in inventory, not belted), THEN proceed to the job.
-  // `toolFetch` makes the first leg target the tool's stockpile tile; the pickup re-targets the site.
   let toolFetch: { itemId: string; siteX: number; siteY: number } | undefined;
   let destX = job.targetX;
   let destY = job.targetY;
@@ -386,8 +306,6 @@ export function handleIdle(pawn: Pawn, gameState: GameState): GameState {
       pawn.position ?? undefined
     );
     if (!drop) {
-      // Claimable only because the colony had a tool a moment ago; it's gone now — cool the job
-      // down for this pawn and release so a tool-bearing pawn can take it.
       markJobUnreachable(pawn.id, job.id, gameState.turn);
       return jobService.releaseJob(pawn.id, job.id, gs);
     }
@@ -411,16 +329,10 @@ export function handleIdle(pawn: Pawn, gameState: GameState): GameState {
     toolFetch
   };
 
-  // ADR-016: craft jobs now target the station tile, so the pawn must walk there like any other
-  // job (no more "craft anywhere"). Only genuinely abstract (0,0) jobs are worked in place. A
-  // tool-fetch detour never starts AT the site — the first leg is always the tool tile.
   const atSite =
     !toolFetch &&
-    ((job.targetX === 0 && job.targetY === 0) || // abstract building placed off-map
+    ((job.targetX === 0 && job.targetY === 0) ||
       (pawn.position && isAdjacent(pawn.position.x, pawn.position.y, job.targetX, job.targetY)));
-
-  // queuePreview (soft-preview of upcoming unclaimed jobs for the need-lookahead system) is
-  // computed by jobService.selectJobForPawn above.
 
   if (atSite) {
     return mutatePawn(gs, pawn.id, (p) => {
@@ -439,9 +351,6 @@ export function handleIdle(pawn: Pawn, gameState: GameState): GameState {
     });
   }
 
-  // tryAssignPath returned null = already adjacent to the destination OR genuinely unreachable.
-  // A tool-fetch leg that's already adjacent enters MovingToResource flagged arrived, so the pickup
-  // branch fires next tick (the job-target adjacency was handled by `atSite` above).
   if (toolFetch && pawn.position && isAdjacent(pawn.position.x, pawn.position.y, destX, destY)) {
     return mutatePawn(gs, pawn.id, (p) => {
       p.currentState = PAWN_STATE.MOVING_TO_RESOURCE;
@@ -451,18 +360,10 @@ export function handleIdle(pawn: Pawn, gameState: GameState): GameState {
     });
   }
 
-  // Unreachable right now — cool the job down for this pawn so we don't re-run the expensive failed
-  // pathfind every tick, then drop the claim.
   markJobUnreachable(pawn.id, job.id, gameState.turn);
   return jobService.releaseJob(pawn.id, job.id, gs);
 }
 
-/**
- * ADR-009 step 2 — the pawn has reached the tool's stockpile tile: take one tool from stock, carry
- * it in its inventory (NOT the belt slot — the gate accepts a carried tool), clear the detour, and
- * re-path to the real job site. If the tool was taken by someone else first, release the job + cool
- * it down so the pawn re-selects (and may grab from another stock tile).
- */
 function acquireToolAndProceed(pawn: Pawn, gameState: GameState): GameState {
   const aj = pawn.activeJob!;
   const tf = aj.toolFetch!;
@@ -479,7 +380,6 @@ function acquireToolAndProceed(pawn: Pawn, gameState: GameState): GameState {
     return jobService.releaseJob(pawn.id, aj.jobId ?? '', goIdle(pawn, gameState));
   }
 
-  // Remove one tool from stock + recompute the aggregate (it's now on the pawn, not the colony).
   const remainder = (drop.quantity ?? 1) - 1;
   const newDropped =
     remainder > 0
@@ -488,9 +388,6 @@ function acquireToolAndProceed(pawn: Pawn, gameState: GameState): GameState {
         )
       : (gameState.droppedItems ?? []).filter((d) => d.id !== drop.id);
 
-  // Carry the tool in the pawn's inventory (NOT the belt slot — belts go there). The tool-gate
-  // (`pawnHasToolFor`) accepts a carried tool, so the pawn can work the job while holding it in its
-  // pack; deposit/craft-staging preserve carried instances, so it isn't dropped at a stockpile.
   const withTool: GameState = {
     ...withDrops(gameState, newDropped),
     pawns: gameState.pawns.map((p) => {
@@ -505,7 +402,6 @@ function acquireToolAndProceed(pawn: Pawn, gameState: GameState): GameState {
   };
 
   const updated = withTool.pawns.find((p) => p.id === pawn.id)!;
-  // Already at the site (tool tile == site or adjacent)? Work next tick. Otherwise path there.
   if (updated.position && isAdjacent(updated.position.x, updated.position.y, tf.siteX, tf.siteY)) {
     return mutatePawn(withTool, pawn.id, (p) => {
       p.currentState = PAWN_STATE.MOVING_TO_RESOURCE;
@@ -531,9 +427,6 @@ export function handleMovingToResource(pawn: Pawn, gameState: GameState): GameSt
     : null;
   if (!jobInPool) return goIdle(pawn, gameState);
 
-  // Dynamic need interruption while en route to a job.
-  // Re-evaluated every turn so needs that arise mid-journey are caught early.
-  // Both work priority and queue lookahead adjust when the pawn will divert.
   const enRouteDist = pawn.position
     ? manhattan(activeJob.targetX, activeJob.targetY, pawn.position.x, pawn.position.y)
     : 0;
@@ -550,9 +443,6 @@ export function handleMovingToResource(pawn: Pawn, gameState: GameState): GameSt
   );
   if (interrupted) return interrupted;
 
-  // Recover from a path dropped after being blocked too long (e.g. an idle pawn parked on
-  // the build site's approach tile). Re-route around it; if the site is now unreachable,
-  // cool the job down for this pawn and release it so another pawn can try.
   const recovered = repathStuckMover(pawn, gameState);
   if (recovered === 'unreachable') {
     if (activeJob.jobId) markJobUnreachable(pawn.id, activeJob.jobId, gameState.turn);
@@ -567,8 +457,6 @@ export function handleMovingToResource(pawn: Pawn, gameState: GameState): GameSt
       activeJob.targetX,
       activeJob.targetY
     );
-    // ADR-009 step 2: arrived at the tool's stockpile tile — grab + equip it, then continue to the
-    // job site (still MovingToResource). Must run BEFORE the WORKING transition (no tool, no work).
     if (adjacent && activeJob.toolFetch) {
       return acquireToolAndProceed(pawn, gameState);
     }
@@ -583,17 +471,8 @@ export function handleMovingToResource(pawn: Pawn, gameState: GameState): GameSt
   return gameState;
 }
 
-// How far (Chebyshev) another claimable job of the SAME type counts as "still part of this cluster".
-// While one exists within this radius, a pawn defers its opportunistic haul and keeps working the
-// patch — so it finishes the 10 bushes next to it before making the trip to the stockpile.
 const OPPORTUNISTIC_DEFER_RADIUS = 16;
 
-/**
- * Is there another claimable job of the same `jobType` within OPPORTUNISTIC_DEFER_RADIUS of the pawn —
- * i.e. more of the same work cluster left to do? Used to hold off opportunistic hauling until the pawn
- * has cleared the local patch (don't haul after every single bush). Unclaimed jobs, or ones this pawn
- * already holds, count; another pawn's claim does not.
- */
 function moreNearbySameTypeWork(pawn: Pawn, gs: GameState, jobType: string): boolean {
   const px = pawn.position?.x;
   const py = pawn.position?.y;
@@ -616,69 +495,41 @@ export function handleWorking(pawn: Pawn, gameState: GameState): GameState {
   const jobInPool = (gameState.jobs ?? []).find((j) => j.id === jobId);
   if (!jobInPool) return goIdle(pawn, gameState);
 
-  // DRAFTED-JOB-ORDERS §8 — preempt immediately: a pending MANUAL order (draftTarget) that isn't the
-  // forced job we're currently on yanks the pawn off this autonomous job NOW (release the claim, drop to
-  // IDLE) so handleIdle runs the order next tick. A survival need still outranks even that (handled by
-  // checkNeedInterrupts below / selectIdleNeed in handleIdle).
   const order = pawn.draftTarget;
   const runningForcedJob = order?.type === 'forceJob' && order.jobId === jobId;
   if (order && !runningForcedJob) {
     return jobService.releaseJob(pawn.id, jobId, goIdle(pawn, gameState));
   }
 
-  // Dynamic need interruption: weighs urgency against proximity to food/shelter vs job target.
-  // The threshold is adjusted by work priority (high-priority jobs resist interruption more)
-  // and job-queue lookahead (if no upcoming task passes near food, eat sooner).
   const jobDist = pawn.position
     ? manhattan(activeJob.targetX, activeJob.targetY, pawn.position.x, pawn.position.y)
     : 0;
   const queue = pawn.jobQueue ?? [];
-  // Reuse jobInPool (found above) instead of scanning gameState.jobs a second time (D9.3).
   const laborLevel = jobService.getJobLaborLevel(jobInPool, pawn, gameState);
 
   const interrupted = checkNeedInterrupts(pawn, gameState, 'Working', jobDist, queue, laborLevel);
-  // A need is pulling the pawn off the job — it's leaving the work area anyway, so scoop up any loose
-  // stockpile-bound goods on its tile to carry along (delivered after the need via handleIdle's
-  // haul-recovery). No-op when nothing's there, so it never detours a hungry pawn — just a free grab.
   if (interrupted) return opportunisticHaulPickup(interrupted, pawn.id);
 
-  // Must be adjacent to the job target to work it (ADR-016: craft is no longer exempt — the
-  // pawn crafts AT the station tile). Only abstract (0,0) jobs are worked in place.
   if (
-    !(activeJob.targetX === 0 && activeJob.targetY === 0) && // abstract building
+    !(activeJob.targetX === 0 && activeJob.targetY === 0) &&
     pawn.position &&
     !isAdjacent(pawn.position.x, pawn.position.y, activeJob.targetX, activeJob.targetY)
   ) {
     return jobService.releaseJob(pawn.id, jobId, goIdle(pawn, gameState));
   }
 
-  // §G light → sight → work. Darkness now flows through the `sight` capacity itself (dampened per tick to
-  // the pawn's night-vision-adjusted effectiveLight, no penalty ≥50% light), and work `*_speed`/quality
-  // formulas AVERAGE their capacities — so low light only shaves work by sight's SHARE (e.g. 1/2 or 1/3),
-  // never to zero, and needs no separate light factor or 0.4 floor here. Sight-less jobs (haul/fetch →
-  // moving+manipulation) are naturally unaffected in the dark.
   const afterAdvance = advanceJobOneTick(pawn, activeJob, jobId, gameState);
   const jobStillExists = (afterAdvance.jobs ?? []).some((j) => j.id === jobId);
 
   if (!jobStillExists) {
-    // Opportunistic hauling: a pawn that just finished a non-haul job while standing next to loose,
-    // stockpile-bound goods (e.g. a woodcutter on the tile it just felled) grabs them now and hauls
-    // them off in the same trip, instead of leaving them for a separate later haul. Haul jobs already
-    // sweep their own 3×3 on pickup (haul.complete), so they're skipped here. DEFERRED while more of
-    // the same work cluster remains nearby: the pawn finishes the patch of bushes/trees first and only
-    // makes the stockpile trip on the LAST one — otherwise it'd shuttle back after every single bush.
     const afterPickup =
       activeJob.type === 'haul' || moreNearbySameTypeWork(pawn, afterAdvance, activeJob.type)
         ? afterAdvance
         : opportunisticHaulPickup(afterAdvance, pawn.id);
 
-    // Job complete. If pawn is now carrying items, enter HAULING state.
     const updatedPawn = afterPickup.pawns.find((p) => p.id === pawn.id);
     const invItems = updatedPawn?.inventory?.items ?? {};
     const hasInventory = Object.values(invItems).some((v) => v > 0);
-    // What was completed: prefer the most specific target (harvested resource / built building /
-    // craft order / hauled item), falling back to the job type. Duration is turns since claim
-    // (includes travel + work for this attempt).
     const what =
       activeJob.resourceId ??
       activeJob.buildingId ??
@@ -697,8 +548,6 @@ export function handleWorking(pawn: Pawn, gameState: GameState): GameState {
     );
 
     if (hasInventory) {
-      // Transition to HAULING — handleHauling will run next turn and find a deposit point.
-      // This ensures items are visible in the CARRYING section for at least one turn.
       gameLogger.log(
         afterAdvance.turn,
         'JOB-EVT',
@@ -707,8 +556,6 @@ export function handleWorking(pawn: Pawn, gameState: GameState): GameState {
       return mutatePawn(afterPickup, pawn.id, (p) => {
         p.currentState = PAWN_STATE.HAULING;
         p.activeJob = undefined;
-        // DRAFTED-JOB-ORDERS §9: this was a forced job — advance the manual queue (deliver first, then
-        // the next order runs once handleIdle sees it after hauling).
         if (runningForcedJob) advancePawnOrders(p);
       });
     }
@@ -716,7 +563,7 @@ export function handleWorking(pawn: Pawn, gameState: GameState): GameState {
     return mutatePawn(afterPickup, pawn.id, (p) => {
       p.currentState = PAWN_STATE.IDLE;
       p.activeJob = undefined;
-      if (runningForcedJob) advancePawnOrders(p); // §9: forced job done → advance the manual queue
+      if (runningForcedJob) advancePawnOrders(p);
     });
   }
 

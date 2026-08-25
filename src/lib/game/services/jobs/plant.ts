@@ -1,24 +1,15 @@
-// Plant job handler (ADR-017) — PRODUCTION-CHAIN-II §F. A grow zone (`zoneTiles['grow']` + a seed
-// filter on its zone instance) drives sowing: for each soil-eligible tile in the zone whose seed is
-// in stock, a `plant` job is generated. On completion the pawn consumes one seed, CLEARS any terrain
-// vegetation still on the tile (yielding its resource into the colony, like a harvest), and places
-// the crop as an IMMATURE resource (count 0) in its place — planting REPLACES the tile's resource in
-// one step. The crop then matures via the growth pass (GameEngineImpl.processCropGrowth refills it).
-// Reaping a matured crop is an ordinary `harvest` (the crop resource lists `designationTypes:
-// ['harvest']`); after an annual depletes, the zone replants.
 import type { GameState, Job } from '../../core/types';
-import { gatedConsole as console } from '../../core/log';
+import { gatedConsole as console } from '../../core/util/log';
 import { zoneTileKeys, zoneInstanceIdAt } from '../DesignationService';
 import { resourceObjectService, type ResourceObjectDef } from '../ResourceObjectService';
 import { itemService } from '../ItemService';
-import { soilTierForTile, SUBTERRAINS, SUBTERRAIN_FALLBACK } from '../../core/Terrains';
+import { soilTierForTile, SUBTERRAINS, SUBTERRAIN_FALLBACK } from '../../core/defs/terrains';
 import { itemMatchesFilter } from './filters';
-import { markTileDirty } from '../../core/tileDeltas';
+import { markTileDirty } from '../../core/state/tileDeltas';
 import { patchPathfindingWalkable } from '../PathfinderService';
-import { absorbDropIfOnStockpileTile } from '../../core/GameState';
-import { rng } from '../../core/rng';
+import { absorbDropIfOnStockpileTile } from '../../core/state/stockpile';
+import { rng } from '../../core/util/rng';
 
-/** Fixed sowing work (the crop's own workAmount is the REAP cost, not the plant cost). */
 const PLANT_WORK = 12;
 
 let _cropDefs: ResourceObjectDef[] | null = null;
@@ -30,15 +21,12 @@ function cropIds(): Set<string> {
   return (_cropIds ??= new Set(cropDefs().map((d) => d.id)));
 }
 
-/** A tile already carries a crop (immature key present, growing, or mature) — don't re-plant. */
 function hasCrop(tile: { resources?: Record<string, number> }): boolean {
   const ids = cropIds();
   for (const id in tile.resources ?? {}) if (ids.has(id)) return true;
   return false;
 }
 
-/** The crop to sow on a grow-zone tile: the first crop whose seed passes the zone's filter, fits the
- *  tile's soil tier, and is in stock. Null when nothing plantable applies. */
 function cropForTile(
   gs: GameState,
   tile: { subType: string },
@@ -62,8 +50,6 @@ export function generate(jobs: Job[], gs: GameState): Job[] {
   const growTiles = zoneTileKeys(gs, 'grow');
   const growSet = new Set(growTiles);
 
-  // Prune plant jobs whose tile left the grow zone or already holds a crop. Terrain vegetation no
-  // longer blocks — the plant job clears it on completion (§F option B).
   jobs = jobs.filter((j) => {
     if (j.type !== 'plant') return true;
     const key = `${j.targetX},${j.targetY}`;
@@ -81,7 +67,7 @@ export function generate(jobs: Job[], gs: GameState): Job[] {
     const [x, y] = key.split(',').map(Number);
     const tile = gs.worldMap[y]?.[x];
     if (!tile) continue;
-    if (hasCrop(tile)) continue; // already sown
+    if (hasCrop(tile)) continue;
     const crop = cropForTile(gs, tile, key);
     if (!crop) continue;
     jobs.push({
@@ -106,22 +92,15 @@ export function complete(job: Job, gs: GameState): GameState {
   if (!tile || hasCrop(tile)) return gs;
 
   const seed = def.crop.seedItem;
-  if ((gs.stockpile?.[seed] ?? 0) <= 0) return gs; // seed gone — abort, job re-evaluates next tick
+  if ((gs.stockpile?.[seed] ?? 0) <= 0) return gs;
   let state = itemService.consumeItems({ [seed]: 1 }, gs);
 
-  // §F option B — clear any terrain vegetation (grass, bush, wild grain…) occupying the tile, yielding
-  // its resource into the colony exactly as a harvest would, then sow the crop in its place. In-place
-  // tile mutation + delta.
   const pawn = state.pawns.find((p) => p.id === job.claimedBy);
   const col = state.worldMap[job.targetY][job.targetX];
   const ids = cropIds();
   const cleared: string[] = [];
   const newDropped = [...(state.droppedItems ?? [])];
   const newDropIds: string[] = [];
-  // Clear every non-crop occupant — by resource COUNT *or* by a live GROWTH entry. A REGROWING patch
-  // (e.g. grass) sits at count 0 while growth > 0 and is still rendered, so clearing only by count
-  // would leave grass painted over the freshly-sown crop tile. A count-bearing occupant yields its
-  // harvest drops; a count-0 regrowing one is just stripped (nothing to harvest).
   const occupantIds = new Set([
     ...Object.keys(col.resources ?? {}),
     ...Object.keys(col.growth ?? {})
@@ -132,7 +111,7 @@ export function complete(job: Job, gs: GameState): GameState {
     const grw = col.growth?.[id] ?? 0;
     if (amt <= 0 && grw <= 0) continue;
     cleared.push(id);
-    if (amt <= 0) continue; // regrowing patch with no harvestable count — strip it, no drops
+    if (amt <= 0) continue;
     const growthPct = col.growth?.[id] ?? 100;
     const yields = resourceObjectService.calculateYield(id, pawn, undefined, undefined, growthPct);
     for (const [dropResourceId, dropAmount] of Object.entries(yields)) {
@@ -148,9 +127,6 @@ export function complete(job: Job, gs: GameState): GameState {
     }
   }
 
-  // Place the crop IMMATURE: count 0, growth 0%, stripping any cleared vegetation. It climbs toward
-  // 100% via processCropGrowth — but ONLY while the tile keeps meeting the crop's needs
-  // (fertility/temp/wetness/light). When it reaches 100% the growth pass sets count → nodeAmount.
   const resources: Record<string, number> = {};
   for (const [id, amt] of Object.entries(col.resources ?? {}))
     if (!cleared.includes(id)) resources[id] = amt;
@@ -160,7 +136,6 @@ export function complete(job: Job, gs: GameState): GameState {
   for (const id of cleared) delete growth[id];
   growth[job.resourceId] = 0;
   col.growth = growth;
-  // Cleared vegetation may have blocked movement/sight — restore the tile's base subterrain physics.
   if (cleared.length) {
     const baseSub = SUBTERRAINS[col.subType] ?? SUBTERRAIN_FALLBACK;
     col.walkable = baseSub.walkable;
@@ -170,7 +145,6 @@ export function complete(job: Job, gs: GameState): GameState {
   }
   markTileDirty(job.targetY, job.targetX, col);
 
-  // Spawn the cleared vegetation's drops and absorb any that landed on a stockpile tile.
   state = { ...state, droppedItems: newDropped };
   for (const id of newDropIds) state = absorbDropIfOnStockpileTile(state, id);
 

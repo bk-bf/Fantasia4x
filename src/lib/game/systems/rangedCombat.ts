@@ -1,40 +1,20 @@
-/**
- * Pure ranged-combat helpers, kept out of Combat.ts so firing logic stays testable.
- *
- * Aim model: three independent stats — `aim_accuracy` (PER), `aim_speed` (DEX), `aim_range` (STR) —
- * plus a LINEAR distance term (farther = less accurate AND slower to aim). Equipped items add flat
- * `aimBonuses` read directly here — equipment never reaches the stat engine, so it can't go via
- * `evaluateStat`.
- *
- * Line of sight is combat-local and cheap: a `distance ≤ visionRange` scalar (`withinSight`) plus a
- * per-shot Bresenham `blocksSight` line (`hasLineOfSight`) — NOT the parked WASM fog-of-war raycast.
- */
 import type { Pawn, Mob, Item, ItemInstance, ItemQuality } from '../core/types';
-import { chebyshev } from '../core/distance';
+import { chebyshev } from '../core/util/distance';
 import { itemService } from '../services/ItemService';
 import { pawnStatService } from '../services/PawnStatService';
 
-/** Each +1.0 of the `aim_accuracy` stat → this many hit-chance points (PER 20 ≈ +0.4 → +20). */
 const AIM_ACC_STAT_POINTS = 50;
-/** LINEAR distance falloff: each tile of range costs this many hit-chance points. */
 const ACC_FALLOFF_PER_TILE = 2.5;
-/** LINEAR aim-time falloff: each tile of range lengthens the aim interval by this fraction. */
 const AIM_TIME_PER_TILE = 0.08;
-/** Cadence floor in ticks. MIRRORS melee's `MIN_ATTACK_INTERVAL_TICKS` (72 = 1.2 s @ 60 TPS) so a
- *  built archer can't out-cycle a duelist. Duplicated, not imported, to avoid a rangedCombat → Combat cycle. */
 const MIN_SHOT_INTERVAL_TICKS = 72;
-/** Aim-speed penalty for drawing arrows/bolts from a pack (no ready quiver) — a fumbling nock. */
 const DRAW_FUMBLE_PENALTY = -0.2;
 
-/** A weapon counts as ranged when its `range` reaches past melee (all melee weapons author range 0). */
 export function isRangedWeaponProps(
   wp: NonNullable<Item['weaponProperties']> | undefined
 ): boolean {
   return !!wp && (wp.range ?? 0) > 1;
 }
 
-/** A *thrown* weapon: ranged, no ammo bucket (self-consumes), one-handed → lives in the OFF hand so it
- *  pairs with a melee main-hand (the hybrid STR/PER build, instead of a shield). */
 export function isThrownWeaponProps(
   wp: NonNullable<Item['weaponProperties']> | undefined
 ): boolean {
@@ -44,31 +24,18 @@ export function isThrownWeaponProps(
 export interface RangedWeapon {
   itemId: string;
   itemName: string;
-  /** Base reach in tiles — the weapon's own limit, scaled by `aim_range` and capped by sight. */
   range: number;
-  /** Melee reach (usually 0 for a bow) — at/under this the bow-butt fallback applies. */
   reach: number;
-  /** Attack-interval multiplier added after a shot (crossbow 3 = a third the cadence of a bow). */
   reload: number;
-  /** Does damage scale with STR (bows yes; crossbows/slings no — mechanical advantage)? */
   strScaled: boolean;
-  /** Ammo bucket this weapon draws; undefined = self-thrown (no ammo). */
   ammoCategory?: string;
-  /** Craft-quality tier of the equipped instance — scales the shot's damage/accuracy/pen. */
   quality?: ItemQuality;
-  /** Famed stat-explosion multiplier of the equipped instance (×2–5, layered over the quality tier). */
   famedStatMult?: number;
-  /** Which hand holds it — a thrown weapon's slot is cleared when it leaves the hand (self-consume). */
   slot: 'mainHand' | 'offHand';
-  /** Visual particle style for the flight (thrown weapon's own; launchers override from the ammo). */
   projectile?: string;
-  /** CHANNELED staff: ammo-less like a thrown weapon, but pays `staminaCost` as mana and is NOT
-   *  self-consumed (stays in hand) — so the no-ammo firing branch must keep it equipped. */
   channeled?: boolean;
 }
 
-/** The equipped ranged weapon for a pawn — main-hand first (bow/crossbow/sling), then off-hand
- *  (a thrown weapon), or null. Mobs carry no equipment → no ranged yet. */
 export function getRangedWeapon(attacker: Pawn | Mob): RangedWeapon | null {
   if (!('equipment' in attacker) || !attacker.equipment) return null;
   for (const slot of ['mainHand', 'offHand'] as const) {
@@ -96,8 +63,6 @@ export function getRangedWeapon(attacker: Pawn | Mob): RangedWeapon | null {
   return null;
 }
 
-/** True when the pawn holds a real MELEE weapon in the main hand — so a hybrid (sword + off-hand
- *  thrown spear) melees with the sword rather than bow-butting the spear. */
 export function hasMeleeMainHand(pawn: Pawn): boolean {
   const inst = pawn.equipment?.mainHand;
   if (!inst) return false;
@@ -105,14 +70,7 @@ export function hasMeleeMainHand(pawn: Pawn): boolean {
   return !!wp && !isRangedWeaponProps(wp);
 }
 
-/**
- * MELEE grip, derived from what's in the hands: twoHanded (+offense, incl. bows used as a stave);
- * shield (off-hand shield — no offense bonus, raises the wearer's dodge; there is NO active block,
- * defence is all dodge); duelist (1H with off-hand FREE: +damage/+armorPen/+crit); oneHanded (1H
- * with off-hand occupied by a non-shield: neutral). Melee only — the ranged path never calls `attackerProfile`.
- */
 export type MeleeGrip = 'twoHanded' | 'shield' | 'dualWield' | 'duelist' | 'oneHanded';
-/** The trait that unlocks the duel grip. Data-side id, so the trait can be re-themed without code. */
 export const DUELIST_TRAIT_ID = 'duelist';
 const hasDuelistTraining = (entity: Pawn | Mob): boolean =>
   !!entity.traits?.some((t) => t.id === DUELIST_TRAIT_ID);
@@ -128,22 +86,14 @@ export function getGrip(entity: Pawn | Mob): MeleeGrip {
     ? itemService.getItemById(eq.offHand.itemId)?.armorProperties
     : undefined;
   if (offArmor?.armorType === 'shield') return 'shield';
-  // A matched pair of daggers. Both blades must be `offHandable` — light enough to be worked in either
-  // hand — so this can never be a sword and a buckler-substitute. It is the assassin's answer to having
-  // no shield: a second point instead of protection.
   const offWp = eq.offHand
     ? itemService.getItemById(eq.offHand.itemId)?.weaponProperties
     : undefined;
   if (mainWp?.offHandable && offWp?.offHandable) return 'dualWield';
-  // DUELIST is a TRAINED style, not a consequence of an empty hand. It used to be handed to every
-  // pawn holding a one-hander with nothing in the off-hand, which made the +damage/+pen/+crit free and
-  // universal — the exact opposite of a gated specialisation.
   if (mainWp && !eq.offHand && hasDuelistTraining(entity)) return 'duelist';
   return 'oneHanded';
 }
 
-/** Sum the flat `aimBonuses` across every equipped slot (the ranged weapon's personality + worn
- *  marksman gear). Read directly because equipment never reaches `evaluateStat`. */
 export function sumAimBonuses(pawn: Pawn): { accuracy: number; speed: number; range: number } {
   const out = { accuracy: 0, speed: 0, range: 0 };
   const eq = pawn.equipment as Record<string, ItemInstance | undefined> | undefined;
@@ -165,13 +115,6 @@ export interface AmmoPick {
   props: NonNullable<Item['ammoProperties']>;
 }
 
-/**
- * Best available ammo in inventory matching `category`. "Best" weighs the head's own `damage` (the
- * real source of a shot's punch — the launcher only multiplies it), its legacy flat `damageBonus`,
- * and its armour penetration. Any head fits any launcher of the bucket, so a bronze-age arrow still
- * flies from a steel-age bow; this just picks the best one carried.
- * Ammo rides normal inventory BY DESIGN — a quiver sells draw SPEED, not storage.
- */
 export function pickAmmo(pawn: Pawn, category: string): AmmoPick | null {
   const items = pawn.inventory?.items;
   if (!items) return null;
@@ -190,36 +133,24 @@ export function pickAmmo(pawn: Pawn, category: string): AmmoPick | null {
   return best;
 }
 
-/** Can this pawn actually fire `rw` right now? A thrown weapon (no ammoCategory) IS its own ammo, so
- *  it's always loaded; a launcher needs a matching ammo stack in inventory. */
 export function hasViableAmmo(pawn: Pawn, rw: RangedWeapon): boolean {
   return !rw.ammoCategory || pickAmmo(pawn, rw.ammoCategory) !== null;
 }
 
-/** Chebyshev (king-move) tile distance — the metric combat already uses for adjacency. */
 export function tileDistance(ax: number, ay: number, bx: number, by: number): number {
   return chebyshev(ax, ay, bx, by);
 }
 
-/** Reduced line-of-sight: the target is "in sight" if within the attacker's vision range. */
 export function withinSight(dist: number, visionRange: number): boolean {
   return dist <= visionRange;
 }
 
-// Line-of-sight lives in core/lineOfSight.ts (shared with mob AI); re-exported for combat callers.
-export { hasLineOfSight, type SightCell } from '../core/lineOfSight';
+export { hasLineOfSight, type SightCell } from '../core/util/lineOfSight';
 
-/**
- * Base perception-driven sight range. NOTE: `visionRange` is a Pawns.ts ability, NOT a stats.jsonc
- * stat — `pawnStatService.evaluateStat('visionRange')` would return the 1.0 fallback, so compute it
- * directly. It's ≥ the light-scaled `pawnVisionTiles`, so it never contradicts the FSM's perception gate.
- */
 export function pawnVisionRange(pawn: Pawn): number {
   return 10 + ((pawn.stats?.perception ?? 10) - 10) * 0.5;
 }
 
-/** Farthest firable tile: weapon `range` scaled by `aim_range` (STR), plus flat gear bonuses,
- *  hard-capped by `visionRange`. */
 export function effectiveRangedRange(pawn: Pawn, rw: RangedWeapon): number {
   const aimRange = pawnStatService.evaluateStat('aim_range', pawn);
   const equipRange = sumAimBonuses(pawn).range;
@@ -227,8 +158,6 @@ export function effectiveRangedRange(pawn: Pawn, rw: RangedWeapon): number {
   return Math.min(pawnVisionRange(pawn), Math.max(1, raw));
 }
 
-/** Hit-chance points added to the base to-hit: `aim_accuracy` (PER), flat gear + ammo accuracy,
- *  a LINEAR distance penalty, and cover. Can go negative. */
 export function rangedAccuracyMod(
   aimAccStat: number,
   equipAccBonus: number,
@@ -245,11 +174,6 @@ export function rangedAccuracyMod(
   );
 }
 
-/**
- * Cadence for one shot = AIM time + SPAN time, each with its OWN stat: AIM is lengthened linearly by
- * distance and shortened by `aim_speed` + draw gear (every ranged weapon pays it); SPAN is the crank —
- * `(reload − 1)` extra base intervals shortened by `reload_speed`, zero for reload ≤ 1, distance-independent.
- */
 export function aimIntervalTicks(
   baseInterval: number,
   reload: number,
@@ -261,15 +185,9 @@ export function aimIntervalTicks(
   const aimFactor = Math.max(0.4, aimSpeedStat) * Math.max(0.2, 1 + equipSpeedBonus);
   const aimTime = (baseInterval * (1 + dist * AIM_TIME_PER_TILE)) / aimFactor;
   const spanTime = (baseInterval * Math.max(0, reload - 1)) / Math.max(0.4, reloadSpeedStat);
-  // Floor at the melee minimum so a high-DEX / aim-geared archer can't out-cycle the melee cap.
   return Math.max(MIN_SHOT_INTERVAL_TICKS, Math.round(aimTime + spanTime));
 }
 
-/**
- * Draw-speed delta by how the ammo is carried: matching quiver → bonus; worn pack/container (ammo
- * stowed, not ready) → fumble penalty; else neutral. ONLY arrows/bolts care — sling stones and
- * thrown weapons deploy equally fast from a belt pouch or the hand.
- */
 export function drawSpeedModifier(pawn: Pawn, ammoCategory: string | undefined): number {
   if (ammoCategory !== 'arrow' && ammoCategory !== 'bolt') return 0;
   const eq = pawn.equipment as Record<string, ItemInstance | undefined> | undefined;
