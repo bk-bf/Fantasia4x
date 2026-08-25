@@ -9,6 +9,11 @@
   "adrsDoc": "docs/game/DECISIONS.md",
   "descriptions": "codegraph.descriptions.json",
   "godFunctions": 40,
+  "paths": {
+    "$lib": ["src/lib"],
+    "$lib/*": ["src/lib/*"],
+    "$app/*": ["node_modules/@sveltejs/kit/src/runtime/app/*"]
+  },
   "group": {
     "namespacePrefix": "game"
   },
