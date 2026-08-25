@@ -213,7 +213,14 @@ describe('the boss tier covers every weapon family', () => {
       const f = r.path[2] ?? '?';
       (fam.get(f) ?? fam.set(f, new Set()).get(f)!).add(r.age);
     }
-    const bare = [...fam].filter(([, ages]) => !ages.has('Boss')).map(([f]) => f);
+    // The caster line is deliberately held out for now. A boss rod has to come off something that
+    // fits what it does, and the only fire-themed creature in the game is a goblin caster in a warband
+    // pool — not a beast anyone harvests. Until there is one, a rod built from a wolf's heart is a
+    // worse answer than no rod.
+    const ON_HOLD = new Set(['staff & rod']);
+    const bare = [...fam]
+      .filter(([f, ages]) => !ages.has('Boss') && !ON_HOLD.has(f))
+      .map(([f]) => f);
     expect(bare, `no boss weapon for: ${bare.join(', ')}`).toEqual([]);
   });
 });
@@ -260,6 +267,102 @@ describe('boss gear is runed work', () => {
       if (!out || !boss.has(out)) continue;
       const age = BUILDING_AGE.get(r.station ?? '') ?? 0;
       if (age < 5) bad.push(`${out} is made at ${r.station} — ${AGE_NAMES[age]} work, not runed`);
+    }
+    expect(bad, bad.join('; ')).toEqual([]);
+  });
+});
+
+/**
+ * A recipe can ask for a better tool than the colony currently holds. It cannot ask for one that does
+ * not exist — that is not a hard recipe, it is an unbuildable one, and it reads identically in the
+ * tables. Tier-4 tools exist only for mining and storage; demanding tier 4 for leatherwork silently
+ * removed eleven boss recipes from the game.
+ */
+describe('every recipe asks for a tool that exists', () => {
+  it('no toolTierRequired exceeds the best tool made for that work', () => {
+    const best = new Map<string, number>();
+    for (const i of ITEMS as Array<{ type?: string; category?: string; tier?: number }>) {
+      if (i.type !== 'tool' || typeof i.tier !== 'number' || !i.category) continue;
+      best.set(i.category, Math.max(best.get(i.category) ?? 0, i.tier));
+    }
+    const ceiling = Math.max(...best.values());
+    const bad = RECIPES.filter(
+      (r: { toolTierRequired?: number }) => (r.toolTierRequired ?? 0) > ceiling
+    ).map(
+      (r: { id: string; toolTierRequired?: number }) =>
+        `${r.id} needs tool tier ${r.toolTierRequired}; the best tool in the game is tier ${ceiling}`
+    );
+    expect(bad, bad.join('; ')).toEqual([]);
+  });
+});
+
+/**
+ * STRUCTURAL INTEGRITY. A hafted weapon is three things: a head, a worked shaft, and the joint that
+ * holds one to the other. Two failures kept slipping through and both read as plausible recipes:
+ *
+ *   a RAW LOG standing in for a shaft — a log is a tree section, not a turned haft, and putting one
+ *   straight into a weapon skips the whole woodworking step; and
+ *
+ *   BINDING AS THE JOINT — a fang lashed to a stick with thread is not a weapon, it is a fang and a
+ *   stick. Thread wraps a joint; a socket, a ferrule or rivets make one.
+ *
+ * A bow is exempt from the first: its stave IS the shaped wood, there is no separate haft to make.
+ */
+describe('hafted weapons are structurally sound', () => {
+  const isWeapon = (id: string) =>
+    (ITEMS as Array<{ id: string; type?: string }>).find((i) => i.id === id)?.type === 'weapon';
+  // a bow, a recurve, a sling: the stave IS the shaped wood, there is no separate haft
+  const BOWS = /bow|recurve|sling|crossbow|arbalest/;
+
+  it('no weapon is built straight out of a raw log', () => {
+    const bad: string[] = [];
+    for (const r of RECIPES) {
+      const out = Object.keys(r.outputs ?? {})[0];
+      if (!out || !isWeapon(out) || BOWS.test(out)) continue;
+      const logs = Object.keys(r.inputs ?? {}).filter(
+        (k) => k.endsWith('_log') || k === 'category:log'
+      );
+      if (logs.length)
+        bad.push(
+          `${r.id} puts ${logs.join('/')} straight into a weapon — work it into a haft first`
+        );
+    }
+    expect(bad, bad.join('; ')).toEqual([]);
+  });
+
+  it('a head joined to a haft is fastened, not merely tied on', () => {
+    const HAFT = /haft$|_stave$/;
+    const JOINT = /fastener|nail|rivet|tack|mold|molten|_bar$|category:steel|category:iron/;
+    const bad: string[] = [];
+    for (const r of RECIPES) {
+      const out = Object.keys(r.outputs ?? {})[0];
+      if (!out || !isWeapon(out) || BOWS.test(out)) continue;
+      const keys = Object.keys(r.inputs ?? {});
+      if (!keys.some((k) => HAFT.test(k))) continue;
+      if (!keys.some((k) => JOINT.test(k)))
+        bad.push(`${r.id} has a haft and nothing mechanical holding the head to it`);
+    }
+    expect(bad, bad.join('; ')).toEqual([]);
+  });
+});
+
+/**
+ * Magical wood is runed material, and working it is runed work. Carving an emberwood haft on a
+ * bronze-age saw priced the whole magical-haft chain at bronze and handed the arcane weapon line a
+ * back door — the Heartwood Joiner exists for precisely this.
+ */
+describe('magical wood is worked at a runed bench', () => {
+  it('nothing consumes an arcane wood below a runed station', () => {
+    const ARCANE_WOOD = /^(emberwood|moonwood|heartwood|witchwood|ironwood)_(log|plank|haft)$/;
+    const bad: string[] = [];
+    for (const r of RECIPES) {
+      const uses = Object.keys(r.inputs ?? {}).filter((k) => ARCANE_WOOD.test(k));
+      if (!uses.length) continue;
+      const age = BUILDING_AGE.get(r.station ?? '') ?? 0;
+      if (age < 5)
+        bad.push(
+          `${r.id} works ${uses.join('/')} at ${r.station} — ${AGE_NAMES[age]} work, not runed`
+        );
     }
     expect(bad, bad.join('; ')).toEqual([]);
   });
