@@ -1,6 +1,6 @@
 # Item Rules — what an armour or weapon must satisfy before it exists
 
-> **Related:** [DESIGN.md](DESIGN.md) · [DECISIONS.md](DECISIONS.md) · [ARCHITECTURE.md](ARCHITECTURE.md) · [../tasks/open/AUDIT.md](../tasks/open/AUDIT.md) · [../tasks/open/CONTAINERS-AND-FLUIDS.md](../tasks/open/CONTAINERS-AND-FLUIDS.md)
+> **Related:** [DESIGN.md](DESIGN.md) · [DECISIONS.md](DECISIONS.md) · [ARCHITECTURE.md](ARCHITECTURE.md) · [AUDIT (archived)](../tasks/archive/AUDIT-2026-08-25.md) · [../tasks/open/CONTAINERS-AND-FLUIDS.md](../tasks/open/CONTAINERS-AND-FLUIDS.md)
 
 Walk this in order for every new piece. Each gate can kill the item outright, so do not skip ahead:
 answering gate 4 for an item that fails gate 1 is wasted work. The machine-checkable subset is

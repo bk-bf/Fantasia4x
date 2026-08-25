@@ -2,7 +2,7 @@
 
 # ALCHEMY & BUTCHERY-LOOT EXPANSION
 
-> **Related:** [AUDIT.md](../open/AUDIT.md) · [DESIGN](../../game/DESIGN.md) · [DECISIONS](../../game/DECISIONS.md)
+> **Related:** [AUDIT (archived)](AUDIT-2026-08-25.md) · [DESIGN](../../game/DESIGN.md) · [DECISIONS](../../game/DECISIONS.md)
 >
 > **Archived 2026-07-24 — COMPLETE.** All of §A–§D implemented and headless-verified; see the status line below.
 

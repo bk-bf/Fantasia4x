@@ -1,6 +1,6 @@
 # audit — a code-audit ledger
 
-> **Related:** [AGENTS.md](../../AGENTS.md) · [DECISIONS.md](../../docs/game/DECISIONS.md) · [ITEM-RULES.md](../../docs/game/ITEM-RULES.md) · [ENGINE-PERFORMANCE.md](../../docs/tasks/open/ENGINE-PERFORMANCE.md) · [AUDIT.md](../../docs/tasks/open/AUDIT.md)
+> **Related:** [AGENTS.md](../../AGENTS.md) · [DECISIONS.md](../../docs/game/DECISIONS.md) · [ITEM-RULES.md](../../docs/game/ITEM-RULES.md) · [ENGINE-PERFORMANCE.md](../../docs/tasks/open/ENGINE-PERFORMANCE.md) · [docs/issues](../../docs/issues/README.md)
 
 "Audit the code" is unverifiable: nothing records which of the 5,599 objects in this repo
 anything ever looked at, under which question, with which model. This tool makes that a
@@ -53,8 +53,9 @@ Family **S** was derived from [`core-stat-single-source`](../../docs/issues/core
 which was found by hand. It is the family most likely to be under-triggered rather than
 over-triggered — check its n/a rate before trusting a clean result.
 
-`docs/tasks/open/AUDIT.md` remains the tracker for **content and gameplay** audits driven
-through the headless sim. This ledger covers **code-level** checks. They do not overlap.
+Content and gameplay findings land on the same board. `docs/tasks/archive/AUDIT-2026-08-25.md`
+was the old headless-sim checklist; its unfinished items are now issue files and its completed
+record is archived. This ledger raises **code-level** findings into that same board.
 
 ## Rule shape
 

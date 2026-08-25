@@ -1,11 +1,11 @@
 <!-- COMBAT-BALANCE — the two-axis stat rebuild plus the logic errors the tier-4 audit turned up
-     (findings 2026-07-27, design settled 2026-07-27). Findings live in AUDIT.md § Weapons; this file
+     (findings 2026-07-27, design settled 2026-07-27). Findings live in the archived AUDIT § Weapons; this file
      is the WORK. Every task carries the measurement it came from, so a fix can be checked against the
      same number that justified it. -->
 
 # COMBAT-BALANCE — The Two-Axis Stat Rebuild
 
-> **Related:** [AUDIT § Weapons](AUDIT.md) · [DESIGN](../../game/DESIGN.md) · [DECISIONS](../../game/DECISIONS.md) · [ROADMAP](ROADMAP.md) · [STEALTH](STEALTH.md)
+> **Related:** [AUDIT § Weapons (archived)](../archive/AUDIT-2026-08-25.md) · [DESIGN](../../game/DESIGN.md) · [DECISIONS](../../game/DECISIONS.md) · [ROADMAP](ROADMAP.md) · [STEALTH](STEALTH.md)
 
 **Status (2026-07-27):** **Phases 0–3 are DONE.** The core stats set damage capacity and nothing else,
 the six secondary stats are rolled per pawn and surfaced in the pawn panel, and precision aims for
@@ -20,7 +20,7 @@ Also landed as a prerequisite: a core-stat vocabulary pass across the engine, da
 creature schema; the stats are named `strength`, `dexterity`, `constitution`, `perception`,
 `intelligence`, `charisma`. Four engine fixes landed in the original audit pass (power-curve soft
 cap, armour-condition soak, `powerStat`, `critMultiplier` + the heavy-2H accuracy/speed pass) — logged
-in [AUDIT § Weapons](AUDIT.md).
+in [AUDIT § Weapons (archived)](../archive/AUDIT-2026-08-25.md).
 
 **How every number below was produced.** Five harnesses; the distinction matters when checking a fix:
 
@@ -742,7 +742,7 @@ moving stat economy would waste the work.
 ### 14. Data passes
 
 - [ ] Re-rate the warhammer line: `iron_warhammer` (34 dmg) and `steel_warhammer` (40) beat every steel weapon except their own successor, while also carrying the best pen (0.50) and armour damage (10). No iron-age weapon should out-damage the steel band.
-- [ ] Work the per-weapon T4 checklist in [AUDIT § Weapons](AUDIT.md) — every melee row is blocked on Phase 1.
+- [ ] Work the per-weapon T4 checklist, now tracked as [t4-weapon-fight-verification](../../issues/t4-weapon-fight-verification.md) — every melee row is blocked on Phase 1.
 - [ ] The 4 ranged/thrown T4 weapons need their own pass; the melee sweep does not cover the ranged path.
 
 ---
@@ -760,7 +760,7 @@ moving stat economy would waste the work.
 - [x] `pnpm check` clean.
 - [x] Full suite green — **167 files / 1187 tests** (Combat.ts, stats.jsonc and traits.jsonc all moved, so the full run was the required gate).
 - [x] `statAxisProposal` re-pointed at the shipped math — the modelled proposal became direct engine assertions; the two PROPOSAL-pricing tests in `weaponStatSweep` were deleted (the options they priced are decided and shipped).
-- [ ] `t4WeaponAudit` + `weaponStatSweep` re-run and their tables pasted into [AUDIT § Weapons](AUDIT.md).
+- [ ] `t4WeaponAudit` + `weaponStatSweep` re-run and their tables recorded on [t4-weapon-fight-verification](../../issues/t4-weapon-fight-verification.md).
 - [ ] `weaponFightSim` re-run — a balance claim is `[x]` only with the mean-of-8-seeds fight number behind it, stated with its delta.
 - [x] **`combatBalanceAudit` re-run and INVERTED** — all five assertions now pin the FIXED behaviour, so a green run means the fixes hold. Re-invert any that a future change is expected to move.
 - [x] Right-censor every fight comparison (a non-kill counts as the full tick budget) and report kills **and** deaths alongside time-to-kill. Averaging over kills only has already produced one inverted conclusion.

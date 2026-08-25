@@ -7,7 +7,7 @@
     "family": "silent-failure",
     "tier": "T2",
     "title": "default value masks a failed lookup",
-    "authority": "docs/tasks/open/AUDIT.md#stall-debugging",
+    "authority": ".claude/skills/headless/SKILL.md#when-it-stalls",
     "question": "Does a ?? or || default here substitute for a lookup that should have succeeded, so a missing definition, item or pawn becomes a plausible-looking zero, empty array or false instead of an error the caller can see?",
     "fail_requires": [
       "file:line of the default",
@@ -34,7 +34,7 @@
     "family": "silent-failure",
     "tier": "T2",
     "title": "caught error is discarded",
-    "authority": "docs/tasks/open/AUDIT.md#stall-debugging",
+    "authority": ".claude/skills/headless/SKILL.md#when-it-stalls",
     "question": "Does a catch block here discard the error without logging it, rethrowing, or putting the caller into a state that reflects the failure?",
     "fail_requires": [
       "file:line of the catch",
@@ -59,7 +59,7 @@
     "family": "silent-failure",
     "tier": "T2",
     "title": "early return leaves the caller with no signal",
-    "authority": "docs/tasks/open/AUDIT.md#stall-debugging",
+    "authority": ".claude/skills/headless/SKILL.md#when-it-stalls",
     "question": "Does this symbol return early on a precondition failure without telling the caller anything — no return value distinction, no state change, no log — so the caller cannot distinguish 'did the work' from 'declined to'?",
     "fail_requires": [
       "file:line of the early return",

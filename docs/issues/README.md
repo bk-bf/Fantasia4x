@@ -2,7 +2,7 @@
 
 # Issues
 
-> **Related:** [tasks/open/ROADMAP](../tasks/open/ROADMAP.md) · [tasks/open/AUDIT](../tasks/open/AUDIT.md) · [game/DECISIONS](../game/DECISIONS.md) · [tools/audit](../../tools/audit/README.md)
+> **Related:** [tasks/open/ROADMAP](../tasks/open/ROADMAP.md) · [game/DECISIONS](../game/DECISIONS.md) · [tools/audit](../../tools/audit/README.md) · [AUDIT (archived)](../tasks/archive/AUDIT-2026-08-25.md)
 
 The board the nightly audit writes to and the fixer works from. One file per issue, flat.
 
@@ -111,10 +111,9 @@ node tools/audit/fix.mjs --next --no-mon     # skip the mon session
 | | Owns |
 |---|---|
 | `docs/issues/` | Defects. Something is wrong and should be made right. |
-| [`tasks/open/AUDIT.md`](../tasks/open/AUDIT.md) | Content and gameplay audits driven through the headless sim. |
 | [`tasks/open/ROADMAP.md`](../tasks/open/ROADMAP.md) | Features. Something does not exist yet and should. |
-| `tasks/open/<SPEC>.md` | The full analysis behind an issue, when it needs more than a page. The issue links to it. |
+| `tasks/open/<SPEC>.md` | Design work too large for one issue — a rebuild or a system that does not exist yet. |
 
-A long-form spec and an issue are not duplicates: the spec is the reasoning, the issue is the
-unit of work. [`core-stat-single-source`](core-stat-single-source.md) links to
-[CORE-STAT-SINGLE-SOURCE](../tasks/open/CORE-STAT-SINGLE-SOURCE.md) for exactly that reason.
+A spec under `tasks/open/` holds the reasoning behind work that has not been scoped into a unit
+yet. Once a defect has an issue file, that file is the only record of it — the analysis moves into
+`## Evidence` rather than living in a second document that drifts from it.
