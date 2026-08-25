@@ -47,7 +47,7 @@
     "trigger": {
       "all": [
         { "kind_in": ["function", "method"] },
-        { "tested": false },
+        { "test_reachable": false },
         { "exported": true },
         { "min_loc": 12 },
         { "layer_in": ["services", "systems", "core", "entities", "ai"] }

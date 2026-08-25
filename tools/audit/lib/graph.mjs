@@ -3,8 +3,15 @@
 //
 // codegraph node ids embed a line number, so they cannot be the ledger's key. This maps
 // them onto ours by (file, class, name), disambiguating same-named siblings by nearest
-// declared line. Unmatched nodes are counted and reported rather than silently dropped --
-// a low match rate means the graph extract is stale and reachability triggers are lying.
+// declared line.
+//
+// The two inventories do not agree on what a symbol IS, and matching on the triple alone
+// loses every node where they differ: codegraph splits out nested functions and
+// object-literal methods that we deliberately fold into their enclosing symbol, and it
+// names a Svelte component after the file where we call it `<markup>`. Those nodes are not
+// missing -- they are parts of one of our symbols -- so they are mapped onto whichever
+// symbol's span contains them. Without that, their call edges are dropped and the
+// reachability they carry never reaches the ledger.
 
 import { readFileSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
@@ -59,36 +66,91 @@ function indexSymbols(symbols) {
   return byTriple;
 }
 
-/** codegraph node id -> ledger symbol key. */
+/**
+ * codegraph node id -> ledger symbol key.
+ *
+ * Returns the match rate broken down by how each node was matched, because the three
+ * routes mean different things: `exact` is one-to-one, `enclosing` is a node folded into
+ * the symbol it is written inside, and whatever is left has no counterpart here at all
+ * (Rust, which this inventory does not walk).
+ */
 export function mapNodes(graph, symbols) {
   const byTriple = indexSymbols(symbols);
+  const markup = new Map();
+  const byFile = new Map();
+  for (const s of symbols) {
+    if (s.kind === 'markup') markup.set(s.file, s.key);
+    if (!byFile.has(s.file)) byFile.set(s.file, []);
+    byFile.get(s.file).push(s);
+  }
+
   const map = new Map();
-  let matched = 0;
+  const unmatched = [];
+  let exact = 0;
+  let enclosing = 0;
+
   for (const n of graph.nodes) {
     const cands = byTriple.get(`${n.file} ${n.className ?? ''} ${graphName(n)}`);
-    if (!cands || cands.length === 0) continue;
-    const pick =
-      cands.length === 1
-        ? cands[0]
-        : cands.reduce((a, b) =>
-            Math.abs(a.startLine - n.line) <= Math.abs(b.startLine - n.line) ? a : b
-          );
-    map.set(n.id, pick.key);
-    matched++;
+    if (cands && cands.length) {
+      const pick =
+        cands.length === 1
+          ? cands[0]
+          : cands.reduce((a, b) =>
+              Math.abs(a.startLine - n.line) <= Math.abs(b.startLine - n.line) ? a : b
+            );
+      map.set(n.id, pick.key);
+      exact++;
+      continue;
+    }
+    // A component node is the whole file to codegraph; here the file's markup is one symbol
+    // and its script functions are others. The component's edges belong to the markup.
+    if (n.kind === 'component' && markup.has(n.file)) {
+      map.set(n.id, markup.get(n.file));
+      enclosing++;
+      continue;
+    }
+    // Otherwise: the smallest symbol whose span contains the node. codegraph gives endLine
+    // for a real span; older extracts only have `line`, which still lands inside the owner.
+    const owner = smallestContaining(byFile.get(n.file), n);
+    if (owner) {
+      map.set(n.id, owner.key);
+      enclosing++;
+      continue;
+    }
+    unmatched.push(n);
   }
-  return { map, matched, total: graph.nodes.length };
+  return { map, matched: exact + enclosing, exact, enclosing, unmatched, total: graph.nodes.length };
 }
 
+/** The tightest ledger symbol whose line span covers a codegraph node. */
+function smallestContaining(symbols, n) {
+  if (!symbols) return null;
+  const end = typeof n.endLine === 'number' ? n.endLine : n.line;
+  let best = null;
+  for (const s of symbols) {
+    if (s.startLine > n.line || s.endLine < end) continue;
+    if (!best || s.endLine - s.startLine < best.endLine - best.startLine) best = s;
+  }
+  return best;
+}
+
+/**
+ * Call edges in ledger keys. An edge whose ends fold into the SAME symbol (a helper calling
+ * its own enclosing function) is internal to that symbol and carries no reachability, so it
+ * is counted separately from an edge dropped for want of a mapping.
+ */
 export function edgesFor(graph, nodeMap) {
   const out = [];
+  let internal = 0;
   let dropped = 0;
   for (const e of graph.edges) {
     const a = nodeMap.get(e.from);
     const b = nodeMap.get(e.to);
     if (a && b && a !== b) out.push([a, b]);
+    else if (a && b) internal++;
     else dropped++;
   }
-  return { edges: out, dropped };
+  return { edges: out, internal, dropped };
 }
 
 export function testedKeys(graph, nodeMap) {
@@ -97,6 +159,23 @@ export function testedKeys(graph, nodeMap) {
     if (n.tested && nodeMap.has(n.id)) s.add(nodeMap.get(n.id));
   }
   return s;
+}
+
+/**
+ * symbol key -> hops from the nearest directly-tested node, over codegraph's call edges.
+ * Several nodes can fold into one symbol, so the shortest reach wins: if any part of a
+ * symbol is reached by a test, the symbol is.
+ */
+export function testDepths(graph, nodeMap) {
+  const out = new Map();
+  for (const n of graph.nodes) {
+    if (n.testDepth == null) continue;
+    const key = nodeMap.get(n.id);
+    if (!key) continue;
+    const cur = out.get(key);
+    if (cur === undefined || n.testDepth < cur) out.set(key, n.testDepth);
+  }
+  return out;
 }
 
 /** BFS from each entry symbol name over the call edges. */

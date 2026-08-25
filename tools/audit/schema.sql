@@ -29,7 +29,8 @@ CREATE TABLE IF NOT EXISTS symbol (
   class_name    TEXT,
   kind          TEXT NOT NULL,          -- function | method | component | store | accessor | markup | data-row
   exported      INTEGER NOT NULL DEFAULT 0,
-  tested        INTEGER NOT NULL DEFAULT 0,
+  tested        INTEGER NOT NULL DEFAULT 0,   -- a test file calls this directly
+  test_depth    INTEGER,                      -- hops to the nearest such symbol; NULL = no test reaches it
   start_line    INTEGER NOT NULL,
   end_line      INTEGER NOT NULL,
   start_byte    INTEGER NOT NULL,
