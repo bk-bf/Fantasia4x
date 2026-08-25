@@ -20,7 +20,15 @@ import { gearClassOf } from '../game/core/gearClass';
 import itemsData from '../game/database/items/items.jsonc';
 import recipesData from '../game/database/items/recipes.jsonc';
 import buildingsData from '../game/database/world/buildings.jsonc';
-import { GEAR, AGES, rowForAny, type Age, type BuildClass, type GearRow } from './gearDb';
+import {
+  GEAR,
+  AGES,
+  rowForAny,
+  type Age,
+  type BuildClass,
+  type GearRow,
+  AGE_BY_TIER
+} from './gearDb';
 import lootpoolData from '../game/database/items/lootpool.jsonc';
 import creaturesData from '../game/database/pawns/creatures.jsonc';
 import { AGE_NAMES, blameStation, chainAgeOf } from './chainAge';
@@ -77,8 +85,23 @@ const DROPPER_OF_ITEM = new Map<string, string>();
 
 /** Chain age → the same age vocabulary the build tables use. */
 const AGE_OF_CHAIN: Age[] = ['Primitive', 'Copper', 'Bronze', 'Iron', 'Steel', 'Runed'];
+/**
+ * An item's age, in the order the answer is actually trustworthy:
+ *
+ *   1. the gear tables, when this is a piece of gear they already ranked;
+ *   2. an EXPLICIT `tier` on the item — an author saying where the thing belongs;
+ *   3. the workshop ladder its ingredients need.
+ *
+ * (3) alone was the whole rule, and it reads 0 — Primitive — for anything with NO RECIPE at all.
+ * That is right for a foraged berry and wrong for everything you can only ever be given: `voidshard`
+ * is mined at a hundredth of a percent with a runed pick and dropped by humanoid bosses, has no
+ * recipe, and so filed itself under the stone age.
+ */
 const ageOf = (item: any): Age =>
-  gearById.get(item.id)?.age ?? AGE_OF_CHAIN[chainAgeOf(item.id)] ?? 'Primitive';
+  gearById.get(item.id)?.age ??
+  (typeof item.tier === 'number' ? AGE_BY_TIER[Math.min(Math.max(item.tier, 0), 4)] : undefined) ??
+  AGE_OF_CHAIN[chainAgeOf(item.id)] ??
+  'Primitive';
 
 /**
  * WHAT THE ITEM DOES — everything the sim actually reads off it, in one line.

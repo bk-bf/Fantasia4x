@@ -104,8 +104,8 @@
     "toolTierRequired": 0,
     "researchRequired": "food_preservation"
   },
-  {"id": "make_salt_pork", "discipline": "cooking", "station": "larder_cupboard", "inputs": {"category:meat": 4, "salt": 3}, "outputs": {"salt_pork": 3}, "workAmount": 7, "toolTierRequired": 0, "researchRequired": "food_preservation", "passive": true},
-  {"id": "make_pickled_vegetables", "discipline": "cooking", "station": "larder_cupboard", "inputs": {"category:vegetable": 4, "salt": 2}, "outputs": {"pickled_vegetables": 3}, "workAmount": 6, "toolTierRequired": 0, "researchRequired": "food_preservation", "passive": true},
+  {"id": "make_salt_pork", "discipline": "cooking", "station": "meat_larder", "inputs": {"category:meat": 4, "salt": 3}, "outputs": {"salt_pork": 3}, "workAmount": 7, "toolTierRequired": 0, "researchRequired": "food_preservation", "passive": true},
+  {"id": "make_pickled_vegetables", "discipline": "cooking", "station": "brick_stove", "inputs": {"category:vegetable": 4, "salt": 2}, "outputs": {"pickled_vegetables": 3}, "workAmount": 6, "toolTierRequired": 0, "researchRequired": "food_preservation", "passive": true},
   {"id": "make_hard_cheese", "discipline": "cooking", "station": "cheese_basin", "inputs": {"milk": 8, "salt": 2}, "outputs": {"hard_cheese": 2}, "workAmount": 12, "toolTierRequired": 1, "researchRequired": "food_preservation", "passive": true},
   {"id": "make_cured_ham", "discipline": "cooking", "station": "meat_larder", "inputs": {"category:meat": 6, "salt": 4}, "outputs": {"cured_ham": 2}, "workAmount": 14, "toolTierRequired": 1, "researchRequired": "food_preservation", "passive": true},
   {"id": "make_dry_sausage", "discipline": "cooking", "station": "meat_larder", "inputs": {"category:meat": 4, "tallow": 1, "salt": 2}, "outputs": {"dry_sausage": 3}, "workAmount": 10, "toolTierRequired": 1, "researchRequired": "food_preservation", "passive": true},

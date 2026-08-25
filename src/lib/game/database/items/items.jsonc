@@ -15573,6 +15573,9 @@
     "value": 4000,
     "grantsLineage": true,
     "tradeRelationsMin": 75,
+    // Runed: there is no recipe for one, so nothing in the chain could place it — it is mined at a
+    // hundredth of a percent with a runed pick, or taken off a humanoid boss.
+    "tier": 4,
     "description": "A shard of black glass that drinks the light around its edges and gives a cold nothing back. Power sits in it, and a price sits beside the power.",
     "color": "#1a1420",
     "amount": 0,
