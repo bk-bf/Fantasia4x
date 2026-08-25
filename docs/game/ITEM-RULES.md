@@ -115,11 +115,106 @@ recipe states, at minimum:
 - [ ] the **species material** it is cut from, by name, in a quantity that matches the piece's size
       (a cuirass is not one hide; a glove is);
 - [ ] its **metal** component, if the class calls for one, in the ratio above;
-- [ ] any **fitting that is a real component** — rivets, nails, mail rings, enchanted thread. A
-      fastener is listed only when it is a countable manufactured part, or when it IS the structure
-      (withies lashed into a shell, bark tied to a foot). **Sewing thread is never a line item**: you
-      do not sew a jerkin with rope, and the sinew that closes a seam came off the same animal the
-      piece was cut from. Listing it made the player stockpile bookkeeping. R6 enforces this;
+- [ ] the **binding that holds it together** — a sewn piece names it. Leather and hide take `sinew`,
+      cloth takes `thread`, runed work takes `enchant_thread`, and the quantity is in step with the
+      size of the piece (1 for a cap or a glove, 2 for greaves or a cloak, 3 for a torso). **A stone-age
+      piece takes sinew, never thread** — thread is spun at a bronze-age wheel, and R4 will fail a
+      tier-0 garment that waits on one.
+      **This rule used to say the opposite** and its reason was that listing a fastener "made the player
+      stockpile bookkeeping". That was true when one cordage weighed 200 g and one nail weighed 200 g:
+      a fastener really was a heavy, annoying thing to haul. Once the unit was corrected (a nail is
+      10 g, a bar draws to 300) the objection vanished, and what the ban had left behind was a hide cap
+      made of two hides and nothing else — 122 pieces with no binding at all. **A rule outlives its
+      reason quietly; check the reason still holds before enforcing it.**
+- [ ] **A seam slot names `category:binding`, never one material.** A cured hood does not become
+      impossible to craft because the colony has linen thread and no sinew. The pool is `sinew`,
+      `thread`, `cotton_thread` and `enchant_thread`, all **50 g a unit** — the moment one of them is
+      four times the others every recipe that uses it is silently wrong, which is what
+      `enchant_thread` at 0.2 kg did to the whole rune-woven line (a glove was 67% thread by mass).
+      The exception is a piece whose NAME claims the material: a Rune-Woven Robe is woven *with*
+      enchanted thread, so it names it, exactly as a species-named piece demands its species.
+- [ ] **Raw sinew is not thread.** What comes off a carcass is a wet tendon; it is dried hard and
+      shredded before anyone sews with it. Butchery yields `raw_sinew`, the drying rack turns 3 into
+      2 `sinew`. Wool needed the same correction — a fibre reaches the loom or the needle *processed*,
+      never raw.
+- [ ] **One law for every fastening, and it is about MASS: ~8% of what it holds together.** Nails and
+      seams failed identically — a nail was 0.2 kg so a 3 kg chest carried 1.2 kg of them, and a seam
+      came off a hand-written size table so a cap took one unit and an 18 kg plate took three. **In
+      both cases the COUNT looked plausible and the MASS was nonsense, and nothing was checking the
+      mass.** **R16** checks it for both families, with a wide band (a third of the product) so it
+      catches order-of-magnitude errors rather than dictating balance. Mail rings and a bow's sinew
+      backing are exempt: those ARE the piece, not what fastens it.
+- [ ] **A material's NAME says what ONE unit is.** The unit and the name must agree or every count in
+      every recipe is misread, and both directions have shipped. `iron_nail` weighed 0.2 kg and was
+      called "Iron Nails" — a keg, and honest; the unit then shrank to a single 10 g nail and the plural
+      stayed, so "25x Iron Nails" read as 25 kegs. `mail_rings` is the opposite: one unit really is
+      **~290 rings**, so the plural was right but nothing said it was a BATCH, and a coif taking "10x
+      Mail Rings" looked like ten rings when a historical coif is 3,000-6,000. It is now an **Iron
+      Ring-Bundle**, and its description says how many are in one. **R18** checks both directions, and
+      pins the coif's ring count to the historical band.
+- [ ] **A worn garment is never a COMPONENT of another worn garment.** The three torso layers are the
+      combination mechanic — bodyBase under bodyMid under bodyOuter — so building one into another
+      destroys the piece the pawn is meant to have on underneath and charges for it twice. Mail ate a
+      linen gambeson; the coif ate a TORSO garment to make a head piece. The mass comes back as what the
+      piece is actually made of: a coif is 14 ring-bundles (~4,000 rings), a hauberk 58 (~16,600).
+      **R19** enforces it.
+- [ ] **SIZE PROPAGATES DOWN THE CHAIN — every pool prices its members, not just binding.** A
+      `category:` slot takes the cheapest member for a full unit, so `category:leather: 3` bought a
+      jerkin with three scraps of coney fur. The leather pool spans **36x** (0.08 kg vermin hide to
+      2.86 kg mammoth) and the cured-hide pool 34x. Each member's `craftValue` is its weight over the
+      pool's MEDIAN, so a typical hide is still worth exactly 1 and existing counts keep their meaning
+      — what changes is that **a mammoth hide goes five times as far as a rabbit's**, which is the
+      whole point of hunting something big. **R17** fails any pool spanning more than 1.5x in size that
+      ships priced flat.
+      **Price an item against the pool it is DRAWN through, not its raw `category`.** Planks carry
+      `category: wood` alongside logs, so pricing them there measured a 2 kg plank against a 3 kg log
+      and made every plank worth 0.67. Planks are drawn via `category:plank`; that is the pool that
+      sets their value.
+- [ ] **A cast piece consumes the MELT, not a bar.** `cast_*_bar` already poured molten metal into a
+      mould while the item recipes at the same hearth took a bar plus a mould and did the melt
+      invisibly — same station, same operation, two different models. All 20 now take the melt.
+      **Iron and steel keep their bars**: no pre-industrial hearth melts iron, which is why the anvil
+      line is forged and unchanged. That is where smelting touches armour — upstream, in the bar, not
+      in the piece.
+- [ ] **A category pool prices its members by what they cost to HAVE (`craftValue`).** A `category:`
+      slot takes whatever is cheapest to hand, which is fair only when the members cost the same to
+      produce. They rarely do: cordage is plaited at a craft spot on turn one, sinew needs a carcass
+      and a drying rack, thread a bronze-age wheel, enchant-thread five steps ending at a runed loom.
+      Priced one-for-one the cheapest always wins **and the slot is free** — a hide hood costing "1
+      binding" cost one cord.
+      A crude material is worth a FRACTION of a unit, so the recipe consumes more of it. A seam is
+      **4 cordage, 2 sinew, or 1 thread**: same job, same finished piece, honest difference in effort.
+      Set it once on the material; a single recipe that values something differently can override with
+      `costFactor` on its dynamic slot. **R17** fails a mixed-age pool that ships unpriced.
+- [ ] **A missing material is not a licence to reach for any material.** When a piece has no binding,
+      the answer is the binding it would actually be made with — not whatever the pool happens to
+      contain. Hide caps, gloves and boots were fastened with **8 bronze nails**; their own siblings
+      (bracers, greaves, jerkin) were stitched. Nails and rivets belong on plate, splint, shields,
+      packs, belts and boxes; a cap is sewn.
+- [ ] **Everything you fasten with is the same size of thing — 50 g.** Seams and lashings do different
+      jobs, but if their units differ then "1x" means two different amounts depending which one an
+      author reaches for. `cordage` was **0.2 kg and cost five gathers of fibre**, so it was four times
+      the effort of a sinew for the same job, and 31 of its 48 recipes asked for exactly one. The unit
+      is split four ways (`make_cordage` yields 4 from the same 5 fibre) and every count multiplied to
+      match: **identical mass everywhere, four times the granularity.** R16 checks both the unit sizes
+      and the cost of one cordage against its fibre.
+- [ ] **Everything you fasten with is the same size of thing — 50 g.** Seams and lashings do different
+      jobs, but if their units differ then "1x" means two different amounts depending which one an
+      author reaches for. `cordage` was **0.2 kg and cost five gathers of fibre**, four times the
+      effort of a sinew for the same job, and 31 of its 48 recipes asked for exactly one. The unit is
+      split four ways (`make_cordage` yields 4 from the same 5 fibre) and every count multiplied to
+      match: **identical mass everywhere, four times the granularity.** R16 checks the unit sizes and
+      the fibre cost of one cordage.
+- [ ] **The binding pool must reach back to the FIRST AGE.** A stone-age colony laces hide with plaited
+      cord at a craft spot on turn one. When cordage was 0.2 kg it was rope and rightly excluded from
+      seams — but shrinking its unit to 50 g made it a thong, and the exclusion should have gone with
+      it. It did not, which left the whole primitive hide line waiting on butchery *plus* a drying rack
+      for sinew. **Cordage is in the pool; `rope` at 1.1 kg is not, because that is still rope.**
+      Second time in one pass that a rule outlived the number it was written for: when you change a
+      unit, re-read every rule that mentions the material.
+- [ ] **You still do not sew leather with ROPE.** Rope is a lashing, not a seam — it belongs only
+      where it IS the structure (withies lashed into a shell, bark tied to a foot). Rivets, nails and
+      mail rings stay as countable manufactured parts. R6 enforces both halves;
 - [ ] a `workAmount` in step with its neighbours.
 
 ## Species materials, and what the name must say
@@ -207,9 +302,13 @@ carrying no `tier` at all, which put a tier-3 bear's hide in the stone-age colum
       `KingdomService.generateCaravanStock` filters the whole item DB through `isTradeableDef`, capped
       by the colony's wealth tier and the sending kingdom's, so most of the database is already
       purchasable without anyone listing it. R8 asks that same predicate rather than trusting a
-      marker on the item. **A caravan never carries fresh food** — anything with `decaySeconds` (or
-      rot) will not survive weeks on the road — so a perishable with no other source is genuinely
-      unobtainable and belongs in `R8_DEBT`, named with the feature it waits on.
+      marker on the item.
+      **Perishables ARE traded.** The rule used to refuse anything with a `decaySeconds`, on the
+      reasoning that it would not survive weeks on the road — but the sim runs no spoilage clock on a
+      caravan's goods in transit, so that was a rule enforcing a simulation that does not exist, and it
+      quietly emptied the manifest of milk, cheese, fresh meat and fish: most of what a real caravan
+      carried. Only what has already turned (`rotten_*`) is refused. **Do not write a rule against a
+      system the game does not run.**
 
 ## Gate 3 — does the name tell the truth?
 
@@ -307,7 +406,7 @@ same light→medium→heavy axis, so a loadout can be read as one decision inste
       rows drifts the moment one number moves.
 - [ ] **Regalia has no class and needs none** — a ring is not a light/medium/heavy choice.
 - [ ] **A worn carry aid grants VOLUME, never weight.** Weight capacity is the body's —
-      `(11 + 0.19 x brawn) x frameFactor` — and nothing strapped on changes how much mass a pawn can
+      `(11 + 0.19 x strength) x frameFactor` — and nothing strapped on changes how much mass a pawn can
       bear. A pack that raised it was quietly claiming a rucksack makes you stronger; what a pack
       actually does is give bulk somewhere to ride. **The one exception is a load carried IN HAND that
       puts its weight on the ground**: a barrow, a handcart. Those genuinely raise what one person can
@@ -426,12 +525,60 @@ wastes almost nothing, while weaving withies throws most of every rod away. The 
       costs evasion and swing rate) starts at 60% of it. A single primitive piece that would put a pawn
       near that line on its own is wrong however honest its mass looks.
 
+## Gate 3f — a consumable, and what it charges for what it does
+
+A dose that REMOVES something — a condition cleared, a wound knitted — is the strongest thing a
+consumable can do, and **the age decides whether it is paid for.**
+
+- [ ] **Early ages pay in the body.** A stone or bronze-age remedy worked by making the patient
+      sicker on the way to making them better, and that is the trade the item has to state: a
+      downside condition for a stretch of hours, or a `rawConsumeRisk`. Charcoal Purge said in its own
+      description that it "brings the poison back up with it" and then cleared nausea *and* envenom for
+      free — prose promising a trade the effects never charged.
+- [ ] **The middle ages pay less, or pay in time.** A narrower cure, a shorter downside, a partial
+      effect. The Bone-Meal Draught knits a break the day it is drunk and spends that day on a deep
+      ache and a turned stomach.
+- [ ] **The runed age is the one that gets it clean**, and that is the point of reaching it. A costless
+      instant cure earlier has quietly handed the player the endgame answer at bronze.
+- [ ] **Payment is a downside the sim applies, not a grim sentence in the description.** A low
+      `medicineQuality` is not payment either: `bestMedicine` skips anything carrying `curesConditions`,
+      so on a condition medicine that number is never read at all.
+      **R20** checks it, with the same named-debt list R1/R2/R4 use.
+
+**And check the cure actually reaches its target before pricing it.** `curesConditions` writes to
+`conditionTimers` and nothing else. A condition DERIVED from the body — `fractured` off the limb tree,
+`infection` and `hypothermia` as graded severities on `pawn.conditions`, `bleeding` off the wound
+bleed rate, `feverburn`/`frostbrittle`/`pain_maddened` off the pawn's own racial traits — is rebuilt
+every tick and cannot be cleared this way. An item that claims to heal an INJURY uses `mendsWounds`,
+which reaches the limb tree; anything else is a promise the sim never keeps, and charging a price for
+it makes the item worse than free.
+
+## Gate 3g — a splint is worn, a cure is drunk
+
+Bone care has its own ladder, and the split runs down the middle of it: **what holds a break still is
+gear, what closes one is a dose.**
+
+- [ ] **A splint or a cast is WORN.** It takes the limb's armour slot, pushes the `splinted` condition
+      while it is on, and multiplies the mending rate of the bone under the parts it covers
+      (`armorProperties.boneHealMultiplier`). It never closes a break — the weeks are still weeks,
+      there are just fewer of them, and the limb is stiff and half-useless for all of them.
+- [ ] **Which limb it helps is which limb it COVERS.** Targeting rides the same `covers` set the
+      mitigation walk reads, so no second body model is needed and a piece that reaches no bone helps
+      nothing. `coversPart` follows `containedIn`, so covering the forearm reaches the ulna inside it.
+      Arms, legs, hands and feet only — the torso and the skull are not splintable, and no piece in
+      this line may claim them.
+- [ ] **Wood first, then a cast.** Battens are bronze-age and strap over a limb; a limed cast is
+      iron-age, moulds to the small bones a batten cannot reach, holds far harder, and shatters on the
+      first solid blow (a quarter of the splint's `maxDurability`).
+- [ ] **Only a dose closes a break.** Steel age knits it and charges the day it takes; the runed age
+      knits it and charges nothing.
+
 ## Gate 4 — is it physically and mechanically consistent?
 
 - [ ] **Weight, defense and stiffness sit in the ladder** its neighbours already form. Compare
       against the same slot one tier down and one tier up, and against the same tier's other classes.
 - [ ] **A full set is wearable** by the pawn who is supposed to wear it. Carry capacity is
-      `(11 + 0.19 × brawn) × frameFactor`; `laden` starts at 60% of it. Sum the set and check.
+      `(11 + 0.19 × strength) × frameFactor`; `laden` starts at 60% of it. Sum the set and check.
 - [ ] It only uses fields the sim actually **reads**. `defense`, `covers`, `weightKg`,
       `movementPenalty`, `fatiguePerTurn`, `coldResistance`/`heatResistance`, `stealthMod`,
       `maxDurability` and the shield block are live. **`slashResistance`, `pierceResistance`,
@@ -442,6 +589,21 @@ wastes almost nothing, while weaving withies throws most of every rod away. The 
       ⇒ `medium`, rigid metal plate ⇒ `heavy`. Class carries no combat effect on its own; the
       trade-off has to be real, and it lives in weight and `movementPenalty`.
 - [ ] It is **anatomically and physically plausible** first, mechanically convenient second.
+- [ ] **A fluid is authored in litres.** Fluids are counted in litres everywhere — recipes, loot,
+      stockpile totals, vessels — so a fluid definition reads differently from a solid one:
+      `weightKg` is the mass of ONE LITRE (its density: water 1, molten bronze 8.8, molten gold 19.3)
+      and `volumeL` is one SERVING (the phial that gets drunk, the flask a coating is brushed from).
+      Effects are per serving; `nutrition`, `value` and `fuelValue` are per litre. Writing a phial the
+      solid way (`weightKg: 0.3` beside `volumeL: 0.3`) still parses and gives a liquid a third the
+      weight of water. **R22** checks the density band, the serving size, and that a batch fits the
+      station it pours into.
+
+- [ ] **A reversible pair balances.** When a recipe unmakes what another makes — melt a bar to molten,
+      cast the molten back — the two halves are written separately and drift apart on their own. Read
+      them together and check the round trip returns exactly what it took. Bronze counted a 4kg bar as
+      one unit of molten where every other metal counted it as four, so a bar melted and recast came
+      back as two, and one standing order printed metal forever. **R21** walks every pair of recipes in
+      the file and fails any that turns N of an item into more than N.
 
 ## Gate 5 — can a colony actually build and wear it?
 
@@ -469,6 +631,9 @@ wastes almost nothing, while weaving withies throws most of every rod away. The 
 | 3d | every weapon and worn carry aid resolves to a class, and a heavier class costs more and buys more (R12) | `itemRules.test.ts` |
 | 3d | a worn carry aid grants volume only; weight comes from the body, and only a hand-hauled cart adds it (R14) | `itemRules.test.ts` |
 | 3 | no one-off antique word where a plain one exists, in a name or a description (R13) | `itemRules.test.ts` |
+| 3f | a cure below the runed age charges the patient a downside the sim applies (R20) | `itemRules.test.ts` |
+| 4 | no pair of recipes turns N of an item into more than N (R21) | `itemRules.test.ts` |
+| 4 | a fluid states a density and a serving; its batch fits its station (R22) | `itemRules.test.ts` |
 | 3b | no branch of `/gear-db` claims a concept another branch already owns | by hand |
 | 5 | no recipe-less armour; slots resolve | `armourCoverage.test.ts` |
 | 5 | crafted and equipped by a real pawn | `armourChain.test.ts` |

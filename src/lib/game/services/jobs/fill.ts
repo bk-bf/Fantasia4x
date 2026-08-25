@@ -28,7 +28,7 @@ import {
   orphanedContents,
   putIn,
   roomFor,
-  unitsToLitres,
+  servingL,
   vesselAccepts,
   vesselFilterOf,
   vesselOf
@@ -177,13 +177,13 @@ function wantOf(inst: ItemInstance, demand: Set<string>): string | null {
   if (!v) return null;
   for (const itemId of vesselFilterOf(inst)) {
     if (!vesselAccepts(inst.itemId, itemId)) continue;
-    const want = isFluidId(itemId) ? unitsToLitres(itemId, 1) : 1;
+    const want = isFluidId(itemId) ? servingL(itemId) : 1;
     if (roomFor(inst, itemId, want) > 0) return itemId;
   }
   if (inst.contents?.length) return null;
   for (const itemId of demand) {
     if (!vesselAccepts(inst.itemId, itemId)) continue;
-    if (roomFor(inst, itemId, unitsToLitres(itemId, 1)) > 0) return itemId;
+    if (roomFor(inst, itemId, isFluidId(itemId) ? servingL(itemId) : 1) > 0) return itemId;
   }
   return null;
 }
@@ -319,12 +319,12 @@ export function complete(job: Job, gs: GameState): GameState {
     next = withDrops({ ...gs, buildings }, gs.droppedItems ?? []);
   } else if (src.kind === 'vessel') {
     // Rehoming an orphan out of another vessel — it is colony stock, so it is paid for out of stock.
-    const wantUnits = fluid ? wantNative / unitsToLitres(itemId, 1) : wantNative;
+    const wantUnits = wantNative;
     const have = availableQuantityFromDrops(gs.droppedItems, itemId);
     const takeUnits = Math.min(wantUnits, have);
     if (takeUnits <= 0) return gs;
     next = consumeFromStockpiles(gs, { [itemId]: takeUnits });
-    gotNative = fluid ? unitsToLitres(itemId, takeUnits) : takeUnits;
+    gotNative = takeUnits;
   }
   // 'world' costs the colony nothing — that is what a river is.
 

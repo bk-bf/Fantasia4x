@@ -13,7 +13,7 @@ const makePawn = (x: number, y: number): Pawn =>
     name: 'Hauler',
     position: { x, y },
     isAlive: true,
-    stats: { brawn: 10 },
+    stats: { strength: 10 },
     physicalTraits: { height: 170, weight: 70 },
     inventory: { items: {}, instances: [] },
     equipment: {}

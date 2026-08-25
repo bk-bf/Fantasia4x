@@ -5,15 +5,8 @@
  * boundary: depends only on services/core/pawnQueries/pawnStates — never on the handlers or the
  * dispatcher — so the import graph stays acyclic.
  */
-import type {
-  GameState,
-  Pawn,
-  Mob,
-  Building,
-  PlacedBuilding,
-  Job
-} from '../../core/types';
-import { carriedWaterVessel } from '../../core/vessels';
+import type { GameState, Pawn, Mob, Building, PlacedBuilding, Job } from '../../core/types';
+import { carriedDrinkVessel, carriedWaterVessel, isDrinkId } from '../../core/vessels';
 export { carriedWaterVessel };
 import { transientNeedOnset } from '../../core/needs';
 import { gatheringLevelOf } from '../../core/buildingAmenity';
@@ -105,7 +98,7 @@ export function needsRecovery(pawn: Pawn): boolean {
 /** How far (tiles) a fleeing pawn tries to put between itself and the threat. */
 export const FLEE_DISTANCE = 6;
 
-/** Vision/aggro radius in tiles for this pawn. Uses the SHARED awareness-based vision (same as
+/** Vision/aggro radius in tiles for this pawn. Uses the SHARED perception-based vision (same as
  *  mobs, core/vision) scaled by the pawn's tile light + night_vision (§G) — so darkness shortens
  *  threat detection. Defensive pawns ignore this (they only react to adjacent hostiles). */
 export function pawnVisionTiles(pawn: Pawn, gs: GameState): number {
@@ -562,9 +555,7 @@ export function findNearestSeatBuilding(
     (b) =>
       b.status === 'complete' && BUILDINGS_DB.find((d) => d.id === b.type)?.buildingProperties?.seat
   );
-  const b = findNearestBy(seats, (c) =>
-    manhattan(c.x, c.y, pawn.position!.x, pawn.position!.y)
-  );
+  const b = findNearestBy(seats, (c) => manhattan(c.x, c.y, pawn.position!.x, pawn.position!.y));
   return b ? { x: b.x, y: b.y } : null;
 }
 
@@ -637,7 +628,7 @@ export function distToNearestFoodFetch(pawn: Pawn, gs: GameState): number {
  */
 export function distToNearestDrinkTarget(pawn: Pawn, gs: GameState): number {
   if (!pawn.position) return Infinity;
-  const target = findNearestWaterTarget(pawn, gs, 'drink');
+  const target = findNearestWaterTarget(pawn, gs, 'drink') ?? findNearestStoredDrink(pawn, gs);
   if (!target) return Infinity;
   return manhattan(target.x, target.y, pawn.position.x, pawn.position.y);
 }
@@ -866,7 +857,7 @@ export function advancePawnOrders(p: Pawn): void {
   }
 }
 
-// ── P0 awareness pre-filter (ENGINE-PERFORMANCE §6 / ADR-018) ────────────────
+// ── P0 perception pre-filter (ENGINE-PERFORMANCE §6 / ADR-018) ────────────────
 // findCombatThreat / findNearestHuntTarget each run once per pawn per tick, and each
 // used to scan ALL mobs — most of them neutral animals — re-deriving the predicate
 // every call (O(pawns × mobs); the profiler measured ~21k checks/tick). The relevant
@@ -1017,7 +1008,6 @@ export const ROUTE_TO_DRINK_THIRST = needNum('thirst', 'seek', 82);
 
 export const ROUTE_TO_WASH_HYGIENE = needNum('hygiene', 'seek', 88);
 
-export const DRINK_NEED_RELIEF = needNum('thirst', 'relief', 65);
 // SOCIAL: a pawn seeks a gathering place (campfire/hearth) when `relaxation` drops below this; a session
 // there lasts SOCIALISE_TURNS and restores SOCIALISE_RELAXATION_RELIEF (relaxation climbs from ~threshold
 // back toward full).
@@ -1072,6 +1062,47 @@ export function findNearestWaterTarget(
   return best ? { x: best.x, y: best.y } : null;
 }
 
+/**
+ * The nearest STORED drink in the colony — a vessel sitting in a stockpile with something drinkable
+ * in it, or a building holding a drink in its own body (a cask of ale, a barrel of water).
+ *
+ * Without this a colony with no river and no well had no drink target at all: `findNearestWaterTarget`
+ * knows about rivers, painted zones and wells, so forty litres of water in barrels was unreachable and
+ * everyone died of thirst standing next to it. Ranked by what the trip is worth — litres it can
+ * actually give, times what a litre of it does for thirst — then by distance.
+ */
+export function findNearestStoredDrink(
+  pawn: Pawn,
+  gs: GameState
+): { x: number; y: number; itemId: string } | null {
+  const pos = pawn.position;
+  if (!pos) return null;
+  const held: { x: number; y: number; itemId: string; litres: number }[] = [];
+  for (const d of gs.droppedItems ?? []) {
+    if (!d.stored || d.forbidden || d.reservedFor || !d.instance) continue;
+    for (const e of d.instance.contents ?? [])
+      if (isDrinkId(e.itemId) && (e.litres ?? 0) > 0)
+        held.push({ x: d.x, y: d.y, itemId: e.itemId, litres: e.litres ?? 0 });
+  }
+  for (const b of gs.buildings ?? []) {
+    if (b.status !== 'complete') continue;
+    for (const e of b.fluidContents ?? [])
+      if (isDrinkId(e.itemId) && (e.litres ?? 0) > 0)
+        held.push({ x: b.x, y: b.y, itemId: e.itemId, litres: e.litres ?? 0 });
+  }
+  if (held.length === 0) return null;
+  let best = held[0];
+  let bestDist = manhattan(best.x, best.y, pos.x, pos.y);
+  for (const h of held) {
+    const dist = manhattan(h.x, h.y, pos.x, pos.y);
+    if (dist < bestDist) {
+      best = h;
+      bestDist = dist;
+    }
+  }
+  return { x: best.x, y: best.y, itemId: best.itemId };
+}
+
 /** §D: route a pawn to a drink/wash target via the MOVING_TO_NEED flow; null if none/unreachable. */
 export function tryRouteToWaterNeed(
   pawn: Pawn,
@@ -1079,7 +1110,7 @@ export function tryRouteToWaterNeed(
   kind: 'drink' | 'wash'
 ): GameState | null {
   // A pawn with water on its belt drinks it where it stands — that is the whole point of carrying one.
-  if (kind === 'drink' && carriedWaterVessel(pawn)) {
+  if (kind === 'drink' && carriedDrinkVessel(pawn)) {
     const gs = transitionTo(pawn, PAWN_STATE.DRINKING, gameState);
     return {
       ...gs,
@@ -1088,7 +1119,10 @@ export function tryRouteToWaterNeed(
       )
     };
   }
-  const target = findNearestWaterTarget(pawn, gameState, kind);
+  let target = findNearestWaterTarget(pawn, gameState, kind);
+  // Nothing natural to walk to — go to the colony's own stock. Only for drinking: washing wants open
+  // water, not the drinking barrel.
+  if (!target && kind === 'drink') target = findNearestStoredDrink(pawn, gameState);
   if (!target || !pawn.position) return null;
   const targetState = kind === 'drink' ? PAWN_STATE.DRINKING : PAWN_STATE.WASHING;
   // Already there → start the task in place. Clear any in-progress movement (the pawn may have been

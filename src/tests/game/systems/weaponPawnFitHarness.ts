@@ -11,7 +11,7 @@ import type { BodyPartId, EntityStats, Pawn } from '$lib/game/core/types';
  *
  * Every sweep so far handed BOTH sides identical, generic stats, which answers "which weapon is best in
  * the abstract" and not "which weapon is best in the hands it was designed for". A warhammer in the
- * hands of someone with no brawn is not a warhammer. So each weapon is run by three pawns:
+ * hands of someone with no strength is not a warhammer. So each weapon is run by three pawns:
  *
  *   WELL SUITED — the weapon's own power stat at the spawn ceiling, the supporting stats high, and the
  *                 aptitudes its style leans on rolled at the top of the band.
@@ -63,9 +63,9 @@ export const FITS: Fit[] = ['suited', 'average', 'poor'];
 function powerStatOfWeapon(itemId: string): keyof EntityStats {
   const wp = itemService.getItemById(itemId)?.weaponProperties;
   if (wp?.powerStat) return wp.powerStat as keyof EntityStats;
-  if (wp?.arcane) return 'intellect';
-  if (wp?.finesse) return 'awareness';
-  return 'brawn';
+  if (wp?.arcane) return 'intelligence';
+  if (wp?.finesse) return 'perception';
+  return 'strength';
 }
 
 /**
@@ -77,11 +77,11 @@ export function statsFor(fit: Fit, itemId: string): Partial<EntityStats> {
   const power = powerStatOfWeapon(itemId);
   const base: Record<Fit, number> = { suited: 11, average: 12, poor: 7 };
   const s: Partial<EntityStats> = {
-    brawn: base[fit],
-    agility: base[fit],
-    vigour: fit === 'suited' ? 17 : base[fit],
-    awareness: base[fit],
-    intellect: base[fit],
+    strength: base[fit],
+    dexterity: base[fit],
+    constitution: fit === 'suited' ? 17 : base[fit],
+    perception: base[fit],
+    intelligence: base[fit],
     charisma: base[fit]
   };
   // The suited pawn's edge is CONCENTRATED in the stat its weapon actually uses, not spread over

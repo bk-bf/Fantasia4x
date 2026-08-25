@@ -7,13 +7,27 @@ import type { GameState, Pawn } from '$lib/game/core/types';
 // the state while still carrying a movement path (e.g. interrupted mid-job next to water), and must
 // not walk off mid-task (player report). The handlers clear path/isMoving every tick.
 
-function drinkingPawn(state: string): Pawn {
+function drinkingPawn(state: string, withDrink = true): Pawn {
   return {
     id: 'p',
     name: 'P',
     isAlive: true,
     position: { x: 5, y: 5 },
     needs: { hunger: 0, fatigue: 0, thirst: 80, hygiene: 80 },
+    // A skin on the belt, so the pawn has something to actually drink. Without it the handler now
+    // ends the task immediately rather than miming a drink — thirst relief has to be paid for.
+    inventory: withDrink
+      ? {
+          items: {},
+          instances: [
+            {
+              instanceId: 'skin',
+              itemId: 'waterskin',
+              contents: [{ itemId: 'water', litres: 2 }]
+            }
+          ]
+        }
+      : { items: {}, instances: [] },
     // Residual movement from however it entered the state.
     path: [
       { x: 6, y: 5 },
@@ -28,7 +42,9 @@ function drinkingPawn(state: string): Pawn {
       targetY: 5,
       progress: 0,
       timeRequired: 120,
-      turnsInState: 1
+      // 0 so the handler runs its FIRST sip — that is the tick that finds the drink, pays for it and
+      // records what it is worth. Starting at 1 would resume a drink no first sip ever set up.
+      turnsInState: 0
     }
   } as unknown as Pawn;
 }
@@ -46,6 +62,15 @@ describe('drinking/washing gate the pawn in place', () => {
     expect(p.currentState).toBe(PAWN_STATE.DRINKING); // still drinking (1/120 done)
     expect(p.path?.length ?? 0).toBe(0);
     expect(p.isMoving).toBe(false);
+  });
+  it('a pawn with nothing to drink stops instead of miming it', () => {
+    const out = handleDrinking(
+      drinkingPawn(PAWN_STATE.DRINKING, false),
+      stateWith(drinkingPawn(PAWN_STATE.DRINKING, false))
+    );
+    const p = out.pawns[0];
+    expect(p.currentState).toBe(PAWN_STATE.IDLE);
+    expect(p.needs?.thirst, 'and gets no relief for a drink it never had').toBe(80);
   });
 
   it('handleWashing clears the residual path so the pawn stays put', () => {

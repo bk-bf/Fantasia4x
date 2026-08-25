@@ -134,7 +134,7 @@ describe('COMBAT-BALANCE audit — live sim', () => {
           {
             count: 1,
             drafted: true,
-            stats: { brawn: 30, agility: 30, vigour: 40 },
+            stats: { strength: 30, dexterity: 30, constitution: 40 },
             equip: ['steel_longsword']
           }
         ],
@@ -146,13 +146,13 @@ describe('COMBAT-BALANCE audit — live sim', () => {
     const mob = s.getState().mobs?.[0] as Mob;
     const st = mob.stats as unknown as EntityStats;
     console.log(
-      `[GATE] ${CREATURE} spawned brawn ${st.brawn} · agility ${st.agility} · vigour ${st.vigour} · awareness ${st.awareness}`
+      `[GATE] ${CREATURE} spawned strength ${st.strength} · dexterity ${st.dexterity} · constitution ${st.constitution} · perception ${st.perception}`
     );
     // The rename's real failure mode: a key that no longer matches falls through to the 10 fallback
     // on EVERY creature, which no unit assertion would catch.
-    expect(st.brawn).toBeGreaterThan(10);
+    expect(st.strength).toBeGreaterThan(10);
     expect(
-      [st.brawn, st.agility, st.vigour, st.awareness].every((v) => Number.isFinite(v) && v > 0)
+      [st.strength, st.dexterity, st.constitution, st.perception].every((v) => Number.isFinite(v) && v > 0)
     ).toBe(true);
 
     const pawn = (s.getState().pawns as Pawn[])[0];
@@ -167,24 +167,24 @@ describe('COMBAT-BALANCE audit — live sim', () => {
     expect(after).toBeLessThan(before); // damage still lands post-rename
   }, 120_000);
 
-  it('#4 LANDED — a two-hander answers to BRAWN, the stat it names', async () => {
+  it('#4 LANDED — a two-hander answers to STRENGTH, the stat it names', async () => {
     // The doc's headline finding, in a real fight. Same greataxe, same aptitudes, only the physique
-    // differs — and the weapon's own power stat is BRAWN. Before tasks 3–5 and 9 the AGILITY build won
-    // this outright (1.89× faster, 2.9× the blood) because agility bought cadence, to-hit and crit on
+    // differs — and the weapon's own power stat is STRENGTH. Before tasks 3–5 and 9 the DEXTERITY build won
+    // this outright (1.89× faster, 2.9× the blood) because dexterity bought cadence, to-hit and crit on
     // top of damage. It buys none of them now.
     const equip = ['steel_greataxe'];
-    const strong = await meanDuel('BRAWN 40 / AGILITY 10 (2H greataxe)', {
-      stats: { brawn: 40, agility: 10, vigour: 30 },
+    const strong = await meanDuel('STRENGTH 40 / DEXTERITY 10 (2H greataxe)', {
+      stats: { strength: 40, dexterity: 10, constitution: 30 },
       equip
     });
-    const nimble = await meanDuel('BRAWN 10 / AGILITY 40 (2H greataxe)', {
-      stats: { brawn: 10, agility: 40, vigour: 30 },
+    const nimble = await meanDuel('STRENGTH 10 / DEXTERITY 40 (2H greataxe)', {
+      stats: { strength: 10, dexterity: 40, constitution: 30 },
       equip
     });
     console.log('[#4 POWER STAT]\n' + row(strong) + '\n' + row(nimble));
     console.log(
-      `  → the BRAWN build is ${(nimble.ticks / strong.ticks).toFixed(2)}× faster and removes ` +
-        `${((100 - strong.blood) / (100 - nimble.blood)).toFixed(1)}× the blood, on a weapon whose power stat is BRAWN`
+      `  → the STRENGTH build is ${(nimble.ticks / strong.ticks).toFixed(2)}× faster and removes ` +
+        `${((100 - strong.blood) / (100 - nimble.blood)).toFixed(1)}× the blood, on a weapon whose power stat is STRENGTH`
     );
     // The stat the weapon names is now the stat that wins with it — on time-to-kill AND on damage done.
     expect(strong.ticks).toBeLessThan(nimble.ticks);
@@ -194,14 +194,14 @@ describe('COMBAT-BALANCE audit — live sim', () => {
   it('#11 a strict downgrade now costs time', async () => {
     // `lumbering-fighter` is attack_speed ×0.6 AND hit_precision ×0.75 — an unambiguous downgrade that
     // used to make a stiletto FASTER (ratio 0.96×). Both stats are aptitudes now, so the trait's
-    // multipliers bite a stable base instead of one inflated by the wielder's agility.
+    // multipliers bite a stable base instead of one inflated by the wielder's dexterity.
     const equip = ['steel_stiletto'];
     const plain = await meanDuel('stiletto, unimpaired', {
-      stats: { brawn: 20, agility: 40, vigour: 30 },
+      stats: { strength: 20, dexterity: 40, constitution: 30 },
       equip
     });
     const crippled = await meanDuel('stiletto + lumbering-fighter', {
-      stats: { brawn: 20, agility: 40, vigour: 30 },
+      stats: { strength: 20, dexterity: 40, constitution: 30 },
       equip,
       traits: ['lumbering-fighter']
     });
@@ -220,27 +220,27 @@ describe('COMBAT-BALANCE audit — live sim', () => {
       buildScenario({
         seed: 5,
         map: { w: 16, h: 16 },
-        pawns: [{ count: 1, stats: { brawn: 12, agility: 12, vigour: 12, intellect: 12 } }],
+        pawns: [{ count: 1, stats: { strength: 12, dexterity: 12, constitution: 12, intelligence: 12 } }],
         needsDisabled: ['hunger', 'fatigue'],
         seedEntities: false
       })
     );
     const id = (s.getState().pawns as Pawn[])[0].id;
     const before = { ...(s.getState().pawns as Pawn[])[0].stats };
-    // frail = vigourBonus −2 · clumsy = agilityBonus −2 · dull = intellectBonus −2 (task 1, signed)
+    // frail = constitutionBonus −2 · clumsy = dexterityBonus −2 · dull = intelligenceBonus −2 (task 1, signed)
     s.command({
       type: 'devSetPawnTraits',
       payload: { pawnId: id, traitIds: ['frail', 'clumsy', 'dull'] }
     } as never);
     const after = (s.getState().pawns as Pawn[])[0].stats;
     console.log(
-      `[#1 SIGNED GRANTS] frail+clumsy+dull → vigour ${before.vigour}→${after.vigour} · ` +
-        `agility ${before.agility}→${after.agility} · intellect ${before.intellect}→${after.intellect}`
+      `[#1 SIGNED GRANTS] frail+clumsy+dull → constitution ${before.constitution}→${after.constitution} · ` +
+        `dexterity ${before.dexterity}→${after.dexterity} · intelligence ${before.intelligence}→${after.intelligence}`
     );
     // Every one of them is a flaw, and every one of them now costs what it says it costs.
-    expect(after.vigour).toBeLessThan(before.vigour);
-    expect(after.agility).toBeLessThan(before.agility);
-    expect(after.intellect).toBeLessThan(before.intellect);
+    expect(after.constitution).toBeLessThan(before.constitution);
+    expect(after.dexterity).toBeLessThan(before.dexterity);
+    expect(after.intelligence).toBeLessThan(before.intelligence);
   }, 120_000);
 
   it('#2 the sim itself is deterministic — the same seed replays identically', async () => {
@@ -248,12 +248,12 @@ describe('COMBAT-BALANCE audit — live sim', () => {
     // seed must still replay byte-for-byte, or no tuning number above is trustworthy.
     const a = await duel({
       seed: 909,
-      stats: { brawn: 30, agility: 20, vigour: 30 },
+      stats: { strength: 30, dexterity: 20, constitution: 30 },
       equip: ['steel_longsword']
     });
     const b = await duel({
       seed: 909,
-      stats: { brawn: 30, agility: 20, vigour: 30 },
+      stats: { strength: 30, dexterity: 20, constitution: 30 },
       equip: ['steel_longsword']
     });
     console.log(

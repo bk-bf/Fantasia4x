@@ -3,12 +3,12 @@
 import type { EquipmentSlot } from './items';
 
 export interface EntityStats {
-  brawn: number;
-  agility: number;
-  intellect: number;
-  awareness: number;
+  strength: number;
+  dexterity: number;
+  intelligence: number;
+  perception: number;
   charisma: number;
-  vigour: number;
+  constitution: number;
 }
 
 /** A core-attribute key — the six fields of {@link EntityStats}. */
@@ -270,16 +270,16 @@ export interface Trait {
    *  PawnStatService work mults + resistance stats + heal_rate, and Combat resistances.
    *  The old grab-bag of unread effect keys (telepathicRange, memoryBonus…) was pruned. */
   effects: {
-    // Core-stat grants — SIGNED. A flaw authors a negative value (`"agilityBonus": -2`); there is no
+    // Core-stat grants — SIGNED. A flaw authors a negative value (`"dexterityBonus": -2`); there is no
     // separate `*Penalty` key, because having one meant the bake path had to remember to negate it and
     // it never did — every flaw in the game was a blessing. One key, one sign, no branch.
     // Applied at generation (applyCulturalTraitBonuses) and on gain (applyGainedTrait).
-    brawnBonus?: number;
-    agilityBonus?: number;
-    intellectBonus?: number;
-    awarenessBonus?: number;
+    strengthBonus?: number;
+    dexterityBonus?: number;
+    intelligenceBonus?: number;
+    perceptionBonus?: number;
     charismaBonus?: number;
-    vigourBonus?: number;
+    constitutionBonus?: number;
 
     // Work modifiers — each maps a workType (or "all") to a multiplier applied
     // directly to the matching stats.jsonc output (see traits.jsonc header).

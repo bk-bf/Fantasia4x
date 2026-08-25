@@ -7,12 +7,16 @@ const ITEMS_DATABASE = itemsData as unknown as Item[];
 
 // `category:<cat>` slot match (local copy of ItemService.itemMatchesCostCategory to avoid a
 // RecipeService↔ItemService import cycle): `plank`/`log` match any *_plank / *_log; else item.category.
-function recipeItemMatchesCategory(
+export function recipeItemMatchesCategory(
   item: { id: string; category?: string; type?: string },
   cat: string
 ): boolean {
   if (cat === 'plank') return item.id.endsWith('_plank');
   if (cat === 'log') return item.id.endsWith('_log');
+  if (cat === 'fastener')
+    return /_nail$|_rivet$|_tack$/.test(item.id) && item.type !== 'weapon' && item.type !== 'tool';
+  if (cat === 'thread')
+    return item.category === 'binding' && !/^cordage$|^rope$|_rope$|_cordage$/.test(item.id);
   // Never a finished weapon/armour/tool — their `category` doubles as an armour class (see itemDefs).
   if (item.type === 'armor' || item.type === 'weapon' || item.type === 'tool') return false;
   return item.category === cat;
@@ -149,6 +153,7 @@ export class RecipeServiceImpl implements RecipeService {
         for (const cat of this.slotCategories(slot)) {
           for (const it of ITEMS_DATABASE) {
             if (!recipeItemMatchesCategory(it, cat)) continue;
+            if (!this.slotAccepts(slot, it)) continue;
             const arr = this.usedIn.get(it.id) ?? this.usedIn.set(it.id, []).get(it.id)!;
             if (!arr.includes(r)) arr.push(r);
           }
@@ -177,6 +182,25 @@ export class RecipeServiceImpl implements RecipeService {
    *  `acceptsCategory` single-category shorthand so callers never branch on which was authored. */
   slotCategories(slot: { acceptsCategory?: string; acceptsCategories?: string[] }): string[] {
     return slot.acceptsCategories ?? (slot.acceptsCategory ? [slot.acceptsCategory] : []);
+  }
+
+  /**
+   * Does this dynamic slot take this item? The accept list says what SHAPE of material fits; the
+   * slot's `excludes` says which of those are not good enough for this particular job. One chokepoint
+   * so every caller — the auto-picker, the used-by index, the craft card — agrees on the answer.
+   */
+  slotAccepts(
+    slot: {
+      acceptsCategory?: string;
+      acceptsCategories?: string[];
+      excludes?: string[];
+    },
+    item: { id: string; category?: string; type?: string }
+  ): boolean {
+    if (!this.slotCategories(slot).some((c) => recipeItemMatchesCategory(item, c))) return false;
+    const ex = slot.excludes;
+    if (!ex?.length) return true;
+    return !ex.some((x) => x === item.id || x === item.category);
   }
 
   isPassive(recipe: Recipe | undefined): boolean {

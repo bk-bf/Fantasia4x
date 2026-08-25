@@ -11,11 +11,11 @@ function makePawn(over: Partial<Pawn> = {}): Pawn {
     position: { x: 5, y: 5 },
     currentState: 'Idle',
     stats: {
-      brawn: 14,
-      agility: 14,
-      vigour: 12,
-      intellect: 10,
-      awareness: 10,
+      strength: 14,
+      dexterity: 14,
+      constitution: 12,
+      intelligence: 10,
+      perception: 10,
       charisma: 10
     },
     traits: [],

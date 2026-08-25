@@ -863,7 +863,7 @@ class SocialServiceImpl {
     const turn = state.turn;
     const pairCd = DIALOG_PAIR_COOLDOWN_S * TICKS_PER_SECOND;
     const pawnCd = DIALOG_PAWN_COOLDOWN_S * TICKS_PER_SECOND;
-    // Situational awareness: a fight nearby (a comrade trading blows, or an aggressive beast bearing in)
+    // Situational perception: a fight nearby (a comrade trading blows, or an aggressive beast bearing in)
     // is no time for chatter — even for a bystander who isn't the one swinging. Gather the danger points
     // once, then keep any pawn within DIALOG_DANGER_RADIUS of one out of the dialog.
     const danger: { x: number; y: number }[] = [];
@@ -879,7 +879,7 @@ class SocialServiceImpl {
           Math.max(Math.abs(d.x - p.position!.x), Math.abs(d.y - p.position!.y)) <=
           DIALOG_DANGER_RADIUS
       );
-    // Activity awareness: a real conversation belongs to downtime — a pawn who is idle, or gathered at
+    // Activity perception: a real conversation belongs to downtime — a pawn who is idle, or gathered at
     // a fire. Two pawns busily hauling (or just awake in the night) don't strike up a deep talk.
     const sociable = (p: Pawn) =>
       p.currentState === 'Idle' ||

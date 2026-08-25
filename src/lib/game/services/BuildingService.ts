@@ -117,6 +117,9 @@ export interface BuildingService {
   // makers_bench 1 → …); a higher tier supersedes lower ones and crafts their recipes faster.
   stationTier(buildingType: string): number | undefined;
   butcheryTier(buildingType: string): number | undefined;
+  cookingTier(buildingType: string): number | undefined;
+  lapidaryTier(buildingType: string): number | undefined;
+  tailoringTier(buildingType: string): number | undefined;
   craftingBonusOf(buildingType: string): number;
   butcheryYieldBonusOf(buildingType: string): number;
   stationFulfills(haveType: string, recipeStation: string): boolean;
@@ -243,12 +246,30 @@ export class BuildingServiceImpl implements BuildingService {
   ): Record<string, number> | null {
     const building = this.getBuildingById(buildingId);
     if (!building?.buildingCost) return {};
+    // Any ONE alternative cost set may be paid instead of the main one — the dug-loam case: lay the
+    // soil you actually dug rather than composting your way to the same tier. Tried in order, first
+    // affordable wins, main cost first so the ordinary route stays the default.
+    const viaMain = this.payCost(building.buildingCost, gameState, materialOverride);
+    if (viaMain) return viaMain;
+    for (const alt of building.buildingCostAlternatives ?? []) {
+      const viaAlt = this.payCost(alt, gameState, materialOverride);
+      if (viaAlt) return viaAlt;
+    }
+    return null;
+  }
+
+  /** Resolve ONE cost map against available stock, or null when it cannot be paid in full. */
+  private payCost(
+    cost0: Record<string, number>,
+    gameState: GameState,
+    materialOverride?: Record<string, string>
+  ): Record<string, number> | null {
     // ADR-016: pay from AVAILABLE stock (reserved-for-craft stacks excluded).
     const stock = availableAggregateFromDrops(gameState.droppedItems);
     const resolved: Record<string, number> = {};
     const used: Record<string, number> = {};
 
-    for (const [key, cost] of Object.entries(building.buildingCost)) {
+    for (const [key, cost] of Object.entries(cost0)) {
       if (key.startsWith('category:')) {
         const cat = key.slice('category:'.length);
         let need = cost as number;
@@ -448,6 +469,32 @@ export class BuildingServiceImpl implements BuildingService {
     return this.getBuildingById(buildingType)?.effects?.butcheryTier;
   }
 
+  /** Cooking tier of a station (effects.cookingTier); undefined for non-cooking stations. The hearth
+   *  ladder — campfire 0 → stone hearth 1 → brick hearth 2 → brick stove 3 → iron stove 4 → steel
+   *  range 5 — is its own family, like butchery, so a better stove never stands in for a forge. A
+   *  higher tier COOKS THE SAME DISHES faster and on less fuel; it unlocks nothing, because a colony
+   *  that could make pottage on day one should not lose the recipe when it builds a stove. */
+  cookingTier(buildingType: string): number | undefined {
+    return this.getBuildingById(buildingType)?.effects?.cookingTier;
+  }
+
+  /** Lapidary tier (effects.lapidaryTier) — its own family, like cooking and butchery. The rungs are
+   *  abrasives: a sand wheel 0 → an emery wheel 1 → a gem-dust lap 2 → the attunement bench 3, which
+   *  is the only one that does anything magical. Cutting a stone is grinding, not sorcery, so the
+   *  mundane rungs start in the bronze age and each one bites a harder stone than the last. */
+  lapidaryTier(buildingType: string): number | undefined {
+    return this.getBuildingById(buildingType)?.effects?.lapidaryTier;
+  }
+
+  /** Tailoring tier (effects.tailoringTier) — the bench a garment or a piece of soft armour is cut
+   *  and stitched on. Its own family, like cooking: a workbench 0 → a weaving frame 1 → a currier's
+   *  bench 2 → an outfitter's bench 3 → the runic loom 4. A better bench sews the SAME patterns
+   *  faster; it unlocks nothing, because a colony that could stitch a jerkin on day one should not
+   *  lose the pattern when it builds something better. */
+  tailoringTier(buildingType: string): number | undefined {
+    return this.getBuildingById(buildingType)?.effects?.tailoringTier;
+  }
+
   /** Crafting speed bonus of a station (effects.craftingBonus, e.g. 0.2 = +20%); 0 if none. */
   craftingBonusOf(buildingType: string): number {
     return this.getBuildingById(buildingType)?.effects?.craftingBonus ?? 0;
@@ -462,7 +509,14 @@ export class BuildingServiceImpl implements BuildingService {
   /** Overall rank of a station within whichever family it belongs to (generic crafting tier or the
    *  separate butchery tier) — drives "prefer the best station" in bestCraftStation. */
   private stationRank(buildingType: string): number {
-    return this.stationTier(buildingType) ?? this.butcheryTier(buildingType) ?? -1;
+    return (
+      this.stationTier(buildingType) ??
+      this.butcheryTier(buildingType) ??
+      this.cookingTier(buildingType) ??
+      this.lapidaryTier(buildingType) ??
+      this.tailoringTier(buildingType) ??
+      -1
+    );
   }
 
   /**
@@ -479,7 +533,16 @@ export class BuildingServiceImpl implements BuildingService {
     if (needT !== undefined && haveT !== undefined && haveT >= needT) return true;
     const needB = this.butcheryTier(recipeStation);
     const haveB = this.butcheryTier(haveType);
-    return needB !== undefined && haveB !== undefined && haveB >= needB;
+    if (needB !== undefined && haveB !== undefined && haveB >= needB) return true;
+    const needC = this.cookingTier(recipeStation);
+    const haveC = this.cookingTier(haveType);
+    if (needC !== undefined && haveC !== undefined && haveC >= needC) return true;
+    const needL = this.lapidaryTier(recipeStation);
+    const haveL = this.lapidaryTier(haveType);
+    if (needL !== undefined && haveL !== undefined && haveL >= needL) return true;
+    const needTail = this.tailoringTier(recipeStation);
+    const haveTail = this.tailoringTier(haveType);
+    return needTail !== undefined && haveTail !== undefined && haveTail >= needTail;
   }
 
   /** Best complete building that can craft a recipe for `recipeStation` — highest rank wins (a shared

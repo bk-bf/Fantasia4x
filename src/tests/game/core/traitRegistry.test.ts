@@ -12,18 +12,18 @@ const ALL: Trait[] = TRAIT_DATABASE;
 const RARITY_IDS = new Set((raritiesData as { id: string }[]).map((r) => r.id));
 const KINDS = new Set(['stat', 'attribute', 'naturalGear', 'passive', 'wound', 'bodyMod']);
 const STAT_KEYS = new Set([
-  'brawnBonus',
-  'agilityBonus',
-  'intellectBonus',
-  'awarenessBonus',
+  'strengthBonus',
+  'dexterityBonus',
+  'intelligenceBonus',
+  'perceptionBonus',
   'charismaBonus',
-  'vigourBonus',
-  'brawnPenalty',
-  'agilityPenalty',
-  'intellectPenalty',
-  'awarenessPenalty',
+  'constitutionBonus',
+  'strengthPenalty',
+  'dexterityPenalty',
+  'intelligencePenalty',
+  'perceptionPenalty',
   'charismaPenalty',
-  'vigourPenalty'
+  'constitutionPenalty'
 ]);
 // ADR-028 NAMING LAW: a stat/attribute trait's NAME must not evoke a natural weapon/armor or a losable
 // body part — those imply a body-model mechanic the abstract trait lacks. Only body-touching kinds

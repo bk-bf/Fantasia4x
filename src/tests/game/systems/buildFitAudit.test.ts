@@ -55,7 +55,7 @@ const dummy = (): Pawn =>
     isAlive: true,
     position: { x: 0, y: 0 },
     currentState: 'Fighting',
-    stats: { brawn: 10, agility: 1, vigour: 10, awareness: 10, intellect: 10, charisma: 10 },
+    stats: { strength: 10, dexterity: 1, constitution: 10, perception: 10, intelligence: 10, charisma: 10 },
     traits: [],
     equipment: {
       bodyMid: { itemId: 'mail_hauberk', instanceId: 'a1', durability: 999 },

@@ -59,11 +59,259 @@
     "workAmount"      : 14,
     "toolTierRequired": 0
   },
+  // ── Preservation, drink and regalia ───────────────────────────────────────
+  {"id": "smoke_fish", "discipline": "cooking", "station": "smoking_rack", "inputs": {"category:fish": 3, "salt": 1}, "outputs": {"smoked_fish": 3}, "workAmount": 5, "toolTierRequired": 0, "passive": true},
+  {
+    "id"              : "smoke_meat",
+    "discipline"      : "cooking",
+    "station"         : "smoking_rack",
+    "passive"         : true,
+    "inputs"          : {"category:meat": 4, "salt": 1},
+    "outputs"         : {"smoked_meat": 3},
+    "workAmount"      : 8,
+    "toolTierRequired": 0
+  },
+  {
+    "id"              : "smoke_ham",
+    "discipline"      : "cooking",
+    "station"         : "smoking_rack",
+    "passive"         : true,
+    "inputs"          : {"category:meat": 6, "salt": 2},
+    "outputs"         : {"smoked_ham": 2},
+    "workAmount"      : 14,
+    "toolTierRequired": 0,
+    "researchRequired": "food_preservation"
+  },
+  {
+    "id"              : "smoke_sausage",
+    "discipline"      : "cooking",
+    "station"         : "smoking_rack",
+    "passive"         : true,
+    "inputs"          : {"category:meat": 4, "tallow": 1, "salt": 1},
+    "outputs"         : {"smoked_sausage": 3},
+    "workAmount"      : 12,
+    "toolTierRequired": 0,
+    "researchRequired": "food_preservation"
+  },
+  {
+    "id"              : "smoke_cheese",
+    "discipline"      : "cooking",
+    "station"         : "smoking_rack",
+    "passive"         : true,
+    "inputs"          : {"hard_cheese": 2},
+    "outputs"         : {"smoked_cheese": 2},
+    "workAmount"      : 10,
+    "toolTierRequired": 0,
+    "researchRequired": "food_preservation"
+  },
+  {"id": "make_salt_pork", "discipline": "cooking", "station": "campfire", "inputs": {"category:meat": 4, "salt": 3}, "outputs": {"salt_pork": 3}, "workAmount": 7, "toolTierRequired": 0, "researchRequired": "food_preservation", "passive": true},
+  {"id": "make_pickled_vegetables", "discipline": "cooking", "station": "brick_stove", "inputs": {"category:vegetable": 4, "salt": 2}, "outputs": {"pickled_vegetables": 3}, "workAmount": 6, "toolTierRequired": 0, "researchRequired": "food_preservation", "passive": true},
+  {"id": "make_hard_cheese", "discipline": "cooking", "station": "cheese_basin", "inputs": {"milk": 8, "salt": 2}, "outputs": {"hard_cheese": 2}, "workAmount": 12, "toolTierRequired": 1, "researchRequired": "food_preservation", "passive": true},
+  {"id": "make_cured_ham", "discipline": "cooking", "station": "drying_rack", "inputs": {"category:meat": 6, "salt": 4}, "outputs": {"cured_ham": 2}, "workAmount": 14, "toolTierRequired": 1, "researchRequired": "food_preservation", "passive": true},
+  {"id": "make_dry_sausage", "discipline": "cooking", "station": "drying_rack", "inputs": {"category:meat": 4, "tallow": 1, "salt": 2}, "outputs": {"dry_sausage": 3}, "workAmount": 10, "toolTierRequired": 1, "researchRequired": "food_preservation", "passive": true},
+  {"id": "make_potted_meat", "discipline": "cooking", "station": "oven", "inputs": {"category:meat": 4, "tallow": 2, "clay_jug": 1}, "outputs": {"potted_meat": 3}, "workAmount": 12, "toolTierRequired": 2, "researchRequired": "food_preservation"},
+  {"id": "make_preserved_fruit", "discipline": "cooking", "station": "oven", "inputs": {"category:fruit": 4, "honey": 2, "clay_jug": 1}, "outputs": {"preserved_fruit": 3}, "workAmount": 10, "toolTierRequired": 2, "researchRequired": "food_preservation"},
+
+  {"id": "ferment_birch_sap_wine", "station": "fermenter", "inputs": {"water": 4, "honey": 1}, "outputs": {"birch_sap_wine": 3}, "workAmount": 6, "toolTierRequired": 0, "passive": true},
+  {"id": "ferment_mead", "station": "fermenter", "inputs": {"honey": 4, "water": 3}, "outputs": {"mead": 4}, "workAmount": 12, "toolTierRequired": 0, "researchRequired": "fermentation", "passive": true},
+  {"id": "brew_barley_beer", "station": "fermenter", "inputs": {"malt": 3, "water": 4}, "outputs": {"barley_beer": 4}, "workAmount": 8, "toolTierRequired": 0, "researchRequired": "fermentation", "passive": true},
+  {"id": "ferment_grape_wine", "station": "fermenter", "inputs": {"grapes": 6}, "outputs": {"grape_wine": 4}, "workAmount": 10, "toolTierRequired": 0, "researchRequired": "fermentation", "passive": true},
+  {"id": "brew_hopped_ale", "station": "fermenter", "inputs": {"malt": 3, "category:herb": 2, "water": 4}, "outputs": {"hopped_ale": 4}, "workAmount": 10, "toolTierRequired": 1, "researchRequired": "distillation", "passive": true},
+  {"id": "distil_apple_brandy", "discipline": "alchemy", "station": "alchemy_lab", "inputs": {"cider": 6}, "outputs": {"apple_brandy": 2}, "workAmount": 14, "toolTierRequired": 1, "researchRequired": "distillation"},
+  {"id": "distil_grain_whisky", "discipline": "alchemy", "station": "alchemy_lab", "inputs": {"malt": 6, "peat": 2}, "outputs": {"grain_whisky": 2}, "workAmount": 20, "toolTierRequired": 2, "researchRequired": "master_alchemy"},
+  {"id": "make_fortified_wine", "discipline": "alchemy", "station": "alchemy_lab", "inputs": {"grape_wine": 4, "distilled_spirit": 0.3}, "outputs": {"fortified_wine": 4}, "workAmount": 14, "toolTierRequired": 2, "researchRequired": "master_alchemy"},
+
+  {"id": "make_tooth_necklace", "discipline": "bonecarving", "station": "craft_spot", "inputs": {"predator_claw": 3, "category:binding": 1}, "outputs": {"tooth_necklace": 1}, "workAmount": 4, "toolTierRequired": 0},
+  {"id": "make_bone_circlet", "discipline": "bonecarving", "station": "bone_carvers_bench", "inputs": {"medium_bones": 2, "category:binding": 1}, "outputs": {"bone_circlet": 1}, "workAmount": 6, "toolTierRequired": 0},
+  {"id": "make_bronze_torc", "station": "casting_hearth", "inputs": {"molten_bronze": 0.456, "clay_mold": 1}, "outputs": {"bronze_torc": 1}, "workAmount": 10, "toolTierRequired": 1, "researchRequired": "bronze_working"},
+  {"id": "make_bronze_arm_ring", "station": "casting_hearth", "inputs": {"molten_bronze": 0.456, "clay_mold": 1}, "outputs": {"bronze_arm_ring": 2}, "workAmount": 8, "toolTierRequired": 1, "researchRequired": "bronze_working"},
+  {"id": "make_iron_signet_ring", "station": "anvil", "inputs": {"iron_bar": 1}, "outputs": {"iron_signet_ring": 4}, "workAmount": 10, "toolTierRequired": 1, "researchRequired": "iron_working"},
+  {"id": "make_silver_pendant", "station": "anvil", "inputs": {"silver_bar": 1}, "outputs": {"silver_pendant": 4}, "workAmount": 12, "toolTierRequired": 1, "researchRequired": "iron_working"},
+  {"id": "make_filigree_diadem", "station": "anvil", "inputs": {"silver_bar": 1, "iron_wire": 1}, "outputs": {"filigree_diadem": 2}, "workAmount": 20, "toolTierRequired": 2, "researchRequired": "steel_making"},
+  {"id": "make_gold_chain_of_office", "station": "anvil", "inputs": {"gold_bar": 1}, "outputs": {"gold_chain_of_office": 2}, "workAmount": 24, "toolTierRequired": 2, "researchRequired": "steel_making"},
+  // ── Targeted medicine ─────────────────────────────────────────────────────
+  {
+    "id"              : "make_styptic_pack",
+    "discipline"      : "herbalism",
+    "station"         : "makers_bench",
+    "inputs"          : {"bark": 2, "ash": 1, "linen_cloth": 1},
+    "outputs"         : {"styptic_pack": 3},
+    "workAmount"      : 4,
+    "toolTierRequired": 0,
+    "researchRequired": "leather_working"
+  },
+  {
+    "id"              : "make_charcoal_purge",
+    "discipline"      : "herbalism",
+    "station"         : "makers_bench",
+    "inputs"          : {"charcoal": 2, "category:herb": 1},
+    "outputs"         : {"charcoal_purge": 3},
+    "workAmount"      : 4,
+    "toolTierRequired": 0,
+    "researchRequired": "leather_working"
+  },
+  // ── Fracture care ─────────────────────────────────────────────────────────
+  // Splints and casts are WORN gear, so they are made where woodwork and dressing are made, not
+  // brewed. The wooden pair are bronze-age because a batten needs a sawpit; the limed pair are iron
+  // because a cast is set at an apothecary out of burnt limestone.
+  {
+    "id"              : "make_wooden_arm_splint",
+    "discipline"      : "herbalism",
+    "station"         : "makers_bench",
+    "inputs"          : {"category:plank": 1, "linen_cloth": 1, "category:binding": 2},
+    "outputs"         : {"wooden_arm_splint": 3},
+    "workAmount"      : 6,
+    "toolTierRequired": 1,
+    "researchRequired": "leather_working"
+  },
+  {
+    "id"              : "make_wooden_leg_splint",
+    "discipline"      : "herbalism",
+    "station"         : "makers_bench",
+    "inputs"          : {"category:plank": 2, "linen_cloth": 2, "category:binding": 3},
+    "outputs"         : {"wooden_leg_splint": 3},
+    "workAmount"      : 8,
+    "toolTierRequired": 1,
+    "researchRequired": "leather_working"
+  },
+  {
+    "id"              : "make_lime_arm_cast",
+    "discipline"      : "herbalism",
+    "station"         : "apothecary",
+    "inputs"          : {"quicklime": 1, "linen_cloth": 2, "water": 1, "category:thread": 1},
+    "outputs"         : {"lime_arm_cast": 2},
+    "workAmount"      : 10,
+    "toolTierRequired": 1,
+    "researchRequired": "iron_working"
+  },
+  {
+    "id"              : "make_lime_leg_cast",
+    "discipline"      : "herbalism",
+    "station"         : "apothecary",
+    "inputs"          : {"quicklime": 2, "linen_cloth": 4, "water": 2, "category:thread": 2},
+    "outputs"         : {"lime_leg_cast": 2},
+    "workAmount"      : 14,
+    "toolTierRequired": 1,
+    "researchRequired": "iron_working"
+  },
+  {
+    "id"              : "brew_bonemeal_draught",
+    "discipline"      : "alchemy",
+    "station"         : "apothecary",
+    "inputs"          : {"bone_meal": 2, "category:herb": 2, "distilled_spirit": 0.3},
+    "outputs"         : {"bonemeal_draught": 2},
+    "workAmount"      : 16,
+    "toolTierRequired": 2,
+    "researchRequired": "steel_making"
+  },
+  {
+    "id"              : "brew_emberbloom_draught",
+    "discipline"      : "alchemy",
+    "station"         : "apothecary",
+    "inputs"          : {"emberbloom": 2, "gem_dust": 1, "distilled_spirit": 0.3},
+    "outputs"         : {"emberbloom_draught": 2},
+    "workAmount"      : 22,
+    "toolTierRequired": 2,
+    "researchRequired": "runic_inscription"
+  },
+  {
+    "id"              : "brew_fever_draught",
+    "discipline"      : "alchemy",
+    "station"         : "alchemy_lab",
+    "inputs"          : {"bark": 3, "category:herb": 2, "water": 2},
+    "outputs"         : {"fever_draught": 3},
+    "workAmount"      : 8,
+    "toolTierRequired": 1,
+    "researchRequired": "iron_working"
+  },
+  {
+    "id"              : "make_burn_dressing",
+    "discipline"      : "alchemy",
+    "station"         : "alchemy_lab",
+    "inputs"          : {"tallow": 1, "honey": 1, "linen_cloth": 2},
+    "outputs"         : {"burn_dressing": 3},
+    "workAmount"      : 8,
+    "toolTierRequired": 1,
+    "researchRequired": "iron_working"
+  },
+  {
+    "id"              : "make_warming_liniment",
+    "discipline"      : "alchemy",
+    "station"         : "alchemy_lab",
+    "inputs"          : {"tallow": 2, "distilled_spirit": 0.3, "category:herb": 1},
+    "outputs"         : {"warming_liniment": 3},
+    "workAmount"      : 8,
+    "toolTierRequired": 1,
+    "researchRequired": "iron_working"
+  },
+  {
+    "id"              : "brew_poppy_draught",
+    "discipline"      : "alchemy",
+    "station"         : "apothecary",
+    "inputs"          : {"category:herb": 3, "distilled_spirit": 0.3},
+    "outputs"         : {"poppy_draught": 3},
+    "workAmount"      : 12,
+    "toolTierRequired": 2,
+    "researchRequired": "steel_making"
+  },
+  {
+    "id"              : "make_field_surgeons_kit",
+    "discipline"      : "alchemy",
+    "station"         : "apothecary",
+    "inputs"          : {"spirit_tincture": 1, "linen_cloth": 2, "category:steel": 1, "category:thread": 2},
+    "outputs"         : {"field_surgeons_kit": 2},
+    "workAmount"      : 14,
+    "toolTierRequired": 2,
+    "researchRequired": "steel_making"
+  },
+  // ── Medicine ladder ───────────────────────────────────────────────────────
+  // Honey finally has a use: it is a real antibacterial dressing, which is what it was kept for.
+  {
+    "id"              : "make_honey_salve",
+    "discipline"      : "herbalism",
+    "station"         : "makers_bench",
+    "inputs"          : {"honey": 1, "woundwort": 2, "linen_cloth": 1},
+    "outputs"         : {"honey_salve": 2},
+    "workAmount"      : 5,
+    "toolTierRequired": 0,
+    "researchRequired": "leather_working"
+  },
+  {
+    "id"              : "brew_spirit_tincture",
+    "discipline"      : "alchemy",
+    "station"         : "alchemy_lab",
+    "inputs"          : {"distilled_spirit": 0.3, "woundwort": 2, "category:herb": 2},
+    "outputs"         : {"spirit_tincture": 3},
+    "workAmount"      : 8,
+    "toolTierRequired": 1,
+    "researchRequired": "iron_working"
+  },
+  {
+    "id"              : "make_surgeons_dressing",
+    "discipline"      : "alchemy",
+    "station"         : "apothecary",
+    "inputs"          : {"spirit_tincture": 1, "linen_cloth": 2, "category:steel": 1},
+    "outputs"         : {"surgeons_dressing": 4},
+    "workAmount"      : 12,
+    "toolTierRequired": 2,
+    "researchRequired": "steel_making"
+  },
+  // Emberbloom stops being a flower nothing picks.
+  {
+    "id"              : "make_emberbloom_balm",
+    "discipline"      : "alchemy",
+    "station"         : "apothecary",
+    "inputs"          : {"emberbloom": 2, "tallow": 1, "gem_dust": 1},
+    "outputs"         : {"emberbloom_balm": 3},
+    "workAmount"      : 20,
+    "toolTierRequired": 2,
+    "researchRequired": "runic_inscription"
+  },
   {
     "id"              : "make_chewed_poultice",
     "discipline"      : "herbalism",
     "station"         : "craft_spot",
-    "inputs"          : {"woundwort": 2, "cordage": 1},
+    "inputs"          : {"woundwort": 2, "cordage": 4},
     "outputs"         : {"chewed_poultice": 1},
     "workAmount"      : 2,
     "toolTierRequired": 0
@@ -72,7 +320,7 @@
     "id"              : "make_rabbit_meat",
     "station"         : "butcher_spot",
     "inputs"          : {"rabbit_carcass": 1},
-    "outputs"         : {"rabbit_meat": 3, "rabbit_pelt": 2, "coney_wool": 2, "small_bones": 4, "sinew": 2},
+    "outputs"         : {"rabbit_meat": 3, "rabbit_pelt": 2, "coney_wool": 2, "small_bones": 4, "raw_sinew": 2},
     "workAmount"      : 15,
     "toolTierRequired": 0
   },
@@ -80,7 +328,7 @@
     "id"              : "make_venison",
     "station"         : "butcher_spot",
     "inputs"          : {"deer_carcass": 1},
-    "outputs"         : {"venison": 10, "deer_hide": 3, "medium_bones": 12, "sinew": 9, "antler_rack": 1},
+    "outputs"         : {"venison": 10, "deer_hide": 3, "medium_bones": 12, "raw_sinew": 9, "antler_rack": 1},
     "workAmount"      : 30,
     "toolTierRequired": 0
   },
@@ -92,14 +340,6 @@
     "inputs"          : {"rotten_carcass": 1},
     "outputs"         : {"rotten_meat": 8, "rotten_hide": 2, "medium_bones": 6},
     "workAmount"      : 20,
-    "toolTierRequired": 0
-  },
-  {
-    "id"              : "make_tanning_bucket",
-    "station"         : "sawtable",
-    "inputs"          : {"category:plank": 2, "resin": 1},
-    "outputs"         : {"tanning_bucket": 1},
-    "workAmount"      : 5,
     "toolTierRequired": 0
   },
   // ── Curing (passive, Curing Frame): raw hide + ash/salt → a stable cured hide, per species ──
@@ -278,7 +518,7 @@
     "id"               : "tan_coney_fur",
     "station"          : "tanning_bucket_station",
     "passive"          : true,
-    "inputs"           : {"cured_rabbit_pelt": 1, "tanning_brine": 1},
+    "inputs"           : {"cured_rabbit_pelt": 1, "tanning_brine": 1.5},
     "outputs"          : {"coney_fur": 1},
     "workAmount"       : 40,
     "toolTierRequired" : 0
@@ -287,7 +527,7 @@
     "id"               : "tan_vermin_hide",
     "station"          : "tanning_bucket_station",
     "passive"          : true,
-    "inputs"           : {"cured_rat_pelt": 1, "tanning_brine": 1},
+    "inputs"           : {"cured_rat_pelt": 1, "tanning_brine": 1.5},
     "outputs"          : {"vermin_hide": 1},
     "workAmount"       : 40,
     "toolTierRequired" : 0
@@ -296,7 +536,7 @@
     "id"               : "tan_buckskin",
     "station"          : "tanning_bucket_station",
     "passive"          : true,
-    "inputs"           : {"cured_deer_hide": 1, "tanning_brine": 1},
+    "inputs"           : {"cured_deer_hide": 1, "tanning_brine": 1.5},
     "outputs"          : {"buckskin": 1},
     "workAmount"       : 48,
     "toolTierRequired" : 0
@@ -305,7 +545,7 @@
     "id"               : "tan_kidskin",
     "station"          : "tanning_bucket_station",
     "passive"          : true,
-    "inputs"           : {"cured_goat_hide": 1, "tanning_brine": 1},
+    "inputs"           : {"cured_goat_hide": 1, "tanning_brine": 1.5},
     "outputs"          : {"kidskin": 1},
     "workAmount"       : 48,
     "toolTierRequired" : 0
@@ -314,7 +554,7 @@
     "id"               : "tan_jackal_leather",
     "station"          : "tanning_bucket_station",
     "passive"          : true,
-    "inputs"           : {"cured_jackal_hide": 1, "tanning_brine": 1},
+    "inputs"           : {"cured_jackal_hide": 1, "tanning_brine": 1.5},
     "outputs"          : {"jackal_leather": 1},
     "workAmount"       : 48,
     "toolTierRequired" : 0
@@ -323,7 +563,7 @@
     "id"               : "tan_wolf_leather",
     "station"          : "tanning_bucket_station",
     "passive"          : true,
-    "inputs"           : {"cured_wolf_hide": 1, "tanning_brine": 1},
+    "inputs"           : {"cured_wolf_hide": 1, "tanning_brine": 1.5},
     "outputs"          : {"wolf_leather": 1},
     "workAmount"       : 56,
     "toolTierRequired" : 0
@@ -332,7 +572,7 @@
     "id"               : "tan_worg_leather",
     "station"          : "tanning_bucket_station",
     "passive"          : true,
-    "inputs"           : {"cured_worg_hide": 1, "tanning_brine": 1},
+    "inputs"           : {"cured_worg_hide": 1, "tanning_brine": 1.5},
     "outputs"          : {"worg_leather": 1},
     "workAmount"       : 56,
     "toolTierRequired" : 0
@@ -341,7 +581,7 @@
     "id"               : "tan_boarhide",
     "station"          : "tanning_bucket_station",
     "passive"          : true,
-    "inputs"           : {"cured_boar_hide": 1, "tanning_brine": 1},
+    "inputs"           : {"cured_boar_hide": 1, "tanning_brine": 1.5},
     "outputs"          : {"boarhide": 1},
     "workAmount"       : 56,
     "toolTierRequired" : 0
@@ -350,7 +590,7 @@
     "id"               : "tan_elk_leather",
     "station"          : "tanning_bucket_station",
     "passive"          : true,
-    "inputs"           : {"cured_elk_hide": 1, "tanning_brine": 1},
+    "inputs"           : {"cured_elk_hide": 1, "tanning_brine": 1.5},
     "outputs"          : {"elk_leather": 1},
     "workAmount"       : 56,
     "toolTierRequired" : 0
@@ -359,7 +599,7 @@
     "id"               : "tan_oxhide",
     "station"          : "tanning_bucket_station",
     "passive"          : true,
-    "inputs"           : {"cured_aurochs_hide": 1, "tanning_brine": 2},
+    "inputs"           : {"cured_aurochs_hide": 1, "tanning_brine": 3},
     "outputs"          : {"oxhide": 1},
     "workAmount"       : 64,
     "toolTierRequired" : 0
@@ -368,7 +608,7 @@
     "id"               : "tan_bearhide",
     "station"          : "tanning_bucket_station",
     "passive"          : true,
-    "inputs"           : {"cured_bear_pelt": 1, "tanning_brine": 2},
+    "inputs"           : {"cured_bear_pelt": 1, "tanning_brine": 3},
     "outputs"          : {"bearhide": 1},
     "workAmount"       : 64,
     "toolTierRequired" : 0
@@ -377,7 +617,7 @@
     "id"               : "tan_cave_bear_hide",
     "station"          : "beast_tanning_bucket",
     "passive"          : true,
-    "inputs"           : {"cured_cave_bear_pelt": 1, "beast_brine": 1},
+    "inputs"           : {"cured_cave_bear_pelt": 1, "beast_brine": 1.5},
     "outputs"          : {"cave_bear_hide": 1},
     "workAmount"       : 120,
     "toolTierRequired" : 1
@@ -386,7 +626,7 @@
     "id"               : "tan_owlbear_leather",
     "station"          : "beast_tanning_bucket",
     "passive"          : true,
-    "inputs"           : {"cured_owlbear_pelt": 1, "beast_brine": 1},
+    "inputs"           : {"cured_owlbear_pelt": 1, "beast_brine": 1.5},
     "outputs"          : {"owlbear_leather": 1},
     "workAmount"       : 120,
     "toolTierRequired" : 1
@@ -395,7 +635,7 @@
     "id"               : "tan_sabretooth_leather",
     "station"          : "beast_tanning_bucket",
     "passive"          : true,
-    "inputs"           : {"cured_sabretooth_pelt": 1, "beast_brine": 1},
+    "inputs"           : {"cured_sabretooth_pelt": 1, "beast_brine": 1.5},
     "outputs"          : {"sabretooth_leather": 1},
     "workAmount"       : 120,
     "toolTierRequired" : 1
@@ -404,7 +644,7 @@
     "id"               : "tan_mammoth_leather",
     "station"          : "beast_tanning_bucket",
     "passive"          : true,
-    "inputs"           : {"cured_mammoth_fur": 1, "beast_brine": 1},
+    "inputs"           : {"cured_mammoth_fur": 1, "beast_brine": 1.5},
     "outputs"          : {"mammoth_leather": 1},
     "workAmount"       : 120,
     "toolTierRequired" : 1
@@ -413,7 +653,7 @@
     "id"               : "tan_hippogriff_leather",
     "station"          : "beast_tanning_bucket",
     "passive"          : true,
-    "inputs"           : {"cured_hippogriff_hide": 1, "beast_brine": 1},
+    "inputs"           : {"cured_hippogriff_hide": 1, "beast_brine": 1.5},
     "outputs"          : {"hippogriff_leather": 1},
     "workAmount"       : 120,
     "toolTierRequired" : 1
@@ -422,7 +662,7 @@
     "id"               : "tan_direwolf_leather",
     "station"          : "beast_tanning_bucket",
     "passive"          : true,
-    "inputs"           : {"cured_dire_wolf_pelt": 1, "beast_brine": 1},
+    "inputs"           : {"cured_dire_wolf_pelt": 1, "beast_brine": 1.5},
     "outputs"          : {"direwolf_leather": 1},
     "workAmount"       : 120,
     "toolTierRequired" : 1
@@ -604,7 +844,7 @@
     "station"          : "stone_forge",
     "inputs"           : {"malachite": 3},
     "inputAlternatives": [{"azurite": 3}, {"chalcopyrite": 5}, {"copper_bar": 1}],
-    "outputs"          : {"molten_copper": 4},
+    "outputs"          : {"molten_copper": 0.448},
     "workAmount"       : 8,
     "toolTierRequired" : 1,
     "passive"          : true
@@ -612,7 +852,7 @@
   {
     "id"              : "cast_copper_bar",
     "station"         : "stone_forge",
-    "inputs"          : {"molten_copper": 4, "clay_mold": 1},
+    "inputs"          : {"molten_copper": 0.448, "clay_mold": 1},
     "outputs"         : {"copper_bar": 1},
     "workAmount"      : 4,
     "toolTierRequired": 1,
@@ -662,7 +902,7 @@
     "station"          : "stone_forge",
     "inputs"           : {"cassiterite": 3},
     "inputAlternatives": [{"tin_bar": 1}],
-    "outputs"          : {"molten_tin": 4},
+    "outputs"          : {"molten_tin": 0.548},
     "workAmount"       : 8,
     "toolTierRequired" : 1,
     "passive"          : true
@@ -670,7 +910,7 @@
   {
     "id"              : "cast_tin_bar",
     "station"         : "stone_forge",
-    "inputs"          : {"molten_tin": 4, "clay_mold": 1},
+    "inputs"          : {"molten_tin": 0.548, "clay_mold": 1},
     "outputs"         : {"tin_bar": 1},
     "workAmount"      : 4,
     "toolTierRequired": 1,
@@ -680,8 +920,8 @@
     "id"               : "melt_bronze",
     "station"          : "casting_hearth",
     "inputs"           : {"copper_bar": 7, "tin_bar": 1},
-    "inputAlternatives": [{"bronze_bar": 1}],
-    "outputs"          : {"molten_bronze": 8},
+    "inputAlternatives": [{"bronze_bar": 8}],
+    "outputs"          : {"molten_bronze": 3.648},
     "workAmount"       : 10,
     "toolTierRequired" : 1,
     "passive"          : true
@@ -689,7 +929,7 @@
   {
     "id"              : "cast_bronze_bar",
     "station"         : "casting_hearth",
-    "inputs"          : {"molten_bronze": 4, "clay_mold": 1},
+    "inputs"          : {"molten_bronze": 0.456, "clay_mold": 1},
     "outputs"         : {"bronze_bar": 1},
     "workAmount"      : 5,
     "toolTierRequired": 1,
@@ -706,7 +946,7 @@
   {
     "id"              : "make_bronze_nail",
     "station"         : "casting_hearth",
-    "inputs"          : {"bronze_bar": 1, "clay_mold": 1},
+    "inputs"          : {"molten_bronze": 0.456, "clay_mold": 1},
     "outputs"         : {"bronze_nail": 300},
     "workAmount"      : 6,
     "toolTierRequired": 1
@@ -726,7 +966,7 @@
     "station"          : "stone_forge",
     "inputs"           : {"galena": 3},
     "inputAlternatives": [{"lead_bar": 1}],
-    "outputs"          : {"molten_lead": 5},
+    "outputs"          : {"molten_lead": 0.44},
     "workAmount"       : 8,
     "toolTierRequired" : 1,
     "passive"          : true
@@ -734,7 +974,7 @@
   {
     "id"              : "cast_lead_bar",
     "station"         : "stone_forge",
-    "inputs"          : {"molten_lead": 5, "clay_mold": 1},
+    "inputs"          : {"molten_lead": 0.44, "clay_mold": 1},
     "outputs"         : {"lead_bar": 1},
     "workAmount"      : 4,
     "toolTierRequired": 1,
@@ -745,7 +985,7 @@
     "station"          : "stone_forge",
     "inputs"           : {"lead_bar": 3, "bone_meal": 1},
     "inputAlternatives": [{"silver_bar": 1}],
-    "outputs"          : {"molten_silver": 4},
+    "outputs"          : {"molten_silver": 0.38},
     "workAmount"       : 16,
     "toolTierRequired" : 1,
     "passive"          : true
@@ -753,7 +993,7 @@
   {
     "id"              : "cast_silver_bar",
     "station"         : "stone_forge",
-    "inputs"          : {"molten_silver": 4, "clay_mold": 1},
+    "inputs"          : {"molten_silver": 0.38, "clay_mold": 1},
     "outputs"         : {"silver_bar": 1},
     "workAmount"      : 5,
     "toolTierRequired": 1,
@@ -764,7 +1004,7 @@
     "station"          : "stone_forge",
     "inputs"           : {"native_gold": 3},
     "inputAlternatives": [{"electrum": 4}, {"gold_bar": 1}],
-    "outputs"          : {"molten_gold": 4},
+    "outputs"          : {"molten_gold": 0.208},
     "workAmount"       : 10,
     "toolTierRequired" : 1,
     "passive"          : true
@@ -772,7 +1012,7 @@
   {
     "id"              : "cast_gold_bar",
     "station"         : "stone_forge",
-    "inputs"          : {"molten_gold": 4, "clay_mold": 1},
+    "inputs"          : {"molten_gold": 0.208, "clay_mold": 1},
     "outputs"         : {"gold_bar": 1},
     "workAmount"      : 5,
     "toolTierRequired": 1,
@@ -970,7 +1210,7 @@
     "discipline"      : "weaving",
     "station"         : "craft_spot",
     "inputs"          : {"plant_fiber": 5},
-    "outputs"         : {"cordage": 1},
+    "outputs"         : {"cordage": 4},
     "workAmount"      : 1,
     "toolTierRequired": 0
   },
@@ -1004,11 +1244,31 @@
     "toolTierRequired": 0
   },
   {
+    "id"              : "fire_clay_jug",
+    "discipline"      : "pottery",
+    "station"         : "pottery_kiln",
+    "passive"         : true,
+    "inputs"          : {"unfired_jug": 1},
+    "outputs"         : {"clay_jug": 1},
+    "workAmount"      : 3,
+    "toolTierRequired": 0
+  },
+  {
+    "id"              : "fire_flask",
+    "discipline"      : "pottery",
+    "station"         : "pottery_kiln",
+    "passive"         : true,
+    "inputs"          : {"unfired_flask": 1},
+    "outputs"         : {"flask": 1},
+    "workAmount"      : 2,
+    "toolTierRequired": 0
+  },
+  {
     "id"              : "make_water_urn",
     "discipline"      : "pottery",
     "station"         : "pottery_kiln",
     "passive"         : true,
-    "inputs"          : {"category:clay": 1},
+    "inputs"          : {"category:clay": 2},
     "outputs"         : {"water_urn": 1},
     "workAmount"      : 4,
     "toolTierRequired": 0
@@ -1026,7 +1286,7 @@
   {
     "id"              : "make_tile_mold",
     "station"         : "casting_hearth",
-    "inputs"          : {"bronze_bar": 1, "clay_mold": 1},
+    "inputs"          : {"molten_bronze": 0.456, "clay_mold": 1},
     "outputs"         : {"tile_mold": 1},
     "workAmount"      : 6,
     "toolTierRequired": 1
@@ -1045,7 +1305,7 @@
     "id"              : "make_flint_knife",
     "discipline"      : "knapping",
     "station"         : "craft_spot",
-    "inputs"          : {"flint_shard": 2, "branch": 2, "cordage": 1},
+    "inputs"          : {"flint_shard": 2, "branch": 2, "cordage": 4},
     "outputs"         : {"flint_knife": 1},
     "workAmount"      : 1,
     "toolTierRequired": 0
@@ -1054,7 +1314,7 @@
     "id"              : "make_flint_sickle",
     "discipline"      : "knapping",
     "station"         : "craft_spot",
-    "inputs"          : {"flint_shard": 3, "branch": 2, "cordage": 1},
+    "inputs"          : {"flint_shard": 3, "branch": 2, "cordage": 4},
     "outputs"         : {"flint_sickle": 1},
     "workAmount"      : 2,
     "toolTierRequired": 0
@@ -1063,7 +1323,7 @@
     "id"              : "make_stone_chopper",
     "discipline"      : "knapping",
     "station"         : "craft_spot",
-    "inputs"          : {"small_stone": 1, "branch": 3, "cordage": 1},
+    "inputs"          : {"small_stone": 1, "branch": 3, "cordage": 4},
     "outputs"         : {"stone_chopper": 1},
     "workAmount"      : 1,
     "toolTierRequired": 0
@@ -1083,7 +1343,7 @@
     "id"              : "make_stone_axe",
     "discipline"      : "knapping",
     "station"         : "craft_spot",
-    "inputs"          : {"flint_shard": 2, "branch": 3, "cordage": 2},
+    "inputs"          : {"flint_shard": 2, "branch": 3, "cordage": 8},
     "outputs"         : {"stone_axe": 1},
     "workAmount"      : 3,
     "toolTierRequired": 0
@@ -1093,7 +1353,7 @@
     "id"              : "make_stone_hammer",
     "discipline"      : "knapping",
     "station"         : "craft_spot",
-    "inputs"          : {"granite": 2, "branch": 3, "cordage": 1},
+    "inputs"          : {"granite": 2, "branch": 3, "cordage": 4},
     "outputs"         : {"stone_hammer": 1},
     "workAmount"      : 3,
     "toolTierRequired": 0
@@ -1103,7 +1363,7 @@
     "id"              : "make_stone_pick",
     "discipline"      : "knapping",
     "station"         : "craft_spot",
-    "inputs"          : {"granite": 2, "branch": 3, "cordage": 2},
+    "inputs"          : {"granite": 2, "branch": 3, "cordage": 8},
     "outputs"         : {"stone_pick": 1},
     "workAmount"      : 3,
     "toolTierRequired": 0
@@ -1113,7 +1373,7 @@
     "id"              : "make_stone_hoe",
     "discipline"      : "knapping",
     "station"         : "craft_spot",
-    "inputs"          : {"flint_shard": 1, "branch": 2, "cordage": 1},
+    "inputs"          : {"flint_shard": 1, "branch": 2, "cordage": 4},
     "outputs"         : {"stone_hoe": 1},
     "workAmount"      : 2,
     "toolTierRequired": 0
@@ -1122,7 +1382,7 @@
     "id"              : "make_stone_spear",
     "discipline"      : "knapping",
     "station"         : "craft_spot",
-    "inputs"          : {"flint_shard": 3, "branch": 4, "cordage": 1},
+    "inputs"          : {"flint_shard": 3, "branch": 4, "cordage": 4},
     "outputs"         : {"stone_spear": 1},
     "workAmount"      : 3,
     "toolTierRequired": 0
@@ -1131,7 +1391,7 @@
     "id"              : "make_stone_spade",
     "discipline"      : "knapping",
     "station"         : "craft_spot",
-    "inputs"          : {"granite": 2, "branch": 2, "cordage": 2},
+    "inputs"          : {"granite": 2, "branch": 2, "cordage": 8},
     "outputs"         : {"stone_spade": 1},
     "workAmount"      : 3,
     "toolTierRequired": 0
@@ -1148,7 +1408,7 @@
     "id"              : "make_woven_basket",
     "discipline"      : "weaving",
     "station"         : "craft_spot",
-    "inputs"          : {"branch": 15, "cordage": 10},
+    "inputs"          : {"branch": 15, "cordage": 40},
     "outputs"         : {"woven_basket": 1},
     "workAmount"      : 10,
     "toolTierRequired": 0
@@ -1167,7 +1427,7 @@
     "id"              : "make_wolf_meat",
     "station"         : "butcher_spot",
     "inputs"          : {"wolf_carcass": 1},
-    "outputs"         : {"wolf_meat": 7, "wolf_hide": 2, "medium_bones": 10, "sinew": 8, "predator_claw": 1},
+    "outputs"         : {"wolf_meat": 7, "wolf_hide": 2, "medium_bones": 10, "raw_sinew": 8, "predator_claw": 1},
     "workAmount"      : 30,
     "toolTierRequired": 0
   },
@@ -1175,7 +1435,7 @@
     "id"              : "make_bear_meat",
     "station"         : "butcher_spot",
     "inputs"          : {"bear_carcass": 1},
-    "outputs"         : {"bear_meat": 16, "bear_pelt": 2, "large_bones": 16, "sinew": 16, "predator_claw": 1},
+    "outputs"         : {"bear_meat": 16, "bear_pelt": 2, "large_bones": 16, "raw_sinew": 16, "predator_claw": 1},
     "workAmount"      : 60,
     "toolTierRequired": 0
   },
@@ -1183,7 +1443,7 @@
     "id"              : "make_boar_meat",
     "station"         : "butcher_spot",
     "inputs"          : {"boar_carcass": 1},
-    "outputs"         : {"boar_meat": 10, "boar_hide": 3, "medium_bones": 12, "sinew": 9},
+    "outputs"         : {"boar_meat": 10, "boar_hide": 3, "medium_bones": 12, "raw_sinew": 9},
     "workAmount"      : 30,
     "toolTierRequired": 0
   },
@@ -1191,7 +1451,7 @@
     "id"              : "make_elk_meat",
     "station"         : "butcher_spot",
     "inputs"          : {"elk_carcass": 1},
-    "outputs"         : {"elk_meat": 16, "elk_hide": 3, "large_bones": 16, "sinew": 16, "antler_rack": 2},
+    "outputs"         : {"elk_meat": 16, "elk_hide": 3, "large_bones": 16, "raw_sinew": 16, "antler_rack": 2},
     "workAmount"      : 60,
     "toolTierRequired": 0
   },
@@ -1199,7 +1459,7 @@
     "id"              : "make_goat_meat",
     "station"         : "butcher_spot",
     "inputs"          : {"mountain_goat_carcass": 1},
-    "outputs"         : {"goat_meat": 8, "goat_hide": 2, "goat_wool": 8, "medium_bones": 10, "sinew": 8, "curved_horn": 1},
+    "outputs"         : {"goat_meat": 8, "goat_hide": 2, "goat_wool": 8, "medium_bones": 10, "raw_sinew": 8, "curved_horn": 1},
     "workAmount"      : 30,
     "toolTierRequired": 0
   },
@@ -1223,7 +1483,7 @@
     "id"              : "make_rat_meat",
     "station"         : "butcher_spot",
     "inputs"          : {"giant_rat_carcass": 1},
-    "outputs"         : {"rat_meat": 2, "rat_pelt": 1, "small_bones": 3, "sinew": 1},
+    "outputs"         : {"rat_meat": 2, "rat_pelt": 1, "small_bones": 3, "raw_sinew": 1},
     "workAmount"      : 15,
     "toolTierRequired": 0
   },
@@ -1231,7 +1491,7 @@
     "id"              : "make_bone_cleaver",
     "discipline"      : "bonecarving",
     "station"         : "makers_bench",
-    "inputs"          : {"large_bones": 1, "flint_shard": 2, "branch": 3, "cordage": 2},
+    "inputs"          : {"large_bones": 1, "flint_shard": 2, "branch": 3, "cordage": 8},
     "outputs"         : {"bone_cleaver": 1},
     "workAmount"      : 4,
     "toolTierRequired": 0
@@ -1243,7 +1503,7 @@
     // flensing table, steel the sanguinary altar.
     "id"              : "make_iron_butchery_kit",
     "station"         : "anvil",
-    "inputs"          : {"iron_bar": 2, "category:leather": 1, "thread": 2, "iron_nail": 10},
+    "inputs"          : {"iron_bar": 2, "category:leather": 1, "category:thread": 2, "iron_nail": 10},
     "outputs"         : {"iron_butchery_kit": 1},
     "workAmount"      : 9,
     "toolTierRequired": 1,
@@ -1252,7 +1512,7 @@
   {
     "id"              : "make_steel_butchery_kit",
     "station"         : "anvil",
-    "inputs"          : {"category:steel": 2, "category:leather": 1, "thread": 2, "steel_rivet": 10},
+    "inputs"          : {"category:steel": 2, "category:leather": 1, "category:thread": 2, "steel_rivet": 10},
     "outputs"         : {"steel_butchery_kit": 1},
     "workAmount"      : 11,
     "toolTierRequired": 2,
@@ -1266,7 +1526,7 @@
     "id"              : "make_bone_fleshing_scraper",
     "discipline"      : "bonecarving",
     "station"         : "craft_spot",
-    "inputs"          : {"large_bones": 1, "branch": 1, "cordage": 1},
+    "inputs"          : {"large_bones": 1, "branch": 1, "cordage": 4},
     "outputs"         : {"bone_fleshing_scraper": 1},
     "workAmount"      : 3,
     "toolTierRequired": 0
@@ -1301,7 +1561,7 @@
   {
     "id"              : "make_sewing_kit",
     "station"         : "anvil",
-    "inputs"          : {"iron_bar": 1, "thread": 2},
+    "inputs"          : {"iron_bar": 1, "category:thread": 1},
     "outputs"         : {"sewing_kit": 1},
     "workAmount"      : 6,
     "toolTierRequired": 1,
@@ -1310,7 +1570,7 @@
   {
     "id"              : "make_tailors_kit",
     "station"         : "anvil",
-    "inputs"          : {"category:steel": 1, "thread": 2},
+    "inputs"          : {"category:steel": 1, "category:thread": 1},
     "outputs"         : {"tailors_kit": 1},
     "workAmount"      : 8,
     "toolTierRequired": 2,
@@ -1320,6 +1580,33 @@
   // A raw branch hafts a STONE tool; a metal head wants a carved handle. Copper/bronze use a carved
   // `wooden_haft`; iron/steel need a SEASONED haft — carve+sand a batch (active), then soak the batch at
   // the passive soaking trough (the iron-age reward: load six, walk away). No soak → no robust iron tool.
+  {
+    "id": "carve_emberwood_haft",
+    "discipline": "woodworking",
+    "station": "heartwood_joiner",
+    "inputs": { "emberwood_log": 1 },
+    "outputs": { "emberwood_haft": 4 },
+    "workAmount": 10,
+    "toolTierRequired": 3
+  },
+  {
+    "id": "carve_moonwood_haft",
+    "discipline": "woodworking",
+    "station": "heartwood_joiner",
+    "inputs": { "moonwood_log": 1 },
+    "outputs": { "moonwood_haft": 4 },
+    "workAmount": 10,
+    "toolTierRequired": 3
+  },
+  {
+    "id": "carve_heartwood_haft",
+    "discipline": "woodworking",
+    "station": "heartwood_joiner",
+    "inputs": { "heartwood_log": 1 },
+    "outputs": { "heartwood_haft": 4 },
+    "workAmount": 10,
+    "toolTierRequired": 3
+  },
   {
     "id"              : "make_wooden_haft",
     "station"         : "sawtable",
@@ -1353,7 +1640,7 @@
     "id"              : "make_wooden_tongs",
     "discipline"      : "woodworking",
     "station"         : "craft_spot",
-    "inputs"          : {"branch": 3, "cordage": 1},
+    "inputs"          : {"branch": 3, "cordage": 4},
     "outputs"         : {"wooden_tongs": 1},
     "workAmount"      : 2,
     "toolTierRequired": 0
@@ -1452,7 +1739,7 @@
     "id"              : "make_rope",
     "discipline"      : "weaving",
     "station"         : "ropewalk",
-    "inputs"          : {"cordage": 6},
+    "inputs"          : {"cordage": 24},
     "outputs"         : {"rope": 1},
     "workAmount"      : 4,
     "toolTierRequired": 0
@@ -1490,6 +1777,25 @@
     "toolTierRequired": 0
   },
   {
+    "id"              : "dry_sinew",
+    "discipline"      : "leatherworking",
+    "station"         : "drying_rack",
+    "inputs"          : {"raw_sinew": 3},
+    "outputs"         : {"sinew": 2},
+    "workAmount"      : 3,
+    "toolTierRequired": 0,
+    "passive"         : true
+  },
+  {
+    "id": "spin_silk_thread",
+    "discipline": "tailoring",
+    "station": "spinning_wheel",
+    "inputs": { "raw_silk": 3 },
+    "outputs": { "spider_silk_thread": 4 },
+    "workAmount": 8,
+    "toolTierRequired": 1
+  },
+  {
     "id"               : "spin_thread",
     "station"          : "spinning_wheel",
     "inputs"           : {"flax_fiber": 2},
@@ -1504,8 +1810,8 @@
     "id"              : "throw_clay_jug",
     "discipline"      : "pottery",
     "station"         : "potters_wheel",
-    "inputs"          : {"blue_clay": 1},
-    "outputs"         : {"clay_jug": 1},
+    "inputs"          : {"blue_clay": 2},
+    "outputs"         : {"unfired_jug": 1},
     "workAmount"      : 3,
     "toolTierRequired": 0
   },
@@ -1622,7 +1928,7 @@
     "id"              : "make_hide_scrip",
     "discipline"      : "leatherworking",
     "station"         : "makers_bench",
-    "inputs"          : {"category:cured_hide": 3},
+    "inputs"          : {"category:cured_hide": 2, "category:binding": 1},
     "outputs"         : {"hide_scrip": 1},
     "workAmount"      : 5,
     "toolTierRequired": 0
@@ -1631,7 +1937,7 @@
     "id"              : "make_hide_tool_roll",
     "discipline"      : "leatherworking",
     "station"         : "makers_bench",
-    "inputs"          : {"category:cured_hide": 2},
+    "inputs"          : {"category:cured_hide": 1, "category:binding": 1},
     "outputs"         : {"hide_tool_roll": 1},
     "workAmount"      : 4,
     "toolTierRequired": 0
@@ -1640,7 +1946,7 @@
     "id"              : "make_linen_snapsack",
     "discipline"      : "weaving",
     "station"         : "makers_bench",
-    "inputs"          : {"linen_cloth": 6, "category:leather": 1},
+    "inputs"          : {"linen_cloth": 6, "category:leather": 1, "category:binding": 2},
     "outputs"         : {"linen_snapsack": 1},
     "workAmount"      : 8,
     "toolTierRequired": 0
@@ -1649,7 +1955,7 @@
     "id"              : "make_wicker_frame_pack",
     "discipline"      : "weaving",
     "station"         : "craft_spot",
-    "inputs"          : {"branch": 4, "plant_fiber": 3, "cordage": 2},
+    "inputs"          : {"branch": 4, "plant_fiber": 3, "cordage": 8},
     "outputs"         : {"wicker_frame": 1},
     "workAmount"      : 6,
     "toolTierRequired": 0
@@ -1710,7 +2016,7 @@
     "id"              : "make_framed_leather_pack",
     "discipline"      : "leatherworking",
     "station"         : "makers_bench",
-    "inputs"          : {"category:leather": 4, "branch": 6, "cordage": 3},
+    "inputs"          : {"category:leather": 4, "branch": 6, "cordage": 12},
     "outputs"         : {"framed_leather_pack": 1},
     "workAmount"      : 11,
     "toolTierRequired": 0,
@@ -1720,7 +2026,7 @@
     "id"              : "make_iron_buckled_satchel",
     "discipline"      : "leatherworking",
     "station"         : "makers_bench",
-    "inputs"          : {"category:leather": 3, "iron_bar": 1},
+    "inputs"          : {"category:leather": 3, "iron_bar": 1, "category:thread": 1},
     "outputs"         : {"iron_buckled_satchel": 1},
     "workAmount"      : 9,
     "toolTierRequired": 1,
@@ -1730,7 +2036,7 @@
     "id"              : "make_iron_buckled_knapsack",
     "discipline"      : "leatherworking",
     "station"         : "makers_bench",
-    "inputs"          : {"category:leather": 5, "iron_bar": 1},
+    "inputs"          : {"category:leather": 5, "iron_bar": 1, "category:thread": 3},
     "outputs"         : {"iron_buckled_knapsack": 1},
     "workAmount"      : 14,
     "toolTierRequired": 1,
@@ -1750,7 +2056,7 @@
     "id"              : "make_steel_buckled_satchel",
     "discipline"      : "leatherworking",
     "station"         : "makers_bench",
-    "inputs"          : {"category:leather": 4, "category:steel": 1},
+    "inputs"          : {"category:leather": 4, "category:steel": 1, "category:thread": 2},
     "outputs"         : {"steel_buckled_satchel": 1},
     "workAmount"      : 13,
     "toolTierRequired": 2,
@@ -1769,7 +2075,7 @@
   {
     "id"              : "make_rune_woven_satchel",
     "station"         : "runic_loom",
-    "inputs"          : {"silk_cloth": 3, "enchant_thread": 2, "gem_dust": 1},
+    "inputs"          : {"silk_cloth": 3, "enchant_thread": 1, "gem_dust": 1},
     "outputs"         : {"rune_woven_satchel": 1},
     "workAmount"      : 28,
     "toolTierRequired": 1,
@@ -1778,7 +2084,7 @@
   {
     "id"              : "make_rune_bound_frame_pack",
     "station"         : "runecarver_bench",
-    "inputs"          : {"category:leather": 8, "magic_alloy_bar": 1, "enchant_thread": 3, "gem_dust": 1},
+    "inputs"          : {"category:leather": 8, "magic_alloy_bar": 1, "enchant_thread": 5, "gem_dust": 1},
     "outputs"         : {"rune_bound_frame_pack": 1},
     "workAmount"      : 40,
     "toolTierRequired": 1,
@@ -1799,7 +2105,7 @@
     "id"              : "make_ringed_belt",
     "discipline"      : "leatherworking",
     "station"         : "makers_bench",
-    "inputs"          : {"category:leather": 3, "iron_bar": 1},
+    "inputs"          : {"category:leather": 3, "iron_bar": 1, "category:thread": 2},
     "outputs"         : {"ringed_belt": 1},
     "workAmount"      : 10,
     "toolTierRequired": 1,
@@ -1809,16 +2115,25 @@
     "id"              : "make_steel_buckled_belt",
     "discipline"      : "leatherworking",
     "station"         : "makers_bench",
-    "inputs"          : {"category:leather": 4, "category:steel": 1},
+    "inputs"          : {"category:leather": 4, "category:steel": 1, "category:thread": 2},
     "outputs"         : {"steel_buckled_belt": 1},
     "workAmount"      : 14,
     "toolTierRequired": 2,
     "researchRequired": "steel_making"
   },
   {
+    "id"              : "make_rune_etched_pick",
+    "station"         : "runecarver_bench",
+    "inputs"          : {"magic_alloy_bar": 2, "gem_dust": 2, "sanded_haft": 1},
+    "outputs"         : {"rune_etched_pick": 1},
+    "workAmount"      : 30,
+    "toolTierRequired": 2,
+    "researchRequired": "runic_inscription"
+  },
+  {
     "id"              : "make_rune_etched_belt",
     "station"         : "runecarver_bench",
-    "inputs"          : {"category:leather": 4, "magic_alloy_bar": 1, "gem_dust": 2},
+    "inputs"          : {"category:leather": 4, "magic_alloy_bar": 1, "gem_dust": 2, "enchant_thread": 2},
     "outputs"         : {"rune_etched_belt": 1},
     "workAmount"      : 28,
     "toolTierRequired": 1,
@@ -1829,7 +2144,7 @@
     "id"              : "make_hide_knife_sheath",
     "discipline"      : "leatherworking",
     "station"         : "makers_bench",
-    "inputs"          : {"category:cured_hide": 1},
+    "inputs"          : {"category:cured_hide": 1, "category:binding": 1},
     "outputs"         : {"hide_knife_sheath": 1},
     "workAmount"      : 3,
     "toolTierRequired": 0
@@ -1847,7 +2162,7 @@
   {
     "id"              : "make_mounted_sword_belt",
     "station"         : "anvil",
-    "inputs"          : {"category:leather": 3, "iron_bar": 1},
+    "inputs"          : {"category:leather": 3, "iron_bar": 1, "category:thread": 2},
     "outputs"         : {"mounted_sword_belt": 1},
     "workAmount"      : 12,
     "toolTierRequired": 1,
@@ -1900,7 +2215,7 @@
   {
     "id"              : "make_wool_cloak",
     "station"         : "weaving_frame",
-    "inputs"          : {"woolcloth": 4},
+    "inputs"          : {"woolcloth": 4, "category:binding": 2},
     "outputs"         : {"wool_cloak": 1},
     "workAmount"      : 8,
     "toolTierRequired": 1
@@ -1909,7 +2224,7 @@
     "id"              : "make_arcane_robe",
     "station"         : "runic_loom",
     "researchRequired": "runic_inscription",
-    "inputs"          : {"silk_cloth": 5, "gem_dust": 2},
+    "inputs"          : {"silk_cloth": 5, "gem_dust": 2, "category:thread": 2},
     "outputs"         : {"arcane_robe": 1},
     "workAmount"      : 16,
     "toolTierRequired": 2,
@@ -1918,7 +2233,7 @@
   {
     "id"              : "make_silk_robe",
     "station"         : "weaving_frame",
-    "inputs"          : {"silk_cloth": 5},
+    "inputs"          : {"silk_cloth": 5, "category:binding": 1},
     "outputs"         : {"silk_robe": 1},
     "workAmount"      : 12,
     "toolTierRequired": 0,
@@ -1933,7 +2248,7 @@
     "id"              : "make_flint_handaxe",
     "discipline"      : "knapping",
     "station"         : "craft_spot",
-    "inputs"          : {"flint_shard": 2, "branch": 1, "cordage": 1},
+    "inputs"          : {"flint_shard": 2, "branch": 1, "cordage": 4},
     "outputs"         : {"flint_handaxe": 1},
     "workAmount"      : 3,
     "toolTierRequired": 0
@@ -1942,7 +2257,7 @@
     "id"              : "make_wattle_buckler",
     "discipline"      : "weaving",
     "station"         : "craft_spot",
-    "inputs"          : {"branch": 4, "cordage": 2},
+    "inputs"          : {"branch": 4, "cordage": 8},
     "outputs"         : {"wattle_buckler": 1},
     "workAmount"      : 4,
     "toolTierRequired": 0
@@ -1952,7 +2267,7 @@
     "id"              : "make_bone_knife",
     "discipline"      : "bonecarving",
     "station"         : "makers_bench",
-    "inputs"          : {"medium_bones": 1, "cordage": 1},
+    "inputs"          : {"medium_bones": 1, "cordage": 4},
     "outputs"         : {"bone_knife": 1},
     "workAmount"      : 3,
     "toolTierRequired": 0
@@ -1961,7 +2276,7 @@
     "id"              : "make_antler_club",
     "discipline"      : "bonecarving",
     "station"         : "makers_bench",
-    "inputs"          : {"antler_rack": 1, "large_bones": 1, "cordage": 1},
+    "inputs"          : {"antler_rack": 1, "large_bones": 1, "cordage": 4},
     "outputs"         : {"antler_club": 1},
     "workAmount"      : 4,
     "toolTierRequired": 0
@@ -1970,7 +2285,7 @@
     "id"              : "make_bone_tipped_spear",
     "discipline"      : "bonecarving",
     "station"         : "makers_bench",
-    "inputs"          : {"medium_bones": 1, "cordage": 1},
+    "inputs"          : {"medium_bones": 1, "cordage": 4},
     "outputs"         : {"bone_tipped_spear": 1},
     "workAmount"      : 5,
     "toolTierRequired": 0,
@@ -1990,7 +2305,7 @@
   {
     "id"              : "make_bronze_punch_dagger",
     "station"         : "casting_hearth",
-    "inputs"          : {"bronze_bar": 1, "clay_mold": 1, "medium_bones": 1, "category:leather": 1},
+    "inputs"          : {"molten_bronze": 0.456, "clay_mold": 1, "medium_bones": 1, "category:leather": 1},
     "outputs"         : {"bronze_punch_dagger": 1},
     "workAmount"      : 6,
     "toolTierRequired": 1,
@@ -1999,7 +2314,7 @@
   {
     "id"              : "make_leaf_blade_spear",
     "station"         : "casting_hearth",
-    "inputs"          : {"wooden_haft": 1, "bronze_bar": 1, "clay_mold": 1, "category:leather": 1},
+    "inputs"          : {"wooden_haft": 1, "molten_bronze": 0.456, "clay_mold": 1, "category:leather": 1},
     "outputs"         : {"leaf_blade_spear": 1},
     "workAmount"      : 8,
     "toolTierRequired": 1,
@@ -2019,7 +2334,7 @@
   {
     "id"              : "make_cast_bronze_hatchet",
     "station"         : "casting_hearth",
-    "inputs"          : {"wooden_haft": 1, "bronze_bar": 1, "clay_mold": 1, "category:leather": 1},
+    "inputs"          : {"wooden_haft": 1, "molten_bronze": 0.456, "clay_mold": 1, "category:leather": 1},
     "outputs"         : {"cast_bronze_hatchet": 1},
     "workAmount"      : 8,
     "toolTierRequired": 1,
@@ -2040,7 +2355,7 @@
     "id"              : "make_self_bow",
     "discipline"      : "woodworking",
     "station"         : "makers_bench",
-    "inputs"          : {"sinew": 1, "cordage": 1},
+    "inputs"          : {"branch": 3, "category:binding": 4},
     "outputs"         : {"self_bow": 1},
     "workAmount"      : 6,
     "toolTierRequired": 0,
@@ -2061,7 +2376,7 @@
     "id"              : "make_rawhide_round_shield",
     "discipline"      : "leatherworking",
     "station"         : "makers_bench",
-    "inputs"          : {},
+    "inputs"          : {"category:binding": 7},
     "outputs"         : {"rawhide_round_shield": 1},
     "workAmount"      : 6,
     "toolTierRequired": 0,
@@ -2201,10 +2516,91 @@
     "toolTierRequired": 0
   },
   {
+    "id": "make_great_bone_helm",
+    "discipline": "leatherworking",
+    "station": "runic_loom",
+    "inputs": {"great_bone": 1, "cave_bear_pelt": 1, "category:thread": 3, "category:fastener": 8},
+    "outputs": { "great_bone_helm": 1 },
+    "workAmount": 26,
+    "toolTierRequired": 3
+  },
+  {
+    "id": "make_great_bone_cuirass",
+    "discipline": "leatherworking",
+    "station": "runic_loom",
+    "inputs": {"great_bone": 3, "cave_bear_pelt": 2, "direwolf_hackles": 1, "category:thread": 10, "category:fastener": 24},
+    "outputs": { "great_bone_cuirass": 1 },
+    "workAmount": 46,
+    "toolTierRequired": 3
+  },
+  {
+    "id": "make_great_bone_vambraces",
+    "discipline": "leatherworking",
+    "station": "runic_loom",
+    "inputs": {"great_bone": 1, "direwolf_hackles": 1, "category:leather": 1, "category:thread": 3},
+    "outputs": { "great_bone_vambraces": 1 },
+    "workAmount": 22,
+    "toolTierRequired": 3
+  },
+  {
+    "id": "make_great_bone_greaves",
+    "discipline": "leatherworking",
+    "station": "runic_loom",
+    "inputs": {"great_bone": 1, "cave_bear_pelt": 1, "category:leather": 1, "category:thread": 3},
+    "outputs": { "great_bone_greaves": 1 },
+    "workAmount": 24,
+    "toolTierRequired": 3
+  },
+  {
+    "id": "make_great_bone_gauntlets",
+    "discipline": "leatherworking",
+    "station": "runic_loom",
+    "inputs": {"great_bone": 1, "predator_claw": 2, "category:leather": 1, "category:thread": 2},
+    "outputs": { "great_bone_gauntlets": 1 },
+    "workAmount": 18,
+    "toolTierRequired": 3
+  },
+  {
+    "id": "make_great_bone_sabatons",
+    "discipline": "leatherworking",
+    "station": "runic_loom",
+    "inputs": {"great_bone": 1, "cave_bear_pelt": 1, "category:leather": 1, "category:thread": 2},
+    "outputs": { "great_bone_sabatons": 1 },
+    "workAmount": 20,
+    "toolTierRequired": 3
+  },
+  {
+    "id": "make_great_tusk_impaler",
+    "discipline": "smithing",
+    "station": "manaforge",
+    "inputs": { "great_tusk": 1, "sanded_haft": 1, "category:thread": 3, "category:fastener": 6 },
+    "outputs": { "great_tusk_impaler": 1 },
+    "workAmount": 30,
+    "toolTierRequired": 3
+  },
+  {
+    "id": "make_great_fang_javelin",
+    "discipline": "bonecarving",
+    "station": "runecarver_bench",
+    "inputs": {"great_fang": 1, "wooden_haft": 1, "category:fastener": 5, "category:thread": 2},
+    "outputs": { "great_fang_javelin": 1 },
+    "workAmount": 18,
+    "toolTierRequired": 3
+  },
+  {
+    "id": "make_great_fang_dirk",
+    "discipline": "bonecarving",
+    "station": "runecarver_bench",
+    "inputs": { "great_fang": 1, "category:leather": 1, "category:thread": 1 },
+    "outputs": { "great_fang_dirk": 1 },
+    "workAmount": 14,
+    "toolTierRequired": 3
+  },
+  {
     "id"              : "make_great_bone_maul",
     "discipline"      : "bonecarving",
     "station"         : "bone_carvers_bench",
-    "inputs"          : {"great_bone": 1, "oak_plank": 1, "cordage": 2},
+    "inputs"          : {"great_bone": 1, "oak_plank": 1, "cordage": 8},
     "outputs"         : {"great_bone_maul": 1},
     "workAmount"      : 12,
     "toolTierRequired": 0
@@ -2213,7 +2609,7 @@
     "id"              : "make_stone_maul",
     "discipline"      : "knapping",
     "station"         : "craft_spot",
-    "inputs"          : {"small_stone": 2, "branch": 1, "cordage": 1},
+    "inputs"          : {"small_stone": 2, "branch": 1, "cordage": 4},
     "outputs"         : {"stone_maul": 1},
     "workAmount"      : 4,
     "toolTierRequired": 0
@@ -2357,7 +2753,7 @@
     "id"              : "make_war_bow",
     "discipline"      : "woodworking",
     "station"         : "makers_bench",
-    "inputs"          : {"sinew": 2, "thread": 1},
+    "inputs"          : {"category:log": 1, "category:thread": 2},
     "outputs"         : {"war_bow": 1},
     "workAmount"      : 10,
     "toolTierRequired": 1,
@@ -2383,7 +2779,7 @@
     "id"              : "make_sling",
     "discipline"      : "leatherworking",
     "station"         : "makers_bench",
-    "inputs"          : {"category:cured_hide": 1, "cordage": 1},
+    "inputs"          : {"category:cured_hide": 1, "cordage": 4},
     "outputs"         : {"sling": 1},
     "workAmount"      : 3,
     "toolTierRequired": 0
@@ -2393,7 +2789,7 @@
     "id"              : "make_blowgun",
     "discipline"      : "woodworking",
     "station"         : "makers_bench",
-    "inputs"          : {"branch": 1, "cordage": 1},
+    "inputs"          : {"branch": 1, "cordage": 4},
     "outputs"         : {"blowgun": 1},
     "workAmount"      : 4,
     "toolTierRequired": 0
@@ -2411,7 +2807,7 @@
     "id"              : "make_hunting_recurve",
     "discipline"      : "woodworking",
     "station"         : "makers_bench",
-    "inputs"          : {"sinew": 2, "thread": 1},
+    "inputs"          : {"category:log": 1, "category:thread": 2},
     "outputs"         : {"hunting_recurve": 1},
     "workAmount"      : 9,
     "toolTierRequired": 1,
@@ -2428,7 +2824,7 @@
     "id"              : "make_throwing_spear",
     "discipline"      : "woodworking",
     "station"         : "makers_bench",
-    "inputs"          : {"branch": 1, "flint_shard": 1, "cordage": 1},
+    "inputs"          : {"branch": 1, "flint_shard": 1, "cordage": 4},
     "outputs"         : {"throwing_spear": 1},
     "workAmount"      : 3,
     "toolTierRequired": 0
@@ -2436,7 +2832,7 @@
   {
     "id"              : "make_crossbow",
     "station"         : "anvil",
-    "inputs"          : {"oak_plank": 2, "iron_bar": 1, "sinew": 1, "category:leather": 1},
+    "inputs"          : {"oak_plank": 2, "iron_bar": 1, "category:thread": 6, "category:leather": 1},
     "outputs"         : {"crossbow": 1},
     "workAmount"      : 14,
     "toolTierRequired": 1,
@@ -2455,7 +2851,7 @@
     "id"              : "make_flint_arrow",
     "discipline"      : "knapping",
     "station"         : "makers_bench",
-    "inputs"           : {"branch": 1, "flint_shard": 1, "cordage": 1, "feathers": 1},
+    "inputs"           : {"branch": 1, "flint_shard": 1, "cordage": 4, "feathers": 1},
     "inputAlternatives": [ {"branch": 1, "flint_shard": 1, "cordage": 1, "chicken_feathers": 1} ],
     "outputs"         : {"flint_arrow": 4},
     "workAmount"      : 4,
@@ -2465,7 +2861,7 @@
     "id"              : "make_bone_arrow",
     "discipline"      : "bonecarving",
     "station"         : "makers_bench",
-    "inputs"           : {"branch": 1, "medium_bones": 1, "cordage": 1, "feathers": 1},
+    "inputs"           : {"branch": 1, "medium_bones": 1, "cordage": 4, "feathers": 1},
     "inputAlternatives": [ {"branch": 1, "medium_bones": 1, "cordage": 1, "chicken_feathers": 1} ],
     "outputs"         : {"bone_arrow": 4},
     "workAmount"      : 4,
@@ -2474,7 +2870,7 @@
   {
     "id"              : "make_iron_arrow",
     "station"         : "anvil",
-    "inputs"           : {"branch": 1, "iron_bar": 1, "sinew": 1, "feathers": 1},
+    "inputs"           : {"branch": 1, "iron_bar": 1, "category:thread": 1, "feathers": 1},
     "inputAlternatives": [ {"branch": 1, "iron_bar": 1, "sinew": 1, "chicken_feathers": 1} ],
     "outputs"         : {"iron_arrow": 8},
     "workAmount"      : 6,
@@ -2484,7 +2880,7 @@
   {
     "id"              : "make_iron_bolt",
     "station"         : "anvil",
-    "inputs"           : {"branch": 1, "iron_bar": 1, "sinew": 1, "feathers": 1},
+    "inputs"           : {"branch": 1, "iron_bar": 1, "category:thread": 1, "feathers": 1},
     "inputAlternatives": [ {"branch": 1, "iron_bar": 1, "sinew": 1, "chicken_feathers": 1} ],
     "outputs"         : {"iron_bolt": 6},
     "workAmount"      : 6,
@@ -2495,7 +2891,7 @@
     "id"              : "make_brimmed_leather_hood",
     "discipline"      : "leatherworking",
     "station"         : "makers_bench",
-    "inputs"          : {"category:leather": 1},
+    "inputs"          : {"category:leather": 1, "category:binding": 1},
     "outputs"         : {"brimmed_leather_hood": 1},
     "workAmount"      : 4,
     "toolTierRequired": 0
@@ -2504,7 +2900,7 @@
     "id"              : "make_leather_vambraces",
     "discipline"      : "leatherworking",
     "station"         : "makers_bench",
-    "inputs"          : {"category:leather": 1},
+    "inputs"          : {"category:leather": 1, "category:binding": 1},
     "outputs"         : {"leather_vambraces": 1},
     "workAmount"      : 4,
     "toolTierRequired": 0
@@ -2513,7 +2909,7 @@
     "id"              : "make_leather_cloak",
     "discipline"      : "leatherworking",
     "station"         : "makers_bench",
-    "inputs"          : {"category:leather": 2},
+    "inputs"          : {"category:leather": 2, "category:binding": 3},
     "outputs"         : {"leather_cloak": 1},
     "workAmount"      : 6,
     "toolTierRequired": 0
@@ -2521,7 +2917,7 @@
   {
     "id"              : "make_cast_sling_bullet",
     "station"         : "casting_hearth",
-    "inputs"          : {"copper_bar": 1, "clay_mold": 1},
+    "inputs"          : {"molten_copper": 0.448, "clay_mold": 1},
     "outputs"         : {"cast_sling_bullet": 8},
     "workAmount"      : 4,
     "toolTierRequired": 1
@@ -2529,7 +2925,7 @@
   {
     "id"              : "make_broadhead_arrow",
     "station"         : "anvil",
-    "inputs"           : {"branch": 1, "iron_bar": 1, "sinew": 1, "feathers": 1},
+    "inputs"           : {"branch": 1, "iron_bar": 1, "category:thread": 1, "feathers": 1},
     "inputAlternatives": [ {"branch": 1, "iron_bar": 1, "sinew": 1, "chicken_feathers": 1} ],
     "outputs"         : {"broadhead_arrow": 6},
     "workAmount"      : 5,
@@ -2539,7 +2935,7 @@
   {
     "id"              : "make_barbed_arrow",
     "station"         : "anvil",
-    "inputs"           : {"branch": 1, "iron_bar": 1, "sinew": 1, "feathers": 1},
+    "inputs"           : {"branch": 1, "iron_bar": 1, "category:thread": 1, "feathers": 1},
     "inputAlternatives": [ {"branch": 1, "iron_bar": 1, "sinew": 1, "chicken_feathers": 1} ],
     "outputs"         : {"barbed_arrow": 4},
     "workAmount"      : 6,
@@ -2549,7 +2945,7 @@
   {
     "id"              : "make_heavy_quarrel",
     "station"         : "anvil",
-    "inputs"           : {"branch": 1, "iron_bar": 1, "sinew": 1, "feathers": 1},
+    "inputs"           : {"branch": 1, "iron_bar": 1, "category:thread": 1, "feathers": 1},
     "inputAlternatives": [ {"branch": 1, "iron_bar": 1, "sinew": 1, "chicken_feathers": 1} ],
     "outputs"         : {"heavy_quarrel": 6},
     "workAmount"      : 7,
@@ -2560,7 +2956,7 @@
     "id"              : "make_hide_arrow_sheath",
     "discipline"      : "leatherworking",
     "station"         : "makers_bench",
-    "inputs"          : {"category:cured_hide": 2},
+    "inputs"          : {"category:cured_hide": 1, "category:binding": 1},
     "outputs"         : {"hide_arrow_sheath": 1},
     "workAmount"      : 3,
     "toolTierRequired": 0
@@ -2569,7 +2965,7 @@
     "id"              : "make_leather_back_quiver",
     "discipline"      : "leatherworking",
     "station"         : "makers_bench",
-    "inputs"          : {"category:leather": 3},
+    "inputs"          : {"category:leather": 2, "category:binding": 1},
     "outputs"         : {"leather_back_quiver": 1},
     "workAmount"      : 6,
     "toolTierRequired": 0,
@@ -2578,7 +2974,7 @@
   {
     "id"              : "make_stiffened_war_quiver",
     "station"         : "anvil",
-    "inputs"          : {"category:leather": 2, "iron_bar": 1},
+    "inputs"          : {"category:leather": 1, "iron_bar": 1, "category:thread": 1},
     "outputs"         : {"stiffened_war_quiver": 1},
     "workAmount"      : 9,
     "toolTierRequired": 1,
@@ -2588,7 +2984,7 @@
     "id"              : "make_leather_bolt_case",
     "discipline"      : "leatherworking",
     "station"         : "makers_bench",
-    "inputs"          : {"category:leather": 2},
+    "inputs"          : {"category:thread": 1, "category:leather": 1},
     "outputs"         : {"leather_bolt_case": 1},
     "workAmount"      : 5,
     "toolTierRequired": 0,
@@ -2597,7 +2993,7 @@
   {
     "id"              : "make_banded_bolt_quiver",
     "station"         : "anvil",
-    "inputs"          : {"category:leather": 2, "iron_bar": 1, "oak_plank": 1},
+    "inputs"          : {"category:leather": 1, "iron_bar": 1, "oak_plank": 1, "category:thread": 1},
     "outputs"         : {"banded_bolt_quiver": 1},
     "workAmount"      : 8,
     "toolTierRequired": 1,
@@ -2606,7 +3002,7 @@
   {
     "id"              : "make_iron_boss_shield",
     "station"         : "anvil",
-    "inputs"          : {"iron_bar": 1, "category:leather": 1},
+    "inputs"          : {"iron_bar": 1, "category:leather": 1, "category:thread": 9},
     "outputs"         : {"iron_boss_shield": 1},
     "workAmount"      : 10,
     "toolTierRequired": 2,
@@ -2631,7 +3027,7 @@
     "id"              : "make_wicker_vest",
     "discipline"      : "weaving",
     "station"         : "craft_spot",
-    "inputs"          : {"branch": 15, "cordage": 30},
+    "inputs"          : {"branch": 15, "cordage": 120},
     "outputs"         : {"wicker_vest": 1},
     "workAmount"      : 12,
     "toolTierRequired": 0
@@ -2640,7 +3036,7 @@
     "id"              : "make_cured_hide_vest",
     "discipline"      : "leatherworking",
     "station"         : "makers_bench",
-    "inputs"          : {},
+    "inputs"          : {"category:binding": 5},
     "outputs"         : {"cured_hide_vest": 1},
     "workAmount"      : 4,
     "toolTierRequired": 0,
@@ -2663,7 +3059,7 @@
     "id"              : "make_soot_darkened_jerkin",
     "discipline"      : "leatherworking",
     "station"         : "makers_bench",
-    "inputs"          : {"category:leather": 2, "charcoal": 1},
+    "inputs"          : {"category:leather": 2, "charcoal": 1, "category:binding": 2},
     "outputs"         : {"soot_darkened_jerkin": 1},
     "workAmount"      : 6,
     "toolTierRequired": 0
@@ -2672,7 +3068,7 @@
     "id"              : "make_cured_hide_cap",
     "discipline"      : "leatherworking",
     "station"         : "makers_bench",
-    "inputs"          : {},
+    "inputs"          : {"category:binding": 1},
     "outputs"         : {"cured_hide_hood": 1},
     "workAmount"      : 3,
     "toolTierRequired": 0,
@@ -2694,7 +3090,7 @@
   {
     "id"              : "make_linen_gambeson",
     "station"         : "weaving_frame",
-    "inputs"          : {"linen_cloth": 23},
+    "inputs"          : {"linen_cloth": 23, "category:binding": 6},
     "outputs"         : {"linen_gambeson": 1},
     "workAmount"      : 12,
     "toolTierRequired": 0
@@ -2702,7 +3098,7 @@
   {
     "id"              : "make_boarhide_jerkin",
     "station"         : "makers_bench",
-    "inputs"          : {"boarhide": 3, "bronze_bar": 3},
+    "inputs"          : {"boarhide": 3, "bronze_bar": 3, "category:binding": 6},
     "outputs"         : {"boarhide_jerkin": 1},
     "workAmount"      : 12,
     "toolTierRequired": 0,
@@ -2712,7 +3108,7 @@
     "id"              : "make_leather_coif",
     "discipline"      : "leatherworking",
     "station"         : "makers_bench",
-    "inputs"          : {},
+    "inputs"          : {"category:binding": 1},
     "outputs"         : {"leather_coif": 1},
     "workAmount"      : 5,
     "toolTierRequired": 0,
@@ -2724,9 +3120,58 @@
     }
   },
   {
+    "id": "make_bronze_crested_helm",
+    "discipline": "smithing",
+    "station": "casting_hearth",
+    "inputs": { "molten_bronze": 0.42, "clay_mold": 1, "category:leather": 1, "category:binding": 2 },
+    "outputs": { "bronze_crested_helm": 1 },
+    "workAmount": 22,
+    "toolTierRequired": 1
+  },
+  {
+    "id": "make_spangenhelm",
+    "discipline": "smithing",
+    "station": "anvil",
+    "inputs": { "iron_bar": 1, "category:fastener": 16, "category:leather": 1, "category:thread": 1 },
+    "outputs": { "spangenhelm": 1 },
+    "workAmount": 18,
+    "toolTierRequired": 2,
+    "researchRequired": "iron_working"
+  },
+  {
+    "id": "make_kettle_hat",
+    "discipline": "smithing",
+    "station": "anvil",
+    "inputs": { "iron_bar": 1, "category:leather": 1, "category:thread": 1 },
+    "outputs": { "kettle_hat": 1 },
+    "workAmount": 16,
+    "toolTierRequired": 2,
+    "researchRequired": "iron_working"
+  },
+  {
+    "id": "make_sallet",
+    "discipline": "smithing",
+    "station": "anvil",
+    "inputs": { "category:steel": 1, "category:leather": 2, "category:thread": 2 },
+    "outputs": { "sallet": 1 },
+    "workAmount": 28,
+    "toolTierRequired": 3,
+    "researchRequired": "steel_making"
+  },
+  {
+    "id": "make_barbute",
+    "discipline": "smithing",
+    "station": "anvil",
+    "inputs": { "category:steel": 1, "category:leather": 2, "category:thread": 2 },
+    "outputs": { "barbute": 1 },
+    "workAmount": 30,
+    "toolTierRequired": 3,
+    "researchRequired": "steel_making"
+  },
+  {
     "id"              : "make_cast_bronze_skullcap",
     "station"         : "casting_hearth",
-    "inputs"          : {"bronze_bar": 1, "clay_mold": 1},
+    "inputs"          : {"molten_bronze": 0.456, "clay_mold": 1},
     "outputs"         : {"cast_bronze_skullcap": 1},
     "workAmount"      : 8,
     "toolTierRequired": 1,
@@ -2736,7 +3181,7 @@
     "id"              : "make_stitched_gauntlets",
     "discipline"      : "leatherworking",
     "station"         : "makers_bench",
-    "inputs"          : {},
+    "inputs"          : {"category:binding": 1},
     "outputs"         : {"stitched_gauntlets": 1},
     "workAmount"      : 4,
     "toolTierRequired": 0,
@@ -2751,7 +3196,7 @@
     "id"              : "make_tallow_boots",
     "discipline"      : "leatherworking",
     "station"         : "makers_bench",
-    "inputs"          : {},
+    "inputs"          : {"category:binding": 2},
     "outputs"         : {"hide_boots": 1},
     "workAmount"      : 5,
     "toolTierRequired": 0,
@@ -2766,7 +3211,7 @@
   {
     "id"              : "make_mail_coif",
     "station"         : "anvil",
-    "inputs"          : {"mail_rings": 10, "linen_gambeson": 1},
+    "inputs"          : {"mail_rings": 14},
     "outputs"         : {"mail_coif": 1},
     "workAmount"      : 16,
     "toolTierRequired": 2,
@@ -2775,7 +3220,7 @@
   {
     "id"              : "make_iron_nasal_helm",
     "station"         : "anvil",
-    "inputs"          : {"iron_bar": 2},
+    "inputs"          : {"iron_bar": 2, "category:thread": 4},
     "outputs"         : {"iron_nasal_helm": 1},
     "workAmount"      : 12,
     "toolTierRequired": 2,
@@ -2790,7 +3235,7 @@
   {
     "id"              : "make_mail_hauberk",
     "station"         : "anvil",
-    "inputs"          : {"mail_rings": 42, "linen_gambeson": 1},
+    "inputs"          : {"mail_rings": 58},
     "outputs"         : {"mail_hauberk": 1},
     "workAmount"      : 30,
     "toolTierRequired": 2,
@@ -2799,7 +3244,7 @@
   {
     "id"              : "make_brigandine_coat",
     "station"         : "anvil",
-    "inputs"          : {"iron_bar": 6, "linen_cloth": 2},
+    "inputs"          : {"iron_bar": 6, "linen_cloth": 2, "category:thread": 13},
     "outputs"         : {"iron_plated_jack": 1},
     "workAmount"      : 20,
     "toolTierRequired": 2,
@@ -2814,7 +3259,7 @@
   {
     "id"              : "make_iron_gauntlets",
     "station"         : "anvil",
-    "inputs"          : {"iron_bar": 2},
+    "inputs"          : {"iron_bar": 2, "category:thread": 2},
     "outputs"         : {"iron_gauntlets": 1},
     "workAmount"      : 10,
     "toolTierRequired": 2,
@@ -2829,7 +3274,7 @@
   {
     "id"              : "make_iron_shod_boots",
     "station"         : "anvil",
-    "inputs"          : {"iron_bar": 2},
+    "inputs"          : {"iron_bar": 2, "category:thread": 4},
     "outputs"         : {"iron_shod_boots": 1},
     "workAmount"      : 10,
     "toolTierRequired": 2,
@@ -2850,7 +3295,7 @@
   // 1) Trade-gem cutting
   {
     "id"              : "cut_ruby_recipe",
-    "station"         : "lapidary_bench",
+    "station"         : "faceting_lathe",
     "inputs"          : {"ruby": 1},
     "outputs"         : {"cut_ruby": 1},
     "workAmount"      : 5,
@@ -2859,7 +3304,7 @@
   },
   {
     "id"              : "cut_sapphire_recipe",
-    "station"         : "lapidary_bench",
+    "station"         : "faceting_lathe",
     "inputs"          : {"sapphire": 1},
     "outputs"         : {"cut_sapphire": 1},
     "workAmount"      : 5,
@@ -2868,7 +3313,7 @@
   },
   {
     "id"              : "cut_emerald_recipe",
-    "station"         : "lapidary_bench",
+    "station"         : "emery_bench",
     "inputs"          : {"emerald": 1},
     "outputs"         : {"cut_emerald": 1},
     "workAmount"      : 5,
@@ -2877,7 +3322,7 @@
   },
   {
     "id"              : "cut_topaz_recipe",
-    "station"         : "lapidary_bench",
+    "station"         : "emery_bench",
     "inputs"          : {"topaz": 1},
     "outputs"         : {"cut_topaz": 1},
     "workAmount"      : 5,
@@ -2914,7 +3359,7 @@
   // 2) Attunement (infused → attuned gem)
   {
     "id"              : "attune_ruby",
-    "station"         : "lapidary_bench",
+    "station"         : "attunement_bench",
     "inputs"          : {"infused_ruby": 1},
     "outputs"         : {"attuned_ruby": 1},
     "workAmount"      : 8,
@@ -2923,7 +3368,7 @@
   },
   {
     "id"              : "attune_sapphire",
-    "station"         : "lapidary_bench",
+    "station"         : "attunement_bench",
     "inputs"          : {"infused_sapphire": 1},
     "outputs"         : {"attuned_sapphire": 1},
     "workAmount"      : 8,
@@ -2932,7 +3377,7 @@
   },
   {
     "id"              : "attune_emerald",
-    "station"         : "lapidary_bench",
+    "station"         : "attunement_bench",
     "inputs"          : {"infused_emerald": 1},
     "outputs"         : {"attuned_emerald": 1},
     "workAmount"      : 8,
@@ -2941,7 +3386,7 @@
   },
   {
     "id"              : "attune_topaz",
-    "station"         : "lapidary_bench",
+    "station"         : "attunement_bench",
     "inputs"          : {"infused_topaz": 1},
     "outputs"         : {"attuned_topaz": 1},
     "workAmount"      : 8,
@@ -2950,7 +3395,7 @@
   },
   {
     "id"              : "attune_amethyst",
-    "station"         : "lapidary_bench",
+    "station"         : "attunement_bench",
     "inputs"          : {"infused_amethyst": 1},
     "outputs"         : {"attuned_amethyst": 1},
     "workAmount"      : 8,
@@ -2959,7 +3404,7 @@
   },
   {
     "id"              : "attune_citrine",
-    "station"         : "lapidary_bench",
+    "station"         : "attunement_bench",
     "inputs"          : {"infused_citrine": 1},
     "outputs"         : {"attuned_citrine": 1},
     "workAmount"      : 8,
@@ -2968,7 +3413,7 @@
   },
   {
     "id"              : "attune_moonstone",
-    "station"         : "lapidary_bench",
+    "station"         : "attunement_bench",
     "inputs"          : {"infused_moonstone": 1},
     "outputs"         : {"attuned_moonstone": 1},
     "workAmount"      : 8,
@@ -2978,7 +3423,7 @@
   // 3a) Rings (1 attuned gem + 1 gold bar)
   {
     "id"              : "make_ruby_ring",
-    "station"         : "lapidary_bench",
+    "station"         : "attunement_bench",
     "inputs"          : {"attuned_ruby": 1, "gold_bar": 1},
     "outputs"         : {"ruby_ring": 1},
     "workAmount"      : 10,
@@ -2987,7 +3432,7 @@
   },
   {
     "id"              : "make_sapphire_ring",
-    "station"         : "lapidary_bench",
+    "station"         : "attunement_bench",
     "inputs"          : {"attuned_sapphire": 1, "gold_bar": 1},
     "outputs"         : {"sapphire_ring": 1},
     "workAmount"      : 10,
@@ -2996,7 +3441,7 @@
   },
   {
     "id"              : "make_emerald_ring",
-    "station"         : "lapidary_bench",
+    "station"         : "attunement_bench",
     "inputs"          : {"attuned_emerald": 1, "gold_bar": 1},
     "outputs"         : {"emerald_ring": 1},
     "workAmount"      : 10,
@@ -3005,7 +3450,7 @@
   },
   {
     "id"              : "make_topaz_ring",
-    "station"         : "lapidary_bench",
+    "station"         : "attunement_bench",
     "inputs"          : {"attuned_topaz": 1, "gold_bar": 1},
     "outputs"         : {"topaz_ring": 1},
     "workAmount"      : 10,
@@ -3014,7 +3459,7 @@
   },
   {
     "id"              : "make_amethyst_ring",
-    "station"         : "lapidary_bench",
+    "station"         : "attunement_bench",
     "inputs"          : {"attuned_amethyst": 1, "gold_bar": 1},
     "outputs"         : {"amethyst_ring": 1},
     "workAmount"      : 10,
@@ -3023,7 +3468,7 @@
   },
   {
     "id"              : "make_citrine_ring",
-    "station"         : "lapidary_bench",
+    "station"         : "attunement_bench",
     "inputs"          : {"attuned_citrine": 1, "gold_bar": 1},
     "outputs"         : {"citrine_ring": 1},
     "workAmount"      : 10,
@@ -3032,7 +3477,7 @@
   },
   {
     "id"              : "make_moonstone_ring",
-    "station"         : "lapidary_bench",
+    "station"         : "attunement_bench",
     "inputs"          : {"attuned_moonstone": 1, "silver_bar": 1},
     "outputs"         : {"moonstone_ring": 1},
     "workAmount"      : 10,
@@ -3042,7 +3487,7 @@
   // 3b) Amulets (larger gem — 2 attuned gems + 2 gold bars → stronger loadout piece, neck slot)
   {
     "id"              : "make_ruby_amulet",
-    "station"         : "lapidary_bench",
+    "station"         : "attunement_bench",
     "inputs"          : {"attuned_ruby": 2, "gold_bar": 2},
     "outputs"         : {"ruby_amulet": 1},
     "workAmount"      : 14,
@@ -3051,7 +3496,7 @@
   },
   {
     "id"              : "make_sapphire_amulet",
-    "station"         : "lapidary_bench",
+    "station"         : "attunement_bench",
     "inputs"          : {"attuned_sapphire": 2, "gold_bar": 2},
     "outputs"         : {"sapphire_amulet": 1},
     "workAmount"      : 14,
@@ -3060,7 +3505,7 @@
   },
   {
     "id"              : "make_emerald_amulet",
-    "station"         : "lapidary_bench",
+    "station"         : "attunement_bench",
     "inputs"          : {"attuned_emerald": 2, "gold_bar": 2},
     "outputs"         : {"emerald_amulet": 1},
     "workAmount"      : 14,
@@ -3069,7 +3514,7 @@
   },
   {
     "id"              : "make_topaz_amulet",
-    "station"         : "lapidary_bench",
+    "station"         : "attunement_bench",
     "inputs"          : {"attuned_topaz": 2, "gold_bar": 2},
     "outputs"         : {"topaz_amulet": 1},
     "workAmount"      : 14,
@@ -3078,7 +3523,7 @@
   },
   {
     "id"              : "make_amethyst_amulet",
-    "station"         : "lapidary_bench",
+    "station"         : "attunement_bench",
     "inputs"          : {"attuned_amethyst": 2, "gold_bar": 2},
     "outputs"         : {"amethyst_amulet": 1},
     "workAmount"      : 14,
@@ -3087,7 +3532,7 @@
   },
   {
     "id"              : "make_citrine_amulet",
-    "station"         : "lapidary_bench",
+    "station"         : "attunement_bench",
     "inputs"          : {"attuned_citrine": 2, "gold_bar": 2},
     "outputs"         : {"citrine_amulet": 1},
     "workAmount"      : 14,
@@ -3096,7 +3541,7 @@
   },
   {
     "id"              : "make_moonstone_amulet",
-    "station"         : "lapidary_bench",
+    "station"         : "attunement_bench",
     "inputs"          : {"attuned_moonstone": 2, "silver_bar": 2},
     "outputs"         : {"moonstone_amulet": 1},
     "workAmount"      : 14,
@@ -3110,7 +3555,7 @@
   // 4a) Crowns / circlets / diadems (head slot — competes with a helmet)
   {
     "id"              : "make_scholars_circlet",
-    "station"         : "lapidary_bench",
+    "station"         : "attunement_bench",
     "inputs"          : {"attuned_sapphire": 1, "silver_bar": 1},
     "outputs"         : {"scholars_circlet": 1},
     "workAmount"      : 16,
@@ -3119,7 +3564,7 @@
   },
   {
     "id"              : "make_champions_crown",
-    "station"         : "lapidary_bench",
+    "station"         : "attunement_bench",
     "inputs"          : {"attuned_ruby": 1, "attuned_topaz": 1, "gold_bar": 2},
     "outputs"         : {"champions_crown": 1},
     "workAmount"      : 22,
@@ -3128,7 +3573,7 @@
   },
   {
     "id"              : "make_sovereign_crown",
-    "station"         : "lapidary_bench",
+    "station"         : "attunement_bench",
     "inputs"          : {"attuned_citrine": 1, "attuned_amethyst": 1, "gold_bar": 2},
     "outputs"         : {"sovereign_crown": 1},
     "workAmount"      : 22,
@@ -3137,7 +3582,7 @@
   },
   {
     "id"              : "make_wardens_circlet",
-    "station"         : "lapidary_bench",
+    "station"         : "attunement_bench",
     "inputs"          : {"attuned_emerald": 1, "attuned_moonstone": 1, "gold_bar": 1},
     "outputs"         : {"wardens_circlet": 1},
     "workAmount"      : 20,
@@ -3147,7 +3592,7 @@
   // 4b) Necklaces / torcs / pendants (amulet)
   {
     "id"              : "make_gold_torc",
-    "station"         : "lapidary_bench",
+    "station"         : "attunement_bench",
     "inputs"          : {"attuned_emerald": 1, "gold_bar": 2},
     "outputs"         : {"gold_torc": 1},
     "workAmount"      : 16,
@@ -3156,7 +3601,7 @@
   },
   {
     "id"              : "make_champions_torc",
-    "station"         : "lapidary_bench",
+    "station"         : "attunement_bench",
     "inputs"          : {"attuned_ruby": 1, "attuned_emerald": 1, "gold_bar": 1},
     "outputs"         : {"champions_torc": 1},
     "workAmount"      : 18,
@@ -3165,7 +3610,7 @@
   },
   {
     "id"              : "make_wayfarers_pendant",
-    "station"         : "lapidary_bench",
+    "station"         : "attunement_bench",
     "inputs"          : {"attuned_topaz": 1, "attuned_moonstone": 1, "silver_bar": 1},
     "outputs"         : {"wayfarers_pendant": 1},
     "workAmount"      : 18,
@@ -3174,7 +3619,7 @@
   },
   {
     "id"              : "make_sages_pendant",
-    "station"         : "lapidary_bench",
+    "station"         : "attunement_bench",
     "inputs"          : {"attuned_sapphire": 1, "attuned_citrine": 1, "gold_bar": 1},
     "outputs"         : {"sages_pendant": 1},
     "workAmount"      : 18,
@@ -3192,7 +3637,7 @@
   {
     "id"              : "make_ember_staff",
     "station"         : "runecarver_bench",
-    "inputs"          : {"emberwood_log": 1, "cut_ruby": 1, "enchant_thread": 1},
+    "inputs": {"emberwood_haft": 1, "cut_ruby": 1, "category:fastener": 6, "category:thread": 2},
     "outputs"         : {"ember_staff": 1},
     "workAmount"      : 16,
     "toolTierRequired": 1,
@@ -3201,7 +3646,7 @@
   {
     "id"              : "make_frost_staff",
     "station"         : "runecarver_bench",
-    "inputs"          : {"moonwood_log": 1, "cut_sapphire": 1, "enchant_thread": 1},
+    "inputs": {"moonwood_haft": 1, "cut_sapphire": 1, "category:fastener": 6, "category:thread": 2},
     "outputs"         : {"frost_staff": 1},
     "workAmount"      : 16,
     "toolTierRequired": 1,
@@ -3210,7 +3655,7 @@
   {
     "id"              : "make_spark_staff",
     "station"         : "runecarver_bench",
-    "inputs"          : {"heartwood_log": 1, "cut_topaz": 1, "enchant_thread": 1},
+    "inputs": {"heartwood_haft": 1, "cut_topaz": 1, "category:fastener": 6, "category:thread": 2},
     "outputs"         : {"spark_staff": 1},
     "workAmount"      : 16,
     "toolTierRequired": 1,
@@ -3219,7 +3664,7 @@
   {
     "id"              : "make_pyre_staff",
     "station"         : "attunement_altar",
-    "inputs"          : {"emberwood_log": 1, "attuned_ruby": 1, "gold_bar": 1},
+    "inputs": {"emberwood_haft": 1, "attuned_ruby": 1, "gold_bar": 1, "category:fastener": 8},
     "outputs"         : {"pyre_staff": 1},
     "workAmount"      : 24,
     "toolTierRequired": 2,
@@ -3228,7 +3673,7 @@
   {
     "id"              : "make_rime_staff",
     "station"         : "attunement_altar",
-    "inputs"          : {"moonwood_log": 1, "attuned_sapphire": 1, "gold_bar": 1},
+    "inputs": {"moonwood_haft": 1, "attuned_sapphire": 1, "gold_bar": 1, "category:fastener": 8},
     "outputs"         : {"rime_staff": 1},
     "workAmount"      : 24,
     "toolTierRequired": 2,
@@ -3237,7 +3682,7 @@
   {
     "id"              : "make_tempest_staff",
     "station"         : "attunement_altar",
-    "inputs"          : {"heartwood_log": 1, "attuned_topaz": 1, "gold_bar": 1},
+    "inputs": {"heartwood_haft": 1, "attuned_topaz": 1, "gold_bar": 1, "category:fastener": 8},
     "outputs"         : {"tempest_staff": 1},
     "workAmount"      : 24,
     "toolTierRequired": 2,
@@ -3249,8 +3694,8 @@
   // The wheel forges its iron rim at the anvil (iron_working); the carts assemble at the sawtable.
   {
     "id"              : "make_wheel",
-    "station"         : "anvil",
-    "inputs"          : {"category:plank": 2, "iron_bar": 1},
+    "station"         : "sawtable",
+    "inputs"          : {"category:plank": 3, "category:fastener": 8, "resin": 1},
     "outputs"         : {"wheel": 1},
     "workAmount"      : 60,
     "toolTierRequired": 1,
@@ -3332,6 +3777,73 @@
   // filling is a free pick from meat/fish/veg/fruit, so a pie names itself ("Apple Pie", "Venison & Onion
   // Pie"). Tiers add fillings (1 → 2 → 3 distinct) + flour, climbing the meal buff (nourished → fortified).
   // Fruit fillings make a sweet pie; meat/veg a savoury one — same recipe, the ingredients tell the story.
+  {
+    "id"              : "make_simple_sandwich",
+    "discipline"      : "cooking",
+    "station"         : "craft_spot",
+    "inputs"          : {"bread": 1},
+    "outputs"         : {"simple_sandwich": 1},
+    "workAmount"      : 3,
+    "toolTierRequired": 0,
+    "dynamicRecipe"   : {
+      "filling1": {
+        "acceptsCategories": ["meat", "fish", "vegetable", "fruit", "preserve"],
+        "quantity"         : 1,
+        "default"          : {"name": "Simple Sandwich", "description": "A cut loaf with something laid between the halves."}
+      }
+    }
+  },
+  {
+    "id"              : "make_hearty_sandwich",
+    "discipline"      : "cooking",
+    "station"         : "craft_spot",
+    "inputs"          : {"bread": 1},
+    "outputs"         : {"hearty_sandwich": 1},
+    "workAmount"      : 5,
+    "toolTierRequired": 0,
+    "dynamicRecipe"   : {
+      "filling1": {
+        "acceptsCategories": ["meat", "fish", "vegetable", "fruit", "preserve"],
+        "quantity"         : 1,
+        "default"          : {"name": "Hearty Sandwich", "description": "Bread packed with two fillings and pressed flat enough to carry."}
+      },
+      "filling2": { "acceptsCategories": ["meat", "fish", "vegetable", "fruit", "preserve"], "quantity": 1 }
+    }
+  },
+  {
+    "id"              : "bake_game_pie",
+    "discipline"      : "cooking",
+    "station"         : "oven",
+    "inputs"          : {"flour": 3},
+    "outputs"         : {"game_pie": 1},
+    "workAmount"      : 22,
+    "toolTierRequired": 0,
+    "researchRequired": "food_preservation",
+    "dynamicRecipe"   : {
+      "keeping": {
+        "acceptsCategories": ["preserve"],
+        "quantity"         : 2,
+        "default"          : {"name": "Game Pie", "description": "Cured and smoked meat baked under a standing crust."}
+      },
+      "filling1": { "acceptsCategories": ["vegetable", "herb"], "quantity": 1 }
+    }
+  },
+  {
+    "id"              : "bake_honey_tart",
+    "discipline"      : "cooking",
+    "station"         : "oven",
+    "inputs"          : {"flour": 2, "honey": 2},
+    "outputs"         : {"honey_tart": 1},
+    "workAmount"      : 16,
+    "toolTierRequired": 0,
+    "dynamicRecipe"   : {
+      "fruit1": {
+        "acceptsCategories": ["fruit"],
+        "quantity"         : 2,
+        "default"          : {"name": "Honey Tart", "description": "A shallow crust filled with honey and fruit."}
+      }
+    }
+  },
   {
     "id"              : "bake_simple_pie",
     "station"         : "oven",
@@ -3468,7 +3980,7 @@
     "id"              : "make_basket",
     "discipline"      : "weaving",
     "station"         : "craft_spot",
-    "inputs"          : {"branch": 10, "cordage": 6},
+    "inputs"          : {"branch": 10, "cordage": 24},
     "outputs"         : {"basket": 1},
     "workAmount"      : 12,
     "toolTierRequired": 0
@@ -3492,7 +4004,7 @@
   {
     "id"               : "make_wooden_bucket",
     "station"          : "sawtable",
-    "inputs"           : {"category:plank": 2, "resin": 1},
+    "inputs"           : {"category:plank": 2, "category:fastener": 4, "resin": 1},
     "inputAlternatives": [ {"category:plank": 2, "bone_glue": 1}, {"category:plank": 2, "hide_glue": 1} ],
     "outputs"          : {"wooden_bucket": 1},
     "workAmount"       : 16,
@@ -3501,7 +4013,7 @@
   {
     "id"               : "make_wooden_barrel",
     "station"          : "sawtable",
-    "inputs"           : {"category:plank": 4, "resin": 2, "cordage": 3},
+    "inputs"           : {"category:plank": 4, "resin": 2, "cordage": 12},
     "inputAlternatives": [ {"category:plank": 4, "bone_glue": 2, "cordage": 3} ],
     "outputs"          : {"wooden_barrel": 1},
     "workAmount"       : 28,
@@ -3513,7 +4025,7 @@
     "station"         : "brewing_barrel",
     "passive"         : true,
     "inputs"          : {"bark": 3, "salt": 1, "ash": 1, "water": 2},
-    "outputs"         : {"tanning_brine": 2},
+    "outputs"         : {"tanning_brine": 3},
     "workAmount"      : 60,
     "toolTierRequired": 0
   },
@@ -3523,7 +4035,7 @@
     "station"         : "brewing_barrel",
     "passive"         : true,
     "inputs"          : {"bark": 4, "salt": 2, "ash": 2, "water": 3},
-    "outputs"         : {"beast_brine": 1},
+    "outputs"         : {"beast_brine": 1.5},
     "workAmount"      : 96,
     "toolTierRequired": 0
   },
@@ -3534,7 +4046,7 @@
     "id"              : "make_aurochs_meat",
     "station"         : "butcher_spot",
     "inputs"          : {"aurochs_carcass": 1},
-    "outputs"         : {"aurochs_meat": 18, "aurochs_hide": 3, "ox_wool": 4, "large_bones": 18, "sinew": 16, "curved_horn": 2},
+    "outputs"         : {"aurochs_meat": 18, "aurochs_hide": 3, "ox_wool": 4, "large_bones": 18, "raw_sinew": 16, "curved_horn": 2},
     "workAmount"      : 60,
     "toolTierRequired": 0
   },
@@ -3542,7 +4054,7 @@
     "id"              : "make_mammoth_meat",
     "station"         : "butcher_spot",
     "inputs"          : {"woolly_mammoth_carcass": 1},
-    "outputs"         : {"mammoth_meat": 40, "mammoth_fur": 6, "ivory": 2, "huge_bones": 24, "mammoth_wool": 12, "sinew": 30},
+    "outputs"         : {"mammoth_meat": 40, "mammoth_fur": 6, "ivory": 2, "huge_bones": 24, "mammoth_wool": 12, "raw_sinew": 30},
     "workAmount"      : 90,
     "toolTierRequired": 0
   },
@@ -3552,7 +4064,7 @@
     "id"              : "make_owlbear_meat",
     "station"         : "butcher_spot",
     "inputs"          : {"owlbear_carcass": 1},
-    "outputs"         : {"owlbear_meat": 16, "owlbear_pelt": 2, "owlbear_bile": 1, "large_bones": 16, "sinew": 14, "predator_claw": 1},
+    "outputs"         : {"owlbear_meat": 16, "owlbear_pelt": 2, "owlbear_bile": 0.3, "large_bones": 16, "raw_sinew": 14, "predator_claw": 1},
     "workAmount"      : 60,
     "toolTierRequired": 0
   },
@@ -3561,7 +4073,7 @@
     "id"              : "make_dire_wolf",
     "station"         : "flensing_table",
     "inputs"          : {"dire_wolf_carcass": 1},
-    "outputs"         : {"wolf_meat": 10, "dire_wolf_pelt": 2, "alpha_ichor": 1, "large_bones": 10, "sinew": 8, "predator_claw": 2},
+    "outputs"         : {"wolf_meat": 10, "dire_wolf_pelt": 2, "alpha_ichor": 0.4, "large_bones": 10, "raw_sinew": 8, "predator_claw": 2},
     "workAmount"      : 50,
     "toolTierRequired": 2
   },
@@ -3569,7 +4081,7 @@
     "id"              : "make_cave_bear",
     "station"         : "flensing_table",
     "inputs"          : {"cave_bear_carcass": 1},
-    "outputs"         : {"bear_meat": 22, "cave_bear_pelt": 2, "owlbear_bile": 1, "large_bones": 18, "sinew": 16, "tallow": 3, "predator_claw": 2},
+    "outputs"         : {"bear_meat": 22, "cave_bear_pelt": 2, "owlbear_bile": 0.3, "large_bones": 18, "raw_sinew": 16, "tallow": 3, "predator_claw": 2},
     "workAmount"      : 80,
     "toolTierRequired": 2
   },
@@ -3577,7 +4089,7 @@
     "id"              : "make_direboar",
     "station"         : "flensing_table",
     "inputs"          : {"direboar_carcass": 1},
-    "outputs"         : {"boar_meat": 16, "boar_hide": 4, "great_tusk": 1, "large_bones": 14, "sinew": 10, "tallow": 4},
+    "outputs"         : {"boar_meat": 16, "boar_hide": 4, "great_tusk": 1, "large_bones": 14, "raw_sinew": 10, "tallow": 4},
     "workAmount"      : 60,
     "toolTierRequired": 2
   },
@@ -3604,7 +4116,7 @@
     "id"              : "flense_great_wolf",
     "station"         : "sanguinary_altar",
     "inputs"          : {"great_wolf_carcass": 1},
-    "outputs"         : {"wolf_meat": 14, "dire_wolf_pelt": 3, "alpha_ichor": 2, "alpha_heart": 1, "direwolf_hackles": 1, "great_fang": 1, "large_bones": 10, "sinew": 8, "predator_claw": 2},
+    "outputs"         : {"wolf_meat": 14, "dire_wolf_pelt": 3, "alpha_ichor": 0.8, "alpha_heart": 1, "direwolf_hackles": 1, "great_fang": 1, "large_bones": 10, "raw_sinew": 8, "predator_claw": 2},
     "workAmount"      : 80,
     "toolTierRequired": 2
   },
@@ -3620,7 +4132,7 @@
     "id"              : "flense_great_bear",
     "station"         : "sanguinary_altar",
     "inputs"          : {"great_bear_carcass": 1},
-    "outputs"         : {"bear_meat": 26, "cave_bear_pelt": 3, "owlbear_bile": 2, "owlbear_pineal": 1, "sabretooth_glands": 1, "great_bone": 2, "great_fang": 1, "tallow": 5, "predator_claw": 2},
+    "outputs"         : {"bear_meat": 26, "cave_bear_pelt": 3, "owlbear_bile": 0.6, "owlbear_pineal": 1, "sabretooth_glands": 1, "great_bone": 2, "great_fang": 1, "tallow": 5, "predator_claw": 2},
     "workAmount"      : 100,
     "toolTierRequired": 2
   },
@@ -3663,7 +4175,7 @@
     "id"              : "make_goblin_remains",
     "station"         : "butcher_spot",
     "inputs"          : {"goblin_carcass": 1},
-    "outputs"         : {"medium_bones": 4, "sinew": 3},
+    "outputs"         : {"medium_bones": 4, "raw_sinew": 3},
     "workAmount"      : 15,
     "toolTierRequired": 0
   },
@@ -3673,7 +4185,7 @@
     "id"              : "render_grimeling",
     "station"         : "butcher_spot",
     "inputs"          : {"grimeling_carcass": 1},
-    "outputs"         : {"caustic_bile": 2, "plant_fiber": 2},
+    "outputs"         : {"caustic_bile": 0.4, "plant_fiber": 2},
     "workAmount"      : 14,
     "toolTierRequired": 0
   },
@@ -3681,7 +4193,7 @@
     "id"              : "make_kobold_remains",
     "station"         : "butcher_spot",
     "inputs"          : {"kobold_skulker_carcass": 1},
-    "outputs"         : {"small_bones": 4, "sinew": 2},
+    "outputs"         : {"small_bones": 4, "raw_sinew": 2},
     "workAmount"      : 12,
     "toolTierRequired": 0
   },
@@ -3689,7 +4201,7 @@
     "id"              : "make_gnoll_remains",
     "station"         : "butcher_spot",
     "inputs"          : {"gnoll_marauder_carcass": 1},
-    "outputs"         : {"medium_bones": 5, "sinew": 4},
+    "outputs"         : {"medium_bones": 5, "raw_sinew": 4},
     "workAmount"      : 18,
     "toolTierRequired": 0
   },
@@ -3697,7 +4209,7 @@
     "id"              : "make_orc_remains",
     "station"         : "butcher_spot",
     "inputs"          : {"orc_reaver_carcass": 1},
-    "outputs"         : {"medium_bones": 6, "sinew": 5},
+    "outputs"         : {"medium_bones": 6, "raw_sinew": 5},
     "workAmount"      : 20,
     "toolTierRequired": 0
   },
@@ -3705,7 +4217,7 @@
     "id"              : "make_harpy_remains",
     "station"         : "butcher_spot",
     "inputs"          : {"harpy_carcass": 1},
-    "outputs"         : {"small_bones": 5, "sinew": 3},
+    "outputs"         : {"small_bones": 5, "raw_sinew": 3},
     "workAmount"      : 15,
     "toolTierRequired": 0
   },
@@ -3713,7 +4225,7 @@
     "id"              : "make_bullywug_remains",
     "station"         : "butcher_spot",
     "inputs"          : {"bullywug_carcass": 1},
-    "outputs"         : {"small_bones": 4, "sinew": 3},
+    "outputs"         : {"small_bones": 4, "raw_sinew": 3},
     "workAmount"      : 15,
     "toolTierRequired": 0
   },
@@ -3721,7 +4233,7 @@
     "id"              : "make_viper_remains",
     "station"         : "butcher_spot",
     "inputs"          : {"marsh_viper_carcass": 1},
-    "outputs"         : {"venom_sac": 1, "small_bones": 2, "sinew": 1},
+    "outputs"         : {"venom_sac": 1, "small_bones": 2, "raw_sinew": 1},
     "workAmount"      : 12,
     "toolTierRequired": 0
   },
@@ -3729,7 +4241,7 @@
     "id"              : "make_stirge_remains",
     "station"         : "butcher_spot",
     "inputs"          : {"stirge_carcass": 1},
-    "outputs"         : {"small_bones": 2, "sinew": 1},
+    "outputs"         : {"small_bones": 2, "raw_sinew": 1},
     "workAmount"      : 8,
     "toolTierRequired": 0
   },
@@ -3737,7 +4249,7 @@
   {
     "id"              : "make_cave_bear_plate",
     "station"         : "anvil",
-    "inputs"          : {"prime_cave_bear_hide": 2, "iron_bar": 2},
+    "inputs"          : {"prime_cave_bear_hide": 2, "iron_bar": 2, "category:thread": 29},
     "outputs"         : {"cave_bear_plate": 1},
     "workAmount"      : 60,
     "toolTierRequired": 2,
@@ -3746,18 +4258,18 @@
   {
     "id"              : "make_fang_reaver",
     "discipline"      : "bonecarving",
-    "station"         : "makers_bench",
-    "inputs"          : {"great_fang": 1, "heartwood_log": 1, "sinew": 4},
+    "station"         : "runecarver_bench",
+    "inputs": {"great_fang": 1, "heartwood_haft": 1, "category:fastener": 10, "category:thread": 4},
     "outputs"         : {"fang_reaver": 1},
     "workAmount"      : 50,
-    "toolTierRequired": 2
+    "toolTierRequired": 3
   },
   {
     // §2h magical-beast gear: a cured dire-wolf pelt worked at the weaving frame → the Direwolf Warcloak
     // (grants Might while worn). The crafted twin of a boss famed-drop; the tool-tier gate keeps it late.
     "id"              : "make_direwolf_warcloak",
     "station"         : "weaving_frame",
-    "inputs"          : {"prime_direwolf_leather": 2},
+    "inputs"          : {"prime_direwolf_leather": 2, "category:thread": 6},
     "outputs"         : {"direwolf_warcloak": 1},
     "workAmount"      : 40,
     "toolTierRequired": 1
@@ -3777,7 +4289,7 @@
     "id"              : "make_sabretooth_meat",
     "station"         : "butcher_spot",
     "inputs"          : {"sabretooth_carcass": 1},
-    "outputs"         : {"sabretooth_meat": 12, "sabretooth_pelt": 2, "large_bones": 14, "sinew": 12, "predator_claw": 1},
+    "outputs"         : {"sabretooth_meat": 12, "sabretooth_pelt": 2, "large_bones": 14, "raw_sinew": 12, "predator_claw": 1},
     "workAmount"      : 45,
     "toolTierRequired": 0
   },
@@ -3785,7 +4297,7 @@
     "id"              : "make_crocodile_meat",
     "station"         : "butcher_spot",
     "inputs"          : {"mire_crocodile_carcass": 1},
-    "outputs"         : {"crocodile_meat": 12, "croc_scaled_hide": 3, "medium_bones": 12, "sinew": 10},
+    "outputs"         : {"crocodile_meat": 12, "croc_scaled_hide": 3, "medium_bones": 12, "raw_sinew": 10},
     "workAmount"      : 45,
     "toolTierRequired": 0
   },
@@ -3793,7 +4305,7 @@
     "id"              : "make_hippogriff_meat",
     "station"         : "butcher_spot",
     "inputs"          : {"hippogriff_carcass": 1},
-    "outputs"         : {"hippogriff_meat": 12, "hippogriff_feathered_hide": 2, "feathers": 10, "medium_bones": 12, "sinew": 10, "predator_claw": 2},
+    "outputs"         : {"hippogriff_meat": 12, "hippogriff_feathered_hide": 2, "feathers": 10, "medium_bones": 12, "raw_sinew": 10, "predator_claw": 2},
     "workAmount"      : 45,
     "toolTierRequired": 0
   },
@@ -3809,7 +4321,7 @@
     "id"              : "make_worg_meat",
     "station"         : "butcher_spot",
     "inputs"          : {"worg_carcass": 1},
-    "outputs"         : {"worg_meat": 8, "worg_hide": 2, "medium_bones": 10, "sinew": 8, "predator_claw": 1},
+    "outputs"         : {"worg_meat": 8, "worg_hide": 2, "medium_bones": 10, "raw_sinew": 8, "predator_claw": 1},
     "workAmount"      : 30,
     "toolTierRequired": 0
   },
@@ -3817,7 +4329,7 @@
     "id"              : "make_jackal_meat",
     "station"         : "butcher_spot",
     "inputs"          : {"jackal_carcass": 1},
-    "outputs"         : {"worg_meat": 4, "jackal_hide": 1, "small_bones": 5, "sinew": 4},
+    "outputs"         : {"worg_meat": 4, "jackal_hide": 1, "small_bones": 5, "raw_sinew": 4},
     "workAmount"      : 20,
     "toolTierRequired": 0
   },
@@ -3825,7 +4337,7 @@
     "id"              : "make_quillback_meat",
     "station"         : "butcher_spot",
     "inputs"          : {"quillback_carcass": 1},
-    "outputs"         : {"boar_meat": 8, "boar_hide": 2, "medium_bones": 10, "sinew": 7},
+    "outputs"         : {"boar_meat": 8, "boar_hide": 2, "medium_bones": 10, "raw_sinew": 7},
     "workAmount"      : 30,
     "toolTierRequired": 0
   },
@@ -3833,7 +4345,7 @@
     "id"              : "make_olm_meat",
     "station"         : "butcher_spot",
     "inputs"          : {"giant_olm_carcass": 1},
-    "outputs"         : {"crocodile_meat": 5, "small_bones": 5, "sinew": 4},
+    "outputs"         : {"crocodile_meat": 5, "small_bones": 5, "raw_sinew": 4},
     "workAmount"      : 20,
     "toolTierRequired": 0
   },
@@ -3910,7 +4422,7 @@
   // Magic age (runic_inscription): gem_dust is ground from INFUSED gems only — never normal cut gems.
   {
     "id"               : "grind_gem_dust",
-    "station"          : "lapidary_bench",
+    "station"          : "attunement_bench",
     "researchRequired" : "runic_inscription",
     "inputs"           : {"infused_ruby": 1},
     "inputAlternatives": [
@@ -3929,7 +4441,7 @@
   // gem (the "refined gem-dust++" sink for the crystal-vent tier).
   {
     "id"               : "grind_mana_crystal",
-    "station"          : "lapidary_bench",
+    "station"          : "attunement_bench",
     "researchRequired" : "runic_inscription",
     "inputs"           : {"mana_crystal": 1},
     "outputs"          : {"gem_dust": 4},
@@ -3944,15 +4456,6 @@
     "outputs"         : {"magic_concrete": 2},
     "workAmount"      : 32,
     "toolTierRequired": 2
-  },
-  {
-    "id"              : "make_arcane_resin",
-    "station"         : "lapidary_bench",
-    "researchRequired": "runic_inscription",
-    "inputs"          : {"resin": 2, "gem_dust": 1},
-    "outputs"         : {"arcane_resin": 2},
-    "workAmount"      : 24,
-    "toolTierRequired": 1
   },
   // ════════════════════════════════════════════════════════════════════════════════════════════
   // PRODUCTION-CHAIN-III §F — Armour: mail wire/ring sub-chain, scale, steel plate, beast/bone, regalia
@@ -3979,7 +4482,7 @@
     "id"              : "make_scale_cuirass",
     "discipline"      : "leatherworking",
     "station"         : "makers_bench",
-    "inputs"          : {"scale_plate": 4, "category:leather": 2},
+    "inputs"          : {"scale_plate": 4, "category:leather": 2, "category:thread": 13},
     "outputs"         : {"croc_scale_cuirass": 1},
     "workAmount"      : 60,
     "toolTierRequired": 1
@@ -3988,7 +4491,7 @@
     "id"              : "make_plate_cuirass",
     "station"         : "anvil",
     "researchRequired": "steel_making",
-    "inputs"          : {"category:steel": 8, "boarhide": 1},
+    "inputs"          : {"category:steel": 8, "boarhide": 1, "category:thread": 14},
     "outputs"         : {"plate_cuirass": 1},
     "workAmount"      : 64,
     "toolTierRequired": 3
@@ -4006,7 +4509,7 @@
     "id"               : "make_beast_leather_plate",
     "discipline"      : "leatherworking",
     "station"          : "makers_bench",
-    "inputs"           : {"boarhide": 4, "category:leather": 2},
+    "inputs"           : {"boarhide": 4, "category:leather": 2, "category:binding": 14},
     "inputAlternatives": [ {"boarhide": 4, "category:leather": 2} ],
     "outputs"          : {"layered_boarhide_plate": 1},
     "workAmount"       : 72,
@@ -4016,7 +4519,7 @@
     "id"               : "make_bone_plated_cuirass",
     "discipline"      : "bonecarving",
     "station"          : "makers_bench",
-    "inputs"           : {"huge_bones": 3, "category:leather": 2},
+    "inputs"           : {"huge_bones": 3, "category:leather": 2, "category:binding": 18},
     "inputAlternatives": [ {"large_bones": 5, "category:leather": 2} ],
     "outputs"          : {"bone_plated_cuirass": 1},
     "workAmount"       : 64,
@@ -4026,7 +4529,7 @@
     "id"              : "make_horned_helm",
     "discipline"      : "leatherworking",
     "station"         : "makers_bench",
-    "inputs"          : {"huge_bones": 1, "large_bones": 2, "category:leather": 1},
+    "inputs"          : {"huge_bones": 1, "large_bones": 2, "category:leather": 1, "category:binding": 5},
     "outputs"         : {"horned_helm": 1},
     "workAmount"      : 48,
     "toolTierRequired": 1
@@ -4043,7 +4546,7 @@
   {
     "id"              : "make_regal_robes",
     "station"         : "weaving_frame",
-    "inputs"          : {"woolcloth": 4, "category:wool": 2},
+    "inputs"          : {"woolcloth": 4, "category:wool": 2, "category:binding": 2},
     "outputs"         : {"regal_robes": 1},
     "workAmount"      : 36,
     "toolTierRequired": 0
@@ -4086,7 +4589,7 @@
     "station"          : "alchemy_lab",
     "inputs"           : {"wild_berries": 3, "water": 1},
     "inputAlternatives": [ {"thyme": 3, "water": 1}, {"mint": 3, "water": 1}, {"wild_sage": 3, "water": 1} ],
-    "outputs"          : {"dye": 2},
+    "outputs"          : {"dye": 0.4},
     "workAmount"       : 14,
     "toolTierRequired" : 1,
     "researchRequired" : "basic_alchemy"
@@ -4106,7 +4609,7 @@
     "id"              : "brew_potion_of_might",
     "station"         : "alchemy_lab",
     "inputs"          : {"woundwort": 2, "gem_dust": 1, "glassware": 1},
-    "outputs"         : {"potion_of_might": 1},
+    "outputs"         : {"potion_of_might": 0.3},
     "workAmount"      : 24,
     "toolTierRequired": 1
   },
@@ -4114,7 +4617,7 @@
     "id"              : "brew_draught_of_vigor",
     "station"         : "alchemy_lab",
     "inputs"          : {"woundwort": 2, "gem_dust": 1, "glassware": 1},
-    "outputs"         : {"draught_of_vigor": 1},
+    "outputs"         : {"draught_of_vigor": 0.3},
     "workAmount"      : 24,
     "toolTierRequired": 1
   },
@@ -4122,7 +4625,7 @@
     "id"              : "brew_elixir_of_grace",
     "station"         : "alchemy_lab",
     "inputs"          : {"woundwort": 2, "gem_dust": 1, "glassware": 1},
-    "outputs"         : {"elixir_of_grace": 1},
+    "outputs"         : {"elixir_of_grace": 0.3},
     "workAmount"      : 24,
     "toolTierRequired": 1
   },
@@ -4130,7 +4633,7 @@
     "id"              : "brew_tonic_of_fortitude",
     "station"         : "alchemy_lab",
     "inputs"          : {"woundwort": 2, "gem_dust": 1, "glassware": 1},
-    "outputs"         : {"tonic_of_fortitude": 1},
+    "outputs"         : {"tonic_of_fortitude": 0.3},
     "workAmount"      : 24,
     "toolTierRequired": 1
   },
@@ -4139,16 +4642,16 @@
   {
     "id"              : "brew_bloodrage_draught",
     "station"         : "alchemy_lab",
-    "inputs"          : {"alpha_ichor": 1, "woundwort": 1, "glassware": 1},
-    "outputs"         : {"bloodrage_draught": 1},
+    "inputs"          : {"alpha_ichor": 0.4, "woundwort": 1, "glassware": 1},
+    "outputs"         : {"bloodrage_draught": 0.3},
     "workAmount"      : 30,
     "toolTierRequired": 1
   },
   {
     "id"              : "brew_ironhide_tonic",
     "station"         : "alchemy_lab",
-    "inputs"          : {"owlbear_bile": 1, "woundwort": 1, "glassware": 1},
-    "outputs"         : {"ironhide_tonic": 1},
+    "inputs"          : {"owlbear_bile": 0.3, "woundwort": 1, "glassware": 1},
+    "outputs"         : {"ironhide_tonic": 0.3},
     "workAmount"      : 30,
     "toolTierRequired": 1
   },
@@ -4158,7 +4661,7 @@
     "id"              : "brew_vigor_draught",
     "station"         : "alchemy_lab",
     "inputs"          : {"bloodroot": 2, "woundwort": 1, "glassware": 1},
-    "outputs"         : {"vigor_draught": 1},
+    "outputs"         : {"vigor_draught": 0.3},
     "workAmount"      : 28,
     "toolTierRequired": 1
   },
@@ -4166,7 +4669,7 @@
     "id"              : "brew_calming_draught",
     "station"         : "alchemy_lab",
     "inputs"          : {"dreamleaf": 2, "woundwort": 1, "glassware": 1},
-    "outputs"         : {"calming_draught": 1},
+    "outputs"         : {"calming_draught": 0.3},
     "workAmount"      : 28,
     "toolTierRequired": 1
   },
@@ -4174,7 +4677,7 @@
     "id"              : "brew_nightglow_draught",
     "station"         : "alchemy_lab",
     "inputs"          : {"glowcap": 2, "woundwort": 1, "glassware": 1},
-    "outputs"         : {"nightglow_draught": 1},
+    "outputs"         : {"nightglow_draught": 0.3},
     "workAmount"      : 28,
     "toolTierRequired": 1
   },
@@ -4182,7 +4685,7 @@
     "id"              : "brew_frenzy_draught",
     "station"         : "alchemy_lab",
     "inputs"          : {"spore_of_madness": 1, "mandrake": 1, "glassware": 1},
-    "outputs"         : {"frenzy_draught": 1},
+    "outputs"         : {"frenzy_draught": 0.3},
     "workAmount"      : 32,
     "toolTierRequired": 1
   },
@@ -4190,8 +4693,8 @@
   {
     "id"              : "brew_caustic_coating",
     "station"         : "alchemy_lab",
-    "inputs"          : {"caustic_bile": 2, "nightshade_bolete": 1, "glassware": 1},
-    "outputs"         : {"caustic_coating": 3},
+    "inputs"          : {"caustic_bile": 0.4, "nightshade_bolete": 1, "glassware": 1},
+    "outputs"         : {"caustic_coating": 0.6},
     "workAmount"      : 12,
     "toolTierRequired": 1
   },
@@ -4199,7 +4702,7 @@
     "id"              : "brew_venom_coating",
     "station"         : "alchemy_lab",
     "inputs"          : {"venom_sac": 1, "nightshade_bolete": 1, "glassware": 1},
-    "outputs"         : {"venom_coating": 2},
+    "outputs"         : {"venom_coating": 0.4},
     "workAmount"      : 30,
     "toolTierRequired": 1
   },
@@ -4207,8 +4710,8 @@
   {
     "id"              : "brew_greater_potion_of_might",
     "station"         : "alchemy_lab",
-    "inputs"          : {"woundwort": 3, "glassware": 1, "distilled_spirit": 1},
-    "outputs"         : {"greater_potion_of_might": 1},
+    "inputs"          : {"woundwort": 3, "glassware": 1, "distilled_spirit": 0.3},
+    "outputs"         : {"greater_potion_of_might": 0.3},
     "workAmount"      : 12,
     "toolTierRequired": 1
   },
@@ -4216,15 +4719,15 @@
     "id"              : "brew_grand_potion_of_might",
     "station"         : "apothecary",
     "inputs"          : {"woundwort": 3, "glassware": 1, "mandrake": 1, "purified_catalyst": 1},
-    "outputs"         : {"grand_potion_of_might": 1},
+    "outputs"         : {"grand_potion_of_might": 0.3},
     "workAmount"      : 16,
     "toolTierRequired": 2
   },
   {
     "id"              : "brew_greater_draught_of_vigor",
     "station"         : "alchemy_lab",
-    "inputs"          : {"woundwort": 3, "glassware": 1, "distilled_spirit": 1},
-    "outputs"         : {"greater_draught_of_vigor": 1},
+    "inputs"          : {"woundwort": 3, "glassware": 1, "distilled_spirit": 0.3},
+    "outputs"         : {"greater_draught_of_vigor": 0.3},
     "workAmount"      : 12,
     "toolTierRequired": 1
   },
@@ -4232,15 +4735,15 @@
     "id"              : "brew_grand_draught_of_vigor",
     "station"         : "apothecary",
     "inputs"          : {"woundwort": 3, "glassware": 1, "mandrake": 1, "purified_catalyst": 1},
-    "outputs"         : {"grand_draught_of_vigor": 1},
+    "outputs"         : {"grand_draught_of_vigor": 0.3},
     "workAmount"      : 16,
     "toolTierRequired": 2
   },
   {
     "id"              : "brew_greater_elixir_of_grace",
     "station"         : "alchemy_lab",
-    "inputs"          : {"woundwort": 3, "glassware": 1, "distilled_spirit": 1},
-    "outputs"         : {"greater_elixir_of_grace": 1},
+    "inputs"          : {"woundwort": 3, "glassware": 1, "distilled_spirit": 0.3},
+    "outputs"         : {"greater_elixir_of_grace": 0.3},
     "workAmount"      : 12,
     "toolTierRequired": 1
   },
@@ -4248,15 +4751,15 @@
     "id"              : "brew_grand_elixir_of_grace",
     "station"         : "apothecary",
     "inputs"          : {"woundwort": 3, "glassware": 1, "mandrake": 1, "purified_catalyst": 1},
-    "outputs"         : {"grand_elixir_of_grace": 1},
+    "outputs"         : {"grand_elixir_of_grace": 0.3},
     "workAmount"      : 16,
     "toolTierRequired": 2
   },
   {
     "id"              : "brew_greater_tonic_of_fortitude",
     "station"         : "alchemy_lab",
-    "inputs"          : {"woundwort": 3, "glassware": 1, "distilled_spirit": 1},
-    "outputs"         : {"greater_tonic_of_fortitude": 1},
+    "inputs"          : {"woundwort": 3, "glassware": 1, "distilled_spirit": 0.3},
+    "outputs"         : {"greater_tonic_of_fortitude": 0.3},
     "workAmount"      : 12,
     "toolTierRequired": 1
   },
@@ -4264,47 +4767,47 @@
     "id"              : "brew_grand_tonic_of_fortitude",
     "station"         : "apothecary",
     "inputs"          : {"woundwort": 3, "glassware": 1, "mandrake": 1, "purified_catalyst": 1},
-    "outputs"         : {"grand_tonic_of_fortitude": 1},
+    "outputs"         : {"grand_tonic_of_fortitude": 0.3},
     "workAmount"      : 16,
     "toolTierRequired": 2
   },
   {
     "id"              : "brew_greater_bloodrage_draught",
     "station"         : "alchemy_lab",
-    "inputs"          : {"alpha_ichor": 2, "woundwort": 1, "glassware": 1, "distilled_spirit": 1},
-    "outputs"         : {"greater_bloodrage_draught": 1},
+    "inputs"          : {"alpha_ichor": 0.8, "woundwort": 1, "glassware": 1, "distilled_spirit": 0.3},
+    "outputs"         : {"greater_bloodrage_draught": 0.3},
     "workAmount"      : 12,
     "toolTierRequired": 1
   },
   {
     "id"              : "brew_grand_bloodrage_draught",
     "station"         : "apothecary",
-    "inputs"          : {"alpha_ichor": 2, "woundwort": 1, "glassware": 1, "mandrake": 1, "purified_catalyst": 1},
-    "outputs"         : {"grand_bloodrage_draught": 1},
+    "inputs"          : {"alpha_ichor": 0.8, "woundwort": 1, "glassware": 1, "mandrake": 1, "purified_catalyst": 1},
+    "outputs"         : {"grand_bloodrage_draught": 0.3},
     "workAmount"      : 16,
     "toolTierRequired": 2
   },
   {
     "id"              : "brew_greater_ironhide_tonic",
     "station"         : "alchemy_lab",
-    "inputs"          : {"owlbear_bile": 2, "woundwort": 1, "glassware": 1, "distilled_spirit": 1},
-    "outputs"         : {"greater_ironhide_tonic": 1},
+    "inputs"          : {"owlbear_bile": 0.6, "woundwort": 1, "glassware": 1, "distilled_spirit": 0.3},
+    "outputs"         : {"greater_ironhide_tonic": 0.3},
     "workAmount"      : 12,
     "toolTierRequired": 1
   },
   {
     "id"              : "brew_grand_ironhide_tonic",
     "station"         : "apothecary",
-    "inputs"          : {"owlbear_bile": 2, "woundwort": 1, "glassware": 1, "mandrake": 1, "purified_catalyst": 1},
-    "outputs"         : {"grand_ironhide_tonic": 1},
+    "inputs"          : {"owlbear_bile": 0.6, "woundwort": 1, "glassware": 1, "mandrake": 1, "purified_catalyst": 1},
+    "outputs"         : {"grand_ironhide_tonic": 0.3},
     "workAmount"      : 16,
     "toolTierRequired": 2
   },
   {
     "id"              : "brew_greater_vigor_draught",
     "station"         : "alchemy_lab",
-    "inputs"          : {"bloodroot": 3, "woundwort": 1, "glassware": 1, "distilled_spirit": 1},
-    "outputs"         : {"greater_vigor_draught": 1},
+    "inputs"          : {"bloodroot": 3, "woundwort": 1, "glassware": 1, "distilled_spirit": 0.3},
+    "outputs"         : {"greater_vigor_draught": 0.3},
     "workAmount"      : 12,
     "toolTierRequired": 1
   },
@@ -4312,15 +4815,15 @@
     "id"              : "brew_grand_vigor_draught",
     "station"         : "apothecary",
     "inputs"          : {"bloodroot": 3, "woundwort": 1, "glassware": 1, "mandrake": 1, "purified_catalyst": 1},
-    "outputs"         : {"grand_vigor_draught": 1},
+    "outputs"         : {"grand_vigor_draught": 0.3},
     "workAmount"      : 16,
     "toolTierRequired": 2
   },
   {
     "id"              : "brew_greater_calming_draught",
     "station"         : "alchemy_lab",
-    "inputs"          : {"dreamleaf": 3, "woundwort": 1, "glassware": 1, "distilled_spirit": 1},
-    "outputs"         : {"greater_calming_draught": 1},
+    "inputs"          : {"dreamleaf": 3, "woundwort": 1, "glassware": 1, "distilled_spirit": 0.3},
+    "outputs"         : {"greater_calming_draught": 0.3},
     "workAmount"      : 12,
     "toolTierRequired": 1
   },
@@ -4328,15 +4831,15 @@
     "id"              : "brew_grand_calming_draught",
     "station"         : "apothecary",
     "inputs"          : {"dreamleaf": 3, "woundwort": 1, "glassware": 1, "mandrake": 1, "purified_catalyst": 1},
-    "outputs"         : {"grand_calming_draught": 1},
+    "outputs"         : {"grand_calming_draught": 0.3},
     "workAmount"      : 16,
     "toolTierRequired": 2
   },
   {
     "id"              : "brew_greater_nightglow_draught",
     "station"         : "alchemy_lab",
-    "inputs"          : {"glowcap": 3, "woundwort": 1, "glassware": 1, "distilled_spirit": 1},
-    "outputs"         : {"greater_nightglow_draught": 1},
+    "inputs"          : {"glowcap": 3, "woundwort": 1, "glassware": 1, "distilled_spirit": 0.3},
+    "outputs"         : {"greater_nightglow_draught": 0.3},
     "workAmount"      : 12,
     "toolTierRequired": 1
   },
@@ -4344,15 +4847,15 @@
     "id"              : "brew_grand_nightglow_draught",
     "station"         : "apothecary",
     "inputs"          : {"glowcap": 3, "woundwort": 1, "glassware": 1, "mandrake": 1, "purified_catalyst": 1},
-    "outputs"         : {"grand_nightglow_draught": 1},
+    "outputs"         : {"grand_nightglow_draught": 0.3},
     "workAmount"      : 16,
     "toolTierRequired": 2
   },
   {
     "id"              : "brew_greater_frenzy_draught",
     "station"         : "alchemy_lab",
-    "inputs"          : {"spore_of_madness": 2, "mandrake": 1, "glassware": 1, "distilled_spirit": 1},
-    "outputs"         : {"greater_frenzy_draught": 1},
+    "inputs"          : {"spore_of_madness": 2, "mandrake": 1, "glassware": 1, "distilled_spirit": 0.3},
+    "outputs"         : {"greater_frenzy_draught": 0.3},
     "workAmount"      : 12,
     "toolTierRequired": 1
   },
@@ -4360,15 +4863,15 @@
     "id"              : "brew_grand_frenzy_draught",
     "station"         : "apothecary",
     "inputs"          : {"spore_of_madness": 2, "mandrake": 1, "glassware": 1, "nightshade_bolete": 1, "purified_catalyst": 1},
-    "outputs"         : {"grand_frenzy_draught": 1},
+    "outputs"         : {"grand_frenzy_draught": 0.3},
     "workAmount"      : 16,
     "toolTierRequired": 2
   },
   {
     "id"              : "brew_greater_venom_coating",
     "station"         : "alchemy_lab",
-    "inputs"          : {"venom_sac": 2, "nightshade_bolete": 1, "glassware": 1, "distilled_spirit": 1},
-    "outputs"         : {"greater_venom_coating": 1},
+    "inputs"          : {"venom_sac": 2, "nightshade_bolete": 1, "glassware": 1, "distilled_spirit": 0.3},
+    "outputs"         : {"greater_venom_coating": 0.3},
     "workAmount"      : 12,
     "toolTierRequired": 1
   },
@@ -4376,23 +4879,23 @@
     "id"              : "brew_grand_venom_coating",
     "station"         : "apothecary",
     "inputs"          : {"venom_sac": 2, "nightshade_bolete": 1, "glassware": 1, "mandrake": 1, "purified_catalyst": 1},
-    "outputs"         : {"grand_venom_coating": 1},
+    "outputs"         : {"grand_venom_coating": 0.3},
     "workAmount"      : 16,
     "toolTierRequired": 2
   },
   {
     "id"              : "brew_greater_caustic_coating",
     "station"         : "alchemy_lab",
-    "inputs"          : {"caustic_bile": 3, "nightshade_bolete": 1, "glassware": 1, "distilled_spirit": 1},
-    "outputs"         : {"greater_caustic_coating": 1},
+    "inputs"          : {"caustic_bile": 0.6, "nightshade_bolete": 1, "glassware": 1, "distilled_spirit": 0.3},
+    "outputs"         : {"greater_caustic_coating": 0.3},
     "workAmount"      : 12,
     "toolTierRequired": 1
   },
   {
     "id"              : "brew_grand_caustic_coating",
     "station"         : "apothecary",
-    "inputs"          : {"caustic_bile": 3, "nightshade_bolete": 1, "glassware": 1, "mandrake": 1, "purified_catalyst": 1},
-    "outputs"         : {"grand_caustic_coating": 1},
+    "inputs"          : {"caustic_bile": 0.6, "nightshade_bolete": 1, "glassware": 1, "mandrake": 1, "purified_catalyst": 1},
+    "outputs"         : {"grand_caustic_coating": 0.3},
     "workAmount"      : 16,
     "toolTierRequired": 2
   },
@@ -4402,7 +4905,7 @@
     "id"              : "brew_crude_feral_draught",
     "station"         : "alchemy_lab",
     "inputs"          : {"alpha_heart": 1, "woundwort": 1, "glassware": 1},
-    "outputs"         : {"crude_feral_draught": 1},
+    "outputs"         : {"crude_feral_draught": 0.3},
     "workAmount"      : 10,
     "toolTierRequired": 1
   },
@@ -4410,7 +4913,7 @@
     "id"              : "brew_feral_transfusion",
     "station"         : "apothecary",
     "inputs"          : {"alpha_heart": 1, "woundwort": 2, "gem_dust": 1, "glassware": 1},
-    "outputs"         : {"feral_transfusion": 1},
+    "outputs"         : {"feral_transfusion": 0.3},
     "workAmount"      : 16,
     "toolTierRequired": 1
   },
@@ -4418,7 +4921,7 @@
     "id"              : "brew_alpha_essence",
     "station"         : "apothecary",
     "inputs"          : {"alpha_heart": 1, "woundwort": 2, "gem_dust": 2, "mandrake": 1, "glassware": 1},
-    "outputs"         : {"alpha_essence": 1},
+    "outputs"         : {"alpha_essence": 0.3},
     "workAmount"      : 22,
     "toolTierRequired": 2
   },
@@ -4426,7 +4929,7 @@
     "id"              : "brew_crude_hide_draught",
     "station"         : "alchemy_lab",
     "inputs"          : {"direwolf_hackles": 1, "woundwort": 1, "glassware": 1},
-    "outputs"         : {"crude_hide_draught": 1},
+    "outputs"         : {"crude_hide_draught": 0.3},
     "workAmount"      : 10,
     "toolTierRequired": 1
   },
@@ -4434,7 +4937,7 @@
     "id"              : "brew_hide_transfusion",
     "station"         : "apothecary",
     "inputs"          : {"direwolf_hackles": 1, "woundwort": 2, "gem_dust": 1, "glassware": 1},
-    "outputs"         : {"hide_transfusion": 1},
+    "outputs"         : {"hide_transfusion": 0.3},
     "workAmount"      : 16,
     "toolTierRequired": 1
   },
@@ -4442,7 +4945,7 @@
     "id"              : "brew_ironhide_essence",
     "station"         : "apothecary",
     "inputs"          : {"direwolf_hackles": 1, "woundwort": 2, "gem_dust": 2, "mandrake": 1, "glassware": 1},
-    "outputs"         : {"ironhide_essence": 1},
+    "outputs"         : {"ironhide_essence": 0.3},
     "workAmount"      : 22,
     "toolTierRequired": 2
   },
@@ -4450,7 +4953,7 @@
     "id"              : "brew_crude_predator_draught",
     "station"         : "alchemy_lab",
     "inputs"          : {"sabretooth_glands": 1, "woundwort": 1, "glassware": 1},
-    "outputs"         : {"crude_predator_draught": 1},
+    "outputs"         : {"crude_predator_draught": 0.3},
     "workAmount"      : 10,
     "toolTierRequired": 1
   },
@@ -4458,7 +4961,7 @@
     "id"              : "brew_predator_transfusion",
     "station"         : "apothecary",
     "inputs"          : {"sabretooth_glands": 1, "woundwort": 2, "gem_dust": 1, "glassware": 1},
-    "outputs"         : {"predator_transfusion": 1},
+    "outputs"         : {"predator_transfusion": 0.3},
     "workAmount"      : 16,
     "toolTierRequired": 1
   },
@@ -4466,7 +4969,7 @@
     "id"              : "brew_sabretooth_essence",
     "station"         : "apothecary",
     "inputs"          : {"sabretooth_glands": 1, "woundwort": 2, "gem_dust": 2, "mandrake": 1, "glassware": 1},
-    "outputs"         : {"sabretooth_essence": 1},
+    "outputs"         : {"sabretooth_essence": 0.3},
     "workAmount"      : 22,
     "toolTierRequired": 2
   },
@@ -4474,7 +4977,7 @@
     "id"              : "brew_crude_sight_draught",
     "station"         : "alchemy_lab",
     "inputs"          : {"owlbear_pineal": 1, "woundwort": 1, "glassware": 1},
-    "outputs"         : {"crude_sight_draught": 1},
+    "outputs"         : {"crude_sight_draught": 0.3},
     "workAmount"      : 10,
     "toolTierRequired": 1
   },
@@ -4482,7 +4985,7 @@
     "id"              : "brew_sight_transfusion",
     "station"         : "apothecary",
     "inputs"          : {"owlbear_pineal": 1, "woundwort": 2, "gem_dust": 1, "glassware": 1},
-    "outputs"         : {"sight_transfusion": 1},
+    "outputs"         : {"sight_transfusion": 0.3},
     "workAmount"      : 16,
     "toolTierRequired": 1
   },
@@ -4490,7 +4993,7 @@
     "id"              : "brew_third_eye_essence",
     "station"         : "apothecary",
     "inputs"          : {"owlbear_pineal": 1, "woundwort": 2, "gem_dust": 2, "mandrake": 1, "glassware": 1},
-    "outputs"         : {"third_eye_essence": 1},
+    "outputs"         : {"third_eye_essence": 0.3},
     "workAmount"      : 22,
     "toolTierRequired": 2
   },
@@ -4579,7 +5082,7 @@
       "charcoal": 1
     },
     "outputs": {
-      "distilled_spirit": 1
+      "distilled_spirit": 0.3
     },
     "workAmount": 24,
     "toolTierRequired": 1
@@ -4606,7 +5109,7 @@
       "glassware": 1
     },
     "outputs": {
-      "tanglefoot_coating": 2
+      "tanglefoot_coating": 0.4
     },
     "workAmount": 20,
     "toolTierRequired": 1
@@ -4616,11 +5119,11 @@
     "station": "alchemy_lab",
     "inputs": {
       "resin": 2,
-      "distilled_spirit": 1,
+      "distilled_spirit": 0.3,
       "glassware": 1
     },
     "outputs": {
-      "greater_tanglefoot_coating": 2
+      "greater_tanglefoot_coating": 0.4
     },
     "workAmount": 12,
     "toolTierRequired": 1
@@ -4634,7 +5137,7 @@
       "glassware": 1
     },
     "outputs": {
-      "grand_tanglefoot_coating": 2
+      "grand_tanglefoot_coating": 0.4
     },
     "workAmount": 16,
     "toolTierRequired": 2
@@ -4648,7 +5151,7 @@
       "glassware": 1
     },
     "outputs": {
-      "dread_coating": 2
+      "dread_coating": 0.4
     },
     "workAmount": 20,
     "toolTierRequired": 1
@@ -4659,11 +5162,11 @@
     "inputs": {
       "mandrake": 1,
       "spore_of_madness": 1,
-      "distilled_spirit": 1,
+      "distilled_spirit": 0.3,
       "glassware": 1
     },
     "outputs": {
-      "greater_dread_coating": 2
+      "greater_dread_coating": 0.4
     },
     "workAmount": 12,
     "toolTierRequired": 1
@@ -4678,7 +5181,7 @@
       "glassware": 1
     },
     "outputs": {
-      "grand_dread_coating": 2
+      "grand_dread_coating": 0.4
     },
     "workAmount": 16,
     "toolTierRequired": 2
@@ -4692,7 +5195,7 @@
       "glassware": 1
     },
     "outputs": {
-      "farsight_tonic": 1
+      "farsight_tonic": 0.3
     },
     "workAmount": 28,
     "toolTierRequired": 1
@@ -4702,11 +5205,11 @@
     "station": "alchemy_lab",
     "inputs": {
       "glowcap": 2,
-      "distilled_spirit": 1,
+      "distilled_spirit": 0.3,
       "glassware": 1
     },
     "outputs": {
-      "greater_farsight_tonic": 1
+      "greater_farsight_tonic": 0.3
     },
     "workAmount": 12,
     "toolTierRequired": 1
@@ -4720,7 +5223,7 @@
       "glassware": 1
     },
     "outputs": {
-      "grand_farsight_tonic": 1
+      "grand_farsight_tonic": 0.3
     },
     "workAmount": 16,
     "toolTierRequired": 2
@@ -4734,7 +5237,7 @@
       "glassware": 1
     },
     "outputs": {
-      "antivenin_tonic": 1
+      "antivenin_tonic": 0.3
     },
     "workAmount": 28,
     "toolTierRequired": 1
@@ -4745,11 +5248,11 @@
     "inputs": {
       "charcoal": 1,
       "woundwort": 1,
-      "distilled_spirit": 1,
+      "distilled_spirit": 0.3,
       "glassware": 1
     },
     "outputs": {
-      "greater_antivenin_tonic": 1
+      "greater_antivenin_tonic": 0.3
     },
     "workAmount": 12,
     "toolTierRequired": 1
@@ -4764,7 +5267,7 @@
       "glassware": 1
     },
     "outputs": {
-      "grand_antivenin_tonic": 1
+      "grand_antivenin_tonic": 0.3
     },
     "workAmount": 16,
     "toolTierRequired": 2
@@ -4778,7 +5281,7 @@
       "glassware": 1
     },
     "outputs": {
-      "restful_tonic": 1
+      "restful_tonic": 0.3
     },
     "workAmount": 28,
     "toolTierRequired": 1
@@ -4789,11 +5292,11 @@
     "inputs": {
       "dreamleaf": 1,
       "wild_berries": 1,
-      "distilled_spirit": 1,
+      "distilled_spirit": 0.3,
       "glassware": 1
     },
     "outputs": {
-      "greater_restful_tonic": 1
+      "greater_restful_tonic": 0.3
     },
     "workAmount": 12,
     "toolTierRequired": 1
@@ -4808,7 +5311,7 @@
       "glassware": 1
     },
     "outputs": {
-      "grand_restful_tonic": 1
+      "grand_restful_tonic": 0.3
     },
     "workAmount": 16,
     "toolTierRequired": 2
@@ -4821,7 +5324,7 @@
       "sand": 2
     },
     "outputs": {
-      "honing_oil": 2
+      "honing_oil": 0.4
     },
     "workAmount": 18,
     "toolTierRequired": 1
@@ -4832,10 +5335,10 @@
     "inputs": {
       "tallow": 1,
       "sand": 2,
-      "distilled_spirit": 1
+      "distilled_spirit": 0.3
     },
     "outputs": {
-      "keen_edge_oil": 2
+      "keen_edge_oil": 0.4
     },
     "workAmount": 12,
     "toolTierRequired": 1
@@ -4849,7 +5352,7 @@
       "purified_catalyst": 1
     },
     "outputs": {
-      "razors_grace": 2
+      "razors_grace": 0.4
     },
     "workAmount": 16,
     "toolTierRequired": 2
@@ -4858,13 +5361,13 @@
   {
     "id": "make_fang_charm",
     "discipline"      : "bonecarving",
-    "station": "bone_carvers_bench",
-    "inputs": {"great_fang": 1, "predator_claw": 2, "cordage": 2},
+    "station": "runecarver_bench",
+    "inputs": {"great_fang": 1, "predator_claw": 2, "cordage": 8},
     "outputs": {
       "fang_charm": 1
     },
     "workAmount": 40,
-    "toolTierRequired": 1
+    "toolTierRequired": 3
   },
   {
     "id": "make_fang_arrow",
@@ -4873,7 +5376,7 @@
     "inputs": {
       "great_fang": 1,
       "branch": 2,
-      "sinew": 2,
+      "category:thread": 1,
       "feathers": 2
     },
     "inputAlternatives": [
@@ -4894,7 +5397,7 @@
     "id": "make_barbed_bone_arrow",
     "discipline"      : "bonecarving",
     "station": "makers_bench",
-    "inputs": {"branch": 1, "cordage": 1, "feathers": 1, "antler_rack": 1},
+    "inputs": {"branch": 1, "cordage": 4, "feathers": 1, "antler_rack": 1},
     "inputAlternatives": [{"curved_horn": 1, "branch": 1, "cordage": 1, "feathers": 1}, {"predator_claw": 2, "branch": 1, "cordage": 1, "feathers": 1}, {"branch": 1, "cordage": 1, "chicken_feathers": 1, "antler_rack": 1}],
     "outputs": {
       "barbed_bone_arrow": 6
@@ -5232,7 +5735,7 @@
   {
     "id"              : "make_copper_spear",
     "station"         : "stone_forge",
-    "inputs"          : {"copper_bar": 1, "wooden_haft": 1, "cordage": 1},
+    "inputs"          : {"copper_bar": 1, "wooden_haft": 1, "cordage": 4},
     "outputs"         : {"copper_spear": 1},
     "workAmount"      : 6,
     "toolTierRequired": 0,
@@ -5241,7 +5744,7 @@
   {
     "id"              : "make_copper_flat_axe",
     "station"         : "stone_forge",
-    "inputs"          : {"copper_bar": 1, "wooden_haft": 1, "cordage": 1},
+    "inputs"          : {"copper_bar": 1, "wooden_haft": 1, "cordage": 4},
     "outputs"         : {"copper_flat_axe": 1},
     "workAmount"      : 6,
     "toolTierRequired": 0,
@@ -5251,7 +5754,7 @@
   {
     "id"              : "make_bronze_leaf_sword",
     "station"         : "casting_hearth",
-    "inputs"          : {"bronze_bar": 1, "clay_mold": 1, "category:leather": 1},
+    "inputs"          : {"molten_bronze": 0.456, "clay_mold": 1, "category:leather": 1},
     "outputs"         : {"bronze_leaf_sword": 1},
     "workAmount"      : 9,
     "toolTierRequired": 1,
@@ -5260,7 +5763,7 @@
   {
     "id"              : "make_bronze_flanged_mace",
     "station"         : "casting_hearth",
-    "inputs"          : {"bronze_bar": 1, "clay_mold": 1, "wooden_haft": 1, "category:leather": 1},
+    "inputs"          : {"molten_bronze": 0.456, "clay_mold": 1, "wooden_haft": 1, "category:leather": 1},
     "outputs"         : {"bronze_flanged_mace": 1},
     "workAmount"      : 9,
     "toolTierRequired": 1,
@@ -5269,7 +5772,7 @@
   {
     "id"              : "make_bronze_socketed_spear",
     "station"         : "casting_hearth",
-    "inputs"          : {"bronze_bar": 1, "clay_mold": 1, "wooden_haft": 1, "cordage": 1},
+    "inputs"          : {"molten_bronze": 0.456, "clay_mold": 1, "wooden_haft": 1, "cordage": 4},
     "outputs"         : {"bronze_socketed_spear": 1},
     "workAmount"      : 8,
     "toolTierRequired": 1,
@@ -5278,7 +5781,7 @@
   {
     "id"              : "make_bronze_cleaver",
     "station"         : "casting_hearth",
-    "inputs"          : {"bronze_bar": 2, "clay_mold": 1, "category:leather": 1},
+    "inputs"          : {"molten_bronze": 0.912, "clay_mold": 1, "category:leather": 1},
     "outputs"         : {"bronze_cleaver": 1},
     "workAmount"      : 10,
     "toolTierRequired": 1,
@@ -5287,7 +5790,7 @@
   {
     "id"              : "make_bronze_chain_flail",
     "station"         : "casting_hearth",
-    "inputs"          : {"bronze_bar": 2, "clay_mold": 1, "wooden_haft": 1, "category:leather": 1},
+    "inputs"          : {"molten_bronze": 0.912, "clay_mold": 1, "wooden_haft": 1, "category:leather": 1},
     "outputs"         : {"bronze_chain_flail": 1},
     "workAmount"      : 12,
     "toolTierRequired": 1,
@@ -5296,7 +5799,7 @@
   {
     "id"              : "make_bronze_rapier",
     "station"         : "casting_hearth",
-    "inputs"          : {"bronze_bar": 1, "clay_mold": 1, "category:leather": 1},
+    "inputs"          : {"molten_bronze": 0.456, "clay_mold": 1, "category:leather": 1},
     "outputs"         : {"bronze_rapier": 1},
     "workAmount"      : 11,
     "toolTierRequired": 1,
@@ -5305,7 +5808,7 @@
   {
     "id"              : "make_bronze_great_leaf_sword",
     "station"         : "casting_hearth",
-    "inputs"          : {"bronze_bar": 2, "clay_mold": 1, "sanded_haft": 1, "category:leather": 1},
+    "inputs"          : {"molten_bronze": 0.912, "clay_mold": 1, "sanded_haft": 1, "category:leather": 1},
     "outputs"         : {"bronze_great_leaf_sword": 1},
     "workAmount"      : 14,
     "toolTierRequired": 1,
@@ -5314,7 +5817,7 @@
   {
     "id"              : "make_bronze_greatcleaver",
     "station"         : "casting_hearth",
-    "inputs"          : {"bronze_bar": 3, "clay_mold": 1, "sanded_haft": 1, "category:leather": 1},
+    "inputs"          : {"molten_bronze": 1.368, "clay_mold": 1, "sanded_haft": 1, "category:leather": 1},
     "outputs"         : {"bronze_greatcleaver": 1},
     "workAmount"      : 15,
     "toolTierRequired": 1,
@@ -5323,7 +5826,7 @@
   {
     "id"              : "make_bronze_double_axe",
     "station"         : "casting_hearth",
-    "inputs"          : {"bronze_bar": 3, "clay_mold": 1, "sanded_haft": 1, "cordage": 1},
+    "inputs"          : {"molten_bronze": 1.368, "clay_mold": 1, "sanded_haft": 1, "cordage": 4},
     "outputs"         : {"bronze_double_axe": 1},
     "workAmount"      : 15,
     "toolTierRequired": 1,
@@ -5332,7 +5835,7 @@
   {
     "id"              : "make_bronze_maul",
     "station"         : "casting_hearth",
-    "inputs"          : {"bronze_bar": 3, "clay_mold": 1, "sanded_haft": 1, "category:leather": 1},
+    "inputs"          : {"molten_bronze": 1.368, "clay_mold": 1, "sanded_haft": 1, "category:leather": 1},
     "outputs"         : {"bronze_maul": 1},
     "workAmount"      : 14,
     "toolTierRequired": 1,
@@ -5341,7 +5844,7 @@
   {
     "id"              : "make_bronze_capped_staff",
     "station"         : "casting_hearth",
-    "inputs"          : {"bronze_bar": 1, "clay_mold": 1, "sanded_haft": 2},
+    "inputs"          : {"molten_bronze": 0.456, "clay_mold": 1, "sanded_haft": 2},
     "outputs"         : {"bronze_capped_staff": 1},
     "workAmount"      : 6,
     "toolTierRequired": 1,
@@ -5369,7 +5872,7 @@
   {
     "id"              : "make_iron_winged_spear",
     "station"         : "anvil",
-    "inputs"          : {"iron_bar": 1, "sanded_haft": 1, "cordage": 1},
+    "inputs"          : {"iron_bar": 1, "sanded_haft": 1, "cordage": 4},
     "outputs"         : {"iron_winged_spear": 1},
     "workAmount"      : 10,
     "toolTierRequired": 2,
@@ -5415,7 +5918,7 @@
   {
     "id"              : "make_steel_boar_spear",
     "station"         : "anvil",
-    "inputs"          : {"category:steel": 1, "seasoned_haft": 1, "cordage": 1},
+    "inputs"          : {"category:steel": 1, "seasoned_haft": 1, "cordage": 4},
     "outputs"         : {"steel_boar_spear": 1},
     "workAmount"      : 13,
     "toolTierRequired": 2,
@@ -5525,7 +6028,7 @@
   {
     "id"              : "make_rune_graven_spear",
     "station"         : "runecarver_bench",
-    "inputs"          : {"magic_alloy_bar": 1, "gem_dust": 1, "seasoned_haft": 1, "cordage": 1},
+    "inputs"          : {"magic_alloy_bar": 1, "gem_dust": 1, "seasoned_haft": 1, "cordage": 4},
     "outputs"         : {"rune_graven_spear": 1},
     "workAmount"      : 30,
     "toolTierRequired": 2,
@@ -5606,18 +6109,10 @@
   // Launchers: a turned grip or stock, a string good enough for the draw, and for a crossbow the
   // cast fasteners that hold the lock together.
   {
-    "id"              : "spin_silk_bowstring",
-    "station"         : "spinning_wheel",
-    "inputs"          : {"raw_silk": 1},
-    "outputs"         : {"silk_bowstring": 1},
-    "workAmount"      : 6,
-    "toolTierRequired": 1
-  },
-  {
     "id"              : "make_sinew_backed_bow",
     "discipline"      : "woodworking",
     "station"         : "makers_bench",
-    "inputs"          : {"wooden_haft": 1, "sinew": 3, "cordage": 1},
+    "inputs"          : {"wooden_haft": 1, "sinew": 3, "category:binding": 4},
     "outputs"         : {"sinew_backed_bow": 1},
     "workAmount"      : 8,
     "toolTierRequired": 0,
@@ -5637,7 +6132,7 @@
     "id"              : "make_horn_composite_bow",
     "discipline"      : "woodworking",
     "station"         : "makers_bench",
-    "inputs"          : {"sanded_haft": 1, "curved_horn": 2, "sinew": 3, "thread": 1},
+    "inputs"          : {"category:binding": 2, "sanded_haft": 1, "curved_horn": 2},
     "outputs"         : {"horn_composite_bow": 1},
     "workAmount"      : 14,
     "toolTierRequired": 1,
@@ -5647,7 +6142,7 @@
     "id"              : "make_yew_longbow",
     "discipline"      : "woodworking",
     "station"         : "makers_bench",
-    "inputs"          : {"seasoned_haft": 1, "yew_log": 1, "silk_bowstring": 1, "sinew": 2},
+    "inputs"          : {"seasoned_haft": 1, "yew_log": 1, "spider_silk_thread": 1, "category:thread": 2},
     "outputs"         : {"yew_longbow": 1},
     "workAmount"      : 18,
     "toolTierRequired": 2,
@@ -5656,7 +6151,7 @@
   {
     "id"              : "make_rune_strung_warbow",
     "station"         : "runecarver_bench",
-    "inputs"          : {"seasoned_haft": 1, "yew_log": 1, "silk_bowstring": 1, "enchant_thread": 1, "gem_dust": 1},
+    "inputs"          : {"seasoned_haft": 1, "yew_log": 1, "spider_silk_thread": 1, "enchant_thread": 2, "gem_dust": 1},
     "outputs"         : {"rune_strung_warbow": 1},
     "workAmount"      : 34,
     "toolTierRequired": 2,
@@ -5666,7 +6161,7 @@
     "id"              : "make_composite_crossbow",
     "discipline"      : "woodworking",
     "station"         : "makers_bench",
-    "inputs"          : {"sanded_haft": 1, "oak_plank": 1, "curved_horn": 1, "sinew": 2, "bronze_nail": 26, "thread": 1},
+    "inputs"          : {"category:binding": 5, "sanded_haft": 1, "oak_plank": 1, "curved_horn": 1, "bronze_nail": 26},
     "outputs"         : {"composite_crossbow": 1},
     "workAmount"      : 16,
     "toolTierRequired": 1,
@@ -5675,7 +6170,7 @@
   {
     "id"              : "make_steel_arbalest",
     "station"         : "anvil",
-    "inputs"          : {"seasoned_haft": 1, "oak_plank": 2, "category:steel": 2, "steel_rivet": 36, "silk_bowstring": 1, "category:leather": 1},
+    "inputs"          : {"seasoned_haft": 1, "oak_plank": 2, "category:steel": 2, "steel_rivet": 36, "spider_silk_thread": 1, "category:leather": 1},
     "outputs"         : {"steel_arbalest": 1},
     "workAmount"      : 24,
     "toolTierRequired": 2,
@@ -5684,7 +6179,7 @@
   {
     "id"              : "make_rune_cranked_arbalest",
     "station"         : "runecarver_bench",
-    "inputs"          : {"seasoned_haft": 1, "magic_alloy_bar": 1, "steel_rivet": 34, "silk_bowstring": 1, "enchant_thread": 1},
+    "inputs"          : {"seasoned_haft": 1, "magic_alloy_bar": 1, "steel_rivet": 34, "spider_silk_thread": 1, "enchant_thread": 8},
     "outputs"         : {"rune_cranked_arbalest": 1},
     "workAmount"      : 38,
     "toolTierRequired": 2,
@@ -5694,7 +6189,7 @@
     "id"              : "make_staff_sling",
     "discipline"      : "leatherworking",
     "station"         : "makers_bench",
-    "inputs"          : {"wooden_haft": 1, "category:leather": 1, "cordage": 2},
+    "inputs"          : {"wooden_haft": 1, "category:leather": 1, "cordage": 8},
     "outputs"         : {"staff_sling": 1},
     "workAmount"      : 5,
     "toolTierRequired": 0
@@ -5702,7 +6197,7 @@
   {
     "id"              : "make_rune_whistling_sling",
     "station"         : "runecarver_bench",
-    "inputs"          : {"category:leather": 1, "enchant_thread": 2, "gem_dust": 1},
+    "inputs"          : {"category:leather": 1, "enchant_thread": 1, "gem_dust": 1},
     "outputs"         : {"rune_whistling_sling": 1},
     "workAmount"      : 22,
     "toolTierRequired": 1,
@@ -5712,7 +6207,7 @@
   {
     "id"              : "make_bronze_javelin",
     "station"         : "casting_hearth",
-    "inputs"          : {"bronze_bar": 1, "clay_mold": 1, "wooden_haft": 1},
+    "inputs"          : {"molten_bronze": 0.456, "clay_mold": 1, "wooden_haft": 1},
     "outputs"         : {"bronze_javelin": 2},
     "workAmount"      : 6,
     "toolTierRequired": 1,
@@ -5823,7 +6318,7 @@
   {
     "id"              : "make_bronze_arrow",
     "station"         : "casting_hearth",
-    "inputs"          : {"branch": 1, "bronze_bar": 1, "clay_mold": 1, "sinew": 1, "feathers": 1},
+    "inputs"          : {"branch": 1, "molten_bronze": 0.456, "clay_mold": 1, "category:binding": 1, "feathers": 1},
     "inputAlternatives": [{"branch": 1, "bronze_bar": 1, "clay_mold": 1, "sinew": 1, "chicken_feathers": 1}],
     "outputs"         : {"bronze_arrow": 8},
     "workAmount"      : 5,
@@ -5833,7 +6328,7 @@
   {
     "id"              : "make_bronze_bolt",
     "station"         : "casting_hearth",
-    "inputs"          : {"branch": 1, "bronze_bar": 1, "clay_mold": 1, "sinew": 1},
+    "inputs"          : {"branch": 1, "bronze_bar": 1, "clay_mold": 1, "category:binding": 1},
     "outputs"         : {"bronze_bolt": 6},
     "workAmount"      : 5,
     "toolTierRequired": 1,
@@ -5842,7 +6337,7 @@
   {
     "id"              : "make_steel_bodkin_arrow",
     "station"         : "anvil",
-    "inputs"          : {"branch": 1, "category:steel": 1, "sinew": 1, "feathers": 1},
+    "inputs"          : {"branch": 1, "category:steel": 1, "category:thread": 1, "feathers": 1},
     "inputAlternatives": [{"branch": 1, "category:steel": 1, "sinew": 1, "chicken_feathers": 1}],
     "outputs"         : {"steel_bodkin_arrow": 10},
     "workAmount"      : 7,
@@ -5852,7 +6347,7 @@
   {
     "id"              : "make_steel_broadhead_arrow",
     "station"         : "anvil",
-    "inputs"          : {"branch": 1, "category:steel": 1, "sinew": 1, "feathers": 1},
+    "inputs"          : {"branch": 1, "category:steel": 1, "category:thread": 1, "feathers": 1},
     "inputAlternatives": [{"branch": 1, "category:steel": 1, "sinew": 1, "chicken_feathers": 1}],
     "outputs"         : {"steel_broadhead_arrow": 8},
     "workAmount"      : 7,
@@ -5862,7 +6357,7 @@
   {
     "id"              : "make_steel_quarrel",
     "station"         : "anvil",
-    "inputs"          : {"branch": 1, "category:steel": 1, "sinew": 1, "feathers": 1},
+    "inputs"          : {"branch": 1, "category:steel": 1, "category:thread": 1, "feathers": 1},
     "inputAlternatives": [{"branch": 1, "category:steel": 1, "sinew": 1, "chicken_feathers": 1}],
     "outputs"         : {"steel_quarrel": 8},
     "workAmount"      : 7,
@@ -5893,7 +6388,7 @@
     "id"              : "make_stone_club",
     "discipline"      : "knapping",
     "station"         : "craft_spot",
-    "inputs"          : {"small_stone": 2, "branch": 1, "cordage": 1},
+    "inputs"          : {"small_stone": 2, "branch": 1, "cordage": 4},
     "outputs"         : {"stone_club": 1},
     "workAmount"      : 3,
     "toolTierRequired": 0
@@ -5916,7 +6411,7 @@
   {
     "id"              : "make_cured_hide_skirt",
     "station"         : "makers_bench",
-    "inputs"          : {},
+    "inputs"          : {"category:binding": 2},
     "outputs"         : {"cured_hide_skirt": 1},
     "workAmount"      : 4,
     "toolTierRequired": 0,
@@ -5926,7 +6421,7 @@
   {
     "id"              : "make_boarhide_bracers",
     "station"         : "makers_bench",
-    "inputs"          : {"boarhide": 1, "bronze_bar": 1},
+    "inputs"          : {"boarhide": 1, "bronze_bar": 1, "category:binding": 2},
     "outputs"         : {"boarhide_bracers": 1},
     "workAmount"      : 7,
     "toolTierRequired": 0,
@@ -5935,7 +6430,7 @@
   {
     "id"              : "make_boarhide_greaves",
     "station"         : "makers_bench",
-    "inputs"          : {"boarhide": 2, "bronze_bar": 2},
+    "inputs"          : {"boarhide": 2, "bronze_bar": 2, "category:binding": 3},
     "outputs"         : {"boarhide_greaves": 1},
     "workAmount"      : 9,
     "toolTierRequired": 0,
@@ -5944,7 +6439,7 @@
   {
     "id"              : "make_cast_bronze_bracers",
     "station"         : "casting_hearth",
-    "inputs"          : {"bronze_bar": 1, "clay_mold": 1},
+    "inputs"          : {"bronze_bar": 1, "clay_mold": 1, "category:binding": 2},
     "outputs"         : {"cast_bronze_bracers": 1},
     "workAmount"      : 7,
     "toolTierRequired": 1,
@@ -5954,7 +6449,7 @@
   {
     "id"              : "make_cast_bronze_greaves",
     "station"         : "casting_hearth",
-    "inputs"          : {"bronze_bar": 1, "clay_mold": 1},
+    "inputs"          : {"bronze_bar": 1, "clay_mold": 1, "category:binding": 3},
     "outputs"         : {"cast_bronze_greaves": 1},
     "workAmount"      : 8,
     "toolTierRequired": 1,
@@ -5964,7 +6459,7 @@
   {
     "id"              : "make_iron_bracers",
     "station"         : "anvil",
-    "inputs"          : {"iron_bar": 1},
+    "inputs"          : {"iron_bar": 1, "category:thread": 3},
     "outputs"         : {"iron_bracers": 1},
     "workAmount"      : 8,
     "toolTierRequired": 2,
@@ -5974,7 +6469,7 @@
   {
     "id"              : "make_iron_greaves",
     "station"         : "anvil",
-    "inputs"          : {"iron_bar": 2},
+    "inputs"          : {"iron_bar": 2, "category:thread": 4},
     "outputs"         : {"iron_greaves": 1},
     "workAmount"      : 10,
     "toolTierRequired": 2,
@@ -6004,7 +6499,7 @@
   {
     "id"              : "make_cured_hide_footwraps",
     "station"         : "makers_bench",
-    "inputs"          : {},
+    "inputs"          : {"category:binding": 1},
     "outputs"         : {"cured_hide_boots": 1},
     "workAmount"      : 3,
     "toolTierRequired": 0,
@@ -6014,7 +6509,7 @@
   {
     "id"              : "make_copper_scale_shirt",
     "station"         : "stone_forge",
-    "inputs"          : {"copper_bar": 4},
+    "inputs"          : {"copper_bar": 4, "category:binding": 8},
     "outputs"         : {"copper_scale_shirt": 1},
     "workAmount"      : 26,
     "toolTierRequired": 0,
@@ -6024,7 +6519,7 @@
   {
     "id"              : "make_copper_scale_cap",
     "station"         : "stone_forge",
-    "inputs"          : {"copper_bar": 1},
+    "inputs"          : {"copper_bar": 1, "category:binding": 2},
     "outputs"         : {"copper_scale_cap": 1},
     "workAmount"      : 10,
     "toolTierRequired": 0,
@@ -6034,7 +6529,7 @@
   {
     "id"              : "make_copper_scale_bracers",
     "station"         : "stone_forge",
-    "inputs"          : {"copper_bar": 1},
+    "inputs"          : {"copper_bar": 1, "category:binding": 2},
     "outputs"         : {"copper_scale_bracers": 1},
     "workAmount"      : 8,
     "toolTierRequired": 0,
@@ -6044,7 +6539,7 @@
   {
     "id"              : "make_copper_scale_greaves",
     "station"         : "stone_forge",
-    "inputs"          : {"copper_bar": 1},
+    "inputs"          : {"copper_bar": 1, "category:binding": 3},
     "outputs"         : {"copper_scale_greaves": 1},
     "workAmount"      : 9,
     "toolTierRequired": 0,
@@ -6054,7 +6549,7 @@
   {
     "id"              : "make_linen_robe",
     "station"         : "weaving_frame",
-    "inputs"          : {"linen_cloth": 7},
+    "inputs"          : {"linen_cloth": 7, "category:binding": 2},
     "outputs"         : {"linen_robe": 1},
     "workAmount"      : 10,
     "toolTierRequired": 0,
@@ -6063,7 +6558,7 @@
   {
     "id"              : "make_three_finger_glove",
     "station"         : "makers_bench",
-    "inputs"          : {},
+    "inputs"          : {"category:binding": 1},
     "outputs"         : {"three_finger_glove": 1},
     "workAmount"      : 4,
     "toolTierRequired": 0,
@@ -6071,29 +6566,47 @@
     "dynamicRecipe"   : {"leather": {"acceptsCategory": "leather", "quantity": 2}}
   },
   {
+    "id": "make_arming_cap",
+    "discipline": "tailoring",
+    "station": "weaving_frame",
+    "inputs": { "linen_cloth": 3, "cotton_fiber": 6, "category:thread": 2 },
+    "outputs": { "arming_cap": 1 },
+    "workAmount": 10,
+    "toolTierRequired": 2,
+    "researchRequired": "steel_making"
+  },
+  {
+    "id": "make_arming_doublet",
+    "discipline": "tailoring",
+    "station": "weaving_frame",
+    "inputs": {
+      "linen_cloth": 26,
+      "cotton_fiber": 30,
+      "mail_rings": 6,
+      "category:leather": 2,
+      "category:thread": 10
+    },
+    "outputs": { "arming_doublet": 1 },
+    "workAmount": 38,
+    "toolTierRequired": 2,
+    "researchRequired": "steel_making"
+  },
+  {
+    "id": "make_arming_hose",
+    "discipline": "tailoring",
+    "station": "weaving_frame",
+    "inputs": { "linen_cloth": 7, "cotton_fiber": 10, "category:leather": 1, "category:thread": 4 },
+    "outputs": { "arming_hose": 1 },
+    "workAmount": 18,
+    "toolTierRequired": 2,
+    "researchRequired": "steel_making"
+  },
+  {
     "id"              : "make_quilted_jack",
     "station"         : "weaving_frame",
-    "inputs"          : {"linen_cloth": 24, "plant_fiber": 6},
+    "inputs"          : {"linen_cloth": 24, "plant_fiber": 6, "category:binding": 7},
     "outputs"         : {"quilted_jack": 1},
     "workAmount"      : 24,
-    "toolTierRequired": 0,
-    "discipline"      : "weaving"
-  },
-  {
-    "id"              : "make_arming_cap",
-    "station"         : "weaving_frame",
-    "inputs"          : {"linen_cloth": 2, "plant_fiber": 2},
-    "outputs"         : {"arming_cap": 1},
-    "workAmount"      : 6,
-    "toolTierRequired": 0,
-    "discipline"      : "weaving"
-  },
-  {
-    "id"              : "make_arming_doublet",
-    "station"         : "weaving_frame",
-    "inputs"          : {"linen_cloth": 20, "plant_fiber": 4},
-    "outputs"         : {"arming_doublet": 1},
-    "workAmount"      : 20,
     "toolTierRequired": 0,
     "discipline"      : "weaving"
   },
@@ -6144,7 +6657,7 @@
   {
     "id"              : "make_rune_graven_cuirass",
     "station"         : "runecarver_bench",
-    "inputs"          : {"magic_alloy_bar": 4, "gem_dust": 2, "boarhide": 1},
+    "inputs"          : {"magic_alloy_bar": 4, "gem_dust": 2, "boarhide": 1, "enchant_thread": 12},
     "outputs"         : {"rune_graven_cuirass": 1},
     "workAmount"      : 60,
     "toolTierRequired": 2,
@@ -6153,7 +6666,7 @@
   {
     "id"              : "make_rune_graven_helm",
     "station"         : "runecarver_bench",
-    "inputs"          : {"magic_alloy_bar": 2, "gem_dust": 1, "boarhide": 1},
+    "inputs"          : {"magic_alloy_bar": 2, "gem_dust": 1, "boarhide": 1, "enchant_thread": 4},
     "outputs"         : {"rune_graven_helm": 1},
     "workAmount"      : 40,
     "toolTierRequired": 2,
@@ -6162,7 +6675,7 @@
   {
     "id"              : "make_rune_graven_vambraces",
     "station"         : "runecarver_bench",
-    "inputs"          : {"magic_alloy_bar": 1, "gem_dust": 1},
+    "inputs"          : {"magic_alloy_bar": 1, "gem_dust": 1, "enchant_thread": 2},
     "outputs"         : {"rune_graven_vambraces": 1},
     "workAmount"      : 24,
     "toolTierRequired": 2,
@@ -6171,7 +6684,7 @@
   {
     "id"              : "make_rune_graven_greaves",
     "station"         : "runecarver_bench",
-    "inputs"          : {"magic_alloy_bar": 1, "gem_dust": 1},
+    "inputs"          : {"magic_alloy_bar": 1, "gem_dust": 1, "enchant_thread": 3},
     "outputs"         : {"rune_graven_greaves": 1},
     "workAmount"      : 28,
     "toolTierRequired": 2,
@@ -6180,7 +6693,7 @@
   {
     "id"              : "make_rune_stitched_lamellar",
     "station"         : "runecarver_bench",
-    "inputs"          : {"magic_alloy_bar": 2, "enchant_thread": 3, "gem_dust": 1},
+    "inputs"          : {"magic_alloy_bar": 2, "enchant_thread": 9, "gem_dust": 1},
     "outputs"         : {"rune_stitched_lamellar": 1},
     "workAmount"      : 48,
     "toolTierRequired": 2,
@@ -6190,7 +6703,7 @@
   {
     "id"              : "make_rune_stitched_coif",
     "station"         : "runecarver_bench",
-    "inputs"          : {"magic_alloy_bar": 1, "enchant_thread": 2, "gem_dust": 1},
+    "inputs"          : {"magic_alloy_bar": 1, "enchant_thread": 3, "gem_dust": 1},
     "outputs"         : {"rune_stitched_coif": 1},
     "workAmount"      : 30,
     "toolTierRequired": 2,
@@ -6199,7 +6712,7 @@
   {
     "id"              : "make_rune_woven_robe",
     "station"         : "runic_loom",
-    "inputs"          : {"silk_cloth": 9, "enchant_thread": 3, "gem_dust": 1},
+    "inputs"          : {"silk_cloth": 9, "enchant_thread": 4, "gem_dust": 1},
     "outputs"         : {"rune_woven_robe": 1},
     "workAmount"      : 36,
     "toolTierRequired": 2,
@@ -6220,7 +6733,7 @@
   {
     "id"              : "make_jackal_head",
     "station"         : "makers_bench",
-    "inputs"          : {"jackal_leather": 2},
+    "inputs"          : {"jackal_leather": 2, "category:binding": 1},
     "outputs"         : {"jackal_head": 1},
     "workAmount"      : 11,
     "toolTierRequired": 0,
@@ -6229,7 +6742,7 @@
   {
     "id"              : "make_jackal_bodybase",
     "station"         : "makers_bench",
-    "inputs"          : {"jackal_leather": 5},
+    "inputs"          : {"jackal_leather": 5, "category:binding": 4},
     "outputs"         : {"jackal_bodybase": 1},
     "workAmount"      : 19,
     "toolTierRequired": 0,
@@ -6238,7 +6751,7 @@
   {
     "id"              : "make_jackal_bracers",
     "station"         : "makers_bench",
-    "inputs"          : {"jackal_leather": 3},
+    "inputs"          : {"jackal_leather": 3, "category:binding": 1},
     "outputs"         : {"jackal_bracers": 1},
     "workAmount"      : 11,
     "toolTierRequired": 0,
@@ -6247,7 +6760,7 @@
   {
     "id"              : "make_jackal_gloves",
     "station"         : "makers_bench",
-    "inputs"          : {"jackal_leather": 2},
+    "inputs"          : {"jackal_leather": 2, "category:binding": 1},
     "outputs"         : {"jackal_gloves": 1},
     "workAmount"      : 9,
     "toolTierRequired": 0,
@@ -6256,7 +6769,7 @@
   {
     "id"              : "make_jackal_greaves",
     "station"         : "makers_bench",
-    "inputs"          : {"jackal_leather": 3},
+    "inputs"          : {"jackal_leather": 3, "category:binding": 2},
     "outputs"         : {"jackal_greaves": 1},
     "workAmount"      : 13,
     "toolTierRequired": 0,
@@ -6265,7 +6778,7 @@
   {
     "id"              : "make_jackal_boots",
     "station"         : "makers_bench",
-    "inputs"          : {"jackal_leather": 3},
+    "inputs"          : {"jackal_leather": 3, "category:binding": 1},
     "outputs"         : {"jackal_boots": 1},
     "workAmount"      : 11,
     "toolTierRequired": 0,
@@ -6274,7 +6787,7 @@
   {
     "id"              : "make_boar_head",
     "station"         : "casting_hearth",
-    "inputs"          : {"boarhide": 1, "bronze_bar": 1, "bronze_nail": 8},
+    "inputs"          : {"boarhide": 1, "bronze_bar": 1, "category:binding": 1},
     "outputs"         : {"boar_head": 1},
     "workAmount"      : 11,
     "toolTierRequired": 0,
@@ -6283,7 +6796,7 @@
   {
     "id"              : "make_boar_gloves",
     "station"         : "casting_hearth",
-    "inputs"          : {"boarhide": 1, "bronze_bar": 1, "bronze_nail": 4},
+    "inputs"          : {"boarhide": 1, "bronze_bar": 1, "category:binding": 1},
     "outputs"         : {"boar_gloves": 1},
     "workAmount"      : 9,
     "toolTierRequired": 0,
@@ -6292,7 +6805,7 @@
   {
     "id"              : "make_boar_boots",
     "station"         : "casting_hearth",
-    "inputs"          : {"boarhide": 2, "bronze_bar": 2, "bronze_nail": 8},
+    "inputs"          : {"boarhide": 2, "bronze_bar": 2, "category:binding": 1},
     "outputs"         : {"boar_boots": 1},
     "workAmount"      : 11,
     "toolTierRequired": 0,
@@ -6301,7 +6814,7 @@
   {
     "id"              : "make_deer_bodybase",
     "station"         : "makers_bench",
-    "inputs"          : {"buckskin": 5},
+    "inputs"          : {"buckskin": 5, "category:binding": 4},
     "outputs"         : {"deer_bodybase": 1},
     "workAmount"      : 19,
     "toolTierRequired": 0,
@@ -6310,7 +6823,7 @@
   {
     "id"              : "make_deer_boots",
     "station"         : "makers_bench",
-    "inputs"          : {"buckskin": 3},
+    "inputs"          : {"buckskin": 3, "category:binding": 1},
     "outputs"         : {"deer_boots": 1},
     "workAmount"      : 11,
     "toolTierRequired": 0,
@@ -6319,7 +6832,7 @@
   {
     "id"              : "make_linen_cap",
     "station"         : "weaving_frame",
-    "inputs"          : {"linen_cloth": 3},
+    "inputs"          : {"linen_cloth": 3, "category:binding": 1},
     "outputs"         : {"linen_cap": 1},
     "workAmount"      : 11,
     "toolTierRequired": 0,
@@ -6328,7 +6841,7 @@
   {
     "id"              : "make_linen_gloves",
     "station"         : "weaving_frame",
-    "inputs"          : {"linen_cloth": 2},
+    "inputs"          : {"linen_cloth": 2, "category:binding": 1},
     "outputs"         : {"linen_gloves": 1},
     "workAmount"      : 9,
     "toolTierRequired": 0,
@@ -6337,7 +6850,7 @@
   {
     "id"              : "make_linen_boots",
     "station"         : "weaving_frame",
-    "inputs"          : {"linen_cloth": 3},
+    "inputs"          : {"linen_cloth": 3, "category:binding": 1},
     "outputs"         : {"linen_boots": 1},
     "workAmount"      : 11,
     "toolTierRequired": 0,
@@ -6346,7 +6859,7 @@
   {
     "id"              : "make_wolf_head",
     "station"         : "makers_bench",
-    "inputs"          : {"wolf_leather": 2},
+    "inputs"          : {"wolf_leather": 2, "category:binding": 1},
     "outputs"         : {"wolf_head": 1},
     "workAmount"      : 14,
     "toolTierRequired": 1,
@@ -6355,7 +6868,7 @@
   {
     "id"              : "make_wolf_bodybase",
     "station"         : "makers_bench",
-    "inputs"          : {"wolf_leather": 5},
+    "inputs"          : {"wolf_leather": 5, "category:binding": 4},
     "outputs"         : {"wolf_bodybase": 1},
     "workAmount"      : 22,
     "toolTierRequired": 1,
@@ -6364,7 +6877,7 @@
   {
     "id"              : "make_wolf_bracers",
     "station"         : "makers_bench",
-    "inputs"          : {"wolf_leather": 3},
+    "inputs"          : {"wolf_leather": 3, "category:binding": 1},
     "outputs"         : {"wolf_bracers": 1},
     "workAmount"      : 14,
     "toolTierRequired": 1,
@@ -6373,7 +6886,7 @@
   {
     "id"              : "make_wolf_gloves",
     "station"         : "makers_bench",
-    "inputs"          : {"wolf_leather": 2},
+    "inputs"          : {"wolf_leather": 2, "category:binding": 1},
     "outputs"         : {"wolf_gloves": 1},
     "workAmount"      : 12,
     "toolTierRequired": 1,
@@ -6382,7 +6895,7 @@
   {
     "id"              : "make_wolf_greaves",
     "station"         : "makers_bench",
-    "inputs"          : {"wolf_leather": 3},
+    "inputs"          : {"wolf_leather": 3, "category:binding": 2},
     "outputs"         : {"wolf_greaves": 1},
     "workAmount"      : 16,
     "toolTierRequired": 1,
@@ -6391,7 +6904,7 @@
   {
     "id"              : "make_wolf_boots",
     "station"         : "makers_bench",
-    "inputs"          : {"wolf_leather": 3},
+    "inputs"          : {"wolf_leather": 3, "category:binding": 1},
     "outputs"         : {"wolf_boots": 1},
     "workAmount"      : 14,
     "toolTierRequired": 1,
@@ -6420,7 +6933,7 @@
   {
     "id"              : "make_elk_head",
     "station"         : "makers_bench",
-    "inputs"          : {"elk_leather": 2},
+    "inputs"          : {"elk_leather": 2, "category:binding": 1},
     "outputs"         : {"elk_head": 1},
     "workAmount"      : 14,
     "toolTierRequired": 1,
@@ -6429,7 +6942,7 @@
   {
     "id"              : "make_elk_bodybase",
     "station"         : "makers_bench",
-    "inputs"          : {"elk_leather": 5},
+    "inputs"          : {"elk_leather": 5, "category:binding": 4},
     "outputs"         : {"elk_bodybase": 1},
     "workAmount"      : 22,
     "toolTierRequired": 1,
@@ -6438,7 +6951,7 @@
   {
     "id"              : "make_elk_bracers",
     "station"         : "makers_bench",
-    "inputs"          : {"elk_leather": 3},
+    "inputs"          : {"elk_leather": 3, "category:binding": 1},
     "outputs"         : {"elk_bracers": 1},
     "workAmount"      : 14,
     "toolTierRequired": 1,
@@ -6447,7 +6960,7 @@
   {
     "id"              : "make_elk_gloves",
     "station"         : "makers_bench",
-    "inputs"          : {"elk_leather": 2},
+    "inputs"          : {"elk_leather": 2, "category:binding": 1},
     "outputs"         : {"elk_gloves": 1},
     "workAmount"      : 12,
     "toolTierRequired": 1,
@@ -6456,7 +6969,7 @@
   {
     "id"              : "make_elk_boots",
     "station"         : "makers_bench",
-    "inputs"          : {"elk_leather": 3},
+    "inputs"          : {"elk_leather": 3, "category:binding": 1},
     "outputs"         : {"elk_boots": 1},
     "workAmount"      : 14,
     "toolTierRequired": 1,
@@ -6465,7 +6978,7 @@
   {
     "id"              : "make_quilted_head",
     "station"         : "weaving_frame",
-    "inputs"          : {"linen_cloth": 3},
+    "inputs"          : {"linen_cloth": 3, "category:binding": 1},
     "outputs"         : {"quilted_head": 1},
     "workAmount"      : 14,
     "toolTierRequired": 1,
@@ -6474,7 +6987,7 @@
   {
     "id"              : "make_quilted_gloves",
     "station"         : "weaving_frame",
-    "inputs"          : {"linen_cloth": 2},
+    "inputs"          : {"linen_cloth": 2, "category:binding": 1},
     "outputs"         : {"quilted_gloves": 1},
     "workAmount"      : 12,
     "toolTierRequired": 1,
@@ -6483,7 +6996,7 @@
   {
     "id"              : "make_quilted_boots",
     "station"         : "weaving_frame",
-    "inputs"          : {"linen_cloth": 3},
+    "inputs"          : {"linen_cloth": 3, "category:binding": 1},
     "outputs"         : {"quilted_boots": 1},
     "workAmount"      : 14,
     "toolTierRequired": 1,
@@ -6492,7 +7005,7 @@
   {
     "id"              : "make_sabretooth_head",
     "station"         : "curriers_bench",
-    "inputs"          : {"sabretooth_leather": 2},
+    "inputs"          : {"sabretooth_leather": 2, "category:thread": 1},
     "outputs"         : {"sabretooth_head": 1},
     "workAmount"      : 17,
     "toolTierRequired": 2,
@@ -6501,7 +7014,7 @@
   {
     "id"              : "make_sabretooth_bodybase",
     "station"         : "curriers_bench",
-    "inputs"          : {"sabretooth_leather": 5},
+    "inputs"          : {"sabretooth_leather": 5, "category:thread": 4},
     "outputs"         : {"sabretooth_bodybase": 1},
     "workAmount"      : 25,
     "toolTierRequired": 2,
@@ -6510,7 +7023,7 @@
   {
     "id"              : "make_sabretooth_bracers",
     "station"         : "curriers_bench",
-    "inputs"          : {"sabretooth_leather": 3},
+    "inputs"          : {"sabretooth_leather": 3, "category:thread": 1},
     "outputs"         : {"sabretooth_bracers": 1},
     "workAmount"      : 17,
     "toolTierRequired": 2,
@@ -6519,7 +7032,7 @@
   {
     "id"              : "make_sabretooth_gloves",
     "station"         : "curriers_bench",
-    "inputs"          : {"sabretooth_leather": 2},
+    "inputs"          : {"sabretooth_leather": 2, "category:thread": 1},
     "outputs"         : {"sabretooth_gloves": 1},
     "workAmount"      : 15,
     "toolTierRequired": 2,
@@ -6528,7 +7041,7 @@
   {
     "id"              : "make_sabretooth_greaves",
     "station"         : "curriers_bench",
-    "inputs"          : {"sabretooth_leather": 3},
+    "inputs"          : {"sabretooth_leather": 3, "category:thread": 2},
     "outputs"         : {"sabretooth_greaves": 1},
     "workAmount"      : 19,
     "toolTierRequired": 2,
@@ -6537,7 +7050,7 @@
   {
     "id"              : "make_sabretooth_boots",
     "station"         : "curriers_bench",
-    "inputs"          : {"sabretooth_leather": 3},
+    "inputs"          : {"sabretooth_leather": 3, "category:thread": 1},
     "outputs"         : {"sabretooth_boots": 1},
     "workAmount"      : 17,
     "toolTierRequired": 2,
@@ -6566,7 +7079,7 @@
   {
     "id"              : "make_owlbear_head",
     "station"         : "curriers_bench",
-    "inputs"          : {"owlbear_leather": 2},
+    "inputs"          : {"owlbear_leather": 2, "category:thread": 1},
     "outputs"         : {"owlbear_head": 1},
     "workAmount"      : 17,
     "toolTierRequired": 2,
@@ -6575,7 +7088,7 @@
   {
     "id"              : "make_owlbear_bodybase",
     "station"         : "curriers_bench",
-    "inputs"          : {"owlbear_leather": 5},
+    "inputs"          : {"owlbear_leather": 5, "category:thread": 4},
     "outputs"         : {"owlbear_bodybase": 1},
     "workAmount"      : 25,
     "toolTierRequired": 2,
@@ -6584,7 +7097,7 @@
   {
     "id"              : "make_owlbear_bracers",
     "station"         : "curriers_bench",
-    "inputs"          : {"owlbear_leather": 3},
+    "inputs"          : {"owlbear_leather": 3, "category:thread": 1},
     "outputs"         : {"owlbear_bracers": 1},
     "workAmount"      : 17,
     "toolTierRequired": 2,
@@ -6593,7 +7106,7 @@
   {
     "id"              : "make_owlbear_gloves",
     "station"         : "curriers_bench",
-    "inputs"          : {"owlbear_leather": 2},
+    "inputs"          : {"owlbear_leather": 2, "category:thread": 1},
     "outputs"         : {"owlbear_gloves": 1},
     "workAmount"      : 15,
     "toolTierRequired": 2,
@@ -6602,34 +7115,16 @@
   {
     "id"              : "make_owlbear_boots",
     "station"         : "curriers_bench",
-    "inputs"          : {"owlbear_leather": 3},
+    "inputs"          : {"owlbear_leather": 3, "category:thread": 1},
     "outputs"         : {"owlbear_boots": 1},
     "workAmount"      : 17,
     "toolTierRequired": 2,
     "discipline"      : "leatherworking"
   },
   {
-    "id"              : "make_arming_gloves",
-    "station"         : "weaving_frame",
-    "inputs"          : {"linen_cloth": 2},
-    "outputs"         : {"arming_gloves": 1},
-    "workAmount"      : 15,
-    "toolTierRequired": 2,
-    "discipline"      : "weaving"
-  },
-  {
-    "id"              : "make_arming_boots",
-    "station"         : "weaving_frame",
-    "inputs"          : {"linen_cloth": 3},
-    "outputs"         : {"arming_boots": 1},
-    "workAmount"      : 17,
-    "toolTierRequired": 2,
-    "discipline"      : "weaving"
-  },
-  {
     "id"              : "make_direwolf_head",
     "station"         : "curriers_bench",
-    "inputs"          : {"prime_direwolf_leather": 2},
+    "inputs"          : {"prime_direwolf_leather": 2, "category:thread": 1},
     "outputs"         : {"direwolf_head": 1},
     "workAmount"      : 20,
     "toolTierRequired": 3,
@@ -6638,7 +7133,7 @@
   {
     "id"              : "make_direwolf_bodybase",
     "station"         : "curriers_bench",
-    "inputs"          : {"prime_direwolf_leather": 5},
+    "inputs"          : {"prime_direwolf_leather": 5, "category:thread": 4},
     "outputs"         : {"direwolf_bodybase": 1},
     "workAmount"      : 28,
     "toolTierRequired": 3,
@@ -6647,7 +7142,7 @@
   {
     "id"              : "make_direwolf_bracers",
     "station"         : "curriers_bench",
-    "inputs"          : {"prime_direwolf_leather": 3},
+    "inputs"          : {"prime_direwolf_leather": 3, "category:thread": 1},
     "outputs"         : {"direwolf_bracers": 1},
     "workAmount"      : 20,
     "toolTierRequired": 3,
@@ -6656,7 +7151,7 @@
   {
     "id"              : "make_direwolf_gloves",
     "station"         : "curriers_bench",
-    "inputs"          : {"prime_direwolf_leather": 2},
+    "inputs"          : {"prime_direwolf_leather": 2, "category:thread": 1},
     "outputs"         : {"direwolf_gloves": 1},
     "workAmount"      : 18,
     "toolTierRequired": 3,
@@ -6665,7 +7160,7 @@
   {
     "id"              : "make_direwolf_greaves",
     "station"         : "curriers_bench",
-    "inputs"          : {"prime_direwolf_leather": 3},
+    "inputs"          : {"prime_direwolf_leather": 3, "category:thread": 2},
     "outputs"         : {"direwolf_greaves": 1},
     "workAmount"      : 22,
     "toolTierRequired": 3,
@@ -6674,7 +7169,7 @@
   {
     "id"              : "make_direwolf_boots",
     "station"         : "curriers_bench",
-    "inputs"          : {"prime_direwolf_leather": 3},
+    "inputs"          : {"prime_direwolf_leather": 3, "category:thread": 1},
     "outputs"         : {"direwolf_boots": 1},
     "workAmount"      : 20,
     "toolTierRequired": 3,
@@ -6719,7 +7214,7 @@
   {
     "id"              : "make_hippogriff_head",
     "station"         : "curriers_bench",
-    "inputs"          : {"prime_hippogriff_leather": 2},
+    "inputs"          : {"prime_hippogriff_leather": 2, "category:thread": 1},
     "outputs"         : {"hippogriff_head": 1},
     "workAmount"      : 20,
     "toolTierRequired": 3,
@@ -6728,7 +7223,7 @@
   {
     "id"              : "make_hippogriff_bodybase",
     "station"         : "curriers_bench",
-    "inputs"          : {"prime_hippogriff_leather": 5},
+    "inputs"          : {"prime_hippogriff_leather": 5, "category:thread": 4},
     "outputs"         : {"hippogriff_bodybase": 1},
     "workAmount"      : 28,
     "toolTierRequired": 3,
@@ -6737,7 +7232,7 @@
   {
     "id"              : "make_hippogriff_bracers",
     "station"         : "curriers_bench",
-    "inputs"          : {"prime_hippogriff_leather": 3},
+    "inputs"          : {"prime_hippogriff_leather": 3, "category:thread": 1},
     "outputs"         : {"hippogriff_bracers": 1},
     "workAmount"      : 20,
     "toolTierRequired": 3,
@@ -6746,7 +7241,7 @@
   {
     "id"              : "make_hippogriff_gloves",
     "station"         : "curriers_bench",
-    "inputs"          : {"prime_hippogriff_leather": 2},
+    "inputs"          : {"prime_hippogriff_leather": 2, "category:thread": 1},
     "outputs"         : {"hippogriff_gloves": 1},
     "workAmount"      : 18,
     "toolTierRequired": 3,
@@ -6755,7 +7250,7 @@
   {
     "id"              : "make_hippogriff_boots",
     "station"         : "curriers_bench",
-    "inputs"          : {"prime_hippogriff_leather": 3},
+    "inputs"          : {"prime_hippogriff_leather": 3, "category:thread": 1},
     "outputs"         : {"hippogriff_boots": 1},
     "workAmount"      : 20,
     "toolTierRequired": 3,
@@ -6786,7 +7281,7 @@
     "id": "make_sackcloth_hood",
     "discipline": "weaving",
     "station": "weaving_frame",
-    "inputs": {"sackcloth": 1},
+    "inputs": {"sackcloth": 1, "category:binding": 1},
     "outputs": {
       "sackcloth_hood": 1
     },
@@ -6797,7 +7292,7 @@
     "id": "make_sackcloth_tunic",
     "discipline": "weaving",
     "station": "weaving_frame",
-    "inputs": {"sackcloth": 4},
+    "inputs": {"sackcloth": 4, "category:binding": 2},
     "outputs": {
       "sackcloth_tunic": 1
     },
@@ -6808,7 +7303,7 @@
     "id": "make_sackcloth_mitts",
     "discipline": "weaving",
     "station": "weaving_frame",
-    "inputs": {"sackcloth": 1},
+    "inputs": {"sackcloth": 1, "category:binding": 1},
     "outputs": {
       "sackcloth_mitts": 1
     },
@@ -6819,7 +7314,7 @@
     "id": "make_sackcloth_footwraps",
     "discipline": "weaving",
     "station": "weaving_frame",
-    "inputs": {"sackcloth": 1},
+    "inputs": {"sackcloth": 1, "category:binding": 1},
     "outputs": {
       "sackcloth_footwraps": 1
     },
@@ -6842,7 +7337,7 @@
     "id": "make_deer_greaves",
     "discipline": "leatherworking",
     "station": "makers_bench",
-    "inputs": {"buckskin": 3},
+    "inputs": {"buckskin": 3, "category:binding": 1},
     "outputs": {
       "deer_greaves": 1
     },
@@ -6853,7 +7348,7 @@
     "id": "make_elk_greaves",
     "discipline": "leatherworking",
     "station": "makers_bench",
-    "inputs": {"elk_leather": 3},
+    "inputs": {"elk_leather": 3, "category:binding": 2},
     "outputs": {
       "elk_greaves": 1
     },
@@ -6864,7 +7359,7 @@
     "id": "make_owlbear_greaves",
     "discipline": "leatherworking",
     "station": "curriers_bench",
-    "inputs": {"owlbear_leather": 3},
+    "inputs": {"owlbear_leather": 3, "category:thread": 2},
     "outputs": {
       "owlbear_greaves": 1
     },
@@ -6875,101 +7370,42 @@
     "id": "make_hippogriff_greaves",
     "discipline": "leatherworking",
     "station": "curriers_bench",
-    "inputs": {"prime_hippogriff_leather": 3},
+    "inputs": {"prime_hippogriff_leather": 3, "category:thread": 2},
     "outputs": {
       "hippogriff_greaves": 1
     },
     "workAmount": 12,
     "toolTierRequired": 3
   },
-    {
-    "id": "make_linen_sleeves",
-    "discipline": "weaving",
-    "station": "weaving_frame",
-    "inputs": {"linen_cloth": 2},
-    "outputs": {
-      "linen_sleeves": 1
-    },
-    "workAmount": 5,
-    "toolTierRequired": 0
-  },
-    {
+      {
     "id": "make_linen_hose",
     "discipline": "weaving",
     "station": "weaving_frame",
-    "inputs": {"linen_cloth": 3},
+    "inputs": {"linen_cloth": 3, "category:binding": 1},
     "outputs": {
       "linen_hose": 1
     },
     "workAmount": 6,
     "toolTierRequired": 0
   },
-    {
-    "id": "make_quilted_sleeves",
-    "discipline": "weaving",
-    "station": "weaving_frame",
-    "inputs": {"linen_cloth": 3, "plant_fiber": 2},
-    "outputs": {
-      "quilted_sleeves": 1
-    },
-    "workAmount": 7,
-    "toolTierRequired": 1
-  },
-    {
+      {
     "id": "make_quilted_hose",
     "discipline": "weaving",
     "station": "weaving_frame",
-    "inputs": {"linen_cloth": 4, "plant_fiber": 3},
+    "inputs": {"linen_cloth": 4, "plant_fiber": 3, "category:binding": 1},
     "outputs": {
       "quilted_hose": 1
     },
     "workAmount": 8,
     "toolTierRequired": 1
   },
-    {
-    "id": "make_arming_sleeves",
-    "discipline": "weaving",
-    "station": "weaving_frame",
-    "inputs": {"linen_cloth": 3, "plant_fiber": 2},
-    "outputs": {
-      "arming_sleeves": 1
-    },
-    "workAmount": 9,
-    "toolTierRequired": 2
-  },
-    {
-    "id": "make_arming_hose",
-    "discipline": "weaving",
-    "station": "weaving_frame",
-    "inputs": {"linen_cloth": 4, "plant_fiber": 2},
-    "outputs": {
-      "arming_hose": 1
-    },
-    "workAmount": 10,
-    "toolTierRequired": 2
-  },
-    {
-    "id": "make_rune_woven_sleeves",
-    "discipline": "weaving",
-    "station": "runic_loom",
-    "inputs": {
-      "silk_cloth": 2,
-      "enchant_thread": 1
-    },
-    "outputs": {
-      "rune_woven_sleeves": 1
-    },
-    "workAmount": 12,
-    "toolTierRequired": 3,
-    "researchRequired": "runic_inscription"
-  },
-    {
+          {
     "id": "make_rune_woven_hose",
     "discipline": "weaving",
     "station": "runic_loom",
     "inputs": {
       "silk_cloth": 3,
-      "enchant_thread": 2
+      "enchant_thread": 1
     },
     "outputs": {
       "rune_woven_hose": 1
@@ -7030,10 +7466,8 @@
     "id": "make_rune_graven_gauntlets",
     "discipline": "metalworking",
     "station": "runecarver_bench",
-    "inputs": {
-      "magic_alloy_bar": 1,
-      "gem_dust": 1
-    },
+    "inputs": {"magic_alloy_bar": 1,
+      "gem_dust": 1, "enchant_thread": 2},
     "outputs": {
       "rune_graven_gauntlets": 1
     },
@@ -7045,10 +7479,8 @@
     "id": "make_rune_graven_sabatons",
     "discipline": "metalworking",
     "station": "runecarver_bench",
-    "inputs": {
-      "magic_alloy_bar": 1,
-      "gem_dust": 1
-    },
+    "inputs": {"magic_alloy_bar": 1,
+      "gem_dust": 1, "enchant_thread": 3},
     "outputs": {
       "rune_graven_sabatons": 1
     },
@@ -7061,7 +7493,7 @@
     "id": "make_iron_buckler",
     "discipline": "metalworking",
     "station": "anvil",
-    "inputs": {"iron_bar": 2, "category:leather": 1},
+    "inputs": {"iron_bar": 2, "category:leather": 1, "category:thread": 3},
     "outputs": {
       "iron_buckler": 1
     },
@@ -7084,7 +7516,7 @@
     "id": "make_rune_graven_kite",
     "discipline": "metalworking",
     "station": "runecarver_bench",
-    "inputs": {"magic_alloy_bar": 3, "gem_dust": 2, "boarhide": 1},
+    "inputs": {"magic_alloy_bar": 3, "gem_dust": 2, "boarhide": 1, "enchant_thread": 8},
     "outputs": {
       "rune_graven_kite": 1
     },
@@ -7099,7 +7531,7 @@
     "station": "craft_spot",
     "inputs": {
       "branch": 6,
-      "cordage": 2
+      "cordage": 8
     },
     "outputs": {
       "branch_bracers": 1
@@ -7113,7 +7545,7 @@
     "station": "craft_spot",
     "inputs": {
       "branch": 8,
-      "cordage": 3
+      "cordage": 12
     },
     "outputs": {
       "branch_greaves": 1
@@ -7128,7 +7560,7 @@
     "station": "craft_spot",
     "inputs": {
       "bark": 3,
-      "cordage": 1
+      "cordage": 4
     },
     "outputs": {
       "bark_sandals": 1
@@ -7142,7 +7574,8 @@
     "discipline": "leatherworking",
     "station": "makers_bench",
     "inputs": {
-      "category:leather": 2
+      "category:leather": 2,
+      "category:binding": 1
     },
     "outputs": {
       "waterskin": 1
@@ -7157,9 +7590,7 @@
     "inputs": {
       "blue_clay": 1
     },
-    "outputs": {
-      "flask": 1
-    },
+    "outputs": {"unfired_flask": 1},
     "workAmount": 2,
     "toolTierRequired": 0
   }

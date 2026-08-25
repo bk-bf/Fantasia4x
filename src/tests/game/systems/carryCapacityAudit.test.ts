@@ -9,8 +9,8 @@ import type { GameState, Pawn } from '$lib/game/core/types';
  * CARRY-CAPACITY AUDIT — can a pawn actually afford the kit its build wants?
  *
  * The armour audit found that a one-handed pawn wears full plate AND a shield without ever becoming
- * encumbered, which erases the trade the design rests on: heavy armour is supposed to demand BRAWN,
- * and a one-handed build's dominant stat is AGILITY. This measures whether the capacity curve
+ * encumbered, which erases the trade the design rests on: heavy armour is supposed to demand STRENGTH,
+ * and a one-handed build's dominant stat is DEXTERITY. This measures whether the capacity curve
  * actually enforces that, across pawns drawn the way a real game draws them.
  *
  * Load already counts everything worn AND wielded (`getCurrentCarryLoad` sums `pawn.equipment`), so
@@ -41,7 +41,7 @@ const state = { turn: 0 } as unknown as GameState;
 const band = (ratio: number) =>
   ratio <= 0.75 ? 'free' : ratio <= 1.0 ? 'comfortable' : ratio <= 1.25 ? 'burdened' : 'overloaded';
 
-describe('CARRY CAPACITY — does the curve gate heavy armour on brawn?', () => {
+describe('CARRY CAPACITY — does the curve gate heavy armour on strength?', () => {
   const pop = (() => {
     rng.reseed(20260728);
     const out: Pawn[] = [];
@@ -57,7 +57,7 @@ describe('CARRY CAPACITY — does the curve gate heavy armour on brawn?', () => 
           `+1H+shield ${(kg(ids) + kg([WEAPON_1H, SHIELD])).toFixed(1)}kg · +2H ${(kg(ids) + kg([WEAPON_2H])).toFixed(1)}kg`
       );
 
-    const brawns = pop.map((p) => p.stats.brawn).sort((a, b) => a - b);
+    const strengths = pop.map((p) => p.stats.strength).sort((a, b) => a - b);
     const weights = pop.map((p) => p.physicalTraits?.weight ?? 70).sort((a, b) => a - b);
     const caps = pop
       .map((p) => itemService.getCarryCapacityBreakdown(p).weight.total)
@@ -65,28 +65,28 @@ describe('CARRY CAPACITY — does the curve gate heavy armour on brawn?', () => 
     const q = (a: number[], f: number) => a[Math.floor(a.length * f)];
     rows.push('');
     rows.push(
-      `[POPULATION] n=${pop.length}  brawn p5 ${q(brawns, 0.05)} · median ${q(brawns, 0.5)} · p95 ${q(brawns, 0.95)}`
+      `[POPULATION] n=${pop.length}  strength p5 ${q(strengths, 0.05)} · median ${q(strengths, 0.5)} · p95 ${q(strengths, 0.95)}`
     );
     rows.push(
       `             bodyweight median ${q(weights, 0.5).toFixed(0)}kg · capacity median ${q(caps, 0.5).toFixed(1)}kg (p5 ${q(caps, 0.05).toFixed(1)} · p95 ${q(caps, 0.95).toFixed(1)})`
     );
 
-    // The old formula was `bodyWeight × clamp(brawn × 0.012, 0.05, 0.3)` and that clamp BOUND at
-    // brawn 25 — above it brawn bought nothing, and mass decided the budget. Pin that it is gone: two
-    // pawns of the same body but very different brawn must now differ.
+    // The old formula was `bodyWeight × clamp(strength × 0.012, 0.05, 0.3)` and that clamp BOUND at
+    // strength 25 — above it strength bought nothing, and mass decided the budget. Pin that it is gone: two
+    // pawns of the same body but very different strength must now differ.
     const body = { physicalTraits: { weight: 80, height: 170 }, equipment: {} };
     const capAt = (b: number) =>
-      itemService.getCarryCapacityBreakdown({ ...body, stats: { brawn: b } } as unknown as Pawn)
+      itemService.getCarryCapacityBreakdown({ ...body, stats: { strength: b } } as unknown as Pawn)
         .weight.total;
     rows.push(
-      `             brawn still pays above 25: cap(25) ${capAt(25).toFixed(1)}kg → cap(60) ${capAt(60).toFixed(1)}kg ` +
+      `             strength still pays above 25: cap(25) ${capAt(25).toFixed(1)}kg → cap(60) ${capAt(60).toFixed(1)}kg ` +
         `(was flat at the 0.30 clamp)`
     );
-    // The magnitude is deliberately GENTLE (high base, 0.19/brawn slope): strength decides which
-    // armour CLASS you wear, not whether you can dress at all, and a brawn-60 legend is superhuman
-    // rather than a beast of burden. What must never come back is the old clamp where brawn bought
+    // The magnitude is deliberately GENTLE (high base, 0.19/strength slope): strength decides which
+    // armour CLASS you wear, not whether you can dress at all, and a strength-60 legend is superhuman
+    // rather than a beast of burden. What must never come back is the old clamp where strength bought
     // nothing at all past 25 — so pin a real, meaningful gain, not the old steep one.
-    expect(capAt(60), 'brawn must keep paying past the old clamp').toBeGreaterThan(capAt(25) * 1.25);
+    expect(capAt(60), 'strength must keep paying past the old clamp').toBeGreaterThan(capAt(25) * 1.25);
 
     rows.push('');
     rows.push('[KIT AFFORDABILITY] share of the population in each encumbrance band');
@@ -128,17 +128,17 @@ describe('CARRY CAPACITY — does the curve gate heavy armour on brawn?', () => 
     const heavyOk = afford['1H + shield + HEAVY'].free + afford['1H + shield + HEAVY'].comfortable;
     console.log(
       `\n  → ${((heavyOk / pop.length) * 100).toFixed(0)}% of ALL pawns can wear plate + shield + sword unencumbered.` +
-        `\n    Heavy armour is supposed to demand brawn; a one-handed build's stat is agility.`
+        `\n    Heavy armour is supposed to demand strength; a one-handed build's stat is dexterity.`
     );
     expect(pop.length).toBeGreaterThan(100);
   });
 
-  it('capacity by brawn, at a fixed body — where the curve stops paying', () => {
-    const rows = ['[CURVE] capacity for a 70kg body, by brawn'];
-    rows.push('brawn   loadFraction   capacity   heavy kit + 1H + shield (33.9kg) fits?');
+  it('capacity by strength, at a fixed body — where the curve stops paying', () => {
+    const rows = ['[CURVE] capacity for a 70kg body, by strength'];
+    rows.push('strength   loadFraction   capacity   heavy kit + 1H + shield (33.9kg) fits?');
     for (const b of [8, 12, 16, 20, 25, 30, 40, 60, 100]) {
       const p = {
-        stats: { brawn: b },
+        stats: { strength: b },
         physicalTraits: { weight: 70, height: 170 },
         equipment: {}
       } as unknown as Pawn;

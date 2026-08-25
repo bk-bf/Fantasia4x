@@ -30,7 +30,7 @@ export interface LightEmitter {
   color: [number, number, number];
   /** Falloff radius in tiles. */
   radius: number;
-  /** Peak additive brawn at the source. */
+  /** Peak additive strength at the source. */
   intensity: number;
   /** Whether this emitter flickers (fire). */
   flicker?: boolean;

@@ -178,8 +178,21 @@ export interface DynamicIngredientSlot {
   /** Items in ANY of these categories are accepted (e.g. a stew slot taking meat/fish/vegetable/legume).
    *  Read both fields through `recipeService.slotCategories(slot)` so callers never branch. */
   acceptsCategories?: string[];
+  /**
+   * Item ids or categories this slot REFUSES, even though they match `acceptsCategor(y|ies)`. The
+   * accept list says what shape of material fits; this says which ones are not good enough. A seam
+   * on a late piece takes the binding pool but not cordage — you do not stitch a gambeson with rope.
+   */
+  excludes?: string[];
   /** Units consumed from the chosen ingredient */
   quantity: number;
+  /**
+   * Per-ingredient DISCOUNT inside this slot: `{ cordage: 0.25 }` means one cordage only satisfies a
+   * quarter of a unit, so the slot takes four of them. Overrides the material's own `craftValue`.
+   * Use it where one recipe values a material differently from the rest of the game; otherwise set
+   * `craftValue` on the material once and every slot inherits it.
+   */
+  costFactor?: Record<string, number>;
   /**
    * Per-ingredient overrides applied to the crafted item's display/stats.
    * Key = source itemId, value = overrides.
@@ -256,6 +269,20 @@ export interface Recipe {
 }
 
 export interface Item {
+  /**
+   * How many units of a `category:` cost ONE of this item satisfies. Default 1.
+   *
+   * A category slot takes whatever is cheapest to hand, which is only fair when the members cost
+   * roughly the same to produce. They often do not: `cordage` is plaited from plant fibre at a craft
+   * spot on turn one, `sinew` needs a carcass and a drying rack, `thread` needs a bronze-age spinning
+   * wheel, `enchant_thread` needs five steps ending at a runed loom. Priced at one-for-one the cheapest
+   * always wins and the slot is free.
+   *
+   * So a crude material is worth a FRACTION of a unit and the recipe takes more of it: a seam is
+   * 4 cordage, 2 sinew, or 1 thread. Same job, same finished piece, honest difference in effort.
+   */
+  craftValue?: number;
+
   /** COMBAT-BALANCE task 7: standing this item lends its bearer while EQUIPPED, wielded or worn
    *  (core/prestige.computePrestige). Worn regalia states it on `armorProperties`; a carried standard
    *  states it here, because a banner is not armour and being seen holding it is the point of it. */
@@ -374,6 +401,11 @@ export interface Item {
   // Food properties
   nutrition?: number;
 
+  /** Thirst points one LITRE of this fluid relieves — what makes it a DRINK. Absent/0 means the fluid
+   *  is not drinkable at all (molten bronze, tanning brine, a weapon coating). Water is the baseline;
+   *  a strong spirit is worth barely any of it, because drinking it is not how you rehydrate. */
+  hydration?: number;
+
   /** Alcohol: the one-shot mood lift granted when this drink is consumed; its presence marks the
    *  item as alcoholic (also applies a short `intoxicated` condition). 0/absent = sober. */
   intoxication?: number;
@@ -472,6 +504,25 @@ export interface Item {
    */
   curesConditions?: string[];
   /**
+   * Wound type ids (wounds.jsonc) this consumable MENDS outright on the patient it is given to —
+   * the injury is dropped from the limb tree and the part recovers the HP it was holding.
+   *
+   * Separate from `curesConditions` because the two write to different places. A condition timer is a
+   * countdown on the pawn; a wound is an entry on a body part, and the conditions that read it
+   * (`fractured`) are re-derived from the limb tree every tick — so deleting the timer changes
+   * nothing and the condition is back before the next frame. Anything that claims to heal an INJURY
+   * has to reach the injury.
+   */
+  mendsWounds?: string[];
+
+  /**
+   * How this food was kept, and therefore WHY it lasts. The `Keeps / Perishes` split it replaces was a
+   * lie by omission: almost everything in "Keeps" also rots, just slower, so the shelf said nothing
+   * about the technique that bought the time. `smoked` → `salted` → `pickled` → `aged` → `sealed` is a
+   * real ladder of labour, salt and patience, and it reads off the item instead of off a decay flag.
+   */
+  preservationMethod?: 'smoked' | 'salted' | 'pickled' | 'aged' | 'sealed';
+  /**
    * §2h(ii): consuming one of this item (a rare beast organ) PERMANENTLY grants this `traits.jsonc`
    * trait to the eater (pushed to `pawn.traits` + baked via `applyGainedTrait`) AND rolls a random
    * `negative` trait as a Faustian flaw — power with a price. Applied by `entities/Pawns.applyConsumable`
@@ -484,6 +535,25 @@ export interface Item {
    * the organ into a `traitGamble` draught. Resolved in `applyConsumable`.
    */
   rawConsumeRisk?: { sickness?: string; flawChance?: number };
+
+  /**
+   * Consuming this AWAKENS A BLOODLINE: it bakes a lineage parent trait onto the eater and nothing
+   * else — no gamble, no Faustian flaw. Reserved for something the colony finds once, if ever.
+   *
+   * `true` draws from every lineage the pawn does not already carry; a list narrows the draw. This is
+   * deliberately NOT `traitGamble`, which is built around risk: a voidshard is a 0.01% strike behind a
+   * runed pick, a boss's hoard, or a fortune paid to a caravan that likes you — the finding IS the
+   * gamble, and there is nothing left to punish.
+   */
+  grantsLineage?: true | string[];
+
+  /**
+   * A caravan only carries this when relations with the sending kingdom are at least this warm
+   * (`KingdomRelation.score`, -100..100). Nothing else in the manifest is gated: a merchant will sell
+   * you steel the first time they meet you. This exists for the one or two things a kingdom parts
+   * with only for people it trusts — and then charges a fortune for.
+   */
+  tradeRelationsMin?: number;
   /**
    * ALCHEMY-BUTCHERY-EXPANSION §A: a brewed "transfusion" draught. Drinking it is a weighted GAMBLE (good
    * = a trait, no flaw / mixed = trait + flaw / bad = flaw only). `tier` (1–3, the draught's `ageTier` rung)
@@ -517,9 +587,9 @@ export interface Item {
     /**
      * Which attribute drives the damage roll (`raw = damage × stat / 10`). Omitted, the older
      * `finesse`/`arcane` shorthands decide it (PER / INT), and failing those it is STRENGTH.
-     * A dagger sets `agility`: a knife kills by placement and speed of hand, not by shoulder.
+     * A dagger sets `dexterity`: a knife kills by placement and speed of hand, not by shoulder.
      */
-    powerStat?: 'brawn' | 'agility' | 'awareness' | 'intellect';
+    powerStat?: 'strength' | 'dexterity' | 'perception' | 'intelligence';
     /**
      * Damage multiplier on a critical hit (default 1.5). A precision weapon raises it: the whole
      * point of a stiletto is that the hit which finds the gap is the hit that ends the fight.
@@ -529,7 +599,24 @@ export interface Item {
     arcane?: boolean; // an ARCANE weapon (elemental staff): damage scales with INTELLIGENCE instead of STRENGTH (mirrors `finesse`→PER).
     channeled?: boolean; // a CHANNELED ranged weapon (staff): fires with NO ammo, paying its `staminaCost` as MANA each shot, and is NOT self-consumed/dropped like a thrown weapon (it stays in hand). Bottoming out stamina latches `winded` = out of mana.
     critMod?: number; // added to the wielder's base hit_precision (0–1)
-    twoHanded?: boolean; // requires both mainHand and offHand slots
+    twoHanded?: boolean;
+    /** What KIND of weapon this is, when its name does not say. The gear tables read the family out
+     *  of the id otherwise, which fails the moment a weapon is named for what it does — a Flenser is a
+     *  cleaver and a Chainbiter is a flail, and no regex on those names will find that out. */
+    weaponFamily?:
+      | 'sword'
+      | 'axe'
+      | 'cleaver'
+      | 'mace'
+      | 'flail'
+      | 'spear'
+      | 'rapier'
+      | 'dagger'
+      | 'bow'
+      | 'crossbow'
+      | 'sling'
+      | 'thrown'
+      | 'staff'; // requires both mainHand and offHand slots
     /** A blade light enough to be held in EITHER hand, so a matched pair can be worn at once. Two of
      *  them is the `dualWield` grip (Combat.getGrip): a second point instead of a shield, trading every
      *  scrap of protection for reach into gaps and a much faster working rate. Daggers only — anything
@@ -572,14 +659,14 @@ export interface Item {
     staminaCost?: number; // stamina drained by this attack (default ATTACK_STAMINA_COST)
     /**
      * CREATURE-COMBAT-OVERHAUL §2c — wielding requirement (Battle-Brothers "heavy" weapons). A crude,
-     * massive orc weapon needs raw muscle to swing WELL: a wielder with STR below `brawn` still CAN
+     * massive orc weapon needs raw muscle to swing WELL: a wielder with STR below `strength` still CAN
      * equip it but is driven the staged **`overmatched`** condition (PawnStateMachine `driveWieldStrain`,
-     * scaled by the shortfall) — worse aim (hitChance), softer blows + less force (brawn), harder to
+     * scaled by the shortfall) — worse aim (hitChance), softer blows + less force (strength), harder to
      * dodge, and faster fatigue (drains stamina in a fight). An orc clears its own weapon's bar; a scrawny
      * colonist who loots it flails, and the condition shows as a pill so the player sees WHY. Absent =
      * anyone wields it fine. Gates by CAPABILITY, not by looting — you must field a STRONG pawn.
      */
-    wieldRequirement?: { brawn?: number };
+    wieldRequirement?: { strength?: number };
   };
 
   /**
@@ -686,10 +773,25 @@ export interface Item {
      *  deliberate one-offs (a boss drop, a ceremonial piece) — those stand alone by design. */
     armorSet?: string;
     armorLayer?: 'gambeson' | 'mail' | 'plate';
+    /**
+     * A SPLINT or CAST: while this piece is worn, a bone wound on any part it `covers` knits this
+     * many times faster (read in `PawnStateMachine.healWounds` → `Wounds.healLimbs`). It speeds
+     * recovery and never cures — a break still takes as long as the body needs, just less of it.
+     *
+     * Targeting rides the coverage set the mitigation walk already uses, so which limb a splint helps
+     * is the same answer as which limb it protects, and a piece that reaches no bone helps nothing.
+     */
+    boneHealMultiplier?: number;
     armorValue?: number; // damage absorbed per hit from this layer
     fatiguePerTurn?: number; // fatigue drain per turn while worn
     equipmentSlot?: EquipmentSlot;
-    movementPenalty?: number; // 0.0 to 1.0, where 0.3 = 30% movement penalty
+    movementPenalty?: number;
+    /**
+     * Fraction of SIGHT RANGE this piece costs while worn (0.35 = a third of the world gone). The
+     * helmet trade-off: everything that closes around the face buys its protection with what you can
+     * see out of it. Summed across worn pieces in `effectiveVisionRange`, floored at a third.
+     */
+    sightPenalty?: number; // 0.0 to 1.0, where 0.3 = 30% movement penalty
 
     // Resistance properties
     slashResistance?: number;

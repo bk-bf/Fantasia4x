@@ -10,7 +10,7 @@ import type {
   ConditionStage
 } from '../core/types';
 import { consumeFromStockpiles } from '../core/GameState';
-import { takeOut, carriedWaterVessel } from '../core/vessels';
+import { takeOut, carriedDrinkVessel, hydrationOf } from '../core/vessels';
 import { pawnById } from '../core/pawnIndex';
 import { categorizeStats, getStatDescription } from '../entities/Pawns';
 import { pawnStatService } from './PawnStatService';
@@ -157,9 +157,11 @@ const RELAXATION_DECREASE_PER_SECOND = needNum('relaxation', 'decayRate', 0.13);
 const COMFORT_DECREASE_PER_SECOND = needNum('comfort', 'decayRate', 0.1);
 // §D auto-drink: thirst threshold to drink, and relief per unit of water.
 const AUTO_DRINK_THIRST = needNum('thirst', 'autoSatisfy', 70);
-const WATER_THIRST_RELIEF = needNum('thirst', 'relief', 65);
 // §D auto-wash: hygiene threshold to wash at water, and the cleanliness restored.
 const AUTO_WASH_HYGIENE = needNum('hygiene', 'autoSatisfy', 75);
+/** How fast a pawn moves with nothing on its feet. Any boot beats bare soles on broken ground; the
+ *  heavier the boot the less of that advantage it keeps. */
+const BAREFOOT_MOVE_FACTOR = 0.9;
 const WASH_HYGIENE_RELIEF = needNum('hygiene', 'relief', 70);
 
 // SEASONS_WEATHER Subsystem 3 — temperature/night need effects (PERF-3: scalar constants, read in
@@ -405,6 +407,7 @@ export class PawnServiceImpl implements PawnService {
     hunger: number;
     fatigue: number;
     thirstRate: number;
+    hygieneRate: number;
   } {
     const transientConditions = getActiveTransientConditions(pawn);
 
@@ -414,17 +417,21 @@ export class PawnServiceImpl implements PawnService {
     let hungerRate = transientConditions.reduce((r, e) => r * (e.modifiers.hungerRate ?? 1), 1);
     let fatigueRate = transientConditions.reduce((r, e) => r * (e.modifiers.fatigueRate ?? 1), 1);
     let thirstRate = transientConditions.reduce((r, e) => r * (e.modifiers.thirstRate ?? 1), 1);
+    // `clean` sets this to 0 — a proper wash with soap holds the grime off for a day.
+    let hygieneRate = transientConditions.reduce((r, e) => r * (e.modifiers.hygieneRate ?? 1), 1);
 
     // Also apply persistent condition-stage rate modifiers (e.g. malnutrition increases hunger rate).
     const condMults = conditionNeedMultipliers(pawn.conditions ?? []);
     hungerRate *= condMults.hungerRate;
     fatigueRate *= condMults.fatigueRate;
     thirstRate *= condMults.thirstRate;
+    hygieneRate *= condMults.hygieneRate;
 
     return {
       hunger: this.getHungerIncreasePerTurn(pawn) * hungerRate,
       fatigue: this.getRestIncreasePerTurn(pawn) * fatigueRate,
-      thirstRate
+      thirstRate,
+      hygieneRate
     };
   }
 
@@ -522,7 +529,7 @@ export class PawnServiceImpl implements PawnService {
         : Math.min(100, (needs.thirst ?? 0) + THIRST_INCREASE_PER_SECOND * rate.thirstRate * dt);
       const hygiene = disHygiene
         ? (needs.hygiene ?? 0)
-        : Math.min(100, (needs.hygiene ?? 0) + HYGIENE_INCREASE_PER_SECOND * dt);
+        : Math.min(100, (needs.hygiene ?? 0) + HYGIENE_INCREASE_PER_SECOND * rate.hygieneRate * dt);
 
       // SEASONS_WEATHER wetness: soak fast on wet (>50%) tiles (roofs keep tiles dry — tileWetness
       // already cuts the rain contribution under cover); a fully-wet tile is instant. Off wet ground
@@ -604,9 +611,12 @@ export class PawnServiceImpl implements PawnService {
 
   /**
    * §D auto-drink. A pawn whose thirst passes AUTO_DRINK_THIRST drinks:
-   *   1. from a vessel it is CARRYING (a waterskin on the belt — the reason to carry one), else
+   *   1. from a vessel it is CARRYING (a skin on the belt — the reason to carry one), else
    *   2. raw water if standing next to a river/lake tile (free, but a small hygiene hit), else
    *   3. nothing (thirst keeps climbing → dehydration condition).
+   *
+   * What it relieves is the drink's own `hydration` per litre, not a flat constant — so water is worth
+   * more than ale and far more than brandy, and a pawn that finds nothing gets nothing.
    * Mirrors auto-eat: a lightweight relief pass so thirst isn't a dead-end need.
    *
    * CONTAINERS-AND-FLUIDS §2 removed the step that used to sit at the top of that list — sipping the
@@ -620,16 +630,17 @@ export class PawnServiceImpl implements PawnService {
       if (pawn.isAlive === false) continue;
       if ((pawn.needs.thirst ?? 0) < AUTO_DRINK_THIRST) continue;
 
-      // 1. the pawn's own carried water
-      const skin = carriedWaterVessel(pawn);
+      // 1. the pawn's own carried drink — whatever it is, worth what a litre of it is worth
+      const skin = carriedDrinkVessel(pawn);
       if (skin) {
-        takeOut(skin, 'water', 1);
-        state = this.adjustThirst(pawn.id, -WATER_THIRST_RELIEF, 0, state);
+        const litres = Math.min(1, skin.litres);
+        takeOut(skin.inst, skin.itemId, litres);
+        state = this.adjustThirst(pawn.id, -litres * hydrationOf(skin.itemId), 0, state);
         continue;
       }
-      // 2. raw water from an adjacent river/lake tile
+      // 2. raw water from an adjacent river/lake tile — free, but untreated
       if (pawn.position && this.isNextToWater(pawn.position.x, pawn.position.y, state)) {
-        state = this.adjustThirst(pawn.id, -WATER_THIRST_RELIEF, 6, state); // +6 hygiene (untreated)
+        state = this.adjustThirst(pawn.id, -hydrationOf('water'), 6, state); // +6 hygiene (untreated)
       }
     }
     return state;
@@ -1059,8 +1070,8 @@ export class PawnServiceImpl implements PawnService {
    * Stat-derived walking speed in tiles/second on open (movementCost 1) terrain.
    * Multiplicative model where every factor is ×1.0 for an all-average pawn, so
    * the baseline lands on the RimWorld-ish 4 tiles/s. Factors:
-   *   • Agility — nimbleness (DEX 10 = ×1.0)
-   *   • Body load — own weight carried by brawn (weight ≈ STR×6kg = ×1.0)
+   *   • Dexterity — nimbleness (DEX 10 = ×1.0)
+   *   • Body load — own weight carried by strength (weight ≈ STR×6kg = ×1.0)
    *   • Legs — each leg ≈ half of locomotion; missing/injured legs cripple speed
    *   • Needs — hunger/fatigue above 50% progressively slow the pawn
    *   • Conditions — transient & persistent condition moveSpeed multipliers
@@ -1071,13 +1082,13 @@ export class PawnServiceImpl implements PawnService {
 
     const base = 4.0; // tiles/s on open terrain at all-average stats
 
-    // Agility: average (10) → ×1.0; capped so extremes stay sane.
-    const dex = entity.stats?.agility ?? 10;
+    // Dexterity: average (10) → ×1.0; capped so extremes stay sane.
+    const dex = entity.stats?.dexterity ?? 10;
     const dexFactor = clamp(0.5 + dex / 20, 0.4, 1.8);
     sources.push(`DEX ${dex} ×${dexFactor.toFixed(2)}`);
 
-    // Body load: own bodyweight carried by brawn-derived capacity.
-    const str = entity.stats?.brawn ?? 10;
+    // Body load: own bodyweight carried by strength-derived capacity.
+    const str = entity.stats?.strength ?? 10;
     const weight = entity.physicalTraits?.weight ?? 60;
     const capacity = Math.max(1, str * 6); // STR 10 ≈ 60 kg comfortable
     const weightFactor = clamp(1.15 - 0.15 * (weight / capacity), 0.65, 1.1);
@@ -1100,6 +1111,18 @@ export class PawnServiceImpl implements PawnService {
     const fatiguePenalty = Math.max(0, (fatigue - 50) / 50) * 0.25;
     const needsFactor = clamp(1 - hungerPenalty - fatiguePenalty, 0.5, 1);
     if (needsFactor < 0.999) sources.push(`needs ×${needsFactor.toFixed(2)}`);
+
+    // FOOTWEAR. What is on the feet is the one piece of kit that decides how a pawn WALKS, so it acts
+    // here rather than on the fatigue meter — boots are not tiring, they are fast or slow. Bare feet
+    // are the penalty: anything on the foot beats none, and the heavier the sole the less of that
+    // advantage survives (a rune-woven boot keeps all of it, an iron-shod one gives most of it back).
+    const boot = (entity as Pawn).equipment?.boots;
+    const bootPenalty = boot
+      ? (itemService.getItemById(boot.itemId)?.armorProperties?.movementPenalty ?? 0)
+      : 0;
+    const footFactor = boot ? clamp(1 - bootPenalty, 0.8, 1) : BAREFOOT_MOVE_FACTOR;
+    if (Math.abs(footFactor - 1) > 0.001)
+      sources.push(boot ? `boots ×${footFactor.toFixed(2)}` : `barefoot ×${footFactor.toFixed(2)}`);
 
     // Transient + persistent conditions that modify movement.
     let conditionFactor = getActiveTransientConditions(entity).reduce(
@@ -1147,7 +1170,14 @@ export class PawnServiceImpl implements PawnService {
 
     const tilesPerSecond = Math.max(
       0.05,
-      base * dexFactor * weightFactor * legFactor * needsFactor * conditionFactor * loadFactor
+      base *
+        dexFactor *
+        weightFactor *
+        legFactor *
+        needsFactor *
+        conditionFactor *
+        loadFactor *
+        footFactor
     );
     return { tilesPerSecond, sources };
   }

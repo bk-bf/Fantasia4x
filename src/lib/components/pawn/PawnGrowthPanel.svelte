@@ -11,11 +11,11 @@
   let { pawn }: { pawn: Pawn } = $props();
 
   const ROWS: [StatKey, string][] = [
-    ['brawn', 'BRN'],
-    ['agility', 'AGI'],
-    ['vigour', 'VIG'],
-    ['intellect', 'INT'],
-    ['awareness', 'AWR'],
+    ['strength', 'STR'],
+    ['dexterity', 'DEX'],
+    ['constitution', 'CON'],
+    ['intelligence', 'INT'],
+    ['perception', 'PER'],
     ['charisma', 'CHA']
   ];
 

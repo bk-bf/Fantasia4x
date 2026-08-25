@@ -5,6 +5,7 @@ import creaturesData from '$lib/game/database/pawns/creatures.jsonc';
 import { kingdomService } from '$lib/game/services/KingdomService';
 import resourcesData from '$lib/game/database/world/resources.jsonc';
 import buildingsData from '$lib/game/database/world/buildings.jsonc';
+import conditionsData from '$lib/game/database/pawns/conditions.jsonc';
 import type { Item } from '$lib/game/core/types';
 import { AGE_CEILING, AGE_NAMES, blameStation, chainAgeOf } from '$lib/dev/chainAge';
 import { gearClassOf } from '$lib/game/core/gearClass';
@@ -50,6 +51,7 @@ type Recipe = {
   id: string;
   inputs?: Record<string, number>;
   outputs?: Record<string, number>;
+  inputAlternatives?: Record<string, number>[];
   dynamicRecipe?: Record<string, { acceptsCategory?: string; acceptsCategories?: string[] }>;
 };
 type Creature = {
@@ -439,43 +441,113 @@ const BINDING_SIZE: Record<string, number> = {
 const BINDINGS = ['cordage', 'thread', 'sinew', 'enchant_thread'];
 const slotOf = (i: ArmourItem) => i.armorProperties?.equipmentSlot ?? i.armorProperties?.slot ?? '';
 
-describe('ITEM-RULES R6 — a fastener is a real component or it is not listed', () => {
-  // You do not sew a jerkin with ROPE, and the few metres of sinew or thread that close a seam come
-  // off the same animal or the same fibre the piece is cut from — listing them made the player
-  // stockpile and haul bookkeeping. A fastener earns a line in the recipe only when it is either the
-  // STRUCTURE (withies lashed into a shell, bark tied to a foot) or a countable manufactured part
-  // (rivets, nails, mail rings, enchanted thread).
+describe('ITEM-RULES R6 — a sewn piece lists the binding that holds it together', () => {
+  // This rule used to say the opposite, and its stated reason was that listing a fastener "made the
+  // player stockpile bookkeeping". That was true when one cordage was 200g and one nail was 200g — a
+  // fastener was a heavy, annoying thing to haul, so banning it from 122 recipes bought something.
+  // The unit is fixed now (a nail is 10g, a bar draws to 300), the bookkeeping objection is gone, and
+  // what the ban left behind was a hide cap made of two hides and nothing else.
+  //
+  // What survives from the old rule: you do not sew leather with ROPE. Cordage is a lashing, not a
+  // seam, and it belongs only where it IS the structure.
   const STRUCTURAL = /branch|withy|wicker|wattle|bark|hay|straw/;
-  const SEWING = ['sinew', 'thread'];
+  // `category:thread` is the binding pool with the lashings taken out — cordage is not a seam, and a
+  // late piece is sewn with spun thread or not at all. Both keys are seams; they differ in how low
+  // they will stoop.
+  const SEAM = [
+    'category:binding',
+    'category:thread',
+    'sinew',
+    'thread',
+    'enchant_thread',
+    'cotton_thread',
+    'spider_silk_thread'
+  ];
+  const FASTENER = [
+    ...SEAM,
+    'cordage',
+    'rope',
+    'iron_nail',
+    'bronze_nail',
+    'steel_rivet',
+    'copper_tack',
+    'mail_rings'
+  ];
+  /** How much binding a piece of this size takes. A glove and a cuirass are not sewn with equal thread. */
+  const BINDING_SIZE: Record<string, number> = {
+    head: 1,
+    gloves: 1,
+    boots: 1,
+    socks: 1,
+    bracers: 1,
+    belt: 1,
+    back2: 1,
+    greaves: 2,
+    back: 2,
+    offHand: 2,
+    bodyBase: 3,
+    bodyMid: 3,
+    bodyOuter: 3
+  };
 
-  it('no sewn garment lists its sewing thread', () => {
+  it('every sewn piece names what holds it together', () => {
     const bad: string[] = [];
     for (const i of WEARABLE) {
       const rec = firstRecipe(i.id)!;
       const ins = (rec.inputs ?? {}) as Record<string, number>;
-      for (const b of SEWING) if (ins[b] !== undefined) bad.push(`${i.id} lists ${ins[b]}x ${b}`);
+      const slot = slotOf(i);
+      if (!BINDING_SIZE[slot]) continue;
+      const keys = [
+        ...Object.keys(ins),
+        ...Object.values(rec.dynamicRecipe ?? {}).map((d) => d.acceptsCategory ?? '')
+      ].join(' ');
+      // Wood and metal pieces are pegged, riveted or forged rather than stitched.
+      if (
+        !/leather|hide|pelt|fur|buckskin|kidskin|cloth|linen|wool|silk|cotton|sackcloth/.test(keys)
+      )
+        continue;
+      if (!FASTENER.some((f) => ins[f] !== undefined))
+        bad.push(`${i.id} is cut from ${keys.trim()} and nothing holds it together`);
     }
     expect(bad, bad.join('; ')).toEqual([]);
   });
 
-  it('cordage appears only where it is the structure', () => {
+  it('ROPE appears only where it is the structure — a seam is not lashed with rope', () => {
     const bad: string[] = [];
     for (const i of WEARABLE) {
       const rec = firstRecipe(i.id)!;
       const ins = (rec.inputs ?? {}) as Record<string, number>;
-      if (ins['cordage'] === undefined) continue;
+      // Cordage moved INTO the binding pool when its unit shrank to a thong; `rope` at 1.1kg is
+      // still rope, and nothing is sewn with it.
+      if (ins['rope'] === undefined) continue;
       const keys = [
         ...Object.keys(ins),
         ...Object.values(rec.dynamicRecipe ?? {}).map((d) => d.acceptsCategory ?? '')
       ];
       if (!keys.some((k) => STRUCTURAL.test(k)))
-        bad.push(`${i.id} is lashed with cordage but nothing about it is lashed`);
+        bad.push(`${i.id} is lashed with rope but nothing about it is lashed`);
+    }
+    expect(bad, bad.join('; ')).toEqual([]);
+  });
+
+  it('a binding slot names the CATEGORY, so any threading will do', () => {
+    // A cured hood does not become impossible to craft because the colony has linen thread and no
+    // sinew. Naming one material in a seam slot is the same mistake as a `category:leather` piece
+    // demanding one species.
+    const bad: string[] = [];
+    for (const i of WEARABLE) {
+      const ins = (firstRecipe(i.id)!.inputs ?? {}) as Record<string, number>;
+      // A RUNED piece is woven WITH enchanted thread; that is what its name claims and R5 enforces,
+      // so naming the material there is the point rather than a mistake.
+      if (/rune/.test(i.id)) continue;
+      for (const k of ['sinew', 'thread', 'enchant_thread', 'cotton_thread'])
+        if (ins[k] !== undefined)
+          bad.push(`${i.id} demands ${k} by name — a seam takes \`category:binding\``);
     }
     expect(bad, bad.join('; ')).toEqual([]);
   });
 
   it('every piece still costs SOMETHING', () => {
-    // Stripping the fastener must never leave a recipe that produces armour out of thin air.
     const bad = WEARABLE.filter((i) => {
       const rec = firstRecipe(i.id)!;
       return !Object.keys(rec.inputs ?? {}).length && !Object.keys(rec.dynamicRecipe ?? {}).length;
@@ -485,9 +557,7 @@ describe('ITEM-RULES R6 — a fastener is a real component or it is not listed',
 });
 
 // R7 asks whether a NAME tells the truth about its material, which has nothing to do with whether the
-// piece soaks damage — so it runs over every craftable, not just `WEARABLE`. Scoped to armour it could
-// not see a carry aid, a quiver or a tool, and `hide_scrip`/`hide_tool_roll` sat for months calling
-// themselves hide while their recipe asked for tanned leather.
+// piece soaks damage — so it runs over every craftable, not just `WEARABLE`.
 const NAMED_MATERIAL = CRAFTABLE.filter((i) => recipesByOutput.has(i.id)) as ArmourItem[];
 
 describe('ITEM-RULES R7 — hide is not leather', () => {
@@ -871,7 +941,7 @@ describe('ITEM-RULES R13 — a one-off antique word where a plain one exists', (
 });
 
 // ── R14: a carry aid gives you somewhere to put things, not stronger shoulders ──────────────────
-// Weight capacity is the BODY's — `(11 + 0.19 x brawn) x frameFactor`, and nothing you strap on
+// Weight capacity is the BODY's — `(11 + 0.19 x strength) x frameFactor`, and nothing you strap on
 // changes how much mass a pawn can bear. A pack that raised it was quietly saying a rucksack makes you
 // stronger. What a pack actually does is give bulk somewhere to ride, so worn aids grant VOLUME only.
 //
@@ -1011,6 +1081,449 @@ describe('ITEM-RULES R15 — a fluid states what material may hold it', () => {
           bad.push(
             `${r.id} asks for ${k} at ${r.station ?? 'nowhere'}, which cannot hold it and nothing can carry it there`
           );
+    expect(bad, bad.join('; ')).toEqual([]);
+  });
+});
+
+// ── R16: what holds a thing together is a believable share of the thing ─────────────────────────
+// One law for BOTH families, because they failed the same way. A nail was 0.2 kg, so a 3 kg chest
+// carried 1.2 kg of nails; a seam was picked off a hand-written size table, so a cap took the same
+// binding as an 18 kg plate took three of. In both cases the COUNT looked plausible and the MASS was
+// nonsense, and nothing was checking the mass.
+//
+// The band is deliberately wide — a mail hauberk really is mostly rings, a frame pack really is mostly
+// leather. What it catches is the order-of-magnitude error: fastenings that outweigh the object, or
+// that round down to a token.
+describe('ITEM-RULES R16 — a fastening is a believable share of what it fastens', () => {
+  const UNIT: Record<string, number> = {};
+  for (const i of ITEMS as Item[]) if (i.weightKg) UNIT[i.id] = i.weightKg;
+  const bindingUnit = Math.min(
+    ...(ITEMS as Item[])
+      .filter((i) => i.category === 'binding' && i.weightKg)
+      .map((i) => i.weightKg!)
+  );
+  const massOf = (k: string, q: number) =>
+    (k === 'category:binding' ? bindingUnit : (UNIT[k] ?? 0)) * q;
+  const FASTENERS = [
+    'category:binding',
+    'sinew',
+    'thread',
+    'enchant_thread',
+    'cotton_thread',
+    'iron_nail',
+    'bronze_nail',
+    'steel_rivet',
+    'copper_tack',
+    'mail_rings'
+  ];
+  // Mail is not FASTENED with rings, it is MADE of them; a bow's sinew backing is the same.
+  const IS_THE_PIECE = /mail_|_backed_bow|weave_|spin_|reel_|dry_sinew/;
+
+  it('no fastening outweighs a third of the thing it holds together', () => {
+    const bad: string[] = [];
+    for (const r of RECIPES as unknown as {
+      id: string;
+      inputs?: Record<string, number>;
+      outputs?: Record<string, number>;
+    }[]) {
+      if (IS_THE_PIECE.test(r.id)) continue;
+      const ins = r.inputs ?? {};
+      const fast = FASTENERS.filter((f) => ins[f] !== undefined);
+      if (!fast.length) continue;
+      const fm = fast.reduce((n, f) => n + massOf(f, ins[f]), 0);
+      const om = Object.entries(r.outputs ?? {}).reduce((n, [o, q]) => n + massOf(o, q), 0);
+      if (om <= 0) continue;
+      if (fm > om * 0.34)
+        bad.push(`${r.id}: ${fm.toFixed(2)}kg of fastening on a ${om.toFixed(2)}kg product`);
+    }
+    expect(bad, bad.join('; ')).toEqual([]);
+  });
+
+  it('every binding material weighs what a thread weighs', () => {
+    // The moment one of them is four times the others, every recipe that uses it is silently wrong —
+    // which is exactly what `enchant_thread` at 0.2kg did to the whole rune-woven line.
+    const units = (ITEMS as Item[])
+      .filter((i) => i.category === 'binding')
+      .map((i) => i.weightKg ?? 0);
+    expect(units.length, 'the binding pool exists').toBeGreaterThan(2);
+    expect(
+      Math.max(...units) / Math.min(...units),
+      'binding units are all the same size'
+    ).toBeLessThanOrEqual(1.5);
+  });
+});
+
+// ── R17: a category pool spanning ages must price its members ───────────────────────────────────
+// A `category:` slot takes whatever is cheapest to hand. That is fair when the members cost the same
+// to produce and a lie when they do not: `cordage` is plaited at a craft spot on turn one, `sinew`
+// needs a carcass and a drying rack, `thread` a bronze-age wheel, `enchant_thread` five steps ending
+// at a runed loom. Priced one-for-one the cheapest always wins and the slot is free — which is exactly
+// what a hide hood costing "1 binding" meant when that binding could be a single cord.
+describe('ITEM-RULES R17 — a category pool prices its members by what they cost to have', () => {
+  const pool = (cat: string) => (ITEMS as Item[]).filter((i) => i.category === cat);
+
+  it('every binding material states what a unit of it is worth', () => {
+    const bad = pool('binding')
+      .filter((i) => !(typeof i.craftValue === 'number' && i.craftValue > 0))
+      .map(
+        (i) => `${i.id} is in a category slot with no \`craftValue\` — it will win every slot free`
+      );
+    expect(bad, bad.join('; ')).toEqual([]);
+  });
+
+  it('the crude material is worth less than the worked one', () => {
+    const v = (id: string) => (ITEMS as Item[]).find((i) => i.id === id)?.craftValue ?? 1;
+    // turn-one cord < carcass-and-rack sinew < bronze-age spun thread
+    expect(v('cordage'), 'cordage is the crudest').toBeLessThan(v('sinew'));
+    expect(v('sinew'), 'sinew is cruder than spun thread').toBeLessThan(v('thread'));
+  });
+
+  it('every pool whose members differ in SIZE prices them', () => {
+    // The leather pool ran 0.08kg (coney fur) to 2.86kg (mammoth) — a 36x spread — and a slot asking
+    // for "3 leather" took three scraps of vermin fur for a jerkin. Size has to propagate down the
+    // chain or a category slot quietly becomes the cheapest thing in it.
+    const CATS = ['leather', 'cured_hide', 'meat', 'vegetable', 'wood', 'plank', 'log', 'wool'];
+    const bad: string[] = [];
+    for (const cat of CATS) {
+      const members = (ITEMS as Item[]).filter(
+        (i) =>
+          (cat === 'plank' || cat === 'log' ? i.id.endsWith(`_${cat}`) : i.category === cat) &&
+          i.weightKg &&
+          !['armor', 'weapon', 'tool'].includes(i.type as string)
+      );
+      if (members.length < 2) continue;
+      const ws = members.map((i) => i.weightKg!);
+      if (Math.max(...ws) / Math.min(...ws) < 1.5) continue;
+      const values = new Set(members.map((i) => i.craftValue ?? 1));
+      if (values.size < 2)
+        bad.push(
+          `category:${cat} spans ${(Math.max(...ws) / Math.min(...ws)).toFixed(0)}x in size and is priced flat`
+        );
+    }
+    expect(bad, bad.join('; ')).toEqual([]);
+  });
+
+  it('a pool whose members span more than one age is not priced flat', () => {
+    // The failure this catches is subtle: someone adds a late-age material to an early-age pool and
+    // every recipe using that slot silently gets cheaper, because the new member is never chosen but
+    // the old cheap one is still worth a full unit.
+    const values = new Set(pool('binding').map((i) => i.craftValue ?? 1));
+    expect(values.size, 'binding members are not all worth the same').toBeGreaterThan(1);
+  });
+});
+
+// ── R18: a material's NAME says what ONE unit is ────────────────────────────────────────────────
+// The unit and the name have to agree or every count in every recipe is misread. Both directions have
+// already shipped: `iron_nail` weighed 0.2 kg and was called "Iron Nails" (a keg — honest), then the
+// unit shrank to a single 10 g nail and the plural stayed, so "25x Iron Nails" read as 25 kegs.
+// `mail_rings` is the opposite — one unit really is ~290 rings, and calling it "Mail Rings" made a
+// coif look like it took ten rings when it takes nearly three thousand.
+describe('ITEM-RULES R18 — the name says what one unit is', () => {
+  const byId = new Map((ITEMS as Item[]).map((i) => [i.id, i]));
+  /** One unit is ONE object: the name must be singular. */
+  const SINGLE = ['iron_nail', 'bronze_nail', 'copper_tack', 'steel_rivet'];
+  /** One unit is MANY objects: the name must say so. */
+  const BATCH = [
+    'mail_rings',
+    'small_bones',
+    'medium_bones',
+    'large_bones',
+    'huge_bones',
+    'feathers'
+  ];
+  const BATCH_WORD = /bundle|hank|sheaf|bones|feathers|remains|pips|cuttings|dust|meal/i;
+
+  it('a single-piece fastener is named in the singular', () => {
+    const bad = SINGLE.filter((id) => /s$/i.test(byId.get(id)?.name ?? '')).map(
+      (id) => `${id} is one ${byId.get(id)!.weightKg}kg piece but is called "${byId.get(id)!.name}"`
+    );
+    expect(bad, bad.join('; ')).toEqual([]);
+  });
+
+  it('a unit that is really a batch says so in its name', () => {
+    const bad = BATCH.filter((id) => !BATCH_WORD.test(byId.get(id)?.name ?? '')).map(
+      (id) =>
+        `${id} is a batch (${byId.get(id)!.weightKg}kg) but "${byId.get(id)!.name}" reads as one of them`
+    );
+    expect(bad, bad.join('; ')).toEqual([]);
+  });
+
+  it('the ring bundle is priced so a coif takes a historical number of rings', () => {
+    // ~0.7g a riveted ring; a coif is 3,000-6,000 of them. This is the check that would have caught
+    // "10x Mail Rings" if anyone had asked what ten of them actually WAS.
+    const bundle = byId.get('mail_rings')!.weightKg!;
+    const perCoif = (firstRecipe('mail_coif')!.inputs as Record<string, number>)['mail_rings'];
+    const rings = (bundle * perCoif * 1000) / 0.7;
+    expect(rings, `a coif comes to ${Math.round(rings)} rings`).toBeGreaterThan(2000);
+    expect(rings, `a coif comes to ${Math.round(rings)} rings`).toBeLessThan(7000);
+  });
+});
+
+// ── R19: a worn garment is never a component of another worn garment ────────────────────────────
+// The three torso layers ARE the combination mechanic — bodyBase under bodyMid under bodyOuter — so
+// building one into another destroys the piece the pawn is supposed to be wearing underneath and
+// charges them twice for it. `make_mail_hauberk` ate a linen gambeson, and `make_mail_coif` ate a
+// TORSO garment to make a head piece.
+describe('ITEM-RULES R19 — armour layers stack on the pawn, not inside the recipe', () => {
+  it('no recipe consumes a wearable piece to build another one', () => {
+    const worn = new Set(
+      (ITEMS as Item[])
+        .filter((i) => i.type === 'armor' && i.armorProperties?.armorType)
+        .map((i) => i.id)
+    );
+    const bad: string[] = [];
+    for (const r of RECIPES as unknown as { id: string; inputs?: Record<string, number> }[])
+      for (const k of Object.keys(r.inputs ?? {}))
+        if (worn.has(k))
+          bad.push(
+            `${r.id} consumes ${k}, which is a garment a pawn wears — layer it, do not eat it`
+          );
+    expect(bad, bad.join('; ')).toEqual([]);
+  });
+});
+
+// ── Voidshard: the one thing a colony might never see ───────────────────────────────────────────
+describe('voidshard — every way in is a hard one', () => {
+  const shard = (ITEMS as Item[]).find((i) => i.id === 'voidshard')!;
+
+  it('awakens a bloodline and nothing else — no gamble, no flaw', () => {
+    expect(shard.grantsLineage, 'the shard grants a lineage').toBe(true);
+    expect(shard.traitGamble, 'not a gamble — the finding was the gamble').toBeUndefined();
+    expect(shard.rawConsumeRisk, 'no downside; it is pure reward').toBeUndefined();
+  });
+
+  it('is consumable, not a crafting material', () => {
+    expect(shard.type).toBe('consumable');
+    const eaten = (RECIPES as unknown as { inputs?: Record<string, number> }[]).filter(
+      (r) => r.inputs?.voidshard
+    );
+    expect(eaten, 'nothing grinds it up').toEqual([]);
+  });
+
+  it('a caravan only brings one for a kingdom that trusts you, at a fortune', () => {
+    expect(shard.tradeRelationsMin ?? 0).toBeGreaterThanOrEqual(75);
+    const bars = (ITEMS as Item[]).find((i) => i.id === 'gold_bar')?.value ?? 1;
+    expect(shard.value ?? 0, 'absurdly priced next to a gold bar').toBeGreaterThan(bars * 10);
+  });
+});
+
+// ── R20: an early consumable buys its effect; a runed one is handed it ──────────────────────────
+// A dose that removes something the colony would otherwise have to wait out is the strongest thing a
+// consumable can do, and in the early ages it has to be paid for — the medicine of a stone or bronze
+// age worked by making the patient sicker on the way to making them better. Charcoal Purge described
+// exactly that ("brings the poison back up with it") while clearing nausea AND envenom for nothing,
+// which is the shape this catches: prose that promises a trade the effects never charge.
+//
+// What counts as PAYMENT is a downside the sim actually applies — a `grantsConditions` window naming
+// a condition that is a net penalty, or a `rawConsumeRisk`. A grim description is not payment, and
+// neither is a low `medicineQuality` (the tend path skips condition medicine outright, so that number
+// is never read on one of these).
+//
+// The exemption is the RUNED age and only the runed age. A clean, instant, costless cure is what the
+// last age is FOR — it is the reward for reaching it, and an earlier one that acts the same way has
+// quietly handed the player the endgame answer at bronze.
+describe('ITEM-RULES R20 — a cure below the runed age costs the patient something', () => {
+  const RUNED = AGE_NAMES.indexOf('runed');
+  /** Modifier keys where a number BELOW 1 is a benefit, not a penalty (a slower hunger clock is good). */
+  const LOWER_IS_BETTER = new Set(['hungerRate', 'fatigueRate', 'thirstRate', 'pain']);
+  type CondDef = { id: string; modifiers?: Record<string, number> };
+  const CONDS = conditionsData as unknown as CondDef[];
+  const COND_BY_ID = new Map(CONDS.map((c) => [c.id, c]));
+
+  /** Does this condition leave the pawn worse off overall? Counted rather than all-or-nothing: nausea
+   *  slows the hunger clock while wrecking six other things, and it is plainly not a reward. */
+  const isPenalty = (id: string): boolean => {
+    const m = COND_BY_ID.get(id)?.modifiers ?? {};
+    let bad = 0;
+    let good = 0;
+    for (const [k, v] of Object.entries(m)) {
+      if (typeof v !== 'number' || v === 1) continue;
+      const worse = LOWER_IS_BETTER.has(k) ? v > 1 : v < 1;
+      if (worse) bad++;
+      else good++;
+    }
+    return bad > good;
+  };
+
+  /** Anything eaten, drunk or administered — the whole consumable surface, not just the medicine shelf. */
+  const CONSUMABLES = (ITEMS as Item[]).filter(
+    (i) =>
+      i.type === 'consumable' ||
+      i.type === 'fluid' ||
+      i.medicineQuality != null ||
+      i.curesConditions?.length ||
+      i.mendsWounds?.length
+  );
+  /** A dose that REMOVES something outright, rather than adding a timed effect on top. */
+  const cures = (i: Item) => [...(i.curesConditions ?? []), ...(i.mendsWounds ?? [])];
+  const pays = (i: Item) =>
+    !!(i as { rawConsumeRisk?: unknown }).rawConsumeRisk ||
+    !!(i.conditionDurationTurns && (i.grantsConditions ?? []).some(isPenalty));
+
+  // Named rather than silently tolerated, exactly like R1/R2/R4's lists. Six of these declare a cure
+  // that lands on nothing — see the audit in the R20 notes — and charging a price for an effect that
+  // does not happen makes the item worse than free. The cure has to work before it can cost anything,
+  // so they wait on that, not on a one-line data edit. This list may only ever SHRINK.
+  const R20_DEBT = new Set([
+    // Cure never fires: `bleeding` is re-derived from the limb tree every tick and is never written to
+    // `conditionTimers`, which is the only place `curesConditions` reaches.
+    'styptic_pack',
+    'field_surgeons_kit',
+    // Cure never fires: `infection` and `hypothermia` are graded persistent conditions on
+    // `pawn.conditions`; `feverburn`/`frostbrittle` are racial triggers re-derived from the pawn's own
+    // traits — and feverburn is a BENEFIT, so clearing it would be a downgrade if it worked.
+    'fever_draught',
+    'warming_liniment',
+    // Partly fires: `concussed` is a real timer, `pain_shock` is derived from the pain meter and
+    // `pain_maddened` is another racial benefit.
+    'poppy_draught',
+    // Fires, and is genuinely free: a bronze-age burn dressing puts the fire out at no cost.
+    'burn_dressing',
+    // Fires, and is genuinely free: the first two rungs of the antidote ladder clear the venom AND hand
+    // out a timed immunity. What they should charge is a balance decision about venom counterplay.
+    'antivenin_tonic',
+    'greater_antivenin_tonic'
+  ]);
+
+  it('no early-age dose clears a condition or a wound for nothing', () => {
+    const bad = CONSUMABLES.filter((i) => !R20_DEBT.has(i.id))
+      .filter((i) => cures(i).length > 0)
+      .filter((i) => chainAgeOf(i.id) < RUNED)
+      .filter((i) => !pays(i))
+      .map(
+        (i) =>
+          `${i.id} clears [${cures(i).join(', ')}] at the ${AGE_NAMES[chainAgeOf(i.id)]} age and charges nothing`
+      );
+    expect(bad, bad.join('; ')).toEqual([]);
+  });
+
+  it('the debt list has no stale entries', () => {
+    const fixed = [...R20_DEBT].filter((id) => {
+      const i = (ITEMS as Item[]).find((x) => x.id === id);
+      return i && (!cures(i).length || chainAgeOf(id) >= RUNED || pays(i));
+    });
+    expect(fixed, `fixed — drop from R20_DEBT: ${fixed.join(', ')}`).toEqual([]);
+  });
+
+  it('the runed age is the one that gets its cure clean', () => {
+    const bad = CONSUMABLES.filter((i) => cures(i).length > 0 && chainAgeOf(i.id) >= RUNED)
+      .filter((i) => (i.grantsConditions ?? []).some(isPenalty))
+      .map((i) => `${i.id} is a runed cure and still charges a price — that is what the age buys`);
+    expect(bad, bad.join('; ')).toEqual([]);
+  });
+
+  it('a downside condition is one the sim can actually apply', () => {
+    // A `grantsConditions` id that matches no condition def is a cost that never lands, and it looks
+    // identical to a real one in the data.
+    const bad = CONSUMABLES.flatMap((i) =>
+      (i.grantsConditions ?? [])
+        .filter((c) => !COND_BY_ID.has(c))
+        .map((c) => `${i.id} grants "${c}", which is not a condition`)
+    );
+    expect(bad, bad.join('; ')).toEqual([]);
+  });
+});
+
+// ── R21: unmaking a thing never returns more than went into it ──────────────────────────────────
+// Reversible pairs are everywhere in the metal lines — melt a bar to molten, cast the molten back to
+// a bar — and each half is written on its own, so the two halves drift apart without anything
+// complaining. Bronze counted a 4kg bar as one unit of molten where every other metal counted it as
+// four, and one bar came back out of the round trip as two: an unbounded metal supply from a single
+// standing order. Any pair of recipes that can turn N of an item into more than N is the same defect.
+describe('ITEM-RULES R21 — a round trip through the crafting graph never gains mass', () => {
+  /** Every input set an order can actually run on, alternatives included. */
+  const OPS = RECIPES.flatMap((r) =>
+    [r.inputs, ...(r.inputAlternatives ?? [])]
+      .filter(Boolean)
+      .map((inp) => ({ id: r.id, inp: inp as Record<string, number>, out: r.outputs ?? {} }))
+  );
+
+  const byCat = new Map<string, string[]>();
+  for (const i of ITEMS)
+    if (i.category) byCat.set(i.category, [...(byCat.get(i.category) ?? []), i.id]);
+  /** A category slot stands for any of its members, so a loop through one still counts. */
+  const members = (key: string) =>
+    key.startsWith('category:') ? (byCat.get(key.slice('category:'.length)) ?? []) : [key];
+
+  it('no two recipes turn N of an item into more than N', () => {
+    const gains: string[] = [];
+    for (const seed of ITEMS.map((i) => i.id)) {
+      for (const a of OPS) {
+        const spent = Object.entries(a.inp)
+          .filter(([k]) => members(k).includes(seed))
+          .reduce((s, [, q]) => s + q, 0);
+        if (!spent) continue;
+        for (const b of OPS) {
+          if (!(seed in b.out)) continue;
+          // how many runs of b one run of a can feed, through whichever output they share
+          const bridges = Object.keys(a.out).filter((o) =>
+            Object.keys(b.inp).some((k) => members(k).includes(o))
+          );
+          if (!bridges.length) continue;
+          const runs = Math.min(
+            ...bridges.map((o) => {
+              const need = Object.entries(b.inp).find(([k]) => members(k).includes(o))?.[1] ?? 1;
+              return a.out[o] / need;
+            })
+          );
+          const back = runs * b.out[seed];
+          if (back > spent + 1e-9)
+            gains.push(
+              `${a.id} + ${b.id} turns ${spent}x ${seed} into ${back.toFixed(2)}x — an unbounded supply`
+            );
+        }
+      }
+    }
+    expect([...new Set(gains)], [...new Set(gains)].join('; ')).toEqual([]);
+  });
+});
+
+// ── R22: a fluid is authored in litres ──────────────────────────────────────────────────────────
+// Fluids are counted in LITRES everywhere — recipes, loot, stockpile totals, vessels — so a fluid
+// definition reads differently from a solid one: `weightKg` is the mass of one LITRE (its density)
+// and `volumeL` is one SERVING. Authoring a phial the solid way (`weightKg: 0.3, volumeL: 0.3`) still
+// parses, and yields a fluid a third the weight of water whose recipe costs a third of a litre.
+// Density is the tell, because a real liquid sits between light spirits and molten gold.
+describe('ITEM-RULES R22 — a fluid states a density and a serving, and its batch fits its station', () => {
+  const FLUIDS = ITEMS.filter((i) => i.type === 'fluid');
+
+  it('every fluid weighs a believable amount per litre', () => {
+    const bad = FLUIDS.filter((i) => !(i.weightKg && i.weightKg >= 0.5 && i.weightKg <= 20)).map(
+      (i) =>
+        `${i.id} has weightKg ${i.weightKg} — for a fluid that is kilograms per LITRE, so this reads as ` +
+        `${(i.weightKg ?? 0) < 0.5 ? 'lighter than any real liquid' : 'denser than molten gold'}. ` +
+        `A per-serving weight belongs in volumeL's serving, not here.`
+    );
+    expect(bad, bad.join('; ')).toEqual([]);
+  });
+
+  it('every fluid states a serving a vessel could actually pour', () => {
+    const bad = FLUIDS.filter((i) => !(i.volumeL && i.volumeL > 0 && i.volumeL <= 2)).map(
+      (i) =>
+        `${i.id} has volumeL ${i.volumeL} — one serving, and nothing drinks or doses 2 L at once`
+    );
+    expect(bad, bad.join('; ')).toEqual([]);
+  });
+
+  it('a batch of fluid fits the station it is poured into', () => {
+    const capacity = new Map(
+      (BUILDINGS as { id?: string; fluidCapacityL?: number }[])
+        .filter((b) => b.id)
+        .map((b) => [b.id as string, b.fluidCapacityL ?? 0])
+    );
+    const isFluid = new Set(FLUIDS.map((i) => i.id));
+    const bad: string[] = [];
+    for (const r of RECIPES as (Recipe & { station?: string })[]) {
+      const litres = Object.entries(r.outputs ?? {})
+        .filter(([o]) => isFluid.has(o))
+        .reduce((s, [, q]) => s + q, 0);
+      if (litres <= 0) continue;
+      const cap = capacity.get(r.station ?? '') ?? 0;
+      if (cap > 0 && litres > cap)
+        bad.push(
+          `${r.id} pours ${litres} L into ${r.station}, which holds ${cap} L — the overflow spills`
+        );
+    }
     expect(bad, bad.join('; ')).toEqual([]);
   });
 });

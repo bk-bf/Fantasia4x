@@ -33,6 +33,9 @@ const LOOT_ONLY = new Set([
   'orc_iron_greaves',
   'orc_warhelm',
   'orc_plate_greaves',
+  'orc_plate_vambraces',
+  'orc_plate_gauntlets',
+  'orc_plate_sabatons',
   // Goblin
   'goblin_scrap_vest',
   'goblin_scrap_cap',

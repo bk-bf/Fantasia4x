@@ -16,7 +16,7 @@ import researchData from '../game/database/progression/research.jsonc';
 import traitsData from '../game/database/pawns/traits.jsonc';
 import creaturesData from '../game/database/pawns/creatures.jsonc';
 import lootpoolData from '../game/database/items/lootpool.jsonc';
-import { carcassItems, nodeItems } from './chainAge';
+import { carcassItems, nodeItems, hasRecipe, chainAgeOf, usesBossPart } from './chainAge';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 const items = itemsData as any[];
@@ -425,7 +425,7 @@ export interface GearRow {
   reach: number | null;
   range: number | null;
   stun: number | null;
-  scaling: 'BRN' | 'AGI' | 'AWR' | 'INT' | 'CHA' | 'draw' | null;
+  scaling: 'STR' | 'DEX' | 'PER' | 'INT' | 'CHA' | 'draw' | null;
   twoHanded: boolean | null;
   onHit: string | null;
   wieldStr: number | null;
@@ -508,11 +508,17 @@ function ageOf(
   if (r === 'copper_smelting') return 'Copper';
   // A high-tier LOOT piece is a boss drop, whatever it is forged from — checked before the material
   // words so `iron_tide_greataxe` reads as Boss, not as an iron-age craftable.
-  if (!craftable && tier >= 4) return 'Boss';
-  // An EXPLICIT `tier` outranks every keyword guess below. The keywords read a material out of the
-  // NAME, which stops working the moment gear is named for the animal it came off: `boarhide_jerkin`
-  // contains "hide", and the keyword rule filed a tier-1 bronze-age piece under Primitive. Data
-  // first; the guesswork below is only for entries that declare nothing.
+  // The BOSS band is what a colony can only have by putting down something enormous. That is usually
+  // loot, but it is equally a blade forged from the fang of the thing — the fang decides, not the
+  // smith. Restricting it to drop-only left every crafted boss weapon out of its own band.
+  if (tier >= 4 && (!craftable || usesBossPart(id))) return 'Boss';
+  // AGE IS DERIVED. If something makes this, the chain says when a colony can first hold it — the
+  // latest workshop in it and the ages of everything it consumes. `tier` is deliberately NOT asked:
+  // it is a different axis (a quality rank here, the ADR-009 TOOL tier on a tool) and reading it as
+  // an age filed a flint arrow in the bronze age and a knapped stone axe alongside cast bronze.
+  if (hasRecipe(id)) return AGE_OF_CHAIN[chainAgeOf(id)] ?? 'Primitive';
+  // Nothing makes it, so the keyword guesses below are all that is left for a drop that named no
+  // research. `tierDeclared` still decides there, because a drop has no chain to read.
   if (tierDeclared) return AGE_BY_TIER[Math.min(Math.max(tier, 0), 4)];
   if (/staff$|rune|arcane/.test(id)) return 'Runed';
   // Material words match ANYWHERE in the id, not just at the front: `gnoll_flint_axe` and
@@ -531,7 +537,10 @@ function ageOf(
   if (/^(throwing|sling|self|padded|linen|tallow|wattle|wicker)/.test(id)) return 'Primitive';
   return AGE_BY_TIER[Math.min(Math.max(tier, 0), 4)];
 }
-const AGE_BY_TIER: Age[] = ['Primitive', 'Bronze', 'Iron', 'Steel', 'Runed'];
+/** Item tier (0–4) → age. The one mapping; the item tree reads it too rather than keeping a second. */
+export /** Chain age index → age name. The derivation's own vocabulary. */
+const AGE_OF_CHAIN: Age[] = ['Primitive', 'Copper', 'Bronze', 'Iron', 'Steel', 'Runed'];
+export const AGE_BY_TIER: Age[] = ['Primitive', 'Bronze', 'Iron', 'Steel', 'Runed'];
 
 function kindOf(item: any): GearKind | null {
   if (item.category === 'natural_weapon') return null;
@@ -544,7 +553,28 @@ function kindOf(item: any): GearKind | null {
 }
 
 // Weapon → exactly one weapon-build, by stats + family keywords.
+/** A weapon may simply SAY what it is. The regexes below read the family out of the id, which works
+ *  until a weapon is named for what it does rather than what it is — `flenser` is a cleaver, and no
+ *  amount of pattern matching on its name will discover that. A declared family wins. */
+const FAMILY_CLASS: Record<string, { one: BuildClass; two: BuildClass }> = {
+  sword: { one: 'Sword & Shield', two: 'Greatsword (2H)' },
+  axe: { one: 'Axe & Shield', two: '2H Axe' },
+  cleaver: { one: 'Cleaver & Shield', two: '2H Cleaver' },
+  mace: { one: 'Mace & Shield', two: '2H Hammer' },
+  flail: { one: 'Flail & Shield', two: 'Flail & Shield' },
+  spear: { one: 'Spear & Shield', two: 'Polearm (2H)' },
+  rapier: { one: 'Fencer (Rapier)', two: 'Fencer (Rapier)' },
+  dagger: { one: 'Assassin (Dagger)', two: 'Assassin (Dagger)' },
+  bow: { one: 'Archer (Bow)', two: 'Archer (Bow)' },
+  crossbow: { one: 'Crossbowman', two: 'Crossbowman' },
+  sling: { one: 'Slinger (Sling)', two: 'Slinger (Sling)' },
+  thrown: { one: 'Skirmisher (Throwing)', two: 'Skirmisher (Throwing)' },
+  staff: { one: 'Battlemage (1H Staff)', two: 'War-Caster (2H Staff)' }
+};
+
 function classifyWeapon(item: any, wp: any): BuildClass {
+  const declared = FAMILY_CLASS[wp.weaponFamily as string];
+  if (declared) return wp.twoHanded ? declared.two : declared.one;
   const id = item.id;
   const dt = wp.damageType;
   const two = !!wp.twoHanded;
@@ -705,19 +735,19 @@ function bodyPartOf(slot: string | null): string | null {
 
 /** Core-stat display abbreviations, matching the pawn panels. */
 const SCALE_ABBR: Record<string, GearRow['scaling']> = {
-  brawn: 'BRN',
-  agility: 'AGI',
-  awareness: 'AWR',
-  intellect: 'INT',
+  strength: 'STR',
+  dexterity: 'DEX',
+  perception: 'PER',
+  intelligence: 'INT',
   charisma: 'CHA'
 };
 function scalingOf(wp: any): GearRow['scaling'] {
   if (!wp) return null;
   if (wp.powerStat) return SCALE_ABBR[String(wp.powerStat)] ?? null;
   if (wp.arcane) return 'INT';
-  if (wp.finesse) return 'AWR';
+  if (wp.finesse) return 'PER';
   if (wp.strScaled === false) return 'draw';
-  return 'BRN';
+  return 'STR';
 }
 
 function recipeInfo(rec: any): RecipeInfo | null {
@@ -730,8 +760,17 @@ function recipeInfo(rec: any): RecipeInfo | null {
   };
   push(rec.inputs);
   if (rec.dynamicRecipe)
-    for (const slot of Object.values<any>(rec.dynamicRecipe))
-      inputs.push({ name: prettify(slot.acceptsCategory ?? 'material'), qty: slot.quantity ?? 1 });
+    for (const slot of Object.values<any>(rec.dynamicRecipe)) {
+      // A slot may be authored either way round — `acceptsCategory` for one, `acceptsCategories` for
+      // several. Reading only the singular printed the literal word "material" for every plural slot,
+      // so a three-ingredient stew read as "1x material" three times over.
+      const cats: string[] =
+        slot.acceptsCategories ?? (slot.acceptsCategory ? [slot.acceptsCategory] : []);
+      inputs.push({
+        name: cats.length ? cats.map(prettify).join(' / ') : 'any material',
+        qty: slot.quantity ?? 1
+      });
+    }
   const stationId = rec.station ?? '';
   return {
     stationId,
@@ -756,12 +795,16 @@ for (const i of items) {
   const dry = i?.driesTo;
   const to = typeof dry === 'string' ? dry : dry?.itemId;
   if (to && !DRIED_FROM.has(to)) DRIED_FROM.set(to, i.id);
-  if (typeof i?.decaysTo === 'string' && !ROTTED_FROM.has(i.decaysTo)) ROTTED_FROM.set(i.decaysTo, i.id);
+  if (typeof i?.decaysTo === 'string' && !ROTTED_FROM.has(i.decaysTo))
+    ROTTED_FROM.set(i.decaysTo, i.id);
 }
 // Drying also runs at the CATEGORY level, and those rules live in code rather than in the item defs
 // (`ItemService.CATEGORY_DRYING`): any meat dries to dried meat, any fruit to dried fruit. Mirrored
 // here so the audit does not report two staples as unobtainable.
-for (const [cat, out] of [['meat', 'dried_meat'], ['fruit', 'dried_fruit']] as const)
+for (const [cat, out] of [
+  ['meat', 'dried_meat'],
+  ['fruit', 'dried_fruit']
+] as const)
   if (!DRIED_FROM.has(out)) DRIED_FROM.set(out, `any ${cat}`);
 
 /** Drawn from the world rather than made: a river, a lake, a well. */
@@ -834,7 +877,7 @@ function toRow(item: any, forcedKind?: GearKind): GearRow | null {
     scaling: scalingOf(wp),
     twoHanded: wp ? !!wp.twoHanded : null,
     onHit: oh?.condition ?? null,
-    wieldStr: item.wieldRequirement?.brawn ?? null,
+    wieldStr: item.wieldRequirement?.strength ?? null,
     defense: ap?.defense ?? null,
     armorType: ap?.armorType ?? null,
     slot: ap?.slot ?? ap?.equipmentSlot ?? null,
@@ -875,11 +918,11 @@ function toRow(item: any, forcedKind?: GearKind): GearRow | null {
 
 // ── traits ──────────────────────────────────────────────────────────────────
 const STAT_ABBR: Record<string, string> = {
-  brawn: 'BRN',
-  agility: 'AGI',
-  vigour: 'VIG',
-  awareness: 'AWR',
-  intellect: 'INT',
+  strength: 'STR',
+  dexterity: 'DEX',
+  constitution: 'CON',
+  perception: 'PER',
+  intelligence: 'INT',
   charisma: 'CHA'
 };
 
@@ -973,18 +1016,18 @@ function classifyTrait(t: any): BuildClass[] {
   const e = t.effects ?? {};
   const set = new Set<BuildClass>();
   const stat = (k: string) => e[k + 'Bonus'] != null;
-  if (stat('brawn')) MELEE_ALL.forEach((b) => set.add(b));
-  if (stat('vigour')) {
+  if (stat('strength')) MELEE_ALL.forEach((b) => set.add(b));
+  if (stat('constitution')) {
     FRONTLINE.forEach((b) => set.add(b));
     set.add('Pure Tank');
   }
-  if (stat('agility')) {
+  if (stat('dexterity')) {
     set.add('Assassin (Dagger)');
     set.add('Fencer (Rapier)');
     DUELIST.forEach((b) => set.add(b));
   }
-  if (stat('awareness')) PER_BUILDS.forEach((b) => set.add(b));
-  if (stat('intellect')) CASTERS.forEach((b) => set.add(b));
+  if (stat('perception')) PER_BUILDS.forEach((b) => set.add(b));
+  if (stat('intelligence')) CASTERS.forEach((b) => set.add(b));
   const cm = e.combatMods ?? {};
   for (const k of Object.keys(cm)) {
     if (/aim|reload|ranged|vision_range/.test(k)) RANGED.forEach((b) => set.add(b));

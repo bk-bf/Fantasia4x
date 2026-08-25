@@ -23,10 +23,11 @@ import { createBodyPlanLimbs } from '../systems/Combat';
 import { DEFAULT_PLAN, PART_DEF_MAP, containedParts } from '../core/BodyParts';
 import { SCARRING_CONFIG, makeScarInjury } from '../core/Wounds';
 import {
-  seedAwakeningPaths,
   getTraitById,
+  resolveTraitGamble,
   rollFlawTrait,
-  resolveTraitGamble
+  rollLineageTrait,
+  seedAwakeningPaths
 } from '../core/Lineages';
 import { KIN_INVERSE } from '../core/Social';
 import { itemDefById } from '../core/itemDefs';
@@ -43,9 +44,9 @@ export function resetPawnDebugIds(): void {
   _pawnDebugIdCounter = 1;
 }
 
-/** Stamina pool derived from vigour and agility — shared by Pawn and Mob. */
+/** Stamina pool derived from constitution and dexterity — shared by Pawn and Mob. */
 export function calcMaxStamina(stats: EntityStats): number {
-  return 50 + (stats.vigour - 10) * 4 + (stats.agility - 10) * 2;
+  return 50 + (stats.constitution - 10) * 4 + (stats.dexterity - 10) * 2;
 }
 
 /**
@@ -54,12 +55,12 @@ export function calcMaxStamina(stats: EntityStats): number {
  * Base rate 0.05 /s gives ~0→100 in 2000 s at CON 10; scales with CON.
  */
 export function calcBloodRegenRate(stats: EntityStats): number {
-  return (1.0 + (stats.vigour - 10) * 0.08) * 0.05;
+  return (1.0 + (stats.constitution - 10) * 0.08) * 0.05;
 }
 
-/** Blood pool derived from body weight and vigour. */
+/** Blood pool derived from body weight and constitution. */
 export function calcMaxBloodVolume(physicalTraits: { weight: number }, stats: EntityStats): number {
-  return Math.round(physicalTraits.weight * 1.4 + (stats.vigour - 10) * 2);
+  return Math.round(physicalTraits.weight * 1.4 + (stats.constitution - 10) * 2);
 }
 
 // ── TRAIT-SYSTEM-V2 §4: wound-granter traits ──────────────────────────────────
@@ -287,13 +288,13 @@ export function applyGainedTrait(pawn: Pawn, trait: Trait): void {
     if (pawn.stats[s] !== undefined) pawn.stats[s] = Math.max(1, pawn.stats[s] + v);
   }
   // Grafts — applyTraitGrafts is idempotent per limb id, so running the all-traits pass only adds the
-  // new limb; then credit this trait's grafted parts' core-stat grants (spider-eyes → +awareness).
+  // new limb; then credit this trait's grafted parts' core-stat grants (spider-eyes → +perception).
   if (trait.grafts?.length) {
     applyTraitGrafts(pawn);
     for (const g of trait.grafts)
       for (const pid of g.parts) {
-        const per = PART_DEF_MAP[pid]?.grants?.awarenessBonus;
-        if (typeof per === 'number') pawn.stats.awareness += per;
+        const per = PART_DEF_MAP[pid]?.grants?.perceptionBonus;
+        if (typeof per === 'number') pawn.stats.perception += per;
       }
   }
   // TRAIT-SYSTEM-V2 §4: a `wound`-kind trait stamps a REAL permanent injury on the body. Generation
@@ -331,9 +332,13 @@ export function applyGainedTrait(pawn: Pawn, trait: Trait): void {
 
 /**
  * §2h — apply a CONSUMED item's effects to a pawn, returning a NEW pawn (or the same ref if nothing
- * applied, so the caller can skip decrementing stock). Two sinks, both reusing existing systems:
+ * applied, so the caller can skip decrementing stock). Sinks, all reusing existing systems:
  *   (i)  a timed potion buff — `grantsConditions` + `conditionDurationTurns` stamped onto
  *        `conditionTimers` (exactly like a cooked-meal buff), applying through the condition pipeline.
+ *   (i.b) `curesConditions` clears active condition TIMERS.
+ *   (i.c) `mendsWounds` clears INJURIES off the limb tree. The two are not interchangeable: a
+ *        condition derived from the body (`fractured`) is rebuilt from the limb tree every tick, so
+ *        clearing its timer does nothing at all.
  *   (ii) a beast-organ trait grant — `grantsTraitOnConsume` pushes the trait + bakes it via
  *        `applyGainedTrait`, THEN rolls a Faustian flaw (a curated negative trait) and bakes that too.
  * Clones `stats`/`traits` before baking so the in-place `applyGainedTrait` never mutates the caller's
@@ -378,6 +383,57 @@ export function applyConsumable(
     }
   }
 
+  // (i.c) A wound-mending dose (a bone-knitting draught): drop every injury of the named wound types
+  // off the limb tree and give the part back the HP that injury was holding. The graded conditions
+  // that read the tree — `fractured` — re-derive themselves from it on the next tick, so nothing here
+  // touches them. `boneBroken` is recomputed for the same reason: the bone is whole again.
+  if (def.mendsWounds?.length && next.limbs?.length) {
+    const mend = new Set(def.mendsWounds);
+    let mended = false;
+    const limbs = next.limbs.map((limb) => {
+      const parts = limb.parts ?? [];
+      if (!parts.some((p) => p.injuries.some((w) => mend.has(w.type) && !w.permanent))) return limb;
+      mended = true;
+      const newParts = parts.map((part) => {
+        const kept = part.injuries.filter((w) => !(mend.has(w.type) && !w.permanent));
+        if (kept.length === part.injuries.length) return part;
+        const recovered = part.injuries.reduce(
+          (s, w) => (mend.has(w.type) && !w.permanent ? s + w.damage : s),
+          0
+        );
+        const permanentDamage = kept.reduce((s, w) => (w.permanent ? s + w.damage : s), 0);
+        return {
+          ...part,
+          injuries: kept,
+          health: Math.min(part.maxHp - permanentDamage, part.health + recovered),
+          boneBroken: false
+        };
+      });
+      return {
+        ...limb,
+        parts: newParts,
+        bleedRate: newParts.reduce(
+          (s, p) => s + p.injuries.reduce((ps, w) => ps + w.bleeding, 0),
+          0
+        )
+      };
+    });
+    if (mended) {
+      next.limbs = limbs;
+      let painTotal = 0;
+      const injuries: Injury[] = [];
+      for (const l of limbs)
+        for (const p of l.parts ?? [])
+          for (const w of p.injuries) {
+            painTotal += w.painContribution;
+            injuries.push(w);
+          }
+      next.injuries = injuries;
+      next.pain = Math.max(0, Math.min(100, Math.round(painTotal)));
+      changed = true;
+    }
+  }
+
   const bake = (trait: ReturnType<typeof getTraitById> | undefined) => {
     if (trait && !next.traits.some((t) => t.id === trait.id)) {
       next.traits.push(trait);
@@ -395,6 +451,18 @@ export function applyConsumable(
       bake(trait);
       bake(rollFlawTrait(rand));
     }
+  }
+
+  // (ii-b) A voidshard AWAKENS A BLOODLINE. No gamble and no Faustian flaw: the thing is a 0.01%
+  // strike behind a runed pick, a boss's hoard, or a fortune paid to a caravan that likes you — the
+  // finding IS the gamble, and there is nothing left to punish. A pawn who already belongs to a
+  // bloodline gets nothing, so the shard is not wasted silently: `rollLineageTrait` returns undefined
+  // and the caller sees no change.
+  if (def.grantsLineage) {
+    const pool = Array.isArray(def.grantsLineage) ? def.grantsLineage : undefined;
+    // Awakens a bloodline, or — if the pawn already has one — carries them a rung further down it for
+    // free. Either way the shard is never wasted on someone who simply "already qualifies".
+    for (const t of rollLineageTrait(next, rand, pool)) bake(t);
   }
 
   // (iii) ALCHEMY-BUTCHERY-EXPANSION §A — RAW beast organ: no reward, only risk. Sicken the eater, and at
@@ -805,7 +873,7 @@ export function getStatDescription(
     // Basic Survival
     healthRegenRate: 'Health points recovered per turn',
     diseaseResistance: 'Resistance to illness and poison',
-    vitality: 'Overall health and vigour',
+    vitality: 'Overall health and constitution',
 
     // Skills
     skill_mining: 'Experience in mineral extraction',
@@ -856,12 +924,12 @@ function rollStatsFromRanges(statRanges: Record<string, [number, number]>): Enti
 
 /** The six core-attribute keys. */
 const STAT_KEYS: (keyof EntityStats)[] = [
-  'brawn',
-  'agility',
-  'intellect',
-  'awareness',
+  'strength',
+  'dexterity',
+  'intelligence',
+  'perception',
   'charisma',
-  'vigour'
+  'constitution'
 ];
 
 /**
@@ -895,7 +963,7 @@ function rollGrowthProfile(
   for (const stat of STAT_KEYS) {
     const isFav = favStats.includes(stat);
     // Growth ceiling: 60 is the ABSOLUTE cap and only a talent reaches it. Ordinary stats top out in
-    // the 40s–low 50s. Re-banded down from 62–82 / 85–100: the old bands made brawn 80+ routine, which
+    // the 40s–low 50s. Re-banded down from 62–82 / 85–100: the old bands made strength 80+ routine, which
     // trivialised every carry/requirement gate (steel plate wearable at spawn) and pushed the top end
     // into god-like territory — a legend at 60 is superhuman enough.
     const base = isFav ? rng.int(50, 60) : rng.int(40, 55);
@@ -918,11 +986,11 @@ function applyCulturalTraitBonuses(baseStats: EntityStats, traits: Trait[]): Ent
       }
     });
     // TRAITS §0 — a bodyMod trait's GRAFTED parts pay out their own core-stat bonus (spider eyes → +1
-    // awareness), baked here from the part catalog rather than a rider on the trait's effects.
+    // perception), baked here from the part catalog rather than a rider on the trait's effects.
     for (const g of trait.grafts ?? [])
       for (const partId of g.parts) {
-        const per = PART_DEF_MAP[partId]?.grants?.awarenessBonus;
-        if (typeof per === 'number') modifiedStats.awareness += per;
+        const per = PART_DEF_MAP[partId]?.grants?.perceptionBonus;
+        if (typeof per === 'number') modifiedStats.perception += per;
       }
   });
 

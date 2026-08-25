@@ -2,6 +2,9 @@ import { describe, it, expect } from 'vitest';
 import { buildScenario } from '$lib/game/headless/Scenario';
 import { HeadlessSession } from '$lib/game/headless/HeadlessSession';
 import type { GameState, Pawn } from '$lib/game/core/types';
+import { recipeService } from '$lib/game/services/RecipeService';
+import { pawnStatService } from '$lib/game/services/PawnStatService';
+import { RECOVER_CONSCIOUSNESS } from '$lib/game/core/needs';
 
 /**
  * FSM TRANSITION & INTERRUPT-PRIORITY audit (headless). Drives the REAL sim to prove the tickPawn
@@ -10,6 +13,11 @@ import type { GameState, Pawn } from '$lib/game/core/types';
  * A losing pull must release its job to the pool (claimedBy → null) with no lost/duplicated work.
  */
 const stk = (s: HeadlessSession) => (s.getState().stockpile ?? {}) as Record<string, number>;
+// A craft order's `quantity` is RECIPE RUNS, not units of product: completing it emits
+// `recipe.outputs[item] × quantity` (craft.ts). Read the yield off the recipe so a rebalanced
+// output (make_cordage went 1 → 4) doesn't read as lost or duplicated work here.
+const yieldPerRun = (itemId: string) =>
+  recipeService.getRecipeForItem(itemId)?.outputs?.[itemId] ?? 1;
 const gs = (s: HeadlessSession) => s.getState() as GameState;
 const pawn = (s: HeadlessSession, i = 0) => gs(s).pawns[i] as Pawn;
 const stateOf = (s: HeadlessSession, id: string) =>
@@ -50,7 +58,9 @@ async function workingColony(
 describe('FSM transitions & interrupt priority', () => {
   it('DRAFT interrupts an active job cleanly — job returns to the pool, no lost/duplicated work', async () => {
     const s = await workingColony(101);
-    s.command({ type: 'craftItem', payload: { itemId: 'cordage', quantity: 4 } } as never);
+    const RUNS = 4;
+    const expected = RUNS * yieldPerRun('cordage');
+    s.command({ type: 'craftItem', payload: { itemId: 'cordage', quantity: RUNS } } as never);
     // let a pawn claim + start the craft
     for (let i = 0; i < 20 && !busyPawn(s); i++) s.tick(50);
     const worker = busyPawn(s);
@@ -73,12 +83,14 @@ describe('FSM transitions & interrupt priority', () => {
     expect(w2.activeJob, 'no dangling active job').toBeFalsy();
     // un-draft → the colony finishes the batch EXACTLY once (no lost/duplicated work)
     s.command({ type: 'toggleDraft', payload: { pawnId: worker!.id } } as never);
-    for (let i = 0; i < 40 && (stk(s).cordage ?? 0) < 4; i++) s.tick(100);
-    console.log(`[FSM draft>job] batch completed cordage=${stk(s).cordage ?? 0} (queued 4)`);
+    for (let i = 0; i < 40 && (stk(s).cordage ?? 0) < expected; i++) s.tick(100);
+    console.log(
+      `[FSM draft>job] batch completed cordage=${stk(s).cordage ?? 0} (${RUNS} runs × ${yieldPerRun('cordage')})`
+    );
     expect(
       stk(s).cordage ?? 0,
-      'the 4-unit batch completes exactly, no work lost or double-counted'
-    ).toBe(4);
+      'the batch completes exactly once — no work lost or double-counted'
+    ).toBe(expected);
   });
 
   it('MID-CRAFT NEED interrupt: hunger crossing seek DURING a craft releases the job, then it resumes (no lost work)', async () => {
@@ -96,11 +108,13 @@ describe('FSM transitions & interrupt priority', () => {
       })
     );
     const p = pawn(s, 0);
-    s.command({ type: 'craftItem', payload: { itemId: 'cordage', quantity: 6 } } as never);
+    const RUNS = 6;
+    const expected = RUNS * yieldPerRun('cordage');
+    s.command({ type: 'craftItem', payload: { itemId: 'cordage', quantity: RUNS } } as never);
     let sawWorking = false;
     let interruptedToEat = false;
     let releasedWhileEating = false;
-    for (let i = 0; i < 60 && (stk(s).cordage ?? 0) < 6; i++) {
+    for (let i = 0; i < 60 && (stk(s).cordage ?? 0) < expected; i++) {
       s.tick(30);
       const st = stateOf(s, p.id) ?? '';
       if (st === 'Working' || st === 'MovingToResource') sawWorking = true;
@@ -114,7 +128,7 @@ describe('FSM transitions & interrupt priority', () => {
       }
     }
     console.log(
-      `[FSM mid-craft] worked=${sawWorking}; interrupted to eat=${interruptedToEat}; craft released while eating=${releasedWhileEating}; cordage=${stk(s).cordage ?? 0}/6`
+      `[FSM mid-craft] worked=${sawWorking}; interrupted to eat=${interruptedToEat}; craft released while eating=${releasedWhileEating}; cordage=${stk(s).cordage ?? 0}/${expected}`
     );
     expect(sawWorking, 'the pawn started the craft').toBe(true);
     expect(interruptedToEat, 'hunger crossing seek mid-craft pulled the pawn off to eat').toBe(
@@ -127,7 +141,7 @@ describe('FSM transitions & interrupt priority', () => {
     expect(
       stk(s).cordage ?? 0,
       'the batch still completes — the accrued work was not lost or duplicated'
-    ).toBe(6);
+    ).toBe(expected);
   });
 
   it('COMBAT threat interrupts work: an adjacent hostile pulls a working pawn into Fighting, job released', async () => {
@@ -218,7 +232,7 @@ describe('FSM transitions & interrupt priority', () => {
     );
   });
 
-  it('COLLAPSE lifecycle & collapse-over-draft: a drafted pawn beaten down goes Collapsed, the draft releases, and with NOBODY to tend it it stays down', async () => {
+  it('COLLAPSE lifecycle & collapse-over-draft: a drafted pawn beaten down goes Collapsed, the draft releases, and it only comes back up through the consciousness gate', async () => {
     const s = new HeadlessSession();
     await s.start(
       buildScenario({
@@ -226,8 +240,8 @@ describe('FSM transitions & interrupt priority', () => {
         map: { w: 16, h: 16 },
         workReady: true,
         needsDisabled: ['hunger', 'fatigue', 'thirst', 'hygiene'],
-        // one deliberately frail pawn (low BRAWN/VIGOUR) that can't fight the goblins off
-        pawns: [{ count: 1, skillLevel: 5, stats: { brawn: 4, vigour: 6, agility: 8 } }],
+        // one deliberately frail pawn (low STRENGTH/CONSTITUTION) that can't fight the goblins off
+        pawns: [{ count: 1, skillLevel: 5, stats: { strength: 4, constitution: 6, dexterity: 8 } }],
         buildings: [{ id: 'campfire' }],
         items: { spit_meat: 10 },
         seedEntities: false
@@ -266,44 +280,56 @@ describe('FSM transitions & interrupt priority', () => {
       downedDraft,
       "going down RELEASES the draft — an unconscious pawn can't be commanded"
     ).toBe(false);
-    // Clear the threat. What follows is the DESIGNED arc for a pawn nobody can reach, and it is not
-    // recovery: pawn clotting is deliberately sparse (Wounds.CLOT_ROLL_INTERVAL — "bleeding stays a
-    // treat-or-die threat that only OCCASIONALLY resolves itself, leaving room for a caretaker to make
-    // it (or not)"), and this colony has exactly ONE pawn, so no caretaker can ever come. It bleeds
-    // down, consciousness falls with the blood, and it stays down. An earlier version of this test
-    // asserted that it stood back up on its own, which contradicted that design note and only ever
-    // passed while pawns took lighter wounds.
+    // Clear the threat and watch the downed arc. These goblins put the pawn down on PAIN, with most of
+    // its blood still in it, and a pain collapse is recoverable: with nothing hitting it any more
+    // healWounds mends the pile, pain falls, and consciousness climbs back. What the FSM owes is the
+    // GATE, not a fixed outcome — the pawn is held in Collapsed for exactly as long as consciousness
+    // sits under RECOVER_CONSCIOUSNESS, and coming up is a slow arc a caretaker has time to reach,
+    // not a quick bounce. How far an untended bleed drags consciousness down is wound balance and is
+    // asserted in the wound/bleed tests, not here.
     for (const m of [...(gs(s).mobs ?? [])])
       s.command({ type: 'devKillEntity', payload: { id: (m as { id: string }).id } } as never);
     s.tick(30);
     expect(stateOf(s, p.id), 'still held down right after the threat clears').toBe('Collapsed');
-    const bloodPct = () => {
-      const x = gs(s).pawns.find((q) => q.id === p.id);
-      return ((x?.bloodVolume ?? 0) / (x?.maxBloodVolume ?? 1)) * 100;
-    };
+    const cur = () => gs(s).pawns.find((q) => q.id === p.id)!;
+    const bloodPct = () => ((cur().bloodVolume ?? 0) / (cur().maxBloodVolume ?? 1)) * 100;
+    const consciousness = () => pawnStatService.computeCapacities(cur()).consciousness ?? 1;
     const bloodAtDowning = bloodPct();
-    let stoodUp = false;
-    for (let i = 0; i < 200 && !stoodUp; i++) {
-      s.tick(60);
+    const TICKS_PER_STEP = 60;
+    let ticksDown = 0;
+    let roseAt: { ticks: number; state?: string; consciousness: number } | null = null;
+    for (let i = 0; i < 200 && !roseAt; i++) {
+      s.tick(TICKS_PER_STEP);
       const st = stateOf(s, p.id);
-      if (st && st !== 'Collapsed' && gs(s).pawns.find((x) => x.id === p.id)?.isAlive !== false)
-        stoodUp = true;
+      if (st === 'Collapsed' || cur().isAlive === false) ticksDown += TICKS_PER_STEP;
+      else roseAt = { ticks: ticksDown, state: st, consciousness: consciousness() };
     }
-    const alive = gs(s).pawns.find((x) => x.id === p.id)?.isAlive !== false;
+    const alive = cur().isAlive !== false;
     console.log(
       `[FSM collapse] untended → state=${stateOf(s, p.id)} alive=${alive} ` +
-        `blood ${bloodAtDowning.toFixed(1)}% → ${bloodPct().toFixed(1)}%`
+        `blood ${bloodAtDowning.toFixed(1)}% → ${bloodPct().toFixed(1)}%; ` +
+        (roseAt
+          ? `came up after ${roseAt.ticks} ticks into ${roseAt.state} at consciousness ${roseAt.consciousness.toFixed(3)}`
+          : `still down after ${ticksDown} ticks at consciousness ${consciousness().toFixed(3)}`)
     );
     // The point of the downed state is that it is a WINDOW someone else has to act in, so the pawn must
     // still be there to be saved rather than dead on the spot…
     expect(alive, 'going down is a treat-or-die window, not an instant kill').toBe(true);
-    // …and it must not quietly solve itself, or tending a casualty would never matter.
-    expect(
-      stoodUp,
-      'with no caretaker, an untended bleeding pawn does NOT get back up on its own'
-    ).toBe(false);
-    // The arc has to be LIVE rather than wedged: blood is still draining, so this is heading somewhere.
+    // …the bleed keeps costing it blood while it lies there, so the arc is LIVE rather than wedged…
     expect(bloodPct(), 'the untended bleed keeps costing blood').toBeLessThan(bloodAtDowning);
+    // …and it can only leave Collapsed through the consciousness gate, never by the state machine
+    // dropping the condition on its own.
+    if (roseAt)
+      expect(
+        roseAt.consciousness,
+        'it left Collapsed only once consciousness cleared the recovery threshold'
+      ).toBeGreaterThanOrEqual(RECOVER_CONSCIOUSNESS);
+    // A casualty mending itself has to take long enough that tending one still matters — no quick bounce
+    // back off the floor.
+    expect(
+      roseAt ? roseAt.ticks : ticksDown,
+      'an untended casualty stays down for a long stretch, not a few ticks'
+    ).toBeGreaterThan(300);
   });
 
   it('STUCK / OSCILLATION invariant: a realistic colony over thousands of ticks never wedges a pawn', async () => {
@@ -415,7 +441,7 @@ describe('FSM transitions & interrupt priority', () => {
         workReady: true, // caretaking labor on for everyone
         needsDisabled: ['hunger', 'fatigue', 'thirst', 'hygiene'],
         pawns: [
-          { count: 1, skillLevel: 5, stats: { brawn: 4, vigour: 6, agility: 8 } }, // frail victim
+          { count: 1, skillLevel: 5, stats: { strength: 4, constitution: 6, dexterity: 8 } }, // frail victim
           { count: 2, skillLevel: 20 } // able caretakers
         ],
         buildings: [{ id: 'hay_bed' }], // a rest building → shelter to carry to

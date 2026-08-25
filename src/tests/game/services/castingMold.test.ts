@@ -52,11 +52,13 @@ describe('§5 casting consumes a single-use clay mold', () => {
   });
 
   it('a casting recipe is unaffordable without a clay mold in stock', () => {
-    expect(itemService.hasRequiredMaterials('cast_sling_bullet', state({ copper_bar: 1 }))).toBe(
+    // A cast piece is POURED, so what it consumes is the melt — the bar is one step further back
+    // (`smelt_copper` takes a bar as an alternative and gives 4 measures of molten copper).
+    expect(itemService.hasRequiredMaterials('cast_sling_bullet', state({ molten_copper: 4 }))).toBe(
       false
     );
     expect(
-      itemService.hasRequiredMaterials('cast_sling_bullet', state({ copper_bar: 1, clay_mold: 1 }))
+      itemService.hasRequiredMaterials('cast_sling_bullet', state({ molten_copper: 4, clay_mold: 1 }))
     ).toBe(true);
   });
 });

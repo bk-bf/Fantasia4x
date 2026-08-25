@@ -117,7 +117,7 @@
           <ItemTreeNode node={root} {open} {sel} {toggle} {select} {onhover} {onout} />
         {/each}
         {#if !tree.count}
-          <tr><td colspan="8" class="none">nothing matches “{q}”</td></tr>
+          <tr><td colspan="10" class="none">nothing matches “{q}”</td></tr>
         {/if}
       </tbody>
     </table>

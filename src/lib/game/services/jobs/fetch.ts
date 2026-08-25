@@ -104,7 +104,11 @@ export function complete(job: Job, gs: GameState): GameState {
     remainder > 0
       ? (gs.droppedItems ?? []).map((d) =>
           d.id === drop.id
-            ? { ...d, quantity: remainder, ...(carcassConds ? { unitConditions: carcassConds.slice(taken) } : {}) }
+            ? {
+                ...d,
+                quantity: remainder,
+                ...(carcassConds ? { unitConditions: carcassConds.slice(taken) } : {})
+              }
             : d
         )
       : (gs.droppedItems ?? []).filter((d) => d.id !== drop.id);

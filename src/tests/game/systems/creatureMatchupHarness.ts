@@ -121,9 +121,9 @@ export const WEAPONS: Loadout[] = [
 function powerStatOf(itemId: string): keyof EntityStats {
   const wp = itemService.getItemById(itemId)?.weaponProperties;
   if (wp?.powerStat) return wp.powerStat as keyof EntityStats;
-  if (wp?.arcane) return 'intellect';
-  if (wp?.finesse) return 'awareness';
-  return 'brawn';
+  if (wp?.arcane) return 'intelligence';
+  if (wp?.finesse) return 'perception';
+  return 'strength';
 }
 
 /** A pawn built for this weapon, at the SPAWN CEILING of 20 — above it describes a colonist who cannot
@@ -131,11 +131,11 @@ function powerStatOf(itemId: string): keyof EntityStats {
  *  board, so the comparison is about fit and not about a bigger stat budget. */
 function suitedStats(itemId: string): Partial<EntityStats> {
   const s: Partial<EntityStats> = {
-    brawn: 11,
-    agility: 11,
-    vigour: 17,
-    awareness: 11,
-    intellect: 11,
+    strength: 11,
+    dexterity: 11,
+    constitution: 17,
+    perception: 11,
+    intelligence: 11,
     charisma: 11
   };
   s[powerStatOf(itemId)] = 20;

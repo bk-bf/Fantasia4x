@@ -41,7 +41,9 @@ describe('carry aid chain — packs, belts and sheaths (HeadlessSession, real ti
         // need the tanning chain, which is exactly the gate R4 now enforces.
         items: {
           cured_deer_hide: 30,
-          buckskin: 40,
+          sinew: 60,
+          thread: 60,
+          buckskin: 120,
           jackal_leather: 40,
           bronze_nail: 200,
           iron_bar: 20
@@ -104,7 +106,9 @@ describe('carry aid chain — packs, belts and sheaths (HeadlessSession, real ti
         needsDisabled: ['hunger', 'fatigue'],
         buildings: [{ id: 'makers_bench' }, { id: 'anvil' }, { id: 'runecarver_bench' }],
         items: {
-          buckskin: 60,
+          buckskin: 200,
+          sinew: 60,
+          thread: 60,
           iron_bar: 20,
           iron_nail: 200,
           oak_plank: 20,
@@ -170,7 +174,15 @@ describe('the pack grid — light / medium / heavy at one age (HeadlessSession, 
         pawns: [{ count: 6, skillLevel: 18 }],
         needsDisabled: ['hunger', 'fatigue'],
         buildings: [{ id: 'makers_bench' }],
-        items: { buckskin: 80, jackal_leather: 40, iron_bar: 20, iron_nail: 200, oak_plank: 20 },
+        items: {
+          buckskin: 200,
+          jackal_leather: 40,
+          iron_bar: 20,
+          iron_nail: 200,
+          oak_plank: 20,
+          sinew: 60,
+          thread: 60
+        },
         seedEntities: false
       })
     );
