@@ -88,17 +88,18 @@ say "main at $(git -C "$REPO" rev-parse --short main)"
 # --- 2. codegraph ------------------------------------------------------------
 # Without a current extract the reachability triggers silently stop firing, which reads as
 # "the hot path is clean" rather than "nothing was asked about it".
-if [ -d "$GRAPH" ]; then
-  say "--- re-extracting codegraph"
-  ( cd "$REPO" && "$NODE" "$GRAPH/bin/codegraph.mjs" extract Fantasia4x ) \
-    || say "WARN: codegraph extract failed; reachability triggers will under-fire"
-else
-  say "WARN: no codegraph at $GRAPH; reachability triggers will not fire"
-fi
+# A failed extract used to be a warning, which meant the night carried on against
+# yesterday's graph and produced verdicts that looked clean because nothing was asked. The
+# extract is a precondition of the run, not a nicety, so it now stops the night.
+[ -d "$GRAPH" ] || die "no codegraph at $GRAPH — it is a precondition, not an optional extra"
+say "--- re-extracting codegraph"
+( cd "$REPO" && "$NODE" "$GRAPH/bin/codegraph.mjs" extract Fantasia4x ) \
+  || die "codegraph extract failed — refusing to audit against a stale graph"
 
 # --- 3. index + plan ---------------------------------------------------------
 say "--- indexing"
-( cd "$REPO" && "$NODE" tools/audit/audit.mjs index ) || die "index failed"
+( cd "$REPO" && "$NODE" tools/audit/audit.mjs index --require-fresh ) \
+  || die "index failed, or the graph does not match HEAD"
 say "--- planning"
 ( cd "$REPO" && "$NODE" tools/audit/audit.mjs plan ) || die "plan failed"
 BEFORE=$( cd "$REPO" && "$NODE" tools/audit/audit.mjs status | sed -n 's/^work .*done \([0-9]*\) .*/\1/p' )

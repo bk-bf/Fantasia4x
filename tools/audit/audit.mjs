@@ -20,6 +20,7 @@ import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { hostname } from 'node:os';
+import { execFileSync } from 'node:child_process';
 
 import * as L from './lib/ledger.mjs';
 import { extractRepo, sliceOf } from './lib/extract.mjs';
@@ -47,6 +48,17 @@ const out = (s) => process.stdout.write(s + '\n');
 
 // --- index -------------------------------------------------------------------
 
+/** HEAD of the repo being audited, or null outside a checkout. */
+function gitHead() {
+  try {
+    return execFileSync('git', ['rev-parse', 'HEAD'], { cwd: ROOT, encoding: 'utf8' }).trim();
+  } catch {
+    return null;
+  }
+}
+/** Set by `index` when the graph describes a different revision. `--require-fresh` exits on it. */
+let GRAPH_STALE = false;
+
 function cmdIndex() {
   const db = L.open();
   const t0 = Date.now();
@@ -70,6 +82,20 @@ function cmdIndex() {
     out(
       `graph: ${matched}/${total} nodes mapped (${pct}%), ${edges.length} edges, ${e.dropped} unmapped`
     );
+    // Exact staleness, rather than inferring it from a low match rate once the damage is
+    // done: the extract records the revision it was built from, so a graph describing other
+    // code can be named as such. A stale graph does not error anywhere downstream — the
+    // reachability and caller triggers simply stop firing, which reads as "the hot path is
+    // clean" rather than "nothing was asked about it".
+    const head = gitHead();
+    if (head && graph.commit && graph.commit !== head) {
+      out(`[warn] the codegraph extract was built from ${graph.commit.slice(0, 8)}, but HEAD is`);
+      out(`[warn] ${head.slice(0, 8)} — reachability and family F verdicts describe other code.`);
+      out(`[warn] re-run \`pnpm graph\` before trusting this run.`);
+      GRAPH_STALE = true;
+    } else if (graph.dirty) {
+      out(`[warn] the codegraph extract was built over uncommitted changes; it matches no commit.`);
+    }
     if (matched / total < 0.8) {
       out(
         `[warn] low map rate — the codegraph extract (${graph.generatedAt}) is likely stale; re-run \`pnpm graph\`.`
@@ -100,6 +126,13 @@ function cmdIndex() {
   }
   db.prepare('INSERT OR REPLACE INTO meta (k,v) VALUES (?,?)').run('indexed_at', L.nowIso());
   out(`indexed.`);
+  // Unattended callers pass --require-fresh: a night spent auditing against a graph of other
+  // code produces verdicts that look clean because nothing was asked, which is worse than
+  // not running. Interactive use only gets the warning above.
+  if (GRAPH_STALE && process.argv.includes('--require-fresh')) {
+    out(`[fatal] --require-fresh: refusing to continue against a stale graph.`);
+    process.exit(2);
+  }
 }
 
 // --- plan --------------------------------------------------------------------
