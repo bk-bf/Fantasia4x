@@ -2,7 +2,7 @@
 // handlers. Extracted from JobService (P-4, ADR-017 handler split): these resolve where an order's
 // workstation is and whether the inputs / build materials reserved for an owner are staged on it.
 import type { CraftingInProgress, GameState, PlacedBuilding } from '../../core/types';
-import { heldQuantity, isFluidId } from '../../core/vessels';
+import { heldQuantity, isFluidId } from '../../core/rules/gear/vessels';
 
 /** ADR-016: tile coords of an order's chosen workstation, or null if it's gone. */
 export function stationTileFor(

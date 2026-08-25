@@ -1,12 +1,12 @@
 // Entity lifecycle — hunger/fatigue/blood-loss tick, death → corpse conversion, carcass drops, and
 // corpse decay. Extracted from EntityService (P-4).
 import type { GameState, Mob, MobState, DroppedItem, ItemInstance } from '../../core/types';
-import { getCreatureById } from '../../core/Creatures';
-import { stampForeignVessel } from '../../core/vessels';
-import { drawCarried, getLootPool } from '../../core/LootPools';
+import { getCreatureById } from '../../core/defs/creatures';
+import { stampForeignVessel } from '../../core/rules/gear/vessels';
+import { drawCarried, getLootPool } from '../../core/defs/loot';
 import { itemService } from '../ItemService';
-import { rng } from '../../core/rng';
-import { SECONDS_PER_TICK, perTick } from '../../core/time';
+import { rng } from '../../core/util/rng';
+import { SECONDS_PER_TICK, perTick } from '../../core/util/time';
 import {
   conditionNeedMultipliers,
   transientNeedMultipliers,
@@ -18,25 +18,25 @@ import {
   syncFractureConditions,
   driveWindchill,
   TIRED_FATIGUE_THRESHOLD
-} from '../../core/needs';
+} from '../../core/rules/body/conditions';
 import {
   creatureExposureAt,
   accrueWetness,
   getAmbientLight,
   weatherSightMul
 } from '../EnvironmentService';
-import { isWitnessedByColony } from '../../core/vision';
-import { absorbDropIfOnStockpileTile } from '../../core/GameState';
+import { isWitnessedByColony } from '../../core/rules/body/vision';
+import { absorbDropIfOnStockpileTile } from '../../core/state/stockpile';
 import { pawnStatService } from '../PawnStatService';
-import { simLog } from '../../core/logSink';
-import { lethalAnatomyCause } from '../../core/BodyParts';
+import { simLog } from '../../core/util/logSink';
+import { lethalAnatomyCause } from '../../core/defs/bodyParts';
 import {
   healLimbsInPlace,
   rollWoundClotting,
   MOB_CLOT_ROLL_INTERVAL,
   MOB_BASE_CLOT_CHANCE,
   MOB_BLOODLETTING_CLOT_FACTOR
-} from '../../core/Wounds';
+} from '../../core/defs/wounds';
 import { entityName, mobInLiveRegion, isThinkTick } from './entityHelpers';
 import {
   BASE_HUNGER_PER_SECOND,

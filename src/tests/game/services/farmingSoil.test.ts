@@ -9,7 +9,7 @@ import {
   generate as harvestGenerate
 } from '$lib/game/services/jobs/harvest';
 import { isGrowableResource } from '$lib/game/services/ResourceObjectService';
-import { SUBTERRAINS, soilFertilityPct } from '$lib/game/core/Terrains';
+import { SUBTERRAINS, soilFertilityPct } from '$lib/game/core/defs/terrains';
 import type { GameState, Job } from '$lib/game/core/types';
 
 // PRODUCTION-CHAIN-II §F — soil buildings (terraform) + compost + seeds + wild-crop seed yield.

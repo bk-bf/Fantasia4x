@@ -9,7 +9,7 @@ import {
   applyMealBuff,
   mealPoisonChance
 } from '$lib/game/systems/pawn/pawnQueries';
-import { decayIntoxication } from '$lib/game/core/needs';
+import { decayIntoxication } from '$lib/game/core/rules/body/conditions';
 import conditionsData from '$lib/game/database/pawns/conditions.jsonc';
 import type { GameState, Pawn } from '$lib/game/core/types';
 

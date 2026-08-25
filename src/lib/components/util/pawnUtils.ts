@@ -1,7 +1,7 @@
 import type { GameState, Job, Pawn } from '$lib/game/core/types';
 import { jobService } from '$lib/game/services/JobService';
 import { itemService } from '$lib/game/services/ItemService';
-import { resourceObjectDefById } from '$lib/game/core/resourceObjectDefs';
+import { resourceObjectDefById } from '$lib/game/core/defs/resourceObjects';
 
 /** Human name for a harvest-node or item id — resource-object nodes (berry_bush) via their displayName,
  *  otherwise the item def name, never the raw id. */

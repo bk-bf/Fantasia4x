@@ -1,7 +1,7 @@
 // Passive magical buffs via conditions: gear grants transient magical conditions while worn.
 import { describe, it, expect } from 'vitest';
 import { syncTransientConditions } from '$lib/game/systems/PawnStateMachine';
-import { equipItem } from '$lib/game/core/PawnEquipment';
+import { equipItem } from '$lib/game/core/rules/gear/equipment';
 import { combatService } from '$lib/game/systems/Combat';
 import { itemService } from '$lib/game/services/ItemService';
 import { recipeService } from '$lib/game/services/RecipeService';

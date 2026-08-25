@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { combatService } from '$lib/game/systems/Combat';
-import { createDefaultBodyParts } from '$lib/game/core/BodyParts';
+import { createDefaultBodyParts } from '$lib/game/core/defs/bodyParts';
 import { makeMob } from '$lib/game/services/entity/entitySpawning';
-import { getCreatureById } from '$lib/game/core/Creatures';
-import { rng } from '$lib/game/core/rng';
+import { getCreatureById } from '$lib/game/core/defs/creatures';
+import { rng } from '$lib/game/core/util/rng';
 import type { GameState, Mob, Pawn } from '$lib/game/core/types';
 
 // naturalArmor soaks low-AP attacks, AP bites through, and bodyScale scales blood pool + natural-weapon damage. Drives the real resolveHit/makeMob — no mocks.

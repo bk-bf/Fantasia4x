@@ -29,15 +29,15 @@ import { generateWorld } from '../world/WorldGenerator';
 import { generateColonyPawns, generateWorldKin, resetPawnDebugIds } from '../entities/Pawns';
 import { resetMobIdCounter } from '../services/entity/entitySpawning';
 import { workService } from '../services/WorkService';
-import { SKILL_CATEGORIES } from '../core/workExperience';
+import { SKILL_CATEGORIES } from '../core/rules/body/workExperience';
 import { entityService } from '../services/EntityService';
 import { kingdomService } from '../services/KingdomService';
 import { socialService } from '../services/SocialService';
 import { researchService } from '../services/ResearchService';
 import { itemService } from '../services/ItemService';
 import { applySimCommand } from '../sim/commands';
-import { SUBTERRAINS, SUBTERRAIN_FALLBACK, pickChar } from '../core/Terrains';
-import { rng } from '../core/rng';
+import { SUBTERRAINS, SUBTERRAIN_FALLBACK, pickChar } from '../core/defs/terrains';
+import { rng } from '../core/util/rng';
 
 export interface ScenarioPawnGroup {
   count: number;

@@ -9,8 +9,8 @@ import {
   BREAKDOWN_MOOD_TIER2,
   BREAKDOWN_MOOD_TIER3
 } from '$lib/game/systems/pawn/handlers/breakdown';
-import { moodEffect } from '$lib/game/core/moodEffects';
-import { FSM_STATE_BY_CONDITION, getConditionDefById } from '$lib/game/core/needs';
+import { moodEffect } from '$lib/game/core/defs/moods';
+import { FSM_STATE_BY_CONDITION, getConditionDefById } from '$lib/game/core/rules/body/conditions';
 import { TICKS_PER_GAME_HOUR } from '$lib/game/services/EnvironmentService';
 
 /**

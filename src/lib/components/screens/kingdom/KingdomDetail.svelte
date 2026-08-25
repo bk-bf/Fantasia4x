@@ -7,7 +7,7 @@
 <script lang="ts">
   import type { Culture, Kingdom, KingdomRelation } from '$lib/game/core/types';
   import { COLONY_RELATION_ID } from '$lib/game/core/types';
-  import { knowledgeTier, WEALTH_BAND_LABEL } from '$lib/game/core/Kingdom';
+  import { knowledgeTier, WEALTH_BAND_LABEL } from '$lib/game/core/gen/kingdom';
   import { kingdomService } from '$lib/game/services/KingdomService';
 
   let {

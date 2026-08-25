@@ -3,9 +3,9 @@
 // and removes the building. Extracted from JobService (P-4 handler split).
 import type { GameState, Job } from '../../core/types';
 // Gated console shim — see core/log.ts. Silences per-tick log/debug/warn unless gameDebug(true).
-import { gatedConsole as console } from '../../core/log';
+import { gatedConsole as console } from '../../core/util/log';
 import { buildingService } from '../BuildingService';
-import { addToStockpileZone } from '../../core/GameState';
+import { addToStockpileZone } from '../../core/state/stockpile';
 
 export function generate(jobs: Job[], gs: GameState): Job[] {
   // Remove deconstruct jobs for buildings no longer queued or already gone

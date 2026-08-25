@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { equipDropToPawn, carryDropToInventory } from '$lib/game/core/PawnEquipment';
+import { equipDropToPawn, carryDropToInventory } from '$lib/game/core/rules/gear/equipment';
 import { pawnStatService } from '$lib/game/services/PawnStatService';
 import { jobService } from '$lib/game/services/JobService';
 import type { GameState, Pawn } from '$lib/game/core/types';

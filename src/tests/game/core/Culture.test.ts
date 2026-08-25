@@ -3,9 +3,9 @@ import {
   generateCulture,
   generateCulturePool,
   generateCultureRelations
-} from '$lib/game/core/Culture';
+} from '$lib/game/core/gen/culture';
 import { generateColonyPawns } from '$lib/game/entities/Pawns';
-import { rng } from '$lib/game/core/rng';
+import { rng } from '$lib/game/core/util/rng';
 
 describe('Culture overhaul — pool generation', () => {
   beforeEach(() => rng.reseed(20260617));

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { buildScenario } from '$lib/game/headless/Scenario';
 import { HeadlessSession } from '$lib/game/headless/HeadlessSession';
-import { resolveTraitGamble } from '$lib/game/core/Lineages';
+import { resolveTraitGamble } from '$lib/game/core/defs/lineages';
 import { itemService } from '$lib/game/services/ItemService';
 import { applyConsumable } from '$lib/game/entities/Pawns';
 import type { Pawn } from '$lib/game/core/types';

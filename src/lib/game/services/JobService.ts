@@ -16,9 +16,9 @@
  */
 
 import type { DesignationType, DroppedItem, GameState, Job, JobDef, Pawn } from '../core/types';
-import { manhattan } from '../core/distance';
-import { WORK_CATEGORIES } from '../core/Work';
-import { applyWorkXp, workXpForJob, SKILL_CATEGORIES, workSkillCategory } from '../core/workExperience';
+import { manhattan } from '../core/util/distance';
+import { WORK_CATEGORIES } from '../core/defs/work';
+import { applyWorkXp, workXpForJob, SKILL_CATEGORIES, workSkillCategory } from '../core/rules/body/workExperience';
 import jobsData from '../database/pawns/jobs.jsonc';
 import { resourceObjectService } from './ResourceObjectService';
 import { itemService } from './ItemService';
@@ -43,7 +43,7 @@ import {
   DISCIPLINE_SPLIT_PARENTS,
   disciplineLeaves,
   DISCIPLINE_LABEL
-} from './jobs/disciplineTree';
+} from '../core/defs/disciplines';
 
 // ===== JOB REGISTRY (data-driven, jobs.jsonc) =====
 // The declarative half of the job system. jobs.jsonc lists the colony job types + their

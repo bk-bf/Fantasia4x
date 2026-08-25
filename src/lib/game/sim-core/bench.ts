@@ -29,7 +29,7 @@ import {
   I_Y,
   U_ALIVE
 } from './simWorldView';
-import { gameLogger } from '../dev/gameLogger';
+import { gameLogger } from '../debug/gameLogger';
 
 const DIRS: ReadonlyArray<readonly [number, number]> = [
   [1, 0],

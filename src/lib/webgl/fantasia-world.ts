@@ -10,14 +10,14 @@ import {
   SUBTERRAIN_FALLBACK,
   pickChar,
   resolveCharSpans
-} from '$lib/game/core/Terrains.js';
+} from '$lib/game/core/defs/terrains.js';
 import {
   resourceObjectDefById,
   type ResourceObjectDef
-} from '$lib/game/core/resourceObjectDefs.js';
-import { RESOURCE_VISIBLE_GROWTH } from '$lib/game/core/wildGrowth.js';
-import { buildingDefById } from '$lib/game/core/buildingDefs.js';
-import { parseHexRgb01 } from '$lib/game/core/color.js';
+} from '$lib/game/core/defs/resourceObjects.js';
+import { RESOURCE_VISIBLE_GROWTH } from '$lib/game/core/rules/world/wildGrowth.js';
+import { buildingDefById } from '$lib/game/core/defs/buildings.js';
+import { parseHexRgb01 } from '$lib/game/core/util/color.js';
 import { glyph, SHEET } from './tilesets.js';
 import type { RGB } from './tile-types.js';
 

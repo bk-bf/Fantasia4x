@@ -3,8 +3,8 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { memoryService, MEMORABILITY } from '$lib/game/services/MemoryService';
 import { runConversation, combatBark } from '$lib/game/services/social/conversations';
-import { rng } from '$lib/game/core/rng';
-import { TICKS_PER_SECOND } from '$lib/game/core/time';
+import { rng } from '$lib/game/core/util/rng';
+import { TICKS_PER_SECOND } from '$lib/game/core/util/time';
 import { TURNS_PER_DAY } from '$lib/game/services/EnvironmentService';
 import type {
   EntityCondition,

@@ -3,7 +3,7 @@
 // the action order, and applies tool wear. Extracted from JobService (P-4 handler split).
 import type { DesignationType, GameState, Job } from '../../core/types';
 // Gated console shim — see core/log.ts. Silences per-tick log/debug/warn unless gameDebug(true).
-import { gatedConsole as console } from '../../core/log';
+import { gatedConsole as console } from '../../core/util/log';
 import { resourceObjectService } from '../ResourceObjectService';
 import { itemService } from '../ItemService';
 import { buildingService } from '../BuildingService';
@@ -12,15 +12,15 @@ import {
   SUBTERRAIN_FALLBACK,
   soilTierForTile,
   SUBTYPE_BY_SOIL_TIER
-} from '../../core/Terrains';
-import { markTileDirty } from '../../core/tileDeltas';
-import { addWildGrowth } from '../../core/wildGrowth';
-import { pushRegrowth, minCooldownExpiry } from '../../core/regrowthQueue';
+} from '../../core/defs/terrains';
+import { markTileDirty } from '../../core/state/tileDeltas';
+import { addWildGrowth } from '../../core/rules/world/wildGrowth';
+import { pushRegrowth, minCooldownExpiry } from '../../core/rules/world/regrowthQueue';
 import { patchPathfindingWalkable } from '../PathfinderService';
-import { absorbDropIfOnStockpileTile } from '../../core/GameState';
-import { ticksFromSeconds } from '../../core/time';
+import { absorbDropIfOnStockpileTile } from '../../core/state/stockpile';
+import { ticksFromSeconds } from '../../core/util/time';
 import { seasonRegrowthMultiplier } from '../EnvironmentService';
-import { rng } from '../../core/rng';
+import { rng } from '../../core/util/rng';
 import {
   HARVEST_DTYPES,
   MIN_FORAGE_GROWTH,

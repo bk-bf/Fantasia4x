@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { TRAIT_DATABASE } from '$lib/game/core/Culture';
-import { rng } from '$lib/game/core/rng';
-import { createBodyPlanLimbs } from '$lib/game/core/BodyParts';
-import { rollWoundClotting, recomputeWound } from '$lib/game/core/Wounds';
+import { TRAIT_DATABASE } from '$lib/game/core/gen/culture';
+import { rng } from '$lib/game/core/util/rng';
+import { createBodyPlanLimbs } from '$lib/game/core/defs/bodyParts';
+import { rollWoundClotting, recomputeWound } from '$lib/game/core/defs/wounds';
 import { pawnStatService } from '$lib/game/services/PawnStatService';
 import { applyTraitGrafts, applyTraitWounds } from '$lib/game/entities/Pawns';
 import { syncTransientConditions, tickAuras } from '$lib/game/systems/PawnStateMachine';

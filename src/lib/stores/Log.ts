@@ -1,7 +1,7 @@
 import { writable, derived, type Writable } from 'svelte/store';
 import { browser } from '$app/environment';
-import type { ActivityLogEntry, CombatTurnEntry } from '$lib/game/core/Events';
-import type { LogEventInput } from '$lib/game/core/logSink';
+import type { ActivityLogEntry, CombatTurnEntry } from '$lib/game/core/defs/events';
+import type { LogEventInput } from '$lib/game/core/util/logSink';
 import {
   loadActivityLog,
   scheduleSaveActivityLog,

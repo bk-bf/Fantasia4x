@@ -19,9 +19,9 @@ import type {
   GrowthOffer,
   Trait
 } from '$lib/game/core/types';
-import { rng } from '$lib/game/core/rng';
+import { rng } from '$lib/game/core/util/rng';
 import { DAYS_PER_SEASON } from '$lib/game/services/EnvironmentService';
-import { advanceAwakeningMeters, lineageGrowthEvent } from '$lib/game/core/Lineages';
+import { advanceAwakeningMeters, lineageGrowthEvent } from '$lib/game/core/defs/lineages';
 import { applyGainedTrait } from '$lib/game/entities/Pawns';
 
 const STAT_KEYS: StatKey[] = [

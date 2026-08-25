@@ -56,8 +56,8 @@ The detection half is a **filter on an existing gate**, not a new subsystem:
 | --- | --- | --- |
 | "pawn is in a creature's vision" | `inVision = nearest within visionRange && hasLineOfSight(...)` | [entityAI.ts:594](../../../src/lib/game/services/entity/entityAI.ts#L594) |
 | creature detection ingredients (PER + sight + nightVision + light + weather) | `effectiveVisionRange(mob, tileLight, weatherSightMul)` + `mob.effectiveLight` | [entityAI.ts:585-589](../../../src/lib/game/services/entity/entityAI.ts#L585) |
-| night dampening helper | `dampenLightByNightVision(light, nightVision)` | [vision.ts:79](../../../src/lib/game/core/vision.ts#L79) |
-| trait-summed derived value pattern to copy | `getNightVision()` (sums traits + living parts + conditions + def) | [vision.ts:14-61](../../../src/lib/game/core/vision.ts#L14) |
+| night dampening helper | `dampenLightByNightVision(light, nightVision)` | [vision.ts:79](../../../src/lib/game/core/rules/body/vision.ts#L79) |
+| trait-summed derived value pattern to copy | `getNightVision()` (sums traits + living parts + conditions + def) | [vision.ts:14-61](../../../src/lib/game/core/rules/body/vision.ts#L14) |
 | the reward (crit → aimed vital part), **melee AND ranged** | `resolveHit` rolls `hit_precision + weapon.critMod` | [Combat.ts:789-804](../../../src/lib/game/systems/Combat.ts#L789) |
 | weapon precision field | `weaponProperties.critMod` (added to attacker `hit_precision`) | [items.jsonc:3341](../../../src/lib/game/database/items.jsonc#L3341) |
 | armour stealth field (exists, unused) | `armorProperties.stealthBonus` → **rename `stealthMod`** | [items.ts:515](../../../src/lib/game/core/types/items.ts#L515) |
@@ -88,7 +88,7 @@ Two layers, mirroring how `night_vision` works (a formula base + a summed trait/
 - `dexGate`: DEX ≤ 8 → **0** (hard blocker); DEX 10 → 0.2; DEX 16 → 0.8; DEX 20 → 1.2 (clamp cap 1.4).
 - Default pawn (70 kg, DEX 10): `1.0 × 0.2 × 1 = 0.2` → effectively a non-stealther.
 
-**Layer B — `getStealth(pawn)` (new pure fn, `core/stealth.ts`, copy `getNightVision`'s shape):**
+**Layer B — `getStealth(pawn)` (new pure fn, `core/rules/body/stealth.ts`, copy `getNightVision`'s shape):**
 
 ```
 getStealth(pawn) = clamp(
@@ -300,9 +300,9 @@ own pass. Also parks the **hearing/smell detection channel** (§5 realism upgrad
 
 ## 12. Acceptance criteria
 
-- [x] `stealth` stat added to `stats.jsonc` (size×DEX×moving base); `getStealth()` in `core/stealth.ts` sums
+- [x] `stealth` stat added to `stats.jsonc` (size×DEX×moving base); `getStealth()` in `core/rules/body/stealth.ts` sums
   base + trait `stealth` + part grants + armour `stealthMod`. *(2026-07-14 — `evaluateStat('stealth')`
-  folds both layers; `compileFormula` gained `clamp()` for the DEX gate. `core/stealth.test.ts`.)*
+  folds both layers; `compileFormula` gained `clamp()` for the DEX gate. `tests/game/core/stealth.test.ts`.)*
 - [x] `armorProperties.stealthBonus` renamed to `stealthMod`; summed by `getStealth`. *(2026-07-14 — with
   the weight-derived fallback, −0.03/kg, for unauthored pieces.)*
 - [x] Detection roll wired at the `entityAI` `inVision` gate (per-mob ~2 s timer, cached; proximity +0.25;
@@ -326,14 +326,14 @@ own pass. Also parks the **hearing/smell detection channel** (§5 realism upgrad
   `blowgun` (critMod 0.15) + `blow_dart`, `hunting_recurve` (critMod 0.10, drawPower 1.2 vs war bow's
   1.7); all craftable at the makers_bench. Natural-armour penalty = −0.04/`naturalArmor` point.)*
 - [x] Constraint audit re-verified: no existing pawn/creature ≥ ~0.3 stealth without deliberate build.
-  *(2026-07-14 — enforced by `core/stealth.test.ts` §9 suite: default pawn ≈ 0.2, positive `stealth`
+  *(2026-07-14 — enforced by `tests/game/core/stealth.test.ts` §9 suite: default pawn ≈ 0.2, positive `stealth`
   effects whitelisted, big beast + prowl stays < 1.0.)*
 - [ ] Encounter balance pass after always-on detection lands. *(OPEN — mobs no longer acquire pawns
   instantly: ~9 %/check at the vision border, ~34 % adjacent for a default pawn. Playtest wolf/goblin
-  encounters and tune §13 dials in `core/stealth.ts`.)*
+  encounters and tune §13 dials in `core/rules/body/stealth.ts`.)*
 - [x] ~~ADR-031~~ **ADR-032** written into `DECISIONS.md` + onboarded into `codegraph.config.json`.
   *(2026-07-14 — the draft number was taken by hide wear.)*
-- [x] `docs/game/DESIGN.md` (combat/mechanics) + `ARCHITECTURE.md` (new `core/stealth.ts`) updated.
+- [x] `docs/game/DESIGN.md` (combat/mechanics) + `ARCHITECTURE.md` (new `core/rules/body/stealth.ts`) updated.
   *(2026-07-14.)*
 
 ## 13. Open tuning dials

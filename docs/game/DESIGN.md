@@ -209,7 +209,7 @@ subsystem:
   border). Undetected pawns are skipped by targeting entirely.
 - **Stealth is two-layered** (mirrors night vision) — a `stealth` stat (`sizeFactor(weight) ×
   dexGate(zero ≤ DEX 8) × moving`; size dominant, so beasts/werewolves are poor sneakers for free)
-  plus additives in `core/stealth.ts`: trait `stealth` effects (padded-prowl, chameleon-skin,
+  plus additives in `core/rules/body/stealth.ts`: trait `stealth` effects (padded-prowl, chameleon-skin,
   ambush-stillness, duskshroud, soft-tread; constant-howling vetoes), living-part grants, worn
   `stealthMod` (the soot-darkened jerkin is the one positive) or a per-kg weight drag, and a
   natural-armour drag (the thick-fur pelt chain IS the beast's tanky↔stealth fork). Default pawn

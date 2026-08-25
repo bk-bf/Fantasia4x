@@ -11,9 +11,9 @@
     otherOf,
     relationshipsOf,
     relKey
-  } from '$lib/game/core/Social';
+  } from '$lib/game/core/rules/social/social';
   import { dayIndexForTurn } from '$lib/game/services/EnvironmentService';
-  import StatBar from '../UI/StatBar.svelte';
+  import StatBar from '../UI/widget/StatBar.svelte';
   import RelationBreakdown from './RelationBreakdown.svelte';
 
   export let pawn: Pawn;

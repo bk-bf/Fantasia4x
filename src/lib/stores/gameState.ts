@@ -1,7 +1,7 @@
 import { browser } from '$app/environment';
 import { writable, derived, get } from 'svelte/store';
+import { GameStateManager } from '$lib/game/core/state/GameStateManager';
 import {
-  GameStateManager,
   consumeFromStockpiles,
   addToStockpileZone,
   GENERAL_ZONE_ID,
@@ -9,7 +9,7 @@ import {
   colonyStock,
   availableAggregateFromDrops,
   absorbDropIfOnStockpileTile
-} from '$lib/game/core/GameState';
+} from '$lib/game/core/state/stockpile';
 import { gameEngine } from '$lib/game/systems/GameEngineImpl';
 // P-3: side-effect import — registers the real log/feedback sink before any tick runs.
 import './simLogBridge';
@@ -33,8 +33,8 @@ import {
   generateCulture,
   generateCulturePool,
   generateCultureRelations
-} from '$lib/game/core/Culture';
-import { generateKingdomPool, generateKingdomRelations } from '$lib/game/core/Kingdom';
+} from '$lib/game/core/gen/culture';
+import { generateKingdomPool, generateKingdomRelations } from '$lib/game/core/gen/kingdom';
 import { kingdomService } from '$lib/game/services/KingdomService';
 import { socialService } from '$lib/game/services/SocialService';
 import { itemService } from '$lib/game/services/ItemService';
@@ -44,7 +44,6 @@ import { calculatePawnStats } from '$lib/game/systems/pawnDisplayStats';
 import { generateWorld } from '$lib/game/world/WorldGenerator';
 import {
   customizeMenuPreviewWorld,
-  placeMenuPreviewMagicalGroves,
   placeMenuPreviewScatteredGroves,
   menuPreviewMagicalGroveIds,
   pickMenuPreviewClimate
@@ -65,12 +64,12 @@ import {
 } from './saveManager';
 import { defaultGameSpeed, autoPauseOnThreat, autoPauseOnDeath, debugMode } from './uiPrefs';
 import { clearActivityLog, reloadActivityLogForActiveSave, activityLog } from './Log';
-import { applyDevWorld } from '$lib/game/dev/devWorld';
-import { TICKS_PER_SECOND, ticksFromSeconds } from '$lib/game/core/time';
-import { clearTileDeltas } from '$lib/game/core/tileDeltas';
-import { rng, freshSeed } from '$lib/game/core/rng';
+import { applyDevWorld } from '$lib/game/debug/devWorld';
+import { TICKS_PER_SECOND, ticksFromSeconds } from '$lib/game/core/util/time';
+import { clearTileDeltas } from '$lib/game/core/state/tileDeltas';
+import { rng, freshSeed } from '$lib/game/core/util/rng';
 import { resetUnreachableJobs } from '$lib/game/systems/PawnStateMachine';
-import { isSpawnableTile } from '$lib/game/core/Terrains';
+import { isSpawnableTile } from '$lib/game/core/defs/terrains';
 
 // ===== CONFIGURATION =====
 /** Real-time duration of one simulation tick at 1× speed (ms). */
@@ -808,14 +807,9 @@ function restoreWorld(snapshot: GameState) {
 const MENU_PREVIEW_SEED = 4051283263;
 /** Small world (cheap to build + seed) — big enough that the cover-fit zoom-out floor overflows the
  *  viewport for an atmospheric, slightly-oversized framing. NOT the player's Custom Map size. Width is
- *  Both dimensions are ODD so the map has an exact centre tile — the magical-tree ring then centres on
- *  a real tile on both axes (an even dimension puts the centre between tiles ⇒ a half-tile offset). */
+ *  Both dimensions are ODD so the map has an exact centre tile on both axes (an even dimension puts the
+ *  centre between tiles ⇒ a half-tile offset in the cover-fit framing). */
 const MENU_PREVIEW_MAP = { w: 161, h: 101 };
-/** Legacy backdrop (set by `--legacy-menu` ⇒ VITE_LEGACY_MENU): the original four corner herds + a
- *  symmetric magical-tree ring. The DEFAULT backdrop is the MainMenu2 one: a checkerboard of 2× the
- *  magical trees and NO wildlife. */
-const MENU_PREVIEW_LEGACY = import.meta.env.VITE_LEGACY_MENU === 'true';
-
 /**
  * Boot the main-menu backdrop: a live but gutted preview of the game world that renders behind the
  * title screen (see MenuPreviewBackdrop / GameCanvas `menuPreview`). It starts the sim worker EARLY
@@ -830,7 +824,7 @@ function startMenuPreview() {
   rng.reseed(MENU_PREVIEW_SEED);
   resetUnreachableJobs();
   // `skipResources`: generateWorld normally scatters resources internally — but that pass can't exclude
-  // the magical groves, leaving stray ones off the deliberate ring. So the menu skips it and runs its
+  // the magical groves, leaving stray ones off the deliberate checkerboard. So the menu skips it and runs its
   // OWN single excluded scatter below (otherwise the menu also double-generated resources).
   // tidyWater:false — the backdrop erases water below (customizeMenuPreviewWorld), so a riverbank ring
   // would be left stranded with no water. The Custom Map / game gen keep it (default true).
@@ -840,16 +834,15 @@ function startMenuPreview() {
   });
   // Title-screen art direction: flatten the mountain, erase water, and compute the magical-tree ring (see
   // module). Done BEFORE resource generation and entity seeding so prey spawn on the reshaped land.
-  const groveCenters = customizeMenuPreviewWorld(world);
+  customizeMenuPreviewWorld(world);
   // Exclude the magical groves from the RANDOM scatter so no stray ones spawn off the deliberate layout;
   // ordinary trees/plants still scatter normally.
   resourceGeneratorService.generateResources(world, MENU_PREVIEW_SEED, {
     exclude: menuPreviewMagicalGroveIds()
   });
-  // …then plant the glowing magical trees (after the ordinary-tree scatter, so they aren't clobbered).
-  // Default (MainMenu2): 2× the trees in a jittered checkerboard. Legacy (MainMenu): the symmetric ring.
-  if (MENU_PREVIEW_LEGACY) placeMenuPreviewMagicalGroves(world, groveCenters, MENU_PREVIEW_SEED);
-  else placeMenuPreviewScatteredGroves(world, MENU_PREVIEW_SEED);
+  // …then plant the glowing magical trees (after the ordinary-tree scatter, so they aren't clobbered):
+  // 2× the trees in a jittered checkerboard.
+  placeMenuPreviewScatteredGroves(world, MENU_PREVIEW_SEED);
 
   // Random (per launch) season-appropriate weather; season pinned to the real-world date via
   // `_debugSeason` (processEnvironment otherwise derives season from the turn). Falls back to a
@@ -869,11 +862,8 @@ function startMenuPreview() {
     designations: {},
     jobs: []
   };
-  // Prey only — no laired hostiles, no free-roaming predators — so the backdrop never spawns a hunt.
-  // Legacy menu places four corner herds; the default (MainMenu2) backdrop has NO wildlife.
-  if (MENU_PREVIEW_LEGACY) {
-    preview = entityService.seedInitialEntities(preview, undefined, { preyOnly: true });
-  }
+  // The backdrop has NO wildlife — no herds, no laired hostiles, no free-roaming predators — so it
+  // never spawns a hunt.
 
   previewActive = true;
   gameStore.setSilent(preview);
@@ -1301,7 +1291,7 @@ export const savedStateReady: Promise<void> = (async () => {
   // (./dev.sh --profiler-autorun). Dynamic import keeps the scenario out of the normal bundle; the
   // leading `await` also defers this past synchronous module init, so gameSpeed/isPaused are defined.
   if (import.meta.env.VITE_PROFILER === 'true') {
-    const { buildProfilerScenario } = await import('$lib/game/dev/profilerScenario');
+    const { buildProfilerScenario } = await import('$lib/game/debug/profilerScenario');
     const scenario = buildProfilerScenario();
     rng.reseed(scenario.seed);
     resetUnreachableJobs();

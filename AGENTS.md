@@ -17,7 +17,7 @@ GameEngineImpl (src/lib/game/systems/GameEngineImpl.ts)   ← turn coordinator o
     ↓
 Services (src/lib/game/services/)      ← business logic singletons
     ↓
-Core data (src/lib/game/core/)         ← types, static databases, GameStateManager
+Core data (src/lib/game/core/)         ← types/ defs/ state/ rules/ gen/ util/
 ```
 
 ## Key Rules
@@ -32,17 +32,17 @@ Core data (src/lib/game/core/)         ← types, static databases, GameStateMan
 
 **Turn order** (do not reorder): needs → work → completions → exploration → events.
 
-**Data files are definitions only**: `src/lib/game/core/` contains static arrays/objects. Logic belongs in services.
+**Data files are definitions only**: `src/lib/game/core/defs/` parses the static jsonc databases. Logic belongs in services.
 
 **Before creating, naming or re-tiering ANY item, invoke the `items` skill** (`.claude/skills/items/SKILL.md`) and walk `docs/game/ITEM-RULES.md`. It is an ordered gate list, and each gate can kill the item outright. The two rules broken most often: an item's `tier` must be **at least** the tier of the hardest creature its recipe names (an untiered item reads as tier 0 = Primitive, which is how a Cave Bear's plate ended up in the stone age), and a piece named after a species must **require** that species' material. **Generic before thematic** — a tier's plain material-named line must be complete before any creature-derived alternative for the same slot is authored; Boss tier is the sole exception and must be thematic. A third rule broken just as often, now checked by R4: an item's tier must be at least the age of the latest STATION in its whole ingredient chain (a tier-0 linen cap needed a bronze-age spinning wheel). And a chain earns its length from the ANIMAL, never from an extra processing step. `itemRules.test.ts` + `armourCoverage.test.ts` enforce the checkable part.
 
-**New core data needs a stable id**: entries added to `Items.ts`, `Buildings.ts`, `Research.ts`, or `Work.ts` need a stable `kebab-case` string `id`. Unlock conditions reference `researchId` strings from `Research.ts`; costs reference resource `id` strings from `types.ts`.
+**New core data needs a stable id**: entries added to a `core/defs/` loader's source jsonc (`items.jsonc`, `buildings.jsonc`, `research.jsonc`, `jobs.jsonc`…) need a stable `kebab-case` string `id`. Unlock conditions reference `researchId` strings from `research.jsonc`; costs reference resource `id` strings from `types.ts`.
 
-**Never leak ids in the UI**: data ids — `Items/Buildings/Research` `kebab-case` ids, `limbmap.jsonc` limb/part keys (`front_right_leg`, `frontRightUpperLeg`, `tail`…), job types, etc. — are BACKEND REFERENCE ONLY. A panel/screen must render a human label, never the raw `id`. Use the def's `name`/`label` field; for anatomy route through `src/lib/utils/bodyLabels.ts` (`limbLabel`/`partLabel`) — the single chokepoint so a new body plan can't leak snake_case/camelCase ids into the health panels. Don't hand-roll `id.replace(...)` humanizers at the callsite (they drift — `.replace('_',' ')` only catches the first underscore).
+**Never leak ids in the UI**: data ids — `items/buildings/research` `kebab-case` ids, `limbmap.jsonc` limb/part keys (`front_right_leg`, `frontRightUpperLeg`, `tail`…), job types, etc. — are BACKEND REFERENCE ONLY. A panel/screen must render a human label, never the raw `id`. Use the def's `name`/`label` field; for anatomy route through `src/lib/components/util/bodyLabels.ts` (`limbLabel`/`partLabel`) — the single chokepoint so a new body plan can't leak snake_case/camelCase ids into the health panels. Don't hand-roll `id.replace(...)` humanizers at the callsite (they drift — `.replace('_',' ')` only catches the first underscore).
 
 **Never leak dev jargon into player-facing text**: the `description`/`name` string VALUES in the data files (`stats.jsonc`, `conditions.jsonc`, `items.jsonc`, `traits.jsonc`…) and any UI label/tooltip string are PLAYER-FACING. ADR numbers, spec section refs (`§F8`, `TRAIT-SYSTEM-V2`), file/field/function names, and design-note commentary belong in `//` comments beside the entry — never inside the string. And the TONE: **imply, don't instruct** — describe what the thing IS in-world ("a telling hit that finds a gap… instead of glancing off") and let the player figure out the strategic value themselves. No designer's sales pitch ("THE decisive stat"), no strategy advice ("handy against armoured foes"), no mechanics essay.
 
-**Colony jobs are data-driven** (ADR-017): job types live in `database/jobs.jsonc` (a `JobDef` each — work-category, label, claim-gating), with behaviour bound by `id` in `JobService`'s `handlers` registry. First decide which you actually need:
+**Colony jobs are data-driven** (ADR-017): job types live in `database/pawns/jobs.jsonc` (a `JobDef` each — work-category, label, claim-gating), with behaviour bound by `id` in `JobService`'s `handlers` registry. First decide which you actually need:
 
 - **A new way to make/process an item** (cooking, butchering, drying, smelting…) is almost always **just a recipe** in `recipes.jsonc` at a station — *not* a new job type. It's already a `craft` job. Add the recipe (+ station building, + `Work.ts` category if new); no code.
 - **A genuinely new colony job *type*** (a new verb like `fetch` was) — rare. Three edits, guarded against drift by `jobRegistry.test.ts` + compile-time `JobPoolType` checks:
@@ -252,10 +252,10 @@ Do **not** speculatively update docs on every prompt. Update docs only when expl
 
 | Code path changed                                    | Check these docs                                        |
 | ---------------------------------------------------- | ------------------------------------------------------- |
-| `src/lib/game/core/types.ts`                         | `docs/game/ARCHITECTURE.md` (data model section)       |
+| `src/lib/game/core/types/`                           | `docs/game/ARCHITECTURE.md` (data model section)       |
 | `src/lib/game/systems/GameEngineImpl.ts`             | `docs/game/ARCHITECTURE.md` (turn order section)       |
 | `src/lib/game/services/`                             | `docs/game/ARCHITECTURE.md` (services section)         |
 | `src/lib/game/systems/ModifierSystem.ts`             | `docs/game/ARCHITECTURE.md`, `docs/game/DECISIONS.md` |
-| `src/lib/game/core/` (Items/Buildings/Research/Work) | `docs/game/DESIGN.md`                                  |
+| `src/lib/game/core/defs/` + `database/*.jsonc`        | `docs/game/DESIGN.md`                                  |
 | `src/lib/components/screens/`                        | `docs/ui/ARCHITECTURE.md`                              |
 | `src/app.css`                                        | `docs/ui/DESIGN.md`                                    |

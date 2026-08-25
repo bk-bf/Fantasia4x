@@ -4,11 +4,11 @@ import {
   resourceObjectDefById,
   type ResourceObjectDef,
   type ResourceInteractionDef
-} from '../core/resourceObjectDefs';
+} from '../core/defs/resourceObjects';
 import { pawnStatService } from './PawnStatService';
-import { rng } from '../core/rng';
-import { gameLogger } from '../dev/gameLogger';
-import { isGameDebug } from '../core/log';
+import { rng } from '../core/util/rng';
+import { gameLogger } from '../debug/gameLogger';
+import { isGameDebug } from '../core/util/log';
 
 // Def table + types moved to core/resourceObjectDefs.ts ("data files are definitions"; lets the
 // renderer read defs without importing this service). Re-exported so existing importers keep working.
@@ -20,7 +20,7 @@ export {
   type ResourceInteractionDef,
   type ResourceYieldDef,
   type ToolRequirement
-} from '../core/resourceObjectDefs';
+} from '../core/defs/resourceObjects';
 
 class ResourceObjectServiceImpl {
   getAll(): ResourceObjectDef[] {

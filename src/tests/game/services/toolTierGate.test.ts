@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { itemService } from '$lib/game/services/ItemService';
 import { buildingService } from '$lib/game/services/BuildingService';
-import { colonyToolTier } from '$lib/game/core/GameState';
+import { colonyToolTier } from '$lib/game/core/state/stockpile';
 import type { GameState, DroppedItem } from '$lib/game/core/types';
 
 /**

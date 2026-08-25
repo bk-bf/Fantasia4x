@@ -3,14 +3,17 @@
 // PawnAttributes (where it was baked in) so BOTH the attributes tab AND the trait card's stat/resistance
 // pill render the IDENTICAL breakdown through the shared <StatTooltip> — one computation, no duplication.
 import type { Pawn } from '$lib/game/core/types';
-import { APTITUDE_MIN, APTITUDE_MAX, type AptitudeId } from '$lib/game/core/aptitudes';
+import { APTITUDE_MIN, APTITUDE_MAX, type AptitudeId } from '$lib/game/core/rules/body/aptitudes';
 import statsData from '$lib/game/database/pawns/stats.jsonc';
 import { pawnStatService } from '$lib/game/services/PawnStatService';
 import { itemService } from '$lib/game/services/ItemService';
 import { getActiveConditionViews } from '$lib/components/util/conditionInfo';
-import { conditionNeedMultipliers, conditionStatMultipliers } from '$lib/game/core/needs';
-import { powerStatOf, powerToken } from '$lib/game/core/powerScale';
-import { aptitudeOf } from '$lib/game/core/aptitudes';
+import {
+  conditionNeedMultipliers,
+  conditionStatMultipliers
+} from '$lib/game/core/rules/body/conditions';
+import { powerStatOf, powerToken } from '$lib/game/core/rules/body/powerScale';
+import { aptitudeOf } from '$lib/game/core/rules/body/aptitudes';
 
 export type StatDef = {
   id: string;

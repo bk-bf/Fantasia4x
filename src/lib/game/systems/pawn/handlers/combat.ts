@@ -1,7 +1,7 @@
 /** pawn/handlers/combat — combat state handlers, extracted from PawnStateMachine (hotspot step 2). Each
  *  is a plain (pawn, gameState) => GameState function; the dispatcher wires them into the table. */
 import type { GameState, Pawn } from '../../../core/types';
-import { manhattan, chebyshev } from '../../../core/distance';
+import { manhattan, chebyshev } from '../../../core/util/distance';
 import { PAWN_STATE } from '../pawnStates';
 import {
   findCombatThreat,
@@ -15,7 +15,7 @@ import {
 } from '../pawnHelpers';
 import { getRangedWeapon, effectiveRangedRange } from '../../rangedCombat';
 import { checkNeedInterrupts } from '../needSelection';
-import { feedOnVictim, sateBloodHunger } from '../../../core/Lineages';
+import { feedOnVictim, sateBloodHunger } from '../../../core/defs/lineages';
 
 /**
  * FIGHTING: engage the hostile. Defensive pawns stand their ground (the threat is

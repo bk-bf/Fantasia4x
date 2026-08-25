@@ -9,8 +9,8 @@
  *  The roll is a deterministic hash (like the breakdown roll), NOT the shared sim/combat rng — so it's
  *  replay-safe and never perturbs hit/damage rolls. */
 import type { GameState, Pawn } from '../../core/types';
-import { chebyshev } from '../../core/distance';
-import { findRelationship } from '../../core/Social';
+import { chebyshev } from '../../core/util/distance';
+import { findRelationship } from '../../core/rules/social/social';
 import { pawnStatService } from '../../services/PawnStatService';
 import { TICKS_PER_GAME_HOUR } from '../../services/EnvironmentService';
 import { PAWN_STATE } from './pawnStates';

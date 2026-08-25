@@ -6,7 +6,7 @@
   import { gameState } from '$lib/stores/gameState';
   import CarryItemCard from './CarryItemCard.svelte';
   import VesselFilterPanel from './VesselFilterPanel.svelte';
-  import { vesselOf } from '$lib/game/core/vessels';
+  import { vesselOf } from '$lib/game/core/rules/gear/vessels';
   import CarryCapacity from './CarryCapacity.svelte';
   import PawnConsumables from './PawnConsumables.svelte';
   import PawnVesselContents from './PawnVesselContents.svelte';

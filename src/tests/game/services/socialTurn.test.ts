@@ -3,8 +3,8 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { socialService } from '$lib/game/services/SocialService';
 import { linkStartingKin, remapKinIds } from '$lib/game/entities/Pawns';
-import { findRelationship } from '$lib/game/core/Social';
-import { rng } from '$lib/game/core/rng';
+import { findRelationship } from '$lib/game/core/rules/social/social';
+import { rng } from '$lib/game/core/util/rng';
 import type { GameState, Pawn, PawnRelationship } from '$lib/game/core/types';
 
 function pawn(id: string, x: number, y: number, extra: Partial<Pawn> = {}): Pawn {

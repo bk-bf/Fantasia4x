@@ -290,7 +290,7 @@ cadence, to-hit and crit alongside damage, so a weapon's named stat is the one t
 - [x] ⚠→fixed: **`wheelbarrow` was tier 1 and needs a `wheel`**, which is hooped at the smithy — an
       iron-age chain. Invisible until carts gained a weight class and entered the R4 audit at all. Now
       tier 2, beside the handcart.
-- [x] **One weight class across armour, carry aids and weapons** (`core/gearClass.ts`, new **R12**).
+- [x] **One weight class across armour, carry aids and weapons** (`core/rules/gear/gearClass.ts`, new **R12**).
       Armour and carry aids author it in `armorProperties.armorType`; weapons DERIVE it from mass and
       grip, so 125 rows cannot drift out of step with a hand-typed label. R12 holds the class honest:
       inside one slot at one age a heavier class costs strictly more to wear and returns strictly more

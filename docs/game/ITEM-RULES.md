@@ -401,7 +401,7 @@ same light→medium→heavy axis, so a loadout can be read as one decision inste
       metal-to-leather ratio decides it (above); for a carry aid it is the design axis itself — a
       satchel costs nothing to wear and holds little, a frame pack takes the biggest load and charges
       movement and fatigue for it.
-- [ ] **Weapons DERIVE it** from mass and grip (`gearClassOf` in `core/gearClass.ts`). 125 weapons
+- [ ] **Weapons DERIVE it** from mass and grip (`gearClassOf` in `core/rules/gear/gearClass.ts`). 125 weapons
       already state a `weightKg` and whether they need both hands; a hand-typed label over that many
       rows drifts the moment one number moves.
 - [ ] **Regalia has no class and needs none** — a ring is not a light/medium/heavy choice.

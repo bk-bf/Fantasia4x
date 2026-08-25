@@ -6,12 +6,12 @@
  * dispatcher — so the import graph stays acyclic.
  */
 import type { GameState, Pawn, Mob, Building, PlacedBuilding, Job } from '../../core/types';
-import { carriedDrinkVessel, carriedWaterVessel, isDrinkId } from '../../core/vessels';
+import { carriedDrinkVessel, carriedWaterVessel, isDrinkId } from '../../core/rules/gear/vessels';
 export { carriedWaterVessel };
-import { transientNeedOnset } from '../../core/needs';
-import { gatheringLevelOf } from '../../core/buildingAmenity';
-import { needNum } from '../../core/needsDefs';
-import { isUncareable } from '../../core/Wounds';
+import { transientNeedOnset } from '../../core/rules/body/conditions';
+import { gatheringLevelOf } from '../../core/defs/amenities';
+import { needNum } from '../../core/defs/needs';
+import { isUncareable } from '../../core/defs/wounds';
 import BUILDINGS_DATABASE_RAW from '../../database/world/buildings.jsonc';
 import { jobService } from '../../services/JobService';
 import { pawnService } from '../../services/PawnService';
@@ -24,13 +24,13 @@ import {
 import { allowedTilesForPawn } from './zoneConfine';
 import { occupancyService } from '../../services/OccupancyService';
 import { getRangedWeapon, effectiveRangedRange } from '../rangedCombat';
-import { gameLogger } from '../../dev/gameLogger';
-import { ticksFromSeconds, SECONDS_PER_TICK } from '../../core/time';
-import { rng } from '../../core/rng';
-import { pawnById } from '../../core/pawnIndex';
-import { manhattan, chebyshev, findNearestBy } from '../../core/distance';
+import { gameLogger } from '../../debug/gameLogger';
+import { ticksFromSeconds, SECONDS_PER_TICK } from '../../core/util/time';
+import { rng } from '../../core/util/rng';
+import { pawnById } from '../../core/state/pawnIndex';
+import { manhattan, chebyshev, findNearestBy } from '../../core/util/distance';
 import { computeTileLightLevel } from '../../services/EnvironmentService';
-import { effectiveVisionRange } from '../../core/vision';
+import { effectiveVisionRange } from '../../core/rules/body/vision';
 import { PAWN_STATE, type PawnStateName } from './pawnStates';
 import {
   isAdjacent,
@@ -587,7 +587,7 @@ export function getRestBuildingAtPawn(pawn: Pawn, gs: GameState): PlacedBuilding
 }
 
 // §M room amenity helper lives in core/buildingAmenity (acyclic: services + pawn systems both use it).
-export { amenityAt, AMENITY_RADIUS, buildingComfortOf } from '../../core/buildingAmenity';
+export { amenityAt, AMENITY_RADIUS, buildingComfortOf } from '../../core/defs/amenities';
 export { gatheringLevelOf };
 
 /** True when the pawn is adjacent to a shelter (better sleep). */

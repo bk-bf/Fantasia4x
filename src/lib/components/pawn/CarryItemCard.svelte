@@ -3,11 +3,11 @@
      every carried item — bulk good or tracked tool/weapon — surfaces its info. Used by PawnInventory. -->
 <script lang="ts">
   import type { Item, ItemQuality, VesselContent } from '$lib/game/core/types';
-  import { usedCapacityL } from '$lib/game/core/vessels';
+  import { usedCapacityL } from '$lib/game/core/rules/gear/vessels';
   import { itemService } from '$lib/game/services/ItemService';
-  import ItemStatTooltip from '$lib/components/UI/ItemStatTooltip.svelte';
-  import SpriteIcon from '$lib/components/UI/SpriteIcon.svelte';
-  import { qualityColor, qualityPrefix } from '$lib/game/core/itemQuality';
+  import ItemStatTooltip from '$lib/components/UI/tooltip/ItemStatTooltip.svelte';
+  import SpriteIcon from '$lib/components/UI/widget/SpriteIcon.svelte';
+  import { qualityColor, qualityPrefix } from '$lib/game/core/rules/gear/itemQuality';
 
   let {
     def,

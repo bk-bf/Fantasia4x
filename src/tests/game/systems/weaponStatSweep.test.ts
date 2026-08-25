@@ -2,8 +2,8 @@ import { describe, it, expect } from 'vitest';
 import { combatService } from '$lib/game/systems/Combat';
 import { itemService } from '$lib/game/services/ItemService';
 import { pawnStatService } from '$lib/game/services/PawnStatService';
-import { createDefaultBodyParts } from '$lib/game/core/BodyParts';
-import { rng } from '$lib/game/core/rng';
+import { createDefaultBodyParts } from '$lib/game/core/defs/bodyParts';
+import { rng } from '$lib/game/core/util/rng';
 import type { GameState, Pawn } from '$lib/game/core/types';
 
 /**

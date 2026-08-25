@@ -2,10 +2,10 @@
 <script lang="ts">
   import type { Pawn, EquipmentSlot, Item } from '$lib/game/core/types';
   import { gameCoordinator } from '$lib/game/systems/GameCoordinator';
-  import ItemStatTooltip from '$lib/components/UI/ItemStatTooltip.svelte';
-  import SpriteIcon from '$lib/components/UI/SpriteIcon.svelte';
-  import { qualityPrefix, qualityColor } from '$lib/game/core/itemQuality';
-  import { blockedSlots } from '$lib/game/core/PawnEquipment';
+  import ItemStatTooltip from '$lib/components/UI/tooltip/ItemStatTooltip.svelte';
+  import SpriteIcon from '$lib/components/UI/widget/SpriteIcon.svelte';
+  import { qualityPrefix, qualityColor } from '$lib/game/core/rules/gear/itemQuality';
+  import { blockedSlots } from '$lib/game/core/rules/gear/equipment';
   import { naturalGearForTrait, type NaturalGearMeta } from '$lib/components/util/naturalGear';
   import { gameState } from '$lib/stores/gameState';
 

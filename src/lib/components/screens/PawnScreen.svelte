@@ -38,7 +38,7 @@
   import PawnNeeds from '../pawn/PawnNeeds.svelte';
   import PawnTraits from '../pawn/PawnTraits.svelte';
   import PawnEquipment from '../pawn/PawnEquipment.svelte';
-  import FollowButton from '../UI/FollowButton.svelte';
+  import FollowButton from '../UI/widget/FollowButton.svelte';
 
   // Component state - only pawn selection and navigation logic
   let pawns: Pawn[] = [];

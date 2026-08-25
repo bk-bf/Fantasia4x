@@ -8,9 +8,9 @@ import {
   DEFAULT_PLAN,
   organsOf,
   PART_DEF_MAP
-} from '$lib/game/core/BodyParts';
+} from '$lib/game/core/defs/bodyParts';
 import { applyGainedTrait } from '$lib/game/entities/Pawns';
-import { rng } from '$lib/game/core/rng';
+import { rng } from '$lib/game/core/util/rng';
 import itemsData from '$lib/game/database/items/items.jsonc';
 import traitsData from '$lib/game/database/pawns/traits.jsonc';
 import type { BodyPartId, GameState, Pawn, Trait } from '$lib/game/core/types';

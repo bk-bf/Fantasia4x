@@ -3,9 +3,9 @@
 // pawn's inventory. Extracted from JobService (P-4 handler split).
 import type { GameState, Job, ItemInstance } from '../../core/types';
 // Gated console shim — see core/log.ts. Silences per-tick log/debug/warn unless gameDebug(true).
-import { gatedConsole as console, isGameDebug } from '../../core/log';
+import { gatedConsole as console, isGameDebug } from '../../core/util/log';
 import { itemService } from '../ItemService';
-import { vesselOf } from '../../core/vessels';
+import { vesselOf } from '../../core/rules/gear/vessels';
 import {
   storageTileKeys,
   tilePileCapacity,
@@ -14,11 +14,11 @@ import {
   isStorageTile,
   tileVesselCount,
   withDrops
-} from '../../core/GameState';
+} from '../../core/state/stockpile';
 import { zoneInstanceIdAt } from '../DesignationService';
 import { itemMatchesFilter } from './filters';
-import { ENC_OVERLOAD_FULL } from '../../core/needs';
-import { gameLogger } from '../../dev/gameLogger';
+import { ENC_OVERLOAD_FULL } from '../../core/rules/body/conditions';
+import { gameLogger } from '../../debug/gameLogger';
 
 /**
  * Would the colony's stockpile accept a drop of `resourceId`? Prefers per-instance zone filters,

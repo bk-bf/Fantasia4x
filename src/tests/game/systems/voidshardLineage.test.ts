@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { rollLineageTrait, pawnLineage } from '$lib/game/core/Lineages';
+import { rollLineageTrait, pawnLineage } from '$lib/game/core/defs/lineages';
 import type { Pawn, Trait } from '$lib/game/core/types';
 
 /**

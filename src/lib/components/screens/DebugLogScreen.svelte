@@ -21,7 +21,7 @@
 <script lang="ts">
   import { allLogEntries, clearDebugLog } from '$lib/stores/Log';
   import DebugLogControls from './DebugLogControls.svelte';
-  import ScrollArea from '$lib/components/UI/ScrollArea.svelte';
+  import ScrollArea from '$lib/components/UI/widget/ScrollArea.svelte';
 
   const SEVERITIES = ['ALL', 'critical', 'error', 'warning', 'success', 'info'] as const;
   const RENDER_CAP = 600; // lines actually painted

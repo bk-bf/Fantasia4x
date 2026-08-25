@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { getConditionDefById, CONDITION_IDS_WITH_TRIGGERS } from '$lib/game/core/needs';
+import {
+  getConditionDefById,
+  CONDITION_IDS_WITH_TRIGGERS
+} from '$lib/game/core/rules/body/conditions';
 import conditionsData from '$lib/game/database/pawns/conditions.jsonc';
 import type { ConditionDef, TransientConditionDef } from '$lib/game/core/types/health';
 

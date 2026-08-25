@@ -6,10 +6,10 @@
 <script lang="ts">
   import type { Pawn, Item } from '$lib/game/core/types';
   import { itemService } from '$lib/game/services/ItemService';
-  import { carriedQuantities, isFluidId, servingL } from '$lib/game/core/vessels';
+  import { carriedQuantities, isFluidId, servingL } from '$lib/game/core/rules/gear/vessels';
   import { gameState } from '$lib/stores/gameState';
   import { conditionViewForId } from '$lib/components/util/conditionInfo';
-  import { woundById } from '$lib/game/core/Wounds';
+  import { woundById } from '$lib/game/core/defs/wounds';
 
   let { pawn }: { pawn: Pawn } = $props();
 

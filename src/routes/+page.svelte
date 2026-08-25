@@ -13,18 +13,17 @@
   import WorkScreen from '$lib/components/screens/WorkScreen.svelte';
   import EntityScreen from '$lib/components/screens/EntityScreen.svelte';
   import DebugScreen from '$lib/components/screens/DebugScreen.svelte';
-  import ResourceSidebar from '$lib/components/UI/ResourceSidebar.svelte';
-  import GameControls from '$lib/components/UI/GameControls.svelte';
-  import CustomMapMenu from '$lib/components/UI/CustomMapMenu.svelte';
-  import ChroniclePanel from '$lib/components/UI/ChroniclePanel.svelte';
-  import WorldEffectsLayer from '$lib/components/UI/WorldEffectsLayer.svelte';
-  import LoadingScreen from '$lib/components/UI/LoadingScreen.svelte';
-  import GameOverScreen from '$lib/components/UI/GameOverScreen.svelte';
-  import MainMenu from '$lib/components/UI/MainMenu.svelte';
-  import MainMenu2 from '$lib/components/UI/MainMenu2.svelte';
-  import PauseMenu from '$lib/components/UI/PauseMenu.svelte';
-  import EventModalHost from '$lib/components/UI/EventModalHost.svelte';
-  import AudioController from '$lib/components/UI/AudioController.svelte';
+  import ResourceSidebar from '$lib/components/UI/hud/ResourceSidebar.svelte';
+  import GameControls from '$lib/components/UI/hud/GameControls.svelte';
+  import CustomMapMenu from '$lib/components/UI/menu/CustomMapMenu.svelte';
+  import ChroniclePanel from '$lib/components/UI/hud/ChroniclePanel.svelte';
+  import WorldEffectsLayer from '$lib/components/UI/canvas/WorldEffectsLayer.svelte';
+  import LoadingScreen from '$lib/components/UI/menu/LoadingScreen.svelte';
+  import GameOverScreen from '$lib/components/UI/menu/GameOverScreen.svelte';
+  import MainMenu from '$lib/components/UI/menu/MainMenu.svelte';
+  import PauseMenu from '$lib/components/UI/menu/PauseMenu.svelte';
+  import EventModalHost from '$lib/components/UI/modal/EventModalHost.svelte';
+  import AudioController from '$lib/components/UI/audio/AudioController.svelte';
   import { get } from 'svelte/store';
   import { onMount } from 'svelte';
   import { autohideScroll } from '$lib/actions/autohideScroll';
@@ -216,10 +215,6 @@
     import.meta.env.VITE_DEBUG_MODE === 'true' || import.meta.env.VITE_DEBUG_LOG === 'true';
   $: debugEnabled = DEBUG_BUILD_FLAG || $debugMode;
 
-  // MainMenu2 (left-aligned wordmark) is the DEFAULT title screen; `./launch.sh … --legacy-menu`
-  // (sets VITE_LEGACY_MENU) brings back the original centred MainMenu.
-  const USE_LEGACY_MENU = import.meta.env.VITE_LEGACY_MENU === 'true';
-
   $: NAV_TABS = [
     { key: 'pawns', label: 'PAWNS', fkey: 'F2' },
     { key: 'work', label: 'WORK', fkey: 'F3' },
@@ -400,11 +395,7 @@
 </svg>
 
 {#if $appPhase === 'menu'}
-  {#if USE_LEGACY_MENU}
-    <MainMenu />
-  {:else}
-    <MainMenu2 />
-  {/if}
+  <MainMenu />
 {/if}
 
 <!-- Title-screen loader: covers the menu + its preview map while the backdrop's WebGL/terrain inits,

@@ -12,7 +12,7 @@ import {
   kinLabel,
   kinRelationPhrase,
   KIN_SEED_BONUS
-} from '$lib/game/core/Social';
+} from '$lib/game/core/rules/social/social';
 import type { CultureRelation, Pawn } from '$lib/game/core/types';
 
 function pawnOf(id: string, cultureId: string, extra: Partial<Pawn> = {}): Pawn {

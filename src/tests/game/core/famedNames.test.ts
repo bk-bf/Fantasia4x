@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { mulberry32 } from '$lib/game/core/rng';
+import { mulberry32 } from '$lib/game/core/util/rng';
 import {
   rollFamed,
   rollFamedStatMult,
@@ -8,7 +8,7 @@ import {
   generateFamedHistory,
   rollFamedIdentity,
   FAMED_ENCHANT_POOL
-} from '$lib/game/core/famedNames';
+} from '$lib/game/core/gen/famedNames';
 
 // PRODUCTION-CHAIN-III §I — the pure, deterministic core of the Famed-item feature.
 describe('famed items (§I) — procedural identity + roll math', () => {

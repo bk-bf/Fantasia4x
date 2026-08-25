@@ -4,10 +4,10 @@ import {
   drawPawnTraits,
   pawnMeetsRequires,
   TRAIT_DATABASE
-} from '$lib/game/core/Culture';
+} from '$lib/game/core/gen/culture';
 import { generateColonyPawns } from '$lib/game/entities/Pawns';
-import { generateCulturePool } from '$lib/game/core/Culture';
-import { rng } from '$lib/game/core/rng';
+import { generateCulturePool } from '$lib/game/core/gen/culture';
+import { rng } from '$lib/game/core/util/rng';
 import type { Trait } from '$lib/game/core/types';
 
 const byId = (id: string) => TRAIT_DATABASE.find((t) => t.id === id)!;

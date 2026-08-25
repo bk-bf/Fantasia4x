@@ -1,7 +1,7 @@
 <script lang="ts">
   import { gameState } from '$lib/stores/gameState';
   import { uiState } from '$lib/stores/uiState';
-  import BackButton from '$lib/components/UI/BackButton.svelte';
+  import BackButton from '$lib/components/UI/widget/BackButton.svelte';
   import WorkPriorities from '$lib/components/screens/work/WorkPriorities.svelte';
   import PopulationOverview from '$lib/components/screens/work/PopulationOverview.svelte';
   import { persisted, persist } from '$lib/stores/uiPersist';

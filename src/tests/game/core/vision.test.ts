@@ -5,7 +5,7 @@ import {
   effectiveVisionRange,
   getNightVision,
   isWitnessedByColony
-} from '$lib/game/core/vision';
+} from '$lib/game/core/rules/body/vision';
 import type { Pawn, Mob } from '$lib/game/core/types';
 
 // Shared §G vision: one perception-based range for pawns AND mobs, scaled by tile light and dampened

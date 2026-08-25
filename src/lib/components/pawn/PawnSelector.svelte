@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Pawn } from '$lib/game/core/types';
-  import { stateLabel } from '$lib/game/core/stateDefs';
+  import { stateLabel } from '$lib/game/core/defs/states';
 
   export let pawns: Pawn[];
   export let selectedPawn: Pawn | null;

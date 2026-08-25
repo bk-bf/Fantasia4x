@@ -2,7 +2,7 @@
 // (P2-11). Kept intentionally minimal so it passes on the existing code; its real job is
 // to enforce the project invariants the codebase review called out:
 //   - P0-2: ban Math.random() under the simulation core (must use core/rng).
-//   - P2-10: discourage raw console in the sim core (route through core/log gatedConsole).
+//   - P2-10: discourage raw console in the sim core (route through core/util/log gatedConsole).
 //
 // NOTE: .svelte files are not linted here yet — eslint-plugin-svelte needs the
 // `svelte-eslint-parser` peer dependency, which is not installed. `svelte-check`
@@ -37,7 +37,7 @@ export default [
   // P0-2: the seeded RNG (core/rng) is the only place Math.random may be used.
   {
     files: ['src/lib/game/**/*.ts'],
-    ignores: ['src/lib/game/core/rng.ts'],
+    ignores: ['src/lib/game/core/util/rng.ts'],
     rules: {
       'no-restricted-properties': [
         'error',
@@ -45,7 +45,7 @@ export default [
           object: 'Math',
           property: 'random',
           message:
-            'Use the seeded RNG (rng.random() from $lib/game/core/rng) — Math.random() breaks simulation determinism (P0-2).'
+            'Use the seeded RNG (rng.random() from $lib/game/core/util/rng) — Math.random() breaks simulation determinism (P0-2).'
         }
       ]
     }
@@ -57,7 +57,7 @@ export default [
   // output in GameEngineImpl carries a per-line eslint-disable (ADR-011 exemption).
   {
     files: ['src/lib/game/**/*.ts'],
-    ignores: ['src/lib/game/core/log.ts'],
+    ignores: ['src/lib/game/core/util/log.ts'],
     rules: {
       'no-console': ['error', { allow: ['warn', 'error'] }]
     }

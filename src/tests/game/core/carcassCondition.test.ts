@@ -6,7 +6,7 @@ import {
   normalizeConditions,
   averageCondition,
   FRESH_CONDITION
-} from '$lib/game/core/carcassCondition';
+} from '$lib/game/core/rules/world/carcassCondition';
 import { itemService } from '$lib/game/services/ItemService';
 import type { GameState } from '$lib/game/core/types';
 

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { gameEngine } from '$lib/game/systems/GameEngineImpl';
-import { drainTileDeltas, clearTileDeltas } from '$lib/game/core/tileDeltas';
+import { drainTileDeltas, clearTileDeltas } from '$lib/game/core/state/tileDeltas';
 import type { GameState, WorldTile } from '$lib/game/core/types';
 
 // processResourceRegrowth must mutate only expired tiles in place and ship them as worldMap deltas — never replace the worldMap ref.

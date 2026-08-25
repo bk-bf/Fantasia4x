@@ -9,8 +9,8 @@ import {
   BOUND_NATURAL_WEAPONS,
   PART_DEF_MAP,
   DEFAULT_PLAN
-} from '$lib/game/core/BodyParts';
-import { rng } from '$lib/game/core/rng';
+} from '$lib/game/core/defs/bodyParts';
+import { rng } from '$lib/game/core/util/rng';
 import { pawnStatService } from '$lib/game/services/PawnStatService';
 import type { Mob } from '$lib/game/core/types';
 

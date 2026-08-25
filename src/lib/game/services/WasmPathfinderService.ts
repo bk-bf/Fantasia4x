@@ -1,7 +1,7 @@
 // Worker-safe runtime check instead of $app/environment (which can't bundle into the sim worker
 // that imports this service — ADR-021 W1). `isClientRuntime` is true in the browser main thread
 // AND in a Web Worker, false in SSR/Node/vitest — same gate semantics as the old `browser`.
-import { isClientRuntime } from '../core/runtime';
+import { isClientRuntime } from '../core/util/runtime';
 import type { PathfinderService } from './PathfinderService.js';
 
 type WasmMod = {

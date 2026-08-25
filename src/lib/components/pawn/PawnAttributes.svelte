@@ -6,7 +6,7 @@
   import type { Pawn } from '$lib/game/core/types';
   import statsData from '$lib/game/database/pawns/stats.jsonc';
   import PawnStatBanner from './PawnStatBanner.svelte';
-  import { APTITUDE_IDS } from '$lib/game/core/aptitudes';
+  import { APTITUDE_IDS } from '$lib/game/core/rules/body/aptitudes';
   import { computeAptitudeView } from '$lib/components/util/statView';
   import PawnSkillBanner from './PawnSkillBanner.svelte';
   import StatTooltip from './StatTooltip.svelte';

@@ -8,7 +8,7 @@ import {
   addToStockpileZone,
   consumeFromStockpiles,
   absorbDropIfOnStockpileTile
-} from '$lib/game/core/GameState';
+} from '$lib/game/core/state/stockpile';
 import type { GameState, DroppedItem, PlacedBuilding } from '$lib/game/core/types';
 
 /**

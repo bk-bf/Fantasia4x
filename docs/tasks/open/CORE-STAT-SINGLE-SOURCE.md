@@ -37,7 +37,7 @@ for the stat names as words did not find it, and the commit landed with that tes
 | Where | Form |
 |---|---|
 | [types/culture.ts:5](../../../src/lib/game/core/types/culture.ts#L5) | `interface EntityStats` — the closest thing to a canonical declaration; `StatKey = keyof EntityStats` derives from it |
-| [Culture.ts:40](../../../src/lib/game/core/Culture.ts#L40) | `const STATS = [...]` |
+| [Culture.ts:40](../../../src/lib/game/core/gen/culture.ts#L40) | `const STATS = [...]` |
 | [Pawns.ts:858](../../../src/lib/game/entities/Pawns.ts#L858) | `const STAT_KEYS: (keyof EntityStats)[]` |
 | [PawnGrowthService.ts:27](../../../src/lib/game/services/PawnGrowthService.ts#L27) | `const STAT_KEYS: StatKey[]` |
 | [DebugGodmode.svelte:26](../../../src/lib/components/screens/DebugGodmode.svelte#L26) | `const STAT_KEYS: StatKey[]` |
@@ -95,7 +95,7 @@ game the wrong numbers. Nothing fails to compile and no test asserts the corresp
 
 ### `PowerStat` — declared twice, plus a narrower third
 
-[powerScale.ts:39](../../../src/lib/game/core/powerScale.ts#L39) and
+[powerScale.ts:39](../../../src/lib/game/core/rules/body/powerScale.ts#L39) and
 [Combat.ts:357](../../../src/lib/game/systems/Combat.ts#L357) both `export type PowerStat` with
 identical five-member unions — and `Combat.ts` already re-exports `powerScale` from that same module
 at [:172](../../../src/lib/game/systems/Combat.ts#L172), so it could have imported the type.

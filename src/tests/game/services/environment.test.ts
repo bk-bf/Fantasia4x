@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { SeededRng } from '$lib/game/core/rng';
-import { TICKS_PER_SECOND } from '$lib/game/core/time';
-import { moodEffect } from '$lib/game/core/moodEffects';
+import { SeededRng } from '$lib/game/core/util/rng';
+import { TICKS_PER_SECOND } from '$lib/game/core/util/time';
+import { moodEffect } from '$lib/game/core/defs/moods';
 import type { WorldTile, WeatherType, WeatherState } from '$lib/game/core/types';
 import {
   TURNS_PER_DAY,
@@ -50,7 +50,7 @@ import {
   SEASON_LABELS,
   type ThermalSample
 } from '$lib/game/services/EnvironmentService';
-import { tempRange, driveTemperatureConditions } from '$lib/game/core/needs';
+import { tempRange, driveTemperatureConditions } from '$lib/game/core/rules/body/conditions';
 import type { EntityCondition, PlacedBuilding } from '$lib/game/core/types';
 
 function bld(

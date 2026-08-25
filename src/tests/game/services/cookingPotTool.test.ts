@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { jobService } from '$lib/game/services/JobService';
 import { recipeService } from '$lib/game/services/RecipeService';
 import { itemService } from '$lib/game/services/ItemService';
-import { WORK_CATEGORIES } from '$lib/game/core/Work';
+import { WORK_CATEGORIES } from '$lib/game/core/defs/work';
 import type { GameState, Job, Pawn } from '$lib/game/core/types';
 
 /**

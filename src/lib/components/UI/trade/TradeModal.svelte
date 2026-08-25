@@ -10,8 +10,8 @@
   import { uiState } from '$lib/stores/uiState';
   import { kingdomService } from '$lib/game/services/KingdomService';
   import { pawnStatService } from '$lib/game/services/PawnStatService';
-  import { availableAggregateFromDrops } from '$lib/game/core/GameState';
-  import { itemDefById } from '$lib/game/core/itemDefs';
+  import { availableAggregateFromDrops } from '$lib/game/core/state/stockpile';
+  import { itemDefById } from '$lib/game/core/defs/items';
   import TradeColumn from './TradeColumn.svelte';
   import type { TradeRow } from './TradeColumn.svelte';
 

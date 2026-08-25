@@ -5,7 +5,7 @@
   import { buildingService } from '$lib/game/services/BuildingService';
   import { itemService } from '$lib/game/services/ItemService';
   import { onDestroy } from 'svelte';
-  import CurrentTask from '$lib/components/UI/CurrentTask.svelte';
+  import CurrentTask from '$lib/components/UI/hud/CurrentTask.svelte';
 
   let culture: any = null;
   let availableResearch: any[] = [];

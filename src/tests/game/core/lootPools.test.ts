@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { drawLoadout, rollCondition, type LootPool } from '$lib/game/core/LootPools';
+import { drawLoadout, rollCondition, type LootPool } from '$lib/game/core/defs/loot';
 
 // A seeded, deterministic rng stub — feeds a fixed sequence, wrapping. Lets us assert the pure draw
 // logic (slot chance gate → weighted pick → quality roll) without the game rng singleton.

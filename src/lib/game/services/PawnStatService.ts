@@ -11,13 +11,13 @@ import type {
 import statsData from '../database/pawns/stats.jsonc';
 import conditionsData from '../database/pawns/conditions.jsonc';
 import itemsData from '../database/items/items.jsonc';
-import { WORK_CATEGORIES } from '../core/Work';
-import { getNightVision } from '../core/vision';
-import { getStealth } from '../core/stealth';
-import { vlog } from '../core/logSink';
-import { combinedQualityMultiplier } from '../core/itemQuality';
-import { powerStatOf, powerToken, STAT_SCALE } from '../core/powerScale';
-import { aptitudeOf } from '../core/aptitudes';
+import { WORK_CATEGORIES } from '../core/defs/work';
+import { getNightVision } from '../core/rules/body/vision';
+import { getStealth } from '../core/rules/body/stealth';
+import { vlog } from '../core/util/logSink';
+import { combinedQualityMultiplier } from '../core/rules/gear/itemQuality';
+import { powerStatOf, powerToken, STAT_SCALE } from '../core/rules/body/powerScale';
+import { aptitudeOf } from '../core/rules/body/aptitudes';
 import {
   conditionStatMultipliers,
   type StatMultipliers,
@@ -25,18 +25,18 @@ import {
   conditionConsciousnessMultiplier,
   tempRange,
   RECOVER_CONSCIOUSNESS
-} from '../core/needs';
-import { equippedTemperatureSources, type WornThermalSource } from '../core/PawnEquipment';
-import { computePrestige } from '../core/prestige';
-import { SECONDS_PER_TICK } from '../core/time';
+} from '../core/rules/body/conditions';
+import { equippedTemperatureSources, type WornThermalSource } from '../core/rules/gear/equipment';
+import { computePrestige } from '../core/rules/social/prestige';
+import { SECONDS_PER_TICK } from '../core/util/time';
 import {
   levelBase,
   styleSpeedWeight,
   styleFinesseWeight,
   workSkillCategory,
   NEUTRAL_WORK_LEVEL
-} from '../core/workExperience';
-import { isDiscipline } from './jobs/disciplineTree';
+} from '../core/rules/body/workExperience';
+import { isDiscipline } from '../core/defs/disciplines';
 
 // conditions.jsonc holds both persistent conditions (severity/stages) and transient ones
 // (re-derived each tick); split them by the `duration` discriminant — see the file header.

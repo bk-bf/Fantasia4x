@@ -4,7 +4,7 @@ import { HeadlessSession } from '$lib/game/headless/HeadlessSession';
 import type { GameState, Pawn } from '$lib/game/core/types';
 import { recipeService } from '$lib/game/services/RecipeService';
 import { pawnStatService } from '$lib/game/services/PawnStatService';
-import { RECOVER_CONSCIOUSNESS } from '$lib/game/core/needs';
+import { RECOVER_CONSCIOUSNESS } from '$lib/game/core/rules/body/conditions';
 
 /**
  * FSM TRANSITION & INTERRUPT-PRIORITY audit (headless). Drives the REAL sim to prove the tickPawn

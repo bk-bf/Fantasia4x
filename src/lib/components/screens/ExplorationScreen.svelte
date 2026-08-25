@@ -12,13 +12,13 @@
   //      there's no click-to-open delay. `ensureDiscoveredResources()` is a first-open safety net.
   import { onMount } from 'svelte';
   import { uiState } from '$lib/stores/uiState';
-  import BackButton from '$lib/components/UI/BackButton.svelte';
+  import BackButton from '$lib/components/UI/widget/BackButton.svelte';
   import {
     discoveredResources,
     ensureDiscoveredResources,
     type ResourceRow
   } from '$lib/stores/discoveredResources';
-  import SearchBar from '../UI/SearchBar.svelte';
+  import SearchBar from '../UI/widget/SearchBar.svelte';
 
   onMount(ensureDiscoveredResources);
 

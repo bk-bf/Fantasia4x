@@ -3,12 +3,17 @@
  *  M2-core (ENGINE-PERFORMANCE ★ ACTIVE): single-pawn updates go through `mutatePawn` (mutate the
  *  live array element in place, no per-call `pawns.map` array allocation). Safe — see mutatePawn. */
 import type { GameState, Pawn } from '../../../core/types';
-import { gameLogger } from '../../../dev/gameLogger';
-import { perTick, ticksFromSeconds } from '../../../core/time';
-import { consumeFromStockpiles, availableQuantityFromDrops } from '../../../core/GameState';
+import { gameLogger } from '../../../debug/gameLogger';
+import { perTick, ticksFromSeconds } from '../../../core/util/time';
+import { consumeFromStockpiles, availableQuantityFromDrops } from '../../../core/state/stockpile';
 import { PAWN_STATE, type PawnStateName } from '../pawnStates';
 import { tileHasBody } from '../carry';
-import { carriedDrinkVessel, hydrationOf, isFluidId, takeOut } from '../../../core/vessels';
+import {
+  carriedDrinkVessel,
+  hydrationOf,
+  isFluidId,
+  takeOut
+} from '../../../core/rules/gear/vessels';
 import type { ItemInstance } from '../../../core/types';
 import {
   isAdjacent,
@@ -28,7 +33,7 @@ import {
 import { pickUpFromTile } from '../pawnHauling';
 import { pawnStatService } from '../../../services/PawnStatService';
 import { socialService } from '../../../services/SocialService';
-import { itemDefById } from '../../../core/itemDefs';
+import { itemDefById } from '../../../core/defs/items';
 import {
   findNearestStorageBuilding,
   tryAssignPath,

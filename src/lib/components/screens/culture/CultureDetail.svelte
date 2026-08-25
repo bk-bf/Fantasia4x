@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Culture, CultureRelation } from '$lib/game/core/types';
-  import StatBar from '$lib/components/UI/StatBar.svelte';
+  import StatBar from '$lib/components/UI/widget/StatBar.svelte';
   import TraitCards from '$lib/components/pawn/TraitCards.svelte';
 
   export let culture: Culture;

@@ -1,18 +1,18 @@
 <script lang="ts">
   import { gameState, currentCulture } from '$lib/stores/gameState';
-  import { addToStockpileZone, availableAggregateFromDrops } from '$lib/game/core/GameState';
+  import { addToStockpileZone, availableAggregateFromDrops } from '$lib/game/core/state/stockpile';
   import { uiState } from '$lib/stores/uiState';
-  import BackButton from '$lib/components/UI/BackButton.svelte';
+  import BackButton from '$lib/components/UI/widget/BackButton.svelte';
   import { itemService } from '$lib/game/services/ItemService';
-  import { getMaterialProperty } from '$lib/game/core/materialProperties';
+  import { getMaterialProperty } from '$lib/game/core/defs/materials';
   import { buildingService } from '$lib/game/services/BuildingService';
   import { onDestroy } from 'svelte';
-  import CurrentTask from '../UI/CurrentTask.svelte';
-  import ZonePanel from '../UI/ZonePanel.svelte';
-  import BuildCard from '../UI/BuildCard.svelte';
-  import ItemPills, { type ItemPillView } from '../UI/ItemPills.svelte';
-  import FilterTabs from '../UI/FilterTabs.svelte';
-  import SearchBar from '../UI/SearchBar.svelte';
+  import CurrentTask from '../UI/hud/CurrentTask.svelte';
+  import ZonePanel from '../UI/hud/ZonePanel.svelte';
+  import BuildCard from '../UI/hud/BuildCard.svelte';
+  import ItemPills, { type ItemPillView } from '../UI/widget/ItemPills.svelte';
+  import FilterTabs from '../UI/widget/FilterTabs.svelte';
+  import SearchBar from '../UI/widget/SearchBar.svelte';
   import { persisted, persist } from '$lib/stores/uiPersist';
   import type { PlacedBuilding } from '$lib/game/core/types';
   import type { Building } from '$lib/game/core/types';

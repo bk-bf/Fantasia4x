@@ -4,7 +4,7 @@ import { itemService } from '$lib/game/services/ItemService';
 import { recipeService } from '$lib/game/services/RecipeService';
 import { buildingService } from '$lib/game/services/BuildingService';
 import { workService } from '$lib/game/services/WorkService';
-import { getEquipmentSlot, addInstanceToInventory } from '$lib/game/core/PawnEquipment';
+import { getEquipmentSlot, addInstanceToInventory } from '$lib/game/core/rules/gear/equipment';
 import type { GameState, Pawn } from '$lib/game/core/types';
 
 function makeState(partial: Partial<GameState> = {}): GameState {

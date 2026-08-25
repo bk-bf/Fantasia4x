@@ -1,10 +1,10 @@
 import type { Pawn, GameState, WorkCategory, LaborLevel } from '../core/types';
-import { WORK_CATEGORIES } from '../core/Work';
+import { WORK_CATEGORIES } from '../core/defs/work';
 import { jobService } from './JobService';
 // Shadow the global console with a gated shim: log/debug/info/warn are silent in
 // normal play (toggle via gameDebug(true)); console.error still surfaces. This
 // removes the per-tick logging that profiling showed was ~75% of turn cost.
-import { gatedConsole as console } from '../core/log';
+import { gatedConsole as console } from '../core/util/log';
 
 /**
  * R7: FSM states in which a pawn is engaged in the productive work loop (so `isWorking` is true).

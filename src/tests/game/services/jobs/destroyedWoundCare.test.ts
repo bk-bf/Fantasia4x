@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isUncareable } from '$lib/game/core/Wounds';
+import { isUncareable } from '$lib/game/core/defs/wounds';
 import { hasUntendedWound } from '$lib/game/services/jobs/caretake';
 import type { Injury, Pawn } from '$lib/game/core/types';
 

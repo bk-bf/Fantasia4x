@@ -5,7 +5,7 @@ import {
   SEED_HUNGER_GRACE,
   willFinishOffDowned
 } from '$lib/game/services/entity/entityConstants';
-import { CREATURES } from '$lib/game/core/Creatures';
+import { CREATURES } from '$lib/game/core/defs/creatures';
 
 const predator = CREATURES.find((c) => c.predator) ?? CREATURES[0];
 

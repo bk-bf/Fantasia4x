@@ -14,7 +14,7 @@
 // build's score so the caller can see the whole ranking, not just the winner.
 
 import type { Pawn } from '../game/core/types';
-import { APTITUDE_IDS, type AptitudeId } from '../game/core/aptitudes';
+import { APTITUDE_IDS, type AptitudeId } from '../game/core/rules/body/aptitudes';
 
 export type CoreStat = 'strength' | 'dexterity' | 'constitution' | 'perception' | 'intelligence' | 'charisma';
 

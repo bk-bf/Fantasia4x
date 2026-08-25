@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { pawnService } from '$lib/game/services/PawnService';
-import { ticksFromSeconds } from '$lib/game/core/time';
+import { ticksFromSeconds } from '$lib/game/core/util/time';
 import type { GameState, Pawn } from '$lib/game/core/types';
 
 // Regression: a pawn whose next path tile is held by a STATIONARY body must not wait forever.

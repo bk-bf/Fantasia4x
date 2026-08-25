@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { itemService } from '$lib/game/services/ItemService';
-import { allItemDefs } from '$lib/game/core/itemDefs';
+import { allItemDefs } from '$lib/game/core/defs/items';
 import type { Item } from '$lib/game/core/types';
 
 /**

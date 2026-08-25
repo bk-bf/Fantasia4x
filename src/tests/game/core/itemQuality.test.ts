@@ -9,8 +9,8 @@ import {
   scaleWeaponQuality,
   scaleArmorQuality,
   STANDARD_QUALITY
-} from '$lib/game/core/itemQuality';
-import { mulberry32 } from '$lib/game/core/rng';
+} from '$lib/game/core/rules/gear/itemQuality';
+import { mulberry32 } from '$lib/game/core/util/rng';
 import { completeCraftOrder } from '$lib/game/services/jobs/craft';
 import { itemService } from '$lib/game/services/ItemService';
 import type { GameState } from '$lib/game/core/types';

@@ -15,7 +15,6 @@
   "layers": {
     "rust": 0,
     "core": 0,
-    "utils": 0,
     "database": 0,
     "webgl": 1,
     "entities": 1,
@@ -26,9 +25,15 @@
     "stores": 4,
     "components": 5,
     "routes": 5,
-    "dev": -1
+    "dev": -1,
+    "debug": -1
   },
   "adrRules": [
+    {
+      "adr": "ADR-035",
+      "checkable": false,
+      "reason": "core/ bucketing by module KIND (types/defs/state/rules/gen/util) is a judgement about a module's content, not a call edge. The checkable half — core must not call services, layer direction — is already covered by the `layers` rule."
+    },
     {
       "adr": "ADR-008",
       "severity": "error",
@@ -222,8 +227,8 @@
       "type": "restricted-callee",
       "callee": "aggregateFromDrops",
       "allowFrom": [
-        "game/core/GameState::withDrops",
-        "game/core/GameState::colonyStock"
+        "game/core/state/stockpile::withDrops",
+        "game/core/state/stockpile::colonyStock"
       ],
       "msg": "rebuilds the stockpile aggregate outside withDrops (ADR-034: withDrops is the one place a fluid placed loose is spilled, so a path that aggregates around it can leave water lying on the ground)"
     }

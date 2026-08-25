@@ -48,7 +48,7 @@ import {
   absorbDropIfOnStockpileTile,
   availableAggregateFromDrops,
   withDrops
-} from '../core/GameState';
+} from '../core/state/stockpile';
 import {
   carriedQuantities,
   carrierOf,
@@ -58,26 +58,26 @@ import {
   roomFor,
   servingL,
   takeOut
-} from '../core/vessels';
-import { equipItem, unequipItem, equipDropToPawn } from '../core/PawnEquipment';
-import { rng } from '../core/rng';
+} from '../core/rules/gear/vessels';
+import { equipItem, unequipItem, equipDropToPawn } from '../core/rules/gear/equipment';
+import { rng } from '../core/util/rng';
 import { pickUpFromTile } from '../systems/pawn/pawnHauling';
 import { PAWN_STATE } from '../systems/pawn/pawnStates';
-import { isUncontrollable } from '../core/stateDefs';
+import { isUncontrollable } from '../core/defs/states';
 import { killPawn } from '../systems/PawnStateMachine';
 import { hasShelter } from '../systems/pawn/handlers/rescue';
 import { dropCarriedPawn, freeDropTileNear, CARRIED_PAWN_ITEM } from '../systems/pawn/carry';
-import { manhattan } from '../core/distance';
+import { manhattan } from '../core/util/distance';
 import { designationService } from '../services/DesignationService';
 import { buildingService } from '../services/BuildingService';
 import { itemService } from '../services/ItemService';
 import { recipeService } from '../services/RecipeService';
 import { pawnStatService } from '../services/PawnStatService';
-import { getTraitById } from '../core/Lineages';
+import { getTraitById } from '../core/defs/lineages';
 import { applyGainedTrait } from '../entities/Pawns';
 import { researchService } from '../services/ResearchService';
-import { devSpawnLooseItems, devDestroyAllItems } from '../dev/devWorld';
-import { gameLogger } from '../dev/gameLogger';
+import { devSpawnLooseItems, devDestroyAllItems } from '../debug/devWorld';
+import { gameLogger } from '../debug/gameLogger';
 import { generatePawns, applyConsumable, remapKinIds } from '../entities/Pawns';
 import { pawnGrowthService } from '../services/PawnGrowthService';
 import { devSpawnMobs, devSpawnMobAt } from '../services/entity/entitySpawning';
@@ -91,13 +91,13 @@ import {
   ICE_WALKABLE,
   ICE_WATER_MOVE_COST
 } from '../services/EnvironmentService';
-import { SUBTERRAINS, SUBTERRAIN_FALLBACK } from '../core/Terrains';
+import { SUBTERRAINS, SUBTERRAIN_FALLBACK } from '../core/defs/terrains';
 import { resourceObjectService } from '../services/ResourceObjectService';
 import { patchPathfindingWalkable } from '../services/PathfinderService';
 import { occupancyService } from '../services/OccupancyService';
 import { assignDraftMovePath } from '../services/draftMovePath';
-import { markTileDirty } from '../core/tileDeltas';
-import { simLog } from '../core/logSink';
+import { markTileDirty } from '../core/state/tileDeltas';
+import { simLog } from '../core/util/logSink';
 import type { SimCommand } from './simProtocol';
 
 /** Spiral out from (cx,cy) for the nearest walkable, un-occupied tile (worker-safe pawn placement). */

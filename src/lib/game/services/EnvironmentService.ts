@@ -1,16 +1,16 @@
 // Day/night ambient light, seasons, temperature, and weather.
 // Pure functions of turn (and the season/weather scalars in GameState).
 
-import { TICKS_PER_SECOND } from '../core/time';
-import { vlog } from '../core/logSink';
-import { markTileDirty } from '../core/tileDeltas';
+import { TICKS_PER_SECOND } from '../core/util/time';
+import { vlog } from '../core/util/logSink';
+import { markTileDirty } from '../core/state/tileDeltas';
 import { buildingLight } from './LightingService';
 import { buildingService } from './BuildingService';
 import { resourceObjectService } from './ResourceObjectService';
-import { BIOMES, SUBTERRAINS, SUBTERRAIN_FALLBACK } from '../core/Terrains';
+import { BIOMES, SUBTERRAINS, SUBTERRAIN_FALLBACK } from '../core/defs/terrains';
 import seasonsData from '../database/world/seasons.jsonc';
 import weatherData from '../database/world/weather.jsonc';
-import type { SeededRng } from '../core/rng';
+import type { SeededRng } from '../core/util/rng';
 import type { Season, WeatherState, WeatherType, WorldTile, PlacedBuilding } from '../core/types';
 
 // In-game seconds per day; `turn` counts ticks, so a day is TURNS_PER_DAY × TICKS_PER_SECOND ticks.

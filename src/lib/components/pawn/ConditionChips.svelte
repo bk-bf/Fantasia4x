@@ -2,8 +2,8 @@
      condition (persistent + transient), with a cursor-following hover panel (HoverTip) that explains
      the condition, where the pawn got it from, and what it does. Derivation lives in conditionInfo.ts. -->
 <script lang="ts">
-  import SpriteIcon from '$lib/components/UI/SpriteIcon.svelte';
-  import HoverTip from '$lib/components/UI/HoverTip.svelte';
+  import SpriteIcon from '$lib/components/UI/widget/SpriteIcon.svelte';
+  import HoverTip from '$lib/components/UI/tooltip/HoverTip.svelte';
   import ConditionTooltip from './ConditionTooltip.svelte';
   import type { ConditionView } from '$lib/components/util/conditionInfo';
   import { createPinnable } from '$lib/components/util/pinnable.svelte';

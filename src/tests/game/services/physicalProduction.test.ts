@@ -4,7 +4,7 @@ import {
   releaseReservation,
   availableQuantityFromDrops,
   aggregateFromDrops
-} from '$lib/game/core/GameState';
+} from '$lib/game/core/state/stockpile';
 import { itemService } from '$lib/game/services/ItemService';
 import { recipeService } from '$lib/game/services/RecipeService';
 import type { GameState, DroppedItem } from '$lib/game/core/types';

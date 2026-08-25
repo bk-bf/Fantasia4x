@@ -10,7 +10,7 @@
  *  lifecycle wiring (stamp the condition timer, force the state, apply catharsis) lives in the tick block
  *  in PawnStateMachine, next to the parallel collapse block. */
 import type { GameState, Pawn } from '../../../core/types';
-import { chebyshev } from '../../../core/distance';
+import { chebyshev } from '../../../core/util/distance';
 import { TICKS_PER_GAME_HOUR } from '../../../services/EnvironmentService';
 import { PAWN_STATE } from '../pawnStates';
 import { findCombatThreat, tryWanderStep, tryAssignSleepPath, FLEE_DISTANCE } from '../pawnHelpers';

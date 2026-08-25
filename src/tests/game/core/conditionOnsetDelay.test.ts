@@ -3,8 +3,8 @@ import {
   applyConditionDriver,
   transientNeedOnset,
   TIRED_FATIGUE_THRESHOLD
-} from '$lib/game/core/needs';
-import { TICKS_PER_SECOND } from '$lib/game/core/time';
+} from '$lib/game/core/rules/body/conditions';
+import { TICKS_PER_SECOND } from '$lib/game/core/util/time';
 import conditionsData from '$lib/game/database/pawns/conditions.jsonc';
 import type { ConditionDef, EntityCondition } from '$lib/game/core/types';
 
