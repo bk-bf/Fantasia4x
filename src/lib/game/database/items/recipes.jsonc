@@ -342,14 +342,6 @@
     "workAmount"      : 20,
     "toolTierRequired": 0
   },
-  {
-    "id"              : "make_tanning_bucket",
-    "station"         : "sawtable",
-    "inputs"          : {"category:plank": 2, "category:fastener": 4, "resin": 1},
-    "outputs"         : {"tanning_bucket": 1},
-    "workAmount"      : 5,
-    "toolTierRequired": 0
-  },
   // ── Curing (passive, Curing Frame): raw hide + ash/salt → a stable cured hide, per species ──
   {
     "id"               : "make_cured_rabbit_pelt",
@@ -1768,6 +1760,15 @@
     "passive"         : true
   },
   {
+    "id": "spin_silk_thread",
+    "discipline": "tailoring",
+    "station": "spinning_wheel",
+    "inputs": { "raw_silk": 3 },
+    "outputs": { "spider_silk_thread": 4 },
+    "workAmount": 8,
+    "toolTierRequired": 1
+  },
+  {
     "id"               : "spin_thread",
     "station"          : "spinning_wheel",
     "inputs"           : {"flax_fiber": 2},
@@ -3137,7 +3138,7 @@
   // 1) Trade-gem cutting
   {
     "id"              : "cut_ruby_recipe",
-    "station"         : "lapidary_bench",
+    "station"         : "faceting_lathe",
     "inputs"          : {"ruby": 1},
     "outputs"         : {"cut_ruby": 1},
     "workAmount"      : 5,
@@ -3146,7 +3147,7 @@
   },
   {
     "id"              : "cut_sapphire_recipe",
-    "station"         : "lapidary_bench",
+    "station"         : "faceting_lathe",
     "inputs"          : {"sapphire": 1},
     "outputs"         : {"cut_sapphire": 1},
     "workAmount"      : 5,
@@ -3155,7 +3156,7 @@
   },
   {
     "id"              : "cut_emerald_recipe",
-    "station"         : "lapidary_bench",
+    "station"         : "emery_bench",
     "inputs"          : {"emerald": 1},
     "outputs"         : {"cut_emerald": 1},
     "workAmount"      : 5,
@@ -3164,7 +3165,7 @@
   },
   {
     "id"              : "cut_topaz_recipe",
-    "station"         : "lapidary_bench",
+    "station"         : "emery_bench",
     "inputs"          : {"topaz": 1},
     "outputs"         : {"cut_topaz": 1},
     "workAmount"      : 5,
@@ -3201,7 +3202,7 @@
   // 2) Attunement (infused → attuned gem)
   {
     "id"              : "attune_ruby",
-    "station"         : "lapidary_bench",
+    "station"         : "attunement_bench",
     "inputs"          : {"infused_ruby": 1},
     "outputs"         : {"attuned_ruby": 1},
     "workAmount"      : 8,
@@ -3210,7 +3211,7 @@
   },
   {
     "id"              : "attune_sapphire",
-    "station"         : "lapidary_bench",
+    "station"         : "attunement_bench",
     "inputs"          : {"infused_sapphire": 1},
     "outputs"         : {"attuned_sapphire": 1},
     "workAmount"      : 8,
@@ -3219,7 +3220,7 @@
   },
   {
     "id"              : "attune_emerald",
-    "station"         : "lapidary_bench",
+    "station"         : "attunement_bench",
     "inputs"          : {"infused_emerald": 1},
     "outputs"         : {"attuned_emerald": 1},
     "workAmount"      : 8,
@@ -3228,7 +3229,7 @@
   },
   {
     "id"              : "attune_topaz",
-    "station"         : "lapidary_bench",
+    "station"         : "attunement_bench",
     "inputs"          : {"infused_topaz": 1},
     "outputs"         : {"attuned_topaz": 1},
     "workAmount"      : 8,
@@ -3237,7 +3238,7 @@
   },
   {
     "id"              : "attune_amethyst",
-    "station"         : "lapidary_bench",
+    "station"         : "attunement_bench",
     "inputs"          : {"infused_amethyst": 1},
     "outputs"         : {"attuned_amethyst": 1},
     "workAmount"      : 8,
@@ -3246,7 +3247,7 @@
   },
   {
     "id"              : "attune_citrine",
-    "station"         : "lapidary_bench",
+    "station"         : "attunement_bench",
     "inputs"          : {"infused_citrine": 1},
     "outputs"         : {"attuned_citrine": 1},
     "workAmount"      : 8,
@@ -3255,7 +3256,7 @@
   },
   {
     "id"              : "attune_moonstone",
-    "station"         : "lapidary_bench",
+    "station"         : "attunement_bench",
     "inputs"          : {"infused_moonstone": 1},
     "outputs"         : {"attuned_moonstone": 1},
     "workAmount"      : 8,
@@ -3265,7 +3266,7 @@
   // 3a) Rings (1 attuned gem + 1 gold bar)
   {
     "id"              : "make_ruby_ring",
-    "station"         : "lapidary_bench",
+    "station"         : "attunement_bench",
     "inputs"          : {"attuned_ruby": 1, "gold_bar": 1},
     "outputs"         : {"ruby_ring": 1},
     "workAmount"      : 10,
@@ -3274,7 +3275,7 @@
   },
   {
     "id"              : "make_sapphire_ring",
-    "station"         : "lapidary_bench",
+    "station"         : "attunement_bench",
     "inputs"          : {"attuned_sapphire": 1, "gold_bar": 1},
     "outputs"         : {"sapphire_ring": 1},
     "workAmount"      : 10,
@@ -3283,7 +3284,7 @@
   },
   {
     "id"              : "make_emerald_ring",
-    "station"         : "lapidary_bench",
+    "station"         : "attunement_bench",
     "inputs"          : {"attuned_emerald": 1, "gold_bar": 1},
     "outputs"         : {"emerald_ring": 1},
     "workAmount"      : 10,
@@ -3292,7 +3293,7 @@
   },
   {
     "id"              : "make_topaz_ring",
-    "station"         : "lapidary_bench",
+    "station"         : "attunement_bench",
     "inputs"          : {"attuned_topaz": 1, "gold_bar": 1},
     "outputs"         : {"topaz_ring": 1},
     "workAmount"      : 10,
@@ -3301,7 +3302,7 @@
   },
   {
     "id"              : "make_amethyst_ring",
-    "station"         : "lapidary_bench",
+    "station"         : "attunement_bench",
     "inputs"          : {"attuned_amethyst": 1, "gold_bar": 1},
     "outputs"         : {"amethyst_ring": 1},
     "workAmount"      : 10,
@@ -3310,7 +3311,7 @@
   },
   {
     "id"              : "make_citrine_ring",
-    "station"         : "lapidary_bench",
+    "station"         : "attunement_bench",
     "inputs"          : {"attuned_citrine": 1, "gold_bar": 1},
     "outputs"         : {"citrine_ring": 1},
     "workAmount"      : 10,
@@ -3319,7 +3320,7 @@
   },
   {
     "id"              : "make_moonstone_ring",
-    "station"         : "lapidary_bench",
+    "station"         : "attunement_bench",
     "inputs"          : {"attuned_moonstone": 1, "silver_bar": 1},
     "outputs"         : {"moonstone_ring": 1},
     "workAmount"      : 10,
@@ -3329,7 +3330,7 @@
   // 3b) Amulets (larger gem — 2 attuned gems + 2 gold bars → stronger loadout piece, neck slot)
   {
     "id"              : "make_ruby_amulet",
-    "station"         : "lapidary_bench",
+    "station"         : "attunement_bench",
     "inputs"          : {"attuned_ruby": 2, "gold_bar": 2},
     "outputs"         : {"ruby_amulet": 1},
     "workAmount"      : 14,
@@ -3338,7 +3339,7 @@
   },
   {
     "id"              : "make_sapphire_amulet",
-    "station"         : "lapidary_bench",
+    "station"         : "attunement_bench",
     "inputs"          : {"attuned_sapphire": 2, "gold_bar": 2},
     "outputs"         : {"sapphire_amulet": 1},
     "workAmount"      : 14,
@@ -3347,7 +3348,7 @@
   },
   {
     "id"              : "make_emerald_amulet",
-    "station"         : "lapidary_bench",
+    "station"         : "attunement_bench",
     "inputs"          : {"attuned_emerald": 2, "gold_bar": 2},
     "outputs"         : {"emerald_amulet": 1},
     "workAmount"      : 14,
@@ -3356,7 +3357,7 @@
   },
   {
     "id"              : "make_topaz_amulet",
-    "station"         : "lapidary_bench",
+    "station"         : "attunement_bench",
     "inputs"          : {"attuned_topaz": 2, "gold_bar": 2},
     "outputs"         : {"topaz_amulet": 1},
     "workAmount"      : 14,
@@ -3365,7 +3366,7 @@
   },
   {
     "id"              : "make_amethyst_amulet",
-    "station"         : "lapidary_bench",
+    "station"         : "attunement_bench",
     "inputs"          : {"attuned_amethyst": 2, "gold_bar": 2},
     "outputs"         : {"amethyst_amulet": 1},
     "workAmount"      : 14,
@@ -3374,7 +3375,7 @@
   },
   {
     "id"              : "make_citrine_amulet",
-    "station"         : "lapidary_bench",
+    "station"         : "attunement_bench",
     "inputs"          : {"attuned_citrine": 2, "gold_bar": 2},
     "outputs"         : {"citrine_amulet": 1},
     "workAmount"      : 14,
@@ -3383,7 +3384,7 @@
   },
   {
     "id"              : "make_moonstone_amulet",
-    "station"         : "lapidary_bench",
+    "station"         : "attunement_bench",
     "inputs"          : {"attuned_moonstone": 2, "silver_bar": 2},
     "outputs"         : {"moonstone_amulet": 1},
     "workAmount"      : 14,
@@ -3397,7 +3398,7 @@
   // 4a) Crowns / circlets / diadems (head slot — competes with a helmet)
   {
     "id"              : "make_scholars_circlet",
-    "station"         : "lapidary_bench",
+    "station"         : "attunement_bench",
     "inputs"          : {"attuned_sapphire": 1, "silver_bar": 1},
     "outputs"         : {"scholars_circlet": 1},
     "workAmount"      : 16,
@@ -3406,7 +3407,7 @@
   },
   {
     "id"              : "make_champions_crown",
-    "station"         : "lapidary_bench",
+    "station"         : "attunement_bench",
     "inputs"          : {"attuned_ruby": 1, "attuned_topaz": 1, "gold_bar": 2},
     "outputs"         : {"champions_crown": 1},
     "workAmount"      : 22,
@@ -3415,7 +3416,7 @@
   },
   {
     "id"              : "make_sovereign_crown",
-    "station"         : "lapidary_bench",
+    "station"         : "attunement_bench",
     "inputs"          : {"attuned_citrine": 1, "attuned_amethyst": 1, "gold_bar": 2},
     "outputs"         : {"sovereign_crown": 1},
     "workAmount"      : 22,
@@ -3424,7 +3425,7 @@
   },
   {
     "id"              : "make_wardens_circlet",
-    "station"         : "lapidary_bench",
+    "station"         : "attunement_bench",
     "inputs"          : {"attuned_emerald": 1, "attuned_moonstone": 1, "gold_bar": 1},
     "outputs"         : {"wardens_circlet": 1},
     "workAmount"      : 20,
@@ -3434,7 +3435,7 @@
   // 4b) Necklaces / torcs / pendants (amulet)
   {
     "id"              : "make_gold_torc",
-    "station"         : "lapidary_bench",
+    "station"         : "attunement_bench",
     "inputs"          : {"attuned_emerald": 1, "gold_bar": 2},
     "outputs"         : {"gold_torc": 1},
     "workAmount"      : 16,
@@ -3443,7 +3444,7 @@
   },
   {
     "id"              : "make_champions_torc",
-    "station"         : "lapidary_bench",
+    "station"         : "attunement_bench",
     "inputs"          : {"attuned_ruby": 1, "attuned_emerald": 1, "gold_bar": 1},
     "outputs"         : {"champions_torc": 1},
     "workAmount"      : 18,
@@ -3452,7 +3453,7 @@
   },
   {
     "id"              : "make_wayfarers_pendant",
-    "station"         : "lapidary_bench",
+    "station"         : "attunement_bench",
     "inputs"          : {"attuned_topaz": 1, "attuned_moonstone": 1, "silver_bar": 1},
     "outputs"         : {"wayfarers_pendant": 1},
     "workAmount"      : 18,
@@ -3461,7 +3462,7 @@
   },
   {
     "id"              : "make_sages_pendant",
-    "station"         : "lapidary_bench",
+    "station"         : "attunement_bench",
     "inputs"          : {"attuned_sapphire": 1, "attuned_citrine": 1, "gold_bar": 1},
     "outputs"         : {"sages_pendant": 1},
     "workAmount"      : 18,
@@ -3536,8 +3537,8 @@
   // The wheel forges its iron rim at the anvil (iron_working); the carts assemble at the sawtable.
   {
     "id"              : "make_wheel",
-    "station"         : "anvil",
-    "inputs"          : {"category:plank": 2, "iron_bar": 1},
+    "station"         : "sawtable",
+    "inputs"          : {"category:plank": 3, "category:fastener": 8, "resin": 1},
     "outputs"         : {"wheel": 1},
     "workAmount"      : 60,
     "toolTierRequired": 1,
@@ -4264,7 +4265,7 @@
   // Magic age (runic_inscription): gem_dust is ground from INFUSED gems only — never normal cut gems.
   {
     "id"               : "grind_gem_dust",
-    "station"          : "lapidary_bench",
+    "station"          : "attunement_bench",
     "researchRequired" : "runic_inscription",
     "inputs"           : {"infused_ruby": 1},
     "inputAlternatives": [
@@ -4283,7 +4284,7 @@
   // gem (the "refined gem-dust++" sink for the crystal-vent tier).
   {
     "id"               : "grind_mana_crystal",
-    "station"          : "lapidary_bench",
+    "station"          : "attunement_bench",
     "researchRequired" : "runic_inscription",
     "inputs"           : {"mana_crystal": 1},
     "outputs"          : {"gem_dust": 4},
@@ -5951,18 +5952,10 @@
   // Launchers: a turned grip or stock, a string good enough for the draw, and for a crossbow the
   // cast fasteners that hold the lock together.
   {
-    "id"              : "spin_silk_bowstring",
-    "station"         : "spinning_wheel",
-    "inputs"          : {"raw_silk": 1},
-    "outputs"         : {"silk_bowstring": 1},
-    "workAmount"      : 6,
-    "toolTierRequired": 1
-  },
-  {
     "id"              : "make_sinew_backed_bow",
     "discipline"      : "woodworking",
     "station"         : "makers_bench",
-    "inputs"          : {"wooden_haft": 1, "sinew": 3, "cordage": 4},
+    "inputs"          : {"wooden_haft": 1, "sinew": 3, "category:binding": 4},
     "outputs"         : {"sinew_backed_bow": 1},
     "workAmount"      : 8,
     "toolTierRequired": 0,
@@ -5992,7 +5985,7 @@
     "id"              : "make_yew_longbow",
     "discipline"      : "woodworking",
     "station"         : "makers_bench",
-    "inputs"          : {"seasoned_haft": 1, "yew_log": 1, "silk_bowstring": 1, "category:binding": 2},
+    "inputs"          : {"seasoned_haft": 1, "yew_log": 1, "spider_silk_thread": 1, "category:binding": 2},
     "outputs"         : {"yew_longbow": 1},
     "workAmount"      : 18,
     "toolTierRequired": 2,
@@ -6001,7 +5994,7 @@
   {
     "id"              : "make_rune_strung_warbow",
     "station"         : "runecarver_bench",
-    "inputs"          : {"seasoned_haft": 1, "yew_log": 1, "silk_bowstring": 1, "enchant_thread": 2, "gem_dust": 1},
+    "inputs"          : {"seasoned_haft": 1, "yew_log": 1, "spider_silk_thread": 1, "enchant_thread": 2, "gem_dust": 1},
     "outputs"         : {"rune_strung_warbow": 1},
     "workAmount"      : 34,
     "toolTierRequired": 2,
@@ -6020,7 +6013,7 @@
   {
     "id"              : "make_steel_arbalest",
     "station"         : "anvil",
-    "inputs"          : {"seasoned_haft": 1, "oak_plank": 2, "category:steel": 2, "steel_rivet": 36, "silk_bowstring": 1, "category:leather": 1},
+    "inputs"          : {"seasoned_haft": 1, "oak_plank": 2, "category:steel": 2, "steel_rivet": 36, "spider_silk_thread": 1, "category:leather": 1},
     "outputs"         : {"steel_arbalest": 1},
     "workAmount"      : 24,
     "toolTierRequired": 2,
@@ -6029,7 +6022,7 @@
   {
     "id"              : "make_rune_cranked_arbalest",
     "station"         : "runecarver_bench",
-    "inputs"          : {"seasoned_haft": 1, "magic_alloy_bar": 1, "steel_rivet": 34, "silk_bowstring": 1, "enchant_thread": 8},
+    "inputs"          : {"seasoned_haft": 1, "magic_alloy_bar": 1, "steel_rivet": 34, "spider_silk_thread": 1, "enchant_thread": 8},
     "outputs"         : {"rune_cranked_arbalest": 1},
     "workAmount"      : 38,
     "toolTierRequired": 2,

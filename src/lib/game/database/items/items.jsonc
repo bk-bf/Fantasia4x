@@ -571,20 +571,6 @@
     "weightKg"         : 1.5,
     "volumeL"          : 3.5
   },
-  {
-    "id"               : "tanning_bucket",
-    "charSpans"        : [ {"sheet": "items", "id": 41} ],
-    "name"             : "Tanning Bucket",
-    "type"             : "material",
-    "category"         : "storage",
-    "maxDurability"    : 150,
-    "deteriorationRate": 0.03,
-    "description"      : "Plank-staved bucket for soaking hides in tannin. Needed to build a tanning rack.",
-    "color"            : "#9A7B4F",
-    "amount"           : 0,
-    "weightKg"         : 2.5,
-    "volumeL"          : 3.5
-  },
   // ── Per-animal leathers (PRODUCTION-CHAIN — hide/leather identity split) ──────────────────────────
   // Each hide tans to its OWN leather, all `category: leather` so any fills a generic slot; identity is
   // carried by `material.item` (durability/weight into the crafted item) + `material.building`
@@ -12107,21 +12093,6 @@
     }
   },
   {
-    "id": "silk_bowstring",
-    "charSpans": [ {"sheet": "items", "id": 138} ],
-    "name": "Spider-Silk Bowstring",
-    "type": "material",
-    "category": "fiber",
-    "maxDurability": 220,
-    "deteriorationRate": 0.004,
-    "description": "Thornwood silk laid up wet and dried under tension into a cord no thicker than a bootlace. It barely stretches, so the whole of the draw goes into the shaft.",
-    "color": "#D8D2C0",
-    "amount": 0,
-    "weightKg": 0.05,
-    "volumeL": 0.05,
-    "processingType": ["crafting"]
-  },
-  {
     "id": "iron_boss_shield",
     "charSpans": [ {"sheet": "items", "id": 145} ],
     "name": "Iron-Bossed Kite Shield",
@@ -15190,6 +15161,25 @@
     "volumeL"          : 0.3
   },
   {
+    "id": "spider_silk_thread",
+    "charSpans": [{ "sheet": "items", "id": 158 }],
+    "name": "Spider Silk Thread",
+    "type": "material",
+    "category": "binding",
+    // Steel-age not because a wheel could not spin it, but because of what you have to kill to get a
+    // basket of raw silk: the thornwood spider and the great weaver are late hunts.
+    "tier": 3,
+    "craftValue": 2,
+    "description": "Drawn off a weaver's hoard and doubled on the wheel. Thinner than linen thread and it will not part under a load that snaps sinew.",
+    "color": "#D8D2E0",
+    "amount": 0,
+    "weightKg": 0.04,
+    "volumeL": 0.04,
+    "maxDurability": 220,
+    "deteriorationRate": 0.004,
+    "value": 12
+  },
+  {
     "id": "thread",
     "charSpans": [ {"sheet": "items", "id": 158} ],
     "name": "Spun Thread",
@@ -15687,6 +15677,7 @@
     "name"             : "Infused Ruby",
     "type"             : "material",
     "category"         : "magic_crystal",
+    "tier"      : 4,
     "description"      : "A ruby threaded with raw mana. Attuned and set, it lends the wearer might.",
     "color"            : "#FF3355",
     "amount"           : 0,
@@ -15851,6 +15842,7 @@
     "name"             : "Infused Sapphire",
     "type"             : "material",
     "category"         : "magic_crystal",
+    "tier"      : 4,
     "description"      : "A sapphire threaded with raw mana. Attuned and set, it sharpens the mind.",
     "color"            : "#4A90D8",
     "amount"           : 0,
@@ -15941,6 +15933,7 @@
     "name"             : "Infused Emerald",
     "type"             : "material",
     "category"         : "magic_crystal",
+    "tier"      : 4,
     "description"      : "An emerald threaded with raw mana. Attuned and set, it bolsters endurance.",
     "color"            : "#3FB36B",
     "amount"           : 0,
@@ -16031,6 +16024,7 @@
     "name"             : "Infused Topaz",
     "type"             : "material",
     "category"         : "magic_crystal",
+    "tier"      : 4,
     "description"      : "A topaz threaded with raw mana. Attuned and set, it quickens the limbs.",
     "color"            : "#E0B83A",
     "amount"           : 0,
@@ -16121,6 +16115,7 @@
     "name"             : "Infused Amethyst",
     "type"             : "material",
     "category"         : "magic_crystal",
+    "tier"      : 4,
     "description"      : "An amethyst threaded with raw mana. Attuned and set, it heightens perception.",
     "color"            : "#A060D0",
     "amount"           : 0,
@@ -16211,6 +16206,7 @@
     "name"             : "Infused Citrine",
     "type"             : "material",
     "category"         : "magic_crystal",
+    "tier"      : 4,
     "description"      : "A citrine threaded with raw mana. Attuned and set, it warms the bearer's bearing.",
     "color"            : "#E8B84B",
     "amount"           : 0,
@@ -16301,6 +16297,7 @@
     "name"             : "Infused Moonstone",
     "type"             : "material",
     "category"         : "magic_crystal",
+    "tier"      : 4,
     "description"      : "A moonstone threaded with raw mana. Attuned and set, it lends calm and sure footing.",
     "color"            : "#C9D4E0",
     "amount"           : 0,
@@ -18556,6 +18553,7 @@
     "category": "stone",
     "maxDurability": 250,
     "deteriorationRate": 0.005,
+    "tier": 2,
     "description": "Roman-style mix of quicklime and crushed stone. Sets hard as rock, the strongest mundane masonry.",
     "color": "#9C968C",
     "amount": 0,

@@ -2,10 +2,13 @@ import { describe, it, expect } from 'vitest';
 import buildingsData from '$lib/game/database/world/buildings.jsonc';
 import recipesData from '$lib/game/database/items/recipes.jsonc';
 import { TREE_ITEMS } from '$lib/dev/itemTree';
+import { CARCASS_TIER, nodeItems } from '$lib/dev/chainAge';
+import itemsData from '$lib/game/database/items/items.jsonc';
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 const BUILDINGS = buildingsData as any[];
 const RECIPES = recipesData as any[];
+const ITEMS = itemsData as any[];
 const byId = new Map(BUILDINGS.map((b) => [b.id, b]));
 
 /**
@@ -75,5 +78,54 @@ describe('the item tree partitions cleanly', () => {
       (p) => p.includes(' > ') && VAGUE.has(norm(p.split(' > ').pop()!))
     );
     expect(bad, `${bad.join('; ')} — give these items a real category`).toEqual([]);
+  });
+});
+
+/**
+ * WHERE AN AGE COMES FROM. An item is placed in an age by, in order: the gear tables, an explicit
+ * `tier`, the creature whose carcass it is, or the workshop ladder its recipe needs. An item with
+ * NONE of those does not get "unknown" — it silently reads Primitive, which is how the voidshard
+ * filed itself in the stone age and every cave bear carcass sat beside a rabbit's.
+ *
+ * A raw material dug or foraged off a map node genuinely IS available from turn one, so nodes are a
+ * legitimate fourth source. Everything else has to say where it belongs.
+ */
+describe('every item can say which age it belongs to', () => {
+  it('nothing falls back to Primitive for want of an answer', () => {
+    const producers = new Set(RECIPES.flatMap((r: any) => Object.keys(r.outputs ?? {})));
+    // A creature's attacks are not things a colony can have, and they never enter the age ladder.
+    const NATURAL = (r: { path: string[] }) => r.path[0] === 'Natural weapons';
+    // Sources the game HAS but that are not recipes, nodes or carcasses: a rack that dries meat by
+    // decay, a shorn sheep, a hooked fish, a river, a hive. Each is a real way in — they are listed
+    // rather than guessed so a genuinely sourceless item cannot hide among them.
+    const OFF_LADDER = new Set([
+      'water',
+      'hay',
+      'honey',
+      'terra_preta',
+      'sheep_fleece',
+      'common_carp',
+      'river_trout',
+      'dried_meat',
+      'dried_fruit',
+      'rotten_food',
+      'rotten_carcass',
+      'pawn_carcass',
+      'carried_pawn'
+    ]);
+    const bad = TREE_ITEMS.filter((r) => {
+      const def = ITEMS.find((i: any) => i.id === r.id);
+      if (!def || NATURAL(r) || OFF_LADDER.has(r.id)) return false;
+      if (typeof def.tier === 'number') return false;
+      if (producers.has(r.id)) return false;
+      if (CARCASS_TIER.has(r.id)) return false;
+      if (nodeItems.has(r.id)) return false;
+      return true;
+    }).map(
+      (r) =>
+        `${r.id} has no recipe, no tier, no creature and no map node — it reads ${r.age} by default. ` +
+        `Give it a tier, or a way in.`
+    );
+    expect(bad, bad.join('; ')).toEqual([]);
   });
 });

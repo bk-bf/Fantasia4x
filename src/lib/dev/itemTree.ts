@@ -31,7 +31,7 @@ import {
 } from './gearDb';
 import lootpoolData from '../game/database/items/lootpool.jsonc';
 import creaturesData from '../game/database/pawns/creatures.jsonc';
-import { AGE_NAMES, blameStation, chainAgeOf } from './chainAge';
+import { AGE_NAMES, blameStation, chainAgeOf, CARCASS_TIER } from './chainAge';
 import { SLOT_LAYER } from '../game/core/armorCoverage';
 import type { EquipmentSlot } from '../game/core/types';
 
@@ -97,11 +97,15 @@ const AGE_OF_CHAIN: Age[] = ['Primitive', 'Copper', 'Bronze', 'Iron', 'Steel', '
  * is mined at a hundredth of a percent with a runed pick and dropped by humanoid bosses, has no
  * recipe, and so filed itself under the stone age.
  */
-const ageOf = (item: any): Age =>
-  gearById.get(item.id)?.age ??
-  (typeof item.tier === 'number' ? AGE_BY_TIER[Math.min(Math.max(item.tier, 0), 4)] : undefined) ??
-  AGE_OF_CHAIN[chainAgeOf(item.id)] ??
-  'Primitive';
+const ageOf = (item: any): Age => {
+  const gear = gearById.get(item.id)?.age;
+  if (gear) return gear;
+  if (typeof item.tier === 'number') return AGE_BY_TIER[Math.min(Math.max(item.tier, 0), 4)];
+  // A carcass costs a HUNT, not a workshop — price it by the creature, or every one reads Primitive.
+  const beast = CARCASS_TIER.get(item.id);
+  if (beast !== undefined) return AGE_BY_TIER[Math.min(Math.max(beast - 1, 0), 4)];
+  return AGE_OF_CHAIN[chainAgeOf(item.id)] ?? 'Primitive';
+};
 
 /**
  * WHAT THE ITEM DOES — everything the sim actually reads off it, in one line.
@@ -322,6 +326,35 @@ const MATERIAL_LINE: Record<string, string> = {
 const materialLine = (cat: string) =>
   MATERIAL_LINE[cat] ?? (/_seed$/.test(cat) ? 'seeds' : prettify(cat));
 
+/**
+ * The STAGE a material has reached along its own line. Several lines are a processing ladder, and
+ * filing them by raw category alone put a hide and the leather tanned from it on one undivided shelf
+ * — 82 items deep, with the age column carrying all of the meaning. The stage IS the ladder, so it
+ * becomes the level and each rung gets its own age spine.
+ */
+function materialStage(i: any, line: string): string[] {
+  const id = String(i.id ?? '');
+  if (line === 'hide & leather') {
+    if (/^fleshed_/.test(id)) return ['fleshed'];
+    if (/^cured_/.test(id)) return ['cured'];
+    if (/^raw_|_hide$/.test(id) && !/^cured_/.test(id)) return ['raw'];
+    return ['tanned'];
+  }
+  if (line === 'gems & crystal') {
+    if (/^attuned_/.test(id)) return ['attuned'];
+    if (/^infused_/.test(id)) return ['infused'];
+    if (/^cut_/.test(id)) return ['cut'];
+    if (/dust$/.test(id)) return ['ground'];
+    return ['rough'];
+  }
+  if (line === 'stone & masonry') {
+    if (/_block$|_tile$|brick/.test(id)) return ['cut & fired'];
+    if (/concrete|mortar|plaster/.test(id)) return ['bound'];
+    return ['quarried'];
+  }
+  return [];
+}
+
 /** Crafted and dropped are different things to a player: one is a plan, the other is a hunt. They
  *  split BEFORE sets, so a craftable one-off never sits next to enemy loot. */
 function sourceBranch(i: any): string[] {
@@ -442,7 +475,8 @@ function pathOf(i: any): string[] {
     const work = i.toolBoost?.workType ?? i.category ?? 'other';
     return ['Tools', prettify(String(work)), age];
   }
-  return ['Materials', materialLine(String(i.category ?? 'other')), age];
+  const line = materialLine(String(i.category ?? 'other'));
+  return ['Materials', line, ...materialStage(i, line), age];
 }
 
 /**
