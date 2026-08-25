@@ -1,13 +1,13 @@
 [Unit]
 Description=Fantasia4x nightly code audit
-Documentation=file:%h/Projects/Fantasia4x/.claude/worktrees/audit-ledger/tools/audit/README.md
+Documentation=file:%h/Projects/Fantasia4x/tools/audit/README.md
 After=network-online.target
 
 [Service]
 Type=oneshot
 # ~/.local/bin is not on PATH inside a unit, and the script shells out to git, flock and mon.
 Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin
-ExecStart=%h/Projects/Fantasia4x/.claude/worktrees/audit-ledger/tools/audit/deploy/nightly-audit.sh
+ExecStart=%h/Projects/Fantasia4x/tools/audit/deploy/nightly-audit.sh
 # The token budget inside the script is 3.5 h; this is the backstop for a wedged model call.
 TimeoutStartSec=5h
 Nice=10

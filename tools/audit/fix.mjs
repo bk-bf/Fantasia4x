@@ -10,8 +10,9 @@
 // The gate is `ready: true` in the issue's frontmatter, and only a person sets it. An issue
 // the audit raised is never picked up by the fixer that raised it.
 //
-// Nothing is pushed unless `pnpm check` and the related tests are green. A run that cannot
-// get there pushes nothing and says why on the GitHub issue, so a failed attempt leaves a
+// Nothing is committed unless `pnpm check` and the related tests are green, and nothing is
+// pushed at all — the branch is local and a person decides whether it reaches main. A run
+// that cannot get green writes up why on the review board, so a failed attempt leaves a
 // record rather than a half-finished branch.
 //
 // Every attempt is handed to `mon` under the `fix` tag. A failed attempt keeps its worktree
@@ -24,7 +25,7 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import * as I from './lib/issues.mjs';
-import * as GH from './lib/github.mjs';
+import * as P from './lib/prs.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = process.env.AUDIT_ROOT || join(HERE, '..', '..');
@@ -124,7 +125,7 @@ one PR.
 
 - Change only what the issue names. \`Out of scope\` is binding.
 - Do **not** edit anything under \`docs/issues/\` — the harness owns that file.
-- Do **not** run \`git commit\`, \`git push\`, or any \`gh\` command. The harness commits, pushes
+- Do **not** run \`git commit\`, \`git push\`, or any \`gh\` command. The harness commits
   and opens the PR after it has verified your work.
 - If a citation in the issue no longer holds, say so in your final message and skip it rather
   than inventing a nearby change.
@@ -149,7 +150,7 @@ becomes the pull-request body, so write it for a reviewer, not for me.
 
 ---
 
-# Issue ${d.id} (GitHub #${d.github})
+# Issue ${d.id}
 
 ${issue.body}
 `;
@@ -233,8 +234,7 @@ out(`issue ${d.id} — ${d.title}`);
 
 if (d.ready !== true) fail(`${d.id} is not ready: true`);
 if (d.status !== 'open') fail(`${d.id} is ${d.status}, not open`);
-if (d.pr) fail(`${d.id} already has PR #${d.pr}`);
-if (!d.github) fail(`${d.id} has no GitHub issue — run \`audit publish --id ${d.id}\` first`);
+if (d.pr) fail(`${d.id} already has a review at docs/pr/${d.pr}.md`);
 const errs = I.validate(issue);
 if (errs.length) fail(`${d.id} is invalid: ${errs.join('; ')}`);
 
@@ -246,8 +246,6 @@ if (flag('dry-run')) {
   out(`  ${(issue.body.match(/^\s*- \[ \]/gm) ?? []).length} open remediation step(s)`);
   process.exit(0);
 }
-
-if (!GH.available(ROOT)) fail('gh is not authenticated here');
 
 out(`--- worktree ${wt}`);
 if (existsSync(wt)) {
@@ -317,7 +315,7 @@ try {
       'acceptEdits',
       // Bash is granted deliberately: the model is told to get `pnpm check` and
       // `pnpm test:related` green, and cannot without it. Scope is a throwaway worktree on
-      // a branch, and the harness re-runs both itself before anything is pushed.
+      // a branch, and the harness re-runs both itself before anything is committed.
       '--allowedTools',
       'Bash',
       'Edit',
@@ -336,12 +334,17 @@ try {
   const files = changedFiles(wt).filter((f) => !f.startsWith('docs/issues/'));
   if (files.length === 0) {
     out('--- nothing changed');
-    GH.commentIssue(
-      ROOT,
-      d.github,
-      `The fixer ran and changed nothing.\n\n${account}\n\n_No PR opened._`
-    );
+    // No review file: there is nothing to review. The account still reaches mon.
     I.patchIssue(issue.path, { status: 'open', branch: null });
+    toMon({
+      issue,
+      cwd: ROOT,
+      title: `fix ${d.id} — no change`,
+      prompt:
+        `The fixer for ${d.id} ran and changed nothing.\n\nWhat it reported:\n\n${account}\n\n` +
+        `Say in one paragraph whether the issue is already fixed, wrongly scoped, or was not ` +
+        `understood. Change nothing.`
+    });
     exitCode = 0;
   } else {
     out(`--- changed ${files.length} file(s)`);
@@ -354,22 +357,31 @@ try {
         .filter((r) => r.code !== 0)
         .map((r) => `**${r.name}** exited ${r.code}\n\n\`\`\`\n${r.tail}\n\`\`\``)
         .join('\n\n');
-      GH.commentIssue(
-        ROOT,
-        d.github,
-        `The fixer produced a change but could not get it green, so nothing was pushed.\n\n` +
-          `${detail}\n\n---\n\n${account}`
-      );
+      // A failed attempt is still worth reading, so it gets a review file marked abandoned
+      // rather than vanishing into a log. The branch and worktree stay put.
+      P.writePr(ROOT, {
+        data: {
+          id: d.id,
+          issue: d.id,
+          branch,
+          base: 'main',
+          status: 'abandoned',
+          verified: 'fail',
+          created: I.today(),
+          updated: I.today()
+        },
+        body: P.renderPr({ issue, branch, files, account, verified: 'fail', failures: detail })
+      });
       I.patchIssue(issue.path, { status: 'open', branch: null });
-      out('--- not green; nothing pushed. The account is on the issue.');
+      out(`--- not green. Written up at docs/pr/${d.id}.md; worktree kept.`);
       keepTree = true;
       toMon({
         issue,
         cwd: wt,
         title: `fix ${d.id} — not green`,
         prompt: [
-          `A fix attempt for issue #${d.github} (${d.id}) changed ${files.length} file(s) but`,
-          `could not get \`${PNPM} check\` and \`${PNPM} test:related\` green, so nothing was pushed.`,
+          `A fix attempt for ${d.id} changed ${files.length} file(s) but`,
+          `could not get \`${PNPM} check\` and \`${PNPM} test:related\` green, so it was not committed.`,
           `You are running in that worktree on branch \`${branch}\`, with the changes still in place.`,
           ``,
           `What failed:`,
@@ -381,8 +393,8 @@ try {
           account,
           ``,
           `Say in one paragraph whether this is close to working or wants a different approach.`,
-          `Do not push and do not open a PR — if you are steered to carry it forward, make the`,
-          `changes here and get both commands green, then say so and stop.`
+          `Do not push anything — if you are steered to carry it forward, make the changes`,
+          `here and get both commands green, then say so and stop.`
         ].join('\n')
       });
       exitCode = 1;
@@ -390,77 +402,60 @@ try {
       out(`--- committing`);
       git(['add', '-A'], wt);
       const msg =
-        `fix: ${d.title}\n\nCloses #${d.github}\n\n` +
+        `fix: ${d.title}\n\n` +
         `Raised by the audit ledger${d.rules?.length ? ` (${d.rules.join(', ')})` : ''}; ` +
         `see docs/issues/${d.id}.md.\n\n` +
         `Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>`;
       execFileSync('git', ['commit', '-q', '-F', '-'], { cwd: wt, input: msg });
-      git(['push', '-q', '-u', 'origin', branch], wt);
 
-      const body = [
-        `Closes #${d.github}`,
-        '',
-        account,
-        '',
-        '---',
-        '',
-        `| | |`,
-        `|---|---|`,
-        `| issue | [\`docs/issues/${d.id}.md\`](docs/issues/${d.id}.md) |`,
-        `| severity | ${d.severity} |`,
-        `| raised by | ${d.origin === 'audit' ? `the audit (${(d.rules ?? []).join(', ')})` : 'a person'} |`,
-        `| verified | \`${PNPM} check\`, \`${PNPM} test:related\` |`,
-        '',
-        `Opened unattended by \`tools/audit/fix.mjs\`. Review it as you would any other PR.`
-      ].join('\n');
-
-      const pr = GH.createPr(ROOT, { title: `fix: ${d.title}`, body, base: 'main', head: branch });
-      if (pr.ok) {
-        I.patchIssue(issue.path, { status: 'in-review', pr: pr.number, branch });
-        out(`--- PR #${pr.number}  ${pr.url}`);
-        toMon({
-          issue,
-          cwd: ROOT,
-          title: `fix ${d.id} — PR #${pr.number}`,
-          prompt: [
-            `A fix for issue #${d.github} (${d.id}) is open as PR #${pr.number}: ${pr.url}`,
-            `It changed ${files.length} file(s) on \`${branch}\` and \`${PNPM} check\` plus`,
-            `\`${PNPM} test:related\` were green before it opened.`,
-            ``,
-            `Read the diff (\`gh pr diff ${pr.number}\`) against the issue at`,
-            `docs/issues/${d.id}.md and say, in one paragraph a person can read on a phone:`,
-            `which remediation steps it actually did, which it skipped, and the one thing a`,
-            `reviewer should look at hardest. Flag anything outside the issue's scope.`,
-            `Do not merge, do not push, do not change the PR.`,
-            ``,
-            `What the attempt reported:`,
-            ``,
-            account
-          ].join('\n')
-        });
-      } else {
-        I.patchIssue(issue.path, { status: 'open', branch });
-        out(`--- push succeeded but the PR did not open: ${pr.err}`);
-        exitCode = 1;
-      }
+      // Deliberately NOT pushed. The branch stays in this repo, the argument for it goes on
+      // the review board next to the issue, and a person decides whether it reaches main.
+      P.writePr(ROOT, {
+        data: {
+          id: d.id,
+          issue: d.id,
+          branch,
+          base: 'main',
+          status: 'open',
+          verified: 'pass',
+          created: I.today(),
+          updated: I.today()
+        },
+        body: P.renderPr({ issue, branch, files, account, verified: 'pass' })
+      });
+      I.patchIssue(issue.path, { status: 'in-review', pr: d.id, branch });
+      out(`--- review at docs/pr/${d.id}.md on ${branch} (local, not pushed)`);
+      toMon({
+        issue,
+        cwd: ROOT,
+        title: `fix ${d.id} — ready to review`,
+        prompt: [
+          `A fix for ${d.id} is committed on the local branch \`${branch}\` and written up at`,
+          `docs/pr/${d.id}.md. It changed ${files.length} file(s) and \`${PNPM} check\` plus`,
+          `\`${PNPM} test:related\` were green. Nothing was pushed.`,
+          ``,
+          `Read the diff (\`git diff main...${branch}\`) against the issue at`,
+          `docs/issues/${d.id}.md and say, in one paragraph a person can read on a phone:`,
+          `which remediation steps it actually did, which it skipped, and the one thing a`,
+          `reviewer should look at hardest. Flag anything outside the issue's scope.`,
+          `Do not merge, do not push, do not change the branch.`,
+          ``,
+          `What the attempt reported:`,
+          ``,
+          account
+        ].join('\n')
+      });
     }
   }
 } catch (e) {
   out(`--- ${e.message}`);
-  if (d.github) {
-    GH.commentIssue(
-      ROOT,
-      d.github,
-      `The fixer failed before it could verify anything.\n\n\`\`\`\n${e.message}\n\`\`\``
-    );
-  }
   I.patchIssue(issue.path, { status: 'open', branch: null });
   toMon({
     issue,
     cwd: ROOT,
     title: `fix ${d.id} — failed`,
     prompt:
-      `The fixer for issue #${d.github} (${d.id}) failed before it could verify ` +
+      `The fixer for ${d.id} failed before it could verify ` +
       `anything, with:\n\n${e.message}\n\nSay in one paragraph whether this is a ` +
       `harness problem or an issue problem. Change nothing.`
   });

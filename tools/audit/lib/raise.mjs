@@ -84,7 +84,7 @@ export function groupFindings(db) {
   return [...groups.values()];
 }
 
-function renderBody(g, { existingGithub } = {}) {
+function renderBody(g) {
   const n = g.findings.length;
   const shown = g.findings.slice(0, MAX_EVIDENCE);
   const rest = n - shown.length;

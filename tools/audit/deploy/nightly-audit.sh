@@ -6,17 +6,18 @@
 # only step 5 spends tokens.
 #
 #   1. pull main from origin
-#   2. merge main into the audit branch in the worktree
-#   3. re-extract the codegraph (reachability triggers read it)
-#   4. re-index + re-plan  -> verdicts whose code did not move stay done
-#   5. run the audit until the budget runs out
-#   6. raise confirmed findings onto the issue board, and commit it
-#   7. work any issue a person marked `ready: true` -> a PR on GitHub
-#   8. hand the result to mon so it can be read from anywhere
+#   2. re-extract the codegraph (reachability triggers read it)
+#   3. re-index + re-plan  -> verdicts whose code did not move stay done
+#   4. run the audit until the budget runs out
+#   5. raise confirmed findings onto the issue board, and commit it to main
+#   6. work any issue a person marked `ready: true` -> a local branch + a review file
+#   7. hand the result to mon so it can be read from anywhere
+#
+# Everything runs in the main checkout on `main`. The audit's own output (the board) is the
+# only thing it commits there; a fix attempt goes to its own branch and is never pushed.
 #
 # Environment (all optional, defaults suit ubuntuserver):
 #   AUDIT_REPO      main checkout            ~/Projects/Fantasia4x
-#   AUDIT_TREE      audit worktree           $AUDIT_REPO/.claude/worktrees/audit-ledger
 #   AUDIT_GRAPH     codegraph checkout       ~/Projects/codegraph
 #   AUDIT_NODE      node >= 22.5             ~/.nvm/versions/node/v24.19.0/bin/node
 #   AUDIT_HOURS     token budget in hours    3.5
@@ -31,7 +32,6 @@
 set -uo pipefail
 
 REPO="${AUDIT_REPO:-$HOME/Projects/Fantasia4x}"
-TREE="${AUDIT_TREE:-$REPO/.claude/worktrees/audit-ledger}"
 GRAPH="${AUDIT_GRAPH:-$HOME/Projects/codegraph}"
 NODE="${AUDIT_NODE:-$HOME/.nvm/versions/node/v24.19.0/bin/node}"
 HOURS="${AUDIT_HOURS:-3.5}"
@@ -40,7 +40,6 @@ MODEL="${AUDIT_MODEL:-sonnet}"
 MON="${AUDIT_MON:-$HOME/Documents/Projects/mon/mon}"
 TAG="${AUDIT_TAG:-ci/cl}"
 FIXES="${AUDIT_FIXES:-2}"
-BRANCH="audit-ledger"
 
 # claude lives in ~/.local/bin, which is on PATH in a login shell and in the unit, but not
 # when this script is invoked over a bare ssh command. Resolve it here so all three agree.
@@ -48,7 +47,7 @@ export PATH="$HOME/.local/bin:$PATH"
 AUDIT_CLAUDE="${AUDIT_CLAUDE:-$(command -v claude || echo "$HOME/.local/bin/claude")}"
 export AUDIT_CLAUDE
 
-LOGDIR="$TREE/tools/audit/.ledger/nightly"
+LOGDIR="$REPO/tools/audit/.ledger/nightly"
 STAMP="$(date +%Y-%m-%d)"
 LOG="$LOGDIR/$STAMP.log"
 LOCK="${XDG_RUNTIME_DIR:-/tmp}/fantasia-audit.lock"
@@ -67,40 +66,26 @@ say "=== nightly audit $STAMP ==="
 [ -x "$NODE" ] || die "no node at $NODE (needs >= 22.5 for node:sqlite)"
 [ -x "$AUDIT_CLAUDE" ] || die "no claude at $AUDIT_CLAUDE"
 [ -d "$REPO/.git" ] || die "no checkout at $REPO"
-[ -d "$TREE" ] || die "no worktree at $TREE"
 say "node $("$NODE" -v), claude $AUDIT_CLAUDE"
 
 # --- 1. main -----------------------------------------------------------------
+# Everything below runs here. A board commit left over from a night whose push failed would
+# make `--ff-only` fail forever after, so an unpushed board commit is rebased onto origin
+# rather than treated as divergence.
 say "--- pulling main"
 git -C "$REPO" fetch --quiet origin "+refs/heads/*:refs/remotes/origin/*" || die "fetch failed"
 if [ -n "$(git -C "$REPO" status --porcelain)" ]; then
-  say "WARN: $REPO has uncommitted changes; leaving main where it is"
-else
-  git -C "$REPO" checkout --quiet main && git -C "$REPO" merge --ff-only --quiet origin/main \
-    || say "WARN: main is not fast-forwardable from origin/main; leaving it alone"
+  die "$REPO has uncommitted changes — refusing to run against a dirty tree"
+fi
+git -C "$REPO" checkout --quiet main || die "cannot check out main"
+if ! git -C "$REPO" merge --ff-only --quiet origin/main 2>/dev/null; then
+  say "main has local commits; rebasing them onto origin/main"
+  git -C "$REPO" rebase --quiet origin/main \
+    || { git -C "$REPO" rebase --abort 2>/dev/null; die "main will not rebase onto origin/main — needs a person"; }
 fi
 say "main at $(git -C "$REPO" rev-parse --short main)"
 
-# --- 2. worktree -------------------------------------------------------------
-# Two sources feed this branch: tool changes pushed from another machine, and the game code
-# on main. Both come in as merges. The branch accumulates local merge commits and is never
-# pushed from here, so it will not fast-forward -- `merge`, not `pull --ff-only`.
-git -C "$TREE" rev-parse --abbrev-ref HEAD | grep -qx "$BRANCH" || die "worktree is not on $BRANCH"
-
-say "--- merging origin/$BRANCH (tool changes)"
-if ! git -C "$TREE" merge --no-edit "origin/$BRANCH"; then
-  git -C "$TREE" merge --abort 2>/dev/null
-  die "origin/$BRANCH does not merge cleanly — conflicts need a person"
-fi
-
-say "--- merging main (game code)"
-if ! git -C "$TREE" merge --no-edit main; then
-  git -C "$TREE" merge --abort 2>/dev/null
-  die "main does not merge cleanly into $BRANCH — conflicts need a person"
-fi
-say "$BRANCH at $(git -C "$TREE" rev-parse --short HEAD)"
-
-# --- 3. codegraph ------------------------------------------------------------
+# --- 2. codegraph ------------------------------------------------------------
 # Without a current extract the reachability triggers silently stop firing, which reads as
 # "the hot path is clean" rather than "nothing was asked about it".
 if [ -d "$GRAPH" ]; then
@@ -111,43 +96,49 @@ else
   say "WARN: no codegraph at $GRAPH; reachability triggers will not fire"
 fi
 
-# --- 4. index + plan ---------------------------------------------------------
+# --- 3. index + plan ---------------------------------------------------------
 say "--- indexing"
-( cd "$TREE" && "$NODE" tools/audit/audit.mjs index ) || die "index failed"
+( cd "$REPO" && "$NODE" tools/audit/audit.mjs index ) || die "index failed"
 say "--- planning"
-( cd "$TREE" && "$NODE" tools/audit/audit.mjs plan ) || die "plan failed"
-BEFORE=$( cd "$TREE" && "$NODE" tools/audit/audit.mjs status | sed -n 's/^work .*done \([0-9]*\) .*/\1/p' )
+( cd "$REPO" && "$NODE" tools/audit/audit.mjs plan ) || die "plan failed"
+BEFORE=$( cd "$REPO" && "$NODE" tools/audit/audit.mjs status | sed -n 's/^work .*done \([0-9]*\) .*/\1/p' )
 
-# --- 5. the run --------------------------------------------------------------
+# --- 4. the run --------------------------------------------------------------
 say "--- auditing for ${HOURS}h with $WORKERS workers on $MODEL"
-( cd "$TREE" && "$NODE" tools/audit/run.mjs \
+( cd "$REPO" && "$NODE" tools/audit/run.mjs \
     --workers "$WORKERS" --hours "$HOURS" --model "$MODEL" --run "nightly-$STAMP" )
 RUN_RC=$?
 say "run exited $RUN_RC"
 
-( cd "$TREE" && "$NODE" tools/audit/audit.mjs release ) || true
-( cd "$TREE" && "$NODE" tools/audit/audit.mjs export ) || true
-AFTER=$( cd "$TREE" && "$NODE" tools/audit/audit.mjs status | sed -n 's/^work .*done \([0-9]*\) .*/\1/p' )
+( cd "$REPO" && "$NODE" tools/audit/audit.mjs release ) || true
+( cd "$REPO" && "$NODE" tools/audit/audit.mjs export ) || true
+AFTER=$( cd "$REPO" && "$NODE" tools/audit/audit.mjs status | sed -n 's/^work .*done \([0-9]*\) .*/\1/p' )
 say "verdicts: ${BEFORE:-?} -> ${AFTER:-?}"
 
-# --- 6. raise onto the board -------------------------------------------------
-# Everything lands as `ready: false`. Nothing reaches GitHub or the fixer until a person
-# has read it and flipped that, which is the only gate between the audit and the repo.
+# --- 5. raise onto the board -------------------------------------------------
+# Everything lands as `ready: false`. Nothing is worked on until a person has read it and
+# flipped that, which is the only gate between the audit and the repo.
 say "--- raising findings onto the board"
-( cd "$TREE" && "$NODE" tools/audit/audit.mjs issues ) || say "WARN: issue raising failed"
+( cd "$REPO" && "$NODE" tools/audit/audit.mjs issues ) || say "WARN: issue raising failed"
 
-if [ -n "$(git -C "$TREE" status --porcelain docs/issues)" ]; then
-  git -C "$TREE" add docs/issues
-  git -C "$TREE" -c user.name="fantasia-audit" -c user.email="audit@localhost" \
+if [ -n "$(git -C "$REPO" status --porcelain docs/issues)" ]; then
+  git -C "$REPO" add docs/issues
+  git -C "$REPO" -c user.name="fantasia-audit" -c user.email="audit@localhost" \
     commit -q -m "docs(issues): board refresh $STAMP" || say "WARN: board commit failed"
-  git -C "$TREE" push -q origin "$BRANCH" || say "WARN: board push failed; next run retries"
+  if ! git -C "$REPO" push -q origin main 2>/dev/null; then
+    # Someone pushed to main during the run. Rebase the board commit on top and try once more;
+    # if that still fails, step 1 of the next run picks it up rather than leaving it stranded.
+    say "board push rejected; rebasing onto origin/main and retrying"
+    git -C "$REPO" fetch --quiet origin main \
+      && git -C "$REPO" rebase --quiet origin/main \
+      && git -C "$REPO" push -q origin main \
+      || { git -C "$REPO" rebase --abort 2>/dev/null; say "WARN: board push failed; next run retries"; }
+  fi
   say "board committed and pushed"
 else
   say "board unchanged"
 fi
 
-# Anything already marked ready gets its GitHub issue; the rest stay on the board only.
-( cd "$TREE" && "$NODE" tools/audit/audit.mjs publish ) || say "WARN: publish failed"
 
 # --- 7. the fixer ------------------------------------------------------------
 if [ "${AUDIT_NO_FIX:-0}" = 1 ]; then
@@ -155,7 +146,7 @@ if [ "${AUDIT_NO_FIX:-0}" = 1 ]; then
 else
   say "--- fixer: up to $FIXES issue(s)"
   for _ in $(seq 1 "$FIXES"); do
-    ( cd "$TREE" && "$NODE" tools/audit/fix.mjs --next ) || break
+    ( cd "$REPO" && "$NODE" tools/audit/fix.mjs --next ) || break
   done
 fi
 
@@ -184,7 +175,7 @@ rule answering n/a on most of its matches, say which rule and that its trigger i
 too broad. Name any issue the board gained tonight that looks worth marking \`ready: true\`,
 and any PR the fixer opened. If nothing meaningful landed, say that in one line rather than padding.
 The run log is at $LOG." \
-    --project "$TREE" \
+    --project "$REPO" \
     --title "Fantasia4x nightly code audit — $STAMP" \
     --tag "$TAG" \
     --by fantasia-audit.timer \

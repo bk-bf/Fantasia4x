@@ -1,8 +1,8 @@
 // The issue board: docs/issues/*.md, frontmatter + body.
 //
-// These files are canonical and the GitHub issue is a projection of one. Writing back is
-// field-level rather than a full re-serialise, so a hand-edited body survives the loop
-// touching `github:` or `pr:`.
+// These files are the only record of a defect — nothing is projected anywhere else. Writing
+// back is field-level rather than a full re-serialise, so a hand-edited body survives the
+// loop touching `status:` or `pr:`.
 
 import { readFileSync, writeFileSync, readdirSync, existsSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
@@ -17,7 +17,6 @@ const SCALARS = new Set([
   'severity',
   'ready',
   'origin',
-  'github',
   'branch',
   'pr',
   'created',
@@ -95,7 +94,6 @@ export function serializeFrontmatter(data) {
     'rules',
     'files',
     'symbols',
-    'github',
     'branch',
     'pr',
     'created',
@@ -178,27 +176,3 @@ export function validate(issue) {
   }
   return e;
 }
-
-/** The GitHub body: the prose, then the machine fields folded away so they render clean
- *  but still round-trip. */
-export function githubBody(issue, { repoPath }) {
-  const d = issue.data;
-  const meta = serializeFrontmatter(d).replace(/^---\n|\n---\n$/g, '');
-  return [
-    issue.body.replace(/^#\s+.*\n/, '').trim(),
-    '',
-    '---',
-    '',
-    `Canonical source: [\`${repoPath}\`](${repoPath}) — edit there, not here.`,
-    '',
-    '<details><summary>metadata</summary>',
-    '',
-    '```yaml',
-    meta.trim(),
-    '```',
-    '',
-    '</details>'
-  ].join('\n');
-}
-
-export const labelsFor = (d) => [`kind:${d.kind}`, `severity:${d.severity}`, `origin:${d.origin}`];

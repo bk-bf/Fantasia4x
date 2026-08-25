@@ -6,10 +6,10 @@
 
 The board the nightly audit writes to and the fixer works from. One file per issue, flat.
 
-**These files are canonical; the GitHub issue is a projection of one.** The mapping is the
-`github:` field, written back when the issue is raised. Keeping the truth in the repo means
-an issue survives without a network, is reviewed in the same PR as the code, and cannot
-drift from what the code says — which is the failure this whole board exists to catch.
+**These files are the only record of a defect.** Nothing is projected to a forge — see
+[why not GitHub](../pr/README.md#why-not-github). Keeping the truth in the repo means an
+issue survives without a network, is reviewed beside the code, and cannot drift from what
+the code says, which is the failure this whole board exists to catch.
 
 ## Lifecycle
 
@@ -19,11 +19,11 @@ audit finds it  ──▶  docs/issues/<slug>.md        status: open   ready: fa
                     you read it, decide it is worth doing
                           │
                           ▼                        ready: true
-                     audit publish  ──▶  GitHub issue          github: 42
+                     the fixer takes it  ──▶  worktree ──▶ local branch
+                          │                               + docs/pr/<slug>.md
+                          │                               status: in-review
                           │
-                     the fixer takes it  ──▶  worktree ──▶ PR   status: in-review  pr: 51
-                          │
-                     you merge                                  status: closed
+                     you read the diff and merge            status: closed
 ```
 
 `ready: false` is the gate. Nothing the audit raises is worked on until a person flips it —
@@ -51,9 +51,8 @@ files:                          # blast radius, and what the fixer is scoped to
   - src/lib/game/core/types/culture.ts
 symbols:                        # ledger keys, so a re-audit can tell this issue is stale
   - src/lib/game/core/Culture.ts::STATS#0
-github: 42                      # issue number, written by `audit publish`
 branch: fix/core-stat-single-source   # written by the fixer
-pr: 51                          # written by the fixer
+pr: core-stat-single-source     # the review file in docs/pr/, written by the fixer
 created: 2026-08-24
 updated: 2026-08-25
 ---
@@ -98,7 +97,6 @@ Severity is about the player, never about how annoying the code is to read.
 ```bash
 node tools/audit/audit.mjs issues            # findings -> issue files (origin: audit)
 node tools/audit/audit.mjs issues --dry-run  # what it would write
-node tools/audit/audit.mjs publish           # unpublished + ready issues -> GitHub
 node tools/audit/audit.mjs board             # every issue, by status
 node tools/audit/fix.mjs --issue <slug>      # work one issue in a worktree, open a PR
 node tools/audit/fix.mjs --next              # the oldest ready issue
@@ -111,6 +109,7 @@ node tools/audit/fix.mjs --next --no-mon     # skip the mon session
 | | Owns |
 |---|---|
 | `docs/issues/` | Defects. Something is wrong and should be made right. |
+| [`docs/pr/`](../pr/README.md) | Fix attempts awaiting review — a local branch and the argument for it. |
 | [`tasks/open/ROADMAP.md`](../tasks/open/ROADMAP.md) | Features. Something does not exist yet and should. |
 | `tasks/open/<SPEC>.md` | Design work too large for one issue — a rebuild or a system that does not exist yet. |
 
