@@ -60,10 +60,53 @@
     "toolTierRequired": 0
   },
   // ── Preservation, drink and regalia ───────────────────────────────────────
-  {"id": "smoke_fish", "discipline": "cooking", "station": "drying_rack", "inputs": {"category:fish": 3, "salt": 1}, "outputs": {"smoked_fish": 3}, "workAmount": 5, "toolTierRequired": 0, "passive": true},
+  {"id": "smoke_fish", "discipline": "cooking", "station": "smoking_rack", "inputs": {"category:fish": 3, "salt": 1}, "outputs": {"smoked_fish": 3}, "workAmount": 5, "toolTierRequired": 0, "passive": true},
+  {
+    "id"              : "smoke_meat",
+    "discipline"      : "cooking",
+    "station"         : "smoking_rack",
+    "passive"         : true,
+    "inputs"          : {"category:meat": 4, "salt": 1},
+    "outputs"         : {"smoked_meat": 3},
+    "workAmount"      : 8,
+    "toolTierRequired": 0
+  },
+  {
+    "id"              : "smoke_ham",
+    "discipline"      : "cooking",
+    "station"         : "smoking_rack",
+    "passive"         : true,
+    "inputs"          : {"category:meat": 6, "salt": 2},
+    "outputs"         : {"smoked_ham": 2},
+    "workAmount"      : 14,
+    "toolTierRequired": 0,
+    "researchRequired": "food_preservation"
+  },
+  {
+    "id"              : "smoke_sausage",
+    "discipline"      : "cooking",
+    "station"         : "smoking_rack",
+    "passive"         : true,
+    "inputs"          : {"category:meat": 4, "tallow": 1, "salt": 1},
+    "outputs"         : {"smoked_sausage": 3},
+    "workAmount"      : 12,
+    "toolTierRequired": 0,
+    "researchRequired": "food_preservation"
+  },
+  {
+    "id"              : "smoke_cheese",
+    "discipline"      : "cooking",
+    "station"         : "smoking_rack",
+    "passive"         : true,
+    "inputs"          : {"hard_cheese": 2},
+    "outputs"         : {"smoked_cheese": 2},
+    "workAmount"      : 10,
+    "toolTierRequired": 0,
+    "researchRequired": "food_preservation"
+  },
   {"id": "make_salt_pork", "discipline": "cooking", "station": "larder_cupboard", "inputs": {"category:meat": 4, "salt": 3}, "outputs": {"salt_pork": 3}, "workAmount": 7, "toolTierRequired": 0, "researchRequired": "food_preservation", "passive": true},
   {"id": "make_pickled_vegetables", "discipline": "cooking", "station": "larder_cupboard", "inputs": {"category:vegetable": 4, "salt": 2}, "outputs": {"pickled_vegetables": 3}, "workAmount": 6, "toolTierRequired": 0, "researchRequired": "food_preservation", "passive": true},
-  {"id": "make_hard_cheese", "discipline": "cooking", "station": "larder_cupboard", "inputs": {"milk": 8, "salt": 2}, "outputs": {"hard_cheese": 2}, "workAmount": 12, "toolTierRequired": 1, "researchRequired": "food_preservation", "passive": true},
+  {"id": "make_hard_cheese", "discipline": "cooking", "station": "cheese_basin", "inputs": {"milk": 8, "salt": 2}, "outputs": {"hard_cheese": 2}, "workAmount": 12, "toolTierRequired": 1, "researchRequired": "food_preservation", "passive": true},
   {"id": "make_cured_ham", "discipline": "cooking", "station": "meat_larder", "inputs": {"category:meat": 6, "salt": 4}, "outputs": {"cured_ham": 2}, "workAmount": 14, "toolTierRequired": 1, "researchRequired": "food_preservation", "passive": true},
   {"id": "make_dry_sausage", "discipline": "cooking", "station": "meat_larder", "inputs": {"category:meat": 4, "tallow": 1, "salt": 2}, "outputs": {"dry_sausage": 3}, "workAmount": 10, "toolTierRequired": 1, "researchRequired": "food_preservation", "passive": true},
   {"id": "make_potted_meat", "discipline": "cooking", "station": "oven", "inputs": {"category:meat": 4, "tallow": 2, "clay_jug": 1}, "outputs": {"potted_meat": 3}, "workAmount": 12, "toolTierRequired": 2, "researchRequired": "food_preservation"},
@@ -1209,11 +1252,31 @@
     "toolTierRequired": 0
   },
   {
+    "id"              : "fire_clay_jug",
+    "discipline"      : "pottery",
+    "station"         : "pottery_kiln",
+    "passive"         : true,
+    "inputs"          : {"unfired_jug": 1},
+    "outputs"         : {"clay_jug": 1},
+    "workAmount"      : 3,
+    "toolTierRequired": 0
+  },
+  {
+    "id"              : "fire_flask",
+    "discipline"      : "pottery",
+    "station"         : "pottery_kiln",
+    "passive"         : true,
+    "inputs"          : {"unfired_flask": 1},
+    "outputs"         : {"flask": 1},
+    "workAmount"      : 2,
+    "toolTierRequired": 0
+  },
+  {
     "id"              : "make_water_urn",
     "discipline"      : "pottery",
     "station"         : "pottery_kiln",
     "passive"         : true,
-    "inputs"          : {"category:clay": 1},
+    "inputs"          : {"category:clay": 2},
     "outputs"         : {"water_urn": 1},
     "workAmount"      : 4,
     "toolTierRequired": 0
@@ -1719,8 +1782,8 @@
     "id"              : "throw_clay_jug",
     "discipline"      : "pottery",
     "station"         : "potters_wheel",
-    "inputs"          : {"blue_clay": 1},
-    "outputs"         : {"clay_jug": 1},
+    "inputs"          : {"blue_clay": 2},
+    "outputs"         : {"unfired_jug": 1},
     "workAmount"      : 3,
     "toolTierRequired": 0
   },
@@ -3556,6 +3619,73 @@
   // filling is a free pick from meat/fish/veg/fruit, so a pie names itself ("Apple Pie", "Venison & Onion
   // Pie"). Tiers add fillings (1 → 2 → 3 distinct) + flour, climbing the meal buff (nourished → fortified).
   // Fruit fillings make a sweet pie; meat/veg a savoury one — same recipe, the ingredients tell the story.
+  {
+    "id"              : "make_simple_sandwich",
+    "discipline"      : "cooking",
+    "station"         : "craft_spot",
+    "inputs"          : {"bread": 1},
+    "outputs"         : {"simple_sandwich": 1},
+    "workAmount"      : 3,
+    "toolTierRequired": 0,
+    "dynamicRecipe"   : {
+      "filling1": {
+        "acceptsCategories": ["meat", "fish", "vegetable", "fruit", "preserve"],
+        "quantity"         : 1,
+        "default"          : {"name": "Simple Sandwich", "description": "A cut loaf with something laid between the halves."}
+      }
+    }
+  },
+  {
+    "id"              : "make_hearty_sandwich",
+    "discipline"      : "cooking",
+    "station"         : "craft_spot",
+    "inputs"          : {"bread": 1},
+    "outputs"         : {"hearty_sandwich": 1},
+    "workAmount"      : 5,
+    "toolTierRequired": 0,
+    "dynamicRecipe"   : {
+      "filling1": {
+        "acceptsCategories": ["meat", "fish", "vegetable", "fruit", "preserve"],
+        "quantity"         : 1,
+        "default"          : {"name": "Hearty Sandwich", "description": "Bread packed with two fillings and pressed flat enough to carry."}
+      },
+      "filling2": { "acceptsCategories": ["meat", "fish", "vegetable", "fruit", "preserve"], "quantity": 1 }
+    }
+  },
+  {
+    "id"              : "bake_game_pie",
+    "discipline"      : "cooking",
+    "station"         : "oven",
+    "inputs"          : {"flour": 3},
+    "outputs"         : {"game_pie": 1},
+    "workAmount"      : 22,
+    "toolTierRequired": 0,
+    "researchRequired": "food_preservation",
+    "dynamicRecipe"   : {
+      "keeping": {
+        "acceptsCategories": ["preserve"],
+        "quantity"         : 2,
+        "default"          : {"name": "Game Pie", "description": "Cured and smoked meat baked under a standing crust."}
+      },
+      "filling1": { "acceptsCategories": ["vegetable", "herb"], "quantity": 1 }
+    }
+  },
+  {
+    "id"              : "bake_honey_tart",
+    "discipline"      : "cooking",
+    "station"         : "oven",
+    "inputs"          : {"flour": 2, "honey": 2},
+    "outputs"         : {"honey_tart": 1},
+    "workAmount"      : 16,
+    "toolTierRequired": 0,
+    "dynamicRecipe"   : {
+      "fruit1": {
+        "acceptsCategories": ["fruit"],
+        "quantity"         : 2,
+        "default"          : {"name": "Honey Tart", "description": "A shallow crust filled with honey and fruit."}
+      }
+    }
+  },
   {
     "id"              : "bake_simple_pie",
     "station"         : "oven",
@@ -7353,7 +7483,8 @@
     "discipline": "leatherworking",
     "station": "makers_bench",
     "inputs": {
-      "category:leather": 2
+      "category:leather": 2,
+      "category:binding": 1
     },
     "outputs": {
       "waterskin": 1
@@ -7368,9 +7499,7 @@
     "inputs": {
       "blue_clay": 1
     },
-    "outputs": {
-      "flask": 1
-    },
+    "outputs": {"unfired_flask": 1},
     "workAmount": 2,
     "toolTierRequired": 0
   }

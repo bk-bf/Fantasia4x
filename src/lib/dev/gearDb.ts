@@ -730,8 +730,17 @@ function recipeInfo(rec: any): RecipeInfo | null {
   };
   push(rec.inputs);
   if (rec.dynamicRecipe)
-    for (const slot of Object.values<any>(rec.dynamicRecipe))
-      inputs.push({ name: prettify(slot.acceptsCategory ?? 'material'), qty: slot.quantity ?? 1 });
+    for (const slot of Object.values<any>(rec.dynamicRecipe)) {
+      // A slot may be authored either way round — `acceptsCategory` for one, `acceptsCategories` for
+      // several. Reading only the singular printed the literal word "material" for every plural slot,
+      // so a three-ingredient stew read as "1x material" three times over.
+      const cats: string[] =
+        slot.acceptsCategories ?? (slot.acceptsCategory ? [slot.acceptsCategory] : []);
+      inputs.push({
+        name: cats.length ? cats.map(prettify).join(' / ') : 'any material',
+        qty: slot.quantity ?? 1
+      });
+    }
   const stationId = rec.station ?? '';
   return {
     stationId,
@@ -756,12 +765,16 @@ for (const i of items) {
   const dry = i?.driesTo;
   const to = typeof dry === 'string' ? dry : dry?.itemId;
   if (to && !DRIED_FROM.has(to)) DRIED_FROM.set(to, i.id);
-  if (typeof i?.decaysTo === 'string' && !ROTTED_FROM.has(i.decaysTo)) ROTTED_FROM.set(i.decaysTo, i.id);
+  if (typeof i?.decaysTo === 'string' && !ROTTED_FROM.has(i.decaysTo))
+    ROTTED_FROM.set(i.decaysTo, i.id);
 }
 // Drying also runs at the CATEGORY level, and those rules live in code rather than in the item defs
 // (`ItemService.CATEGORY_DRYING`): any meat dries to dried meat, any fruit to dried fruit. Mirrored
 // here so the audit does not report two staples as unobtainable.
-for (const [cat, out] of [['meat', 'dried_meat'], ['fruit', 'dried_fruit']] as const)
+for (const [cat, out] of [
+  ['meat', 'dried_meat'],
+  ['fruit', 'dried_fruit']
+] as const)
   if (!DRIED_FROM.has(out)) DRIED_FROM.set(out, `any ${cat}`);
 
 /** Drawn from the world rather than made: a river, a lake, a well. */

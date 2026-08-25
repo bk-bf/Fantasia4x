@@ -30,7 +30,7 @@
 </script>
 
 <tr class="grp d{Math.min(node.depth, 4)}">
-  <td colspan="9">
+  <td colspan="10">
     <button
       type="button"
       class="head"
@@ -63,13 +63,14 @@
       <td class="age">{it.age}</td>
       <td class="stat">{it.stat}</td>
       <td class="fx" title={it.effects}>{it.effects}</td>
+      <td class="held" title={it.heldBy}>{it.heldBy}</td>
       <td class="num">{it.weightKg || ''}</td>
       <td class="src">{it.source}</td>
       <td class="gate">{it.gatedBy}</td>
     </tr>
     {#if sel[it.id]}
       <tr class="detail">
-        <td colspan="9" style="padding-left:{pad + 20}px">
+        <td colspan="10" style="padding-left:{pad + 20}px">
           {#if it.desc}<p>{it.desc}</p>{/if}
           <span class="id">{it.id}</span>
         </td>
@@ -169,6 +170,13 @@
   }
   /* Everything the sim reads off the item. Long by design — the tooltip carries the full string when
      it is clipped, because an audit needs to see the whole thing. */
+  .held {
+    color: var(--text-dim, #8a8a8a);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 18ch;
+  }
   .fx {
     color: #7fa88c;
     font-size: 10px;

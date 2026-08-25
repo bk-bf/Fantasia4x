@@ -246,6 +246,9 @@ function grabFoodAt(gameState: GameState, pawn: Pawn, x: number, y: number): Gam
 /** One drink is a litre — `water`'s dose is 1 L, so this is the same measure the recipes use. */
 const DRINK_LITRES = 1;
 
+/** How long a wash WITH SOAP holds the grime off — one in-game day. */
+const CLEAN_TICKS = ticksFromSeconds(300);
+
 /** Is the pawn standing at a river/drink zone or a well? Then the drink is free. */
 function atNaturalWater(pawn: Pawn, gs: GameState): boolean {
   const target = findNearestWaterTarget(pawn, gs, 'drink');
@@ -499,27 +502,42 @@ export function handleWashing(pawn: Pawn, gameState: GameState): GameState {
   const turnsInState = (activeJob?.turnsInState ?? 0) + 1;
   const duration = WASH_TURNS;
   const reliefPerTurn = WASH_NEED_RELIEF / duration;
+  // A bar of soap turns a rinse into a proper wash: the same relief, but the grime stays off for a
+  // day afterwards (`clean` holds hygieneRate at 0) instead of starting to build again immediately.
+  // Spent on the first turn, and only when the colony actually has some — soap is a luxury, not a
+  // requirement, and washing without it works exactly as it always did.
+  let state = gameState;
+  let soaped = false;
+  if (turnsInState === 1 && (gameState.stockpile?.['soap'] ?? 0) >= 1) {
+    state = consumeFromStockpiles(gameState, { soap: 1 });
+    soaped = true;
+  }
   const done = turnsInState >= duration;
   if (turnsInState === 1)
     gameLogger.log(
-      gameState.turn,
+      state.turn,
       'NEED-CHECK',
       () =>
-        `${pawn.name} starts washing hygiene=${(pawn.needs?.hygiene ?? 0).toFixed(1)} at ${fmtPos(pawn)}`
+        `${pawn.name} starts washing${soaped ? ' with soap' : ''} hygiene=${(pawn.needs?.hygiene ?? 0).toFixed(1)} at ${fmtPos(pawn)}`
     );
   if (done)
     gameLogger.log(
-      gameState.turn,
+      state.turn,
       'NEED-CHECK',
       () =>
         `${pawn.name} finished washing hygiene=${Math.max(0, (pawn.needs?.hygiene ?? 0) - reliefPerTurn).toFixed(1)} at ${fmtPos(pawn)}`
     );
-  return mutatePawn(gameState, pawn.id, (p) => {
+  return mutatePawn(state, pawn.id, (p) => {
     // Gate the pawn at the water tile for the whole task (see handleDrinking).
     p.path = [];
     p.isMoving = false;
     p.needs.hygiene = Math.max(0, (p.needs.hygiene ?? 0) - reliefPerTurn);
-    p.needs.lastWash = gameState.turn;
+    p.needs.lastWash = state.turn;
+    if (soaped)
+      p.conditionTimers = {
+        ...(p.conditionTimers ?? {}),
+        clean: Math.max(p.conditionTimers?.clean ?? 0, CLEAN_TICKS)
+      };
     p.currentState = done ? PAWN_STATE.IDLE : PAWN_STATE.WASHING;
     p.activeJob = done
       ? undefined

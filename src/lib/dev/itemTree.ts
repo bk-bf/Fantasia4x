@@ -92,7 +92,7 @@ export function effectsOf(i: any): string {
   const out: string[] = [];
   const hrs = (turns: number) => `${Math.round(turns * 10) / 10}t`;
   if (i.nutrition != null) out.push(`food ${i.nutrition}`);
-  if (i.hydration != null) out.push(`drink ${i.hydration}`);
+  if (i.hydration != null) out.push(`drink ${i.hydration}/L`);
   if (i.medicineQuality != null) out.push(`med ${i.medicineQuality}`);
   if (i.curesConditions?.length) out.push(`cures ${i.curesConditions.join('/')}`);
   if (i.mendsWounds?.length) out.push(`mends ${i.mendsWounds.join('/')}`);
@@ -121,7 +121,6 @@ export function effectsOf(i: any): string {
     );
   if (i.preservationMethod) out.push(i.preservationMethod);
   if (i.decaySeconds) out.push(`spoils ${Math.round(i.decaySeconds / 300)}d`);
-  if (i.heldBy?.length) out.push(`held by ${i.heldBy.join('/')}`);
   if (i.container?.material) out.push(`${i.container.material} vessel`);
   if (i.craftValue != null && i.craftValue !== 1) out.push(`worth ${i.craftValue}/unit`);
   if (i.fuelValue) out.push(`fuel ${i.fuelValue}`);
@@ -162,6 +161,8 @@ export interface TreeItem {
   stat: string;
   /** Everything the sim reads off this item — conditions, cures, coatings, boosts. See `effectsOf`. */
   effects: string;
+  /** Which vessel materials may hold this fluid — its own axis, not one of its effects. */
+  heldBy: string;
   /** light / medium / heavy / shield — it left the tree when layers took that level. */
   cls: string;
   weightKg: number;
@@ -438,14 +439,17 @@ function statOf(i: any): string {
   if (ap?.armorType) return `def ${ap.defense ?? 0}`;
   if (wp) return `dmg ${wp.damage ?? '—'}${wp.damageType ? ` ${wp.damageType}` : ''}`;
   if (i.ammoProperties) return `dmg ${i.ammoProperties.damage ?? '—'}`;
-  // A drinkable food is BOTH: what a litre feeds and how big one serving is. Both numbers matter when
-  // you are deciding whether a skin of ale is worth the litre it costs to carry.
+  // A drink is usually BOTH — ale feeds and it quenches — so these accumulate rather than returning
+  // on the first match, which is what made every drink show only one of its two numbers.
+  const feeds: string[] = [];
   if (i.nutrition != null)
-    return i.type === 'fluid'
-      ? `food ${i.nutrition}/L · ${i.volumeL ?? 1} L per serving`
-      : `food ${i.nutrition}`;
-  if (i.hydration != null) return `drink ${i.hydration}`;
-  if (i.medicineQuality != null) return `med ${i.medicineQuality}`;
+    feeds.push(i.type === 'fluid' ? `food ${i.nutrition}/L` : `food ${i.nutrition}`);
+  if (i.hydration != null) feeds.push(`drink ${i.hydration}/L`);
+  if (i.medicineQuality != null) feeds.push(`med ${i.medicineQuality}`);
+  if (feeds.length) {
+    if (i.type === 'fluid') feeds.push(`${i.volumeL ?? 1} L per serving`);
+    return feeds.join(' · ');
+  }
   if (i.toolBoost) {
     const b = i.toolBoost;
     const parts = [
@@ -478,6 +482,7 @@ export const TREE_ITEMS: TreeItem[] = items
       tier: i.tier ?? null,
       stat: statOf(i),
       effects: effectsOf(i),
+      heldBy: (i.heldBy ?? []).map(prettify).join(' / '),
       cls: CLASS_LABEL[(i.armorProperties ?? {}).armorType] ?? '',
       weightKg: i.weightKg ?? 0,
       source: (gearById.get(i.id) ?? rowForAny(i)).source,
@@ -629,6 +634,7 @@ export type SortKey =
   | 'age'
   | 'stat'
   | 'effects'
+  | 'heldBy'
   | 'weightKg'
   | 'source'
   | 'gatedBy';
@@ -641,6 +647,7 @@ export const SORT_COLUMNS: { key: SortKey; label: string; num?: boolean }[] = [
   { key: 'age', label: 'Age' },
   { key: 'stat', label: 'Stat' },
   { key: 'effects', label: 'Effects' },
+  { key: 'heldBy', label: 'Held by' },
   { key: 'weightKg', label: 'kg', num: true },
   { key: 'source', label: 'Made at' },
   { key: 'gatedBy', label: 'Gated by' }

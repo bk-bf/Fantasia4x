@@ -864,6 +864,15 @@
         ]
     },
     {
+        "id": "clean",
+        "name": "Clean",
+        "flags": ["buff", "comfort"],
+        "transient": true,
+        "description": "Scrubbed with soap rather than rinsed off in a river. The grime takes a day to find its way back.",
+        "color": "#CFE6F2",
+        "modifiers": {"hygieneRate": 0.0}
+    },
+    {
         // FURNITURE-COMFORT — a positive, tiered, severity-decaying condition (modeled on `intoxicated`).
         // Granted by a high `comfort` need; deepens the longer a pawn stays comfortable and lingers as an
         // afterglow when they leave. Each stage slows fatigue (`fatigueRate`) and speeds relaxation recovery

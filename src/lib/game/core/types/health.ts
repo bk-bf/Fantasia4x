@@ -231,6 +231,7 @@ export interface ConditionModifiers {
   hungerRate?: number; // multiplier on hunger accrual rate
   fatigueRate?: number; // multiplier on fatigue accrual rate
   thirstRate?: number; // multiplier on thirst accrual rate (e.g. dysentery's fluid loss)
+  hygieneRate?: number; // multiplier on how fast GRIME accrues — 0 stops it (a wash with soap)
   consciousness?: number; // multiplier on the consciousness capacity (e.g. heavy intoxication)
   dodge?: number; // extra multiplier on the defender's evasion (most evasion now flows via DEX)
   hitChance?: number; // extra multiplier on the attacker's to-hit (most accuracy now flows via DEX)
