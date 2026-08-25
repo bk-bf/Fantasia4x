@@ -44,21 +44,34 @@ const out = (s) => process.stdout.write(s + '\n');
 function run(cmd, args, { cwd = ROOT, input, timeoutMs = 1_800_000 } = {}) {
   return new Promise((resolve) => {
     const p = spawn(cmd, args, { cwd, stdio: ['pipe', 'pipe', 'pipe'] });
-    let o = '', e = '', settled = false;
+    let o = '',
+      e = '',
+      settled = false;
     const t = setTimeout(() => p.kill('SIGKILL'), timeoutMs);
-    const done = (r) => { if (!settled) { settled = true; clearTimeout(t); resolve(r); } };
+    const done = (r) => {
+      if (!settled) {
+        settled = true;
+        clearTimeout(t);
+        resolve(r);
+      }
+    };
     p.stdout.on('data', (d) => (o += d));
     p.stderr.on('data', (d) => (e += d));
     p.on('error', (err) => done({ code: -1, out: o, err: `${e}spawn ${cmd}: ${err.message}` }));
     p.on('close', (code) => done({ code, out: o, err: e }));
     p.stdin.on('error', () => {});
-    if (input !== undefined) { p.stdin.write(input); p.stdin.end(); }
+    if (input !== undefined) {
+      p.stdin.write(input);
+      p.stdin.end();
+    }
   });
 }
 
 const git = (args, cwd = ROOT, quiet = false) =>
   execFileSync('git', args, {
-    cwd, encoding: 'utf8', maxBuffer: 32 * 1024 * 1024,
+    cwd,
+    encoding: 'utf8',
+    maxBuffer: 32 * 1024 * 1024,
     stdio: quiet ? ['ignore', 'pipe', 'ignore'] : ['ignore', 'pipe', 'pipe']
   }).trim();
 
@@ -79,7 +92,10 @@ function pick() {
   return ready[0];
 }
 
-function fail(msg) { out(`ABORT: ${msg}`); process.exit(1); }
+function fail(msg) {
+  out(`ABORT: ${msg}`);
+  process.exit(1);
+}
 
 // --- prompt ------------------------------------------------------------------
 // AGENTS.md tells an agent in this repo to stop at a proposal and wait. That rule is right
@@ -143,13 +159,21 @@ ${issue.body}
 
 function changedFiles(cwd) {
   const s = git(['status', '--porcelain'], cwd);
-  return s.split('\n').filter(Boolean).map((l) => l.slice(3).trim()).filter(Boolean);
+  return s
+    .split('\n')
+    .filter(Boolean)
+    .map((l) => l.slice(3).trim())
+    .filter(Boolean);
 }
 
 async function verify(cwd, files) {
   const results = [];
   const check = await run(PNPM, ['check'], { cwd, timeoutMs: 900_000 });
-  results.push({ name: `${PNPM} check`, code: check.code, tail: errorLines(check.out + check.err) });
+  results.push({
+    name: `${PNPM} check`,
+    code: check.code,
+    tail: errorLines(check.out + check.err)
+  });
 
   const src = files.filter((f) => /^src\/.*\.(ts|svelte)$/.test(f) && !/\.test\.ts$/.test(f));
   if (src.length) {
@@ -175,12 +199,18 @@ const errorLines = (s, n = 25) => {
 function toMon({ issue, cwd, title, prompt }) {
   if (flag('no-mon') || !existsSync(MON)) return null;
   const r = spawnSyncSafe(MON, [
-    'run', prompt,
-    '--project', cwd,
-    '--title', title,
-    '--tag', FIX_TAG,
-    '--by', 'fix.mjs',
-    '--mode', 'acceptEdits'
+    'run',
+    prompt,
+    '--project',
+    cwd,
+    '--title',
+    title,
+    '--tag',
+    FIX_TAG,
+    '--by',
+    'fix.mjs',
+    '--mode',
+    'acceptEdits'
   ]);
   if (r.ok) out(`--- mon: ${r.out.split('\n')[0]}`);
   else out(`--- mon registration failed: ${r.err}`);
@@ -220,9 +250,19 @@ if (flag('dry-run')) {
 if (!GH.available(ROOT)) fail('gh is not authenticated here');
 
 out(`--- worktree ${wt}`);
-if (existsSync(wt)) { try { git(['worktree', 'remove', '--force', wt]); } catch { rmSync(wt, { recursive: true, force: true }); } }
+if (existsSync(wt)) {
+  try {
+    git(['worktree', 'remove', '--force', wt]);
+  } catch {
+    rmSync(wt, { recursive: true, force: true });
+  }
+}
 git(['fetch', '--quiet', 'origin', 'main']);
-try { git(['branch', '-D', branch], ROOT, true); } catch { /* no such branch yet */ }
+try {
+  git(['branch', '-D', branch], ROOT, true);
+} catch {
+  /* no such branch yet */
+}
 git(['worktree', 'add', '-b', branch, wt, 'origin/main']);
 
 I.patchIssue(issue.path, { status: 'in-progress', branch });
@@ -234,7 +274,11 @@ let released = false;
 const release = () => {
   if (released) return;
   released = true;
-  try { I.patchIssue(issue.path, { status: 'open', branch: null }); } catch { /* board gone */ }
+  try {
+    I.patchIssue(issue.path, { status: 'open', branch: null });
+  } catch {
+    /* board gone */
+  }
 };
 for (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP']) {
   process.on(sig, () => {
@@ -255,20 +299,35 @@ try {
   // has generated it. There is no prepare script, so a fresh worktree has neither, and
   // vitest dies resolving the extends before it runs a single test.
   out(`--- svelte-kit sync`);
-  const sync = await run(join(wt, 'node_modules', '.bin', 'svelte-kit'), ['sync'],
-    { cwd: wt, timeoutMs: 300_000 });
+  const sync = await run(join(wt, 'node_modules', '.bin', 'svelte-kit'), ['sync'], {
+    cwd: wt,
+    timeoutMs: 300_000
+  });
   if (sync.code !== 0) out(`    [warn] sync exited ${sync.code}; verification may not run`);
 
   out(`--- ${CLAUDE} (${MODEL})`);
   const t0 = Date.now();
-  const res = await run(CLAUDE, [
-    '--print', '--model', MODEL,
-    '--permission-mode', 'acceptEdits',
-    // Bash is granted deliberately: the model is told to get `pnpm check` and
-    // `pnpm test:related` green, and cannot without it. Scope is a throwaway worktree on
-    // a branch, and the harness re-runs both itself before anything is pushed.
-    '--allowedTools', 'Bash', 'Edit', 'Write', 'Read', 'Grep', 'Glob'
-  ], { cwd: wt, input: buildPrompt(issue), timeoutMs: 3_600_000 });
+  const res = await run(
+    CLAUDE,
+    [
+      '--print',
+      '--model',
+      MODEL,
+      '--permission-mode',
+      'acceptEdits',
+      // Bash is granted deliberately: the model is told to get `pnpm check` and
+      // `pnpm test:related` green, and cannot without it. Scope is a throwaway worktree on
+      // a branch, and the harness re-runs both itself before anything is pushed.
+      '--allowedTools',
+      'Bash',
+      'Edit',
+      'Write',
+      'Read',
+      'Grep',
+      'Glob'
+    ],
+    { cwd: wt, input: buildPrompt(issue), timeoutMs: 3_600_000 }
+  );
   const mins = ((Date.now() - t0) / 60000).toFixed(1);
   if (res.code !== 0) throw new Error(`the model exited ${res.code}:\n${tail(res.err)}`);
   const account = res.out.trim();
@@ -277,8 +336,11 @@ try {
   const files = changedFiles(wt).filter((f) => !f.startsWith('docs/issues/'));
   if (files.length === 0) {
     out('--- nothing changed');
-    GH.commentIssue(ROOT, d.github,
-      `The fixer ran and changed nothing.\n\n${account}\n\n_No PR opened._`);
+    GH.commentIssue(
+      ROOT,
+      d.github,
+      `The fixer ran and changed nothing.\n\n${account}\n\n_No PR opened._`
+    );
     I.patchIssue(issue.path, { status: 'open', branch: null });
     exitCode = 0;
   } else {
@@ -288,16 +350,22 @@ try {
     for (const r of v.results) out(`    ${r.code === 0 ? 'pass' : 'FAIL'}  ${r.name}`);
 
     if (!v.ok) {
-      const detail = v.results.filter((r) => r.code !== 0)
-        .map((r) => `**${r.name}** exited ${r.code}\n\n\`\`\`\n${r.tail}\n\`\`\``).join('\n\n');
-      GH.commentIssue(ROOT, d.github,
+      const detail = v.results
+        .filter((r) => r.code !== 0)
+        .map((r) => `**${r.name}** exited ${r.code}\n\n\`\`\`\n${r.tail}\n\`\`\``)
+        .join('\n\n');
+      GH.commentIssue(
+        ROOT,
+        d.github,
         `The fixer produced a change but could not get it green, so nothing was pushed.\n\n` +
-        `${detail}\n\n---\n\n${account}`);
+          `${detail}\n\n---\n\n${account}`
+      );
       I.patchIssue(issue.path, { status: 'open', branch: null });
       out('--- not green; nothing pushed. The account is on the issue.');
       keepTree = true;
       toMon({
-        issue, cwd: wt,
+        issue,
+        cwd: wt,
         title: `fix ${d.id} — not green`,
         prompt: [
           `A fix attempt for issue #${d.github} (${d.id}) changed ${files.length} file(s) but`,
@@ -321,7 +389,8 @@ try {
     } else {
       out(`--- committing`);
       git(['add', '-A'], wt);
-      const msg = `fix: ${d.title}\n\nCloses #${d.github}\n\n` +
+      const msg =
+        `fix: ${d.title}\n\nCloses #${d.github}\n\n` +
         `Raised by the audit ledger${d.rules?.length ? ` (${d.rules.join(', ')})` : ''}; ` +
         `see docs/issues/${d.id}.md.\n\n` +
         `Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>`;
@@ -329,14 +398,19 @@ try {
       git(['push', '-q', '-u', 'origin', branch], wt);
 
       const body = [
-        `Closes #${d.github}`, '',
-        account, '',
-        '---', '',
-        `| | |`, `|---|---|`,
+        `Closes #${d.github}`,
+        '',
+        account,
+        '',
+        '---',
+        '',
+        `| | |`,
+        `|---|---|`,
         `| issue | [\`docs/issues/${d.id}.md\`](docs/issues/${d.id}.md) |`,
         `| severity | ${d.severity} |`,
         `| raised by | ${d.origin === 'audit' ? `the audit (${(d.rules ?? []).join(', ')})` : 'a person'} |`,
-        `| verified | \`${PNPM} check\`, \`${PNPM} test:related\` |`, '',
+        `| verified | \`${PNPM} check\`, \`${PNPM} test:related\` |`,
+        '',
         `Opened unattended by \`tools/audit/fix.mjs\`. Review it as you would any other PR.`
       ].join('\n');
 
@@ -345,7 +419,8 @@ try {
         I.patchIssue(issue.path, { status: 'in-review', pr: pr.number, branch });
         out(`--- PR #${pr.number}  ${pr.url}`);
         toMon({
-          issue, cwd: ROOT,
+          issue,
+          cwd: ROOT,
           title: `fix ${d.id} — PR #${pr.number}`,
           prompt: [
             `A fix for issue #${d.github} (${d.id}) is open as PR #${pr.number}: ${pr.url}`,
@@ -373,22 +448,32 @@ try {
 } catch (e) {
   out(`--- ${e.message}`);
   if (d.github) {
-    GH.commentIssue(ROOT, d.github, `The fixer failed before it could verify anything.\n\n\`\`\`\n${e.message}\n\`\`\``);
+    GH.commentIssue(
+      ROOT,
+      d.github,
+      `The fixer failed before it could verify anything.\n\n\`\`\`\n${e.message}\n\`\`\``
+    );
   }
   I.patchIssue(issue.path, { status: 'open', branch: null });
   toMon({
-    issue, cwd: ROOT,
+    issue,
+    cwd: ROOT,
     title: `fix ${d.id} — failed`,
-    prompt: `The fixer for issue #${d.github} (${d.id}) failed before it could verify ` +
-            `anything, with:\n\n${e.message}\n\nSay in one paragraph whether this is a ` +
-            `harness problem or an issue problem. Change nothing.`
+    prompt:
+      `The fixer for issue #${d.github} (${d.id}) failed before it could verify ` +
+      `anything, with:\n\n${e.message}\n\nSay in one paragraph whether this is a ` +
+      `harness problem or an issue problem. Change nothing.`
   });
   exitCode = 1;
 } finally {
   if (keepTree) {
     out(`--- worktree kept at ${wt}`);
   } else {
-    try { git(['worktree', 'remove', '--force', wt]); } catch { rmSync(wt, { recursive: true, force: true }); }
+    try {
+      git(['worktree', 'remove', '--force', wt]);
+    } catch {
+      rmSync(wt, { recursive: true, force: true });
+    }
     out('--- worktree removed');
   }
 }

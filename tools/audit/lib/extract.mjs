@@ -12,13 +12,32 @@ import ts from 'typescript';
 import { sha } from './ledger.mjs';
 
 const LAYERS = {
-  rust: 0, core: 0, utils: 0, database: 0, webgl: 1, entities: 1, ai: 2,
-  services: 2, world: 3, systems: 3, stores: 4, components: 5, routes: 5, dev: -1
+  rust: 0,
+  core: 0,
+  utils: 0,
+  database: 0,
+  webgl: 1,
+  entities: 1,
+  ai: 2,
+  services: 2,
+  world: 3,
+  systems: 3,
+  stores: 4,
+  components: 5,
+  routes: 5,
+  dev: -1
 };
 
 const SKIP_DIRS = new Set([
-  'node_modules', '.git', '.svelte-kit', 'build', 'dist', 'target',
-  'spatial-core-pkg', 'sim-core-pkg', '.ledger'
+  'node_modules',
+  '.git',
+  '.svelte-kit',
+  'build',
+  'dist',
+  'target',
+  'spatial-core-pkg',
+  'sim-core-pkg',
+  '.ledger'
 ]);
 
 export function walkFiles(root, exts = ['.ts', '.svelte', '.jsonc']) {
@@ -43,7 +62,8 @@ const lineOffsets = (text) => {
   return offs;
 };
 const lineAtIdx = (offs, byte) => {
-  let lo = 0, hi = offs.length - 1;
+  let lo = 0,
+    hi = offs.length - 1;
   while (lo < hi) {
     const mid = (lo + hi + 1) >> 1;
     if (offs[mid] <= byte) lo = mid;
@@ -69,7 +89,8 @@ function moduleOf(file) {
 // Cheap syntactic facts a rule trigger can filter on without the agent reading anything.
 // These narrow WHICH symbols a rule applies to; they never decide the rule.
 
-const UNIT_WORDS = /\b(tick|ticks|turn|turns|ms|millis|seconds?|secs?|minutes?|hours?|days?|pct|percent|ratio|fraction|kg|litres?|liters?|tiles?|px|hz|tps|fps)\b/i;
+const UNIT_WORDS =
+  /\b(tick|ticks|turn|turns|ms|millis|seconds?|secs?|minutes?|hours?|days?|pct|percent|ratio|fraction|kg|litres?|liters?|tiles?|px|hz|tps|fps)\b/i;
 
 export function computeFlags(text, { kind, lang }) {
   const f = [];
@@ -112,8 +133,7 @@ function extractTs(text, file, { offset = 0, lang = 'ts', outerText = null } = {
   const offs = lineOffsets(src);
   const found = [];
 
-  const isExported = (n) =>
-    !!n.modifiers?.some((m) => m.kind === ts.SyntaxKind.ExportKeyword);
+  const isExported = (n) => !!n.modifiers?.some((m) => m.kind === ts.SyntaxKind.ExportKeyword);
 
   const push = (node, name, kind, className, exported) => {
     const start = node.getStart(sf, true) + offset;
@@ -140,31 +160,47 @@ function extractTs(text, file, { offset = 0, lang = 'ts', outerText = null } = {
         const init = d.initializer;
         if (init && (ts.isArrowFunction(init) || ts.isFunctionExpression(init))) {
           push(node, d.name.text, 'function', null, isExported(node));
-        } else if (init && ts.isCallExpression(init) &&
-                   /^(writable|readable|derived)$/.test(init.expression.getText(sf))) {
+        } else if (
+          init &&
+          ts.isCallExpression(init) &&
+          /^(writable|readable|derived)$/.test(init.expression.getText(sf))
+        ) {
           push(node, d.name.text, 'store', null, isExported(node));
-        } else if (init && (ts.isArrayLiteralExpression(init) || ts.isObjectLiteralExpression(init))) {
+        } else if (
+          init &&
+          (ts.isArrayLiteralExpression(init) || ts.isObjectLiteralExpression(init))
+        ) {
           // Module-level lookup tables -- the rosters and label maps that drift apart
           // (docs/issues/core-stat-single-source.md). They are not functions, so nothing
           // else here would emit them and family S would have nothing to audit.
-          const entries = ts.isArrayLiteralExpression(init) ? init.elements.length : init.properties.length;
+          const entries = ts.isArrayLiteralExpression(init)
+            ? init.elements.length
+            : init.properties.length;
           if (entries >= 2 && node.parent && ts.isSourceFile(node.parent)) {
             push(node, d.name.text, 'table', null, isExported(node));
           }
-        } else if (init && ts.isAsExpression(init) &&
-                   (ts.isArrayLiteralExpression(init.expression) || ts.isObjectLiteralExpression(init.expression))) {
+        } else if (
+          init &&
+          ts.isAsExpression(init) &&
+          (ts.isArrayLiteralExpression(init.expression) ||
+            ts.isObjectLiteralExpression(init.expression))
+        ) {
           const inner = init.expression;
-          const entries = ts.isArrayLiteralExpression(inner) ? inner.elements.length : inner.properties.length;
+          const entries = ts.isArrayLiteralExpression(inner)
+            ? inner.elements.length
+            : inner.properties.length;
           if (entries >= 2 && node.parent && ts.isSourceFile(node.parent)) {
             push(node, d.name.text, 'table', null, isExported(node));
           }
         }
       }
-    }
-    else if (ts.isTypeAliasDeclaration(node) && node.name &&
-             ts.isUnionTypeNode(node.type) &&
-             node.type.types.length >= 2 &&
-             node.type.types.every((t) => ts.isLiteralTypeNode(t))) {
+    } else if (
+      ts.isTypeAliasDeclaration(node) &&
+      node.name &&
+      ts.isUnionTypeNode(node.type) &&
+      node.type.types.length >= 2 &&
+      node.type.types.every((t) => ts.isLiteralTypeNode(t))
+    ) {
       // A string-literal union is a roster too, and drifts from the arrays that restate it.
       push(node, node.name.text, 'table', null, isExported(node));
     }
@@ -186,12 +222,21 @@ function extractTs(text, file, { offset = 0, lang = 'ts', outerText = null } = {
     const slice = src.slice(s.start, s.end);
     return {
       key: `${file}::${qual}#${n}`,
-      file, lang, kind: s.kind, name: s.name, className: s.className,
+      file,
+      lang,
+      kind: s.kind,
+      name: s.name,
+      className: s.className,
       exported: s.exported,
-      module: moduleOf(file), group: moduleOf(file).split('/')[0], layer: layerOf(file),
-      startByte: s.start, endByte: s.end,
-      startLine: lineAtIdx(offs, s.start), endLine: lineAtIdx(offs, s.end),
-      loc: slice.split('\n').length, chars: slice.length,
+      module: moduleOf(file),
+      group: moduleOf(file).split('/')[0],
+      layer: layerOf(file),
+      startByte: s.start,
+      endByte: s.end,
+      startLine: lineAtIdx(offs, s.start),
+      endLine: lineAtIdx(offs, s.end),
+      loc: slice.split('\n').length,
+      chars: slice.length,
       contentHash: sha(slice),
       signature: slice.split('\n')[0].trim().slice(0, 200),
       flags: computeFlags(slice, { kind: s.kind, lang }),
@@ -237,13 +282,23 @@ function extractSvelte(text, file) {
     if (slice.length === 0) return out;
     out.push({
       key: `${file}::<markup>#0`,
-      file, lang: 'svelte', kind: 'markup', name: '<markup>', className: null,
-      exported: true, module: moduleOf(file), group: moduleOf(file).split('/')[0],
+      file,
+      lang: 'svelte',
+      kind: 'markup',
+      name: '<markup>',
+      className: null,
+      exported: true,
+      module: moduleOf(file),
+      group: moduleOf(file).split('/')[0],
       layer: layerOf(file),
-      startByte, endByte,
-      startLine: lineAtIdx(offs, startByte), endLine: lineAtIdx(offs, endByte),
-      loc: slice.split('\n').length, chars: slice.length,
-      contentHash: sha(slice), signature: null,
+      startByte,
+      endByte,
+      startLine: lineAtIdx(offs, startByte),
+      endLine: lineAtIdx(offs, endByte),
+      loc: slice.split('\n').length,
+      chars: slice.length,
+      contentHash: sha(slice),
+      signature: null,
       flags: computeFlags(slice, { kind: 'markup', lang: 'svelte' }),
       text: slice
     });
@@ -258,21 +313,47 @@ function extractSvelte(text, file) {
 function extractJsonc(text, file) {
   const out = [];
   const offs = lineOffsets(text);
-  let depth = 0, inStr = false, esc = false, inLine = false, inBlock = false;
-  let entryStart = -1, ordinal = 0;
+  let depth = 0,
+    inStr = false,
+    esc = false,
+    inLine = false,
+    inBlock = false;
+  let entryStart = -1,
+    ordinal = 0;
   for (let i = 0; i < text.length; i++) {
-    const c = text[i], n = text[i + 1];
-    if (inLine) { if (c === '\n') inLine = false; continue; }
-    if (inBlock) { if (c === '*' && n === '/') { inBlock = false; i++; } continue; }
+    const c = text[i],
+      n = text[i + 1];
+    if (inLine) {
+      if (c === '\n') inLine = false;
+      continue;
+    }
+    if (inBlock) {
+      if (c === '*' && n === '/') {
+        inBlock = false;
+        i++;
+      }
+      continue;
+    }
     if (inStr) {
       if (esc) esc = false;
       else if (c === '\\') esc = true;
       else if (c === '"') inStr = false;
       continue;
     }
-    if (c === '/' && n === '/') { inLine = true; i++; continue; }
-    if (c === '/' && n === '*') { inBlock = true; i++; continue; }
-    if (c === '"') { inStr = true; continue; }
+    if (c === '/' && n === '/') {
+      inLine = true;
+      i++;
+      continue;
+    }
+    if (c === '/' && n === '*') {
+      inBlock = true;
+      i++;
+      continue;
+    }
+    if (c === '"') {
+      inStr = true;
+      continue;
+    }
     if (c === '{' || c === '[') {
       depth++;
       if (depth === 2 && c === '{') entryStart = i;
@@ -283,13 +364,23 @@ function extractJsonc(text, file) {
         if (id) {
           out.push({
             key: `${file}::${id}#0`,
-            file, lang: 'jsonc', kind: 'data-row', name: id, className: null,
-            exported: true, module: moduleOf(file), group: moduleOf(file).split('/')[0],
+            file,
+            lang: 'jsonc',
+            kind: 'data-row',
+            name: id,
+            className: null,
+            exported: true,
+            module: moduleOf(file),
+            group: moduleOf(file).split('/')[0],
             layer: 'database',
-            startByte: entryStart, endByte: i + 1,
-            startLine: lineAtIdx(offs, entryStart), endLine: lineAtIdx(offs, i + 1),
-            loc: slice.split('\n').length, chars: slice.length,
-            contentHash: sha(slice), signature: `"id": "${id}"`,
+            startByte: entryStart,
+            endByte: i + 1,
+            startLine: lineAtIdx(offs, entryStart),
+            endLine: lineAtIdx(offs, i + 1),
+            loc: slice.split('\n').length,
+            chars: slice.length,
+            contentHash: sha(slice),
+            signature: `"id": "${id}"`,
             flags: computeFlags(slice, { kind: 'data-row', lang: 'jsonc' }),
             text: slice
           });

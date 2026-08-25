@@ -44,10 +44,20 @@ const log = (s) => {
 // unit PATH resolves to the system node (v20 here), which has no node:sqlite.
 function sh(cmd, args, { input, env, timeoutMs = 600_000 } = {}) {
   return new Promise((resolve) => {
-    const p = spawn(cmd, args, { env: { ...process.env, ...env }, stdio: ['pipe', 'pipe', 'pipe'] });
-    let out = '', err = '', settled = false;
+    const p = spawn(cmd, args, {
+      env: { ...process.env, ...env },
+      stdio: ['pipe', 'pipe', 'pipe']
+    });
+    let out = '',
+      err = '',
+      settled = false;
     const timer = setTimeout(() => p.kill('SIGKILL'), timeoutMs);
-    const done = (r) => { if (settled) return; settled = true; clearTimeout(timer); resolve(r); };
+    const done = (r) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      resolve(r);
+    };
     p.stdout.on('data', (d) => (out += d));
     p.stderr.on('data', (d) => (err += d));
     // A missing binary arrives as an 'error' event, not a non-zero close. Unhandled, it
@@ -55,7 +65,10 @@ function sh(cmd, args, { input, env, timeoutMs = 600_000 } = {}) {
     p.on('error', (e) => done({ code: -1, out, err: `${err}spawn ${cmd}: ${e.message}` }));
     p.on('close', (code) => done({ code, out, err }));
     p.stdin.on('error', () => {});
-    if (input !== undefined) { p.stdin.write(input); p.stdin.end(); }
+    if (input !== undefined) {
+      p.stdin.write(input);
+      p.stdin.end();
+    }
   });
 }
 
@@ -71,16 +84,31 @@ async function askModel(prompt) {
 
 async function worker(id, deadline) {
   const env = { AUDIT_WORKER: `${hostname()}#${id}` };
-  let batches = 0, verdicts = 0, fails = 0, errors = 0;
+  let batches = 0,
+    verdicts = 0,
+    fails = 0,
+    errors = 0;
 
   while (Date.now() < deadline) {
     const next = await sh(process.execPath, [AUDIT, 'next', '--run', RUN_ID], { env });
-    if (next.code !== 0) { log(`[w${id}] next failed: ${next.err.trim()}`); errors++; break; }
+    if (next.code !== 0) {
+      log(`[w${id}] next failed: ${next.err.trim()}`);
+      errors++;
+      break;
+    }
 
     let task;
-    try { task = JSON.parse(next.out.trim().split('\n').pop()); }
-    catch { log(`[w${id}] unparseable task: ${next.out.slice(0, 200)}`); errors++; break; }
-    if (task.empty) { log(`[w${id}] queue empty`); break; }
+    try {
+      task = JSON.parse(next.out.trim().split('\n').pop());
+    } catch {
+      log(`[w${id}] unparseable task: ${next.out.slice(0, 200)}`);
+      errors++;
+      break;
+    }
+    if (task.empty) {
+      log(`[w${id}] queue empty`);
+      break;
+    }
 
     const taskFile = join(TMP, `task-${id}.json`);
     const respFile = join(TMP, `resp-${id}.txt`);
@@ -102,8 +130,11 @@ async function worker(id, deadline) {
       continue;
     }
 
-    const sub = await sh(process.execPath,
-      [AUDIT, 'submit', respFile, '--task', taskFile, '--run', RUN_ID, '--model', MODEL], { env });
+    const sub = await sh(
+      process.execPath,
+      [AUDIT, 'submit', respFile, '--task', taskFile, '--run', RUN_ID, '--model', MODEL],
+      { env }
+    );
     const accepted = Number(/accepted (\d+)/.exec(sub.out)?.[1] ?? 0);
     const rejected = Number(/rejected (\d+)/.exec(sub.out)?.[1] ?? 0);
     const batchFails = (sub.out.match(/\[FAIL\]/g) ?? []).length;
@@ -111,9 +142,13 @@ async function worker(id, deadline) {
     fails += batchFails;
     batches++;
 
-    log(`[w${id}] ${task.symbol_key} — ${task.rules.length} rules, ${accepted} accepted, ` +
-        `${rejected} rejected, ${batchFails} fail, ${((Date.now() - t0) / 1000).toFixed(1)}s`);
-    for (const line of sub.out.split('\n').filter((l) => l.includes('[reject]') || l.includes('[FAIL]'))) {
+    log(
+      `[w${id}] ${task.symbol_key} — ${task.rules.length} rules, ${accepted} accepted, ` +
+        `${rejected} rejected, ${batchFails} fail, ${((Date.now() - t0) / 1000).toFixed(1)}s`
+    );
+    for (const line of sub.out
+      .split('\n')
+      .filter((l) => l.includes('[reject]') || l.includes('[FAIL]'))) {
       log(`[w${id}]   ${line.trim()}`);
     }
 
@@ -125,16 +160,25 @@ async function worker(id, deadline) {
 }
 
 const deadline = ONCE ? Date.now() + 15 * 60_000 : Date.now() + HOURS * 3600_000;
-log(`run ${RUN_ID} — ${WORKERS} worker(s), model ${MODEL}, until ${new Date(deadline).toISOString()}`);
+log(
+  `run ${RUN_ID} — ${WORKERS} worker(s), model ${MODEL}, until ${new Date(deadline).toISOString()}`
+);
 
 const results = await Promise.all(
   Array.from({ length: WORKERS }, (_, i) => worker(i + 1, deadline))
 );
 
-const total = results.reduce((a, r) => ({
-  batches: a.batches + r.batches, verdicts: a.verdicts + r.verdicts,
-  fails: a.fails + r.fails, errors: a.errors + r.errors
-}), { batches: 0, verdicts: 0, fails: 0, errors: 0 });
+const total = results.reduce(
+  (a, r) => ({
+    batches: a.batches + r.batches,
+    verdicts: a.verdicts + r.verdicts,
+    fails: a.fails + r.fails,
+    errors: a.errors + r.errors
+  }),
+  { batches: 0, verdicts: 0, fails: 0, errors: 0 }
+);
 
-log(`done — ${total.batches} batches, ${total.verdicts} verdicts, ${total.fails} fails, ${total.errors} errors`);
+log(
+  `done — ${total.batches} batches, ${total.verdicts} verdicts, ${total.fails} fails, ${total.errors} errors`
+);
 await sh(process.execPath, [AUDIT, 'status']).then((r) => process.stdout.write(r.out));

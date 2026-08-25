@@ -37,7 +37,7 @@ const clauseHandlers = {
       return h !== undefined && h <= max;
     });
   },
-  has_callers: (s, v, ctx) => (ctx.callerCount(s.key) > 0) === !!v,
+  has_callers: (s, v, ctx) => ctx.callerCount(s.key) > 0 === !!v,
   min_callers: (s, v, ctx) => ctx.callerCount(s.key) >= v
 };
 
@@ -53,8 +53,13 @@ function globToRegex(glob) {
   for (let i = 0; i < glob.length; i++) {
     const c = glob[i];
     if (c === '*' && glob[i + 1] === '*') {
-      if (glob[i + 2] === '/') { re += '(?:[^/]*/)*'; i += 2; }
-      else { re += '.*'; i += 1; }
+      if (glob[i + 2] === '/') {
+        re += '(?:[^/]*/)*';
+        i += 2;
+      } else {
+        re += '.*';
+        i += 1;
+      }
     } else if (c === '*') {
       re += '[^/]*';
     } else if (c === '?') {
@@ -91,7 +96,9 @@ export function evaluate(trigger, symbol, ctx) {
   }
   if (trigger.not) {
     const r = evaluate(trigger.not, symbol, ctx);
-    return r.ok ? { ok: false, failed: `not(${describe(trigger.not)})` } : { ok: true, failed: null };
+    return r.ok
+      ? { ok: false, failed: `not(${describe(trigger.not)})` }
+      : { ok: true, failed: null };
   }
 
   for (const [k, v] of Object.entries(trigger)) {
@@ -116,7 +123,7 @@ export function makeContext({ symbols, edges, reach, readSlice }) {
   return {
     flags: (s) => {
       if (!flagCache.has(s.key)) {
-        flagCache.set(s.key, typeof s.flags === 'string' ? JSON.parse(s.flags) : s.flags ?? []);
+        flagCache.set(s.key, typeof s.flags === 'string' ? JSON.parse(s.flags) : (s.flags ?? []));
       }
       return flagCache.get(s.key);
     },

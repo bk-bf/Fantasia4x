@@ -19,7 +19,8 @@ function candidates(root) {
   c.push(join(root, '..', 'codegraph', 'data', 'Fantasia4x.json'));
   try {
     const main = execFileSync('git', ['rev-parse', '--path-format=absolute', '--git-common-dir'], {
-      cwd: root, encoding: 'utf8'
+      cwd: root,
+      encoding: 'utf8'
     }).trim();
     c.push(join(dirname(main), '..', 'codegraph', 'data', 'Fantasia4x.json'));
   } catch {
@@ -47,7 +48,6 @@ function graphName(n) {
   if (n.className && name.startsWith(n.className + '.')) name = name.slice(n.className.length + 1);
   return name.replace(/^(get|set)\s+/, '');
 }
-
 
 function indexSymbols(symbols) {
   const byTriple = new Map();

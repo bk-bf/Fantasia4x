@@ -29,7 +29,10 @@ function authorityExcerpt(root, ref, cache) {
       const start = m.index;
       const rest = text.slice(start + m[0].length);
       const next = rest.search(/^#{1,4}\s/m);
-      excerpt = (m[0] + rest.slice(0, next === -1 ? 4000 : next)).split('\n').slice(0, AUTHORITY_LINES).join('\n');
+      excerpt = (m[0] + rest.slice(0, next === -1 ? 4000 : next))
+        .split('\n')
+        .slice(0, AUTHORITY_LINES)
+        .join('\n');
     }
   }
   // With no anchor, only a short document is worth quoting whole; dumping the head of a
@@ -58,9 +61,13 @@ export function buildPrompt({ root, symbol, rules, callers, callees, slice }) {
   lines.push('');
   lines.push(`- key: ${symbol.key}`);
   lines.push(`- file: ${symbol.file} lines ${symbol.start_line}-${symbol.end_line}`);
-  lines.push(`- kind: ${symbol.kind}  layer: ${symbol.layer ?? 'n/a'}  exported: ${!!symbol.exported}  covered by a test: ${!!symbol.tested}`);
+  lines.push(
+    `- kind: ${symbol.kind}  layer: ${symbol.layer ?? 'n/a'}  exported: ${!!symbol.exported}  covered by a test: ${!!symbol.tested}`
+  );
   lines.push('');
-  lines.push('```' + (symbol.lang === 'jsonc' ? 'jsonc' : symbol.lang === 'svelte' ? 'svelte' : 'ts'));
+  lines.push(
+    '```' + (symbol.lang === 'jsonc' ? 'jsonc' : symbol.lang === 'svelte' ? 'svelte' : 'ts')
+  );
   lines.push(slice);
   lines.push('```');
   lines.push('');
@@ -111,27 +118,42 @@ export function buildPrompt({ root, symbol, rules, callers, callees, slice }) {
   lines.push('Return ONE JSON object and nothing else:');
   lines.push('');
   lines.push('```json');
-  lines.push(JSON.stringify({
-    verdicts: [
+  lines.push(
+    JSON.stringify(
       {
-        rule_id: '<the rule id>',
-        status: 'pass | fail | n/a | undecidable',
-        summary: '<one sentence; required for fail, otherwise optional>',
-        evidence: ['<one entry per fail_requires item, in order>'],
-        na_clause: '<required when status is n/a: which trigger condition you believe does not hold>',
-        missing: '<required when status is undecidable: exactly what you would have needed>'
-      }
-    ]
-  }, null, 2));
+        verdicts: [
+          {
+            rule_id: '<the rule id>',
+            status: 'pass | fail | n/a | undecidable',
+            summary: '<one sentence; required for fail, otherwise optional>',
+            evidence: ['<one entry per fail_requires item, in order>'],
+            na_clause:
+              '<required when status is n/a: which trigger condition you believe does not hold>',
+            missing: '<required when status is undecidable: exactly what you would have needed>'
+          }
+        ]
+      },
+      null,
+      2
+    )
+  );
   lines.push('```');
   lines.push('');
   lines.push('Rules for answering:');
   lines.push('- One entry per rule listed above. No extras, no omissions.');
   lines.push('- `pass` is the default. Use it when the rule simply does not fire on this code.');
-  lines.push('- `fail` requires every item in that rule\'s fail_requires list, filled in with concrete file:line and values. No evidence means no fail.');
-  lines.push('- `n/a` is for a rule that should never have been handed to you; name the trigger condition that does not hold. It is checked against the harness, so a wrong `n/a` is visible.');
-  lines.push('- `undecidable` when the answer needs something outside this slice. Name it exactly. Guessing is worse than `undecidable`.');
-  lines.push('- Do not soften a fail into an undecidable, and do not inflate a pass into a fail to look thorough.');
+  lines.push(
+    "- `fail` requires every item in that rule's fail_requires list, filled in with concrete file:line and values. No evidence means no fail."
+  );
+  lines.push(
+    '- `n/a` is for a rule that should never have been handed to you; name the trigger condition that does not hold. It is checked against the harness, so a wrong `n/a` is visible.'
+  );
+  lines.push(
+    '- `undecidable` when the answer needs something outside this slice. Name it exactly. Guessing is worse than `undecidable`.'
+  );
+  lines.push(
+    '- Do not soften a fail into an undecidable, and do not inflate a pass into a fail to look thorough.'
+  );
 
   return lines.join('\n');
 }
