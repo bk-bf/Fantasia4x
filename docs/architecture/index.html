@@ -91,7 +91,7 @@
 
       <div class="col">
         <div class="tension"><span class="h">◆ What the centre tells you</span>The gravity of the codebase isn't a subsystem — it's <b>lookups and randomness</b>. <span class="c">SeededRng.random</span> at 85 callers is why determinism is a whole-project contract: one un-seeded draw and every saved game replays differently. The subsystems all sit <em>above</em> this floor.</div>
-        <p class="small muted">Constellation curated from the codegraph extract (294 modules, 3,995 call edges). For the full live graph — zoom, pan, every node — run <span class="c">pnpm graph:serve</span> and open the codegraph viewer.</p>
+        <p class="small muted">Constellation curated from a call-graph extract taken at the time (294 modules, 3,995 call edges).</p>
       </div>
     </section>
 
@@ -367,7 +367,7 @@
     <section class="sec" id="questions">
       <p class="kicker">Decide these on purpose</p>
       <h2 class="col">The open questions the map surfaced</h2>
-      <p class="col muted">Drawn from the AUDIT record, codegraph, and the code sweeps behind every ◆ above.</p>
+      <p class="col muted">Drawn from the AUDIT record, a call-graph extract of the time, and the code sweeps behind every ◆ above.</p>
       <div class="col">
         <div class="grid2">
           <div class="tension"><span class="h">◆ structure</span><b>Growth is the “once a day” grab-bag</b> — offers + aging + lineage, mutated in place. Split the daily hook from stat growth?</div>
@@ -395,7 +395,7 @@
           <h4>The five knots — learn these and the rest untangles</h4>
           <p class="small">the one gate that changes the world <span class="c">GameStateManager</span> · the one doorway of requests <span class="c">commands.ts</span> · the one answer to “how good at this job” <span class="c">getWorkModifiers</span> · the one bonus-tallier <span class="c">ModifierSystem</span> · the one door to map-movement <span class="c">PathfinderService</span>.</p>
         </div>
-        <p style="margin-top:20px" class="muted">The old slideshow version of this lives in <span class="ref">docs/architecture/slideshow/</span>. For the live, zoomable dependency graph, run <span class="c">pnpm graph:serve</span>.</p>
+        <p style="margin-top:20px" class="muted">The old slideshow version of this lives in <span class="ref">docs/architecture/slideshow/</span>.</p>
       </div>
     </section>
 

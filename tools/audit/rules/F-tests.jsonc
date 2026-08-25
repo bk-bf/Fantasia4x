@@ -1,5 +1,11 @@
 // Family F — the tests themselves. T2 exists to stay small, and it only can if T1 is
 // trustworthy. Coverage says "covered"; nothing says the assertion means anything.
+//
+// Whether a test covers a symbol is not a trigger, because most of this suite runs through
+// buildScenario / HeadlessSession and never names its subject: a flag saying "a test file
+// calls this" answers a different question and reads as untested for most of the engine.
+// The agent searches src/tests itself -- for the symbol name, for the harness entry points
+// that reach it -- and says which searches it ran.
 [
   {
     "id": "F01",
@@ -7,9 +13,9 @@
     "tier": "T2",
     "title": "test asserts less than the symbol promises",
     "authority": "AGENTS.md#scope-tests-after-an-edit",
-    "question": "The tests covering this symbol: do they assert its actual contract — the values, ordering, bounds and failure modes its name and signature promise — or only that it runs, returns truthy, or does not throw?",
+    "question": "Find the tests that cover this symbol: search src/tests for its name, and for the scenario or headless-session entry points that would run it. If nothing covers it, the verdict is n/a with na_clause \"no test covers this symbol\" and the searches as evidence. Otherwise: do those tests assert its actual contract — the values, ordering, bounds and failure modes its name and signature promise — or only that it runs, returns truthy, or does not throw?",
     "fail_requires": [
-      "the test file and case",
+      "the test file and case, as path:line",
       "the part of the contract left unasserted",
       "an input that would pass the test while the behaviour is wrong"
     ],
@@ -20,7 +26,6 @@
     "trigger": {
       "all": [
         { "kind_in": ["function", "method"] },
-        { "tested": true },
         { "exported": true }
       ]
     },
@@ -33,21 +38,21 @@
     "tier": "T2",
     "title": "untested behaviour a cheap test would pin",
     "authority": "AGENTS.md#scope-tests-after-an-edit",
-    "question": "Does this exported symbol have a branch, bound or ordering guarantee that no test covers and that a single cheap unit test would pin?",
+    "question": "Search src/tests for this symbol\u2019s name and for any scenario that would run it, and say which searches you ran. If something covers it, the verdict is n/a with na_clause \"a test covers this symbol\". Otherwise: does this exported symbol have a branch, bound or ordering guarantee that no test covers and that a single cheap unit test would pin?",
     "fail_requires": [
       "the specific behaviour left unpinned",
       "the input that exercises it",
-      "a proposed test name (the test itself is written on escalation, not here)"
+      "a proposed test name (the test itself is written on escalation, not here)",
+      "the searches over src/tests that found nothing"
     ],
     "not_a_finding": [
       "a symbol whose behaviour is only meaningful over real ticks — that escalates to a headless scenario, not a unit test",
       "a pure re-export or one-line delegation",
-      "a symbol already covered by a headless scenario"
+      "a symbol already covered by a headless scenario — that is n/a, not a fail"
     ],
     "trigger": {
       "all": [
         { "kind_in": ["function", "method"] },
-        { "test_reachable": false },
         { "exported": true },
         { "min_loc": 12 },
         { "layer_in": ["services", "systems", "core", "entities", "ai"] }

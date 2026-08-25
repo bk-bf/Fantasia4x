@@ -145,7 +145,7 @@ export interface Job {
  * `database/pawns/jobs.jsonc` (one entry per pool job type). The *behaviour* (how a job of this type is
  * generated and completed) is bound by `id` in `JobService`'s handler registry, exactly as
  * recipes.jsonc pairs with `JobService._completeCraft`. Adding a colony job = one jsonc entry + one
- * registry binding + one `Job['type']` union member (a `graph:check` rule guards the three from
+ * registry binding + one `Job['type']` union member (jobRegistry.test.ts guards the three from
  * drifting). FSM-internal job kinds (`eat`/`sleep`/`need`) are NOT colony jobs and have no entry.
  */
 export interface JobDef {

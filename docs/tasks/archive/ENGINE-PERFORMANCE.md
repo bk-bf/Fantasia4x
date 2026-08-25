@@ -51,10 +51,10 @@ Profiling-driven performance work, measured on the heavy `--profiler` sandbox (1
   updates LOCALLY (`updateHiddenMaskAt` — early-outs unless a SOLID tile flips, then re-floods only the
   affected pocket, persisted `solid`/`exterior`); grove glows are a per-tile emitter `Map`. The full
   builders now live behind ONE seam (`gameCanvas/terrainPaint::fullRebuildTerrain`, first build / new-map
-  load only), enforced by a codegraph `restricted-callee` rule (ADR-026). GPU side: `setGrid(grid,
+  load only), enforced by a seam rule (ADR-026). GPU side: `setGrid(grid,
   dirtyTiles)` stamps only the §E chunks holding a changed cell (`markTerrainChunksDirty`) instead of a
   global `gridVersion` bump. Guarded by `hiddenMaskIncremental.test.ts`; `check`/`test` (561) green,
-  `graph:check` ADR-026 ✓. **Re-check `perf.log` in-game** (the `[TRIG]` probe should still show
+  ADR-026 seam check ✓. **Re-check `perf.log` in-game** (the `[TRIG]` probe should still show
   `worldMapRef=0`; terrain bumps only on real changes, no per-tick whole-map scan).
 - **🧱 CHUNKED TERRAIN (§E, 2026-06-20) — FPS regression from the 500×500 default map, FIXED + validated in-game.** Commit
   `b2a1031` changed the default map 240×160 → 500×500 (**38k → 250k tiles, 6.5×**). TPS was unaffected
@@ -442,8 +442,8 @@ pure JS + GPU-upload + GC, **not** paint/layout.
   - `BuildingService.applyBuildingFootprint` — event-rate (build/deconstruct).
   All three now mutate the changed tile IN PLACE + `markTileDirty` (ADR-002 amendment, mirroring §C regrowth)
   → no ref flip, ships a `worldMapDelta`. **Result: `worldMapRef → 0`; `worldMapDelta` now flows (3–12/30flush,
-  `wmDelta ≈ 0–0.4k` payload); the full re-clone is gone.** (Found by grep for `worldMap.map`; codegraph's
-  reachability *couldn't* see `_completeHarvest` — registry-dispatched — see [[codegraph-registry-blindspot]],
+  `wmDelta ≈ 0–0.4k` payload); the full re-clone is gone.** (Found by grep for `worldMap.map`; the call-graph tool of the time
+  *couldn't* see `_completeHarvest` — registry-dispatched —
   since FIXED in the extractor.)
 - [~] **D7 — sectional throttle (jobs/workAssignments/droppedItems/stockpile @ ~4Hz): TRIED, REVERTED.**
   Aimed at the constant `jobs ≈ 50k/flush` tax + harvest-time `droppedItems` growth, staggered onto phases so

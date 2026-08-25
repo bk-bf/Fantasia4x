@@ -42,7 +42,6 @@
 #   file server (python3 http.server, rooted at static/) starts on :5174 serving the /dev/ spritesheet
 #   viewer (http://localhost:5174/dev/spritesheet-viewer.html) — the game server itself is shell-only/
 #   sandboxed. It is NOT a second Vite (that would thrash the shared dep cache and slow startup).
-# codegraph is a separate always-on systemd user service (see codegraph_hint below).
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PIDS=()
@@ -151,18 +150,6 @@ start_spritesheet_viewer() {
   echo "  [spritesheet] http://localhost:$vport/dev/spritesheet-viewer.html"
 }
 
-# codegraph now runs as its own always-on systemd user service, decoupled from
-# this script — no file watcher, rebuilt on demand via the ↻ button in its header,
-# so it never competes with playtesting/profiling. We only print a pointer here.
-#   manage it with:  systemctl --user {status,restart,stop} codegraph
-codegraph_hint() {
-  if systemctl --user is-active --quiet codegraph.service 2>/dev/null; then
-    echo "  [codegraph] http://localhost:5185  (systemd --user service; ↻ in header rebuilds)"
-  else
-    echo "  [codegraph] viewer not running — start it: systemctl --user start codegraph"
-  fi
-}
-
 wait_for_port() {
   local port="$1"
   printf '  waiting for http://localhost:%s ' "$port"
@@ -268,7 +255,6 @@ if [[ "$TOOLS" == true ]]; then
   launch "$SCRIPT_DIR" "dev-server" "--hmr --tools"
   wait_for_port "$PORT" || { cleanup; exit 1; }
   start_spritesheet_viewer "$VPORT"
-  codegraph_hint
   echo ""
   echo "  → gear database   http://localhost:$PORT/gear-db"
   echo "  → spritesheets    http://localhost:$VPORT/dev/spritesheet-viewer.html"
@@ -334,7 +320,6 @@ if [[ -n "$SHELL_TARGET" ]]; then
 
   echo "Fantasia4x — $SHELL_TARGET shell over $SERVER_LABEL server (main only)"
   echo ""
-  codegraph_hint
   start_spritesheet_viewer
 
   # Sandboxed electron: the dev server is started INSIDE the network namespace (not on the host), so
@@ -370,7 +355,6 @@ fi
 if [[ "$PROFILER" == true ]]; then
   echo "Fantasia4x — profiler sandbox (main server only)"
   echo ""
-  codegraph_hint
   launch "$SCRIPT_DIR" "main" "--profiler$LOG_FLAG"
   echo ""
   echo "Ctrl-C to stop."
@@ -391,7 +375,6 @@ if [[ -d "$LAUNCH_DIR" ]]; then
   done
 fi
 
-codegraph_hint
 
 echo ""
 echo "Ctrl-C to stop all."

@@ -16,6 +16,7 @@ import { hostname } from 'node:os';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const AUDIT = join(HERE, 'audit.mjs');
+const ROOT = process.env.AUDIT_ROOT || join(HERE, '..', '..');
 const TMP = join(HERE, '.ledger', 'tmp');
 
 const arg = (n, d) => {
@@ -42,10 +43,11 @@ const log = (s) => {
 
 // Child audit CLI calls go through process.execPath, not a bare 'node': inside a systemd
 // unit PATH resolves to the system node (v20 here), which has no node:sqlite.
-function sh(cmd, args, { input, env, timeoutMs = 600_000 } = {}) {
+function sh(cmd, args, { input, env, cwd, timeoutMs = 600_000 } = {}) {
   return new Promise((resolve) => {
     const p = spawn(cmd, args, {
       env: { ...process.env, ...env },
+      ...(cwd ? { cwd } : {}),
       stdio: ['pipe', 'pipe', 'pipe']
     });
     let out = '',
@@ -73,10 +75,13 @@ function sh(cmd, args, { input, env, timeoutMs = 600_000 } = {}) {
 }
 
 async function askModel(prompt) {
-  // --print keeps it non-interactive; the audit prompt supplies the whole contract, so no
-  // tools and no session are needed. A fresh process per batch is what keeps context fixed.
+  // --print keeps it non-interactive; a fresh process per batch is what keeps context fixed.
+  // `plan` permits the read-only tools and nothing else: the rules ask the model to search
+  // the repo for callers and tests, and it must not be able to change what it is auditing.
+  // cwd is the checkout, so those searches resolve against the code this batch describes.
   const r = await sh(CLAUDE, ['--print', '--model', MODEL, '--permission-mode', 'plan'], {
-    input: prompt
+    input: prompt,
+    cwd: ROOT
   });
   if (r.code !== 0) throw new Error(`claude exited ${r.code}: ${r.err.slice(0, 400)}`);
   return r.out;

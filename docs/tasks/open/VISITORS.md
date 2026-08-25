@@ -104,7 +104,7 @@ victory/defeat keyed on pawn count — none exist today. If added later, count c
 - [ ] Should a guest's death (starved/killed at the colony) carry a relations penalty like a killed caravan mob
   (`onKingdomMobKilled` −45)? Likely yes.
 
-## 9. ADR-032 draft (add to `DECISIONS.md` + onboard into `codegraph.config.json` when built)
+## 9. ADR-032 draft (add to `DECISIONS.md` when built)
 
 **Non-colonist pawns live in `state.pawns` behind an `isVisitor` flag.** Guests reuse the entire pawn stack
 (needs, mood, FSM, movement, haul jobs, selection card) instead of a parallel entity type or an extended mob.
@@ -124,5 +124,5 @@ Graph-checkable candidate: flag raw `state.pawns.length` in the gate modules onc
 - [ ] Selection card views a visitor; DRAFT/MOVE/equipment/force-work controls hidden and the commands rejected.
 - [ ] Auto-departure after `stayDaysRange`; parting gift when mood ≥ `giftMoodThreshold`.
 - [ ] `evictVisitor` applies `guest_evicted` colonist mood debuff + kingdom relation penalty.
-- [ ] `events.jsonc` `visitors` updated (§6); ADR-032 written into `DECISIONS.md` + onboarded into `codegraph.config.json`.
+- [ ] `events.jsonc` `visitors` updated (§6); ADR-032 written into `DECISIONS.md`, and a seam rule added to `tools/audit/seams.jsonc` if it names a chokepoint.
 - [ ] `docs/game/DESIGN.md` (visitor mechanic) + `ARCHITECTURE.md` (`colonists()` helper / visitor spawn) updated; ROADMAP row added.

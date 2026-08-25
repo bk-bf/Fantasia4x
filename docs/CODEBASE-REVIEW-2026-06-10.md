@@ -18,7 +18,7 @@ ADR-018..ADR-026, the audio subsystem, main menu + app-shell hardening, the terr
 trees, ore veins, ice), and the temperature/connectivity bug arcs logged in BUGS.md.
 
 Gate at last update (2026-07-02): `check` 0 (8 svelte warnings) · `test` **820/820** (115 files) ·
-`lint` **0** · `build` ok · `graph:check` **0 errors / 10 warnings** (the A-4 god-modules — the only
+`lint` **0** · `build` ok · the architecture check of the time **0 errors / 10 warnings** (the A-4 god-modules — the only
 open A-item).
 
 ---
@@ -33,9 +33,9 @@ open A-item).
   (`--fix` on three files); the two in generated `sim-core-pkg/*.d.ts` are now covered by an eslint
   `ignores` entry (matching `spatial-core-pkg`). Gate: `lint` 0.
 
-## graph:check (2026-07-01 run — was 12 errors / 43 warnings; **all but A-4 resolved 2026-07-02**)
+## architecture check (2026-07-01 run — was 12 errors / 43 warnings; **all but A-4 resolved 2026-07-02**)
 
-Graph after the fixes: 269 files · 1,979 functions · 2,981 edges · `graph:check` 0 errors / 10 warnings.
+Graph after the fixes: 269 files · 1,979 functions · 2,981 edges · 0 errors / 10 warnings.
 
 - [x] **A-1 · ADR-008 ×10 — direct `wasmPathfinderService` imports bypass the `PathfinderService` interface.**
   Resolved 2026-07-02: the `PathfinderService` interface was widened to the impl's real surface
@@ -78,7 +78,7 @@ Graph after the fixes: 269 files · 1,979 functions · 2,981 edges · `graph:che
 
 - [x] **A-5 · Orphans ×14 — triage dead code vs extractor blind spots.** Resolved 2026-07-02. Real dead
   code was only `core/Terrains` `TR`/`PR` (tilesheet-range helpers orphaned by the asset re-org) —
-  deleted. The other 12 were **two extractor blind spots, fixed in `../codegraph` extract.mjs** rather
+  deleted. The other 12 were **two extractor blind spots, fixed in the extractor** rather
   than suppressed: (1) a *callback bridge* — a function referenced as a call argument
   (`forEach(sortNode)`, `addEventListener('scroll', onScroll)`, `setOutputSink(publish)`) or as a fn
   value inside an object-literal argument (`setSimLogSink({ logActivity: … } as SimLogSink)` — type
@@ -90,10 +90,10 @@ Graph after the fixes: 269 files · 1,979 functions · 2,981 edges · `graph:che
   **`core/color.ts`** (`hexToRgb01` + nullable `parseHexRgb01`; Terrains, resourceObjectDefs and
   fantasia-world import it); `itemMatchesCostCategory` → **`core/itemDefs.ts`** (BuildingService's
   "avoid the ItemService cycle" local copy deleted — core is below both; ItemService re-exports).
-  `logActivity`/`clear` were *name collisions of closure-scoped locals*, not copy-paste — the codegraph
+  `logActivity`/`clear` were *name collisions of closure-scoped locals*, not copy-paste — the
   duplicate check now skips `nested` (closure-scoped) functions, so it can't recur.
 - [x] **A-7 · Graph snapshot baseline is stale.** Re-snapshotted 2026-07-02 after the A-1..A-6 fixes
-  (269 files · 1,979 fns · 2,981 edges) — `graph:diff` is signal again.
+  (269 files · 1,979 fns · 2,981 edges) — the diff was signal again.
 
 ## From playtest
 

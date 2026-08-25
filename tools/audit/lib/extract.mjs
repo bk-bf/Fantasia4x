@@ -1,10 +1,10 @@
 // Symbol inventory: every auditable object in the repo, with an exact source span,
 // a line-independent key, and a content hash.
 //
-// The key deliberately does NOT contain a line number. `codegraph` ids look like
-// `module::name@12#0`, which change whenever anything above the symbol moves -- fine for
-// a call graph, useless as a ledger primary key. Ours is `<file>::<Class.name>#<ordinal>`,
-// where ordinal disambiguates same-named siblings in one file, in source order.
+// The key deliberately does NOT contain a line number: an id carrying one changes whenever
+// anything above the symbol moves, which would re-open every verdict below an edit. Ours is
+// `<file>::<Class.name>#<ordinal>`, where ordinal disambiguates same-named siblings in one
+// file, in source order.
 
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative, extname } from 'node:path';

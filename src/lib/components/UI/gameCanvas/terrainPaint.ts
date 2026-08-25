@@ -2,12 +2,11 @@
  * ADR-026 full-map terrain build — the SINGLE seam.
  *
  * This module's {@link fullRebuildTerrain} is the ONLY place allowed to call the whole-map builders
- * `buildGameGrid` (562k setTile) and `computeHiddenMaskState` (whole-map BFS). codegraph's
- * `restricted-callee` rule (ADR-026 in codegraph.config.json) flags any other caller — so the per-delta
+ * `buildGameGrid` (562k setTile) and `computeHiddenMaskState` (whole-map BFS). `audit t0` checks that
+ * seam (ADR-026 in tools/audit/seams.jsonc) and names any other caller — so the per-delta
  * render path in GameCanvas, which must repaint only the changed cells, can never silently reintroduce a
- * full rebuild. It lives in a plain `.ts` module (not the Svelte component) precisely so codegraph has
- * function-level granularity to enforce that — a `<script>` function would collapse into the component
- * node and be invisible to the rule.
+ * full rebuild. It lives in a plain `.ts` module rather than inside the Svelte component so that the
+ * check can name the exact function a call sits in.
  *
  * It is intentionally pure: takes the world + buildings, returns the freshly built terrain grid and every
  * incremental baseline (mask state, grove-emitter map, building-diff snapshot). The caller assigns them to

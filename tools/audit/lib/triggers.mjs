@@ -1,6 +1,12 @@
 // Trigger evaluation. A rule's `trigger` is data, never code, so rules stay reviewable
 // and a rule file cannot reach into the harness.
 //
+// Every clause answers from the symbol's own text and metadata, both read straight out of
+// the file it lives in. Nothing here consults a precomputed map of the codebase. A question
+// about the code AROUND a symbol -- who calls it, whether a test reaches it, whether the
+// tick loop gets to it -- is not a trigger; it is part of the rule, and the agent answers it
+// by searching the repo and citing what it found.
+//
 // The harness decides which rules apply to a symbol. The agent never sees a rule that
 // did not trigger, and never gets to decide that a rule does not apply to it -- an `n/a`
 // verdict must name the clause it believes failed, which is then checkable against this.
@@ -21,32 +27,13 @@ const clauseHandlers = {
   module_matches: (s, v) => re(v).test(s.module ?? ''),
   name_matches: (s, v) => re(v).test(s.name),
   exported: (s, v) => !!s.exported === !!v,
-  tested: (s, v) => !!s.tested === !!v,
-  // `tested` is "a test file calls this". A suite driven through a harness reaches most of
-  // its subject one or more hops in, and every one of those reads as untested -- so ask
-  // about reach, not about the call site.
-  test_reachable: (s, v) => ((s.test_depth ?? s.testDepth) != null) === !!v,
-  max_test_depth: (s, v) => {
-    const d = s.test_depth ?? s.testDepth;
-    return d != null && d <= v;
-  },
   min_loc: (s, v) => s.loc >= v,
   max_loc: (s, v) => s.loc <= v,
   flag: (s, v, ctx) => ctx.flags(s).includes(v),
   any_flag: (s, v, ctx) => v.some((f) => ctx.flags(s).includes(f)),
   no_flag: (s, v, ctx) => !ctx.flags(s).includes(v),
   matches: (s, v, ctx) => re(v, 'm').test(ctx.text(s)),
-  not_matches: (s, v, ctx) => !re(v, 'm').test(ctx.text(s)),
-  reachable_from: (s, v, ctx) => {
-    const entries = v.entries ?? [v.entry];
-    const max = v.max_hops ?? Infinity;
-    return entries.some((e) => {
-      const h = ctx.hops(e, s.key);
-      return h !== undefined && h <= max;
-    });
-  },
-  has_callers: (s, v, ctx) => ctx.callerCount(s.key) > 0 === !!v,
-  min_callers: (s, v, ctx) => ctx.callerCount(s.key) >= v
+  not_matches: (s, v, ctx) => !re(v, 'm').test(ctx.text(s))
 };
 
 function globMatch(path, pattern) {
@@ -120,13 +107,9 @@ export function evaluate(trigger, symbol, ctx) {
 const describe = (t) => JSON.stringify(t);
 
 /** Build the evaluation context once per plan, so clauses stay O(1). */
-export function makeContext({ symbols, edges, reach, readSlice }) {
+export function makeContext({ symbols, readSlice }) {
   const flagCache = new Map();
   const textCache = new Map();
-  const hopMap = new Map();
-  for (const r of reach) hopMap.set(`${r.entry} ${r.symbol_key ?? r.key}`, r.hops);
-  const callerCount = new Map();
-  for (const [, b] of edges) callerCount.set(b, (callerCount.get(b) ?? 0) + 1);
 
   return {
     flags: (s) => {
@@ -139,8 +122,6 @@ export function makeContext({ symbols, edges, reach, readSlice }) {
       if (!textCache.has(s.key)) textCache.set(s.key, s.text ?? readSlice(s));
       return textCache.get(s.key);
     },
-    hops: (entry, key) => hopMap.get(`${entry} ${key}`),
-    callerCount: (key) => callerCount.get(key) ?? 0,
     symbols
   };
 }
@@ -158,8 +139,7 @@ export function match(rules, symbols, ctx) {
           symbol_key: s.key,
           rule_id: r.id,
           content_hash: s.content_hash ?? s.contentHash,
-          dep_hash: s.dep_hash ?? s.depHash ?? '',
-          rule_hash: r.rule_hash
+                  rule_hash: r.rule_hash
         });
       } else {
         const m = misses.get(r.id) ?? new Map();

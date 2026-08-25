@@ -58,7 +58,7 @@ distance. `services/entity/entityAI.ts` + `entityHelpers.ts` + `entityLifecycle.
 
 The headline FPS fix (supersedes **R2**). **No full-map rebuild on a per-tick delta** — repaint only the
 changed cells + their dependents; a full O(map) pass is legal ONLY on a new-map load. Codified as
-**[ADR-026](../../game/DECISIONS.md)** and enforced by a codegraph `restricted-callee` rule. See ADR-026
+**[ADR-026](../../game/DECISIONS.md)** and enforced by a seam rule. See ADR-026
 for the full design; the wins:
 
 - [x] **Changed-tile channel.** `mainTileDeltas` (main-thread mirror of the worker's `tileDeltas`) records

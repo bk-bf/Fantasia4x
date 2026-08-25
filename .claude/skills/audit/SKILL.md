@@ -54,39 +54,24 @@ you killed a run and the board looks busy, `audit release` returns that worker's
 
 ## Before you trust a result
 
-**The graph must be current.** `audit index` reads the codegraph extract for call edges,
-reachability and the `tested` flag. A stale extract does not error downstream — the reachability
-triggers silently stop firing, which reads as "the hot path is clean" rather than "nothing was
-asked about it". Re-extract first:
+**A verdict about the code around a symbol is only as good as the search behind it.** The
+prompt hands the agent one symbol's source and nothing else — no caller list, no coverage
+flag. Rules in families E, F and G ask about the rest of the repository, and the agent has to
+go and look: grep for the callers, follow them toward `processGameTurn` / `tickPawn`, search
+`src/tests` for anything that exercises it. So when you review one of those:
 
-```bash
-node ../codegraph/bin/codegraph.mjs extract Fantasia4x
-```
+- a `fail` must cite `path:line` for every claim about another file — `lib/verdict.mjs`
+  rejects one that supplies fewer evidence items than the rule demands
+- an `n/a` must name the trigger clause or the search that closed it ("not reached from
+  processGameTurn or tickPawn", "a test covers this symbol")
+- a bare `pass` on a reachability or coverage rule is the weakest thing in the ledger:
+  nothing forces it to show the search it did. Treat a family E/F/G `pass` with no evidence
+  as unverified rather than as a clean bill.
 
-The extract records the commit it was built from, so `index` names staleness exactly rather than
-guessing at it:
-
-```
-[warn] the codegraph extract was built from c4e25b60, but HEAD is
-[warn] 80bf808a — reachability and family F verdicts describe other code.
-```
-
-**Pass `--require-fresh` and that becomes exit 2 instead of a warning.** The nightly does; use it
-for anything unattended. A graph one commit behind still maps at ~82%, which is above the
-map-rate heuristic, so the proxy alone does not catch it.
-
-`index` also prints the two lines that decide whether family F and G verdicts mean anything:
-
-```
-graph: 2243/2724 nodes mapped (82%), 3468 edges, 970 unmapped
-graph: 465 symbols marked tested
-```
-
-A low mapped percentage or a `tested` count near zero means the graph is wrong, not that the code
-is untested — `index` warns when the flag collapses. The known cause: `tsconfig.json` extends
-`.svelte-kit/tsconfig.json`, which `svelte-kit sync` generates and is not checked in, so on a
-checkout where `pnpm install` never ran, `$lib` resolves to nothing and every aliased import is
-dropped from the graph. `codegraph.config.json`'s `paths` block is the fallback for that.
+**`audit t0` first, always.** It costs nothing and decides what no agent should be asked:
+constants an ADR declares against their real values, and the chokepoints in
+`tools/audit/seams.jsonc` against every call site that reaches them. If T0 can
+decide a thing, it does not belong at T2.
 
 ## Reading a verdict
 
@@ -130,8 +115,8 @@ hardest. Then stop. `Out of scope` in the issue is binding on the fixer and on y
 ## The nightly
 
 `fantasia-audit.timer` runs `deploy/nightly-audit.sh` on ubuntuserver, **in the main checkout on
-`main`** — there is no audit branch, and re-introducing one would put the codegraph and the ledger
-on different trees. It fetches, re-extracts, re-indexes, re-plans, runs the loop for its budget,
+`main`** — there is no audit branch, and re-introducing one would put the ledger on a different
+tree from the code it describes. It fetches, re-indexes, re-plans, runs the loop for its budget,
 raises findings onto the board, commits **only `docs/issues/`** to `main`, then works up to
 `AUDIT_FIXES` ready issues and hands the night to `mon` on the `ci/cl` tag.
 
@@ -141,15 +126,15 @@ The board commit is the one automated thing that reaches `main`. It is markdown,
 Debugging a night that did nothing, in order:
 
 1. `journalctl --user -u fantasia-audit.service -n 60` — it dies loudly on a dirty tree, a
-   `main` that will not rebase, a failed codegraph extract, or a graph that does not match HEAD.
+   `main` that will not rebase, or a failed index.
 2. `tools/audit/.ledger/nightly/<date>.log` — the run's own narration.
-3. `audit status` — if `done` did not move, the loop never claimed anything; check the graph
-   lines above before suspecting the model.
+3. `audit status` — if `done` did not move, the loop never claimed anything; check that
+   `audit plan` produced work items before suspecting the model.
 
 ## Adding a rule
 
 Rules are data: `tools/audit/rules/<FAMILY>.jsonc`, families A–H and S. A new check must justify
-why a cheaper tier cannot decide it — if `tsc`, `eslint` or `graph:check` could catch it, it
+why a cheaper tier cannot decide it — if `tsc`, `eslint` or a `audit t0` check could catch it, it
 belongs at T0 and costs nothing. `audit demote` lists T2 rules that have earned being rewritten as
 a static rule; taking that offer is how the expensive tier shrinks.
 

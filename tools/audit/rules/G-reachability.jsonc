@@ -1,5 +1,6 @@
-// Family G — code that cannot run. `graph:check` already reports orphans (nothing calls
-// it). What it cannot see is a branch inside a called symbol that no caller can satisfy.
+// Family G — code that cannot run. A branch inside a symbol that IS called, whose guard no
+// caller can satisfy. Finding the call sites is the work: search the repo for the symbol's
+// name, including string-keyed dispatch and re-exports, and read each site.
 [
   {
     "id": "G01",
@@ -7,21 +8,21 @@
     "tier": "T2",
     "title": "branch no caller can reach",
     "authority": "docs/game/ARCHITECTURE.md",
-    "question": "Given every call site of this symbol, is there a branch here whose guard no caller can satisfy — an argument value never passed, a state combination the callers exclude, a type narrowing that is always one way?",
+    "question": "Find every call site of this symbol first — search the repo for its name, and for it appearing as a string key or a re-export, since neither looks like a call. Given those call sites, is there a branch here whose guard no caller can satisfy — an argument value never passed, a state combination the callers exclude, a type narrowing that is always one way?",
     "fail_requires": [
       "the branch",
       "the guard that cannot hold",
-      "the call sites checked, and why none of them reach it"
+      "the call sites checked as path:line, the searches that found them, and why none reach the branch"
     ],
     "not_a_finding": [
       "a defensive guard against a value the type system allows even if current callers avoid it",
       "a branch reachable from a test, a headless scenario or a dev route",
-      "a branch reachable through an exported entry point that external code could call"
+      "a branch reachable through an exported entry point that external code could call",
+      "a symbol whose call sites you could not enumerate — that is undecidable, not pass"
     ],
     "trigger": {
       "all": [
         { "kind_in": ["function", "method"] },
-        { "min_callers": 1 },
         { "min_loc": 15 },
         { "matches": "(if\\s*\\(|switch\\s*\\()" }
       ]
