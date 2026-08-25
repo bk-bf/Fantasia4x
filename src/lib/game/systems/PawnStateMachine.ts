@@ -37,10 +37,10 @@ import {
   rollWoundClotting,
   CLOT_ROLL_INTERVAL,
   BASE_CLOT_CHANCE
-} from '../core/Wounds';
-import { feedOnVictim } from '../core/Lineages';
-import { coversPart } from '../core/armorCoverage';
-import { lethalAnatomyCause } from '../core/BodyParts';
+} from '../core/defs/wounds';
+import { feedOnVictim } from '../core/defs/lineages';
+import { coversPart } from '../core/rules/gear/armorCoverage';
+import { lethalAnatomyCause } from '../core/defs/bodyParts';
 import conditionsData from '../database/pawns/conditions.jsonc';
 import buildingsData from '../database/world/buildings.jsonc';
 // Per-bed wound-recovery: a sleeping pawn knits faster on a better bed. We reuse each bed's
@@ -55,9 +55,9 @@ import { itemService } from '../services/ItemService';
 import { pawnStatService } from '../services/PawnStatService';
 import { socialService } from '../services/SocialService';
 import { memoryService } from '../services/MemoryService';
-import { simLog } from '../core/logSink';
-import { gameLogger } from '../dev/gameLogger';
-import { perTick, SECONDS_PER_TICK } from '../core/time';
+import { simLog } from '../core/util/logSink';
+import { gameLogger } from '../debug/gameLogger';
+import { perTick, SECONDS_PER_TICK } from '../core/util/time';
 import {
   driveNeedConditions,
   decayIntoxication,
@@ -80,13 +80,13 @@ import {
   RECOVER_CONSCIOUSNESS,
   FSM_STATE_BY_CONDITION,
   TIRED_FATIGUE_THRESHOLD
-} from '../core/needs';
+} from '../core/rules/body/conditions';
 import {
   evaluatePredicate,
   fireTriggers,
   type GraphContext,
   type FiredEdge
-} from '../core/conditionGraph';
+} from '../core/rules/body/conditionGraph';
 import {
   weatherEffects,
   diurnalTempDelta,
@@ -104,10 +104,10 @@ import {
   dayIndexForTurn,
   isFullMoon
 } from '../services/EnvironmentService';
-import { getNightVision, dampenLightByNightVision } from '../core/vision';
+import { getNightVision, dampenLightByNightVision } from '../core/rules/body/vision';
 import { calcBloodRegenRate } from '../entities/Pawns';
-import { rng } from '../core/rng';
-import { pawnById } from '../core/pawnIndex';
+import { rng } from '../core/util/rng';
+import { pawnById } from '../core/state/pawnIndex';
 
 // The pawn AI was decomposed out of this file (hotspot 2026-06-13): the 15 state handlers live in
 // `pawn/handlers/{work,needs,combat}.ts`, the shared orchestration helpers + tuning constants in
@@ -172,8 +172,8 @@ const BREAKDOWN_STATES: ReadonlySet<string> = new Set([
   PAWN_STATE.HIDING,
   PAWN_STATE.PANICKING
 ]);
-import { moodEffect } from '../core/moodEffects';
-import { needNum } from '../core/needsDefs';
+import { moodEffect } from '../core/defs/moods';
+import { needNum } from '../core/defs/needs';
 // Re-exported for external consumers that imported them from this module historically.
 export { PAWN_STATE, type PawnStateName };
 export { resetUnreachableJobs } from './pawn/pawnHelpers';

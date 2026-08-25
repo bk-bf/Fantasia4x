@@ -1,10 +1,14 @@
 import { describe, it, expect } from 'vitest';
 import { applyTraitWounds, applyTraitBodyMods } from '$lib/game/entities/Pawns';
-import { TRAIT_DATABASE } from '$lib/game/core/Culture';
+import { TRAIT_DATABASE } from '$lib/game/core/gen/culture';
 import { createBodyPlanLimbs } from '$lib/game/systems/Combat';
-import { lethalAnatomyCause, PART_DEF_MAP, BOUND_NATURAL_WEAPONS } from '$lib/game/core/BodyParts';
-import { getTransientConditionDef } from '$lib/game/core/needs';
-import { healLimbs, recomputeWound } from '$lib/game/core/Wounds';
+import {
+  lethalAnatomyCause,
+  PART_DEF_MAP,
+  BOUND_NATURAL_WEAPONS
+} from '$lib/game/core/defs/bodyParts';
+import { getTransientConditionDef } from '$lib/game/core/rules/body/conditions';
+import { healLimbs, recomputeWound } from '$lib/game/core/defs/wounds';
 import { itemService } from '$lib/game/services/ItemService';
 import type { GameState, Pawn, Trait, Injury } from '$lib/game/core/types';
 

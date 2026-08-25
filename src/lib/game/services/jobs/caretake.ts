@@ -12,9 +12,9 @@ import { socialService } from '../SocialService';
 import { itemService } from '../ItemService';
 import { buildingService } from '../BuildingService';
 import { isRoofedTile } from '../EnvironmentService';
-import { consumeFromStockpiles } from '../../core/GameState';
-import { CARE_CONFIG, isTended, isUncareable } from '../../core/Wounds';
-import { rng } from '../../core/rng';
+import { consumeFromStockpiles } from '../../core/state/stockpile';
+import { CARE_CONFIG, isTended, isUncareable } from '../../core/defs/wounds';
+import { rng } from '../../core/util/rng';
 import { PAWN_STATE } from '../../systems/pawn/pawnStates';
 
 /** Work points to dress ONE wound (a short on-site job). The auto caretake job accrues this at the

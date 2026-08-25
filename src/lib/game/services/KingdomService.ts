@@ -23,7 +23,7 @@ import {
   getBackgroundById,
   backgroundHomeKnowledge,
   backgroundWorldliness
-} from '../core/Backgrounds';
+} from '../core/defs/backgrounds';
 import {
   WEALTH_BANDS,
   dispositionForScore,
@@ -32,14 +32,14 @@ import {
   generateLeaderName,
   knowledgeTier,
   stepWealthBand
-} from '../core/Kingdom';
-import { allItemDefs, itemDefById } from '../core/itemDefs';
-import { baseItemValue } from '../core/itemValue';
-import { clamp } from '../core/math';
-import { rng } from '../core/rng';
-import { kinRelationPhrase } from '../core/Social';
-import { simLog } from '../core/logSink';
-import { TICKS_PER_SECOND } from '../core/time';
+} from '../core/gen/kingdom';
+import { allItemDefs, itemDefById } from '../core/defs/items';
+import { baseItemValue } from '../core/rules/gear/itemValue';
+import { clamp } from '../core/util/math';
+import { rng } from '../core/util/rng';
+import { kinRelationPhrase } from '../core/rules/social/social';
+import { simLog } from '../core/util/logSink';
+import { TICKS_PER_SECOND } from '../core/util/time';
 import { TURNS_PER_DAY } from './EnvironmentService';
 import { spawnKingdomParty, despawnKingdomParty } from './entity/kingdomParties';
 import events from '../database/social/events.jsonc';

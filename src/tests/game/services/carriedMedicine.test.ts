@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { buildScenario } from '$lib/game/headless/Scenario';
 import { HeadlessSession } from '$lib/game/headless/HeadlessSession';
-import { carriedQuantities, carrierOf } from '$lib/game/core/vessels';
+import { carriedQuantities, carrierOf } from '$lib/game/core/rules/gear/vessels';
 import type { Pawn } from '$lib/game/core/types';
 
 /**

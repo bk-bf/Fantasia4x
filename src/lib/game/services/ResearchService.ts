@@ -1,10 +1,10 @@
 import type { ResearchProject, EntityStats, GameState } from '../core/types';
-import { consumeFromStockpiles, availableQuantityFromDrops } from '../core/GameState';
+import { consumeFromStockpiles, availableQuantityFromDrops } from '../core/state/stockpile';
 import researchData from '../database/progression/research.jsonc';
-import { perTick } from '../core/time';
+import { perTick } from '../core/util/time';
 // Gated console shim — see core/log.ts. Silences per-tick log/debug/warn unless
 // gameDebug(true); console.error still surfaces.
-import { gatedConsole as console } from '../core/log';
+import { gatedConsole as console } from '../core/util/log';
 
 const RESEARCH_DATABASE = researchData as unknown as ResearchProject[];
 

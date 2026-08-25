@@ -12,17 +12,17 @@ import {
   storageTileKeys,
   tilePileCapacity,
   tileStoredPileCount
-} from '../../core/GameState';
-import { usedWeightKg } from '../../core/vessels';
-import { manhattan } from '../../core/distance';
+} from '../../core/state/stockpile';
+import { usedWeightKg } from '../../core/rules/gear/vessels';
+import { manhattan } from '../../core/util/distance';
 import { occupancyService } from '../../services/OccupancyService';
 import { itemService } from '../../services/ItemService';
 import { storageAcceptsDrop, storageTileAcceptsDrop } from '../../services/jobs/haul';
 import { zonePriorityRankAt } from '../../services/DesignationService';
-import { ENC_OVERLOAD_FULL } from '../../core/needs';
-import { gameLogger } from '../../dev/gameLogger';
-import { rng } from '../../core/rng';
-import { mergeConditions } from '../../core/carcassCondition';
+import { ENC_OVERLOAD_FULL } from '../../core/rules/body/conditions';
+import { gameLogger } from '../../debug/gameLogger';
+import { rng } from '../../core/util/rng';
+import { mergeConditions } from '../../core/rules/world/carcassCondition';
 import { PAWN_STATE } from './pawnStates';
 import { goIdle } from './pawnHelpers';
 import { isCarriedPawnInstance } from './carry';

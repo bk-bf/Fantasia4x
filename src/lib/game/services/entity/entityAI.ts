@@ -1,21 +1,25 @@
 // Entity AI / FSM brain — per-tick stepping for hostile mobs and neutral animals (wander, flee,
 // hunt, forage, sleep) plus the feeding sub-steppers. Extracted from EntityService (P-4).
 import type { GameState, Mob, MobState, Pawn, DroppedItem } from '../../core/types';
-import { getCreatureById, type CreatureDefinition } from '../../core/Creatures';
+import { getCreatureById, type CreatureDefinition } from '../../core/defs/creatures';
 import { getAmbientLight, computeTileLightLevel, weatherSightMul } from '../EnvironmentService';
-import { effectiveVisionRange, getNightVision, dampenLightByNightVision } from '../../core/vision';
-import { hasLineOfSight } from '../../core/lineOfSight';
-import { manhattan, chebyshev } from '../../core/distance';
-import { ticksFromSeconds, SECONDS_PER_TICK } from '../../core/time';
+import {
+  effectiveVisionRange,
+  getNightVision,
+  dampenLightByNightVision
+} from '../../core/rules/body/vision';
+import { hasLineOfSight } from '../../core/util/lineOfSight';
+import { manhattan, chebyshev } from '../../core/util/distance';
+import { ticksFromSeconds, SECONDS_PER_TICK } from '../../core/util/time';
 import { calcMaxStamina } from '../../entities/Pawns';
-import { gameLogger } from '../../dev/gameLogger';
-import { rng } from '../../core/rng';
-import { markTileDirty } from '../../core/tileDeltas';
-import { addWildGrowth } from '../../core/wildGrowth';
-import { consumeTop } from '../../core/carcassCondition';
+import { gameLogger } from '../../debug/gameLogger';
+import { rng } from '../../core/util/rng';
+import { markTileDirty } from '../../core/state/tileDeltas';
+import { addWildGrowth } from '../../core/rules/world/wildGrowth';
+import { consumeTop } from '../../core/rules/world/carcassCondition';
 import { resourceObjectService } from '../ResourceObjectService';
 import { pawnStatService } from '../PawnStatService';
-import { COLLAPSE_CONSCIOUSNESS, RECOVER_CONSCIOUSNESS } from '../../core/needs';
+import { COLLAPSE_CONSCIOUSNESS, RECOVER_CONSCIOUSNESS } from '../../core/rules/body/conditions';
 import {
   nearestPawn,
   isPawnDetected,
@@ -36,7 +40,7 @@ import {
   isThinkTick,
   entityName
 } from './entityHelpers';
-import { simLog } from '../../core/logSink';
+import { simLog } from '../../core/util/logSink';
 import {
   type TileFoodKind,
   NIGHT_THRESHOLD,

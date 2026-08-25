@@ -8,7 +8,7 @@
  *  into the state transition; `checkNeedInterrupts` is the thin select+apply wrapper the handlers
  *  call (behaviour-identical to the previous inline version, logging included). */
 import type { GameState, Pawn } from '../../core/types';
-import { gameLogger } from '../../dev/gameLogger';
+import { gameLogger } from '../../debug/gameLogger';
 import { jobService } from '../../services/JobService';
 import { PAWN_STATE } from './pawnStates';
 import { hasAvailableFood } from './pawnQueries';

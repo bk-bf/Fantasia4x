@@ -2,8 +2,8 @@ import { describe, it, expect } from 'vitest';
 import { combatService } from '$lib/game/systems/Combat';
 import { healWounds } from '$lib/game/systems/PawnStateMachine';
 import { tendPatient } from '$lib/game/services/jobs/caretake';
-import { CREATURES } from '$lib/game/core/Creatures';
-import { createBodyPlanLimbs, organsOf, PART_DEF_MAP } from '$lib/game/core/BodyParts';
+import { CREATURES } from '$lib/game/core/defs/creatures';
+import { createBodyPlanLimbs, organsOf, PART_DEF_MAP } from '$lib/game/core/defs/bodyParts';
 import { itemService } from '$lib/game/services/ItemService';
 import { recipeService } from '$lib/game/services/RecipeService';
 import type { GameState, Injury, Mob, Pawn } from '$lib/game/core/types';
@@ -365,7 +365,7 @@ describe('combat sim (headless tickCombat)', () => {
     // A pawn wearing only a body cuirass (covers the torso, not the limbs). Over many hits, blows that
     // land on a COVERED part are soaked; blows on an UNCOVERED limb take (near-)full damage — proving
     // armour mitigates per-struck-part, not as a flat body-wide shield. Bucketed by `coversPart` itself.
-    const { coversPart } = await import('$lib/game/core/armorCoverage');
+    const { coversPart } = await import('$lib/game/core/rules/gear/armorCoverage');
     const { itemService } = await import('$lib/game/services/ItemService');
     const cuirass = itemService.getItemById('plate_cuirass')!;
     const empty = makeState([], []);

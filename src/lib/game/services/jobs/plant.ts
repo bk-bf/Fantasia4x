@@ -7,16 +7,16 @@
 // Reaping a matured crop is an ordinary `harvest` (the crop resource lists `designationTypes:
 // ['harvest']`); after an annual depletes, the zone replants.
 import type { GameState, Job } from '../../core/types';
-import { gatedConsole as console } from '../../core/log';
+import { gatedConsole as console } from '../../core/util/log';
 import { zoneTileKeys, zoneInstanceIdAt } from '../DesignationService';
 import { resourceObjectService, type ResourceObjectDef } from '../ResourceObjectService';
 import { itemService } from '../ItemService';
-import { soilTierForTile, SUBTERRAINS, SUBTERRAIN_FALLBACK } from '../../core/Terrains';
+import { soilTierForTile, SUBTERRAINS, SUBTERRAIN_FALLBACK } from '../../core/defs/terrains';
 import { itemMatchesFilter } from './filters';
-import { markTileDirty } from '../../core/tileDeltas';
+import { markTileDirty } from '../../core/state/tileDeltas';
 import { patchPathfindingWalkable } from '../PathfinderService';
-import { absorbDropIfOnStockpileTile } from '../../core/GameState';
-import { rng } from '../../core/rng';
+import { absorbDropIfOnStockpileTile } from '../../core/state/stockpile';
+import { rng } from '../../core/util/rng';
 
 /** Fixed sowing work (the crop's own workAmount is the REAP cost, not the plant cost). */
 const PLANT_WORK = 12;

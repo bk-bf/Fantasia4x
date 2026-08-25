@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { HeadlessSession } from '$lib/game/headless/HeadlessSession';
 import { buildScenario } from '$lib/game/headless/Scenario';
-import { setSimLogSink } from '$lib/game/core/logSink';
-import type { CombatTurnEntry } from '$lib/game/core/Events';
+import { setSimLogSink } from '$lib/game/core/util/logSink';
+import type { CombatTurnEntry } from '$lib/game/core/defs/events';
 import { getGrip } from '$lib/game/systems/rangedCombat';
 import { pawnStatService } from '$lib/game/services/PawnStatService';
 import type { EntityStats, Pawn } from '$lib/game/core/types';

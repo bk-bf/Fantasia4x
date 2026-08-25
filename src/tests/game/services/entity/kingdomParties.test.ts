@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { spawnKingdomParty, despawnKingdomParty } from '$lib/game/services/entity/kingdomParties';
 import { kingdomService } from '$lib/game/services/KingdomService';
-import { generateCulturePool, generateCultureRelations } from '$lib/game/core/Culture';
-import { generateKingdomPool, generateKingdomRelations } from '$lib/game/core/Kingdom';
-import { rng } from '$lib/game/core/rng';
+import { generateCulturePool, generateCultureRelations } from '$lib/game/core/gen/culture';
+import { generateKingdomPool, generateKingdomRelations } from '$lib/game/core/gen/kingdom';
+import { rng } from '$lib/game/core/util/rng';
 import type { GameState, Kingdom } from '$lib/game/core/types';
 
 // KINGDOMS-TRADE §3: party spawn/despawn + the daily arrival scheduler. Exercises the new

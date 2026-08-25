@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { itemService } from '$lib/game/services/ItemService';
 import { pawnService } from '$lib/game/services/PawnService';
-import { getEquipmentSlot } from '$lib/game/core/PawnEquipment';
+import { getEquipmentSlot } from '$lib/game/core/rules/gear/equipment';
 import type { GameState, Pawn } from '$lib/game/core/types';
 
 // PRODUCTION-CHAIN-II §L — Bulk Logistics (simplified model).

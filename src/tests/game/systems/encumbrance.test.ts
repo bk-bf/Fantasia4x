@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { driveEncumbrance, getConditionCurrentStage } from '$lib/game/core/needs';
+import { driveEncumbrance, getConditionCurrentStage } from '$lib/game/core/rules/body/conditions';
 import { itemService } from '$lib/game/services/ItemService';
 import type { EntityCondition, GameState, Pawn } from '$lib/game/core/types';
 

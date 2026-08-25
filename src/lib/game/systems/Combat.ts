@@ -37,32 +37,37 @@ import {
   conditionStatMultipliers,
   getTransientConditionDef,
   COLLAPSE_CONSCIOUSNESS
-} from '../core/needs';
-import { getCreatureById } from '../core/Creatures';
+} from '../core/rules/body/conditions';
+import { getCreatureById } from '../core/defs/creatures';
 import { willFinishOffDowned } from '../services/entity/entityConstants';
-import { woundForDamageType, woundById, severityFromFrac, recomputeWound } from '../core/Wounds';
-import { scaleWeaponQuality, scaleArmorQuality } from '../core/itemQuality';
+import {
+  woundForDamageType,
+  woundById,
+  severityFromFrac,
+  recomputeWound
+} from '../core/defs/wounds';
+import { scaleWeaponQuality, scaleArmorQuality } from '../core/rules/gear/itemQuality';
 import { pawnStatService } from '../services/PawnStatService';
 import { calcMaxStamina } from '../entities/Pawns';
 import conditionsData from '../database/pawns/conditions.jsonc';
 import type { ConditionDef, TransientConditionDef } from '../core/types';
-import { simLog, type CombatTextKind } from '../core/logSink';
-import { rng } from '../core/rng';
-import { chebyshev } from '../core/distance';
-import { clamp } from '../core/math';
-import { perTick } from '../core/time';
+import { simLog, type CombatTextKind } from '../core/util/logSink';
+import { rng } from '../core/util/rng';
+import { chebyshev } from '../core/util/distance';
+import { clamp } from '../core/util/math';
+import { perTick } from '../core/util/time';
 import {
   ticksFromGameHours,
   getAmbientLight,
   weatherSightMul
 } from '../services/EnvironmentService';
-import { isWitnessedByColony } from '../core/vision';
+import { isWitnessedByColony } from '../core/rules/body/vision';
 import {
   isDetectedBy,
   revealPawnToMob,
   STEALTH_STRIKE_MULT,
   STEALTH_PACK_ALERT_RADIUS
-} from '../core/stealth';
+} from '../core/rules/body/stealth';
 import { kingdomService } from '../services/KingdomService';
 import { socialService } from '../services/SocialService';
 import { memoryService } from '../services/MemoryService';
@@ -83,8 +88,8 @@ import {
   BOUND_NATURAL_WEAPONS,
   DEFAULT_PLAN,
   BONE_FRACTION
-} from '../core/BodyParts';
-import { coversPart, ARMOUR_SLOTS, SLOT_LAYER } from '../core/armorCoverage';
+} from '../core/defs/bodyParts';
+import { coversPart, ARMOUR_SLOTS, SLOT_LAYER } from '../core/rules/gear/armorCoverage';
 
 /** Armour share for a part with no explicit `armor` in limbmap — mid value, neither bare nor plated. */
 const DEFAULT_ARMOR_SHARE = 0.5;
@@ -169,8 +174,8 @@ const K_PRECISION_FRACTURE = 4;
 const HIDE_WEAR_RESET_TICKS = 750;
 // The damage-power curve moved to core/powerScale so the stat engine can resolve the POWER token
 // without importing Combat (which imports it). Re-exported here for existing callers.
-export { powerScale, STAT_SCALE } from '../core/powerScale';
-import { powerScale } from '../core/powerScale';
+export { powerScale, STAT_SCALE } from '../core/rules/body/powerScale';
+import { powerScale } from '../core/rules/body/powerScale';
 /** How strongly `bodyScale` boosts natural-weapon damage: damageMult = 1 + (bodyScale − 1) × this. */
 const NATURAL_DAMAGE_BODYSCALE_FACTOR = 0.5;
 /** Mob base damage when it has no weapon. */

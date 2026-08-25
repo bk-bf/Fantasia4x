@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { itemService } from '$lib/game/services/ItemService';
 import { rebuildThermalField } from '$lib/game/services/EnvironmentService';
-import { SECONDS_PER_TICK } from '$lib/game/core/time';
+import { SECONDS_PER_TICK } from '$lib/game/core/util/time';
 import type { GameState, DroppedItem, PlacedBuilding, WorldTile } from '$lib/game/core/types';
 
 /**

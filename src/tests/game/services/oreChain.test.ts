@@ -4,7 +4,7 @@ import { HeadlessSession } from '$lib/game/headless/HeadlessSession';
 import { recipeService } from '$lib/game/services/RecipeService';
 import { itemService } from '$lib/game/services/ItemService';
 import { buildingService } from '$lib/game/services/BuildingService';
-import { vesselAccepts } from '$lib/game/core/vessels';
+import { vesselAccepts } from '$lib/game/core/rules/gear/vessels';
 
 /**
  * ORE AUDIT — the non-ferrous chains (copper/tin/bronze, lead→silver by cupellation, gold) plus the

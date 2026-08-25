@@ -1,20 +1,20 @@
 <script lang="ts">
   import { gameState, currentCulture } from '$lib/stores/gameState';
-  import BuildCard from '$lib/components/UI/BuildCard.svelte';
-  import ItemPills, { type ItemPillView } from '$lib/components/UI/ItemPills.svelte';
-  import FilterTabs from '$lib/components/UI/FilterTabs.svelte';
-  import SearchBar from '$lib/components/UI/SearchBar.svelte';
+  import BuildCard from '$lib/components/UI/hud/BuildCard.svelte';
+  import ItemPills, { type ItemPillView } from '$lib/components/UI/widget/ItemPills.svelte';
+  import FilterTabs from '$lib/components/UI/widget/FilterTabs.svelte';
+  import SearchBar from '$lib/components/UI/widget/SearchBar.svelte';
   import { persisted, persist } from '$lib/stores/uiPersist';
-  import BackButton from '$lib/components/UI/BackButton.svelte';
+  import BackButton from '$lib/components/UI/widget/BackButton.svelte';
   import ITEMS_DATABASE from '$lib/game/database/items/items.jsonc';
   import { itemService } from '$lib/game/services/ItemService';
   import { recipeService } from '$lib/game/services/RecipeService';
   import { buildingService } from '$lib/game/services/BuildingService';
   import { jobService } from '$lib/game/services/JobService';
-  import { getMaterialProperty } from '$lib/game/core/materialProperties';
-  import { WORK_CATEGORIES } from '$lib/game/core/Work';
-  import { releaseReservation } from '$lib/game/core/GameState';
-  import { categoryPath, labelFor } from '$lib/utils/itemCategoryTree';
+  import { getMaterialProperty } from '$lib/game/core/defs/materials';
+  import { WORK_CATEGORIES } from '$lib/game/core/defs/work';
+  import { releaseReservation } from '$lib/game/core/state/stockpile';
+  import { categoryPath, labelFor } from '$lib/components/util/itemCategoryTree';
   import { onDestroy } from 'svelte';
   import type { Item } from '$lib/game/core/types';
 

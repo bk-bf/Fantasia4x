@@ -6,7 +6,7 @@
 import { itemService } from '../ItemService';
 import { buildingService } from '../BuildingService';
 import { recipeService } from '../RecipeService';
-import { disciplineParent, resolveDiscipline, isDiscipline } from './disciplineTree';
+import { disciplineParent, resolveDiscipline, isDiscipline } from '../../core/defs/disciplines';
 
 /** A craft order's LEAF discipline (leatherworking / butchery / bonecarving / pottery / metalworking…).
  *  Resolution order: (1) the RECIPE's explicit `discipline` tag, so a mixed station routes each recipe

@@ -268,7 +268,7 @@ N-5). Suspected at first to be a movement/approach-tile yoyo (FLEE-1 class) or a
 it was neither.
 
 **Root cause (confirmed via a live CDP state dump of the running Electron app):** **duplicate dropped-item
-ids.** When `reserveForOrder` (`core/GameState.ts`) splits a stockpile stack to reserve build materials,
+ids.** When `reserveForOrder` (`core/state/stockpile.ts`) splits a stockpile stack to reserve build materials,
 it minted the reserved sub-stack's id as `` `${d.id}-resv-${orderId.slice(-6)}` `` — and `slice(-6)` is the
 **tail of the building's placement timestamp**. Every building **drag-placed in one batch shares a single
 `Date.now()`**, so all of their reserved stacks of the same item, sitting on the same shared stockpile tile,
@@ -281,7 +281,7 @@ belonged to a *sibling* wall → `reservedFor !== owner` → the valid fetch job
 oscillation. The latent fragility was old (ADR-016); drag-placing many buildings is what triggered the
 collision, so the "since the perf work" association was incidental.
 
-**Fix (three parts, `core/GameState.ts` + `services/JobService.ts`):**
+**Fix (three parts, `core/state/stockpile.ts` + `services/JobService.ts`):**
 - **Unique reservation ids** — use the **full `orderId`** (unique per building/order), not `slice(-6)`, so
   reserved stacks can no longer collide.
 - **Owner-aware fetch matching** — the `_syncFetchJobs` keep-filter and the add-dedup match on **`id` AND

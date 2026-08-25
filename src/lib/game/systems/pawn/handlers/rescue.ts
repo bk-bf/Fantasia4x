@@ -4,12 +4,12 @@
  *  (the carry/drop cargo logic lives in systems/pawn/carry.ts). All that remains here is the shared
  *  "where do I take them?" query — the nearest complete rest building. */
 import type { GameState, Pawn } from '../../../core/types';
-import { manhattan } from '../../../core/distance';
+import { manhattan } from '../../../core/util/distance';
 import { isRestBuildingType, tryAssignPath, goIdle, mutatePawn } from '../pawnHelpers';
 import { tileHasBody, pickUpPawn, dropCarriedPawn, freeDropTileNear } from '../carry';
 import { isAdjacent } from '../pawnQueries';
 import { PAWN_STATE } from '../pawnStates';
-import { pawnById } from '../../../core/pawnIndex';
+import { pawnById } from '../../../core/state/pawnIndex';
 import { jobService } from '../../../services/JobService';
 
 /** Nearest COMPLETE rest building (bed/shelter) tile to (x,y) that is NOT already occupied by another

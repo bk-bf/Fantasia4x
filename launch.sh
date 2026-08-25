@@ -20,8 +20,6 @@
 # --play: clean PLAYER launch (shell only) — drops --debug so the game opens at the MAIN MENU with
 #   the DEBUG tab hidden, the way an alpha build looks. Still served by the live dev server, so
 #   bug-fixes are a reload away (no rebuild). Immersive playtesting: ./launch.sh --electron --play.
-# --legacy-menu: render the ORIGINAL centred main menu (MainMenu) instead of the default left-aligned
-#   one (MainMenu2), gated by VITE_LEGACY_MENU. E.g. ./launch.sh --electron --play --legacy-menu.
 # RELOAD: Vite hot-reload / live page-reload is OFF for every launch.sh server, so an agent editing the
 #   tree never reloads a live playtest. Manual browser reload (F5 / Ctrl+R / Ctrl+Shift+R) and DevTools
 #   are gated inside the Electron shell on the in-app Debug setting: a --play build blocks them until you
@@ -54,7 +52,6 @@ export PATH="$HOME/.npm-global/bin:$PATH"
 PROFILER=false
 LOG=false
 PLAY=false
-LEGACY_MENU=false
 TOOLS=false
 SANDBOX=auto   # auto = default ON for electron (OFF under --profiler); --sandbox forces on, --net-host forces off
 SHELL_TARGET=""
@@ -64,7 +61,6 @@ for arg in "$@"; do
     --profiler) PROFILER=true ;;
     --log) LOG=true ;;
     --play) PLAY=true ;;
-    --legacy-menu) LEGACY_MENU=true ;;
     --sandbox) SANDBOX=on ;;
     --net-host) SANDBOX=off ;;
     --electron) SHELL_TARGET=electron ;;
@@ -95,8 +91,6 @@ fi
 # here, so launch.sh servers always run with hot-reload OFF — an agent editing the tree never reloads a
 # live playtest. (Run `./dev.sh --hmr` directly to opt a standalone server back in.)
 LOG_FLAG=""; [[ "$LOG" == true ]] && LOG_FLAG=" --log"
-# --legacy-menu: render the original centred main menu (MainMenu) instead of the default MainMenu2.
-LEGACY_FLAG=""; [[ "$LEGACY_MENU" == true ]] && LEGACY_FLAG=" --legacy-menu"
 
 cleanup() {
   [[ ${#PIDS[@]} -eq 0 ]] && return
@@ -307,7 +301,7 @@ if [[ -n "$SHELL_TARGET" ]]; then
   # immersive playtest over the live dev server, so bug-fixes are still just a reload away.
   SERVER_FLAG="--debug"; [[ "$PROFILER" == true ]] && SERVER_FLAG="--profiler"
   [[ "$PLAY" == true ]] && SERVER_FLAG=""
-  SERVER_FLAG="$SERVER_FLAG$LOG_FLAG$LEGACY_FLAG"
+  SERVER_FLAG="$SERVER_FLAG$LOG_FLAG"
   SERVER_LABEL="play"; [[ "$PLAY" != true ]] && SERVER_LABEL="${SERVER_FLAG#--}"
   PORT=5173
   [[ -f "$SCRIPT_DIR/.devport" ]] && PORT=$(< "$SCRIPT_DIR/.devport")

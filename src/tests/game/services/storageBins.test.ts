@@ -8,7 +8,7 @@ import {
   isFilteredBinTile,
   binFilterAt,
   absorbDropIfOnStockpileTile
-} from '$lib/game/core/GameState';
+} from '$lib/game/core/state/stockpile';
 import { storageTileAcceptsDrop, storageAcceptsDrop } from '$lib/game/services/jobs/haul';
 
 /**

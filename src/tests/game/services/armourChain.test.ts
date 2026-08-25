@@ -4,8 +4,8 @@ import { HeadlessSession } from '$lib/game/headless/HeadlessSession';
 import { recipeService } from '$lib/game/services/RecipeService';
 import { itemService } from '$lib/game/services/ItemService';
 import { completeCraftOrder } from '$lib/game/services/jobs/craft';
-import { getEquipmentSlot } from '$lib/game/core/PawnEquipment';
-import { ARMOUR_SLOTS } from '$lib/game/core/armorCoverage';
+import { getEquipmentSlot } from '$lib/game/core/rules/gear/equipment';
+import { ARMOUR_SLOTS } from '$lib/game/core/rules/gear/armorCoverage';
 import type { EquipmentSlot, GameState, Item } from '$lib/game/core/types';
 
 // The armour expansion, verified where it actually matters: can a colony REACH these pieces.

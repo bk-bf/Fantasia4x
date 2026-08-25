@@ -5,7 +5,7 @@
 // units of ANY allowed material (the build-cost items + per-def substitutes like plant_fiber for hay),
 // so unticking one material just falls back to the others.
 import type { GameState, PlacedBuilding } from '../core/types';
-import { availableAggregateFromDrops } from '../core/GameState';
+import { availableAggregateFromDrops } from '../core/state/stockpile';
 import { buildingService } from './BuildingService';
 import { itemService } from './ItemService';
 

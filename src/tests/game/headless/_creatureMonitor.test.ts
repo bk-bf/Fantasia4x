@@ -2,7 +2,7 @@ import { it, expect, beforeAll } from 'vitest';
 import { pathfinderService } from '$lib/game/services/PathfinderService';
 import { HeadlessSession } from '$lib/game/headless/HeadlessSession';
 import { buildScenario } from '$lib/game/headless/Scenario';
-import { setSimLogSink, setVerboseLogging, type SimLogSink } from '$lib/game/core/logSink';
+import { setSimLogSink, setVerboseLogging, type SimLogSink } from '$lib/game/core/util/logSink';
 import type { GameState, Mob } from '$lib/game/core/types';
 
 /**

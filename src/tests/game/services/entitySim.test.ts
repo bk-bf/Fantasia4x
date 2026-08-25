@@ -1,7 +1,7 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import { entityService } from '$lib/game/services/EntityService';
-import { TICKS_PER_SECOND } from '$lib/game/core/time';
-import { setSimLogSink, type SimLogSink } from '$lib/game/core/logSink';
+import { TICKS_PER_SECOND } from '$lib/game/core/util/time';
+import { setSimLogSink, type SimLogSink } from '$lib/game/core/util/logSink';
 import type { GameState, Mob } from '$lib/game/core/types';
 
 /** A no-op sink with a recording `threatAlert` — lets a headless sim assert the one-shot threat alert. */

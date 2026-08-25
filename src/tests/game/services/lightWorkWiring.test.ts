@@ -4,7 +4,7 @@ import {
   getAmbientLight,
   TURNS_PER_DAY
 } from '$lib/game/services/EnvironmentService';
-import { TICKS_PER_SECOND } from '$lib/game/core/time';
+import { TICKS_PER_SECOND } from '$lib/game/core/util/time';
 import { lightWorkMultiplier } from '$lib/game/systems/pawn/pawnHelpers';
 import { jobService } from '$lib/game/services/JobService';
 

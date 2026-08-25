@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { PART_DEF_MAP, skeletonPartOf } from '$lib/game/core/BodyParts';
-import { woundById } from '$lib/game/core/Wounds';
+import { PART_DEF_MAP, skeletonPartOf } from '$lib/game/core/defs/bodyParts';
+import { woundById } from '$lib/game/core/defs/wounds';
 import { pawnStatService } from '$lib/game/services/PawnStatService';
-import { syncFractureConditions } from '$lib/game/core/needs';
+import { syncFractureConditions } from '$lib/game/core/rules/body/conditions';
 import type { EntityCondition, LimbState, Pawn } from '$lib/game/core/types';
 
 // Heavy/blunt trauma can break a limb's bone — cripples without severing; the RNG fracture roll itself lives in Combat.performAttack.

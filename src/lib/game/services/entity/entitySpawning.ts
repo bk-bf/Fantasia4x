@@ -1,22 +1,22 @@
 // Entity spawning — initial seeding + periodic DF-style spawner, biome-weighted and capped.
 // Extracted from EntityService (P-4). The former `this.idCounter` is now a module-level counter.
 import type { GameState, Mob, MobState, EntityStats, EntityNeeds } from '../../core/types';
-import { CREATURES, type CreatureDefinition } from '../../core/Creatures';
+import { CREATURES, type CreatureDefinition } from '../../core/defs/creatures';
 import { getAmbientLight } from '../EnvironmentService';
 import { calcMaxStamina } from '../../entities/Pawns';
 import { createBodyPlanLimbs } from '../../systems/Combat';
-import { DEFAULT_PLAN } from '../../core/BodyParts';
-import { TRAIT_DATABASE } from '../../core/Culture';
-import { creatureAptitudes } from '../../core/aptitudes';
-import { rng } from '../../core/rng';
-import { getLootPool, drawLoadout, rollCondition, validateLootItemIds } from '../../core/LootPools';
-import { generateBossName } from '../../core/BossNames';
+import { DEFAULT_PLAN } from '../../core/defs/bodyParts';
+import { TRAIT_DATABASE } from '../../core/gen/culture';
+import { creatureAptitudes } from '../../core/rules/body/aptitudes';
+import { rng } from '../../core/util/rng';
+import { getLootPool, drawLoadout, rollCondition, validateLootItemIds } from '../../core/defs/loot';
+import { generateBossName } from '../../core/gen/bossNames';
 import { itemService } from '../ItemService';
 import type { PawnEquipment, ItemInstance } from '../../core/types';
 import { findNearbyWalkable } from './entityHelpers';
-import { isSpawnableTile } from '../../core/Terrains';
+import { isSpawnableTile } from '../../core/defs/terrains';
 import { resourceObjectService } from '../ResourceObjectService';
-import { markTileDirty } from '../../core/tileDeltas';
+import { markTileDirty } from '../../core/state/tileDeltas';
 import {
   SPAWN_CHECK_INTERVAL,
   BASE_SPAWN_CHANCE,
@@ -42,8 +42,8 @@ import {
   STARTING_BUBBLE_TURNS,
   SEED_HUNGER_GRACE
 } from './entityConstants';
-import { chebyshev } from '../../core/distance';
-import { getCreatureById } from '../../core/Creatures';
+import { chebyshev } from '../../core/util/distance';
+import { getCreatureById } from '../../core/defs/creatures';
 
 let idCounter = 0;
 

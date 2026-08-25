@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { buildScenario } from '$lib/game/headless/Scenario';
 import { HeadlessSession } from '$lib/game/headless/HeadlessSession';
-import { soilTierForTile } from '$lib/game/core/Terrains';
+import { soilTierForTile } from '$lib/game/core/defs/terrains';
 
 /**
  * CROPS AUDIT (headless, real ticks). A `grow` zone drives sowing: for each soil-eligible tile whose

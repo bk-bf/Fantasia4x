@@ -1,13 +1,13 @@
 <script lang="ts">
   import { gameState } from '$lib/stores/gameState';
   import { uiState } from '$lib/stores/uiState';
-  import BackButton from '$lib/components/UI/BackButton.svelte';
-  import { getCreatureById } from '$lib/game/core/Creatures';
+  import BackButton from '$lib/components/UI/widget/BackButton.svelte';
+  import { getCreatureById } from '$lib/game/core/defs/creatures';
   import type { Mob, LimbState } from '$lib/game/core/types';
-  import FollowButton from '../UI/FollowButton.svelte';
-  import SearchBar from '../UI/SearchBar.svelte';
-  import { limbLabel, partLabel } from '$lib/utils/bodyLabels';
-  import { woundById } from '$lib/game/core/Wounds';
+  import FollowButton from '../UI/widget/FollowButton.svelte';
+  import SearchBar from '../UI/widget/SearchBar.svelte';
+  import { limbLabel, partLabel } from '$lib/components/util/bodyLabels';
+  import { woundById } from '$lib/game/core/defs/wounds';
   import { persisted, persist } from '$lib/stores/uiPersist';
 
   let mobs = $derived(($gameState.mobs ?? []).filter((m) => m.state !== 'Corpse'));

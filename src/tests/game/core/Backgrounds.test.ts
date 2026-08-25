@@ -4,12 +4,12 @@ import {
   rollBackgrounds,
   getBackgroundById,
   ADULT_AGE
-} from '$lib/game/core/Backgrounds';
-import { generateCulturePool, generateCultureRelations } from '$lib/game/core/Culture';
-import { generateKingdomPool, generateKingdomRelations } from '$lib/game/core/Kingdom';
+} from '$lib/game/core/defs/backgrounds';
+import { generateCulturePool, generateCultureRelations } from '$lib/game/core/gen/culture';
+import { generateKingdomPool, generateKingdomRelations } from '$lib/game/core/gen/kingdom';
 import { generateColonyPawns } from '$lib/game/entities/Pawns';
 import { kingdomService } from '$lib/game/services/KingdomService';
-import { rng } from '$lib/game/core/rng';
+import { rng } from '$lib/game/core/util/rng';
 import type { GameState, Kingdom } from '$lib/game/core/types';
 
 function world(seed = 20260713) {

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { generateCulture, SPAWN_STAT_CAP } from '$lib/game/core/Culture';
+import { generateCulture, SPAWN_STAT_CAP } from '$lib/game/core/gen/culture';
 import { generatePawns } from '$lib/game/entities/Pawns';
-import { rng } from '$lib/game/core/rng';
+import { rng } from '$lib/game/core/util/rng';
 import type { Pawn } from '$lib/game/core/types';
 
 /**

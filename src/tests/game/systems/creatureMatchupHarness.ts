@@ -1,11 +1,11 @@
 import { HeadlessSession } from '$lib/game/headless/HeadlessSession';
 import { buildScenario } from '$lib/game/headless/Scenario';
-import { setSimLogSink } from '$lib/game/core/logSink';
+import { setSimLogSink } from '$lib/game/core/util/logSink';
 import { itemService } from '$lib/game/services/ItemService';
 import { partCombatValue } from '$lib/game/systems/Combat';
 import { appendFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import creaturesData from '$lib/game/database/pawns/creatures.jsonc';
-import type { CombatTurnEntry } from '$lib/game/core/Events';
+import type { CombatTurnEntry } from '$lib/game/core/defs/events';
 import type { BodyPartId, EntityStats, Mob, Pawn } from '$lib/game/core/types';
 
 /**

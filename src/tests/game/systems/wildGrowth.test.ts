@@ -1,13 +1,13 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { gameEngine } from '$lib/game/systems/GameEngineImpl';
 import { complete as completeHarvest } from '$lib/game/services/jobs/harvest';
-import { clearTileDeltas, drainTileDeltas } from '$lib/game/core/tileDeltas';
+import { clearTileDeltas, drainTileDeltas } from '$lib/game/core/state/tileDeltas';
 import {
   addWildGrowth,
   clearWildGrowth,
   wildGrowthSize,
   RESOURCE_VISIBLE_GROWTH
-} from '$lib/game/core/wildGrowth';
+} from '$lib/game/core/rules/world/wildGrowth';
 import type { GameState, Job, WorldTile } from '$lib/game/core/types';
 
 // A harvest resets a `regrowsFromZero` node to growth 0; processWildGrowth climbs 0→100 in place and restores the count at maturity.

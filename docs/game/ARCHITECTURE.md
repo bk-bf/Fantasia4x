@@ -17,7 +17,7 @@ src/lib/game/systems/GameEngineImpl   ← Turn coordinator (calls services, no l
          ↓
 src/lib/game/services/                ← Business logic singletons
          ↓
-src/lib/game/core/                    ← Types, static databases, GameStateManager
+src/lib/game/core/                    ← types/ · defs/ · state/ · rules/ · gen/ · util/
 ```
 
 ## Services
@@ -35,11 +35,10 @@ Each service implements an interface and exports a singleton. Import the singlet
 | `recipeService`   | `services/RecipeService.ts`    | Recipe registry ("how X is made"); station tiers; `passive` furnace flag |
 | `resourceObjectService` | `services/ResourceObjectService.ts` | World resource defs: harvest interactions, yields, `toolRequirement` |
 | `researchService` | `services/ResearchService.ts`  | Research progression, unlock checks               |
-| `locationService` | `services/LocationServices.ts` | Exploration missions, location data               |
 | `entityService`   | `services/EntityService.ts`    | Mob spawning, AI, movement, hunger, hunting, corpses |
 | `occupancyService`| `services/OccupancyService.ts` | Single source of "which tiles hold a body" — pathfinding + movement collision (ADR-014) |
 | `kingdomService`  | `services/KingdomService.ts`   | World political layer (KINGDOMS-TRADE): kingdom facet drift, hidden-knowledge contact, visitor/caravan cadence + parties, colony wealth, barter pricing. Runs once per in-game day in the events phase — zero per-tick cost |
-| `socialService`   | `services/SocialService.ts`    | Pawn social layer (SOCIAL-LAYER): sparse culture-seeded relationships + hysteretic stages, daily conversations, romance, mood modifiers over the drift mood, breaks/crises, prestige/beauty. `processSocialTurn` runs once per in-game day in the events phase (beside `processKingdomsDaily`) — zero per-tick cost; big deltas arrive via `on*` hooks (death/rescue/tend/friendly-fire/battle-forged/meals). Pure helpers in `core/Social.ts` |
+| `socialService`   | `services/SocialService.ts`    | Pawn social layer (SOCIAL-LAYER): sparse culture-seeded relationships + hysteretic stages, daily conversations, romance, mood modifiers over the drift mood, breaks/crises, prestige/beauty. `processSocialTurn` runs once per in-game day in the events phase (beside `processKingdomsDaily`) — zero per-tick cost; big deltas arrive via `on*` hooks (death/rescue/tend/friendly-fire/battle-forged/meals). Pure helpers in `core/rules/social/social.ts` |
 
 Two singletons live under `systems/` (they coordinate state-machine/combat logic rather than being
 pure services): **`pawnStateMachineService`** (`systems/PawnStateMachine.ts` — the pawn FSM:
@@ -78,7 +77,7 @@ phases read state the earlier ones produce:
 9. **Entities** — mob spawn / step / movement / hunger / removal (`entityService.*`).
 10. **Combat** — `combatService.tickCombat` + fresh-corpse handling.
 11. **Reap dead** — `reapDeadPawns`: finalise any combat death that bypassed `killPawn` (corpse/gear drop, record) and remove dead pawns from `pawns[]` (NT-2).
-12. **Events** — `eventSystem.generateEvent` rolls a random world event on its own cadence; consequences are applied (`processEventConsequences`) and the event is logged to the chronicle via `simLog.logActivity({type:'event'})` (R11, ADR-006 content). Events fire rarely (cadence in `core/Events.ts`); most ticks this is a cheap early-return.
+12. **Events** — `eventSystem.generateEvent` rolls a random world event on its own cadence; consequences are applied (`processEventConsequences`) and the event is logged to the chronicle via `simLog.logActivity({type:'event'})` (R11, ADR-006 content). Events fire rarely (cadence in `core/defs/events.ts`); most ticks this is a cheap early-return.
 13. **Commit + UI push** — `GameStateManager.updateState` then a throttled store notify (~15 Hz).
 
 ## Modifier System
@@ -95,21 +94,37 @@ Never compute flat bonus sums manually when a modifier system method exists.
 
 **Work is NOT here (ADR-015).** Work speed/yield/quality is a separate, single model in `pawnStatService.getWorkModifiers` (formulas in `database/stats.jsonc` × body capacities × explicit trait `workSpeed`/`workYield`/`workQuality`). The old `ModifierSystem.calculateWorkEfficiency` path was deleted — do not reintroduce a second work-calc path.
 
-## Static Data Files
+## Core Layout
 
-| File                | Contents                                                                 |
-| ------------------- | ------------------------------------------------------------------------ |
-| `core/types.ts`     | All interfaces: `GameState`, `Pawn`, `Building`, `Item`, `WorkCategory`… |
-| `core/GameState.ts` | `GameStateManager` — the only mutation surface                           |
-| `core/Items.ts`     | Item definitions (resources, equipment, consumables)                     |
-| `core/Buildings.ts` | Building definitions and unlock conditions                               |
-| `core/Research.ts`  | Research tree and unlock costs                                           |
-| `core/Work.ts`      | Work category definitions                                                |
-| `core/Culture.ts`   | Culture generation: archetype-biased pool (15–25), procedural lore/description, relations (ADR-023) |
-| `core/BodyParts.ts` | **Anatomy loader** (ADR-024): loads `database/limbmap.jsonc` → global `PART_DEF_MAP`, per-plan hit-roll tables, `createBodyPlanLimbs(plan, bodyScale)`, part→weapon/armour bindings |
-| `core/stealth.ts`   | **Stealth model** (ADR-032): Layer B additives on the `stealth` stat (trait effects, living-part grants, worn `stealthMod`/weight drag, natural-armour drag), pure detection-roll math (`detectionScore`/`detectionChance`), reveal helpers, and every stealth tuning dial. The roll rides the `entityAI` vision gate (`entityHelpers.isPawnDetected`), cached per mob-pawn in `Mob.stealthChecks` |
-| `core/Locations.ts` | Exploration zone definitions                                             |
-| `core/Events.ts`    | Event type definitions                                                   |
+`core/` is split by KIND of module, not by subject. Add a new module to the bucket that matches what
+it is; nothing new goes at the `core/` root.
+
+| Directory     | Holds                                                                                          |
+| ------------- | ---------------------------------------------------------------------------------------------- |
+| `core/types/` | Domain type modules, re-exported by the `core/types.ts` barrel. Add new types to the domain module, never to the barrel |
+| `core/defs/`  | One module per `database/*.jsonc` file: parse it once, expose an O(1) lookup. No logic          |
+| `core/state/` | `GameStateManager` (the only mutation surface), the stockpile/tile-storage query surface, and the per-tick indexes |
+| `core/rules/` | Pure simulation math, grouped `body/` · `gear/` · `world/` · `social/`. No state, no service imports |
+| `core/gen/`   | Procedural generators — culture, kingdom, boss names, famed-item identity                       |
+| `core/util/`  | Domain-free primitives: math, seeded RNG, grid distance, line of sight, colour, CP437, timing, logging |
+
+Notable modules:
+
+| File                              | Contents                                                                 |
+| --------------------------------- | ------------------------------------------------------------------------ |
+| `core/types.ts`                   | Barrel over `core/types/*`: `GameState`, `Pawn`, `Building`, `Item`, `WorkCategory`… |
+| `core/state/GameStateManager.ts`  | `GameStateManager` — the only mutation surface                           |
+| `core/state/stockpile.ts`         | Stockpile zones, colony stock, order reservations, tile capacity/filters  |
+| `core/defs/items.ts`              | Item definitions (resources, equipment, consumables) from `items.jsonc`   |
+| `core/defs/buildings.ts`          | Building definitions and unlock conditions from `buildings.jsonc`         |
+| `core/defs/work.ts`               | Work category definitions                                                 |
+| `core/defs/disciplines.ts`        | The craft DISCIPLINE tree parsed from `jobs.jsonc` — leaf → parent, station match |
+| `core/defs/events.ts`             | Event type definitions and cadence                                        |
+| `core/defs/bodyParts.ts`          | **Anatomy loader** (ADR-024): loads `database/limbmap.jsonc` → global `PART_DEF_MAP`, per-plan hit-roll tables, `createBodyPlanLimbs(plan, bodyScale)`, part→weapon/armour bindings |
+| `core/gen/culture.ts`             | Culture generation: archetype-biased pool (15–25), procedural lore/description, relations (ADR-023) |
+| `core/rules/body/conditions.ts`   | The condition engine — drivers, stages, stat/need multipliers, shock, encumbrance, windchill |
+| `core/rules/body/stealth.ts`      | **Stealth model** (ADR-032): Layer B additives on the `stealth` stat (trait effects, living-part grants, worn `stealthMod`/weight drag, natural-armour drag), pure detection-roll math (`detectionScore`/`detectionChance`), reveal helpers, and every stealth tuning dial. The roll rides the `entityAI` vision gate (`entityHelpers.isPawnDetected`), cached per mob-pawn in `Mob.stealthChecks` |
+| `core/rules/gear/equipment.ts`    | Worn/held gear resolution — slots, coverage, layering                     |
 
 ## AI Generation (Server-Only)
 
@@ -121,7 +136,7 @@ Gemini API calls live exclusively in `src/routes/api/`. Client code calls the ro
 
 - **Worker→main snapshot (the perf-critical path, ADR-021 W2/W2b — ENGINE-PERFORMANCE §B).** Cloning the whole `GameState` every flush was ~32% of worker time. Now: a **sectional diff** (only top-level fields whose ref changed) + **per-entity slim/resync** for pawns/mobs (slim hot-field projection every flush; heavy cold fields full-resynced ~every 8th flush), reassembled on a per-id mirror in `simWorkerClient`. Took the heavy stress case to **80–100 TPS @4×**. Protocol in `sim/simProtocol.ts` (`EntitySync`).
 - **Profiling is browser-native** (the custom in-game profiler was retired — it scaled with entity count and couldn't see the worker boundary). Capture with the **Firefox Profiler** on the `--profiler` sandbox, read headless via `scripts/profile-self.mjs` (JS self-time per worker function) or `pq`. See ENGINE-PERFORMANCE §10.
-- **Gated logging** (`core/log.ts`) — hot-path modules do `import { gatedConsole as console } from '../core/log'` to silence per-tick `log`/`debug`/`info`/`warn` (errors stay live). Hot-path logging was ~75% of per-tick cost before this. New per-tick code must use the shim, not the global `console`.
+- **Gated logging** (`core/util/log.ts`) — hot-path modules do `import { gatedConsole as console } from '../core/util/log'` to silence per-tick `log`/`debug`/`info`/`warn` (errors stay live). Hot-path logging was ~75% of per-tick cost before this. New per-tick code must use the shim, not the global `console`.
 
 ## Headless Sim & Scenarios (ADR-033)
 

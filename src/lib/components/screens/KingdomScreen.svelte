@@ -15,7 +15,7 @@
   } from '$lib/stores/gameState';
   import type { Culture, Kingdom, KingdomRelation } from '$lib/game/core/types';
   import { COLONY_RELATION_ID } from '$lib/game/core/types';
-  import { knowledgeTier } from '$lib/game/core/Kingdom';
+  import { knowledgeTier } from '$lib/game/core/gen/kingdom';
   import KingdomDetail from './kingdom/KingdomDetail.svelte';
   import { persisted, persist } from '$lib/stores/uiPersist';
 

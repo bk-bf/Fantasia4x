@@ -4,7 +4,7 @@ import {
   conditionStatMultipliers,
   conditionNeedMultipliers,
   getConditionCurrentStage
-} from '$lib/game/core/needs';
+} from '$lib/game/core/rules/body/conditions';
 import { itemService } from '$lib/game/services/ItemService';
 import type { EntityCondition } from '$lib/game/core/types';
 

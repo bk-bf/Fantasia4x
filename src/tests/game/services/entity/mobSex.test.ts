@@ -1,8 +1,8 @@
 // Sex on spawn: ordinary creatures roll a 50/50 sex; `sex: false` creatures (wraiths/oozes) get none.
 import { describe, it, expect, beforeEach } from 'vitest';
 import { makeMob } from '$lib/game/services/entity/entitySpawning';
-import { getCreatureById } from '$lib/game/core/Creatures';
-import { rng } from '$lib/game/core/rng';
+import { getCreatureById } from '$lib/game/core/defs/creatures';
+import { rng } from '$lib/game/core/util/rng';
 
 beforeEach(() => rng.reseed(20260713));
 

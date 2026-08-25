@@ -3,7 +3,7 @@
   // and hidden again when it lapses back to empty (like the drying meter). Fills → the pawn will turn to
   // that lineage at its next growth event.
   import type { Pawn } from '$lib/game/core/types';
-  import { awakeningLabel, lineageDef } from '$lib/game/core/Lineages';
+  import { awakeningLabel, lineageDef } from '$lib/game/core/defs/lineages';
 
   export let pawn: Pawn;
 

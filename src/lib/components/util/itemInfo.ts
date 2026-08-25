@@ -5,7 +5,7 @@
 import { itemService } from '$lib/game/services/ItemService.js';
 import { recipeService } from '$lib/game/services/RecipeService.js';
 import { resourceObjectService } from '$lib/game/services/ResourceObjectService.js';
-import { SOIL_TIER_NAME, type SoilTier } from '$lib/game/core/Terrains.js';
+import { SOIL_TIER_NAME, type SoilTier } from '$lib/game/core/defs/terrains.js';
 import { TURNS_PER_DAY } from '$lib/game/services/EnvironmentService.js';
 import type { Item, Building } from '$lib/game/core/types.js';
 import buildingsData from '$lib/game/database/world/buildings.jsonc';

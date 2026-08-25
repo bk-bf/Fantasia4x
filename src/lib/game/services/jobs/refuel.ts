@@ -5,9 +5,9 @@
 // queued job can never complete as a no-op. Extracted from JobService (P-4 handler split).
 import type { GameState, Job } from '../../core/types';
 // Gated console shim — see core/log.ts. Silences per-tick log/debug/warn unless gameDebug(true).
-import { gatedConsole as console } from '../../core/log';
+import { gatedConsole as console } from '../../core/util/log';
 import { buildingService } from '../BuildingService';
-import { consumeFromStockpiles } from '../../core/GameState';
+import { consumeFromStockpiles } from '../../core/state/stockpile';
 import * as fuelRules from '../fuelRules';
 
 export function generate(jobs: Job[], gs: GameState): Job[] {

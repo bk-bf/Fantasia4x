@@ -16,7 +16,7 @@
 // offer for this slot, and what sits empty beside it" — because a level with one child instead of six
 // IS the hole, visible without reading a row.
 
-import { gearClassOf } from '../game/core/gearClass';
+import { gearClassOf } from '../game/core/rules/gear/gearClass';
 import itemsData from '../game/database/items/items.jsonc';
 import recipesData from '../game/database/items/recipes.jsonc';
 import buildingsData from '../game/database/world/buildings.jsonc';
@@ -39,7 +39,7 @@ import {
   hasRecipe,
   NODE_TOOL_AGE
 } from './chainAge';
-import { SLOT_LAYER } from '../game/core/armorCoverage';
+import { SLOT_LAYER } from '../game/core/rules/gear/armorCoverage';
 import type { EquipmentSlot } from '../game/core/types';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */

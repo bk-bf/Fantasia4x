@@ -9,26 +9,26 @@ import type {
   ConditionDef,
   ConditionStage
 } from '../core/types';
-import { consumeFromStockpiles } from '../core/GameState';
-import { takeOut, carriedDrinkVessel, hydrationOf } from '../core/vessels';
-import { pawnById } from '../core/pawnIndex';
+import { consumeFromStockpiles } from '../core/state/stockpile';
+import { takeOut, carriedDrinkVessel, hydrationOf } from '../core/rules/gear/vessels';
+import { pawnById } from '../core/state/pawnIndex';
 import { categorizeStats, getStatDescription } from '../entities/Pawns';
 import { pawnStatService } from './PawnStatService';
 import { itemService } from './ItemService';
-import { WORK_CATEGORIES } from '../core/Work';
-import { TICKS_PER_SECOND, SECONDS_PER_TICK, perTick } from '../core/time';
+import { WORK_CATEGORIES } from '../core/defs/work';
+import { TICKS_PER_SECOND, SECONDS_PER_TICK, perTick } from '../core/util/time';
 import { stepBody } from './MovementSystem';
 import { occupancyService } from './OccupancyService';
 import conditionsData from '../database/pawns/conditions.jsonc';
-import { NEEDS_DB, needNum } from '../core/needsDefs';
-import { moodEffect, MOOD_BASE } from '../core/moodEffects';
+import { NEEDS_DB, needNum } from '../core/defs/needs';
+import { moodEffect, MOOD_BASE } from '../core/defs/moods';
 import {
   getConditionCurrentStage,
   conditionNeedMultipliers,
   getConditionDefById
-} from '../core/needs';
-import { amenityAt } from '../core/buildingAmenity';
-import { effectiveMood, moodModifierValue } from '../core/Social';
+} from '../core/rules/body/conditions';
+import { amenityAt } from '../core/defs/amenities';
+import { effectiveMood, moodModifierValue } from '../core/rules/social/social';
 import {
   getAmbientLight,
   weatherEffects,
@@ -43,7 +43,7 @@ import {
 } from './EnvironmentService';
 // Gated console shim — see core/log.ts. Silences per-tick log/debug/warn unless
 // gameDebug(true); console.error still surfaces.
-import { gatedConsole as console } from '../core/log';
+import { gatedConsole as console } from '../core/util/log';
 
 // conditions.jsonc holds persistent and transient conditions; `pawn.transientConditions`
 // references the transient ones — pick them out by the `duration` discriminant.

@@ -1,7 +1,7 @@
 // Live entities (mobs/animals) and the Pawn model. Split out of core/types.ts (P-4); re-exported
 // via the barrel.
 
-import type { Aptitudes } from '../aptitudes';
+import type { Aptitudes } from '../rules/body/aptitudes';
 import type { EntityStats, StatKey, GrowthOffer, LineagePath } from './culture';
 import type { EntityNeeds, EntityCondition, Injury, LimbState } from './health';
 import type { PawnInventory, PawnEquipment, EquipmentSlot } from './items';

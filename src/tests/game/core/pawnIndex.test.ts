@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { pawnById } from '$lib/game/core/pawnIndex';
+import { pawnById } from '$lib/game/core/state/pawnIndex';
 import type { Pawn } from '$lib/game/core/types';
 
 /**

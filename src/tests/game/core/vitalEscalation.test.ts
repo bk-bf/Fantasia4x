@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { detectVitalEscalations, snapshotVitalStages } from '$lib/game/core/needs';
+import { detectVitalEscalations, snapshotVitalStages } from '$lib/game/core/rules/body/conditions';
 import type { EntityCondition } from '$lib/game/core/types';
 
 /**

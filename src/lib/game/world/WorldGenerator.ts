@@ -9,10 +9,10 @@ import {
   pickSubterrain,
   pickChar,
   getWaterLevel
-} from '../core/Terrains';
+} from '../core/defs/terrains';
 import { resourceGeneratorService } from '../services/ResourceGeneratorService';
 import { biomeBaseMoisture, baseMoistureFromWater } from '../services/EnvironmentService';
-import { makeSeededRng } from '../core/rng';
+import { makeSeededRng } from '../core/util/rng';
 
 // Noise constants ported from Celestia noise_generator.gd
 const TERRAIN_FREQUENCY = 0.005;

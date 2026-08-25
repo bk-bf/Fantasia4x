@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { SeededRng } from '$lib/game/core/rng';
+import { SeededRng } from '$lib/game/core/util/rng';
 import type { WorldTile, WeatherState, EntityCondition } from '$lib/game/core/types';
 import {
   ambientWind,
@@ -11,7 +11,7 @@ import {
   advanceWeatherForDay,
   type ThermalSample
 } from '$lib/game/services/EnvironmentService';
-import { driveWindchill, getConditionCurrentStage } from '$lib/game/core/needs';
+import { driveWindchill, getConditionCurrentStage } from '$lib/game/core/rules/body/conditions';
 
 // Graded wind: five degrees (slightly→extremely windy) drive the staged `windchilled` condition;
 // roofs and the lee of impassable tiles (walls/mountains) shelter a tile from the wind.

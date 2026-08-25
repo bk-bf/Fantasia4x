@@ -11,7 +11,7 @@
   import type { Item, ItemInstance, Pawn } from '$lib/game/core/types';
   import { itemService } from '$lib/game/services/ItemService';
   import { gameState } from '$lib/stores/gameState';
-  import { servingL, vesselOf } from '$lib/game/core/vessels';
+  import { servingL, vesselOf } from '$lib/game/core/rules/gear/vessels';
 
   let { pawn }: { pawn: Pawn } = $props();
 

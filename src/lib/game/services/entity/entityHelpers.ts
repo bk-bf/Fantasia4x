@@ -2,27 +2,27 @@
 // lifecycle modules. Extracted from EntityService (P-4); converted from class methods to free
 // functions (the class had no instance state but `idCounter`, so `this.` simply dropped away).
 import type { GameState, Mob, Pawn, WorldTile } from '../../core/types';
-import { getCreatureById, type CreatureDefinition } from '../../core/Creatures';
-import { pawnById } from '../../core/pawnIndex';
-import { manhattan, chebyshev } from '../../core/distance';
-import { SECONDS_PER_TICK, ticksFromSeconds } from '../../core/time';
-import { getNightVision } from '../../core/vision';
+import { getCreatureById, type CreatureDefinition } from '../../core/defs/creatures';
+import { pawnById } from '../../core/state/pawnIndex';
+import { manhattan, chebyshev } from '../../core/util/distance';
+import { SECONDS_PER_TICK, ticksFromSeconds } from '../../core/util/time';
+import { getNightVision } from '../../core/rules/body/vision';
 import {
   detectionScore,
   detectionChance,
   STEALTH_CHECK_INTERVAL_S,
   STEALTH_CHECK_JITTER_S,
   STEALTH_FORGET_S
-} from '../../core/stealth';
+} from '../../core/rules/body/stealth';
 import { pawnStatService } from '../PawnStatService';
 import { stepBody, seedMidCrossClaims } from '../MovementSystem';
 import { resourceObjectService } from '../ResourceObjectService';
 import { buildSharedSoftBlockedGrid, pathfinderService } from '../PathfinderService';
 import { occupancyService } from '../OccupancyService';
-import { hasLineOfSight } from '../../core/lineOfSight';
+import { hasLineOfSight } from '../../core/util/lineOfSight';
 import { reachable } from './connectivity';
-import { simLog, isVerboseLogging } from '../../core/logSink';
-import { rng } from '../../core/rng';
+import { simLog, isVerboseLogging } from '../../core/util/logSink';
+import { rng } from '../../core/util/rng';
 import {
   type TileFoodKind,
   WILD_FORAGE_RESOURCE_IDS,

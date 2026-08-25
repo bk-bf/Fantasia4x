@@ -1,0 +1,245 @@
+import type { ActivityLogEntry, CombatTurnEntry, LogCategory } from '../defs/events';
+
+/**
+ * A lean structured log entry for the unified log pipeline (combat/work/event narrative still use
+ * the richer `logActivity`). Routed by `category` to the in-game debug tab + `.debug/<category>.log`.
+ */
+export interface LogEventInput {
+  category: LogCategory;
+  severity?: ActivityLogEntry['severity'];
+  turn: number;
+  message: string;
+  data?: Record<string, unknown>;
+}
+
+/**
+ * P-3: log/feedback sink for the simulation layer.
+ *
+ * Services and systems (Combat, EntityService, pawn state machine) emit chronicle entries and
+ * floating combat text through this interface instead of importing the Svelte stores directly —
+ * which would invert the layer direction (sim → stores) and tie headless sims/tests to the UI.
+ * The store layer registers the real sink at startup (see `stores/simLogBridge.ts`); headless
+ * runs keep the no-op default, so nothing logs unless a sink is wired in.
+ */
+
+/** Kind of floating combat label — mirrors the renderer's combat-feedback channel. */
+export type CombatTextKind =
+  | 'damage'
+  | 'crit'
+  | 'miss'
+  | 'dodge'
+  | 'bleed'
+  | 'knockdown'
+  // A bone-break event label ("Fractured!") — its own kind so it sizes with the other status floaters
+  // (10px, like dodge) instead of borrowing `crit`'s 14px damage-number emphasis.
+  | 'fracture'
+  // A data-driven condition-onset label (name from conditions.jsonc); colour comes via `color`.
+  | 'condition'
+  // SOCIAL-LAYER: a conversation line spoken over a pawn's head — rendered as a speech-bubble
+  // float with a longer dwell than the rising combat numbers.
+  | 'social';
+
+/** A world-space floating-text request (tile coordinates, never pixels). */
+export interface CombatTextRequest {
+  worldX: number;
+  worldY: number;
+  text: string;
+  kind: CombatTextKind;
+  /** Explicit CSS colour (used by `kind: 'condition'`, whose colour is data-driven from
+   *  conditions.jsonc rather than a fixed per-kind CSS class). Ignored by the fixed combat kinds. */
+  color?: string;
+  /** Extra vertical pixel offset applied on top of the tile→screen position. Lets a secondary
+   *  cue (a bleed/knockdown label) stack BELOW the damage number that shares the same tile and
+   *  spawn instant, instead of rising on top of it and hiding the number. */
+  dy?: number;
+}
+
+/** A visual lunge request: nudge the attacker's glyph toward the struck tile and back. */
+export interface CombatLungeRequest {
+  attackerId: string;
+  /** Unit direction toward the target (tile space). */
+  dirX: number;
+  dirY: number;
+}
+
+/** A world-space combat SOUND cue (tile coords) — a weapon swing or a condition onset. The renderer's
+ *  audio layer plays the clip set for `sound` at a volume scaled by zoom + viewport proximity. */
+export interface CombatSoundRequest {
+  /** Combat sound-id (audio/manifest.ts `COMBAT_SFX`): weapon archetype (slash/blunt/…) or condition
+   *  cue (knockdown/fracture/…). */
+  sound: string;
+  worldX: number;
+  worldY: number;
+}
+
+/** A ranged projectile to animate from shooter tile → target tile (visual only; the hit is already
+ *  resolved hitscan). `effect` selects the particle style (from the ammo/weapon `projectile` field). */
+export interface CombatProjectileRequest {
+  fromX: number;
+  fromY: number;
+  toX: number;
+  toY: number;
+  effect: string; // 'arrow' | 'bolt' | 'stone' | 'spear'
+}
+
+export interface SimLogSink {
+  /** Append a raw chronicle entry; returns the generated entry id. */
+  logActivity(entry: Omit<ActivityLogEntry, 'id' | 'timestamp'>): string;
+
+  /** Append a lean structured diagnostic entry (perf/ai/needs/job/system) to the unified log. */
+  logEvent(e: LogEventInput): void;
+
+  // ----- combat (systems/Combat) -----
+  logCombatSwing(
+    attackerId: string,
+    attackerName: string,
+    defenderId: string,
+    defenderName: string,
+    turn: number,
+    focusX: number,
+    focusY: number,
+    swing: CombatTurnEntry
+  ): void;
+  logCombatKill(
+    attackerId: string,
+    attackerName: string,
+    defenderId: string,
+    defenderName: string,
+    turn: number,
+    focusX: number,
+    focusY: number,
+    weapon?: string
+  ): void;
+  /** Push a floating combat label for the renderer. */
+  pushCombatText(req: CombatTextRequest): void;
+  /** Push an attacker-glyph lunge for the renderer (visual only). */
+  pushAttackLunge(req: CombatLungeRequest): void;
+  /** Push a combat sound cue (weapon swing / condition onset) for the renderer's audio layer. */
+  pushCombatSound(req: CombatSoundRequest): void;
+  /** Push a ranged projectile to animate shooter→target (visual only). */
+  pushProjectile(req: CombatProjectileRequest): void;
+
+  // ----- entities (services/EntityService) -----
+  logEntityDeath(
+    entityId: string,
+    entityName: string,
+    cause: string,
+    turn: number,
+    focusX: number,
+    focusY: number
+  ): void;
+
+  /** A mob just SPOTTED a colonist (newly entered Alerted on a pawn) — drives the main thread's
+   *  auto-pause + a pulsing chronicle alert. Fired once per alert episode, not every tick. */
+  threatAlert(
+    mobId: string,
+    mobName: string,
+    pawnName: string,
+    turn: number,
+    focusX: number,
+    focusY: number
+  ): void;
+
+  /** A colonist's malnutrition/dehydration just ESCALATED to a worse stage — drives a pulsing
+   *  chronicle warning + the colony-alert bugle. Fired once per stage graduation, not every tick. */
+  vitalAlert(
+    pawnId: string,
+    pawnName: string,
+    vital: 'malnutrition' | 'dehydration',
+    stageLabel: string,
+    turn: number,
+    focusX: number,
+    focusY: number
+  ): void;
+
+  /** A colonist DIED — drives the main thread's auto-pause (autoPauseOnDeath) + a pulsing chronicle
+   *  alert + the colony-alert bugle. Fired once per death from the shared death finaliser. */
+  pawnDeath(
+    pawnId: string,
+    pawnName: string,
+    cause: string,
+    turn: number,
+    focusX: number,
+    focusY: number
+  ): void;
+}
+
+/** Default no-op sink: a headless sim (and the test suite) logs nothing until a real sink is set. */
+const noopSink: SimLogSink = {
+  logActivity: () => '',
+  logEvent: () => {},
+  logCombatSwing: () => {},
+  logCombatKill: () => {},
+  pushCombatText: () => {},
+  pushAttackLunge: () => {},
+  pushCombatSound: () => {},
+  pushProjectile: () => {},
+  logEntityDeath: () => {},
+  threatAlert: () => {},
+  vitalAlert: () => {},
+  pawnDeath: () => {}
+};
+
+/**
+ * The active sink. Exported as a live binding so call sites read the current value each time —
+ * imports captured before `setSimLogSink` runs still resolve to the registered sink at call time.
+ */
+export let simLog: SimLogSink = noopSink;
+
+/** Register the real sink (called once from the store layer at startup). */
+export function setSimLogSink(sink: SimLogSink): void {
+  simLog = sink;
+}
+
+/**
+ * Verbose-logging gate. High-volume per-tick traces (per-pawn needs/AI decisions, entity snapshots)
+ * are emitted ONLY under `--debug` (VITE_DEBUG_MODE) or the standalone `--log` (VITE_DEBUG_LOG) flag,
+ * which also surfaces the in-game DEBUG log tab. In a normal run — and crucially under `--profiler`
+ * (which enables neither) — they cost nothing: `vlog` returns before building the message, so the sim
+ * profiles clean and there's no firehose. To watch the log during a profiler/electron run, opt in
+ * explicitly with `--log`. Light perf logging (the 1 Hz TPS sampler) is separate and always on.
+ *
+ * The build flag is the FLOOR; the in-game Settings → Debug mode toggle can also turn it on at runtime
+ * in a shipped/`--play` build (so a player can capture the same traces without a debug build). The
+ * toggle drives `setVerboseLogging`, which is mirrored into the sim worker too (see simWorkerClient /
+ * sim.worker `setVerbose`). It's a live binding, so call sites reading `LOG_VERBOSE` see toggles
+ * immediately. OFF by default — normal play stays firehose-free.
+ */
+const BUILD_VERBOSE: boolean =
+  import.meta.env.VITE_DEBUG_MODE === 'true' || import.meta.env.VITE_DEBUG_LOG === 'true';
+
+export let LOG_VERBOSE: boolean = BUILD_VERBOSE;
+
+/** Runtime override for the verbose gate (Settings → Debug mode). ORs with the build flag, so a
+ *  `--debug`/`--log` build stays verbose even when the toggle is off. Per module instance — the main
+ *  thread and the sim worker each call this against their own copy. */
+export function setVerboseLogging(on: boolean): void {
+  LOG_VERBOSE = on || BUILD_VERBOSE;
+}
+
+/** Live read of the verbose gate. Prefer this over importing `LOG_VERBOSE` at call sites that GUARD
+ *  expensive message construction (`if (isVerboseLogging()) …`): a function call always reflects the
+ *  latest `setVerboseLogging`, with no dependence on ES-module live-binding being preserved through
+ *  bundling. */
+export function isVerboseLogging(): boolean {
+  return LOG_VERBOSE;
+}
+
+/**
+ * Gated verbose log. No-op (and the message thunk is never invoked) unless `LOG_VERBOSE`. Pass a
+ * thunk for hot-path callers so the string is only built when verbose logging is actually on.
+ */
+export function vlog(
+  category: LogCategory,
+  turn: number,
+  message: string | (() => string),
+  severity: ActivityLogEntry['severity'] = 'info'
+): void {
+  if (!LOG_VERBOSE) return;
+  simLog.logEvent({
+    category,
+    severity,
+    turn,
+    message: typeof message === 'function' ? message() : message
+  });
+}

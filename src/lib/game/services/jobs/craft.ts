@@ -13,15 +13,15 @@ import type {
   PlacedBuilding
 } from '../../core/types';
 // Gated console shim — see core/log.ts. Silences per-tick log/debug/warn unless gameDebug(true).
-import { gatedConsole as console } from '../../core/log';
+import { gatedConsole as console } from '../../core/util/log';
 import { itemService } from '../ItemService';
 import { recipeService } from '../RecipeService';
 import { pawnStatService } from '../PawnStatService';
 import { buildingService } from '../BuildingService';
 import { craftDiscipline, disciplineParent } from './craftDiscipline';
-import { rollCraftQuality, qualityMultiplier } from '../../core/itemQuality';
-import { rollFamed, rollFamedIdentity } from '../../core/famedNames';
-import { itemDefById } from '../../core/itemDefs';
+import { rollCraftQuality, qualityMultiplier } from '../../core/rules/gear/itemQuality';
+import { rollFamed, rollFamedIdentity } from '../../core/gen/famedNames';
+import { itemDefById } from '../../core/defs/items';
 import {
   defaultFilterFor,
   heldQuantity,
@@ -29,16 +29,16 @@ import {
   putIn,
   takeOut,
   vesselOf
-} from '../../core/vessels';
+} from '../../core/rules/gear/vessels';
 import { memoryService } from '../MemoryService';
-import { aggregateMaterialMods } from '../../core/materialProperties';
+import { aggregateMaterialMods } from '../../core/defs/materials';
 import {
   absorbDropIfOnStockpileTile,
   reserveForOrder,
   releaseReservation,
   withDrops
-} from '../../core/GameState';
-import { rng } from '../../core/rng';
+} from '../../core/state/stockpile';
+import { rng } from '../../core/util/rng';
 import { stationTileFor, orderSupplied } from './staging';
 import { wearWorkingPawnTool } from './harvest';
 

@@ -8,8 +8,8 @@ import buildingsData from '$lib/game/database/world/buildings.jsonc';
 import conditionsData from '$lib/game/database/pawns/conditions.jsonc';
 import type { Item } from '$lib/game/core/types';
 import { AGE_CEILING, AGE_NAMES, blameStation, chainAgeOf } from '$lib/dev/chainAge';
-import { gearClassOf } from '$lib/game/core/gearClass';
-import { vesselAccepts } from '$lib/game/core/vessels';
+import { gearClassOf } from '$lib/game/core/rules/gear/gearClass';
+import { vesselAccepts } from '$lib/game/core/rules/gear/vessels';
 
 // The machine-checkable subset of docs/game/ITEM-RULES.md.
 //

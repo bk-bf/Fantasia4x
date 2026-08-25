@@ -7,10 +7,10 @@ import {
   stepWealthBand,
   WEALTH_BANDS,
   findKingdomRelation
-} from '$lib/game/core/Kingdom';
-import { generateCulturePool, generateCultureRelations } from '$lib/game/core/Culture';
+} from '$lib/game/core/gen/kingdom';
+import { generateCulturePool, generateCultureRelations } from '$lib/game/core/gen/culture';
 import { COLONY_RELATION_ID } from '$lib/game/core/types';
-import { rng } from '$lib/game/core/rng';
+import { rng } from '$lib/game/core/util/rng';
 
 describe('KINGDOMS-TRADE — kingdom pool generation', () => {
   beforeEach(() => rng.reseed(20260712));

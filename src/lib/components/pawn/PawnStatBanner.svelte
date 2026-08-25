@@ -4,7 +4,7 @@
      which adds the name header), plus anywhere else the core attributes are shown. -->
 <script lang="ts">
   import type { Pawn } from '$lib/game/core/types';
-  import { conditionStatMultipliers } from '$lib/game/core/needs';
+  import { conditionStatMultipliers } from '$lib/game/core/rules/body/conditions';
   export let pawn: Pawn;
 
   // Active conditions (shock, malnutrition, hypothermia…) scale the RAW attributes. Show the

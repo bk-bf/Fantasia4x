@@ -4,12 +4,12 @@
 // the building is solid. Extracted from JobService (P-4 handler split).
 import type { GameState, Job } from '../../core/types';
 // Gated console shim — see core/log.ts. Silences per-tick log/debug/warn unless gameDebug(true).
-import { gatedConsole as console } from '../../core/log';
+import { gatedConsole as console } from '../../core/util/log';
 import { buildingService } from '../BuildingService';
 import { pawnStatService } from '../PawnStatService';
 import { buildingSupplied } from './staging';
-import { SUBTERRAINS, SUBTERRAIN_FALLBACK, terrainBlocksSight } from '../../core/Terrains';
-import { markTileDirty } from '../../core/tileDeltas';
+import { SUBTERRAINS, SUBTERRAIN_FALLBACK, terrainBlocksSight } from '../../core/defs/terrains';
+import { markTileDirty } from '../../core/state/tileDeltas';
 import { patchPathfindingWalkable } from '../PathfinderService';
 
 export function generate(jobs: Job[], gs: GameState): Job[] {

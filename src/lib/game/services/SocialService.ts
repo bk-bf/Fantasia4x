@@ -21,7 +21,7 @@ import type {
   RelationEventKind,
   RelationTag
 } from '../core/types';
-import { computePrestige } from '../core/prestige';
+import { computePrestige } from '../core/rules/social/prestige';
 import {
   activeMoodModifiers,
   effectiveMood,
@@ -30,14 +30,14 @@ import {
   seedScore,
   sortedPair,
   stageForScore
-} from '../core/Social';
-import { rng } from '../core/rng';
-import { moodEffect } from '../core/moodEffects';
+} from '../core/rules/social/social';
+import { rng } from '../core/util/rng';
+import { moodEffect } from '../core/defs/moods';
 import { memoryService } from './MemoryService';
-import { simLog } from '../core/logSink';
-import { TICKS_PER_SECOND } from '../core/time';
+import { simLog } from '../core/util/logSink';
+import { TICKS_PER_SECOND } from '../core/util/time';
 import { TURNS_PER_DAY } from './EnvironmentService';
-import { nearGatheringPlace } from '../core/buildingAmenity';
+import { nearGatheringPlace } from '../core/defs/amenities';
 import { pawnStatService } from './PawnStatService';
 import {
   combatBark as pickBark,

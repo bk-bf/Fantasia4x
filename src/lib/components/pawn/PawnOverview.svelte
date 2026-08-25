@@ -9,14 +9,14 @@
     getPawnTaskSummary
   } from '$lib/components/util/pawnUtils';
   import { pawnService } from '$lib/game/services/PawnService';
-  import { effectiveMood } from '$lib/game/core/Social';
-  import { sizeFromHeight } from '$lib/game/core/Culture';
+  import { effectiveMood } from '$lib/game/core/rules/social/social';
+  import { sizeFromHeight } from '$lib/game/core/gen/culture';
   import {
     getBackgroundById,
     describeBackgroundEffects,
     type Background
-  } from '$lib/game/core/Backgrounds';
-  import HoverTip from '$lib/components/UI/HoverTip.svelte';
+  } from '$lib/game/core/defs/backgrounds';
+  import HoverTip from '$lib/components/UI/tooltip/HoverTip.svelte';
   import PawnStance from './PawnStance.svelte';
   import PawnRestPolicy from './PawnRestPolicy.svelte';
   import PawnMedicinePolicy from './PawnMedicinePolicy.svelte';

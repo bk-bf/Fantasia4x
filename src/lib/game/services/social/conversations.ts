@@ -5,9 +5,9 @@
 // SocialService.processDialogTick.
 
 import type { EventMemory, Pawn, PawnRelationship, RelationStage, Season } from '../../core/types';
-import { effectiveMood } from '../../core/Social';
-import { rng } from '../../core/rng';
-import { TICKS_PER_SECOND } from '../../core/time';
+import { effectiveMood } from '../../core/rules/social/social';
+import { rng } from '../../core/util/rng';
+import { TICKS_PER_SECOND } from '../../core/util/time';
 import { TURNS_PER_DAY } from '../EnvironmentService';
 import dialogData from '../../database/social/dialog.jsonc';
 import memoriesData from '../../database/pawns/memories.jsonc';

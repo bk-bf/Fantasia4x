@@ -33,11 +33,11 @@
 import { browser } from '$app/environment';
 import { get } from 'svelte/store';
 import type { GameState, WorldTile } from '$lib/game/core/types';
-import type { ActivityLogEntry } from '$lib/game/core/Events';
-import { TICKS_PER_SECOND } from '$lib/game/core/time';
-import { SUBTERRAINS, SUBTERRAIN_FALLBACK } from '$lib/game/core/Terrains';
-import { ensureWorkSkills } from '$lib/game/core/workExperience';
-import { ensureAptitudes } from '$lib/game/core/aptitudes';
+import type { ActivityLogEntry } from '$lib/game/core/defs/events';
+import { TICKS_PER_SECOND } from '$lib/game/core/util/time';
+import { SUBTERRAINS, SUBTERRAIN_FALLBACK } from '$lib/game/core/defs/terrains';
+import { ensureWorkSkills } from '$lib/game/core/rules/body/workExperience';
+import { ensureAptitudes } from '$lib/game/core/rules/body/aptitudes';
 import { autosaveEnabled } from './uiPrefs';
 
 // ── constants ──────────────────────────────────────────────────────────────

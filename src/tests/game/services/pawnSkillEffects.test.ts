@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { buildScenario } from '$lib/game/headless/Scenario';
 import { HeadlessSession } from '$lib/game/headless/HeadlessSession';
 import { craftWorkCategory, craftDiscipline } from '$lib/game/services/jobs/craftDiscipline';
-import { scaleWeaponQuality } from '$lib/game/core/itemQuality';
+import { scaleWeaponQuality } from '$lib/game/core/rules/gear/itemQuality';
 import { itemService } from '$lib/game/services/ItemService';
 
 /**

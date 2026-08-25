@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import itemsData from '$lib/game/database/items/items.jsonc';
 import recipesData from '$lib/game/database/items/recipes.jsonc';
 import type { EquipmentSlot, Item } from '$lib/game/core/types';
-import { SLOT_COVERAGE } from '$lib/game/core/armorCoverage';
+import { SLOT_COVERAGE } from '$lib/game/core/rules/gear/armorCoverage';
 
 // The armour DB's structural guarantees. Every one of these failed silently at some point: fifteen
 // limb pieces (pauldrons/bracers/greaves at EVERY age) shipped as item definitions with no recipe,

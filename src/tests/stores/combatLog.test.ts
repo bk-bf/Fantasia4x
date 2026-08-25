@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { get } from 'svelte/store';
 import { activityLog, logCombatSwing, logCombatKill, __resetCombatSessions } from '$lib/stores/Log';
-import type { CombatTurnEntry } from '$lib/game/core/Events';
+import type { CombatTurnEntry } from '$lib/game/core/defs/events';
 
 // An engagement is ONE Chronicle entry that accretes every swing, not a fresh line per re-touch.
 function swing(turn: number, hit: boolean, damage = 0): CombatTurnEntry {

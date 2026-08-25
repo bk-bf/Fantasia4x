@@ -9,8 +9,8 @@ import type {
   Kingdom,
   KinKind
 } from '../core/types';
-import { createPawnInventory, createPawnEquipment } from '../core/PawnEquipment';
-import { drawPawnTraits, SPAWN_STAT_CAP } from '../core/Culture';
+import { createPawnInventory, createPawnEquipment } from '../core/rules/gear/equipment';
+import { drawPawnTraits, SPAWN_STAT_CAP } from '../core/gen/culture';
 import {
   type Background,
   rollOrigin,
@@ -18,22 +18,22 @@ import {
   backgroundTraitAffinity,
   applyBackgroundExperience,
   backgroundPrestige
-} from '../core/Backgrounds';
+} from '../core/defs/backgrounds';
 import { createBodyPlanLimbs } from '../systems/Combat';
-import { DEFAULT_PLAN, PART_DEF_MAP, containedParts } from '../core/BodyParts';
-import { SCARRING_CONFIG, makeScarInjury } from '../core/Wounds';
+import { DEFAULT_PLAN, PART_DEF_MAP, containedParts } from '../core/defs/bodyParts';
+import { SCARRING_CONFIG, makeScarInjury } from '../core/defs/wounds';
 import {
   getTraitById,
   resolveTraitGamble,
   rollFlawTrait,
   rollLineageTrait,
   seedAwakeningPaths
-} from '../core/Lineages';
-import { KIN_INVERSE } from '../core/Social';
-import { itemDefById } from '../core/itemDefs';
-import { seedWorkLevels, rollWorkStyle } from '../core/workExperience';
-import { rng } from '../core/rng';
-import { rollAptitudes } from '../core/aptitudes';
+} from '../core/defs/lineages';
+import { KIN_INVERSE } from '../core/rules/social/social';
+import { itemDefById } from '../core/defs/items';
+import { seedWorkLevels, rollWorkStyle } from '../core/rules/body/workExperience';
+import { rng } from '../core/util/rng';
+import { rollAptitudes } from '../core/rules/body/aptitudes';
 
 // Module-level counter for sequential debug IDs across all generated pawns.
 let _pawnDebugIdCounter = 1;

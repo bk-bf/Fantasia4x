@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { computeAptitudeView } from '$lib/components/util/statView';
-import { APTITUDE_IDS } from '$lib/game/core/aptitudes';
+import { APTITUDE_IDS } from '$lib/game/core/rules/body/aptitudes';
 import type { Pawn } from '$lib/game/core/types';
 
 /**

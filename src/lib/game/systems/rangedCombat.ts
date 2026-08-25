@@ -10,7 +10,7 @@
  * per-shot Bresenham `blocksSight` line (`hasLineOfSight`) — NOT the parked WASM fog-of-war raycast.
  */
 import type { Pawn, Mob, Item, ItemInstance, ItemQuality } from '../core/types';
-import { chebyshev } from '../core/distance';
+import { chebyshev } from '../core/util/distance';
 import { itemService } from '../services/ItemService';
 import { pawnStatService } from '../services/PawnStatService';
 
@@ -207,7 +207,7 @@ export function withinSight(dist: number, visionRange: number): boolean {
 }
 
 // Line-of-sight lives in core/lineOfSight.ts (shared with mob AI); re-exported for combat callers.
-export { hasLineOfSight, type SightCell } from '../core/lineOfSight';
+export { hasLineOfSight, type SightCell } from '../core/util/lineOfSight';
 
 /**
  * Base perception-driven sight range. NOTE: `visionRange` is a Pawns.ts ability, NOT a stats.jsonc

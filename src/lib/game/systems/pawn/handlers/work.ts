@@ -1,9 +1,9 @@
 /** pawn/handlers/work — work state handlers, extracted from PawnStateMachine (hotspot step 2). Each
  *  is a plain (pawn, gameState) => GameState function; the dispatcher wires them into the table. */
 import type { GameState, Pawn, Job } from '../../../core/types';
-import { gameLogger } from '../../../dev/gameLogger';
-import { manhattan } from '../../../core/distance';
-import { perTick } from '../../../core/time';
+import { gameLogger } from '../../../debug/gameLogger';
+import { manhattan } from '../../../core/util/distance';
+import { perTick } from '../../../core/util/time';
 import { jobService, BASE_WORK_RATE } from '../../../services/JobService';
 import { pawnStatService } from '../../../services/PawnStatService';
 import { pathfinderService } from '../../../services/PathfinderService';
@@ -35,8 +35,8 @@ import {
   addInstanceToInventory,
   equipDropToPawn,
   carryDropToInventory
-} from '../../../core/PawnEquipment';
-import { withDrops } from '../../../core/GameState';
+} from '../../../core/rules/gear/equipment';
+import { withDrops } from '../../../core/state/stockpile';
 import { handleForcedConsume, handleForcedDrink } from './needs';
 
 /** DRAFTED-JOB-ORDERS §8: force-equip / carry a specific dropped item NOW (an undrafted manual order).

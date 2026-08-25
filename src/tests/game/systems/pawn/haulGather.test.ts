@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { complete as completeHaul, stockpileAcceptsDrop } from '$lib/game/services/jobs/haul';
 import { opportunisticHaulPickup, pickUpFromTile } from '$lib/game/systems/pawn/pawnHauling';
 import { itemService } from '$lib/game/services/ItemService';
-import { ENC_OVERLOAD_FULL } from '$lib/game/core/needs';
+import { ENC_OVERLOAD_FULL } from '$lib/game/core/rules/body/conditions';
 import type { GameState, Pawn, DroppedItem, Job } from '$lib/game/core/types';
 
 // A real-ish pawn so the carry budget (body mass × STRENGTH load fraction) computes. STRENGTH 10, 70 kg body

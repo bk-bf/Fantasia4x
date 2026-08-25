@@ -1,9 +1,9 @@
 import { HeadlessSession } from '$lib/game/headless/HeadlessSession';
 import { buildScenario } from '$lib/game/headless/Scenario';
-import { setSimLogSink } from '$lib/game/core/logSink';
+import { setSimLogSink } from '$lib/game/core/util/logSink';
 import { itemService } from '$lib/game/services/ItemService';
 import { partArmorPoints, partCombatValue } from '$lib/game/systems/Combat';
-import type { CombatTurnEntry } from '$lib/game/core/Events';
+import type { CombatTurnEntry } from '$lib/game/core/defs/events';
 import type { BodyPartId, EntityStats, Pawn } from '$lib/game/core/types';
 
 /**

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { tryWanderStep } from '$lib/game/systems/pawn/pawnHelpers';
-import { rng } from '$lib/game/core/rng';
+import { rng } from '$lib/game/core/util/rng';
 import type { GameState, Pawn } from '$lib/game/core/types';
 
 // Idle pawns amble one tile at a time instead of standing frozen — natural milling, and it

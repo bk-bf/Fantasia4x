@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getMaterialProperty, aggregateMaterialMods } from '$lib/game/core/materialProperties';
+import { getMaterialProperty, aggregateMaterialMods } from '$lib/game/core/defs/materials';
 
 /**
  * §M material properties — a dynamic build/craft material shifts the finished building's / item's

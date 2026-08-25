@@ -3,15 +3,15 @@ import buildingsData from '../database/world/buildings.jsonc';
 import itemsData from '../database/items/items.jsonc';
 import resourcesData from '../database/world/resources.jsonc';
 import type { Item } from '../core/types';
-import { resolveCharSpans } from '../core/Terrains';
-import { buildingDefById } from '../core/buildingDefs';
-import { itemMatchesCostCategory } from '../core/itemDefs';
-import { markTileDirty } from '../core/tileDeltas';
+import { resolveCharSpans } from '../core/defs/terrains';
+import { buildingDefById } from '../core/defs/buildings';
+import { itemMatchesCostCategory } from '../core/defs/items';
+import { markTileDirty } from '../core/state/tileDeltas';
 import { patchPathfindingWalkable } from './PathfinderService';
-import type { CharSpan } from '../core/Terrains';
-import { rng } from '../core/rng';
-import { perTick } from '../core/time';
-import { aggregateMaterialMods } from '../core/materialProperties';
+import type { CharSpan } from '../core/defs/terrains';
+import { rng } from '../core/util/rng';
+import { perTick } from '../core/util/time';
+import { aggregateMaterialMods } from '../core/defs/materials';
 import {
   consumeFromStockpiles,
   addToStockpileZone,
@@ -19,7 +19,7 @@ import {
   colonyToolTier,
   reserveForOrder,
   releaseReservation
-} from '../core/GameState';
+} from '../core/state/stockpile';
 
 const AVAILABLE_BUILDINGS = buildingsData as unknown as Building[];
 const ITEMS_DB = itemsData as unknown as Item[];

@@ -6,21 +6,21 @@
  * back as snapshots (worldMap omitted when unchanged). WASM inits in the worker; save = post the
  * full state on request.
  */
-import { isClientRuntime } from '../core/runtime';
+import { isClientRuntime } from '../core/util/runtime';
 import { pathfinderService } from '../services/PathfinderService';
-import { GameStateManager } from '../core/GameState';
+import { GameStateManager } from '../core/state/GameStateManager';
 import { gameEngine } from '../systems/GameEngineImpl';
-import { rng } from '../core/rng';
+import { rng } from '../core/util/rng';
 import { resetUnreachableJobs } from '../systems/PawnStateMachine';
-import { TICKS_PER_SECOND } from '../core/time';
-import { setSimLogSink, simLog, setVerboseLogging, type SimLogSink } from '../core/logSink';
+import { TICKS_PER_SECOND } from '../core/util/time';
+import { setSimLogSink, simLog, setVerboseLogging, type SimLogSink } from '../core/util/logSink';
 import { applySimCommand } from './commands';
 import { projectSentEntity } from './entityProjection';
 import type { SimLogEvent, EntitySync } from './simProtocol';
-import { drainTileDeltasBudgeted, clearTileDeltas } from '../core/tileDeltas';
-import { carcassConditionByType } from '../core/carcassCondition';
-import { buildingsVisualSig } from '../core/buildingSig';
-import { gameLogger } from '../dev/gameLogger';
+import { drainTileDeltasBudgeted, clearTileDeltas } from '../core/state/tileDeltas';
+import { carcassConditionByType } from '../core/rules/world/carcassCondition';
+import { buildingsVisualSig } from '../core/state/buildingSig';
+import { gameLogger } from '../debug/gameLogger';
 import type { GameState, Pawn, Mob, WorldTile, DroppedItem } from '../core/types';
 
 const TICK_MS = 1000 / TICKS_PER_SECOND;

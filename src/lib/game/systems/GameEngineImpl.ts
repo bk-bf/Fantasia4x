@@ -5,14 +5,14 @@ import type {
   SystemInteractionResult
 } from './GameEngine';
 import type { GameState, WorldTile } from '../core/types';
-import { GameStateManager } from '../core/GameState';
+import { GameStateManager } from '../core/state/GameStateManager';
 import {
   peekRegrowthTurn,
   popRegrowth,
   pushRegrowth,
   minCooldownExpiry,
   rebuildRegrowthQueue
-} from '../core/regrowthQueue';
+} from '../core/rules/world/regrowthQueue';
 // NB: the engine no longer imports the Svelte store — its per-tick output goes through an
 // injected `outputSink` (set by the store on the main thread; postMessage in the sim worker).
 // This severs the only engine→store coupling, the prerequisite for running the sim off-thread
@@ -24,7 +24,7 @@ import { pawnService } from '../services/PawnService';
 import { pawnGrowthService } from '../services/PawnGrowthService';
 import { buildingService } from '../services/BuildingService';
 import { researchService } from '../services/ResearchService';
-import { WORK_CATEGORIES } from '../core/Work';
+import { WORK_CATEGORIES } from '../core/defs/work';
 import buildingsData from '../database/world/buildings.jsonc';
 
 import { pawnStateMachineService, reapDeadPawns } from './PawnStateMachine';
@@ -44,7 +44,7 @@ import {
 } from './pawn/carry';
 import { tendPatient, hasUntendedWound, TEND_WORK } from '../services/jobs/caretake';
 import { MIN_FORAGE_GROWTH } from '../services/jobs/filters';
-import { equipDropToPawn, carryDropToInventory } from '../core/PawnEquipment';
+import { equipDropToPawn, carryDropToInventory } from '../core/rules/gear/equipment';
 import { jobService, BASE_WORK_RATE } from '../services/JobService';
 import { pawnStatService } from '../services/PawnStatService';
 import { resourceObjectService } from '../services/ResourceObjectService';
@@ -53,7 +53,7 @@ import { readMobPathStats } from '../services/entity/entityHelpers';
 import { maybeRebuildConnectivity } from '../services/entity/connectivity';
 import { combatService } from './Combat';
 import { getRangedWeapon, effectiveRangedRange, hasViableAmmo } from './rangedCombat';
-import { TICKS_PER_SECOND, ticksFromSeconds, perTick } from '../core/time';
+import { TICKS_PER_SECOND, ticksFromSeconds, perTick } from '../core/util/time';
 import {
   buildPathfindingGridsSoftBlocked,
   patchPathfindingWalkable,
@@ -61,11 +61,11 @@ import {
 } from '../services/PathfinderService';
 import { occupancyService } from '../services/OccupancyService';
 import { assignDraftMovePath } from '../services/draftMovePath';
-import { isGameDebug, gatedConsole } from '../core/log';
+import { isGameDebug, gatedConsole } from '../core/util/log';
 import type { WorkCategory } from '../core/types';
 import type { Pawn, PawnOrder } from '../core/types';
 import { advanceJobOneTick } from './pawn/handlers/work';
-import { rng } from '../core/rng';
+import { rng } from '../core/util/rng';
 import {
   seasonForTurn,
   dayIndexForTurn,
@@ -88,17 +88,17 @@ import {
   fermentTempRate
 } from '../services/EnvironmentService';
 import { zoneTileKeys } from '../services/DesignationService';
-import { soilTierForTile } from '../core/Terrains';
-import { cropHealth, cropLossPerDay } from '../core/cropHealth';
-import { markTileDirty } from '../core/tileDeltas';
+import { soilTierForTile } from '../core/defs/terrains';
+import { cropHealth, cropLossPerDay } from '../core/rules/world/cropHealth';
+import { markTileDirty } from '../core/state/tileDeltas';
 import {
   RESOURCE_VISIBLE_GROWTH,
   rebuildWildGrowth,
   wildGrowthSize,
   wildGrowthEntries,
   removeWildGrowth
-} from '../core/wildGrowth';
-import { simLog, vlog, isVerboseLogging } from '../core/logSink';
+} from '../core/rules/world/wildGrowth';
+import { simLog, vlog, isVerboseLogging } from '../core/util/logSink';
 
 const AVAILABLE_BUILDINGS = buildingsData as unknown as import('../core/types').Building[];
 

@@ -4,7 +4,7 @@ import {
   cropLossPerDay,
   cropGrowthDirection,
   type CropWindow
-} from '$lib/game/core/cropHealth';
+} from '$lib/game/core/rules/world/cropHealth';
 
 // A hardy cold-spring crop (rye-like) vs. its window.
 const win: CropWindow = { minSoil: 1, minTemp: -8, maxTemp: 30, minMoisture: 25, maxMoisture: 70 };

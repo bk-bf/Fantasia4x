@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { combatService } from '$lib/game/systems/Combat';
 import { healWounds } from '$lib/game/systems/PawnStateMachine';
-import { rollWoundClotting, healLimbs } from '$lib/game/core/Wounds';
+import { rollWoundClotting, healLimbs } from '$lib/game/core/defs/wounds';
 import { needsRecovery } from '$lib/game/systems/pawn/pawnHelpers';
 import { selectIdleNeed } from '$lib/game/systems/pawn/needSelection';
 import {
@@ -12,9 +12,9 @@ import {
 import { stepHunger } from '$lib/game/services/entity/entityLifecycle';
 import { applyConsumable } from '$lib/game/entities/Pawns';
 import { makeMob } from '$lib/game/services/entity/entitySpawning';
-import { getCreatureById } from '$lib/game/core/Creatures';
-import { buildHealthModel } from '$lib/components/UI/gameCanvas/selectionCard';
-import { rng } from '$lib/game/core/rng';
+import { getCreatureById } from '$lib/game/core/defs/creatures';
+import { buildHealthModel } from '$lib/components/UI/canvas/selectionCard';
+import { rng } from '$lib/game/core/util/rng';
 import type { GameState, Injury, Pawn } from '$lib/game/core/types';
 
 // Wounds mend at full rate only while resting; untended serious wounds stall; dressing quality is shelter-gated. Drives the real services — no mocks.

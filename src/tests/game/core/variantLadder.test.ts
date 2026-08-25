@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { CREATURES, getCreatureById } from '$lib/game/core/Creatures';
-import { getLootPool, validateLootItemIds } from '$lib/game/core/LootPools';
+import { CREATURES, getCreatureById } from '$lib/game/core/defs/creatures';
+import { getLootPool, validateLootItemIds } from '$lib/game/core/defs/loot';
 import { itemService } from '$lib/game/services/ItemService';
-import { isBodyPlan } from '$lib/game/core/BodyParts';
-import { generateBossName } from '$lib/game/core/BossNames';
+import { isBodyPlan } from '$lib/game/core/defs/bodyParts';
+import { generateBossName } from '$lib/game/core/gen/bossNames';
 import {
   makeMob,
   TIER_SPAWN_WEIGHT,

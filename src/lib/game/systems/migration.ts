@@ -2,9 +2,9 @@
 // completed buildings. Parks candidates on `GameState.pendingEvent`; empty wave returns state unchanged.
 
 import type { GameState } from '../core/types';
-import { rng } from '../core/rng';
+import { rng } from '../core/util/rng';
 import { generateColonyPawns, remapKinIds } from '../entities/Pawns';
-import { simLog } from '../core/logSink';
+import { simLog } from '../core/util/logSink';
 import events from '../database/social/events.jsonc';
 
 const CFG = (

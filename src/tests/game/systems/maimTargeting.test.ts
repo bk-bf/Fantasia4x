@@ -1,10 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { HeadlessSession } from '$lib/game/headless/HeadlessSession';
 import { buildScenario } from '$lib/game/headless/Scenario';
-import { setSimLogSink } from '$lib/game/core/logSink';
+import { setSimLogSink } from '$lib/game/core/util/logSink';
 import { pawnStatService } from '$lib/game/services/PawnStatService';
 import { partLethality, partIncapacitation, PART_DEF_MAP } from '$lib/game/systems/Combat';
-import type { CombatTurnEntry } from '$lib/game/core/Events';
+import type { CombatTurnEntry } from '$lib/game/core/defs/events';
 import type { BodyPartId, Mob, Pawn } from '$lib/game/core/types';
 
 /**

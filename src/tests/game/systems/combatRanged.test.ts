@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { combatService } from '$lib/game/systems/Combat';
-import { rng } from '$lib/game/core/rng';
+import { rng } from '$lib/game/core/util/rng';
 import {
   getRangedWeapon,
   pickAmmo,
@@ -16,7 +16,7 @@ import {
   getGrip,
   hasLineOfSight
 } from '$lib/game/systems/rangedCombat';
-import { getEquipmentSlot } from '$lib/game/core/PawnEquipment';
+import { getEquipmentSlot } from '$lib/game/core/rules/gear/equipment';
 import { itemService } from '$lib/game/services/ItemService';
 import { recipeService } from '$lib/game/services/RecipeService';
 import type { GameState, Mob, Pawn } from '$lib/game/core/types';

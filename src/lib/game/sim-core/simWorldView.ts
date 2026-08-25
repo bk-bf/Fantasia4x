@@ -15,7 +15,7 @@
  * R0 is the data model only. The tick logic (movement/needs/FSM/combat) is ported onto these
  * buffers in R2; the renderer snapshot becomes a view of them in R3.
  */
-import { isClientRuntime } from '../core/runtime';
+import { isClientRuntime } from '../core/util/runtime';
 
 // ── Field-plane indices — MUST match sim-core/src/lib.rs ───────────────────────────────────────
 // f32 plane

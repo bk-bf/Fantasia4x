@@ -11,10 +11,10 @@ import type { GameState, Pawn, ItemInstance } from '../../core/types';
 
 import ITEMS_DATABASE from '../../database/items/items.jsonc';
 import RARITIES from '../../database/items/rarities.jsonc';
-import { consumeFromStockpiles } from '../../core/GameState';
-import { manhattan } from '../../core/distance';
-import { ticksFromSeconds } from '../../core/time';
-import { rng } from '../../core/rng';
+import { consumeFromStockpiles } from '../../core/state/stockpile';
+import { manhattan } from '../../core/util/distance';
+import { ticksFromSeconds } from '../../core/util/time';
+import { rng } from '../../core/util/rng';
 import { edibleNutrition, resolveAllowedFoodIds, isCarcass } from '../../services/foodRules';
 
 // ── §F8 alcohol (mood good) ──────────────────────────────────────────────────────────────────────

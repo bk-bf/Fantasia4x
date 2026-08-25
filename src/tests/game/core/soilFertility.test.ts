@@ -5,7 +5,7 @@ import {
   SOIL_TIER_NAME,
   SOIL_ITEM_BY_TIER,
   SUBTYPE_BY_SOIL_TIER
-} from '$lib/game/core/Terrains';
+} from '$lib/game/core/defs/terrains';
 import { itemService } from '$lib/game/services/ItemService';
 
 // PRODUCTION-CHAIN-II §F P1 — fertility is a 0–100% value (5 steps), depicted like wetness, derived

@@ -13,7 +13,7 @@
     WORST_TIERS,
     NON_SKILL_TASKS,
     type CellRank
-  } from '$lib/utils/workUtils';
+  } from '$lib/components/util/workUtils';
 
   interface Props {
     pawn: Pawn;

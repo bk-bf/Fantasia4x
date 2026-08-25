@@ -1,10 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { generateCulture } from '$lib/game/core/Culture';
+import { generateCulture } from '$lib/game/core/gen/culture';
 import { generatePawns } from '$lib/game/entities/Pawns';
 import { combatService } from '$lib/game/systems/Combat';
 import { pawnStatService } from '$lib/game/services/PawnStatService';
-import { createDefaultBodyParts } from '$lib/game/core/BodyParts';
-import { rng } from '$lib/game/core/rng';
+import { createDefaultBodyParts } from '$lib/game/core/defs/bodyParts';
+import { rng } from '$lib/game/core/util/rng';
 import {
   BUILD_PROFILES,
   FIT_BUILDS,

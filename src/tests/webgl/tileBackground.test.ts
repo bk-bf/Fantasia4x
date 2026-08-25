@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { buildGameGrid } from '$lib/webgl/fantasia-world';
-import { SUBTERRAINS } from '$lib/game/core/Terrains';
+import { SUBTERRAINS } from '$lib/game/core/defs/terrains';
 import type { WorldTile } from '$lib/game/core/types';
 
 /**

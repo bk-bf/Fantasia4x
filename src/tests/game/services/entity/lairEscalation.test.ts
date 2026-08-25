@@ -1,13 +1,13 @@
 import { describe, it, beforeEach, expect } from 'vitest';
 import { pickEscalatedCreature, tickLairs } from '$lib/game/services/entity/entitySpawning';
-import { rng } from '$lib/game/core/rng';
+import { rng } from '$lib/game/core/util/rng';
 import {
   LAIR_TICK_INTERVAL,
   LAIR_MAX_ESCALATION,
   STARTING_BUBBLE_TURNS
 } from '$lib/game/services/entity/entityConstants';
 import type { GameState } from '$lib/game/core/types';
-import type { CreatureDefinition } from '$lib/game/core/Creatures';
+import type { CreatureDefinition } from '$lib/game/core/defs/creatures';
 
 const wolf = (tier: number) =>
   ({ id: `w${tier}`, species: 'wolf', tier }) as unknown as CreatureDefinition;

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import GameCanvas from '$lib/components/UI/GameCanvas.svelte';
+  import GameCanvas from '$lib/components/UI/canvas/GameCanvas.svelte';
 </script>
 
 <div class="map-wrap">

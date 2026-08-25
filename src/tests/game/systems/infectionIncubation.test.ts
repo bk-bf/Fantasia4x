@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { pawnStateMachineService } from '$lib/game/systems/PawnStateMachine';
-import { CARE_CONFIG } from '$lib/game/core/Wounds';
+import { CARE_CONFIG } from '$lib/game/core/defs/wounds';
 import type { GameState, Pawn, Injury } from '$lib/game/core/types';
 
 // A fresh open+untended wound must not fester until it is `infectionIncubationTicks` old (~2.5 in-game days).

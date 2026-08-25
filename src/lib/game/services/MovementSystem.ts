@@ -13,7 +13,7 @@
  */
 
 import type { WorldTile } from '../core/types';
-import { TICKS_PER_SECOND, ticksFromSeconds } from '../core/time';
+import { TICKS_PER_SECOND, ticksFromSeconds } from '../core/util/time';
 
 // ── Shared interface ──────────────────────────────────────────────────────────
 

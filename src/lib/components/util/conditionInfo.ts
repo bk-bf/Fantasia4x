@@ -15,7 +15,7 @@ import type {
 import conditionsData from '$lib/game/database/pawns/conditions.jsonc';
 import { gameHoursFromTicks } from '$lib/game/services/EnvironmentService';
 import { pawnStatService } from '$lib/game/services/PawnStatService';
-import { getNightVision } from '$lib/game/core/vision';
+import { getNightVision } from '$lib/game/core/rules/body/vision';
 import { workAxisLabel } from '$lib/components/util/pawnUtils';
 
 /** A remaining tick duration shown as coarse IN-GAME time — the unit the clock and HealthReadout use —

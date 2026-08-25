@@ -8,21 +8,21 @@ import type {
   ItemQuality,
   ItemInstance
 } from '../core/types';
-import { qualityPrefix } from '../core/itemQuality';
-import { itemDefById, itemMatchesCostCategory } from '../core/itemDefs';
-import { usedCapacityL, usedWeightKg, vesselOf } from '../core/vessels';
+import { qualityPrefix } from '../core/rules/gear/itemQuality';
+import { itemDefById, itemMatchesCostCategory } from '../core/defs/items';
+import { usedCapacityL, usedWeightKg, vesselOf } from '../core/rules/gear/vessels';
 import {
   decayAll,
   normalizeConditions,
   carcassConditionByType as computeCarcassConditionByType
-} from '../core/carcassCondition';
+} from '../core/rules/world/carcassCondition';
 import {
   consumeFromStockpiles,
   addToStockpileZone,
   withDrops,
   availableQuantityFromDrops,
   colonyToolTier
-} from '../core/GameState';
+} from '../core/state/stockpile';
 import { recipeService } from './RecipeService';
 import { buildingService, weatherExposureFactor } from './BuildingService';
 import {
@@ -36,12 +36,12 @@ import {
 } from './EnvironmentService';
 import itemsData from '../database/items/items.jsonc';
 import buildingsData from '../database/world/buildings.jsonc';
-import { SECONDS_PER_TICK } from '../core/time';
-import { chebyshev } from '../core/distance';
-import { sizeFromHeight } from '../core/Culture';
+import { SECONDS_PER_TICK } from '../core/util/time';
+import { chebyshev } from '../core/util/distance';
+import { sizeFromHeight } from '../core/gen/culture';
 // Gated console shim (ADR-011): per-tick/per-action log/debug/info/warn are silent unless
 // gameDebug(true); console.error still surfaces.
-import { gatedConsole as console } from '../core/log';
+import { gatedConsole as console } from '../core/util/log';
 
 const ITEMS_DATABASE = itemsData as unknown as Item[];
 
@@ -50,7 +50,7 @@ const BUILDING_DEFS_FOR_ITEMS = buildingsData as unknown as import('../core/type
 
 // `category:<cat>` cost/slot matching lives in core/itemDefs.ts (single copy — was also pasted
 // into BuildingService). Re-exported for existing importers.
-export { itemMatchesCostCategory } from '../core/itemDefs';
+export { itemMatchesCostCategory } from '../core/defs/items';
 
 /** How many units of a `category:` cost ONE of this item satisfies (see `Item.craftValue`). A crude
  *  material is worth a fraction, so the slot consumes more of it. Defaults to 1. */

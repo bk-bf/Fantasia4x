@@ -8,10 +8,10 @@
 // field is worker-only and these events are rare. Recall is a read the dialog tick performs.
 
 import type { EntityCondition, EventMemory, GameState, MemoryKind, Pawn } from '../core/types';
-import { rng } from '../core/rng';
-import { TICKS_PER_SECOND } from '../core/time';
+import { rng } from '../core/util/rng';
+import { TICKS_PER_SECOND } from '../core/util/time';
 import { TURNS_PER_DAY } from './EnvironmentService';
-import { getConditionCurrentStage } from '../core/needs';
+import { getConditionCurrentStage } from '../core/rules/body/conditions';
 import memoriesData from '../database/pawns/memories.jsonc';
 
 const DAY = TURNS_PER_DAY * TICKS_PER_SECOND; // ticks in one in-game day (18000)

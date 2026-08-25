@@ -2,11 +2,11 @@
 // tied back with rolled warmth, whose standing seeds through the normal relationship path.
 import { describe, it, expect, beforeEach } from 'vitest';
 import { generateColonyPawns, generateWorldKin } from '$lib/game/entities/Pawns';
-import { generateCulturePool, generateCultureRelations } from '$lib/game/core/Culture';
-import { generateKingdomPool, generateKingdomRelations } from '$lib/game/core/Kingdom';
+import { generateCulturePool, generateCultureRelations } from '$lib/game/core/gen/culture';
+import { generateKingdomPool, generateKingdomRelations } from '$lib/game/core/gen/kingdom';
 import { socialService } from '$lib/game/services/SocialService';
-import { findRelationship } from '$lib/game/core/Social';
-import { rng } from '$lib/game/core/rng';
+import { findRelationship } from '$lib/game/core/rules/social/social';
+import { rng } from '$lib/game/core/util/rng';
 import type { GameState } from '$lib/game/core/types';
 
 function world() {

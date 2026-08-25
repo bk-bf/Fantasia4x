@@ -22,7 +22,11 @@
 
 import type { DroppedItem, GameState, ItemInstance, Job } from '../../core/types';
 import { itemService } from '../ItemService';
-import { consumeFromStockpiles, withDrops, availableQuantityFromDrops } from '../../core/GameState';
+import {
+  consumeFromStockpiles,
+  withDrops,
+  availableQuantityFromDrops
+} from '../../core/state/stockpile';
 import {
   isFluidId,
   orphanedContents,
@@ -32,8 +36,8 @@ import {
   vesselAccepts,
   vesselFilterOf,
   vesselOf
-} from '../../core/vessels';
-import { manhattan } from '../../core/distance';
+} from '../../core/rules/gear/vessels';
+import { manhattan } from '../../core/util/distance';
 
 /** A pour is a real chore — slower than a scoop, far quicker than a craft. */
 const FILL_WORK = 0.4;

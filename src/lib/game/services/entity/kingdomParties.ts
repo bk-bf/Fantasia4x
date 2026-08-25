@@ -12,12 +12,12 @@ import type {
   WealthBand,
   WorldTile
 } from '../../core/types';
-import { getCreatureById } from '../../core/Creatures';
-import { isSpawnableTile } from '../../core/Terrains';
-import { rng } from '../../core/rng';
-import { WEALTH_BANDS } from '../../core/Kingdom';
+import { getCreatureById } from '../../core/defs/creatures';
+import { isSpawnableTile } from '../../core/defs/terrains';
+import { rng } from '../../core/util/rng';
+import { WEALTH_BANDS } from '../../core/gen/kingdom';
 import { makeMob, equipFromLootPool } from './entitySpawning';
-import { TICKS_PER_SECOND } from '../../core/time';
+import { TICKS_PER_SECOND } from '../../core/util/time';
 import { TURNS_PER_DAY } from '../EnvironmentService';
 import events from '../../database/social/events.jsonc';
 

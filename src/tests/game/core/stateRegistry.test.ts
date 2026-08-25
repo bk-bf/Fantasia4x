@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { PAWN_STATE } from '$lib/game/systems/pawn/pawnStates';
-import { STATE_DEFS, UNCONTROLLABLE_STATES, stateLabel } from '$lib/game/core/stateDefs';
-import { NEED_OWNED_STATES } from '$lib/game/core/needsDefs';
+import { STATE_DEFS, UNCONTROLLABLE_STATES, stateLabel } from '$lib/game/core/defs/states';
+import { NEED_OWNED_STATES } from '$lib/game/core/defs/needs';
 
 /**
  * The FSM state registry (states.jsonc) and the typed `PAWN_STATE` ids are two halves of one thing:

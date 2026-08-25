@@ -5,10 +5,10 @@ import {
   lineageGrowthEvent,
   AWAKENING_DEFS,
   LINEAGE_DEFS
-} from '$lib/game/core/Lineages';
-import { feedOnVictim, sateBloodHunger } from '$lib/game/core/Lineages';
-import { rng } from '$lib/game/core/rng';
-import { drawPawnTraits } from '$lib/game/core/Culture';
+} from '$lib/game/core/defs/lineages';
+import { feedOnVictim, sateBloodHunger } from '$lib/game/core/defs/lineages';
+import { rng } from '$lib/game/core/util/rng';
+import { drawPawnTraits } from '$lib/game/core/gen/culture';
 import { createBodyPlanLimbs } from '$lib/game/systems/Combat';
 import type { Culture, Pawn, Trait } from '$lib/game/core/types';
 

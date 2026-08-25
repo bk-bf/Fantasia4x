@@ -1,6 +1,6 @@
 // Entity tunables + wild-food sets. Extracted from EntityService (P-4) so the spawning/AI/lifecycle
 // modules and the shared helpers can all import one source of truth.
-import { ticksFromSeconds } from '../../core/time';
+import { ticksFromSeconds } from '../../core/util/time';
 import itemsData from '../../database/items/items.jsonc';
 import { resourceObjectService } from '../ResourceObjectService';
 

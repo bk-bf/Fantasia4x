@@ -13,16 +13,16 @@
  */
 import { GameEngineImpl } from '../systems/GameEngineImpl';
 import type { TurnProcessingResult } from '../systems/GameEngine';
-import { GameStateManager } from '../core/GameState';
+import { GameStateManager } from '../core/state/GameStateManager';
 import { applySimCommand } from '../sim/commands';
 import type { SimCommand } from '../sim/simProtocol';
 import { resetUnreachableJobs } from '../systems/PawnStateMachine';
 import { resetSocialTransients } from '../services/SocialService';
 import { pathfinderService } from '../services/PathfinderService';
-import { rng } from '../core/rng';
+import { rng } from '../core/util/rng';
 import type { GameState } from '../core/types';
 import { toSnapshot, fromSnapshot, type HeadlessSnapshot } from './snapshot';
-import { setSimLogSink, setVerboseLogging, type SimLogSink } from '../core/logSink';
+import { setSimLogSink, setVerboseLogging, type SimLogSink } from '../core/util/logSink';
 import { setEntityTrace, drainEntityTiming } from '../services/entity/entityAI';
 
 export interface TraceLine {

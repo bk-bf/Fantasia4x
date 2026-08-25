@@ -1,11 +1,11 @@
 // Wires the sim's log/feedback sink (core/logSink, default no-op) to the real Svelte stores.
 // Imported for its side effect from `stores/gameState.ts`, so it runs before any tick.
-import { setSimLogSink, type SimLogSink } from '$lib/game/core/logSink';
+import { setSimLogSink, type SimLogSink } from '$lib/game/core/util/logSink';
 import { logActivity, logDiag, logEntityDeath, logCombatSwing, logCombatKill } from './Log';
-import { combatFeedback } from './combatFeedback';
-import { attackLunges } from './attackLunges';
-import { combatSounds } from './combatSounds';
-import { projectiles } from './projectiles';
+import { combatFeedback } from './fx/combatFeedback';
+import { attackLunges } from './fx/attackLunges';
+import { combatSounds } from './fx/combatSounds';
+import { projectiles } from './fx/projectiles';
 import { requestThreatPause, requestDeathPause } from './gameState';
 import { threatPulse, alertPulse } from './uiState';
 

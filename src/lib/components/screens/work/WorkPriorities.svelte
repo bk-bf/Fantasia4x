@@ -1,6 +1,6 @@
 <script lang="ts">
   import { gameState } from '$lib/stores/gameState';
-  import { WORK_CATEGORIES } from '$lib/game/core/Work';
+  import { WORK_CATEGORIES } from '$lib/game/core/defs/work';
   import { pawnStatService } from '$lib/game/services/PawnStatService';
   import { jobService } from '$lib/game/services/JobService';
   import { persisted, persist } from '$lib/stores/uiPersist';
@@ -19,7 +19,7 @@
     stateColor,
     stateLabel,
     type CellRank
-  } from '$lib/utils/workUtils';
+  } from '$lib/components/util/workUtils';
   import WorkCellTooltip from './WorkCellTooltip.svelte';
 
   interface Props {

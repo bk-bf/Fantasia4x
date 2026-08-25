@@ -8,15 +8,15 @@
  *     now the ONLY sim path in the browser (`USE_SIM_WORKER` = `isClientRuntime`); the `?simworker`
  *     opt-in flag is retired.
  */
-import { isClientRuntime } from '../core/runtime';
+import { isClientRuntime } from '../core/util/runtime';
 import { realSimLogSink } from '../../stores/simLogBridge';
 import {
   markRenderTileDirty,
   markSnowRenderTileDirty,
   clearRenderTileDeltas
-} from '../../components/UI/gameCanvas/mainTileDeltas';
+} from '../../components/UI/canvas/mainTileDeltas';
 import { batchLogReplay } from '../../stores/Log';
-import { vlog, setVerboseLogging } from '../core/logSink';
+import { vlog, setVerboseLogging } from '../core/util/logSink';
 import type { SimLogEvent, EntitySync } from './simProtocol';
 import type { GameState, Pawn, Mob, WorldTile, DroppedItem } from '../core/types';
 

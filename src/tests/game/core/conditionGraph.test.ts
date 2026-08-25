@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { evaluatePredicate, fireTriggers, type GraphContext } from '$lib/game/core/conditionGraph';
+import {
+  evaluatePredicate,
+  fireTriggers,
+  type GraphContext
+} from '$lib/game/core/rules/body/conditionGraph';
 import type { ConditionTrigger } from '$lib/game/core/types/health';
 
 function ctx(over: Partial<GraphContext> = {}): GraphContext {

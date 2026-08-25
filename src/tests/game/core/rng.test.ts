@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { mulberry32, SeededRng, rng, freshSeed } from '$lib/game/core/rng';
+import { mulberry32, SeededRng, rng, freshSeed } from '$lib/game/core/util/rng';
 
 describe('rng (P0-2 seeded determinism)', () => {
   it('mulberry32 is deterministic for a given seed', () => {

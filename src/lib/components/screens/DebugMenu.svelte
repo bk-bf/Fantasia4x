@@ -8,7 +8,7 @@
   import { gameState } from '$lib/stores/gameState';
   import { uiState } from '$lib/stores/uiState';
   import { resourceObjectService } from '$lib/game/services/ResourceObjectService';
-  import { CREATURES } from '$lib/game/core/Creatures';
+  import { CREATURES } from '$lib/game/core/defs/creatures';
   import {
     WEATHER_IDS,
     WEATHER_LABELS,
@@ -18,7 +18,7 @@
   import type { Season } from '$lib/game/core/types';
   import itemsData from '$lib/game/database/items/items.jsonc';
   import buildingsData from '$lib/game/database/world/buildings.jsonc';
-  import AudioNowPlaying from '$lib/components/UI/AudioNowPlaying.svelte';
+  import AudioNowPlaying from '$lib/components/UI/audio/AudioNowPlaying.svelte';
   import DebugGodmode from './DebugGodmode.svelte';
 
   type NamedDef = { id: string; name?: string; category?: string };

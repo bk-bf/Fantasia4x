@@ -17,8 +17,8 @@ import type {
   ZonePriority
 } from '../core/types';
 import { ZONE_PRIORITY_RANK } from '../core/types';
-import { rng } from '../core/rng';
-import { absorbDropIfOnStockpileTile } from '../core/GameState';
+import { rng } from '../core/util/rng';
+import { absorbDropIfOnStockpileTile } from '../core/state/stockpile';
 
 /**
  * Standing-zone designation types stored in `GameState.zoneTiles` (a per-tile array) rather than

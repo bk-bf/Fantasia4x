@@ -5,7 +5,7 @@
  */
 
 import type { FontAtlas, CharacterInfo, FontMetrics } from './types.js';
-import { CP437_TO_UNICODE } from '$lib/game/core/cp437.js';
+import { CP437_TO_UNICODE } from '$lib/game/core/util/cp437.js';
 
 /**
  * Extended character set for roguelikes

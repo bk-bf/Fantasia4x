@@ -31,7 +31,6 @@ PROFILER_MODE=false
 PROFILER_AUTORUN=false
 HMR_MODE=false
 BROWSER_MODE=false
-LEGACY_MENU_MODE=false
 HEADLESS_MODE=false
 
 # Read worktree-local port override if present
@@ -49,7 +48,6 @@ while [[ $# -gt 0 ]]; do
     --hmr) HMR_MODE=true ;; # opt into Vite hot-reload / live page-reload (off by default)
     --browser) BROWSER_MODE=true ;; # lift the desktop-shell guard so a plain browser can load the game
     --tools) TOOLS_MODE=true ;; # dev-tools mode — allowlist the /gear-db browser route; game STAYS guarded
-    --legacy-menu) LEGACY_MENU_MODE=true ;; # render the original centred main menu (MainMenu)
     --headless) HEADLESS_MODE=true ;; # enable the /api/sim/* headless-sim routes (ADR-033)
     --port) PORT="$2"; shift ;;
     --port=*) PORT="${1#--port=}" ;;
@@ -141,14 +139,6 @@ else
   echo "Browser access blocked (default) — game loads only in the desktop shell; pass --browser to allow."
 fi
 
-# Main menu: MainMenu2 (left-aligned) is the DEFAULT; --legacy-menu sets VITE_LEGACY_MENU to render the
-# original centred MainMenu instead.
-LEGACY_ENV=""
-if [[ "$LEGACY_MENU_MODE" == "true" ]]; then
-  echo "Legacy menu enabled — rendering the original centred main menu (MainMenu)."
-  LEGACY_ENV="VITE_LEGACY_MENU=true"
-fi
-
 # Dev-tools mode: make the /gear-db browser route reachable in a plain browser WITHOUT lifting the
 # desktop-shell guard for the game. VITE_TOOLS_MODE allowlists that route + the module graph it needs;
 # the game's root document stays 403, so opening the bare server URL never launches the game. Used by
@@ -173,5 +163,5 @@ fi
 # 60s) blocks dev-server startup for ~70s before giving up. Zero retries makes it fail fast and start
 # immediately. No-op on the host (the first fetch succeeds there, so retries never trigger). Must be the
 # `--config.X` form — `pnpm --fetch-retries=… exec` is rejected as an unknown option.
-# shellcheck disable=SC2086 -- $PROFILER_ENV/$DEBUG_ENV/$HMR_ENV/$BROWSER_ENV/$TOOLS_ENV/$LEGACY_ENV/$HEADLESS_ENV are intentional VAR=val flag passthroughs
-exec env $PROFILER_ENV $DEBUG_ENV $HMR_ENV $BROWSER_ENV $TOOLS_ENV $LEGACY_ENV $HEADLESS_ENV VITE_DEV_BRANCH="$BRANCH" VITE_DEV_COMMIT="$COMMIT" pnpm --config.fetch-retries=0 exec vite dev --host --port $PORT
+# shellcheck disable=SC2086 -- $PROFILER_ENV/$DEBUG_ENV/$HMR_ENV/$BROWSER_ENV/$TOOLS_ENV/$HEADLESS_ENV are intentional VAR=val flag passthroughs
+exec env $PROFILER_ENV $DEBUG_ENV $HMR_ENV $BROWSER_ENV $TOOLS_ENV $HEADLESS_ENV VITE_DEV_BRANCH="$BRANCH" VITE_DEV_COMMIT="$COMMIT" pnpm --config.fetch-retries=0 exec vite dev --host --port $PORT
