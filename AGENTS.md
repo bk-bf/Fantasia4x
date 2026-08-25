@@ -110,7 +110,9 @@ pnpm graph:diff           # diff the graph against the saved baseline
 > (`node ../codegraph/bin/codegraph.mjs … Fantasia4x`) — it must be checked out as a
 > sibling of this repo. Override its location with `CODEGRAPH_DIR`.
 
-> **Audit/playtest/verify = drive the REAL sim → invoke the `headless` skill.** Any "verify / audit /
+> **Audit/playtest/verify = drive the REAL sim → invoke the `headless` skill.** ("Audit" of the
+> CODE — the symbol ledger, `docs/issues/`, `docs/pr/` — is the `audit` skill instead; this one is
+> about whether a game system behaves.) Any "verify / audit /
 > playtest / end-to-end" claim must come from `HeadlessSession` (or `./dev.sh --headless` + `/api/sim/*`)
 > with real pawns over real ticks, and must state the mechanism + observed delta ("N ticks, stock X→Y").
 > Unit/service tests (`completeCraftOrder`, `canQueueCraft`, static reachability, `resolveHit` sampling)
@@ -226,6 +228,8 @@ Full architecture, design decisions, philosophy, and task tracking live in `docs
 | `docs/game/PHILOSOPHY.md`                  | Guiding development principles; edit only if a principle genuinely changes |
 | `docs/ui/ARCHITECTURE.md`                  | Component breakdown, screen structure, store usage patterns                |
 | `docs/ui/DESIGN.md`                        | Visual direction, retro terminal style, colour and typography rules        |
+| `docs/issues/`                             | Defects — the only record; raised by the audit, gated by `ready:`           |
+| `docs/pr/`                                 | Fix attempts awaiting review: a local branch and the argument for it        |
 | `docs/tasks/open/ROADMAP.md`              | Planned work; keep entries actionable and brief                            |
 | `docs/tasks/open/SCREEN-REFACTORING.md`   | Break down WorkScreen, ExplorationScreen, CraftingScreen                   |
 | `docs/tasks/open/RESEARCH-ENHANCEMENT.md` | Three-tier research system design and requirements                         |
