@@ -159,6 +159,9 @@ const COMFORT_DECREASE_PER_SECOND = needNum('comfort', 'decayRate', 0.1);
 const AUTO_DRINK_THIRST = needNum('thirst', 'autoSatisfy', 70);
 // §D auto-wash: hygiene threshold to wash at water, and the cleanliness restored.
 const AUTO_WASH_HYGIENE = needNum('hygiene', 'autoSatisfy', 75);
+/** How fast a pawn moves with nothing on its feet. Any boot beats bare soles on broken ground; the
+ *  heavier the boot the less of that advantage it keeps. */
+const BAREFOOT_MOVE_FACTOR = 0.9;
 const WASH_HYGIENE_RELIEF = needNum('hygiene', 'relief', 70);
 
 // SEASONS_WEATHER Subsystem 3 — temperature/night need effects (PERF-3: scalar constants, read in
@@ -1109,6 +1112,18 @@ export class PawnServiceImpl implements PawnService {
     const needsFactor = clamp(1 - hungerPenalty - fatiguePenalty, 0.5, 1);
     if (needsFactor < 0.999) sources.push(`needs ×${needsFactor.toFixed(2)}`);
 
+    // FOOTWEAR. What is on the feet is the one piece of kit that decides how a pawn WALKS, so it acts
+    // here rather than on the fatigue meter — boots are not tiring, they are fast or slow. Bare feet
+    // are the penalty: anything on the foot beats none, and the heavier the sole the less of that
+    // advantage survives (a rune-woven boot keeps all of it, an iron-shod one gives most of it back).
+    const boot = (entity as Pawn).equipment?.boots;
+    const bootPenalty = boot
+      ? (itemService.getItemById(boot.itemId)?.armorProperties?.movementPenalty ?? 0)
+      : 0;
+    const footFactor = boot ? clamp(1 - bootPenalty, 0.8, 1) : BAREFOOT_MOVE_FACTOR;
+    if (Math.abs(footFactor - 1) > 0.001)
+      sources.push(boot ? `boots ×${footFactor.toFixed(2)}` : `barefoot ×${footFactor.toFixed(2)}`);
+
     // Transient + persistent conditions that modify movement.
     let conditionFactor = getActiveTransientConditions(entity).reduce(
       (r, e) => r * (e.modifiers.moveSpeed ?? 1),
@@ -1155,7 +1170,14 @@ export class PawnServiceImpl implements PawnService {
 
     const tilesPerSecond = Math.max(
       0.05,
-      base * dexFactor * weightFactor * legFactor * needsFactor * conditionFactor * loadFactor
+      base *
+        dexFactor *
+        weightFactor *
+        legFactor *
+        needsFactor *
+        conditionFactor *
+        loadFactor *
+        footFactor
     );
     return { tilesPerSecond, sources };
   }
