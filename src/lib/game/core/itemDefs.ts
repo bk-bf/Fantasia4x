@@ -37,6 +37,11 @@ export function itemMatchesCostCategory(
 ): boolean {
   if (cat === 'plank') return item.id.endsWith('_plank');
   if (cat === 'log') return item.id.endsWith('_log');
+  // A FASTENER is whatever the colony currently pins things with — a tack, a nail, a rivet. Which
+  // metal it is does not change the job, so a recipe asks for the pool and takes what is to hand
+  // rather than naming one and going unbuildable in every other age.
+  if (cat === 'fastener')
+    return /_nail$|_rivet$|_tack$/.test(item.id) && item.type !== 'weapon' && item.type !== 'tool';
   // A `category:<cat>` cost/slot consumes raw stock — a material (or food, for cooking slots), never a
   // finished weapon/armour/tool. Those carry a `category` that doubles as their armour CLASS
   // (leather/metal/cloth), so without this guard a `category:leather` grip could be "crafted" from a

@@ -69,6 +69,10 @@ const poolMembers = (key: string): string[] => {
   // The pseudo-categories resolve by id, exactly as the sim's matcher does.
   if (cat === 'plank' || cat === 'log')
     return items.filter((i: any) => String(i?.id ?? '').endsWith(`_${cat}`)).map((i: any) => i.id);
+  if (cat === 'fastener')
+    return items
+      .filter((i: any) => /_nail$|_rivet$|_tack$/.test(String(i?.id ?? '')))
+      .map((i: any) => i.id);
   return (byCategory.get(cat) ?? []).filter((id) => {
     const t = itemById.get(id)?.type;
     return t !== 'armor' && t !== 'weapon' && t !== 'tool';

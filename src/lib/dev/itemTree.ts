@@ -350,6 +350,21 @@ const preservation = (i: any): string => {
 // puts age directly under the branch (an audit reads "what does Bronze offer for this slot"); every
 // other branch puts its conceptual line first and age beneath it, because "all the fuels, by age" is
 // the question there rather than "everything the bronze age has".
+/**
+ * What a food IS, as one clean partition. This used to be TWO levels — a preservation word and then
+ * the raw `category` — which double-counted: an item with `category: "food"` built a shelf called
+ * Food underneath the branch called Food, "fresh > Spoiled" filed rot as fresh, and the raw category
+ * put a Carcass shelf in the larder holding the only two carcasses in the game typed as food.
+ *
+ * One axis, in the order that decides what the thing is for: cooked, kept, or raw.
+ */
+function foodBranch(i: any): string[] {
+  if (i.category === 'spoiled') return ['Spoiled'];
+  if (i.category === 'meal') return ['Cooked dishes'];
+  if (i.preservationMethod) return ['Preserved', prettify(String(i.preservationMethod))];
+  return [prettify(i.category ?? 'other')];
+}
+
 function pathOf(i: any): string[] {
   const ap = i.armorProperties;
   const wp = i.weaponProperties;
@@ -410,7 +425,7 @@ function pathOf(i: any): string[] {
   }
 
   if (i.type === 'food' || i.nutrition != null)
-    return ['Consumables', 'Food', preservation(i), prettify(i.category ?? 'food'), age];
+    return ['Consumables', 'Food', ...foodBranch(i), age];
   if (i.medicineQuality != null) return ['Consumables', 'Medicine', age];
   // The coatings and tinctures all became FLUIDS; what still carries `category: reagent` here is beast
   // ORGANS, eaten whole for the trait gamble. Calling that shelf "Coatings & tinctures" was a leftover
