@@ -55,15 +55,27 @@ you killed a run and the board looks busy, `audit release` returns that worker's
 ## Before you trust a result
 
 **The graph must be current.** `audit index` reads the codegraph extract for call edges,
-reachability and the `tested` flag. A stale extract does not error — the reachability triggers
-silently stop firing, which reads as "the hot path is clean" rather than "nothing was asked about
-it". Re-extract first:
+reachability and the `tested` flag. A stale extract does not error downstream — the reachability
+triggers silently stop firing, which reads as "the hot path is clean" rather than "nothing was
+asked about it". Re-extract first:
 
 ```bash
 node ../codegraph/bin/codegraph.mjs extract Fantasia4x
 ```
 
-`index` prints what it got. Two lines decide whether family F and G verdicts mean anything:
+The extract records the commit it was built from, so `index` names staleness exactly rather than
+guessing at it:
+
+```
+[warn] the codegraph extract was built from c4e25b60, but HEAD is
+[warn] 80bf808a — reachability and family F verdicts describe other code.
+```
+
+**Pass `--require-fresh` and that becomes exit 2 instead of a warning.** The nightly does; use it
+for anything unattended. A graph one commit behind still maps at ~82%, which is above the
+map-rate heuristic, so the proxy alone does not catch it.
+
+`index` also prints the two lines that decide whether family F and G verdicts mean anything:
 
 ```
 graph: 2243/2724 nodes mapped (82%), 3468 edges, 970 unmapped
@@ -128,8 +140,8 @@ The board commit is the one automated thing that reaches `main`. It is markdown,
 
 Debugging a night that did nothing, in order:
 
-1. `journalctl --user -u fantasia-audit.service -n 60` — it dies loudly on a dirty tree or a
-   `main` that will not rebase.
+1. `journalctl --user -u fantasia-audit.service -n 60` — it dies loudly on a dirty tree, a
+   `main` that will not rebase, a failed codegraph extract, or a graph that does not match HEAD.
 2. `tools/audit/.ledger/nightly/<date>.log` — the run's own narration.
 3. `audit status` — if `done` did not move, the loop never claimed anything; check the graph
    lines above before suspecting the model.
