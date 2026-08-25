@@ -1,4 +1,6 @@
 import { describe, it, expect } from 'vitest';
+import recipesData from '$lib/game/database/items/recipes.jsonc';
+import { chainAgeOf, hasRecipe, blameStation } from '$lib/dev/chainAge';
 import { GEAR, AGES, DROPPED, UNAFFILIATED } from '$lib/dev/gearDb';
 
 // Guards the gear tables' SORTING, which is invisible from inside the sim and has silently broken
@@ -24,15 +26,27 @@ const AGE_BY_RESEARCH: Record<string, string> = {
 };
 
 describe('gear tables sort by DATA, not by words in the id', () => {
-  it('every armour row lands in the age its own tier/research declares', () => {
+  // AGE IS DERIVED, TIER IS NOT AGE. This test used to assert `age === AGE_BY_TIER[tier]`, which made
+  // the hand-written tier the definition of the age and so could never catch a wrong one — a flint
+  // arrow declared T1 was "correctly" bronze-age, and a knapped stone axe sat beside cast bronze.
+  // The age of a craftable is what its CHAIN costs: the latest workshop in it and the ages of
+  // everything it consumes. Tier keeps its own column and its own meaning.
+  it('every craftable armour row lands in the age its own chain can build', () => {
+    const AGE_OF_CHAIN = ['Primitive', 'Copper', 'Bronze', 'Iron', 'Steel', 'Runed'];
     const wrong = ARMOUR.filter((r) => {
-      if (r.age === 'Boss') return false; // loot band, decided by craftability not tier
-      const expected = r.research ? AGE_BY_RESEARCH[r.research] : AGE_BY_TIER[Math.min(r.tier, 4)];
-      return expected && r.age !== expected;
+      if (r.age === 'Boss') return false; // loot band, decided by craftability not by a chain
+      if (!hasRecipe(r.id)) return false; // a drop has no chain to read
+      // a declared research gate wins over the chain — read it off the RECIPE, because the row's own
+      // `research` field is not populated for every kind of gear
+      const rec = (
+        recipesData as { id: string; outputs?: Record<string, number>; researchRequired?: string }[]
+      ).find((x) => x.outputs && r.id in x.outputs);
+      if (rec?.researchRequired && AGE_BY_RESEARCH[rec.researchRequired]) return false;
+      return r.age !== AGE_OF_CHAIN[chainAgeOf(r.id)];
     }).map(
       (r) =>
-        `${r.id} (T${r.tier}${r.research ? ', ' + r.research : ''}) filed under ${r.age}, ` +
-        `should be ${r.research ? AGE_BY_RESEARCH[r.research] : AGE_BY_TIER[Math.min(r.tier, 4)]}`
+        `${r.id} (T${r.tier}) filed under ${r.age}, but its chain builds at ` +
+        `${AGE_OF_CHAIN[chainAgeOf(r.id)]} (${blameStation(r.id) || 'no station'})`
     );
     expect(wrong, wrong.join('\n')).toEqual([]);
   });

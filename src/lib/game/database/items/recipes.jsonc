@@ -6418,24 +6418,6 @@
     "discipline"      : "weaving"
   },
   {
-    "id"              : "make_arming_cap",
-    "station"         : "weaving_frame",
-    "inputs"          : {"linen_cloth": 2, "plant_fiber": 2, "category:binding": 1},
-    "outputs"         : {"arming_cap": 1},
-    "workAmount"      : 6,
-    "toolTierRequired": 0,
-    "discipline"      : "weaving"
-  },
-  {
-    "id"              : "make_arming_doublet",
-    "station"         : "weaving_frame",
-    "inputs"          : {"linen_cloth": 20, "plant_fiber": 4, "category:binding": 6},
-    "outputs"         : {"arming_doublet": 1},
-    "workAmount"      : 20,
-    "toolTierRequired": 0,
-    "discipline"      : "weaving"
-  },
-  {
     "id"              : "make_open_burgonet",
     "station"         : "anvil",
     "inputs"          : {"category:steel": 2, "steel_rivet": 12},
@@ -6947,24 +6929,6 @@
     "discipline"      : "leatherworking"
   },
   {
-    "id"              : "make_arming_gloves",
-    "station"         : "weaving_frame",
-    "inputs"          : {"linen_cloth": 2, "category:binding": 1},
-    "outputs"         : {"arming_gloves": 1},
-    "workAmount"      : 15,
-    "toolTierRequired": 2,
-    "discipline"      : "weaving"
-  },
-  {
-    "id"              : "make_arming_boots",
-    "station"         : "weaving_frame",
-    "inputs"          : {"linen_cloth": 3, "category:binding": 1},
-    "outputs"         : {"arming_boots": 1},
-    "workAmount"      : 17,
-    "toolTierRequired": 2,
-    "discipline"      : "weaving"
-  },
-  {
     "id"              : "make_direwolf_head",
     "station"         : "curriers_bench",
     "inputs"          : {"prime_direwolf_leather": 2, "category:binding": 1},
@@ -7264,29 +7228,7 @@
     "workAmount": 8,
     "toolTierRequired": 1
   },
-    {
-    "id": "make_arming_sleeves",
-    "discipline": "weaving",
-    "station": "weaving_frame",
-    "inputs": {"linen_cloth": 3, "plant_fiber": 2, "category:binding": 1},
-    "outputs": {
-      "arming_sleeves": 1
-    },
-    "workAmount": 9,
-    "toolTierRequired": 2
-  },
-    {
-    "id": "make_arming_hose",
-    "discipline": "weaving",
-    "station": "weaving_frame",
-    "inputs": {"linen_cloth": 4, "plant_fiber": 2, "category:binding": 1},
-    "outputs": {
-      "arming_hose": 1
-    },
-    "workAmount": 10,
-    "toolTierRequired": 2
-  },
-    {
+        {
     "id": "make_rune_woven_sleeves",
     "discipline": "weaving",
     "station": "runic_loom",

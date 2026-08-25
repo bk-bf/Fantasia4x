@@ -36,6 +36,29 @@ for (const b of buildingsData as any[]) {
   if (b?.id) BUILDING_AGE.set(b.id, age < 0 ? 0 : age);
 }
 
+/** item id → the age of the PICK a node demands before it will give the thing up. A node has no
+ *  workshop behind it, but it can still be gated: a corundum will not come out of the rock for a
+ *  copper pick. Tool tiers 0–4 are stone, copper, iron, steel and runed. */
+export const NODE_TOOL_AGE = new Map<string, number>();
+{
+  const TOOL_AGE = [0, 1, 3, 4, 5]; // stone → primitive, copper → copper, iron, steel, runed
+  (function scan(o: unknown): void {
+    if (Array.isArray(o)) return o.forEach(scan);
+    if (!o || typeof o !== 'object') return;
+    const n = o as Record<string, any>;
+    const inter = n.interaction;
+    const tier = inter?.toolRequirement?.minTier;
+    if (typeof tier === 'number')
+      for (const y of inter.yields ?? [])
+        if (typeof y?.itemId === 'string') {
+          const age = TOOL_AGE[Math.min(Math.max(tier, 0), 4)];
+          const seen = NODE_TOOL_AGE.get(y.itemId);
+          if (seen === undefined || age < seen) NODE_TOOL_AGE.set(y.itemId, age);
+        }
+    for (const v of Object.values(n)) scan(v);
+  })(resourcesData);
+}
+
 /** Everything a map node yields — foraged or mined, so no workshop stands behind it. */
 export const nodeItems = new Set<string>();
 (function walk(o: unknown): void {
@@ -128,6 +151,11 @@ for (let pass = 0; pass < 30; pass++) {
   }
   if (!changed) break;
 }
+
+/** Does anything in the game MAKE this? Distinguishes "its chain is primitive" from "it has no chain",
+ *  which `chainAgeOf` returns 0 for alike. Without the difference a mined gem and a stone-age craft
+ *  are indistinguishable, and the age of the first one has to come from somewhere else. */
+export const hasRecipe = (id: string): boolean => recipesByOutput.has(id);
 
 /** The latest station age anywhere in this item's production chain (0 = needs no workshop at all). */
 export const chainAgeOf = (id: string): ChainAge => chain.get(id) ?? 0;
