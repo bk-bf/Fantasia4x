@@ -4,6 +4,8 @@ import recipesData from '$lib/game/database/items/recipes.jsonc';
 import { TREE_ITEMS } from '$lib/dev/itemTree';
 import { CARCASS_TIER, nodeItems } from '$lib/dev/chainAge';
 import lootpoolData from '$lib/game/database/items/lootpool.jsonc';
+import { itemMatchesCostCategory } from '$lib/game/core/itemDefs';
+import { recipeItemMatchesCategory } from '$lib/game/services/RecipeService';
 import itemsData from '$lib/game/database/items/items.jsonc';
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -140,6 +142,61 @@ describe('every item can say which age it belongs to', () => {
         `${r.id} has no recipe, no tier, no creature and no map node — it reads ${r.age} by default. ` +
         `Give it a tier, or a way in.`
     );
+    expect(bad, bad.join('; ')).toEqual([]);
+  });
+});
+
+/**
+ * `itemMatchesCostCategory` (itemDefs) and `recipeItemMatchesCategory` (RecipeService) are the same
+ * rule written twice — the second exists only to break an import cycle. Two copies drift, and the
+ * drift is invisible: the RecipeService copy silently lacked `fastener` for a while, so a slot the
+ * sim would fill did not advertise itself in the used-by index. Held together by a test rather than
+ * by remembering.
+ */
+describe('the two category matchers agree', () => {
+  it('every item × category answers the same in both', () => {
+    const cats = [
+      'plank',
+      'log',
+      'fastener',
+      'thread',
+      'binding',
+      'leather',
+      'cured_hide',
+      'metal',
+      'steel',
+      'iron',
+      'stone',
+      'block',
+      'clay',
+      'meat',
+      'fish',
+      'herb',
+      'wool'
+    ];
+    const bad: string[] = [];
+    for (const i of ITEMS as Array<{ id: string; category?: string; type?: string }>)
+      for (const c of cats)
+        if (itemMatchesCostCategory(i, c) !== recipeItemMatchesCategory(i, c))
+          bad.push(`${i.id} × ${c}`);
+    expect(bad.slice(0, 20), `${bad.length} disagreements: ${bad.slice(0, 20).join(', ')}`).toEqual(
+      []
+    );
+  });
+});
+
+/** A cap keeps the sun off. A thing that stops a blade is a helm, a coif or a cervelliere. */
+describe('helmets are not caps', () => {
+  it('nothing worn on the head is called a cap', () => {
+    const bad = (
+      ITEMS as Array<{ id: string; name?: string; armorProperties?: { equipmentSlot?: string } }>
+    )
+      .filter(
+        (i) => i.armorProperties?.equipmentSlot === 'head' && /\bcap\b|cap$/i.test(i.name ?? '')
+      )
+      .map(
+        (i) => `${i.id} is called "${i.name}" — name it a helm, a coif, or whatever it actually is`
+      );
     expect(bad, bad.join('; ')).toEqual([]);
   });
 });

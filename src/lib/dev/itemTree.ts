@@ -223,9 +223,10 @@ export function effectsOf(i: any): string {
   // FOOTWEAR reads against BARE FEET, not against nothing: anything on the foot beats bare soles on
   // broken ground, and a heavy sole gives some of that back. Showing only the penalty hid the whole
   // benefit — a light boot printed no movement line at all while being the fastest thing you can wear.
+  if (ap?.sightPenalty) out.push(`sight −${Math.round(ap.sightPenalty * 100)}%`);
   if (ap?.equipmentSlot === 'boots' || ap?.equipmentSlot === 'socks') {
     const gain = (1 - (ap.movementPenalty ?? 0)) / BAREFOOT_MOVE_FACTOR - 1;
-    out.push(`move ${gain >= 0 ? '+' : '−'}${Math.abs(Math.round(gain * 1000) / 10)}% vs barefoot`);
+    out.push(`move ${gain >= 0 ? '+' : '−'}${Math.abs(Math.round(gain * 1000) / 10)}%`);
   } else if (ap?.movementPenalty) {
     out.push(`move −${Math.round(ap.movementPenalty * 100)}%`);
   }

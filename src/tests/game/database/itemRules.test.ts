@@ -451,7 +451,18 @@ describe('ITEM-RULES R6 — a sewn piece lists the binding that holds it togethe
   // What survives from the old rule: you do not sew leather with ROPE. Cordage is a lashing, not a
   // seam, and it belongs only where it IS the structure.
   const STRUCTURAL = /branch|withy|wicker|wattle|bark|hay|straw/;
-  const SEAM = ['category:binding', 'sinew', 'thread', 'enchant_thread', 'cotton_thread'];
+  // `category:thread` is the binding pool with the lashings taken out — cordage is not a seam, and a
+  // late piece is sewn with spun thread or not at all. Both keys are seams; they differ in how low
+  // they will stoop.
+  const SEAM = [
+    'category:binding',
+    'category:thread',
+    'sinew',
+    'thread',
+    'enchant_thread',
+    'cotton_thread',
+    'spider_silk_thread'
+  ];
   const FASTENER = [
     ...SEAM,
     'cordage',

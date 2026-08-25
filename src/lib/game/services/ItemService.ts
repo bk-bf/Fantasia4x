@@ -533,10 +533,9 @@ export class ItemServiceImpl implements ItemService {
     // the COMBINED quantity is in stock (the resolveActiveCost sum-path mirrors this).
     const demand: Record<string, number> = {};
     for (const [slotKey, slot] of Object.entries(recipe.dynamicRecipe)) {
-      const cats = recipeService.slotCategories(slot);
       const candidates = ITEMS_DATABASE.filter(
         (i) =>
-          cats.some((c) => itemMatchesCostCategory(i, c)) &&
+          recipeService.slotAccepts(slot, i) &&
           this.getAvailableQuantity(i.id, gameState) >= (demand[i.id] ?? 0) + slot.quantity
       );
       if (!candidates.length) return null;
