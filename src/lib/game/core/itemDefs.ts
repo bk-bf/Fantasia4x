@@ -42,14 +42,12 @@ export function itemMatchesCostCategory(
   // rather than naming one and going unbuildable in every other age.
   if (cat === 'fastener')
     return /_nail$|_rivet$|_tack$/.test(item.id) && item.type !== 'weapon' && item.type !== 'tool';
-  // THREAD grade: the binding pool minus everything you would not put through a needle. Cordage is a
-  // lashing and sinew is a field repair; a finished garment is sewn with spun thread. Anything whose
-  // `craftValue` says one unit is a whole seam qualifies, so a new thread joins by being good enough
-  // rather than by being listed here.
+  // THREAD grade: the binding pool with the LASHINGS taken out. Cordage and rope tie things together
+  // from the outside; everything else in the pool goes through a needle. Defined by what it excludes
+  // rather than by a craftValue floor, so a better thread — silk, enchanted — is never accidentally
+  // shut out of a recipe for being worth more than plain thread.
   if (cat === 'thread')
-    return item.category === 'binding' && (item as { craftValue?: number }).craftValue !== undefined
-      ? ((item as { craftValue?: number }).craftValue ?? 0) >= 1
-      : false;
+    return item.category === 'binding' && !/^cordage$|^rope$|_rope$|_cordage$/.test(item.id);
   // A `category:<cat>` cost/slot consumes raw stock — a material (or food, for cooking slots), never a
   // finished weapon/armour/tool. Those carry a `category` that doubles as their armour CLASS
   // (leather/metal/cloth), so without this guard a `category:leather` grip could be "crafted" from a

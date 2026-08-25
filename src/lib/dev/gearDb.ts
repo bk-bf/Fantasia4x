@@ -16,7 +16,7 @@ import researchData from '../game/database/progression/research.jsonc';
 import traitsData from '../game/database/pawns/traits.jsonc';
 import creaturesData from '../game/database/pawns/creatures.jsonc';
 import lootpoolData from '../game/database/items/lootpool.jsonc';
-import { carcassItems, nodeItems, hasRecipe, chainAgeOf } from './chainAge';
+import { carcassItems, nodeItems, hasRecipe, chainAgeOf, usesBossPart } from './chainAge';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 const items = itemsData as any[];
@@ -508,7 +508,10 @@ function ageOf(
   if (r === 'copper_smelting') return 'Copper';
   // A high-tier LOOT piece is a boss drop, whatever it is forged from — checked before the material
   // words so `iron_tide_greataxe` reads as Boss, not as an iron-age craftable.
-  if (!craftable && tier >= 4) return 'Boss';
+  // The BOSS band is what a colony can only have by putting down something enormous. That is usually
+  // loot, but it is equally a blade forged from the fang of the thing — the fang decides, not the
+  // smith. Restricting it to drop-only left every crafted boss weapon out of its own band.
+  if (tier >= 4 && (!craftable || usesBossPart(id))) return 'Boss';
   // AGE IS DERIVED. If something makes this, the chain says when a colony can first hold it — the
   // latest workshop in it and the ages of everything it consumes. `tier` is deliberately NOT asked:
   // it is a different axis (a quality rank here, the ADR-009 TOOL tier on a tool) and reading it as
@@ -550,7 +553,28 @@ function kindOf(item: any): GearKind | null {
 }
 
 // Weapon → exactly one weapon-build, by stats + family keywords.
+/** A weapon may simply SAY what it is. The regexes below read the family out of the id, which works
+ *  until a weapon is named for what it does rather than what it is — `flenser` is a cleaver, and no
+ *  amount of pattern matching on its name will discover that. A declared family wins. */
+const FAMILY_CLASS: Record<string, { one: BuildClass; two: BuildClass }> = {
+  sword: { one: 'Sword & Shield', two: 'Greatsword (2H)' },
+  axe: { one: 'Axe & Shield', two: '2H Axe' },
+  cleaver: { one: 'Cleaver & Shield', two: '2H Cleaver' },
+  mace: { one: 'Mace & Shield', two: '2H Hammer' },
+  flail: { one: 'Flail & Shield', two: 'Flail & Shield' },
+  spear: { one: 'Spear & Shield', two: 'Polearm (2H)' },
+  rapier: { one: 'Fencer (Rapier)', two: 'Fencer (Rapier)' },
+  dagger: { one: 'Assassin (Dagger)', two: 'Assassin (Dagger)' },
+  bow: { one: 'Archer (Bow)', two: 'Archer (Bow)' },
+  crossbow: { one: 'Crossbowman', two: 'Crossbowman' },
+  sling: { one: 'Slinger (Sling)', two: 'Slinger (Sling)' },
+  thrown: { one: 'Skirmisher (Throwing)', two: 'Skirmisher (Throwing)' },
+  staff: { one: 'Battlemage (1H Staff)', two: 'War-Caster (2H Staff)' }
+};
+
 function classifyWeapon(item: any, wp: any): BuildClass {
+  const declared = FAMILY_CLASS[wp.weaponFamily as string];
+  if (declared) return wp.twoHanded ? declared.two : declared.one;
   const id = item.id;
   const dt = wp.damageType;
   const two = !!wp.twoHanded;

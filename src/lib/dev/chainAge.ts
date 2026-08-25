@@ -157,6 +157,34 @@ for (let pass = 0; pass < 30; pass++) {
  *  are indistinguishable, and the age of the first one has to come from somewhere else. */
 export const hasRecipe = (id: string): boolean => recipesByOutput.has(id);
 
+/** Parts that only come off a TIER 4+ beast, at the altar where such a thing is flensed. Anything
+ *  whose chain eats one of these is boss work whoever swung the hammer — the fang decides that, not
+ *  the smith. */
+export const BOSS_PARTS = new Set([
+  'great_fang',
+  'great_tusk',
+  'great_bone',
+  'alpha_heart',
+  'alpha_ichor',
+  'direwolf_hackles',
+  'owlbear_pineal',
+  'sabretooth_glands'
+]);
+
+/** Does this item's chain consume something only a boss beast yields? Walks the whole chain, so a
+ *  weapon built from a component built from a fang still counts. */
+export const usesBossPart = (id: string, seen = new Set<string>()): boolean => {
+  if (BOSS_PARTS.has(id)) return true;
+  if (seen.has(id)) return false;
+  seen.add(id);
+  for (const r of recipesByOutput.get(id) ?? [])
+    for (const k of ingredientsOf(r)) {
+      if (k.startsWith('category:')) continue;
+      if (usesBossPart(k, seen)) return true;
+    }
+  return false;
+};
+
 /** The latest station age anywhere in this item's production chain (0 = needs no workshop at all). */
 export const chainAgeOf = (id: string): ChainAge => chain.get(id) ?? 0;
 

@@ -44,7 +44,8 @@
       "conditionRange": [0.3, 0.7],
       "quality": [[0, 3], [1, 2]],
       "slots": {
-        "head":      {"chance": 0.30, "pick": [{"id": "goblin_scrap_cap", "w": 2}, {"id": "goblin_bark_bracers", "w": 1}]},
+        "bracers": { "chance": 0.4, "pick": [{ "id": "goblin_bark_bracers", "w": 1 }] },
+        "head":      {"chance": 0.30, "pick": [{"id": "goblin_scrap_cap", "w": 2}, ]},
         "mainHand":  {"chance": 0.85, "pick": [{"id": "goblin_shank", "w": 3}, {"id": "goblin_hooked_spear", "w": 2}, {"id": "goblin_net", "w": 1}]},
         "bodyOuter": {"chance": 0.4,  "pick": [{"id": "goblin_scrap_vest", "w": 1}]}
       }
@@ -101,7 +102,7 @@
       "conditionRange": [0.6, 0.95],
       "quality": [[1, 2], [2, 3], [4, 1]],
       "slots": {
-        "mainHand": {"chance": 1.0, "pick": [{"id": "orc_greataxe", "w": 1}]},
+        "mainHand": {"chance": 1.0, "pick": [{"id": "flenser", "w": 1}, {"id": "chainbiter", "w": 1}, {"id": "siege_lock_arbalest", "w": 1}, {"id": "orc_greataxe", "w": 1}]},
         "offHand":  {"chance": 0.5, "pick": [{"id": "orc_iron_slab", "w": 1}]},
         "bodyMid":  {"chance": 1.0, "pick": [{"id": "orc_warplate", "w": 1}]}
       }
@@ -119,9 +120,12 @@
       "conditionRange": [0.7, 1.0],
       "quality": [[2, 2], [4, 2], [5, 1]],
       "slots": {
+        "bracers": { "chance": 0.55, "pick": [{ "id": "orc_plate_vambraces", "w": 1 }] },
+        "gloves": { "chance": 0.5, "pick": [{ "id": "orc_plate_gauntlets", "w": 1 }] },
+        "boots": { "chance": 0.5, "pick": [{ "id": "orc_plate_sabatons", "w": 1 }] },
         "head":    {"chance": 0.45, "pick": [{"id": "orc_warhelm", "w": 2}]},
         "greaves":   {"chance": 0.35, "pick": [{"id": "orc_plate_greaves", "w": 1}]},
-        "mainHand": {"chance": 1.0, "pick": [{"id": "iron_tide_greataxe", "w": 1, "famed": true}]},
+        "mainHand": {"chance": 1.0, "pick": [{"id": "gravemaker", "w": 1}, {"id": "anvil_breaker", "w": 1}, {"id": "iron_tide_greataxe", "w": 1, "famed": true}]},
         "offHand":  {"chance": 0.6, "pick": [{"id": "orc_iron_slab", "w": 1}]},
         "bodyMid":  {"chance": 1.0, "pick": [{"id": "orc_warplate", "w": 1}]}
       }
@@ -136,7 +140,7 @@
       "conditionRange": [0.6, 0.95],
       "quality": [[1, 2], [2, 3], [3, 1]],
       "slots": {
-        "mainHand":  {"chance": 1.0, "pick": [{"id": "goblin_hooked_spear", "w": 1, "famed": true}]},
+        "mainHand":  {"chance": 1.0, "pick": [{"id": "warren_hornbow", "w": 1}, {"id": "skullcracker_sling", "w": 1}, {"id": "warren_needle", "w": 1}, {"id": "goblin_hooked_spear", "w": 1, "famed": true}]},
         "offHand":   {"chance": 0.5, "pick": [{"id": "goblin_net", "w": 1}]},
         "bodyOuter": {"chance": 1.0, "pick": [{"id": "goblin_scrap_vest", "w": 1}]}
       }
@@ -192,8 +196,10 @@
       "conditionRange": [0.35, 0.7],
       "quality": [[0, 3], [1, 2]],
       "slots": {
+        "bodyOuter": { "chance": 0.4, "pick": [{ "id": "wicker_vest", "w": 1 }] },
+        "bodyMid": { "chance": 0.4, "pick": [{ "id": "cured_hide_vest", "w": 1 }] },
         "mainHand":  {"chance": 0.95, "pick": [{"id": "bone_knife", "w": 2}, {"id": "stone_spear", "w": 3}, {"id": "flint_handaxe", "w": 2}]},
-        "bodyBase":  {"chance": 0.5,  "pick": [{"id": "cured_hide_vest", "w": 2}, {"id": "wicker_vest", "w": 1}]},
+        "bodyBase":  {"chance": 0.5,  "pick": []},
         "head":      {"chance": 0.25, "pick": [{"id": "cured_hide_hood", "w": 1}]}
       }
     },

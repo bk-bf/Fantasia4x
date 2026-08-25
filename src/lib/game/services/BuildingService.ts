@@ -119,6 +119,7 @@ export interface BuildingService {
   butcheryTier(buildingType: string): number | undefined;
   cookingTier(buildingType: string): number | undefined;
   lapidaryTier(buildingType: string): number | undefined;
+  tailoringTier(buildingType: string): number | undefined;
   craftingBonusOf(buildingType: string): number;
   butcheryYieldBonusOf(buildingType: string): number;
   stationFulfills(haveType: string, recipeStation: string): boolean;
@@ -485,6 +486,15 @@ export class BuildingServiceImpl implements BuildingService {
     return this.getBuildingById(buildingType)?.effects?.lapidaryTier;
   }
 
+  /** Tailoring tier (effects.tailoringTier) — the bench a garment or a piece of soft armour is cut
+   *  and stitched on. Its own family, like cooking: a workbench 0 → a weaving frame 1 → a currier's
+   *  bench 2 → an outfitter's bench 3 → the runic loom 4. A better bench sews the SAME patterns
+   *  faster; it unlocks nothing, because a colony that could stitch a jerkin on day one should not
+   *  lose the pattern when it builds something better. */
+  tailoringTier(buildingType: string): number | undefined {
+    return this.getBuildingById(buildingType)?.effects?.tailoringTier;
+  }
+
   /** Crafting speed bonus of a station (effects.craftingBonus, e.g. 0.2 = +20%); 0 if none. */
   craftingBonusOf(buildingType: string): number {
     return this.getBuildingById(buildingType)?.effects?.craftingBonus ?? 0;
@@ -504,6 +514,7 @@ export class BuildingServiceImpl implements BuildingService {
       this.butcheryTier(buildingType) ??
       this.cookingTier(buildingType) ??
       this.lapidaryTier(buildingType) ??
+      this.tailoringTier(buildingType) ??
       -1
     );
   }
@@ -528,7 +539,10 @@ export class BuildingServiceImpl implements BuildingService {
     if (needC !== undefined && haveC !== undefined && haveC >= needC) return true;
     const needL = this.lapidaryTier(recipeStation);
     const haveL = this.lapidaryTier(haveType);
-    return needL !== undefined && haveL !== undefined && haveL >= needL;
+    if (needL !== undefined && haveL !== undefined && haveL >= needL) return true;
+    const needTail = this.tailoringTier(recipeStation);
+    const haveTail = this.tailoringTier(haveType);
+    return needTail !== undefined && haveTail !== undefined && haveTail >= needTail;
   }
 
   /** Best complete building that can craft a recipe for `recipeStation` — highest rank wins (a shared

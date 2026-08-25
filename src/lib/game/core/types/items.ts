@@ -599,7 +599,24 @@ export interface Item {
     arcane?: boolean; // an ARCANE weapon (elemental staff): damage scales with INTELLIGENCE instead of STRENGTH (mirrors `finesse`→PER).
     channeled?: boolean; // a CHANNELED ranged weapon (staff): fires with NO ammo, paying its `staminaCost` as MANA each shot, and is NOT self-consumed/dropped like a thrown weapon (it stays in hand). Bottoming out stamina latches `winded` = out of mana.
     critMod?: number; // added to the wielder's base hit_precision (0–1)
-    twoHanded?: boolean; // requires both mainHand and offHand slots
+    twoHanded?: boolean;
+    /** What KIND of weapon this is, when its name does not say. The gear tables read the family out
+     *  of the id otherwise, which fails the moment a weapon is named for what it does — a Flenser is a
+     *  cleaver and a Chainbiter is a flail, and no regex on those names will find that out. */
+    weaponFamily?:
+      | 'sword'
+      | 'axe'
+      | 'cleaver'
+      | 'mace'
+      | 'flail'
+      | 'spear'
+      | 'rapier'
+      | 'dagger'
+      | 'bow'
+      | 'crossbow'
+      | 'sling'
+      | 'thrown'
+      | 'staff'; // requires both mainHand and offHand slots
     /** A blade light enough to be held in EITHER hand, so a matched pair can be worn at once. Two of
      *  them is the `dualWield` grip (Combat.getGrip): a second point instead of a shield, trading every
      *  scrap of protection for reach into gaps and a much faster working rate. Daggers only — anything
