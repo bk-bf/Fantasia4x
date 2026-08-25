@@ -88,9 +88,16 @@ record is archived. This ledger raises **code-level** findings into that same bo
 ```
 
 Trigger clauses: `file_glob` `file_not_glob` `kind_in` `lang_in` `layer_in` `group_in`
-`module_matches` `name_matches` `exported` `tested` `min_loc` `max_loc` `flag` `any_flag`
-`no_flag` `matches` `not_matches` `reachable_from` `has_callers` `min_callers`, composed
-with `all` / `any` / `not`.
+`module_matches` `name_matches` `exported` `tested` `test_reachable` `max_test_depth`
+`min_loc` `max_loc` `flag` `any_flag` `no_flag` `matches` `not_matches` `reachable_from`
+`has_callers` `min_callers`, composed with `all` / `any` / `not`.
+
+`tested` is "a test file calls this symbol directly". Most of this suite runs through
+`buildScenario` / `HeadlessSession`, so what a test actually exercises sits one or more
+hops further in: `test_reachable` and `max_test_depth` read codegraph's `testDepth` (hops
+to the nearest directly-tested symbol) and are what a rule asking "is this untested?"
+should use. Asking with `tested` alone puts 271 symbols in front of an agent where
+`test_reachable` puts 79.
 
 ## Verdicts
 
@@ -123,8 +130,12 @@ node tools/audit/run.mjs --once --model haiku         # one batch, for checking 
 ```
 
 `index` needs a current `codegraph` extract for the reachability and caller triggers; run
-`pnpm graph` first. It reports the node match rate and warns when it is low — a low rate
-means `reachable_from` is under-firing, not that the code is clean.
+`pnpm graph` first. It compares the extract's commit against HEAD and warns when they
+differ — a stale graph makes `reachable_from` under-fire, which reads as clean code rather
+than as an unasked question. It also reports how each node was matched: `exact` is
+one-to-one, `folded` is a codegraph node (a nested function, an object-literal method, a
+component) attributed to the symbol whose span contains it, and anything left over has no
+counterpart in this inventory at all and gets named.
 
 ## Parallel workers
 

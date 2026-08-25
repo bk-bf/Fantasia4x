@@ -22,6 +22,14 @@ const clauseHandlers = {
   name_matches: (s, v) => re(v).test(s.name),
   exported: (s, v) => !!s.exported === !!v,
   tested: (s, v) => !!s.tested === !!v,
+  // `tested` is "a test file calls this". A suite driven through a harness reaches most of
+  // its subject one or more hops in, and every one of those reads as untested -- so ask
+  // about reach, not about the call site.
+  test_reachable: (s, v) => ((s.test_depth ?? s.testDepth) != null) === !!v,
+  max_test_depth: (s, v) => {
+    const d = s.test_depth ?? s.testDepth;
+    return d != null && d <= v;
+  },
   min_loc: (s, v) => s.loc >= v,
   max_loc: (s, v) => s.loc <= v,
   flag: (s, v, ctx) => ctx.flags(s).includes(v),

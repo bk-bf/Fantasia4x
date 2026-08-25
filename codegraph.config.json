@@ -4,7 +4,8 @@
   "srcDir": "src/lib",
   "svelteRoot": "src",
   "rustCrates": [
-    "spatial-core"
+    "spatial-core",
+    "sim-core"
   ],
   "adrsDoc": "docs/game/DECISIONS.md",
   "descriptions": "codegraph.descriptions.json",

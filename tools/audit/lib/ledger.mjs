@@ -19,7 +19,15 @@ export function open(path = DB_PATH) {
   const db = new DatabaseSync(path);
   db.exec(readFileSync(join(TOOL_DIR, 'schema.sql'), 'utf8'));
   db.exec('PRAGMA busy_timeout = 10000');
+  migrate(db);
   return db;
+}
+
+// CREATE TABLE IF NOT EXISTS leaves an existing table alone, so a column added later never
+// appears in a ledger that already exists. SQLite has no ADD COLUMN IF NOT EXISTS.
+function migrate(db) {
+  const cols = new Set(db.prepare('PRAGMA table_info(symbol)').all().map((r) => r.name));
+  if (!cols.has('test_depth')) db.exec('ALTER TABLE symbol ADD COLUMN test_depth INTEGER');
 }
 
 // --- symbols -----------------------------------------------------------------
@@ -27,14 +35,14 @@ export function open(path = DB_PATH) {
 export function replaceSymbols(db, symbols) {
   const ts = nowIso();
   const up = db.prepare(`
-    INSERT INTO symbol (key,file,module,grp,layer,lang,name,class_name,kind,exported,tested,
+    INSERT INTO symbol (key,file,module,grp,layer,lang,name,class_name,kind,exported,tested,test_depth,
                         start_line,end_line,start_byte,end_byte,loc,chars,content_hash,dep_hash,
                         flags,signature,first_seen,last_seen,alive)
-    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1)
     ON CONFLICT(key) DO UPDATE SET
       file=excluded.file, module=excluded.module, grp=excluded.grp, layer=excluded.layer,
       lang=excluded.lang, name=excluded.name, class_name=excluded.class_name, kind=excluded.kind,
-      exported=excluded.exported, tested=excluded.tested,
+      exported=excluded.exported, tested=excluded.tested, test_depth=excluded.test_depth,
       start_line=excluded.start_line, end_line=excluded.end_line,
       start_byte=excluded.start_byte, end_byte=excluded.end_byte,
       loc=excluded.loc, chars=excluded.chars, content_hash=excluded.content_hash,
@@ -56,6 +64,7 @@ export function replaceSymbols(db, symbols) {
         s.kind,
         s.exported ? 1 : 0,
         s.tested ? 1 : 0,
+        s.testDepth ?? null,
         s.startLine,
         s.endLine,
         s.startByte,

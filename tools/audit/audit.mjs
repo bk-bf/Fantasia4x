@@ -73,14 +73,19 @@ function cmdIndex() {
     );
     out(`[warn] run \`pnpm graph\` first, or set CODEGRAPH_DIR.`);
   } else {
-    const { map, matched, total } = G.mapNodes(graph, symbols);
+    const { map, matched, exact, enclosing, unmatched, total } = G.mapNodes(graph, symbols);
     const e = G.edgesFor(graph, map);
     edges = e.edges;
     const tested = G.testedKeys(graph, map);
-    for (const s of symbols) if (tested.has(s.key)) s.tested = true;
+    const depths = G.testDepths(graph, map);
+    for (const s of symbols) {
+      if (tested.has(s.key)) s.tested = true;
+      if (depths.has(s.key)) s.testDepth = depths.get(s.key);
+    }
     const pct = ((matched / total) * 100).toFixed(0);
     out(
-      `graph: ${matched}/${total} nodes mapped (${pct}%), ${edges.length} edges, ${e.dropped} unmapped`
+      `graph: ${matched}/${total} nodes mapped (${pct}%: ${exact} exact, ${enclosing} folded into an enclosing symbol), ` +
+        `${edges.length} edges (${e.internal} internal to one symbol, ${e.dropped} unmapped)`
     );
     // Exact staleness, rather than inferring it from a low match rate once the damage is
     // done: the extract records the revision it was built from, so a graph describing other
@@ -96,17 +101,29 @@ function cmdIndex() {
     } else if (graph.dirty) {
       out(`[warn] the codegraph extract was built over uncommitted changes; it matches no commit.`);
     }
-    if (matched / total < 0.8) {
+    // Staleness is already exact, above. What this names is the other thing a low map rate
+    // can mean: nodes describing code this inventory does not model at all, which carry
+    // reachability that never arrives here. Rust is the expected case; anything else is not.
+    const foreign = unmatched.filter((n) => !/\.rs$/.test(n.file));
+    if (foreign.length) {
+      const files = [...new Set(foreign.map((n) => n.file))].slice(0, 5);
       out(
-        `[warn] low map rate — the codegraph extract (${graph.generatedAt}) is likely stale; re-run \`pnpm graph\`.`
+        `[warn] ${foreign.length} codegraph node(s) map to no symbol here, so their call edges are`
       );
+      out(`[warn] dropped: ${files.join(', ')}${files.length < foreign.length ? ', …' : ''}`);
     }
     // The `tested` flag comes from codegraph's heuristic. When it collapses, family F asks
     // "is this untested?" about code that has tests -- noise, and it looks like coverage.
-    const testedRate =
-      tested.size /
-      Math.max(1, symbols.filter((s) => s.kind === 'function' || s.kind === 'method').length);
-    out(`graph: ${tested.size} symbols marked tested`);
+    const fnCount = Math.max(
+      1,
+      symbols.filter((s) => s.kind === 'function' || s.kind === 'method').length
+    );
+    const testedRate = tested.size / fnCount;
+    const reached = symbols.filter((s) => s.testDepth != null).length;
+    out(
+      `graph: ${tested.size} symbols called from a test, ${reached} reached by one ` +
+        `(${((reached / fnCount) * 100).toFixed(0)}% of functions/methods)`
+    );
     if (testedRate < 0.05) {
       out(`[warn] almost nothing is marked tested despite the repo having test files —`);
       out(
