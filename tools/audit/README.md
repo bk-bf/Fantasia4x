@@ -148,18 +148,16 @@ Each issue carries every citation the audit demanded before it would record a fa
 ```bash
 node tools/audit/audit.mjs issues --dry-run   # what would be written
 node tools/audit/audit.mjs issues             # write docs/issues/*.md
-node tools/audit/audit.mjs publish            # ready issues -> GitHub
 node tools/audit/audit.mjs board              # the board, by status
 ```
 
-The board lives at [`docs/issues/`](../../docs/issues/README.md) and is **canonical**; the
-GitHub issue is a projection carrying the issue number back in `github:`. Publishing is
-idempotent — an issue with a number is edited, one without is created.
+The board lives at [`docs/issues/`](../../docs/issues/README.md) and is the **only** record
+of a defect — nothing is projected to a forge. See
+[why not GitHub](../../docs/pr/README.md#why-not-github).
 
 Everything is raised `ready: false`. `ready` is the only gate between the audit and the
-repo, and only a person sets it: `publish` skips what is not ready, and the fixer will not
-touch it. An audit that raised its own work and then acted on it would be a loop with no
-one in it.
+repo, and only a person sets it: the fixer will not touch anything without it. An audit that
+raised its own work and then acted on it would be a loop with no one in it.
 
 Refreshing never overwrites an issue whose `origin: human`, and never reopens one that is
 `closed`.
@@ -173,27 +171,31 @@ node tools/audit/fix.mjs --next --dry-run     # pick and print
 node tools/audit/fix.mjs --next --keep        # leave the worktree to inspect
 ```
 
-One issue, one worktree off `origin/main`, one branch `fix/<slug>`, one PR. The prompt hands
+One issue, one worktree off `origin/main`, one branch `fix/<slug>`, one review file at
+[`docs/pr/<slug>.md`](../../docs/pr/README.md). The prompt hands
 the model the issue and states plainly that AGENTS.md's "stop at a proposal" rule does not
 apply here — `ready: true` is the go-ahead — because otherwise every run ends with a plan and
 no diff. It is told not to commit, not to push, not to touch `docs/issues/`, and that
 `Out of scope` is binding.
 
-**Nothing is pushed unless `pnpm check` and `pnpm test:related` are green.** A run that
-cannot get there pushes nothing, comments the failure and the model's account on the GitHub
-issue, and returns the issue to `open`. A failed attempt leaves a record rather than a
-half-finished branch. The worktree is removed either way.
+**Nothing is committed unless `pnpm check` and `pnpm test:related` are green, and nothing is
+pushed at all.** The branch stays local; whether it reaches `main` is your decision, made by
+reading `git diff main...fix/<slug>`. A run that cannot get green commits nothing, writes the
+failure and the model's account to the review board as `status: abandoned`, keeps its
+worktree, and returns the issue to `open` — a failed attempt leaves a record rather than a
+half-finished branch.
 
-Status moves `open → in-progress → in-review`, with `pr:` written back. Merging is yours;
-nothing here closes an issue.
+Status moves `open → in-progress → in-review`, with `pr:` naming the review file. Merging is
+yours; nothing here closes an issue.
 
 **Every attempt is handed to `mon` under the `fix` tag** (`AUDIT_FIX_TAG`), separately from
 the nightly audit reports on `ci/cl`:
 
 | Outcome | The session |
 | --- | --- |
-| PR opened | Runs in the audit worktree. Reads the diff against the issue and says which remediation steps it actually did, which it skipped, and what a reviewer should look at hardest. |
+| Ready to review | Runs in the main checkout. Reads `git diff main...fix/<slug>` against the issue and says which remediation steps it actually did, which it skipped, and what a reviewer should look at hardest. |
 | Not green | **Keeps the fix worktree and runs in it**, with the changes still in place. `mon steer` can carry the same attempt forward from any machine rather than starting over. |
+| Nothing changed | Says whether the issue is already fixed, wrongly scoped, or was not understood. No review file is written. |
 | Crashed before verifying | Says whether it is a harness problem or an issue problem, and changes nothing. |
 
 `--no-mon` skips registration.
@@ -219,22 +221,23 @@ journalctl --user -u fantasia-audit.service -n 40
 [`nightly-audit.sh`](deploy/nightly-audit.sh) runs in this order, and the order is the
 point — the source has to be current before the ledger is re-planned:
 
-1. `git fetch` + fast-forward `main` from origin
-2. merge `origin/audit-ledger` (tool changes pushed from another machine) and then
-   `main` (game code) into the worktree — both abort on conflict rather than guessing.
-   The branch accumulates local merge commits, so it will not fast-forward; that is why
-   these are merges rather than a `pull --ff-only`.
-3. re-extract the codegraph — without it the reachability triggers stop firing, which reads
+1. `git fetch` + fast-forward `main` from origin. It runs in the main checkout on `main`;
+   there is no audit branch. A board commit whose push failed last night is rebased onto
+   `origin/main` rather than treated as divergence, which would otherwise wedge every
+   later run on `--ff-only`.
+2. re-extract the codegraph — without it the reachability triggers stop firing, which reads
    as "the hot path is clean" rather than "nothing was asked about it"
-4. `audit index` + `audit plan` — verdicts whose code did not move stay `done`, so only the
+3. `audit index` + `audit plan` — verdicts whose code did not move stay `done`, so only the
    diff is re-audited
-5. `run.mjs` until the budget runs out (3.5 h, 3 workers, sonnet by default)
-6. `audit issues` — findings onto the board; the board is committed and pushed
-7. `audit publish` + `fix.mjs --next` ×`AUDIT_FIXES` — only touches `ready: true` issues
-8. `mon run` with the night's numbers, so the report is readable from a phone
+4. `run.mjs` until the budget runs out (3.5 h, 3 workers, sonnet by default)
+5. `audit issues` — findings onto the board, committed to `main` and pushed. This is the
+   only thing the nightly puts on `main`; it is markdown, and all of it `ready: false`.
+6. `fix.mjs --next` ×`AUDIT_FIXES` — only touches `ready: true` issues. Each attempt gets
+   its own local branch and a review file; nothing is pushed.
+7. `mon run` with the night's numbers, so the report is readable from a phone
 
-Steps 1–4 and 6 are deterministic and cost nothing; steps 5 and 7 spend tokens. A `flock` stops a
-second night starting on top of an overrunning one.
+Steps 1–3 and 5 are deterministic and cost nothing; steps 4 and 6 spend tokens. A `flock`
+stops a second night starting on top of an overrunning one.
 
 **Timezone.** The server's clock is UTC, so `OnCalendar` carries an explicit
 `Europe/Berlin`. A plain cron line at `0 4 * * *` on that box would fire at 04:00 UTC —
