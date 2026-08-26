@@ -7,6 +7,9 @@
     open,
     sel,
     cols,
+    shown,
+    hiddenRows,
+    hideRow,
     toggle,
     select,
     onhover,
@@ -17,6 +20,10 @@
     sel: Record<string, boolean>;
     /** how many columns the detail row spans */
     cols: number;
+    /** one flag per column index, in the source's column order */
+    shown: boolean[];
+    hiddenRows: Record<string, boolean>;
+    hideRow: (id: string) => void;
     toggle: (key: string) => void;
     select: (id: string) => void;
     /** a view with no hover card (buildings) simply passes neither */
@@ -44,9 +51,21 @@
 </tr>
 {#if !shut}
   {#each node.children as child (child.key)}
-    <Self node={child} {open} {sel} {cols} {toggle} {select} {onhover} {onout} />
+    <Self
+      node={child}
+      {open}
+      {sel}
+      {cols}
+      {shown}
+      {hiddenRows}
+      {hideRow}
+      {toggle}
+      {select}
+      {onhover}
+      {onout}
+    />
   {/each}
-  {#each node.rows as r (r.id)}
+  {#each node.rows.filter((r) => !hiddenRows[r.id]) as r (r.id)}
     <tr
       class="leaf"
       class:sel={sel[r.id]}
@@ -56,9 +75,14 @@
       onmouseleave={() => onout?.()}
     >
       {#each r.cells as c, i (i)}
-        <td class={c.cls} title={c.title} style={i === 0 ? `padding-left:${pad + 20}px` : undefined}
-          ><span class="v">{c.v}</span></td
-        >
+        {#if shown[i] !== false}
+          <td
+            class={c.cls}
+            title={c.title}
+            style={i === 0 ? `padding-left:${pad + 20}px` : undefined}
+            ><span class="v">{c.v}</span></td
+          >
+        {/if}
       {/each}
     </tr>
     {#if sel[r.id]}
@@ -66,6 +90,7 @@
         <td colspan={cols} style="padding-left:{pad + 20}px">
           {#if r.desc}<p>{r.desc}</p>{/if}
           <span class="id">{r.id}</span>
+          <button type="button" class="hide" onclick={() => hideRow(r.id)}>hide this row</button>
         </td>
       </tr>
     {/if}
@@ -204,5 +229,20 @@
   .id {
     color: #5f5a48;
     font-size: 10px;
+  }
+  .hide {
+    margin-left: 10px;
+    font: inherit;
+    font-size: 10px;
+    color: #8a7f5f;
+    background: none;
+    border: 1px solid #3a3324;
+    border-radius: 3px;
+    padding: 0 5px;
+    cursor: pointer;
+  }
+  .hide:hover {
+    color: #d8c48a;
+    border-color: #6a5f42;
   }
 </style>
