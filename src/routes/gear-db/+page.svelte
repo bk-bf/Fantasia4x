@@ -2,7 +2,7 @@
   import { effectsOf } from '$lib/dev/itemTree';
   import TreeView from '$lib/dev/TreeView.svelte';
   import { ITEM_SOURCE } from '$lib/dev/itemTree';
-  import { BUILDING_SOURCE } from '$lib/dev/buildingTree';
+  import { BUILDING_SOURCE, type BuildRow } from '$lib/dev/buildingTree';
 
   import { page } from '$app/state';
   import {
@@ -171,6 +171,7 @@
   const cellFor = (g: GearRow, label: string) => infoRows(g).find((r) => r.label === label) ?? null;
 
   let hovered = $state<GearRow | null>(null);
+  let hoveredStation = $state<BuildRow | null>(null);
   let hoveredBuild = $state<string | null>(null);
   let hoveredStat = $state<{ info: StatInfo; build: string | null; why: string | null } | null>(
     null
@@ -199,6 +200,14 @@
   }
   function hoverGear(g: GearRow, e: MouseEvent) {
     hovered = g;
+    hoveredBuild = null;
+    hoveredStat = null;
+    hoveredStation = null;
+    pos(e);
+  }
+  function hoverStation(b: BuildRow, e: MouseEvent) {
+    hoveredStation = b;
+    hovered = null;
     hoveredBuild = null;
     hoveredStat = null;
     pos(e);
@@ -457,7 +466,7 @@
       class:active={view === 'audit'}
       onclick={() => (view = 'audit')}
       title="Every item in items.jsonc, nested by what it is — armour by age ▸ set ▸ class ▸ coverage"
-      >Audit</button
+      >Items</button
     >
     <button
       class="tab lead"
@@ -545,6 +554,50 @@
         </div>{/each}
     </div>
   {/snippet}
+  {#snippet stationBody(b: BuildRow)}
+    <div class="info-head" data-cat="general">
+      {b.name}<span class="info-kind">{b.path[1] ?? b.path[0]}</span>
+    </div>
+    {#if b.desc}<p class="info-desc">{b.desc}</p>{/if}
+    <div class="info-grid">
+      <div class="info-row"><span class="il">age</span><span class="iv">{b.age}</span></div>
+      {#if b.rung !== null}
+        <div class="info-row">
+          <span class="il">rung</span><span class="iv info">{b.rung} on this ladder</span>
+        </div>
+      {/if}
+      {#if b.speed}
+        <div class="info-row">
+          <span class="il">speed</span><span class="iv good">+{b.speed}%</span>
+        </div>
+      {/if}
+      {#if b.boosts}
+        <div class="info-row">
+          <span class="il">grants</span><span class="iv good">{b.boosts}</span>
+        </div>
+      {/if}
+      {#if b.stores}
+        <div class="info-row"><span class="il">stores</span><span class="iv">{b.stores}</span></div>
+      {/if}
+      {#if b.fuel !== null}
+        <div class="info-row">
+          <span class="il">fuel</span><span class="iv">{b.fuel} / tick</span>
+        </div>
+      {/if}
+      <div class="info-row">
+        <span class="il">makes</span>
+        <span class="iv {b.makes ? 'info' : 'bad'}"
+          >{b.makes || (b.rung !== null ? 'inherits its ladder' : 'nothing')}</span
+        >
+      </div>
+      {#if b.cost}
+        <div class="info-row">
+          <span class="il">built from</span><span class="iv">{b.cost}</span>
+        </div>
+      {/if}
+      <div class="info-row"><span class="il">work</span><span class="iv">{b.work}</span></div>
+    </div>
+  {/snippet}
   {#snippet statBody(s: StatInfo, build: string | null, why: string | null)}
     <div class="info-head" data-cat={build ? BUILD_CAT[build] : 'general'}>
       {s.label}<span class="info-kind"
@@ -603,7 +656,11 @@
       onout={hoverOut}
     />
   {:else if view === 'buildings'}
-    <TreeView source={BUILDING_SOURCE} />
+    <TreeView
+      source={BUILDING_SOURCE}
+      onhover={(row, e) => hoverStation(row as BuildRow, e)}
+      onout={hoverOut}
+    />
   {:else if view === 'builds'}
     <div class="tabs sub">
       <button class="tab" class:active={bview === 'weapon'} onclick={() => (bview = 'weapon')}
@@ -929,6 +986,10 @@
     <div class="tooltip" use:place={[hx, hy, hoveredBuild]}>{@render buildBody(hoveredBuild)}</div>
   {:else if hovered}
     <div class="tooltip" use:place={[hx, hy, hovered]}>{@render infoBody(hovered)}</div>
+  {:else if hoveredStation}
+    <div class="tooltip" use:place={[hx, hy, hoveredStation]}>
+      {@render stationBody(hoveredStation)}
+    </div>
   {/if}
 </div>
 

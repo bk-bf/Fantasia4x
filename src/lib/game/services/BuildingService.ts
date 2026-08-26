@@ -21,6 +21,16 @@ import {
   releaseReservation
 } from '../core/state/stockpile';
 
+/** Legacy per-family effect keys, read so an un-migrated building keeps working. New stations use
+ *  `effects.family` + `effects.rung`. */
+const LEGACY_LADDER: [string, string][] = [
+  ['cookingTier', 'cooking'],
+  ['butcheryTier', 'butchery'],
+  ['lapidaryTier', 'lapidary'],
+  ['tailoringTier', 'tailoring'],
+  ['tier', 'crafting']
+];
+
 const AVAILABLE_BUILDINGS = buildingsData as unknown as Building[];
 const ITEMS_DB = itemsData as unknown as Item[];
 
@@ -85,6 +95,8 @@ export interface BuildingService {
   cookingTier(buildingType: string): number | undefined;
   lapidaryTier(buildingType: string): number | undefined;
   tailoringTier(buildingType: string): number | undefined;
+  /** Which LADDER a station is on and how far up — one lookup for every family there is. */
+  stationLadders(buildingType: string): { family: string; rung: number }[];
   craftingBonusOf(buildingType: string): number;
   butcheryYieldBonusOf(buildingType: string): number;
   stationFulfills(haveType: string, recipeStation: string): boolean;
@@ -365,6 +377,27 @@ export class BuildingServiceImpl implements BuildingService {
     return { upkeep, requirements };
   }
 
+  /**
+   * A station LADDER: `effects.family` names it and `effects.rung` places the station on it. Every
+   * family behaves identically — a higher rung runs every lower rung's recipes, faster — so there is
+   * one lookup rather than one per family. Nine of them written out by hand is nine places to forget
+   * a `return true`, and adding milling or brewing should be a data change, not a code change.
+   *
+   * The older per-family keys (`cookingTier`, `tailoringTier`, …) are still read so a building that
+   * has not been migrated keeps working; the named accessors below are thin readers over this.
+   */
+  stationLadders(buildingType: string): { family: string; rung: number }[] {
+    const e = this.getBuildingById(buildingType)?.effects as Record<string, unknown> | undefined;
+    if (!e) return [];
+    const out: { family: string; rung: number }[] = [];
+    if (typeof e.family === 'string' && typeof e.rung === 'number')
+      out.push({ family: e.family, rung: e.rung });
+    for (const [key, family] of LEGACY_LADDER)
+      if (typeof e[key] === 'number' && !out.some((l) => l.family === family))
+        out.push({ family, rung: e[key] as number });
+    return out;
+  }
+
   stationTier(buildingType: string): number | undefined {
     return this.getBuildingById(buildingType)?.effects?.tier;
   }
@@ -394,33 +427,18 @@ export class BuildingServiceImpl implements BuildingService {
   }
 
   private stationRank(buildingType: string): number {
-    return (
-      this.stationTier(buildingType) ??
-      this.butcheryTier(buildingType) ??
-      this.cookingTier(buildingType) ??
-      this.lapidaryTier(buildingType) ??
-      this.tailoringTier(buildingType) ??
-      -1
-    );
+    const l = this.stationLadders(buildingType);
+    return l.length ? Math.max(...l.map((x) => x.rung)) : -1;
   }
 
   stationFulfills(haveType: string, recipeStation: string): boolean {
     if (haveType === recipeStation) return true;
-    const needT = this.stationTier(recipeStation);
-    const haveT = this.stationTier(haveType);
-    if (needT !== undefined && haveT !== undefined && haveT >= needT) return true;
-    const needB = this.butcheryTier(recipeStation);
-    const haveB = this.butcheryTier(haveType);
-    if (needB !== undefined && haveB !== undefined && haveB >= needB) return true;
-    const needC = this.cookingTier(recipeStation);
-    const haveC = this.cookingTier(haveType);
-    if (needC !== undefined && haveC !== undefined && haveC >= needC) return true;
-    const needL = this.lapidaryTier(recipeStation);
-    const haveL = this.lapidaryTier(haveType);
-    if (needL !== undefined && haveL !== undefined && haveL >= needL) return true;
-    const needTail = this.tailoringTier(recipeStation);
-    const haveTail = this.tailoringTier(haveType);
-    return needTail !== undefined && haveTail !== undefined && haveTail >= needTail;
+    // A station can sit on TWO ladders at once — a maker's bench is tailoring rung 0 AND generic
+    // crafting tier 1 — so any shared family with a high enough rung fulfils. Reporting only the
+    // first one silently dropped the generic tier and broke bootstrap.
+    const need = this.stationLadders(recipeStation);
+    const have = this.stationLadders(haveType);
+    return need.some((n) => have.some((h) => h.family === n.family && h.rung >= n.rung));
   }
 
   bestCraftStation(recipeStation: string, gameState: GameState): PlacedBuilding | null {
