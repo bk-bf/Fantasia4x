@@ -443,13 +443,9 @@
 </script>
 
 <div class="build-db">
-  <header>
-    <h1>
-      Build database <span class="live">live · {BUILDS.length} builds · {GEAR.length} entries</span>
-    </h1>
-  </header>
-
   <div class="tabs">
+    <h1>Build database<span class="live">{BUILDS.length}b · {GEAR.length}e</span></h1>
+    <span class="sep"></span>
     <button class="tab lead" class:active={view === 'builds'} onclick={() => (view = 'builds')}
       >Builds</button
     >
@@ -662,7 +658,8 @@
     </div>
   {/snippet}
 
-  {#if view === 'audit'}
+  <div class="body">
+    {#if view === 'audit'}
     <TreeView
       source={ITEM_SOURCE}
       onhover={(row, e) => hoverCard && hoverGear(row as GearRow, e)}
@@ -931,9 +928,10 @@
             {/each}
           </tbody>
         </table>
-      </div>
+        </div>
+      {/if}
     {/if}
-  {/if}
+  </div>
 
   {#if compare}
     <section class="cmp" class:min={compareMin}>
@@ -1017,23 +1015,32 @@
   .build-db {
     position: fixed;
     inset: 0;
-    overflow-y: auto;
-    overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
     font-family: var(--font-mono, ui-monospace, monospace);
     color: #ece6d4;
     background: #13110c;
-    padding: 22px 26px 60px;
+    padding: 8px 12px 10px;
   }
-  header h1 {
-    font-size: 24px;
-    margin: 0 0 4px;
+  .body {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: auto;
+  }
+  h1 {
+    font-size: 14px;
+    margin: 0;
     font-weight: 700;
+    white-space: nowrap;
   }
   .live {
-    font-size: 12px;
+    font-size: 10px;
     color: #83bb6f;
     letter-spacing: 0.05em;
-    margin-left: 10px;
+    margin-left: 8px;
     font-weight: 400;
   }
   code {
@@ -1046,7 +1053,8 @@
     display: flex;
     align-items: center;
     gap: 4px;
-    margin-bottom: 14px;
+    margin-bottom: 6px;
+    flex: 0 0 auto;
     flex-wrap: wrap;
   }
   .sep {

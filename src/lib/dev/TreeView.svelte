@@ -222,13 +222,18 @@
 
 <style>
   .wrap {
-    margin-top: 8px;
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
   }
   .controls {
     display: flex;
     gap: 6px;
     align-items: center;
-    margin-bottom: 6px;
+    margin-bottom: 5px;
+    flex: 0 0 auto;
+    flex-wrap: wrap;
   }
   .search {
     background: #14120c;
@@ -278,8 +283,9 @@
     font-weight: 700;
   }
   .scroll {
+    flex: 1;
+    min-height: 0;
     overflow: auto;
-    max-height: 78vh;
     border: 1px solid #2a2519;
   }
   .picker {
