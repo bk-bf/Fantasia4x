@@ -37,6 +37,37 @@ for (const r of recipes) {
 }
 for (const list of RECIPES_AT.values()) list.sort((a, b) => a.localeCompare(b));
 
+const LEGACY_LADDER: [string, string][] = [
+  ['cookingTier', 'cooking'],
+  ['butcheryTier', 'butchery'],
+  ['lapidaryTier', 'lapidary'],
+  ['tailoringTier', 'tailoring']
+];
+
+const laddersOf = (b: any): { family: string; rung: number }[] => {
+  const e = b?.effects ?? {};
+  const out: { family: string; rung: number }[] = [];
+  if (typeof e.family === 'string' && typeof e.rung === 'number')
+    out.push({ family: e.family, rung: e.rung });
+  for (const [key, family] of LEGACY_LADDER)
+    if (typeof e[key] === 'number' && !out.some((l) => l.family === family))
+      out.push({ family, rung: e[key] as number });
+  return out;
+};
+
+const INHERITED = new Map<string, string[]>();
+for (const b of buildings) {
+  const mine = laddersOf(b);
+  if (!mine.length) continue;
+  const below = buildings.filter(
+    (o: any) =>
+      o.id !== b.id &&
+      laddersOf(o).some((l) => mine.some((m) => m.family === l.family && l.rung < m.rung))
+  );
+  const labels = below.flatMap((o: any) => RECIPES_AT.get(o.id) ?? []);
+  if (labels.length) INHERITED.set(b.id, [...new Set(labels)].sort((x, y) => x.localeCompare(y)));
+}
+
 export const BUILD_AGES = ['Primitive', 'Copper', 'Bronze', 'Iron', 'Steel', 'Runed'] as const;
 export type BuildAge = (typeof BUILD_AGES)[number];
 
@@ -156,6 +187,8 @@ export interface BuildRow {
   makes: number;
   /** what those recipes produce, by name */
   recipes: string[];
+  /** what it also runs by superseding every lower rung of its own ladder */
+  inherited: string[];
   cost: string;
   work: number;
   desc: string;
@@ -209,6 +242,7 @@ export const BUILD_ROWS: BuildRow[] = buildings
     fuel: b.fuelConsumptionRate ?? null,
     makes: (RECIPES_AT.get(b.id) ?? []).length,
     recipes: RECIPES_AT.get(b.id) ?? [],
+    inherited: INHERITED.get(b.id) ?? [],
     cost: costOf(b),
     work: b.workAmount ?? 0,
     desc: b.description ?? ''
@@ -334,6 +368,12 @@ export function sortBuildingTree(
 
 import type { TreeSource, ViewNode, ViewRow } from './treeView';
 
+const recipeCell = (b: BuildRow): string => {
+  const own = b.recipes.join(', ');
+  if (!b.inherited.length) return own;
+  return `${own}${own ? ' · ' : ''}supersedes: ${b.inherited.join(', ')}`;
+};
+
 const CELLS = (b: BuildRow): ViewRow['cells'] => [
   { v: b.name, cls: 'nm' },
   { v: b.age, cls: 'age' },
@@ -343,7 +383,16 @@ const CELLS = (b: BuildRow): ViewRow['cells'] => [
   { v: b.stores, cls: 'cls' },
   { v: b.fuel ?? '', cls: 'num' },
   { v: b.makes || '—', cls: 'num' },
-  { v: b.recipes.join(', '), cls: 'src', title: b.recipes.join('\n') },
+  {
+    v: recipeCell(b),
+    cls: 'recipes',
+    title: [
+      b.recipes.length ? `Its own:\n  ${b.recipes.join('\n  ')}` : 'Introduces no recipe of its own',
+      b.inherited.length ? `\nSupersedes:\n  ${b.inherited.join('\n  ')}` : ''
+    ]
+      .filter(Boolean)
+      .join('\n')
+  },
   { v: b.work || '', cls: 'num' },
   { v: b.cost, cls: 'src', title: b.cost }
 ];

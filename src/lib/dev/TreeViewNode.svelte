@@ -178,6 +178,14 @@
   .src {
     color: #7f8a92;
   }
+  .recipes {
+    color: #7f8a92;
+    font-size: 9px;
+    line-height: 1.3;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    max-width: 46ch;
+  }
   .gate {
     color: #6f6a58;
     font-size: 10px;
