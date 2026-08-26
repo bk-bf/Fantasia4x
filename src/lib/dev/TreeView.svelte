@@ -14,6 +14,47 @@
     onout?: () => void;
   } = $props();
 
+  const MIN_W = 44;
+  const defaultWidth = (c: { key: string; num?: boolean }): number =>
+    c.num ? 62 : c.key === 'name' ? 300 : c.key === 'recipes' ? 380 : 160;
+  const storeKey = $derived(`f4x.treeview.cols.${source.noun}`);
+
+  let widths = $state<Record<string, number>>({});
+  let loadedFor = '';
+  $effect(() => {
+    if (loadedFor === storeKey) return;
+    loadedFor = storeKey;
+    let saved: Record<string, number> = {};
+    try {
+      saved = JSON.parse(localStorage.getItem(storeKey) ?? '{}');
+    } catch {
+      saved = {};
+    }
+    const next: Record<string, number> = {};
+    for (const c of source.columns)
+      next[c.key] = Math.max(MIN_W, Number(saved[c.key]) || defaultWidth(c));
+    widths = next;
+  });
+
+  function resize(key: string, px: number) {
+    widths[key] = Math.max(MIN_W, Math.round(px));
+    try {
+      localStorage.setItem(storeKey, JSON.stringify(widths));
+    } catch {
+      /* a dev tool in a private window still works, it just forgets */
+    }
+  }
+  function resetWidths() {
+    const next: Record<string, number> = {};
+    for (const c of source.columns) next[c.key] = defaultWidth(c);
+    widths = next;
+    try {
+      localStorage.removeItem(storeKey);
+    } catch {
+      /* nothing to forget */
+    }
+  }
+
   let q = $state('');
   let open = $state<Record<string, boolean>>({});
   let sel = $state<Record<string, boolean>>({});
@@ -58,6 +99,7 @@
     />
     <button class="btn" onclick={expandAll}>expand all</button>
     <button class="btn" onclick={collapseAll}>collapse all</button>
+    <button class="btn" onclick={resetWidths}>reset widths</button>
     <span class="count"
       >{view.count} / {source.total}
       {source.noun}{#if Object.keys(sel).length}
@@ -67,7 +109,12 @@
   {#if source.hint}<p class="hint">{@html source.hint}</p>{/if}
   <div class="scroll">
     <table>
-      <TreeViewHeader columns={source.columns} {sortKey} {sortDir} {sortBy} />
+      <colgroup>
+        {#each source.columns as c (c.key)}
+          <col style="width:{widths[c.key] ?? defaultWidth(c)}px" />
+        {/each}
+      </colgroup>
+      <TreeViewHeader columns={source.columns} {sortKey} {sortDir} {sortBy} {widths} {resize} />
       <tbody>
         {#each view.children as root (root.key)}
           <TreeViewNode
@@ -153,7 +200,9 @@
   }
   table {
     border-collapse: collapse;
-    width: 100%;
+    table-layout: fixed;
+    width: max-content;
+    min-width: 100%;
     font-size: 11px;
   }
   .none {
