@@ -306,3 +306,48 @@ describe('no two items share a name', () => {
     expect(bad, bad.join('; ')).toEqual([]);
   });
 });
+
+describe('a workstation is named for equipment, not for a room', () => {
+  const POWERED_MILLS = new Set(['donkey_mill', 'watermill', 'windmill']);
+  const ROOMISH =
+    /(house|works|shop|cellar|brewery|bakery|granary|lodge|walk|smithy)\b|\b(lab|apothecary|hall|barn|shed|room|hut|kitchen)\b/i;
+
+  it('no workstation carries a name that reads as a building', () => {
+    const bad = BUILDINGS.filter((b) => b.workstation && !POWERED_MILLS.has(b.id))
+      .filter((b) => ROOMISH.test(b.name ?? ''))
+      .map((b) => `${b.id} is called "${b.name}" — a room, not a thing a pawn works at`);
+    expect(bad, bad.join('; ')).toEqual([]);
+  });
+
+  it('the deferred powered mills stay exempt only while they hold no recipes', () => {
+    const bad = [...POWERED_MILLS]
+      .filter((id) => RECIPES.some((r) => r.station === id))
+      .map((id) => `${id} has recipes — see docs/tasks/open/MECHANICAL-POWER.md before adding any`);
+    expect(bad, bad.join('; ')).toEqual([]);
+  });
+});
+
+describe('station ladders ascend', () => {
+  const ladders = new Map<string, { id: string; rung: number; age: number; name: string }[]>();
+  for (const b of BUILDINGS) {
+    const e = b.effects ?? {};
+    if (typeof e.family !== 'string' || typeof e.rung !== 'number') continue;
+    const row = { id: b.id, rung: e.rung, age: BUILDING_AGE.get(b.id) ?? 0, name: b.name };
+    ladders.set(e.family, [...(ladders.get(e.family) ?? []), row]);
+  }
+
+  it('a higher rung is never an earlier age than the rung below it', () => {
+    const bad: string[] = [];
+    for (const [family, rows] of ladders) {
+      const sorted = [...rows].sort((a, b) => a.rung - b.rung);
+      for (let i = 1; i < sorted.length; i++)
+        if (sorted[i].age < sorted[i - 1].age)
+          bad.push(
+            `${family}: "${sorted[i].name}" (rung ${sorted[i].rung}, ${AGE_NAMES[sorted[i].age]}) ` +
+              `sits above "${sorted[i - 1].name}" (${AGE_NAMES[sorted[i - 1].age]})`
+          );
+    }
+    expect(bad, bad.join('; ')).toEqual([]);
+  });
+
+});
