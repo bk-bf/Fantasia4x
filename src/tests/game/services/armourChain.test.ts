@@ -107,7 +107,7 @@ describe('armour chain — physical pawn pipeline (HeadlessSession, real ticks)'
         workReady: true,
         pawns: [{ count: 6, skillLevel: 12 }],
         needsDisabled: ['hunger', 'fatigue'],
-        buildings: [{ id: 'makers_bench' }, { id: 'craft_spot' }],
+        buildings: [{ id: 'makers_bench' }, { id: 'craft_spot' }, { id: 'weaving_frame' }],
         items: {
           cured_deer_hide: 20,
           deer_hide: 20,

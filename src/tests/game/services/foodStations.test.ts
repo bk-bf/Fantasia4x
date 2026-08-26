@@ -144,20 +144,29 @@ describe('every cooking rung earns its build', () => {
     ])
       craft(id);
 
+    let stockPeak = 0;
     const wave1 = ['roast_joint', 'bone_stock', 'seared_steak', 'confit_meat'];
-    for (let i = 0; i < 40 && !wave1.every((k) => (stk()[k] ?? 0) > 0); i++) s.tick(400);
+    for (let i = 0; i < 40 && !wave1.every((k) => (stk()[k] ?? 0) > 0); i++) {
+      s.tick(400);
+      stockPeak = Math.max(stockPeak, stk().bone_stock ?? 0);
+    }
 
     craft('braised_game');
-    for (let i = 0; i < 25 && !((stk().braised_game ?? 0) > 0); i++) s.tick(400);
+    for (let i = 0; i < 25 && !((stk().braised_game ?? 0) > 0); i++) {
+      s.tick(400);
+      stockPeak = Math.max(stockPeak, stk().bone_stock ?? 0);
+    }
 
     console.log(
       `[COOK] hearth: roast=${stk().roast_joint ?? 0} fish=${stk().baked_fish ?? 0} roots=${stk().baked_roots ?? 0} | ` +
-        `stove: stock=${stk().bone_stock ?? 0} braised=${stk().braised_game ?? 0} | ` +
+        `stove: stock peak=${stockPeak} left=${stk().bone_stock ?? 0} braised=${stk().braised_game ?? 0} | ` +
         `iron: steak=${stk().seared_steak ?? 0} sausage=${stk().fresh_sausage ?? 0} | ` +
         `steel: confit=${stk().confit_meat ?? 0}`
     );
     expect(stk().roast_joint ?? 0, 'rung 2 roasted a joint').toBeGreaterThan(0);
-    expect(stk().bone_stock ?? 0, 'rung 3 simmered stock').toBeGreaterThan(0);
+    expect(stockPeak, 'rung 3 simmered stock (it is spent on stews and braises)').toBeGreaterThan(
+      0
+    );
     expect(stk().braised_game ?? 0, 'rung 3 braised on the stock').toBeGreaterThan(0);
     expect(stk().seared_steak ?? 0, 'rung 4 seared on iron').toBeGreaterThan(0);
     expect(stk().confit_meat ?? 0, 'rung 5 sealed a confit').toBeGreaterThan(0);

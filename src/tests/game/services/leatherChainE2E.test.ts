@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { buildScenario } from '$lib/game/headless/Scenario';
+import { isFluidId } from '$lib/game/core/rules/gear/vessels';
 import { HeadlessSession } from '$lib/game/headless/HeadlessSession';
 import { recipeService } from '$lib/game/services/RecipeService';
 import { itemService } from '$lib/game/services/ItemService';
@@ -31,7 +32,7 @@ function provisioned(): GameState {
   const stations = new Set<string>();
   for (const r of [...CURE, ...TAN, ...CONSUMERS]) if (r.station) stations.add(r.station);
   const stock: Record<string, number> = {};
-  for (const t of ['material', 'food', 'consumable'])
+  for (const t of ['material', 'food', 'consumable', 'fluid'])
     for (const i of itemService.getItemsByType(t)) stock[i.id] = 999;
   return buildScenario({
     seed: 42,
@@ -93,8 +94,10 @@ describe('leather/wool chain — full end-to-end sweep (provisioned colony)', ()
         { ...state, craftingQueue: [makeOrder(r.id, state)] } as GameState,
         () => 1
       );
-      if (!(gs.droppedItems ?? []).some((d) => d.resourceId === out))
-        fail.push(`${r.id}: no ${out}`);
+      const landed = isFluidId(out)
+        ? (gs.stockpile?.[out] ?? 0) > 0
+        : (gs.droppedItems ?? []).some((d) => d.resourceId === out);
+      if (!landed) fail.push(`${r.id}: no ${out}`);
     }
     console.log(
       `[E2E] consumers: ${CONSUMERS.length} recipes (${CONSUMERS.filter(usesCat('category:leather')).length} leather), ${fail.length} failures`

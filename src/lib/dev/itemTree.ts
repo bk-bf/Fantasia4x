@@ -169,6 +169,8 @@ export interface TreeItem {
   id: string;
   name: string;
   path: string[];
+  /** every branch it belongs to; the first is `path` */
+  paths: string[][];
   age: Age;
   ageRank: number;
   tier: number | null;
@@ -423,8 +425,18 @@ function pathOf(i: any): string[] {
   return ['Materials', line, ...materialStage(i, line), age];
 }
 
+function altPathsOf(i: any): string[][] {
+  const out: string[][] = [];
+  const age = ageOf(i);
+  if (i.type === 'fluid' && i.nutrition != null)
+    out.push(['Consumables', 'Food', ...foodBranch(i), age]);
+  if (i.type === 'fluid' && i.medicineQuality != null) out.push(['Consumables', 'Medicine', age]);
+  return out;
+}
+
 function fluidPurpose(i: any): string {
   if (i.coatingEffect) return 'Coatings & oils';
+  if (i.medicineQuality != null) return 'Medicine';
   if (i.nutrition != null || i.id === 'water') return 'Drink';
   if ((i.grantsConditions?.length && i.conditionDurationTurns) || i.grantsTraitOnConsume)
     return 'Potions & draughts';
@@ -477,6 +489,7 @@ export const TREE_ITEMS: TreeItem[] = items
       id: i.id,
       name: i.name ?? prettify(i.id),
       path: pathOf(i),
+      paths: [pathOf(i), ...altPathsOf(i)],
       age: ageOf(i),
       ageRank: AGES.indexOf(ageOf(i)),
       tier: i.tier ?? null,
@@ -579,21 +592,23 @@ export function buildTree(rows: TreeItem[] = TREE_ITEMS): TreeNode {
   };
   const index = new Map<string, TreeNode>([['', root]]);
   for (const it of rows) {
-    let key = '';
-    let node = root;
-    node.count++;
-    it.path.forEach((label, depth) => {
-      key = key ? `${key}/${label}` : label;
-      let child = index.get(key);
-      if (!child) {
-        child = { key, label, depth, count: 0, children: [], items: [], missing: [] };
-        index.set(key, child);
-        node.children.push(child);
-      }
-      child.count++;
-      node = child;
-    });
-    node.items.push(it);
+    root.count++;
+    for (const path of it.paths ?? [it.path]) {
+      let key = '';
+      let node = root;
+      path.forEach((label, depth) => {
+        key = key ? `${key}/${label}` : label;
+        let child = index.get(key);
+        if (!child) {
+          child = { key, label, depth, count: 0, children: [], items: [], missing: [] };
+          index.set(key, child);
+          node.children.push(child);
+        }
+        child.count++;
+        node = child;
+      });
+      node.items.push(it);
+    }
   }
   (function order(n: TreeNode, rootLabel = '') {
     if (n === root)
