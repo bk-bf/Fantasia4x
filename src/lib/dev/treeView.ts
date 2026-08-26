@@ -44,7 +44,7 @@ export interface TreeSource {
   /** plural noun for the count line and the search placeholder */
   noun: string;
   /** the paragraph under the controls explaining how to read this tree */
-  hint: string;
+  hint?: string;
   columns: ViewColumn[];
   total: number;
   /** filtered, built and sorted in one call, because the caller has no business knowing the order */

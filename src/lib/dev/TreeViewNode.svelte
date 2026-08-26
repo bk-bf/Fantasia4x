@@ -57,7 +57,7 @@
     >
       {#each r.cells as c, i (i)}
         <td class={c.cls} title={c.title} style={i === 0 ? `padding-left:${pad + 20}px` : undefined}
-          >{c.v}</td
+          ><span class="v">{c.v}</span></td
         >
       {/each}
     </tr>
@@ -162,18 +162,26 @@
   }
   .held {
     color: var(--text-dim, #8a8a8a);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 18ch;
   }
   .fx {
     color: #7fa88c;
     font-size: 10px;
-    max-width: 34ch;
+  }
+  td .v {
+    display: inline;
+  }
+  .held .v,
+  .fx .v {
+    display: block;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+  .held .v {
+    max-width: 18ch;
+  }
+  .fx .v {
+    max-width: 34ch;
   }
   .src {
     color: #7f8a92;
@@ -182,9 +190,12 @@
     color: #7f8a92;
     font-size: 9px;
     line-height: 1.3;
+  }
+  .recipes .v {
+    display: block;
+    max-width: 46ch;
     white-space: normal;
     overflow-wrap: anywhere;
-    max-width: 46ch;
   }
   .gate {
     color: #6f6a58;
