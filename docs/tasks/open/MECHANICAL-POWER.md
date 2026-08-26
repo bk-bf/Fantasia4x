@@ -23,8 +23,8 @@ grinds flour faster, for no reason the player can see. Nothing about them is a m
 not real, the water is not real, the wind is not real.
 
 `quern` (milling 0) **stays a workstation** and is unaffected by this spec. A hand quern is exactly
-a thing a pawn kneels at and turns. It was renamed **Hand Quern** in the same pass, and the "hand"
-is what this spec eventually contrasts against.
+a thing a pawn kneels at and turns. It was renamed **Granite Quern** in the same pass, and it is
+the hand-powered baseline this spec eventually contrasts against.
 
 ---
 
@@ -96,7 +96,7 @@ proven to be worth the interface cost.
 
 Once power exists, milling stops being one recipe made faster and becomes a throughput tier:
 
-- **Hand Quern** (workstation, no power) — flour one small batch at a time, a pawn stood there the
+- **Granite Quern** (workstation, no power) — flour one small batch at a time, a pawn stood there the
   whole while. The fallback that always works.
 - **Animal Mill** — runs without a pawn present once the beast is assigned. The player trades a
   tamed animal and its feed for freeing a colonist.

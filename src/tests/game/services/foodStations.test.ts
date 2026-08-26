@@ -94,3 +94,77 @@ describe('the new stations actually run', () => {
     expect(stk().honey_tart ?? 0, 'a tart was baked').toBeGreaterThan(0);
   }, 200000);
 });
+
+describe('every cooking rung earns its build', () => {
+  it('pawns cook up the whole ladder, hearth to steel stove', async () => {
+    const s = new HeadlessSession();
+    await s.start(
+      buildScenario({
+        seed: 44,
+        map: { w: 22, h: 22 },
+        workReady: true,
+        researchMaxTier: 9,
+        toolTier: 3,
+        infiniteFuel: true,
+        pawns: [{ count: 8, skillLevel: 20 }],
+        needsDisabled: ['hunger', 'fatigue', 'thirst', 'hygiene'],
+        buildings: [
+          { id: 'brick_hearth' },
+          { id: 'brick_stove' },
+          { id: 'iron_stove' },
+          { id: 'steel_stove' }
+        ],
+        items: {
+          venison: 40,
+          river_trout: 12,
+          turnip: 30,
+          onion: 20,
+          thyme: 20,
+          salt: 30,
+          tallow: 30,
+          large_bones: 20,
+          water: 20,
+          bread: 10
+        },
+        seedEntities: false
+      })
+    );
+    const stk = () => (s.getState() as unknown as S).stockpile ?? {};
+    const craft = (itemId: string, quantity = 1) =>
+      s.command({ type: 'craftItem', payload: { itemId, quantity } } as never);
+
+    for (const id of [
+      'roast_joint',
+      'baked_fish',
+      'baked_roots',
+      'bone_stock',
+      'seared_steak',
+      'fresh_sausage',
+      'confit_meat'
+    ])
+      craft(id);
+
+    const wave1 = ['roast_joint', 'bone_stock', 'seared_steak', 'confit_meat'];
+    for (let i = 0; i < 40 && !wave1.every((k) => (stk()[k] ?? 0) > 0); i++) s.tick(400);
+
+    craft('braised_game');
+    for (let i = 0; i < 25 && !((stk().braised_game ?? 0) > 0); i++) s.tick(400);
+
+    console.log(
+      `[COOK] hearth: roast=${stk().roast_joint ?? 0} fish=${stk().baked_fish ?? 0} roots=${stk().baked_roots ?? 0} | ` +
+        `stove: stock=${stk().bone_stock ?? 0} braised=${stk().braised_game ?? 0} | ` +
+        `iron: steak=${stk().seared_steak ?? 0} sausage=${stk().fresh_sausage ?? 0} | ` +
+        `steel: confit=${stk().confit_meat ?? 0}`
+    );
+    expect(stk().roast_joint ?? 0, 'rung 2 roasted a joint').toBeGreaterThan(0);
+    expect(stk().bone_stock ?? 0, 'rung 3 simmered stock').toBeGreaterThan(0);
+    expect(stk().braised_game ?? 0, 'rung 3 braised on the stock').toBeGreaterThan(0);
+    expect(stk().seared_steak ?? 0, 'rung 4 seared on iron').toBeGreaterThan(0);
+    expect(stk().confit_meat ?? 0, 'rung 5 sealed a confit').toBeGreaterThan(0);
+
+    craft('feast_platter');
+    for (let i = 0; i < 25 && !((stk().feast_platter ?? 0) > 0); i++) s.tick(400);
+    console.log(`[COOK] steel: feast platter=${stk().feast_platter ?? 0}`);
+    expect(stk().feast_platter ?? 0, 'the platter assembles the rungs below it').toBeGreaterThan(0);
+  }, 300000);
+});

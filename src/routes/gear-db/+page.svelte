@@ -570,8 +570,14 @@
       </div>
       {#if b.recipes.length}
         <div class="info-row recipes">
-          <span class="il">recipes</span>
+          <span class="il">unlocks</span>
           <span class="iv">{b.recipes.join(', ')}</span>
+        </div>
+      {/if}
+      {#if b.inherited.length}
+        <div class="info-row recipes">
+          <span class="il">supersedes</span>
+          <span class="iv">{b.inherited.join(', ')}</span>
         </div>
       {/if}
       {#if b.cost}

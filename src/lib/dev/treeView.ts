@@ -8,7 +8,7 @@
 export interface ViewCell {
   /** what the cell reads */
   v: string | number;
-  /** the class the existing table styles already understand: nm, num, cls, age, stat, fx, src, gate */
+  /** the class the existing table styles already understand: nm, num, cls, age, stat, fx, src, gate, recipes */
   cls: string;
   /** hover text, for a cell that is truncated */
   title?: string;
