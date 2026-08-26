@@ -10,6 +10,8 @@ describe('the cooking ladder', () => {
   it('every rung is a strict improvement on the one below', () => {
     let lastBonus = -1;
     let lastFuel = 99;
+    let lastHold = -1;
+    let lastBurnTime = -1;
     for (const id of LADDER) {
       const def = buildingService.getBuildingById(id)!;
       const tier = buildingService.cookingTier(id)!;
@@ -18,8 +20,16 @@ describe('the cooking ladder', () => {
       expect(tier, `${id} declares a cooking tier`).toBe(LADDER.indexOf(id));
       expect(bonus, `${id} cooks faster than the rung below`).toBeGreaterThan(lastBonus);
       expect(fuel, `${id} burns less than the rung below`).toBeLessThanOrEqual(lastFuel);
+      const hold = def.maxFuel ?? 0;
+      expect(hold, `${id} holds more fuel than the rung below`).toBeGreaterThan(lastHold);
+      expect(
+        hold / fuel,
+        `${id} runs longer on a full load than the rung below`
+      ).toBeGreaterThan(lastBurnTime);
       lastBonus = bonus;
       lastFuel = fuel;
+      lastHold = hold;
+      lastBurnTime = hold / fuel;
     }
   });
 

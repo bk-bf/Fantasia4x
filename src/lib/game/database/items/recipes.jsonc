@@ -1394,7 +1394,7 @@
   },
   {
     "id"              : "make_elk_meat",
-    "station"         : "butcher_spot",
+    "station"         : "dressing_stone",
     "inputs"          : {"elk_carcass": 1},
     "outputs"         : {"elk_meat": 16, "elk_hide": 3, "large_bones": 16, "raw_sinew": 16, "antler_rack": 2},
     "workAmount"      : 60,
@@ -1426,7 +1426,7 @@
   },
   {
     "id"              : "make_rat_meat",
-    "station"         : "butcher_spot",
+    "station"         : "dressing_stone",
     "inputs"          : {"giant_rat_carcass": 1},
     "outputs"         : {"rat_meat": 2, "rat_pelt": 1, "small_bones": 3, "raw_sinew": 1},
     "workAmount"      : 15,
@@ -3878,7 +3878,7 @@
   },
   {
     "id"              : "make_aurochs_meat",
-    "station"         : "butcher_spot",
+    "station"         : "dressing_stone",
     "inputs"          : {"aurochs_carcass": 1},
     "outputs"         : {"aurochs_meat": 18, "aurochs_hide": 3, "ox_wool": 4, "large_bones": 18, "raw_sinew": 16, "curved_horn": 2},
     "workAmount"      : 60,
@@ -3886,7 +3886,7 @@
   },
   {
     "id"              : "make_mammoth_meat",
-    "station"         : "butcher_spot",
+    "station"         : "dressing_stone",
     "inputs"          : {"woolly_mammoth_carcass": 1},
     "outputs"         : {"mammoth_meat": 40, "mammoth_fur": 6, "ivory": 2, "huge_bones": 24, "mammoth_wool": 12, "raw_sinew": 30},
     "workAmount"      : 90,
@@ -3894,7 +3894,7 @@
   },
   {
     "id"              : "make_owlbear_meat",
-    "station"         : "butcher_spot",
+    "station"         : "dressing_stone",
     "inputs"          : {"owlbear_carcass": 1},
     "outputs"         : {"owlbear_meat": 16, "owlbear_pelt": 2, "owlbear_bile": 0.3, "large_bones": 16, "raw_sinew": 14, "predator_claw": 1},
     "workAmount"      : 60,
@@ -4006,7 +4006,7 @@
   },
   {
     "id"              : "render_grimeling",
-    "station"         : "butcher_spot",
+    "station"         : "dressing_stone",
     "inputs"          : {"grimeling_carcass": 1},
     "outputs"         : {"caustic_bile": 0.4, "plant_fiber": 2},
     "workAmount"      : 14,
@@ -4014,7 +4014,7 @@
   },
   {
     "id"              : "make_kobold_remains",
-    "station"         : "butcher_spot",
+    "station"         : "dressing_stone",
     "inputs"          : {"kobold_skulker_carcass": 1},
     "outputs"         : {"small_bones": 4, "raw_sinew": 2},
     "workAmount"      : 12,
@@ -4022,7 +4022,7 @@
   },
   {
     "id"              : "make_gnoll_remains",
-    "station"         : "butcher_spot",
+    "station"         : "dressing_stone",
     "inputs"          : {"gnoll_marauder_carcass": 1},
     "outputs"         : {"medium_bones": 5, "raw_sinew": 4},
     "workAmount"      : 18,
@@ -4038,7 +4038,7 @@
   },
   {
     "id"              : "make_harpy_remains",
-    "station"         : "butcher_spot",
+    "station"         : "dressing_stone",
     "inputs"          : {"harpy_carcass": 1},
     "outputs"         : {"small_bones": 5, "raw_sinew": 3},
     "workAmount"      : 15,
@@ -4046,7 +4046,7 @@
   },
   {
     "id"              : "make_bullywug_remains",
-    "station"         : "butcher_spot",
+    "station"         : "dressing_stone",
     "inputs"          : {"bullywug_carcass": 1},
     "outputs"         : {"small_bones": 4, "raw_sinew": 3},
     "workAmount"      : 15,
@@ -4054,7 +4054,7 @@
   },
   {
     "id"              : "make_viper_remains",
-    "station"         : "butcher_spot",
+    "station"         : "dressing_stone",
     "inputs"          : {"marsh_viper_carcass": 1},
     "outputs"         : {"venom_sac": 1, "small_bones": 2, "raw_sinew": 1},
     "workAmount"      : 12,
@@ -4105,7 +4105,7 @@
   },
   {
     "id"              : "make_sabretooth_meat",
-    "station"         : "butcher_spot",
+    "station"         : "dressing_stone",
     "inputs"          : {"sabretooth_carcass": 1},
     "outputs"         : {"sabretooth_meat": 12, "sabretooth_pelt": 2, "large_bones": 14, "raw_sinew": 12, "predator_claw": 1},
     "workAmount"      : 45,
@@ -4113,7 +4113,7 @@
   },
   {
     "id"              : "make_crocodile_meat",
-    "station"         : "butcher_spot",
+    "station"         : "dressing_stone",
     "inputs"          : {"mire_crocodile_carcass": 1},
     "outputs"         : {"crocodile_meat": 12, "croc_scaled_hide": 3, "medium_bones": 12, "raw_sinew": 10},
     "workAmount"      : 45,
@@ -4121,7 +4121,7 @@
   },
   {
     "id"              : "make_hippogriff_meat",
-    "station"         : "butcher_spot",
+    "station"         : "dressing_stone",
     "inputs"          : {"hippogriff_carcass": 1},
     "outputs"         : {"hippogriff_meat": 12, "hippogriff_feathered_hide": 2, "feathers": 10, "medium_bones": 12, "raw_sinew": 10, "predator_claw": 2},
     "workAmount"      : 45,
@@ -4137,7 +4137,7 @@
   },
   {
     "id"              : "make_worg_meat",
-    "station"         : "butcher_spot",
+    "station"         : "dressing_stone",
     "inputs"          : {"worg_carcass": 1},
     "outputs"         : {"worg_meat": 8, "worg_hide": 2, "medium_bones": 10, "raw_sinew": 8, "predator_claw": 1},
     "workAmount"      : 30,
@@ -4153,7 +4153,7 @@
   },
   {
     "id"              : "make_quillback_meat",
-    "station"         : "butcher_spot",
+    "station"         : "dressing_stone",
     "inputs"          : {"quillback_carcass": 1},
     "outputs"         : {"boar_meat": 8, "boar_hide": 2, "medium_bones": 10, "raw_sinew": 7},
     "workAmount"      : 30,
@@ -4161,7 +4161,7 @@
   },
   {
     "id"              : "make_olm_meat",
-    "station"         : "butcher_spot",
+    "station"         : "dressing_stone",
     "inputs"          : {"giant_olm_carcass": 1},
     "outputs"         : {"crocodile_meat": 5, "small_bones": 5, "raw_sinew": 4},
     "workAmount"      : 20,
