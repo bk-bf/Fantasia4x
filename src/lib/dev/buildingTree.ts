@@ -410,13 +410,6 @@ const asView = (n: BuildNode): ViewNode => ({
 export const BUILDING_SOURCE: TreeSource = {
   noun: 'buildings',
   total: BUILD_ROWS.length,
-  hint:
-    'Every building, filed by what it is FOR and then by <b>age</b> — read off what it enables, ' +
-    'never off its name. <b>Rung</b> is its place in a station ladder: a family climbs 0, 1, 2 … and ' +
-    'each rung cooks, cuts or sews the SAME recipes faster than the one below, so a gap in the ' +
-    'numbers is a missing station rather than a missing recipe. <b>Makes</b> counts the recipes that ' +
-    'name it — a rung showing none is inheriting its family&rsquo;s work, which is the ladder doing ' +
-    'its job; a station outside any ladder showing none is the question.',
   columns: BUILD_COLUMNS,
   view(needle, sortKey, dir) {
     const base = needle

@@ -64,7 +64,7 @@
         · {Object.keys(sel).length} open{/if}</span
     >
   </div>
-  <p class="hint">{@html source.hint}</p>
+  {#if source.hint}<p class="hint">{@html source.hint}</p>{/if}
   <div class="scroll">
     <table>
       <TreeViewHeader columns={source.columns} {sortKey} {sortDir} {sortBy} />
