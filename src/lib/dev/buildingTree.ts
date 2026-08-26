@@ -117,7 +117,9 @@ function purposeOf(b: any): string {
   const has = (k: string) => e[k] != null;
   const l = ladderOf(b);
   if (l) return FAMILY_LABEL[l.family] ?? prettify(l.family);
-  if (has('smeltingEnabled') || has('smithingEnabled')) return 'Forge & smelting';
+  if (has('smithingEnabled')) return 'Forging';
+  if (has('smeltingEnabled')) return 'Smelting & alloying';
+  if (has('bonecarvingEnabled')) return 'Bone & antler carving';
   if (has('bakingEnabled')) return 'Baking';
   if (has('brewingEnabled') || has('fermentation')) return 'Brewing';
   if (has('alchemyEnabled')) return 'Alchemy';
@@ -369,9 +371,9 @@ export function sortBuildingTree(
 import type { TreeSource, ViewNode, ViewRow } from './treeView';
 
 const recipeCell = (b: BuildRow): string => {
-  const own = b.recipes.join(', ');
-  if (!b.inherited.length) return own;
-  return `${own}${own ? ' · ' : ''}supersedes: ${b.inherited.join(', ')}`;
+  if (!b.recipes.length) return '';
+  if (!b.inherited.length) return b.recipes.join(', ');
+  return `${b.recipes.join(', ')} · supersedes: ${b.inherited.join(', ')}`;
 };
 
 const CELLS = (b: BuildRow): ViewRow['cells'] => [

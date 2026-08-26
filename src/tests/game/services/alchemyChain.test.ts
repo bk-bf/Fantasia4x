@@ -20,7 +20,12 @@ describe('alchemy / magical-creature reagents', () => {
         toolTier: 3,
         pawns: [{ count: 6, skillLevel: 20 }],
         needsDisabled: ['hunger', 'fatigue', 'thirst', 'hygiene'],
-        buildings: [{ id: 'butcher_spot' }, { id: 'alchemy_lab' }, { id: 'apothecary' }],
+        buildings: [
+          { id: 'butcher_spot' },
+          { id: 'dressing_stone' },
+          { id: 'alchemy_lab' },
+          { id: 'apothecary' }
+        ],
         items: {
           grimeling_carcass: 3,
           nightshade_bolete: 4,
