@@ -781,14 +781,6 @@ const asView = (n: TreeNode): ViewNode => ({
 export const ITEM_SOURCE: TreeSource = {
   noun: 'items',
   total: TREE_ITEMS.length,
-  hint:
-    'Every entry in <code>items.jsonc</code>, filed by what it IS and then by <b>age</b> — a level ' +
-    'with one child instead of six is the hole, visible without reading a row. Armour nests age ▸ ' +
-    'set ▸ <b>body layer</b> ▸ what it covers, layers outermost first, because armour is subtractive ' +
-    'and layers add. <b>Gated by</b> is the latest station in an item&rsquo;s whole ingredient chain, ' +
-    'which is what really decides its age. Click a row for its description, or a column heading to ' +
-    're-sort every shelf and its headings by it — again for descending, a third time back to the ' +
-    'natural order.',
   columns: SORT_COLUMNS,
   view(needle, sortKey, dir) {
     const base = needle

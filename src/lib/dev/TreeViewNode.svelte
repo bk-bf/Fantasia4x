@@ -142,7 +142,8 @@
   .leaf td {
     padding: 1px 6px;
     border-bottom: 1px solid #1a180f;
-    white-space: nowrap;
+    overflow: hidden;
+    vertical-align: top;
   }
   .nm {
     color: #cfc39a;
@@ -168,20 +169,10 @@
     font-size: 10px;
   }
   td .v {
-    display: inline;
-  }
-  .held .v,
-  .fx .v {
     display: block;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-  }
-  .held .v {
-    max-width: 18ch;
-  }
-  .fx .v {
-    max-width: 34ch;
   }
   .src {
     color: #7f8a92;
@@ -192,10 +183,9 @@
     line-height: 1.3;
   }
   .recipes .v {
-    display: block;
-    max-width: 46ch;
     white-space: normal;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
+    text-overflow: clip;
   }
   .gate {
     color: #6f6a58;
