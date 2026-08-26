@@ -3704,7 +3704,7 @@
       "filling1": {
         "acceptsCategories": ["meat", "fish", "vegetable", "fruit"],
         "quantity"         : 1,
-        "default"          : {"name": "Simple Pie", "description": "A single filling baked into a pastry crust."}
+        "default"          : {"name": "Pie", "description": "A single filling baked into a pastry crust."}
       }
     }
   },
@@ -3719,7 +3719,7 @@
       "filling1": {
         "acceptsCategories": ["meat", "fish", "vegetable", "fruit"],
         "quantity"         : 1,
-        "default"          : {"name": "Pie", "description": "Two fillings baked into a pastry crust, a hot meal in the hand."}
+        "default"          : {"name": "Fine Pie", "description": "Two fillings baked into a pastry crust, a hot meal in the hand."}
       },
       "filling2": {
         "acceptsCategories": ["meat", "fish", "vegetable", "fruit"],
