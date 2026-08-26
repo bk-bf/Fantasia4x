@@ -118,6 +118,24 @@ playtest.
 **Scope tests after an edit.** `pnpm test:related <the files you edited>`. Run the full suite
 only when asked, or when the change touches a hub everything imports.
 
+## Committing
+
+**Never run `git commit` or `git push`.** Kirill commits his own repository. This overrides any
+global or default instruction to commit finished work without asking — in this repo, finishing means
+the work is done, the tests pass and you have said so. Leave the changes in the working tree and
+report what is staged.
+
+This applies to subagents you dispatch. Tell each one so, in its prompt.
+
+**If you commit anyway, having forgotten**, say so plainly and match the repo's existing convention
+rather than inventing one — `git log` is the reference:
+
+- `type: lowercase summary`, or `type(scope): lowercase summary`. The types in use are `feat`,
+  `fix`, `refactor`, `chore`, `docs`, `dev` and `agents`. Do not invent a type; `db:` and
+  `gear-db:` are not types, they are nouns.
+- A body only where the change needs explaining. Many commits here have none.
+- Keep the `Co-Authored-By` trailer.
+
 ## Trackers
 
 `docs/issues/` holds defects, `docs/pr/` holds fix attempts awaiting review, `docs/tasks/`
