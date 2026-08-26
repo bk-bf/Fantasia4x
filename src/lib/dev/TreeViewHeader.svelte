@@ -42,7 +42,7 @@
 <thead>
   <tr>
     {#each columns as c (c.key)}
-      <th class:l={!c.num}>
+      <th>
         <button
           type="button"
           class="sort"
@@ -73,16 +73,13 @@
     z-index: 1;
     background: #191710;
     color: #8a7f5f;
-    text-align: right;
+    text-align: center;
     font-weight: 700;
     font-size: 10px;
     text-transform: uppercase;
     letter-spacing: 0.05em;
     padding: 4px 6px;
     border-bottom: 1px solid #3a3324;
-  }
-  thead th.l {
-    text-align: left;
   }
   .sort {
     font: inherit;

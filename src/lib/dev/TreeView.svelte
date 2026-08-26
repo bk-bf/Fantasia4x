@@ -55,6 +55,56 @@
     }
   }
 
+  let hiddenCols = $state<Record<string, boolean>>({});
+  let hiddenRows = $state<Record<string, boolean>>({});
+  let pickerOpen = $state(false);
+  const colsKey = $derived(`f4x.treeview.hidecols.${source.noun}`);
+  const rowsKey = $derived(`f4x.treeview.hiderows.${source.noun}`);
+  const read = (k: string): Record<string, boolean> => {
+    try {
+      return JSON.parse(localStorage.getItem(k) ?? '{}');
+    } catch {
+      return {};
+    }
+  };
+  const write = (k: string, v: Record<string, boolean>) => {
+    try {
+      localStorage.setItem(k, JSON.stringify(v));
+    } catch {
+      /* a dev tool in a private window still works, it just forgets */
+    }
+  };
+  let hidLoadedFor = '';
+  $effect(() => {
+    if (hidLoadedFor === colsKey) return;
+    hidLoadedFor = colsKey;
+    hiddenCols = read(colsKey);
+    hiddenRows = read(rowsKey);
+  });
+
+  const shown = $derived(source.columns.map((c) => !hiddenCols[c.key]));
+  const visibleCount = $derived(shown.filter(Boolean).length);
+  const hiddenRowCount = $derived(Object.keys(hiddenRows).length);
+
+  function toggleCol(key: string) {
+    if (!hiddenCols[key] && visibleCount <= 1) return;
+    hiddenCols[key] ? delete hiddenCols[key] : (hiddenCols[key] = true);
+    hiddenCols = { ...hiddenCols };
+    write(colsKey, hiddenCols);
+  }
+  function showAllCols() {
+    hiddenCols = {};
+    write(colsKey, hiddenCols);
+  }
+  function hideRow(id: string) {
+    hiddenRows = { ...hiddenRows, [id]: true };
+    write(rowsKey, hiddenRows);
+  }
+  function showAllRows() {
+    hiddenRows = {};
+    write(rowsKey, hiddenRows);
+  }
+
   let q = $state('');
   let open = $state<Record<string, boolean>>({});
   let sel = $state<Record<string, boolean>>({});
@@ -100,6 +150,28 @@
     <button class="btn" onclick={expandAll}>expand all</button>
     <button class="btn" onclick={collapseAll}>collapse all</button>
     <button class="btn" onclick={resetWidths}>reset widths</button>
+    <span class="picker">
+      <button class="btn" onclick={() => (pickerOpen = !pickerOpen)}
+        >columns {visibleCount}/{source.columns.length}</button
+      >
+      {#if pickerOpen}
+        <span class="menu">
+          {#each source.columns as c (c.key)}
+            <label class="opt"
+              ><input
+                type="checkbox"
+                checked={!hiddenCols[c.key]}
+                onchange={() => toggleCol(c.key)}
+              />{c.label}</label
+            >
+          {/each}
+          <button class="btn all" onclick={showAllCols}>show all columns</button>
+        </span>
+      {/if}
+    </span>
+    {#if hiddenRowCount}
+      <button class="btn" onclick={showAllRows}>show {hiddenRowCount} hidden row(s)</button>
+    {/if}
     <span class="count"
       >{view.count} / {source.total}
       {source.noun}{#if Object.keys(sel).length}
@@ -111,17 +183,29 @@
     <table>
       <colgroup>
         {#each source.columns as c (c.key)}
-          <col style="width:{widths[c.key] ?? defaultWidth(c)}px" />
+          {#if !hiddenCols[c.key]}
+            <col style="width:{widths[c.key] ?? defaultWidth(c)}px" />
+          {/if}
         {/each}
       </colgroup>
-      <TreeViewHeader columns={source.columns} {sortKey} {sortDir} {sortBy} {widths} {resize} />
+      <TreeViewHeader
+        columns={source.columns.filter((c) => !hiddenCols[c.key])}
+        {sortKey}
+        {sortDir}
+        {sortBy}
+        {widths}
+        {resize}
+      />
       <tbody>
         {#each view.children as root (root.key)}
           <TreeViewNode
             node={root}
             {open}
             {sel}
-            cols={source.columns.length}
+            cols={visibleCount}
+            {shown}
+            {hiddenRows}
+            {hideRow}
             {toggle}
             {select}
             {onhover}
@@ -197,6 +281,37 @@
     overflow: auto;
     max-height: 78vh;
     border: 1px solid #2a2519;
+  }
+  .picker {
+    position: relative;
+    display: inline-block;
+  }
+  .menu {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    z-index: 5;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 170px;
+    padding: 6px;
+    background: #191710;
+    border: 1px solid #3a3324;
+    border-radius: 4px;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
+  }
+  .opt {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: #cfc39a;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .menu .all {
+    margin-top: 4px;
   }
   table {
     border-collapse: collapse;
