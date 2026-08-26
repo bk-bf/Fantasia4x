@@ -429,10 +429,6 @@
     <h1>
       Build database <span class="live">live · {BUILDS.length} builds · {GEAR.length} entries</span>
     </h1>
-    <p>
-      Auto-classified from <code>items.jsonc</code>, <code>recipes.jsonc</code> &amp;
-      <code>traits.jsonc</code> by stats. Edit the data, save, reload.
-    </p>
   </header>
 
   <div class="tabs">
@@ -1005,11 +1001,6 @@
     letter-spacing: 0.05em;
     margin-left: 10px;
     font-weight: 400;
-  }
-  header p {
-    color: #9a9279;
-    font-size: 13px;
-    margin: 0 0 16px;
   }
   code {
     color: #d8ab52;
