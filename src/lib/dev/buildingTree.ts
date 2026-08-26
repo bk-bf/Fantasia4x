@@ -34,23 +34,46 @@ const ageOf = (b: any): BuildAge => {
  * The station LADDER a building belongs to, if any — the four tier families plus the generic craft
  * tier. This is the level that makes a missing rung visible.
  */
-const LADDER: { key: string; label: string }[] = [
-  { key: 'cookingTier', label: 'Hearth & stove' },
-  { key: 'butcheryTier', label: 'Butchery' },
-  { key: 'lapidaryTier', label: 'Lapidary' },
-  { key: 'tailoringTier', label: 'Tailoring' },
-  { key: 'tier', label: 'General crafting' }
+const FAMILY_LABEL: Record<string, string> = {
+  cooking: 'Hearth & stove',
+  butchery: 'Butchery',
+  lapidary: 'Lapidary',
+  tailoring: 'Tailoring',
+  milling: 'Milling',
+  baking: 'Baking',
+  brewing: 'Brewing',
+  alchemy: 'Alchemy',
+  crafting: 'General crafting'
+};
+/** the older per-family keys, still read for a station that has not been migrated */
+const LEGACY: [string, string][] = [
+  ['cookingTier', 'cooking'],
+  ['butcheryTier', 'butchery'],
+  ['lapidaryTier', 'lapidary'],
+  ['tailoringTier', 'tailoring'],
+  ['tier', 'crafting']
 ];
+
+/** The ladder a station is on, however it declares it. */
+function ladderOf(b: any): { family: string; rung: number } | null {
+  const e = b?.effects ?? {};
+  if (typeof e.family === 'string' && typeof e.rung === 'number')
+    return { family: e.family, rung: e.rung };
+  for (const [key, family] of LEGACY)
+    if (typeof e[key] === 'number') return { family, rung: e[key] };
+  return null;
+}
 
 /** What a building is FOR. Read off what it enables, never off its name. */
 function purposeOf(b: any): string {
   const e = b?.effects ?? {};
   const has = (k: string) => e[k] != null;
-  for (const l of LADDER) if (has(l.key)) return l.label;
+  const l = ladderOf(b);
+  if (l) return FAMILY_LABEL[l.family] ?? prettify(l.family);
   if (has('smeltingEnabled') || has('smithingEnabled')) return 'Forge & smelting';
-  if (has('bakingEnabled')) return 'Baking & milling';
-  if (has('brewingEnabled') || has('fermentation') || has('alchemyEnabled'))
-    return 'Brewing & alchemy';
+  if (has('bakingEnabled')) return 'Baking';
+  if (has('brewingEnabled') || has('fermentation')) return 'Brewing';
+  if (has('alchemyEnabled')) return 'Alchemy';
   if (has('woodworkingEnabled')) return 'Woodwork';
   if (has('leatherworkingEnabled')) return 'Leatherwork';
   if (has('lapidaryEnabled')) return 'Lapidary';
@@ -107,6 +130,10 @@ export interface BuildRow {
   rung: number | null;
   /** crafting speed bonus, as a percentage */
   speed: number;
+  /** yield/preservation/drying bonuses, as a percentage each, in one readout */
+  boosts: string;
+  /** how many stacks it keeps, and of what */
+  stores: string;
   /** how much of a fuel charge it burns per tick; null when it needs no fire */
   fuel: number | null;
   /** recipes that name it as their station */
@@ -116,16 +143,38 @@ export interface BuildRow {
   desc: string;
 }
 
+/** Every bonus a station grants beyond raw speed, as one readable line. */
+const BOOSTS: [string, string][] = [
+  ['butcheryYieldBonus', 'yield'],
+  ['treatmentBonus', 'treatment'],
+  ['dryingBonus', 'drying'],
+  ['preservation', 'keeps'],
+  ['fermentation', 'ferments'],
+  ['warmth', 'warmth'],
+  ['comfort', 'comfort'],
+  ['beauty', 'beauty']
+];
+const boostsOf = (b: any): string => {
+  const e = b?.effects ?? {};
+  return BOOSTS.filter(([k]) => e[k])
+    .map(([k, label]) => `${label} +${e[k] > 3 ? e[k] : Math.round(e[k] * 100) + '%'}`)
+    .join(' · ');
+};
+
+/** What a store holds, and how much of it. */
+const storesOf = (b: any): string => {
+  const stacks = b?.effects?.storageStacks;
+  if (!stacks) return '';
+  const f = b?.storageFilter;
+  return Array.isArray(f) && f.length ? `${stacks} × ${f.length} kinds` : `${stacks} stacks`;
+};
+
 const costOf = (b: any): string =>
   Object.entries(b?.buildingCost ?? {})
     .map(([k, v]) => `${v}× ${prettify(k.replace(/^category:/, ''))}`)
     .join(', ');
 
-const rungOf = (b: any): number | null => {
-  const e = b?.effects ?? {};
-  for (const l of LADDER) if (e[l.key] != null) return Number(e[l.key]);
-  return null;
-};
+const rungOf = (b: any): number | null => ladderOf(b)?.rung ?? null;
 
 export const BUILD_ROWS: BuildRow[] = buildings
   .filter((b) => b?.id && !b.notBuildable)
@@ -137,6 +186,8 @@ export const BUILD_ROWS: BuildRow[] = buildings
     ageRank: BUILD_AGES.indexOf(ageOf(b)),
     rung: rungOf(b),
     speed: Math.round((b.effects?.craftingBonus ?? 0) * 100),
+    boosts: boostsOf(b),
+    stores: storesOf(b),
     fuel: b.fuelConsumptionRate ?? null,
     makes: RECIPE_COUNT.get(b.id) ?? 0,
     cost: costOf(b),
@@ -191,12 +242,24 @@ export function buildBuildingTree(rows: BuildRow[] = BUILD_ROWS): BuildNode {
 
 export const BUILDING_TREE = buildBuildingTree();
 
-export type BuildSortKey = 'name' | 'age' | 'rung' | 'speed' | 'fuel' | 'makes' | 'work' | 'cost';
+export type BuildSortKey =
+  | 'name'
+  | 'age'
+  | 'rung'
+  | 'speed'
+  | 'boosts'
+  | 'stores'
+  | 'fuel'
+  | 'makes'
+  | 'work'
+  | 'cost';
 export const BUILD_COLUMNS: { key: BuildSortKey; label: string; num?: boolean }[] = [
   { key: 'name', label: 'Building' },
   { key: 'age', label: 'Age' },
   { key: 'rung', label: 'Rung', num: true },
   { key: 'speed', label: 'Speed', num: true },
+  { key: 'boosts', label: 'Also grants' },
+  { key: 'stores', label: 'Stores' },
   { key: 'fuel', label: 'Fuel', num: true },
   { key: 'makes', label: 'Makes', num: true },
   { key: 'work', label: 'Work', num: true },
@@ -253,6 +316,8 @@ const CELLS = (b: BuildRow): ViewRow['cells'] => [
   { v: b.age, cls: 'age' },
   { v: b.rung ?? '—', cls: 'num' },
   { v: b.speed ? `+${b.speed}%` : '', cls: 'num' },
+  { v: b.boosts, cls: 'fx', title: b.boosts },
+  { v: b.stores, cls: 'cls' },
   { v: b.fuel ?? '', cls: 'num' },
   { v: b.makes || '—', cls: 'num' },
   { v: b.work || '', cls: 'num' },
@@ -266,7 +331,7 @@ const asView = (n: BuildNode): ViewNode => ({
   count: n.count,
   missing: [],
   children: n.children.map(asView),
-  rows: n.rows.map((b) => ({ id: b.id, cells: CELLS(b), desc: b.desc }))
+  rows: n.rows.map((b) => ({ id: b.id, cells: CELLS(b), desc: b.desc, hover: b }))
 });
 
 export const BUILDING_SOURCE: TreeSource = {
