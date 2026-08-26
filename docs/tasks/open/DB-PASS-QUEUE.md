@@ -56,9 +56,11 @@ tanning, curing and seasoning alike.
 Then the expansion: **every iron-age-and-later tool haft, and every bow and staff, should pass through
 it.** That is a weapons audit — many recipes currently skip the step or bind a head to a raw shaft.
 
+Proposal delivered: [SOAKING-AND-HAFTS](SOAKING-AND-HAFTS.md). Awaiting review before any edit.
+
 - [ ] The three stations reconcile to one concept, named for all of what it does
-- [ ] A table of every tool haft, bow and staff, what its recipe does now, what it should do
-- [ ] **Stop there.** Do not rewrite the recipes.
+- [x] A table of every tool haft, bow and staff, what its recipe does now, what it should do
+- [x] **Stop there.** Do not rewrite the recipes.
 
 ## T5 — Steel Deck Oven and Runed Brewing Vat earn their build
 

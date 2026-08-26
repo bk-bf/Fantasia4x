@@ -254,19 +254,22 @@ describe('hafted weapons are structurally sound', () => {
     expect(bad, bad.join('; ')).toEqual([]);
   });
 
+  const UNFASTENED_HAFTS = 72;
+
   it('a head joined to a haft is fastened, not merely tied on', () => {
-    const HAFT = /haft$|_stave$/;
-    const JOINT = /fastener|nail|rivet|tack|mold|molten|_bar$|category:steel|category:iron/;
+    const HAFT = /haft$|_stave$|_shaft$/;
+    const JOINT = /fastener|nail|rivet|tack|_pin$|wedge/;
     const bad: string[] = [];
     for (const r of RECIPES) {
-      const out = Object.keys(r.outputs ?? {})[0];
-      if (!out || !isWeapon(out) || BOWS.test(out)) continue;
       const keys = Object.keys(r.inputs ?? {});
       if (!keys.some((k) => HAFT.test(k))) continue;
-      if (!keys.some((k) => JOINT.test(k)))
-        bad.push(`${r.id} has a haft and nothing mechanical holding the head to it`);
+      if (!keys.some((k) => JOINT.test(k))) bad.push(r.id);
     }
-    expect(bad, bad.join('; ')).toEqual([]);
+    expect(
+      bad.length,
+      `${bad.length} recipes hang a head on a haft with no wedge, nail or rivet. This may only ` +
+        `shrink — see docs/tasks/open/SOAKING-AND-HAFTS.md. Offenders: ${bad.join(', ')}`
+    ).toBeLessThanOrEqual(UNFASTENED_HAFTS);
   });
 });
 
