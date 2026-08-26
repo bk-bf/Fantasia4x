@@ -44,9 +44,14 @@ describe('§F8 stations + recipes', () => {
   it('milling/baking wire to quern/oven; brewing is passive at the fermenter', () => {
     expect(recipeService.getRecipeById('mill_flour')?.station).toBe('quern');
     expect(recipeService.getRecipeById('bake_bread')?.station).toBe('oven');
-    for (const id of ['malt_grain', 'brew_ale', 'ferment_wine', 'ferment_cider']) {
+    for (const [id, station] of [
+      ['malt_grain', 'brewhouse'],
+      ['brew_ale', 'brewhouse'],
+      ['ferment_wine', 'fermenter'],
+      ['ferment_cider', 'fermenter']
+    ] as const) {
       const r = recipeService.getRecipeById(id)!;
-      expect(r.station).toBe('fermenter');
+      expect(r.station).toBe(station);
       expect(r.passive).toBe(true);
     }
     expect(recipeService.getRecipeById('mill_flour')?.inputs).toHaveProperty('category:grain');

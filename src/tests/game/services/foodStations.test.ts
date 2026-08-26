@@ -66,7 +66,12 @@ describe('the new stations actually run', () => {
         infiniteFuel: true,
         pawns: [{ count: 6, skillLevel: 20 }],
         needsDisabled: ['hunger', 'fatigue', 'thirst', 'hygiene'],
-        buildings: [{ id: 'oven' }, { id: 'craft_spot' }, { id: 'smoking_rack' }],
+        buildings: [
+          { id: 'oven' },
+          { id: 'brick_bake_oven' },
+          { id: 'craft_spot' },
+          { id: 'smoking_rack' }
+        ],
         items: { bread: 10, venison: 20, flour: 30, honey: 20, apple: 20, salt: 10, cabbage: 10 },
         seedEntities: false
       })

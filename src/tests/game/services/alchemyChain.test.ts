@@ -20,7 +20,7 @@ describe('alchemy / magical-creature reagents', () => {
         toolTier: 3,
         pawns: [{ count: 6, skillLevel: 20 }],
         needsDisabled: ['hunger', 'fatigue', 'thirst', 'hygiene'],
-        buildings: [{ id: 'butcher_spot' }, { id: 'alchemy_lab' }],
+        buildings: [{ id: 'butcher_spot' }, { id: 'alchemy_lab' }, { id: 'apothecary' }],
         items: {
           grimeling_carcass: 3,
           nightshade_bolete: 4,
@@ -175,7 +175,7 @@ describe('alchemy / magical-creature reagents', () => {
     );
   });
 
-  it('§C: T2 brews at the lab, T3 (Grand) requires the apothecary — driven headless', async () => {
+  it('§C: Greater brews at the Copper Still, Grand requires the Runed Still — driven headless', async () => {
     const s = new HeadlessSession();
     await s.start(
       buildScenario({
@@ -186,7 +186,7 @@ describe('alchemy / magical-creature reagents', () => {
         toolTier: 3,
         pawns: [{ count: 5, skillLevel: 20 }],
         needsDisabled: ['hunger', 'fatigue', 'thirst', 'hygiene'],
-        buildings: [{ id: 'alchemy_lab' }, { id: 'apothecary' }],
+        buildings: [{ id: 'alchemy_lab' }, { id: 'apothecary' }, { id: 'arcane_alembic' }],
         items: {
           woundwort: 20,
           distilled_spirit: 8,
@@ -211,7 +211,7 @@ describe('alchemy / magical-creature reagents', () => {
       `[ALCH tier-brew] greater=${stk(s).greater_potion_of_might ?? 0} grand=${stk(s).grand_potion_of_might ?? 0}`
     );
     expect(stk(s).greater_potion_of_might ?? 0, 'T2 brewed').toBeGreaterThan(0);
-    expect(stk(s).grand_potion_of_might ?? 0, 'T3 brewed at the apothecary').toBeGreaterThan(0);
+    expect(stk(s).grand_potion_of_might ?? 0, 'T3 brewed at the Runed Still').toBeGreaterThan(0);
   });
 
   it('§C reagent depth: sugarcane → sugar → mash → distilled_spirit, and purified_catalyst — headless', async () => {
@@ -309,7 +309,7 @@ describe('alchemy / magical-creature reagents', () => {
         toolTier: 3,
         pawns: [{ count: 6, skillLevel: 20 }],
         needsDisabled: ['hunger', 'fatigue', 'thirst', 'hygiene'],
-        buildings: [{ id: 'alchemy_lab' }],
+        buildings: [{ id: 'alchemy_lab' }, { id: 'apothecary' }],
         items: {
           resin: 6,
           tallow: 6,
