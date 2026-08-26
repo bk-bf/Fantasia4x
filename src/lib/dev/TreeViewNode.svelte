@@ -1,24 +1,27 @@
 <script lang="ts">
-  import Self from './ItemTreeNode.svelte';
-  import type { TreeNode } from './itemTree';
-  import type { GearRow } from './gearDb';
+  import Self from './TreeViewNode.svelte';
+  import type { ViewNode } from './treeView';
 
   let {
     node,
     open,
     sel,
+    cols,
     toggle,
     select,
     onhover,
     onout
   }: {
-    node: TreeNode;
+    node: ViewNode;
     open: Record<string, boolean>;
     sel: Record<string, boolean>;
+    /** how many columns the detail row spans */
+    cols: number;
     toggle: (key: string) => void;
     select: (id: string) => void;
-    onhover: (row: GearRow, e: MouseEvent) => void;
-    onout: () => void;
+    /** a view with no hover card (buildings) simply passes neither */
+    onhover?: (row: unknown, e: MouseEvent) => void;
+    onout?: () => void;
   } = $props();
 
   const shut = $derived(!open[node.key]);
@@ -26,7 +29,7 @@
 </script>
 
 <tr class="grp d{Math.min(node.depth, 4)}">
-  <td colspan="10">
+  <td colspan={cols}>
     <button
       type="button"
       class="head"
@@ -41,33 +44,28 @@
 </tr>
 {#if !shut}
   {#each node.children as child (child.key)}
-    <Self node={child} {open} {sel} {toggle} {select} {onhover} {onout} />
+    <Self node={child} {open} {sel} {cols} {toggle} {select} {onhover} {onout} />
   {/each}
-  {#each node.items as it (it.id)}
+  {#each node.rows as r (r.id)}
     <tr
       class="leaf"
-      class:sel={sel[it.id]}
-      onclick={() => select(it.id)}
-      onmouseenter={(e) => onhover(it.row, e)}
-      onmousemove={(e) => onhover(it.row, e)}
-      onmouseleave={onout}
+      class:sel={sel[r.id]}
+      onclick={() => select(r.id)}
+      onmouseenter={(e) => onhover?.(r.hover, e)}
+      onmousemove={(e) => onhover?.(r.hover, e)}
+      onmouseleave={() => onout?.()}
     >
-      <td class="nm" style="padding-left:{pad + 20}px">{it.name}</td>
-      <td class="num">{it.tier ?? '—'}</td>
-      <td class="cls">{it.cls}</td>
-      <td class="age">{it.age}</td>
-      <td class="stat">{it.stat}</td>
-      <td class="fx" title={it.effects}>{it.effects}</td>
-      <td class="held" title={it.heldBy}>{it.heldBy}</td>
-      <td class="num">{it.weightKg || ''}</td>
-      <td class="src">{it.source}</td>
-      <td class="gate">{it.gatedBy}</td>
+      {#each r.cells as c, i (i)}
+        <td class={c.cls} title={c.title} style={i === 0 ? `padding-left:${pad + 20}px` : undefined}
+          >{c.v}</td
+        >
+      {/each}
     </tr>
-    {#if sel[it.id]}
+    {#if sel[r.id]}
       <tr class="detail">
-        <td colspan="10" style="padding-left:{pad + 20}px">
-          {#if it.desc}<p>{it.desc}</p>{/if}
-          <span class="id">{it.id}</span>
+        <td colspan={cols} style="padding-left:{pad + 20}px">
+          {#if r.desc}<p>{r.desc}</p>{/if}
+          <span class="id">{r.id}</span>
         </td>
       </tr>
     {/if}

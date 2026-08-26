@@ -733,3 +733,59 @@ export function rowComparator(
     return d ? d * dir : naturalOrder(a, b);
   };
 }
+
+// ── the table's view of this data ───────────────────────────────────────────────────────────────
+// The nested audit table is one component (`TreeView`); a dataset reaches it by describing itself
+// here. Buildings do the same in `buildingTree`, so the two views cannot drift apart.
+
+import type { TreeSource, ViewNode, ViewRow } from './treeView';
+
+const CELLS = (i: TreeItem): ViewRow['cells'] => [
+  { v: i.name, cls: 'nm' },
+  { v: i.tier ?? '—', cls: 'num' },
+  { v: i.cls, cls: 'cls' },
+  { v: i.age, cls: 'age' },
+  { v: i.stat, cls: 'stat' },
+  { v: i.effects, cls: 'fx', title: i.effects },
+  { v: i.heldBy, cls: 'held', title: i.heldBy },
+  { v: i.weightKg || '', cls: 'num' },
+  { v: i.source, cls: 'src' },
+  { v: i.gatedBy, cls: 'gate' }
+];
+
+const asView = (n: TreeNode): ViewNode => ({
+  key: n.key,
+  label: n.label,
+  depth: n.depth,
+  count: n.count,
+  missing: n.missing,
+  children: n.children.map(asView),
+  rows: n.items.map((i) => ({ id: i.id, cells: CELLS(i), desc: i.desc, hover: i.row }))
+});
+
+export const ITEM_SOURCE: TreeSource = {
+  noun: 'items',
+  total: TREE_ITEMS.length,
+  hint:
+    'Every entry in <code>items.jsonc</code>, filed by what it IS and then by <b>age</b> — a level ' +
+    'with one child instead of six is the hole, visible without reading a row. Armour nests age ▸ ' +
+    'set ▸ <b>body layer</b> ▸ what it covers, layers outermost first, because armour is subtractive ' +
+    'and layers add. <b>Gated by</b> is the latest station in an item&rsquo;s whole ingredient chain, ' +
+    'which is what really decides its age. Click a row for its description, or a column heading to ' +
+    're-sort every shelf and its headings by it — again for descending, a third time back to the ' +
+    'natural order.',
+  columns: SORT_COLUMNS,
+  view(needle, sortKey, dir) {
+    const base = needle
+      ? buildTree(
+          TREE_ITEMS.filter(
+            (i) =>
+              i.name.toLowerCase().includes(needle) ||
+              i.id.includes(needle.replace(/ /g, '_')) ||
+              i.path.some((p) => p.toLowerCase().includes(needle))
+          )
+        )
+      : ITEM_TREE;
+    return asView(sortTree(base, sortKey as SortKey | null, dir));
+  }
+};

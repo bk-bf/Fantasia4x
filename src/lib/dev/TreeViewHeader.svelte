@@ -1,22 +1,24 @@
 <script lang="ts">
-  import { SORT_COLUMNS, type SortKey } from './itemTree';
+  import type { ViewColumn } from './treeView';
 
   let {
+    columns,
     sortKey,
     sortDir,
     sortBy
   }: {
-    sortKey: SortKey | null;
+    columns: ViewColumn[];
+    sortKey: string | null;
     sortDir: 1 | -1;
-    sortBy: (key: SortKey) => void;
+    sortBy: (key: string) => void;
   } = $props();
 
-  const arrow = (key: SortKey) => (sortKey !== key ? '' : sortDir === 1 ? ' ▴' : ' ▾');
+  const arrow = (key: string) => (sortKey !== key ? '' : sortDir === 1 ? ' ▴' : ' ▾');
 </script>
 
 <thead>
   <tr>
-    {#each SORT_COLUMNS as c (c.key)}
+    {#each columns as c (c.key)}
       <th class:l={!c.num}>
         <button
           type="button"

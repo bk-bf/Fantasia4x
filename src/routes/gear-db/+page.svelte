@@ -1,6 +1,8 @@
 <script lang="ts">
   import { effectsOf } from '$lib/dev/itemTree';
-  import ItemTree from '$lib/dev/ItemTree.svelte';
+  import TreeView from '$lib/dev/TreeView.svelte';
+  import { ITEM_SOURCE } from '$lib/dev/itemTree';
+  import { BUILDING_SOURCE } from '$lib/dev/buildingTree';
 
   import { page } from '$app/state';
   import {
@@ -402,7 +404,10 @@
   }
 
   const params = page.url?.searchParams ?? new URLSearchParams();
-  let view = $state<'builds' | 'audit'>(params.get('view') === 'audit' ? 'audit' : 'builds');
+  const VIEWS = ['builds', 'audit', 'buildings'] as const;
+  type View = (typeof VIEWS)[number];
+  const startView = params.get('view');
+  let view = $state<View>(VIEWS.includes(startView as View) ? (startView as View) : 'builds');
 
   const pct = (v: number | null) => (v == null ? '—' : Math.round(v * 100) + '%');
   const numf = (v: number | null) => (v == null ? '—' : String(v));
@@ -453,6 +458,13 @@
       onclick={() => (view = 'audit')}
       title="Every item in items.jsonc, nested by what it is — armour by age ▸ set ▸ class ▸ coverage"
       >Audit</button
+    >
+    <button
+      class="tab lead"
+      class:active={view === 'buildings'}
+      onclick={() => (view = 'buildings')}
+      title="Every building, nested by what it is for and when a colony can raise it — the station ladders read as ladders here"
+      >Buildings</button
     >
     <span class="sep"></span>
     <button
@@ -585,7 +597,13 @@
   {/snippet}
 
   {#if view === 'audit'}
-    <ItemTree onhover={hoverGear} onout={hoverOut} />
+    <TreeView
+      source={ITEM_SOURCE}
+      onhover={(row, e) => hoverGear(row as GearRow, e)}
+      onout={hoverOut}
+    />
+  {:else if view === 'buildings'}
+    <TreeView source={BUILDING_SOURCE} />
   {:else if view === 'builds'}
     <div class="tabs sub">
       <button class="tab" class:active={bview === 'weapon'} onclick={() => (bview = 'weapon')}
