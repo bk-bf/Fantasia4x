@@ -82,9 +82,16 @@ which is the bug.
 
 Use Svelte 5 runes — `$state`, `$derived`, `$effect`. Not the legacy `$:` syntax.
 
-**Reuse before creating.** Before writing any tooltip, pill, panel, bar or overlay, search
-for an existing component that does it and import it. If the thing you need is baked into one
-panel, extract it and import it in both places rather than copying it.
+**NEVER DUPLICATE CODE. REUSE AND EXTRACT COMPONENTS.** Before writing any tooltip, pill, panel,
+bar, table or overlay, search for an existing one and import it. If the thing you need is baked
+into one panel, EXTRACT it and import it in both places. Copying it is never the answer, and
+"mine needs slightly different data" is not an exception — parameterise the component and pass
+the data in.
+
+A copy does not merely repeat the logic; it forks the STYLING with it, so the second one is wrong
+the moment either is touched. A buildings tree copied from the item tree shipped with a different
+palette and misaligned columns while the original was fine, because the styles live beside the
+component that owns them.
 
 ## Items
 
