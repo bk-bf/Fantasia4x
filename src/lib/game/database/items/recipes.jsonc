@@ -142,7 +142,7 @@
   {
     "id"              : "make_wooden_arm_splint",
     "discipline"      : "herbalism",
-    "station"         : "makers_bench",
+    "station"         : "weaving_frame",
     "inputs"          : {"category:plank": 1, "linen_cloth": 1, "category:binding": 2},
     "outputs"         : {"wooden_arm_splint": 3},
     "workAmount"      : 6,
@@ -152,7 +152,7 @@
   {
     "id"              : "make_wooden_leg_splint",
     "discipline"      : "herbalism",
-    "station"         : "makers_bench",
+    "station"         : "weaving_frame",
     "inputs"          : {"category:plank": 2, "linen_cloth": 2, "category:binding": 3},
     "outputs"         : {"wooden_leg_splint": 3},
     "workAmount"      : 8,
@@ -712,12 +712,12 @@
     "toolRequirement" : {"workType": "cooking", "minTier": 0},
     "dynamicRecipe"   : {
       "ingredient1": {
-        "acceptsCategories": ["meat", "fish", "vegetable", "legume", "herb"],
+        "acceptsCategories": ["meat", "fish", "vegetable", "legume", "herb", "broth"],
         "quantity"         : 1,
         "default"          : {"name": "Stew", "description": "A simple two-ingredient stew. Plain but filling."}
       },
       "ingredient2": {
-        "acceptsCategories": ["meat", "fish", "vegetable", "legume", "herb"],
+        "acceptsCategories": ["meat", "fish", "vegetable", "legume", "herb", "broth"],
         "quantity"         : 1
       }
     }
@@ -732,16 +732,16 @@
     "toolRequirement" : {"workType": "cooking", "minTier": 0},
     "dynamicRecipe"   : {
       "ingredient1": {
-        "acceptsCategories": ["meat", "fish", "vegetable", "legume", "herb"],
+        "acceptsCategories": ["meat", "fish", "vegetable", "legume", "herb", "broth"],
         "quantity"         : 1,
         "default"          : {"name": "Fine Stew", "description": "A hearty three-ingredient stew, thick and rich."}
       },
       "ingredient2": {
-        "acceptsCategories": ["meat", "fish", "vegetable", "legume", "herb"],
+        "acceptsCategories": ["meat", "fish", "vegetable", "legume", "herb", "broth"],
         "quantity"         : 1
       },
       "ingredient3": {
-        "acceptsCategories": ["meat", "fish", "vegetable", "legume", "herb"],
+        "acceptsCategories": ["meat", "fish", "vegetable", "legume", "herb", "broth"],
         "quantity"         : 1
       }
     }
@@ -756,20 +756,20 @@
     "toolRequirement" : {"workType": "cooking", "minTier": 0},
     "dynamicRecipe"   : {
       "ingredient1": {
-        "acceptsCategories": ["meat", "fish", "vegetable", "legume", "herb"],
+        "acceptsCategories": ["meat", "fish", "vegetable", "legume", "herb", "broth"],
         "quantity"         : 1,
         "default"          : {"name": "Lavish Stew", "description": "A rich four-ingredient feast-stew, dense and hearty."}
       },
       "ingredient2": {
-        "acceptsCategories": ["meat", "fish", "vegetable", "legume", "herb"],
+        "acceptsCategories": ["meat", "fish", "vegetable", "legume", "herb", "broth"],
         "quantity"         : 1
       },
       "ingredient3": {
-        "acceptsCategories": ["meat", "fish", "vegetable", "legume", "herb"],
+        "acceptsCategories": ["meat", "fish", "vegetable", "legume", "herb", "broth"],
         "quantity"         : 1
       },
       "ingredient4": {
-        "acceptsCategories": ["meat", "fish", "vegetable", "legume", "herb"],
+        "acceptsCategories": ["meat", "fish", "vegetable", "legume", "herb", "broth"],
         "quantity"         : 1
       }
     }
@@ -2788,7 +2788,7 @@
   {
     "id"              : "make_brimmed_leather_hood",
     "discipline"      : "leatherworking",
-    "station"         : "makers_bench",
+    "station"         : "weaving_frame",
     "inputs"          : {"category:leather": 1, "category:binding": 1},
     "outputs"         : {"brimmed_leather_hood": 1},
     "workAmount"      : 4,
@@ -2797,7 +2797,7 @@
   {
     "id"              : "make_leather_vambraces",
     "discipline"      : "leatherworking",
-    "station"         : "makers_bench",
+    "station"         : "weaving_frame",
     "inputs"          : {"category:leather": 1, "category:binding": 1},
     "outputs"         : {"leather_vambraces": 1},
     "workAmount"      : 4,
@@ -2806,7 +2806,7 @@
   {
     "id"              : "make_leather_cloak",
     "discipline"      : "leatherworking",
-    "station"         : "makers_bench",
+    "station"         : "weaving_frame",
     "inputs"          : {"category:leather": 2, "category:binding": 3},
     "outputs"         : {"leather_cloak": 1},
     "workAmount"      : 6,
@@ -2954,7 +2954,7 @@
   {
     "id"              : "make_soot_darkened_jerkin",
     "discipline"      : "leatherworking",
-    "station"         : "makers_bench",
+    "station"         : "weaving_frame",
     "inputs"          : {"category:leather": 2, "charcoal": 1, "category:binding": 2},
     "outputs"         : {"soot_darkened_jerkin": 1},
     "workAmount"      : 6,
@@ -2992,7 +2992,7 @@
   },
   {
     "id"              : "make_boarhide_jerkin",
-    "station"         : "makers_bench",
+    "station"         : "weaving_frame",
     "inputs"          : {"boarhide": 3, "bronze_bar": 3, "category:binding": 6},
     "outputs"         : {"boarhide_jerkin": 1},
     "workAmount"      : 12,
@@ -3002,7 +3002,7 @@
   {
     "id"              : "make_leather_coif",
     "discipline"      : "leatherworking",
-    "station"         : "makers_bench",
+    "station"         : "weaving_frame",
     "inputs"          : {"category:binding": 1},
     "outputs"         : {"leather_coif": 1},
     "workAmount"      : 5,
@@ -3075,7 +3075,7 @@
   {
     "id"              : "make_stitched_gauntlets",
     "discipline"      : "leatherworking",
-    "station"         : "makers_bench",
+    "station"         : "weaving_frame",
     "inputs"          : {"category:binding": 1},
     "outputs"         : {"stitched_gauntlets": 1},
     "workAmount"      : 4,
@@ -3090,7 +3090,7 @@
   {
     "id"              : "make_tallow_boots",
     "discipline"      : "leatherworking",
-    "station"         : "makers_bench",
+    "station"         : "weaving_frame",
     "inputs"          : {"category:binding": 2},
     "outputs"         : {"hide_boots": 1},
     "workAmount"      : 5,
@@ -4088,7 +4088,7 @@
   },
   {
     "id"              : "make_direwolf_warcloak",
-    "station"         : "weaving_frame",
+    "station"         : "curriers_bench",
     "inputs"          : {"prime_direwolf_leather": 2, "category:thread": 6},
     "outputs"         : {"direwolf_warcloak": 1},
     "workAmount"      : 40,
@@ -4284,7 +4284,7 @@
   {
     "id"              : "make_scale_cuirass",
     "discipline"      : "leatherworking",
-    "station"         : "makers_bench",
+    "station"         : "curriers_bench",
     "inputs"          : {"scale_plate": 4, "category:leather": 2, "category:thread": 13},
     "outputs"         : {"croc_scale_cuirass": 1},
     "workAmount"      : 60,
@@ -4311,7 +4311,7 @@
   {
     "id"               : "make_beast_leather_plate",
     "discipline"      : "leatherworking",
-    "station"          : "makers_bench",
+    "station"          : "weaving_frame",
     "inputs"           : {"boarhide": 4, "category:leather": 2, "category:binding": 14},
     "inputAlternatives": [ {"boarhide": 4, "category:leather": 2} ],
     "outputs"          : {"layered_boarhide_plate": 1},
@@ -4321,7 +4321,7 @@
   {
     "id"               : "make_bone_plated_cuirass",
     "discipline"      : "bonecarving",
-    "station"          : "makers_bench",
+    "station"          : "weaving_frame",
     "inputs"           : {"huge_bones": 3, "category:leather": 2, "category:binding": 18},
     "inputAlternatives": [ {"large_bones": 5, "category:leather": 2} ],
     "outputs"          : {"bone_plated_cuirass": 1},
@@ -4331,7 +4331,7 @@
   {
     "id"              : "make_horned_helm",
     "discipline"      : "leatherworking",
-    "station"         : "makers_bench",
+    "station"         : "weaving_frame",
     "inputs"          : {"huge_bones": 1, "large_bones": 2, "category:leather": 1, "category:binding": 5},
     "outputs"         : {"horned_helm": 1},
     "workAmount"      : 48,
@@ -6183,7 +6183,7 @@
   },
   {
     "id"              : "make_boarhide_bracers",
-    "station"         : "makers_bench",
+    "station"         : "weaving_frame",
     "inputs"          : {"boarhide": 1, "bronze_bar": 1, "category:binding": 2},
     "outputs"         : {"boarhide_bracers": 1},
     "workAmount"      : 7,
@@ -6192,7 +6192,7 @@
   },
   {
     "id"              : "make_boarhide_greaves",
-    "station"         : "makers_bench",
+    "station"         : "weaving_frame",
     "inputs"          : {"boarhide": 2, "bronze_bar": 2, "category:binding": 3},
     "outputs"         : {"boarhide_greaves": 1},
     "workAmount"      : 9,
@@ -6320,7 +6320,7 @@
   },
   {
     "id"              : "make_three_finger_glove",
-    "station"         : "makers_bench",
+    "station"         : "weaving_frame",
     "inputs"          : {"category:binding": 1},
     "outputs"         : {"three_finger_glove": 1},
     "workAmount"      : 4,
@@ -6331,7 +6331,7 @@
   {
     "id": "make_arming_cap",
     "discipline": "tailoring",
-    "station": "weaving_frame",
+    "station": "outfitters_bench",
     "inputs": { "linen_cloth": 3, "cotton_fiber": 6, "category:thread": 2 },
     "outputs": { "arming_cap": 1 },
     "workAmount": 10,
@@ -6341,7 +6341,7 @@
   {
     "id": "make_arming_doublet",
     "discipline": "tailoring",
-    "station": "weaving_frame",
+    "station": "outfitters_bench",
     "inputs": {
       "linen_cloth": 26,
       "cotton_fiber": 30,
@@ -6357,7 +6357,7 @@
   {
     "id": "make_arming_hose",
     "discipline": "tailoring",
-    "station": "weaving_frame",
+    "station": "outfitters_bench",
     "inputs": { "linen_cloth": 7, "cotton_fiber": 10, "category:leather": 1, "category:thread": 4 },
     "outputs": { "arming_hose": 1 },
     "workAmount": 18,
@@ -6494,7 +6494,7 @@
   },
   {
     "id"              : "make_jackal_head",
-    "station"         : "makers_bench",
+    "station"         : "weaving_frame",
     "inputs"          : {"jackal_leather": 2, "category:binding": 1},
     "outputs"         : {"jackal_head": 1},
     "workAmount"      : 11,
@@ -6503,7 +6503,7 @@
   },
   {
     "id"              : "make_jackal_bodybase",
-    "station"         : "makers_bench",
+    "station"         : "weaving_frame",
     "inputs"          : {"jackal_leather": 5, "category:binding": 4},
     "outputs"         : {"jackal_bodybase": 1},
     "workAmount"      : 19,
@@ -6512,7 +6512,7 @@
   },
   {
     "id"              : "make_jackal_bracers",
-    "station"         : "makers_bench",
+    "station"         : "weaving_frame",
     "inputs"          : {"jackal_leather": 3, "category:binding": 1},
     "outputs"         : {"jackal_bracers": 1},
     "workAmount"      : 11,
@@ -6521,7 +6521,7 @@
   },
   {
     "id"              : "make_jackal_gloves",
-    "station"         : "makers_bench",
+    "station"         : "weaving_frame",
     "inputs"          : {"jackal_leather": 2, "category:binding": 1},
     "outputs"         : {"jackal_gloves": 1},
     "workAmount"      : 9,
@@ -6530,7 +6530,7 @@
   },
   {
     "id"              : "make_jackal_greaves",
-    "station"         : "makers_bench",
+    "station"         : "weaving_frame",
     "inputs"          : {"jackal_leather": 3, "category:binding": 2},
     "outputs"         : {"jackal_greaves": 1},
     "workAmount"      : 13,
@@ -6539,7 +6539,7 @@
   },
   {
     "id"              : "make_jackal_boots",
-    "station"         : "makers_bench",
+    "station"         : "weaving_frame",
     "inputs"          : {"jackal_leather": 3, "category:binding": 1},
     "outputs"         : {"jackal_boots": 1},
     "workAmount"      : 11,
@@ -6575,7 +6575,7 @@
   },
   {
     "id"              : "make_deer_bodybase",
-    "station"         : "makers_bench",
+    "station"         : "weaving_frame",
     "inputs"          : {"buckskin": 5, "category:binding": 4},
     "outputs"         : {"deer_bodybase": 1},
     "workAmount"      : 19,
@@ -6584,7 +6584,7 @@
   },
   {
     "id"              : "make_deer_boots",
-    "station"         : "makers_bench",
+    "station"         : "weaving_frame",
     "inputs"          : {"buckskin": 3, "category:binding": 1},
     "outputs"         : {"deer_boots": 1},
     "workAmount"      : 11,
@@ -6620,7 +6620,7 @@
   },
   {
     "id"              : "make_wolf_head",
-    "station"         : "makers_bench",
+    "station"         : "weaving_frame",
     "inputs"          : {"wolf_leather": 2, "category:binding": 1},
     "outputs"         : {"wolf_head": 1},
     "workAmount"      : 14,
@@ -6629,7 +6629,7 @@
   },
   {
     "id"              : "make_wolf_bodybase",
-    "station"         : "makers_bench",
+    "station"         : "weaving_frame",
     "inputs"          : {"wolf_leather": 5, "category:binding": 4},
     "outputs"         : {"wolf_bodybase": 1},
     "workAmount"      : 22,
@@ -6638,7 +6638,7 @@
   },
   {
     "id"              : "make_wolf_bracers",
-    "station"         : "makers_bench",
+    "station"         : "weaving_frame",
     "inputs"          : {"wolf_leather": 3, "category:binding": 1},
     "outputs"         : {"wolf_bracers": 1},
     "workAmount"      : 14,
@@ -6647,7 +6647,7 @@
   },
   {
     "id"              : "make_wolf_gloves",
-    "station"         : "makers_bench",
+    "station"         : "weaving_frame",
     "inputs"          : {"wolf_leather": 2, "category:binding": 1},
     "outputs"         : {"wolf_gloves": 1},
     "workAmount"      : 12,
@@ -6656,7 +6656,7 @@
   },
   {
     "id"              : "make_wolf_greaves",
-    "station"         : "makers_bench",
+    "station"         : "weaving_frame",
     "inputs"          : {"wolf_leather": 3, "category:binding": 2},
     "outputs"         : {"wolf_greaves": 1},
     "workAmount"      : 16,
@@ -6665,7 +6665,7 @@
   },
   {
     "id"              : "make_wolf_boots",
-    "station"         : "makers_bench",
+    "station"         : "weaving_frame",
     "inputs"          : {"wolf_leather": 3, "category:binding": 1},
     "outputs"         : {"wolf_boots": 1},
     "workAmount"      : 14,
@@ -6694,7 +6694,7 @@
   },
   {
     "id"              : "make_elk_head",
-    "station"         : "makers_bench",
+    "station"         : "weaving_frame",
     "inputs"          : {"elk_leather": 2, "category:binding": 1},
     "outputs"         : {"elk_head": 1},
     "workAmount"      : 14,
@@ -6703,7 +6703,7 @@
   },
   {
     "id"              : "make_elk_bodybase",
-    "station"         : "makers_bench",
+    "station"         : "weaving_frame",
     "inputs"          : {"elk_leather": 5, "category:binding": 4},
     "outputs"         : {"elk_bodybase": 1},
     "workAmount"      : 22,
@@ -6712,7 +6712,7 @@
   },
   {
     "id"              : "make_elk_bracers",
-    "station"         : "makers_bench",
+    "station"         : "weaving_frame",
     "inputs"          : {"elk_leather": 3, "category:binding": 1},
     "outputs"         : {"elk_bracers": 1},
     "workAmount"      : 14,
@@ -6721,7 +6721,7 @@
   },
   {
     "id"              : "make_elk_gloves",
-    "station"         : "makers_bench",
+    "station"         : "weaving_frame",
     "inputs"          : {"elk_leather": 2, "category:binding": 1},
     "outputs"         : {"elk_gloves": 1},
     "workAmount"      : 12,
@@ -6730,7 +6730,7 @@
   },
   {
     "id"              : "make_elk_boots",
-    "station"         : "makers_bench",
+    "station"         : "weaving_frame",
     "inputs"          : {"elk_leather": 3, "category:binding": 1},
     "outputs"         : {"elk_boots": 1},
     "workAmount"      : 14,
@@ -7096,7 +7096,7 @@
   {
     "id": "make_deer_greaves",
     "discipline": "leatherworking",
-    "station": "makers_bench",
+    "station": "weaving_frame",
     "inputs": {"buckskin": 3, "category:binding": 1},
     "outputs": {
       "deer_greaves": 1
@@ -7107,7 +7107,7 @@
     {
     "id": "make_elk_greaves",
     "discipline": "leatherworking",
-    "station": "makers_bench",
+    "station": "weaving_frame",
     "inputs": {"elk_leather": 3, "category:binding": 2},
     "outputs": {
       "elk_greaves": 1

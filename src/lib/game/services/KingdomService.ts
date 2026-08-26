@@ -542,7 +542,8 @@ class KingdomServiceImpl {
       def.type === 'tool' ||
       def.type === 'weapon' ||
       def.type === 'armor' ||
-      def.type === 'food'
+      def.type === 'food' ||
+      def.type === 'fluid'
     );
   }
 

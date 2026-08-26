@@ -56,8 +56,7 @@
     "minFuelHeat": 0,
     "fuelRequirements": {"tinderItemId": "plant_fiber", "tinderAmount": 2},
     "defaultAllowedFuelItemIds": ["green_firewood", "dry_firewood", "peat", "charcoal"],
-    "buildingState": {"isUnique": false, "maxCount": 5}
-  },
+    "buildingState": {"isUnique": false, "maxCount": 5}, "fluidCapacityL": 15},
   {
     "id": "craft_spot",
     "ageTier": "primitive:1",
@@ -103,8 +102,7 @@
     "upkeepCost": {},
     "effects": { "tailoringTier": 0, "craftingEnabled": true, "tier": 1, "craftingBonus": 0.2},
     "storageCapacity": {},
-    "buildingState": {"isUnique": false, "maxCount": 3}
-  },
+    "buildingState": {"isUnique": false, "maxCount": 3}, "fluidCapacityL": 4},
   {
     "id": "butcher_spot",
     "ageTier": "primitive:2",
@@ -2010,8 +2008,7 @@
     "fuelConsumptionRate": 0.6,
     "minFuelHeat"     : 0,
     "lightRadius"     : 4,
-    "effects"         : {"cookingTier": 3, "craftingBonus": 0.45, "warmth": 1.0, "cookingEnabled": true, "boilingEnabled": true, "isFire": 1}
-  },
+    "effects"         : {"cookingTier": 3, "craftingBonus": 0.45, "warmth": 1.0, "cookingEnabled": true, "boilingEnabled": true, "isFire": 1}, "fluidCapacityL": 20},
   {
     "id"              : "iron_stove",
     "ageTier"         : "iron:1",
@@ -2709,6 +2706,5 @@
     "upkeepCost": {},
     "effects": {"craftingEnabled": true},
     "storageCapacity": {},
-    "buildingState": {"isUnique": false, "maxCount": 6}
-  }
+    "buildingState": {"isUnique": false, "maxCount": 6}, "fluidCapacityL": 5}
 ]

@@ -907,6 +907,7 @@
         "charSpans"  : [ {"sheet": "font", "id": 1} ],
         "modifiers"  : {"hungerRate": 0.85, "fatigueRate": 0.92}
     },
+  {"id": "stock_warmed", "name": "Stock-Warmed", "flags": ["food", "buff"], "transient": true, "description": "A bowl of hot bone broth taken standing. The warmth sits in the chest a good while and the cold bites slower for it.", "color": "#B07A3C", "charSpans": [{"sheet": "font", "id": 1}], "modifiers": {"constitution": 1.12, "hungerRate": 0.94}},
     {
         "id"         : "nourished",
         "name"       : "Nourished",
