@@ -124,7 +124,10 @@ describe('every cooking rung earns its build', () => {
           tallow: 30,
           large_bones: 20,
           water: 20,
-          bread: 10
+          bread: 20,
+          milk: 20,
+          wine: 20,
+          hard_cheese: 20
         },
         seedEntities: false
       })
@@ -171,9 +174,40 @@ describe('every cooking rung earns its build', () => {
     expect(stk().seared_steak ?? 0, 'rung 4 seared on iron').toBeGreaterThan(0);
     expect(stk().confit_meat ?? 0, 'rung 5 sealed a confit').toBeGreaterThan(0);
 
+    craft('bone_stock');
+    craft('wine_poached_fish');
+    for (let i = 0; i < 20 && !((stk().bone_stock ?? 0) >= 2); i++) s.tick(400);
+    craft('cold_milk_soup');
+    for (
+      let i = 0;
+      i < 30 && !((stk().wine_poached_fish ?? 0) > 0 && (stk().cold_milk_soup ?? 0) > 0);
+      i++
+    )
+      s.tick(400);
+    console.log(
+      `[COOK] composed: wine-poached fish=${stk().wine_poached_fish ?? 0} cold milk soup=${stk().cold_milk_soup ?? 0}`
+    );
+    expect(
+      stk().wine_poached_fish ?? 0,
+      'rung 3 poached a lower dish in wine it had no other use for'
+    ).toBeGreaterThan(0);
+    expect(stk().cold_milk_soup ?? 0, 'rung 4 let stock down with milk').toBeGreaterThan(0);
+
+    craft('marching_loaf');
     craft('feast_platter');
-    for (let i = 0; i < 25 && !((stk().feast_platter ?? 0) > 0); i++) s.tick(400);
-    console.log(`[COOK] steel: feast platter=${stk().feast_platter ?? 0}`);
+    for (
+      let i = 0;
+      i < 30 && !((stk().marching_loaf ?? 0) > 0 && (stk().feast_platter ?? 0) > 0);
+      i++
+    )
+      s.tick(400);
+    console.log(
+      `[COOK] steel: marching loaf=${stk().marching_loaf ?? 0} feast platter=${stk().feast_platter ?? 0}`
+    );
+    expect(
+      stk().marching_loaf ?? 0,
+      'rung 5 packed a loaf around confit and cheese'
+    ).toBeGreaterThan(0);
     expect(stk().feast_platter ?? 0, 'the platter assembles the rungs below it').toBeGreaterThan(0);
   }, 300000);
 });

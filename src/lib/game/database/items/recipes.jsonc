@@ -7358,5 +7358,8 @@
   {"id": "sear_steak", "station": "iron_stove", "inputs": {"category:meat": 2, "tallow": 1, "salt": 1, "category:herb": 1}, "outputs": {"seared_steak": 1}, "workAmount": 9, "toolTierRequired": 3},
   {"id": "stuff_sausage", "station": "iron_stove", "inputs": {"category:meat": 3, "tallow": 1, "salt": 2, "category:herb": 1}, "outputs": {"fresh_sausage": 2}, "workAmount": 12, "toolTierRequired": 3},
   {"id": "make_confit", "station": "steel_stove", "inputs": {"category:meat": 3, "tallow": 4, "salt": 2}, "outputs": {"confit_meat": 2}, "workAmount": 20, "toolTierRequired": 3},
-  {"id": "assemble_feast_platter", "station": "steel_stove", "inputs": {"roast_joint": 1, "confit_meat": 1, "fresh_sausage": 1, "bread": 2, "baked_roots": 1}, "outputs": {"feast_platter": 1}, "workAmount": 16, "toolTierRequired": 3}
+  {"id": "poach_fish_in_wine", "station": "brick_stove", "inputs": {"baked_fish": 1, "wine": 2, "category:herb": 1}, "outputs": {"wine_poached_fish": 1}, "workAmount": 9, "toolTierRequired": 2},
+  {"id": "make_cold_milk_soup", "station": "iron_stove", "inputs": {"bone_stock": 2, "milk": 3, "category:vegetable": 1}, "outputs": {"cold_milk_soup": 1}, "workAmount": 10, "toolTierRequired": 3},
+  {"id": "pack_marching_loaf", "station": "steel_stove", "inputs": {"bread": 2, "confit_meat": 1, "hard_cheese": 2}, "outputs": {"marching_loaf": 1}, "workAmount": 14, "toolTierRequired": 3},
+  {"id": "assemble_feast_platter", "station": "steel_stove", "inputs": {"roast_joint": 1, "confit_meat": 1, "fresh_sausage": 1, "bread": 2, "baked_roots": 1, "hard_cheese": 2, "wine": 2}, "outputs": {"feast_platter": 1}, "workAmount": 16, "toolTierRequired": 3}
 ]
