@@ -2114,7 +2114,7 @@
     "workAmount": 28,
     "toolTierRequired": 1,
     "populationRequired": 1,
-    "effects": {"family": "baking", "rung": 1, "craftingBonus": 0.25, "craftingEnabled": true}
+    "effects": {"bakingEnabled": true, "family": "baking", "rung": 1, "craftingBonus": 0.25, "craftingEnabled": true}
   },
   {
     "id": "bakehouse",
@@ -2130,7 +2130,7 @@
     "workAmount": 44,
     "toolTierRequired": 2,
     "populationRequired": 1,
-    "effects": {"family": "baking", "rung": 2, "craftingBonus": 0.5, "craftingEnabled": true}
+    "effects": {"bakingEnabled": true, "family": "baking", "rung": 2, "craftingBonus": 0.5, "craftingEnabled": true}
   },
   {
     "id": "steel_bake_range",
@@ -2146,7 +2146,7 @@
     "workAmount": 56,
     "toolTierRequired": 3,
     "populationRequired": 1,
-    "effects": {"family": "baking", "rung": 3, "craftingBonus": 0.7, "craftingEnabled": true}
+    "effects": {"bakingEnabled": true, "family": "baking", "rung": 3, "craftingBonus": 0.7, "craftingEnabled": true}
   },
   {
     "id": "brewhouse",
