@@ -1003,8 +1003,15 @@
 
 <style>
   .tooltip .info-row.recipes .iv {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 4;
+    line-clamp: 4;
+    overflow: hidden;
     white-space: normal;
-    max-width: 46ch;
+    overflow-wrap: break-word;
+    width: 46ch;
+    max-height: calc(4 * 1.35em);
     line-height: 1.35;
   }
   .build-db {
