@@ -176,6 +176,24 @@
     | { kind: 'build'; id: string }
     | { kind: 'stat'; info: StatInfo; build: string | null; why: string | null };
   let hover = $state<Hover | null>(null);
+  const HOVER_KEY = 'f4x.geardb.hovercard';
+  let hoverCard = $state(true);
+  $effect(() => {
+    try {
+      hoverCard = localStorage.getItem(HOVER_KEY) !== 'off';
+    } catch {
+      hoverCard = true;
+    }
+  });
+  function toggleHoverCard() {
+    hoverCard = !hoverCard;
+    if (!hoverCard) hover = null;
+    try {
+      localStorage.setItem(HOVER_KEY, hoverCard ? 'on' : 'off');
+    } catch {
+      /* a dev tool in a private window still works, it just forgets */
+    }
+  }
   let hx = $state(0);
   let hy = $state(0);
   function pos(e: MouseEvent) {
@@ -450,6 +468,15 @@
       >Buildings</button
     >
     <span class="sep"></span>
+    {#if view === 'audit' || view === 'buildings'}
+      <button
+        class="tab info-toggle"
+        class:active={hoverCard}
+        onclick={toggleHoverCard}
+        title="Hover card: the panel that follows the pointer over a row. Turn it off when it covers what you are reading."
+        >{hoverCard ? '◉' : '○'} hover card</button
+      >
+    {/if}
     <button
       class="tab info-toggle"
       class:active={compare}
@@ -638,13 +665,13 @@
   {#if view === 'audit'}
     <TreeView
       source={ITEM_SOURCE}
-      onhover={(row, e) => hoverGear(row as GearRow, e)}
+      onhover={(row, e) => hoverCard && hoverGear(row as GearRow, e)}
       onout={hoverOut}
     />
   {:else if view === 'buildings'}
     <TreeView
       source={BUILDING_SOURCE}
-      onhover={(row, e) => hoverStation(row as BuildRow, e)}
+      onhover={(row, e) => hoverCard && hoverStation(row as BuildRow, e)}
       onout={hoverOut}
     />
   {:else if view === 'builds'}
