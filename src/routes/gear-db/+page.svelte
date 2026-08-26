@@ -170,12 +170,12 @@
   });
   const cellFor = (g: GearRow, label: string) => infoRows(g).find((r) => r.label === label) ?? null;
 
-  let hovered = $state<GearRow | null>(null);
-  let hoveredStation = $state<BuildRow | null>(null);
-  let hoveredBuild = $state<string | null>(null);
-  let hoveredStat = $state<{ info: StatInfo; build: string | null; why: string | null } | null>(
-    null
-  );
+  type Hover =
+    | { kind: 'gear'; row: GearRow }
+    | { kind: 'station'; row: BuildRow }
+    | { kind: 'build'; id: string }
+    | { kind: 'stat'; info: StatInfo; build: string | null; why: string | null };
+  let hover = $state<Hover | null>(null);
   let hx = $state(0);
   let hy = $state(0);
   function pos(e: MouseEvent) {
@@ -198,42 +198,20 @@
     reposition();
     return { update: (_p: unknown) => reposition() };
   }
-  function hoverGear(g: GearRow, e: MouseEvent) {
-    hovered = g;
-    hoveredBuild = null;
-    hoveredStat = null;
-    hoveredStation = null;
+  function show(h: Hover, e: MouseEvent) {
+    hover = h;
     pos(e);
   }
-  function hoverStation(b: BuildRow, e: MouseEvent) {
-    hoveredStation = b;
-    hovered = null;
-    hoveredBuild = null;
-    hoveredStat = null;
-    pos(e);
-  }
-  function hoverBuild(b: string, e: MouseEvent) {
-    hoveredBuild = b;
-    hovered = null;
-    hoveredStat = null;
-    pos(e);
-  }
-  function hoverStat(
+  const hoverGear = (row: GearRow, e: MouseEvent) => show({ kind: 'gear', row }, e);
+  const hoverStation = (row: BuildRow, e: MouseEvent) => show({ kind: 'station', row }, e);
+  const hoverBuild = (id: string, e: MouseEvent) => show({ kind: 'build', id }, e);
+  const hoverStat = (
     statId: string,
     e: MouseEvent,
     build: string | null = null,
     why: string | null = null
-  ) {
-    hoveredStat = { info: STAT_INFO[statId], build, why };
-    hovered = null;
-    hoveredBuild = null;
-    pos(e);
-  }
-  function hoverOut() {
-    hovered = null;
-    hoveredBuild = null;
-    hoveredStat = null;
-  }
+  ) => show({ kind: 'stat', info: STAT_INFO[statId], build, why }, e);
+  const hoverOut = () => (hover = null);
 
   interface InfoRow {
     label: string;
@@ -590,6 +568,12 @@
           >{b.makes || (b.rung !== null ? 'inherits its ladder' : 'nothing')}</span
         >
       </div>
+      {#if b.recipes.length}
+        <div class="info-row recipes">
+          <span class="il">recipes</span>
+          <span class="iv">{b.recipes.join(', ')}</span>
+        </div>
+      {/if}
       {#if b.cost}
         <div class="info-row">
           <span class="il">built from</span><span class="iv">{b.cost}</span>
@@ -978,22 +962,22 @@
     </section>
   {/if}
 
-  {#if hoveredStat}
-    <div class="tooltip wide" use:place={[hx, hy, hoveredStat]}>
-      {@render statBody(hoveredStat.info, hoveredStat.build, hoveredStat.why)}
-    </div>
-  {:else if hoveredBuild}
-    <div class="tooltip" use:place={[hx, hy, hoveredBuild]}>{@render buildBody(hoveredBuild)}</div>
-  {:else if hovered}
-    <div class="tooltip" use:place={[hx, hy, hovered]}>{@render infoBody(hovered)}</div>
-  {:else if hoveredStation}
-    <div class="tooltip" use:place={[hx, hy, hoveredStation]}>
-      {@render stationBody(hoveredStation)}
+  {#if hover}
+    <div class="tooltip" class:wide={hover.kind === 'stat'} use:place={[hx, hy, hover]}>
+      {#if hover.kind === 'stat'}{@render statBody(hover.info, hover.build, hover.why)}
+      {:else if hover.kind === 'build'}{@render buildBody(hover.id)}
+      {:else if hover.kind === 'gear'}{@render infoBody(hover.row)}
+      {:else}{@render stationBody(hover.row)}{/if}
     </div>
   {/if}
 </div>
 
 <style>
+  .tooltip .info-row.recipes .iv {
+    white-space: normal;
+    max-width: 46ch;
+    line-height: 1.35;
+  }
   .build-db {
     position: fixed;
     inset: 0;

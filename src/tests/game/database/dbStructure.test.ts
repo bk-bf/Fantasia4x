@@ -286,3 +286,23 @@ describe('magical wood is worked at a runed bench', () => {
     expect(bad, bad.join('; ')).toEqual([]);
   });
 });
+
+/**
+ * Two items with one display name are indistinguishable wherever a list shows names — a stockpile, a
+ * craft card, the station recipe lists. The ids differ, but an id is backend reference and the player
+ * never sees one. Three pairs shipped this way: two pies both called "Pie", and a mail bracer and a
+ * riveted plate bracer both called "Riveted Iron Bracers".
+ */
+describe('no two items share a name', () => {
+  it('every display name identifies exactly one item', () => {
+    const seen = new Map<string, string[]>();
+    for (const i of ITEMS as Array<{ id: string; name?: string }>) {
+      if (!i.name) continue;
+      seen.set(i.name, [...(seen.get(i.name) ?? []), i.id]);
+    }
+    const bad = [...seen.entries()]
+      .filter(([, ids]) => ids.length > 1)
+      .map(([name, ids]) => `"${name}" is used by ${ids.join(' and ')}`);
+    expect(bad, bad.join('; ')).toEqual([]);
+  });
+});

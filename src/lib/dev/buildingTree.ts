@@ -8,6 +8,7 @@
 
 import buildingsData from '../game/database/world/buildings.jsonc';
 import recipesData from '../game/database/items/recipes.jsonc';
+import itemsData from '../game/database/items/items.jsonc';
 import { AGE_NAMES } from './chainAge';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -16,10 +17,25 @@ const recipes = recipesData as any[];
 
 const prettify = (id: string) => id.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 
-/** How many recipes name this building as their station. A workstation nothing is made at is a hole. */
-const RECIPE_COUNT = new Map<string, number>();
-for (const r of recipes)
-  if (r?.station) RECIPE_COUNT.set(r.station, (RECIPE_COUNT.get(r.station) ?? 0) + 1);
+/**
+ * What each station MAKES, named for the thing it produces. A count answers "is anything made here"
+ * and nothing else; the list answers "is the RIGHT thing made here", which is the audit question —
+ * cheese on a cupboard and hams on a storage rail were both a wrong name in a list, invisible as a
+ * number.
+ */
+const ITEM_NAME = new Map<string, string>(
+  (itemsData as any[]).filter((i) => i?.id).map((i) => [i.id, i.name ?? prettify(i.id)])
+);
+const RECIPES_AT = new Map<string, string[]>();
+for (const r of recipes) {
+  if (!r?.station) continue;
+  const out = Object.keys(r.outputs ?? {});
+  const label = out.length
+    ? out.map((o) => ITEM_NAME.get(o) ?? prettify(o)).join(' + ')
+    : prettify(String(r.id).replace(/^(make|carve|bake|brew|smelt|cast|melt|tan|spin)_/, ''));
+  RECIPES_AT.set(r.station, [...(RECIPES_AT.get(r.station) ?? []), label]);
+}
+for (const list of RECIPES_AT.values()) list.sort((a, b) => a.localeCompare(b));
 
 export const BUILD_AGES = ['Primitive', 'Copper', 'Bronze', 'Iron', 'Steel', 'Runed'] as const;
 export type BuildAge = (typeof BUILD_AGES)[number];
@@ -138,6 +154,8 @@ export interface BuildRow {
   fuel: number | null;
   /** recipes that name it as their station */
   makes: number;
+  /** what those recipes produce, by name */
+  recipes: string[];
   cost: string;
   work: number;
   desc: string;
@@ -189,7 +207,8 @@ export const BUILD_ROWS: BuildRow[] = buildings
     boosts: boostsOf(b),
     stores: storesOf(b),
     fuel: b.fuelConsumptionRate ?? null,
-    makes: RECIPE_COUNT.get(b.id) ?? 0,
+    makes: (RECIPES_AT.get(b.id) ?? []).length,
+    recipes: RECIPES_AT.get(b.id) ?? [],
     cost: costOf(b),
     work: b.workAmount ?? 0,
     desc: b.description ?? ''
@@ -251,6 +270,7 @@ export type BuildSortKey =
   | 'stores'
   | 'fuel'
   | 'makes'
+  | 'recipes'
   | 'work'
   | 'cost';
 export const BUILD_COLUMNS: { key: BuildSortKey; label: string; num?: boolean }[] = [
@@ -262,6 +282,7 @@ export const BUILD_COLUMNS: { key: BuildSortKey; label: string; num?: boolean }[
   { key: 'stores', label: 'Stores' },
   { key: 'fuel', label: 'Fuel', num: true },
   { key: 'makes', label: 'Makes', num: true },
+  { key: 'recipes', label: 'Recipes' },
   { key: 'work', label: 'Work', num: true },
   { key: 'cost', label: 'Built from' }
 ];
@@ -274,6 +295,8 @@ const valueOf = (r: BuildRow, k: BuildSortKey): number | string => {
       return r.rung ?? -1;
     case 'fuel':
       return r.fuel ?? -1;
+    case 'recipes':
+      return r.recipes.join(', ');
     case 'speed':
     case 'makes':
     case 'work':
@@ -320,6 +343,7 @@ const CELLS = (b: BuildRow): ViewRow['cells'] => [
   { v: b.stores, cls: 'cls' },
   { v: b.fuel ?? '', cls: 'num' },
   { v: b.makes || '—', cls: 'num' },
+  { v: b.recipes.join(', '), cls: 'src', title: b.recipes.join('\n') },
   { v: b.work || '', cls: 'num' },
   { v: b.cost, cls: 'src', title: b.cost }
 ];

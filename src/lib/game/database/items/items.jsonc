@@ -13214,7 +13214,7 @@
   {
     "id": "iron_bracers",
     "charSpans": [ {"sheet": "items", "id": 12} ],
-    "name": "Riveted Iron Bracers",
+    "name": "Iron Mail Bracers",
     "type": "armor",
     "category": "metal",
     "deteriorationRate": 0.008,
@@ -13241,7 +13241,7 @@
   {
     "id": "iron_greaves",
     "charSpans": [ {"sheet": "items", "id": 12} ],
-    "name": "Riveted Iron Greaves",
+    "name": "Iron Mail Greaves",
     "type": "armor",
     "category": "metal",
     "deteriorationRate": 0.008,
@@ -17840,7 +17840,7 @@
   {
     "id"               : "meat_pie",
     "charSpans"        : [ {"sheet": "items", "id": 113} ],
-    "name"             : "Pie",
+    "name"             : "Fine Pie",
     "dynamicName"      : true,
     "mealBuff"         : {"condition": "nourished", "seconds": 75},
     "type"             : "food",
