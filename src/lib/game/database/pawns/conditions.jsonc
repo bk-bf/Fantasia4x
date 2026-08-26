@@ -881,10 +881,10 @@
         "mood"       : "cond_well_fed",
         "flags"      : ["food", "buff"],
         "transient"  : true,
-        "description": "A proper hot meal in the belly. Settled and ready to work.",
+        "description": "A proper hot meal in the belly. Settled, and the next one can wait a while.",
         "color"      : "#9CCC65",
         "charSpans"  : [ {"sheet": "font", "id": 1} ],
-        "modifiers"  : {"workEfficiency": 1.05}
+        "modifiers"  : {"hungerRate": 0.94, "workEfficiency": 1.05}
     },
     {
         "id"         : "rallied",
@@ -905,28 +905,38 @@
         "description": "A thick, stick-to-the-ribs stew. Stays filling for hours and keeps the body going.",
         "color"      : "#C8A064",
         "charSpans"  : [ {"sheet": "font", "id": 1} ],
-        "modifiers"  : {"hungerRate": 0.85, "fatigueRate": 0.92}
+        "modifiers"  : {"hungerRate": 0.85, "workEfficiency": 1.08}
     },
-  {"id": "stock_warmed", "name": "Stock-Warmed", "flags": ["food", "buff"], "transient": true, "description": "A bowl of hot bone broth taken standing. The warmth sits in the chest a good while and the cold bites slower for it.", "color": "#B07A3C", "charSpans": [{"sheet": "font", "id": 1}], "modifiers": {"constitution": 1.12, "hungerRate": 0.94}},
+  {"id": "warmed_through", "name": "Warmed Through", "flags": ["food", "buff"], "transient": true, "description": "Something boiled and eaten hot. The chill goes out of the hands and stays out for a while.", "color": "#C08A4A", "charSpans": [{"sheet": "font", "id": 1}], "modifiers": {"constitution": 1.06}},
+  {"id": "stock_warmed", "name": "Stock-Warmed", "flags": ["food", "buff"], "transient": true, "description": "A bowl of hot bone broth taken standing. The warmth sits in the chest a good while and the cold bites slower for it.", "color": "#B07A3C", "charSpans": [{"sheet": "font", "id": 1}], "modifiers": {"constitution": 1.12}},
+  {"id": "banked_warmth", "name": "Banked Warmth", "flags": ["food", "buff"], "transient": true, "description": "Fat and marrow off a long, low pot. The heat of it banks down deep and burns all day, and weather that would bite goes unnoticed.", "color": "#9C5F28", "charSpans": [{"sheet": "font", "id": 2}], "modifiers": {"constitution": 1.2}},
+  {"id": "cool_slaked", "name": "Cool-Slaked", "flags": ["food", "buff"], "transient": true, "description": "Sweet fruit taken cold. The mouth stops going dry every hour.", "color": "#7FD1C2", "charSpans": [{"sheet": "font", "id": 1}], "modifiers": {"thirstRate": 0.9}},
+  {"id": "deep_slaked", "name": "Deep-Slaked", "flags": ["food", "buff"], "transient": true, "description": "A cold bowl, more drink than dish, thick with milk. It sits in a body through the worst hours of a hot day.", "color": "#4FB3A5", "charSpans": [{"sheet": "font", "id": 2}], "modifiers": {"thirstRate": 0.78}},
+  {"id": "set_to_mend", "name": "Set to Mend", "flags": ["food", "buff"], "transient": true, "description": "Light fare picked over slowly by someone who is not well. The aches quiet down and the day stops being so long.", "color": "#5FA8A0", "charSpans": [{"sheet": "font", "id": 2}], "modifiers": {"pain": 0.86, "fatigueRate": 0.84}},
+  {"id": "trail_fed", "name": "Trail-Fed", "flags": ["food", "buff"], "transient": true, "description": "Food built to be carried and cut cold. It goes down on the move and asks nothing back.", "color": "#A8B47A", "charSpans": [{"sheet": "font", "id": 1}], "modifiers": {"moveSpeed": 1.05, "fatigueRate": 0.94}},
+  {"id": "well_provisioned", "name": "Well-Provisioned", "flags": ["food", "buff"], "transient": true, "description": "Salted, sealed and packed to keep. A day away from the walls stops mattering.", "color": "#8C9E52", "charSpans": [{"sheet": "font", "id": 2}], "modifiers": {"moveSpeed": 1.09, "fatigueRate": 0.88}},
+  {"id": "clear_headed", "name": "Clear-Headed", "flags": ["food", "buff"], "transient": true, "description": "Sharp, salted things that cut through a heavy morning. The fog goes off the thinking.", "color": "#9FB8D8", "charSpans": [{"sheet": "font", "id": 1}], "modifiers": {"intelligence": 1.05}},
+  {"id": "keen_witted", "name": "Keen-Witted", "flags": ["food", "buff"], "transient": true, "description": "A clean, careful dish eaten unhurried. The head sits still and the hands do as they are told.", "color": "#6E93C4", "charSpans": [{"sheet": "font", "id": 2}], "modifiers": {"intelligence": 1.09, "consciousness": 1.04}},
+  {"id": "blood_up", "name": "Blood Up", "flags": ["food", "buff"], "transient": true, "description": "A long board and too much of it, taken loud and in company. The room came away from the table looking for something to swing at.", "color": "#C0392B", "floater": true, "charSpans": [{"sheet": "font", "id": 2}], "modifiers": {"strength": 1.12, "weaponDamage": 1.1, "critChance": 1.18, "attackSpeed": 1.05, "hitChance": 1.05}},
     {
         "id"         : "nourished",
         "name"       : "Nourished",
         "flags"      : ["food", "buff"],
         "transient"  : true,
-        "description": "A full, balanced meal of meat and garden veg. The body works the better for it.",
+        "description": "A full, balanced meal of meat and garden veg. The body works the better for it, and works longer between plates.",
         "color"      : "#8BC34A",
         "charSpans"  : [ {"sheet": "font", "id": 2} ],
-        "modifiers"  : {"constitution": 1.05, "workEfficiency": 1.06}
+        "modifiers"  : {"hungerRate": 0.78, "workEfficiency": 1.12}
     },
     {
         "id"         : "fortified",
         "name"       : "Fortified",
         "flags"      : ["food", "buff"],
         "transient"  : true,
-        "description": "A rich, hearty feast. The body is steeled, stronger, hardier, and slow to tire.",
+        "description": "Red meat and salt, eaten before the work turns rough. It sits heavy and puts weight behind the arm.",
         "color"      : "#D8A52A",
         "charSpans"  : [ {"sheet": "font", "id": 2} ],
-        "modifiers"  : {"strength": 1.05, "constitution": 1.06, "fatigueRate": 0.88}
+        "modifiers"  : {"strength": 1.08, "weaponDamage": 1.06, "hitChance": 1.03}
     },
     {
         "id"         : "refreshed",
@@ -947,7 +957,7 @@
         "description": "Calming herbs settle the body, aches ease and weariness lifts. Good fare for the mending.",
         "color"      : "#80CBC4",
         "charSpans"  : [ {"sheet": "font", "id": 1} ],
-        "modifiers"  : {"fatigueRate": 0.9, "pain": 0.95}
+        "modifiers"  : {"fatigueRate": 0.9, "pain": 0.92}
     },
     {
         "id"         : "mood_ecstatic",

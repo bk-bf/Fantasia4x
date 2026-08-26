@@ -20,9 +20,13 @@ Seven lines, each with its own condition ladder in `conditions.jsonc`: **nutriti
 by a modifier the sim already reads — `constitution` reaching `cold_resistance` is the worked example
 (`stock_warmed`); a modifier nothing reads is decoration.
 
-- [ ] Conditions authored, each with a modifier something reads
-- [ ] Existing meals reassigned onto the lines; no line left with one member
-- [ ] Headless: a pawn eats one dish per line and the condition lands
+- [x] Conditions authored, each with a modifier something reads
+- [x] Existing meals reassigned onto the lines; no line left with one member
+- [x] Headless: a pawn eats one dish per line and the condition lands
+
+Seven axes, one read per line: nutrition `hungerRate`, heat `thirstRate`, cold `constitution`,
+health `pain`, preservation `moveSpeed`, combat `weaponDamage`/`critChance`, infection
+`intelligence` (into `caretaking_quality`, which is what pushes infection back).
 
 ## T2 — Upper-rung dishes compose, and still bring something of their own
 
@@ -30,9 +34,12 @@ by a modifier the sim already reads — `constitution` reaching `cold_resistance
 cooking — **but a composed dish must also take 1–2 ingredients no lower dish used.** A recipe that
 only re-cooks earlier meals adds nothing and reads as filler.
 
-- [ ] Upper cooking rungs take 1–2 lower dishes plus 1–2 ingredients of their own
-- [ ] No composed dish is a pure re-cook
-- [ ] Headless: the full chain cooks from raw stock through to the top dish
+- [x] Upper cooking rungs take 1–2 lower dishes plus 1–2 ingredients of their own
+- [x] No composed dish is a pure re-cook
+- [x] Headless: the full chain cooks from raw stock through to the top dish
+
+Wine-Poached Fish (wine), Cold Milk Soup (milk), Marching Loaf (hard cheese); the Feast Platter was
+the one pure re-cook and now takes cheese and wine of its own.
 
 ## T3 — Alchemy gated behind fermented fluids
 
@@ -67,10 +74,13 @@ Proposal delivered: [SOAKING-AND-HAFTS](SOAKING-AND-HAFTS.md). Awaiting review b
 **Propose only.** Both are top rungs that introduce no recipe, so the DB shows them empty. New items
 go through the `items` skill gate first, so this returns a proposal, not data.
 
-- [ ] 2–4 dishes for the Steel Deck Oven that only a sealed steel oven could bake
-- [ ] 2–4 drinks for the Runed Brewing Vat that only a runed vat could ferment
-- [ ] Each named, costed, and checked against the `items` gate list
-- [ ] **Stop there.** Do not author the items.
+- [x] 2–4 dishes for the Steel Deck Oven that only a sealed steel oven could bake
+- [x] 2–4 drinks for the Runed Brewing Vat that only a runed vat could ferment
+- [x] Each named, costed, and checked against the `items` gate list
+- [x] **Stop there.** Do not author the items.
+
+Proposal: [TOP-RUNG-ITEMS](TOP-RUNG-ITEMS.md) — three dishes, two drinks, and three station defects
+that change what a top-rung drink may claim.
 
 ---
 
