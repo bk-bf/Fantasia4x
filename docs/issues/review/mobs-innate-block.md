@@ -1,7 +1,7 @@
 ---
 id: mobs-innate-block
 title: Every creature negates a share of melee blows with no shield, because block derives from constitution and mass
-status: open
+status: in-review
 kind: correctness
 severity: medium
 ready: true
@@ -11,6 +11,8 @@ files:
   - src/lib/game/systems/Combat.ts
   - src/lib/game/services/PawnStatService.ts
 symbols: []
+branch: fix/mobs-innate-block
+pr: mobs-innate-block
 created: 2026-08-25
 updated: 2026-08-27
 ---
