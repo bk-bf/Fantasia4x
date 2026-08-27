@@ -52,14 +52,7 @@ const RES_KEY: Record<string, string> = {
 
 const BASELINE = {
   id: '__statbaseline__',
-  stats: {
-    strength: 10,
-    dexterity: 10,
-    constitution: 10,
-    perception: 10,
-    intelligence: 10,
-    charisma: 10
-  },
+  stats: Object.fromEntries(CORE_STAT_KEYS.map((k) => [k, 10])),
   physicalTraits: { weight: 70, height: 170, size: 'medium' }
 } as unknown as Pawn;
 const baseCaps = pawnStatService.computeCapacities(BASELINE);

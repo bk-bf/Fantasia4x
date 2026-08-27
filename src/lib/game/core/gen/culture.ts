@@ -1,4 +1,5 @@
 import type { Culture, Trait, CultureLore, CultureRelation } from '../types';
+import { CORE_STAT_KEYS } from '../types';
 import traitDbData from '../../database/pawns/traits.jsonc';
 import loreData from '../../database/social/culture-lore.jsonc';
 import { rng } from '../util/rng';
@@ -36,7 +37,7 @@ const LORE = loreData as unknown as {
   };
 };
 
-const STATS = ['strength', 'dexterity', 'intelligence', 'perception', 'charisma', 'constitution'];
+const STATS = CORE_STAT_KEYS;
 
 const CONFLICT_GROUPS: string[][] = [
   ['stocky', 'rangy'],
