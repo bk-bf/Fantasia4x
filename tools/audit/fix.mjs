@@ -20,7 +20,7 @@
 // machine instead of it having to start over.
 
 import { spawn, execFileSync } from 'node:child_process';
-import { existsSync, rmSync } from 'node:fs';
+import { cpSync, existsSync, rmSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -302,6 +302,17 @@ try {
     timeoutMs: 300_000
   });
   if (sync.code !== 0) out(`    [warn] sync exited ${sync.code}; verification may not run`);
+
+  // The wasm packages are gitignored build output of the Rust crates, so a fresh worktree has
+  // neither and svelte-check cannot resolve $lib/sim-core-pkg or $lib/spatial-core-pkg. Building
+  // them needs wasm-pack and a cargo toolchain; copying them from the checkout the worktree was
+  // cut from is the same bytes for the same committed Rust source, and costs nothing.
+  for (const pkg of ['sim-core-pkg', 'spatial-core-pkg']) {
+    const from = join(ROOT, 'src', 'lib', pkg);
+    const to = join(wt, 'src', 'lib', pkg);
+    if (existsSync(from) && !existsSync(to)) cpSync(from, to, { recursive: true });
+  }
+  out(`--- wasm packages staged`);
 
   out(`--- ${CLAUDE} (${MODEL})`);
   const t0 = Date.now();
