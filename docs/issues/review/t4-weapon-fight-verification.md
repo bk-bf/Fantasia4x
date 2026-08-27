@@ -1,7 +1,7 @@
 ---
 id: t4-weapon-fight-verification
 title: Twenty tier-4 weapons and the wieldRequirement condition have never been driven through a real fight
-status: open
+status: in-review
 kind: test-gap
 severity: medium
 ready: true
@@ -13,6 +13,8 @@ files:
   - src/tests/game/systems/weaponStatSweep.test.ts
   - src/lib/game/systems/Combat.ts
 symbols: []
+branch: fix/t4-weapon-fight-verification
+pr: t4-weapon-fight-verification
 created: 2026-08-25
 updated: 2026-08-27
 ---
