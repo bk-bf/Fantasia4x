@@ -1,7 +1,7 @@
 ---
 id: armour-resistance-fields-dead
 title: slashResistance, pierceResistance and crushResistance are authored on armour and read by nothing
-status: open
+status: in-review
 kind: data
 severity: medium
 ready: true
@@ -13,6 +13,8 @@ files:
   - src/lib/game/systems/Combat.ts
   - src/lib/game/core/PawnEquipment.ts
 symbols: []
+branch: fix/armour-resistance-fields-dead
+pr: armour-resistance-fields-dead
 created: 2026-08-25
 updated: 2026-08-27
 ---
