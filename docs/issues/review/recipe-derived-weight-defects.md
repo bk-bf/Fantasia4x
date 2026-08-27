@@ -1,7 +1,7 @@
 ---
 id: recipe-derived-weight-defects
 title: Recipes that consume whole bars and staveless bows derive absurd item weights
-status: open
+status: in-review
 kind: data
 severity: medium
 ready: true
@@ -11,6 +11,8 @@ files:
   - src/lib/game/database/items/recipes.jsonc
   - src/lib/game/database/items/items.jsonc
 symbols: []
+branch: fix/recipe-derived-weight-defects
+pr: recipe-derived-weight-defects
 created: 2026-08-25
 updated: 2026-08-27
 ---
