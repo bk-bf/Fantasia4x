@@ -4,7 +4,7 @@ title: Conditions reach the sim by multiplying a core stat, which pays the stron
 status: open
 kind: correctness
 severity: high
-ready: false
+ready: true
 origin: human
 rules: []
 files:

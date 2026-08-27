@@ -4,7 +4,7 @@ title: Recipes that consume whole bars and staveless bows derive absurd item wei
 status: open
 kind: data
 severity: medium
-ready: false
+ready: true
 origin: human
 rules: []
 files:
@@ -12,7 +12,7 @@ files:
   - src/lib/game/database/items/items.jsonc
 symbols: []
 created: 2026-08-25
-updated: 2026-08-25
+updated: 2026-08-27
 ---
 
 # Recipes that consume whole bars and staveless bows derive absurd item weights

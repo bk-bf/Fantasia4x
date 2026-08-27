@@ -4,7 +4,7 @@ title: Medium armour has no stiffness identity and no neck, hands or feet line a
 status: open
 kind: data
 severity: medium
-ready: false
+ready: true
 origin: human
 rules: []
 files:
@@ -12,7 +12,7 @@ files:
   - src/lib/game/database/items/recipes.jsonc
 symbols: []
 created: 2026-08-25
-updated: 2026-08-25
+updated: 2026-08-27
 ---
 
 # Medium armour has coverage holes, and the shield ladder stops at steel

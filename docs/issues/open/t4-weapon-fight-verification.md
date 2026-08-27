@@ -4,7 +4,7 @@ title: Twenty tier-4 weapons and the wieldRequirement condition have never been 
 status: open
 kind: test-gap
 severity: medium
-ready: false
+ready: true
 origin: human
 rules: []
 files:
@@ -14,7 +14,7 @@ files:
   - src/lib/game/systems/Combat.ts
 symbols: []
 created: 2026-08-25
-updated: 2026-08-25
+updated: 2026-08-27
 ---
 
 # Twenty tier-4 weapons have never been driven through a real fight

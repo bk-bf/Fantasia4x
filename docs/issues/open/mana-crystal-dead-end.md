@@ -4,7 +4,7 @@ title: mana_crystal is a dead-end drop and make_ash is shadowed by two byproduct
 status: open
 kind: data
 severity: low
-ready: false
+ready: true
 origin: human
 rules: []
 files:
@@ -12,7 +12,7 @@ files:
   - src/lib/game/database/items/items.jsonc
 symbols: []
 created: 2026-08-25
-updated: 2026-08-25
+updated: 2026-08-27
 ---
 
 # mana_crystal is a dead-end drop and make_ash is shadowed

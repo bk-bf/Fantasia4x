@@ -4,7 +4,7 @@ title: The six core stats are re-declared by hand in ten rosters, nine abbreviat
 status: open
 kind: drift
 severity: high
-ready: false
+ready: true
 origin: human
 rules: []
 files:
@@ -21,7 +21,7 @@ files:
   - src/lib/utils/bodyLabels.ts
 symbols: []
 created: 2026-08-24
-updated: 2026-08-25
+updated: 2026-08-27
 ---
 
 # Core stats have no single declaration
