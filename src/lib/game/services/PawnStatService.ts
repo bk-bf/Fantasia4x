@@ -116,9 +116,10 @@ const CORE_STAT_ORDER = [
   'intelligence',
   'charisma'
 ] as const satisfies readonly StatKey[];
-type CoreStatOrderCoversStatKey = StatKey extends (typeof CORE_STAT_ORDER)[number] ? true : never;
-const _coreStatOrderCoversStatKey: CoreStatOrderCoversStatKey = true;
-void _coreStatOrderCoversStatKey;
+type NoStatKeyMissingFrom<T extends never> = T;
+type CoreStatOrderCoversEveryStatKey = NoStatKeyMissingFrom<
+  Exclude<StatKey, (typeof CORE_STAT_ORDER)[number]>
+>;
 
 function coreStatValue(
   k: StatKey,
