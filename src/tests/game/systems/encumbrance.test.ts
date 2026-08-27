@@ -48,8 +48,8 @@ describe('driveEncumbrance (load → staged condition)', () => {
     const c: EntityCondition[] = [];
     driveEncumbrance(c, 1.5);
     const stage = getConditionCurrentStage(c.find((x) => x.id === 'encumbered')!);
-    expect(stage!.modifiers.dexterity).toBeLessThan(1);
-    expect(stage!.modifiers.strength).toBeLessThan(1);
+    expect(stage!.modifiers.cutting_resistance).toBeLessThan(0);
+    expect(stage!.modifiers.melee_damage).toBeLessThan(0);
     expect(stage!.modifiers.moveSpeed).toBeLessThan(1);
   });
 });

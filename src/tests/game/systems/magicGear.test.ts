@@ -83,11 +83,11 @@ describe('§M magical conditions', () => {
       ].sort()
     );
     const CONSUMED = new Set([
-      'strength',
-      'dexterity',
-      'constitution',
-      'perception',
-      'intelligence',
+      'melee_damage',
+      'cutting_resistance',
+      'stamina',
+      'aim_range',
+      'caretaking_quality',
       'workEfficiency',
       'moveSpeed',
       'fatigueRate',

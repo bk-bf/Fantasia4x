@@ -31,15 +31,15 @@
                 "label"      : "burdened",
                 "minSeverity": 0.0,
                 "color"      : "#C8A064",
-                "modifiers"  : {"dexterity": 0.9, "moveSpeed": 0.95, "fatigueRate": 1.1, "dodge": 0.93, "attackSpeed": 0.955, "hitChance": 0.96}
+                "modifiers"  : {"cutting_resistance": -0.01, "moveSpeed": 0.95, "fatigueRate": 1.1, "dodge": 0.93, "attackSpeed": 0.955, "hitChance": 0.96}
             },
             {
                 "label"      : "encumbered",
                 "minSeverity": 0.33,
                 "color"      : "#D08040",
                 "modifiers"  : {
-                    "dexterity"     : 0.7 ,
-                    "strength"      : 0.9 ,
+                    "cutting_resistance": -0.03 ,
+                    "melee_damage": -0.1 ,
                     "moveSpeed"     : 0.85,
                     "workEfficiency": 0.85,
                     "fatigueRate"   : 1.3, "dodge": 0.79, "attackSpeed": 0.865, "hitChance": 0.88}
@@ -49,8 +49,8 @@
                 "minSeverity": 0.83,
                 "color"      : "#C04030",
                 "modifiers"  : {
-                    "dexterity"     : 0.45,
-                    "strength"      : 0.75,
+                    "cutting_resistance": -0.055,
+                    "melee_damage": -0.25,
                     "moveSpeed"     : 0.6 ,
                     "workEfficiency": 0.6 ,
                     "fatigueRate"   : 1.6, "dodge": 0.615, "attackSpeed": 0.753, "hitChance": 0.78}
@@ -68,19 +68,19 @@
                 "label"      : "unwieldy",
                 "minSeverity": 0.0,
                 "color"      : "#C8A064",
-                "modifiers"  : {"hitChance": 0.85, "strength": 0.95, "fatigueRate": 1.25}
+                "modifiers"  : {"hitChance": 0.85, "melee_damage": -0.05, "fatigueRate": 1.25}
             },
             {
                 "label"      : "overmatched",
                 "minSeverity": 0.35,
                 "color"      : "#D08040",
-                "modifiers"  : {"hitChance": 0.68, "strength": 0.86, "dodge": 0.9, "fatigueRate": 1.5}
+                "modifiers"  : {"hitChance": 0.68, "melee_damage": -0.14, "dodge": 0.9, "fatigueRate": 1.5}
             },
             {
                 "label"      : "flailing",
                 "minSeverity": 0.7,
                 "color"      : "#C04030",
-                "modifiers"  : {"hitChance": 0.5, "strength": 0.75, "dodge": 0.8, "fatigueRate": 1.8}
+                "modifiers"  : {"hitChance": 0.5, "melee_damage": -0.25, "dodge": 0.8, "fatigueRate": 1.8}
             }
         ]
     },
@@ -97,31 +97,31 @@
                 "label"      : "slightly windy",
                 "minSeverity": 0.0,
                 "color"      : "#B0C4DE",
-                "modifiers"  : {"dexterity": 0.98, "moveSpeed": 0.98, "hitChance": 0.992}
+                "modifiers"  : {"cutting_resistance": -0.002, "moveSpeed": 0.98, "hitChance": 0.992}
             },
             {
                 "label"      : "somewhat windy",
                 "minSeverity": 0.2,
                 "color"      : "#A0B8D8",
-                "modifiers"  : {"dexterity": 0.95, "moveSpeed": 0.95, "fatigueRate": 1.05, "hitChance": 0.98}
+                "modifiers"  : {"cutting_resistance": -0.005, "moveSpeed": 0.95, "fatigueRate": 1.05, "hitChance": 0.98}
             },
             {
                 "label"      : "fairly windy",
                 "minSeverity": 0.4,
                 "color"      : "#8FB0D4",
-                "modifiers"  : {"dexterity": 0.9, "moveSpeed": 0.92, "workEfficiency": 0.95, "fatigueRate": 1.1, "hitChance": 0.96}
+                "modifiers"  : {"cutting_resistance": -0.01, "moveSpeed": 0.92, "workEfficiency": 0.95, "fatigueRate": 1.1, "hitChance": 0.96}
             },
             {
                 "label"      : "very windy",
                 "minSeverity": 0.6,
                 "color"      : "#6FA0CC",
-                "modifiers"  : {"dexterity": 0.82, "moveSpeed": 0.85, "workEfficiency": 0.88, "fatigueRate": 1.2, "hitChance": 0.928}
+                "modifiers"  : {"cutting_resistance": -0.018, "moveSpeed": 0.85, "workEfficiency": 0.88, "fatigueRate": 1.2, "hitChance": 0.928}
             },
             {
                 "label"      : "extremely windy",
                 "minSeverity": 0.8,
                 "color"      : "#4F8FC4",
-                "modifiers"  : {"dexterity": 0.72, "moveSpeed": 0.75, "workEfficiency": 0.78, "fatigueRate": 1.3, "hitChance": 0.888}
+                "modifiers"  : {"cutting_resistance": -0.028, "moveSpeed": 0.75, "workEfficiency": 0.78, "fatigueRate": 1.3, "hitChance": 0.888}
             }
         ]
     },
@@ -138,19 +138,19 @@
                 "label"      : "hairline",
                 "minSeverity": 0.0,
                 "color"      : "#D8B048",
-                "modifiers"  : {"strength": 0.9, "dexterity": 0.88, "workEfficiency": 0.9, "dodge": 0.916, "attackSpeed": 0.946, "hitChance": 0.952}
+                "modifiers"  : {"melee_damage": -0.1, "cutting_resistance": -0.012, "workEfficiency": 0.9, "dodge": 0.916, "attackSpeed": 0.946, "hitChance": 0.952}
             },
             {
                 "label"      : "cracked",
                 "minSeverity": 0.4,
                 "color"      : "#C8743A",
-                "modifiers"  : {"strength": 0.75, "dexterity": 0.7, "workEfficiency": 0.8, "dodge": 0.79, "attackSpeed": 0.865, "hitChance": 0.88}
+                "modifiers"  : {"melee_damage": -0.25, "cutting_resistance": -0.03, "workEfficiency": 0.8, "dodge": 0.79, "attackSpeed": 0.865, "hitChance": 0.88}
             },
             {
                 "label"      : "shattered",
                 "minSeverity": 0.75,
                 "color"      : "#C04030",
-                "modifiers"  : {"strength": 0.55, "dexterity": 0.5, "workEfficiency": 0.65, "dodge": 0.65, "attackSpeed": 0.775, "hitChance": 0.8}
+                "modifiers"  : {"melee_damage": -0.45, "cutting_resistance": -0.05, "workEfficiency": 0.65, "dodge": 0.65, "attackSpeed": 0.775, "hitChance": 0.8}
             }
         ]
     },
@@ -176,16 +176,16 @@
                 "label"      : "thirsty",
                 "minSeverity": 0.0,
                 "color"      : "#4FC3F7",
-                "modifiers"  : {"strength": 0.9, "dexterity": 0.95, "workEfficiency": 0.8, "moveSpeed": 0.9, "dodge": 0.965, "attackSpeed": 0.978, "hitChance": 0.98}
+                "modifiers"  : {"melee_damage": -0.1, "cutting_resistance": -0.005, "workEfficiency": 0.8, "moveSpeed": 0.9, "dodge": 0.965, "attackSpeed": 0.978, "hitChance": 0.98}
             },
             {
                 "label"      : "parched",
                 "minSeverity": 0.25,
                 "color"      : "#29B6F6",
                 "modifiers"  : {
-                    "strength"      : 0.75,
-                    "dexterity"     : 0.85,
-                    "constitution"  : 0.85,
+                    "melee_damage": -0.25,
+                    "cutting_resistance": -0.015,
+                    "stamina": -6,
                     "workEfficiency": 0.65,
                     "fatigueRate"   : 1.3, "dodge": 0.895, "attackSpeed": 0.933, "hitChance": 0.94}
             },
@@ -195,9 +195,9 @@
                 "color"          : "#0288D1",
                 "lifeThreatening": true,
                 "modifiers"      : {
-                    "strength"      : 0.5,
-                    "dexterity"     : 0.6,
-                    "constitution"  : 0.6,
+                    "melee_damage": -0.5,
+                    "cutting_resistance": -0.04,
+                    "stamina": -16,
                     "workEfficiency": 0.4,
                     "fatigueRate"   : 1.5, "dodge": 0.72, "attackSpeed": 0.82, "hitChance": 0.84}
             },
@@ -207,9 +207,9 @@
                 "color"          : "#01579B",
                 "lifeThreatening": true,
                 "modifiers"      : {
-                    "strength"      : 0.25,
-                    "dexterity"     : 0.3 ,
-                    "constitution"  : 0.4 ,
+                    "melee_damage": -0.75,
+                    "cutting_resistance": -0.07 ,
+                    "stamina": -24 ,
                     "workEfficiency": 0.1 ,
                     "fatigueRate"   : 1.8, "dodge": 0.51, "attackSpeed": 0.685, "hitChance": 0.72}
             }
@@ -238,22 +238,22 @@
                 "label"      : "hungry",
                 "minSeverity": 0.0,
                 "color"      : "#f57c00",
-                "modifiers"  : {"strength": 0.9, "workEfficiency": 0.8, "moveSpeed": 0.85}
+                "modifiers"  : {"melee_damage": -0.1, "workEfficiency": 0.8, "moveSpeed": 0.85}
             },
             {
                 "label"      : "minor",
                 "minSeverity": 0.2,
                 "color"      : "#ef6c00",
-                "modifiers"  : {"strength": 0.8, "constitution": 0.9, "workEfficiency": 0.7, "hungerRate": 1.1}
+                "modifiers"  : {"melee_damage": -0.2, "stamina": -4, "workEfficiency": 0.7, "hungerRate": 1.1}
             },
             {
                 "label"      : "moderate",
                 "minSeverity": 0.35,
                 "color"      : "#e65100",
                 "modifiers"  : {
-                    "strength"      : 0.65,
-                    "constitution"  : 0.8 ,
-                    "dexterity"     : 0.9 ,
+                    "melee_damage": -0.35,
+                    "stamina": -8 ,
+                    "cutting_resistance": -0.01 ,
                     "workEfficiency": 0.6 ,
                     "hungerRate"    : 1.2, "dodge": 0.93, "attackSpeed": 0.955, "hitChance": 0.96}
             },
@@ -262,9 +262,9 @@
                 "minSeverity": 0.5,
                 "color"      : "#bf360c",
                 "modifiers"  : {
-                    "strength"      : 0.5,
-                    "constitution"  : 0.7,
-                    "dexterity"     : 0.8,
+                    "melee_damage": -0.5,
+                    "stamina": -12,
+                    "cutting_resistance": -0.02,
                     "workEfficiency": 0.5,
                     "hungerRate"    : 1.3, "dodge": 0.86, "attackSpeed": 0.91, "hitChance": 0.92}
             },
@@ -274,9 +274,9 @@
                 "color"          : "#b71c1c",
                 "lifeThreatening": true,
                 "modifiers"      : {
-                    "strength"      : 0.35,
-                    "constitution"  : 0.55,
-                    "dexterity"     : 0.6 ,
+                    "melee_damage": -0.65,
+                    "stamina": -18,
+                    "cutting_resistance": -0.04 ,
                     "workEfficiency": 0.35,
                     "hungerRate"    : 1.4, "dodge": 0.72, "attackSpeed": 0.82, "hitChance": 0.84}
             },
@@ -286,9 +286,9 @@
                 "color"          : "#c62828",
                 "lifeThreatening": true,
                 "modifiers"      : {
-                    "strength"      : 0.2,
-                    "constitution"  : 0.4,
-                    "dexterity"     : 0.4,
+                    "melee_damage": -0.8,
+                    "stamina": -24,
+                    "cutting_resistance": -0.06,
                     "workEfficiency": 0.2,
                     "hungerRate"    : 1.5, "dodge": 0.58, "attackSpeed": 0.73, "hitChance": 0.76}
             },
@@ -297,7 +297,7 @@
                 "minSeverity"    : 0.95,
                 "color"          : "#ff1744",
                 "lifeThreatening": true,
-                "modifiers"      : {"strength": 0.1, "constitution": 0.2, "dexterity": 0.2, "workEfficiency": 0.0, "dodge": 0.44, "attackSpeed": 0.64, "hitChance": 0.68}
+                "modifiers"      : {"melee_damage": -0.9, "stamina": -32, "cutting_resistance": -0.08, "workEfficiency": 0.0, "dodge": 0.44, "attackSpeed": 0.64, "hitChance": 0.68}
             }
         ]
     },
@@ -315,23 +315,23 @@
                 "label"      : "mild",
                 "minSeverity": 0.0,
                 "color"      : "#f9a825",
-                "modifiers"  : {"constitution": 0.9, "workEfficiency": 0.85}
+                "modifiers"  : {"stamina": -4, "workEfficiency": 0.85}
             },
             {
                 "label"      : "moderate",
                 "minSeverity": 0.25,
                 "color"      : "#f57f17",
-                "modifiers"  : {"constitution": 0.8, "strength": 0.85, "workEfficiency": 0.7, "hungerRate": 1.1}
+                "modifiers"  : {"stamina": -8, "melee_damage": -0.15, "workEfficiency": 0.7, "hungerRate": 1.1}
             },
             {
                 "label"      : "serious",
                 "minSeverity": 0.5,
                 "color"      : "#e65100",
                 "modifiers"  : {
-                    "constitution"  : 0.6 ,
-                    "strength"      : 0.65,
-                    "dexterity"     : 0.75,
-                    "intelligence"  : 0.8 ,
+                    "stamina": -16 ,
+                    "melee_damage": -0.35,
+                    "cutting_resistance": -0.025,
+                    "caretaking_quality": -0.0014 ,
                     "workEfficiency": 0.5 ,
                     "moveSpeed"     : 0.8 ,
                     "hungerRate"    : 1.25, "dodge": 0.825, "attackSpeed": 0.888, "hitChance": 0.9}
@@ -342,10 +342,10 @@
                 "color"          : "#bf360c",
                 "lifeThreatening": true,
                 "modifiers"      : {
-                    "constitution"  : 0.4 ,
-                    "strength"      : 0.45,
-                    "dexterity"     : 0.5 ,
-                    "intelligence"  : 0.6 ,
+                    "stamina": -24 ,
+                    "melee_damage": -0.55,
+                    "cutting_resistance": -0.05 ,
+                    "caretaking_quality": -0.0028 ,
                     "workEfficiency": 0.25,
                     "moveSpeed"     : 0.5 ,
                     "hungerRate"    : 1.5, "dodge": 0.65, "attackSpeed": 0.775, "hitChance": 0.8}
@@ -356,9 +356,9 @@
                 "color"          : "#ff1744",
                 "lifeThreatening": true,
                 "modifiers"      : {
-                    "constitution"  : 0.2,
-                    "strength"      : 0.2,
-                    "dexterity"     : 0.2,
+                    "stamina": -32,
+                    "melee_damage": -0.8,
+                    "cutting_resistance": -0.08,
                     "workEfficiency": 0.0,
                     "moveSpeed"     : 0.0, "dodge": 0.44, "attackSpeed": 0.64, "hitChance": 0.68}
             }
@@ -380,9 +380,9 @@
                 "minSeverity": 0.0,
                 "color"      : "#E0A050",
                 "modifiers"  : {
-                    "strength"      : 0.9  ,
-                    "dexterity"     : 0.9  ,
-                    "perception"    : 0.925,
+                    "melee_damage": -0.1  ,
+                    "cutting_resistance": -0.01  ,
+                    "aim_range": -0.0187,
                     "workEfficiency": 0.9  ,
                     "moveSpeed"     : 0.925, "dodge": 0.93, "attackSpeed": 0.955, "hitChance": 0.97}
             },
@@ -391,9 +391,9 @@
                 "minSeverity": 0.3,
                 "color"      : "#D98A3A",
                 "modifiers"  : {
-                    "strength"      : 0.775,
-                    "dexterity"     : 0.75 ,
-                    "perception"    : 0.8  ,
+                    "melee_damage": -0.225,
+                    "cutting_resistance": -0.025 ,
+                    "aim_range": -0.05  ,
                     "workEfficiency": 0.75 ,
                     "moveSpeed"     : 0.825, "dodge": 0.825, "attackSpeed": 0.888, "hitChance": 0.92}
             },
@@ -403,10 +403,10 @@
                 "color"          : "#C46A2A",
                 "lifeThreatening": true,
                 "modifiers"      : {
-                    "strength"      : 0.65 ,
-                    "dexterity"     : 0.625,
-                    "perception"    : 0.675,
-                    "constitution"  : 0.8  ,
+                    "melee_damage": -0.35 ,
+                    "cutting_resistance": -0.0375,
+                    "aim_range": -0.0812,
+                    "knockdown_resistance": -0.05  ,
                     "workEfficiency": 0.6  ,
                     "moveSpeed"     : 0.675, "dodge": 0.738, "attackSpeed": 0.831, "hitChance": 0.87}
             },
@@ -416,10 +416,10 @@
                 "color"          : "#A0501E",
                 "lifeThreatening": true,
                 "modifiers"      : {
-                    "strength"      : 0.575,
-                    "dexterity"     : 0.55 ,
-                    "perception"    : 0.6  ,
-                    "constitution"  : 0.7  ,
+                    "melee_damage": -0.425,
+                    "cutting_resistance": -0.045 ,
+                    "aim_range": -0.1  ,
+                    "knockdown_resistance": -0.075  ,
                     "workEfficiency": 0.5  ,
                     "moveSpeed"     : 0.5, "dodge": 0.685, "attackSpeed": 0.798, "hitChance": 0.84}
             }
@@ -441,9 +441,9 @@
                 "minSeverity": 0.0,
                 "color"      : "#b0bec5",
                 "modifiers"  : {
-                    "strength"      : 0.9  ,
-                    "dexterity"     : 0.9  ,
-                    "perception"    : 0.925,
+                    "melee_damage": -0.1  ,
+                    "cutting_resistance": -0.01  ,
+                    "aim_range": -0.0187,
                     "workEfficiency": 0.9  ,
                     "moveSpeed"     : 0.925, "dodge": 0.93, "attackSpeed": 0.955, "hitChance": 0.97}
             },
@@ -452,9 +452,9 @@
                 "minSeverity": 0.3,
                 "color"      : "#90a4ae",
                 "modifiers"  : {
-                    "strength"      : 0.775,
-                    "dexterity"     : 0.75 ,
-                    "perception"    : 0.8  ,
+                    "melee_damage": -0.225,
+                    "cutting_resistance": -0.025 ,
+                    "aim_range": -0.05  ,
                     "workEfficiency": 0.75 ,
                     "moveSpeed"     : 0.825, "dodge": 0.825, "attackSpeed": 0.888, "hitChance": 0.92}
             },
@@ -464,10 +464,10 @@
                 "color"          : "#607d8b",
                 "lifeThreatening": true,
                 "modifiers"      : {
-                    "strength"      : 0.65 ,
-                    "dexterity"     : 0.625,
-                    "perception"    : 0.675,
-                    "constitution"  : 0.8  ,
+                    "melee_damage": -0.35 ,
+                    "cutting_resistance": -0.0375,
+                    "aim_range": -0.0812,
+                    "knockdown_resistance": -0.05  ,
                     "workEfficiency": 0.6  ,
                     "moveSpeed"     : 0.675, "dodge": 0.738, "attackSpeed": 0.831, "hitChance": 0.87}
             },
@@ -477,10 +477,10 @@
                 "color"          : "#455a64",
                 "lifeThreatening": true,
                 "modifiers"      : {
-                    "strength"      : 0.575,
-                    "dexterity"     : 0.55 ,
-                    "perception"    : 0.6  ,
-                    "constitution"  : 0.7  ,
+                    "melee_damage": -0.425,
+                    "cutting_resistance": -0.045 ,
+                    "aim_range": -0.1  ,
+                    "knockdown_resistance": -0.075  ,
                     "workEfficiency": 0.5  ,
                     "moveSpeed"     : 0.5, "dodge": 0.685, "attackSpeed": 0.798, "hitChance": 0.84}
             }
@@ -508,15 +508,15 @@
                 "label"      : "shivering",
                 "minSeverity": 0.0,
                 "color"      : "#81D4FA",
-                "modifiers"  : {"dexterity": 0.85, "strength": 0.9, "workEfficiency": 0.85, "moveSpeed": 0.9, "dodge": 0.895, "attackSpeed": 0.933, "hitChance": 0.94}
+                "modifiers"  : {"cutting_resistance": -0.015, "melee_damage": -0.1, "workEfficiency": 0.85, "moveSpeed": 0.9, "dodge": 0.895, "attackSpeed": 0.933, "hitChance": 0.94}
             },
             {
                 "label"      : "chilled",
                 "minSeverity": 0.25,
                 "color"      : "#4FC3F7",
                 "modifiers"  : {
-                    "dexterity"     : 0.6,
-                    "strength"      : 0.8,
+                    "cutting_resistance": -0.04,
+                    "melee_damage": -0.2,
                     "workEfficiency": 0.7,
                     "moveSpeed"     : 0.8,
                     "fatigueRate"   : 1.3, "dodge": 0.72, "attackSpeed": 0.82, "hitChance": 0.84}
@@ -527,9 +527,9 @@
                 "color"          : "#29B6F6",
                 "lifeThreatening": true,
                 "modifiers"      : {
-                    "dexterity"     : 0.35,
-                    "strength"      : 0.6 ,
-                    "constitution"  : 0.8 ,
+                    "cutting_resistance": -0.065,
+                    "melee_damage": -0.4 ,
+                    "stamina": -8 ,
                     "workEfficiency": 0.45,
                     "moveSpeed"     : 0.55,
                     "fatigueRate"   : 1.5, "dodge": 0.545, "attackSpeed": 0.708, "hitChance": 0.74}
@@ -540,9 +540,9 @@
                 "color"          : "#0277BD",
                 "lifeThreatening": true,
                 "modifiers"      : {
-                    "dexterity"     : 0.2,
-                    "strength"      : 0.4,
-                    "constitution"  : 0.6,
+                    "cutting_resistance": -0.08,
+                    "melee_damage": -0.6,
+                    "stamina": -16,
                     "workEfficiency": 0.2,
                     "moveSpeed"     : 0.3,
                     "fatigueRate"   : 1.7, "dodge": 0.44, "attackSpeed": 0.64, "hitChance": 0.68}
@@ -571,16 +571,16 @@
                 "label"      : "overheating",
                 "minSeverity": 0.0,
                 "color"      : "#FFCC80",
-                "modifiers"  : {"strength": 0.9, "workEfficiency": 0.85}
+                "modifiers"  : {"melee_damage": -0.1, "workEfficiency": 0.85}
             },
             {
                 "label"      : "heat exhaustion",
                 "minSeverity": 0.3,
                 "color"      : "#FFA726",
                 "modifiers"  : {
-                    "strength"      : 0.7 ,
-                    "dexterity"     : 0.85,
-                    "constitution"  : 0.85,
+                    "melee_damage": -0.3 ,
+                    "cutting_resistance": -0.015,
+                    "stamina": -6,
                     "workEfficiency": 0.65,
                     "moveSpeed"     : 0.8 ,
                     "hungerRate"    : 1.2, "dodge": 0.895, "attackSpeed": 0.933, "hitChance": 0.94}
@@ -591,9 +591,9 @@
                 "color"          : "#FB8C00",
                 "lifeThreatening": true,
                 "modifiers"      : {
-                    "strength"      : 0.45,
-                    "dexterity"     : 0.55,
-                    "constitution"  : 0.6 ,
+                    "melee_damage": -0.55,
+                    "cutting_resistance": -0.045,
+                    "stamina": -16 ,
                     "workEfficiency": 0.4 ,
                     "moveSpeed"     : 0.55,
                     "hungerRate"    : 1.3, "dodge": 0.685, "attackSpeed": 0.798, "hitChance": 0.82}
@@ -604,9 +604,9 @@
                 "color"          : "#E65100",
                 "lifeThreatening": true,
                 "modifiers"      : {
-                    "strength"      : 0.25,
-                    "dexterity"     : 0.3 ,
-                    "constitution"  : 0.4 ,
+                    "melee_damage": -0.75,
+                    "cutting_resistance": -0.07 ,
+                    "stamina": -24 ,
                     "workEfficiency": 0.15,
                     "moveSpeed"     : 0.3, "dodge": 0.51, "attackSpeed": 0.685, "hitChance": 0.72}
             }
@@ -639,7 +639,7 @@
         "color": "#ff5722",
         "floater": true,
         "charSpans": [ {"sheet": "font", "id": 15} ],
-        "modifiers": {"dexterity": 0.2, "strength": 0.5, "moveSpeed": 0.0, "workEfficiency": 0.0, "dodge": 0.44, "attackSpeed": 0.64, "hitChance": 0.68}
+        "modifiers": {"cutting_resistance": -0.08, "melee_damage": -0.5, "moveSpeed": 0.0, "workEfficiency": 0.0, "dodge": 0.44, "attackSpeed": 0.64, "hitChance": 0.68}
     },
     {
         "id": "collapse",
@@ -695,7 +695,7 @@
         "floater": true,
         "charSpans": [ {"sheet": "items", "id": 25} ],
         "needOnset": {"need": "fatigue", "atOrAbove": 100},
-        "modifiers": {"strength": 0.7, "dexterity": 0.7, "perception": 0.8, "workEfficiency": 0.5, "moveSpeed": 0.5, "dodge": 0.79, "attackSpeed": 0.865, "hitChance": 0.92}
+        "modifiers": {"melee_damage": -0.3, "cutting_resistance": -0.03, "aim_range": -0.05, "workEfficiency": 0.5, "moveSpeed": 0.5, "dodge": 0.79, "attackSpeed": 0.865, "hitChance": 0.92}
     },
     {
         "id": "winded",
@@ -707,7 +707,7 @@
         "floater": true,
         "charSpans": [ {"sheet": "font", "id": 126} ],
         "priority": 20,
-        "modifiers": {"strength": 0.5, "dexterity": 0.4, "moveSpeed": 0.3, "dodge": 0.58, "attackSpeed": 0.73, "hitChance": 0.76}
+        "modifiers": {"melee_damage": -0.5, "cutting_resistance": -0.06, "moveSpeed": 0.3, "dodge": 0.58, "attackSpeed": 0.73, "hitChance": 0.76}
     },
     {
         "id": "wet",
@@ -728,7 +728,7 @@
                 "severity": 0.04
             }
         ],
-        "modifiers": {"dexterity": 0.95, "moveSpeed": 0.9, "workEfficiency": 0.95, "dodge": 0.965, "attackSpeed": 0.978, "hitChance": 0.98}
+        "modifiers": {"cutting_resistance": -0.005, "moveSpeed": 0.9, "workEfficiency": 0.95, "dodge": 0.965, "attackSpeed": 0.978, "hitChance": 0.98}
     },
     {
         "id": "sheltered",
@@ -776,22 +776,22 @@
                 "label"      : "tipsy",
                 "minSeverity": 0.0,
                 "color"      : "#E8C35A",
-                "modifiers"  : {"dexterity": 0.95, "perception": 0.95, "pain": 0.85, "dodge": 0.965, "attackSpeed": 0.978, "hitChance": 0.98}
+                "modifiers"  : {"cutting_resistance": -0.005, "aim_range": -0.0125, "pain": 0.85, "dodge": 0.965, "attackSpeed": 0.978, "hitChance": 0.98}
             },
             {
                 "label"      : "merry",
                 "minSeverity": 0.3,
                 "color"      : "#D8A52A",
-                "modifiers"  : {"dexterity": 0.88, "perception": 0.9, "workEfficiency": 0.92, "pain": 0.7, "dodge": 0.916, "attackSpeed": 0.946, "hitChance": 0.96}
+                "modifiers"  : {"cutting_resistance": -0.012, "aim_range": -0.025, "workEfficiency": 0.92, "pain": 0.7, "dodge": 0.916, "attackSpeed": 0.946, "hitChance": 0.96}
             },
             {
                 "label"      : "drunk",
                 "minSeverity": 0.6,
                 "color"      : "#C2871A",
                 "modifiers"  : {
-                    "strength"      : 0.9 ,
-                    "dexterity"     : 0.7 ,
-                    "perception"    : 0.7 ,
+                    "melee_damage": -0.1 ,
+                    "cutting_resistance": -0.03 ,
+                    "aim_range": -0.075 ,
                     "workEfficiency": 0.75,
                     "moveSpeed"     : 0.85,
                     "consciousness" : 0.8 ,
@@ -802,9 +802,9 @@
                 "minSeverity": 0.85,
                 "color"      : "#9C6A12",
                 "modifiers"  : {
-                    "strength"      : 0.7,
-                    "dexterity"     : 0.4,
-                    "perception"    : 0.4,
+                    "melee_damage": -0.3,
+                    "cutting_resistance": -0.06,
+                    "aim_range": -0.15,
                     "workEfficiency": 0.4,
                     "moveSpeed"     : 0.5,
                     "consciousness" : 0.4,
@@ -855,7 +855,7 @@
         "color": "#8FAE52",
         "floater": true,
         "charSpans": [ {"sheet": "font", "id": 247} ],
-        "modifiers": {"dexterity": 0.85, "workEfficiency": 0.6, "moveSpeed": 0.85, "hungerRate": 0.7, "dodge": 0.895, "attackSpeed": 0.933, "hitChance": 0.94}
+        "modifiers": {"cutting_resistance": -0.015, "workEfficiency": 0.6, "moveSpeed": 0.85, "hungerRate": 0.7, "dodge": 0.895, "attackSpeed": 0.933, "hitChance": 0.94}
     },
     {
         "id": "dysentery",
@@ -867,9 +867,9 @@
         "floater": true,
         "charSpans": [ {"sheet": "font", "id": 247} ],
         "modifiers": {
-            "strength"      : 0.7,
-            "dexterity"     : 0.7,
-            "constitution"  : 0.8,
+            "melee_damage": -0.3,
+            "cutting_resistance": -0.03,
+            "stamina": -8,
             "workEfficiency": 0.4,
             "moveSpeed"     : 0.7,
             "thirstRate"    : 1.6,
@@ -907,17 +907,17 @@
         "charSpans"  : [ {"sheet": "font", "id": 1} ],
         "modifiers"  : {"hungerRate": 0.85, "workEfficiency": 1.08}
     },
-  {"id": "warmed_through", "name": "Warmed Through", "flags": ["food", "buff"], "transient": true, "description": "Something boiled and eaten hot. The chill goes out of the hands and stays out for a while.", "color": "#C08A4A", "charSpans": [{"sheet": "font", "id": 1}], "modifiers": {"constitution": 1.06}},
-  {"id": "stock_warmed", "name": "Stock-Warmed", "flags": ["food", "buff"], "transient": true, "description": "A bowl of hot bone broth taken standing. The warmth sits in the chest a good while and the cold bites slower for it.", "color": "#B07A3C", "charSpans": [{"sheet": "font", "id": 1}], "modifiers": {"constitution": 1.12}},
-  {"id": "banked_warmth", "name": "Banked Warmth", "flags": ["food", "buff"], "transient": true, "description": "Fat and marrow off a long, low pot. The heat of it banks down deep and burns all day, and weather that would bite goes unnoticed.", "color": "#9C5F28", "charSpans": [{"sheet": "font", "id": 2}], "modifiers": {"constitution": 1.2}},
+  {"id": "warmed_through", "name": "Warmed Through", "flags": ["food", "buff"], "transient": true, "description": "Something boiled and eaten hot. The chill goes out of the hands and stays out for a while.", "color": "#C08A4A", "charSpans": [{"sheet": "font", "id": 1}], "modifiers": {"cold_resistance": 0.006}},
+  {"id": "stock_warmed", "name": "Stock-Warmed", "flags": ["food", "buff"], "transient": true, "description": "A bowl of hot bone broth taken standing. The warmth sits in the chest a good while and the cold bites slower for it.", "color": "#B07A3C", "charSpans": [{"sheet": "font", "id": 1}], "modifiers": {"cold_resistance": 0.012}},
+  {"id": "banked_warmth", "name": "Banked Warmth", "flags": ["food", "buff"], "transient": true, "description": "Fat and marrow off a long, low pot. The heat of it banks down deep and burns all day, and weather that would bite goes unnoticed.", "color": "#9C5F28", "charSpans": [{"sheet": "font", "id": 2}], "modifiers": {"cold_resistance": 0.02}},
   {"id": "cool_slaked", "name": "Cool-Slaked", "flags": ["food", "buff"], "transient": true, "description": "Sweet fruit taken cold. The mouth stops going dry every hour.", "color": "#7FD1C2", "charSpans": [{"sheet": "font", "id": 1}], "modifiers": {"thirstRate": 0.9}},
   {"id": "deep_slaked", "name": "Deep-Slaked", "flags": ["food", "buff"], "transient": true, "description": "A cold bowl, more drink than dish, thick with milk. It sits in a body through the worst hours of a hot day.", "color": "#4FB3A5", "charSpans": [{"sheet": "font", "id": 2}], "modifiers": {"thirstRate": 0.78}},
   {"id": "set_to_mend", "name": "Set to Mend", "flags": ["food", "buff"], "transient": true, "description": "Light fare picked over slowly by someone who is not well. The aches quiet down and the day stops being so long.", "color": "#5FA8A0", "charSpans": [{"sheet": "font", "id": 2}], "modifiers": {"pain": 0.86, "fatigueRate": 0.84}},
   {"id": "trail_fed", "name": "Trail-Fed", "flags": ["food", "buff"], "transient": true, "description": "Food built to be carried and cut cold. It goes down on the move and asks nothing back.", "color": "#A8B47A", "charSpans": [{"sheet": "font", "id": 1}], "modifiers": {"moveSpeed": 1.05, "fatigueRate": 0.94}},
   {"id": "well_provisioned", "name": "Well-Provisioned", "flags": ["food", "buff"], "transient": true, "description": "Salted, sealed and packed to keep. A day away from the walls stops mattering.", "color": "#8C9E52", "charSpans": [{"sheet": "font", "id": 2}], "modifiers": {"moveSpeed": 1.09, "fatigueRate": 0.88}},
-  {"id": "clear_headed", "name": "Clear-Headed", "flags": ["food", "buff"], "transient": true, "description": "Sharp, salted things that cut through a heavy morning. The fog goes off the thinking.", "color": "#9FB8D8", "charSpans": [{"sheet": "font", "id": 1}], "modifiers": {"intelligence": 1.05}},
-  {"id": "keen_witted", "name": "Keen-Witted", "flags": ["food", "buff"], "transient": true, "description": "A clean, careful dish eaten unhurried. The head sits still and the hands do as they are told.", "color": "#6E93C4", "charSpans": [{"sheet": "font", "id": 2}], "modifiers": {"intelligence": 1.09, "consciousness": 1.04}},
-  {"id": "blood_up", "name": "Blood Up", "flags": ["food", "buff"], "transient": true, "description": "A long board and too much of it, taken loud and in company. The room came away from the table looking for something to swing at.", "color": "#C0392B", "floater": true, "charSpans": [{"sheet": "font", "id": 2}], "modifiers": {"strength": 1.12, "weaponDamage": 1.1, "critChance": 1.18, "attackSpeed": 1.05, "hitChance": 1.05}},
+  {"id": "clear_headed", "name": "Clear-Headed", "flags": ["food", "buff"], "transient": true, "description": "Sharp, salted things that cut through a heavy morning. The fog goes off the thinking.", "color": "#9FB8D8", "charSpans": [{"sheet": "font", "id": 1}], "modifiers": {"caretaking_quality": 0.0004}},
+  {"id": "keen_witted", "name": "Keen-Witted", "flags": ["food", "buff"], "transient": true, "description": "A clean, careful dish eaten unhurried. The head sits still and the hands do as they are told.", "color": "#6E93C4", "charSpans": [{"sheet": "font", "id": 2}], "modifiers": {"caretaking_quality": 0.0006, "consciousness": 1.04}},
+  {"id": "blood_up", "name": "Blood Up", "flags": ["food", "buff"], "transient": true, "description": "A long board and too much of it, taken loud and in company. The room came away from the table looking for something to swing at.", "color": "#C0392B", "floater": true, "charSpans": [{"sheet": "font", "id": 2}], "modifiers": {"melee_damage": 0.1154, "weaponDamage": 1.1, "critChance": 1.18, "attackSpeed": 1.05, "hitChance": 1.05}},
     {
         "id"         : "nourished",
         "name"       : "Nourished",
@@ -936,7 +936,7 @@
         "description": "Red meat and salt, eaten before the work turns rough. It sits heavy and puts weight behind the arm.",
         "color"      : "#D8A52A",
         "charSpans"  : [ {"sheet": "font", "id": 2} ],
-        "modifiers"  : {"strength": 1.08, "weaponDamage": 1.06, "hitChance": 1.03}
+        "modifiers"  : {"melee_damage": 0.0779, "weaponDamage": 1.06, "hitChance": 1.03}
     },
     {
         "id"         : "refreshed",
@@ -947,7 +947,7 @@
         "description": "Sweet, cool fruit, a welcome lift. Senses sharpen and the step lightens.",
         "color"      : "#AED581",
         "charSpans"  : [ {"sheet": "font", "id": 1} ],
-        "modifiers"  : {"perception": 1.05, "dexterity": 1.03, "dodge": 1.021, "attackSpeed": 1.014, "hitChance": 1.02}
+        "modifiers"  : {"aim_range": 0.0125, "cutting_resistance": 0.003, "dodge": 1.021, "attackSpeed": 1.014, "hitChance": 1.02}
     },
     {
         "id"         : "soothed",
@@ -1024,9 +1024,9 @@
         "charSpans": [ {"sheet": "font", "id": 21} ],
         "triggers": [ {"to": "nausea", "chance": 0.015, "durationHours": 1.5} ],
         "modifiers": {
-            "strength"      : 0.6,
-            "dexterity"     : 0.6,
-            "constitution"  : 0.7,
+            "melee_damage": -0.4,
+            "cutting_resistance": -0.04,
+            "stamina": -12,
             "workEfficiency": 0.7,
             "moveSpeed"     : 0.8,
             "fatigueRate"   : 1.3, "dodge": 0.72, "attackSpeed": 0.82, "hitChance": 0.84}
@@ -1041,7 +1041,7 @@
         "color": "#AB47BC",
         "floater": true,
         "charSpans": [ {"sheet": "font", "id": 19} ],
-        "modifiers": {"perception": 0.4, "dexterity": 0.6, "intelligence": 0.7, "workEfficiency": 0.7, "moveSpeed": 0.9, "dodge": 0.72, "attackSpeed": 0.82, "hitChance": 0.76}
+        "modifiers": {"aim_range": -0.15, "cutting_resistance": -0.04, "caretaking_quality": -0.0021, "workEfficiency": 0.7, "moveSpeed": 0.9, "dodge": 0.72, "attackSpeed": 0.82, "hitChance": 0.76}
     },
     {
         "id": "ensnared",
@@ -1053,7 +1053,7 @@
         "color": "#8D6E63",
         "floater": true,
         "charSpans": [ {"sheet": "font", "id": 15} ],
-        "modifiers": {"dexterity": 0.4, "moveSpeed": 0.0, "dodge": 0.58, "attackSpeed": 0.73, "hitChance": 0.76}
+        "modifiers": {"cutting_resistance": -0.06, "moveSpeed": 0.0, "dodge": 0.58, "attackSpeed": 0.73, "hitChance": 0.76}
     },
     {
         "id": "staggered",
@@ -1065,7 +1065,7 @@
         "color": "#E08840",
         "floater": true,
         "charSpans": [ {"sheet": "font", "id": 15} ],
-        "modifiers": {"dexterity": 0.85, "moveSpeed": 0.9, "dodge": 0.895, "attackSpeed": 0.933, "hitChance": 0.94}
+        "modifiers": {"cutting_resistance": -0.015, "moveSpeed": 0.9, "dodge": 0.895, "attackSpeed": 0.933, "hitChance": 0.94}
     },
     {
         "id": "concussed",
@@ -1077,7 +1077,7 @@
         "color": "#9C6AC0",
         "floater": true,
         "charSpans": [ {"sheet": "font", "id": 19} ],
-        "modifiers": {"perception": 0.5, "dexterity": 0.6, "consciousness": 0.7, "workEfficiency": 0.5, "dodge": 0.72, "attackSpeed": 0.82, "hitChance": 0.8}
+        "modifiers": {"aim_range": -0.125, "cutting_resistance": -0.04, "consciousness": 0.7, "workEfficiency": 0.5, "dodge": 0.72, "attackSpeed": 0.82, "hitChance": 0.8}
     },
     {
         "id": "hamstrung",
@@ -1089,7 +1089,7 @@
         "color": "#B5502E",
         "floater": true,
         "charSpans": [ {"sheet": "font", "id": 3} ],
-        "modifiers": {"moveSpeed": 0.4, "dexterity": 0.75, "dodge": 0.825, "attackSpeed": 0.888, "hitChance": 0.9}
+        "modifiers": {"moveSpeed": 0.4, "cutting_resistance": -0.025, "dodge": 0.825, "attackSpeed": 0.888, "hitChance": 0.9}
     },
     {
         "id": "cowed",
@@ -1101,7 +1101,7 @@
         "color": "#6A5ACD",
         "floater": true,
         "charSpans": [ {"sheet": "font", "id": 19} ],
-        "modifiers": {"strength": 0.8, "hitChance": 0.75, "moveSpeed": 0.85, "workEfficiency": 0.85}
+        "modifiers": {"melee_damage": -0.2, "hitChance": 0.75, "moveSpeed": 0.85, "workEfficiency": 0.85}
     },
     {
         "id": "splinted",
@@ -1112,7 +1112,7 @@
         "color": "#C8A870",
         "floater": true,
         "charSpans": [ {"sheet": "font", "id": 126} ],
-        "modifiers": {"dexterity": 0.9, "workEfficiency": 0.85, "moveSpeed": 0.92, "dodge": 0.93, "attackSpeed": 0.95}
+        "modifiers": {"cutting_resistance": -0.01, "workEfficiency": 0.85, "moveSpeed": 0.92, "dodge": 0.93, "attackSpeed": 0.95}
     },
     {
         "id": "bone_ache",
@@ -1123,7 +1123,7 @@
         "color": "#9A6B4F",
         "floater": true,
         "charSpans": [ {"sheet": "font", "id": 19} ],
-        "modifiers": {"strength": 0.8, "dexterity": 0.8, "workEfficiency": 0.55, "moveSpeed": 0.85, "fatigueRate": 1.3, "dodge": 0.83, "attackSpeed": 0.9, "hitChance": 0.88}
+        "modifiers": {"melee_damage": -0.2, "cutting_resistance": -0.02, "workEfficiency": 0.55, "moveSpeed": 0.85, "fatigueRate": 1.3, "dodge": 0.83, "attackSpeed": 0.9, "hitChance": 0.88}
     },
     {
         "id"         : "feathered",
@@ -1166,7 +1166,7 @@
         "description": "The hunger has the reins now — whatever is nearest and alive will do.",
         "color"      : "#8B1A1A",
         "charSpans"  : [ {"sheet": "items", "id": 84} ],
-        "modifiers"  : {"strength": 1.2, "intelligence": 0.7}
+        "modifiers"  : {"melee_damage": 0.1875, "caretaking_quality": -0.0021}
     },
     {
         "id"         : "berserk",
@@ -1178,7 +1178,7 @@
         "color"      : "#C0392B",
         "charSpans"  : [ {"sheet": "items", "id": 211} ],
         "priority"   : 60,
-        "modifiers"  : {"strength": 1.5, "intelligence": 0.9, "consciousness": 1.5},
+        "modifiers"  : {"melee_damage": 0.4286, "caretaking_quality": -0.0007, "consciousness": 1.5},
         "selfTrigger": {"meter": "pain", "atOrAbove": 40, "durationHours": 0.25},
         "onExpiry"   : {"to": "berserk_spent", "durationHours": 0.5}
     },
@@ -1192,7 +1192,7 @@
         "color"      : "#E67E22",
         "charSpans"  : [ {"sheet": "items", "id": 211} ],
         "priority"   : 55,
-        "modifiers"  : {"strength": 1.2, "consciousness": 1.2},
+        "modifiers"  : {"melee_damage": 0.1875, "consciousness": 1.2},
         "selfTrigger": {"meter": "pain", "atOrAbove": 40, "durationHours": 0.25},
         "onExpiry"   : {"to": "adrenal_spent", "durationHours": 0.5}
     },
@@ -1205,7 +1205,7 @@
         "description": "Wrung out after the fury — muscles leaden, the body paying back what the rage borrowed.",
         "color"      : "#7B241C",
         "charSpans"  : [ {"sheet": "items", "id": 211} ],
-        "modifiers"  : {"strength": 0.75}
+        "modifiers"  : {"melee_damage": -0.25}
     },
     {
         "id"         : "adrenal_spent",
@@ -1216,7 +1216,7 @@
         "description": "The surge fades to a shaky, sapped weariness as the body settles its debt.",
         "color"      : "#A04000",
         "charSpans"  : [ {"sheet": "items", "id": 211} ],
-        "modifiers"  : {"strength": 0.9}
+        "modifiers"  : {"melee_damage": -0.1}
     },
     {
         "id"         : "stone_boned",
@@ -1249,7 +1249,7 @@
         "charSpans"   : [ {"sheet": "font", "id": 15} ],
         "flags"       : ["racial", "environmental"],
         "activateWhen": {"unsheltered": true, "meter": "ambientLight", "atOrAbove": 0.7},
-        "modifiers"   : {"strength": 0.85, "dexterity": 0.85, "perception": 0.85, "dodge": 0.895, "attackSpeed": 0.933, "hitChance": 0.94}
+        "modifiers"   : {"melee_damage": -0.15, "cutting_resistance": -0.015, "aim_range": -0.0375, "dodge": 0.895, "attackSpeed": 0.933, "hitChance": 0.94}
     },
     {
         "id": "burning",
@@ -1260,7 +1260,7 @@
         "color": "#FF5722",
         "floater": true,
         "charSpans": [ {"sheet": "font", "id": 15} ],
-        "modifiers": {"dexterity": 0.9, "moveSpeed": 0.9, "workEfficiency": 0.85, "dodge": 0.93, "attackSpeed": 0.955, "hitChance": 0.96}
+        "modifiers": {"cutting_resistance": -0.01, "moveSpeed": 0.9, "workEfficiency": 0.85, "dodge": 0.93, "attackSpeed": 0.955, "hitChance": 0.96}
     },
     {
         "id": "feasted",
@@ -1271,7 +1271,7 @@
         "color": "#C62828",
         "floater": true,
         "charSpans": [ {"sheet": "items", "id": 84} ],
-        "modifiers": {"strength": 1.2, "dexterity": 1.15, "constitution": 1.15, "moveSpeed": 1.1, "workEfficiency": 1.1, "dodge": 1.105, "attackSpeed": 1.068, "hitChance": 1.06}
+        "modifiers": {"melee_damage": 0.1875, "cutting_resistance": 0.015, "stamina": 6, "moveSpeed": 1.1, "workEfficiency": 1.1, "dodge": 1.105, "attackSpeed": 1.068, "hitChance": 1.06}
     },
     {
         "id"         : "budding_winged",
@@ -1349,7 +1349,7 @@
         "charSpans"  : [ {"sheet": "creatures", "id": 251} ],
         "priority"   : 70,
         "activateWhen": {"fullMoon": true, "meter": "ambientLight", "atOrBelow": 0.35},
-        "modifiers"  : {"strength": 1.4, "constitution": 1.2, "moveSpeed": 1.2, "intelligence": 0.8},
+        "modifiers"  : {"melee_damage": 0.3529, "stamina": 8, "moveSpeed": 1.2, "caretaking_quality": -0.0014},
         "grants"     : {"nightVision": 1.0}
     },
     {
@@ -1363,7 +1363,7 @@
         "charSpans"  : [ {"sheet": "items", "id": 211} ],
         "priority"   : 40,
         "activateWhen": {"hasCondition": "werewolf"},
-        "modifiers"  : {"strength": 1.15, "workEfficiency": 0.6}
+        "modifiers"  : {"melee_damage": 0.1429, "workEfficiency": 0.6}
     },
     {
         "id"         : "bounding_gait",
@@ -1396,7 +1396,7 @@
         "color"      : "#c05a3a",
         "charSpans"  : [ {"sheet": "items", "id": 211} ],
         "priority"   : 30,
-        "modifiers"  : {"strength": 1.1}
+        "modifiers"  : {"melee_damage": 0.0968}
     },
     {
         "id"         : "cold_torpor",
@@ -1407,7 +1407,7 @@
         "color"      : "#6a9ac0",
         "charSpans"  : [ {"sheet": "font", "id": 247} ],
         "activateWhen": {"need": "coldExposure", "atOrAbove": 30},
-        "modifiers"  : {"dexterity": 0.85, "moveSpeed": 0.85, "workEfficiency": 0.9, "dodge": 0.895, "attackSpeed": 0.933, "hitChance": 0.94}
+        "modifiers"  : {"cutting_resistance": -0.015, "moveSpeed": 0.85, "workEfficiency": 0.9, "dodge": 0.895, "attackSpeed": 0.933, "hitChance": 0.94}
     },
     {
         "id"         : "parched_skin",
@@ -1418,7 +1418,7 @@
         "color"      : "#c8a030",
         "charSpans"  : [ {"sheet": "font", "id": 247} ],
         "activateWhen": {"need": "wetness", "atOrBelow": 10},
-        "modifiers"  : {"strength": 0.9, "dexterity": 0.9, "dodge": 0.93, "attackSpeed": 0.955, "hitChance": 0.96}
+        "modifiers"  : {"melee_damage": -0.1, "cutting_resistance": -0.01, "dodge": 0.93, "attackSpeed": 0.955, "hitChance": 0.96}
     },
     {
         "id"         : "toxin_immune",
@@ -1504,7 +1504,7 @@
         "floater"     : true,
         "charSpans"   : [ {"sheet": "font", "id": 247} ],
         "activateWhen": {"need": "coldExposure", "atOrAbove": 60},
-        "modifiers"   : {"dexterity": 1.15, "moveSpeed": 1.1, "dodge": 1.105, "attackSpeed": 1.068, "hitChance": 1.06}
+        "modifiers"   : {"cutting_resistance": 0.015, "moveSpeed": 1.1, "dodge": 1.105, "attackSpeed": 1.068, "hitChance": 1.06}
     },
     {
         "id"          : "frostbrittle",
@@ -1529,7 +1529,7 @@
         "floater"     : true,
         "charSpans"   : [ {"sheet": "font", "id": 15} ],
         "activateWhen": {"need": "heatExposure", "atOrAbove": 40},
-        "modifiers"   : {"strength": 1.1, "workEfficiency": 1.05}
+        "modifiers"   : {"melee_damage": 0.0968, "workEfficiency": 1.05}
     },
     {
         "id"          : "heat_faint",
@@ -1578,7 +1578,7 @@
         "floater"     : true,
         "charSpans"   : [ {"sheet": "font", "id": 21} ],
         "activateWhen": {"hasCondition": "windchilled"},
-        "modifiers"   : {"dexterity": 1.1, "moveSpeed": 1.1, "dodge": 1.07, "attackSpeed": 1.045, "hitChance": 1.04}
+        "modifiers"   : {"cutting_resistance": 0.01, "moveSpeed": 1.1, "dodge": 1.07, "attackSpeed": 1.045, "hitChance": 1.04}
     },
     {
         "id"          : "wind_cowed",
@@ -1627,7 +1627,7 @@
         "floater"     : true,
         "charSpans"   : [ {"sheet": "items", "id": 211} ],
         "activateWhen": {"meter": "pain", "atOrAbove": 40},
-        "modifiers"   : {"strength": 1.2, "hitChance": 1.1}
+        "modifiers"   : {"melee_damage": 0.1875, "hitChance": 1.1}
     },
     {
         "id"          : "faint_hearted",
@@ -1651,7 +1651,7 @@
         "floater"     : true,
         "charSpans"   : [ {"sheet": "items", "id": 84} ],
         "activateWhen": {"meter": "bloodFrac", "atOrBelow": 0.6},
-        "modifiers"   : {"dexterity": 1.2, "strength": 1.1, "dodge": 1.14, "attackSpeed": 1.09, "hitChance": 1.08}
+        "modifiers"   : {"cutting_resistance": 0.02, "melee_damage": 0.0968, "dodge": 1.14, "attackSpeed": 1.09, "hitChance": 1.08}
     },
     {
         "id"          : "anemic_shock",
@@ -1676,7 +1676,7 @@
         "floater"     : true,
         "charSpans"   : [ {"sheet": "font", "id": 15} ],
         "activateWhen": {"hasCondition": "infection"},
-        "modifiers"   : {"constitution": 1.15}
+        "modifiers"   : {"stamina": 6}
     },
     {
         "id"          : "septic_prone",
@@ -1701,7 +1701,7 @@
         "floater"     : true,
         "charSpans"   : [ {"sheet": "items", "id": 195} ],
         "activateWhen": {"hasCondition": "envenomed"},
-        "modifiers"   : {"strength": 1.25, "dexterity": 1.25, "dodge": 1.175, "attackSpeed": 1.113, "hitChance": 1.1}
+        "modifiers"   : {"melee_damage": 0.2308, "cutting_resistance": 0.025, "dodge": 1.175, "attackSpeed": 1.113, "hitChance": 1.1}
     },
     {
         "id"          : "thin_veined",
@@ -1788,7 +1788,7 @@
         "description": "An attuned ruby lends raw strength, heavier blows and easier labour.",
         "color"      : "#FF3355",
         "charSpans"  : [ {"sheet": "font", "id": 2} ],
-        "modifiers"  : {"strength": 1.15, "workEfficiency": 1.06}
+        "modifiers"  : {"melee_damage": 0.1429, "workEfficiency": 1.06}
     },
     {
         "id"         : "insight",
@@ -1799,7 +1799,7 @@
         "description": "An attuned sapphire sharpens the mind, keener wits and more productive work.",
         "color"      : "#4A90D8",
         "charSpans"  : [ {"sheet": "font", "id": 2} ],
-        "modifiers"  : {"intelligence": 1.15, "workEfficiency": 1.06}
+        "modifiers"  : {"caretaking_quality": 0.001, "workEfficiency": 1.06}
     },
     {
         "id"         : "vigor",
@@ -1810,7 +1810,7 @@
         "description": "An attuned emerald bolsters endurance, a hardier body that tires more slowly.",
         "color"      : "#3FB36B",
         "charSpans"  : [ {"sheet": "font", "id": 2} ],
-        "modifiers"  : {"constitution": 1.12, "fatigueRate": 0.85}
+        "modifiers"  : {"stamina": 4.8, "fatigueRate": 0.85}
     },
     {
         "id": "quickness",
@@ -1821,7 +1821,7 @@
         "description": "An attuned topaz quickens the limbs, faster on foot, harder to land a blow on, and quicker to strike.",
         "color": "#E0B83A",
         "charSpans": [ {"sheet": "font", "id": 2} ],
-        "modifiers": {"dexterity": 1.15, "moveSpeed": 1.12, "dodge": 1.105, "attackSpeed": 1.068, "hitChance": 1.06}
+        "modifiers": {"cutting_resistance": 0.015, "moveSpeed": 1.12, "dodge": 1.105, "attackSpeed": 1.068, "hitChance": 1.06}
     },
     {
         "id"         : "keen_senses",
@@ -1832,7 +1832,7 @@
         "description": "An attuned amethyst heightens perception, sharper aim and quicker to read danger.",
         "color"      : "#A060D0",
         "charSpans"  : [ {"sheet": "font", "id": 2} ],
-        "modifiers"  : {"perception": 1.15, "hitChance": 1.06}
+        "modifiers"  : {"aim_range": 0.0375, "hitChance": 1.06}
     },
     {
         "id"         : "charm",
@@ -1865,7 +1865,7 @@
         "description": "Attuned regalia lends preternatural poise, quick and sure, far harder to land a blow on. The magical answer to a plate cuirass: dodge instead of armour.",
         "color": "#B0E0D0",
         "charSpans": [ {"sheet": "font", "id": 2} ],
-        "modifiers": {"dexterity": 1.15, "moveSpeed": 1.06, "dodge": 1.105, "attackSpeed": 1.068, "hitChance": 1.06}
+        "modifiers": {"cutting_resistance": 0.015, "moveSpeed": 1.06, "dodge": 1.105, "attackSpeed": 1.068, "hitChance": 1.06}
     },
     {
         "id": "fortitude",
@@ -1876,6 +1876,6 @@
         "description": "Attuned regalia steels the body against hardship, hardier, and tires and hungers far more slowly.",
         "color": "#C8A85A",
         "charSpans": [ {"sheet": "font", "id": 2} ],
-        "modifiers": {"constitution": 1.12, "fatigueRate": 0.82, "hungerRate": 0.90}
+        "modifiers": {"stamina": 4.8, "fatigueRate": 0.82, "hungerRate": 0.90}
     }
 ]

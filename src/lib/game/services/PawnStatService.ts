@@ -23,6 +23,7 @@ import {
   type StatMultipliers,
   conditionPainMultiplier,
   conditionConsciousnessMultiplier,
+  conditionModifierSum,
   tempRange,
   RECOVER_CONSCIOUSNESS
 } from '../core/rules/body/conditions';
@@ -62,6 +63,8 @@ STATS.forEach((st) => {
 
 const WORK_STAT_IDS = new Set(STATS.filter((s) => s.category === 'work').map((s) => s.id));
 const COMBAT_STAT_IDS = new Set(STATS.filter((s) => s.category === 'combat').map((s) => s.id));
+
+const CONDITION_MULTIPLIER_KEY_IDS = new Set(['pain', 'consciousness', 'dodge', 'block']);
 
 const CATEGORY_TOOLS: Record<string, Set<string>> = {};
 for (const cat of WORK_CATEGORIES) {
@@ -686,7 +689,8 @@ export class PawnStatServiceImpl implements PawnStatService {
       evaluateFormula(def.formula, pawn, capacities, skill, statId) *
         traitCombatMult(pawn, statId) *
         (statId === 'attack_speed' ? equippedWeaponSpeedMult(pawn) : 1) +
-      traitResistanceBonus(pawn, statId);
+      traitResistanceBonus(pawn, statId) +
+      (CONDITION_MULTIPLIER_KEY_IDS.has(statId) ? 0 : conditionModifierSum(pawn, statId));
     return statId === 'stealth' ? getStealth(pawn, v) : v;
   }
 
@@ -718,7 +722,7 @@ export class PawnStatServiceImpl implements PawnStatService {
         gearTotal += r;
       }
       const raw = (con + trait + gearTotal) * TEMP_RES_DEG_PER_UNIT;
-      const deg = Math.max(0, Math.min(TEMP_RES_DEG_CAP, raw));
+      const deg = Math.min(TEMP_RES_DEG_CAP, raw);
       return { sources, deg, capped: raw > TEMP_RES_DEG_CAP };
     };
     const cold = sideTolerance('cold_resistance', (g) => g.cold);

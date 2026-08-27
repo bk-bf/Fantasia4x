@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   driveWieldStrain,
-  conditionStatMultipliers,
+  conditionModifierSum,
   conditionNeedMultipliers,
   getConditionCurrentStage
 } from '$lib/game/core/rules/body/conditions';
@@ -40,10 +40,10 @@ describe('§2c wield strain', () => {
     expect(conds.find((c) => c.id === 'overmatched')).toBeUndefined();
   });
 
-  it('the condition cripples combat: softer blows (strength), worse aim (hitChance), faster fatigue', () => {
+  it('the condition cripples combat: softer blows (melee damage), worse aim (hitChance), faster fatigue', () => {
     const conds: EntityCondition[] = [];
     driveWieldStrain(conds, 14);
-    expect(conditionStatMultipliers({ conditions: conds }).strength).toBeLessThan(1);
+    expect(conditionModifierSum({ conditions: conds }, 'melee_damage')).toBeLessThan(0);
     expect(getConditionCurrentStage(conds[0])?.modifiers.hitChance).toBeLessThan(1);
     expect(conditionNeedMultipliers(conds).fatigueRate).toBeGreaterThan(1);
   });
