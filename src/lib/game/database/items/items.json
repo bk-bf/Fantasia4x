@@ -12934,7 +12934,7 @@
       "armorValue"     : 10,
       "sightPenalty": 0.05,
       "fatiguePerTurn" : 0.25,
-      "movementPenalty": 0.0
+      "movementPenalty": 0.02
     }
   },
   {
@@ -13047,7 +13047,7 @@
       "equipmentSlot"  : "gloves",
       "armorValue"     : 8,
       "fatiguePerTurn" : 0.20,
-      "movementPenalty": 0.0
+      "movementPenalty": 0.02
     }
   },
   {
@@ -13234,7 +13234,7 @@
       "equipmentSlot"  : "bracers",
       "armorValue"     : 8,
       "fatiguePerTurn" : 0.15,
-      "movementPenalty": 0.0
+      "movementPenalty": 0.02
     }
   },
   {
@@ -13261,7 +13261,7 @@
       "equipmentSlot"  : "greaves",
       "armorValue"     : 8,
       "fatiguePerTurn" : 0.15,
-      "movementPenalty": 0.0
+      "movementPenalty": 0.02
     }
   },
   {
