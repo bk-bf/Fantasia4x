@@ -2498,7 +2498,7 @@
   {
     "id"              : "make_great_bone_maul",
     "discipline"      : "bonecarving",
-    "station"         : "bone_carvers_bench",
+    "station"         : "runecarver_bench",
     "inputs"          : {"great_bone": 1, "oak_plank": 1, "cordage": 8},
     "outputs"         : {"great_bone_maul": 1},
     "workAmount"      : 12,
@@ -6051,29 +6051,29 @@
   {
     "id"              : "make_copper_rod",
     "station"         : "casting_hearth",
-    "inputs"          : {"wooden_haft": 1, "cut_citrine": 1, "copper_bar": 1},
+    "inputs"          : {"wooden_haft": 1, "cut_citrine": 1, "copper_bar": 1, "category:fastener": 2},
     "outputs"         : {"copper_rod": 1},
     "workAmount"      : 10,
     "toolTierRequired": 1,
-    "researchRequired": "arcane_lapidary"
+    "researchRequired": "bronze_working"
   },
   {
     "id"              : "make_iron_rod",
     "station"         : "anvil",
-    "inputs"          : {"sanded_haft": 1, "cut_topaz": 1, "iron_bar": 1},
+    "inputs"          : {"sanded_haft": 1, "cut_topaz": 1, "iron_bar": 1, "category:fastener": 2},
     "outputs"         : {"iron_rod": 1},
     "workAmount"      : 11,
     "toolTierRequired": 1,
-    "researchRequired": "arcane_lapidary"
+    "researchRequired": "iron_working"
   },
   {
     "id"              : "make_steel_rod",
     "station"         : "anvil",
-    "inputs"          : {"seasoned_haft": 1, "cut_sapphire": 1, "category:steel": 1},
+    "inputs"          : {"seasoned_haft": 1, "cut_sapphire": 1, "category:steel": 1, "category:fastener": 2},
     "outputs"         : {"steel_rod": 1},
     "workAmount"      : 12,
     "toolTierRequired": 1,
-    "researchRequired": "arcane_lapidary"
+    "researchRequired": "steel_making"
   },
   {
     "id"              : "make_emberglass_scepter",
