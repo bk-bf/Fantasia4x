@@ -1,7 +1,7 @@
 ---
 id: condition-stat-modifiers-multiplicative
 title: Conditions reach the sim by multiplying a core stat, which pays the strong, nothing to the weak, and everything that stat feeds
-status: open
+status: in-review
 kind: correctness
 severity: high
 ready: true
@@ -16,6 +16,8 @@ symbols:
   - conditionStatMultipliers
   - evaluateFormula
   - temperatureTolerance
+branch: fix/condition-stat-modifiers-multiplicative
+pr: condition-stat-modifiers-multiplicative
 created: 2026-08-27
 updated: 2026-08-27
 ---
