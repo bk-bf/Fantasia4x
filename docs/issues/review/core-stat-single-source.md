@@ -1,7 +1,7 @@
 ---
 id: core-stat-single-source
 title: The six core stats are re-declared by hand in ten rosters, nine abbreviation maps and three positional argument lists
-status: open
+status: in-review
 kind: drift
 severity: high
 ready: true
@@ -20,6 +20,8 @@ files:
   - src/lib/components/screens/culture/CultureDetail.svelte
   - src/lib/utils/bodyLabels.ts
 symbols: []
+branch: fix/core-stat-single-source
+pr: core-stat-single-source
 created: 2026-08-24
 updated: 2026-08-27
 ---
