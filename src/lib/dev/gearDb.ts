@@ -5,6 +5,7 @@ import researchData from '../game/database/progression/research.jsonc';
 import traitsData from '../game/database/pawns/traits.jsonc';
 import creaturesData from '../game/database/pawns/creatures.jsonc';
 import lootpoolData from '../game/database/items/lootpool.jsonc';
+import { CORE_STAT_ABBR } from '../game/core/types';
 import { carcassItems, nodeItems, hasRecipe, chainAgeOf, usesBossPart } from './chainAge';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -629,13 +630,9 @@ function bodyPartOf(slot: string | null): string | null {
   }
 }
 
-const SCALE_ABBR: Record<string, GearRow['scaling']> = {
-  strength: 'STR',
-  dexterity: 'DEX',
-  perception: 'PER',
-  intelligence: 'INT',
-  charisma: 'CHA'
-};
+const SCALE_ABBR: Record<string, GearRow['scaling']> = Object.fromEntries(
+  Object.entries(CORE_STAT_ABBR).filter(([id]) => id !== 'constitution')
+) as Record<string, GearRow['scaling']>;
 function scalingOf(wp: any): GearRow['scaling'] {
   if (!wp) return null;
   if (wp.powerStat) return SCALE_ABBR[String(wp.powerStat)] ?? null;
@@ -797,14 +794,7 @@ function toRow(item: any, forcedKind?: GearKind): GearRow | null {
   };
 }
 
-const STAT_ABBR: Record<string, string> = {
-  strength: 'STR',
-  dexterity: 'DEX',
-  constitution: 'CON',
-  perception: 'PER',
-  intelligence: 'INT',
-  charisma: 'CHA'
-};
+const STAT_ABBR: Record<string, string> = CORE_STAT_ABBR;
 
 const RARITY_ORDER = ['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythic', 'negative'];
 const rarityRank = (r: string) => {

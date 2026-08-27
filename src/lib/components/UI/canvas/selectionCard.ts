@@ -4,6 +4,7 @@ import { resourceObjectService } from '$lib/game/services/ResourceObjectService.
 import { type CreatureDefinition, getCreatureById } from '$lib/game/core/defs/creatures.js';
 import { RELAXATION_NOTEWORTHY, WETNESS_NOTEWORTHY } from '$lib/components/util/pawnUtils';
 import type { Pawn, Mob, Injury } from '$lib/game/core/types.js';
+import { CORE_STATS } from '$lib/game/core/types.js';
 import { limbLabel, partLabel } from '$lib/components/util/bodyLabels';
 import { woundById } from '$lib/game/core/defs/wounds';
 import { getActiveConditionViews } from '$lib/components/util/conditionInfo.js';
@@ -54,14 +55,7 @@ export function coreStats(entity: Pawn | Mob): EntityStat[] {
     return { label, value: eff, warn: eff < raw };
   };
   const s = entity.stats;
-  return [
-    cell('STR', s.strength, sm.strength),
-    cell('DEX', s.dexterity, sm.dexterity),
-    cell('CON', s.constitution, sm.constitution),
-    cell('INT', s.intelligence, sm.intelligence),
-    cell('PER', s.perception, sm.perception),
-    cell('CHA', s.charisma, 1)
-  ];
+  return CORE_STATS.map(({ id, abbr }) => cell(abbr, s[id], id === 'charisma' ? 1 : sm[id]));
 }
 
 function bestArmorDefense(entity: Pawn | Mob): number {

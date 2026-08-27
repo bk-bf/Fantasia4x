@@ -8,6 +8,7 @@ import type {
   ItemInstance,
   Trait
 } from '../core/types';
+import { CORE_STAT_KEYS, type StatKey } from '../core/types';
 import statsData from '../database/pawns/stats.jsonc';
 import conditionsData from '../database/pawns/conditions.jsonc';
 import itemsData from '../database/items/items.jsonc';
@@ -107,12 +108,7 @@ function heldToolBoost(
 }
 
 const FORMULA_VARS = [
-  'STRENGTH',
-  'DEXTERITY',
-  'CONSTITUTION',
-  'PERCEPTION',
-  'INTELLIGENCE',
-  'CHARISMA',
+  ...CORE_STAT_KEYS.map((k) => k.toUpperCase()),
   'weight',
   'height',
   'consciousness',
@@ -133,6 +129,14 @@ const FORMULA_VARS = [
   'APT'
 ] as const;
 const FORMULA_VAR_RE = new RegExp('\\b(?:' + FORMULA_VARS.join('|') + ')\\b', 'g');
+
+function coreStatValue(
+  k: StatKey,
+  s: Partial<Record<StatKey, number>> | undefined,
+  sm: StatMultipliers
+): number {
+  return k === 'charisma' ? (s?.charisma ?? 10) : (s?.[k] ?? 10) * sm[k];
+}
 
 const BLOOD_FAINT_ONSET = 0.2;
 const BLOOD_FAINT_FLOOR = 0.55;
@@ -241,12 +245,7 @@ function evaluateFormula(
   const power = formulaUsesPower(formula) ? equippedPowerToken(p, sm) : STAT_SCALE;
   const apt = aptitudeOf(p as { aptitudes?: Record<string, number> }, statId);
   const v = fn(
-    (s?.strength ?? 10) * sm.strength,
-    (s?.dexterity ?? 10) * sm.dexterity,
-    (s?.constitution ?? 10) * sm.constitution,
-    (s?.perception ?? 10) * sm.perception,
-    (s?.intelligence ?? 10) * sm.intelligence,
-    s?.charisma ?? 10,
+    ...CORE_STAT_KEYS.map((k) => coreStatValue(k, s, sm)),
     tr?.weight ?? 70,
     tr?.height ?? 170,
     capacities.consciousness ?? 1,
@@ -746,12 +745,7 @@ export class PawnStatServiceImpl implements PawnStatService {
     const sm = conditionStatMultipliers(entity);
     const r2 = (n: number) => Math.round(n * 100) / 100;
     const all: Record<string, number> = {
-      STRENGTH: (s?.strength ?? 10) * sm.strength,
-      DEXTERITY: (s?.dexterity ?? 10) * sm.dexterity,
-      CONSTITUTION: (s?.constitution ?? 10) * sm.constitution,
-      PERCEPTION: (s?.perception ?? 10) * sm.perception,
-      INTELLIGENCE: (s?.intelligence ?? 10) * sm.intelligence,
-      CHARISMA: s?.charisma ?? 10,
+      ...Object.fromEntries(CORE_STAT_KEYS.map((k) => [k.toUpperCase(), coreStatValue(k, s, sm)])),
       weight: tr?.weight ?? 70,
       height: tr?.height ?? 170,
       consciousness: caps.consciousness ?? 1,

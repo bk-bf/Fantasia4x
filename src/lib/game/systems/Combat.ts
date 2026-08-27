@@ -140,8 +140,8 @@ const ORGAN_DAMAGE_VARIANCE = 0.4;
 const K_PRECISION_ORGAN = 6;
 const K_PRECISION_FRACTURE = 4;
 const HIDE_WEAR_RESET_TICKS = 750;
-export { powerScale, STAT_SCALE } from '../core/rules/body/powerScale';
-import { powerScale } from '../core/rules/body/powerScale';
+export { powerScale, STAT_SCALE, type PowerStat } from '../core/rules/body/powerScale';
+import { powerScale, type PowerStat } from '../core/rules/body/powerScale';
 const NATURAL_DAMAGE_BODYSCALE_FACTOR = 0.5;
 const MOB_BASE_DAMAGE = 5;
 const CRIT_MULTIPLIER = 1.5;
@@ -263,8 +263,6 @@ function profileFromWeapon(
     critMultiplier: wp.critMultiplier
   };
 }
-
-export type PowerStat = 'strength' | 'dexterity' | 'perception' | 'intelligence' | 'charisma';
 
 const DUELIST_DAMAGE_MULT = 1.28;
 const DUELIST_ARMOR_PEN = 0.1;

@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { Culture, CultureRelation } from '$lib/game/core/types';
+  import { CORE_STATS } from '$lib/game/core/types';
   import StatBar from '$lib/components/UI/widget/StatBar.svelte';
   import TraitCards from '$lib/components/pawn/TraitCards.svelte';
 
@@ -7,15 +8,6 @@
   export let knownCultures: Culture[];
   export let relations: CultureRelation[];
   export let headcount = 0;
-
-  const STAT_ORDER = [
-    'strength',
-    'dexterity',
-    'constitution',
-    'intelligence',
-    'perception',
-    'charisma'
-  ];
 
   function traitStatBonus(r: Culture, stat: string): number {
     let b = 0;
@@ -97,14 +89,14 @@
 
 
   <div class="section-hdr">| STATS <span class="hint">(each pawn rolls in range)</span></div>
-  {#each STAT_ORDER as stat}
+  {#each CORE_STATS as { id: stat, abbr }}
     {#if culture.statRanges[stat]}
       {@const range = culture.statRanges[stat]}
       {@const bonus = traitStatBonus(culture, stat)}
       {@const effMax = range[1] + bonus}
       {@const avg = (range[0] + range[1]) / 2 + bonus}
       <StatBar
-        label={stat.slice(0, 3).toUpperCase()}
+        label={abbr}
         value={effMax}
         max={22}
         color={statColor(avg)}

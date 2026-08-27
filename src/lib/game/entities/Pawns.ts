@@ -9,6 +9,7 @@ import type {
   Kingdom,
   KinKind
 } from '../core/types';
+import { CORE_STAT_KEYS } from '../core/types';
 import { createPawnInventory, createPawnEquipment } from '../core/rules/gear/equipment';
 import { drawPawnTraits, SPAWN_STAT_CAP } from '../core/gen/culture';
 import {
@@ -708,14 +709,7 @@ function rollStatsFromRanges(statRanges: Record<string, [number, number]>): Enti
   return stats as EntityStats;
 }
 
-const STAT_KEYS: (keyof EntityStats)[] = [
-  'strength',
-  'dexterity',
-  'intelligence',
-  'perception',
-  'charisma',
-  'constitution'
-];
+const STAT_KEYS = CORE_STAT_KEYS;
 
 function rollGrowthProfile(
   finalStats: EntityStats,

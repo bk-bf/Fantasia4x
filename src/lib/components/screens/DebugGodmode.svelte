@@ -2,6 +2,7 @@
   import { gameState } from '$lib/stores/gameState';
   import { SCENARIO_PRESETS } from '$lib/game/headless/scenarios/presets';
   import type { DisableableNeed, StatKey } from '$lib/game/core/types';
+  import { CORE_STAT_KEYS } from '$lib/game/core/types';
   import itemsData from '$lib/game/database/items/items.jsonc';
 
   type NamedDef = { id: string; name?: string; category?: string };
@@ -16,14 +17,7 @@
     { key: 'relaxation', label: 'Relaxation' },
     { key: 'mobHunger', label: 'Creature hunger' }
   ];
-  const STAT_KEYS: StatKey[] = [
-    'strength',
-    'dexterity',
-    'intelligence',
-    'perception',
-    'charisma',
-    'constitution'
-  ];
+  const STAT_KEYS = CORE_STAT_KEYS;
 
   let presetId = $state(SCENARIO_PRESETS[0]?.id ?? '');
   let pawnId = $state('');

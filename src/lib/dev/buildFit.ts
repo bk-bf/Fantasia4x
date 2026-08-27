@@ -1,7 +1,7 @@
-import type { Pawn } from '../game/core/types';
+import type { Pawn, StatKey } from '../game/core/types';
 import { APTITUDE_IDS, type AptitudeId } from '../game/core/rules/body/aptitudes';
 
-export type CoreStat = 'strength' | 'dexterity' | 'constitution' | 'perception' | 'intelligence' | 'charisma';
+export type CoreStat = StatKey;
 
 export interface BuildProfile {
   stats: Partial<Record<CoreStat, number>>;

@@ -1,4 +1,5 @@
 import type { Pawn } from '$lib/game/core/types';
+import { CORE_STAT_KEYS } from '$lib/game/core/types';
 import { APTITUDE_MIN, APTITUDE_MAX, type AptitudeId } from '$lib/game/core/rules/body/aptitudes';
 import statsData from '$lib/game/database/pawns/stats.jsonc';
 import { pawnStatService } from '$lib/game/services/PawnStatService';
@@ -135,7 +136,8 @@ function derivation(s: StatDef, pawn: Pawn, ctx: StatContext): Deriv {
   }
   if (s.id === 'carry_weight') {
     return {
-      formula: 'bodyWeight × loadFraction + gear  (loadFraction = STR × 1.2%)',
+      formula:
+        'bodyWeight × loadFraction + gear  (loadFraction = capacity ÷ bodyWeight, capacity = (11 + STR × 0.19) × frame)',
       vars: [
         { name: 'bodyWeight', value: `${ctx.carry.bodyWeight}kg` },
         {
@@ -174,12 +176,9 @@ function derivation(s: StatDef, pawn: Pawn, ctx: StatContext): Deriv {
   const st = pawn.stats;
   const sm = ctx.condStatMult;
   const eff = (base: number, mult: number) => (mult === 1 ? base : Math.round(base * mult));
-  add('STRENGTH', eff(st.strength, sm.strength));
-  add('DEXTERITY', eff(st.dexterity, sm.dexterity));
-  add('CONSTITUTION', eff(st.constitution, sm.constitution));
-  add('PERCEPTION', eff(st.perception, sm.perception));
-  add('INTELLIGENCE', eff(st.intelligence, sm.intelligence));
-  add('CHARISMA', st.charisma);
+  for (const id of CORE_STAT_KEYS) {
+    add(id.toUpperCase(), id === 'charisma' ? st.charisma : eff(st[id], sm[id]));
+  }
   add('weight', pawn.physicalTraits?.weight ?? 70);
   add('height', pawn.physicalTraits?.height ?? 170);
   if (/\bSKILL\b/.test(s.formula)) {

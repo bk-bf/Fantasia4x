@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { Trait, Pawn, Item } from '$lib/game/core/types';
+  import { CORE_STAT_ABBR } from '$lib/game/core/types';
   import { naturalGearForTrait, type NaturalGearMeta } from '$lib/components/util/naturalGear';
   import { workAxisLabel } from '$lib/components/util/pawnUtils';
   import { partLabel, limbLabel } from '$lib/components/util/bodyLabels';
@@ -81,14 +82,7 @@
   );
   const rarityColor = (t: Trait) => RARITY_COLOR[t.rarity ?? 'common'] ?? '#9E9E9E';
 
-  const STAT_ABBR: Record<string, string> = {
-    strength: 'STR',
-    dexterity: 'DEX',
-    intelligence: 'INT',
-    perception: 'PER',
-    charisma: 'CHA',
-    constitution: 'CON'
-  };
+  const STAT_ABBR: Record<string, string> = CORE_STAT_ABBR;
   const SLOT_LABEL: Record<string, string> = {
     mainHand: 'Main Hand',
     offHand: 'Off Hand',

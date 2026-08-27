@@ -7,6 +7,7 @@ import type {
   ConditionModifiers,
   Injury
 } from '$lib/game/core/types';
+import { CORE_STAT_ABBR } from '$lib/game/core/types';
 import conditionsData from '$lib/game/database/pawns/conditions.jsonc';
 import { gameHoursFromTicks } from '$lib/game/services/EnvironmentService';
 import { pawnStatService } from '$lib/game/services/PawnStatService';
@@ -48,11 +49,11 @@ export interface ConditionView {
 }
 
 const MOD_LABEL: Partial<Record<keyof ConditionModifiers, string>> = {
-  strength: 'STR',
-  dexterity: 'DEX',
-  constitution: 'CON',
-  perception: 'PER',
-  intelligence: 'INT',
+  strength: CORE_STAT_ABBR.strength,
+  dexterity: CORE_STAT_ABBR.dexterity,
+  constitution: CORE_STAT_ABBR.constitution,
+  perception: CORE_STAT_ABBR.perception,
+  intelligence: CORE_STAT_ABBR.intelligence,
   workEfficiency: 'Work',
   moveSpeed: 'Move',
   dodge: 'Dodge',
@@ -75,14 +76,7 @@ function effectLines(mods: ConditionModifiers): string[] {
   return out;
 }
 
-const GRANT_STAT_ABBR: Record<string, string> = {
-  strength: 'STR',
-  dexterity: 'DEX',
-  intelligence: 'INT',
-  perception: 'PER',
-  charisma: 'CHA',
-  constitution: 'CON'
-};
+const GRANT_STAT_ABBR: Record<string, string> = CORE_STAT_ABBR;
 const grantAxis = (name: string): string =>
   name === 'workSpeed'
     ? 'spd'

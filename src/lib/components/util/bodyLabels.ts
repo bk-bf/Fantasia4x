@@ -1,3 +1,9 @@
+import { CORE_STAT_ABBR, type StatKey } from '$lib/game/core/types';
+
+export function statAbbr(id: StatKey): string {
+  return CORE_STAT_ABBR[id];
+}
+
 function humanize(id: string): string {
   return id
     .replace(/_/g, ' ')

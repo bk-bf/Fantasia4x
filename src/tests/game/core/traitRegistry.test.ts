@@ -5,24 +5,12 @@ import { getTransientConditionDef } from '$lib/game/core/rules/body/conditions';
 import { PART_DEF_MAP, BOUND_NATURAL_WEAPONS } from '$lib/game/core/defs/bodyParts';
 import raritiesData from '$lib/game/database/items/rarities.jsonc';
 import type { Trait } from '$lib/game/core/types';
+import { CORE_STAT_KEYS } from '$lib/game/core/types';
 
 const ALL: Trait[] = TRAIT_DATABASE;
 const RARITY_IDS = new Set((raritiesData as { id: string }[]).map((r) => r.id));
 const KINDS = new Set(['stat', 'attribute', 'naturalGear', 'passive', 'wound', 'bodyMod']);
-const STAT_KEYS = new Set([
-  'strengthBonus',
-  'dexterityBonus',
-  'intelligenceBonus',
-  'perceptionBonus',
-  'charismaBonus',
-  'constitutionBonus',
-  'strengthPenalty',
-  'dexterityPenalty',
-  'intelligencePenalty',
-  'perceptionPenalty',
-  'charismaPenalty',
-  'constitutionPenalty'
-]);
+const STAT_KEYS = new Set(CORE_STAT_KEYS.map((k) => `${k}Bonus`));
 const ANATOMY_NAME_RE =
   /\b(bone|boned|skin|skinned|hide|scale|scaled|shell|carapace|claw|clawed|horn|horned|fang|fanged|tusk|eyed|one-eyed|ear|winged|feather|feathered|furred|joint|jointed)\b/i;
 
@@ -45,6 +33,15 @@ describe('TRAIT-SYSTEM-V2 trait registry', () => {
           expect(STAT_KEYS.has(k), `${t.id} attribute-kind carries core-stat rider ${k}`).toBe(
             false
           );
+      }
+    }
+  });
+
+  it('every *Bonus effect key names a real core stat', () => {
+    for (const t of ALL) {
+      for (const k of Object.keys(t.effects ?? {})) {
+        if (!k.endsWith('Bonus')) continue;
+        expect(STAT_KEYS.has(k), `${t.id} unrecognised bonus key ${k}`).toBe(true);
       }
     }
   });
