@@ -1,7 +1,7 @@
 ---
 id: s01-game-services
 title: Hand-maintained roster restates a declared set — game/services
-status: open
+status: in-review
 kind: drift
 severity: high
 ready: true
@@ -12,6 +12,8 @@ files:
   - src/lib/game/services/PawnStatService.ts
 symbols:
   - src/lib/game/services/PawnStatService.ts::FORMULA_VARS#0
+branch: fix/s01-game-services
+pr: s01-game-services
 created: 2026-08-24
 updated: 2026-08-27
 ---
