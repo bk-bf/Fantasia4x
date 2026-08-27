@@ -4448,7 +4448,9 @@
     </div>
   {:else if similarDragMode}
     <div class="designation-hud">
-      [⊞ SELECT {similarDragResourceId.replace(/_/g, ' ').toUpperCase()}] — drag to designate all ·
+      [⊞ SELECT {(resourceObjectService.getById(similarDragResourceId)?.displayName ??
+        similarDragResourceId
+      ).toUpperCase()}] — drag to designate all ·
       Esc cancel{#if similarDragActive}
         — ({Math.abs(similarEndX - similarAnchorX) + 1}×{Math.abs(similarEndY - similarAnchorY) +
           1}){/if}
