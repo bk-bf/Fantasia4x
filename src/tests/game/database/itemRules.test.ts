@@ -1244,3 +1244,102 @@ describe('ITEM-RULES R22 — a fluid states a density and a serving, and its bat
     expect(bad, bad.join('; ')).toEqual([]);
   });
 });
+
+describe('ITEM-RULES R23 — a crafted item derives a plausible mass for its kind', () => {
+  const byId = new Map((ITEMS as Item[]).map((i) => [i.id, i]));
+  const recipeById = new Map((RECIPES as Recipe[]).map((r) => [r.id, r]));
+  const weightOf = (id: string) => byId.get(id)?.weightKg ?? 0;
+  const WOODY = new Set(['wood', 'woodwork']);
+
+  it('a bow with a recipe consumes a real wooden stave, not sinew and thread alone', () => {
+    const bows = (ITEMS as Item[]).filter(
+      (i) => i.type === 'weapon' && i.weaponProperties?.ammoCategory === 'arrow'
+    );
+    const bad: string[] = [];
+    for (const bow of bows) {
+      const recipes = recipesByOutput.get(bow.id) ?? [];
+      if (!recipes.length) continue;
+      const hasWood = recipes.some((r) => {
+        const keys = Object.keys(r.inputs ?? {});
+        if (keys.some((k) => k === 'category:log' || k === 'category:plank')) return true;
+        if (keys.some((k) => !k.startsWith('category:') && WOODY.has(byId.get(k)?.category ?? '')))
+          return true;
+        return Object.values(r.dynamicRecipe ?? {}).some((slot) =>
+          ['wood', 'woodwork', 'log', 'plank'].includes(slot.acceptsCategory ?? '')
+        );
+      });
+      if (!hasWood) bad.push(`${bow.id} has no wooden stave in any recipe that makes it`);
+    }
+    expect(bad, bad.join('; ')).toEqual([]);
+  });
+
+  it('a small bar-forged blade or tool does not consume a whole ingot', () => {
+    const FIXED = ['make_copper_dagger', 'make_sewing_kit', 'make_steel_stiletto'];
+    const BAR_KEYS = ['copper_bar', 'iron_bar', 'category:steel'];
+    const bad: string[] = [];
+    for (const id of FIXED) {
+      const r = recipeById.get(id);
+      if (!r) {
+        bad.push(`${id} recipe is missing`);
+        continue;
+      }
+      for (const key of BAR_KEYS) {
+        const q = r.inputs?.[key];
+        if (q !== undefined && q >= 1)
+          bad.push(`${id} consumes ${q}x ${key} — a whole bar for a small piece`);
+      }
+    }
+    expect(bad, bad.join('; ')).toEqual([]);
+  });
+
+  it('an attunement amulet is not priced off a whole ingot', () => {
+    const AMULETS = [
+      'make_ruby_amulet',
+      'make_sapphire_amulet',
+      'make_emerald_amulet',
+      'make_topaz_amulet',
+      'make_amethyst_amulet',
+      'make_citrine_amulet',
+      'make_moonstone_amulet'
+    ];
+    const bad: string[] = [];
+    for (const id of AMULETS) {
+      const r = recipeById.get(id);
+      if (!r) {
+        bad.push(`${id} recipe is missing`);
+        continue;
+      }
+      for (const key of ['gold_bar', 'silver_bar']) {
+        const q = r.inputs?.[key];
+        if (q !== undefined && q >= 1)
+          bad.push(
+            `${id} consumes ${q}x ${key} — a whole ingot for a ${weightOf(Object.keys(r.outputs ?? {})[0])}kg amulet`
+          );
+      }
+    }
+    expect(bad, bad.join('; ')).toEqual([]);
+  });
+
+  it('a woven withy piece derives a mass in reach of what it should weigh', () => {
+    const WOVEN: Record<string, string> = {
+      wattle_buckler: 'make_wattle_buckler',
+      wicker_vest: 'make_wicker_vest'
+    };
+    const WITHY_RETENTION = 0.46;
+    const bad: string[] = [];
+    for (const [itemId, recipeId] of Object.entries(WOVEN)) {
+      const item = byId.get(itemId);
+      const r = recipeById.get(recipeId);
+      if (!item?.weightKg || !r) continue;
+      const raw = Object.entries(r.inputs ?? {}).reduce((s, [k, q]) => s + weightOf(k) * q, 0);
+      const derived = raw * WITHY_RETENTION;
+      const lo = item.weightKg * 0.6;
+      const hi = item.weightKg * 1.5;
+      if (derived < lo || derived > hi)
+        bad.push(
+          `${itemId} derives to ${derived.toFixed(2)}kg but weighs ${item.weightKg}kg — outside the plausible ${lo.toFixed(2)}-${hi.toFixed(2)}kg band`
+        );
+    }
+    expect(bad, bad.join('; ')).toEqual([]);
+  });
+});
