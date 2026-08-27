@@ -2053,7 +2053,8 @@ class CombatServiceImpl implements CombatService {
 
   private blockChance(defender: Pawn | Mob, ranged: boolean, incoming = BLOCK_FORCE_REF): number {
     const shield = this.shieldDef(defender)?.armorProperties;
-    const bonus = shield?.blockBonus ?? 0;
+    if (!shield) return 0;
+    const bonus = shield.blockBonus ?? 0;
     const base =
       (pawnStatService.evaluateStat('block', defender) + bonus) *
       this.conditionMult(defender, 'block');

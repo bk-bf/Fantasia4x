@@ -206,6 +206,36 @@ describe('combat sim (headless tickCombat)', () => {
     expect(staminaByWeapon.get('kick')!).toBeGreaterThan(staminaByWeapon.get('fists')!);
   });
 
+  it('a defender holding no shield never blocks — pawn and mob alike', () => {
+    const attacker = makePawn({ stats: { ...stats, strength: 22, dexterity: 20 } });
+    const pawnDefender = makePawn({ id: 'def', stats: { ...stats, constitution: 30 } });
+    const mobDefender = makeGoblin({ stats: { ...stats, constitution: 30, dexterity: 1 } });
+    const empty = makeState([], []);
+    let pawnBlocked = 0;
+    let mobBlocked = 0;
+    for (let i = 0; i < 2000; i++) {
+      if (combatService.resolveHit(attacker, pawnDefender, empty).blocked) pawnBlocked++;
+      if (combatService.resolveHit(attacker, mobDefender, empty).blocked) mobBlocked++;
+    }
+    expect(pawnBlocked).toBe(0);
+    expect(mobBlocked).toBe(0);
+  });
+
+  it('a defender WITH a shield does block some blows (positive control for the shield gate)', () => {
+    const attacker = makePawn({ stats: { ...stats, strength: 22, dexterity: 20 } });
+    const shielded = makePawn({
+      id: 'def',
+      stats: { ...stats, constitution: 30 },
+      equipment: { offHand: { itemId: 'wattle_buckler', instanceId: 'sh1', durability: 100 } }
+    });
+    const empty = makeState([], []);
+    let blocked = 0;
+    for (let i = 0; i < 2000; i++) {
+      if (combatService.resolveHit(attacker, shielded, empty).blocked) blocked++;
+    }
+    expect(blocked).toBeGreaterThan(0);
+  });
+
   it('lands critical hits for a high-crit attacker (stat + weapon critMod)', () => {
     const attacker = makePawn({ stats: { ...stats, dexterity: 22, perception: 22 } });
     const defender = makeGoblin({ stats: { ...stats, dexterity: 1 } });
