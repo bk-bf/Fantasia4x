@@ -4,7 +4,7 @@ title: Every creature negates a share of melee blows with no shield, because blo
 status: open
 kind: correctness
 severity: medium
-ready: false
+ready: true
 origin: human
 rules: []
 files:
@@ -12,7 +12,7 @@ files:
   - src/lib/game/services/PawnStatService.ts
 symbols: []
 created: 2026-08-25
-updated: 2026-08-25
+updated: 2026-08-27
 ---
 
 # Every creature negates a share of melee blows with no shield

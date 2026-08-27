@@ -4,7 +4,7 @@ title: Hand-maintained roster restates a declared set — game/services
 status: open
 kind: drift
 severity: high
-ready: false
+ready: true
 origin: audit
 rules:
   - S01
@@ -13,7 +13,7 @@ files:
 symbols:
   - src/lib/game/services/PawnStatService.ts::FORMULA_VARS#0
 created: 2026-08-24
-updated: 2026-08-24
+updated: 2026-08-27
 ---
 
 # Hand-maintained roster restates a declared set — game/services

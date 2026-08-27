@@ -4,7 +4,7 @@ title: Every staff, rod and scepter is carved on a runed bench while claiming ti
 status: open
 kind: data
 severity: high
-ready: false
+ready: true
 origin: human
 rules: []
 files:
@@ -13,7 +13,7 @@ files:
   - src/tests/game/database/itemRules.test.ts
 symbols: []
 created: 2026-08-25
-updated: 2026-08-25
+updated: 2026-08-27
 ---
 
 # Every staff, rod and scepter is carved on a runed bench while claiming tier 1-3

@@ -4,7 +4,7 @@ title: slashResistance, pierceResistance and crushResistance are authored on arm
 status: open
 kind: data
 severity: medium
-ready: false
+ready: true
 origin: human
 rules: []
 files:
@@ -14,7 +14,7 @@ files:
   - src/lib/game/core/PawnEquipment.ts
 symbols: []
 created: 2026-08-25
-updated: 2026-08-25
+updated: 2026-08-27
 ---
 
 # slashResistance, pierceResistance and crushResistance are read by nothing

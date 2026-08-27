@@ -130,9 +130,16 @@ export function readIssue(path) {
 export function listIssues(root) {
   const dir = ISSUES_DIR(root);
   if (!existsSync(dir)) return [];
-  return readdirSync(dir)
-    .filter((f) => f.endsWith('.md') && f !== 'README.md' && !f.startsWith('_'))
-    .map((f) => readIssue(join(dir, f)))
+  const keep = (f) => f.endsWith('.md') && f !== 'README.md' && !f.startsWith('_');
+  const found = [];
+  for (const e of readdirSync(dir, { withFileTypes: true })) {
+    if (e.isDirectory()) {
+      const sub = join(dir, e.name);
+      for (const f of readdirSync(sub)) if (keep(f)) found.push(join(sub, f));
+    } else if (keep(e.name)) found.push(join(dir, e.name));
+  }
+  return found
+    .map((p) => readIssue(p))
     .sort((a, b) => String(a.data.created).localeCompare(String(b.data.created)));
 }
 

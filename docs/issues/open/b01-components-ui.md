@@ -4,7 +4,7 @@ title: Raw data id rendered in the UI — components/UI
 status: open
 kind: boundary
 severity: medium
-ready: false
+ready: true
 origin: audit
 rules:
   - B01
@@ -13,7 +13,7 @@ files:
 symbols:
   - src/lib/components/UI/GameCanvas.svelte::<markup>#0
 created: 2026-08-24
-updated: 2026-08-24
+updated: 2026-08-27
 ---
 
 # Raw data id rendered in the UI — components/UI
