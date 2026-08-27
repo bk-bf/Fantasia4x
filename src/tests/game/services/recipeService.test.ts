@@ -45,6 +45,25 @@ describe('RecipeService (recipe registry, Stage A)', () => {
     expect(r!.outputs).toHaveProperty('sawdust');
   });
 
+  it('a recipe owning a crafting card is the recipe that card resolves to', () => {
+    const itemIds = new Set((itemsData as Array<{ id: string }>).map((i) => i.id));
+    const knownDeferredShadows = new Set(['make_ash']);
+    const recipes = recipesData as Array<{ id: string; outputs?: Record<string, number> }>;
+    const errors: string[] = [];
+    for (const r of recipes) {
+      if (!r.id.startsWith('make_')) continue;
+      if (knownDeferredShadows.has(r.id)) continue;
+      const ownedItemId = r.id.slice('make_'.length);
+      if (!itemIds.has(ownedItemId)) continue;
+      if (!r.outputs || !(ownedItemId in r.outputs)) continue;
+      const resolved = recipeService.getRecipeForItem(ownedItemId);
+      if (resolved?.id !== r.id) {
+        errors.push(`${r.id} does not own the card for "${ownedItemId}"; resolves to ${resolved?.id}`);
+      }
+    }
+    expect(errors).toEqual([]);
+  });
+
   it('every authored recipe + alternative resolves to real item and building ids', () => {
     const itemIds = new Set((itemsData as Array<{ id: string }>).map((i) => i.id));
     const buildingIds = new Set((buildingsData as Array<{ id: string }>).map((b) => b.id));
