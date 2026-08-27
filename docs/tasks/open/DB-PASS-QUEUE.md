@@ -1,9 +1,32 @@
+---
+id: db-pass-queue
+kind: queue
+status: in-progress
+queue: false
+blocked-on: nothing
+owner: kirill
+created: 2026-08-27
+updated: 2026-08-27
+---
 <!-- LOC cap: 120 (created: 2026-08-27) -->
 
 # DB PASS QUEUE — five tasks split out of the 2026-08-26 workstation audit
 
 > **Related:** [MECHANICAL-POWER](MECHANICAL-POWER.md) · [ITEM-RULES](../../game/ITEM-RULES.md) ·
 > [ROADMAP](ROADMAP.md)
+
+## Where each task stands
+
+| task | what | status |
+|---|---|---|
+| T1 | meals gain seven axes | **done** |
+| T2 | composed dishes bring their own ingredients | **done** |
+| T3 | alchemy gated behind fermented fluids | **open** — implementable, but which potion needs wine, ale or spirit is a design call |
+| T4 | one soaking bin, plus hafts | **awaiting review** — [SOAKING-AND-HAFTS](SOAKING-AND-HAFTS.md) |
+| T5 | top-rung oven and vat items | **awaiting review** — [TOP-RUNG-ITEMS](TOP-RUNG-ITEMS.md) |
+
+`queue: false` means the overnight issue loop does not take this file. T3 is the only part that
+could be worked without a decision from Kirill first.
 
 Each is handed to its own agent. Two produce a proposal for review rather than edits, because both
 would rewrite recipes the player already depends on.

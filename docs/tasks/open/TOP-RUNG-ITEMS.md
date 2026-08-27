@@ -1,9 +1,38 @@
+---
+id: top-rung-items
+kind: proposal
+status: awaiting-review
+queue: false
+blocked-on: decision
+owner: kirill
+created: 2026-08-27
+updated: 2026-08-27
+---
 <!-- LOC cap: 220 (created: 2026-08-27) -->
 
 # TOP RUNG ITEMS — what the Steel Deck Oven and the Runed Brewing Vat make
 
 > **Related:** [DB-PASS-QUEUE](DB-PASS-QUEUE.md) (this is T5) · [game/ITEM-RULES](../../game/ITEM-RULES.md) ·
 > [MECHANICAL-POWER](MECHANICAL-POWER.md)
+
+Three dishes for the Steel Deck Oven and two drinks for the Runed Brewing Vat, both rungs that
+introduce nothing today. Costed and gate-checked, not authored.
+
+## Decisions this needs before any edit
+
+1. Is `cheese_tart` worth keeping? Its own write-up marks it weakest and first to cut.
+2. Should `effects.arcane` and `effects.fermentation` be made real for the runed vat, or its
+   description corrected to match what the sim does?
+
+## Defects this turned up, which are their own tasks
+
+- **`effects.arcane` is inert for food and fluid** — it reaches `rollFamed` only inside a branch
+  gated on `QUALITY_STAMPED_TYPES = {weapon, armor, tool}`.
+- **`frostheart_timber` has no consumer** anywhere in `recipes.jsonc` or `buildings.jsonc`.
+- **`refreshed` is the only meal-buff condition nothing grants.**
+- **`bread`, `simple_pie`, `meat_pie` and `hearty_pie` carry no `decaySeconds`**, so baked goods
+  never spoil while every stew and preserve does. Four of 22 meals.
+- ~~The upper baking rungs did not declare `bakingEnabled`~~ — fixed 2026-08-27.
 
 ## Status
 

@@ -1,9 +1,36 @@
+---
+id: soaking-and-hafts
+kind: proposal
+status: awaiting-review
+queue: false
+blocked-on: decision
+owner: kirill
+created: 2026-08-27
+updated: 2026-08-27
+---
 <!-- LOC cap: 175 (created: 2026-08-27) -->
 
 # SOAKING AND HAFTS — one vat, and every shaft that should pass through it
 
 > **Related:** [DB-PASS-QUEUE](DB-PASS-QUEUE.md) (T4) · [ITEM-RULES](../../game/ITEM-RULES.md) ·
 > [ROADMAP](ROADMAP.md) · [AUDIT (archived)](../archive/AUDIT-2026-08-25.md)
+
+Merge three soaking stations into one two-rung ladder, and route every tool haft, bow and staff
+through it. 43 rows audited, 23 need changing.
+
+## Decisions this needs before any edit
+
+1. Do bow staves take `seasoned_haft`, or does a new cured stave item get authored?
+2. Do the six arcane staffs get a runed soaking rung plus three cured arcane haft items, or stay
+   as they are?
+3. Does `soaking_trough` get deleted, or kept and re-scoped?
+
+## Defects this turned up, which are their own tasks
+
+- **42 heads are mounted on a haft with no fastener**, and the guard meant to catch it cannot —
+  its `JOINT` regex accepts the head material itself. Ratcheted at 72 in `dbStructure.test.ts`;
+  fixing the recipes is a separate pass.
+- **Three runed rods carry a tier-2 `wooden_haft`** — the copper-age handle — at a runed bench.
 
 ## Status
 
