@@ -3,10 +3,10 @@ import type { EquipmentSlot } from './items';
 export const CORE_STATS = [
   { id: 'strength', name: 'Strength', abbr: 'STR' },
   { id: 'dexterity', name: 'Dexterity', abbr: 'DEX' },
-  { id: 'constitution', name: 'Constitution', abbr: 'CON' },
-  { id: 'perception', name: 'Perception', abbr: 'PER' },
   { id: 'intelligence', name: 'Intelligence', abbr: 'INT' },
-  { id: 'charisma', name: 'Charisma', abbr: 'CHA' }
+  { id: 'perception', name: 'Perception', abbr: 'PER' },
+  { id: 'charisma', name: 'Charisma', abbr: 'CHA' },
+  { id: 'constitution', name: 'Constitution', abbr: 'CON' }
 ] as const;
 
 export type StatKey = (typeof CORE_STATS)[number]['id'];

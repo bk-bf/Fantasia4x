@@ -1,14 +1,14 @@
 import { describe, it, expect } from 'vitest';
-import statsData from '$lib/game/database/pawns/stats.jsonc';
-import itemsData from '$lib/game/database/items/items.jsonc';
-import conditionsData from '$lib/game/database/pawns/conditions.jsonc';
-import loreData from '$lib/game/database/social/culture-lore.jsonc';
+import statsData from '$lib/game/database/pawns/stats.json';
+import itemsData from '$lib/game/database/items/items.json';
+import conditionsData from '$lib/game/database/pawns/conditions.json';
+import loreData from '$lib/game/database/social/culture-lore.json';
 import { CORE_STAT_KEYS, type StatKey } from '$lib/game/core/types';
 
 const isCoreStat = (k: string): k is StatKey => (CORE_STAT_KEYS as readonly string[]).includes(k);
 
 describe('core stat keys are validated against the roster, not typo-tolerant', () => {
-  it('every stats.jsonc primaryStat is a real core stat', () => {
+  it('every stats.json primaryStat is a real core stat', () => {
     for (const s of statsData as { id: string; primaryStat?: string }[]) {
       if (s.primaryStat == null) continue;
       expect(isCoreStat(s.primaryStat), `${s.id} primaryStat ${s.primaryStat}`).toBe(true);
@@ -42,7 +42,7 @@ describe('core stat keys are validated against the roster, not typo-tolerant', (
     }
   });
 
-  it('every conditions.jsonc `modifiers` key is a real core stat or a known non-stat modifier', () => {
+  it('every conditions.json `modifiers` key is a real core stat or a known non-stat modifier', () => {
     const NON_STAT_MODIFIER_KEYS = new Set([
       'workEfficiency',
       'moveSpeed',
