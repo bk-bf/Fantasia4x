@@ -12741,7 +12741,7 @@
       "equipmentSlot": "head",
       "armorValue": 13,
       "sightPenalty": 0.04,
-      "movementPenalty": 0.0,
+      "movementPenalty": 0.02,
       "fatiguePerTurn": 0.07
     }
   },
@@ -12768,7 +12768,7 @@
       "equipmentSlot": "head",
       "armorValue": 14,
       "sightPenalty": 0.09,
-      "movementPenalty": 0.0,
+      "movementPenalty": 0.02,
       "fatiguePerTurn": 0.08
     }
   },
