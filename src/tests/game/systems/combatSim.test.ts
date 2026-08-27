@@ -347,13 +347,12 @@ describe('combat sim (headless tickCombat)', () => {
     expect(covAvg, 'the covered part takes clearly less than an uncovered one — armour is per-part').toBeLessThan(unAvg * 0.85);
   });
 
-  it('armour-resistance-fields-dead: slashResistance/pierceResistance/crushResistance mitigate their matching damage type more than an unmatched one', () => {
+  it('a piece\'s damage-type resistance mitigates its own damage type more than any other', () => {
     const defender = makePawn({
       id: 'armored',
       limbs: createBodyPlanLimbs('humanoid', 1),
       equipment: { bodyOuter: { itemId: 'plate_cuirass', instanceId: 'a1', durability: 300 } }
     });
-    // plate_cuirass: defense 30, slashResistance 0.3, pierceResistance 0.25, crushResistance 0.15
     const rawDamage = 40;
     const reduction = (damageType: DamageType) =>
       partArmorReduction(defender, 'chest', 0, rawDamage, damageType);
