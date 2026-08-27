@@ -855,7 +855,7 @@
   {
     "id"              : "make_copper_dagger",
     "station"         : "stone_forge",
-    "inputs"          : {"copper_bar": 1, "medium_bones": 1},
+    "inputs"          : {"copper_bar": 0.1, "medium_bones": 1},
     "outputs"         : {"copper_dagger": 1},
     "workAmount"      : 5,
     "toolTierRequired": 0,
@@ -1498,7 +1498,7 @@
   {
     "id"              : "make_sewing_kit",
     "station"         : "anvil",
-    "inputs"          : {"iron_bar": 1, "category:thread": 1},
+    "inputs"          : {"iron_bar": 0.1, "category:thread": 1},
     "outputs"         : {"sewing_kit": 1},
     "workAmount"      : 6,
     "toolTierRequired": 1,
@@ -2159,7 +2159,7 @@
     "id"              : "make_wattle_buckler",
     "discipline"      : "weaving",
     "station"         : "craft_spot",
-    "inputs"          : {"branch": 4, "cordage": 8},
+    "inputs"          : {"branch": 11, "cordage": 20},
     "outputs"         : {"wattle_buckler": 1},
     "workAmount"      : 4,
     "toolTierRequired": 0
@@ -2624,7 +2624,7 @@
   {
     "id"              : "make_steel_stiletto",
     "station"         : "anvil",
-    "inputs"          : {"category:steel": 1, "category:leather": 1},
+    "inputs"          : {"category:steel": 0.1, "category:leather": 1},
     "outputs"         : {"steel_stiletto": 1},
     "workAmount"      : 9,
     "toolTierRequired": 2,
@@ -2924,7 +2924,7 @@
     "id"              : "make_wicker_vest",
     "discipline"      : "weaving",
     "station"         : "craft_spot",
-    "inputs"          : {"branch": 15, "cordage": 120},
+    "inputs"          : {"branch": 8, "cordage": 60},
     "outputs"         : {"wicker_vest": 1},
     "workAmount"      : 12,
     "toolTierRequired": 0
@@ -3372,7 +3372,7 @@
   {
     "id"              : "make_ruby_amulet",
     "station"         : "attunement_bench",
-    "inputs"          : {"attuned_ruby": 2, "gold_bar": 2},
+    "inputs"          : {"attuned_ruby": 2, "gold_bar": 0.05},
     "outputs"         : {"ruby_amulet": 1},
     "workAmount"      : 14,
     "toolTierRequired": 1,
@@ -3381,7 +3381,7 @@
   {
     "id"              : "make_sapphire_amulet",
     "station"         : "attunement_bench",
-    "inputs"          : {"attuned_sapphire": 2, "gold_bar": 2},
+    "inputs"          : {"attuned_sapphire": 2, "gold_bar": 0.05},
     "outputs"         : {"sapphire_amulet": 1},
     "workAmount"      : 14,
     "toolTierRequired": 1,
@@ -3390,7 +3390,7 @@
   {
     "id"              : "make_emerald_amulet",
     "station"         : "attunement_bench",
-    "inputs"          : {"attuned_emerald": 2, "gold_bar": 2},
+    "inputs"          : {"attuned_emerald": 2, "gold_bar": 0.05},
     "outputs"         : {"emerald_amulet": 1},
     "workAmount"      : 14,
     "toolTierRequired": 1,
@@ -3399,7 +3399,7 @@
   {
     "id"              : "make_topaz_amulet",
     "station"         : "attunement_bench",
-    "inputs"          : {"attuned_topaz": 2, "gold_bar": 2},
+    "inputs"          : {"attuned_topaz": 2, "gold_bar": 0.05},
     "outputs"         : {"topaz_amulet": 1},
     "workAmount"      : 14,
     "toolTierRequired": 1,
@@ -3408,7 +3408,7 @@
   {
     "id"              : "make_amethyst_amulet",
     "station"         : "attunement_bench",
-    "inputs"          : {"attuned_amethyst": 2, "gold_bar": 2},
+    "inputs"          : {"attuned_amethyst": 2, "gold_bar": 0.05},
     "outputs"         : {"amethyst_amulet": 1},
     "workAmount"      : 14,
     "toolTierRequired": 1,
@@ -3417,7 +3417,7 @@
   {
     "id"              : "make_citrine_amulet",
     "station"         : "attunement_bench",
-    "inputs"          : {"attuned_citrine": 2, "gold_bar": 2},
+    "inputs"          : {"attuned_citrine": 2, "gold_bar": 0.05},
     "outputs"         : {"citrine_amulet": 1},
     "workAmount"      : 14,
     "toolTierRequired": 1,
@@ -3426,7 +3426,7 @@
   {
     "id"              : "make_moonstone_amulet",
     "station"         : "attunement_bench",
-    "inputs"          : {"attuned_moonstone": 2, "silver_bar": 2},
+    "inputs"          : {"attuned_moonstone": 2, "silver_bar": 0.05},
     "outputs"         : {"moonstone_amulet": 1},
     "workAmount"      : 14,
     "toolTierRequired": 1,
