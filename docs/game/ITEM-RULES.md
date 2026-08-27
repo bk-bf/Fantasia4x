@@ -581,10 +581,11 @@ gear, what closes one is a dose.**
       `(11 + 0.19 × strength) × frameFactor`; `laden` starts at 60% of it. Sum the set and check.
 - [ ] It only uses fields the sim actually **reads**. `defense`, `covers`, `weightKg`,
       `movementPenalty`, `fatiguePerTurn`, `coldResistance`/`heatResistance`, `stealthMod`,
-      `maxDurability` and the shield block are live. **`slashResistance`, `pierceResistance`,
-      `crushResistance` and `magicResistance` are NOT** — `mitigationAt` reads only `defense`, and
-      nothing outside the `gearDb` dev tool reads `magicResistance`, so authoring them promises the
-      player something that does nothing. Do not justify an item with a dead field.
+      `maxDurability`, `slashResistance`/`pierceResistance`/`crushResistance` and the shield block
+      are live — the three type resistances multiply the piece's `defense` against a matching
+      `cutting`/`piercing`/`blunt` hit in `partArmorReduction`. **`magicResistance` is NOT** —
+      nothing outside the `gearDb` dev tool reads it, so authoring it promises the player something
+      that does nothing. Do not justify an item with a dead field.
 - [ ] Armour class matches the construction: soft/flexible ⇒ `light`, rigid organic or flexible metal
       ⇒ `medium`, rigid metal plate ⇒ `heavy`. Class carries no combat effect on its own; the
       trade-off has to be real, and it lives in weight and `movementPenalty`.

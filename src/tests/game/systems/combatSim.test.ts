@@ -1,12 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { combatService } from '$lib/game/systems/Combat';
+import { combatService, partArmorReduction } from '$lib/game/systems/Combat';
 import { healWounds } from '$lib/game/systems/PawnStateMachine';
 import { tendPatient } from '$lib/game/services/jobs/caretake';
 import { CREATURES } from '$lib/game/core/defs/creatures';
 import { createBodyPlanLimbs, organsOf, PART_DEF_MAP } from '$lib/game/core/defs/bodyParts';
 import { itemService } from '$lib/game/services/ItemService';
 import { recipeService } from '$lib/game/services/RecipeService';
-import type { GameState, Injury, Mob, Pawn } from '$lib/game/core/types';
+import type { DamageType, GameState, Injury, Mob, Pawn } from '$lib/game/core/types';
 
 const stats = {
   strength: 14,
@@ -345,6 +345,33 @@ describe('combat sim (headless tickCombat)', () => {
     expect(covN, 'some blows landed on the covered torso').toBeGreaterThan(20);
     expect(unN, 'some blows landed on uncovered limbs').toBeGreaterThan(20);
     expect(covAvg, 'the covered part takes clearly less than an uncovered one — armour is per-part').toBeLessThan(unAvg * 0.85);
+  });
+
+  it('armour-resistance-fields-dead: slashResistance/pierceResistance/crushResistance mitigate their matching damage type more than an unmatched one', () => {
+    const defender = makePawn({
+      id: 'armored',
+      limbs: createBodyPlanLimbs('humanoid', 1),
+      equipment: { bodyOuter: { itemId: 'plate_cuirass', instanceId: 'a1', durability: 300 } }
+    });
+    // plate_cuirass: defense 30, slashResistance 0.3, pierceResistance 0.25, crushResistance 0.15
+    const rawDamage = 40;
+    const reduction = (damageType: DamageType) =>
+      partArmorReduction(defender, 'chest', 0, rawDamage, damageType);
+    const cutting = reduction('cutting');
+    const piercing = reduction('piercing');
+    const blunt = reduction('blunt');
+    const fire = reduction('fire');
+    expect(cutting, 'slashResistance (0.3) mitigates a cutting hit the most').toBeGreaterThan(
+      piercing
+    );
+    expect(
+      piercing,
+      'pierceResistance (0.25) mitigates more than crushResistance (0.15)'
+    ).toBeGreaterThan(blunt);
+    expect(
+      fire,
+      'fire has no matching armorProperties field, so it falls back to defense alone (below crushResistance, the smallest of the three)'
+    ).toBeLessThan(blunt);
   });
 
   it('§Q quality flows into combat: a Masterwork blade hits harder than a Crude one (resolveHit)', () => {

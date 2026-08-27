@@ -463,11 +463,24 @@ function conditionSoakFactor(inst: ItemInstance, item: Item): number {
   return 0.5 + 0.5 * clamp(inst.durability / max, 0, 1);
 }
 
-function partArmorReduction(
+type ArmorProps = NonNullable<Item['armorProperties']>;
+const ARMOR_DAMAGE_TYPE_RESISTANCE_FIELD: Partial<Record<DamageType, keyof ArmorProps>> = {
+  cutting: 'slashResistance',
+  piercing: 'pierceResistance',
+  blunt: 'crushResistance'
+};
+
+function armorTypeResistance(ap: ArmorProps, damageType: DamageType): number {
+  const field = ARMOR_DAMAGE_TYPE_RESISTANCE_FIELD[damageType];
+  return field ? (ap[field] as number | undefined) ?? 0 : 0;
+}
+
+export function partArmorReduction(
   defender: Pawn | Mob,
   partId: BodyPartId,
   armorPen: number,
   rawDamage: number,
+  damageType: DamageType,
   turn?: number
 ): number {
   const def = PART_DEF_MAP[partId];
@@ -484,7 +497,10 @@ function partArmorReduction(
       const scaled = scaleArmorQuality(baseAp, inst.quality, inst.famedStatMult);
       worn.push({
         layer: SLOT_LAYER[slot] ?? 1,
-        defense: scaled.defense * conditionSoakFactor(inst, item)
+        defense:
+          scaled.defense *
+          conditionSoakFactor(inst, item) *
+          (1 + armorTypeResistance(scaled, damageType))
       });
     }
     worn.sort((a, b) => a.layer - b.layer);
@@ -809,7 +825,7 @@ class CombatServiceImpl implements CombatService {
     const partMaxHp =
       limbOfPart(defender, partId)?.parts?.find((p) => p.id === partId)?.maxHp ?? partDef.maxHp;
 
-    const armorRed = partArmorReduction(defender, partId, armorPen, raw, state.turn);
+    const armorRed = partArmorReduction(defender, partId, armorPen, raw, damageType, state.turn);
     const physRes = physicalResistance(defender, damageType);
     const mitigated = raw * (1 - armorRed) * (1 - physRes);
     const critMult = profile.critMultiplier ?? CRIT_MULTIPLIER;
