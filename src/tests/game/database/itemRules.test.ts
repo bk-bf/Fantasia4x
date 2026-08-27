@@ -143,7 +143,7 @@ const hardestCreature = (id: string): { p: Prov; via: string | null } => {
 };
 
 const R1_DEBT = new Set<string>([]);
-const R2_DEBT = new Set(['great_bone_maul']);
+const R2_DEBT = new Set<string>([]);
 const R3_DEBT = new Set(['layered_boarhide_plate', 'steel_boar_spear']);
 
 describe('ITEM-RULES R1 — every craftable equipment item declares a tier', () => {
@@ -208,22 +208,7 @@ describe('ITEM-RULES R3 — a species in the name means that species in the reci
   });
 });
 
-const R4_DEBT = new Set<string>([
-  'cinder_rod',
-  'hoarfrost_rod',
-  'storm_rod',
-  'ember_staff',
-  'frost_staff',
-  'spark_staff',
-  'emberglass_scepter',
-  'rimeglass_scepter',
-  'stormglass_scepter',
-  'pyre_staff',
-  'rime_staff',
-  'tempest_staff',
-  'manaforge_greatstaff',
-  'great_bone_maul'
-]);
+const R4_DEBT = new Set<string>([]);
 
 describe('ITEM-RULES R4 — tier is not below the workshop its materials need', () => {
   it('no item is gated behind a station later than its own age', () => {
