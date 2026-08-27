@@ -9,14 +9,14 @@ describe('caster rod chain — physical pawn pipeline (HeadlessSession, real tic
       buildScenario({
         seed: 21,
         map: { w: 20, h: 20 },
-        researchMaxTier: 9,
+        researchMaxTier: 1,
         toolTier: 3,
         infiniteFuel: true,
         workReady: true,
         pawns: [{ count: 6, skillLevel: 16 }],
         needsDisabled: ['hunger', 'fatigue'],
         buildings: [{ id: 'casting_hearth' }],
-        items: { wooden_haft: 10, cut_citrine: 10, copper_bar: 10 },
+        items: { wooden_haft: 10, cut_citrine: 10, copper_bar: 10, copper_tack: 20 },
         seedEntities: false
       })
     );
@@ -43,14 +43,14 @@ describe('caster rod chain — physical pawn pipeline (HeadlessSession, real tic
       buildScenario({
         seed: 22,
         map: { w: 20, h: 20 },
-        researchMaxTier: 9,
+        researchMaxTier: 2,
         toolTier: 3,
         infiniteFuel: true,
         workReady: true,
         pawns: [{ count: 6, skillLevel: 16 }],
         needsDisabled: ['hunger', 'fatigue'],
         buildings: [{ id: 'anvil' }],
-        items: { sanded_haft: 10, cut_topaz: 10, iron_bar: 10 },
+        items: { sanded_haft: 10, cut_topaz: 10, iron_bar: 10, iron_nail: 20 },
         seedEntities: false
       })
     );
@@ -77,14 +77,14 @@ describe('caster rod chain — physical pawn pipeline (HeadlessSession, real tic
       buildScenario({
         seed: 23,
         map: { w: 20, h: 20 },
-        researchMaxTier: 9,
+        researchMaxTier: 2,
         toolTier: 3,
         infiniteFuel: true,
         workReady: true,
         pawns: [{ count: 6, skillLevel: 16 }],
         needsDisabled: ['hunger', 'fatigue'],
         buildings: [{ id: 'anvil' }],
-        items: { seasoned_haft: 10, cut_sapphire: 10, bloom_steel: 10 },
+        items: { seasoned_haft: 10, cut_sapphire: 10, bloom_steel: 10, steel_rivet: 20 },
         seedEntities: false
       })
     );

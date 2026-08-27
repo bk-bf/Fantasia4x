@@ -143,7 +143,7 @@ describe('alchemy / magical-creature reagents', () => {
         toolTier: 3,
         pawns: [{ count: 5, skillLevel: 20 }],
         needsDisabled: ['hunger', 'fatigue', 'thirst', 'hygiene'],
-        buildings: [{ id: 'bone_carvers_bench' }],
+        buildings: [{ id: 'bone_carvers_bench' }, { id: 'runecarver_bench' }],
         items: { great_tusk: 3, great_bone: 3, oak_plank: 4, cordage: 8, spit_meat: 10 },
         seedEntities: false
       })
