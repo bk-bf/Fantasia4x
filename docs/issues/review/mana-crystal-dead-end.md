@@ -1,7 +1,7 @@
 ---
 id: mana-crystal-dead-end
 title: mana_crystal is a dead-end drop and make_ash is shadowed by two byproduct producers
-status: open
+status: in-review
 kind: data
 severity: low
 ready: true
@@ -11,6 +11,8 @@ files:
   - src/lib/game/database/items/recipes.jsonc
   - src/lib/game/database/items/items.jsonc
 symbols: []
+branch: fix/mana-crystal-dead-end
+pr: mana-crystal-dead-end
 created: 2026-08-25
 updated: 2026-08-27
 ---
