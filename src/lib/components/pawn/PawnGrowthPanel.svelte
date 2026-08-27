@@ -1,17 +1,11 @@
 <script lang="ts">
   import type { Pawn, StatKey } from '$lib/game/core/types';
+  import { CORE_STATS } from '$lib/game/core/types';
   import { gameState } from '$lib/stores/gameState';
 
   let { pawn }: { pawn: Pawn } = $props();
 
-  const ROWS: [StatKey, string][] = [
-    ['strength', 'STR'],
-    ['dexterity', 'DEX'],
-    ['constitution', 'CON'],
-    ['intelligence', 'INT'],
-    ['perception', 'PER'],
-    ['charisma', 'CHA']
-  ];
+  const ROWS: [StatKey, string][] = CORE_STATS.map((s) => [s.id, s.abbr]);
 
   const offer = $derived(pawn.pendingGrowth?.[0]);
   const queued = $derived(pawn.pendingGrowth?.length ?? 0);

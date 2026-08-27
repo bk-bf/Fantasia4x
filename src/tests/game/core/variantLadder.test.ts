@@ -10,6 +10,7 @@ import {
   pickWeightedByTier,
   pickSpeciesThenTier
 } from '$lib/game/services/entity/entitySpawning';
+import { CORE_STAT_KEYS, type StatKey } from '$lib/game/core/types';
 
 describe('§2e variant-ladder data integrity', () => {
   it('every natural weapon resolves to a natural_weapon item with weaponProperties', () => {
@@ -51,6 +52,7 @@ describe('§2e variant-ladder data integrity', () => {
       }
       if (c.statRanges) {
         for (const [k, r] of Object.entries(c.statRanges)) {
+          expect(CORE_STAT_KEYS.includes(k as StatKey), `${c.id} statRanges key ${k}`).toBe(true);
           expect(r![0], `${c.id} ${k} min ≤ max`).toBeLessThanOrEqual(r![1]);
         }
       }

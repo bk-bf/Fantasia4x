@@ -1,15 +1,25 @@
 import type { EquipmentSlot } from './items';
 
-export interface EntityStats {
-  strength: number;
-  dexterity: number;
-  intelligence: number;
-  perception: number;
-  charisma: number;
-  constitution: number;
-}
+export const CORE_STATS = [
+  { id: 'strength', name: 'Strength', abbr: 'STR' },
+  { id: 'dexterity', name: 'Dexterity', abbr: 'DEX' },
+  { id: 'constitution', name: 'Constitution', abbr: 'CON' },
+  { id: 'perception', name: 'Perception', abbr: 'PER' },
+  { id: 'intelligence', name: 'Intelligence', abbr: 'INT' },
+  { id: 'charisma', name: 'Charisma', abbr: 'CHA' }
+] as const;
 
-export type StatKey = keyof EntityStats;
+export type StatKey = (typeof CORE_STATS)[number]['id'];
+
+export const CORE_STAT_KEYS: readonly StatKey[] = CORE_STATS.map((s) => s.id);
+
+export const CORE_STAT_ABBR: Record<StatKey, string> = Object.fromEntries(
+  CORE_STATS.map((s) => [s.id, s.abbr])
+) as Record<StatKey, string>;
+
+export type EntityStats = Record<StatKey, number>;
+
+type StatBonusEffects = { [K in `${StatKey}Bonus`]?: number };
 
 export interface GrowthOffer {
   kind: 'season' | 'birthday';
@@ -108,14 +118,7 @@ export interface Trait {
   carryPenalty?: number;
   triggeredCondition?: string;
   blocksSlots?: EquipmentSlot[];
-  effects: {
-    strengthBonus?: number;
-    dexterityBonus?: number;
-    intelligenceBonus?: number;
-    perceptionBonus?: number;
-    charismaBonus?: number;
-    constitutionBonus?: number;
-
+  effects: StatBonusEffects & {
     workSpeed?: Record<string, number>;
     workYield?: Record<string, number>;
     workQuality?: Record<string, number>;
