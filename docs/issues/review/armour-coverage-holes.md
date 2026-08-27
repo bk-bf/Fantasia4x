@@ -1,7 +1,7 @@
 ---
 id: armour-coverage-holes
 title: Medium armour has no stiffness identity and no neck, hands or feet line at any age, and the shield ladder stops at steel
-status: open
+status: in-review
 kind: data
 severity: medium
 ready: true
@@ -11,6 +11,8 @@ files:
   - src/lib/game/database/items/items.jsonc
   - src/lib/game/database/items/recipes.jsonc
 symbols: []
+branch: fix/armour-coverage-holes
+pr: armour-coverage-holes
 created: 2026-08-25
 updated: 2026-08-27
 ---
