@@ -1,7 +1,7 @@
 ---
 id: b01-components-ui
 title: Raw data id rendered in the UI — components/UI
-status: open
+status: in-review
 kind: boundary
 severity: medium
 ready: true
@@ -12,6 +12,8 @@ files:
   - src/lib/components/UI/GameCanvas.svelte
 symbols:
   - src/lib/components/UI/GameCanvas.svelte::<markup>#0
+branch: fix/b01-components-ui
+pr: b01-components-ui
 created: 2026-08-24
 updated: 2026-08-27
 ---
