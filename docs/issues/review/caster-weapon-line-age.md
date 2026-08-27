@@ -1,7 +1,7 @@
 ---
 id: caster-weapon-line-age
 title: Every staff, rod and scepter is carved on a runed bench while claiming tier 1-3, so the caster has no progression
-status: open
+status: in-review
 kind: data
 severity: high
 ready: true
@@ -12,6 +12,8 @@ files:
   - src/lib/game/database/items/recipes.jsonc
   - src/tests/game/database/itemRules.test.ts
 symbols: []
+branch: fix/caster-weapon-line-age
+pr: caster-weapon-line-age
 created: 2026-08-25
 updated: 2026-08-27
 ---
