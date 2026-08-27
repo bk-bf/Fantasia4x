@@ -118,6 +118,25 @@ function conditionModifierProduct(
   return mult;
 }
 
+export function conditionModifierSum(
+  entity: { conditions?: EntityCondition[]; transientConditions?: string[] },
+  key: keyof ConditionModifiers
+): number {
+  const conds = entity.conditions;
+  const tconds = entity.transientConditions;
+  if ((!conds || conds.length === 0) && (!tconds || tconds.length === 0)) return 0;
+  let sum = 0;
+  for (const c of conds ?? []) {
+    const v = getConditionCurrentStage(c)?.modifiers[key];
+    if (v != null) sum += v;
+  }
+  for (const id of tconds ?? []) {
+    const v = TRANSIENT_BY_ID.get(id)?.modifiers[key];
+    if (v != null) sum += v;
+  }
+  return sum;
+}
+
 export function conditionPainMultiplier(entity: {
   conditions?: EntityCondition[];
   transientConditions?: string[];
