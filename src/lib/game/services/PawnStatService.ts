@@ -24,6 +24,7 @@ import {
   conditionPainMultiplier,
   conditionConsciousnessMultiplier,
   conditionModifierSum,
+  conditionModifierContributions,
   tempRange,
   RECOVER_CONSCIOUSNESS
 } from '../core/rules/body/conditions';
@@ -710,10 +711,14 @@ export class PawnStatServiceImpl implements PawnStatService {
     const sideTolerance = (statId: string, pick: (g: WornThermalSource) => number) => {
       const stat = this.evaluateStat(statId, pawn);
       const trait = traitResistanceBonus(pawn, statId);
-      const con = stat - trait;
+      const conds = conditionModifierContributions(pawn, statId);
+      const condTotal = conds.reduce((a, c) => a + c.value, 0);
+      const con = stat - trait - condTotal;
       const sources: TempToleranceSource[] = [];
       if (con !== 0) sources.push({ label: 'Constitution', deg: con * TEMP_RES_DEG_PER_UNIT });
       if (trait !== 0) sources.push({ label: 'Traits', deg: trait * TEMP_RES_DEG_PER_UNIT });
+      for (const c of conds)
+        sources.push({ label: c.name, deg: c.value * TEMP_RES_DEG_PER_UNIT });
       let gearTotal = 0;
       for (const g of gear) {
         const r = pick(g);
@@ -721,7 +726,7 @@ export class PawnStatServiceImpl implements PawnStatService {
         sources.push({ label: g.name, deg: r * TEMP_RES_DEG_PER_UNIT });
         gearTotal += r;
       }
-      const raw = (con + trait + gearTotal) * TEMP_RES_DEG_PER_UNIT;
+      const raw = (con + trait + condTotal + gearTotal) * TEMP_RES_DEG_PER_UNIT;
       const deg = Math.min(TEMP_RES_DEG_CAP, raw);
       return { sources, deg, capped: raw > TEMP_RES_DEG_CAP };
     };

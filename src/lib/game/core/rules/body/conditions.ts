@@ -99,22 +99,34 @@ export function decayIntoxication(conditions: EntityCondition[]): void {
   else conditions[idx] = { ...conditions[idx], severity: next };
 }
 
+function eachConditionModifier(
+  entity: { conditions?: EntityCondition[]; transientConditions?: string[] },
+  key: keyof ConditionModifiers,
+  visit: (value: number, name: string) => void
+): void {
+  const conds = entity.conditions;
+  if (conds)
+    for (const c of conds) {
+      const v = getConditionCurrentStage(c)?.modifiers[key];
+      if (v != null) visit(v, CONDITION_BY_ID.get(c.id)?.name ?? '');
+    }
+  const tconds = entity.transientConditions;
+  if (tconds)
+    for (const id of tconds) {
+      const def = TRANSIENT_BY_ID.get(id);
+      const v = def?.modifiers[key];
+      if (v != null) visit(v, def!.name);
+    }
+}
+
 function conditionModifierProduct(
   entity: { conditions?: EntityCondition[]; transientConditions?: string[] },
   key: keyof ConditionModifiers
 ): number {
-  const conds = entity.conditions;
-  const tconds = entity.transientConditions;
-  if ((!conds || conds.length === 0) && (!tconds || tconds.length === 0)) return 1;
   let mult = 1;
-  for (const c of conds ?? []) {
-    const v = getConditionCurrentStage(c)?.modifiers[key];
-    if (v != null) mult *= v;
-  }
-  for (const id of tconds ?? []) {
-    const v = TRANSIENT_BY_ID.get(id)?.modifiers[key];
-    if (v != null) mult *= v;
-  }
+  eachConditionModifier(entity, key, (v) => {
+    mult *= v;
+  });
   return mult;
 }
 
@@ -122,19 +134,22 @@ export function conditionModifierSum(
   entity: { conditions?: EntityCondition[]; transientConditions?: string[] },
   key: keyof ConditionModifiers
 ): number {
-  const conds = entity.conditions;
-  const tconds = entity.transientConditions;
-  if ((!conds || conds.length === 0) && (!tconds || tconds.length === 0)) return 0;
   let sum = 0;
-  for (const c of conds ?? []) {
-    const v = getConditionCurrentStage(c)?.modifiers[key];
-    if (v != null) sum += v;
-  }
-  for (const id of tconds ?? []) {
-    const v = TRANSIENT_BY_ID.get(id)?.modifiers[key];
-    if (v != null) sum += v;
-  }
+  eachConditionModifier(entity, key, (v) => {
+    sum += v;
+  });
   return sum;
+}
+
+export function conditionModifierContributions(
+  entity: { conditions?: EntityCondition[]; transientConditions?: string[] },
+  key: keyof ConditionModifiers
+): Array<{ name: string; value: number }> {
+  const out: Array<{ name: string; value: number }> = [];
+  eachConditionModifier(entity, key, (value, name) => {
+    if (value !== 0 && name) out.push({ name, value });
+  });
+  return out;
 }
 
 export function conditionPainMultiplier(entity: {
