@@ -112,7 +112,7 @@ export function computeFlags(text, { kind, lang }) {
   if (has(/\bgameState\.[A-Za-z_]+\s*=|gs\.[A-Za-z_]+\s*=/)) f.push('assignsGameState');
   if (has(/\bTODO\b|\bFIXME\b|\bHACK\b|\bXXX\b/)) f.push('hasTodo');
   if (has(/\$:/) && lang === 'svelte') f.push('legacyReactive');
-  if (has(/\.replace\(['"`][_-]['"`]/)) f.push('handRolledHumanizer');
+  if (has(/\.replace\((['"`][_-]['"`]|\/\[?[_-]+\]?\/)/)) f.push('handRolledHumanizer');
   if (kind === 'markup' || lang === 'svelte') {
     if (has(/\{[^}]*\.id\b[^}]*\}/)) f.push('rendersIdExpression');
     if (has(/>[^<>{]*[A-Za-z][^<>{]*</)) f.push('rendersLiteralText');

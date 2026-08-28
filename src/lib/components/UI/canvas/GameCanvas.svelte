@@ -426,6 +426,7 @@
   let _cycleIndex = 0;
   let similarDragMode = false;
   let similarDragResourceId = '';
+  let similarDragDisplayName = '';
   let similarDragDesignationType: DesignationType = 'harvest';
   let similarDragActive = false;
   let highlightedResourceTiles: Set<string> = new Set();
@@ -759,9 +760,7 @@
       selectedResourceDef.interaction
     ];
     const lines: string[] = [];
-    lines.push(
-      `${selectedResourceTile.resourceId.replace(/_/g, ' ')} — ×${selectedResourceAmount} nodes`
-    );
+    lines.push(`${selectedResourceDef.displayName} — ×${selectedResourceAmount} nodes`);
     const growthPct = isGrowableResource(selectedResourceDef)
       ? (worldMap[selectedResourceTile.y]?.[selectedResourceTile.x]?.growth?.[
           selectedResourceTile.resourceId
@@ -3873,6 +3872,7 @@
     if (!selectedResourceTile || !selectedResourceDef) return;
     const dtype = (selectedResourceDef.designationTypes?.[0] ?? 'harvest') as DesignationType;
     similarDragResourceId = selectedResourceTile.resourceId;
+    similarDragDisplayName = selectedResourceDef.displayName;
     similarDragDesignationType = dtype;
     similarDragMode = true;
     similarDragActive = false;
@@ -4448,10 +4448,7 @@
     </div>
   {:else if similarDragMode}
     <div class="designation-hud">
-      [⊞ SELECT {(resourceObjectService.getById(similarDragResourceId)?.displayName ??
-        similarDragResourceId
-      ).toUpperCase()}] — drag to designate all ·
-      Esc cancel{#if similarDragActive}
+      [⊞ SELECT {similarDragDisplayName.toUpperCase()}] — drag to designate all · Esc cancel{#if similarDragActive}
         — ({Math.abs(similarEndX - similarAnchorX) + 1}×{Math.abs(similarEndY - similarAnchorY) +
           1}){/if}
     </div>
