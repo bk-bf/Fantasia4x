@@ -24,7 +24,7 @@ fi
 
 # The unit hardcodes ~/Projects/Fantasia4x; installing from anywhere else would produce a
 # unit that points at the wrong checkout.
-EXPECT="$HOME/Projects/Fantasia4x/tools/audit/deploy"
+EXPECT="$HOME/Documents/Projects/Fantasia4x/tools/audit/deploy"
 if [ "$HERE" != "$EXPECT" ]; then
   echo "this checkout is at $HERE" >&2
   echo "the unit's ExecStart expects $EXPECT" >&2
