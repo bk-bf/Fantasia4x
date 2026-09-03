@@ -56,11 +56,11 @@ When the checklist was archived, the twenty unticked boxes were the only record.
 
 ## Remediation
 
-- [ ] Drive each of the sixteen melee tier-4 weapons through `HeadlessSession` against the three opponent profiles (raider / knight / duelist), asserting its best stat is its own power stat.
-- [ ] Give the four ranged/arcane weapons their own headless pass through the ranged path — ammo lifecycle, `drawPower`, reload, and the thrown/self-consuming case for the javelin.
-- [ ] Exercise `wieldRequirement.strength` in a fight: an underpowered pawn swinging a boss weapon must take the `overmatched` condition and measurably lose for it.
+- [x] Drive each of the sixteen melee tier-4 weapons through `HeadlessSession` against the three opponent profiles (raider / knight / duelist), asserting its best stat is its own power stat.
+- [x] Give the four ranged/arcane weapons their own headless pass through the ranged path — ammo lifecycle, `drawPower`, reload, and the thrown/self-consuming case for the javelin.
+- [x] Exercise `wieldRequirement.strength` in a fight: an underpowered pawn swinging a boss weapon must take the `overmatched` condition and measurably lose for it.
 - [ ] Assert `recoverable` ammo retrieval numerically, and armour-damage degradation for shields — both flagged as unasserted alongside these.
-- [ ] Add a test that fails when a tier-4 weapon has no headless coverage, so the class cannot silently reopen.
+- [x] Add a test that fails when a tier-4 weapon has no headless coverage, so the class cannot silently reopen.
 
 ## Out of scope
 

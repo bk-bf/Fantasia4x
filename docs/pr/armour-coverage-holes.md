@@ -10,54 +10,158 @@ verified: pass
 ---
 # fix: Medium armour has no stiffness identity and no neck, hands or feet line at any age, and the shield ladder stops at steel
 
-> **Related:** [issue](../issues/armour-coverage-holes.md) · [pr/README](README.md) · [issues/README](../issues/README.md)
+> **Related:** [issue](../issues/review/armour-coverage-holes.md) · [pr/README](README.md) · [issues/README](../issues/README.md)
 
-`fix/armour-coverage-holes` is committed and green. Nothing has been pushed anywhere.
+`fix/armour-coverage-holes` is committed and green. The branch is pushed to origin.
 
 ## What it reports doing
 
-Both green. Here's the account of the work.
+# fix: medium armour stiffness at iron, and the coverage check that let a borrowed piece pass
 
-## What I found before touching anything
+## The fix as committed closed four of six holes
 
-I verified (by parsing `items.jsonc`/`recipes.jsonc` directly and replicating the coverage test's exact reachability logic, not by trusting the issue's prose) that two of the three Remediation items were **already fixed** in this worktree, by work landed after the issue was filed on 2026-08-25:
+`movementPenalty` is the stiffness axis. `Combat.wornStiffness` sums it across every worn
+piece, clamps the total at `STIFFNESS_DODGE_CAP` 0.45, and multiplies `defDodge` by
+`1 - total` in `resolveHit`. On boots only, `PawnService` reads the same field again as a
+move-speed factor. Nothing else consumes it.
 
-- **Medium neck/hands/feet line**: `copper_scale_gloves/shoes`, `boar_gloves/boots`, `iron_gauntlets/shod_boots`, `munition_half_plate_gloves/boots`, `rune_stitched_gloves/boots` all exist, are craftable, and are correctly gated. A script computing per-class, per-region reachability by age confirms medium has zero gaps from the copper age onward (only stone age is short, which is correct — medium and heavy don't exist pre-metal by design). "Neck" was never a real slot; `head` already covers it and that's separately tested and passing.
-- **Runed shield**: `rune_graven_kite` (tier 4) with recipe `make_rune_graven_kite` already sits immediately after `make_steel_heater_shield` in `recipes.jsonc` (current lines 7263–7285). The issue's citation of line 7504 for the steel recipe is stale — line numbers shifted from unrelated edits, and the runed successor was added in that same pass.
+The branch set `movementPenalty: 0.02` on four `iron_mail` pieces — `mail_coif`,
+`iron_gauntlets`, `iron_bracers`, `iron_greaves`. It left `spangenhelm` and `kettle_hat` at
+`0.0`. Both are iron-age medium head pieces, so two of the three medium helms a player can
+forge at iron still read identical to the light line, which is the collision the issue names.
+I set both to `0.02`, the band the four mail pieces now use.
 
-I skipped these two per the harness instructions ("if a citation no longer holds, say so and skip it").
+`iron_shod_boots` was already `0.06` and is unchanged.
 
-## What was still real, and what I changed
+## What the branch also changed
 
-**Iron-age medium stiffness collision (confirmed).** `mail_coif`, `iron_bracers`, `iron_gauntlets`, and `iron_greaves` all had `movementPenalty: 0.0`, identical to their light equivalents (`wolf_head`/`elk_head`, `wolf_bracers`, `wolf_gloves`, `wolf_greaves`) at the same age. Every other age's medium glove sits at `0.02` (bronze `boar_gloves`, steel `munition_half_plate_gloves`, runed `rune_stitched_gloves` all `0.02`) and iron was the sole outlier at `0.0`; the iron-age head, bracers and greaves showed the same flat collision. `iron_shod_boots` (`0.06`) already distinguished from light boots, so I left it alone.
+`armourCoverage.test.ts` gained a second `describe` block that walks light and medium
+separately across six regions — head, torso, arms, hands, legs, feet — using each class's own
+torso layer (`bodyBase` for light, `bodyMid` for medium), so a piece borrowed from another
+weight class no longer satisfies a region. Heavy is excluded, which matches ITEM-RULES: heavy
+sets are deliberately incomplete and pad from the light and medium lines.
 
-I set `movementPenalty: 0.02` on those four `iron_mail` pieces — a value that sits between light (`0.0`) and heavy `iron_plate` (`0.05` on bracers/greaves/bodyOuter), and matches the `0.02` medium-glove band used at every other age.
+## Verification
 
-**Coverage test strengthened (`armourCoverage.test.ts`).** Added a new `describe` block, `every tech age dresses each weight class in its own gear`, that checks light and medium separately against six regions (head/torso/arms/hands/legs/feet, using each class's own torso slot — `bodyBase` for light, `bodyMid` for medium) instead of the old any-class-satisfies-the-region check. Heavy is intentionally excluded: ITEM-RULES documents heavy sets as "deliberately incomplete" (no gloves/boots before steel, padded from light/medium), so a strict 6-region requirement would be a false failure for heavy, not a real hole. `AGE_BY_RESEARCH`/`AGE_NAMES`/`gateOf` were hoisted to module scope so both describe blocks share one definition. Result: 22 tests now (11 original + 11 new), all green — a future PR that reintroduces a medium- or light-specific hole and lets it be papered over by a borrowed fallback will now fail here.
+`pnpm check` — 890 files, 0 errors, 10 warnings, 4 files with problems. All ten warnings are
+pre-existing and in files this branch does not touch (`SelectedEntityCard.svelte`,
+`ActivityLogOverlay.svelte`, `PawnNeeds.svelte`, `SortableTable.svelte`).
 
-## Remediation items not done, and why
+`vitest run dbStructure armourCoverage itemRules gearSorting armourChain bootsAndStealth
+equipCarryLoad` — 7 files, 112 tests, 0 failures.
 
-- **Author medium neck/hands/feet line** — already exists; nothing to author.
-- **Author a runed-tier shield** — already exists; nothing to author.
-- **Headless-verify one new piece per line** — no new pieces were authored (both lines above were already closed), so there's no "new piece" to run through the headless sim. The existing `armourChain.test.ts` (unchanged by me, still green) already headless-verifies the two limb pieces I did touch: `pawns craft the iron limb line at an anvil` drives real ticks through `HeadlessSession` and reports `turn=1200 bracers=1 greaves=1 (iron_bar 27/30)` — confirming `iron_bracers` and `iron_greaves` still craft and equip correctly with the new `movementPenalty`.
+`RUN_AUDITS=1 vitest run armourStyleAudit styleMatchups carryCapacityAudit` — these three are
+the only audit suites that equip a changed item. 3 files, 6 tests, 0 failures; the two combat
+suites take 667s and 1515s on one fork. A first attempt at all three together died with exit
+144 partway through `styleMatchups` — another agent's `pkill -f vitest`, not this branch — so
+I re-ran `armourStyleAudit` and `styleMatchups` individually and both exited 0.
+`combatBalanceAudit` is not in this set: it fails on `main` too, bisected by the coordinator
+to `1cfca876`'s barefoot movement factor.
 
-## Verification run
+**The new coverage block has teeth.** I flipped `copper_scale_gloves` from `medium` to
+`heavy`, which removes medium's only copper-age hands piece. Exactly one of the 22 tests
+failed — `copper: medium armour covers all six regions without borrowing another class` —
+and no other. Reverted.
 
-```
-npx vitest run src/tests/game/database/itemRules.test.ts \
-                src/tests/game/database/armourCoverage.test.ts \
-                src/tests/game/database/gearSorting.test.ts \
-                src/tests/game/services/armourChain.test.ts
-→ 4 files, 87 tests, all passed
+**Stiffness, real sim, A/B on one scenario.** `HeadlessSession`, a drafted pawn in the iron
+mail kit against an `orc_reaver`, 10 seeds, everything identical but the four
+`movementPenalty` values:
 
-pnpm check
-→ svelte-check: 890 files, 0 errors, 10 pre-existing warnings (unrelated files)
+| | worn stiffness | ticks | injuries taken |
+|---|---|---|---|
+| `0.0` (pre-branch) | 0.000 | 49,220 | 16 |
+| `0.02` (branch) | 0.080 | 50,820 | 21 |
 
-pnpm test:related src/lib/game/database/items/items.jsonc src/tests/game/database/armourCoverage.test.ts
-→ 162 files, 1206 tests, all passed
-```
+Direction matches the mechanism — 8% off dodge means more swings land. Ten duels is a small
+sample and the blood-remaining totals (346.8% → 354.8%) move the other way, so injuries taken
+is the signal here, not blood.
 
-Files changed: `src/lib/game/database/items/items.jsonc` (4 `movementPenalty` values), `src/tests/game/database/armourCoverage.test.ts` (new per-class coverage check). Nothing under `docs/issues/` was touched.
+**All six changed pieces reach the sim.** Reading `movementPenalty` back off the pawn
+equipment `buildScenario` built, not off the data file: a medium iron kit sums to 0.080 with
+any of `mail_coif`, `spangenhelm` or `kettle_hat` in the head slot, against 0.000 for the
+light iron-age equivalent (`wolf_head`, `wolf_gloves`, `wolf_bracers`, `wolf_greaves`). That
+is the separation the issue asked for.
+
+**Medium hands and feet craft and equip.** `HeadlessSession`, anvil, 6 pawns, 1200 ticks:
+`iron_bar` 30→26, `buckskin` 20→17, `iron_gauntlets` 0→1, `iron_shod_boots` 0→1, worn into
+`gloves` and `boots`.
+
+**The runed shield crafts and equips.** `HeadlessSession`, runecarver bench, 2400 ticks:
+`magic_alloy_bar` 9→6, `rune_graven_kite` 0→1, worn into `offHand`. `armourChain.test.ts`
+filters `armorType === 'shield'` out of the exhaustive craft-card case and none of its three
+headless cases craft a shield, so no off-hand piece had ever been driven by pawns.
+
+## Verifying the fixer's three claims
+
+**Medium has a hands and feet line — true, but not "landed after the issue was filed".** The
+pieces are `copper_scale_gloves`/`copper_scale_shoes` (commit `230e0389`, 2026-08-21),
+`boar_gloves`/`boar_boots`, `munition_half_plate_gloves`/`_boots` and
+`rune_stitched_gloves`/`_boots` (`ee5cbae4`, 2026-08-18), and `iron_gauntlets`/
+`iron_shod_boots` (`74092894`, 2026-07-15). Every one predates the issue's `created:
+2026-08-25`. The issue was filed against a state that already had them.
+
+I checked coverage through both age paths, because they disagree about what "ungated" means:
+
+- the coverage test's path — `researchRequired` mapped to an age index — gives medium all six
+  regions cumulatively from copper on.
+- `gearDb.ageOf`, which is what the `/gear-db` grid renders, gives medium one piece of its own
+  per region per age with no gap: head Copper/Bronze/Iron/Steel/Runed, torso
+  `copper_scale_shirt`/`boarhide_jerkin`/`croc_scale_cuirass`/`munition_breastplate`/
+  `rune_stitched_lamellar`, and the same for arms, hands, legs and feet.
+
+"Neck" is not a slot. `SLOT_COVERAGE.head` lists `neck` among the parts a head piece protects,
+and `armourCoverage.test.ts` already asserts it.
+
+**`rune_graven_kite` exists — true, and also predates the issue.** Tier 4, recipe
+`make_rune_graven_kite` at the runecarver bench gated on `runic_inscription`, sitting directly
+after `make_steel_heater_shield`. Both the item and the recipe landed in `230e0389`,
+2026-08-21. So the issue's evidence line — "no tier-4 entry" — was already wrong when written.
+
+**The steel shield line citation is stale — true.** `recipes.jsonc` is 7365 lines;
+`make_steel_heater_shield` is at line 7263. The cited line 7504 does not exist.
+
+## Remediation
+
+Done:
+
+- iron-age medium `movementPenalty` band — the branch's four pieces plus `spangenhelm` and
+  `kettle_hat`.
+- the coverage test extended past "the region can be covered", and shown to fail on an
+  introduced medium hole.
+- headless-verified one piece per line: medium hands, medium feet, and the runed shield.
+
+Not done:
+
+- **author the medium neck/hands/feet line** — stale. The line exists at every age from copper
+  to runed and predates the issue by four days to six weeks. Nothing to author.
+- **author a runed-tier shield** — stale. `rune_graven_kite` predates the issue by four days.
+
+## Limits of what I am ticking
+
+The new coverage block derives a piece's age from `researchRequired` alone, so a recipe with
+no research gate counts as age 0 and satisfies every age above it. `gearDb.ageOf` instead
+walks the ingredient chain, which puts `boarhide_jerkin` at Bronze and `croc_scale_cuirass` at
+Iron. No cell currently rests on an ungated piece as its earliest entry — medium torso is held
+at copper by `copper_scale_shirt`, which is research-gated — so the block's verdicts are
+correct today. A future ungated piece would paper over a hole without failing it, which is the
+shape of defect the block was written to catch.
+
+## Unfiled defects
+
+- `iron_nasal_helm` (heavy, iron) carries `movementPenalty: 0.0` while every other iron-age
+  heavy piece is `0.05`. With the medium band now at `0.02`, the iron head slot has medium
+  costing more dodge than heavy. Pre-existing; the branch makes it visible. Not fixed.
+- `great_bone_helm`, `great_bone_vambraces`, `great_bone_gauntlets` and `great_bone_greaves`
+  omit `movementPenalty` entirely. `wornStiffness` reads `?? 0`, so a full heavy bone kit is
+  free to wear. Not fixed.
+
+## A headless setup note
+
+`make_iron_gauntlets` and `make_iron_shod_boots` carry a `dynamicRecipe` leather slot on top
+of their `inputs`. A scenario that stocks the listed inputs but no leather leaves
+`autoSelectIngredients` returning `null`, so `resolveActiveCost` returns `null`, the order
+sits at `pending: true` forever and every pawn reads `Idle` with nothing logged. That is what
+my first run hit; it is the scenario, not a defect.
 
 ## Review it
 
@@ -77,11 +181,11 @@ git branch -D fix/armour-coverage-holes          # drop it
 
 | | |
 |---|---|
-| issue | [`docs/issues/armour-coverage-holes.md`](../issues/armour-coverage-holes.md) |
+| issue | [`docs/issues/review/armour-coverage-holes.md`](../issues/review/armour-coverage-holes.md) |
 | severity | medium |
 | raised by | a person |
 | files changed | 2 |
-| verified | `check` + `test:related` green |
+| verified | re-verified on the branch; see the account above |
 
 <details><summary>files</summary>
 
@@ -90,4 +194,4 @@ git branch -D fix/armour-coverage-holes          # drop it
 
 </details>
 
-_Written unattended by `tools/audit/fix.mjs`. The branch is local; nothing was pushed._
+_Account written after re-running the verification on the branch._

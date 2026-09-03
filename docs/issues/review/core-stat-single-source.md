@@ -77,15 +77,15 @@ it holds the derived `*Bonus`/`*Penalty` forms.
 
 ## Remediation
 
-- [ ] Add a single core-stat declaration — id, display name, three-letter abbreviation, order — as data next to `stats.jsonc`, and derive `EntityStats`/`StatKey` from it.
-- [ ] Replace all ten rosters with imports of that one list.
-- [ ] Replace all nine abbreviation maps and the `slice(0, 3)` call with one lookup, alongside [`bodyLabels.ts`](../../src/lib/utils/bodyLabels.ts).
-- [ ] Build `FORMULA_VARS` and both argument lists in `PawnStatService` from the declaration so the positional contract cannot drift; delete the `Args MUST match` comment once it is structural.
-- [ ] Collapse `PowerStat` to one declaration and widen the `types/items.ts` field to match.
-- [ ] Derive the `*Bonus` effect keys from the roster, drop the six dead `*Penalty` entries, and make an unrecognised `*Bonus` key fail a test rather than no-op.
-- [ ] Add a test asserting every roster-derived surface covers the declaration exactly — the check that would have caught BRA/AWA.
-- [ ] Validate the data-file stat keys against the roster (`modifiers`, `statRanges`, `powerStat`, `primaryStat`, `wieldRequirement`, `statFocus`/`statDump`) so a typo fails a test instead of spawning a default.
-- [ ] Fix the stale `carry_weight` tooltip formula.
+- [x] Add a single core-stat declaration — id, display name, three-letter abbreviation, order — as data next to `stats.jsonc`, and derive `EntityStats`/`StatKey` from it.
+- [x] Replace all ten rosters with imports of that one list.
+- [x] Replace all nine abbreviation maps and the `slice(0, 3)` call with one lookup, alongside [`bodyLabels.ts`](../../src/lib/utils/bodyLabels.ts).
+- [x] Build `FORMULA_VARS` and both argument lists in `PawnStatService` from the declaration so the positional contract cannot drift; delete the `Args MUST match` comment once it is structural.
+- [x] Collapse `PowerStat` to one declaration and widen the `types/items.ts` field to match.
+- [x] Derive the `*Bonus` effect keys from the roster, drop the six dead `*Penalty` entries, and make an unrecognised `*Bonus` key fail a test rather than no-op.
+- [x] Add a test asserting every roster-derived surface covers the declaration exactly — the check that would have caught BRA/AWA.
+- [x] Validate the data-file stat keys against the roster (`modifiers`, `statRanges`, `powerStat`, `primaryStat`, `wieldRequirement`, `statFocus`/`statDump`) so a typo fails a test instead of spawning a default.
+- [x] Fix the stale `carry_weight` tooltip formula.
 
 ## Out of scope
 

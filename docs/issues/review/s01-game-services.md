@@ -41,10 +41,10 @@ Nothing below the judgment tier can decide this one: it is why `S01` exists at T
 
 ## Remediation
 
-- [ ] Confirm each citation above still holds; drop any whose evidence does not.
+- [x] Confirm each citation above still holds; drop any whose evidence does not.
 - [ ] Fix every remaining site under `game/services` — this is one class, one PR.
-- [ ] Add the check that would have caught it, or record why it stays a judgment call.
-- [ ] `pnpm check` and `pnpm test:related` on the changed files are green.
+- [x] Add the check that would have caught it, or record why it stays a judgment call.
+- [x] `pnpm check` and `pnpm test:related` on the changed files are green.
 
 ## Out of scope
 

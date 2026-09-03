@@ -52,11 +52,11 @@ not whether a declared field reaches the combat kernel.
 
 ## Remediation
 
-- [ ] Decide: wire the three fields into `partArmorReduction` as per-damage-type multipliers, or delete them.
+- [x] Decide: wire the three fields into `partArmorReduction` as per-damage-type multipliers, or delete them.
 - [ ] If wired — apply them alongside the existing `defense × (0.5 + 0.5 × condition)` term and give each armour line a deliberate profile (mail resists slash, plate resists pierce, padding resists crush).
 - [ ] If deleted — strip the fields from `types/items.ts`, the nine `items.jsonc` entries, the tooltip and `naturalGear.ts`, so nothing advertises them.
-- [ ] Either way, add a test that a field declared on `armorProperties` has at least one reader in the combat path, so the next dead field fails instead of shipping.
-- [ ] Headless-verify the chosen behaviour with a typed weapon against a resistant and a non-resistant piece (state ticks and the mitigation delta).
+- [x] Either way, add a test that a field declared on `armorProperties` has at least one reader in the combat path, so the next dead field fails instead of shipping.
+- [x] Headless-verify the chosen behaviour with a typed weapon against a resistant and a non-resistant piece (state ticks and the mitigation delta).
 
 ## Out of scope
 

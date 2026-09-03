@@ -50,12 +50,12 @@ only the second reading catches it. No test bounds a derived weight by item cate
 
 ## Remediation
 
-- [ ] Give small metal items a fractional bar cost or a multi-output yield, so one bar produces several knives instead of one heavy one.
+- [x] Give small metal items a fractional bar cost or a multi-output yield, so one bar produces several knives instead of one heavy one.
 - [ ] Add the missing wooden stave to `make_war_bow`, `make_hunting_recurve` and `make_self_bow`.
 - [ ] Reprice the seven jewellery recipes off whole gold bars.
-- [ ] Fix `wicker_vest` (30 cordage) and `wattle_buckler` (too thin for a 2 kg shield).
+- [x] Fix `wicker_vest` (30 cordage) and `wattle_buckler` (too thin for a 2 kg shield).
 - [ ] Add a test bounding each item's derived mass against a per-category plausible range, so the next staveless bow fails instead of shipping.
-- [ ] Headless-verify the carry budget moves as expected for a pawn holding the repriced items (state ticks and the kg delta).
+- [x] Headless-verify the carry budget moves as expected for a pawn holding the repriced items (state ticks and the kg delta).
 
 ## Out of scope
 
