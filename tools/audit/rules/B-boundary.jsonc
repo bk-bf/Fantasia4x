@@ -34,7 +34,7 @@
       ]
     },
     "demotable": true,
-    "status": "active"
+    "status": "draft"
   },
   {
     "id": "B02",
@@ -59,7 +59,7 @@
       ]
     },
     "demotable": true,
-    "status": "active"
+    "status": "draft"
   },
   {
     "id": "B03",
@@ -86,7 +86,7 @@
       ]
     },
     "demotable": false,
-    "status": "active"
+    "status": "draft"
   },
   {
     "id": "B04",
@@ -113,6 +113,6 @@
       ]
     },
     "demotable": false,
-    "status": "active"
+    "status": "draft"
   }
 ]
