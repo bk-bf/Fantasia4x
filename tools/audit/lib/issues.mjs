@@ -140,7 +140,11 @@ export function listIssues(root) {
   }
   return found
     .map((p) => readIssue(p))
-    .sort((a, b) => String(a.data.created).localeCompare(String(b.data.created)));
+    .sort(
+      (a, b) =>
+        String(a.data.created).localeCompare(String(b.data.created)) ||
+        String(a.data.id).localeCompare(String(b.data.id))
+    );
 }
 
 export function writeIssue(root, { data, body }) {
@@ -160,6 +164,28 @@ export function patchIssue(path, patch) {
 }
 
 export const today = () => new Date().toISOString().slice(0, 10);
+
+const checkboxKey = (s) => s.trim().replace(/\s+/g, ' ');
+
+export function tickRemediation(path, account) {
+  const done = new Set(
+    (account.match(/^[ \t]*DONE:[ \t]*(.+)$/gm) ?? []).map((l) =>
+      checkboxKey(l.replace(/^[ \t]*DONE:[ \t]*/, ''))
+    )
+  );
+  if (done.size === 0) return 0;
+  const { data, body } = readIssue(path);
+  let ticked = 0;
+  const next = body.replace(/^([ \t]*)- \[ \] (.+)$/gm, (line, indent, text) => {
+    if (!done.has(checkboxKey(text))) return line;
+    ticked += 1;
+    return `${indent}- [x] ${text}`;
+  });
+  if (ticked) {
+    writeFileSync(path, serializeFrontmatter({ ...data, updated: today() }) + '\n' + next.replace(/^\n+/, ''));
+  }
+  return ticked;
+}
 
 export function validate(issue) {
   const e = [];

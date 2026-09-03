@@ -49,15 +49,16 @@ export function patchPr(path, patch) {
  * table underneath is what the harness observed, so the two can be compared rather than
  * having to be trusted together.
  */
-export function renderPr({ issue, branch, files, account, verified, failures }) {
+export function renderPr({ issue, branch, files, account, verified, failures, ran }) {
   const d = issue.data;
+  const issueHref = `../${issue.path.split('/docs/').pop()}`;
   const lines = [
     `# fix: ${d.title}`,
     '',
-    `> **Related:** [issue](../issues/${d.id}.md) · [pr/README](README.md) · [issues/README](../issues/README.md)`,
+    `> **Related:** [issue](${issueHref}) · [pr/README](README.md) · [issues/README](../issues/README.md)`,
     '',
     verified === 'pass'
-      ? `\`${branch}\` is committed and green. Nothing has been pushed anywhere.`
+      ? `\`${branch}\` is committed and every command below passed.`
       : `\`${branch}\` has the changes but could not be made green, so it was left uncommitted for you to look at.`,
     '',
     '## What it reports doing',
@@ -93,11 +94,15 @@ export function renderPr({ issue, branch, files, account, verified, failures }) 
     '',
     '| | |',
     '|---|---|',
-    `| issue | [\`docs/issues/${d.id}.md\`](../issues/${d.id}.md) |`,
+    `| issue | [\`${issue.path.split('/docs/').pop()}\`](${issueHref}) |`,
     `| severity | ${d.severity} |`,
     `| raised by | ${d.origin === 'audit' ? `the audit (${(d.rules ?? []).join(', ') || 'no rule'})` : 'a person'} |`,
     `| files changed | ${files.length} |`,
-    `| verified | ${verified === 'pass' ? '`check` + `test:related` green' : 'did NOT pass'} |`,
+    `| verified | ${
+      verified === 'pass'
+        ? (ran ?? []).map((r) => `\`${r}\``).join(', ') || 'nothing ran'
+        : 'did NOT pass'
+    } |`,
     '',
     files.length
       ? [
@@ -109,7 +114,7 @@ export function renderPr({ issue, branch, files, account, verified, failures }) 
         ].join('\n')
       : '',
     '',
-    '_Written unattended by `tools/audit/fix.mjs`. The branch is local; nothing was pushed._'
+    '_Written unattended by `tools/audit/fix.mjs`._'
   );
   return lines.join('\n') + '\n';
 }

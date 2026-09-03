@@ -37,18 +37,27 @@ const FIX_TAG = process.env.AUDIT_FIX_TAG || 'fix';
 
 const arg = (n, d) => {
   const i = process.argv.indexOf(`--${n}`);
-  return i === -1 ? d : process.argv[i + 1];
+  if (i === -1) return d;
+  const v = process.argv[i + 1];
+  if (v === undefined || v.startsWith('--')) fail(`--${n} needs a value`);
+  return v;
 };
 const flag = (n) => process.argv.includes(`--${n}`);
 const out = (s) => process.stdout.write(s + '\n');
 
 function run(cmd, args, { cwd = ROOT, input, timeoutMs = 1_800_000 } = {}) {
   return new Promise((resolve) => {
-    const p = spawn(cmd, args, { cwd, stdio: ['pipe', 'pipe', 'pipe'] });
+    const p = spawn(cmd, args, { cwd, stdio: ['pipe', 'pipe', 'pipe'], detached: true });
     let o = '',
       e = '',
       settled = false;
-    const t = setTimeout(() => p.kill('SIGKILL'), timeoutMs);
+    const t = setTimeout(() => {
+      try {
+        process.kill(-p.pid, 'SIGKILL');
+      } catch {
+        p.kill('SIGKILL');
+      }
+    }, timeoutMs);
     const done = (r) => {
       if (!settled) {
         settled = true;
@@ -123,10 +132,12 @@ the 200-line component limit, Svelte 5 runes, \`pnpm\` never \`npm\`.
 Work the Remediation list below, all of it, in this worktree. This is one class of defect and
 one PR.
 
-- Change only what the issue names. \`Out of scope\` is binding.
+- Change only what the issue names. \`Out of scope\` is binding.${
+    (d.files ?? []).length ? `\n- The issue scopes this to: ${(d.files ?? []).join(', ')}.` : ''
+  }
 - Do **not** edit anything under \`docs/issues/\` — the harness owns that file.
-- Do **not** run \`git commit\`, \`git push\`, or any \`gh\` command. The harness commits
-  and opens the PR after it has verified your work.
+- Do **not** run \`git commit\`, \`git push\`, or any \`gh\` command. The harness re-runs the
+  verification itself and commits only if it passes.
 - If a citation in the issue no longer holds, say so in your final message and skip it rather
   than inventing a nearby change.
 - If the whole issue is already fixed, change nothing and say so.
@@ -136,17 +147,45 @@ one PR.
 Before you finish, run and get green:
 
     ${PNPM} check
-    ${PNPM} test:related <the files you changed>
+    ${PNPM} test:related <the src files you changed>
+    ${PNPM} vitest run <each test file you added or edited, by path>
 
-Do not run the full test suite. If you cannot get both green, stop, leave the tree as it is,
-and explain in your final message exactly what is failing and what you tried. A failed
+\`test:related\` selects tests that import the files you name. It selects **nothing** for a
+change to a \`.jsonc\` data file, and nothing for a test file you added — those have to be run
+by path, and a change with no test naming it is not verified. The harness re-runs all of this
+and will refuse to commit if nothing executed.
+
+Run every verification in the foreground. Never use \`run_in_background\`, never background a
+command with \`&\`, and never wait for a notification: the Bash tool moves anything over 600
+seconds into the background, this session ends when your turn ends, and a result you did not
+see is a result nobody saw. If a run is too slow, narrow it to specific files or describe
+blocks and run it again — do not walk away from it.
+
+Do not run the full test suite. If you cannot get everything green, stop, leave the tree as it
+is, and explain in your final message exactly what is failing and what you tried. A failed
 attempt with a clear account is more useful than a passing one that narrowed the fix.
 
 # Finish
 
-End with a short account of: what you changed and why, anything in the Remediation list you
-did not do and why, and the exact verification commands you ran with their result. That text
-becomes the pull-request body, so write it for a reviewer, not for me.
+End with a short account of: what you changed and why, and the exact verification commands you
+ran with their result. That text becomes the review document, so write it for a reviewer, not
+for me.
+
+Then account for the Remediation list, one line per item, quoting each checkbox's text exactly
+as it appears below:
+
+    DONE: <checkbox text>
+    SKIPPED: <checkbox text> - <why>
+
+The harness ticks the DONE items in the issue file and leaves the rest. An item you do not
+list counts as skipped.
+
+The last line of your final message must be exactly:
+
+    ACCOUNT COMPLETE
+
+If you cannot get there, stop and say why instead — the harness treats a missing final line as
+an unfinished session and will not commit.
 
 ---
 
@@ -159,11 +198,15 @@ ${issue.body}
 // --- verification ------------------------------------------------------------
 
 function changedFiles(cwd) {
-  const s = git(['status', '--porcelain'], cwd);
+  const s = execFileSync('git', ['status', '--porcelain', '-uall', '--no-renames', '-z'], {
+    cwd,
+    encoding: 'utf8',
+    maxBuffer: 32 * 1024 * 1024
+  });
   return s
-    .split('\n')
+    .split('\0')
     .filter(Boolean)
-    .map((l) => l.slice(3).trim())
+    .map((l) => l.slice(3))
     .filter(Boolean);
 }
 
@@ -177,11 +220,28 @@ async function verify(cwd, files) {
   });
 
   const src = files.filter((f) => /^src\/.*\.(ts|svelte)$/.test(f) && !/\.test\.ts$/.test(f));
+  const tests = files.filter((f) => /^src\/.*\.test\.ts$/.test(f));
+
   if (src.length) {
     const t = await run(PNPM, ['test:related', ...src], { cwd, timeoutMs: 1_800_000 });
     results.push({ name: `${PNPM} test:related`, code: t.code, tail: errorLines(t.out + t.err) });
-  } else {
-    results.push({ name: `${PNPM} test:related`, code: 0, tail: 'no source files changed' });
+  }
+  if (tests.length) {
+    const t = await run(PNPM, ['vitest', 'run', ...tests], { cwd, timeoutMs: 1_800_000 });
+    results.push({
+      name: `${PNPM} vitest run ${tests.join(' ')}`,
+      code: t.code,
+      tail: errorLines(t.out + t.err)
+    });
+  }
+  if (!src.length && !tests.length) {
+    results.push({
+      name: 'tests',
+      code: 2,
+      tail:
+        'no .ts, .svelte or .test.ts file changed, so nothing was executed. A data-only or ' +
+        'doc-only change is not verified until a test names it.'
+    });
   }
   return { ok: results.every((r) => r.code === 0), results };
 }
@@ -228,6 +288,13 @@ function spawnSyncSafe(cmd, args) {
 
 // --- main --------------------------------------------------------------------
 
+for (const i of I.listIssues(ROOT)) {
+  if (i.data.status !== 'in-progress') continue;
+  if (existsSync(join(ROOT, '.claude', 'worktrees', `fix-${i.data.id}`))) continue;
+  out(`--- releasing ${i.data.id}, left at in-progress by a run that did not exit`);
+  I.patchIssue(i.path, { status: 'open', branch: null });
+}
+
 const issue = pick();
 const d = issue.data;
 out(`issue ${d.id} — ${d.title}`);
@@ -253,6 +320,7 @@ if (existsSync(wt)) {
     git(['worktree', 'remove', '--force', wt]);
   } catch {
     rmSync(wt, { recursive: true, force: true });
+    git(['worktree', 'prune']);
   }
 }
 git(['fetch', '--quiet', 'origin', 'main']);
@@ -339,7 +407,12 @@ try {
   );
   const mins = ((Date.now() - t0) / 60000).toFixed(1);
   if (res.code !== 0) throw new Error(`the model exited ${res.code}:\n${tail(res.err)}`);
-  const account = res.out.trim();
+  const raw = res.out.trim();
+  if (!/^ACCOUNT COMPLETE$/m.test(raw))
+    throw new Error(
+      `the session ended without finishing (${raw.length} chars back):\n${tail(raw, 5)}`
+    );
+  const account = raw.replace(/^ACCOUNT COMPLETE$/m, '').trim();
   out(`    ${mins} min, ${account.length} chars back`);
 
   const files = changedFiles(wt).filter((f) => !f.startsWith('docs/issues/'));
@@ -383,7 +456,7 @@ try {
         },
         body: P.renderPr({ issue, branch, files, account, verified: 'fail', failures: detail })
       });
-      I.patchIssue(issue.path, { status: 'open', branch: null });
+      I.patchIssue(issue.path, { status: 'open', branch: null, pr: d.id });
       out(`--- not green. Written up at docs/pr/${d.id}.md; worktree kept.`);
       keepTree = true;
       toMon({
@@ -411,11 +484,11 @@ try {
       exitCode = 1;
     } else {
       out(`--- committing`);
-      git(['add', '-A'], wt);
+      git(['add', '-A', '--', ':!docs/issues'], wt);
       const msg =
         `fix: ${d.title}\n\n` +
         `Raised by the audit ledger${d.rules?.length ? ` (${d.rules.join(', ')})` : ''}; ` +
-        `see docs/issues/${d.id}.md.\n\n` +
+        `see ${issue.path.replace(`${ROOT}/`, '')}.\n\n` +
         `Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>`;
       execFileSync('git', ['commit', '-q', '-F', '-'], { cwd: wt, input: msg });
 
@@ -432,9 +505,18 @@ try {
           created: I.today(),
           updated: I.today()
         },
-        body: P.renderPr({ issue, branch, files, account, verified: 'pass' })
+        body: P.renderPr({
+          issue,
+          branch,
+          files,
+          account,
+          verified: 'pass',
+          ran: v.results.map((r) => r.name)
+        })
       });
       I.patchIssue(issue.path, { status: 'in-review', pr: d.id, branch });
+      const ticked = I.tickRemediation(issue.path, account);
+      out(`--- ticked ${ticked} remediation item(s)`);
       out(`--- review at docs/pr/${d.id}.md on ${branch} (local, not pushed)`);
       toMon({
         issue,
@@ -460,7 +542,28 @@ try {
   }
 } catch (e) {
   out(`--- ${e.message}`);
-  I.patchIssue(issue.path, { status: 'open', branch: null });
+  keepTree = true;
+  P.writePr(ROOT, {
+    data: {
+      id: d.id,
+      issue: d.id,
+      branch,
+      base: 'main',
+      status: 'abandoned',
+      verified: 'fail',
+      created: I.today(),
+      updated: I.today()
+    },
+    body: P.renderPr({
+      issue,
+      branch,
+      files: [],
+      account: '',
+      verified: 'fail',
+      failures: e.message
+    })
+  });
+  I.patchIssue(issue.path, { status: 'open', branch: null, pr: d.id });
   toMon({
     issue,
     cwd: ROOT,
