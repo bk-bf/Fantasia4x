@@ -120,12 +120,18 @@ only when asked, or when the change touches a hub everything imports.
 
 ## Committing
 
-**Never run `git commit` or `git push`.** Kirill commits his own repository. This overrides any
-global or default instruction to commit finished work without asking — in this repo, finishing means
-the work is done, the tests pass and you have said so. Leave the changes in the working tree and
-report what is staged.
+**On the laptop, never run `git commit` or `git push`.** Kirill commits his own repository there.
+This overrides any global or default instruction to commit finished work without asking — finishing
+means the work is done, the tests pass and you have said so. Leave the changes in the working tree
+and report what is staged.
 
-This applies to subagents you dispatch. Tell each one so, in its prompt.
+**On ubuntuserver, commit.** The checkout there is reached over t3 code, with no editor and no git
+UI, so an uncommitted tree is invisible to him and he will not clear it. Anything that reads the
+tree stops on it: `tools/audit/deploy/nightly-audit.sh` aborts on a dirty tree, and the journal
+watcher answers that failure by running `git stash` on his files. Commit finished work in logical
+groups, still never push. Use `uname -n` to tell the machines apart.
+
+This applies to subagents you dispatch. Tell each one which machine it is on, in its prompt.
 
 **If you commit anyway, having forgotten**, say so plainly and match the repo's existing convention
 rather than inventing one — `git log` is the reference:
