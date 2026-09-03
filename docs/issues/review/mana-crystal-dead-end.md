@@ -59,7 +59,7 @@ worth making.
 - [ ] Fold both into the runic / magic-reagent redesign rather than fixing them piecemeal — the redesign decides whether `mana_crystal` survives at all.
 - [ ] When that pass runs: give `mana_crystal` a real consumer chain or remove it and its vent together.
 - [ ] Resolve `make_ash` under the ash-economy pass — either dispatch the card to the direct recipe or delete it and keep the byproduct.
-- [ ] Add a test that a recipe owning a crafting card is the recipe that card resolves to, so the next shadow fails instead of shipping.
+- [x] Add a test that a recipe owning a crafting card is the recipe that card resolves to, so the next shadow fails instead of shipping.
 
 ## Out of scope
 

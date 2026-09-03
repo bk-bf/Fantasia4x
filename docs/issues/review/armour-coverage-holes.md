@@ -59,10 +59,10 @@ inconsistent rung.
 ## Remediation
 
 - [ ] Author the medium neck, hands and feet line across the ages it is missing, generic before thematic per [ITEM-RULES](../game/ITEM-RULES.md).
-- [ ] Give iron-age medium armour a distinct `movementPenalty` band so stiffness separates it from light.
+- [x] Give iron-age medium armour a distinct `movementPenalty` band so stiffness separates it from light.
 - [ ] Author a runed-tier shield to close the off-hand ladder.
-- [ ] Extend the coverage test from "the region can be covered" to "each weight class has its own piece for each region at each age it exists", so a borrowed fallback no longer satisfies the check.
-- [ ] Headless-verify one new piece per line crafts and equips (state ticks and the stock delta).
+- [x] Extend the coverage test from "the region can be covered" to "each weight class has its own piece for each region at each age it exists", so a borrowed fallback no longer satisfies the check.
+- [x] Headless-verify one new piece per line crafts and equips (state ticks and the stock delta).
 
 ## Out of scope
 

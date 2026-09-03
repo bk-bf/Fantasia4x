@@ -54,11 +54,11 @@ added for a design decision that was never made stays indefinitely.
 
 ## Remediation
 
-- [ ] Decide the age each elemental line actually belongs to, and set `tier` to match the station its recipe already names.
-- [ ] Author the early caster weapons the vacated tiers need — a plain material-named rod/stave per age, generic before thematic per [ITEM-RULES](../game/ITEM-RULES.md).
-- [ ] Re-tier `great_bone_maul` so it clears both `R4_DEBT` (station age) and `R2_DEBT` (creature tier) together.
-- [ ] Remove all fourteen ids from `R4_DEBT`; the stale-entry test at `itemRules.test.ts:310` then proves they are genuinely fixed.
-- [ ] Headless-verify one caster per age crafts and equips (`HeadlessSession`, state the tick count and the stock delta).
+- [x] Decide the age each elemental line actually belongs to, and set `tier` to match the station its recipe already names.
+- [x] Author the early caster weapons the vacated tiers need — a plain material-named rod/stave per age, generic before thematic per [ITEM-RULES](../game/ITEM-RULES.md).
+- [x] Re-tier `great_bone_maul` so it clears both `R4_DEBT` (station age) and `R2_DEBT` (creature tier) together.
+- [x] Remove all fourteen ids from `R4_DEBT`; the stale-entry test at `itemRules.test.ts:310` then proves they are genuinely fixed.
+- [x] Headless-verify one caster per age crafts and equips (`HeadlessSession`, state the tick count and the stock delta).
 
 ## Out of scope
 

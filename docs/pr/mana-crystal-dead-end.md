@@ -10,23 +10,93 @@ verified: pass
 ---
 # fix: mana_crystal is a dead-end drop and make_ash is shadowed by two byproduct producers
 
-> **Related:** [issue](../issues/mana-crystal-dead-end.md) · [pr/README](README.md) · [issues/README](../issues/README.md)
+> **Related:** [issue](../issues/review/mana-crystal-dead-end.md) · [pr/README](README.md) · [issues/README](../issues/README.md)
 
-`fix/mana-crystal-dead-end` is committed and green. Nothing has been pushed anywhere.
+`fix/mana-crystal-dead-end` is committed and green. The branch is pushed to origin.
 
 ## What it reports doing
 
-## Summary
+# fix: mana_crystal is a dead-end drop and make_ash is shadowed by two byproduct producers
 
-The Remediation list has four items. Items 1–3 (deciding `mana_crystal`'s fate, resolving `make_ash`'s shadow) are the two fixes the issue's **Out of scope** section explicitly defers to the runic/magic-reagent and ash-economy redesigns — I left `recipes.jsonc` untouched. Only item 4 was actionable now: a regression test so the next shadow fails loudly instead of shipping silently.
+## What the branch changes
 
-**Changed:** `src/tests/game/services/recipeService.test.ts` — added `'a recipe owning a crafting card is the recipe that card resolves to'`. It walks every authored recipe whose id follows the `make_<itemId>` convention (the naming pattern that ties a recipe to the item's own crafting card), and asserts `getRecipeForItem(itemId)` resolves back to that same recipe — i.e. no earlier-declared recipe with the same output shadows it. I confirmed by hand (scripted probe over the raw JSONC, then via the real `RecipeService`) that `make_ash` is the only recipe currently shadowed this way, so it's carried as a named, explicit exclusion (`knownDeferredShadows`) rather than silently passing — the moment a *second* card gets shadowed, this test fails without needing an update.
+One added test in `src/tests/game/services/recipeService.test.ts`, 19 lines. No production
+code, no data.
 
-Not done: giving `mana_crystal` a consumer chain or removing its vent, and dispatching/deleting `make_ash` — both out of scope per the issue, deferred to the redesigns that own them.
+`RecipeService.getRecipeForItem(itemId)` returns `producedBy.get(itemId)?.[0]` — the first
+recipe in declaration order that lists the item among its outputs. A crafting card for an item
+therefore resolves to whichever recipe was declared first, which need not be the recipe
+authored for that item. `make_ash` outputs `ash`; `burn_charcoal` (line 33 of `recipes.jsonc`)
+emits `ash` as a byproduct and is declared ~960 lines earlier, so the ash card reaches
+charcoal-burning and `make_ash` is unreachable.
 
-**Verification:**
-- `pnpm check` — 0 errors (10 pre-existing a11y/CSS warnings, unrelated to this change)
-- `pnpm test:related src/tests/game/services/recipeService.test.ts` — 7 passed, including the new test
+The test walks `recipes.jsonc` for ids matching the `make_<itemId>` convention where
+`<itemId>` is a real item and appears in that recipe's outputs, and asserts
+`getRecipeForItem(itemId)` returns that same recipe. `make_ash` is carried in a
+`knownDeferredShadows` set.
+
+## Verified
+
+- `pnpm vitest run src/tests/game/services/recipeService.test.ts` — 7 passed.
+- `pnpm vitest run` over recipeService, recipeDiscipline, jobCraftByproducts, fuelRules,
+  itemReferences, itemRules, dbStructure — 97 passed across 7 files.
+- `pnpm check` — 0 errors, 10 warnings, 890 files. See the vite.config defect below: the
+  command cannot run in a git worktree as shipped; this figure is from a temporary local edit
+  to `findGitRoot`, reverted.
+- `AUDIT_SUITES` (`vitest.config.ts:47-59`) are weapon/armour/combat balance suites. Nothing
+  in them touches the recipe registry, so `RUN_AUDITS=1` was not run.
+- Unit test only. Nothing behavioural changed, so there is no tick delta to report and no
+  headless run was done.
+
+### Coverage of the new test, measured
+
+Instrumented the loop, ran it, reverted the instrumentation.
+
+- 774 recipes in `recipes.jsonc`, 560 with a `make_` prefix, 535 reach the assertion.
+- Exclusion removed → 1 failure: `make_ash does not own the card for "ash"; resolves to
+  burn_charcoal`. It is the only shadow among the 535, which confirms the fixer's claim.
+- Exclusion restored, second shadow injected by adding `"tallow": 1` to `burn_charcoal`'s
+  outputs → 1 failure: `make_tallow does not own the card for "tallow"; resolves to
+  burn_charcoal`. Reverted. `knownDeferredShadows` is a set of one literal id, not a pattern;
+  a new shadow fails the test rather than being swallowed.
+
+### Blind spot in the new test
+
+25 of the 560 `make_*` recipes are skipped because the text after `make_` is not an item id —
+the convention does not hold for them. A shadow on any of their outputs would not be caught:
+
+- butchery cards named for the animal, e.g. `make_dire_wolf` → `wolf_meat` + 5 byproducts
+- cards whose output is named differently, e.g. `make_scale_cuirass` → `croc_scale_cuirass`,
+  `make_brigandine_coat` → `iron_plated_jack`, `make_confit` → `confit_meat`
+
+The other guard in the test (`ownedItemId in r.outputs`) never fires on current data.
+
+## Changed on top of the fixer's work
+
+Nothing. The branch is one commit, `830c5525`, already pushed to
+`origin/fix/mana-crystal-dead-end`; local and remote heads match.
+
+## Remediation items not done
+
+- Item 1, fold both into the runic / magic-reagent redesign — deferred by the issue's
+  `## Out of scope`: "Doing either fix now. Both are deliberately deferred to the reworks that
+  own them."
+- Item 2, give `mana_crystal` a consumer chain or remove it with its vent — same deferral, and
+  the item's own text conditions it on "when that pass runs".
+- Item 3, resolve `make_ash` under the ash-economy pass — same deferral.
+
+## Unfiled defects found
+
+**`vite.config.ts` `findGitRoot` fails in every git worktree.** Lines 7-13 accept a directory
+only when `.git` is a directory; in a worktree `.git` is a file, so the walk reaches `/` and
+line 123 reads `/package.json`. `pnpm check` then reports 110 identical `ENOENT ... '/package.json'`
+errors and exit 1 for reasons unrelated to any branch. Dropping `&& fs.statSync(gitPath).isDirectory()`
+gives 0 errors. Line 138 feeds the same value to `server.fs.allow`, so `pnpm dev` in a worktree
+serves with the filesystem root allowed. Not fixed — out of this branch's scope.
+
+**Recipe ids that name an item that does not exist.** `make_brigandine_coat` outputs
+`iron_plated_jack` and `make_scale_cuirass` outputs `croc_scale_cuirass`. Whatever surfaces a
+recipe by id will read as the wrong garment. Not fixed.
 
 ## Review it
 
@@ -46,11 +116,11 @@ git branch -D fix/mana-crystal-dead-end          # drop it
 
 | | |
 |---|---|
-| issue | [`docs/issues/mana-crystal-dead-end.md`](../issues/mana-crystal-dead-end.md) |
+| issue | [`docs/issues/review/mana-crystal-dead-end.md`](../issues/review/mana-crystal-dead-end.md) |
 | severity | low |
 | raised by | a person |
 | files changed | 1 |
-| verified | `check` + `test:related` green |
+| verified | re-verified on the branch; see the account above |
 
 <details><summary>files</summary>
 
@@ -58,4 +128,4 @@ git branch -D fix/mana-crystal-dead-end          # drop it
 
 </details>
 
-_Written unattended by `tools/audit/fix.mjs`. The branch is local; nothing was pushed._
+_Account written after re-running the verification on the branch._

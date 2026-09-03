@@ -50,10 +50,10 @@ arises once you notice the stat has no shield gate — and the stat reads correc
 
 ## Remediation
 
-- [ ] Decide the intended behaviour: gate block behind holding a shield, keep a small innate "bracing" term deliberately, or make innate block pawn-only.
-- [ ] Implement the decision in `blockChance` — the change is at the base term, not the cap.
-- [ ] Add a test asserting a shieldless defender's block chance matches the decision (zero, or a stated bracing floor), covering both a pawn and a mob.
-- [ ] Headless-verify a melee exchange against a shieldless creature before and after (state ticks and the negated-blow count).
+- [x] Decide the intended behaviour: gate block behind holding a shield, keep a small innate "bracing" term deliberately, or make innate block pawn-only.
+- [x] Implement the decision in `blockChance` — the change is at the base term, not the cap.
+- [x] Add a test asserting a shieldless defender's block chance matches the decision (zero, or a stated bracing floor), covering both a pawn and a mob.
+- [x] Headless-verify a melee exchange against a shieldless creature before and after (state ticks and the negated-blow count).
 
 ## Out of scope
 

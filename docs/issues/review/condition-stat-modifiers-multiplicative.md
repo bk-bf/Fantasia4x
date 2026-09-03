@@ -104,22 +104,22 @@ written.
 
 ## Remediation
 
-- [ ] **Wire the reader that already exists.** `evaluateStat` should ask the generic condition reader
+- [x] **Wire the reader that already exists.** `evaluateStat` should ask the generic condition reader
       for the stat id it is evaluating, exactly as it already asks `traitResistanceBonus`. No new data
       shape: `ConditionModifiers` takes any key, `stats.jsonc` supplies the ids, and `pain` /
       `consciousness` prove the pattern. `conditionModifierProduct` multiplies, so an additive
       sibling is needed alongside it — the product form stays for the keys that want a factor.
-- [ ] **Stop modifying core stats.** A condition names the derived stat it means. `constitution` and
+- [x] **Stop modifying core stats.** A condition names the derived stat it means. `constitution` and
       the other four become the exception, used only where a condition genuinely changes the whole
       body, and each remaining use is justified in the same PR or converted.
-- [ ] **Additive, not multiplicative,** for everything on the new channel — a fixed contribution
+- [x] **Additive, not multiplicative,** for everything on the new channel — a fixed contribution
       moves every pawn the same distance whatever their baseline, which is what an offset formula
       wants. A factor stays correct only for a stat read directly rather than as a deviation from 10;
       `workEfficiency`, `moveSpeed`, `hungerRate`, `thirstRate` and `fatigueRate` are that case and
       can stay as they are.
 - [ ] Convert the 50 conditions, keeping each one's effect on an average pawn roughly where it is now
       so balance does not move while the mechanism changes.
-- [ ] **Drop the zero-clamp at `PawnStatService.ts:721`** — `Math.max(0, Math.min(CAP, raw))` becomes
+- [x] **Drop the zero-clamp at `PawnStatService.ts:721`** — `Math.max(0, Math.min(CAP, raw))` becomes
       `Math.min(CAP, raw)`. **Decided, not open.** A frail pawn is already weaker for having a lower
       stat; zeroing the sum makes them forfeit the whole gear bonus on top, which discounts the same
       weakness twice. Worked case, cold gear worth `+0.015` resistance at 20°/unit:
@@ -136,7 +136,7 @@ written.
       (`PawnStateMachine.ts:390`, `PawnService.ts:365`, `selectionCard.ts:271`, and a debug log) all
       take the onset, so a negative degree simply means a pawn starts feeling cold above their
       comfort floor.
-- [ ] Add the check that would have caught it: for every condition with a core-stat modifier, assert
+- [x] Add the check that would have caught it: for every condition with a core-stat modifier, assert
       the sim's own reader moves for a weak, an average and a strong pawn.
 
 ## Out of scope
