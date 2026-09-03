@@ -33,7 +33,7 @@
       ]
     },
     "demotable": false,
-    "status": "active"
+    "status": "draft"
   },
   {
     "id": "A03a",
@@ -61,7 +61,7 @@
       ]
     },
     "demotable": false,
-    "status": "active"
+    "status": "draft"
   },
   {
     "id": "A06a",
@@ -87,7 +87,7 @@
       ]
     },
     "demotable": true,
-    "status": "active"
+    "status": "draft"
   },
   {
     "id": "A16a",
@@ -114,7 +114,7 @@
       ]
     },
     "demotable": false,
-    "status": "active"
+    "status": "draft"
   },
   {
     "id": "A17a",
@@ -140,7 +140,7 @@
       ]
     },
     "demotable": true,
-    "status": "active"
+    "status": "draft"
   },
   {
     "id": "A08a",
@@ -167,7 +167,7 @@
       ]
     },
     "demotable": false,
-    "status": "active"
+    "status": "draft"
   },
   {
     "id": "A00a",
@@ -193,6 +193,6 @@
       ]
     },
     "demotable": false,
-    "status": "active"
+    "status": "draft"
   }
 ]
