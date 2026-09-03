@@ -13,6 +13,7 @@ import { writeFileSync, mkdirSync, appendFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { hostname } from 'node:os';
+import { pauseReason, nextSlotDelay, recordBatch, windowState } from './lib/pace.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const AUDIT = join(HERE, 'audit.mjs');
@@ -87,6 +88,26 @@ async function askModel(prompt) {
   return r.out;
 }
 
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+async function gate(id, deadline) {
+  const paused = pauseReason();
+  if (paused) {
+    log(`[w${id}] paused: ${paused}`);
+    return 'stop';
+  }
+  const delay = nextSlotDelay();
+  if (delay <= 0) return 'go';
+  if (Date.now() + delay >= deadline) {
+    const mins = Math.ceil(delay / 60_000);
+    log(`[w${id}] rate cap reached; next slot in ${mins}m, past this run's deadline`);
+    return 'stop';
+  }
+  log(`[w${id}] rate cap reached; waiting ${Math.ceil(delay / 60_000)}m for the next slot`);
+  await sleep(delay);
+  return 'go';
+}
+
 async function worker(id, deadline) {
   const env = { AUDIT_WORKER: `${hostname()}#${id}` };
   let batches = 0,
@@ -95,6 +116,7 @@ async function worker(id, deadline) {
     errors = 0;
 
   while (Date.now() < deadline) {
+    if ((await gate(id, deadline)) === 'stop') break;
     const next = await sh(process.execPath, [AUDIT, 'next', '--run', RUN_ID], { env });
     if (next.code !== 0) {
       log(`[w${id}] next failed: ${next.err.trim()}`);
@@ -146,6 +168,7 @@ async function worker(id, deadline) {
     verdicts += accepted;
     fails += batchFails;
     batches++;
+    recordBatch();
 
     log(
       `[w${id}] ${task.symbol_key} — ${task.rules.length} rules, ${accepted} accepted, ` +
@@ -165,9 +188,11 @@ async function worker(id, deadline) {
 }
 
 const deadline = ONCE ? Date.now() + 15 * 60_000 : Date.now() + HOURS * 3600_000;
+const pace = windowState();
 log(
   `run ${RUN_ID} — ${WORKERS} worker(s), model ${MODEL}, until ${new Date(deadline).toISOString()}`
 );
+log(`pace — ${pace.used}/${pace.cap} batches used in the last 5h, ${pace.remaining} available`);
 
 const results = await Promise.all(
   Array.from({ length: WORKERS }, (_, i) => worker(i + 1, deadline))
