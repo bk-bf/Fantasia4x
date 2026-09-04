@@ -487,7 +487,7 @@ export const COMMANDS: Record<string, Cmd> = {
 
     const pawns = s.pawns.slice();
     const before = pawns[pi];
-    pawns[pi] = applyConsumable(before, p.itemId, Math.random);
+    pawns[pi] = applyConsumable(before, p.itemId, () => rng.random());
     if (pawns[pi] === before) return s;
     const vessel = carrierOf(carer, p.itemId);
     if (vessel)
