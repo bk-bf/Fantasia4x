@@ -15,7 +15,9 @@ const DEFAULT_CONTROL = {
   paused_at: null,
   reason: null,
   resume_after: null,
-  window_batches: 60
+  ceiling_pct: 95,
+  poll_seconds: 60,
+  plan_url: 'https://dashboard.callmedaddy.dedyn.io/api/plan'
 };
 
 function readJson(path, fallback) {
@@ -31,8 +33,6 @@ export const readControl = () => readJson(CONTROL, DEFAULT_CONTROL);
 export function writeControl(patch) {
   mkdirSync(LEDGER, { recursive: true });
   const next = { ...readControl(), ...patch };
-  const tmp = `${CONTROL}.tmp`;
-  writeFileSync(tmp, JSON.stringify(next, null, 1));
   writeFileSync(CONTROL, JSON.stringify(next, null, 1));
   return next;
 }
@@ -51,19 +51,47 @@ export function recordBatch(ts = Date.now()) {
   return batches.length;
 }
 
-export function windowState() {
-  const control = readControl();
-  const { batches } = readPace();
-  const cap = Number(control.window_batches) || DEFAULT_CONTROL.window_batches;
-  const oldest = batches.length ? Math.min(...batches) : null;
-  return {
-    cap,
-    used: batches.length,
-    remaining: Math.max(0, cap - batches.length),
-    window_ends: oldest === null ? null : oldest + WINDOW_MS,
-    paused: !!control.paused,
-    control
-  };
+export function writeWorkerState(worker, state) {
+  mkdirSync(LEDGER, { recursive: true });
+  const path = join(LEDGER, `worker-${String(worker).replace(/[^a-z0-9_-]/gi, '_')}.json`);
+  writeFileSync(path, JSON.stringify({ worker, ts: Date.now(), ...state }));
+}
+
+let planCache = { at: 0, plan: null };
+
+export async function readPlan(url, maxAgeMs = 30_000) {
+  if (Date.now() - planCache.at < maxAgeMs && planCache.plan) return planCache.plan;
+  try {
+    const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
+    if (!res.ok) throw new Error(`plan ${res.status}`);
+    const body = await res.json();
+    const five = body?.five_hour;
+    if (typeof five?.pct !== 'number' || !five?.resets_at) throw new Error('no five_hour');
+    const plan = { pct: five.pct, resetsAt: Date.parse(five.resets_at) };
+    planCache = { at: Date.now(), plan };
+    return plan;
+  } catch (e) {
+    return planCache.plan ? { ...planCache.plan, stale: e.message } : null;
+  }
+}
+
+export function schedule(plan, control, now = Date.now()) {
+  const ceiling = Number(control.ceiling_pct) || DEFAULT_CONTROL.ceiling_pct;
+  if (!plan) return { verdict: 'go', reason: 'no plan data' };
+  const windowStart = plan.resetsAt - WINDOW_MS;
+  const elapsed = Math.min(Math.max(now - windowStart, 0), WINDOW_MS);
+  const target = (ceiling * elapsed) / WINDOW_MS;
+  const minsLeft = Math.max(0, (plan.resetsAt - now) / 60_000);
+  if (plan.pct >= ceiling) {
+    return { verdict: 'wait', target, ceiling, pct: plan.pct, minsLeft,
+             reason: `at the ${ceiling}% ceiling` };
+  }
+  if (plan.pct >= target) {
+    return { verdict: 'wait', target, ceiling, pct: plan.pct, minsLeft,
+             reason: `${plan.pct.toFixed(1)}% used is ahead of the ${target.toFixed(1)}% schedule` };
+  }
+  return { verdict: 'go', target, ceiling, pct: plan.pct, minsLeft,
+           reason: `${plan.pct.toFixed(1)}% used is behind the ${target.toFixed(1)}% schedule` };
 }
 
 export function pauseReason(now = Date.now()) {
@@ -76,11 +104,9 @@ export function pauseReason(now = Date.now()) {
   return control.reason || 'paused';
 }
 
-export function nextSlotDelay(now = Date.now()) {
-  const { cap } = windowState();
+export async function windowState() {
+  const control = readControl();
+  const plan = await readPlan(control.plan_url);
   const { batches } = readPace();
-  if (batches.length < cap) return 0;
-  const sorted = [...batches].sort((a, b) => a - b);
-  const freeAt = sorted[batches.length - cap] + WINDOW_MS;
-  return Math.max(0, freeAt - now);
+  return { control, plan, batches: batches.length, ...schedule(plan, control) };
 }

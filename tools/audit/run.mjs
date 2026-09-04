@@ -13,7 +13,7 @@ import { writeFileSync, mkdirSync, appendFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { hostname } from 'node:os';
-import { pauseReason, nextSlotDelay, recordBatch, windowState } from './lib/pace.mjs';
+import { pauseReason, recordBatch, readControl, readPlan, schedule, writeWorkerState } from './lib/pace.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const AUDIT = join(HERE, 'audit.mjs');
@@ -91,21 +91,27 @@ async function askModel(prompt) {
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 async function gate(id, deadline) {
-  const paused = pauseReason();
-  if (paused) {
-    log(`[w${id}] paused: ${paused}`);
-    return 'stop';
+  for (;;) {
+    if (Date.now() >= deadline) return 'stop';
+    const paused = pauseReason();
+    if (paused) {
+      log(`[w${id}] paused: ${paused}`);
+      return 'stop';
+    }
+    const control = readControl();
+    const plan = await readPlan(control.plan_url);
+    const s = schedule(plan, control);
+    if (s.verdict === 'go') return 'go';
+    writeWorkerState(id, { state: 'holding', reason: s.reason, pct: s.pct,
+                           target: s.target, mins_left: s.minsLeft });
+    const poll = Math.max(15, Number(control.poll_seconds) || 60) * 1000;
+    if (Date.now() + poll >= deadline) return 'stop';
+    if (!gate.said || Date.now() - gate.said > 600_000) {
+      gate.said = Date.now();
+      log(`[w${id}] holding — ${s.reason}, ${s.minsLeft?.toFixed(0)}m to reset`);
+    }
+    await sleep(poll);
   }
-  const delay = nextSlotDelay();
-  if (delay <= 0) return 'go';
-  if (Date.now() + delay >= deadline) {
-    const mins = Math.ceil(delay / 60_000);
-    log(`[w${id}] rate cap reached; next slot in ${mins}m, past this run's deadline`);
-    return 'stop';
-  }
-  log(`[w${id}] rate cap reached; waiting ${Math.ceil(delay / 60_000)}m for the next slot`);
-  await sleep(delay);
-  return 'go';
 }
 
 async function worker(id, deadline) {
@@ -142,6 +148,8 @@ async function worker(id, deadline) {
     writeFileSync(taskFile, JSON.stringify(task));
 
     const t0 = Date.now();
+    writeWorkerState(id, { state: 'working', symbol: task.symbol_key,
+                           rules: task.rules.length });
     try {
       writeFileSync(respFile, await askModel(task.prompt));
     } catch (e) {
@@ -184,15 +192,19 @@ async function worker(id, deadline) {
     if (accepted === 0) await sh(process.execPath, [AUDIT, 'release'], { env });
     if (ONCE) break;
   }
+  writeWorkerState(id, { state: 'done' });
   return { batches, verdicts, fails, errors };
 }
 
 const deadline = ONCE ? Date.now() + 15 * 60_000 : Date.now() + HOURS * 3600_000;
-const pace = windowState();
 log(
   `run ${RUN_ID} — ${WORKERS} worker(s), model ${MODEL}, until ${new Date(deadline).toISOString()}`
 );
-log(`pace — ${pace.used}/${pace.cap} batches used in the last 5h, ${pace.remaining} available`);
+{
+  const c = readControl();
+  const s = schedule(await readPlan(c.plan_url), c);
+  log(`pace — ${s.reason}, ceiling ${s.ceiling ?? '?'}%`);
+}
 
 const results = await Promise.all(
   Array.from({ length: WORKERS }, (_, i) => worker(i + 1, deadline))
