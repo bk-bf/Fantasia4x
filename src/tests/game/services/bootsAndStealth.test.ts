@@ -4,7 +4,7 @@ import { HeadlessSession } from '$lib/game/headless/HeadlessSession';
 import { pawnService } from '$lib/game/services/PawnService';
 import { stealthAdditives } from '$lib/game/core/rules/body/stealth';
 import type { Pawn } from '$lib/game/core/types';
-import itemsData from '$lib/game/database/items/items.jsonc';
+import itemsData from '$lib/game/database/items/items.json';
 
 async function pawnWith(equip: string[]): Promise<Pawn> {
   const s = new HeadlessSession();

@@ -1,6 +1,6 @@
 import type { Pawn } from '$lib/game/core/types';
 import { APTITUDE_MIN, APTITUDE_MAX, type AptitudeId } from '$lib/game/core/rules/body/aptitudes';
-import statsData from '$lib/game/database/pawns/stats.jsonc';
+import statsData from '$lib/game/database/pawns/stats.json';
 import { pawnStatService } from '$lib/game/services/PawnStatService';
 import { itemService } from '$lib/game/services/ItemService';
 import { getActiveConditionViews } from '$lib/components/util/conditionInfo';

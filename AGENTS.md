@@ -13,7 +13,7 @@ A file that describes the code is a claim about the past; the code is what runs.
 - **Where is X / who calls X** — `grep`. The result is a line in a file, true when you ran it.
 - **What breaks if I change X** — grep the name, read each call site, follow the ones that
   matter upward. Include string keys and re-exports; neither looks like a call.
-- **Is X dead** — the same search, plus `src/tests` and the `.jsonc` data files, before
+- **Is X dead** — the same search, plus `src/tests` and the `.json` data files, before
   concluding nothing reaches it.
 - **Is X tested** — grep `src/tests` for the name, then for the scenario that would run it.
   Most of the suite drives through `buildScenario` / `HeadlessSession` and never names its
@@ -24,7 +24,7 @@ State what you checked. "I grepped for `foo` and found three call sites" is an a
 
 ## No comments
 
-**Do not write comments.** Not in TypeScript, not in Svelte, not in `.jsonc` data files, not
+**Do not write comments.** Not in TypeScript, not in Svelte, not in the `.json` data files, not
 in config, not in unit files. A comment states what was true when it was typed; the code
 states what is true now, and the two separate silently.
 
@@ -112,6 +112,15 @@ playtest.
 ## Tools
 
 **Always `pnpm`** — never `npm` or `yarn`.
+
+**`pnpm check` is the gate.** It runs `svelte-check`, `eslint` and `knip`, and all three must
+stay green. `eslint` is frozen at its current warning count with `--max-warnings`, so a change
+that adds a warning fails the gate; burn warnings down rather than raising the number.
+`pnpm knip:all` reports unused exports and files, which the gate does not yet enforce.
+`pnpm dupes` runs copy-paste detection over `src`.
+
+**The data files are strict `.json`.** No comments, no trailing commas — the parser rejects
+both, which is how the no-comments rule is enforced rather than remembered.
 
 **Always `./dev.sh`** to start the dev server, never `pnpm dev` directly.
 

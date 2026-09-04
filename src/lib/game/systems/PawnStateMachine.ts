@@ -26,8 +26,8 @@ import {
 import { feedOnVictim } from '../core/defs/lineages';
 import { coversPart } from '../core/rules/gear/armorCoverage';
 import { lethalAnatomyCause } from '../core/defs/bodyParts';
-import conditionsData from '../database/pawns/conditions.jsonc';
-import buildingsData from '../database/world/buildings.jsonc';
+import conditionsData from '../database/pawns/conditions.json';
+import buildingsData from '../database/world/buildings.json';
 const BED_TREATMENT_BONUS = new Map<string, number>(
   (buildingsData as unknown as Array<{ id: string; effects?: { treatmentBonus?: number } }>)
     .filter((b) => (b.effects?.treatmentBonus ?? 0) > 0)

@@ -5,7 +5,7 @@ import { workService } from '$lib/game/services/WorkService';
 import { absorbDropIfOnStockpileTile, addToStockpileZone } from '$lib/game/core/state/stockpile';
 import { fluidLitres, heldQuantity } from '$lib/game/core/rules/gear/vessels';
 import { itemService } from '$lib/game/services/ItemService';
-import BUILDINGS from '$lib/game/database/world/buildings.jsonc';
+import BUILDINGS from '$lib/game/database/world/buildings.json';
 import type { GameState, ItemInstance } from '$lib/game/core/types';
 
 const stk = (s: HeadlessSession) => (s.getState().stockpile ?? {}) as Record<string, number>;

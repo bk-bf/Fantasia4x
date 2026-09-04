@@ -2,7 +2,7 @@ import type { DesignationType, DroppedItem, GameState, Job, JobDef, Pawn } from 
 import { manhattan } from '../core/util/distance';
 import { WORK_CATEGORIES } from '../core/defs/work';
 import { applyWorkXp, workXpForJob, SKILL_CATEGORIES, workSkillCategory } from '../core/rules/body/workExperience';
-import jobsData from '../database/pawns/jobs.jsonc';
+import jobsData from '../database/pawns/jobs.json';
 import { resourceObjectService } from './ResourceObjectService';
 import { itemService } from './ItemService';
 import { recipeService } from './RecipeService';

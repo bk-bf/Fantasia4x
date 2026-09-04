@@ -1,0 +1,16 @@
+{
+  "threshold": 3,
+  "minTokens": 60,
+  "reporters": ["consoleFull"],
+  "absolute": false,
+  "gitignore": true,
+  "ignore": [
+    "**/node_modules/**",
+    "**/.svelte-kit/**",
+    "**/build/**",
+    "**/dist/**",
+    "src/lib/sim-core-pkg/**",
+    "src/lib/spatial-core-pkg/**",
+    "desktop-spike/**"
+  ]
+}

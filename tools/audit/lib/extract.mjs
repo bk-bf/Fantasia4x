@@ -40,7 +40,7 @@ const SKIP_DIRS = new Set([
   '.ledger'
 ]);
 
-export function walkFiles(root, exts = ['.ts', '.svelte', '.jsonc']) {
+export function walkFiles(root, exts = ['.ts', '.svelte', '.json']) {
   const out = [];
   (function rec(dir) {
     for (const e of readdirSync(dir)) {
@@ -82,7 +82,7 @@ function moduleOf(file) {
   return file
     .replace(/^src\/lib\//, '')
     .replace(/^src\//, '')
-    .replace(/\.(ts|svelte|jsonc)$/, '');
+    .replace(/\.(ts|svelte|json)$/, '');
 }
 
 // --- computed facts ----------------------------------------------------------
@@ -117,7 +117,7 @@ export function computeFlags(text, { kind, lang }) {
     if (has(/\{[^}]*\.id\b[^}]*\}/)) f.push('rendersIdExpression');
     if (has(/>[^<>{]*[A-Za-z][^<>{]*</)) f.push('rendersLiteralText');
   }
-  if (lang === 'jsonc') {
+  if (lang === 'json') {
     if (has(/"(description|name|label|flavor|text)"\s*:/)) f.push('hasPlayerFacingText');
     if (has(/"tier"\s*:/)) f.push('hasTier');
     if (has(/"(materials|ingredients|inputs)"\s*:/)) f.push('hasRecipeInputs');
@@ -310,7 +310,7 @@ function extractSvelte(text, file) {
 // Each top-level entry of a definition array is its own auditable object, so a single
 // bad item row re-opens only itself rather than the whole 8000-line file.
 
-function extractJsonc(text, file) {
+function extractJson(text, file) {
   const out = [];
   const offs = lineOffsets(text);
   let depth = 0,
@@ -365,7 +365,7 @@ function extractJsonc(text, file) {
           out.push({
             key: `${file}::${id}#0`,
             file,
-            lang: 'jsonc',
+            lang: 'json',
             kind: 'data-row',
             name: id,
             className: null,
@@ -381,7 +381,7 @@ function extractJsonc(text, file) {
             chars: slice.length,
             contentHash: sha(slice),
             signature: `"id": "${id}"`,
-            flags: computeFlags(slice, { kind: 'data-row', lang: 'jsonc' }),
+            flags: computeFlags(slice, { kind: 'data-row', lang: 'json' }),
             text: slice
           });
           ordinal++;
@@ -405,7 +405,7 @@ export function extractRepo(root, { include = ['src'] } = {}) {
       const text = readFileSync(abs, 'utf8');
       try {
         if (file.endsWith('.svelte')) symbols.push(...extractSvelte(text, file));
-        else if (file.endsWith('.jsonc')) symbols.push(...extractJsonc(text, file));
+        else if (file.endsWith('.json')) symbols.push(...extractJson(text, file));
         else symbols.push(...extractTs(text, file));
       } catch (e) {
         process.stderr.write(`[extract] ${file}: ${e.message}\n`);

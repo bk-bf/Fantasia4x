@@ -1,12 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import buildingsData from '$lib/game/database/world/buildings.jsonc';
-import recipesData from '$lib/game/database/items/recipes.jsonc';
+import buildingsData from '$lib/game/database/world/buildings.json';
+import recipesData from '$lib/game/database/items/recipes.json';
 import { TREE_ITEMS } from '$lib/dev/itemTree';
 import { AGE_NAMES, BUILDING_AGE, CARCASS_TIER, nodeItems } from '$lib/dev/chainAge';
-import lootpoolData from '$lib/game/database/items/lootpool.jsonc';
+import lootpoolData from '$lib/game/database/items/lootpool.json';
 import { itemMatchesCostCategory } from '$lib/game/core/defs/items';
 import { recipeItemMatchesCategory } from '$lib/game/services/RecipeService';
-import itemsData from '$lib/game/database/items/items.jsonc';
+import itemsData from '$lib/game/database/items/items.json';
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 const BUILDINGS = buildingsData as any[];

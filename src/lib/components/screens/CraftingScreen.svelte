@@ -6,7 +6,7 @@
   import SearchBar from '$lib/components/UI/widget/SearchBar.svelte';
   import { persisted, persist } from '$lib/stores/uiPersist';
   import BackButton from '$lib/components/UI/widget/BackButton.svelte';
-  import ITEMS_DATABASE from '$lib/game/database/items/items.jsonc';
+  import ITEMS_DATABASE from '$lib/game/database/items/items.json';
   import { itemService } from '$lib/game/services/ItemService';
   import { recipeService } from '$lib/game/services/RecipeService';
   import { buildingService } from '$lib/game/services/BuildingService';

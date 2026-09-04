@@ -14,11 +14,11 @@ import { WEALTH_BANDS } from '../../core/gen/kingdom';
 import { makeMob, equipFromLootPool } from './entitySpawning';
 import { TICKS_PER_SECOND } from '../../core/util/time';
 import { TURNS_PER_DAY } from '../EnvironmentService';
-import events from '../../database/social/events.jsonc';
+import events from '../../database/social/events.json';
 
 const TICKS_PER_DAY = TURNS_PER_DAY * TICKS_PER_SECOND;
 
-const EVENTS = events as {
+const EVENTS = events as unknown as {
   visitors: { partySize: [number, number]; stayDays: number; anchorRing: [number, number] };
   caravan: { stayDays: number; anchorRing: [number, number] };
 };

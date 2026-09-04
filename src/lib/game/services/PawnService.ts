@@ -19,7 +19,7 @@ import { WORK_CATEGORIES } from '../core/defs/work';
 import { TICKS_PER_SECOND, SECONDS_PER_TICK, perTick } from '../core/util/time';
 import { stepBody } from './MovementSystem';
 import { occupancyService } from './OccupancyService';
-import conditionsData from '../database/pawns/conditions.jsonc';
+import conditionsData from '../database/pawns/conditions.json';
 import { NEEDS_DB, needNum } from '../core/defs/needs';
 import { moodEffect, MOOD_BASE } from '../core/defs/moods';
 import {

@@ -6,7 +6,7 @@ import type {
   TransientConditionDef,
   LimbState
 } from '../../types';
-import conditionsData from '../../../database/pawns/conditions.jsonc';
+import conditionsData from '../../../database/pawns/conditions.json';
 import { PART_DEF_MAP, boneBreakBudget } from '../../defs/bodyParts';
 import { woundById } from '../../defs/wounds';
 import { perTick } from '../../util/time';

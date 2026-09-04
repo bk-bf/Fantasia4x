@@ -1,10 +1,10 @@
 <script lang="ts">
-  import type { Trait, Pawn, Item } from '$lib/game/core/types';
+  import type { Trait, Pawn, Item, EquipmentSlot } from '$lib/game/core/types';
   import { naturalGearForTrait, type NaturalGearMeta } from '$lib/components/util/naturalGear';
   import { workAxisLabel } from '$lib/components/util/pawnUtils';
   import { partLabel, limbLabel } from '$lib/components/util/bodyLabels';
   import { getTransientConditionDef } from '$lib/game/core/rules/body/conditions';
-  import raritiesData from '$lib/game/database/items/rarities.jsonc';
+  import raritiesData from '$lib/game/database/items/rarities.json';
   import HoverTip from '$lib/components/UI/tooltip/HoverTip.svelte';
   import ItemStatTooltip from '$lib/components/UI/tooltip/ItemStatTooltip.svelte';
   import WorkCellTooltip from '$lib/components/screens/work/WorkCellTooltip.svelte';
@@ -89,7 +89,7 @@
     charisma: 'CHA',
     constitution: 'CON'
   };
-  const SLOT_LABEL: Record<string, string> = {
+  const SLOT_LABEL: Record<EquipmentSlot, string> = {
     mainHand: 'Main Hand',
     offHand: 'Off Hand',
     gloves: 'Hands',
@@ -98,6 +98,7 @@
     bodyMid: 'Mid',
     bodyBase: 'Skin',
     boots: 'Feet',
+    socks: 'Socks',
     bracers: 'Arms',
     greaves: 'Legs',
     belt: 'Belt',
@@ -310,7 +311,7 @@
   }
 
   function blockedLabels(t: Trait): string[] {
-    return (t.blocksSlots ?? []).map((s) => SLOT_LABEL[s] ?? s);
+    return (t.blocksSlots ?? []).map((s) => SLOT_LABEL[s]);
   }
 
   let hoveredCard = $state<{ trait: Trait; x: number; y: number } | null>(null);

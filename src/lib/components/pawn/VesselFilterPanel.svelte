@@ -2,7 +2,7 @@
   import type { Item, ItemInstance } from '$lib/game/core/types';
   import { gameState } from '$lib/stores/gameState.js';
   import ItemFilterChecklist from '$lib/components/UI/canvas/ItemFilterChecklist.svelte';
-  import itemsData from '$lib/game/database/items/items.jsonc';
+  import itemsData from '$lib/game/database/items/items.json';
   import { itemService } from '$lib/game/services/ItemService';
   import {
     contentsLabel,

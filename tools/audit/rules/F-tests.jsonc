@@ -30,7 +30,7 @@
       ]
     },
     "demotable": false,
-    "status": "draft"
+    "status": "active"
   },
   {
     "id": "F02",
@@ -59,6 +59,6 @@
       ]
     },
     "demotable": false,
-    "status": "draft"
+    "status": "active"
   }
 ]

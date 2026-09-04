@@ -1,11 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import itemsData from '$lib/game/database/items/items.jsonc';
-import recipesData from '$lib/game/database/items/recipes.jsonc';
-import creaturesData from '$lib/game/database/pawns/creatures.jsonc';
+import itemsData from '$lib/game/database/items/items.json';
+import recipesData from '$lib/game/database/items/recipes.json';
+import creaturesData from '$lib/game/database/pawns/creatures.json';
 import { kingdomService } from '$lib/game/services/KingdomService';
-import resourcesData from '$lib/game/database/world/resources.jsonc';
-import buildingsData from '$lib/game/database/world/buildings.jsonc';
-import conditionsData from '$lib/game/database/pawns/conditions.jsonc';
+import resourcesData from '$lib/game/database/world/resources.json';
+import buildingsData from '$lib/game/database/world/buildings.json';
+import conditionsData from '$lib/game/database/pawns/conditions.json';
 import type { Item } from '$lib/game/core/types';
 import { AGE_CEILING, AGE_NAMES, blameStation, chainAgeOf } from '$lib/dev/chainAge';
 import { gearClassOf } from '$lib/game/core/rules/gear/gearClass';
@@ -481,7 +481,7 @@ describe('ITEM-RULES R7 — hide is not leather', () => {
   });
 });
 
-import lootpoolData from '$lib/game/database/items/lootpool.jsonc';
+import lootpoolData from '$lib/game/database/items/lootpool.json';
 
 const NODE_ITEMS = new Set<string>();
 (function walk(o: unknown): void {
@@ -498,7 +498,7 @@ const CARCASS_ITEMS = new Set(
 );
 const LOOTED = new Set<string>();
 for (const pool of Object.values<{ slots?: Record<string, { pick?: { id: string }[] }> }>(
-  (lootpoolData as { pools?: Record<string, never> }).pools ?? {}
+  (lootpoolData as unknown as { pools?: Record<string, never> }).pools ?? {}
 ))
   for (const slot of Object.values(pool?.slots ?? {}))
     for (const pick of slot?.pick ?? []) LOOTED.add(pick.id);

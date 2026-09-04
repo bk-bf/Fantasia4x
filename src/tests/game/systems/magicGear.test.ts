@@ -4,7 +4,7 @@ import { equipItem } from '$lib/game/core/rules/gear/equipment';
 import { combatService } from '$lib/game/systems/Combat';
 import { itemService } from '$lib/game/services/ItemService';
 import { recipeService } from '$lib/game/services/RecipeService';
-import conditionsData from '$lib/game/database/pawns/conditions.jsonc';
+import conditionsData from '$lib/game/database/pawns/conditions.json';
 import type { GameState, Mob, Pawn } from '$lib/game/core/types';
 
 const CUT_AT: Record<string, string> = {
@@ -18,7 +18,7 @@ const CUT_AT: Record<string, string> = {
 };
 
 const MAGICAL_CONDS = (
-  conditionsData as Array<{
+  conditionsData as unknown as Array<{
     id: string;
     transient?: boolean;
     magical?: boolean;

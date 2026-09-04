@@ -183,7 +183,7 @@
     <button class="cm-btn" onclick={rollSeed} title="roll a new random seed and preview it"
       >⟳</button
     >
-    <button class="cm-btn" onclick={reset} title="restore terrains.jsonc defaults">reset</button>
+    <button class="cm-btn" onclick={reset} title="restore terrains.json defaults">reset</button>
     <button
       class="cm-btn generate"
       onclick={generate}

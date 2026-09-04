@@ -6,8 +6,8 @@ import type {
   DroppedItem,
   DesignationType
 } from '../core/types';
-import itemsData from '../database/items/items.jsonc';
-import researchData from '../database/progression/research.jsonc';
+import itemsData from '../database/items/items.json';
+import researchData from '../database/progression/research.json';
 
 const ALL_ITEM_IDS = (itemsData as unknown as { id: string; category?: string }[])
   .filter((i) => i.category !== 'natural_weapon')

@@ -1,10 +1,10 @@
-import itemsData from '../game/database/items/items.jsonc';
-import recipesData from '../game/database/items/recipes.jsonc';
-import buildingsData from '../game/database/world/buildings.jsonc';
-import researchData from '../game/database/progression/research.jsonc';
-import traitsData from '../game/database/pawns/traits.jsonc';
-import creaturesData from '../game/database/pawns/creatures.jsonc';
-import lootpoolData from '../game/database/items/lootpool.jsonc';
+import itemsData from '../game/database/items/items.json';
+import recipesData from '../game/database/items/recipes.json';
+import buildingsData from '../game/database/world/buildings.json';
+import researchData from '../game/database/progression/research.json';
+import traitsData from '../game/database/pawns/traits.json';
+import creaturesData from '../game/database/pawns/creatures.json';
+import lootpoolData from '../game/database/items/lootpool.json';
 import { carcassItems, nodeItems, hasRecipe, chainAgeOf, usesBossPart } from './chainAge';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */

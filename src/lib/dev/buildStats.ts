@@ -1,4 +1,4 @@
-import statsData from '../game/database/pawns/stats.jsonc';
+import statsData from '../game/database/pawns/stats.json';
 import { GEAR, BUILDS, type BuildClass, type GearRow } from './gearDb';
 
 const statDefs = statsData as {
