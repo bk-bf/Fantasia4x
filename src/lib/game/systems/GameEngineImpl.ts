@@ -20,7 +20,6 @@ import { pawnService } from '../services/PawnService';
 import { pawnGrowthService } from '../services/PawnGrowthService';
 import { buildingService } from '../services/BuildingService';
 import { researchService } from '../services/ResearchService';
-import { WORK_CATEGORIES } from '../core/defs/work';
 import buildingsData from '../database/world/buildings.json';
 
 import { pawnStateMachineService, reapDeadPawns } from './PawnStateMachine';
@@ -58,7 +57,6 @@ import {
 import { occupancyService } from '../services/OccupancyService';
 import { assignDraftMovePath } from '../services/draftMovePath';
 import { isGameDebug, gatedConsole } from '../core/util/log';
-import type { WorkCategory } from '../core/types';
 import type { Pawn, PawnOrder } from '../core/types';
 import { advanceJobOneTick } from './pawn/handlers/work';
 import { rng } from '../core/util/rng';

@@ -7,7 +7,6 @@ import type {
   BodyPartState,
   BodyPartId,
   DamageType,
-  LimbId,
   Item,
   ItemInstance,
   DroppedItem,
@@ -73,7 +72,6 @@ import { socialService } from '../services/SocialService';
 import { memoryService } from '../services/MemoryService';
 import {
   PART_DEF_MAP,
-  rollBodyPart,
   rollBodyPartOf,
   createDefaultBodyParts,
   createBodyPlanLimbs,
@@ -141,7 +139,6 @@ const K_PRECISION_ORGAN = 6;
 const K_PRECISION_FRACTURE = 4;
 const HIDE_WEAR_RESET_TICKS = 750;
 export { powerScale, STAT_SCALE } from '../core/rules/body/powerScale';
-import { powerScale } from '../core/rules/body/powerScale';
 const NATURAL_DAMAGE_BODYSCALE_FACTOR = 0.5;
 const MOB_BASE_DAMAGE = 5;
 const CRIT_MULTIPLIER = 1.5;
@@ -272,7 +269,6 @@ const DUELIST_CRIT = 0.05;
 const TWOHAND_DAMAGE_MULT = 1.15;
 const TWOHAND_ARMOR_PEN = 0.05;
 
-const DUAL_SPEED_MULT = 1.4;
 const DUAL_CRIT = 0.08;
 const DUAL_ARMOR_PEN = 0.08;
 const DUAL_DAMAGE_MULT = 1.05;
@@ -284,7 +280,6 @@ const PARRY_CAP = 0.4;
 const RANGED_BLOCK_MULT = 0.5;
 const MELEE_ACCURACY_WEIGHT = 2;
 const BASE_MELEE_HIT = 60;
-const DEX_HIT_WEIGHT = 1;
 const HIT_CHANCE_WEIGHT = 100 / 3;
 const DODGE_HIT_WEIGHT = 50;
 const NATURAL_ARMOR_DODGE_DRAG = 0.01;
@@ -732,7 +727,6 @@ class CombatServiceImpl implements CombatService {
       ? override.profile
       : attackerProfile(attacker, this.entityDistance(attacker, defender));
     const {
-      str,
       dex,
       baseDamage,
       accuracy,

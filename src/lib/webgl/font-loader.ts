@@ -1,5 +1,5 @@
 import type { FontAtlas } from './types.js';
-import { FontAtlasGenerator, createMonospaceFontAtlas } from './font-atlas.js';
+import { FontAtlasGenerator } from './font-atlas.js';
 
 export interface FontLoadOptions {
   fontFamily: string;

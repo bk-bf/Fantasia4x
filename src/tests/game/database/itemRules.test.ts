@@ -344,21 +344,6 @@ type ArmourItem = Item & {
 const WEARABLE = (ITEMS as ArmourItem[]).filter(
   (i) => i.armorProperties?.armorType && !i.weaponProperties && recipesByOutput.has(i.id)
 );
-const BINDING_SIZE: Record<string, number> = {
-  head: 1,
-  gloves: 1,
-  boots: 1,
-  bracers: 1,
-  belt: 1,
-  back2: 1,
-  greaves: 2,
-  back: 2,
-  offHand: 2,
-  bodyBase: 3,
-  bodyMid: 3,
-  bodyOuter: 3
-};
-const BINDINGS = ['cordage', 'thread', 'sinew', 'enchant_thread'];
 const slotOf = (i: ArmourItem) => i.armorProperties?.equipmentSlot ?? i.armorProperties?.slot ?? '';
 
 describe('ITEM-RULES R6 — a sewn piece lists the binding that holds it together', () => {
@@ -650,7 +635,6 @@ describe('ITEM-RULES R11 — a container item and a storage building never share
 });
 
 describe('ITEM-RULES R12 — the weight class is the same axis on armour, carry aids and weapons', () => {
-  const RANK: Record<string, number> = { light: 0, medium: 1, heavy: 2 };
 
   it('every craftable weapon and worn carry aid resolves to a class', () => {
     const bad = CRAFTABLE.filter((i) => i.weaponProperties || i.inventoryBonus)

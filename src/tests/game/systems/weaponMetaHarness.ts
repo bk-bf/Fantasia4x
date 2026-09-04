@@ -11,23 +11,6 @@ export const EQUAL: Partial<EntityStats> = { strength: 20, dexterity: 20, consti
 const PROGRESS = '.debug/weapon-meta-progress.log';
 let _done = 0;
 let _total = 0;
-const startProgress = (label: string, total: number) => {
-  _done = 0;
-  _total = total;
-  try {
-    writeFileSync(PROGRESS, `${label} — ${total} fights to run\n`, { flag: 'a' });
-  } catch {
-  }
-};
-const step = (what: string) => {
-  _done++;
-  if (_done % 25 !== 0 && _done !== _total) return;
-  const pct = ((_done / _total) * 100).toFixed(1);
-  try {
-    appendFileSync(PROGRESS, `  ${_done} of ${_total} fights (${pct}%)   ${what}\n`);
-  } catch {
-  }
-};
 
 export const ARMOUR: Record<string, string[]> = {
   none: [],

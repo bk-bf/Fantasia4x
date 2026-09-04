@@ -22,7 +22,7 @@
     "test:related": "vitest related --run",
     "test:watch": "vitest",
     "check": "pnpm check:types && pnpm lint && pnpm knip",
-    "lint": "eslint . --max-warnings 283",
+    "lint": "eslint . --max-warnings 221",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "audit": "node tools/audit/audit.mjs",

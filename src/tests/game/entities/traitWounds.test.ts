@@ -7,7 +7,6 @@ import {
   PART_DEF_MAP,
   BOUND_NATURAL_WEAPONS
 } from '$lib/game/core/defs/bodyParts';
-import { getTransientConditionDef } from '$lib/game/core/rules/body/conditions';
 import { healLimbs, recomputeWound } from '$lib/game/core/defs/wounds';
 import { itemService } from '$lib/game/services/ItemService';
 import type { GameState, Pawn, Trait, Injury } from '$lib/game/core/types';

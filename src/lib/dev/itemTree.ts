@@ -8,8 +8,7 @@ import {
   rowForAny,
   type Age,
   type BuildClass,
-  type GearRow,
-  AGE_BY_TIER
+  type GearRow
 } from './gearDb';
 import lootpoolData from '../game/database/items/lootpool.json';
 import creaturesData from '../game/database/pawns/creatures.json';
@@ -346,13 +345,6 @@ function sourceBranch(i: any): string[] {
   const who = DROPPER_OF_ITEM.get(i.id);
   return who ? ['dropped', who] : ['dropped', 'unclaimed'];
 }
-
-const preservation = (i: any): string => {
-  if (i.preservationMethod) return `${i.preservationMethod}`;
-  if (i.category === 'meal') return 'cooked to order';
-  if (/dried|smoked|salted|cured|pickled/i.test(`${i.id} ${i.name ?? ''}`)) return 'dried';
-  return 'fresh';
-};
 
 function foodBranch(i: any): string[] {
   if (i.category === 'spoiled') return ['Spoiled'];

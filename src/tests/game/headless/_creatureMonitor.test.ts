@@ -14,7 +14,6 @@ const MOVING_STATES = new Set([
   'Startled',
   'Alerted'
 ]);
-const RESTFUL_STATES = new Set(['Grazing', 'Eating', 'Sleeping', 'Exhausted', 'Collapsed', 'Tamed']);
 
 const SPAWN_MIX: Array<{ id: string; n: number }> = [
   { id: 'wolf', n: 25 },

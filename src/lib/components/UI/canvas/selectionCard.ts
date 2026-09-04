@@ -27,7 +27,6 @@ import type {
   MoodModel,
   HealthLimb,
   HealthPart,
-  HealthWound,
   ArmorModel,
   ArmorLimb,
   ArmorPart

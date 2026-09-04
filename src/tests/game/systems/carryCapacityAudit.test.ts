@@ -23,8 +23,6 @@ const SHIELD = 'iron_boss_shield';
 const kg = (ids: string[]) =>
   ids.reduce((s, id) => s + (itemService.getItemById(id)?.weightKg ?? 0), 0);
 
-const state = { turn: 0 } as unknown as GameState;
-
 const band = (ratio: number) =>
   ratio <= 0.75 ? 'free' : ratio <= 1.0 ? 'comfortable' : ratio <= 1.25 ? 'burdened' : 'overloaded';
 

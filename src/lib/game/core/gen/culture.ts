@@ -518,7 +518,6 @@ function generateCultureTraitSets(archetype: Archetype): { guaranteed: Trait[]; 
 }
 
 const MAX_CULTURAL_TRAITS = 2;
-const MAX_PERSONAL_TRAITS = 3;
 
 export function drawPawnTraits(
   culture: Culture,

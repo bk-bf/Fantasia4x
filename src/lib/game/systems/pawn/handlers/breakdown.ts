@@ -1,7 +1,6 @@
 import type { GameState, Pawn } from '../../../core/types';
 import { chebyshev } from '../../../core/util/distance';
 import { TICKS_PER_GAME_HOUR } from '../../../services/EnvironmentService';
-import { PAWN_STATE } from '../pawnStates';
 import { findCombatThreat, tryWanderStep, tryAssignSleepPath, FLEE_DISTANCE } from '../pawnHelpers';
 
 export type BreakdownKind = 'crying' | 'hiding' | 'fleeing';

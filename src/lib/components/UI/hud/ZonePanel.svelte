@@ -1,7 +1,7 @@
 <script lang="ts">
   import { uiState } from '$lib/stores/uiState';
   import { gameState } from '$lib/stores/gameState';
-  import type { FilterableZoneType, ZoneInstanceType, Item } from '$lib/game/core/types';
+  import type { ZoneInstanceType, Item } from '$lib/game/core/types';
   import itemsData from '$lib/game/database/items/items.json';
   import { resourceObjectService } from '$lib/game/services/ResourceObjectService';
   import BuildCard from './BuildCard.svelte';

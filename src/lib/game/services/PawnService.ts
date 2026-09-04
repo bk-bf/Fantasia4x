@@ -5,18 +5,15 @@ import type {
   EntityNeeds,
   PawnState,
   TransientConditionDef,
-  EntityCondition,
-  ConditionDef,
-  ConditionStage
+  ConditionDef
 } from '../core/types';
-import { consumeFromStockpiles } from '../core/state/stockpile';
 import { takeOut, carriedDrinkVessel, hydrationOf } from '../core/rules/gear/vessels';
 import { pawnById } from '../core/state/pawnIndex';
 import { categorizeStats, getStatDescription } from '../entities/Pawns';
 import { pawnStatService } from './PawnStatService';
 import { itemService } from './ItemService';
 import { WORK_CATEGORIES } from '../core/defs/work';
-import { TICKS_PER_SECOND, SECONDS_PER_TICK, perTick } from '../core/util/time';
+import { SECONDS_PER_TICK, perTick } from '../core/util/time';
 import { stepBody } from './MovementSystem';
 import { occupancyService } from './OccupancyService';
 import conditionsData from '../database/pawns/conditions.json';

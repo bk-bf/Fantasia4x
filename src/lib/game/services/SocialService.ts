@@ -1,9 +1,7 @@
 import type {
   EventMemory,
   GameState,
-  ItemInstance,
   Mob,
-  MoodModifier,
   Pawn,
   PawnRelationship,
   RelationEventKind,

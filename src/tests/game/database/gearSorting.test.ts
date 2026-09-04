@@ -5,7 +5,6 @@ import { GEAR, AGES, DROPPED, UNAFFILIATED } from '$lib/dev/gearDb';
 
 const ROWS = GEAR;
 const ARMOUR = ROWS.filter((r) => r.kind === 'armor');
-const AGE_BY_TIER = ['Primitive', 'Bronze', 'Iron', 'Steel', 'Runed'];
 const AGE_BY_RESEARCH: Record<string, string> = {
   copper_smelting: 'Copper',
   bronze_working: 'Bronze',
