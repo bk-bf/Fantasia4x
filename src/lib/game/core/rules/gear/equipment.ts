@@ -412,7 +412,7 @@ export function damageEquipment(pawn: Pawn, slot: EquipmentSlot, damage: number 
   const inst = pawn.equipment[slot];
   if (!inst) return pawn;
 
-  const def = itemDefById(inst.itemId);
+  itemDefById(inst.itemId);
   const newDurability = Math.max(0, inst.durability - damage);
 
   if (newDurability <= 0) {

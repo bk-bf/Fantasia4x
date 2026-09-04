@@ -24,7 +24,6 @@ describe('generateWorldKin', () => {
     const worldKin = generateWorldKin(founders, cultures, kingdoms);
 
     expect(worldKin.length).toBeGreaterThan(0);
-    const byId = new Map(worldKin.map((w) => [w.id, w]));
     for (const w of worldKin) {
       expect(w.kin?.length).toBe(1);
       const tie = w.kin![0];

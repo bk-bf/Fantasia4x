@@ -9,7 +9,6 @@ import BUILDINGS_DATABASE_RAW from '../../database/world/buildings.json';
 import { jobService } from '../../services/JobService';
 import { pawnService } from '../../services/PawnService';
 import {
-  buildPathfindingGrids,
   buildSharedSoftBlockedGrid,
   buildPathfindingGridsConfined,
   pathfinderService

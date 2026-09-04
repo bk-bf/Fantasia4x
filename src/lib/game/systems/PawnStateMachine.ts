@@ -6,8 +6,6 @@ import type {
   ConditionDef,
   ConditionStage,
   Injury,
-  LimbState,
-  EntityCondition,
   DroppedItem,
   DeadPawnRecord,
   Item,

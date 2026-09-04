@@ -9,19 +9,6 @@ import { join } from 'node:path';
 
 export const ISSUES_DIR = (root) => join(root, 'docs', 'issues');
 
-const SCALARS = new Set([
-  'id',
-  'title',
-  'status',
-  'kind',
-  'severity',
-  'ready',
-  'origin',
-  'branch',
-  'pr',
-  'created',
-  'updated'
-]);
 const LISTS = new Set(['rules', 'files', 'symbols']);
 
 export const STATUSES = ['open', 'in-progress', 'in-review', 'closed'];

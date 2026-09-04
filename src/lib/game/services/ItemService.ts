@@ -1,7 +1,6 @@
 import type {
   Item,
   GameState,
-  DynamicIngredientSlot,
   DroppedItem,
   Recipe,
   Pawn,

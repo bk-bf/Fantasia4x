@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest';
 import { combatService } from '$lib/game/systems/Combat';
-import { itemService } from '$lib/game/services/ItemService';
 import { pawnStatService } from '$lib/game/services/PawnStatService';
 import { createDefaultBodyParts } from '$lib/game/core/defs/bodyParts';
 import { applyGainedTrait } from '$lib/game/entities/Pawns';

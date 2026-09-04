@@ -1,13 +1,12 @@
 <script lang="ts">
   import { gameState, currentCulture } from '$lib/stores/gameState';
-  import { addToStockpileZone, availableAggregateFromDrops } from '$lib/game/core/state/stockpile';
+  import { availableAggregateFromDrops } from '$lib/game/core/state/stockpile';
   import { uiState } from '$lib/stores/uiState';
   import BackButton from '$lib/components/UI/widget/BackButton.svelte';
   import { itemService } from '$lib/game/services/ItemService';
   import { getMaterialProperty } from '$lib/game/core/defs/materials';
   import { buildingService } from '$lib/game/services/BuildingService';
   import { onDestroy } from 'svelte';
-  import CurrentTask from '../UI/hud/CurrentTask.svelte';
   import ZonePanel from '../UI/hud/ZonePanel.svelte';
   import BuildCard from '../UI/hud/BuildCard.svelte';
   import ItemPills, { type ItemPillView } from '../UI/widget/ItemPills.svelte';
@@ -78,7 +77,6 @@
     'shelter'
   ].flatMap((cat) => buildingService.getBuildingsByCategory(cat));
 
-  $: firstBuildingInProgress = buildings.find((b) => b.status !== 'complete') ?? null;
   $: allBuildingsInProgress = buildings.filter((b) => b.status !== 'complete');
   $: campfires = buildings.filter((b) => b.type === 'campfire' && b.status === 'complete');
 
@@ -111,8 +109,6 @@
   $: displayedDefs = searchTerm
     ? unlockedDefs.filter((b) => b.name.toLowerCase().includes(searchTerm))
     : (activeSection?.defs ?? []);
-
-  $: availableBuildings = unlockedDefs;
 
   $: availStock = availableAggregateFromDrops($gameState?.droppedItems);
   $: getItemAmount = (itemId: string): number => availStock[itemId] ?? 0;
@@ -164,19 +160,6 @@
     unsubscribeGame();
   });
 
-  function startBuilding(building: Building) {
-    if (!canBuild(building)) {
-      console.log('Cannot build:', building.name);
-      return;
-    }
-
-    gameState.command({
-      type: 'placeBuilding',
-      payload: { bid: building.id, x: 0, y: 0 },
-      save: true
-    });
-  }
-
   function cancelBuilding(buildingId: string) {
     gameState.command({ type: 'cancelBuildingRefund', payload: { buildingId }, save: true });
   }
@@ -197,62 +180,6 @@
     gameState.command({ type: 'reorderBuilds', payload: { orderedIds: order }, save: true });
   }
 
-  function formatEffectName(camelCaseStr: string): string {
-    return camelCaseStr
-      .replace(/([A-Z])/g, ' $1')
-      .replace(/^./, (match) => match.toUpperCase())
-      .trim();
-  }
-
-  function getBuildingRequirements(building: Building): string[] {
-    const requirements = [];
-
-    if (building.toolTierRequired && building.toolTierRequired > 0) {
-      requirements.push(`🔧 Tool Level ${building.toolTierRequired}`);
-    }
-
-    if (building.researchRequired) {
-      requirements.push(`📚 ${building.researchRequired}`);
-    }
-
-    if (building.populationRequired > 0) {
-      requirements.push(`👥 ${building.populationRequired} population`);
-    }
-
-    return requirements;
-  }
-
-  function getBuildingSpecialProperties(building: Building): string[] {
-    const properties = [];
-
-    if (building.buildingProperties) {
-      const props = building.buildingProperties;
-
-      if (props.populationCapacity) properties.push(`🏠 +${props.populationCapacity} housing`);
-      if (props.knowledgeGeneration)
-        properties.push(`📚 +${props.knowledgeGeneration} knowledge/hour`);
-      if (props.foodProduction) properties.push(`🍖 +${props.foodProduction} food/hour`);
-      if (props.defensiveStrength) properties.push(`🛡️ +${props.defensiveStrength} defense`);
-      if (props.craftingSpeed)
-        properties.push(`⚡ +${Math.round((props.craftingSpeed - 1) * 100)}% crafting speed`);
-      if (props.tradeBonus)
-        properties.push(`💰 +${Math.round((props.tradeBonus - 1) * 100)}% trade value`);
-      if (props.magicalPower) properties.push(`🔮 +${props.magicalPower} magical power`);
-    }
-
-    return properties;
-  }
-
-  function getUpkeepInfo(building: Building): string[] {
-    if (!building.upkeepCost || Object.keys(building.upkeepCost).length === 0) {
-      return ['No upkeep required'];
-    }
-
-    return Object.entries(building.upkeepCost).map(([itemId, amount]) => {
-      const item = itemService.getItemById(itemId);
-      return `${item?.name || itemId}: ${amount}/hour`;
-    });
-  }
 </script>
 
 <div class="building-menu">
@@ -354,7 +281,6 @@
               {#if costPills.length > 0}<ItemPills pills={costPills} />{/if}
               {#each Object.entries(building.buildingCost).filter( ([id]) => id.startsWith('category:') ) as [id, n]}
                 {@const have = getCostHave(id)}
-                <!-- svelte-ignore a11y_no_onchange -->
                 <span class="cost-item cost-cat" class:neg-text={have < (n as number)}>
                   <select
                     class="mat-select"

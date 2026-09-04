@@ -1,7 +1,6 @@
-import type { Pawn, GameState, WorkCategory, LaborLevel } from '../core/types';
+import type { GameState, WorkCategory, LaborLevel } from '../core/types';
 import { WORK_CATEGORIES } from '../core/defs/work';
 import { jobService } from './JobService';
-import { gatedConsole as console } from '../core/util/log';
 
 const WORK_LOOP_STATES = new Set([
   'Working',

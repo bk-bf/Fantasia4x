@@ -2,9 +2,7 @@ import { browser } from '$app/environment';
 import { writable, derived, get } from 'svelte/store';
 import { GameStateManager } from '$lib/game/core/state/GameStateManager';
 import {
-  consumeFromStockpiles,
   addToStockpileZone,
-  GENERAL_ZONE_ID,
   computeAggregate,
   colonyStock,
   availableAggregateFromDrops,
@@ -23,7 +21,6 @@ import type {
   DesignationType
 } from '$lib/game/core/types';
 import { generateColonyPawns, generateWorldKin } from '$lib/game/entities/Pawns';
-import { pawnService } from '$lib/game/services/PawnService';
 import {
   generateCulture,
   generateCulturePool,
@@ -33,7 +30,6 @@ import { generateKingdomPool, generateKingdomRelations } from '$lib/game/core/ge
 import { kingdomService } from '$lib/game/services/KingdomService';
 import { socialService } from '$lib/game/services/SocialService';
 import { itemService } from '$lib/game/services/ItemService';
-import { buildingService } from '$lib/game/services/BuildingService';
 import { workService } from '$lib/game/services/WorkService';
 import { calculatePawnStats } from '$lib/game/systems/pawnDisplayStats';
 import { generateWorld } from '$lib/game/world/WorldGenerator';
@@ -476,19 +472,6 @@ export function spawnPawnsOnMap(pawns: Pawn[], worldMap: WorldTile[][]): Pawn[] 
       hasReachedDestination: false
     };
   });
-}
-
-function updatePawnStats(state: GameState): GameState {
-  const newPawnStats: Record<string, Record<string, { value: number; sources: string[] }>> = {};
-
-  state.pawns.forEach((pawn) => {
-    newPawnStats[pawn.id] = calculatePawnStats(pawn);
-  });
-
-  return {
-    ...state,
-    pawnStats: newPawnStats
-  };
 }
 
 function startAutoTurns() {

@@ -1,4 +1,4 @@
-import type { ResearchProject, EntityStats, GameState } from '../core/types';
+import type { ResearchProject, GameState } from '../core/types';
 import { consumeFromStockpiles, availableQuantityFromDrops } from '../core/state/stockpile';
 import researchData from '../database/progression/research.json';
 import { perTick } from '../core/util/time';

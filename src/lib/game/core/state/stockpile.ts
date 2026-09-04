@@ -7,7 +7,6 @@ import type {
   DroppedItem,
   ItemInstance
 } from '../types';
-import { rng } from '../util/rng';
 import { mergeConditions } from '../rules/world/carcassCondition';
 import {
   heldQuantity,
@@ -434,7 +433,7 @@ function drawFromVessel(
   const d = drops[i];
   const held = heldQuantity(d.instance, itemId);
   if (held <= 0 || !d.instance) return remaining;
-  const fluid = isFluidId(itemId);
+  isFluidId(itemId);
   const wantNative = remaining;
   const inst = { ...d.instance, contents: d.instance.contents?.map((e) => ({ ...e })) };
   const got = takeOut(inst, itemId, Math.min(held, wantNative));

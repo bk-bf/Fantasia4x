@@ -1,7 +1,5 @@
 import type {
   Pawn,
-  EntityNeeds,
-  PawnState,
   Culture,
   EntityStats,
   Trait,

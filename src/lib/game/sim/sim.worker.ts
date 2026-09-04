@@ -14,7 +14,7 @@ import { drainTileDeltasBudgeted, clearTileDeltas } from '../core/state/tileDelt
 import { carcassConditionByType } from '../core/rules/world/carcassCondition';
 import { buildingsVisualSig } from '../core/state/buildingSig';
 import { gameLogger } from '../debug/gameLogger';
-import type { GameState, Pawn, Mob, WorldTile, DroppedItem } from '../core/types';
+import type { GameState, WorldTile, DroppedItem } from '../core/types';
 
 const TICK_MS = 1000 / TICKS_PER_SECOND;
 const BATCH_BUDGET_MS = 16;
