@@ -4,7 +4,7 @@ import { setSimLogSink } from '$lib/game/core/util/logSink';
 import { itemService } from '$lib/game/services/ItemService';
 import { partCombatValue } from '$lib/game/systems/Combat';
 import { appendFileSync, mkdirSync, writeFileSync } from 'node:fs';
-import creaturesData from '$lib/game/database/pawns/creatures.jsonc';
+import creaturesData from '$lib/game/database/pawns/creatures.json';
 import type { CombatTurnEntry } from '$lib/game/core/defs/events';
 import type { BodyPartId, EntityStats, Mob, Pawn } from '$lib/game/core/types';
 

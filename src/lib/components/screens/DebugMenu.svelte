@@ -10,8 +10,8 @@
     SEASON_LABELS
   } from '$lib/game/services/EnvironmentService';
   import type { Season } from '$lib/game/core/types';
-  import itemsData from '$lib/game/database/items/items.jsonc';
-  import buildingsData from '$lib/game/database/world/buildings.jsonc';
+  import itemsData from '$lib/game/database/items/items.json';
+  import buildingsData from '$lib/game/database/world/buildings.json';
   import AudioNowPlaying from '$lib/components/UI/audio/AudioNowPlaying.svelte';
   import DebugGodmode from './DebugGodmode.svelte';
 

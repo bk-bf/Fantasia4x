@@ -1,4 +1,4 @@
-import jobsData from '../../database/pawns/jobs.jsonc';
+import jobsData from '../../database/pawns/jobs.json';
 import type { DisciplineDef, JobDef } from '../types';
 
 const DISCIPLINES: DisciplineDef[] =

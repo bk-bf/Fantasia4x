@@ -8,9 +8,9 @@ import type {
   ItemInstance,
   Trait
 } from '../core/types';
-import statsData from '../database/pawns/stats.jsonc';
-import conditionsData from '../database/pawns/conditions.jsonc';
-import itemsData from '../database/items/items.jsonc';
+import statsData from '../database/pawns/stats.json';
+import conditionsData from '../database/pawns/conditions.json';
+import itemsData from '../database/items/items.json';
 import { WORK_CATEGORIES } from '../core/defs/work';
 import { getNightVision } from '../core/rules/body/vision';
 import { getStealth } from '../core/rules/body/stealth';

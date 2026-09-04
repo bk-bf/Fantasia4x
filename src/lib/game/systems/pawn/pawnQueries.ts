@@ -1,7 +1,7 @@
 import type { GameState, Pawn, ItemInstance } from '../../core/types';
 
-import ITEMS_DATABASE from '../../database/items/items.jsonc';
-import RARITIES from '../../database/items/rarities.jsonc';
+import ITEMS_DATABASE from '../../database/items/items.json';
+import RARITIES from '../../database/items/rarities.json';
 import { consumeFromStockpiles } from '../../core/state/stockpile';
 import { manhattan } from '../../core/util/distance';
 import { ticksFromSeconds } from '../../core/util/time';

@@ -10,7 +10,7 @@ import {
   mealPoisonChance
 } from '$lib/game/systems/pawn/pawnQueries';
 import { decayIntoxication } from '$lib/game/core/rules/body/conditions';
-import conditionsData from '$lib/game/database/pawns/conditions.jsonc';
+import conditionsData from '$lib/game/database/pawns/conditions.json';
 import type { GameState, Pawn } from '$lib/game/core/types';
 
 describe('§F8 food-chain items', () => {
@@ -127,7 +127,7 @@ describe('§F8 food poisoning', () => {
     expect(mealPoisonChance([{ id: 'water', units: 3 }])).toBe(0);
   });
 
-  it('a low-rarity cooked dish is poisonier than a higher-rarity one (rarities.jsonc poisonMult)', () => {
+  it('a low-rarity cooked dish is poisonier than a higher-rarity one (rarities.json poisonMult)', () => {
     expect(mealPoisonChance([{ id: 'dried_meat', units: 1 }])).toBeGreaterThan(
       mealPoisonChance([{ id: 'salted_meat', units: 1 }])
     );

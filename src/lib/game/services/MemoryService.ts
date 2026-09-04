@@ -3,7 +3,7 @@ import { rng } from '../core/util/rng';
 import { TICKS_PER_SECOND } from '../core/util/time';
 import { TURNS_PER_DAY } from './EnvironmentService';
 import { getConditionCurrentStage } from '../core/rules/body/conditions';
-import memoriesData from '../database/pawns/memories.jsonc';
+import memoriesData from '../database/pawns/memories.json';
 
 const DAY = TURNS_PER_DAY * TICKS_PER_SECOND;
 

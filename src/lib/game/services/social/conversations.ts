@@ -3,8 +3,8 @@ import { effectiveMood } from '../../core/rules/social/social';
 import { rng } from '../../core/util/rng';
 import { TICKS_PER_SECOND } from '../../core/util/time';
 import { TURNS_PER_DAY } from '../EnvironmentService';
-import dialogData from '../../database/social/dialog.jsonc';
-import memoriesData from '../../database/pawns/memories.jsonc';
+import dialogData from '../../database/social/dialog.json';
+import memoriesData from '../../database/pawns/memories.json';
 
 const CALLBACK_MAX_TICKS = 6 * TURNS_PER_DAY * TICKS_PER_SECOND;
 const CALLBACK_CHANCE = 0.45;

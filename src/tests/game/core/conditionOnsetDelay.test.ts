@@ -5,7 +5,7 @@ import {
   TIRED_FATIGUE_THRESHOLD
 } from '$lib/game/core/rules/body/conditions';
 import { TICKS_PER_SECOND } from '$lib/game/core/util/time';
-import conditionsData from '$lib/game/database/pawns/conditions.jsonc';
+import conditionsData from '$lib/game/database/pawns/conditions.json';
 import type { ConditionDef, EntityCondition } from '$lib/game/core/types';
 
 const ALL = conditionsData as unknown as ConditionDef[];

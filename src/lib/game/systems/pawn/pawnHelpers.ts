@@ -5,7 +5,7 @@ import { transientNeedOnset } from '../../core/rules/body/conditions';
 import { gatheringLevelOf } from '../../core/defs/amenities';
 import { needNum } from '../../core/defs/needs';
 import { isUncareable } from '../../core/defs/wounds';
-import BUILDINGS_DATABASE_RAW from '../../database/world/buildings.jsonc';
+import BUILDINGS_DATABASE_RAW from '../../database/world/buildings.json';
 import { jobService } from '../../services/JobService';
 import { pawnService } from '../../services/PawnService';
 import {

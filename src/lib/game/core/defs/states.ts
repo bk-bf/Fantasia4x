@@ -1,4 +1,4 @@
-import statesData from '../../database/pawns/states.jsonc';
+import statesData from '../../database/pawns/states.json';
 
 export type StateKind = 'idle' | 'travel' | 'work' | 'combat' | 'uncontrollable';
 export type StateSource = 'auto' | 'job' | 'need' | 'combat' | 'condition' | 'player';

@@ -1,5 +1,5 @@
 import { ticksFromSeconds } from '../../core/util/time';
-import itemsData from '../../database/items/items.jsonc';
+import itemsData from '../../database/items/items.json';
 import { resourceObjectService } from '../ResourceObjectService';
 
 export const SPAWN_CHECK_INTERVAL = ticksFromSeconds(20);

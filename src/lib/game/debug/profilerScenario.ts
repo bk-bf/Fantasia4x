@@ -13,7 +13,7 @@ import { generatePawns } from '../entities/Pawns';
 import { workService } from '../services/WorkService';
 import { entityService } from '../services/EntityService';
 import { buildingService } from '../services/BuildingService';
-import itemsData from '../database/items/items.jsonc';
+import itemsData from '../database/items/items.json';
 import { rng } from '../core/util/rng';
 
 const ITEMS = itemsData as unknown as Item[];

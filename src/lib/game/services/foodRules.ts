@@ -1,5 +1,5 @@
 import type { Item, FoodSettings } from '../core/types';
-import itemsData from '../database/items/items.jsonc';
+import itemsData from '../database/items/items.json';
 
 const ITEMS_DB = itemsData as unknown as Item[];
 

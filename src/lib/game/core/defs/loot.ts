@@ -1,4 +1,4 @@
-import lootpoolRaw from '../../database/items/lootpool.jsonc';
+import lootpoolRaw from '../../database/items/lootpool.json';
 import { isFluidId, servingL } from '../rules/gear/vessels';
 import { rollFamedIdentity } from '../gen/famedNames';
 import type { EquipmentSlot, ItemQuality } from '../types/items';

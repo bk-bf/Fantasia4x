@@ -5,8 +5,8 @@ import { pawnStatService } from '$lib/game/services/PawnStatService';
 import { createDefaultBodyParts } from '$lib/game/core/defs/bodyParts';
 import { applyGainedTrait } from '$lib/game/entities/Pawns';
 import { rng } from '$lib/game/core/util/rng';
-import itemsData from '$lib/game/database/items/items.jsonc';
-import traitsData from '$lib/game/database/pawns/traits.jsonc';
+import itemsData from '$lib/game/database/items/items.json';
+import traitsData from '$lib/game/database/pawns/traits.json';
 import type { GameState, Pawn, Trait } from '$lib/game/core/types';
 
 const BASE_ATTACK_INTERVAL_TICKS = 120;
@@ -150,7 +150,7 @@ describe('trait baking — a gained trait is a born trait', () => {
     const leftovers = TRAITS.flatMap((t) =>
       Object.keys((t.effects ?? {}) as Record<string, unknown>).filter((k) => k.endsWith('Penalty'))
     );
-    expect(leftovers, 'no `*Penalty` key survives in traits.jsonc').toEqual([]);
+    expect(leftovers, 'no `*Penalty` key survives in traits.json').toEqual([]);
 
     const negatives = TRAITS.flatMap((t) =>
       Object.entries((t.effects ?? {}) as Record<string, unknown>)

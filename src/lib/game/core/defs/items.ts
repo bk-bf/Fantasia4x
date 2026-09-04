@@ -1,4 +1,4 @@
-import itemsData from '../../database/items/items.jsonc';
+import itemsData from '../../database/items/items.json';
 import type { Item } from '../types';
 
 const ITEMS_DATABASE = itemsData as unknown as Item[];

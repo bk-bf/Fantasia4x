@@ -1,6 +1,6 @@
 import type { DesignationType, Season } from '../types';
 import { resolveCharSpans, type CharSpan } from './terrains';
-import resourceObjectsData from '../../database/world/resources.jsonc';
+import resourceObjectsData from '../../database/world/resources.json';
 import { hexToRgb01 } from '../util/color';
 
 export interface ResourceYieldDef {

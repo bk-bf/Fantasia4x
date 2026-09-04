@@ -1,5 +1,5 @@
 import { describe, it } from 'vitest';
-import itemsData from '$lib/game/database/items/items.jsonc';
+import itemsData from '$lib/game/database/items/items.json';
 import { AGE_NAMES, AGE_CEILING, chainAgeOf, blameStation } from '$lib/dev/chainAge';
 /* eslint-disable @typescript-eslint/no-explicit-any */
 describe('declared tier vs derived chain', () => {
