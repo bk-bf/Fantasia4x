@@ -151,7 +151,7 @@ Before you finish, run and get green:
     ${PNPM} vitest run <each test file you added or edited, by path>
 
 \`test:related\` selects tests that import the files you name. It selects **nothing** for a
-change to a \`.jsonc\` data file, and nothing for a test file you added — those have to be run
+change to a \`.json\` data file, and nothing for a test file you added — those have to be run
 by path, and a change with no test naming it is not verified. The harness re-runs all of this
 and will refuse to commit if nothing executed.
 

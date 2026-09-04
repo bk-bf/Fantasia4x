@@ -119,9 +119,9 @@ const stripComments = (t) =>
  * ledger is built from, so "which function is this call inside" is exact.
  */
 export function seamViolations(root, symbols) {
-  const rulePath = join(dirname(fileURLToPath(import.meta.url)), '..', 'seams.jsonc');
+  const rulePath = join(dirname(fileURLToPath(import.meta.url)), '..', 'seams.json');
   if (!existsSync(rulePath)) return { rules: 0, findings: [] };
-  const rules = JSON.parse(stripComments(readFileSync(rulePath, 'utf8')));
+  const rules = JSON.parse(readFileSync(rulePath, 'utf8'));
   const findings = [];
 
   for (const r of rules) {

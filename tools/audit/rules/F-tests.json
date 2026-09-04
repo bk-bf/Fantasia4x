@@ -1,11 +1,3 @@
-// Family F — the tests themselves. T2 exists to stay small, and it only can if T1 is
-// trustworthy. Coverage says "covered"; nothing says the assertion means anything.
-//
-// Whether a test covers a symbol is not a trigger, because most of this suite runs through
-// buildScenario / HeadlessSession and never names its subject: a flag saying "a test file
-// calls this" answers a different question and reads as untested for most of the engine.
-// The agent searches src/tests itself -- for the symbol name, for the harness entry points
-// that reach it -- and says which searches it ran.
 [
   {
     "id": "F01",
@@ -25,8 +17,15 @@
     ],
     "trigger": {
       "all": [
-        { "kind_in": ["function", "method"] },
-        { "exported": true }
+        {
+          "kind_in": [
+            "function",
+            "method"
+          ]
+        },
+        {
+          "exported": true
+        }
       ]
     },
     "demotable": false,
@@ -38,7 +37,7 @@
     "tier": "T2",
     "title": "untested behaviour a cheap test would pin",
     "authority": "AGENTS.md#scope-tests-after-an-edit",
-    "question": "Search src/tests for this symbol\u2019s name and for any scenario that would run it, and say which searches you ran. If something covers it, the verdict is n/a with na_clause \"a test covers this symbol\". Otherwise: does this exported symbol have a branch, bound or ordering guarantee that no test covers and that a single cheap unit test would pin?",
+    "question": "Search src/tests for this symbol’s name and for any scenario that would run it, and say which searches you ran. If something covers it, the verdict is n/a with na_clause \"a test covers this symbol\". Otherwise: does this exported symbol have a branch, bound or ordering guarantee that no test covers and that a single cheap unit test would pin?",
     "fail_requires": [
       "the specific behaviour left unpinned",
       "the input that exercises it",
@@ -52,10 +51,27 @@
     ],
     "trigger": {
       "all": [
-        { "kind_in": ["function", "method"] },
-        { "exported": true },
-        { "min_loc": 12 },
-        { "layer_in": ["services", "systems", "core", "entities", "ai"] }
+        {
+          "kind_in": [
+            "function",
+            "method"
+          ]
+        },
+        {
+          "exported": true
+        },
+        {
+          "min_loc": 12
+        },
+        {
+          "layer_in": [
+            "services",
+            "systems",
+            "core",
+            "entities",
+            "ai"
+          ]
+        }
       ]
     },
     "demotable": false,

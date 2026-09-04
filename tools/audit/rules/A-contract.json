@@ -1,12 +1,3 @@
-// Family A — contract drift.
-//
-// Most ADRs state their invariant in prose, so no script decides them and these rules are
-// the residue. `audit t0` reports which of the decisions doc's ADRs still carry no rule.
-//
-// A rule belongs here only when the invariant is stated in an ADR and cannot be decided by
-// tsc, eslint, a test, the headless sim, or a T0 check. The mechanical halves already live
-// in T0: a declared constant still holding its declared value (`adr-const`), and a
-// chokepoint nothing routes around (`adr-seams`, seams.jsonc).
 [
   {
     "id": "A02a",
@@ -27,9 +18,21 @@
     ],
     "trigger": {
       "all": [
-        { "kind_in": ["function", "method", "accessor"] },
-        { "flag": "assignsGameState" },
-        { "file_not_glob": ["src/lib/game/core/GameState.ts"] }
+        {
+          "kind_in": [
+            "function",
+            "method",
+            "accessor"
+          ]
+        },
+        {
+          "flag": "assignsGameState"
+        },
+        {
+          "file_not_glob": [
+            "src/lib/game/core/GameState.ts"
+          ]
+        }
       ]
     },
     "demotable": false,
@@ -54,10 +57,26 @@
     ],
     "trigger": {
       "all": [
-        { "kind_in": ["function", "method"] },
-        { "layer_in": ["services", "systems", "entities", "ai"] },
-        { "matches": "(bonus|penalty|multiplier|modifier|efficiency|effectiveness)" },
-        { "not_matches": "ModifierSystem" }
+        {
+          "kind_in": [
+            "function",
+            "method"
+          ]
+        },
+        {
+          "layer_in": [
+            "services",
+            "systems",
+            "entities",
+            "ai"
+          ]
+        },
+        {
+          "matches": "(bonus|penalty|multiplier|modifier|efficiency|effectiveness)"
+        },
+        {
+          "not_matches": "ModifierSystem"
+        }
       ]
     },
     "demotable": false,
@@ -81,9 +100,20 @@
     ],
     "trigger": {
       "all": [
-        { "file_glob": ["src/lib/game/core/**/*.ts"] },
-        { "kind_in": ["function", "method"] },
-        { "min_loc": 6 }
+        {
+          "file_glob": [
+            "src/lib/game/core/**/*.ts"
+          ]
+        },
+        {
+          "kind_in": [
+            "function",
+            "method"
+          ]
+        },
+        {
+          "min_loc": 6
+        }
       ]
     },
     "demotable": true,
@@ -108,9 +138,27 @@
     ],
     "trigger": {
       "all": [
-        { "kind_in": ["function", "method"] },
-        { "any": [{ "layer_in": ["services"] }, { "module_matches": "game/systems" }] },
-        { "matches": "(quantity|stock|amount|inventory|reserve|consume|spawnItem|addItem)" }
+        {
+          "kind_in": [
+            "function",
+            "method"
+          ]
+        },
+        {
+          "any": [
+            {
+              "layer_in": [
+                "services"
+              ]
+            },
+            {
+              "module_matches": "game/systems"
+            }
+          ]
+        },
+        {
+          "matches": "(quantity|stock|amount|inventory|reserve|consume|spawnItem|addItem)"
+        }
       ]
     },
     "demotable": false,
@@ -122,7 +170,7 @@
     "tier": "T2",
     "title": "hand-written job.type switch instead of the JobDef registry",
     "authority": "docs/game/DECISIONS.md#adr-017",
-    "question": "Does this symbol branch on a job type by hand — a switch, an if-chain, or a literal map — where ADR-017 requires the work-category, label and claim-gating to flow from jobs.jsonc via jobService.getJobWorkCategory?",
+    "question": "Does this symbol branch on a job type by hand — a switch, an if-chain, or a literal map — where ADR-017 requires the work-category, label and claim-gating to flow from jobs.json via jobService.getJobWorkCategory?",
     "fail_requires": [
       "file:line of the branch",
       "which JobDef field it duplicates",
@@ -134,9 +182,18 @@
     ],
     "trigger": {
       "all": [
-        { "kind_in": ["function", "method"] },
-        { "matches": "(job\\.type|jobType|Job\\['type'\\])" },
-        { "not_matches": "getJobWorkCategory" }
+        {
+          "kind_in": [
+            "function",
+            "method"
+          ]
+        },
+        {
+          "matches": "(job\\.type|jobType|Job\\['type'\\])"
+        },
+        {
+          "not_matches": "getJobWorkCategory"
+        }
       ]
     },
     "demotable": true,
@@ -161,9 +218,21 @@
     ],
     "trigger": {
       "all": [
-        { "kind_in": ["function", "method"] },
-        { "matches": "(openSet|closedSet|heuristic|manhattan|euclidean|floodFill|bresenham|visibilit|lineOfSight|nearest)" },
-        { "file_not_glob": ["src/lib/game/services/Pathfinder*.ts", "src/lib/game/services/*Spatial*.ts"] }
+        {
+          "kind_in": [
+            "function",
+            "method"
+          ]
+        },
+        {
+          "matches": "(openSet|closedSet|heuristic|manhattan|euclidean|floodFill|bresenham|visibilit|lineOfSight|nearest)"
+        },
+        {
+          "file_not_glob": [
+            "src/lib/game/services/Pathfinder*.ts",
+            "src/lib/game/services/*Spatial*.ts"
+          ]
+        }
       ]
     },
     "demotable": false,
@@ -187,9 +256,18 @@
     ],
     "trigger": {
       "all": [
-        { "kind_in": ["function", "method"] },
-        { "matches": "/\\*\\*" },
-        { "min_loc": 12 }
+        {
+          "kind_in": [
+            "function",
+            "method"
+          ]
+        },
+        {
+          "matches": "/\\*\\*"
+        },
+        {
+          "min_loc": 12
+        }
       ]
     },
     "demotable": false,

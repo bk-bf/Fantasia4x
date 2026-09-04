@@ -1,24 +1,21 @@
-// Architecture seams a script can enforce, so no agent has to.
-//
-// Each entry names a chokepoint the codebase is supposed to funnel through, and the exact
-// symbols allowed through it. `audit t0` finds every call site by scanning symbol bodies
-// (the same AST spans the ledger is built from) and reports anything else that calls it.
-//
-//   callee   a function name; `allow` lists `<file>::<Class.name>` symbols that may call it
-//   module   an import specifier suffix; `allow` lists the files that may import it
 [
   {
     "adr": "ADR-008",
     "kind": "module",
     "target": "services/WasmPathfinderService",
-    "allow": ["src/lib/game/services/PathfinderService.ts", "src/lib/game/services/index.ts"],
+    "allow": [
+      "src/lib/game/services/PathfinderService.ts",
+      "src/lib/game/services/index.ts"
+    ],
     "msg": "imports WasmPathfinderService directly (go through the PathfinderService interface)"
   },
   {
     "adr": "ADR-026",
     "kind": "callee",
     "target": "buildGameGrid",
-    "allow": ["src/lib/components/UI/gameCanvas/terrainPaint.ts::fullRebuildTerrain"],
+    "allow": [
+      "src/lib/components/UI/gameCanvas/terrainPaint.ts::fullRebuildTerrain"
+    ],
     "msg": "full-map terrain rebuild outside the terrainPaint seam (the per-delta path must repaint only changed tiles)"
   },
   {
@@ -35,7 +32,10 @@
     "adr": "ADR-034",
     "kind": "callee",
     "target": "aggregateFromDrops",
-    "allow": ["src/lib/game/core/GameState.ts::withDrops", "src/lib/game/core/GameState.ts::colonyStock"],
+    "allow": [
+      "src/lib/game/core/GameState.ts::withDrops",
+      "src/lib/game/core/GameState.ts::colonyStock"
+    ],
     "msg": "rebuilds the stockpile aggregate outside withDrops (withDrops is the one place a fluid placed loose is spilled, so a path that aggregates around it can leave water lying on the ground)"
   }
 ]

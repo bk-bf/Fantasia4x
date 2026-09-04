@@ -1,9 +1,3 @@
-// Family B — boundary leaks. Player-facing text and backend ids.
-//
-// The greppable half of this family belongs in T0 (an ast-grep rule for a hand-rolled
-// `id.replace('_',' ')` humanizer, an eslint rule for `$:` in Svelte files). What is left
-// here needs a reader: whether a rendered expression is an id or a label, and whether a
-// sentence sells a mechanic instead of describing a thing.
 [
   {
     "id": "B01",
@@ -26,11 +20,19 @@
       "any": [
         {
           "all": [
-            { "kind_in": ["markup"] },
-            { "flag": "rendersIdExpression" }
+            {
+              "kind_in": [
+                "markup"
+              ]
+            },
+            {
+              "flag": "rendersIdExpression"
+            }
           ]
         },
-        { "flag": "handRolledHumanizer" }
+        {
+          "flag": "handRolledHumanizer"
+        }
       ]
     },
     "demotable": true,
@@ -54,8 +56,14 @@
     ],
     "trigger": {
       "all": [
-        { "lang_in": ["json"] },
-        { "flag": "hasPlayerFacingText" }
+        {
+          "lang_in": [
+            "json"
+          ]
+        },
+        {
+          "flag": "hasPlayerFacingText"
+        }
       ]
     },
     "demotable": true,
@@ -80,9 +88,19 @@
     ],
     "trigger": {
       "all": [
-        { "lang_in": ["json"] },
-        { "matches": "\"description\"\\s*:" },
-        { "file_glob": ["src/lib/game/database/**/*.json"] }
+        {
+          "lang_in": [
+            "json"
+          ]
+        },
+        {
+          "matches": "\"description\"\\s*:"
+        },
+        {
+          "file_glob": [
+            "src/lib/game/database/**/*.json"
+          ]
+        }
       ]
     },
     "demotable": false,
@@ -107,9 +125,18 @@
     ],
     "trigger": {
       "all": [
-        { "kind_in": ["function", "method"] },
-        { "name_matches": "(?i)(mouseup|pointerup|dragend|release|commit|complete).*(mark|drag|select|box)|(mark|drag|select|box).*(up|end|release|commit|complete)" },
-        { "matches": "(designat|draft|hunt|harvest)" }
+        {
+          "kind_in": [
+            "function",
+            "method"
+          ]
+        },
+        {
+          "name_matches": "(?i)(mouseup|pointerup|dragend|release|commit|complete).*(mark|drag|select|box)|(mark|drag|select|box).*(up|end|release|commit|complete)"
+        },
+        {
+          "matches": "(designat|draft|hunt|harvest)"
+        }
       ]
     },
     "demotable": false,

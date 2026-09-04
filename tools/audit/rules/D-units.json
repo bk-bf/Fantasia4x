@@ -1,5 +1,3 @@
-// Family D — unit and frame correctness. Ticks vs turns, ms vs seconds, 0-1 vs 0-100,
-// per-pawn vs per-colony. The type system sees `number` for all of them.
 [
   {
     "id": "D01",
@@ -20,11 +18,30 @@
     ],
     "trigger": {
       "all": [
-        { "kind_in": ["function", "method"] },
-        { "flag": "hasUnitWords" },
-        { "flag": "hasNumericLiteral" },
-        { "layer_in": ["services", "systems", "entities", "ai", "core"] },
-        { "min_loc": 5 }
+        {
+          "kind_in": [
+            "function",
+            "method"
+          ]
+        },
+        {
+          "flag": "hasUnitWords"
+        },
+        {
+          "flag": "hasNumericLiteral"
+        },
+        {
+          "layer_in": [
+            "services",
+            "systems",
+            "entities",
+            "ai",
+            "core"
+          ]
+        },
+        {
+          "min_loc": 5
+        }
       ]
     },
     "demotable": false,
@@ -49,10 +66,25 @@
     ],
     "trigger": {
       "all": [
-        { "kind_in": ["function", "method"] },
-        { "exported": true },
-        { "flag": "hasUnitWords" },
-        { "layer_in": ["services", "systems", "core"] }
+        {
+          "kind_in": [
+            "function",
+            "method"
+          ]
+        },
+        {
+          "exported": true
+        },
+        {
+          "flag": "hasUnitWords"
+        },
+        {
+          "layer_in": [
+            "services",
+            "systems",
+            "core"
+          ]
+        }
       ]
     },
     "demotable": false,

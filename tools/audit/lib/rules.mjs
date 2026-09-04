@@ -7,52 +7,6 @@ import { TOOL_DIR } from './ledger.mjs';
 
 export const RULES_DIR = join(TOOL_DIR, 'rules');
 
-export function stripJsonc(text) {
-  let out = '';
-  let inStr = false,
-    esc = false,
-    inLine = false,
-    inBlock = false;
-  for (let i = 0; i < text.length; i++) {
-    const c = text[i],
-      n = text[i + 1];
-    if (inLine) {
-      if (c === '\n') {
-        inLine = false;
-        out += c;
-      }
-      continue;
-    }
-    if (inBlock) {
-      if (c === '*' && n === '/') {
-        inBlock = false;
-        i++;
-      }
-      continue;
-    }
-    if (inStr) {
-      out += c;
-      if (esc) esc = false;
-      else if (c === '\\') esc = true;
-      else if (c === '"') inStr = false;
-      continue;
-    }
-    if (c === '/' && n === '/') {
-      inLine = true;
-      i++;
-      continue;
-    }
-    if (c === '/' && n === '*') {
-      inBlock = true;
-      i++;
-      continue;
-    }
-    if (c === '"') inStr = true;
-    out += c;
-  }
-  return out.replace(/,(\s*[}\]])/g, '$1');
-}
-
 const REQUIRED = ['id', 'family', 'title', 'question', 'trigger'];
 const TIERS = new Set(['T0', 'T1', 'T2']);
 const STATUSES = new Set(['active', 'draft', 'demoted']);
@@ -60,10 +14,10 @@ const STATUSES = new Set(['active', 'draft', 'demoted']);
 export function loadRules(dir = RULES_DIR) {
   const rules = [];
   const errors = [];
-  for (const f of readdirSync(dir).filter((x) => x.endsWith('.jsonc') || x.endsWith('.json'))) {
+  for (const f of readdirSync(dir).filter((x) => x.endsWith('.json'))) {
     let parsed;
     try {
-      parsed = JSON.parse(stripJsonc(readFileSync(join(dir, f), 'utf8')));
+      parsed = JSON.parse(readFileSync(join(dir, f), 'utf8'));
     } catch (e) {
       errors.push(`${f}: ${e.message}`);
       continue;
