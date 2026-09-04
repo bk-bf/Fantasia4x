@@ -1,10 +1,3 @@
-// Family E — per-tick cost. `perf.log` reports worker TPS in aggregate; it never says
-// which symbol paid for it.
-//
-// Whether the tick loop reaches a symbol is not a trigger. The trigger narrows to code that
-// COULD be on it — right layer, allocating or logging — and the agent establishes reach by
-// searching for the callers and following them up to processGameTurn / tickPawn. A symbol
-// nothing reaches is `n/a` with the searches cited, never `pass`.
 [
   {
     "id": "E01",
@@ -27,9 +20,29 @@
     ],
     "trigger": {
       "all": [
-        { "kind_in": ["function", "method"] },
-        { "layer_in": ["services", "systems", "entities", "ai", "core"] },
-        { "any_flag": ["allocatesArray", "spreadsObject", "allocatesLiteral", "deepClones"] }
+        {
+          "kind_in": [
+            "function",
+            "method"
+          ]
+        },
+        {
+          "layer_in": [
+            "services",
+            "systems",
+            "entities",
+            "ai",
+            "core"
+          ]
+        },
+        {
+          "any_flag": [
+            "allocatesArray",
+            "spreadsObject",
+            "allocatesLiteral",
+            "deepClones"
+          ]
+        }
       ]
     },
     "demotable": false,
@@ -55,9 +68,24 @@
     ],
     "trigger": {
       "all": [
-        { "kind_in": ["function", "method"] },
-        { "layer_in": ["services", "systems", "entities", "ai", "core"] },
-        { "matches": "(\\.map\\(|\\.filter\\(|=\\s*\\[)" }
+        {
+          "kind_in": [
+            "function",
+            "method"
+          ]
+        },
+        {
+          "layer_in": [
+            "services",
+            "systems",
+            "entities",
+            "ai",
+            "core"
+          ]
+        },
+        {
+          "matches": "(\\.map\\(|\\.filter\\(|=\\s*\\[)"
+        }
       ]
     },
     "demotable": false,
@@ -82,8 +110,20 @@
     ],
     "trigger": {
       "all": [
-        { "kind_in": ["function", "method"] },
-        { "file_glob": ["src/lib/**/sim.worker.ts", "src/lib/**/simWorkerClient.ts", "src/lib/**/entityProjection.ts", "src/lib/**/*snapshot*.ts"] }
+        {
+          "kind_in": [
+            "function",
+            "method"
+          ]
+        },
+        {
+          "file_glob": [
+            "src/lib/**/sim.worker.ts",
+            "src/lib/**/simWorkerClient.ts",
+            "src/lib/**/entityProjection.ts",
+            "src/lib/**/*snapshot*.ts"
+          ]
+        }
       ]
     },
     "demotable": false,
@@ -108,9 +148,24 @@
     ],
     "trigger": {
       "all": [
-        { "kind_in": ["function", "method"] },
-        { "layer_in": ["services", "systems", "entities", "ai", "core"] },
-        { "flag": "logs" }
+        {
+          "kind_in": [
+            "function",
+            "method"
+          ]
+        },
+        {
+          "layer_in": [
+            "services",
+            "systems",
+            "entities",
+            "ai",
+            "core"
+          ]
+        },
+        {
+          "flag": "logs"
+        }
       ]
     },
     "demotable": true,

@@ -1,6 +1,3 @@
-// Family H — definition rows. `itemRules.test.ts` and `armourCoverage.test.ts` already
-// own the mechanically checkable gates (R2 creature tier, R4 station age, coverage holes).
-// These are the gates that need a reader, and they route through the `items` skill.
 [
   {
     "id": "H01",
@@ -20,9 +17,19 @@
     ],
     "trigger": {
       "all": [
-        { "lang_in": ["json"] },
-        { "file_glob": ["src/lib/game/database/items/items.json"] },
-        { "flag": "hasTier" }
+        {
+          "lang_in": [
+            "json"
+          ]
+        },
+        {
+          "file_glob": [
+            "src/lib/game/database/items/items.json"
+          ]
+        },
+        {
+          "flag": "hasTier"
+        }
       ]
     },
     "demotable": false,
@@ -46,9 +53,19 @@
     ],
     "trigger": {
       "all": [
-        { "lang_in": ["json"] },
-        { "file_glob": ["src/lib/game/database/items/items.json"] },
-        { "matches": "\"name\"\\s*:" }
+        {
+          "lang_in": [
+            "json"
+          ]
+        },
+        {
+          "file_glob": [
+            "src/lib/game/database/items/items.json"
+          ]
+        },
+        {
+          "matches": "\"name\"\\s*:"
+        }
       ]
     },
     "demotable": false,
@@ -72,9 +89,19 @@
     ],
     "trigger": {
       "all": [
-        { "lang_in": ["json"] },
-        { "file_glob": ["src/lib/game/database/items/items.json"] },
-        { "matches": "\"(slot|equipSlot|armourSlot)\"\\s*:" }
+        {
+          "lang_in": [
+            "json"
+          ]
+        },
+        {
+          "file_glob": [
+            "src/lib/game/database/items/items.json"
+          ]
+        },
+        {
+          "matches": "\"(slot|equipSlot|armourSlot)\"\\s*:"
+        }
       ]
     },
     "demotable": false,

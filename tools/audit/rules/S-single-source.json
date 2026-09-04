@@ -1,13 +1,3 @@
-// Family S — single-source drift.
-//
-// Derived from docs/issues/core-stat-single-source.md, which was found by hand. The shape:
-// a fixed set is declared once properly and then restated by hand elsewhere, and the type
-// system checks the *members* of each restatement but never its *completeness or order*.
-// A `StatKey[]` annotation does not stop a list from being short one entry.
-//
-// This is the family most likely to be under-triggered rather than over-triggered: the
-// syntactic tell is weak, and the judgement is entirely "is there a canonical declaration
-// this restates?" Check the n/a rate here before trusting a clean result.
 [
   {
     "id": "S01",
@@ -31,8 +21,14 @@
     ],
     "trigger": {
       "all": [
-        { "kind_in": ["table"] },
-        { "matches": "['\"][A-Za-z_][A-Za-z0-9_]*['\"][\\s\\S]{0,120}['\"][A-Za-z_][A-Za-z0-9_]*['\"][\\s\\S]{0,120}['\"][A-Za-z_][A-Za-z0-9_]*['\"]" }
+        {
+          "kind_in": [
+            "table"
+          ]
+        },
+        {
+          "matches": "['\"][A-Za-z_][A-Za-z0-9_]*['\"][\\s\\S]{0,120}['\"][A-Za-z_][A-Za-z0-9_]*['\"][\\s\\S]{0,120}['\"][A-Za-z_][A-Za-z0-9_]*['\"]"
+        }
       ]
     },
     "demotable": false,
@@ -58,8 +54,16 @@
     ],
     "trigger": {
       "all": [
-        { "kind_in": ["function", "method", "store"] },
-        { "matches": "(?i)(MUST match|must be kept|keep (?:it |them |these )?in sync|keep in step|same order as|order must|mirrors? the|parallel (?:to|with)|corresponds? to the order)" }
+        {
+          "kind_in": [
+            "function",
+            "method",
+            "store"
+          ]
+        },
+        {
+          "matches": "(?i)(MUST match|must be kept|keep (?:it |them |these )?in sync|keep in step|same order as|order must|mirrors? the|parallel (?:to|with)|corresponds? to the order)"
+        }
       ]
     },
     "demotable": false,
@@ -88,14 +92,33 @@
       "any": [
         {
           "all": [
-            { "kind_in": ["function", "method", "store", "markup", "table"] },
-            { "matches": "(\\bslice\\(0,\\s*[23]\\)\\s*\\.\\s*toUpperCase|toUpperCase\\(\\)\\s*\\.\\s*slice\\(0,\\s*[23]\\))" }
+            {
+              "kind_in": [
+                "function",
+                "method",
+                "store",
+                "markup",
+                "table"
+              ]
+            },
+            {
+              "matches": "(\\bslice\\(0,\\s*[23]\\)\\s*\\.\\s*toUpperCase|toUpperCase\\(\\)\\s*\\.\\s*slice\\(0,\\s*[23]\\))"
+            }
           ]
         },
         {
           "all": [
-            { "kind_in": ["function", "method", "store", "table"] },
-            { "matches": "['\"]?\\w+['\"]?\\s*:\\s*['\"][A-Z]{2,4}['\"]\\s*,[\\s\\S]{0,80}['\"]?\\w+['\"]?\\s*:\\s*['\"][A-Z]{2,4}['\"]\\s*,[\\s\\S]{0,80}['\"]?\\w+['\"]?\\s*:\\s*['\"][A-Z]{2,4}['\"]" }
+            {
+              "kind_in": [
+                "function",
+                "method",
+                "store",
+                "table"
+              ]
+            },
+            {
+              "matches": "['\"]?\\w+['\"]?\\s*:\\s*['\"][A-Z]{2,4}['\"]\\s*,[\\s\\S]{0,80}['\"]?\\w+['\"]?\\s*:\\s*['\"][A-Z]{2,4}['\"]\\s*,[\\s\\S]{0,80}['\"]?\\w+['\"]?\\s*:\\s*['\"][A-Z]{2,4}['\"]"
+            }
           ]
         }
       ]
@@ -124,10 +147,29 @@
     ],
     "trigger": {
       "all": [
-        { "kind_in": ["function", "method"] },
-        { "layer_in": ["services", "systems", "entities", "core"] },
-        { "matches": "\\bdef(?:inition)?\\??\\.|\\bsr\\??\\.|\\bentry\\??\\.|\\brow\\??\\." },
-        { "any_flag": ["hasNullishDefault", "hasOrDefault"] }
+        {
+          "kind_in": [
+            "function",
+            "method"
+          ]
+        },
+        {
+          "layer_in": [
+            "services",
+            "systems",
+            "entities",
+            "core"
+          ]
+        },
+        {
+          "matches": "\\bdef(?:inition)?\\??\\.|\\bsr\\??\\.|\\bentry\\??\\.|\\brow\\??\\."
+        },
+        {
+          "any_flag": [
+            "hasNullishDefault",
+            "hasOrDefault"
+          ]
+        }
       ]
     },
     "demotable": false,

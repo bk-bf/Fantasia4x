@@ -1,6 +1,3 @@
-// Family G — code that cannot run. A branch inside a symbol that IS called, whose guard no
-// caller can satisfy. Finding the call sites is the work: search the repo for the symbol's
-// name, including string-keyed dispatch and re-exports, and read each site.
 [
   {
     "id": "G01",
@@ -22,9 +19,18 @@
     ],
     "trigger": {
       "all": [
-        { "kind_in": ["function", "method"] },
-        { "min_loc": 15 },
-        { "matches": "(if\\s*\\(|switch\\s*\\()" }
+        {
+          "kind_in": [
+            "function",
+            "method"
+          ]
+        },
+        {
+          "min_loc": 15
+        },
+        {
+          "matches": "(if\\s*\\(|switch\\s*\\()"
+        }
       ]
     },
     "demotable": false,

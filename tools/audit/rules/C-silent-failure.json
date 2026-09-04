@@ -1,6 +1,3 @@
-// Family C — silent failure. A lookup misses, a default fills in, and the colony quietly
-// stops doing something. Headless catches this only when someone already suspected it
-// and wrote that scenario; the type system never catches it at all.
 [
   {
     "id": "C01",
@@ -21,9 +18,27 @@
     ],
     "trigger": {
       "all": [
-        { "kind_in": ["function", "method"] },
-        { "any_flag": ["hasNullishDefault", "hasOrDefault"] },
-        { "layer_in": ["services", "systems", "entities", "ai", "core"] }
+        {
+          "kind_in": [
+            "function",
+            "method"
+          ]
+        },
+        {
+          "any_flag": [
+            "hasNullishDefault",
+            "hasOrDefault"
+          ]
+        },
+        {
+          "layer_in": [
+            "services",
+            "systems",
+            "entities",
+            "ai",
+            "core"
+          ]
+        }
       ]
     },
     "demotable": false,
@@ -47,8 +62,15 @@
     ],
     "trigger": {
       "all": [
-        { "kind_in": ["function", "method"] },
-        { "flag": "hasCatch" }
+        {
+          "kind_in": [
+            "function",
+            "method"
+          ]
+        },
+        {
+          "flag": "hasCatch"
+        }
       ]
     },
     "demotable": true,
@@ -73,10 +95,26 @@
     ],
     "trigger": {
       "all": [
-        { "kind_in": ["function", "method"] },
-        { "flag": "hasBareReturn" },
-        { "layer_in": ["services", "systems", "entities", "ai"] },
-        { "min_loc": 8 }
+        {
+          "kind_in": [
+            "function",
+            "method"
+          ]
+        },
+        {
+          "flag": "hasBareReturn"
+        },
+        {
+          "layer_in": [
+            "services",
+            "systems",
+            "entities",
+            "ai"
+          ]
+        },
+        {
+          "min_loc": 8
+        }
       ]
     },
     "demotable": false,
