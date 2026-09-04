@@ -142,7 +142,7 @@
   import { buildingsVisualSig } from '$lib/game/core/state/buildingSig';
   import { lineFormationTargets } from '$lib/game/sim/commands';
   import type { ItemPillView } from '$lib/components/UI/widget/ItemPills.svelte';
-  import itemsData from '$lib/game/database/items/items.jsonc';
+  import itemsData from '$lib/game/database/items/items.json';
 
   const ITEMS_DATABASE = itemsData as unknown as Item[];
 

@@ -1,12 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { jobService } from '$lib/game/services/JobService';
-import jobsData from '$lib/game/database/pawns/jobs.jsonc';
+import jobsData from '$lib/game/database/pawns/jobs.json';
 import type { JobDef } from '$lib/game/core/types';
 
 const defs = jobsData as unknown as JobDef[];
 
-describe('job registry (jobs.jsonc ↔ JobService)', () => {
-  it('every jobs.jsonc id has a registered behaviour handler, and vice versa', () => {
+describe('job registry (jobs.json ↔ JobService)', () => {
+  it('every jobs.json id has a registered behaviour handler, and vice versa', () => {
     expect(new Set(defs.map((d) => d.id))).toEqual(new Set(jobService.jobTypeIds()));
   });
 

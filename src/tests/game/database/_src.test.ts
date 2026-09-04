@@ -1,8 +1,8 @@
 import { it } from 'vitest';
 import { TREE_ITEMS } from '$lib/dev/itemTree';
 import { GEAR } from '$lib/dev/gearDb';
-import resourcesData from '$lib/game/database/world/resources.jsonc';
-import creaturesData from '$lib/game/database/pawns/creatures.jsonc';
+import resourcesData from '$lib/game/database/world/resources.json';
+import creaturesData from '$lib/game/database/pawns/creatures.json';
 /* eslint-disable @typescript-eslint/no-explicit-any */
 const node = new Set<string>();
 (function walk(o: unknown): void {

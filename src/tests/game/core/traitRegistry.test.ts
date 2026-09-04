@@ -3,7 +3,7 @@ import { DUELIST_TRAIT_ID } from '$lib/game/systems/rangedCombat';
 import { TRAIT_DATABASE } from '$lib/game/core/gen/culture';
 import { getTransientConditionDef } from '$lib/game/core/rules/body/conditions';
 import { PART_DEF_MAP, BOUND_NATURAL_WEAPONS } from '$lib/game/core/defs/bodyParts';
-import raritiesData from '$lib/game/database/items/rarities.jsonc';
+import raritiesData from '$lib/game/database/items/rarities.json';
 import type { Trait } from '$lib/game/core/types';
 
 const ALL: Trait[] = TRAIT_DATABASE;

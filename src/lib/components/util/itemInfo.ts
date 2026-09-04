@@ -4,7 +4,7 @@ import { resourceObjectService } from '$lib/game/services/ResourceObjectService.
 import { SOIL_TIER_NAME, type SoilTier } from '$lib/game/core/defs/terrains.js';
 import { TURNS_PER_DAY } from '$lib/game/services/EnvironmentService.js';
 import type { Item, Building } from '$lib/game/core/types.js';
-import buildingsData from '$lib/game/database/world/buildings.jsonc';
+import buildingsData from '$lib/game/database/world/buildings.json';
 
 type CharSpan = { sheet?: string; id?: number; from?: number; to?: number; literal?: string };
 

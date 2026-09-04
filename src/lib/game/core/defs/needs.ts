@@ -1,4 +1,4 @@
-import needsData from '../../database/pawns/needs.jsonc';
+import needsData from '../../database/pawns/needs.json';
 
 export interface NeedMoodBand {
   atOrAbove?: number;

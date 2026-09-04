@@ -9,7 +9,7 @@
       "quality": [[0, 3], [1, 2]],
       "slots": {
         "bracers": { "chance": 0.4, "pick": [{ "id": "goblin_bark_bracers", "w": 1 }] },
-        "head":      {"chance": 0.30, "pick": [{"id": "goblin_scrap_cap", "w": 2}, ]},
+        "head":      {"chance": 0.30, "pick": [{"id": "goblin_scrap_cap", "w": 2}]},
         "mainHand":  {"chance": 0.85, "pick": [{"id": "goblin_shank", "w": 3}, {"id": "goblin_hooked_spear", "w": 2}, {"id": "goblin_net", "w": 1}]},
         "bodyOuter": {"chance": 0.4,  "pick": [{"id": "goblin_scrap_vest", "w": 1}]}
       }

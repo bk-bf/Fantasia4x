@@ -3,7 +3,7 @@ import {
   getConditionDefById,
   CONDITION_IDS_WITH_TRIGGERS
 } from '$lib/game/core/rules/body/conditions';
-import conditionsData from '$lib/game/database/pawns/conditions.jsonc';
+import conditionsData from '$lib/game/database/pawns/conditions.json';
 import type { ConditionDef, TransientConditionDef } from '$lib/game/core/types/health';
 
 const DEFS = conditionsData as unknown as Array<ConditionDef | TransientConditionDef>;

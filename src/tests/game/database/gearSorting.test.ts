@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import recipesData from '$lib/game/database/items/recipes.jsonc';
+import recipesData from '$lib/game/database/items/recipes.json';
 import { chainAgeOf, hasRecipe, blameStation } from '$lib/dev/chainAge';
 import { GEAR, AGES, DROPPED, UNAFFILIATED } from '$lib/dev/gearDb';
 
@@ -25,7 +25,11 @@ describe('gear tables sort by DATA, not by words in the id', () => {
       if (r.age === 'Boss') return false;
       if (!hasRecipe(r.id)) return false;
       const rec = (
-        recipesData as { id: string; outputs?: Record<string, number>; researchRequired?: string }[]
+        recipesData as unknown as {
+          id: string;
+          outputs?: Record<string, number>;
+          researchRequired?: string;
+        }[]
       ).find((x) => x.outputs && r.id in x.outputs);
       if (rec?.researchRequired && AGE_BY_RESEARCH[rec.researchRequired]) return false;
       return r.age !== AGE_OF_CHAIN[chainAgeOf(r.id)];

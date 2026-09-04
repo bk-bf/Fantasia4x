@@ -2163,7 +2163,7 @@
     "toolTierRequired": 2,
     "populationRequired": 1,
     "effects": {"family": "brewing", "rung": 1, "craftingBonus": 0.3, "craftingEnabled": true, "brewingEnabled": true, "fermentation": 1},
-    "fluidCapacityL": 150,
+    "fluidCapacityL": 150
   },
   {
     "id": "lagering_cellar",
@@ -2180,7 +2180,7 @@
     "toolTierRequired": 3,
     "populationRequired": 1,
     "effects": {"family": "brewing", "rung": 2, "craftingBonus": 0.5, "craftingEnabled": true, "brewingEnabled": true, "fermentation": 1},
-    "fluidCapacityL": 200,
+    "fluidCapacityL": 200
   },
   {
     "id": "runic_brewhouse",
@@ -2197,7 +2197,7 @@
     "toolTierRequired": 3,
     "populationRequired": 1,
     "effects": {"family": "brewing", "rung": 3, "craftingBonus": 0.7, "craftingEnabled": true, "brewingEnabled": true, "fermentation": 1, "arcane": 1},
-    "fluidCapacityL": 250,
+    "fluidCapacityL": 250
   },
   {
     "id": "oven",

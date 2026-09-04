@@ -3,9 +3,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const DB = path.resolve(import.meta.dirname, '../src/lib/game/database');
-const CREATURES = path.join(DB, 'creatures.jsonc');
-const ITEMS = path.join(DB, 'items.jsonc');
-const LOOTPOOL = path.join(DB, 'lootpool.jsonc');
+const CREATURES = path.join(DB, 'creatures.json');
+const ITEMS = path.join(DB, 'items.json');
+const LOOTPOOL = path.join(DB, 'lootpool.json');
 
 const QUALITY_MULT = [0.8, 1.0, 1.15, 1.3, 1.5, 1.8];
 
@@ -224,7 +224,7 @@ if (args.includes('--check')) {
     console.error(`✗ ${drift.length} creature(s) drifted from the committed annotations:\n`);
     for (const d of drift) console.error('  ' + d);
     console.error(
-      '\nUpdate the inline `// DPS x | effHP y | profile` + threatLevel in creatures.jsonc.'
+      '\nUpdate the inline `// DPS x | effHP y | profile` + threatLevel in creatures.json.'
     );
     process.exit(1);
   }

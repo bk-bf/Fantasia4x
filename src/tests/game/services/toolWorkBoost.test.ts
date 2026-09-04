@@ -31,7 +31,7 @@ const equipping = (itemId: string): Pawn => {
   return p;
 };
 
-describe('tool work boost (additive, items.jsonc toolBoost)', () => {
+describe('tool work boost (additive, items.json toolBoost)', () => {
   it('a carried stone_pick adds to mining speed AND yield', () => {
     const bareM = pawnStatService.getWorkModifiers(base(), 'mining');
     const pickM = pawnStatService.getWorkModifiers(carrying('stone_pick'), 'mining');

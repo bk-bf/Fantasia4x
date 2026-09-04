@@ -432,7 +432,7 @@
         <p class="note err">No creature results yet — run <code>./audit.sh --creatures</code>.</p>
       {:else}
         <p class="sub">
-          Every weapon against the real hostile creatures from <code>creatures.jsonc</code>, in hands
+          Every weapon against the real hostile creatures from <code>creatures.json</code>, in hands
           built for it, across all four armour classes. <strong>Overall</strong> is the mean combat
           value wrecked per 1000 ticks. The four armour columns show the same weapon with the PAWN
           naked, in light, medium and plate — <strong>naked → plate</strong> is what wearing armour

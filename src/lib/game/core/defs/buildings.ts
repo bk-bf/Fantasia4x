@@ -1,4 +1,4 @@
-import buildingsData from '../../database/world/buildings.jsonc';
+import buildingsData from '../../database/world/buildings.json';
 import type { Building } from '../types';
 
 const BUILDINGS_DATABASE = buildingsData as unknown as Building[];

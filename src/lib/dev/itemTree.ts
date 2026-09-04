@@ -1,7 +1,7 @@
 import { gearClassOf } from '../game/core/rules/gear/gearClass';
-import itemsData from '../game/database/items/items.jsonc';
-import recipesData from '../game/database/items/recipes.jsonc';
-import buildingsData from '../game/database/world/buildings.jsonc';
+import itemsData from '../game/database/items/items.json';
+import recipesData from '../game/database/items/recipes.json';
+import buildingsData from '../game/database/world/buildings.json';
 import {
   GEAR,
   AGES,
@@ -11,8 +11,8 @@ import {
   type GearRow,
   AGE_BY_TIER
 } from './gearDb';
-import lootpoolData from '../game/database/items/lootpool.jsonc';
-import creaturesData from '../game/database/pawns/creatures.jsonc';
+import lootpoolData from '../game/database/items/lootpool.json';
+import creaturesData from '../game/database/pawns/creatures.json';
 import {
   AGE_NAMES,
   blameStation,

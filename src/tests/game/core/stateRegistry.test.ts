@@ -4,28 +4,28 @@ import { STATE_DEFS, UNCONTROLLABLE_STATES, stateLabel } from '$lib/game/core/de
 import { NEED_OWNED_STATES } from '$lib/game/core/defs/needs';
 
 describe('FSM state registry ↔ PAWN_STATE', () => {
-  it('every need-owned state (needs.jsonc `states`) is a real PAWN_STATE — typo guard', () => {
+  it('every need-owned state (needs.json `states`) is a real PAWN_STATE — typo guard', () => {
     const enumVals = new Set<string>(Object.values(PAWN_STATE));
     for (const s of NEED_OWNED_STATES)
-      expect(enumVals.has(s), `needs.jsonc names a non-existent state '${s}'`).toBe(true);
+      expect(enumVals.has(s), `needs.json names a non-existent state '${s}'`).toBe(true);
   });
 
-  it('every STRUCTURAL PAWN_STATE has a states.jsonc entry; need states are owned by needs.jsonc; no orphans', () => {
+  it('every STRUCTURAL PAWN_STATE has a states.json entry; need states are owned by needs.json; no orphans', () => {
     const defKeys = new Set(Object.keys(STATE_DEFS));
     for (const v of Object.values(PAWN_STATE)) {
       if (NEED_OWNED_STATES.has(v)) {
         expect(
           defKeys.has(v),
-          `need state '${v}' should NOT be in states.jsonc (needs.jsonc owns it)`
+          `need state '${v}' should NOT be in states.json (needs.json owns it)`
         ).toBe(false);
       } else {
-        expect(defKeys.has(v), `no states.jsonc entry for structural state '${v}'`).toBe(true);
+        expect(defKeys.has(v), `no states.json entry for structural state '${v}'`).toBe(true);
       }
     }
     for (const k of defKeys)
       expect(
         new Set<string>(Object.values(PAWN_STATE)).has(k),
-        `orphan states.jsonc entry '${k}'`
+        `orphan states.json entry '${k}'`
       ).toBe(true);
   });
 

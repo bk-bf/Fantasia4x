@@ -33,13 +33,13 @@ import { simLog } from '../core/util/logSink';
 import { TICKS_PER_SECOND } from '../core/util/time';
 import { TURNS_PER_DAY } from './EnvironmentService';
 import { spawnKingdomParty, despawnKingdomParty } from './entity/kingdomParties';
-import events from '../database/social/events.jsonc';
+import events from '../database/social/events.json';
 
 const TICKS_PER_DAY = TURNS_PER_DAY * TICKS_PER_SECOND;
 
 const STALE_AFTER_TICKS = 30 * TICKS_PER_DAY;
 
-const ARRIVAL = events as {
+const ARRIVAL = events as unknown as {
   visitors: {
     baseCadenceDays: number;
     firstArrivalDays: [number, number];

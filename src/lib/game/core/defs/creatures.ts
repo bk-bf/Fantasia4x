@@ -1,4 +1,4 @@
-import creaturesData from '../../database/pawns/creatures.jsonc';
+import creaturesData from '../../database/pawns/creatures.json';
 import { resolveCharSpans, type CharSpan } from './terrains';
 import type { DamageType } from '../types/health';
 

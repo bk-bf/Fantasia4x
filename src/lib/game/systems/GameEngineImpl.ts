@@ -21,7 +21,7 @@ import { pawnGrowthService } from '../services/PawnGrowthService';
 import { buildingService } from '../services/BuildingService';
 import { researchService } from '../services/ResearchService';
 import { WORK_CATEGORIES } from '../core/defs/work';
-import buildingsData from '../database/world/buildings.jsonc';
+import buildingsData from '../database/world/buildings.json';
 
 import { pawnStateMachineService, reapDeadPawns } from './PawnStateMachine';
 import { rollMigrantWave } from './migration';

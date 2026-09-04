@@ -49,7 +49,7 @@ import {
 import { scaleWeaponQuality, scaleArmorQuality } from '../core/rules/gear/itemQuality';
 import { pawnStatService } from '../services/PawnStatService';
 import { calcMaxStamina } from '../entities/Pawns';
-import conditionsData from '../database/pawns/conditions.jsonc';
+import conditionsData from '../database/pawns/conditions.json';
 import type { ConditionDef, TransientConditionDef } from '../core/types';
 import { simLog, type CombatTextKind } from '../core/util/logSink';
 import { rng } from '../core/util/rng';

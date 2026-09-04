@@ -4,7 +4,7 @@
   import { hudSpriteIconAction } from '$lib/components/UI/canvas/hudSpriteIcon';
   import type { HudSpriteIconRef } from '$lib/components/UI/canvas/spriteSheets';
   import ItemFilterChecklist from '$lib/components/UI/canvas/ItemFilterChecklist.svelte';
-  import itemsData from '$lib/game/database/items/items.jsonc';
+  import itemsData from '$lib/game/database/items/items.json';
   import { itemService } from '$lib/game/services/ItemService';
   import { buildingService } from '$lib/game/services/BuildingService';
   import {

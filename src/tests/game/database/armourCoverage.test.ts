@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import itemsData from '$lib/game/database/items/items.jsonc';
-import recipesData from '$lib/game/database/items/recipes.jsonc';
+import itemsData from '$lib/game/database/items/items.json';
+import recipesData from '$lib/game/database/items/recipes.json';
 import type { EquipmentSlot, Item } from '$lib/game/core/types';
 import { SLOT_COVERAGE } from '$lib/game/core/rules/gear/armorCoverage';
 
@@ -65,7 +65,7 @@ describe('armour is reachable through play', () => {
       .map((i) => i.id);
     expect(
       orphans,
-      `armour with an items.jsonc entry but no recipe (unequippable in play; add a recipe, or ` +
+      `armour with an items.json entry but no recipe (unequippable in play; add a recipe, or ` +
         `LOOT_ONLY it here if it is enemy gear): ${orphans.join(', ')}`
     ).toEqual([]);
   });

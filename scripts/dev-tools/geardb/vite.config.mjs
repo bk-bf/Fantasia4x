@@ -7,47 +7,6 @@ import { fileURLToPath } from 'node:url';
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(HERE, '../../..');
 
-function stripJsoncComments(src) {
-  let out = '';
-  let i = 0;
-  let inStr = false;
-  while (i < src.length) {
-    if (inStr) {
-      if (src[i] === '\\') {
-        out += src[i] + src[i + 1];
-        i += 2;
-      } else if (src[i] === '"') {
-        inStr = false;
-        out += src[i++];
-      } else {
-        out += src[i++];
-      }
-    } else if (src[i] === '"') {
-      inStr = true;
-      out += src[i++];
-    } else if (src[i] === '/' && src[i + 1] === '/') {
-      while (i < src.length && src[i] !== '\n') i++;
-    } else if (src[i] === '/' && src[i + 1] === '*') {
-      i += 2;
-      while (i < src.length && !(src[i] === '*' && src[i + 1] === '/')) i++;
-      i += 2;
-    } else {
-      out += src[i++];
-    }
-  }
-  return out;
-}
-
-function jsoncPlugin() {
-  return {
-    name: 'vite-plugin-jsonc',
-    transform(code, id) {
-      if (!id.endsWith('.jsonc')) return;
-      return { code: `export default ${stripJsoncComments(code)}`, map: null };
-    }
-  };
-}
-
 function readAudit() {
   const dir = join(ROOT, 'static/audit');
   if (!existsSync(dir)) return null;
@@ -87,7 +46,7 @@ function auditDataPlugin() {
 
 export default defineConfig({
   root: HERE,
-  plugins: [svelte({ configFile: false, preprocess: vitePreprocess() }), jsoncPlugin(), auditDataPlugin()],
+  plugins: [svelte({ configFile: false, preprocess: vitePreprocess() }), auditDataPlugin()],
   resolve: {
     alias: {
       $app: resolve(HERE, 'shims'),
