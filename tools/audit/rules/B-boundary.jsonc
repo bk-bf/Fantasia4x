@@ -54,7 +54,7 @@
     ],
     "trigger": {
       "all": [
-        { "lang_in": ["jsonc"] },
+        { "lang_in": ["json"] },
         { "flag": "hasPlayerFacingText" }
       ]
     },
@@ -80,9 +80,9 @@
     ],
     "trigger": {
       "all": [
-        { "lang_in": ["jsonc"] },
+        { "lang_in": ["json"] },
         { "matches": "\"description\"\\s*:" },
-        { "file_glob": ["src/lib/game/database/**/*.jsonc"] }
+        { "file_glob": ["src/lib/game/database/**/*.json"] }
       ]
     },
     "demotable": false,
