@@ -2,7 +2,7 @@
   import { gameState } from '$lib/stores/gameState';
   import { SCENARIO_PRESETS } from '$lib/game/headless/scenarios/presets';
   import type { DisableableNeed, StatKey } from '$lib/game/core/types';
-  import itemsData from '$lib/game/database/items/items.jsonc';
+  import itemsData from '$lib/game/database/items/items.json';
 
   type NamedDef = { id: string; name?: string; category?: string };
   const ITEMS = (itemsData as unknown as NamedDef[]).filter((i) => i.category !== 'natural_weapon');
@@ -14,6 +14,7 @@
     { key: 'hygiene', label: 'Hygiene' },
     { key: 'wetness', label: 'Wetness' },
     { key: 'relaxation', label: 'Relaxation' },
+    { key: 'comfort', label: 'Comfort' },
     { key: 'mobHunger', label: 'Creature hunger' }
   ];
   const STAT_KEYS: StatKey[] = [

@@ -1,4 +1,4 @@
-import moodData from '../../database/pawns/mood.jsonc';
+import moodData from '../../database/pawns/mood.json';
 
 export interface MoodEffect {
   label: string;

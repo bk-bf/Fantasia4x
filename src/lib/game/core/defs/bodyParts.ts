@@ -1,6 +1,6 @@
 import type { BodyPartId, LimbId, BodyPartState, LimbState } from '../types';
 import { rng } from '../util/rng';
-import limbmapRaw from '../../database/pawns/limbmap.jsonc';
+import limbmapRaw from '../../database/pawns/limbmap.json';
 
 export interface BodyPartDef {
   id: BodyPartId;

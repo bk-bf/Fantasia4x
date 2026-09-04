@@ -432,6 +432,4 @@ export function damageEquipment(pawn: Pawn, slot: EquipmentSlot, damage: number 
       [slot]: { ...inst, durability: newDurability }
     }
   };
-
-  void def;
 }

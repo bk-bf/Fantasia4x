@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Pawn, Item, ItemInstance } from '$lib/game/core/types';
-  import ITEMS_DATABASE from '$lib/game/database/items/items.jsonc';
+  import ITEMS_DATABASE from '$lib/game/database/items/items.json';
   import { itemService } from '$lib/game/services/ItemService';
   import { gameState } from '$lib/stores/gameState';
   import CarryItemCard from './CarryItemCard.svelte';
@@ -98,7 +98,7 @@
               <VesselFilterPanel {inst} onClose={() => (openVessel = null)} />
             {/if}
           {:else}
-            <div class="card unknown-card" title="No items.jsonc entry for this id — data bug.">
+            <div class="card unknown-card" title="No items.json entry for this id — data bug.">
               ⚠ unknown item<br /><code>{inst.itemId}</code>
             </div>
           {/if}
@@ -121,7 +121,7 @@
             dropTitle="Drop now — put this stack down on the pawn's tile."
           />
         {:else}
-          <div class="card unknown-card" title="No items.jsonc entry for this id — data bug.">
+          <div class="card unknown-card" title="No items.json entry for this id — data bug.">
             ⚠ unknown item<br /><code>{itemId}</code> ×{qty}
           </div>
         {/if}

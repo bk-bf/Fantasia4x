@@ -20,13 +20,13 @@
     ],
     "trigger": {
       "all": [
-        { "lang_in": ["jsonc"] },
-        { "file_glob": ["src/lib/game/database/items/items.jsonc"] },
+        { "lang_in": ["json"] },
+        { "file_glob": ["src/lib/game/database/items/items.json"] },
         { "flag": "hasTier" }
       ]
     },
     "demotable": false,
-    "status": "draft"
+    "status": "active"
   },
   {
     "id": "H02",
@@ -46,13 +46,13 @@
     ],
     "trigger": {
       "all": [
-        { "lang_in": ["jsonc"] },
-        { "file_glob": ["src/lib/game/database/items/items.jsonc"] },
+        { "lang_in": ["json"] },
+        { "file_glob": ["src/lib/game/database/items/items.json"] },
         { "matches": "\"name\"\\s*:" }
       ]
     },
     "demotable": false,
-    "status": "draft"
+    "status": "active"
   },
   {
     "id": "H03",
@@ -72,12 +72,12 @@
     ],
     "trigger": {
       "all": [
-        { "lang_in": ["jsonc"] },
-        { "file_glob": ["src/lib/game/database/items/items.jsonc"] },
+        { "lang_in": ["json"] },
+        { "file_glob": ["src/lib/game/database/items/items.json"] },
         { "matches": "\"(slot|equipSlot|armourSlot)\"\\s*:" }
       ]
     },
     "demotable": false,
-    "status": "draft"
+    "status": "active"
   }
 ]

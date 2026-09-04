@@ -5,8 +5,8 @@ import { buildingLight } from './LightingService';
 import { buildingService } from './BuildingService';
 import { resourceObjectService } from './ResourceObjectService';
 import { BIOMES, SUBTERRAINS, SUBTERRAIN_FALLBACK } from '../core/defs/terrains';
-import seasonsData from '../database/world/seasons.jsonc';
-import weatherData from '../database/world/weather.jsonc';
+import seasonsData from '../database/world/seasons.json';
+import weatherData from '../database/world/weather.json';
 import type { SeededRng } from '../core/util/rng';
 import type { Season, WeatherState, WeatherType, WorldTile, PlacedBuilding } from '../core/types';
 

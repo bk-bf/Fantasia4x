@@ -1,8 +1,8 @@
-import itemsData from '../game/database/items/items.jsonc';
-import recipesData from '../game/database/items/recipes.jsonc';
-import buildingsData from '../game/database/world/buildings.jsonc';
-import resourcesData from '../game/database/world/resources.jsonc';
-import creaturesData from '../game/database/pawns/creatures.jsonc';
+import itemsData from '../game/database/items/items.json';
+import recipesData from '../game/database/items/recipes.json';
+import buildingsData from '../game/database/world/buildings.json';
+import resourcesData from '../game/database/world/resources.json';
+import creaturesData from '../game/database/pawns/creatures.json';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 

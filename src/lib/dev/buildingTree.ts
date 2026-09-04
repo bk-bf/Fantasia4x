@@ -6,9 +6,9 @@
 // station LADDERS in particular — cooking 0–5, tailoring 0–4, lapidary 0–3, butchery 0–3 — are
 // invisible in a flat list and obvious as a tree: a family with one rung is a hole.
 
-import buildingsData from '../game/database/world/buildings.jsonc';
-import recipesData from '../game/database/items/recipes.jsonc';
-import itemsData from '../game/database/items/items.jsonc';
+import buildingsData from '../game/database/world/buildings.json';
+import recipesData from '../game/database/items/recipes.json';
+import itemsData from '../game/database/items/items.json';
 import { AGE_NAMES } from './chainAge';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */

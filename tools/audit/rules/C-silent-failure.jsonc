@@ -27,7 +27,7 @@
       ]
     },
     "demotable": false,
-    "status": "active"
+    "status": "draft"
   },
   {
     "id": "C02",
@@ -52,7 +52,7 @@
       ]
     },
     "demotable": true,
-    "status": "active"
+    "status": "draft"
   },
   {
     "id": "C03",
@@ -80,6 +80,6 @@
       ]
     },
     "demotable": false,
-    "status": "active"
+    "status": "draft"
   }
 ]

@@ -1,4 +1,4 @@
-import woundsRaw from '../../database/pawns/wounds.jsonc';
+import woundsRaw from '../../database/pawns/wounds.json';
 import { PART_DEF_MAP, boneBreakBudget } from './bodyParts';
 import { rng } from '../util/rng';
 import type { DamageType } from '../types';

@@ -1,4 +1,4 @@
-import traitDbData from '../../database/pawns/traits.jsonc';
+import traitDbData from '../../database/pawns/traits.json';
 import { rng } from '../util/rng';
 import { recomputeWound } from './wounds';
 import type { Pawn, Trait } from '../types';

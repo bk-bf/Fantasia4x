@@ -20,8 +20,8 @@ import {
   vesselOf
 } from '../rules/gear/vessels';
 import { allItemDefs, itemDefById } from '../defs/items';
-import buildingsData from '../../database/world/buildings.jsonc';
-import itemsData from '../../database/items/items.jsonc';
+import buildingsData from '../../database/world/buildings.json';
+import itemsData from '../../database/items/items.json';
 
 const TOOL_TIER_BY_ID: Map<string, number> = new Map(
   (itemsData as unknown as Item[])

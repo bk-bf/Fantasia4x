@@ -1,4 +1,4 @@
-import buildingsData from '../../database/world/buildings.jsonc';
+import buildingsData from '../../database/world/buildings.json';
 import type { Building, PlacedBuilding } from '../types';
 import { aggregateMaterialMods } from './materials';
 

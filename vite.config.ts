@@ -5,44 +5,10 @@ import path from 'path';
 import fs from 'fs';
 
 function findGitRoot(dir: string): string {
-  const gitPath = path.join(dir, '.git');
-  if (fs.existsSync(gitPath) && fs.statSync(gitPath).isDirectory()) return dir;
+  if (fs.existsSync(path.join(dir, 'package.json'))) return dir;
   const parent = path.dirname(dir);
   if (parent === dir) return dir;
   return findGitRoot(parent);
-}
-
-function stripJsoncComments(src: string): string {
-  let out = '';
-  let i = 0;
-  let inStr = false;
-  while (i < src.length) {
-    if (inStr) {
-      if (src[i] === '\\') {
-        out += src[i] + src[i + 1];
-        i += 2;
-      } else if (src[i] === '"') {
-        inStr = false;
-        out += src[i++];
-      } else {
-        out += src[i++];
-      }
-    } else {
-      if (src[i] === '"') {
-        inStr = true;
-        out += src[i++];
-      } else if (src[i] === '/' && src[i + 1] === '/') {
-        while (i < src.length && src[i] !== '\n') i++;
-      } else if (src[i] === '/' && src[i + 1] === '*') {
-        i += 2;
-        while (i < src.length && !(src[i] === '*' && src[i + 1] === '/')) i++;
-        i += 2;
-      } else {
-        out += src[i++];
-      }
-    }
-  }
-  return out;
 }
 
 const SHELL_UA_MARKER = 'Fantasia4xShell';
@@ -108,17 +74,6 @@ function desktopShellGuardPlugin(): Plugin {
   };
 }
 
-function jsoncPlugin(): Plugin {
-  return {
-    name: 'vite-plugin-jsonc',
-    transform(code, id) {
-      if (!id.endsWith('.jsonc')) return;
-      const json = stripJsoncComments(code);
-      return { code: `export default ${json}`, map: null };
-    }
-  };
-}
-
 const APP_VERSION = JSON.parse(
   fs.readFileSync(path.join(findGitRoot(process.cwd()), 'package.json'), 'utf-8')
 ).version;
@@ -127,10 +82,10 @@ export default defineConfig({
   define: {
     __APP_VERSION__: JSON.stringify(APP_VERSION)
   },
-  plugins: [desktopShellGuardPlugin(), jsoncPlugin(), wasm(), sveltekit()],
+  plugins: [desktopShellGuardPlugin(), wasm(), sveltekit()],
   worker: {
     format: 'es',
-    plugins: () => [jsoncPlugin(), wasm()]
+    plugins: () => [wasm()]
   },
   server: {
     hmr: process.env.F4X_HMR === 'true' ? undefined : false,

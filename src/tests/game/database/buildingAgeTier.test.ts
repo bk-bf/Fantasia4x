@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import buildingsData from '$lib/game/database/world/buildings.jsonc';
+import buildingsData from '$lib/game/database/world/buildings.json';
 import { AGE_NAMES, BUILDING_AGE, blameStation, chainAgeOf } from '$lib/dev/chainAge';
 
 type Building = {

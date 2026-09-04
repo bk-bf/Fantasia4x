@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { buildScenario } from '$lib/game/headless/Scenario';
 import { HeadlessSession } from '$lib/game/headless/HeadlessSession';
 import { buildingService } from '$lib/game/services/BuildingService';
-import buildingsData from '$lib/game/database/world/buildings.jsonc';
+import buildingsData from '$lib/game/database/world/buildings.json';
 
 const LADDER = ['campfire', 'hearth', 'brick_hearth', 'brick_stove', 'iron_stove', 'steel_stove'];
 

@@ -1,5 +1,5 @@
 import type { GameState, PlacedBuilding, Item, FuelSettings } from '../core/types';
-import itemsData from '../database/items/items.jsonc';
+import itemsData from '../database/items/items.json';
 import { buildingService } from './BuildingService';
 
 const ITEMS_DB = itemsData as unknown as Item[];

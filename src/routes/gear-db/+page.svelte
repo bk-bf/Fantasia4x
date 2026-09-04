@@ -453,7 +453,7 @@
       class="tab lead"
       class:active={view === 'audit'}
       onclick={() => (view = 'audit')}
-      title="Every item in items.jsonc, nested by what it is — armour by age ▸ set ▸ class ▸ coverage"
+      title="Every item in items.json, nested by what it is — armour by age ▸ set ▸ class ▸ coverage"
       >Items</button
     >
     <button

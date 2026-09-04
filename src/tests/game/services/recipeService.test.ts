@@ -1,11 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import { recipeService } from '$lib/game/services/RecipeService';
-import recipesData from '$lib/game/database/items/recipes.jsonc';
-import itemsData from '$lib/game/database/items/items.jsonc';
-import buildingsData from '$lib/game/database/world/buildings.jsonc';
+import recipesData from '$lib/game/database/items/recipes.json';
+import itemsData from '$lib/game/database/items/items.json';
+import buildingsData from '$lib/game/database/world/buildings.json';
 
 describe('RecipeService (recipe registry, Stage A)', () => {
-  it('resolves a migrated recipe from recipes.jsonc (venison)', () => {
+  it('resolves a migrated recipe from recipes.json (venison)', () => {
     const r = recipeService.getRecipeForItem('venison');
     expect(r).toBeDefined();
     expect(r!.station).toBe('butcher_spot');
@@ -47,8 +47,8 @@ describe('RecipeService (recipe registry, Stage A)', () => {
 
   it('every authored recipe + alternative resolves to real item and building ids', () => {
     const itemIds = new Set((itemsData as Array<{ id: string }>).map((i) => i.id));
-    const buildingIds = new Set((buildingsData as Array<{ id: string }>).map((b) => b.id));
-    const recipes = recipesData as Array<{
+    const buildingIds = new Set((buildingsData as unknown as Array<{ id: string }>).map((b) => b.id));
+    const recipes = recipesData as unknown as Array<{
       id: string;
       station?: string;
       inputs?: Record<string, number>;
