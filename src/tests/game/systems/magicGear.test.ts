@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import type { TransientConditionDef } from '$lib/game/core/types';
 import { syncTransientConditions } from '$lib/game/systems/PawnStateMachine';
 import { equipItem } from '$lib/game/core/rules/gear/equipment';
 import { combatService } from '$lib/game/systems/Combat';
@@ -17,14 +18,7 @@ const CUT_AT: Record<string, string> = {
   sapphire: 'faceting_lathe'
 };
 
-const MAGICAL_CONDS = (
-  conditionsData as unknown as Array<{
-    id: string;
-    transient?: boolean;
-    magical?: boolean;
-    modifiers: Record<string, number>;
-  }>
-).filter((c) => c.magical);
+const MAGICAL_CONDS = (conditionsData as unknown as TransientConditionDef[]).filter((c) => c.magical);
 
 const MINERALS = ['ruby', 'sapphire', 'emerald', 'topaz', 'amethyst', 'citrine', 'moonstone'];
 

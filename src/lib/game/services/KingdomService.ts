@@ -34,25 +34,19 @@ import { TICKS_PER_SECOND } from '../core/util/time';
 import { TURNS_PER_DAY } from './EnvironmentService';
 import { spawnKingdomParty, despawnKingdomParty } from './entity/kingdomParties';
 import events from '../database/social/events.json';
+import { pair } from '../core/util/dataPair';
 
 const TICKS_PER_DAY = TURNS_PER_DAY * TICKS_PER_SECOND;
 
 const STALE_AFTER_TICKS = 30 * TICKS_PER_DAY;
 
-const ARRIVAL = events as unknown as {
+const ARRIVAL = {
   visitors: {
-    baseCadenceDays: number;
-    firstArrivalDays: [number, number];
-    cadenceWealthSqueeze: number;
-    cadenceRelationDivisor: number;
-    cadenceClamp: [number, number];
-    cadenceJitterDays: number;
-    cadenceFloorTicks: number;
-    busyBackoffDays: number;
-    spawnFailBackoffDays: number;
-    noSenderBackoffDays: number;
-  };
-  caravan: { tradeChance: number };
+    ...events.visitors,
+    firstArrivalDays: pair(events.visitors.firstArrivalDays, 'events.visitors.firstArrivalDays'),
+    cadenceClamp: pair(events.visitors.cadenceClamp, 'events.visitors.cadenceClamp')
+  },
+  caravan: events.caravan
 };
 const V = ARRIVAL.visitors;
 

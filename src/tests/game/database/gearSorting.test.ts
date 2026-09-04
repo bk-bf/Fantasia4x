@@ -24,13 +24,7 @@ describe('gear tables sort by DATA, not by words in the id', () => {
     const wrong = ARMOUR.filter((r) => {
       if (r.age === 'Boss') return false;
       if (!hasRecipe(r.id)) return false;
-      const rec = (
-        recipesData as unknown as {
-          id: string;
-          outputs?: Record<string, number>;
-          researchRequired?: string;
-        }[]
-      ).find((x) => x.outputs && r.id in x.outputs);
+      const rec = recipesData.find((x) => 'outputs' in x && x.outputs && r.id in x.outputs);
       if (rec?.researchRequired && AGE_BY_RESEARCH[rec.researchRequired]) return false;
       return r.age !== AGE_OF_CHAIN[chainAgeOf(r.id)];
     }).map(
