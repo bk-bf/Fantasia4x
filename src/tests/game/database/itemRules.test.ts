@@ -498,7 +498,7 @@ const CARCASS_ITEMS = new Set(
 );
 const LOOTED = new Set<string>();
 for (const pool of Object.values<{ slots?: Record<string, { pick?: { id: string }[] }> }>(
-  (lootpoolData as unknown as { pools?: Record<string, never> }).pools ?? {}
+  lootpoolData.pools ?? {}
 ))
   for (const slot of Object.values(pool?.slots ?? {}))
     for (const pick of slot?.pick ?? []) LOOTED.add(pick.id);

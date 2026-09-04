@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { recipeService } from '$lib/game/services/RecipeService';
 import recipesData from '$lib/game/database/items/recipes.json';
+import type { Recipe } from '$lib/game/core/types';
 import itemsData from '$lib/game/database/items/items.json';
 import buildingsData from '$lib/game/database/world/buildings.json';
 
@@ -46,15 +47,9 @@ describe('RecipeService (recipe registry, Stage A)', () => {
   });
 
   it('every authored recipe + alternative resolves to real item and building ids', () => {
-    const itemIds = new Set((itemsData as Array<{ id: string }>).map((i) => i.id));
-    const buildingIds = new Set((buildingsData as unknown as Array<{ id: string }>).map((b) => b.id));
-    const recipes = recipesData as unknown as Array<{
-      id: string;
-      station?: string;
-      inputs?: Record<string, number>;
-      outputs?: Record<string, number>;
-      inputAlternatives?: Array<Record<string, number>>;
-    }>;
+    const itemIds = new Set(itemsData.map((i) => i.id));
+    const buildingIds = new Set(buildingsData.map((b) => b.id));
+    const recipes = recipesData as unknown as Recipe[];
     const errors: string[] = [];
     for (const r of recipes) {
       const ingredientSets = [r.inputs, r.outputs, ...(r.inputAlternatives ?? [])].filter(
