@@ -13,7 +13,7 @@ files:
 symbols:
   - src/lib/audio/manifest.ts::resolveAmbient#0
 created: 2026-09-04
-updated: 2026-09-04
+updated: 2026-09-05
 ---
 
 # Branch no caller can reach — audio

@@ -29,7 +29,7 @@ symbols:
   - src/lib/components/util/workUtils.ts::NON_SKILL_TASKS#0
   - src/lib/components/util/workUtils.ts::ABBR#0
 created: 2026-09-04
-updated: 2026-09-04
+updated: 2026-09-05
 ---
 
 # Hand-maintained roster restates a declared set — components/util

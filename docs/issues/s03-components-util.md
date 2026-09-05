@@ -13,7 +13,7 @@ files:
 symbols:
   - src/lib/components/util/conditionInfo.ts::GRANT_STAT_ABBR#0
 created: 2026-09-04
-updated: 2026-09-04
+updated: 2026-09-05
 ---
 
 # Display label mapped by hand where a lookup exists — components/util

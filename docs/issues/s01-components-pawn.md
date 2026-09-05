@@ -36,7 +36,7 @@ symbols:
   - src/lib/components/pawn/TraitCards.svelte::STAT_ABBR#0
   - src/lib/components/pawn/TraitCards.svelte::SLOT_LABEL#0
 created: 2026-09-04
-updated: 2026-09-04
+updated: 2026-09-05
 ---
 
 # Hand-maintained roster restates a declared set — components/pawn

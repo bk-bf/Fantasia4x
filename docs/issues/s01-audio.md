@@ -15,7 +15,7 @@ symbols:
   - src/lib/audio/manifest.ts::WORK_SOUND_LABELS#0
   - src/lib/audio/manifest.ts::COMBAT_SFX#0
 created: 2026-09-04
-updated: 2026-09-04
+updated: 2026-09-05
 ---
 
 # Hand-maintained roster restates a declared set — audio
