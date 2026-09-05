@@ -15,7 +15,7 @@ symbols:
   - src/lib/components/screens/BuildingMenu.svelte::getBuildingSpecialProperties#0
   - src/lib/components/screens/ResearchScreen.svelte::getCategoryIcon#0
 created: 2026-09-04
-updated: 2026-09-04
+updated: 2026-09-05
 ---
 
 # Branch no caller can reach — components/screens

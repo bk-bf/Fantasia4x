@@ -13,7 +13,7 @@ files:
 symbols:
   - src/lib/components/screens/DebugLogScreen.svelte::clearLogs#0
 created: 2026-09-04
-updated: 2026-09-04
+updated: 2026-09-05
 ---
 
 # Caught error is discarded — components/screens

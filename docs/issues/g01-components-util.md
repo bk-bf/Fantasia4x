@@ -17,7 +17,7 @@ symbols:
   - src/lib/components/util/conditionInfo.ts::transientSources#0
   - src/lib/components/util/pawnUtils.ts::describeJob#0
 created: 2026-09-04
-updated: 2026-09-04
+updated: 2026-09-05
 ---
 
 # Branch no caller can reach — components/util

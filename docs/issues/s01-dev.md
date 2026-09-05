@@ -14,7 +14,7 @@ symbols:
   - src/lib/dev/AuditTables.svelte::ARM_ORDER#0
   - src/lib/dev/AuditTables.svelte::TABS#0
 created: 2026-09-04
-updated: 2026-09-04
+updated: 2026-09-05
 ---
 
 # Hand-maintained roster restates a declared set — dev

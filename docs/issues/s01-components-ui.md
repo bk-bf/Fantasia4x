@@ -24,7 +24,7 @@ symbols:
   - src/lib/components/UI/hud/ChroniclePanel.svelte::CATEGORY_LABEL#0
   - src/lib/components/UI/hud/ZonePanel.svelte::ZONE_DEFS#0
 created: 2026-09-04
-updated: 2026-09-04
+updated: 2026-09-05
 ---
 
 # Hand-maintained roster restates a declared set — components/UI
