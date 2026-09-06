@@ -24,7 +24,7 @@ symbols:
   - src/lib/components/screens/PawnScreen.svelte::TABS#0
   - src/lib/components/screens/culture/CultureDetail.svelte::STAT_ORDER#0
 created: 2026-09-04
-updated: 2026-09-05
+updated: 2026-09-06
 ---
 
 # Hand-maintained roster restates a declared set — components/screens

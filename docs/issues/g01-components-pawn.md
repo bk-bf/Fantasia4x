@@ -13,7 +13,7 @@ files:
 symbols:
   - src/lib/components/pawn/TraitCards.svelte::getEffectTags#0
 created: 2026-09-04
-updated: 2026-09-05
+updated: 2026-09-06
 ---
 
 # Branch no caller can reach — components/pawn
