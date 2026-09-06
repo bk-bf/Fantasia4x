@@ -10,6 +10,7 @@ import type { Item } from '$lib/game/core/types';
 import { AGE_CEILING, AGE_NAMES, blameStation, chainAgeOf } from '$lib/dev/chainAge';
 import { gearClassOf } from '$lib/game/core/rules/gear/gearClass';
 import { vesselAccepts } from '$lib/game/core/rules/gear/vessels';
+import { itemMatchesCostCategory } from '$lib/game/core/defs/items';
 
 type Recipe = {
   id: string;
@@ -1225,6 +1226,120 @@ describe('ITEM-RULES R22 — a fluid states a density and a serving, and its bat
           `${r.id} pours ${litres} L into ${r.station}, which holds ${cap} L — the overflow spills`
         );
     }
+    expect(bad, bad.join('; ')).toEqual([]);
+  });
+});
+
+describe('ITEM-RULES R23 — a crafted piece derives a mass in reach of what it weighs', () => {
+  const byId = new Map((ITEMS as Item[]).map((i) => [i.id, i]));
+  const recipeById = new Map((RECIPES as Recipe[]).map((r) => [r.id, r]));
+  const WOODY = new Set(['wood', 'woodwork']);
+
+  const worthOf = (i: Item & { craftValue?: number }) =>
+    typeof i.craftValue === 'number' && i.craftValue > 0 ? i.craftValue : 1;
+
+  const massPerWorth = (cat: string) => {
+    const pool = (ITEMS as (Item & { craftValue?: number })[])
+      .filter((i) => itemMatchesCostCategory(i, cat) && i.weightKg)
+      .map((i) => i.weightKg! / worthOf(i))
+      .sort((a, b) => a - b);
+    return pool.length ? pool[Math.floor(pool.length / 2)] : 0;
+  };
+
+  const inputMass = (r: Recipe) =>
+    Object.entries(r.inputs ?? {}).reduce(
+      (sum, [key, qty]) =>
+        sum +
+        qty *
+          (key.startsWith('category:')
+            ? massPerWorth(key.slice('category:'.length))
+            : (byId.get(key)?.weightKg ?? 0)),
+      0
+    );
+
+  const FORGED = 0.82;
+  const WITHY = 0.46;
+  const DERIVED: { recipe: string; retention: number }[] = [
+    { recipe: 'make_copper_dagger', retention: FORGED },
+    { recipe: 'make_sewing_kit', retention: FORGED },
+    { recipe: 'make_steel_stiletto', retention: FORGED },
+    { recipe: 'make_wattle_buckler', retention: WITHY },
+    { recipe: 'make_wicker_vest', retention: WITHY }
+  ];
+
+  it('a bow with a recipe consumes a real wooden stave, not sinew and thread alone', () => {
+    const bows = (ITEMS as Item[]).filter(
+      (i) => i.type === 'weapon' && i.weaponProperties?.ammoCategory === 'arrow'
+    );
+    const bad: string[] = [];
+    for (const bow of bows) {
+      const recipes = recipesByOutput.get(bow.id) ?? [];
+      if (!recipes.length) continue;
+      const hasWood = recipes.some((r) => {
+        const keys = Object.keys(r.inputs ?? {});
+        if (keys.some((k) => k === 'category:log' || k === 'category:plank')) return true;
+        if (keys.some((k) => !k.startsWith('category:') && WOODY.has(byId.get(k)?.category ?? '')))
+          return true;
+        return Object.values(r.dynamicRecipe ?? {}).some((slot) =>
+          ['wood', 'woodwork', 'log', 'plank'].includes(slot.acceptsCategory ?? '')
+        );
+      });
+      if (!hasWood) bad.push(`${bow.id} has no wooden stave in any recipe that makes it`);
+    }
+    expect(bad, bad.join('; ')).toEqual([]);
+  });
+
+  it('a repriced recipe derives a per-piece mass within reach of the piece', () => {
+    const bad: string[] = [];
+    for (const { recipe, retention } of DERIVED) {
+      const r = recipeById.get(recipe);
+      if (!r) {
+        bad.push(`${recipe} is missing`);
+        continue;
+      }
+      const [outId, outQty] = Object.entries(r.outputs ?? {})[0] ?? [];
+      const authored = byId.get(outId ?? '')?.weightKg ?? 0;
+      if (!authored || !outQty) {
+        bad.push(`${recipe} has no weighed output`);
+        continue;
+      }
+      const derived = (inputMass(r) * retention) / outQty;
+      const lo = authored * 0.6;
+      const hi = authored * 1.5;
+      if (derived < lo || derived > hi)
+        bad.push(
+          `${recipe} derives ${derived.toFixed(2)}kg per ${outId} against an authored ${authored}kg ` +
+            `— outside ${lo.toFixed(2)}-${hi.toFixed(2)}kg`
+        );
+    }
+    expect(bad, bad.join('; ')).toEqual([]);
+  });
+
+  it('no repriced recipe spends a whole bar on one small piece', () => {
+    const BAR = /_bar$|^category:(steel|iron|metal)$/;
+    const bad: string[] = [];
+    for (const { recipe } of DERIVED) {
+      const r = recipeById.get(recipe);
+      if (!r) continue;
+      const outQty = Object.values(r.outputs ?? {})[0] ?? 1;
+      const bars = Object.entries(r.inputs ?? {})
+        .filter(([k]) => BAR.test(k))
+        .reduce((s, [, q]) => s + q, 0);
+      if (bars > 0 && bars / outQty > 0.5)
+        bad.push(`${recipe} spends ${(bars / outQty).toFixed(2)} bars on each piece it makes`);
+    }
+    expect(bad, bad.join('; ')).toEqual([]);
+  });
+
+  it('no recipe input is a fraction of a countable solid', () => {
+    const bad: string[] = [];
+    for (const r of RECIPES as Recipe[])
+      for (const [key, qty] of Object.entries(r.inputs ?? {})) {
+        if (Number.isInteger(qty)) continue;
+        const id = key.startsWith('category:') ? '' : key;
+        if (id && byId.get(id)?.type === 'fluid') continue;
+        bad.push(`${r.id} asks for ${qty}x ${key}, which no stockpile can hold without a remainder`);
+      }
     expect(bad, bad.join('; ')).toEqual([]);
   });
 });

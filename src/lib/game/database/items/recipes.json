@@ -855,8 +855,8 @@
   {
     "id"              : "make_copper_dagger",
     "station"         : "stone_forge",
-    "inputs"          : {"copper_bar": 1, "medium_bones": 1},
-    "outputs"         : {"copper_dagger": 1},
+    "inputs"          : {"copper_bar": 1, "medium_bones": 2},
+    "outputs"         : {"copper_dagger": 6},
     "workAmount"      : 5,
     "toolTierRequired": 0,
     "researchRequired": "copper_smelting"
@@ -1498,8 +1498,8 @@
   {
     "id"              : "make_sewing_kit",
     "station"         : "anvil",
-    "inputs"          : {"iron_bar": 1, "category:thread": 1},
-    "outputs"         : {"sewing_kit": 1},
+    "inputs"          : {"iron_bar": 1, "category:thread": 2},
+    "outputs"         : {"sewing_kit": 8},
     "workAmount"      : 6,
     "toolTierRequired": 1,
     "researchRequired": "iron_working"
@@ -2159,7 +2159,7 @@
     "id"              : "make_wattle_buckler",
     "discipline"      : "weaving",
     "station"         : "craft_spot",
-    "inputs"          : {"branch": 4, "cordage": 8},
+    "inputs"          : {"branch": 11, "cordage": 20},
     "outputs"         : {"wattle_buckler": 1},
     "workAmount"      : 4,
     "toolTierRequired": 0
@@ -2625,7 +2625,7 @@
     "id"              : "make_steel_stiletto",
     "station"         : "anvil",
     "inputs"          : {"category:steel": 1, "category:leather": 1},
-    "outputs"         : {"steel_stiletto": 1},
+    "outputs"         : {"steel_stiletto": 10},
     "workAmount"      : 9,
     "toolTierRequired": 2,
     "researchRequired": "steel_making"
@@ -2924,7 +2924,7 @@
     "id"              : "make_wicker_vest",
     "discipline"      : "weaving",
     "station"         : "craft_spot",
-    "inputs"          : {"branch": 15, "cordage": 120},
+    "inputs"          : {"branch": 8, "cordage": 60},
     "outputs"         : {"wicker_vest": 1},
     "workAmount"      : 12,
     "toolTierRequired": 0
