@@ -138,7 +138,7 @@ describe('broken bone effects', () => {
     expect(conditions.some((x) => x.id === 'fractured')).toBe(false);
   });
 
-  it('the `fractured` condition crushes STRENGTH/DEXTERITY (core stats), so combat suffers too', () => {
+  it('the `fractured` condition crushes melee damage directly, so combat suffers too', () => {
     const broken = pawnWithBrokenArm(true);
     broken.conditions = [{ id: 'fractured', severity: 1 }];
     const intactDmg = pawnStatService.evaluateStat('melee_damage', pawnWithBrokenArm(true));

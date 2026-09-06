@@ -154,7 +154,7 @@ describe('driveWindchill — effective wind → staged condition (direct, not ac
     expect(stage!.lifeThreatening).toBeFalsy();
     expect(stage!.modifiers.strength).toBeUndefined();
     expect(stage!.modifiers.constitution).toBeUndefined();
-    expect(stage!.modifiers.dexterity).toBeLessThan(1);
+    expect(stage!.modifiers.cutting_resistance).toBeLessThan(0);
     expect(stage!.modifiers.moveSpeed).toBeLessThan(1);
   });
 });
