@@ -112,6 +112,22 @@ describe('armour slots resolve', () => {
   });
 });
 
+const AGE_BY_RESEARCH: Record<string, number> = {
+  copper_smelting: 1,
+  bronze_working: 2,
+  iron_smelting: 3,
+  iron_working: 3,
+  steel_making: 4,
+  runic_inscription: 5,
+  attunement: 5,
+  arcane_lapidary: 5,
+  mythic_attunement: 5
+};
+const AGE_NAMES = ['ungated', 'copper', 'bronze', 'iron', 'steel', 'runed'];
+
+const gateOf = (id: string) =>
+  RECIPES.find((r) => Object.keys(r.outputs ?? {}).includes(id))?.researchRequired ?? '';
+
 describe('every tech age can dress a pawn', () => {
   const REGION_OF: Partial<Record<EquipmentSlot, string>> = {
     head: 'head',
@@ -134,22 +150,6 @@ describe('every tech age can dress a pawn', () => {
     'feet'
   ];
 
-  const AGE_BY_RESEARCH: Record<string, number> = {
-    copper_smelting: 1,
-    bronze_working: 2,
-    iron_smelting: 3,
-    iron_working: 3,
-    steel_making: 4,
-    runic_inscription: 5,
-    attunement: 5,
-    arcane_lapidary: 5,
-    mythic_attunement: 5
-  };
-  const AGE_NAMES = ['ungated', 'copper', 'bronze', 'iron', 'steel', 'runed'];
-
-  const gateOf = (id: string) =>
-    RECIPES.find((r) => Object.keys(r.outputs ?? {}).includes(id))?.researchRequired ?? '';
-
   const reachableBy = (age: number): Set<string> => {
     const covered = new Set<string>();
     for (const i of wearable) {
@@ -169,4 +169,51 @@ describe('every tech age can dress a pawn', () => {
       expect(gaps, `no craftable armour covers: ${gaps.join(', ')}`).toEqual([]);
     });
   }
+});
+
+describe('every tech age dresses each weight class in its own gear', () => {
+  const CLASS_REGION_SLOT: Record<'light' | 'medium', Partial<Record<EquipmentSlot, string>>> = {
+    light: {
+      head: 'head',
+      bodyBase: 'torso',
+      bracers: 'arms',
+      gloves: 'hands',
+      greaves: 'legs',
+      boots: 'feet'
+    },
+    medium: {
+      head: 'head',
+      bodyMid: 'torso',
+      bracers: 'arms',
+      gloves: 'hands',
+      greaves: 'legs',
+      boots: 'feet'
+    }
+  };
+  const REGIONS = ['head', 'torso', 'arms', 'hands', 'legs', 'feet'];
+  const STARTS_AT: Record<'light' | 'medium', number> = { light: 0, medium: 1 };
+
+  const reachableByClass = (age: number, cls: 'light' | 'medium'): Set<string> => {
+    const covered = new Set<string>();
+    for (const i of wearable) {
+      if (!craftable.has(i.id) || i.armorProperties!.armorType !== cls) continue;
+      const gate = AGE_BY_RESEARCH[gateOf(i.id)] ?? 0;
+      if (gate > age) continue;
+      const region = CLASS_REGION_SLOT[cls][i.armorProperties!.equipmentSlot as EquipmentSlot];
+      if (region) covered.add(region);
+    }
+    return covered;
+  };
+
+  (['light', 'medium'] as const).forEach((cls) => {
+    for (let age = STARTS_AT[cls]; age < AGE_NAMES.length; age++) {
+      it(`${AGE_NAMES[age]}: ${cls} armour covers all six regions without borrowing another class`, () => {
+        const covered = reachableByClass(age, cls);
+        const gaps = REGIONS.filter((r) => !covered.has(r));
+        expect(gaps, `${cls} has no craftable piece of its own for: ${gaps.join(', ')}`).toEqual(
+          []
+        );
+      });
+    }
+  });
 });
