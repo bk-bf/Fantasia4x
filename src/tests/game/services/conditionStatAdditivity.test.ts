@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { pawnStatService } from '$lib/game/services/PawnStatService';
 import { conditionModifierSum } from '$lib/game/core/rules/body/conditions';
-import conditionsData from '$lib/game/database/pawns/conditions.jsonc';
-import statsData from '$lib/game/database/pawns/stats.jsonc';
+import conditionsData from '$lib/game/database/pawns/conditions.json';
+import statsData from '$lib/game/database/pawns/stats.json';
 import type { EntityCondition, Pawn } from '$lib/game/core/types';
 
 const STAT_IDS = new Set((statsData as Array<{ id: string }>).map((s) => s.id));
