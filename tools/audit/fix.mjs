@@ -24,7 +24,7 @@ import { cpSync, existsSync, rmSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import * as I from './lib/issues.mjs';
+import * as I from './lib/gh.mjs';
 import * as P from './lib/prs.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -441,23 +441,12 @@ try {
         .filter((r) => r.code !== 0)
         .map((r) => `**${r.name}** exited ${r.code}\n\n\`\`\`\n${r.tail}\n\`\`\``)
         .join('\n\n');
-      // A failed attempt is still worth reading, so it gets a review file marked abandoned
-      // rather than vanishing into a log. The branch and worktree stay put.
-      P.writePr(ROOT, {
-        data: {
-          id: d.id,
-          issue: d.id,
-          branch,
-          base: 'main',
-          status: 'abandoned',
-          verified: 'fail',
-          created: I.today(),
-          updated: I.today()
-        },
-        body: P.renderPr({ issue, branch, files, account, verified: 'fail', failures: detail })
-      });
-      I.patchIssue(issue.path, { status: 'open', branch: null, pr: d.id });
-      out(`--- not green. Written up at docs/pr/${d.id}.md; worktree kept.`);
+      I.comment(
+        issue.path,
+        P.renderAttempt({ branch, files, account, verified: 'fail', failures: detail })
+      );
+      I.patchIssue(issue.path, { status: 'open', branch: null });
+      out(`--- not green. Written up on issue #${issue.path}; worktree kept.`);
       keepTree = true;
       toMon({
         issue,
@@ -494,30 +483,20 @@ try {
 
       // Deliberately NOT pushed. The branch stays in this repo, the argument for it goes on
       // the review board next to the issue, and a person decides whether it reaches main.
-      P.writePr(ROOT, {
-        data: {
-          id: d.id,
-          issue: d.id,
-          branch,
-          base: 'main',
-          status: 'open',
-          verified: 'pass',
-          created: I.today(),
-          updated: I.today()
-        },
-        body: P.renderPr({
-          issue,
+      I.comment(
+        issue.path,
+        P.renderAttempt({
           branch,
           files,
           account,
           verified: 'pass',
           ran: v.results.map((r) => r.name)
         })
-      });
-      I.patchIssue(issue.path, { status: 'in-review', pr: d.id, branch });
+      );
+      I.patchIssue(issue.path, { status: 'in-review', branch });
       const ticked = I.tickRemediation(issue.path, account);
       out(`--- ticked ${ticked} remediation item(s)`);
-      out(`--- review at docs/pr/${d.id}.md on ${branch} (local, not pushed)`);
+      out(`--- attempt on issue #${issue.path}, branch ${branch} (local, not pushed)`);
       toMon({
         issue,
         cwd: ROOT,
@@ -543,27 +522,11 @@ try {
 } catch (e) {
   out(`--- ${e.message}`);
   keepTree = true;
-  P.writePr(ROOT, {
-    data: {
-      id: d.id,
-      issue: d.id,
-      branch,
-      base: 'main',
-      status: 'abandoned',
-      verified: 'fail',
-      created: I.today(),
-      updated: I.today()
-    },
-    body: P.renderPr({
-      issue,
-      branch,
-      files: [],
-      account: '',
-      verified: 'fail',
-      failures: e.message
-    })
-  });
-  I.patchIssue(issue.path, { status: 'open', branch: null, pr: d.id });
+  I.comment(
+    issue.path,
+    P.renderAttempt({ branch, files: [], account: '', verified: 'fail', failures: e.message })
+  );
+  I.patchIssue(issue.path, { status: 'open', branch: null });
   toMon({
     issue,
     cwd: ROOT,

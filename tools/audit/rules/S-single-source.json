@@ -6,7 +6,7 @@
     "kind": "drift",
     "severity": "high",
     "title": "hand-maintained roster restates a declared set",
-    "authority": "docs/issues/core-stat-single-source.md",
+    "authority": "https://github.com/bk-bf/Fantasia4x/issues/20",
     "question": "Does this symbol write out, by hand, the members of a set that is already declared somewhere else — an interface's keys, a union's members, the ids in a data file — such that adding a member elsewhere would silently leave this list short?",
     "fail_requires": [
       "file:line of the hand-written list",
@@ -41,7 +41,7 @@
     "kind": "drift",
     "severity": "critical",
     "title": "correspondence held together by a comment",
-    "authority": "docs/issues/core-stat-single-source.md",
+    "authority": "https://github.com/bk-bf/Fantasia4x/issues/20",
     "question": "Does a comment here instruct a future reader to keep two things in step — matching order, matching length, matching keys — where nothing enforces it? A comment is not a check, and the failure is silent.",
     "fail_requires": [
       "the comment, quoted",
@@ -76,7 +76,7 @@
     "kind": "drift",
     "severity": "medium",
     "title": "display label mapped by hand where a lookup exists",
-    "authority": "docs/issues/core-stat-single-source.md",
+    "authority": "https://github.com/bk-bf/Fantasia4x/issues/20",
     "question": "Does this symbol map ids to display labels with its own literal table or string surgery, where the project already has one place that owns that mapping? Two copies disagree eventually, and the player sees both.",
     "fail_requires": [
       "file:line of the local map or the string surgery",
@@ -133,7 +133,7 @@
     "kind": "drift",
     "severity": "high",
     "title": "data-file key read without validation against its roster",
-    "authority": "docs/issues/core-stat-single-source.md",
+    "authority": "https://github.com/bk-bf/Fantasia4x/issues/20",
     "question": "Does this symbol read a key straight off a definition object and fall back when it is absent, so a misspelt key in the data file is indistinguishable from an unspecified one and produces a default with no warning?",
     "fail_requires": [
       "file:line of the unchecked read and its fallback",

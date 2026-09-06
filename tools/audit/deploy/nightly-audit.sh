@@ -8,7 +8,7 @@
 #   1. pull main from origin
 #   2. re-index + re-plan  -> verdicts whose code did not move stay done
 #   3. run the audit until the budget runs out
-#   4. raise confirmed findings onto the issue board, and commit it to main
+#   4. raise confirmed findings as GitHub issues
 #   5. work any issue a person marked `ready: true` -> a local branch + a review file
 #   6. hand the result to mon so it can be read from anywhere
 #
@@ -104,27 +104,14 @@ say "verdicts: ${BEFORE:-?} -> ${AFTER:-?}"
 # --- 4. raise onto the board -------------------------------------------------
 # Everything lands as `ready: false`. Nothing is worked on until a person has read it and
 # flipped that, which is the only gate between the audit and the repo.
-say "--- raising findings onto the board"
-( cd "$REPO" && "$NODE" tools/audit/audit.mjs issues ) || say "WARN: issue raising failed"
-
-if [ -n "$(git -C "$REPO" status --porcelain docs/issues)" ]; then
-  git -C "$REPO" add docs/issues
-  git -C "$REPO" -c user.name="fantasia-audit" -c user.email="audit@localhost" \
-    commit -q -m "docs(issues): board refresh $STAMP" || say "WARN: board commit failed"
-  if ! git -C "$REPO" push -q origin main 2>/dev/null; then
-    # Someone pushed to main during the run. Rebase the board commit on top and try once more;
-    # if that still fails, step 1 of the next run picks it up rather than leaving it stranded.
-    say "board push rejected; rebasing onto origin/main and retrying"
-    git -C "$REPO" fetch --quiet origin main \
-      && git -C "$REPO" rebase --quiet origin/main \
-      && git -C "$REPO" push -q origin main \
-      || { git -C "$REPO" rebase --abort 2>/dev/null; say "WARN: board push failed; next run retries"; }
-  fi
-  say "board committed and pushed"
+if [ "${AUDIT_NO_ISSUES:-0}" = 1 ]; then
+  say "AUDIT_NO_ISSUES=1 -- not raising onto the file board"
 else
-  say "board unchanged"
+  say "--- raising findings onto the board"
+  ( cd "$REPO" && "$NODE" tools/audit/audit.mjs issues ) || say "WARN: issue raising failed"
 fi
 
+say "board is on GitHub; nothing to commit here"
 
 # --- 5. the fixer ------------------------------------------------------------
 if [ "${AUDIT_NO_FIX:-0}" = 1 ]; then

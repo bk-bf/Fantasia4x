@@ -11,7 +11,7 @@
 //   audit na             n/a verdicts + per-rule n/a rate (rule-scope review)
 //   audit t0             deterministic checks (ADR constant drift, architecture seams, coverage gap)
 //   audit demote         T2 rules that have earned a move down to T0
-//   audit issues         phase 2: confirmed findings -> docs/issues/*.md
+//   audit issues         phase 2: confirmed findings -> GitHub issues
 //   audit board          every issue on the board, by status
 //   audit export         write the ledger out as JSONL for git
 //   audit rules          list loaded rules and validation errors
@@ -28,7 +28,7 @@ import { makeContext, match } from './lib/triggers.mjs';
 import { buildPrompt } from './lib/prompt.mjs';
 import { parseResponse, validate } from './lib/verdict.mjs';
 import { adrConstDrift, adrCoverage, seamViolations } from './lib/t0.mjs';
-import * as I from './lib/issues.mjs';
+import * as I from './lib/gh.mjs';
 import { groupFindings, upsertIssue } from './lib/raise.mjs';
 
 const ROOT = process.env.AUDIT_ROOT || join(dirname(fileURLToPath(import.meta.url)), '..', '..');
@@ -370,9 +370,9 @@ function cmdIssues() {
     const r = upsertIssue(ROOT, g, byId);
     counts[r.action] = (counts[r.action] ?? 0) + 1;
     if (r.action === 'created')
-      out(`  created  docs/issues/${r.id}.md  (${g.findings.length} findings)`);
+      out(`  created  #${r.path}  ${r.id}  (${g.findings.length} findings)`);
     else if (r.action === 'updated')
-      out(`  updated  docs/issues/${r.id}.md  (${g.findings.length} findings)`);
+      out(`  updated  #${r.path}  ${r.id}  (${g.findings.length} findings)`);
   }
   out('');
   out(

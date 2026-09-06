@@ -1,6 +1,6 @@
 # audit — a code-audit ledger
 
-> **Related:** [AGENTS.md](../../AGENTS.md) · [DECISIONS.md](../../docs/game/DECISIONS.md) · [ITEM-RULES.md](../../docs/game/ITEM-RULES.md) · [ENGINE-PERFORMANCE.md](../../docs/tasks/open/ENGINE-PERFORMANCE.md) · [docs/issues](../../docs/issues/README.md)
+> **Related:** [AGENTS.md](../../AGENTS.md) · [DECISIONS.md](../../docs/game/DECISIONS.md) · [ITEM-RULES.md](../../docs/game/ITEM-RULES.md) · [ENGINE-PERFORMANCE.md](../../docs/tasks/open/ENGINE-PERFORMANCE.md) · [issues](https://github.com/bk-bf/Fantasia4x/issues)
 
 "Audit the code" is unverifiable: nothing records which of the 5,599 objects in this repo
 anything ever looked at, under which question, with which model. This tool makes that a
@@ -49,7 +49,7 @@ them.
 | **H** data | Item tier plausibility, naming progression, generic-before-thematic |
 | **S** single-source | A roster restated by hand, a correspondence held together by a comment, a label mapped twice, a data key read unvalidated |
 
-Family **S** was derived from [`core-stat-single-source`](../../docs/issues/core-stat-single-source.md),
+Family **S** was derived from [issue #20](https://github.com/bk-bf/Fantasia4x/issues/20),
 which was found by hand. It is the family most likely to be under-triggered rather than
 over-triggered — check its n/a rate before trusting a clean result.
 
@@ -153,13 +153,16 @@ Each issue carries every citation the audit demanded before it would record a fa
 
 ```bash
 node tools/audit/audit.mjs issues --dry-run   # what would be written
-node tools/audit/audit.mjs issues             # write docs/issues/*.md
+node tools/audit/audit.mjs issues             # raise them as GitHub issues
 node tools/audit/audit.mjs board              # the board, by status
 ```
 
-The board lives at [`docs/issues/`](../../docs/issues/README.md) and is the **only** record
-of a defect — nothing is projected to a forge. See
-[why not GitHub](../../docs/pr/README.md#why-not-github).
+The board is [GitHub issues](https://github.com/bk-bf/Fantasia4x/issues). Frontmatter became
+labels: severity (`high`/`medium`/`low`), kind (`drift`, `correctness`, `data`, `boundary`,
+`test gap`), origin (`found by audit`/`found by hand`), the rule that fired (`S01`, `G01`, …)
+and the `ready` gate. `tools/audit/lib/gh.mjs` is the only writer; it finds an issue again by
+the `<!-- audit-id: … -->` marker in its body and keeps files and symbols in a
+`<!-- audit-meta: … -->` block beside it.
 
 Everything is raised `ready: false`. `ready` is the only gate between the audit and the
 repo, and only a person sets it: the fixer will not touch anything without it. An audit that
@@ -177,17 +180,17 @@ node tools/audit/fix.mjs --next --dry-run     # pick and print
 node tools/audit/fix.mjs --next --keep        # leave the worktree to inspect
 ```
 
-One issue, one worktree off `origin/main`, one branch `fix/<slug>`, one review file at
-[`docs/pr/<slug>.md`](../../docs/pr/README.md). The prompt hands
+One issue, one worktree off `origin/main`, one branch `fix/<slug>`, and the attempt written
+up as a comment on that issue. The prompt hands
 the model the issue and states plainly that AGENTS.md's "stop at a proposal" rule does not
 apply here — `ready: true` is the go-ahead — because otherwise every run ends with a plan and
-no diff. It is told not to commit, not to push, not to touch `docs/issues/`, and that
+no diff. It is told not to commit, not to push, not to close the issue, and that
 `Out of scope` is binding.
 
 **Nothing is committed unless `pnpm check` and `pnpm test:related` are green, and nothing is
 pushed at all.** The branch stays local; whether it reaches `main` is your decision, made by
 reading `git diff main...fix/<slug>`. A run that cannot get green commits nothing, writes the
-failure and the model's account to the review board as `status: abandoned`, keeps its
+failure and the model's account to the issue as a comment, keeps its
 worktree, and returns the issue to `open` — a failed attempt leaves a record rather than a
 half-finished branch.
 

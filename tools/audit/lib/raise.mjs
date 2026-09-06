@@ -4,9 +4,7 @@
 // board's unit of work is the class -- that is what a fixer can close in a single PR. So
 // findings group by (rule, module group), and the issue carries every citation.
 
-import { readIssue, writeIssue, patchIssue, today, ISSUES_DIR, listIssues } from './issues.mjs';
-import { join } from 'node:path';
-import { existsSync } from 'node:fs';
+import { readIssue, writeIssue, patchIssue, today, listIssues } from './gh.mjs';
 
 // Family defaults; an individual rule may override with its own `kind`/`severity`.
 const FAMILY_KIND = {
@@ -179,14 +177,14 @@ export function idFor(g) {
 export function upsertIssue(root, g, rulesById) {
   const id = idFor(g);
   const found = listIssues(root).find((i) => i.data.id === id);
-  const path = found ? found.path : join(ISSUES_DIR(root), `${id}.md`);
   const rule = rulesById.get(g.rule_id) ?? {};
   const kind = rule.kind ?? FAMILY_KIND[g.family] ?? 'correctness';
   const severity = rule.severity ?? FAMILY_SEVERITY[g.family] ?? 'medium';
   const files = [...new Set(g.findings.map((f) => f.file))];
   const symbols = [...new Set(g.findings.map((f) => f.symbol_key))];
 
-  if (existsSync(path)) {
+  if (found) {
+    const path = found.path;
     const existing = readIssue(path);
     if (existing.data.origin === 'human') return { path, action: 'skipped-human' };
     if (existing.data.status === 'closed') return { path, action: 'skipped-closed' };
@@ -227,5 +225,6 @@ export function upsertIssue(root, g, rulesById) {
     },
     body: renderBody(g)
   });
-  return { path, action: 'created', id };
+  const created = listIssues(root).find((i) => i.data.id === id);
+  return { path: created ? created.path : id, action: 'created', id };
 }

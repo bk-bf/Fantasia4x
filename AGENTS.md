@@ -138,7 +138,8 @@ and report what is staged.
 UI, so an uncommitted tree is invisible to him and he will not clear it. Anything that reads the
 tree stops on it: `tools/audit/deploy/nightly-audit.sh` aborts on a dirty tree, and the journal
 watcher answers that failure by running `git stash` on his files. Commit finished work in logical
-groups, still never push. Use `uname -n` to tell the machines apart.
+groups. Pushing is allowed now that the board is on GitHub, but push `main` only when the
+work is verified green. Use `uname -n` to tell the machines apart.
 
 This applies to subagents you dispatch. Tell each one which machine it is on, in its prompt.
 
@@ -153,9 +154,36 @@ rather than inventing one — `git log` is the reference:
 
 ## Trackers
 
-`docs/issues/` holds defects, `docs/pr/` holds fix attempts awaiting review, `docs/tasks/`
-holds planned work. `ready: true` on an issue is a person's decision — never set it.
+**GitHub issues hold defects.** `gh issue list` is the board; `docs/tasks/` still holds planned
+work. The old `docs/issues/` and `docs/pr/` directories are gone.
 
-**Close out the tracker for work you finished.** If a task came from a checkbox, a row or a
-spec's acceptance criteria, tick it as part of completing the work. Leaving a finished item
-showing open is the failure to avoid.
+Frontmatter became labels: severity `high` / `medium` / `low`, kind `drift` / `correctness` /
+`data` / `boundary` / `test gap`, origin `found by audit` / `found by hand`, the audit rule that
+fired (`S01`, `G01`, `C02`, `S03`, `B01`), and `ready`.
+
+**`ready` is a person's decision — never add that label.** It is the only gate between the audit
+and the repo, and the fixer will not touch an issue without it.
+
+**Close out the issue for work you finished.** `gh issue close <n> --reason completed` with a
+comment naming the commit that fixed it. If the issue carries remediation checkboxes, tick the
+ones you did. Leaving a finished item open is the failure to avoid.
+
+## Pull requests
+
+**This is a solo repository, so a pull request is the exception.** The default is a branch merged
+straight into `main` once `pnpm check` and the tests are green. A PR costs a push, a round trip and
+a page to read, and on a repo with one developer it usually buys nothing.
+
+Open one only when the extra step earns itself:
+
+- the change is large enough that reviewing it as one diff beats reading the merge commit
+- it needs to sit unmerged while something else is decided
+- CI has to run on it before it can land
+- it wants line-level comments to argue with later
+
+Otherwise: branch, verify, `git merge --no-ff`, and close the issue with the merge commit. Several
+related fixes belong in one branch and one merge, not one branch each.
+
+`tools/audit/fix.mjs` never opens a PR. It writes its attempt as a comment on the issue and leaves
+the branch local, because most of what it produces is a few lines that a merge commit explains
+better than a PR page would.
