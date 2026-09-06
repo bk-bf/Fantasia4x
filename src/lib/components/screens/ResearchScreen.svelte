@@ -1,6 +1,5 @@
 <script lang="ts">
   import { gameState, currentCulture } from '$lib/stores/gameState';
-  import { uiState } from '$lib/stores/uiState';
   import { researchService } from '$lib/game/services/ResearchService';
   import { buildingService } from '$lib/game/services/BuildingService';
   import { itemService } from '$lib/game/services/ItemService';

@@ -13,7 +13,6 @@
   import { jobService } from '$lib/game/services/JobService';
   import { getMaterialProperty } from '$lib/game/core/defs/materials';
   import { WORK_CATEGORIES } from '$lib/game/core/defs/work';
-  import { releaseReservation } from '$lib/game/core/state/stockpile';
   import { categoryPath, labelFor } from '$lib/components/util/itemCategoryTree';
   import { onDestroy } from 'svelte';
   import type { Item } from '$lib/game/core/types';

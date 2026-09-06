@@ -40,7 +40,6 @@
     PlacedBuilding,
     DesignationType,
     DroppedItem,
-    FuelSettings,
     Item,
     Mob,
     ZoneInstance,
@@ -51,7 +50,6 @@
   import { BASE_TILE_PX } from '$lib/webgl/tile-types.js';
   import { pawnService } from '$lib/game/services/PawnService.js';
   import {
-    buildPathfindingGrids,
     pathfinderService
   } from '$lib/game/services/PathfinderService.js';
   import { designationService } from '$lib/game/services/DesignationService.js';

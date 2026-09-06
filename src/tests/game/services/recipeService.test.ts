@@ -47,9 +47,9 @@ describe('RecipeService (recipe registry, Stage A)', () => {
   });
 
   it('a recipe owning a crafting card is the recipe that card resolves to', () => {
-    const itemIds = new Set((itemsData as Array<{ id: string }>).map((i) => i.id));
+    const itemIds = new Set(itemsData.map((i) => i.id));
     const knownDeferredShadows = new Set(['make_ash']);
-    const recipes = recipesData as Array<{ id: string; outputs?: Record<string, number> }>;
+    const recipes = recipesData as unknown as Recipe[];
     const errors: string[] = [];
     for (const r of recipes) {
       if (!r.id.startsWith('make_')) continue;

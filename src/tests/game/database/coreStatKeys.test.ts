@@ -7,6 +7,9 @@ import { CORE_STAT_KEYS, type StatKey } from '$lib/game/core/types';
 
 const isCoreStat = (k: string): k is StatKey => (CORE_STAT_KEYS as readonly string[]).includes(k);
 
+const DECLARED_STAT_IDS = new Set((statsData as { id: string }[]).map((s) => s.id));
+const isDeclaredStat = (k: string): boolean => isCoreStat(k) || DECLARED_STAT_IDS.has(k);
+
 describe('core stat keys are validated against the roster, not typo-tolerant', () => {
   it('every stats.json primaryStat is a real core stat', () => {
     for (const s of statsData as { id: string; primaryStat?: string }[]) {
@@ -70,7 +73,7 @@ describe('core stat keys are validated against the roster, not typo-tolerant', (
         if (k === 'modifiers' && v && typeof v === 'object' && !Array.isArray(v)) {
           for (const mk of Object.keys(v as Record<string, unknown>)) {
             expect(
-              isCoreStat(mk) || NON_STAT_MODIFIER_KEYS.has(mk),
+              isDeclaredStat(mk) || NON_STAT_MODIFIER_KEYS.has(mk),
               `${path} modifiers key ${mk}`
             ).toBe(true);
           }
