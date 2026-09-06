@@ -1376,7 +1376,7 @@ touch). No static check decides it — it's a dev-tooling/runtime-topology decis
 ### ADR-034 [GAME]: Fluids Are a TYPE, Not a Category — and a Vessel Is Not a Carry Aid
 
 **Status:** Accepted (2026-08-23) — implemented same day. Full plan + outcomes in
-[CONTAINERS-AND-FLUIDS](../tasks/open/CONTAINERS-AND-FLUIDS.md).
+[CONTAINERS-AND-FLUIDS (archived)](../tasks/archive/CONTAINERS-AND-FLUIDS-2026-08-23.md).
 
 **Context.** Three unrelated ideas shared the word "container". A wicker frame, a hide scrip and a
 quiver all did exactly one thing — add to `inventoryBonus` — while a clay jug did not even do that.
