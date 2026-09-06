@@ -56,6 +56,7 @@ const AUDIT_SUITES = [
   'src/tests/game/systems/combatBalanceAudit.test.ts',
   'src/tests/game/systems/buildFitAudit.test.ts',
   'src/tests/game/systems/t4WeaponAudit.test.ts',
+  'src/tests/game/systems/t4WeaponFight.test.ts',
   'src/tests/game/systems/maimTargeting.test.ts',
   'src/tests/game/systems/carryCapacityAudit.test.ts',
   'src/tests/game/systems/weaponPawnFitNone.test.ts',
