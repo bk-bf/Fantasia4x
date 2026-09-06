@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { HeadlessSession } from '$lib/game/headless/HeadlessSession';
 import { buildScenario } from '$lib/game/headless/Scenario';
 import { setSimLogSink } from '$lib/game/core/util/logSink';
-import itemsData from '$lib/game/database/items/items.jsonc';
+import itemsData from '$lib/game/database/items/items.json';
 import type { CombatTurnEntry } from '$lib/game/core/defs/events';
 import type { Pawn } from '$lib/game/core/types';
 
