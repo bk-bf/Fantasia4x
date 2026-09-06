@@ -1,17 +1,14 @@
 <script lang="ts">
-  import type { Pawn } from '$lib/game/core/types';
+  import type { Pawn, StatKey } from '$lib/game/core/types';
+  import { CORE_STATS } from '$lib/game/core/types';
   import { conditionStatMultipliers } from '$lib/game/core/rules/body/conditions';
   export let pawn: Pawn;
 
   $: sm = conditionStatMultipliers(pawn);
-  $: cells = [
-    ['STR', pawn.stats.strength, sm.strength, 'strength'],
-    ['DEX', pawn.stats.dexterity, sm.dexterity, 'dexterity'],
-    ['CON', pawn.stats.constitution, sm.constitution, 'constitution'],
-    ['INT', pawn.stats.intelligence, sm.intelligence, 'intelligence'],
-    ['PER', pawn.stats.perception, sm.perception, 'perception'],
-    ['CHA', pawn.stats.charisma, 1, 'charisma']
-  ] as const;
+  $: cells = CORE_STATS.map(
+    ({ id, abbr }) =>
+      [abbr, pawn.stats[id], id === 'charisma' ? 1 : sm[id], id] as const
+  );
   const isFav = (key: string) => pawn.favStats?.includes(key as keyof typeof pawn.stats) ?? false;
   const capOf = (key: string) =>
     pawn.maxStats?.[key as keyof typeof pawn.maxStats] as number | undefined;
@@ -19,16 +16,7 @@
   const eff = (base: number, mult: number) => Math.round(base * mult);
   const pct = (mult: number) => `${mult < 1 ? '−' : '+'}${Math.abs(Math.round((mult - 1) * 100))}%`;
 
-  const STAT_KEY: Record<string, string> = {
-    STR: 'strength',
-    DEX: 'dexterity',
-    CON: 'constitution',
-    INT: 'intelligence',
-    PER: 'perception',
-    CHA: 'charisma'
-  };
-  function traitParts(lbl: string): string {
-    const key = STAT_KEY[lbl];
+  function traitParts(key: StatKey): string {
     const parts: string[] = [];
     for (const t of pawn.traits ?? []) {
       const e = t.effects as Record<string, number> | undefined;
@@ -37,8 +25,8 @@
     }
     return parts.join(', ');
   }
-  function statTitle(lbl: string, base: number, mult: number): string {
-    const tp = traitParts(lbl);
+  function statTitle(lbl: string, key: StatKey, base: number, mult: number): string {
+    const tp = traitParts(key);
     let s = `${lbl} ${base}`;
     if (tp) s += `  (traits: ${tp})`;
     if (mult !== 1) s += `  × ${mult.toFixed(2)} conditions = ${eff(base, mult)}`;
@@ -48,7 +36,7 @@
 
 <div class="stats-grid">
   {#each cells as [lbl, base, mult, key]}
-    <div class="stat-cell" class:fav={isFav(key)} title={statTitle(lbl, base, mult)}>
+    <div class="stat-cell" class:fav={isFav(key)} title={statTitle(lbl, key, base, mult)}>
       <span class="stat-lbl">{lbl}</span>
       <span class="stat-val-row">
         <span class="stat-val" class:penalized={mult < 1} class:boosted={mult > 1}>

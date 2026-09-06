@@ -1,4 +1,5 @@
 import type { Pawn } from '$lib/game/core/types';
+import { CORE_STAT_KEYS } from '$lib/game/core/types';
 import { APTITUDE_MIN, APTITUDE_MAX, type AptitudeId } from '$lib/game/core/rules/body/aptitudes';
 import statsData from '$lib/game/database/pawns/stats.json';
 import { pawnStatService } from '$lib/game/services/PawnStatService';
@@ -51,14 +52,7 @@ const RES_KEY: Record<string, string> = {
 
 const BASELINE = {
   id: '__statbaseline__',
-  stats: {
-    strength: 10,
-    dexterity: 10,
-    constitution: 10,
-    perception: 10,
-    intelligence: 10,
-    charisma: 10
-  },
+  stats: Object.fromEntries(CORE_STAT_KEYS.map((k) => [k, 10])),
   physicalTraits: { weight: 70, height: 170, size: 'medium' }
 } as unknown as Pawn;
 const baseCaps = pawnStatService.computeCapacities(BASELINE);
@@ -135,7 +129,8 @@ function derivation(s: StatDef, pawn: Pawn, ctx: StatContext): Deriv {
   }
   if (s.id === 'carry_weight') {
     return {
-      formula: 'bodyWeight × loadFraction + gear  (loadFraction = STR × 1.2%)',
+      formula:
+        'bodyWeight × loadFraction + gear  (loadFraction = capacity ÷ bodyWeight, capacity = (11 + STR × 0.19) × frame)',
       vars: [
         { name: 'bodyWeight', value: `${ctx.carry.bodyWeight}kg` },
         {
@@ -174,12 +169,9 @@ function derivation(s: StatDef, pawn: Pawn, ctx: StatContext): Deriv {
   const st = pawn.stats;
   const sm = ctx.condStatMult;
   const eff = (base: number, mult: number) => (mult === 1 ? base : Math.round(base * mult));
-  add('STRENGTH', eff(st.strength, sm.strength));
-  add('DEXTERITY', eff(st.dexterity, sm.dexterity));
-  add('CONSTITUTION', eff(st.constitution, sm.constitution));
-  add('PERCEPTION', eff(st.perception, sm.perception));
-  add('INTELLIGENCE', eff(st.intelligence, sm.intelligence));
-  add('CHARISMA', st.charisma);
+  for (const id of CORE_STAT_KEYS) {
+    add(id.toUpperCase(), id === 'charisma' ? st.charisma : eff(st[id], sm[id]));
+  }
   add('weight', pawn.physicalTraits?.weight ?? 70);
   add('height', pawn.physicalTraits?.height ?? 170);
   if (/\bSKILL\b/.test(s.formula)) {

@@ -1,5 +1,6 @@
 import type { DamageType } from './health';
 import type { OnHitCondition, OnHitWound } from './culture';
+import type { PowerStat } from '../rules/body/powerScale';
 
 export type ItemQuality = 0 | 1 | 2 | 3 | 4 | 5;
 
@@ -268,7 +269,7 @@ export interface Item {
     bluntMod?: number;
     stunChance?: number;
     armorDamage?: number;
-    powerStat?: 'strength' | 'dexterity' | 'perception' | 'intelligence';
+    powerStat?: PowerStat;
     critMultiplier?: number;
     finesse?: boolean;
     arcane?: boolean;

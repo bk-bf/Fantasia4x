@@ -1,15 +1,8 @@
-import type { Pawn } from '$lib/game/core/types';
+import type { Pawn, StatKey } from '$lib/game/core/types';
+import { CORE_STAT_KEYS } from '$lib/game/core/types';
 import { statBucket } from '$lib/game/core/gen/culture';
 
-const STATS = [
-  'strength',
-  'dexterity',
-  'constitution',
-  'intelligence',
-  'perception',
-  'charisma'
-] as const;
-type StatKey = (typeof STATS)[number];
+const STATS = CORE_STAT_KEYS;
 
 const POSITIVE: Record<StatKey, { strong: string; mighty: string }> = {
   strength: { strong: 'strong-armed', mighty: 'immensely powerful' },
