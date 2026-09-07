@@ -5,7 +5,7 @@
     "tier": "T2",
     "title": "test asserts less than the symbol promises",
     "authority": "AGENTS.md#scope-tests-after-an-edit",
-    "question": "Find the tests that cover this symbol: search src/tests for its name, and for the scenario or headless-session entry points that would run it. If nothing covers it, the verdict is n/a with na_clause \"no test covers this symbol\" and the searches as evidence. Otherwise: do those tests assert its actual contract — the values, ordering, bounds and failure modes its name and signature promise — or only that it runs, returns truthy, or does not throw?",
+    "question": "Find the tests that cover this symbol: search src/tests for its name, and for the scenario or headless-session entry points that would run it. If nothing covers it, the verdict is n/a with na_clause \"no test covers this symbol\" and the searches as evidence. Otherwise: do those tests assert its actual contract \u2014 the values, ordering, bounds and failure modes its name and signature promise \u2014 or only that it runs, returns truthy, or does not throw?",
     "fail_requires": [
       "the test file and case, as path:line",
       "the part of the contract left unasserted",
@@ -29,7 +29,8 @@
       ]
     },
     "demotable": false,
-    "status": "active"
+    "status": "active",
+    "name": "weak-assertion"
   },
   {
     "id": "F02",
@@ -37,7 +38,7 @@
     "tier": "T2",
     "title": "untested behaviour a cheap test would pin",
     "authority": "AGENTS.md#scope-tests-after-an-edit",
-    "question": "Search src/tests for this symbol’s name and for any scenario that would run it, and say which searches you ran. If something covers it, the verdict is n/a with na_clause \"a test covers this symbol\". Otherwise: does this exported symbol have a branch, bound or ordering guarantee that no test covers and that a single cheap unit test would pin?",
+    "question": "Search src/tests for this symbol\u2019s name and for any scenario that would run it, and say which searches you ran. If something covers it, the verdict is n/a with na_clause \"a test covers this symbol\". Otherwise: does this exported symbol have a branch, bound or ordering guarantee that no test covers and that a single cheap unit test would pin?",
     "fail_requires": [
       "the specific behaviour left unpinned",
       "the input that exercises it",
@@ -45,9 +46,9 @@
       "the searches over src/tests that found nothing"
     ],
     "not_a_finding": [
-      "a symbol whose behaviour is only meaningful over real ticks — that escalates to a headless scenario, not a unit test",
+      "a symbol whose behaviour is only meaningful over real ticks \u2014 that escalates to a headless scenario, not a unit test",
       "a pure re-export or one-line delegation",
-      "a symbol already covered by a headless scenario — that is n/a, not a fail"
+      "a symbol already covered by a headless scenario \u2014 that is n/a, not a fail"
     ],
     "trigger": {
       "all": [
@@ -75,6 +76,7 @@
       ]
     },
     "demotable": false,
-    "status": "active"
+    "status": "active",
+    "name": "missing-test"
   }
 ]

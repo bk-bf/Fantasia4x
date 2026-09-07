@@ -5,7 +5,7 @@
     "tier": "T2",
     "title": "mixed units in one expression",
     "authority": "docs/game/ARCHITECTURE.md#turn-order",
-    "question": "Does an arithmetic expression here combine two different units — ticks with turns, milliseconds with seconds, a 0-1 fraction with a 0-100 percentage, a per-tick rate with a per-turn total — without a conversion?",
+    "question": "Does an arithmetic expression here combine two different units \u2014 ticks with turns, milliseconds with seconds, a 0-1 fraction with a 0-100 percentage, a per-tick rate with a per-turn total \u2014 without a conversion?",
     "fail_requires": [
       "the expression",
       "the unit of each operand and where each came from",
@@ -45,7 +45,8 @@
       ]
     },
     "demotable": false,
-    "status": "draft"
+    "status": "draft",
+    "name": "mixed-units"
   },
   {
     "id": "D02",
@@ -88,6 +89,7 @@
       ]
     },
     "demotable": false,
-    "status": "draft"
+    "status": "draft",
+    "name": "unnamed-unit"
   }
 ]

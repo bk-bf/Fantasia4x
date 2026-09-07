@@ -159,7 +159,12 @@ work. The old `docs/issues/` and `docs/pr/` directories are gone.
 
 Frontmatter became labels: severity `high` / `medium` / `low`, kind `drift` / `correctness` /
 `data` / `boundary` / `test gap`, origin `found by audit` / `found by hand`, the audit rule that
-fired (`S01`, `G01`, `C02`, `S03`, `B01`), and `ready`.
+fired, and `ready`.
+
+**A rule is labelled by its name, not its id.** `restated-roster`, `dead-branch`,
+`error-discarded`, `weak-assertion`, `logic-in-defs` — every rule in `tools/audit/rules/`
+carries a `name`, and that is what reaches the board and the issue slug. The id (`S01`, `A06a`)
+stays the ledger's key and should not appear in anything a person reads.
 
 **Triage through the lanes, never around them.** The board is
 [projects/4](https://github.com/users/bk-bf/projects/4) and its columns are an order:

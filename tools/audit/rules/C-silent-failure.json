@@ -42,7 +42,8 @@
       ]
     },
     "demotable": false,
-    "status": "draft"
+    "status": "draft",
+    "name": "default-masks-lookup"
   },
   {
     "id": "C02",
@@ -74,7 +75,8 @@
       ]
     },
     "demotable": true,
-    "status": "draft"
+    "status": "draft",
+    "name": "error-discarded"
   },
   {
     "id": "C03",
@@ -82,7 +84,7 @@
     "tier": "T2",
     "title": "early return leaves the caller with no signal",
     "authority": ".claude/skills/headless/SKILL.md#when-it-stalls",
-    "question": "Does this symbol return early on a precondition failure without telling the caller anything — no return value distinction, no state change, no log — so the caller cannot distinguish 'did the work' from 'declined to'?",
+    "question": "Does this symbol return early on a precondition failure without telling the caller anything \u2014 no return value distinction, no state change, no log \u2014 so the caller cannot distinguish 'did the work' from 'declined to'?",
     "fail_requires": [
       "file:line of the early return",
       "the precondition that failed",
@@ -118,6 +120,7 @@
       ]
     },
     "demotable": false,
-    "status": "draft"
+    "status": "draft",
+    "name": "silent-early-return"
   }
 ]

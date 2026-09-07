@@ -5,7 +5,7 @@
     "tier": "T2",
     "title": "branch no caller can reach",
     "authority": "docs/game/ARCHITECTURE.md",
-    "question": "Find every call site of this symbol first — search the repo for its name, and for it appearing as a string key or a re-export, since neither looks like a call. Given those call sites, is there a branch here whose guard no caller can satisfy — an argument value never passed, a state combination the callers exclude, a type narrowing that is always one way?",
+    "question": "Find every call site of this symbol first \u2014 search the repo for its name, and for it appearing as a string key or a re-export, since neither looks like a call. Given those call sites, is there a branch here whose guard no caller can satisfy \u2014 an argument value never passed, a state combination the callers exclude, a type narrowing that is always one way?",
     "fail_requires": [
       "the branch",
       "the guard that cannot hold",
@@ -15,7 +15,7 @@
       "a defensive guard against a value the type system allows even if current callers avoid it",
       "a branch reachable from a test, a headless scenario or a dev route",
       "a branch reachable through an exported entry point that external code could call",
-      "a symbol whose call sites you could not enumerate — that is undecidable, not pass"
+      "a symbol whose call sites you could not enumerate \u2014 that is undecidable, not pass"
     ],
     "trigger": {
       "all": [
@@ -34,6 +34,7 @@
       ]
     },
     "demotable": false,
-    "status": "draft"
+    "status": "draft",
+    "name": "dead-branch"
   }
 ]

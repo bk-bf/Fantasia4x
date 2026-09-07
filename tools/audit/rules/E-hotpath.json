@@ -5,7 +5,7 @@
     "tier": "T2",
     "title": "allocation on the per-tick peace path",
     "authority": "docs/tasks/open/ENGINE-PERFORMANCE.md",
-    "question": "Establish first whether the per-tick loop reaches this symbol: search the repo for calls to it by name, follow those callers upward toward processGameTurn or tickPawn, and stop after 4 hops. If no path reaches it, the verdict is n/a with na_clause \"not reached from processGameTurn or tickPawn\" and the searches you ran as evidence. If it is reached: does this symbol allocate an object, array or closure on every tick when nothing is happening — the peace path, which is the common case — rather than lazily on first write?",
+    "question": "Establish first whether the per-tick loop reaches this symbol: search the repo for calls to it by name, follow those callers upward toward processGameTurn or tickPawn, and stop after 4 hops. If no path reaches it, the verdict is n/a with na_clause \"not reached from processGameTurn or tickPawn\" and the searches you ran as evidence. If it is reached: does this symbol allocate an object, array or closure on every tick when nothing is happening \u2014 the peace path, which is the common case \u2014 rather than lazily on first write?",
     "fail_requires": [
       "file:line of the allocation",
       "the call path from processGameTurn or tickPawn, as path:line references",
@@ -16,7 +16,7 @@
       "an allocation reached only on the combat branch",
       "the deliberate per-tick top-level state copy that the ADR-002 amendment relies on",
       "an allocation in a phase that provably runs on a throttled cadence rather than every tick",
-      "a symbol no call path reaches from processGameTurn or tickPawn — that is n/a, not pass"
+      "a symbol no call path reaches from processGameTurn or tickPawn \u2014 that is n/a, not pass"
     ],
     "trigger": {
       "all": [
@@ -46,7 +46,8 @@
       ]
     },
     "demotable": false,
-    "status": "draft"
+    "status": "draft",
+    "name": "tick-allocation"
   },
   {
     "id": "E02",
@@ -64,7 +65,7 @@
     "not_a_finding": [
       "a replacement that only happens when the contents genuinely changed",
       "a local array never observed outside this symbol",
-      "a symbol no call path reaches from processGameTurn or tickPawn — that is n/a, not pass"
+      "a symbol no call path reaches from processGameTurn or tickPawn \u2014 that is n/a, not pass"
     ],
     "trigger": {
       "all": [
@@ -89,7 +90,8 @@
       ]
     },
     "demotable": false,
-    "status": "draft"
+    "status": "draft",
+    "name": "memo-ref-churn"
   },
   {
     "id": "E03",
@@ -127,7 +129,8 @@
       ]
     },
     "demotable": false,
-    "status": "draft"
+    "status": "draft",
+    "name": "snapshot-growth"
   },
   {
     "id": "E04",
@@ -144,7 +147,7 @@
     "not_a_finding": [
       "a log behind the project's existing debug gate",
       "a log on an error branch that does not run in a normal tick",
-      "a symbol no call path reaches from processGameTurn or tickPawn — that is n/a, not pass"
+      "a symbol no call path reaches from processGameTurn or tickPawn \u2014 that is n/a, not pass"
     ],
     "trigger": {
       "all": [
@@ -169,6 +172,7 @@
       ]
     },
     "demotable": true,
-    "status": "draft"
+    "status": "draft",
+    "name": "tick-logging"
   }
 ]

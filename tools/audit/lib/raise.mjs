@@ -168,14 +168,15 @@ function titleFor(g) {
   return `${t.charAt(0).toUpperCase()}${t.slice(1)} — ${g.group}`;
 }
 
-export function idFor(g) {
-  return slug(`${g.rule_id}-${g.group}`);
+export function idFor(g, rulesById) {
+  const name = rulesById?.get(g.rule_id)?.name ?? g.rule_id;
+  return slug(`${name}-${g.group}`);
 }
 
 /** Write or refresh one issue file. Never flips `ready`, never rewrites a body a person has
  *  edited by hand — an audit-origin issue is refreshed, a human-origin one is left alone. */
 export function upsertIssue(root, g, rulesById) {
-  const id = idFor(g);
+  const id = idFor(g, rulesById);
   const found = listIssues(root).find((i) => i.data.id === id);
   const rule = rulesById.get(g.rule_id) ?? {};
   const kind = rule.kind ?? FAMILY_KIND[g.family] ?? 'correctness';

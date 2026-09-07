@@ -1,4 +1,5 @@
 import { execFileSync } from 'node:child_process';
+import { loadRules } from './rules.mjs';
 
 export const STATUSES = ['open', 'in-progress', 'in-review', 'closed'];
 export const KINDS = ['drift', 'correctness', 'performance', 'boundary', 'data', 'test-gap'];
@@ -16,6 +17,21 @@ const unlabel = (map, names) => {
   for (const [k, v] of Object.entries(map)) if (names.includes(v)) return k;
   return undefined;
 };
+
+let ruleNames = null;
+
+/** rule id -> the readable name the board shows. The id stays the ledger's key. */
+function nameOf(id) {
+  if (ruleNames === null) {
+    ruleNames = new Map();
+    try {
+      for (const r of loadRules().rules) ruleNames.set(r.id, r.name ?? r.id);
+    } catch {
+      /* a rules file that will not parse must not stop an issue being written */
+    }
+  }
+  return ruleNames.get(id) ?? id;
+}
 
 export const today = () => new Date().toISOString().slice(0, 10);
 
@@ -42,10 +58,8 @@ function ensureLabels(names) {
   }
   for (const n of names) {
     if (knownLabels.has(n)) continue;
-    const rule = /^[A-Z]\d{2}[a-z]?$/.test(n);
     try {
-      gh(['label', 'create', n, '--color', rule ? 'ededed' : 'cccccc',
-          '--description', rule ? `audit rule ${n}` : '', '--force']);
+      gh(['label', 'create', n, '--color', 'ededed', '--description', '', '--force']);
     } catch {
       /* a label that cannot be created must not stop the finding being recorded */
     }
@@ -93,7 +107,7 @@ function toIssue(raw) {
       severity: unlabel(SEVERITY_LABEL, names),
       ready: names.includes('ready'),
       origin: unlabel(ORIGIN_LABEL, names) ?? 'audit',
-      rules: names.filter((n) => /^[A-Z]\d{2}$/.test(n)),
+      rules: meta.rules ?? [],
       files: meta.files ?? [],
       symbols: meta.symbols ?? [],
       created: meta.created ?? (raw.createdAt ?? '').slice(0, 10),
@@ -135,7 +149,7 @@ function labelsFor(d) {
   if (d.severity && SEVERITY_LABEL[d.severity]) out.push(SEVERITY_LABEL[d.severity]);
   if (d.kind && KIND_LABEL[d.kind]) out.push(KIND_LABEL[d.kind]);
   if (d.origin && ORIGIN_LABEL[d.origin]) out.push(ORIGIN_LABEL[d.origin]);
-  for (const r of d.rules ?? []) out.push(r);
+  for (const r of d.rules ?? []) out.push(nameOf(r));
   if (d.ready === true) out.push('ready');
   if (STATUS_LABEL[d.status]) out.push(STATUS_LABEL[d.status]);
   return out;
@@ -144,6 +158,7 @@ function labelsFor(d) {
 function composeBody(data, body) {
   const meta = {
     id: data.id,
+    rules: data.rules ?? [],
     files: data.files ?? [],
     symbols: data.symbols ?? [],
     created: data.created ?? today(),

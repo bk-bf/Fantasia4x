@@ -5,7 +5,7 @@
     "tier": "T2",
     "title": "raw data id rendered in the UI",
     "authority": "AGENTS.md#never-leak-ids-in-the-ui",
-    "question": "Does this markup or component render a backend id — a kebab-case item/building/research id, a limbmap limb or part key, a job type — where a human label belongs?",
+    "question": "Does this markup or component render a backend id \u2014 a kebab-case item/building/research id, a limbmap limb or part key, a job type \u2014 where a human label belongs?",
     "fail_requires": [
       "file:line of the rendered expression",
       "the id shape it emits (kebab-case, snake_case, camelCase limb key)",
@@ -36,7 +36,8 @@
       ]
     },
     "demotable": true,
-    "status": "draft"
+    "status": "draft",
+    "name": "raw-id-in-ui"
   },
   {
     "id": "B02",
@@ -67,7 +68,8 @@
       ]
     },
     "demotable": true,
-    "status": "draft"
+    "status": "draft",
+    "name": "dev-jargon"
   },
   {
     "id": "B03",
@@ -75,7 +77,7 @@
     "tier": "T2",
     "title": "player-facing text instructs instead of describing",
     "authority": "AGENTS.md#never-leak-dev-jargon-into-player-facing-text",
-    "question": "Does a description in this row tell the player what the thing is FOR rather than what it IS — a sales pitch, strategy advice, or a mechanics essay — instead of describing it in-world and letting the player draw the conclusion?",
+    "question": "Does a description in this row tell the player what the thing is FOR rather than what it IS \u2014 a sales pitch, strategy advice, or a mechanics essay \u2014 instead of describing it in-world and letting the player draw the conclusion?",
     "fail_requires": [
       "the sentence",
       "which part is instruction or salesmanship",
@@ -104,7 +106,8 @@
       ]
     },
     "demotable": false,
-    "status": "draft"
+    "status": "draft",
+    "name": "text-instructs"
   },
   {
     "id": "B04",
@@ -112,7 +115,7 @@
     "tier": "T2",
     "title": "selection gesture commits instead of highlighting",
     "authority": "AGENTS.md#selection-is-not-commitment",
-    "question": "Does this gesture handler execute the action on the gesture itself — a click or a drag-box release that designates, drafts, moves or hunts — instead of only highlighting the targets and surfacing a verb button for the player to press?",
+    "question": "Does this gesture handler execute the action on the gesture itself \u2014 a click or a drag-box release that designates, drafts, moves or hunts \u2014 instead of only highlighting the targets and surfacing a verb button for the player to press?",
     "fail_requires": [
       "file:line where the gesture handler performs the action",
       "which action it commits",
@@ -140,6 +143,7 @@
       ]
     },
     "demotable": false,
-    "status": "draft"
+    "status": "draft",
+    "name": "selection-commits"
   }
 ]

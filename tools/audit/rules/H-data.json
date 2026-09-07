@@ -5,14 +5,14 @@
     "tier": "T2",
     "title": "item tier implausible for what it is",
     "authority": "docs/game/ITEM-RULES.md",
-    "question": "Is this row's tier defensible for the thing it describes — its materials, the technology its recipe implies, and the age its station belongs to — beyond the R2 and R4 checks the test suite already enforces?",
+    "question": "Is this row's tier defensible for the thing it describes \u2014 its materials, the technology its recipe implies, and the age its station belongs to \u2014 beyond the R2 and R4 checks the test suite already enforces?",
     "fail_requires": [
       "the tier as written",
       "the material, technique or station that contradicts it",
       "the tier it should carry"
     ],
     "not_a_finding": [
-      "a violation R2 or R4 already fails on — that is the test suite's job, not this rule's",
+      "a violation R2 or R4 already fails on \u2014 that is the test suite's job, not this rule's",
       "a Boss-tier piece, which is thematic by design"
     ],
     "trigger": {
@@ -33,7 +33,8 @@
       ]
     },
     "demotable": false,
-    "status": "active"
+    "status": "active",
+    "name": "wrong-tier"
   },
   {
     "id": "H02",
@@ -69,7 +70,8 @@
       ]
     },
     "demotable": false,
-    "status": "active"
+    "status": "active",
+    "name": "name-breaks-progression"
   },
   {
     "id": "H03",
@@ -105,6 +107,7 @@
       ]
     },
     "demotable": false,
-    "status": "active"
+    "status": "active",
+    "name": "generic-before-thematic"
   }
 ]
