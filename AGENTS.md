@@ -161,8 +161,26 @@ Frontmatter became labels: severity `high` / `medium` / `low`, kind `drift` / `c
 `data` / `boundary` / `test gap`, origin `found by audit` / `found by hand`, the audit rule that
 fired (`S01`, `G01`, `C02`, `S03`, `B01`), and `ready`.
 
-**`ready` is a person's decision — never add that label.** It is the only gate between the audit
-and the repo, and the fixer will not touch an issue without it.
+**Triage through the lanes, never around them.** The board is
+[projects/4](https://github.com/users/bk-bf/projects/4) and its columns are an order:
+`Backlog` → `Ready` → `In progress` → `In review` → `Done`, with `Blocked on you` off to the side.
+
+- **`Backlog`** — raised, not yet evaluated. The audit raises here and nowhere else.
+- **`Ready`** — nothing blocks it, no decision is outstanding, the scope is clear enough to
+  start. It means *available to work on*, not *approved by a person*. Promoting one is a
+  deliberate evaluation, so say why.
+- **`In progress`** — a branch exists and someone is on it.
+- **`In review`** — the work is finished and green, waiting for Kirill to audit it. This lane is
+  his, not yours; put work here and stop.
+- **`Done`** — he accepted it, and the merge commit that closed the issue is named on it.
+- **`Blocked on you`** — cannot proceed until he chooses: a proposal awaiting a yes, or a design
+  call whose measurements are already in hand. Not a parking space for anything merely hard.
+
+Do not skip a lane. Nothing goes from `Backlog` straight to `In progress`, and nothing reaches
+`Done` without passing through his review.
+
+`ready` the label and `Ready` the column mean the same thing; `tools/audit/fix.mjs` reads the
+label, so keep them in step.
 
 **Close out the issue for work you finished.** `gh issue close <n> --reason completed` with a
 comment naming the commit that fixed it. If the issue carries remediation checkboxes, tick the
