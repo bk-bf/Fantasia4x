@@ -37,6 +37,23 @@ export function writeControl(patch) {
   return next;
 }
 
+export function anchorFor(resetsAt, pct) {
+  if (!resetsAt) return 0;
+  const doc = readJson(PACE, { batches: [], anchors: {} });
+  const anchors = doc.anchors ?? {};
+  const key = String(resetsAt);
+  if (anchors[key] === undefined) {
+    anchors[key] = pct;
+    const keep = Object.fromEntries(
+      Object.entries(anchors).filter(([k]) => Number(k) > Date.now() - 2 * WINDOW_MS)
+    );
+    mkdirSync(LEDGER, { recursive: true });
+    writeFileSync(PACE, JSON.stringify({ ...doc, anchors: keep }, null, 1));
+    return pct;
+  }
+  return anchors[key];
+}
+
 export function readPace() {
   const p = readJson(PACE, { batches: [] });
   const cutoff = Date.now() - WINDOW_MS;
@@ -66,21 +83,38 @@ export async function readPlan(url, maxAgeMs = 30_000) {
     if (!res.ok) throw new Error(`plan ${res.status}`);
     const body = await res.json();
     const five = body?.five_hour;
-    if (typeof five?.pct !== 'number' || !five?.resets_at) throw new Error('no five_hour');
-    const plan = { pct: five.pct, resetsAt: Date.parse(five.resets_at) };
+    if (typeof five?.pct !== 'number') throw new Error('no five_hour');
+    const plan = {
+      pct: five.pct,
+      resetsAt: five.resets_at ? Date.parse(five.resets_at) : null
+    };
     planCache = { at: Date.now(), plan };
     return plan;
   } catch (e) {
-    return planCache.plan ? { ...planCache.plan, stale: e.message } : null;
+    const held = planCache.plan;
+    if (held && (held.resetsAt === null || held.resetsAt > Date.now())) {
+      return { ...held, stale: e.message };
+    }
+    return null;
   }
 }
 
 export function schedule(plan, control, now = Date.now()) {
   const ceiling = Number(control.ceiling_pct) || DEFAULT_CONTROL.ceiling_pct;
   if (!plan) return { verdict: 'go', reason: 'no plan data' };
+  if (plan.resetsAt === null || plan.resetsAt <= now) {
+    return {
+      verdict: 'go',
+      ceiling,
+      pct: plan.pct,
+      minsLeft: 0,
+      reason: `no five-hour block is open (${plan.pct.toFixed(1)}% used), so the next batch starts one`
+    };
+  }
   const windowStart = plan.resetsAt - WINDOW_MS;
   const elapsed = Math.min(Math.max(now - windowStart, 0), WINDOW_MS);
-  const target = (ceiling * elapsed) / WINDOW_MS;
+  const anchor = Math.min(anchorFor(plan.resetsAt, plan.pct), ceiling);
+  const target = anchor + ((ceiling - anchor) * elapsed) / WINDOW_MS;
   const minsLeft = Math.max(0, (plan.resetsAt - now) / 60_000);
   if (plan.pct >= ceiling) {
     return { verdict: 'wait', target, ceiling, pct: plan.pct, minsLeft,
