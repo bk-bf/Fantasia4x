@@ -14,6 +14,7 @@
     "scripts/**/*.mjs"
   ],
   "ignore": [
+    ".claude/**",
     "src/lib/sim-core-pkg/**",
     "src/lib/spatial-core-pkg/**",
     "desktop-spike/**",

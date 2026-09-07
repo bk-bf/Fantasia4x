@@ -8,6 +8,7 @@ import prettier from 'eslint-config-prettier';
 
 const IGNORES = [
   'node_modules/**',
+  '.claude/**',
   'build/**',
   'dist/**',
   '.svelte-kit/**',

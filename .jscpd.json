@@ -1,10 +1,13 @@
 {
   "threshold": 3,
   "minTokens": 60,
-  "reporters": ["consoleFull"],
+  "reporters": [
+    "consoleFull"
+  ],
   "absolute": false,
   "gitignore": true,
   "ignore": [
+    ".claude/**",
     "**/node_modules/**",
     "**/.svelte-kit/**",
     "**/build/**",
