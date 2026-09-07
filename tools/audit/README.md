@@ -126,11 +126,19 @@ node tools/audit/audit.mjs export     # ledger -> JSONL under tools/audit/ledger
 
 node tools/audit/run.mjs --workers 4 --hours 8        # the overnight loop
 node tools/audit/run.mjs --once --model haiku         # one batch, for checking a rule
+node tools/audit/run.mjs --workers 2 --hours 1 --dry-run   # drive the board, spend nothing
 ```
 
 `index` re-reads every source file and rewrites the symbol inventory; `plan` crosses the
 active rules against it. A verdict survives both as long as its symbol's `content_hash` and
 its rule's `rule_hash` are unchanged, so only what actually moved is re-audited.
+
+## Testing the board without spending anything
+
+`--dry-run` runs the whole loop — the pace gate, the pause check, the per-worker state the
+dashboard reads — but claims no work, calls no model and writes no verdict. The board shows
+`working`, the worker rows fill, and Pause stops it, all for free. Use it for any change to
+`/audit`; the ledger and `pace.json` are left exactly as they were.
 
 ## Parallel workers
 

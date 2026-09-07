@@ -31,6 +31,7 @@ const HOURS = Number(arg('hours', 8));
 const MODEL = arg('model', 'sonnet');
 const CLAUDE = process.env.AUDIT_CLAUDE || 'claude';
 const ONCE = flag('once');
+const DRY = flag('dry-run');
 const RUN_ID = arg('run', `run-${new Date().toISOString().replace(/[:.]/g, '-')}`);
 const LOG = join(HERE, '.ledger', `${RUN_ID}.log`);
 
@@ -123,6 +124,20 @@ async function worker(id, deadline) {
 
   while (Date.now() < deadline) {
     if ((await gate(id, deadline)) === 'stop') break;
+
+    // --dry-run exercises the gate, the worker state and the board without claiming work,
+    // calling a model or writing a verdict. It is how the dashboard is tested for free.
+    if (DRY) {
+      batches++;
+      const fake = `dry-run/worker-${id}/batch-${batches}`;
+      writeWorkerState(id, { state: 'working', symbol: fake, rules: 1 });
+      const ms = 3000 + Math.floor(Math.random() * 5000);
+      log(`[w${id}] ${fake} — dry run, no model call, ${(ms / 1000).toFixed(1)}s`);
+      await sleep(ms);
+      if (ONCE) break;
+      continue;
+    }
+
     const next = await sh(process.execPath, [AUDIT, 'next', '--run', RUN_ID], { env });
     if (next.code !== 0) {
       log(`[w${id}] next failed: ${next.err.trim()}`);
@@ -198,7 +213,9 @@ async function worker(id, deadline) {
 
 const deadline = ONCE ? Date.now() + 15 * 60_000 : Date.now() + HOURS * 3600_000;
 log(
-  `run ${RUN_ID} — ${WORKERS} worker(s), model ${MODEL}, until ${new Date(deadline).toISOString()}`
+  `run ${RUN_ID} — ${WORKERS} worker(s), model ${MODEL}` +
+    (DRY ? ' — DRY RUN, no model calls, no verdicts' : '') +
+    `, until ${new Date(deadline).toISOString()}`
 );
 {
   const c = readControl();
