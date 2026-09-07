@@ -186,8 +186,11 @@ stays the ledger's key and should not appear in anything a person reads.
 Do not skip a lane. Nothing goes from `Backlog` straight to `In progress`, and nothing reaches
 `Done` without passing through his review.
 
-`ready` the label and `Ready` the column mean the same thing; `tools/audit/fix.mjs` reads the
-label, so keep them in step.
+**Move the card, never the label.** `ready`, `needs decision` and the three `verify` labels are
+derived from the board's Status and Verify fields by `board-sync.py`, on the same tick that
+refreshes the dashboard. Edit one of those labels by hand and it is overwritten within a minute.
+Any open issue missing from the board is added to `Backlog`. Kind, severity, origin and the rule
+name are not touched — they describe the finding, not its state.
 
 **Every issue says how it will be verified**, as a `Verify` field on the board and a label on
 the issue. Set it at triage, not at review, so the cost of an item is visible before anyone
