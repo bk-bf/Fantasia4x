@@ -1,5 +1,5 @@
 [Unit]
-Description=Fantasia4x nightly code audit
+Description=Fantasia4x code audit
 Documentation=file:%h/Documents/Projects/Fantasia4x/tools/audit/README.md
 After=network-online.target
 
@@ -10,11 +10,11 @@ Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin
 Environment=AUDIT_REPO=%h/Documents/Projects/Fantasia4x
 Environment=AUDIT_MON=%h/Documents/Projects/dashboard/mon
 Environment=AUDIT_MODEL=opus
-Environment=AUDIT_WORKERS=2
-Environment=AUDIT_HOURS=3
+Environment=AUDIT_WORKERS=3
+Environment=AUDIT_HOURS=5
 Environment=AUDIT_NO_FIX=1
 ExecStart=%h/Documents/Projects/Fantasia4x/tools/audit/deploy/nightly-audit.sh
 # The token budget inside the script is 3.5 h; this is the backstop for a wedged model call.
-TimeoutStartSec=5h
+TimeoutStartSec=6h
 Nice=10
 IOSchedulingClass=idle

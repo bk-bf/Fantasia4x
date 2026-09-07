@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Nightly code audit, run by fantasia-audit.timer on ubuntuserver.
+# Code audit, run by fantasia-audit.timer on ubuntuserver.
 #
 # Order matters: the source has to be current before the ledger is re-planned, or the
 # night is spent auditing yesterday's code. Steps 1-2 are deterministic and cost nothing;
@@ -70,9 +70,10 @@ say "node $("$NODE" -v), claude $AUDIT_CLAUDE"
 # make `--ff-only` fail forever after, so an unpushed board commit is rebased onto origin
 # rather than treated as divergence.
 say "--- pulling main"
-git -C "$REPO" fetch --quiet origin "+refs/heads/*:refs/remotes/origin/*" || die "fetch failed"
+git -C "$REPO" fetch --quiet origin "+refs/heads/*:refs/remotes/origin/*" || say "WARN: fetch failed, auditing the tree as it stands"
 if [ -n "$(git -C "$REPO" status --porcelain)" ]; then
-  die "$REPO has uncommitted changes — refusing to run against a dirty tree"
+  say "$REPO has uncommitted changes — skipping this run, nothing was touched"
+  exit 0
 fi
 git -C "$REPO" checkout --quiet main || die "cannot check out main"
 if ! git -C "$REPO" merge --ff-only --quiet origin/main 2>/dev/null; then
