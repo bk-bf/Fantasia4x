@@ -175,8 +175,10 @@ stays the ledger's key and should not appear in anything a person reads.
   start. It means *available to work on*, not *approved by a person*. Promoting one is a
   deliberate evaluation, so say why.
 - **`In progress`** — a branch exists and someone is on it.
-- **`In review`** — the work is finished and green, waiting for Kirill to audit it. This lane is
-  his, not yours; put work here and stop.
+- **`In review`** — the work is finished and an agent is verifying it, by the route the
+  `Verify` field names. Nothing here needs Kirill.
+- **`Needs playtest`** — green, and the remaining question is one only he can answer. This lane
+  is his; put work here and stop.
 - **`Done`** — he accepted it, and the merge commit that closed the issue is named on it.
 - **`Blocked on you`** — cannot proceed until he chooses: a proposal awaiting a yes, or a design
   call whose measurements are already in hand. Not a parking space for anything merely hard.
@@ -186,6 +188,22 @@ Do not skip a lane. Nothing goes from `Backlog` straight to `In progress`, and n
 
 `ready` the label and `Ready` the column mean the same thing; `tools/audit/fix.mjs` reads the
 label, so keep them in step.
+
+**Every issue says how it will be verified**, as a `Verify` field on the board and a label on
+the issue. Set it at triage, not at review, so the cost of an item is visible before anyone
+starts:
+
+- **`verify tests`** — `pnpm check` and the vitest suite settle it. A refactor, a dead branch,
+  a restated roster, a data row with a test over it. An agent finishes these alone.
+- **`verify headless`** — it only shows up in the running sim, so it needs the `headless` skill:
+  real pawns, real ticks, a stated delta. Job and stock flow, recipe throughput, combat
+  measurement. Still an agent's job.
+- **`needs playtest`** — the numbers can be produced but not judged. Balance feel, pacing, an
+  interaction that has to be used. **Only these reach Kirill.** An audit that says creatures die
+  faster cannot say whether that is the game he wants.
+
+Do not mark something `needs playtest` because it is large or risky. The test is whether a
+measurement could settle it; if one could, it belongs in one of the first two.
 
 **Close out the issue for work you finished.** `gh issue close <n> --reason completed` with a
 comment naming the commit that fixed it. If the issue carries remediation checkboxes, tick the
