@@ -28,6 +28,31 @@ function gh(args, { input } = {}) {
   });
 }
 
+let knownLabels = null;
+
+function ensureLabels(names) {
+  if (knownLabels === null) {
+    try {
+      knownLabels = new Set(
+        JSON.parse(gh(['label', 'list', '--limit', '200', '--json', 'name'])).map((l) => l.name)
+      );
+    } catch {
+      knownLabels = new Set();
+    }
+  }
+  for (const n of names) {
+    if (knownLabels.has(n)) continue;
+    const rule = /^[A-Z]\d{2}[a-z]?$/.test(n);
+    try {
+      gh(['label', 'create', n, '--color', rule ? 'ededed' : 'cccccc',
+          '--description', rule ? `audit rule ${n}` : '', '--force']);
+    } catch {
+      /* a label that cannot be created must not stop the finding being recorded */
+    }
+    knownLabels.add(n);
+  }
+}
+
 const MARKER = (id) => `<!-- audit-id: ${id} -->`;
 const META = /<!-- audit-meta: (\{.*?\}) -->/s;
 
@@ -129,10 +154,12 @@ function composeBody(data, body) {
 
 export function writeIssue(_root, { data, body }) {
   const existing = listIssues().find((i) => i.data.id === data.id);
+  const labels = labelsFor(data);
+  ensureLabels(labels);
   const args = existing
     ? ['issue', 'edit', existing.path, '--title', data.title, '--body-file', '-']
     : ['issue', 'create', '--title', data.title, '--body-file', '-'];
-  for (const l of labelsFor(data)) args.push(existing ? '--add-label' : '--label', l);
+  for (const l of labels) args.push(existing ? '--add-label' : '--label', l);
   const outText = gh(args, { input: composeBody(data, body) });
   invalidate();
   const url = outText.trim().split('\n').filter(Boolean).pop() ?? '';
@@ -146,6 +173,7 @@ export function patchIssue(handle, patch) {
   if (patch.title) args.push('--title', patch.title);
   const before = new Set(labelsFor(cur.data));
   const after = new Set(labelsFor(next));
+  ensureLabels([...after]);
   for (const l of after) if (!before.has(l)) args.push('--add-label', l);
   for (const l of before) if (!after.has(l)) args.push('--remove-label', l);
   const bodyChanged =
