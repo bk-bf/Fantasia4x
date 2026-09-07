@@ -5,6 +5,7 @@
 // findings group by (rule, module group), and the issue carries every citation.
 
 import { readIssue, writeIssue, patchIssue, today, listIssues } from './gh.mjs';
+import { blobUrl, linkify, authorityLink, issueRef } from './links.mjs';
 
 // Family defaults; an individual rule may override with its own `kind`/`severity`.
 const FAMILY_KIND = {
@@ -82,7 +83,7 @@ export function groupFindings(db) {
   return [...groups.values()];
 }
 
-function renderBody(g) {
+function renderBody(g, sha) {
   const n = g.findings.length;
   const shown = g.findings.slice(0, MAX_EVIDENCE);
   const rest = n - shown.length;
@@ -90,9 +91,10 @@ function renderBody(g) {
   const lines = [];
   lines.push(`# ${titleFor(g)}`);
   lines.push('');
+  const authority = authorityLink(g.authority, sha);
   lines.push(
-    `> **Related:** [issues/README](README.md) · [tools/audit](../../tools/audit/README.md)` +
-      (g.authority ? ` · [rule source](../../${g.authority.split('#')[0]})` : '')
+    `> **Related:** [\`tools/audit\`](${blobUrl('tools/audit/README.md', null, sha)})` +
+      (authority ? ` · rule source ${authority}` : '')
   );
   lines.push('');
 
@@ -105,16 +107,16 @@ function renderBody(g) {
   );
   lines.push('');
   if (shown.length) {
-    lines.push(`The clearest case: ${shown[0].summary}`);
+    lines.push(`The clearest case: ${linkify(issueRef(shown[0].summary), sha)}`);
     lines.push('');
   }
 
   lines.push('## Evidence');
   lines.push('');
   for (const f of shown) {
-    const rel = `../../${f.file}`;
-    lines.push(`- [\`${f.file}:${f.start_line}\`](${rel}#L${f.start_line}) — ${f.summary}`);
-    for (const e of safeJson(f.evidence)) lines.push(`  - ${e}`);
+    const at = blobUrl(f.file, f.start_line, sha);
+    lines.push(`- [\`${f.file}:${f.start_line}\`](${at}) — ${linkify(issueRef(f.summary), sha)}`);
+    for (const e of safeJson(f.evidence)) lines.push(`  - ${linkify(issueRef(e), sha)}`);
   }
   if (rest > 0) {
     lines.push('');
@@ -129,7 +131,7 @@ function renderBody(g) {
   lines.push(
     `Nothing below the judgment tier can decide this one: it is why \`${g.rule_id}\` ` +
       `exists at T2 rather than as a lint rule or a test. ` +
-      (g.authority ? `The invariant is stated in \`${g.authority}\`. ` : '') +
+      (authority ? `The invariant is stated in ${authority}. ` : '') +
       `If the fix makes the class mechanically checkable, add that check and demote the rule ` +
       `— \`node tools/audit/audit.mjs demote\` tracks which rules have earned it.`
   );
@@ -175,7 +177,7 @@ export function idFor(g, rulesById) {
 
 /** Write or refresh one issue file. Never flips `ready`, never rewrites a body a person has
  *  edited by hand — an audit-origin issue is refreshed, a human-origin one is left alone. */
-export function upsertIssue(root, g, rulesById) {
+export function upsertIssue(root, g, rulesById, sha, force = false) {
   const id = idFor(g, rulesById);
   const found = listIssues(root).find((i) => i.data.id === id);
   const rule = rulesById.get(g.rule_id) ?? {};
@@ -189,10 +191,10 @@ export function upsertIssue(root, g, rulesById) {
     const existing = readIssue(path);
     if (existing.data.origin === 'human') return { path, action: 'skipped-human' };
     if (existing.data.status === 'closed') return { path, action: 'skipped-closed' };
-    if (existing.data.ready === true) return { path, action: 'skipped-approved' };
+    if (existing.data.ready === true && !force) return { path, action: 'skipped-approved' };
     const before = existing.body;
-    const body = renderBody(g);
-    const changed = before.trim() !== body.trim();
+    const body = renderBody(g, sha);
+    const changed = force || before.trim() !== body.trim();
     patchIssue(path, {
       title: titleFor(g),
       kind,
@@ -224,7 +226,7 @@ export function upsertIssue(root, g, rulesById) {
       created: today(),
       updated: today()
     },
-    body: renderBody(g)
+    body: renderBody(g, sha)
   });
   const created = listIssues(root).find((i) => i.data.id === id);
   return { path: created ? created.path : id, action: 'created', id };

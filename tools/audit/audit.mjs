@@ -12,6 +12,7 @@
 //   audit t0             deterministic checks (ADR constant drift, architecture seams, coverage gap)
 //   audit demote         T2 rules that have earned a move down to T0
 //   audit issues         phase 2: confirmed findings -> GitHub issues
+//   audit issues --rerender   rewrite every body against the current renderer
 //   audit board          every issue on the board, by status
 //   audit export         write the ledger out as JSONL for git
 //   audit rules          list loaded rules and validation errors
@@ -19,6 +20,7 @@
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { execFileSync } from 'node:child_process';
 import { hostname } from 'node:os';
 
 import * as L from './lib/ledger.mjs';
@@ -30,6 +32,7 @@ import { parseResponse, validate } from './lib/verdict.mjs';
 import { adrConstDrift, adrCoverage, seamViolations } from './lib/t0.mjs';
 import * as I from './lib/gh.mjs';
 import { groupFindings, upsertIssue } from './lib/raise.mjs';
+import { indexedSha } from './lib/links.mjs';
 
 const ROOT = process.env.AUDIT_ROOT || join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 // Stable by default so `audit release` can find this machine's claims across separate
@@ -53,6 +56,14 @@ function cmdIndex() {
 
   L.replaceSymbols(db, symbols);
   db.prepare('INSERT OR REPLACE INTO meta (k,v) VALUES (?,?)').run('indexed_at', L.nowIso());
+  // Evidence cites a line number, which is only true of the commit it was read at. Pinning
+  // permalinks to this sha keeps a citation correct after the file moves underneath it.
+  try {
+    const sha = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: ROOT, encoding: 'utf8' }).trim();
+    db.prepare('INSERT OR REPLACE INTO meta (k,v) VALUES (?,?)').run('indexed_sha', sha);
+  } catch {
+    /* a checkout without git still indexes; the links just fall back to the default branch */
+  }
   out(`indexed.`);
 }
 
@@ -350,6 +361,7 @@ function cmdIssues() {
   const { rules } = loadRules();
   const byId = new Map(rules.map((r) => [r.id, r]));
   const groups = groupFindings(db);
+  const sha = indexedSha(db);
   if (groups.length === 0) {
     out('no open findings to raise');
     return;
@@ -367,7 +379,7 @@ function cmdIssues() {
 
   const counts = {};
   for (const g of groups) {
-    const r = upsertIssue(ROOT, g, byId);
+    const r = upsertIssue(ROOT, g, byId, sha, flag('rerender'));
     counts[r.action] = (counts[r.action] ?? 0) + 1;
     if (r.action === 'created')
       out(`  created  #${r.path}  ${r.id}  (${g.findings.length} findings)`);
