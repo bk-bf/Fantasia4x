@@ -186,6 +186,31 @@ stays the ledger's key and should not appear in anything a person reads.
 Do not skip a lane. Nothing goes from `Backlog` straight to `In progress`, and nothing reaches
 `Done` without passing through his review.
 
+**Never write to GitHub with `gh` directly.** `gh issue create|edit|close|comment` and
+`gh label create|edit|delete` are denied in `.claude/settings.json`. Use `pnpm issue`:
+
+```bash
+pnpm issue labels                       # every label the schema allows
+pnpm issue lint --body-file draft.md    # would this be accepted?
+pnpm issue create --title T --body-file - --label high --label drift
+pnpm issue close 12 --commit <sha>
+```
+
+It repairs what is mechanical and refuses what is not. A `path:line` written in prose becomes a
+permalink pinned to the commit the audit indexed — a citation names a line, and a line is only
+true at one revision. An issue URL in backticks becomes `#12`, because GitHub renders a code
+span as code and links a bare reference. What it refuses: a label outside the schema, naming the
+nearest real one (`test-missing` comes back as `missing-test`); a relative markdown link, which
+means nothing in an issue body; a project-view URL, which is renumbered; a blob link whose file
+or line does not exist at that commit; and `ready` on a new issue, because new work lands in
+`Backlog`.
+
+The vocabulary is `tools/audit/labels.json` plus one label per rule `name`. Adding a label means
+editing that file, not inventing one at a call site. `pnpm issue sync-labels` creates what is
+missing and names the strays.
+
+Reading is unrestricted: `gh issue list`, `gh issue view`, `gh project item-list`.
+
 **Move the card, never the label.** `ready`, `needs decision` and the three `verify` labels are
 derived from the board's Status and Verify fields by `board-sync.py`, on the same tick that
 refreshes the dashboard. Edit one of those labels by hand and it is overwritten within a minute.
