@@ -1,0 +1,8 @@
+{
+  "severity": ["critical", "high", "medium", "low"],
+  "kind": ["drift", "correctness", "performance", "boundary", "data", "test gap"],
+  "origin": ["found by audit", "found by hand"],
+  "verify": ["verify tests", "verify headless", "needs playtest"],
+  "state": ["ready", "needs decision"],
+  "work": ["feature", "combat balance"]
+}

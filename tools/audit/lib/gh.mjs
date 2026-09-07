@@ -1,5 +1,6 @@
 import { execFileSync } from 'node:child_process';
 import { loadRules } from './rules.mjs';
+import { check, allowedLabels } from './schema.mjs';
 
 export const STATUSES = ['open', 'in-progress', 'in-review', 'closed'];
 export const KINDS = ['drift', 'correctness', 'performance', 'boundary', 'data', 'test-gap'];
@@ -56,8 +57,12 @@ function ensureLabels(names) {
       knownLabels = new Set();
     }
   }
+  const allowed = allowedLabels();
   for (const n of names) {
     if (knownLabels.has(n)) continue;
+    if (!allowed.has(n)) {
+      throw new Error(`refusing to create the label "${n}" — it is not in the schema`);
+    }
     try {
       gh(['label', 'create', n, '--color', 'ededed', '--description', '', '--force']);
     } catch {
@@ -168,8 +173,14 @@ function composeBody(data, body) {
 }
 
 export function writeIssue(_root, { data, body }) {
-  const existing = listIssues().find((i) => i.data.id === data.id);
+  // validate before any network call: an invalid write should cost nothing and fail the same
+  // way whether or not GitHub is reachable
   const labels = labelsFor(data);
+  const errors = check({ labels, body, allowReady: data.ready === true });
+  if (errors.length) {
+    throw new Error(`refusing to write ${data.id}:\n  - ${errors.join('\n  - ')}`);
+  }
+  const existing = listIssues().find((i) => i.data.id === data.id);
   ensureLabels(labels);
   const args = existing
     ? ['issue', 'edit', existing.path, '--title', data.title, '--body-file', '-']

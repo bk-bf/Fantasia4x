@@ -41,7 +41,8 @@
     "check:types": "svelte-check --tsconfig ./tsconfig.json",
     "knip": "knip --no-progress --include dependencies,unlisted,unresolved",
     "dupes": "jscpd src",
-    "knip:all": "knip --no-progress"
+    "knip:all": "knip --no-progress",
+    "issue": "node tools/issue.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^9.30.0",
