@@ -49,11 +49,7 @@ export interface ConditionView {
 }
 
 const MOD_LABEL: Partial<Record<keyof ConditionModifiers, string>> = {
-  strength: CORE_STAT_ABBR.strength,
-  dexterity: CORE_STAT_ABBR.dexterity,
-  constitution: CORE_STAT_ABBR.constitution,
-  perception: CORE_STAT_ABBR.perception,
-  intelligence: CORE_STAT_ABBR.intelligence,
+  ...CORE_STAT_ABBR,
   workEfficiency: 'Work',
   moveSpeed: 'Move',
   dodge: 'Dodge',
@@ -76,7 +72,6 @@ function effectLines(mods: ConditionModifiers): string[] {
   return out;
 }
 
-const GRANT_STAT_ABBR: Record<string, string> = CORE_STAT_ABBR;
 const grantAxis = (name: string): string =>
   name === 'workSpeed'
     ? 'spd'
@@ -92,10 +87,10 @@ export function traitGrantLines(trait: Trait): string[] {
   for (const [name, value] of Object.entries(trait.effects ?? {})) {
     if (name.endsWith('Bonus') && typeof value === 'number') {
       const stat = name.replace('Bonus', '');
-      out.push(`${GRANT_STAT_ABBR[stat] ?? stat} +${value}`);
+      out.push(`${CORE_STAT_ABBR[stat as keyof typeof CORE_STAT_ABBR] ?? stat} +${value}`);
     } else if (name.endsWith('Penalty') && typeof value === 'number') {
       const stat = name.replace('Penalty', '');
-      out.push(`${GRANT_STAT_ABBR[stat] ?? stat} -${value}`);
+      out.push(`${CORE_STAT_ABBR[stat as keyof typeof CORE_STAT_ABBR] ?? stat} -${value}`);
     } else if (name === 'combatMods' && value && typeof value === 'object') {
       for (const [statId, mul] of Object.entries(value as Record<string, number>)) {
         const p = Math.round((mul - 1) * 100);
