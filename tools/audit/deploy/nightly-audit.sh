@@ -10,7 +10,6 @@
 #   3. run the audit until the budget runs out
 #   4. raise confirmed findings as GitHub issues
 #   5. work any issue a person marked `ready: true` -> a local branch + a review file
-#   6. hand the result to mon so it can be read from anywhere
 #
 # Everything runs in the main checkout on `main`. The audit's own output (the board) is the
 # only thing it commits there; a fix attempt goes to its own branch and is never pushed.
@@ -21,11 +20,8 @@
 #   AUDIT_HOURS     token budget in hours    3.5
 #   AUDIT_WORKERS   parallel workers         3
 #   AUDIT_MODEL     model for the loop       sonnet
-#   AUDIT_MON       mon binary               ~/Documents/Projects/mon/mon
-#   AUDIT_TAG       mon tag                  ci/cl
 #   AUDIT_FIXES     issues to attempt per night   2
 #   AUDIT_REVIEWS   cards to review per night      2
-#   AUDIT_NO_MON=1  skip the mon handoff (for a manual test run)
 #   AUDIT_NO_FIX=1  skip phase 3 entirely
 
 set -uo pipefail
@@ -35,8 +31,6 @@ NODE="${AUDIT_NODE:-$HOME/.nvm/versions/node/v24.19.0/bin/node}"
 HOURS="${AUDIT_HOURS:-3.5}"
 WORKERS="${AUDIT_WORKERS:-3}"
 MODEL="${AUDIT_MODEL:-sonnet}"
-MON="${AUDIT_MON:-$HOME/Documents/Projects/mon/mon}"
-TAG="${AUDIT_TAG:-ci/cl}"
 FIXES="${AUDIT_FIXES:-2}"
 REVIEWS="${AUDIT_REVIEWS:-2}"
 
@@ -134,40 +128,6 @@ else
   for _ in $(seq 1 "$REVIEWS"); do
     ( cd "$REPO" && "$NODE" tools/audit/review.mjs --next ) || break
   done
-fi
-
-# --- 7. mon ------------------------------------------------------------------
-# The audit itself is deterministic and needs no agent. What is worth a session is reading
-# the night's findings and saying which ones matter, somewhere reachable from a phone.
-if [ "${AUDIT_NO_MON:-0}" = 1 ]; then
-  say "AUDIT_NO_MON=1 — skipping the mon handoff"
-elif [ -x "$MON" ]; then
-  say "--- handing the report to mon"
-  # The pinned node matters in the prompt too: the session's own PATH resolves to v20,
-  # which has no node:sqlite, so a bare \`node\` would fail to open the ledger.
-  "$MON" run "Last night's code audit finished. Read it with (use this exact node):
-
-  $NODE tools/audit/audit.mjs status
-  $NODE tools/audit/audit.mjs findings
-  $NODE tools/audit/audit.mjs na
-  $NODE tools/audit/audit.mjs demote
-  $NODE tools/audit/audit.mjs board
-
-Say what changed since yesterday and what is worth acting on, in one paragraph a
-person can read on a phone. Lead with the most severe finding, not the newest.
-Verify each fail you mention against the source it cites and drop any whose
-evidence does not hold — a fail with wrong line numbers is noise. If \`na\` shows a
-rule answering n/a on most of its matches, say which rule and that its trigger is
-too broad. Name any issue the board gained tonight that looks worth marking \`ready: true\`,
-and any PR the fixer opened. If nothing meaningful landed, say that in one line rather than padding.
-The run log is at $LOG." \
-    --project "$REPO" \
-    --title "Fantasia4x nightly code audit — $STAMP" \
-    --tag "$TAG" \
-    --by fantasia-audit.timer \
-    || say "WARN: mon run failed"
-else
-  say "WARN: no mon at $MON — the report was not registered"
 fi
 
 say "=== done ==="

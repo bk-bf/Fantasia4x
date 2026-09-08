@@ -265,8 +265,8 @@ switch for all of it.
 
 ## Nightly run on ubuntuserver
 
-`deploy/` holds a systemd user timer that runs the whole thing at 04:00 local and hands the
-report to `mon`. The units' `ExecStart` points into this checkout, so the repo owns them —
+`deploy/` holds a systemd user timer that runs the whole thing at 04:00 local. The units'
+`ExecStart` points into this checkout, so the repo owns them —
 `install.sh` symlinks rather than copies, and a `git pull` updates the installed unit.
 
 ```bash
@@ -293,7 +293,6 @@ point — the source has to be current before the ledger is re-planned:
    local branch; nothing is pushed.
 6. `review.mjs --next` ×`AUDIT_REVIEWS` — verifies `In review` cards on the merge and pushes
    the ones that pass to `main`.
-7. `mon run` with the night's numbers, so the report is readable from a phone
 
 Steps 1–3 are deterministic and cost nothing; steps 4, 5 and 6 spend tokens. A `flock`
 stops a second night starting on top of an overrunning one.
@@ -309,8 +308,8 @@ stops a second night starting on top of an overrunning one.
 `loginctl enable-linger` is set. `install.sh` says so if it is not.
 
 Environment overrides: `AUDIT_REPO` `AUDIT_TREE` `AUDIT_GRAPH` `AUDIT_NODE` `AUDIT_CLAUDE`
-`AUDIT_HOURS` `AUDIT_WORKERS` `AUDIT_MODEL` `AUDIT_FIX_MODEL` `AUDIT_FIXES` `AUDIT_MON`
-`AUDIT_TAG` `AUDIT_NO_MON` `AUDIT_NO_FIX`.
+`AUDIT_HOURS` `AUDIT_WORKERS` `AUDIT_MODEL` `AUDIT_FIX_MODEL` `AUDIT_FIXES` `AUDIT_REVIEWS`
+`AUDIT_NO_FIX`.
 
 ## Storage
 
