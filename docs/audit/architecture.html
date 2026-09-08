@@ -1,0 +1,680 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>audit — how it works</title>
+<style>
+  :root {
+    --bg: #faf9f5; --panel: #ffffff; --sunken: #f0eee6;
+    --line: #e6e2d7; --line-strong: #d5d0c2;
+    --fg: #191917; --fg-dim: #43423d; --muted: #79766e;
+    --accent: #c96442; --accent-soft: #f5e7e0;
+    --good: #4f7d55; --warn: #b0812c; --bad: #b8452c; --info: #3f6ea8;
+    --mono: ui-monospace, "SF Mono", Menlo, "Cascadia Mono", monospace;
+    --sans: "Styrene B", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Inter, sans-serif;
+    --serif: "Copernicus", "Tiempos Text", Georgia, "Source Serif 4", ui-serif, serif;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #262624; --panel: #30302e; --sunken: #1f1e1d;
+      --line: #3f3e3a; --line-strong: #55534d;
+      --fg: #faf9f5; --fg-dim: #dedbd2; --muted: #a09d94;
+      --accent: #d97757; --accent-soft: #3d2f28;
+      --good: #85b389; --warn: #d7ab5b; --bad: #e08267; --info: #7aa7d9;
+      color-scheme: dark;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg);
+    font: 400 16px/1.65 var(--sans);
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 940px; margin: 0 auto; padding: 56px 24px 96px; }
+  header { border-bottom: 1px solid var(--line); padding-bottom: 28px; margin-bottom: 40px; }
+  h1 { font: 600 40px/1.1 var(--serif); margin: 0 0 12px; letter-spacing: -.01em; }
+  .tag { color: var(--muted); font-size: 15px; }
+  h2 {
+    font: 600 25px/1.25 var(--serif); margin: 56px 0 14px;
+    padding-top: 22px; border-top: 1px solid var(--line);
+  }
+  h3 { font: 600 17px/1.35 var(--sans); margin: 30px 0 8px; }
+  p { margin: 0 0 15px; color: var(--fg-dim); }
+  .lede { font-size: 18px; color: var(--fg); }
+  code { font-family: var(--mono); font-size: .88em; background: var(--sunken);
+         border: 1px solid var(--line); border-radius: 5px; padding: 1px 5px; }
+  pre { background: var(--sunken); border: 1px solid var(--line); border-radius: 10px;
+        padding: 14px 16px; overflow-x: auto; font-family: var(--mono);
+        font-size: 13px; line-height: 1.6; color: var(--fg-dim); }
+  pre code { background: none; border: 0; padding: 0; font-size: inherit; }
+  figure { margin: 26px 0 30px; }
+  figure svg { display: block; width: 100%; height: auto; }
+  figcaption { color: var(--muted); font-size: 13.5px; margin-top: 10px; }
+  table { width: 100%; border-collapse: collapse; margin: 18px 0 24px; font-size: 14.5px; }
+  th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line);
+           vertical-align: top; }
+  th { color: var(--muted); font-weight: 500; font-size: 12px;
+       text-transform: uppercase; letter-spacing: .05em; }
+  td:first-child { white-space: nowrap; font-family: var(--mono); font-size: 13px;
+                   color: var(--accent); }
+  td { color: var(--fg-dim); }
+  .scroll { overflow-x: auto; }
+  .note {
+    border-left: 3px solid var(--accent); background: var(--accent-soft);
+    padding: 12px 16px; border-radius: 0 8px 8px 0; margin: 22px 0;
+    color: var(--fg-dim); font-size: 15px;
+  }
+  .note strong { color: var(--fg); }
+  .cols { display: grid; gap: 18px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+          padding: 16px 18px; }
+  .card h4 { margin: 0 0 6px; font: 600 15px/1.3 var(--sans); }
+  .card p { margin: 0; font-size: 14.5px; }
+  ul { color: var(--fg-dim); padding-left: 20px; }
+  li { margin-bottom: 7px; }
+  .k { color: var(--fg); font-weight: 500; }
+  .box { fill: var(--panel); stroke: var(--line-strong); stroke-width: 1.5; }
+  .box.warm { fill: var(--accent-soft); stroke: var(--accent); }
+  .box.sunk { fill: var(--sunken); stroke: var(--line); }
+  .lbl { font: 600 13px var(--sans); fill: var(--fg); }
+  .sub { font: 400 11.5px var(--mono); fill: var(--muted); }
+  .edge { stroke: var(--line-strong); stroke-width: 1.5; fill: none; }
+  .edge.hot { stroke: var(--accent); }
+  .edge.dash { stroke-dasharray: 4 4; }
+  .etxt { font: 400 11px var(--sans); fill: var(--muted); }
+  .fn { font: 400 10.5px var(--mono); fill: var(--accent); opacity: .85; }
+  footer { margin-top: 64px; padding-top: 20px; border-top: 1px solid var(--line);
+           color: var(--muted); font-size: 13.5px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>audit</h1>
+  <p class="tag">A ledger of every question ever asked about this codebase, which object it
+     was asked about, and which version of that object answered.</p>
+</header>
+
+<p class="lede">"I audited the code" cannot be checked. Nobody can say which of the 6,233
+objects in this repository anything ever read, under which question, or whether the answer
+still describes the code as it stands today.</p>
+
+<p>This tool replaces the claim with a table. Every auditable object gets a key that does not
+move when lines shift, and a hash of its exact source. Every rule gets a hash of its own text.
+An answer is stored against the pair it was produced under, so coverage is a
+<code>SELECT count(*)</code> rather than a memory of what someone looked at.</p>
+
+<h2>The pipeline</h2>
+
+<figure>
+<svg viewBox="0 0 960 420" role="img" aria-label="The repository is indexed and planned into a work queue; a worker claims a batch, asks a model, and records a verdict; a failing verdict becomes a finding, then a GitHub issue, then a card on the board.">
+  <defs>
+    <marker id="p1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--line-strong)"/>
+    </marker>
+    <marker id="p2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--accent)"/>
+    </marker>
+  </defs>
+
+  <rect class="box sunk" x="624" y="8" width="170" height="70" rx="10"/>
+  <text x="640" y="32" class="lbl">claude --print</text>
+  <text x="640" y="58" class="sub">read-only tools</text>
+
+  <rect class="box sunk" x="16" y="110" width="160" height="92" rx="10"/>
+  <text x="32" y="134" class="lbl">the repo</text>
+  <text x="32" y="160" class="sub">src/** · rules/</text>
+
+  <rect class="box" x="212" y="110" width="180" height="92" rx="10"/>
+  <text x="228" y="134" class="lbl">index + plan</text>
+  <text x="228" y="160" class="sub">6233 symbols</text>
+  <text x="228" y="182" class="fn">extractRepo · plan</text>
+
+  <rect class="box warm" x="428" y="110" width="160" height="92" rx="10"/>
+  <text x="444" y="134" class="lbl">work queue</text>
+  <text x="444" y="160" class="sub">4041 rows</text>
+  <text x="444" y="182" class="fn">audit plan</text>
+
+  <rect class="box" x="624" y="110" width="170" height="92" rx="10"/>
+  <text x="640" y="134" class="lbl">a batch</text>
+  <text x="640" y="160" class="sub">1 symbol, 40 rules</text>
+  <text x="640" y="182" class="fn">claimBatch</text>
+
+  <rect class="box" x="830" y="110" width="114" height="92" rx="10"/>
+  <text x="846" y="134" class="lbl">verdict</text>
+  <text x="846" y="160" class="sub">4 kinds</text>
+  <text x="846" y="182" class="fn">submit</text>
+
+  <rect class="box warm" x="754" y="300" width="190" height="92" rx="10"/>
+  <text x="770" y="324" class="lbl">finding</text>
+  <text x="770" y="350" class="sub">274 open</text>
+  <text x="770" y="372" class="fn">openFindings</text>
+
+  <rect class="box" x="474" y="300" width="220" height="92" rx="10"/>
+  <text x="490" y="324" class="lbl">GitHub issue</text>
+  <text x="490" y="350" class="sub">grouped by rule</text>
+  <text x="490" y="372" class="fn">pnpm issue create</text>
+
+  <rect class="box" x="194" y="300" width="220" height="92" rx="10"/>
+  <text x="210" y="324" class="lbl">the board</text>
+  <text x="210" y="350" class="sub">projects/4 lanes</text>
+  <text x="210" y="372" class="fn">board-sync.py</text>
+
+  <path class="edge" d="M176 156 H210" marker-end="url(#p1)"/>
+  <path class="edge" d="M392 156 H426" marker-end="url(#p1)"/>
+  <path class="edge" d="M588 156 H622" marker-end="url(#p1)"/>
+  <path class="edge hot" d="M794 156 H828" marker-end="url(#p2)"/>
+  <path class="edge hot" d="M694 110 V80" marker-end="url(#p2)"/>
+  <path class="edge" d="M724 78 V108" marker-end="url(#p1)"/>
+  <path class="edge hot" d="M887 202 V262 H849 V298" marker-end="url(#p2)"/>
+  <path class="edge" d="M754 346 H696" marker-end="url(#p1)"/>
+  <path class="edge" d="M474 346 H416" marker-end="url(#p1)"/>
+</svg>
+<figcaption>Only the step into the model costs anything. Indexing, planning and claiming are
+arithmetic over files, and re-running them on unchanged code produces no work at all.</figcaption>
+</figure>
+
+<h2>What counts as an object</h2>
+
+<p>An object is a symbol: a thing with a name, a start line and an end line. Indexing walks the
+repository and records one row for each, with the exact bytes it spans and a hash of them.</p>
+
+<div class="scroll">
+<table>
+  <thead><tr><th>Kind</th><th>Count</th><th>What it is</th></tr></thead>
+  <tbody>
+    <tr><td>data-row</td><td>2995</td><td>One entry in a <code>.json</code> data file: an item, a recipe, a terrain</td></tr>
+    <tr><td>function</td><td>2023</td><td>A named function in TypeScript or in a Svelte script block</td></tr>
+    <tr><td>method</td><td>704</td><td>A method on a class, keyed by <code>Class.name</code></td></tr>
+    <tr><td>table</td><td>355</td><td>A declared array or record read as a lookup</td></tr>
+    <tr><td>markup</td><td>112</td><td>The template half of a Svelte component</td></tr>
+    <tr><td>store</td><td>41</td><td>A Svelte store or a rune-backed state object</td></tr>
+    <tr><td>accessor</td><td>3</td><td>A getter or setter</td></tr>
+  </tbody>
+</table>
+</div>
+
+<p>The key is <code>&lt;file&gt;::&lt;Class.name&gt;#&lt;ordinal&gt;</code>, which survives an
+edit above it. Adding a blank line at the top of a file does not invalidate anything in it.</p>
+
+<p>Indexing also computes <span class="k">flags</span> — 22 facts a script can decide by reading
+the symbol alone, such as <code>allocatesArray</code>, <code>emptyCatch</code>,
+<code>hasPlayerFacingText</code>, <code>rendersIdExpression</code>, <code>hasTier</code>. A flag
+is never an opinion about the code; it records that a shape is present, so a rule can be pointed
+at the symbols where its question could even apply.</p>
+
+<h2>A verdict expires by itself</h2>
+
+<p>Three hashes decide whether an answer still stands:</p>
+
+<div class="scroll">
+<table>
+  <thead><tr><th>Hash</th><th>Over</th><th>Changing it means</th></tr></thead>
+  <tbody>
+    <tr><td>content_hash</td><td>The symbol's exact source slice</td><td>The code was edited; every answer about it re-opens</td></tr>
+    <tr><td>rule_hash</td><td>The rule's question, trigger and evidence contract</td><td>The question changed; every answer to it re-opens</td></tr>
+    <tr><td>dep_hash</td><td>The symbols this one calls</td><td>A callee moved under it</td></tr>
+  </tbody>
+</table>
+</div>
+
+<p>A row in <code>verdict</code> carries the hashes it was written under, and a
+<code>UNIQUE</code> index over <code>(symbol_key, rule_id, content_hash, rule_hash)</code>. There
+is no <em>stale</em> column, so there is nothing to forget to set. <code>audit plan</code>
+rebuilds the pending set by joining symbols against active rules and subtracting the verdicts
+whose hashes still match.</p>
+
+<p>The same check runs again at submission. If the source moved while a batch was with the model,
+the answer is refused and the work item stays open. A worker cannot record a judgement about code
+that no longer exists.</p>
+
+<h2>Three tiers, and a ratchet</h2>
+
+<p>Every rule is assigned to exactly one tier, and has to justify why the cheaper tier below it
+cannot decide the question.</p>
+
+<div class="scroll">
+<table>
+  <thead><tr><th>Tier</th><th>Mechanism</th><th>Decides</th></tr></thead>
+  <tbody>
+    <tr><td>T0</td><td><code>svelte-check</code>, <code>eslint</code>, <code>audit t0</code></td><td>Types, declared constants, architecture seams</td></tr>
+    <tr><td>T1</td><td>vitest, <code>HeadlessSession</code></td><td>Behaviour that runs</td></tr>
+    <tr><td>T2</td><td>The model loop</td><td>What a reading of prose against code decides</td></tr>
+  </tbody>
+</table>
+</div>
+
+<p><code>audit demote</code> lists T2 rules that have failed the same way often enough to be worth
+writing as a static check. Once written, the rule's status becomes <code>demoted</code> and it
+stops costing tokens. The expensive tier is meant to shrink.</p>
+
+<h2>Rules are data</h2>
+
+<p>One file per family under <code>tools/audit/rules/</code>. There are 30 rules; 12 are
+<code>active</code> and 18 are <code>draft</code>, and a draft is planned but never claimed.</p>
+
+<div class="scroll">
+<table>
+  <thead><tr><th>Family</th><th>Rules</th><th>What only a reader can decide</th></tr></thead>
+  <tbody>
+    <tr><td>contract</td><td>state-outside-manager, stat-outside-modifiers, logic-in-defs, bypasses-reserve, job-switch-by-hand, spatial-inlined, doc-contradicts-code</td><td>Invariants stated in prose in an ADR, and prose that no longer matches the code</td></tr>
+    <tr><td>tests</td><td>weak-assertion, missing-test</td><td>A test that asserts less than the symbol promises</td></tr>
+    <tr><td>data</td><td>wrong-tier, name-breaks-progression, generic-before-thematic</td><td>Whether an item belongs in the age it is filed under</td></tr>
+    <tr><td>single-source</td><td>restated-roster, comment-held-pairing, label-mapped-by-hand, unvalidated-key</td><td>A list written out by hand beside the declaration it copies</td></tr>
+    <tr><td>boundary</td><td>raw-id-in-ui, dev-jargon, text-instructs, selection-commits</td><td>Internal vocabulary reaching the player</td></tr>
+    <tr><td>hot-path</td><td>tick-allocation, memo-ref-churn, snapshot-growth, tick-logging</td><td>Work done every tick when nothing is happening</td></tr>
+    <tr><td>silent-failure</td><td>default-masks-lookup, error-discarded, silent-early-return</td><td>A default that hides a lookup that found nothing</td></tr>
+    <tr><td>units</td><td>mixed-units, unnamed-unit</td><td>Ticks against turns, milliseconds against seconds</td></tr>
+    <tr><td>reachability</td><td>dead-branch</td><td>A branch no caller can satisfy</td></tr>
+  </tbody>
+</table>
+</div>
+
+<p>A rule carries the question, the evidence a failure has to produce, the shapes that are not
+findings, and a trigger the harness evaluates:</p>
+
+<pre><code>{
+  "id": "S01",
+  "name": "restated-roster",
+  "family": "single-source",
+  "tier": "T2",
+  "question": "Does this symbol list members of a set that is declared elsewhere?",
+  "fail_requires": ["file:line of the declaration", "file:line of the restatement"],
+  "not_a_finding": ["a narrowing that names a subset on purpose"],
+  "trigger": { "all": [{ "kind_in": ["function", "table"] }, { "min_loc": 4 }] },
+  "status": "active"
+}</code></pre>
+
+<p>Trigger clauses read the symbol and its own metadata: <code>file_glob</code>,
+<code>kind_in</code>, <code>layer_in</code>, <code>name_matches</code>, <code>exported</code>,
+<code>min_loc</code>, <code>any_flag</code>, <code>matches</code>, composed with
+<code>all</code> / <code>any</code> / <code>not</code>.</p>
+
+<div class="note">
+  <strong>There is no trigger for "is this tested" or "is this reached from the tick loop".</strong>
+  Those are questions about the rest of the repository. Answering them in the harness would mean
+  keeping a second copy of the call graph in step, and a copy that drifted would stop firing
+  quietly — which reads as clean code rather than as a question nobody asked. The rule states the
+  question instead, and the model has to search for the answer and cite <code>path:line</code>.
+</div>
+
+<h2>Four answers, and what each one costs to give</h2>
+
+<div class="scroll">
+<table>
+  <thead><tr><th>Status</th><th>Count</th><th>Requirement</th></tr></thead>
+  <tbody>
+    <tr><td>pass</td><td>360</td><td>The default. Nothing more is asked for</td></tr>
+    <tr><td>fail</td><td>274</td><td>Every item in that rule's <code>fail_requires</code>, plus a summary</td></tr>
+    <tr><td>n/a</td><td>213</td><td>Must name the trigger clause it believes did not hold</td></tr>
+    <tr><td>undecidable</td><td>0</td><td>Must name exactly what was missing</td></tr>
+  </tbody>
+</table>
+</div>
+
+<p>The requirements are checked in <code>lib/verdict.mjs</code>, not requested in the prompt. A
+failure that arrives without its citations is rejected and the work item stays pending, so the
+cheapest way for a model to finish a batch is to answer <code>pass</code> honestly.</p>
+
+<p><code>undecidable</code> exists so that guessing is never the only way to close an item, and a
+rule with a high undecidable rate is a badly scoped rule. Both that rate and the n/a rate are
+visible per rule in <code>audit status</code>, which is how a family gets caught firing on
+symbols its question does not fit.</p>
+
+<h2>Claiming work</h2>
+
+<p>A batch is <span class="k">one symbol and up to 40 of its pending rules</span>. Reading one
+symbol once and answering every open question about it is cheaper than reading it forty times,
+and the answers are independent rows regardless.</p>
+
+<p>Claims are taken inside <code>BEGIN IMMEDIATE</code> with a <code>changes()</code> check, so
+any number of processes on any number of machines can share one ledger without two of them
+claiming the same work. A claim carries a 30-minute lease. An expired one is deleted at the top
+of the next claim, and its work row returns to <code>pending</code>, so a worker killed
+mid-batch costs one batch. <code>audit release</code> returns a worker's claims immediately.</p>
+
+<h2>Spending against a five-hour limit</h2>
+
+<p>The account has a rolling five-hour usage window. Running until it is empty and then stopping
+would leave hours with nothing running and no capacity left for anything done by hand. The gate
+in <code>lib/pace.mjs</code> spreads the spend across the window instead.</p>
+
+<figure>
+<svg viewBox="0 0 960 250" role="img" aria-label="The dashboard's plan endpoint feeds the schedule function, which compares usage against a target and answers go or wait.">
+  <defs>
+    <marker id="g1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--line-strong)"/>
+    </marker>
+    <marker id="g2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--accent)"/>
+    </marker>
+  </defs>
+
+  <rect class="box sunk" x="16" y="72" width="190" height="92" rx="10"/>
+  <text x="32" y="96" class="lbl">/api/plan</text>
+  <text x="32" y="122" class="sub">pct used</text>
+  <text x="32" y="144" class="sub">resets at</text>
+
+  <rect class="box warm" x="266" y="52" width="240" height="132" rx="10"/>
+  <text x="282" y="76" class="lbl">schedule()</text>
+  <text x="282" y="102" class="sub">anchor at window</text>
+  <text x="282" y="124" class="sub">start, ramp to the</text>
+  <text x="282" y="146" class="sub">ceiling by the end</text>
+  <text x="282" y="170" class="fn">pace.mjs</text>
+
+  <rect class="box" x="596" y="30" width="200" height="82" rx="10"/>
+  <text x="612" y="54" class="lbl">go</text>
+  <text x="612" y="80" class="sub">claim a batch</text>
+
+  <rect class="box" x="596" y="146" width="200" height="82" rx="10"/>
+  <text x="612" y="170" class="lbl">wait</text>
+  <text x="612" y="196" class="sub">poll in 15 s</text>
+
+  <rect class="box sunk" x="836" y="146" width="108" height="82" rx="10"/>
+  <text x="852" y="170" class="lbl">holding</text>
+  <text x="852" y="196" class="sub">on /audit</text>
+
+  <path class="edge" d="M206 118 H264" marker-end="url(#g1)"/>
+  <path class="edge hot" d="M506 100 H560 V71 H594" marker-end="url(#g2)"/>
+  <path class="edge" d="M506 136 H560 V187 H594" marker-end="url(#g1)"/>
+  <path class="edge" d="M796 187 H834" marker-end="url(#g1)"/>
+</svg>
+<figcaption>The target is read once per batch, so a run that is ahead of schedule idles instead
+of finishing early and leaving the window empty.</figcaption>
+</figure>
+
+<p>The target rises from wherever usage stood when the window opened to the
+<span class="k">ceiling</span> by the time it closes. Usage above the target means wait; below it
+means go. The ceiling is a number on the page, so lowering it reserves headroom for work done by
+hand without stopping the audit.</p>
+
+<div class="note">
+  <strong>One implementation of that formula.</strong> The dashboard used to compute its own
+  version of the target for display, and the two disagreed — the page showed a number that no
+  worker was gating on. <code>audit.mjs tick</code> now returns the schedule and the monitor
+  prints it.
+</div>
+
+<h2>What starts a run</h2>
+
+<p>The page at <code>/audit</code> never touches the ledger and never starts a process. A button
+writes a request file; one command reads it.</p>
+
+<figure>
+<svg viewBox="0 0 960 350" role="img" aria-label="A button posts to the dashboard server, which writes a request file; tick reads it every twenty seconds, writes control.json, launches the runner as its own systemd unit, and the monitor writes audit.json back to the page.">
+  <defs>
+    <marker id="s1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--line-strong)"/>
+    </marker>
+    <marker id="s2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--accent)"/>
+    </marker>
+  </defs>
+
+  <rect class="box warm" x="16" y="40" width="190" height="92" rx="10"/>
+  <text x="32" y="64" class="lbl">/audit</text>
+  <text x="32" y="90" class="sub">Resume · Pause</text>
+  <text x="32" y="112" class="fn">Controls.svelte</text>
+
+  <rect class="box" x="246" y="40" width="200" height="92" rx="10"/>
+  <text x="262" y="64" class="lbl">the dashboard</text>
+  <text x="262" y="90" class="sub">POST /api/audit</text>
+  <text x="262" y="112" class="fn">server.py</text>
+
+  <rect class="box sunk" x="486" y="40" width="210" height="92" rx="10"/>
+  <text x="502" y="64" class="lbl">a request file</text>
+  <text x="502" y="90" class="sub">audit-control.json</text>
+  <text x="502" y="112" class="fn">.cache_sources/</text>
+
+  <rect class="box warm" x="736" y="40" width="208" height="132" rx="10"/>
+  <text x="752" y="64" class="lbl">audit.mjs tick</text>
+  <text x="752" y="90" class="sub">every 20 seconds</text>
+  <text x="752" y="112" class="sub">apply · decide</text>
+  <text x="752" y="134" class="sub">launch</text>
+  <text x="752" y="158" class="fn">supervise.mjs</text>
+
+  <rect class="box sunk" x="486" y="220" width="210" height="92" rx="10"/>
+  <text x="502" y="244" class="lbl">control.json</text>
+  <text x="502" y="270" class="sub">paused · window</text>
+  <text x="502" y="292" class="fn">writeControl</text>
+
+  <rect class="box" x="176" y="220" width="270" height="92" rx="10"/>
+  <text x="192" y="244" class="lbl">fantasia-audit-run</text>
+  <text x="192" y="270" class="sub">its own cgroup</text>
+  <text x="192" y="292" class="fn">systemd-run --user</text>
+
+  <rect class="box" x="736" y="220" width="208" height="92" rx="10"/>
+  <text x="752" y="244" class="lbl">audit.json</text>
+  <text x="752" y="270" class="sub">what the page reads</text>
+  <text x="752" y="292" class="fn">audit-monitor.py</text>
+
+  <path class="edge" d="M206 86 H244" marker-end="url(#s1)"/>
+  <path class="edge" d="M446 86 H484" marker-end="url(#s1)"/>
+  <path class="edge hot" d="M696 86 H734" marker-end="url(#s2)"/>
+  <path class="edge" d="M840 172 V218" marker-end="url(#s1)"/>
+  <path class="edge hot" d="M800 172 V196 H591 V218" marker-end="url(#s2)"/>
+  <path class="edge hot" d="M486 266 H448" marker-end="url(#s2)"/>
+  <path class="edge dash" d="M840 312 V332 H111 V134" marker-end="url(#s1)"/>
+</svg>
+<figcaption>The dashed line is the only way the page learns anything. Nothing connects into the
+audit; every state it shows was written to a file by a command that had already finished.</figcaption>
+</figure>
+
+<p><code>tick</code> decides one thing: whether a runner should be alive right now. It is alive
+when the audit is not paused, a <span class="k">run window</span> is open, and work is pending.</p>
+
+<div class="cols">
+  <div class="card">
+    <h4>Start opens a window</h4>
+    <p>Of the requested length, with the requested workers and model.</p>
+  </div>
+  <div class="card">
+    <h4>Resume reopens the last one</h4>
+    <p>If it has closed. That is what lets Resume start the audit from a standing stop.</p>
+  </div>
+  <div class="card">
+    <h4>Pause kills the runner</h4>
+    <p><code>run.mjs</code> exits rather than idling. The next tick after a resume starts it
+       again with the hours the window has left.</p>
+  </div>
+  <div class="card">
+    <h4>The window closing ends it</h4>
+    <p>Nothing relaunches after that until a button asks. Five launches that die inside two
+       minutes close the window and record why.</p>
+  </div>
+</div>
+
+<div class="note">
+  <strong>The runner is a unit, not a child process.</strong> A process spawned by
+  <code>audit-monitor.service</code> sits in that unit's cgroup, and systemd tears the cgroup
+  down when a <code>Type=oneshot</code> service finishes. A run started that way was killed within
+  a minute every time while the button reported success. <code>systemd-run --user</code> gives the
+  runner its own cgroup, and <code>systemctl --user status fantasia-audit-run</code> is its status.
+</div>
+
+<h2>Findings become issues</h2>
+
+<p>A verdict is a row. An issue is a unit of work. <code>audit issues</code> turns one into the
+other by grouping open failures by <span class="k">(rule, two-segment module path)</span>: a rule
+firing forty times across one directory is one class of defect, and the class is what a single
+branch can close. Each issue carries every citation the audit demanded before it would record the
+failure.</p>
+
+<p><code>tools/issue.mjs</code> is the only writer. Direct <code>gh issue create</code> is denied
+in <code>.claude/settings.json</code>, because an issue written by hand skips the repairs and the
+refusals:</p>
+
+<ul>
+  <li>A <code>path:line</code> written in prose becomes a permalink pinned to the commit the
+      audit indexed. A citation names a line, and a line is only true at one revision.</li>
+  <li>A label outside <code>tools/audit/labels.json</code> is refused, naming the nearest real
+      one.</li>
+  <li>A body under roughly 240 characters, or with no citation, or with no remediation checkbox,
+      is refused as a stub.</li>
+  <li>Four classifications are required on every issue: severity, kind, origin and verify. An
+      issue missing one cannot be sorted or costed.</li>
+</ul>
+
+<p>The board is <a href="https://github.com/users/bk-bf/projects/4">projects/4</a>, and its
+columns are an order: <code>Backlog</code> → <code>Ready</code> → <code>In progress</code> →
+<code>In review</code> → <code>Done</code>, with <code>Blocked on you</code> and
+<code>Needs playtest</code> off to the side.</p>
+
+<p><span class="k">Moving the card is the only gesture.</span> <code>board-sync.py</code> runs on
+the same 20-second tick as the monitor and derives the <code>ready</code>,
+<code>needs decision</code> and <code>verify</code> labels from the board's Status and Verify
+fields. A label edited by hand is overwritten within a minute. Severity, kind, origin and the rule
+name are never touched — they describe the finding, not its state.</p>
+
+<h3>Who verifies what</h3>
+
+<div class="scroll">
+<table>
+  <thead><tr><th>Verify</th><th>Settled by</th><th>Reaches Kirill</th></tr></thead>
+  <tbody>
+    <tr><td>tests</td><td><code>pnpm check</code> and the vitest suite</td><td>No</td></tr>
+    <tr><td>headless</td><td>Real pawns over real ticks, with a stated delta</td><td>No</td></tr>
+    <tr><td>playtest</td><td>Judgement about balance, pacing or feel</td><td>Yes</td></tr>
+  </tbody>
+</table>
+</div>
+
+<p>The field is set at triage, not at review, so the cost of an item is visible before anyone
+starts. An audit that reports creatures dying faster cannot say whether that is the game he
+wants; a measurement that could settle the question means the item is not a playtest.</p>
+
+<h2>The fixer</h2>
+
+<p><code>fix.mjs</code> takes one issue, works it in a git worktree off <code>origin/main</code>
+on a branch <code>fix/&lt;slug&gt;</code>, and writes the attempt up as a comment on the issue.
+Nothing is committed unless <code>pnpm check</code> and the related tests are green, and nothing
+is pushed at all — whether the branch reaches <code>main</code> is decided by reading
+<code>git diff main...fix/&lt;slug&gt;</code>.</p>
+
+<p>An attempt that cannot get green commits nothing, keeps its worktree, writes the failure to the
+issue, and returns the issue to the pool. A run interrupted by a signal releases its issue before
+exiting; without that, a killed run leaves an issue marked in progress that no later run will ever
+pick up.</p>
+
+<p>The fixer never opens a pull request. This is a solo repository, so a branch merged with
+<code>--no-ff</code> and an issue closed against the merge commit says everything a review page
+would, and several related fixes belong in one branch rather than one branch each.</p>
+
+<h2>The nightly run</h2>
+
+<p><code>deploy/</code> holds a systemd user timer whose <code>ExecStart</code> points into this
+checkout, so the repository owns the units and <code>install.sh</code> symlinks rather than copies.
+<code>nightly-audit.sh</code> runs in this order, and the order decides whether the night is spent
+on current code:</p>
+
+<div class="scroll">
+<table>
+  <thead><tr><th>Step</th><th>Does</th><th>Spends</th></tr></thead>
+  <tbody>
+    <tr><td>1</td><td>Fetch and fast-forward <code>main</code>. A dirty tree stops the run</td><td>Nothing</td></tr>
+    <tr><td>2</td><td><code>audit index</code> and <code>audit plan</code> — only what moved re-opens</td><td>Nothing</td></tr>
+    <tr><td>3</td><td><code>run.mjs</code> until the budget runs out</td><td>Tokens</td></tr>
+    <tr><td>4</td><td><code>audit issues</code> — failures onto the board</td><td>Tokens</td></tr>
+    <tr><td>5</td><td><code>fix.mjs --next</code>, only on issues a person marked ready</td><td>Tokens</td></tr>
+    <tr><td>6</td><td><code>mon run</code> with the night's numbers, readable from a phone</td><td>Tokens</td></tr>
+  </tbody>
+</table>
+</div>
+
+<p>A <code>flock</code> stops a second night starting on top of one that overran. The server's
+clock is UTC, so the timer carries an explicit <code>Europe/Berlin</code>; a plain
+<code>0 4 * * *</code> would fire at 06:00 local in summer and shift at every change. The default
+<code>node</code> there is v20, which has no <code>node:sqlite</code>, so the script pins
+v24.19.0.</p>
+
+<h2>Where in the code</h2>
+
+<div class="scroll">
+<table>
+  <thead><tr><th>File</th><th>Holds</th></tr></thead>
+  <tbody>
+    <tr><td>audit.mjs</td><td>The CLI: index, plan, status, next, submit, release, findings, na, t0, demote, issues, board, export, rules, tick</td></tr>
+    <tr><td>lib/extract.mjs</td><td>Symbol spans, hashes, flags, the call graph</td></tr>
+    <tr><td>lib/rules.mjs</td><td>Loading and validating <code>rules/*.json</code></td></tr>
+    <tr><td>lib/triggers.mjs</td><td>Which symbols a rule applies to</td></tr>
+    <tr><td>lib/prompt.mjs</td><td>The batch prompt, one symbol and its open rules</td></tr>
+    <tr><td>lib/verdict.mjs</td><td>Parsing an answer and enforcing the evidence contract</td></tr>
+    <tr><td>lib/ledger.mjs</td><td>Opening the database, atomic claims, coverage queries</td></tr>
+    <tr><td>lib/pace.mjs</td><td>Control file, usage window, the go-or-wait decision</td></tr>
+    <tr><td>lib/supervise.mjs</td><td>The dashboard request, the run window, launching the unit</td></tr>
+    <tr><td>lib/t0.mjs</td><td>Deterministic checks: constant drift, architecture seams</td></tr>
+    <tr><td>lib/gh.mjs</td><td>The only writer to GitHub</td></tr>
+    <tr><td>run.mjs</td><td>The worker loop</td></tr>
+    <tr><td>fix.mjs</td><td>One issue, one worktree, one branch</td></tr>
+    <tr><td>schema.sql</td><td>Seven tables and their indexes</td></tr>
+  </tbody>
+</table>
+</div>
+
+<p>Two files live outside this repository, on the server:
+<code>~/server/mediaserver/scripts/audit-monitor.py</code> projects the ledger into
+<code>audit.json</code>, and <code>board-sync.py</code> derives the lane labels. The page itself is
+<code>~/Documents/Projects/dashboard/web/src/lib/audit/</code>.</p>
+
+<h2>On disk</h2>
+
+<div class="scroll">
+<table>
+  <thead><tr><th>Path</th><th>Holds</th></tr></thead>
+  <tbody>
+    <tr><td>.ledger/audit.db</td><td>The ledger. Per-machine, git-ignored</td></tr>
+    <tr><td>.ledger/control.json</td><td>Paused, ceiling, the open run window</td></tr>
+    <tr><td>.ledger/pace.json</td><td>Batch timestamps in the current window</td></tr>
+    <tr><td>.ledger/worker-N.json</td><td>What each worker is on, for the page</td></tr>
+    <tr><td>.ledger/*.log</td><td>One log per run, named for the run id</td></tr>
+    <tr><td>ledger/*.jsonl</td><td><code>audit export</code>, for grepping and backup</td></tr>
+  </tbody>
+</table>
+</div>
+
+<p>The database is git-ignored on purpose: it is per-machine state, and committing it from two
+machines guarantees a conflict on the next merge.</p>
+
+<h2>Where it stands</h2>
+
+<div class="scroll">
+<table>
+  <thead><tr><th>Number</th><th>Value</th><th>Meaning</th></tr></thead>
+  <tbody>
+    <tr><td>symbols</td><td>6233</td><td>Objects the index knows about</td></tr>
+    <tr><td>in scope</td><td>2572</td><td>Symbols at least one active rule triggers on</td></tr>
+    <tr><td>work</td><td>4041</td><td>(symbol, rule) pairs to answer</td></tr>
+    <tr><td>done</td><td>635</td><td>15.7% of them, against current hashes</td></tr>
+    <tr><td>fail</td><td>274</td><td>Open findings</td></tr>
+    <tr><td>rules</td><td>12 of 30</td><td>Active. The other 18 are drafts and are never claimed</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h2>Rules that look arbitrary and are not</h2>
+
+<ul>
+  <li><span class="k">A draft rule is planned but never claimed.</span> That is how a rule's
+      trigger can be measured against the real repository before it costs anything to answer.</li>
+  <li><span class="k">The model runs in plan mode.</span> Its tools are read-only, so it cannot
+      change the code it is describing, and its working directory is the checkout so its searches
+      resolve against the version the batch is about.</li>
+  <li><span class="k">Every batch is a fresh process with no memory.</span> The ledger is the only
+      state, so a run can be killed at any moment and resumed with no loss beyond one batch.</li>
+  <li><span class="k">The ceiling defaults to 95%, not 100%.</span> The last five percent is what
+      is left for work done by hand while the audit is running.</li>
+  <li><span class="k">Nothing marks its own work ready.</span> An audit that raised its own
+      findings and then acted on them would be a loop with nobody in it.</li>
+</ul>
+
+<footer>
+  Fantasia4x · <code>tools/audit/</code> · the README beside it is the operator's guide;
+  this describes the shape.
+</footer>
+
+</div>
+</body>
+</html>

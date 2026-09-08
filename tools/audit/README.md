@@ -1,6 +1,6 @@
 # audit — a code-audit ledger
 
-> **Related:** [AGENTS.md](../../AGENTS.md) · [DECISIONS.md](../../docs/game/DECISIONS.md) · [ITEM-RULES.md](../../docs/game/ITEM-RULES.md) · [ENGINE-PERFORMANCE.md](../../docs/tasks/open/ENGINE-PERFORMANCE.md) · [issues](https://github.com/bk-bf/Fantasia4x/issues)
+> **Related:** [architecture](../../docs/audit/architecture.html) · [AGENTS.md](../../AGENTS.md) · [DECISIONS.md](../../docs/game/DECISIONS.md) · [ITEM-RULES.md](../../docs/game/ITEM-RULES.md) · [ENGINE-PERFORMANCE.md](../../docs/tasks/open/ENGINE-PERFORMANCE.md) · [issues](https://github.com/bk-bf/Fantasia4x/issues)
 
 "Audit the code" is unverifiable: nothing records which of the 5,599 objects in this repo
 anything ever looked at, under which question, with which model. This tool makes that a
