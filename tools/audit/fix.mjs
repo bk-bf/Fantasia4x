@@ -32,13 +32,14 @@ import {
   changedFiles,
   prepareWorktree,
   verifyTests,
-  failureDetail
+  failureDetail,
+  assignDevPort
 } from './lib/harness.mjs';
 import { readControl } from './lib/pace.mjs';
 import * as P from './lib/prs.mjs';
 
 const MODEL = process.env.AUDIT_FIX_MODEL || 'sonnet';
-const ROUTES = new Set(['tests', 'headless']);
+const ROUTES = new Set(['tests', 'headless', 'playtest']);
 
 const arg = (n, d) => {
   const i = process.argv.indexOf(`--${n}`);
@@ -55,16 +56,19 @@ const out = (s) => process.stdout.write(s + '\n');
 function pick() {
   const named = arg('issue', null);
   if (named) {
-    const i = I.listIssues(ROOT).find((x) => x.data.id === named || x.path === String(named));
-    if (!i) fail(`no issue ${named}`);
-    return i;
+    const issue = I.listIssues(ROOT).find(
+      (x) => x.data.id === named || x.path === String(named)
+    );
+    if (!issue) fail(`no issue ${named}`);
+    const card = B.itemFor(issue.number);
+    const route = (card?.verify ?? '').toLowerCase();
+    if (!ROUTES.has(route)) fail(`#${issue.number} has no Verify route on the board`);
+    return { issue, route };
   }
+
   const route = arg('verify', 'tests').toLowerCase();
   if (!ROUTES.has(route))
-    fail(
-      `--verify ${route} is not a route this harness can settle. A card marked "playtest" is ` +
-        `Kirill's to judge and is never picked up here.`
-    );
+    fail(`--verify ${route} is not a route — one of: ${[...ROUTES].join(', ')}`);
 
   const ready = B.inLane('ready')
     .filter((it) => it.content?.type === 'Issue')
@@ -75,7 +79,7 @@ function pick() {
 
   for (const it of ready) {
     const issue = I.readIssue(String(it.content.number));
-    if (issue.data.status !== 'closed') return issue;
+    if (issue.data.status !== 'closed') return { issue, route };
   }
   fail(`every ${route} card in Ready is already closed`);
 }
@@ -191,10 +195,11 @@ for (const it of B.inLane('in progress')) {
   B.moveLane(n, 'ready');
 }
 
-const issue = pick();
+const { issue, route } = pick();
 const d = issue.data;
 const num = issue.number;
 out(`#${num} ${d.id} — ${d.title}`);
+out(`--- route ${route}`);
 
 if (d.status === 'closed') fail(`#${num} is closed`);
 const errs = I.validate(issue);
@@ -205,7 +210,7 @@ const wt = join(ROOT, '.claude', 'worktrees', `fix-${d.id}`);
 
 if (flag('dry-run')) {
   out(`would work #${num} on ${branch} in ${wt}`);
-  out(`  lane ${B.laneOf(num)} -> in progress -> in review`);
+  out(`  lane ${B.laneOf(num)} -> in progress -> ${route === 'playtest' ? 'needs playtest' : 'in review'}`);
   out(`  ${(issue.body.match(/^\s*- \[ \]/gm) ?? []).length} open remediation step(s)`);
   process.exit(0);
 }
@@ -324,20 +329,38 @@ try {
         `Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>`;
       execFileSync('git', ['commit', '-q', '-F', '-'], { cwd: wt, input: msg });
 
-      I.comment(
-        num,
-        P.renderAttempt({
-          branch,
-          files,
-          account,
-          verified: 'pass',
-          ran: v.results.map((r) => r.name)
-        })
-      );
+      const ran = v.results.map((r) => r.name);
+
+      let pushed = true;
+      try {
+        git(['push', '--force-with-lease', '-u', 'origin', `${branch}:${branch}`], wt);
+        out(`--- pushed ${branch}`);
+      } catch (e) {
+        pushed = false;
+        out(`    [warn] could not push ${branch}: ${tail(String(e.message), 3)}`);
+      }
+
+      if (route === 'playtest') {
+        const port = await assignDevPort(wt);
+        I.comment(
+          num,
+          P.renderPlaytest({ branch, worktree: wt, port, files, account, ran, pushed })
+        );
+        keepTree = true;
+      } else {
+        I.comment(num, P.renderAttempt({ branch, files, account, verified: 'pass', ran, pushed }));
+      }
+
       const ticked = I.tickRemediation(num, account);
       out(`--- ticked ${ticked} remediation item(s)`);
-      B.moveLane(num, 'in review');
-      out(`--- #${num} is In review on ${branch}; review.mjs takes it from here`);
+
+      if (route === 'playtest') {
+        B.moveLane(num, 'needs playtest');
+        out(`--- #${num} is in Needs playtest on ${branch}; the worktree stays at ${wt}`);
+      } else {
+        B.moveLane(num, 'in review');
+        out(`--- #${num} is In review on ${branch}; review.mjs takes it from here`);
+      }
     }
   }
 } catch (e) {

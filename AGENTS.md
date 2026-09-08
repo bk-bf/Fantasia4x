@@ -183,8 +183,10 @@ someone is ready to start it.
 - **`In review`** — the work is finished and an agent is verifying it, by the route the
   `Verify` field names. Nothing here needs Kirill. A card that passes its route is merged to
   `main` by the reviewer, not held for him.
-- **`Needs playtest`** — green, and the remaining question is one only he can answer. This lane
-  is his; put work here and stop.
+- **`Needs playtest`** — green, and the remaining question is one only he can answer. The work
+  is committed on `fix/<slug>` and **not merged**; its worktree stays, with its own `.devport`,
+  so `./dev.sh` in it runs beside whatever is already on 5173. This lane is his; put work here
+  and stop.
 - **`Done`** — merged, and the merge commit that closed the issue is named on it.
 - **`Blocked on you`** — cannot proceed until he chooses: a proposal awaiting a yes, or a design
   call whose measurements are already in hand. Not a parking space for anything merely hard.
@@ -202,15 +204,16 @@ Do not skip a lane. Nothing goes from `Backlog` straight to `In progress`, and n
 
 **The board runs itself on the first two routes.** `pnpm audit:fix --next` takes the oldest
 `Ready` card whose `Verify` is `tests`, works it in a worktree, and moves it to `In review` once
-`pnpm check` and the related tests are green on the branch. `pnpm audit:review --next` takes the
+`pnpm check` and the related tests are green on the branch. Every green branch is pushed, so a
+diff is readable from anywhere; `review.mjs` deletes it from origin when it merges. `pnpm audit:review --next` takes the
 oldest `In review` card, re-merges its branch onto a freshly fetched `origin/main`, runs the
 route again on the merge result — plus a headless session for `verify headless` — and pushes to
 `main`, closes the issue and moves the card to `Done` only if that is green. Anything short of
 green sends the card back to `Ready` with the failure written on the issue.
 
-`--verify headless` selects the headless route; `playtest` is refused outright, so a card whose
-answer is a judgement never reaches an unattended run. Both scripts stop while the audit is
-paused, because they spend the same limits.
+`--verify playtest` works the card the same way and stops at `Needs playtest`: committed,
+pushed, not merged, worktree kept on its own port. Nothing merges a playtest branch except
+Kirill. Both scripts stop while the audit is paused, because they spend the same limits.
 
 **Never write to GitHub with `gh` directly.** `gh issue create|edit|close|comment` and
 `gh label create|edit|delete` are denied in `.claude/settings.json`. Use `pnpm issue`:

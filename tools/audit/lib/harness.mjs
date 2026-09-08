@@ -1,5 +1,6 @@
 import { spawn, execFileSync } from 'node:child_process';
-import { cpSync, existsSync } from 'node:fs';
+import { cpSync, existsSync, writeFileSync } from 'node:fs';
+import { createServer } from 'node:net';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -138,3 +139,23 @@ export const failureDetail = (results) =>
     .filter((r) => r.code !== 0)
     .map((r) => `**${r.name}** exited ${r.code}\n\n\`\`\`\n${r.tail}\n\`\`\``)
     .join('\n\n');
+
+const canBind = (port) =>
+  new Promise((resolve) => {
+    const srv = createServer();
+    srv.once('error', () => resolve(false));
+    srv.once('listening', () => srv.close(() => resolve(true)));
+    srv.listen(port, '0.0.0.0');
+  });
+
+/** dev.sh reads `.devport` from its own directory, so a worktree given one runs its own dev
+ *  server and never competes with the checkout it was cut from. `.devport` is gitignored. */
+export async function assignDevPort(wt, from = 5174) {
+  for (let port = from; port < from + 40; port += 1) {
+    if (await canBind(port)) {
+      writeFileSync(join(wt, '.devport'), `${port}\n`);
+      return port;
+    }
+  }
+  throw new Error(`no free port between ${from} and ${from + 39}`);
+}

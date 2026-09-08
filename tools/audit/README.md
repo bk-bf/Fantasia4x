@@ -210,14 +210,14 @@ Refreshing never overwrites an issue whose `origin: human`, and never reopens on
 ```bash
 pnpm audit:fix --next                     # oldest Ready card on the tests route
 pnpm audit:fix --next --verify headless   # the headless route instead
+pnpm audit:fix --next --verify playtest   # work it, then hand it to Kirill
 pnpm audit:fix --issue 24                 # a named one
 pnpm audit:fix --next --dry-run           # pick and print
 pnpm audit:fix --next --keep              # leave the worktree to inspect
 ```
 
-The gate is the board, not a label: a card sitting in `Ready` whose `Verify` field names a
-route this harness can settle. `playtest` is refused outright — a card whose answer is a
-judgement never reaches an unattended run.
+The gate is the board, not a label: a card sitting in `Ready`, worked on the route its `Verify`
+field names.
 
 One issue, one worktree off `origin/main`, one branch `fix/<slug>`, and the attempt written up
 as a comment on that issue. The prompt hands the model the issue and states plainly that
@@ -225,11 +225,20 @@ AGENTS.md's "stop at a proposal" rule does not apply here, because otherwise eve
 with a plan and no diff. It is told not to commit, not to push, not to close the issue, and
 that `Out of scope` is binding.
 
-**Nothing is committed unless `pnpm check` and `pnpm test:related` are green.** A run that
+**Nothing is committed unless `pnpm check` and `pnpm test:related` are green.** A green branch
+is pushed to origin so the diff is readable from anywhere; `review.mjs` deletes it there when it
+merges. A run that
 cannot get green commits nothing, writes the failure and the model's account to the issue as a
 comment, keeps its worktree, and sends the card back to `Ready`.
 
-The card moves `Ready → In progress → In review`. An interrupted run (SIGINT/SIGTERM/SIGHUP)
+Where it ends depends on the route:
+
+| Route | Green ends at |
+| --- | --- |
+| `tests`, `headless` | `In review`, for `review.mjs` to verify on the merge and land. |
+| `playtest` | `Needs playtest`, committed and **not** merged. The branch is pushed, the worktree is kept, and it is given a free port in `.devport` so `./dev.sh` inside it runs beside the checkout's own dev server instead of fighting it for 5173. Only Kirill merges one. |
+
+The card moves `Ready → In progress → In review` or `→ Needs playtest`. An interrupted run (SIGINT/SIGTERM/SIGHUP)
 sends it back to `Ready` before exiting and leaves the worktree in place. A card left `In
 progress` with no worktree behind it — a run that was killed outright — is released by the next
 run before it picks anything.

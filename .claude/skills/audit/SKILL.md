@@ -29,7 +29,8 @@ Same shape, three more:
 
 - **Never push a `fix/<slug>` branch by hand, and never merge one by hand.** `review.mjs` merges
   what passed its route, and nothing else reaches `main`. A card on the `playtest` route is
-  never merged unattended at all — that judgement is Kirill's.
+  never merged at all — it stops in `Needs playtest` with its branch and worktree intact, and
+  that judgement is Kirill's.
 - **Never write to GitHub with `gh` directly.** `gh issue create|edit|close|comment` and
   `gh label *` are denied. Everything goes through `pnpm issue`, which validates labels, links
   and body substance before a single network call.
@@ -90,13 +91,13 @@ its evidence requirements rather than the prompt asking nicely. When reviewing f
 
 `pnpm audit:fix --next` takes the oldest card in the board's `Ready` lane whose `Verify` field
 says `tests`, into a worktree off `origin/main` on `fix/<slug>`, works the whole Remediation
-list, and re-runs `pnpm check` + `pnpm test:related` itself. `--verify headless` picks that
-route instead; `playtest` is refused, because a judgement is not something an unattended run
-can make.
+list, and re-runs `pnpm check` + `pnpm test:related` itself. `--verify headless` and
+`--verify playtest` pick the other two routes.
 
 | Outcome | What exists afterwards |
 |---|---|
-| green | a local commit on `fix/<slug>`, the attempt as a comment on the issue, card `In review` |
+| green, `tests` or `headless` | a local commit on `fix/<slug>`, the attempt as a comment on the issue, card `In review` |
+| green, `playtest` | the same commit, pushed and **not** merged, its worktree kept with a free port in `.devport`, card `Needs playtest` |
 | not green | **nothing committed**, the failing output on the issue, the worktree kept, card back in `Ready` |
 | nothing changed | a comment saying so, card back in `Ready` |
 

@@ -304,9 +304,21 @@ try {
   const sha = git(['rev-parse', 'HEAD'], wt).slice(0, 8);
   out(`--- merged as ${sha}`);
 
-  I.comment(num, P.renderReview({ branch: fixBranch, route, ran, ok: true, sha, account }));
-  I.patchIssue(num, { status: 'closed' });
-  B.moveLane(num, 'done');
+  // The merge is on main from here on. Nothing below is allowed to turn that into a failure
+  // that sends the card back to Ready, so each step reports and continues.
+  const settle = (what, fn) => {
+    try {
+      fn();
+    } catch (e) {
+      out(`--- merged, but could not ${what}: ${tail(String(e.message), 3)}`);
+    }
+  };
+  sent = true;
+  settle('comment on the issue', () =>
+    I.comment(num, P.renderReview({ branch: fixBranch, route, ran, ok: true, sha, account }))
+  );
+  settle('close the issue', () => I.patchIssue(num, { status: 'closed' }));
+  settle('move the card to Done', () => B.moveLane(num, 'done'));
   out(`--- #${num} closed, card in Done`);
 
   try {
@@ -321,6 +333,7 @@ try {
   }
 
   git(['branch', '-D', fixBranch], ROOT, true);
+  settle(`delete origin/${fixBranch}`, () => git(['push', 'origin', '--delete', fixBranch], ROOT));
   const fixWt = join(ROOT, '.claude', 'worktrees', `fix-${d.id}`);
   if (existsSync(fixWt)) {
     try {
