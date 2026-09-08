@@ -1,5 +1,5 @@
-import { execFileSync, spawn } from 'node:child_process';
-import { openSync, mkdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { execFileSync, spawn, spawnSync } from 'node:child_process';
+import { openSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { homedir } from 'node:os';
@@ -40,7 +40,7 @@ export function runnerPids() {
         const [pid, ...rest] = l.split(' ');
         return { pid: Number(pid), cmd: rest.join(' ') };
       })
-      .filter((p) => Number.isFinite(p.pid));
+      .filter((p) => Number.isFinite(p.pid) && /(^|\/)node(js)?$/.test(p.cmd.split(' ')[0]));
   } catch {
     return [];
   }
@@ -112,24 +112,51 @@ function claudeEnv() {
   };
 }
 
-function launch({ hours, workers, model }, now) {
+const RUN_UNIT = 'fantasia-audit-run';
+
+function runnerArgs({ hours, workers, model, dry }, runId) {
+  return [
+    RUNNER,
+    '--workers', String(workers),
+    '--hours', String(hours),
+    '--model', model,
+    '--run', runId,
+    ...(dry ? ['--dry-run'] : [])
+  ];
+}
+
+function launch({ hours, workers, model, dry }, now) {
   const stamp = new Date(now).toISOString().replace(/[:.]/g, '-');
   const runId = `dashboard-${stamp}`;
-  const dir = join(LEDGER, 'nightly');
-  mkdirSync(dir, { recursive: true });
-  const log = join(dir, `${runId}.log`);
+  const log = join(LEDGER, `${runId}.log`);
+  const env = claudeEnv();
+  const args = runnerArgs({ hours, workers, model, dry }, runId);
+
+  if (process.env.XDG_RUNTIME_DIR) {
+    const r = spawnSync(
+      'systemd-run',
+      [
+        '--user', '--collect', `--unit=${RUN_UNIT}`,
+        `--description=Fantasia4x audit run ${runId}`,
+        `--working-directory=${REPO}`,
+        `--setenv=AUDIT_CLAUDE=${env.AUDIT_CLAUDE}`,
+        `--setenv=PATH=${env.PATH}`,
+        process.execPath,
+        ...args
+      ],
+      { encoding: 'utf8' }
+    );
+    if (r.status === 0) return { unit: `${RUN_UNIT}.service`, log, runId };
+    return { error: `systemd-run: ${(r.stderr || r.error?.message || '').trim().slice(0, 200)}`, log, runId };
+  }
+
   const fd = openSync(log, 'a');
-  const child = spawn(
-    process.execPath,
-    [
-      RUNNER,
-      '--workers', String(workers),
-      '--hours', String(hours),
-      '--model', model,
-      '--run', runId
-    ],
-    { cwd: REPO, detached: true, stdio: ['ignore', fd, fd], env: { ...process.env, ...claudeEnv() } }
-  );
+  const child = spawn(process.execPath, args, {
+    cwd: REPO,
+    detached: true,
+    stdio: ['ignore', fd, fd],
+    env: { ...process.env, ...env }
+  });
   child.unref();
   return { pid: child.pid, log, runId };
 }
@@ -160,7 +187,8 @@ export function decide(now, pids = runnerPids()) {
     why: 'unpaused, inside the run window, with work pending',
     hours: Math.max(MIN_HOURS, (run.until - now) / 3600_000),
     workers: run.workers,
-    model: run.model
+    model: run.model,
+    dry: Boolean(run.dry)
   };
 }
 
@@ -205,7 +233,15 @@ export async function tick(now = Date.now()) {
     } else {
       launched = launch(decision, now);
       control = writeControl({
-        run: { ...run, fast_deaths: fastDeaths, launched_at: now, launched_pid: launched.pid, stopped: null }
+        run: {
+          ...run,
+          fast_deaths: fastDeaths,
+          launched_at: now,
+          launched_pid: launched.pid ?? null,
+          launched_unit: launched.unit ?? null,
+          launch_error: launched.error ?? null,
+          stopped: launched.error ? `could not launch: ${launched.error}` : null
+        }
       });
     }
   } else {

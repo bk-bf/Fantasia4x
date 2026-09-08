@@ -127,11 +127,36 @@ node tools/audit/audit.mjs export     # ledger -> JSONL under tools/audit/ledger
 node tools/audit/run.mjs --workers 4 --hours 8        # the overnight loop
 node tools/audit/run.mjs --once --model haiku         # one batch, for checking a rule
 node tools/audit/run.mjs --workers 2 --hours 1 --dry-run   # drive the board, spend nothing
+
+node tools/audit/audit.mjs tick        # one supervisor pass: apply the dashboard, launch if due
+node tools/audit/audit.mjs tick --json # the same, as the document audit-monitor.py projects
 ```
 
 `index` re-reads every source file and rewrites the symbol inventory; `plan` crosses the
 active rules against it. A verdict survives both as long as its symbol's `content_hash` and
 its rule's `rule_hash` are unchanged, so only what actually moved is re-audited.
+
+## How the dashboard drives a run
+
+`/audit` never touches the ledger. A button writes a request file, and `audit.mjs tick`
+is the only thing that reads it. `audit-monitor.timer` calls `tick` every 20 s, so a click
+takes effect within one tick and a pause reaches a live worker within its poll interval.
+
+`tick` decides one thing: whether a runner should be alive right now. It is alive when the
+audit is not paused, a **run window** is open, and work is pending. Start opens a window of
+the requested length; Resume reopens the last one if it has closed, which is what makes
+Resume able to start the audit from a standing stop. A pause kills the runner — `run.mjs`
+exits rather than idles — and the next tick after a resume launches it again with the hours
+left in the window. The window expiring is what ends a run for good; nothing relaunches
+after that until a button asks.
+
+The runner is started as its own transient unit, `fantasia-audit-run.service`, not as a
+child of the monitor. A child would sit in `audit-monitor.service`'s cgroup and be killed
+the moment that oneshot finished, which is how a launch could report success and leave
+nothing running. `systemctl --user status fantasia-audit-run` is the runner's own status.
+
+Five launches that die inside two minutes close the window and record why, so a runner that
+cannot start does not relaunch every 20 s.
 
 ## Testing the board without spending anything
 
