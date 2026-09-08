@@ -15,7 +15,7 @@
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { check, allowedLabels } from './audit/lib/schema.mjs';
-import { linkify, issueRef, indexedSha } from './audit/lib/links.mjs';
+import { linkify, issueRef, indexedSha, blobUrl, resolveRepoPath } from './audit/lib/links.mjs';
 
 process.stdout.on('error', (e) => {
   if (e.code === 'EPIPE') process.exit(0);
@@ -56,7 +56,104 @@ const guard = (labels, body, { allowReady = false } = {}) => {
   if (errors.length) die(`refused:\n  - ${errors.join('\n  - ')}`);
 };
 
-if (cmd === 'labels') {
+const EXT = /\.(ts|tsx|js|mjs|cjs|svelte|json|md|sh|py|rs|css|html)$/;
+
+/** Every way a citation reaches an issue body, and whether it points at something real. */
+function scanBody(body, sha) {
+  const found = [];
+  const text = body ?? '';
+
+  for (const m of text.matchAll(/\[([^\]]*)\]\((?!https?:|#)([^)]+)\)/g)) {
+    const [, label, target] = m;
+    const [path, anchor] = target.split('#');
+    const real = resolveRepoPath(path, sha);
+    found.push({ kind: 'relative-link', whole: m[0], label, path, anchor, real });
+  }
+
+  // a code span inside a link label is already linked; only a bare one is a missing link
+  const linkSpans = [];
+  for (const m of text.matchAll(/\[[^\]]*\]\([^)]*\)/g)) linkSpans.push([m.index, m.index + m[0].length]);
+  const linked = (i) => linkSpans.some(([a, b]) => i >= a && i < b);
+
+  for (const m of text.matchAll(/`([A-Za-z0-9._/-]+\.[A-Za-z]{1,8})(?::(\d+))?`/g)) {
+    if (!EXT.test(m[1]) || linked(m.index)) continue;
+    found.push({ kind: 'code-span-path', whole: m[0], path: m[1], line: m[2], real: resolveRepoPath(m[1], sha) });
+  }
+
+  for (const m of text.matchAll(
+    /https:\/\/github\.com\/[^/]+\/[^/]+\/blob\/([0-9a-f]{7,40})\/([^)#\s]+)(?:#L(\d+))?/g
+  )) {
+    found.push({ kind: 'blob', whole: m[0], sha: m[1], path: m[2], line: m[3], real: resolveRepoPath(m[2], m[1]) });
+  }
+  return found;
+}
+
+/** `[[`x`](a)](b)` — a label that is itself a link. Keep the inner one; it is the specific
+ *  citation, and the outer was added by converting a code span that was already inside a link. */
+function unnest(text) {
+  let out = text ?? '';
+  for (let i = 0; i < 5; i++) {
+    const next = out.replace(/\[(\[[^\]]*\]\([^)]*\))\]\([^)]*\)/g, '$1');
+    if (next === out) break;
+    out = next;
+  }
+  return out;
+}
+
+function repair(body, sha) {
+  let out = unnest(issueRef(body ?? ''));
+  for (const f of scanBody(out, sha)) {
+    if (!f.real) continue;
+    if (f.kind === 'relative-link') {
+      const line = (f.anchor ?? '').match(/^L(\d+)$/)?.[1];
+      out = out.split(f.whole).join(`[${f.label}](${blobUrl(f.real, line, sha)})`);
+    } else if (f.kind === 'code-span-path') {
+      out = out.split(f.whole).join(`[\`${f.path}${f.line ? ':' + f.line : ''}\`](${blobUrl(f.real, f.line, sha)})`);
+    }
+  }
+  return unnest(linkify(out, sha));
+}
+
+const allIssues = () =>
+  JSON.parse(gh(['issue', 'list', '--state', 'all', '--limit', '300', '--json', 'number,title,body']));
+
+if (cmd === 'check-links' || cmd === 'fix-links') {
+  const sha = indexedSha(null);
+  const fix = cmd === 'fix-links';
+  let bad = 0;
+  let fixed = 0;
+  let dead = 0;
+  for (const it of allIssues()) {
+    // a resolving blob link is the goal, not a problem; everything else is work left to do
+    const problems = scanBody(it.body, sha).filter((f) => f.kind !== 'blob' || !f.real);
+    const unresolvable = problems.filter((f) => !f.real);
+    const next = repair(it.body, sha);
+    const drifted = next !== (it.body ?? '');
+
+    if (problems.length) {
+      bad += 1;
+      process.stdout.write(
+        `#${it.number}  ${problems.length} reference(s), ${unresolvable.length} unresolvable\n`
+      );
+      for (const u of unresolvable.slice(0, 4)) {
+        dead += 1;
+        process.stdout.write(`      dead: ${u.kind} ${u.path}\n`);
+      }
+    } else if (drifted) {
+      // valid markdown can still be wrong: a nested link parses fine and reads as noise
+      process.stdout.write(`#${it.number}  body is not in canonical form\n`);
+    }
+
+    if (fix && drifted) {
+      gh(['issue', 'edit', String(it.number), '--body-file', '-'], next);
+      fixed += 1;
+    }
+    if (!fix && drifted) bad = Math.max(bad, 1);
+  }
+  process.stdout.write(`\n${bad} issue(s) with unlinked or broken references` +
+    (fix ? `, ${fixed} rewritten` : '') + `, ${dead} citation(s) point at nothing\n`);
+  if (!fix && bad) process.exit(1);
+} else if (cmd === 'labels') {
   for (const l of [...allowedLabels()].sort()) process.stdout.write(`${l}\n`);
 } else if (cmd === 'lint') {
   const body = prepare(readBody());

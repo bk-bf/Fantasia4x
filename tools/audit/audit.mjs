@@ -33,6 +33,7 @@ import { adrConstDrift, adrCoverage, seamViolations } from './lib/t0.mjs';
 import * as I from './lib/gh.mjs';
 import { groupFindings, upsertIssue } from './lib/raise.mjs';
 import { indexedSha } from './lib/links.mjs';
+import { tick } from './lib/supervise.mjs';
 
 const ROOT = process.env.AUDIT_ROOT || join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 // Stable by default so `audit release` can find this machine's claims across separate
@@ -455,6 +456,20 @@ function cmdRules() {
   if (errors.length) process.exit(1);
 }
 
+async function cmdTick() {
+  const r = await tick();
+  if (flag('json')) {
+    out(JSON.stringify(r));
+    return;
+  }
+  out(`${r.decision.state} — ${r.decision.why}`);
+  if (r.applied.length) out(`applied from the dashboard: ${r.applied.join(', ')}`);
+  if (r.opened) out(`run window opened by the ${r.opened} button — ${r.control.run.hours}h`);
+  if (r.launched) out(`launched pid ${r.launched.pid} → ${r.launched.log}`);
+  out(`pace — ${r.schedule.reason}`);
+  out(`pending ${r.pending}, runners ${r.pids.length}`);
+}
+
 const commands = {
   index: cmdIndex,
   plan: cmdPlan,
@@ -469,7 +484,8 @@ const commands = {
   export: cmdExport,
   rules: cmdRules,
   issues: cmdIssues,
-  board: cmdBoard
+  board: cmdBoard,
+  tick: cmdTick
 };
 
 const cmd = process.argv[2];
@@ -483,4 +499,4 @@ if (!cmd || !commands[cmd]) {
   );
   process.exit(cmd ? 2 : 0);
 }
-commands[cmd]();
+await commands[cmd]();

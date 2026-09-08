@@ -209,6 +209,12 @@ The vocabulary is `tools/audit/labels.json` plus one label per rule `name`. Addi
 editing that file, not inventing one at a call site. `pnpm issue sync-labels` creates what is
 missing and names the strays.
 
+`pnpm issue check-links` reads every issue and reports each citation that points at nothing,
+each relative link, and each body that is not in canonical form. It exits non-zero, so it is the
+check to run after any pass that rewrites bodies — a spot check on a handful of issues proves
+nothing about the rest. `pnpm issue fix-links` repairs what can be repaired and leaves the rest
+reported.
+
 Reading is unrestricted: `gh issue list`, `gh issue view`, `gh project item-list`.
 
 **Move the card, never the label.** `ready`, `needs decision` and the three `verify` labels are

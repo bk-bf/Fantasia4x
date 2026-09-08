@@ -3,7 +3,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-export const ROOT = process.env.AUDIT_ROOT || join(HERE, '..', '..');
+export const ROOT = process.env.AUDIT_ROOT || join(HERE, '..', '..', '..');
 
 export const REPO = process.env.AUDIT_GH_REPO || 'bk-bf/Fantasia4x';
 const BASE = `https://github.com/${REPO}`;
@@ -63,4 +63,49 @@ export function authorityLink(authority, sha) {
   if (issue) return `#${issue[1]}`;
   const [path, anchor] = authority.split('#');
   return `[\`${path}\`](${blobUrl(path, null, sha)}${anchor ? `#${anchor}` : ''})`;
+}
+
+let treeCache = null;
+
+/** Every path in the repo at a commit, plus a basename index, so a citation written as
+ *  `Culture.ts:40` or `types/culture.ts:5` can be resolved to a real file. */
+export function repoTree(sha) {
+  if (treeCache?.sha === sha) return treeCache;
+  let files = [];
+  try {
+    files = execFileSync('git', ['ls-tree', '-r', '--name-only', sha ?? 'HEAD'], {
+      cwd: ROOT,
+      encoding: 'utf8',
+      maxBuffer: 64 * 1024 * 1024
+    })
+      .split('\n')
+      .filter(Boolean);
+  } catch {
+    files = [];
+  }
+  const byBase = new Map();
+  for (const f of files) {
+    const b = f.split('/').pop();
+    byBase.set(b, [...(byBase.get(b) ?? []), f]);
+  }
+  treeCache = { sha, files: new Set(files), byBase };
+  return treeCache;
+}
+
+/** Resolve however a citation was written to a real repo path, or null if it cannot be. */
+export function resolveRepoPath(raw, sha) {
+  if (!raw) return null;
+  const tree = repoTree(sha);
+  const clean = String(raw).replace(/^\.{1,2}\//, '').replace(/^(\.\.\/)+/, '').replace(/^\//, '');
+  if (tree.files.has(clean)) return clean;
+  const suffix = [...tree.files].filter((f) => f.endsWith('/' + clean));
+  if (suffix.length === 1) return suffix[0];
+  const base = clean.split('/').pop();
+  const hits = tree.byBase.get(base) ?? [];
+  if (hits.length === 1) return hits[0];
+  const narrowed = hits.filter((f) => f.endsWith(clean));
+  if (narrowed.length === 1) return narrowed[0];
+  // the data files were .jsonc until they became strict json; older evidence still says jsonc
+  if (clean.endsWith('.jsonc')) return resolveRepoPath(clean.replace(/\.jsonc$/, '.json'), sha);
+  return null;
 }
