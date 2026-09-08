@@ -19,7 +19,40 @@ export function open(path = DB_PATH) {
   const db = new DatabaseSync(path);
   db.exec(readFileSync(join(TOOL_DIR, 'schema.sql'), 'utf8'));
   db.exec('PRAGMA busy_timeout = 10000');
+  migrate(db);
   return db;
+}
+
+function migrate(db) {
+  const have = new Set(db.prepare('PRAGMA table_info(finding)').all().map((c) => c.name));
+  for (const [name, decl] of [
+    ['issue_number', 'INTEGER'],
+    ['raised_at', 'TEXT']
+  ]) {
+    if (!have.has(name)) db.exec(`ALTER TABLE finding ADD COLUMN ${name} ${decl}`);
+  }
+  db.exec('CREATE INDEX IF NOT EXISTS finding_issue ON finding(issue_number)');
+}
+
+export function markRaised(db, findingIds, issueNumber) {
+  const n = Number(issueNumber);
+  if (!Number.isFinite(n) || findingIds.length === 0) return 0;
+  const at = nowIso();
+  const up = db.prepare('UPDATE finding SET issue_number = ?, raised_at = ? WHERE id = ?');
+  let count = 0;
+  for (const id of findingIds) count += up.run(n, at, id).changes;
+  return count;
+}
+
+export function raisedSummary(db) {
+  return db
+    .prepare(
+      `SELECT f.rule_id, f.issue_number, count(*) AS n, max(f.raised_at) AS at
+         FROM finding f WHERE f.state = 'open'
+        GROUP BY f.rule_id, f.issue_number
+        ORDER BY f.issue_number IS NULL DESC, n DESC`
+    )
+    .all();
 }
 
 // --- symbols -----------------------------------------------------------------

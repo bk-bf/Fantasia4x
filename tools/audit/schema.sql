@@ -121,7 +121,9 @@ CREATE TABLE IF NOT EXISTS finding (
   state      TEXT NOT NULL DEFAULT 'open', -- open | repro-written | false-positive | fixed
   created_at TEXT NOT NULL,
   closed_at  TEXT,
-  note       TEXT
+  note       TEXT,
+  issue_number INTEGER,
+  raised_at    TEXT
 );
 CREATE INDEX IF NOT EXISTS finding_state ON finding(state);
 

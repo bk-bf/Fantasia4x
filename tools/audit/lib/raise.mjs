@@ -31,6 +31,18 @@ const FAMILY_SEVERITY = {
   'single-source': 'high'
 };
 
+const FAMILY_VERIFY = {
+  contract: 'tests',
+  boundary: 'tests',
+  'silent-failure': 'tests',
+  units: 'tests',
+  'hot-path': 'headless',
+  tests: 'tests',
+  reachability: 'tests',
+  data: 'playtest',
+  'single-source': 'tests'
+};
+
 const MAX_EVIDENCE = 20;
 
 /** Two path segments is the coherence unit: `game/services`, `components/UI`. A rule firing
@@ -183,15 +195,16 @@ export function upsertIssue(root, g, rulesById, sha, force = false) {
   const rule = rulesById.get(g.rule_id) ?? {};
   const kind = rule.kind ?? FAMILY_KIND[g.family] ?? 'correctness';
   const severity = rule.severity ?? FAMILY_SEVERITY[g.family] ?? 'medium';
+  const verify = rule.verify ?? FAMILY_VERIFY[g.family] ?? 'tests';
   const files = [...new Set(g.findings.map((f) => f.file))];
   const symbols = [...new Set(g.findings.map((f) => f.symbol_key))];
 
   if (found) {
     const path = found.path;
     const existing = readIssue(path);
-    if (existing.data.origin === 'human') return { path, action: 'skipped-human' };
-    if (existing.data.status === 'closed') return { path, action: 'skipped-closed' };
-    if (existing.data.ready === true && !force) return { path, action: 'skipped-approved' };
+    if (existing.data.origin === 'human') return { path, action: 'skipped-human', id };
+    if (existing.data.status === 'closed') return { path, action: 'skipped-closed', id };
+    if (existing.data.ready === true && !force) return { path, action: 'skipped-approved', id };
     const before = existing.body;
     const body = renderBody(g, sha);
     const changed = force || before.trim() !== body.trim();
@@ -199,6 +212,7 @@ export function upsertIssue(root, g, rulesById, sha, force = false) {
       title: titleFor(g),
       kind,
       severity,
+      verify: existing.data.verify ?? verify,
       files,
       symbols,
       rules: [g.rule_id],
@@ -218,6 +232,7 @@ export function upsertIssue(root, g, rulesById, sha, force = false) {
       status: 'open',
       kind,
       severity,
+      verify,
       ready: false,
       origin: 'audit',
       rules: [g.rule_id],

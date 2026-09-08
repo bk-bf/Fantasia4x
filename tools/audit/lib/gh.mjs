@@ -1,4 +1,6 @@
 import { execFileSync } from 'node:child_process';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { loadRules } from './rules.mjs';
 import { check, allowedLabels } from './schema.mjs';
 
@@ -13,6 +15,7 @@ const KIND_LABEL = {
 };
 const ORIGIN_LABEL = { audit: 'found by audit', human: 'found by hand' };
 const STATUS_LABEL = { 'in-progress': 'in progress', 'in-review': 'in review' };
+const VERIFY_LABEL = { tests: 'verify tests', headless: 'verify headless', playtest: 'needs playtest' };
 
 const unlabel = (map, names) => {
   for (const [k, v] of Object.entries(map)) if (names.includes(v)) return k;
@@ -45,6 +48,17 @@ function gh(args, { input } = {}) {
   });
 }
 
+const WRAPPER = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'issue.mjs');
+
+function issueTool(args, { input } = {}) {
+  return execFileSync(process.execPath, [WRAPPER, ...args], {
+    encoding: 'utf8',
+    input,
+    maxBuffer: 64 * 1024 * 1024,
+    stdio: ['pipe', 'pipe', 'pipe']
+  });
+}
+
 let knownLabels = null;
 
 function ensureLabels(names) {
@@ -64,11 +78,12 @@ function ensureLabels(names) {
       throw new Error(`refusing to create the label "${n}" — it is not in the schema`);
     }
     try {
-      gh(['label', 'create', n, '--color', 'ededed', '--description', '', '--force']);
+      issueTool(['sync-labels']);
+      knownLabels = null;
     } catch {
       /* a label that cannot be created must not stop the finding being recorded */
     }
-    knownLabels.add(n);
+    knownLabels?.add(n);
   }
 }
 
@@ -112,6 +127,7 @@ function toIssue(raw) {
       severity: unlabel(SEVERITY_LABEL, names),
       ready: names.includes('ready'),
       origin: unlabel(ORIGIN_LABEL, names) ?? 'audit',
+      verify: unlabel(VERIFY_LABEL, names),
       rules: meta.rules ?? [],
       files: meta.files ?? [],
       symbols: meta.symbols ?? [],
@@ -154,6 +170,7 @@ function labelsFor(d) {
   if (d.severity && SEVERITY_LABEL[d.severity]) out.push(SEVERITY_LABEL[d.severity]);
   if (d.kind && KIND_LABEL[d.kind]) out.push(KIND_LABEL[d.kind]);
   if (d.origin && ORIGIN_LABEL[d.origin]) out.push(ORIGIN_LABEL[d.origin]);
+  if (d.verify && VERIFY_LABEL[d.verify]) out.push(VERIFY_LABEL[d.verify]);
   for (const r of d.rules ?? []) out.push(nameOf(r));
   if (d.ready === true) out.push('ready');
   if (STATUS_LABEL[d.status]) out.push(STATUS_LABEL[d.status]);
@@ -183,10 +200,10 @@ export function writeIssue(_root, { data, body }) {
   const existing = listIssues().find((i) => i.data.id === data.id);
   ensureLabels(labels);
   const args = existing
-    ? ['issue', 'edit', existing.path, '--title', data.title, '--body-file', '-']
-    : ['issue', 'create', '--title', data.title, '--body-file', '-'];
+    ? ['edit', existing.path, '--title', data.title, '--body-file', '-']
+    : ['create', '--title', data.title, '--body-file', '-'];
   for (const l of labels) args.push(existing ? '--add-label' : '--label', l);
-  const outText = gh(args, { input: composeBody(data, body) });
+  const outText = issueTool(args, { input: composeBody(data, body) });
   invalidate();
   const url = outText.trim().split('\n').filter(Boolean).pop() ?? '';
   return existing ? existing.path : url.split('/').pop();
@@ -195,20 +212,22 @@ export function writeIssue(_root, { data, body }) {
 export function patchIssue(handle, patch) {
   const cur = readIssue(handle);
   const next = { ...cur.data, ...patch };
-  const args = ['issue', 'edit', cur.path];
+  const args = ['edit', cur.path];
   if (patch.title) args.push('--title', patch.title);
   const before = new Set(labelsFor(cur.data));
   const after = new Set(labelsFor(next));
   ensureLabels([...after]);
-  for (const l of after) if (!before.has(l)) args.push('--add-label', l);
+  for (const l of after) args.push('--add-label', l);
   for (const l of before) if (!after.has(l)) args.push('--remove-label', l);
   const bodyChanged =
     patch.body !== undefined ||
     JSON.stringify(next.files) !== JSON.stringify(cur.data.files) ||
     JSON.stringify(next.symbols) !== JSON.stringify(cur.data.symbols);
   if (bodyChanged) args.push('--body-file', '-');
-  if (args.length > 3) {
-    gh(args, bodyChanged ? { input: composeBody(next, patch.body ?? cur.body) } : {});
+  const labelsChanged =
+    [...after].some((l) => !before.has(l)) || [...before].some((l) => !after.has(l));
+  if (bodyChanged || labelsChanged || patch.title) {
+    issueTool(args, bodyChanged ? { input: composeBody(next, patch.body ?? cur.body) } : {});
   }
   if (next.status === 'closed' && cur.data.status !== 'closed') {
     gh(['issue', 'close', cur.path, '--reason', 'completed']);
@@ -221,7 +240,7 @@ export function patchIssue(handle, patch) {
 }
 
 export function comment(handle, text) {
-  gh(['issue', 'comment', String(handle), '--body-file', '-'], { input: text });
+  issueTool(['comment', String(handle), '--body-file', '-'], { input: text });
   invalidate();
 }
 

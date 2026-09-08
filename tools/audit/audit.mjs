@@ -361,12 +361,20 @@ function cmdIssues() {
   const db = L.open();
   const { rules } = loadRules();
   const byId = new Map(rules.map((r) => [r.id, r]));
-  const groups = groupFindings(db);
+  const only = (arg('only', '') || '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const all = groupFindings(db);
+  const groups = only.length
+    ? all.filter((g) => only.some((p) => g.group === p || g.group.startsWith(`${p}/`)))
+    : all;
   const sha = indexedSha(db);
   if (groups.length === 0) {
-    out('no open findings to raise');
+    out(only.length ? `no open findings under ${only.join(', ')}` : 'no open findings to raise');
     return;
   }
+  if (only.length) out(`${groups.length} of ${all.length} group(s) match ${only.join(', ')}`);
 
   if (flag('dry-run')) {
     out(`${groups.length} issue(s) would be written:`);
@@ -382,10 +390,16 @@ function cmdIssues() {
   for (const g of groups) {
     const r = upsertIssue(ROOT, g, byId, sha, flag('rerender'));
     counts[r.action] = (counts[r.action] ?? 0) + 1;
+    const linked = L.markRaised(
+      db,
+      g.findings.map((f) => f.id),
+      r.path
+    );
     if (r.action === 'created')
       out(`  created  #${r.path}  ${r.id}  (${g.findings.length} findings)`);
     else if (r.action === 'updated')
       out(`  updated  #${r.path}  ${r.id}  (${g.findings.length} findings)`);
+    else out(`  ${r.action.padEnd(16)} #${r.path}  ${r.id}  (${linked} findings linked)`);
   }
   out('');
   out(
@@ -395,6 +409,23 @@ function cmdIssues() {
   );
   out('');
   out('All raised as `ready: false`. Nothing is worked on until you flip that.');
+}
+
+function cmdRaised() {
+  const db = L.open();
+  const rows = L.raisedSummary(db);
+  const names = new Map(loadRules().rules.map((r) => [r.id, r.name ?? r.id]));
+  const unraised = rows.filter((r) => r.issue_number === null);
+  const raised = rows.filter((r) => r.issue_number !== null);
+  out(`on the board: ${raised.reduce((a, r) => a + r.n, 0)} finding(s) over ${raised.length} issue(s)`);
+  for (const r of raised) {
+    out(`  #${String(r.issue_number).padEnd(5)} ${(names.get(r.rule_id) ?? r.rule_id).padEnd(22)} ${String(r.n).padStart(4)}  ${r.at?.slice(0, 10) ?? ''}`);
+  }
+  out('');
+  out(`not on the board: ${unraised.reduce((a, r) => a + r.n, 0)} finding(s)`);
+  for (const r of unraised) {
+    out(`  ${'—'.padEnd(6)} ${(names.get(r.rule_id) ?? r.rule_id).padEnd(22)} ${String(r.n).padStart(4)}`);
+  }
 }
 
 function cmdBoard() {
@@ -485,7 +516,8 @@ const commands = {
   rules: cmdRules,
   issues: cmdIssues,
   board: cmdBoard,
-  tick: cmdTick
+  tick: cmdTick,
+  raised: cmdRaised
 };
 
 const cmd = process.argv[2];
