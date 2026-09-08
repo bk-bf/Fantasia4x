@@ -171,6 +171,11 @@ stays the ledger's key and should not appear in anything a person reads.
 `Backlog` → `Ready` → `In progress` → `In review` → `Done`, with `Blocked on you` off to the side.
 
 - **`Backlog`** — raised, not yet evaluated. The audit raises here and nowhere else.
+
+**Every card is a real issue.** Do not put a draft card on the board to represent work that has
+a spec but no issue — an empty card inflates the count and says nothing a person can act on.
+Planned work lives in `docs/tasks/` and is listed in `ROADMAP.md`; it becomes an issue when
+someone is ready to start it.
 - **`Ready`** — nothing blocks it, no decision is outstanding, the scope is clear enough to
   start. It means *available to work on*, not *approved by a person*. Promoting one is a
   deliberate evaluation, so say why.
