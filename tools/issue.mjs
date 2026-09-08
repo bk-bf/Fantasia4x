@@ -16,6 +16,7 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { check, allowedLabels, checkRequired, checkTemplate } from './audit/lib/schema.mjs';
 import { linkify, issueRef, indexedSha, blobUrl, resolveRepoPath } from './audit/lib/links.mjs';
+import { moveLane } from './audit/lib/board.mjs';
 
 process.stdout.on('error', (e) => {
   if (e.code === 'EPIPE') process.exit(0);
@@ -114,18 +115,7 @@ const guard = (labels, body, { allowReady = false, template = false } = {}) => {
 const allIssues = () =>
   JSON.parse(gh(['issue', 'list', '--state', 'all', '--limit', '300', '--json', 'number,title,body']));
 
-const LANES = {
-  backlog: 'e11e56ce',
-  'blocked on you': '990e2322',
-  ready: '14aee711',
-  'in progress': '9e8caff2',
-  'in review': '365210d5',
-  'needs playtest': 'e7ebab1b',
-  done: 'ea4793e4'
-};
-// two lanes mean "a person has to look at this". An agent may put a card there; only Kirill
-// takes one out, and nothing puts it back because he did.
-const HIS = new Set(['blocked on you', 'needs playtest']);
+
 
 if (cmd === 'check-labels') {
   let bad = 0;
@@ -143,28 +133,13 @@ if (cmd === 'check-labels') {
   if (bad) process.exit(1);
 } else if (cmd === 'lane') {
   const n = argv[1] ?? die('which issue?');
-  const to = (argv.slice(2).join(' ') || '').toLowerCase();
-  if (!LANES[to]) die(`unknown lane "${to}" — one of: ${Object.keys(LANES).join(', ')}`);
-
-  const board = JSON.parse(
-    gh(['project', 'item-list', '4', '--owner', 'bk-bf', '--limit', '200', '--format', 'json'])
-  ).items;
-  const item = board.find((i) => String(i.content?.number) === String(n));
-  if (!item) die(`#${n} is not on the board`);
-  const from = (item.status ?? '').toLowerCase();
-
-  if (HIS.has(from) && from !== to) {
-    die(
-      `#${n} is in "${item.status}", which is Kirill's lane. He moves it out, not you.\n` +
-        `If it is genuinely finished, say so and leave the card where it is.`
-    );
+  const to = argv.slice(2).join(' ') || '';
+  try {
+    const r = moveLane(n, to);
+    process.stdout.write(`#${n}  ${r.from} -> ${r.to}${r.moved ? '' : ' (already there)'}\n`);
+  } catch (e) {
+    die(e.message);
   }
-  const q =
-    'mutation($p:ID!,$i:ID!,$f:ID!,$o:String!){ updateProjectV2ItemFieldValue(input:{projectId:$p,' +
-    'itemId:$i,fieldId:$f,value:{singleSelectOptionId:$o}}){ projectV2Item{id} } }';
-  gh(['api', 'graphql', '-f', 'query=' + q, '-f', 'p=PVT_kwHOBlZOB84Bip03', '-f', 'i=' + item.id,
-      '-f', 'f=PVTSSF_lAHOBlZOB84Bip03zhhhAfI', '-f', 'o=' + LANES[to]]);
-  process.stdout.write(`#${n}  ${item.status ?? 'unset'} -> ${to}\n`);
 } else if (cmd === 'check-links' || cmd === 'fix-links') {
   const sha = indexedSha(null);
   const fix = cmd === 'fix-links';

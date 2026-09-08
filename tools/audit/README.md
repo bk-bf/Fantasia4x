@@ -197,9 +197,10 @@ and the `ready` gate. `tools/audit/lib/gh.mjs` is the only writer; it finds an i
 the `<!-- audit-id: … -->` marker in its body and keeps files and symbols in a
 `<!-- audit-meta: … -->` block beside it.
 
-Everything is raised `ready: false`. `ready` is the only gate between the audit and the
-repo, and only a person sets it: the fixer will not touch anything without it. An audit that
-raised its own work and then acted on it would be a loop with no one in it.
+Everything is raised into `Backlog`. The lane is the only gate between the audit and the
+repo: a card reaches the fixer when it is in `Ready`, and it gets there by triage, not by the
+run that raised it. An audit that raised its own work and then acted on it would be a loop
+with no one in it.
 
 Refreshing never overwrites an issue whose `origin: human`, and never reopens one that is
 `closed`.
@@ -207,44 +208,60 @@ Refreshing never overwrites an issue whose `origin: human`, and never reopens on
 ## Phase 3 — the fixer
 
 ```bash
-node tools/audit/fix.mjs --next               # oldest ready issue
-node tools/audit/fix.mjs --issue <slug>       # a named one
-node tools/audit/fix.mjs --next --dry-run     # pick and print
-node tools/audit/fix.mjs --next --keep        # leave the worktree to inspect
+pnpm audit:fix --next                     # oldest Ready card on the tests route
+pnpm audit:fix --next --verify headless   # the headless route instead
+pnpm audit:fix --issue 24                 # a named one
+pnpm audit:fix --next --dry-run           # pick and print
+pnpm audit:fix --next --keep              # leave the worktree to inspect
 ```
 
-One issue, one worktree off `origin/main`, one branch `fix/<slug>`, and the attempt written
-up as a comment on that issue. The prompt hands
-the model the issue and states plainly that AGENTS.md's "stop at a proposal" rule does not
-apply here — `ready: true` is the go-ahead — because otherwise every run ends with a plan and
-no diff. It is told not to commit, not to push, not to close the issue, and that
-`Out of scope` is binding.
+The gate is the board, not a label: a card sitting in `Ready` whose `Verify` field names a
+route this harness can settle. `playtest` is refused outright — a card whose answer is a
+judgement never reaches an unattended run.
 
-**Nothing is committed unless `pnpm check` and `pnpm test:related` are green, and nothing is
-pushed at all.** The branch stays local; whether it reaches `main` is your decision, made by
-reading `git diff main...fix/<slug>`. A run that cannot get green commits nothing, writes the
-failure and the model's account to the issue as a comment, keeps its
-worktree, and returns the issue to `open` — a failed attempt leaves a record rather than a
-half-finished branch.
+One issue, one worktree off `origin/main`, one branch `fix/<slug>`, and the attempt written up
+as a comment on that issue. The prompt hands the model the issue and states plainly that
+AGENTS.md's "stop at a proposal" rule does not apply here, because otherwise every run ends
+with a plan and no diff. It is told not to commit, not to push, not to close the issue, and
+that `Out of scope` is binding.
 
-Status moves `open → in-progress → in-review`, with `pr:` naming the review file. Merging is
-yours; nothing here closes an issue.
+**Nothing is committed unless `pnpm check` and `pnpm test:related` are green.** A run that
+cannot get green commits nothing, writes the failure and the model's account to the issue as a
+comment, keeps its worktree, and sends the card back to `Ready`.
 
-**Every attempt is handed to `mon` under the `fix` tag** (`AUDIT_FIX_TAG`), separately from
-the nightly audit reports on `ci/cl`:
+The card moves `Ready → In progress → In review`. An interrupted run (SIGINT/SIGTERM/SIGHUP)
+sends it back to `Ready` before exiting and leaves the worktree in place. A card left `In
+progress` with no worktree behind it — a run that was killed outright — is released by the next
+run before it picks anything.
 
-| Outcome | The session |
+## Phase 4 — the reviewer
+
+```bash
+pnpm audit:review --next                  # oldest In review card
+pnpm audit:review --issue 24              # a named one
+pnpm audit:review --next --dry-run        # pick and print
+pnpm audit:review --next --keep           # leave the worktree to inspect
+```
+
+The fixer verified its branch in isolation. The reviewer verifies the **merge**: a second
+worktree off a freshly fetched `origin/main`, `git merge --no-ff` of `fix/<slug>` into it, and
+the route run again on the result. A branch that passed alone and conflicts with main, or
+passes alone and fails against what landed since, is caught here and nowhere else.
+
+| Route | What settles it |
 | --- | --- |
-| Ready to review | Runs in the main checkout. Reads `git diff main...fix/<slug>` against the issue and says which remediation steps it actually did, which it skipped, and what a reviewer should look at hardest. |
-| Not green | **Keeps the fix worktree and runs in it**, with the changes still in place. `mon steer` can carry the same attempt forward from any machine rather than starting over. |
-| Nothing changed | Says whether the issue is already fixed, wrongly scoped, or was not understood. No review file is written. |
-| Crashed before verifying | Says whether it is a harness problem or an issue problem, and changes nothing. |
+| `tests` | `pnpm check` and `pnpm test:related` on the merge result. Deterministic, no model. |
+| `headless` | The same, then a session that must invoke the `headless` skill, drive the real sim over real ticks, and end with `VERDICT: PASS` or `VERDICT: FAIL`. It judges only whether the stated behaviour happens — never whether the numbers are the right numbers, which is a playtest question. |
 
-`--no-mon` skips registration.
+Green means merged: `git push origin HEAD:main`, a comment naming the merge commit, the issue
+closed, the card in `Done`, and both branches deleted. The main checkout is fast-forwarded onto
+the merge when it is clean and on `main`.
 
-An interrupted run (SIGINT/SIGTERM/SIGHUP) releases its issue back to `open` before
-exiting and leaves the worktree in place. Without that a killed run leaves the issue at
-`in-progress` with a branch set, and no later run will ever pick it up again.
+Anything else sends the card back to `Ready` with the failure written on the issue and the
+worktree kept.
+
+Both scripts stop while the audit is paused — they spend the same limits, and the pause is one
+switch for all of it.
 
 ## Nightly run on ubuntuserver
 
@@ -270,13 +287,15 @@ point — the source has to be current before the ledger is re-planned:
 2. `audit index` + `audit plan` — verdicts whose code did not move stay `done`, so only the
    diff is re-audited
 3. `run.mjs` until the budget runs out (3.5 h, 3 workers, sonnet by default)
-4. `audit issues` — findings onto the board, committed to `main` and pushed. This is the
-   only thing the nightly puts on `main`; it is markdown, and all of it `ready: false`.
-6. `fix.mjs --next` ×`AUDIT_FIXES` — only touches `ready: true` issues. Each attempt gets
-   its own local branch and a review file; nothing is pushed.
+4. `audit issues` — findings raised as GitHub issues, into `Backlog`. Nothing acts on them
+   until someone triages a card into `Ready`.
+5. `fix.mjs --next` ×`AUDIT_FIXES` — only touches cards in `Ready`. Each attempt gets its own
+   local branch; nothing is pushed.
+6. `review.mjs --next` ×`AUDIT_REVIEWS` — verifies `In review` cards on the merge and pushes
+   the ones that pass to `main`.
 7. `mon run` with the night's numbers, so the report is readable from a phone
 
-Steps 1–3 and 5 are deterministic and cost nothing; steps 4 and 6 spend tokens. A `flock`
+Steps 1–3 are deterministic and cost nothing; steps 4, 5 and 6 spend tokens. A `flock`
 stops a second night starting on top of an overrunning one.
 
 **Timezone.** The server's clock is UTC, so `OnCalendar` carries an explicit

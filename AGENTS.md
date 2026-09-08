@@ -181,10 +181,11 @@ someone is ready to start it.
   deliberate evaluation, so say why.
 - **`In progress`** — a branch exists and someone is on it.
 - **`In review`** — the work is finished and an agent is verifying it, by the route the
-  `Verify` field names. Nothing here needs Kirill.
+  `Verify` field names. Nothing here needs Kirill. A card that passes its route is merged to
+  `main` by the reviewer, not held for him.
 - **`Needs playtest`** — green, and the remaining question is one only he can answer. This lane
   is his; put work here and stop.
-- **`Done`** — he accepted it, and the merge commit that closed the issue is named on it.
+- **`Done`** — merged, and the merge commit that closed the issue is named on it.
 - **`Blocked on you`** — cannot proceed until he chooses: a proposal awaiting a yes, or a design
   call whose measurements are already in hand. Not a parking space for anything merely hard.
 
@@ -193,11 +194,23 @@ someone is ready to start it.
 looked at. And do not put one back because he moved it out: him moving a card is the answer,
 not a mistake to correct. Nothing watches those lanes for drift.
 
-Move a card with `pnpm issue lane <n> <lane>`, which refuses the wrong direction. Direct
-`gh project item-edit` is denied.
+Move a card with `pnpm issue lane <n> <lane>`, which refuses a move out of his two lanes.
+Direct `gh project item-edit` is denied.
 
 Do not skip a lane. Nothing goes from `Backlog` straight to `In progress`, and nothing reaches
-`Done` without passing through his review.
+`Done` without passing its `Verify` route in `In review`.
+
+**The board runs itself on the first two routes.** `pnpm audit:fix --next` takes the oldest
+`Ready` card whose `Verify` is `tests`, works it in a worktree, and moves it to `In review` once
+`pnpm check` and the related tests are green on the branch. `pnpm audit:review --next` takes the
+oldest `In review` card, re-merges its branch onto a freshly fetched `origin/main`, runs the
+route again on the merge result — plus a headless session for `verify headless` — and pushes to
+`main`, closes the issue and moves the card to `Done` only if that is green. Anything short of
+green sends the card back to `Ready` with the failure written on the issue.
+
+`--verify headless` selects the headless route; `playtest` is refused outright, so a card whose
+answer is a judgement never reaches an unattended run. Both scripts stop while the audit is
+paused, because they spend the same limits.
 
 **Never write to GitHub with `gh` directly.** `gh issue create|edit|close|comment` and
 `gh label create|edit|delete` are denied in `.claude/settings.json`. Use `pnpm issue`:

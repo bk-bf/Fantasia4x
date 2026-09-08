@@ -24,6 +24,7 @@
 #   AUDIT_MON       mon binary               ~/Documents/Projects/mon/mon
 #   AUDIT_TAG       mon tag                  ci/cl
 #   AUDIT_FIXES     issues to attempt per night   2
+#   AUDIT_REVIEWS   cards to review per night      2
 #   AUDIT_NO_MON=1  skip the mon handoff (for a manual test run)
 #   AUDIT_NO_FIX=1  skip phase 3 entirely
 
@@ -37,6 +38,7 @@ MODEL="${AUDIT_MODEL:-sonnet}"
 MON="${AUDIT_MON:-$HOME/Documents/Projects/mon/mon}"
 TAG="${AUDIT_TAG:-ci/cl}"
 FIXES="${AUDIT_FIXES:-2}"
+REVIEWS="${AUDIT_REVIEWS:-2}"
 
 # claude lives in ~/.local/bin, which is on PATH in a login shell and in the unit, but not
 # when this script is invoked over a bare ssh command. Resolve it here so all three agree.
@@ -124,7 +126,17 @@ else
   done
 fi
 
-# --- 6. mon ------------------------------------------------------------------
+# --- 6. the reviewer ---------------------------------------------------------
+if [ "${AUDIT_NO_REVIEW:-0}" = 1 ]; then
+  say "AUDIT_NO_REVIEW=1 — skipping the review pass"
+else
+  say "--- reviewer: up to $REVIEWS card(s)"
+  for _ in $(seq 1 "$REVIEWS"); do
+    ( cd "$REPO" && "$NODE" tools/audit/review.mjs --next ) || break
+  done
+fi
+
+# --- 7. mon ------------------------------------------------------------------
 # The audit itself is deterministic and needs no agent. What is worth a session is reading
 # the night's findings and saying which ones matter, somewhere reachable from a phone.
 if [ "${AUDIT_NO_MON:-0}" = 1 ]; then

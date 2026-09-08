@@ -1,6 +1,6 @@
 ---
 name: audit
-description: "The Fantasia4x code-audit ledger (tools/audit), the issue board at docs/issues/, and the local review board at docs/pr/ — how a run is steered and what only a person may decide. Loaded manually with /audit; never invoked automatically, and not implied by the word \"audit\" in ordinary conversation."
+description: "The Fantasia4x code-audit ledger (tools/audit), the GitHub issue board it raises to, and the fixer and reviewer that work cards off that board — how a run is steered and what only a person may decide. Loaded manually with /audit; never invoked automatically, and not implied by the word \"audit\" in ordinary conversation."
 disable-model-invocation: true
 ---
 
@@ -15,23 +15,24 @@ Three surfaces, in order:
 | | |
 |---|---|
 | the ledger | `tools/audit/.ledger/audit.db` — one row per `(symbol, rule)`. Gitignored, per-machine. |
-| the issue board | `docs/issues/*.md` — confirmed defects. The **only** record; nothing is projected to a forge. |
-| the review board | `docs/pr/*.md` — one fix attempt each, alongside a local `fix/<slug>` branch. |
+| the issue board | GitHub issues, written only through `pnpm issue`. Confirmed defects, one each. |
+| the project board | [projects/4](https://github.com/users/bk-bf/projects/4) — the lanes, and the `Verify` field that decides which route settles a card. |
 
 ## The rule that must not be weakened
 
-**`ready: true` is a person's decision. Never set it.** It is the single gate between the audit
-and the repo. An agent that raises a finding, marks it ready, and then fixes it is a loop with
-nobody in it — the entire design exists to prevent exactly that. You may write issues, read them,
-argue about severity, and propose that one is worth doing. Flipping the flag is not yours.
+**A run never promotes its own finding.** The audit raises into `Backlog` and stops there.
+Moving a card to `Ready` is triage — a separate, deliberate evaluation, made after the finding
+has been read, with a reason stated. An agent that raises a finding, promotes it and then fixes
+it in one pass is a loop with nobody in it, and the lanes exist to prevent that.
 
 Same shape, three more:
 
-- **Never push a `fix/<slug>` branch**, and never merge one. They are local on purpose. Whether a
-  change reaches `main` is decided by a person reading `git diff main...fix/<slug>`.
-- **Never file anything to GitHub.** There is no `gh` path left in the tool; if you find yourself
-  reaching for one, the answer is a file under `docs/pr/`. See
-  [why not GitHub](../../../docs/pr/README.md#why-not-github).
+- **Never push a `fix/<slug>` branch by hand, and never merge one by hand.** `review.mjs` merges
+  what passed its route, and nothing else reaches `main`. A card on the `playtest` route is
+  never merged unattended at all — that judgement is Kirill's.
+- **Never write to GitHub with `gh` directly.** `gh issue create|edit|close|comment` and
+  `gh label *` are denied. Everything goes through `pnpm issue`, which validates labels, links
+  and body substance before a single network call.
 - **Never hand-edit `.ledger/audit.db`.** Every state change goes through `audit.mjs`, which is
   what makes a killed run resumable.
 
@@ -85,24 +86,33 @@ its evidence requirements rather than the prompt asking nicely. When reviewing f
   repro that passes closes the finding as a false positive. T2 feeds T1; it does not compete
   with it. Reach for the `headless` skill to write that repro.
 
-## Steering a fix attempt
+## The fixer and the reviewer
 
-`fix.mjs` takes one `ready: true` issue into a worktree off `origin/main` on `fix/<slug>`, works
-the whole Remediation list, and re-runs `pnpm check` + `pnpm test:related` itself.
+`pnpm audit:fix --next` takes the oldest card in the board's `Ready` lane whose `Verify` field
+says `tests`, into a worktree off `origin/main` on `fix/<slug>`, works the whole Remediation
+list, and re-runs `pnpm check` + `pnpm test:related` itself. `--verify headless` picks that
+route instead; `playtest` is refused, because a judgement is not something an unattended run
+can make.
 
 | Outcome | What exists afterwards |
 |---|---|
-| green | a local commit on `fix/<slug>`, `docs/pr/<slug>.md` `status: open`, issue `in-review` |
-| not green | **nothing committed**, `docs/pr/<slug>.md` `status: abandoned` with the failing output, the worktree kept |
-| nothing changed | no review file — there is nothing to review |
+| green | a local commit on `fix/<slug>`, the attempt as a comment on the issue, card `In review` |
+| not green | **nothing committed**, the failing output on the issue, the worktree kept, card back in `Ready` |
+| nothing changed | a comment saying so, card back in `Ready` |
 
-Every outcome is registered in `mon` under the **`fix`** tag. A failed attempt's session runs
-*inside* its kept worktree, so `mon steer` carries that same attempt forward with the changes
-still in place instead of restarting it. That is the intended way to push one over the line.
+`pnpm audit:review --next` takes the oldest `In review` card, merges `fix/<slug>` onto a freshly
+fetched `origin/main` in a second worktree, and runs its route on the **merge result** — the
+fixer only ever verified the branch alone. On the `headless` route it then runs a session that
+must drive the real sim and answer `VERDICT: PASS` or `VERDICT: FAIL`.
 
-When asked to review an attempt, read the diff against the issue — not the attempt's own account
-of itself. `docs/pr/<slug>.md` deliberately records both: `verified` is what the harness observed,
-the prose is what the model claimed. They are separate so they can be compared.
+Green means it pushes to `main`, closes the issue naming the merge commit, and moves the card to
+`Done`. Anything else sends the card back to `Ready` with the failure on the issue.
+
+Both stop while the audit is paused; they draw on the same limits.
+
+When you review an attempt by hand, read the diff against the issue — not the attempt's own
+account of itself. The issue comment records both: what the harness observed, and what the model
+claimed. They are separate so they can be compared.
 
 ```bash
 git diff main...fix/<slug>
@@ -117,11 +127,13 @@ hardest. Then stop. `Out of scope` in the issue is binding on the fixer and on y
 `fantasia-audit.timer` runs `deploy/nightly-audit.sh` on ubuntuserver, **in the main checkout on
 `main`** — there is no audit branch, and re-introducing one would put the ledger on a different
 tree from the code it describes. It fetches, re-indexes, re-plans, runs the loop for its budget,
-raises findings onto the board, commits **only `docs/issues/`** to `main`, then works up to
-`AUDIT_FIXES` ready issues and hands the night to `mon` on the `ci/cl` tag.
+raises findings onto the board as GitHub issues, then works up to `AUDIT_FIXES` cards from
+`Ready`, reviews up to `AUDIT_REVIEWS` cards from `In review`, and hands the night to `mon` on
+the `ci/cl` tag.
 
-The board commit is the one automated thing that reaches `main`. It is markdown, all
-`ready: false`, so nothing acts on it. Fix attempts never go near `main`.
+The reviewer is the only automated thing that reaches `main`, and only for a merge that passed
+its route. Findings are raised into `Backlog`, where nothing acts on them until someone triages
+them into `Ready`.
 
 Debugging a night that did nothing, in order:
 
