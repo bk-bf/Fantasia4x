@@ -246,17 +246,19 @@ export function comment(handle, text) {
 
 const checkboxKey = (s) => s.trim().replace(/\s+/g, ' ');
 
+/** A session is told to quote the checkbox text exactly, and routinely appends its reasoning to
+ *  the same line. Matching on a prefix ticks what was actually done instead of silently
+ *  ticking nothing. */
 export function tickRemediation(handle, account) {
-  const done = new Set(
-    (account.match(/^[ \t]*DONE:[ \t]*(.+)$/gm) ?? []).map((l) =>
-      checkboxKey(l.replace(/^[ \t]*DONE:[ \t]*/, ''))
-    )
+  const done = (account.match(/^[ \t]*DONE:[ \t]*(.+)$/gm) ?? []).map((l) =>
+    checkboxKey(l.replace(/^[ \t]*DONE:[ \t]*/, ''))
   );
-  if (done.size === 0) return 0;
+  if (done.length === 0) return 0;
   const cur = readIssue(handle);
   let ticked = 0;
   const next = cur.body.replace(/^([ \t]*)- \[ \] (.+)$/gm, (line, indent, text) => {
-    if (!done.has(checkboxKey(text))) return line;
+    const key = checkboxKey(text);
+    if (!done.some((d) => d === key || d.startsWith(key))) return line;
     ticked += 1;
     return `${indent}- [x] ${text}`;
   });
