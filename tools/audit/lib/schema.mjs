@@ -9,10 +9,31 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 
 /** Every label a writer may use: the fixed vocabulary plus one per rule name. Anything else
  *  is a typo or an invention, and both pollute the board the same way. */
+function vocabulary() {
+  try {
+    return JSON.parse(readFileSync(join(HERE, '..', 'labels.json'), 'utf8'));
+  } catch {
+    return { required: [], groups: {} };
+  }
+}
+
+/** Every issue has to say how severe it is, what sort of thing it is, who raised it and how it
+ *  gets verified. An issue missing one of those cannot be sorted, filtered or costed. */
+export function checkRequired(labels = []) {
+  const { required = [], groups = {} } = vocabulary();
+  const errors = [];
+  for (const g of required) {
+    const options = groups[g] ?? [];
+    if (options.some((l) => labels.includes(l))) continue;
+    errors.push(`no ${g} label — one of: ${options.join(', ')}`);
+  }
+  return errors;
+}
+
 export function allowedLabels() {
   const out = new Set();
   try {
-    for (const group of Object.values(JSON.parse(readFileSync(join(HERE, '..', 'labels.json'), 'utf8')))) {
+    for (const group of Object.values(vocabulary().groups)) {
       for (const l of group) out.add(l);
     }
   } catch {
@@ -136,6 +157,63 @@ export function checkBody(body) {
   return errors;
 }
 
-export function check({ labels, body, allowReady = false } = {}) {
-  return [...checkLabels(labels, { allowReady }), ...checkBody(body)];
+const MIN_PROSE = 240;
+
+/** An issue nobody can act on is worse than no issue: it inflates the count and names nothing.
+ *  The bar is deliberately about substance, not shape — a heading with nothing under it passes
+ *  a section check and still tells a reader nothing. */
+export function checkTemplate(body, labels = []) {
+  const errors = [];
+  const text = (body ?? '')
+    .replace(/<!--[\s\S]*?-->/g, '')
+    .replace(/^\s*>.*$/gm, '')
+    .trim();
+
+  const prose = text
+    .replace(/^#{1,6} .*$/gm, '')
+    .replace(/```[\s\S]*?```/g, '')
+    .replace(/^\s*[-*] \[[ x]\] /gm, '')
+    .trim();
+
+  if (prose.length < MIN_PROSE) {
+    errors.push(
+      `the body is ${prose.length} characters of prose, under ${MIN_PROSE} — say what breaks and ` +
+        'what a reader should see, not just a title'
+    );
+  }
+
+  // structure is a means, not the bar: a checkbox list with citations is actionable, and a
+  // wall of unbroken prose is not. Only ask for sections once it is long enough to need them.
+  const headings = [...text.matchAll(/^##\s+(.+)$/gm)].map((m) => m[1].trim().toLowerCase());
+  if (!headings.length && prose.length > 1500) {
+    errors.push(
+      `${prose.length} characters with no sections — break it up, see .github/ISSUE_TEMPLATE`
+    );
+  }
+  for (const h of headings) {
+    const under = text.split(new RegExp(`^##\\s+${h.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*$`, 'im'))[1] ?? '';
+    const nextBreak = under.split(/^##\s+/m)[0].trim();
+    if (nextBreak.length < 20) errors.push(`the section "${h}" is empty`);
+  }
+
+  const cites =
+    (text.match(/https:\/\/github\.com\/[^/]+\/[^/]+\/blob\//g) ?? []).length +
+    (text.match(/(?<![\w#])#\d+\b/g) ?? []).length;
+  if (!cites) {
+    errors.push('no citation — link the line, the spec or the issue this is about');
+  }
+
+  const decision = labels.includes('needs decision');
+  if (!decision && !/^\s*[-*] \[[ x]\] /m.test(text)) {
+    errors.push('no remediation checkbox — an issue needs a definition of done, or the label "needs decision"');
+  }
+  return errors;
+}
+
+export function check({ labels, body, allowReady = false, template = false } = {}) {
+  return [
+    ...checkLabels(labels, { allowReady }),
+    ...checkBody(body),
+    ...(template ? [...checkTemplate(body, labels ?? []), ...checkRequired(labels ?? [])] : [])
+  ];
 }

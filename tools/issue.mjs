@@ -14,7 +14,7 @@
 
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
-import { check, allowedLabels } from './audit/lib/schema.mjs';
+import { check, allowedLabels, checkRequired, checkTemplate } from './audit/lib/schema.mjs';
 import { linkify, issueRef, indexedSha, blobUrl, resolveRepoPath } from './audit/lib/links.mjs';
 
 process.stdout.on('error', (e) => {
@@ -42,18 +42,6 @@ const readBody = () => {
   if (f === '-') return readFileSync(0, 'utf8');
   if (f) return readFileSync(f, 'utf8');
   return arg('body', '');
-};
-
-/** Repair what can be repaired, then refuse what cannot. */
-const prepare = (raw) => {
-  const sha = indexedSha(null);
-  const body = linkify(issueRef(raw ?? ''), sha);
-  return body;
-};
-
-const guard = (labels, body, { allowReady = false } = {}) => {
-  const errors = check({ labels, body, allowReady });
-  if (errors.length) die(`refused:\n  - ${errors.join('\n  - ')}`);
 };
 
 const EXT = /\.(ts|tsx|js|mjs|cjs|svelte|json|md|sh|py|rs|css|html)$/;
@@ -114,6 +102,15 @@ function repair(body, sha) {
   return unnest(linkify(out, sha));
 }
 
+/** Repair what can be repaired, then refuse what cannot. Same treatment as fix-links, so a
+ *  body written by hand and a body rewritten in bulk end up in the same shape. */
+const prepare = (raw) => repair(raw ?? '', indexedSha(null));
+
+const guard = (labels, body, { allowReady = false, template = false } = {}) => {
+  const errors = check({ labels, body, allowReady, template });
+  if (errors.length) die(`refused:\n  - ${errors.join('\n  - ')}`);
+};
+
 const allIssues = () =>
   JSON.parse(gh(['issue', 'list', '--state', 'all', '--limit', '300', '--json', 'number,title,body']));
 
@@ -130,7 +127,21 @@ const LANES = {
 // takes one out, and nothing puts it back because he did.
 const HIS = new Set(['blocked on you', 'needs playtest']);
 
-if (cmd === 'lane') {
+if (cmd === 'check-labels') {
+  let bad = 0;
+  for (const it of JSON.parse(
+    gh(['issue', 'list', '--state', 'open', '--limit', '300', '--json', 'number,title,labels,body'])
+  )) {
+    const names = it.labels.map((l) => l.name);
+    const problems = [...checkRequired(names), ...checkTemplate(it.body, names)];
+    if (!problems.length) continue;
+    bad += 1;
+    process.stdout.write(`#${it.number}  ${it.title.slice(0, 52)}\n`);
+    for (const e of problems) process.stdout.write(`      ${e}\n`);
+  }
+  process.stdout.write(`\n${bad} open issue(s) incompletely classified\n`);
+  if (bad) process.exit(1);
+} else if (cmd === 'lane') {
   const n = argv[1] ?? die('which issue?');
   const to = (argv.slice(2).join(' ') || '').toLowerCase();
   if (!LANES[to]) die(`unknown lane "${to}" — one of: ${Object.keys(LANES).join(', ')}`);
@@ -194,7 +205,7 @@ if (cmd === 'lane') {
   for (const l of [...allowedLabels()].sort()) process.stdout.write(`${l}\n`);
 } else if (cmd === 'lint') {
   const body = prepare(readBody());
-  const errors = check({ labels: all('label'), body });
+  const errors = check({ labels: all('label'), body, template: !argv.includes('--no-template') });
   if (errors.length) die(`refused:\n  - ${errors.join('\n  - ')}`);
   process.stdout.write('ok\n');
 } else if (cmd === 'sync-labels') {
@@ -215,7 +226,7 @@ if (cmd === 'lane') {
   const title = arg('title') ?? die('--title is required');
   const labels = all('label');
   const body = prepare(readBody());
-  guard(labels, body);
+  guard(labels, body, { template: true });
   const args = ['issue', 'create', '--title', title, '--body-file', '-'];
   for (const l of labels) args.push('--label', l);
   process.stdout.write(gh(args, body));
@@ -223,7 +234,7 @@ if (cmd === 'lane') {
   const n = argv[1] ?? die('which issue?');
   const add = all('add-label');
   const body = arg('body-file') ? prepare(readBody()) : null;
-  guard(add, body ?? '', { allowReady: true });
+  guard(add, body ?? '', { allowReady: true, template: body !== null });
   const args = ['issue', 'edit', n];
   if (arg('title')) args.push('--title', arg('title'));
   if (body !== null) args.push('--body-file', '-');

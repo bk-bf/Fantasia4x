@@ -218,6 +218,15 @@ means nothing in an issue body; a project-view URL, which is renumbered; a blob 
 or line does not exist at that commit; and `ready` on a new issue, because new work lands in
 `Backlog`.
 
+**Four classifications are required on every issue** — severity, kind, origin and verify. An
+issue missing one cannot be sorted, filtered or costed, so `create` refuses it and
+`pnpm issue check-labels` reports any open issue that has drifted.
+
+**A body has to say something.** `create` also refuses a stub: under ~240 characters of prose,
+no citation, or no remediation checkbox (unless it carries `needs decision`). A heading with
+nothing under it counts as empty. `.github/ISSUE_TEMPLATE` holds the shape, though structure is
+not the bar — a checkbox list with citations is fine, and a wall of unbroken prose is not.
+
 The vocabulary is `tools/audit/labels.json` plus one label per rule `name`. Adding a label means
 editing that file, not inventing one at a call site. `pnpm issue sync-labels` creates what is
 missing and names the strays.
