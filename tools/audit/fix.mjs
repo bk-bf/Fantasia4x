@@ -84,6 +84,16 @@ function pick() {
   fail(`every ${route} card in Ready is already closed`);
 }
 
+const say = (n, text) => {
+  try {
+    I.comment(n, text);
+    return true;
+  } catch (e) {
+    out(`--- could not comment on #${n}: ${String(e.message).split('\n').slice(0, 4).join(' ')}`);
+    return false;
+  }
+};
+
 function fail(msg) {
   out(`ABORT: ${msg}`);
   process.exit(1);
@@ -182,8 +192,13 @@ const control = readControl();
 const paused = control.paused === true;
 if (paused) {
   const why = control.reason ? `: ${control.reason}` : '';
-  if (!flag('dry-run')) fail(`the audit is paused${why}, and the fixer spends the same limits`);
-  out(`--- the audit is paused${why}; a real run would stop here`);
+  if (flag('force')) out(`--- the audit is paused${why}; --force overrides it for this card`);
+  else if (!flag('dry-run'))
+    fail(
+      `the audit is paused${why}, and the fixer spends the same limits. ` +
+        `--force runs this one card anyway and leaves the audit paused.`
+    );
+  else out(`--- the audit is paused${why}; a real run would stop here`);
 }
 
 for (const it of B.inLane('in progress')) {
@@ -295,8 +310,7 @@ try {
   const files = changedFiles(wt);
   if (files.length === 0) {
     out('--- nothing changed');
-    I.comment(
-      num,
+    say(num,
       `**Fix attempt on \`${branch}\` changed nothing.**\n\n## What it reports\n\n${
         account || '_(the attempt returned nothing)_'
       }\n`
@@ -311,8 +325,7 @@ try {
 
     if (!v.ok) {
       const detail = failureDetail(v.results);
-      I.comment(
-        num,
+      say(num,
         P.renderAttempt({ branch, files, account, verified: 'fail', failures: detail })
       );
       B.moveLane(num, 'ready');
@@ -342,13 +355,12 @@ try {
 
       if (route === 'playtest') {
         const port = await assignDevPort(wt);
-        I.comment(
-          num,
+        say(num,
           P.renderPlaytest({ branch, worktree: wt, port, files, account, ran, pushed })
         );
         keepTree = true;
       } else {
-        I.comment(num, P.renderAttempt({ branch, files, account, verified: 'pass', ran, pushed }));
+        say(num, P.renderAttempt({ branch, files, account, verified: 'pass', ran, pushed }));
       }
 
       const ticked = I.tickRemediation(num, account);
@@ -366,8 +378,7 @@ try {
 } catch (e) {
   out(`--- ${e.message}`);
   keepTree = true;
-  I.comment(
-    num,
+  say(num,
     P.renderAttempt({ branch, files: [], account: '', verified: 'fail', failures: e.message })
   );
   B.moveLane(num, 'ready');

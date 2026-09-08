@@ -48,6 +48,16 @@ const arg = (n, d) => {
 const flag = (n) => process.argv.includes(`--${n}`);
 const out = (s) => process.stdout.write(s + '\n');
 
+const say = (n, text) => {
+  try {
+    I.comment(n, text);
+    return true;
+  } catch (e) {
+    out(`--- could not comment on #${n}: ${String(e.message).split('\n').slice(0, 4).join(' ')}`);
+    return false;
+  }
+};
+
 function fail(msg) {
   out(`ABORT: ${msg}`);
   process.exit(1);
@@ -148,8 +158,13 @@ ${issue.body}
 const control = readControl();
 if (control.paused === true) {
   const why = control.reason ? `: ${control.reason}` : '';
-  if (!flag('dry-run')) fail(`the audit is paused${why}, and the reviewer spends the same limits`);
-  out(`--- the audit is paused${why}; a real run would stop here`);
+  if (flag('force')) out(`--- the audit is paused${why}; --force overrides it for this card`);
+  else if (!flag('dry-run'))
+    fail(
+      `the audit is paused${why}, and the reviewer spends the same limits. ` +
+        `--force runs this one card anyway and leaves the audit paused.`
+    );
+  else out(`--- the audit is paused${why}; a real run would stop here`);
 }
 
 const { issue, route } = pick();
@@ -194,7 +209,7 @@ const sendBack = (failures, ran, account) => {
   if (sent) return;
   sent = true;
   try {
-    I.comment(num, P.renderReview({ branch: fixBranch, route, ran, ok: false, failures, account }));
+    say(num, P.renderReview({ branch: fixBranch, route, ran, ok: false, failures, account }));
     B.moveLane(num, 'ready');
   } catch (e) {
     out(`--- could not write the issue back: ${e.message}`);
@@ -314,9 +329,7 @@ try {
     }
   };
   sent = true;
-  settle('comment on the issue', () =>
-    I.comment(num, P.renderReview({ branch: fixBranch, route, ran, ok: true, sha, account }))
-  );
+  say(num, P.renderReview({ branch: fixBranch, route, ran, ok: true, sha, account }));
   settle('close the issue', () => I.patchIssue(num, { status: 'closed' }));
   settle('move the card to Done', () => B.moveLane(num, 'done'));
   out(`--- #${num} closed, card in Done`);

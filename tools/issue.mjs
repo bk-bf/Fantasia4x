@@ -219,7 +219,11 @@ if (cmd === 'check-labels') {
 } else if (cmd === 'comment') {
   const n = argv[1] ?? die('which issue?');
   const body = prepare(readBody());
-  guard([], body, { allowReady: true });
+  // A comment is a record of what a run did, not a specification. Refusing to post one because
+  // the text it is reporting names something that no longer exists loses the whole record, so
+  // the same problems are reported and the comment still goes up.
+  const problems = check({ labels: [], body, allowReady: true });
+  for (const e of problems) process.stderr.write(`note: ${e}\n`);
   process.stdout.write(gh(['issue', 'comment', n, '--body-file', '-'], body));
 } else if (cmd === 'close') {
   const n = argv[1] ?? die('which issue?');

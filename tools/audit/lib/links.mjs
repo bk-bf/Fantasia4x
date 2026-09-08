@@ -41,7 +41,8 @@ const PATH_RE =
   /(?<![\w/[(`])((?:src|tools|scripts|docs|electron)\/[A-Za-z0-9._/-]+\.[A-Za-z]{1,8})(?::(\d+))?/g;
 
 /** Turn `src/lib/x.ts:41` written in prose into a permalink, leaving anything already inside
- *  a markdown link or a code span alone. */
+ *  a markdown link or a code span alone. A path that does not resolve at the commit is left as
+ *  written: linking it would manufacture a dead permalink, which the body check then rejects. */
 export function linkify(text, sha) {
   if (!text) return text;
   const spans = [];
@@ -51,8 +52,10 @@ export function linkify(text, sha) {
 
   return text.replace(PATH_RE, (whole, file, line, offset) => {
     if (inside(offset)) return whole;
-    const label = line ? `${file}:${line}` : file;
-    return `[\`${label}\`](${blobUrl(file, line, sha)})`;
+    const real = resolveRepoPath(file, sha);
+    if (!real) return whole;
+    const label = line ? `${real}:${line}` : real;
+    return `[\`${label}\`](${blobUrl(real, line, sha)})`;
   });
 }
 
