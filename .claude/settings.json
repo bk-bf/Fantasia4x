@@ -8,7 +8,9 @@
       "Bash(gh issue reopen:*)",
       "Bash(gh label create:*)",
       "Bash(gh label edit:*)",
-      "Bash(gh label delete:*)"
+      "Bash(gh label delete:*)",
+      "Bash(gh project item-edit:*)",
+      "Bash(gh project item-delete:*)"
     ]
   }
 }

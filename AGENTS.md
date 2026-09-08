@@ -183,6 +183,14 @@ stays the ledger's key and should not appear in anything a person reads.
 - **`Blocked on you`** — cannot proceed until he chooses: a proposal awaiting a yes, or a design
   call whose measurements are already in hand. Not a parking space for anything merely hard.
 
+**`Blocked on you` and `Needs playtest` are his lanes.** Put a card in when it belongs there.
+**Never take one out** — he is the only one who decides a thing he asked to look at has been
+looked at. And do not put one back because he moved it out: him moving a card is the answer,
+not a mistake to correct. Nothing watches those lanes for drift.
+
+Move a card with `pnpm issue lane <n> <lane>`, which refuses the wrong direction. Direct
+`gh project item-edit` is denied.
+
 Do not skip a lane. Nothing goes from `Backlog` straight to `In progress`, and nothing reaches
 `Done` without passing through his review.
 
