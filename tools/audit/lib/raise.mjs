@@ -65,7 +65,7 @@ export function groupFindings(db) {
   const rows = db
     .prepare(
       `
-    SELECT f.id, f.symbol_key, f.rule_id, f.summary, f.evidence, f.state,
+    SELECT f.id, f.symbol_key, f.rule_id, f.summary, f.evidence, f.state, f.issue_number,
            s.file, s.start_line, s.name, s.kind AS symbol_kind,
            r.family, r.title AS rule_title, r.authority
       FROM finding f
@@ -180,6 +180,24 @@ const safeJson = (s) => {
 function titleFor(g) {
   const t = g.rule_title ?? g.rule_id;
   return `${t.charAt(0).toUpperCase()}${t.slice(1)} — ${g.group}`;
+}
+
+export function renderNewFindings(g, fresh) {
+  const name = g.rule_title ?? g.rule_id;
+  const lines = [
+    `The audit has found ${fresh.length} more ${fresh.length === 1 ? 'occurrence' : 'occurrences'} of ${name} in \`${g.group}\` since this issue was triaged.`,
+    '',
+    'They are not in the body above, because the body is not rewritten once a card has left `Backlog`.',
+    ''
+  ];
+  for (const f of fresh) {
+    lines.push(`- \`${f.file}:${f.start_line}\` — ${(f.summary ?? '').trim()}`);
+  }
+  lines.push('');
+  lines.push(
+    'If any of these is a different failure mode rather than more of the same, it wants its own issue.'
+  );
+  return lines.join('\n');
 }
 
 export function idFor(g, rulesById) {

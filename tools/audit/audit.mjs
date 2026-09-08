@@ -31,7 +31,7 @@ import { buildPrompt } from './lib/prompt.mjs';
 import { parseResponse, validate } from './lib/verdict.mjs';
 import { adrConstDrift, adrCoverage, seamViolations } from './lib/t0.mjs';
 import * as I from './lib/gh.mjs';
-import { groupFindings, upsertIssue } from './lib/raise.mjs';
+import { groupFindings, upsertIssue, renderNewFindings } from './lib/raise.mjs';
 import { indexedSha } from './lib/links.mjs';
 import { tick } from './lib/supervise.mjs';
 
@@ -390,6 +390,15 @@ function cmdIssues() {
   for (const g of groups) {
     const r = upsertIssue(ROOT, g, byId, sha, flag('rerender'));
     counts[r.action] = (counts[r.action] ?? 0) + 1;
+    const fresh = g.findings.filter((f) => f.issue_number === null);
+    if (r.action.startsWith('skipped') && fresh.length > 0 && r.action !== 'skipped-human') {
+      try {
+        I.comment(r.path, renderNewFindings(g, fresh));
+        out(`  commented #${r.path}  ${r.id}  (${fresh.length} new since it was triaged)`);
+      } catch (e) {
+        out(`  WARN     #${r.path}  could not comment: ${String(e.message).slice(0, 120)}`);
+      }
+    }
     const linked = L.markRaised(
       db,
       g.findings.map((f) => f.id),
