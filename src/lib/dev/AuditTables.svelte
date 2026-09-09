@@ -167,7 +167,6 @@
     }
   ];
 
-  const ARM_ORDER = ['none', 'light', 'medium', 'heavy'];
   const matchupCols: Column<CreatureRow>[] = [
     { key: 'weapon', label: 'weapon', get: (r) => r.weapon },
     { key: 'creature', label: 'creature', get: (r) => r.creature },
@@ -182,7 +181,7 @@
     {
       key: 'armour',
       label: 'pawn wearing',
-      get: (r) => ARM_ORDER.indexOf(r.armour),
+      get: (r) => ARMOUR_ORDER.indexOf(r.armour),
       disp: (r) => r.armour
     },
     {
@@ -399,13 +398,17 @@
     }
   ];
 
-  const TABS: { key: Tab; label: string }[] = [
-    { key: 'creatures', label: 'Weapon summary' },
-    { key: 'byCreature', label: 'Every matchup' },
-    { key: 'fit', label: 'Weapon × pawn fit' },
-    { key: 'styles', label: 'Style vs armour' },
-    { key: 'move', label: 'Armour flip' }
-  ];
+  const TAB_LABELS: Record<Tab, string> = {
+    creatures: 'Weapon summary',
+    byCreature: 'Every matchup',
+    fit: 'Weapon × pawn fit',
+    styles: 'Style vs armour',
+    move: 'Armour flip'
+  };
+  const TABS: { key: Tab; label: string }[] = (Object.keys(TAB_LABELS) as Tab[]).map((key) => ({
+    key,
+    label: TAB_LABELS[key]
+  }));
 </script>
 
 <div class="audit">
