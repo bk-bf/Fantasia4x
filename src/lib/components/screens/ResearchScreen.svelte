@@ -36,25 +36,6 @@
     gameState.command({ type: 'startResearch', payload: { researchId: research.id } });
   }
 
-  function getCategoryIcon(category: string): string {
-    switch (category) {
-      case 'knowledge':
-        return '📚';
-      case 'crafting':
-        return '⚒️';
-      case 'building':
-        return '🏗️';
-      case 'military':
-        return '⚔️';
-      case 'exploration':
-        return '🗺️';
-      case 'social':
-        return '👥';
-      default:
-        return '🔬';
-    }
-  }
-
   function getTierColor(tier: number): string {
     switch (tier) {
       case 0:
