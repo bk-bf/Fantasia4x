@@ -1,93 +1,103 @@
-# Promoting dev to main
+# Playtest before promoting
 
-`main` is the branch you play and build from. Nothing automated writes to it. Everything the
-audit and the resolver produce lands on `dev`, and it arrives on `main` only when you run:
+What is on `dev` and not in the build you play, ranked by priority. Regenerate the list with
+`pnpm audit:promote --list`; this one is stamped after #43.
 
-```bash
-pnpm audit:promote --list      # what is on dev that main does not have
-pnpm audit:promote             # merge it in a throwaway worktree, run the whole suite, stop
-pnpm audit:promote --push      # the same, then push main and move the cards to Done
-```
+## P1
 
-Without `--push` it merges `dev` into `main` in `.claude/worktrees/promote`, runs `pnpm check`
-and the **entire** vitest suite there — 191 files, 1,383 tests, about seven minutes — and then
-prints that worktree so you can play the merge before it exists anywhere else:
+- [ ] **#43 — DB-PASS-QUEUE, the four remaining data passes**
+      Fourteen alchemy recipes moved off `distilled_spirit: 0.3` onto a whole `grape_wine: 1` or
+      `hopped_ale: 1` — salves, tinctures, antidotes, the woundwort line, the ichor and bile
+      potions. Every one of them now depends on the brewing chain instead of distilling.
+      *Watch: that a potion is still craftable from what a colony has, and that wine and ale
+      supply keeps up.*
 
-```bash
-cd .claude/worktrees/promote && ./dev.sh
-```
+- [ ] **#11 — A pawn can equip an item the colony does not have**
+      `equipPawnItem` now refuses when the item is not in the stockpile and consumes it when it
+      is; unequipping returns it. Scenario setup uses a separate `devEquipPawnItem` bypass so
+      it cannot be mistaken for proof of obtainability.
+      *Watch: equip and unequip a few pieces and check the stockpile count moves both ways.*
 
-It has its own `.devport`, so it runs beside whatever is already on 5173, and `dev.sh` prints
-the branch and commit it is serving. A promotion that is not green leaves `main` untouched.
+- [ ] **#12 — A fractional recipe quantity rounds back up to a whole unit**
+      Stockpile comparisons gained an epsilon, and a partial take is now taken as a partial
+      instead of `Math.ceil` rounding it up to a whole unit.
+      *Watch: inputs deplete by the amount you expect and no order sticks queued.*
 
-## What to look at first
+- [ ] **#3 — Caught error is discarded, components/screens**
+      Errors that were caught and swallowed are now reported instead of vanishing.
+      *Watch: nothing new and noisy appears in the log during ordinary play.*
 
-Most of what lands is label and roster derivation with no intended behaviour change. These are
-the ones that change what the game does, so spend the spin here.
+- [ ] **#28 — Hand-maintained roster restates a declared set, components/screens**
+      The screens derive their rosters from the declaration instead of restating them, and
+      `KNOWLEDGE_TIERS` now holds the labels beside the thresholds that produce them.
+      *Watch: the kingdom screen's knowledge wording — strangers, acquainted, familiar, well
+      known, deeply known.*
 
-**Alchemy inputs changed across fourteen recipes.** `distilled_spirit: 0.3` became a whole
-`grape_wine: 1` or `hopped_ale: 1` — salves, tinctures, antidotes, the woundwort line, the ichor
-and bile potions. Every one of them now depends on the brewing chain instead of distilling, and
-on whole units instead of a third. Check a potion is still craftable from what a colony has, and
-that the wine and ale supply can keep up.
+- [ ] **#29 — Hand-maintained roster restates a declared set, components/UI**
+      Same derivation across the canvas and HUD components.
+      *Watch: zone panel, building storage, stockpile zone and chronicle entries all label
+      correctly.*
 
-**Equipping consumes stock.** `equipPawnItem` now refuses when the item is not in the stockpile
-and consumes it when it is; unequipping returns it. This is the largest behavioural change on the
-branch. Equip and unequip a few pieces and watch the count move. Anything that refuses to equip
-when it should not is this.
+- [ ] **#27 — Hand-maintained roster restates a declared set, components/pawn**
+      Same derivation across the pawn panels.
+      *Watch: traits, attributes, relations, stance, and the rest and medicine policies.*
 
-**Bow recipes changed.** War bow and hunting recurve take 5 and 4 `branch` instead of 1 `log`.
-Confirm they are satisfiable from what an early colony actually gathers.
+- [ ] **#30 — Hand-maintained roster restates a declared set, components/util**
+      Same derivation in the shared helpers; `core/types/buildings.ts` now declares the set once.
+      *Watch: the item category tree and the work list render with real names.*
 
-**Fractional recipe quantities no longer round up.** A partial take is taken as a partial, with
-an epsilon on the stockpile comparisons. Watch inputs deplete by the amount you expect, and that
-nothing sticks queued.
+- [ ] **#26 — Hand-maintained roster restates a declared set, audio**
+      The ambient layer roster is derived rather than hand-listed.
+      *Watch: ambience plays, and changes between day and night.*
 
-## Then sweep the panels
+- [ ] **#31 — Hand-maintained roster restates a declared set, dev**
+      The gear-db audit tables dropped a duplicated `ARM_ORDER` and made the tab list exhaustive
+      by type, so a missing tab is now a compile error.
+      *Watch: `/gear-db` opens and every tab renders.*
 
-Ten cards rewrote how labels are produced. A wrong lookup shows as a blank label or a raw id,
-not as a crash, so it needs eyes rather than tests.
+## P2
 
-- Pawn screen — attributes, traits, relations, equipment doll, stance, rest and medicine policies
-- Kingdom screen — the knowledge tier wording: `strangers`, `acquainted`, `familiar`,
-  `well known`, `deeply known`
-- Canvas HUD — zone panel, building storage, stockpile zone, chronicle entries
-- Combat log — the narration strings
-- Ambience — that it plays, and that it changes between day and night
-- `/gear-db` — the audit tables
+- [ ] **#10 — War bow and hunting recurve each consume two pieces of wood for one stave**
+      Both now take `branch` — 5 and 4 — instead of a single `log`, with a rule test over it.
+      *Watch: both are craftable from what an early colony actually gathers.*
 
-## What is on dev
+- [ ] **#32 — Display label mapped by hand where a lookup exists, components/util**
+      Condition labels are spread from `CORE_STAT_ABBR` instead of a retyped copy.
+      *Watch: condition and trait tooltips show abbreviations, not raw ids.*
 
-As of `origin/dev` after `#43`. Regenerate with `pnpm audit:promote --list`.
+## P3
 
-| # | what it does |
-|---|---|
-| 3 | `components/screens` — caught errors were swallowed; they are reported |
-| 4 | `audio` — unreachable `isNight ? 0 : 0.15` arm removed from the ambient fallback |
-| 5 | `components/pawn` — dead `*Penalty` branch in the trait effects loop removed |
-| 6 | `components/screens` — unreachable branch removed |
-| 7 | `components/UI` — unreachable branch removed |
-| 8 | `components/util` — unreachable branch removed |
-| 10 | **war bow and hunting recurve cost 5 and 4 `branch` instead of 1 `log`**, plus a rule test |
-| 11 | **`equipPawnItem` refuses on empty stock and consumes the item**; scenario setup uses a separate `devEquipPawnItem` bypass |
-| 12 | **fractional recipe quantities** — epsilon comparisons, partial take instead of rounding up |
-| 26 | `audio` — ambient roster derived instead of hand-listed |
-| 27 | `components/pawn` — roster derived across the pawn panels |
-| 28 | `components/screens` — roster derived; `KNOWLEDGE_TIERS` added so labels sit beside thresholds |
-| 29 | `components/UI` — roster derived across canvas and HUD |
-| 30 | `components/util` — roster derived; `core/types/buildings.ts` declares the set once |
-| 31 | `dev` — gear-db tables: duplicate `ARM_ORDER` dropped, `TABS` made exhaustive by type |
-| 32 | `components/util` — condition labels spread from `CORE_STAT_ABBR` |
-| 38 | combat balance loose ends — narration, work utils, stat view, tile storage |
-| 43 | **fourteen alchemy recipes moved off `distilled_spirit` onto whole `grape_wine` / `hopped_ale`** |
+- [ ] **#38 — Combat balance 4f, loose ends left by the two-axis rebuild**
+      Tidies left over from the two-axis rebuild across combat narration, work utils, stat view
+      and tile storage.
+      *Watch: the combat log reads correctly through a fight.*
 
-## What is not on dev
+- [ ] **#4 — Branch no caller can reach, audio**
+      The ambient fallback had an `isNight ? 0 : 0.15` arm that could never take the `0`, since
+      the night case returns earlier. Now a plain `0.15`.
+      *Watch: night ambience still differs from day.*
 
-**#9, heavy armour stiffness.** Its headless review measured the fix working — bare 9.14 hits
-taken per 8000-tick trial against 15.31 for a full bone kit, over 16 seeds — but failed it,
-because a remediation item claimed `movementPenalty` would become a load error and it did not.
-`items.ts` still declares it optional and `defs/items.ts` loads the database with a raw cast, so
-a new armour piece omitting the field still ships with zero stiffness. Heavy armour dodge cost is
-unchanged on `dev`.
+- [ ] **#5 — Branch no caller can reach, components/pawn**
+      A dead `*Penalty` arm in the trait effects loop removed; no trait ever carried that key.
+      *Watch: trait cards still list their effects.*
 
-**#13, the gear grid age match.** Could not be made green; the card is back in `Ready`.
+- [ ] **#6 — Branch no caller can reach, components/screens**
+      Unreachable branch removed.
+      *Watch: the screens it touched still open.*
+
+- [ ] **#7 — Branch no caller can reach, components/UI**
+      Unreachable branch removed.
+      *Watch: the canvas draws.*
+
+- [ ] **#8 — Branch no caller can reach, components/util**
+      Unreachable branch removed.
+      *Watch: nothing that reads a pawn's utils renders blank.*
+
+## Not on dev
+
+- **#9, heavy armour stiffness.** The headless review measured the fix working — 9.14 hits taken
+  bare against 15.31 in a full bone kit over 16 seeds — then failed it, because a remediation item
+  claimed `movementPenalty` would become a load error and it does not. Heavy armour dodge cost is
+  unchanged.
+- **#13, the gear grid files an item by matching words in its research id.** Could not be made
+  green; back in `Ready`.
