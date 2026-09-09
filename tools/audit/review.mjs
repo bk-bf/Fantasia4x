@@ -360,20 +360,25 @@ try {
     }
   };
   sent = true;
-  say(
-    num,
-    P.renderReview({
-      branch: fixBranch,
-      route,
-      ran,
-      ok: true,
-      sha,
-      account,
-      base: BASE,
-      outside: wandered?.outside
-    })
-  );
-  settle('close the issue', () => I.patchIssue(num, { status: 'closed' }));
+  // The fixer already wrote up the attempt and the commands it ran. Repeating that here says
+  // nothing, so a clean pass leaves only `Fixed in <sha>.` on the close. A headless account or
+  // a reach past the cited files is new, and does get written.
+  if (account || wandered?.outside?.length) {
+    say(
+      num,
+      P.renderReview({
+        branch: fixBranch,
+        route,
+        ran,
+        ok: true,
+        sha,
+        account,
+        base: BASE,
+        outside: wandered?.outside
+      })
+    );
+  }
+  settle('close the issue', () => I.closeWithCommit(num, sha));
   settle('move the card to On dev', () => B.moveLane(num, 'on dev'));
   out(`--- #${num} closed, card in On dev — main is untouched`);
 

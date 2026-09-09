@@ -248,6 +248,11 @@ export function comment(handle, text) {
   invalidate();
 }
 
+export function closeWithCommit(handle, sha) {
+  issueTool(['close', String(handle), '--commit', sha]);
+  invalidate();
+}
+
 const checkboxKey = (s) => s.trim().replace(/\s+/g, ' ');
 
 /** A session is told to quote the checkbox text exactly, and routinely appends its reasoning to
