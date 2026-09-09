@@ -60,6 +60,8 @@ if [[ -n "$COMMIT" ]] && ! git -C "$SCRIPT_DIR" diff --quiet HEAD 2>/dev/null; t
   COMMIT="$COMMIT*"
 fi
 
+echo "Serving ${BRANCH:-a detached HEAD} at ${COMMIT:-unknown} on http://localhost:$PORT"
+
 PROFILER_ENV=""
 if [[ "$PROFILER_MODE" == "true" ]]; then
   PROFILER_ENV="VITE_PROFILER=true"

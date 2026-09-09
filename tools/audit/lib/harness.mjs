@@ -75,10 +75,49 @@ export function changedFiles(cwd) {
 export const committedFiles = (cwd, base = `origin/${BASE}`) =>
   git(['diff', '--name-only', `${base}...HEAD`], cwd).split('\n').filter(Boolean);
 
+const CRATES = [
+  ['sim-core', 'sim-core-pkg'],
+  ['spatial-core', 'spatial-core-pkg']
+];
+
+/** The wasm bytes are copied rather than rebuilt, which is only sound while both trees hold the
+ *  same Rust. A crate that differs, or a dirty crate in the source tree, means the copy would be
+ *  compiled from other source than the code under test -- and a headless number measured against
+ *  it is wrong with nothing to show for it. */
+function crateMatches(crate, from, to) {
+  const treeOf = (dir) => {
+    try {
+      return git(['rev-parse', `HEAD:${crate}`], dir, true);
+    } catch {
+      return null;
+    }
+  };
+  const dirty = (dir) => {
+    try {
+      return git(['status', '--porcelain', '--', crate], dir, true) !== '';
+    } catch {
+      return true;
+    }
+  };
+  const a = treeOf(from);
+  const b = treeOf(to);
+  if (a === null || b === null) return { ok: false, why: `${crate} has no tree in one of them` };
+  if (a !== b) return { ok: false, why: `${crate} is ${a.slice(0, 8)} here and ${b.slice(0, 8)} there` };
+  if (dirty(from)) return { ok: false, why: `${crate} is uncommitted in ${from}` };
+  return { ok: true };
+}
+
+async function buildWasm(wt, log) {
+  for (const script of ['add:wasm', 'add:wasm:sim']) {
+    const r = await run(PNPM, [script], { cwd: wt, timeoutMs: 1_800_000 });
+    if (r.code !== 0) throw new Error(`${PNPM} ${script} failed:\n${tail(r.out + r.err)}`);
+  }
+  log('--- wasm packages built from this tree');
+}
+
 /** A fresh worktree has no node_modules, no .svelte-kit/tsconfig.json for tsconfig to extend,
  *  and no wasm packages -- they are gitignored build output of the Rust crates. Without all
- *  three, svelte-check dies before it reads a line of source. The wasm bytes are copied from
- *  the checkout the worktree was cut from: same committed Rust source, same output. */
+ *  three, svelte-check dies before it reads a line of source. */
 export async function prepareWorktree(wt, log = () => {}) {
   log('--- pnpm install');
   const inst = await run(PNPM, ['install', '--prefer-offline'], { cwd: wt, timeoutMs: 900_000 });
@@ -91,12 +130,25 @@ export async function prepareWorktree(wt, log = () => {}) {
   });
   if (sync.code !== 0) log(`    [warn] sync exited ${sync.code}; verification may not run`);
 
-  for (const pkg of ['sim-core-pkg', 'spatial-core-pkg']) {
-    const from = join(ROOT, 'src', 'lib', pkg);
+  const mismatched = [];
+  for (const [crate, pkg] of CRATES) {
     const to = join(wt, 'src', 'lib', pkg);
-    if (existsSync(from) && !existsSync(to)) cpSync(from, to, { recursive: true });
+    if (existsSync(to)) continue;
+    const from = join(ROOT, 'src', 'lib', pkg);
+    const same = crateMatches(crate, ROOT, wt);
+    if (!same.ok) {
+      mismatched.push(same.why);
+      continue;
+    }
+    if (existsSync(from)) cpSync(from, to, { recursive: true });
   }
-  log('--- wasm packages staged');
+
+  if (mismatched.length) {
+    log(`--- not copying wasm: ${mismatched.join('; ')}`);
+    await buildWasm(wt, log);
+  } else {
+    log('--- wasm packages staged from the checkout, same crate revision');
+  }
 }
 
 export async function verifyTests(cwd, files) {

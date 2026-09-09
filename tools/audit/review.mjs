@@ -142,8 +142,9 @@ re-running them proves nothing new. What is missing is the loop.
 
 Does the sim now behave the way the issue's Remediation list says it should?
 
-- Measure it. State the mechanism and the delta, in the skill's form: "HeadlessSession, N ticks,
-  <thing> X→Y".
+- Measure it. State the mechanism, the delta and the tree, in the skill's form:
+  "HeadlessSession, N ticks, <thing> X→Y, on <branch> at <short sha>". Read the branch and sha
+  from this worktree with git; do not state them from memory.
 - If the change did nothing observable, that is a FAIL, even when the code looks right.
 - If the change works but broke something adjacent that your scenario exposes, that is a FAIL.
 - Do not judge whether the numbers are the right numbers for the game. That is a playtest

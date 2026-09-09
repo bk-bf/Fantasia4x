@@ -16,8 +16,16 @@ loop works. They are a supplement, NEVER a substitute.
 
 - Only call something "playtested / end-to-end / headless-verified" when real pawns produced the
   result over real ticks.
-- Always state the **mechanism + observed delta**: "HeadlessSession, 3600 ticks, galena 60→48,
-  silver_bar 0→1". A claim without a delta is not a verification.
+- Always state the **mechanism + observed delta + the tree it ran in**: "HeadlessSession,
+  3600 ticks, galena 60→48, silver_bar 0→1, on `fix/recipe-rounding` at `a1b2c3d`". A claim
+  without a delta is not a verification, and a delta without a tree cannot be checked by whoever
+  reads it next.
+- **Get the tree from the shell, not from memory**: `git -C . rev-parse --abbrev-ref HEAD` and
+  `git -C . rev-parse --short HEAD`, in the directory the scenario ran in. Nothing here is
+  branch-aware — `dev.sh` and every scenario execute the working tree of whatever directory they
+  are invoked in, so a session started in the main checkout measures `dev` even when the work
+  under test lives on a `fix/` branch in a worktree. That mistake produces a real delta about
+  the wrong code and looks identical to a correct one.
 - If it is only unit-tested, say so plainly and mark it `[~]`, never `[x]`.
 
 Never dress a unit test up as a playtest. This has been a repeated, explicitly-flagged failure.

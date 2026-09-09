@@ -103,7 +103,10 @@ the tiers work.
 
 **A claim that something works comes from running it.** "Verify", "playtest", "end-to-end" and
 "headless" all mean the real sim with real pawns over real ticks — invoke the `headless`
-skill, and state the mechanism and the observed delta ("N ticks, stock X→Y").
+skill, and state the mechanism, the observed delta and the tree it ran in ("N ticks, stock X→Y,
+on `fix/x` at `a1b2c3d`"). Nothing here is branch-aware: `dev.sh` and every scenario run the
+working tree of the directory they are invoked in, so a session started in the checkout measures
+`dev` even when the work under test is on a branch in a worktree.
 
 A unit or service test is a supplement, never a substitute: it proves a function, not that the
 loop works. If a thing is only unit-tested, say exactly that. Never present a unit test as a
