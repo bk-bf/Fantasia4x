@@ -2,12 +2,12 @@
   import { recentActivity, clearActivityLog } from '$lib/stores/Log';
   import { uiState } from '$lib/stores/uiState';
   import { hideSidebars, chronicleMinimized } from '$lib/stores/uiPrefs';
-  import type { ActivityLogEntry } from '$lib/game/core/defs/events';
+  import type { ActivityLogEntry, LogCategory } from '$lib/game/core/defs/events';
   import CombatBreakdown from './CombatBreakdown.svelte';
   import HoverTip from '../tooltip/HoverTip.svelte';
   import ScrollArea from '../widget/ScrollArea.svelte';
 
-  const TYPE_ABBR: Record<string, string> = {
+  const TYPE_ABBR: Record<LogCategory, string> = {
     work: 'WRK',
     building: 'BLD',
     crafting: 'CRF',
@@ -20,10 +20,15 @@
     entity: 'ENT',
     social: 'SOC',
     weather: 'WTR',
-    season: 'SEA'
+    season: 'SEA',
+    ai: 'INS',
+    needs: 'NED',
+    job: 'JOB',
+    item: 'ITM',
+    perf: 'SYS'
   };
 
-  const CATEGORY_LABEL: Record<string, string> = {
+  const CATEGORY_LABEL: Record<LogCategory, string> = {
     work: 'Labour',
     building: 'Construction',
     crafting: 'Crafting',
@@ -36,11 +41,16 @@
     entity: 'Wildlife',
     social: 'Company',
     weather: 'Weather',
-    season: 'Season'
+    season: 'Season',
+    ai: 'Instinct',
+    needs: 'Needs',
+    job: 'Task',
+    item: 'Item',
+    perf: 'Chronicle'
   };
 
   function categoryLabel(e: ActivityLogEntry) {
-    return CATEGORY_LABEL[e.type] ?? 'Chronicle';
+    return CATEGORY_LABEL[e.type];
   }
 
   const SEV_CLASS: Record<string, string> = {
@@ -52,7 +62,7 @@
   };
 
   function abbr(e: ActivityLogEntry) {
-    return TYPE_ABBR[e.type] ?? '???';
+    return TYPE_ABBR[e.type];
   }
 
   let expandedId: string | null = null;

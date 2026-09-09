@@ -33,6 +33,13 @@ export const ZONE_PRIORITY_RANK: Record<ZonePriority, number> = {
   urgent: 3
 };
 
+export const ZONE_PRIORITY_LABELS: Record<ZonePriority, string> = {
+  low: 'Low',
+  normal: 'Normal',
+  preferred: 'Preferred',
+  urgent: 'Urgent'
+};
+
 export interface ZoneInstance {
   id: string;
   type: ZoneInstanceType;

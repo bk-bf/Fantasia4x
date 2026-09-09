@@ -14,8 +14,9 @@
     getAmbientLight,
     getAmbientTint
   } from '$lib/game/services/EnvironmentService';
+  import type { WeatherOverlayKind } from '$lib/game/services/EnvironmentService';
 
-  type Mode = 'none' | 'rain' | 'snow' | 'fog' | 'leaves' | 'dust' | 'snowdust' | 'foggy_rain';
+  type Mode = WeatherOverlayKind;
 
   let canvas: HTMLCanvasElement;
   let ctx: CanvasRenderingContext2D | null = null;

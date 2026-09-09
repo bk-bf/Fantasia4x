@@ -31,8 +31,7 @@
 
   const filterUniverse = (type: string) => (type === 'grow' ? SEED_CATEGORIES : ALL_CATEGORIES);
 
-  const ZONE_DEFS: {
-    type: ZoneInstanceType;
+  interface ZoneDef {
     label: string;
     charSpans: CharSpan[];
     desc: string;
@@ -40,9 +39,14 @@
     filterable?: boolean;
     pawnAssignable?: boolean;
     tinted?: boolean;
-  }[] = [
-    {
-      type: 'stockpile',
+  }
+
+  // 'harvest' is single-tile designation only: it never gets a zone-panel
+  // create card, so it is excluded here rather than silently missing.
+  type ZonePanelType = Exclude<ZoneInstanceType, 'harvest'>;
+
+  const ZONE_DEFS: Record<ZonePanelType, ZoneDef> = {
+    stockpile: {
       label: 'STOCKPILE',
       charSpans: [{ literal: 'P' }],
       desc: 'Haulers deposit carried resources here',
@@ -50,24 +54,21 @@
       filterable: true,
       tinted: true
     },
-    {
-      type: 'drink',
+    drink: {
       label: 'DRINK',
       charSpans: [{ literal: '~' }],
       desc: 'Thirsty pawns come here to drink (clean upstream water / urns)',
       color: '#4fc3f7',
       tinted: true
     },
-    {
-      type: 'wash',
+    wash: {
       label: 'WASH',
       charSpans: [{ literal: '≈' }],
       desc: 'Dirty pawns come here to wash',
       color: '#80d8c0',
       tinted: true
     },
-    {
-      type: 'restrict',
+    restrict: {
       label: 'RESTRICT',
       charSpans: [{ literal: '#' }],
       desc: 'Assigned pawns stay inside this zone and never wander out',
@@ -75,8 +76,7 @@
       pawnAssignable: true,
       tinted: true
     },
-    {
-      type: 'grow',
+    grow: {
       label: 'GROW',
       charSpans: [{ literal: '"' }],
       desc: 'Farmers sow the chosen seed on fertile soil in this zone',
@@ -84,9 +84,11 @@
       filterable: true,
       tinted: true
     }
-  ];
+  };
 
-  const defOf = (type: string) => ZONE_DEFS.find((d) => d.type === type);
+  const ZONE_DEF_ENTRIES = Object.entries(ZONE_DEFS) as [ZonePanelType, ZoneDef][];
+
+  const defOf = (type: string) => (ZONE_DEFS as Record<string, ZoneDef>)[type];
 
   let activeType = $derived($uiState.designationType);
   let activeInstId = $derived($uiState.activeZoneInstanceId);
@@ -107,9 +109,9 @@
     })()
   );
 
-  function newZone(type: ZoneInstanceType) {
+  function newZone(type: ZonePanelType) {
     const existing = ($gameState.zoneInstances ?? []).filter((z) => z.type === type).length;
-    const def = ZONE_DEFS.find((d) => d.type === type)!;
+    const def = ZONE_DEFS[type];
     const label = `${def.label[0]}${def.label.slice(1).toLowerCase()} ${existing + 1}`;
     const id = `${type}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
     gameState.command({ type: 'createZoneInstance', payload: { type, label, id }, save: true });
@@ -198,8 +200,8 @@
   </div>
 
   <div class="card-grid">
-    {#each ZONE_DEFS as def}
-      {@const count = ($gameState.zoneInstances ?? []).filter((z) => z.type === def.type).length}
+    {#each ZONE_DEF_ENTRIES as [type, def] (type)}
+      {@const count = ($gameState.zoneInstances ?? []).filter((z) => z.type === type).length}
       <BuildCard
         name={def.label}
         charSpans={def.charSpans}
@@ -209,7 +211,7 @@
         actionLabel="+ NEW"
         actionEnabled={true}
         variant="ok"
-        onAction={() => newZone(def.type)}
+        onAction={() => newZone(type)}
       >
         {#if count > 0}
           <span class="cost-item">{count} active</span>
