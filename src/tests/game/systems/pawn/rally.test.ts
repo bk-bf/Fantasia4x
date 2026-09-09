@@ -7,6 +7,7 @@ import { getConditionDefById } from '$lib/game/core/rules/body/conditions';
 import { shouldRollBreakdown } from '$lib/game/systems/pawn/handlers/breakdown';
 import { tryRally, _resetRallyCooldowns } from '$lib/game/systems/pawn/rally';
 import { TICKS_PER_GAME_HOUR } from '$lib/game/services/EnvironmentService';
+import { rng } from '$lib/game/core/util/rng';
 import type { GameState, Pawn } from '$lib/game/core/types';
 
 function scene(id: string, dx: number, score: number) {
@@ -30,7 +31,10 @@ function scene(id: string, dx: number, score: number) {
 }
 
 describe('rally system', () => {
-  beforeEach(() => _resetRallyCooldowns());
+  beforeEach(() => {
+    rng.reseed(20260729);
+    _resetRallyCooldowns();
+  });
 
   it('oratory is a real social stat (CHA + prestige + a clear voice)', () => {
     const [p] = generatePawns(initialGameState.culture, 1);

@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { combatService, partArmorReduction } from '$lib/game/systems/Combat';
 import { healWounds } from '$lib/game/systems/PawnStateMachine';
 import { tendPatient } from '$lib/game/services/jobs/caretake';
@@ -6,7 +6,10 @@ import { CREATURES } from '$lib/game/core/defs/creatures';
 import { createBodyPlanLimbs, organsOf, PART_DEF_MAP } from '$lib/game/core/defs/bodyParts';
 import { itemService } from '$lib/game/services/ItemService';
 import { recipeService } from '$lib/game/services/RecipeService';
+import { rng } from '$lib/game/core/util/rng';
 import type { DamageType, GameState, Injury, Mob, Pawn } from '$lib/game/core/types';
+
+beforeEach(() => rng.reseed(20260729));
 
 const stats = {
   strength: 14,
@@ -309,6 +312,38 @@ describe('combat sim (headless tickCombat)', () => {
     const rate = hits / 1000;
     expect(rate).toBeGreaterThan(0.4);
     expect(rate).toBeLessThan(0.8);
+  });
+
+  it('a blinded pawn lands fewer melee blows than an unhurt one (hit_chance reads × sight)', () => {
+    const defender = makePawn({
+      id: 'def',
+      stats: { ...stats, dexterity: 10 },
+      limbs: createBodyPlanLimbs('humanoid', 1)
+    });
+    const empty = makeState([], []);
+    const sighted = makePawn({
+      id: 'atk',
+      stats: { ...stats, dexterity: 10 },
+      limbs: createBodyPlanLimbs('humanoid', 1)
+    });
+    const blinded = makePawn({
+      id: 'atk',
+      stats: { ...stats, dexterity: 10 },
+      limbs: createBodyPlanLimbs('humanoid', 1)
+    });
+    for (const limb of blinded.limbs ?? [])
+      for (const part of limb.parts ?? [])
+        if (part.id === 'leftEye' || part.id === 'rightEye') {
+          part.health = 0;
+          part.isMissing = true;
+        }
+    let sightedHits = 0;
+    let blindedHits = 0;
+    for (let i = 0; i < 1000; i++) {
+      if (combatService.resolveHit(sighted, defender, empty).hit) sightedHits++;
+      if (combatService.resolveHit(blinded, defender, empty).hit) blindedHits++;
+    }
+    expect(blindedHits).toBeLessThan(sightedHits);
   });
 
   it('§121 per-part armor: a covered part is mitigated, an UNCOVERED part bypasses (same pawn, one cuirass)', async () => {
