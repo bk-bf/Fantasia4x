@@ -1,10 +1,20 @@
 import type { CombatTurnEntry } from '$lib/game/core/defs/events';
+import type { WoundSeverity } from '$lib/game/core/defs/wounds';
+import type { DamageType } from '$lib/game/core/types';
 
-export type NarrationTier = 'minor' | 'serious' | 'critical' | 'destroyed';
+export type NarrationTier = WoundSeverity;
 
-const TIER_ORDER: NarrationTier[] = ['minor', 'serious', 'critical', 'destroyed'];
+const TIER_RANK: Record<NarrationTier, number> = {
+  minor: 0,
+  serious: 1,
+  critical: 2,
+  destroyed: 3
+};
+const TIER_ORDER = (Object.keys(TIER_RANK) as NarrationTier[]).sort(
+  (a, b) => TIER_RANK[a] - TIER_RANK[b]
+);
 
-const HIT_VERBS: Record<string, Record<NarrationTier, string[]>> = {
+const HIT_VERBS: Record<DamageType, Record<NarrationTier, string[]>> = {
   cutting: {
     minor: ['grazed', 'nicked', 'cut'],
     serious: ['slashed', 'gashed', 'lacerated'],
@@ -28,6 +38,18 @@ const HIT_VERBS: Record<string, Record<NarrationTier, string[]>> = {
     serious: ['seared', 'burned', 'scalded'],
     critical: ['charred', 'roasted', 'cooked'],
     destroyed: ['incinerated', 'immolated', 'reduced to ash']
+  },
+  frost: {
+    minor: ['chilled', 'frosted', 'nipped'],
+    serious: ['frostburned', 'iced over', 'numbed'],
+    critical: ['frost-shattered', 'iced through', 'frozen'],
+    destroyed: ['shattered by frost', 'frozen solid', 'ice-shattered']
+  },
+  lightning: {
+    minor: ['zapped', 'sparked', 'shocked'],
+    serious: ['jolted', 'arced through', 'electrocuted'],
+    critical: ['charred by lightning', 'blasted', 'convulsed by'],
+    destroyed: ['vaporised', 'blasted apart', 'reduced to cinders']
   }
 };
 
@@ -79,7 +101,8 @@ export function describeSwing(t: CombatTurnEntry): SwingNarration {
     };
   }
   const tier = narrationTier(t);
-  const family = t.damageType && t.damageType in HIT_VERBS ? t.damageType : 'blunt';
+  const family: DamageType =
+    t.damageType && t.damageType in HIT_VERBS ? (t.damageType as DamageType) : 'blunt';
   const part = bodyPartName(t.bodyPart);
   return {
     attacker: t.attackerName,

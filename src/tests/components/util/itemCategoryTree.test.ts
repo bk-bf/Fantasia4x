@@ -41,6 +41,13 @@ describe('itemCategoryTree.categoryPath', () => {
   it('nests food under consumables', () => {
     expect(categoryPath(def('spit_meat'))).toEqual(['consumables', 'food', 'meals']);
   });
+
+  it('routes every category in the item database somewhere other than Other', () => {
+    const uncovered = itemService
+      .getAllCategories()
+      .filter((cat) => categoryPath({ id: '', name: '', category: cat } as Item)[0] === 'other');
+    expect(uncovered).toEqual([]);
+  });
 });
 
 describe('itemCategoryTree.buildCategoryTree', () => {
