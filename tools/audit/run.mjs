@@ -92,6 +92,7 @@ async function askModel(prompt) {
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 async function gate(id, deadline) {
+  let holding = false;
   for (;;) {
     if (Date.now() >= deadline) return 'stop';
     const paused = pauseReason();
@@ -101,8 +102,9 @@ async function gate(id, deadline) {
     }
     const control = readControl();
     const plan = await readPlan(control.plan_url);
-    const s = schedule(plan, control);
+    const s = schedule(plan, control, Date.now(), holding);
     if (s.verdict === 'go') return 'go';
+    holding = true;
     writeWorkerState(id, { state: 'holding', reason: s.reason, pct: s.pct,
                            target: s.target, mins_left: s.minsLeft });
     const poll = Math.max(15, Number(control.poll_seconds) || 60) * 1000;

@@ -8,6 +8,7 @@ const CONTROL = join(LEDGER, 'control.json');
 const PACE = join(LEDGER, 'pace.json');
 
 export const WINDOW_MS = 5 * 3600_000;
+export const RESUME_MARGIN = 10;
 
 const DEFAULT_CONTROL = {
   paused: false,
@@ -82,7 +83,7 @@ export async function readPlan(url, maxAgeMs = 30_000) {
   }
 }
 
-export function schedule(plan, control, now = Date.now()) {
+export function schedule(plan, control, now = Date.now(), holding = false) {
   const ceiling = Number(control.ceiling_pct) || DEFAULT_CONTROL.ceiling_pct;
   if (!plan) return { verdict: 'go', reason: 'no plan data' };
   if (plan.resetsAt === null || plan.resetsAt <= now) {
@@ -97,16 +98,26 @@ export function schedule(plan, control, now = Date.now()) {
   const windowStart = plan.resetsAt - WINDOW_MS;
   const elapsed = Math.min(Math.max(now - windowStart, 0), WINDOW_MS);
   const target = (ceiling * elapsed) / WINDOW_MS;
+  const margin = Math.min(RESUME_MARGIN, Math.max(0, ceiling - target));
   const minsLeft = Math.max(0, (plan.resetsAt - now) / 60_000);
+  const spare = target - plan.pct;
+  const base = { target, margin, ceiling, pct: plan.pct, minsLeft };
   if (plan.pct >= ceiling) {
-    return { verdict: 'wait', target, ceiling, pct: plan.pct, minsLeft,
-             reason: `at the ${ceiling}% ceiling` };
+    return { ...base, verdict: 'wait', reason: `at the ${ceiling}% ceiling` };
+  }
+  if (holding) {
+    if (spare >= margin) {
+      return { ...base, verdict: 'go',
+               reason: `${spare.toFixed(1)} points spare, past the ${margin.toFixed(1)}-point margin` };
+    }
+    return { ...base, verdict: 'wait',
+             reason: `${plan.pct.toFixed(1)}% used, waiting for ${margin.toFixed(1)} points spare of the ${target.toFixed(1)}% schedule` };
   }
   if (plan.pct >= target) {
-    return { verdict: 'wait', target, ceiling, pct: plan.pct, minsLeft,
+    return { ...base, verdict: 'wait',
              reason: `${plan.pct.toFixed(1)}% used is ahead of the ${target.toFixed(1)}% schedule` };
   }
-  return { verdict: 'go', target, ceiling, pct: plan.pct, minsLeft,
+  return { ...base, verdict: 'go',
            reason: `${plan.pct.toFixed(1)}% used is behind the ${target.toFixed(1)}% schedule` };
 }
 
