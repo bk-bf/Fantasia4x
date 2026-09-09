@@ -1,13 +1,12 @@
-import type { Pawn, WorkAssignment } from '$lib/game/core/types';
+import type { Pawn, WorkAssignment, LaborLevel } from '$lib/game/core/types';
 import { stateLabel as stateDefLabel } from '$lib/game/core/defs/states';
 import { resourceObjectDefById } from '$lib/game/core/defs/resourceObjects';
+import { WORK_CATEGORIES } from '$lib/game/core/defs/work';
+import { NON_SKILL_CATEGORIES } from '$lib/game/core/rules/body/workExperience';
 
-export function getPawnLaborLevel(
-  a: WorkAssignment | undefined,
-  workId: string
-): 0 | 1 | 2 | 3 | 4 {
+export function getPawnLaborLevel(a: WorkAssignment | undefined, workId: string): LaborLevel {
   const ls = a?.laborSettings;
-  if (ls && workId in ls) return ls[workId] as 0 | 1 | 2 | 3 | 4;
+  if (ls && workId in ls) return ls[workId] as LaborLevel;
   const pri = a?.workPriorities?.[workId] ?? 0;
   if (pri === 0) return 0;
   if (pri <= 3) return 1;
@@ -16,23 +15,29 @@ export function getPawnLaborLevel(
   return 4;
 }
 
-export const LABOR_LABELS: Record<number, string> = {
+export const LABOR_LABELS: Record<LaborLevel, string> = {
   0: '—',
   1: 'LOW',
   2: 'NRM',
   3: 'HI',
   4: 'URG'
 };
-export const LABOR_COLORS: Record<number, string> = {
+export const LABOR_COLORS: Record<LaborLevel, string> = {
   0: '#555',
   1: '#4a9',
   2: '#8bc',
   3: '#fa0',
   4: '#f44'
 };
-export const LVL_NAMES = ['Off', 'Low', 'Normal', 'High', 'Urgent'] as const;
+export const LVL_NAMES: Record<LaborLevel, string> = {
+  0: 'Off',
+  1: 'Low',
+  2: 'Normal',
+  3: 'High',
+  4: 'Urgent'
+};
 
-export const NON_SKILL_TASKS: Record<string, { label: string; statId: string }[]> = {
+const NON_SKILL_ROWS: Record<string, { label: string; statId: string }[]> = {
   hunting: [
     { label: 'Hit chance', statId: 'hit_chance' },
     { label: 'Attack speed', statId: 'attack_speed' },
@@ -48,13 +53,19 @@ export const NON_SKILL_TASKS: Record<string, { label: string; statId: string }[]
   ]
 };
 
-export const ABBR: Record<string, string> = {
+export const NON_SKILL_TASKS: Record<string, { label: string; statId: string }[]> =
+  Object.fromEntries(
+    [...NON_SKILL_CATEGORIES].map((id) => [id, NON_SKILL_ROWS[id] ?? []])
+  );
+
+const ABBR_OVERRIDES: Record<string, string> = {
   foraging: 'FRG',
   woodcutting: 'WOD',
   mining: 'MNE',
   hunting: 'HNT',
+  butchery: 'BCH',
   fishing: 'FSH',
-  crafting: 'CRF',
+  planting: 'PLN',
   metalworking: 'MTL',
   woodworking: 'WWK',
   tailoring: 'TLR',
@@ -65,8 +76,24 @@ export const ABBR: Record<string, string> = {
   research: 'RSH',
   construction: 'BLD',
   alchemy: 'ALH',
-  cooking: 'COK'
+  caretaking: 'CTK',
+  cooking: 'COK',
+  weaving: 'WEV',
+  knapping: 'KNP',
+  masonry: 'MSN',
+  lapidary: 'LAP',
+  bonecarving: 'BCV',
+  meals: 'MLS',
+  baking: 'BAK',
+  brewing: 'BRW',
+  herbalism: 'HRB',
+  potions: 'PTN',
+  hauling: 'HUL'
 };
+
+export const ABBR: Record<string, string> = Object.fromEntries(
+  WORK_CATEGORIES.map((c) => [c.id, ABBR_OVERRIDES[c.id] ?? c.id.slice(0, 3).toUpperCase()])
+);
 
 export function stateColor(pawn: Pick<Pawn, 'currentState'>): string {
   switch (pawn.currentState) {

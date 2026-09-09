@@ -11,7 +11,8 @@ const TOOL_CATEGORIES = new Set([
   'crafting',
   'cooking',
   'hauling',
-  'metalworking'
+  'metalworking',
+  'leatherworking'
 ]);
 
 const STATIC_CATEGORY_PATH: Record<string, string[]> = {
@@ -22,20 +23,29 @@ const STATIC_CATEGORY_PATH: Record<string, string[]> = {
   grain: ['consumables', 'food', 'produce'],
   legume: ['consumables', 'food', 'produce'],
   herb: ['consumables', 'food', 'produce'],
+  sweetener: ['consumables', 'food', 'produce'],
+  dairy: ['consumables', 'food', 'produce'],
+  plant: ['consumables', 'food', 'produce'],
+  ingredient: ['consumables', 'food', 'produce'],
   meal: ['consumables', 'food', 'meals'],
   food: ['consumables', 'food', 'meals'],
   cooking: ['consumables', 'food', 'meals'],
   consumable: ['consumables', 'food', 'meals'],
+  preserve: ['consumables', 'food', 'preserved'],
   drink: ['consumables', 'drinks'],
   medicine: ['consumables', 'medicine'],
   spoiled: ['consumables', 'spoiled'],
   wood: ['materials', 'wood'],
   magic_wood: ['materials', 'wood'],
+  woodwork: ['materials', 'wood'],
   stone: ['materials', 'stone'],
   block: ['materials', 'stone'],
   construction: ['materials', 'stone'],
+  clay: ['materials', 'clay'],
   metal: ['materials', 'metals'],
   ore: ['materials', 'metals'],
+  steel: ['materials', 'metals'],
+  iron: ['materials', 'metals'],
   gem: ['materials', 'gems'],
   magic_gem: ['materials', 'gems'],
   crystal: ['materials', 'gems'],
@@ -43,14 +53,21 @@ const STATIC_CATEGORY_PATH: Record<string, string[]> = {
   leather: ['materials', 'textiles'],
   cloth: ['materials', 'textiles'],
   fiber: ['materials', 'textiles'],
+  hide: ['materials', 'textiles'],
+  cured_hide: ['materials', 'textiles'],
+  binding: ['materials', 'textiles'],
+  wool: ['materials', 'textiles'],
   organic: ['materials', 'organic'],
   carcass: ['materials', 'organic'],
+  reagent: ['materials', 'organic'],
   soil: ['materials', 'soil'],
   jewelry: ['goods', 'jewelry'],
+  regalia: ['goods', 'jewelry'],
   light: ['goods', 'light'],
   fuel: ['goods', 'fuel'],
   storage: ['goods', 'storage'],
-  primitive: ['goods', 'primitive']
+  primitive: ['goods', 'primitive'],
+  hygiene: ['goods', 'hygiene']
 };
 
 function combatPath(item: Item): string[] {
@@ -99,6 +116,7 @@ export const CATEGORY_LABELS: Record<string, string> = {
   meat: 'Meat & Fish',
   produce: 'Produce',
   meals: 'Meals',
+  preserved: 'Preserved',
   drinks: 'Drinks',
   medicine: 'Medicine',
   spoiled: 'Spoiled',
@@ -106,6 +124,7 @@ export const CATEGORY_LABELS: Record<string, string> = {
   materials: 'Materials',
   wood: 'Wood',
   stone: 'Stone & Masonry',
+  clay: 'Clay',
   metals: 'Metals & Ores',
   gems: 'Gems & Crystals',
   textiles: 'Hides & Textiles',
@@ -117,6 +136,7 @@ export const CATEGORY_LABELS: Record<string, string> = {
   fuel: 'Fuel',
   storage: 'Containers',
   primitive: 'Primitive',
+  hygiene: 'Hygiene',
   other: 'Other'
 };
 

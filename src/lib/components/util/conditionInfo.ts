@@ -57,8 +57,13 @@ const MOD_LABEL: Partial<Record<keyof ConditionModifiers, string>> = {
   hungerRate: 'Hunger rate',
   fatigueRate: 'Fatigue rate',
   thirstRate: 'Thirst rate',
+  hygieneRate: 'Hygiene rate',
   pain: 'Pain',
-  consciousness: 'Consciousness'
+  consciousness: 'Consciousness',
+  attackSpeed: 'Attack speed',
+  critChance: 'Crit chance',
+  weaponDamage: 'Weapon damage',
+  relaxationRate: 'Relaxation rate'
 };
 
 function effectLines(mods: ConditionModifiers): string[] {

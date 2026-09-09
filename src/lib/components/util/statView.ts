@@ -47,7 +47,8 @@ const RES_KEY: Record<string, string> = {
   shadow_resistance: 'shadowResistance',
   wetness_resistance: 'wetnessResistance',
   heal_rate: 'healRate',
-  night_vision: 'nightVision'
+  night_vision: 'nightVision',
+  stealth: 'stealth'
 };
 
 const BASELINE = {
