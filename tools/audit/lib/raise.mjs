@@ -247,7 +247,6 @@ export function upsertIssue(root, g, rulesById, sha, force = false) {
       severity,
       verify: existing.data.verify ?? verify,
       subarea: existing.data.subarea ?? subarea,
-      type: existing.data.type ?? type,
       files,
       symbols,
       rules: [g.rule_id],

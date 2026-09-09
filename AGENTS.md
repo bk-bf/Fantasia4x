@@ -234,8 +234,8 @@ means nothing in an issue body; a project-view URL, which is renumbered; a blob 
 or line does not exist at that commit; and `ready` on a new issue, because new work lands in
 `Backlog`.
 
-**Six classifications are required on every issue** — severity, kind, origin, verify, subarea
-and type. An issue missing one cannot be sorted, filtered or costed, so `create` refuses it and
+**Five classifications are required on every issue** — severity, kind, origin, verify and
+subarea. An issue missing one cannot be sorted, filtered or costed, so `create` refuses it and
 `pnpm issue check-labels` reports any open issue that has drifted.
 
 **`subarea` names the part of the tree the issue is in**, one word, `game/` dropped:
@@ -248,13 +248,14 @@ an issue that cites no code.
 This is not the board's `Area` field, which is a game-domain taxonomy: `combat`, `items`, `sim`,
 `ui`, `data`, `tooling`. A card carries both — where in the code, and what part of the game.
 
-**`type` mirrors the board's `Work type` field** — `feat`, `fix`, `refactor`, `perf`, `test`,
-`tooling`, `docs`, `chore`, `decision`, the same words the commit messages use. `raise.mjs` sets
-it from the rule family and `board-sync.py` keeps it equal to the field, the same way it keeps
-the `verify` labels equal to `Verify`.
+**The work type is a board field, not a label**, and nothing mirrors it — a card would then
+carry the same word twice. `pnpm issue create --type` is required and sets it, `raise.mjs`
+passes the type its rule family implies, and `check-labels` reads the board and reports an open
+issue whose card has no `Work type` or is not on the board at all. The words are the ones the
+commit messages use: `feat`, `fix`, `refactor`, `perf`, `test`, `tooling`, `docs`, `chore`,
+`decision`.
 
-A field with no label is a field nothing can check: `Work type` went unset on nine cards without
-anything noticing, because `check-labels` reads labels and the field was only on the board.
+A field that nothing checks is how nine cards went untyped without anything noticing.
 
 **A body has to say something.** `create` also refuses a stub: under ~240 characters of prose,
 no citation, or no remediation checkbox (unless it carries `needs decision`). A heading with
@@ -273,8 +274,8 @@ reported.
 
 Reading is unrestricted: `gh issue list`, `gh issue view`, `gh project item-list`.
 
-**Move the card, never the label.** `ready`, `needs decision`, the three `verify` labels and the
-work type are derived from the board's Status, Verify and Work type fields by `board-sync.py`, on the same tick that
+**Move the card, never the label.** `ready`, `needs decision` and the three `verify` labels are
+derived from the board's Status and Verify fields by `board-sync.py`, on the same tick that
 refreshes the dashboard. Edit one of those labels by hand and it is overwritten within a minute.
 Any open issue missing from the board is added to `Backlog`. Kind, severity, origin and the rule
 name are not touched — they describe the finding, not its state.

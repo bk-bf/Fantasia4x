@@ -110,3 +110,10 @@ export function moveLane(n, to) {
   invalidate();
   return { from: item.status ?? 'unset', to: lane, moved: true };
 }
+
+export function addToBoard(n) {
+  const url = `https://github.com/${OWNER}/Fantasia4x/issues/${n}`;
+  gh(['project', 'item-add', PROJECT_NUMBER, '--owner', OWNER, '--url', url]);
+  invalidate();
+  return itemFor(n);
+}

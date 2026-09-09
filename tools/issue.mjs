@@ -16,7 +16,7 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { check, allowedLabels, checkRequired, checkTemplate } from './audit/lib/schema.mjs';
 import { linkify, issueRef, indexedSha, blobUrl, resolveRepoPath } from './audit/lib/links.mjs';
-import { moveLane } from './audit/lib/board.mjs';
+import { moveLane, setSelect, addToBoard, itemFor, boardItems } from './audit/lib/board.mjs';
 
 process.stdout.on('error', (e) => {
   if (e.code === 'EPIPE') process.exit(0);
@@ -44,6 +44,8 @@ const readBody = () => {
   if (f) return readFileSync(f, 'utf8');
   return arg('body', '');
 };
+
+const TYPES = ['feat', 'fix', 'refactor', 'perf', 'test', 'tooling', 'docs', 'chore', 'decision'];
 
 const EXT = /\.(ts|tsx|js|mjs|cjs|svelte|json|md|sh|py|rs|css|html)$/;
 
@@ -129,8 +131,28 @@ if (cmd === 'check-labels') {
     process.stdout.write(`#${it.number}  ${it.title.slice(0, 52)}\n`);
     for (const e of problems) process.stdout.write(`      ${e}\n`);
   }
-  process.stdout.write(`\n${bad} open issue(s) incompletely classified\n`);
-  if (bad) process.exit(1);
+  const cards = new Map(
+    boardItems()
+      .filter((i) => i.content?.number)
+      .map((i) => [String(i.content.number), i['work type'] ?? null])
+  );
+  let untyped = 0;
+  for (const it of JSON.parse(
+    gh(['issue', 'list', '--state', 'open', '--limit', '300', '--json', 'number,title'])
+  )) {
+    const key = String(it.number);
+    if (!cards.has(key)) {
+      untyped += 1;
+      process.stdout.write(`#${it.number}  ${it.title.slice(0, 52)}\n      not on the board\n`);
+    } else if (!cards.get(key)) {
+      untyped += 1;
+      process.stdout.write(`#${it.number}  ${it.title.slice(0, 52)}\n      no Work type on the board\n`);
+    }
+  }
+  process.stdout.write(
+    `\n${bad} open issue(s) incompletely classified, ${untyped} without a work type\n`
+  );
+  if (bad || untyped) process.exit(1);
 } else if (cmd === 'lane') {
   const n = argv[1] ?? die('which issue?');
   const to = argv.slice(2).join(' ') || '';
@@ -212,11 +234,22 @@ if (cmd === 'check-labels') {
 } else if (cmd === 'create') {
   const title = arg('title') ?? die('--title is required');
   const labels = all('label');
+  const type = arg('type');
+  if (!type) die(`--type is required — one of: ${TYPES.join(', ')}`);
+  if (!TYPES.includes(type)) die(`unknown --type "${type}" — one of: ${TYPES.join(', ')}`);
   const body = prepare(readBody());
   guard(labels, body, { template: true });
   const args = ['issue', 'create', '--title', title, '--body-file', '-'];
   for (const l of labels) args.push('--label', l);
-  process.stdout.write(gh(args, body));
+  const url = gh(args, body).trim();
+  process.stdout.write(url + '\n');
+  const n = url.split('/').pop();
+  try {
+    addToBoard(n);
+    setSelect(n, 'Work type', type);
+  } catch (e) {
+    process.stderr.write(`note: created #${n} but could not set its Work type: ${e.message}\n`);
+  }
 } else if (cmd === 'edit') {
   const n = argv[1] ?? die('which issue?');
   const add = all('add-label');
