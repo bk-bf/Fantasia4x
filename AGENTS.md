@@ -177,7 +177,7 @@ along with the pre-commit hook. `git commit --no-verify` bypasses it for a one-o
 **GitHub issues hold defects.** `gh issue list` is the board; `docs/tasks/` still holds planned
 work. The old `docs/issues/` and `docs/pr/` directories are gone.
 
-Frontmatter became labels: severity `high` / `medium` / `low`, kind `drift` / `correctness` /
+Frontmatter became labels: severity `critical` / `high` / `medium` / `low`, kind `drift` / `correctness` /
 `data` / `boundary` / `test gap`, origin `found by audit` / `found by hand`, the audit rule that
 fired, and `ready`.
 
@@ -299,6 +299,12 @@ nothing about the rest. `pnpm issue fix-links` repairs what can be repaired and 
 reported.
 
 Reading is unrestricted: `gh issue list`, `gh issue view`, `gh project item-list`.
+
+**`Priority` is the severity label, projected onto a field.** `critical → P0`, `high → P1`,
+`medium → P2`, `low → P3`, and the option colours match the labels. It exists because the board
+can group and sort by a field and not by a label, so it carries no information severity does not
+— it is not a second axis and it is never set by hand. `board-sync.py` derives it every tick and
+`pnpm issue check-labels` reports a card whose Priority disagrees with its severity.
 
 **Move the card, never the label.** `ready`, `needs decision` and the three `verify` labels are
 derived from the board's Status and Verify fields by `board-sync.py`, on the same tick that

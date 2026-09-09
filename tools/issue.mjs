@@ -46,6 +46,7 @@ const readBody = () => {
 };
 
 const TYPES = ['feat', 'fix', 'refactor', 'perf', 'test', 'tooling', 'docs', 'chore', 'decision'];
+const SEVERITY_PRIORITY = { critical: 'P0', high: 'P1', medium: 'P2', low: 'P3' };
 
 const EXT = /\.(ts|tsx|js|mjs|cjs|svelte|json|md|sh|py|rs|css|html)$/;
 
@@ -150,6 +151,13 @@ if (cmd === 'check-labels') {
       if (!card.status) gaps.push('no Status — the card is on the board in no lane');
       if (!card['work type']) gaps.push('no Work type on the board');
       if (!card.verify) gaps.push('no Verify route on the board');
+      const sev = (card.labels ?? []).find((l) => SEVERITY_PRIORITY[l]);
+      if (sev && card.priority !== SEVERITY_PRIORITY[sev]) {
+        gaps.push(
+          `Priority is ${card.priority ?? 'unset'} but the severity is ${sev}, which is ` +
+            `${SEVERITY_PRIORITY[sev]} — Priority is derived, not set by hand`
+        );
+      }
       if (gaps.length) {
         untyped += 1;
         process.stdout.write(`#${it.number}  ${it.title.slice(0, 52)}\n`);
