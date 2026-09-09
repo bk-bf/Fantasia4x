@@ -59,13 +59,15 @@ export function linkify(text, sha) {
   });
 }
 
-/** A rule's `authority` is either a doc path in the repo or an issue URL. */
-export function authorityLink(authority, sha) {
+/** A rule's `authority` names where its invariant is written down. Only an issue reference
+ *  reaches a reader: a doc path is a moving target -- it gets renamed, folded into another
+ *  file or deleted, and the citation then points at nothing while still looking authoritative.
+ *  The rule still carries the field, and `prompt.mjs` still reads the document for the model;
+ *  it just does not become a link somebody clicks. */
+export function authorityLink(authority) {
   if (!authority) return null;
   const issue = /github\.com\/[^/]+\/[^/]+\/issues\/(\d+)/.exec(authority);
-  if (issue) return `#${issue[1]}`;
-  const [path, anchor] = authority.split('#');
-  return `[\`${path}\`](${blobUrl(path, null, sha)}${anchor ? `#${anchor}` : ''})`;
+  return issue ? `#${issue[1]}` : null;
 }
 
 let treeCache = null;

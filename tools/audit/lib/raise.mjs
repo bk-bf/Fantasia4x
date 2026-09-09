@@ -116,7 +116,7 @@ function renderBody(g, sha) {
   const lines = [];
   lines.push(`# ${titleFor(g)}`);
   lines.push('');
-  const authority = authorityLink(g.authority, sha);
+  const authority = authorityLink(g.authority);
   lines.push(
     `> **Related:** [\`tools/audit\`](${blobUrl('tools/audit/README.md', null, sha)})` +
       (authority ? ` · rule source ${authority}` : '')
