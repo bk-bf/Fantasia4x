@@ -4,14 +4,18 @@
 
   export let pawn: Pawn;
 
-  type Stance = 'aggressive' | 'defensive' | 'flee';
-  const STANCES: Array<{ id: Stance; label: string; title: string }> = [
-    { id: 'aggressive', label: 'AGGRO', title: 'Engage any hostile within vision range' },
-    { id: 'defensive', label: 'DEF', title: 'Only fight once a hostile is adjacent (default)' },
-    { id: 'flee', label: 'FLEE', title: 'Retreat as soon as a hostile is seen' }
-  ];
+  type Stance = NonNullable<Pawn['combatStance']>;
+  const STANCE_META: Record<Stance, { label: string; title: string }> = {
+    aggressive: { label: 'AGGRO', title: 'Engage any hostile within vision range' },
+    defensive: { label: 'DEF', title: 'Only fight once a hostile is adjacent (default)' },
+    flee: { label: 'FLEE', title: 'Retreat as soon as a hostile is seen' }
+  };
+  const STANCES = (Object.keys(STANCE_META) as Stance[]).map((id) => ({
+    id,
+    ...STANCE_META[id]
+  }));
 
-  $: current = (pawn.combatStance ?? 'defensive') as Stance;
+  $: current = pawn.combatStance ?? 'defensive';
 
   function setStance(stance: Stance) {
     gameState.command({ type: 'setPawnStance', payload: { pawnId: pawn.id, stance }, save: true });

@@ -22,25 +22,26 @@
 
   const isPinned = (itemId: string) => (pawn.pinnedItems ?? []).includes(itemId);
 
-  const SLOTS: { slot: EquipmentSlot; label: string }[] = [
-    { slot: 'head', label: 'Head' },
-    { slot: 'mainHand', label: 'Main Hand' },
-    { slot: 'bodyOuter', label: 'Outer' },
-    { slot: 'offHand', label: 'Off Hand' },
-    { slot: 'bodyMid', label: 'Mid' },
-    { slot: 'bodyBase', label: 'Skin' },
-    { slot: 'bracers', label: 'Arms' },
-    { slot: 'greaves', label: 'Legs' },
-    { slot: 'gloves', label: 'Hands' },
-    { slot: 'belt', label: 'Belt' },
-    { slot: 'boots', label: 'Feet' },
-    { slot: 'socks', label: 'Wraps' },
-    { slot: 'back', label: 'Cloak' },
-    { slot: 'back2', label: 'Pack' },
-    { slot: 'amulet', label: 'Amulet' },
-    { slot: 'ring', label: 'Ring' },
-    { slot: 'ring2', label: 'Ring' }
-  ];
+  const SLOT_LABEL: Record<EquipmentSlot, string> = {
+    head: 'Head',
+    mainHand: 'Main Hand',
+    bodyOuter: 'Outer',
+    offHand: 'Off Hand',
+    bodyMid: 'Mid',
+    bodyBase: 'Skin',
+    bracers: 'Arms',
+    greaves: 'Legs',
+    gloves: 'Hands',
+    belt: 'Belt',
+    boots: 'Feet',
+    socks: 'Wraps',
+    back: 'Cloak',
+    back2: 'Pack',
+    amulet: 'Amulet',
+    ring: 'Ring',
+    ring2: 'Ring'
+  };
+  const SLOTS: EquipmentSlot[] = Object.keys(SLOT_LABEL) as EquipmentSlot[];
 
   function inst(slot: EquipmentSlot) {
     return pawn.equipment?.[slot];
@@ -98,7 +99,8 @@
 </script>
 
 <div class="doll">
-  {#each SLOTS as { slot, label } (slot)}
+  {#each SLOTS as slot (slot)}
+    {@const label = SLOT_LABEL[slot]}
     {@const it = inst(slot)}
     {@const def = it ? gameCoordinator.getItemById(it.itemId) : null}
     {@const maxDur = def?.maxDurability ?? 100}
