@@ -7,7 +7,8 @@ import {
   tileFreeCapacity,
   addToStockpileZone,
   consumeFromStockpiles,
-  absorbDropIfOnStockpileTile
+  absorbDropIfOnStockpileTile,
+  reserveForOrder
 } from '$lib/game/core/state/stockpile';
 import type { GameState, DroppedItem, PlacedBuilding } from '$lib/game/core/types';
 
@@ -110,6 +111,29 @@ describe('drops-authoritative storage core (Stage 2 flip)', () => {
     const out = consumeFromStockpiles(gs, { branch: 5 });
     expect(out.droppedItems!.find((x) => x.resourceId === 'branch')).toBeUndefined();
     expect(out.stockpile['branch'] ?? 0).toBe(0);
+  });
+
+  it('consumeFromStockpiles clears a fractional pile down to float dust instead of leaving residue', () => {
+    let gs = withDesig([drop({ id: 's', resourceId: 'copper_bar', x: 0, y: 0, quantity: 1 })]);
+    for (let i = 0; i < 10; i++) {
+      gs = consumeFromStockpiles(gs, { copper_bar: 0.1 });
+    }
+    expect(gs.droppedItems!.find((x) => x.resourceId === 'copper_bar')).toBeUndefined();
+    expect(gs.stockpile['copper_bar'] ?? 0).toBe(0);
+  });
+
+  it('reserveForOrder splitting a pile down to float dust discards the leftover instead of keeping it', () => {
+    let gs = withDesig([drop({ id: 's', resourceId: 'copper_bar', x: 0, y: 0, quantity: 1 })]);
+    for (let i = 0; i < 10; i++) {
+      const res = reserveForOrder(gs, 'copper_bar', 0.1, `order-${i}`);
+      gs = res.state;
+      expect(res.reserved).toBeCloseTo(0.1);
+      gs = {
+        ...gs,
+        droppedItems: (gs.droppedItems ?? []).filter((d) => d.reservedFor !== `order-${i}`)
+      };
+    }
+    expect(gs.droppedItems!.find((x) => x.resourceId === 'copper_bar')).toBeUndefined();
   });
 
   it('absorbDropIfOnStockpileTile marks a loose drop stored when on a stockpile tile', () => {
