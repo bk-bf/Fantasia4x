@@ -251,15 +251,6 @@
             kind: 'attr',
             statId: stat
           });
-        } else if (name.endsWith('Penalty') && typeof value === 'number') {
-          const stat = name.replace('Penalty', '');
-          tags.push({
-            label: STAT_ABBR[stat] ?? stat,
-            value: `-${value}`,
-            type: 'neg',
-            kind: 'attr',
-            statId: stat
-          });
         } else if (name === 'combatMods' && value && typeof value === 'object') {
           for (const [statId, mul] of Object.entries(value as Record<string, number>)) {
             const pct = Math.round((mul - 1) * 100);
