@@ -4,14 +4,14 @@ export type MusicScene = 'menu' | 'day' | 'night' | 'combat';
 
 export type AmbientBed = 'birds-day' | 'night-crickets' | 'wind' | 'rain' | 'rain-heavy' | 'forest';
 
-const MENU = ['/audio/music/all/menu/menu.ogg', '/audio/music/all/menu/menu-kingdom.ogg'];
+const MENU = ['/audio/music/all/menu/menu.ogg', '/audio/music/all/menu/menu-kingdom.ogg'] as const;
 const COMBAT = [
   '/audio/music/all/combat/combat-1.ogg',
   '/audio/music/all/combat/combat-2.ogg',
   '/audio/music/all/combat/combat-3.ogg',
   '/audio/music/all/combat/combat-4.ogg',
   '/audio/music/all/combat/combat-5.ogg'
-];
+] as const;
 
 const DAY_SHARED = [
   '/audio/music/all/day/day-1.ogg',
@@ -22,39 +22,47 @@ const DAY_SHARED = [
   '/audio/music/all/day/day-6.ogg',
   '/audio/music/all/day/day-7.ogg',
   '/audio/music/all/day/day-8.ogg'
-];
-const DAY_SEASONAL: Record<Season, string[]> = {
+] as const;
+const DAY_SEASONAL = {
   spring: [],
   summer: [],
   autumn: [],
   winter: ['/audio/music/winter/day/magic-actions.ogg']
-};
+} satisfies Record<Season, readonly string[]>;
 const NIGHT_SHARED = [
   '/audio/music/all/night/night-1.ogg',
   '/audio/music/all/night/night-2.ogg',
   '/audio/music/all/night/night-3.ogg',
   '/audio/music/all/night/night-4.ogg',
   '/audio/music/all/night/night-5.ogg'
-];
-const NIGHT_SEASONAL: Record<Season, string[]> = {
+] as const;
+const NIGHT_SEASONAL = {
   spring: [],
   summer: [],
   autumn: [],
   winter: []
-};
+} satisfies Record<Season, readonly string[]>;
 
 export function playlistFor(scene: MusicScene, season?: Season): string[] {
   switch (scene) {
     case 'menu':
-      return MENU;
+      return [...MENU];
     case 'combat':
-      return COMBAT;
+      return [...COMBAT];
     case 'day':
-      return season ? [...DAY_SHARED, ...DAY_SEASONAL[season]] : DAY_SHARED;
+      return season ? [...DAY_SHARED, ...DAY_SEASONAL[season]] : [...DAY_SHARED];
     case 'night':
-      return season ? [...NIGHT_SHARED, ...NIGHT_SEASONAL[season]] : NIGHT_SHARED;
+      return season ? [...NIGHT_SHARED, ...NIGHT_SEASONAL[season]] : [...NIGHT_SHARED];
   }
 }
+
+type TrackUrl =
+  | (typeof MENU)[number]
+  | (typeof COMBAT)[number]
+  | (typeof DAY_SHARED)[number]
+  | (typeof DAY_SEASONAL)[keyof typeof DAY_SEASONAL][number]
+  | (typeof NIGHT_SHARED)[number]
+  | (typeof NIGHT_SEASONAL)[keyof typeof NIGHT_SEASONAL][number];
 
 export const FIRE_LOOP = '/audio/ambient/fire.ogg';
 
@@ -105,7 +113,7 @@ export const TRACK_LABELS: Record<string, string> = {
   '/audio/music/all/combat/combat-4.ogg': 'For The King',
   '/audio/music/all/combat/combat-5.ogg': 'Light Battle',
   '/audio/music/winter/day/magic-actions.ogg': 'Magic Actions'
-};
+} satisfies Record<TrackUrl, string>;
 
 export const AMBIENT_LABELS: Record<AmbientBed, string> = {
   'birds-day': 'Birds (day)',
@@ -181,14 +189,16 @@ export function creatureClips(id: string | undefined): string[] {
 const workClips = (id: string, n: number): string[] =>
   Array.from({ length: n }, (_, i) => `/audio/work/${id}/${i + 1}.ogg`);
 
-export const WORK_SFX: Record<string, string[]> = {
+export const WORK_SFX = {
   woodcutting: workClips('woodcutting', 5),
   mining: workClips('mining', 5),
   construction: workClips('construction', 5),
   crafting: workClips('crafting', 5),
   foraging: workClips('foraging', 3),
   planting: workClips('planting', 3)
-};
+} satisfies Record<string, string[]>;
+
+type WorkSoundId = keyof typeof WORK_SFX;
 
 export const WORK_SOUND_LABELS: Record<string, string> = {
   woodcutting: 'Woodcutting',
@@ -197,10 +207,10 @@ export const WORK_SOUND_LABELS: Record<string, string> = {
   crafting: 'Crafting',
   foraging: 'Foraging',
   planting: 'Planting'
-};
+} satisfies Record<WorkSoundId, string>;
 
 export function workClipsFor(id: string | undefined): string[] {
-  return id && id in WORK_SFX ? WORK_SFX[id] : [];
+  return id && id in WORK_SFX ? WORK_SFX[id as WorkSoundId] : [];
 }
 
 const combatClips = (id: string, n: number): string[] =>
@@ -216,6 +226,9 @@ export const COMBAT_SFX: Record<string, string[]> = {
   screech: combatClips('screech', 2),
   spectral: combatClips('spectral', 2),
   tongue: combatClips('tongue', 1),
+  reptile: combatClips('reptile', 1),
+  whoosh: combatClips('whoosh', 1),
+  blade: combatClips('blade', 1),
   knockdown: combatClips('knockdown', 1),
   fracture: combatClips('fracture', 1),
   shock: combatClips('shock', 1),
