@@ -37,6 +37,8 @@ export interface CombatTurnEntry {
   fatal?: boolean;
 }
 
+export const LOG_SEVERITIES = ['critical', 'error', 'warning', 'success', 'info'] as const;
+
 export interface ActivityLogEntry {
   id: string;
   turn: number;
@@ -66,7 +68,7 @@ export interface ActivityLogEntry {
   location?: string;
   result: string;
   details?: Record<string, any>;
-  severity: 'info' | 'success' | 'warning' | 'error' | 'critical';
+  severity: (typeof LOG_SEVERITIES)[number];
   entityIds?: string[];
   focusX?: number;
   focusY?: number;

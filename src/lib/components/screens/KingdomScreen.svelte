@@ -9,11 +9,9 @@
   } from '$lib/stores/gameState';
   import type { Culture, Kingdom, KingdomRelation } from '$lib/game/core/types';
   import { COLONY_RELATION_ID } from '$lib/game/core/types';
-  import { knowledgeTier } from '$lib/game/core/gen/kingdom';
+  import { knowledgeTierLabel } from '$lib/game/core/gen/kingdom';
   import KingdomDetail from './kingdom/KingdomDetail.svelte';
   import { persisted, persist } from '$lib/stores/uiPersist';
-
-  const ACQUAINTANCE = ['strangers', 'acquainted', 'familiar', 'well known', 'deeply known'];
 
   let known: Kingdom[] = [];
   let relations: KingdomRelation[] = [];
@@ -84,7 +82,7 @@
               >
             {/if}
             <span class="ki-disp">{dispositionTo(kingdom.id)}</span>
-            <span class="ki-tier">{ACQUAINTANCE[knowledgeTier(kingdom.knowledge)]}</span>
+            <span class="ki-tier">{knowledgeTierLabel(kingdom.knowledge)}</span>
           </button>
         {/each}
       </nav>

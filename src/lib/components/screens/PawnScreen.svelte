@@ -24,16 +24,15 @@
   let selectedPawnId: string | null = get(uiState).selectedPawnId;
   let pawnScreenElement: HTMLElement;
 
-  type PawnTab = 'status' | 'attributes' | 'relations' | 'gear';
-  let activeTab: PawnTab = persisted<PawnTab>('pawn.tab', 'status');
-  $: persist('pawn.tab', activeTab);
-
-  const TABS: { id: PawnTab; label: string }[] = [
+  const TABS = [
     { id: 'status', label: 'STATUS' },
     { id: 'attributes', label: 'ATTRIBUTES' },
     { id: 'relations', label: 'RELATIONS' },
     { id: 'gear', label: 'GEAR' }
-  ];
+  ] as const;
+  type PawnTab = (typeof TABS)[number]['id'];
+  let activeTab: PawnTab = persisted<PawnTab>('pawn.tab', 'status');
+  $: persist('pawn.tab', activeTab);
 
   const unsubscribe = gameState.subscribe((state) => {
     pawns = state.pawns || [];
