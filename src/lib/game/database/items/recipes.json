@@ -183,7 +183,7 @@
     "id"              : "brew_bonemeal_draught",
     "discipline"      : "alchemy",
     "station"         : "apothecary",
-    "inputs"          : {"bone_meal": 2, "category:herb": 2, "distilled_spirit": 0.3},
+    "inputs"          : {"bone_meal": 2, "category:herb": 2, "grape_wine": 1},
     "outputs"         : {"bonemeal_draught": 2},
     "workAmount"      : 16,
     "toolTierRequired": 2,
@@ -233,7 +233,7 @@
     "id"              : "brew_poppy_draught",
     "discipline"      : "alchemy",
     "station"         : "apothecary",
-    "inputs"          : {"category:herb": 3, "distilled_spirit": 0.3},
+    "inputs"          : {"category:herb": 3, "grape_wine": 1},
     "outputs"         : {"poppy_draught": 3},
     "workAmount"      : 12,
     "toolTierRequired": 2,
@@ -4502,7 +4502,7 @@
   {
     "id"              : "brew_greater_potion_of_might",
     "station"         : "apothecary",
-    "inputs"          : {"woundwort": 3, "glassware": 1, "distilled_spirit": 0.3},
+    "inputs"          : {"woundwort": 3, "glassware": 1, "hopped_ale": 1},
     "outputs"         : {"greater_potion_of_might": 0.3},
     "workAmount"      : 12,
     "toolTierRequired": 1
@@ -4518,7 +4518,7 @@
   {
     "id"              : "brew_greater_draught_of_vigor",
     "station"         : "apothecary",
-    "inputs"          : {"woundwort": 3, "glassware": 1, "distilled_spirit": 0.3},
+    "inputs"          : {"woundwort": 3, "glassware": 1, "hopped_ale": 1},
     "outputs"         : {"greater_draught_of_vigor": 0.3},
     "workAmount"      : 12,
     "toolTierRequired": 1
@@ -4534,7 +4534,7 @@
   {
     "id"              : "brew_greater_elixir_of_grace",
     "station"         : "apothecary",
-    "inputs"          : {"woundwort": 3, "glassware": 1, "distilled_spirit": 0.3},
+    "inputs"          : {"woundwort": 3, "glassware": 1, "grape_wine": 1},
     "outputs"         : {"greater_elixir_of_grace": 0.3},
     "workAmount"      : 12,
     "toolTierRequired": 1
@@ -4550,7 +4550,7 @@
   {
     "id"              : "brew_greater_tonic_of_fortitude",
     "station"         : "apothecary",
-    "inputs"          : {"woundwort": 3, "glassware": 1, "distilled_spirit": 0.3},
+    "inputs"          : {"woundwort": 3, "glassware": 1, "hopped_ale": 1},
     "outputs"         : {"greater_tonic_of_fortitude": 0.3},
     "workAmount"      : 12,
     "toolTierRequired": 1
@@ -4566,7 +4566,7 @@
   {
     "id"              : "brew_greater_bloodrage_draught",
     "station"         : "apothecary",
-    "inputs"          : {"alpha_ichor": 0.8, "woundwort": 1, "glassware": 1, "distilled_spirit": 0.3},
+    "inputs"          : {"alpha_ichor": 0.8, "woundwort": 1, "glassware": 1, "hopped_ale": 1},
     "outputs"         : {"greater_bloodrage_draught": 0.3},
     "workAmount"      : 12,
     "toolTierRequired": 1
@@ -4582,7 +4582,7 @@
   {
     "id"              : "brew_greater_ironhide_tonic",
     "station"         : "apothecary",
-    "inputs"          : {"owlbear_bile": 0.6, "woundwort": 1, "glassware": 1, "distilled_spirit": 0.3},
+    "inputs"          : {"owlbear_bile": 0.6, "woundwort": 1, "glassware": 1, "hopped_ale": 1},
     "outputs"         : {"greater_ironhide_tonic": 0.3},
     "workAmount"      : 12,
     "toolTierRequired": 1
@@ -4598,7 +4598,7 @@
   {
     "id"              : "brew_greater_vigor_draught",
     "station"         : "apothecary",
-    "inputs"          : {"bloodroot": 3, "woundwort": 1, "glassware": 1, "distilled_spirit": 0.3},
+    "inputs"          : {"bloodroot": 3, "woundwort": 1, "glassware": 1, "hopped_ale": 1},
     "outputs"         : {"greater_vigor_draught": 0.3},
     "workAmount"      : 12,
     "toolTierRequired": 1
@@ -4614,7 +4614,7 @@
   {
     "id"              : "brew_greater_calming_draught",
     "station"         : "apothecary",
-    "inputs"          : {"dreamleaf": 3, "woundwort": 1, "glassware": 1, "distilled_spirit": 0.3},
+    "inputs"          : {"dreamleaf": 3, "woundwort": 1, "glassware": 1, "grape_wine": 1},
     "outputs"         : {"greater_calming_draught": 0.3},
     "workAmount"      : 12,
     "toolTierRequired": 1
@@ -4630,7 +4630,7 @@
   {
     "id"              : "brew_greater_nightglow_draught",
     "station"         : "apothecary",
-    "inputs"          : {"glowcap": 3, "woundwort": 1, "glassware": 1, "distilled_spirit": 0.3},
+    "inputs"          : {"glowcap": 3, "woundwort": 1, "glassware": 1, "grape_wine": 1},
     "outputs"         : {"greater_nightglow_draught": 0.3},
     "workAmount"      : 12,
     "toolTierRequired": 1
@@ -4646,7 +4646,7 @@
   {
     "id"              : "brew_greater_frenzy_draught",
     "station"         : "apothecary",
-    "inputs"          : {"spore_of_madness": 2, "mandrake": 1, "glassware": 1, "distilled_spirit": 0.3},
+    "inputs"          : {"spore_of_madness": 2, "mandrake": 1, "glassware": 1, "hopped_ale": 1},
     "outputs"         : {"greater_frenzy_draught": 0.3},
     "workAmount"      : 12,
     "toolTierRequired": 1
@@ -5029,7 +5029,7 @@
     "inputs": {
       "charcoal": 1,
       "woundwort": 1,
-      "distilled_spirit": 0.3,
+      "grape_wine": 1,
       "glassware": 1
     },
     "outputs": {
@@ -5073,7 +5073,7 @@
     "inputs": {
       "dreamleaf": 1,
       "wild_berries": 1,
-      "distilled_spirit": 0.3,
+      "grape_wine": 1,
       "glassware": 1
     },
     "outputs": {
