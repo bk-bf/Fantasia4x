@@ -254,7 +254,24 @@ if (cmd === 'check-labels') {
   const n = argv[1] ?? die('which issue?');
   const add = all('add-label');
   const body = arg('body-file') ? prepare(readBody()) : null;
-  guard(add, body ?? '', { allowReady: true, template: body !== null });
+  // Refuse what this edit introduces, not what it inherits. A body that already cites a file
+  // somebody deleted cannot be ticked, relabelled or corrected while the old citation is held
+  // against it, which locks the issue instead of protecting it.
+  const inherited =
+    body === null
+      ? []
+      : check({
+          labels: [],
+          body: JSON.parse(gh(['issue', 'view', n, '--json', 'body'])).body ?? '',
+          allowReady: true
+        });
+  const introduced = check({
+    labels: add,
+    body: body ?? '',
+    allowReady: true,
+    template: body !== null
+  }).filter((e) => !inherited.includes(e));
+  if (introduced.length) die(`refused:\n  - ${introduced.join('\n  - ')}`);
   const args = ['issue', 'edit', n];
   if (arg('title')) args.push('--title', arg('title'));
   if (body !== null) args.push('--body-file', '-');

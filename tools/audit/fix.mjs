@@ -305,6 +305,7 @@ for (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP']) {
 
 let exitCode = 0;
 let keepTree = flag('keep');
+let committed = false;
 try {
   await prepareWorktree(wt, out);
 
@@ -371,6 +372,9 @@ try {
       git(['add', '-A'], wt);
       const msg = commitMessage(d, num, files, route === 'playtest' ? 'fix' : undefined);
       execFileSync('git', ['commit', '-q', '-F', '-'], { cwd: wt, input: msg });
+      // The commit exists from here on. Nothing below may reach the catch and write the branch
+      // up as a failed attempt that was never committed.
+      committed = true;
 
       const ran = v.results.map((r) => r.name);
 
@@ -393,8 +397,12 @@ try {
         say(num, P.renderAttempt({ branch, files, account, verified: 'pass', ran, pushed }));
       }
 
-      const ticked = I.tickRemediation(num, account);
-      out(`--- ticked ${ticked} remediation item(s)`);
+      try {
+        const ticked = I.tickRemediation(num, account);
+        out(`--- ticked ${ticked} remediation item(s)`);
+      } catch (e) {
+        out(`--- could not tick #${num}: ${String(e.message).split('\n').slice(0, 3).join(' ')}`);
+      }
 
       if (route === 'playtest') {
         B.moveLane(num, 'needs playtest');
@@ -408,10 +416,20 @@ try {
 } catch (e) {
   out(`--- ${e.message}`);
   keepTree = true;
-  say(num,
-    P.renderAttempt({ branch, files: [], account: '', verified: 'fail', failures: e.message })
-  );
-  B.moveLane(num, 'ready');
+  if (committed) {
+    out(`--- ${branch} is committed; leaving #${num} where it is`);
+    say(
+      num,
+      `**The work landed; the bookkeeping after it did not.**\n\n` +
+        `\`${branch}\` is committed and pushed. What failed afterwards:\n\n` +
+        `\`\`\`\n${e.message}\n\`\`\`\n`
+    );
+  } else {
+    say(num,
+      P.renderAttempt({ branch, files: [], account: '', verified: 'fail', failures: e.message })
+    );
+    B.moveLane(num, 'ready');
+  }
   exitCode = 1;
 } finally {
   if (keepTree) {
