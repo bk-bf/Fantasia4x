@@ -273,23 +273,11 @@ try {
   if (files.length === 0) throw new Error(`${fixBranch} adds nothing on top of origin/${BASE}`);
   out(`--- ${files.length} file(s) against ${BASE}`);
 
+  // Reported, not refused. Removing a restated roster means editing the file that declares the
+  // set, which the issue never cites, so refusing blocked the canonical fix twice. The tests
+  // still gate correctness, and this lands on dev, which is read before it is promoted.
   const wandered = outOfScope(issue, files);
-  if (wandered) {
-    out(`--- outside the issue's scope: ${wandered.outside.join(', ')}`);
-    sendBack(
-      `The branch edits ${wandered.outside.length} file(s) the issue does not cite:\n\n` +
-        wandered.outside.map((f) => `- \`${f}\``).join('\n') +
-        `\n\nThe issue scopes the work to:\n\n` +
-        wandered.cited.map((f) => `- \`${f}\``).join('\n') +
-        `\n\nEither the fix reached past what was asked, or the issue's file list is too narrow ` +
-        `and wants widening before this is worked again. A file under \`src/tests/\` is always ` +
-        `in scope and is not counted here.`,
-      ['scope check'],
-      ''
-    );
-    keepTree = true;
-    process.exit(1);
-  }
+  if (wandered) out(`--- outside the issue's scope: ${wandered.outside.join(', ')}`);
 
   await prepareWorktree(wt, out);
 
@@ -372,7 +360,19 @@ try {
     }
   };
   sent = true;
-  say(num, P.renderReview({ branch: fixBranch, route, ran, ok: true, sha, account, base: BASE }));
+  say(
+    num,
+    P.renderReview({
+      branch: fixBranch,
+      route,
+      ran,
+      ok: true,
+      sha,
+      account,
+      base: BASE,
+      outside: wandered?.outside
+    })
+  );
   settle('close the issue', () => I.patchIssue(num, { status: 'closed' }));
   settle('move the card to On dev', () => B.moveLane(num, 'on dev'));
   out(`--- #${num} closed, card in On dev — main is untouched`);

@@ -48,7 +48,7 @@ export function renderAttempt({ branch, files, account, verified, failures, ran,
   return lines.join('\n') + '\n';
 }
 
-export function renderReview({ branch, route, ran, ok, failures, sha, account, base = 'dev' }) {
+export function renderReview({ branch, route, ran, ok, failures, sha, account, outside, base = 'dev' }) {
   const lines = [
     ok
       ? `**Reviewed on the ${route} route and merged to \`${base}\`.**`
@@ -57,6 +57,16 @@ export function renderReview({ branch, route, ran, ok, failures, sha, account, b
   ];
 
   if (account) lines.push('## What the review measured', '', account.trim(), '');
+  if (outside?.length)
+    lines.push(
+      '## It reached past the files this issue cites',
+      '',
+      ...outside.map((f) => `- \`${f}\``),
+      '',
+      'That is often the right fix — removing a restated roster means editing whatever declares ' +
+        'the set. It is named here so it is visible before promotion, not because it is wrong.',
+      ''
+    );
   if (failures) lines.push('## What failed', '', failures, '');
 
   lines.push(
