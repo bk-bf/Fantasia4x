@@ -150,7 +150,14 @@ rather than inventing one — `git log` is the reference:
   `fix`, `refactor`, `chore`, `docs`, `dev` and `agents`. Do not invent a type; `db:` and
   `gear-db:` are not types, they are nouns.
 - A body only where the change needs explaining. Many commits here have none.
+- **A body is bullets, never prose.** One `- ` per change, sentence case, ending in a full
+  stop, naming the symbol or file inline. `eb79af85`, `ef1cb295` and `bd98c2c4` are the
+  reference. A paragraph explaining the reasoning behind a change does not belong in a commit
+  message; put it in the code, a test, or `docs/`.
 - Keep the `Co-Authored-By` trailer.
+
+`scripts/hooks/commit-msg` refuses anything else, and `pnpm hooks:install` puts it in place
+along with the pre-commit hook. `git commit --no-verify` bypasses it for a one-off.
 
 ## Trackers
 
