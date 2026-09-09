@@ -1,12 +1,15 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import type { TransientConditionDef } from '$lib/game/core/types';
 import { syncTransientConditions } from '$lib/game/systems/PawnStateMachine';
 import { equipItem } from '$lib/game/core/rules/gear/equipment';
 import { combatService } from '$lib/game/systems/Combat';
 import { itemService } from '$lib/game/services/ItemService';
 import { recipeService } from '$lib/game/services/RecipeService';
+import { rng } from '$lib/game/core/util/rng';
 import conditionsData from '$lib/game/database/pawns/conditions.json';
 import type { GameState, Mob, Pawn } from '$lib/game/core/types';
+
+beforeEach(() => rng.reseed(20260729));
 
 const CUT_AT: Record<string, string> = {
   moonstone: 'lapidary_bench',
