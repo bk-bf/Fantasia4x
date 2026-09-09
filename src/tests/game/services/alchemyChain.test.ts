@@ -194,7 +194,7 @@ describe('alchemy / magical-creature reagents', () => {
         buildings: [{ id: 'alchemy_lab' }, { id: 'apothecary' }, { id: 'arcane_alembic' }],
         items: {
           woundwort: 20,
-          distilled_spirit: 8,
+          hopped_ale: 8,
           purified_catalyst: 8,
           mandrake: 8,
           glassware: 20,
@@ -217,6 +217,66 @@ describe('alchemy / magical-creature reagents', () => {
     );
     expect(stk(s).greater_potion_of_might ?? 0, 'T2 brewed').toBeGreaterThan(0);
     expect(stk(s).grand_potion_of_might ?? 0, 'T3 brewed at the Runed Still').toBeGreaterThan(0);
+  });
+
+  it('§D T3: greater potions are gated on a brewed fluid, not distilled_spirit — refuses without it, brews with it', async () => {
+    const runAle = async (withAle: boolean) => {
+      const s = new HeadlessSession();
+      await s.start(
+        buildScenario({
+          seed: 78,
+          map: { w: 16, h: 16 },
+          workReady: true,
+          researchMaxTier: 9,
+          toolTier: 3,
+          pawns: [{ count: 5, skillLevel: 20 }],
+          needsDisabled: ['hunger', 'fatigue', 'thirst', 'hygiene'],
+          buildings: [{ id: 'apothecary' }],
+          items: withAle
+            ? { woundwort: 6, glassware: 6, hopped_ale: 4, spit_meat: 10 }
+            : { woundwort: 6, glassware: 6, spit_meat: 10 },
+          seedEntities: false
+        })
+      );
+      s.command({ type: 'craftItem', payload: { itemId: 'greater_potion_of_might' } } as never);
+      for (let i = 0; i < 20 && (stk(s).greater_potion_of_might ?? 0) === 0; i++) s.tick(400);
+      return stk(s).greater_potion_of_might ?? 0;
+    };
+    const runWine = async (withWine: boolean) => {
+      const s = new HeadlessSession();
+      await s.start(
+        buildScenario({
+          seed: 79,
+          map: { w: 16, h: 16 },
+          workReady: true,
+          researchMaxTier: 9,
+          toolTier: 3,
+          pawns: [{ count: 5, skillLevel: 20 }],
+          needsDisabled: ['hunger', 'fatigue', 'thirst', 'hygiene'],
+          buildings: [{ id: 'apothecary' }],
+          items: withWine
+            ? { dreamleaf: 6, woundwort: 6, glassware: 6, grape_wine: 4, spit_meat: 10 }
+            : { dreamleaf: 6, woundwort: 6, glassware: 6, spit_meat: 10 },
+          seedEntities: false
+        })
+      );
+      s.command({ type: 'craftItem', payload: { itemId: 'greater_calming_draught' } } as never);
+      for (let i = 0; i < 20 && (stk(s).greater_calming_draught ?? 0) === 0; i++) s.tick(400);
+      return stk(s).greater_calming_draught ?? 0;
+    };
+    const aleWithout = await runAle(false);
+    const aleWith = await runAle(true);
+    const wineWithout = await runWine(false);
+    const wineWith = await runWine(true);
+    console.log(
+      `[ALCH fluid-gate] greater_potion_of_might w/o hopped_ale=${aleWithout} with=${aleWith}; greater_calming_draught w/o grape_wine=${wineWithout} with=${wineWith}`
+    );
+    expect(aleWithout, 'no hopped_ale in stock: the ale-gated greater tier is unclaimable').toBe(0);
+    expect(aleWith, 'hopped_ale in stock: the ale-gated greater tier brews').toBeGreaterThan(0);
+    expect(wineWithout, 'no grape_wine in stock: the wine-gated greater tier is unclaimable').toBe(
+      0
+    );
+    expect(wineWith, 'grape_wine in stock: the wine-gated greater tier brews').toBeGreaterThan(0);
   });
 
   it('§C reagent depth: sugarcane → sugar → mash → distilled_spirit, and purified_catalyst — headless', async () => {

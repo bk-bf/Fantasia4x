@@ -21,8 +21,8 @@ updated: 2026-08-27
 |---|---|---|
 | T1 | meals gain seven axes | **done** |
 | T2 | composed dishes bring their own ingredients | **done** |
-| T3 | alchemy gated behind fermented fluids | **open** — implementable, but which potion needs wine, ale or spirit is a design call |
-| T4 | one soaking bin, plus hafts | **awaiting review** — [SOAKING-AND-HAFTS](SOAKING-AND-HAFTS.md) |
+| T3 | alchemy gated behind fermented fluids | **done** |
+| T4 | one soaking bin, plus hafts | **awaiting review** — [SOAKING-AND-HAFTS](SOAKING-AND-HAFTS.md); the station merge is split out as [#52](https://github.com/bk-bf/Fantasia4x/issues/52) |
 | T5 | top-rung oven and vat items | **awaiting review** — [TOP-RUNG-ITEMS](TOP-RUNG-ITEMS.md) |
 
 `queue: false` means the overnight issue loop does not take this file. T3 is the only part that
@@ -71,9 +71,18 @@ under-used. Wine, ale and spirit are the obvious solvents; decide per potion whi
 say why in the PR note. This buys cross-progression: the brewing ladder starts mattering to the
 alchemy ladder.
 
-- [ ] Each gated potion names the fermented input its method actually needs
-- [ ] Brewing rungs gain readers, so the ladder is worth climbing
-- [ ] Headless: a gated potion refuses without the fluid and brews with it
+- [x] Each gated potion names the fermented input its method actually needs
+- [x] Brewing rungs gain readers, so the ladder is worth climbing
+- [x] Headless: a gated potion refuses without the fluid and brews with it
+
+Ale for anything physical (might, vigor ×2, fortitude, bloodrage, frenzy, ironhide — a hearty brew
+for a laborer or a fighter); wine for anything mental or restorative (grace, calming, restful,
+nightglow, bonemeal, antivenin, poppy — the wine- or laudanum-tincture tradition); spirit stays
+where a raw solvent is the point, not a flavour — the coatings, the oils, `warming_liniment`,
+`spirit_tincture`, `emberbloom_draught`, `greater_farsight_tonic`. 14 recipes in
+`recipes.json` moved onto `grape_wine`/`hopped_ale`; `alchemyChain.test.ts` gained a headless test
+proving `greater_potion_of_might` refuses without `hopped_ale` and `greater_calming_draught`
+refuses without `grape_wine`.
 
 ## T4 — One soaking bin, and hafts for everything that needs one
 
@@ -88,7 +97,9 @@ it.** That is a weapons audit — many recipes currently skip the step or bind a
 
 Proposal delivered: [SOAKING-AND-HAFTS](SOAKING-AND-HAFTS.md). Awaiting review before any edit.
 
-- [ ] The three stations reconcile to one concept, named for all of what it does
+- [ ] The three stations reconcile to one concept, named for all of what it does — split out as
+      [#52](https://github.com/bk-bf/Fantasia4x/issues/52), since it is blocked on the three
+      decisions in [SOAKING-AND-HAFTS](SOAKING-AND-HAFTS.md#decisions-this-needs-before-any-edit)
 - [x] A table of every tool haft, bow and staff, what its recipe does now, what it should do
 - [x] **Stop there.** Do not rewrite the recipes.
 
