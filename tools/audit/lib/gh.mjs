@@ -17,6 +17,7 @@ const KIND_LABEL = {
 const ORIGIN_LABEL = { audit: 'found by audit', human: 'found by hand' };
 const STATUS_LABEL = { 'in-progress': 'in progress', 'in-review': 'in review' };
 const VERIFY_LABEL = { tests: 'verify tests', headless: 'verify headless', playtest: 'needs playtest' };
+const TYPES = new Set(['feat', 'fix', 'refactor', 'perf', 'test', 'tooling', 'docs', 'chore', 'decision']);
 
 const unlabel = (map, names) => {
   for (const [k, v] of Object.entries(map)) if (names.includes(v)) return k;
@@ -130,6 +131,7 @@ function toIssue(raw) {
       origin: unlabel(ORIGIN_LABEL, names) ?? 'audit',
       verify: unlabel(VERIFY_LABEL, names),
       subarea: names.find((n) => subareas().has(n)) ?? null,
+      type: names.find((n) => TYPES.has(n)) ?? null,
       rules: meta.rules ?? [],
       files: meta.files ?? [],
       symbols: meta.symbols ?? [],
@@ -173,6 +175,7 @@ function labelsFor(d) {
   if (d.kind && KIND_LABEL[d.kind]) out.push(KIND_LABEL[d.kind]);
   if (d.origin && ORIGIN_LABEL[d.origin]) out.push(ORIGIN_LABEL[d.origin]);
   if (d.subarea && subareas().has(d.subarea)) out.push(d.subarea);
+  if (d.type && TYPES.has(d.type)) out.push(d.type);
   if (d.verify && VERIFY_LABEL[d.verify]) out.push(VERIFY_LABEL[d.verify]);
   for (const r of d.rules ?? []) out.push(nameOf(r));
   if (d.ready === true) out.push('ready');

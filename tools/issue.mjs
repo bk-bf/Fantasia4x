@@ -9,7 +9,7 @@
 //   node tools/issue.mjs comment <n> --body-file -
 //   node tools/issue.mjs close <n> --commit <sha>
 //   node tools/issue.mjs labels            # what the schema allows
-//   node tools/issue.mjs sync-labels       # create what is missing, name the strays
+//   node tools/issue.mjs sync-labels [--prune]  # create what is missing, name or delete the strays
 //   node tools/issue.mjs lint --body-file - [--label L]...
 
 import { execFileSync } from 'node:child_process';
@@ -193,9 +193,21 @@ if (cmd === 'check-labels') {
     gh(['label', 'create', l, '--color', 'ededed', '--force']);
     process.stdout.write(`created  ${l}\n`);
   }
+  const prune = argv.includes('--prune');
   for (const l of have) {
     if (allowed.has(l) || DEFAULT.has(l)) continue;
-    process.stdout.write(`stray    ${l}  (not in the schema — delete it or add it to labels.json)\n`);
+    const used = JSON.parse(
+      gh(['issue', 'list', '--state', 'all', '--limit', '300', '--label', l, '--json', 'number'])
+    ).length;
+    if (prune && used === 0) {
+      gh(['label', 'delete', l, '--yes']);
+      process.stdout.write(`deleted  ${l}\n`);
+      continue;
+    }
+    process.stdout.write(
+      `stray    ${l}  (not in the schema, on ${used} issue(s)` +
+        `${used === 0 ? ' — --prune deletes it' : ' — retag those first'})\n`
+    );
   }
 } else if (cmd === 'create') {
   const title = arg('title') ?? die('--title is required');

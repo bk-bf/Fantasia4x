@@ -234,8 +234,8 @@ means nothing in an issue body; a project-view URL, which is renumbered; a blob 
 or line does not exist at that commit; and `ready` on a new issue, because new work lands in
 `Backlog`.
 
-**Five classifications are required on every issue** — severity, kind, origin, verify and
-subarea. An issue missing one cannot be sorted, filtered or costed, so `create` refuses it and
+**Six classifications are required on every issue** — severity, kind, origin, verify, subarea
+and type. An issue missing one cannot be sorted, filtered or costed, so `create` refuses it and
 `pnpm issue check-labels` reports any open issue that has drifted.
 
 **`subarea` names the part of the tree the issue is in**, one word, `game/` dropped:
@@ -248,6 +248,14 @@ an issue that cites no code.
 This is not the board's `Area` field, which is a game-domain taxonomy: `combat`, `items`, `sim`,
 `ui`, `data`, `tooling`. A card carries both — where in the code, and what part of the game.
 
+**`type` mirrors the board's `Work type` field** — `feat`, `fix`, `refactor`, `perf`, `test`,
+`tooling`, `docs`, `chore`, `decision`, the same words the commit messages use. `raise.mjs` sets
+it from the rule family and `board-sync.py` keeps it equal to the field, the same way it keeps
+the `verify` labels equal to `Verify`.
+
+A field with no label is a field nothing can check: `Work type` went unset on nine cards without
+anything noticing, because `check-labels` reads labels and the field was only on the board.
+
 **A body has to say something.** `create` also refuses a stub: under ~240 characters of prose,
 no citation, or no remediation checkbox (unless it carries `needs decision`). A heading with
 nothing under it counts as empty. `.github/ISSUE_TEMPLATE` holds the shape, though structure is
@@ -255,7 +263,7 @@ not the bar — a checkbox list with citations is fine, and a wall of unbroken p
 
 The vocabulary is `tools/audit/labels.json` plus one label per rule `name`. Adding a label means
 editing that file, not inventing one at a call site. `pnpm issue sync-labels` creates what is
-missing and names the strays.
+missing and names the strays; `--prune` deletes a stray no issue carries.
 
 `pnpm issue check-links` reads every issue and reports each citation that points at nothing,
 each relative link, and each body that is not in canonical form. It exits non-zero, so it is the
@@ -265,8 +273,8 @@ reported.
 
 Reading is unrestricted: `gh issue list`, `gh issue view`, `gh project item-list`.
 
-**Move the card, never the label.** `ready`, `needs decision` and the three `verify` labels are
-derived from the board's Status and Verify fields by `board-sync.py`, on the same tick that
+**Move the card, never the label.** `ready`, `needs decision`, the three `verify` labels and the
+work type are derived from the board's Status, Verify and Work type fields by `board-sync.py`, on the same tick that
 refreshes the dashboard. Edit one of those labels by hand and it is overwritten within a minute.
 Any open issue missing from the board is added to `Backlog`. Kind, severity, origin and the rule
 name are not touched — they describe the finding, not its state.

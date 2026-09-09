@@ -44,6 +44,18 @@ const FAMILY_VERIFY = {
   'single-source': 'tests'
 };
 
+const FAMILY_TYPE = {
+  contract: 'refactor',
+  boundary: 'fix',
+  'silent-failure': 'fix',
+  units: 'fix',
+  'hot-path': 'perf',
+  tests: 'test',
+  reachability: 'refactor',
+  data: 'fix',
+  'single-source': 'refactor'
+};
+
 const MAX_EVIDENCE = 20;
 
 /** Two path segments is the coherence unit: `game/services`, `components/UI`. A rule firing
@@ -218,6 +230,7 @@ export function upsertIssue(root, g, rulesById, sha, force = false) {
   const files = [...new Set(g.findings.map((f) => f.file))];
   const symbols = [...new Set(g.findings.map((f) => f.symbol_key))];
   const subarea = subareaFor(files);
+  const type = rule.type ?? FAMILY_TYPE[g.family] ?? 'fix';
 
   if (found) {
     const path = found.path;
@@ -234,6 +247,7 @@ export function upsertIssue(root, g, rulesById, sha, force = false) {
       severity,
       verify: existing.data.verify ?? verify,
       subarea: existing.data.subarea ?? subarea,
+      type: existing.data.type ?? type,
       files,
       symbols,
       rules: [g.rule_id],
@@ -255,6 +269,7 @@ export function upsertIssue(root, g, rulesById, sha, force = false) {
       severity,
       verify,
       subarea,
+      type,
       ready: false,
       origin: 'audit',
       rules: [g.rule_id],
