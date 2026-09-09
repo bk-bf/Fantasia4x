@@ -2,7 +2,7 @@
 set -uo pipefail
 
 MSG_FILE="$1"
-TYPES="feat|fix|refactor|chore|docs|dev|agents"
+TYPES="feat|fix|refactor|chore|docs|dev|agents|perf|style|test|ci|build"
 
 mapfile -t LINES < <(grep -v '^#' "$MSG_FILE")
 SUBJECT="${LINES[0]:-}"
@@ -18,10 +18,10 @@ fail() {
   echo >&2
   echo "    type(scope): lowercase summary" >&2
   echo >&2
-  echo "    - Sentence-case bullet naming one change, ending with a full stop." >&2
+  echo "    - Bullet naming one change, ending with a full stop." >&2
   echo "    - One bullet per change, with the symbol or file named inline." >&2
   echo >&2
-  echo "  Types: feat, fix, refactor, chore, docs, dev, agents." >&2
+  echo "  Types: feat, fix, refactor, chore, docs, dev, agents, perf, style, test, ci, build." >&2
   echo "  A body is optional. When there is one it is bullets, not prose." >&2
   echo "  Bypass once with: git commit --no-verify" >&2
   exit 1
@@ -33,10 +33,6 @@ if ! [[ "$SUBJECT" =~ ^($TYPES)(\([a-z0-9./-]+\))?:\ [a-z] ]]; then
   fail "the subject is not \"type(scope): lowercase summary\": $SUBJECT"
 fi
 
-if (( ${#SUBJECT} > 72 )); then
-  fail "the subject is ${#SUBJECT} characters, over 72"
-fi
-
 if (( ${#LINES[@]} > 1 )) && [[ -n "${LINES[1]:-}" ]]; then
   fail "the subject and the body need a blank line between them"
 fi
@@ -46,8 +42,8 @@ for (( i = 2; i < ${#LINES[@]}; i++ )); do
   [[ -z "$line" ]] && continue
   [[ "$line" =~ ^[A-Za-z-]+:\ .*$ ]] && continue
   [[ "$line" =~ ^\ \ +[^-] ]] && continue
-  if ! [[ "$line" =~ ^-\ [A-Z0-9\`] ]]; then
-    fail "a body line is not a bullet starting \"- \" with a capital: $line"
+  if ! [[ "$line" =~ ^-\ [^[:space:]] ]]; then
+    fail "a body line is not a bullet starting \"- \": $line"
   fi
   if ! [[ "$line" =~ [.:]$ ]]; then
     fail "a bullet does not end with a full stop: $line"

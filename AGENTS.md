@@ -147,8 +147,9 @@ This applies to subagents you dispatch. Tell each one which machine it is on, in
 rather than inventing one — `git log` is the reference:
 
 - `type: lowercase summary`, or `type(scope): lowercase summary`. The types in use are `feat`,
-  `fix`, `refactor`, `chore`, `docs`, `dev` and `agents`. Do not invent a type; `db:` and
-  `gear-db:` are not types, they are nouns.
+  `fix`, `refactor`, `chore`, `docs`, `dev`, `agents`, `perf`, `style`, `test`, `ci` and
+  `build`. Do not invent a type; `db:` and `gear-db:` are not types, they are nouns — they
+  belong in the scope, as `feat(db):`.
 - A body only where the change needs explaining. Many commits here have none.
 - **A body is bullets, never prose.** One `- ` per change, sentence case, ending in a full
   stop, naming the symbol or file inline. `eb79af85`, `ef1cb295` and `bd98c2c4` are the
