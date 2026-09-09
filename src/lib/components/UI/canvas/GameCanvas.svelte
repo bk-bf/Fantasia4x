@@ -4346,10 +4346,6 @@
         equipMenu = { x: e.clientX, y: e.clientY, entries };
         return;
       }
-      if (isDrafted) {
-        issueMove();
-        return;
-      }
     }
 
     if (designationMode) {
