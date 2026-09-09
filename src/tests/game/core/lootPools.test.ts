@@ -1,12 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import {
-  drawLoadout,
-  drawCarried,
-  rollCondition,
-  getLootPool,
-  validateLootItemIds,
-  type LootPool
-} from '$lib/game/core/defs/loot';
+import { getLootPool, type LootPool } from '$lib/game/core/defs/loot';
+import { drawLoadout, drawCarried, rollCondition, validateLootItemIds } from '$lib/game/core/gen/loot';
 
 function seq(values: number[]) {
   let i = 0;

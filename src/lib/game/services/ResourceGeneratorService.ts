@@ -1,7 +1,8 @@
 import type { WorldTile } from '../core/types';
 import type { ResourceObjectDef } from './ResourceObjectService';
 import { resourceObjectService, isGrowableResource } from './ResourceObjectService';
-import { SUBTERRAINS, SUBTERRAIN_FALLBACK, pickChar, isSpawnableTile } from '../core/defs/terrains';
+import { SUBTERRAINS, SUBTERRAIN_FALLBACK, pickChar } from '../core/defs/terrains';
+import { isSpawnableTile } from '../core/rules/world/terrain';
 import { makeSeededRng } from '../core/util/rng';
 import { STARTING_BUBBLE_RADIUS, MIN_LAIR_SPACING } from './entity/entityConstants';
 

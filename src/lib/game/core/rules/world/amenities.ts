@@ -1,8 +1,6 @@
-import buildingsData from '../../database/world/buildings.json';
-import type { Building, PlacedBuilding } from '../types';
-import { aggregateMaterialMods } from './materials';
-
-const BUILDING_DEFS = buildingsData as unknown as Building[];
+import type { PlacedBuilding } from '../../types';
+import { buildingDefById } from '../../defs/buildings';
+import { aggregateMaterialMods } from '../gear/materialMods';
 
 export const AMENITY_RADIUS = 2;
 
@@ -16,7 +14,7 @@ export function nearGatheringPlace(
   for (const b of buildings ?? []) {
     if (b.status !== 'complete') continue;
     if (Math.abs(b.x - x) > GATHERING_RADIUS || Math.abs(b.y - y) > GATHERING_RADIUS) continue;
-    if (BUILDING_DEFS.find((d) => d.id === b.type)?.buildingProperties?.gathering) return true;
+    if (buildingDefById(b.type)?.buildingProperties?.gathering) return true;
   }
   return false;
 }
@@ -31,7 +29,7 @@ export function amenityAt(
   for (const b of buildings ?? []) {
     if (b.status !== 'complete') continue;
     if (Math.abs(b.x - x) > AMENITY_RADIUS || Math.abs(b.y - y) > AMENITY_RADIUS) continue;
-    const eff = BUILDING_DEFS.find((d) => d.id === b.type)?.effects;
+    const eff = buildingDefById(b.type)?.effects;
     if (!eff) continue;
     const mods = b.materials ? aggregateMaterialMods(Object.values(b.materials), 'building') : null;
     beauty += (eff.beauty ?? 0) + (mods?.beauty ?? 0);
@@ -42,7 +40,7 @@ export function amenityAt(
 
 export function buildingComfortOf(b: PlacedBuilding | undefined | null): number {
   if (!b || b.status !== 'complete') return 0;
-  const eff = BUILDING_DEFS.find((d) => d.id === b.type)?.effects;
+  const eff = buildingDefById(b.type)?.effects;
   if (!eff) return 0;
   const mods = b.materials ? aggregateMaterialMods(Object.values(b.materials), 'building') : null;
   return (eff.comfort ?? 0) + (mods?.comfort ?? 0);
@@ -50,6 +48,6 @@ export function buildingComfortOf(b: PlacedBuilding | undefined | null): number 
 
 export function gatheringLevelOf(b: PlacedBuilding | undefined | null): number {
   if (!b || b.status !== 'complete') return 0;
-  const p = BUILDING_DEFS.find((d) => d.id === b.type)?.buildingProperties;
+  const p = buildingDefById(b.type)?.buildingProperties;
   return p?.gathering ? (p.gatheringLevel ?? 1) : 0;
 }

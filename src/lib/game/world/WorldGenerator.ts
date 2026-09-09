@@ -1,17 +1,91 @@
 import { createNoise2D } from 'simplex-noise';
 import type { WorldTile } from '../core/types';
-import {
-  BIOMES,
-  SUBTERRAINS,
-  SUBTERRAIN_FALLBACK,
-  pickBiome,
-  pickSubterrain,
-  pickChar,
-  getWaterLevel
-} from '../core/defs/terrains';
+import { BIOMES, SUBTERRAINS, SUBTERRAIN_FALLBACK, pickChar } from '../core/defs/terrains';
+import { pickBiome, pickSubterrain } from '../core/rules/world/terrain';
 import { resourceGeneratorService } from '../services/ResourceGeneratorService';
 import { biomeBaseMoisture, baseMoistureFromWater } from '../services/EnvironmentService';
 import { makeSeededRng } from '../core/util/rng';
+
+export interface BiomeConfigEntry {
+  id: string;
+  displayName: string;
+  share: number;
+  baseTemp: number;
+  baseMoisture: number;
+}
+
+const DEFAULT_BIOME_CONFIG: Record<
+  string,
+  { densityRange: [number, number]; baseTemp: number; baseMoisture: number }
+> = Object.fromEntries(
+  Object.entries(BIOMES)
+    .filter(([, d]) => d.densityRange)
+    .map(([id, d]) => [
+      id,
+      {
+        densityRange: [d.densityRange![0], d.densityRange![1]] as [number, number],
+        baseTemp: d.baseTemp ?? 0,
+        baseMoisture: d.baseMoisture ?? 0
+      }
+    ])
+);
+
+const DENSITY_ORDER: string[] = Object.entries(DEFAULT_BIOME_CONFIG)
+  .sort((a, b) => a[1].densityRange[0] - b[1].densityRange[0])
+  .map(([id]) => id);
+
+export function getBiomeConfig(): BiomeConfigEntry[] {
+  return DENSITY_ORDER.map((id) => {
+    const d = BIOMES[id];
+    return {
+      id,
+      displayName: d.displayName,
+      share: d.densityRange![1] - d.densityRange![0],
+      baseTemp: d.baseTemp ?? 0,
+      baseMoisture: d.baseMoisture ?? 0
+    };
+  });
+}
+
+export function applyBiomeShares(shares: Record<string, number>): void {
+  const total = DENSITY_ORDER.reduce((s, id) => s + Math.max(0, shares[id] ?? 0), 0);
+  let cursor = 0;
+  DENSITY_ORDER.forEach((id, i) => {
+    if (!BIOMES[id]) return;
+    const w = total > 0 ? Math.max(0, shares[id] ?? 0) / total : 1 / DENSITY_ORDER.length;
+    const start = i === 0 ? 0 : cursor;
+    cursor += w;
+    const end = i === DENSITY_ORDER.length - 1 ? 1 : cursor;
+    BIOMES[id].densityRange = [start, end];
+  });
+}
+
+export function setBiomeField(id: string, field: 'baseTemp' | 'baseMoisture', value: number): void {
+  const d = BIOMES[id];
+  if (!d) return;
+  if (field === 'baseTemp') d.baseTemp = value;
+  else d.baseMoisture = value;
+}
+
+const DEFAULT_WATER_LEVEL = 0.22;
+let waterLevel = DEFAULT_WATER_LEVEL;
+export function getWaterLevel(): number {
+  return waterLevel;
+}
+export function setWaterLevel(v: number): void {
+  waterLevel = Math.max(0, Math.min(1, v));
+}
+
+export function resetBiomeConfig(): void {
+  for (const [id, def] of Object.entries(DEFAULT_BIOME_CONFIG)) {
+    const d = BIOMES[id];
+    if (!d) continue;
+    d.densityRange = [def.densityRange[0], def.densityRange[1]];
+    d.baseTemp = def.baseTemp;
+    d.baseMoisture = def.baseMoisture;
+  }
+  waterLevel = DEFAULT_WATER_LEVEL;
+}
 
 const TERRAIN_FREQUENCY = 0.005;
 const DETAIL_FREQUENCY = 0.05;

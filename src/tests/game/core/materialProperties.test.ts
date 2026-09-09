@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { getMaterialProperty, aggregateMaterialMods } from '$lib/game/core/defs/materials';
+import { getMaterialProperty } from '$lib/game/core/defs/materials';
+import { aggregateMaterialMods } from '$lib/game/core/rules/gear/materialMods';
 
 describe('material properties', () => {
   it('tougher materials carry a >1 durability mult, flimsy ones <1', () => {

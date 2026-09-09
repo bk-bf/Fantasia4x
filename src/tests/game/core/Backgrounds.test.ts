@@ -1,16 +1,15 @@
 import { describe, it, expect, beforeEach } from 'vitest';
+import { getBackgroundById, type Background } from '$lib/game/core/defs/backgrounds';
 import {
   rollOrigin,
   rollBackgrounds,
-  getBackgroundById,
   backgroundTraitAffinity,
   applyBackgroundExperience,
   backgroundPrestige,
   backgroundHomeKnowledge,
   backgroundWorldliness,
   ADULT_AGE
-} from '$lib/game/core/defs/backgrounds';
-import type { Background } from '$lib/game/core/defs/backgrounds';
+} from '$lib/game/core/gen/backgrounds';
 import { generateCulturePool, generateCultureRelations } from '$lib/game/core/gen/culture';
 import { generateKingdomPool, generateKingdomRelations } from '$lib/game/core/gen/kingdom';
 import { generateColonyPawns } from '$lib/game/entities/Pawns';

@@ -1,7 +1,8 @@
 import type { GameState, Mob, MobState, DroppedItem, ItemInstance } from '../../core/types';
 import { getCreatureById } from '../../core/defs/creatures';
 import { stampForeignVessel } from '../../core/rules/gear/vessels';
-import { drawCarried, getLootPool } from '../../core/defs/loot';
+import { getLootPool } from '../../core/defs/loot';
+import { drawCarried } from '../../core/gen/loot';
 import { itemService } from '../ItemService';
 import { rng } from '../../core/util/rng';
 import { SECONDS_PER_TICK, perTick } from '../../core/util/time';
@@ -27,7 +28,7 @@ import { isWitnessedByColony } from '../../core/rules/body/vision';
 import { absorbDropIfOnStockpileTile } from '../../core/state/stockpile';
 import { pawnStatService } from '../PawnStatService';
 import { simLog } from '../../core/util/logSink';
-import { lethalAnatomyCause } from '../../core/defs/bodyParts';
+import { lethalAnatomyCause } from '../../core/rules/body/anatomy';
 import {
   healLimbsInPlace,
   rollWoundClotting,

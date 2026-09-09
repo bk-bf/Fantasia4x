@@ -13,7 +13,7 @@ import {
 } from '../pawnHelpers';
 import { getRangedWeapon, effectiveRangedRange } from '../../rangedCombat';
 import { checkNeedInterrupts } from '../needSelection';
-import { feedOnVictim, sateBloodHunger } from '../../../core/defs/lineages';
+import { feedOnVictim, sateBloodHunger } from '../../../core/rules/body/lineage';
 
 export function handleFighting(pawn: Pawn, gameState: GameState): GameState {
   const threat = findCombatThreat(pawn, gameState);
