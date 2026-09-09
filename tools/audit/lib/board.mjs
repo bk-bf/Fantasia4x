@@ -11,6 +11,7 @@ export const LANES = {
   ready: '14aee711',
   'in progress': '9e8caff2',
   'in review': '365210d5',
+  'on dev': 'faf70e85',
   'needs playtest': 'e7ebab1b',
   done: 'ea4793e4'
 };

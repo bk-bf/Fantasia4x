@@ -16,13 +16,13 @@ export function renderAttempt({ branch, files, account, verified, failures, ran,
     '## Review it',
     '',
     '```bash',
-    `git diff main...${branch}`,
-    `git log --oneline main..${branch}`,
+    `git diff dev...${branch}`,
+    `git log --oneline dev..${branch}`,
     '```',
     '',
     verified === 'pass'
-      ? '`review.mjs` takes it from here: it re-merges this branch onto a fresh `origin/main`, ' +
-        'runs the route the Verify field names, and merges only if that is green.'
+      ? '`review.mjs` takes it from here: it re-merges this branch onto a fresh `origin/dev`, ' +
+        'runs the route the Verify field names, and merges to `dev` only if that is green.'
       : 'The worktree was kept so the attempt can be carried forward.',
     '',
     `Verified: ${
@@ -48,10 +48,10 @@ export function renderAttempt({ branch, files, account, verified, failures, ran,
   return lines.join('\n') + '\n';
 }
 
-export function renderReview({ branch, route, ran, ok, failures, sha, account }) {
+export function renderReview({ branch, route, ran, ok, failures, sha, account, base = 'dev' }) {
   const lines = [
     ok
-      ? `**Reviewed on the ${route} route and merged to \`main\`.**`
+      ? `**Reviewed on the ${route} route and merged to \`${base}\`.**`
       : `**Reviewed on the ${route} route and sent back — it did not pass.**`,
     ''
   ];
@@ -61,7 +61,8 @@ export function renderReview({ branch, route, ran, ok, failures, sha, account })
 
   lines.push(
     ok
-      ? `Merged as \`${sha}\`. The branch \`${branch}\` was deleted.`
+      ? `Merged into \`${base}\` as \`${sha}\`, and \`${branch}\` was deleted. ` +
+        `\`main\` is unchanged until you promote.`
       : `The card is back in Ready and \`${branch}\` still holds the attempt.`,
     '',
     `Ran: ${(ran ?? []).map((r) => `\`${r}\``).join(', ') || 'nothing'}`,
@@ -93,10 +94,10 @@ export function renderPlaytest({ branch, worktree, port, files, account, ran, pu
     '',
     '## Then',
     '',
-    'If it plays right:',
+    'If it plays right, it belongs on `dev` with everything else:',
     '',
     '```bash',
-    `git merge --no-ff ${branch}`,
+    `git checkout dev && git merge --no-ff ${branch}`,
     '```',
     '',
     `If it does not, say what is wrong on this issue and move the card back to \`Ready\`. ` +

@@ -5,17 +5,17 @@
 # night is spent auditing yesterday's code. Steps 1-2 are deterministic and cost nothing;
 # only step 3 spends tokens.
 #
-#   1. pull main from origin
+#   1. pull dev from origin
 #   2. re-index + re-plan  -> verdicts whose code did not move stay done
 #   3. run the audit until the budget runs out
 #   4. raise confirmed findings as GitHub issues
-#   5. work any issue a person marked `ready: true` -> a local branch + a review file
+#   5. work a Ready card, review it, merge it to dev -- one card at a time
 #
-# Everything runs in the main checkout on `main`. The audit's own output (the board) is the
-# only thing it commits there; a fix attempt goes to its own branch and is never pushed.
+# Everything runs in the checkout on `dev`. `main` is the branch Kirill plays and builds from
+# and nothing here writes to it; `promote.mjs` carries dev across when he decides.
 #
 # Environment (all optional, defaults suit ubuntuserver):
-#   AUDIT_REPO      main checkout            ~/Projects/Fantasia4x
+#   AUDIT_REPO      the dev checkout         ~/Projects/Fantasia4x
 #   AUDIT_NODE      node >= 22.5             ~/.nvm/versions/node/v24.19.0/bin/node
 #   AUDIT_HOURS     token budget in hours    3.5
 #   AUDIT_WORKERS   parallel workers         3
@@ -61,23 +61,24 @@ say "=== nightly audit $STAMP ==="
 [ -d "$REPO/.git" ] || die "no checkout at $REPO"
 say "node $("$NODE" -v), claude $AUDIT_CLAUDE"
 
-# --- 1. main -----------------------------------------------------------------
-# Everything below runs here. A board commit left over from a night whose push failed would
-# make `--ff-only` fail forever after, so an unpushed board commit is rebased onto origin
-# rather than treated as divergence.
-say "--- pulling main"
+# --- 1. dev ------------------------------------------------------------------
+# Everything runs off dev: the audit indexes it, the fixer branches from it, the reviewer
+# merges into it. main is what Kirill plays and builds, and only `promote.mjs` writes there.
+# An unpushed commit is rebased onto origin rather than treated as divergence, so a night
+# whose push failed does not wedge `--ff-only` forever after.
+say "--- pulling dev"
 git -C "$REPO" fetch --quiet origin "+refs/heads/*:refs/remotes/origin/*" || say "WARN: fetch failed, auditing the tree as it stands"
 if [ -n "$(git -C "$REPO" status --porcelain)" ]; then
   say "$REPO has uncommitted changes — skipping this run, nothing was touched"
   exit 0
 fi
-git -C "$REPO" checkout --quiet main || die "cannot check out main"
-if ! git -C "$REPO" merge --ff-only --quiet origin/main 2>/dev/null; then
-  say "main has local commits; rebasing them onto origin/main"
-  git -C "$REPO" rebase --quiet origin/main \
-    || { git -C "$REPO" rebase --abort 2>/dev/null; die "main will not rebase onto origin/main — needs a person"; }
+git -C "$REPO" checkout --quiet dev || die "cannot check out dev"
+if ! git -C "$REPO" merge --ff-only --quiet origin/dev 2>/dev/null; then
+  say "dev has local commits; rebasing them onto origin/dev"
+  git -C "$REPO" rebase --quiet origin/dev \
+    || { git -C "$REPO" rebase --abort 2>/dev/null; die "dev will not rebase onto origin/dev — needs a person"; }
 fi
-say "main at $(git -C "$REPO" rev-parse --short main)"
+say "dev at $(git -C "$REPO" rev-parse --short dev)"
 
 # --- 2. index + plan ---------------------------------------------------------
 say "--- indexing"

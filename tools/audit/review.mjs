@@ -1,18 +1,21 @@
 #!/usr/bin/env node
 // Take one card out of the board's In review lane, verify it by the route its Verify field
-// names, and merge it to main if that route is green.
+// names, and merge it to dev if that route is green.
 //
 //   node tools/audit/review.mjs --next            the oldest In review card
 //   node tools/audit/review.mjs --issue 24        a named one
 //   node tools/audit/review.mjs --next --dry-run  pick and print, change nothing
 //   node tools/audit/review.mjs --next --keep     leave the worktree for inspection
 //
-// The fix branch is re-merged onto a freshly fetched origin/main in its own worktree, so what
+// The fix branch is re-merged onto a freshly fetched origin/dev in its own worktree, so what
 // is verified is the merge result and not the branch in isolation. The diff is checked against
-// the files the issue cites before anything runs. `tests` is deterministic and runs no model. `headless` runs a session that must drive the real sim and report a
+// the files the issue cites before anything runs. `tests` is deterministic and runs no model.
+//
+// Green means merged to `dev`. `main` is the branch Kirill plays and builds from; nothing here
+// writes to it, and `promote.mjs` is what carries `dev` across when he decides. `headless` runs a session that must drive the real sim and report a
 // delta. A card on the playtest route never reaches here -- that lane is Kirill's.
 //
-// Green means merged to main and the issue closed. Anything else sends the card back to Ready
+// Green means merged to dev and the card in On dev. Anything else sends the card back to Ready
 // with the failure written up on the issue.
 
 import { existsSync, rmSync } from 'node:fs';
@@ -23,6 +26,7 @@ import * as I from './lib/gh.mjs';
 import {
   ROOT,
   PNPM,
+  BASE,
   CLAUDE,
   run,
   git,
@@ -118,7 +122,7 @@ function outOfScope(issue, changed) {
 
 function headlessPrompt(issue, route, files) {
   return `You are reviewing one finished change in this repository. You do not write the fix —
-it is already committed in this worktree and merged onto the current origin/main.
+it is already committed in this worktree and merged onto the current origin/${BASE}.
 
 # Authorisation
 
@@ -195,8 +199,8 @@ out(`#${num} ${d.id} — ${d.title}`);
 out(`--- route ${route}, branch ${fixBranch}`);
 
 if (flag('dry-run')) {
-  out(`would verify ${fixBranch} merged onto origin/main in ${wt}`);
-  out(`  green -> merge to main, close #${num}, card to Done`);
+  out(`would verify ${fixBranch} merged onto origin/${BASE} in ${wt}`);
+  out(`  green -> merge to ${BASE}, card to On dev`);
   out(`  red   -> comment on #${num}, card back to Ready`);
   process.exit(0);
 }
@@ -209,13 +213,13 @@ if (existsSync(wt)) {
     git(['worktree', 'prune']);
   }
 }
-git(['fetch', '--quiet', 'origin', 'main']);
+git(['fetch', '--quiet', 'origin', BASE]);
 try {
   git(['branch', '-D', revBranch], ROOT, true);
 } catch {
   /* no such branch yet */
 }
-git(['worktree', 'add', '-b', revBranch, wt, 'origin/main']);
+git(['worktree', 'add', '-b', revBranch, wt, `origin/${BASE}`]);
 out(`--- worktree ${wt}`);
 
 let exitCode = 0;
@@ -242,7 +246,7 @@ for (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP']) {
 }
 
 try {
-  out(`--- merging ${fixBranch} onto origin/main`);
+  out(`--- merging ${fixBranch} onto origin/${BASE}`);
   try {
     git(['merge', '--no-ff', '--no-edit', fixBranch], wt);
   } catch (e) {
@@ -254,7 +258,7 @@ try {
       }
     })();
     throw new Error(
-      `${fixBranch} no longer merges onto origin/main.\n\n\`\`\`\n${tail(
+      `${fixBranch} no longer merges onto origin/${BASE}.\n\n\`\`\`\n${tail(
         conflicts || String(e.message),
         20
       )}\n\`\`\``
@@ -262,8 +266,8 @@ try {
   }
 
   const files = committedFiles(wt);
-  if (files.length === 0) throw new Error(`${fixBranch} adds nothing on top of origin/main`);
-  out(`--- ${files.length} file(s) against main`);
+  if (files.length === 0) throw new Error(`${fixBranch} adds nothing on top of origin/${BASE}`);
+  out(`--- ${files.length} file(s) against ${BASE}`);
 
   const wandered = outOfScope(issue, files);
   if (wandered) {
@@ -345,16 +349,16 @@ try {
     }
   }
 
-  out(`--- pushing to main`);
+  out(`--- pushing to ${BASE}`);
   try {
-    git(['push', 'origin', 'HEAD:main'], wt);
+    git(['push', 'origin', `HEAD:${BASE}`], wt);
   } catch (e) {
-    throw new Error(`the merge is green but main moved under it:\n${tail(String(e.message), 10)}`);
+    throw new Error(`the merge is green but ${BASE} moved under it:\n${tail(String(e.message), 10)}`);
   }
   const sha = git(['rev-parse', 'HEAD'], wt).slice(0, 8);
   out(`--- merged as ${sha}`);
 
-  // The merge is on main from here on. Nothing below is allowed to turn that into a failure
+  // The merge is on dev from here on. Nothing below is allowed to turn that into a failure
   // that sends the card back to Ready, so each step reports and continues.
   const settle = (what, fn) => {
     try {
@@ -364,21 +368,10 @@ try {
     }
   };
   sent = true;
-  say(num, P.renderReview({ branch: fixBranch, route, ran, ok: true, sha, account }));
+  say(num, P.renderReview({ branch: fixBranch, route, ran, ok: true, sha, account, base: BASE }));
   settle('close the issue', () => I.patchIssue(num, { status: 'closed' }));
-  settle('move the card to Done', () => B.moveLane(num, 'done'));
-  out(`--- #${num} closed, card in Done`);
-
-  try {
-    if (git(['status', '--porcelain'], ROOT) === '' && git(['branch', '--show-current'], ROOT) === 'main') {
-      git(['merge', '--ff-only', 'origin/main'], ROOT);
-      out('--- the checkout is on the merge');
-    } else {
-      out('--- the checkout is dirty or off main, so it still needs a pull');
-    }
-  } catch {
-    out('--- could not fast-forward the checkout; pull it by hand');
-  }
+  settle('move the card to On dev', () => B.moveLane(num, 'on dev'));
+  out(`--- #${num} closed, card in On dev — main is untouched`);
 
   git(['branch', '-D', fixBranch], ROOT, true);
   settle(`delete origin/${fixBranch}`, () => git(['push', 'origin', '--delete', fixBranch], ROOT));

@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 const HERE = dirname(fileURLToPath(import.meta.url));
 export const ROOT = process.env.AUDIT_ROOT || join(HERE, '..', '..', '..');
 export const PNPM = process.env.AUDIT_PNPM || 'pnpm';
+export const BASE = process.env.AUDIT_BASE || 'dev';
 export const CLAUDE = process.env.AUDIT_CLAUDE || 'claude';
 
 export function run(cmd, args, { cwd = ROOT, input, timeoutMs = 1_800_000 } = {}) {
@@ -71,7 +72,7 @@ export function changedFiles(cwd) {
     .filter(Boolean);
 }
 
-export const committedFiles = (cwd, base = 'origin/main') =>
+export const committedFiles = (cwd, base = `origin/${BASE}`) =>
   git(['diff', '--name-only', `${base}...HEAD`], cwd).split('\n').filter(Boolean);
 
 /** A fresh worktree has no node_modules, no .svelte-kit/tsconfig.json for tsconfig to extend,

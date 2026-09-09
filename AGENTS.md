@@ -134,6 +134,15 @@ This overrides any global or default instruction to commit finished work without
 means the work is done, the tests pass and you have said so. Leave the changes in the working tree
 and report what is staged.
 
+**All work lands on `dev`.** `main` is the branch Kirill plays and builds from, and it changes
+only when he promotes. Nothing automated writes to it: the fixer branches from `origin/dev`, the
+reviewer merges back into `dev`, and the nightly runs in a checkout on `dev`. `pnpm audit:promote`
+merges `dev` into `main` in a throwaway worktree, runs the **whole** suite there rather than the
+related subset, and stops — printing the worktree to play and the command to push. `--push` is
+the same run with the merge pushed, for when he has played it and decided.
+
+Branch from `dev`, merge to `dev`, and never push `main`.
+
 **On ubuntuserver, commit.** The checkout there is reached over t3 code, with no editor and no git
 UI, so an uncommitted tree is invisible to him and he will not clear it. Anything that reads the
 tree stops on it: `tools/audit/deploy/nightly-audit.sh` aborts on a dirty tree, and the journal
@@ -176,7 +185,8 @@ stays the ledger's key and should not appear in anything a person reads.
 
 **Triage through the lanes, never around them.** The board is
 [projects/4](https://github.com/users/bk-bf/projects/4) and its columns are an order:
-`Backlog` → `Ready` → `In progress` → `In review` → `Done`, with `Blocked on you` off to the side.
+`Backlog` → `Ready` → `In progress` → `In review` → `On dev` → `Done`, with `Blocked on you` off
+to the side.
 
 - **`Backlog`** — raised, not yet evaluated. The audit raises here and nowhere else.
 
@@ -190,12 +200,15 @@ someone is ready to start it.
 - **`In progress`** — a branch exists and someone is on it.
 - **`In review`** — the work is finished and an agent is verifying it, by the route the
   `Verify` field names. Nothing here needs Kirill. A card that passes its route is merged to
-  `main` by the reviewer, not held for him.
+  `dev` by the reviewer, not held for him.
+- **`On dev`** — verified and merged to `dev`, and not yet in the build Kirill plays. Cards rest
+  here until he promotes, which is the only thing that writes `main`.
 - **`Needs playtest`** — green, and the remaining question is one only he can answer. The work
   is committed on `fix/<slug>` and **not merged**; its worktree stays, with its own `.devport`,
   so `./dev.sh` in it runs beside whatever is already on 5173. This lane is his; put work here
   and stop.
-- **`Done`** — merged, and the merge commit that closed the issue is named on it.
+- **`Done`** — promoted to `main`, so it is in the game he plays. The issue was closed when it
+  reached `dev`; the lane is where the work lives, not whether it is finished.
 - **`Blocked on you`** — cannot proceed until he chooses: a proposal awaiting a yes, or a design
   call whose measurements are already in hand. Not a parking space for anything merely hard.
 
@@ -207,17 +220,18 @@ not a mistake to correct. Nothing watches those lanes for drift.
 Move a card with `pnpm issue lane <n> <lane>`, which refuses a move out of his two lanes.
 Direct `gh project item-edit` is denied.
 
-Do not skip a lane. Nothing goes from `Backlog` straight to `In progress`, and nothing reaches
-`Done` without passing its `Verify` route in `In review`.
+Do not skip a lane. Nothing goes from `Backlog` straight to `In progress`, nothing reaches
+`On dev` without passing its `Verify` route in `In review`, and nothing reaches `Done` except by
+a promotion Kirill ran.
 
 **The board runs itself on the first two routes.** `pnpm audit:fix --next` takes the oldest
-`Ready` card whose `Verify` is `tests`, works it in a worktree, and moves it to `In review` once
+`Ready` card whose `Verify` is `tests`, works it in a worktree off `origin/dev`, and moves it to `In review` once
 `pnpm check` and the related tests are green on the branch. Every green branch is pushed, so a
 diff is readable from anywhere; `review.mjs` deletes it from origin when it merges. `pnpm audit:review --next` takes the
 oldest `In review` card, checks the diff touches only files the issue cites, re-merges its
-branch onto a freshly fetched `origin/main`, runs the route again on the merge result — plus a
-headless session for `verify headless` — and pushes to `main`, closes the issue and moves the
-card to `Done` only if that is green. Anything short of
+branch onto a freshly fetched `origin/dev`, runs the route again on the merge result — plus a
+headless session for `verify headless` — and pushes to `dev`, closes the issue and moves the
+card to `On dev` only if that is green. Anything short of
 green sends the card back to `Ready` with the failure written on the issue.
 
 `--verify playtest` works the card the same way and stops at `Needs playtest`: committed,

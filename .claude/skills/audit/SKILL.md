@@ -27,8 +27,9 @@ it in one pass is a loop with nobody in it, and the lanes exist to prevent that.
 
 Same shape, three more:
 
-- **Never push a `fix/<slug>` branch by hand, and never merge one by hand.** `review.mjs` merges
-  what passed its route, and nothing else reaches `main`. A card on the `playtest` route is
+- **Never push `main`.** All work lands on `dev`; `main` changes only when Kirill runs
+  `pnpm audit:promote --push`, after playing the merge. `review.mjs` merges what passed its
+  route into `dev`, and nothing else reaches either branch. A card on the `playtest` route is
   never merged at all — it stops in `Needs playtest` with its branch and worktree intact, and
   that judgement is Kirill's.
 - **Never write to GitHub with `gh` directly.** `gh issue create|edit|close|comment` and
@@ -90,7 +91,7 @@ its evidence requirements rather than the prompt asking nicely. When reviewing f
 ## The fixer and the reviewer
 
 `pnpm audit:fix --next` takes the oldest card in the board's `Ready` lane whose `Verify` field
-says `tests`, into a worktree off `origin/main` on `fix/<slug>`, works the whole Remediation
+says `tests`, into a worktree off `origin/dev` on `fix/<slug>`, works the whole Remediation
 list, and re-runs `pnpm check` + `pnpm test:related` itself. `--verify headless` and
 `--verify playtest` pick the other two routes.
 
@@ -102,12 +103,13 @@ list, and re-runs `pnpm check` + `pnpm test:related` itself. `--verify headless`
 | nothing changed | a comment saying so, card back in `Ready` |
 
 `pnpm audit:review --next` takes the oldest `In review` card, merges `fix/<slug>` onto a freshly
-fetched `origin/main` in a second worktree, and runs its route on the **merge result** — the
+fetched `origin/dev` in a second worktree, and runs its route on the **merge result** — the
 fixer only ever verified the branch alone. On the `headless` route it then runs a session that
 must drive the real sim and answer `VERDICT: PASS` or `VERDICT: FAIL`.
 
-Green means it pushes to `main`, closes the issue naming the merge commit, and moves the card to
-`Done`. Anything else sends the card back to `Ready` with the failure on the issue.
+Green means it pushes to `dev`, closes the issue naming the merge commit, and moves the card to
+`On dev`. `main` is the branch Kirill plays and builds from; only `pnpm audit:promote` writes
+there, and only when he runs it. Anything else sends the card back to `Ready` with the failure on the issue.
 
 Both stop while the audit is paused; they draw on the same limits.
 

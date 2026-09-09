@@ -219,7 +219,7 @@ pnpm audit:fix --next --keep              # leave the worktree to inspect
 The gate is the board, not a label: a card sitting in `Ready`, worked on the route its `Verify`
 field names.
 
-One issue, one worktree off `origin/main`, one branch `fix/<slug>`, and the attempt written up
+One issue, one worktree off `origin/dev`, one branch `fix/<slug>`, and the attempt written up
 as a comment on that issue. The prompt hands the model the issue and states plainly that
 AGENTS.md's "stop at a proposal" rule does not apply here, because otherwise every run ends
 with a plan and no diff. It is told not to commit, not to push, not to close the issue, and
@@ -259,8 +259,8 @@ issue that cites no code at all is not checked this way. On the `tests` route no
 diff, so this is the only thing that reads it.
 
 The fixer verified its branch in isolation. The reviewer verifies the **merge**: a second
-worktree off a freshly fetched `origin/main`, `git merge --no-ff` of `fix/<slug>` into it, and
-the route run again on the result. A branch that passed alone and conflicts with main, or
+worktree off a freshly fetched `origin/dev`, `git merge --no-ff` of `fix/<slug>` into it, and
+the route run again on the result. A branch that passed alone and conflicts with `dev`, or
 passes alone and fails against what landed since, is caught here and nowhere else.
 
 | Route | What settles it |
@@ -268,9 +268,24 @@ passes alone and fails against what landed since, is caught here and nowhere els
 | `tests` | `pnpm check` and `pnpm test:related` on the merge result. Deterministic, no model. |
 | `headless` | The same, then a session that must invoke the `headless` skill, drive the real sim over real ticks, and end with `VERDICT: PASS` or `VERDICT: FAIL`. It judges only whether the stated behaviour happens — never whether the numbers are the right numbers, which is a playtest question. |
 
-Green means merged: `git push origin HEAD:main`, a comment naming the merge commit, the issue
-closed, the card in `Done`, and both branches deleted. The main checkout is fast-forwarded onto
-the merge when it is clean and on `main`.
+Green means merged to **`dev`**: `git push origin HEAD:dev`, a comment naming the merge commit,
+the issue closed, the card in `On dev`, and both branches deleted. `main` is not touched.
+
+## Promotion
+
+```bash
+pnpm audit:promote --list      # what is on dev that main does not have
+pnpm audit:promote             # merge it in a worktree and run the whole suite there
+pnpm audit:promote --push      # the same, and push main + move the cards to Done
+```
+
+`main` is the branch you play and build from, so nothing automated writes to it. Promotion
+merges `dev` into `main` in a throwaway worktree, runs `pnpm check` and the **entire** vitest
+suite there — 191 files, 1383 tests, about seven minutes — and then stops. It prints the
+worktree so you can `./dev.sh` in it on its own port and play the merge before it exists
+anywhere else. `--push` is the same run with the push at the end.
+
+A promotion that is not green leaves `main` untouched and keeps the worktree.
 
 Anything else sends the card back to `Ready` with the failure written on the issue and the
 worktree kept.
@@ -295,22 +310,21 @@ journalctl --user -u fantasia-audit.service -n 40
 [`nightly-audit.sh`](deploy/nightly-audit.sh) runs in this order, and the order is the
 point — the source has to be current before the ledger is re-planned:
 
-1. `git fetch` + fast-forward `main` from origin. It runs in the main checkout on `main`;
-   there is no audit branch. A board commit whose push failed last night is rebased onto
-   `origin/main` rather than treated as divergence, which would otherwise wedge every
-   later run on `--ff-only`.
+1. `git fetch` + fast-forward `dev` from origin. It runs in the checkout on `dev`; there is no
+   audit branch. A commit whose push failed last night is rebased onto `origin/dev` rather than
+   treated as divergence, which would otherwise wedge every later run on `--ff-only`.
 2. `audit index` + `audit plan` — verdicts whose code did not move stay `done`, so only the
    diff is re-audited
 3. `run.mjs` until the budget runs out (3.5 h, 3 workers, sonnet by default)
 4. `audit issues` — findings raised as GitHub issues, into `Backlog`. Nothing acts on them
    until someone triages a card into `Ready`.
 5. `fix.mjs --next` then `review.mjs --next`, ×`AUDIT_FIXES` — **interleaved, not one pass
-   each**. A fixer cuts its worktree from `origin/main`, so a card worked before the previous
+   each**. A fixer cuts its worktree from `origin/dev`, so a card worked before the previous
    one has merged does not contain it. 22 files are cited by more than one open issue, and two
    cards on the same file conflict the moment the second one merges. Reviewing each card before
    working the next closes that window.
 6. `review.mjs --next` ×`AUDIT_REVIEWS` — anything still sitting `In review`, from a night that
-   was cut short or a card sent back and re-worked.
+   was cut short or a card sent back and re-worked. Nothing in the nightly writes `main`.
 
 Steps 1–3 are deterministic and cost nothing; steps 4, 5 and 6 spend tokens. A `flock`
 stops a second night starting on top of an overrunning one.

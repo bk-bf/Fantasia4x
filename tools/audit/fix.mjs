@@ -1,6 +1,9 @@
 #!/usr/bin/env node
 // Take one card out of the board's Ready lane, fix it in a worktree, move the card.
 //
+// Everything here happens off `dev`. `main` is the branch Kirill plays and builds from, and
+// nothing automated writes to it.
+//
 //   node tools/audit/fix.mjs --next               the oldest Ready card on the tests route
 //   node tools/audit/fix.mjs --next --verify headless
 //   node tools/audit/fix.mjs --issue 24           a named one
@@ -25,6 +28,7 @@ import * as I from './lib/gh.mjs';
 import {
   ROOT,
   PNPM,
+  BASE,
   CLAUDE,
   run,
   git,
@@ -239,13 +243,13 @@ if (existsSync(wt)) {
     git(['worktree', 'prune']);
   }
 }
-git(['fetch', '--quiet', 'origin', 'main']);
+git(['fetch', '--quiet', 'origin', BASE]);
 try {
   git(['branch', '-D', branch], ROOT, true);
 } catch {
   /* no such branch yet */
 }
-git(['worktree', 'add', '-b', branch, wt, 'origin/main']);
+git(['worktree', 'add', '-b', branch, wt, `origin/${BASE}`]);
 
 B.moveLane(num, 'in progress');
 
