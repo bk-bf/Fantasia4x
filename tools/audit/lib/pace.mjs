@@ -37,23 +37,6 @@ export function writeControl(patch) {
   return next;
 }
 
-export function anchorFor(resetsAt, pct) {
-  if (!resetsAt) return 0;
-  const doc = readJson(PACE, { batches: [], anchors: {} });
-  const anchors = doc.anchors ?? {};
-  const key = String(resetsAt);
-  if (anchors[key] === undefined) {
-    anchors[key] = pct;
-    const keep = Object.fromEntries(
-      Object.entries(anchors).filter(([k]) => Number(k) > Date.now() - 2 * WINDOW_MS)
-    );
-    mkdirSync(LEDGER, { recursive: true });
-    writeFileSync(PACE, JSON.stringify({ ...doc, anchors: keep }, null, 1));
-    return pct;
-  }
-  return anchors[key];
-}
-
 export function readPace() {
   const p = readJson(PACE, { batches: [] });
   const cutoff = Date.now() - WINDOW_MS;
@@ -113,8 +96,7 @@ export function schedule(plan, control, now = Date.now()) {
   }
   const windowStart = plan.resetsAt - WINDOW_MS;
   const elapsed = Math.min(Math.max(now - windowStart, 0), WINDOW_MS);
-  const anchor = Math.min(anchorFor(plan.resetsAt, plan.pct), ceiling);
-  const target = anchor + ((ceiling - anchor) * elapsed) / WINDOW_MS;
+  const target = (ceiling * elapsed) / WINDOW_MS;
   const minsLeft = Math.max(0, (plan.resetsAt - now) / 60_000);
   if (plan.pct >= ceiling) {
     return { verdict: 'wait', target, ceiling, pct: plan.pct, minsLeft,
