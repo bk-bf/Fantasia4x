@@ -77,7 +77,7 @@ function applyRequest(req, now) {
       patch.reason = patch.paused ? (req.reason ?? null) : null;
       patch.resume_after = patch.paused ? (req.resume_after ?? null) : null;
     }
-    for (const key of ['ceiling_pct', 'window_batches', 'hours', 'workers', 'model']) {
+    for (const key of ['ceiling_pct', 'margin_pct', 'window_batches', 'hours', 'workers', 'model']) {
       if (key in req && req[key] !== control[key]) patch[key] = req[key];
     }
   }

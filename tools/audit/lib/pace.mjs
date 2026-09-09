@@ -17,6 +17,7 @@ const DEFAULT_CONTROL = {
   reason: null,
   resume_after: null,
   ceiling_pct: 95,
+  margin_pct: RESUME_MARGIN,
   poll_seconds: 60,
   plan_url: 'https://dashboard.callmedaddy.dedyn.io/api/plan'
 };
@@ -98,7 +99,11 @@ export function schedule(plan, control, now = Date.now(), holding = false) {
   const windowStart = plan.resetsAt - WINDOW_MS;
   const elapsed = Math.min(Math.max(now - windowStart, 0), WINDOW_MS);
   const target = (ceiling * elapsed) / WINDOW_MS;
-  const margin = Math.min(RESUME_MARGIN, Math.max(0, ceiling - target));
+  const want = Number(control.margin_pct);
+  const margin = Math.min(
+    Number.isFinite(want) && want >= 0 ? want : RESUME_MARGIN,
+    Math.max(0, ceiling - target)
+  );
   const minsLeft = Math.max(0, (plan.resetsAt - now) / 60_000);
   const spare = target - plan.pct;
   const base = { target, margin, ceiling, pct: plan.pct, minsLeft };
