@@ -6,7 +6,9 @@
 </script>
 
 <script lang="ts">
-  import { allLogEntries, clearDebugLog } from '$lib/stores/Log';
+  import { get } from 'svelte/store';
+  import { allLogEntries, clearDebugLog, logDiag } from '$lib/stores/Log';
+  import { currentTurn } from '$lib/stores/gameState';
   import DebugLogControls from './DebugLogControls.svelte';
   import ScrollArea from '$lib/components/UI/widget/ScrollArea.svelte';
 
@@ -72,7 +74,18 @@
 
   async function clearLogs() {
     clearDebugLog();
-    await fetch('/api/logs', { method: 'DELETE' }).catch(() => {});
+    try {
+      const res = await fetch('/api/logs', { method: 'DELETE' });
+      if (!res.ok) throw new Error(`DELETE /api/logs returned ${res.status}`);
+    } catch (err) {
+      logDiag({
+        category: 'system',
+        severity: 'error',
+        turn: get(currentTurn),
+        message: 'failed to clear log files on disk',
+        data: { error: err instanceof Error ? err.message : String(err) }
+      });
+    }
   }
 </script>
 
