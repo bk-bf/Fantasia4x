@@ -5,6 +5,7 @@ import { recipeService } from '$lib/game/services/RecipeService';
 import { itemService } from '$lib/game/services/ItemService';
 import { completeCraftOrder } from '$lib/game/services/jobs/craft';
 import { workService } from '$lib/game/services/WorkService';
+import { consumeFromStockpiles } from '$lib/game/core/state/stockpile';
 import type { GameState } from '$lib/game/core/types';
 
 const CHAIN = [
@@ -114,6 +115,20 @@ describe('steel chain', () => {
       else console.log(`  [STEEL-MAT] ${s.padEnd(22)} → sword matDur=${d.matDur ?? 1}`);
     }
     expect(fail, fail.join('\n')).toEqual([]);
+  });
+
+  it('a fractional category:steel cost spends proportionally instead of rounding up to a whole bar', () => {
+    const gs = {
+      droppedItems: [
+        { id: 'd1', resourceId: 'crucible_steel', quantity: 10, stored: true, x: 0, y: 0 }
+      ]
+    } as unknown as GameState;
+    const cost = itemService.expandCategoryCost({ 'category:steel': 0.1 }, gs);
+    expect(cost).toEqual({ crucible_steel: 0.1 });
+
+    const after = consumeFromStockpiles(gs, cost!);
+    const remaining = (after.droppedItems ?? []).find((d) => d.resourceId === 'crucible_steel');
+    expect(remaining?.quantity).toBeCloseTo(9.9);
   });
 
   it('pawns physically smelt iron at the bloomery and bake blister steel at the cementation furnace', async () => {

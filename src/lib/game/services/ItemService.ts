@@ -415,7 +415,7 @@ export class ItemServiceImpl implements ItemService {
           const avail = this.getAvailableQuantity(item.id, gameState) - (used[item.id] ?? 0);
           if (avail <= 0) continue;
           const worth = craftValueOf(item);
-          const take = Math.min(avail, Math.ceil(need / worth));
+          const take = Math.min(avail, need / worth);
           out[item.id] = (out[item.id] ?? 0) + take;
           used[item.id] = (used[item.id] ?? 0) + take;
           need -= take * worth;

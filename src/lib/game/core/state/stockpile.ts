@@ -60,6 +60,8 @@ export function computeAggregate(zones: StockpileZone[]): Record<string, number>
 
 export const BASE_TILE_CAPACITY = 200;
 
+const QUANTITY_EPSILON = 1e-6;
+
 export function aggregateFromDrops(drops: DroppedItem[] | undefined): Record<string, number> {
   const agg: Record<string, number> = {};
   for (const d of drops ?? []) {
@@ -165,15 +167,18 @@ export function reserveForOrder(
       }
       continue;
     }
-    if (d.quantity <= remaining) {
+    if (d.quantity <= remaining + QUANTITY_EPSILON) {
       drops.push({ ...d, reservedFor: orderId });
       remaining -= d.quantity;
     } else {
-      drops.push({
-        ...d,
-        quantity: d.quantity - remaining,
-        ...(d.unitConditions ? { unitConditions: d.unitConditions.slice(remaining) } : {})
-      });
+      const leftover = d.quantity - remaining;
+      if (leftover > QUANTITY_EPSILON) {
+        drops.push({
+          ...d,
+          quantity: leftover,
+          ...(d.unitConditions ? { unitConditions: d.unitConditions.slice(remaining) } : {})
+        });
+      }
       drops.push({
         ...(d.unitConditions ? { unitConditions: d.unitConditions.slice(0, remaining) } : {}),
         id: `${d.id}-resv-${orderId}`,
@@ -420,7 +425,7 @@ export function consumeFromStockpiles(state: GameState, items: Record<string, nu
     }
   }
 
-  const kept = newDropped.filter((d) => !d.stored || d.quantity > 0);
+  const kept = newDropped.filter((d) => !d.stored || d.quantity > QUANTITY_EPSILON);
   return withDrops(state, kept);
 }
 
