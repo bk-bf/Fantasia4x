@@ -7,6 +7,28 @@ import { ROOT } from './links.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 
+let templateSections = null;
+
+function requiredSections() {
+  if (templateSections === null) {
+    try {
+      const md = readFileSync(join(ROOT, '.github', 'ISSUE_TEMPLATE', 'defect.md'), 'utf8');
+      templateSections = [...md.matchAll(/^##\s+(.+)$/gm)].map((m) => m[1].trim().toLowerCase());
+    } catch {
+      templateSections = [];
+    }
+  }
+  return templateSections;
+}
+
+function ruleNames() {
+  try {
+    return new Set(loadRules().rules.map((r) => r.name).filter(Boolean));
+  } catch {
+    return new Set();
+  }
+}
+
 /** Every label a writer may use: the fixed vocabulary plus one per rule name. Anything else
  *  is a typo or an invention, and both pollute the board the same way. */
 function vocabulary() {
@@ -158,6 +180,7 @@ export function checkBody(body) {
 }
 
 const MIN_PROSE = 240;
+const STRUCTURE_AT = 1500;
 
 /** An issue nobody can act on is worse than no issue: it inflates the count and names nothing.
  *  The bar is deliberately about substance, not shape — a heading with nothing under it passes
@@ -182,12 +205,24 @@ export function checkTemplate(body, labels = []) {
     );
   }
 
-  // structure is a means, not the bar: a checkbox list with citations is actionable, and a
-  // wall of unbroken prose is not. Only ask for sections once it is long enough to need them.
   const headings = [...text.matchAll(/^##\s+(.+)$/gm)].map((m) => m[1].trim().toLowerCase());
-  if (!headings.length && prose.length > 1500) {
+  const required = requiredSections();
+  if (prose.length > STRUCTURE_AT && required.length) {
+    const missing = required.filter((r) => !headings.includes(r));
+    if (missing.length) {
+      errors.push(
+        `${prose.length} characters, and .github/ISSUE_TEMPLATE/defect.md asks for a section ` +
+          `this body does not have: ${missing.map((m) => `"${m}"`).join(', ')}`
+      );
+    }
+  }
+
+  const rules = ruleNames();
+  const fromAudit = labels.includes('found by audit') || labels.some((l) => rules.has(l));
+  if (fromAudit && !headings.includes('evidence')) {
     errors.push(
-      `${prose.length} characters with no sections — break it up, see .github/ISSUE_TEMPLATE`
+      'no "## Evidence" section — an issue naming a rule has to show the lines the rule fired on, ' +
+        'not mention them in passing'
     );
   }
   for (const h of headings) {
