@@ -269,7 +269,7 @@ export function resolveAmbient(opts: {
       layers['birds-day'] = 0.4;
       layers.forest = 0.2;
     } else {
-      layers.forest = isNight ? 0 : 0.15;
+      layers.forest = 0.15;
     }
   }
 
