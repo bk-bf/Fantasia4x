@@ -105,8 +105,10 @@ function pick() {
 
 /** The tests route runs no model, so nothing reads the diff against the issue. An issue names
  *  the files its findings sit in; a fix that edits something else has either widened its own
- *  scope or fixed a different problem. A test file is always allowed, and an issue that cites
- *  no code at all cannot be checked this way. */
+ *  scope or fixed a different problem. A test file is always allowed -- "add the check that
+ *  would have caught it" is on every remediation list -- and so is a doc, which cannot change
+ *  behaviour and is usually where that check gets stated. An issue that cites no code at all
+ *  cannot be checked this way. */
 function outOfScope(issue, changed) {
   const cited = new Set(
     (issue.data.files ?? []).flatMap((f) =>
@@ -116,7 +118,8 @@ function outOfScope(issue, changed) {
     )
   );
   if (cited.size === 0) return null;
-  const outside = changed.filter((f) => !cited.has(f) && !f.startsWith('src/tests/'));
+  const free = (f) => f.startsWith('src/tests/') || f.startsWith('docs/') || f.endsWith('.md');
+  const outside = changed.filter((f) => !cited.has(f) && !free(f));
   return outside.length ? { cited: [...cited], outside } : null;
 }
 
