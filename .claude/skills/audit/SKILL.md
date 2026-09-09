@@ -118,8 +118,8 @@ account of itself. The issue comment records both: what the harness observed, an
 claimed. They are separate so they can be compared.
 
 ```bash
-git diff main...fix/<slug>
-git log --oneline main..fix/<slug>
+git diff dev...fix/<slug>
+git log --oneline dev..fix/<slug>
 ```
 
 Say which remediation steps it actually did, which it skipped, and the one thing worth looking at
@@ -127,21 +127,21 @@ hardest. Then stop. `Out of scope` in the issue is binding on the fixer and on y
 
 ## The nightly
 
-`fantasia-audit.timer` runs `deploy/nightly-audit.sh` on ubuntuserver, **in the main checkout on
-`main`** — there is no audit branch, and re-introducing one would put the ledger on a different
+`fantasia-audit.timer` runs `deploy/nightly-audit.sh` on ubuntuserver, **in the checkout on
+`dev`** — there is no audit branch, and re-introducing one would put the ledger on a different
 tree from the code it describes. It fetches, re-indexes, re-plans, runs the loop for its budget,
 raises findings onto the board as GitHub issues, then works up to `AUDIT_FIXES` cards from
 `Ready`, reviews up to `AUDIT_REVIEWS` cards from `In review`, and hands the night to `mon` on
 the `ci/cl` tag.
 
-The reviewer is the only automated thing that reaches `main`, and only for a merge that passed
-its route. Findings are raised into `Backlog`, where nothing acts on them until someone triages
+The reviewer is the only automated thing that writes a branch at all, and it writes `dev`.
+Nothing automated reaches `main`. Findings are raised into `Backlog`, where nothing acts on them until someone triages
 them into `Ready`.
 
 Debugging a night that did nothing, in order:
 
 1. `journalctl --user -u fantasia-audit.service -n 60` — it dies loudly on a dirty tree, a
-   `main` that will not rebase, or a failed index.
+   `dev` that will not rebase, or a failed index.
 2. `tools/audit/.ledger/nightly/<date>.log` — the run's own narration.
 3. `audit status` — if `done` did not move, the loop never claimed anything; check that
    `audit plan` produced work items before suspecting the model.
