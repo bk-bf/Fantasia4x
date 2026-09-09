@@ -1,18 +1,16 @@
 <script lang="ts">
   import { gameState } from '$lib/stores/gameState.js';
   import type { PlacedBuilding, Item, ZonePriority } from '$lib/game/core/types.js';
+  import { ZONE_PRIORITY_LABELS } from '$lib/game/core/types.js';
   import ItemFilterChecklist from '$lib/components/UI/canvas/ItemFilterChecklist.svelte';
   import itemsData from '$lib/game/database/items/items.json';
   import { buildingService } from '$lib/game/services/BuildingService';
 
   let { building, open = false }: { building: PlacedBuilding; open?: boolean } = $props();
 
-  const PRIORITIES: { value: ZonePriority; label: string }[] = [
-    { value: 'low', label: 'Low' },
-    { value: 'normal', label: 'Normal' },
-    { value: 'preferred', label: 'Preferred' },
-    { value: 'urgent', label: 'Urgent' }
-  ];
+  const PRIORITIES = (Object.entries(ZONE_PRIORITY_LABELS) as [ZonePriority, string][]).map(
+    ([value, label]) => ({ value, label })
+  );
   const binPriority = $derived(building.storageSettings?.priority ?? 'normal');
   function setPriority(value: ZonePriority) {
     gameState.command({

@@ -3,6 +3,7 @@
   import { itemService } from '$lib/game/services/ItemService';
   import itemsData from '$lib/game/database/items/items.json';
   import type { Item, ZoneFilter, ZonePriority } from '$lib/game/core/types';
+  import { ZONE_PRIORITY_LABELS } from '$lib/game/core/types';
   import ItemFilterChecklist from '$lib/components/UI/canvas/ItemFilterChecklist.svelte';
 
   let {
@@ -19,12 +20,9 @@
     open?: boolean;
   } = $props();
 
-  const PRIORITIES: { value: ZonePriority; label: string }[] = [
-    { value: 'low', label: 'Low' },
-    { value: 'normal', label: 'Normal' },
-    { value: 'preferred', label: 'Preferred' },
-    { value: 'urgent', label: 'Urgent' }
-  ];
+  const PRIORITIES = (Object.entries(ZONE_PRIORITY_LABELS) as [ZonePriority, string][]).map(
+    ([value, label]) => ({ value, label })
+  );
   function setPriority(value: ZonePriority) {
     gameState.command({
       type: 'setInstancePriority',
