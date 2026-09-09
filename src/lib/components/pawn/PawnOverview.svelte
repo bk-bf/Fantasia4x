@@ -23,17 +23,16 @@
   import PawnAdminister from './PawnAdminister.svelte';
   import PawnForceWork from './PawnForceWork.svelte';
   import PawnGrowthPanel from './PawnGrowthPanel.svelte';
-  import { DAYS_PER_SEASON } from '$lib/game/services/EnvironmentService';
+  import { DAYS_PER_SEASON, SEASON_IDS, SEASON_LABELS } from '$lib/game/services/EnvironmentService';
 
   export let pawn: Pawn;
   export let gameState: GameState;
 
-  const SEASONS = ['Spring', 'Summer', 'Autumn', 'Winter'];
   $: birthdayLabel =
     pawn.birthDayOfYear != null
-      ? `born ${SEASONS[Math.floor(pawn.birthDayOfYear / DAYS_PER_SEASON)]} day ${
-          (pawn.birthDayOfYear % DAYS_PER_SEASON) + 1
-        }`
+      ? `born ${SEASON_LABELS[
+          SEASON_IDS[Math.floor(pawn.birthDayOfYear / DAYS_PER_SEASON) % SEASON_IDS.length]
+        ]} day ${(pawn.birthDayOfYear % DAYS_PER_SEASON) + 1}`
       : '';
 
   $: taskSummary = getPawnTaskSummary(pawn, gameState);

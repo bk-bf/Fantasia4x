@@ -13,7 +13,8 @@
       title: 'Up to honey salve — keep the worked medicine for someone else'
     },
     { id: 2, label: 'IRON', title: 'Up to spirit tincture' },
-    { id: 3, label: 'STEEL', title: "Up to a surgeon's dressing" }
+    { id: 3, label: 'STEEL', title: "Up to a surgeon's dressing" },
+    { id: 4, label: 'RUNED', title: 'Up to Emberbloom Balm' }
   ];
 
   $: current = pawn.medicineTierCap ?? null;

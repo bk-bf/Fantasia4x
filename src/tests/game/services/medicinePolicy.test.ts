@@ -25,6 +25,14 @@ describe('medicine — dressings are automatic, condition cures are not', () => 
       ).toBe(true);
   });
 
+  it('no stocked medicine sits above the tier cap picker (PawnMedicinePolicy TIERS, id 4 = RUNED)', () => {
+    const maxTier = Math.max(0, ...meds().map((m) => m.tier ?? 0));
+    expect(
+      maxTier,
+      'a medicine item now exceeds tier 4 — add its rung to PawnMedicinePolicy.svelte TIERS'
+    ).toBeLessThanOrEqual(4);
+  });
+
   it('conditions the game can inflict are actually treatable by something', () => {
     const all = allItemDefs();
     const cured = new Set(all.flatMap((m: Item) => m.curesConditions ?? []));

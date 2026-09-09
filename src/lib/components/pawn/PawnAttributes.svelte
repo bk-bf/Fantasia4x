@@ -2,7 +2,7 @@
   import type { Pawn } from '$lib/game/core/types';
   import statsData from '$lib/game/database/pawns/stats.json';
   import PawnStatBanner from './PawnStatBanner.svelte';
-  import { APTITUDE_IDS } from '$lib/game/core/rules/body/aptitudes';
+  import { APTITUDE_IDS, type AptitudeId } from '$lib/game/core/rules/body/aptitudes';
   import { computeAptitudeView } from '$lib/components/util/statView';
   import PawnSkillBanner from './PawnSkillBanner.svelte';
   import StatTooltip from './StatTooltip.svelte';
@@ -78,7 +78,13 @@
     return { destroy: () => cell.removeEventListener('mouseenter', onEnter) };
   }
 
-  $: grouped = CATEGORY_ORDER.filter((cat) => categories.includes(cat))
+  $: categoryOrder = [
+    ...CATEGORY_ORDER,
+    ...[...new Set(STATS.map((s) => s.category))].filter((cat) => !CATEGORY_ORDER.includes(cat))
+  ];
+
+  $: grouped = categoryOrder
+    .filter((cat) => categories.includes(cat))
     .map((cat) => ({
       cat,
       label: CATEGORY_LABEL[cat] ?? cat.toUpperCase(),
@@ -86,7 +92,7 @@
     }))
     .filter((g) => g.stats.length > 0);
 
-  const APT_META: Record<string, { label: string; desc: string; mass?: boolean }> = {
+  const APT_META: Record<AptitudeId, { label: string; desc: string; mass?: boolean }> = {
     hit_chance: { label: 'accuracy', desc: 'How reliably a swing finds its mark.' },
     attack_speed: { label: 'attack speed', desc: 'How quickly blows follow one another.' },
     hit_precision: {
@@ -118,7 +124,7 @@
       rows.unshift({
         label: 'APTITUDES',
         cells: APTITUDE_IDS.map((id) => {
-          const m = APT_META[id] ?? { label: id, desc: '' };
+          const m = APT_META[id];
           return {
             id,
             hl: false,

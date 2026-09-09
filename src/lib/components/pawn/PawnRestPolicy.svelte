@@ -4,26 +4,27 @@
 
   export let pawn: Pawn;
 
-  type RestPolicy = 'never' | 'shelter' | 'always';
-  const POLICIES: Array<{ id: RestPolicy; label: string; title: string }> = [
-    {
-      id: 'never',
+  type RestPolicy = NonNullable<Pawn['restPolicy']>;
+  const POLICY_META: Record<RestPolicy, { label: string; title: string }> = {
+    never: {
       label: 'NO REST',
       title: 'Never break off to recover — keep working, accept the slow heal rate (emergencies)'
     },
-    {
-      id: 'shelter',
+    shelter: {
       label: 'SHELTER',
       title: 'Recover only when a bed/roofed shelter is reachable; otherwise keep working'
     },
-    {
-      id: 'always',
+    always: {
       label: 'ALWAYS',
       title: 'Recover freely, lying on the bare ground if no bed/shelter is near (default)'
     }
-  ];
+  };
+  const POLICIES = (Object.keys(POLICY_META) as RestPolicy[]).map((id) => ({
+    id,
+    ...POLICY_META[id]
+  }));
 
-  $: current = (pawn.restPolicy ?? 'always') as RestPolicy;
+  $: current = pawn.restPolicy ?? 'always';
 
   function setPolicy(policy: RestPolicy) {
     gameState.command({

@@ -32,7 +32,8 @@
     piercing_resistance: 'piercing_resistance',
     blunt_resistance: 'blunt_resistance',
     healRate: 'heal_rate',
-    nightVision: 'night_vision'
+    nightVision: 'night_vision',
+    stealth: 'stealth'
   };
   const GEAR_FOLDED_RES = new Set([
     'coldResistance',

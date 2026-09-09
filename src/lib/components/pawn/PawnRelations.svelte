@@ -1,5 +1,11 @@
 <script lang="ts">
-  import type { GameState, Pawn, PawnRelationship, RelationTag } from '$lib/game/core/types';
+  import type {
+    GameState,
+    Pawn,
+    PawnRelationship,
+    RelationTag,
+    RomanceStage
+  } from '$lib/game/core/types';
   import {
     kinLabel,
     STAGE_LABEL,
@@ -29,7 +35,7 @@
     mentor: 'mentor',
     rescued_by: 'saved in the field'
   };
-  const ROMANCE_LABEL: Record<string, string> = {
+  const ROMANCE_LABEL: Record<RomanceStage, string> = {
     interested: 'Interested',
     courting: 'Courting',
     partners: 'Partners',
@@ -144,7 +150,7 @@
               >{STAGE_LABEL[r.stage]}</span
             >
             {#if r.romance}
-              <span class="romance">♥ {ROMANCE_LABEL[r.romance.stage] ?? ''}</span>
+              <span class="romance">♥ {ROMANCE_LABEL[r.romance.stage]}</span>
             {/if}
           </div>
           <StatBar
