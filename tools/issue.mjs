@@ -287,6 +287,28 @@ if (cmd === 'check-labels') {
   const problems = check({ labels: [], body, allowReady: true });
   for (const e of problems) process.stderr.write(`note: ${e}\n`);
   process.stdout.write(gh(['issue', 'comment', n, '--body-file', '-'], body));
+} else if (cmd === 'prune-comments') {
+  // The reviewer used to repeat the fixer's write-up on every clean pass. A comment that only
+  // says a branch merged says nothing the close does not; one carrying a headless measurement
+  // or a reach past the cited files is the only record of it and is left alone.
+  const apply = argv.includes('--apply');
+  const KEEP = /## What the review measured|## It reached past/;
+  let hit = 0;
+  for (const it of JSON.parse(
+    gh(['issue', 'list', '--state', 'all', '--limit', '300', '--json', 'number'])
+  )) {
+    const cs = JSON.parse(gh(['issue', 'view', String(it.number), '--json', 'comments'])).comments;
+    for (const c of cs) {
+      if (!/^\*\*Reviewed on the \w+ route and merged to/.test(c.body)) continue;
+      if (KEEP.test(c.body)) continue;
+      const id = (c.url.match(/issuecomment-(\d+)/) ?? [])[1];
+      if (!id) continue;
+      hit += 1;
+      process.stdout.write(`#${it.number}  ${id}  ${c.body.split('\n')[0].slice(0, 62)}\n`);
+      if (apply) gh(['api', '-X', 'DELETE', `/repos/bk-bf/Fantasia4x/issues/comments/${id}`]);
+    }
+  }
+  process.stdout.write(`\n${hit} duplicate review comment(s)${apply ? ' deleted' : ''}\n`);
 } else if (cmd === 'close') {
   const n = argv[1] ?? die('which issue?');
   const sha = arg('commit');
