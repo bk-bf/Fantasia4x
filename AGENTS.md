@@ -214,9 +214,10 @@ Do not skip a lane. Nothing goes from `Backlog` straight to `In progress`, and n
 `Ready` card whose `Verify` is `tests`, works it in a worktree, and moves it to `In review` once
 `pnpm check` and the related tests are green on the branch. Every green branch is pushed, so a
 diff is readable from anywhere; `review.mjs` deletes it from origin when it merges. `pnpm audit:review --next` takes the
-oldest `In review` card, re-merges its branch onto a freshly fetched `origin/main`, runs the
-route again on the merge result — plus a headless session for `verify headless` — and pushes to
-`main`, closes the issue and moves the card to `Done` only if that is green. Anything short of
+oldest `In review` card, checks the diff touches only files the issue cites, re-merges its
+branch onto a freshly fetched `origin/main`, runs the route again on the merge result — plus a
+headless session for `verify headless` — and pushes to `main`, closes the issue and moves the
+card to `Done` only if that is green. Anything short of
 green sends the card back to `Ready` with the failure written on the issue.
 
 `--verify playtest` works the card the same way and stops at `Needs playtest`: committed,

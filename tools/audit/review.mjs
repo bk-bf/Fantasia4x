@@ -8,8 +8,8 @@
 //   node tools/audit/review.mjs --next --keep     leave the worktree for inspection
 //
 // The fix branch is re-merged onto a freshly fetched origin/main in its own worktree, so what
-// is verified is the merge result and not the branch in isolation. `tests` is deterministic
-// and runs no model. `headless` runs a session that must drive the real sim and report a
+// is verified is the merge result and not the branch in isolation. The diff is checked against
+// the files the issue cites before anything runs. `tests` is deterministic and runs no model. `headless` runs a session that must drive the real sim and report a
 // delta. A card on the playtest route never reaches here -- that lane is Kirill's.
 //
 // Green means merged to main and the issue closed. Anything else sends the card back to Ready
@@ -97,6 +97,23 @@ function pick() {
     return { issue, route };
   }
   fail(`nothing reviewable:\n  ${skipped.join('\n  ')}`);
+}
+
+/** The tests route runs no model, so nothing reads the diff against the issue. An issue names
+ *  the files its findings sit in; a fix that edits something else has either widened its own
+ *  scope or fixed a different problem. A test file is always allowed, and an issue that cites
+ *  no code at all cannot be checked this way. */
+function outOfScope(issue, changed) {
+  const cited = new Set(
+    (issue.data.files ?? []).flatMap((f) =>
+      [...String(f).matchAll(/((?:src|tools)\/[A-Za-z0-9._/-]+?\.(?:ts|svelte|json|mjs))/g)].map(
+        (m) => m[1]
+      )
+    )
+  );
+  if (cited.size === 0) return null;
+  const outside = changed.filter((f) => !cited.has(f) && !f.startsWith('src/tests/'));
+  return outside.length ? { cited: [...cited], outside } : null;
 }
 
 function headlessPrompt(issue, route, files) {
@@ -247,6 +264,24 @@ try {
   const files = committedFiles(wt);
   if (files.length === 0) throw new Error(`${fixBranch} adds nothing on top of origin/main`);
   out(`--- ${files.length} file(s) against main`);
+
+  const wandered = outOfScope(issue, files);
+  if (wandered) {
+    out(`--- outside the issue's scope: ${wandered.outside.join(', ')}`);
+    sendBack(
+      `The branch edits ${wandered.outside.length} file(s) the issue does not cite:\n\n` +
+        wandered.outside.map((f) => `- \`${f}\``).join('\n') +
+        `\n\nThe issue scopes the work to:\n\n` +
+        wandered.cited.map((f) => `- \`${f}\``).join('\n') +
+        `\n\nEither the fix reached past what was asked, or the issue's file list is too narrow ` +
+        `and wants widening before this is worked again. A file under \`src/tests/\` is always ` +
+        `in scope and is not counted here.`,
+      ['scope check'],
+      ''
+    );
+    keepTree = true;
+    process.exit(1);
+  }
 
   await prepareWorktree(wt, out);
 

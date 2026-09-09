@@ -252,6 +252,12 @@ pnpm audit:review --next --dry-run        # pick and print
 pnpm audit:review --next --keep           # leave the worktree to inspect
 ```
 
+Before anything runs, the diff is checked against the files the issue cites: a change to a file
+the issue does not name has either reached past what was asked or fixed a different problem, and
+goes back to `Ready` naming both lists. A file under `src/tests/` is always in scope, and an
+issue that cites no code at all is not checked this way. On the `tests` route no model reads the
+diff, so this is the only thing that reads it.
+
 The fixer verified its branch in isolation. The reviewer verifies the **merge**: a second
 worktree off a freshly fetched `origin/main`, `git merge --no-ff` of `fix/<slug>` into it, and
 the route run again on the result. A branch that passed alone and conflicts with main, or
@@ -298,10 +304,13 @@ point — the source has to be current before the ledger is re-planned:
 3. `run.mjs` until the budget runs out (3.5 h, 3 workers, sonnet by default)
 4. `audit issues` — findings raised as GitHub issues, into `Backlog`. Nothing acts on them
    until someone triages a card into `Ready`.
-5. `fix.mjs --next` ×`AUDIT_FIXES` — only touches cards in `Ready`. Each attempt gets its own
-   local branch; nothing is pushed.
-6. `review.mjs --next` ×`AUDIT_REVIEWS` — verifies `In review` cards on the merge and pushes
-   the ones that pass to `main`.
+5. `fix.mjs --next` then `review.mjs --next`, ×`AUDIT_FIXES` — **interleaved, not one pass
+   each**. A fixer cuts its worktree from `origin/main`, so a card worked before the previous
+   one has merged does not contain it. 22 files are cited by more than one open issue, and two
+   cards on the same file conflict the moment the second one merges. Reviewing each card before
+   working the next closes that window.
+6. `review.mjs --next` ×`AUDIT_REVIEWS` — anything still sitting `In review`, from a night that
+   was cut short or a card sent back and re-worked.
 
 Steps 1–3 are deterministic and cost nothing; steps 4, 5 and 6 spend tokens. A `flock`
 stops a second night starting on top of an overrunning one.

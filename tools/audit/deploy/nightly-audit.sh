@@ -114,17 +114,20 @@ say "board is on GitHub; nothing to commit here"
 if [ "${AUDIT_NO_FIX:-0}" = 1 ]; then
   say "AUDIT_NO_FIX=1 — skipping phase 3"
 else
-  say "--- fixer: up to $FIXES issue(s)"
+  say "--- fixer and reviewer: up to $FIXES card(s), each reviewed before the next is worked"
   for _ in $(seq 1 "$FIXES"); do
     ( cd "$REPO" && "$NODE" tools/audit/fix.mjs --next ) || break
+    if [ "${AUDIT_NO_REVIEW:-0}" != 1 ]; then
+      ( cd "$REPO" && "$NODE" tools/audit/review.mjs --next ) || true
+    fi
   done
 fi
 
-# --- 6. the reviewer ---------------------------------------------------------
+# --- 6. review whatever is still waiting -------------------------------------
 if [ "${AUDIT_NO_REVIEW:-0}" = 1 ]; then
   say "AUDIT_NO_REVIEW=1 — skipping the review pass"
 else
-  say "--- reviewer: up to $REVIEWS card(s)"
+  say "--- reviewer: up to $REVIEWS card(s) left In review"
   for _ in $(seq 1 "$REVIEWS"); do
     ( cd "$REPO" && "$NODE" tools/audit/review.mjs --next ) || break
   done
