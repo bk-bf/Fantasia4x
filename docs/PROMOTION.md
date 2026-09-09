@@ -92,12 +92,3 @@ What is on `dev` and not in the build you play, ranked by priority. Regenerate t
 - [ ] **#8 — Branch no caller can reach, components/util**
       Unreachable branch removed.
       *Watch: nothing that reads a pawn's utils renders blank.*
-
-## Not on dev
-
-- **#9, heavy armour stiffness.** The headless review measured the fix working — 9.14 hits taken
-  bare against 15.31 in a full bone kit over 16 seeds — then failed it, because a remediation item
-  claimed `movementPenalty` would become a load error and it does not. Heavy armour dodge cost is
-  unchanged.
-- **#13, the gear grid files an item by matching words in its research id.** Could not be made
-  green; back in `Ready`.
