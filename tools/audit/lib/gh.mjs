@@ -3,6 +3,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadRules } from './rules.mjs';
 import { check, allowedLabels } from './schema.mjs';
+import { subareas, subareaFor } from './subarea.mjs';
 
 export const STATUSES = ['open', 'in-progress', 'in-review', 'closed'];
 export const KINDS = ['drift', 'correctness', 'performance', 'boundary', 'data', 'test-gap'];
@@ -128,6 +129,7 @@ function toIssue(raw) {
       ready: names.includes('ready'),
       origin: unlabel(ORIGIN_LABEL, names) ?? 'audit',
       verify: unlabel(VERIFY_LABEL, names),
+      subarea: names.find((n) => subareas().has(n)) ?? null,
       rules: meta.rules ?? [],
       files: meta.files ?? [],
       symbols: meta.symbols ?? [],
@@ -170,6 +172,7 @@ function labelsFor(d) {
   if (d.severity && SEVERITY_LABEL[d.severity]) out.push(SEVERITY_LABEL[d.severity]);
   if (d.kind && KIND_LABEL[d.kind]) out.push(KIND_LABEL[d.kind]);
   if (d.origin && ORIGIN_LABEL[d.origin]) out.push(ORIGIN_LABEL[d.origin]);
+  if (d.subarea && subareas().has(d.subarea)) out.push(d.subarea);
   if (d.verify && VERIFY_LABEL[d.verify]) out.push(VERIFY_LABEL[d.verify]);
   for (const r of d.rules ?? []) out.push(nameOf(r));
   if (d.ready === true) out.push('ready');
@@ -190,6 +193,7 @@ function composeBody(data, body) {
 }
 
 export function writeIssue(_root, { data, body }) {
+  if (!data.subarea) data.subarea = subareaFor(data.files ?? []);
   // validate before any network call: an invalid write should cost nothing and fail the same
   // way whether or not GitHub is reachable
   const labels = labelsFor(data);

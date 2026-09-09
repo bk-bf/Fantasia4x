@@ -46,6 +46,49 @@ export const laneOf = (n) => (itemFor(n)?.status ?? '').toLowerCase();
 export const inLane = (lane) =>
   boardItems().filter((i) => (i.status ?? '').toLowerCase() === lane.toLowerCase());
 
+let fieldCache = null;
+
+export function fields() {
+  if (!fieldCache) {
+    const q =
+      '{ user(login:"' + OWNER + '"){ projectV2(number:' + PROJECT_NUMBER + '){ fields(first:40){ ' +
+      'nodes{ ... on ProjectV2SingleSelectField { id name options{ id name } } } } } } }';
+    const raw = JSON.parse(gh(['api', 'graphql', '-f', 'query=' + q]));
+    fieldCache = raw.data.user.projectV2.fields.nodes.filter((f) => f?.name);
+  }
+  return fieldCache;
+}
+
+function applySelect(itemId, fieldId, optionId) {
+  const q =
+    'mutation($p:ID!,$i:ID!,$f:ID!,$o:String!){ updateProjectV2ItemFieldValue(input:{projectId:$p,' +
+    'itemId:$i,fieldId:$f,value:{singleSelectOptionId:$o}}){ projectV2Item{id} } }';
+  gh([
+    'api', 'graphql', '-f', 'query=' + q,
+    '-f', 'p=' + PROJECT_ID,
+    '-f', 'i=' + itemId,
+    '-f', 'f=' + fieldId,
+    '-f', 'o=' + optionId
+  ]);
+}
+
+export function setSelect(n, fieldName, optionName) {
+  const item = itemFor(n);
+  if (!item) throw new Error(`#${n} is not on the board`);
+  const field = fields().find((f) => f.name.toLowerCase() === fieldName.toLowerCase());
+  if (!field) throw new Error(`no field "${fieldName}" on the board`);
+  const option = field.options.find((o) => o.name.toLowerCase() === String(optionName).toLowerCase());
+  if (!option)
+    throw new Error(
+      `"${optionName}" is not an option of ${field.name} — one of: ${field.options.map((o) => o.name).join(', ')}`
+    );
+  const before = item[field.name.toLowerCase()] ?? null;
+  if (before === option.name) return { from: before, to: option.name, moved: false };
+  applySelect(item.id, field.id, option.id);
+  invalidate();
+  return { from: before, to: option.name, moved: true };
+}
+
 export function moveLane(n, to) {
   const lane = String(to).toLowerCase();
   if (!LANES[lane])
@@ -63,16 +106,7 @@ export function moveLane(n, to) {
 
   if (from === lane) return { from, to: lane, moved: false };
 
-  const q =
-    'mutation($p:ID!,$i:ID!,$f:ID!,$o:String!){ updateProjectV2ItemFieldValue(input:{projectId:$p,' +
-    'itemId:$i,fieldId:$f,value:{singleSelectOptionId:$o}}){ projectV2Item{id} } }';
-  gh([
-    'api', 'graphql', '-f', 'query=' + q,
-    '-f', 'p=' + PROJECT_ID,
-    '-f', 'i=' + item.id,
-    '-f', 'f=' + STATUS_FIELD_ID,
-    '-f', 'o=' + LANES[lane]
-  ]);
+  applySelect(item.id, STATUS_FIELD_ID, LANES[lane]);
   invalidate();
   return { from: item.status ?? 'unset', to: lane, moved: true };
 }

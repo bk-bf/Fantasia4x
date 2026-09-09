@@ -5,6 +5,7 @@
 // findings group by (rule, module group), and the issue carries every citation.
 
 import { readIssue, writeIssue, patchIssue, today, listIssues } from './gh.mjs';
+import { subareaFor } from './subarea.mjs';
 import { blobUrl, linkify, authorityLink, issueRef } from './links.mjs';
 
 // Family defaults; an individual rule may override with its own `kind`/`severity`.
@@ -216,6 +217,7 @@ export function upsertIssue(root, g, rulesById, sha, force = false) {
   const verify = rule.verify ?? FAMILY_VERIFY[g.family] ?? 'tests';
   const files = [...new Set(g.findings.map((f) => f.file))];
   const symbols = [...new Set(g.findings.map((f) => f.symbol_key))];
+  const subarea = subareaFor(files);
 
   if (found) {
     const path = found.path;
@@ -231,6 +233,7 @@ export function upsertIssue(root, g, rulesById, sha, force = false) {
       kind,
       severity,
       verify: existing.data.verify ?? verify,
+      subarea: existing.data.subarea ?? subarea,
       files,
       symbols,
       rules: [g.rule_id],
@@ -251,6 +254,7 @@ export function upsertIssue(root, g, rulesById, sha, force = false) {
       kind,
       severity,
       verify,
+      subarea,
       ready: false,
       origin: 'audit',
       rules: [g.rule_id],
