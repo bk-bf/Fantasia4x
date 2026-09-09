@@ -9,10 +9,11 @@
   import { get } from 'svelte/store';
   import { allLogEntries, clearDebugLog, logDiag } from '$lib/stores/Log';
   import { currentTurn } from '$lib/stores/gameState';
+  import { LOG_SEVERITIES } from '$lib/game/core/defs/events';
   import DebugLogControls from './DebugLogControls.svelte';
   import ScrollArea from '$lib/components/UI/widget/ScrollArea.svelte';
 
-  const SEVERITIES = ['ALL', 'critical', 'error', 'warning', 'success', 'info'] as const;
+  const SEVERITIES = ['ALL', ...LOG_SEVERITIES] as const;
   const RENDER_CAP = 600;
 
   let filterTag = $state(lastTag);

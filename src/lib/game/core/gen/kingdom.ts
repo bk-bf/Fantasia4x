@@ -88,7 +88,15 @@ function countFor(table: [number, number][], idx: number): number {
   return rng.int(lo, hi);
 }
 
-export const KNOWLEDGE_TIER_THRESHOLDS = [0, 25, 60, 110, 180];
+export const KNOWLEDGE_TIERS = [
+  { threshold: 0, label: 'strangers' },
+  { threshold: 25, label: 'acquainted' },
+  { threshold: 60, label: 'familiar' },
+  { threshold: 110, label: 'well known' },
+  { threshold: 180, label: 'deeply known' }
+] as const;
+
+export const KNOWLEDGE_TIER_THRESHOLDS = KNOWLEDGE_TIERS.map((t) => t.threshold);
 
 export function knowledgeTier(knowledge: number): number {
   let tier = 0;
@@ -99,6 +107,10 @@ export function knowledgeTier(knowledge: number): number {
     }
   }
   return tier;
+}
+
+export function knowledgeTierLabel(knowledge: number): string {
+  return KNOWLEDGE_TIERS[knowledgeTier(knowledge)].label;
 }
 
 export const WEALTH_BANDS: WealthBand[] = [

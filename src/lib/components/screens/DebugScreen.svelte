@@ -3,13 +3,13 @@
   import DebugLogScreen from './DebugLogScreen.svelte';
   import { persisted, persist } from '$lib/stores/uiPersist';
 
-  type DebugTab = 'menu' | 'log';
-  let activeTab = $state<DebugTab>(persisted<DebugTab>('debug.tab', 'menu'));
-  $effect(() => persist('debug.tab', activeTab));
-  const TABS: { id: DebugTab; label: string }[] = [
+  const TABS = [
     { id: 'menu', label: 'MENU' },
     { id: 'log', label: 'LOG' }
-  ];
+  ] as const;
+  type DebugTab = (typeof TABS)[number]['id'];
+  let activeTab = $state<DebugTab>(persisted<DebugTab>('debug.tab', 'menu'));
+  $effect(() => persist('debug.tab', activeTab));
 </script>
 
 <div class="debug-screen">
