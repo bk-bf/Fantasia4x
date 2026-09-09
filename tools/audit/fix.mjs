@@ -190,6 +190,36 @@ ${issue.body}
 `;
 }
 
+// --- commit message ----------------------------------------------------------
+
+// scripts/hooks/commit-msg refuses anything else: `type(scope): lowercase summary`, a blank
+// line, then bullets ending in a full stop. The board's work type is the commit type, except
+// for the two options git has no type for.
+const COMMIT_TYPE = { tooling: 'dev', decision: 'chore' };
+const GIT_TYPES = /^(feat|fix|refactor|chore|docs|dev|perf|style|test|ci|build)$/;
+
+function commitMessage(d, num, files, workType) {
+  const raw = workType ?? B.itemFor(num)?.['work type'] ?? 'fix';
+  const type = COMMIT_TYPE[raw] ?? (GIT_TYPES.test(raw) ? raw : 'fix');
+  const scope = /^[a-z0-9./-]+$/.test(d.subarea ?? '') ? `(${d.subarea})` : '';
+  const summary = String(d.title)
+    .replace(/\s+—\s+[^—]*$/, '')
+    .replace(/^[^A-Za-z]+/, '')
+    .replace(/^./, (c) => c.toLowerCase())
+    .slice(0, 68)
+    .trim();
+  const named = files.slice(0, 6).map((f) => `\`${f}\``).join(', ');
+  const rest = files.length > 6 ? ` and ${files.length - 6} more` : '';
+  return [
+    `${type}${scope}: ${summary}`,
+    '',
+    `- Work the remediation list on #${num}.`,
+    `- Change ${named}${rest}.`,
+    '',
+    'Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>'
+  ].join('\n');
+}
+
 // --- main --------------------------------------------------------------------
 
 const control = readControl();
@@ -339,11 +369,7 @@ try {
     } else {
       out(`--- committing`);
       git(['add', '-A'], wt);
-      const msg =
-        `fix: ${d.title}\n\n` +
-        `Raised by the audit ledger${d.rules?.length ? ` (${d.rules.join(', ')})` : ''}; ` +
-        `closes #${num}.\n\n` +
-        `Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>`;
+      const msg = commitMessage(d, num, files, route === 'playtest' ? 'fix' : undefined);
       execFileSync('git', ['commit', '-q', '-F', '-'], { cwd: wt, input: msg });
 
       const ran = v.results.map((r) => r.name);
