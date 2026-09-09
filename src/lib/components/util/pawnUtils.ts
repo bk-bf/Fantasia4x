@@ -31,12 +31,6 @@ function describeJob(job: Job): string {
       return `haul ${resourceLabel(job.resourceId)} @ (${job.targetX},${job.targetY})`;
     case 'craft':
       return 'craft item';
-    case 'eat':
-      return 'eat';
-    case 'sleep':
-      return 'rest';
-    case 'light':
-      return `light ${job.buildingId ?? 'campfire'}`;
     case 'refuel':
       return `refuel ${job.buildingId ?? 'campfire'}`;
     default:

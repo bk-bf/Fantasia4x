@@ -88,9 +88,6 @@ export function traitGrantLines(trait: Trait): string[] {
     if (name.endsWith('Bonus') && typeof value === 'number') {
       const stat = name.replace('Bonus', '');
       out.push(`${CORE_STAT_ABBR[stat as keyof typeof CORE_STAT_ABBR] ?? stat} +${value}`);
-    } else if (name.endsWith('Penalty') && typeof value === 'number') {
-      const stat = name.replace('Penalty', '');
-      out.push(`${CORE_STAT_ABBR[stat as keyof typeof CORE_STAT_ABBR] ?? stat} -${value}`);
     } else if (name === 'combatMods' && value && typeof value === 'object') {
       for (const [statId, mul] of Object.entries(value as Record<string, number>)) {
         const p = Math.round((mul - 1) * 100);
@@ -194,23 +191,12 @@ function persistentSources(entity: Pawn | Mob, def: ConditionDef): string[] {
         `Too much blood lost (${lostPct}% gone) — the blood-loss half of shock. Stop the bleeding.`
       ];
     }
-    case 'blood_loss': {
-      const bleeders = allInjuries(entity).filter((i) => (i.bleeding ?? 0) > 0);
-      return bleeders.length
-        ? bleeders.map(
-            (i) =>
-              `${prettyPart(i.bodyPart)} — ${i.type} (bleeding ${Math.round(i.bleeding * 10) / 10})`
-          )
-        : ['Recent heavy bleeding'];
-    }
     case 'infection': {
       const inf = allInjuries(entity).filter((i) => i.infected);
       return inf.length
         ? inf.map((i) => `${prettyPart(i.bodyPart)} — ${i.type} (infected)`)
         : ['An untended wound has festered'];
     }
-    case 'shock':
-      return [`Pain ${Math.round(entity.pain ?? 0)}/100`];
     case 'windchilled':
       return ['Out in the wind — sheltered by a roof or the lee of a wall/mountain'];
     case 'intoxicated':
@@ -236,10 +222,6 @@ function transientSources(entity: Pawn | Mob, id: string): string[] {
       const nv = Math.round(getNightVision(entity) * 100);
       return [`Sight × ${el}% in this light${nv > 0 ? ` (night vision +${nv}%)` : ''}`];
     }
-    case 'eating':
-      return ['Currently eating'];
-    case 'sleeping':
-      return ['Currently sleeping'];
     case 'winded':
       return ['Stamina spent in combat'];
     case 'bleeding': {
