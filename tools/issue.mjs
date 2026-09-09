@@ -134,7 +134,7 @@ if (cmd === 'check-labels') {
   const cards = new Map(
     boardItems()
       .filter((i) => i.content?.number)
-      .map((i) => [String(i.content.number), i['work type'] ?? null])
+      .map((i) => [String(i.content.number), i])
   );
   let untyped = 0;
   for (const it of JSON.parse(
@@ -144,13 +144,21 @@ if (cmd === 'check-labels') {
     if (!cards.has(key)) {
       untyped += 1;
       process.stdout.write(`#${it.number}  ${it.title.slice(0, 52)}\n      not on the board\n`);
-    } else if (!cards.get(key)) {
-      untyped += 1;
-      process.stdout.write(`#${it.number}  ${it.title.slice(0, 52)}\n      no Work type on the board\n`);
+    } else {
+      const card = cards.get(key);
+      const gaps = [];
+      if (!card.status) gaps.push('no Status — the card is on the board in no lane');
+      if (!card['work type']) gaps.push('no Work type on the board');
+      if (!card.verify) gaps.push('no Verify route on the board');
+      if (gaps.length) {
+        untyped += 1;
+        process.stdout.write(`#${it.number}  ${it.title.slice(0, 52)}\n`);
+        for (const g of gaps) process.stdout.write(`      ${g}\n`);
+      }
     }
   }
   process.stdout.write(
-    `\n${bad} open issue(s) incompletely classified, ${untyped} without a work type\n`
+    `\n${bad} open issue(s) incompletely classified, ${untyped} with a gap on the board\n`
   );
   if (bad || untyped) process.exit(1);
 } else if (cmd === 'lane') {
@@ -244,11 +252,22 @@ if (cmd === 'check-labels') {
   const url = gh(args, body).trim();
   process.stdout.write(url + '\n');
   const n = url.split('/').pop();
+  // Adding the item is not enough: an item with no Status has no lane, and board-sync only
+  // backfills Backlog for issues it adds itself. It also derives the verify label from the
+  // Verify field, so leaving that empty strips the label this issue was just created with.
+  const VERIFY_FIELD = {
+    'verify tests': 'tests',
+    'verify headless': 'headless',
+    'needs playtest': 'playtest'
+  };
+  const verify = labels.map((l) => VERIFY_FIELD[l]).find(Boolean);
   try {
     addToBoard(n);
+    setSelect(n, 'Status', 'Backlog');
     setSelect(n, 'Work type', type);
+    if (verify) setSelect(n, 'Verify', verify);
   } catch (e) {
-    process.stderr.write(`note: created #${n} but could not set its Work type: ${e.message}\n`);
+    process.stderr.write(`note: created #${n} but could not set its fields: ${e.message}\n`);
   }
 } else if (cmd === 'edit') {
   const n = argv[1] ?? die('which issue?');
