@@ -1,21 +1,18 @@
 # Playtest before promoting
 
-What is on `dev` and not in the build you play, ranked by priority. Regenerate the list with
-`pnpm audit:promote --list`; this one is stamped after #43.
+What is on `dev` and not in the build you play, ranked by priority and then by number.
+Regenerate with `pnpm audit:promote --list`; this one is stamped after #43.
 
 ## P1
 
-- [ ] **#43 — DB-PASS-QUEUE, the four remaining data passes**
-      Fourteen alchemy recipes moved off `distilled_spirit: 0.3` onto a whole `grape_wine: 1` or
-      `hopped_ale: 1` — salves, tinctures, antidotes, the woundwort line, the ichor and bile
-      potions. Every one of them now depends on the brewing chain instead of distilling.
-      *Watch: that a potion is still craftable from what a colony has, and that wine and ale
-      supply keeps up.*
+- [ ] **#3 — Caught error is discarded, components/screens**
+      Errors that were caught and swallowed are now reported instead of vanishing.
+      *Watch: nothing new and noisy appears in the log during ordinary play.*
 
 - [ ] **#11 — A pawn can equip an item the colony does not have**
       `equipPawnItem` now refuses when the item is not in the stockpile and consumes it when it
-      is; unequipping returns it. Scenario setup uses a separate `devEquipPawnItem` bypass so
-      it cannot be mistaken for proof of obtainability.
+      is; unequipping returns it. Scenario setup uses a separate `devEquipPawnItem` bypass so it
+      cannot be mistaken for proof of obtainability.
       *Watch: equip and unequip a few pieces and check the stockpile count moves both ways.*
 
 - [ ] **#12 — A fractional recipe quantity rounds back up to a whole unit**
@@ -23,13 +20,17 @@ What is on `dev` and not in the build you play, ranked by priority. Regenerate t
       instead of `Math.ceil` rounding it up to a whole unit.
       *Watch: inputs deplete by the amount you expect and no order sticks queued.*
 
-- [ ] **#3 — Caught error is discarded, components/screens**
-      Errors that were caught and swallowed are now reported instead of vanishing.
-      *Watch: nothing new and noisy appears in the log during ordinary play.*
+- [ ] **#26 — Hand-maintained roster restates a declared set, audio**
+      The ambient layer roster is derived rather than hand-listed.
+      *Watch: ambience plays, and changes between day and night.*
+
+- [ ] **#27 — Hand-maintained roster restates a declared set, components/pawn**
+      The pawn panels derive their rosters from the declaration instead of restating them.
+      *Watch: traits, attributes, relations, stance, and the rest and medicine policies.*
 
 - [ ] **#28 — Hand-maintained roster restates a declared set, components/screens**
-      The screens derive their rosters from the declaration instead of restating them, and
-      `KNOWLEDGE_TIERS` now holds the labels beside the thresholds that produce them.
+      Same derivation across the screens, and `KNOWLEDGE_TIERS` now holds the labels beside the
+      thresholds that produce them.
       *Watch: the kingdom screen's knowledge wording — strangers, acquainted, familiar, well
       known, deeply known.*
 
@@ -38,17 +39,9 @@ What is on `dev` and not in the build you play, ranked by priority. Regenerate t
       *Watch: zone panel, building storage, stockpile zone and chronicle entries all label
       correctly.*
 
-- [ ] **#27 — Hand-maintained roster restates a declared set, components/pawn**
-      Same derivation across the pawn panels.
-      *Watch: traits, attributes, relations, stance, and the rest and medicine policies.*
-
 - [ ] **#30 — Hand-maintained roster restates a declared set, components/util**
       Same derivation in the shared helpers; `core/types/buildings.ts` now declares the set once.
       *Watch: the item category tree and the work list render with real names.*
-
-- [ ] **#26 — Hand-maintained roster restates a declared set, audio**
-      The ambient layer roster is derived rather than hand-listed.
-      *Watch: ambience plays, and changes between day and night.*
 
 - [ ] **#31 — Hand-maintained roster restates a declared set, dev**
       The gear-db audit tables dropped a duplicated `ARM_ORDER` and made the tab list exhaustive
@@ -65,12 +58,14 @@ What is on `dev` and not in the build you play, ranked by priority. Regenerate t
       Condition labels are spread from `CORE_STAT_ABBR` instead of a retyped copy.
       *Watch: condition and trait tooltips show abbreviations, not raw ids.*
 
-## P3
+- [ ] **#43 — DB-PASS-QUEUE, the four remaining data passes**
+      Fourteen alchemy recipes moved off `distilled_spirit: 0.3` onto a whole `grape_wine: 1` or
+      `hopped_ale: 1` — salves, tinctures, antidotes, the woundwort line, the ichor and bile
+      potions. Every one of them now depends on the brewing chain instead of distilling.
+      *Watch: that a potion is still craftable from what a colony has, and that wine and ale
+      supply keeps up.*
 
-- [ ] **#38 — Combat balance 4f, loose ends left by the two-axis rebuild**
-      Tidies left over from the two-axis rebuild across combat narration, work utils, stat view
-      and tile storage.
-      *Watch: the combat log reads correctly through a fight.*
+## P3
 
 - [ ] **#4 — Branch no caller can reach, audio**
       The ambient fallback had an `isNight ? 0 : 0.15` arm that could never take the `0`, since
@@ -92,3 +87,8 @@ What is on `dev` and not in the build you play, ranked by priority. Regenerate t
 - [ ] **#8 — Branch no caller can reach, components/util**
       Unreachable branch removed.
       *Watch: nothing that reads a pawn's utils renders blank.*
+
+- [ ] **#38 — Combat balance 4f, loose ends left by the two-axis rebuild**
+      Tidies left over from the two-axis rebuild across combat narration, work utils, stat view
+      and tile storage.
+      *Watch: the combat log reads correctly through a fight.*
