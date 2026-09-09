@@ -17,7 +17,10 @@ type Recipe = {
   inputs?: Record<string, number>;
   outputs?: Record<string, number>;
   inputAlternatives?: Record<string, number>[];
-  dynamicRecipe?: Record<string, { acceptsCategory?: string; acceptsCategories?: string[] }>;
+  dynamicRecipe?: Record<
+    string,
+    { acceptsCategory?: string; acceptsCategories?: string[]; quantity?: number }
+  >;
 };
 type Creature = {
   id: string;
@@ -1231,8 +1234,8 @@ describe('ITEM-RULES R23 — a crafted piece derives a mass in reach of what it 
     return pool.length ? pool[Math.floor(pool.length / 2)] : 0;
   };
 
-  const inputMass = (r: Recipe) =>
-    Object.entries(r.inputs ?? {}).reduce(
+  const inputMass = (r: Recipe) => {
+    const staticMass = Object.entries(r.inputs ?? {}).reduce(
       (sum, [key, qty]) =>
         sum +
         qty *
@@ -1241,15 +1244,24 @@ describe('ITEM-RULES R23 — a crafted piece derives a mass in reach of what it 
             : (byId.get(key)?.weightKg ?? 0)),
       0
     );
+    const dynamicMass = Object.values(r.dynamicRecipe ?? {}).reduce(
+      (sum, slot) => sum + (slot.quantity ?? 0) * massPerWorth(slot.acceptsCategory ?? ''),
+      0
+    );
+    return staticMass + dynamicMass;
+  };
 
   const FORGED = 0.82;
   const WITHY = 0.46;
+  const STAVE = 0.28;
   const DERIVED: { recipe: string; retention: number }[] = [
     { recipe: 'make_copper_dagger', retention: FORGED },
     { recipe: 'make_sewing_kit', retention: FORGED },
     { recipe: 'make_steel_stiletto', retention: FORGED },
     { recipe: 'make_wattle_buckler', retention: WITHY },
-    { recipe: 'make_wicker_vest', retention: WITHY }
+    { recipe: 'make_wicker_vest', retention: WITHY },
+    { recipe: 'make_war_bow', retention: STAVE },
+    { recipe: 'make_hunting_recurve', retention: STAVE }
   ];
 
   it('a bow with a recipe consumes a real wooden stave, not sinew and thread alone', () => {
@@ -1326,5 +1338,47 @@ describe('ITEM-RULES R23 — a crafted piece derives a mass in reach of what it 
         bad.push(`${r.id} asks for ${qty}x ${key}, which no stockpile can hold without a remainder`);
       }
     expect(bad, bad.join('; ')).toEqual([]);
+  });
+});
+
+describe('ITEM-RULES R24 — a recipe never prices the same material twice', () => {
+  const membersOfCategory = (cat: string) =>
+    new Set((ITEMS as Item[]).filter((i) => itemMatchesCostCategory(i, cat)).map((i) => i.id));
+
+  const overlaps = (r: Recipe): string[] => {
+    const hits: string[] = [];
+    for (const [slotKey, slot] of Object.entries(r.dynamicRecipe ?? {})) {
+      const slotCats = [slot.acceptsCategory, ...(slot.acceptsCategories ?? [])].filter(
+        (c): c is string => !!c
+      );
+      for (const cat of slotCats) {
+        const slotMembers = membersOfCategory(cat);
+        for (const key of Object.keys(r.inputs ?? {})) {
+          const inputMembers = key.startsWith('category:')
+            ? membersOfCategory(key.slice('category:'.length))
+            : new Set([key]);
+          if ([...inputMembers].some((id) => slotMembers.has(id)))
+            hits.push(`static "${key}" and dynamicRecipe."${slotKey}" (${cat})`);
+        }
+      }
+    }
+    return hits;
+  };
+
+  const DUPLICATE_MATERIAL_DEBT = new Set(['make_spatha', 'make_iron_boss_shield']);
+
+  it('no static input and dynamicRecipe slot claim the same material', () => {
+    const bad = (RECIPES as Recipe[])
+      .filter((r) => !DUPLICATE_MATERIAL_DEBT.has(r.id))
+      .flatMap((r) => overlaps(r).map((hit) => `${r.id}: ${hit} both claim the same material`));
+    expect(bad, bad.join('; ')).toEqual([]);
+  });
+
+  it('the debt list has no stale entries', () => {
+    const fixed = [...DUPLICATE_MATERIAL_DEBT].filter((id) => {
+      const r = (RECIPES as Recipe[]).find((x) => x.id === id);
+      return !r || overlaps(r).length === 0;
+    });
+    expect(fixed, `fixed — drop from DUPLICATE_MATERIAL_DEBT: ${fixed.join(', ')}`).toEqual([]);
   });
 });
