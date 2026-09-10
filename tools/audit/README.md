@@ -144,7 +144,8 @@ takes effect within one tick and a pause reaches a live worker within its poll i
 
 `tick` decides one thing: whether a runner should be alive right now. It is alive when the
 audit is not paused, a **run window** is open, and work is pending. Start opens a window of
-the requested length; Resume reopens the last one if it has closed, which is what makes
+the requested length, and a length of 0 opens one that never closes, so Pause is the only
+thing that stops it; Resume reopens the last one if it has closed, which is what makes
 Resume able to start the audit from a standing stop. A pause kills the runner — `run.mjs`
 exits rather than idles — and the next tick after a resume launches it again with the hours
 left in the window. The window expiring is what ends a run for good; nothing relaunches

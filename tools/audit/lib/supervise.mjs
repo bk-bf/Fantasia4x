@@ -22,6 +22,7 @@ const SETTLE_MS = 60_000;
 const FAST_DEATH_MS = 120_000;
 const MAX_FAST_DEATHS = 5;
 const MIN_HOURS = 0.05;
+const CHUNK_HOURS = 24;
 
 const readJson = (path, fallback) => {
   try {
@@ -60,7 +61,10 @@ export function pendingWork() {
 function settingsFrom(source, fallback) {
   const s = source ?? {};
   return {
-    hours: Number(s.hours) > 0 ? Number(s.hours) : fallback.hours,
+    hours:
+      s.hours !== undefined && s.hours !== null && s.hours !== '' && Number(s.hours) >= 0
+        ? Number(s.hours)
+        : fallback.hours,
     workers: Number(s.workers) > 0 ? Number(s.workers) : fallback.workers,
     model: typeof s.model === 'string' && s.model ? s.model : fallback.model
   };
@@ -88,12 +92,14 @@ function applyRequest(req, now) {
 function openWindow(settings, now, opened_by) {
   const held = readControl();
   const s = settingsFrom(settings, settingsFrom(held, DEFAULTS));
+  const continuous = s.hours === 0;
   return writeControl({
     run: {
       ...s,
+      continuous,
       opened_by,
       opened_at: now,
-      until: now + s.hours * 3600_000,
+      until: continuous ? null : now + s.hours * 3600_000,
       launched_at: null,
       launched_pid: null,
       fast_deaths: 0,
@@ -169,11 +175,11 @@ export function decide(now, pids = runnerPids()) {
   if (control.paused) {
     return { launch: false, state: 'paused', why: control.reason || 'paused from the dashboard' };
   }
-  if (!run || !run.until) {
+  if (!run || (!run.continuous && !run.until)) {
     return { launch: false, state: 'no window', why: 'no run window is open — press Resume' };
   }
   if (run.stopped) return { launch: false, state: 'stopped', why: run.stopped };
-  if (run.until <= now) {
+  if (!run.continuous && run.until <= now) {
     return { launch: false, state: 'window closed', why: `the ${run.hours}h run window has closed` };
   }
   const pending = pendingWork();
@@ -185,8 +191,10 @@ export function decide(now, pids = runnerPids()) {
   return {
     launch: true,
     state: 'launch',
-    why: 'unpaused, inside the run window, with work pending',
-    hours: Math.max(MIN_HOURS, (run.until - now) / 3600_000),
+    why: run.continuous
+      ? 'unpaused and running continuously, with work pending'
+      : 'unpaused, inside the run window, with work pending',
+    hours: run.continuous ? CHUNK_HOURS : Math.max(MIN_HOURS, (run.until - now) / 3600_000),
     workers: run.workers,
     model: run.model,
     dry: Boolean(run.dry)
@@ -208,12 +216,20 @@ export async function tick(now = Date.now()) {
     writeFileSync(join(LEDGER, 'last-start.json'), JSON.stringify({ ts: start.ts }));
   } else if (applied.includes('paused') && control.paused === false) {
     const run = control.run;
-    if (!run?.until || run.until <= now || run.stopped) {
+    const closed = !run || (!run.continuous && (!run.until || run.until <= now));
+    if (closed || run.stopped) {
       control = openWindow(run ?? start, now, 'resume button');
       opened = 'resume';
     } else {
       control = writeControl({ run: { ...run, fast_deaths: 0, stopped: null } });
     }
+  }
+
+  if (applied.includes('hours') && control.run && !opened) {
+    const h = Number(control.hours);
+    control = writeControl({
+      run: { ...control.run, hours: h, continuous: h === 0, until: h === 0 ? null : now + h * 3600_000 }
+    });
   }
 
   const pids = runnerPids();
