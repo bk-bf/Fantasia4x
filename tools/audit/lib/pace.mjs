@@ -100,10 +100,8 @@ export function schedule(plan, control, now = Date.now(), holding = false) {
   const elapsed = Math.min(Math.max(now - windowStart, 0), WINDOW_MS);
   const target = (ceiling * elapsed) / WINDOW_MS;
   const want = Number(control.margin_pct);
-  const margin = Math.min(
-    Number.isFinite(want) && want >= 0 ? want : RESUME_MARGIN,
-    Math.max(0, ceiling - target)
-  );
+  const wanted = Number.isFinite(want) && want >= 0 ? want : RESUME_MARGIN;
+  const margin = target < wanted ? 0 : Math.min(wanted, Math.max(0, ceiling - target));
   const minsLeft = Math.max(0, (plan.resetsAt - now) / 60_000);
   const spare = target - plan.pct;
   const base = { target, margin, ceiling, pct: plan.pct, minsLeft };
