@@ -55,6 +55,17 @@ export function raisedSummary(db) {
     .all();
 }
 
+export function findingsForIssue(db, issueNumber) {
+  return db
+    .prepare(
+      `SELECT f.summary, f.evidence, s.file, s.start_line
+         FROM finding f JOIN symbol s ON s.key = f.symbol_key
+        WHERE f.issue_number = ? AND f.state = 'open'
+        ORDER BY s.file, s.start_line`
+    )
+    .all(Number(issueNumber));
+}
+
 // --- symbols -----------------------------------------------------------------
 
 export function replaceSymbols(db, symbols) {
