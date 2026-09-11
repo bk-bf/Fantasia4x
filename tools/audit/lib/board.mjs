@@ -13,7 +13,8 @@ export const LANES = {
   'in review': '365210d5',
   'on dev': 'faf70e85',
   'needs playtest': 'e7ebab1b',
-  done: 'ea4793e4'
+  done: 'ea4793e4',
+  rejected: '1a214656'
 };
 
 const HIS_LANES = new Set(['blocked on you', 'needs playtest']);
