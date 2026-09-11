@@ -7,6 +7,7 @@ import {
   validateLootItemIds,
   type LootPool
 } from '$lib/game/core/defs/loot';
+import { isFluidId, servingL } from '$lib/game/core/rules/gear/vessels';
 
 function seq(values: number[]) {
   let i = 0;
@@ -78,6 +79,36 @@ describe('lootpool draw', () => {
   it('§4b: an unflagged pick carries no famed identity (the common case)', () => {
     const drawn = drawLoadout(POOL, seq([0.1, 0.0, 0.0, 0.9]));
     expect(drawn[0].famed).toBeUndefined();
+  });
+
+  it('drawCarried merges repeat picks of one id and converts a fluid pick to litres', () => {
+    expect(isFluidId('bloodrage_draught')).toBe(true);
+    expect(servingL('bloodrage_draught')).not.toBe(1);
+    const fluidPool: LootPool = {
+      dropChance: 1,
+      slots: {},
+      carried: [
+        { chance: 1, count: [2, 2], pick: [{ id: 'bloodrage_draught', w: 1 }] },
+        { chance: 1, count: [1, 1], pick: [{ id: 'bloodrage_draught', w: 1 }] }
+      ]
+    };
+    const drawn = drawCarried(fluidPool, seq([0, 0, 0, 0, 0, 0]));
+    expect(drawn).toHaveLength(1);
+    expect(drawn[0].itemId).toBe('bloodrage_draught');
+    expect(drawn[0].qty).toBeCloseTo(3 * servingL('bloodrage_draught'));
+
+    expect(isFluidId('chewed_poultice')).toBe(false);
+    const unitPool: LootPool = {
+      dropChance: 1,
+      slots: {},
+      carried: [
+        { chance: 1, count: [2, 2], pick: [{ id: 'chewed_poultice', w: 1 }] },
+        { chance: 1, count: [1, 1], pick: [{ id: 'chewed_poultice', w: 1 }] }
+      ]
+    };
+    const drawnUnits = drawCarried(unitPool, seq([0, 0, 0, 0, 0, 0]));
+    expect(drawnUnits).toHaveLength(1);
+    expect(drawnUnits[0]).toEqual({ itemId: 'chewed_poultice', qty: 3 });
   });
 });
 
