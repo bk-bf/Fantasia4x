@@ -20,7 +20,9 @@ import {
   checkRequired,
   checkTemplate,
   checkLabels,
-  checkBody
+  checkBody,
+  checkKind,
+  labelGroup
 } from './audit/lib/schema.mjs';
 import { linkify, issueRef, indexedSha, blobUrl, resolveRepoPath } from './audit/lib/links.mjs';
 import { moveLane, setSelect, addToBoard, itemFor, boardItems } from './audit/lib/board.mjs';
@@ -139,7 +141,11 @@ if (cmd === 'check-labels') {
   )) {
     const names = it.labels.map((l) => l.name);
     const workType = cards.get(String(it.number))?.['work type'];
-    const problems = [...checkRequired(names), ...checkTemplate(it.body, names, workType)];
+    const problems = [
+      ...checkRequired(names),
+      ...checkTemplate(it.body, names, workType),
+      ...checkKind(names, workType)
+    ];
     if (!problems.length) continue;
     bad += 1;
     process.stdout.write(`#${it.number}  ${it.title.slice(0, 52)}\n`);
@@ -266,6 +272,7 @@ if (cmd === 'check-labels') {
   const type = arg('type');
   if (!type) die(`--type is required — one of: ${TYPES.join(', ')}`);
   if (!TYPES.includes(type)) die(`unknown --type "${type}" — one of: ${TYPES.join(', ')}`);
+  if (type === 'feat' && !labels.some((l) => labelGroup('kind').includes(l))) labels.push('feature');
   const body = prepare(readBody());
   guard(labels, body, { template: true, workType: type });
   const args = ['issue', 'create', '--title', title, '--body-file', '-'];
@@ -310,7 +317,8 @@ if (cmd === 'check-labels') {
     ...checkBody(body ?? ''),
     ...(body !== null
       ? [...checkTemplate(body, resulting, workType), ...checkRequired(resulting)]
-      : [])
+      : []),
+    ...(add.length || removed.size ? checkKind(resulting, workType) : [])
   ].filter((e) => !inherited.includes(e));
   if (introduced.length) die(`refused:\n  - ${introduced.join('\n  - ')}`);
   const args = ['issue', 'edit', n];

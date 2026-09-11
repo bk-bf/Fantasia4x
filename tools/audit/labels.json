@@ -2,7 +2,7 @@
   "required": ["severity", "kind", "origin", "verify", "subarea"],
   "groups": {
     "severity": ["critical", "high", "medium", "low"],
-    "kind": ["drift", "correctness", "performance", "boundary", "data", "test gap"],
+    "kind": ["drift", "correctness", "performance", "boundary", "data", "test gap", "feature"],
     "origin": ["found by audit", "found by hand"],
     "verify": ["verify tests", "verify headless", "needs playtest"],
     "subarea": [

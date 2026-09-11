@@ -129,7 +129,7 @@ export function moveLane(n, to) {
     throw new Error(
       `#${n} is not a ${[...AGENT_TRIAGED_KINDS].join(' or ')} card, so Kirill decides whether ` +
         `it gets worked.\nComment on it with \`pnpm issue comment ${n} --body-file -\`, naming ` +
-        `the open decision or task it overlaps (the Blocked on you cards, docs/tasks/open) or ` +
+        `the open decision or task it overlaps (the Blocked on you cards) or ` +
         `"none", and what in play reaches the code it cites. Then move it to Blocked on you.`
     );
 

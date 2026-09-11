@@ -6,8 +6,8 @@ labels: found by hand
 
 ## What needs deciding
 
-The choice, in one paragraph, and what stays blocked until it is made. Link the spec in
-`docs/tasks/`.
+The choice, in one paragraph, and what stays blocked until it is made. Name the feature or
+defect it blocks as #N.
 
 ## Options
 

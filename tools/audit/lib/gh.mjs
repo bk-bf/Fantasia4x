@@ -6,13 +6,13 @@ import { check, allowedLabels } from './schema.mjs';
 import { subareas, subareaFor } from './subarea.mjs';
 
 export const STATUSES = ['open', 'in-progress', 'in-review', 'closed'];
-export const KINDS = ['drift', 'correctness', 'performance', 'boundary', 'data', 'test-gap'];
+export const KINDS = ['drift', 'correctness', 'performance', 'boundary', 'data', 'test-gap', 'feature'];
 export const SEVERITIES = ['critical', 'high', 'medium', 'low'];
 
 const SEVERITY_LABEL = { critical: 'critical', high: 'high', medium: 'medium', low: 'low' };
 const KIND_LABEL = {
   drift: 'drift', correctness: 'correctness', performance: 'performance',
-  boundary: 'boundary', data: 'data', 'test-gap': 'test gap'
+  boundary: 'boundary', data: 'data', 'test-gap': 'test gap', feature: 'feature'
 };
 const ORIGIN_LABEL = { audit: 'found by audit', human: 'found by hand' };
 const STATUS_LABEL = { 'in-progress': 'in progress', 'in-review': 'in review' };
@@ -273,6 +273,15 @@ export function tickRemediation(handle, account) {
   });
   if (ticked) patchIssue(cur.path, { body: next, updated: today() });
   return ticked;
+}
+
+export function featureSteps(body) {
+  const section = (body ?? '').split(/^##\s+Steps\s*$/im)[1];
+  if (section === undefined) return [];
+  return [...section.split(/^##\s+/m)[0].matchAll(/^[ \t]*- \[([ x])\] (.+)$/gm)].map((m) => ({
+    done: m[1] === 'x',
+    text: m[2].trim()
+  }));
 }
 
 export function validate(issue) {

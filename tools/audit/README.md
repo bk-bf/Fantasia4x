@@ -1,6 +1,6 @@
 # audit — a code-audit ledger
 
-> **Related:** [AGENTS.md](../../AGENTS.md) · [DECISIONS.md](../../docs/game/DECISIONS.md) · [ITEM-RULES.md](../../docs/game/ITEM-RULES.md) · [ENGINE-PERFORMANCE.md](../../docs/tasks/open/ENGINE-PERFORMANCE.md) · [issues](https://github.com/bk-bf/Fantasia4x/issues)
+> **Related:** [AGENTS.md](../../AGENTS.md) · [DECISIONS.md](../../docs/game/DECISIONS.md) · [ITEM-RULES.md](../../docs/game/ITEM-RULES.md) · [ENGINE-PERFORMANCE.md](../../docs/tasks/archive/ENGINE-PERFORMANCE.md) · [issues](https://github.com/bk-bf/Fantasia4x/issues)
 
 "Audit the code" is unverifiable: nothing records which of the 5,599 objects in this repo
 anything ever looked at, under which question, with which model. This tool makes that a
@@ -65,7 +65,7 @@ record is archived. This ledger raises **code-level** findings into that same bo
   "family": "hot-path",
   "tier": "T2",
   "title": "allocation on the per-tick peace path",
-  "authority": "docs/tasks/open/ENGINE-PERFORMANCE.md",   // excerpt is shipped in the prompt
+  "authority": "docs/tasks/archive/ENGINE-PERFORMANCE.md",   // excerpt is shipped in the prompt
   "question": "Does this symbol allocate ... on every tick when nothing is happening?",
   "fail_requires": [                    // a fail missing any of these is rejected
     "file:line of the allocation",
@@ -193,7 +193,7 @@ node tools/audit/audit.mjs board              # the board, by status
 
 The board is [GitHub issues](https://github.com/bk-bf/Fantasia4x/issues). Frontmatter became
 labels: severity (`high`/`medium`/`low`), kind (`drift`, `correctness`, `data`, `boundary`,
-`test gap`), origin (`found by audit`/`found by hand`), the rule that fired (`S01`, `G01`, …)
+`test gap`, `feature`), origin (`found by audit`/`found by hand`), the rule that fired (`S01`, `G01`, …)
 and the `ready` gate. `tools/audit/lib/gh.mjs` is the only writer; it finds an issue again by
 the `<!-- audit-id: … -->` marker in its body and keeps files and symbols in a
 `<!-- audit-meta: … -->` block beside it.
@@ -225,6 +225,13 @@ as a comment on that issue. The prompt hands the model the issue and states plai
 AGENTS.md's "stop at a proposal" rule does not apply here, because otherwise every run ends
 with a plan and no diff. It is told not to commit, not to push, not to close the issue, and
 that `Out of scope` is binding.
+
+A `feature` card is built one step per branch. The fixer hands the model only the first open
+checkbox under `## Steps`, and that step goes through `In review`, `Needs approval` and
+`Approved` like any defect. When it merges, `review.mjs --merge` ticks the step. If steps
+remain, the card goes back to `Ready` for the next one instead of closing; the issue closes when
+its last step lands. A step is ticked only once it is on `dev`, so a step that fails review is
+worked again rather than skipped.
 
 **Nothing is committed unless `pnpm check` and `pnpm test:related` are green.** A green branch
 is pushed to origin so the diff is readable from anywhere; `review.mjs` deletes it there when it

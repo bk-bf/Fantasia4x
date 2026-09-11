@@ -174,11 +174,13 @@ along with the pre-commit hook. `git commit --no-verify` bypasses it for a one-o
 
 ## Trackers
 
-**GitHub issues hold defects.** `gh issue list` is the board; `docs/tasks/` still holds planned
-work. The old `docs/issues/` and `docs/pr/` directories are gone.
+**GitHub issues hold all work** — defects, features and decisions. `gh issue list` is the board.
+A feature's issue is its spec; no spec file sits beside it. `docs/tasks/` keeps `ROADMAP.md`, the
+record of what shipped, and `archive/`, which nothing new is written to. The old `docs/issues/`
+and `docs/pr/` directories are gone.
 
 Frontmatter became labels: severity `critical` / `high` / `medium` / `low`, kind `drift` / `correctness` /
-`data` / `boundary` / `test gap`, origin `found by audit` / `found by hand`, the audit rule that
+`performance` / `data` / `boundary` / `test gap` / `feature`, origin `found by audit` / `found by hand`, the audit rule that
 fired, and `ready`.
 
 **A rule is labelled by its name, not its id.** `restated-roster`, `dead-branch`,
@@ -195,8 +197,7 @@ stays the ledger's key and should not appear in anything a person reads.
 
 **Every card is a real issue.** Do not put a draft card on the board to represent work that has
 a spec but no issue — an empty card inflates the count and says nothing a person can act on.
-Planned work lives in `docs/tasks/` and is listed in `ROADMAP.md`; it becomes an issue when
-someone is ready to start it.
+Planned work is an issue from the start, and waits in `Backlog` until Kirill moves it on.
 - **`Ready`** — nothing blocks it, no decision is outstanding, the scope is clear enough to
   start. An agent promotes a `drift` or `test gap` card out of `Backlog` itself, and says why.
   Any other kind waits for Kirill: the agent comments on the issue with the open decision or
@@ -299,6 +300,16 @@ commit messages use: `feat`, `fix`, `refactor`, `perf`, `test`, `tooling`, `docs
 `decision`.
 
 A field that nothing checks is how nine cards went untyped without anything noticing.
+
+**A feature is built one step per branch.** Work type `feat` goes with the kind `feature`, and
+nothing else: `create --type feat` adds the kind when no kind is given, and `check-labels`
+reports a card where the two disagree. A decision card about a feature may carry `feature` too.
+The body follows `.github/ISSUE_TEMPLATE/feat.md` — What this is, Why, Steps, How it gets
+verified — and may add `## Decisions this needs before any edit` and `## Considered and
+rejected`. Each checkbox under `## Steps` is one branch: the fixer works the first open step
+only, it passes review and Kirill's approval like any card, and `review.mjs --merge` ticks it.
+While steps remain, a merged step sends the card back to `Ready`; the issue closes when its last
+step lands. Write each step as a change that can be merged, verified and approved by itself.
 
 **A body has to say something.** `create` also refuses a stub: under ~240 characters of prose,
 no citation, or no remediation checkbox (unless it carries `needs decision`). A heading with

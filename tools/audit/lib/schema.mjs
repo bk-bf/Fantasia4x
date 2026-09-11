@@ -7,7 +7,7 @@ import { ROOT } from './links.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 
-const TEMPLATE_FOR = { feat: 'task.md', decision: 'decision.md' };
+const TEMPLATE_FOR = { feat: 'feat.md', decision: 'decision.md' };
 const templateCache = new Map();
 
 export const templateFor = (workType) => TEMPLATE_FOR[workType] ?? 'defect.md';
@@ -37,6 +37,8 @@ function vocabulary() {
   }
 }
 
+export const labelGroup = (group) => vocabulary().groups?.[group] ?? [];
+
 /** Every issue has to say how severe it is, what sort of thing it is, who raised it and how it
  *  gets verified. An issue missing one of those cannot be sorted, filtered or costed. */
 export function checkRequired(labels = []) {
@@ -46,6 +48,24 @@ export function checkRequired(labels = []) {
     const options = groups[g] ?? [];
     if (options.some((l) => labels.includes(l))) continue;
     errors.push(`no ${g} label — one of: ${options.join(', ')}`);
+  }
+  return errors;
+}
+
+const FEATURE_TYPES = new Set(['feat', 'decision']);
+
+export function checkKind(labels = [], workType) {
+  const feature = labels.includes('feature');
+  const others = labels.filter((l) => l !== 'feature' && labelGroup('kind').includes(l));
+  const errors = [];
+  if (workType === 'feat' && !feature) {
+    errors.push('work type feat needs the kind "feature" — the fixer works a feature one step at a time');
+  }
+  if (feature && workType && !FEATURE_TYPES.has(workType)) {
+    errors.push(`the kind "feature" goes with work type feat or decision, not ${workType}`);
+  }
+  if (feature && others.length) {
+    errors.push(`a feature carries no second kind — remove ${others.map((l) => `"${l}"`).join(', ')}`);
   }
   return errors;
 }
@@ -236,7 +256,11 @@ export function check({ labels, body, allowReady = false, template = false, work
     ...checkLabels(labels, { allowReady }),
     ...checkBody(body),
     ...(template
-      ? [...checkTemplate(body, labels ?? [], workType), ...checkRequired(labels ?? [])]
+      ? [
+          ...checkTemplate(body, labels ?? [], workType),
+          ...checkRequired(labels ?? []),
+          ...checkKind(labels ?? [], workType)
+        ]
       : [])
   ];
 }

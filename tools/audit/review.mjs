@@ -396,9 +396,22 @@ try {
       }
     };
     sent = true;
-    settle('close the issue', () => I.closeWithCommit(num, sha));
-    settle('move the card to On dev', () => B.moveLane(num, 'on dev'));
-    out(`--- #${num} closed, card in On dev — main is untouched`);
+    const open =
+      issue.data.kind === 'feature' ? I.featureSteps(issue.body).filter((s) => !s.done) : [];
+    if (open.length) settle('tick the step', () => I.tickRemediation(num, `DONE: ${open[0].text}`));
+    if (open.length > 1) {
+      say(
+        num,
+        `**Step merged to \`${BASE}\` as ${sha}:** ${open[0].text}\n\n` +
+          `${open.length - 1} step(s) left; the card is back in Ready for the next one.`
+      );
+      settle('move the card back to Ready', () => B.moveLane(num, 'ready'));
+      out(`--- #${num} has ${open.length - 1} step(s) left, card back in Ready — main is untouched`);
+    } else {
+      settle('close the issue', () => I.closeWithCommit(num, sha));
+      settle('move the card to On dev', () => B.moveLane(num, 'on dev'));
+      out(`--- #${num} closed, card in On dev — main is untouched`);
+    }
 
     const fixWt = join(ROOT, '.claude', 'worktrees', `fix-${d.id}`);
     if (existsSync(fixWt)) {
