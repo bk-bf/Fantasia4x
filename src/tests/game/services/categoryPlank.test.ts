@@ -42,4 +42,18 @@ describe('category:plank dynamic slot', () => {
     const gs = { droppedItems: [], stockpile: {} } as unknown as GameState;
     expect(itemService.expandCategoryCost({ 'category:plank': 1 }, gs)).toBeNull();
   });
+
+  it('`fastener` matches *_nail/_rivet/_tack but excludes weapon and tool items', () => {
+    expect(itemMatchesCostCategory({ id: 'iron_nail', category: 'metal' }, 'fastener')).toBe(true);
+    expect(itemMatchesCostCategory({ id: 'steel_rivet', category: 'metal' }, 'fastener')).toBe(
+      true
+    );
+    expect(
+      itemMatchesCostCategory({ id: 'iron_nail', category: 'metal', type: 'weapon' }, 'fastener')
+    ).toBe(false);
+    expect(
+      itemMatchesCostCategory({ id: 'iron_nail', category: 'metal', type: 'tool' }, 'fastener')
+    ).toBe(false);
+    expect(itemMatchesCostCategory({ id: 'iron_bar', category: 'metal' }, 'fastener')).toBe(false);
+  });
 });

@@ -1,6 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import { PAWN_STATE } from '$lib/game/systems/pawn/pawnStates';
-import { STATE_DEFS, UNCONTROLLABLE_STATES, stateLabel } from '$lib/game/core/defs/states';
+import {
+  STATE_DEFS,
+  UNCONTROLLABLE_STATES,
+  stateLabel,
+  isUncontrollable
+} from '$lib/game/core/defs/states';
 import { NEED_OWNED_STATES } from '$lib/game/core/defs/needs';
 
 describe('FSM state registry ↔ PAWN_STATE', () => {
@@ -56,5 +61,12 @@ describe('FSM state registry ↔ PAWN_STATE', () => {
     expect(stateLabel(PAWN_STATE.EATING)).toBe('Eating');
     expect(stateLabel(PAWN_STATE.SLEEPING)).toBe('Sleeping');
     expect(stateLabel('Dead')).toBe('Dead');
+    expect(stateLabel(undefined)).toBe('Idle');
+  });
+
+  it('isUncontrollable answers only for the flagged states, and is null-safe', () => {
+    expect(isUncontrollable(PAWN_STATE.COLLAPSED)).toBe(true);
+    expect(isUncontrollable(PAWN_STATE.IDLE)).toBe(false);
+    expect(isUncontrollable(undefined)).toBe(false);
   });
 });
