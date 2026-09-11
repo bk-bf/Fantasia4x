@@ -1,5 +1,7 @@
 import { execFileSync } from 'node:child_process';
 
+import { linkOf } from './pulls.mjs';
+
 const PROJECT_ID = 'PVT_kwHOBlZOB84Bip03';
 const STATUS_FIELD_ID = 'PVTSSF_lAHOBlZOB84Bip03zhhhAfI';
 const PROJECT_NUMBER = '4';
@@ -127,6 +129,17 @@ export function moveLane(n, to) {
     );
 
   if (from === lane) return { from, to: lane, moved: false };
+
+  if (lane === 'backlog') {
+    const pull = JSON.parse(
+      gh(['pr', 'list', '--state', 'open', '--limit', '100', '--json', 'number,body'])
+    ).find((p) => linkOf(p)?.issue === Number(n));
+    if (pull)
+      throw new Error(
+        `#${n} has an open pull request, #${pull.number}, so it cannot go to Backlog. ` +
+          `Work with a pull request is In progress or later.`
+      );
+  }
 
   applySelect(item.id, STATUS_FIELD_ID, LANES[lane]);
   invalidate();
