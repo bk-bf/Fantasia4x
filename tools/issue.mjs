@@ -6,6 +6,9 @@
 //
 //   node tools/issue.mjs create --title T --type fix --area sim --size S --body-file - [--label L]...
 //   node tools/issue.mjs edit <n> [--title T] [--body-file -] [--add-label L] [--remove-label L]
+//                                 [--type T] [--area A] [--size S]
+//   node tools/issue.mjs sub <parent> <child>        # make <child> a sub-issue of <parent>
+//   node tools/issue.mjs blocked-by <n> <blocker>    # mark <n> as blocked by <blocker>
 //   node tools/issue.mjs comment <n> --body-file -
 //   node tools/issue.mjs close <n> --commit <sha>
 //   node tools/issue.mjs labels            # what the schema allows
@@ -24,6 +27,7 @@ import {
   checkKind,
   labelGroup
 } from './audit/lib/schema.mjs';
+import { checkPrivate } from './audit/lib/private.mjs';
 import { linkify, issueRef, indexedSha, blobUrl, resolveRepoPath } from './audit/lib/links.mjs';
 import {
   moveLane,
@@ -158,6 +162,18 @@ const guard = (labels, body, { allowReady = false, template = false, workType } 
 
 const allIssues = () =>
   JSON.parse(gh(['issue', 'list', '--state', 'all', '--limit', '300', '--json', 'number,title,body']));
+
+const nodeId = (n) => gh(['issue', 'view', String(n), '--json', 'id', '--jq', '.id']).trim();
+
+function mutate(query, vars) {
+  const args = ['api', 'graphql', '-f', `query=${query}`];
+  for (const [k, v] of Object.entries(vars)) args.push('-f', `${k}=${v}`);
+  try {
+    gh(args);
+  } catch (e) {
+    die(e.message);
+  }
+}
 
 
 
@@ -302,6 +318,8 @@ if (cmd === 'check-labels') {
   }
 } else if (cmd === 'create') {
   const title = arg('title') ?? die('--title is required');
+  const privateTitle = checkPrivate(title);
+  if (privateTitle.length) die(`refused:\n  - title ${privateTitle.join('\n  - title ')}`);
   const labels = all('label');
   const type = arg('type');
   if (!type) die(`--type is required — one of: ${TYPES.join(', ')}`);
@@ -332,6 +350,8 @@ if (cmd === 'check-labels') {
     setSelect(n, 'Work type', type);
     setSelect(n, 'Area', area);
     setSelect(n, 'Size', size);
+    const priority = labels.map((l) => SEVERITY_PRIORITY[l]).find(Boolean);
+    if (priority) setSelect(n, 'Priority', priority);
     if (verify) setSelect(n, 'Verify', verify);
   } catch (e) {
     process.stderr.write(`note: created #${n} but could not set its fields: ${e.message}\n`);
@@ -340,6 +360,10 @@ if (cmd === 'check-labels') {
   const n = argv[1] ?? die('which issue?');
   const add = all('add-label');
   const body = arg('body-file') ? prepare(readBody()) : null;
+  const type = arg('type');
+  if (type && !TYPES.includes(type)) die(`unknown --type "${type}" — one of: ${TYPES.join(', ')}`);
+  const area = arg('area') ? boardOption('Area', arg('area'), 'area') : null;
+  const size = arg('size') ? boardOption('Size', arg('size'), 'size') : null;
   // Refuse what this edit introduces, not what it inherits. A body that already cites a file
   // somebody deleted cannot be ticked, relabelled or corrected while the old citation is held
   // against it, which locks the issue instead of protecting it.
@@ -348,16 +372,17 @@ if (cmd === 'check-labels') {
   const resulting = [...new Set([...current.labels.map((l) => l.name), ...add])].filter(
     (l) => !removed.has(l)
   );
-  const workType = itemFor(n)?.['work type'];
+  const workType = type ?? itemFor(n)?.['work type'];
   const inherited =
     body === null ? [] : check({ labels: [], body: current.body ?? '', allowReady: true });
   const introduced = [
     ...checkLabels(add, { allowReady: true }),
+    ...(arg('title') ? checkPrivate(arg('title')).map((e) => `title ${e}`) : []),
     ...checkBody(body ?? ''),
     ...(body !== null
       ? [...checkTemplate(body, resulting, workType), ...checkRequired(resulting)]
       : []),
-    ...(add.length || removed.size ? checkKind(resulting, workType) : [])
+    ...(add.length || removed.size || type ? checkKind(resulting, workType) : [])
   ].filter((e) => !inherited.includes(e));
   if (introduced.length) die(`refused:\n  - ${introduced.join('\n  - ')}`);
   const args = ['issue', 'edit', n];
@@ -365,10 +390,44 @@ if (cmd === 'check-labels') {
   if (body !== null) args.push('--body-file', '-');
   for (const l of add) args.push('--add-label', l);
   for (const l of all('remove-label')) args.push('--remove-label', l);
-  process.stdout.write(gh(args, body ?? undefined));
+  const fieldEdits = [
+    ['Work type', type],
+    ['Area', area],
+    ['Size', size]
+  ].filter(([, value]) => value);
+  if (args.length === 3 && !fieldEdits.length) die('nothing to edit');
+  if (args.length > 3) process.stdout.write(gh(args, body ?? undefined));
+  for (const [field, value] of fieldEdits) {
+    try {
+      const r = setSelect(n, field, value);
+      process.stdout.write(
+        `#${n}  ${field}: ${r.from ?? 'unset'} -> ${r.to}${r.moved ? '' : ' (already set)'}\n`
+      );
+    } catch (e) {
+      die(e.message);
+    }
+  }
+} else if (cmd === 'sub') {
+  const [parent, child] = argv.slice(1, 3);
+  if (!parent || !child) die('usage: sub <parent> <child>');
+  mutate(
+    'mutation($p:ID!,$c:ID!){ addSubIssue(input:{issueId:$p,subIssueId:$c}){ clientMutationId } }',
+    { p: nodeId(parent), c: nodeId(child) }
+  );
+  process.stdout.write(`#${child} is a sub-issue of #${parent}\n`);
+} else if (cmd === 'blocked-by') {
+  const [n, blocker] = argv.slice(1, 3);
+  if (!n || !blocker) die('usage: blocked-by <issue> <blocker>');
+  mutate(
+    'mutation($i:ID!,$b:ID!){ addBlockedBy(input:{issueId:$i,blockingIssueId:$b}){ clientMutationId } }',
+    { i: nodeId(n), b: nodeId(blocker) }
+  );
+  process.stdout.write(`#${n} is blocked by #${blocker}\n`);
 } else if (cmd === 'comment') {
   const n = argv[1] ?? die('which issue?');
   const body = prepare(readBody());
+  const privateWords = checkPrivate(body);
+  if (privateWords.length) die(`refused:\n  - ${privateWords.join('\n  - ')}`);
   // A comment is a record of what a run did, not a specification. Refusing to post one because
   // the text it is reporting names something that no longer exists loses the whole record, so
   // the same problems are reported and the comment still goes up.
@@ -405,5 +464,6 @@ if (cmd === 'check-labels') {
     gh(['issue', 'close', n, '--reason', 'completed', '--comment', `Fixed in ${sha}.`])
   );
 } else {
-  die(readFileSync(new URL(import.meta.url), 'utf8').split('\n').slice(1, 15).join('\n').replace(/^\/\/ ?/gm, ''));
+  const head = readFileSync(new URL(import.meta.url), 'utf8').split('\n').slice(1);
+  die(head.slice(0, head.findIndex((l) => !l.startsWith('//'))).join('\n').replace(/^\/\/ ?/gm, ''));
 }
