@@ -14,7 +14,14 @@
 
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
-import { check, allowedLabels, checkRequired, checkTemplate } from './audit/lib/schema.mjs';
+import {
+  check,
+  allowedLabels,
+  checkRequired,
+  checkTemplate,
+  checkLabels,
+  checkBody
+} from './audit/lib/schema.mjs';
 import { linkify, issueRef, indexedSha, blobUrl, resolveRepoPath } from './audit/lib/links.mjs';
 import { moveLane, setSelect, addToBoard, itemFor, boardItems } from './audit/lib/board.mjs';
 
@@ -110,8 +117,8 @@ function repair(body, sha) {
  *  body written by hand and a body rewritten in bulk end up in the same shape. */
 const prepare = (raw) => repair(raw ?? '', indexedSha(null));
 
-const guard = (labels, body, { allowReady = false, template = false } = {}) => {
-  const errors = check({ labels, body, allowReady, template });
+const guard = (labels, body, { allowReady = false, template = false, workType } = {}) => {
+  const errors = check({ labels, body, allowReady, template, workType });
   if (errors.length) die(`refused:\n  - ${errors.join('\n  - ')}`);
 };
 
@@ -122,21 +129,22 @@ const allIssues = () =>
 
 if (cmd === 'check-labels') {
   let bad = 0;
-  for (const it of JSON.parse(
-    gh(['issue', 'list', '--state', 'open', '--limit', '300', '--json', 'number,title,labels,body'])
-  )) {
-    const names = it.labels.map((l) => l.name);
-    const problems = [...checkRequired(names), ...checkTemplate(it.body, names)];
-    if (!problems.length) continue;
-    bad += 1;
-    process.stdout.write(`#${it.number}  ${it.title.slice(0, 52)}\n`);
-    for (const e of problems) process.stdout.write(`      ${e}\n`);
-  }
   const cards = new Map(
     boardItems()
       .filter((i) => i.content?.number)
       .map((i) => [String(i.content.number), i])
   );
+  for (const it of JSON.parse(
+    gh(['issue', 'list', '--state', 'open', '--limit', '300', '--json', 'number,title,labels,body'])
+  )) {
+    const names = it.labels.map((l) => l.name);
+    const workType = cards.get(String(it.number))?.['work type'];
+    const problems = [...checkRequired(names), ...checkTemplate(it.body, names, workType)];
+    if (!problems.length) continue;
+    bad += 1;
+    process.stdout.write(`#${it.number}  ${it.title.slice(0, 52)}\n`);
+    for (const e of problems) process.stdout.write(`      ${e}\n`);
+  }
   let untyped = 0;
   for (const it of JSON.parse(
     gh(['issue', 'list', '--state', 'open', '--limit', '300', '--json', 'number,title'])
@@ -218,7 +226,12 @@ if (cmd === 'check-labels') {
   for (const l of [...allowedLabels()].sort()) process.stdout.write(`${l}\n`);
 } else if (cmd === 'lint') {
   const body = prepare(readBody());
-  const errors = check({ labels: all('label'), body, template: !argv.includes('--no-template') });
+  const errors = check({
+    labels: all('label'),
+    body,
+    template: !argv.includes('--no-template'),
+    workType: arg('type') ?? 'fix'
+  });
   if (errors.length) die(`refused:\n  - ${errors.join('\n  - ')}`);
   process.stdout.write('ok\n');
 } else if (cmd === 'sync-labels') {
@@ -254,7 +267,7 @@ if (cmd === 'check-labels') {
   if (!type) die(`--type is required — one of: ${TYPES.join(', ')}`);
   if (!TYPES.includes(type)) die(`unknown --type "${type}" — one of: ${TYPES.join(', ')}`);
   const body = prepare(readBody());
-  guard(labels, body, { template: true });
+  guard(labels, body, { template: true, workType: type });
   const args = ['issue', 'create', '--title', title, '--body-file', '-'];
   for (const l of labels) args.push('--label', l);
   const url = gh(args, body).trim();
@@ -284,20 +297,21 @@ if (cmd === 'check-labels') {
   // Refuse what this edit introduces, not what it inherits. A body that already cites a file
   // somebody deleted cannot be ticked, relabelled or corrected while the old citation is held
   // against it, which locks the issue instead of protecting it.
+  const current = JSON.parse(gh(['issue', 'view', n, '--json', 'body,labels']));
+  const removed = new Set(all('remove-label'));
+  const resulting = [...new Set([...current.labels.map((l) => l.name), ...add])].filter(
+    (l) => !removed.has(l)
+  );
+  const workType = itemFor(n)?.['work type'];
   const inherited =
-    body === null
-      ? []
-      : check({
-          labels: [],
-          body: JSON.parse(gh(['issue', 'view', n, '--json', 'body'])).body ?? '',
-          allowReady: true
-        });
-  const introduced = check({
-    labels: add,
-    body: body ?? '',
-    allowReady: true,
-    template: body !== null
-  }).filter((e) => !inherited.includes(e));
+    body === null ? [] : check({ labels: [], body: current.body ?? '', allowReady: true });
+  const introduced = [
+    ...checkLabels(add, { allowReady: true }),
+    ...checkBody(body ?? ''),
+    ...(body !== null
+      ? [...checkTemplate(body, resulting, workType), ...checkRequired(resulting)]
+      : [])
+  ].filter((e) => !inherited.includes(e));
   if (introduced.length) die(`refused:\n  - ${introduced.join('\n  - ')}`);
   const args = ['issue', 'edit', n];
   if (arg('title')) args.push('--title', arg('title'));

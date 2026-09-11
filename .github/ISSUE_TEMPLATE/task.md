@@ -1,7 +1,6 @@
 ---
 name: Task
 about: Planned work with a spec behind it.
-labels: feature
 ---
 
 ## What this is

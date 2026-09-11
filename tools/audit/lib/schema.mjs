@@ -7,27 +7,25 @@ import { ROOT } from './links.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 
-let templateSections = null;
+const TEMPLATE_FOR = { feat: 'task.md', decision: 'decision.md' };
+const templateCache = new Map();
 
-function requiredSections() {
-  if (templateSections === null) {
+export const templateFor = (workType) => TEMPLATE_FOR[workType] ?? 'defect.md';
+
+function requiredSections(file) {
+  if (!templateCache.has(file)) {
+    let sections = [];
     try {
-      const md = readFileSync(join(ROOT, '.github', 'ISSUE_TEMPLATE', 'defect.md'), 'utf8');
-      templateSections = [...md.matchAll(/^##\s+(.+)$/gm)].map((m) => m[1].trim().toLowerCase());
+      const md = readFileSync(join(ROOT, '.github', 'ISSUE_TEMPLATE', file), 'utf8');
+      sections = [...md.matchAll(/^##\s+(.+)$/gm)].map((m) => m[1].trim().toLowerCase());
     } catch {
-      templateSections = [];
+      sections = [];
     }
+    templateCache.set(file, sections);
   }
-  return templateSections;
+  return templateCache.get(file);
 }
 
-function ruleNames() {
-  try {
-    return new Set(loadRules().rules.map((r) => r.name).filter(Boolean));
-  } catch {
-    return new Set();
-  }
-}
 
 /** Every label a writer may use: the fixed vocabulary plus one per rule name. Anything else
  *  is a typo or an invention, and both pollute the board the same way. */
@@ -180,12 +178,11 @@ export function checkBody(body) {
 }
 
 const MIN_PROSE = 240;
-const STRUCTURE_AT = 1500;
 
 /** An issue nobody can act on is worse than no issue: it inflates the count and names nothing.
  *  The bar is deliberately about substance, not shape — a heading with nothing under it passes
  *  a section check and still tells a reader nothing. */
-export function checkTemplate(body, labels = []) {
+export function checkTemplate(body, labels = [], workType) {
   const errors = [];
   const text = (body ?? '')
     .replace(/<!--[\s\S]*?-->/g, '')
@@ -206,23 +203,12 @@ export function checkTemplate(body, labels = []) {
   }
 
   const headings = [...text.matchAll(/^##\s+(.+)$/gm)].map((m) => m[1].trim().toLowerCase());
-  const required = requiredSections();
-  if (prose.length > STRUCTURE_AT && required.length) {
-    const missing = required.filter((r) => !headings.includes(r));
-    if (missing.length) {
-      errors.push(
-        `${prose.length} characters, and .github/ISSUE_TEMPLATE/defect.md asks for a section ` +
-          `this body does not have: ${missing.map((m) => `"${m}"`).join(', ')}`
-      );
-    }
-  }
-
-  const rules = ruleNames();
-  const fromAudit = labels.includes('found by audit') || labels.some((l) => rules.has(l));
-  if (fromAudit && !headings.includes('evidence')) {
+  const file = templateFor(workType);
+  const missing = requiredSections(file).filter((r) => !headings.includes(r));
+  if (missing.length) {
     errors.push(
-      'no "## Evidence" section — an issue naming a rule has to show the lines the rule fired on, ' +
-        'not mention them in passing'
+      `.github/ISSUE_TEMPLATE/${file} asks for a section this body does not have: ` +
+        missing.map((m) => `"${m}"`).join(', ')
     );
   }
   for (const h of headings) {
@@ -238,17 +224,19 @@ export function checkTemplate(body, labels = []) {
     errors.push('no citation — link the line, the spec or the issue this is about');
   }
 
-  const decision = labels.includes('needs decision');
+  const decision = labels.includes('needs decision') || workType === 'decision';
   if (!decision && !/^\s*[-*] \[[ x]\] /m.test(text)) {
     errors.push('no remediation checkbox — an issue needs a definition of done, or the label "needs decision"');
   }
   return errors;
 }
 
-export function check({ labels, body, allowReady = false, template = false } = {}) {
+export function check({ labels, body, allowReady = false, template = false, workType } = {}) {
   return [
     ...checkLabels(labels, { allowReady }),
     ...checkBody(body),
-    ...(template ? [...checkTemplate(body, labels ?? []), ...checkRequired(labels ?? [])] : [])
+    ...(template
+      ? [...checkTemplate(body, labels ?? [], workType), ...checkRequired(labels ?? [])]
+      : [])
   ];
 }
