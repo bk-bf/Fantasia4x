@@ -256,6 +256,10 @@ When the pull request already exists, the fixer puts every comment on it — the
 Kirill's — into the prompt, so a comment on the pull request is how work is sent back with a
 reason.
 
+A card in `Manual` is one Kirill is working by hand. `--issue` refuses it, `--next` never sees it
+because it reads only `Ready`, the reviewer skips its pull request, and `board-sync.py` does not
+press Update branch on it. Merging its pull request still moves it to `On dev`.
+
 ## Phase 4 — the reviewer
 
 ```bash
