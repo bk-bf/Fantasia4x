@@ -11,13 +11,16 @@ export const LANES = {
   ready: '14aee711',
   failed: '3cfbabb8',
   'in progress': '9e8caff2',
+  manual: 'a25ed474',
   'pr ready': 'fee29b9d',
   'on dev': 'faf70e85',
   done: 'ea4793e4',
   rejected: '1a214656'
 };
 
-const HIS_LANES = new Set(['blocked on you', 'rejected']);
+const HIS_LANES = new Set(['blocked on you', 'rejected', 'manual']);
+
+const LEFT_ON_MERGE = new Set(['manual']);
 
 const AGENT_TRIAGED_KINDS = new Set(['drift', 'test gap']);
 
@@ -104,7 +107,7 @@ export function moveLane(n, to) {
   if (!item) throw new Error(`#${n} is not on the board`);
   const from = (item.status ?? '').toLowerCase();
 
-  if (HIS_LANES.has(from) && from !== lane)
+  if (HIS_LANES.has(from) && from !== lane && !(LEFT_ON_MERGE.has(from) && lane === 'on dev'))
     throw new Error(
       `#${n} is in "${item.status}", which is Kirill's lane. He moves it out, not you.\n` +
         `If it is genuinely finished, say so and leave the card where it is.`
