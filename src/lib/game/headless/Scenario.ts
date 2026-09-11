@@ -216,7 +216,7 @@ export function buildScenario(spec: ScenarioSpec): GameState {
         Object.assign(skills, g.skills ?? {});
         cmd('devSetPawnSkills', { pawnId: p.id, skills });
       }
-      for (const itemId of g.equip ?? []) cmd('devEquipPawnItem', { pawnId: p.id, itemId });
+      for (const itemId of g.equip ?? []) cmd('equipPawnItem', { pawnId: p.id, itemId });
       if (g.drafted) cmd('toggleDraft', { pawnId: p.id });
     }
     if (g.needs) {

@@ -9,12 +9,6 @@ Regenerate with `pnpm audit:promote --list`; this one is stamped after #43.
       Errors that were caught and swallowed are now reported instead of vanishing.
       *Watch: nothing new and noisy appears in the log during ordinary play.*
 
-- [ ] **#11 — A pawn can equip an item the colony does not have**
-      `equipPawnItem` now refuses when the item is not in the stockpile and consumes it when it
-      is; unequipping returns it. Scenario setup uses a separate `devEquipPawnItem` bypass so it
-      cannot be mistaken for proof of obtainability.
-      *Watch: equip and unequip a few pieces and check the stockpile count moves both ways.*
-
 - [ ] **#12 — A fractional recipe quantity rounds back up to a whole unit**
       Stockpile comparisons gained an epsilon, and a partial take is now taken as a partial
       instead of `Math.ceil` rounding it up to a whole unit.

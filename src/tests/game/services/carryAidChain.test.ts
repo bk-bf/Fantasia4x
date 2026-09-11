@@ -45,15 +45,13 @@ describe('carry aid chain — packs, belts and sheaths (HeadlessSession, real ti
         seedEntities: false
       })
     );
-    const ids = [
+    const made = await craftAll(session, [
       'hide_knife_sheath',
       'leather_sword_belt',
       'leather_belt',
       'ringed_belt',
       'leather_knapsack'
-    ];
-    const made = await craftAll(session, ids);
-    const crafted = Object.fromEntries(ids.map((id) => [id, stockOf(session)[id] ?? 0]));
+    ]);
 
     const pawnId = session.getState().pawns[0].id;
     const before = budget(session.getState(), pawnId);
@@ -70,7 +68,14 @@ describe('carry aid chain — packs, belts and sheaths (HeadlessSession, real ti
         `${after.maxWeightKg.toFixed(1)}kg/${after.maxVolumeL.toFixed(1)}L`
     );
 
-    for (const id of ids) expect(crafted[id], `${id} is craftable in play`).toBeGreaterThan(0);
+    for (const id of [
+      'hide_knife_sheath',
+      'leather_sword_belt',
+      'leather_belt',
+      'ringed_belt',
+      'leather_knapsack'
+    ])
+      expect(stockOf(session)[id] ?? 0, `${id} is craftable in play`).toBeGreaterThan(0);
     expect(worn?.back2?.itemId, 'a pack goes in the LOAD slot, not over the cloak').toBe(
       'leather_knapsack'
     );
@@ -108,16 +113,18 @@ describe('carry aid chain — packs, belts and sheaths (HeadlessSession, real ti
         seedEntities: false
       })
     );
-    const ids = [
-      'mounted_sword_belt',
-      'steel_buckled_belt',
-      'steel_riveted_knapsack',
-      'plated_war_belt',
-      'rune_etched_belt',
-      'rune_stitched_knapsack'
-    ];
-    const made = await craftAll(session, ids, 60);
-    const crafted = Object.fromEntries(ids.map((id) => [id, stockOf(session)[id] ?? 0]));
+    const made = await craftAll(
+      session,
+      [
+        'mounted_sword_belt',
+        'steel_buckled_belt',
+        'steel_riveted_knapsack',
+        'plated_war_belt',
+        'rune_etched_belt',
+        'rune_stitched_knapsack'
+      ],
+      60
+    );
 
     const pawnId = session.getState().pawns[0].id;
     const before = budget(session.getState(), pawnId);
@@ -131,7 +138,15 @@ describe('carry aid chain — packs, belts and sheaths (HeadlessSession, real ti
         `carry ${before.maxWeightKg.toFixed(1)}kg → ${after.maxWeightKg.toFixed(1)}kg`
     );
 
-    for (const id of ids) expect(crafted[id], `${id} is craftable in play`).toBeGreaterThan(0);
+    for (const id of [
+      'mounted_sword_belt',
+      'steel_buckled_belt',
+      'steel_riveted_knapsack',
+      'plated_war_belt',
+      'rune_etched_belt',
+      'rune_stitched_knapsack'
+    ])
+      expect(stockOf(session)[id] ?? 0, `${id} is craftable in play`).toBeGreaterThan(0);
     expect(after.maxWeightKg - before.maxWeightKg).toBe(0);
     expect(after.maxVolumeL - before.maxVolumeL).toBeCloseTo(86, 1);
   });
@@ -165,7 +180,6 @@ describe('the pack grid — light / medium / heavy at one age (HeadlessSession, 
     );
     const ids = ['iron_buckled_satchel', 'iron_buckled_knapsack', 'iron_framed_pack'];
     const made = await craftAll(session, ids, 60);
-    const crafted = Object.fromEntries(ids.map((id) => [id, stockOf(session)[id] ?? 0]));
 
     const pawnId = session.getState().pawns[0].id;
     const base = budget(session.getState(), pawnId);
@@ -181,7 +195,8 @@ describe('the pack grid — light / medium / heavy at one age (HeadlessSession, 
         ids.map((id) => `${id} +${carried[id].toFixed(1)}L`).join(', ')
     );
 
-    for (const id of ids) expect(crafted[id], `${id} is craftable`).toBeGreaterThan(0);
+    for (const id of ids)
+      expect(stockOf(session)[id] ?? 0, `${id} is craftable`).toBeGreaterThan(0);
     expect(carried.iron_buckled_satchel).toBeCloseTo(30, 1);
     expect(carried.iron_buckled_knapsack).toBeCloseTo(42, 1);
     expect(carried.iron_framed_pack).toBeCloseTo(60, 1);

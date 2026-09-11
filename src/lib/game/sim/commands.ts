@@ -552,17 +552,7 @@ export const COMMANDS: Record<string, Cmd> = {
     };
     return { ...s, workAssignments: a };
   },
-  equipPawnItem: (s, p: { pawnId: string; itemId: string }) => {
-    if (!stockedDose(s, p.itemId)) return s;
-    const idx = s.pawns.findIndex((pw) => pw.id === p.pawnId);
-    if (idx === -1) return s;
-    const pawns = s.pawns.slice();
-    const before = pawns[idx];
-    pawns[idx] = equipItem(before, p.itemId, s.turn);
-    if (pawns[idx] === before) return s;
-    return consumeFromStockpiles({ ...s, pawns }, { [p.itemId]: doseOf(p.itemId) });
-  },
-  devEquipPawnItem: (s, p: { pawnId: string; itemId: string }) => ({
+  equipPawnItem: (s, p: { pawnId: string; itemId: string }) => ({
     ...s,
     pawns: s.pawns.map((pw) => (pw.id === p.pawnId ? equipItem(pw, p.itemId, s.turn) : pw))
   }),
