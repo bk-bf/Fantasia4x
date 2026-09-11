@@ -11,6 +11,7 @@ export const LANES = {
   ready: '14aee711',
   failed: '3cfbabb8',
   'in progress': '9e8caff2',
+  manual: 'a25ed474',
   'pr ready': 'fee29b9d',
   'on dev': 'faf70e85',
   done: 'ea4793e4',
