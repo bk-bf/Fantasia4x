@@ -127,7 +127,7 @@ export type PawnOrder =
   | { type: 'haul'; x: number; y: number }
   | { type: 'equip'; dropId: string; x: number; y: number; slot?: EquipmentSlot | 'inventory' }
   | { type: 'rescue'; victimId: string; auto?: boolean }
-  | { type: 'tend'; patientId: string; nextTendTurn?: number }
+  | { type: 'tend'; patientId: string; nextTendTurn?: number; withoutMedicine?: boolean }
   | { type: 'forceJob'; jobId: string }
   | { type: 'forceConsume'; dropId: string; x: number; y: number }
   | { type: 'drink'; x: number; y: number };

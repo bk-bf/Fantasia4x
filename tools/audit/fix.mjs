@@ -9,15 +9,6 @@
 //   node tools/audit/fix.mjs --issue 24           a named one
 //   node tools/audit/fix.mjs --next --dry-run     pick and print, change nothing
 //   node tools/audit/fix.mjs --next --keep        leave the worktree for inspection
-//
-// The gate is the board: Ready, and a Verify route this harness can settle. The card moves
-// Ready -> In progress -> In review, and back to Ready if the run fails or dies. A card the
-// audit's pause is holding is not picked up at all -- both spend the same limits.
-//
-// Nothing is committed unless `pnpm check` and the related tests are green, and nothing is
-// pushed at all: the branch is local and a person decides whether it reaches main. A run
-// that cannot get green writes up why on the issue, so a failed attempt leaves a record
-// rather than a half-finished branch.
 
 import { execFileSync } from 'node:child_process';
 import { existsSync, rmSync } from 'node:fs';
@@ -25,6 +16,7 @@ import { join } from 'node:path';
 
 import * as B from './lib/board.mjs';
 import * as I from './lib/gh.mjs';
+import * as PR from './lib/pulls.mjs';
 import {
   ROOT,
   PNPM,
@@ -108,7 +100,35 @@ function fail(msg) {
 // for a conversation and wrong here, so the authorisation is stated explicitly -- otherwise
 // every fixer run ends with a plan and no diff.
 
-function buildPrompt(issue) {
+const nextStep = (issue) =>
+  issue.data.kind === 'feature'
+    ? (I.featureSteps(issue.body).find((s) => !s.done)?.text ?? null)
+    : null;
+
+const featureScope = (step) => `This issue is a feature, built one step per branch. Work only its next open step:
+
+    ${step}
+
+The ticked steps are already on \`${BASE}\`. The open steps after this one are later branches, so
+do not start them.`;
+
+const feedbackSection = (pull, notes) =>
+  notes.length
+    ? `
+
+---
+
+# Said on the previous attempt
+
+This issue already has pull request #${pull}, and what follows was written on it by the reviewer or
+by Kirill. This attempt starts again from \`${BASE}\`, so the earlier diff is gone. Address every
+point below in the new one.
+
+${notes.map((n) => `- ${n.replace(/\n/g, '\n  ')}`).join('\n')}
+`
+    : '';
+
+function buildPrompt(issue, step) {
   const d = issue.data;
   return `You are fixing one recorded issue in this repository, end to end.
 
@@ -116,7 +136,7 @@ function buildPrompt(issue) {
 
 This repository's AGENTS.md says not to touch code without being asked, and to stop at a
 proposal. **You have been asked.** This issue's card was triaged into the board's Ready lane,
-which is the explicit go-ahead to implement its whole Remediation list. Do not stop at a
+which is the explicit go-ahead to implement ${step ? 'the step named under Scope' : 'its whole Remediation list'}. Do not stop at a
 proposal, do not ask for confirmation, and do not report back a plan — make the changes.
 
 Everything else in AGENTS.md still applies in full: the layering, the service singletons, the
@@ -125,8 +145,7 @@ the 200-line component limit, Svelte 5 runes, \`pnpm\` never \`npm\`.
 
 # Scope
 
-Work the Remediation list below, all of it, in this worktree. This is one class of defect and
-one PR.
+${step ? featureScope(step) : 'Work the Remediation list below, all of it, in this worktree. This is one class of defect and\none PR.'}
 
 - Change only what the issue names. \`Out of scope\` is binding.${
     (d.files ?? []).length ? `\n- The issue scopes this to: ${(d.files ?? []).join(', ')}.` : ''
@@ -198,22 +217,23 @@ ${issue.body}
 const COMMIT_TYPE = { tooling: 'dev', decision: 'chore' };
 const GIT_TYPES = /^(feat|fix|refactor|chore|docs|dev|perf|style|test|ci|build)$/;
 
-function commitMessage(d, num, files, workType) {
+function commitMessage(d, num, files, workType, step) {
   const raw = workType ?? B.itemFor(num)?.['work type'] ?? 'fix';
   const type = COMMIT_TYPE[raw] ?? (GIT_TYPES.test(raw) ? raw : 'fix');
   const scope = /^[a-z0-9./-]+$/.test(d.subarea ?? '') ? `(${d.subarea})` : '';
-  const summary = String(d.title)
+  const summary = String(step ? step.replace(/`/g, '') : d.title)
     .replace(/\s+—\s+[^—]*$/, '')
     .replace(/^[^A-Za-z]+/, '')
     .replace(/^./, (c) => c.toLowerCase())
     .slice(0, 68)
-    .trim();
+    .trim()
+    .replace(/[.\s]+$/, '');
   const named = files.slice(0, 6).map((f) => `\`${f}\``).join(', ');
   const rest = files.length > 6 ? ` and ${files.length - 6} more` : '';
   return [
     `${type}${scope}: ${summary}`,
     '',
-    `- Work the remediation list on #${num}.`,
+    step ? `- Take the next step on #${num}.` : `- Work the remediation list on #${num}.`,
     `- Change ${named}${rest}.`,
     '',
     'Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>'
@@ -235,11 +255,15 @@ if (paused) {
   else out(`--- the audit is paused${why}; a real run would stop here`);
 }
 
+const pulls = PR.openPulls();
+const withPull = new Set(pulls.map((p) => PR.linkOf(p)?.issue).filter(Boolean));
+
 for (const it of B.inLane('in progress')) {
   const n = it.content?.number;
   if (!n) continue;
   const stale = I.readIssue(String(n));
   if (existsSync(join(ROOT, '.claude', 'worktrees', `fix-${stale.data.id}`))) continue;
+  if (withPull.has(n)) continue;
   out(`--- releasing #${n}, left In progress by a run that did not exit`);
   B.moveLane(n, 'ready');
 }
@@ -253,14 +277,23 @@ out(`--- route ${route}`);
 if (d.status === 'closed') fail(`#${num} is closed`);
 const errs = I.validate(issue);
 if (errs.length) fail(`${d.id} is invalid: ${errs.join('; ')}`);
+const step = nextStep(issue);
+if (d.kind === 'feature' && !step) fail(`#${num} is a feature with no open step under ## Steps`);
 
-const branch = `fix/${d.id}`;
-const wt = join(ROOT, '.claude', 'worktrees', `fix-${d.id}`);
+const earlier = pulls.find((p) => PR.linkOf(p)?.issue === num) ?? null;
+const branch = earlier?.headRefName ?? `fix/${d.id}`;
+const wt = join(ROOT, '.claude', 'worktrees', `fix-${branch.slice('fix/'.length)}`);
+const notes = earlier ? PR.feedback(earlier.number) : [];
 
 if (flag('dry-run')) {
   out(`would work #${num} on ${branch} in ${wt}`);
-  out(`  lane ${B.laneOf(num)} -> in progress -> ${route === 'playtest' ? 'needs playtest' : 'in review'}`);
+  out(
+    `  lane ${B.laneOf(num)} -> in progress, then a pull request into ${BASE}` +
+      (route === 'playtest' ? ` labelled ${PR.PLAYTEST_LABEL} and the card to pr ready` : '')
+  );
+  if (earlier) out(`  PR #${earlier.number} is open; ${notes.length} comment(s) go into the prompt`);
   out(`  ${(issue.body.match(/^\s*- \[ \]/gm) ?? []).length} open remediation step(s)`);
+  if (step) out(`  next step: ${step}`);
   process.exit(0);
 }
 
@@ -330,7 +363,11 @@ try {
       'Grep',
       'Glob'
     ],
-    { cwd: wt, input: buildPrompt(issue), timeoutMs: 3_600_000 }
+    {
+      cwd: wt,
+      input: buildPrompt(issue, step) + feedbackSection(earlier?.number, notes),
+      timeoutMs: 3_600_000
+    }
   );
   const mins = ((Date.now() - t0) / 60000).toFixed(1);
   if (res.code !== 0) throw new Error(`the model exited ${res.code}:\n${tail(res.err)}`);
@@ -370,7 +407,13 @@ try {
     } else {
       out(`--- committing`);
       git(['add', '-A'], wt);
-      const msg = commitMessage(d, num, files, route === 'playtest' ? 'fix' : undefined);
+      const msg = commitMessage(
+        d,
+        num,
+        files,
+        step ? 'feat' : route === 'playtest' ? 'fix' : undefined,
+        step
+      );
       execFileSync('git', ['commit', '-q', '-F', '-'], { cwd: wt, input: msg });
       // The commit exists from here on. Nothing below may reach the catch and write the branch
       // up as a failed attempt that was never committed.
@@ -387,29 +430,44 @@ try {
         out(`    [warn] could not push ${branch}: ${tail(String(e.message), 3)}`);
       }
 
-      if (route === 'playtest') {
-        const port = await assignDevPort(wt);
-        say(num,
-          P.renderPlaytest({ branch, worktree: wt, port, files, account, ran, pushed })
-        );
-        keepTree = true;
-      } else {
+      const port = route === 'playtest' ? await assignDevPort(wt) : null;
+      if (route === 'playtest') keepTree = true;
+      const body = P.renderPull({ issue: num, step, route, account, ran, files, worktree: wt, port });
+      let pull = pushed ? PR.openPullFor(branch) : null;
+      if (pull) {
+        PR.editPull(pull.number, body);
+        out(`--- pushed onto PR #${pull.number} and rewrote its description`);
+      } else if (pushed) {
+        pull = PR.createPull({
+          branch,
+          title: msg.split('\n')[0],
+          body,
+          labels: route === 'playtest' ? [PR.PLAYTEST_LABEL] : []
+        });
+        out(`--- opened PR #${pull?.number} into ${BASE}`);
+      }
+
+      if (!pull)
         say(num, P.renderAttempt({ branch, files, account, verified: 'pass', ran, pushed }));
+
+      if (!step) {
+        try {
+          const ticked = I.tickRemediation(num, account);
+          out(`--- ticked ${ticked} remediation item(s)`);
+        } catch (e) {
+          out(`--- could not tick #${num}: ${String(e.message).split('\n').slice(0, 3).join(' ')}`);
+        }
       }
 
-      try {
-        const ticked = I.tickRemediation(num, account);
-        out(`--- ticked ${ticked} remediation item(s)`);
-      } catch (e) {
-        out(`--- could not tick #${num}: ${String(e.message).split('\n').slice(0, 3).join(' ')}`);
-      }
-
-      if (route === 'playtest') {
-        B.moveLane(num, 'needs playtest');
-        out(`--- #${num} is in Needs playtest on ${branch}; the worktree stays at ${wt}`);
+      if (pull && route === 'playtest') {
+        B.moveLane(num, 'pr ready');
+        out(`--- #${num} waits in PR ready on PR #${pull.number}; the worktree stays at ${wt}`);
       } else {
-        B.moveLane(num, 'in review');
-        out(`--- #${num} is In review on ${branch}; review.mjs takes it from here`);
+        out(
+          pull
+            ? `--- #${num} stays In progress on PR #${pull.number}; review.mjs takes it from here`
+            : `--- #${num} stays In progress; ${branch} is committed and not pushed`
+        );
       }
     }
   }

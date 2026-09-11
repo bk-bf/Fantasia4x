@@ -1,4 +1,4 @@
-export function renderAttempt({ branch, files, account, verified, failures, ran, pushed }) {
+export function renderAttempt({ branch, files, account, verified, failures, ran, pushed, pull }) {
   const lines = [
     verified === 'pass'
       ? `**Fix attempt on \`${branch}\` — committed, and every command below passed.**`
@@ -13,17 +13,13 @@ export function renderAttempt({ branch, files, account, verified, failures, ran,
   if (failures) lines.push('## What failed', '', failures, '');
 
   lines.push(
-    '## Review it',
-    '',
-    '```bash',
-    `git diff dev...${branch}`,
-    `git log --oneline dev..${branch}`,
-    '```',
-    '',
-    verified === 'pass'
-      ? '`review.mjs` takes it from here: it re-merges this branch onto a fresh `origin/dev`, ' +
-        'runs the route the Verify field names, and merges to `dev` only if that is green.'
-      : 'The worktree was kept so the attempt can be carried forward.',
+    verified !== 'pass'
+      ? 'The worktree was kept so the attempt can be carried forward.'
+      : pull
+        ? `Pull request #${pull}. \`review.mjs\` re-merges it onto a fresh \`origin/dev\`, runs the ` +
+          'route the Verify field names and posts its result there, and CI runs on it too. ' +
+          'Merging it is yours.'
+        : `\`${branch}\` could not be pushed, so no pull request was opened.`,
     '',
     `Verified: ${
       verified === 'pass'
@@ -48,10 +44,10 @@ export function renderAttempt({ branch, files, account, verified, failures, ran,
   return lines.join('\n') + '\n';
 }
 
-export function renderReview({ branch, route, ran, ok, failures, sha, account, outside, base = 'dev' }) {
+export function renderReview({ route, ran, ok, failures, account, outside }) {
   const lines = [
     ok
-      ? `**Reviewed on the ${route} route and merged to \`${base}\`.**`
+      ? `**Reviewed on the ${route} route and passed.**`
       : `**Reviewed on the ${route} route and sent back — it did not pass.**`,
     ''
   ];
@@ -64,16 +60,16 @@ export function renderReview({ branch, route, ran, ok, failures, sha, account, o
       ...outside.map((f) => `- \`${f}\``),
       '',
       'That is often the right fix — removing a restated roster means editing whatever declares ' +
-        'the set. It is named here so it is visible before promotion, not because it is wrong.',
+        'the set. It is named here so it is visible before you merge it, not because it is wrong.',
       ''
     );
   if (failures) lines.push('## What failed', '', failures, '');
 
   lines.push(
     ok
-      ? `Merged into \`${base}\` as \`${sha}\`, and \`${branch}\` was deleted. ` +
-        `\`main\` is unchanged until you promote.`
-      : `The card is back in Ready and \`${branch}\` still holds the attempt.`,
+      ? 'Merging this pull request is yours.'
+      : 'The card is back in Ready. The next attempt is pushed to this pull request, and the ' +
+        'fixer reads what is written here before it starts.',
     '',
     `Ran: ${(ran ?? []).map((r) => `\`${r}\``).join(', ') || 'nothing'}`,
     '',
@@ -82,53 +78,58 @@ export function renderReview({ branch, route, ran, ok, failures, sha, account, o
   return lines.join('\n') + '\n';
 }
 
-export function renderPlaytest({ branch, worktree, port, files, account, ran, pushed }) {
+export function renderPull({ issue, step, route, account, ran, files, worktree, port }) {
   const lines = [
-    `**Committed on \`${branch}\` and left for you to play. It is not merged.**`,
+    step ? `Part of #${issue}\nStep: ${step}` : `Fixes #${issue}`,
     '',
-    '## What it changed',
+    '## What changed',
     '',
-    account.trim() || '_(the attempt returned nothing)_',
+    account.trim().replace(/^(#{2,5}) /gm, '#$1 ') || '_(the fixer returned no account)_',
     '',
-    '## Play it',
+    '## Verified',
     '',
-    'The worktree has its own `.devport`, so this runs alongside whatever is already on 5173 ' +
-      'and does not touch your checkout.',
+    ...((ran ?? []).length ? ran.map((r) => `- \`${r}\` — green on the branch`) : ['- nothing ran']),
     '',
-    '```bash',
-    `cd ${worktree}`,
-    './dev.sh',
-    '```',
-    '',
-    `It comes up on http://localhost:${port}.`,
-    '',
-    '## Then',
-    '',
-    'If it plays right, it belongs on `dev` with everything else:',
-    '',
-    '```bash',
-    `git checkout dev && git merge --no-ff ${branch}`,
-    '```',
-    '',
-    `If it does not, say what is wrong on this issue and move the card back to \`Ready\`. ` +
-      `The branch and the worktree stay until you do one or the other.`,
-    '',
-    `Verified: ${(ran ?? []).map((r) => `\`${r}\``).join(', ') || 'nothing ran'} · files changed: ${
-      files.length
-    }${pushed ? ` · pushed as \`${branch}\`` : ''}`,
+    route === 'playtest'
+      ? 'The reviewer skips a playtest pull request, because whether it plays right is yours to ' +
+        'judge. CI still runs on it.'
+      : `\`review.mjs\` re-merges this onto a fresh \`dev\`, runs the ${route} route again and sets ` +
+        '`audit/review` on the latest commit. CI runs on it too.',
     ''
   ];
 
-  if (files.length) {
+  if (route === 'playtest' && worktree)
     lines.push(
-      '<details><summary>files</summary>',
+      '## Play it',
+      '',
+      'The worktree has its own `.devport`, so it runs beside whatever is already on 5173.',
+      '',
+      '```bash',
+      `cd ${worktree}`,
+      './dev.sh',
+      '```',
+      '',
+      `It comes up on http://localhost:${port}.`,
+      ''
+    );
+
+  lines.push(
+    '## Then',
+    '',
+    'Merge it when it is right. If it is not, say what is wrong here and move the card back to ' +
+      '`Ready`; the fixer reads this pull request before its next attempt.',
+    ''
+  );
+
+  if (files?.length)
+    lines.push(
+      `<details><summary>${files.length} file(s)</summary>`,
       '',
       ...files.map((f) => `- \`${f}\``),
       '',
       '</details>',
       ''
     );
-  }
 
   lines.push('_Written unattended by `tools/audit/fix.mjs`._');
   return lines.join('\n') + '\n';

@@ -4,7 +4,6 @@
     "family": "reachability",
     "tier": "T2",
     "title": "branch no caller can reach",
-    "authority": "docs/game/ARCHITECTURE.md",
     "question": "Find every call site of this symbol first \u2014 search the repo for its name, and for it appearing as a string key or a re-export, since neither looks like a call. Given those call sites, is there a branch here whose guard no caller can satisfy \u2014 an argument value never passed, a state combination the callers exclude, a type narrowing that is always one way?",
     "fail_requires": [
       "the branch",

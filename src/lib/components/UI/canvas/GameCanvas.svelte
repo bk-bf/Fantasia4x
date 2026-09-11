@@ -101,7 +101,7 @@
   import { getEquipmentSlot } from '$lib/game/core/rules/gear/equipment.js';
   import { getRangedWeapon } from '$lib/game/systems/rangedCombat.js';
   import { needsRecovery } from '$lib/game/systems/pawn/pawnHelpers';
-  import { hasUntendedWound } from '$lib/game/services/jobs/caretake';
+  import { hasUntendedWound, pickTendMedicine } from '$lib/game/services/jobs/caretake';
   import { conditionPriority } from '$lib/game/core/rules/body/conditions';
   import { getCreatureById } from '$lib/game/core/defs/creatures.js';
   import { TICKS_PER_SECOND } from '$lib/game/core/util/time.js';
@@ -4081,9 +4081,14 @@
           });
         }
         if (medic && hasUntendedWound(target, $gameState?.turn ?? 0)) {
+          if ($gameState && pickTendMedicine($gameState, target, medic))
+            entries.push({
+              label: `Emergency tend ${target.name} with medicine`,
+              run: () => issueOrder({ type: 'tend', patientId: id })
+            });
           entries.push({
-            label: `Emergency care for ${target.name} now`,
-            run: () => issueOrder({ type: 'tend', patientId: id })
+            label: `Emergency tend ${target.name} without medicine`,
+            run: () => issueOrder({ type: 'tend', patientId: id, withoutMedicine: true })
           });
         }
         if (entries.length > 0) {

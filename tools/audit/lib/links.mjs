@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { execFileSync } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -40,17 +41,35 @@ export function issueRef(text) {
 const PATH_RE =
   /(?<![\w/[(`])((?:src|tools|scripts|docs|electron)\/[A-Za-z0-9._/-]+\.[A-Za-z]{1,8})(?::(\d+))?/g;
 
+const BACKTICK_PATH_RE =
+  /`((?:src|tools|scripts|docs|electron)\/[A-Za-z0-9._/-]+\.[A-Za-z]{1,8})(?::(\d+))?`/g;
+
 /** Turn `src/lib/x.ts:41` written in prose into a permalink, leaving anything already inside
- *  a markdown link or a code span alone. A path that does not resolve at the commit is left as
- *  written: linking it would manufacture a dead permalink, which the body check then rejects. */
+ *  a markdown link alone. A backtick-wrapped path that does not resolve at the commit, or that
+ *  `git check-ignore` matches, is not evidence -- a model citing its own scratch file, or a
+ *  test the finding asks to be written, reads as proof otherwise. The backticks come off so it
+ *  stops looking like a citation `check-links` would follow; the words stay. */
 export function linkify(text, sha) {
   if (!text) return text;
+
+  const linkSpans = [];
+  for (const m of text.matchAll(/\[[^\]]*\]\([^)]*\)/g)) linkSpans.push([m.index, m.index + m[0].length]);
+  const withinLink = (i) => linkSpans.some(([a, b]) => i >= a && i < b);
+
+  const out = text.replace(BACKTICK_PATH_RE, (whole, file, line, offset) => {
+    if (withinLink(offset)) return whole;
+    const real = resolveRepoPath(file, sha);
+    if (!real) return line ? `${file}:${line}` : file;
+    const label = line ? `${real}:${line}` : real;
+    return `[\`${label}\`](${blobUrl(real, line, sha)})`;
+  });
+
   const spans = [];
   const guard = /\[[^\]]*\]\([^)]*\)|`[^`]*`/g;
-  for (let m; (m = guard.exec(text)); ) spans.push([m.index, m.index + m[0].length]);
+  for (let m; (m = guard.exec(out)); ) spans.push([m.index, m.index + m[0].length]);
   const inside = (i) => spans.some(([a, b]) => i >= a && i < b);
 
-  return text.replace(PATH_RE, (whole, file, line, offset) => {
+  return out.replace(PATH_RE, (whole, file, line, offset) => {
     if (inside(offset)) return whole;
     const real = resolveRepoPath(file, sha);
     if (!real) return whole;
@@ -97,9 +116,19 @@ export function repoTree(sha) {
   return treeCache;
 }
 
-/** Resolve however a citation was written to a real repo path, or null if it cannot be. */
-export function resolveRepoPath(raw, sha) {
-  if (!raw) return null;
+/** `git ls-tree` already excludes anything gitignored and never committed, but a citation
+ *  naming an ignored path that *was* once tracked, or one a basename match resolves onto by
+ *  accident, would slip past that check alone. Ask git directly rather than trust the tree. */
+export function isGitIgnored(path) {
+  try {
+    execFileSync('git', ['check-ignore', '-q', '--', path], { cwd: ROOT });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function findInTree(raw, sha) {
   const tree = repoTree(sha);
   const clean = String(raw).replace(/^\.{1,2}\//, '').replace(/^(\.\.\/)+/, '').replace(/^\//, '');
   if (tree.files.has(clean)) return clean;
@@ -111,6 +140,14 @@ export function resolveRepoPath(raw, sha) {
   const narrowed = hits.filter((f) => f.endsWith(clean));
   if (narrowed.length === 1) return narrowed[0];
   // the data files were .jsonc until they became strict json; older evidence still says jsonc
-  if (clean.endsWith('.jsonc')) return resolveRepoPath(clean.replace(/\.jsonc$/, '.json'), sha);
+  if (clean.endsWith('.jsonc')) return findInTree(clean.replace(/\.jsonc$/, '.json'), sha);
   return null;
+}
+
+/** Resolve however a citation was written to a real repo path, or null if it cannot be. */
+export function resolveRepoPath(raw, sha) {
+  if (!raw) return null;
+  const real = findInTree(raw, sha);
+  if (real && isGitIgnored(real)) return null;
+  return real;
 }

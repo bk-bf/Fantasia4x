@@ -8,13 +8,13 @@
 
 **https://github.com/users/bk-bf/projects/4**
 
-Every defect, feature phase and pending decision is an item there, in one of six columns —
-`Backlog` · `Blocked on you` · `Ready` · `In progress` · `In review` · `Done` — with fields for
-work type, area, priority and size. `gh issue list` is the same set without the columns.
+Every defect, feature and pending decision is an issue there, in one of eleven lanes —
+`Backlog` · `Ready` · `In progress` · `In review` · `Needs approval` · `Approved` · `On dev` ·
+`Done`, with `Blocked on you`, `Needs playtest` and `Rejected` beside them — and fields for work
+type, area, priority and verify route. `gh issue list` is the same set without the lanes.
 
 This file no longer tracks status. It records what shipped, and points at the spec that
-describes it. A spec in `open/`, `review/` or `planned/` is a design document; the board says
-whether anyone is working on it.
+described it. Planned work has no spec file: a feature's issue is its spec.
 
 ## Shipped
 
@@ -67,15 +67,15 @@ whether anyone is working on it.
 
 | # | Item | Spec |
 |---|------|------|
-| **2b** | **Visitors (kingdom guests)** | [VISITORS](planned/VISITORS.md) |
+| **2b** | **Visitors (kingdom guests)** | [#65](https://github.com/bk-bf/Fantasia4x/issues/65) |
 | **7** | **Drafted Job/Need Orders** | [DRAFTED-JOB-ORDERS](archive/DRAFTED-JOB-ORDERS.md) |
-| **8** | **Rest from Entity Spawning** | [ANIMAL-HUSBANDRY](planned/ANIMAL-HUSBANDRY.md) |
+| **8** | **Rest from Entity Spawning** | [#58](https://github.com/bk-bf/Fantasia4x/issues/58) |
 | **8c** | **Build-archetype coverage audit** | [BUILD-ARCHETYPES (artifact)](https://claude.ai/code/artifact/f87ef907-46e2-4015-a455-b698799eea4f) |
-| **8d** | **Combat balance: the two-axis stat rebuild** | [COMBAT-BALANCE](review/COMBAT-BALANCE.md) |
+| **8d** | **Combat balance: the two-axis stat rebuild** | [#33](https://github.com/bk-bf/Fantasia4x/issues/33)–[#37](https://github.com/bk-bf/Fantasia4x/issues/37) |
 | **8f** | **Early–mid apparel gap (t0–t2)** | [AUDIT (archived)](archive/AUDIT-2026-08-25.md) |
 | **8g** | **Wound-specific tiered medicine** | [AUDIT (archived)](archive/AUDIT-2026-08-25.md) |
 | **8h** | **Runic / magic-reagent tier redesign** | _unspecced_ |
 | **9** | **Magic III** | [LINEAGES](archive/LINEAGES-2026-07-09.md) |
-| **10** | **Research Enhancement** | [RESEARCH-ENHANCEMENT](planned/RESEARCH-ENHANCEMENT.md) |
+| **10** | **Research Enhancement** | [#61](https://github.com/bk-bf/Fantasia4x/issues/61) |
 | — | *loose ends, no spec:* building-work bonus stacking · AI event generation (migrant-wave `pendingEvent` seam) · culture content-variety expansion (diversify archetype `statFocus`/`statDump` + comparatives, ~16 archetypes + per-archetype name banks, more quality/yield traits) | — |
 

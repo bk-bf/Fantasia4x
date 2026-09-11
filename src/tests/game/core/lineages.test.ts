@@ -96,8 +96,29 @@ describe('LINEAGES §4 awakening meters', () => {
     expect(beast.lastFedDay).toBe(100);
     advanceAwakeningMeters(p, 102);
     expect(beast.value).toBe(10);
+    advanceAwakeningMeters(p, 103);
+    expect(beast.value, 'exactly at the grace-day boundary, still no decay').toBe(10);
     advanceAwakeningMeters(p, 110);
     expect(beast.value).toBeLessThan(10);
+  });
+
+  it('a pawn who already belongs to a lineage is never re-seeded by a fresh gateway trait', () => {
+    const alreadyBeast: Trait = {
+      id: LINEAGE_DEFS[0].parent,
+      name: 'already-beast',
+      description: '',
+      kind: 'passive'
+    } as Trait;
+    const p = pawn({ traits: [alreadyBeast, clawGateway] });
+    seedAwakeningPaths(p);
+    expect(p.lineagePaths).toBeUndefined();
+  });
+
+  it('a gateway not opted in with lineageExclusive:false is ignored, even with real awaken conditions', () => {
+    const notAGateway: Trait = { ...clawGateway, lineageExclusive: undefined } as Trait;
+    const p = pawn({ traits: [notAGateway] });
+    seedAwakeningPaths(p);
+    expect(p.lineagePaths).toBeUndefined();
   });
 
   it('gateway draw cap: at most TWO gateways per pawn, and a second is rare (~1 in 20)', () => {
@@ -145,24 +166,11 @@ describe('LINEAGES §4 awakening meters', () => {
   });
 
   it('a full meter AWAKENS the pawn: grants the lineage parent + its first member', () => {
-    const parent: Trait = {
-      id: 'beast-heritage',
-      name: 'Beast',
-      description: '',
-      kind: 'passive'
-    } as Trait;
-    const member: Trait = {
-      id: 'savage-bite',
-      name: 'Savage Bite',
-      description: '',
-      kind: 'naturalGear',
-      lineage: ['beast']
-    } as Trait;
     const p = pawn({
       traits: [clawGateway],
       lineagePaths: [
         {
-          condition: 'devour-raw-meat',
+          condition: clawGateway.awakens![0],
           lineage: LINEAGE_DEFS[0].id,
           deed: 'ateRawMeat',
           target: 5,
@@ -174,8 +182,12 @@ describe('LINEAGES §4 awakening meters', () => {
     });
     const applied: Trait[] = [];
     const res = lineageGrowthEvent(p, (t) => applied.push(t));
-    expect(['awaken', 'none', 'evolve', 'grow']).toContain(res.kind);
-    void [parent, member];
+    expect(res.kind).toBe('awaken');
+    expect(res.lineage).toBe(LINEAGE_DEFS[0].id);
+    expect(res.added).toContain(LINEAGE_DEFS[0].parent);
+    expect(p.traits!.some((t) => t.id === LINEAGE_DEFS[0].parent)).toBe(true);
+    expect(p.lineagePaths).toBeUndefined();
+    expect(applied.length).toBe(res.added.length);
   });
 
   it('Beast content: a FULL meter awakens the pawn → beast-heritage + a first beast member', () => {
@@ -301,6 +313,27 @@ describe('vampiric feeding (feedOnVictim)', () => {
     const bite = neck.injuries.find((w) => w.type === 'puncture')!;
     expect(bite).toBeTruthy();
     expect(bite.permanent).toBeUndefined();
+    expect(feeder.needs!.bloodHunger).toBe(0);
+    expect(feeder.conditionTimers!.bloodthirst).toBeUndefined();
+  });
+
+  it('a victim with no intact neck still gets drained (floor-clamped) and sates the feeder, without a wound', () => {
+    const feeder = {
+      id: 'vamp',
+      isAlive: true,
+      needs: { bloodHunger: 100 },
+      conditionTimers: { bloodthirst: 500 }
+    } as unknown as Pawn;
+    const victim = {
+      id: 'meal',
+      isAlive: true,
+      bloodVolume: 20,
+      maxBloodVolume: 100,
+      limbs: []
+    } as unknown as Pawn;
+    feedOnVictim(feeder, victim, 1000);
+    expect(victim.bloodVolume, 'floored at 15, never negative').toBe(15);
+    expect(victim.injuries, 'no neck to wound, so nothing is recorded').toBeUndefined();
     expect(feeder.needs!.bloodHunger).toBe(0);
     expect(feeder.conditionTimers!.bloodthirst).toBeUndefined();
   });

@@ -268,7 +268,7 @@ describe('hafted weapons are structurally sound', () => {
     expect(
       bad.length,
       `${bad.length} recipes hang a head on a haft with no wedge, nail or rivet. This may only ` +
-        `shrink — see docs/tasks/open/SOAKING-AND-HAFTS.md. Offenders: ${bad.join(', ')}`
+        `shrink — see issue #57. Offenders: ${bad.join(', ')}`
     ).toBeLessThanOrEqual(UNFASTENED_HAFTS);
   });
 });
@@ -325,7 +325,7 @@ describe('a workstation is named for equipment, not for a room', () => {
   it('the deferred powered mills stay exempt only while they hold no recipes', () => {
     const bad = [...POWERED_MILLS]
       .filter((id) => RECIPES.some((r) => r.station === id))
-      .map((id) => `${id} has recipes — see docs/tasks/open/MECHANICAL-POWER.md before adding any`);
+      .map((id) => `${id} has recipes — see issue #59 before adding any`);
     expect(bad, bad.join('; ')).toEqual([]);
   });
 });

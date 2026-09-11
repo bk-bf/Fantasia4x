@@ -4,7 +4,7 @@
     "family": "hot-path",
     "tier": "T2",
     "title": "allocation on the per-tick peace path",
-    "authority": "docs/tasks/open/ENGINE-PERFORMANCE.md",
+    "authority": "docs/tasks/archive/ENGINE-PERFORMANCE.md",
     "question": "Establish first whether the per-tick loop reaches this symbol: search the repo for calls to it by name, follow those callers upward toward processGameTurn or tickPawn, and stop after 4 hops. If no path reaches it, the verdict is n/a with na_clause \"not reached from processGameTurn or tickPawn\" and the searches you ran as evidence. If it is reached: does this symbol allocate an object, array or closure on every tick when nothing is happening \u2014 the peace path, which is the common case \u2014 rather than lazily on first write?",
     "fail_requires": [
       "file:line of the allocation",
@@ -54,7 +54,7 @@
     "family": "hot-path",
     "tier": "T2",
     "title": "array reference churned every tick under a ref-keyed memo",
-    "authority": "docs/tasks/open/ENGINE-PERFORMANCE.md",
+    "authority": "docs/tasks/archive/ENGINE-PERFORMANCE.md",
     "question": "Establish first whether the per-tick loop reaches this symbol: search the repo for calls to it by name, follow those callers upward toward processGameTurn or tickPawn, and stop after 4 hops. If no path reaches it, the verdict is n/a with na_clause \"not reached from processGameTurn or tickPawn\" and the searches you ran as evidence. If it is reached: does this symbol replace an array or map reference every tick that a ref-keyed memo downstream (pawnById, the terrain _terrainRev cache) uses as its cache key, silently forcing a rebuild?",
     "fail_requires": [
       "file:line where the reference is replaced",
@@ -98,7 +98,7 @@
     "family": "hot-path",
     "tier": "T2",
     "title": "field added to the worker to main snapshot",
-    "authority": "docs/tasks/open/ENGINE-PERFORMANCE.md",
+    "authority": "docs/tasks/archive/ENGINE-PERFORMANCE.md",
     "question": "Does this symbol put a field or array into the worker-to-main snapshot that ships on every flush or can grow without bound (droppedItems, per-unit arrays), instead of a summary or a per-id delta?",
     "fail_requires": [
       "the field and where it is written into the snapshot",

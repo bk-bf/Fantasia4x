@@ -10,14 +10,13 @@ export const LANES = {
   'blocked on you': '990e2322',
   ready: '14aee711',
   'in progress': '9e8caff2',
-  'in review': '365210d5',
+  'pr ready': 'fee29b9d',
   'on dev': 'faf70e85',
-  'needs playtest': 'e7ebab1b',
   done: 'ea4793e4',
   rejected: '1a214656'
 };
 
-const HIS_LANES = new Set(['blocked on you', 'needs playtest']);
+const HIS_LANES = new Set(['blocked on you', 'rejected']);
 
 const AGENT_TRIAGED_KINDS = new Set(['drift', 'test gap']);
 
@@ -118,7 +117,9 @@ export function moveLane(n, to) {
   )
     throw new Error(
       `#${n} is not a ${[...AGENT_TRIAGED_KINDS].join(' or ')} card, so Kirill decides whether ` +
-        `it leaves Backlog and moves it himself on the board.\nLeave it in Backlog.`
+        `it gets worked.\nComment on it with \`pnpm issue comment ${n} --body-file -\`, naming ` +
+        `the open decision or task it overlaps (the Blocked on you cards) or ` +
+        `"none", and what in play reaches the code it cites. Then move it to Blocked on you.`
     );
 
   if (from === lane) return { from, to: lane, moved: false };
