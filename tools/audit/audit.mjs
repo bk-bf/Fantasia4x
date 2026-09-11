@@ -390,8 +390,9 @@ function cmdIssues() {
   for (const g of groups) {
     const r = upsertIssue(ROOT, g, byId, sha, flag('rerender'));
     counts[r.action] = (counts[r.action] ?? 0) + 1;
-    const fresh = g.findings.filter((f) => f.issue_number === null);
-    if (r.action.startsWith('skipped') && fresh.length > 0 && r.action !== 'skipped-human') {
+    const mine = r.links.find((l) => l.path === r.path)?.findings ?? [];
+    const fresh = mine.filter((f) => f.issue_number !== Number(r.path));
+    if (r.action === 'skipped-approved' && fresh.length > 0) {
       try {
         I.comment(r.path, renderNewFindings(g, fresh));
         out(`  commented #${r.path}  ${r.id}  (${fresh.length} new since it was triaged)`);
@@ -399,15 +400,17 @@ function cmdIssues() {
         out(`  WARN     #${r.path}  could not comment: ${String(e.message).slice(0, 120)}`);
       }
     }
-    const linked = L.markRaised(
-      db,
-      g.findings.map((f) => f.id),
-      r.path
-    );
-    if (r.action === 'created')
-      out(`  created  #${r.path}  ${r.id}  (${g.findings.length} findings)`);
+    let linked = 0;
+    for (const l of r.links) {
+      linked += L.markRaised(
+        db,
+        l.findings.map((f) => f.id),
+        l.path
+      );
+    }
+    if (r.action === 'created') out(`  created  #${r.path}  ${r.id}  (${mine.length} findings)`);
     else if (r.action === 'updated')
-      out(`  updated  #${r.path}  ${r.id}  (${g.findings.length} findings)`);
+      out(`  updated  #${r.path}  ${r.id}  (${mine.length} findings)`);
     else out(`  ${r.action.padEnd(16)} #${r.path}  ${r.id}  (${linked} findings linked)`);
   }
   out('');
