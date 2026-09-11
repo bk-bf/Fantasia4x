@@ -204,7 +204,9 @@ run that raised it. An audit that raised its own work and then acted on it would
 with no one in it.
 
 Refreshing never overwrites an issue whose `origin: human`, and never reopens one that is
-`closed`.
+`closed`. A finding under a closed issue's rule and group, on a symbol that issue never
+listed, goes to a follow-up issue instead — `<id>-2`, then `<id>-3` — raised into `Backlog`
+and naming the issue it follows. Findings the closed issue did list stay linked to it.
 
 ## Phase 3 — the fixer
 
