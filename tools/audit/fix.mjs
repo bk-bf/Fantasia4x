@@ -34,6 +34,7 @@ import {
 } from './lib/harness.mjs';
 import { readControl } from './lib/pace.mjs';
 import * as P from './lib/prs.mjs';
+import { ledgerEvidence } from './lib/raise.mjs';
 
 const MODEL = process.env.AUDIT_FIX_MODEL || 'sonnet';
 const ROUTES = new Set(['tests', 'headless', 'playtest']);
@@ -209,7 +210,7 @@ an unfinished session and will not commit.
 # Issue ${d.id}
 
 ${issue.body}
-`;
+${ledgerEvidence(issue.number)}`;
 }
 
 // --- commit message ----------------------------------------------------------
