@@ -4,7 +4,7 @@
 // mean nothing in an issue, an issue URL inside backticks that never becomes a link, and a
 // label invented one letter away from the one that already exists.
 //
-//   node tools/issue.mjs create --title T --body-file - [--label L]...
+//   node tools/issue.mjs create --title T --type fix --area sim --size S --body-file - [--label L]...
 //   node tools/issue.mjs edit <n> [--title T] [--body-file -] [--add-label L] [--remove-label L]
 //   node tools/issue.mjs comment <n> --body-file -
 //   node tools/issue.mjs close <n> --commit <sha>
@@ -25,7 +25,15 @@ import {
   labelGroup
 } from './audit/lib/schema.mjs';
 import { linkify, issueRef, indexedSha, blobUrl, resolveRepoPath } from './audit/lib/links.mjs';
-import { moveLane, setSelect, addToBoard, itemFor, boardItems } from './audit/lib/board.mjs';
+import {
+  moveLane,
+  setSelect,
+  addToBoard,
+  itemFor,
+  boardItems,
+  fields,
+  invalidate
+} from './audit/lib/board.mjs';
 
 process.stdout.on('error', (e) => {
   if (e.code === 'EPIPE') process.exit(0);
@@ -56,6 +64,23 @@ const readBody = () => {
 
 const TYPES = ['feat', 'fix', 'refactor', 'perf', 'test', 'tooling', 'docs', 'chore', 'decision'];
 const SEVERITY_PRIORITY = { critical: 'P0', high: 'P1', medium: 'P2', low: 'P3' };
+
+const boardOption = (field, value, flag) => {
+  const options = fields().find((f) => f.name === field)?.options.map((o) => o.name) ?? [];
+  if (!value) die(`--${flag} is required — one of: ${options.join(', ')}`);
+  const hit = options.find((o) => o.toLowerCase() === String(value).toLowerCase());
+  if (!hit) die(`unknown --${flag} "${value}" — one of: ${options.join(', ')}`);
+  return hit;
+};
+
+const pause = (ms) => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+
+function waitForCard(n) {
+  for (let i = 0; i < 6 && !itemFor(n); i++) {
+    pause(5000);
+    invalidate();
+  }
+}
 
 const EXT = /\.(ts|tsx|js|mjs|cjs|svelte|json|md|sh|py|rs|css|html)$/;
 
@@ -165,6 +190,8 @@ if (cmd === 'check-labels') {
       if (!card.status) gaps.push('no Status — the card is on the board in no lane');
       if (!card['work type']) gaps.push('no Work type on the board');
       if (!card.verify) gaps.push('no Verify route on the board');
+      if (!card.area) gaps.push('no Area on the board');
+      if (!card.size) gaps.push('no Size on the board');
       const sev = (card.labels ?? []).find((l) => SEVERITY_PRIORITY[l]);
       if (sev && card.priority !== SEVERITY_PRIORITY[sev]) {
         gaps.push(
@@ -272,6 +299,8 @@ if (cmd === 'check-labels') {
   const type = arg('type');
   if (!type) die(`--type is required — one of: ${TYPES.join(', ')}`);
   if (!TYPES.includes(type)) die(`unknown --type "${type}" — one of: ${TYPES.join(', ')}`);
+  const area = boardOption('Area', arg('area'), 'area');
+  const size = boardOption('Size', arg('size'), 'size');
   if (type === 'feat' && !labels.some((l) => labelGroup('kind').includes(l))) labels.push('feature');
   const body = prepare(readBody());
   guard(labels, body, { template: true, workType: type });
@@ -291,8 +320,11 @@ if (cmd === 'check-labels') {
   const verify = labels.map((l) => VERIFY_FIELD[l]).find(Boolean);
   try {
     addToBoard(n);
+    waitForCard(n);
     setSelect(n, 'Status', 'Backlog');
     setSelect(n, 'Work type', type);
+    setSelect(n, 'Area', area);
+    setSelect(n, 'Size', size);
     if (verify) setSelect(n, 'Verify', verify);
   } catch (e) {
     process.stderr.write(`note: created #${n} but could not set its fields: ${e.message}\n`);

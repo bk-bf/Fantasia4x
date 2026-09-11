@@ -213,6 +213,12 @@ export function renderNewFindings(g, fresh) {
   return lines.join('\n');
 }
 
+const AREA_FOR_SUBAREA = {
+  components: 'ui', webgl: 'ui', routes: 'ui', stores: 'ui', actions: 'ui', audio: 'ui',
+  database: 'data',
+  tools: 'tooling', dev: 'tooling', debug: 'tooling', headless: 'tooling', server: 'tooling'
+};
+
 export function idFor(g, rulesById) {
   const name = rulesById?.get(g.rule_id)?.name ?? g.rule_id;
   return slug(`${name}-${g.group}`);
@@ -231,6 +237,8 @@ export function upsertIssue(root, g, rulesById, sha, force = false) {
   const symbols = [...new Set(g.findings.map((f) => f.symbol_key))];
   const subarea = subareaFor(files);
   const type = rule.type ?? FAMILY_TYPE[g.family] ?? 'fix';
+  const area = rule.area ?? AREA_FOR_SUBAREA[subarea] ?? 'sim';
+  const size = files.length <= 2 ? 'S' : files.length <= 6 ? 'M' : 'L';
 
   if (found) {
     const path = found.path;
@@ -269,6 +277,8 @@ export function upsertIssue(root, g, rulesById, sha, force = false) {
       verify,
       subarea,
       type,
+      area,
+      size,
       ready: false,
       origin: 'audit',
       rules: [g.rule_id],
