@@ -74,6 +74,10 @@ function pick() {
       skipped.push(`PR #${pull.number} names no issue`);
       continue;
     }
+    if (B.laneOf(link.issue) === 'manual') {
+      skipped.push(`#${link.issue} is in Manual`);
+      continue;
+    }
     const route = (B.itemFor(link.issue)?.verify ?? '').toLowerCase();
     if (!ROUTES.has(route)) {
       skipped.push(`#${link.issue} is on the ${route || 'unset'} route`);
