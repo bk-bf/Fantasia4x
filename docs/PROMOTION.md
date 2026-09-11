@@ -44,10 +44,6 @@ Regenerate with `pnpm audit:promote --list`; this one is stamped after #43.
 
 ## P2
 
-- [ ] **#10 — War bow and hunting recurve each consume two pieces of wood for one stave**
-      Both now take `branch` — 5 and 4 — instead of a single `log`, with a rule test over it.
-      *Watch: both are craftable from what an early colony actually gathers.*
-
 - [ ] **#32 — Display label mapped by hand where a lookup exists, components/util**
       Condition labels are spread from `CORE_STAT_ABBR` instead of a retyped copy.
       *Watch: condition and trait tooltips show abbreviations, not raw ids.*
