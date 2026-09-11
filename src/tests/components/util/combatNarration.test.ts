@@ -53,3 +53,32 @@ describe('combat narration', () => {
     expect(describeSwing(s).verb).toBe(describeSwing(s).verb);
   });
 });
+
+describe('narrationTier bounds', () => {
+  it('saturates at destroyed instead of overflowing past it', () => {
+    expect(narrationTier(swing({ woundSeverity: 'destroyed', crit: true }))).toBe('destroyed');
+  });
+
+  it('applies both bumps when a crit also eats half the limb', () => {
+    expect(
+      narrationTier(swing({ woundSeverity: 'minor', crit: true, damage: 35, partMaxHp: 60 }))
+    ).toBe('critical');
+  });
+
+  it('bumps at exactly half the limb, not just past it', () => {
+    expect(narrationTier(swing({ woundSeverity: 'minor', damage: 30, partMaxHp: 60 }))).toBe(
+      'serious'
+    );
+  });
+
+  it('does not bump just under half the limb', () => {
+    expect(narrationTier(swing({ woundSeverity: 'minor', damage: 29, partMaxHp: 60 }))).toBe(
+      'minor'
+    );
+  });
+
+  it('falls back to minor when woundSeverity is missing', () => {
+    const { woundSeverity: _drop, ...rest } = swing();
+    expect(narrationTier(rest as CombatTurnEntry)).toBe('minor');
+  });
+});
