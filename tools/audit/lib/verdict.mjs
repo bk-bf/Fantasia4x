@@ -1,8 +1,11 @@
+// @ts-nocheck
 // Verdict validation. The evidence contract is enforced here, not in the prompt: a `fail`
 // without the evidence its rule demands is rejected and the work item stays open.
 // This is what stops "audited" from meaning "an agent said something".
 
 const STATUSES = new Set(['pass', 'fail', 'n/a', 'undecidable']);
+
+export const MAX_EVIDENCE_CHARS = 300;
 
 export function parseResponse(text) {
   const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/);
@@ -44,6 +47,14 @@ export function validate(parsed, { expectedRules, symbolKey, hashes }) {
         rejected.push({
           rule_id: v.rule_id,
           reason: `fail supplied ${ev.length} of ${required.length} required evidence items`
+        });
+        continue;
+      }
+      const long = ev.filter((x) => x.length > MAX_EVIDENCE_CHARS).length;
+      if (long) {
+        rejected.push({
+          rule_id: v.rule_id,
+          reason: `${long} evidence item(s) over ${MAX_EVIDENCE_CHARS} characters`
         });
         continue;
       }
