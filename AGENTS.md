@@ -193,7 +193,9 @@ from there the work is a pull request, and the card follows it. `Rejected` is th
 on purpose. A change to the lanes inserts or drops the one option it concerns and keeps every
 other option where Kirill put it; rewriting the whole option list moves his columns.
 
-- **`Backlog`** — raised, not yet evaluated. The audit raises here and nowhere else.
+- **`Backlog`** — raised, not yet evaluated. The audit raises here and nowhere else. A card with an
+  open pull request is never here: `board-sync.py` moves it to `In progress` on its next tick, and
+  `pnpm issue lane` refuses to put it back.
 
 **Every card is a real issue.** Do not put a draft card on the board to represent work that has
 a spec but no issue — an empty card inflates the count and says nothing a person can act on.
@@ -397,6 +399,13 @@ comment naming the commit that fixed it. If the issue carries remediation checkb
 ones you did. Leaving a finished item open is the failure to avoid.
 
 ## Pull requests
+
+**Check what is already open before building or investigating.** Two sessions building the same
+thing leaves two implementations and a conflict in the same file. `tools/audit/hooks/inflight.mjs`
+runs from `.claude/settings.json`: it lists the open pull requests with every prompt, and it refuses
+the first edit in a session of a file that an open pull request changes or an open issue cites,
+naming them. The branch's own issue and pull request, from the `-<n>` its name ends in, are not
+counted. Read what it names; if the edit belongs to that work, do it on that branch.
 
 **Work an agent does on a board card goes through a pull request into `dev`.** The fixer opens
 it, the reviewer and CI report on it, and Kirill merges it. The pull request is where he reads the
