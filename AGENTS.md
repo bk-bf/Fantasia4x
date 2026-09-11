@@ -315,7 +315,8 @@ A field that nothing checks is how nine cards went untyped without anything noti
 without `--area` (`combat`, `items`, `sim`, `ui`, `data`, `tooling`) and `--size` (`S`, `M`, `L`),
 checks both against the board's own options, and sets them on the card. `raise.mjs` derives them
 for what the audit raises: Area from the subarea, Size from how many files the findings touch.
-`check-labels` reports an open card missing either. Size is the effort: `S` is one change in a
+`check-labels` reports a card missing either, open or in `On dev` or `Done`, and
+`pnpm issue edit <n> --area A --size S` sets them. Size is the effort: `S` is one change in a
 file or two, `M` is several files or a measurement, `L` is several steps, a new system or a design.
 
 **A feature is built one step per branch.** Work type `feat` goes with the kind `feature`, and
