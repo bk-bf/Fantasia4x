@@ -259,7 +259,9 @@ can override that.
 
 Merging is Kirill's. When a pull request merges, GitHub closes the issue it fixes, and
 `tools/audit/after-merge.mjs` — run by `board-sync.py` every five minutes — moves the card to
-`On dev`, deletes the branch and removes its worktrees.
+`On dev`, deletes the branch and removes its worktrees. The same pass keeps every open pull request mergeable: one
+that has fallen behind `dev` gets GitHub's Update branch, which re-runs CI, and one that no longer
+merges gets a comment naming the conflicting files while its card moves to `Failed`.
 
 `--verify playtest` works the card the same way and labels its pull request `needs playtest`,
 and the card goes straight to `PR ready`. The reviewer skips it, and the worktree stays with its own `.devport`, so `./dev.sh` in it runs
@@ -272,7 +274,7 @@ reviewer stop while the audit is paused, because they spend the same limits.
 ```bash
 pnpm issue labels                       # every label the schema allows
 pnpm issue lint --body-file draft.md    # would this be accepted?
-pnpm issue create --title T --body-file - --label high --label drift
+pnpm issue create --title T --type fix --area sim --size S --body-file - --label high --label drift
 pnpm issue close 12 --commit <sha>
 ```
 
@@ -307,6 +309,13 @@ commit messages use: `feat`, `fix`, `refactor`, `perf`, `test`, `tooling`, `docs
 `decision`.
 
 A field that nothing checks is how nine cards went untyped without anything noticing.
+
+**Area and Size are required on every card as well.** `pnpm issue create` refuses an issue
+without `--area` (`combat`, `items`, `sim`, `ui`, `data`, `tooling`) and `--size` (`S`, `M`, `L`),
+checks both against the board's own options, and sets them on the card. `raise.mjs` derives them
+for what the audit raises: Area from the subarea, Size from how many files the findings touch.
+`check-labels` reports an open card missing either. Size is the effort: `S` is one change in a
+file or two, `M` is several files or a measurement, `L` is several steps, a new system or a design.
 
 **A feature is built one step per branch.** Work type `feat` goes with the kind `feature`, and
 nothing else: `create --type feat` adds the kind when no kind is given, and `check-labels`
