@@ -205,7 +205,10 @@ export function writeIssue(_root, { data, body }) {
   ensureLabels(labels);
   const args = existing
     ? ['edit', existing.path, '--title', data.title, '--body-file', '-']
-    : ['create', '--title', data.title, '--body-file', '-', '--type', data.type ?? 'fix'];
+    : [
+        'create', '--title', data.title, '--body-file', '-', '--type', data.type ?? 'fix',
+        '--area', data.area ?? '', '--size', data.size ?? ''
+      ];
   for (const l of labels) args.push(existing ? '--add-label' : '--label', l);
   const outText = issueTool(args, { input: composeBody(data, body) });
   invalidate();

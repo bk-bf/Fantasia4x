@@ -91,7 +91,7 @@ export function setSelect(n, fieldName, optionName) {
   const before = item[field.name.toLowerCase()] ?? null;
   if (before === option.name) return { from: before, to: option.name, moved: false };
   applySelect(item.id, field.id, option.id);
-  invalidate();
+  item[field.name.toLowerCase()] = option.name;
   return { from: before, to: option.name, moved: true };
 }
 
