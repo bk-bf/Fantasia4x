@@ -106,6 +106,7 @@
   import { getCreatureById } from '$lib/game/core/defs/creatures.js';
   import { TICKS_PER_SECOND } from '$lib/game/core/util/time.js';
   import { vlog } from '$lib/game/core/util/logSink.js';
+  import { createFramePerf, perfSessionLine } from './framePerf.js';
   import { simTarget } from '$lib/game/services/MovementSystem.js';
   import SelectedEntityCard from '$lib/components/UI/hud/SelectedEntityCard.svelte';
   import type {
@@ -2886,11 +2887,14 @@
     let _dbgTerrainMaxMs = 0;
     let _dbgWindowStart = 0;
     const FROZEN_SAFETY_MS = 400;
+    const framePerf = createFramePerf();
+    vlog('perf', get(gameState).turn, perfSessionLine());
     function frame() {
       if (!renderer || !ready) return;
       try {
         beat('frame');
         const now = performance.now();
+        framePerf.begin(now);
         const dt = lastFrameTime ? (now - lastFrameTime) / 1000 : 0;
         lastFrameTime = now;
         if (dt > 0) {
@@ -2912,14 +2916,17 @@
               `terrain=${st.terrainMs.toFixed(2)}ms overlay=${st.overlayMs.toFixed(2)}ms ` +
               `rebuilds=${st.terrainRebuilds} resourceRebuilds=${st.resourceRebuilds} ` +
               `draws=${st.drawCalls} verts=${st.vertexCount} ` +
-              `mobs=${gs.mobs?.length ?? 0} pawns=${gs.pawns?.length ?? 0}`
+              `mobs=${gs.mobs?.length ?? 0} pawns=${gs.pawns?.length ?? 0} ` +
+              framePerf.report(el)
           );
           _rpWinStart = now;
           _rpFrames = 0;
           _rpDtSum = 0;
           _rpMaxDt = 0;
         }
+        framePerf.start();
         gameState.stepSimulation(dt * 1000);
+        framePerf.stop('sim');
         if (customMapPreview) {
           pawnOverlayGrid.clear();
           itemOverlayGrid.clear();
@@ -2939,7 +2946,9 @@
           _lairScanAt = now;
           rebuildLairTiles();
         }
+        framePerf.start();
         updateWorldEffectOverlays();
+        framePerf.stop('fx');
         if (
           _terrainDirty &&
           (_forceTerrainRebuild || now - _lastTerrainBuild >= TERRAIN_REBUILD_MIN_MS)
@@ -2963,6 +2972,7 @@
         const frozen = !menuPreview && (customMapPreview || tileWidth < FREEZE_TILE_PX);
         if (_renderDirty || !frozen || now - lastDrawAt >= FROZEN_SAFETY_MS) {
           beat('gl:setgrids');
+          framePerf.start();
           renderer.setResourceOverlayGrid(_resourceGrid);
           renderer.setResourceTallOverlayGrid(_resourceTallGrid);
           renderer.setBuildingOverlayGrid(buildingOverlayGrid);
@@ -2978,6 +2988,7 @@
           beat(`gl-draw${_heavyRenderReason ? ':' + _heavyRenderReason : ''}`, get(gameState).turn);
           renderer.beginFrame();
           renderer.endFrame();
+          framePerf.stop('draw');
           beat('idle');
           if (_heavyRenderReason) {
             const _hst = renderer.getStats();
@@ -3042,6 +3053,7 @@
           lastFpsPush = now;
           renderFps.set(0);
         }
+        framePerf.end(viewX, viewY);
         animationId = requestAnimationFrame(frame);
       } catch (_frameErr) {
         crashBreadcrumb(
