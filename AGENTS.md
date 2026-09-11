@@ -138,8 +138,8 @@ means the work is done, the tests pass and you have said so. Leave the changes i
 and report what is staged.
 
 **All work lands on `dev`.** `main` is the branch Kirill plays and builds from, and it changes
-only when he promotes. Nothing automated writes to it: the fixer branches from `origin/dev`, the
-reviewer merges back into `dev`, and the nightly runs in a checkout on `dev`. `pnpm audit:promote`
+only when he promotes. Nothing automated writes to it: the fixer branches from `origin/dev`, a card
+reaches `dev` only after Kirill moves it to `Approved`, and the nightly runs in a checkout on `dev`. `pnpm audit:promote`
 merges `dev` into `main` in a throwaway worktree, runs the **whole** suite there rather than the
 related subset, and stops — printing the worktree to play and the command to push. `--push` is
 the same run with the merge pushed, for when he has played it and decided.
@@ -188,8 +188,8 @@ stays the ledger's key and should not appear in anything a person reads.
 
 **Triage through the lanes, never around them.** The board is
 [projects/4](https://github.com/users/bk-bf/projects/4) and its columns are an order:
-`Backlog` → `Ready` → `In progress` → `In review` → `On dev` → `Done`, with `Blocked on you` and
-`Rejected` off to the side.
+`Backlog` → `Ready` → `In progress` → `In review` → `Needs approval` → `Approved` → `On dev` →
+`Done`, with `Blocked on you`, `Needs playtest` and `Rejected` off to the side.
 
 - **`Backlog`** — raised, not yet evaluated. The audit raises here and nowhere else.
 
@@ -204,14 +204,21 @@ someone is ready to start it.
   `Blocked on you`. He moves it to `Ready`.
 - **`In progress`** — a branch exists and someone is on it.
 - **`In review`** — the work is finished and an agent is verifying it, by the route the
-  `Verify` field names. Nothing here needs Kirill. A card that passes its route is merged to
-  `dev` by the reviewer, not held for him.
+  `Verify` field names. Nothing here needs Kirill. A card that passes its route goes to
+  `Needs approval`, unmerged; one that fails goes back to `Ready` with the failure on the issue.
+- **`Needs approval`** — verified, and waiting for Kirill to read the diff on `fix/<slug>`, which
+  is pushed and not merged. His lane.
+- **`Approved`** — his yes. Only he puts a card here. `board-sync.py` sees it within five
+  minutes and starts `tools/audit/deploy/merge-approved.sh`, which re-merges the branch onto a
+  fresh `origin/dev`, runs `pnpm check` and the related tests on the result, pushes `dev`, closes
+  the issue and moves the card to `On dev`. A branch that no longer merges, or goes red, goes
+  back to `Ready` with the failure on the issue.
 - **`On dev`** — verified and merged to `dev`, and not yet in the build Kirill plays. Cards rest
   here until he promotes, which is the only thing that writes `main`.
 - **`Needs playtest`** — green, and the remaining question is one only he can answer. The work
   is committed on `fix/<slug>` and **not merged**; its worktree stays, with its own `.devport`,
   so `./dev.sh` in it runs beside whatever is already on 5173. This lane is his; put work here
-  and stop.
+  and stop. He approves it the same way as any other card, by moving it to `Approved`.
 - **`Done`** — promoted to `main`, so it is in the game he plays. The issue was closed when it
   reached `dev`; the lane is where the work lives, not whether it is finished.
 - **`Blocked on you`** — cannot proceed until he chooses: a proposal awaiting a yes, a design
@@ -220,18 +227,19 @@ someone is ready to start it.
 - **`Rejected`** — closed without being wanted, with the reason as a comment on the issue.
   Kirill puts cards here.
 
-**`Blocked on you`, `Needs playtest` and `Rejected` are his lanes.** Put a card in when it belongs there.
+**`Blocked on you`, `Needs approval`, `Needs playtest` and `Rejected` are his lanes.** Put a card in when it belongs there.
 **Never take one out** — he is the only one who decides a thing he asked to look at has been
 looked at. And do not put one back because he moved it out: him moving a card is the answer,
 not a mistake to correct. Nothing watches those lanes for drift.
 
 Move a card with `pnpm issue lane <n> <lane>`, which refuses a move out of his lanes, and a move
-out of `Backlog` for any card that is not `drift` or `test gap` unless it goes to `Blocked on you`.
+out of `Backlog` for any card that is not `drift` or `test gap` unless it goes to `Blocked on you`,
+and any move into `Approved` — only Kirill puts a card there, and doing so is his yes to merge it.
 Direct `gh project item-edit` is denied.
 
 Do not skip a lane. Nothing goes from `Backlog` straight to `In progress`, nothing reaches
-`On dev` without passing its `Verify` route in `In review`, and nothing reaches `Done` except by
-a promotion Kirill ran.
+`On dev` without passing its `Verify` route in `In review` and being moved to `Approved` by
+Kirill, and nothing reaches `Done` except by a promotion Kirill ran.
 
 **The board runs itself on the first two routes.** `pnpm audit:fix --next` takes the oldest
 `Ready` card whose `Verify` is `tests`, works it in a worktree off `origin/dev`, and moves it to `In review` once
@@ -239,13 +247,16 @@ a promotion Kirill ran.
 diff is readable from anywhere; `review.mjs` deletes it from origin when it merges. `pnpm audit:review --next` takes the
 oldest `In review` card, checks the diff touches only files the issue cites, re-merges its
 branch onto a freshly fetched `origin/dev`, runs the route again on the merge result — plus a
-headless session for `verify headless` — and pushes to `dev`, closes the issue and moves the
-card to `On dev` only if that is green. Anything short of
-green sends the card back to `Ready` with the failure written on the issue.
+headless session for `verify headless` — and moves the card to `Needs approval` if that is
+green. It merges nothing. Anything short of green sends the card back to `Ready` with the
+failure written on the issue. `pnpm audit:review --merge --next` lands the oldest `Approved`
+card the same way, without the headless session; `merge-approved.sh` runs it for every
+`Approved` card.
 
 `--verify playtest` works the card the same way and stops at `Needs playtest`: committed,
-pushed, not merged, worktree kept on its own port. Nothing merges a playtest branch except
-Kirill. Both scripts stop while the audit is paused, because they spend the same limits.
+pushed, not merged, worktree kept on its own port. Nothing merges a playtest branch until
+Kirill moves it to `Approved`. The fixer and the reviewer stop while the audit is paused,
+because they spend the same limits; `--merge` runs no model and does not.
 
 **Never write to GitHub with `gh` directly.** `gh issue create|edit|close|comment` and
 `gh label create|edit|delete` are denied in `.claude/settings.json`. Use `pnpm issue`:

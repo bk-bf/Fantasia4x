@@ -48,11 +48,13 @@ export function renderAttempt({ branch, files, account, verified, failures, ran,
   return lines.join('\n') + '\n';
 }
 
-export function renderReview({ branch, route, ran, ok, failures, sha, account, outside, base = 'dev' }) {
+export function renderReview({ branch, route, ran, ok, failures, account, outside, base = 'dev', stage = 'review' }) {
   const lines = [
     ok
-      ? `**Reviewed on the ${route} route and merged to \`${base}\`.**`
-      : `**Reviewed on the ${route} route and sent back — it did not pass.**`,
+      ? `**Reviewed on the ${route} route and passed — waiting for your approval.**`
+      : stage === 'merge'
+        ? `**Approved, but it could not land on \`${base}\`.**`
+        : `**Reviewed on the ${route} route and sent back — it did not pass.**`,
     ''
   ];
 
@@ -64,15 +66,15 @@ export function renderReview({ branch, route, ran, ok, failures, sha, account, o
       ...outside.map((f) => `- \`${f}\``),
       '',
       'That is often the right fix — removing a restated roster means editing whatever declares ' +
-        'the set. It is named here so it is visible before promotion, not because it is wrong.',
+        'the set. It is named here so it is visible before you approve it, not because it is wrong.',
       ''
     );
   if (failures) lines.push('## What failed', '', failures, '');
 
   lines.push(
     ok
-      ? `Merged into \`${base}\` as \`${sha}\`, and \`${branch}\` was deleted. ` +
-        `\`main\` is unchanged until you promote.`
+      ? `\`${branch}\` is pushed and not merged. Move the card to Approved and it lands on ` +
+        `\`${base}\`.`
       : `The card is back in Ready and \`${branch}\` still holds the attempt.`,
     '',
     `Ran: ${(ran ?? []).map((r) => `\`${r}\``).join(', ') || 'nothing'}`,

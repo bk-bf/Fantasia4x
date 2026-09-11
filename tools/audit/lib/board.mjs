@@ -11,13 +11,17 @@ export const LANES = {
   ready: '14aee711',
   'in progress': '9e8caff2',
   'in review': '365210d5',
-  'on dev': 'faf70e85',
+  'needs approval': '9e01e59a',
   'needs playtest': 'e7ebab1b',
+  approved: '9437891f',
+  'on dev': 'faf70e85',
   done: 'ea4793e4',
   rejected: '1a214656'
 };
 
-const HIS_LANES = new Set(['blocked on you', 'needs playtest', 'rejected']);
+const HIS_LANES = new Set(['blocked on you', 'needs approval', 'needs playtest', 'rejected']);
+
+const ONLY_HE_FILLS = new Set(['approved']);
 
 const AGENT_TRIAGED_KINDS = new Set(['drift', 'test gap']);
 
@@ -108,6 +112,12 @@ export function moveLane(n, to) {
     throw new Error(
       `#${n} is in "${item.status}", which is Kirill's lane. He moves it out, not you.\n` +
         `If it is genuinely finished, say so and leave the card where it is.`
+    );
+
+  if (ONLY_HE_FILLS.has(lane) && from !== lane)
+    throw new Error(
+      `#${n} cannot be moved to "${to}" by an agent. A card in it is merged to dev, and Kirill ` +
+        `putting it there is the approval.`
     );
 
   if (

@@ -1,22 +1,8 @@
 #!/usr/bin/env node
-// Take one card out of the board's In review lane, verify it by the route its Verify field
-// names, and merge it to dev if that route is green.
-//
 //   node tools/audit/review.mjs --next            the oldest In review card
 //   node tools/audit/review.mjs --issue 24        a named one
 //   node tools/audit/review.mjs --next --dry-run  pick and print, change nothing
 //   node tools/audit/review.mjs --next --keep     leave the worktree for inspection
-//
-// The fix branch is re-merged onto a freshly fetched origin/dev in its own worktree, so what
-// is verified is the merge result and not the branch in isolation. The diff is checked against
-// the files the issue cites before anything runs. `tests` is deterministic and runs no model.
-//
-// Green means merged to `dev`. `main` is the branch Kirill plays and builds from; nothing here
-// writes to it, and `promote.mjs` is what carries `dev` across when he decides. `headless` runs a session that must drive the real sim and report a
-// delta. A card on the playtest route never reaches here -- that lane is Kirill's.
-//
-// Green means merged to dev and the card in On dev. Anything else sends the card back to Ready
-// with the failure written up on the issue.
 
 import { existsSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
@@ -52,6 +38,9 @@ const arg = (n, d) => {
 const flag = (n) => process.argv.includes(`--${n}`);
 const out = (s) => process.stdout.write(s + '\n');
 
+const MERGE = flag('merge');
+const LANE = MERGE ? 'approved' : 'in review';
+
 const say = (n, text) => {
   try {
     I.comment(n, text);
@@ -76,25 +65,39 @@ const branchExists = (b) => {
   }
 };
 
+const ensureLocalBranch = (b) => {
+  if (branchExists(b)) return true;
+  try {
+    git(['fetch', '--quiet', 'origin', `${b}:${b}`], ROOT, true);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
 function pick() {
   const named = arg('issue', null);
-  const cards = B.inLane('in review')
+  const cards = B.inLane(LANE)
     .filter((it) => it.content?.type === 'Issue')
     .sort((a, b) => a.content.number - b.content.number);
 
   const wanted = named
     ? cards.filter((it) => String(it.content.number) === String(named))
-    : cards.filter((it) => ROUTES.has((it.verify ?? '').toLowerCase()));
+    : MERGE
+      ? cards
+      : cards.filter((it) => ROUTES.has((it.verify ?? '').toLowerCase()));
 
-  if (named && wanted.length === 0) fail(`#${named} is not In review`);
-  if (wanted.length === 0) fail('no card In review is on the tests or headless route');
+  if (named && wanted.length === 0) fail(`#${named} is not ${MERGE ? 'Approved' : 'In review'}`);
+  if (wanted.length === 0)
+    fail(MERGE ? 'no card is Approved' : 'no card In review is on the tests or headless route');
 
   const skipped = [];
   for (const it of wanted) {
     const issue = I.readIssue(String(it.content.number));
     const route = (it.verify ?? '').toLowerCase();
-    if (!ROUTES.has(route)) fail(`#${it.content.number} is on the ${route || 'unset'} route`);
-    if (!branchExists(`fix/${issue.data.id}`)) {
+    if (!MERGE && !ROUTES.has(route))
+      fail(`#${it.content.number} is on the ${route || 'unset'} route`);
+    if (!ensureLocalBranch(`fix/${issue.data.id}`)) {
       skipped.push(`#${it.content.number} has no branch fix/${issue.data.id}`);
       continue;
     }
@@ -181,7 +184,7 @@ ${issue.body}
 // --- main --------------------------------------------------------------------
 
 const control = readControl();
-if (control.paused === true) {
+if (control.paused === true && !MERGE) {
   const why = control.reason ? `: ${control.reason}` : '';
   if (flag('force')) out(`--- the audit is paused${why}; --force overrides it for this card`);
   else if (!flag('dry-run'))
@@ -204,7 +207,11 @@ out(`--- route ${route}, branch ${fixBranch}`);
 
 if (flag('dry-run')) {
   out(`would verify ${fixBranch} merged onto origin/${BASE} in ${wt}`);
-  out(`  green -> merge to ${BASE}, card to On dev`);
+  out(
+    MERGE
+      ? `  green -> push ${BASE}, close #${num}, card to On dev`
+      : `  green -> card to Needs approval, nothing merged`
+  );
   out(`  red   -> comment on #${num}, card back to Ready`);
   process.exit(0);
 }
@@ -234,7 +241,19 @@ const sendBack = (failures, ran, account) => {
   if (sent) return;
   sent = true;
   try {
-    say(num, P.renderReview({ branch: fixBranch, route, ran, ok: false, failures, account }));
+    say(
+      num,
+      P.renderReview({
+        branch: fixBranch,
+        route,
+        ran,
+        ok: false,
+        failures,
+        account,
+        base: BASE,
+        stage: MERGE ? 'merge' : 'review'
+      })
+    );
     B.moveLane(num, 'ready');
   } catch (e) {
     out(`--- could not write the issue back: ${e.message}`);
@@ -243,6 +262,10 @@ const sendBack = (failures, ran, account) => {
 
 for (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP']) {
   process.on(sig, () => {
+    if (MERGE) {
+      out(`\n--- ${sig}: #${num} stays in Approved, worktree left at ${wt}`);
+      process.exit(130);
+    }
     out(`\n--- ${sig}: sending #${num} back to Ready, worktree left at ${wt}`);
     sendBack(`The review was interrupted by ${sig}.`, [], '');
     process.exit(130);
@@ -273,9 +296,6 @@ try {
   if (files.length === 0) throw new Error(`${fixBranch} adds nothing on top of origin/${BASE}`);
   out(`--- ${files.length} file(s) against ${BASE}`);
 
-  // Reported, not refused. Removing a restated roster means editing the file that declares the
-  // set, which the issue never cites, so refusing blocked the canonical fix twice. The tests
-  // still gate correctness, and this lands on dev, which is read before it is promoted.
   const wandered = outOfScope(issue, files);
   if (wandered) out(`--- outside the issue's scope: ${wandered.outside.join(', ')}`);
 
@@ -294,7 +314,7 @@ try {
   }
 
   let account = '';
-  if (route === 'headless') {
+  if (route === 'headless' && !MERGE) {
     out(`--- ${CLAUDE} (${MODEL}) on the headless route`);
     const t0 = Date.now();
     const res = await run(
@@ -341,56 +361,56 @@ try {
     }
   }
 
-  out(`--- pushing to ${BASE}`);
-  try {
-    git(['push', 'origin', `HEAD:${BASE}`], wt);
-  } catch (e) {
-    throw new Error(`the merge is green but ${BASE} moved under it:\n${tail(String(e.message), 10)}`);
-  }
-  const sha = git(['rev-parse', 'HEAD'], wt).slice(0, 8);
-  out(`--- merged as ${sha}`);
-
-  // The merge is on dev from here on. Nothing below is allowed to turn that into a failure
-  // that sends the card back to Ready, so each step reports and continues.
-  const settle = (what, fn) => {
+  if (!MERGE) {
+    sent = true;
+    if (account || wandered?.outside?.length)
+      say(
+        num,
+        P.renderReview({
+          branch: fixBranch,
+          route,
+          ran,
+          ok: true,
+          account,
+          base: BASE,
+          outside: wandered?.outside
+        })
+      );
+    B.moveLane(num, 'needs approval');
+    out(`--- #${num} passed and waits in Needs approval; ${fixBranch} is not merged`);
+  } else {
+    out(`--- pushing to ${BASE}`);
     try {
-      fn();
+      git(['push', 'origin', `HEAD:${BASE}`], wt);
     } catch (e) {
-      out(`--- merged, but could not ${what}: ${tail(String(e.message), 3)}`);
+      throw new Error(`the merge is green but ${BASE} moved under it:\n${tail(String(e.message), 10)}`);
     }
-  };
-  sent = true;
-  // The fixer already wrote up the attempt and the commands it ran. Repeating that here says
-  // nothing, so a clean pass leaves only `Fixed in <sha>.` on the close. A headless account or
-  // a reach past the cited files is new, and does get written.
-  if (account || wandered?.outside?.length) {
-    say(
-      num,
-      P.renderReview({
-        branch: fixBranch,
-        route,
-        ran,
-        ok: true,
-        sha,
-        account,
-        base: BASE,
-        outside: wandered?.outside
-      })
-    );
-  }
-  settle('close the issue', () => I.closeWithCommit(num, sha));
-  settle('move the card to On dev', () => B.moveLane(num, 'on dev'));
-  out(`--- #${num} closed, card in On dev — main is untouched`);
+    const sha = git(['rev-parse', 'HEAD'], wt).slice(0, 8);
+    out(`--- merged as ${sha}`);
 
-  git(['branch', '-D', fixBranch], ROOT, true);
-  settle(`delete origin/${fixBranch}`, () => git(['push', 'origin', '--delete', fixBranch], ROOT));
-  const fixWt = join(ROOT, '.claude', 'worktrees', `fix-${d.id}`);
-  if (existsSync(fixWt)) {
-    try {
-      git(['worktree', 'remove', '--force', fixWt]);
-    } catch {
-      rmSync(fixWt, { recursive: true, force: true });
+    const settle = (what, fn) => {
+      try {
+        fn();
+      } catch (e) {
+        out(`--- merged, but could not ${what}: ${tail(String(e.message), 3)}`);
+      }
+    };
+    sent = true;
+    settle('close the issue', () => I.closeWithCommit(num, sha));
+    settle('move the card to On dev', () => B.moveLane(num, 'on dev'));
+    out(`--- #${num} closed, card in On dev — main is untouched`);
+
+    const fixWt = join(ROOT, '.claude', 'worktrees', `fix-${d.id}`);
+    if (existsSync(fixWt)) {
+      try {
+        git(['worktree', 'remove', '--force', fixWt]);
+      } catch {
+        rmSync(fixWt, { recursive: true, force: true });
+        git(['worktree', 'prune']);
+      }
     }
+    settle(`delete ${fixBranch}`, () => git(['branch', '-D', fixBranch], ROOT, true));
+    settle(`delete origin/${fixBranch}`, () => git(['push', 'origin', '--delete', fixBranch], ROOT));
   }
 } catch (e) {
   out(`--- ${e.message}`);
