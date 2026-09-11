@@ -242,10 +242,11 @@ Where it ends depends on the route:
 
 | Route | Green ends at |
 | --- | --- |
-| `tests`, `headless` | A pull request into `dev`, for `review.mjs` to verify on the merge and CI to check. |
-| `playtest` | A pull request labelled `needs playtest`. The worktree is kept, and it is given a free port in `.devport` so `./dev.sh` inside it runs beside the checkout's own dev server instead of fighting it for 5173. |
+| `tests`, `headless` | A pull request into `dev`, for `review.mjs` to verify on the merge and CI to check. The card waits `In progress` until the reviewer passes it, then moves to `PR ready`. |
+| `playtest` | A pull request labelled `needs playtest`, and the card goes straight to `PR ready`. The worktree is kept, and it is given a free port in `.devport` so `./dev.sh` inside it runs beside the checkout's own dev server instead of fighting it for 5173. |
 
-The card moves `Ready → In progress` and stays there until the pull request merges. An
+The card moves `Ready → In progress → PR ready` and stays there until the pull request
+merges. An
 interrupted run (SIGINT/SIGTERM/SIGHUP) sends it back to `Ready` before exiting and leaves the
 worktree in place. A card left `In progress` with no worktree and no open pull request behind
 it — a run that was killed outright — is released by the next run before it picks anything.

@@ -187,7 +187,7 @@ out(`--- PR #${pull.number}, route ${route}, ${fixBranch} at ${head.slice(0, 8)}
 
 if (flag('dry-run')) {
   out(`would verify ${fixBranch} merged onto origin/${BASE} in ${wt}`);
-  out(`  green -> ${PR.REVIEW_CONTEXT} success on PR #${pull.number}; merging it is Kirill's`);
+  out(`  green -> ${PR.REVIEW_CONTEXT} success on PR #${pull.number}, card to PR ready`);
   out(`  red   -> ${PR.REVIEW_CONTEXT} failure, the failure on PR #${pull.number}, card back to Ready`);
   process.exit(0);
 }
@@ -330,7 +330,12 @@ try {
       pull.number,
       P.renderReview({ route, ran, ok: true, account, outside: wandered?.outside })
     );
-  out(`--- PR #${pull.number} for #${num} passed; merging it is Kirill's`);
+  try {
+    B.moveLane(num, 'pr ready');
+    out(`--- PR #${pull.number} for #${num} passed; the card waits in PR ready`);
+  } catch (e) {
+    out(`--- PR #${pull.number} passed, but #${num} could not be moved: ${tail(String(e.message), 3)}`);
+  }
 } catch (e) {
   out(`--- ${e.message}`);
   keepTree = true;

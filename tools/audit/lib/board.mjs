@@ -10,6 +10,7 @@ export const LANES = {
   'blocked on you': '990e2322',
   ready: '14aee711',
   'in progress': '9e8caff2',
+  'pr ready': 'fee29b9d',
   'on dev': 'faf70e85',
   done: 'ea4793e4',
   rejected: '1a214656'

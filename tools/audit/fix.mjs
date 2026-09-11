@@ -289,7 +289,7 @@ if (flag('dry-run')) {
   out(`would work #${num} on ${branch} in ${wt}`);
   out(
     `  lane ${B.laneOf(num)} -> in progress, then a pull request into ${BASE}` +
-      (route === 'playtest' ? ` labelled ${PR.PLAYTEST_LABEL}` : '')
+      (route === 'playtest' ? ` labelled ${PR.PLAYTEST_LABEL} and the card to pr ready` : '')
   );
   if (earlier) out(`  PR #${earlier.number} is open; ${notes.length} comment(s) go into the prompt`);
   out(`  ${(issue.body.match(/^\s*- \[ \]/gm) ?? []).length} open remediation step(s)`);
@@ -468,13 +468,16 @@ try {
         }
       }
 
-      out(
-        pull
-          ? `--- #${num} stays In progress on PR #${pull.number}; ${
-              route === 'playtest' ? `the worktree stays at ${wt}` : 'review.mjs takes it from here'
-            }`
-          : `--- #${num} stays In progress; ${branch} is committed and not pushed`
-      );
+      if (pull && route === 'playtest') {
+        B.moveLane(num, 'pr ready');
+        out(`--- #${num} waits in PR ready on PR #${pull.number}; the worktree stays at ${wt}`);
+      } else {
+        out(
+          pull
+            ? `--- #${num} stays In progress on PR #${pull.number}; review.mjs takes it from here`
+            : `--- #${num} stays In progress; ${branch} is committed and not pushed`
+        );
+      }
     }
   }
 } catch (e) {

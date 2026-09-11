@@ -190,9 +190,9 @@ stays the ledger's key and should not appear in anything a person reads.
 
 **Triage through the lanes, never around them.** The board is
 [projects/4](https://github.com/users/bk-bf/projects/4) and its columns are an order:
-`Backlog` → `Ready` → `In progress` → `On dev` → `Done`, with `Blocked on you` and `Rejected`
-off to the side. The board carries an issue as far as `Ready`; from there the work is a pull
-request, and the card waits in `In progress` until it merges.
+`Backlog` → `Ready` → `In progress` → `PR ready` → `On dev` → `Done`, with
+`Blocked on you` and `Rejected` off to the side. The board carries an issue as far as `Ready`;
+from there the work is a pull request, and the card follows it.
 
 - **`Backlog`** — raised, not yet evaluated. The audit raises here and nowhere else.
 
@@ -204,10 +204,12 @@ Planned work is an issue from the start, and waits in `Backlog` until Kirill mov
   Any other kind waits for Kirill: the agent comments on the issue with the open decision or
   task it overlaps, or "none", and what in play reaches the code it cites, then moves it to
   `Blocked on you`. He moves it to `Ready`.
-- **`In progress`** — a branch exists. Once the fixer has it green it is a pull request into
-  `dev`, and the card stays here until that pull request merges. The pull request is where the
-  work is reviewed: `review.mjs` and CI post their results there, and Kirill merges it or
-  comments on it.
+- **`In progress`** — a branch exists and an agent is on it. Once the fixer has it green it is a
+  pull request into `dev`, and the card stays here while `review.mjs` verifies it.
+- **`PR ready`** — the pull request is ready for Kirill: `review.mjs` passed it, or it
+  is a `needs playtest` pull request, which the reviewer skips. He merges it, or comments on it
+  and moves the card back to `Ready`. Agents put cards here, and `after-merge.mjs` takes them out
+  when the pull request merges.
 - **`On dev`** — merged to `dev` by a pull request Kirill merged, and not yet in the build he
   plays. Cards rest here until he promotes, which is the only thing that writes `main`.
 - **`Done`** — promoted to `main`, so it is in the game he plays. The issue was closed when it
@@ -241,8 +243,8 @@ sent back with a reason.
 `pnpm audit:review --next` takes the oldest open pull request whose latest commit has no
 `audit/review` status, re-merges it onto a freshly fetched `origin/dev`, runs the route again on
 the result — plus a headless session for `verify headless` — and sets `audit/review` to success
-or failure on that commit. A failure is written on the pull request and sends the card back to
-`Ready`. `.github/workflows/check.yml` runs `pnpm check` and the related tests on every pull
+or failure on that commit. A pass moves the card to `PR ready`; a failure is written on the pull
+request and sends the card back to `Ready`. `.github/workflows/check.yml` runs `pnpm check` and the related tests on every pull
 request into `dev` and every push to `dev`, on GitHub's runners, and branch protection on `dev`
 requires it to pass on an up-to-date branch before a merge. Kirill is the repository's admin and
 can override that.
@@ -251,8 +253,8 @@ Merging is Kirill's. When a pull request merges, GitHub closes the issue it fixe
 `tools/audit/after-merge.mjs` — run by `board-sync.py` every five minutes — moves the card to
 `On dev`, deletes the branch and removes its worktrees.
 
-`--verify playtest` works the card the same way and labels its pull request `needs playtest`.
-The reviewer skips it, and the worktree stays with its own `.devport`, so `./dev.sh` in it runs
+`--verify playtest` works the card the same way and labels its pull request `needs playtest`,
+and the card goes straight to `PR ready`. The reviewer skips it, and the worktree stays with its own `.devport`, so `./dev.sh` in it runs
 beside whatever is already on 5173. He merges it once he has played it. The fixer and the
 reviewer stop while the audit is paused, because they spend the same limits.
 
