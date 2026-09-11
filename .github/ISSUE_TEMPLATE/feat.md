@@ -1,7 +1,7 @@
 ---
 name: Feature
 about: New or changed game behaviour, built one step per branch.
-labels: feature
+labels: feature, found by hand
 ---
 
 ## What this is
