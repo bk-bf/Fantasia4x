@@ -360,7 +360,9 @@ can group and sort by a field and not by a label, so it carries no information s
 **Move the card, never the label.** `ready`, `needs decision` and the three `verify` labels are
 derived from the board's Status and Verify fields by `board-sync.py`, on the same tick that
 refreshes the dashboard. Edit one of those labels by hand and it is overwritten within a minute.
-Any open issue missing from the board is added to `Backlog`. Kind, severity, origin and the rule
+Any open issue missing from the board is added to `Backlog`. An open pull request carries the labels
+of the issue it fixes, less `ready` and `needs decision`, copied on the same tick — label the
+issue, never the pull request. Kind, severity, origin and the rule
 name are not touched — they describe the finding, not its state.
 
 **Every issue says how it will be verified**, as a `Verify` field on the board and a label on
