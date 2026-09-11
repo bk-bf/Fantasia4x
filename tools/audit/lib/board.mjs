@@ -18,6 +18,10 @@ export const LANES = {
 
 const HIS_LANES = new Set(['blocked on you', 'needs playtest']);
 
+const AGENT_TRIAGED_KINDS = new Set(['drift', 'test gap']);
+
+const agentMayTriage = (item) => (item.labels ?? []).some((l) => AGENT_TRIAGED_KINDS.has(l));
+
 const gh = (args) =>
   execFileSync('gh', args, { encoding: 'utf8', stdio: ['pipe', 'pipe', 'inherit'] });
 
@@ -103,6 +107,17 @@ export function moveLane(n, to) {
     throw new Error(
       `#${n} is in "${item.status}", which is Kirill's lane. He moves it out, not you.\n` +
         `If it is genuinely finished, say so and leave the card where it is.`
+    );
+
+  if (
+    (from === 'backlog' || from === '') &&
+    lane !== 'backlog' &&
+    lane !== 'blocked on you' &&
+    !agentMayTriage(item)
+  )
+    throw new Error(
+      `#${n} is not a ${[...AGENT_TRIAGED_KINDS].join(' or ')} card, so Kirill decides whether ` +
+        `it leaves Backlog and moves it himself on the board.\nLeave it in Backlog.`
     );
 
   if (from === lane) return { from, to: lane, moved: false };
