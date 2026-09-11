@@ -1324,11 +1324,16 @@
 
     const glyphOf = (id: string, x: number, y: number, kind: GlyphFloatKind): GlyphFloat => ({
       id,
-      left: (x - viewX + 0.5) * tW,
-      top: (y - viewY) * tH - 18,
+      left: (x + 0.5) * tW,
+      top: y * tH - 18,
       kind
     });
-    const onScreen = (o: { left: number; top: number }) => o.left >= 0 && o.top >= 0 && o.left <= W;
+    const camX = viewX * tW;
+    const camY = viewY * tH;
+    const onScreen = (o: { left: number; top: number }) =>
+      o.left >= camX && o.top >= camY && o.left <= camX + W;
+    const nearScreen = (x: number, y: number) =>
+      x >= camX - tW && y >= camY - tH && x <= camX + W + tW && y <= camY + H + tH;
     const newGlyphs: GlyphFloat[] = [];
     const prioCollapse = conditionPriority('collapse');
     const prioSleeping = conditionPriority('sleeping');
@@ -1384,11 +1389,11 @@
       if (b.type !== 'campfire' || b.status !== 'complete' || b.lit !== true) continue;
       const o: GlyphFloat = {
         id: b.id,
-        left: (b.x - viewX + 0.5) * tW,
-        top: (b.y - viewY + 0.5) * tH,
+        left: (b.x + 0.5) * tW,
+        top: (b.y + 0.5) * tH,
         kind: 'campfire'
       };
-      if (o.left >= 0 && o.top >= 0 && o.left <= W) newGlyphs.push(o);
+      if (onScreen(o)) newGlyphs.push(o);
     }
     const glyphKey = newGlyphs
       .map((o) => `${o.kind}:${o.id}:${Math.round(o.left)},${Math.round(o.top)}`)
@@ -1411,11 +1416,11 @@
         )
         .map((p) => ({
           id: p.id,
-          left: (p.position!.x - viewX + 0.5) * tW,
-          top: (p.position!.y - viewY) * tH - 6,
+          left: (p.position!.x + 0.5) * tW,
+          top: p.position!.y * tH - 6,
           progress: Math.max(0, Math.min(1, p.activeJob?.progress ?? 0))
         }))
-        .filter((o) => o.left >= 0 && o.top >= 0 && o.left <= W),
+        .filter(onScreen),
       ...pawns
         .filter(
           (p) =>
@@ -1426,20 +1431,20 @@
         )
         .map((p) => ({
           id: p.id,
-          left: (p.position!.x - viewX + 0.5) * tW,
-          top: (p.position!.y - viewY) * tH - 6,
+          left: (p.position!.x + 0.5) * tW,
+          top: p.position!.y * tH - 6,
           progress: Math.max(0, Math.min(1, p.tendProgress ?? 0))
         }))
-        .filter((o) => o.left >= 0 && o.top >= 0 && o.left <= W),
+        .filter(onScreen),
       ...mobs
         .filter((m) => (m.eatProgress ?? 0) > 0 && !isHiddenTile(m.x, m.y))
         .map((m) => ({
           id: m.id,
-          left: (m.x - viewX + 0.5) * tW,
-          top: (m.y - viewY) * tH - 6,
+          left: (m.x + 0.5) * tW,
+          top: m.y * tH - 6,
           progress: Math.max(0, Math.min(1, m.eatProgress ?? 0))
         }))
-        .filter((o) => o.left >= 0 && o.top >= 0 && o.left <= W)
+        .filter(onScreen)
     ];
     const progressKey = newProgress
       .map(
@@ -1453,9 +1458,9 @@
 
     const newParticles: { id: string; left: number; top: number; effect: string }[] = [];
     for (const lt of _lairTiles) {
-      const left = (lt.x - viewX + 0.5) * tW;
-      const top = (lt.y - viewY + 0.5) * tH;
-      if (left < 0 || top < 0 || left > W || top > H) continue;
+      const left = (lt.x + 0.5) * tW;
+      const top = (lt.y + 0.5) * tH;
+      if (left < camX || top < camY || left > camX + W || top > camY + H) continue;
       newParticles.push({ id: `${lt.x},${lt.y}`, left, top, effect: lt.effect });
     }
     const particleKey = newParticles
@@ -1477,22 +1482,22 @@
         )
         .map((p) => ({
           id: `hp-${p.id}`,
-          left: (p.position!.x - viewX + 0.5) * tW,
-          top: (p.position!.y - viewY) * tH - 10,
+          left: (p.position!.x + 0.5) * tW,
+          top: p.position!.y * tH - 10,
           health: Math.max(0, Math.min(1, (p.state.health ?? 100) / 100)),
           type: 'pawn' as const
         }))
-        .filter((o) => o.left >= 0 && o.top >= 0 && o.left <= W),
+        .filter(onScreen),
       ...mobs
         .filter((m) => m.state !== 'Corpse' && m.health < m.maxHealth && !isHiddenTile(m.x, m.y))
         .map((m) => ({
           id: `hp-${m.id}`,
-          left: (m.x - viewX + 0.5) * tW,
-          top: (m.y - viewY) * tH - 10,
+          left: (m.x + 0.5) * tW,
+          top: m.y * tH - 10,
           health: Math.max(0, Math.min(1, m.maxHealth > 0 ? m.health / m.maxHealth : 1)),
           type: 'mob' as const
         }))
-        .filter((o) => o.left >= 0 && o.top >= 0 && o.left <= W)
+        .filter(onScreen)
     ];
     const healthKey = newHealth
       .map((o) => `${o.id}:${Math.round(o.left)},${Math.round(o.top)},${Math.round(o.health * 20)}`)
@@ -1508,13 +1513,13 @@
         const target = p.draftTarget!;
         const rp = pawnRenderPos.get(p.id) ?? p.position!;
         const points: Array<{ x: number; y: number }> = [
-          { x: (rp.x - viewX + 0.5) * tW, y: (rp.y - viewY + 0.5) * tH }
+          { x: (rp.x + 0.5) * tW, y: (rp.y + 0.5) * tH }
         ];
         const path = p.path ?? [];
         const pathIdx = p.pathIndex ?? 0;
         for (let i = pathIdx; i < path.length; i++) {
           const tile = path[i];
-          points.push({ x: (tile.x - viewX + 0.5) * tW, y: (tile.y - viewY + 0.5) * tH });
+          points.push({ x: (tile.x + 0.5) * tW, y: (tile.y + 0.5) * tH });
         }
         if (target.type === 'attack') {
           let tx = p.position!.x;
@@ -1532,14 +1537,14 @@
               ty = pp.position.y;
             }
           }
-          points.push({ x: (tx - viewX + 0.5) * tW, y: (ty - viewY + 0.5) * tH });
+          points.push({ x: (tx + 0.5) * tW, y: (ty + 0.5) * tH });
         } else if (pathIdx >= path.length && 'x' in target) {
-          points.push({ x: (target.x - viewX + 0.5) * tW, y: (target.y - viewY + 0.5) * tH });
+          points.push({ x: (target.x + 0.5) * tW, y: (target.y + 0.5) * tH });
         }
         return { id: `draft-${p.id}`, points };
       })
       .filter((o) =>
-        o.points.some((p) => p.x >= -tW && p.y >= -tH && p.x <= W + tW && p.y <= H + tH)
+        o.points.some((p) => nearScreen(p.x, p.y))
       );
     const draftKey = newDraftTargets
       .map(
@@ -1556,13 +1561,13 @@
       .filter((e) => now - e.spawnTime < floatTtl(e.kind))
       .map((e) => ({
         id: e.id,
-        left: (e.worldX - viewX + 0.5) * tW,
-        top: (e.worldY - viewY) * tH - 14 + (e.dy ?? 0),
+        left: (e.worldX + 0.5) * tW,
+        top: e.worldY * tH - 14 + (e.dy ?? 0),
         text: e.text,
         kind: e.kind,
         color: e.color
       }))
-      .filter((o) => o.left >= -tW && o.top >= -tH && o.left <= W + tW && o.top <= H + tH);
+      .filter((o) => nearScreen(o.left, o.top));
     const flScale = Math.min(1.2, Math.max(0.25, tW / 20));
     const CHAR_W = 5;
     const MAX_TXT_W = 152;
@@ -1610,14 +1615,14 @@
         const wy = e.fromY + (e.toY - e.fromY) * tc;
         return {
           id: e.id,
-          left: (wx - viewX + 0.5) * tW,
-          top: (wy - viewY + 0.5) * tH,
+          left: (wx + 0.5) * tW,
+          top: (wy + 0.5) * tH,
           angle: (Math.atan2(e.toY - e.fromY, e.toX - e.fromX) * 180) / Math.PI,
           effect: e.effect,
           progress
         };
       })
-      .filter((o) => o.left >= -tW && o.top >= -tH && o.left <= W + tW && o.top <= H + tH);
+      .filter((o) => nearScreen(o.left, o.top));
     const projKey = newProjectiles
       .map((o) => `${o.id}:${Math.round(o.left)},${Math.round(o.top)}:${o.progress >= 1 ? 1 : 0}`)
       .join('|');
