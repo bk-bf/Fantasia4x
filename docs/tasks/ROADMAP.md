@@ -67,7 +67,7 @@ described it. Planned work has no spec file: a feature's issue is its spec.
 
 | # | Item | Spec |
 |---|------|------|
-| **2b** | **Visitors (kingdom guests)** | [VISITORS (archived)](archive/VISITORS.md) |
+| **2b** | **Visitors (kingdom guests)** | [#65](https://github.com/bk-bf/Fantasia4x/issues/65) |
 | **7** | **Drafted Job/Need Orders** | [DRAFTED-JOB-ORDERS](archive/DRAFTED-JOB-ORDERS.md) |
 | **8** | **Rest from Entity Spawning** | [#58](https://github.com/bk-bf/Fantasia4x/issues/58) |
 | **8c** | **Build-archetype coverage audit** | [BUILD-ARCHETYPES (artifact)](https://claude.ai/code/artifact/f87ef907-46e2-4015-a455-b698799eea4f) |
