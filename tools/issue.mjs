@@ -4,8 +4,8 @@
 // mean nothing in an issue, an issue URL inside backticks that never becomes a link, and a
 // label invented one letter away from the one that already exists.
 //
-//   node tools/issue.mjs create --title T --type fix --area sim --size S --body-file - [--label L]...
-//   node tools/issue.mjs edit <n> [--title T] [--body-file -] [--add-label L] [--remove-label L]
+//   node tools/issue.mjs create --title T --type fix --area sim --size S --body-file - [--label L]... [--parent N]
+//   node tools/issue.mjs edit <n> [--title T] [--body-file -] [--add-label L] [--remove-label L] [--parent N]
 //   node tools/issue.mjs comment <n> --body-file -
 //   node tools/issue.mjs close <n> --commit <sha>
 //   node tools/issue.mjs labels            # what the schema allows
@@ -159,6 +159,22 @@ const guard = (labels, body, { allowReady = false, template = false, workType } 
 const allIssues = () =>
   JSON.parse(gh(['issue', 'list', '--state', 'all', '--limit', '300', '--json', 'number,title,body']));
 
+const REPO_API = '/repos/bk-bf/Fantasia4x';
+
+const issueId = (n) => {
+  let it;
+  try {
+    it = JSON.parse(gh(['api', `${REPO_API}/issues/${n}`]));
+  } catch {
+    die(`no issue #${n}`);
+  }
+  if (it.pull_request) die(`#${n} is a pull request, not an issue`);
+  return it.id;
+};
+
+const linkParent = (n, parent) =>
+  gh(['api', '-X', 'POST', `${REPO_API}/issues/${parent}/sub_issues`, '-F', `sub_issue_id=${issueId(n)}`]);
+
 
 
 if (cmd === 'check-labels') {
@@ -311,6 +327,8 @@ if (cmd === 'check-labels') {
   if (type === 'feat' && !labels.some((l) => labelGroup('kind').includes(l))) labels.push('feature');
   const body = prepare(readBody());
   guard(labels, body, { template: true, workType: type });
+  const parent = arg('parent');
+  if (parent) issueId(parent);
   const args = ['issue', 'create', '--title', title, '--body-file', '-'];
   for (const l of labels) args.push('--label', l);
   const url = gh(args, body).trim();
@@ -336,8 +354,18 @@ if (cmd === 'check-labels') {
   } catch (e) {
     process.stderr.write(`note: created #${n} but could not set its fields: ${e.message}\n`);
   }
+  if (parent) {
+    try {
+      linkParent(n, parent);
+      process.stdout.write(`#${n} is a sub-issue of #${parent}\n`);
+    } catch (e) {
+      process.stderr.write(`note: created #${n} but could not make it a sub-issue of #${parent}: ${e.message}\n`);
+    }
+  }
 } else if (cmd === 'edit') {
   const n = argv[1] ?? die('which issue?');
+  const parent = arg('parent');
+  if (parent) issueId(parent);
   const add = all('add-label');
   const body = arg('body-file') ? prepare(readBody()) : null;
   // Refuse what this edit introduces, not what it inherits. A body that already cites a file
@@ -360,12 +388,17 @@ if (cmd === 'check-labels') {
     ...(add.length || removed.size ? checkKind(resulting, workType) : [])
   ].filter((e) => !inherited.includes(e));
   if (introduced.length) die(`refused:\n  - ${introduced.join('\n  - ')}`);
-  const args = ['issue', 'edit', n];
-  if (arg('title')) args.push('--title', arg('title'));
-  if (body !== null) args.push('--body-file', '-');
-  for (const l of add) args.push('--add-label', l);
-  for (const l of all('remove-label')) args.push('--remove-label', l);
-  process.stdout.write(gh(args, body ?? undefined));
+  const changes = [];
+  if (arg('title')) changes.push('--title', arg('title'));
+  if (body !== null) changes.push('--body-file', '-');
+  for (const l of add) changes.push('--add-label', l);
+  for (const l of all('remove-label')) changes.push('--remove-label', l);
+  if (!changes.length && !parent) die('nothing to edit');
+  if (changes.length) process.stdout.write(gh(['issue', 'edit', n, ...changes], body ?? undefined));
+  if (parent) {
+    linkParent(n, parent);
+    process.stdout.write(`#${n} is a sub-issue of #${parent}\n`);
+  }
 } else if (cmd === 'comment') {
   const n = argv[1] ?? die('which issue?');
   const body = prepare(readBody());
