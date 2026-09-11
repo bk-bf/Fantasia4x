@@ -31,13 +31,14 @@ import {
 } from '../core/state/stockpile';
 import {
   carriedQuantities,
-  carrierOf,
+  doseOf,
+  drainDose,
   emptyOut,
   heldQuantity,
   isFluidId,
   roomFor,
   servingL,
-  takeOut
+  takeCarriedDose
 } from '../core/rules/gear/vessels';
 import { equipItem, unequipItem, equipDropToPawn } from '../core/rules/gear/equipment';
 import { rng } from '../core/util/rng';
@@ -489,13 +490,7 @@ export const COMMANDS: Record<string, Cmd> = {
     const before = pawns[pi];
     pawns[pi] = applyConsumable(before, p.itemId, () => rng.random());
     if (pawns[pi] === before) return s;
-    const vessel = carrierOf(carer, p.itemId);
-    if (vessel)
-      return drainCarriedDose({ ...s, pawns }, p.caretakerId, vessel.instanceId, p.itemId);
-    const items = { ...(carer.inventory?.items ?? {}) };
-    items[p.itemId] = (items[p.itemId] ?? 0) - doseOf(p.itemId);
-    if (items[p.itemId] <= 0) delete items[p.itemId];
-    pawns[ci] = { ...carer, inventory: { ...(carer.inventory ?? { instances: [] }), items } };
+    pawns[ci] = takeCarriedDose(pawns[ci], p.itemId);
     return { ...s, pawns };
   },
 
@@ -1630,10 +1625,6 @@ function carriedDose(s: GameState, pawnId: string, instanceId: string, itemId: s
   return isFluidId(itemId) ? held >= servingL(itemId) : held >= 1;
 }
 
-function doseOf(itemId: string): number {
-  return isFluidId(itemId) ? servingL(itemId) : 1;
-}
-
 function stockedDose(s: GameState, itemId: string): boolean {
   return ((s.stockpile ?? {})[itemId] ?? 0) >= doseOf(itemId);
 }
@@ -1644,22 +1635,8 @@ function drainCarriedDose(
   instanceId: string,
   itemId: string
 ): GameState {
-  const want = isFluidId(itemId) ? servingL(itemId) : 1;
   return {
     ...s,
-    pawns: s.pawns.map((p) => {
-      if (p.id !== pawnId) return p;
-      const drain = (i: ItemInstance): ItemInstance => {
-        if (i.instanceId !== instanceId) return i;
-        const copy: ItemInstance = { ...i, contents: i.contents?.map((e) => ({ ...e })) };
-        takeOut(copy, itemId, want);
-        return copy;
-      };
-      const instances = (p.inventory?.instances ?? []).map(drain);
-      const equipment = Object.fromEntries(
-        Object.entries(p.equipment ?? {}).map(([slot, i]) => [slot, i ? drain(i) : i])
-      ) as typeof p.equipment;
-      return { ...p, equipment, inventory: { ...(p.inventory ?? { items: {} }), instances } };
-    })
+    pawns: s.pawns.map((p) => (p.id === pawnId ? drainDose(p, instanceId, itemId) : p))
   };
 }

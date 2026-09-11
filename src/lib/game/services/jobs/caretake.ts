@@ -5,6 +5,7 @@ import { itemService } from '../ItemService';
 import { buildingService } from '../BuildingService';
 import { isRoofedTile } from '../EnvironmentService';
 import { consumeFromStockpiles } from '../../core/state/stockpile';
+import { carriedQuantities, doseOf, takeCarriedDose } from '../../core/rules/gear/vessels';
 import { CARE_CONFIG, isTended, isUncareable } from '../../core/defs/wounds';
 import { rng } from '../../core/util/rng';
 import { PAWN_STATE } from '../../systems/pawn/pawnStates';
@@ -38,19 +39,29 @@ function needsTending(patient: Pawn, turn: number): boolean {
   return hasUntendedWound(patient, turn) || hasActiveInfection(patient);
 }
 
-function bestMedicine(gs: GameState, patient: Pawn): { id: string; quality: number } | null {
+export function pickTendMedicine(
+  gs: GameState,
+  patient: Pawn,
+  medic: Pawn
+): { id: string; quality: number; carried: boolean } | null {
   const cap = patient.medicineTierCap;
-  let best: { id: string; quality: number } | null = null;
-  for (const [id, amount] of Object.entries(gs.stockpile ?? {})) {
-    if (amount <= 0) continue;
-    const def = itemService.getItemById(id);
-    const q = def?.medicineQuality;
-    if (!q || q <= 0) continue;
-    if (def?.curesConditions?.length || def?.mendsWounds?.length) continue;
-    if (cap != null && (def?.tier ?? 0) > cap) continue;
-    if (!best || q > best.quality) best = { id, quality: q };
-  }
-  return best;
+  const best = (held: Record<string, number>) => {
+    let found: { id: string; quality: number } | null = null;
+    for (const [id, amount] of Object.entries(held)) {
+      if (amount < doseOf(id)) continue;
+      const def = itemService.getItemById(id);
+      const q = def?.medicineQuality;
+      if (!q || q <= 0) continue;
+      if (def?.curesConditions?.length || def?.mendsWounds?.length) continue;
+      if (cap != null && (def?.tier ?? 0) > cap) continue;
+      if (!found || q > found.quality) found = { id, quality: q };
+    }
+    return found;
+  };
+  const carried = best(carriedQuantities(medic));
+  if (carried) return { ...carried, carried: true };
+  const stocked = best(gs.stockpile ?? {});
+  return stocked ? { ...stocked, carried: false } : null;
 }
 
 function shelterTendFactor(gs: GameState, x: number, y: number): number {
@@ -97,7 +108,7 @@ export function tendPatient(
   const skill = pawnStatService.evaluateStat('caretaking_quality', medic) * TEND_SKILL_SCALE;
   const mood = medic.state?.mood ?? 50;
   const moodFactor = Math.max(0.3, Math.min(1.2, 0.6 + (mood / 100) * 0.6));
-  const med = useMedicine ? bestMedicine(gs, patient) : null;
+  const med = useMedicine ? pickTendMedicine(gs, patient, medic) : null;
   const shelter = shelterTendFactor(gs, patient.position.x, patient.position.y);
   const skillRoll = skill * moodFactor * (0.6 + rng.random() * 0.4);
   const quality = Math.max(0, Math.min(1, (skillRoll + (med?.quality ?? 0)) * shelter));
@@ -141,7 +152,12 @@ export function tendPatient(
       p.id === patient.id ? { ...patient, limbs: newLimbs, conditions: newConditions } : p
     )
   };
-  if (med) next = consumeFromStockpiles(next, { [med.id]: 1 });
+  if (med?.carried)
+    next = {
+      ...next,
+      pawns: next.pawns.map((p) => (p.id === medic.id ? takeCarriedDose(p, med.id) : p))
+    };
+  else if (med) next = consumeFromStockpiles(next, { [med.id]: doseOf(med.id) });
   next = socialService.onTend(next, medic, patient);
   return next;
 }

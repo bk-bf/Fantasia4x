@@ -51,6 +51,33 @@ export function carrierOf(pawn: Pawn, itemId: string): ItemInstance | null {
   return best;
 }
 
+export function doseOf(itemId: string): number {
+  return isFluidId(itemId) ? servingL(itemId) : 1;
+}
+
+export function drainDose(pawn: Pawn, instanceId: string, itemId: string): Pawn {
+  const drain = (i: ItemInstance): ItemInstance => {
+    if (i.instanceId !== instanceId) return i;
+    const copy: ItemInstance = { ...i, contents: i.contents?.map((e) => ({ ...e })) };
+    takeOut(copy, itemId, doseOf(itemId));
+    return copy;
+  };
+  const instances = (pawn.inventory?.instances ?? []).map(drain);
+  const equipment = Object.fromEntries(
+    Object.entries(pawn.equipment ?? {}).map(([slot, i]) => [slot, i ? drain(i) : i])
+  ) as Pawn['equipment'];
+  return { ...pawn, equipment, inventory: { ...(pawn.inventory ?? { items: {} }), instances } };
+}
+
+export function takeCarriedDose(pawn: Pawn, itemId: string): Pawn {
+  const vessel = carrierOf(pawn, itemId);
+  if (vessel) return drainDose(pawn, vessel.instanceId, itemId);
+  const items = { ...(pawn.inventory?.items ?? {}) };
+  items[itemId] = (items[itemId] ?? 0) - doseOf(itemId);
+  if (items[itemId] <= 0) delete items[itemId];
+  return { ...pawn, inventory: { ...(pawn.inventory ?? { instances: [] }), items } };
+}
+
 export function vesselOf(itemId: string): NonNullable<Item['container']> | null {
   return itemDefById(itemId)?.container ?? null;
 }
