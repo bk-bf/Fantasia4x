@@ -25,6 +25,7 @@ import {
 } from './lib/harness.mjs';
 import { readControl } from './lib/pace.mjs';
 import * as P from './lib/prs.mjs';
+import { ledgerEvidence } from './lib/raise.mjs';
 
 const MODEL = process.env.AUDIT_REVIEW_MODEL || 'sonnet';
 const ROUTES = new Set(['tests', 'headless']);
@@ -160,7 +161,7 @@ it. Never guess a verdict you did not measure.
 # Issue #${issue.number} — ${issue.data.title}
 
 ${issue.body}
-`;
+${ledgerEvidence(issue.number)}`;
 }
 
 // --- main --------------------------------------------------------------------
