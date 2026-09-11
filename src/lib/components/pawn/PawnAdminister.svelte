@@ -61,13 +61,9 @@
   }
 </script>
 
-<div class="wrap">
-  <div class="hdr">ADMINISTER</div>
-  {#if doses.length === 0}
-    <div class="empty">carrying no condition medicine — put some in this pawn's pack</div>
-  {:else if adjacent.length === 0}
-    <div class="empty">nobody standing beside them</div>
-  {:else}
+{#if doses.length > 0 && adjacent.length > 0}
+  <div class="wrap">
+    <div class="hdr">ADMINISTER</div>
     {#each doses as d (d.id)}
       <div class="dose">
         <span class="nm">{d.def.name}</span>
@@ -90,8 +86,8 @@
         {/each}
       </div>
     {/each}
-  {/if}
-</div>
+  </div>
+{/if}
 
 <style>
   .wrap {
@@ -102,11 +98,6 @@
     letter-spacing: 0.1em;
     color: var(--text-dim, #8a8a8a);
     margin-bottom: 0.25rem;
-  }
-  .empty {
-    font-size: 0.7rem;
-    color: var(--text-dim, #6a6a6a);
-    font-style: italic;
   }
   .dose {
     display: flex;
