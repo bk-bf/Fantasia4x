@@ -237,8 +237,10 @@ promotion Kirill ran.
 
 **After `Ready`, the work is a pull request.** `pnpm audit:fix --next` takes the oldest `Ready`
 card whose `Verify` is `tests` and works it in a worktree off `origin/dev`. Once `pnpm check` and
-the related tests are green it pushes `fix/<slug>` and opens a pull request into `dev` that says
-`Fixes #n`. A card that comes back to `Ready` is worked again onto the same pull request, and the
+the related tests are green it pushes `fix/<title>-<n>` and opens a pull request into `dev` that says
+`Fixes #n`. Every branch is named `<type>/<title>-<issue number>`, never the number alone: the
+`pre-push` hook refuses a new branch that is not, and `createPull` refuses to open a pull request
+from one. A card that comes back to `Ready` is worked again onto the same pull request, and the
 fixer reads every comment on it first — Kirill's included — so a comment there is how work is
 sent back with a reason.
 

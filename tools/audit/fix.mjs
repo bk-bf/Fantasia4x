@@ -17,6 +17,7 @@ import { join } from 'node:path';
 import * as B from './lib/board.mjs';
 import * as I from './lib/gh.mjs';
 import * as PR from './lib/pulls.mjs';
+import { branchFor } from './lib/branch.mjs';
 import {
   ROOT,
   PNPM,
@@ -262,7 +263,8 @@ for (const it of B.inLane('in progress')) {
   const n = it.content?.number;
   if (!n) continue;
   const stale = I.readIssue(String(n));
-  if (existsSync(join(ROOT, '.claude', 'worktrees', `fix-${stale.data.id}`))) continue;
+  const trees = [`fix-${stale.data.id}`, `fix-${branchFor(stale).slice('fix/'.length)}`];
+  if (trees.some((t) => existsSync(join(ROOT, '.claude', 'worktrees', t)))) continue;
   if (withPull.has(n)) continue;
   out(`--- releasing #${n}, left In progress by a run that did not exit`);
   B.moveLane(n, 'ready');
@@ -281,7 +283,7 @@ const step = nextStep(issue);
 if (d.kind === 'feature' && !step) fail(`#${num} is a feature with no open step under ## Steps`);
 
 const earlier = pulls.find((p) => PR.linkOf(p)?.issue === num) ?? null;
-const branch = earlier?.headRefName ?? `fix/${d.id}`;
+const branch = earlier?.headRefName ?? branchFor(issue);
 const wt = join(ROOT, '.claude', 'worktrees', `fix-${branch.slice('fix/'.length)}`);
 const notes = earlier ? PR.feedback(earlier.number) : [];
 

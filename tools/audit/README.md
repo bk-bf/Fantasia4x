@@ -220,7 +220,8 @@ pnpm audit:fix --next --keep              # leave the worktree to inspect
 The gate is the board, not a label: a card sitting in `Ready`, worked on the route its `Verify`
 field names.
 
-One issue, one worktree off `origin/dev`, one branch `fix/<slug>`, and the attempt written up
+One issue, one worktree off `origin/dev`, one branch `fix/<title>-<n>` from `branchFor` in
+`lib/branch.mjs`, and the attempt written up
 as a comment on that issue. The prompt hands the model the issue and states plainly that
 AGENTS.md's "stop at a proposal" rule does not apply here, because otherwise every run ends
 with a plan and no diff. It is told not to commit, not to push, not to close the issue, and
