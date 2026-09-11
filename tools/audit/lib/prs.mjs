@@ -68,8 +68,8 @@ export function renderReview({ route, ran, ok, failures, account, outside }) {
   lines.push(
     ok
       ? 'Merging this pull request is yours.'
-      : 'The card is back in Ready. The next attempt is pushed to this pull request, and the ' +
-        'fixer reads what is written here before it starts.',
+      : 'The card is in Failed. Move it to Ready to have the fixer try again; the next attempt is ' +
+        'pushed to this pull request, and the fixer reads what is written here before it starts.',
     '',
     `Ran: ${(ran ?? []).map((r) => `\`${r}\``).join(', ') || 'nothing'}`,
     '',

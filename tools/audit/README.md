@@ -237,7 +237,7 @@ step that fails review is worked again rather than skipped.
 **Nothing is committed unless `pnpm check` and `pnpm test:related` are green.** A green branch
 is pushed and opened as a pull request into `dev`, or pushed onto the pull request it already
 has. A run that cannot get green commits nothing, writes the failure and the model's account to
-the issue as a comment, keeps its worktree, and sends the card back to `Ready`.
+the issue as a comment, keeps its worktree, and moves the card to `Failed`.
 
 Where it ends depends on the route:
 
@@ -300,7 +300,7 @@ anywhere else. `--push` is the same run with the push at the end.
 
 A promotion that is not green leaves `main` untouched and keeps the worktree.
 
-Anything else sends the card back to `Ready` with the failure written on the issue and the
+Anything else moves the card to `Failed` with the failure written on the issue and the
 worktree kept.
 
 Both scripts stop while the audit is paused — they spend the same limits, and the pause is one

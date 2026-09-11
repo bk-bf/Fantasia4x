@@ -188,7 +188,7 @@ out(`--- PR #${pull.number}, route ${route}, ${fixBranch} at ${head.slice(0, 8)}
 if (flag('dry-run')) {
   out(`would verify ${fixBranch} merged onto origin/${BASE} in ${wt}`);
   out(`  green -> ${PR.REVIEW_CONTEXT} success on PR #${pull.number}, card to PR ready`);
-  out(`  red   -> ${PR.REVIEW_CONTEXT} failure, the failure on PR #${pull.number}, card back to Ready`);
+  out(`  red   -> ${PR.REVIEW_CONTEXT} failure, the failure on PR #${pull.number}, card to Failed`);
   process.exit(0);
 }
 
@@ -223,9 +223,9 @@ const sendBack = (failures, ran, account) => {
   }
   sayOnPull(pull.number, P.renderReview({ route, ran, ok: false, failures, account }));
   try {
-    B.moveLane(num, 'ready');
+    B.moveLane(num, 'failed');
   } catch (e) {
-    out(`--- could not move #${num} back to Ready: ${e.message}`);
+    out(`--- could not move #${num} to Failed: ${e.message}`);
   }
 };
 

@@ -389,7 +389,7 @@ try {
         account || '_(the attempt returned nothing)_'
       }\n`
     );
-    B.moveLane(num, 'ready');
+    B.moveLane(num, 'failed');
     exitCode = 0;
   } else {
     out(`--- changed ${files.length} file(s)`);
@@ -402,8 +402,8 @@ try {
       say(num,
         P.renderAttempt({ branch, files, account, verified: 'fail', failures: detail })
       );
-      B.moveLane(num, 'ready');
-      out(`--- not green. Written up on #${num}; worktree kept at ${wt}.`);
+      B.moveLane(num, 'failed');
+      out(`--- not green. Written up on #${num}, card in Failed; worktree kept at ${wt}.`);
       keepTree = true;
       exitCode = 1;
     } else {
@@ -488,7 +488,7 @@ try {
     say(num,
       P.renderAttempt({ branch, files: [], account: '', verified: 'fail', failures: e.message })
     );
-    B.moveLane(num, 'ready');
+    B.moveLane(num, 'failed');
   }
   exitCode = 1;
 } finally {
