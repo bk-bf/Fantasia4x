@@ -431,33 +431,24 @@ try {
       }
 
       const port = route === 'playtest' ? await assignDevPort(wt) : null;
+      if (route === 'playtest') keepTree = true;
+      const body = P.renderPull({ issue: num, step, route, account, ran, files, worktree: wt, port });
       let pull = pushed ? PR.openPullFor(branch) : null;
-      if (pull) out(`--- pushed onto PR #${pull.number}`);
-      else if (pushed) {
+      if (pull) {
+        PR.editPull(pull.number, body);
+        out(`--- pushed onto PR #${pull.number} and rewrote its description`);
+      } else if (pushed) {
         pull = PR.createPull({
           branch,
           title: msg.split('\n')[0],
-          body: PR.pullBody({
-            issue: num,
-            step,
-            route,
-            extra: port ? `Play it with \`cd ${wt} && ./dev.sh\`, on http://localhost:${port}.` : ''
-          }),
+          body,
           labels: route === 'playtest' ? [PR.PLAYTEST_LABEL] : []
         });
         out(`--- opened PR #${pull?.number} into ${BASE}`);
       }
 
-      if (route === 'playtest') {
-        say(num,
-          P.renderPlaytest({ branch, worktree: wt, port, files, account, ran, pushed, pull: pull?.number })
-        );
-        keepTree = true;
-      } else {
-        say(num,
-          P.renderAttempt({ branch, files, account, verified: 'pass', ran, pushed, pull: pull?.number })
-        );
-      }
+      if (!pull)
+        say(num, P.renderAttempt({ branch, files, account, verified: 'pass', ran, pushed }));
 
       if (!step) {
         try {

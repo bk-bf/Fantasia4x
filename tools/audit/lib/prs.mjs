@@ -78,52 +78,58 @@ export function renderReview({ route, ran, ok, failures, account, outside }) {
   return lines.join('\n') + '\n';
 }
 
-export function renderPlaytest({ branch, worktree, port, files, account, ran, pushed, pull }) {
+export function renderPull({ issue, step, route, account, ran, files, worktree, port }) {
   const lines = [
-    `**Committed on \`${branch}\` and left for you to play. It is not merged.**`,
+    step ? `Part of #${issue}\nStep: ${step}` : `Fixes #${issue}`,
     '',
-    '## What it changed',
+    '## What changed',
     '',
-    account.trim() || '_(the attempt returned nothing)_',
+    account.trim().replace(/^(#{2,5}) /gm, '#$1 ') || '_(the fixer returned no account)_',
     '',
-    '## Play it',
+    '## Verified',
     '',
-    'The worktree has its own `.devport`, so this runs alongside whatever is already on 5173 ' +
-      'and does not touch your checkout.',
+    ...((ran ?? []).length ? ran.map((r) => `- \`${r}\` — green on the branch`) : ['- nothing ran']),
     '',
-    '```bash',
-    `cd ${worktree}`,
-    './dev.sh',
-    '```',
-    '',
-    `It comes up on http://localhost:${port}.`,
-    '',
-    '## Then',
-    '',
-    pull
-      ? `If it plays right, merge pull request #${pull}. If it does not, say what is wrong on ` +
-        'the pull request and move the card back to `Ready`; the fixer reads the pull request ' +
-        'before its next attempt.'
-      : `\`${branch}\` could not be pushed, so there is no pull request yet.`,
-    '',
-    'The branch and the worktree stay until it is merged or worked again.',
-    '',
-    `Verified: ${(ran ?? []).map((r) => `\`${r}\``).join(', ') || 'nothing ran'} · files changed: ${
-      files.length
-    }${pushed ? ` · pushed as \`${branch}\`` : ''}`,
+    route === 'playtest'
+      ? 'The reviewer skips a playtest pull request, because whether it plays right is yours to ' +
+        'judge. CI still runs on it.'
+      : `\`review.mjs\` re-merges this onto a fresh \`dev\`, runs the ${route} route again and sets ` +
+        '`audit/review` on the latest commit. CI runs on it too.',
     ''
   ];
 
-  if (files.length) {
+  if (route === 'playtest' && worktree)
     lines.push(
-      '<details><summary>files</summary>',
+      '## Play it',
+      '',
+      'The worktree has its own `.devport`, so it runs beside whatever is already on 5173.',
+      '',
+      '```bash',
+      `cd ${worktree}`,
+      './dev.sh',
+      '```',
+      '',
+      `It comes up on http://localhost:${port}.`,
+      ''
+    );
+
+  lines.push(
+    '## Then',
+    '',
+    'Merge it when it is right. If it is not, say what is wrong here and move the card back to ' +
+      '`Ready`; the fixer reads this pull request before its next attempt.',
+    ''
+  );
+
+  if (files?.length)
+    lines.push(
+      `<details><summary>${files.length} file(s)</summary>`,
       '',
       ...files.map((f) => `- \`${f}\``),
       '',
       '</details>',
       ''
     );
-  }
 
   lines.push('_Written unattended by `tools/audit/fix.mjs`._');
   return lines.join('\n') + '\n';

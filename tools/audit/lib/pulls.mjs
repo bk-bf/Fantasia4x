@@ -43,17 +43,8 @@ export function mergedPulls() {
   ).filter((p) => p.headRefName.startsWith('fix/'));
 }
 
-export function pullBody({ issue, step, route, extra }) {
-  return [
-    step ? `Part of #${issue}\nStep: ${step}` : `Fixes #${issue}`,
-    '',
-    `Verify: ${route}`,
-    ...(extra ? ['', extra] : []),
-    '',
-    '_Opened unattended by `tools/audit/fix.mjs`._',
-    ''
-  ].join('\n');
-}
+export const editPull = (n, body) =>
+  gh(['api', '-X', 'PATCH', `repos/${repo()}/pulls/${n}`, '--input', '-'], JSON.stringify({ body }));
 
 export function linkOf(pull) {
   const body = pull.body ?? '';
