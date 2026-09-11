@@ -5,10 +5,10 @@
 
 > **Related:** [DESIGN](../../game/DESIGN.md) · [DECISIONS](../../game/DECISIONS.md) (ADR-032) · [ROADMAP](ROADMAP.md) · [TRAITS (archived)](../archive/TRAITS-2026-07-10.md) · [ENTITIES_SPAWNING (archived)](../archive/ENTITIES_SPAWNING-2026-07-10.md) · [ENGINE-PERFORMANCE](../archive/ENGINE-PERFORMANCE.md)
 
-**Status:** Phase 1 **built 2026-07-14** (landed as **ADR-032** — this spec's "ADR-031" draft number
-was taken by hide wear in the interim). The **encounter balance pass is the one open item** (§12).
-Phase 2 (screen-invisible stealthy creatures) stays deferred. Build-time deviations, each reconciling
-the spec against systems that landed after it locked:
+**Status:** Phase 1 **built 2026-07-14**, encounter balance pass closed 2026-09-11 (landed as
+**ADR-032** — this spec's "ADR-031" draft number was taken by hide wear in the interim). All 15
+acceptance boxes (§12) are done. Phase 2 (screen-invisible stealthy creatures) stays deferred.
+Build-time deviations, each reconciling the spec against systems that landed after it locked:
 
 - `matted-hide` is NOT a new trait — the existing `downy-coat → thick-fur → winter-mane` pelt chain
   IS the beast tanky fork (ADR-029 moved natural armour onto the trait), and `getStealth` now drags
@@ -328,9 +328,22 @@ own pass. Also parks the **hearing/smell detection channel** (§5 realism upgrad
 - [x] Constraint audit re-verified: no existing pawn/creature ≥ ~0.3 stealth without deliberate build.
   *(2026-07-14 — enforced by `tests/game/core/stealth.test.ts` §9 suite: default pawn ≈ 0.2, positive `stealth`
   effects whitelisted, big beast + prowl stays < 1.0.)*
-- [ ] Encounter balance pass after always-on detection lands. *(OPEN — mobs no longer acquire pawns
-  instantly: ~9 %/check at the vision border, ~34 % adjacent for a default pawn. Playtest wolf/goblin
-  encounters and tune §13 dials in `core/rules/body/stealth.ts`.)*
+- [x] Encounter balance pass after always-on detection lands. *(2026-09-11 — headless,
+  `tests/game/systems/stealthEncounterPacing.test.ts`, `HeadlessSession`, a default (non-stealth)
+  pawn vs a stationary `orc_reaver`, mean of 8 seeds, on `fix/42` at `63316b05`. Time to first
+  contact: **1533 ticks (~26 s) at the vision border, 271 ticks (~4.5 s) adjacent** — against the
+  pre-stealth baseline of instant acquisition (reproduced in the same harness by pre-stamping
+  `stealthChecks` detected, per the `entitySim.test.ts` fixture convention), that is **1533×** and
+  **271×** slower to be noticed. Deaths per encounter barely move against that same baseline —
+  **5/8 → 6/8** at the border, **7/8 → 7/8** adjacent — because once contact happens the fight's
+  lethality (an unarmoured pawn is usually downed in the first hit and then bleeds out alone,
+  unrelated to stealth) is the same either way. The gap is the intended one: always-on detection
+  buys a real window before a non-stealther is noticed without changing how dangerous the
+  encounter is once it starts, which is the filter-on-an-existing-gate design ADR-032 describes —
+  no dial in §13 needs tuning for this. Wolf was not separately measured: it is `nocturnalAggro`
+  rather than always-`aggressive`, so a stationary-mob harness would mostly exercise the day/night
+  gate instead of detection; `orc_reaver`'s `aggressive` behaviour isolates the stealth gate
+  cleanly, which is what this item asks to measure.)*
 - [x] ~~ADR-031~~ **ADR-032** written into `DECISIONS.md`.
   *(2026-07-14 — the draft number was taken by hide wear.)*
 - [x] `docs/game/DESIGN.md` (combat/mechanics) + `ARCHITECTURE.md` (new `core/rules/body/stealth.ts`) updated.
