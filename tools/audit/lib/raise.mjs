@@ -57,7 +57,7 @@ const FAMILY_TYPE = {
   'single-source': 'refactor'
 };
 
-const MAX_EVIDENCE = 20;
+const BODY_LIMIT = 60000;
 
 /** Two path segments is the coherence unit: `game/services`, `components/UI`. A rule firing
  *  across unrelated trees becomes several issues rather than one unreviewable PR. */
@@ -109,88 +109,65 @@ export function groupFindings(db) {
   return [...groups.values()];
 }
 
-function renderBody(g, sha, follows = []) {
+function renderBody(g, sha, follows, budget) {
   const n = g.findings.length;
-  const shown = g.findings.slice(0, MAX_EVIDENCE);
-  const rest = n - shown.length;
-
-  const lines = [];
-  lines.push(`# ${titleFor(g)}`);
-  lines.push('');
   const authority = authorityLink(g.authority);
-  lines.push(
+  const head = [
+    `# ${titleFor(g)}`,
+    '',
     `> **Related:** [\`tools/audit\`](${blobUrl('tools/audit/README.md', null, sha)})` +
       (authority ? ` · rule source ${authority}` : '') +
-      (follows.length ? ` · follows ${follows.map((n) => `#${n}`).join(', ')}` : '')
-  );
-  lines.push('');
-
-  lines.push('## What breaks');
-  lines.push('');
-  lines.push(
+      (follows.length ? ` · follows ${follows.map((i) => `#${i}`).join(', ')}` : ''),
+    '',
+    '## What breaks',
+    '',
     `Rule \`${g.rule_id}\` — ${g.rule_title} — holds in ${n} ` +
       `place${n === 1 ? '' : 's'} under \`${g.group}\`. Each one is listed below with the ` +
-      `evidence the audit required before it would record a fail.`
-  );
-  lines.push('');
-  if (shown.length) {
-    lines.push(`The clearest case: ${linkify(issueRef(shown[0].summary), sha)}`);
-    lines.push('');
-  }
-
-  lines.push('## Evidence');
-  lines.push('');
-  for (const f of shown) {
-    const at = blobUrl(f.file, f.start_line, sha);
-    lines.push(`- [\`${f.file}:${f.start_line}\`](${at}) — ${linkify(issueRef(f.summary), sha)}`);
-    for (const e of safeJson(f.evidence)) lines.push(`  - ${linkify(issueRef(e), sha)}`);
-  }
-  if (rest > 0) {
-    lines.push('');
-    lines.push(
-      `…and ${rest} more under the same rule. \`node tools/audit/audit.mjs findings\` lists them all.`
-    );
-  }
-  lines.push('');
-
-  lines.push('## Why nothing caught it');
-  lines.push('');
-  lines.push(
+      `audit's one-sentence account of it.`,
+    '',
+    '## Evidence',
+    ''
+  ];
+  const tail = [
+    '',
+    '## Why nothing caught it',
+    '',
     `Nothing below the judgment tier can decide this one: it is why \`${g.rule_id}\` ` +
       `exists at T2 rather than as a lint rule or a test. ` +
       (authority ? `The invariant is stated in ${authority}. ` : '') +
       `If the fix makes the class mechanically checkable, add that check and demote the rule ` +
-      `— \`node tools/audit/audit.mjs demote\` tracks which rules have earned it.`
-  );
-  lines.push('');
-
-  lines.push('## Remediation');
-  lines.push('');
-  lines.push(`- [ ] Confirm each citation above still holds; drop any whose evidence does not.`);
-  lines.push(`- [ ] Fix every remaining site under \`${g.group}\` — this is one class, one PR.`);
-  lines.push(
-    `- [ ] Add the check that would have caught it, or record why it stays a judgment call.`
-  );
-  lines.push(`- [ ] \`pnpm check\` and \`pnpm test:related\` on the changed files are green.`);
-  lines.push('');
-
-  lines.push('## Out of scope');
-  lines.push('');
-  lines.push(
+      `— \`node tools/audit/audit.mjs demote\` tracks which rules have earned it.`,
+    '',
+    '## Remediation',
+    '',
+    `- [ ] Confirm each citation above still holds; drop any whose evidence does not.`,
+    `- [ ] Fix every remaining site under \`${g.group}\` — this is one class, one PR.`,
+    `- [ ] Add the check that would have caught it, or record why it stays a judgment call.`,
+    `- [ ] \`pnpm check\` and \`pnpm test:related\` on the changed files are green.`,
+    '',
+    '## Out of scope',
+    '',
     `Sites outside \`${g.group}\`, and any other rule's findings — they are their own ` +
-      `issues. Widening this PR past the citations above makes it unreviewable.`
-  );
-  lines.push('');
-  return lines.join('\n');
-}
+      `issues. Widening this PR past the citations above makes it unreviewable.`,
+    ''
+  ];
+  const more = (rest) => [
+    '',
+    `…and ${rest} more under the same rule. \`node tools/audit/audit.mjs findings\` lists them all.`
+  ];
 
-const safeJson = (s) => {
-  try {
-    return JSON.parse(s ?? '[]');
-  } catch {
-    return [];
+  let room = budget - [...head, ...more(n), ...tail].join('\n').length;
+  const sites = [];
+  for (const f of g.findings) {
+    const at = blobUrl(f.file, f.start_line, sha);
+    const line = `- [\`${f.file}:${f.start_line}\`](${at}) — ${linkify(issueRef(f.summary), sha)}`;
+    if (line.length + 1 > room) break;
+    sites.push(line);
+    room -= line.length + 1;
   }
-};
+  const rest = n - sites.length;
+  return [...head, ...sites, ...(rest > 0 ? more(rest) : []), ...tail].join('\n');
+}
 
 function titleFor(g) {
   const t = g.rule_title ?? g.rule_id;
@@ -250,6 +227,7 @@ export function upsertIssue(root, g, rulesById, sha, force = false) {
   const verify = rule.verify ?? FAMILY_VERIFY[g.family] ?? 'tests';
   const files = [...new Set(own.findings.map((f) => f.file))];
   const symbols = [...new Set(own.findings.map((f) => f.symbol_key))];
+  const budget = BODY_LIMIT - JSON.stringify({ files, symbols }).length;
   const subarea = subareaFor(files);
   const type = rule.type ?? FAMILY_TYPE[g.family] ?? 'fix';
   const area = rule.area ?? AREA_FOR_SUBAREA[subarea] ?? 'sim';
@@ -261,7 +239,7 @@ export function upsertIssue(root, g, rulesById, sha, force = false) {
     if (existing.data.origin === 'human') return result(path, 'skipped-human');
     if (existing.data.ready === true && !force) return result(path, 'skipped-approved');
     const before = existing.body;
-    const body = renderBody(own, sha, follows);
+    const body = renderBody(own, sha, follows, budget);
     const changed = force || before.trim() !== body.trim();
     patchIssue(path, {
       title: titleFor(g),
@@ -301,7 +279,7 @@ export function upsertIssue(root, g, rulesById, sha, force = false) {
       created: today(),
       updated: today()
     },
-    body: renderBody(own, sha, follows)
+    body: renderBody(own, sha, follows, budget)
   });
   const created = listIssues(root).find((i) => i.data.id === id);
   return result(created ? created.path : id, 'created');

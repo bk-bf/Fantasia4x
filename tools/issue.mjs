@@ -127,7 +127,14 @@ function unnest(text) {
 }
 
 function repair(body, sha) {
-  let out = unnest(issueRef(body ?? ''));
+  return (body ?? '')
+    .split(/(<!--[\s\S]*?-->)/)
+    .map((part, i) => (i % 2 ? part : repairProse(part, sha)))
+    .join('');
+}
+
+function repairProse(text, sha) {
+  let out = unnest(issueRef(text));
   for (const f of scanBody(out, sha)) {
     if (!f.real) continue;
     if (f.kind === 'relative-link') {

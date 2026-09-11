@@ -183,7 +183,9 @@ about code that no longer exists.
 A finding is a verdict row. An issue is a unit of work. `audit issues` turns one into the
 other by grouping open findings by **(rule, two-path-segment module group)**: a rule firing
 forty times is one class of defect, and the class is what a fixer can close in a single PR.
-Each issue carries every citation the audit demanded before it would record a fail.
+Each issue lists its sites one per line, as a link and the audit's one-sentence summary, and
+stops listing before the body passes 60,000 characters, under GitHub's 65,536 limit. The full
+evidence behind each site stays in the ledger.
 
 ```bash
 node tools/audit/audit.mjs issues --dry-run   # what would be written
