@@ -7,7 +7,8 @@
 import { readIssue, writeIssue, patchIssue, today, listIssues } from './gh.mjs';
 import { planGeneration } from './generations.mjs';
 import { subareaFor } from './subarea.mjs';
-import { blobUrl, linkify, authorityLink, issueRef } from './links.mjs';
+import { blobUrl, linkify, authorityLink, issueRef, stripLinks } from './links.mjs';
+import { open, findingsForIssue } from './ledger.mjs';
 
 // Family defaults; an individual rule may override with its own `kind`/`severity`.
 const FAMILY_KIND = {
@@ -192,6 +193,28 @@ export function renderNewFindings(g, fresh) {
   return lines.join('\n');
 }
 
+export function ledgerEvidence(issueNumber) {
+  const findings = findingsForIssue(open(), issueNumber);
+  if (findings.length === 0) return '';
+  const lines = [
+    '',
+    '---',
+    '',
+    '# Evidence from the audit ledger',
+    '',
+    `The issue lists each site with a one-sentence summary. This is the evidence the audit ` +
+      `recorded for all ${findings.length} of them, including any the issue body does not list.`,
+    ''
+  ];
+  for (const f of findings) {
+    lines.push(`- \`${f.file}:${f.start_line}\` — ${(f.summary ?? '').trim()}`);
+    for (const e of JSON.parse(f.evidence ?? '[]')) {
+      lines.push(`  - ${String(e).replace(/\s*\n\s*/g, ' ')}`);
+    }
+  }
+  return `${lines.join('\n')}\n`;
+}
+
 const AREA_FOR_SUBAREA = {
   components: 'ui', webgl: 'ui', routes: 'ui', stores: 'ui', actions: 'ui', audio: 'ui',
   database: 'data',
@@ -240,7 +263,7 @@ export function upsertIssue(root, g, rulesById, sha, force = false) {
     if (existing.data.ready === true && !force) return result(path, 'skipped-approved');
     const before = existing.body;
     const body = renderBody(own, sha, follows, budget);
-    const changed = force || before.trim() !== body.trim();
+    const changed = force || stripLinks(before).trim() !== stripLinks(body).trim();
     patchIssue(path, {
       title: titleFor(g),
       kind,

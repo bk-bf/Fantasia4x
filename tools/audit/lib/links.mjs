@@ -30,6 +30,8 @@ export const blobUrl = (file, line, sha) =>
 
 export const issueUrl = (n) => `${BASE}/issues/${n}`;
 
+export const stripLinks = (text) => String(text).replace(/\[([^\]]*)\]\([^)]*\)/g, '$1');
+
 /** GitHub auto-links a bare `#12`, and renders a backticked URL as code. Anything that names
  *  an issue in this repo becomes the bare reference. */
 export function issueRef(text) {
