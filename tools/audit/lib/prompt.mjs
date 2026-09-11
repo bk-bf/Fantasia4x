@@ -13,6 +13,7 @@
 
 import { readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
+import { MAX_EVIDENCE_CHARS } from './verdict.mjs';
 
 const AUTHORITY_LINES = 60;
 
@@ -123,7 +124,9 @@ export function buildPrompt({ root, symbol, rules, slice }) {
             rule_id: '<the rule id>',
             status: 'pass | fail | n/a | undecidable',
             summary: '<one sentence; required for fail, otherwise optional>',
-            evidence: ['<one entry per fail_requires item, in order>'],
+            evidence: [
+              `<one entry per fail_requires item, in order, at most ${MAX_EVIDENCE_CHARS} characters each>`
+            ],
             na_clause:
               '<required when status is n/a: which trigger condition you believe does not hold>',
             missing: '<required when status is undecidable: exactly what you would have needed>'
@@ -141,6 +144,9 @@ export function buildPrompt({ root, symbol, rules, slice }) {
   lines.push('- `pass` is the default. Use it when the rule simply does not fire on this code.');
   lines.push(
     "- `fail` requires every item in that rule's fail_requires list, filled in with concrete file:line and values. No evidence means no fail."
+  );
+  lines.push(
+    `- Each evidence entry is at most ${MAX_EVIDENCE_CHARS} characters: the fact and its file:line, not the searches that led to it. A longer entry is rejected.`
   );
   lines.push(
     '- `n/a` is for a rule that should never have been handed to you; name the trigger condition that does not hold. It is checked against the harness, so a wrong `n/a` is visible.'
