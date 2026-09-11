@@ -57,6 +57,8 @@ function pick() {
       (x) => x.data.id === named || x.path === String(named)
     );
     if (!issue) fail(`no issue ${named}`);
+    if (B.laneOf(issue.number) === 'manual')
+      fail(`#${issue.number} is in Manual, so Kirill is working it by hand`);
     const card = B.itemFor(issue.number);
     const route = (card?.verify ?? '').toLowerCase();
     if (!ROUTES.has(route)) fail(`#${issue.number} has no Verify route on the board`);

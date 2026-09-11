@@ -160,7 +160,7 @@ export async function verifyTests(cwd, files) {
     tail: errorLines(check.out + check.err)
   });
 
-  const src = files.filter((f) => /^src\/.*\.(ts|svelte)$/.test(f) && !/\.test\.ts$/.test(f));
+  const src = files.filter((f) => /^src\/.*\.(ts|svelte|json)$/.test(f) && !/\.test\.ts$/.test(f));
   const tests = files.filter((f) => /^src\/.*\.test\.ts$/.test(f));
 
   if (src.length) {
@@ -180,7 +180,7 @@ export async function verifyTests(cwd, files) {
       name: 'tests',
       code: 2,
       tail:
-        'no .ts, .svelte or .test.ts file changed, so nothing was executed. A data-only or ' +
+        'no .ts, .svelte, .json or .test.ts file under src changed, so nothing was executed. A ' +
         'doc-only change is not verified until a test names it.'
     });
   }

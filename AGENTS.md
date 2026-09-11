@@ -191,7 +191,7 @@ stays the ledger's key and should not appear in anything a person reads.
 **Triage through the lanes, never around them.** The board is
 [projects/4](https://github.com/users/bk-bf/projects/4) and its columns are an order:
 `Backlog` → `Ready` → `In progress` → `PR ready` → `On dev` → `Done`, with
-`Blocked on you`, `Failed` and `Rejected` off to the side. The board carries an issue as far as `Ready`;
+`Blocked on you`, `Manual`, `Failed` and `Rejected` off to the side. The board carries an issue as far as `Ready`;
 from there the work is a pull request, and the card follows it. `Rejected` is the first column
 on purpose. A change to the lanes inserts or drops the one option it concerns and keeps every
 other option where Kirill put it; rewriting the whole option list moves his columns.
@@ -212,6 +212,10 @@ Planned work is an issue from the start, and waits in `Backlog` until Kirill mov
   elsewhere. An agent moves a card out of `Failed` only when he says so.
 - **`In progress`** — a branch exists and an agent is on it. Once the fixer has it green it is a
   pull request into `dev`, and the card stays here while `review.mjs` verifies it.
+- **`Manual`** — Kirill is working it by hand. `review.mjs` skips its pull request, `board-sync.py`
+  does not update its branch, and `fix.mjs` refuses it. He moves it to `PR ready` to have it
+  reviewed or to `Ready` to hand it to the fixer; when its pull request merges, `after-merge.mjs`
+  moves it to `On dev`, the one move out of it an agent makes.
 - **`PR ready`** — the pull request is ready for Kirill: `review.mjs` passed it, or it
   is a `needs playtest` pull request, which the reviewer skips. He merges it, or comments on it
   and moves the card back to `Ready`. Agents put cards here, and `after-merge.mjs` takes them out
@@ -226,7 +230,7 @@ Planned work is an issue from the start, and waits in `Backlog` until Kirill mov
 - **`Rejected`** — closed without being wanted, with the reason as a comment on the issue.
   Kirill puts cards here.
 
-**`Blocked on you` and `Rejected` are his lanes.** Put a card in when it belongs there.
+**`Blocked on you`, `Manual` and `Rejected` are his lanes.** Put a card in when it belongs there.
 **Never take one out** — he is the only one who decides a thing he asked to look at has been
 looked at. And do not put one back because he moved it out: him moving a card is the answer,
 not a mistake to correct. Nothing watches those lanes for drift.
