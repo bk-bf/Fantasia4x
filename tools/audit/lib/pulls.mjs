@@ -1,6 +1,7 @@
 import { execFileSync } from 'node:child_process';
 
 import { ROOT, BASE } from './harness.mjs';
+import { branchProblem } from './branch.mjs';
 
 export const REVIEW_CONTEXT = 'audit/review';
 export const PLAYTEST_LABEL = 'needs playtest';
@@ -54,6 +55,8 @@ export function linkOf(pull) {
 }
 
 export function createPull({ branch, title, body, labels = [] }) {
+  const problem = branchProblem(branch);
+  if (problem) throw new Error(problem);
   const args = ['pr', 'create', '--base', BASE, '--head', branch, '--title', title, '--body-file', '-'];
   for (const l of labels) args.push('--label', l);
   gh(args, body);

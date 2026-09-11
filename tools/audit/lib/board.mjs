@@ -9,6 +9,7 @@ export const LANES = {
   backlog: 'e11e56ce',
   'blocked on you': '990e2322',
   ready: '14aee711',
+  failed: '3cfbabb8',
   'in progress': '9e8caff2',
   'pr ready': 'fee29b9d',
   'on dev': 'faf70e85',
