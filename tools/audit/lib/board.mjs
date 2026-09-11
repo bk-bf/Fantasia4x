@@ -78,19 +78,26 @@ function applySelect(itemId, fieldId, optionId) {
   ]);
 }
 
-export function setSelect(n, fieldName, optionName) {
-  const item = itemFor(n);
-  if (!item) throw new Error(`#${n} is not on the board`);
-  const field = fields().find((f) => f.name.toLowerCase() === fieldName.toLowerCase());
-  if (!field) throw new Error(`no field "${fieldName}" on the board`);
+export function fieldNamed(name) {
+  const field = fields().find((f) => f.name.toLowerCase() === String(name).toLowerCase());
+  if (!field) throw new Error(`no field "${name}" on the board`);
+  return field;
+}
+
+export function optionFor(fieldName, optionName) {
+  const field = fieldNamed(fieldName);
   const option = field.options.find((o) => o.name.toLowerCase() === String(optionName).toLowerCase());
   if (!option)
     throw new Error(
       `"${optionName}" is not an option of ${field.name} — one of: ${field.options.map((o) => o.name).join(', ')}`
     );
-  const before = item[field.name.toLowerCase()] ?? null;
+  return { field, option };
+}
+
+export function setItemSelect(itemId, fieldName, optionName, before = null) {
+  const { field, option } = optionFor(fieldName, optionName);
   if (before === option.name) return { from: before, to: option.name, moved: false };
-  applySelect(item.id, field.id, option.id);
+  applySelect(itemId, field.id, option.id);
   invalidate();
   return { from: before, to: option.name, moved: true };
 }
@@ -132,7 +139,10 @@ export function moveLane(n, to) {
 
 export function addToBoard(n) {
   const url = `https://github.com/${OWNER}/Fantasia4x/issues/${n}`;
-  gh(['project', 'item-add', PROJECT_NUMBER, '--owner', OWNER, '--url', url]);
+  const added = JSON.parse(
+    gh(['project', 'item-add', PROJECT_NUMBER, '--owner', OWNER, '--url', url, '--format', 'json'])
+  );
   invalidate();
-  return itemFor(n);
+  if (!added?.id) throw new Error(`gh project item-add returned no card for #${n}`);
+  return added.id;
 }

@@ -4,7 +4,8 @@
 // mean nothing in an issue, an issue URL inside backticks that never becomes a link, and a
 // label invented one letter away from the one that already exists.
 //
-//   node tools/issue.mjs create --title T --body-file - [--label L]...
+//   node tools/issue.mjs create --title T --type T --area A --size S --body-file - [--label L]...
+//   node tools/issue.mjs fields <n> [--type T] [--verify V] [--area A] [--size S]
 //   node tools/issue.mjs edit <n> [--title T] [--body-file -] [--add-label L] [--remove-label L]
 //   node tools/issue.mjs comment <n> --body-file -
 //   node tools/issue.mjs close <n> --commit <sha>
@@ -23,7 +24,15 @@ import {
   checkBody
 } from './audit/lib/schema.mjs';
 import { linkify, issueRef, indexedSha, blobUrl, resolveRepoPath } from './audit/lib/links.mjs';
-import { moveLane, setSelect, addToBoard, itemFor, boardItems } from './audit/lib/board.mjs';
+import {
+  moveLane,
+  setItemSelect,
+  optionFor,
+  fieldNamed,
+  addToBoard,
+  itemFor,
+  boardItems
+} from './audit/lib/board.mjs';
 
 process.stdout.on('error', (e) => {
   if (e.code === 'EPIPE') process.exit(0);
@@ -44,6 +53,37 @@ const die = (m) => {
 
 const gh = (args, input) =>
   execFileSync('gh', args, { encoding: 'utf8', input, stdio: ['pipe', 'pipe', 'inherit'] });
+
+const FLAG_FIELD = { type: 'Work type', verify: 'Verify', area: 'Area', size: 'Size' };
+
+const requireOption = (field, flag, value) => {
+  if (!value)
+    die(`--${flag} is required — one of: ${fieldNamed(field).options.map((o) => o.name).join(', ')}`);
+  try {
+    optionFor(field, value);
+  } catch (e) {
+    die(e.message);
+  }
+};
+
+function fillCard(n, values) {
+  const wanted = Object.entries(values).filter(([, value]) => value);
+  let itemId;
+  try {
+    itemId = addToBoard(n);
+  } catch (e) {
+    return wanted.map(([field]) => ({ field, why: e.message }));
+  }
+  const unset = [];
+  for (const [field, value] of wanted) {
+    try {
+      setItemSelect(itemId, field, value);
+    } catch (e) {
+      unset.push({ field, why: e.message });
+    }
+  }
+  return unset;
+}
 
 const readBody = () => {
   const f = arg('body-file');
@@ -159,6 +199,8 @@ if (cmd === 'check-labels') {
       if (!card.status) gaps.push('no Status — the card is on the board in no lane');
       if (!card['work type']) gaps.push('no Work type on the board');
       if (!card.verify) gaps.push('no Verify route on the board');
+      if (!card.area) gaps.push('no Area on the board');
+      if (!card.size) gaps.push('no Size on the board');
       const sev = (card.labels ?? []).find((l) => SEVERITY_PRIORITY[l]);
       if (sev && card.priority !== SEVERITY_PRIORITY[sev]) {
         gaps.push(
@@ -266,6 +308,10 @@ if (cmd === 'check-labels') {
   const type = arg('type');
   if (!type) die(`--type is required — one of: ${TYPES.join(', ')}`);
   if (!TYPES.includes(type)) die(`unknown --type "${type}" — one of: ${TYPES.join(', ')}`);
+  const area = arg('area');
+  const size = arg('size');
+  requireOption('Area', 'area', area);
+  requireOption('Size', 'size', size);
   const body = prepare(readBody());
   guard(labels, body, { template: true, workType: type });
   const args = ['issue', 'create', '--title', title, '--body-file', '-'];
@@ -282,14 +328,54 @@ if (cmd === 'check-labels') {
     'needs playtest': 'playtest'
   };
   const verify = labels.map((l) => VERIFY_FIELD[l]).find(Boolean);
-  try {
-    addToBoard(n);
-    setSelect(n, 'Status', 'Backlog');
-    setSelect(n, 'Work type', type);
-    if (verify) setSelect(n, 'Verify', verify);
-  } catch (e) {
-    process.stderr.write(`note: created #${n} but could not set its fields: ${e.message}\n`);
+  const unset = fillCard(n, {
+    Status: 'Backlog',
+    'Work type': type,
+    Verify: verify,
+    Area: area,
+    Size: size
+  });
+  if (unset.length) {
+    const repair = [`--type ${type}`, verify && `--verify ${verify}`, `--area ${area}`, `--size ${size}`]
+      .filter(Boolean)
+      .join(' ');
+    process.stderr.write(
+      `created #${n}, but its board card is missing:\n` +
+        unset.map((u) => `  - ${u.field}: ${u.why}\n`).join('') +
+        `repair it with:\n  pnpm issue fields ${n} ${repair}\n` +
+        (unset.some((u) => u.field === 'Status') ? `  pnpm issue lane ${n} backlog\n` : '')
+    );
+    process.exit(1);
   }
+} else if (cmd === 'fields') {
+  const n = argv[1] ?? die('which issue?');
+  const wanted = Object.entries(FLAG_FIELD)
+    .map(([flag, field]) => [field, arg(flag)])
+    .filter(([, value]) => value);
+  if (!wanted.length)
+    die(`nothing to set — pass one or more of ${Object.keys(FLAG_FIELD).map((f) => `--${f}`).join(', ')}`);
+  for (const [field, value] of wanted) {
+    try {
+      optionFor(field, value);
+    } catch (e) {
+      die(e.message);
+    }
+  }
+  const item = itemFor(n);
+  const itemId = item?.id ?? addToBoard(n);
+  let failed = 0;
+  for (const [field, value] of wanted) {
+    try {
+      const r = setItemSelect(itemId, field, value, item?.[field.toLowerCase()] ?? null);
+      process.stdout.write(
+        `#${n}  ${field}: ${r.from ?? 'unset'} -> ${r.to}${r.moved ? '' : ' (already set)'}\n`
+      );
+    } catch (e) {
+      failed += 1;
+      process.stderr.write(`#${n}  ${field}: ${e.message}\n`);
+    }
+  }
+  if (failed) process.exit(1);
 } else if (cmd === 'edit') {
   const n = argv[1] ?? die('which issue?');
   const add = all('add-label');
