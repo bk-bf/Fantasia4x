@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+set -uo pipefail
+
+ROOT="$(cd "$(git rev-parse --git-common-dir)/.." && pwd)"
+
+NEW=()
+while read -r _local_ref local_sha remote_ref remote_sha; do
+  [[ "$local_sha" =~ ^0+$ ]] && continue
+  [[ "$remote_sha" =~ ^0+$ ]] || continue
+  [[ "$remote_ref" == refs/heads/* ]] || continue
+  NEW+=("${remote_ref#refs/heads/}")
+done
+
+(( ${#NEW[@]} )) || exit 0
+
+node --input-type=module -e "
+import { branchProblem } from 'file://$ROOT/tools/audit/lib/branch.mjs';
+const bad = process.argv.slice(1).map(branchProblem).filter(Boolean);
+if (bad.length) {
+  for (const b of bad) console.error('pre-push: ' + b);
+  console.error('  Rename it with: git branch -m <old> <new>. Bypass once with: git push --no-verify');
+  process.exit(1);
+}
+" "${NEW[@]}"
