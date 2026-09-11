@@ -192,7 +192,9 @@ stays the ledger's key and should not appear in anything a person reads.
 [projects/4](https://github.com/users/bk-bf/projects/4) and its columns are an order:
 `Backlog` → `Ready` → `In progress` → `PR ready` → `On dev` → `Done`, with
 `Blocked on you` and `Rejected` off to the side. The board carries an issue as far as `Ready`;
-from there the work is a pull request, and the card follows it.
+from there the work is a pull request, and the card follows it. `Rejected` is the first column
+on purpose. A change to the lanes inserts or drops the one option it concerns and keeps every
+other option where Kirill put it; rewriting the whole option list moves his columns.
 
 - **`Backlog`** — raised, not yet evaluated. The audit raises here and nowhere else.
 
