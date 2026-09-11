@@ -227,34 +227,37 @@ with a plan and no diff. It is told not to commit, not to push, not to close the
 that `Out of scope` is binding.
 
 A `feature` card is built one step per branch. The fixer hands the model only the first open
-checkbox under `## Steps`, and that step goes through `In review`, `Needs approval` and
-`Approved` like any defect. When it merges, `review.mjs --merge` ticks the step. If steps
-remain, the card goes back to `Ready` for the next one instead of closing; the issue closes when
-its last step lands. A step is ticked only once it is on `dev`, so a step that fails review is
-worked again rather than skipped.
+checkbox under `## Steps`, and its pull request says `Part of #n` and names the step on a
+`Step:` line instead of `Fixes #n`, so merging it does not close the issue. When it merges,
+`after-merge.mjs` ticks the step. If steps remain, the card goes back to `Ready` for the next
+one; the issue closes when its last step lands. A step is ticked only once it is on `dev`, so a
+step that fails review is worked again rather than skipped.
 
 **Nothing is committed unless `pnpm check` and `pnpm test:related` are green.** A green branch
-is pushed to origin so the diff is readable from anywhere; `review.mjs` deletes it there when it
-merges. A run that
-cannot get green commits nothing, writes the failure and the model's account to the issue as a
-comment, keeps its worktree, and sends the card back to `Ready`.
+is pushed and opened as a pull request into `dev`, or pushed onto the pull request it already
+has. A run that cannot get green commits nothing, writes the failure and the model's account to
+the issue as a comment, keeps its worktree, and sends the card back to `Ready`.
 
 Where it ends depends on the route:
 
 | Route | Green ends at |
 | --- | --- |
-| `tests`, `headless` | `In review`, for `review.mjs` to verify on the merge and land. |
-| `playtest` | `Needs playtest`, committed and **not** merged. The branch is pushed, the worktree is kept, and it is given a free port in `.devport` so `./dev.sh` inside it runs beside the checkout's own dev server instead of fighting it for 5173. Only Kirill merges one. |
+| `tests`, `headless` | A pull request into `dev`, for `review.mjs` to verify on the merge and CI to check. |
+| `playtest` | A pull request labelled `needs playtest`. The worktree is kept, and it is given a free port in `.devport` so `./dev.sh` inside it runs beside the checkout's own dev server instead of fighting it for 5173. |
 
-The card moves `Ready → In progress → In review` or `→ Needs playtest`. An interrupted run (SIGINT/SIGTERM/SIGHUP)
-sends it back to `Ready` before exiting and leaves the worktree in place. A card left `In
-progress` with no worktree behind it — a run that was killed outright — is released by the next
-run before it picks anything.
+The card moves `Ready → In progress` and stays there until the pull request merges. An
+interrupted run (SIGINT/SIGTERM/SIGHUP) sends it back to `Ready` before exiting and leaves the
+worktree in place. A card left `In progress` with no worktree and no open pull request behind
+it — a run that was killed outright — is released by the next run before it picks anything.
+
+When the pull request already exists, the fixer puts every comment on it — the reviewer's and
+Kirill's — into the prompt, so a comment on the pull request is how work is sent back with a
+reason.
 
 ## Phase 4 — the reviewer
 
 ```bash
-pnpm audit:review --next                  # oldest In review card
+pnpm audit:review --next                  # oldest open pull request with no audit/review status
 pnpm audit:review --issue 24              # a named one
 pnpm audit:review --next --dry-run        # pick and print
 pnpm audit:review --next --keep           # leave the worktree to inspect
@@ -331,7 +334,7 @@ point — the source has to be current before the ledger is re-planned:
    one has merged does not contain it. 22 files are cited by more than one open issue, and two
    cards on the same file conflict the moment the second one merges. Reviewing each card before
    working the next closes that window.
-6. `review.mjs --next` ×`AUDIT_REVIEWS` — anything still sitting `In review`, from a night that
+6. `review.mjs --next` ×`AUDIT_REVIEWS` — any pull request still without an `audit/review` status, from a night that
    was cut short or a card sent back and re-worked. Nothing in the nightly writes `main`.
 
 Steps 1–3 are deterministic and cost nothing; steps 4, 5 and 6 spend tokens. A `flock`

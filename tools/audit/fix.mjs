@@ -9,15 +9,6 @@
 //   node tools/audit/fix.mjs --issue 24           a named one
 //   node tools/audit/fix.mjs --next --dry-run     pick and print, change nothing
 //   node tools/audit/fix.mjs --next --keep        leave the worktree for inspection
-//
-// The gate is the board: Ready, and a Verify route this harness can settle. The card moves
-// Ready -> In progress -> In review, and back to Ready if the run fails or dies. A card the
-// audit's pause is holding is not picked up at all -- both spend the same limits.
-//
-// Nothing is committed unless `pnpm check` and the related tests are green, and nothing is
-// pushed at all: the branch is local and a person decides whether it reaches main. A run
-// that cannot get green writes up why on the issue, so a failed attempt leaves a record
-// rather than a half-finished branch.
 
 import { execFileSync } from 'node:child_process';
 import { existsSync, rmSync } from 'node:fs';
@@ -25,6 +16,7 @@ import { join } from 'node:path';
 
 import * as B from './lib/board.mjs';
 import * as I from './lib/gh.mjs';
+import * as PR from './lib/pulls.mjs';
 import {
   ROOT,
   PNPM,
@@ -119,6 +111,22 @@ const featureScope = (step) => `This issue is a feature, built one step per bran
 
 The ticked steps are already on \`${BASE}\`. The open steps after this one are later branches, so
 do not start them.`;
+
+const feedbackSection = (pull, notes) =>
+  notes.length
+    ? `
+
+---
+
+# Said on the previous attempt
+
+This issue already has pull request #${pull}, and what follows was written on it by the reviewer or
+by Kirill. This attempt starts again from \`${BASE}\`, so the earlier diff is gone. Address every
+point below in the new one.
+
+${notes.map((n) => `- ${n.replace(/\n/g, '\n  ')}`).join('\n')}
+`
+    : '';
 
 function buildPrompt(issue, step) {
   const d = issue.data;
@@ -247,11 +255,15 @@ if (paused) {
   else out(`--- the audit is paused${why}; a real run would stop here`);
 }
 
+const pulls = PR.openPulls();
+const withPull = new Set(pulls.map((p) => PR.linkOf(p)?.issue).filter(Boolean));
+
 for (const it of B.inLane('in progress')) {
   const n = it.content?.number;
   if (!n) continue;
   const stale = I.readIssue(String(n));
   if (existsSync(join(ROOT, '.claude', 'worktrees', `fix-${stale.data.id}`))) continue;
+  if (withPull.has(n)) continue;
   out(`--- releasing #${n}, left In progress by a run that did not exit`);
   B.moveLane(n, 'ready');
 }
@@ -268,12 +280,18 @@ if (errs.length) fail(`${d.id} is invalid: ${errs.join('; ')}`);
 const step = nextStep(issue);
 if (d.kind === 'feature' && !step) fail(`#${num} is a feature with no open step under ## Steps`);
 
-const branch = `fix/${d.id}`;
-const wt = join(ROOT, '.claude', 'worktrees', `fix-${d.id}`);
+const earlier = pulls.find((p) => PR.linkOf(p)?.issue === num) ?? null;
+const branch = earlier?.headRefName ?? `fix/${d.id}`;
+const wt = join(ROOT, '.claude', 'worktrees', `fix-${branch.slice('fix/'.length)}`);
+const notes = earlier ? PR.feedback(earlier.number) : [];
 
 if (flag('dry-run')) {
   out(`would work #${num} on ${branch} in ${wt}`);
-  out(`  lane ${B.laneOf(num)} -> in progress -> ${route === 'playtest' ? 'needs playtest' : 'in review'}`);
+  out(
+    `  lane ${B.laneOf(num)} -> in progress, then a pull request into ${BASE}` +
+      (route === 'playtest' ? ` labelled ${PR.PLAYTEST_LABEL}` : '')
+  );
+  if (earlier) out(`  PR #${earlier.number} is open; ${notes.length} comment(s) go into the prompt`);
   out(`  ${(issue.body.match(/^\s*- \[ \]/gm) ?? []).length} open remediation step(s)`);
   if (step) out(`  next step: ${step}`);
   process.exit(0);
@@ -345,7 +363,11 @@ try {
       'Grep',
       'Glob'
     ],
-    { cwd: wt, input: buildPrompt(issue, step), timeoutMs: 3_600_000 }
+    {
+      cwd: wt,
+      input: buildPrompt(issue, step) + feedbackSection(earlier?.number, notes),
+      timeoutMs: 3_600_000
+    }
   );
   const mins = ((Date.now() - t0) / 60000).toFixed(1);
   if (res.code !== 0) throw new Error(`the model exited ${res.code}:\n${tail(res.err)}`);
@@ -408,14 +430,33 @@ try {
         out(`    [warn] could not push ${branch}: ${tail(String(e.message), 3)}`);
       }
 
+      const port = route === 'playtest' ? await assignDevPort(wt) : null;
+      let pull = pushed ? PR.openPullFor(branch) : null;
+      if (pull) out(`--- pushed onto PR #${pull.number}`);
+      else if (pushed) {
+        pull = PR.createPull({
+          branch,
+          title: msg.split('\n')[0],
+          body: PR.pullBody({
+            issue: num,
+            step,
+            route,
+            extra: port ? `Play it with \`cd ${wt} && ./dev.sh\`, on http://localhost:${port}.` : ''
+          }),
+          labels: route === 'playtest' ? [PR.PLAYTEST_LABEL] : []
+        });
+        out(`--- opened PR #${pull?.number} into ${BASE}`);
+      }
+
       if (route === 'playtest') {
-        const port = await assignDevPort(wt);
         say(num,
-          P.renderPlaytest({ branch, worktree: wt, port, files, account, ran, pushed })
+          P.renderPlaytest({ branch, worktree: wt, port, files, account, ran, pushed, pull: pull?.number })
         );
         keepTree = true;
       } else {
-        say(num, P.renderAttempt({ branch, files, account, verified: 'pass', ran, pushed }));
+        say(num,
+          P.renderAttempt({ branch, files, account, verified: 'pass', ran, pushed, pull: pull?.number })
+        );
       }
 
       if (!step) {
@@ -427,13 +468,13 @@ try {
         }
       }
 
-      if (route === 'playtest') {
-        B.moveLane(num, 'needs playtest');
-        out(`--- #${num} is in Needs playtest on ${branch}; the worktree stays at ${wt}`);
-      } else {
-        B.moveLane(num, 'in review');
-        out(`--- #${num} is In review on ${branch}; review.mjs takes it from here`);
-      }
+      out(
+        pull
+          ? `--- #${num} stays In progress on PR #${pull.number}; ${
+              route === 'playtest' ? `the worktree stays at ${wt}` : 'review.mjs takes it from here'
+            }`
+          : `--- #${num} stays In progress; ${branch} is committed and not pushed`
+      );
     }
   }
 } catch (e) {

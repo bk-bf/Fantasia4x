@@ -128,7 +128,7 @@ fi
 if [ "${AUDIT_NO_REVIEW:-0}" = 1 ]; then
   say "AUDIT_NO_REVIEW=1 — skipping the review pass"
 else
-  say "--- reviewer: up to $REVIEWS card(s) left In review"
+  say "--- reviewer: up to $REVIEWS pull request(s) without a review"
   for _ in $(seq 1 "$REVIEWS"); do
     ( cd "$REPO" && "$NODE" tools/audit/review.mjs --next ) || break
   done

@@ -1,0 +1,57 @@
+name: check
+
+on:
+  pull_request:
+    branches: [dev]
+  push:
+    branches: [dev]
+
+concurrency:
+  group: check-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            spatial-core
+            sim-core
+
+      - uses: jetli/wasm-pack-action@v0.4.0
+        with:
+          version: latest
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build WASM crates
+        run: |
+          (cd spatial-core && wasm-pack build --target web --out-dir ../src/lib/spatial-core-pkg)
+          (cd sim-core && wasm-pack build --target web --out-dir ../src/lib/sim-core-pkg)
+
+      - name: Sync SvelteKit
+        run: pnpm exec svelte-kit sync
+
+      - name: pnpm check and the related tests
+        env:
+          CHECK_BASE: ${{ github.event_name == 'push' && github.event.before || '' }}
+        run: node tools/audit/ci-check.mjs

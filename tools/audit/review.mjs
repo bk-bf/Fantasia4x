@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-//   node tools/audit/review.mjs --next            the oldest In review card
-//   node tools/audit/review.mjs --issue 24        a named one
+//   node tools/audit/review.mjs --next            the oldest pull request not yet reviewed
+//   node tools/audit/review.mjs --issue 24        the pull request for a named issue
 //   node tools/audit/review.mjs --next --dry-run  pick and print, change nothing
 //   node tools/audit/review.mjs --next --keep     leave the worktree for inspection
 
@@ -9,6 +9,7 @@ import { join } from 'node:path';
 
 import * as B from './lib/board.mjs';
 import * as I from './lib/gh.mjs';
+import * as PR from './lib/pulls.mjs';
 import {
   ROOT,
   PNPM,
@@ -38,15 +39,12 @@ const arg = (n, d) => {
 const flag = (n) => process.argv.includes(`--${n}`);
 const out = (s) => process.stdout.write(s + '\n');
 
-const MERGE = flag('merge');
-const LANE = MERGE ? 'approved' : 'in review';
-
-const say = (n, text) => {
+const sayOnPull = (n, text) => {
   try {
-    I.comment(n, text);
+    PR.commentOnPull(n, text);
     return true;
   } catch (e) {
-    out(`--- could not comment on #${n}: ${String(e.message).split('\n').slice(0, 4).join(' ')}`);
+    out(`--- could not comment on PR #${n}: ${String(e.message).split('\n').slice(0, 4).join(' ')}`);
     return false;
   }
 };
@@ -56,52 +54,32 @@ function fail(msg) {
   process.exit(1);
 }
 
-const branchExists = (b) => {
-  try {
-    git(['rev-parse', '--verify', '--quiet', `refs/heads/${b}`], ROOT, true);
-    return true;
-  } catch {
-    return false;
-  }
-};
-
-const ensureLocalBranch = (b) => {
-  if (branchExists(b)) return true;
-  try {
-    git(['fetch', '--quiet', 'origin', `${b}:${b}`], ROOT, true);
-    return true;
-  } catch {
-    return false;
-  }
-};
-
 function pick() {
   const named = arg('issue', null);
-  const cards = B.inLane(LANE)
-    .filter((it) => it.content?.type === 'Issue')
-    .sort((a, b) => a.content.number - b.content.number);
+  const pulls = PR.openPulls()
+    .filter((p) => !p.labels.includes(PR.PLAYTEST_LABEL))
+    .sort((a, b) => a.number - b.number);
 
   const wanted = named
-    ? cards.filter((it) => String(it.content.number) === String(named))
-    : MERGE
-      ? cards
-      : cards.filter((it) => ROUTES.has((it.verify ?? '').toLowerCase()));
+    ? pulls.filter((p) => PR.linkOf(p)?.issue === Number(named))
+    : pulls.filter((p) => PR.reviewState(p.headRefOid) === null);
 
-  if (named && wanted.length === 0) fail(`#${named} is not ${MERGE ? 'Approved' : 'In review'}`);
-  if (wanted.length === 0)
-    fail(MERGE ? 'no card is Approved' : 'no card In review is on the tests or headless route');
+  if (named && wanted.length === 0) fail(`#${named} has no open pull request into ${BASE}`);
+  if (wanted.length === 0) fail('no open pull request is waiting for review');
 
   const skipped = [];
-  for (const it of wanted) {
-    const issue = I.readIssue(String(it.content.number));
-    const route = (it.verify ?? '').toLowerCase();
-    if (!MERGE && !ROUTES.has(route))
-      fail(`#${it.content.number} is on the ${route || 'unset'} route`);
-    if (!ensureLocalBranch(`fix/${issue.data.id}`)) {
-      skipped.push(`#${it.content.number} has no branch fix/${issue.data.id}`);
+  for (const pull of wanted) {
+    const link = PR.linkOf(pull);
+    if (!link) {
+      skipped.push(`PR #${pull.number} names no issue`);
       continue;
     }
-    return { issue, route };
+    const route = (B.itemFor(link.issue)?.verify ?? '').toLowerCase();
+    if (!ROUTES.has(route)) {
+      skipped.push(`#${link.issue} is on the ${route || 'unset'} route`);
+      continue;
+    }
+    return { issue: I.readIssue(String(link.issue)), route, pull };
   }
   fail(`nothing reviewable:\n  ${skipped.join('\n  ')}`);
 }
@@ -162,8 +140,8 @@ ${files.map((f) => `- ${f}`).join('\n')}
 
 # Finish
 
-Report what you ran, what you measured, and the delta. Write it for someone reading the issue
-later, not for me.
+Report what you ran, what you measured, and the delta. Write it for someone reading the pull
+request later, not for me.
 
 The last line of your final message must be exactly one of:
 
@@ -184,7 +162,7 @@ ${issue.body}
 // --- main --------------------------------------------------------------------
 
 const control = readControl();
-if (control.paused === true && !MERGE) {
+if (control.paused === true) {
   const why = control.reason ? `: ${control.reason}` : '';
   if (flag('force')) out(`--- the audit is paused${why}; --force overrides it for this card`);
   else if (!flag('dry-run'))
@@ -195,24 +173,22 @@ if (control.paused === true && !MERGE) {
   else out(`--- the audit is paused${why}; a real run would stop here`);
 }
 
-const { issue, route } = pick();
+const { issue, route, pull } = pick();
 const d = issue.data;
 const num = issue.number;
-const fixBranch = `fix/${d.id}`;
-const revBranch = `review/${d.id}`;
-const wt = join(ROOT, '.claude', 'worktrees', `review-${d.id}`);
+const head = pull.headRefOid;
+const fixBranch = pull.headRefName;
+const slug = fixBranch.slice('fix/'.length);
+const revBranch = `review/${slug}`;
+const wt = join(ROOT, '.claude', 'worktrees', `review-${slug}`);
 
 out(`#${num} ${d.id} — ${d.title}`);
-out(`--- route ${route}, branch ${fixBranch}`);
+out(`--- PR #${pull.number}, route ${route}, ${fixBranch} at ${head.slice(0, 8)}`);
 
 if (flag('dry-run')) {
   out(`would verify ${fixBranch} merged onto origin/${BASE} in ${wt}`);
-  out(
-    MERGE
-      ? `  green -> push ${BASE}, close #${num}, card to On dev`
-      : `  green -> card to Needs approval, nothing merged`
-  );
-  out(`  red   -> comment on #${num}, card back to Ready`);
+  out(`  green -> ${PR.REVIEW_CONTEXT} success on PR #${pull.number}; merging it is Kirill's`);
+  out(`  red   -> ${PR.REVIEW_CONTEXT} failure, the failure on PR #${pull.number}, card back to Ready`);
   process.exit(0);
 }
 
@@ -224,7 +200,7 @@ if (existsSync(wt)) {
     git(['worktree', 'prune']);
   }
 }
-git(['fetch', '--quiet', 'origin', BASE]);
+git(['fetch', '--quiet', 'origin', BASE, fixBranch]);
 try {
   git(['branch', '-D', revBranch], ROOT, true);
 } catch {
@@ -241,33 +217,21 @@ const sendBack = (failures, ran, account) => {
   if (sent) return;
   sent = true;
   try {
-    say(
-      num,
-      P.renderReview({
-        branch: fixBranch,
-        route,
-        ran,
-        ok: false,
-        failures,
-        account,
-        base: BASE,
-        stage: MERGE ? 'merge' : 'review'
-      })
-    );
+    PR.setReviewState(head, 'failure', `did not pass on the ${route} route`);
+  } catch (e) {
+    out(`--- could not mark PR #${pull.number}: ${tail(String(e.message), 3)}`);
+  }
+  sayOnPull(pull.number, P.renderReview({ route, ran, ok: false, failures, account }));
+  try {
     B.moveLane(num, 'ready');
   } catch (e) {
-    out(`--- could not write the issue back: ${e.message}`);
+    out(`--- could not move #${num} back to Ready: ${e.message}`);
   }
 };
 
 for (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP']) {
   process.on(sig, () => {
-    if (MERGE) {
-      out(`\n--- ${sig}: #${num} stays in Approved, worktree left at ${wt}`);
-      process.exit(130);
-    }
-    out(`\n--- ${sig}: sending #${num} back to Ready, worktree left at ${wt}`);
-    sendBack(`The review was interrupted by ${sig}.`, [], '');
+    out(`\n--- ${sig}: PR #${pull.number} left unreviewed, worktree at ${wt}`);
     process.exit(130);
   });
 }
@@ -275,7 +239,7 @@ for (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP']) {
 try {
   out(`--- merging ${fixBranch} onto origin/${BASE}`);
   try {
-    git(['merge', '--no-ff', '--no-edit', fixBranch], wt);
+    git(['merge', '--no-ff', '--no-edit', head], wt);
   } catch (e) {
     const conflicts = (() => {
       try {
@@ -308,13 +272,13 @@ try {
 
   if (!v.ok) {
     sendBack(failureDetail(v.results), ran, '');
-    out(`--- not green on the merge. Written up on #${num}; worktree kept at ${wt}`);
+    out(`--- not green on the merge. Written up on PR #${pull.number}; worktree kept at ${wt}`);
     keepTree = true;
     process.exit(1);
   }
 
   let account = '';
-  if (route === 'headless' && !MERGE) {
+  if (route === 'headless') {
     out(`--- ${CLAUDE} (${MODEL}) on the headless route`);
     const t0 = Date.now();
     const res = await run(
@@ -348,83 +312,25 @@ try {
     out(`    ${mins} min, VERDICT: ${verdict[1]}`);
     ran.push(`headless review (${MODEL})`);
 
-    // A headless session may write a scenario file to drive the sim. It reviews, so nothing
-    // it wrote belongs in the merge.
     git(['reset', '--hard', 'HEAD'], wt);
     git(['clean', '-fd'], wt);
 
     if (verdict[1] === 'FAIL') {
       sendBack('The headless review measured the change and did not accept it.', ran, account);
-      out(`--- FAIL on the headless route. Written up on #${num}; worktree kept at ${wt}`);
+      out(`--- FAIL on the headless route. Written up on PR #${pull.number}; worktree kept at ${wt}`);
       keepTree = true;
       process.exit(1);
     }
   }
 
-  if (!MERGE) {
-    sent = true;
-    if (account || wandered?.outside?.length)
-      say(
-        num,
-        P.renderReview({
-          branch: fixBranch,
-          route,
-          ran,
-          ok: true,
-          account,
-          base: BASE,
-          outside: wandered?.outside
-        })
-      );
-    B.moveLane(num, 'needs approval');
-    out(`--- #${num} passed and waits in Needs approval; ${fixBranch} is not merged`);
-  } else {
-    out(`--- pushing to ${BASE}`);
-    try {
-      git(['push', 'origin', `HEAD:${BASE}`], wt);
-    } catch (e) {
-      throw new Error(`the merge is green but ${BASE} moved under it:\n${tail(String(e.message), 10)}`);
-    }
-    const sha = git(['rev-parse', 'HEAD'], wt).slice(0, 8);
-    out(`--- merged as ${sha}`);
-
-    const settle = (what, fn) => {
-      try {
-        fn();
-      } catch (e) {
-        out(`--- merged, but could not ${what}: ${tail(String(e.message), 3)}`);
-      }
-    };
-    sent = true;
-    const open =
-      issue.data.kind === 'feature' ? I.featureSteps(issue.body).filter((s) => !s.done) : [];
-    if (open.length) settle('tick the step', () => I.tickRemediation(num, `DONE: ${open[0].text}`));
-    if (open.length > 1) {
-      say(
-        num,
-        `**Step merged to \`${BASE}\` as ${sha}:** ${open[0].text}\n\n` +
-          `${open.length - 1} step(s) left; the card is back in Ready for the next one.`
-      );
-      settle('move the card back to Ready', () => B.moveLane(num, 'ready'));
-      out(`--- #${num} has ${open.length - 1} step(s) left, card back in Ready — main is untouched`);
-    } else {
-      settle('close the issue', () => I.closeWithCommit(num, sha));
-      settle('move the card to On dev', () => B.moveLane(num, 'on dev'));
-      out(`--- #${num} closed, card in On dev — main is untouched`);
-    }
-
-    const fixWt = join(ROOT, '.claude', 'worktrees', `fix-${d.id}`);
-    if (existsSync(fixWt)) {
-      try {
-        git(['worktree', 'remove', '--force', fixWt]);
-      } catch {
-        rmSync(fixWt, { recursive: true, force: true });
-        git(['worktree', 'prune']);
-      }
-    }
-    settle(`delete ${fixBranch}`, () => git(['branch', '-D', fixBranch], ROOT, true));
-    settle(`delete origin/${fixBranch}`, () => git(['push', 'origin', '--delete', fixBranch], ROOT));
-  }
+  sent = true;
+  PR.setReviewState(head, 'success', `${route} route green on a fresh ${BASE}`);
+  if (account || wandered?.outside?.length)
+    sayOnPull(
+      pull.number,
+      P.renderReview({ route, ran, ok: true, account, outside: wandered?.outside })
+    );
+  out(`--- PR #${pull.number} for #${num} passed; merging it is Kirill's`);
 } catch (e) {
   out(`--- ${e.message}`);
   keepTree = true;
