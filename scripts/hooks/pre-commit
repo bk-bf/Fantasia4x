@@ -7,4 +7,8 @@
 #
 # This is the tracked SOURCE of the hook. Install it into .git/hooks with:  pnpm hooks:install
 ROOT="$(git rev-parse --show-toplevel)"
+if [[ -f "$ROOT/tools/audit/private-check.mjs" ]]; then
+  git diff --cached -U0 --no-color | grep '^+' | grep -v '^+++' |
+    node "$ROOT/tools/audit/private-check.mjs" "a staged line" || exit 1
+fi
 exec "$ROOT/scripts/build-distance.sh" --check
