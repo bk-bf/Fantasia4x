@@ -188,8 +188,8 @@ stays the ledger's key and should not appear in anything a person reads.
 
 **Triage through the lanes, never around them.** The board is
 [projects/4](https://github.com/users/bk-bf/projects/4) and its columns are an order:
-`Backlog` → `Ready` → `In progress` → `In review` → `On dev` → `Done`, with `Blocked on you` off
-to the side.
+`Backlog` → `Ready` → `In progress` → `In review` → `On dev` → `Done`, with `Blocked on you` and
+`Rejected` off to the side.
 
 - **`Backlog`** — raised, not yet evaluated. The audit raises here and nowhere else.
 
@@ -198,8 +198,10 @@ a spec but no issue — an empty card inflates the count and says nothing a pers
 Planned work lives in `docs/tasks/` and is listed in `ROADMAP.md`; it becomes an issue when
 someone is ready to start it.
 - **`Ready`** — nothing blocks it, no decision is outstanding, the scope is clear enough to
-  start. It means *available to work on*, not *approved by a person*. Promoting one is a
-  deliberate evaluation, so say why.
+  start. An agent promotes a `drift` or `test gap` card out of `Backlog` itself, and says why.
+  Any other kind waits for Kirill: the agent comments on the issue with the open decision or
+  task it overlaps, or "none", and what in play reaches the code it cites, then moves it to
+  `Blocked on you`. He moves it to `Ready`.
 - **`In progress`** — a branch exists and someone is on it.
 - **`In review`** — the work is finished and an agent is verifying it, by the route the
   `Verify` field names. Nothing here needs Kirill. A card that passes its route is merged to
@@ -212,15 +214,19 @@ someone is ready to start it.
   and stop.
 - **`Done`** — promoted to `main`, so it is in the game he plays. The issue was closed when it
   reached `dev`; the lane is where the work lives, not whether it is finished.
-- **`Blocked on you`** — cannot proceed until he chooses: a proposal awaiting a yes, or a design
-  call whose measurements are already in hand. Not a parking space for anything merely hard.
+- **`Blocked on you`** — cannot proceed until he chooses: a proposal awaiting a yes, a design
+  call whose measurements are already in hand, or a card that is not `drift` or `test gap`
+  waiting for his yes to be worked. Not a parking space for anything merely hard.
+- **`Rejected`** — closed without being wanted, with the reason as a comment on the issue.
+  Kirill puts cards here.
 
-**`Blocked on you` and `Needs playtest` are his lanes.** Put a card in when it belongs there.
+**`Blocked on you`, `Needs playtest` and `Rejected` are his lanes.** Put a card in when it belongs there.
 **Never take one out** — he is the only one who decides a thing he asked to look at has been
 looked at. And do not put one back because he moved it out: him moving a card is the answer,
 not a mistake to correct. Nothing watches those lanes for drift.
 
-Move a card with `pnpm issue lane <n> <lane>`, which refuses a move out of his two lanes.
+Move a card with `pnpm issue lane <n> <lane>`, which refuses a move out of his lanes, and a move
+out of `Backlog` for any card that is not `drift` or `test gap` unless it goes to `Blocked on you`.
 Direct `gh project item-edit` is denied.
 
 Do not skip a lane. Nothing goes from `Backlog` straight to `In progress`, nothing reaches

@@ -920,7 +920,7 @@ export class GameEngineImpl implements GameEngine {
             ...gs,
             pawns: gs.pawns.map((p) =>
               p.id === pawn.id
-                ? { ...p, draftTarget: { type: 'tend', patientId: target.patientId, nextTendTurn } }
+                ? { ...p, draftTarget: { ...target, nextTendTurn } }
                 : p
             )
           };
@@ -955,7 +955,7 @@ export class GameEngineImpl implements GameEngine {
           gs = pawnService.assignPath(pawn.id, [], gs);
           if (target.nextTendTurn === undefined || gs.turn >= target.nextTendTurn) {
             const medic = gs.pawns.find((p) => p.id === pawn.id)!;
-            gs = tendPatient(patient, medic, gs);
+            gs = tendPatient(patient, medic, gs, !target.withoutMedicine);
             const after = gs.pawns.find((p) => p.id === target.patientId);
             if (!after || !hasUntendedWound(after, gs.turn)) {
               clearTend();

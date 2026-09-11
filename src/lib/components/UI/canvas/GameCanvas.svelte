@@ -4076,10 +4076,16 @@
           });
         }
         if (medic && hasUntendedWound(target, $gameState?.turn ?? 0)) {
-          entries.push({
-            label: `Emergency care for ${target.name} now`,
-            run: () => issueOrder({ type: 'tend', patientId: id })
-          });
+          entries.push(
+            {
+              label: `Emergency tend ${target.name} with medicine`,
+              run: () => issueOrder({ type: 'tend', patientId: id })
+            },
+            {
+              label: `Emergency tend ${target.name} without medicine`,
+              run: () => issueOrder({ type: 'tend', patientId: id, withoutMedicine: true })
+            }
+          );
         }
         if (entries.length > 0) {
           equipMenu = { x: e.clientX, y: e.clientY, entries };

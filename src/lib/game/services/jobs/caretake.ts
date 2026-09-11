@@ -63,7 +63,12 @@ function shelterTendFactor(gs: GameState, x: number, y: number): number {
   return OFF_SHELTER_TEND_MUL;
 }
 
-export function tendPatient(patient: Pawn, medic: Pawn, gs: GameState): GameState {
+export function tendPatient(
+  patient: Pawn,
+  medic: Pawn,
+  gs: GameState,
+  useMedicine = true
+): GameState {
   const turn = gs.turn;
   const limbs = patient.limbs;
   if (!limbs || !patient.position) return gs;
@@ -92,7 +97,7 @@ export function tendPatient(patient: Pawn, medic: Pawn, gs: GameState): GameStat
   const skill = pawnStatService.evaluateStat('caretaking_quality', medic) * TEND_SKILL_SCALE;
   const mood = medic.state?.mood ?? 50;
   const moodFactor = Math.max(0.3, Math.min(1.2, 0.6 + (mood / 100) * 0.6));
-  const med = bestMedicine(gs, patient);
+  const med = useMedicine ? bestMedicine(gs, patient) : null;
   const shelter = shelterTendFactor(gs, patient.position.x, patient.position.y);
   const skillRoll = skill * moodFactor * (0.6 + rng.random() * 0.4);
   const quality = Math.max(0, Math.min(1, (skillRoll + (med?.quality ?? 0)) * shelter));
