@@ -1,18 +1,24 @@
 import { describe, it, expect } from 'vitest';
 import {
   createBodyPlanLimbs,
+  createDefaultBodyParts,
   rollBodyPart,
+  rollBodyPartOf,
   parentLimbOf,
   enabledNaturalWeapons,
   lethalAnatomyCause,
   organsOf,
+  containedParts,
+  cascadeSeveredContents,
+  boneBreakBudget,
+  BONE_FRACTION,
   BOUND_NATURAL_WEAPONS,
   PART_DEF_MAP,
   DEFAULT_PLAN
 } from '$lib/game/core/defs/bodyParts';
 import { rng } from '$lib/game/core/util/rng';
 import { pawnStatService } from '$lib/game/services/PawnStatService';
-import type { Mob } from '$lib/game/core/types';
+import type { BodyPartState, LimbState, Mob } from '$lib/game/core/types';
 
 describe('body plans', () => {
   it('the humanoid plan is the 6-limb arms/legs body with fingers + toes', () => {
@@ -90,7 +96,23 @@ describe('body plans', () => {
     expect(paw(big).health).toBe(paw(big).maxHp);
   });
 
-  it('rollBodyPart respects the plan — a quadruped never rolls a humanoid finger', () => {
+  it('a bodyScale below 1 never rounds a part down to 0 HP (Math.max(1, …) floor)', () => {
+    const limbs = createBodyPlanLimbs('humanoid', 0.001);
+    const toe = limbs.flatMap((l) => l.parts!).find((p) => p.id === 'leftBigToe')!;
+    expect(toe.maxHp).toBe(1);
+    expect(toe.health).toBe(1);
+  });
+
+  it('createBodyPlanLimbs falls back to the default plan for an unrecognized plan key', () => {
+    const fallback = createBodyPlanLimbs('totally-bogus-plan', 1);
+    const expected = createBodyPlanLimbs(DEFAULT_PLAN, 1);
+    expect(fallback.map((l) => l.id)).toEqual(expected.map((l) => l.id));
+    expect(fallback.flatMap((l) => l.parts!.map((p) => p.id))).toEqual(
+      expected.flatMap((l) => l.parts!.map((p) => p.id))
+    );
+  });
+
+  it('rollBodyPart respects the plan — a quadruped never rolls a humanoid finger, and only ever rolls a hittable (hitWeight > 0) part', () => {
     rng.reseed(7);
     const planParts = new Set(
       Object.values(createBodyPlanLimbs('quadruped', 1).flatMap((l) => l.parts!.map((p) => p.id)))
@@ -99,6 +121,19 @@ describe('body plans', () => {
       const part = rollBodyPart('quadruped');
       expect(planParts.has(part)).toBe(true);
       expect(/Finger|Toe/.test(part)).toBe(false);
+      expect(PART_DEF_MAP[part]!.hitWeight).toBeGreaterThan(0);
+    }
+  });
+
+  it('rollBodyPart falls back to the default plan when given an unrecognized plan key', () => {
+    rng.reseed(13);
+    const defaultOuterIds = new Set(
+      createBodyPlanLimbs(DEFAULT_PLAN, 1)
+        .flatMap((l) => l.parts!.map((p) => p.id))
+        .filter((id) => PART_DEF_MAP[id]!.hitWeight > 0)
+    );
+    for (let i = 0; i < 200; i++) {
+      expect(defaultOuterIds.has(rollBodyPart('totally-bogus-plan'))).toBe(true);
     }
   });
 
@@ -106,6 +141,17 @@ describe('body plans', () => {
     expect(parentLimbOf('humanoid', 'leftHand')).toBe('left_arm');
     expect(parentLimbOf('quadruped', 'frontLeftPaw')).toBe('front_left_leg');
     expect(parentLimbOf('quadruped', 'tail')).toBe('tail');
+  });
+
+  it('parentLimbOf returns undefined for a part that does not belong to the given plan', () => {
+    expect(parentLimbOf('humanoid', 'no-such-part-id')).toBeUndefined();
+    expect(parentLimbOf('humanoid', 'frontLeftPaw')).toBeUndefined();
+  });
+
+  it('parentLimbOf falls back to the default plan for an unrecognized plan key', () => {
+    expect(parentLimbOf('totally-bogus-plan', 'leftHand')).toBe(
+      parentLimbOf(DEFAULT_PLAN, 'leftHand')
+    );
   });
 
   it('the skull is the BONE (skeleton), the head is the flesh that holds the brain; a broken skull is not death', () => {
@@ -306,5 +352,142 @@ describe('species-specific organ + weapon wiring', () => {
     const w = enabledNaturalWeapons(createBodyPlanLimbs('amorphous', 1));
     expect(w.has('claw')).toBe(true);
     expect(w.has('spectral_strike')).toBe(true);
+  });
+});
+
+describe('boneBreakBudget', () => {
+  it('a skeleton part spends its whole scaled max HP as break budget', () => {
+    const ulna = PART_DEF_MAP['leftUlna'];
+    expect(ulna?.skeleton).toBe(true);
+    expect(boneBreakBudget(ulna, 70)).toBe(70);
+  });
+
+  it('a non-skeleton (flesh) part only spends BONE_FRACTION of its scaled max HP', () => {
+    const forearm = PART_DEF_MAP['leftForearm'];
+    expect(forearm?.skeleton).toBeUndefined();
+    expect(boneBreakBudget(forearm, 70)).toBeCloseTo(BONE_FRACTION * 70);
+  });
+});
+
+describe('containedParts', () => {
+  it('walks the containment tree transitively across multiple levels, excluding the parent itself', () => {
+    const contained = containedParts('leftWing');
+    expect(contained.has('leftWing')).toBe(false);
+    expect(contained.has('leftWingHumerus')).toBe(true);
+    expect(contained.has('leftWingtip')).toBe(true);
+    expect(contained.has('leftCarpometacarpus')).toBe(true);
+    expect(contained.has('leftWingClaw')).toBe(true);
+    expect(contained.has('leftWingPhalanx')).toBe(true);
+  });
+
+  it('a leaf part with nothing contained in it returns an empty set', () => {
+    expect(containedParts('leftCarpometacarpus').size).toBe(0);
+  });
+});
+
+describe('cascadeSeveredContents', () => {
+  const partState = (id: string, isMissing = false): BodyPartState => ({
+    id,
+    health: 10,
+    maxHp: 10,
+    isMissing,
+    injuries: []
+  });
+
+  it('severing a container that holds a live vital organ destroys it and reports lostVital', () => {
+    const parts = [
+      partState('chest'),
+      partState('heart'),
+      partState('leftLung'),
+      partState('rightLung'),
+      partState('ribcage')
+    ];
+    const { parts: next, lostVital } = cascadeSeveredContents(parts, 'chest');
+    expect(lostVital).toBe(true);
+    const heart = next.find((p) => p.id === 'heart')!;
+    expect(heart.isMissing).toBe(true);
+    expect(heart.health).toBe(0);
+  });
+
+  it('severing a container whose contents are all non-vital reports lostVital false', () => {
+    const parts = [
+      partState('abdomen'),
+      partState('liver'),
+      partState('stomach'),
+      partState('leftKidney'),
+      partState('rightKidney')
+    ];
+    const { parts: next, lostVital } = cascadeSeveredContents(parts, 'abdomen');
+    expect(lostVital).toBe(false);
+    expect(next.find((p) => p.id === 'liver')!.isMissing).toBe(true);
+  });
+
+  it('is a no-op identity return when the container has children but none of them are still alive', () => {
+    const parts = [
+      partState('chest'),
+      partState('heart', true),
+      partState('leftLung', true),
+      partState('rightLung', true),
+      partState('ribcage', true)
+    ];
+    const result = cascadeSeveredContents(parts, 'chest');
+    expect(result.parts).toBe(parts);
+    expect(result.lostVital).toBe(false);
+  });
+});
+
+describe('rollBodyPartOf', () => {
+  it('never rolls a part that is missing or lives on a missing limb', () => {
+    const limbs = createBodyPlanLimbs('humanoid', 1);
+    limbs.flatMap((l) => l.parts!).find((p) => p.id === 'leftHand')!.isMissing = true;
+    rng.reseed(19);
+    for (let i = 0; i < 2000; i++) {
+      expect(rollBodyPartOf(limbs, 'humanoid')).not.toBe('leftHand');
+    }
+  });
+
+  it('can roll a part that is present on the body but outside the plan set, when it has hitWeight > 0', () => {
+    const limbs: LimbState[] = [
+      {
+        id: 'front_left_leg',
+        health: 100,
+        isMissing: false,
+        bleedRate: 0,
+        parts: [
+          {
+            id: 'frontLeftPaw',
+            health: 22,
+            maxHp: 22,
+            isMissing: false,
+            injuries: []
+          }
+        ]
+      }
+    ];
+    rng.reseed(23);
+    const seen = new Set<string>();
+    for (let i = 0; i < 3000; i++) seen.add(rollBodyPartOf(limbs, 'humanoid'));
+    expect(seen.has('frontLeftPaw')).toBe(true);
+  });
+});
+
+describe('createDefaultBodyParts', () => {
+  it('returns the humanoid plan parts for a known limb, each defaulted to full HP', () => {
+    const expectedIds = createBodyPlanLimbs(DEFAULT_PLAN, 1)
+      .find((l) => l.id === 'left_arm')!
+      .parts!.map((p) => p.id);
+    const parts = createDefaultBodyParts('left_arm');
+    expect(parts.map((p) => p.id)).toEqual(expectedIds);
+    for (const p of parts) {
+      const def = PART_DEF_MAP[p.id]!;
+      expect(p.health).toBe(def.maxHp);
+      expect(p.maxHp).toBe(def.maxHp);
+      expect(p.isMissing).toBe(false);
+      expect(p.injuries).toEqual([]);
+    }
+  });
+
+  it('returns an empty array for a limb id absent from the humanoid plan', () => {
+    expect(createDefaultBodyParts('front_left_leg')).toEqual([]);
   });
 });

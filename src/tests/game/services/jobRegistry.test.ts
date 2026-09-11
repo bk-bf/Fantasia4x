@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { jobService } from '$lib/game/services/JobService';
 import jobsData from '$lib/game/database/pawns/jobs.json';
 import type { JobDef } from '$lib/game/core/types';
+import { isDiscipline } from '$lib/game/core/defs/disciplines';
 
 const defs = jobsData as unknown as JobDef[];
 
@@ -103,5 +104,12 @@ describe('job registry (jobs.json ↔ JobService)', () => {
     expect(kids('metalworking')).toEqual([]);
     expect(jobService.isCraftSubjob('butchery')).toBe(true);
     expect(jobService.isCraftSubjob('cooking')).toBe(false);
+  });
+
+  it('isDiscipline recognizes real discipline parents and leaves, and rejects everything else', () => {
+    expect(isDiscipline('metalworking')).toBe(true);
+    expect(isDiscipline('butchery')).toBe(true);
+    expect(isDiscipline('sleep')).toBe(false);
+    expect(isDiscipline('not_a_real_discipline')).toBe(false);
   });
 });

@@ -9,6 +9,7 @@ import {
   generate as harvestGenerate
 } from '$lib/game/services/jobs/harvest';
 import { isGrowableResource } from '$lib/game/services/ResourceObjectService';
+import type { ResourceObjectDef } from '$lib/game/core/defs/resourceObjects';
 import { SUBTERRAINS, soilFertilityPct } from '$lib/game/core/defs/terrains';
 import type { GameState, Job } from '$lib/game/core/types';
 
@@ -198,6 +199,47 @@ describe('§F resource growth/maturity', () => {
     expect(isGrowableResource(resourceObjectService.getById('crop_wheat')!)).toBe(true);
     expect(isGrowableResource(resourceObjectService.getById('pine_tree')!)).toBe(true);
     expect(isGrowableResource(resourceObjectService.getById('hematite')!)).toBe(false);
+  });
+
+  const bareInteraction = {
+    action: 'a',
+    workCategory: 'x',
+    workAmount: 1,
+    toolRequirement: null,
+    yields: []
+  };
+
+  it('a crop config alone makes an object growable, with no persistent/regrowing interaction needed', () => {
+    const def = {
+      interaction: { ...bareInteraction },
+      crop: {
+        seedItem: 's',
+        minSoil: 0,
+        minMoisture: 0,
+        maxMoisture: 1,
+        minTemp: 0,
+        maxTemp: 1,
+        needsLight: false,
+        growthTurns: 10,
+        fertilityCost: 0
+      }
+    } as unknown as ResourceObjectDef;
+    expect(isGrowableResource(def)).toBe(true);
+  });
+
+  it('walks the interactions array, not just the single interaction, and treats regrowthTurns 0 as still regrowable', () => {
+    const def = {
+      interaction: { ...bareInteraction },
+      interactions: [{ ...bareInteraction }, { ...bareInteraction, regrowthTurns: 0 }]
+    } as unknown as ResourceObjectDef;
+    expect(isGrowableResource(def)).toBe(true);
+  });
+
+  it('an object with no crop, no persistent flag and no regrowthTurns is not growable', () => {
+    const def = {
+      interaction: { ...bareInteraction, persistent: false }
+    } as unknown as ResourceObjectDef;
+    expect(isGrowableResource(def)).toBe(false);
   });
 
   it('growth scales harvest yield — an ungrown node yields nothing, a full one yields normally', () => {

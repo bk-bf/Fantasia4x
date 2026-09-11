@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { drawLoadout, rollCondition, type LootPool } from '$lib/game/core/defs/loot';
+import {
+  drawLoadout,
+  drawCarried,
+  rollCondition,
+  getLootPool,
+  validateLootItemIds,
+  type LootPool
+} from '$lib/game/core/defs/loot';
 
 function seq(values: number[]) {
   let i = 0;
@@ -71,5 +78,75 @@ describe('lootpool draw', () => {
   it('§4b: an unflagged pick carries no famed identity (the common case)', () => {
     const drawn = drawLoadout(POOL, seq([0.1, 0.0, 0.0, 0.9]));
     expect(drawn[0].famed).toBeUndefined();
+  });
+});
+
+describe('getLootPool', () => {
+  it('returns undefined for a pool id that does not exist', () => {
+    expect(getLootPool('no-such-pool-id')).toBeUndefined();
+  });
+});
+
+describe('validateLootItemIds', () => {
+  it('throws naming the slot when a slot pick resolves to an unknown item id', () => {
+    expect(() =>
+      validateLootItemIds((id) => id !== 'goblin_bark_bracers')
+    ).toThrow(/goblin_bark_bracers/);
+  });
+
+  it('throws naming "carried" when a carried pick resolves to an unknown item id', () => {
+    expect(() => validateLootItemIds((id) => id !== 'venom_coating')).toThrow(/carried/);
+  });
+});
+
+describe('drawCarried', () => {
+  it('skips a carry entry whose chance roll fails', () => {
+    const pool: LootPool = {
+      dropChance: 1,
+      slots: {},
+      carried: [{ chance: 0.5, count: [1, 1], pick: [{ id: 'rock' }] }]
+    };
+    expect(drawCarried(pool, seq([0.9]))).toEqual([]);
+  });
+
+  it('rolls a count within range and weighted-picks among the carry pool', () => {
+    const pool: LootPool = {
+      dropChance: 1,
+      slots: {},
+      carried: [
+        {
+          chance: 1,
+          count: [2, 2],
+          pick: [
+            { id: 'twig', w: 1 },
+            { id: 'branch', w: 3 }
+          ]
+        }
+      ]
+    };
+    const drawn = drawCarried(pool, seq([0.0, 0.0, 0.9]));
+    expect(drawn).toEqual([{ itemId: 'branch', qty: 2 }]);
+  });
+
+  it('aggregates qty when two carry entries draw the same item id', () => {
+    const pool: LootPool = {
+      dropChance: 1,
+      slots: {},
+      carried: [
+        { chance: 1, count: [1, 1], pick: [{ id: 'coin' }] },
+        { chance: 1, count: [2, 2], pick: [{ id: 'coin' }] }
+      ]
+    };
+    const drawn = drawCarried(pool, seq([0, 0, 0, 0, 0, 0]));
+    expect(drawn).toEqual([{ itemId: 'coin', qty: 3 }]);
+  });
+
+  it('drops a carry entry whose rolled quantity is 0', () => {
+    const pool: LootPool = {
+      dropChance: 1,
+      slots: {},
+      carried: [{ chance: 1, count: [0, 0], pick: [{ id: 'rock' }] }]
+    };
+    expect(drawCarried(pool, seq([0.0, 0.0]))).toEqual([]);
   });
 });

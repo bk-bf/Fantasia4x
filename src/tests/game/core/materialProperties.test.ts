@@ -31,4 +31,14 @@ describe('material properties', () => {
     const m = aggregateMaterialMods(['iron_bar', 'not_a_material'], 'item');
     expect(m).toEqual({ durability: 1, beauty: 0, comfort: 0, insulation: 0, weight: 1 });
   });
+
+  it('aggregateMaterialMods multiplies weight and sums comfort/insulation across materials', () => {
+    const oak = aggregateMaterialMods(['oak_plank'], 'item');
+    expect(oak.weight).toBeCloseTo(1.2);
+    const both = aggregateMaterialMods(['oak_plank', 'ironwood_plank'], 'item');
+    expect(both.weight).toBeCloseTo(1.2 * 1.3);
+    const insulated = aggregateMaterialMods(['mammoth_wool', 'oxhide'], 'building');
+    expect(insulated.insulation).toBeCloseTo(0.25 + 0.06);
+    expect(insulated.comfort).toBeCloseTo(0.22);
+  });
 });

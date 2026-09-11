@@ -49,4 +49,18 @@ describe('voidshard — awakens a bloodline, or carries an existing one further'
     expect(rollLineageTrait(bare(held), fixed(0))).toEqual([]);
     expect(held.filter((t) => t.lineageParent).length, 'exactly one bloodline, ever').toBe(1);
   });
+
+  it('a pool restricts the shard to one bloodline, even when that line is not the first candidate', () => {
+    const seen = new Set<string>();
+    for (let i = 0; i < 10; i++) {
+      const got = rollLineageTrait(bare(), () => i / 10, ['werewolf']);
+      const parent = got.find((t) => t.lineageParent);
+      if (parent) seen.add(parent.lineageParent as string);
+    }
+    expect(seen, 'only the pooled lineage is ever awakened').toEqual(new Set(['werewolf']));
+  });
+
+  it('a pool matching none of the candidate lineages yields nothing', () => {
+    expect(rollLineageTrait(bare(), fixed(0), ['not-a-real-lineage'])).toEqual([]);
+  });
 });

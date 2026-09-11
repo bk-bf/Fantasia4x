@@ -75,6 +75,31 @@ describe('alchemy / magical-creature reagents', () => {
     expect(lo, 'a crude brew rarely gives a clean good result').toBeLessThan(0.2);
   });
 
+  it('§A trait gamble: a below-zero alchemy skill clamps to the same odds as zero', () => {
+    const spec = {
+      tier: 1,
+      traitPool: ['feral-adrenaline', 'pack-fury', 'bestial-might'],
+      flawSeverity: 'harsh' as const
+    };
+    const goodRateAt = (alch: number) => {
+      let good = 0;
+      const N = 200;
+      for (let i = 0; i < N; i++) {
+        let k = 0;
+        const seq = [(i + 0.5) / N, 0.9, 0.1];
+        const { trait, flaw } = resolveTraitGamble(spec, alch, () => seq[k++] ?? 0.5);
+        if (trait && !flaw) good++;
+      }
+      return good / N;
+    };
+    const atZero = goodRateAt(0);
+    const belowZero = goodRateAt(-5);
+    expect(
+      belowZero,
+      'a negative alchemy value (e.g. durationMult below 1) must clamp to 0, not push the odds past it'
+    ).toBe(atZero);
+  });
+
   it('§A raw organ is NEUTERED (no free trait); brewed draught grants via the gamble', async () => {
     const s = new HeadlessSession();
     await s.start(

@@ -22,12 +22,15 @@ describe('§2e variant-ladder data integrity', () => {
     }
   });
 
-  it('every carcassItemId resolves to a carcass item', () => {
+  it('every carcassItemId resolves to a carcass item, tagged isCarcass for consumers', () => {
     for (const c of CREATURES) {
       if (!c.carcassItemId) continue;
       const item = itemService.getItemById(c.carcassItemId);
       expect(item?.category, `${c.id} → ${c.carcassItemId}`).toBe('carcass');
+      expect(item?.isCarcass, `${c.id} → ${c.carcassItemId} should be tagged isCarcass`).toBe(true);
     }
+    const nonCarcass = itemService.getItemById('iron_bar');
+    expect(nonCarcass?.isCarcass).toBeFalsy();
   });
 
   it('every lootPool resolves, and every pool item id resolves', () => {
@@ -61,6 +64,11 @@ describe('§2e variant-ladder data integrity', () => {
       }
       expect(isBodyPlan(c.limbMap ?? 'humanoid'), `${c.id} limbMap`).toBe(true);
     }
+  });
+
+  it('isBodyPlan rejects an unrecognized or undefined plan key', () => {
+    expect(isBodyPlan('some-bogus-plan-name')).toBe(false);
+    expect(isBodyPlan(undefined)).toBe(false);
   });
 
   it('the six specced species carry full 5-tier ladders (12 variants + base)', () => {
