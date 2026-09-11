@@ -306,6 +306,21 @@ reported.
 
 Reading is unrestricted: `gh issue list`, `gh issue view`, `gh project item-list`.
 
+**Reading is not free.** GitHub allows the account 5,000 GraphQL points an hour, shared by every
+agent on both machines, `board-sync.py` and the dashboard. `gh project item-list` costs 101 points
+a call; `gh issue list` and `gh issue view` cost about 1. Read the board once and keep the result.
+When the points run out, every board read and `gh issue create` fails until the hour resets.
+
+**Check the limit with GraphQL, not `gh api rate_limit`.** Its `graphql` figure does not track
+the counter the limit is enforced against, and reads `used 0` while hundreds are spent. A
+rate-limit hint telling you to run `gh api rate_limit --jq .resources` is wrong for this. Run:
+
+```bash
+gh api graphql -f query='{rateLimit{used remaining resetAt}}' --jq .data.rateLimit
+```
+
+At `remaining 0`, wait for `resetAt` rather than retrying.
+
 **`Priority` is the severity label, projected onto a field.** `critical → P0`, `high → P1`,
 `medium → P2`, `low → P3`, and the option colours match the labels. It exists because the board
 can group and sort by a field and not by a label, so it carries no information severity does not
