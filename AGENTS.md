@@ -191,7 +191,7 @@ stays the ledger's key and should not appear in anything a person reads.
 **Triage through the lanes, never around them.** The board is
 [projects/4](https://github.com/users/bk-bf/projects/4) and its columns are an order:
 `Backlog` → `Ready` → `In progress` → `PR ready` → `On dev` → `Done`, with
-`Blocked on you` and `Rejected` off to the side. The board carries an issue as far as `Ready`;
+`Blocked on you`, `Failed` and `Rejected` off to the side. The board carries an issue as far as `Ready`;
 from there the work is a pull request, and the card follows it. `Rejected` is the first column
 on purpose. A change to the lanes inserts or drops the one option it concerns and keeps every
 other option where Kirill put it; rewriting the whole option list moves his columns.
@@ -206,6 +206,10 @@ Planned work is an issue from the start, and waits in `Backlog` until Kirill mov
   Any other kind waits for Kirill: the agent comments on the issue with the open decision or
   task it overlaps, or "none", and what in play reaches the code it cites, then moves it to
   `Blocked on you`. He moves it to `Ready`.
+- **`Failed`** — tried and did not land: the fixer could not get it green or changed nothing, or
+  the reviewer failed its pull request. The reason is on the issue or the pull request. The fixer
+  never picks from here; Kirill reads the reason and moves the card to `Ready` to try again, or
+  elsewhere. An agent moves a card out of `Failed` only when he says so.
 - **`In progress`** — a branch exists and an agent is on it. Once the fixer has it green it is a
   pull request into `dev`, and the card stays here while `review.mjs` verifies it.
 - **`PR ready`** — the pull request is ready for Kirill: `review.mjs` passed it, or it
@@ -248,7 +252,7 @@ sent back with a reason.
 `audit/review` status, re-merges it onto a freshly fetched `origin/dev`, runs the route again on
 the result — plus a headless session for `verify headless` — and sets `audit/review` to success
 or failure on that commit. A pass moves the card to `PR ready`; a failure is written on the pull
-request and sends the card back to `Ready`. `.github/workflows/check.yml` runs `pnpm check` and the related tests on every pull
+request and moves the card to `Failed`. `.github/workflows/check.yml` runs `pnpm check` and the related tests on every pull
 request into `dev` and every push to `dev`, on GitHub's runners, and branch protection on `dev`
 requires it to pass on an up-to-date branch before a merge. Kirill is the repository's admin and
 can override that.
@@ -356,7 +360,9 @@ can group and sort by a field and not by a label, so it carries no information s
 **Move the card, never the label.** `ready`, `needs decision` and the three `verify` labels are
 derived from the board's Status and Verify fields by `board-sync.py`, on the same tick that
 refreshes the dashboard. Edit one of those labels by hand and it is overwritten within a minute.
-Any open issue missing from the board is added to `Backlog`. Kind, severity, origin and the rule
+Any open issue missing from the board is added to `Backlog`. An open pull request carries the labels
+of the issue it fixes, less `ready` and `needs decision`, copied on the same tick — label the
+issue, never the pull request. Kind, severity, origin and the rule
 name are not touched — they describe the finding, not its state.
 
 **Every issue says how it will be verified**, as a `Verify` field on the board and a label on
