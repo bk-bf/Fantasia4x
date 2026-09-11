@@ -1215,6 +1215,87 @@ describe('ITEM-RULES R22 — a fluid states a density and a serving, and its bat
   });
 });
 
+const R24_DEBT = new Set([
+  'bracers@tier1:light->medium',
+  'greaves@tier1:light->medium',
+  'greaves@tier2:medium->heavy',
+  'bracers@tier4:medium->heavy',
+  'greaves@tier4:medium->heavy',
+  'gloves@tier4:medium->heavy',
+  'head@tier3:medium->heavy',
+  'gloves@tier3:medium->heavy'
+]);
+
+describe('ITEM-RULES R24 — a heavier armour class never costs less stiffness to wear', () => {
+  const STIFF_ARMOUR = (ITEMS as ArmourItem[]).filter(
+    (i) =>
+      i.type === 'armor' &&
+      i.armorProperties?.armorType &&
+      i.armorProperties.armorType !== 'shield' &&
+      recipesByOutput.has(i.id)
+  );
+  const bucket = new Map<string, ArmourItem[]>();
+  for (const i of STIFF_ARMOUR) {
+    const key = `${i.armorProperties!.equipmentSlot}@tier${i.tier ?? 0}`;
+    bucket.set(key, [...(bucket.get(key) ?? []), i]);
+  }
+  const stiffness = (i: ArmourItem) => (i as Item).armorProperties?.movementPenalty ?? 0;
+  const groupsFor = (slotAge: string, lower: string, upper: string) => {
+    const group = bucket.get(slotAge) ?? [];
+    return {
+      lo: group.filter((i) => i.armorProperties!.armorType === lower),
+      hi: group.filter((i) => i.armorProperties!.armorType === upper)
+    };
+  };
+
+  it('per slot and age, medium costs at least what light costs and heavy costs at least what medium costs', () => {
+    const bad: string[] = [];
+    for (const key of bucket.keys()) {
+      for (const [lower, upper] of [
+        ['light', 'medium'],
+        ['medium', 'heavy']
+      ] as const) {
+        const bucketKey = `${key}:${lower}->${upper}`;
+        if (R24_DEBT.has(bucketKey)) continue;
+        const { lo, hi } = groupsFor(key, lower, upper);
+        if (!lo.length || !hi.length) continue;
+        const loMax = Math.max(...lo.map(stiffness));
+        const hiMin = Math.min(...hi.map(stiffness));
+        if (hiMin < loMax)
+          bad.push(
+            `${bucketKey}: ${upper} bottoms out at ${hiMin} movementPenalty, below ${lower}'s ${loMax}`
+          );
+      }
+    }
+    expect(bad, bad.join('; ')).toEqual([]);
+  });
+
+  it('the debt list has no stale entries', () => {
+    const fixed = [...R24_DEBT].filter((bucketKey) => {
+      const [slotAge, rest] = bucketKey.split(':');
+      const [lower, upper] = rest.split('->');
+      const { lo, hi } = groupsFor(slotAge, lower, upper);
+      if (!lo.length || !hi.length) return true;
+      const loMax = Math.max(...lo.map(stiffness));
+      const hiMin = Math.min(...hi.map(stiffness));
+      return hiMin >= loMax;
+    });
+    expect(fixed, `fixed — drop from R24_DEBT: ${fixed.join(', ')}`).toEqual([]);
+  });
+});
+
+describe('ITEM-RULES R25 — an armour piece that declares a weight class declares its stiffness', () => {
+  it('movementPenalty is never silently absent on a worn armour piece', () => {
+    const bad = (ITEMS as ArmourItem[])
+      .filter((i) => i.type === 'armor' && i.armorProperties?.armorType)
+      .filter((i) => (i as Item).armorProperties?.movementPenalty === undefined)
+      .map(
+        (i) => `${i.id} declares armorType ${i.armorProperties!.armorType} with no movementPenalty`
+      );
+    expect(bad, bad.join('; ')).toEqual([]);
+  });
+});
+
 describe('ITEM-RULES R23 — a crafted piece derives a mass in reach of what it weighs', () => {
   const byId = new Map((ITEMS as Item[]).map((i) => [i.id, i]));
   const recipeById = new Map((RECIPES as Recipe[]).map((r) => [r.id, r]));

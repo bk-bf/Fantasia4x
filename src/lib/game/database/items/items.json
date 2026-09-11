@@ -8438,7 +8438,8 @@
       "equipmentSlot": "bracers",
       "armorLayer": "plate",
       "armorValue": 13,
-      "fatiguePerTurn": 0.2
+      "fatiguePerTurn": 0.2,
+      "movementPenalty": 0.0
     }
   },
   {
@@ -8464,7 +8465,8 @@
       "equipmentSlot": "gloves",
       "armorLayer": "plate",
       "armorValue": 11,
-      "fatiguePerTurn": 0.16
+      "fatiguePerTurn": 0.16,
+      "movementPenalty": 0.0
     }
   },
   {
@@ -8516,7 +8518,8 @@
       "equipmentSlot": "head",
       "armorLayer": "plate",
       "armorValue": 25,
-      "fatiguePerTurn": 0.26
+      "fatiguePerTurn": 0.26,
+      "movementPenalty": 0.03
     }
   },
   {
@@ -8570,7 +8573,8 @@
       "equipmentSlot": "bracers",
       "armorLayer": "plate",
       "armorValue": 13,
-      "fatiguePerTurn": 0.15
+      "fatiguePerTurn": 0.15,
+      "movementPenalty": 0.02
     }
   },
   {
@@ -8596,7 +8600,8 @@
       "equipmentSlot": "greaves",
       "armorLayer": "plate",
       "armorValue": 13,
-      "fatiguePerTurn": 0.16
+      "fatiguePerTurn": 0.16,
+      "movementPenalty": 0.02
     }
   },
   {
@@ -8622,7 +8627,8 @@
       "equipmentSlot": "gloves",
       "armorLayer": "plate",
       "armorValue": 11,
-      "fatiguePerTurn": 0.11
+      "fatiguePerTurn": 0.11,
+      "movementPenalty": 0.02
     }
   },
   {
@@ -13067,7 +13073,7 @@
       "armorValue"     : 16,
       "sightPenalty": 0.08,
       "fatiguePerTurn" : 0.30,
-      "movementPenalty": 0.0
+      "movementPenalty": 0.05
     }
   },
   {
