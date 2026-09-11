@@ -5,6 +5,7 @@
 // findings group by (rule, module group), and the issue carries every citation.
 
 import { readIssue, writeIssue, patchIssue, today, listIssues } from './gh.mjs';
+import { planGeneration } from './generations.mjs';
 import { subareaFor } from './subarea.mjs';
 import { blobUrl, linkify, authorityLink, issueRef } from './links.mjs';
 
@@ -108,7 +109,7 @@ export function groupFindings(db) {
   return [...groups.values()];
 }
 
-function renderBody(g, sha) {
+function renderBody(g, sha, follows = []) {
   const n = g.findings.length;
   const shown = g.findings.slice(0, MAX_EVIDENCE);
   const rest = n - shown.length;
@@ -119,7 +120,8 @@ function renderBody(g, sha) {
   const authority = authorityLink(g.authority);
   lines.push(
     `> **Related:** [\`tools/audit\`](${blobUrl('tools/audit/README.md', null, sha)})` +
-      (authority ? ` · rule source ${authority}` : '')
+      (authority ? ` · rule source ${authority}` : '') +
+      (follows.length ? ` · follows ${follows.map((n) => `#${n}`).join(', ')}` : '')
   );
   lines.push('');
 
@@ -227,27 +229,39 @@ export function idFor(g, rulesById) {
 /** Write or refresh one issue file. Never flips `ready`, never rewrites a body a person has
  *  edited by hand — an audit-origin issue is refreshed, a human-origin one is left alone. */
 export function upsertIssue(root, g, rulesById, sha, force = false) {
-  const id = idFor(g, rulesById);
-  const found = listIssues(root).find((i) => i.data.id === id);
+  const plan = planGeneration(idFor(g, rulesById), listIssues(root), g.findings);
+  const settled = [...plan.settled].map(([path, findings]) => ({ path, findings }));
+  if (plan.own.length === 0) {
+    const last = plan.closed.at(-1);
+    return { path: last.path, action: 'skipped-closed', id: last.data.id, links: settled };
+  }
+  const id = plan.id;
+  const own = { ...g, findings: plan.own };
+  const follows = plan.closed.map((i) => i.path);
+  const result = (path, action) => ({
+    path,
+    action,
+    id,
+    links: [...settled, { path, findings: plan.own }]
+  });
   const rule = rulesById.get(g.rule_id) ?? {};
   const kind = rule.kind ?? FAMILY_KIND[g.family] ?? 'correctness';
   const severity = rule.severity ?? FAMILY_SEVERITY[g.family] ?? 'medium';
   const verify = rule.verify ?? FAMILY_VERIFY[g.family] ?? 'tests';
-  const files = [...new Set(g.findings.map((f) => f.file))];
-  const symbols = [...new Set(g.findings.map((f) => f.symbol_key))];
+  const files = [...new Set(own.findings.map((f) => f.file))];
+  const symbols = [...new Set(own.findings.map((f) => f.symbol_key))];
   const subarea = subareaFor(files);
   const type = rule.type ?? FAMILY_TYPE[g.family] ?? 'fix';
   const area = rule.area ?? AREA_FOR_SUBAREA[subarea] ?? 'sim';
   const size = files.length <= 2 ? 'S' : files.length <= 6 ? 'M' : 'L';
 
-  if (found) {
-    const path = found.path;
+  if (plan.current) {
+    const path = plan.current.path;
     const existing = readIssue(path);
-    if (existing.data.origin === 'human') return { path, action: 'skipped-human', id };
-    if (existing.data.status === 'closed') return { path, action: 'skipped-closed', id };
-    if (existing.data.ready === true && !force) return { path, action: 'skipped-approved', id };
+    if (existing.data.origin === 'human') return result(path, 'skipped-human');
+    if (existing.data.ready === true && !force) return result(path, 'skipped-approved');
     const before = existing.body;
-    const body = renderBody(g, sha);
+    const body = renderBody(own, sha, follows);
     const changed = force || before.trim() !== body.trim();
     patchIssue(path, {
       title: titleFor(g),
@@ -264,7 +278,7 @@ export function upsertIssue(root, g, rulesById, sha, force = false) {
       const cur = readIssue(path);
       writeIssue(root, { data: cur.data, body });
     }
-    return { path, action: changed ? 'updated' : 'unchanged', id };
+    return result(path, changed ? 'updated' : 'unchanged');
   }
 
   writeIssue(root, {
@@ -287,8 +301,8 @@ export function upsertIssue(root, g, rulesById, sha, force = false) {
       created: today(),
       updated: today()
     },
-    body: renderBody(g, sha)
+    body: renderBody(own, sha, follows)
   });
   const created = listIssues(root).find((i) => i.data.id === id);
-  return { path: created ? created.path : id, action: 'created', id };
+  return result(created ? created.path : id, 'created');
 }
