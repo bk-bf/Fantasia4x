@@ -221,6 +221,10 @@ const AREA_FOR_SUBAREA = {
   tools: 'tooling', dev: 'tooling', debug: 'tooling', headless: 'tooling', server: 'tooling'
 };
 
+export const areaFor = (subarea, rule = {}) => rule.area ?? AREA_FOR_SUBAREA[subarea] ?? 'sim';
+
+export const sizeFor = (files) => (files.length <= 2 ? 'S' : files.length <= 6 ? 'M' : 'L');
+
 export function idFor(g, rulesById) {
   const name = rulesById?.get(g.rule_id)?.name ?? g.rule_id;
   return slug(`${name}-${g.group}`);
@@ -253,8 +257,8 @@ export function upsertIssue(root, g, rulesById, sha, force = false) {
   const budget = BODY_LIMIT - JSON.stringify({ files, symbols }).length;
   const subarea = subareaFor(files);
   const type = rule.type ?? FAMILY_TYPE[g.family] ?? 'fix';
-  const area = rule.area ?? AREA_FOR_SUBAREA[subarea] ?? 'sim';
-  const size = files.length <= 2 ? 'S' : files.length <= 6 ? 'M' : 'L';
+  const area = areaFor(subarea, rule);
+  const size = sizeFor(files);
 
   if (plan.current) {
     const path = plan.current.path;

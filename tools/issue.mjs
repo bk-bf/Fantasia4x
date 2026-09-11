@@ -5,7 +5,7 @@
 // label invented one letter away from the one that already exists.
 //
 //   node tools/issue.mjs create --title T --type fix --area sim --size S --body-file - [--label L]... [--parent N]
-//   node tools/issue.mjs edit <n> [--title T] [--body-file -] [--add-label L] [--remove-label L] [--parent N]
+//   node tools/issue.mjs edit <n> [--title T] [--body-file -] [--add-label L] [--remove-label L] [--area A] [--size S] [--parent N]
 //   node tools/issue.mjs comment <n> --body-file -
 //   node tools/issue.mjs close <n> --commit <sha>
 //   node tools/issue.mjs labels            # what the schema allows
@@ -175,6 +175,25 @@ const issueId = (n) => {
 const linkParent = (n, parent) =>
   gh(['api', '-X', 'POST', `${REPO_API}/issues/${parent}/sub_issues`, '-F', `sub_issue_id=${issueId(n)}`]);
 
+const MERGED_LANES = new Set(['on dev', 'done']);
+
+const boardGaps = (card) => {
+  const gaps = [];
+  if (!card.status) gaps.push('no Status — the card is on the board in no lane');
+  if (!card['work type']) gaps.push('no Work type on the board');
+  if (!card.verify) gaps.push('no Verify route on the board');
+  if (!card.area) gaps.push('no Area on the board');
+  if (!card.size) gaps.push('no Size on the board');
+  const sev = (card.labels ?? []).find((l) => SEVERITY_PRIORITY[l]);
+  if (sev && card.priority !== SEVERITY_PRIORITY[sev]) {
+    gaps.push(
+      `Priority is ${card.priority ?? 'unset'} but the severity is ${sev}, which is ` +
+        `${SEVERITY_PRIORITY[sev]} — Priority is derived, not set by hand`
+    );
+  }
+  return gaps;
+};
+
 
 
 if (cmd === 'check-labels') {
@@ -200,34 +219,23 @@ if (cmd === 'check-labels') {
     for (const e of problems) process.stdout.write(`      ${e}\n`);
   }
   let untyped = 0;
+  const report = (n, title, gaps, lane) => {
+    if (!gaps.length) return;
+    untyped += 1;
+    process.stdout.write(`#${n}  ${title.slice(0, 52)}${lane ? `  (${lane})` : ''}\n`);
+    for (const g of gaps) process.stdout.write(`      ${g}\n`);
+  };
+  const open = new Set();
   for (const it of JSON.parse(
     gh(['issue', 'list', '--state', 'open', '--limit', '300', '--json', 'number,title'])
   )) {
     const key = String(it.number);
-    if (!cards.has(key)) {
-      untyped += 1;
-      process.stdout.write(`#${it.number}  ${it.title.slice(0, 52)}\n      not on the board\n`);
-    } else {
-      const card = cards.get(key);
-      const gaps = [];
-      if (!card.status) gaps.push('no Status — the card is on the board in no lane');
-      if (!card['work type']) gaps.push('no Work type on the board');
-      if (!card.verify) gaps.push('no Verify route on the board');
-      if (!card.area) gaps.push('no Area on the board');
-      if (!card.size) gaps.push('no Size on the board');
-      const sev = (card.labels ?? []).find((l) => SEVERITY_PRIORITY[l]);
-      if (sev && card.priority !== SEVERITY_PRIORITY[sev]) {
-        gaps.push(
-          `Priority is ${card.priority ?? 'unset'} but the severity is ${sev}, which is ` +
-            `${SEVERITY_PRIORITY[sev]} — Priority is derived, not set by hand`
-        );
-      }
-      if (gaps.length) {
-        untyped += 1;
-        process.stdout.write(`#${it.number}  ${it.title.slice(0, 52)}\n`);
-        for (const g of gaps) process.stdout.write(`      ${g}\n`);
-      }
-    }
+    open.add(key);
+    report(it.number, it.title, cards.has(key) ? boardGaps(cards.get(key)) : ['not on the board']);
+  }
+  for (const [key, card] of cards) {
+    if (open.has(key) || !MERGED_LANES.has((card.status ?? '').toLowerCase())) continue;
+    report(key, card.title ?? '', boardGaps(card), card.status);
   }
   process.stdout.write(
     `\n${bad} open issue(s) incompletely classified, ${untyped} with a gap on the board\n`
@@ -366,6 +374,8 @@ if (cmd === 'check-labels') {
   const n = argv[1] ?? die('which issue?');
   const parent = arg('parent');
   if (parent) issueId(parent);
+  const area = arg('area') && boardOption('Area', arg('area'), 'area');
+  const size = arg('size') && boardOption('Size', arg('size'), 'size');
   const add = all('add-label');
   const body = arg('body-file') ? prepare(readBody()) : null;
   // Refuse what this edit introduces, not what it inherits. A body that already cites a file
@@ -393,11 +403,20 @@ if (cmd === 'check-labels') {
   if (body !== null) changes.push('--body-file', '-');
   for (const l of add) changes.push('--add-label', l);
   for (const l of all('remove-label')) changes.push('--remove-label', l);
-  if (!changes.length && !parent) die('nothing to edit');
+  if (!changes.length && !parent && !area && !size) die('nothing to edit');
   if (changes.length) process.stdout.write(gh(['issue', 'edit', n, ...changes], body ?? undefined));
   if (parent) {
     linkParent(n, parent);
     process.stdout.write(`#${n} is a sub-issue of #${parent}\n`);
+  }
+  for (const [field, value] of [['Area', area], ['Size', size]]) {
+    if (!value) continue;
+    try {
+      setSelect(n, field, value);
+    } catch (e) {
+      die(e.message);
+    }
+    process.stdout.write(`#${n} ${field} is ${value}\n`);
   }
 } else if (cmd === 'comment') {
   const n = argv[1] ?? die('which issue?');
