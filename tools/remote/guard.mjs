@@ -5,7 +5,7 @@ import { basename } from 'node:path';
 
 const TEST_HOSTNAME = 'ubuntuserver';
 const TEST_TOOLS = new Set(['vitest', 'svelte-check', 'eslint', 'knip', 'jscpd', 'playwright', 'tsc']);
-const HARNESS = /^(\.\/)?tools\/(work-pins|bench|gungraun)\/|node_modules\/\.bin\//;
+const HARNESS = /^(\.\/)?tools\/(work-pins|bench|gungraun)\/|^(\.\/)?tools\/remote\/ci\.mjs|node_modules\/\.bin\//;
 const WRAPPERS = new Set(['bgr', 'nice', 'ionice', 'env', 'time', 'sudo', 'command', 'exec']);
 const SHELLS = new Set(['sh', 'bash', 'zsh']);
 
