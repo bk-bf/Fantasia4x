@@ -59,9 +59,7 @@ jobs:
             spatial-core
             sim-core
 
-      - uses: jetli/wasm-pack-action@v0.4.0
-        with:
-          version: latest
+      - uses: ./.github/actions/wasm-pack
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile

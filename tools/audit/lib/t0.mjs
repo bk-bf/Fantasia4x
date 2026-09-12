@@ -147,3 +147,37 @@ export function seamViolations(root, symbols) {
   }
   return { rules: rules.length, findings };
 }
+
+export const COMPONENT_LINE_LIMIT = 200;
+
+const lineCount = (text) => (text.match(/\n/g) ?? []).length;
+
+export function componentSizeViolations(root) {
+  const basePath = join(dirname(fileURLToPath(import.meta.url)), '..', 'component-sizes.json');
+  const frozen = existsSync(basePath) ? JSON.parse(readFileSync(basePath, 'utf8')) : {};
+  const findings = [];
+  const notes = [];
+  const present = new Set();
+
+  for (const abs of walkFiles(join(root, 'src'), ['.svelte'])) {
+    const file = abs.slice(root.length + 1);
+    const lines = lineCount(readFileSync(abs, 'utf8'));
+    const cap = frozen[file];
+    if (cap !== undefined) present.add(file);
+    if (lines <= COMPONENT_LINE_LIMIT) {
+      if (cap !== undefined)
+        notes.push({ where: file, detail: `${lines} lines, under the limit now; drop it from component-sizes.json` });
+      continue;
+    }
+    if (cap === undefined)
+      findings.push({ where: file, detail: `${lines} lines, over the ${COMPONENT_LINE_LIMIT}-line component limit` });
+    else if (lines > cap)
+      findings.push({ where: file, detail: `grew from ${cap} to ${lines} lines; a component over the limit may only shrink` });
+    else if (lines < cap)
+      notes.push({ where: file, detail: `shrank from ${cap} to ${lines} lines; lower its entry in component-sizes.json` });
+  }
+  for (const file of Object.keys(frozen))
+    if (!present.has(file)) notes.push({ where: file, detail: 'no longer exists; drop it from component-sizes.json' });
+
+  return { frozen: Object.keys(frozen).length, findings, notes };
+}

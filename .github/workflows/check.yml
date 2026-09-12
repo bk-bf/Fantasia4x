@@ -14,6 +14,9 @@ jobs:
   check:
     runs-on: ubuntu-latest
     timeout-minutes: 90
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - uses: actions/checkout@v4
         with:
@@ -36,9 +39,7 @@ jobs:
             spatial-core
             sim-core
 
-      - uses: jetli/wasm-pack-action@v0.4.0
-        with:
-          version: latest
+      - uses: ./.github/actions/wasm-pack
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -55,3 +56,37 @@ jobs:
         env:
           CHECK_BASE: ${{ github.event_name == 'push' && github.event.before || '' }}
         run: node tools/audit/ci-check.mjs
+
+      - name: Architecture seams and component sizes
+        run: node tools/audit/audit.mjs t0 --strict
+
+      - name: Work pins, base against head
+        if: github.event_name == 'pull_request'
+        run: node tools/work-pins/gate.mjs --base HEAD^1
+
+      - name: Read the gungraun version
+        id: gungraun
+        if: github.event_name == 'pull_request'
+        run: echo "version=$(cargo pkgid --manifest-path spatial-core/Cargo.toml gungraun | sed 's/.*@//')" >> "$GITHUB_OUTPUT"
+
+      - uses: gungraun/setup-gungraun@v1.1.3
+        if: github.event_name == 'pull_request'
+        with:
+          runner-version: ${{ steps.gungraun.outputs.version }}
+
+      - name: Instruction counts, base against head
+        if: github.event_name == 'pull_request'
+        run: node tools/gungraun/gate.mjs --base HEAD^1 --home "$RUNNER_TEMP/gungraun"
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() && github.event_name == 'pull_request' }}
+        with:
+          name: gungraun-flamegraphs
+          path: ${{ runner.temp }}/gungraun/**/*.svg
+          if-no-files-found: ignore
+
+      - name: CodSpeed benchmarks
+        uses: CodSpeedHQ/action@v5
+        with:
+          mode: simulation
+          run: pnpm bench

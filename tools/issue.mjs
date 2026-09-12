@@ -4,13 +4,16 @@
 // mean nothing in an issue, an issue URL inside backticks that never becomes a link, and a
 // label invented one letter away from the one that already exists.
 //
-//   node tools/issue.mjs create --title T --type fix --area sim --size S --body-file - [--label L]...
-//   node tools/issue.mjs edit <n> [--title T] [--body-file -] [--add-label L] [--remove-label L]
+//   node tools/issue.mjs create --title T --type fix --area sim --size S --body-file - [--label L]... [--parent N]
+//   node tools/issue.mjs edit <n> [--title T] [--body-file -] [--add-label L] [--remove-label L] [--type T] [--area A] [--size S] [--verify V] [--parent N]
+//   node tools/issue.mjs blocked-by <n> <blocker>    # mark <n> as blocked by <blocker>
 //   node tools/issue.mjs comment <n> --body-file -
 //   node tools/issue.mjs close <n> --commit <sha>
 //   node tools/issue.mjs labels            # what the schema allows
 //   node tools/issue.mjs sync-labels [--prune]  # create what is missing, name or delete the strays
 //   node tools/issue.mjs lint --body-file - [--label L]...
+//   node tools/issue.mjs pr --head <branch> --title T --body-file -
+//   node tools/issue.mjs pr-edit <n> --body-file -
 
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
@@ -24,16 +27,19 @@ import {
   checkKind,
   labelGroup
 } from './audit/lib/schema.mjs';
+import { checkPrivate } from './audit/lib/private.mjs';
 import { linkify, issueRef, indexedSha, blobUrl, resolveRepoPath } from './audit/lib/links.mjs';
 import {
   moveLane,
   setSelect,
   addToBoard,
   itemFor,
+  laneOf,
   boardItems,
   fields,
   invalidate
 } from './audit/lib/board.mjs';
+import { createPull, editPull } from './audit/lib/pulls.mjs';
 
 process.stdout.on('error', (e) => {
   if (e.code === 'EPIPE') process.exit(0);
@@ -159,6 +165,43 @@ const guard = (labels, body, { allowReady = false, template = false, workType } 
 const allIssues = () =>
   JSON.parse(gh(['issue', 'list', '--state', 'all', '--limit', '300', '--json', 'number,title,body']));
 
+const REPO_API = '/repos/bk-bf/Fantasia4x';
+
+const issueRecord = (n) => {
+  let it;
+  try {
+    it = JSON.parse(gh(['api', `${REPO_API}/issues/${n}`]));
+  } catch {
+    die(`no issue #${n}`);
+  }
+  if (it.pull_request) die(`#${n} is a pull request, not an issue`);
+  return it;
+};
+
+const issueId = (n) => issueRecord(n).id;
+
+const linkParent = (n, parent) =>
+  gh(['api', '-X', 'POST', `${REPO_API}/issues/${parent}/sub_issues`, '-F', `sub_issue_id=${issueId(n)}`]);
+
+const MERGED_LANES = new Set(['on dev', 'done']);
+
+const boardGaps = (card) => {
+  const gaps = [];
+  if (!card.status) gaps.push('no Status — the card is on the board in no lane');
+  if (!card['work type']) gaps.push('no Work type on the board');
+  if (!card.verify) gaps.push('no Verify route on the board');
+  if (!card.area) gaps.push('no Area on the board');
+  if (!card.size) gaps.push('no Size on the board');
+  const sev = (card.labels ?? []).find((l) => SEVERITY_PRIORITY[l]);
+  if (sev && card.priority !== SEVERITY_PRIORITY[sev]) {
+    gaps.push(
+      `Priority is ${card.priority ?? 'unset'} but the severity is ${sev}, which is ` +
+        `${SEVERITY_PRIORITY[sev]} — Priority is derived, not set by hand`
+    );
+  }
+  return gaps;
+};
+
 
 
 if (cmd === 'check-labels') {
@@ -184,34 +227,23 @@ if (cmd === 'check-labels') {
     for (const e of problems) process.stdout.write(`      ${e}\n`);
   }
   let untyped = 0;
+  const report = (n, title, gaps, lane) => {
+    if (!gaps.length) return;
+    untyped += 1;
+    process.stdout.write(`#${n}  ${title.slice(0, 52)}${lane ? `  (${lane})` : ''}\n`);
+    for (const g of gaps) process.stdout.write(`      ${g}\n`);
+  };
+  const open = new Set();
   for (const it of JSON.parse(
     gh(['issue', 'list', '--state', 'open', '--limit', '300', '--json', 'number,title'])
   )) {
     const key = String(it.number);
-    if (!cards.has(key)) {
-      untyped += 1;
-      process.stdout.write(`#${it.number}  ${it.title.slice(0, 52)}\n      not on the board\n`);
-    } else {
-      const card = cards.get(key);
-      const gaps = [];
-      if (!card.status) gaps.push('no Status — the card is on the board in no lane');
-      if (!card['work type']) gaps.push('no Work type on the board');
-      if (!card.verify) gaps.push('no Verify route on the board');
-      if (!card.area) gaps.push('no Area on the board');
-      if (!card.size) gaps.push('no Size on the board');
-      const sev = (card.labels ?? []).find((l) => SEVERITY_PRIORITY[l]);
-      if (sev && card.priority !== SEVERITY_PRIORITY[sev]) {
-        gaps.push(
-          `Priority is ${card.priority ?? 'unset'} but the severity is ${sev}, which is ` +
-            `${SEVERITY_PRIORITY[sev]} — Priority is derived, not set by hand`
-        );
-      }
-      if (gaps.length) {
-        untyped += 1;
-        process.stdout.write(`#${it.number}  ${it.title.slice(0, 52)}\n`);
-        for (const g of gaps) process.stdout.write(`      ${g}\n`);
-      }
-    }
+    open.add(key);
+    report(it.number, it.title, cards.has(key) ? boardGaps(cards.get(key)) : ['not on the board']);
+  }
+  for (const [key, card] of cards) {
+    if (open.has(key) || !MERGED_LANES.has((card.status ?? '').toLowerCase())) continue;
+    report(key, card.title ?? '', boardGaps(card), card.status);
   }
   process.stdout.write(
     `\n${bad} open issue(s) incompletely classified, ${untyped} with a gap on the board\n`
@@ -302,15 +334,22 @@ if (cmd === 'check-labels') {
   }
 } else if (cmd === 'create') {
   const title = arg('title') ?? die('--title is required');
+  const privateTitle = checkPrivate(title);
+  if (privateTitle.length) die(`refused:\n  - title ${privateTitle.join('\n  - title ')}`);
   const labels = all('label');
-  const type = arg('type');
-  if (!type) die(`--type is required — one of: ${TYPES.join(', ')}`);
+  const parent = arg('parent');
+  if (parent) issueId(parent);
+  const type = arg('type') ?? (parent ? itemFor(parent)?.['work type'] : null);
+  if (!type) die(`--type is required, or --parent to take the parent's — one of: ${TYPES.join(', ')}`);
   if (!TYPES.includes(type)) die(`unknown --type "${type}" — one of: ${TYPES.join(', ')}`);
   const area = boardOption('Area', arg('area'), 'area');
   const size = boardOption('Size', arg('size'), 'size');
   if (type === 'feat' && !labels.some((l) => labelGroup('kind').includes(l))) labels.push('feature');
   const body = prepare(readBody());
   guard(labels, body, { template: true, workType: type });
+  const INHERITED_LANES = new Set(['backlog', 'blocked on you', 'ready', 'manual']);
+  const parentLane = parent ? laneOf(parent) : '';
+  const lane = INHERITED_LANES.has(parentLane) ? parentLane : 'backlog';
   const args = ['issue', 'create', '--title', title, '--body-file', '-'];
   for (const l of labels) args.push('--label', l);
   const url = gh(args, body).trim();
@@ -328,18 +367,35 @@ if (cmd === 'check-labels') {
   try {
     addToBoard(n);
     waitForCard(n);
-    setSelect(n, 'Status', 'Backlog');
+    setSelect(n, 'Status', lane);
     setSelect(n, 'Work type', type);
     setSelect(n, 'Area', area);
     setSelect(n, 'Size', size);
+    const priority = labels.map((l) => SEVERITY_PRIORITY[l]).find(Boolean);
+    if (priority) setSelect(n, 'Priority', priority);
     if (verify) setSelect(n, 'Verify', verify);
   } catch (e) {
     process.stderr.write(`note: created #${n} but could not set its fields: ${e.message}\n`);
   }
+  if (parent) {
+    try {
+      linkParent(n, parent);
+      process.stdout.write(`#${n} is a sub-issue of #${parent}, in ${lane}\n`);
+    } catch (e) {
+      process.stderr.write(`note: created #${n} but could not make it a sub-issue of #${parent}: ${e.message}\n`);
+    }
+  }
 } else if (cmd === 'edit') {
   const n = argv[1] ?? die('which issue?');
+  const parent = arg('parent');
+  if (parent) issueId(parent);
+  const area = arg('area') && boardOption('Area', arg('area'), 'area');
+  const size = arg('size') && boardOption('Size', arg('size'), 'size');
   const add = all('add-label');
   const body = arg('body-file') ? prepare(readBody()) : null;
+  const type = arg('type');
+  if (type && !TYPES.includes(type)) die(`unknown --type "${type}" — one of: ${TYPES.join(', ')}`);
+  const verify = arg('verify');
   // Refuse what this edit introduces, not what it inherits. A body that already cites a file
   // somebody deleted cannot be ticked, relabelled or corrected while the old citation is held
   // against it, which locks the issue instead of protecting it.
@@ -348,27 +404,77 @@ if (cmd === 'check-labels') {
   const resulting = [...new Set([...current.labels.map((l) => l.name), ...add])].filter(
     (l) => !removed.has(l)
   );
-  const workType = itemFor(n)?.['work type'];
+  const workType = type ?? itemFor(n)?.['work type'];
   const inherited =
     body === null ? [] : check({ labels: [], body: current.body ?? '', allowReady: true });
   const introduced = [
     ...checkLabels(add, { allowReady: true }),
+    ...(arg('title') ? checkPrivate(arg('title')).map((e) => `title ${e}`) : []),
     ...checkBody(body ?? ''),
     ...(body !== null
       ? [...checkTemplate(body, resulting, workType), ...checkRequired(resulting)]
       : []),
-    ...(add.length || removed.size ? checkKind(resulting, workType) : [])
+    ...(add.length || removed.size || type ? checkKind(resulting, workType) : [])
   ].filter((e) => !inherited.includes(e));
   if (introduced.length) die(`refused:\n  - ${introduced.join('\n  - ')}`);
-  const args = ['issue', 'edit', n];
-  if (arg('title')) args.push('--title', arg('title'));
-  if (body !== null) args.push('--body-file', '-');
-  for (const l of add) args.push('--add-label', l);
-  for (const l of all('remove-label')) args.push('--remove-label', l);
-  process.stdout.write(gh(args, body ?? undefined));
+  const changes = [];
+  if (arg('title')) changes.push('--title', arg('title'));
+  if (body !== null) changes.push('--body-file', '-');
+  for (const l of add) changes.push('--add-label', l);
+  for (const l of all('remove-label')) changes.push('--remove-label', l);
+  if (!changes.length && !parent && !type && !area && !size && !verify) die('nothing to edit');
+  if (changes.length) process.stdout.write(gh(['issue', 'edit', n, ...changes], body ?? undefined));
+  if (parent) {
+    linkParent(n, parent);
+    process.stdout.write(`#${n} is a sub-issue of #${parent}\n`);
+  }
+  for (const [field, value] of [
+    ['Work type', type],
+    ['Area', area],
+    ['Size', size],
+    ['Verify', verify]
+  ]) {
+    if (!value) continue;
+    try {
+      setSelect(n, field, value);
+    } catch (e) {
+      die(e.message);
+    }
+    process.stdout.write(`#${n} ${field} is ${value}\n`);
+  }
+} else if (cmd === 'blocked-by') {
+  const [n, blocker] = argv.slice(1, 3);
+  if (!n || !blocker) die('usage: blocked-by <issue> <blocker>');
+  const q =
+    'mutation($i:ID!,$b:ID!){ addBlockedBy(input:{issueId:$i,blockingIssueId:$b}){ clientMutationId } }';
+  try {
+    gh(['api', 'graphql', '-f', `query=${q}`, '-f', `i=${issueRecord(n).node_id}`, '-f', `b=${issueRecord(blocker).node_id}`]);
+  } catch (e) {
+    die(e.message);
+  }
+  process.stdout.write(`#${n} is blocked by #${blocker}\n`);
+} else if (cmd === 'pr') {
+  const head = arg('head') ?? die('which branch? --head <branch>');
+  const title = arg('title') ?? die('--title is required');
+  try {
+    const pull = createPull({ branch: head, title, body: readBody() });
+    process.stdout.write(`${pull?.url ?? ''}\n`);
+  } catch (e) {
+    die(e.message);
+  }
+} else if (cmd === 'pr-edit') {
+  const n = argv[1] ?? die('which pull request?');
+  try {
+    editPull(n, readBody());
+  } catch (e) {
+    die(e.message);
+  }
+  process.stdout.write(`#${n} description rewritten\n`);
 } else if (cmd === 'comment') {
   const n = argv[1] ?? die('which issue?');
   const body = prepare(readBody());
+  const privateWords = checkPrivate(body);
+  if (privateWords.length) die(`refused:\n  - ${privateWords.join('\n  - ')}`);
   // A comment is a record of what a run did, not a specification. Refusing to post one because
   // the text it is reporting names something that no longer exists loses the whole record, so
   // the same problems are reported and the comment still goes up.
@@ -405,5 +511,6 @@ if (cmd === 'check-labels') {
     gh(['issue', 'close', n, '--reason', 'completed', '--comment', `Fixed in ${sha}.`])
   );
 } else {
-  die(readFileSync(new URL(import.meta.url), 'utf8').split('\n').slice(1, 15).join('\n').replace(/^\/\/ ?/gm, ''));
+  const head = readFileSync(new URL(import.meta.url), 'utf8').split('\n').slice(1);
+  die(head.slice(0, head.findIndex((l) => !l.startsWith('//'))).join('\n').replace(/^\/\/ ?/gm, ''));
 }

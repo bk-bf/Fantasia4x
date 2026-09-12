@@ -4,6 +4,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadRules } from './rules.mjs';
 import { ROOT } from './links.mjs';
+import { checkPrivate } from './private.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 
@@ -162,6 +163,7 @@ const linesAt = (sha, path) => {
 export function checkBody(body) {
   const errors = [];
   const text = body ?? '';
+  errors.push(...checkPrivate(text));
 
   for (const m of text.matchAll(/\[[^\]]*\]\((?!https?:)([^)]+)\)/g)) {
     errors.push(

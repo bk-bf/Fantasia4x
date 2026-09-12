@@ -78,7 +78,10 @@ which is the bug.
 
 ## Components
 
-200 line limit. Extract sub-components when it is exceeded.
+200 line limit. Extract sub-components when it is exceeded. `check` runs
+`node tools/audit/audit.mjs t0 --strict`, which fails a new component over 200 lines and an
+over-limit component that grows past its entry in `tools/audit/component-sizes.json`. Entries only
+go down: lower one when a component shrinks, and drop it once the component is under the limit.
 
 Use Svelte 5 runes — `$state`, `$derived`, `$effect`. Not the legacy `$:` syntax.
 
@@ -132,31 +135,25 @@ only when asked, or when the change touches a hub everything imports.
 
 ## Committing
 
-**On the laptop, never run `git commit` or `git push`.** Kirill commits his own repository there.
-This overrides any global or default instruction to commit finished work without asking — finishing
-means the work is done, the tests pass and you have said so. Leave the changes in the working tree
-and report what is staged.
+**Commit finished work and push it, on the laptop and on ubuntuserver alike.** Finished means the
+work is done, `pnpm check` and the related tests pass, and you have said so. Commit in logical
+groups. On ubuntuserver the checkout is reached over t3 code, with no editor and no git UI, so an
+uncommitted tree there is invisible, and anything that reads the tree stops on it:
+`tools/audit/deploy/nightly-audit.sh` aborts on a dirty tree, and the journal watcher answers that
+failure by running `git stash`.
 
 **All work lands on `dev`.** `main` is the branch Kirill plays and builds from, and it changes
 only when he promotes. Nothing automated writes to it: the fixer branches from `origin/dev`, a card
-reaches `dev` only through a pull request Kirill merged, and the nightly runs in a checkout on `dev`. `pnpm audit:promote`
+reaches `dev` only through a merged pull request, and the nightly runs in a checkout on `dev`. `pnpm audit:promote`
 merges `dev` into `main` in a throwaway worktree, runs the **whole** suite there rather than the
 related subset, and stops — printing the worktree to play and the command to push. `--push` is
 the same run with the merge pushed, for when he has played it and decided.
 
 Branch from `dev`, merge to `dev`, and never push `main`.
 
-**On ubuntuserver, commit.** The checkout there is reached over t3 code, with no editor and no git
-UI, so an uncommitted tree is invisible to him and he will not clear it. Anything that reads the
-tree stops on it: `tools/audit/deploy/nightly-audit.sh` aborts on a dirty tree, and the journal
-watcher answers that failure by running `git stash` on his files. Commit finished work in logical
-groups. Pushing is allowed now that the board is on GitHub, but push `main` only when the
-work is verified green. Use `uname -n` to tell the machines apart.
+This applies to subagents you dispatch.
 
-This applies to subagents you dispatch. Tell each one which machine it is on, in its prompt.
-
-**If you commit anyway, having forgotten**, say so plainly and match the repo's existing convention
-rather than inventing one — `git log` is the reference:
+**Every commit follows the repo's convention**, not an invented one — `git log` is the reference:
 
 - `type: lowercase summary`, or `type(scope): lowercase summary`. The types in use are `feat`,
   `fix`, `refactor`, `chore`, `docs`, `dev`, `agents`, `perf`, `style`, `test`, `ci` and
@@ -169,12 +166,16 @@ rather than inventing one — `git log` is the reference:
   message; put it in the code, a test, or `docs/`.
 - Keep the `Co-Authored-By` trailer.
 
-`scripts/hooks/commit-msg` refuses anything else, and `pnpm hooks:install` puts it in place
-along with the pre-commit hook. `git commit --no-verify` bypasses it for a one-off.
+**The hooks enforce it.** `scripts/hooks/commit-msg` refuses a message in any other shape,
+`pre-push` refuses a new branch not named `<type>/<title>-<issue number>`, and `pre-commit` and
+`commit-msg` refuse a line or message carrying a private word, checked against the hashes in
+`tools/audit/private-words.json`. `pnpm hooks:install` links all three into `.git/hooks`; run it in
+any clone whose hooks are missing. Never bypass them with `--no-verify`.
 
 ## Trackers
 
-**GitHub issues hold all work** — defects, features and decisions. `gh issue list` is the board.
+**GitHub issues hold all tracked work** — defects, features and decisions. `gh issue list` is the
+board. Work done in a conversation is tracked only when its scope calls for it; see "Pull requests".
 A feature's issue is its spec; no spec file sits beside it. `docs/tasks/` keeps `ROADMAP.md`, the
 record of what shipped, and `archive/`, which nothing new is written to. The old `docs/issues/`
 and `docs/pr/` directories are gone.
@@ -196,7 +197,9 @@ from there the work is a pull request, and the card follows it. `Rejected` is th
 on purpose. A change to the lanes inserts or drops the one option it concerns and keeps every
 other option where Kirill put it; rewriting the whole option list moves his columns.
 
-- **`Backlog`** — raised, not yet evaluated. The audit raises here and nowhere else.
+- **`Backlog`** — raised, not yet evaluated. The audit raises here and nowhere else. A card with an
+  open pull request is never here: `board-sync.py` moves it to `In progress` on its next tick, and
+  `pnpm issue lane` refuses to put it back.
 
 **Every card is a real issue.** Do not put a draft card on the board to represent work that has
 a spec but no issue — an empty card inflates the count and says nothing a person can act on.
@@ -212,15 +215,16 @@ Planned work is an issue from the start, and waits in `Backlog` until Kirill mov
   elsewhere. An agent moves a card out of `Failed` only when he says so.
 - **`In progress`** — a branch exists and an agent is on it. Once the fixer has it green it is a
   pull request into `dev`, and the card stays here while `review.mjs` verifies it.
-- **`Manual`** — Kirill is working it by hand. `review.mjs` skips its pull request, `board-sync.py`
+- **`Manual`** — he is working it by hand. `review.mjs` skips its pull request, `board-sync.py`
   does not update its branch, and `fix.mjs` refuses it. He moves it to `PR ready` to have it
   reviewed or to `Ready` to hand it to the fixer; when its pull request merges, `after-merge.mjs`
   moves it to `On dev`, the one move out of it an agent makes.
-- **`PR ready`** — the pull request is ready for Kirill: `review.mjs` passed it, or it
-  is a `needs playtest` pull request, which the reviewer skips. He merges it, or comments on it
-  and moves the card back to `Ready`. Agents put cards here, and `after-merge.mjs` takes them out
+- **`PR ready`** — the pull request has passed: `review.mjs` passed it, or it is a
+  `needs playtest` pull request, which the reviewer skips. `board-sync.py` merges a reviewed one
+  once CI is green; a `needs playtest` one waits for him to play and merge it, or to comment on it
+  and move the card back to `Ready`. Agents put cards here, and `after-merge.mjs` takes them out
   when the pull request merges.
-- **`On dev`** — merged to `dev` by a pull request Kirill merged, and not yet in the build he
+- **`On dev`** — merged to `dev` by a pull request, and not yet in the build he
   plays. Cards rest here until he promotes, which is the only thing that writes `main`.
 - **`Done`** — promoted to `main`, so it is in the game he plays. The issue was closed when it
   reached `dev`; the lane is where the work lives, not whether it is finished.
@@ -235,13 +239,19 @@ Planned work is an issue from the start, and waits in `Backlog` until Kirill mov
 looked at. And do not put one back because he moved it out: him moving a card is the answer,
 not a mistake to correct. Nothing watches those lanes for drift.
 
-Move a card with `pnpm issue lane <n> <lane>`, which refuses a move out of his lanes, and a move
-out of `Backlog` for any card that is not `drift` or `test gap` unless it goes to `Blocked on you`.
+One exception, and only through the `unblock` skill: it asks him about each `Blocked on you` card
+with the question tool, writes his answers into the issue body and a comment, and moves the card
+to `Ready`. `moveLane` allows that one move only while the card's latest comment starts with
+`**Answered**`. It also allows `Blocked on you` to `Manual`, for when he takes a card by hand.
+
+Move a card with `pnpm issue lane <n> <lane>`, which refuses any other move out of his lanes, and a
+move out of `Backlog` for any card that is not `drift` or `test gap` unless it goes to
+`Blocked on you` or it is a sub-issue following its parent into the parent's lane.
 Direct `gh project item-edit` is denied.
 
-Do not skip a lane. Nothing goes from `Backlog` straight to `In progress`, nothing reaches
-`On dev` except through a pull request Kirill merged, and nothing reaches `Done` except by a
-promotion Kirill ran.
+Do not skip a lane. Nothing goes from `Backlog` straight to `In progress` except when a pull
+request opens for it, nothing reaches `On dev` except through a merged pull request, and nothing
+reaches `Done` except by a promotion he ran.
 
 **After `Ready`, the work is a pull request.** `pnpm audit:fix --next` takes the oldest `Ready`
 card whose `Verify` is `tests` and works it in a worktree off `origin/dev`. Once `pnpm check` and
@@ -261,7 +271,10 @@ request into `dev` and every push to `dev`, on GitHub's runners, and branch prot
 requires it to pass on an up-to-date branch before a merge. Kirill is the repository's admin and
 can override that.
 
-Merging is Kirill's. When a pull request merges, GitHub closes the issue it fixes, and
+`board-sync.py` merges a pull request once GitHub reports it `CLEAN`, meaning mergeable, up to date
+and with `check` green, when its card is in `In progress` or `PR ready`, it does not carry
+`needs playtest`, and, for a `fix/` branch, its latest commit has `audit/review` success. He merges
+the rest. When a pull request merges, GitHub closes the issue it fixes, and
 `tools/audit/after-merge.mjs` — run by `board-sync.py` every five minutes — moves the card to
 `On dev`, deletes the branch and removes its worktrees. The same pass keeps every open pull request mergeable: one
 that has fallen behind `dev` gets GitHub's Update branch, which re-runs CI, and one that no longer
@@ -272,14 +285,17 @@ and the card goes straight to `PR ready`. The reviewer skips it, and the worktre
 beside whatever is already on 5173. He merges it once he has played it. The fixer and the
 reviewer stop while the audit is paused, because they spend the same limits.
 
-**Never write to GitHub with `gh` directly.** `gh issue create|edit|close|comment` and
-`gh label create|edit|delete` are denied in `.claude/settings.json`. Use `pnpm issue`:
+**Never write to GitHub with `gh` directly.** `gh issue create|edit|close|comment`,
+`gh label create|edit|delete` and `gh pr create|edit` are denied in `.claude/settings.json`. Use
+`pnpm issue`:
 
 ```bash
 pnpm issue labels                       # every label the schema allows
 pnpm issue lint --body-file draft.md    # would this be accepted?
 pnpm issue create --title T --type fix --area sim --size S --body-file - --label high --label drift
 pnpm issue close 12 --commit <sha>
+pnpm issue pr --head <branch> --title T --body-file -   # open a pull request into dev
+pnpm issue pr-edit 84 --body-file -                     # rewrite its description
 ```
 
 It repairs what is mechanical and refuses what is not. A `path:line` written in prose becomes a
@@ -306,7 +322,8 @@ This is not the board's `Area` field, which is a game-domain taxonomy: `combat`,
 `ui`, `data`, `tooling`. A card carries both — where in the code, and what part of the game.
 
 **The work type is a board field, not a label**, and nothing mirrors it — a card would then
-carry the same word twice. `pnpm issue create --type` is required and sets it, `raise.mjs`
+carry the same word twice. `pnpm issue create --type` sets it, and is required unless `--parent`
+names an issue to take it from, `raise.mjs`
 passes the type its rule family implies, and `check-labels` reads the board and reports an open
 issue whose card has no `Work type` or is not on the board at all. The words are the ones the
 commit messages use: `feat`, `fix`, `refactor`, `perf`, `test`, `tooling`, `docs`, `chore`,
@@ -318,7 +335,8 @@ A field that nothing checks is how nine cards went untyped without anything noti
 without `--area` (`combat`, `items`, `sim`, `ui`, `data`, `tooling`) and `--size` (`S`, `M`, `L`),
 checks both against the board's own options, and sets them on the card. `raise.mjs` derives them
 for what the audit raises: Area from the subarea, Size from how many files the findings touch.
-`check-labels` reports an open card missing either. Size is the effort: `S` is one change in a
+`check-labels` reports a card missing either, open or in `On dev` or `Done`, and
+`pnpm issue edit <n> --area A --size S` sets them, as `--verify V` sets the Verify route. Size is the effort: `S` is one change in a
 file or two, `M` is several files or a measurement, `L` is several steps, a new system or a design.
 
 **A feature is built one step per branch.** Work type `feat` goes with the kind `feature`, and
@@ -328,9 +346,17 @@ The body follows `.github/ISSUE_TEMPLATE/feat.md` — What this is, Why, Steps, 
 verified — and may add `## Decisions this needs before any edit` and `## Considered and
 rejected`. Each checkbox under `## Steps` is one branch and one pull request: the fixer works the
 first open step only, and its pull request says `Part of #n` with the step on a `Step:` line, so
-merging it does not close the issue. When Kirill merges it, `after-merge.mjs` ticks the step.
+merging it does not close the issue. When it merges, `after-merge.mjs` ticks the step.
 While steps remain, a merged step sends the card back to `Ready`; the issue closes when its last
 step lands. Write each step as a change that can be merged, verified and reviewed by itself.
+
+**A pull request never links an issue with open sub-issues.** The board shows a pull request only
+on the issue it closes, so one that says `Part of #n` about a parent shows on no card.
+`pnpm issue pr`, `pnpm issue pr-edit` and the fixer refuse it and name the open sub-issues. Link
+the sub-issue the work belongs to, making a new one with `pnpm issue create --parent <n>` when a
+step has none. The new sub-issue takes the parent's work type, and its lane when that is
+`Backlog`, `Blocked on you`, `Ready` or `Manual`. Its pull request says `Fixes #<sub-issue>`, with the parent's step on the `Step:`
+line, and `after-merge.mjs` ticks that step in the parent as well.
 
 **A body has to say something.** `create` also refuses a stub: under ~240 characters of prose,
 no citation, or no remediation checkbox (unless it carries `needs decision`). A heading with
@@ -400,14 +426,33 @@ ones you did. Leaving a finished item open is the failure to avoid.
 
 ## Pull requests
 
+**Check what is already open before building or investigating.** Two sessions building the same
+thing leaves two implementations and a conflict in the same file. `tools/audit/hooks/inflight.mjs`
+runs from `.claude/settings.json`: it lists the open pull requests with every prompt, and it refuses
+the first edit in a session of a file that an open pull request changes or an open issue cites,
+naming them. The branch's own issue and pull request, from the `-<n>` its name ends in, are not
+counted. Read what it names; if the edit belongs to that work, do it on that branch.
+
 **Work an agent does on a board card goes through a pull request into `dev`.** The fixer opens
-it, the reviewer and CI report on it, and Kirill merges it. The pull request is where he reads the
+it, the reviewer and CI report on it, and it merges once they pass. The pull request is where he reads the
 diff and where he writes what is wrong with it, and the fixer reads those comments on its next
 attempt. Several related fixes belong in one branch and one pull request, not one each.
 
-Work done in a conversation, at Kirill's request and outside the board, does not need one:
-branch from `dev`, verify, `git merge --no-ff` into `dev`, and close the issue with the merge
-commit. Open a pull request anyway when the change is large enough that reviewing it as one diff
-beats reading the merge commit, or when it has to sit unmerged while something else is decided.
+**Work done in a conversation at Kirill's request needs no issue and no pull request.** Branch
+from `dev` in a worktree, run `pnpm check` and the related tests, and commit it to `dev`
+directly: `git merge --no-ff` the branch into `dev` and push. Branch protection lets his account
+push past the required `check`, so the local run is the only gate; do not push red. If the work
+settles an issue that already exists, close that issue with the commit.
+
+Open an issue and a pull request only when one of these holds:
+
+- the scope is large enough to be reviewed as one diff, spans several sessions, or has to sit
+  unmerged while something else is decided;
+- the work is handed to the fixer, which works cards from `Ready` unattended and needs an issue
+  to work from.
+
+A small fix, a rule in this file, a tooling tweak or a one-step change asked for in the
+conversation is none of these. Filing an issue and a pull request for it adds a card and a CI
+run and nothing he reads.
 
 Nothing opens a pull request into `main`; `pnpm audit:promote` is how `dev` reaches it.

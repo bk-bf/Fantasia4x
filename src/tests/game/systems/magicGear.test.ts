@@ -250,8 +250,8 @@ describe('§M regalia (combo & head jewelry)', () => {
 
   it('two single-buff rings fill both ring slots and stack their buffs (no swap)', () => {
     let pawn = { id: 'r', equipment: {}, transientConditions: [] } as unknown as Pawn;
-    pawn = equipItem(pawn, 'ruby_ring');
-    pawn = equipItem(pawn, 'sapphire_ring');
+    pawn = equipItem(pawn, 'ruby_ring', 0);
+    pawn = equipItem(pawn, 'sapphire_ring', 0);
     expect(pawn.equipment.ring?.itemId).toBe('ruby_ring');
     expect(pawn.equipment.ring2?.itemId).toBe('sapphire_ring');
     const synced = syncTransientConditions(pawn);
