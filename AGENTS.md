@@ -171,7 +171,8 @@ any clone whose hooks are missing. Never bypass them with `--no-verify`.
 
 ## Trackers
 
-**GitHub issues hold all work** — defects, features and decisions. `gh issue list` is the board.
+**GitHub issues hold all tracked work** — defects, features and decisions. `gh issue list` is the
+board. Work done in a conversation is tracked only when its scope calls for it; see "Pull requests".
 A feature's issue is its spec; no spec file sits beside it. `docs/tasks/` keeps `ROADMAP.md`, the
 record of what shipped, and `archive/`, which nothing new is written to. The old `docs/issues/`
 and `docs/pr/` directories are gone.
@@ -431,9 +432,21 @@ it, the reviewer and CI report on it, and it merges once they pass. The pull req
 diff and where he writes what is wrong with it, and the fixer reads those comments on its next
 attempt. Several related fixes belong in one branch and one pull request, not one each.
 
-Work done in a conversation, at Kirill's request and outside the board, does not need one:
-branch from `dev`, verify, `git merge --no-ff` into `dev`, and close the issue with the merge
-commit. Open a pull request anyway when the change is large enough that reviewing it as one diff
-beats reading the merge commit, or when it has to sit unmerged while something else is decided.
+**Work done in a conversation at Kirill's request needs no issue and no pull request.** Branch
+from `dev` in a worktree, run `pnpm check` and the related tests, and commit it to `dev`
+directly: `git merge --no-ff` the branch into `dev` and push. Branch protection lets his account
+push past the required `check`, so the local run is the only gate; do not push red. If the work
+settles an issue that already exists, close that issue with the commit.
+
+Open an issue and a pull request only when one of these holds:
+
+- the scope is large enough to be reviewed as one diff, spans several sessions, or has to sit
+  unmerged while something else is decided;
+- the work is handed to the fixer, which works cards from `Ready` unattended and needs an issue
+  to work from.
+
+A small fix, a rule in this file, a tooling tweak or a one-step change asked for in the
+conversation is none of these. Filing an issue and a pull request for it adds a card and a CI
+run and nothing he reads.
 
 Nothing opens a pull request into `main`; `pnpm audit:promote` is how `dev` reaches it.
