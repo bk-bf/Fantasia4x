@@ -84,6 +84,11 @@ const steps = [
       existsSync('tools/work-pins/browser.mjs') ? ensureChromium() : 'this commit has no browser leg'
   },
   {
+    name: 'Ticks per second, base against head',
+    cmd: ['node', 'tools/work-pins/gate.mjs', '--leg', 'tps', '--base', base],
+    slow: true
+  },
+  {
     name: 'Benchmarks run',
     cmd: ['vitest', 'bench', '--run', '--config', 'tools/bench/vitest.config.ts']
   },
