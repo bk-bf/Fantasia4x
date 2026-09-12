@@ -10,7 +10,9 @@
       "Bash(gh label edit:*)",
       "Bash(gh label delete:*)",
       "Bash(gh project item-edit:*)",
-      "Bash(gh project item-delete:*)"
+      "Bash(gh project item-delete:*)",
+      "Bash(gh pr create:*)",
+      "Bash(gh pr edit:*)"
     ]
   },
   "hooks": {
