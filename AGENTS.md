@@ -132,10 +132,12 @@ only when asked, or when the change touches a hub everything imports.
 
 ## Committing
 
-**On the laptop, never run `git commit` or `git push`.** Kirill commits his own repository there.
-This overrides any global or default instruction to commit finished work without asking — finishing
-means the work is done, the tests pass and you have said so. Leave the changes in the working tree
-and report what is staged.
+**Commit finished work and push it, on the laptop and on ubuntuserver alike.** Finished means the
+work is done, `pnpm check` and the related tests pass, and you have said so. Commit in logical
+groups. On ubuntuserver the checkout is reached over t3 code, with no editor and no git UI, so an
+uncommitted tree there is invisible, and anything that reads the tree stops on it:
+`tools/audit/deploy/nightly-audit.sh` aborts on a dirty tree, and the journal watcher answers that
+failure by running `git stash`.
 
 **All work lands on `dev`.** `main` is the branch Kirill plays and builds from, and it changes
 only when he promotes. Nothing automated writes to it: the fixer branches from `origin/dev`, a card
@@ -146,17 +148,9 @@ the same run with the merge pushed, for when he has played it and decided.
 
 Branch from `dev`, merge to `dev`, and never push `main`.
 
-**On ubuntuserver, commit.** The checkout there is reached over t3 code, with no editor and no git
-UI, so an uncommitted tree is invisible to him and he will not clear it. Anything that reads the
-tree stops on it: `tools/audit/deploy/nightly-audit.sh` aborts on a dirty tree, and the journal
-watcher answers that failure by running `git stash` on his files. Commit finished work in logical
-groups. Pushing is allowed now that the board is on GitHub, but push `main` only when the
-work is verified green. Use `uname -n` to tell the machines apart.
+This applies to subagents you dispatch.
 
-This applies to subagents you dispatch. Tell each one which machine it is on, in its prompt.
-
-**If you commit anyway, having forgotten**, say so plainly and match the repo's existing convention
-rather than inventing one — `git log` is the reference:
+**Every commit follows the repo's convention**, not an invented one — `git log` is the reference:
 
 - `type: lowercase summary`, or `type(scope): lowercase summary`. The types in use are `feat`,
   `fix`, `refactor`, `chore`, `docs`, `dev`, `agents`, `perf`, `style`, `test`, `ci` and
@@ -169,8 +163,11 @@ rather than inventing one — `git log` is the reference:
   message; put it in the code, a test, or `docs/`.
 - Keep the `Co-Authored-By` trailer.
 
-`scripts/hooks/commit-msg` refuses anything else, and `pnpm hooks:install` puts it in place
-along with the pre-commit hook. `git commit --no-verify` bypasses it for a one-off.
+**The hooks enforce it.** `scripts/hooks/commit-msg` refuses a message in any other shape,
+`pre-push` refuses a new branch not named `<type>/<title>-<issue number>`, and `pre-commit` and
+`commit-msg` refuse a line or message carrying a private word, checked against the hashes in
+`tools/audit/private-words.json`. `pnpm hooks:install` links all three into `.git/hooks`; run it in
+any clone whose hooks are missing. Never bypass them with `--no-verify`.
 
 ## Trackers
 
