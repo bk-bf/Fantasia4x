@@ -287,7 +287,9 @@ the related tests are green it pushes `fix/<title>-<n>` and opens a pull request
 `pre-push` hook refuses a new branch that is not, and `createPull` refuses to open a pull request
 from one. A card that comes back to `Ready` is worked again onto the same pull request, and the
 fixer reads every comment on it first — Kirill's included — so a comment there is how work is
-sent back with a reason.
+sent back with a reason. `pnpm audit:resolve` works every `Ready` card in turn — tests, then
+headless, then playtest — waiting and holding on the audit's own pace schedule; the `resolve`
+skill starts it as the `fantasia-resolve` unit on ubuntuserver and watches it.
 
 `pnpm audit:review --next` takes the oldest open pull request whose latest commit has no
 `audit/review` status, re-merges it onto a freshly fetched `origin/dev`, runs the route again on
