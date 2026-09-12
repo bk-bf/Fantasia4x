@@ -25,5 +25,13 @@
     "@firefox-devtools/profiler-cli",
     "@sveltejs/adapter-auto"
   ],
-  "ignoreExportsUsedInFile": true
+  "ignoreExportsUsedInFile": true,
+  "vitest": {
+    "config": [
+      "vitest.config.ts",
+      "tools/bench/vitest.config.ts",
+      "tools/bench/tps.config.ts",
+      "tools/work-pins/vitest.config.ts"
+    ]
+  }
 }
