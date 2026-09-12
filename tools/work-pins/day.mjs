@@ -90,10 +90,10 @@ async function main() {
       messages: {},
       counters: {
         'panel style writes': sum('panelStyleWrites'),
-        'tint matrix writes': sum('tintMatrixWrites'),
-        LayoutCount: sum('layoutCount')
+        'tint matrix writes': sum('tintMatrixWrites')
       },
       observed: {
+        LayoutCount: sum('layoutCount'),
         RecalcStyleCount: sum('recalcStyleCount'),
         buckets: rows,
         seconds: Math.round((Date.now() - started) / 1000),
