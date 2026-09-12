@@ -31,6 +31,7 @@ const COUNTED_METRICS = ['LayoutCount'];
 const OBSERVED_METRICS = ['RecalcStyleCount'];
 const LAYER_SETTLE_MS = 300;
 const WORLD_EFFECTS = '.world-effects-layer';
+const EXACT_CALL_COUNTS = '--js-flags=--no-flush-bytecode --no-lazy-feedback-allocation';
 const HELD_METRICS = ['Nodes', 'JSEventListeners'];
 const OBSERVED_FILES = [
   /^src\/lib\/audio\//,
@@ -462,7 +463,7 @@ async function main() {
   const origin = `http://127.0.0.1:${port}`;
   log(`tree ${tree}, fixture ${opts.fixture} (${body.length} bytes), port ${port}`);
   const server = await startServer(tree, port, join(out, '..', `dev-server-${port}.log`));
-  const browser = await chromium.launch({ headless: true, args: ['--mute-audio'] });
+  const browser = await chromium.launch({ headless: true, args: ['--mute-audio', EXACT_CALL_COUNTS] });
   const errors = [];
   try {
     const context = await browser.newContext({ viewport: VIEWPORT, deviceScaleFactor: 1 });
