@@ -97,7 +97,7 @@ echo "==> starting $TEST_FILE on $HOST (detached)"
 ssh "$HOST" "$NODE_ENV_SETUP
   cd $REMOTE_DIR
   : > $LOG; : > $PROGRESS
-  nohup env VITEST_MAX_FORKS=\${AUDIT_FORKS:-\$(nproc)} RUN_AUDITS=1 \
+  nohup env VITEST_MAX_WORKERS=\${AUDIT_FORKS:-\$(nproc)} RUN_AUDITS=1 \
     pnpm vitest run $TEST_FILE ${*:+$*} > $LOG 2>&1 &
   echo \$! > $PIDFILE"
 

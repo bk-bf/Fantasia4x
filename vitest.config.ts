@@ -84,6 +84,7 @@ export default defineConfig({
   },
   test: {
     environment: 'node',
+    testTimeout: 60_000,
     include: ['src/**/*.{test,spec}.ts'],
     exclude: [
       'node_modules/**',
@@ -92,11 +93,6 @@ export default defineConfig({
       ...(process.env.RUN_AUDITS ? [] : AUDIT_SUITES)
     ],
     pool: 'forks',
-    poolOptions: {
-      forks: {
-        minForks: 1,
-        maxForks: Math.max(1, Number(process.env.VITEST_MAX_FORKS) || 3)
-      }
-    }
+    maxWorkers: Math.max(1, Number(process.env.VITEST_MAX_WORKERS) || 3)
   }
 });

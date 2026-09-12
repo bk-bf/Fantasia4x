@@ -22,6 +22,9 @@ jobs:
   check:
     runs-on: ubuntu-latest
     timeout-minutes: 90
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - uses: actions/checkout@v4
         with:
@@ -63,6 +66,9 @@ jobs:
           CHECK_BASE: ${{ github.event_name == 'push' && github.event.before || '' }}
         run: node tools/audit/ci-check.mjs
 
+      - name: Architecture seams and component sizes
+        run: node tools/audit/audit.mjs t0 --strict
+
       - name: Work pins, base against head
         if: github.event_name == 'pull_request'
         run: node tools/work-pins/gate.mjs --base HEAD^1
@@ -87,6 +93,12 @@ jobs:
           name: gungraun-flamegraphs
           path: ${{ runner.temp }}/gungraun/**/*.svg
           if-no-files-found: ignore
+
+      - name: CodSpeed benchmarks
+        uses: CodSpeedHQ/action@v5
+        with:
+          mode: simulation
+          run: pnpm bench
 
       - name: Install Chromium for the browser work pins
         if: github.event_name != 'push'

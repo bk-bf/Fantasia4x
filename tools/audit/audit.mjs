@@ -29,7 +29,13 @@ import { loadRules } from './lib/rules.mjs';
 import { makeContext, match } from './lib/triggers.mjs';
 import { buildPrompt } from './lib/prompt.mjs';
 import { parseResponse, validate } from './lib/verdict.mjs';
-import { adrConstDrift, adrCoverage, seamViolations } from './lib/t0.mjs';
+import {
+  adrConstDrift,
+  adrCoverage,
+  seamViolations,
+  componentSizeViolations,
+  COMPONENT_LINE_LIMIT
+} from './lib/t0.mjs';
 import * as I from './lib/gh.mjs';
 import { groupFindings, upsertIssue, renderNewFindings } from './lib/raise.mjs';
 import { indexedSha } from './lib/links.mjs';
@@ -314,6 +320,15 @@ function cmdT0() {
   for (const f of seams.findings) out(`  [seam] ${f.adr} ${f.where}: ${f.detail}`);
   if (seams.findings.length === 0) out('  no violations');
 
+  const sizes = componentSizeViolations(ROOT);
+  out('');
+  out(
+    `component-sizes: ${sizes.frozen} component(s) over ${COMPONENT_LINE_LIMIT} lines frozen at their size`
+  );
+  for (const f of sizes.findings) out(`  [size] ${f.where}: ${f.detail}`);
+  for (const f of sizes.notes) out(`  [note] ${f.where}: ${f.detail}`);
+  if (sizes.findings.length === 0) out('  no violations');
+
   const cov = adrCoverage(ROOT, rules);
   if (cov) {
     out('');
@@ -323,7 +338,8 @@ function cmdT0() {
     if (cov.unguarded.length) out(`  no T2 rule: ${cov.unguarded.join(' ')}`);
   }
   db.close();
-  if ((drift.findings.length || seams.findings.length) && flag('strict')) process.exit(1);
+  if ((drift.findings.length || seams.findings.length || sizes.findings.length) && flag('strict'))
+    process.exit(1);
 }
 
 function cmdDemote() {

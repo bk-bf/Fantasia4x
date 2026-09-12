@@ -78,7 +78,10 @@ which is the bug.
 
 ## Components
 
-200 line limit. Extract sub-components when it is exceeded.
+200 line limit. Extract sub-components when it is exceeded. `check` runs
+`node tools/audit/audit.mjs t0 --strict`, which fails a new component over 200 lines and an
+over-limit component that grows past its entry in `tools/audit/component-sizes.json`. Entries only
+go down: lower one when a component shrinks, and drop it once the component is under the limit.
 
 Use Svelte 5 runes — `$state`, `$derived`, `$effect`. Not the legacy `$:` syntax.
 
@@ -171,7 +174,8 @@ any clone whose hooks are missing. Never bypass them with `--no-verify`.
 
 ## Trackers
 
-**GitHub issues hold all work** — defects, features and decisions. `gh issue list` is the board.
+**GitHub issues hold all tracked work** — defects, features and decisions. `gh issue list` is the
+board. Work done in a conversation is tracked only when its scope calls for it; see "Pull requests".
 A feature's issue is its spec; no spec file sits beside it. `docs/tasks/` keeps `ROADMAP.md`, the
 record of what shipped, and `archive/`, which nothing new is written to. The old `docs/issues/`
 and `docs/pr/` directories are gone.
@@ -238,10 +242,11 @@ not a mistake to correct. Nothing watches those lanes for drift.
 One exception, and only through the `unblock` skill: it asks him about each `Blocked on you` card
 with the question tool, writes his answers into the issue body and a comment, and moves the card
 to `Ready`. `moveLane` allows that one move only while the card's latest comment starts with
-`**Answered**`.
+`**Answered**`. It also allows `Blocked on you` to `Manual`, for when he takes a card by hand.
 
-Move a card with `pnpm issue lane <n> <lane>`, which refuses a move out of his lanes, and a move
-out of `Backlog` for any card that is not `drift` or `test gap` unless it goes to `Blocked on you`.
+Move a card with `pnpm issue lane <n> <lane>`, which refuses any other move out of his lanes, and a
+move out of `Backlog` for any card that is not `drift` or `test gap` unless it goes to
+`Blocked on you` or it is a sub-issue following its parent into the parent's lane.
 Direct `gh project item-edit` is denied.
 
 Do not skip a lane. Nothing goes from `Backlog` straight to `In progress` except when a pull
@@ -317,7 +322,8 @@ This is not the board's `Area` field, which is a game-domain taxonomy: `combat`,
 `ui`, `data`, `tooling`. A card carries both — where in the code, and what part of the game.
 
 **The work type is a board field, not a label**, and nothing mirrors it — a card would then
-carry the same word twice. `pnpm issue create --type` is required and sets it, `raise.mjs`
+carry the same word twice. `pnpm issue create --type` sets it, and is required unless `--parent`
+names an issue to take it from, `raise.mjs`
 passes the type its rule family implies, and `check-labels` reads the board and reports an open
 issue whose card has no `Work type` or is not on the board at all. The words are the ones the
 commit messages use: `feat`, `fix`, `refactor`, `perf`, `test`, `tooling`, `docs`, `chore`,
@@ -330,7 +336,7 @@ without `--area` (`combat`, `items`, `sim`, `ui`, `data`, `tooling`) and `--size
 checks both against the board's own options, and sets them on the card. `raise.mjs` derives them
 for what the audit raises: Area from the subarea, Size from how many files the findings touch.
 `check-labels` reports a card missing either, open or in `On dev` or `Done`, and
-`pnpm issue edit <n> --area A --size S` sets them. Size is the effort: `S` is one change in a
+`pnpm issue edit <n> --area A --size S` sets them, as `--verify V` sets the Verify route. Size is the effort: `S` is one change in a
 file or two, `M` is several files or a measurement, `L` is several steps, a new system or a design.
 
 **A feature is built one step per branch.** Work type `feat` goes with the kind `feature`, and
@@ -348,7 +354,8 @@ step lands. Write each step as a change that can be merged, verified and reviewe
 on the issue it closes, so one that says `Part of #n` about a parent shows on no card.
 `pnpm issue pr`, `pnpm issue pr-edit` and the fixer refuse it and name the open sub-issues. Link
 the sub-issue the work belongs to, making a new one with `pnpm issue create --parent <n>` when a
-step has none: its pull request says `Fixes #<sub-issue>`, with the parent's step on the `Step:`
+step has none. The new sub-issue takes the parent's work type, and its lane when that is
+`Backlog`, `Blocked on you`, `Ready` or `Manual`. Its pull request says `Fixes #<sub-issue>`, with the parent's step on the `Step:`
 line, and `after-merge.mjs` ticks that step in the parent as well.
 
 **A body has to say something.** `create` also refuses a stub: under ~240 characters of prose,
@@ -431,9 +438,21 @@ it, the reviewer and CI report on it, and it merges once they pass. The pull req
 diff and where he writes what is wrong with it, and the fixer reads those comments on its next
 attempt. Several related fixes belong in one branch and one pull request, not one each.
 
-Work done in a conversation, at Kirill's request and outside the board, does not need one:
-branch from `dev`, verify, `git merge --no-ff` into `dev`, and close the issue with the merge
-commit. Open a pull request anyway when the change is large enough that reviewing it as one diff
-beats reading the merge commit, or when it has to sit unmerged while something else is decided.
+**Work done in a conversation at Kirill's request needs no issue and no pull request.** Branch
+from `dev` in a worktree, run `pnpm check` and the related tests, and commit it to `dev`
+directly: `git merge --no-ff` the branch into `dev` and push. Branch protection lets his account
+push past the required `check`, so the local run is the only gate; do not push red. If the work
+settles an issue that already exists, close that issue with the commit.
+
+Open an issue and a pull request only when one of these holds:
+
+- the scope is large enough to be reviewed as one diff, spans several sessions, or has to sit
+  unmerged while something else is decided;
+- the work is handed to the fixer, which works cards from `Ready` unattended and needs an issue
+  to work from.
+
+A small fix, a rule in this file, a tooling tweak or a one-step change asked for in the
+conversation is none of these. Filing an issue and a pull request for it adds a card and a CI
+run and nothing he reads.
 
 Nothing opens a pull request into `main`; `pnpm audit:promote` is how `dev` reaches it.

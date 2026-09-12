@@ -1,31 +1,16 @@
 import { vi } from 'vitest';
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { serialize } from 'node:v8';
-import { gunzipSync } from 'node:zlib';
 import { Session } from 'node:inspector/promises';
 import type { Profiler } from 'node:inspector';
-import { buildScenario, type ScenarioSpec } from '$lib/game/headless/Scenario';
-import { fromSnapshot } from '$lib/game/headless/snapshot';
 import { pathfinderService } from '$lib/game/services/PathfinderService';
-import type { SimCommand } from '$lib/game/sim/simProtocol';
-import type { GameState } from '$lib/game/core/types';
+import { initialState, type WorkPinScenario } from './scenarios';
 import { functionPins } from './functions.mjs';
 
 const FRAME_MS = 16;
 const SOURCE_ROOT = '/src/lib/';
-
-export type WorkPinScenario = {
-  name: string;
-  ticks: number;
-  commands?: SimCommand[];
-} & ({ spec: ScenarioSpec } | { snapshotGz: string });
-
-function initialState(sc: WorkPinScenario): GameState {
-  if ('spec' in sc) return buildScenario(sc.spec);
-  return fromSnapshot(JSON.parse(gunzipSync(readFileSync(sc.snapshotGz)).toString('utf8')));
-}
 
 interface MessageTally {
   count: number;

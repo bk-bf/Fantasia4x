@@ -174,5 +174,59 @@
     "demotable": true,
     "status": "draft",
     "name": "tick-logging"
+  },
+  {
+    "id": "E05",
+    "family": "hot-path",
+    "tier": "T2",
+    "title": "whole-collection work on every rendered frame",
+    "authority": "https://github.com/bk-bf/Fantasia4x/issues/77",
+    "question": "Establish first whether the render loop reaches this symbol: search the repo for calls to it by name, follow those callers upward toward a callback scheduled with requestAnimationFrame (GameCanvas.svelte's startLoop and the frame function it schedules, WeatherCanvas.svelte's frame), and stop after 4 hops. If no path reaches it, the verdict is n/a with na_clause \"not reached from a requestAnimationFrame callback\" and the searches you ran as evidence. If it is reached: does this symbol allocate, rebuild or scan a whole collection (every tile, mob, drop, lair or overlay) on every frame, or on a fixed timer, when neither the view nor the state it reads has changed, instead of only when a revision or dirty flag says so?",
+    "fail_requires": [
+      "file:line of the allocation, rebuild or scan",
+      "the call path from the requestAnimationFrame callback, as path:line references",
+      "the collection it walks and roughly how large it is on a real save",
+      "why no revision, dirty-flag or changed-reference check guards it"
+    ],
+    "not_a_finding": [
+      "work behind a revision, dirty-flag or changed-reference check",
+      "a rebuild that runs once on load, resize or a settings change",
+      "per-frame work proportional to the tiles on screen while the camera moves",
+      "a symbol no call path reaches from a requestAnimationFrame callback — that is n/a, not pass"
+    ],
+    "trigger": {
+      "all": [
+        {
+          "kind_in": [
+            "function",
+            "method"
+          ]
+        },
+        {
+          "file_glob": [
+            "src/lib/components/UI/canvas/**",
+            "src/lib/webgl/**"
+          ]
+        },
+        {
+          "any": [
+            {
+              "any_flag": [
+                "allocatesArray",
+                "spreadsObject",
+                "allocatesLiteral",
+                "deepClones"
+              ]
+            },
+            {
+              "matches": "(rebuild|Rebuild|recompute|Recompute|for\\s*\\(|\\.forEach\\(|\\.map\\(|\\.filter\\()"
+            }
+          ]
+        }
+      ]
+    },
+    "demotable": false,
+    "status": "draft",
+    "name": "frame-collection-work"
   }
 ]
