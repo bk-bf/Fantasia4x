@@ -20,7 +20,7 @@ on:
         default: browser
 
 concurrency:
-  group: check-${{ github.event.pull_request.number || github.ref }}
+  group: check-${{ github.event.pull_request.number || github.ref }}-${{ inputs.leg }}
   cancel-in-progress: true
 
 jobs:
