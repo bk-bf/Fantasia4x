@@ -19,6 +19,7 @@ const SETTLE_FRAMES = 300;
 const TICKS_PER_FRAME = 1;
 const STEP_TIMEOUT_MS = 120_000;
 const SAVE_ID = 'work-pins';
+const RANDOM_SEED = 0x2545f491;
 const DEFAULT_FIXTURE = 'tools/work-pins/fixtures/dev-save.json.gz';
 const PHASES = [
   { name: 'run', paused: false, pan: false },
@@ -30,6 +31,7 @@ const COUNTED_METRICS = ['LayoutCount'];
 const OBSERVED_METRICS = ['RecalcStyleCount'];
 const HELD_METRICS = ['Nodes', 'JSEventListeners'];
 const MAP = '[aria-label="World map"]';
+const SERVE_WITHOUT_GIT = { GIT_DIR: '/dev/null' };
 
 const { values: opts } = parseArgs({
   options: {
@@ -67,7 +69,7 @@ async function startServer(tree, port, logFile) {
   const child = spawn(join(tree, 'dev.sh'), ['--browser', '--port', String(port)], {
     cwd: tree,
     detached: true,
-    env: { ...process.env, VITE_WORK_PINS: '1', CI: 'true' },
+    env: { ...process.env, ...SERVE_WITHOUT_GIT, VITE_WORK_PINS: '1', CI: 'true' },
     stdio: ['ignore', 'pipe', 'pipe']
   });
   child.stdout.pipe(out);
@@ -89,8 +91,11 @@ function hideAudio() {
   delete window.webkitAudioContext;
 }
 
-function seedRandom() {
-  let s = 0x2545f491;
+function seedRandom(seed) {
+  let s = seed;
+  window.__reseedRandom = (next) => {
+    s = next;
+  };
   Math.random = () => {
     s = (s + 0x6d2b79f5) | 0;
     let t = Math.imul(s ^ (s >>> 15), 1 | s);
@@ -390,7 +395,7 @@ async function main() {
   const errors = [];
   try {
     const context = await browser.newContext({ viewport: VIEWPORT, deviceScaleFactor: 1 });
-    await context.addInitScript(seedRandom);
+    await context.addInitScript(seedRandom, RANDOM_SEED);
     await context.addInitScript(hideAudio);
     const page = await context.newPage();
     page.on('pageerror', (e) => errors.push(e.message));
@@ -410,6 +415,7 @@ async function main() {
     const sim = await workers.find(/sim\.worker/);
     await cdp.send('Performance.enable');
     await page.clock.pauseAt(PAUSE_AT_MS);
+    await page.evaluate((seed) => window.__reseedRandom(seed), RANDOM_SEED);
     const samples = await measure(page, cdp, workers, sim, n);
     await writeResults(out, samples, n, cdp, workers, sim);
   } finally {
