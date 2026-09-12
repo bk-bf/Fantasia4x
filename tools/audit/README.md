@@ -264,6 +264,22 @@ A card in `Manual` is one being worked by hand. `--issue` refuses it, `--next` n
 because it reads only `Ready`, the reviewer skips its pull request, and `board-sync.py` does not
 press Update branch on it. Merging its pull request still moves it to `On dev`.
 
+### Working the whole lane
+
+```bash
+pnpm audit:resolve                        # every Ready card, one after another
+pnpm audit:resolve --dry-run              # pace verdict, GitHub points and the order, then exit
+```
+
+`resolve.mjs` runs `fix.mjs --issue <n>` on each card in `Ready`: tests first, then headless,
+then playtest, oldest first within a route. Each card is tried once per run, whatever the fixer
+does with it — a pull request, `Failed`, nothing changed or a refusal — and the run ends when no
+untried card is left. Before every card it waits while the audit is paused and holds while
+`schedule` in `lib/pace.mjs` says the five-hour usage window is ahead of its line, the same gate
+an audit worker passes before a batch. It also waits for GitHub's GraphQL points to reset while
+fewer than `RESOLVE_POINTS_FLOOR` (600) remain. The `resolve` skill starts it as the
+`fantasia-resolve` systemd unit, which restarts it two minutes after it dies.
+
 ## Phase 4 — the reviewer
 
 ```bash
