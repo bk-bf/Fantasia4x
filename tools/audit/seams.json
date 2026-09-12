@@ -13,6 +13,7 @@
     "adr": "ADR-026",
     "kind": "callee",
     "target": "buildGameGrid",
+    "blocks": true,
     "allow": [
       "src/lib/components/UI/canvas/terrainPaint.ts::fullRebuildTerrain"
     ],
@@ -22,6 +23,7 @@
     "adr": "ADR-026",
     "kind": "callee",
     "target": "computeHiddenMaskState",
+    "blocks": true,
     "allow": [
       "src/lib/components/UI/canvas/terrainPaint.ts::fullRebuildTerrain",
       "src/lib/webgl/fantasia-world.ts::computeHiddenMask"
@@ -42,6 +44,7 @@
     "adr": "#77",
     "kind": "callee",
     "target": "requestAnimationFrame",
+    "blocks": true,
     "allow": [
       "src/lib/audio/AudioService.ts::AudioServiceImpl.ensureSmoothing",
       "src/lib/components/UI/canvas/GameCanvas.svelte::redrawOverlay",

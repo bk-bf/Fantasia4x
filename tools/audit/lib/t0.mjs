@@ -132,7 +132,7 @@ export function seamViolations(root, symbols) {
         const file = abs.slice(root.length + 1);
         if (allow.has(file) || file.endsWith(`${r.target}.ts`)) continue;
         if (re.test(stripComments(readFileSync(abs, 'utf8'))))
-          findings.push({ adr: r.adr, where: file, detail: r.msg });
+          findings.push({ adr: r.adr, where: file, detail: r.msg, blocks: r.blocks === true });
       }
       continue;
     }
@@ -141,7 +141,12 @@ export function seamViolations(root, symbols) {
       const id = `${s.file}::${s.className ? s.className + '.' : ''}${s.name}`;
       if (allow.has(id) || s.name === r.target) continue;
       if (re.test(stripComments(s.text ?? ''))) {
-        findings.push({ adr: r.adr, where: `${id}  ${s.file}:${s.startLine}`, detail: r.msg });
+        findings.push({
+          adr: r.adr,
+          where: `${id}  ${s.file}:${s.startLine}`,
+          detail: r.msg,
+          blocks: r.blocks === true
+        });
       }
     }
   }
