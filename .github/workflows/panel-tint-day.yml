@@ -1,0 +1,60 @@
+name: panel tint day
+
+on:
+  push:
+    branches: ['test/tint-full-day-*']
+
+jobs:
+  measure:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - tree: base
+            ref: 7e2aeb022863aca8321c7822978c0d983e4aabda
+          - tree: head
+            ref: 4eb55ca6a008c5d2125cb952e570138e71eea0e2
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - uses: ./.github/actions/wasm-pack
+
+      - name: Check out the measured tree
+        run: git worktree add "$RUNNER_TEMP/tree" ${{ matrix.ref }}
+
+      - name: Build the measured tree
+        working-directory: ${{ runner.temp }}/tree
+        run: |
+          pnpm install --frozen-lockfile
+          (cd spatial-core && wasm-pack build --target web --out-dir ../src/lib/spatial-core-pkg)
+          (cd sim-core && wasm-pack build --target web --out-dir ../src/lib/sim-core-pkg)
+          pnpm exec svelte-kit sync
+
+      - name: Install the harness
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm exec playwright install --with-deps --only-shell chromium
+
+      - name: Step one in-game day
+        run: node tools/work-pins/tint-ab.mjs --tree "$RUNNER_TEMP/tree" --out "$RUNNER_TEMP/out/${{ matrix.tree }}.json"
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: tint-${{ matrix.tree }}
+          path: ${{ runner.temp }}/out/
