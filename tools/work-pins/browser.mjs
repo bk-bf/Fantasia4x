@@ -36,7 +36,7 @@ const { values: opts } = parseArgs({
     tree: { type: 'string', default: '.' },
     out: { type: 'string' },
     fixture: { type: 'string', default: process.env.WORK_PINS_FIXTURE ?? DEFAULT_FIXTURE },
-    frames: { type: 'string', default: '180' }
+    frames: { type: 'string', default: '240' }
   }
 });
 
@@ -150,8 +150,17 @@ function trackNetwork(page) {
 
 async function loadGame(page, origin) {
   await page.goto(`${origin}/`);
-  await page.getByRole('button', { name: 'Load Game', exact: true }).click({ timeout: 300_000 });
-  await page.locator('.row button.main').first().click({ timeout: 60_000 });
+  const loadGame = page.getByRole('button', { name: 'Load Game', exact: true });
+  await page.waitForFunction(
+    () =>
+      [...document.querySelectorAll('button.menu-btn')].some(
+        (b) => b.textContent.trim() === 'Load Game' && !b.disabled
+      ),
+    null,
+    { timeout: 300_000, polling: 500 }
+  );
+  await loadGame.dispatchEvent('click');
+  await page.locator('.row button.main').first().dispatchEvent('click', {}, { timeout: 60_000 });
   await page.waitForFunction(
     (map) =>
       !!document.querySelector(map) &&
@@ -232,14 +241,12 @@ async function focusMap(page) {
   await page.evaluate((map) => document.querySelector(map).focus(), MAP);
 }
 
-async function setPaused(page, want, mapCentre) {
-  const button = 'button.ctrl-btn:has-text("PAUSE"), button.ctrl-btn:has-text("RESUME")';
-  const paused = async () => (await page.locator(button).first().getAttribute('class')).includes('is-paused');
-  if ((await paused()) !== want) {
-    const at = await centreOf(page, button);
-    await page.mouse.click(at.x, at.y);
-    await page.mouse.move(mapCentre.x, mapCentre.y);
-  }
+async function setPaused(page, want) {
+  const button = page
+    .locator('button.ctrl-btn:has-text("PAUSE"), button.ctrl-btn:has-text("RESUME")')
+    .first();
+  const paused = async () => (await button.getAttribute('class')).includes('is-paused');
+  if ((await paused()) !== want) await button.dispatchEvent('click');
   await focusMap(page);
   if ((await paused()) !== want) throw new Error(`pause button did not reach paused=${want}`);
 }
@@ -257,8 +264,8 @@ async function sample(page, cdp, workers, sim) {
   return { page: page_, worker: worker_, stats, metrics: await metrics(cdp) };
 }
 
-async function runPhase(page, phase, n, mapCentre) {
-  await setPaused(page, phase.paused, mapCentre);
+async function runPhase(page, phase, n) {
+  await setPaused(page, phase.paused);
   for (let i = 0; i < n; i++) {
     if (phase.pan && i === 0) await page.keyboard.down(PAN_KEYS[0]);
     if (phase.pan && i === n / 2) {
@@ -305,7 +312,7 @@ async function measure(page, cdp, workers, sim, n) {
   const mapCentre = await centreOf(page, MAP);
   await page.mouse.move(mapCentre.x, mapCentre.y);
   await focusMap(page);
-  await setPaused(page, true, mapCentre);
+  await setPaused(page, true);
   await frames(page, SETTLE_FRAMES);
   for (let i = 0; i < ZOOM_STEPS; i++) {
     await page.mouse.wheel(0, -120);
@@ -318,7 +325,7 @@ async function measure(page, cdp, workers, sim, n) {
   await workers.send(sim, 'Profiler.startPreciseCoverage', { callCount: true, detailed: false });
   const samples = [await sample(page, cdp, workers, sim)];
   for (const phase of PHASES) {
-    await runPhase(page, phase, n, mapCentre);
+    await runPhase(page, phase, n);
     samples.push(await sample(page, cdp, workers, sim));
     log(`phase ${phase.name}: ${JSON.stringify(samples.at(-1).stats.render)}`);
   }
