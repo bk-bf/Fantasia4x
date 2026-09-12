@@ -82,7 +82,10 @@ which is the bug.
 `node tools/audit/audit.mjs t0`, which warns on a new component over 200 lines and on an
 over-limit component that grows past its entry in `tools/audit/component-sizes.json`; the warning
 never fails the check, because only the speed gates block a pull request. Entries only go down:
-lower one when a component shrinks, and drop it once the component is under the limit.
+lower one when a component shrinks, and drop it once the component is under the limit. The seams
+in `tools/audit/seams.json` marked `"blocks": true`, a full-map terrain rebuild or a new
+per-frame loop, are speed gates and do fail the check; when the new caller is intended, add it
+to that rule's `allow` list in the same pull request.
 
 Use Svelte 5 runes — `$state`, `$derived`, `$effect`. Not the legacy `$:` syntax.
 

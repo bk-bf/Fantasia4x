@@ -324,8 +324,10 @@ function cmdT0() {
   out('');
   out(`adr-seams: ${seams.rules} chokepoint(s) checked`);
   for (const f of seams.findings) {
-    out(`  [seam] ${f.adr} ${f.where}: ${f.detail}`);
-    warn('title=Seam', `${f.adr} ${f.where}: ${f.detail}`);
+    out(`  [seam${f.blocks ? ', blocks' : ''}] ${f.adr} ${f.where}: ${f.detail}`);
+    if (!f.blocks) warn('title=Seam', `${f.adr} ${f.where}: ${f.detail}`);
+    else if (process.env.GITHUB_ACTIONS === 'true')
+      out(`::error title=Speed seam::${f.adr} ${f.where}: ${f.detail}`);
   }
   if (seams.findings.length === 0) out('  no violations');
 
@@ -350,6 +352,7 @@ function cmdT0() {
     if (cov.unguarded.length) out(`  no T2 rule: ${cov.unguarded.join(' ')}`);
   }
   db.close();
+  if (seams.findings.some((f) => f.blocks)) process.exit(1);
   if ((drift.findings.length || seams.findings.length || sizes.findings.length) && flag('strict'))
     process.exit(1);
 }
