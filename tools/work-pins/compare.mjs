@@ -62,11 +62,12 @@ export function compareRuns(baseRuns, headRuns) {
       rows.push({ scenario, fn: 'final turn', where: '', base: b.turn, head: h.turn });
     rows.push(...functionRows(scenario, b.functions, h.functions));
     if (b.phases && h.phases) rows.push(...counterRows(scenario, 'phase', b.phases, h.phases));
-    else
+    else if (b.phases || h.phases)
       notes.push(
         `scenario \`${scenario}\`: phase counters missing on ${b.phases ? 'head' : 'base'}, not compared`
       );
     rows.push(...messageRows(scenario, b.messages, h.messages));
+    rows.push(...counterRows(scenario, 'counter', b.counters ?? {}, h.counters ?? {}));
   }
   rows.sort(
     (x, y) => Math.abs(y.head - y.base) - Math.abs(x.head - x.base) || x.fn.localeCompare(y.fn)

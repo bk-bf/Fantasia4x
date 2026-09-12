@@ -5,6 +5,7 @@
     "src/app.html",
     "electron/**/*.{cjs,js}",
     "tools/audit/*.mjs",
+    "tools/work-pins/*.mjs",
     "scripts/**/*.mjs",
     "src/tests/**/*.test.ts"
   ],
