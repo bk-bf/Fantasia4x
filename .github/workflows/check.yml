@@ -53,3 +53,7 @@ jobs:
         env:
           CHECK_BASE: ${{ github.event_name == 'push' && github.event.before || '' }}
         run: node tools/audit/ci-check.mjs
+
+      - name: Work pins, base against head
+        if: github.event_name == 'pull_request'
+        run: node tools/work-pins/gate.mjs --base HEAD^1
