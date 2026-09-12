@@ -14,17 +14,21 @@ function arg(name, fallback) {
   return i >= 0 ? process.argv[i + 1] : fallback;
 }
 
-function benchExecutables(crateDir, targetDir) {
-  const out = execFileSync(
-    'cargo',
+function cargo(crateDir, targetDir, args, options) {
+  return execFileSync('cargo', args, {
+    cwd: crateDir,
+    env: { ...process.env, CARGO_TARGET_DIR: targetDir },
+    ...options
+  });
+}
+
+function benchExecutables(crate, crateDir, targetDir) {
+  cargo(crateDir, targetDir, ['clean', '--release', '--package', crate], { stdio: 'inherit' });
+  const out = cargo(
+    crateDir,
+    targetDir,
     ['bench', '--no-run', '--message-format=json-render-diagnostics'],
-    {
-      cwd: crateDir,
-      env: { ...process.env, CARGO_TARGET_DIR: targetDir },
-      encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'inherit'],
-      maxBuffer: 64 << 20
-    }
+    { encoding: 'utf8', stdio: ['ignore', 'pipe', 'inherit'], maxBuffer: 64 << 20 }
   );
   return out
     .split('\n')
@@ -56,7 +60,7 @@ function measureBase(crate, baseTree, targetDir, home) {
   }
   let executables;
   try {
-    executables = benchExecutables(baseCrate, targetDir);
+    executables = benchExecutables(crate, baseCrate, targetDir);
   } catch {
     process.stdout.write(`::warning::${crate}: the benchmarks do not build on the base, so head is not compared\n`);
     return false;
@@ -82,7 +86,8 @@ try {
     const targetDir = resolve(crate, 'target');
     const compared = measureBase(crate, baseTree, targetDir, crateHome);
     const args = compared ? ['--baseline=base', `--callgrind-limits=${LIMITS}`] : [];
-    const status = runBenches(resolve(crate), benchExecutables(crate, targetDir), crateHome, args);
+    const headCrate = resolve(crate);
+    const status = runBenches(headCrate, benchExecutables(crate, headCrate, targetDir), crateHome, args);
     results.push({ crate, compared, status });
   }
 } finally {
