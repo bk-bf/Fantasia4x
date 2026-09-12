@@ -141,7 +141,7 @@ failure by running `git stash`.
 
 **All work lands on `dev`.** `main` is the branch Kirill plays and builds from, and it changes
 only when he promotes. Nothing automated writes to it: the fixer branches from `origin/dev`, a card
-reaches `dev` only through a pull request Kirill merged, and the nightly runs in a checkout on `dev`. `pnpm audit:promote`
+reaches `dev` only through a merged pull request, and the nightly runs in a checkout on `dev`. `pnpm audit:promote`
 merges `dev` into `main` in a throwaway worktree, runs the **whole** suite there rather than the
 related subset, and stops — printing the worktree to play and the command to push. `--push` is
 the same run with the merge pushed, for when he has played it and decided.
