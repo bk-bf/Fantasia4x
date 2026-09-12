@@ -35,7 +35,8 @@ const COUNTED_METRICS = ['LayoutCount'];
 const OBSERVED_METRICS = ['RecalcStyleCount'];
 const LAYER_SETTLE_MS = 300;
 const WORLD_EFFECTS = '.world-effects-layer';
-const EXACT_CALL_COUNTS = '--js-flags=--no-flush-bytecode --no-lazy-feedback-allocation';
+const EXACT_CALL_COUNTS =
+  '--js-flags=--no-flush-bytecode --no-lazy-feedback-allocation --no-sparkplug --no-maglev --no-turbofan';
 const HELD_METRICS = ['Nodes', 'JSEventListeners'];
 const OBSERVED_FILES = [
   /^src\/lib\/audio\//,

@@ -20,7 +20,7 @@ on:
         default: browser
 
 concurrency:
-  group: check-${{ github.event.pull_request.number || github.ref }}-${{ inputs.leg }}
+  group: check-${{ github.event.pull_request.number || github.ref }}-${{ inputs.leg }}-${{ github.event_name == 'workflow_dispatch' && github.run_id || '' }}
   cancel-in-progress: true
 
 jobs:
