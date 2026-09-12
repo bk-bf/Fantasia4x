@@ -26,7 +26,8 @@ const PHASES = [
   { name: 'paused-pan', paused: true, pan: true }
 ];
 const PAN_KEYS = ['ArrowRight', 'ArrowLeft'];
-const COUNTED_METRICS = ['LayoutCount', 'RecalcStyleCount'];
+const COUNTED_METRICS = ['LayoutCount'];
+const OBSERVED_METRICS = ['RecalcStyleCount'];
 const HELD_METRICS = ['Nodes', 'JSEventListeners'];
 const MAP = '[aria-label="World map"]';
 
@@ -80,6 +81,12 @@ async function startServer(tree, port, logFile) {
     }
   }
   throw new Error(`dev server never answered on ${port}, see ${logFile}`);
+}
+
+function hideAudio() {
+  delete window.Audio;
+  delete window.AudioContext;
+  delete window.webkitAudioContext;
 }
 
 function seedRandom() {
@@ -288,6 +295,12 @@ function counters(before, after) {
   return out;
 }
 
+function observed(before, after) {
+  return Object.fromEntries(
+    OBSERVED_METRICS.map((k) => [k, (after.metrics[k] ?? 0) - (before.metrics[k] ?? 0)])
+  );
+}
+
 async function measure(page, cdp, workers, sim, n) {
   const mapCentre = await centreOf(page, MAP);
   await page.mouse.move(mapCentre.x, mapCentre.y);
@@ -334,7 +347,8 @@ async function writeResults(out, samples, n, cdp, workers, sim) {
         functions: await functionPins(after.page, pageSource, fileOf),
         phases: null,
         messages: {},
-        counters: counters(before, after)
+        counters: counters(before, after),
+        observed: observed(before, after)
       },
       {
         scenario: `browser ${name} worker`,
@@ -370,6 +384,7 @@ async function main() {
   try {
     const context = await browser.newContext({ viewport: VIEWPORT, deviceScaleFactor: 1 });
     await context.addInitScript(seedRandom);
+    await context.addInitScript(hideAudio);
     const page = await context.newPage();
     page.on('pageerror', (e) => errors.push(e.message));
     const networkQuiet = trackNetwork(page);
