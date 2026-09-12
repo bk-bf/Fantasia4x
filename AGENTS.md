@@ -142,9 +142,8 @@ ubuntuserver against the merge base with `origin/dev`: `ci-check.mjs`, the seams
 the work pins, the gungraun instruction counts, the browser work pins, a benchmark run and
 `actionlint` over the workflows. It runs every step, prints a pass, fail or skip line for each, and
 names what a skipped step needs. `pnpm ci:local --quick` skips gungraun and the browser leg. On
-ubuntuserver itself start it as `node tools/remote/ci.mjs`: the server's default Node is 20, which
-the pinned pnpm 11 refuses, and `ci.mjs` loads the pinned Node and pnpm from `tools/remote/prepare.sh`
-before it runs anything.
+ubuntuserver `pnpm ci:local` runs it in place; `ci.mjs` loads the pinned Node and pnpm from
+`tools/remote/prepare.sh` before it runs anything.
 
 **`pnpm check` is the gate.** It runs `svelte-check`, `eslint` and `knip`, and all three must
 stay green. `eslint` is frozen at its current warning count with `--max-warnings`, so a change
