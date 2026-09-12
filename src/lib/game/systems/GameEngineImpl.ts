@@ -132,6 +132,7 @@ export class GameEngineImpl implements GameEngine {
   private _phaseMs: Record<string, number> = {};
   private _phaseTicks = 0;
   private _dbg = false;
+  private phaseCounts: Record<string, number> | null = null;
   private avgTileTemp: number | undefined = undefined;
   private outputSink: ((state: GameState, flush: boolean) => void) | null = null;
   private commitSink: ((state: GameState, save: boolean) => void) | null = null;
@@ -161,7 +162,12 @@ export class GameEngineImpl implements GameEngine {
     };
   }
 
+  countPhases(counts: Record<string, number> | null): void {
+    this.phaseCounts = counts;
+  }
+
   private timed(label: string, fn: () => void): void {
+    if (this.phaseCounts) this.phaseCounts[label] = (this.phaseCounts[label] ?? 0) + 1;
     if (!this._dbg) {
       fn();
       return;
