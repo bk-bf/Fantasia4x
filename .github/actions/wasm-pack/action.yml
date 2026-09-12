@@ -1,0 +1,15 @@
+name: wasm-pack
+description: Install the pinned wasm-pack, and fail if any other version ends up on the path.
+inputs:
+  version:
+    description: The wasm-pack version to install, without the leading v.
+    default: '0.15.0'
+runs:
+  using: composite
+  steps:
+    - uses: jetli/wasm-pack-action@v0.4.0
+      with:
+        version: v${{ inputs.version }}
+    - name: Check the wasm-pack version
+      shell: bash
+      run: test "$(wasm-pack --version)" = "wasm-pack ${{ inputs.version }}"
