@@ -2,6 +2,10 @@
 set -uo pipefail
 
 MSG_FILE="$1"
+ROOT="$(git rev-parse --show-toplevel)"
+if [[ -f "$ROOT/tools/audit/private-check.mjs" ]]; then
+  grep -v '^#' "$MSG_FILE" | node "$ROOT/tools/audit/private-check.mjs" "the commit message" || exit 1
+fi
 TYPES="feat|fix|refactor|chore|docs|dev|agents|perf|style|test|ci|build"
 
 mapfile -t LINES < <(grep -v '^#' "$MSG_FILE")
