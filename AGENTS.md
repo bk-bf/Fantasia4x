@@ -78,7 +78,10 @@ which is the bug.
 
 ## Components
 
-200 line limit. Extract sub-components when it is exceeded.
+200 line limit. Extract sub-components when it is exceeded. `check` runs
+`node tools/audit/audit.mjs t0 --strict`, which fails a new component over 200 lines and an
+over-limit component that grows past its entry in `tools/audit/component-sizes.json`. Entries only
+go down: lower one when a component shrinks, and drop it once the component is under the limit.
 
 Use Svelte 5 runes — `$state`, `$derived`, `$effect`. Not the legacy `$:` syntax.
 

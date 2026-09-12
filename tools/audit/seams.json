@@ -14,7 +14,7 @@
     "kind": "callee",
     "target": "buildGameGrid",
     "allow": [
-      "src/lib/components/UI/gameCanvas/terrainPaint.ts::fullRebuildTerrain"
+      "src/lib/components/UI/canvas/terrainPaint.ts::fullRebuildTerrain"
     ],
     "msg": "full-map terrain rebuild outside the terrainPaint seam (the per-delta path must repaint only changed tiles)"
   },
@@ -23,7 +23,7 @@
     "kind": "callee",
     "target": "computeHiddenMaskState",
     "allow": [
-      "src/lib/components/UI/gameCanvas/terrainPaint.ts::fullRebuildTerrain",
+      "src/lib/components/UI/canvas/terrainPaint.ts::fullRebuildTerrain",
       "src/lib/webgl/fantasia-world.ts::computeHiddenMask"
     ],
     "msg": "whole-map hidden-mask BFS outside the terrainPaint seam (use updateHiddenMaskAt incrementally on a delta)"
@@ -33,9 +33,23 @@
     "kind": "callee",
     "target": "aggregateFromDrops",
     "allow": [
-      "src/lib/game/core/GameState.ts::withDrops",
-      "src/lib/game/core/GameState.ts::colonyStock"
+      "src/lib/game/core/state/stockpile.ts::withDrops",
+      "src/lib/game/core/state/stockpile.ts::colonyStock"
     ],
     "msg": "rebuilds the stockpile aggregate outside withDrops (withDrops is the one place a fluid placed loose is spilled, so a path that aggregates around it can leave water lying on the ground)"
+  },
+  {
+    "adr": "#77",
+    "kind": "callee",
+    "target": "requestAnimationFrame",
+    "allow": [
+      "src/lib/audio/AudioService.ts::AudioServiceImpl.ensureSmoothing",
+      "src/lib/components/UI/canvas/GameCanvas.svelte::redrawOverlay",
+      "src/lib/components/UI/canvas/GameCanvas.svelte::startLoop",
+      "src/lib/components/UI/canvas/WeatherCanvas.svelte::frame",
+      "src/lib/components/UI/menu/CustomMapMenu.svelte::nextFrames",
+      "src/lib/components/UI/tooltip/HoverTip.svelte::schedule"
+    ],
+    "msg": "starts a new per-frame callback outside the frame loops that exist today (per-frame work belongs in the render loop, where the browser work pins count it, not in a second requestAnimationFrame loop)"
   }
 ]

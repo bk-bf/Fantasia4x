@@ -57,6 +57,9 @@ jobs:
           CHECK_BASE: ${{ github.event_name == 'push' && github.event.before || '' }}
         run: node tools/audit/ci-check.mjs
 
+      - name: Architecture seams and component sizes
+        run: node tools/audit/audit.mjs t0 --strict
+
       - name: Work pins, base against head
         if: github.event_name == 'pull_request'
         run: node tools/work-pins/gate.mjs --base HEAD^1
