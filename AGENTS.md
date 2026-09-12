@@ -283,14 +283,17 @@ and the card goes straight to `PR ready`. The reviewer skips it, and the worktre
 beside whatever is already on 5173. He merges it once he has played it. The fixer and the
 reviewer stop while the audit is paused, because they spend the same limits.
 
-**Never write to GitHub with `gh` directly.** `gh issue create|edit|close|comment` and
-`gh label create|edit|delete` are denied in `.claude/settings.json`. Use `pnpm issue`:
+**Never write to GitHub with `gh` directly.** `gh issue create|edit|close|comment`,
+`gh label create|edit|delete` and `gh pr create|edit` are denied in `.claude/settings.json`. Use
+`pnpm issue`:
 
 ```bash
 pnpm issue labels                       # every label the schema allows
 pnpm issue lint --body-file draft.md    # would this be accepted?
 pnpm issue create --title T --type fix --area sim --size S --body-file - --label high --label drift
 pnpm issue close 12 --commit <sha>
+pnpm issue pr --head <branch> --title T --body-file -   # open a pull request into dev
+pnpm issue pr-edit 84 --body-file -                     # rewrite its description
 ```
 
 It repairs what is mechanical and refuses what is not. A `path:line` written in prose becomes a
@@ -343,6 +346,13 @@ first open step only, and its pull request says `Part of #n` with the step on a 
 merging it does not close the issue. When it merges, `after-merge.mjs` ticks the step.
 While steps remain, a merged step sends the card back to `Ready`; the issue closes when its last
 step lands. Write each step as a change that can be merged, verified and reviewed by itself.
+
+**A pull request never links an issue with open sub-issues.** The board shows a pull request only
+on the issue it closes, so one that says `Part of #n` about a parent shows on no card.
+`pnpm issue pr`, `pnpm issue pr-edit` and the fixer refuse it and name the open sub-issues. Link
+the sub-issue the work belongs to, making a new one with `pnpm issue create --parent <n>` when a
+step has none: its pull request says `Fixes #<sub-issue>`, with the parent's step on the `Step:`
+line, and `after-merge.mjs` ticks that step in the parent as well.
 
 **A body has to say something.** `create` also refuses a stub: under ~240 characters of prose,
 no citation, or no remediation checkbox (unless it carries `needs decision`). A heading with
