@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { execFileSync } from 'node:child_process';
 import { appendFileSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { cpus, tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
 import { report } from './compare.mjs';
@@ -11,8 +11,9 @@ const BENCH_DIR = 'tools/bench';
 const HOOK_DIR = 'src/lib/workPins';
 const WASM_CRATES = ['spatial-core', 'sim-core'];
 const TPS_CONFIG = `${BENCH_DIR}/tps.config.ts`;
-const TPS_ROUNDS = Number(process.env.TPS_ROUNDS ?? 5);
+const TPS_ROUNDS = Number(process.env.TPS_ROUNDS ?? 9);
 const TPS_THRESHOLD = Number(process.env.TPS_THRESHOLD ?? 0.05);
+const TPS_CORE = process.env.TPS_CORE ?? String(cpus().length - 1);
 
 function arg(name, fallback) {
   const i = process.argv.indexOf(name);
@@ -106,7 +107,9 @@ function browserLeg(script, tree, base, head, results, hookFrom) {
 }
 
 function tpsRun(cwd, out) {
-  sh('pnpm', ['exec', 'vitest', 'bench', '--run', '--config', TPS_CONFIG, '--outputJson', out], { cwd });
+  sh('taskset', ['-c', TPS_CORE, 'pnpm', 'exec', 'vitest', 'bench', '--run', '--config', TPS_CONFIG, '--outputJson', out], {
+    cwd
+  });
   const bench = JSON.parse(readFileSync(out, 'utf8')).files[0].groups[0].benchmarks[0];
   return { name: bench.name, ms: bench.median ?? bench.mean };
 }
@@ -134,9 +137,9 @@ function tpsLeg(tree, base, head, results) {
     `| ${side} | ${runs[side].map((x) => x.toFixed(1)).join(', ')} | ${ms.toFixed(1)} | ${ticks ? Math.round((ticks * 1000) / ms) : '-'} |`;
   summary(
     [
-      `## Ticks per second: head is ${(change * 100).toFixed(1)}% ${change > 0 ? 'slower' : 'faster'} than base${slower ? `, past the ${Math.round(TPS_THRESHOLD * 100)}% limit` : ''}`,
+      `## Ticks per second: head is ${Math.abs(change * 100).toFixed(1)}% ${change > 0 ? 'slower' : 'faster'} than base${slower ? `, past the ${Math.round(TPS_THRESHOLD * 100)}% limit` : ''}`,
       '',
-      `\`${name}\`, ${TPS_ROUNDS} alternating rounds, ms per run.`,
+      `\`${name}\`, ${TPS_ROUNDS} alternating rounds on core ${TPS_CORE}, ms per run.`,
       '',
       '| side | runs (median ms of each) | median ms | ticks per second |',
       '|---|---|---:|---:|',
