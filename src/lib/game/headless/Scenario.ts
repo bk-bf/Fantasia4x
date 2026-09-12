@@ -11,7 +11,7 @@ import {
   ensureKingdomPool,
   markColonyCulturesDiscovered,
   spawnPawnsOnMap
-} from '$lib/stores/gameState';
+} from '../core/state/initialState';
 import { generateWorld } from '../world/WorldGenerator';
 import { generateColonyPawns, generateWorldKin, resetPawnDebugIds } from '../entities/Pawns';
 import { resetMobIdCounter } from '../services/entity/entitySpawning';
