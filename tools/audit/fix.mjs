@@ -60,6 +60,9 @@ function pick() {
     if (!issue) fail(`no issue ${named}`);
     if (B.laneOf(issue.number) === 'manual')
       fail(`#${issue.number} is in Manual, so it is being worked by hand`);
+    const subs = PR.openSubIssues(issue.number);
+    if (subs.length)
+      fail(`#${issue.number} has open sub-issues (${subs.map((s) => `#${s}`).join(', ')}); work one of them`);
     const card = B.itemFor(issue.number);
     const route = (card?.verify ?? '').toLowerCase();
     if (!ROUTES.has(route)) fail(`#${issue.number} has no Verify route on the board`);
@@ -79,9 +82,14 @@ function pick() {
 
   for (const it of ready) {
     const issue = I.readIssue(String(it.content.number));
-    if (issue.data.status !== 'closed') return { issue, route };
+    if (issue.data.status === 'closed') continue;
+    if (PR.openSubIssues(issue.number).length) {
+      out(`--- skipping #${issue.number}, it has open sub-issues`);
+      continue;
+    }
+    return { issue, route };
   }
-  fail(`every ${route} card in Ready is already closed`);
+  fail(`every ${route} card in Ready is closed or has open sub-issues`);
 }
 
 const say = (n, text) => {
