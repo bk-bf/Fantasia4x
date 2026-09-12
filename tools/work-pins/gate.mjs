@@ -1,14 +1,18 @@
 #!/usr/bin/env node
 import { execFileSync } from 'node:child_process';
-import { appendFileSync, cpSync, existsSync, mkdirSync, mkdtempSync, rmSync } from 'node:fs';
+import { appendFileSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
 import { report } from './compare.mjs';
 
 const HARNESS_DIR = 'tools/work-pins';
+const BENCH_DIR = 'tools/bench';
 const HOOK_DIR = 'src/lib/workPins';
 const WASM_CRATES = ['spatial-core', 'sim-core'];
+const TPS_CONFIG = `${BENCH_DIR}/tps.config.ts`;
+const TPS_ROUNDS = Number(process.env.TPS_ROUNDS ?? 5);
+const TPS_THRESHOLD = Number(process.env.TPS_THRESHOLD ?? 0.05);
 
 function arg(name, fallback) {
   const i = process.argv.indexOf(name);
@@ -29,10 +33,12 @@ function wasmUnchanged(ref) {
   }
 }
 
-function prepareTree(ref, dir) {
+function prepareTree(ref, dir, harnessDirs) {
   sh('git', ['worktree', 'add', '--detach', dir, ref]);
-  rmSync(join(dir, HARNESS_DIR), { recursive: true, force: true });
-  cpSync(HARNESS_DIR, join(dir, HARNESS_DIR), { recursive: true });
+  for (const harness of harnessDirs) {
+    rmSync(join(dir, harness), { recursive: true, force: true });
+    cpSync(harness, join(dir, harness), { recursive: true });
+  }
   sh('pnpm', ['install', '--frozen-lockfile', '--prefer-offline'], { cwd: dir });
   if (wasmUnchanged(ref)) {
     for (const crate of WASM_CRATES)
@@ -99,24 +105,69 @@ function browserLeg(script, tree, base, head, results, hookFrom) {
   return report(join(results, 'base'), join(results, 'head'));
 }
 
+function tpsRun(cwd, out) {
+  sh('pnpm', ['exec', 'vitest', 'bench', '--run', '--config', TPS_CONFIG, '--outputJson', out], { cwd });
+  const bench = JSON.parse(readFileSync(out, 'utf8')).files[0].groups[0].benchmarks[0];
+  return { name: bench.name, ms: bench.median ?? bench.mean };
+}
+
+const median = (xs) => [...xs].sort((a, b) => a - b)[Math.floor(xs.length / 2)];
+
+function tpsLeg(tree, base, head, results) {
+  const trees = { base: tree(base, 'tree'), head: head ? tree(head, 'head-tree') : process.cwd() };
+  const runs = { base: [], head: [] };
+  let name = '';
+  mkdirSync(results, { recursive: true });
+  for (let round = 0; round < TPS_ROUNDS; round++) {
+    for (const side of round % 2 === 0 ? ['base', 'head'] : ['head', 'base']) {
+      const r = tpsRun(trees[side], join(results, `tps-${side}-${round}.json`));
+      name = r.name;
+      runs[side].push(r.ms);
+    }
+  }
+  const ticks = Number(name.match(/(\d+) ticks/)?.[1] ?? 0);
+  const baseMs = median(runs.base);
+  const headMs = median(runs.head);
+  const change = (headMs - baseMs) / baseMs;
+  const slower = change > TPS_THRESHOLD;
+  const row = (side, ms) =>
+    `| ${side} | ${runs[side].map((x) => x.toFixed(1)).join(', ')} | ${ms.toFixed(1)} | ${ticks ? Math.round((ticks * 1000) / ms) : '-'} |`;
+  summary(
+    [
+      `## Ticks per second: head is ${(change * 100).toFixed(1)}% ${change > 0 ? 'slower' : 'faster'} than base${slower ? `, past the ${Math.round(TPS_THRESHOLD * 100)}% limit` : ''}`,
+      '',
+      `\`${name}\`, ${TPS_ROUNDS} alternating rounds, ms per run.`,
+      '',
+      '| side | runs (median ms of each) | median ms | ticks per second |',
+      '|---|---|---:|---:|',
+      row('base', baseMs),
+      row('head', headMs),
+      ''
+    ].join('\n')
+  );
+  return !slower;
+}
+
 const leg = arg('--leg', 'sim');
 const base = arg('--base', 'HEAD');
 const head = arg('--head');
 const hookFrom = arg('--hook-from');
 const scratch = mkdtempSync(join(tmpdir(), 'work-pins-'));
 const results = resolve(arg('--out', scratch));
+const harnessDirs = leg === 'tps' ? [HARNESS_DIR, BENCH_DIR] : [HARNESS_DIR];
 const trees = [];
 const tree = (ref, name) => {
   const dir = join(scratch, name);
   trees.push(dir);
   process.stdout.write(`${name} ${execFileSync('git', ['rev-parse', ref], { encoding: 'utf8' })}`);
-  prepareTree(ref, dir);
+  prepareTree(ref, dir, harnessDirs);
   return dir;
 };
 let ok = false;
 try {
   const script = { browser: 'browser.mjs', day: 'day.mjs' }[leg];
   if (script) ok = browserLeg(script, tree, base, head, results, hookFrom);
+  else if (leg === 'tps') ok = tpsLeg(tree, base, head, results);
   else {
     const baseTree = tree(base, 'tree');
     const headTree = head ? tree(head, 'head-tree') : process.cwd();
