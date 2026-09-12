@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 HOOKS_DIR="$(git -C "$ROOT" rev-parse --git-path hooks)"
 
-for hook in pre-commit commit-msg pre-push; do
+for hook in pre-commit commit-msg pre-push post-checkout; do
   SRC="$ROOT/scripts/hooks/$hook"
   DEST="$HOOKS_DIR/$hook"
   if [[ -e "$DEST" && ! -L "$DEST" ]]; then
@@ -18,9 +18,10 @@ for hook in pre-commit commit-msg pre-push; do
 done
 
 echo
-echo "  pre-commit  informational only — prints a heads-up once the tree is \$BUILD_DISTANCE_MAX"
-echo "              (default 100) commits past the last v* tag. It does not block."
+echo "  pre-commit  refuses a staged line that carries a private word."
 echo "  commit-msg  refuses a message that is not \"type(scope): lowercase summary\" with a"
 echo "              bullet body. Bypass once with: git commit --no-verify"
 echo "  pre-push    refuses a new branch not named <type>/<title>-<issue number>, e.g."
 echo "              fix/stealth-encounter-pacing-42. Bypass once with: git push --no-verify"
+echo "  post-checkout  copies the main checkout's .svelte-kit/tsconfig.json into a new worktree"
+echo "              that has none, so its tsconfig.json resolves in the editor."

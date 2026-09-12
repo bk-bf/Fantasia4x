@@ -43,8 +43,10 @@ if (dirty.length)
 
 const sha = git('rev-parse', 'HEAD');
 
+const SSH_OPTIONS = ['-o', 'BatchMode=yes', '-o', 'ServerAliveInterval=30', '-o', 'ServerAliveCountMax=10'];
+
 function ssh(script, opts = {}) {
-  return spawnSync('ssh', ['-o', 'BatchMode=yes', HOST, `bash -c ${quote(script)}`], {
+  return spawnSync('ssh', [...SSH_OPTIONS, HOST, `bash -c ${quote(script)}`], {
     encoding: 'utf8',
     maxBuffer: 1 << 26,
     ...opts
@@ -124,7 +126,7 @@ function runScript() {
 function run() {
   ensureCommit();
   process.stderr.write(`[remote] ${argv.join(' ')} on ${HOST}:~/${dir} at ${sha}\n`);
-  const remote = spawn('ssh', ['-o', 'BatchMode=yes', HOST, `bash -c ${quote(runScript())}`], {
+  const remote = spawn('ssh', [...SSH_OPTIONS, HOST, `bash -c ${quote(runScript())}`], {
     stdio: ['ignore', 'inherit', 'inherit']
   });
   remote.on('error', (e) => die(`ssh: ${e.message}`, SSH_UNREACHABLE));
