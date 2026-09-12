@@ -11,6 +11,8 @@
 //   node tools/issue.mjs labels            # what the schema allows
 //   node tools/issue.mjs sync-labels [--prune]  # create what is missing, name or delete the strays
 //   node tools/issue.mjs lint --body-file - [--label L]...
+//   node tools/issue.mjs pr --head <branch> --title T --body-file -
+//   node tools/issue.mjs pr-edit <n> --body-file -
 
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
@@ -34,6 +36,7 @@ import {
   fields,
   invalidate
 } from './audit/lib/board.mjs';
+import { createPull, editPull } from './audit/lib/pulls.mjs';
 
 process.stdout.on('error', (e) => {
   if (e.code === 'EPIPE') process.exit(0);
@@ -418,6 +421,23 @@ if (cmd === 'check-labels') {
     }
     process.stdout.write(`#${n} ${field} is ${value}\n`);
   }
+} else if (cmd === 'pr') {
+  const head = arg('head') ?? die('which branch? --head <branch>');
+  const title = arg('title') ?? die('--title is required');
+  try {
+    const pull = createPull({ branch: head, title, body: readBody() });
+    process.stdout.write(`${pull?.url ?? ''}\n`);
+  } catch (e) {
+    die(e.message);
+  }
+} else if (cmd === 'pr-edit') {
+  const n = argv[1] ?? die('which pull request?');
+  try {
+    editPull(n, readBody());
+  } catch (e) {
+    die(e.message);
+  }
+  process.stdout.write(`#${n} description rewritten\n`);
 } else if (cmd === 'comment') {
   const n = argv[1] ?? die('which issue?');
   const body = prepare(readBody());

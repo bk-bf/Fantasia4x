@@ -48,8 +48,29 @@ export function mergedPulls() {
   );
 }
 
-export const editPull = (n, body) =>
-  gh(['api', '-X', 'PATCH', `repos/${repo()}/pulls/${n}`, '--input', '-'], JSON.stringify({ body }));
+export function openSubIssues(n) {
+  return JSON.parse(gh(['api', `repos/${repo()}/issues/${n}/sub_issues?per_page=100`]))
+    .filter((s) => s.state === 'open')
+    .map((s) => s.number);
+}
+
+const PARENT_QUERY =
+  'query($owner:String!,$name:String!,$n:Int!)' +
+  '{repository(owner:$owner,name:$name){issue(number:$n){parent{number}}}}';
+
+export function parentOf(n) {
+  const [owner, name] = repo().split('/');
+  const res = JSON.parse(
+    gh([
+      'api', 'graphql',
+      '-f', `query=${PARENT_QUERY}`,
+      '-f', `owner=${owner}`,
+      '-f', `name=${name}`,
+      '-F', `n=${n}`
+    ])
+  );
+  return res.data.repository.issue?.parent?.number ?? null;
+}
 
 export function linkOf(pull) {
   const body = pull.body ?? '';
@@ -58,13 +79,31 @@ export function linkOf(pull) {
   return { issue: Number(issue), step: /^Step: (.+)$/m.exec(body)?.[1]?.trim() ?? null };
 }
 
+export function linkProblem(body) {
+  const link = linkOf({ body });
+  if (!link) return null;
+  const open = openSubIssues(link.issue);
+  if (!open.length) return null;
+  const list = open.map((s) => `#${s}`).join(', ');
+  return `#${link.issue} has open sub-issues (${list}): link the pull request to the one it works`;
+}
+
+export function editPull(n, body) {
+  const problem = linkProblem(body);
+  if (problem) throw new Error(problem);
+  return gh(
+    ['api', '-X', 'PATCH', `repos/${repo()}/pulls/${n}`, '--input', '-'],
+    JSON.stringify({ body })
+  );
+}
+
 export function createPull({ branch, title, body, labels = [] }) {
-  const problem = branchProblem(branch);
+  const problem = branchProblem(branch) || linkProblem(body);
   if (problem) throw new Error(problem);
   const args = ['pr', 'create', '--base', BASE, '--head', branch, '--title', title, '--body-file', '-'];
   for (const l of labels) args.push('--label', l);
-  gh(args, body);
-  return openPullFor(branch);
+  const url = gh(args, body).trim();
+  return openPullFor(branch) ?? { url };
 }
 
 export const commentOnPull = (n, body) =>
