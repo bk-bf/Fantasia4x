@@ -237,6 +237,11 @@ Planned work is an issue from the start, and waits in `Backlog` until Kirill mov
 looked at. And do not put one back because he moved it out: him moving a card is the answer,
 not a mistake to correct. Nothing watches those lanes for drift.
 
+One exception, and only through the `unblock` skill: it asks him about each `Blocked on you` card
+with the question tool, writes his answers into the issue body and a comment, and moves the card
+to `Ready`. `moveLane` allows that one move only while the card's latest comment starts with
+`**Answered by Kirill**`.
+
 Move a card with `pnpm issue lane <n> <lane>`, which refuses a move out of his lanes, and a move
 out of `Backlog` for any card that is not `drift` or `test gap` unless it goes to `Blocked on you`.
 Direct `gh project item-edit` is denied.
