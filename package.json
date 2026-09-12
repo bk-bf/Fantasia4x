@@ -21,6 +21,8 @@
     "test:changed": "vitest run --changed",
     "test:related": "vitest related --run",
     "test:watch": "vitest",
+    "work-pins": "vitest run --config tools/work-pins/vitest.config.ts",
+    "work-pins:gate": "node tools/work-pins/gate.mjs",
     "check": "pnpm check:types && pnpm lint && pnpm knip",
     "lint": "eslint . --max-warnings 221",
     "lint:fix": "eslint . --fix",
