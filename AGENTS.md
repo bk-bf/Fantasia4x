@@ -239,10 +239,11 @@ not a mistake to correct. Nothing watches those lanes for drift.
 One exception, and only through the `unblock` skill: it asks him about each `Blocked on you` card
 with the question tool, writes his answers into the issue body and a comment, and moves the card
 to `Ready`. `moveLane` allows that one move only while the card's latest comment starts with
-`**Answered**`.
+`**Answered**`. It also allows `Blocked on you` to `Manual`, for when he takes a card by hand.
 
-Move a card with `pnpm issue lane <n> <lane>`, which refuses a move out of his lanes, and a move
-out of `Backlog` for any card that is not `drift` or `test gap` unless it goes to `Blocked on you`.
+Move a card with `pnpm issue lane <n> <lane>`, which refuses any other move out of his lanes, and a
+move out of `Backlog` for any card that is not `drift` or `test gap` unless it goes to
+`Blocked on you` or it is a sub-issue following its parent into the parent's lane.
 Direct `gh project item-edit` is denied.
 
 Do not skip a lane. Nothing goes from `Backlog` straight to `In progress` except when a pull
@@ -318,7 +319,8 @@ This is not the board's `Area` field, which is a game-domain taxonomy: `combat`,
 `ui`, `data`, `tooling`. A card carries both — where in the code, and what part of the game.
 
 **The work type is a board field, not a label**, and nothing mirrors it — a card would then
-carry the same word twice. `pnpm issue create --type` is required and sets it, `raise.mjs`
+carry the same word twice. `pnpm issue create --type` sets it, and is required unless `--parent`
+names an issue to take it from, `raise.mjs`
 passes the type its rule family implies, and `check-labels` reads the board and reports an open
 issue whose card has no `Work type` or is not on the board at all. The words are the ones the
 commit messages use: `feat`, `fix`, `refactor`, `perf`, `test`, `tooling`, `docs`, `chore`,
@@ -331,7 +333,7 @@ without `--area` (`combat`, `items`, `sim`, `ui`, `data`, `tooling`) and `--size
 checks both against the board's own options, and sets them on the card. `raise.mjs` derives them
 for what the audit raises: Area from the subarea, Size from how many files the findings touch.
 `check-labels` reports a card missing either, open or in `On dev` or `Done`, and
-`pnpm issue edit <n> --area A --size S` sets them. Size is the effort: `S` is one change in a
+`pnpm issue edit <n> --area A --size S` sets them, as `--verify V` sets the Verify route. Size is the effort: `S` is one change in a
 file or two, `M` is several files or a measurement, `L` is several steps, a new system or a design.
 
 **A feature is built one step per branch.** Work type `feat` goes with the kind `feature`, and
@@ -349,7 +351,8 @@ step lands. Write each step as a change that can be merged, verified and reviewe
 on the issue it closes, so one that says `Part of #n` about a parent shows on no card.
 `pnpm issue pr`, `pnpm issue pr-edit` and the fixer refuse it and name the open sub-issues. Link
 the sub-issue the work belongs to, making a new one with `pnpm issue create --parent <n>` when a
-step has none: its pull request says `Fixes #<sub-issue>`, with the parent's step on the `Step:`
+step has none. The new sub-issue takes the parent's work type, and its lane when that is
+`Backlog`, `Blocked on you`, `Ready` or `Manual`. Its pull request says `Fixes #<sub-issue>`, with the parent's step on the `Step:`
 line, and `after-merge.mjs` ticks that step in the parent as well.
 
 **A body has to say something.** `create` also refuses a stub: under ~240 characters of prose,

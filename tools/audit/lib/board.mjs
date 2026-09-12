@@ -1,6 +1,6 @@
 import { execFileSync } from 'node:child_process';
 
-import { linkOf } from './pulls.mjs';
+import { linkOf, parentOf } from './pulls.mjs';
 
 const PROJECT_ID = 'PVT_kwHOBlZOB84Bip03';
 const STATUS_FIELD_ID = 'PVTSSF_lAHOBlZOB84Bip03zhhhAfI';
@@ -61,6 +61,11 @@ export const itemFor = (n) =>
 
 export const laneOf = (n) => (itemFor(n)?.status ?? '').toLowerCase();
 
+const followsParent = (n, lane) => {
+  const parent = parentOf(n);
+  return parent !== null && laneOf(parent) === lane;
+};
+
 export const inLane = (lane) =>
   boardItems().filter((i) => (i.status ?? '').toLowerCase() === lane.toLowerCase());
 
@@ -117,29 +122,34 @@ export function moveLane(n, to) {
   const from = (item.status ?? '').toLowerCase();
 
   const answered = from === 'blocked on you' && lane === 'ready' && lastCommentIsAnswer(n);
+  const workedByHand = from === 'blocked on you' && lane === 'manual';
   if (
     HIS_LANES.has(from) &&
     from !== lane &&
     !answered &&
+    !workedByHand &&
     !(LEFT_ON_MERGE.has(from) && lane === 'on dev')
   )
     throw new Error(
       `#${n} is in "${item.status}", which is Kirill's lane. He moves it out, not you.\n` +
         `If it is genuinely finished, say so and leave the card where it is.\n` +
-        `A Blocked on you card goes to Ready once its latest comment is his answer, starting ${ANSWER_MARK}.`
+        `A Blocked on you card goes to Ready once its latest comment is his answer, starting ${ANSWER_MARK},\n` +
+        `or to Manual when he takes it by hand.`
     );
 
   if (
     (from === 'backlog' || from === '') &&
     lane !== 'backlog' &&
     lane !== 'blocked on you' &&
-    !agentMayTriage(item)
+    !agentMayTriage(item) &&
+    !followsParent(n, lane)
   )
     throw new Error(
       `#${n} is not a ${[...AGENT_TRIAGED_KINDS].join(' or ')} card, so Kirill decides whether ` +
         `it gets worked.\nComment on it with \`pnpm issue comment ${n} --body-file -\`, naming ` +
         `the open decision or task it overlaps (the Blocked on you cards) or ` +
-        `"none", and what in play reaches the code it cites. Then move it to Blocked on you.`
+        `"none", and what in play reaches the code it cites. Then move it to Blocked on you.\n` +
+        `A sub-issue may also follow its parent into the lane the parent is in.`
     );
 
   if (from === lane) return { from, to: lane, moved: false };

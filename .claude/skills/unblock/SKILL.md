@@ -50,8 +50,8 @@ accept most of them in a click. A question he has to research before answering h
    `tools/audit/fix.mjs`), so an answer left only in a comment never reaches it.
 2. **Comment.** `pnpm issue comment <n> --body-file -`, starting with the exact line
    `**Answered**`, followed by the same bullets and nothing else.
-3. **Lane.** `pnpm issue lane <n> ready`. `moveLane` allows a move out of Blocked on you only to
-   Ready, and only while the card's latest comment starts with `**Answered**`, so the
+3. **Lane.** `pnpm issue lane <n> ready`. `moveLane` allows a move out of Blocked on you to
+   Ready only while the card's latest comment starts with `**Answered**`, so the
    comment has to be the last thing written to the issue before the move.
 
 Leave the card in its lane when the answer was "Not now", a rejection, a new question, or when
