@@ -123,6 +123,19 @@ playtest.
 
 **Always `pnpm`** — never `npm` or `yarn`.
 
+**Nothing test- or CI-related runs on the laptop.** `pnpm test`, `test:related`, `test:changed`,
+`check`, `check:types`, `lint`, `knip`, `knip:all`, `dupes`, `bench`, `bench:tps`, `work-pins`,
+`work-pins:gate`, `audit:t0`, `test:audit` and `test:sim-core` go through `tools/remote/run.mjs`.
+On the laptop it refuses a tree with any uncommitted or untracked file, because the server runs
+commits: commit first, a work-in-progress commit on the branch is fine. It sends `HEAD`, pushed or
+not, to `~/test-runs/Fantasia4x/<worktree>` on ubuntuserver over the `ubuntu` ssh alias, checks out
+that exact commit, refuses to run unless the server's `HEAD` equals it and its tree is clean, runs
+the command under `nice`, and streams the output and exit code back, naming the commit. It fails
+rather than fall back to the laptop. On ubuntuserver and in CI it runs the command in place.
+`F4X_FETCH=<dir>` copies that directory back after the run.
+`tools/remote/guard.mjs` refuses a test runner, linter, type check or harness started directly on
+the laptop; wrap anything else as `node tools/remote/run.mjs <command>`.
+
 **`pnpm check` is the gate.** It runs `svelte-check`, `eslint` and `knip`, and all three must
 stay green. `eslint` is frozen at its current warning count with `--max-warnings`, so a change
 that adds a warning fails the gate; burn warnings down rather than raising the number.
