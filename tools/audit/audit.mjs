@@ -311,13 +311,22 @@ function cmdT0() {
   if (drift.declared < 5) {
     out('  (most ADRs state their invariant in prose, which is why family A exists at T2)');
   }
-  for (const f of drift.findings) out(`  [${f.kind}] ${f.adr} ${f.name}: ${f.detail}`);
+  const warn = (props, text) => {
+    if (process.env.GITHUB_ACTIONS === 'true') out(`::warning ${props}::${text}`);
+  };
+  for (const f of drift.findings) {
+    out(`  [${f.kind}] ${f.adr} ${f.name}: ${f.detail}`);
+    warn('title=ADR constant drift', `${f.adr} ${f.name}: ${f.detail}`);
+  }
   if (drift.findings.length === 0) out('  no drift');
 
   const seams = seamViolations(ROOT, extractRepo(ROOT));
   out('');
   out(`adr-seams: ${seams.rules} chokepoint(s) checked`);
-  for (const f of seams.findings) out(`  [seam] ${f.adr} ${f.where}: ${f.detail}`);
+  for (const f of seams.findings) {
+    out(`  [seam] ${f.adr} ${f.where}: ${f.detail}`);
+    warn('title=Seam', `${f.adr} ${f.where}: ${f.detail}`);
+  }
   if (seams.findings.length === 0) out('  no violations');
 
   const sizes = componentSizeViolations(ROOT);
@@ -325,7 +334,10 @@ function cmdT0() {
   out(
     `component-sizes: ${sizes.frozen} component(s) over ${COMPONENT_LINE_LIMIT} lines frozen at their size`
   );
-  for (const f of sizes.findings) out(`  [size] ${f.where}: ${f.detail}`);
+  for (const f of sizes.findings) {
+    out(`  [size] ${f.where}: ${f.detail}`);
+    warn(`file=${f.where},title=Component size`, f.detail);
+  }
   for (const f of sizes.notes) out(`  [note] ${f.where}: ${f.detail}`);
   if (sizes.findings.length === 0) out('  no violations');
 
