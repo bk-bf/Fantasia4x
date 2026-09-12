@@ -18,8 +18,7 @@ for hook in pre-commit commit-msg pre-push post-checkout; do
 done
 
 echo
-echo "  pre-commit  informational only — prints a heads-up once the tree is \$BUILD_DISTANCE_MAX"
-echo "              (default 100) commits past the last v* tag. It does not block."
+echo "  pre-commit  refuses a staged line that carries a private word."
 echo "  commit-msg  refuses a message that is not \"type(scope): lowercase summary\" with a"
 echo "              bullet body. Bypass once with: git commit --no-verify"
 echo "  pre-push    refuses a new branch not named <type>/<title>-<issue number>, e.g."
