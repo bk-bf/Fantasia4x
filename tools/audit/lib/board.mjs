@@ -24,7 +24,7 @@ const HIS_LANES = new Set(['blocked on you', 'rejected', 'manual']);
 
 const LEFT_ON_MERGE = new Set(['manual']);
 
-const ANSWER_MARK = '**Answered by Kirill**';
+const ANSWER_MARK = '**Answered**';
 
 const lastCommentIsAnswer = (n) =>
   (JSON.parse(gh(['issue', 'view', String(n), '--json', 'comments'])).comments.at(-1)?.body ?? '')
