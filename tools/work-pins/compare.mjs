@@ -34,22 +34,63 @@ function messageRows(scenario, base, head) {
   ];
 }
 
+const leafOf = (name) => name.split(' > ').at(-1);
+
+function uniqueBy(pins, nameOf) {
+  const out = new Map();
+  for (const [key, pin] of pins) {
+    const name = nameOf(pin.name);
+    out.set(name, out.has(name) ? null : key);
+  }
+  return out;
+}
+
+function pairMoves(onlyBase, onlyHead, nameOf) {
+  const pairs = [];
+  const heads = uniqueBy(onlyHead, nameOf);
+  for (const [name, baseKey] of uniqueBy(onlyBase, nameOf)) {
+    const headKey = heads.get(name);
+    if (!baseKey || !headKey) continue;
+    pairs.push([onlyBase.get(baseKey), onlyHead.get(headKey)]);
+    onlyBase.delete(baseKey);
+    onlyHead.delete(headKey);
+  }
+  return pairs;
+}
+
 function functionRows(scenario, base, head) {
   const rows = [];
+  const moved = [];
+  const onlyBase = new Map();
+  const onlyHead = new Map();
   for (const key of new Set([...Object.keys(base), ...Object.keys(head)])) {
     const b = base[key];
     const h = head[key];
-    const bc = b?.count ?? 0;
-    const hc = h?.count ?? 0;
-    if (bc === hc) continue;
-    const at = h ?? b;
-    rows.push({ scenario, fn: at.name, where: `${at.file}:${at.line}`, base: bc, head: hc });
+    if (b && h) {
+      if (b.count !== h.count)
+        rows.push({ scenario, fn: h.name, where: `${h.file}:${h.line}`, base: b.count, head: h.count });
+    } else if (b) onlyBase.set(key, b);
+    else onlyHead.set(key, h);
   }
-  return rows;
+  const pairs = [
+    ...pairMoves(onlyBase, onlyHead, (name) => name),
+    ...pairMoves(onlyBase, onlyHead, leafOf)
+  ];
+  for (const [b, h] of pairs) {
+    const where = `${b.file}:${b.line} → ${h.file}:${h.line}`;
+    if (b.count === h.count) moved.push({ scenario, fn: `${b.name} → ${h.name}`, where, count: h.count });
+    else rows.push({ scenario, fn: h.name, where, base: b.count, head: h.count });
+  }
+  for (const b of onlyBase.values())
+    rows.push({ scenario, fn: b.name, where: `${b.file}:${b.line}`, base: b.count, head: 0 });
+  for (const h of onlyHead.values())
+    rows.push({ scenario, fn: h.name, where: `${h.file}:${h.line}`, base: 0, head: h.count });
+  return { rows, moved };
 }
 
 export function compareRuns(baseRuns, headRuns) {
   const rows = [];
+  const moved = [];
   const notes = [];
   for (const scenario of new Set([...baseRuns.keys(), ...headRuns.keys()])) {
     const b = baseRuns.get(scenario);
@@ -60,7 +101,9 @@ export function compareRuns(baseRuns, headRuns) {
     }
     if (b.turn !== h.turn)
       rows.push({ scenario, fn: 'final turn', where: '', base: b.turn, head: h.turn });
-    rows.push(...functionRows(scenario, b.functions, h.functions));
+    const fns = functionRows(scenario, b.functions, h.functions);
+    rows.push(...fns.rows);
+    moved.push(...fns.moved);
     if (b.phases && h.phases) rows.push(...counterRows(scenario, 'phase', b.phases, h.phases));
     else if (b.phases || h.phases)
       notes.push(
@@ -72,7 +115,7 @@ export function compareRuns(baseRuns, headRuns) {
   rows.sort(
     (x, y) => Math.abs(y.head - y.base) - Math.abs(x.head - x.base) || x.fn.localeCompare(y.fn)
   );
-  return { rows, notes };
+  return { rows, moved, notes };
 }
 
 function change(r) {
@@ -91,22 +134,36 @@ export function renderTable(rows) {
   return [head, ...body].join('\n');
 }
 
+function renderMoved(moved) {
+  if (!moved.length) return '';
+  const body = moved.map((m) => `| ${m.scenario} | \`${m.fn}\` | \`${m.where}\` | ${m.count} |`);
+  return [
+    '',
+    `<details><summary>${moved.length} function(s) moved with the same call count</summary>`,
+    '',
+    '| scenario | function | moved | calls |',
+    '|---|---|---|---:|',
+    ...body,
+    '',
+    '</details>',
+    ''
+  ].join('\n');
+}
+
 export function report(baseDir, headDir) {
-  const { rows, notes } = compareRuns(readRuns(baseDir), readRuns(headDir));
+  const { rows, moved, notes } = compareRuns(readRuns(baseDir), readRuns(headDir));
   const lines = [];
   lines.push(
     rows.length ? `## Work pins: ${rows.length} count(s) changed` : '## Work pins: no change'
   );
   for (const n of notes) lines.push(`- ${n}`);
-  const text = rows.length
-    ? `${lines.join('\n')}\n\n${renderTable(rows)}\n`
-    : `${lines.join('\n')}\n`;
+  const text = `${lines.join('\n')}\n${rows.length ? `\n${renderTable(rows)}\n` : ''}${renderMoved(moved)}`;
   process.stdout.write(text);
   if (process.env.GITHUB_STEP_SUMMARY) {
     const shown = rows.slice(0, SUMMARY_ROW_LIMIT);
     const more = rows.length - shown.length;
     const summary = rows.length
-      ? `${lines.join('\n')}\n\n${renderTable(shown)}\n${more > 0 ? `\n${more} more row(s) in the job log.\n` : ''}`
+      ? `${lines.join('\n')}\n\n${renderTable(shown)}\n${more > 0 ? `\n${more} more row(s) in the job log.\n` : ''}${renderMoved(moved)}`
       : text;
     appendFileSync(process.env.GITHUB_STEP_SUMMARY, summary);
   }
