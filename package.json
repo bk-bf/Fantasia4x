@@ -24,6 +24,7 @@
     "work-pins": "vitest run --config tools/work-pins/vitest.config.ts",
     "work-pins:gate": "node tools/work-pins/gate.mjs",
     "bench": "vitest bench --run --config tools/bench/vitest.config.ts",
+    "bench:tps": "vitest bench --run --config tools/bench/tps.config.ts",
     "check": "pnpm check:types && pnpm lint && pnpm knip",
     "lint": "eslint . --max-warnings 221",
     "lint:fix": "eslint . --fix",
