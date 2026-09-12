@@ -92,6 +92,9 @@ pub fn find_path(
 
         let cx = (cur % w) as i32;
         let cy = (cur / w) as i32;
+        for &(dx, dy) in &DIRS {
+            std::hint::black_box(octile((cx + dx) as u32, (cy + dy) as u32, ex, ey));
+        }
 
         for &(dx, dy) in &DIRS {
             let nx = cx + dx;
