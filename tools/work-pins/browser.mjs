@@ -1,26 +1,30 @@
 #!/usr/bin/env node
-import { spawn } from 'node:child_process';
-import { createWriteStream, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { createServer } from 'node:net';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
-import * as zlib from 'node:zlib';
-import { chromium } from 'playwright';
 
+import {
+  DEFAULT_FIXTURE,
+  MAP,
+  assertRunning,
+  focusMap,
+  frame,
+  frames,
+  freezeClock,
+  logger,
+  metrics,
+  openGame,
+  setPaused,
+  sleep,
+  takePanelWrites,
+  watchPanelWrites
+} from './browser-session.mjs';
 import { functionPins } from './functions.mjs';
 
-const FRAME_MS = 16;
-const EPOCH_MS = 1_700_000_000_000;
-const PAUSE_AT_MS = EPOCH_MS + 24 * 3600 * 1000;
-const VIEWPORT = { width: 1280, height: 800 };
 const ZOOM_STEPS = 7;
 const FRAMES_PER_ZOOM = 10;
 const SETTLE_FRAMES = 300;
-const TICKS_PER_FRAME = 1;
-const STEP_TIMEOUT_MS = 120_000;
-const SAVE_ID = 'work-pins';
-const RANDOM_SEED = 0x2545f491;
-const DEFAULT_FIXTURE = 'tools/work-pins/fixtures/dev-save.json.gz';
+const PAUSE_CHECK_FRAMES = 25;
 const PHASES = [
   { name: 'run', paused: false, pan: false },
   { name: 'pan', paused: false, pan: true },
@@ -38,8 +42,6 @@ const OBSERVED_FILES = [
   /^node_modules\/\.vite\/deps\/howler\.js$/,
   /^src\/lib\/workPins\//
 ];
-const MAP = '[aria-label="World map"]';
-const SERVE_WITHOUT_GIT = { GIT_DIR: '/dev/null' };
 
 const { values: opts } = parseArgs({
   options: {
@@ -50,139 +52,7 @@ const { values: opts } = parseArgs({
   }
 });
 
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-const log = (line) => process.stdout.write(`[browser-pins] ${line}\n`);
-
-function readFixture(path) {
-  const raw = readFileSync(path);
-  if (path.endsWith('.gz')) return zlib.gunzipSync(raw);
-  if (path.endsWith('.br')) return zlib.brotliDecompressSync(raw);
-  if (path.endsWith('.zst')) return zlib.zstdDecompressSync(raw);
-  return raw;
-}
-
-function freePort() {
-  return new Promise((done, fail) => {
-    const s = createServer();
-    s.on('error', fail);
-    s.listen(0, '127.0.0.1', () => {
-      const { port } = s.address();
-      s.close(() => done(port));
-    });
-  });
-}
-
-async function startServer(tree, port, logFile) {
-  const out = createWriteStream(logFile);
-  const child = spawn(join(tree, 'dev.sh'), ['--browser', '--port', String(port)], {
-    cwd: tree,
-    detached: true,
-    env: { ...process.env, ...SERVE_WITHOUT_GIT, VITE_WORK_PINS: '1', CI: 'true' },
-    stdio: ['ignore', 'pipe', 'pipe']
-  });
-  child.stdout.pipe(out);
-  child.stderr.pipe(out);
-  for (let i = 0; i < 600; i++) {
-    if (child.exitCode !== null) throw new Error(`dev server exited ${child.exitCode}, see ${logFile}`);
-    try {
-      if ((await fetch(`http://127.0.0.1:${port}/`)).ok) return child;
-    } catch {
-      await sleep(500);
-    }
-  }
-  throw new Error(`dev server never answered on ${port}, see ${logFile}`);
-}
-
-function hideAudio() {
-  delete window.Audio;
-  delete window.AudioContext;
-  delete window.webkitAudioContext;
-}
-
-function seedRandom(seed) {
-  let s = seed;
-  window.__reseedRandom = (next) => {
-    s = next;
-  };
-  Math.random = () => {
-    s = (s + 0x6d2b79f5) | 0;
-    let t = Math.imul(s ^ (s >>> 15), 1 | s);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
-async function seedSave(page, origin, body) {
-  const route = `${origin}/__work-pins/**`;
-  await page.route(route, (r) =>
-    r.request().url().endsWith('/save.json')
-      ? r.fulfill({ contentType: 'application/json', body })
-      : r.fulfill({ contentType: 'text/html', body: '<!doctype html><title>work pins</title>' })
-  );
-  await page.goto(`${origin}/__work-pins/seed`);
-  const renderer = await page.evaluate(() => {
-    const gl = document.createElement('canvas').getContext('webgl2');
-    const ext = gl?.getExtension('WEBGL_debug_renderer_info');
-    return gl ? gl.getParameter(ext ? ext.UNMASKED_RENDERER_WEBGL : gl.RENDERER) : 'no WebGL2';
-  });
-  log(`WebGL2 renderer: ${renderer}`);
-  await page.evaluate(async (id) => {
-    const snap = await (await fetch('/__work-pins/save.json')).json();
-    const db = await new Promise((done, fail) => {
-      const req = indexedDB.open('fantasia4x', 1);
-      req.onupgradeneeded = () => req.result.createObjectStore('saves');
-      req.onsuccess = () => done(req.result);
-      req.onerror = () => fail(req.error);
-    });
-    await new Promise((done, fail) => {
-      const tx = db.transaction('saves', 'readwrite');
-      tx.objectStore('saves').put(snap.dynamic, `save:${id}`);
-      tx.objectStore('saves').put(snap.world, `world:${id}`);
-      tx.oncomplete = done;
-      tx.onerror = () => fail(tx.error);
-    });
-    db.close();
-  }, SAVE_ID);
-  await page.unroute(route);
-}
-
-function trackNetwork(page) {
-  let inflight = 0;
-  let lastChange = Date.now();
-  const bump = (d) => {
-    inflight += d;
-    lastChange = Date.now();
-  };
-  page.on('request', () => bump(1));
-  page.on('requestfinished', () => bump(-1));
-  page.on('requestfailed', () => bump(-1));
-  return async (quietMs) => {
-    while (inflight > 0 || Date.now() - lastChange < quietMs) await sleep(250);
-  };
-}
-
-async function loadGame(page, origin) {
-  await page.goto(`${origin}/`);
-  const loadGame = page.getByRole('button', { name: 'Load Game', exact: true });
-  await page.waitForFunction(
-    () =>
-      [...document.querySelectorAll('button.menu-btn')].some(
-        (b) => b.textContent.trim() === 'Load Game' && !b.disabled
-      ),
-    null,
-    { timeout: 300_000, polling: 500 }
-  );
-  await loadGame.dispatchEvent('click');
-  await page.locator('.row button.main').first().dispatchEvent('click', {}, { timeout: 60_000 });
-  await page.waitForFunction(
-    (map) =>
-      !!document.querySelector(map) &&
-      !document.querySelector('.loading-screen') &&
-      !!document.querySelector('button.ctrl-btn'),
-    MAP,
-    { timeout: 900_000, polling: 500 }
-  );
-}
+const log = logger('browser-pins');
 
 function workerChannel(cdp) {
   const sessions = new Map();
@@ -219,55 +89,9 @@ function workerChannel(cdp) {
   return { send, find };
 }
 
-function withTimeout(promise, what) {
-  let timer;
-  const expire = new Promise((_, fail) => {
-    timer = setTimeout(() => fail(new Error(`${what} timed out`)), STEP_TIMEOUT_MS);
-  });
-  return Promise.race([promise, expire]).finally(() => clearTimeout(timer));
-}
-
-async function flushLayout(page) {
-  await page.evaluate(() => document.documentElement.getBoundingClientRect().height);
-}
-
-async function frame(page) {
-  await withTimeout(
-    page.evaluate((ticks) => window.__f4xWorkPins.step(ticks), TICKS_PER_FRAME),
-    'sim step'
-  );
-  await flushLayout(page);
-  await page.clock.runFor(FRAME_MS);
-  await flushLayout(page);
-}
-
-async function frames(page, n) {
-  for (let i = 0; i < n; i++) await frame(page);
-}
-
 async function centreOf(page, selector) {
   const box = await page.locator(selector).first().boundingBox();
   return { x: Math.round(box.x + box.width / 2), y: Math.round(box.y + box.height / 2) };
-}
-
-async function focusMap(page) {
-  await page.evaluate((map) => document.querySelector(map).focus(), MAP);
-}
-
-async function setPaused(page, want) {
-  const button = page
-    .locator('button.ctrl-btn:has-text("PAUSE"), button.ctrl-btn:has-text("RESUME")')
-    .first();
-  const paused = async () => (await button.getAttribute('class')).includes('is-paused');
-  if ((await paused()) !== want) await button.dispatchEvent('click');
-  await focusMap(page);
-  if ((await paused()) !== want) throw new Error(`pause button did not reach paused=${want}`);
-}
-
-async function metrics(cdp) {
-  await cdp.send('HeapProfiler.collectGarbage');
-  const { metrics: list } = await cdp.send('Performance.getMetrics');
-  return Object.fromEntries(list.map((m) => [m.name, m.value]));
 }
 
 function watchLayers(cdp) {
@@ -294,22 +118,26 @@ async function takeLayers(state) {
 }
 
 function watchWorldEffects(selector) {
-  window.__worldEffectsMutations = 0;
+  const w = (window.__f4xWorldEffects = { mutations: 0, styleWrites: 0, childListChanges: 0 });
   const layer = document.querySelector(selector);
   if (!layer) return false;
   new MutationObserver((records) => {
-    window.__worldEffectsMutations += records.length;
+    for (const r of records) {
+      w.mutations++;
+      if (r.type === 'attributes' && r.attributeName === 'style') w.styleWrites++;
+      if (r.type === 'childList') w.childListChanges++;
+    }
   }).observe(layer, { childList: true, subtree: true, attributes: true, characterData: true });
   return true;
 }
 
 function takeWorldEffects(selector) {
+  const w = window.__f4xWorldEffects;
   const layer = document.querySelector(selector);
-  const taken = {
-    nodes: layer ? layer.querySelectorAll('*').length : 0,
-    mutations: window.__worldEffectsMutations
-  };
-  window.__worldEffectsMutations = 0;
+  const taken = { ...w, nodes: layer ? layer.querySelectorAll('*').length : 0 };
+  w.mutations = 0;
+  w.styleWrites = 0;
+  w.childListChanges = 0;
   return taken;
 }
 
@@ -318,13 +146,24 @@ async function sample(page, cdp, workers, sim, layerState) {
   const worker_ = (await workers.send(sim, 'Profiler.takePreciseCoverage')).result;
   const stats = await page.evaluate(() => window.__f4xWorkPins.stats());
   const worldEffects = await page.evaluate(takeWorldEffects, WORLD_EFFECTS);
+  const panels = await takePanelWrites(page);
   const layers = await takeLayers(layerState);
-  return { page: page_, worker: worker_, stats, worldEffects, layers, metrics: await metrics(cdp) };
+  return {
+    page: page_,
+    worker: worker_,
+    stats,
+    worldEffects,
+    panels,
+    layers,
+    metrics: await metrics(cdp, { collectGarbage: true })
+  };
 }
 
 async function runPhase(page, phase, n) {
   await setPaused(page, phase.paused);
+  const what = `phase ${phase.name}`;
   for (let i = 0; i < n; i++) {
+    if (!phase.paused && i % PAUSE_CHECK_FRAMES === 0) await assertRunning(page, what);
     if (phase.pan && i === 0) await page.keyboard.down(PAN_KEYS[0]);
     if (phase.pan && i === n / 2) {
       await page.keyboard.up(PAN_KEYS[0]);
@@ -333,6 +172,7 @@ async function runPhase(page, phase, n) {
     await frame(page);
   }
   if (phase.pan) await page.keyboard.up(PAN_KEYS[1]);
+  if (!phase.paused) await assertRunning(page, what);
 }
 
 function fileOf(url) {
@@ -367,6 +207,10 @@ function counters(before, after) {
   for (const k of HELD_METRICS) out[k] = after.metrics[k] ?? 0;
   out['worldEffects nodes'] = after.worldEffects.nodes;
   out['worldEffects mutations'] = after.worldEffects.mutations;
+  out['worldEffects style writes'] = after.worldEffects.styleWrites;
+  out['worldEffects child list changes'] = after.worldEffects.childListChanges;
+  out['panel style writes'] = after.panels.panelStyleWrites;
+  out['tint matrix writes'] = after.panels.tintMatrixWrites;
   out.layers = after.layers.layers;
   out.layerArea = after.layers.layerArea;
   out.layersPainted = after.layers.layersPainted;
@@ -458,26 +302,15 @@ async function main() {
   const out = resolve(opts.out);
   const n = Number(opts.frames);
   mkdirSync(out, { recursive: true });
-  const body = readFixture(resolve(opts.fixture));
-  const port = await freePort();
-  const origin = `http://127.0.0.1:${port}`;
-  log(`tree ${tree}, fixture ${opts.fixture} (${body.length} bytes), port ${port}`);
-  const server = await startServer(tree, port, join(out, '..', `dev-server-${port}.log`));
-  const browser = await chromium.launch({ headless: true, args: ['--mute-audio', EXACT_CALL_COUNTS] });
-  const errors = [];
+  const game = await openGame({
+    tree,
+    fixture: opts.fixture,
+    serverLog: `${out}.dev-server.log`,
+    args: [EXACT_CALL_COUNTS],
+    log
+  });
   try {
-    const context = await browser.newContext({ viewport: VIEWPORT, deviceScaleFactor: 1 });
-    await context.addInitScript(seedRandom, RANDOM_SEED);
-    await context.addInitScript(hideAudio);
-    const page = await context.newPage();
-    page.on('pageerror', (e) => errors.push(e.message));
-    const networkQuiet = trackNetwork(page);
-    await page.clock.install({ time: EPOCH_MS });
-    await seedSave(page, origin, body);
-    await loadGame(page, origin);
-    await networkQuiet(3000);
-    log('game ready');
-    const cdp = await context.newCDPSession(page);
+    const { page, cdp } = game;
     const workers = workerChannel(cdp);
     await cdp.send('Target.setAutoAttach', {
       autoAttach: true,
@@ -489,19 +322,14 @@ async function main() {
     const layerState = watchLayers(cdp);
     await cdp.send('LayerTree.enable');
     if (!(await page.evaluate(watchWorldEffects, WORLD_EFFECTS))) throw new Error(`no ${WORLD_EFFECTS}`);
-    await page.clock.pauseAt(PAUSE_AT_MS);
-    await page.evaluate((seed) => window.__reseedRandom(seed), RANDOM_SEED);
+    log(`panels ${JSON.stringify(await watchPanelWrites(page))}`);
+    await freezeClock(page);
     const samples = await measure(page, cdp, workers, sim, n, layerState);
     await writeResults(out, samples, n, cdp, workers, sim);
   } finally {
-    await browser.close();
-    try {
-      process.kill(-server.pid, 'SIGTERM');
-    } catch {
-      server.kill('SIGTERM');
-    }
+    await game.close();
   }
-  if (errors.length) log(`page errors:\n${errors.join('\n')}`);
+  if (game.errors.length) log(`page errors:\n${game.errors.join('\n')}`);
 }
 
 await main();

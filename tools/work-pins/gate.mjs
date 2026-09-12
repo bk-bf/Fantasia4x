@@ -66,8 +66,8 @@ function runHarness(cwd, out) {
   });
 }
 
-function runBrowser(tree, out) {
-  sh('node', [join(HARNESS_DIR, 'browser.mjs'), '--tree', tree, '--out', out]);
+function runBrowser(script, tree, out) {
+  sh('node', [join(HARNESS_DIR, script), '--tree', tree, '--out', out]);
 }
 
 function summary(text) {
@@ -84,18 +84,18 @@ function refHasHook(ref) {
   }
 }
 
-function browserLeg(tree, base, head, results, hookFrom) {
+function browserLeg(script, tree, base, head, results, hookFrom) {
   const headTree = head ? tree(head, 'head-tree') : process.cwd();
   if (!hasHook(headTree, hookFrom)) throw new Error(`head has no ${HOOK_DIR}, nothing to run`);
   if (!refHasHook(base) && !hookFrom) {
-    runBrowser(headTree, join(results, 'head'));
+    runBrowser(script, headTree, join(results, 'head'));
     summary(`## Browser work pins: base has no \`${HOOK_DIR}\`, so head ran alone\n`);
     return true;
   }
   const baseTree = tree(base, 'tree');
   if (!hasHook(baseTree, hookFrom)) throw new Error(`base has no ${HOOK_DIR} after the patch`);
-  runBrowser(baseTree, join(results, 'base'));
-  runBrowser(headTree, join(results, 'head'));
+  runBrowser(script, baseTree, join(results, 'base'));
+  runBrowser(script, headTree, join(results, 'head'));
   return report(join(results, 'base'), join(results, 'head'));
 }
 
@@ -115,7 +115,8 @@ const tree = (ref, name) => {
 };
 let ok = false;
 try {
-  if (leg === 'browser') ok = browserLeg(tree, base, head, results, hookFrom);
+  const script = { browser: 'browser.mjs', day: 'day.mjs' }[leg];
+  if (script) ok = browserLeg(script, tree, base, head, results, hookFrom);
   else {
     const baseTree = tree(base, 'tree');
     const headTree = head ? tree(head, 'head-tree') : process.cwd();
