@@ -5,7 +5,7 @@
 // label invented one letter away from the one that already exists.
 //
 //   node tools/issue.mjs create --title T --type fix --area sim --size S --body-file - [--label L]... [--parent N]
-//   node tools/issue.mjs edit <n> [--title T] [--body-file -] [--add-label L] [--remove-label L] [--type T] [--area A] [--size S] [--parent N]
+//   node tools/issue.mjs edit <n> [--title T] [--body-file -] [--add-label L] [--remove-label L] [--type T] [--area A] [--size S] [--verify V] [--parent N]
 //   node tools/issue.mjs blocked-by <n> <blocker>    # mark <n> as blocked by <blocker>
 //   node tools/issue.mjs comment <n> --body-file -
 //   node tools/issue.mjs close <n> --commit <sha>
@@ -34,6 +34,7 @@ import {
   setSelect,
   addToBoard,
   itemFor,
+  laneOf,
   boardItems,
   fields,
   invalidate
@@ -336,16 +337,19 @@ if (cmd === 'check-labels') {
   const privateTitle = checkPrivate(title);
   if (privateTitle.length) die(`refused:\n  - title ${privateTitle.join('\n  - title ')}`);
   const labels = all('label');
-  const type = arg('type');
-  if (!type) die(`--type is required — one of: ${TYPES.join(', ')}`);
+  const parent = arg('parent');
+  if (parent) issueId(parent);
+  const type = arg('type') ?? (parent ? itemFor(parent)?.['work type'] : null);
+  if (!type) die(`--type is required, or --parent to take the parent's — one of: ${TYPES.join(', ')}`);
   if (!TYPES.includes(type)) die(`unknown --type "${type}" — one of: ${TYPES.join(', ')}`);
   const area = boardOption('Area', arg('area'), 'area');
   const size = boardOption('Size', arg('size'), 'size');
   if (type === 'feat' && !labels.some((l) => labelGroup('kind').includes(l))) labels.push('feature');
   const body = prepare(readBody());
   guard(labels, body, { template: true, workType: type });
-  const parent = arg('parent');
-  if (parent) issueId(parent);
+  const INHERITED_LANES = new Set(['backlog', 'blocked on you', 'ready', 'manual']);
+  const parentLane = parent ? laneOf(parent) : '';
+  const lane = INHERITED_LANES.has(parentLane) ? parentLane : 'backlog';
   const args = ['issue', 'create', '--title', title, '--body-file', '-'];
   for (const l of labels) args.push('--label', l);
   const url = gh(args, body).trim();
@@ -363,7 +367,7 @@ if (cmd === 'check-labels') {
   try {
     addToBoard(n);
     waitForCard(n);
-    setSelect(n, 'Status', 'Backlog');
+    setSelect(n, 'Status', lane);
     setSelect(n, 'Work type', type);
     setSelect(n, 'Area', area);
     setSelect(n, 'Size', size);
@@ -376,7 +380,7 @@ if (cmd === 'check-labels') {
   if (parent) {
     try {
       linkParent(n, parent);
-      process.stdout.write(`#${n} is a sub-issue of #${parent}\n`);
+      process.stdout.write(`#${n} is a sub-issue of #${parent}, in ${lane}\n`);
     } catch (e) {
       process.stderr.write(`note: created #${n} but could not make it a sub-issue of #${parent}: ${e.message}\n`);
     }
@@ -391,6 +395,7 @@ if (cmd === 'check-labels') {
   const body = arg('body-file') ? prepare(readBody()) : null;
   const type = arg('type');
   if (type && !TYPES.includes(type)) die(`unknown --type "${type}" — one of: ${TYPES.join(', ')}`);
+  const verify = arg('verify');
   // Refuse what this edit introduces, not what it inherits. A body that already cites a file
   // somebody deleted cannot be ticked, relabelled or corrected while the old citation is held
   // against it, which locks the issue instead of protecting it.
@@ -417,13 +422,18 @@ if (cmd === 'check-labels') {
   if (body !== null) changes.push('--body-file', '-');
   for (const l of add) changes.push('--add-label', l);
   for (const l of all('remove-label')) changes.push('--remove-label', l);
-  if (!changes.length && !parent && !type && !area && !size) die('nothing to edit');
+  if (!changes.length && !parent && !type && !area && !size && !verify) die('nothing to edit');
   if (changes.length) process.stdout.write(gh(['issue', 'edit', n, ...changes], body ?? undefined));
   if (parent) {
     linkParent(n, parent);
     process.stdout.write(`#${n} is a sub-issue of #${parent}\n`);
   }
-  for (const [field, value] of [['Work type', type], ['Area', area], ['Size', size]]) {
+  for (const [field, value] of [
+    ['Work type', type],
+    ['Area', area],
+    ['Size', size],
+    ['Verify', verify]
+  ]) {
     if (!value) continue;
     try {
       setSelect(n, field, value);
