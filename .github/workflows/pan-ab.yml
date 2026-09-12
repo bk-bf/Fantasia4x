@@ -1,0 +1,60 @@
+name: camera pan ab
+
+on:
+  push:
+    branches: ['test/pan-ab-*']
+
+jobs:
+  measure:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - tree: dev
+            ref: fc6d61596500f35e541e95dfee1d6ff62d76f4fe
+          - tree: pr64
+            ref: 07f2f63917814dc4a2d16021f99f7b1ec6b5c143
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - uses: ./.github/actions/wasm-pack
+
+      - name: Check out the measured tree
+        run: git worktree add "$RUNNER_TEMP/tree" ${{ matrix.ref }}
+
+      - name: Build the measured tree
+        working-directory: ${{ runner.temp }}/tree
+        run: |
+          pnpm install --frozen-lockfile
+          (cd spatial-core && wasm-pack build --target web --out-dir ../src/lib/spatial-core-pkg)
+          (cd sim-core && wasm-pack build --target web --out-dir ../src/lib/sim-core-pkg)
+          pnpm exec svelte-kit sync
+
+      - name: Install the harness
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm exec playwright install --with-deps --only-shell chromium
+
+      - name: Run, pan and pan while paused
+        run: node tools/work-pins/pan-ab.mjs --tree "$RUNNER_TEMP/tree" --out "$RUNNER_TEMP/out/${{ matrix.tree }}.json"
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: pan-${{ matrix.tree }}
+          path: ${{ runner.temp }}/out/
