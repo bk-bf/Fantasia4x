@@ -3,6 +3,7 @@ import { appendFileSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const SUMMARY_ROW_LIMIT = 300;
+const THRESHOLD = Number(process.env.WORK_PINS_THRESHOLD ?? 0.05);
 
 function readRuns(dir) {
   const runs = new Map();
@@ -88,10 +89,14 @@ function functionRows(scenario, base, head) {
   return { rows, moved };
 }
 
+const totalCalls = (run) => Object.values(run.functions ?? {}).reduce((s, f) => s + f.count, 0);
+const overBudget = (t) => (t.base === 0 ? t.head > 0 : t.head > t.base * (1 + THRESHOLD));
+
 export function compareRuns(baseRuns, headRuns) {
   const rows = [];
   const moved = [];
   const notes = [];
+  const totals = [];
   for (const scenario of new Set([...baseRuns.keys(), ...headRuns.keys()])) {
     const b = baseRuns.get(scenario);
     const h = headRuns.get(scenario);
@@ -111,11 +116,14 @@ export function compareRuns(baseRuns, headRuns) {
       );
     rows.push(...messageRows(scenario, b.messages, h.messages));
     rows.push(...counterRows(scenario, 'counter', b.counters ?? {}, h.counters ?? {}));
+    totals.push({ scenario, fn: 'all calls', where: '', base: totalCalls(b), head: totalCalls(h) });
+    for (const [key, head] of Object.entries(h.counters ?? {}))
+      totals.push({ scenario, fn: `counter ${key}`, where: '', base: b.counters?.[key] ?? 0, head });
   }
   rows.sort(
     (x, y) => Math.abs(y.head - y.base) - Math.abs(x.head - x.base) || x.fn.localeCompare(y.fn)
   );
-  return { rows, moved, notes };
+  return { rows, moved, notes, totals, over: totals.filter(overBudget) };
 }
 
 function change(r) {
@@ -134,40 +142,48 @@ export function renderTable(rows) {
   return [head, ...body].join('\n');
 }
 
+function details(summary, body) {
+  return ['', `<details><summary>${summary}</summary>`, '', body, '', '</details>', ''].join('\n');
+}
+
 function renderMoved(moved) {
   if (!moved.length) return '';
   const body = moved.map((m) => `| ${m.scenario} | \`${m.fn}\` | \`${m.where}\` | ${m.count} |`);
-  return [
-    '',
-    `<details><summary>${moved.length} function(s) moved with the same call count</summary>`,
-    '',
-    '| scenario | function | moved | calls |',
-    '|---|---|---|---:|',
-    ...body,
-    '',
-    '</details>',
-    ''
-  ].join('\n');
+  return details(
+    `${moved.length} function(s) moved with the same call count`,
+    ['| scenario | function | moved | calls |', '|---|---|---|---:|', ...body].join('\n')
+  );
+}
+
+function render({ rows, moved, notes, totals, over }, rowLimit) {
+  const budget = `${Math.round(THRESHOLD * 100)}%`;
+  const heading = over.length
+    ? `## Work pins: ${over.length} total(s) grew by more than ${budget}`
+    : `## Work pins: every total within ${budget}${rows.length ? `, ${rows.length} count(s) changed` : ', no change'}`;
+  const parts = [[heading, ...notes.map((n) => `- ${n}`)].join('\n')];
+  if (over.length) parts.push(`\nOver the ${budget} budget, which fails the check:\n\n${renderTable(over)}\n`);
+  const changedTotals = totals.filter((t) => t.head !== t.base);
+  if (changedTotals.length) parts.push(details('Totals that changed', renderTable(changedTotals)));
+  if (rows.length) {
+    const shown = rows.slice(0, rowLimit);
+    const more = rows.length - shown.length;
+    parts.push(
+      details(
+        `${rows.length} count(s) changed; reported, not gated`,
+        `${renderTable(shown)}${more > 0 ? `\n\n${more} more row(s) in the job log.` : ''}`
+      )
+    );
+  }
+  parts.push(renderMoved(moved));
+  return `${parts.join('\n')}\n`;
 }
 
 export function report(baseDir, headDir) {
-  const { rows, moved, notes } = compareRuns(readRuns(baseDir), readRuns(headDir));
-  const lines = [];
-  lines.push(
-    rows.length ? `## Work pins: ${rows.length} count(s) changed` : '## Work pins: no change'
-  );
-  for (const n of notes) lines.push(`- ${n}`);
-  const text = `${lines.join('\n')}\n${rows.length ? `\n${renderTable(rows)}\n` : ''}${renderMoved(moved)}`;
-  process.stdout.write(text);
-  if (process.env.GITHUB_STEP_SUMMARY) {
-    const shown = rows.slice(0, SUMMARY_ROW_LIMIT);
-    const more = rows.length - shown.length;
-    const summary = rows.length
-      ? `${lines.join('\n')}\n\n${renderTable(shown)}\n${more > 0 ? `\n${more} more row(s) in the job log.\n` : ''}${renderMoved(moved)}`
-      : text;
-    appendFileSync(process.env.GITHUB_STEP_SUMMARY, summary);
-  }
-  return rows.length === 0 && notes.every((n) => !n.includes('ran only on'));
+  const result = compareRuns(readRuns(baseDir), readRuns(headDir));
+  process.stdout.write(render(result, Infinity));
+  if (process.env.GITHUB_STEP_SUMMARY)
+    appendFileSync(process.env.GITHUB_STEP_SUMMARY, render(result, SUMMARY_ROW_LIMIT));
+  return result.over.length === 0 && result.notes.every((n) => !n.includes('ran only on'));
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
