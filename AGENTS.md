@@ -136,6 +136,13 @@ rather than fall back to the laptop. On ubuntuserver and in CI it runs the comma
 `tools/remote/guard.mjs` refuses a test runner, linter, type check or harness started directly on
 the laptop; wrap anything else as `node tools/remote/run.mjs <command>`.
 
+**Run `pnpm ci:local` before pushing a branch that opens or updates a pull request, and before
+pushing `dev`; push only when it passes.** It runs the `check` job's pull-request steps on
+ubuntuserver against the merge base with `origin/dev`: `ci-check.mjs`, the seams and sizes audit,
+the work pins, the gungraun instruction counts, the browser work pins, a benchmark run and
+`actionlint` over the workflows. It runs every step, prints a pass, fail or skip line for each, and
+names what a skipped step needs. `pnpm ci:local --quick` skips gungraun and the browser leg.
+
 **`pnpm check` is the gate.** It runs `svelte-check`, `eslint` and `knip`, and all three must
 stay green. `eslint` is frozen at its current warning count with `--max-warnings`, so a change
 that adds a warning fails the gate; burn warnings down rather than raising the number.
