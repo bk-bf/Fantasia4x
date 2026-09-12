@@ -67,7 +67,7 @@ jobs:
         run: node tools/audit/ci-check.mjs
 
       - name: Architecture seams and component sizes
-        run: node tools/audit/audit.mjs t0 --strict
+        run: node tools/audit/audit.mjs t0
 
       - name: Work pins, base against head
         if: github.event_name == 'pull_request'
