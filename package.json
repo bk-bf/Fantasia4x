@@ -36,6 +36,7 @@
     "audit:run": "node tools/audit/run.mjs",
     "audit:fix": "node tools/audit/fix.mjs",
     "audit:review": "node tools/audit/review.mjs",
+    "audit:resolve": "node tools/audit/resolve.mjs",
     "audit:promote": "node tools/audit/promote.mjs",
     "add:wasm": "cd spatial-core && ~/.cargo/bin/wasm-pack build --target web --out-dir ../src/lib/spatial-core-pkg",
     "add:wasm:sim": "cd sim-core && ~/.cargo/bin/wasm-pack build --target web --out-dir ../src/lib/sim-core-pkg",

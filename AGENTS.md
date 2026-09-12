@@ -141,7 +141,10 @@ pushing `dev`; push only when it passes.** It runs the `check` job's pull-reques
 ubuntuserver against the merge base with `origin/dev`: `ci-check.mjs`, the seams and sizes audit,
 the work pins, the gungraun instruction counts, the browser work pins, a benchmark run and
 `actionlint` over the workflows. It runs every step, prints a pass, fail or skip line for each, and
-names what a skipped step needs. `pnpm ci:local --quick` skips gungraun and the browser leg.
+names what a skipped step needs. `pnpm ci:local --quick` skips gungraun and the browser leg. On
+ubuntuserver itself start it as `node tools/remote/ci.mjs`: the server's default Node is 20, which
+the pinned pnpm 11 refuses, and `ci.mjs` loads the pinned Node and pnpm from `tools/remote/prepare.sh`
+before it runs anything.
 
 **`pnpm check` is the gate.** It runs `svelte-check`, `eslint` and `knip`, and all three must
 stay green. `eslint` is frozen at its current warning count with `--max-warnings`, so a change
@@ -284,7 +287,9 @@ the related tests are green it pushes `fix/<title>-<n>` and opens a pull request
 `pre-push` hook refuses a new branch that is not, and `createPull` refuses to open a pull request
 from one. A card that comes back to `Ready` is worked again onto the same pull request, and the
 fixer reads every comment on it first — Kirill's included — so a comment there is how work is
-sent back with a reason.
+sent back with a reason. `pnpm audit:resolve` works every `Ready` card in turn — tests, then
+headless, then playtest — waiting and holding on the audit's own pace schedule; the `resolve`
+skill starts it as the `fantasia-resolve` unit on ubuntuserver and watches it.
 
 `pnpm audit:review --next` takes the oldest open pull request whose latest commit has no
 `audit/review` status, re-merges it onto a freshly fetched `origin/dev`, runs the route again on

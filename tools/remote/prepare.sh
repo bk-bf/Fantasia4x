@@ -8,6 +8,7 @@ export PATH="$SHIMS:$NODE_BIN:$HOME/.cargo/bin:$PATH"
 export RUSTUP_TOOLCHAIN="$F4X_RUST"
 export COREPACK_ENABLE_DOWNLOAD_PROMPT=0
 export TMPDIR="$HOME/test-runs/tmp"
+export F4X_PREPARED=1
 mkdir -p "$TMPDIR"
 
 if [ ! -x "$NODE_BIN/node" ]; then

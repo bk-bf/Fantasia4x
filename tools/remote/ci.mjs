@@ -13,6 +13,16 @@ if (process.env.CI !== 'true' && hostname() !== TEST_HOSTNAME) {
   process.exit(2);
 }
 
+if (process.env.CI !== 'true' && process.env.F4X_PREPARED !== '1') {
+  const top = execFileSync('git', ['rev-parse', '--show-toplevel'], { encoding: 'utf8' }).trim();
+  const prepared = spawnSync(
+    'bash',
+    ['-c', 'cd "$1" && source tools/remote/prepare.sh && cd "$2" && shift 2 && exec node "$@"', 'bash', top, process.cwd(), ...process.argv.slice(1)],
+    { stdio: 'inherit' }
+  );
+  process.exit(prepared.status ?? 1);
+}
+
 const git = (...args) => execFileSync('git', args, { encoding: 'utf8' }).trim();
 const works = (cmd, args = ['--version']) => spawnSync(cmd, args, { stdio: 'ignore' }).status === 0;
 const base = process.env.CI_LOCAL_BASE ?? git('merge-base', 'HEAD', TRUNK);
@@ -25,8 +35,13 @@ const pinnedGungraun = () =>
 const home = mkdtempSync(join(tmpdir(), 'ci-local-gungraun-'));
 
 function gungraunMissing() {
-  if (works('valgrind') && works('gungraun-runner')) return null;
-  return `needs valgrind and gungraun-runner ${pinnedGungraun()}: sudo apt install valgrind libc6-dbg, then cargo install gungraun-runner --version ${pinnedGungraun()}`;
+  const version = pinnedGungraun();
+  const runner = spawnSync('gungraun-runner', ['--version'], { encoding: 'utf8' });
+  const missing = [];
+  if (!works('valgrind')) missing.push('valgrind and libc6-dbg: sudo apt install valgrind libc6-dbg');
+  if (runner.status !== 0 || !runner.stdout.includes(version))
+    missing.push(`gungraun-runner ${version}: cargo install gungraun-runner --version ${version}`);
+  return missing.length ? `needs ${missing.join('; ')}` : null;
 }
 
 function ensureActionlint() {
@@ -67,6 +82,11 @@ const steps = [
     slow: true,
     skip: () =>
       existsSync('tools/work-pins/browser.mjs') ? ensureChromium() : 'this commit has no browser leg'
+  },
+  {
+    name: 'Ticks per second, base against head',
+    cmd: ['node', 'tools/work-pins/gate.mjs', '--leg', 'tps', '--base', base],
+    slow: true
   },
   {
     name: 'Benchmarks run',
