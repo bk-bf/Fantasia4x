@@ -7,6 +7,8 @@ import {
 } from '../../components/UI/canvas/mainTileDeltas';
 import { batchLogReplay } from '../../stores/Log';
 import { vlog, setVerboseLogging } from '../core/util/logSink';
+import { WORK_PINS } from '../../workPins/flag';
+import { connectWorkPins, receiveWorkPins, type WorkPinsReply } from '../../workPins/page';
 import type { SimLogEvent, EntitySync } from './simProtocol';
 import type { GameState, Pawn, Mob, WorldTile, DroppedItem } from '../core/types';
 
@@ -96,6 +98,7 @@ class SimWorkerBridge {
     this.w = new Worker(new URL('./sim.worker.ts', import.meta.url), { type: 'module' });
     this.w.onmessage = (e: MessageEvent) => this.handle(e.data);
     this.w.onerror = (e) => console.error('[SIM-WORKER] error:', e.message || e);
+    if (WORK_PINS) connectWorkPins((msg) => this.w?.postMessage(msg));
   }
 
   init(state: GameState, seed: number, opts?: { preview?: boolean }): void {
@@ -144,6 +147,7 @@ class SimWorkerBridge {
     error?: string;
     events?: SimLogEvent[];
   }): void {
+    if (WORK_PINS && m.kind === 'workPins') return receiveWorkPins(m as unknown as WorkPinsReply);
     if (m.kind === 'snapshot') {
       if (m.worldMap) {
         this.worldMap = m.worldMap;

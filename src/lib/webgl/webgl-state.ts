@@ -1,5 +1,7 @@
 import { isWebGL2Supported, checkWebGLError } from './utils.js';
 import { crashBreadcrumb } from './crashLog.js';
+import { WORK_PINS } from '../workPins/flag.js';
+import { countUploads } from '../workPins/page.js';
 
 export interface WebGLStateOptions {
   canvas: HTMLCanvasElement;
@@ -53,6 +55,7 @@ export class WebGLStateManager {
     if (!this.gl) {
       throw new Error('Failed to create WebGL2 context');
     }
+    if (WORK_PINS) countUploads(this.gl);
 
     this.canvas.addEventListener('webglcontextlost', this.contextLostHandler, false);
     this.canvas.addEventListener('webglcontextrestored', this.contextRestoredHandler, false);
