@@ -13,6 +13,16 @@ if (process.env.CI !== 'true' && hostname() !== TEST_HOSTNAME) {
   process.exit(2);
 }
 
+if (process.env.CI !== 'true' && process.env.F4X_PREPARED !== '1') {
+  const top = execFileSync('git', ['rev-parse', '--show-toplevel'], { encoding: 'utf8' }).trim();
+  const prepared = spawnSync(
+    'bash',
+    ['-c', 'cd "$1" && source tools/remote/prepare.sh && cd "$2" && shift 2 && exec node "$@"', 'bash', top, process.cwd(), ...process.argv.slice(1)],
+    { stdio: 'inherit' }
+  );
+  process.exit(prepared.status ?? 1);
+}
+
 const git = (...args) => execFileSync('git', args, { encoding: 'utf8' }).trim();
 const works = (cmd, args = ['--version']) => spawnSync(cmd, args, { stdio: 'ignore' }).status === 0;
 const base = process.env.CI_LOCAL_BASE ?? git('merge-base', 'HEAD', TRUNK);
