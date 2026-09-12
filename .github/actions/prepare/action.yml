@@ -1,0 +1,45 @@
+name: prepare
+description: Install the pinned Node, pnpm, Rust and wasm-pack, install dependencies, build the WASM crates and sync SvelteKit.
+inputs:
+  tree:
+    description: The checkout to prepare.
+    default: .
+runs:
+  using: composite
+  steps:
+    - uses: pnpm/action-setup@v4
+
+    - uses: actions/setup-node@v4
+      with:
+        node-version: 24.20.0
+        cache: pnpm
+
+    - uses: dtolnay/rust-toolchain@master
+      with:
+        toolchain: 1.98.1
+        targets: wasm32-unknown-unknown
+
+    - uses: Swatinem/rust-cache@v2
+      with:
+        workspaces: |
+          ${{ inputs.tree }}/spatial-core
+          ${{ inputs.tree }}/sim-core
+
+    - uses: ./.github/actions/wasm-pack
+
+    - name: Install dependencies
+      shell: bash
+      working-directory: ${{ inputs.tree }}
+      run: pnpm install --frozen-lockfile
+
+    - name: Build WASM crates
+      shell: bash
+      working-directory: ${{ inputs.tree }}
+      run: |
+        (cd spatial-core && wasm-pack build --target web --out-dir ../src/lib/spatial-core-pkg)
+        (cd sim-core && wasm-pack build --target web --out-dir ../src/lib/sim-core-pkg)
+
+    - name: Sync SvelteKit
+      shell: bash
+      working-directory: ${{ inputs.tree }}
+      run: pnpm exec svelte-kit sync
