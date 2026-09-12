@@ -54,9 +54,9 @@
   let currentScreen = 'main';
   let buildings: PlacedBuilding[] = [];
 
+  const toTintStep = (v: number): number => Math.round(v * 64) / 64;
   $: ambient = environmentService.getAmbient(environmentService.ambientTurn($gameState));
-  $: panelTint = ambient.panelTint;
-
+  $: panelTint = ambient.panelTint.map(toTintStep) as [number, number, number];
   $: panelSaturation = bleakSaturation(
     effectivePanelSaturation(environmentService.effectiveSeason($gameState), $gameState.weather),
     ambient.light
@@ -77,7 +77,7 @@
   const NIGHT_SAT_FLOOR = 0.6;
   function bleakSaturation(baseSat: number, light: number): number {
     const extra = (1 - baseSat) * (1 - light) * NIGHT_BLEAK;
-    return Math.max(Math.min(baseSat, NIGHT_SAT_FLOOR), baseSat - extra);
+    return toTintStep(Math.max(Math.min(baseSat, NIGHT_SAT_FLOOR), baseSat - extra));
   }
 
   function buildPanelMatrix(tint: [number, number, number], s: number): string {
