@@ -25,8 +25,13 @@ const pinnedGungraun = () =>
 const home = mkdtempSync(join(tmpdir(), 'ci-local-gungraun-'));
 
 function gungraunMissing() {
-  if (works('valgrind') && works('gungraun-runner')) return null;
-  return `needs valgrind and gungraun-runner ${pinnedGungraun()}: sudo apt install valgrind libc6-dbg, then cargo install gungraun-runner --version ${pinnedGungraun()}`;
+  const version = pinnedGungraun();
+  const runner = spawnSync('gungraun-runner', ['--version'], { encoding: 'utf8' });
+  const missing = [];
+  if (!works('valgrind')) missing.push('valgrind and libc6-dbg: sudo apt install valgrind libc6-dbg');
+  if (runner.status !== 0 || !runner.stdout.includes(version))
+    missing.push(`gungraun-runner ${version}: cargo install gungraun-runner --version ${version}`);
+  return missing.length ? `needs ${missing.join('; ')}` : null;
 }
 
 function ensureActionlint() {
