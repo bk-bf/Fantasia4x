@@ -7,6 +7,7 @@ declare global {
 interface ImportMetaEnv {
   readonly VITE_DEBUG_MODE?: string;
   readonly VITE_DEBUG_LOG?: string;
+  readonly VITE_WORK_PINS?: string;
 }
 interface ImportMeta {
   readonly env: ImportMetaEnv;
