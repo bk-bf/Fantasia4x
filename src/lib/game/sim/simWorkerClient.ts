@@ -98,7 +98,7 @@ class SimWorkerBridge {
     this.w = new Worker(new URL('./sim.worker.ts', import.meta.url), { type: 'module' });
     this.w.onmessage = (e: MessageEvent) => this.handle(e.data);
     this.w.onerror = (e) => console.error('[SIM-WORKER] error:', e.message || e);
-    if (WORK_PINS) connectWorkPins((msg) => this.w?.postMessage(msg));
+    if (WORK_PINS) connectWorkPins(this.w);
   }
 
   init(state: GameState, seed: number, opts?: { preview?: boolean }): void {

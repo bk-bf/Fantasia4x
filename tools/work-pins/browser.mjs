@@ -30,6 +30,11 @@ const PAN_KEYS = ['ArrowRight', 'ArrowLeft'];
 const COUNTED_METRICS = ['LayoutCount'];
 const OBSERVED_METRICS = ['RecalcStyleCount'];
 const HELD_METRICS = ['Nodes', 'JSEventListeners'];
+const OBSERVED_FILES = [
+  /^src\/lib\/audio\//,
+  /^node_modules\/\.vite\/deps\/howler\.js$/,
+  /^src\/lib\/workPins\//
+];
 const MAP = '[aria-label="World map"]';
 const SERVE_WITHOUT_GIT = { GIT_DIR: '/dev/null' };
 
@@ -291,6 +296,14 @@ function fileOf(url) {
   return null;
 }
 
+function splitObserved(pins) {
+  const compared = {};
+  const observed = {};
+  for (const [key, pin] of Object.entries(pins))
+    (OBSERVED_FILES.some((re) => re.test(pin.file)) ? observed : compared)[key] = pin;
+  return { compared, observed };
+}
+
 function sourceReader(fetchSource) {
   const cache = new Map();
   return async (scriptId) => {
@@ -351,24 +364,27 @@ async function writeResults(out, samples, n, cdp, workers, sim) {
     const [before, after] = [samples[i], samples[i + 1]];
     const name = PHASES[i].name;
     const { turn, phases, messages } = after.stats.worker;
+    const page = splitObserved(await functionPins(after.page, pageSource, fileOf));
+    const worker = splitObserved(await functionPins(after.worker, workerSource, fileOf));
     const runs = [
       {
         scenario: `browser ${name} page`,
         ticks: n,
         turn,
-        functions: await functionPins(after.page, pageSource, fileOf),
+        functions: page.compared,
         phases: null,
         messages: {},
         counters: counters(before, after),
-        observed: observed(before, after)
+        observed: { ...observed(before, after), functions: page.observed }
       },
       {
         scenario: `browser ${name} worker`,
         ticks: n,
         turn,
-        functions: await functionPins(after.worker, workerSource, fileOf),
+        functions: worker.compared,
         phases,
-        messages
+        messages,
+        observed: { functions: worker.observed }
       }
     ];
     for (const run of runs) {

@@ -63,12 +63,12 @@ function takeTotals(): Totals {
   return taken;
 }
 
-export function connectWorkPins(post: (msg: unknown) => void): void {
+export function connectWorkPins(worker: Worker): void {
   const request = (op: string, extra: Record<string, unknown> = {}) =>
     new Promise<WorkPinsReply>((resolve) => {
       const id = nextId++;
       waiting.set(id, resolve);
-      post({ kind: 'workPins', op, id, ...extra });
+      worker.postMessage({ kind: 'workPins', op, id, ...extra });
     });
   (globalThis as Record<string, unknown>).__f4xWorkPins = {
     step: async (ticks: number) => (await request('step', { ticks })).turn,
