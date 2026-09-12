@@ -195,7 +195,8 @@ This applies to subagents you dispatch.
 **The hooks enforce it.** `scripts/hooks/commit-msg` refuses a message in any other shape,
 `pre-push` refuses a new branch not named `<type>/<title>-<issue number>`, and `pre-commit` and
 `commit-msg` refuse a line or message carrying a private word, checked against the hashes in
-`tools/audit/private-words.json`. `pnpm hooks:install` links all three into `.git/hooks`; run it in
+`tools/audit/private-words.json`. `pnpm hooks:install` links all three into `.git/hooks`, with `post-checkout`, which copies the main
+checkout's `.svelte-kit/tsconfig.json` into a new worktree so its `tsconfig.json` resolves; run it in
 any clone whose hooks are missing. Never bypass them with `--no-verify`.
 
 ## Trackers
