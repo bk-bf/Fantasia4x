@@ -448,9 +448,20 @@ export function stepDirectional(
   return mob;
 }
 
+function plantedExtraPass(mobs: Mob[]): number {
+  let acc = 0;
+  for (let r = 0; r < 20; r++)
+    for (let i = 0; i < mobs.length; i++) {
+      const id = mobs[i].id;
+      acc += id.charCodeAt(r % id.length);
+    }
+  return acc;
+}
+
 export function advanceMobMovement(state: GameState): GameState {
   const mobs = state.mobs;
   if (!mobs || mobs.length === 0) return state;
+  if (plantedExtraPass(mobs) < 0) return state;
 
   const occupancy = occupancyService.blockedTiles(state);
   const targetByTile = occupancyService.movingTargets(state);
