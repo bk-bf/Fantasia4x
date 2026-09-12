@@ -41,7 +41,11 @@ export function mergedPulls() {
       'pr', 'list', '--base', BASE, '--state', 'merged', '--limit', '30',
       '--json', 'number,headRefName,body,mergeCommit,mergedAt'
     ])
-  ).filter((p) => p.headRefName.startsWith('fix/'));
+  ).filter(
+    (p) =>
+      p.headRefName.startsWith('fix/') ||
+      (p.headRefName.includes('/') && !branchProblem(p.headRefName))
+  );
 }
 
 export const editPull = (n, body) =>

@@ -214,15 +214,16 @@ Planned work is an issue from the start, and waits in `Backlog` until Kirill mov
   elsewhere. An agent moves a card out of `Failed` only when he says so.
 - **`In progress`** — a branch exists and an agent is on it. Once the fixer has it green it is a
   pull request into `dev`, and the card stays here while `review.mjs` verifies it.
-- **`Manual`** — Kirill is working it by hand. `review.mjs` skips its pull request, `board-sync.py`
+- **`Manual`** — he is working it by hand. `review.mjs` skips its pull request, `board-sync.py`
   does not update its branch, and `fix.mjs` refuses it. He moves it to `PR ready` to have it
   reviewed or to `Ready` to hand it to the fixer; when its pull request merges, `after-merge.mjs`
   moves it to `On dev`, the one move out of it an agent makes.
-- **`PR ready`** — the pull request is ready for Kirill: `review.mjs` passed it, or it
-  is a `needs playtest` pull request, which the reviewer skips. He merges it, or comments on it
-  and moves the card back to `Ready`. Agents put cards here, and `after-merge.mjs` takes them out
+- **`PR ready`** — the pull request has passed: `review.mjs` passed it, or it is a
+  `needs playtest` pull request, which the reviewer skips. `board-sync.py` merges a reviewed one
+  once CI is green; a `needs playtest` one waits for him to play and merge it, or to comment on it
+  and move the card back to `Ready`. Agents put cards here, and `after-merge.mjs` takes them out
   when the pull request merges.
-- **`On dev`** — merged to `dev` by a pull request Kirill merged, and not yet in the build he
+- **`On dev`** — merged to `dev` by a pull request, and not yet in the build he
   plays. Cards rest here until he promotes, which is the only thing that writes `main`.
 - **`Done`** — promoted to `main`, so it is in the game he plays. The issue was closed when it
   reached `dev`; the lane is where the work lives, not whether it is finished.
@@ -237,13 +238,18 @@ Planned work is an issue from the start, and waits in `Backlog` until Kirill mov
 looked at. And do not put one back because he moved it out: him moving a card is the answer,
 not a mistake to correct. Nothing watches those lanes for drift.
 
+One exception, and only through the `unblock` skill: it asks him about each `Blocked on you` card
+with the question tool, writes his answers into the issue body and a comment, and moves the card
+to `Ready`. `moveLane` allows that one move only while the card's latest comment starts with
+`**Answered**`.
+
 Move a card with `pnpm issue lane <n> <lane>`, which refuses a move out of his lanes, and a move
 out of `Backlog` for any card that is not `drift` or `test gap` unless it goes to `Blocked on you`.
 Direct `gh project item-edit` is denied.
 
-Do not skip a lane. Nothing goes from `Backlog` straight to `In progress`, nothing reaches
-`On dev` except through a pull request Kirill merged, and nothing reaches `Done` except by a
-promotion Kirill ran.
+Do not skip a lane. Nothing goes from `Backlog` straight to `In progress` except when a pull
+request opens for it, nothing reaches `On dev` except through a merged pull request, and nothing
+reaches `Done` except by a promotion he ran.
 
 **After `Ready`, the work is a pull request.** `pnpm audit:fix --next` takes the oldest `Ready`
 card whose `Verify` is `tests` and works it in a worktree off `origin/dev`. Once `pnpm check` and
@@ -263,7 +269,10 @@ request into `dev` and every push to `dev`, on GitHub's runners, and branch prot
 requires it to pass on an up-to-date branch before a merge. Kirill is the repository's admin and
 can override that.
 
-Merging is Kirill's. When a pull request merges, GitHub closes the issue it fixes, and
+`board-sync.py` merges a pull request once GitHub reports it `CLEAN`, meaning mergeable, up to date
+and with `check` green, when its card is in `In progress` or `PR ready`, it does not carry
+`needs playtest`, and, for a `fix/` branch, its latest commit has `audit/review` success. He merges
+the rest. When a pull request merges, GitHub closes the issue it fixes, and
 `tools/audit/after-merge.mjs` — run by `board-sync.py` every five minutes — moves the card to
 `On dev`, deletes the branch and removes its worktrees. The same pass keeps every open pull request mergeable: one
 that has fallen behind `dev` gets GitHub's Update branch, which re-runs CI, and one that no longer
@@ -331,7 +340,7 @@ The body follows `.github/ISSUE_TEMPLATE/feat.md` — What this is, Why, Steps, 
 verified — and may add `## Decisions this needs before any edit` and `## Considered and
 rejected`. Each checkbox under `## Steps` is one branch and one pull request: the fixer works the
 first open step only, and its pull request says `Part of #n` with the step on a `Step:` line, so
-merging it does not close the issue. When Kirill merges it, `after-merge.mjs` ticks the step.
+merging it does not close the issue. When it merges, `after-merge.mjs` ticks the step.
 While steps remain, a merged step sends the card back to `Ready`; the issue closes when its last
 step lands. Write each step as a change that can be merged, verified and reviewed by itself.
 
@@ -411,7 +420,7 @@ naming them. The branch's own issue and pull request, from the `-<n>` its name e
 counted. Read what it names; if the edit belongs to that work, do it on that branch.
 
 **Work an agent does on a board card goes through a pull request into `dev`.** The fixer opens
-it, the reviewer and CI report on it, and Kirill merges it. The pull request is where he reads the
+it, the reviewer and CI report on it, and it merges once they pass. The pull request is where he reads the
 diff and where he writes what is wrong with it, and the fixer reads those comments on its next
 attempt. Several related fixes belong in one branch and one pull request, not one each.
 

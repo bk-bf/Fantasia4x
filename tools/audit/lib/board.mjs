@@ -24,6 +24,13 @@ const HIS_LANES = new Set(['blocked on you', 'rejected', 'manual']);
 
 const LEFT_ON_MERGE = new Set(['manual']);
 
+const ANSWER_MARK = '**Answered**';
+
+const lastCommentIsAnswer = (n) =>
+  (JSON.parse(gh(['issue', 'view', String(n), '--json', 'comments'])).comments.at(-1)?.body ?? '')
+    .trimStart()
+    .startsWith(ANSWER_MARK);
+
 const AGENT_TRIAGED_KINDS = new Set(['drift', 'test gap']);
 
 const agentMayTriage = (item) => (item.labels ?? []).some((l) => AGENT_TRIAGED_KINDS.has(l));
@@ -109,10 +116,17 @@ export function moveLane(n, to) {
   if (!item) throw new Error(`#${n} is not on the board`);
   const from = (item.status ?? '').toLowerCase();
 
-  if (HIS_LANES.has(from) && from !== lane && !(LEFT_ON_MERGE.has(from) && lane === 'on dev'))
+  const answered = from === 'blocked on you' && lane === 'ready' && lastCommentIsAnswer(n);
+  if (
+    HIS_LANES.has(from) &&
+    from !== lane &&
+    !answered &&
+    !(LEFT_ON_MERGE.has(from) && lane === 'on dev')
+  )
     throw new Error(
       `#${n} is in "${item.status}", which is Kirill's lane. He moves it out, not you.\n` +
-        `If it is genuinely finished, say so and leave the card where it is.`
+        `If it is genuinely finished, say so and leave the card where it is.\n` +
+        `A Blocked on you card goes to Ready once its latest comment is his answer, starting ${ANSWER_MARK}.`
     );
 
   if (
