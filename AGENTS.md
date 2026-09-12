@@ -211,7 +211,7 @@ Planned work is an issue from the start, and waits in `Backlog` until Kirill mov
   elsewhere. An agent moves a card out of `Failed` only when he says so.
 - **`In progress`** — a branch exists and an agent is on it. Once the fixer has it green it is a
   pull request into `dev`, and the card stays here while `review.mjs` verifies it.
-- **`Manual`** — Kirill is working it by hand. `review.mjs` skips its pull request, `board-sync.py`
+- **`Manual`** — he is working it by hand. `review.mjs` skips its pull request, `board-sync.py`
   does not update its branch, and `fix.mjs` refuses it. He moves it to `PR ready` to have it
   reviewed or to `Ready` to hand it to the fixer; when its pull request merges, `after-merge.mjs`
   moves it to `On dev`, the one move out of it an agent makes.
@@ -237,7 +237,7 @@ not a mistake to correct. Nothing watches those lanes for drift.
 One exception, and only through the `unblock` skill: it asks him about each `Blocked on you` card
 with the question tool, writes his answers into the issue body and a comment, and moves the card
 to `Ready`. `moveLane` allows that one move only while the card's latest comment starts with
-`**Answered by Kirill**`.
+`**Answered**`.
 
 Move a card with `pnpm issue lane <n> <lane>`, which refuses a move out of his lanes, and a move
 out of `Backlog` for any card that is not `drift` or `test gap` unless it goes to `Blocked on you`.

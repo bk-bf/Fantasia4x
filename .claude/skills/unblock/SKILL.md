@@ -1,11 +1,11 @@
 ---
 name: unblock
-description: Clear the Blocked on you lane of the Fantasia4x board. Propose a resolution for each card's open decision through the question tool, record Kirill's answers on the issue, and move each answered card to Ready. Use when asked to resolve, unblock or go through the Blocked on you cards, or to "ask me about the blocked cards".
+description: Clear the Blocked on you lane of the Fantasia4x board. Propose a resolution for each card's open decision through the question tool, record the answers on the issue, and move each answered card to Ready. Use when asked to resolve, unblock or go through the Blocked on you cards, or to "ask me about the blocked cards".
 ---
 
 # Clearing the Blocked on you lane
 
-Kirill clicks through questions; everything else is yours. The work is in the proposals: the
+The user clicks through questions; everything else is yours. The work is in the proposals: the
 recommended option should be the one he would pick after reading the issue himself, so he can
 accept most of them in a click. A question he has to research before answering has failed.
 
@@ -49,9 +49,9 @@ accept most of them in a click. A question he has to research before answering h
    body and the pull request's comments, not the issue's comments (`buildPrompt` in
    `tools/audit/fix.mjs`), so an answer left only in a comment never reaches it.
 2. **Comment.** `pnpm issue comment <n> --body-file -`, starting with the exact line
-   `**Answered by Kirill**`, followed by the same bullets and nothing else.
+   `**Answered**`, followed by the same bullets and nothing else.
 3. **Lane.** `pnpm issue lane <n> ready`. `moveLane` allows a move out of Blocked on you only to
-   Ready, and only while the card's latest comment starts with `**Answered by Kirill**`, so the
+   Ready, and only while the card's latest comment starts with `**Answered**`, so the
    comment has to be the last thing written to the issue before the move.
 
 Leave the card in its lane when the answer was "Not now", a rejection, a new question, or when
