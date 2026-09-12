@@ -35,4 +35,5 @@ if [ ! -d src/lib/sim-core-pkg ] || [ ! -d src/lib/spatial-core-pkg ] \
   echo "$WASM_HASH" > .git/f4x-wasm-hash
 fi
 
+export PATH="$PWD/node_modules/.bin:$PATH"
 pnpm exec svelte-kit sync >&2
