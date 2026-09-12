@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.1.247",
   "license": "AGPL-3.0-or-later",
-  "description": "Fantasia4x \u2014 a turn-based 4X colony chronicle.",
+  "description": "Fantasia4x — a turn-based 4X colony chronicle.",
   "author": "bk",
   "type": "module",
   "main": "electron/main.cjs",
@@ -23,6 +23,7 @@
     "test:watch": "vitest",
     "work-pins": "vitest run --config tools/work-pins/vitest.config.ts",
     "work-pins:gate": "node tools/work-pins/gate.mjs",
+    "bench": "vitest bench --run --config tools/bench/vitest.config.ts",
     "check": "pnpm check:types && pnpm lint && pnpm knip",
     "lint": "eslint . --max-warnings 221",
     "lint:fix": "eslint . --fix",
@@ -50,6 +51,7 @@
     "issue": "node tools/issue.mjs"
   },
   "devDependencies": {
+    "@codspeed/vitest-plugin": "6.0.0-beta.2",
     "@eslint/js": "^9.30.0",
     "@firefox-devtools/profiler-cli": "^0.2.1",
     "@sveltejs/adapter-auto": "^6.0.0",

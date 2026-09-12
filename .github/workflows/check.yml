@@ -14,6 +14,9 @@ jobs:
   check:
     runs-on: ubuntu-latest
     timeout-minutes: 90
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - uses: actions/checkout@v4
         with:
@@ -78,3 +81,9 @@ jobs:
           name: gungraun-flamegraphs
           path: ${{ runner.temp }}/gungraun/**/*.svg
           if-no-files-found: ignore
+
+      - name: CodSpeed benchmarks
+        uses: CodSpeedHQ/action@v5
+        with:
+          mode: simulation
+          run: pnpm bench
