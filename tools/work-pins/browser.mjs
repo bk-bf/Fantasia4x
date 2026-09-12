@@ -29,6 +29,8 @@ const PHASES = [
 const PAN_KEYS = ['ArrowRight', 'ArrowLeft'];
 const COUNTED_METRICS = ['LayoutCount'];
 const OBSERVED_METRICS = ['RecalcStyleCount'];
+const LAYER_SETTLE_MS = 300;
+const WORLD_EFFECTS = '.world-effects-layer';
 const HELD_METRICS = ['Nodes', 'JSEventListeners'];
 const OBSERVED_FILES = [
   /^src\/lib\/audio\//,
@@ -267,11 +269,56 @@ async function metrics(cdp) {
   return Object.fromEntries(list.map((m) => [m.name, m.value]));
 }
 
-async function sample(page, cdp, workers, sim) {
+function watchLayers(cdp) {
+  const state = { layers: [], changes: 0, painted: 0 };
+  cdp.on('LayerTree.layerTreeDidChange', (p) => {
+    state.changes++;
+    if (p.layers) state.layers = p.layers;
+  });
+  cdp.on('LayerTree.layerPainted', () => state.painted++);
+  return state;
+}
+
+async function takeLayers(state) {
+  await sleep(LAYER_SETTLE_MS);
+  const taken = {
+    layers: state.layers.length,
+    layerArea: state.layers.reduce((sum, l) => sum + Math.round(l.width * l.height), 0),
+    layerTreeChanges: state.changes,
+    layersPainted: state.painted
+  };
+  state.changes = 0;
+  state.painted = 0;
+  return taken;
+}
+
+function watchWorldEffects(selector) {
+  window.__worldEffectsMutations = 0;
+  const layer = document.querySelector(selector);
+  if (!layer) return false;
+  new MutationObserver((records) => {
+    window.__worldEffectsMutations += records.length;
+  }).observe(layer, { childList: true, subtree: true, attributes: true, characterData: true });
+  return true;
+}
+
+function takeWorldEffects(selector) {
+  const layer = document.querySelector(selector);
+  const taken = {
+    nodes: layer ? layer.querySelectorAll('*').length : 0,
+    mutations: window.__worldEffectsMutations
+  };
+  window.__worldEffectsMutations = 0;
+  return taken;
+}
+
+async function sample(page, cdp, workers, sim, layerState) {
   const page_ = (await cdp.send('Profiler.takePreciseCoverage')).result;
   const worker_ = (await workers.send(sim, 'Profiler.takePreciseCoverage')).result;
   const stats = await page.evaluate(() => window.__f4xWorkPins.stats());
-  return { page: page_, worker: worker_, stats, metrics: await metrics(cdp) };
+  const worldEffects = await page.evaluate(takeWorldEffects, WORLD_EFFECTS);
+  const layers = await takeLayers(layerState);
+  return { page: page_, worker: worker_, stats, worldEffects, layers, metrics: await metrics(cdp) };
 }
 
 async function runPhase(page, phase, n) {
@@ -317,16 +364,24 @@ function counters(before, after) {
   for (const [k, v] of Object.entries(after.stats.render)) out[`render ${k}`] = v;
   for (const k of COUNTED_METRICS) out[k] = (after.metrics[k] ?? 0) - (before.metrics[k] ?? 0);
   for (const k of HELD_METRICS) out[k] = after.metrics[k] ?? 0;
+  out['worldEffects nodes'] = after.worldEffects.nodes;
+  out['worldEffects mutations'] = after.worldEffects.mutations;
+  out.layers = after.layers.layers;
+  out.layerArea = after.layers.layerArea;
+  out.layersPainted = after.layers.layersPainted;
   return out;
 }
 
 function observed(before, after) {
-  return Object.fromEntries(
-    OBSERVED_METRICS.map((k) => [k, (after.metrics[k] ?? 0) - (before.metrics[k] ?? 0)])
-  );
+  return {
+    ...Object.fromEntries(
+      OBSERVED_METRICS.map((k) => [k, (after.metrics[k] ?? 0) - (before.metrics[k] ?? 0)])
+    ),
+    layerTreeChanges: after.layers.layerTreeChanges
+  };
 }
 
-async function measure(page, cdp, workers, sim, n) {
+async function measure(page, cdp, workers, sim, n, layerState) {
   const mapCentre = await centreOf(page, MAP);
   await page.mouse.move(mapCentre.x, mapCentre.y);
   await focusMap(page);
@@ -341,10 +396,10 @@ async function measure(page, cdp, workers, sim, n) {
   await cdp.send('Profiler.startPreciseCoverage', { callCount: true, detailed: false });
   await workers.send(sim, 'Profiler.enable');
   await workers.send(sim, 'Profiler.startPreciseCoverage', { callCount: true, detailed: false });
-  const samples = [await sample(page, cdp, workers, sim)];
+  const samples = [await sample(page, cdp, workers, sim, layerState)];
   for (const phase of PHASES) {
     await runPhase(page, phase, n);
-    samples.push(await sample(page, cdp, workers, sim));
+    samples.push(await sample(page, cdp, workers, sim, layerState));
     log(`phase ${phase.name}: ${JSON.stringify(samples.at(-1).stats.render)}`);
   }
   return samples;
@@ -430,9 +485,12 @@ async function main() {
     });
     const sim = await workers.find(/sim\.worker/);
     await cdp.send('Performance.enable');
+    const layerState = watchLayers(cdp);
+    await cdp.send('LayerTree.enable');
+    if (!(await page.evaluate(watchWorldEffects, WORLD_EFFECTS))) throw new Error(`no ${WORLD_EFFECTS}`);
     await page.clock.pauseAt(PAUSE_AT_MS);
     await page.evaluate((seed) => window.__reseedRandom(seed), RANDOM_SEED);
-    const samples = await measure(page, cdp, workers, sim, n);
+    const samples = await measure(page, cdp, workers, sim, n, layerState);
     await writeResults(out, samples, n, cdp, workers, sim);
   } finally {
     await browser.close();
