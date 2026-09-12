@@ -13,6 +13,11 @@ on:
       head:
         description: Branch whose browser work pins are the head
         default: dev
+      leg:
+        description: browser runs, pans and pans while paused; day steps one in-game day
+        type: choice
+        options: [browser, day]
+        default: browser
 
 concurrency:
   group: check-${{ github.event.pull_request.number || github.ref }}
@@ -21,7 +26,7 @@ concurrency:
 jobs:
   check:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: ${{ github.event_name == 'workflow_dispatch' && 300 || 90 }}
     permissions:
       contents: read
     steps:
@@ -65,6 +70,31 @@ jobs:
           path: ${{ runner.temp }}/gungraun/**/*.svg
           if-no-files-found: ignore
 
+      - name: Install Chromium for the browser work pins
+        if: github.event_name != 'push'
+        run: pnpm exec playwright install --with-deps --only-shell chromium
+
+      - name: Browser work pins, base against head
+        if: github.event_name == 'pull_request'
+        run: node tools/work-pins/gate.mjs --leg browser --base HEAD^1
+
+      - name: Browser work pins, two branches
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          BASE_BRANCH: ${{ inputs.base }}
+          HEAD_BRANCH: ${{ inputs.head }}
+          LEG: ${{ inputs.leg }}
+        run: >-
+          node tools/work-pins/gate.mjs --leg "$LEG"
+          --base "origin/$BASE_BRANCH" --head "origin/$HEAD_BRANCH"
+          --hook-from "$(git merge-base HEAD origin/dev)" --out work-pins-out
+
+      - uses: actions/upload-artifact@v4
+        if: github.event_name == 'workflow_dispatch' && always()
+        with:
+          name: browser-work-pins
+          path: work-pins-out
+
   codspeed:
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -81,27 +111,3 @@ jobs:
         with:
           mode: simulation
           run: pnpm bench
-
-      - name: Install Chromium for the browser work pins
-        if: github.event_name != 'push'
-        run: pnpm exec playwright install --with-deps --only-shell chromium
-
-      - name: Browser work pins, base against head
-        if: github.event_name == 'pull_request'
-        run: node tools/work-pins/gate.mjs --leg browser --base HEAD^1
-
-      - name: Browser work pins, two branches
-        if: github.event_name == 'workflow_dispatch'
-        env:
-          BASE_BRANCH: ${{ inputs.base }}
-          HEAD_BRANCH: ${{ inputs.head }}
-        run: >-
-          node tools/work-pins/gate.mjs --leg browser
-          --base "origin/$BASE_BRANCH" --head "origin/$HEAD_BRANCH"
-          --hook-from "$(git merge-base HEAD origin/dev)" --out work-pins-out
-
-      - uses: actions/upload-artifact@v4
-        if: github.event_name == 'workflow_dispatch' && always()
-        with:
-          name: browser-work-pins
-          path: work-pins-out
