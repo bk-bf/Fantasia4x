@@ -105,6 +105,8 @@ for (const pull of fresh) {
     landStep(pull, link.issue, link.step, sha);
     landParentStep(pull, link.issue, link.step, sha);
   } else if (link) landFix(link.issue, sha);
+  if (B.itemFor(pull.number)?.content?.type === 'PullRequest')
+    settle('move the pull request card to On dev', () => B.moveLane(pull.number, 'on dev'));
 
   const slug = pull.headRefName.slice('fix/'.length);
   removeWorktree(join(ROOT, '.claude', 'worktrees', `fix-${slug}`));

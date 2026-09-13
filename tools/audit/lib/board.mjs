@@ -142,6 +142,7 @@ export function moveLane(n, to) {
 
   if (
     (from === 'backlog' || from === '') &&
+    item.content?.type !== 'PullRequest' &&
     lane !== 'backlog' &&
     lane !== 'blocked on you' &&
     !agentMayTriage(item) &&
@@ -173,8 +174,8 @@ export function moveLane(n, to) {
   return { from: item.status ?? 'unset', to: lane, moved: true };
 }
 
-export function addToBoard(n) {
-  const url = `https://github.com/${OWNER}/Fantasia4x/issues/${n}`;
+export function addToBoard(n, kind = 'issues') {
+  const url = `https://github.com/${OWNER}/Fantasia4x/${kind}/${n}`;
   gh(['project', 'item-add', PROJECT_NUMBER, '--owner', OWNER, '--url', url]);
   invalidate();
   return itemFor(n);

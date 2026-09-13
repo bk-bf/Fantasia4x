@@ -526,12 +526,14 @@ if (cmd === 'check-labels') {
     const pull = createPull({ branch: head, title, body });
     process.stdout.write(`${pull?.url ?? ''}\n`);
     const link = linkOf({ body });
-    if (link) {
+    const card = link?.issue ?? pull?.number;
+    if (card) {
       try {
-        const r = moveLane(link.issue, 'in check');
-        if (r.moved) process.stdout.write(`#${link.issue} ${r.from} -> in check\n`);
+        if (!link) addToBoard(card, 'pull');
+        const r = moveLane(card, 'in check');
+        if (r.moved) process.stdout.write(`#${card} ${r.from || 'no lane'} -> in check\n`);
       } catch (e) {
-        process.stdout.write(`#${link.issue} stayed put: ${String(e.message).split('\n')[0]}\n`);
+        process.stdout.write(`#${card} stayed put: ${String(e.message).split('\n')[0]}\n`);
       }
     }
   } catch (e) {
