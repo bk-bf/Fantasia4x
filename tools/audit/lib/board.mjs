@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process';
 
 import { linkOf, parentOf } from './pulls.mjs';
 import { passiveLane } from './lanes.mjs';
-import { REST_FIELD_TYPES, fromRest } from './board-rest.mjs';
+import { cardsFromRest, restFieldIds } from './board-rest.mjs';
 
 const PROJECT_ID = 'PVT_kwHOBlZOB84Bip03';
 const STATUS_FIELD_ID = 'PVTSSF_lAHOBlZOB84Bip03zhhhAfI';
@@ -53,14 +53,13 @@ export const invalidate = () => {
 
 const REST_BASE = `/users/${OWNER}/projectsV2/${PROJECT_NUMBER}`;
 
-const restPages = (path) => JSON.parse(gh(['api', '--paginate', '--slurp', path])).flat();
+const restPages = (path = '') => JSON.parse(gh(['api', '--paginate', '--slurp', path]));
 
 function restItems() {
-  const ids = restPages(`${REST_BASE}/fields?per_page=100`)
-    .filter((f) => REST_FIELD_TYPES.has(f.data_type))
-    .map((f) => f.id);
-  return restPages(`${REST_BASE}/items?per_page=100&fields=${ids.join(',')}`).map((it) =>
-    fromRest(it, `${OWNER}/Fantasia4x`)
+  const ids = restFieldIds(restPages(`${REST_BASE}/fields?per_page=100`));
+  return cardsFromRest(
+    restPages(`${REST_BASE}/items?per_page=100&fields=${ids.join(',')}`),
+    `${OWNER}/Fantasia4x`
   );
 }
 

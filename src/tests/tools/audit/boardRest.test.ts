@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { fromRest } from '../../../../tools/audit/lib/board-rest.mjs';
+import { cardsFromRest, fromRest, restFieldIds } from '../../../../tools/audit/lib/board-rest.mjs';
 
 const restCard = {
   id: 245082702,
@@ -51,5 +51,25 @@ describe('fromRest', () => {
   it('gives a milestone with no due date an empty dueOn', () => {
     const card = { ...restCard, fields: [{ data_type: 'milestone', name: 'Milestone', value: { title: 'v0.3 - Content', due_on: null } }] };
     expect(fromRest(card, 'bk-bf/Fantasia4x').milestone).toEqual({ title: 'v0.3 - Content', description: '', dueOn: '' });
+  });
+});
+
+describe('restFieldIds', () => {
+  it('keeps the ids of the select, labels and milestone fields across pages', () => {
+    const pages = [
+      [{ id: 1, data_type: 'title' }, { id: 2, data_type: 'single_select' }],
+      [{ id: 3, data_type: 'labels' }, { id: 4, data_type: 'milestone' }, { id: 5, data_type: 'assignees' }]
+    ];
+    expect(restFieldIds(pages)).toEqual([2, 3, 4]);
+  });
+});
+
+describe('cardsFromRest', () => {
+  it('reads every card on every page', () => {
+    const second = { ...restCard, node_id: 'PVTI_second', content: { ...restCard.content, number: 54 } };
+    expect(cardsFromRest([[restCard], [second]], 'bk-bf/Fantasia4x')).toMatchObject([
+      { id: 'PVTI_lAHOBlZOB84Bip03zg6bqk4', content: { number: 53 } },
+      { id: 'PVTI_second', content: { number: 54 } }
+    ]);
   });
 });

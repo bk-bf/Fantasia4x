@@ -1,7 +1,7 @@
 // @ts-nocheck
-export const REST_FIELD_TYPES = new Set(['single_select', 'labels', 'milestone']);
+const REST_FIELD_TYPES = new Set(['single_select', 'labels', 'milestone']);
 
-export function restValue(field) {
+function restValue(field) {
   const v = field.value;
   if (v == null) return undefined;
   if (field.data_type === 'single_select') return v.name?.raw ?? v.name;
@@ -32,3 +32,12 @@ export function fromRest(item, repository) {
     Object.fromEntries(values)
   );
 }
+
+export const restFieldIds = (pages) =>
+  pages
+    .flat()
+    .filter((field) => REST_FIELD_TYPES.has(field.data_type))
+    .map((field) => field.id);
+
+export const cardsFromRest = (pages, repository) =>
+  pages.flat().map((item) => fromRest(item, repository));
