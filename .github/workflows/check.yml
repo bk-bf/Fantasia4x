@@ -125,11 +125,41 @@ jobs:
 
       - name: CodSpeed benchmarks
         uses: CodSpeedHQ/action@v5
+        env:
+          TMPDIR: ${{ runner.temp }}
         with:
           mode: simulation
           runner-version: 5.2.1
           cache-instruments: false
           run: pnpm bench
+
+      - name: Exact counts from the profiles
+        if: ${{ !cancelled() }}
+        run: node tools/bench/counts.mjs "$RUNNER_TEMP" --out "$RUNNER_TEMP/codspeed-counts.json"
+
+      - uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() }}
+        with:
+          name: codspeed-counts-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/codspeed-counts.json
+          if-no-files-found: ignore
+
+      - name: Counts from the profiles earlier runs left in /tmp
+        run: |
+          mkdir -p "$RUNNER_TEMP/legacy"
+          for d in /tmp/profile.*.out; do
+            [ -d "$d" ] || continue
+            stamp=$(date -u -d "@$(stat -c %Y "$d")" +%Y%m%dT%H%M%SZ)
+            node tools/bench/counts.mjs "$d" --out "$RUNNER_TEMP/legacy/$stamp.json"
+            rm -rf "$d"
+          done
+          ls -la "$RUNNER_TEMP/legacy"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: codspeed-legacy-counts
+          path: ${{ runner.temp }}/legacy
+          if-no-files-found: ignore
 
   perf-notes:
     if: ${{ !cancelled() && github.event_name == 'pull_request' }}
@@ -137,6 +167,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
+      actions: read
       contents: read
       checks: read
       issues: write
@@ -150,6 +181,12 @@ jobs:
           name: work-pins-notes
           path: ${{ runner.temp }}/notes
 
+      - uses: actions/download-artifact@v8
+        continue-on-error: true
+        with:
+          name: codspeed-counts-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/codspeed
+
       - uses: actions/setup-node@v7
         with:
           node-version: 24.20.0
@@ -159,5 +196,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
           WORK_PINS_NOTES: ${{ runner.temp }}/notes/work-pins-notes.jsonl
+          CODSPEED_COUNTS: ${{ runner.temp }}/codspeed/codspeed-counts.json
         run: node tools/work-pins/perf-notes.mjs

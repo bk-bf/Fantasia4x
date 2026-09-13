@@ -523,8 +523,9 @@ diff and where he writes what is wrong with it, and the fixer reads those commen
 attempt. Several related fixes belong in one branch and one pull request, not one each.
 
 **Read a pull request's Performance notes before calling it ready or merging it.** The `perf-notes`
-job in `check.yml` keeps one comment on each pull request with CodSpeed's changed benchmarks and the
-work pins' changed totals, and raises each as a warning on the run. Neither blocks the merge. A
+job in `check.yml` keeps one comment on each pull request with CodSpeed's changed benchmarks, the
+exact instruction and cache-miss counts from CodSpeed's profiles, base against head, and the work
+pins' changed totals, and raises the first and last as warnings on the run. None of them blocks the merge. A
 change the notes show as real cost gets a follow-up issue, or goes back to its branch.
 
 **Work done in a conversation needs no issue, and lands through a pull request like everything
