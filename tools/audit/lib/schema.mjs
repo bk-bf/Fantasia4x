@@ -13,18 +13,36 @@ const templateCache = new Map();
 
 export const templateFor = (workType) => TEMPLATE_FOR[workType] ?? 'defect.md';
 
-function requiredSections(file) {
-  if (!templateCache.has(file)) {
+const headingsOf = (md) =>
+  [...String(md ?? '').matchAll(/^##\s+(.+)$/gm)].map((m) => m[1].trim().toLowerCase());
+
+function requiredSections(pathInGithub) {
+  if (!templateCache.has(pathInGithub)) {
     let sections = [];
     try {
-      const md = readFileSync(join(ROOT, '.github', 'ISSUE_TEMPLATE', file), 'utf8');
-      sections = [...md.matchAll(/^##\s+(.+)$/gm)].map((m) => m[1].trim().toLowerCase());
+      sections = headingsOf(readFileSync(join(ROOT, '.github', pathInGithub), 'utf8'));
     } catch {
       sections = [];
     }
-    templateCache.set(file, sections);
+    templateCache.set(pathInGithub, sections);
   }
-  return templateCache.get(file);
+  return templateCache.get(pathInGithub);
+}
+
+const PULL_TEMPLATE = 'pull_request_template.md';
+const OPTIONAL_PULL_SECTIONS = new Set(['play it']);
+
+export function checkPullTemplate(body) {
+  const headings = new Set(headingsOf(body));
+  const missing = requiredSections(PULL_TEMPLATE).filter(
+    (s) => !OPTIONAL_PULL_SECTIONS.has(s) && !headings.has(s)
+  );
+  return missing.length
+    ? [
+        `.github/${PULL_TEMPLATE} asks for a section this body does not have: ` +
+          missing.map((m) => `"${m}"`).join(', ')
+      ]
+    : [];
 }
 
 
@@ -240,9 +258,9 @@ export function checkTemplate(body, labels = [], workType) {
     );
   }
 
-  const headings = [...text.matchAll(/^##\s+(.+)$/gm)].map((m) => m[1].trim().toLowerCase());
+  const headings = headingsOf(text);
   const file = templateFor(workType);
-  const missing = requiredSections(file).filter((r) => !headings.includes(r));
+  const missing = requiredSections(join('ISSUE_TEMPLATE', file)).filter((r) => !headings.includes(r));
   if (missing.length) {
     errors.push(
       `.github/ISSUE_TEMPLATE/${file} asks for a section this body does not have: ` +
