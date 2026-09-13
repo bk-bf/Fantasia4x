@@ -121,7 +121,8 @@ function summarise(times, seconds, ticks) {
   };
 }
 
-const takeRender = async (page) => (await page.evaluate(() => window.__f4xWorkPins.stats())).render;
+const takeRender = async (page) =>
+  (await page.evaluate(() => window.__f4xWorkPins?.stats() ?? null))?.render ?? {};
 
 async function panPath(page, ms) {
   await page.keyboard.down(PAN_KEYS[0]);
@@ -167,7 +168,8 @@ async function main() {
     args,
     log,
     clock: false,
-    init: [recordTicks]
+    init: [recordTicks],
+    workPins: false
   });
   try {
     const { page } = game;
