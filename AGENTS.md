@@ -156,6 +156,17 @@ both, which is how the no-comments rule is enforced rather than remembered.
 
 **Always `./dev.sh`** to start the dev server, never `pnpm dev` directly.
 
+**The game is played through `./launch.sh --electron --play`**, run from the checkout or worktree
+under test, with `--log` added when `.debug/*.log` must be written. Never tell Kirill to start it
+with `pnpm start` in `desktop-spike/electron`, or with `./dev.sh` plus the shell. The shell on its
+own loads `localhost:5173`. `launch.sh` serves on `127.0.0.1:$(cat .devport)` inside its own network
+namespace, and the saves belong to that origin. A worktree reaches the same saves only with the
+same `.devport`.
+
+**Ctrl-Z stops a launch; it does not end it.** Every process stays in state `T` until it is
+continued. `pgrep -af 'desktop-spike/electron/.*electron|vite dev'` lists what is left, and
+`pkill -CONT -g <pgid>; pkill -TERM -g <pgid>` ends one launch.
+
 **Scope tests after an edit.** `pnpm test:related <the files you edited>`. Run the full suite
 only when asked, or when the change touches a hub everything imports.
 
