@@ -312,7 +312,10 @@ merges gets a comment naming the conflicting files while its card moves to `Fail
 `--verify playtest` works the card the same way and labels its pull request `needs playtest`,
 and the card goes straight to `PR ready`. The reviewer skips it, and the worktree stays with its own `.devport`, so `./dev.sh` in it runs
 beside whatever is already on 5173. He merges it once he has played it. The fixer and the
-reviewer stop while the audit is paused, because they spend the same limits.
+reviewer stop while the audit is paused, because they spend the same limits. The resolver ignores
+the pause and starts the fixer with `--force`, and while `fantasia-resolve` is active the audit
+stands down instead: `run.mjs` stops its workers, the dashboard does not relaunch a run, and
+`nightly-audit.sh` skips its run, its fixer and its reviewer.
 
 **Never write to GitHub with `gh` directly.** `gh issue create|edit|close|comment`,
 `gh label create|edit|delete` and `gh pr create|edit` are denied in `.claude/settings.json`. Use
@@ -326,7 +329,14 @@ pnpm issue close 12 --commit <sha>
 pnpm issue pr --head <branch> --title T --body-file -   # open a pull request into dev
 pnpm issue pr-edit 84 --body-file -                     # rewrite its description
 pnpm issue milestone list                               # versions and how much of each is closed
+pnpm issue tidy [--remove] [--host H]...                # merged or idle worktrees, branches and test clones
 ```
+
+`pnpm issue tidy` lists what is left over on this machine and its test hosts: worktrees and branches
+that are merged into `dev`, or identical on GitHub with no open pull request, and test clones whose
+worktree is gone. `--remove` deletes only a worktree that is clean, untouched for an hour and used by
+no process, and a clone no run holds. The prompt hook names the count when this machine has any, and
+`after-merge.mjs` runs it with `--remove` on ubuntuserver after every merge pass.
 
 It repairs what is mechanical and refuses what is not. A `path:line` written in prose becomes a
 permalink pinned to the commit the audit indexed — a citation names a line, and a line is only

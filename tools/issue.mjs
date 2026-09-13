@@ -18,6 +18,7 @@
 //   node tools/issue.mjs lint --body-file - [--label L]...
 //   node tools/issue.mjs pr --head <branch> --title T --body-file -
 //   node tools/issue.mjs pr-edit <n> --body-file -
+//   node tools/issue.mjs tidy [--remove] [--host H]...   # merged or idle worktrees, branches and test clones
 
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
@@ -46,6 +47,7 @@ import {
   invalidate
 } from './audit/lib/board.mjs';
 import { createPull, editPull } from './audit/lib/pulls.mjs';
+import { tidy } from './audit/lib/tidy.mjs';
 
 process.stdout.on('error', (e) => {
   if (e.code === 'EPIPE') process.exit(0);
@@ -615,6 +617,13 @@ if (cmd === 'check-labels') {
   } else {
     die('usage: milestone list | create --title vX.Y --body-file - | edit vX.Y | close vX.Y');
   }
+} else if (cmd === 'tidy') {
+  const open = new Set(
+    JSON.parse(gh(['pr', 'list', '--state', 'open', '--limit', '200', '--json', 'headRefName'])).map(
+      (p) => p.headRefName
+    )
+  );
+  tidy({ root: process.cwd(), remove: argv.includes('--remove'), hosts: ['ubuntu', ...all('host')], open });
 } else if (cmd === 'close') {
   const n = argv[1] ?? die('which issue?');
   const sha = arg('commit');
