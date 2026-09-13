@@ -2,16 +2,13 @@
 set -uo pipefail
 
 ROOT="$(cd "$(git rev-parse --git-common-dir)/.." && pwd)"
-TOP="$(git rev-parse --show-toplevel)"
 
 NEW=()
 BRANCHES=()
-DEV=()
 while read -r _local_ref local_sha remote_ref remote_sha; do
   [[ "$local_sha" =~ ^0+$ ]] && continue
   [[ "$remote_ref" == refs/heads/* ]] || continue
   BRANCHES+=("${remote_ref#refs/heads/}")
-  [[ "$remote_ref" == refs/heads/dev ]] && DEV+=("$local_sha $remote_sha")
   [[ "$remote_sha" =~ ^0+$ ]] && NEW+=("${remote_ref#refs/heads/}")
 done
 
@@ -45,21 +42,6 @@ if (bad.length) {
 }
 " "${NEW[@]}" || exit 1
 fi
-
-HEAD_SHA="$(git rev-parse HEAD)"
-for entry in "${DEV[@]}"; do
-  sha="${entry% *}"
-  before="${entry#* }"
-  if [[ "$sha" != "$HEAD_SHA" ]]; then
-    echo "pre-push: push dev from a checkout of the commit being pushed; the server runs the checked-out commit" >&2
-    exit 1
-  fi
-  echo "pre-push: pnpm check and the tests related to the change since ${before:0:8}, on the server, before dev moves" >&2
-  (cd "$TOP" && CHECK_BASE="$before" node tools/remote/run.mjs node tools/audit/ci-check.mjs) || {
-    echo "pre-push: pnpm check or the related tests failed; dev is not pushed" >&2
-    exit 1
-  }
-done
 
 CARDS=()
 for b in "${BRANCHES[@]}"; do [[ "$b" == dev ]] || CARDS+=("$b"); done

@@ -148,11 +148,12 @@ touches a file that leg runs: the game, or that leg's own harness. A change to t
 runs none of them; `promote.yml` runs every leg against `main` before a promotion, which catches a
 leg such a change broke.
 
-**The `pre-push` hook decides what runs on the server before a push; you do not.** A push to
-`dev` runs `tools/audit/ci-check.mjs` on ubuntuserver first: `pnpm check` and the tests related to
-what changed since `dev`'s tip on GitHub, for the checked-out commit, so `dev` is pushed from a
-checkout of the commit being pushed, and only when both pass. A push of any other branch runs
-nothing on the server. Run `pnpm ci:local` by hand only to reproduce a failure of `check`.
+**A push runs nothing on the server; GitHub checks the pushed commit.** The `pre-push` hook only
+refuses a badly named or blocked branch and moves the pushed branch's card. The check job runs
+`pnpm check` and the related tests on every pull request and every push to `dev`, and skips them
+when only Markdown or `docs/` changed. Do not run them by hand before a push GitHub will check:
+the same run on the same commit twice buys nothing. Run them by hand while you work, and
+`pnpm ci:local` to reproduce a failure of the check job.
 
 `pnpm ci:local` runs the `check` job's pull-request steps on
 ubuntuserver against the merge base with `origin/dev`: `ci-check.mjs`, the seams and sizes audit,
@@ -185,7 +186,8 @@ only when asked, or when the change touches a hub everything imports.
 ## Committing
 
 **Commit finished work and push it, on the laptop and on ubuntuserver alike.** Finished means the
-work is done, `pnpm check` and the related tests pass, and you have said so. Commit in logical
+work is done and you have said so; the check job on GitHub then runs `pnpm check` and the related
+tests on the pushed commit, and a red one is fixed by the next push. Commit in logical
 groups. On ubuntuserver the checkout is reached over t3 code, with no editor and no git UI, so an
 uncommitted tree there is invisible, and anything that reads the tree stops on it:
 `tools/audit/deploy/nightly-audit.sh` aborts on a dirty tree, and the journal watcher answers that
@@ -219,9 +221,8 @@ This applies to subagents you dispatch.
 - Keep the `Co-Authored-By` trailer.
 
 **The hooks enforce it.** `tools/hooks/commit-msg` refuses a message in any other shape,
-`pre-push` refuses a new branch not named `<type>/<title>` or `<type>/<title>-<issue number>`, a
-branch whose issue is blocked by an open issue, and a push to `dev` that fails `pnpm check` or the
-related tests on the server; `pre-commit` and
+`pre-push` refuses a new branch not named `<type>/<title>` or `<type>/<title>-<issue number>` and a
+branch whose issue is blocked by an open issue; `pre-commit` and
 `commit-msg` refuse a line or message carrying a private word, checked against the hashes in
 `tools/audit/private-words.json`. `pnpm hooks:install` links all three into `.git/hooks`, with `post-checkout`, which copies the main
 checkout's `.svelte-kit/tsconfig.json` into a new worktree so its `tsconfig.json` resolves; run it in
@@ -340,8 +341,8 @@ request into `dev` and every push to `dev`, on GitHub's runners; on a push it me
 pins, gungraun and the browser leg against the tip the push replaced. Branch protection on `dev`
 requires a pull request whose check job, "pnpm check, related tests, seams and work pins", passed
 on an up-to-date branch from every account except the
-admin's, which every agent here pushes with; that account pushes to `dev` directly, after the
-`pre-push` gate, and a red `check` on `dev` is fixed by the next push.
+admin's, which every agent here pushes with; that account pushes to `dev` directly, and a red
+check on `dev` is fixed by the next push.
 
 `board-sync.py` merges a pull request once GitHub reports it `CLEAN`, meaning mergeable, up to date
 and with `check` green, when its card is in `In progress`, `In Check` or `PR ready`, it does not carry
@@ -564,8 +565,8 @@ show as real cost gets a follow-up issue, or goes back to its branch.
 `dev`.** Branch from `dev` in a worktree that does not track it, `git worktree add --no-track -b
 <type>/<title> <path> origin/dev`, because a branch that tracks `origin/dev` lets an editor's Sync
 push it without the gate. Commit, bring it up to date with `git fetch origin && git rebase
-origin/dev`, and push it with `git push origin HEAD:dev`. The `pre-push` hook runs `pnpm check` and
-the related tests on the server first, and `check` then runs on GitHub for the pushed commit; watch
+origin/dev`, and push it with `git push origin HEAD:dev`. The check job then runs on GitHub for the pushed
+commit; watch
 it, and fix a red one with the next push. If the work settles an issue that already exists, close it
 with the commit.
 

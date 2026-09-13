@@ -23,7 +23,7 @@ to ubuntuserver through `remote/run.mjs`.
 | `work-pins/` | Call counts of the simulation tick and the browser frame, base against head. | `pnpm work-pins`, `pnpm work-pins:gate` |
 | `gungraun/gate.mjs` | Instruction counts for `sim-core` and `spatial-core`, base against head. | `node tools/gungraun/gate.mjs --base <ref>` |
 | `gpu/` | Frame measurement on a rented GPU: `vast.mjs` rents the machine, `probe.mjs` tries Chromium's GPU flags, `frames.mjs` times frames. | `node tools/gpu/<script>.mjs` |
-| `hooks/` | Git hooks: commit message shape, private words, branch names, pushes to `dev`, and branches of blocked issues. | `pnpm hooks:install` |
+| `hooks/` | Git hooks: commit message shape, private words, branch names, branches of blocked issues, and the card of a pushed branch. | `pnpm hooks:install` |
 | `dev-tools/` | Standalone dev pages packed into one HTML file, such as the gear database. | `pnpm tools:pack` |
 | `profile-self.mjs`, `profile-window.mjs` | Read the newest Firefox Profiler recording in `.debug/` and report the simulation's functions in it. | `node tools/profile-self.mjs` |
 | `threat-model.mjs` | Rates creature threat from the creature, item and loot data. | `pnpm threat`, `pnpm threat:check` |

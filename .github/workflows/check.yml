@@ -45,7 +45,7 @@ jobs:
         run: node tools/audit/ci-scope.mjs --base "$BASE"
 
       - name: pnpm check and the related tests
-        if: github.event_name != 'workflow_dispatch'
+        if: github.event_name != 'workflow_dispatch' && steps.scope.outputs.check == 'true'
         env:
           CHECK_BASE: ${{ github.event_name == 'push' && github.event.before || '' }}
           WARNINGS_NOTES: ${{ runner.temp }}/warnings-notes.jsonl

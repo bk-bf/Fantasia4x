@@ -16,12 +16,14 @@ const RUST = [/^sim-core\//, /^spatial-core\//, /^\.github\/actions\//];
 const WORK_PINS = [/^tools\/work-pins\//];
 const BENCH = [/^tools\/bench\//];
 const GUNGRAUN = [/^tools\/gungraun\//];
+const DOCS = [/\.md$/, /^docs\//];
 
 const touches = (files, rules) => files.some((f) => rules.some((r) => r.test(f)));
 
 export function scopeOf(files) {
   const game = touches(files, GAME);
   return {
+    check: !files.length || !files.every((f) => DOCS.some((r) => r.test(f))),
     workPins: game || touches(files, WORK_PINS),
     gungraun: touches(files, RUST) || touches(files, GUNGRAUN),
     browser: game || touches(files, WORK_PINS),
