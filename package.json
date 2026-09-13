@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.1.247",
   "license": "AGPL-3.0-or-later",
-  "description": "Fantasia4x — a turn-based 4X colony chronicle.",
+  "description": "A real-time fantasy colony sim with procedurally generated cultures.",
   "author": "bk",
   "type": "module",
   "main": "electron/main.cjs",
