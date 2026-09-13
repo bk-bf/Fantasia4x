@@ -16,7 +16,7 @@
 //   node tools/issue.mjs labels            # what the schema allows
 //   node tools/issue.mjs sync-labels [--prune]  # create what is missing, name or delete the strays
 //   node tools/issue.mjs lint --body-file - [--label L]...
-//   node tools/issue.mjs pr --head <branch> --title T --body-file -
+//   node tools/issue.mjs pr --head <branch> --title T --body-file - [--auto]
 //   node tools/issue.mjs pr-edit <n> --body-file -
 //   node tools/issue.mjs tidy [--remove] [--host H]...   # merged or idle worktrees, branches and test clones
 
@@ -522,8 +522,9 @@ if (cmd === 'check-labels') {
   const head = arg('head') ?? die('which branch? --head <branch>');
   const title = arg('title') ?? die('--title is required');
   try {
-    const pull = createPull({ branch: head, title, body: readBody() });
-    process.stdout.write(`${pull?.url ?? ''}\n`);
+    const autoMerge = argv.includes('--auto');
+    const pull = createPull({ branch: head, title, body: readBody(), autoMerge });
+    process.stdout.write(`${pull?.url ?? ''}${autoMerge ? ' (merges itself once check passes)' : ''}\n`);
   } catch (e) {
     die(e.message);
   }
