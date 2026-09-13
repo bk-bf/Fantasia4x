@@ -6,6 +6,7 @@ import { dirname, join } from 'node:path';
 import * as B from './lib/board.mjs';
 import * as I from './lib/gh.mjs';
 import * as PR from './lib/pulls.mjs';
+import { tidy } from './lib/tidy.mjs';
 import { ROOT, BASE, git, tail } from './lib/harness.mjs';
 
 const STATE =
@@ -113,3 +114,8 @@ for (const pull of fresh) {
 
   record(pull.number);
 }
+
+if (!DRY)
+  settle('tidy leftover worktrees and branches', () =>
+    tidy({ root: ROOT, remove: true, open: new Set(PR.openPulls().map((p) => p.headRefName)), log: out })
+  );
