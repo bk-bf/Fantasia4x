@@ -59,14 +59,18 @@ const median = (xs) => quantile(xs, 0.5);
 
 function summarise(times, seconds) {
   const deltas = times.slice(1).map((t, i) => t - times[i]);
+  const mid = median(deltas);
   return {
     frames: deltas.length,
     fps: Number((deltas.length / seconds).toFixed(2)),
-    medianMs: Number(median(deltas).toFixed(3)),
+    medianMs: Number(mid.toFixed(3)),
     p95Ms: Number(quantile(deltas, 0.95).toFixed(3)),
-    maxMs: Number(Math.max(...deltas).toFixed(3))
+    maxMs: Number(Math.max(...deltas).toFixed(3)),
+    slowFrames: deltas.filter((d) => d > 3 * mid).length
   };
 }
+
+const takeRender = async (page) => (await page.evaluate(() => window.__f4xWorkPins.stats())).render;
 
 async function panPath(page, ms) {
   await page.keyboard.down(PAN_KEYS[0]);
@@ -79,10 +83,19 @@ async function panPath(page, ms) {
 
 async function runPhase(page, phase, ms) {
   await setPaused(page, phase.paused);
+  await takeRender(page);
   await page.evaluate(recordFrames);
   if (phase.pan) await panPath(page, ms);
   else await sleep(ms);
-  return summarise(await page.evaluate(takeFrames), ms / 1000);
+  const frames = summarise(await page.evaluate(takeFrames), ms / 1000);
+  const render = await takeRender(page);
+  return {
+    ...frames,
+    bufferUploadKB: Math.round(render.bufferUploadBytes / 1024),
+    textureUploadKB: Math.round(render.textureUploadBytes / 1024),
+    glDrawCalls: render.glDrawCalls,
+    glVertices: render.glVertices
+  };
 }
 
 async function main() {
