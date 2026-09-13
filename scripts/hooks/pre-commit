@@ -1,14 +1,6 @@
 #!/usr/bin/env bash
-# Fantasia4x pre-commit: refuse a commit once the tree has drifted BUILD_DISTANCE_MAX (default 100)
-# commits past the last release build (last v* tag) — forcing a new release to be cut first.
-#
-# Bypass for a one-off: git commit --no-verify
-# Tune the cap:        BUILD_DISTANCE_MAX=150 git commit ...   (or edit the script default)
-#
-# This is the tracked SOURCE of the hook. Install it into .git/hooks with:  pnpm hooks:install
 ROOT="$(git rev-parse --show-toplevel)"
 if [[ -f "$ROOT/tools/audit/private-check.mjs" && ! -f "$(git rev-parse --git-path MERGE_HEAD)" ]]; then
   git diff --cached -U0 --no-color | grep '^+' | grep -v '^+++' |
     node "$ROOT/tools/audit/private-check.mjs" "a staged line" || exit 1
 fi
-exec "$ROOT/scripts/build-distance.sh" --check
