@@ -1,0 +1,132 @@
+name: promote
+
+on:
+  push:
+    branches: ['promote/**']
+  workflow_dispatch:
+
+concurrency:
+  group: promote-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  suite:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: ./.github/actions/prepare
+
+      - name: pnpm check
+        run: pnpm check
+
+      - name: The whole test suite
+        run: pnpm test
+
+      - name: Architecture seams and component sizes
+        run: node tools/audit/audit.mjs t0
+
+      - name: Rust crate tests
+        run: pnpm test:sim-core
+
+  audits:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: ./.github/actions/prepare
+
+      - name: Combat audits
+        run: pnpm test:audit
+
+  measure:
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: ./.github/actions/prepare
+
+      - name: Work pins, main against the candidate
+        run: node tools/work-pins/gate.mjs --base HEAD^1
+
+      - name: Read the gungraun version
+        id: gungraun
+        run: echo "version=$(cargo pkgid --manifest-path spatial-core/Cargo.toml gungraun | sed 's/.*@//')" >> "$GITHUB_OUTPUT"
+
+      - uses: gungraun/setup-gungraun@v1.1.3
+        with:
+          runner-version: ${{ steps.gungraun.outputs.version }}
+
+      - name: Instruction counts, main against the candidate
+        run: node tools/gungraun/gate.mjs --base HEAD^1 --home "$RUNNER_TEMP/gungraun"
+
+      - name: Does main have the page hook
+        id: hook
+        run: echo "present=$(git cat-file -e HEAD^1:src/lib/workPins 2>/dev/null && echo true || echo false)" >> "$GITHUB_OUTPUT"
+
+      - name: Install Chromium for the browser legs
+        if: steps.hook.outputs.present == 'true'
+        run: pnpm exec playwright install --with-deps --only-shell chromium
+
+      - name: Browser work pins, main against the candidate
+        if: steps.hook.outputs.present == 'true'
+        run: node tools/work-pins/gate.mjs --leg browser --base HEAD^1
+
+      - name: One game day in the browser, main against the candidate
+        if: steps.hook.outputs.present == 'true'
+        run: node tools/work-pins/gate.mjs --leg day --base HEAD^1
+
+      - name: Browser legs skipped
+        if: steps.hook.outputs.present != 'true'
+        run: echo "::notice title=Browser legs skipped::main has no src/lib/workPins, so the browser and day legs cannot measure it. The first promotion adds it."
+
+  tps:
+    runs-on: [self-hosted, ubuntuserver]
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: ./.github/actions/prepare
+
+      - name: Ticks per second, main against the candidate
+        env:
+          TMPDIR: ${{ runner.temp }}
+        run: node tools/work-pins/gate.mjs --leg tps --base HEAD^1
+
+  codspeed:
+    runs-on: [self-hosted, ubuntuserver]
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: ./.github/actions/prepare
+
+      - name: CodSpeed benchmarks
+        uses: CodSpeedHQ/action@v5
+        env:
+          TMPDIR: ${{ runner.temp }}
+        with:
+          mode: simulation
+          runner-version: 5.2.1
+          cache-instruments: false
+          run: pnpm bench
