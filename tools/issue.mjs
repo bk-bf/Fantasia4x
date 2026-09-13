@@ -46,7 +46,7 @@ import {
   fields,
   invalidate
 } from './audit/lib/board.mjs';
-import { createPull, editPull } from './audit/lib/pulls.mjs';
+import { createPull, editPull, linkOf } from './audit/lib/pulls.mjs';
 import { tidy } from './audit/lib/tidy.mjs';
 
 process.stdout.on('error', (e) => {
@@ -522,8 +522,20 @@ if (cmd === 'check-labels') {
   const head = arg('head') ?? die('which branch? --head <branch>');
   const title = arg('title') ?? die('--title is required');
   try {
-    const pull = createPull({ branch: head, title, body: readBody() });
+    const body = readBody();
+    const pull = createPull({ branch: head, title, body });
     process.stdout.write(`${pull?.url ?? ''}\n`);
+    const link = linkOf({ body });
+    const card = link?.issue ?? pull?.number;
+    if (card) {
+      try {
+        if (!link) addToBoard(card, 'pull');
+        const r = moveLane(card, 'in check');
+        if (r.moved) process.stdout.write(`#${card} ${r.from || 'no lane'} -> in check\n`);
+      } catch (e) {
+        process.stdout.write(`#${card} stayed put: ${String(e.message).split('\n')[0]}\n`);
+      }
+    }
   } catch (e) {
     die(e.message);
   }
