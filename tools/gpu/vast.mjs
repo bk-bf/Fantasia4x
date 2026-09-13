@@ -20,7 +20,21 @@ const OFFER_QUERY = {
 const USAGE =
   'usage: node tools/gpu/vast.mjs up | down [instance id] | start <instance id> | stop <instance id>';
 
+const SESSION_REFRESH =
+  "uvx vastai --help >/dev/null && read -rsp 'vast.ai API key: ' K && echo && " +
+  "read -rp '6-digit code from your authenticator app: ' C && " +
+  'uvx vastai tfa login --method-type totp -c "$C" --api-key "$K" && ' +
+  'gh secret set VAST_API_KEY --repo bk-bf/Fantasia4x < ~/.config/vastai/vast_tfa_key; unset K C';
+
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+function sessionProblem(status, text) {
+  if (status === 404 && text.includes('Session expired'))
+    return 'the two-factor session in VAST_API_KEY has expired';
+  if (status === 401 && text.includes('Two Factor Authentication'))
+    return 'VAST_API_KEY holds a plain API key, and this action needs a two-factor session';
+  return null;
+}
 
 async function call(method, path, body) {
   if (!process.env.VAST_API_KEY) throw new Error('VAST_API_KEY is not set');
@@ -33,6 +47,8 @@ async function call(method, path, body) {
     body: body === undefined ? undefined : JSON.stringify(body)
   });
   const text = await res.text();
+  const problem = sessionProblem(res.status, text);
+  if (problem) throw new Error(`${problem}; open a new session on the laptop with:\n${SESSION_REFRESH}`);
   if (!res.ok) throw new Error(`${method} ${path} answered ${res.status}: ${text.slice(0, 300)}`);
   return text ? JSON.parse(text) : {};
 }
