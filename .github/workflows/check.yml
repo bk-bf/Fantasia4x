@@ -30,7 +30,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -63,7 +63,7 @@ jobs:
         if: github.event_name == 'pull_request'
         run: node tools/gungraun/gate.mjs --base HEAD^1 --home "$RUNNER_TEMP/gungraun"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: ${{ !cancelled() && github.event_name == 'pull_request' }}
         with:
           name: gungraun-flamegraphs
@@ -89,7 +89,7 @@ jobs:
           --base "origin/$BASE_BRANCH" --head "origin/$HEAD_BRANCH"
           --hook-from "$(git merge-base HEAD origin/dev)" --out work-pins-out
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: github.event_name == 'workflow_dispatch' && always()
         with:
           name: browser-work-pins
@@ -102,7 +102,7 @@ jobs:
       contents: read
       id-token: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: ./.github/actions/prepare
 
