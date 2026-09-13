@@ -56,16 +56,27 @@ function takeFrames() {
 
 function recordTicks() {
   const ticks = (window.__f4xTicks = []);
+  const kinds = (window.__f4xMessageKinds = {});
+  window.__f4xWorkers = 0;
   const Original = window.Worker;
   window.Worker = class extends Original {
     constructor(...args) {
       super(...args);
+      window.__f4xWorkers++;
       this.addEventListener('message', (e) => {
-        if (e.data?.kind === 'snapshot') ticks.push(performance.now());
+        const kind = e.data?.kind ?? typeof e.data;
+        kinds[kind] = (kinds[kind] ?? 0) + 1;
+        if (kind === 'snapshot') ticks.push(performance.now());
       });
     }
   };
 }
+
+const wiring = (page) =>
+  page.evaluate(() => ({
+    workersWrapped: window.__f4xWorkers ?? 'wrapper missing',
+    messageKinds: window.__f4xMessageKinds ?? null
+  }));
 
 const share = (part, whole) => (whole ? Number(((100 * part) / whole).toFixed(1)) : 0);
 
@@ -160,6 +171,7 @@ async function main() {
   });
   try {
     const { page } = game;
+    log(`wiring after load: ${JSON.stringify(await wiring(page))}`);
     const box = await page.locator(MAP).first().boundingBox();
     await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
     await focusMap(page);
@@ -184,6 +196,7 @@ async function main() {
     }
     const fps = Object.fromEntries(Object.entries(result.phases).map(([name, p]) => [name, p.fps]));
     log(`median fps over ${rounds} rounds: ${JSON.stringify(fps)}`);
+    log(`wiring after phases: ${JSON.stringify(await wiring(page))}`);
     if (game.errors.length) log(`page errors: ${game.errors.slice(0, 3).join(' | ')}`);
     writeFileSync(out, JSON.stringify(result, null, 1));
   } finally {
