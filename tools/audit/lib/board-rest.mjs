@@ -16,17 +16,19 @@ export function fromRest(item, repository) {
   const values = (item.fields ?? [])
     .map((field) => [field.name.toLowerCase(), restValue(field)])
     .filter(([, value]) => value !== undefined);
-  return {
-    id: item.node_id,
-    title: c.title ?? '',
-    content: {
-      type: item.content_type,
-      number: c.number,
-      title: c.title,
-      body: c.body ?? '',
-      url: c.html_url,
-      repository
+  return Object.assign(
+    {
+      id: item.node_id,
+      title: c.title ?? '',
+      content: {
+        type: item.content_type,
+        number: c.number,
+        title: c.title,
+        body: c.body ?? '',
+        url: c.html_url,
+        repository
+      }
     },
-    ...Object.fromEntries(values)
-  };
+    Object.fromEntries(values)
+  );
 }
