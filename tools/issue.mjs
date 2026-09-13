@@ -4,8 +4,12 @@
 // mean nothing in an issue, an issue URL inside backticks that never becomes a link, and a
 // label invented one letter away from the one that already exists.
 //
-//   node tools/issue.mjs create --title T --type fix --area sim --size S --body-file - [--label L]... [--parent N]
-//   node tools/issue.mjs edit <n> [--title T] [--body-file -] [--add-label L] [--remove-label L] [--type T] [--area A] [--size S] [--verify V] [--parent N]
+//   node tools/issue.mjs create --title T --type fix --area sim --size S --body-file - [--label L]... [--parent N] [--milestone vX.Y]
+//   node tools/issue.mjs edit <n> [--title T] [--body-file -] [--add-label L] [--remove-label L] [--type T] [--area A] [--size S] [--verify V] [--parent N] [--milestone vX.Y]
+//   node tools/issue.mjs milestone list
+//   node tools/issue.mjs milestone create --title vX.Y --body-file - [--due YYYY-MM-DD]
+//   node tools/issue.mjs milestone edit vX.Y [--title vX.Y] [--body-file -] [--due YYYY-MM-DD]
+//   node tools/issue.mjs milestone close vX.Y
 //   node tools/issue.mjs blocked-by <n> <blocker>    # mark <n> as blocked by <blocker>
 //   node tools/issue.mjs comment <n> --body-file -
 //   node tools/issue.mjs close <n> --commit <sha>
@@ -25,6 +29,7 @@ import {
   checkLabels,
   checkBody,
   checkKind,
+  checkMilestone,
   labelGroup
 } from './audit/lib/schema.mjs';
 import { checkPrivate } from './audit/lib/private.mjs';
@@ -183,6 +188,50 @@ const issueId = (n) => issueRecord(n).id;
 const linkParent = (n, parent) =>
   gh(['api', '-X', 'POST', `${REPO_API}/issues/${parent}/sub_issues`, '-F', `sub_issue_id=${issueId(n)}`]);
 
+const milestones = () => JSON.parse(gh(['api', `${REPO_API}/milestones?state=all&per_page=100`]));
+
+const milestoneNamed = (title) => {
+  const every = milestones();
+  const hit = every.find((m) => m.title === title);
+  if (!hit) {
+    const open = every.filter((m) => m.state === 'open').map((m) => m.title);
+    die(`no milestone "${title}" — open: ${open.join(', ') || 'none'} (pnpm issue milestone create)`);
+  }
+  if (hit.state !== 'open') die(`milestone ${title} is closed`);
+  return hit;
+};
+
+const NESTING_QUERY =
+  'query($endCursor:String){repository(owner:"bk-bf",name:"Fantasia4x"){' +
+  'issues(states:OPEN,first:100,after:$endCursor){nodes{number milestone{title} ' +
+  'parent{number milestone{title}}} pageInfo{hasNextPage endCursor}}}}';
+
+const openNesting = () =>
+  new Map(
+    gh(['api', 'graphql', '--paginate', '--jq', '.data.repository.issues.nodes[]', '-f', `query=${NESTING_QUERY}`])
+      .split('\n')
+      .filter(Boolean)
+      .map((line) => JSON.parse(line))
+      .map((i) => [String(i.number), i])
+  );
+
+const milestoneGaps = (issue, workType) => {
+  const own = issue?.milestone?.title ?? null;
+  const parent = issue?.parent;
+  if (parent) {
+    const theirs = parent.milestone?.title ?? null;
+    if (own === theirs) return [];
+    return [
+      `milestone is ${own ?? 'unset'} but its parent #${parent.number} is in ${theirs ?? 'none'} — ` +
+        "a sub-issue sits in its parent's milestone"
+    ];
+  }
+  if (workType === 'feat' && !own) {
+    return ['a feature with no milestone and no parent — pnpm issue edit <n> --milestone vX.Y'];
+  }
+  return [];
+};
+
 const MERGED_LANES = new Set(['on dev', 'done']);
 
 const boardGaps = (card) => {
@@ -206,6 +255,7 @@ const boardGaps = (card) => {
 
 if (cmd === 'check-labels') {
   let bad = 0;
+  const nesting = openNesting();
   const cards = new Map(
     boardItems()
       .filter((i) => i.content?.number)
@@ -219,7 +269,8 @@ if (cmd === 'check-labels') {
     const problems = [
       ...checkRequired(names),
       ...checkTemplate(it.body, names, workType),
-      ...checkKind(names, workType)
+      ...checkKind(names, workType),
+      ...milestoneGaps(nesting.get(String(it.number)), workType)
     ];
     if (!problems.length) continue;
     bad += 1;
@@ -338,10 +389,15 @@ if (cmd === 'check-labels') {
   if (privateTitle.length) die(`refused:\n  - title ${privateTitle.join('\n  - title ')}`);
   const labels = all('label');
   const parent = arg('parent');
-  if (parent) issueId(parent);
+  const parentRecord = parent ? issueRecord(parent) : null;
   const type = arg('type') ?? (parent ? itemFor(parent)?.['work type'] : null);
   if (!type) die(`--type is required, or --parent to take the parent's — one of: ${TYPES.join(', ')}`);
   if (!TYPES.includes(type)) die(`unknown --type "${type}" — one of: ${TYPES.join(', ')}`);
+  const milestone = arg('milestone') ?? parentRecord?.milestone?.title ?? null;
+  if (milestone) milestoneNamed(milestone);
+  if (type === 'feat' && !milestone && !parent) {
+    die('a feature needs a milestone — --milestone vX.Y (pnpm issue milestone list), or --parent to sit under a category');
+  }
   const area = boardOption('Area', arg('area'), 'area');
   const size = boardOption('Size', arg('size'), 'size');
   if (type === 'feat' && !labels.some((l) => labelGroup('kind').includes(l))) labels.push('feature');
@@ -352,6 +408,7 @@ if (cmd === 'check-labels') {
   const lane = INHERITED_LANES.has(parentLane) ? parentLane : 'backlog';
   const args = ['issue', 'create', '--title', title, '--body-file', '-'];
   for (const l of labels) args.push('--label', l);
+  if (milestone) args.push('--milestone', milestone);
   const url = gh(args, body).trim();
   process.stdout.write(url + '\n');
   const n = url.split('/').pop();
@@ -396,6 +453,8 @@ if (cmd === 'check-labels') {
   const type = arg('type');
   if (type && !TYPES.includes(type)) die(`unknown --type "${type}" — one of: ${TYPES.join(', ')}`);
   const verify = arg('verify');
+  const milestone = arg('milestone');
+  if (milestone) milestoneNamed(milestone);
   // Refuse what this edit introduces, not what it inherits. A body that already cites a file
   // somebody deleted cannot be ticked, relabelled or corrected while the old citation is held
   // against it, which locks the issue instead of protecting it.
@@ -404,7 +463,8 @@ if (cmd === 'check-labels') {
   const resulting = [...new Set([...current.labels.map((l) => l.name), ...add])].filter(
     (l) => !removed.has(l)
   );
-  const workType = type ?? itemFor(n)?.['work type'];
+  const checksKind = add.length || removed.size || type;
+  const workType = type ?? (body !== null || checksKind ? itemFor(n)?.['work type'] : undefined);
   const inherited =
     body === null ? [] : check({ labels: [], body: current.body ?? '', allowReady: true });
   const introduced = [
@@ -422,6 +482,7 @@ if (cmd === 'check-labels') {
   if (body !== null) changes.push('--body-file', '-');
   for (const l of add) changes.push('--add-label', l);
   for (const l of all('remove-label')) changes.push('--remove-label', l);
+  if (milestone) changes.push('--milestone', milestone);
   if (!changes.length && !parent && !type && !area && !size && !verify) die('nothing to edit');
   if (changes.length) process.stdout.write(gh(['issue', 'edit', n, ...changes], body ?? undefined));
   if (parent) {
@@ -503,6 +564,53 @@ if (cmd === 'check-labels') {
     }
   }
   process.stdout.write(`\n${hit} duplicate review comment(s)${apply ? ' deleted' : ''}\n`);
+} else if (cmd === 'milestone') {
+  const sub = argv[1];
+  const due = arg('due');
+  if (due && !/^\d{4}-\d{2}-\d{2}$/.test(due)) die(`--due "${due}" is not a date — write YYYY-MM-DD`);
+  const dueOn = due ? `${due}T23:59:59Z` : null;
+  const refuse = (errors) => {
+    if (errors.length) die(`refused:\n  - ${errors.join('\n  - ')}`);
+  };
+  if (sub === 'list') {
+    for (const m of milestones()) {
+      const total = m.open_issues + m.closed_issues;
+      process.stdout.write(
+        `${m.title}  ${m.state}  ${m.closed_issues}/${total} closed` +
+          `${m.due_on ? `  due ${m.due_on.slice(0, 10)}` : ''}\n`
+      );
+    }
+  } else if (sub === 'create') {
+    const title = arg('title') ?? die('--title is required, a version such as v0.2');
+    const body = prepare(readBody());
+    const errors = checkMilestone({ title, body });
+    if (milestones().some((m) => m.title === title)) errors.push(`milestone ${title} already exists`);
+    refuse(errors);
+    const args = ['api', '-X', 'POST', `${REPO_API}/milestones`, '-f', `title=${title}`, '-f', `description=${body}`];
+    if (dueOn) args.push('-f', `due_on=${dueOn}`);
+    process.stdout.write(`${JSON.parse(gh(args)).html_url}\n`);
+  } else if (sub === 'edit') {
+    const current = milestoneNamed(argv[2] ?? die('which milestone?'));
+    const title = arg('title');
+    const body = arg('body-file') ? prepare(readBody()) : null;
+    refuse(checkMilestone({ title: title ?? undefined, body: body ?? undefined }));
+    const args = ['api', '-X', 'PATCH', `${REPO_API}/milestones/${current.number}`];
+    if (title) args.push('-f', `title=${title}`);
+    if (body !== null) args.push('-f', `description=${body}`);
+    if (dueOn) args.push('-f', `due_on=${dueOn}`);
+    if (args.length === 4) die('nothing to edit');
+    gh(args);
+    process.stdout.write(`${title ?? current.title} updated\n`);
+  } else if (sub === 'close') {
+    const current = milestoneNamed(argv[2] ?? die('which milestone?'));
+    if (current.open_issues) {
+      die(`refused: ${current.title} still has ${current.open_issues} open issue(s) — close or move them first`);
+    }
+    gh(['api', '-X', 'PATCH', `${REPO_API}/milestones/${current.number}`, '-f', 'state=closed']);
+    process.stdout.write(`${current.title} closed\n`);
+  } else {
+    die('usage: milestone list | create --title vX.Y --body-file - | edit vX.Y | close vX.Y');
+  }
 } else if (cmd === 'close') {
   const n = argv[1] ?? die('which issue?');
   const sha = arg('commit');

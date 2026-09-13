@@ -325,6 +325,7 @@ pnpm issue create --title T --type fix --area sim --size S --body-file - --label
 pnpm issue close 12 --commit <sha>
 pnpm issue pr --head <branch> --title T --body-file -   # open a pull request into dev
 pnpm issue pr-edit 84 --body-file -                     # rewrite its description
+pnpm issue milestone list                               # versions and how much of each is closed
 ```
 
 It repairs what is mechanical and refuses what is not. A `path:line` written in prose becomes a
@@ -386,6 +387,17 @@ the sub-issue the work belongs to, making a new one with `pnpm issue create --pa
 step has none. The new sub-issue takes the parent's work type, and its lane when that is
 `Backlog`, `Blocked on you`, `Ready` or `Manual`. Its pull request says `Fixes #<sub-issue>`, with the parent's step on the `Step:`
 line, and `after-merge.mjs` ticks that step in the parent as well.
+
+**A milestone is a version; a spec category is a parent issue inside it.** `v0.2` is a GitHub
+milestone. Each spec category in it is a parent issue, and each feature of the category is a
+sub-issue with its own `## Steps`. GitHub milestones do not nest, so the category is an issue, not
+a milestone. `pnpm issue milestone create --title v0.2 --body-file -` refuses a title that is not a
+version, a description under ~240 characters of prose or with no checkbox as its definition of
+done, and anything an issue body is refused for. `milestone close` refuses while an issue in it is
+open. `create --milestone` and `edit --milestone` refuse a milestone that does not exist or is
+closed. A sub-issue takes its parent's milestone, and a `feat` issue with no parent needs one.
+`check-labels` reports a feature with neither, and a sub-issue in a different milestone from its
+parent.
 
 **A body has to say something.** `create` also refuses a stub: under ~240 characters of prose,
 no citation, or no remediation checkbox (unless it carries `needs decision`). A heading with
