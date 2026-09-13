@@ -197,7 +197,7 @@ export function checkBody(body) {
 const MIN_PROSE = 240;
 const CHECKBOX = /^\s*[-*] \[[ x]\] /m;
 const VERSION = /^v\d+\.\d+(\.\d+)?( - \S.*)?$/;
-export const versionOf = (title) => title?.match(/^v\d+\.\d+(\.\d+)?/)?.[0] ?? null;
+export const versionOf = (title = '') => title?.match(/^v\d+\.\d+(\.\d+)?/)?.[0] ?? null;
 
 const stripNotes = (body) =>
   (body ?? '')
