@@ -99,7 +99,7 @@ export function editPull(n, body) {
   );
 }
 
-export function createPull({ branch, title, body, labels = [], autoMerge = false }) {
+export function createPull({ branch, title, body, labels = [] }) {
   const problem =
     branchProblem(branch) ||
     blockProblem(branch) ||
@@ -109,7 +109,6 @@ export function createPull({ branch, title, body, labels = [], autoMerge = false
   const args = ['pr', 'create', '--base', BASE, '--head', branch, '--title', title, '--body-file', '-'];
   for (const l of labels) args.push('--label', l);
   const url = gh(args, body).trim();
-  if (autoMerge) gh(['pr', 'merge', branch, '--auto', '--merge']);
   return openPullFor(branch) ?? { url };
 }
 
