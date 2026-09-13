@@ -5,7 +5,7 @@ ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 HOOKS_DIR="$(git -C "$ROOT" rev-parse --git-path hooks)"
 
 for hook in pre-commit commit-msg pre-push post-checkout; do
-  SRC="$ROOT/scripts/hooks/$hook"
+  SRC="$ROOT/tools/hooks/$hook"
   DEST="$HOOKS_DIR/$hook"
   if [[ -e "$DEST" && ! -L "$DEST" ]]; then
     echo "hooks: $DEST already exists and isn't our symlink — leaving it alone."

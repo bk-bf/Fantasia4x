@@ -123,6 +123,10 @@ playtest.
 
 **Always `pnpm`** — never `npm` or `yarn`.
 
+**Every tool is in [`tools/`](tools/), and [`tools/README.md`](tools/README.md) lists each one and
+how to run it.** Only the launchers `dev.sh`, `launch.sh`, `build.sh`, `install.sh` and `audit.sh`
+stay at the root. A new tool goes in `tools/` and gets a line in that index.
+
 **Nothing test- or CI-related runs on the laptop.** `pnpm test`, `test:related`, `test:changed`,
 `check`, `check:types`, `lint`, `knip`, `knip:all`, `dupes`, `bench`, `bench:tps`, `work-pins`,
 `work-pins:gate`, `audit:t0`, `test:audit` and `test:sim-core` go through `tools/remote/run.mjs`.
@@ -192,7 +196,7 @@ This applies to subagents you dispatch.
   message; put it in the code, a test, or `docs/`.
 - Keep the `Co-Authored-By` trailer.
 
-**The hooks enforce it.** `scripts/hooks/commit-msg` refuses a message in any other shape,
+**The hooks enforce it.** `tools/hooks/commit-msg` refuses a message in any other shape,
 `pre-push` refuses a new branch not named `<type>/<title>` or `<type>/<title>-<issue number>`, and a
 branch whose issue is blocked by an open issue; `pre-commit` and
 `commit-msg` refuse a line or message carrying a private word, checked against the hashes in

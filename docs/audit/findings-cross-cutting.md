@@ -44,9 +44,9 @@ only within their own file all get flagged). Verified each candidate by grepping
 **Checked, not a problem** (knip false positives, verified by grep):
 - `tools/audit/fix.mjs`, `tools/audit/lib/prs.mjs` -- invoked as CLI entry points (`node tools/audit/fix.mjs --next`) from `tools/audit/README.md` and `tools/audit/deploy/nightly-audit.sh`, not via `import`.
 - `electron/preload.cjs` -- loaded via `path.join(__dirname, 'preload.cjs')` string in `electron/main.cjs`, which knip's static analysis doesn't follow.
-- `scripts/dev-tools/geardb/main.ts`, `.../shims/state.ts`, `.../vite.config.mjs` -- built by `scripts/dev-tools/pack.mjs` (`pnpm tools:pack`), a separate mini Vite app, not part of the main import graph.
+- `tools/dev-tools/geardb/main.ts`, `.../shims/state.ts`, `.../vite.config.mjs` -- built by `tools/dev-tools/pack.mjs` (`pnpm tools:pack`), a separate mini Vite app, not part of the main import graph.
 - `desktop-spike/electron/main.js`, `desktop-spike/electron/preload.cjs` -- labeled "throwaway wrappers" in `desktop-spike/README.md`, run manually, not part of the main build.
-- `scripts/profile-self.mjs`, `scripts/profile-window.mjs` -- standalone CLI scripts run manually with `node`, not imported.
+- `tools/profile-self.mjs`, `tools/profile-window.mjs` -- standalone CLI scripts run manually with `node`, not imported.
 - `buildArmorModel`, `pawnStateLabel`, `mobDisplayName` (selectionCard.ts), `bodyPartName` (combatNarration.ts), `CATEGORY_LABELS` (itemCategoryTree.ts), `STAT_REF` (buildFit.ts) -- each is exported but only used inside its own file; not dead code, just an export keyword that could be dropped.
 - `uuid` (dependency) and `@types/uuid` (devDependency) -- knip's "unused dependencies" list; confirmed zero `from 'uuid'` imports anywhere in `src`. Worth dropping from `package.json` but not a structural finding.
 

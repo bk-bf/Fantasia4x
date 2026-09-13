@@ -238,7 +238,7 @@ ${ledgerEvidence(issue.number)}`;
 
 // --- commit message ----------------------------------------------------------
 
-// scripts/hooks/commit-msg refuses anything else: `type(scope): lowercase summary`, a blank
+// tools/hooks/commit-msg refuses anything else: `type(scope): lowercase summary`, a blank
 // line, then bullets ending in a full stop. The board's work type is the commit type, except
 // for the two options git has no type for.
 const COMMIT_TYPE = { tooling: 'dev', decision: 'chore' };

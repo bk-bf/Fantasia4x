@@ -118,7 +118,6 @@ export default [
       'src/tests/**/*.ts',
       'src/lib/game/headless/**/*.ts',
       'tools/**/*.mjs',
-      'scripts/**/*.mjs',
       'electron/**'
     ],
     rules: { 'no-console': 'off' }
