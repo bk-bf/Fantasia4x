@@ -1,4 +1,4 @@
-name: promote
+name: promotion
 
 on:
   push:
@@ -11,6 +11,7 @@ concurrency:
 
 jobs:
   suite:
+    name: pnpm check, the whole test suite, seams and Rust tests
     runs-on: ubuntu-latest
     timeout-minutes: 120
     permissions:
@@ -35,6 +36,7 @@ jobs:
         run: pnpm test:sim-core
 
   audits:
+    name: Combat audits
     runs-on: ubuntu-latest
     timeout-minutes: 360
     permissions:
@@ -48,6 +50,7 @@ jobs:
         run: pnpm test:audit
 
   measure:
+    name: Work pins, gungraun and browser legs, main against the candidate
     runs-on: ubuntu-latest
     timeout-minutes: 240
     permissions:
@@ -94,6 +97,7 @@ jobs:
         run: echo "::notice title=Browser legs skipped::main has no src/lib/workPins, so the browser and day legs cannot measure it. The first promotion adds it."
 
   tps:
+    name: Ticks per second on ubuntuserver, main against the candidate
     runs-on: [self-hosted, ubuntuserver]
     timeout-minutes: 60
     permissions:
@@ -111,6 +115,7 @@ jobs:
         run: node tools/work-pins/gate.mjs --leg tps --base HEAD^1
 
   codspeed:
+    name: CodSpeed benchmarks on ubuntuserver
     runs-on: [self-hosted, ubuntuserver]
     timeout-minutes: 60
     permissions:

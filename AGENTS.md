@@ -166,8 +166,11 @@ ubuntuserver `pnpm ci:local` runs it in place; `ci.mjs` loads the pinned Node an
 `tools/remote/prepare.sh` before it runs anything.
 
 **`pnpm check` is the gate.** It runs `svelte-check`, `eslint` and `knip`, and all three must
-stay green. `eslint` is frozen at its current warning count with `--max-warnings`, so a change
-that adds a warning fails the gate; burn warnings down rather than raising the number.
+stay green. `svelte-check` and `eslint` are frozen at their warning counts in
+`tools/audit/warning-budget.json`: `tools/audit/warnings.mjs` runs both, fails on any error or on a
+count past its budget, and says when a count has dropped below it; lower the budget then, and never
+raise it. In CI it lists every warning by rule in the check job's summary on the run page, annotates
+the ones in files the change touches, and puts the totals in the pull request's Check notes.
 `pnpm knip:all` reports unused exports and files, which the gate does not yet enforce.
 `pnpm dupes` runs copy-paste detection over `src`.
 
@@ -335,7 +338,8 @@ or failure on that commit. A pass moves the card to `PR ready`; a failure is wri
 request and moves the card to `Failed`. `.github/workflows/check.yml` runs `pnpm check` and the related tests on every pull
 request into `dev` and every push to `dev`, on GitHub's runners; on a push it measures the work
 pins, gungraun and the browser leg against the tip the push replaced. Branch protection on `dev`
-requires a pull request whose `check` passed on an up-to-date branch from every account except the
+requires a pull request whose check job, "pnpm check, related tests, seams and work pins", passed
+on an up-to-date branch from every account except the
 admin's, which every agent here pushes with; that account pushes to `dev` directly, after the
 `pre-push` gate, and a red `check` on `dev` is fixed by the next push.
 
@@ -548,11 +552,13 @@ it, the reviewer and CI report on it, and it merges once they pass. The pull req
 diff and where he writes what is wrong with it, and the fixer reads those comments on its next
 attempt. Several related fixes belong in one branch and one pull request, not one each.
 
-**Read a pull request's Performance notes before calling it ready or merging it.** The `perf-notes`
-job in `check.yml` keeps one comment on each pull request with CodSpeed's changed benchmarks, the
-exact instruction and cache-miss counts from CodSpeed's profiles, base against head, and the work
-pins' changed totals, and raises the first and last as warnings on the run. None of them blocks the merge. A
-change the notes show as real cost gets a follow-up issue, or goes back to its branch.
+**Read a pull request's Check notes before calling it ready or merging it.** The `perf-notes`
+job in `check.yml` keeps one comment on each pull request with the `svelte-check` and `eslint`
+warning totals against their budgets and every error and every warning in the files it touches,
+CodSpeed's changed benchmarks, the exact instruction and cache-miss counts from CodSpeed's
+profiles against `dev`, and the work pins' changed totals. The warnings and the work pins fail the
+check job past their budgets; CodSpeed and the counts do not block the merge. A change the notes
+show as real cost gets a follow-up issue, or goes back to its branch.
 
 **Work done in a conversation needs no issue and no pull request; it is pushed straight to
 `dev`.** Branch from `dev` in a worktree that does not track it, `git worktree add --no-track -b

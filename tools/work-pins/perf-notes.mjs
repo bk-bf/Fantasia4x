@@ -8,6 +8,7 @@ const PR = process.env.PR_NUMBER;
 const SHA = process.env.HEAD_SHA;
 const BASE_SHA = process.env.BASE_SHA;
 const NOTES = process.env.WORK_PINS_NOTES;
+const WARNINGS = process.env.WARNINGS_NOTES;
 const COUNTS = process.env.CODSPEED_COUNTS;
 const CODSPEED_RAN = process.env.CODSPEED_RAN === 'true';
 const RUN_URL = `${process.env.GITHUB_SERVER_URL}/${REPO}/actions/runs/${process.env.GITHUB_RUN_ID}`;
@@ -64,9 +65,9 @@ function codspeedRows(run) {
     .map(([, mark, name, url, base, head, change]) => ({ mark, name, file: benchFile(url), base, head, change }));
 }
 
-function readNotes() {
-  if (!NOTES || !existsSync(NOTES)) return [];
-  return readFileSync(NOTES, 'utf8')
+function readJsonl(path) {
+  if (!path || !existsSync(path)) return [];
+  return readFileSync(path, 'utf8')
     .split('\n')
     .filter(Boolean)
     .map((line) => JSON.parse(line));
@@ -76,11 +77,38 @@ const headCounts = () => (COUNTS && existsSync(COUNTS) ? JSON.parse(readFileSync
 
 const escapeData = (s) => s.replaceAll('%', '%25').replaceAll('\r', '%0D').replaceAll('\n', '%0A');
 const warn = (title, text) => process.stdout.write(`::warning title=${title}::${escapeData(text)}\n`);
+const html = (s) => String(s).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
 
 function pct(t) {
   if (t.base === 0) return 'new';
   const d = ((t.head - t.base) / t.base) * 100;
   return `${d > 0 ? '+' : ''}${d.toFixed(1)}%`;
+}
+
+function warningsSection(notes) {
+  if (!notes.length) return 'Warnings: no report from the check job.';
+  const lines = [
+    "Warnings from `svelte-check` and `eslint`; the check job's summary on the run page lists every one by rule:",
+    '',
+    '| tool | errors | warnings | budget | most common |',
+    '|---|---:|---:|---:|---|',
+    ...notes.map(
+      (n) =>
+        `| ${n.tool} | ${n.errors} | ${n.warnings} | ${n.budget} | ${n.rules
+          .slice(0, 3)
+          .map((r) => `\`${r.rule}\` ${r.count}`)
+          .join(', ')} |`
+    )
+  ];
+  const flagged = notes.flatMap((n) => n.annotate);
+  if (flagged.length)
+    lines.push(
+      '',
+      'Errors, and warnings in files this pull request touches:',
+      '',
+      ...flagged.map((a) => `- \`${a.file}:${a.line}\` ${a.tool} ${a.severity} \`${a.rule}\`: ${html(a.message)}`)
+    );
+  return lines.join('\n');
 }
 
 function codspeedSection(run, rows) {
@@ -128,7 +156,8 @@ async function upsert(body, hasNews) {
 
 const run = await codspeedRun();
 const rows = codspeedRows(run);
-const notes = readNotes();
+const notes = readJsonl(NOTES);
+const warnings = readJsonl(WARNINGS);
 const head = headCounts();
 let base = null;
 try {
@@ -141,12 +170,18 @@ for (const r of rows) warn('CodSpeed', `${r.file} ${r.name}: ${r.base} → ${r.h
 for (const t of notes.flatMap((n) => n.totals))
   warn('Work pins', `${t.scenario} ${t.fn}: ${t.base} → ${t.head} (${pct(t)})`);
 
-const hasNews = Boolean(head) || rows.length > 0 || notes.some((n) => n.totals.length || n.changed);
+const hasNews =
+  Boolean(head) ||
+  rows.length > 0 ||
+  notes.some((n) => n.totals.length || n.changed) ||
+  warnings.some((n) => n.errors || n.warnings);
 const body = [
   MARKER,
-  '## Performance notes',
+  '## Check notes',
   '',
-  'Advisory: `check` fails only on work-pin totals that grow past their budget. CodSpeed is not gated; its estimate is computed from the instruction and cache-miss counts below.',
+  'The check job fails on an error, on a warning count past its budget and on a work-pin total past its budget. CodSpeed and the exact counts are advisory; CodSpeed\'s estimate is computed from those counts.',
+  '',
+  warningsSection(warnings),
   '',
   codspeedSection(run, rows),
   '',

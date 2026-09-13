@@ -1,4 +1,4 @@
-name: check
+name: CI
 
 on:
   pull_request:
@@ -25,6 +25,7 @@ concurrency:
 
 jobs:
   check:
+    name: pnpm check, related tests, seams and work pins
     runs-on: ubuntu-latest
     timeout-minutes: ${{ github.event_name == 'workflow_dispatch' && 300 || 90 }}
     permissions:
@@ -47,7 +48,15 @@ jobs:
         if: github.event_name != 'workflow_dispatch'
         env:
           CHECK_BASE: ${{ github.event_name == 'push' && github.event.before || '' }}
+          WARNINGS_NOTES: ${{ runner.temp }}/warnings-notes.jsonl
         run: node tools/audit/ci-check.mjs
+
+      - uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() && github.event_name == 'pull_request' }}
+        with:
+          name: warnings-notes
+          path: ${{ runner.temp }}/warnings-notes.jsonl
+          if-no-files-found: ignore
 
       - name: Architecture seams and component sizes
         run: node tools/audit/audit.mjs t0
@@ -114,6 +123,7 @@ jobs:
           path: work-pins-out
 
   codspeed:
+    name: CodSpeed benchmarks on ubuntuserver
     if: github.event_name != 'workflow_dispatch' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: [self-hosted, ubuntuserver]
     timeout-minutes: 60
@@ -167,6 +177,7 @@ jobs:
           if-no-files-found: ignore
 
   tps:
+    name: Ticks per second on ubuntuserver
     if: github.event_name != 'workflow_dispatch' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: [self-hosted, ubuntuserver]
     timeout-minutes: 30
@@ -197,6 +208,7 @@ jobs:
         run: node tools/work-pins/gate.mjs --leg tps --base "$BASE"
 
   perf-notes:
+    name: Check notes on the pull request
     if: ${{ !cancelled() && github.event_name == 'pull_request' }}
     needs: [check, codspeed]
     runs-on: ubuntu-latest
@@ -219,6 +231,12 @@ jobs:
       - uses: actions/download-artifact@v8
         continue-on-error: true
         with:
+          name: warnings-notes
+          path: ${{ runner.temp }}/warnings
+
+      - uses: actions/download-artifact@v8
+        continue-on-error: true
+        with:
           name: codspeed-counts-${{ github.run_attempt }}
           path: ${{ runner.temp }}/codspeed
 
@@ -226,13 +244,14 @@ jobs:
         with:
           node-version: 24.20.0
 
-      - name: Performance notes
+      - name: Check notes
         env:
           GITHUB_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           WORK_PINS_NOTES: ${{ runner.temp }}/notes/work-pins-notes.jsonl
+          WARNINGS_NOTES: ${{ runner.temp }}/warnings/warnings-notes.jsonl
           CODSPEED_COUNTS: ${{ runner.temp }}/codspeed/codspeed-counts.json
           CODSPEED_RAN: ${{ needs.codspeed.outputs.bench }}
         run: node tools/work-pins/perf-notes.mjs

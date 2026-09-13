@@ -17,6 +17,7 @@ to ubuntuserver through `remote/run.mjs`.
 | `audit/` | The code audit: symbol ledger, rules, overnight runs, fixer, reviewer, resolver and promotion. `audit/README.md` describes it. | `pnpm audit`, `audit:run`, `audit:fix`, `audit:review`, `audit:resolve`, `audit:promote` |
 | `audit/deploy/` | The ubuntuserver units for the nightly audit, and their installer. | `tools/audit/deploy/install.sh` |
 | `audit/hooks/inflight.mjs` | Lists open pull requests with every prompt and flags the first edit of a file they touch. | Claude Code hook |
+| `audit/warnings.mjs` | Runs `svelte-check` or `eslint`, fails on an error or on warnings past `audit/warning-budget.json`, and in CI lists every warning on the run page, annotates the changed files and feeds the pull request's Check notes. | `pnpm check:types`, `pnpm lint` |
 | `bench/` | CodSpeed benchmarks of whole ticks and one entity phase, and ticks per second. | `pnpm bench`, `pnpm bench:tps` |
 | `bench/counts.mjs` | Reads the exact instruction and cache-miss counts per benchmark out of CodSpeed's profiles. | `node tools/bench/counts.mjs <dir> --out <file>`, run by the `codspeed` job |
 | `work-pins/` | Call counts of the simulation tick and the browser frame, base against head. | `pnpm work-pins`, `pnpm work-pins:gate` |
