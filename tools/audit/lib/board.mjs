@@ -14,6 +14,7 @@ export const LANES = {
   failed: '3cfbabb8',
   'in progress': '9e8caff2',
   manual: 'a25ed474',
+  'in check': 'b36e3808',
   'pr ready': 'fee29b9d',
   'on dev': 'faf70e85',
   done: 'ea4793e4',
@@ -123,18 +124,20 @@ export function moveLane(n, to) {
 
   const answered = from === 'blocked on you' && lane === 'ready' && lastCommentIsAnswer(n);
   const workedByHand = from === 'blocked on you' && lane === 'manual';
+  const takenUp = from === 'manual' && (lane === 'in progress' || lane === 'in check');
   if (
     HIS_LANES.has(from) &&
     from !== lane &&
     !answered &&
     !workedByHand &&
+    !takenUp &&
     !(LEFT_ON_MERGE.has(from) && lane === 'on dev')
   )
     throw new Error(
       `#${n} is in "${item.status}", which is Kirill's lane. He moves it out, not you.\n` +
         `If it is genuinely finished, say so and leave the card where it is.\n` +
         `A Blocked on you card goes to Ready once its latest comment is his answer, starting ${ANSWER_MARK},\n` +
-        `or to Manual when he takes it by hand.`
+        `or to Manual when he takes it by hand. A Manual card goes to In progress or In Check when an agent takes it up.`
     );
 
   if (

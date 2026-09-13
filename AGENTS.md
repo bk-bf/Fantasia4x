@@ -140,9 +140,12 @@ rather than fall back to the laptop. On ubuntuserver and in CI it runs the comma
 `tools/remote/guard.mjs` refuses a test runner, linter, type check or harness started directly on
 the laptop; wrap anything else as `node tools/remote/run.mjs <command>`.
 
-**The `pre-push` hook decides what runs on the server before a push; you do not.** The pull
+**The `pre-push` hook decides what runs on the server before a push; you do not.** A push to
+`dev` runs `tools/audit/ci-check.mjs` on ubuntuserver first: `pnpm check` and the tests related to
+what changed since `dev`'s tip on GitHub, for the checked-out commit, so `dev` is pushed from a
+checkout of the commit being pushed, and only when both pass. The pull
 request's `check` runs every step on GitHub except ticks per second, which no workflow runs. On
-every push of a branch the hook asks `scopeOf` in `tools/audit/ci-scope.mjs` whether the pushed
+every push of a branch the hook also asks `scopeOf` in `tools/audit/ci-scope.mjs` whether the pushed
 commit needs that leg: a change to the game, to the work-pins or bench harness, or to the gating
 itself (`ci-scope.mjs`, `tools/remote/ci.mjs`, `run.mjs`, `prepare.sh`, `tools/hooks/pre-push`,
 `check.yml`) does. It then runs `ci.mjs --push` on ubuntuserver, which runs that one leg, and the
@@ -209,9 +212,10 @@ This applies to subagents you dispatch.
 - Keep the `Co-Authored-By` trailer.
 
 **The hooks enforce it.** `tools/hooks/commit-msg` refuses a message in any other shape,
-`pre-push` refuses a new branch not named `<type>/<title>` or `<type>/<title>-<issue number>` and a
-branch whose issue is blocked by an open issue, and runs the ticks-per-second leg when `scopeOf`
-says the pushed commit needs it; `pre-commit` and
+`pre-push` refuses a new branch not named `<type>/<title>` or `<type>/<title>-<issue number>`, a
+branch whose issue is blocked by an open issue, and a push to `dev` that fails `pnpm check` or the
+related tests on the server, and runs the ticks-per-second leg when `scopeOf` says the pushed commit
+needs it; `pre-commit` and
 `commit-msg` refuse a line or message carrying a private word, checked against the hashes in
 `tools/audit/private-words.json`. `pnpm hooks:install` links all three into `.git/hooks`, with `post-checkout`, which copies the main
 checkout's `.svelte-kit/tsconfig.json` into a new worktree so its `tsconfig.json` resolves; run it in
@@ -236,7 +240,7 @@ stays the ledger's key and should not appear in anything a person reads.
 
 **Triage through the lanes, never around them.** The board is
 [projects/4](https://github.com/users/bk-bf/projects/4) and its columns are an order:
-`Backlog` → `Ready` → `In progress` → `PR ready` → `On dev` → `Done`, with
+`Backlog` → `Ready` → `In progress` → `In Check` → `PR ready` → `On dev` → `Done`, with
 `Blocked on you`, `Manual`, `Failed` and `Rejected` off to the side. The board carries an issue as far as `Ready`;
 from there the work is a pull request, and the card follows it. `Rejected` is the first column
 on purpose. A change to the lanes inserts or drops the one option it concerns and keeps every
@@ -258,12 +262,17 @@ Planned work is an issue from the start, and waits in `Backlog` until Kirill mov
   the reviewer failed its pull request. The reason is on the issue or the pull request. The fixer
   never picks from here; Kirill reads the reason and moves the card to `Ready` to try again, or
   elsewhere. An agent moves a card out of `Failed` only when he says so.
-- **`In progress`** — a branch exists and an agent is on it. Once the fixer has it green it is a
-  pull request into `dev`, and the card stays here while `review.mjs` verifies it.
+- **`In progress`** — a branch exists and an agent is on it. Once it is green it is a pull
+  request into `dev`, and the card moves to `In Check`.
+- **`In Check`** — a pull request is open and its checks, and the reviewer, are running.
+  `pnpm issue pr` and the fixer move the card here when they open or update its pull request;
+  `review.mjs` moves it on to `PR ready` or `Failed`, and `board-sync.py` merges or flags it as it
+  does a card `In progress`.
 - **`Manual`** — he is working it by hand. `review.mjs` skips its pull request, `board-sync.py`
   does not update its branch, and `fix.mjs` refuses it. He moves it to `PR ready` to have it
   reviewed or to `Ready` to hand it to the fixer; when its pull request merges, `after-merge.mjs`
-  moves it to `On dev`, the one move out of it an agent makes.
+  moves it to `On dev`. An agent that takes a `Manual` card up moves it to `In progress` with
+  `pnpm issue lane <n> "in progress"`, and to `In Check` once its pull request is open.
 - **`PR ready`** — the pull request has passed: `review.mjs` passed it, or it is a
   `needs playtest` pull request, which the reviewer skips. `board-sync.py` merges a reviewed one
   once CI is green; a `needs playtest` one waits for him to play and merge it, or to comment on it
@@ -280,8 +289,8 @@ Planned work is an issue from the start, and waits in `Backlog` until Kirill mov
   Kirill puts cards here.
 
 **`Blocked on you`, `Manual` and `Rejected` are his lanes.** Put a card in when it belongs there.
-**Never take one out** — he is the only one who decides a thing he asked to look at has been
-looked at. And do not put one back because he moved it out: him moving a card is the answer,
+**Never take one out**, except a `Manual` card an agent takes up, which goes to `In progress` or
+`In Check` — he is the only one who decides a thing he asked to look at has been looked at. And do not put one back because he moved it out: him moving a card is the answer,
 not a mistake to correct. Nothing watches those lanes for drift.
 
 One exception, and only through the `unblock` skill: it asks him about each `Blocked on you` card
@@ -314,12 +323,14 @@ skill starts it as the `fantasia-resolve` unit on ubuntuserver and watches it.
 the result — plus a headless session for `verify headless` — and sets `audit/review` to success
 or failure on that commit. A pass moves the card to `PR ready`; a failure is written on the pull
 request and moves the card to `Failed`. `.github/workflows/check.yml` runs `pnpm check` and the related tests on every pull
-request into `dev` and every push to `dev`, on GitHub's runners. Branch protection on `dev`
-accepts only a pull request whose `check` passed on an up-to-date branch, for every account, the
-admin's included; nothing reaches `dev` by a direct push.
+request into `dev` and every push to `dev`, on GitHub's runners; on a push it measures the work
+pins, gungraun and the browser leg against the tip the push replaced. Branch protection on `dev`
+requires a pull request whose `check` passed on an up-to-date branch from every account except the
+admin's, which every agent here pushes with; that account pushes to `dev` directly, after the
+`pre-push` gate, and a red `check` on `dev` is fixed by the next push.
 
 `board-sync.py` merges a pull request once GitHub reports it `CLEAN`, meaning mergeable, up to date
-and with `check` green, when its card is in `In progress` or `PR ready`, it does not carry
+and with `check` green, when its card is in `In progress`, `In Check` or `PR ready`, it does not carry
 `needs playtest`, and, for a `fix/` branch, its latest commit has `audit/review` success. He merges
 the rest. When a pull request merges, GitHub closes the issue it fixes, and
 `tools/audit/after-merge.mjs` — run by `board-sync.py` every five minutes — moves the card to
@@ -527,19 +538,18 @@ job in `check.yml` keeps one comment on each pull request with CodSpeed's change
 work pins' changed totals, and raises each as a warning on the run. Neither blocks the merge. A
 change the notes show as real cost gets a follow-up issue, or goes back to its branch.
 
-**Work done in a conversation needs no issue, and lands through a pull request like everything
-else.** Branch from `dev` in a worktree that does not track it, `git worktree add --no-track -b
+**Work done in a conversation needs no issue and no pull request; it is pushed straight to
+`dev`.** Branch from `dev` in a worktree that does not track it, `git worktree add --no-track -b
 <type>/<title> <path> origin/dev`, because a branch that tracks `origin/dev` lets an editor's Sync
-push it straight at `dev`. Commit, push the branch, and open the pull request
-with `pnpm issue pr --head <branch> --title T --body-file -`. Watch its `check` in the background,
-and merge it with `gh pr merge <n> --merge` once `check` is green on an up-to-date branch. If the
-work settles an issue that already exists, say `Fixes #n` in the body.
+push it without the gate. Commit, bring it up to date with `git fetch origin && git rebase
+origin/dev`, and push it with `git push origin HEAD:dev`. The `pre-push` hook runs `pnpm check` and
+the related tests on the server first, and `check` then runs on GitHub for the pushed commit; watch
+it, and fix a red one with the next push. If the work settles an issue that already exists, close it
+with the commit.
 
-Batch small changes into one pull request. While the requests are small, keep one conversation
-worktree open, commit each change there as its own commit, push once the batch is done, and open a
-single pull request for all of it. Open a separate pull request only for a change
-that has to land before the rest, or one large enough to be reviewed on its own. The merge keeps
-each commit, so every change stays visible in `dev`'s history.
+Open a pull request for conversation work only when it has to sit unmerged while something else
+is decided, or is large enough to be reviewed as one diff: `pnpm issue pr --head <branch> --title T
+--body-file -`, then `gh pr merge <n> --merge` once `check` is green on an up-to-date branch.
 
 Open an issue only when one of these holds:
 

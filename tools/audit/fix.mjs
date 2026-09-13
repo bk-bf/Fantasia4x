@@ -491,12 +491,11 @@ try {
       if (pull && route === 'playtest') {
         B.moveLane(num, 'pr ready');
         out(`--- #${num} waits in PR ready on PR #${pull.number}; the worktree stays at ${wt}`);
+      } else if (pull) {
+        B.moveLane(num, 'in check');
+        out(`--- #${num} is In Check on PR #${pull.number}; review.mjs takes it from here`);
       } else {
-        out(
-          pull
-            ? `--- #${num} stays In progress on PR #${pull.number}; review.mjs takes it from here`
-            : `--- #${num} stays In progress; ${branch} is committed and not pushed`
-        );
+        out(`--- #${num} stays In progress; ${branch} is committed and not pushed`);
       }
     }
   }
