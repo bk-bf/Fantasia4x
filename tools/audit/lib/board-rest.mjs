@@ -13,7 +13,10 @@ export function restValue(field) {
 
 export function fromRest(item, repository) {
   const c = item.content ?? {};
-  const card = {
+  const values = (item.fields ?? [])
+    .map((field) => [field.name.toLowerCase(), restValue(field)])
+    .filter(([, value]) => value !== undefined);
+  return {
     id: item.node_id,
     title: c.title ?? '',
     content: {
@@ -23,11 +26,7 @@ export function fromRest(item, repository) {
       body: c.body ?? '',
       url: c.html_url,
       repository
-    }
+    },
+    ...Object.fromEntries(values)
   };
-  for (const field of item.fields ?? []) {
-    const value = restValue(field);
-    if (value !== undefined) card[field.name.toLowerCase()] = value;
-  }
-  return card;
 }
