@@ -193,7 +193,9 @@ This applies to subagents you dispatch.
 - Keep the `Co-Authored-By` trailer.
 
 **The hooks enforce it.** `scripts/hooks/commit-msg` refuses a message in any other shape,
-`pre-push` refuses a new branch not named `<type>/<title>-<issue number>`, and `pre-commit` and
+`pre-push` refuses a new branch not named `<type>/<title>-<issue number>`, and a push to `dev` from any
+other branch or of a commit that has not passed `pnpm ci:local` (for a merge, the branch it brings in
+must have passed; `tools/remote/run.mjs` records each passing commit in `.git/f4x-ci-passed`), and `pre-commit` and
 `commit-msg` refuse a line or message carrying a private word, checked against the hashes in
 `tools/audit/private-words.json`. `pnpm hooks:install` links all three into `.git/hooks`, with `post-checkout`, which copies the main
 checkout's `.svelte-kit/tsconfig.json` into a new worktree so its `tsconfig.json` resolves; run it in

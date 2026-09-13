@@ -2,13 +2,31 @@
 set -uo pipefail
 
 ROOT="$(cd "$(git rev-parse --git-common-dir)/.." && pwd)"
+PASSED="$(git rev-parse --path-format=absolute --git-common-dir)/f4x-ci-passed"
 
 NEW=()
-while read -r _local_ref local_sha remote_ref remote_sha; do
+DEV=()
+while read -r local_ref local_sha remote_ref remote_sha; do
   [[ "$local_sha" =~ ^0+$ ]] && continue
+  [[ "$remote_ref" == refs/heads/dev ]] && DEV+=("$local_ref $local_sha")
   [[ "$remote_sha" =~ ^0+$ ]] || continue
   [[ "$remote_ref" == refs/heads/* ]] || continue
   NEW+=("${remote_ref#refs/heads/}")
+done
+
+for entry in "${DEV[@]}"; do
+  local_ref="${entry% *}"
+  sha="${entry#* }"
+  if [[ "$local_ref" != refs/heads/dev ]]; then
+    echo "pre-push: refusing to push $local_ref into dev. Merge it into dev, then push dev itself." >&2
+    exit 1
+  fi
+  merged="$(git rev-parse -q --verify "$sha^2" 2>/dev/null || true)"
+  if [[ ! -e "$PASSED/$sha" && ( -z "$merged" || ! -e "$PASSED/$merged" ) ]]; then
+    echo "pre-push: ${sha:0:8} has not passed pnpm ci:local, and neither has the branch it merges." >&2
+    echo "  Run pnpm ci:local on that branch or on dev, then push again." >&2
+    exit 1
+  fi
 done
 
 (( ${#NEW[@]} )) || exit 0
