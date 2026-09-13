@@ -36,6 +36,11 @@ jobs:
 
       - uses: ./.github/actions/prepare
 
+      - name: What this change needs measured
+        id: scope
+        if: github.event_name == 'pull_request'
+        run: node tools/audit/ci-scope.mjs --base HEAD^1
+
       - name: pnpm check and the related tests
         if: github.event_name != 'workflow_dispatch'
         env:
@@ -46,23 +51,23 @@ jobs:
         run: node tools/audit/audit.mjs t0
 
       - name: Work pins, base against head
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' && steps.scope.outputs.workPins == 'true'
         env:
           WORK_PINS_NOTES: ${{ runner.temp }}/work-pins-notes.jsonl
         run: node tools/work-pins/gate.mjs --base HEAD^1
 
       - name: Read the gungraun version
         id: gungraun
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' && steps.scope.outputs.gungraun == 'true'
         run: echo "version=$(cargo pkgid --manifest-path spatial-core/Cargo.toml gungraun | sed 's/.*@//')" >> "$GITHUB_OUTPUT"
 
       - uses: gungraun/setup-gungraun@v1.1.3
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' && steps.scope.outputs.gungraun == 'true'
         with:
           runner-version: ${{ steps.gungraun.outputs.version }}
 
       - name: Instruction counts, base against head
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' && steps.scope.outputs.gungraun == 'true'
         run: node tools/gungraun/gate.mjs --base HEAD^1 --home "$RUNNER_TEMP/gungraun"
 
       - uses: actions/upload-artifact@v7
@@ -73,11 +78,11 @@ jobs:
           if-no-files-found: ignore
 
       - name: Install Chromium for the browser work pins
-        if: github.event_name != 'push'
+        if: github.event_name == 'workflow_dispatch' || steps.scope.outputs.browser == 'true'
         run: pnpm exec playwright install --with-deps --only-shell chromium
 
       - name: Browser work pins, base against head
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' && steps.scope.outputs.browser == 'true'
         env:
           WORK_PINS_NOTES: ${{ runner.temp }}/work-pins-notes.jsonl
         run: node tools/work-pins/gate.mjs --leg browser --base HEAD^1

@@ -141,7 +141,10 @@ when it passes.** It runs the `check` job's pull-request steps on
 ubuntuserver against the merge base with `origin/dev`: `ci-check.mjs`, the seams and sizes audit,
 the work pins, the gungraun instruction counts, the browser work pins, a benchmark run and
 `actionlint` over the workflows. It runs every step, prints a pass, fail or skip line for each, and
-names what a skipped step needs. `pnpm ci:local --quick` skips gungraun and the browser leg. On
+names what a skipped step needs. `pnpm ci:local --quick` skips gungraun and the browser leg. `ci:local` and
+the `check` job both skip what a change cannot move: `tools/audit/ci-scope.mjs` runs the work pins,
+the browser leg, ticks per second and the benchmarks only when a game file or that harness changed,
+and gungraun only when a Rust crate did; a change to the gating itself runs all of them. On
 ubuntuserver `pnpm ci:local` runs it in place; `ci.mjs` loads the pinned Node and pnpm from
 `tools/remote/prepare.sh` before it runs anything.
 

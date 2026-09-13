@@ -4,6 +4,8 @@ import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { hostname, tmpdir } from 'node:os';
 import { join } from 'node:path';
 
+import { changedFiles, scopeOf } from '../audit/ci-scope.mjs';
+
 const TEST_HOSTNAME = 'ubuntuserver';
 const TRUNK = 'origin/dev';
 const quick = process.argv.includes('--quick');
@@ -33,6 +35,7 @@ const pinnedGungraun = () =>
     .trim()
     .replace(/.*@/, '');
 const home = mkdtempSync(join(tmpdir(), 'ci-local-gungraun-'));
+const scope = scopeOf(changedFiles(base));
 
 function gungraunMissing() {
   const version = pinnedGungraun();
@@ -69,16 +72,22 @@ const steps = [
     env: { CHECK_BASE: base }
   },
   { name: 'Architecture seams and component sizes', cmd: ['node', 'tools/audit/audit.mjs', 't0'] },
-  { name: 'Work pins, base against head', cmd: ['node', 'tools/work-pins/gate.mjs', '--base', base] },
+  {
+    name: 'Work pins, base against head',
+    cmd: ['node', 'tools/work-pins/gate.mjs', '--base', base],
+    needs: 'workPins'
+  },
   {
     name: 'Instruction counts, base against head',
     cmd: ['node', 'tools/gungraun/gate.mjs', '--base', base, '--home', home],
+    needs: 'gungraun',
     slow: true,
     skip: gungraunMissing
   },
   {
     name: 'Browser work pins, base against head',
     cmd: ['node', 'tools/work-pins/gate.mjs', '--leg', 'browser', '--base', base],
+    needs: 'browser',
     slow: true,
     skip: () =>
       existsSync('tools/work-pins/browser.mjs') ? ensureChromium() : 'this commit has no browser leg'
@@ -86,11 +95,13 @@ const steps = [
   {
     name: 'Ticks per second, base against head',
     cmd: ['node', 'tools/work-pins/gate.mjs', '--leg', 'tps', '--base', base],
+    needs: 'tps',
     slow: true
   },
   {
     name: 'Benchmarks run',
-    cmd: ['vitest', 'bench', '--run', '--config', 'tools/bench/vitest.config.ts']
+    cmd: ['vitest', 'bench', '--run', '--config', 'tools/bench/vitest.config.ts'],
+    needs: 'bench'
   },
   { name: 'Workflow files', cmd: ['actionlint'], skip: ensureActionlint }
 ];
@@ -98,6 +109,10 @@ const steps = [
 process.stdout.write(`[ci-local] ${git('rev-parse', 'HEAD')} against ${base} (merge base with ${TRUNK})\n`);
 const results = [];
 for (const step of steps) {
+  if (step.needs && !scope[step.needs]) {
+    results.push({ name: step.name, outcome: 'skip', note: 'no file it measures changed' });
+    continue;
+  }
   if (quick && step.slow) {
     results.push({ name: step.name, outcome: 'skip', note: '--quick' });
     continue;
