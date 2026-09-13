@@ -326,7 +326,7 @@ pnpm issue labels                       # every label the schema allows
 pnpm issue lint --body-file draft.md    # would this be accepted?
 pnpm issue create --title T --type fix --area sim --size S --agent haiku --body-file - --label high --label drift
 pnpm issue close 12 --commit <sha>
-pnpm issue pr --head <branch> --title T --body-file - [--auto]   # a pull request into dev; --auto merges it once check passes
+pnpm issue pr --head <branch> --title T --body-file -   # open a pull request into dev
 pnpm issue pr-edit 84 --body-file -                     # rewrite its description
 pnpm issue milestone list                               # versions and how much of each is closed
 pnpm issue tidy [--remove] [--host H]...                # merged or idle worktrees, branches and test clones
@@ -508,9 +508,9 @@ change the notes show as real cost gets a follow-up issue, or goes back to its b
 else.** Branch from `dev` in a worktree that does not track it, `git worktree add --no-track -b
 <type>/<title> <path> origin/dev`, because a branch that tracks `origin/dev` lets an editor's Sync
 push it straight at `dev`. Commit, run `pnpm ci:local`, push the branch, and open the pull request
-with `pnpm issue pr --head <branch> --title T --body-file - --auto`; it merges itself once `check`
-passes on an up-to-date branch. If the work settles an issue that already exists, say `Fixes #n`
-in the body.
+with `pnpm issue pr --head <branch> --title T --body-file -`. Watch its `check` in the background,
+and merge it with `gh pr merge <n> --merge` once `check` is green on an up-to-date branch. If the
+work settles an issue that already exists, say `Fixes #n` in the body.
 
 Open an issue only when one of these holds:
 
