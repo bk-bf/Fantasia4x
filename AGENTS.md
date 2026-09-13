@@ -123,6 +123,10 @@ playtest.
 
 **Always `pnpm`** — never `npm` or `yarn`.
 
+**Every tool is in [`tools/`](tools/), and [`tools/README.md`](tools/README.md) lists each one and
+how to run it.** Only the launchers `dev.sh`, `launch.sh`, `build.sh`, `install.sh` and `audit.sh`
+stay at the root. A new tool goes in `tools/` and gets a line in that index.
+
 **Nothing test- or CI-related runs on the laptop.** `pnpm test`, `test:related`, `test:changed`,
 `check`, `check:types`, `lint`, `knip`, `knip:all`, `dupes`, `bench`, `bench:tps`, `work-pins`,
 `work-pins:gate`, `audit:t0`, `test:audit` and `test:sim-core` go through `tools/remote/run.mjs`.
@@ -140,7 +144,7 @@ the laptop; wrap anything else as `node tools/remote/run.mjs <command>`.
 request's `check` runs every step on GitHub except ticks per second, which no workflow runs. On
 every push of a branch the hook asks `scopeOf` in `tools/audit/ci-scope.mjs` whether the pushed
 commit needs that leg: a change to the game, to the work-pins or bench harness, or to the gating
-itself (`ci-scope.mjs`, `tools/remote/ci.mjs`, `run.mjs`, `prepare.sh`, `scripts/hooks/pre-push`,
+itself (`ci-scope.mjs`, `tools/remote/ci.mjs`, `run.mjs`, `prepare.sh`, `tools/hooks/pre-push`,
 `check.yml`) does. It then runs `ci.mjs --push` on ubuntuserver, which runs that one leg, and the
 push goes ahead only when it passes. Anything else runs nothing on the server. The server runs the
 checked-out commit, so the hook refuses a push that needs the leg from a branch that is not checked
@@ -204,9 +208,10 @@ This applies to subagents you dispatch.
   message; put it in the code, a test, or `docs/`.
 - Keep the `Co-Authored-By` trailer.
 
-**The hooks enforce it.** `scripts/hooks/commit-msg` refuses a message in any other shape,
-`pre-push` refuses a new branch not named `<type>/<title>` or `<type>/<title>-<issue number>` and
-runs the ticks-per-second leg when `scopeOf` says the pushed commit needs it, and `pre-commit` and
+**The hooks enforce it.** `tools/hooks/commit-msg` refuses a message in any other shape,
+`pre-push` refuses a new branch not named `<type>/<title>` or `<type>/<title>-<issue number>` and a
+branch whose issue is blocked by an open issue, and runs the ticks-per-second leg when `scopeOf`
+says the pushed commit needs it; `pre-commit` and
 `commit-msg` refuse a line or message carrying a private word, checked against the hashes in
 `tools/audit/private-words.json`. `pnpm hooks:install` links all three into `.git/hooks`, with `post-checkout`, which copies the main
 checkout's `.svelte-kit/tsconfig.json` into a new worktree so its `tsconfig.json` resolves; run it in
@@ -506,6 +511,11 @@ runs from `.claude/settings.json`: it lists the open pull requests with every pr
 the first edit in a session of a file that an open pull request changes or an open issue cites,
 naming them. The branch's own issue and pull request, from the `-<n>` its name ends in, are not
 counted. Read what it names; if the edit belongs to that work, do it on that branch.
+
+**An issue blocked by an open issue stays local.** `pre-push` refuses a branch whose `-<n>` names
+an issue that GitHub lists as blocked by an open issue, `createPull` refuses its pull request, and
+`pnpm audit:fix` skips or refuses the card; each names the blocker. Work on it and test it locally;
+it is pushed once the blocker closes. `pnpm issue blocked-by <n> <blocker>` adds the link.
 
 **Work an agent does on a board card goes through a pull request into `dev`.** The fixer opens
 it, the reviewer and CI report on it, and it merges once they pass. The pull request is where he reads the

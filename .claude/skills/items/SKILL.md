@@ -198,11 +198,11 @@ The `/gear-db` route is live for you; the shared table is a **packed snapshot** 
 itself. After any item, recipe or gearDb change:
 
 ```bash
-node scripts/dev-tools/pack.mjs geardb     # bakes the .jsonc data into .devtools-dist/gear-db.html
+node tools/dev-tools/pack.mjs geardb     # bakes the .jsonc data into .devtools-dist/gear-db.html
 ```
 
 Then republish that file with the Artifact tool, passing the URL in
-`scripts/dev-tools/published.json` as `url` so the link stays stable. Publishing without it mints a
+`tools/dev-tools/published.json` as `url` so the link stays stable. Publishing without it mints a
 new artifact and the user's link goes stale.
 
 **Check the pack actually rebuilt before you publish.** It shells out to `pnpm`, which is often not

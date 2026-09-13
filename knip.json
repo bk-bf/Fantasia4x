@@ -7,13 +7,13 @@
     "tools/audit/*.mjs",
     "tools/work-pins/*.mjs",
     "tools/gpu/*.mjs",
-    "scripts/**/*.mjs",
+    "tools/*.mjs",
+    "tools/dev-tools/**/*.mjs",
     "src/tests/**/*.test.ts"
   ],
   "project": [
     "src/**/*.{ts,js,svelte}",
-    "tools/**/*.mjs",
-    "scripts/**/*.mjs"
+    "tools/**/*.mjs"
   ],
   "ignore": [
     ".claude/**",
