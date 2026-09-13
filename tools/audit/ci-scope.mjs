@@ -8,29 +8,25 @@ const GAME = [
   /^sim-core\//,
   /^spatial-core\//,
   /^static\//,
-  /^(package\.json|pnpm-lock\.yaml|tsconfig\.json)$/,
+  /^(pnpm-lock\.yaml|tsconfig\.json)$/,
   /^(vite|svelte)\.config\.[cm]?[jt]s$/,
   /^\.github\/actions\//
 ];
 const RUST = [/^sim-core\//, /^spatial-core\//, /^\.github\/actions\//];
-const GATING = [
-  /^tools\/audit\/ci-scope\.mjs$/,
-  /^tools\/remote\/(ci\.mjs|run\.mjs|prepare\.sh)$/,
-  /^tools\/hooks\/pre-push$/,
-  /^\.github\/workflows\/check\.yml$/
-];
 const WORK_PINS = [/^tools\/work-pins\//];
 const BENCH = [/^tools\/bench\//];
 const GUNGRAUN = [/^tools\/gungraun\//];
+const DOCS = [/\.md$/, /^docs\//];
+const TESTS = /^src\/tests\//;
 
 const touches = (files, rules) => files.some((f) => rules.some((r) => r.test(f)));
 
 export function scopeOf(files) {
-  const all = touches(files, GATING);
-  const game = all || touches(files, GAME);
+  const game = touches(files.filter((f) => !TESTS.test(f)), GAME);
   return {
+    check: !files.length || !files.every((f) => DOCS.some((r) => r.test(f))),
     workPins: game || touches(files, WORK_PINS),
-    gungraun: all || touches(files, RUST) || touches(files, GUNGRAUN),
+    gungraun: touches(files, RUST) || touches(files, GUNGRAUN),
     browser: game || touches(files, WORK_PINS),
     tps: game || touches(files, WORK_PINS) || touches(files, BENCH),
     bench: game || touches(files, BENCH)
