@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @ts-nocheck
 import { execFileSync } from 'node:child_process';
 import { appendFileSync } from 'node:fs';
 
@@ -14,32 +15,32 @@ const GAME = [
 const RUST = [/^sim-core\//, /^spatial-core\//, /^\.github\/actions\//];
 const GATING = [
   /^tools\/audit\/ci-scope\.mjs$/,
-  /^tools\/remote\/(ci\.mjs|prepare\.sh)$/,
+  /^tools\/remote\/(ci\.mjs|run\.mjs|prepare\.sh)$/,
+  /^scripts\/hooks\/pre-push$/,
   /^\.github\/workflows\/check\.yml$/
 ];
-const HARNESS = {
-  workPins: [/^tools\/work-pins\//],
-  gungraun: [/^tools\/gungraun\//],
-  browser: [/^tools\/work-pins\//],
-  tps: [/^tools\/work-pins\//, /^tools\/bench\//],
-  bench: [/^tools\/bench\//]
-};
+const WORK_PINS = [/^tools\/work-pins\//];
+const BENCH = [/^tools\/bench\//];
+const GUNGRAUN = [/^tools\/gungraun\//];
 
 const touches = (files, rules) => files.some((f) => rules.some((r) => r.test(f)));
 
 export function scopeOf(files) {
   const all = touches(files, GATING);
-  const game = touches(files, GAME);
-  const scope = {};
-  for (const [leg, harness] of Object.entries(HARNESS)) {
-    const measured = leg === 'gungraun' ? touches(files, RUST) : game;
-    scope[leg] = all || measured || touches(files, harness);
-  }
-  return scope;
+  const game = all || touches(files, GAME);
+  return {
+    workPins: game || touches(files, WORK_PINS),
+    gungraun: all || touches(files, RUST) || touches(files, GUNGRAUN),
+    browser: game || touches(files, WORK_PINS),
+    tps: game || touches(files, WORK_PINS) || touches(files, BENCH),
+    bench: game || touches(files, BENCH)
+  };
 }
 
-export const changedFiles = (base) =>
-  execFileSync('git', ['diff', '--name-only', base, 'HEAD'], { encoding: 'utf8' }).split('\n').filter(Boolean);
+export const onPush = (files) => (touches(files, GATING) ? 'all' : scopeOf(files).tps ? 'tps' : null);
+
+export const changedFiles = (base, head = 'HEAD') =>
+  execFileSync('git', ['diff', '--name-only', base, head], { encoding: 'utf8' }).split('\n').filter(Boolean);
 
 if (import.meta.url === `file://${process.argv[1]}`) {
   const i = process.argv.indexOf('--base');

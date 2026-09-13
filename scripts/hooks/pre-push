@@ -2,18 +2,19 @@
 set -uo pipefail
 
 ROOT="$(cd "$(git rev-parse --git-common-dir)/.." && pwd)"
+TOP="$(git rev-parse --show-toplevel)"
 
 NEW=()
+PUSHED=()
 while read -r _local_ref local_sha remote_ref remote_sha; do
   [[ "$local_sha" =~ ^0+$ ]] && continue
-  [[ "$remote_sha" =~ ^0+$ ]] || continue
   [[ "$remote_ref" == refs/heads/* ]] || continue
-  NEW+=("${remote_ref#refs/heads/}")
+  PUSHED+=("$local_sha")
+  [[ "$remote_sha" =~ ^0+$ ]] && NEW+=("${remote_ref#refs/heads/}")
 done
 
-(( ${#NEW[@]} )) || exit 0
-
-node --input-type=module -e "
+if (( ${#NEW[@]} )); then
+  node --input-type=module -e "
 import { branchProblem } from 'file://$ROOT/tools/audit/lib/branch.mjs';
 const bad = process.argv.slice(1).map(branchProblem).filter(Boolean);
 if (bad.length) {
@@ -21,4 +22,27 @@ if (bad.length) {
   console.error('  Rename it with: git branch -m <old> <new>. Bypass once with: git push --no-verify');
   process.exit(1);
 }
-" "${NEW[@]}"
+" "${NEW[@]}" || exit 1
+fi
+
+(( ${#PUSHED[@]} )) || exit 0
+[[ -f "$TOP/tools/audit/ci-scope.mjs" ]] || exit 0
+
+HEAD_SHA="$(git rev-parse HEAD)"
+for sha in $(printf '%s\n' "${PUSHED[@]}" | sort -u); do
+  base="$(git merge-base "$sha" origin/dev 2>/dev/null)" || continue
+  needs="$(node --input-type=module -e "
+import { changedFiles, onPush } from 'file://$TOP/tools/audit/ci-scope.mjs';
+process.stdout.write(onPush(changedFiles(process.argv[1], process.argv[2])) ?? '');
+" "$base" "$sha")" || exit 1
+  [[ -n "$needs" ]] || continue
+  if [[ "$sha" != "$HEAD_SHA" ]]; then
+    echo "pre-push: $sha needs ci:local ($needs), and the server runs the checked-out commit; check it out and push from there" >&2
+    exit 1
+  fi
+  echo "pre-push: $sha needs ci:local ($needs) on the server before it is pushed" >&2
+  (cd "$TOP" && node tools/remote/run.mjs node tools/remote/ci.mjs --push) || {
+    echo "pre-push: ci:local failed; not pushing" >&2
+    exit 1
+  }
+done

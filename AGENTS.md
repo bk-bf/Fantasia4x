@@ -136,8 +136,16 @@ rather than fall back to the laptop. On ubuntuserver and in CI it runs the comma
 `tools/remote/guard.mjs` refuses a test runner, linter, type check or harness started directly on
 the laptop; wrap anything else as `node tools/remote/run.mjs <command>`.
 
-**Run `pnpm ci:local` before pushing a branch that opens or updates a pull request; push only
-when it passes.** It runs the `check` job's pull-request steps on
+**The `pre-push` hook decides when `pnpm ci:local` runs; you do not.** On every push of a branch
+it asks `onPush` in `tools/audit/ci-scope.mjs` what the pushed commit needs. A change to the gating
+itself (`ci-scope.mjs`, `tools/remote/ci.mjs`, `run.mjs`, `prepare.sh`, `scripts/hooks/pre-push`,
+`check.yml`) runs the whole of `ci:local`. A change to the game or to the work-pins or bench harness
+runs `ci.mjs --push`, which runs only the ticks-per-second leg, the one step no workflow runs.
+Anything else runs nothing, and the pull request's `check` covers it. The push goes ahead only when
+the run passes. The server runs the checked-out commit, so the hook refuses a push that needs a run
+from a branch that is not checked out. Run `pnpm ci:local` by hand only to reproduce a failure.
+
+`pnpm ci:local` runs the `check` job's pull-request steps on
 ubuntuserver against the merge base with `origin/dev`: `ci-check.mjs`, the seams and sizes audit,
 the work pins, the gungraun instruction counts, the browser work pins, a benchmark run and
 `actionlint` over the workflows. It runs every step, prints a pass, fail or skip line for each, and
@@ -196,7 +204,8 @@ This applies to subagents you dispatch.
 - Keep the `Co-Authored-By` trailer.
 
 **The hooks enforce it.** `scripts/hooks/commit-msg` refuses a message in any other shape,
-`pre-push` refuses a new branch not named `<type>/<title>` or `<type>/<title>-<issue number>`, and `pre-commit` and
+`pre-push` refuses a new branch not named `<type>/<title>` or `<type>/<title>-<issue number>` and
+runs what `onPush` says the pushed commit needs, and `pre-commit` and
 `commit-msg` refuse a line or message carrying a private word, checked against the hashes in
 `tools/audit/private-words.json`. `pnpm hooks:install` links all three into `.git/hooks`, with `post-checkout`, which copies the main
 checkout's `.svelte-kit/tsconfig.json` into a new worktree so its `tsconfig.json` resolves; run it in
@@ -510,14 +519,14 @@ change the notes show as real cost gets a follow-up issue, or goes back to its b
 **Work done in a conversation needs no issue, and lands through a pull request like everything
 else.** Branch from `dev` in a worktree that does not track it, `git worktree add --no-track -b
 <type>/<title> <path> origin/dev`, because a branch that tracks `origin/dev` lets an editor's Sync
-push it straight at `dev`. Commit, run `pnpm ci:local`, push the branch, and open the pull request
+push it straight at `dev`. Commit, push the branch, and open the pull request
 with `pnpm issue pr --head <branch> --title T --body-file -`. Watch its `check` in the background,
 and merge it with `gh pr merge <n> --merge` once `check` is green on an up-to-date branch. If the
 work settles an issue that already exists, say `Fixes #n` in the body.
 
 Batch small changes into one pull request. While the requests are small, keep one conversation
-worktree open, commit each change there as its own commit, run `pnpm ci:local` once the batch is
-done, and open a single pull request for all of it. Open a separate pull request only for a change
+worktree open, commit each change there as its own commit, push once the batch is done, and open a
+single pull request for all of it. Open a separate pull request only for a change
 that has to land before the rest, or one large enough to be reviewed on its own. The merge keeps
 each commit, so every change stays visible in `dev`'s history.
 

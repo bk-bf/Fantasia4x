@@ -4,11 +4,12 @@ import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { hostname, tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { changedFiles, scopeOf } from '../audit/ci-scope.mjs';
+import { changedFiles, onPush, scopeOf } from '../audit/ci-scope.mjs';
 
 const TEST_HOSTNAME = 'ubuntuserver';
 const TRUNK = 'origin/dev';
 const quick = process.argv.includes('--quick');
+const push = process.argv.includes('--push');
 
 if (process.env.CI !== 'true' && hostname() !== TEST_HOSTNAME) {
   process.stderr.write('[ci-local] runs on ubuntuserver only; start it with pnpm ci:local\n');
@@ -35,7 +36,9 @@ const pinnedGungraun = () =>
     .trim()
     .replace(/.*@/, '');
 const home = mkdtempSync(join(tmpdir(), 'ci-local-gungraun-'));
-const scope = scopeOf(changedFiles(base));
+const files = changedFiles(base);
+const scope = scopeOf(files);
+const runs = push ? onPush(files) : 'all';
 
 function gungraunMissing() {
   const version = pinnedGungraun();
@@ -109,6 +112,10 @@ const steps = [
 process.stdout.write(`[ci-local] ${git('rev-parse', 'HEAD')} against ${base} (merge base with ${TRUNK})\n`);
 const results = [];
 for (const step of steps) {
+  if (runs !== 'all' && step.needs !== runs) {
+    results.push({ name: step.name, outcome: 'skip', note: 'the pull request check runs it' });
+    continue;
+  }
   if (step.needs && !scope[step.needs]) {
     results.push({ name: step.name, outcome: 'skip', note: 'no file it measures changed' });
     continue;
