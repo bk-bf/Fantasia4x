@@ -140,15 +140,13 @@ rather than fall back to the laptop. On ubuntuserver and in CI it runs the comma
 `tools/remote/guard.mjs` refuses a test runner, linter, type check or harness started directly on
 the laptop; wrap anything else as `node tools/remote/run.mjs <command>`.
 
-**The `pre-push` hook decides what runs on the server before a push; you do not.** The pull
-request's `check` runs every step on GitHub except ticks per second, which no workflow runs. On
-every push of a branch the hook asks `scopeOf` in `tools/audit/ci-scope.mjs` whether the pushed
-commit needs that leg: a change to the game, to the work-pins or bench harness, or to the gating
+**Every CI step runs as a GitHub Actions job, so each run shows on the pull request.** `check` runs
+on GitHub's runners; `codspeed` and `tps`, ticks per second, run on the self-hosted runner on
+ubuntuserver, one job at a time. The `tps` job asks `scopeOf` in `tools/audit/ci-scope.mjs` whether
+the change needs that leg: a change to the game, to the work-pins or bench harness, or to the gating
 itself (`ci-scope.mjs`, `tools/remote/ci.mjs`, `run.mjs`, `prepare.sh`, `tools/hooks/pre-push`,
-`check.yml`) does. It then runs `ci.mjs --push` on ubuntuserver, which runs that one leg, and the
-push goes ahead only when it passes. Anything else runs nothing on the server. The server runs the
-checked-out commit, so the hook refuses a push that needs the leg from a branch that is not checked
-out. Run `pnpm ci:local` by hand only to reproduce a failure of `check`.
+`check.yml`) does. A push runs nothing on the server. Run `pnpm ci:local` by hand only to reproduce
+a failure of `check`.
 
 `pnpm ci:local` runs the `check` job's pull-request steps on
 ubuntuserver against the merge base with `origin/dev`: `ci-check.mjs`, the seams and sizes audit,
@@ -210,8 +208,7 @@ This applies to subagents you dispatch.
 
 **The hooks enforce it.** `tools/hooks/commit-msg` refuses a message in any other shape,
 `pre-push` refuses a new branch not named `<type>/<title>` or `<type>/<title>-<issue number>` and a
-branch whose issue is blocked by an open issue, and runs the ticks-per-second leg when `scopeOf`
-says the pushed commit needs it; `pre-commit` and
+branch whose issue is blocked by an open issue; `pre-commit` and
 `commit-msg` refuse a line or message carrying a private word, checked against the hashes in
 `tools/audit/private-words.json`. `pnpm hooks:install` links all three into `.git/hooks`, with `post-checkout`, which copies the main
 checkout's `.svelte-kit/tsconfig.json` into a new worktree so its `tsconfig.json` resolves; run it in

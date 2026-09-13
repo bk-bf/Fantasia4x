@@ -161,6 +161,32 @@ jobs:
           path: ${{ runner.temp }}/legacy
           if-no-files-found: ignore
 
+  tps:
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, ubuntuserver]
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24.20.0
+
+      - name: What this change needs measured
+        id: scope
+        run: node tools/audit/ci-scope.mjs --base HEAD^1
+
+      - uses: ./.github/actions/prepare
+        if: steps.scope.outputs.tps == 'true'
+
+      - name: Ticks per second, base against head
+        if: steps.scope.outputs.tps == 'true'
+        run: node tools/work-pins/gate.mjs --leg tps --base HEAD^1
+
   perf-notes:
     if: ${{ !cancelled() && github.event_name == 'pull_request' }}
     needs: [check, codspeed]

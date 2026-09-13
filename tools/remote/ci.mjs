@@ -9,7 +9,6 @@ import { changedFiles, scopeOf } from '../audit/ci-scope.mjs';
 const TEST_HOSTNAME = 'ubuntuserver';
 const TRUNK = 'origin/dev';
 const quick = process.argv.includes('--quick');
-const push = process.argv.includes('--push');
 
 if (process.env.CI !== 'true' && hostname() !== TEST_HOSTNAME) {
   process.stderr.write('[ci-local] runs on ubuntuserver only; start it with pnpm ci:local\n');
@@ -110,10 +109,6 @@ const steps = [
 process.stdout.write(`[ci-local] ${git('rev-parse', 'HEAD')} against ${base} (merge base with ${TRUNK})\n`);
 const results = [];
 for (const step of steps) {
-  if (push && step.needs !== 'tps') {
-    results.push({ name: step.name, outcome: 'skip', note: 'the pull request check runs it' });
-    continue;
-  }
   if (step.needs && !scope[step.needs]) {
     results.push({ name: step.name, outcome: 'skip', note: 'no file it measures changed' });
     continue;

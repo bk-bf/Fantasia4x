@@ -2,16 +2,13 @@
 set -uo pipefail
 
 ROOT="$(cd "$(git rev-parse --git-common-dir)/.." && pwd)"
-TOP="$(git rev-parse --show-toplevel)"
 
 NEW=()
 BRANCHES=()
-PUSHED=()
 while read -r _local_ref local_sha remote_ref remote_sha; do
   [[ "$local_sha" =~ ^0+$ ]] && continue
   [[ "$remote_ref" == refs/heads/* ]] || continue
   BRANCHES+=("${remote_ref#refs/heads/}")
-  PUSHED+=("$local_sha")
   [[ "$remote_sha" =~ ^0+$ ]] && NEW+=("${remote_ref#refs/heads/}")
 done
 
@@ -34,8 +31,9 @@ process.exit(refused ? 1 : 0);
 " "${BRANCHES[@]}" || exit 1
 fi
 
-if (( ${#NEW[@]} )); then
-  node --input-type=module -e "
+(( ${#NEW[@]} )) || exit 0
+
+node --input-type=module -e "
 import { branchProblem } from 'file://$ROOT/tools/audit/lib/branch.mjs';
 const bad = process.argv.slice(1).map(branchProblem).filter(Boolean);
 if (bad.length) {
@@ -43,27 +41,4 @@ if (bad.length) {
   console.error('  Rename it with: git branch -m <old> <new>. Bypass once with: git push --no-verify');
   process.exit(1);
 }
-" "${NEW[@]}" || exit 1
-fi
-
-(( ${#PUSHED[@]} )) || exit 0
-[[ -f "$TOP/tools/audit/ci-scope.mjs" ]] || exit 0
-
-HEAD_SHA="$(git rev-parse HEAD)"
-for sha in $(printf '%s\n' "${PUSHED[@]}" | sort -u); do
-  base="$(git merge-base "$sha" origin/dev 2>/dev/null)" || continue
-  tps="$(node --input-type=module -e "
-import { changedFiles, scopeOf } from 'file://$TOP/tools/audit/ci-scope.mjs';
-process.stdout.write(String(scopeOf(changedFiles(process.argv[1], process.argv[2])).tps));
-" "$base" "$sha")" || exit 1
-  [[ "$tps" == true ]] || continue
-  if [[ "$sha" != "$HEAD_SHA" ]]; then
-    echo "pre-push: $sha needs the ticks-per-second leg, and the server runs the checked-out commit; check it out and push from there" >&2
-    exit 1
-  fi
-  echo "pre-push: $sha needs the ticks-per-second leg on the server before it is pushed" >&2
-  (cd "$TOP" && node tools/remote/run.mjs node tools/remote/ci.mjs --push) || {
-    echo "pre-push: the ticks-per-second leg failed; not pushing" >&2
-    exit 1
-  }
-done
+" "${NEW[@]}"
