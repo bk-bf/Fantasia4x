@@ -53,6 +53,7 @@
   },
   "devDependencies": {
     "@codspeed/vitest-plugin": "6.0.0-beta.2",
+    "@eslint/compat": "^2.1.1",
     "@eslint/js": "^9.30.0",
     "@firefox-devtools/profiler-cli": "^0.2.1",
     "@sveltejs/adapter-auto": "^6.0.0",
