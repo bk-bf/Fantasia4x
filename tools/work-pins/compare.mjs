@@ -178,8 +178,16 @@ function render({ rows, moved, notes, totals, over }, rowLimit) {
   return `${parts.join('\n')}\n`;
 }
 
+function writeNotes({ totals, rows }) {
+  const file = process.env.WORK_PINS_NOTES;
+  if (!file) return;
+  const changed = totals.filter((t) => t.head !== t.base);
+  appendFileSync(file, `${JSON.stringify({ totals: changed, changed: rows.length })}\n`);
+}
+
 export function report(baseDir, headDir) {
   const result = compareRuns(readRuns(baseDir), readRuns(headDir));
+  writeNotes(result);
   process.stdout.write(render(result, Infinity));
   if (process.env.GITHUB_STEP_SUMMARY)
     appendFileSync(process.env.GITHUB_STEP_SUMMARY, render(result, SUMMARY_ROW_LIMIT));
