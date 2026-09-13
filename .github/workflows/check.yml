@@ -185,6 +185,8 @@ jobs:
 
       - name: Ticks per second, base against head
         if: steps.scope.outputs.tps == 'true'
+        env:
+          TMPDIR: ${{ runner.temp }}
         run: node tools/work-pins/gate.mjs --leg tps --base HEAD^1
 
   perf-notes:
