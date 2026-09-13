@@ -467,6 +467,11 @@ it, the reviewer and CI report on it, and it merges once they pass. The pull req
 diff and where he writes what is wrong with it, and the fixer reads those comments on its next
 attempt. Several related fixes belong in one branch and one pull request, not one each.
 
+**Read a pull request's Performance notes before calling it ready or merging it.** The `perf-notes`
+job in `check.yml` keeps one comment on each pull request with CodSpeed's changed benchmarks and the
+work pins' changed totals, and raises each as a warning on the run. Neither blocks the merge. A
+change the notes show as real cost gets a follow-up issue, or goes back to its branch.
+
 **Work done in a conversation at Kirill's request needs no issue and no pull request.** Branch
 from `dev` in a worktree, run `pnpm check` and the related tests, and commit it to `dev`
 directly: `git merge --no-ff` the branch into `dev` and push. Branch protection lets his account
