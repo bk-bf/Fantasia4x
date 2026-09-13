@@ -88,7 +88,7 @@ function pct(t) {
 function warningsSection(notes) {
   if (!notes.length) return 'Warnings: no report from the check job.';
   const lines = [
-    "Warnings from `svelte-check` and `eslint`; the check job's summary on the run page lists every one by rule:",
+    "Warnings from `svelte-check` and `eslint`, and type errors from `tsc` over `tools/`; the check job's summary on the run page lists every one by rule:",
     '',
     '| tool | errors | warnings | budget | most common |',
     '|---|---:|---:|---:|---|',

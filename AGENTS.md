@@ -168,11 +168,12 @@ the server: it refuses a badly named or blocked branch and moves the pushed bran
 run `pnpm check` or the tests by hand before a push GitHub will check; the chain runs them on the
 pushed commit. Run them by hand only while you work.
 
-**`pnpm check` is the gate.** It runs `svelte-check`, `eslint` and `knip`, and all three must
-stay green. `svelte-check` and `eslint` are frozen at their warning counts in
-`tools/audit/warning-budget.json`: `tools/audit/warnings.mjs` runs both, fails on any error or on a
-count past its budget, and says when a count has dropped below it; lower the budget then, and never
-raise it. In CI it lists every warning by rule in the check job's summary on the run page, annotates
+**`pnpm check` is the gate.** It runs `svelte-check`, `tsc` over `tools/`, `eslint` and `knip`, and
+all four must stay green. `svelte-check` does not reach `tools/`, so `pnpm check:tools` type-checks
+every tracked `.mjs`, `.js` and `.ts` file there. `svelte-check` and `eslint` are frozen at their
+warning counts, and `tools-types` at its count of type errors, in `tools/audit/warning-budget.json`:
+`tools/audit/warnings.mjs` runs all three, fails on any error or on a count past its budget, and says
+when a count has dropped below it; lower the budget then, and never raise it. In CI it lists every warning by rule in the check job's summary on the run page, annotates
 the ones in files the change touches, and puts the totals in the pull request's Check notes.
 `pnpm knip:all` reports unused exports and files, which the gate does not yet enforce.
 `pnpm dupes` runs copy-paste detection over `src`.
