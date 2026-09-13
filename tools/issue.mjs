@@ -30,7 +30,8 @@ import {
   checkBody,
   checkKind,
   checkMilestone,
-  labelGroup
+  labelGroup,
+  milestonePlan
 } from './audit/lib/schema.mjs';
 import { checkPrivate } from './audit/lib/private.mjs';
 import { linkify, issueRef, indexedSha, blobUrl, resolveRepoPath } from './audit/lib/links.mjs';
@@ -215,7 +216,7 @@ const openNesting = () =>
       .map((i) => [String(i.number), i])
   );
 
-const milestoneGaps = (issue, workType) => {
+const milestoneGaps = (issue) => {
   const own = issue?.milestone?.title ?? null;
   const parent = issue?.parent;
   if (parent) {
@@ -226,10 +227,8 @@ const milestoneGaps = (issue, workType) => {
         "a sub-issue sits in its parent's milestone"
     ];
   }
-  if (workType === 'feat' && !own) {
-    return ['a feature with no milestone and no parent — pnpm issue edit <n> --milestone vX.Y'];
-  }
-  return [];
+  if (own) return [];
+  return [`no milestone — pnpm issue edit <n> --milestone ${milestonePlan().current ?? 'vX.Y'}`];
 };
 
 const MERGED_LANES = new Set(['on dev', 'done']);
@@ -271,7 +270,7 @@ if (cmd === 'check-labels') {
       ...checkRequired(names),
       ...checkTemplate(it.body, names, workType),
       ...checkKind(names, workType),
-      ...milestoneGaps(nesting.get(String(it.number)), workType)
+      ...milestoneGaps(nesting.get(String(it.number)))
     ];
     if (!problems.length) continue;
     bad += 1;
@@ -394,11 +393,9 @@ if (cmd === 'check-labels') {
   const type = arg('type') ?? (parent ? itemFor(parent)?.['work type'] : null);
   if (!type) die(`--type is required, or --parent to take the parent's — one of: ${TYPES.join(', ')}`);
   if (!TYPES.includes(type)) die(`unknown --type "${type}" — one of: ${TYPES.join(', ')}`);
-  const milestone = arg('milestone') ?? parentRecord?.milestone?.title ?? null;
-  if (milestone) milestoneNamed(milestone);
-  if (type === 'feat' && !milestone && !parent) {
-    die('a feature needs a milestone — --milestone vX.Y (pnpm issue milestone list), or --parent to sit under a category');
-  }
+  const milestone = arg('milestone') ?? parentRecord?.milestone?.title ?? milestonePlan().current;
+  if (!milestone) die('no milestone — pass --milestone vX.Y, or set "current" in tools/audit/milestones.json');
+  milestoneNamed(milestone);
   const area = boardOption('Area', arg('area'), 'area');
   const size = boardOption('Size', arg('size'), 'size');
   const agent = boardOption('Agent', arg('agent'), 'agent');
@@ -578,10 +575,12 @@ if (cmd === 'check-labels') {
     if (errors.length) die(`refused:\n  - ${errors.join('\n  - ')}`);
   };
   if (sub === 'list') {
+    const plan = milestonePlan();
     for (const m of milestones()) {
       const total = m.open_issues + m.closed_issues;
+      const role = m.title === plan.current ? 'current' : plan.draft.includes(m.title) ? 'draft' : m.state;
       process.stdout.write(
-        `${m.title}  ${m.state}  ${m.closed_issues}/${total} closed` +
+        `${m.title}  ${role}  ${m.closed_issues}/${total} closed` +
           `${m.due_on ? `  due ${m.due_on.slice(0, 10)}` : ''}\n`
       );
     }
