@@ -25,7 +25,7 @@
     "bench": "node tools/remote/run.mjs vitest bench --run --config tools/bench/vitest.config.ts",
     "bench:tps": "node tools/remote/run.mjs vitest bench --run --config tools/bench/tps.config.ts",
     "check": "node tools/remote/run.mjs sh -c 'pnpm check:types && pnpm lint && pnpm knip'",
-    "ci:local": "node tools/remote/run.mjs node tools/remote/ci.mjs",
+    "chain": "node tools/chain.mjs",
     "lint": "node tools/remote/run.mjs node tools/audit/warnings.mjs eslint",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",

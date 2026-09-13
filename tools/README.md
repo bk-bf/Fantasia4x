@@ -9,10 +9,10 @@ to ubuntuserver through `remote/run.mjs`.
 | Path | What it does | How to run it |
 |---|---|---|
 | `issue.mjs` | Writes GitHub issues, pull requests, board lanes, labels, blockers and milestones in the shape the repo checks. | `pnpm issue <command>` |
-| `remote/run.mjs` | Runs a test or check command on ubuntuserver against the committed `HEAD`. | the `pnpm` test, check and bench scripts |
-| `remote/ci.mjs` | Runs the `check` job's pull-request steps on ubuntuserver. | `pnpm ci:local`, `pnpm ci:local --quick` |
+| `chain.mjs` | Pushes the branch, starts or follows the CI chain for it on GitHub, and streams the run to its result. | `pnpm chain`, `pnpm chain --pre` |
+| `remote/run.mjs` | Runs a test or check command on ubuntuserver against the committed `HEAD`, for work in progress. | the `pnpm` test, check and bench scripts |
 | `remote/guard.mjs` | Refuses a test runner, linter or harness started on the laptop. | Claude Code hook |
-| `remote/prepare.sh` | Puts the pinned Node, pnpm and Rust on the path on ubuntuserver. | loaded by `remote/ci.mjs` |
+| `remote/prepare.sh` | Puts the pinned Node, pnpm and Rust on the path on ubuntuserver. | loaded by `remote/run.mjs` |
 | `remote/runner/install.sh` | Sets up the self-hosted GitHub Actions runner on ubuntuserver: a `gh-runner` user, CodSpeed's valgrind build, and the runner as a low-priority service. Needs root once. | `sudo tools/remote/runner/install.sh <registration token>` |
 | `audit/` | The code audit: symbol ledger, rules, overnight runs, fixer, reviewer, resolver and promotion. `audit/README.md` describes it. | `pnpm audit`, `audit:run`, `audit:fix`, `audit:review`, `audit:resolve`, `audit:promote` |
 | `audit/deploy/` | The ubuntuserver units for the nightly audit, and their installer. | `tools/audit/deploy/install.sh` |

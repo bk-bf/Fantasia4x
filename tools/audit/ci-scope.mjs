@@ -8,7 +8,7 @@ const GAME = [
   /^sim-core\//,
   /^spatial-core\//,
   /^static\//,
-  /^(package\.json|pnpm-lock\.yaml|tsconfig\.json)$/,
+  /^(pnpm-lock\.yaml|tsconfig\.json)$/,
   /^(vite|svelte)\.config\.[cm]?[jt]s$/,
   /^\.github\/actions\//
 ];

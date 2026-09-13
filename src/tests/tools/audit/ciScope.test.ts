@@ -35,11 +35,16 @@ describe('scopeOf', () => {
   it('measures nothing when only the CI files change, since no leg runs them', () => {
     for (const file of [
       'tools/audit/ci-scope.mjs',
-      'tools/remote/ci.mjs',
+      'tools/chain.mjs',
       'tools/remote/run.mjs',
       'tools/hooks/pre-push',
       '.github/workflows/check.yml'
     ])
       expect(scopeOf([file])).toEqual(checkOnly);
+  });
+
+  it('measures a dependency change, which always touches the lockfile, but not a script or description', () => {
+    expect(scopeOf(['package.json'])).toEqual(checkOnly);
+    expect(scopeOf(['package.json', 'pnpm-lock.yaml']).bench).toBe(true);
   });
 });
