@@ -20,13 +20,17 @@ because the fixer runs `pnpm check` and the tests, and nothing test-related runs
 
 ## Pace
 
-Before every card the loop does what an audit worker does before a batch: it waits while the
-audit is paused (`tools/audit/lib/pace.mjs` `pauseReason`), and holds while `schedule` says the
-five-hour usage window is ahead of the ceiling's pro-rata line, polling every
-`poll_seconds` of the audit's control file. It also waits for GitHub's GraphQL points to reset
-while fewer than `RESOLVE_POINTS_FLOOR` (600) are left, because every board read costs 101 of
-the account's hourly 5,000. Holding is normal and is logged once every ten minutes; do not
-start a second resolver to get round it, and do not pass `--force` to the fixer.
+The resolver does not share the audit's pause. It works the cards whether the audit is paused
+or not, and starts the fixer with `--force`. It never runs beside the audit: while
+`fantasia-resolve` is active, `run.mjs` stops its workers, the dashboard does not relaunch a run,
+and `nightly-audit.sh` skips its run, its fixer and its reviewer.
+
+Before every card the loop waits while `fantasia-audit` or `fantasia-audit-run` is still active,
+and holds while `schedule` in `tools/audit/lib/pace.mjs` says the five-hour usage window is ahead
+of the ceiling's pro-rata line, polling every `poll_seconds` of the audit's control file. It also
+waits for GitHub's GraphQL points to reset while fewer than `RESOLVE_POINTS_FLOOR` (600) are
+left, because every board read costs 101 of the account's hourly 5,000. Holding is normal and is
+logged once every ten minutes; do not start a second resolver to get round it.
 
 ## 1. Look before starting
 

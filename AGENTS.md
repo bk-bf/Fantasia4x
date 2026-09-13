@@ -312,7 +312,10 @@ merges gets a comment naming the conflicting files while its card moves to `Fail
 `--verify playtest` works the card the same way and labels its pull request `needs playtest`,
 and the card goes straight to `PR ready`. The reviewer skips it, and the worktree stays with its own `.devport`, so `./dev.sh` in it runs
 beside whatever is already on 5173. He merges it once he has played it. The fixer and the
-reviewer stop while the audit is paused, because they spend the same limits.
+reviewer stop while the audit is paused, because they spend the same limits. The resolver ignores
+the pause and starts the fixer with `--force`, and while `fantasia-resolve` is active the audit
+stands down instead: `run.mjs` stops its workers, the dashboard does not relaunch a run, and
+`nightly-audit.sh` skips its run, its fixer and its reviewer.
 
 **Never write to GitHub with `gh` directly.** `gh issue create|edit|close|comment`,
 `gh label create|edit|delete` and `gh pr create|edit` are denied in `.claude/settings.json`. Use
