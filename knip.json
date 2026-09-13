@@ -6,6 +6,7 @@
     "electron/**/*.{cjs,js}",
     "tools/audit/*.mjs",
     "tools/work-pins/*.mjs",
+    "tools/gpu/*.mjs",
     "scripts/**/*.mjs",
     "src/tests/**/*.test.ts"
   ],
