@@ -136,12 +136,24 @@ rather than fall back to the laptop. On ubuntuserver and in CI it runs the comma
 `tools/remote/guard.mjs` refuses a test runner, linter, type check or harness started directly on
 the laptop; wrap anything else as `node tools/remote/run.mjs <command>`.
 
-**Run `pnpm ci:local` before pushing a branch that opens or updates a pull request; push only
-when it passes.** It runs the `check` job's pull-request steps on
+**The `pre-push` hook decides what runs on the server before a push; you do not.** The pull
+request's `check` runs every step on GitHub except ticks per second, which no workflow runs. On
+every push of a branch the hook asks `scopeOf` in `tools/audit/ci-scope.mjs` whether the pushed
+commit needs that leg: a change to the game, to the work-pins or bench harness, or to the gating
+itself (`ci-scope.mjs`, `tools/remote/ci.mjs`, `run.mjs`, `prepare.sh`, `scripts/hooks/pre-push`,
+`check.yml`) does. It then runs `ci.mjs --push` on ubuntuserver, which runs that one leg, and the
+push goes ahead only when it passes. Anything else runs nothing on the server. The server runs the
+checked-out commit, so the hook refuses a push that needs the leg from a branch that is not checked
+out. Run `pnpm ci:local` by hand only to reproduce a failure of `check`.
+
+`pnpm ci:local` runs the `check` job's pull-request steps on
 ubuntuserver against the merge base with `origin/dev`: `ci-check.mjs`, the seams and sizes audit,
 the work pins, the gungraun instruction counts, the browser work pins, a benchmark run and
 `actionlint` over the workflows. It runs every step, prints a pass, fail or skip line for each, and
-names what a skipped step needs. `pnpm ci:local --quick` skips gungraun and the browser leg. On
+names what a skipped step needs. `pnpm ci:local --quick` skips gungraun and the browser leg. `ci:local` and
+the `check` job both skip what a change cannot move: `tools/audit/ci-scope.mjs` runs the work pins,
+the browser leg, ticks per second and the benchmarks only when a game file or that harness changed,
+and gungraun only when a Rust crate did; a change to the gating itself runs all of them. On
 ubuntuserver `pnpm ci:local` runs it in place; `ci.mjs` loads the pinned Node and pnpm from
 `tools/remote/prepare.sh` before it runs anything.
 
@@ -193,7 +205,8 @@ This applies to subagents you dispatch.
 - Keep the `Co-Authored-By` trailer.
 
 **The hooks enforce it.** `scripts/hooks/commit-msg` refuses a message in any other shape,
-`pre-push` refuses a new branch not named `<type>/<title>` or `<type>/<title>-<issue number>`, and `pre-commit` and
+`pre-push` refuses a new branch not named `<type>/<title>` or `<type>/<title>-<issue number>` and
+runs the ticks-per-second leg when `scopeOf` says the pushed commit needs it, and `pre-commit` and
 `commit-msg` refuse a line or message carrying a private word, checked against the hashes in
 `tools/audit/private-words.json`. `pnpm hooks:install` links all three into `.git/hooks`, with `post-checkout`, which copies the main
 checkout's `.svelte-kit/tsconfig.json` into a new worktree so its `tsconfig.json` resolves; run it in
@@ -326,7 +339,7 @@ pnpm issue labels                       # every label the schema allows
 pnpm issue lint --body-file draft.md    # would this be accepted?
 pnpm issue create --title T --type fix --area sim --size S --agent haiku --body-file - --label high --label drift
 pnpm issue close 12 --commit <sha>
-pnpm issue pr --head <branch> --title T --body-file - [--auto]   # a pull request into dev; --auto merges it once check passes
+pnpm issue pr --head <branch> --title T --body-file -   # open a pull request into dev
 pnpm issue pr-edit 84 --body-file -                     # rewrite its description
 pnpm issue milestone list                               # versions and how much of each is closed
 pnpm issue tidy [--remove] [--host H]...                # merged or idle worktrees, branches and test clones
@@ -507,10 +520,16 @@ change the notes show as real cost gets a follow-up issue, or goes back to its b
 **Work done in a conversation needs no issue, and lands through a pull request like everything
 else.** Branch from `dev` in a worktree that does not track it, `git worktree add --no-track -b
 <type>/<title> <path> origin/dev`, because a branch that tracks `origin/dev` lets an editor's Sync
-push it straight at `dev`. Commit, run `pnpm ci:local`, push the branch, and open the pull request
-with `pnpm issue pr --head <branch> --title T --body-file - --auto`; it merges itself once `check`
-passes on an up-to-date branch. If the work settles an issue that already exists, say `Fixes #n`
-in the body.
+push it straight at `dev`. Commit, push the branch, and open the pull request
+with `pnpm issue pr --head <branch> --title T --body-file -`. Watch its `check` in the background,
+and merge it with `gh pr merge <n> --merge` once `check` is green on an up-to-date branch. If the
+work settles an issue that already exists, say `Fixes #n` in the body.
+
+Batch small changes into one pull request. While the requests are small, keep one conversation
+worktree open, commit each change there as its own commit, push once the batch is done, and open a
+single pull request for all of it. Open a separate pull request only for a change
+that has to land before the rest, or one large enough to be reviewed on its own. The merge keeps
+each commit, so every change stays visible in `dev`'s history.
 
 Open an issue only when one of these holds:
 
