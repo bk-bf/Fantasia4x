@@ -166,7 +166,7 @@ async function loadGame(page, origin) {
   );
 }
 
-export async function openGame({ tree, fixture, serverLog, args = [], log, clock = true }) {
+export async function openGame({ tree, fixture, serverLog, args = [], log, clock = true, init = [] }) {
   const body = readFixture(resolve(fixture));
   const port = await freePort();
   const origin = `http://127.0.0.1:${port}`;
@@ -182,6 +182,7 @@ export async function openGame({ tree, fixture, serverLog, args = [], log, clock
     await context.addInitScript(seedRandom, RANDOM_SEED);
     await context.addInitScript(hideAudio);
     await context.addInitScript(disableAutoPause);
+    for (const script of init) await context.addInitScript(script);
     const page = await context.newPage();
     const errors = [];
     page.on('pageerror', (e) => errors.push(e.message));

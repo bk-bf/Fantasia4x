@@ -54,10 +54,49 @@ function takeFrames() {
   return window.__f4xFrameTimes;
 }
 
+function recordTicks() {
+  const ticks = (window.__f4xTicks = []);
+  const Original = window.Worker;
+  window.Worker = class extends Original {
+    constructor(...args) {
+      super(...args);
+      this.addEventListener('message', (e) => {
+        if (e.data?.kind === 'snapshot') ticks.push(performance.now());
+      });
+    }
+  };
+}
+
+const share = (part, whole) => (whole ? Number(((100 * part) / whole).toFixed(1)) : 0);
+
+function tickShare(times, ticks, slowerThan) {
+  const inside = ticks.filter((t) => t > times[0] && t <= times.at(-1));
+  let slow = 0;
+  let slowTicked = 0;
+  let fast = 0;
+  let fastTicked = 0;
+  let j = 0;
+  for (let i = 1; i < times.length; i++) {
+    let ticked = false;
+    while (j < inside.length && inside[j] <= times[i]) {
+      if (inside[j] > times[i - 1]) ticked = true;
+      j++;
+    }
+    if (times[i] - times[i - 1] > slowerThan) {
+      slow++;
+      if (ticked) slowTicked++;
+    } else {
+      fast++;
+      if (ticked) fastTicked++;
+    }
+  }
+  return { ticks: inside.length, slowWithTickPct: share(slowTicked, slow), otherWithTickPct: share(fastTicked, fast) };
+}
+
 const quantile = (xs, q) => [...xs].sort((a, b) => a - b)[Math.min(xs.length - 1, Math.floor(q * xs.length))];
 const median = (xs) => quantile(xs, 0.5);
 
-function summarise(times, seconds) {
+function summarise(times, seconds, ticks) {
   const deltas = times.slice(1).map((t, i) => t - times[i]);
   const mid = median(deltas);
   return {
@@ -66,7 +105,8 @@ function summarise(times, seconds) {
     medianMs: Number(mid.toFixed(3)),
     p95Ms: Number(quantile(deltas, 0.95).toFixed(3)),
     maxMs: Number(Math.max(...deltas).toFixed(3)),
-    slowFrames: deltas.filter((d) => d > 3 * mid).length
+    slowFrames: deltas.filter((d) => d > 3 * mid).length,
+    ...tickShare(times, ticks, 3 * mid)
   };
 }
 
@@ -87,7 +127,8 @@ async function runPhase(page, phase, ms) {
   await page.evaluate(recordFrames);
   if (phase.pan) await panPath(page, ms);
   else await sleep(ms);
-  const frames = summarise(await page.evaluate(takeFrames), ms / 1000);
+  const times = await page.evaluate(takeFrames);
+  const frames = summarise(times, ms / 1000, await page.evaluate(() => window.__f4xTicks ?? []));
   const render = await takeRender(page);
   return {
     ...frames,
@@ -114,7 +155,8 @@ async function main() {
     serverLog: `${out}.dev-server.log`,
     args,
     log,
-    clock: false
+    clock: false,
+    init: [recordTicks]
   });
   try {
     const { page } = game;
