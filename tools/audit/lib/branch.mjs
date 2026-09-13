@@ -1,6 +1,6 @@
 const MAX_SLUG = 48;
 
-const RULE = /^[a-z]+\/(?=[a-z0-9-]*[a-z])[a-z0-9]+(?:-[a-z0-9]+)*-\d+$/;
+const RULE = /^[a-z]+\/(?=[a-z0-9-]*[a-z])[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 const LONG_LIVED = new Set(['main', 'dev']);
 
@@ -24,7 +24,7 @@ export function branchFor(issue) {
 export function branchProblem(name) {
   if (LONG_LIVED.has(name) || RULE.test(name)) return null;
   return (
-    `branch "${name}" is not named <type>/<title>-<issue number> — say what the branch does, ` +
-    `then append the issue it belongs to, e.g. fix/stealth-encounter-pacing-42`
+    `branch "${name}" is not named <type>/<title> or <type>/<title>-<issue number> — say what the ` +
+    `branch does, and append the issue it belongs to when it has one, e.g. fix/stealth-encounter-pacing-42`
   );
 }

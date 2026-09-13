@@ -98,13 +98,14 @@ export function editPull(n, body) {
   );
 }
 
-export function createPull({ branch, title, body, labels = [] }) {
+export function createPull({ branch, title, body, labels = [], autoMerge = false }) {
   const problem =
     branchProblem(branch) || checkPrivate(`${title}\n${body}`)[0] || linkProblem(body);
   if (problem) throw new Error(problem);
   const args = ['pr', 'create', '--base', BASE, '--head', branch, '--title', title, '--body-file', '-'];
   for (const l of labels) args.push('--label', l);
   const url = gh(args, body).trim();
+  if (autoMerge) gh(['pr', 'merge', branch, '--auto', '--merge']);
   return openPullFor(branch) ?? { url };
 }
 
