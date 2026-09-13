@@ -5,16 +5,15 @@ import tsPlugin from '@typescript-eslint/eslint-plugin';
 import svelte from 'eslint-plugin-svelte';
 import svelteParser from 'svelte-eslint-parser';
 import prettier from 'eslint-config-prettier';
+import { includeIgnoreFile } from '@eslint/compat';
+import { fileURLToPath } from 'node:url';
+
+const GITIGNORED = includeIgnoreFile(fileURLToPath(new URL('.gitignore', import.meta.url)));
 
 const IGNORES = [
-  'node_modules/**',
   '.claude/**',
-  'build/**',
   'dist/**',
-  '.svelte-kit/**',
   'package/**',
-  'src/lib/spatial-core-pkg/**',
-  'src/lib/sim-core-pkg/**',
   'spatial-core/**',
   'sim-core/**',
   'desktop-spike/**',
@@ -48,6 +47,7 @@ const SHARED = {
 };
 
 export default [
+  GITIGNORED,
   { ignores: IGNORES },
   js.configs.recommended,
   {

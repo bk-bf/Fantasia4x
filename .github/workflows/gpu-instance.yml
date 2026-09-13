@@ -1,0 +1,38 @@
+name: gpu-instance
+
+on:
+  workflow_dispatch:
+    inputs:
+      state:
+        description: Start or stop the rented GPU instance
+        type: choice
+        options: [running, stopped]
+        default: running
+
+concurrency:
+  group: gpu-instance
+  cancel-in-progress: false
+
+jobs:
+  set:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    env:
+      VAST_API_KEY: ${{ secrets.VAST_API_KEY }}
+      VAST_INSTANCE: ${{ vars.VAST_INSTANCE }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24.20.0
+
+      - name: Start the instance
+        if: inputs.state == 'running'
+        run: node tools/gpu/vast.mjs start "$VAST_INSTANCE"
+
+      - name: Stop the instance
+        if: inputs.state == 'stopped'
+        run: node tools/gpu/vast.mjs stop "$VAST_INSTANCE"

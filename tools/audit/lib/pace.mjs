@@ -1,3 +1,4 @@
+import { spawnSync } from 'node:child_process';
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -9,6 +10,13 @@ const PACE = join(LEDGER, 'pace.json');
 
 export const WINDOW_MS = 5 * 3600_000;
 export const RESUME_MARGIN = 10;
+
+export const RESOLVER_UNIT = 'fantasia-resolve';
+export const AUDIT_RUN_UNIT = 'fantasia-audit-run';
+export const AUDIT_UNITS = ['fantasia-audit', AUDIT_RUN_UNIT];
+
+export const activeUnits = (units) =>
+  units.filter((unit) => spawnSync('systemctl', ['--user', 'is-active', '--quiet', unit]).status === 0);
 
 const DEFAULT_CONTROL = {
   paused: false,

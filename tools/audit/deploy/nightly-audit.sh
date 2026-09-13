@@ -56,6 +56,11 @@ exec 9>"$LOCK"
 flock -n 9 || die "a previous run still holds $LOCK"
 
 say "=== nightly audit $STAMP ==="
+resolving() { systemctl --user is-active --quiet fantasia-resolve; }
+if resolving; then
+  say "fantasia-resolve is working the Ready cards — skipping this run, nothing was touched"
+  exit 0
+fi
 [ -x "$NODE" ] || die "no node at $NODE (needs >= 22.5 for node:sqlite)"
 [ -x "$AUDIT_CLAUDE" ] || die "no claude at $AUDIT_CLAUDE"
 [ -d "$REPO/.git" ] || die "no checkout at $REPO"
@@ -117,6 +122,7 @@ if [ "${AUDIT_NO_FIX:-0}" = 1 ]; then
 else
   say "--- fixer and reviewer: up to $FIXES card(s), each reviewed before the next is worked"
   for _ in $(seq 1 "$FIXES"); do
+    if resolving; then say "fantasia-resolve is working the Ready cards — skipping the fixer"; break; fi
     ( cd "$REPO" && "$NODE" tools/audit/fix.mjs --next ) || break
     if [ "${AUDIT_NO_REVIEW:-0}" != 1 ]; then
       ( cd "$REPO" && "$NODE" tools/audit/review.mjs --next ) || true
@@ -127,6 +133,8 @@ fi
 # --- 6. review whatever is still waiting -------------------------------------
 if [ "${AUDIT_NO_REVIEW:-0}" = 1 ]; then
   say "AUDIT_NO_REVIEW=1 — skipping the review pass"
+elif resolving; then
+  say "fantasia-resolve is working the Ready cards — skipping the review pass"
 else
   say "--- reviewer: up to $REVIEWS pull request(s) without a review"
   for _ in $(seq 1 "$REVIEWS"); do

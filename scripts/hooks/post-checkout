@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+TOP="$(git rev-parse --show-toplevel)"
+MAIN="$(cd "$(git rev-parse --git-common-dir)/.." && pwd)"
+SRC="$MAIN/.svelte-kit/tsconfig.json"
+DEST="$TOP/.svelte-kit/tsconfig.json"
+
+if [[ "$TOP" == "$MAIN" || -e "$DEST" || ! -e "$SRC" ]]; then
+  exit 0
+fi
+mkdir -p "$TOP/.svelte-kit"
+cp "$SRC" "$DEST"

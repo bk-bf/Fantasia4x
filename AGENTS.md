@@ -142,9 +142,8 @@ ubuntuserver against the merge base with `origin/dev`: `ci-check.mjs`, the seams
 the work pins, the gungraun instruction counts, the browser work pins, a benchmark run and
 `actionlint` over the workflows. It runs every step, prints a pass, fail or skip line for each, and
 names what a skipped step needs. `pnpm ci:local --quick` skips gungraun and the browser leg. On
-ubuntuserver itself start it as `node tools/remote/ci.mjs`: the server's default Node is 20, which
-the pinned pnpm 11 refuses, and `ci.mjs` loads the pinned Node and pnpm from `tools/remote/prepare.sh`
-before it runs anything.
+ubuntuserver `pnpm ci:local` runs it in place; `ci.mjs` loads the pinned Node and pnpm from
+`tools/remote/prepare.sh` before it runs anything.
 
 **`pnpm check` is the gate.** It runs `svelte-check`, `eslint` and `knip`, and all three must
 stay green. `eslint` is frozen at its current warning count with `--max-warnings`, so a change
@@ -196,7 +195,8 @@ This applies to subagents you dispatch.
 **The hooks enforce it.** `scripts/hooks/commit-msg` refuses a message in any other shape,
 `pre-push` refuses a new branch not named `<type>/<title>-<issue number>`, and `pre-commit` and
 `commit-msg` refuse a line or message carrying a private word, checked against the hashes in
-`tools/audit/private-words.json`. `pnpm hooks:install` links all three into `.git/hooks`; run it in
+`tools/audit/private-words.json`. `pnpm hooks:install` links all three into `.git/hooks`, with `post-checkout`, which copies the main
+checkout's `.svelte-kit/tsconfig.json` into a new worktree so its `tsconfig.json` resolves; run it in
 any clone whose hooks are missing. Never bypass them with `--no-verify`.
 
 ## Trackers
@@ -312,7 +312,10 @@ merges gets a comment naming the conflicting files while its card moves to `Fail
 `--verify playtest` works the card the same way and labels its pull request `needs playtest`,
 and the card goes straight to `PR ready`. The reviewer skips it, and the worktree stays with its own `.devport`, so `./dev.sh` in it runs
 beside whatever is already on 5173. He merges it once he has played it. The fixer and the
-reviewer stop while the audit is paused, because they spend the same limits.
+reviewer stop while the audit is paused, because they spend the same limits. The resolver ignores
+the pause and starts the fixer with `--force`, and while `fantasia-resolve` is active the audit
+stands down instead: `run.mjs` stops its workers, the dashboard does not relaunch a run, and
+`nightly-audit.sh` skips its run, its fixer and its reviewer.
 
 **Never write to GitHub with `gh` directly.** `gh issue create|edit|close|comment`,
 `gh label create|edit|delete` and `gh pr create|edit` are denied in `.claude/settings.json`. Use
@@ -321,11 +324,19 @@ reviewer stop while the audit is paused, because they spend the same limits.
 ```bash
 pnpm issue labels                       # every label the schema allows
 pnpm issue lint --body-file draft.md    # would this be accepted?
-pnpm issue create --title T --type fix --area sim --size S --body-file - --label high --label drift
+pnpm issue create --title T --type fix --area sim --size S --agent haiku --body-file - --label high --label drift
 pnpm issue close 12 --commit <sha>
 pnpm issue pr --head <branch> --title T --body-file -   # open a pull request into dev
 pnpm issue pr-edit 84 --body-file -                     # rewrite its description
+pnpm issue milestone list                               # versions and how much of each is closed
+pnpm issue tidy [--remove] [--host H]...                # merged or idle worktrees, branches and test clones
 ```
+
+`pnpm issue tidy` lists what is left over on this machine and its test hosts: worktrees and branches
+that are merged into `dev`, or identical on GitHub with no open pull request, and test clones whose
+worktree is gone. `--remove` deletes only a worktree that is clean, untouched for an hour and used by
+no process, and a clone no run holds. The prompt hook names the count when this machine has any, and
+`after-merge.mjs` runs it with `--remove` on ubuntuserver after every merge pass.
 
 It repairs what is mechanical and refuses what is not. A `path:line` written in prose becomes a
 permalink pinned to the commit the audit indexed — a citation names a line, and a line is only
@@ -368,6 +379,14 @@ for what the audit raises: Area from the subarea, Size from how many files the f
 `pnpm issue edit <n> --area A --size S` sets them, as `--verify V` sets the Verify route. Size is the effort: `S` is one change in a
 file or two, `M` is several files or a measurement, `L` is several steps, a new system or a design.
 
+**Agent is required on every card too: it is the model the fixer works the card under.**
+`pnpm issue create` refuses an issue without `--agent` (`haiku`, `sonnet`, `opus`), and
+`pnpm issue edit <n> --agent A` changes it. `fix.mjs` passes it to `claude --model` and refuses a
+card without one. Pick the smallest model the scope allows: `haiku` for a mechanical change in a
+file or two, `sonnet` for several files, a feature step or a headless measurement, `opus` only for
+a cross-cutting refactor, a new system or a design. `raise.mjs` derives it with `agentFor` in
+`tools/audit/lib/raise.mjs`, and `check-labels` reports an open card without one.
+
 **A feature is built one step per branch.** Work type `feat` goes with the kind `feature`, and
 nothing else: `create --type feat` adds the kind when no kind is given, and `check-labels`
 reports a card where the two disagree. A decision card about a feature may carry `feature` too.
@@ -386,6 +405,19 @@ the sub-issue the work belongs to, making a new one with `pnpm issue create --pa
 step has none. The new sub-issue takes the parent's work type, and its lane when that is
 `Backlog`, `Blocked on you`, `Ready` or `Manual`. Its pull request says `Fixes #<sub-issue>`, with the parent's step on the `Step:`
 line, and `after-merge.mjs` ticks that step in the parent as well.
+
+**A milestone is a version; a spec category is a parent issue inside it.** Every issue sits in a
+version milestone. Each spec category in one is a parent issue, and each feature of the category
+is a sub-issue with its own `## Steps`. GitHub milestones do not nest, so the category is an issue,
+not a milestone. `tools/audit/milestones.json` names the `current` milestone, where every new issue
+lands unless `--milestone` or its parent names another, and the `draft` ones, which take only an
+issue assigned to them by name. Moving `current` to the next version is how new issues stop landing
+in the one being finished. `pnpm issue milestone create --title v0.2 --body-file -` refuses a title
+that is not a version, a description under ~240 characters of prose or with no checkbox as its
+definition of done, and anything an issue body is refused for. `milestone close` refuses while an
+issue in it is open. `create --milestone` and `edit --milestone` refuse a milestone that does not
+exist or is closed. `check-labels` reports an open issue with no milestone, and a sub-issue in a
+different milestone from its parent.
 
 **A body has to say something.** `create` also refuses a stub: under ~240 characters of prose,
 no citation, or no remediation checkbox (unless it carries `needs decision`). A heading with
@@ -466,6 +498,11 @@ counted. Read what it names; if the edit belongs to that work, do it on that bra
 it, the reviewer and CI report on it, and it merges once they pass. The pull request is where he reads the
 diff and where he writes what is wrong with it, and the fixer reads those comments on its next
 attempt. Several related fixes belong in one branch and one pull request, not one each.
+
+**Read a pull request's Performance notes before calling it ready or merging it.** The `perf-notes`
+job in `check.yml` keeps one comment on each pull request with CodSpeed's changed benchmarks and the
+work pins' changed totals, and raises each as a warning on the run. Neither blocks the merge. A
+change the notes show as real cost gets a follow-up issue, or goes back to its branch.
 
 **Work done in a conversation at Kirill's request needs no issue and no pull request.** Branch
 from `dev` in a worktree, run `pnpm check` and the related tests, and commit it to `dev`

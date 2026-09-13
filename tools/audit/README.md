@@ -222,7 +222,8 @@ pnpm audit:fix --next --keep              # leave the worktree to inspect
 ```
 
 The gate is the board, not a label: a card sitting in `Ready`, worked on the route its `Verify`
-field names.
+field names, by the model its `Agent` field names. `Agent` is `haiku`, `sonnet` or `opus` and goes
+to `claude --model` as it is. `--issue` refuses a card with no `Agent`, and `--next` skips one.
 
 One issue, one worktree off `origin/dev`, one branch `fix/<title>-<n>` from `branchFor` in
 `lib/branch.mjs`, and the attempt written up
@@ -272,7 +273,8 @@ pnpm audit:resolve --dry-run              # pace verdict, GitHub points and the 
 ```
 
 `resolve.mjs` runs `fix.mjs --issue <n>` on each card in `Ready`: tests first, then headless,
-then playtest, oldest first within a route. Each card is tried once per run, whatever the fixer
+then playtest, oldest first within a route. Each card runs under the model its `Agent` field
+names, and the log line for it names both. Each card is tried once per run, whatever the fixer
 does with it — a pull request, `Failed`, nothing changed or a refusal — and the run ends when no
 untried card is left. Before every card it waits while the audit is paused and holds while
 `schedule` in `lib/pace.mjs` says the five-hour usage window is ahead of its line, the same gate
@@ -377,7 +379,7 @@ stops a second night starting on top of an overrunning one.
 `loginctl enable-linger` is set. `install.sh` says so if it is not.
 
 Environment overrides: `AUDIT_REPO` `AUDIT_TREE` `AUDIT_GRAPH` `AUDIT_NODE` `AUDIT_CLAUDE`
-`AUDIT_HOURS` `AUDIT_WORKERS` `AUDIT_MODEL` `AUDIT_FIX_MODEL` `AUDIT_FIXES` `AUDIT_REVIEWS`
+`AUDIT_HOURS` `AUDIT_WORKERS` `AUDIT_MODEL` `AUDIT_FIXES` `AUDIT_REVIEWS`
 `AUDIT_NO_FIX`.
 
 ## Storage

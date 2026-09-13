@@ -166,7 +166,7 @@ async function loadGame(page, origin) {
   );
 }
 
-export async function openGame({ tree, fixture, serverLog, args = [], log }) {
+export async function openGame({ tree, fixture, serverLog, args = [], log, clock = true }) {
   const body = readFixture(resolve(fixture));
   const port = await freePort();
   const origin = `http://127.0.0.1:${port}`;
@@ -186,7 +186,7 @@ export async function openGame({ tree, fixture, serverLog, args = [], log }) {
     const errors = [];
     page.on('pageerror', (e) => errors.push(e.message));
     const networkQuiet = trackNetwork(page);
-    await page.clock.install({ time: EPOCH_MS });
+    if (clock) await page.clock.install({ time: EPOCH_MS });
     await seedSave(page, origin, body, log);
     await loadGame(page, origin);
     await networkQuiet(NETWORK_QUIET_MS);
