@@ -17,11 +17,12 @@ const WORK_PINS = [/^tools\/work-pins\//];
 const BENCH = [/^tools\/bench\//];
 const GUNGRAUN = [/^tools\/gungraun\//];
 const DOCS = [/\.md$/, /^docs\//];
+const TESTS = /^src\/tests\//;
 
 const touches = (files, rules) => files.some((f) => rules.some((r) => r.test(f)));
 
 export function scopeOf(files) {
-  const game = touches(files, GAME);
+  const game = touches(files.filter((f) => !TESTS.test(f)), GAME);
   return {
     check: !files.length || !files.every((f) => DOCS.some((r) => r.test(f))),
     workPins: game || touches(files, WORK_PINS),

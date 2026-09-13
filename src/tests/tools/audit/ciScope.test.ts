@@ -47,4 +47,8 @@ describe('scopeOf', () => {
     expect(scopeOf(['package.json'])).toEqual(checkOnly);
     expect(scopeOf(['package.json', 'pnpm-lock.yaml']).bench).toBe(true);
   });
+
+  it('measures nothing for a change to tests alone, since no leg runs them', () => {
+    expect(scopeOf(['src/tests/tools/audit/ciScope.test.ts', 'src/tests/game/combat.test.ts'])).toEqual(checkOnly);
+  });
 });
