@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 import { execFileSync, spawn, spawnSync } from 'node:child_process';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import { hostname } from 'node:os';
-import { basename, isAbsolute, relative } from 'node:path';
+import { basename, isAbsolute, join, relative } from 'node:path';
 
 const TEST_HOSTNAME = 'ubuntuserver';
 const HOST = process.env.F4X_TEST_HOST ?? 'ubuntu';
@@ -12,6 +13,7 @@ const FORWARDED_ENV = /^(WORK_PINS_|RUN_AUDITS$|CHECK_BASE$|VITEST_)/;
 const SSH_UNREACHABLE = 255;
 const WRONG_COMMIT = 3;
 const DIRTY_LISTED = 10;
+const CI_SCRIPT = /(^|\/)tools\/remote\/ci\.mjs$/;
 
 const die = (msg, code = 2) => {
   process.stderr.write(`[remote] ${msg}\n`);
@@ -21,13 +23,23 @@ const die = (msg, code = 2) => {
 const argv = process.argv.slice(2);
 if (!argv.length) die('usage: node tools/remote/run.mjs <command> [args...]');
 
+const git = (...args) => execFileSync('git', args, { encoding: 'utf8' }).trim();
+
+function recordPass(commit) {
+  if (!argv.some((a) => CI_SCRIPT.test(a))) return;
+  const passed = join(git('rev-parse', '--path-format=absolute', '--git-common-dir'), 'f4x-ci-passed');
+  mkdirSync(passed, { recursive: true });
+  writeFileSync(join(passed, commit), `${new Date().toISOString()} ${argv.join(' ')}\n`);
+}
+
 if (process.env.CI === 'true' || hostname() === TEST_HOSTNAME) {
   const r = spawnSync(argv[0], argv.slice(1), { stdio: 'inherit' });
   if (r.error) die(`${argv[0]}: ${r.error.message}`, 127);
+  if (r.status === 0 && !git('status', '--porcelain', '--untracked-files=normal'))
+    recordPass(git('rev-parse', 'HEAD'));
   process.exit(r.status ?? 1);
 }
 
-const git = (...args) => execFileSync('git', args, { encoding: 'utf8' }).trim();
 const quote = (s) => `'${String(s).replaceAll("'", `'\\''`)}'`;
 const top = git('rev-parse', '--show-toplevel');
 const dir = `${RUNS_DIR}/${basename(top)}`;
@@ -141,6 +153,7 @@ function run() {
     }
     const now = git('rev-parse', 'HEAD');
     if (now !== sha) die(`result is for ${sha}; this tree moved to ${now} during the run`, code || 1);
+    if (code === 0) recordPass(sha);
     process.stderr.write(`[remote] exit ${code} for ${sha}\n`);
     process.exit(code ?? 1);
   });
