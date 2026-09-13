@@ -107,8 +107,9 @@ jobs:
           path: work-pins-out
 
   codspeed:
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, ubuntuserver]
+    timeout-minutes: 60
     permissions:
       contents: read
       id-token: write
@@ -121,6 +122,8 @@ jobs:
         uses: CodSpeedHQ/action@v5
         with:
           mode: simulation
+          runner-version: 5.2.1
+          cache-instruments: false
           run: pnpm bench
 
   perf-notes:
