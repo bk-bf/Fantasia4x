@@ -5,45 +5,13 @@ import { fileURLToPath } from 'node:url';
 import { loadRules } from './rules.mjs';
 import { ROOT } from './links.mjs';
 import { checkPrivate } from './private.mjs';
+import { headingsOf, requiredSections } from './template.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 
 const TEMPLATE_FOR = { feat: 'feat.md', decision: 'decision.md' };
-const templateCache = new Map();
 
 export const templateFor = (workType) => TEMPLATE_FOR[workType] ?? 'defect.md';
-
-const headingsOf = (md) =>
-  [...String(md ?? '').matchAll(/^##\s+(.+)$/gm)].map((m) => m[1].trim().toLowerCase());
-
-function requiredSections(pathInGithub) {
-  if (!templateCache.has(pathInGithub)) {
-    let sections = [];
-    try {
-      sections = headingsOf(readFileSync(join(ROOT, '.github', pathInGithub), 'utf8'));
-    } catch {
-      sections = [];
-    }
-    templateCache.set(pathInGithub, sections);
-  }
-  return templateCache.get(pathInGithub);
-}
-
-const PULL_TEMPLATE = 'pull_request_template.md';
-const OPTIONAL_PULL_SECTIONS = new Set(['play it']);
-
-export function checkPullTemplate(body) {
-  const headings = new Set(headingsOf(body));
-  const missing = requiredSections(PULL_TEMPLATE).filter(
-    (s) => !OPTIONAL_PULL_SECTIONS.has(s) && !headings.has(s)
-  );
-  return missing.length
-    ? [
-        `.github/${PULL_TEMPLATE} asks for a section this body does not have: ` +
-          missing.map((m) => `"${m}"`).join(', ')
-      ]
-    : [];
-}
 
 
 /** Every label a writer may use: the fixed vocabulary plus one per rule name. Anything else

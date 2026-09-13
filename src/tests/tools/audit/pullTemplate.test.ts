@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { checkPullTemplate } from '../../../../tools/audit/lib/schema.mjs';
-import { renderPull } from '../../../../tools/audit/lib/prs.mjs';
+import { checkPullTemplate } from '../../../../tools/audit/lib/template.mjs';
+
+const untypedFixerModule = new URL('../../../../tools/audit/lib/prs.mjs', import.meta.url).href;
 
 const templated = [
   'Fixes #12',
@@ -33,7 +34,8 @@ describe('checkPullTemplate', () => {
     expect(errors[0]).not.toContain('"play it"');
   });
 
-  it('accepts the body the fixer renders on both of its routes', () => {
+  it('accepts the body the fixer renders on both of its routes', async () => {
+    const { renderPull } = await import(untypedFixerModule);
     for (const route of ['tests', 'playtest']) {
       const body = renderPull({
         issue: 12,
