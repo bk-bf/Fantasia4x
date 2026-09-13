@@ -324,6 +324,8 @@ if (cmd === 'check-labels') {
     `\n${bad} open issue(s) incompletely classified, ${untyped} with a gap on the board\n`
   );
   if (bad || untyped) process.exit(1);
+} else if (cmd === 'board') {
+  process.stdout.write(`${JSON.stringify({ items: boardItems() })}\n`);
 } else if (cmd === 'lane') {
   const n = argv[1] ?? die('which issue?');
   const to = argv.slice(2).join(' ') || '';

@@ -2,6 +2,7 @@ import { execFileSync } from 'node:child_process';
 
 import { linkOf, parentOf } from './pulls.mjs';
 import { passiveLane } from './lanes.mjs';
+import { REST_FIELD_TYPES, fromRest } from './board-rest.mjs';
 
 const PROJECT_ID = 'PVT_kwHOBlZOB84Bip03';
 const STATUS_FIELD_ID = 'PVTSSF_lAHOBlZOB84Bip03zhhhAfI';
@@ -38,7 +39,11 @@ const AGENT_TRIAGED_KINDS = new Set(['drift', 'test gap']);
 const agentMayTriage = (item) => (item.labels ?? []).some((l) => AGENT_TRIAGED_KINDS.has(l));
 
 const gh = (args) =>
-  execFileSync('gh', args, { encoding: 'utf8', stdio: ['pipe', 'pipe', 'inherit'] });
+  execFileSync('gh', args, {
+    encoding: 'utf8',
+    stdio: ['pipe', 'pipe', 'inherit'],
+    maxBuffer: 64 * 1024 * 1024
+  });
 
 let cache = null;
 
@@ -46,14 +51,32 @@ export const invalidate = () => {
   cache = null;
 };
 
+const REST_BASE = `/users/${OWNER}/projectsV2/${PROJECT_NUMBER}`;
+
+const restPages = (path) => JSON.parse(gh(['api', '--paginate', '--slurp', path])).flat();
+
+function restItems() {
+  const ids = restPages(`${REST_BASE}/fields?per_page=100`)
+    .filter((f) => REST_FIELD_TYPES.has(f.data_type))
+    .map((f) => f.id);
+  return restPages(`${REST_BASE}/items?per_page=100&fields=${ids.join(',')}`).map((it) =>
+    fromRest(it, `${OWNER}/Fantasia4x`)
+  );
+}
+
 export function boardItems() {
   if (!cache) {
-    cache = JSON.parse(
-      gh([
-        'project', 'item-list', PROJECT_NUMBER,
-        '--owner', OWNER, '--limit', '300', '--format', 'json'
-      ])
-    ).items;
+    try {
+      cache = JSON.parse(
+        gh([
+          'project', 'item-list', PROJECT_NUMBER,
+          '--owner', OWNER, '--limit', '300', '--format', 'json'
+        ])
+      ).items;
+    } catch {
+      process.stderr.write('board: the GraphQL read failed, reading the board over REST\n');
+      cache = restItems();
+    }
   }
   return cache;
 }

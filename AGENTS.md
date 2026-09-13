@@ -490,7 +490,11 @@ Reading is unrestricted: `gh issue list`, `gh issue view`, `gh project item-list
 **Reading is not free.** GitHub allows the account 5,000 GraphQL points an hour, shared by every
 agent on both machines, `board-sync.py` and the dashboard. `gh project item-list` costs 101 points
 a call; `gh issue list` and `gh issue view` cost about 1. Read the board once and keep the result.
-When the points run out, every board read and `gh issue create` fails until the hour resets.
+When the points run out, `gh issue create` and every card write fail until the hour resets. Board
+reads do not: `boardItems` in `tools/audit/lib/board.mjs` and `board_items` in `board-sync.py`
+then read the board over GitHub's REST API, which counts 5,000 requests an hour on a separate
+budget and spends 3 on a read. `pnpm -s issue board` prints the board as `gh project item-list`
+does, through the same fallback.
 
 **Check the limit with GraphQL, not `gh api rate_limit`.** Its `graphql` figure does not track
 the counter the limit is enforced against, and reads `used 0` while hundreds are spent. A
