@@ -136,8 +136,8 @@ rather than fall back to the laptop. On ubuntuserver and in CI it runs the comma
 `tools/remote/guard.mjs` refuses a test runner, linter, type check or harness started directly on
 the laptop; wrap anything else as `node tools/remote/run.mjs <command>`.
 
-**Run `pnpm ci:local` before pushing a branch that opens or updates a pull request, and before
-pushing `dev`; push only when it passes.** It runs the `check` job's pull-request steps on
+**Run `pnpm ci:local` before pushing a branch that opens or updates a pull request; push only
+when it passes.** It runs the `check` job's pull-request steps on
 ubuntuserver against the merge base with `origin/dev`: `ci-check.mjs`, the seams and sizes audit,
 the work pins, the gungraun instruction counts, the browser work pins, a benchmark run and
 `actionlint` over the workflows. It runs every step, prints a pass, fail or skip line for each, and
@@ -193,9 +193,7 @@ This applies to subagents you dispatch.
 - Keep the `Co-Authored-By` trailer.
 
 **The hooks enforce it.** `scripts/hooks/commit-msg` refuses a message in any other shape,
-`pre-push` refuses a new branch not named `<type>/<title>-<issue number>`, and a push to `dev` from any
-other branch or of a commit that has not passed `pnpm ci:local` (for a merge, the branch it brings in
-must have passed; `tools/remote/run.mjs` records each passing commit in `.git/f4x-ci-passed`), and `pre-commit` and
+`pre-push` refuses a new branch not named `<type>/<title>` or `<type>/<title>-<issue number>`, and `pre-commit` and
 `commit-msg` refuse a line or message carrying a private word, checked against the hashes in
 `tools/audit/private-words.json`. `pnpm hooks:install` links all three into `.git/hooks`, with `post-checkout`, which copies the main
 checkout's `.svelte-kit/tsconfig.json` into a new worktree so its `tsconfig.json` resolves; run it in
@@ -285,9 +283,9 @@ reaches `Done` except by a promotion he ran.
 **After `Ready`, the work is a pull request.** `pnpm audit:fix --next` takes the oldest `Ready`
 card whose `Verify` is `tests` and works it in a worktree off `origin/dev`. Once `pnpm check` and
 the related tests are green it pushes `fix/<title>-<n>` and opens a pull request into `dev` that says
-`Fixes #n`. Every branch is named `<type>/<title>-<issue number>`, never the number alone: the
-`pre-push` hook refuses a new branch that is not, and `createPull` refuses to open a pull request
-from one. A card that comes back to `Ready` is worked again onto the same pull request, and the
+`Fixes #n`. A branch for a card is named `<type>/<title>-<issue number>`, and a branch with no issue
+`<type>/<title>`, never a number alone: the `pre-push` hook refuses any other name, and `createPull`
+refuses to open a pull request from one. A card that comes back to `Ready` is worked again onto the same pull request, and the
 fixer reads every comment on it first — Kirill's included — so a comment there is how work is
 sent back with a reason. `pnpm audit:resolve` works every `Ready` card in turn — tests, then
 headless, then playtest — waiting and holding on the audit's own pace schedule; the `resolve`
@@ -298,9 +296,9 @@ skill starts it as the `fantasia-resolve` unit on ubuntuserver and watches it.
 the result — plus a headless session for `verify headless` — and sets `audit/review` to success
 or failure on that commit. A pass moves the card to `PR ready`; a failure is written on the pull
 request and moves the card to `Failed`. `.github/workflows/check.yml` runs `pnpm check` and the related tests on every pull
-request into `dev` and every push to `dev`, on GitHub's runners, and branch protection on `dev`
-requires it to pass on an up-to-date branch before a merge. Kirill is the repository's admin and
-can override that.
+request into `dev` and every push to `dev`, on GitHub's runners. Branch protection on `dev`
+accepts only a pull request whose `check` passed on an up-to-date branch, for every account, the
+admin's included; nothing reaches `dev` by a direct push.
 
 `board-sync.py` merges a pull request once GitHub reports it `CLEAN`, meaning mergeable, up to date
 and with `check` green, when its card is in `In progress` or `PR ready`, it does not carry
@@ -328,7 +326,7 @@ pnpm issue labels                       # every label the schema allows
 pnpm issue lint --body-file draft.md    # would this be accepted?
 pnpm issue create --title T --type fix --area sim --size S --agent haiku --body-file - --label high --label drift
 pnpm issue close 12 --commit <sha>
-pnpm issue pr --head <branch> --title T --body-file -   # open a pull request into dev
+pnpm issue pr --head <branch> --title T --body-file - [--auto]   # a pull request into dev; --auto merges it once check passes
 pnpm issue pr-edit 84 --body-file -                     # rewrite its description
 pnpm issue milestone list                               # versions and how much of each is closed
 pnpm issue tidy [--remove] [--host H]...                # merged or idle worktrees, branches and test clones
@@ -506,13 +504,15 @@ job in `check.yml` keeps one comment on each pull request with CodSpeed's change
 work pins' changed totals, and raises each as a warning on the run. Neither blocks the merge. A
 change the notes show as real cost gets a follow-up issue, or goes back to its branch.
 
-**Work done in a conversation at Kirill's request needs no issue and no pull request.** Branch
-from `dev` in a worktree, run `pnpm check` and the related tests, and commit it to `dev`
-directly: `git merge --no-ff` the branch into `dev` and push. Branch protection lets his account
-push past the required `check`, so the local run is the only gate; do not push red. If the work
-settles an issue that already exists, close that issue with the commit.
+**Work done in a conversation needs no issue, and lands through a pull request like everything
+else.** Branch from `dev` in a worktree that does not track it, `git worktree add --no-track -b
+<type>/<title> <path> origin/dev`, because a branch that tracks `origin/dev` lets an editor's Sync
+push it straight at `dev`. Commit, run `pnpm ci:local`, push the branch, and open the pull request
+with `pnpm issue pr --head <branch> --title T --body-file - --auto`; it merges itself once `check`
+passes on an up-to-date branch. If the work settles an issue that already exists, say `Fixes #n`
+in the body.
 
-Open an issue and a pull request only when one of these holds:
+Open an issue only when one of these holds:
 
 - the scope is large enough to be reviewed as one diff, spans several sessions, or has to sit
   unmerged while something else is decided;
@@ -520,7 +520,6 @@ Open an issue and a pull request only when one of these holds:
   to work from.
 
 A small fix, a rule in this file, a tooling tweak or a one-step change asked for in the
-conversation is none of these. Filing an issue and a pull request for it adds a card and a CI
-run and nothing he reads.
+conversation is none of these. Filing an issue for it adds a card and nothing he reads.
 
 Nothing opens a pull request into `main`; `pnpm audit:promote` is how `dev` reaches it.
