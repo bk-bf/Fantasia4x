@@ -146,7 +146,7 @@ order, each starting only when the one before it passed:
 
 1. `Pre-check`, on GitHub's runner: `pnpm check`, the related tests, the seams and sizes audit and
    `actionlint` over the workflows. It decides the scope with `scopeOf` in
-   `tools/audit/ci-scope.mjs`, and skips `pnpm check` and the tests when only Markdown or `docs/`
+   `tools/audit/ci-scope.mjs`, and skips `pnpm check` and the tests when only Markdown
    changed. GitHub's runner reaches this verdict in about 65 to 90 s, ubuntuserver in about 105 s.
 2. The measurements, each only when the game or that leg's own harness changed. `Measurements`, on
    GitHub's runner, holds the work pins, gungraun and the browser work pins. `CodSpeed benchmarks`
@@ -220,7 +220,7 @@ This applies to subagents you dispatch.
 - **A body is bullets, never prose.** One `- ` per change, sentence case, ending in a full
   stop, naming the symbol or file inline. `eb79af85`, `ef1cb295` and `bd98c2c4` are the
   reference. A paragraph explaining the reasoning behind a change does not belong in a commit
-  message; put it in the code, a test, or `docs/`.
+  message; put it in the code, a test, or the issue.
 - Keep the `Co-Authored-By` trailer.
 
 **The hooks enforce it.** `tools/hooks/commit-msg` refuses a message in any other shape,
@@ -235,9 +235,10 @@ any clone whose hooks are missing. Never bypass them with `--no-verify`.
 
 **GitHub issues hold all tracked work** — defects, features and decisions. `gh issue list` is the
 board. Work done in a conversation is tracked only when its scope calls for it; see "Pull requests".
-A feature's issue is its spec; no spec file sits beside it. `docs/tasks/` keeps `ROADMAP.md`, the
-record of what shipped, and `archive/`, which nothing new is written to. The old `docs/issues/`
-and `docs/pr/` directories are gone.
+A feature's issue is its spec; no spec file sits beside it. There is no `docs/` directory: what
+shipped before the board is the closed milestone `v0.1 - Before the board`, and a permalink pinned
+to an older commit still reaches any file `docs/` held. The item rules live beside the `items`
+skill, in `.claude/skills/items/ITEM-RULES.md`.
 
 Frontmatter became labels: severity `critical` / `high` / `medium` / `low`, kind `drift` / `correctness` /
 `performance` / `data` / `boundary` / `test gap` / `feature`, origin `found by audit` / `found by hand`, the audit rule that

@@ -5,7 +5,7 @@ description: Author, name, re-tier or audit any Fantasia4x item — armour, weap
 
 # Authoring and auditing items
 
-`docs/game/ITEM-RULES.md` is the ordered gate list and stays the source of truth. This skill is the
+`ITEM-RULES.md`, beside this skill, is the ordered gate list and stays the source of truth. This skill is the
 part that keeps getting forgotten: **what the tests do NOT catch, how to name a thing, and the audit
 loop to run afterwards.** Read the gate list, then this.
 
@@ -223,5 +223,5 @@ the freshly built asset byte-for-byte.
 
 ## Finishing
 
-- Tick the remediation box on the `docs/issues/` entry with the mechanism and delta.
-- Update `docs/game/ITEM-RULES.md` if a **rule** changed — not merely because items changed.
+- Tick the remediation box on the issue with the mechanism and delta.
+- Update `ITEM-RULES.md` beside this skill if a **rule** changed — not merely because items changed.

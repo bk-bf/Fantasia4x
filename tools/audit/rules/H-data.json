@@ -4,7 +4,7 @@
     "family": "data",
     "tier": "T2",
     "title": "item tier implausible for what it is",
-    "authority": "docs/game/ITEM-RULES.md",
+    "authority": ".claude/skills/items/ITEM-RULES.md",
     "question": "Is this row's tier defensible for the thing it describes \u2014 its materials, the technology its recipe implies, and the age its station belongs to \u2014 beyond the R2 and R4 checks the test suite already enforces?",
     "fail_requires": [
       "the tier as written",
@@ -41,7 +41,7 @@
     "family": "data",
     "tier": "T2",
     "title": "name breaks the tier's naming progression",
-    "authority": "docs/game/ITEM-RULES.md",
+    "authority": ".claude/skills/items/ITEM-RULES.md",
     "question": "Does this row's name read as the crude first iteration its tier implies, using a historical term rather than a modern or fantasy-inflated one, and does a species-named piece actually require that species' material?",
     "fail_requires": [
       "the name",
@@ -78,7 +78,7 @@
     "family": "data",
     "tier": "T2",
     "title": "generic line incomplete before a thematic alternative",
-    "authority": "docs/game/ITEM-RULES.md",
+    "authority": ".claude/skills/items/ITEM-RULES.md",
     "question": "Is this a creature-derived or otherwise thematic piece for a slot whose plain material-named line at the same tier is not yet complete?",
     "fail_requires": [
       "the slot and tier",
