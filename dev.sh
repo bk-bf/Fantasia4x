@@ -30,8 +30,6 @@ while [[ $# -gt 0 ]]; do
   shift
 done
 
-bash "$SCRIPT_DIR/scripts/build-distance.sh" || true
-
 if [[ ! -d "$SCRIPT_DIR/.svelte-kit" ]]; then
   echo "Generating .svelte-kit/…"
   (cd "$SCRIPT_DIR" && CI=true pnpm exec svelte-kit sync 2>&1) || true
