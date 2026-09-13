@@ -4,7 +4,7 @@ import { ROOT, BASE } from './harness.mjs';
 import { branchProblem } from './branch.mjs';
 import { blockProblem } from './blockers.mjs';
 import { checkPrivate } from './private.mjs';
-import { checkPullTemplate } from './schema.mjs';
+import { checkPullTemplate } from './template.mjs';
 
 export const REVIEW_CONTEXT = 'audit/review';
 export const PLAYTEST_LABEL = 'needs playtest';
