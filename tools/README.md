@@ -17,11 +17,13 @@ to ubuntuserver through `remote/run.mjs`.
 | `audit/` | The code audit: symbol ledger, rules, overnight runs, fixer, reviewer, resolver and promotion. `audit/README.md` describes it. | `pnpm audit`, `audit:run`, `audit:fix`, `audit:review`, `audit:resolve`, `audit:promote` |
 | `audit/deploy/` | The ubuntuserver units for the nightly audit, and their installer. | `tools/audit/deploy/install.sh` |
 | `audit/hooks/inflight.mjs` | Lists open pull requests with every prompt and flags the first edit of a file they touch. | Claude Code hook |
+| `audit/warnings.mjs` | Runs `svelte-check` or `eslint`, fails on an error or on warnings past `audit/warning-budget.json`, and in CI lists every warning on the run page, annotates the changed files and feeds the pull request's Check notes. | `pnpm check:types`, `pnpm lint` |
 | `bench/` | CodSpeed benchmarks of whole ticks and one entity phase, and ticks per second. | `pnpm bench`, `pnpm bench:tps` |
+| `bench/counts.mjs` | Reads the exact instruction and cache-miss counts per benchmark out of CodSpeed's profiles. | `node tools/bench/counts.mjs <dir> --out <file>`, run by the `codspeed` job |
 | `work-pins/` | Call counts of the simulation tick and the browser frame, base against head. | `pnpm work-pins`, `pnpm work-pins:gate` |
 | `gungraun/gate.mjs` | Instruction counts for `sim-core` and `spatial-core`, base against head. | `node tools/gungraun/gate.mjs --base <ref>` |
 | `gpu/` | Frame measurement on a rented GPU: `vast.mjs` rents the machine, `probe.mjs` tries Chromium's GPU flags, `frames.mjs` times frames. | `node tools/gpu/<script>.mjs` |
-| `hooks/` | Git hooks: commit message shape, private words, branch names, pushes to `dev`, and branches of blocked issues. | `pnpm hooks:install` |
+| `hooks/` | Git hooks: commit message shape, private words, branch names, branches of blocked issues, and the card of a pushed branch. | `pnpm hooks:install` |
 | `dev-tools/` | Standalone dev pages packed into one HTML file, such as the gear database. | `pnpm tools:pack` |
 | `profile-self.mjs`, `profile-window.mjs` | Read the newest Firefox Profiler recording in `.debug/` and report the simulation's functions in it. | `node tools/profile-self.mjs` |
 | `threat-model.mjs` | Rates creature threat from the creature, item and loot data. | `pnpm threat`, `pnpm threat:check` |

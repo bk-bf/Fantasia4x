@@ -1,6 +1,7 @@
 import { execFileSync } from 'node:child_process';
 
 import { linkOf, parentOf } from './pulls.mjs';
+import { passiveLane } from './lanes.mjs';
 
 const PROJECT_ID = 'PVT_kwHOBlZOB84Bip03';
 const STATUS_FIELD_ID = 'PVTSSF_lAHOBlZOB84Bip03zhhhAfI';
@@ -125,9 +126,19 @@ export const strayCard = (item) =>
     : `a ${cardKind(item)} card, not an issue, in ${item.status ?? 'no lane'}: only Backlog and Rejected hold one`;
 
 const openPullLinking = (n) =>
-  JSON.parse(gh(['pr', 'list', '--state', 'open', '--limit', '100', '--json', 'number,body'])).find(
+  JSON.parse(gh(['pr', 'list', '--state', 'open', '--limit', '100', '--json', 'number,body,isDraft'])).find(
     (p) => linkOf(p)?.issue === Number(n)
   ) ?? null;
+
+export function followBranch(branch) {
+  const pull =
+    JSON.parse(gh(['pr', 'list', '--state', 'open', '--head', branch, '--json', 'number,body,isDraft']))[0] ??
+    null;
+  const n = pull ? linkOf(pull)?.issue : Number(/-(\d+)$/.exec(branch)?.[1]);
+  if (!n) return null;
+  const to = passiveLane(laneOf(n), pull);
+  return to ? { n, ...moveLane(n, to) } : null;
+}
 
 export function moveLane(n, to) {
   const lane = String(to).toLowerCase();
@@ -143,6 +154,15 @@ export function moveLane(n, to) {
       `#${n} is a ${cardKind(item)} card, not an issue, so only Backlog and Rejected hold it.\n` +
         'Open an issue with `pnpm issue create` and link the pull request to it with `Fixes #<issue>`.'
     );
+
+  if (lane === 'in check') {
+    const pull = openPullLinking(n);
+    if (!pull || pull.isDraft)
+      throw new Error(
+        `#${n} has ${pull ? `only a draft pull request, #${pull.number}` : 'no open pull request'}, so it is not In Check.\n` +
+          'In Check holds finished work whose ready pull request is running its checks; `gh pr ready <n>` marks a draft ready.'
+      );
+  }
 
   const answered = from === 'blocked on you' && lane === 'ready' && lastCommentIsAnswer(n);
   const workedByHand = from === 'blocked on you' && lane === 'manual';
