@@ -17,6 +17,8 @@ const OFFER_QUERY = {
   dph_total: { lte: 0.25 },
   order: [['dph_total', 'asc']]
 };
+const USAGE =
+  'usage: node tools/gpu/vast.mjs up | down [instance id] | start <instance id> | stop <instance id>';
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -59,10 +61,21 @@ async function waitRunning(id) {
   throw new Error(`instance ${id} was not running after ${WAIT_MS / 60_000} minutes`);
 }
 
+async function attachKey(id) {
+  const pub = process.env.VAST_SSH_PUB;
+  if (pub) await call('POST', `/v0/instances/${id}/ssh/`, { ssh_key: readFileSync(pub, 'utf8').trim() });
+}
+
+function outputAddress(instance) {
+  output('host', instance.ssh_host);
+  output('port', instance.ssh_port);
+  output('direct', `${instance.public_ipaddr}:${instance.ports?.['22/tcp']?.[0]?.HostPort ?? ''}`);
+}
+
 async function up() {
   const image = process.env.VAST_IMAGE;
   if (!image) throw new Error('VAST_IMAGE is not set');
-  const pub = readFileSync(process.env.VAST_SSH_PUB, 'utf8').trim();
+  if (!process.env.VAST_SSH_PUB) throw new Error('VAST_SSH_PUB is not set');
   const offer = await cheapestOffer();
   process.stdout.write(
     `offer ${offer.id}: ${offer.gpu_name}, $${offer.dph_total}/h, ${offer.cpu_cores_effective} CPUs, ` +
@@ -79,9 +92,20 @@ async function up() {
   if (!id) throw new Error(`renting offer ${offer.id} returned no instance id`);
   output('id', id);
   const instance = await waitRunning(id);
-  await call('POST', `/v0/instances/${id}/ssh/`, { ssh_key: pub });
-  output('host', instance.ssh_host);
-  output('port', instance.ssh_port);
+  await attachKey(id);
+  outputAddress(instance);
+}
+
+async function start(id) {
+  await call('PUT', `/v0/instances/${id}/`, { state: 'running' });
+  const instance = await waitRunning(id);
+  await attachKey(id);
+  outputAddress(instance);
+}
+
+async function stop(id) {
+  await call('PUT', `/v0/instances/${id}/`, { state: 'stopped' });
+  process.stdout.write(`stopping instance ${id}\n`);
 }
 
 async function labelled() {
@@ -114,4 +138,6 @@ async function down(known) {
 const [command, arg] = process.argv.slice(2);
 if (command === 'up') await up();
 else if (command === 'down') await down(arg);
-else throw new Error('usage: node tools/gpu/vast.mjs up | down [instance id]');
+else if (command === 'start' && arg) await start(arg);
+else if (command === 'stop' && arg) await stop(arg);
+else throw new Error(USAGE);
