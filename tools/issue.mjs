@@ -550,9 +550,9 @@ if (cmd === 'check-labels') {
     const card = linkOf({ body }).issue;
     try {
       const r = moveLane(card, 'in check');
-      if (r.moved) process.stdout.write(`#${card} ${r.from || 'no lane'} -> in check\n`);
+      if (r.moved) process.stderr.write(`#${card} ${r.from || 'no lane'} -> in check\n`);
     } catch (e) {
-      process.stdout.write(`#${card} stayed put: ${String(e.message).split('\n')[0]}\n`);
+      process.stderr.write(`#${card} stayed put: ${String(e.message).split('\n')[0]}\n`);
     }
   } catch (e) {
     die(e.message);

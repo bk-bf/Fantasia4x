@@ -372,7 +372,7 @@ pnpm issue labels                       # every label the schema allows
 pnpm issue lint --body-file draft.md    # would this be accepted?
 pnpm issue create --title T --type fix --area sim --size S --agent haiku --body-file - --label high --label drift
 pnpm issue close 12 --commit <sha>
-pnpm issue pr --head <branch> --title T --body-file -   # open a pull request into dev
+pnpm -s issue pr --head <branch> --title T --body-file - # open a pull request into dev
 pnpm issue pr-edit 84 --body-file -                     # rewrite its description
 pnpm issue pr-sync [<n>...]                             # copy each issue's labels and milestone to its pull request
 pnpm issue milestone list                               # versions and how much of each is closed
@@ -576,8 +576,11 @@ it, and fix a red one with the next push. If the work settles an issue that alre
 with the commit.
 
 Open a pull request for conversation work only when it has to sit unmerged while something else
-is decided, or is large enough to be reviewed as one diff: `pnpm issue pr --head <branch> --title T
+is decided, or is large enough to be reviewed as one diff: `pnpm -s issue pr --head <branch> --title T
 --body-file -`, then `gh pr merge <n> --merge` once its required jobs are green on an up-to-date branch.
+Keep the `-s`: it leaves the pull request's address as the command's only output, which the
+PostToolUse hook in `~/.claude/settings.json` on ubuntuserver reads to attach the pull request to the
+T3 Code thread, and without it pnpm prints its own lines first and the thread gets nothing.
 
 Open an issue only when one of these holds:
 
