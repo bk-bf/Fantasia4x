@@ -95,14 +95,30 @@ const unlinkedProblem = (body) =>
     ? null
     : 'the pull request links no issue: its body needs a `Fixes #<issue>` or `Part of #<issue>` line. Open the issue with `pnpm issue create` first';
 
+const CARD_ONLY = new Set(['ready', 'needs decision']);
+
+function inherited(body) {
+  const { issue } = linkOf({ body });
+  const it = JSON.parse(gh(['api', `repos/${repo()}/issues/${issue}`]));
+  if (!it.milestone)
+    throw new Error(
+      `#${issue} has no milestone, so its pull request would have none. Set one with \`pnpm issue edit ${issue} --milestone vX.Y\``
+    );
+  return { labels: it.labels.map((l) => l.name).filter((l) => !CARD_ONLY.has(l)), milestone: it.milestone };
+}
+
 export function editPull(n, body) {
   const problem = checkPrivate(body)[0] || unlinkedProblem(body) || linkProblem(body);
   if (problem) throw new Error(problem);
+  const { labels, milestone } = inherited(body);
   return gh(
-    ['api', '-X', 'PATCH', `repos/${repo()}/pulls/${n}`, '--input', '-'],
-    JSON.stringify({ body })
+    ['api', '-X', 'PATCH', `repos/${repo()}/issues/${n}`, '--input', '-'],
+    JSON.stringify({ body, labels, milestone: milestone.number })
   );
 }
+
+export const syncPull = (n) =>
+  editPull(n, JSON.parse(gh(['pr', 'view', String(n), '--json', 'body'])).body);
 
 export function createPull({ branch, title, body, labels = [] }) {
   const problem =
@@ -112,8 +128,12 @@ export function createPull({ branch, title, body, labels = [] }) {
     unlinkedProblem(body) ||
     linkProblem(body);
   if (problem) throw new Error(problem);
-  const args = ['pr', 'create', '--base', BASE, '--head', branch, '--title', title, '--body-file', '-'];
-  for (const l of labels) args.push('--label', l);
+  const from = inherited(body);
+  const args = [
+    'pr', 'create', '--base', BASE, '--head', branch, '--title', title, '--body-file', '-',
+    '--milestone', from.milestone.title
+  ];
+  for (const l of new Set([...from.labels, ...labels])) args.push('--label', l);
   const url = gh(args, body).trim();
   return openPullFor(branch) ?? { url };
 }

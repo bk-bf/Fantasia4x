@@ -267,18 +267,21 @@ Planned work is an issue from the start, and waits in `Backlog` until Kirill mov
   the reviewer failed its pull request. The reason is on the issue or the pull request. The fixer
   never picks from here; Kirill reads the reason and moves the card to `Ready` to try again, or
   elsewhere. An agent moves a card out of `Failed` only when he says so.
-- **`In progress`** — a branch exists and an agent is on it. Once it is green it is a pull
-  request into `dev`, and the card moves to `In Check`.
-- **`In Check`** — a pull request is open and its checks, and the reviewer, are running.
-  `pnpm issue pr` and the fixer move the card here when they open or update its pull request;
+- **`In progress`** — a branch exists and an agent is on it. Pushing a `<type>/<title>-<n>` branch
+  that has no pull request, or only a draft, moves card `n` here.
+- **`In Check`** — a ready pull request is open and its checks, and the reviewer, are running.
+  Nothing moves a card here by hand: `pnpm issue pr` and the fixer move it when they open or
+  update its pull request, and the `pre-push` hook moves it on every push of a branch whose ready
+  pull request links it, because that push starts its checks. `pnpm issue lane` refuses In Check
+  for a card whose pull request is a draft or missing, and `check-labels` reports one there.
   `review.mjs` moves it on to `PR ready` or `Failed`, and `board-sync.py` merges or flags it as it
   does a card `In progress`. A card whose pull request is open may come here straight from
   `Backlog`.
 - **`Manual`** — he is working it by hand. `review.mjs` skips its pull request, `board-sync.py`
   does not update its branch, and `fix.mjs` refuses it. He moves it to `PR ready` to have it
   reviewed or to `Ready` to hand it to the fixer; when its pull request merges, `after-merge.mjs`
-  moves it to `On dev`. An agent that takes a `Manual` card up moves it to `In progress` with
-  `pnpm issue lane <n> "in progress"`, and to `In Check` once its pull request is open.
+  moves it to `On dev`. When an agent takes a `Manual` card up, pushing its `-<n>` branch moves
+  it to `In progress`, and opening its pull request moves it to `In Check`.
 - **`PR ready`** — the pull request has passed: `review.mjs` passed it, or it is a
   `needs playtest` pull request, which the reviewer skips. `board-sync.py` merges a reviewed one
   once CI is green; a `needs playtest` one waits for him to play and merge it, or to comment on it
@@ -363,6 +366,7 @@ pnpm issue create --title T --type fix --area sim --size S --agent haiku --body-
 pnpm issue close 12 --commit <sha>
 pnpm issue pr --head <branch> --title T --body-file -   # open a pull request into dev
 pnpm issue pr-edit 84 --body-file -                     # rewrite its description
+pnpm issue pr-sync [<n>...]                             # copy each issue's labels and milestone to its pull request
 pnpm issue milestone list                               # versions and how much of each is closed
 pnpm issue tidy [--remove] [--host H]...                # merged or idle worktrees, branches and test clones
 ```
@@ -495,9 +499,13 @@ can group and sort by a field and not by a label, so it carries no information s
 **Move the card, never the label.** `ready`, `needs decision` and the three `verify` labels are
 derived from the board's Status and Verify fields by `board-sync.py`, on the same tick that
 refreshes the dashboard. Edit one of those labels by hand and it is overwritten within a minute.
-Any open issue missing from the board is added to `Backlog`. An open pull request carries the labels
-of the issue it fixes, less `ready` and `needs decision`, copied on the same tick — label the
-issue, never the pull request. Kind, severity, origin and the rule
+Any open issue missing from the board is added to `Backlog`. A pull request carries the labels and
+the milestone of the issue it fixes, less `ready` and `needs decision`: `createPull` and `editPull`
+copy them when the pull request opens or its description changes, and refuse an issue with no
+milestone; `board-sync.py` copies the labels again every tick, and `pnpm issue pr-sync` copies both
+to every open pull request. `check-labels` reports an open pull request with no link or no
+milestone. A pull request is never a card of its own. Label the issue, never the pull request.
+Kind, severity, origin and the rule
 name are not touched — they describe the finding, not its state.
 
 **Every issue says how it will be verified**, as a `Verify` field on the board and a label on

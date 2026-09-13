@@ -47,7 +47,7 @@ import {
   invalidate,
   strayCard
 } from './audit/lib/board.mjs';
-import { createPull, editPull, linkOf } from './audit/lib/pulls.mjs';
+import { createPull, editPull, syncPull, linkOf } from './audit/lib/pulls.mjs';
 import { tidy } from './audit/lib/tidy.mjs';
 
 process.stdout.on('error', (e) => {
@@ -303,6 +303,22 @@ if (cmd === 'check-labels') {
     const stray = strayCard(item);
     if (stray) report(item.content?.number ?? '-', item.content?.title ?? item.title ?? '', [stray], item.status);
   }
+  const pulls = JSON.parse(
+    gh(['pr', 'list', '--state', 'open', '--limit', '100', '--json', 'number,title,body,isDraft,milestone'])
+  );
+  for (const p of pulls)
+    report(p.number, p.title, [
+      ...(linkOf(p) ? [] : ['pull request links no issue']),
+      ...(p.milestone ? [] : ["pull request has no milestone: `pnpm issue pr-sync` copies its issue's"])
+    ]);
+  for (const [key, card] of cards) {
+    if ((card.status ?? '').toLowerCase() !== 'in check') continue;
+    const pull = pulls.find((p) => String(linkOf(p)?.issue) === key);
+    if (!pull || pull.isDraft)
+      report(key, card.title ?? '', [
+        pull ? `in In Check with only a draft pull request, #${pull.number}` : 'in In Check with no open pull request'
+      ], card.status);
+  }
   process.stdout.write(
     `\n${bad} open issue(s) incompletely classified, ${untyped} with a gap on the board\n`
   );
@@ -548,6 +564,21 @@ if (cmd === 'check-labels') {
     die(e.message);
   }
   process.stdout.write(`#${n} description rewritten\n`);
+} else if (cmd === 'pr-sync') {
+  const numbers = argv.slice(1).length
+    ? argv.slice(1)
+    : JSON.parse(gh(['pr', 'list', '--state', 'open', '--limit', '100', '--json', 'number'])).map((p) => String(p.number));
+  let failed = 0;
+  for (const n of numbers) {
+    try {
+      syncPull(n);
+      process.stdout.write(`#${n} carries the labels and milestone of its issue\n`);
+    } catch (e) {
+      failed += 1;
+      process.stdout.write(`#${n}: ${String(e.message).split('\n')[0]}\n`);
+    }
+  }
+  if (failed) process.exit(1);
 } else if (cmd === 'comment') {
   const n = argv[1] ?? die('which issue?');
   const body = prepare(readBody());
