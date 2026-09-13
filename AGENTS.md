@@ -512,6 +512,12 @@ with `pnpm issue pr --head <branch> --title T --body-file -`. Watch its `check` 
 and merge it with `gh pr merge <n> --merge` once `check` is green on an up-to-date branch. If the
 work settles an issue that already exists, say `Fixes #n` in the body.
 
+Batch small changes into one pull request. While the requests are small, keep one conversation
+worktree open, commit each change there as its own commit, run `pnpm ci:local` once the batch is
+done, and open a single pull request for all of it. Open a separate pull request only for a change
+that has to land before the rest, or one large enough to be reviewed on its own. The merge keeps
+each commit, so every change stays visible in `dev`'s history.
+
 Open an issue only when one of these holds:
 
 - the scope is large enough to be reviewed as one diff, spans several sessions, or has to sit
