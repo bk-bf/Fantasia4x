@@ -6,7 +6,7 @@ import { applySimCommand } from '$lib/game/sim/commands';
 import { generateWorld } from '$lib/game/world/WorldGenerator';
 import { generatePawns } from '$lib/game/entities/Pawns';
 import { workService } from '$lib/game/services/WorkService';
-import { initialGameState } from '$lib/stores/gameState';
+import { initialGameState } from '$lib/game/core/state/initialState';
 import { rng } from '$lib/game/core/util/rng';
 import type { GameState, WorldTile } from '$lib/game/core/types';
 

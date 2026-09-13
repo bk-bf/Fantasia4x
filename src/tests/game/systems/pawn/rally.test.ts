@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { generatePawns } from '$lib/game/entities/Pawns';
-import { initialGameState } from '$lib/stores/gameState';
+import { initialGameState } from '$lib/game/core/state/initialState';
 import { pawnStatService } from '$lib/game/services/PawnStatService';
 import { moodEffect } from '$lib/game/core/defs/moods';
 import { getConditionDefById } from '$lib/game/core/rules/body/conditions';

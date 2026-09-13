@@ -7,7 +7,7 @@ import type {
   WorldTile,
   Item
 } from '../core/types';
-import { initialGameState } from '$lib/stores/gameState';
+import { initialGameState } from '../core/state/initialState';
 import { generateWorld } from '../world/WorldGenerator';
 import { generatePawns } from '../entities/Pawns';
 import { workService } from '../services/WorkService';
