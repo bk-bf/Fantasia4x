@@ -9,6 +9,7 @@ const SHA = process.env.HEAD_SHA;
 const BASE_SHA = process.env.BASE_SHA;
 const NOTES = process.env.WORK_PINS_NOTES;
 const COUNTS = process.env.CODSPEED_COUNTS;
+const CODSPEED_RAN = process.env.CODSPEED_RAN === 'true';
 const RUN_URL = `${process.env.GITHUB_SERVER_URL}/${REPO}/actions/runs/${process.env.GITHUB_RUN_ID}`;
 const MARKER = '<!-- f4x-perf-notes -->';
 const CODSPEED = 'CodSpeed Performance Analysis';
@@ -33,6 +34,7 @@ async function api(method, path, body) {
 }
 
 async function codspeedRun() {
+  if (!CODSPEED_RAN) return null;
   const until = Date.now() + WAIT_MS;
   while (Date.now() < until) {
     const found = await api(
@@ -82,6 +84,7 @@ function pct(t) {
 }
 
 function codspeedSection(run, rows) {
+  if (!CODSPEED_RAN) return 'CodSpeed: not run, because no game or bench file changed.';
   if (!run) return `CodSpeed had not reported on \`${SHA.slice(0, 8)}\` after ${WAIT_MS / 60_000} minutes.`;
   if (!rows.length) return `CodSpeed: no benchmark changed on \`${SHA.slice(0, 8)}\`.`;
   return [

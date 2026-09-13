@@ -114,19 +114,35 @@ jobs:
           path: work-pins-out
 
   codspeed:
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    if: github.event_name != 'workflow_dispatch' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: [self-hosted, ubuntuserver]
     timeout-minutes: 60
     permissions:
       actions: read
       contents: read
       id-token: write
+    env:
+      BASE: ${{ github.event_name == 'push' && github.event.before || 'HEAD^1' }}
+    outputs:
+      bench: ${{ steps.scope.outputs.bench }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24.20.0
+
+      - name: What this change needs measured
+        id: scope
+        run: node tools/audit/ci-scope.mjs --base "$BASE"
 
       - uses: ./.github/actions/prepare
+        if: steps.scope.outputs.bench == 'true'
 
       - name: CodSpeed benchmarks
+        if: steps.scope.outputs.bench == 'true'
         uses: CodSpeedHQ/action@v5
         env:
           TMPDIR: ${{ runner.temp }}
@@ -137,14 +153,14 @@ jobs:
           run: pnpm bench
 
       - name: Exact counts from the profiles
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && steps.scope.outputs.bench == 'true' }}
         env:
           GITHUB_TOKEN: ${{ github.token }}
           BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
         run: node tools/bench/counts.mjs "$RUNNER_TEMP" --out "$RUNNER_TEMP/codspeed-counts.json"
 
       - uses: actions/upload-artifact@v7
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && steps.scope.outputs.bench == 'true' }}
         with:
           name: codspeed-counts-${{ github.run_attempt }}
           path: ${{ runner.temp }}/codspeed-counts.json
@@ -218,4 +234,5 @@ jobs:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           WORK_PINS_NOTES: ${{ runner.temp }}/notes/work-pins-notes.jsonl
           CODSPEED_COUNTS: ${{ runner.temp }}/codspeed/codspeed-counts.json
+          CODSPEED_RAN: ${{ needs.codspeed.outputs.bench }}
         run: node tools/work-pins/perf-notes.mjs

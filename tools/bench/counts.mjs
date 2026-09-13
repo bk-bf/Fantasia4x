@@ -10,7 +10,7 @@ const NOISE = { instructions: 0.5, llMisses: 15 };
 const PROFILE_FOLDER = /^profile\..+\.out$/;
 const PROFILE_FILE = /^\d+\.out$/;
 const COUNTS_ARTIFACT = 'codspeed-counts-';
-const BASE_RUNS_SEARCHED = 10;
+const BASE_RUNS_SEARCHED = 100;
 
 export const llMisses = (c) => c.ILmr + c.DLmr + c.DLmw;
 

@@ -27,7 +27,7 @@ describe('scopeOf', () => {
     expect(scopeOf(['tools/gungraun/gate.mjs'])).toEqual({ ...nothing, gungraun: true });
   });
 
-  it('measures everything when the gating itself changes', () => {
+  it('measures nothing when only the CI files change, since no leg runs them', () => {
     for (const file of [
       'tools/audit/ci-scope.mjs',
       'tools/remote/ci.mjs',
@@ -35,6 +35,6 @@ describe('scopeOf', () => {
       'tools/hooks/pre-push',
       '.github/workflows/check.yml'
     ])
-      expect(Object.values(scopeOf([file])).every(Boolean)).toBe(true);
+      expect(scopeOf([file])).toEqual(nothing);
   });
 });

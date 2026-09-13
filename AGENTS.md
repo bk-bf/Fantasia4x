@@ -142,10 +142,11 @@ the laptop; wrap anything else as `node tools/remote/run.mjs <command>`.
 
 **Every CI step runs as a GitHub Actions job, so each run shows on GitHub.** `check` runs on
 GitHub's runners; `codspeed` and `tps`, ticks per second, run on the self-hosted runner on
-ubuntuserver, one job at a time, on every pull request and every push to `dev`. The `tps` job asks
-`scopeOf` in `tools/audit/ci-scope.mjs` whether the change needs that leg: a change to the game, to
-the work-pins or bench harness, or to the gating itself (`ci-scope.mjs`, `tools/remote/ci.mjs`,
-`run.mjs`, `prepare.sh`, `tools/hooks/pre-push`, `check.yml`) does.
+ubuntuserver, one job at a time, on every pull request and every push to `dev`. Each measurement
+leg, those two jobs included, asks `scopeOf` in `tools/audit/ci-scope.mjs` whether the change
+touches a file that leg runs: the game, or that leg's own harness. A change to the CI files alone
+runs none of them; `promote.yml` runs every leg against `main` before a promotion, which catches a
+leg such a change broke.
 
 **The `pre-push` hook decides what runs on the server before a push; you do not.** A push to
 `dev` runs `tools/audit/ci-check.mjs` on ubuntuserver first: `pnpm check` and the tests related to
@@ -160,7 +161,7 @@ the work pins, the gungraun instruction counts, the browser work pins, a benchma
 names what a skipped step needs. `pnpm ci:local --quick` skips gungraun and the browser leg. `ci:local` and
 the `check` job both skip what a change cannot move: `tools/audit/ci-scope.mjs` runs the work pins,
 the browser leg, ticks per second and the benchmarks only when a game file or that harness changed,
-and gungraun only when a Rust crate did; a change to the gating itself runs all of them. On
+and gungraun only when a Rust crate did. On
 ubuntuserver `pnpm ci:local` runs it in place; `ci.mjs` loads the pinned Node and pnpm from
 `tools/remote/prepare.sh` before it runs anything.
 

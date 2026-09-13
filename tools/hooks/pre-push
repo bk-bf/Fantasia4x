@@ -74,5 +74,5 @@ for (const branch of process.argv.slice(1)) {
     console.error('pre-push: the card of ' + branch + ' stayed put: ' + String(e.message).split('\n')[0]);
   }
 }
-" "${CARDS[@]}"
+" "${CARDS[@]}" || true
 fi
