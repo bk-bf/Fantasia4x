@@ -2,20 +2,22 @@ import { describe, it, expect } from 'vitest';
 import {
   createBodyPlanLimbs,
   createDefaultBodyParts,
-  rollBodyPart,
-  rollBodyPartOf,
   parentLimbOf,
-  enabledNaturalWeapons,
-  lethalAnatomyCause,
   organsOf,
-  containedParts,
-  cascadeSeveredContents,
   boneBreakBudget,
   BONE_FRACTION,
   BOUND_NATURAL_WEAPONS,
   PART_DEF_MAP,
   DEFAULT_PLAN
 } from '$lib/game/core/defs/bodyParts';
+import {
+  rollBodyPart,
+  rollBodyPartOf,
+  enabledNaturalWeapons,
+  lethalAnatomyCause,
+  containedParts,
+  cascadeSeveredContents
+} from '$lib/game/core/rules/body/anatomy';
 import { rng } from '$lib/game/core/util/rng';
 import { pawnStatService } from '$lib/game/services/PawnStatService';
 import type { BodyPartState, LimbState, Mob } from '$lib/game/core/types';

@@ -24,7 +24,7 @@ import {
   conditionNeedMultipliers,
   getConditionDefById
 } from '../core/rules/body/conditions';
-import { amenityAt } from '../core/defs/amenities';
+import { amenityAt } from '../core/rules/world/amenities';
 import { effectiveMood, moodModifierValue } from '../core/rules/social/social';
 import {
   getAmbientLight,

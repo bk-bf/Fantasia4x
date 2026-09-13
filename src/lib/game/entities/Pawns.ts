@@ -10,24 +10,25 @@ import type {
 import { CORE_STAT_KEYS } from '../core/types';
 import { createPawnInventory, createPawnEquipment } from '../core/rules/gear/equipment';
 import { drawPawnTraits, SPAWN_STAT_CAP } from '../core/gen/culture';
+import { type Background } from '../core/defs/backgrounds';
 import {
-  type Background,
   rollOrigin,
   rollBackgrounds,
   backgroundTraitAffinity,
   applyBackgroundExperience,
   backgroundPrestige
-} from '../core/defs/backgrounds';
+} from '../core/gen/backgrounds';
 import { createBodyPlanLimbs } from '../systems/Combat';
-import { DEFAULT_PLAN, PART_DEF_MAP, containedParts } from '../core/defs/bodyParts';
+import { DEFAULT_PLAN, PART_DEF_MAP } from '../core/defs/bodyParts';
+import { containedParts } from '../core/rules/body/anatomy';
 import { SCARRING_CONFIG, makeScarInjury } from '../core/defs/wounds';
+import { getTraitById } from '../core/defs/lineages';
 import {
-  getTraitById,
   resolveTraitGamble,
   rollFlawTrait,
   rollLineageTrait,
   seedAwakeningPaths
-} from '../core/defs/lineages';
+} from '../core/rules/body/lineage';
 import { KIN_INVERSE } from '../core/rules/social/social';
 import { itemDefById } from '../core/defs/items';
 import { seedWorkLevels, rollWorkStyle } from '../core/rules/body/workExperience';

@@ -1,12 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import {
-  drawLoadout,
-  drawCarried,
-  rollCondition,
-  getLootPool,
-  validateLootItemIds,
-  type LootPool
-} from '$lib/game/core/defs/loot';
+import { getLootPool, type LootPool } from '$lib/game/core/defs/loot';
+import { drawLoadout, drawCarried, rollCondition, validateLootItemIds } from '$lib/game/core/gen/loot';
 import { isFluidId, servingL } from '$lib/game/core/rules/gear/vessels';
 
 function seq(values: number[]) {

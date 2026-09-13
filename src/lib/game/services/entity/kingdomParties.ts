@@ -8,7 +8,7 @@ import type {
   WorldTile
 } from '../../core/types';
 import { getCreatureById } from '../../core/defs/creatures';
-import { isSpawnableTile } from '../../core/defs/terrains';
+import { isSpawnableTile } from '../../core/rules/world/terrain';
 import { rng } from '../../core/util/rng';
 import { WEALTH_BANDS } from '../../core/gen/kingdom';
 import { makeMob, equipFromLootPool } from './entitySpawning';

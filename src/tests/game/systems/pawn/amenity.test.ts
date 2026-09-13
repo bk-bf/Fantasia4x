@@ -5,7 +5,7 @@ import {
   buildingComfortOf,
   gatheringLevelOf
 } from '$lib/game/systems/pawn/pawnHelpers';
-import { nearGatheringPlace, GATHERING_RADIUS } from '$lib/game/core/defs/amenities';
+import { nearGatheringPlace, GATHERING_RADIUS } from '$lib/game/core/rules/world/amenities';
 import type { PlacedBuilding } from '$lib/game/core/types';
 
 const b = (

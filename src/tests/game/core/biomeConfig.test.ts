@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from 'vitest';
-import { applyBiomeShares, getBiomeConfig, resetBiomeConfig } from '$lib/game/core/defs/terrains';
+import { applyBiomeShares, getBiomeConfig, resetBiomeConfig } from '$lib/game/world/WorldGenerator';
 
 describe('getBiomeConfig / applyBiomeShares', () => {
   afterEach(() => {

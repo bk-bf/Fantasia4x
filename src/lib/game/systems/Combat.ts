@@ -72,13 +72,9 @@ import { socialService } from '../services/SocialService';
 import { memoryService } from '../services/MemoryService';
 import {
   PART_DEF_MAP,
-  rollBodyPartOf,
   createDefaultBodyParts,
   createBodyPlanLimbs,
   parentLimbOf,
-  enabledNaturalWeapons,
-  cascadeSeveredContents,
-  lethalAnatomyCause,
   skeletonPartOf,
   organsOf,
   boneBreakBudget,
@@ -86,6 +82,12 @@ import {
   DEFAULT_PLAN,
   BONE_FRACTION
 } from '../core/defs/bodyParts';
+import {
+  rollBodyPartOf,
+  enabledNaturalWeapons,
+  cascadeSeveredContents,
+  lethalAnatomyCause
+} from '../core/rules/body/anatomy';
 import { coversPart, ARMOUR_SLOTS, SLOT_LAYER } from '../core/rules/gear/armorCoverage';
 
 const DEFAULT_ARMOR_SHARE = 0.5;

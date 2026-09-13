@@ -6,7 +6,7 @@
     planRefuel,
     getRefuelThresholdRatio
   } from '$lib/game/services/fuelRules';
-  import { aggregateMaterialMods } from '$lib/game/core/defs/materials';
+  import { aggregateMaterialMods } from '$lib/game/core/rules/gear/materialMods';
   import { jobProgressBar, dryingIndicator } from './selectionCard';
   import type { PlacedBuilding, DroppedItem, GameState } from '$lib/game/core/types';
 

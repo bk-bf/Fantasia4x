@@ -1,12 +1,12 @@
 import { describe, it, expect, beforeEach } from 'vitest';
+import { AWAKENING_DEFS, LINEAGE_DEFS } from '$lib/game/core/defs/lineages';
 import {
   seedAwakeningPaths,
   advanceAwakeningMeters,
   lineageGrowthEvent,
-  AWAKENING_DEFS,
-  LINEAGE_DEFS
-} from '$lib/game/core/defs/lineages';
-import { feedOnVictim, sateBloodHunger } from '$lib/game/core/defs/lineages';
+  feedOnVictim,
+  sateBloodHunger
+} from '$lib/game/core/rules/body/lineage';
 import { rng } from '$lib/game/core/util/rng';
 import { drawPawnTraits } from '$lib/game/core/gen/culture';
 import { createBodyPlanLimbs } from '$lib/game/systems/Combat';

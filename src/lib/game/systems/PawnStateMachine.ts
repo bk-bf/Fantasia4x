@@ -21,9 +21,9 @@ import {
   CLOT_ROLL_INTERVAL,
   BASE_CLOT_CHANCE
 } from '../core/defs/wounds';
-import { feedOnVictim } from '../core/defs/lineages';
+import { feedOnVictim } from '../core/rules/body/lineage';
 import { coversPart } from '../core/rules/gear/armorCoverage';
-import { lethalAnatomyCause } from '../core/defs/bodyParts';
+import { lethalAnatomyCause } from '../core/rules/body/anatomy';
 import conditionsData from '../database/pawns/conditions.json';
 import buildingsData from '../database/world/buildings.json';
 const BED_TREATMENT_BONUS = new Map<string, number>(

@@ -6,14 +6,11 @@ import {
   SOIL_ITEM_BY_TIER,
   SUBTYPE_BY_SOIL_TIER,
   resolveCharSpans,
-  pickBiome,
   terrainBlocksSight,
-  isSpawnableTile,
-  pickSubterrain,
-  applyBiomeShares,
-  resetBiomeConfig,
   BIOMES
 } from '$lib/game/core/defs/terrains';
+import { pickBiome, isSpawnableTile, pickSubterrain } from '$lib/game/core/rules/world/terrain';
+import { applyBiomeShares, resetBiomeConfig } from '$lib/game/world/WorldGenerator';
 import { itemService } from '$lib/game/services/ItemService';
 import type { WorldTile } from '$lib/game/core/types';
 

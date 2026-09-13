@@ -2,7 +2,7 @@ import type { GameState, Pawn, Mob, Building, PlacedBuilding, Job } from '../../
 import { carriedDrinkVessel, carriedWaterVessel, isDrinkId } from '../../core/rules/gear/vessels';
 export { carriedWaterVessel };
 import { transientNeedOnset } from '../../core/rules/body/conditions';
-import { gatheringLevelOf } from '../../core/defs/amenities';
+import { gatheringLevelOf } from '../../core/rules/world/amenities';
 import { needNum } from '../../core/defs/needs';
 import { isUncareable } from '../../core/defs/wounds';
 import BUILDINGS_DATABASE_RAW from '../../database/world/buildings.json';
@@ -417,7 +417,7 @@ export function getRestBuildingAtPawn(pawn: Pawn, gs: GameState): PlacedBuilding
   );
 }
 
-export { amenityAt, AMENITY_RADIUS, buildingComfortOf } from '../../core/defs/amenities';
+export { amenityAt, AMENITY_RADIUS, buildingComfortOf } from '../../core/rules/world/amenities';
 export { gatheringLevelOf };
 
 export function isAtRestBuilding(pawn: Pawn, gs: GameState): boolean {

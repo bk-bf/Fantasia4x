@@ -2,8 +2,6 @@ import terrainsData from '../../database/world/terrains.json';
 import subterrainsData from '../../database/world/subterrains.json';
 import { CP437_TO_UNICODE } from '../util/cp437.js';
 import { hexToRgb01 } from '../util/color';
-import type { WorldTile } from '../types';
-
 export interface BiomeDef {
   displayName: string;
   densityRange?: [number, number];
@@ -90,87 +88,6 @@ export const BIOMES: Record<string, BiomeDef> = Object.fromEntries(
   ])
 ) as unknown as Record<string, BiomeDef>;
 
-export interface BiomeConfigEntry {
-  id: string;
-  displayName: string;
-  share: number;
-  baseTemp: number;
-  baseMoisture: number;
-}
-
-const DEFAULT_BIOME_CONFIG: Record<
-  string,
-  { densityRange: [number, number]; baseTemp: number; baseMoisture: number }
-> = Object.fromEntries(
-  Object.entries(BIOMES)
-    .filter(([, d]) => d.densityRange)
-    .map(([id, d]) => [
-      id,
-      {
-        densityRange: [d.densityRange![0], d.densityRange![1]] as [number, number],
-        baseTemp: d.baseTemp ?? 0,
-        baseMoisture: d.baseMoisture ?? 0
-      }
-    ])
-);
-
-const DENSITY_ORDER: string[] = Object.entries(DEFAULT_BIOME_CONFIG)
-  .sort((a, b) => a[1].densityRange[0] - b[1].densityRange[0])
-  .map(([id]) => id);
-
-export function getBiomeConfig(): BiomeConfigEntry[] {
-  return DENSITY_ORDER.map((id) => {
-    const d = BIOMES[id];
-    return {
-      id,
-      displayName: d.displayName,
-      share: d.densityRange![1] - d.densityRange![0],
-      baseTemp: d.baseTemp ?? 0,
-      baseMoisture: d.baseMoisture ?? 0
-    };
-  });
-}
-
-export function applyBiomeShares(shares: Record<string, number>): void {
-  const total = DENSITY_ORDER.reduce((s, id) => s + Math.max(0, shares[id] ?? 0), 0);
-  let cursor = 0;
-  DENSITY_ORDER.forEach((id, i) => {
-    if (!BIOMES[id]) return;
-    const w = total > 0 ? Math.max(0, shares[id] ?? 0) / total : 1 / DENSITY_ORDER.length;
-    const start = i === 0 ? 0 : cursor;
-    cursor += w;
-    const end = i === DENSITY_ORDER.length - 1 ? 1 : cursor;
-    BIOMES[id].densityRange = [start, end];
-  });
-}
-
-export function setBiomeField(id: string, field: 'baseTemp' | 'baseMoisture', value: number): void {
-  const d = BIOMES[id];
-  if (!d) return;
-  if (field === 'baseTemp') d.baseTemp = value;
-  else d.baseMoisture = value;
-}
-
-const DEFAULT_WATER_LEVEL = 0.22;
-let waterLevel = DEFAULT_WATER_LEVEL;
-export function getWaterLevel(): number {
-  return waterLevel;
-}
-export function setWaterLevel(v: number): void {
-  waterLevel = Math.max(0, Math.min(1, v));
-}
-
-export function resetBiomeConfig(): void {
-  for (const [id, def] of Object.entries(DEFAULT_BIOME_CONFIG)) {
-    const d = BIOMES[id];
-    if (!d) continue;
-    d.densityRange = [def.densityRange[0], def.densityRange[1]];
-    d.baseTemp = def.baseTemp;
-    d.baseMoisture = def.baseMoisture;
-  }
-  waterLevel = DEFAULT_WATER_LEVEL;
-}
-
 export const SUBTERRAINS: Record<string, SubterrainDef> = Object.fromEntries(
   (subterrainsData as unknown as Array<Record<string, unknown>>).map((sub) => [
     sub.id as string,
@@ -195,19 +112,6 @@ export const SUBTERRAIN_FALLBACK: SubterrainDef = {
   fg: [0.5, 0.5, 0.5],
   bg: [0.03, 0.03, 0.03]
 };
-
-export function pickSubterrain(biomeName: string, detailNoise: number): string {
-  const parent = BIOMES[biomeName]?.parent;
-  for (const [id, def] of Object.entries(SUBTERRAINS)) {
-    const range = def.biomes?.[biomeName] ?? (parent ? def.biomes?.[parent] : undefined);
-    if (!range) continue;
-    const [min, max] = range;
-    if ((min === null || detailNoise >= min) && (max === null || detailNoise < max)) {
-      return id;
-    }
-  }
-  return 'dirt';
-}
 
 export type SoilTier = 0 | 1 | 2 | 3 | 4;
 
@@ -253,26 +157,9 @@ export const SUBTYPE_BY_SOIL_TIER: Record<SoilTier, string> = {
   4: 'terra_preta'
 };
 
-const SPAWNABLE_BIOMES = new Set(['forest', 'plains', 'swamp']);
-const WATER_SUBTYPES = new Set(['water', 'shallow_water', 'rapids']);
+export const SPAWNABLE_BIOMES = new Set(['forest', 'plains', 'swamp']);
+export const WATER_SUBTYPES = new Set(['water', 'shallow_water', 'rapids']);
 
 export function terrainBlocksSight(walkable: boolean, subType: string): boolean {
   return !walkable && !WATER_SUBTYPES.has(subType);
-}
-
-export function isSpawnableTile(tile: WorldTile | undefined | null): boolean {
-  if (!tile || !tile.walkable) return false;
-  const biome = tile.terrainType;
-  if (!SPAWNABLE_BIOMES.has(biome) && !SPAWNABLE_BIOMES.has(BIOMES[biome]?.parent ?? ''))
-    return false;
-  if (WATER_SUBTYPES.has(tile.subType)) return false;
-  return true;
-}
-
-export function pickBiome(density: number): string | null {
-  for (const [name, def] of Object.entries(BIOMES)) {
-    if (!def.densityRange) continue;
-    if (density >= def.densityRange[0] && density < def.densityRange[1]) return name;
-  }
-  return null;
 }

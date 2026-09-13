@@ -8,7 +8,8 @@ import type {
   ItemInstance
 } from '../core/types';
 import { qualityPrefix } from '../core/rules/gear/itemQuality';
-import { itemDefById, itemMatchesCostCategory } from '../core/defs/items';
+import { itemDefById } from '../core/defs/items';
+import { itemMatchesCostCategory } from '../core/rules/gear/itemCategory';
 import { usedCapacityL, usedWeightKg, vesselOf } from '../core/rules/gear/vessels';
 import {
   decayAll,
@@ -44,7 +45,7 @@ const ITEMS_DATABASE = itemsData as unknown as Item[];
 
 const BUILDING_DEFS_FOR_ITEMS = buildingsData as unknown as import('../core/types').Building[];
 
-export { itemMatchesCostCategory } from '../core/defs/items';
+export { itemMatchesCostCategory };
 
 function craftValueOf(item: { craftValue?: number } | undefined | null): number {
   const v = item?.craftValue;
