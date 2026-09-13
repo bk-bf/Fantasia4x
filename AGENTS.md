@@ -140,31 +140,33 @@ rather than fall back to the laptop. On ubuntuserver and in CI it runs the comma
 `tools/remote/guard.mjs` refuses a test runner, linter, type check or harness started directly on
 the laptop; wrap anything else as `node tools/remote/run.mjs <command>`.
 
-**Every CI step runs as a GitHub Actions job, so each run shows on GitHub.** `check` runs on
-GitHub's runners; `codspeed` and `tps`, ticks per second, run on the self-hosted runner on
-ubuntuserver, one job at a time, on every pull request and every push to `dev`. Each measurement
-leg, those two jobs included, asks `scopeOf` in `tools/audit/ci-scope.mjs` whether the change
-touches a file that leg runs: the game, or that leg's own harness. A change to the CI files alone
-runs none of them; `promote.yml` runs every leg against `main` before a promotion, which catches a
-leg such a change broke.
+**One chain checks every change, and GitHub starts and records it.** `.github/workflows/check.yml`
+runs on every pull request into `dev`, every push to `dev`, and every `pnpm chain`. Its jobs run in
+order, each starting only when the one before it passed:
 
-**A push runs nothing on the server; GitHub checks the pushed commit.** The `pre-push` hook only
-refuses a badly named or blocked branch and moves the pushed branch's card. The check job runs
-`pnpm check` and the related tests on every pull request and every push to `dev`, and skips them
-when only Markdown or `docs/` changed. Do not run them by hand before a push GitHub will check:
-the same run on the same commit twice buys nothing. Run them by hand while you work, and
-`pnpm ci:local` to reproduce a failure of the check job.
+1. `Pre-check`, on GitHub's runner: `pnpm check`, the related tests, the seams and sizes audit and
+   `actionlint` over the workflows. It decides the scope with `scopeOf` in
+   `tools/audit/ci-scope.mjs`, and skips `pnpm check` and the tests when only Markdown or `docs/`
+   changed. GitHub's runner reaches this verdict in about 65 to 90 s, ubuntuserver in about 105 s.
+2. The measurements, each only when the game or that leg's own harness changed. `Measurements`, on
+   GitHub's runner, holds the work pins, gungraun and the browser work pins. `CodSpeed benchmarks`
+   and `Ticks per second` run on the self-hosted runner on ubuntuserver, one job at a time.
+   CodSpeed stays there although it would finish sooner elsewhere: GitHub's changing machines read
+   identical code up to 2.6% apart, and on ubuntuserver its instruction counts agree within 0.43%.
+3. `Check notes`, the comment on the pull request.
 
-`pnpm ci:local` runs the `check` job's pull-request steps on
-ubuntuserver against the merge base with `origin/dev`: `ci-check.mjs`, the seams and sizes audit,
-the work pins, the gungraun instruction counts, the browser work pins, a benchmark run and
-`actionlint` over the workflows. It runs every step, prints a pass, fail or skip line for each, and
-names what a skipped step needs. `pnpm ci:local --quick` skips gungraun and the browser leg. `ci:local` and
-the `check` job both skip what a change cannot move: `tools/audit/ci-scope.mjs` runs the work pins,
-the browser leg, ticks per second and the benchmarks only when a game file or that harness changed,
-and gungraun only when a Rust crate did. On
-ubuntuserver `pnpm ci:local` runs it in place; `ci.mjs` loads the pinned Node and pnpm from
-`tools/remote/prepare.sh` before it runs anything.
+Branch protection on `dev` requires `Pre-check` and `Measurements`; a job the scope skips counts as
+passed. A change to the CI files alone runs no measurement; `promote.yml` runs every leg against
+`main` before a promotion, which catches a leg such a change broke.
+
+**`pnpm chain` is the one command.** It pushes the current branch, which starts nothing by itself,
+then follows its pull request's run, or starts the chain on the branch when it has no pull request,
+and streams the run from GitHub until it exits with the run's result. `pnpm chain --pre` runs the
+pre-check alone. It runs on the laptop because it only starts and watches the run. A push to a pull
+request branch or to `dev` starts the same chain without it. The `pre-push` hook runs nothing on
+the server: it refuses a badly named or blocked branch and moves the pushed branch's card. Do not
+run `pnpm check` or the tests by hand before a push GitHub will check; the chain runs them on the
+pushed commit. Run them by hand only while you work.
 
 **`pnpm check` is the gate.** It runs `svelte-check`, `eslint` and `knip`, and all three must
 stay green. `svelte-check` and `eslint` are frozen at their warning counts in
@@ -339,13 +341,12 @@ or failure on that commit. A pass moves the card to `PR ready`; a failure is wri
 request and moves the card to `Failed`. `.github/workflows/check.yml` runs `pnpm check` and the related tests on every pull
 request into `dev` and every push to `dev`, on GitHub's runners; on a push it measures the work
 pins, gungraun and the browser leg against the tip the push replaced. Branch protection on `dev`
-requires a pull request whose check job, "pnpm check, related tests, seams and work pins", passed
-on an up-to-date branch from every account except the
-admin's, which every agent here pushes with; that account pushes to `dev` directly, and a red
-check on `dev` is fixed by the next push.
+requires a pull request whose `Pre-check` and `Measurements` jobs passed on an up-to-date branch
+from every account except the admin's, which every agent here pushes with; that account pushes to
+`dev` directly, and a red check on `dev` is fixed by the next push.
 
 `board-sync.py` merges a pull request once GitHub reports it `CLEAN`, meaning mergeable, up to date
-and with `check` green, when its card is in `In progress`, `In Check` or `PR ready`, it does not carry
+and with its required jobs green, when its card is in `In progress`, `In Check` or `PR ready`, it does not carry
 `needs playtest`, and, for a `fix/` branch, its latest commit has `audit/review` success. He merges
 the rest. When a pull request merges, GitHub closes the issue it fixes, and
 `tools/audit/after-merge.mjs` — run by `board-sync.py` every five minutes — moves the card to
@@ -572,7 +573,7 @@ with the commit.
 
 Open a pull request for conversation work only when it has to sit unmerged while something else
 is decided, or is large enough to be reviewed as one diff: `pnpm issue pr --head <branch> --title T
---body-file -`, then `gh pr merge <n> --merge` once `check` is green on an up-to-date branch.
+--body-file -`, then `gh pr merge <n> --merge` once its required jobs are green on an up-to-date branch.
 
 Open an issue only when one of these holds:
 
