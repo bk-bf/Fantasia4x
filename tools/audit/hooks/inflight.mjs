@@ -5,6 +5,7 @@ import { homedir } from 'node:os';
 import { dirname, join, relative, resolve } from 'node:path';
 
 import { linkOf } from '../lib/pulls.mjs';
+import { localLeftovers } from '../lib/tidy.mjs';
 
 const TTL_MS = 5 * 60 * 1000;
 const MAX_LINES = 8;
@@ -87,22 +88,40 @@ function onPrompt() {
       }
     });
   }
-  if (!snap.pulls.length) process.exit(0);
   const here = ownWork(root).branch;
   const lines = snap.pulls.map(
     (p) =>
       `- #${p.number} ${p.branch}${p.issue ? ` (for #${p.issue})` : ''}: ${p.title} [${p.files.length} files]` +
       (p.branch === here ? ' (checked out here)' : '')
   );
+  const leftovers = leftoversLine();
+  if (!lines.length && !leftovers) process.exit(0);
   emit({
     hookSpecificOutput: {
       hookEventName: 'UserPromptSubmit',
       additionalContext: [
-        'Open pull requests in this repository. Before building or investigating, check whether the task overlaps one of them or an open issue:',
-        ...lines
+        ...(lines.length
+          ? [
+              'Open pull requests in this repository. Before building or investigating, check whether the task overlaps one of them or an open issue:',
+              ...lines
+            ]
+          : []),
+        ...(leftovers ? [leftovers] : [])
       ].join('\n')
     }
   });
+}
+
+function leftoversLine() {
+  try {
+    const { worktrees, branches } = localLeftovers(root);
+    const w = worktrees.filter((t) => t.removable).length;
+    const b = branches.filter((t) => t.removable).length;
+    if (!w && !b) return '';
+    return `${w} worktree(s) and ${b} branch(es) on this machine are merged into dev and idle: \`pnpm issue tidy\` lists them, \`pnpm issue tidy --remove\` deletes them.`;
+  } catch {
+    return '';
+  }
 }
 
 function onEdit() {
