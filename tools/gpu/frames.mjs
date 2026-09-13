@@ -13,6 +13,8 @@ import {
   sleep
 } from '../work-pins/browser-session.mjs';
 
+process.env.GOMAXPROCS ??= '4';
+
 const UNCAPPED = ['--disable-gpu-vsync', '--disable-frame-rate-limit'];
 const ZOOM_STEPS = 7;
 const ZOOM_PAUSE_MS = 150;
@@ -30,8 +32,9 @@ const { values: opts } = parseArgs({
     out: { type: 'string' },
     fixture: { type: 'string', default: process.env.WORK_PINS_FIXTURE ?? DEFAULT_FIXTURE },
     seconds: { type: 'string', default: '10' },
+    rounds: { type: 'string', default: '3' },
     angle: { type: 'string', default: 'gl-egl' },
-    uncapped: { type: 'boolean', default: false }
+    capped: { type: 'boolean', default: false }
   }
 });
 
@@ -52,39 +55,46 @@ function takeFrames() {
 }
 
 const quantile = (xs, q) => [...xs].sort((a, b) => a - b)[Math.min(xs.length - 1, Math.floor(q * xs.length))];
+const median = (xs) => quantile(xs, 0.5);
 
 function summarise(times, seconds) {
   const deltas = times.slice(1).map((t, i) => t - times[i]);
   return {
     frames: deltas.length,
     fps: Number((deltas.length / seconds).toFixed(2)),
-    medianMs: Number(quantile(deltas, 0.5).toFixed(3)),
+    medianMs: Number(median(deltas).toFixed(3)),
     p95Ms: Number(quantile(deltas, 0.95).toFixed(3)),
     maxMs: Number(Math.max(...deltas).toFixed(3))
   };
 }
 
+async function panPath(page, ms) {
+  await page.keyboard.down(PAN_KEYS[0]);
+  await sleep(ms / 2);
+  await page.keyboard.up(PAN_KEYS[0]);
+  await page.keyboard.down(PAN_KEYS[1]);
+  await sleep(ms / 2);
+  await page.keyboard.up(PAN_KEYS[1]);
+}
+
 async function runPhase(page, phase, ms) {
   await setPaused(page, phase.paused);
   await page.evaluate(recordFrames);
-  if (phase.pan) await page.keyboard.down(PAN_KEYS[0]);
-  await sleep(ms / 2);
-  if (phase.pan) {
-    await page.keyboard.up(PAN_KEYS[0]);
-    await page.keyboard.down(PAN_KEYS[1]);
-  }
-  await sleep(ms / 2);
-  if (phase.pan) await page.keyboard.up(PAN_KEYS[1]);
+  if (phase.pan) await panPath(page, ms);
+  else await sleep(ms);
   return summarise(await page.evaluate(takeFrames), ms / 1000);
 }
 
 async function main() {
   if (!opts.out)
-    throw new Error('usage: frames.mjs --out <file> [--tree <dir>] [--seconds N] [--angle gl-egl|vulkan] [--uncapped]');
+    throw new Error(
+      'usage: frames.mjs --out <file> [--tree <dir>] [--seconds N] [--rounds N] [--angle gl-egl|vulkan] [--capped]'
+    );
   const seconds = Number(opts.seconds);
+  const rounds = Number(opts.rounds);
   const out = resolve(opts.out);
   mkdirSync(dirname(out), { recursive: true });
-  const args = [`--use-angle=${opts.angle}`, '--ignore-gpu-blocklist', ...(opts.uncapped ? UNCAPPED : [])];
+  const args = [`--use-angle=${opts.angle}`, '--ignore-gpu-blocklist', ...(opts.capped ? [] : UNCAPPED)];
   const game = await openGame({
     tree: resolve(opts.tree),
     fixture: opts.fixture,
@@ -104,11 +114,21 @@ async function main() {
     }
     await setPaused(page, false);
     await sleep(WARM_MS);
-    const result = { args, seconds, phases: {} };
-    for (const phase of PHASES) {
-      result.phases[phase.name] = await runPhase(page, phase, seconds * 1000);
-      log(`${phase.name}: ${JSON.stringify(result.phases[phase.name])}`);
+    await panPath(page, seconds * 1000);
+    const result = { args, seconds, rounds, phases: {} };
+    for (let round = 1; round <= rounds; round++) {
+      for (const phase of PHASES) {
+        const r = await runPhase(page, phase, seconds * 1000);
+        (result.phases[phase.name] ??= { runs: [] }).runs.push(r);
+        log(`round ${round} ${phase.name}: ${JSON.stringify(r)}`);
+      }
     }
+    for (const p of Object.values(result.phases)) {
+      p.fps = median(p.runs.map((r) => r.fps));
+      p.medianMs = median(p.runs.map((r) => r.medianMs));
+    }
+    const fps = Object.fromEntries(Object.entries(result.phases).map(([name, p]) => [name, p.fps]));
+    log(`median fps over ${rounds} rounds: ${JSON.stringify(fps)}`);
     if (game.errors.length) log(`page errors: ${game.errors.slice(0, 3).join(' | ')}`);
     writeFileSync(out, JSON.stringify(result, null, 1));
   } finally {
