@@ -1,11 +1,16 @@
 // @ts-nocheck
-import { appendFileSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { appendFileSync, mkdtempSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 export const EVENTS = ['Ir', 'Dr', 'Dw', 'I1mr', 'D1mr', 'D1mw', 'ILmr', 'DLmr', 'DLmw'];
+const NOISE = { instructions: 0.5, llMisses: 15 };
 const PROFILE_FOLDER = /^profile\..+\.out$/;
 const PROFILE_FILE = /^\d+\.out$/;
+const COUNTS_ARTIFACT = 'codspeed-counts-';
+const BASE_RUNS_SEARCHED = 10;
 
 export const llMisses = (c) => c.ILmr + c.DLmr + c.DLmw;
 
@@ -40,37 +45,97 @@ export function readCounts(dirs) {
 
 const number = (n) => (n === undefined ? '-' : n.toLocaleString('en-US'));
 
-function change(base, head) {
+const percent = (base, head) => ((head - base) / base) * 100;
+
+function change(base, head, digits) {
   if (base === undefined) return 'new';
   if (head === undefined) return 'gone';
-  if (base === 0) return head === 0 ? '0.000%' : 'new';
-  const d = ((head - base) / base) * 100;
-  return `${d > 0 ? '+' : ''}${d.toFixed(3)}%`;
+  if (base === 0) return head === 0 ? '0%' : 'new';
+  const d = percent(base, head);
+  return `${d > 0 ? '+' : ''}${d.toFixed(digits)}%`;
 }
+
+export function verdict(base, head) {
+  if (!base) return 'new benchmark';
+  if (!head) return 'benchmark gone';
+  const ir = percent(base.Ir, head.Ir);
+  const work = ir > NOISE.instructions ? '**slower**' : ir < -NOISE.instructions ? '**faster**' : 'within noise';
+  const ll = llMisses(base) ? percent(llMisses(base), llMisses(head)) : 0;
+  const memory = Math.abs(ll) > NOISE.llMisses ? `, LL misses ${ll > 0 ? 'up' : 'down'} past noise` : '';
+  return work + memory;
+}
+
+const LEGEND = [
+  `- **instructions**: the CPU instructions the benchmark ran. Four runs of the same code differed by up to 0.43%, so a change within ±${NOISE.instructions}% is noise and a larger one means the code does more or less work.`,
+  `- **LL misses**: memory reads and writes that missed every CPU cache and went to RAM. Four runs of the same code differed by up to 12.8%, so only a change past ±${NOISE.llMisses}% means something.`,
+  '- **verdict**: slower or faster when the instructions changed past their noise band.'
+].join('\n');
+
+const benchName = (uri) => `\`${uri.replace(/^tools\/bench\//, '')}\``;
 
 export function countsTable(head, base) {
   const uris = [...new Set([...Object.keys(base ?? {}), ...Object.keys(head)])].sort();
-  const name = (uri) => `\`${uri.replace(/^tools\/bench\//, '')}\``;
   if (!base)
     return [
       '| benchmark | instructions | LL misses |',
       '|---|---:|---:|',
-      ...uris.map((u) => `| ${name(u)} | ${number(head[u].Ir)} | ${number(llMisses(head[u]))} |`)
+      ...uris.map((u) => `| ${benchName(u)} | ${number(head[u].Ir)} | ${number(llMisses(head[u]))} |`)
     ].join('\n');
   return [
-    '| benchmark | instructions, base | instructions, head | change | LL misses, base | LL misses, head | change |',
-    '|---|---:|---:|---:|---:|---:|---:|',
+    '| benchmark | instructions | change | LL misses | change | verdict |',
+    '|---|---:|---:|---:|---:|---|',
     ...uris.map((u) => {
       const b = base[u];
       const h = head[u];
       const bl = b && llMisses(b);
       const hl = h && llMisses(h);
-      return `| ${name(u)} | ${number(b?.Ir)} | ${number(h?.Ir)} | ${change(b?.Ir, h?.Ir)} | ${number(bl)} | ${number(hl)} | ${change(bl, hl)} |`;
+      return `| ${benchName(u)} | ${number(h?.Ir)} | ${change(b?.Ir, h?.Ir, 2)} | ${number(hl)} | ${change(bl, hl, 1)} | ${verdict(b, h)} |`;
     })
   ].join('\n');
 }
 
-function main() {
+export function countsReport(head, base) {
+  const intro = base
+    ? `Exact counts from CodSpeed's profiles on ubuntuserver; each change is against \`dev\` at \`${base.sha.slice(0, 8)}\` ([run](${base.url})).`
+    : "Exact counts from CodSpeed's profiles on ubuntuserver; no `dev` run has counts to compare against yet.";
+  return [intro, '', countsTable(head, base?.counts), '', LEGEND].join('\n');
+}
+
+async function api(path, token) {
+  const res = await fetch(`${process.env.GITHUB_API_URL ?? 'https://api.github.com'}${path}`, {
+    headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json' }
+  });
+  if (!res.ok) throw new Error(`GET ${path} answered ${res.status}: ${(await res.text()).slice(0, 300)}`);
+  return res.json();
+}
+
+async function artifactJson(artifact, token) {
+  const res = await fetch(artifact.archive_download_url, { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new Error(`artifact ${artifact.id} answered ${res.status}`);
+  const zip = join(mkdtempSync(join(tmpdir(), 'counts-')), 'counts.zip');
+  writeFileSync(zip, Buffer.from(await res.arrayBuffer()));
+  return JSON.parse(execFileSync('unzip', ['-p', zip, 'codspeed-counts.json'], { encoding: 'utf8' }));
+}
+
+export async function baseCounts({ repo, token, sha }) {
+  if (!repo || !token || !sha) return null;
+  const { workflow_runs: runs } = await api(
+    `/repos/${repo}/actions/workflows/check.yml/runs?branch=dev&event=push&status=completed&per_page=100`,
+    token
+  );
+  const from = runs.findIndex((r) => r.head_sha === sha);
+  if (from < 0) return null;
+  for (const run of runs.slice(from, from + BASE_RUNS_SEARCHED)) {
+    const { artifacts } = await api(`/repos/${repo}/actions/runs/${run.id}/artifacts?per_page=100`, token);
+    const latest = artifacts
+      .filter((a) => a.name.startsWith(COUNTS_ARTIFACT) && !a.expired)
+      .sort((a, b) => b.id - a.id)[0];
+    if (latest) return { sha: run.head_sha, url: run.html_url, counts: (await artifactJson(latest, token)).counts };
+  }
+  return null;
+}
+
+async function main() {
   const args = process.argv.slice(2);
   const outAt = args.indexOf('--out');
   const out = outAt >= 0 ? args.splice(outAt, 2)[1] : null;
@@ -79,11 +144,21 @@ function main() {
     process.stdout.write(`no CodSpeed profile with benchmark counts under ${args.join(', ')}\n`);
     return;
   }
-  const table = countsTable(counts);
-  process.stdout.write(`${table}\n`);
-  if (process.env.GITHUB_STEP_SUMMARY)
-    appendFileSync(process.env.GITHUB_STEP_SUMMARY, `## Exact counts from CodSpeed's profiles\n\n${table}\n`);
   if (out) writeFileSync(out, JSON.stringify({ sha: process.env.GITHUB_SHA ?? null, counts }, null, 1));
+  let base = null;
+  try {
+    base = await baseCounts({
+      repo: process.env.GITHUB_REPOSITORY,
+      token: process.env.GITHUB_TOKEN,
+      sha: process.env.BASE_SHA
+    });
+  } catch (e) {
+    process.stdout.write(`base counts unavailable: ${e.message}\n`);
+  }
+  const report = countsReport(counts, base);
+  process.stdout.write(`${report}\n`);
+  if (process.env.GITHUB_STEP_SUMMARY)
+    appendFileSync(process.env.GITHUB_STEP_SUMMARY, `## Exact counts from CodSpeed's profiles\n\n${report}\n`);
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) main();
+if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) await main();

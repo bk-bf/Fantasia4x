@@ -118,6 +118,7 @@ jobs:
     runs-on: [self-hosted, ubuntuserver]
     timeout-minutes: 60
     permissions:
+      actions: read
       contents: read
       id-token: write
     steps:
@@ -137,6 +138,9 @@ jobs:
 
       - name: Exact counts from the profiles
         if: ${{ !cancelled() }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
         run: node tools/bench/counts.mjs "$RUNNER_TEMP" --out "$RUNNER_TEMP/codspeed-counts.json"
 
       - uses: actions/upload-artifact@v7
@@ -146,29 +150,14 @@ jobs:
           path: ${{ runner.temp }}/codspeed-counts.json
           if-no-files-found: ignore
 
-      - name: Counts from the profiles earlier runs left in /tmp
-        run: |
-          mkdir -p "$RUNNER_TEMP/legacy"
-          for d in /tmp/profile.*.out; do
-            [ -d "$d" ] || continue
-            stamp=$(date -u -d "@$(stat -c %Y "$d")" +%Y%m%dT%H%M%SZ)
-            node tools/bench/counts.mjs "$d" --out "$RUNNER_TEMP/legacy/$stamp.json"
-            rm -rf "$d"
-          done
-          ls -la "$RUNNER_TEMP/legacy"
-
-      - uses: actions/upload-artifact@v7
-        with:
-          name: codspeed-legacy-counts
-          path: ${{ runner.temp }}/legacy
-          if-no-files-found: ignore
-
   tps:
-    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    if: github.event_name != 'workflow_dispatch' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: [self-hosted, ubuntuserver]
     timeout-minutes: 30
     permissions:
       contents: read
+    env:
+      BASE: ${{ github.event_name == 'push' && github.event.before || 'HEAD^1' }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -180,7 +169,7 @@ jobs:
 
       - name: What this change needs measured
         id: scope
-        run: node tools/audit/ci-scope.mjs --base HEAD^1
+        run: node tools/audit/ci-scope.mjs --base "$BASE"
 
       - uses: ./.github/actions/prepare
         if: steps.scope.outputs.tps == 'true'
@@ -189,7 +178,7 @@ jobs:
         if: steps.scope.outputs.tps == 'true'
         env:
           TMPDIR: ${{ runner.temp }}
-        run: node tools/work-pins/gate.mjs --leg tps --base HEAD^1
+        run: node tools/work-pins/gate.mjs --leg tps --base "$BASE"
 
   perf-notes:
     if: ${{ !cancelled() && github.event_name == 'pull_request' }}

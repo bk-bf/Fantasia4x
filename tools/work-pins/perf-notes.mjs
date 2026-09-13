@@ -1,9 +1,6 @@
 #!/usr/bin/env node
-import { execFileSync } from 'node:child_process';
-import { existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { countsTable } from '../bench/counts.mjs';
+import { existsSync, readFileSync } from 'node:fs';
+import { baseCounts, countsReport } from '../bench/counts.mjs';
 
 const API = process.env.GITHUB_API_URL ?? 'https://api.github.com';
 const REPO = process.env.GITHUB_REPOSITORY;
@@ -15,8 +12,6 @@ const COUNTS = process.env.CODSPEED_COUNTS;
 const RUN_URL = `${process.env.GITHUB_SERVER_URL}/${REPO}/actions/runs/${process.env.GITHUB_RUN_ID}`;
 const MARKER = '<!-- f4x-perf-notes -->';
 const CODSPEED = 'CodSpeed Performance Analysis';
-const COUNTS_ARTIFACT = 'codspeed-counts-';
-const BASE_RUNS_SEARCHED = 10;
 const WAIT_MS = 10 * 60_000;
 const POLL_MS = 15_000;
 const ROW =
@@ -77,34 +72,6 @@ function readNotes() {
 
 const headCounts = () => (COUNTS && existsSync(COUNTS) ? JSON.parse(readFileSync(COUNTS, 'utf8')).counts : null);
 
-async function artifactJson(artifact) {
-  const res = await fetch(artifact.archive_download_url, {
-    headers: { Authorization: `Bearer ${process.env.GITHUB_TOKEN}` }
-  });
-  if (!res.ok) throw new Error(`artifact ${artifact.id} answered ${res.status}`);
-  const zip = join(mkdtempSync(join(tmpdir(), 'counts-')), 'counts.zip');
-  writeFileSync(zip, Buffer.from(await res.arrayBuffer()));
-  return JSON.parse(execFileSync('unzip', ['-p', zip, 'codspeed-counts.json'], { encoding: 'utf8' }));
-}
-
-async function baseCounts() {
-  if (!BASE_SHA) return null;
-  const { workflow_runs: runs } = await api(
-    'GET',
-    `/repos/${REPO}/actions/workflows/check.yml/runs?branch=dev&event=push&status=completed&per_page=100`
-  );
-  const from = runs.findIndex((r) => r.head_sha === BASE_SHA);
-  if (from < 0) return null;
-  for (const run of runs.slice(from, from + BASE_RUNS_SEARCHED)) {
-    const { artifacts } = await api('GET', `/repos/${REPO}/actions/runs/${run.id}/artifacts?per_page=100`);
-    const latest = artifacts
-      .filter((a) => a.name.startsWith(COUNTS_ARTIFACT) && !a.expired)
-      .sort((a, b) => b.id - a.id)[0];
-    if (latest) return { sha: run.head_sha, url: run.html_url, counts: (await artifactJson(latest)).counts };
-  }
-  return null;
-}
-
 const escapeData = (s) => s.replaceAll('%', '%25').replaceAll('\r', '%0D').replaceAll('\n', '%0A');
 const warn = (title, text) => process.stdout.write(`::warning title=${title}::${escapeData(text)}\n`);
 
@@ -126,13 +93,8 @@ function codspeedSection(run, rows) {
   ].join('\n');
 }
 
-function countsSection(head, base) {
-  if (!head) return 'Exact counts: this run left no CodSpeed profile.';
-  const intro = base
-    ? `Exact counts from CodSpeed's profiles on ubuntuserver, \`dev\` at \`${base.sha.slice(0, 8)}\` ([run](${base.url})) against this pull request:`
-    : "Exact counts from CodSpeed's profiles on ubuntuserver; no `dev` run at or before this pull request's base has them yet:";
-  return [intro, '', countsTable(head, base?.counts)].join('\n');
-}
+const countsSection = (head, base) =>
+  head ? countsReport(head, base) : 'Exact counts: this run left no CodSpeed profile.';
 
 function workPinsSection(notes) {
   const totals = notes.flatMap((n) => n.totals);
@@ -167,7 +129,7 @@ const notes = readNotes();
 const head = headCounts();
 let base = null;
 try {
-  base = head ? await baseCounts() : null;
+  base = head ? await baseCounts({ repo: REPO, token: process.env.GITHUB_TOKEN, sha: BASE_SHA }) : null;
 } catch (e) {
   process.stdout.write(`base counts unavailable: ${e.message}\n`);
 }
