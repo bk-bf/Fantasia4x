@@ -90,8 +90,13 @@ export function linkProblem(body) {
   return `#${link.issue} has open sub-issues (${list}): link the pull request to the one it works`;
 }
 
+const unlinkedProblem = (body) =>
+  linkOf({ body })
+    ? null
+    : 'the pull request links no issue: its body needs a `Fixes #<issue>` or `Part of #<issue>` line. Open the issue with `pnpm issue create` first';
+
 export function editPull(n, body) {
-  const problem = checkPrivate(body)[0] || linkProblem(body);
+  const problem = checkPrivate(body)[0] || unlinkedProblem(body) || linkProblem(body);
   if (problem) throw new Error(problem);
   return gh(
     ['api', '-X', 'PATCH', `repos/${repo()}/pulls/${n}`, '--input', '-'],
@@ -104,6 +109,7 @@ export function createPull({ branch, title, body, labels = [] }) {
     branchProblem(branch) ||
     blockProblem(branch) ||
     checkPrivate(`${title}\n${body}`)[0] ||
+    unlinkedProblem(body) ||
     linkProblem(body);
   if (problem) throw new Error(problem);
   const args = ['pr', 'create', '--base', BASE, '--head', branch, '--title', title, '--body-file', '-'];

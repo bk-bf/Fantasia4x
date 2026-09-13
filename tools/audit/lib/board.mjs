@@ -113,6 +113,22 @@ export function setSelect(n, fieldName, optionName) {
   return { from: before, to: option.name, moved: true };
 }
 
+const ISSUE_FREE_LANES = new Set(['backlog', 'rejected']);
+
+const PULL_LANES = new Set(['in progress', 'in check']);
+
+const cardKind = (item) => (item.content?.type === 'PullRequest' ? 'pull request' : 'draft');
+
+export const strayCard = (item) =>
+  item.content?.type === 'Issue' || ISSUE_FREE_LANES.has((item.status ?? '').toLowerCase())
+    ? null
+    : `a ${cardKind(item)} card, not an issue, in ${item.status ?? 'no lane'}: only Backlog and Rejected hold one`;
+
+const openPullLinking = (n) =>
+  JSON.parse(gh(['pr', 'list', '--state', 'open', '--limit', '100', '--json', 'number,body'])).find(
+    (p) => linkOf(p)?.issue === Number(n)
+  ) ?? null;
+
 export function moveLane(n, to) {
   const lane = String(to).toLowerCase();
   if (!LANES[lane])
@@ -121,6 +137,12 @@ export function moveLane(n, to) {
   const item = itemFor(n);
   if (!item) throw new Error(`#${n} is not on the board`);
   const from = (item.status ?? '').toLowerCase();
+
+  if (item.content?.type !== 'Issue' && !ISSUE_FREE_LANES.has(lane))
+    throw new Error(
+      `#${n} is a ${cardKind(item)} card, not an issue, so only Backlog and Rejected hold it.\n` +
+        'Open an issue with `pnpm issue create` and link the pull request to it with `Fixes #<issue>`.'
+    );
 
   const answered = from === 'blocked on you' && lane === 'ready' && lastCommentIsAnswer(n);
   const workedByHand = from === 'blocked on you' && lane === 'manual';
@@ -142,26 +164,25 @@ export function moveLane(n, to) {
 
   if (
     (from === 'backlog' || from === '') &&
-    item.content?.type !== 'PullRequest' &&
     lane !== 'backlog' &&
     lane !== 'blocked on you' &&
     !agentMayTriage(item) &&
-    !followsParent(n, lane)
+    !followsParent(n, lane) &&
+    !(PULL_LANES.has(lane) && openPullLinking(n))
   )
     throw new Error(
       `#${n} is not a ${[...AGENT_TRIAGED_KINDS].join(' or ')} card, so Kirill decides whether ` +
         `it gets worked.\nComment on it with \`pnpm issue comment ${n} --body-file -\`, naming ` +
         `the open decision or task it overlaps (the Blocked on you cards) or ` +
         `"none", and what in play reaches the code it cites. Then move it to Blocked on you.\n` +
-        `A sub-issue may also follow its parent into the lane the parent is in.`
+        `A sub-issue may also follow its parent into the lane the parent is in, and a card whose ` +
+        `pull request is open goes to In progress or In Check.`
     );
 
   if (from === lane) return { from, to: lane, moved: false };
 
   if (lane === 'backlog') {
-    const pull = JSON.parse(
-      gh(['pr', 'list', '--state', 'open', '--limit', '100', '--json', 'number,body'])
-    ).find((p) => linkOf(p)?.issue === Number(n));
+    const pull = openPullLinking(n);
     if (pull)
       throw new Error(
         `#${n} has an open pull request, #${pull.number}, so it cannot go to Backlog. ` +
@@ -174,8 +195,8 @@ export function moveLane(n, to) {
   return { from: item.status ?? 'unset', to: lane, moved: true };
 }
 
-export function addToBoard(n, kind = 'issues') {
-  const url = `https://github.com/${OWNER}/Fantasia4x/${kind}/${n}`;
+export function addToBoard(n) {
+  const url = `https://github.com/${OWNER}/Fantasia4x/issues/${n}`;
   gh(['project', 'item-add', PROJECT_NUMBER, '--owner', OWNER, '--url', url]);
   invalidate();
   return itemFor(n);
