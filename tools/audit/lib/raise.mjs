@@ -225,6 +225,16 @@ export const areaFor = (subarea, rule = {}) => rule.area ?? AREA_FOR_SUBAREA[sub
 
 export const sizeFor = (files) => (files.length <= 2 ? 'S' : files.length <= 6 ? 'M' : 'L');
 
+const MECHANICAL_KINDS = new Set(['drift', 'test-gap']);
+const JUDGED_KINDS = new Set(['feature', 'data']);
+
+export const agentFor = ({ size, kind, verify }) =>
+  size === 'L' && !MECHANICAL_KINDS.has(kind)
+    ? 'opus'
+    : size === 'S' && verify !== 'headless' && !JUDGED_KINDS.has(kind)
+      ? 'haiku'
+      : 'sonnet';
+
 export function idFor(g, rulesById) {
   const name = rulesById?.get(g.rule_id)?.name ?? g.rule_id;
   return slug(`${name}-${g.group}`);
@@ -298,6 +308,7 @@ export function upsertIssue(root, g, rulesById, sha, force = false) {
       type,
       area,
       size,
+      agent: agentFor({ size, kind, verify }),
       ready: false,
       origin: 'audit',
       rules: [g.rule_id],
