@@ -196,7 +196,8 @@ export function checkBody(body) {
 
 const MIN_PROSE = 240;
 const CHECKBOX = /^\s*[-*] \[[ x]\] /m;
-const VERSION = /^v\d+\.\d+(\.\d+)?$/;
+const VERSION = /^v\d+\.\d+(\.\d+)?( - \S.*)?$/;
+export const versionOf = (title) => title?.match(/^v\d+\.\d+(\.\d+)?/)?.[0] ?? null;
 
 const stripNotes = (body) =>
   (body ?? '')
@@ -260,7 +261,7 @@ export function checkMilestone({ title, body } = {}) {
   if (title !== undefined) {
     if (!VERSION.test(title ?? '')) {
       errors.push(
-        `milestone "${title}" is not a version — a milestone is one, written v0.2 or v0.2.1; ` +
+        `milestone "${title}" is not named for a version — write v0.2, or v0.2 - Demo for one part of it; ` +
           'a spec category is a parent issue inside it'
       );
     }

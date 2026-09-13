@@ -453,18 +453,21 @@ step has none. The new sub-issue takes the parent's work type, and its lane when
 `Backlog`, `Blocked on you`, `Ready` or `Manual`. Its pull request says `Fixes #<sub-issue>`, with the parent's step on the `Step:`
 line, and `after-merge.mjs` ticks that step in the parent as well.
 
-**A milestone is a version; a spec category is a parent issue inside it.** Every issue sits in a
-version milestone. Each spec category in one is a parent issue, and each feature of the category
-is a sub-issue with its own `## Steps`. GitHub milestones do not nest, so the category is an issue,
-not a milestone. `tools/audit/milestones.json` names the `current` milestone, where every new issue
-lands unless `--milestone` or its parent names another, and the `draft` ones, which take only an
-issue assigned to them by name. Moving `current` to the next version is how new issues stop landing
-in the one being finished. `pnpm issue milestone create --title v0.2 --body-file -` refuses a title
-that is not a version, a description under ~240 characters of prose or with no checkbox as its
+**A milestone is a version, or one part of a version named after it.** GitHub milestones do not
+nest, so a title reads `v0.2`, or `v0.2 - Gameplay` for one part, and the flat list sorts into
+versions: `v0.2 - CI gate`, `v0.2 - Performance`, `v0.2 - Gameplay`, `v0.2 - Launch` and
+`v0.2 - Triage`. Every issue sits in one. Each spec category is a parent issue, and each feature of
+the category is a sub-issue with its own `## Steps`; a sub-issue sits in a milestone of its parent's
+version. `tools/audit/milestones.json` names the `current` milestone, where every new issue lands
+unless `--milestone` or its parent names another, and the `draft` ones, which take only an issue
+assigned to them by name. New issues land in `v0.2 - Triage`, inside the version being finished,
+because a new issue can reveal a blocker for it; each is sorted into a part of v0.2 or into v0.3.
+`pnpm issue milestone create --title "v0.2 - Demo" --body-file -` refuses a title that is not a
+version or a version and a name, a description under ~240 characters of prose or with no checkbox as its
 definition of done, and anything an issue body is refused for. `milestone close` refuses while an
 issue in it is open. `create --milestone` and `edit --milestone` refuse a milestone that does not
 exist or is closed. `check-labels` reports an open issue with no milestone, and a sub-issue in a
-different milestone from its parent.
+milestone of another version than its parent's.
 
 **A body has to say something.** `create` also refuses a stub: under ~240 characters of prose,
 no citation, or no remediation checkbox (unless it carries `needs decision`). A heading with

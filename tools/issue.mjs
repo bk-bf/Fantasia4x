@@ -32,7 +32,8 @@ import {
   checkKind,
   checkMilestone,
   labelGroup,
-  milestonePlan
+  milestonePlan,
+  versionOf
 } from './audit/lib/schema.mjs';
 import { checkPrivate } from './audit/lib/private.mjs';
 import { linkify, issueRef, indexedSha, blobUrl, resolveRepoPath } from './audit/lib/links.mjs';
@@ -190,7 +191,7 @@ const issueRecord = (n) => {
 const issueId = (n) => issueRecord(n).id;
 
 const linkParent = (n, parent) =>
-  gh(['api', '-X', 'POST', `${REPO_API}/issues/${parent}/sub_issues`, '-F', `sub_issue_id=${issueId(n)}`]);
+  gh(['api', '-X', 'POST', `${REPO_API}/issues/${parent}/sub_issues`, '-F', `sub_issue_id=${issueId(n)}`, '-F', 'replace_parent=true']);
 
 const milestones = () => JSON.parse(gh(['api', `${REPO_API}/milestones?state=all&per_page=100`]));
 
@@ -224,10 +225,10 @@ const milestoneGaps = (issue) => {
   const parent = issue?.parent;
   if (parent) {
     const theirs = parent.milestone?.title ?? null;
-    if (own === theirs) return [];
+    if (versionOf(own) === versionOf(theirs)) return [];
     return [
       `milestone is ${own ?? 'unset'} but its parent #${parent.number} is in ${theirs ?? 'none'} — ` +
-        "a sub-issue sits in its parent's milestone"
+        "a sub-issue sits in a milestone of its parent's version"
     ];
   }
   if (own) return [];
@@ -631,7 +632,7 @@ if (cmd === 'check-labels') {
       );
     }
   } else if (sub === 'create') {
-    const title = arg('title') ?? die('--title is required, a version such as v0.2');
+    const title = arg('title') ?? die('--title is required, a version such as v0.2 or v0.2 - Demo');
     const body = prepare(readBody());
     const errors = checkMilestone({ title, body });
     if (milestones().some((m) => m.title === title)) errors.push(`milestone ${title} already exists`);
@@ -659,7 +660,7 @@ if (cmd === 'check-labels') {
     gh(['api', '-X', 'PATCH', `${REPO_API}/milestones/${current.number}`, '-f', 'state=closed']);
     process.stdout.write(`${current.title} closed\n`);
   } else {
-    die('usage: milestone list | create --title vX.Y --body-file - | edit vX.Y | close vX.Y');
+    die('usage: milestone list | create --title "vX.Y - Name" --body-file - | edit "vX.Y - Name" | close "vX.Y - Name"');
   }
 } else if (cmd === 'tidy') {
   const open = new Set(
