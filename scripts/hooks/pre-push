@@ -31,18 +31,18 @@ fi
 HEAD_SHA="$(git rev-parse HEAD)"
 for sha in $(printf '%s\n' "${PUSHED[@]}" | sort -u); do
   base="$(git merge-base "$sha" origin/dev 2>/dev/null)" || continue
-  needs="$(node --input-type=module -e "
-import { changedFiles, onPush } from 'file://$TOP/tools/audit/ci-scope.mjs';
-process.stdout.write(onPush(changedFiles(process.argv[1], process.argv[2])) ?? '');
+  tps="$(node --input-type=module -e "
+import { changedFiles, scopeOf } from 'file://$TOP/tools/audit/ci-scope.mjs';
+process.stdout.write(String(scopeOf(changedFiles(process.argv[1], process.argv[2])).tps));
 " "$base" "$sha")" || exit 1
-  [[ -n "$needs" ]] || continue
+  [[ "$tps" == true ]] || continue
   if [[ "$sha" != "$HEAD_SHA" ]]; then
-    echo "pre-push: $sha needs ci:local ($needs), and the server runs the checked-out commit; check it out and push from there" >&2
+    echo "pre-push: $sha needs the ticks-per-second leg, and the server runs the checked-out commit; check it out and push from there" >&2
     exit 1
   fi
-  echo "pre-push: $sha needs ci:local ($needs) on the server before it is pushed" >&2
+  echo "pre-push: $sha needs the ticks-per-second leg on the server before it is pushed" >&2
   (cd "$TOP" && node tools/remote/run.mjs node tools/remote/ci.mjs --push) || {
-    echo "pre-push: ci:local failed; not pushing" >&2
+    echo "pre-push: the ticks-per-second leg failed; not pushing" >&2
     exit 1
   }
 done

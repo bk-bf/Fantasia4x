@@ -37,8 +37,6 @@ export function scopeOf(files) {
   };
 }
 
-export const onPush = (files) => (touches(files, GATING) ? 'all' : scopeOf(files).tps ? 'tps' : null);
-
 export const changedFiles = (base, head = 'HEAD') =>
   execFileSync('git', ['diff', '--name-only', base, head], { encoding: 'utf8' }).split('\n').filter(Boolean);
 
