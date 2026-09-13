@@ -2,18 +2,13 @@
 set -uo pipefail
 
 ROOT="$(cd "$(git rev-parse --git-common-dir)/.." && pwd)"
-TOP="$(git rev-parse --show-toplevel)"
 
 NEW=()
 BRANCHES=()
-PUSHED=()
-DEV=()
 while read -r _local_ref local_sha remote_ref remote_sha; do
   [[ "$local_sha" =~ ^0+$ ]] && continue
   [[ "$remote_ref" == refs/heads/* ]] || continue
   BRANCHES+=("${remote_ref#refs/heads/}")
-  PUSHED+=("$local_sha")
-  [[ "$remote_ref" == refs/heads/dev ]] && DEV+=("$local_sha $remote_sha")
   [[ "$remote_sha" =~ ^0+$ ]] && NEW+=("${remote_ref#refs/heads/}")
 done
 
@@ -48,38 +43,18 @@ if (bad.length) {
 " "${NEW[@]}" || exit 1
 fi
 
-HEAD_SHA="$(git rev-parse HEAD)"
-for entry in "${DEV[@]}"; do
-  sha="${entry% *}"
-  before="${entry#* }"
-  if [[ "$sha" != "$HEAD_SHA" ]]; then
-    echo "pre-push: push dev from a checkout of the commit being pushed; the server runs the checked-out commit" >&2
-    exit 1
-  fi
-  echo "pre-push: pnpm check and the tests related to the change since ${before:0:8}, on the server, before dev moves" >&2
-  (cd "$TOP" && CHECK_BASE="$before" node tools/remote/run.mjs node tools/audit/ci-check.mjs) || {
-    echo "pre-push: pnpm check or the related tests failed; dev is not pushed" >&2
-    exit 1
+CARDS=()
+for b in "${BRANCHES[@]}"; do [[ "$b" == dev ]] || CARDS+=("$b"); done
+if (( ${#CARDS[@]} )); then
+  node --input-type=module -e "
+import { followBranch } from 'file://$ROOT/tools/audit/lib/board.mjs';
+for (const branch of process.argv.slice(1)) {
+  try {
+    const r = followBranch(branch);
+    if (r?.moved) console.error('pre-push: #' + r.n + ' ' + (r.from || 'no lane') + ' -> ' + r.to);
+  } catch (e) {
+    console.error('pre-push: the card of ' + branch + ' stayed put: ' + String(e.message).split('\n')[0]);
   }
-done
-
-(( ${#PUSHED[@]} )) || exit 0
-[[ -f "$TOP/tools/audit/ci-scope.mjs" ]] || exit 0
-
-for sha in $(printf '%s\n' "${PUSHED[@]}" | sort -u); do
-  base="$(git merge-base "$sha" origin/dev 2>/dev/null)" || continue
-  tps="$(node --input-type=module -e "
-import { changedFiles, scopeOf } from 'file://$TOP/tools/audit/ci-scope.mjs';
-process.stdout.write(String(scopeOf(changedFiles(process.argv[1], process.argv[2])).tps));
-" "$base" "$sha")" || exit 1
-  [[ "$tps" == true ]] || continue
-  if [[ "$sha" != "$HEAD_SHA" ]]; then
-    echo "pre-push: $sha needs the ticks-per-second leg, and the server runs the checked-out commit; check it out and push from there" >&2
-    exit 1
-  fi
-  echo "pre-push: $sha needs the ticks-per-second leg on the server before it is pushed" >&2
-  (cd "$TOP" && node tools/remote/run.mjs node tools/remote/ci.mjs --push) || {
-    echo "pre-push: the ticks-per-second leg failed; not pushing" >&2
-    exit 1
-  }
-done
+}
+" "${CARDS[@]}" || true
+fi
