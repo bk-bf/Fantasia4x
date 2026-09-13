@@ -40,6 +40,15 @@ function vocabulary() {
 
 export const labelGroup = (group) => vocabulary().groups?.[group] ?? [];
 
+export function milestonePlan() {
+  try {
+    const plan = JSON.parse(readFileSync(join(HERE, '..', 'milestones.json'), 'utf8'));
+    return { current: plan.current ?? null, draft: plan.draft ?? [] };
+  } catch {
+    return { current: null, draft: [] };
+  }
+}
+
 /** Every issue has to say how severe it is, what sort of thing it is, who raised it and how it
  *  gets verified. An issue missing one of those cannot be sorted, filtered or costed. */
 export function checkRequired(labels = []) {
