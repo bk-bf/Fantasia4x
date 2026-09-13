@@ -13,6 +13,7 @@ to ubuntuserver through `remote/run.mjs`.
 | `remote/ci.mjs` | Runs the `check` job's pull-request steps on ubuntuserver. | `pnpm ci:local`, `pnpm ci:local --quick` |
 | `remote/guard.mjs` | Refuses a test runner, linter or harness started on the laptop. | Claude Code hook |
 | `remote/prepare.sh` | Puts the pinned Node, pnpm and Rust on the path on ubuntuserver. | loaded by `remote/ci.mjs` |
+| `remote/runner/install.sh` | Sets up the self-hosted GitHub Actions runner on ubuntuserver: a `gh-runner` user, CodSpeed's valgrind build, and the runner as a low-priority service. Needs root once. | `sudo tools/remote/runner/install.sh <registration token>` |
 | `audit/` | The code audit: symbol ledger, rules, overnight runs, fixer, reviewer, resolver and promotion. `audit/README.md` describes it. | `pnpm audit`, `audit:run`, `audit:fix`, `audit:review`, `audit:resolve`, `audit:promote` |
 | `audit/deploy/` | The ubuntuserver units for the nightly audit, and their installer. | `tools/audit/deploy/install.sh` |
 | `audit/hooks/inflight.mjs` | Lists open pull requests with every prompt and flags the first edit of a file they touch. | Claude Code hook |
