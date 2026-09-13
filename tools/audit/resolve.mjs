@@ -3,7 +3,7 @@ import { execFileSync, spawn } from 'node:child_process';
 
 import * as B from './lib/board.mjs';
 import { ROOT } from './lib/harness.mjs';
-import { pauseReason, readControl, readPlan, schedule } from './lib/pace.mjs';
+import { AUDIT_UNITS, activeUnits, readControl, readPlan, schedule } from './lib/pace.mjs';
 
 const ORDER = { tests: 0, headless: 1, playtest: 2 };
 const POINTS_FLOOR = Number(process.env.RESOLVE_POINTS_FLOOR) || 600;
@@ -22,10 +22,10 @@ function sayEvery(key, text) {
 }
 
 async function paceVerdict(holding) {
-  const paused = pauseReason();
   const control = readControl();
   const poll = Math.max(15, Number(control.poll_seconds) || 60) * 1000;
-  if (paused) return { go: false, key: 'paused', reason: `the audit is paused: ${paused}`, poll };
+  const audit = activeUnits(AUDIT_UNITS);
+  if (audit.length) return { go: false, key: 'waiting', reason: `${audit.join(' and ')} is running`, poll };
   const s = schedule(await readPlan(control.plan_url), control, Date.now(), holding);
   return { go: s.verdict === 'go', key: 'holding', reason: s.reason, poll };
 }
@@ -81,9 +81,11 @@ function readyCards(tried) {
     );
 }
 
+const routeAndAgent = (card) => `${card.verify.toLowerCase()}, ${card.agent ?? 'no agent'}`;
+
 const runFix = (n) =>
   new Promise((resolve) => {
-    const child = spawn(process.execPath, ['tools/audit/fix.mjs', '--issue', String(n)], {
+    const child = spawn(process.execPath, ['tools/audit/fix.mjs', '--issue', String(n), '--force'], {
       cwd: ROOT,
       stdio: 'inherit'
     });
@@ -97,7 +99,7 @@ if (DRY) {
   log(`github: ${rl.remaining} points left, floor ${POINTS_FLOOR}, resets ${rl.resetAt}`);
   const cards = readyCards(new Set());
   log(`${cards.length} card(s) in Ready, in the order they would be worked:`);
-  for (const c of cards) log(`  #${c.content.number} (${c.verify.toLowerCase()}) ${c.content.title ?? ''}`);
+  for (const c of cards) log(`  #${c.content.number} (${routeAndAgent(c)}) ${c.content.title ?? ''}`);
   process.exit(0);
 }
 
@@ -125,7 +127,7 @@ for (;;) {
   const n = card.content.number;
   tried.add(n);
   const t0 = Date.now();
-  log(`#${n} (${card.verify.toLowerCase()}) ${card.content.title ?? ''}`);
+  log(`#${n} (${routeAndAgent(card)}) ${card.content.title ?? ''}`);
   const { code, signal } = await runFix(n);
   worked += 1;
   log(

@@ -63,19 +63,27 @@ described it. Planned work has no spec file: a feature's issue is its spec.
 | — | **Screen refactoring** (WorkScreen split into sub-components) | 2026-06-03 | [SCREEN-REFACTORING-2026-06-03.md](archive/SCREEN-REFACTORING-2026-06-03.md) |
 | — | **Phase 1 foundation** (GameEngine + PawnScreen refactoring, hunger/rest system) | 2026-05-25 | — |
 
-## Not shipped, tracked on the board
+## Not shipped, tracked in milestones
 
-| # | Item | Spec |
+What is not shipped lives in a version milestone on
+**https://github.com/bk-bf/Fantasia4x/milestones** — `v0.2`, then `v0.3`. Each spec category is a
+parent issue in one, with its features as sub-issues. A row below that is not yet an issue still
+has to be migrated from its spec.
+
+| # | Item | Where it is now |
 |---|------|------|
-| **2b** | **Visitors (kingdom guests)** | [#65](https://github.com/bk-bf/Fantasia4x/issues/65) |
-| **7** | **Drafted Job/Need Orders** | [DRAFTED-JOB-ORDERS](archive/DRAFTED-JOB-ORDERS.md) |
-| **8** | **Rest from Entity Spawning** | [#58](https://github.com/bk-bf/Fantasia4x/issues/58) |
-| **8c** | **Build-archetype coverage audit** | [BUILD-ARCHETYPES (artifact)](https://claude.ai/code/artifact/f87ef907-46e2-4015-a455-b698799eea4f) |
-| **8d** | **Combat balance: the two-axis stat rebuild** | [#33](https://github.com/bk-bf/Fantasia4x/issues/33)–[#37](https://github.com/bk-bf/Fantasia4x/issues/37) |
-| **8f** | **Early–mid apparel gap (t0–t2)** | [AUDIT (archived)](archive/AUDIT-2026-08-25.md) |
-| **8g** | **Wound-specific tiered medicine** | [AUDIT (archived)](archive/AUDIT-2026-08-25.md) |
-| **8h** | **Runic / magic-reagent tier redesign** | _unspecced_ |
-| **9** | **Magic III** | [LINEAGES](archive/LINEAGES-2026-07-09.md) |
-| **10** | **Research Enhancement** | [#61](https://github.com/bk-bf/Fantasia4x/issues/61) |
-| — | *loose ends, no spec:* building-work bonus stacking · AI event generation (migrant-wave `pendingEvent` seam) · culture content-variety expansion (diversify archetype `statFocus`/`statDump` + comparatives, ~16 archetypes + per-archetype name banks, more quality/yield traits) | — |
+| **2b** | **Visitors (kingdom guests)** | [#65](https://github.com/bk-bf/Fantasia4x/issues/65), `v0.2` |
+| **6** | **Stealth: detection dials, hiding creatures, new senses** | [#120](https://github.com/bk-bf/Fantasia4x/issues/120), `v0.2` |
+| **7** | **Drafted Job/Need Orders** | not yet an issue — [DRAFTED-JOB-ORDERS](archive/DRAFTED-JOB-ORDERS.md) |
+| **8** | **Rest from Entity Spawning** | [#58](https://github.com/bk-bf/Fantasia4x/issues/58), `v0.2` |
+| **8c** | **Build-archetype coverage audit** | not yet an issue — [BUILD-ARCHETYPES (artifact)](https://claude.ai/code/artifact/f87ef907-46e2-4015-a455-b698799eea4f) |
+| **8d** | **Combat balance: the two-axis stat rebuild** | [#119](https://github.com/bk-bf/Fantasia4x/issues/119), `v0.2` |
+| **8f** | **Early–mid apparel gap (t0–t2)** | not yet checked against [#41](https://github.com/bk-bf/Fantasia4x/issues/41) — [AUDIT (archived)](archive/AUDIT-2026-08-25.md) |
+| **8g** | **Wound-specific tiered medicine** | not yet an issue — [AUDIT (archived)](archive/AUDIT-2026-08-25.md) |
+| **8h** | **Runic / magic-reagent tier redesign** | `v0.3` once specced |
+| **9** | **Magic III** | no milestone until it is redesigned |
+| **10** | **Research Enhancement** | [#61](https://github.com/bk-bf/Fantasia4x/issues/61), `v0.2` |
+| — | **Soaking and hafts** | [#121](https://github.com/bk-bf/Fantasia4x/issues/121), `v0.2` |
+| — | **Mechanical power** | [#59](https://github.com/bk-bf/Fantasia4x/issues/59), `v0.3` |
+| — | *loose ends, no spec:* building-work bonus stacking · AI event generation (migrant-wave `pendingEvent` seam) · culture content-variety expansion (diversify archetype `statFocus`/`statDump` + comparatives, ~16 archetypes + per-archetype name banks, more quality/yield traits) | not yet issues |
 

@@ -5,7 +5,16 @@ import { fileURLToPath } from 'node:url';
 import { homedir } from 'node:os';
 import { DatabaseSync } from 'node:sqlite';
 
-import { readControl, writeControl, readPace, readPlan, schedule } from './pace.mjs';
+import {
+  AUDIT_RUN_UNIT,
+  RESOLVER_UNIT,
+  activeUnits,
+  readControl,
+  writeControl,
+  readPace,
+  readPlan,
+  schedule
+} from './pace.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const TOOL = join(HERE, '..');
@@ -119,7 +128,7 @@ function claudeEnv() {
   };
 }
 
-const RUN_UNIT = 'fantasia-audit-run';
+const RUN_UNIT = AUDIT_RUN_UNIT;
 
 function runnerArgs({ hours, workers, model, dry }, runId) {
   return [
@@ -174,6 +183,9 @@ export function decide(now, pids = runnerPids()) {
   if (pids.length) return { launch: false, state: 'running', why: `${pids.length} runner alive` };
   if (control.paused) {
     return { launch: false, state: 'paused', why: control.reason || 'paused from the dashboard' };
+  }
+  if (activeUnits([RESOLVER_UNIT]).length) {
+    return { launch: false, state: 'resolving', why: `${RESOLVER_UNIT} is working the Ready cards` };
   }
   if (!run || (!run.continuous && !run.until)) {
     return { launch: false, state: 'no window', why: 'no run window is open — press Resume' };

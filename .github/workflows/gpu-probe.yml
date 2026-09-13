@@ -1,0 +1,65 @@
+name: gpu-probe
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: gpu-probe
+  cancel-in-progress: false
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    env:
+      VAST_API_KEY: ${{ secrets.VAST_API_KEY }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24.20.0
+
+      - name: Package Playwright for the instance
+        run: |
+          PW="$(grep -m1 -oP '^  playwright@\K[0-9.]+' pnpm-lock.yaml)"
+          echo "PW=$PW" >> "$GITHUB_ENV"
+          mkdir -p "$RUNNER_TEMP/probe"
+          cp tools/gpu/probe.mjs "$RUNNER_TEMP/probe/"
+          cd "$RUNNER_TEMP/probe"
+          echo '{"private":true,"type":"module"}' > package.json
+          pnpm add --config.node-linker=hoisted "playwright@$PW"
+          tar -czf "$RUNNER_TEMP/probe.tgz" -C "$RUNNER_TEMP" probe
+
+      - name: Rent the cheapest matching GPU
+        id: up
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keygen -q -t ed25519 -N '' -f ~/.ssh/vast
+          VAST_IMAGE="mcr.microsoft.com/playwright:v$PW-noble" VAST_SSH_PUB="$HOME/.ssh/vast.pub" node tools/gpu/vast.mjs up
+
+      - name: Probe Chromium on the GPU
+        env:
+          HOST: ${{ steps.up.outputs.host }}
+          PORT: ${{ steps.up.outputs.port }}
+        run: |
+          printf 'Host vast\n  HostName %s\n  Port %s\n  User root\n  IdentityFile ~/.ssh/vast\n  StrictHostKeyChecking no\n  UserKnownHostsFile /dev/null\n  ConnectTimeout 15\n  ServerAliveInterval 30\n' "$HOST" "$PORT" >> ~/.ssh/config
+          for _ in $(seq 30); do ssh vast true && break; sleep 10; done
+          ssh vast bash -s <<'EOF'
+          nvidia-smi --query-gpu=name,driver_version,memory.total --format=csv,noheader
+          tr '\0' '\n' < /proc/1/environ | grep '^NVIDIA_' || echo "no NVIDIA_ variables in the container environment"
+          ldconfig -p | grep -E 'libEGL_nvidia|libGLX_nvidia|libnvidia-eglcore|libnvidia-glcore|libvulkan' || echo "no NVIDIA graphics libraries"
+          ls /etc/vulkan/icd.d /usr/share/vulkan/icd.d /usr/share/glvnd/egl_vendor.d 2>&1
+          EOF
+          ssh vast 'tar -xzf - -C /root' < "$RUNNER_TEMP/probe.tgz"
+          ssh vast 'cd /root/probe && PLAYWRIGHT_BROWSERS_PATH=/ms-playwright timeout 900 node probe.mjs' | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Destroy the instance
+        if: always()
+        env:
+          ID: ${{ steps.up.outputs.id }}
+        run: node tools/gpu/vast.mjs down "$ID"

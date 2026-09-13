@@ -30,7 +30,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -47,6 +47,8 @@ jobs:
 
       - name: Work pins, base against head
         if: github.event_name == 'pull_request'
+        env:
+          WORK_PINS_NOTES: ${{ runner.temp }}/work-pins-notes.jsonl
         run: node tools/work-pins/gate.mjs --base HEAD^1
 
       - name: Read the gungraun version
@@ -63,7 +65,7 @@ jobs:
         if: github.event_name == 'pull_request'
         run: node tools/gungraun/gate.mjs --base HEAD^1 --home "$RUNNER_TEMP/gungraun"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: ${{ !cancelled() && github.event_name == 'pull_request' }}
         with:
           name: gungraun-flamegraphs
@@ -76,7 +78,16 @@ jobs:
 
       - name: Browser work pins, base against head
         if: github.event_name == 'pull_request'
+        env:
+          WORK_PINS_NOTES: ${{ runner.temp }}/work-pins-notes.jsonl
         run: node tools/work-pins/gate.mjs --leg browser --base HEAD^1
+
+      - uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() && github.event_name == 'pull_request' }}
+        with:
+          name: work-pins-notes
+          path: ${{ runner.temp }}/work-pins-notes.jsonl
+          if-no-files-found: ignore
 
       - name: Browser work pins, two branches
         if: github.event_name == 'workflow_dispatch'
@@ -89,7 +100,7 @@ jobs:
           --base "origin/$BASE_BRANCH" --head "origin/$HEAD_BRANCH"
           --hook-from "$(git merge-base HEAD origin/dev)" --out work-pins-out
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: github.event_name == 'workflow_dispatch' && always()
         with:
           name: browser-work-pins
@@ -102,7 +113,7 @@ jobs:
       contents: read
       id-token: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: ./.github/actions/prepare
 
@@ -111,3 +122,34 @@ jobs:
         with:
           mode: simulation
           run: pnpm bench
+
+  perf-notes:
+    if: ${{ !cancelled() && github.event_name == 'pull_request' }}
+    needs: [check, codspeed]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      checks: read
+      issues: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/download-artifact@v8
+        continue-on-error: true
+        with:
+          name: work-pins-notes
+          path: ${{ runner.temp }}/notes
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24.20.0
+
+      - name: Performance notes
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          WORK_PINS_NOTES: ${{ runner.temp }}/notes/work-pins-notes.jsonl
+        run: node tools/work-pins/perf-notes.mjs
