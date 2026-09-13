@@ -32,7 +32,7 @@ describe('scopeOf', () => {
       'tools/audit/ci-scope.mjs',
       'tools/remote/ci.mjs',
       'tools/remote/run.mjs',
-      'scripts/hooks/pre-push',
+      'tools/hooks/pre-push',
       '.github/workflows/check.yml'
     ])
       expect(Object.values(scopeOf([file])).every(Boolean)).toBe(true);

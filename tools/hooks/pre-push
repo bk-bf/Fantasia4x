@@ -5,13 +5,34 @@ ROOT="$(cd "$(git rev-parse --git-common-dir)/.." && pwd)"
 TOP="$(git rev-parse --show-toplevel)"
 
 NEW=()
+BRANCHES=()
 PUSHED=()
 while read -r _local_ref local_sha remote_ref remote_sha; do
   [[ "$local_sha" =~ ^0+$ ]] && continue
   [[ "$remote_ref" == refs/heads/* ]] || continue
+  BRANCHES+=("${remote_ref#refs/heads/}")
   PUSHED+=("$local_sha")
   [[ "$remote_sha" =~ ^0+$ ]] && NEW+=("${remote_ref#refs/heads/}")
 done
+
+if (( ${#BRANCHES[@]} )); then
+  node --input-type=module -e "
+import { blockProblem } from 'file://$ROOT/tools/audit/lib/blockers.mjs';
+let refused = false;
+for (const branch of process.argv.slice(1)) {
+  try {
+    const problem = blockProblem(branch);
+    if (problem) {
+      console.error('pre-push: ' + problem);
+      refused = true;
+    }
+  } catch (e) {
+    console.error('pre-push: could not read the blockers of ' + branch + ', pushing it anyway: ' + String(e.message).split('\n')[0]);
+  }
+}
+process.exit(refused ? 1 : 0);
+" "${BRANCHES[@]}" || exit 1
+fi
 
 if (( ${#NEW[@]} )); then
   node --input-type=module -e "

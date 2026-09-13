@@ -16,7 +16,7 @@ const RUST = [/^sim-core\//, /^spatial-core\//, /^\.github\/actions\//];
 const GATING = [
   /^tools\/audit\/ci-scope\.mjs$/,
   /^tools\/remote\/(ci\.mjs|run\.mjs|prepare\.sh)$/,
-  /^scripts\/hooks\/pre-push$/,
+  /^tools\/hooks\/pre-push$/,
   /^\.github\/workflows\/check\.yml$/
 ];
 const WORK_PINS = [/^tools\/work-pins\//];

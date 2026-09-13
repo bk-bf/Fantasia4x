@@ -361,7 +361,7 @@ import { gatedConsole as console } from '../core/util/log';
 
 No call sites change. Applied to the per-tick services: `WorkService`, `PawnService`, `JobService`, `ResearchService`, `LocationServices`. Toggle at runtime from the dev console with `gameDebug(true)` (exposed via `globalThis.gameDebug = setGameDebug`); `isGameDebug()` gates any remaining heavy log-building (e.g. `GameEngineImpl.debugLogPawns()`).
 
-**2. On-demand tick profiler — RETIRED 2026-06-15.** `processGameTurn()` used to wrap each phase in a `t(label, fn)` timer toggled by `profileTurns()` (`[PROF]`/`[PROF-PAWN]`/`__profOut`). **Removed:** the instrumentation scaled with entity count and, crucially, couldn't see the worker→main boundary — the cost that actually dominated once the sim went off-thread (ADR-021 §B). Profiling is now **browser-native**: Firefox Profiler → `pq` / `scripts/profile-self.mjs`. The `t()` runners are now no-op pass-throughs. *(The gated logger, point 1, stays.)*
+**2. On-demand tick profiler — RETIRED 2026-06-15.** `processGameTurn()` used to wrap each phase in a `t(label, fn)` timer toggled by `profileTurns()` (`[PROF]`/`[PROF-PAWN]`/`__profOut`). **Removed:** the instrumentation scaled with entity count and, crucially, couldn't see the worker→main boundary — the cost that actually dominated once the sim went off-thread (ADR-021 §B). Profiling is now **browser-native**: Firefox Profiler → `pq` / `tools/profile-self.mjs`. The `t()` runners are now no-op pass-throughs. *(The gated logger, point 1, stays.)*
 
 **3. `GameEngineImpl` console shadowing** — moot now the `[PROF]` output is gone; it still avoids shadowing `console` so real warnings surface.
 
@@ -747,7 +747,7 @@ wrapper choice (ADR-020). The wrapper is **not** a performance lever — single-
 - The `MAX_STEPS`/terrain-throttle tradeoffs are gone (Worker + `_terrainRev`).
 - **The custom in-game profiler was RETIRED** (it scaled with entity count and couldn't see the
   worker boundary — the cost that actually mattered). Profiling is now **browser-native** (Firefox
-  Profiler → `pq`/`scripts/profile-self.mjs`); `[PROF]`/`profCount`/`?simprof`/`__profileTurns` removed.
+  Profiler → `pq`/`tools/profile-self.mjs`); `[PROF]`/`profCount`/`?simprof`/`__profileTurns` removed.
 - **Two rejected sub-attempts (measured worse, reverted):** a TS uniform-grid for nearest-entity
   queries (per-tick allocation > linear scan at ~290 entities) and `(pawns,mobs)`-memoized occupancy
   (near-zero hit rate). See ENGINE-PERFORMANCE §B.
