@@ -18,6 +18,7 @@ import * as B from './lib/board.mjs';
 import * as I from './lib/gh.mjs';
 import * as PR from './lib/pulls.mjs';
 import { branchFor } from './lib/branch.mjs';
+import { openBlockers, blockedMessage } from './lib/blockers.mjs';
 import {
   ROOT,
   PNPM,
@@ -63,6 +64,8 @@ function pick() {
     const subs = PR.openSubIssues(issue.number);
     if (subs.length)
       fail(`#${issue.number} has open sub-issues (${subs.map((s) => `#${s}`).join(', ')}); work one of them`);
+    const blockers = openBlockers(issue.number);
+    if (blockers.length) fail(blockedMessage(issue.number, blockers));
     const card = B.itemFor(issue.number);
     const route = (card?.verify ?? '').toLowerCase();
     if (!ROUTES.has(route)) fail(`#${issue.number} has no Verify route on the board`);
@@ -89,6 +92,11 @@ function pick() {
       out(`--- skipping #${issue.number}, it has open sub-issues`);
       continue;
     }
+    const blockers = openBlockers(issue.number);
+    if (blockers.length) {
+      out(`--- skipping #${issue.number}, it is blocked by ${blockers.map((b) => `#${b.number}`).join(', ')}`);
+      continue;
+    }
     const model = modelOf(it);
     if (!model) {
       out(`--- skipping #${issue.number}, it has no Agent on the board`);
@@ -96,7 +104,7 @@ function pick() {
     }
     return { issue, route, model };
   }
-  fail(`every ${route} card in Ready is closed, has open sub-issues or has no Agent`);
+  fail(`every ${route} card in Ready is closed, blocked, has open sub-issues or has no Agent`);
 }
 
 const say = (n, text) => {

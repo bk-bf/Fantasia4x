@@ -2,6 +2,7 @@ import { execFileSync } from 'node:child_process';
 
 import { ROOT, BASE } from './harness.mjs';
 import { branchProblem } from './branch.mjs';
+import { blockProblem } from './blockers.mjs';
 import { checkPrivate } from './private.mjs';
 
 export const REVIEW_CONTEXT = 'audit/review';
@@ -100,7 +101,10 @@ export function editPull(n, body) {
 
 export function createPull({ branch, title, body, labels = [], autoMerge = false }) {
   const problem =
-    branchProblem(branch) || checkPrivate(`${title}\n${body}`)[0] || linkProblem(body);
+    branchProblem(branch) ||
+    blockProblem(branch) ||
+    checkPrivate(`${title}\n${body}`)[0] ||
+    linkProblem(body);
   if (problem) throw new Error(problem);
   const args = ['pr', 'create', '--base', BASE, '--head', branch, '--title', title, '--body-file', '-'];
   for (const l of labels) args.push('--label', l);

@@ -193,7 +193,8 @@ This applies to subagents you dispatch.
 - Keep the `Co-Authored-By` trailer.
 
 **The hooks enforce it.** `scripts/hooks/commit-msg` refuses a message in any other shape,
-`pre-push` refuses a new branch not named `<type>/<title>` or `<type>/<title>-<issue number>`, and `pre-commit` and
+`pre-push` refuses a new branch not named `<type>/<title>` or `<type>/<title>-<issue number>`, and a
+branch whose issue is blocked by an open issue; `pre-commit` and
 `commit-msg` refuse a line or message carrying a private word, checked against the hashes in
 `tools/audit/private-words.json`. `pnpm hooks:install` links all three into `.git/hooks`, with `post-checkout`, which copies the main
 checkout's `.svelte-kit/tsconfig.json` into a new worktree so its `tsconfig.json` resolves; run it in
@@ -493,6 +494,11 @@ runs from `.claude/settings.json`: it lists the open pull requests with every pr
 the first edit in a session of a file that an open pull request changes or an open issue cites,
 naming them. The branch's own issue and pull request, from the `-<n>` its name ends in, are not
 counted. Read what it names; if the edit belongs to that work, do it on that branch.
+
+**An issue blocked by an open issue stays local.** `pre-push` refuses a branch whose `-<n>` names
+an issue that GitHub lists as blocked by an open issue, `createPull` refuses its pull request, and
+`pnpm audit:fix` skips or refuses the card; each names the blocker. Work on it and test it locally;
+it is pushed once the blocker closes. `pnpm issue blocked-by <n> <blocker>` adds the link.
 
 **Work an agent does on a board card goes through a pull request into `dev`.** The fixer opens
 it, the reviewer and CI report on it, and it merges once they pass. The pull request is where he reads the
