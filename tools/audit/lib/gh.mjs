@@ -207,7 +207,7 @@ export function writeIssue(_root, { data, body }) {
     ? ['edit', existing.path, '--title', data.title, '--body-file', '-']
     : [
         'create', '--title', data.title, '--body-file', '-', '--type', data.type ?? 'fix',
-        '--area', data.area ?? '', '--size', data.size ?? ''
+        '--area', data.area ?? '', '--size', data.size ?? '', '--agent', data.agent ?? ''
       ];
   for (const l of labels) args.push(existing ? '--add-label' : '--label', l);
   const outText = issueTool(args, { input: composeBody(data, body) });

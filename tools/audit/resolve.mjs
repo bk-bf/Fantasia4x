@@ -81,6 +81,8 @@ function readyCards(tried) {
     );
 }
 
+const routeAndAgent = (card) => `${card.verify.toLowerCase()}, ${card.agent ?? 'no agent'}`;
+
 const runFix = (n) =>
   new Promise((resolve) => {
     const child = spawn(process.execPath, ['tools/audit/fix.mjs', '--issue', String(n)], {
@@ -97,7 +99,7 @@ if (DRY) {
   log(`github: ${rl.remaining} points left, floor ${POINTS_FLOOR}, resets ${rl.resetAt}`);
   const cards = readyCards(new Set());
   log(`${cards.length} card(s) in Ready, in the order they would be worked:`);
-  for (const c of cards) log(`  #${c.content.number} (${c.verify.toLowerCase()}) ${c.content.title ?? ''}`);
+  for (const c of cards) log(`  #${c.content.number} (${routeAndAgent(c)}) ${c.content.title ?? ''}`);
   process.exit(0);
 }
 
@@ -125,7 +127,7 @@ for (;;) {
   const n = card.content.number;
   tried.add(n);
   const t0 = Date.now();
-  log(`#${n} (${card.verify.toLowerCase()}) ${card.content.title ?? ''}`);
+  log(`#${n} (${routeAndAgent(card)}) ${card.content.title ?? ''}`);
   const { code, signal } = await runFix(n);
   worked += 1;
   log(

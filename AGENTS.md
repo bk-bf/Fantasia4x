@@ -321,7 +321,7 @@ reviewer stop while the audit is paused, because they spend the same limits.
 ```bash
 pnpm issue labels                       # every label the schema allows
 pnpm issue lint --body-file draft.md    # would this be accepted?
-pnpm issue create --title T --type fix --area sim --size S --body-file - --label high --label drift
+pnpm issue create --title T --type fix --area sim --size S --agent haiku --body-file - --label high --label drift
 pnpm issue close 12 --commit <sha>
 pnpm issue pr --head <branch> --title T --body-file -   # open a pull request into dev
 pnpm issue pr-edit 84 --body-file -                     # rewrite its description
@@ -368,6 +368,14 @@ for what the audit raises: Area from the subarea, Size from how many files the f
 `check-labels` reports a card missing either, open or in `On dev` or `Done`, and
 `pnpm issue edit <n> --area A --size S` sets them, as `--verify V` sets the Verify route. Size is the effort: `S` is one change in a
 file or two, `M` is several files or a measurement, `L` is several steps, a new system or a design.
+
+**Agent is required on every card too: it is the model the fixer works the card under.**
+`pnpm issue create` refuses an issue without `--agent` (`haiku`, `sonnet`, `opus`), and
+`pnpm issue edit <n> --agent A` changes it. `fix.mjs` passes it to `claude --model` and refuses a
+card without one. Pick the smallest model the scope allows: `haiku` for a mechanical change in a
+file or two, `sonnet` for several files, a feature step or a headless measurement, `opus` only for
+a cross-cutting refactor, a new system or a design. `raise.mjs` derives it with `agentFor` in
+`tools/audit/lib/raise.mjs`, and `check-labels` reports an open card without one.
 
 **A feature is built one step per branch.** Work type `feat` goes with the kind `feature`, and
 nothing else: `create --type feat` adds the kind when no kind is given, and `check-labels`
