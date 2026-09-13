@@ -44,7 +44,8 @@ import {
   laneOf,
   boardItems,
   fields,
-  invalidate
+  invalidate,
+  strayCard
 } from './audit/lib/board.mjs';
 import { createPull, editPull, linkOf } from './audit/lib/pulls.mjs';
 import { tidy } from './audit/lib/tidy.mjs';
@@ -298,6 +299,10 @@ if (cmd === 'check-labels') {
     if (open.has(key) || !MERGED_LANES.has((card.status ?? '').toLowerCase())) continue;
     report(key, card.title ?? '', boardGaps(card), card.status);
   }
+  for (const item of boardItems()) {
+    const stray = strayCard(item);
+    if (stray) report(item.content?.number ?? '-', item.content?.title ?? item.title ?? '', [stray], item.status);
+  }
   process.stdout.write(
     `\n${bad} open issue(s) incompletely classified, ${untyped} with a gap on the board\n`
   );
@@ -525,16 +530,12 @@ if (cmd === 'check-labels') {
     const body = readBody();
     const pull = createPull({ branch: head, title, body });
     process.stdout.write(`${pull?.url ?? ''}\n`);
-    const link = linkOf({ body });
-    const card = link?.issue ?? pull?.number;
-    if (card) {
-      try {
-        if (!link) addToBoard(card, 'pull');
-        const r = moveLane(card, 'in check');
-        if (r.moved) process.stdout.write(`#${card} ${r.from || 'no lane'} -> in check\n`);
-      } catch (e) {
-        process.stdout.write(`#${card} stayed put: ${String(e.message).split('\n')[0]}\n`);
-      }
+    const card = linkOf({ body }).issue;
+    try {
+      const r = moveLane(card, 'in check');
+      if (r.moved) process.stdout.write(`#${card} ${r.from || 'no lane'} -> in check\n`);
+    } catch (e) {
+      process.stdout.write(`#${card} stayed put: ${String(e.message).split('\n')[0]}\n`);
     }
   } catch (e) {
     die(e.message);
