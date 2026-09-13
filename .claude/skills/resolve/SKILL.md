@@ -6,7 +6,8 @@ description: Start the Fantasia4x resolver on ubuntuserver and watch it work the
 # Running the resolver
 
 `tools/audit/resolve.mjs` is the loop. It takes the cards in `Ready`, tests first, then
-headless, then playtest, oldest first, and hands each to `tools/audit/fix.mjs --issue <n>`. It
+headless, then playtest, oldest first, and hands each to `tools/audit/fix.mjs --issue <n>`,
+which runs the model the card's `Agent` field names and refuses a card without one. It
 tries each card once per run and stops when no untried card is left. Your job is to start it,
 watch it and keep it alive. What happens to a card afterwards is not yours to judge: a pull
 request that fails review or CI is the reviewer's run, and `board-sync.py` merges the ones that
@@ -61,7 +62,7 @@ Arm a persistent Monitor on its journal, filtered to what changes a card or the 
 journalctl --user -u fantasia-resolve -f -n 0 -o cat | grep --line-buffered -E '^\[resolve|^--- (#|opened|pushed|not green|nothing changed)|^ABORT|Scheduled restart|Main process exited|Failed with result'
 ```
 
-Report one line per card as it finishes: the card, what the fixer did with it (a pull request,
+Report one line per card as it finishes: the card, the model it ran under, what the fixer did with it (a pull request,
 `PR ready`, `Failed`, nothing changed, or refused with its `ABORT:` reason) and how long it took.
 Report a hold or a pause once, when it starts, not every time it is logged.
 

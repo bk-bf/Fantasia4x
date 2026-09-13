@@ -36,7 +36,7 @@ import { readControl } from './lib/pace.mjs';
 import * as P from './lib/prs.mjs';
 import { ledgerEvidence } from './lib/raise.mjs';
 
-const MODEL = process.env.AUDIT_FIX_MODEL || 'sonnet';
+const modelOf = (card) => (card?.agent ?? '').toLowerCase() || null;
 const ROUTES = new Set(['tests', 'headless', 'playtest']);
 
 const arg = (n, d) => {
@@ -66,7 +66,9 @@ function pick() {
     const card = B.itemFor(issue.number);
     const route = (card?.verify ?? '').toLowerCase();
     if (!ROUTES.has(route)) fail(`#${issue.number} has no Verify route on the board`);
-    return { issue, route };
+    const model = modelOf(card);
+    if (!model) fail(`#${issue.number} has no Agent on the board, so no model is named to work it`);
+    return { issue, route, model };
   }
 
   const route = arg('verify', 'tests').toLowerCase();
@@ -87,9 +89,14 @@ function pick() {
       out(`--- skipping #${issue.number}, it has open sub-issues`);
       continue;
     }
-    return { issue, route };
+    const model = modelOf(it);
+    if (!model) {
+      out(`--- skipping #${issue.number}, it has no Agent on the board`);
+      continue;
+    }
+    return { issue, route, model };
   }
-  fail(`every ${route} card in Ready is closed or has open sub-issues`);
+  fail(`every ${route} card in Ready is closed, has open sub-issues or has no Agent`);
 }
 
 const say = (n, text) => {
@@ -229,7 +236,7 @@ ${ledgerEvidence(issue.number)}`;
 const COMMIT_TYPE = { tooling: 'dev', decision: 'chore' };
 const GIT_TYPES = /^(feat|fix|refactor|chore|docs|dev|perf|style|test|ci|build)$/;
 
-function commitMessage(d, num, files, workType, step) {
+function commitMessage(d, num, files, workType, step, model) {
   const raw = workType ?? B.itemFor(num)?.['work type'] ?? 'fix';
   const type = COMMIT_TYPE[raw] ?? (GIT_TYPES.test(raw) ? raw : 'fix');
   const scope = /^[a-z0-9./-]+$/.test(d.subarea ?? '') ? `(${d.subarea})` : '';
@@ -248,7 +255,7 @@ function commitMessage(d, num, files, workType, step) {
     step ? `- Take the next step on #${num}.` : `- Work the remediation list on #${num}.`,
     `- Change ${named}${rest}.`,
     '',
-    'Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>'
+    `Co-Authored-By: Claude ${model.charAt(0).toUpperCase()}${model.slice(1)} <noreply@anthropic.com>`
   ].join('\n');
 }
 
@@ -281,7 +288,7 @@ for (const it of B.inLane('in progress')) {
   B.moveLane(n, 'ready');
 }
 
-const { issue, route } = pick();
+const { issue, route, model } = pick();
 const d = issue.data;
 const num = issue.number;
 out(`#${num} ${d.id} — ${d.title}`);
@@ -299,7 +306,7 @@ const wt = join(ROOT, '.claude', 'worktrees', `fix-${branch.slice('fix/'.length)
 const notes = earlier ? PR.feedback(earlier.number) : [];
 
 if (flag('dry-run')) {
-  out(`would work #${num} on ${branch} in ${wt}`);
+  out(`would work #${num} under ${model} on ${branch} in ${wt}`);
   out(
     `  lane ${B.laneOf(num)} -> in progress, then a pull request into ${BASE}` +
       (route === 'playtest' ? ` labelled ${PR.PLAYTEST_LABEL} and the card to pr ready` : '')
@@ -355,14 +362,14 @@ let committed = false;
 try {
   await prepareWorktree(wt, out);
 
-  out(`--- ${CLAUDE} (${MODEL})`);
+  out(`--- ${CLAUDE} (${model})`);
   const t0 = Date.now();
   const res = await run(
     CLAUDE,
     [
       '--print',
       '--model',
-      MODEL,
+      model,
       '--permission-mode',
       'acceptEdits',
       // Bash is granted deliberately: the model is told to get `pnpm check` and
@@ -425,7 +432,8 @@ try {
         num,
         files,
         step ? 'feat' : route === 'playtest' ? 'fix' : undefined,
-        step
+        step,
+        model
       );
       execFileSync('git', ['commit', '-q', '-F', '-'], { cwd: wt, input: msg });
       // The commit exists from here on. Nothing below may reach the catch and write the branch

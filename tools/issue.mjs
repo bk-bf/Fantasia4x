@@ -4,8 +4,8 @@
 // mean nothing in an issue, an issue URL inside backticks that never becomes a link, and a
 // label invented one letter away from the one that already exists.
 //
-//   node tools/issue.mjs create --title T --type fix --area sim --size S --body-file - [--label L]... [--parent N]
-//   node tools/issue.mjs edit <n> [--title T] [--body-file -] [--add-label L] [--remove-label L] [--type T] [--area A] [--size S] [--verify V] [--parent N]
+//   node tools/issue.mjs create --title T --type fix --area sim --size S --agent haiku --body-file - [--label L]... [--parent N]
+//   node tools/issue.mjs edit <n> [--title T] [--body-file -] [--add-label L] [--remove-label L] [--type T] [--area A] [--size S] [--agent A] [--verify V] [--parent N]
 //   node tools/issue.mjs blocked-by <n> <blocker>    # mark <n> as blocked by <blocker>
 //   node tools/issue.mjs comment <n> --body-file -
 //   node tools/issue.mjs close <n> --commit <sha>
@@ -185,13 +185,14 @@ const linkParent = (n, parent) =>
 
 const MERGED_LANES = new Set(['on dev', 'done']);
 
-const boardGaps = (card) => {
+const boardGaps = (card, open = false) => {
   const gaps = [];
   if (!card.status) gaps.push('no Status — the card is on the board in no lane');
   if (!card['work type']) gaps.push('no Work type on the board');
   if (!card.verify) gaps.push('no Verify route on the board');
   if (!card.area) gaps.push('no Area on the board');
   if (!card.size) gaps.push('no Size on the board');
+  if (open && !card.agent) gaps.push('no Agent on the board');
   const sev = (card.labels ?? []).find((l) => SEVERITY_PRIORITY[l]);
   if (sev && card.priority !== SEVERITY_PRIORITY[sev]) {
     gaps.push(
@@ -239,7 +240,7 @@ if (cmd === 'check-labels') {
   )) {
     const key = String(it.number);
     open.add(key);
-    report(it.number, it.title, cards.has(key) ? boardGaps(cards.get(key)) : ['not on the board']);
+    report(it.number, it.title, cards.has(key) ? boardGaps(cards.get(key), true) : ['not on the board']);
   }
   for (const [key, card] of cards) {
     if (open.has(key) || !MERGED_LANES.has((card.status ?? '').toLowerCase())) continue;
@@ -344,6 +345,7 @@ if (cmd === 'check-labels') {
   if (!TYPES.includes(type)) die(`unknown --type "${type}" — one of: ${TYPES.join(', ')}`);
   const area = boardOption('Area', arg('area'), 'area');
   const size = boardOption('Size', arg('size'), 'size');
+  const agent = boardOption('Agent', arg('agent'), 'agent');
   if (type === 'feat' && !labels.some((l) => labelGroup('kind').includes(l))) labels.push('feature');
   const body = prepare(readBody());
   guard(labels, body, { template: true, workType: type });
@@ -371,6 +373,7 @@ if (cmd === 'check-labels') {
     setSelect(n, 'Work type', type);
     setSelect(n, 'Area', area);
     setSelect(n, 'Size', size);
+    setSelect(n, 'Agent', agent);
     const priority = labels.map((l) => SEVERITY_PRIORITY[l]).find(Boolean);
     if (priority) setSelect(n, 'Priority', priority);
     if (verify) setSelect(n, 'Verify', verify);
@@ -391,6 +394,7 @@ if (cmd === 'check-labels') {
   if (parent) issueId(parent);
   const area = arg('area') && boardOption('Area', arg('area'), 'area');
   const size = arg('size') && boardOption('Size', arg('size'), 'size');
+  const agent = arg('agent') && boardOption('Agent', arg('agent'), 'agent');
   const add = all('add-label');
   const body = arg('body-file') ? prepare(readBody()) : null;
   const type = arg('type');
@@ -422,7 +426,7 @@ if (cmd === 'check-labels') {
   if (body !== null) changes.push('--body-file', '-');
   for (const l of add) changes.push('--add-label', l);
   for (const l of all('remove-label')) changes.push('--remove-label', l);
-  if (!changes.length && !parent && !type && !area && !size && !verify) die('nothing to edit');
+  if (!changes.length && !parent && !type && !area && !size && !agent && !verify) die('nothing to edit');
   if (changes.length) process.stdout.write(gh(['issue', 'edit', n, ...changes], body ?? undefined));
   if (parent) {
     linkParent(n, parent);
@@ -432,6 +436,7 @@ if (cmd === 'check-labels') {
     ['Work type', type],
     ['Area', area],
     ['Size', size],
+    ['Agent', agent],
     ['Verify', verify]
   ]) {
     if (!value) continue;
