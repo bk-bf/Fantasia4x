@@ -146,8 +146,9 @@ gh api repos/bk-bf/Fantasia4x/branches/dev/protection --jq .required_status_chec
 
 A required job the scope skips counts as passed. `.github/workflows/promote.yml` runs every leg
 against `main` before a promotion, which catches a leg that a change to the CI files broke. The
-CodSpeed and ticks-per-second legs run on the self-hosted runner on ubuntuserver because their
-counts repeat there and do not on GitHub's changing machines; keep them there.
+CodSpeed and ticks-per-second legs run on GitHub's own runners. Before moving either to another
+machine, run the same commit against itself there several times and compare the spread with
+GitHub's, which the pull request that moved them records.
 
 **`pnpm chain` is the one command** (`tools/chain.mjs`). It pushes the current branch and streams
 its check run from GitHub until the run ends, exiting with its result; `pnpm chain --pre` runs the
