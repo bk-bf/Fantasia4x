@@ -59,7 +59,7 @@ describe('parseProfile', () => {
 });
 
 describe('verdict', () => {
-  it('calls an instruction change within half a percent noise', () => {
+  it('calls an instruction change inside the noise band within noise', () => {
     expect(verdict(counts(1_000_000, 100), counts(1_004_000, 100))).toBe('within noise');
   });
 
