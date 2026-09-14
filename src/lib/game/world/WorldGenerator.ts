@@ -83,7 +83,7 @@ export function getTerraceNoise(
 export function generateWorld(
   width: number,
   height: number,
-  seed = Date.now(),
+  seed: number,
   opts?: { skipResources?: boolean; tidyWater?: boolean }
 ): WorldTile[][] {
   const detailSeed = (seed * 6971) >>> 0;

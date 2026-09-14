@@ -669,8 +669,12 @@ export const COMMANDS: Record<string, Cmd> = {
       );
       return s;
     }
+    const takenIds = new Set((s.droppedItems ?? []).map((d) => d.id));
+    const dropBase = `drop-${p.pawnId}-${p.itemId}-t${s.turn}`;
+    let dropSeq = 0;
+    while (takenIds.has(`${dropBase}-${dropSeq}`)) dropSeq++;
     const drop = {
-      id: `drop-${p.pawnId}-${p.itemId}-${Date.now()}`,
+      id: `${dropBase}-${dropSeq}`,
       resourceId: p.itemId,
       x: pawn.position.x,
       y: pawn.position.y,
