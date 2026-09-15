@@ -354,7 +354,8 @@ if (cmd === 'check-labels') {
   let dead = 0;
   for (const it of allIssues()) {
     // a resolving blob link is the goal, not a problem; everything else is work left to do
-    const problems = scanBody(it.body, sha).filter((f) => f.kind !== 'blob' || !f.real);
+    const prose = String(it.body ?? '').replace(/<!--[\s\S]*?-->/g, '');
+    const problems = scanBody(prose, sha).filter((f) => f.kind !== 'blob' || !f.real);
     const unresolvable = problems.filter((f) => !f.real);
     const next = repair(it.body, sha);
     const drifted = next !== (it.body ?? '');
