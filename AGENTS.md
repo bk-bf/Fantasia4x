@@ -296,7 +296,9 @@ fixed by the next push.
 (`~/server/mediaserver/scripts/board-sync.py`, with `tools/audit/after-merge.mjs`). It merges the
 pull requests that are ready to merge, keeps the open ones up to date with `dev`, moves merged
 cards to `On dev`, writes the labels that mirror a board field, and adds any open issue missing
-from the board to `Backlog`. Read it for the exact conditions before you rely on one.
+from the board to `Backlog`. It moves a parent issue into the lane all of its sub-issues share,
+unless the parent is in `Manual` or `Rejected`. Read it for the exact conditions before you rely
+on one.
 
 **Never write to GitHub with `gh` directly.** `gh issue create|edit|close|comment`,
 `gh label create|edit|delete` and `gh pr create|edit` are denied in `.claude/settings.json`. Use
