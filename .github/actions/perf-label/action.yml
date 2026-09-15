@@ -1,0 +1,13 @@
+name: perf-label
+description: Set PERF_CHANGE_ACCEPTED from the labels the pull request carries now.
+runs:
+  using: composite
+  steps:
+    - name: Read the perf change accepted label
+      if: github.event_name == 'pull_request'
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+        GH_REPO: ${{ github.repository }}
+        PR: ${{ github.event.pull_request.number }}
+      run: echo "PERF_CHANGE_ACCEPTED=$(gh pr view "$PR" --json labels --jq 'any(.labels[]; .name == "perf change accepted")')" >> "$GITHUB_ENV"

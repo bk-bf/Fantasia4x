@@ -1,0 +1,44 @@
+name: Perf change accepted
+
+on:
+  pull_request:
+    branches: [dev]
+    types: [labeled, unlabeled]
+
+concurrency:
+  group: perf-label-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  rerun:
+    name: Re-run check for the perf change accepted label
+    if: github.event.label.name == 'perf change accepted'
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    permissions:
+      actions: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      SHA: ${{ github.event.pull_request.head.sha }}
+      ACTION: ${{ github.event.action }}
+    steps:
+      - name: Re-run the check run of the head commit
+        run: |
+          read -r id status conclusion < <(gh run list --workflow check.yml --commit "$SHA" --event pull_request --limit 1 \
+            --json databaseId,status,conclusion --jq '.[0] | "\(.databaseId) \(.status) \(.conclusion)"')
+          if [ -z "$id" ] || [ "$id" = null ]; then
+            echo "no check run for $SHA yet; it reads the label when it runs"
+            exit 0
+          fi
+          if [ "$status" != completed ]; then
+            gh run cancel "$id"
+            gh run watch "$id" > /dev/null || true
+            gh run rerun "$id"
+          elif [ "$ACTION" = labeled ] && [ "$conclusion" != success ]; then
+            gh run rerun "$id" --failed
+          elif [ "$ACTION" = unlabeled ] && [ "$conclusion" = success ]; then
+            gh run rerun "$id"
+          else
+            echo "check run $id is $conclusion; nothing to re-run"
+          fi
