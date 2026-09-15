@@ -14,6 +14,7 @@ import { pawnStatService } from './PawnStatService';
 import { itemService } from './ItemService';
 import { WORK_CATEGORIES } from '../core/defs/work';
 import { SECONDS_PER_TICK, perTick } from '../core/util/time';
+import { tileKey } from '../core/util/tileKey';
 import { stepBody } from './MovementSystem';
 import { occupancyService } from './OccupancyService';
 import conditionsData from '../database/pawns/conditions.json';
@@ -893,12 +894,13 @@ export class PawnServiceImpl implements PawnService {
 
     const occupied = occupancyService.blockedTiles(state);
     const targetByTile = occupancyService.movingTargets(state);
-    const claimed = new Set<string>();
+    const claimed = new Set<number>();
+    const width = state.worldMap[0]?.length ?? 0;
     for (const p of state.pawns) {
       if (p.isAlive === false || !p.position || !p.path?.length || p.nextCellCostLeft == null)
         continue;
       const t = p.path[p.pathIndex ?? 0];
-      if (t) claimed.add(`${t.x},${t.y}`);
+      if (t) claimed.add(tileKey(t.x, t.y, width));
     }
 
     const patch = (p: Pawn, fields: Partial<Pawn>) => Object.assign(p, fields);

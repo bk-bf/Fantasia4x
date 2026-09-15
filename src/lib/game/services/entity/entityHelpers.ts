@@ -454,8 +454,8 @@ export function advanceMobMovement(state: GameState): GameState {
 
   const occupancy = occupancyService.blockedTiles(state);
   const targetByTile = occupancyService.movingTargets(state);
-  const claimed = new Set<string>();
-  seedMidCrossClaims(mobs, claimed, (m) => m.state !== 'Corpse');
+  const claimed = new Set<number>();
+  seedMidCrossClaims(mobs, claimed, state.worldMap[0]?.length ?? 0, (m) => m.state !== 'Corpse');
 
   let changed = false;
   const next: Mob[] = new Array(mobs.length);
