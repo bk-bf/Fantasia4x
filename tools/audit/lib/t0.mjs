@@ -109,6 +109,11 @@ export function adrCoverage(root, rules, doc = 'docs/game/DECISIONS.md') {
 const stripComments = (t) =>
   t.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/(^|[^:])\/\/.*$/gm, '$1');
 
+const stripCommentsKeepPositions = (t) =>
+  t
+    .replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, ' '))
+    .replace(/(^|[^:])\/\/.*$/gm, (m, p1) => p1 + ' '.repeat(m.length - p1.length));
+
 /**
  * Architecture seams, checked by reading the code rather than a map of it.
  *
@@ -149,8 +154,34 @@ export function seamViolations(root, symbols) {
         });
       }
     }
+    for (const { file, line } of topLevelCalls(root, symbols, r.target)) {
+      const id = `${file}::<top level>`;
+      if (allow.has(id)) continue;
+      findings.push({ adr: r.adr, where: `${id}  ${file}:${line}`, detail: r.msg, blocks: r.blocks === true });
+    }
   }
   return { rules: rules.length, findings };
+}
+
+function topLevelCalls(root, symbols, target) {
+  const spans = new Map();
+  for (const s of symbols) {
+    if (!spans.has(s.file)) spans.set(s.file, []);
+    spans.get(s.file).push([s.startByte, s.endByte]);
+  }
+  const re = new RegExp(`(?:\\.|\\b)${target}\\s*\\(`, 'g');
+  const calls = [];
+  for (const abs of walkFiles(join(root, 'src'), ['.ts', '.svelte'])) {
+    const file = abs.slice(root.length + 1);
+    if (/\.(test|spec)\.ts$/.test(file) || file.includes('/tests/')) continue;
+    const text = stripCommentsKeepPositions(readFileSync(abs, 'utf8'));
+    const inside = spans.get(file) ?? [];
+    for (const m of text.matchAll(re)) {
+      if (inside.some(([a, b]) => m.index >= a && m.index < b)) continue;
+      calls.push({ file, line: text.slice(0, m.index).split('\n').length });
+    }
+  }
+  return calls;
 }
 
 export const COMPONENT_LINE_LIMIT = 200;
