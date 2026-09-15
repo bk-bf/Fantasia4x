@@ -6,7 +6,7 @@ import { basename, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 export const EVENTS = ['Ir', 'Dr', 'Dw', 'I1mr', 'D1mr', 'D1mw', 'ILmr', 'DLmr', 'DLmw'];
-const NOISE = { instructions: 0.75, llMisses: 15 };
+export const NOISE = { instructions: 0.75, llMisses: 15 };
 const PROFILE_FOLDER = /^profile\..+\.out$/;
 const PROFILE_FILE = /^\d+\.out$/;
 const COUNTS_ARTIFACT = 'codspeed-counts-';
@@ -47,7 +47,7 @@ const number = (n) => (n === undefined ? '-' : n.toLocaleString('en-US'));
 
 const percent = (base, head) => ((head - base) / base) * 100;
 
-function change(base, head, digits) {
+export function change(base, head, digits) {
   if (base === undefined) return 'new';
   if (head === undefined) return 'gone';
   if (base === 0) return head === 0 ? '0%' : 'new';

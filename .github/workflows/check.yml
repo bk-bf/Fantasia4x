@@ -233,12 +233,20 @@ jobs:
       - name: Ticks per second, base against head
         env:
           TMPDIR: ${{ runner.temp }}
+          TPS_NOTES: ${{ runner.temp }}/tps-notes.jsonl
         run: node tools/work-pins/gate.mjs --leg tps --base "$BASE"
+
+      - uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() }}
+        with:
+          name: tps-notes
+          path: ${{ runner.temp }}/tps-notes.jsonl
+          if-no-files-found: ignore
 
   perf-notes:
     name: Check notes on the pull request
     if: ${{ !cancelled() && github.event_name == 'pull_request' }}
-    needs: [precheck, measure, codspeed]
+    needs: [precheck, measure, codspeed, tps]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -268,6 +276,12 @@ jobs:
           name: codspeed-counts-${{ github.run_attempt }}
           path: ${{ runner.temp }}/codspeed
 
+      - uses: actions/download-artifact@v8
+        continue-on-error: true
+        with:
+          name: tps-notes
+          path: ${{ runner.temp }}/tps
+
       - uses: actions/setup-node@v7
         with:
           node-version: 24.20.0
@@ -282,4 +296,5 @@ jobs:
           WARNINGS_NOTES: ${{ runner.temp }}/warnings/warnings-notes.jsonl
           CODSPEED_COUNTS: ${{ runner.temp }}/codspeed/codspeed-counts.json
           CODSPEED_RAN: ${{ needs.codspeed.result == 'success' || needs.codspeed.result == 'failure' }}
+          TPS_NOTES: ${{ runner.temp }}/tps/tps-notes.jsonl
         run: node tools/work-pins/perf-notes.mjs
