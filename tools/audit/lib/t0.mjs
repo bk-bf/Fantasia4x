@@ -109,7 +109,7 @@ export function adrCoverage(root, rules, doc = 'docs/game/DECISIONS.md') {
 const stripComments = (t) =>
   t.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/(^|[^:])\/\/.*$/gm, '$1');
 
-const stripCommentsKeepPositions = (t) =>
+const stripCommentsKeepPositions = (t = '') =>
   t
     .replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, ' '))
     .replace(/(^|[^:])\/\/.*$/gm, (m, p1) => p1 + ' '.repeat(m.length - p1.length));
@@ -128,6 +128,18 @@ export function seamViolations(root, symbols) {
   if (!existsSync(rulePath)) return { rules: 0, findings: [] };
   const rules = JSON.parse(readFileSync(rulePath, 'utf8'));
   const findings = [];
+  const spans = new Map();
+  for (const s of symbols) {
+    if (!spans.has(s.file)) spans.set(s.file, []);
+    spans.get(s.file).push([s.startByte, s.endByte]);
+  }
+  const sources = [];
+  for (const abs of walkFiles(join(root, 'src'), ['.ts', '.svelte'])) {
+    const file = abs.slice(root.length + 1);
+    if (/\.(test|spec)\.ts$/.test(file) || file.includes('/tests/')) continue;
+    const text = stripCommentsKeepPositions(readFileSync(abs, 'utf8'));
+    sources.push({ file, text, inside: spans.get(file) ?? [] });
+  }
 
   for (const r of rules) {
     const allow = new Set(r.allow ?? []);
@@ -154,34 +166,18 @@ export function seamViolations(root, symbols) {
         });
       }
     }
-    for (const { file, line } of topLevelCalls(root, symbols, r.target)) {
-      const id = `${file}::<top level>`;
-      if (allow.has(id)) continue;
-      findings.push({ adr: r.adr, where: `${id}  ${file}:${line}`, detail: r.msg, blocks: r.blocks === true });
+    const call = new RegExp(`(?:\\.|\\b)${r.target}\\s*\\(`, 'g');
+    for (const { file, text, inside } of sources) {
+      calls: for (const m of text.matchAll(call)) {
+        for (const [a, b] of inside) if (m.index >= a && m.index < b) continue calls;
+        const id = `${file}::<top level>`;
+        if (allow.has(id)) continue;
+        const line = text.slice(0, m.index).split('\n').length;
+        findings.push({ adr: r.adr, where: `${id}  ${file}:${line}`, detail: r.msg, blocks: r.blocks === true });
+      }
     }
   }
   return { rules: rules.length, findings };
-}
-
-function topLevelCalls(root, symbols, target) {
-  const spans = new Map();
-  for (const s of symbols) {
-    if (!spans.has(s.file)) spans.set(s.file, []);
-    spans.get(s.file).push([s.startByte, s.endByte]);
-  }
-  const re = new RegExp(`(?:\\.|\\b)${target}\\s*\\(`, 'g');
-  const calls = [];
-  for (const abs of walkFiles(join(root, 'src'), ['.ts', '.svelte'])) {
-    const file = abs.slice(root.length + 1);
-    if (/\.(test|spec)\.ts$/.test(file) || file.includes('/tests/')) continue;
-    const text = stripCommentsKeepPositions(readFileSync(abs, 'utf8'));
-    const inside = spans.get(file) ?? [];
-    for (const m of text.matchAll(re)) {
-      if (inside.some(([a, b]) => m.index >= a && m.index < b)) continue;
-      calls.push({ file, line: text.slice(0, m.index).split('\n').length });
-    }
-  }
-  return calls;
 }
 
 export const COMPONENT_LINE_LIMIT = 200;
