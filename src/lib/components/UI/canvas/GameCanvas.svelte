@@ -327,9 +327,9 @@
   };
 
   let resourceGlowEmitters: import('$lib/game/services/LightingService.js').LightEmitter[] = [];
-  function refreshEmitters() {
+  function refreshEmitters(buildingList = buildings) {
     lightingService.setEmitters([
-      ...lightingService.collectEmitters(buildings),
+      ...lightingService.collectEmitters(buildingList),
       ...resourceGlowEmitters
     ]);
     renderer?.setDynamicLight(lightingService.hasEmitters());
@@ -495,8 +495,8 @@
   let hoverPawnId: string | null = null;
   let hoverMobId: string | null = null;
 
-  function findPawnAtTile(tx: number, ty: number): Pawn | null {
-    for (const pawn of pawns) {
+  function findPawnAtTile(tx: number, ty: number, pawnList = pawns): Pawn | null {
+    for (const pawn of pawnList) {
       const rp = pawnRenderPos.get(pawn.id);
       const cx = rp ? Math.round(rp.x) : (pawn.position?.x ?? -1);
       const cy = rp ? Math.round(rp.y) : (pawn.position?.y ?? -1);
@@ -505,8 +505,8 @@
     return null;
   }
 
-  function findMobAtTile(tx: number, ty: number): Mob | null {
-    for (const mob of mobs) {
+  function findMobAtTile(tx: number, ty: number, mobList = mobs): Mob | null {
+    for (const mob of mobList) {
       if (mob.state === 'Corpse') continue;
       const rp = mobRenderPos.get(mob.id);
       const cx = rp ? Math.round(rp.x) : mob.x;
@@ -516,15 +516,20 @@
     return null;
   }
 
-  function updateHoverEntity() {
-    if (hoverTileX < 0 || hoverTileY < 0) {
+  function updateHoverEntity(
+    tx = hoverTileX,
+    ty = hoverTileY,
+    pawnList?: Pawn[],
+    mobList?: Mob[]
+  ) {
+    if (tx < 0 || ty < 0) {
       hoverPawnId = null;
       hoverMobId = null;
       return;
     }
-    const pawn = findPawnAtTile(hoverTileX, hoverTileY);
+    const pawn = findPawnAtTile(tx, ty, pawnList);
     hoverPawnId = pawn?.id ?? null;
-    hoverMobId = pawn ? null : (findMobAtTile(hoverTileX, hoverTileY)?.id ?? null);
+    hoverMobId = pawn ? null : (findMobAtTile(tx, ty, mobList)?.id ?? null);
   }
 
   $: hoverPawn = hoverPawnId ? (pawns.find((p) => p.id === hoverPawnId) ?? null) : null;
@@ -1173,35 +1178,51 @@
 
   const PAWN_SPRITES = [64, 66, 69, 78, 85, 103, 105, 125].map((i) => glyph(SHEET.MAP, i));
 
-  function pawnSimTarget(pawn: Pawn): { x: number; y: number } {
+  function pawnSimTarget(pawn: Pawn, map: WorldTile[][]): { x: number; y: number } {
     const { x, y } = pawn.position!;
     return simTarget(
       { x, y, path: pawn.path, pathIndex: pawn.pathIndex, nextCellCostLeft: pawn.nextCellCostLeft },
-      worldMap
+      map
     );
   }
 
-  function updatePawnOverlay(dt: number) {
+  function updatePawnOverlay(
+    dt: number,
+    map: WorldTile[][],
+    items: DroppedItem[],
+    buildingList: PlacedBuilding[],
+    mobList: Mob[],
+    pawnList: Pawn[],
+    vx: number,
+    vy: number,
+    box: HTMLDivElement,
+    tW: number,
+    tH: number,
+    selPawnId: string | null,
+    selMobId: string | null,
+    marked: 'pawn' | 'mob' | null,
+    markedIds: Set<string>
+  ) {
     pawnOverlayGrid.clear();
     itemOverlayGrid.clear();
-    overlayDroppedItems(itemOverlayGrid, droppedItems, isHiddenTile);
+    overlayDroppedItems(itemOverlayGrid, items, isHiddenTile);
     buildingOverlayGrid.clear();
-    overlayBuildings(buildingOverlayGrid, buildings, isHiddenTile);
+    overlayBuildings(buildingOverlayGrid, buildingList, isHiddenTile);
     const clampedDt = Math.min(dt, 0.05);
     const alpha = clampedDt > 0 ? 1 - Math.exp(-clampedDt / MOVE_SMOOTH_TAU) : 1;
     const nowMs = animNow();
 
     const freshState = get(gameState);
-    const liveMobs = freshState.mobs ?? mobs;
-    const livePawns = freshState.pawns ?? pawns;
+    const liveMobs = freshState.mobs ?? mobList;
+    const livePawns = freshState.pawns ?? pawnList;
 
     const CULL_MARGIN = 3;
-    const cullMinX = viewX - CULL_MARGIN;
-    const cullMinY = viewY - CULL_MARGIN;
-    const cullMaxX = viewX + Math.ceil((container?.clientWidth ?? 0) / tileWidth) + CULL_MARGIN;
-    const cullMaxY = viewY + Math.ceil((container?.clientHeight ?? 0) / tileHeight) + CULL_MARGIN;
+    const cullMinX = vx - CULL_MARGIN;
+    const cullMinY = vy - CULL_MARGIN;
+    const cullMaxX = vx + Math.ceil((box?.clientWidth ?? 0) / tW) + CULL_MARGIN;
+    const cullMaxY = vy + Math.ceil((box?.clientHeight ?? 0) / tH) + CULL_MARGIN;
     const ENTITY_RENDER_MIN_PX = 5;
-    const renderMobs = tileWidth >= ENTITY_RENDER_MIN_PX;
+    const renderMobs = tW >= ENTITY_RENDER_MIN_PX;
     const seenMobs = new Set<string>();
     for (const mob of liveMobs) {
       if (!renderMobs) break;
@@ -1210,7 +1231,7 @@
       if (mob.x < cullMinX || mob.x > cullMaxX || mob.y < cullMinY || mob.y > cullMaxY) continue;
       seenMobs.add(mob.id);
 
-      const target = simTarget(mob, worldMap);
+      const target = simTarget(mob, map);
       let rm = mobRenderPos.get(mob.id);
       if (!rm || Math.abs(rm.x - target.x) > 2 || Math.abs(rm.y - target.y) > 2) {
         rm = { x: target.x, y: target.y };
@@ -1225,8 +1246,7 @@
       const cellX = Math.round(rm.x);
       const cellY = Math.round(rm.y);
       if (isHiddenTile(cellX, cellY)) continue;
-      const isSelected =
-        mob.id === selectedMobId || (markedKind === 'mob' && markedSet.has(mob.id));
+      const isSelected = mob.id === selMobId || (marked === 'mob' && markedIds.has(mob.id));
       const mLunge = lungeOffset(mob.id, nowMs);
       const mTier = def.tier;
       const mScale = mTier != null ? TIER_GLYPH_SCALE[mTier] : undefined;
@@ -1263,7 +1283,7 @@
       if (pawn.carriedBy) continue;
       seen.add(pawn.id);
 
-      const target = pawnSimTarget(pawn);
+      const target = pawnSimTarget(pawn, map);
       let rp = pawnRenderPos.get(pawn.id);
       if (!rp || Math.abs(rp.x - target.x) > 2 || Math.abs(rp.y - target.y) > 2) {
         rp = { x: target.x, y: target.y };
@@ -1276,8 +1296,7 @@
       const cellX = Math.round(rp.x);
       const cellY = Math.round(rp.y);
       if (isHiddenTile(cellX, cellY)) continue;
-      const isSelected =
-        pawn.id === selectedPawnId || (markedKind === 'pawn' && markedSet.has(pawn.id));
+      const isSelected = pawn.id === selPawnId || (marked === 'pawn' && markedIds.has(pawn.id));
       const isSleeping = pawn.currentState === 'Sleeping';
       const isCollapsed = pawn.currentState === 'Collapsed';
       const isResting = isSleeping && needsRecovery(pawn as never);
@@ -1316,16 +1335,23 @@
     }
   }
 
-  function updateWorldEffectOverlays() {
-    const W = container?.clientWidth ?? 0;
-    const H = container?.clientHeight ?? 0;
-    const tW = tileWidth;
-    const tH = tileHeight;
+  function updateWorldEffectOverlays(
+    pawnList: Pawn[],
+    mobList: Mob[],
+    buildingList: PlacedBuilding[],
+    vx: number,
+    vy: number,
+    box: HTMLDivElement,
+    tW: number,
+    tH: number
+  ) {
+    const W = box?.clientWidth ?? 0;
+    const H = box?.clientHeight ?? 0;
 
     const glyphOf = (id: string, x: number, y: number, kind: GlyphFloatKind): GlyphFloat => ({
       id,
-      left: (x - viewX + 0.5) * tW,
-      top: (y - viewY) * tH - 18,
+      left: (x - vx + 0.5) * tW,
+      top: (y - vy) * tH - 18,
       kind
     });
     const onScreen = (o: { left: number; top: number }) => o.left >= 0 && o.top >= 0 && o.left <= W;
@@ -1333,7 +1359,7 @@
     const prioCollapse = conditionPriority('collapse');
     const prioSleeping = conditionPriority('sleeping');
     const prioWinded = conditionPriority('winded');
-    for (const p of pawns) {
+    for (const p of pawnList) {
       if (!p.position) continue;
       if (p.carriedBy) continue;
       if (isHiddenTile(p.position.x, p.position.y)) continue;
@@ -1356,7 +1382,7 @@
         if (onScreen(o)) newGlyphs.push(o);
       }
     }
-    for (const m of mobs) {
+    for (const m of mobList) {
       if (m.state === 'Corpse') continue;
       if (isHiddenTile(m.x, m.y)) continue;
       let kind: GlyphFloatKind | null = null;
@@ -1380,12 +1406,12 @@
         if (onScreen(o)) newGlyphs.push(o);
       }
     }
-    for (const b of buildings) {
+    for (const b of buildingList) {
       if (b.type !== 'campfire' || b.status !== 'complete' || b.lit !== true) continue;
       const o: GlyphFloat = {
         id: b.id,
-        left: (b.x - viewX + 0.5) * tW,
-        top: (b.y - viewY + 0.5) * tH,
+        left: (b.x - vx + 0.5) * tW,
+        top: (b.y - vy + 0.5) * tH,
         kind: 'campfire'
       };
       if (o.left >= 0 && o.top >= 0 && o.left <= W) newGlyphs.push(o);
@@ -1399,7 +1425,7 @@
     }
 
     const newProgress = [
-      ...pawns
+      ...pawnList
         .filter(
           (p) =>
             p.position &&
@@ -1411,12 +1437,12 @@
         )
         .map((p) => ({
           id: p.id,
-          left: (p.position!.x - viewX + 0.5) * tW,
-          top: (p.position!.y - viewY) * tH - 6,
+          left: (p.position!.x - vx + 0.5) * tW,
+          top: (p.position!.y - vy) * tH - 6,
           progress: Math.max(0, Math.min(1, p.activeJob?.progress ?? 0))
         }))
         .filter((o) => o.left >= 0 && o.top >= 0 && o.left <= W),
-      ...pawns
+      ...pawnList
         .filter(
           (p) =>
             p.draftTarget?.type === 'tend' &&
@@ -1426,17 +1452,17 @@
         )
         .map((p) => ({
           id: p.id,
-          left: (p.position!.x - viewX + 0.5) * tW,
-          top: (p.position!.y - viewY) * tH - 6,
+          left: (p.position!.x - vx + 0.5) * tW,
+          top: (p.position!.y - vy) * tH - 6,
           progress: Math.max(0, Math.min(1, p.tendProgress ?? 0))
         }))
         .filter((o) => o.left >= 0 && o.top >= 0 && o.left <= W),
-      ...mobs
+      ...mobList
         .filter((m) => (m.eatProgress ?? 0) > 0 && !isHiddenTile(m.x, m.y))
         .map((m) => ({
           id: m.id,
-          left: (m.x - viewX + 0.5) * tW,
-          top: (m.y - viewY) * tH - 6,
+          left: (m.x - vx + 0.5) * tW,
+          top: (m.y - vy) * tH - 6,
           progress: Math.max(0, Math.min(1, m.eatProgress ?? 0))
         }))
         .filter((o) => o.left >= 0 && o.top >= 0 && o.left <= W)
@@ -1453,8 +1479,8 @@
 
     const newParticles: { id: string; left: number; top: number; effect: string }[] = [];
     for (const lt of _lairTiles) {
-      const left = (lt.x - viewX + 0.5) * tW;
-      const top = (lt.y - viewY + 0.5) * tH;
+      const left = (lt.x - vx + 0.5) * tW;
+      const top = (lt.y - vy + 0.5) * tH;
       if (left < 0 || top < 0 || left > W || top > H) continue;
       newParticles.push({ id: `${lt.x},${lt.y}`, left, top, effect: lt.effect });
     }
@@ -1467,7 +1493,7 @@
     }
 
     const newHealth = [
-      ...pawns
+      ...pawnList
         .filter(
           (p) =>
             p.position &&
@@ -1477,18 +1503,18 @@
         )
         .map((p) => ({
           id: `hp-${p.id}`,
-          left: (p.position!.x - viewX + 0.5) * tW,
-          top: (p.position!.y - viewY) * tH - 10,
+          left: (p.position!.x - vx + 0.5) * tW,
+          top: (p.position!.y - vy) * tH - 10,
           health: Math.max(0, Math.min(1, (p.state.health ?? 100) / 100)),
           type: 'pawn' as const
         }))
         .filter((o) => o.left >= 0 && o.top >= 0 && o.left <= W),
-      ...mobs
+      ...mobList
         .filter((m) => m.state !== 'Corpse' && m.health < m.maxHealth && !isHiddenTile(m.x, m.y))
         .map((m) => ({
           id: `hp-${m.id}`,
-          left: (m.x - viewX + 0.5) * tW,
-          top: (m.y - viewY) * tH - 10,
+          left: (m.x - vx + 0.5) * tW,
+          top: (m.y - vy) * tH - 10,
           health: Math.max(0, Math.min(1, m.maxHealth > 0 ? m.health / m.maxHealth : 1)),
           type: 'mob' as const
         }))
@@ -1502,39 +1528,39 @@
       worldEffects.setHealthOverlays(newHealth);
     }
 
-    const newDraftTargets = pawns
+    const newDraftTargets = pawnList
       .filter((p) => p.position && p.drafted && p.draftTarget)
       .map((p) => {
         const target = p.draftTarget!;
         const rp = pawnRenderPos.get(p.id) ?? p.position!;
         const points: Array<{ x: number; y: number }> = [
-          { x: (rp.x - viewX + 0.5) * tW, y: (rp.y - viewY + 0.5) * tH }
+          { x: (rp.x - vx + 0.5) * tW, y: (rp.y - vy + 0.5) * tH }
         ];
         const path = p.path ?? [];
         const pathIdx = p.pathIndex ?? 0;
         for (let i = pathIdx; i < path.length; i++) {
           const tile = path[i];
-          points.push({ x: (tile.x - viewX + 0.5) * tW, y: (tile.y - viewY + 0.5) * tH });
+          points.push({ x: (tile.x - vx + 0.5) * tW, y: (tile.y - vy + 0.5) * tH });
         }
         if (target.type === 'attack') {
           let tx = p.position!.x;
           let ty = p.position!.y;
           if (target.targetType === 'mob') {
-            const m = mobs.find((mm) => mm.id === target.targetId);
+            const m = mobList.find((mm) => mm.id === target.targetId);
             if (m) {
               tx = m.x;
               ty = m.y;
             }
           } else {
-            const pp = pawns.find((q) => q.id === target.targetId);
+            const pp = pawnList.find((q) => q.id === target.targetId);
             if (pp?.position) {
               tx = pp.position.x;
               ty = pp.position.y;
             }
           }
-          points.push({ x: (tx - viewX + 0.5) * tW, y: (ty - viewY + 0.5) * tH });
+          points.push({ x: (tx - vx + 0.5) * tW, y: (ty - vy + 0.5) * tH });
         } else if (pathIdx >= path.length && 'x' in target) {
-          points.push({ x: (target.x - viewX + 0.5) * tW, y: (target.y - viewY + 0.5) * tH });
+          points.push({ x: (target.x - vx + 0.5) * tW, y: (target.y - vy + 0.5) * tH });
         }
         return { id: `draft-${p.id}`, points };
       })
@@ -1556,8 +1582,8 @@
       .filter((e) => now - e.spawnTime < floatTtl(e.kind))
       .map((e) => ({
         id: e.id,
-        left: (e.worldX - viewX + 0.5) * tW,
-        top: (e.worldY - viewY) * tH - 14 + (e.dy ?? 0),
+        left: (e.worldX - vx + 0.5) * tW,
+        top: (e.worldY - vy) * tH - 14 + (e.dy ?? 0),
         text: e.text,
         kind: e.kind,
         color: e.color
@@ -1610,8 +1636,8 @@
         const wy = e.fromY + (e.toY - e.fromY) * tc;
         return {
           id: e.id,
-          left: (wx - viewX + 0.5) * tW,
-          top: (wy - viewY + 0.5) * tH,
+          left: (wx - vx + 0.5) * tW,
+          top: (wy - vy + 0.5) * tH,
           angle: (Math.atan2(e.toY - e.fromY, e.toX - e.fromX) * 180) / Math.PI,
           effect: e.effect,
           progress
@@ -1627,10 +1653,10 @@
     }
   }
 
-  function rebuildLairTiles() {
+  function rebuildLairTiles(map: WorldTile[][]) {
     const out: { x: number; y: number; effect: string }[] = [];
-    for (let y = 0; y < worldMap.length; y++) {
-      const row = worldMap[y];
+    for (let y = 0; y < map.length; y++) {
+      const row = map[y];
       if (!row) continue;
       for (let x = 0; x < row.length; x++) {
         const res = row[x]?.resources;
@@ -1663,24 +1689,31 @@
     return `${b.x},${b.y}:${b.type}:${b.status}:${b.deconstructQueued ? 1 : 0}:${b.paused ? 1 : 0}`;
   }
 
-  function _blueprintRectTiles(): Set<string> {
+  function _blueprintRectTiles(
+    hx = hoverTileX,
+    hy = hoverTileY,
+    dragActive = blueprintDragActive
+  ): Set<string> {
     const s = new Set<string>();
-    if (!blueprintDragActive || blueprintAnchorX < 0 || hoverTileX < 0 || hoverTileY < 0) return s;
-    const x1 = Math.min(blueprintAnchorX, hoverTileX);
-    const x2 = Math.max(blueprintAnchorX, hoverTileX);
-    const y1 = Math.min(blueprintAnchorY, hoverTileY);
-    const y2 = Math.max(blueprintAnchorY, hoverTileY);
+    if (!dragActive) return s;
+    const ax = blueprintAnchorX;
+    const ay = blueprintAnchorY;
+    if (ax < 0 || hx < 0 || hy < 0) return s;
+    const x1 = Math.min(ax, hx);
+    const x2 = Math.max(ax, hx);
+    const y1 = Math.min(ay, hy);
+    const y2 = Math.max(ay, hy);
     for (let y = y1; y <= y2; y++) for (let x = x1; x <= x2; x++) s.add(`${x},${y}`);
     return s;
   }
 
-  function _currentBlueprintTiles(): Set<string> {
+  function _currentBlueprintTiles(bpId: string | null, hx: number, hy: number): Set<string> {
     const s = new Set<string>();
-    if (!blueprintBuildingId) return s;
+    if (!bpId) return s;
     if (blueprintDragActive) {
-      return _blueprintRectTiles();
-    } else if (hoverTileX >= 0 && hoverTileY >= 0) {
-      s.add(`${hoverTileX},${hoverTileY}`);
+      return _blueprintRectTiles(hx, hy, true);
+    } else if (hx >= 0 && hy >= 0) {
+      s.add(`${hx},${hy}`);
     }
     return s;
   }
@@ -1699,9 +1732,15 @@
     return true;
   }
 
-  function _fullRebuildTerrain(): void {
-    _heavyRenderReason = `FULL-REBUILD map=${worldMap[0]?.length ?? 0}x${worldMap.length} season=${_renderSeason ?? '?'}`;
-    const built = fullRebuildTerrain(worldMap, buildings, _buildingSig, _renderSeason);
+  function _fullRebuildTerrain(
+    map = worldMap,
+    buildingList = buildings,
+    bpId = blueprintBuildingId,
+    hx = hoverTileX,
+    hy = hoverTileY
+  ): void {
+    _heavyRenderReason = `FULL-REBUILD map=${map[0]?.length ?? 0}x${map.length} season=${_renderSeason ?? '?'}`;
+    const built = fullRebuildTerrain(map, buildingList, _buildingSig, _renderSeason);
     _terrainGrid = built.terrainGrid;
     _resourceGrid = built.resourceGrid;
     _resourceTallGrid = built.resourceTallGrid;
@@ -1709,29 +1748,42 @@
     renderer?.setSnowGrid(_snowGrid);
     _maskState = built.maskState;
     hiddenMask = _maskState.mask;
-    _terrainGridWorldMapRef = worldMap;
+    _terrainGridWorldMapRef = map;
     _prevBuildingsById = built.buildingsById;
     _emitterMap = built.emitterMap;
     resourceGlowEmitters = built.emitters;
     clearRenderTileDeltas();
     _snowPendingChunks.clear();
-    refreshEmitters();
+    refreshEmitters(buildingList);
 
     _blueprintRoofSupport = null;
-    _prevBlueprintTiles = _currentBlueprintTiles();
+    _prevBlueprintTiles = _currentBlueprintTiles(bpId, hx, hy);
     for (const k of _prevBlueprintTiles) {
       const ci = k.indexOf(',');
-      _blueprintPreviewTile(_terrainGrid, +k.slice(0, ci), +k.slice(ci + 1));
+      _blueprintPreviewTile(
+        _terrainGrid,
+        +k.slice(0, ci),
+        +k.slice(ci + 1),
+        map,
+        buildingList,
+        bpId
+      );
     }
   }
 
-  function redrawOverlayNow() {
-    if (!renderer?.isReady() || worldMap.length === 0) return;
+  function redrawOverlayNow(
+    map = worldMap,
+    buildingList = buildings,
+    hx = hoverTileX,
+    hy = hoverTileY
+  ) {
+    if (!renderer?.isReady() || map.length === 0) return;
     markRenderDirty();
-    const W = worldMap[0]?.length ?? 0;
+    const W = map[0]?.length ?? 0;
+    const bpId = blueprintBuildingId;
 
-    if (!_terrainGrid || !_maskState || worldMap !== _terrainGridWorldMapRef) {
-      _fullRebuildTerrain();
+    if (!_terrainGrid || !_maskState || map !== _terrainGridWorldMapRef) {
+      _fullRebuildTerrain(map, buildingList, bpId, hx, hy);
       renderer.setGrid(_terrainGrid!);
       drawDesignations();
       return;
@@ -1742,7 +1794,7 @@
     for (const c of deltas) dirty.add(c.y * W + c.x);
 
     const curBuildings = new Map<string, { x: number; y: number; sig: string }>();
-    for (const b of buildings) {
+    for (const b of buildingList) {
       if (b.status === 'complete') curBuildings.set(b.id, { x: b.x, y: b.y, sig: _buildingSig(b) });
     }
     for (const [id, prev] of _prevBuildingsById) {
@@ -1755,7 +1807,7 @@
     }
     _prevBuildingsById = curBuildings;
 
-    const curBlueprint = _currentBlueprintTiles();
+    const curBlueprint = _currentBlueprintTiles(bpId, hx, hy);
     for (const k of _prevBlueprintTiles) {
       const ci = k.indexOf(',');
       dirty.add(+k.slice(ci + 1) * W + +k.slice(0, ci));
@@ -1767,7 +1819,7 @@
     _prevBlueprintTiles = curBlueprint;
 
     if (deltas.length) {
-      const maskTouched = updateHiddenMaskAt(_maskState, worldMap, deltas as TileCoord[]);
+      const maskTouched = updateHiddenMaskAt(_maskState, map, deltas as TileCoord[]);
       for (const c of maskTouched) dirty.add(c.y * W + c.x);
     }
 
@@ -1782,7 +1834,7 @@
     for (const key of dirty) {
       const x = key % W;
       const y = (key / W) | 0;
-      const t = worldMap[y]?.[x];
+      const t = map[y]?.[x];
       if (!t) continue;
       applyTileToGrid(_terrainGrid, t, hiddenMask);
       if (_resourceGrid && _resourceTallGrid)
@@ -1790,22 +1842,29 @@
       if (_snowGrid) applySnowToGrid(_snowGrid, t, hiddenMask);
       if (_updateEmitterAt(y, x, t)) emittersChanged = true;
     }
-    for (const b of buildings) {
+    for (const b of buildingList) {
       if (b.status === 'complete' && isFloorBuilding(b) && dirty.has(b.y * W + b.x))
-        applyBuildingToGrid(_terrainGrid, b, worldMap[b.y]?.[b.x]);
+        applyBuildingToGrid(_terrainGrid, b, map[b.y]?.[b.x]);
     }
-    for (const b of buildings) {
+    for (const b of buildingList) {
       if (b.status === 'complete' && isRoofBuilding(b) && dirty.has(b.y * W + b.x))
-        applyBuildingToGrid(_terrainGrid, b, worldMap[b.y]?.[b.x]);
+        applyBuildingToGrid(_terrainGrid, b, map[b.y]?.[b.x]);
     }
     _blueprintRoofSupport = null;
     for (const k of curBlueprint) {
       const ci = k.indexOf(',');
-      _blueprintPreviewTile(_terrainGrid, +k.slice(0, ci), +k.slice(ci + 1));
+      _blueprintPreviewTile(
+        _terrainGrid,
+        +k.slice(0, ci),
+        +k.slice(ci + 1),
+        map,
+        buildingList,
+        bpId
+      );
     }
     if (emittersChanged) {
       resourceGlowEmitters = [..._emitterMap.values()];
-      refreshEmitters();
+      refreshEmitters(buildingList);
     }
 
     const dirtyTiles: TileCoord[] = [];
@@ -1830,8 +1889,8 @@
     }
   }
 
-  function repaintSnowNow() {
-    if (!renderer?.isReady() || !_snowGrid || worldMap.length === 0) return;
+  function repaintSnowNow(map: WorldTile[][]) {
+    if (!renderer?.isReady() || !_snowGrid || map.length === 0) return;
     if (_snowPendingChunks.size === 0) return;
     beat(`snow:chunks ${_snowPendingChunks.size}`);
     const due: { x: number; y: number }[] = [];
@@ -1839,7 +1898,7 @@
     for (const [key, cells] of _snowPendingChunks) {
       _snowPendingChunks.delete(key);
       for (const c of cells) {
-        const t = worldMap[c.y]?.[c.x];
+        const t = map[c.y]?.[c.x];
         if (t) {
           applySnowToGrid(_snowGrid, t, hiddenMask);
           due.push({ x: c.x, y: c.y });
@@ -1900,7 +1959,7 @@
     _foliageIdx = 0;
   }
 
-  function _processFoliageTransition(): void {
+  function _processFoliageTransition(map: WorldTile[][]): void {
     const P = _foliagePending;
     if (_foliageIdx >= P.length) {
       if (P.length) {
@@ -1914,7 +1973,7 @@
     const due: TileCoord[] = [];
     while (_foliageIdx < P.length && budget > 0 && _curTurn >= P[_foliageIdx].flipTurn) {
       const p = P[_foliageIdx++];
-      const t = worldMap[p.y]?.[p.x];
+      const t = map[p.y]?.[p.x];
       if (t) {
         applyResourceToGrid(_resourceGrid, _resourceTallGrid, t, hiddenMask, _renderSeason);
         due.push({ x: p.x, y: p.y });
@@ -2442,13 +2501,20 @@
     ctx.restore();
   }
 
-  function _blueprintPreviewTile(grid: GameGrid, tx: number, ty: number) {
-    if (tx < 0 || ty < 0 || ty >= worldMap.length || tx >= (worldMap[0]?.length ?? 0)) return;
-    if (worldMap[ty]?.[tx]?.walkable === false) return;
-    const building = buildingService.getBuildingById(blueprintBuildingId!);
+  function _blueprintPreviewTile(
+    grid: GameGrid,
+    tx: number,
+    ty: number,
+    map: WorldTile[][],
+    buildingList: PlacedBuilding[],
+    bpId: string | null
+  ) {
+    if (tx < 0 || ty < 0 || ty >= map.length || tx >= (map[0]?.length ?? 0)) return;
+    if (map[ty]?.[tx]?.walkable === false) return;
+    const building = buildingService.getBuildingById(bpId!);
     if (!building) return;
     if (building.effects?.roof) {
-      _blueprintRoofSupport ??= buildingService.makeRoofSupportLookup(buildings, worldMap);
+      _blueprintRoofSupport ??= buildingService.makeRoofSupportLookup(buildingList, map);
       if (!buildingService.roofTileSupported(tx, ty, _blueprintRoofSupport)) return;
     }
     const charSpans = building.charSpans;
@@ -2812,45 +2878,84 @@
     }
   }
 
-  function updateCameraFollow(dt: number) {
-    if (!cameraFollowPawnId || !ready || !renderer?.isReady()) return;
-    const rp = pawnRenderPos.get(cameraFollowPawnId);
-    if (!rp) return;
-    const visW = (container?.clientWidth ?? 800) / tileWidth;
-    const visH = (container?.clientHeight ?? 600) / tileHeight;
-    const [targetX, targetY] = clampView(rp.x - visW / 2, rp.y - visH * FOLLOW_VERTICAL);
+  function updateCameraFollow(
+    dt: number,
+    followId: string | null,
+    vx: number,
+    vy: number,
+    map: WorldTile[][],
+    box: HTMLDivElement,
+    tW: number,
+    tH: number
+  ): [number, number] | null {
+    if (!followId || !ready || !renderer?.isReady()) return null;
+    const rp = pawnRenderPos.get(followId);
+    if (!rp) return null;
+    const visW = (box?.clientWidth ?? 800) / tW;
+    const visH = (box?.clientHeight ?? 600) / tH;
+    const [targetX, targetY] = clampView(
+      rp.x - visW / 2,
+      rp.y - visH * FOLLOW_VERTICAL,
+      map,
+      box,
+      tW,
+      tH
+    );
     const alpha = dt > 0 ? 1 - Math.exp(-dt / FOLLOW_SMOOTH_TAU) : 1;
-    const dx = targetX - viewX;
-    const dy = targetY - viewY;
+    const dx = targetX - vx;
+    const dy = targetY - vy;
     if (Math.abs(dx) < 0.01 && Math.abs(dy) < 0.01) {
-      if (dx !== 0 || dy !== 0) setView(targetX, targetY);
-      return;
+      if (dx !== 0 || dy !== 0) return [targetX, targetY];
+      return null;
     }
-    setView(viewX + dx * alpha, viewY + dy * alpha);
+    return [vx + dx * alpha, vy + dy * alpha];
   }
 
-  function updateCameraFollowMob(dt: number) {
-    if (!cameraFollowMobId || !ready || !renderer?.isReady()) return;
-    const rp = mobRenderPos.get(cameraFollowMobId);
-    if (!rp) return;
-    const visW = (container?.clientWidth ?? 800) / tileWidth;
-    const visH = (container?.clientHeight ?? 600) / tileHeight;
-    const [targetX, targetY] = clampView(rp.x - visW / 2, rp.y - visH * FOLLOW_VERTICAL);
+  function updateCameraFollowMob(
+    dt: number,
+    followId: string | null,
+    vx: number,
+    vy: number,
+    map: WorldTile[][],
+    box: HTMLDivElement,
+    tW: number,
+    tH: number
+  ): [number, number] | null {
+    if (!followId || !ready || !renderer?.isReady()) return null;
+    const rp = mobRenderPos.get(followId);
+    if (!rp) return null;
+    const visW = (box?.clientWidth ?? 800) / tW;
+    const visH = (box?.clientHeight ?? 600) / tH;
+    const [targetX, targetY] = clampView(
+      rp.x - visW / 2,
+      rp.y - visH * FOLLOW_VERTICAL,
+      map,
+      box,
+      tW,
+      tH
+    );
     const alpha = dt > 0 ? 1 - Math.exp(-dt / FOLLOW_SMOOTH_TAU) : 1;
-    const dx = targetX - viewX;
-    const dy = targetY - viewY;
+    const dx = targetX - vx;
+    const dy = targetY - vy;
     if (Math.abs(dx) < 0.01 && Math.abs(dy) < 0.01) {
-      if (dx !== 0 || dy !== 0) setView(targetX, targetY);
-      return;
+      if (dx !== 0 || dy !== 0) return [targetX, targetY];
+      return null;
     }
-    setView(viewX + dx * alpha, viewY + dy * alpha);
+    return [vx + dx * alpha, vy + dy * alpha];
   }
 
-  function updateKeyboardPan(dt: number) {
-    if (dt <= 0 || !ready || menuPreview) return;
-    if (cameraFollowPawnId || cameraFollowMobId) {
+  function updateKeyboardPan(
+    dt: number,
+    preview: boolean,
+    followPawnId: string | null,
+    followMobId: string | null,
+    vx: number,
+    vy: number
+  ): [number, number] | null {
+    if (dt <= 0 || !ready || preview) return null;
+    if (followPawnId || followMobId) {
       panVelX = panVelY = 0;
-      return;
+      return null;
     }
     const tx = (heldPan.right ? 1 : 0) - (heldPan.left ? 1 : 0);
     const ty = (heldPan.down ? 1 : 0) - (heldPan.up ? 1 : 0);
@@ -2859,8 +2964,8 @@
     panVelY += (ty * PAN_SPEED - panVelY) * a;
     if (tx === 0 && Math.abs(panVelX) < 0.02) panVelX = 0;
     if (ty === 0 && Math.abs(panVelY) < 0.02) panVelY = 0;
-    if (panVelX === 0 && panVelY === 0) return;
-    setView(viewX + panVelX * dt, viewY + panVelY * dt);
+    if (panVelX === 0 && panVelY === 0) return null;
+    return [vx + panVelX * dt, vy + panVelY * dt];
   }
 
   function startLoop() {
@@ -2915,26 +3020,62 @@
           _rpMaxDt = 0;
         }
         gameState.stepSimulation(dt * 1000);
-        if (customMapPreview) {
+        const preview = menuPreview;
+        const mapPreview = customMapPreview;
+        const map = worldMap;
+        const box = container;
+        const tW = tileWidth;
+        const tH = tileHeight;
+        const pawnList = pawns;
+        const mobList = mobs;
+        const buildingList = buildings;
+        const followPawnId = cameraFollowPawnId;
+        const followMobId = cameraFollowMobId;
+        let vx = viewX;
+        let vy = viewY;
+        let hx = hoverTileX;
+        let hy = hoverTileY;
+        if (mapPreview) {
           pawnOverlayGrid.clear();
           itemOverlayGrid.clear();
           buildingOverlayGrid.clear();
         } else {
-          updatePawnOverlay(dt);
+          updatePawnOverlay(
+            dt,
+            map,
+            droppedItems,
+            buildingList,
+            mobList,
+            pawnList,
+            vx,
+            vy,
+            box,
+            tW,
+            tH,
+            selectedPawnId,
+            selectedMobId,
+            markedKind,
+            markedSet
+          );
         }
-        if (cursorOverCanvas && (cameraFollowPawnId || cameraFollowMobId)) {
-          hoverTileX = Math.floor(lastCursorCx / tileWidth + viewX);
-          hoverTileY = Math.floor(lastCursorCy / tileHeight + viewY);
+        if (cursorOverCanvas && (followPawnId || followMobId)) {
+          hx = Math.floor(lastCursorCx / tW + vx);
+          hoverTileX = hx;
+          hy = Math.floor(lastCursorCy / tH + vy);
+          hoverTileY = hy;
         }
-        updateHoverEntity();
-        updateCameraFollow(dt);
-        updateCameraFollowMob(dt);
-        updateKeyboardPan(dt);
+        updateHoverEntity(hx, hy, pawnList, mobList);
+        const pawnView = updateCameraFollow(dt, followPawnId, vx, vy, map, box, tW, tH);
+        if (pawnView) [vx, vy] = setView(pawnView[0], pawnView[1], map, box, tW, tH, preview);
+        const mobView = updateCameraFollowMob(dt, followMobId, vx, vy, map, box, tW, tH);
+        if (mobView) [vx, vy] = setView(mobView[0], mobView[1], map, box, tW, tH, preview);
+        const panView = updateKeyboardPan(dt, preview, followPawnId, followMobId, vx, vy);
+        if (panView) [vx, vy] = setView(panView[0], panView[1], map, box, tW, tH, preview);
         if (now - _lairScanAt > 4000) {
           _lairScanAt = now;
-          rebuildLairTiles();
+          rebuildLairTiles(map);
         }
-        updateWorldEffectOverlays();
+        updateWorldEffectOverlays(pawnList, mobList, buildingList, vx, vy, box, tW, tH);
         if (
           _terrainDirty &&
           (_forceTerrainRebuild || now - _lastTerrainBuild >= TERRAIN_REBUILD_MIN_MS)
@@ -2943,19 +3084,19 @@
           _forceTerrainRebuild = false;
           _lastTerrainBuild = now;
           beat('terrain-rebuild');
-          redrawOverlayNow();
+          redrawOverlayNow(map, buildingList, hx, hy);
         }
         if (_snowDirty && now - _lastSnowBuild >= TERRAIN_REBUILD_MIN_MS) {
           _snowDirty = false;
           _lastSnowBuild = now;
           _queueSnowDeltas();
         }
-        if (_snowPendingChunks.size > 0) repaintSnowNow();
+        if (_snowPendingChunks.size > 0) repaintSnowNow(map);
         if (_foliagePending.length > 0) {
           beat(`foliage ${_foliagePending.length - _foliageIdx}`);
-          _processFoliageTransition();
+          _processFoliageTransition(map);
         }
-        const frozen = !menuPreview && (customMapPreview || tileWidth < FREEZE_TILE_PX);
+        const frozen = !preview && (mapPreview || tW < FREEZE_TILE_PX);
         if (_renderDirty || !frozen || now - lastDrawAt >= FROZEN_SAFETY_MS) {
           beat('gl:setgrids');
           renderer.setResourceOverlayGrid(_resourceGrid);
@@ -2963,11 +3104,11 @@
           renderer.setBuildingOverlayGrid(buildingOverlayGrid);
           renderer.setItemOverlayGrid(itemOverlayGrid);
           renderer.setOverlayGrid(pawnOverlayGrid);
-          const _dbgT0 = menuPreview && _menuPerfOn ? performance.now() : 0;
+          const _dbgT0 = preview && _menuPerfOn ? performance.now() : 0;
           if (_heavyRenderReason) {
             crashBreadcrumb(
               get(gameState).turn,
-              `→ heavy draw START: ${_heavyRenderReason} (prevVerts≈${renderer.getStats().vertexCount}, tile=${tileWidth.toFixed(1)}px)`
+              `→ heavy draw START: ${_heavyRenderReason} (prevVerts≈${renderer.getStats().vertexCount}, tile=${tW.toFixed(1)}px)`
             );
           }
           beat(`gl-draw${_heavyRenderReason ? ':' + _heavyRenderReason : ''}`, get(gameState).turn);
@@ -2982,7 +3123,7 @@
             );
             _heavyRenderReason = '';
           }
-          if (menuPreview && _menuPerfOn) {
+          if (preview && _menuPerfOn) {
             const renderMs = performance.now() - _dbgT0;
             const gap = _dbgPrevT ? now - _dbgPrevT : 0;
             _dbgPrevT = now;
@@ -3025,7 +3166,7 @@
           }
           _renderDirty = false;
           lastDrawAt = now;
-          if (menuPreview && !_previewPainted) {
+          if (preview && !_previewPainted) {
             _previewPainted = true;
             menuPreviewRendered.set(true);
           }
@@ -3050,16 +3191,23 @@
     frame();
   }
 
-  function clampView(x: number, y: number): [number, number] {
-    const mapW = worldMap.length > 0 ? worldMap[0].length : 80;
-    const mapH = worldMap.length > 0 ? worldMap.length : 50;
-    const visW = Math.ceil((container?.clientWidth ?? 800) / tileWidth);
-    const visH = Math.ceil((container?.clientHeight ?? 600) / tileHeight);
+  function clampView(
+    x: number,
+    y: number,
+    map = worldMap,
+    box = container,
+    tW = tileWidth,
+    tH = tileHeight
+  ): [number, number] {
+    const mapW = map.length > 0 ? map[0].length : 80;
+    const mapH = map.length > 0 ? map.length : 50;
+    const visW = Math.ceil((box?.clientWidth ?? 800) / tW);
+    const visH = Math.ceil((box?.clientHeight ?? 600) / tH);
     return [Math.max(0, Math.min(x, mapW - visW)), Math.max(0, Math.min(y, mapH - visH))];
   }
 
-  function saveCameraState() {
-    if (menuPreview) return;
+  function saveCameraState(preview = menuPreview) {
+    if (preview) return;
     if (saveCameraTimer !== null) clearTimeout(saveCameraTimer);
     saveCameraTimer = setTimeout(() => {
       saveCameraTimer = null;
@@ -3067,12 +3215,22 @@
     }, 200);
   }
 
-  function setView(x: number, y: number) {
-    [viewX, viewY] = clampView(x, y);
-    renderer?.setViewTileOffset(viewX, viewY);
+  function setView(
+    x: number,
+    y: number,
+    map?: WorldTile[][],
+    box?: HTMLDivElement,
+    tW?: number,
+    tH?: number,
+    preview?: boolean
+  ): [number, number] {
+    const view = clampView(x, y, map, box, tW, tH);
+    [viewX, viewY] = view;
+    renderer?.setViewTileOffset(view[0], view[1]);
     markRenderDirty();
-    saveCameraState();
+    saveCameraState(preview);
     drawDesignations();
+    return view;
   }
 
   function handleKeyDown(e: KeyboardEvent) {
