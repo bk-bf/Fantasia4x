@@ -1,6 +1,6 @@
 <script lang="ts">
   import { worldEffects } from '$lib/stores/fx/worldEffects';
-  import { cameraTileSize } from '$lib/stores/cameraView';
+  import { cameraTileSize, cameraViewport } from '$lib/stores/cameraView';
   import { gameState } from '$lib/stores/gameState';
   const isPaused = gameState.isPaused;
   import { environmentService, getAmbientLight } from '$lib/game/services/EnvironmentService';
@@ -15,177 +15,182 @@
 </script>
 
 <div class="world-effects-layer" class:paused={$isPaused}>
-  {#each $worldEffects.glyphFloats as float (float.kind + float.id)}
-    {@const xf = `transform: translate(${float.left}px, ${float.top}px) translateX(-50%) scale(${floatScale});`}
-    {#if float.kind === 'sleep'}
-      <div class="zzz-float" style={xf}>
-        <span class="zzz-z" style="animation-delay:0s">Z</span><span
-          class="zzz-z"
-          style="animation-delay:0.7s">z</span
-        ><span class="zzz-z" style="animation-delay:1.4s">z</span>
-      </div>
-    {:else if float.kind === 'rest'}
-      <div class="rest-float" style={xf}>
-        <span class="rest-cross" style="animation-delay:0s">✚</span><span
-          class="rest-cross"
-          style="animation-delay:0.7s">✚</span
-        ><span class="rest-cross" style="animation-delay:1.4s">✚</span>
-      </div>
-    {:else if float.kind === 'collapse'}
-      <div class="collapse-float" style={xf}>
-        <span class="collapse-arrow" style="animation-delay:0s">↓</span><span
-          class="collapse-arrow"
-          style="animation-delay:0.7s">↓</span
-        ><span class="collapse-arrow" style="animation-delay:1.4s">↓</span>
-      </div>
-    {:else if float.kind === 'winded'}
-      <div class="winded-float" style={xf}>
-        <span class="winded-arrow" style="animation-delay:0s">↓</span><span
-          class="winded-arrow"
-          style="animation-delay:0.7s">↓</span
-        ><span class="winded-arrow" style="animation-delay:1.4s">↓</span>
-      </div>
-    {:else if float.kind === 'campfire'}
-      <div class="fire-sparks" style={xf}>
-        <span class="spark s1">·</span>
-        <span class="spark s2">*</span>
-        <span class="spark s3">·</span>
-        <span class="spark s4">*</span>
-        <span class="spark s5">·</span>
-      </div>
-    {:else if float.kind === 'trade'}
-      <div class="trade-float" style={xf}>
-        <span class="trade-mark">?</span>
-      </div>
-    {/if}
-  {/each}
-
-  {#each $worldEffects.progressOverlays as overlay (overlay.id)}
-    <div
-      class="pawn-progress-float"
-      style="transform: translate({overlay.left}px, {overlay.top}px) translateX(-50%) scale({floatScale});"
-    >
-      <div class="pawn-progress-fill" style="width:{overlay.progress * 100}%"></div>
-    </div>
-  {/each}
-
-  {#each $worldEffects.particleOverlays as overlay (overlay.id)}
-    {@const fxScale = Math.max(0.35, Math.min(1.8, $cameraTileSize / BASE_TILE))}
-
-    {@const amb = getAmbientLight(environmentService.ambientTurn($gameState))}
-    {@const xf = `transform: translate(${overlay.left}px, ${overlay.top}px) translateX(-50%) scale(${fxScale}); filter: brightness(${amb});`}
-    {#if overlay.effect === 'smoke'}
-      <div class="lair-fx lair-smoke" style={xf}>
-        <span class="puff p1">▒</span>
-        <span class="puff p2">░</span>
-        <span class="puff p3">▒</span>
-        <span class="puff p4">░</span>
-        <span class="puff p5">▒</span>
-        <span class="puff p6">░</span>
-      </div>
-    {:else if overlay.effect === 'bloodmist'}
-      <div class="lair-fx lair-bloodmist" style={xf}>
-        <span class="fog blood-a"></span>
-        <span class="fog blood-b"></span>
-      </div>
-    {:else if overlay.effect === 'miasma'}
-      <div class="lair-fx lair-miasma" style={xf}>
-        <span class="fog miasma-a"></span>
-        <span class="fog miasma-b"></span>
-      </div>
-    {:else if overlay.effect === 'flies'}
-      <div class="lair-fx lair-flies" style={xf}>
-        <span class="fly f1">·</span>
-        <span class="fly f2">·</span>
-        <span class="fly f3">·</span>
-        <span class="fly f4">·</span>
-        <span class="fly f5">·</span>
-        <span class="fly f6">·</span>
-      </div>
-    {:else if overlay.effect === 'feathers'}
-      <div class="lair-fx lair-feathers" style={xf}>
-        <span class="feather fe1">'</span>
-        <span class="feather fe2">`</span>
-        <span class="feather fe3">'</span>
-        <span class="feather fe4">,</span>
-        <span class="feather fe5">`</span>
-      </div>
-    {/if}
-  {/each}
-
-  {#each $worldEffects.projectileOverlays as o (o.id)}
-    {#if o.progress < 1}
-      <div
-        class="projectile fx-{o.effect}"
-        style="transform: translate({o.left}px, {o.top}px) rotate({o.angle}deg);"
-      >
-        <span class="proj-trail"></span>
-        <span class="proj-head"></span>
-      </div>
-    {:else}
-      <div class="proj-impact-wrap" style="transform: translate({o.left}px, {o.top}px);">
-        <div class="proj-impact fx-{o.effect}"></div>
-      </div>
-    {/if}
-  {/each}
-
-  {#each $worldEffects.healthOverlays as overlay (overlay.id)}
-    <div
-      class="health-bar-float"
-      style="transform: translate({overlay.left}px, {overlay.top}px) translateX(-50%);"
-    >
-      <div
-        class="health-bar-fill"
-        class:pawn={overlay.type === 'pawn'}
-        class:mob={overlay.type === 'mob'}
-        style="width:{overlay.health * 100}%"
-      ></div>
-    </div>
-  {/each}
-
-  {#if $worldEffects.draftTargetOverlays.length > 0}
-    <svg
-      class="draft-target-line"
-      style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none;"
-    >
-      {#each $worldEffects.draftTargetOverlays as overlay (overlay.id)}
-        {@const last = overlay.points[overlay.points.length - 1]}
-        <polyline
-          points={overlay.points.map((p) => `${p.x},${p.y}`).join(' ')}
-          fill="none"
-          stroke="#ff4444"
-          stroke-width="2"
-          stroke-dasharray="4,4"
-          opacity="0.7"
-        />
-        {#if last}
-          <circle cx={last.x} cy={last.y} r="4" fill="#ff4444" opacity="0.5" />
-        {/if}
-      {/each}
-    </svg>
-  {/if}
-
-  {#each $worldEffects.floatingTextOverlays as overlay (overlay.id)}
-    {#if overlay.kind === 'social'}
-      {#if $showDialogBubbles}
-        <div
-          class="social-bubble"
-          style="transform: translate({overlay.left}px, {overlay.top}px) translateX(-50%) scale({combatFloatScale});"
-        >
-          <span class="combat-float social">{overlay.text}</span>
+  <div
+    class="world-space"
+    style="transform: translate({-$cameraViewport.x * $cameraTileSize}px, {-$cameraViewport.y * $cameraTileSize}px);"
+  >
+    {#each $worldEffects.glyphFloats as float (float.kind + float.id)}
+      {@const xf = `transform: translate(${float.left}px, ${float.top}px) translateX(-50%) scale(${floatScale});`}
+      {#if float.kind === 'sleep'}
+        <div class="zzz-float" style={xf}>
+          <span class="zzz-z" style="animation-delay:0s">Z</span><span
+            class="zzz-z"
+            style="animation-delay:0.7s">z</span
+          ><span class="zzz-z" style="animation-delay:1.4s">z</span>
+        </div>
+      {:else if float.kind === 'rest'}
+        <div class="rest-float" style={xf}>
+          <span class="rest-cross" style="animation-delay:0s">✚</span><span
+            class="rest-cross"
+            style="animation-delay:0.7s">✚</span
+          ><span class="rest-cross" style="animation-delay:1.4s">✚</span>
+        </div>
+      {:else if float.kind === 'collapse'}
+        <div class="collapse-float" style={xf}>
+          <span class="collapse-arrow" style="animation-delay:0s">↓</span><span
+            class="collapse-arrow"
+            style="animation-delay:0.7s">↓</span
+          ><span class="collapse-arrow" style="animation-delay:1.4s">↓</span>
+        </div>
+      {:else if float.kind === 'winded'}
+        <div class="winded-float" style={xf}>
+          <span class="winded-arrow" style="animation-delay:0s">↓</span><span
+            class="winded-arrow"
+            style="animation-delay:0.7s">↓</span
+          ><span class="winded-arrow" style="animation-delay:1.4s">↓</span>
+        </div>
+      {:else if float.kind === 'campfire'}
+        <div class="fire-sparks" style={xf}>
+          <span class="spark s1">·</span>
+          <span class="spark s2">*</span>
+          <span class="spark s3">·</span>
+          <span class="spark s4">*</span>
+          <span class="spark s5">·</span>
+        </div>
+      {:else if float.kind === 'trade'}
+        <div class="trade-float" style={xf}>
+          <span class="trade-mark">?</span>
         </div>
       {/if}
-    {:else}
+    {/each}
+
+    {#each $worldEffects.progressOverlays as overlay (overlay.id)}
       <div
-        class="combat-float {overlay.kind}"
-        style="transform: translate({overlay.left}px, {overlay.top}px) translateX(-50%) scale({combatFloatScale});{overlay.color
-          ? ` color:${overlay.color};`
-          : ''}"
+        class="pawn-progress-float"
+        style="transform: translate({overlay.left}px, {overlay.top}px) translateX(-50%) scale({floatScale});"
       >
-        {overlay.text}
+        <div class="pawn-progress-fill" style="width:{overlay.progress * 100}%"></div>
       </div>
+    {/each}
+
+    {#each $worldEffects.particleOverlays as overlay (overlay.id)}
+      {@const fxScale = Math.max(0.35, Math.min(1.8, $cameraTileSize / BASE_TILE))}
+
+      {@const amb = getAmbientLight(environmentService.ambientTurn($gameState))}
+      {@const xf = `transform: translate(${overlay.left}px, ${overlay.top}px) translateX(-50%) scale(${fxScale}); filter: brightness(${amb});`}
+      {#if overlay.effect === 'smoke'}
+        <div class="lair-fx lair-smoke" style={xf}>
+          <span class="puff p1">▒</span>
+          <span class="puff p2">░</span>
+          <span class="puff p3">▒</span>
+          <span class="puff p4">░</span>
+          <span class="puff p5">▒</span>
+          <span class="puff p6">░</span>
+        </div>
+      {:else if overlay.effect === 'bloodmist'}
+        <div class="lair-fx lair-bloodmist" style={xf}>
+          <span class="fog blood-a"></span>
+          <span class="fog blood-b"></span>
+        </div>
+      {:else if overlay.effect === 'miasma'}
+        <div class="lair-fx lair-miasma" style={xf}>
+          <span class="fog miasma-a"></span>
+          <span class="fog miasma-b"></span>
+        </div>
+      {:else if overlay.effect === 'flies'}
+        <div class="lair-fx lair-flies" style={xf}>
+          <span class="fly f1">·</span>
+          <span class="fly f2">·</span>
+          <span class="fly f3">·</span>
+          <span class="fly f4">·</span>
+          <span class="fly f5">·</span>
+          <span class="fly f6">·</span>
+        </div>
+      {:else if overlay.effect === 'feathers'}
+        <div class="lair-fx lair-feathers" style={xf}>
+          <span class="feather fe1">'</span>
+          <span class="feather fe2">`</span>
+          <span class="feather fe3">'</span>
+          <span class="feather fe4">,</span>
+          <span class="feather fe5">`</span>
+        </div>
+      {/if}
+    {/each}
+
+    {#each $worldEffects.projectileOverlays as o (o.id)}
+      {#if o.progress < 1}
+        <div
+          class="projectile fx-{o.effect}"
+          style="transform: translate({o.left}px, {o.top}px) rotate({o.angle}deg);"
+        >
+          <span class="proj-trail"></span>
+          <span class="proj-head"></span>
+        </div>
+      {:else}
+        <div class="proj-impact-wrap" style="transform: translate({o.left}px, {o.top}px);">
+          <div class="proj-impact fx-{o.effect}"></div>
+        </div>
+      {/if}
+    {/each}
+
+    {#each $worldEffects.healthOverlays as overlay (overlay.id)}
+      <div
+        class="health-bar-float"
+        style="transform: translate({overlay.left}px, {overlay.top}px) translateX(-50%);"
+      >
+        <div
+          class="health-bar-fill"
+          class:pawn={overlay.type === 'pawn'}
+          class:mob={overlay.type === 'mob'}
+          style="width:{overlay.health * 100}%"
+        ></div>
+      </div>
+    {/each}
+
+    {#if $worldEffects.draftTargetOverlays.length > 0}
+      <svg
+        class="draft-target-line"
+        style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none;"
+      >
+        {#each $worldEffects.draftTargetOverlays as overlay (overlay.id)}
+          {@const last = overlay.points[overlay.points.length - 1]}
+          <polyline
+            points={overlay.points.map((p) => `${p.x},${p.y}`).join(' ')}
+            fill="none"
+            stroke="#ff4444"
+            stroke-width="2"
+            stroke-dasharray="4,4"
+            opacity="0.7"
+          />
+          {#if last}
+            <circle cx={last.x} cy={last.y} r="4" fill="#ff4444" opacity="0.5" />
+          {/if}
+        {/each}
+      </svg>
     {/if}
-  {/each}
+
+    {#each $worldEffects.floatingTextOverlays as overlay (overlay.id)}
+      {#if overlay.kind === 'social'}
+        {#if $showDialogBubbles}
+          <div
+            class="social-bubble"
+            style="transform: translate({overlay.left}px, {overlay.top}px) translateX(-50%) scale({combatFloatScale});"
+          >
+            <span class="combat-float social">{overlay.text}</span>
+          </div>
+        {/if}
+      {:else}
+        <div
+          class="combat-float {overlay.kind}"
+          style="transform: translate({overlay.left}px, {overlay.top}px) translateX(-50%) scale({combatFloatScale});{overlay.color
+            ? ` color:${overlay.color};`
+            : ''}"
+        >
+          {overlay.text}
+        </div>
+      {/if}
+    {/each}
+  </div>
 
   {#if $weatherEffects}
     <WeatherCanvas />
@@ -202,6 +207,11 @@
   }
   .world-effects-layer.paused :global(*) {
     animation-play-state: paused !important;
+  }
+  .world-space {
+    position: absolute;
+    inset: 0;
+    will-change: transform;
   }
 
   .pawn-progress-float {
