@@ -182,7 +182,19 @@ function writeNotes({ totals, rows }) {
   const file = process.env.WORK_PINS_NOTES;
   if (!file) return;
   const changed = totals.filter((t) => t.head !== t.base);
-  appendFileSync(file, `${JSON.stringify({ totals: changed, changed: rows.length })}\n`);
+  const top = rows.slice(0, 0);
+  for (const t of changed) {
+    if (t.fn !== 'all calls') continue;
+    let kept = 0;
+    for (const r of rows) {
+      if (kept === 3) break;
+      if (r.scenario === t.scenario && r.where) {
+        top.push(r);
+        kept += 1;
+      }
+    }
+  }
+  appendFileSync(file, `${JSON.stringify({ totals: changed, changed: rows.length, top })}\n`);
 }
 
 export function report(baseDir, headDir) {

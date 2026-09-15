@@ -148,6 +148,11 @@ function tpsLeg(tree, base, head, results) {
       ''
     ].join('\n')
   );
+  if (process.env.TPS_NOTES)
+    appendFileSync(
+      process.env.TPS_NOTES,
+      `${JSON.stringify({ name, ticks, base: runs.base, head: runs.head, baseMs, headMs })}\n`
+    );
   return !slower;
 }
 
