@@ -88,6 +88,7 @@ jobs:
     timeout-minutes: 90
     permissions:
       contents: read
+      pull-requests: read
     env:
       BASE: ${{ needs.precheck.outputs.base }}
     steps:
@@ -96,6 +97,8 @@ jobs:
           fetch-depth: 0
 
       - uses: ./.github/actions/prepare
+
+      - uses: ./.github/actions/perf-label
 
       - name: Work pins, base against head
         if: needs.precheck.outputs.workPins == 'true'
@@ -221,6 +224,7 @@ jobs:
     timeout-minutes: 30
     permissions:
       contents: read
+      pull-requests: read
     env:
       BASE: ${{ needs.precheck.outputs.base }}
     steps:
@@ -229,6 +233,8 @@ jobs:
           fetch-depth: 0
 
       - uses: ./.github/actions/prepare
+
+      - uses: ./.github/actions/perf-label
 
       - name: Ticks per second, base against head
         env:

@@ -11,6 +11,7 @@
       "stores", "systems", "tools", "webgl", "world"
     ],
     "state": ["ready", "needs decision"],
-    "work": ["combat balance"]
+    "work": ["combat balance"],
+    "override": ["perf change accepted"]
   }
 }

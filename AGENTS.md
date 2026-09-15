@@ -150,6 +150,13 @@ CodSpeed and ticks-per-second legs run on GitHub's own runners. Before moving ei
 machine, run the same commit against itself there several times and compare the spread with
 GitHub's, which the pull request that moved them records.
 
+**`perf change accepted`, in `tools/audit/labels.json`, lets an intended growth through the work
+pins, gungraun and ticks-per-second budgets.** With it set, those gates still run and write their
+tables, and pass. It reaches a pull request from its issue, copied by `pnpm issue pr`, `pr-edit`,
+`pr-sync` and `board-sync.py`, and `.github/workflows/perf-label.yml` re-runs `check` when it is
+added or removed. An agent explains, in its pull request, every total that grows past its budget,
+and never adds the label itself.
+
 **`pnpm chain` is the one command** (`tools/chain.mjs`). It pushes the current branch and streams
 its check run from GitHub until the run ends, exiting with its result; `pnpm chain --pre` runs the
 pre-check alone. A push to a pull request branch or to `dev` starts the same chain. Do not run
