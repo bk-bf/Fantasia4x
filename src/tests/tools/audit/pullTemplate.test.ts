@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { checkPullSignOff, checkPullTemplate } from '../../../../tools/audit/lib/template.mjs';
+import { checkSignOff, checkPullTemplate } from '../../../../tools/audit/lib/template.mjs';
 
 const untypedFixerModule = new URL('../../../../tools/audit/lib/prs.mjs', import.meta.url).href;
 
@@ -30,9 +30,9 @@ describe('checkPullTemplate', () => {
   });
 });
 
-describe('checkPullSignOff', () => {
+describe('checkSignOff', () => {
   it('accepts a body that says what changed and how it was verified', () => {
-    expect(checkPullSignOff(templated)).toEqual([]);
+    expect(checkSignOff(templated)).toEqual([]);
   });
 
   it.each([
@@ -40,7 +40,7 @@ describe('checkPullSignOff', () => {
     ['a Generated with Claude Code line', '\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)'],
     ['a Written unattended by line', '\n\n_Written unattended by `tools/audit/fix.mjs`._']
   ])('refuses %s', (_, tail) => {
-    expect(checkPullSignOff(templated + tail)).toHaveLength(1);
+    expect(checkSignOff(templated + tail)).toHaveLength(1);
   });
 });
 
@@ -59,7 +59,31 @@ describe('the body the fixer renders', () => {
         port: 5174
       });
       expect(checkPullTemplate(body)).toEqual([]);
-      expect(checkPullSignOff(body)).toEqual([]);
+      expect(checkSignOff(body)).toEqual([]);
+    }
+  });
+});
+
+describe('the comments the fixer and the reviewer render', () => {
+  it('carry no instructions to the reader and no sign-off', async () => {
+    const { renderAttempt, renderReview } = await import(untypedFixerModule);
+    const comments = [
+      renderAttempt({
+        branch: 'fix/thing-12',
+        files: ['src/a.ts'],
+        account: 'Changed a thing.',
+        verified: 'pass',
+        ran: ['pnpm check'],
+        pushed: true,
+        pull: 7
+      }),
+      renderAttempt({ branch: 'fix/thing-12', files: [], account: '', verified: 'fail', failures: 'red' }),
+      renderReview({ route: 'tests', ran: ['pnpm check'], ok: true, account: 'Measured.', outside: ['src/b.ts'] }),
+      renderReview({ route: 'tests', ran: [], ok: false, failures: 'red' })
+    ];
+    for (const text of comments) {
+      expect(checkSignOff(text)).toEqual([]);
+      expect(text).not.toMatch(/yours|Move it to Ready|not because it is wrong/);
     }
   });
 });

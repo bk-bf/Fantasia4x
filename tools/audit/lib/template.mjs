@@ -34,7 +34,7 @@ export function checkPullTemplate(body = '') {
     : [];
 }
 
-export const checkPullSignOff = (body = '') =>
-  SIGN_OFFS.filter(({ pattern }) => pattern.test(body)).map(
-    ({ what }) => `remove ${what}: a pull request body carries no instructions to its reader and no sign-off`
+export const checkSignOff = (text = '') =>
+  SIGN_OFFS.filter(({ pattern }) => pattern.test(text)).map(
+    ({ what }) => `remove ${what}: nothing written to GitHub carries instructions to its reader or a sign-off`
   );

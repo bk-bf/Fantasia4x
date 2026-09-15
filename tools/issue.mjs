@@ -36,7 +36,15 @@ import {
   versionOf
 } from './audit/lib/schema.mjs';
 import { checkPrivate } from './audit/lib/private.mjs';
-import { linkify, issueRef, indexedSha, blobUrl, resolveRepoPath } from './audit/lib/links.mjs';
+import {
+  linkify,
+  issueRef,
+  indexedSha,
+  blobUrl,
+  resolveRepoPath,
+  repairDeadCitation
+} from './audit/lib/links.mjs';
+import { checkSignOff } from './audit/lib/template.mjs';
 import {
   moveLane,
   setSelect,
@@ -152,7 +160,10 @@ function repair(body, sha) {
 function repairProse(text, sha) {
   let out = unnest(issueRef(text));
   for (const f of scanBody(out, sha)) {
-    if (!f.real) continue;
+    if (!f.real) {
+      out = repairDeadCitation(out, f);
+      continue;
+    }
     if (f.kind === 'relative-link') {
       const line = (f.anchor ?? '').match(/^L(\d+)$/)?.[1];
       out = out.split(f.whole).join(`[${f.label}](${blobUrl(f.real, line, sha)})`);
@@ -551,10 +562,10 @@ if (cmd === 'check-labels') {
     process.stdout.write(`${pull?.url ?? ''}\n`);
     const card = linkOf({ body }).issue;
     try {
-      const r = moveLane(card, 'in check');
-      if (r.moved) process.stderr.write(`#${card} ${r.from || 'no lane'} -> in check\n`);
+      moveLane(card, 'in check');
     } catch (e) {
-      process.stderr.write(`#${card} stayed put: ${String(e.message).split('\n')[0]}\n`);
+      if (process.stderr.isTTY)
+        process.stderr.write(`#${card} stayed put: ${String(e.message).split('\n')[0]}\n`);
     }
   } catch (e) {
     die(e.message);
@@ -587,6 +598,8 @@ if (cmd === 'check-labels') {
   const body = prepare(readBody());
   const privateWords = checkPrivate(body);
   if (privateWords.length) die(`refused:\n  - ${privateWords.join('\n  - ')}`);
+  const signOff = checkSignOff(body);
+  if (signOff.length) die(`refused:\n  - ${signOff.join('\n  - ')}`);
   // A comment is a record of what a run did, not a specification. Refusing to post one because
   // the text it is reporting names something that no longer exists loses the whole record, so
   // the same problems are reported and the comment still goes up.

@@ -4,7 +4,7 @@ import { ROOT, BASE } from './harness.mjs';
 import { branchProblem } from './branch.mjs';
 import { blockProblem } from './blockers.mjs';
 import { checkPrivate } from './private.mjs';
-import { checkPullSignOff, checkPullTemplate } from './template.mjs';
+import { checkSignOff, checkPullTemplate } from './template.mjs';
 
 export const REVIEW_CONTEXT = 'audit/review';
 export const PLAYTEST_LABEL = 'needs playtest';
@@ -111,7 +111,7 @@ function inherited(body) {
 export function editPull(n, body, { template = true } = {}) {
   const problem =
     checkPrivate(body)[0] ||
-    checkPullSignOff(body)[0] ||
+    checkSignOff(body)[0] ||
     (template && checkPullTemplate(body)[0]) ||
     unlinkedProblem(body) ||
     linkProblem(body);
@@ -133,7 +133,7 @@ export function createPull({ branch, title, body, labels = [] }) {
     branchProblem(branch) ||
     blockProblem(branch) ||
     checkPrivate(`${title}\n${body}`)[0] ||
-    checkPullSignOff(body)[0] ||
+    checkSignOff(body)[0] ||
     checkPullTemplate(body)[0] ||
     unlinkedProblem(body) ||
     linkProblem(body);
@@ -148,8 +148,11 @@ export function createPull({ branch, title, body, labels = [] }) {
   return openPullFor(branch) ?? { url };
 }
 
-export const commentOnPull = (n, body) =>
-  gh(['pr', 'comment', String(n), '--body-file', '-'], body);
+export const commentOnPull = (n, body) => {
+  const problem = checkSignOff(body)[0];
+  if (problem) throw new Error(problem);
+  return gh(['pr', 'comment', String(n), '--body-file', '-'], body);
+};
 
 export function feedback(n) {
   const view = JSON.parse(gh(['pr', 'view', String(n), '--json', 'comments,reviews']));

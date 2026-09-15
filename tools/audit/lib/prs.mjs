@@ -14,11 +14,9 @@ export function renderAttempt({ branch, files, account, verified, failures, ran,
 
   lines.push(
     verified !== 'pass'
-      ? 'The worktree was kept so the attempt can be carried forward.'
+      ? 'The worktree was kept.'
       : pull
-        ? `Pull request #${pull}. \`review.mjs\` re-merges it onto a fresh \`origin/dev\`, runs the ` +
-          'route the Verify field names and posts its result there, and CI runs on it too. ' +
-          'Merging it is yours.'
+        ? `Pull request #${pull}.`
         : `\`${branch}\` could not be pushed, so no pull request was opened.`,
     '',
     `Verified: ${
@@ -40,8 +38,7 @@ export function renderAttempt({ branch, files, account, verified, failures, ran,
     );
   }
 
-  lines.push('_Written unattended by `tools/audit/fix.mjs`._');
-  return lines.join('\n') + '\n';
+  return lines.join('\n').trimEnd() + '\n';
 }
 
 export function renderReview({ route, ran, ok, failures, account, outside }) {
@@ -58,23 +55,12 @@ export function renderReview({ route, ran, ok, failures, account, outside }) {
       '## It reached past the files this issue cites',
       '',
       ...outside.map((f) => `- \`${f}\``),
-      '',
-      'That is often the right fix — removing a restated roster means editing whatever declares ' +
-        'the set. It is named here so it is visible before you merge it, not because it is wrong.',
       ''
     );
   if (failures) lines.push('## What failed', '', failures, '');
+  if (!ok) lines.push('The card is in Failed.', '');
 
-  lines.push(
-    ok
-      ? 'Merging this pull request is yours.'
-      : 'The card is in Failed. Move it to Ready to have the fixer try again; the next attempt is ' +
-        'pushed to this pull request, and the fixer reads what is written here before it starts.',
-    '',
-    `Ran: ${(ran ?? []).map((r) => `\`${r}\``).join(', ') || 'nothing'}`,
-    '',
-    '_Written unattended by `tools/audit/review.mjs`._'
-  );
+  lines.push(`Ran: ${(ran ?? []).map((r) => `\`${r}\``).join(', ') || 'nothing'}`);
   return lines.join('\n') + '\n';
 }
 
