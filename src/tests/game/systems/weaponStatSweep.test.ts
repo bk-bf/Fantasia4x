@@ -113,8 +113,8 @@ function sample(attacker: Pawn, defender: Pawn, n = 3000, seed = 1234) {
   let dmg = 0;
   let hits = 0;
   let stam = 0;
+  const d = makePawn({ ...(defender as unknown as Record<string, unknown>), limbs: fullLimbs() });
   for (let i = 0; i < n; i++) {
-    const d = makePawn({ ...(defender as unknown as Record<string, unknown>), limbs: fullLimbs() });
     const r = combatService.resolveHit(attacker, d, emptyState);
     dmg += r.damage;
     stam += r.staminaCost ?? 0;
