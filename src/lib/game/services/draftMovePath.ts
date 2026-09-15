@@ -8,7 +8,7 @@ export function assignDraftMovePath(
   pawn: Pawn,
   tx: number,
   ty: number,
-  blocked?: Set<string>
+  blocked?: Set<number>
 ): GameState {
   if (!pawn.position) return gs;
   if (pawn.position.x === tx && pawn.position.y === ty) {

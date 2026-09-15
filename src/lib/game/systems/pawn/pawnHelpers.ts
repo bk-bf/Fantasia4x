@@ -136,7 +136,7 @@ export function markJobUnreachable(pawnId: string, jobId: string, turn: number):
 function gridForPawn(
   pawn: Pawn,
   gameState: GameState,
-  blocked: Set<string>,
+  blocked: Set<number>,
   sx: number,
   sy: number
 ) {
