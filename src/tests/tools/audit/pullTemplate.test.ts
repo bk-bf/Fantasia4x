@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { checkPullTemplate } from '../../../../tools/audit/lib/template.mjs';
+import { checkPullSignOff, checkPullTemplate } from '../../../../tools/audit/lib/template.mjs';
 
 const untypedFixerModule = new URL('../../../../tools/audit/lib/prs.mjs', import.meta.url).href;
 
@@ -12,11 +12,7 @@ const templated = [
   '',
   '## Verified',
   '',
-  '- `pnpm check` — passed',
-  '',
-  '## Then',
-  '',
-  'Merge it when it is right.'
+  '- `pnpm check` — passed'
 ].join('\n');
 
 describe('checkPullTemplate', () => {
@@ -30,11 +26,26 @@ describe('checkPullTemplate', () => {
     expect(errors[0]).toContain('.github/pull_request_template.md');
     expect(errors[0]).toContain('"what changed"');
     expect(errors[0]).toContain('"verified"');
-    expect(errors[0]).toContain('"then"');
     expect(errors[0]).not.toContain('"play it"');
   });
+});
 
-  it('accepts the body the fixer renders on both of its routes', async () => {
+describe('checkPullSignOff', () => {
+  it('accepts a body that says what changed and how it was verified', () => {
+    expect(checkPullSignOff(templated)).toEqual([]);
+  });
+
+  it.each([
+    ['a Then section', '\n\n## Then\n\nMerge it when it is right.'],
+    ['a Generated with Claude Code line', '\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)'],
+    ['a Written unattended by line', '\n\n_Written unattended by `tools/audit/fix.mjs`._']
+  ])('refuses %s', (_, tail) => {
+    expect(checkPullSignOff(templated + tail)).toHaveLength(1);
+  });
+});
+
+describe('the body the fixer renders', () => {
+  it('passes both checks on both of its routes', async () => {
     const { renderPull } = await import(untypedFixerModule);
     for (const route of ['tests', 'playtest']) {
       const body = renderPull({
@@ -48,6 +59,7 @@ describe('checkPullTemplate', () => {
         port: 5174
       });
       expect(checkPullTemplate(body)).toEqual([]);
+      expect(checkPullSignOff(body)).toEqual([]);
     }
   });
 });

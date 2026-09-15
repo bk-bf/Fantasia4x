@@ -89,12 +89,6 @@ export function renderPull({ issue, step, route, account, ran, files, worktree, 
     '## Verified',
     '',
     ...((ran ?? []).length ? ran.map((r) => `- \`${r}\` — green on the branch`) : ['- nothing ran']),
-    '',
-    route === 'playtest'
-      ? 'The reviewer skips a playtest pull request, because whether it plays right is yours to ' +
-        'judge. CI still runs on it.'
-      : `\`review.mjs\` re-merges this onto a fresh \`dev\`, runs the ${route} route again and sets ` +
-        '`audit/review` on the latest commit. CI runs on it too.',
     ''
   ];
 
@@ -113,24 +107,14 @@ export function renderPull({ issue, step, route, account, ran, files, worktree, 
       ''
     );
 
-  lines.push(
-    '## Then',
-    '',
-    'Merge it when it is right. If it is not, say what is wrong here and move the card back to ' +
-      '`Ready`; the fixer reads this pull request before its next attempt.',
-    ''
-  );
-
   if (files?.length)
     lines.push(
       `<details><summary>${files.length} file(s)</summary>`,
       '',
       ...files.map((f) => `- \`${f}\``),
       '',
-      '</details>',
-      ''
+      '</details>'
     );
 
-  lines.push('_Written unattended by `tools/audit/fix.mjs`._');
-  return lines.join('\n') + '\n';
+  return lines.join('\n').trimEnd() + '\n';
 }

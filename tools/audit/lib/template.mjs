@@ -4,6 +4,11 @@ import { ROOT } from './links.mjs';
 
 const PULL_TEMPLATE = 'pull_request_template.md';
 const OPTIONAL_PULL_SECTIONS = new Set(['play it']);
+const SIGN_OFFS = [
+  { pattern: /^##\s+then\s*$/im, what: 'the "## Then" section' },
+  { pattern: /generated with \[?claude code/i, what: 'the "Generated with Claude Code" line' },
+  { pattern: /written unattended by/i, what: 'the "Written unattended by" line' }
+];
 
 export const headingsOf = (md = '') =>
   [...String(md).matchAll(/^##\s+(.+)$/gm)].map((m) => m[1].trim().toLowerCase());
@@ -28,3 +33,8 @@ export function checkPullTemplate(body = '') {
       ]
     : [];
 }
+
+export const checkPullSignOff = (body = '') =>
+  SIGN_OFFS.filter(({ pattern }) => pattern.test(body)).map(
+    ({ what }) => `remove ${what}: a pull request body carries no instructions to its reader and no sign-off`
+  );
