@@ -13,6 +13,7 @@ const WASM_CRATES = ['spatial-core', 'sim-core'];
 const TPS_CONFIG = `${BENCH_DIR}/tps.config.ts`;
 const TPS_ROUNDS = Number(process.env.TPS_ROUNDS ?? 9);
 const TPS_THRESHOLD = Number(process.env.TPS_THRESHOLD ?? 0.05);
+const PERF_CHANGE_ACCEPTED = process.env.PERF_CHANGE_ACCEPTED === 'true';
 const TPS_CORE = process.env.TPS_CORE ?? String(cpus().length - 1);
 
 function arg(name, fallback) {
@@ -132,12 +133,13 @@ function tpsLeg(tree, base, head, results) {
   const baseMs = median(runs.base);
   const headMs = median(runs.head);
   const change = (headMs - baseMs) / baseMs;
-  const slower = change > TPS_THRESHOLD;
+  const overBudget = change > TPS_THRESHOLD;
+  const slower = overBudget && !PERF_CHANGE_ACCEPTED;
   const row = (side, ms) =>
     `| ${side} | ${runs[side].map((x) => x.toFixed(1)).join(', ')} | ${ms.toFixed(1)} | ${ticks ? Math.round((ticks * 1000) / ms) : '-'} |`;
   summary(
     [
-      `## Ticks per second: head is ${Math.abs(change * 100).toFixed(1)}% ${change > 0 ? 'slower' : 'faster'} than base${slower ? `, past the ${Math.round(TPS_THRESHOLD * 100)}% limit` : ''}`,
+      `## Ticks per second: head is ${Math.abs(change * 100).toFixed(1)}% ${change > 0 ? 'slower' : 'faster'} than base${overBudget ? `, past the ${Math.round(TPS_THRESHOLD * 100)}% limit${PERF_CHANGE_ACCEPTED ? ', allowed by the "perf change accepted" label' : ''}` : ''}`,
       '',
       `\`${name}\`, ${TPS_ROUNDS} alternating rounds on core ${TPS_CORE}, ms per run.`,
       '',
