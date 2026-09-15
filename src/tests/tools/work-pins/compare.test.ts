@@ -34,7 +34,7 @@ async function compare(headCalls: number, accepted: boolean) {
     printed.push(String(chunk));
     return true;
   });
-  const { report } = await import('../../../../tools/work-pins/compare.mjs');
+  const { report } = await import(new URL('../../../../tools/work-pins/compare.mjs', import.meta.url).href);
   const passed = report(runDir(100), runDir(headCalls));
   vi.mocked(process.stdout.write).mockRestore();
   return { passed, text: printed.join('') };
