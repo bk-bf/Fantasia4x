@@ -2,8 +2,9 @@ import { describe, it, expect, afterEach } from 'vitest';
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { seamViolations } from '../../../../tools/audit/lib/t0.mjs';
-import { extractRepo } from '../../../../tools/audit/lib/extract.mjs';
+const auditLib = (file: string) => new URL(`../../../../tools/audit/lib/${file}`, import.meta.url).href;
+const { seamViolations } = await import(auditLib('t0.mjs'));
+const { extractRepo } = await import(auditLib('extract.mjs'));
 
 const roots: string[] = [];
 
