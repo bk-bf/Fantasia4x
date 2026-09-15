@@ -23,7 +23,7 @@ import { memoryService } from './MemoryService';
 import { simLog } from '../core/util/logSink';
 import { TICKS_PER_SECOND } from '../core/util/time';
 import { TURNS_PER_DAY } from './EnvironmentService';
-import { nearGatheringPlace } from '../core/defs/amenities';
+import { nearGatheringPlace } from '../core/rules/world/amenities';
 import { pawnStatService } from './PawnStatService';
 import {
   combatBark as pickBark,

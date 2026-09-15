@@ -1,6 +1,7 @@
 import creaturesData from '../../database/pawns/creatures.json';
 import { resolveCharSpans, type CharSpan } from './terrains';
 import type { DamageType } from '../types/health';
+import { deriveCreatureStats } from '../rules/body/creatureStats';
 
 export type EntityClass = 'mob' | 'animal';
 export type EntityBehaviour = 'passive' | 'neutral' | 'aggressive';
@@ -102,43 +103,11 @@ function defaultEatsForDiet(diet: EntityDiet): FoodCategory[] {
   }
 }
 
-function creatureMidStats(raw: RawCreature): {
-  strength: number;
-  dexterity: number;
-  constitution: number;
-  perception: number;
-} {
-  if (raw.stats)
-    return raw.stats as {
-      strength: number;
-      dexterity: number;
-      constitution: number;
-      perception: number;
-    };
-  const sr = raw.statRanges as CreatureDefinition['statRanges'] | undefined;
-  const mid = (r: [number, number] | undefined, fallback: number) =>
-    r ? Math.round((r[0] + r[1]) / 2) : fallback;
-  return {
-    strength: mid(sr?.strength, 10),
-    dexterity: mid(sr?.dexterity, 10),
-    constitution: mid(sr?.constitution, 10),
-    perception: mid(sr?.perception, 10)
-  };
-}
-
 function toDefinition(raw: RawCreature): CreatureDefinition {
-  const rs = creatureMidStats(raw);
-  const visionRange = Math.round(4 + rs.perception * 1.3);
-  const stats: CreatureStats = {
-    strength: rs.strength,
-    dexterity: rs.dexterity,
-    constitution: rs.constitution,
-    perception: rs.perception,
-    health: rs.constitution * 5,
-    speed: Math.floor(1.5 + rs.dexterity * 0.35),
-    visionRange,
-    fleeRange: Math.round(visionRange * 1.45)
-  };
+  const stats: CreatureStats = deriveCreatureStats(
+    raw.stats as CreatureStats | undefined,
+    raw.statRanges as CreatureDefinition['statRanges'] | undefined
+  );
   const diet = (raw.diet as EntityDiet) ?? 'omnivore';
   const predator = (raw.predator as boolean) ?? false;
   return {

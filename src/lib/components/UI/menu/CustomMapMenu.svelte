@@ -11,7 +11,7 @@
     getWaterLevel,
     setWaterLevel,
     type BiomeConfigEntry
-  } from '$lib/game/core/defs/terrains';
+  } from '$lib/game/world/WorldGenerator';
 
   let { onClose }: { onClose: () => void } = $props();
 

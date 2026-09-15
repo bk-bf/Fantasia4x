@@ -25,7 +25,7 @@ import {
   vesselOf
 } from '../../core/rules/gear/vessels';
 import { memoryService } from '../MemoryService';
-import { aggregateMaterialMods } from '../../core/defs/materials';
+import { aggregateMaterialMods } from '../../core/rules/gear/materialMods';
 import {
   absorbDropIfOnStockpileTile,
   reserveForOrder,

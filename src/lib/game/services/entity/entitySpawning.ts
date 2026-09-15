@@ -7,12 +7,13 @@ import { DEFAULT_PLAN } from '../../core/defs/bodyParts';
 import { TRAIT_DATABASE } from '../../core/gen/culture';
 import { creatureAptitudes } from '../../core/rules/body/aptitudes';
 import { rng } from '../../core/util/rng';
-import { getLootPool, drawLoadout, rollCondition, validateLootItemIds } from '../../core/defs/loot';
+import { getLootPool } from '../../core/defs/loot';
+import { drawLoadout, rollCondition, validateLootItemIds } from '../../core/gen/loot';
 import { generateBossName } from '../../core/gen/bossNames';
 import { itemService } from '../ItemService';
 import type { PawnEquipment, ItemInstance } from '../../core/types';
 import { findNearbyWalkable } from './entityHelpers';
-import { isSpawnableTile } from '../../core/defs/terrains';
+import { isSpawnableTile } from '../../core/rules/world/terrain';
 import { resourceObjectService } from '../ResourceObjectService';
 import { markTileDirty } from '../../core/state/tileDeltas';
 import {

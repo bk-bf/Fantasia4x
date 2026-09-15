@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { pawnStatService } from '$lib/game/services/PawnStatService';
-import { createBodyPlanLimbs, enabledNaturalWeapons } from '$lib/game/core/defs/bodyParts';
+import { createBodyPlanLimbs } from '$lib/game/core/defs/bodyParts';
+import { enabledNaturalWeapons } from '$lib/game/core/rules/body/anatomy';
 import type { LimbState, Mob } from '$lib/game/core/types';
 
 const STATS = {
