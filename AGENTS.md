@@ -300,9 +300,9 @@ The admin account every agent pushes with pushes to `dev` directly, and a red ch
 fixed by the next push.
 
 **`board-sync.py` runs every five minutes on ubuntuserver**
-(`~/server/mediaserver/scripts/board-sync.py`, with `tools/audit/after-merge.mjs`). It merges the
-pull requests that are ready to merge, keeps the open ones up to date with `dev`, moves merged
-cards to `On dev`, writes the labels that mirror a board field, and adds any open issue missing
+(`~/server/mediaserver/scripts/board-sync.py`, with `tools/audit/after-merge.mjs`). It keeps the
+open pull requests up to date with `dev` and never merges one, moves merged cards to `On dev`,
+writes the labels that mirror a board field, and adds any open issue missing
 from the board to `Backlog`. It moves a parent issue into the lane all of its sub-issues share,
 unless the parent is in `Manual` or `Rejected`. Read it for the exact conditions before you rely
 on one.
@@ -377,7 +377,9 @@ wall of unbroken prose is not.
 **Reading is not free.** Every agent on both machines, `board-sync.py` and the dashboard share one
 hourly GraphQL budget, and reading the board is the costliest call there is. Read it once, with
 `pnpm -s issue board`, and keep the result; when GraphQL is spent it reads over REST, which has a
-budget of its own. Card writes and `gh issue create` need GraphQL, and fail until the hour resets.
+budget of its own. `pnpm issue`, `after-merge.mjs` and `board-sync.py` then read and write issues,
+pull requests and cards over REST too, through `tools/audit/lib/gh-run.mjs`. `pnpm issue create`,
+`blocked-by` and `--parent` still need GraphQL, and fail until the hour resets.
 
 **Check the limit with GraphQL, not `gh api rate_limit`.** Its `graphql` figure does not track
 the counter the limit is enforced against, and reads `used 0` while hundreds are spent. A
