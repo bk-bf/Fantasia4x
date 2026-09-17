@@ -3,7 +3,8 @@
   import type { NaturalGearMeta } from '$lib/components/util/naturalGear';
   import { coveredParts } from '$lib/game/core/rules/gear/armorCoverage';
   import { partLabel } from '$lib/components/util/bodyLabels';
-  import { getMaterialProperty, aggregateMaterialMods } from '$lib/game/core/defs/materials';
+  import { getMaterialProperty } from '$lib/game/core/defs/materials';
+  import { aggregateMaterialMods } from '$lib/game/core/rules/gear/materialMods';
   import { itemService } from '$lib/game/services/ItemService';
   import { resourceObjectService } from '$lib/game/services/ResourceObjectService';
   import { SOIL_TIER_NAME, type SoilTier } from '$lib/game/core/defs/terrains';

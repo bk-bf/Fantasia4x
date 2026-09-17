@@ -59,6 +59,18 @@ export class SeededRng {
     return arr[Math.floor(this.next() * arr.length)];
   }
 
+  pickWeighted<T>(items: readonly T[], weightOf: (item: T) => number): T | undefined {
+    if (items.length === 0) return undefined;
+    const total = items.reduce((s, it) => s + Math.max(0, weightOf(it)), 0);
+    if (total <= 0) return items[this.int(0, items.length - 1)];
+    let roll = this.random() * total;
+    for (const it of items) {
+      roll -= Math.max(0, weightOf(it));
+      if (roll < 0) return it;
+    }
+    return items[items.length - 1];
+  }
+
   gaussian(mean = 0, sd = 1): number {
     const u1 = 1 - this.next();
     const u2 = this.next();

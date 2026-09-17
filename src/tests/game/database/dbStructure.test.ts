@@ -4,7 +4,7 @@ import recipesData from '$lib/game/database/items/recipes.json';
 import { TREE_ITEMS } from '$lib/dev/itemTree';
 import { AGE_NAMES, BUILDING_AGE, CARCASS_TIER, nodeItems } from '$lib/dev/chainAge';
 import lootpoolData from '$lib/game/database/items/lootpool.json';
-import { itemMatchesCostCategory } from '$lib/game/core/defs/items';
+import { itemMatchesCostCategory } from '$lib/game/core/rules/gear/itemCategory';
 import { recipeItemMatchesCategory } from '$lib/game/services/RecipeService';
 import itemsData from '$lib/game/database/items/items.json';
 /* eslint-disable @typescript-eslint/no-explicit-any */

@@ -11,12 +11,12 @@ const PARENT_OF = new Map<string, string>();
 const LEAVES_OF = new Map<string, string[]>();
 export const DISCIPLINE_LABEL = new Map<string, string>();
 
-interface StationMatch {
+export interface StationMatch {
   id: string;
   flags: string[];
   foodOutput: boolean;
 }
-const STATION_MATCHES: StationMatch[] = [];
+export const STATION_MATCHES: StationMatch[] = [];
 function pushMatch(d: DisciplineDef) {
   if (!d.station) return;
   if (d.station === 'foodOutput') STATION_MATCHES.push({ id: d.id, flags: [], foodOutput: true });
@@ -53,18 +53,4 @@ export function disciplineLeaves(parentId: string): string[] {
 
 export function isDiscipline(id: string): boolean {
   return DISCIPLINE_LABEL.has(id);
-}
-
-export function resolveDiscipline(opts: {
-  effects: Record<string, number>;
-  toolWorkType?: string;
-  isFood: boolean;
-}): string | undefined {
-  if (opts.toolWorkType && isDiscipline(opts.toolWorkType)) return opts.toolWorkType;
-  for (const m of STATION_MATCHES) {
-    if (m.foodOutput) continue;
-    if (m.flags.some((f) => opts.effects[f])) return m.id;
-  }
-  if (opts.isFood) return STATION_MATCHES.find((m) => m.foodOutput)?.id ?? 'meals';
-  return undefined;
 }

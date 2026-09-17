@@ -60,7 +60,7 @@ import { TICKS_PER_SECOND, ticksFromSeconds } from '$lib/game/core/util/time';
 import { clearTileDeltas } from '$lib/game/core/state/tileDeltas';
 import { rng, freshSeed } from '$lib/game/core/util/rng';
 import { resetUnreachableJobs } from '$lib/game/systems/PawnStateMachine';
-import { isSpawnableTile } from '$lib/game/core/defs/terrains';
+import { isSpawnableTile } from '$lib/game/core/rules/world/terrain';
 
 const TICK_DURATION_MS = 1000 / TICKS_PER_SECOND;
 const MAX_STEPS_PER_FRAME = 4;

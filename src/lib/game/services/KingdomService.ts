@@ -9,12 +9,8 @@ import type {
   Pawn
 } from '../core/types';
 import { COLONY_RELATION_ID } from '../core/types';
-import {
-  SEED_KNOWLEDGE_CAP,
-  getBackgroundById,
-  backgroundHomeKnowledge,
-  backgroundWorldliness
-} from '../core/defs/backgrounds';
+import { getBackgroundById } from '../core/defs/backgrounds';
+import { backgroundHomeKnowledge, backgroundWorldliness } from '../core/gen/backgrounds';
 import {
   WEALTH_BANDS,
   dispositionForScore,
@@ -37,6 +33,8 @@ import events from '../database/social/events.json';
 import { pair } from '../core/util/dataPair';
 
 const TICKS_PER_DAY = TURNS_PER_DAY * TICKS_PER_SECOND;
+
+const SEED_KNOWLEDGE_CAP = 200;
 
 const STALE_AFTER_TICKS = 30 * TICKS_PER_DAY;
 

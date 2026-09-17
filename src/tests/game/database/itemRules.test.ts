@@ -10,7 +10,7 @@ import type { Item } from '$lib/game/core/types';
 import { AGE_CEILING, AGE_NAMES, blameStation, chainAgeOf } from '$lib/dev/chainAge';
 import { gearClassOf } from '$lib/game/core/rules/gear/gearClass';
 import { vesselAccepts } from '$lib/game/core/rules/gear/vessels';
-import { itemMatchesCostCategory } from '$lib/game/core/defs/items';
+import { itemMatchesCostCategory } from '$lib/game/core/rules/gear/itemCategory';
 
 type Recipe = {
   id: string;

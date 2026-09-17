@@ -5,13 +5,13 @@ import resourcesData from '../database/world/resources.json';
 import type { Item } from '../core/types';
 import { resolveCharSpans } from '../core/defs/terrains';
 import { buildingDefById } from '../core/defs/buildings';
-import { itemMatchesCostCategory } from '../core/defs/items';
+import { itemMatchesCostCategory } from '../core/rules/gear/itemCategory';
 import { markTileDirty } from '../core/state/tileDeltas';
 import { patchPathfindingWalkable } from './PathfinderService';
 import type { CharSpan } from '../core/defs/terrains';
 import { rng } from '../core/util/rng';
 import { perTick } from '../core/util/time';
-import { aggregateMaterialMods } from '../core/defs/materials';
+import { aggregateMaterialMods } from '../core/rules/gear/materialMods';
 import {
   consumeFromStockpiles,
   addToStockpileZone,

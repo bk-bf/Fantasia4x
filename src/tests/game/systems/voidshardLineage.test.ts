@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { rollLineageTrait, pawnLineage } from '$lib/game/core/defs/lineages';
+import { rollLineageTrait, pawnLineage } from '$lib/game/core/rules/body/lineage';
 import type { Pawn, Trait } from '$lib/game/core/types';
 
 const bare = (traits: Trait[] = []): Pawn => ({ traits }) as unknown as Pawn;

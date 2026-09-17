@@ -2,7 +2,8 @@
   import type { Building } from '$lib/game/core/types';
   import { recipeService } from '$lib/game/services/RecipeService';
   import { itemService } from '$lib/game/services/ItemService';
-  import { getMaterialProperty, aggregateMaterialMods } from '$lib/game/core/defs/materials';
+  import { getMaterialProperty } from '$lib/game/core/defs/materials';
+  import { aggregateMaterialMods } from '$lib/game/core/rules/gear/materialMods';
 
   interface Props {
     building: Building;
