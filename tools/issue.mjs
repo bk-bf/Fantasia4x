@@ -20,8 +20,8 @@
 //   node tools/issue.mjs pr-edit <n> --body-file -
 //   node tools/issue.mjs tidy [--remove] [--host H]...   # merged or idle worktrees, branches and test clones
 
-import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
+import { runGh } from './audit/lib/gh-run.mjs';
 import {
   check,
   allowedLabels,
@@ -76,8 +76,7 @@ const die = (m) => {
   process.exit(1);
 };
 
-const gh = (args, input) =>
-  execFileSync('gh', args, { encoding: 'utf8', input, stdio: ['pipe', 'pipe', 'inherit'] });
+const gh = (args, input) => runGh(args, input, '', true);
 
 const readBody = () => {
   const f = arg('body-file');

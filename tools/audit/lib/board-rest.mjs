@@ -41,3 +41,16 @@ export const restFieldIds = (pages) =>
 
 export const cardsFromRest = (pages, repository) =>
   pages.flat().map((item) => fromRest(item, repository));
+
+export const restIdOf = (pages, nodeId) =>
+  pages.flat().find((entry) => entry.node_id === nodeId)?.id ?? null;
+
+export const selectFieldsFromRest = (pages) =>
+  pages
+    .flat()
+    .filter((field) => field.data_type === 'single_select')
+    .map((field) => ({
+      id: field.node_id,
+      name: field.name,
+      options: (field.options ?? []).map((o) => ({ id: o.id, name: o.name?.raw ?? o.name }))
+    }));

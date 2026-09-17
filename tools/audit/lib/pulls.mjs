@@ -1,6 +1,5 @@
-import { execFileSync } from 'node:child_process';
-
 import { ROOT, BASE } from './harness.mjs';
+import { runGh } from './gh-run.mjs';
 import { branchProblem } from './branch.mjs';
 import { blockProblem } from './blockers.mjs';
 import { checkPrivate } from './private.mjs';
@@ -9,14 +8,7 @@ import { checkSignOff, checkPullTemplate } from './template.mjs';
 export const REVIEW_CONTEXT = 'audit/review';
 export const PLAYTEST_LABEL = 'needs playtest';
 
-const gh = (args, input) =>
-  execFileSync('gh', args, {
-    cwd: ROOT,
-    encoding: 'utf8',
-    input,
-    maxBuffer: 64 * 1024 * 1024,
-    stdio: ['pipe', 'pipe', 'pipe']
-  });
+const gh = (args, input) => runGh(args, input, ROOT);
 
 let repoName = null;
 const repo = () =>
@@ -63,16 +55,21 @@ const PARENT_QUERY =
 
 export function parentOf(n) {
   const [owner, name] = repo().split('/');
-  const res = JSON.parse(
-    gh([
-      'api', 'graphql',
-      '-f', `query=${PARENT_QUERY}`,
-      '-f', `owner=${owner}`,
-      '-f', `name=${name}`,
-      '-F', `n=${n}`
-    ])
-  );
-  return res.data.repository.issue?.parent?.number ?? null;
+  try {
+    const res = JSON.parse(
+      gh([
+        'api', 'graphql',
+        '-f', `query=${PARENT_QUERY}`,
+        '-f', `owner=${owner}`,
+        '-f', `name=${name}`,
+        '-F', `n=${n}`
+      ])
+    );
+    return res.data.repository.issue?.parent?.number ?? null;
+  } catch {
+    const url = JSON.parse(gh(['api', `repos/${repo()}/issues/${n}`])).parent_issue_url;
+    return url ? Number(url.split('/').pop()) : null;
+  }
 }
 
 export function linkOf(pull) {
