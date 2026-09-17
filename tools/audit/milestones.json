@@ -1,4 +1,8 @@
 {
-  "current": "v0.2",
-  "draft": ["v0.3"]
+  "current": "v0.2 - Triage",
+  "draft": [
+    "v0.3 - Systems",
+    "v0.3 - Content",
+    "v0.3 - Code health"
+  ]
 }

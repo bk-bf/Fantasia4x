@@ -1,21 +1,14 @@
-import { execFileSync } from 'node:child_process';
-
 import { ROOT, BASE } from './harness.mjs';
+import { runGh } from './gh-run.mjs';
 import { branchProblem } from './branch.mjs';
 import { blockProblem } from './blockers.mjs';
 import { checkPrivate } from './private.mjs';
+import { checkSignOff, checkPullTemplate } from './template.mjs';
 
 export const REVIEW_CONTEXT = 'audit/review';
 export const PLAYTEST_LABEL = 'needs playtest';
 
-const gh = (args, input) =>
-  execFileSync('gh', args, {
-    cwd: ROOT,
-    encoding: 'utf8',
-    input,
-    maxBuffer: 64 * 1024 * 1024,
-    stdio: ['pipe', 'pipe', 'pipe']
-  });
+const gh = (args, input) => runGh(args, input, ROOT);
 
 let repoName = null;
 const repo = () =>
@@ -62,16 +55,21 @@ const PARENT_QUERY =
 
 export function parentOf(n) {
   const [owner, name] = repo().split('/');
-  const res = JSON.parse(
-    gh([
-      'api', 'graphql',
-      '-f', `query=${PARENT_QUERY}`,
-      '-f', `owner=${owner}`,
-      '-f', `name=${name}`,
-      '-F', `n=${n}`
-    ])
-  );
-  return res.data.repository.issue?.parent?.number ?? null;
+  try {
+    const res = JSON.parse(
+      gh([
+        'api', 'graphql',
+        '-f', `query=${PARENT_QUERY}`,
+        '-f', `owner=${owner}`,
+        '-f', `name=${name}`,
+        '-F', `n=${n}`
+      ])
+    );
+    return res.data.repository.issue?.parent?.number ?? null;
+  } catch {
+    const url = JSON.parse(gh(['api', `repos/${repo()}/issues/${n}`])).parent_issue_url;
+    return url ? Number(url.split('/').pop()) : null;
+  }
 }
 
 export function linkOf(pull) {
@@ -107,8 +105,13 @@ function inherited(body) {
   return { labels: it.labels.map((l) => l.name).filter((l) => !CARD_ONLY.has(l)), milestone: it.milestone };
 }
 
-export function editPull(n, body) {
-  const problem = checkPrivate(body)[0] || unlinkedProblem(body) || linkProblem(body);
+export function editPull(n, body, { template = true } = {}) {
+  const problem =
+    checkPrivate(body)[0] ||
+    checkSignOff(body)[0] ||
+    (template && checkPullTemplate(body)[0]) ||
+    unlinkedProblem(body) ||
+    linkProblem(body);
   if (problem) throw new Error(problem);
   const { labels, milestone } = inherited(body);
   return gh(
@@ -118,13 +121,17 @@ export function editPull(n, body) {
 }
 
 export const syncPull = (n) =>
-  editPull(n, JSON.parse(gh(['pr', 'view', String(n), '--json', 'body'])).body);
+  editPull(n, JSON.parse(gh(['pr', 'view', String(n), '--json', 'body'])).body, {
+    template: false
+  });
 
 export function createPull({ branch, title, body, labels = [] }) {
   const problem =
     branchProblem(branch) ||
     blockProblem(branch) ||
     checkPrivate(`${title}\n${body}`)[0] ||
+    checkSignOff(body)[0] ||
+    checkPullTemplate(body)[0] ||
     unlinkedProblem(body) ||
     linkProblem(body);
   if (problem) throw new Error(problem);
@@ -138,8 +145,11 @@ export function createPull({ branch, title, body, labels = [] }) {
   return openPullFor(branch) ?? { url };
 }
 
-export const commentOnPull = (n, body) =>
-  gh(['pr', 'comment', String(n), '--body-file', '-'], body);
+export const commentOnPull = (n, body) => {
+  const problem = checkSignOff(body)[0];
+  if (problem) throw new Error(problem);
+  return gh(['pr', 'comment', String(n), '--body-file', '-'], body);
+};
 
 export function feedback(n) {
   const view = JSON.parse(gh(['pr', 'view', String(n), '--json', 'comments,reviews']));

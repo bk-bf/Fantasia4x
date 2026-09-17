@@ -88,6 +88,7 @@ jobs:
     timeout-minutes: 90
     permissions:
       contents: read
+      pull-requests: read
     env:
       BASE: ${{ needs.precheck.outputs.base }}
     steps:
@@ -96,6 +97,8 @@ jobs:
           fetch-depth: 0
 
       - uses: ./.github/actions/prepare
+
+      - uses: ./.github/actions/perf-label
 
       - name: Work pins, base against head
         if: needs.precheck.outputs.workPins == 'true'
@@ -175,19 +178,24 @@ jobs:
           path: work-pins-out
 
   codspeed:
-    name: CodSpeed benchmarks on ubuntuserver
+    name: CodSpeed benchmarks
     needs: precheck
     if: needs.precheck.outputs.bench == 'true' && (github.event_name != 'workflow_dispatch' || inputs.mode == 'chain') && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
-    runs-on: [self-hosted, ubuntuserver]
+    runs-on: ubuntu-latest
     timeout-minutes: 60
     permissions:
       actions: read
+      checks: read
       contents: read
       id-token: write
+      pull-requests: read
     steps:
       - uses: actions/checkout@v7
 
       - uses: ./.github/actions/prepare
+
+      - name: Note when the benchmarks start
+        run: echo "CODSPEED_SINCE=$(date -u +%FT%TZ)" >> "$GITHUB_ENV"
 
       - name: CodSpeed benchmarks
         uses: CodSpeedHQ/action@v5
@@ -213,14 +221,24 @@ jobs:
           path: ${{ runner.temp }}/codspeed-counts.json
           if-no-files-found: ignore
 
+      - uses: ./.github/actions/perf-label
+
+      - name: CodSpeed verdict
+        if: github.event_name == 'pull_request'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: node tools/bench/codspeed-gate.mjs
+
   tps:
-    name: Ticks per second on ubuntuserver
+    name: Ticks per second
     needs: precheck
     if: needs.precheck.outputs.tps == 'true' && (github.event_name != 'workflow_dispatch' || inputs.mode == 'chain') && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
-    runs-on: [self-hosted, ubuntuserver]
+    runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
       contents: read
+      pull-requests: read
     env:
       BASE: ${{ needs.precheck.outputs.base }}
     steps:
@@ -230,15 +248,25 @@ jobs:
 
       - uses: ./.github/actions/prepare
 
+      - uses: ./.github/actions/perf-label
+
       - name: Ticks per second, base against head
         env:
           TMPDIR: ${{ runner.temp }}
+          TPS_NOTES: ${{ runner.temp }}/tps-notes.jsonl
         run: node tools/work-pins/gate.mjs --leg tps --base "$BASE"
+
+      - uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() }}
+        with:
+          name: tps-notes
+          path: ${{ runner.temp }}/tps-notes.jsonl
+          if-no-files-found: ignore
 
   perf-notes:
     name: Check notes on the pull request
     if: ${{ !cancelled() && github.event_name == 'pull_request' }}
-    needs: [precheck, measure, codspeed]
+    needs: [precheck, measure, codspeed, tps]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -268,6 +296,12 @@ jobs:
           name: codspeed-counts-${{ github.run_attempt }}
           path: ${{ runner.temp }}/codspeed
 
+      - uses: actions/download-artifact@v8
+        continue-on-error: true
+        with:
+          name: tps-notes
+          path: ${{ runner.temp }}/tps
+
       - uses: actions/setup-node@v7
         with:
           node-version: 24.20.0
@@ -282,4 +316,5 @@ jobs:
           WARNINGS_NOTES: ${{ runner.temp }}/warnings/warnings-notes.jsonl
           CODSPEED_COUNTS: ${{ runner.temp }}/codspeed/codspeed-counts.json
           CODSPEED_RAN: ${{ needs.codspeed.result == 'success' || needs.codspeed.result == 'failure' }}
+          TPS_NOTES: ${{ runner.temp }}/tps/tps-notes.jsonl
         run: node tools/work-pins/perf-notes.mjs

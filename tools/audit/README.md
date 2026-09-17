@@ -1,6 +1,6 @@
 # audit — a code-audit ledger
 
-> **Related:** [AGENTS.md](../../AGENTS.md) · [DECISIONS.md](../../docs/game/DECISIONS.md) · [ITEM-RULES.md](../../docs/game/ITEM-RULES.md) · [ENGINE-PERFORMANCE.md](../../docs/tasks/archive/ENGINE-PERFORMANCE.md) · [issues](https://github.com/bk-bf/Fantasia4x/issues)
+> **Related:** [AGENTS.md](../../AGENTS.md) · [DECISIONS.md](https://github.com/bk-bf/Fantasia4x/blob/14c60448ab1ffef3e8b46ac54d9cbd94db40da91/docs/game/DECISIONS.md) · [ITEM-RULES.md](../../.claude/skills/items/ITEM-RULES.md) · [ENGINE-PERFORMANCE.md](https://github.com/bk-bf/Fantasia4x/blob/14c60448ab1ffef3e8b46ac54d9cbd94db40da91/docs/tasks/archive/ENGINE-PERFORMANCE.md) · [issues](https://github.com/bk-bf/Fantasia4x/issues)
 
 "Audit the code" is unverifiable: nothing records which of the 5,599 objects in this repo
 anything ever looked at, under which question, with which model. This tool makes that a
@@ -53,7 +53,7 @@ Family **S** was derived from [issue #20](https://github.com/bk-bf/Fantasia4x/is
 which was found by hand. It is the family most likely to be under-triggered rather than
 over-triggered — check its n/a rate before trusting a clean result.
 
-Content and gameplay findings land on the same board. `docs/tasks/archive/AUDIT-2026-08-25.md`
+Content and gameplay findings land on the same board. [AUDIT-2026-08-25.md](https://github.com/bk-bf/Fantasia4x/blob/14c60448ab1ffef3e8b46ac54d9cbd94db40da91/docs/tasks/archive/AUDIT-2026-08-25.md)
 was the old headless-sim checklist; its unfinished items are now issue files and its completed
 record is archived. This ledger raises **code-level** findings into that same board.
 

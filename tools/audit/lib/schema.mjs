@@ -5,27 +5,13 @@ import { fileURLToPath } from 'node:url';
 import { loadRules } from './rules.mjs';
 import { ROOT } from './links.mjs';
 import { checkPrivate } from './private.mjs';
+import { headingsOf, requiredSections } from './template.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 
 const TEMPLATE_FOR = { feat: 'feat.md', decision: 'decision.md' };
-const templateCache = new Map();
 
 export const templateFor = (workType) => TEMPLATE_FOR[workType] ?? 'defect.md';
-
-function requiredSections(file) {
-  if (!templateCache.has(file)) {
-    let sections = [];
-    try {
-      const md = readFileSync(join(ROOT, '.github', 'ISSUE_TEMPLATE', file), 'utf8');
-      sections = [...md.matchAll(/^##\s+(.+)$/gm)].map((m) => m[1].trim().toLowerCase());
-    } catch {
-      sections = [];
-    }
-    templateCache.set(file, sections);
-  }
-  return templateCache.get(file);
-}
 
 
 /** Every label a writer may use: the fixed vocabulary plus one per rule name. Anything else
@@ -210,7 +196,8 @@ export function checkBody(body) {
 
 const MIN_PROSE = 240;
 const CHECKBOX = /^\s*[-*] \[[ x]\] /m;
-const VERSION = /^v\d+\.\d+(\.\d+)?$/;
+const VERSION = /^v\d+\.\d+(\.\d+)?( - \S.*)?$/;
+export const versionOf = (title = '') => title?.match(/^v\d+\.\d+(\.\d+)?/)?.[0] ?? null;
 
 const stripNotes = (body) =>
   (body ?? '')
@@ -240,9 +227,9 @@ export function checkTemplate(body, labels = [], workType) {
     );
   }
 
-  const headings = [...text.matchAll(/^##\s+(.+)$/gm)].map((m) => m[1].trim().toLowerCase());
+  const headings = headingsOf(text);
   const file = templateFor(workType);
-  const missing = requiredSections(file).filter((r) => !headings.includes(r));
+  const missing = requiredSections(join('ISSUE_TEMPLATE', file)).filter((r) => !headings.includes(r));
   if (missing.length) {
     errors.push(
       `.github/ISSUE_TEMPLATE/${file} asks for a section this body does not have: ` +
@@ -274,7 +261,7 @@ export function checkMilestone({ title, body } = {}) {
   if (title !== undefined) {
     if (!VERSION.test(title ?? '')) {
       errors.push(
-        `milestone "${title}" is not a version — a milestone is one, written v0.2 or v0.2.1; ` +
+        `milestone "${title}" is not named for a version — write v0.2, or v0.2 - Demo for one part of it; ` +
           'a spec category is a parent issue inside it'
       );
     }

@@ -1,7 +1,7 @@
-import { execFileSync } from 'node:child_process';
-
 import { linkOf, parentOf } from './pulls.mjs';
 import { passiveLane } from './lanes.mjs';
+import { cardsFromRest, restFieldIds, restIdOf, selectFieldsFromRest } from './board-rest.mjs';
+import { runGh } from './gh-run.mjs';
 
 const PROJECT_ID = 'PVT_kwHOBlZOB84Bip03';
 const STATUS_FIELD_ID = 'PVTSSF_lAHOBlZOB84Bip03zhhhAfI';
@@ -37,8 +37,7 @@ const AGENT_TRIAGED_KINDS = new Set(['drift', 'test gap']);
 
 const agentMayTriage = (item) => (item.labels ?? []).some((l) => AGENT_TRIAGED_KINDS.has(l));
 
-const gh = (args) =>
-  execFileSync('gh', args, { encoding: 'utf8', stdio: ['pipe', 'pipe', 'inherit'] });
+const gh = (args, input = '') => runGh(args, input, '', true);
 
 let cache = null;
 
@@ -46,14 +45,31 @@ export const invalidate = () => {
   cache = null;
 };
 
+const REST_BASE = `/users/${OWNER}/projectsV2/${PROJECT_NUMBER}`;
+
+const restPages = (path = '') => JSON.parse(gh(['api', '--paginate', '--slurp', path]));
+
+function restItems() {
+  const ids = restFieldIds(restPages(`${REST_BASE}/fields?per_page=100`));
+  return cardsFromRest(
+    restPages(`${REST_BASE}/items?per_page=100&fields=${ids.join(',')}`),
+    `${OWNER}/Fantasia4x`
+  );
+}
+
 export function boardItems() {
   if (!cache) {
-    cache = JSON.parse(
-      gh([
-        'project', 'item-list', PROJECT_NUMBER,
-        '--owner', OWNER, '--limit', '300', '--format', 'json'
-      ])
-    ).items;
+    try {
+      cache = JSON.parse(
+        gh([
+          'project', 'item-list', PROJECT_NUMBER,
+          '--owner', OWNER, '--limit', '300', '--format', 'json'
+        ])
+      ).items;
+    } catch {
+      process.stderr.write('board: the GraphQL read failed, reading the board over REST\n');
+      cache = restItems();
+    }
   }
   return cache;
 }
@@ -78,8 +94,12 @@ export function fields() {
     const q =
       '{ user(login:"' + OWNER + '"){ projectV2(number:' + PROJECT_NUMBER + '){ fields(first:40){ ' +
       'nodes{ ... on ProjectV2SingleSelectField { id name options{ id name } } } } } } }';
-    const raw = JSON.parse(gh(['api', 'graphql', '-f', 'query=' + q]));
-    fieldCache = raw.data.user.projectV2.fields.nodes.filter((f) => f?.name);
+    try {
+      const raw = JSON.parse(gh(['api', 'graphql', '-f', 'query=' + q]));
+      fieldCache = raw.data.user.projectV2.fields.nodes.filter((f) => f?.name);
+    } catch {
+      fieldCache = selectFieldsFromRest(restPages(`${REST_BASE}/fields?per_page=100`));
+    }
   }
   return fieldCache;
 }
@@ -88,13 +108,24 @@ function applySelect(itemId, fieldId, optionId) {
   const q =
     'mutation($p:ID!,$i:ID!,$f:ID!,$o:String!){ updateProjectV2ItemFieldValue(input:{projectId:$p,' +
     'itemId:$i,fieldId:$f,value:{singleSelectOptionId:$o}}){ projectV2Item{id} } }';
-  gh([
-    'api', 'graphql', '-f', 'query=' + q,
-    '-f', 'p=' + PROJECT_ID,
-    '-f', 'i=' + itemId,
-    '-f', 'f=' + fieldId,
-    '-f', 'o=' + optionId
-  ]);
+  try {
+    gh([
+      'api', 'graphql', '-f', 'query=' + q,
+      '-f', 'p=' + PROJECT_ID,
+      '-f', 'i=' + itemId,
+      '-f', 'f=' + fieldId,
+      '-f', 'o=' + optionId
+    ]);
+  } catch {
+    const item = restIdOf(restPages(`${REST_BASE}/items?per_page=100`), itemId);
+    const field = restIdOf(restPages(`${REST_BASE}/fields?per_page=100`), fieldId);
+    if (item === null || field === null)
+      throw new Error(`the card write failed, and REST has no card ${itemId} or field ${fieldId}`);
+    gh(
+      ['api', '-X', 'PATCH', `${REST_BASE}/items/${item}`, '--input', '-'],
+      JSON.stringify({ fields: [{ id: field, value: optionId }] })
+    );
+  }
 }
 
 export function setSelect(n, fieldName, optionName) {

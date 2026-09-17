@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   parseSvelteCheck,
   parseEslint,
+  parseTsc,
   verdict,
   summary,
   annotation,
@@ -81,6 +82,37 @@ describe('parseEslint', () => {
         line: 9,
         column: 1,
         message: 'Parsing error: Unexpected token'
+      }
+    ]);
+  });
+});
+
+describe('parseTsc', () => {
+  it('reads each positioned type error as a budgeted finding and skips lines without a position', () => {
+    const out = [
+      "tools/audit/lib/ledger.mjs(26,17): error TS7006: Parameter 'db' implicitly has an 'any' type.",
+      "/repo/tools/issue.mjs(3,1): error TS2339: Property 'x' does not exist on type '{}'.",
+      "error TS6053: File 'tools/missing.mjs' not found.",
+      'Found 2 errors in 2 files.'
+    ].join('\n');
+    expect(parseTsc(out, '/repo')).toEqual([
+      {
+        tool: 'tools-types',
+        severity: 'warning',
+        rule: 'TS7006',
+        file: 'tools/audit/lib/ledger.mjs',
+        line: 26,
+        column: 17,
+        message: "Parameter 'db' implicitly has an 'any' type."
+      },
+      {
+        tool: 'tools-types',
+        severity: 'warning',
+        rule: 'TS2339',
+        file: 'tools/issue.mjs',
+        line: 3,
+        column: 1,
+        message: "Property 'x' does not exist on type '{}'."
       }
     ]);
   });

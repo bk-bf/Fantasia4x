@@ -6,7 +6,7 @@ import { basename, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 export const EVENTS = ['Ir', 'Dr', 'Dw', 'I1mr', 'D1mr', 'D1mw', 'ILmr', 'DLmr', 'DLmw'];
-const NOISE = { instructions: 0.5, llMisses: 15 };
+export const NOISE = { instructions: 0.75, llMisses: 15 };
 const PROFILE_FOLDER = /^profile\..+\.out$/;
 const PROFILE_FILE = /^\d+\.out$/;
 const COUNTS_ARTIFACT = 'codspeed-counts-';
@@ -47,7 +47,7 @@ const number = (n) => (n === undefined ? '-' : n.toLocaleString('en-US'));
 
 const percent = (base, head) => ((head - base) / base) * 100;
 
-function change(base, head, digits) {
+export function change(base, head, digits) {
   if (base === undefined) return 'new';
   if (head === undefined) return 'gone';
   if (base === 0) return head === 0 ? '0%' : 'new';
@@ -66,7 +66,7 @@ export function verdict(base, head) {
 }
 
 const LEGEND = [
-  `- **instructions**: the CPU instructions the benchmark ran. Four runs of the same code differed by up to 0.43%, so a change within ±${NOISE.instructions}% is noise and a larger one means the code does more or less work.`,
+  `- **instructions**: the CPU instructions the benchmark ran. Six runs of the same code on GitHub's runners, on two CPU models, differed by up to 0.65%, so a change within ±${NOISE.instructions}% is noise and a larger one means the code does more or less work.`,
   `- **LL misses**: memory reads and writes that missed every CPU cache and went to RAM. Four runs of the same code differed by up to 12.8%, so only a change past ±${NOISE.llMisses}% means something.`,
   '- **verdict**: slower or faster when the instructions changed past their noise band.'
 ].join('\n');
@@ -96,8 +96,8 @@ export function countsTable(head, base) {
 
 export function countsReport(head, base) {
   const intro = base
-    ? `Exact counts from CodSpeed's profiles on ubuntuserver; each change is against \`dev\` at \`${base.sha.slice(0, 8)}\` ([run](${base.url})).`
-    : "Exact counts from CodSpeed's profiles on ubuntuserver; no `dev` run has counts to compare against yet.";
+    ? `Exact counts from CodSpeed's profiles; each change is against \`dev\` at \`${base.sha.slice(0, 8)}\` ([run](${base.url})).`
+    : "Exact counts from CodSpeed's profiles; no `dev` run has counts to compare against yet.";
   return [intro, '', countsTable(head, base?.counts), '', LEGEND].join('\n');
 }
 

@@ -22,6 +22,12 @@ const IGNORES = [
   '**/*.jsonc'
 ];
 
+const GAME_FILES_STILL_IMPORTING_UI = [
+  'src/lib/game/debug/profilerScenario.ts',
+  'src/lib/game/headless/Scenario.ts',
+  'src/lib/game/sim/simWorkerClient.ts'
+];
+
 const PROJECT_RULES = {
   'no-restricted-properties': [
     'error',
@@ -99,6 +105,23 @@ export default [
     files: ['src/lib/game/**/*.ts'],
     ignores: ['src/lib/game/core/util/log.ts'],
     rules: { 'no-console': ['error', { allow: ['warn', 'error'] }] }
+  },
+  {
+    files: ['src/lib/game/**/*.ts'],
+    ignores: GAME_FILES_STILL_IMPORTING_UI,
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              regex: '^(\\$lib/|(\\.\\./)+)(components|stores|webgl)(/|$)',
+              message: 'Code under src/lib/game does not import from components, stores or webgl.'
+            }
+          ]
+        }
+      ]
+    }
   },
   {
     files: ['**/*.{js,ts,mjs}'],

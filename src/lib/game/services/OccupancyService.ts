@@ -1,21 +1,22 @@
 import type { GameState } from '../core/types';
+import { tileKey } from '../core/util/tileKey';
 
 export interface OccupancyService {
-  blockedTiles(state: GameState, excludeId?: string): Set<string>;
-  blockedTilesShared(state: GameState): Set<string>;
+  blockedTiles(state: GameState, excludeId?: string): Set<number>;
+  blockedTilesShared(state: GameState): Set<number>;
   isBlocked(state: GameState, x: number, y: number, excludeId?: string): boolean;
-  movingTargets(state: GameState): Map<string, { id: string; target: string }>;
+  movingTargets(state: GameState): Map<number, { id: string; target: number }>;
 }
 
 class OccupancyServiceImpl implements OccupancyService {
   private _sharedMobs: unknown = null;
   private _sharedPawns: unknown = null;
-  private _sharedSet: Set<string> | null = null;
+  private _sharedSet: Set<number> | null = null;
   private _mtMobs: unknown = null;
   private _mtPawns: unknown = null;
-  private _mtMap: Map<string, { id: string; target: string }> | null = null;
+  private _mtMap: Map<number, { id: string; target: number }> | null = null;
 
-  blockedTilesShared(state: GameState): Set<string> {
+  blockedTilesShared(state: GameState): Set<number> {
     if (this._sharedMobs === state.mobs && this._sharedPawns === state.pawns && this._sharedSet)
       return this._sharedSet;
     const s = this.blockedTiles(state);
@@ -25,32 +26,38 @@ class OccupancyServiceImpl implements OccupancyService {
     return s;
   }
 
-  blockedTiles(state: GameState, excludeId?: string): Set<string> {
-    const occupied = new Set<string>();
+  blockedTiles(state: GameState, excludeId?: string): Set<number> {
+    const width = state.worldMap[0]?.length ?? 0;
+    const occupied = new Set<number>();
     for (const p of state.pawns) {
       if (p.id === excludeId || !p.position || p.isAlive === false) continue;
-      occupied.add(`${p.position.x},${p.position.y}`);
+      occupied.add(tileKey(p.position.x, p.position.y, width));
     }
     for (const m of state.mobs ?? []) {
       if (m.id === excludeId || m.state === 'Corpse') continue;
-      occupied.add(`${m.x},${m.y}`);
+      occupied.add(tileKey(m.x, m.y, width));
     }
     return occupied;
   }
 
-  movingTargets(state: GameState): Map<string, { id: string; target: string }> {
+  movingTargets(state: GameState): Map<number, { id: string; target: number }> {
     if (this._mtMobs === state.mobs && this._mtPawns === state.pawns && this._mtMap)
       return this._mtMap;
-    const m = new Map<string, { id: string; target: string }>();
+    const width = state.worldMap[0]?.length ?? 0;
+    const m = new Map<number, { id: string; target: number }>();
     for (const p of state.pawns) {
       if (p.isAlive === false || !p.position || !p.isMoving || !p.path?.length) continue;
       const t = p.path[p.pathIndex ?? 0];
-      if (t) m.set(`${p.position.x},${p.position.y}`, { id: p.id, target: `${t.x},${t.y}` });
+      if (t)
+        m.set(tileKey(p.position.x, p.position.y, width), {
+          id: p.id,
+          target: tileKey(t.x, t.y, width)
+        });
     }
     for (const mob of state.mobs ?? []) {
       if (mob.state === 'Corpse' || !mob.path?.length) continue;
       const t = mob.path[mob.pathIndex ?? 0];
-      if (t) m.set(`${mob.x},${mob.y}`, { id: mob.id, target: `${t.x},${t.y}` });
+      if (t) m.set(tileKey(mob.x, mob.y, width), { id: mob.id, target: tileKey(t.x, t.y, width) });
     }
     this._mtMobs = state.mobs;
     this._mtPawns = state.pawns;

@@ -44,21 +44,52 @@ export const parseEslint = (json, cwd = process.cwd()) =>
     }))
   );
 
-function runTool(command, args, parse) {
+export function parseTsc(out, cwd = process.cwd()) {
+  const found = [];
+  for (const line of out.split('\n')) {
+    const m = /^(.+?)\((\d+),(\d+)\): error (TS\d+): (.*)$/.exec(line.trim());
+    if (!m) continue;
+    found.push({
+      tool: 'tools-types',
+      severity: 'warning',
+      rule: m[4],
+      file: rel(m[1], cwd),
+      line: Number(m[2]),
+      column: Number(m[3]),
+      message: m[5]
+    });
+  }
+  return found;
+}
+
+function runTool(command, args, parse, { exitsOnFindings = false } = {}) {
   const r = spawnSync(command, args, OUTPUT);
   if (r.error) throw r.error;
   const found = parse(r.stdout);
-  if (r.status !== 0 && !found.some((f) => f.severity === 'error'))
+  if (r.status !== 0 && !found.some((f) => f.severity === 'error') && !(exitsOnFindings && found.length))
     throw new Error(`${command} exited ${r.status} without reporting an error:\n${r.stdout.slice(-2000)}${r.stderr.slice(-2000)}`);
   return found;
 }
+
+const TSC_FLAGS = [
+  '--noEmit', '--pretty', 'false', '--allowJs', '--checkJs', '--strict', '--skipLibCheck',
+  '--module', 'esnext', '--moduleResolution', 'bundler', '--target', 'es2022',
+  '--types', 'node', '--resolveJsonModule'
+];
+
+const toolFiles = () =>
+  execFileSync('git', ['ls-files', '-z', 'tools'], OUTPUT)
+    .split('\0')
+    .filter((f) => /\.(mjs|js|ts)$/.test(f));
 
 const RUNNERS = {
   'svelte-check': () =>
     runTool('svelte-check', ['--tsconfig', './tsconfig.json', '--output', 'machine-verbose'], (out) =>
       parseSvelteCheck(out)
     ),
-  eslint: () => runTool('eslint', ['.', '--format', 'json'], (out) => parseEslint(out || '[]'))
+  eslint: () => runTool('eslint', ['.', '--format', 'json'], (out) => parseEslint(out || '[]')),
+  'tools-types': () =>
+    runTool('tsc', [...TSC_FLAGS, ...toolFiles()], (out) => parseTsc(out), { exitsOnFindings: true })
 };
 
 export function byRule(found) {
