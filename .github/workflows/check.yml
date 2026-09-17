@@ -185,12 +185,17 @@ jobs:
     timeout-minutes: 60
     permissions:
       actions: read
+      checks: read
       contents: read
       id-token: write
+      pull-requests: read
     steps:
       - uses: actions/checkout@v7
 
       - uses: ./.github/actions/prepare
+
+      - name: Note when the benchmarks start
+        run: echo "CODSPEED_SINCE=$(date -u +%FT%TZ)" >> "$GITHUB_ENV"
 
       - name: CodSpeed benchmarks
         uses: CodSpeedHQ/action@v5
@@ -215,6 +220,15 @@ jobs:
           name: codspeed-counts-${{ github.run_attempt }}
           path: ${{ runner.temp }}/codspeed-counts.json
           if-no-files-found: ignore
+
+      - uses: ./.github/actions/perf-label
+
+      - name: CodSpeed verdict
+        if: github.event_name == 'pull_request'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: node tools/bench/codspeed-gate.mjs
 
   tps:
     name: Ticks per second
