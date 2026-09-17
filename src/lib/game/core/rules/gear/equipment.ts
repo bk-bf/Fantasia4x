@@ -195,11 +195,11 @@ export function canEquipItem(_pawn: Pawn, itemId: string): boolean {
   return getEquipmentSlot(item) !== null;
 }
 
-export function addInstanceToInventory(pawn: Pawn, itemId: string, turn?: number): Pawn {
+export function addInstanceToInventory(pawn: Pawn, itemId: string, turn: number): Pawn {
   const item = itemDefById(itemId);
   if (!item) return pawn;
   const instance: ItemInstance = {
-    instanceId: `${itemId}-${pawn.id}-${turn !== undefined ? `t${turn}` : Date.now()}`,
+    instanceId: `${itemId}-${pawn.id}-t${turn}`,
     itemId,
     durability: item.maxDurability ?? 100
   };
@@ -223,7 +223,7 @@ function drainWornVesselIntoPack(pawn: Pawn, worn: ItemInstance): Pawn {
   return { ...pawn, inventory: { ...inv, items, instances } };
 }
 
-export function equipItem(pawn: Pawn, itemId: string, turn?: number): Pawn {
+export function equipItem(pawn: Pawn, itemId: string, turn: number): Pawn {
   const item = itemDefById(itemId);
   if (!item || !canEquipItem(pawn, itemId)) return pawn;
 
@@ -238,7 +238,7 @@ export function equipItem(pawn: Pawn, itemId: string, turn?: number): Pawn {
   }
 
   const instance: ItemInstance = {
-    instanceId: `${itemId}-${pawn.id}-${turn !== undefined ? `t${turn}` : Date.now()}`,
+    instanceId: `${itemId}-${pawn.id}-t${turn}`,
     itemId,
     durability: item.maxDurability ?? 100
   };

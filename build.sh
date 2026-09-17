@@ -104,12 +104,6 @@ sync_pkg_version() {
   return 0
 }
 
-poke_build_badge() {
-  local gitdir="$SCRIPT_DIR/.git"
-  [[ -d "$gitdir" ]] || return 0
-  : > "$gitdir/build-distance-refresh" 2>/dev/null || true
-}
-
 if $PUSH; then
   BRANCH="$(git rev-parse --abbrev-ref HEAD)"
   if [[ "$BRANCH" != "main" ]]; then
@@ -164,7 +158,6 @@ if $PUSH; then
     git tag -a "$TAG" -m "$TAG"
     git push origin "$BRANCH"
     git push origin "$TAG"
-    poke_build_badge
     REPO_URL="$(gh repo view --json url -q .url 2>/dev/null || echo '')"
     echo "✓ Pushed $TAG. CI is building & will publish the release: ${REPO_URL}/actions"
     exit 0
@@ -296,7 +289,6 @@ EOF
   echo "▸ Publishing $TAG (creates the tag)…"
   gh release edit "$TAG" --draft=false
   git fetch origin --tags --quiet 2>/dev/null || true
-  poke_build_badge
   echo "✓ Published: $(gh release view "$TAG" --json url -q .url 2>/dev/null)"
 
   update_release_pill "$TAG"

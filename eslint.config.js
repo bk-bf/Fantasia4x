@@ -5,22 +5,27 @@ import tsPlugin from '@typescript-eslint/eslint-plugin';
 import svelte from 'eslint-plugin-svelte';
 import svelteParser from 'svelte-eslint-parser';
 import prettier from 'eslint-config-prettier';
+import { includeIgnoreFile } from '@eslint/compat';
+import { fileURLToPath } from 'node:url';
+
+const GITIGNORED = includeIgnoreFile(fileURLToPath(new URL('.gitignore', import.meta.url)));
 
 const IGNORES = [
-  'node_modules/**',
   '.claude/**',
-  'build/**',
   'dist/**',
-  '.svelte-kit/**',
   'package/**',
-  'src/lib/spatial-core-pkg/**',
-  'src/lib/sim-core-pkg/**',
   'spatial-core/**',
   'sim-core/**',
   'desktop-spike/**',
   'static/**',
   '**/*.json',
   '**/*.jsonc'
+];
+
+const GAME_FILES_STILL_IMPORTING_UI = [
+  'src/lib/game/debug/profilerScenario.ts',
+  'src/lib/game/headless/Scenario.ts',
+  'src/lib/game/sim/simWorkerClient.ts'
 ];
 
 const PROJECT_RULES = {
@@ -48,6 +53,7 @@ const SHARED = {
 };
 
 export default [
+  GITIGNORED,
   { ignores: IGNORES },
   js.configs.recommended,
   {
@@ -101,6 +107,23 @@ export default [
     rules: { 'no-console': ['error', { allow: ['warn', 'error'] }] }
   },
   {
+    files: ['src/lib/game/**/*.ts'],
+    ignores: GAME_FILES_STILL_IMPORTING_UI,
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              regex: '^(\\$lib/|(\\.\\./)+)(components|stores|webgl)(/|$)',
+              message: 'Code under src/lib/game does not import from components, stores or webgl.'
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
     files: ['**/*.{js,ts,mjs}'],
     rules: {
       'no-restricted-syntax': [
@@ -118,7 +141,6 @@ export default [
       'src/tests/**/*.ts',
       'src/lib/game/headless/**/*.ts',
       'tools/**/*.mjs',
-      'scripts/**/*.mjs',
       'electron/**'
     ],
     rules: { 'no-console': 'off' }

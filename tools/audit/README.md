@@ -1,6 +1,6 @@
 # audit — a code-audit ledger
 
-> **Related:** [AGENTS.md](../../AGENTS.md) · [DECISIONS.md](../../docs/game/DECISIONS.md) · [ITEM-RULES.md](../../docs/game/ITEM-RULES.md) · [ENGINE-PERFORMANCE.md](../../docs/tasks/archive/ENGINE-PERFORMANCE.md) · [issues](https://github.com/bk-bf/Fantasia4x/issues)
+> **Related:** [AGENTS.md](../../AGENTS.md) · [DECISIONS.md](https://github.com/bk-bf/Fantasia4x/blob/14c60448ab1ffef3e8b46ac54d9cbd94db40da91/docs/game/DECISIONS.md) · [ITEM-RULES.md](../../.claude/skills/items/ITEM-RULES.md) · [ENGINE-PERFORMANCE.md](https://github.com/bk-bf/Fantasia4x/blob/14c60448ab1ffef3e8b46ac54d9cbd94db40da91/docs/tasks/archive/ENGINE-PERFORMANCE.md) · [issues](https://github.com/bk-bf/Fantasia4x/issues)
 
 "Audit the code" is unverifiable: nothing records which of the 5,599 objects in this repo
 anything ever looked at, under which question, with which model. This tool makes that a
@@ -53,7 +53,7 @@ Family **S** was derived from [issue #20](https://github.com/bk-bf/Fantasia4x/is
 which was found by hand. It is the family most likely to be under-triggered rather than
 over-triggered — check its n/a rate before trusting a clean result.
 
-Content and gameplay findings land on the same board. `docs/tasks/archive/AUDIT-2026-08-25.md`
+Content and gameplay findings land on the same board. [AUDIT-2026-08-25.md](https://github.com/bk-bf/Fantasia4x/blob/14c60448ab1ffef3e8b46ac54d9cbd94db40da91/docs/tasks/archive/AUDIT-2026-08-25.md)
 was the old headless-sim checklist; its unfinished items are now issue files and its completed
 record is archived. This ledger raises **code-level** findings into that same board.
 
@@ -183,7 +183,9 @@ about code that no longer exists.
 A finding is a verdict row. An issue is a unit of work. `audit issues` turns one into the
 other by grouping open findings by **(rule, two-path-segment module group)**: a rule firing
 forty times is one class of defect, and the class is what a fixer can close in a single PR.
-Each issue carries every citation the audit demanded before it would record a fail.
+Each issue lists its sites one per line, as a link and the audit's one-sentence summary, and
+stops listing before the body passes 60,000 characters, under GitHub's 65,536 limit. The full
+evidence behind each site stays in the ledger.
 
 ```bash
 node tools/audit/audit.mjs issues --dry-run   # what would be written
@@ -204,7 +206,9 @@ run that raised it. An audit that raised its own work and then acted on it would
 with no one in it.
 
 Refreshing never overwrites an issue whose `origin: human`, and never reopens one that is
-`closed`.
+`closed`. A finding under a closed issue's rule and group, on a symbol that issue never
+listed, goes to a follow-up issue instead — `<id>-2`, then `<id>-3` — raised into `Backlog`
+and naming the issue it follows. Findings the closed issue did list stay linked to it.
 
 ## Phase 3 — the fixer
 
@@ -218,7 +222,8 @@ pnpm audit:fix --next --keep              # leave the worktree to inspect
 ```
 
 The gate is the board, not a label: a card sitting in `Ready`, worked on the route its `Verify`
-field names.
+field names, by the model its `Agent` field names. `Agent` is `haiku`, `sonnet` or `opus` and goes
+to `claude --model` as it is. `--issue` refuses a card with no `Agent`, and `--next` skips one.
 
 One issue, one worktree off `origin/dev`, one branch `fix/<title>-<n>` from `branchFor` in
 `lib/branch.mjs`, and the attempt written up
@@ -255,6 +260,27 @@ it — a run that was killed outright — is released by the next run before it 
 When the pull request already exists, the fixer puts every comment on it — the reviewer's and
 Kirill's — into the prompt, so a comment on the pull request is how work is sent back with a
 reason.
+
+A card in `Manual` is one being worked by hand. `--issue` refuses it, `--next` never sees it
+because it reads only `Ready`, the reviewer skips its pull request, and `board-sync.py` does not
+press Update branch on it. Merging its pull request still moves it to `On dev`.
+
+### Working the whole lane
+
+```bash
+pnpm audit:resolve                        # every Ready card, one after another
+pnpm audit:resolve --dry-run              # pace verdict, GitHub points and the order, then exit
+```
+
+`resolve.mjs` runs `fix.mjs --issue <n>` on each card in `Ready`: tests first, then headless,
+then playtest, oldest first within a route. Each card runs under the model its `Agent` field
+names, and the log line for it names both. Each card is tried once per run, whatever the fixer
+does with it — a pull request, `Failed`, nothing changed or a refusal — and the run ends when no
+untried card is left. Before every card it waits while the audit is paused and holds while
+`schedule` in `lib/pace.mjs` says the five-hour usage window is ahead of its line, the same gate
+an audit worker passes before a batch. It also waits for GitHub's GraphQL points to reset while
+fewer than `RESOLVE_POINTS_FLOOR` (600) remain. The `resolve` skill starts it as the
+`fantasia-resolve` systemd unit, which restarts it two minutes after it dies.
 
 ## Phase 4 — the reviewer
 
@@ -353,7 +379,7 @@ stops a second night starting on top of an overrunning one.
 `loginctl enable-linger` is set. `install.sh` says so if it is not.
 
 Environment overrides: `AUDIT_REPO` `AUDIT_TREE` `AUDIT_GRAPH` `AUDIT_NODE` `AUDIT_CLAUDE`
-`AUDIT_HOURS` `AUDIT_WORKERS` `AUDIT_MODEL` `AUDIT_FIX_MODEL` `AUDIT_FIXES` `AUDIT_REVIEWS`
+`AUDIT_HOURS` `AUDIT_WORKERS` `AUDIT_MODEL` `AUDIT_FIXES` `AUDIT_REVIEWS`
 `AUDIT_NO_FIX`.
 
 ## Storage

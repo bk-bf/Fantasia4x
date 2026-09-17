@@ -109,6 +109,11 @@ export function adrCoverage(root, rules, doc = 'docs/game/DECISIONS.md') {
 const stripComments = (t) =>
   t.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/(^|[^:])\/\/.*$/gm, '$1');
 
+const stripCommentsKeepPositions = (t = '') =>
+  t
+    .replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, ' '))
+    .replace(/(^|[^:])\/\/.*$/gm, (m, p1) => p1 + ' '.repeat(m.length - p1.length));
+
 /**
  * Architecture seams, checked by reading the code rather than a map of it.
  *
@@ -123,6 +128,18 @@ export function seamViolations(root, symbols) {
   if (!existsSync(rulePath)) return { rules: 0, findings: [] };
   const rules = JSON.parse(readFileSync(rulePath, 'utf8'));
   const findings = [];
+  const spans = new Map();
+  for (const s of symbols) {
+    if (!spans.has(s.file)) spans.set(s.file, []);
+    spans.get(s.file).push([s.startByte, s.endByte]);
+  }
+  const sources = [];
+  for (const abs of walkFiles(join(root, 'src'), ['.ts', '.svelte'])) {
+    const file = abs.slice(root.length + 1);
+    if (/\.(test|spec)\.ts$/.test(file) || file.includes('/tests/')) continue;
+    const text = stripCommentsKeepPositions(readFileSync(abs, 'utf8'));
+    sources.push({ file, text, inside: spans.get(file) ?? [] });
+  }
 
   for (const r of rules) {
     const allow = new Set(r.allow ?? []);
@@ -132,7 +149,7 @@ export function seamViolations(root, symbols) {
         const file = abs.slice(root.length + 1);
         if (allow.has(file) || file.endsWith(`${r.target}.ts`)) continue;
         if (re.test(stripComments(readFileSync(abs, 'utf8'))))
-          findings.push({ adr: r.adr, where: file, detail: r.msg });
+          findings.push({ adr: r.adr, where: file, detail: r.msg, blocks: r.blocks === true });
       }
       continue;
     }
@@ -141,9 +158,58 @@ export function seamViolations(root, symbols) {
       const id = `${s.file}::${s.className ? s.className + '.' : ''}${s.name}`;
       if (allow.has(id) || s.name === r.target) continue;
       if (re.test(stripComments(s.text ?? ''))) {
-        findings.push({ adr: r.adr, where: `${id}  ${s.file}:${s.startLine}`, detail: r.msg });
+        findings.push({
+          adr: r.adr,
+          where: `${id}  ${s.file}:${s.startLine}`,
+          detail: r.msg,
+          blocks: r.blocks === true
+        });
+      }
+    }
+    const call = new RegExp(`(?:\\.|\\b)${r.target}\\s*\\(`, 'g');
+    for (const { file, text, inside } of sources) {
+      calls: for (const m of text.matchAll(call)) {
+        for (const [a, b] of inside) if (m.index >= a && m.index < b) continue calls;
+        const id = `${file}::<top level>`;
+        if (allow.has(id)) continue;
+        const line = text.slice(0, m.index).split('\n').length;
+        findings.push({ adr: r.adr, where: `${id}  ${file}:${line}`, detail: r.msg, blocks: r.blocks === true });
       }
     }
   }
   return { rules: rules.length, findings };
+}
+
+export const COMPONENT_LINE_LIMIT = 200;
+
+const lineCount = (text) => (text.match(/\n/g) ?? []).length;
+
+export function componentSizeViolations(root) {
+  const basePath = join(dirname(fileURLToPath(import.meta.url)), '..', 'component-sizes.json');
+  const frozen = existsSync(basePath) ? JSON.parse(readFileSync(basePath, 'utf8')) : {};
+  const findings = [];
+  const notes = [];
+  const present = new Set();
+
+  for (const abs of walkFiles(join(root, 'src'), ['.svelte'])) {
+    const file = abs.slice(root.length + 1);
+    const lines = lineCount(readFileSync(abs, 'utf8'));
+    const cap = frozen[file];
+    if (cap !== undefined) present.add(file);
+    if (lines <= COMPONENT_LINE_LIMIT) {
+      if (cap !== undefined)
+        notes.push({ where: file, detail: `${lines} lines, under the limit now; drop it from component-sizes.json` });
+      continue;
+    }
+    if (cap === undefined)
+      findings.push({ where: file, detail: `${lines} lines, over the ${COMPONENT_LINE_LIMIT}-line component limit` });
+    else if (lines > cap)
+      findings.push({ where: file, detail: `grew from ${cap} to ${lines} lines; a component over the limit may only shrink` });
+    else if (lines < cap)
+      notes.push({ where: file, detail: `shrank from ${cap} to ${lines} lines; lower its entry in component-sizes.json` });
+  }
+  for (const file of Object.keys(frozen))
+    if (!present.has(file)) notes.push({ where: file, detail: 'no longer exists; drop it from component-sizes.json' });
+
+  return { frozen: Object.keys(frozen).length, findings, notes };
 }

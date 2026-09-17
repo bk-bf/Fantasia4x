@@ -5,13 +5,15 @@
     "src/app.html",
     "electron/**/*.{cjs,js}",
     "tools/audit/*.mjs",
-    "scripts/**/*.mjs",
+    "tools/work-pins/*.mjs",
+    "tools/gpu/*.mjs",
+    "tools/*.mjs",
+    "tools/dev-tools/**/*.mjs",
     "src/tests/**/*.test.ts"
   ],
   "project": [
     "src/**/*.{ts,js,svelte}",
-    "tools/**/*.mjs",
-    "scripts/**/*.mjs"
+    "tools/**/*.mjs"
   ],
   "ignore": [
     ".claude/**",
@@ -22,7 +24,16 @@
   ],
   "ignoreDependencies": [
     "@firefox-devtools/profiler-cli",
-    "@sveltejs/adapter-auto"
+    "@sveltejs/adapter-auto",
+    "svelte-check"
   ],
-  "ignoreExportsUsedInFile": true
+  "ignoreExportsUsedInFile": true,
+  "vitest": {
+    "config": [
+      "vitest.config.ts",
+      "tools/bench/vitest.config.ts",
+      "tools/bench/tps.config.ts",
+      "tools/work-pins/vitest.config.ts"
+    ]
+  }
 }

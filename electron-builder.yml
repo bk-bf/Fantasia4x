@@ -18,7 +18,7 @@ linux:
     - AppImage
     - deb
   category: Game
-  synopsis: A turn-based 4X colony chronicle.
+  synopsis: A real-time fantasy colony sim with procedurally generated cultures.
   maintainer: bk <boychenkokirill@gmail.com>
 
 win:

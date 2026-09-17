@@ -5,7 +5,7 @@ description: Author, name, re-tier or audit any Fantasia4x item — armour, weap
 
 # Authoring and auditing items
 
-`docs/game/ITEM-RULES.md` is the ordered gate list and stays the source of truth. This skill is the
+`ITEM-RULES.md`, beside this skill, is the ordered gate list and stays the source of truth. This skill is the
 part that keeps getting forgotten: **what the tests do NOT catch, how to name a thing, and the audit
 loop to run afterwards.** Read the gate list, then this.
 
@@ -198,11 +198,11 @@ The `/gear-db` route is live for you; the shared table is a **packed snapshot** 
 itself. After any item, recipe or gearDb change:
 
 ```bash
-node scripts/dev-tools/pack.mjs geardb     # bakes the .jsonc data into .devtools-dist/gear-db.html
+node tools/dev-tools/pack.mjs geardb     # bakes the .jsonc data into .devtools-dist/gear-db.html
 ```
 
 Then republish that file with the Artifact tool, passing the URL in
-`scripts/dev-tools/published.json` as `url` so the link stays stable. Publishing without it mints a
+`tools/dev-tools/published.json` as `url` so the link stays stable. Publishing without it mints a
 new artifact and the user's link goes stale.
 
 **Check the pack actually rebuilt before you publish.** It shells out to `pnpm`, which is often not
@@ -223,5 +223,5 @@ the freshly built asset byte-for-byte.
 
 ## Finishing
 
-- Tick the remediation box on the `docs/issues/` entry with the mechanism and delta.
-- Update `docs/game/ITEM-RULES.md` if a **rule** changed — not merely because items changed.
+- Tick the remediation box on the issue with the mechanism and delta.
+- Update `ITEM-RULES.md` beside this skill if a **rule** changed — not merely because items changed.

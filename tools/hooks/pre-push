@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+set -uo pipefail
+
+ROOT="$(cd "$(git rev-parse --git-common-dir)/.." && pwd)"
+
+NEW=()
+BRANCHES=()
+while read -r _local_ref local_sha remote_ref remote_sha; do
+  [[ "$local_sha" =~ ^0+$ ]] && continue
+  [[ "$remote_ref" == refs/heads/* ]] || continue
+  BRANCHES+=("${remote_ref#refs/heads/}")
+  [[ "$remote_sha" =~ ^0+$ ]] && NEW+=("${remote_ref#refs/heads/}")
+done
+
+if (( ${#BRANCHES[@]} )); then
+  node --input-type=module -e "
+import { blockProblem } from 'file://$ROOT/tools/audit/lib/blockers.mjs';
+let refused = false;
+for (const branch of process.argv.slice(1)) {
+  try {
+    const problem = blockProblem(branch);
+    if (problem) {
+      console.error('pre-push: ' + problem);
+      refused = true;
+    }
+  } catch (e) {
+    console.error('pre-push: could not read the blockers of ' + branch + ', pushing it anyway: ' + String(e.message).split('\n')[0]);
+  }
+}
+process.exit(refused ? 1 : 0);
+" "${BRANCHES[@]}" || exit 1
+fi
+
+if (( ${#NEW[@]} )); then
+  node --input-type=module -e "
+import { branchProblem } from 'file://$ROOT/tools/audit/lib/branch.mjs';
+const bad = process.argv.slice(1).map(branchProblem).filter(Boolean);
+if (bad.length) {
+  for (const b of bad) console.error('pre-push: ' + b);
+  console.error('  Rename it with: git branch -m <old> <new>. Bypass once with: git push --no-verify');
+  process.exit(1);
+}
+" "${NEW[@]}" || exit 1
+fi
+
+CARDS=()
+for b in "${BRANCHES[@]}"; do [[ "$b" == dev ]] || CARDS+=("$b"); done
+if (( ${#CARDS[@]} )); then
+  node --input-type=module -e "
+import { followBranch } from 'file://$ROOT/tools/audit/lib/board.mjs';
+for (const branch of process.argv.slice(1)) {
+  try {
+    const r = followBranch(branch);
+    if (r?.moved) console.error('pre-push: #' + r.n + ' ' + (r.from || 'no lane') + ' -> ' + r.to);
+  } catch (e) {
+    console.error('pre-push: the card of ' + branch + ' stayed put: ' + String(e.message).split('\n')[0]);
+  }
+}
+" "${CARDS[@]}" || true
+fi

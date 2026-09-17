@@ -489,11 +489,13 @@ describe('mining tool gating (bugfix)', () => {
     });
     const stonePick = addInstanceToInventory(
       { id: 'p', equipment: {}, inventory: { items: {}, instances: [] } } as unknown as Pawn,
-      'stone_pick'
+      'stone_pick',
+      0
     );
     const copperPick = addInstanceToInventory(
       { id: 'p', equipment: {}, inventory: { items: {}, instances: [] } } as unknown as Pawn,
-      'copper_pick'
+      'copper_pick',
+      0
     );
     expect(jobService.pawnHasToolFor(stonePick, 'mining', 1), 'stone pick too soft for tin').toBe(
       false
@@ -528,7 +530,7 @@ describe('tool carry / slot (bugfix)', () => {
       equipment: {},
       inventory: { items: {}, instances: [] }
     } as unknown as Pawn;
-    const withPick = addInstanceToInventory(bare, 'stone_pick');
+    const withPick = addInstanceToInventory(bare, 'stone_pick', 0);
     expect(withPick.inventory.instances.some((i) => i.itemId === 'stone_pick')).toBe(true);
     expect((withPick.equipment as Record<string, unknown>).belt).toBeUndefined();
     expect(jobService.pawnHasToolFor(withPick, 'mining', 0)).toBe(true);

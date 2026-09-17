@@ -132,6 +132,7 @@ export class GameEngineImpl implements GameEngine {
   private _phaseMs: Record<string, number> = {};
   private _phaseTicks = 0;
   private _dbg = false;
+  private phaseCounts: Record<string, number> | null = null;
   private avgTileTemp: number | undefined = undefined;
   private outputSink: ((state: GameState, flush: boolean) => void) | null = null;
   private commitSink: ((state: GameState, save: boolean) => void) | null = null;
@@ -161,7 +162,12 @@ export class GameEngineImpl implements GameEngine {
     };
   }
 
+  countPhases(counts: Record<string, number> | null): void {
+    this.phaseCounts = counts;
+  }
+
   private timed(label: string, fn: () => void): void {
+    if (this.phaseCounts) this.phaseCounts[label] = (this.phaseCounts[label] ?? 0) + 1;
     if (!this._dbg) {
       fn();
       return;
@@ -264,10 +270,11 @@ export class GameEngineImpl implements GameEngine {
       this.lastTurnProcessed = this.gameState.turn;
       t('mgrUpdate', () => this.gameStateManager!.updateState(this.gameState!));
       t('uiPush', () => {
+        if (!this.outputSink) return;
         const nowMs = performance.now();
         const flush = nowMs - this.lastFlushMs >= UI_PUSH_MS;
         if (flush) this.lastFlushMs = nowMs;
-        this.outputSink?.(this.gameState!, flush);
+        this.outputSink(this.gameState!, flush);
       });
 
       if (dbg && ++this._phaseTicks >= PHASE_LOG_TICKS) {
@@ -322,10 +329,12 @@ export class GameEngineImpl implements GameEngine {
       this.lastTurnProcessed = this.gameState!.turn;
       this.gameStateManager!.updateState(this.gameState!);
 
-      const nowMs = performance.now();
-      const flush = nowMs - this.lastFlushMs >= PREVIEW_PUSH_MS;
-      if (flush) this.lastFlushMs = nowMs;
-      this.outputSink?.(this.gameState!, flush);
+      if (this.outputSink) {
+        const nowMs = performance.now();
+        const flush = nowMs - this.lastFlushMs >= PREVIEW_PUSH_MS;
+        if (flush) this.lastFlushMs = nowMs;
+        this.outputSink(this.gameState!, flush);
+      }
 
       return { success: true, turnsProcessed: 1, systemsUpdated: ['preview'], errors: [] };
     } catch (error) {

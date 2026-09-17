@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { loadRules } from './rules.mjs';
 import { check, allowedLabels } from './schema.mjs';
 import { subareas, subareaFor } from './subarea.mjs';
+import { runGh } from './gh-run.mjs';
 
 export const STATUSES = ['open', 'in-progress', 'in-review', 'closed'];
 export const KINDS = ['drift', 'correctness', 'performance', 'boundary', 'data', 'test-gap', 'feature'];
@@ -41,12 +42,7 @@ function nameOf(id) {
 export const today = () => new Date().toISOString().slice(0, 10);
 
 function gh(args, { input } = {}) {
-  return execFileSync('gh', args, {
-    encoding: 'utf8',
-    input,
-    maxBuffer: 64 * 1024 * 1024,
-    stdio: ['pipe', 'pipe', 'pipe']
-  });
+  return runGh(args, input);
 }
 
 const WRAPPER = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'issue.mjs');
@@ -207,7 +203,7 @@ export function writeIssue(_root, { data, body }) {
     ? ['edit', existing.path, '--title', data.title, '--body-file', '-']
     : [
         'create', '--title', data.title, '--body-file', '-', '--type', data.type ?? 'fix',
-        '--area', data.area ?? '', '--size', data.size ?? ''
+        '--area', data.area ?? '', '--size', data.size ?? '', '--agent', data.agent ?? ''
       ];
   for (const l of labels) args.push(existing ? '--add-label' : '--label', l);
   const outText = issueTool(args, { input: composeBody(data, body) });

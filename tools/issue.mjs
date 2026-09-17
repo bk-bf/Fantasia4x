@@ -4,16 +4,24 @@
 // mean nothing in an issue, an issue URL inside backticks that never becomes a link, and a
 // label invented one letter away from the one that already exists.
 //
-//   node tools/issue.mjs create --title T --type fix --area sim --size S --body-file - [--label L]...
-//   node tools/issue.mjs edit <n> [--title T] [--body-file -] [--add-label L] [--remove-label L]
+//   node tools/issue.mjs create --title T --type fix --area sim --size S --agent haiku --body-file - [--label L]... [--parent N] [--milestone vX.Y]
+//   node tools/issue.mjs edit <n> [--title T] [--body-file -] [--add-label L] [--remove-label L] [--type T] [--area A] [--size S] [--agent A] [--verify V] [--parent N] [--milestone vX.Y]
+//   node tools/issue.mjs milestone list
+//   node tools/issue.mjs milestone create --title vX.Y --body-file - [--due YYYY-MM-DD]
+//   node tools/issue.mjs milestone edit vX.Y [--title vX.Y] [--body-file -] [--due YYYY-MM-DD]
+//   node tools/issue.mjs milestone close vX.Y
+//   node tools/issue.mjs blocked-by <n> <blocker>    # mark <n> as blocked by <blocker>
 //   node tools/issue.mjs comment <n> --body-file -
 //   node tools/issue.mjs close <n> --commit <sha>
 //   node tools/issue.mjs labels            # what the schema allows
 //   node tools/issue.mjs sync-labels [--prune]  # create what is missing, name or delete the strays
 //   node tools/issue.mjs lint --body-file - [--label L]...
+//   node tools/issue.mjs pr --head <branch> --title T --body-file -
+//   node tools/issue.mjs pr-edit <n> --body-file -
+//   node tools/issue.mjs tidy [--remove] [--host H]...   # merged or idle worktrees, branches and test clones
 
-import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
+import { runGh } from './audit/lib/gh-run.mjs';
 import {
   check,
   allowedLabels,
@@ -22,18 +30,34 @@ import {
   checkLabels,
   checkBody,
   checkKind,
-  labelGroup
+  checkMilestone,
+  labelGroup,
+  milestonePlan,
+  versionOf
 } from './audit/lib/schema.mjs';
-import { linkify, issueRef, indexedSha, blobUrl, resolveRepoPath } from './audit/lib/links.mjs';
+import { checkPrivate } from './audit/lib/private.mjs';
+import {
+  linkify,
+  issueRef,
+  indexedSha,
+  blobUrl,
+  resolveRepoPath,
+  repairDeadCitation
+} from './audit/lib/links.mjs';
+import { checkSignOff } from './audit/lib/template.mjs';
 import {
   moveLane,
   setSelect,
   addToBoard,
   itemFor,
+  laneOf,
   boardItems,
   fields,
-  invalidate
+  invalidate,
+  strayCard
 } from './audit/lib/board.mjs';
+import { createPull, editPull, syncPull, linkOf } from './audit/lib/pulls.mjs';
+import { tidy } from './audit/lib/tidy.mjs';
 
 process.stdout.on('error', (e) => {
   if (e.code === 'EPIPE') process.exit(0);
@@ -52,8 +76,7 @@ const die = (m) => {
   process.exit(1);
 };
 
-const gh = (args, input) =>
-  execFileSync('gh', args, { encoding: 'utf8', input, stdio: ['pipe', 'pipe', 'inherit'] });
+const gh = (args, input) => runGh(args, input, '', true);
 
 const readBody = () => {
   const f = arg('body-file');
@@ -127,9 +150,19 @@ function unnest(text) {
 }
 
 function repair(body, sha) {
-  let out = unnest(issueRef(body ?? ''));
+  return (body ?? '')
+    .split(/(<!--[\s\S]*?-->)/)
+    .map((part, i) => (i % 2 ? part : repairProse(part, sha)))
+    .join('');
+}
+
+function repairProse(text, sha) {
+  let out = unnest(issueRef(text));
   for (const f of scanBody(out, sha)) {
-    if (!f.real) continue;
+    if (!f.real) {
+      out = repairDeadCitation(out, f);
+      continue;
+    }
     if (f.kind === 'relative-link') {
       const line = (f.anchor ?? '').match(/^L(\d+)$/)?.[1];
       out = out.split(f.whole).join(`[${f.label}](${blobUrl(f.real, line, sha)})`);
@@ -152,10 +185,91 @@ const guard = (labels, body, { allowReady = false, template = false, workType } 
 const allIssues = () =>
   JSON.parse(gh(['issue', 'list', '--state', 'all', '--limit', '300', '--json', 'number,title,body']));
 
+const REPO_API = '/repos/bk-bf/Fantasia4x';
+
+const issueRecord = (n) => {
+  let it;
+  try {
+    it = JSON.parse(gh(['api', `${REPO_API}/issues/${n}`]));
+  } catch {
+    die(`no issue #${n}`);
+  }
+  if (it.pull_request) die(`#${n} is a pull request, not an issue`);
+  return it;
+};
+
+const issueId = (n) => issueRecord(n).id;
+
+const linkParent = (n, parent) =>
+  gh(['api', '-X', 'POST', `${REPO_API}/issues/${parent}/sub_issues`, '-F', `sub_issue_id=${issueId(n)}`, '-F', 'replace_parent=true']);
+
+const milestones = () => JSON.parse(gh(['api', `${REPO_API}/milestones?state=all&per_page=100`]));
+
+const milestoneNamed = (title) => {
+  const every = milestones();
+  const hit = every.find((m) => m.title === title);
+  if (!hit) {
+    const open = every.filter((m) => m.state === 'open').map((m) => m.title);
+    die(`no milestone "${title}" — open: ${open.join(', ') || 'none'} (pnpm issue milestone create)`);
+  }
+  if (hit.state !== 'open') die(`milestone ${title} is closed`);
+  return hit;
+};
+
+const NESTING_QUERY =
+  'query($endCursor:String){repository(owner:"bk-bf",name:"Fantasia4x"){' +
+  'issues(states:OPEN,first:100,after:$endCursor){nodes{number milestone{title} ' +
+  'parent{number milestone{title}}} pageInfo{hasNextPage endCursor}}}}';
+
+const openNesting = () =>
+  new Map(
+    gh(['api', 'graphql', '--paginate', '--jq', '.data.repository.issues.nodes[]', '-f', `query=${NESTING_QUERY}`])
+      .split('\n')
+      .filter(Boolean)
+      .map((line) => JSON.parse(line))
+      .map((i) => [String(i.number), i])
+  );
+
+const milestoneGaps = (issue) => {
+  const own = issue?.milestone?.title ?? null;
+  const parent = issue?.parent;
+  if (parent) {
+    const theirs = parent.milestone?.title ?? null;
+    if (versionOf(own) === versionOf(theirs)) return [];
+    return [
+      `milestone is ${own ?? 'unset'} but its parent #${parent.number} is in ${theirs ?? 'none'} — ` +
+        "a sub-issue sits in a milestone of its parent's version"
+    ];
+  }
+  if (own) return [];
+  return [`no milestone — pnpm issue edit <n> --milestone ${milestonePlan().current ?? 'vX.Y'}`];
+};
+
+const MERGED_LANES = new Set(['on dev', 'done']);
+
+const boardGaps = (card, open = false) => {
+  const gaps = [];
+  if (!card.status) gaps.push('no Status — the card is on the board in no lane');
+  if (!card['work type']) gaps.push('no Work type on the board');
+  if (!card.verify) gaps.push('no Verify route on the board');
+  if (!card.area) gaps.push('no Area on the board');
+  if (!card.size) gaps.push('no Size on the board');
+  if (open && !card.agent) gaps.push('no Agent on the board');
+  const sev = (card.labels ?? []).find((l) => SEVERITY_PRIORITY[l]);
+  if (sev && card.priority !== SEVERITY_PRIORITY[sev]) {
+    gaps.push(
+      `Priority is ${card.priority ?? 'unset'} but the severity is ${sev}, which is ` +
+        `${SEVERITY_PRIORITY[sev]} — Priority is derived, not set by hand`
+    );
+  }
+  return gaps;
+};
+
 
 
 if (cmd === 'check-labels') {
   let bad = 0;
+  const nesting = openNesting();
   const cards = new Map(
     boardItems()
       .filter((i) => i.content?.number)
@@ -169,7 +283,8 @@ if (cmd === 'check-labels') {
     const problems = [
       ...checkRequired(names),
       ...checkTemplate(it.body, names, workType),
-      ...checkKind(names, workType)
+      ...checkKind(names, workType),
+      ...milestoneGaps(nesting.get(String(it.number)))
     ];
     if (!problems.length) continue;
     bad += 1;
@@ -177,39 +292,50 @@ if (cmd === 'check-labels') {
     for (const e of problems) process.stdout.write(`      ${e}\n`);
   }
   let untyped = 0;
+  const report = (n, title, gaps, lane) => {
+    if (!gaps.length) return;
+    untyped += 1;
+    process.stdout.write(`#${n}  ${title.slice(0, 52)}${lane ? `  (${lane})` : ''}\n`);
+    for (const g of gaps) process.stdout.write(`      ${g}\n`);
+  };
+  const open = new Set();
   for (const it of JSON.parse(
     gh(['issue', 'list', '--state', 'open', '--limit', '300', '--json', 'number,title'])
   )) {
     const key = String(it.number);
-    if (!cards.has(key)) {
-      untyped += 1;
-      process.stdout.write(`#${it.number}  ${it.title.slice(0, 52)}\n      not on the board\n`);
-    } else {
-      const card = cards.get(key);
-      const gaps = [];
-      if (!card.status) gaps.push('no Status — the card is on the board in no lane');
-      if (!card['work type']) gaps.push('no Work type on the board');
-      if (!card.verify) gaps.push('no Verify route on the board');
-      if (!card.area) gaps.push('no Area on the board');
-      if (!card.size) gaps.push('no Size on the board');
-      const sev = (card.labels ?? []).find((l) => SEVERITY_PRIORITY[l]);
-      if (sev && card.priority !== SEVERITY_PRIORITY[sev]) {
-        gaps.push(
-          `Priority is ${card.priority ?? 'unset'} but the severity is ${sev}, which is ` +
-            `${SEVERITY_PRIORITY[sev]} — Priority is derived, not set by hand`
-        );
-      }
-      if (gaps.length) {
-        untyped += 1;
-        process.stdout.write(`#${it.number}  ${it.title.slice(0, 52)}\n`);
-        for (const g of gaps) process.stdout.write(`      ${g}\n`);
-      }
-    }
+    open.add(key);
+    report(it.number, it.title, cards.has(key) ? boardGaps(cards.get(key), true) : ['not on the board']);
+  }
+  for (const [key, card] of cards) {
+    if (open.has(key) || !MERGED_LANES.has((card.status ?? '').toLowerCase())) continue;
+    report(key, card.title ?? '', boardGaps(card), card.status);
+  }
+  for (const item of boardItems()) {
+    const stray = strayCard(item);
+    if (stray) report(item.content?.number ?? '-', item.content?.title ?? item.title ?? '', [stray], item.status);
+  }
+  const pulls = JSON.parse(
+    gh(['pr', 'list', '--state', 'open', '--limit', '100', '--json', 'number,title,body,isDraft,milestone'])
+  );
+  for (const p of pulls)
+    report(p.number, p.title, [
+      ...(linkOf(p) ? [] : ['pull request links no issue']),
+      ...(p.milestone ? [] : ["pull request has no milestone: `pnpm issue pr-sync` copies its issue's"])
+    ]);
+  for (const [key, card] of cards) {
+    if ((card.status ?? '').toLowerCase() !== 'in check') continue;
+    const pull = pulls.find((p) => String(linkOf(p)?.issue) === key);
+    if (!pull || pull.isDraft)
+      report(key, card.title ?? '', [
+        pull ? `in In Check with only a draft pull request, #${pull.number}` : 'in In Check with no open pull request'
+      ], card.status);
   }
   process.stdout.write(
     `\n${bad} open issue(s) incompletely classified, ${untyped} with a gap on the board\n`
   );
   if (bad || untyped) process.exit(1);
+} else if (cmd === 'board') {
+  process.stdout.write(`${JSON.stringify({ items: boardItems() })}\n`);
 } else if (cmd === 'lane') {
   const n = argv[1] ?? die('which issue?');
   const to = argv.slice(2).join(' ') || '';
@@ -227,7 +353,8 @@ if (cmd === 'check-labels') {
   let dead = 0;
   for (const it of allIssues()) {
     // a resolving blob link is the goal, not a problem; everything else is work left to do
-    const problems = scanBody(it.body, sha).filter((f) => f.kind !== 'blob' || !f.real);
+    const prose = String(it.body ?? '').replace(/<!--[\s\S]*?-->/g, '');
+    const problems = scanBody(prose, sha).filter((f) => f.kind !== 'blob' || !f.real);
     const unresolvable = problems.filter((f) => !f.real);
     const next = repair(it.body, sha);
     const drifted = next !== (it.body ?? '');
@@ -295,17 +422,29 @@ if (cmd === 'check-labels') {
   }
 } else if (cmd === 'create') {
   const title = arg('title') ?? die('--title is required');
+  const privateTitle = checkPrivate(title);
+  if (privateTitle.length) die(`refused:\n  - title ${privateTitle.join('\n  - title ')}`);
   const labels = all('label');
-  const type = arg('type');
-  if (!type) die(`--type is required — one of: ${TYPES.join(', ')}`);
+  const parent = arg('parent');
+  const parentRecord = parent ? issueRecord(parent) : null;
+  const type = arg('type') ?? (parent ? itemFor(parent)?.['work type'] : null);
+  if (!type) die(`--type is required, or --parent to take the parent's — one of: ${TYPES.join(', ')}`);
   if (!TYPES.includes(type)) die(`unknown --type "${type}" — one of: ${TYPES.join(', ')}`);
+  const milestone = arg('milestone') ?? parentRecord?.milestone?.title ?? milestonePlan().current;
+  if (!milestone) die('no milestone — pass --milestone vX.Y, or set "current" in tools/audit/milestones.json');
+  milestoneNamed(milestone);
   const area = boardOption('Area', arg('area'), 'area');
   const size = boardOption('Size', arg('size'), 'size');
+  const agent = boardOption('Agent', arg('agent'), 'agent');
   if (type === 'feat' && !labels.some((l) => labelGroup('kind').includes(l))) labels.push('feature');
   const body = prepare(readBody());
   guard(labels, body, { template: true, workType: type });
+  const INHERITED_LANES = new Set(['backlog', 'blocked on you', 'ready', 'manual']);
+  const parentLane = parent ? laneOf(parent) : '';
+  const lane = INHERITED_LANES.has(parentLane) ? parentLane : 'backlog';
   const args = ['issue', 'create', '--title', title, '--body-file', '-'];
   for (const l of labels) args.push('--label', l);
+  if (milestone) args.push('--milestone', milestone);
   const url = gh(args, body).trim();
   process.stdout.write(url + '\n');
   const n = url.split('/').pop();
@@ -321,18 +460,39 @@ if (cmd === 'check-labels') {
   try {
     addToBoard(n);
     waitForCard(n);
-    setSelect(n, 'Status', 'Backlog');
+    setSelect(n, 'Status', lane);
     setSelect(n, 'Work type', type);
     setSelect(n, 'Area', area);
     setSelect(n, 'Size', size);
+    setSelect(n, 'Agent', agent);
+    const priority = labels.map((l) => SEVERITY_PRIORITY[l]).find(Boolean);
+    if (priority) setSelect(n, 'Priority', priority);
     if (verify) setSelect(n, 'Verify', verify);
   } catch (e) {
     process.stderr.write(`note: created #${n} but could not set its fields: ${e.message}\n`);
   }
+  if (parent) {
+    try {
+      linkParent(n, parent);
+      process.stdout.write(`#${n} is a sub-issue of #${parent}, in ${lane}\n`);
+    } catch (e) {
+      process.stderr.write(`note: created #${n} but could not make it a sub-issue of #${parent}: ${e.message}\n`);
+    }
+  }
 } else if (cmd === 'edit') {
   const n = argv[1] ?? die('which issue?');
+  const parent = arg('parent');
+  if (parent) issueId(parent);
+  const area = arg('area') && boardOption('Area', arg('area'), 'area');
+  const size = arg('size') && boardOption('Size', arg('size'), 'size');
+  const agent = arg('agent') && boardOption('Agent', arg('agent'), 'agent');
   const add = all('add-label');
   const body = arg('body-file') ? prepare(readBody()) : null;
+  const type = arg('type');
+  if (type && !TYPES.includes(type)) die(`unknown --type "${type}" — one of: ${TYPES.join(', ')}`);
+  const verify = arg('verify');
+  const milestone = arg('milestone');
+  if (milestone) milestoneNamed(milestone);
   // Refuse what this edit introduces, not what it inherits. A body that already cites a file
   // somebody deleted cannot be ticked, relabelled or corrected while the old citation is held
   // against it, which locks the issue instead of protecting it.
@@ -341,27 +501,105 @@ if (cmd === 'check-labels') {
   const resulting = [...new Set([...current.labels.map((l) => l.name), ...add])].filter(
     (l) => !removed.has(l)
   );
-  const workType = itemFor(n)?.['work type'];
+  const checksKind = add.length || removed.size || type;
+  const workType = type ?? (body !== null || checksKind ? itemFor(n)?.['work type'] : undefined);
   const inherited =
     body === null ? [] : check({ labels: [], body: current.body ?? '', allowReady: true });
   const introduced = [
     ...checkLabels(add, { allowReady: true }),
+    ...(arg('title') ? checkPrivate(arg('title')).map((e) => `title ${e}`) : []),
     ...checkBody(body ?? ''),
     ...(body !== null
       ? [...checkTemplate(body, resulting, workType), ...checkRequired(resulting)]
       : []),
-    ...(add.length || removed.size ? checkKind(resulting, workType) : [])
+    ...(add.length || removed.size || type ? checkKind(resulting, workType) : [])
   ].filter((e) => !inherited.includes(e));
   if (introduced.length) die(`refused:\n  - ${introduced.join('\n  - ')}`);
-  const args = ['issue', 'edit', n];
-  if (arg('title')) args.push('--title', arg('title'));
-  if (body !== null) args.push('--body-file', '-');
-  for (const l of add) args.push('--add-label', l);
-  for (const l of all('remove-label')) args.push('--remove-label', l);
-  process.stdout.write(gh(args, body ?? undefined));
+  const changes = [];
+  if (arg('title')) changes.push('--title', arg('title'));
+  if (body !== null) changes.push('--body-file', '-');
+  for (const l of add) changes.push('--add-label', l);
+  for (const l of all('remove-label')) changes.push('--remove-label', l);
+  if (milestone) changes.push('--milestone', milestone);
+  if (!changes.length && !parent && !type && !area && !size && !agent && !verify) die('nothing to edit');
+  if (changes.length) process.stdout.write(gh(['issue', 'edit', n, ...changes], body ?? undefined));
+  if (parent) {
+    linkParent(n, parent);
+    process.stdout.write(`#${n} is a sub-issue of #${parent}\n`);
+  }
+  for (const [field, value] of [
+    ['Work type', type],
+    ['Area', area],
+    ['Size', size],
+    ['Agent', agent],
+    ['Verify', verify]
+  ]) {
+    if (!value) continue;
+    try {
+      setSelect(n, field, value);
+    } catch (e) {
+      die(e.message);
+    }
+    process.stdout.write(`#${n} ${field} is ${value}\n`);
+  }
+} else if (cmd === 'blocked-by') {
+  const [n, blocker] = argv.slice(1, 3);
+  if (!n || !blocker) die('usage: blocked-by <issue> <blocker>');
+  const q =
+    'mutation($i:ID!,$b:ID!){ addBlockedBy(input:{issueId:$i,blockingIssueId:$b}){ clientMutationId } }';
+  try {
+    gh(['api', 'graphql', '-f', `query=${q}`, '-f', `i=${issueRecord(n).node_id}`, '-f', `b=${issueRecord(blocker).node_id}`]);
+  } catch (e) {
+    die(e.message);
+  }
+  process.stdout.write(`#${n} is blocked by #${blocker}\n`);
+} else if (cmd === 'pr') {
+  const head = arg('head') ?? die('which branch? --head <branch>');
+  const title = arg('title') ?? die('--title is required');
+  try {
+    const body = readBody();
+    const pull = createPull({ branch: head, title, body });
+    process.stdout.write(`${pull?.url ?? ''}\n`);
+    const card = linkOf({ body }).issue;
+    try {
+      moveLane(card, 'in check');
+    } catch (e) {
+      if (process.stderr.isTTY)
+        process.stderr.write(`#${card} stayed put: ${String(e.message).split('\n')[0]}\n`);
+    }
+  } catch (e) {
+    die(e.message);
+  }
+} else if (cmd === 'pr-edit') {
+  const n = argv[1] ?? die('which pull request?');
+  try {
+    editPull(n, readBody());
+  } catch (e) {
+    die(e.message);
+  }
+  process.stdout.write(`#${n} description rewritten\n`);
+} else if (cmd === 'pr-sync') {
+  const numbers = argv.slice(1).length
+    ? argv.slice(1)
+    : JSON.parse(gh(['pr', 'list', '--state', 'open', '--limit', '100', '--json', 'number'])).map((p) => String(p.number));
+  let failed = 0;
+  for (const n of numbers) {
+    try {
+      syncPull(n);
+      process.stdout.write(`#${n} carries the labels and milestone of its issue\n`);
+    } catch (e) {
+      failed += 1;
+      process.stdout.write(`#${n}: ${String(e.message).split('\n')[0]}\n`);
+    }
+  }
+  if (failed) process.exit(1);
 } else if (cmd === 'comment') {
   const n = argv[1] ?? die('which issue?');
   const body = prepare(readBody());
+  const privateWords = checkPrivate(body);
+  if (privateWords.length) die(`refused:\n  - ${privateWords.join('\n  - ')}`);
+  const signOff = checkSignOff(body);
+  if (signOff.length) die(`refused:\n  - ${signOff.join('\n  - ')}`);
   // A comment is a record of what a run did, not a specification. Refusing to post one because
   // the text it is reporting names something that no longer exists loses the whole record, so
   // the same problems are reported and the comment still goes up.
@@ -390,6 +628,62 @@ if (cmd === 'check-labels') {
     }
   }
   process.stdout.write(`\n${hit} duplicate review comment(s)${apply ? ' deleted' : ''}\n`);
+} else if (cmd === 'milestone') {
+  const sub = argv[1];
+  const due = arg('due');
+  if (due && !/^\d{4}-\d{2}-\d{2}$/.test(due)) die(`--due "${due}" is not a date — write YYYY-MM-DD`);
+  const dueOn = due ? `${due}T23:59:59Z` : null;
+  const refuse = (errors) => {
+    if (errors.length) die(`refused:\n  - ${errors.join('\n  - ')}`);
+  };
+  if (sub === 'list') {
+    const plan = milestonePlan();
+    for (const m of milestones()) {
+      const total = m.open_issues + m.closed_issues;
+      const role = m.title === plan.current ? 'current' : plan.draft.includes(m.title) ? 'draft' : m.state;
+      process.stdout.write(
+        `${m.title}  ${role}  ${m.closed_issues}/${total} closed` +
+          `${m.due_on ? `  due ${m.due_on.slice(0, 10)}` : ''}\n`
+      );
+    }
+  } else if (sub === 'create') {
+    const title = arg('title') ?? die('--title is required, a version such as v0.2 or v0.2 - Demo');
+    const body = prepare(readBody());
+    const errors = checkMilestone({ title, body });
+    if (milestones().some((m) => m.title === title)) errors.push(`milestone ${title} already exists`);
+    refuse(errors);
+    const args = ['api', '-X', 'POST', `${REPO_API}/milestones`, '-f', `title=${title}`, '-f', `description=${body}`];
+    if (dueOn) args.push('-f', `due_on=${dueOn}`);
+    process.stdout.write(`${JSON.parse(gh(args)).html_url}\n`);
+  } else if (sub === 'edit') {
+    const current = milestoneNamed(argv[2] ?? die('which milestone?'));
+    const title = arg('title');
+    const body = arg('body-file') ? prepare(readBody()) : null;
+    refuse(checkMilestone({ title: title ?? undefined, body: body ?? undefined }));
+    const args = ['api', '-X', 'PATCH', `${REPO_API}/milestones/${current.number}`];
+    if (title) args.push('-f', `title=${title}`);
+    if (body !== null) args.push('-f', `description=${body}`);
+    if (dueOn) args.push('-f', `due_on=${dueOn}`);
+    if (args.length === 4) die('nothing to edit');
+    gh(args);
+    process.stdout.write(`${title ?? current.title} updated\n`);
+  } else if (sub === 'close') {
+    const current = milestoneNamed(argv[2] ?? die('which milestone?'));
+    if (current.open_issues) {
+      die(`refused: ${current.title} still has ${current.open_issues} open issue(s) — close or move them first`);
+    }
+    gh(['api', '-X', 'PATCH', `${REPO_API}/milestones/${current.number}`, '-f', 'state=closed']);
+    process.stdout.write(`${current.title} closed\n`);
+  } else {
+    die('usage: milestone list | create --title "vX.Y - Name" --body-file - | edit "vX.Y - Name" | close "vX.Y - Name"');
+  }
+} else if (cmd === 'tidy') {
+  const open = new Set(
+    JSON.parse(gh(['pr', 'list', '--state', 'open', '--limit', '200', '--json', 'headRefName'])).map(
+      (p) => p.headRefName
+    )
+  );
+  tidy({ root: process.cwd(), remove: argv.includes('--remove'), hosts: ['ubuntu', ...all('host')], open });
 } else if (cmd === 'close') {
   const n = argv[1] ?? die('which issue?');
   const sha = arg('commit');
@@ -398,5 +692,6 @@ if (cmd === 'check-labels') {
     gh(['issue', 'close', n, '--reason', 'completed', '--comment', `Fixed in ${sha}.`])
   );
 } else {
-  die(readFileSync(new URL(import.meta.url), 'utf8').split('\n').slice(1, 15).join('\n').replace(/^\/\/ ?/gm, ''));
+  const head = readFileSync(new URL(import.meta.url), 'utf8').split('\n').slice(1);
+  die(head.slice(0, head.findIndex((l) => !l.startsWith('//'))).join('\n').replace(/^\/\/ ?/gm, ''));
 }

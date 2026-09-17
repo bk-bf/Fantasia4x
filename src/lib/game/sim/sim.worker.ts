@@ -1,4 +1,5 @@
 /// <reference lib="webworker" />
+import { WORK_PINS, tallyMessage, handleWorkPins } from '../../workPins/worker';
 import { isClientRuntime } from '../core/util/runtime';
 import { pathfinderService } from '../services/PathfinderService';
 import { GameStateManager } from '../core/state/GameStateManager';
@@ -44,6 +45,7 @@ let prevWM: unknown,
   prevZoneTiles: unknown;
 
 function post(msg: unknown) {
+  if (WORK_PINS) tallyMessage(msg);
   (self as unknown as Worker).postMessage(msg);
 }
 
@@ -446,7 +448,7 @@ self.onmessage = async (e: MessageEvent) => {
       lastDropIds = new Set();
       lastDropsArrRef = undefined;
       lastBatch = performance.now();
-      if (!loop) loop = setInterval(batch, 16);
+      if (!loop && !WORK_PINS) loop = setInterval(batch, 16);
       post({ kind: 'ready' });
       publish(msg.state, true, true);
       break;
@@ -480,6 +482,16 @@ self.onmessage = async (e: MessageEvent) => {
       break;
     case 'requestSave':
       post({ kind: 'fullState', state: gameEngine.getGameState() });
+      break;
+    case 'workPins':
+      if (WORK_PINS)
+        handleWorkPins(msg, {
+          engine: gameEngine,
+          paused: () => paused,
+          tickMs: TICK_MS,
+          flushLog,
+          fail: (error) => post({ kind: 'error', error })
+        });
       break;
   }
 };

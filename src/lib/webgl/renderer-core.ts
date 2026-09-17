@@ -8,6 +8,8 @@ import { WebGLStateManager } from './webgl-state.js';
 import type { GameGrid } from './game-grid.js';
 import type { FontAtlas } from './types.js';
 import { BASE_TILE_PX } from './tile-types.js';
+import { WORK_PINS } from '../workPins/flag.js';
+import { addFrameTotals } from '../workPins/page.js';
 
 interface Viewport {
   x: number;
@@ -476,6 +478,7 @@ export class WebGLRendererCore {
     this.render();
     this.stats.frameTime = this.timer.end();
     this.stats.fps = this.timer.updateFPS();
+    if (WORK_PINS) addFrameTotals(this.stats);
   }
 
   getStats(): RenderStats {

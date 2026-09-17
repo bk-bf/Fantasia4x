@@ -30,6 +30,8 @@ export const blobUrl = (file, line, sha) =>
 
 export const issueUrl = (n) => `${BASE}/issues/${n}`;
 
+export const stripLinks = (text) => String(text).replace(/\[([^\]]*)\]\([^)]*\)/g, '$1');
+
 /** GitHub auto-links a bare `#12`, and renders a backticked URL as code. Anything that names
  *  an issue in this repo becomes the bare reference. */
 export function issueRef(text) {
@@ -128,17 +130,19 @@ export function isGitIgnored(path) {
   }
 }
 
+const cleanPath = (raw) =>
+  String(raw).replace(/^\.{1,2}\//, '').replace(/^(\.\.\/)+/, '').replace(/^\//, '');
+
 function findInTree(raw, sha) {
   const tree = repoTree(sha);
-  const clean = String(raw).replace(/^\.{1,2}\//, '').replace(/^(\.\.\/)+/, '').replace(/^\//, '');
+  const clean = cleanPath(raw);
   if (tree.files.has(clean)) return clean;
   const suffix = [...tree.files].filter((f) => f.endsWith('/' + clean));
   if (suffix.length === 1) return suffix[0];
-  const base = clean.split('/').pop();
-  const hits = tree.byBase.get(base) ?? [];
-  if (hits.length === 1) return hits[0];
-  const narrowed = hits.filter((f) => f.endsWith(clean));
-  if (narrowed.length === 1) return narrowed[0];
+  if (!clean.includes('/')) {
+    const hits = tree.byBase.get(clean) ?? [];
+    if (hits.length === 1) return hits[0];
+  }
   // the data files were .jsonc until they became strict json; older evidence still says jsonc
   if (clean.endsWith('.jsonc')) return findInTree(clean.replace(/\.jsonc$/, '.json'), sha);
   return null;
@@ -150,4 +154,48 @@ export function resolveRepoPath(raw, sha) {
   const real = findInTree(raw, sha);
   if (real && isGitIgnored(real)) return null;
   return real;
+}
+
+const TRUNK = 'origin/dev';
+
+const git = (args) =>
+  execFileSync('git', args, { cwd: ROOT, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 }).trim();
+
+const hasPath = (sha, path) => {
+  try {
+    execFileSync('git', ['cat-file', '-e', `${sha}:${path}`], { cwd: ROOT, stdio: 'ignore' });
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+export function lastTracked(raw, ref = TRUNK) {
+  if (!raw) return null;
+  try {
+    const named = git(['log', ref, '--format=', '--name-only', '--', `:(glob)**/${cleanPath(raw)}`]);
+    const paths = [...new Set(named.split('\n').filter(Boolean))];
+    if (paths.length !== 1 || isGitIgnored(paths[0])) return null;
+    const [path] = paths;
+    const last = git(['log', ref, '-1', '--format=%H', '--', path]);
+    const sha = hasPath(last, path) ? last : git(['rev-parse', `${last}^`]);
+    return hasPath(sha, path) ? { path, sha } : null;
+  } catch {
+    return null;
+  }
+}
+
+export function repairDeadCitation(text, f) {
+  const old = lastTracked(f.path);
+  const line = f.kind === 'relative-link' ? (f.anchor ?? '').match(/^L(\d+)$/)?.[1] : f.line;
+  if (f.kind === 'blob') {
+    if (old) return text.split(f.whole).join(blobUrl(old.path, line, old.sha));
+    const escaped = f.whole.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return text.replace(new RegExp(`\\[([^\\]]*)\\]\\(${escaped}\\)`, 'g'), (_, label) =>
+      label.replaceAll('`', '')
+    );
+  }
+  const label = f.kind === 'relative-link' ? f.label : `\`${f.path}${f.line ? `:${f.line}` : ''}\``;
+  if (old) return text.split(f.whole).join(`[${label}](${blobUrl(old.path, line, old.sha)})`);
+  return text.split(f.whole).join(label.replaceAll('`', ''));
 }

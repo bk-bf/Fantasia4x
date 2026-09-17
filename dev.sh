@@ -30,8 +30,6 @@ while [[ $# -gt 0 ]]; do
   shift
 done
 
-bash "$SCRIPT_DIR/scripts/build-distance.sh" || true
-
 if [[ ! -d "$SCRIPT_DIR/.svelte-kit" ]]; then
   echo "Generating .svelte-kit/…"
   (cd "$SCRIPT_DIR" && CI=true pnpm exec svelte-kit sync 2>&1) || true
@@ -67,7 +65,7 @@ if [[ "$PROFILER_MODE" == "true" ]]; then
   PROFILER_ENV="VITE_PROFILER=true"
   if [[ "$PROFILER_AUTORUN" == "true" ]]; then
     echo "Profiler CAPTURE run — heavy populated map, auto-unpaused at 4×, overlay dropped immediately."
-    echo "  Open http://localhost:$PORT, record in the Firefox Profiler, then read with scripts/profile-self.mjs."
+    echo "  Open http://localhost:$PORT, record in the Firefox Profiler, then read with tools/profile-self.mjs."
     PROFILER_ENV="$PROFILER_ENV VITE_PROFILER_AUTORUN=true"
   else
     echo "Profiler sandbox — heavy populated map, REAL-game startup (PAUSED behind the loading overlay)."

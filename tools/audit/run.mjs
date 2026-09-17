@@ -13,7 +13,16 @@ import { writeFileSync, mkdirSync, appendFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { hostname } from 'node:os';
-import { pauseReason, recordBatch, readControl, readPlan, schedule, writeWorkerState } from './lib/pace.mjs';
+import {
+  RESOLVER_UNIT,
+  activeUnits,
+  pauseReason,
+  recordBatch,
+  readControl,
+  readPlan,
+  schedule,
+  writeWorkerState
+} from './lib/pace.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const AUDIT = join(HERE, 'audit.mjs');
@@ -98,6 +107,10 @@ async function gate(id, deadline) {
     const paused = pauseReason();
     if (paused) {
       log(`[w${id}] paused: ${paused}`);
+      return 'stop';
+    }
+    if (activeUnits([RESOLVER_UNIT]).length) {
+      log(`[w${id}] stopping: ${RESOLVER_UNIT} is working the Ready cards`);
       return 'stop';
     }
     const control = readControl();

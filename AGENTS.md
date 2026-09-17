@@ -2,7 +2,9 @@
 
 Behavioural rules only. Nothing here describes the architecture, the design, or how the
 code works — that is what the code is for, and a second copy of it here would be wrong
-within a week.
+within a week. The same holds for the tooling: where a rule depends on a list, an option, a
+count, a job name or what a script does, this file names the command or the file that holds
+it. Run that command or read that file; do not carry a copy of what it says.
 
 ## The code is the ground truth
 
@@ -78,7 +80,12 @@ which is the bug.
 
 ## Components
 
-200 line limit. Extract sub-components when it is exceeded.
+200 line limit. Extract sub-components when it is exceeded. The t0 audit,
+`node tools/audit/audit.mjs t0`, warns on a component past the limit or past its entry in
+`tools/audit/component-sizes.json`. Entries only go down: lower one when a component shrinks,
+and drop it once the component is under the limit. A seam in `tools/audit/seams.json` marked
+`"blocks": true` fails the check; when the new caller is intended, add it to that rule's `allow`
+list in the same pull request.
 
 Use Svelte 5 runes — `$state`, `$derived`, `$effect`. Not the legacy `$:` syntax.
 
@@ -89,9 +96,7 @@ into one panel, EXTRACT it and import it in both places. Copying it is never the
 the data in.
 
 A copy does not merely repeat the logic; it forks the STYLING with it, so the second one is wrong
-the moment either is touched. A buildings tree copied from the item tree shipped with a different
-palette and misaligned columns while the original was fine, because the styles live beside the
-component that owns them.
+the moment either is touched, because the styles live beside the component that owns them.
 
 ## Items
 
@@ -116,11 +121,52 @@ playtest.
 
 **Always `pnpm`** — never `npm` or `yarn`.
 
-**`pnpm check` is the gate.** It runs `svelte-check`, `eslint` and `knip`, and all three must
-stay green. `eslint` is frozen at its current warning count with `--max-warnings`, so a change
-that adds a warning fails the gate; burn warnings down rather than raising the number.
-`pnpm knip:all` reports unused exports and files, which the gate does not yet enforce.
-`pnpm dupes` runs copy-paste detection over `src`.
+**Every tool is in [`tools/`](tools/), and [`tools/README.md`](tools/README.md) lists each one and
+how to run it.** Only the launchers stay at the root. A new tool goes in `tools/` and gets a line
+in that index.
+
+**Nothing test- or CI-related runs on the laptop.** Every `package.json` script that runs a test,
+type check, linter, benchmark or measurement goes through `tools/remote/run.mjs`, and
+`grep -n run.mjs package.json` lists them; wrap anything else the same way, as
+`node tools/remote/run.mjs <command>`. It runs the committed `HEAD` on ubuntuserver and refuses a
+laptop tree with any uncommitted or untracked file, so commit first; a work-in-progress commit on
+the branch is fine. It never falls back to the laptop. Its options are in the file.
+`tools/remote/guard.mjs` refuses a test runner, linter, type check or harness started directly on
+the laptop.
+
+**One chain checks every change, and GitHub starts and records it.**
+`.github/workflows/check.yml` runs on every pull request into `dev`, every push to `dev`, and every
+`pnpm chain`; read it for its jobs, their order and where each runs. `scopeOf` in
+`tools/audit/ci-scope.mjs` decides which legs a change runs. The jobs a pull request into `dev`
+must pass:
+
+```bash
+gh api repos/bk-bf/Fantasia4x/branches/dev/protection --jq .required_status_checks.contexts
+```
+
+A required job the scope skips counts as passed. `.github/workflows/promote.yml` runs every leg
+against `main` before a promotion, which catches a leg that a change to the CI files broke. The
+CodSpeed and ticks-per-second legs run on GitHub's own runners. Before moving either to another
+machine, run the same commit against itself there several times and compare the spread with
+GitHub's, which the pull request that moved them records.
+
+**`perf change accepted`, in `tools/audit/labels.json`, lets an intended growth through the work
+pins, gungraun and ticks-per-second budgets, and past a regression CodSpeed reports.** With it set,
+those gates still run and write their tables, and pass. It reaches a pull request from its issue, copied by `pnpm issue pr`, `pr-edit`,
+`pr-sync` and `board-sync.py`, and `.github/workflows/perf-label.yml` re-runs `check` when it is
+added or removed. An agent explains, in its pull request, every total that grows past its budget,
+and never adds the label itself.
+
+**`pnpm chain` is the one command** (`tools/chain.mjs`). It pushes the current branch and streams
+its check run from GitHub until the run ends, exiting with its result; `pnpm chain --pre` runs the
+pre-check alone. A push to a pull request branch or to `dev` starts the same chain. Do not run
+`pnpm check` or the tests by hand before a push GitHub will check; the chain runs them on the
+pushed commit. Run them by hand only while you work.
+
+**`pnpm check` is the gate**, and every tool its `package.json` script runs must stay green. Warning
+counts are frozen per tool in `tools/audit/warning-budget.json`; `tools/audit/warnings.mjs` fails
+a count past its budget and says when one has dropped below it. Lower the budget then, and never
+raise it.
 
 **The data files are strict `.json`.** No comments, no trailing commas — the parser rejects
 both, which is how the no-comments rule is enforced rather than remembered.
@@ -143,223 +189,208 @@ only when asked, or when the change touches a hub everything imports.
 
 ## Committing
 
-**On the laptop, never run `git commit` or `git push`.** Kirill commits his own repository there.
-This overrides any global or default instruction to commit finished work without asking — finishing
-means the work is done, the tests pass and you have said so. Leave the changes in the working tree
-and report what is staged.
+**Commit finished work and push it, on the laptop and on ubuntuserver alike.** Finished means the
+work is done and you have said so; the chain then checks the pushed commit, and a red one is fixed
+by the next push. Commit in logical groups. On ubuntuserver the checkout is reached over t3 code,
+with no editor and no git UI, so an uncommitted tree there is invisible, and the tools that read
+that tree stop on it.
 
-**All work lands on `dev`.** `main` is the branch Kirill plays and builds from, and it changes
-only when he promotes. Nothing automated writes to it: the fixer branches from `origin/dev`, a card
-reaches `dev` only through a pull request Kirill merged, and the nightly runs in a checkout on `dev`. `pnpm audit:promote`
-merges `dev` into `main` in a throwaway worktree, runs the **whole** suite there rather than the
-related subset, and stops — printing the worktree to play and the command to push. `--push` is
-the same run with the merge pushed, for when he has played it and decided.
+**All work lands on `dev`.** `main` is the branch the owner plays and builds from, and only his
+promotion changes it: `pnpm audit:promote` and `.github/workflows/promote.yml` hold what a
+promotion runs. Nothing automated writes to `main`.
 
 Branch from `dev`, merge to `dev`, and never push `main`.
 
-**On ubuntuserver, commit.** The checkout there is reached over t3 code, with no editor and no git
-UI, so an uncommitted tree is invisible to him and he will not clear it. Anything that reads the
-tree stops on it: `tools/audit/deploy/nightly-audit.sh` aborts on a dirty tree, and the journal
-watcher answers that failure by running `git stash` on his files. Commit finished work in logical
-groups. Pushing is allowed now that the board is on GitHub, but push `main` only when the
-work is verified green. Use `uname -n` to tell the machines apart.
+This applies to subagents you dispatch.
 
-This applies to subagents you dispatch. Tell each one which machine it is on, in its prompt.
+**Every commit follows the repo's convention**, not an invented one — `git log` is the reference:
 
-**If you commit anyway, having forgotten**, say so plainly and match the repo's existing convention
-rather than inventing one — `git log` is the reference:
-
-- `type: lowercase summary`, or `type(scope): lowercase summary`. The types in use are `feat`,
-  `fix`, `refactor`, `chore`, `docs`, `dev`, `agents`, `perf`, `style`, `test`, `ci` and
-  `build`. Do not invent a type; `db:` and `gear-db:` are not types, they are nouns — they
-  belong in the scope, as `feat(db):`.
+- `type: lowercase summary`, or `type(scope): lowercase summary`. `tools/hooks/commit-msg` holds
+  the types it accepts. Do not invent a type; a noun such as `db` belongs in the scope, as
+  `feat(db):`.
 - A body only where the change needs explaining. Many commits here have none.
 - **A body is bullets, never prose.** One `- ` per change, sentence case, ending in a full
   stop, naming the symbol or file inline. `eb79af85`, `ef1cb295` and `bd98c2c4` are the
   reference. A paragraph explaining the reasoning behind a change does not belong in a commit
-  message; put it in the code, a test, or `docs/`.
+  message; put it in the code, a test, or the issue.
 - Keep the `Co-Authored-By` trailer.
 
-`scripts/hooks/commit-msg` refuses anything else, and `pnpm hooks:install` puts it in place
-along with the pre-commit hook. `git commit --no-verify` bypasses it for a one-off.
+**The hooks in `tools/hooks/` enforce it**, along with branch names, blocked branches and private
+words; each refusal names its rule. `pnpm hooks:install` links them into `.git/hooks`; run it in
+any clone whose hooks are missing. Never bypass them with `--no-verify`.
 
 ## Trackers
 
-**GitHub issues hold all work** — defects, features and decisions. `gh issue list` is the board.
-A feature's issue is its spec; no spec file sits beside it. `docs/tasks/` keeps `ROADMAP.md`, the
-record of what shipped, and `archive/`, which nothing new is written to. The old `docs/issues/`
-and `docs/pr/` directories are gone.
+**GitHub issues hold all tracked work** — defects, features and decisions. `gh issue list` is the
+board. Work done in a conversation is tracked only when its scope calls for it; see "Pull requests".
+A feature's issue is its spec; no spec file sits beside it. There is no `docs/` directory: what
+shipped before the board is the closed milestone `v0.1 - Before the board`, and a permalink pinned
+to an older commit still reaches any file `docs/` held. The item rules live beside the `items`
+skill, in `.claude/skills/items/ITEM-RULES.md`.
 
-Frontmatter became labels: severity `critical` / `high` / `medium` / `low`, kind `drift` / `correctness` /
-`performance` / `data` / `boundary` / `test gap` / `feature`, origin `found by audit` / `found by hand`, the audit rule that
-fired, and `ready`.
+**Look the vocabulary up; do not recall it.**
 
-**A rule is labelled by its name, not its id.** `restated-roster`, `dead-branch`,
-`error-discarded`, `weak-assertion`, `logic-in-defs` — every rule in `tools/audit/rules/`
-carries a `name`, and that is what reaches the board and the issue slug. The id (`S01`, `A06a`)
-stays the ledger's key and should not appear in anything a person reads.
+```bash
+pnpm issue labels                                                 # every label an issue may carry
+gh api '/users/bk-bf/projectsV2/4/fields?per_page=100'           # the board's fields and their options
+pnpm issue milestone list                                         # every milestone and how much of it is closed
+```
+
+The labels are `tools/audit/labels.json` plus one per audit rule `name`. Adding a label means
+editing that file, not inventing one at a call site; `pnpm issue sync-labels` creates what is
+missing and names the strays, and `--prune` deletes a stray no issue carries.
+
+**A rule is labelled by its name, not its id.** Every rule in `tools/audit/rules/` carries a
+`name`, and that is what reaches the board and the issue slug. The id stays the ledger's key and
+does not appear in anything a person reads.
 
 **Triage through the lanes, never around them.** The board is
 [projects/4](https://github.com/users/bk-bf/projects/4) and its columns are an order:
-`Backlog` → `Ready` → `In progress` → `PR ready` → `On dev` → `Done`, with
-`Blocked on you`, `Failed` and `Rejected` off to the side. The board carries an issue as far as `Ready`;
-from there the work is a pull request, and the card follows it. `Rejected` is the first column
-on purpose. A change to the lanes inserts or drops the one option it concerns and keeps every
-other option where Kirill put it; rewriting the whole option list moves his columns.
+`Backlog` → `Ready` → `In progress` → `In Check` → `PR ready` → `On dev` → `Done`, with
+`Blocked on you`, `Manual`, `Failed` and `Rejected` off to the side. The board carries an issue as
+far as `Ready`; from there the work is a pull request, and the card follows it. A change to the
+lanes inserts or drops the one option it concerns and keeps every other option where the owner put
+it; rewriting the whole option list moves his columns.
 
-- **`Backlog`** — raised, not yet evaluated. The audit raises here and nowhere else.
-
-**Every card is a real issue.** Do not put a draft card on the board to represent work that has
-a spec but no issue — an empty card inflates the count and says nothing a person can act on.
-Planned work is an issue from the start, and waits in `Backlog` until Kirill moves it on.
+- **`Backlog`** — raised, not yet evaluated. The audit raises here and nowhere else. A card with an
+  open pull request is never here.
 - **`Ready`** — nothing blocks it, no decision is outstanding, the scope is clear enough to
   start. An agent promotes a `drift` or `test gap` card out of `Backlog` itself, and says why.
-  Any other kind waits for Kirill: the agent comments on the issue with the open decision or
+  Any other kind waits for the owner: the agent comments on the issue with the open decision or
   task it overlaps, or "none", and what in play reaches the code it cites, then moves it to
   `Blocked on you`. He moves it to `Ready`.
-- **`Failed`** — tried and did not land: the fixer could not get it green or changed nothing, or
-  the reviewer failed its pull request. The reason is on the issue or the pull request. The fixer
-  never picks from here; Kirill reads the reason and moves the card to `Ready` to try again, or
-  elsewhere. An agent moves a card out of `Failed` only when he says so.
-- **`In progress`** — a branch exists and an agent is on it. Once the fixer has it green it is a
-  pull request into `dev`, and the card stays here while `review.mjs` verifies it.
-- **`PR ready`** — the pull request is ready for Kirill: `review.mjs` passed it, or it
-  is a `needs playtest` pull request, which the reviewer skips. He merges it, or comments on it
-  and moves the card back to `Ready`. Agents put cards here, and `after-merge.mjs` takes them out
-  when the pull request merges.
-- **`On dev`** — merged to `dev` by a pull request Kirill merged, and not yet in the build he
-  plays. Cards rest here until he promotes, which is the only thing that writes `main`.
+- **`Failed`** — tried and did not land. The reason is on the issue or the pull request. The
+  fixer never picks from here; the owner reads the reason and moves the card on. An agent moves a
+  card out of `Failed` only when he says so.
+- **`In progress`** — a branch exists and an agent is on it. Pushing a `<type>/<title>-<n>` branch
+  that has no ready pull request moves card `n` here.
+- **`In Check`** — a ready pull request is open and its checks, and the reviewer, are running.
+  Nothing moves a card here by hand; opening or pushing its ready pull request does.
+- **`Manual`** — he is working it by hand, and the fixer and the reviewer leave it alone. When an
+  agent takes a `Manual` card up, pushing its `-<n>` branch moves it to `In progress`, and opening
+  its pull request moves it to `In Check`.
+- **`PR ready`** — the pull request has passed review, or it is a `needs playtest` pull request,
+  which waits for him to play and merge it.
+- **`On dev`** — merged to `dev` by a pull request, and not yet in the build he plays.
 - **`Done`** — promoted to `main`, so it is in the game he plays. The issue was closed when it
   reached `dev`; the lane is where the work lives, not whether it is finished.
 - **`Blocked on you`** — cannot proceed until he chooses: a proposal awaiting a yes, a design
   call whose measurements are already in hand, or a card that is not `drift` or `test gap`
   waiting for his yes to be worked. Not a parking space for anything merely hard.
 - **`Rejected`** — closed without being wanted, with the reason as a comment on the issue.
-  Kirill puts cards here.
+  The owner puts cards here.
 
-**`Blocked on you` and `Rejected` are his lanes.** Put a card in when it belongs there.
-**Never take one out** — he is the only one who decides a thing he asked to look at has been
-looked at. And do not put one back because he moved it out: him moving a card is the answer,
-not a mistake to correct. Nothing watches those lanes for drift.
+**Every card past `Backlog` is a real issue.** A draft or a pull request card sits only in
+`Backlog` or `Rejected`. Do not put a draft card on the board to represent work that has a spec
+but no issue; planned work is an issue from the start, and waits in `Backlog` until the owner moves
+it on.
 
-Move a card with `pnpm issue lane <n> <lane>`, which refuses a move out of his lanes, and a move
-out of `Backlog` for any card that is not `drift` or `test gap` unless it goes to `Blocked on you`.
-Direct `gh project item-edit` is denied.
+**`Blocked on you`, `Manual` and `Rejected` are his lanes.** Put a card in when it belongs there.
+**Never take one out**, except a `Manual` card an agent takes up — he is the only one who decides a
+thing he asked to look at has been looked at. And do not put one back because he moved it out:
+him moving a card is the answer, not a mistake to correct. The one other way out is the `unblock`
+skill, which asks him about each `Blocked on you` card and records his answer before it moves the
+card to `Ready`.
 
-Do not skip a lane. Nothing goes from `Backlog` straight to `In progress`, nothing reaches
-`On dev` except through a pull request Kirill merged, and nothing reaches `Done` except by a
-promotion Kirill ran.
+Move a card with `pnpm issue lane <n> <lane>`; it refuses a move these rules forbid and says
+which. Direct `gh project item-edit` is denied. Do not skip a lane: nothing goes from `Backlog`
+straight to `In progress` except when a pull request opens for it, nothing reaches `On dev` except
+through a merged pull request, and nothing reaches `Done` except by a promotion he ran.
 
-**After `Ready`, the work is a pull request.** `pnpm audit:fix --next` takes the oldest `Ready`
-card whose `Verify` is `tests` and works it in a worktree off `origin/dev`. Once `pnpm check` and
-the related tests are green it pushes `fix/<title>-<n>` and opens a pull request into `dev` that says
-`Fixes #n`. Every branch is named `<type>/<title>-<issue number>`, never the number alone: the
-`pre-push` hook refuses a new branch that is not, and `createPull` refuses to open a pull request
-from one. A card that comes back to `Ready` is worked again onto the same pull request, and the
-fixer reads every comment on it first — Kirill's included — so a comment there is how work is
-sent back with a reason.
+**After `Ready`, the work is a pull request.** The fixer (`pnpm audit:fix`,
+`tools/audit/fix.mjs`), the reviewer (`pnpm audit:review`, `tools/audit/review.mjs`) and the
+resolver (the `resolve` skill) turn cards into pull requests and judge them; read them for what
+each picks and runs. A card that comes back to `Ready` is worked again onto the same pull request,
+and the fixer reads every comment on it first — the owner's included — so a comment there is how
+work is sent back with a reason. A branch for a card is named `<type>/<title>-<issue number>`, and
+a branch with no issue `<type>/<title>`, never a number alone. The fixer and the reviewer stop
+while the audit is paused, because they spend the same limits; `pnpm audit:fix` says when it is.
 
-`pnpm audit:review --next` takes the oldest open pull request whose latest commit has no
-`audit/review` status, re-merges it onto a freshly fetched `origin/dev`, runs the route again on
-the result — plus a headless session for `verify headless` — and sets `audit/review` to success
-or failure on that commit. A pass moves the card to `PR ready`; a failure is written on the pull
-request and moves the card to `Failed`. `.github/workflows/check.yml` runs `pnpm check` and the related tests on every pull
-request into `dev` and every push to `dev`, on GitHub's runners, and branch protection on `dev`
-requires it to pass on an up-to-date branch before a merge. Kirill is the repository's admin and
-can override that.
+Branch protection holds pull requests into `dev` to the required jobs on an up-to-date branch.
+The admin account every agent pushes with pushes to `dev` directly, and a red check on `dev` is
+fixed by the next push.
 
-Merging is Kirill's. When a pull request merges, GitHub closes the issue it fixes, and
-`tools/audit/after-merge.mjs` — run by `board-sync.py` every five minutes — moves the card to
-`On dev`, deletes the branch and removes its worktrees. The same pass keeps every open pull request mergeable: one
-that has fallen behind `dev` gets GitHub's Update branch, which re-runs CI, and one that no longer
-merges gets a comment naming the conflicting files while its card moves to `Failed`.
+**`board-sync.py` runs every five minutes on ubuntuserver**
+(`~/server/mediaserver/scripts/board-sync.py`, with `tools/audit/after-merge.mjs`). It keeps the
+open pull requests up to date with `dev` and never merges one, moves merged cards to `On dev`,
+writes the labels that mirror a board field, and adds any open issue missing
+from the board to `Backlog`. It moves a parent issue into the lane all of its sub-issues share,
+unless the parent is in `Manual` or `Rejected`. Read it for the exact conditions before you rely
+on one.
 
-`--verify playtest` works the card the same way and labels its pull request `needs playtest`,
-and the card goes straight to `PR ready`. The reviewer skips it, and the worktree stays with its own `.devport`, so `./dev.sh` in it runs
-beside whatever is already on 5173. He merges it once he has played it. The fixer and the
-reviewer stop while the audit is paused, because they spend the same limits.
-
-**Never write to GitHub with `gh` directly.** `gh issue create|edit|close|comment` and
-`gh label create|edit|delete` are denied in `.claude/settings.json`. Use `pnpm issue`:
+**Never write to GitHub with `gh` directly.** `gh issue create|edit|close|comment`,
+`gh label create|edit|delete` and `gh pr create|edit` are denied in `.claude/settings.json`. Use
+`pnpm issue`; `grep -o "cmd === '[a-z-]*'" tools/issue.mjs` lists every command it has:
 
 ```bash
-pnpm issue labels                       # every label the schema allows
-pnpm issue lint --body-file draft.md    # would this be accepted?
-pnpm issue create --title T --type fix --area sim --size S --body-file - --label high --label drift
-pnpm issue close 12 --commit <sha>
+pnpm issue lint --body-file draft.md                     # would this body be accepted?
+pnpm issue create --title T --type fix --body-file - ... # a new issue; it names what is missing
+pnpm issue edit <n> ...                                  # labels, fields, milestone, parent
+pnpm issue close <n> --commit <sha>
+pnpm -s issue pr --head <branch> --title T --body-file - # open a pull request into dev
+pnpm issue pr-edit <n> --body-file -                     # rewrite its description
+pnpm issue pr-sync [<n>...]                              # copy each issue's labels and milestone to its pull request
+pnpm -s issue board                                      # the whole board as JSON
+pnpm issue check-labels                                  # every open issue with a missing label or field
+pnpm issue check-links                                   # every citation that points at nothing
+pnpm issue tidy [--remove]                               # merged or idle worktrees, branches and test clones
 ```
 
-It repairs what is mechanical and refuses what is not. A `path:line` written in prose becomes a
-permalink pinned to the commit the audit indexed — a citation names a line, and a line is only
-true at one revision. An issue URL in backticks becomes `#12`, because GitHub renders a code
-span as code and links a bare reference. What it refuses: a label outside the schema, naming the
-nearest real one (`test-missing` comes back as `missing-test`); a relative markdown link, which
-means nothing in an issue body; a project-view URL, which is renumbered; a blob link whose file
-or line does not exist at that commit; and `ready` on a new issue, because new work lands in
-`Backlog`.
+Every command checks what it writes and refuses with the reason. It rewrites what is mechanical,
+such as a `path:line` into a permalink pinned to one commit, and refuses what is not.
+`pnpm issue check-links` exits non-zero, so run it after any pass that rewrites bodies — a spot
+check on a handful of issues proves nothing about the rest. `pnpm issue fix-links` repairs what
+can be repaired and leaves the rest reported.
 
-**Five classifications are required on every issue** — severity, kind, origin, verify and
-subarea. An issue missing one cannot be sorted, filtered or costed, so `create` refuses it and
-`pnpm issue check-labels` reports any open issue that has drifted.
+**Every issue carries the required labels and board fields.** `pnpm issue create` refuses an
+issue missing one and names it, and `pnpm issue check-labels` reports every open issue that has
+drifted. `checkRequired` in `tools/audit/lib/schema.mjs` and the board's fields say what is
+required. The judgement calls:
 
-**`subarea` names the part of the tree the issue is in**, one word, `game/` dropped:
-`database`, `core`, `services`, `systems`, `sim`, `sim-core`, `entities`, `headless`, `world`,
-`debug`, `ai`, `components`, `stores`, `webgl`, `audio`, `dev`, `server`, `actions`, `routes`,
-`tools`. It is derived, not judged — `tools/audit/lib/subarea.mjs` maps a path to its label, and
-an issue citing several files takes the one most of its evidence sits in. Set it by hand only on
-an issue that cites no code.
+- **Subarea** names where in the code the issue is. It is derived, not judged:
+  `tools/audit/lib/subarea.mjs` maps a path to its label, and an issue citing several files takes
+  the one most of its evidence sits in. Set it by hand only on an issue that cites no code.
+- **Area** is the board's game-domain field: what part of the game, not where in the code.
+- **Work type** is a board field, not a label, and nothing mirrors it; its words are the commit
+  types.
+- **Size** is the effort: `S` is one change in a file or two, `M` is several files or a
+  measurement, `L` is several steps, a new system or a design.
+- **Agent** is the model the fixer works the card under. Pick the smallest model the scope
+  allows: `haiku` for a mechanical change in a file or two, `sonnet` for several files, a feature
+  step or a headless measurement, `opus` only for a cross-cutting refactor, a new system or a
+  design.
 
-This is not the board's `Area` field, which is a game-domain taxonomy: `combat`, `items`, `sim`,
-`ui`, `data`, `tooling`. A card carries both — where in the code, and what part of the game.
+**A feature is built one step per branch.** Work type `feat` goes with the kind `feature`. The body
+follows `.github/ISSUE_TEMPLATE/feat.md`, and may add `## Decisions this needs before any edit` and
+`## Considered and rejected`. Each checkbox under `## Steps` is one branch and one pull request:
+the fixer works the first open step only, and its pull request says `Part of #n` with the step on
+a `Step:` line, so merging it does not close the issue. Write each step as a change that can be
+merged, verified and reviewed by itself.
 
-**The work type is a board field, not a label**, and nothing mirrors it — a card would then
-carry the same word twice. `pnpm issue create --type` is required and sets it, `raise.mjs`
-passes the type its rule family implies, and `check-labels` reads the board and reports an open
-issue whose card has no `Work type` or is not on the board at all. The words are the ones the
-commit messages use: `feat`, `fix`, `refactor`, `perf`, `test`, `tooling`, `docs`, `chore`,
-`decision`.
+**A pull request never links an issue with open sub-issues.** The board shows a pull request only
+on the issue it closes, so one that says `Part of #n` about a parent shows on no card. Link the
+sub-issue the work belongs to, making a new one with `pnpm issue create --parent <n>` when a step
+has none. Its pull request says `Fixes #<sub-issue>`, with the parent's step on the `Step:` line.
 
-A field that nothing checks is how nine cards went untyped without anything noticing.
+**A milestone is a version, or one part of a version named after it**: `v0.2`, or
+`v0.2 - Gameplay`, because GitHub milestones do not nest. Every issue sits in one, and a sub-issue
+sits in a milestone of its parent's version. Each spec category is a parent issue, and each
+feature of the category is a sub-issue with its own `## Steps`. `tools/audit/milestones.json`
+names the `current` milestone, where every new issue lands unless `--milestone` or its parent
+names another, and the `draft` ones, which take only an issue assigned to them by name. A new
+issue lands inside the version being finished because it can reveal a blocker for it; sort each
+one into a part of that version or into the next.
 
-**Area and Size are required on every card as well.** `pnpm issue create` refuses an issue
-without `--area` (`combat`, `items`, `sim`, `ui`, `data`, `tooling`) and `--size` (`S`, `M`, `L`),
-checks both against the board's own options, and sets them on the card. `raise.mjs` derives them
-for what the audit raises: Area from the subarea, Size from how many files the findings touch.
-`check-labels` reports an open card missing either. Size is the effort: `S` is one change in a
-file or two, `M` is several files or a measurement, `L` is several steps, a new system or a design.
+**A body has to say something.** `create` refuses a stub and says why. `.github/ISSUE_TEMPLATE`
+holds the shape, though structure is not the bar — a checkbox list with citations is fine, and a
+wall of unbroken prose is not.
 
-**A feature is built one step per branch.** Work type `feat` goes with the kind `feature`, and
-nothing else: `create --type feat` adds the kind when no kind is given, and `check-labels`
-reports a card where the two disagree. A decision card about a feature may carry `feature` too.
-The body follows `.github/ISSUE_TEMPLATE/feat.md` — What this is, Why, Steps, How it gets
-verified — and may add `## Decisions this needs before any edit` and `## Considered and
-rejected`. Each checkbox under `## Steps` is one branch and one pull request: the fixer works the
-first open step only, and its pull request says `Part of #n` with the step on a `Step:` line, so
-merging it does not close the issue. When Kirill merges it, `after-merge.mjs` ticks the step.
-While steps remain, a merged step sends the card back to `Ready`; the issue closes when its last
-step lands. Write each step as a change that can be merged, verified and reviewed by itself.
-
-**A body has to say something.** `create` also refuses a stub: under ~240 characters of prose,
-no citation, or no remediation checkbox (unless it carries `needs decision`). A heading with
-nothing under it counts as empty. `.github/ISSUE_TEMPLATE` holds the shape, though structure is
-not the bar — a checkbox list with citations is fine, and a wall of unbroken prose is not.
-
-The vocabulary is `tools/audit/labels.json` plus one label per rule `name`. Adding a label means
-editing that file, not inventing one at a call site. `pnpm issue sync-labels` creates what is
-missing and names the strays; `--prune` deletes a stray no issue carries.
-
-`pnpm issue check-links` reads every issue and reports each citation that points at nothing,
-each relative link, and each body that is not in canonical form. It exits non-zero, so it is the
-check to run after any pass that rewrites bodies — a spot check on a handful of issues proves
-nothing about the rest. `pnpm issue fix-links` repairs what can be repaired and leaves the rest
-reported.
-
-Reading is unrestricted: `gh issue list`, `gh issue view`, `gh project item-list`.
-
-**Reading is not free.** GitHub allows the account 5,000 GraphQL points an hour, shared by every
-agent on both machines, `board-sync.py` and the dashboard. `gh project item-list` costs 101 points
-a call; `gh issue list` and `gh issue view` cost about 1. Read the board once and keep the result.
-When the points run out, every board read and `gh issue create` fails until the hour resets.
+**Reading is not free.** Every agent on both machines, `board-sync.py` and the dashboard share one
+hourly GraphQL budget, and reading the board is the costliest call there is. Read it once, with
+`pnpm -s issue board`, and keep the result; when GraphQL is spent it reads over REST, which has a
+budget of its own. `pnpm issue`, `after-merge.mjs` and `board-sync.py` then read and write issues,
+pull requests and cards over REST too, through `tools/audit/lib/gh-run.mjs`. `pnpm issue create`,
+`blocked-by` and `--parent` still need GraphQL, and fail until the hour resets.
 
 **Check the limit with GraphQL, not `gh api rate_limit`.** Its `graphql` figure does not track
 the counter the limit is enforced against, and reads `used 0` while hundreds are spent. A
@@ -371,19 +402,16 @@ gh api graphql -f query='{rateLimit{used remaining resetAt}}' --jq .data.rateLim
 
 At `remaining 0`, wait for `resetAt` rather than retrying.
 
-**`Priority` is the severity label, projected onto a field.** `critical → P0`, `high → P1`,
-`medium → P2`, `low → P3`, and the option colours match the labels. It exists because the board
-can group and sort by a field and not by a label, so it carries no information severity does not
-— it is not a second axis and it is never set by hand. `board-sync.py` derives it every tick and
-`pnpm issue check-labels` reports a card whose Priority disagrees with its severity.
+**`Priority` is the severity label, projected onto a field** (`SEVERITY_PRIORITY` in
+`tools/issue.mjs` and `board-sync.py`). It exists because the board can group and sort by a field
+and not by a label, so it carries no information severity does not, and it is never set by hand.
 
-**Move the card, never the label.** `ready`, `needs decision` and the three `verify` labels are
-derived from the board's Status and Verify fields by `board-sync.py`, on the same tick that
-refreshes the dashboard. Edit one of those labels by hand and it is overwritten within a minute.
-Any open issue missing from the board is added to `Backlog`. An open pull request carries the labels
-of the issue it fixes, less `ready` and `needs decision`, copied on the same tick — label the
-issue, never the pull request. Kind, severity, origin and the rule
-name are not touched — they describe the finding, not its state.
+**Move the card, never the label.** A label that mirrors a board field is rewritten from the
+field by `board-sync.py` within minutes, so an edit to the label is lost; change the field. A pull
+request carries the labels and the milestone of the issue it fixes, and `pnpm issue pr`,
+`pr-edit` and `pr-sync` copy them. Label the issue, never the pull request. A pull request is
+never a card of its own. Kind, severity, origin and the rule name are not touched — they describe
+the finding, not its state.
 
 **Every issue says how it will be verified**, as a `Verify` field on the board and a label on
 the issue. Set it at triage, not at review, so the cost of an item is visible before anyone
@@ -395,26 +423,61 @@ starts:
   real pawns, real ticks, a stated delta. Job and stock flow, recipe throughput, combat
   measurement. Still an agent's job.
 - **`needs playtest`** — the numbers can be produced but not judged. Balance feel, pacing, an
-  interaction that has to be used. **Only these reach Kirill.** An audit that says creatures die
+  interaction that has to be used. **Only these reach the owner.** An audit that says creatures die
   faster cannot say whether that is the game he wants.
 
 Do not mark something `needs playtest` because it is large or risky. The test is whether a
 measurement could settle it; if one could, it belongs in one of the first two.
 
-**Close out the issue for work you finished.** `gh issue close <n> --reason completed` with a
-comment naming the commit that fixed it. If the issue carries remediation checkboxes, tick the
-ones you did. Leaving a finished item open is the failure to avoid.
+**Close out the issue for work you finished.** `pnpm issue close <n> --commit <sha>`. If the issue
+carries remediation checkboxes, tick the ones you did. Leaving a finished item open is the failure
+to avoid.
 
 ## Pull requests
 
-**Work an agent does on a board card goes through a pull request into `dev`.** The fixer opens
-it, the reviewer and CI report on it, and Kirill merges it. The pull request is where he reads the
-diff and where he writes what is wrong with it, and the fixer reads those comments on its next
-attempt. Several related fixes belong in one branch and one pull request, not one each.
+**Check what is already open before building or investigating.** Two sessions building the same
+thing leaves two implementations and a conflict in the same file. `tools/audit/hooks/inflight.mjs`
+lists the open pull requests with every prompt, and refuses the first edit in a session of a file
+that an open pull request changes or an open issue cites, naming them. Read what it names; if the
+edit belongs to that work, do it on that branch.
 
-Work done in a conversation, at Kirill's request and outside the board, does not need one:
-branch from `dev`, verify, `git merge --no-ff` into `dev`, and close the issue with the merge
-commit. Open a pull request anyway when the change is large enough that reviewing it as one diff
-beats reading the merge commit, or when it has to sit unmerged while something else is decided.
+**An issue blocked by an open issue stays local.** Pushing its branch and opening its pull request
+are refused, naming the blocker. Work on it and test it locally; it is pushed once the blocker
+closes. `pnpm issue blocked-by <n> <blocker>` adds the link.
+
+**Work an agent does on a board card goes through a pull request into `dev`.** The fixer opens
+it, the reviewer and CI report on it, and it merges once they pass. The pull request is where he
+reads the diff and where he writes what is wrong with it, and the fixer reads those comments on
+its next attempt. Several related fixes belong in one branch and one pull request, not one each.
+
+**Read a pull request's Check notes before calling it ready or merging it.** The `perf-notes` job
+in `check.yml` keeps that one comment on each pull request, written by
+`tools/work-pins/perf-notes.mjs`. A change the notes show as real cost gets a follow-up issue, or
+goes back to its branch.
+
+**Work done in a conversation needs no issue and no pull request; it is pushed straight to
+`dev`.** Branch from `dev` in a worktree that does not track it, `git worktree add --no-track -b
+<type>/<title> <path> origin/dev`, because a branch that tracks `origin/dev` lets an editor's Sync
+push it without the gate. Commit, bring it up to date with `git fetch origin && git rebase
+origin/dev`, and push it with `git push origin HEAD:dev`. The chain then runs on GitHub for the
+pushed commit; watch it, and fix a red one with the next push. If the work settles an issue that
+already exists, close it with the commit.
+
+Open a pull request for conversation work only when it has to sit unmerged while something else
+is decided, or is large enough to be reviewed as one diff: `pnpm -s issue pr --head <branch> --title T
+--body-file -`, then `gh pr merge <n> --merge` once its required jobs are green on an up-to-date branch.
+Keep the `-s`: it leaves the pull request's address as the command's only output, which the
+PostToolUse hook in `~/.claude/settings.json` on ubuntuserver reads to attach the pull request to the
+T3 Code thread.
+
+Open an issue only when one of these holds:
+
+- the scope is large enough to be reviewed as one diff, spans several sessions, or has to sit
+  unmerged while something else is decided;
+- the work is handed to the fixer, which works cards from `Ready` unattended and needs an issue
+  to work from.
+
+A small fix, a rule in this file, a tooling tweak or a one-step change asked for in the
+conversation is none of these. Filing an issue for it adds a card and nothing he reads.
 
 Nothing opens a pull request into `main`; `pnpm audit:promote` is how `dev` reaches it.

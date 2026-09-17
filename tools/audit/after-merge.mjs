@@ -6,6 +6,7 @@ import { dirname, join } from 'node:path';
 import * as B from './lib/board.mjs';
 import * as I from './lib/gh.mjs';
 import * as PR from './lib/pulls.mjs';
+import { tidy } from './lib/tidy.mjs';
 import { ROOT, BASE, git, tail } from './lib/harness.mjs';
 
 const STATE =
@@ -78,6 +79,18 @@ function landFix(num, sha) {
   out(`--- #${num}: closed, card in On dev`);
 }
 
+const stepKey = (s) => s.trim().replace(/\s+/g, ' ');
+
+function landParentStep(pull, num, step, sha) {
+  const parent = settle('read the parent issue', () => PR.parentOf(num));
+  if (!parent) return;
+  const steps = settle('read the parent steps', () =>
+    I.featureSteps(I.readIssue(String(parent)).body)
+  );
+  if (steps?.some((s) => !s.done && stepKey(step).startsWith(stepKey(s.text))))
+    landStep(pull, parent, step, sha);
+}
+
 const fresh = PR.mergedPulls()
   .filter((p) => !seen.has(p.number))
   .sort((a, b) => a.number - b.number);
@@ -88,8 +101,10 @@ for (const pull of fresh) {
   out(`PR #${pull.number} ${pull.headRefName} merged as ${sha}${link ? ` for #${link.issue}` : ', names no issue'}`);
   if (DRY) continue;
 
-  if (link?.step) landStep(pull, link.issue, link.step, sha);
-  else if (link) landFix(link.issue, sha);
+  if (link?.step) {
+    landStep(pull, link.issue, link.step, sha);
+    landParentStep(pull, link.issue, link.step, sha);
+  } else if (link) landFix(link.issue, sha);
 
   const slug = pull.headRefName.slice('fix/'.length);
   removeWorktree(join(ROOT, '.claude', 'worktrees', `fix-${slug}`));
@@ -99,3 +114,8 @@ for (const pull of fresh) {
 
   record(pull.number);
 }
+
+if (!DRY)
+  settle('tidy leftover worktrees and branches', () =>
+    tidy({ root: ROOT, remove: true, open: new Set(PR.openPulls().map((p) => p.headRefName)), log: out })
+  );

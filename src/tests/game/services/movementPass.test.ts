@@ -6,6 +6,7 @@ import {
   type MovableBody
 } from '$lib/game/services/MovementSystem';
 import type { WorldTile } from '$lib/game/core/types';
+import { tileKey } from '$lib/game/core/util/tileKey';
 
 function world(w = 10, h = 10): WorldTile[][] {
   return Array.from({ length: h }, (_, y) =>
@@ -41,7 +42,7 @@ describe('stepBody — shared move pass', () => {
   });
 
   it('holds (keeps path, increments blockedTicks) when the next tile is occupied', () => {
-    const occ = new Set(['1,0']);
+    const occ = new Set([tileKey(1, 0, 10)]);
     const res = stepBody(
       body('a', 0, 0, { path: [{ x: 1, y: 0 }], pathIndex: 0 }),
       occ,
@@ -55,7 +56,7 @@ describe('stepBody — shared move pass', () => {
   });
 
   it('drops the path after MAX_BLOCKED_TICKS so the FSM re-routes', () => {
-    const occ = new Set(['1,0']);
+    const occ = new Set([tileKey(1, 0, 10)]);
     let b = body('a', 0, 0, {
       path: [{ x: 1, y: 0 }],
       pathIndex: 0,
@@ -82,7 +83,7 @@ describe('stepBody — shared move pass', () => {
   });
 
   it('prevents two fresh movers converging on one tile (claim set)', () => {
-    const claimed = new Set<string>();
+    const claimed = new Set<number>();
     const a = stepBody(
       body('a', 0, 0, { path: [{ x: 1, y: 1 }], pathIndex: 0 }),
       new Set(),
@@ -91,7 +92,7 @@ describe('stepBody — shared move pass', () => {
       200
     );
     expect(a.status).toBe('moved');
-    expect(claimed.has('1,1')).toBe(true);
+    expect(claimed.has(tileKey(1, 1, 10))).toBe(true);
     const b = stepBody(
       body('b', 2, 2, { path: [{ x: 1, y: 1 }], pathIndex: 0 }),
       new Set(),
@@ -103,11 +104,11 @@ describe('stepBody — shared move pass', () => {
   });
 
   it('seedMidCrossClaims reserves a mid-crosser’s committed tile', () => {
-    const claimed = new Set<string>();
+    const claimed = new Set<number>();
     const bodies: MovableBody[] = [
       body('a', 0, 0, { path: [{ x: 1, y: 0 }], pathIndex: 0, nextCellCostLeft: 30 })
     ];
-    seedMidCrossClaims(bodies, claimed, () => true);
-    expect(claimed.has('1,0')).toBe(true);
+    seedMidCrossClaims(bodies, claimed, 10, () => true);
+    expect(claimed.has(tileKey(1, 0, 10))).toBe(true);
   });
 });

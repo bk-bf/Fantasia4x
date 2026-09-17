@@ -18,6 +18,7 @@ import * as B from './lib/board.mjs';
 import * as I from './lib/gh.mjs';
 import * as PR from './lib/pulls.mjs';
 import { branchFor } from './lib/branch.mjs';
+import { openBlockers, blockedMessage } from './lib/blockers.mjs';
 import {
   ROOT,
   PNPM,
@@ -34,8 +35,9 @@ import {
 } from './lib/harness.mjs';
 import { readControl } from './lib/pace.mjs';
 import * as P from './lib/prs.mjs';
+import { ledgerEvidence } from './lib/raise.mjs';
 
-const MODEL = process.env.AUDIT_FIX_MODEL || 'sonnet';
+const modelOf = (card) => (card?.agent ?? '').toLowerCase() || null;
 const ROUTES = new Set(['tests', 'headless', 'playtest']);
 
 const arg = (n, d) => {
@@ -57,10 +59,19 @@ function pick() {
       (x) => x.data.id === named || x.path === String(named)
     );
     if (!issue) fail(`no issue ${named}`);
+    if (B.laneOf(issue.number) === 'manual')
+      fail(`#${issue.number} is in Manual, so it is being worked by hand`);
+    const subs = PR.openSubIssues(issue.number);
+    if (subs.length)
+      fail(`#${issue.number} has open sub-issues (${subs.map((s) => `#${s}`).join(', ')}); work one of them`);
+    const blockers = openBlockers(issue.number);
+    if (blockers.length) fail(blockedMessage(issue.number, blockers));
     const card = B.itemFor(issue.number);
     const route = (card?.verify ?? '').toLowerCase();
     if (!ROUTES.has(route)) fail(`#${issue.number} has no Verify route on the board`);
-    return { issue, route };
+    const model = modelOf(card);
+    if (!model) fail(`#${issue.number} has no Agent on the board, so no model is named to work it`);
+    return { issue, route, model };
   }
 
   const route = arg('verify', 'tests').toLowerCase();
@@ -76,9 +87,24 @@ function pick() {
 
   for (const it of ready) {
     const issue = I.readIssue(String(it.content.number));
-    if (issue.data.status !== 'closed') return { issue, route };
+    if (issue.data.status === 'closed') continue;
+    if (PR.openSubIssues(issue.number).length) {
+      out(`--- skipping #${issue.number}, it has open sub-issues`);
+      continue;
+    }
+    const blockers = openBlockers(issue.number);
+    if (blockers.length) {
+      out(`--- skipping #${issue.number}, it is blocked by ${blockers.map((b) => `#${b.number}`).join(', ')}`);
+      continue;
+    }
+    const model = modelOf(it);
+    if (!model) {
+      out(`--- skipping #${issue.number}, it has no Agent on the board`);
+      continue;
+    }
+    return { issue, route, model };
   }
-  fail(`every ${route} card in Ready is already closed`);
+  fail(`every ${route} card in Ready is closed, blocked, has open sub-issues or has no Agent`);
 }
 
 const say = (n, text) => {
@@ -207,18 +233,18 @@ an unfinished session and will not commit.
 # Issue ${d.id}
 
 ${issue.body}
-`;
+${ledgerEvidence(issue.number)}`;
 }
 
 // --- commit message ----------------------------------------------------------
 
-// scripts/hooks/commit-msg refuses anything else: `type(scope): lowercase summary`, a blank
+// tools/hooks/commit-msg refuses anything else: `type(scope): lowercase summary`, a blank
 // line, then bullets ending in a full stop. The board's work type is the commit type, except
 // for the two options git has no type for.
 const COMMIT_TYPE = { tooling: 'dev', decision: 'chore' };
 const GIT_TYPES = /^(feat|fix|refactor|chore|docs|dev|perf|style|test|ci|build)$/;
 
-function commitMessage(d, num, files, workType, step) {
+function commitMessage(d, num, files, workType, step, model) {
   const raw = workType ?? B.itemFor(num)?.['work type'] ?? 'fix';
   const type = COMMIT_TYPE[raw] ?? (GIT_TYPES.test(raw) ? raw : 'fix');
   const scope = /^[a-z0-9./-]+$/.test(d.subarea ?? '') ? `(${d.subarea})` : '';
@@ -237,7 +263,7 @@ function commitMessage(d, num, files, workType, step) {
     step ? `- Take the next step on #${num}.` : `- Work the remediation list on #${num}.`,
     `- Change ${named}${rest}.`,
     '',
-    'Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>'
+    `Co-Authored-By: Claude ${model.charAt(0).toUpperCase()}${model.slice(1)} <noreply@anthropic.com>`
   ].join('\n');
 }
 
@@ -270,7 +296,7 @@ for (const it of B.inLane('in progress')) {
   B.moveLane(n, 'ready');
 }
 
-const { issue, route } = pick();
+const { issue, route, model } = pick();
 const d = issue.data;
 const num = issue.number;
 out(`#${num} ${d.id} — ${d.title}`);
@@ -288,7 +314,7 @@ const wt = join(ROOT, '.claude', 'worktrees', `fix-${branch.slice('fix/'.length)
 const notes = earlier ? PR.feedback(earlier.number) : [];
 
 if (flag('dry-run')) {
-  out(`would work #${num} on ${branch} in ${wt}`);
+  out(`would work #${num} under ${model} on ${branch} in ${wt}`);
   out(
     `  lane ${B.laneOf(num)} -> in progress, then a pull request into ${BASE}` +
       (route === 'playtest' ? ` labelled ${PR.PLAYTEST_LABEL} and the card to pr ready` : '')
@@ -344,14 +370,14 @@ let committed = false;
 try {
   await prepareWorktree(wt, out);
 
-  out(`--- ${CLAUDE} (${MODEL})`);
+  out(`--- ${CLAUDE} (${model})`);
   const t0 = Date.now();
   const res = await run(
     CLAUDE,
     [
       '--print',
       '--model',
-      MODEL,
+      model,
       '--permission-mode',
       'acceptEdits',
       // Bash is granted deliberately: the model is told to get `pnpm check` and
@@ -414,7 +440,8 @@ try {
         num,
         files,
         step ? 'feat' : route === 'playtest' ? 'fix' : undefined,
-        step
+        step,
+        model
       );
       execFileSync('git', ['commit', '-q', '-F', '-'], { cwd: wt, input: msg });
       // The commit exists from here on. Nothing below may reach the catch and write the branch
@@ -464,12 +491,11 @@ try {
       if (pull && route === 'playtest') {
         B.moveLane(num, 'pr ready');
         out(`--- #${num} waits in PR ready on PR #${pull.number}; the worktree stays at ${wt}`);
+      } else if (pull) {
+        B.moveLane(num, 'in check');
+        out(`--- #${num} is In Check on PR #${pull.number}; review.mjs takes it from here`);
       } else {
-        out(
-          pull
-            ? `--- #${num} stays In progress on PR #${pull.number}; review.mjs takes it from here`
-            : `--- #${num} stays In progress; ${branch} is committed and not pushed`
-        );
+        out(`--- #${num} stays In progress; ${branch} is committed and not pushed`);
       }
     }
   }

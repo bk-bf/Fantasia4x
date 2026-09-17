@@ -77,6 +77,7 @@ import { resourceObjectService } from '../services/ResourceObjectService';
 import { patchPathfindingWalkable } from '../services/PathfinderService';
 import { occupancyService } from '../services/OccupancyService';
 import { assignDraftMovePath } from '../services/draftMovePath';
+import { rebuildConnectivity, reachable } from '../services/entity/connectivity';
 import { markTileDirty } from '../core/state/tileDeltas';
 import { simLog } from '../core/util/logSink';
 import type { SimCommand } from './simProtocol';
@@ -164,6 +165,33 @@ function setInstanceDownOnTile(
   return absorbDropIfOnStockpileTile(next, drop.id);
 }
 
+function refuseUnreachableMoves(
+  s: GameState,
+  pawns: Pawn[],
+  targets: Map<string, { x: number; y: number }>
+): Set<string> {
+  const refused = new Set<string>();
+  if (!s.worldMap?.length || targets.size === 0) return refused;
+  rebuildConnectivity(s.worldMap);
+  for (const pawn of pawns) {
+    const t = targets.get(pawn.id);
+    if (!t || !pawn.position || reachable(pawn.position.x, pawn.position.y, t.x, t.y)) continue;
+    refused.add(pawn.id);
+    simLog.logActivity({
+      turn: s.turn,
+      type: 'pawn_action',
+      actor: pawn.name,
+      action: 'Blocked',
+      result: `${pawn.name} can't find a way there`,
+      severity: 'warning',
+      entityIds: [pawn.id],
+      focusX: pawn.position.x,
+      focusY: pawn.position.y
+    });
+  }
+  return refused;
+}
+
 export const COMMANDS: Record<string, Cmd> = {
   addItem: (s, p: { itemId: string; amount: number; tileKey?: string }) =>
     addToStockpileZone(s, p.tileKey ?? null, { [p.itemId]: p.amount }),
@@ -181,6 +209,10 @@ export const COMMANDS: Record<string, Cmd> = {
   }),
   setPawnDraftTarget: (s, p: { pawnId: string; target: unknown; append?: boolean }) => {
     const target = (p.target as PawnOrder | null) ?? null;
+    if (target && target.type === 'move') {
+      const pawn = s.pawns.find((pw) => pw.id === p.pawnId);
+      if (pawn && refuseUnreachableMoves(s, [pawn], new Map([[pawn.id, target]])).size) return s;
+    }
     let gs: GameState;
     if (p.append && target) {
       gs = {
@@ -325,6 +357,8 @@ export const COMMANDS: Record<string, Cmd> = {
       claimed.add(`${tile.x},${tile.y}`);
       targets.set(id, tile);
     }
+    const drafted = s.pawns.filter((pw) => pw.drafted);
+    for (const id of refuseUnreachableMoves(s, drafted, targets)) targets.delete(id);
     let gs: GameState = {
       ...s,
       pawns: s.pawns.map((pw) => {
@@ -349,6 +383,7 @@ export const COMMANDS: Record<string, Cmd> = {
         p.ids.includes(pw.id) && pw.drafted && pw.position && !isUncontrollable(pw.currentState)
     );
     const targets = lineFormationTargets(s.worldMap, pawns, p.ax, p.ay, p.bx, p.by);
+    for (const id of refuseUnreachableMoves(s, pawns, targets)) targets.delete(id);
     let gs: GameState = {
       ...s,
       pawns: s.pawns.map((pw) => {
@@ -669,8 +704,12 @@ export const COMMANDS: Record<string, Cmd> = {
       );
       return s;
     }
+    const takenIds = new Set((s.droppedItems ?? []).map((d) => d.id));
+    const dropBase = `drop-${p.pawnId}-${p.itemId}-t${s.turn}`;
+    let dropSeq = 0;
+    while (takenIds.has(`${dropBase}-${dropSeq}`)) dropSeq++;
     const drop = {
-      id: `drop-${p.pawnId}-${p.itemId}-${Date.now()}`,
+      id: `${dropBase}-${dropSeq}`,
       resourceId: p.itemId,
       x: pawn.position.x,
       y: pawn.position.y,

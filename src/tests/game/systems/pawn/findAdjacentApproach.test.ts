@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import type { WorldTile } from '$lib/game/core/types';
 import { findAdjacentApproach } from '$lib/game/systems/pawn/pawnQueries';
+import { tileKey } from '$lib/game/core/util/tileKey';
 
 describe('findAdjacentApproach', () => {
   const map = Array.from({ length: 5 }, () =>
@@ -29,7 +30,7 @@ describe('findAdjacentApproach', () => {
 
   it('skips occupied tiles even when they are in the allowed zone', () => {
     const allowed = new Set(['1,2', '3,2']);
-    const occupied = new Set(['1,2']);
+    const occupied = new Set([tileKey(1, 2, 5)]);
     expect(findAdjacentApproach(TX, TY, map, occupied, 0, 2, allowed)).toEqual({ x: 3, y: 2 });
   });
 });

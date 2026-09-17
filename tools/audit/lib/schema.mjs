@@ -4,27 +4,14 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadRules } from './rules.mjs';
 import { ROOT } from './links.mjs';
+import { checkPrivate } from './private.mjs';
+import { headingsOf, requiredSections } from './template.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 
 const TEMPLATE_FOR = { feat: 'feat.md', decision: 'decision.md' };
-const templateCache = new Map();
 
 export const templateFor = (workType) => TEMPLATE_FOR[workType] ?? 'defect.md';
-
-function requiredSections(file) {
-  if (!templateCache.has(file)) {
-    let sections = [];
-    try {
-      const md = readFileSync(join(ROOT, '.github', 'ISSUE_TEMPLATE', file), 'utf8');
-      sections = [...md.matchAll(/^##\s+(.+)$/gm)].map((m) => m[1].trim().toLowerCase());
-    } catch {
-      sections = [];
-    }
-    templateCache.set(file, sections);
-  }
-  return templateCache.get(file);
-}
 
 
 /** Every label a writer may use: the fixed vocabulary plus one per rule name. Anything else
@@ -38,6 +25,15 @@ function vocabulary() {
 }
 
 export const labelGroup = (group) => vocabulary().groups?.[group] ?? [];
+
+export function milestonePlan() {
+  try {
+    const plan = JSON.parse(readFileSync(join(HERE, '..', 'milestones.json'), 'utf8'));
+    return { current: plan.current ?? null, draft: plan.draft ?? [] };
+  } catch {
+    return { current: null, draft: [] };
+  }
+}
 
 /** Every issue has to say how severe it is, what sort of thing it is, who raised it and how it
  *  gets verified. An issue missing one of those cannot be sorted, filtered or costed. */
@@ -162,6 +158,7 @@ const linesAt = (sha, path) => {
 export function checkBody(body) {
   const errors = [];
   const text = body ?? '';
+  errors.push(...checkPrivate(text));
 
   for (const m of text.matchAll(/\[[^\]]*\]\((?!https?:)([^)]+)\)/g)) {
     errors.push(
@@ -198,22 +195,30 @@ export function checkBody(body) {
 }
 
 const MIN_PROSE = 240;
+const CHECKBOX = /^\s*[-*] \[[ x]\] /m;
+const VERSION = /^v\d+\.\d+(\.\d+)?( - \S.*)?$/;
+export const versionOf = (title = '') => title?.match(/^v\d+\.\d+(\.\d+)?/)?.[0] ?? null;
+
+const stripNotes = (body) =>
+  (body ?? '')
+    .replace(/<!--[\s\S]*?-->/g, '')
+    .replace(/^\s*>.*$/gm, '')
+    .trim();
+
+const proseOf = (text) =>
+  text
+    .replace(/^#{1,6} .*$/gm, '')
+    .replace(/```[\s\S]*?```/g, '')
+    .replace(/^\s*[-*] \[[ x]\] /gm, '')
+    .trim();
 
 /** An issue nobody can act on is worse than no issue: it inflates the count and names nothing.
  *  The bar is deliberately about substance, not shape — a heading with nothing under it passes
  *  a section check and still tells a reader nothing. */
 export function checkTemplate(body, labels = [], workType) {
   const errors = [];
-  const text = (body ?? '')
-    .replace(/<!--[\s\S]*?-->/g, '')
-    .replace(/^\s*>.*$/gm, '')
-    .trim();
-
-  const prose = text
-    .replace(/^#{1,6} .*$/gm, '')
-    .replace(/```[\s\S]*?```/g, '')
-    .replace(/^\s*[-*] \[[ x]\] /gm, '')
-    .trim();
+  const text = stripNotes(body);
+  const prose = proseOf(text);
 
   if (prose.length < MIN_PROSE) {
     errors.push(
@@ -222,9 +227,9 @@ export function checkTemplate(body, labels = [], workType) {
     );
   }
 
-  const headings = [...text.matchAll(/^##\s+(.+)$/gm)].map((m) => m[1].trim().toLowerCase());
+  const headings = headingsOf(text);
   const file = templateFor(workType);
-  const missing = requiredSections(file).filter((r) => !headings.includes(r));
+  const missing = requiredSections(join('ISSUE_TEMPLATE', file)).filter((r) => !headings.includes(r));
   if (missing.length) {
     errors.push(
       `.github/ISSUE_TEMPLATE/${file} asks for a section this body does not have: ` +
@@ -245,8 +250,34 @@ export function checkTemplate(body, labels = [], workType) {
   }
 
   const decision = labels.includes('needs decision') || workType === 'decision';
-  if (!decision && !/^\s*[-*] \[[ x]\] /m.test(text)) {
+  if (!decision && !CHECKBOX.test(text)) {
     errors.push('no remediation checkbox — an issue needs a definition of done, or the label "needs decision"');
+  }
+  return errors;
+}
+
+export function checkMilestone({ title, body } = {}) {
+  const errors = [];
+  if (title !== undefined) {
+    if (!VERSION.test(title ?? '')) {
+      errors.push(
+        `milestone "${title}" is not named for a version — write v0.2, or v0.2 - Demo for one part of it; ` +
+          'a spec category is a parent issue inside it'
+      );
+    }
+    errors.push(...checkPrivate(title ?? '').map((e) => `title ${e}`));
+  }
+  if (body !== undefined) {
+    errors.push(...checkBody(body));
+    const text = stripNotes(body);
+    const prose = proseOf(text);
+    if (prose.length < MIN_PROSE) {
+      errors.push(
+        `the description is ${prose.length} characters of prose, under ${MIN_PROSE} — say what ` +
+          'the version is and what a player can do in it'
+      );
+    }
+    if (!CHECKBOX.test(text)) errors.push('no checkbox — a milestone needs a definition of done');
   }
   return errors;
 }

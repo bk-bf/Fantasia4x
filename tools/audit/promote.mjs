@@ -1,25 +1,23 @@
 #!/usr/bin/env node
-// What is on dev that is not in the build you play, verified as one merge.
-//
-//   node tools/audit/promote.mjs             what is waiting, and the full suite on the merge
-//   node tools/audit/promote.mjs --list      what is waiting, run nothing
-//   node tools/audit/promote.mjs --push      push main and move the cards, after it is green
-//
-// This does not write to main on its own. It merges dev into main in a throwaway worktree,
-// runs the whole suite there rather than the related subset, and prints the command to run.
-// `--push` is the same run with the merge pushed at the end, for when you have decided.
-
+import { execFileSync } from 'node:child_process';
 import { existsSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 
 import * as B from './lib/board.mjs';
-import { ROOT, PNPM, run, git, tail, errorLines, prepareWorktree } from './lib/harness.mjs';
+import { ROOT, git, tail, prepareWorktree } from './lib/harness.mjs';
 
 const flag = (n) => process.argv.includes(`--${n}`);
 const out = (s) => process.stdout.write(s + '\n');
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 const wt = join(ROOT, '.claude', 'worktrees', 'promote');
 const branch = 'promote/main';
+const WORKFLOW = 'promote.yml';
+const POLL_MS = 60_000;
+const WAIT_MS = 7 * 3600_000;
+
+const gh = (args) =>
+  execFileSync('gh', args, { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
 
 git(['fetch', '--quiet', 'origin', 'main', 'dev']);
 
@@ -40,6 +38,38 @@ out('');
 
 if (flag('list')) process.exit(0);
 
+const mainSha = git(['rev-parse', 'origin/main']);
+const devSha = git(['rev-parse', 'origin/dev']);
+
+function reusableCandidate() {
+  try {
+    git(['fetch', '--quiet', 'origin', branch], ROOT, true);
+  } catch {
+    return null;
+  }
+  const [sha, ...parents] = git(['rev-list', '--parents', '-n', '1', `origin/${branch}`]).split(' ');
+  return parents[0] === mainSha && parents[1] === devSha ? sha : null;
+}
+
+async function waitForRun(sha) {
+  const until = Date.now() + WAIT_MS;
+  let shown = '';
+  while (Date.now() < until) {
+    const [run] = JSON.parse(
+      gh(['run', 'list', '--workflow', WORKFLOW, '--commit', sha, '--limit', '1', '--json', 'databaseId,status,conclusion,url'])
+    );
+    if (run) {
+      const { jobs } = JSON.parse(gh(['run', 'view', String(run.databaseId), '--json', 'jobs']));
+      const line = jobs.map((j) => `${j.name} ${j.conclusion || j.status}`).join(', ');
+      if (line !== shown) out(`    ${line}`);
+      shown = line;
+      if (run.status === 'completed') return { run, jobs };
+    }
+    await sleep(POLL_MS);
+  }
+  return null;
+}
+
 if (existsSync(wt)) {
   try {
     git(['worktree', 'remove', '--force', wt]);
@@ -51,58 +81,53 @@ if (existsSync(wt)) {
 try {
   git(['branch', '-D', branch], ROOT, true);
 } catch {
-  /* no such branch yet */
+  out(`--- no local ${branch} to replace`);
 }
-git(['worktree', 'add', '-b', branch, wt, 'origin/main']);
-out(`--- worktree ${wt}`);
 
 let code = 0;
+let pushed = false;
 try {
-  git(['merge', '--no-ff', '--no-edit', 'origin/dev'], wt);
-  out('--- dev merges onto main cleanly');
-
-  await prepareWorktree(wt, out);
-
-  out(`--- ${PNPM} check`);
-  const check = await run(PNPM, ['check'], { cwd: wt, timeoutMs: 1_200_000 });
-  out(`    ${check.code === 0 ? 'pass' : 'FAIL'}  ${PNPM} check`);
-  if (check.code !== 0) out(errorLines(check.out + check.err));
-
-  out(`--- ${PNPM} test — the whole suite, not the related subset`);
-  const t0 = Date.now();
-  const test = await run(PNPM, ['test'], { cwd: wt, timeoutMs: 2_400_000 });
-  const mins = ((Date.now() - t0) / 60000).toFixed(1);
-  out(`    ${test.code === 0 ? 'pass' : 'FAIL'}  ${PNPM} test  (${mins} min)`);
-  const summary = (test.out + test.err)
-    .split('\n')
-    .filter((l) => /Test Files|Tests\s+\d|Duration/.test(l));
-  for (const l of summary) out(`    ${l.trim()}`);
-  if (test.code !== 0) out(errorLines(test.out + test.err));
-
-  if (check.code !== 0 || test.code !== 0) {
-    out('\nNot green. main is untouched and the worktree is kept so you can look.');
-    process.exit(1);
+  const reused = reusableCandidate();
+  if (reused) {
+    git(['worktree', 'add', '-b', branch, wt, reused]);
+    out(`--- reusing ${reused.slice(0, 8)} on origin/${branch}: main and dev have not moved`);
+  } else {
+    git(['worktree', 'add', '-b', branch, wt, 'origin/main']);
+    git(['merge', '--no-ff', '--no-edit', 'origin/dev'], wt);
+    out('--- dev merges onto main cleanly');
+    git(['push', '--force', 'origin', `HEAD:refs/heads/${branch}`], wt);
+    out(`--- pushed the merge to ${branch}, where ${WORKFLOW} runs`);
   }
 
-  const sha = git(['rev-parse', 'HEAD'], wt).slice(0, 8);
-  out(`\nGreen. The merge is ${sha} on ${branch}.`);
+  const sha = git(['rev-parse', 'HEAD'], wt);
+  out(`--- waiting for ${WORKFLOW} on ${sha.slice(0, 8)}`);
+  const result = await waitForRun(sha);
+  if (!result) throw new Error(`${WORKFLOW} did not finish on ${sha.slice(0, 8)} within ${WAIT_MS / 3600_000} h`);
+  const { run, jobs } = result;
 
-  if (!flag('push')) {
+  if (run.conclusion !== 'success') {
+    for (const j of jobs.filter((j) => !['success', 'skipped'].includes(j.conclusion)))
+      out(`    ${j.conclusion || j.status}  ${j.name}`);
+    out(`\nNot green: ${run.url}\nmain is untouched and the worktree is kept so you can look.`);
+    code = 1;
+  } else if (!flag('push')) {
+    await prepareWorktree(wt, out);
+    out(`\nGreen: ${run.url}`);
     out('\nPlay it first — the worktree above has its own checkout:');
     out(`  cd ${wt} && ./dev.sh`);
     out('\nThen, when you are happy:');
-    out('  node tools/audit/promote.mjs --push');
-    process.exit(0);
-  }
-
-  git(['push', 'origin', 'HEAD:main'], wt);
-  out(`--- pushed ${sha} to main`);
-  for (const c of cards) {
-    try {
-      B.moveLane(c.content.number, 'done');
-      out(`    #${c.content.number} -> Done`);
-    } catch (e) {
-      out(`    #${c.content.number} stayed put: ${tail(String(e.message), 2)}`);
+    out('  pnpm audit:promote --push');
+  } else {
+    git(['push', 'origin', 'HEAD:main'], wt);
+    pushed = true;
+    out(`--- pushed ${sha.slice(0, 8)} to main after ${run.url}`);
+    for (const c of cards) {
+      try {
+        B.moveLane(c.content.number, 'done');
+        out(`    #${c.content.number} -> Done`);
+      } catch (e) {
+        out(`    #${c.content.number} stayed put: ${tail(String(e.message), 2)}`);
+      }
     }
   }
 } catch (e) {
@@ -110,7 +135,7 @@ try {
   out('main is untouched.');
   code = 1;
 } finally {
-  if (code === 0 && flag('push')) {
+  if (pushed) {
     try {
       git(['worktree', 'remove', '--force', wt]);
       git(['branch', '-D', branch], ROOT, true);

@@ -29,7 +29,13 @@ import { loadRules } from './lib/rules.mjs';
 import { makeContext, match } from './lib/triggers.mjs';
 import { buildPrompt } from './lib/prompt.mjs';
 import { parseResponse, validate } from './lib/verdict.mjs';
-import { adrConstDrift, adrCoverage, seamViolations } from './lib/t0.mjs';
+import {
+  adrConstDrift,
+  adrCoverage,
+  seamViolations,
+  componentSizeViolations,
+  COMPONENT_LINE_LIMIT
+} from './lib/t0.mjs';
 import * as I from './lib/gh.mjs';
 import { groupFindings, upsertIssue, renderNewFindings } from './lib/raise.mjs';
 import { indexedSha } from './lib/links.mjs';
@@ -305,14 +311,37 @@ function cmdT0() {
   if (drift.declared < 5) {
     out('  (most ADRs state their invariant in prose, which is why family A exists at T2)');
   }
-  for (const f of drift.findings) out(`  [${f.kind}] ${f.adr} ${f.name}: ${f.detail}`);
+  const warn = (props, text) => {
+    if (process.env.GITHUB_ACTIONS === 'true') out(`::warning ${props}::${text}`);
+  };
+  for (const f of drift.findings) {
+    out(`  [${f.kind}] ${f.adr} ${f.name}: ${f.detail}`);
+    warn('title=ADR constant drift', `${f.adr} ${f.name}: ${f.detail}`);
+  }
   if (drift.findings.length === 0) out('  no drift');
 
   const seams = seamViolations(ROOT, extractRepo(ROOT));
   out('');
   out(`adr-seams: ${seams.rules} chokepoint(s) checked`);
-  for (const f of seams.findings) out(`  [seam] ${f.adr} ${f.where}: ${f.detail}`);
+  for (const f of seams.findings) {
+    out(`  [seam${f.blocks ? ', blocks' : ''}] ${f.adr} ${f.where}: ${f.detail}`);
+    if (!f.blocks) warn('title=Seam', `${f.adr} ${f.where}: ${f.detail}`);
+    else if (process.env.GITHUB_ACTIONS === 'true')
+      out(`::error title=Speed seam::${f.adr} ${f.where}: ${f.detail}`);
+  }
   if (seams.findings.length === 0) out('  no violations');
+
+  const sizes = componentSizeViolations(ROOT);
+  out('');
+  out(
+    `component-sizes: ${sizes.frozen} component(s) over ${COMPONENT_LINE_LIMIT} lines frozen at their size`
+  );
+  for (const f of sizes.findings) {
+    out(`  [size] ${f.where}: ${f.detail}`);
+    warn(`file=${f.where},title=Component size`, f.detail);
+  }
+  for (const f of sizes.notes) out(`  [note] ${f.where}: ${f.detail}`);
+  if (sizes.findings.length === 0) out('  no violations');
 
   const cov = adrCoverage(ROOT, rules);
   if (cov) {
@@ -323,7 +352,9 @@ function cmdT0() {
     if (cov.unguarded.length) out(`  no T2 rule: ${cov.unguarded.join(' ')}`);
   }
   db.close();
-  if ((drift.findings.length || seams.findings.length) && flag('strict')) process.exit(1);
+  if (seams.findings.some((f) => f.blocks)) process.exit(1);
+  if ((drift.findings.length || seams.findings.length || sizes.findings.length) && flag('strict'))
+    process.exit(1);
 }
 
 function cmdDemote() {
@@ -390,8 +421,9 @@ function cmdIssues() {
   for (const g of groups) {
     const r = upsertIssue(ROOT, g, byId, sha, flag('rerender'));
     counts[r.action] = (counts[r.action] ?? 0) + 1;
-    const fresh = g.findings.filter((f) => f.issue_number === null);
-    if (r.action.startsWith('skipped') && fresh.length > 0 && r.action !== 'skipped-human') {
+    const mine = r.links.find((l) => l.path === r.path)?.findings ?? [];
+    const fresh = mine.filter((f) => f.issue_number !== Number(r.path));
+    if (r.action === 'skipped-approved' && fresh.length > 0) {
       try {
         I.comment(r.path, renderNewFindings(g, fresh));
         out(`  commented #${r.path}  ${r.id}  (${fresh.length} new since it was triaged)`);
@@ -399,15 +431,17 @@ function cmdIssues() {
         out(`  WARN     #${r.path}  could not comment: ${String(e.message).slice(0, 120)}`);
       }
     }
-    const linked = L.markRaised(
-      db,
-      g.findings.map((f) => f.id),
-      r.path
-    );
-    if (r.action === 'created')
-      out(`  created  #${r.path}  ${r.id}  (${g.findings.length} findings)`);
+    let linked = 0;
+    for (const l of r.links) {
+      linked += L.markRaised(
+        db,
+        l.findings.map((f) => f.id),
+        l.path
+      );
+    }
+    if (r.action === 'created') out(`  created  #${r.path}  ${r.id}  (${mine.length} findings)`);
     else if (r.action === 'updated')
-      out(`  updated  #${r.path}  ${r.id}  (${g.findings.length} findings)`);
+      out(`  updated  #${r.path}  ${r.id}  (${mine.length} findings)`);
     else out(`  ${r.action.padEnd(16)} #${r.path}  ${r.id}  (${linked} findings linked)`);
   }
   out('');

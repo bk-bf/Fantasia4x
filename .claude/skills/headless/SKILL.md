@@ -104,7 +104,7 @@ chain is broken") that were all setup, not defects.
 
 ## Finishing
 
-- Record the outcome on the `docs/issues/` entry the run was driving, with the mechanism and delta.
+- Record the outcome on the issue the run was driving, with the mechanism and delta.
   Tick a remediation box only if it was genuinely headless-verified.
 - Keep a genuinely valuable scenario as a permanent regression test (`oreChain.test.ts`,
   `steelChain.test.ts`, `leatherChainE2E.test.ts` are the precedent). Delete `_`-prefixed probes.
