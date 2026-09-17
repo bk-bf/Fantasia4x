@@ -42,12 +42,12 @@ function freePort() {
   });
 }
 
-async function startServer(tree, port, logFile) {
+async function startServer(tree, port, logFile, workPins) {
   const out = createWriteStream(logFile);
   const child = spawn(join(tree, 'dev.sh'), ['--browser', '--port', String(port)], {
     cwd: tree,
     detached: true,
-    env: { ...process.env, ...SERVE_WITHOUT_GIT, VITE_WORK_PINS: '1', CI: 'true' },
+    env: { ...process.env, ...SERVE_WITHOUT_GIT, ...(workPins ? { VITE_WORK_PINS: '1' } : {}), CI: 'true' },
     stdio: ['ignore', 'pipe', 'pipe']
   });
   child.stdout.pipe(out);
@@ -166,12 +166,21 @@ async function loadGame(page, origin) {
   );
 }
 
-export async function openGame({ tree, fixture, serverLog, args = [], log, clock = true }) {
+export async function openGame({
+  tree,
+  fixture,
+  serverLog,
+  args = [],
+  log,
+  clock = true,
+  init = [],
+  workPins = true
+}) {
   const body = readFixture(resolve(fixture));
   const port = await freePort();
   const origin = `http://127.0.0.1:${port}`;
   log(`tree ${tree}, fixture ${fixture} (${body.length} bytes), port ${port}`);
-  const server = await startServer(tree, port, serverLog);
+  const server = await startServer(tree, port, serverLog, workPins);
   const browser = await chromium.launch({ headless: true, args: ['--mute-audio', ...args] });
   const close = async () => {
     await browser.close();
@@ -182,6 +191,7 @@ export async function openGame({ tree, fixture, serverLog, args = [], log, clock
     await context.addInitScript(seedRandom, RANDOM_SEED);
     await context.addInitScript(hideAudio);
     await context.addInitScript(disableAutoPause);
+    for (const script of init) await context.addInitScript(script);
     const page = await context.newPage();
     const errors = [];
     page.on('pageerror', (e) => errors.push(e.message));

@@ -20,8 +20,8 @@
 //   node tools/issue.mjs pr-edit <n> --body-file -
 //   node tools/issue.mjs tidy [--remove] [--host H]...   # merged or idle worktrees, branches and test clones
 
-import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
+import { runGh } from './audit/lib/gh-run.mjs';
 import {
   check,
   allowedLabels,
@@ -32,10 +32,19 @@ import {
   checkKind,
   checkMilestone,
   labelGroup,
-  milestonePlan
+  milestonePlan,
+  versionOf
 } from './audit/lib/schema.mjs';
 import { checkPrivate } from './audit/lib/private.mjs';
-import { linkify, issueRef, indexedSha, blobUrl, resolveRepoPath } from './audit/lib/links.mjs';
+import {
+  linkify,
+  issueRef,
+  indexedSha,
+  blobUrl,
+  resolveRepoPath,
+  repairDeadCitation
+} from './audit/lib/links.mjs';
+import { checkSignOff } from './audit/lib/template.mjs';
 import {
   moveLane,
   setSelect,
@@ -44,9 +53,10 @@ import {
   laneOf,
   boardItems,
   fields,
-  invalidate
+  invalidate,
+  strayCard
 } from './audit/lib/board.mjs';
-import { createPull, editPull } from './audit/lib/pulls.mjs';
+import { createPull, editPull, syncPull, linkOf } from './audit/lib/pulls.mjs';
 import { tidy } from './audit/lib/tidy.mjs';
 
 process.stdout.on('error', (e) => {
@@ -66,8 +76,7 @@ const die = (m) => {
   process.exit(1);
 };
 
-const gh = (args, input) =>
-  execFileSync('gh', args, { encoding: 'utf8', input, stdio: ['pipe', 'pipe', 'inherit'] });
+const gh = (args, input) => runGh(args, input, '', true);
 
 const readBody = () => {
   const f = arg('body-file');
@@ -150,7 +159,10 @@ function repair(body, sha) {
 function repairProse(text, sha) {
   let out = unnest(issueRef(text));
   for (const f of scanBody(out, sha)) {
-    if (!f.real) continue;
+    if (!f.real) {
+      out = repairDeadCitation(out, f);
+      continue;
+    }
     if (f.kind === 'relative-link') {
       const line = (f.anchor ?? '').match(/^L(\d+)$/)?.[1];
       out = out.split(f.whole).join(`[${f.label}](${blobUrl(f.real, line, sha)})`);
@@ -189,7 +201,7 @@ const issueRecord = (n) => {
 const issueId = (n) => issueRecord(n).id;
 
 const linkParent = (n, parent) =>
-  gh(['api', '-X', 'POST', `${REPO_API}/issues/${parent}/sub_issues`, '-F', `sub_issue_id=${issueId(n)}`]);
+  gh(['api', '-X', 'POST', `${REPO_API}/issues/${parent}/sub_issues`, '-F', `sub_issue_id=${issueId(n)}`, '-F', 'replace_parent=true']);
 
 const milestones = () => JSON.parse(gh(['api', `${REPO_API}/milestones?state=all&per_page=100`]));
 
@@ -223,10 +235,10 @@ const milestoneGaps = (issue) => {
   const parent = issue?.parent;
   if (parent) {
     const theirs = parent.milestone?.title ?? null;
-    if (own === theirs) return [];
+    if (versionOf(own) === versionOf(theirs)) return [];
     return [
       `milestone is ${own ?? 'unset'} but its parent #${parent.number} is in ${theirs ?? 'none'} — ` +
-        "a sub-issue sits in its parent's milestone"
+        "a sub-issue sits in a milestone of its parent's version"
     ];
   }
   if (own) return [];
@@ -298,10 +310,32 @@ if (cmd === 'check-labels') {
     if (open.has(key) || !MERGED_LANES.has((card.status ?? '').toLowerCase())) continue;
     report(key, card.title ?? '', boardGaps(card), card.status);
   }
+  for (const item of boardItems()) {
+    const stray = strayCard(item);
+    if (stray) report(item.content?.number ?? '-', item.content?.title ?? item.title ?? '', [stray], item.status);
+  }
+  const pulls = JSON.parse(
+    gh(['pr', 'list', '--state', 'open', '--limit', '100', '--json', 'number,title,body,isDraft,milestone'])
+  );
+  for (const p of pulls)
+    report(p.number, p.title, [
+      ...(linkOf(p) ? [] : ['pull request links no issue']),
+      ...(p.milestone ? [] : ["pull request has no milestone: `pnpm issue pr-sync` copies its issue's"])
+    ]);
+  for (const [key, card] of cards) {
+    if ((card.status ?? '').toLowerCase() !== 'in check') continue;
+    const pull = pulls.find((p) => String(linkOf(p)?.issue) === key);
+    if (!pull || pull.isDraft)
+      report(key, card.title ?? '', [
+        pull ? `in In Check with only a draft pull request, #${pull.number}` : 'in In Check with no open pull request'
+      ], card.status);
+  }
   process.stdout.write(
     `\n${bad} open issue(s) incompletely classified, ${untyped} with a gap on the board\n`
   );
   if (bad || untyped) process.exit(1);
+} else if (cmd === 'board') {
+  process.stdout.write(`${JSON.stringify({ items: boardItems() })}\n`);
 } else if (cmd === 'lane') {
   const n = argv[1] ?? die('which issue?');
   const to = argv.slice(2).join(' ') || '';
@@ -319,7 +353,8 @@ if (cmd === 'check-labels') {
   let dead = 0;
   for (const it of allIssues()) {
     // a resolving blob link is the goal, not a problem; everything else is work left to do
-    const problems = scanBody(it.body, sha).filter((f) => f.kind !== 'blob' || !f.real);
+    const prose = String(it.body ?? '').replace(/<!--[\s\S]*?-->/g, '');
+    const problems = scanBody(prose, sha).filter((f) => f.kind !== 'blob' || !f.real);
     const unresolvable = problems.filter((f) => !f.real);
     const next = repair(it.body, sha);
     const drifted = next !== (it.body ?? '');
@@ -522,8 +557,16 @@ if (cmd === 'check-labels') {
   const head = arg('head') ?? die('which branch? --head <branch>');
   const title = arg('title') ?? die('--title is required');
   try {
-    const pull = createPull({ branch: head, title, body: readBody() });
+    const body = readBody();
+    const pull = createPull({ branch: head, title, body });
     process.stdout.write(`${pull?.url ?? ''}\n`);
+    const card = linkOf({ body }).issue;
+    try {
+      moveLane(card, 'in check');
+    } catch (e) {
+      if (process.stderr.isTTY)
+        process.stderr.write(`#${card} stayed put: ${String(e.message).split('\n')[0]}\n`);
+    }
   } catch (e) {
     die(e.message);
   }
@@ -535,11 +578,28 @@ if (cmd === 'check-labels') {
     die(e.message);
   }
   process.stdout.write(`#${n} description rewritten\n`);
+} else if (cmd === 'pr-sync') {
+  const numbers = argv.slice(1).length
+    ? argv.slice(1)
+    : JSON.parse(gh(['pr', 'list', '--state', 'open', '--limit', '100', '--json', 'number'])).map((p) => String(p.number));
+  let failed = 0;
+  for (const n of numbers) {
+    try {
+      syncPull(n);
+      process.stdout.write(`#${n} carries the labels and milestone of its issue\n`);
+    } catch (e) {
+      failed += 1;
+      process.stdout.write(`#${n}: ${String(e.message).split('\n')[0]}\n`);
+    }
+  }
+  if (failed) process.exit(1);
 } else if (cmd === 'comment') {
   const n = argv[1] ?? die('which issue?');
   const body = prepare(readBody());
   const privateWords = checkPrivate(body);
   if (privateWords.length) die(`refused:\n  - ${privateWords.join('\n  - ')}`);
+  const signOff = checkSignOff(body);
+  if (signOff.length) die(`refused:\n  - ${signOff.join('\n  - ')}`);
   // A comment is a record of what a run did, not a specification. Refusing to post one because
   // the text it is reporting names something that no longer exists loses the whole record, so
   // the same problems are reported and the comment still goes up.
@@ -587,7 +647,7 @@ if (cmd === 'check-labels') {
       );
     }
   } else if (sub === 'create') {
-    const title = arg('title') ?? die('--title is required, a version such as v0.2');
+    const title = arg('title') ?? die('--title is required, a version such as v0.2 or v0.2 - Demo');
     const body = prepare(readBody());
     const errors = checkMilestone({ title, body });
     if (milestones().some((m) => m.title === title)) errors.push(`milestone ${title} already exists`);
@@ -615,7 +675,7 @@ if (cmd === 'check-labels') {
     gh(['api', '-X', 'PATCH', `${REPO_API}/milestones/${current.number}`, '-f', 'state=closed']);
     process.stdout.write(`${current.title} closed\n`);
   } else {
-    die('usage: milestone list | create --title vX.Y --body-file - | edit vX.Y | close vX.Y');
+    die('usage: milestone list | create --title "vX.Y - Name" --body-file - | edit "vX.Y - Name" | close "vX.Y - Name"');
   }
 } else if (cmd === 'tidy') {
   const open = new Set(

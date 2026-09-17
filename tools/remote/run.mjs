@@ -87,7 +87,7 @@ function ensureCommit() {
   });
   checked(
     ssh(
-      `cd ${quote(dir)} && cat > .git/f4x.bundle && git fetch -q .git/f4x.bundle HEAD:refs/f4x/head && rm .git/f4x.bundle`,
+      `cd ${quote(dir)} && cat > .git/f4x.bundle && git fetch -q .git/f4x.bundle +HEAD:refs/f4x/head && rm .git/f4x.bundle`,
       { input: bundle }
     ),
     'send unpushed commits'

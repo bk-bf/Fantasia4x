@@ -46,7 +46,7 @@
       ]
     },
     "demotable": false,
-    "status": "draft",
+    "status": "active",
     "name": "tick-allocation"
   },
   {
@@ -226,7 +226,7 @@
       ]
     },
     "demotable": false,
-    "status": "draft",
+    "status": "active",
     "name": "frame-collection-work"
   }
 ]

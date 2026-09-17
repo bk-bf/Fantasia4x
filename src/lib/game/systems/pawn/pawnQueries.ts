@@ -4,6 +4,7 @@ import ITEMS_DATABASE from '../../database/items/items.json';
 import RARITIES from '../../database/items/rarities.json';
 import { consumeFromStockpiles } from '../../core/state/stockpile';
 import { manhattan } from '../../core/util/distance';
+import { tileKey } from '../../core/util/tileKey';
 import { ticksFromSeconds } from '../../core/util/time';
 import { rng } from '../../core/util/rng';
 import { edibleNutrition, resolveAllowedFoodIds, isCarcass } from '../../services/foodRules';
@@ -35,11 +36,12 @@ export function findAdjacentApproach(
   tx: number,
   ty: number,
   worldMap: GameState['worldMap'],
-  occupied?: Set<string>,
+  occupied?: Set<number>,
   fromX?: number,
   fromY?: number,
   allowed?: Set<string> | null
 ): { x: number; y: number } | null {
+  const width = worldMap[0]?.length ?? 0;
   let best: { x: number; y: number } | null = null;
   let bestDist = Infinity;
   for (let dy = -1; dy <= 1; dy++) {
@@ -47,7 +49,7 @@ export function findAdjacentApproach(
       if (dx === 0 && dy === 0) continue;
       const nx = tx + dx;
       const ny = ty + dy;
-      if (!worldMap[ny]?.[nx]?.walkable || occupied?.has(`${nx},${ny}`)) continue;
+      if (!worldMap[ny]?.[nx]?.walkable || occupied?.has(tileKey(nx, ny, width))) continue;
       if (allowed && !allowed.has(`${nx},${ny}`)) continue;
       const dist = fromX !== undefined && fromY !== undefined ? manhattan(nx, ny, fromX, fromY) : 0;
       if (dist < bestDist) {

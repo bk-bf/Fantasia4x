@@ -1,5 +1,6 @@
 import type { WorldTile } from '../core/types';
 import { TICKS_PER_SECOND, ticksFromSeconds } from '../core/util/time';
+import { tileKey } from '../core/util/tileKey';
 
 export interface Movable {
   x: number;
@@ -107,30 +108,32 @@ export function simTarget<T extends Movable>(
 
 export function seedMidCrossClaims<T extends MovableBody>(
   bodies: T[],
-  claimed: Set<string>,
+  claimed: Set<number>,
+  width: number,
   isActive: (b: T) => boolean
 ): void {
   for (const b of bodies) {
     if (!isActive(b) || !b.path?.length || b.nextCellCostLeft == null) continue;
     const t = b.path[b.pathIndex ?? 0];
-    if (t) claimed.add(`${t.x},${t.y}`);
+    if (t) claimed.add(tileKey(t.x, t.y, width));
   }
 }
 
 export function stepBody<T extends MovableBody>(
   body: T,
-  occupancy: Set<string>,
-  claimed: Set<string>,
+  occupancy: Set<number>,
+  claimed: Set<number>,
   worldMap: WorldTile[][],
   speed: number,
-  targetByTile?: Map<string, { id: string; target: string }>
+  targetByTile?: Map<number, { id: string; target: number }>
 ): StepResult<T> {
   const target = body.path?.[body.pathIndex ?? 0];
   if (!body.path || body.path.length === 0 || !target) {
     return { body, status: 'idle', done: false };
   }
-  const targetKey = `${target.x},${target.y}`;
-  const selfKey = `${body.x},${body.y}`;
+  const width = worldMap[0]?.length ?? 0;
+  const targetKey = tileKey(target.x, target.y, width);
+  const selfKey = tileKey(body.x, body.y, width);
   const midCrossing = body.nextCellCostLeft != null;
   const occupiedByOther = occupancy.has(targetKey) && targetKey !== selfKey;
   const blocked = occupiedByOther || (!midCrossing && claimed.has(targetKey));

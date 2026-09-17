@@ -4,6 +4,7 @@ import { join } from 'node:path';
 
 const SUMMARY_ROW_LIMIT = 300;
 const THRESHOLD = Number(process.env.WORK_PINS_THRESHOLD ?? 0.05);
+const ACCEPTED = process.env.PERF_CHANGE_ACCEPTED === 'true';
 
 function readRuns(dir) {
   const runs = new Map();
@@ -158,10 +159,13 @@ function renderMoved(moved) {
 function render({ rows, moved, notes, totals, over }, rowLimit) {
   const budget = `${Math.round(THRESHOLD * 100)}%`;
   const heading = over.length
-    ? `## Work pins: ${over.length} total(s) grew by more than ${budget}`
+    ? `## Work pins: ${over.length} total(s) grew by more than ${budget}${ACCEPTED ? ', allowed by the "perf change accepted" label' : ''}`
     : `## Work pins: every total within ${budget}${rows.length ? `, ${rows.length} count(s) changed` : ', no change'}`;
   const parts = [[heading, ...notes.map((n) => `- ${n}`)].join('\n')];
-  if (over.length) parts.push(`\nOver the ${budget} budget, which fails the check:\n\n${renderTable(over)}\n`);
+  if (over.length)
+    parts.push(
+      `\nOver the ${budget} budget${ACCEPTED ? ', allowed through by the label' : ', which fails the check'}:\n\n${renderTable(over)}\n`
+    );
   const changedTotals = totals.filter((t) => t.head !== t.base);
   if (changedTotals.length) parts.push(details('Totals that changed', renderTable(changedTotals)));
   if (rows.length) {
@@ -182,7 +186,19 @@ function writeNotes({ totals, rows }) {
   const file = process.env.WORK_PINS_NOTES;
   if (!file) return;
   const changed = totals.filter((t) => t.head !== t.base);
-  appendFileSync(file, `${JSON.stringify({ totals: changed, changed: rows.length })}\n`);
+  const top = rows.slice(0, 0);
+  for (const t of changed) {
+    if (t.fn !== 'all calls') continue;
+    let kept = 0;
+    for (const r of rows) {
+      if (kept === 3) break;
+      if (r.scenario === t.scenario && r.where) {
+        top.push(r);
+        kept += 1;
+      }
+    }
+  }
+  appendFileSync(file, `${JSON.stringify({ totals: changed, changed: rows.length, top })}\n`);
 }
 
 export function report(baseDir, headDir) {
@@ -191,7 +207,7 @@ export function report(baseDir, headDir) {
   process.stdout.write(render(result, Infinity));
   if (process.env.GITHUB_STEP_SUMMARY)
     appendFileSync(process.env.GITHUB_STEP_SUMMARY, render(result, SUMMARY_ROW_LIMIT));
-  return result.over.length === 0 && result.notes.every((n) => !n.includes('ran only on'));
+  return (result.over.length === 0 || ACCEPTED) && result.notes.every((n) => !n.includes('ran only on'));
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
