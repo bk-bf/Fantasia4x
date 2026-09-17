@@ -151,8 +151,8 @@ machine, run the same commit against itself there several times and compare the 
 GitHub's, which the pull request that moved them records.
 
 **`perf change accepted`, in `tools/audit/labels.json`, lets an intended growth through the work
-pins, gungraun and ticks-per-second budgets.** With it set, those gates still run and write their
-tables, and pass. It reaches a pull request from its issue, copied by `pnpm issue pr`, `pr-edit`,
+pins, gungraun and ticks-per-second budgets, and past a regression CodSpeed reports.** With it set,
+those gates still run and write their tables, and pass. It reaches a pull request from its issue, copied by `pnpm issue pr`, `pr-edit`,
 `pr-sync` and `board-sync.py`, and `.github/workflows/perf-label.yml` re-runs `check` when it is
 added or removed. An agent explains, in its pull request, every total that grows past its budget,
 and never adds the label itself.
