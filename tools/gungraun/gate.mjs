@@ -8,6 +8,7 @@ const CRATES = ['spatial-core', 'sim-core'];
 const HARNESS = ['Cargo.toml', 'Cargo.lock', 'benches'];
 const LIMITS = 'ir=5%';
 const REGRESSION = 3;
+const PERF_CHANGE_ACCEPTED = process.env.PERF_CHANGE_ACCEPTED === 'true';
 
 function arg(name, fallback) {
   const i = process.argv.indexOf(name);
@@ -100,9 +101,15 @@ try {
 }
 
 for (const { crate, compared, status } of results) {
-  const verdict = status === 0 ? 'ok' : status === REGRESSION ? `over ${LIMITS}` : `failed (${status})`;
+  const verdict =
+    status === 0
+      ? 'ok'
+      : status === REGRESSION
+        ? `over ${LIMITS}${PERF_CHANGE_ACCEPTED ? ', allowed by the "perf change accepted" label' : ''}`
+        : `failed (${status})`;
   process.stdout.write(`${crate}: ${compared ? 'base against head' : 'head only'}, ${verdict}\n`);
 }
 process.stdout.write(`flame graphs in ${home}\n`);
 const failed = results.find((r) => r.status !== 0 && r.status !== REGRESSION);
-process.exit(failed ? failed.status : results.some((r) => r.status === REGRESSION) ? REGRESSION : 0);
+const regressed = results.some((r) => r.status === REGRESSION);
+process.exit(failed ? failed.status : regressed && !PERF_CHANGE_ACCEPTED ? REGRESSION : 0);

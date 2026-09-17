@@ -1,4 +1,4 @@
-name: check
+name: CI
 
 on:
   pull_request:
@@ -7,26 +7,148 @@ on:
     branches: [dev]
   workflow_dispatch:
     inputs:
+      mode:
+        description: chain runs every stage on this branch against its merge base with dev; pre runs the pre-check alone; browser and day compare two branches in the browser
+        type: choice
+        options: [chain, pre, browser, day]
+        default: chain
       base:
-        description: Branch whose browser work pins are the base
+        description: browser and day only, the branch whose work pins are the base
         default: main
       head:
-        description: Branch whose browser work pins are the head
+        description: browser and day only, the branch whose work pins are the head
         default: dev
-      leg:
-        description: browser runs, pans and pans while paused; day steps one in-game day
-        type: choice
-        options: [browser, day]
-        default: browser
 
 concurrency:
-  group: check-${{ github.event.pull_request.number || github.ref }}-${{ inputs.leg }}-${{ github.event_name == 'workflow_dispatch' && github.run_id || '' }}
+  group: ci-${{ github.event.pull_request.number || github.ref }}-${{ inputs.mode }}-${{ github.event_name == 'workflow_dispatch' && github.run_id || '' }}
   cancel-in-progress: true
 
 jobs:
-  check:
+  precheck:
+    name: 'Pre-check: pnpm check, related tests, seams, workflow lint'
+    if: github.event_name != 'workflow_dispatch' || inputs.mode == 'chain' || inputs.mode == 'pre'
     runs-on: ubuntu-latest
-    timeout-minutes: ${{ github.event_name == 'workflow_dispatch' && 300 || 90 }}
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    outputs:
+      base: ${{ steps.scope.outputs.base }}
+      workPins: ${{ steps.scope.outputs.workPins }}
+      gungraun: ${{ steps.scope.outputs.gungraun }}
+      browser: ${{ steps.scope.outputs.browser }}
+      tps: ${{ steps.scope.outputs.tps }}
+      bench: ${{ steps.scope.outputs.bench }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: ./.github/actions/prepare
+
+      - name: What this change needs
+        id: scope
+        env:
+          BEFORE: ${{ github.event.before }}
+        run: |
+          case "$GITHUB_EVENT_NAME" in
+            push) base="$BEFORE" ;;
+            pull_request) base="$(git rev-parse HEAD^1)" ;;
+            *) base="$(git merge-base HEAD origin/dev)" ;;
+          esac
+          echo "base=$base" >> "$GITHUB_OUTPUT"
+          node tools/audit/ci-scope.mjs --base "$base"
+
+      - name: pnpm check and the related tests
+        if: steps.scope.outputs.check == 'true'
+        env:
+          CHECK_BASE: ${{ steps.scope.outputs.base }}
+          WARNINGS_NOTES: ${{ runner.temp }}/warnings-notes.jsonl
+        run: node tools/audit/ci-check.mjs
+
+      - uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() && github.event_name == 'pull_request' }}
+        with:
+          name: warnings-notes
+          path: ${{ runner.temp }}/warnings-notes.jsonl
+          if-no-files-found: ignore
+
+      - name: Architecture seams and component sizes
+        run: node tools/audit/audit.mjs t0
+
+      - name: Workflow files
+        run: |
+          bash <(curl -fsSL https://raw.githubusercontent.com/rhysd/actionlint/v1.7.7/scripts/download-actionlint.bash) 1.7.7 "$RUNNER_TEMP"
+          "$RUNNER_TEMP/actionlint" -color
+
+  measure:
+    name: 'Measurements: work pins, Rust instruction counts, browser work pins'
+    needs: precheck
+    if: (github.event_name != 'workflow_dispatch' || inputs.mode == 'chain') && (needs.precheck.outputs.workPins == 'true' || needs.precheck.outputs.gungraun == 'true' || needs.precheck.outputs.browser == 'true')
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    permissions:
+      contents: read
+      pull-requests: read
+    env:
+      BASE: ${{ needs.precheck.outputs.base }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: ./.github/actions/prepare
+
+      - uses: ./.github/actions/perf-label
+
+      - name: Work pins, base against head
+        if: needs.precheck.outputs.workPins == 'true'
+        env:
+          WORK_PINS_NOTES: ${{ runner.temp }}/work-pins-notes.jsonl
+        run: node tools/work-pins/gate.mjs --base "$BASE"
+
+      - name: Read the gungraun version
+        id: gungraun
+        if: needs.precheck.outputs.gungraun == 'true'
+        run: echo "version=$(cargo pkgid --manifest-path spatial-core/Cargo.toml gungraun | sed 's/.*@//')" >> "$GITHUB_OUTPUT"
+
+      - uses: gungraun/setup-gungraun@v1.1.3
+        if: needs.precheck.outputs.gungraun == 'true'
+        with:
+          runner-version: ${{ steps.gungraun.outputs.version }}
+
+      - name: Instruction counts, base against head
+        if: needs.precheck.outputs.gungraun == 'true'
+        run: node tools/gungraun/gate.mjs --base "$BASE" --home "$RUNNER_TEMP/gungraun"
+
+      - uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() && needs.precheck.outputs.gungraun == 'true' }}
+        with:
+          name: gungraun-flamegraphs
+          path: ${{ runner.temp }}/gungraun/**/*.svg
+          if-no-files-found: ignore
+
+      - name: Install Chromium for the browser work pins
+        if: needs.precheck.outputs.browser == 'true'
+        run: pnpm exec playwright install --with-deps --only-shell chromium
+
+      - name: Browser work pins, base against head
+        if: needs.precheck.outputs.browser == 'true'
+        env:
+          WORK_PINS_NOTES: ${{ runner.temp }}/work-pins-notes.jsonl
+        run: node tools/work-pins/gate.mjs --leg browser --base "$BASE"
+
+      - uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() && github.event_name == 'pull_request' }}
+        with:
+          name: work-pins-notes
+          path: ${{ runner.temp }}/work-pins-notes.jsonl
+          if-no-files-found: ignore
+
+  compare:
+    name: Browser work pins, two branches
+    if: github.event_name == 'workflow_dispatch' && (inputs.mode == 'browser' || inputs.mode == 'day')
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
     permissions:
       contents: read
     steps:
@@ -36,99 +158,119 @@ jobs:
 
       - uses: ./.github/actions/prepare
 
-      - name: pnpm check and the related tests
-        if: github.event_name != 'workflow_dispatch'
-        env:
-          CHECK_BASE: ${{ github.event_name == 'push' && github.event.before || '' }}
-        run: node tools/audit/ci-check.mjs
-
-      - name: Architecture seams and component sizes
-        run: node tools/audit/audit.mjs t0
-
-      - name: Work pins, base against head
-        if: github.event_name == 'pull_request'
-        env:
-          WORK_PINS_NOTES: ${{ runner.temp }}/work-pins-notes.jsonl
-        run: node tools/work-pins/gate.mjs --base HEAD^1
-
-      - name: Read the gungraun version
-        id: gungraun
-        if: github.event_name == 'pull_request'
-        run: echo "version=$(cargo pkgid --manifest-path spatial-core/Cargo.toml gungraun | sed 's/.*@//')" >> "$GITHUB_OUTPUT"
-
-      - uses: gungraun/setup-gungraun@v1.1.3
-        if: github.event_name == 'pull_request'
-        with:
-          runner-version: ${{ steps.gungraun.outputs.version }}
-
-      - name: Instruction counts, base against head
-        if: github.event_name == 'pull_request'
-        run: node tools/gungraun/gate.mjs --base HEAD^1 --home "$RUNNER_TEMP/gungraun"
-
-      - uses: actions/upload-artifact@v7
-        if: ${{ !cancelled() && github.event_name == 'pull_request' }}
-        with:
-          name: gungraun-flamegraphs
-          path: ${{ runner.temp }}/gungraun/**/*.svg
-          if-no-files-found: ignore
-
       - name: Install Chromium for the browser work pins
-        if: github.event_name != 'push'
         run: pnpm exec playwright install --with-deps --only-shell chromium
 
-      - name: Browser work pins, base against head
-        if: github.event_name == 'pull_request'
-        env:
-          WORK_PINS_NOTES: ${{ runner.temp }}/work-pins-notes.jsonl
-        run: node tools/work-pins/gate.mjs --leg browser --base HEAD^1
-
-      - uses: actions/upload-artifact@v7
-        if: ${{ !cancelled() && github.event_name == 'pull_request' }}
-        with:
-          name: work-pins-notes
-          path: ${{ runner.temp }}/work-pins-notes.jsonl
-          if-no-files-found: ignore
-
       - name: Browser work pins, two branches
-        if: github.event_name == 'workflow_dispatch'
         env:
           BASE_BRANCH: ${{ inputs.base }}
           HEAD_BRANCH: ${{ inputs.head }}
-          LEG: ${{ inputs.leg }}
+          LEG: ${{ inputs.mode }}
         run: >-
           node tools/work-pins/gate.mjs --leg "$LEG"
           --base "origin/$BASE_BRANCH" --head "origin/$HEAD_BRANCH"
           --hook-from "$(git merge-base HEAD origin/dev)" --out work-pins-out
 
       - uses: actions/upload-artifact@v7
-        if: github.event_name == 'workflow_dispatch' && always()
+        if: always()
         with:
           name: browser-work-pins
           path: work-pins-out
 
   codspeed:
+    name: CodSpeed benchmarks
+    needs: precheck
+    if: needs.precheck.outputs.bench == 'true' && (github.event_name != 'workflow_dispatch' || inputs.mode == 'chain') && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
     permissions:
+      actions: read
+      checks: read
       contents: read
       id-token: write
+      pull-requests: read
     steps:
       - uses: actions/checkout@v7
 
       - uses: ./.github/actions/prepare
 
+      - name: Note when the benchmarks start
+        run: echo "CODSPEED_SINCE=$(date -u +%FT%TZ)" >> "$GITHUB_ENV"
+
       - name: CodSpeed benchmarks
         uses: CodSpeedHQ/action@v5
+        env:
+          TMPDIR: ${{ runner.temp }}
         with:
           mode: simulation
+          runner-version: 5.2.1
+          cache-instruments: false
           run: pnpm bench
 
+      - name: Exact counts from the profiles
+        if: ${{ !cancelled() }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          BASE_SHA: ${{ needs.precheck.outputs.base }}
+        run: node tools/bench/counts.mjs "$RUNNER_TEMP" --out "$RUNNER_TEMP/codspeed-counts.json"
+
+      - uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() }}
+        with:
+          name: codspeed-counts-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/codspeed-counts.json
+          if-no-files-found: ignore
+
+      - uses: ./.github/actions/perf-label
+
+      - name: CodSpeed verdict
+        if: github.event_name == 'pull_request'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: node tools/bench/codspeed-gate.mjs
+
+  tps:
+    name: Ticks per second
+    needs: precheck
+    if: needs.precheck.outputs.tps == 'true' && (github.event_name != 'workflow_dispatch' || inputs.mode == 'chain') && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      pull-requests: read
+    env:
+      BASE: ${{ needs.precheck.outputs.base }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: ./.github/actions/prepare
+
+      - uses: ./.github/actions/perf-label
+
+      - name: Ticks per second, base against head
+        env:
+          TMPDIR: ${{ runner.temp }}
+          TPS_NOTES: ${{ runner.temp }}/tps-notes.jsonl
+        run: node tools/work-pins/gate.mjs --leg tps --base "$BASE"
+
+      - uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() }}
+        with:
+          name: tps-notes
+          path: ${{ runner.temp }}/tps-notes.jsonl
+          if-no-files-found: ignore
+
   perf-notes:
+    name: Check notes on the pull request
     if: ${{ !cancelled() && github.event_name == 'pull_request' }}
-    needs: [check, codspeed]
+    needs: [precheck, measure, codspeed, tps]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
+      actions: read
       contents: read
       checks: read
       issues: write
@@ -142,14 +284,37 @@ jobs:
           name: work-pins-notes
           path: ${{ runner.temp }}/notes
 
+      - uses: actions/download-artifact@v8
+        continue-on-error: true
+        with:
+          name: warnings-notes
+          path: ${{ runner.temp }}/warnings
+
+      - uses: actions/download-artifact@v8
+        continue-on-error: true
+        with:
+          name: codspeed-counts-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/codspeed
+
+      - uses: actions/download-artifact@v8
+        continue-on-error: true
+        with:
+          name: tps-notes
+          path: ${{ runner.temp }}/tps
+
       - uses: actions/setup-node@v7
         with:
           node-version: 24.20.0
 
-      - name: Performance notes
+      - name: Check notes
         env:
           GITHUB_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
           WORK_PINS_NOTES: ${{ runner.temp }}/notes/work-pins-notes.jsonl
+          WARNINGS_NOTES: ${{ runner.temp }}/warnings/warnings-notes.jsonl
+          CODSPEED_COUNTS: ${{ runner.temp }}/codspeed/codspeed-counts.json
+          CODSPEED_RAN: ${{ needs.codspeed.result == 'success' || needs.codspeed.result == 'failure' }}
+          TPS_NOTES: ${{ runner.temp }}/tps/tps-notes.jsonl
         run: node tools/work-pins/perf-notes.mjs

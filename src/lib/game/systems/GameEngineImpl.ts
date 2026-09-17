@@ -270,10 +270,11 @@ export class GameEngineImpl implements GameEngine {
       this.lastTurnProcessed = this.gameState.turn;
       t('mgrUpdate', () => this.gameStateManager!.updateState(this.gameState!));
       t('uiPush', () => {
+        if (!this.outputSink) return;
         const nowMs = performance.now();
         const flush = nowMs - this.lastFlushMs >= UI_PUSH_MS;
         if (flush) this.lastFlushMs = nowMs;
-        this.outputSink?.(this.gameState!, flush);
+        this.outputSink(this.gameState!, flush);
       });
 
       if (dbg && ++this._phaseTicks >= PHASE_LOG_TICKS) {
@@ -328,10 +329,12 @@ export class GameEngineImpl implements GameEngine {
       this.lastTurnProcessed = this.gameState!.turn;
       this.gameStateManager!.updateState(this.gameState!);
 
-      const nowMs = performance.now();
-      const flush = nowMs - this.lastFlushMs >= PREVIEW_PUSH_MS;
-      if (flush) this.lastFlushMs = nowMs;
-      this.outputSink?.(this.gameState!, flush);
+      if (this.outputSink) {
+        const nowMs = performance.now();
+        const flush = nowMs - this.lastFlushMs >= PREVIEW_PUSH_MS;
+        if (flush) this.lastFlushMs = nowMs;
+        this.outputSink(this.gameState!, flush);
+      }
 
       return { success: true, turnsProcessed: 1, systemsUpdated: ['preview'], errors: [] };
     } catch (error) {

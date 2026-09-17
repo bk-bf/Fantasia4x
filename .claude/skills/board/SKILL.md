@@ -14,9 +14,11 @@ minutes.
 
 1. **Budget.** `gh api graphql -f query='{rateLimit{remaining resetAt}}' --jq .data.rateLimit`.
    The board read costs 101 points of an hourly 5,000 that every agent and `board-sync.py`
-   share. Below about 150 remaining, say so and stop until `resetAt`.
-2. **Board, once.** `gh project item-list 4 --owner bk-bf --limit 300 --format json`, saved to a
-   temporary file and read from there. Each card has its lane (`status`), `work type`, `area`,
+   share; when they run out it reads over REST instead, which has its own hourly 5,000
+   requests. The relations query below still needs about 3 points: below that, say so and stop
+   until `resetAt`.
+2. **Board, once.** `pnpm -s issue board > <temporary file>`, read from there. It prints what
+   `gh project item-list` prints, and reads over REST when GraphQL fails. Each card has its lane (`status`), `work type`, `area`,
    `size`, `verify`, `priority` and labels. Do not read the board a second time.
 3. **Relations, one query of about 3 points:**
 

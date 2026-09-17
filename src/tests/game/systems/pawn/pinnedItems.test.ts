@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { depositInventory } from '$lib/game/systems/pawn/pawnHauling';
 import { COMMANDS } from '$lib/game/sim/commands';
 import type { GameState, Pawn } from '$lib/game/core/types';
@@ -68,6 +68,31 @@ describe('pinned carried items are never deposited', () => {
     const drop = (out.droppedItems ?? []).find((d) => d.resourceId === 'stone_axe');
     expect(drop).toMatchObject({ quantity: 1, x: 0, y: 0, durability: 42 });
     expect(drop?.instance).toMatchObject({ instanceId: 'axe-1', durability: 42 });
+  });
+
+  it('dropCarriedItem names a bulk drop the same in two identical runs at different clock times', () => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(1_000);
+      const first = COMMANDS.dropCarriedItem(makeState(hauler({ wood: 5 })), { pawnId: 'h', itemId: 'wood' });
+      vi.setSystemTime(9_000_000);
+      const second = COMMANDS.dropCarriedItem(makeState(hauler({ wood: 5 })), { pawnId: 'h', itemId: 'wood' });
+      expect(second.droppedItems?.[0]?.id).toBe(first.droppedItems?.[0]?.id);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('dropCarriedItem gives a second bulk drop of the same item in one turn its own id', () => {
+    const once = COMMANDS.dropCarriedItem(makeState(hauler({ wood: 5 })), { pawnId: 'h', itemId: 'wood' });
+    const refilled = {
+      ...once,
+      pawns: once.pawns.map((pw) => ({ ...pw, inventory: { ...pw.inventory, items: { wood: 3 } } }))
+    };
+    const twice = COMMANDS.dropCarriedItem(refilled, { pawnId: 'h', itemId: 'wood' });
+    const ids = (twice.droppedItems ?? []).map((d) => d.id);
+    expect(ids).toHaveLength(2);
+    expect(new Set(ids).size).toBe(2);
   });
 
   it('togglePinItem flips the pin on and off for the right pawn', () => {
