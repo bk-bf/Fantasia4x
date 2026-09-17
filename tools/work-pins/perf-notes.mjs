@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 import { existsSync, readFileSync } from 'node:fs';
 import { baseCounts, change, countsReport, NOISE } from '../bench/counts.mjs';
+import { api, WAIT_MS, waitForCodspeed } from '../bench/codspeed-check.mjs';
 
-const API = process.env.GITHUB_API_URL ?? 'https://api.github.com';
 const REPO = process.env.GITHUB_REPOSITORY;
 const PR = process.env.PR_NUMBER;
 const SHA = process.env.HEAD_SHA;
@@ -14,41 +14,8 @@ const TPS = process.env.TPS_NOTES;
 const CODSPEED_RAN = process.env.CODSPEED_RAN === 'true';
 const RUN_URL = `${process.env.GITHUB_SERVER_URL}/${REPO}/actions/runs/${process.env.GITHUB_RUN_ID}`;
 const MARKER = '<!-- f4x-perf-notes -->';
-const CODSPEED = 'CodSpeed Performance Analysis';
-const WAIT_MS = 10 * 60_000;
-const POLL_MS = 15_000;
 const ROW =
   /^\|\s*(\S+)\s*\|\s*\[``\s*(.+?)\s*``\]\(([^)]+)\)\s*\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|\s*([+-][\d.]+%)\s*\|/;
-
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-
-async function api(method, path, body) {
-  const res = await fetch(`${API}${path}`, {
-    method,
-    headers: {
-      Authorization: `Bearer ${process.env.GITHUB_TOKEN}`,
-      Accept: 'application/vnd.github+json'
-    },
-    body: body === undefined ? undefined : JSON.stringify(body)
-  });
-  if (!res.ok) throw new Error(`${method} ${path} answered ${res.status}: ${(await res.text()).slice(0, 300)}`);
-  return res.status === 204 ? {} : res.json();
-}
-
-async function codspeedRun() {
-  if (!CODSPEED_RAN) return null;
-  const until = Date.now() + WAIT_MS;
-  while (Date.now() < until) {
-    const found = await api(
-      'GET',
-      `/repos/${REPO}/commits/${SHA}/check-runs?check_name=${encodeURIComponent(CODSPEED)}`
-    );
-    const run = (found.check_runs ?? []).find((r) => r.status === 'completed');
-    if (run) return run;
-    await sleep(POLL_MS);
-  }
-  return null;
-}
 
 function benchFile(url) {
   try {
@@ -161,7 +128,7 @@ async function upsert(body, hasNews) {
   return null;
 }
 
-const run = await codspeedRun();
+const run = CODSPEED_RAN ? await waitForCodspeed({ repo: REPO, sha: SHA }) : null;
 const rows = codspeedRows(run);
 const notes = readJsonl(NOTES);
 const warnings = readJsonl(WARNINGS);
@@ -214,7 +181,7 @@ const body = [
   '',
   net.length ? `**Net effect:** ${net.join(' · ')}` : '**Net effect:** no measurement ran on this commit.',
   '',
-  'The check job fails on an error, on a warning count past its budget and on a work-pin total past its budget. CodSpeed and the exact counts are advisory; CodSpeed\'s estimate is computed from those counts.',
+  'The check job fails on an error, on a warning count past its budget and on a work-pin total past its budget, and the CodSpeed job fails on a regression CodSpeed reports; the `perf change accepted` label lets a budget or a regression through. The exact counts are advisory; CodSpeed\'s estimate is computed from those counts.',
   '',
   warningsSection(warnings),
   '',
