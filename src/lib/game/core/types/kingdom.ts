@@ -34,6 +34,7 @@ export interface Kingdom {
   name: string;
   cultureMix: KingdomCultureShare[];
   relationBias: 'always_hostile' | 'derived';
+  wild?: boolean;
   lore: KingdomLore;
   knowledge: number;
   discovered?: boolean;
