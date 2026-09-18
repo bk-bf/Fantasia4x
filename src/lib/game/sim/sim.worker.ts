@@ -120,7 +120,11 @@ const PAWN_COLD = new Set<string>([
   'conditionTimers',
   'kin',
   'moodModifiers',
-  'socialBreak'
+  'socialBreak',
+  'isVisitor',
+  'visitorKingdomId',
+  'departTurn',
+  'foodStash'
 ]);
 const MOB_COLD = new Set<string>([
   'stats',

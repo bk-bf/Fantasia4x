@@ -22,6 +22,7 @@ import {
   availableQuantityFromDrops,
   colonyToolTier
 } from '../core/state/stockpile';
+import { colonistCount } from '../core/state/colonists';
 import { recipeService } from './RecipeService';
 import { buildingService, weatherExposureFactor } from './BuildingService';
 import {
@@ -343,7 +344,7 @@ export class ItemServiceImpl implements ItemService {
       !gameState.completedResearch.includes(recipe.researchRequired)
     )
       return false;
-    if (recipe.populationRequired && gameState.pawns.length < recipe.populationRequired)
+    if (recipe.populationRequired && colonistCount(gameState) < recipe.populationRequired)
       return false;
     return true;
   }
