@@ -93,6 +93,11 @@ export default defineConfig({
       ...(process.env.RUN_AUDITS ? [] : AUDIT_SUITES)
     ],
     pool: 'forks',
-    maxWorkers: Math.max(1, Number(process.env.VITEST_MAX_WORKERS) || 3)
+    maxWorkers: Math.max(1, Number(process.env.VITEST_MAX_WORKERS) || 3),
+    coverage: {
+      provider: 'v8',
+      include: ['src/lib/game/**/*.ts'],
+      reporter: ['text', 'json-summary']
+    }
   }
 });
