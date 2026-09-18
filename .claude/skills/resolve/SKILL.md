@@ -50,8 +50,13 @@ worked. An empty `Ready` means there is nothing to do; say so and stop.
 systemd-run --user --unit=fantasia-resolve --collect \
   -p Restart=on-failure -p RestartSec=120 \
   -p WorkingDirectory=$HOME/Documents/Projects/Fantasia4x \
-  /bin/bash -c '. tools/remote/prepare.sh && exec node tools/audit/resolve.mjs'
+  /bin/bash -c 'export PATH="$HOME/.local/bin:$PATH"; . tools/remote/prepare.sh && command -v claude && exec node tools/audit/resolve.mjs'
 ```
+
+`claude` lives in `~/.local/bin`, which a user unit does not inherit and `prepare.sh` does not
+add, so without that first export every card dies at `spawn claude ENOENT` after its worktree is
+built, and lands in `Failed`. `command -v claude` prints the binary the loop will run, so a start
+that cannot find it fails at once instead of a card at a time.
 
 `prepare.sh` loads the pinned Node and pnpm and points `TMPDIR` at `~/test-runs/tmp`, so the
 fixer's test runs do not fill `/tmp`. `Restart=on-failure` brings the loop back two minutes after
