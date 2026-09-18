@@ -9,7 +9,7 @@
 
   const offer = $derived(pawn.pendingGrowth?.[0]);
   const queued = $derived(pawn.pendingGrowth?.length ?? 0);
-  const isFav = (k: StatKey) => pawn.favStats?.includes(k) ?? false;
+  const isFav = (k: StatKey) => (pawn.talentStars?.[k] ?? 0) > 0;
   const gainOf = (k: StatKey) => offer?.rolls[k] ?? 0;
   const capOf = (k: StatKey) => pawn.maxStats?.[k] ?? Infinity;
   const projected = (k: StatKey) => Math.min(capOf(k), pawn.stats[k] + gainOf(k));

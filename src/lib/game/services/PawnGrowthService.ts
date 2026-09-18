@@ -25,7 +25,7 @@ function rollGain(isFav: boolean): number {
 function bankOffer(pawn: Pawn, kind: GrowthOffer['kind'], doubled: boolean): void {
   const rolls: Partial<Record<StatKey, number>> = {};
   for (const stat of STAT_KEYS) {
-    const isFav = pawn.favStats?.includes(stat) ?? false;
+    const isFav = (pawn.talentStars?.[stat] ?? 0) > 0;
     rolls[stat] = rollGain(isFav) * (doubled ? 2 : 1);
   }
   (pawn.pendingGrowth ??= []).push({ kind, rolls });
