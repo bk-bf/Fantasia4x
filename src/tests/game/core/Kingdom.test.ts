@@ -2,6 +2,10 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import {
   generateKingdomPool,
   generateKingdomRelations,
+  generateKingdom,
+  generateLeaderName,
+  generateFamedItemName,
+  dispositionForScore,
   knowledgeTier,
   KNOWLEDGE_TIER_THRESHOLDS,
   stepWealthBand,
@@ -10,7 +14,17 @@ import {
 } from '$lib/game/core/gen/kingdom';
 import { generateCulturePool, generateCultureRelations } from '$lib/game/core/gen/culture';
 import { COLONY_RELATION_ID } from '$lib/game/core/types';
+import type { Kingdom, KingdomRelation, CultureRelation } from '$lib/game/core/types';
 import { rng } from '$lib/game/core/util/rng';
+import loreData from '$lib/game/database/social/kingdom-lore.json';
+
+const LORE = loreData as unknown as {
+  raiderLeaderTitles: string[];
+  leaderTitlesByTier: string[][];
+  famedItemMaterials: string[];
+  famedItemTypes: string[];
+  famedItemEpithets: string[];
+};
 
 describe('KINGDOMS-TRADE — kingdom pool generation', () => {
   beforeEach(() => rng.reseed(20260712));
@@ -79,6 +93,77 @@ describe('KINGDOMS-TRADE — kingdom pool generation', () => {
       expect(rel?.score).toBe(-100);
       expect(rel?.disposition).toBe('hostile');
     }
+
+    const raider = pool.find((k) => k.relationBias === 'always_hostile');
+    const nonRaider = pool.find((k) => k.relationBias !== 'always_hostile');
+    if (raider && nonRaider) {
+      const rel = findKingdomRelation(relations, raider.id, nonRaider.id);
+      expect(rel?.score, 'raider-vs-kingdom pair, not just the colony row').toBe(-100);
+      expect(rel?.disposition).toBe('hostile');
+    }
+  });
+
+  it('lore.settlements (towns + villages) rises with wealth tier', () => {
+    const cultures = generateCulturePool(6);
+    const byBand = new Map<string, number[]>();
+    for (let i = 0; i < 500; i++) {
+      const k = generateKingdom(cultures, false);
+      const total = k.lore.settlements.towns + k.lore.settlements.villages;
+      const arr = byBand.get(k.lore.wealthBand) ?? [];
+      arr.push(total);
+      byBand.set(k.lore.wealthBand, arr);
+    }
+    const avg = (arr: number[]) => arr.reduce((a, b) => a + b, 0) / arr.length;
+    const destitute = byBand.get('destitute') ?? [];
+    const opulent = byBand.get('opulent') ?? [];
+    expect(destitute.length, 'need destitute samples').toBeGreaterThan(3);
+    expect(opulent.length, 'need opulent samples').toBeGreaterThan(3);
+    expect(avg(destitute)).toBeLessThan(avg(opulent));
+  });
+
+  it('generateKingdomRelations score responds to culture-relation affinity between kingdoms', () => {
+    const lore = {
+      epithet: 'e',
+      temperament: 't',
+      leaderName: 'l',
+      wealthBand: 'modest' as const,
+      capitalName: 'cap',
+      settlements: { towns: 1, villages: 1 },
+      history: [] as string[],
+      figures: [] as string[],
+      famedItems: { created: [] as string[], held: [] as string[] }
+    };
+    const a: Kingdom = {
+      id: 'ka',
+      name: 'A',
+      cultureMix: [{ cultureId: 'c1', weight: 1 }],
+      relationBias: 'derived',
+      lore,
+      knowledge: 0
+    };
+    const b: Kingdom = {
+      id: 'kb',
+      name: 'B',
+      cultureMix: [{ cultureId: 'c2', weight: 1 }],
+      relationBias: 'derived',
+      lore,
+      knowledge: 0
+    };
+    const highRel: CultureRelation[] = [{ a: 'c1', b: 'c2', score: 90, disposition: 'allied' }];
+    const lowRel: CultureRelation[] = [{ a: 'c1', b: 'c2', score: -90, disposition: 'hostile' }];
+
+    const avgScore = (rel: CultureRelation[]) => {
+      let total = 0;
+      const N = 200;
+      for (let i = 0; i < N; i++) {
+        const relations = generateKingdomRelations([a, b], rel, 'c1');
+        const pair = relations.find((r) => r.a === 'ka' && r.b === 'kb')!;
+        total += pair.score;
+      }
+      return total / N;
+    };
+
+    expect(avgScore(highRel)).toBeGreaterThan(avgScore(lowRel));
   });
 });
 
@@ -97,5 +182,57 @@ describe('KINGDOMS-TRADE — knowledge tiers & wealth bands', () => {
     expect(stepWealthBand('destitute', 1)).toBe('modest');
     expect(stepWealthBand('opulent', 1)).toBe('opulent');
     expect(stepWealthBand('opulent', -1)).toBe('wealthy');
+  });
+
+  it('dispositionForScore maps all four thresholds, not just the extremes', () => {
+    expect(dispositionForScore(60)).toBe('allied');
+    expect(dispositionForScore(59)).toBe('friendly');
+    expect(dispositionForScore(20)).toBe('friendly');
+    expect(dispositionForScore(19)).toBe('neutral');
+    expect(dispositionForScore(-19)).toBe('neutral');
+    expect(dispositionForScore(-20)).toBe('wary');
+    expect(dispositionForScore(-59)).toBe('wary');
+    expect(dispositionForScore(-60)).toBe('hostile');
+    expect(dispositionForScore(-100)).toBe('hostile');
+  });
+});
+
+describe('KINGDOMS-TRADE — leader names, famed items & relation lookup', () => {
+  it('generateLeaderName draws its title from the raider pool for raiders, the tiered pool otherwise', () => {
+    for (let i = 0; i < 150; i++) {
+      const name = generateLeaderName(true);
+      const title = LORE.raiderLeaderTitles.find((t) => name.startsWith(`${t} `));
+      expect(title, name).toBeTruthy();
+    }
+    const wealthIdx = 3;
+    for (let i = 0; i < 150; i++) {
+      const name = generateLeaderName(false, wealthIdx);
+      const title = LORE.leaderTitlesByTier[wealthIdx].find((t) => name.startsWith(`${t} `));
+      expect(title, name).toBeTruthy();
+    }
+  });
+
+  it('generateFamedItemName combines a real material and item type from LORE', () => {
+    const combos = new Set<string>();
+    for (const m of LORE.famedItemMaterials)
+      for (const t of LORE.famedItemTypes) combos.add(`The ${m} ${t}`);
+
+    for (let i = 0; i < 200; i++) {
+      const name = generateFamedItemName();
+      expect(name).toMatch(/^The \S+ \S+/);
+      const matchedCombo = [...combos].find((c) => name === c || name.startsWith(`${c} `));
+      expect(matchedCombo, name).toBeTruthy();
+      if (name !== matchedCombo) {
+        const epithet = name.slice(matchedCombo!.length + 1);
+        expect(LORE.famedItemEpithets, name).toContain(epithet);
+      }
+    }
+  });
+
+  it('findKingdomRelation is symmetric and returns undefined for an unrelated pair', () => {
+    const relations: KingdomRelation[] = [{ a: 'x', b: 'y', score: 10, disposition: 'friendly' }];
+    expect(findKingdomRelation(relations, 'x', 'y')).toEqual(relations[0]);
+    expect(findKingdomRelation(relations, 'y', 'x')).toEqual(relations[0]);
+    expect(findKingdomRelation(relations, 'x', 'z')).toBeUndefined();
   });
 });

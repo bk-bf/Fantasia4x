@@ -2,6 +2,7 @@ import { describe, it, expect, afterEach } from 'vitest';
 import { entityService } from '$lib/game/services/EntityService';
 import { TICKS_PER_SECOND } from '$lib/game/core/util/time';
 import { setSimLogSink, type SimLogSink } from '$lib/game/core/util/logSink';
+import { transientNeedMultipliers } from '$lib/game/core/rules/body/conditions';
 import type { GameState, Mob } from '$lib/game/core/types';
 
 function makeThreatSpy() {
@@ -260,6 +261,21 @@ describe('creature conditions affect creatures (parity with pawns)', () => {
     let state = weatherState([makeGoblin()], 0, 0.8);
     state = entityService.stepHunger(state);
     expect((state.mobs![0].conditions ?? []).some((c) => c.id === 'windchilled')).toBe(true);
+  });
+
+  it('transientNeedMultipliers reads hungerRate/fatigueRate straight from conditions.json for a transient id', () => {
+    expect(transientNeedMultipliers(['sleeping'])).toEqual({
+      hungerRate: 0.33,
+      fatigueRate: 0.0,
+      thirstRate: 1,
+      hygieneRate: 1
+    });
+    expect(transientNeedMultipliers(['eating'])).toEqual({
+      hungerRate: 0.0,
+      fatigueRate: 1,
+      thirstRate: 1,
+      hygieneRate: 1
+    });
   });
 });
 

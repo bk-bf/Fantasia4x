@@ -52,6 +52,18 @@ describe('driveEncumbrance (load → staged condition)', () => {
     expect(stage!.modifiers.melee_damage).toBeLessThan(0);
     expect(stage!.modifiers.moveSpeed).toBeLessThan(1);
   });
+
+  it('below full capacity the load is graded as "laden" (0.6–1.0), not "encumbered"', () => {
+    const c: EntityCondition[] = [];
+    driveEncumbrance(c, 0.5);
+    expect(c.find((x) => x.id === 'laden')).toBeUndefined();
+
+    driveEncumbrance(c, 0.8);
+    expect(c.find((x) => x.id === 'encumbered')).toBeUndefined();
+    const laden = c.find((x) => x.id === 'laden');
+    expect(laden).toBeDefined();
+    expect(laden!.severity).toBeCloseTo((0.8 - 0.6) / (1.0 - 0.6), 10);
+  });
 });
 
 describe('carry capacity: worn armour adds VOLUME (pockets) but fills WEIGHT', () => {
