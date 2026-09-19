@@ -236,7 +236,7 @@ does not appear in anything a person reads.
 **Triage through the lanes, never around them.** The board is
 [projects/4](https://github.com/users/bk-bf/projects/4) and its columns are an order:
 `Backlog` → `Ready` → `In progress` → `In Check` → `PR ready` → `On dev` → `Done`, with
-`Blocked on you`, `Manual`, `Failed` and `Rejected` off to the side. The board carries an issue as
+`Blocked on you`, `Manual`, `Needs Playtest`, `Failed` and `Rejected` off to the side. The board carries an issue as
 far as `Ready`; from there the work is a pull request, and the card follows it. A change to the
 lanes inserts or drops the one option it concerns and keeps every other option where the owner put
 it; rewriting the whole option list moves his columns.
@@ -258,8 +258,11 @@ it; rewriting the whole option list moves his columns.
 - **`Manual`** — he is working it by hand, and the fixer and the reviewer leave it alone. When an
   agent takes a `Manual` card up, pushing its `-<n>` branch moves it to `In progress`, and opening
   its pull request moves it to `In Check`.
-- **`PR ready`** — the pull request has passed review, or it is a `needs playtest` pull request,
-  which waits for him to play and merge it.
+- **`PR ready`** — the pull request has passed review, and waits to be merged.
+- **`Needs Playtest`** — a ready pull request carrying `needs playtest`: its numbers can be
+  produced but not judged, so it waits for him to play it and merge it. The fixer puts a
+  `playtest` card here when it opens the pull request, and `board-sync.py` moves any card whose
+  open pull request carries the label.
 - **`On dev`** — merged to `dev` by a pull request, and not yet in the build he plays.
 - **`Done`** — promoted to `main`, so it is in the game he plays. The issue was closed when it
   reached `dev`; the lane is where the work lives, not whether it is finished.
@@ -274,7 +277,7 @@ it; rewriting the whole option list moves his columns.
 but no issue; planned work is an issue from the start, and waits in `Backlog` until the owner moves
 it on.
 
-**`Blocked on you`, `Manual` and `Rejected` are his lanes.** Put a card in when it belongs there.
+**`Blocked on you`, `Manual`, `Needs Playtest` and `Rejected` are his lanes.** Put a card in when it belongs there.
 **Never take one out**, except a `Manual` card an agent takes up — he is the only one who decides a
 thing he asked to look at has been looked at. And do not put one back because he moved it out:
 him moving a card is the answer, not a mistake to correct. The one other way out is the `unblock`
