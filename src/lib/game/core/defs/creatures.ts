@@ -51,6 +51,7 @@ export interface CreatureDefinition {
   pack: [number, number];
   tameable: boolean;
   tameResistance: number;
+  kingdom?: string;
   mountable: boolean;
   huntable: boolean;
   canSteal: boolean;
@@ -161,6 +162,7 @@ function toDefinition(raw: RawCreature): CreatureDefinition {
     pack: (raw.pack as [number, number]) ?? [1, 1],
     tameable: (raw.tameable as boolean) ?? false,
     tameResistance: (raw.tameResistance as number) ?? 0.5,
+    kingdom: (raw.kingdom as string | undefined) ?? undefined,
     mountable: (raw.mountable as boolean) ?? false,
     huntable: (raw.huntable as boolean) ?? false,
     canSteal: (raw.canSteal as boolean) ?? false,

@@ -50,6 +50,8 @@ const ARRIVAL = {
 };
 const V = ARRIVAL.visitors;
 
+export const KILL_RELATION_COST = -2;
+
 export const KNOWLEDGE_XP = {
   arrival: 6,
   presencePerDay: 2,
@@ -192,7 +194,9 @@ class KingdomServiceImpl {
   }
 
   forceArrival(state: GameState, kind?: KingdomParty['kind']): GameState {
-    const nonRaider = (state.kingdoms ?? []).filter((k) => k.relationBias !== 'always_hostile');
+    const nonRaider = (state.kingdoms ?? []).filter(
+      (k) => !k.wild && k.relationBias !== 'always_hostile'
+    );
     if (nonRaider.length === 0) return state;
     const traders = nonRaider.filter((k) => WEALTH_BANDS.indexOf(k.lore.wealthBand) >= 2);
     const wantCaravan = kind === 'caravan' || (kind == null && traders.length > 0);
@@ -307,7 +311,7 @@ class KingdomServiceImpl {
   private eligibleSenders(state: GameState): { kingdom: Kingdom; relation: KingdomRelation }[] {
     const out: { kingdom: Kingdom; relation: KingdomRelation }[] = [];
     for (const k of state.kingdoms ?? []) {
-      if (k.relationBias === 'always_hostile') continue;
+      if (k.wild || k.relationBias === 'always_hostile') continue;
       const rel = findKingdomRelation(state.kingdomRelations ?? [], COLONY_RELATION_ID, k.id);
       if (!rel) continue;
       if (rel.score <= -20) continue;
@@ -440,7 +444,7 @@ class KingdomServiceImpl {
       if (!includeWorldliness) continue;
       const { count, band } = backgroundWorldliness(childhood, adulthood);
       if (count > 0) {
-        const others = (s.kingdoms ?? []).filter((k) => k.id !== p.homeKingdomId);
+        const others = (s.kingdoms ?? []).filter((k) => !k.wild && k.id !== p.homeKingdomId);
         for (let i = 0; i < count && others.length > 0; i++) {
           const k = others.splice(rng.int(0, others.length - 1), 1)[0];
           s = this.seedKnowledge(s, k.id, rng.int(band[0], band[1]), p.name);
@@ -466,9 +470,9 @@ class KingdomServiceImpl {
     return { ...state, kingdomRelations: relations };
   }
 
-  onKingdomMobKilled(state: GameState, mob: Mob): GameState {
+  onMobKilled(state: GameState, mob: Mob): GameState {
     if (!mob.kingdomId) return state;
-    return this.adjustColonyRelation(state, mob.kingdomId, -45);
+    return this.adjustColonyRelation(state, mob.kingdomId, KILL_RELATION_COST);
   }
 
   colonyWealth(state: GameState): number {

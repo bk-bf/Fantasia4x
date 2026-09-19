@@ -1,4 +1,13 @@
-import type { GameState, Mob, MobState, Pawn, DroppedItem } from '../../core/types';
+import type {
+  GameState,
+  Mob,
+  MobState,
+  Pawn,
+  DroppedItem,
+  KingdomRelation
+} from '../../core/types';
+import { COLONY_RELATION_ID } from '../../core/types';
+import { findKingdomRelation } from '../../core/gen/kingdom';
 import { getCreatureById, type CreatureDefinition } from '../../core/defs/creatures';
 import { getAmbientLight, computeTileLightLevel, weatherSightMul } from '../EnvironmentService';
 import {
@@ -78,6 +87,7 @@ import {
 let _huntSlots = 0;
 let _thinkDtTicks = 1;
 const ROTTEN_CARCASS_ID = 'rotten_carcass';
+const EMPTY_RELATIONS: KingdomRelation[] = [];
 let _pendingDropConsumption = new Map<string, number>();
 function findNearestCarcassDrop(state: GameState, mob: Mob): DroppedItem | null {
   const drops = state.droppedItems;
@@ -658,6 +668,49 @@ function nearestEngageablePos(
   return best;
 }
 
+let _dispositionSource: KingdomRelation[] | undefined;
+let _dispositionCache = new Map<string, KingdomRelation['disposition'] | null>();
+
+function colonyDispositionToward(
+  mob: Mob,
+  def: CreatureDefinition,
+  state: GameState
+): KingdomRelation['disposition'] | null {
+  const kingdomId = mob.kingdomId ?? def.kingdom;
+  if (!kingdomId) return null;
+  const relations = state.kingdomRelations ?? EMPTY_RELATIONS;
+  if (relations !== _dispositionSource) {
+    _dispositionSource = relations;
+    _dispositionCache = new Map();
+  }
+  const cached = _dispositionCache.get(kingdomId);
+  if (cached !== undefined) return cached;
+  const found = findKingdomRelation(relations, COLONY_RELATION_ID, kingdomId)?.disposition ?? null;
+  _dispositionCache.set(kingdomId, found);
+  return found;
+}
+
+export function huntsPawnsOnSight(
+  mob: Mob,
+  def: CreatureDefinition,
+  state: GameState,
+  isNight: boolean,
+  turn: number
+): boolean {
+  if ((mob.provokedUntil ?? 0) > turn) return true;
+  const disposition = colonyDispositionToward(mob, def, state);
+  if (disposition) return disposition === 'hostile';
+  return def.behaviour === 'aggressive' || (def.nocturnalAggro && isNight);
+}
+
+export function defendsTerritoryFromPawns(
+  mob: Mob,
+  def: CreatureDefinition,
+  state: GameState
+): boolean {
+  return def.territorial && colonyDispositionToward(mob, def, state) == null;
+}
+
 export function stepHostile(
   mob: Mob,
   def: CreatureDefinition,
@@ -673,9 +726,9 @@ export function stepHostile(
   pendingTileDepletion: Array<{ x: number; y: number; id: string }>,
   pendingMobState: Map<string, Partial<Mob>>
 ): Mob {
-  const effectiveBehaviour = def.nocturnalAggro && isNight ? 'aggressive' : def.behaviour;
-  const aggressive = effectiveBehaviour === 'aggressive';
-  const placid = !aggressive && !def.territorial;
+  const aggressive = huntsPawnsOnSight(mob, def, state, isNight, turn);
+  const territorial = defendsTerritoryFromPawns(mob, def, state);
+  const placid = !aggressive && !territorial;
 
   if (
     mob.health <= mob.maxHealth * FLEE_HEALTH_FRACTION &&
@@ -896,7 +949,7 @@ export function stepHostile(
     case 'Wander': {
       const tooClose =
         !aggressive &&
-        def.territorial &&
+        territorial &&
         inVision &&
         dist(mob, inVision.pos) <= Math.ceil(visionRange * 0.5);
       const pawnInTerritory =
@@ -1062,7 +1115,7 @@ export function stepHostile(
     case 'Sleeping': {
       if (inVision) {
         const tooClose =
-          !aggressive && def.territorial && dist(mob, inVision.pos) <= Math.ceil(visionRange * 0.5);
+          !aggressive && territorial && dist(mob, inVision.pos) <= Math.ceil(visionRange * 0.5);
         if (aggressive || tooClose) {
           if (!mob.alertedPawn)
             simLog.threatAlert(

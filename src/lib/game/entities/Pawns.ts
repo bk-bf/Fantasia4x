@@ -541,12 +541,13 @@ export function generateWorldKin(
 ): Pawn[] {
   if (culturePool.length === 0) return [];
   const world: Pawn[] = [];
+  const settled = kingdoms.filter((k) => !k.wild);
   let seq = 0;
   for (let fi = 0; fi < founders.length; fi++) {
     const founder = founders[fi];
     const culture = culturePool.find((c) => c.id === founder.cultureId) ?? rng.pick(culturePool);
     const homeKingdomId =
-      founder.homeKingdomId ?? (kingdoms.length > 0 ? rng.pick(kingdoms).id : undefined);
+      founder.homeKingdomId ?? (settled.length > 0 ? rng.pick(settled).id : undefined);
     const founderAge = founder.age ?? 30;
     const surname = founder.name.split(' ').slice(-1)[0];
     for (const plan of WORLD_KIN_PLAN) {
