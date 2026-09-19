@@ -20,6 +20,7 @@ to ubuntuserver through `remote/run.mjs`.
 | `bench/` | CodSpeed benchmarks of whole ticks and one entity phase, and ticks per second. | `pnpm bench`, `pnpm bench:tps` |
 | `bench/counts.mjs` | Reads the exact instruction and cache-miss counts per benchmark out of CodSpeed's profiles. | `node tools/bench/counts.mjs <dir> --out <file>`, run by the `codspeed` job |
 | `bench/codspeed-gate.mjs` | Waits for CodSpeed's verdict on the head commit and fails on a regression unless the pull request carries `perf change accepted`. The wait lives in `bench/codspeed-check.mjs`, which the Check notes share. | run by the `codspeed` job |
+| `coverage/gate.mjs` | Runs the whole test suite with line coverage of `src/lib/game` and writes the total and each changed file's coverage for the Check notes. | `pnpm test:coverage`, run by the `coverage` job |
 | `work-pins/` | Call counts of the simulation tick and the browser frame, base against head. | `pnpm work-pins`, `pnpm work-pins:gate` |
 | `gungraun/gate.mjs` | Instruction counts for `sim-core` and `spatial-core`, base against head. | `node tools/gungraun/gate.mjs --base <ref>` |
 | `gpu/` | Frame measurement on a rented GPU: `vast.mjs` rents the machine, `probe.mjs` tries Chromium's GPU flags, `frames.mjs` times frames. | `node tools/gpu/<script>.mjs` |

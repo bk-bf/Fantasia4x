@@ -11,6 +11,7 @@ const NOTES = process.env.WORK_PINS_NOTES;
 const WARNINGS = process.env.WARNINGS_NOTES;
 const COUNTS = process.env.CODSPEED_COUNTS;
 const TPS = process.env.TPS_NOTES;
+const COVERAGE = process.env.COVERAGE_NOTES;
 const CODSPEED_RAN = process.env.CODSPEED_RAN === 'true';
 const RUN_URL = `${process.env.GITHUB_SERVER_URL}/${REPO}/actions/runs/${process.env.GITHUB_RUN_ID}`;
 const MARKER = '<!-- f4x-perf-notes -->';
@@ -95,6 +96,18 @@ function codspeedSection(run, rows) {
 const countsSection = (head, base) =>
   head ? countsReport(head, base) : 'Exact counts: this run left no CodSpeed profile.';
 
+function coverageSection() {
+  if (!coverage) return 'Coverage: no report from the coverage job.';
+  const lines = [
+    `Coverage: ${coverage.total.toFixed(1)}% of \`src/lib/game\` lines, computed in ${Math.round(coverage.seconds)}s.`
+  ];
+  if (coverage.files.length) {
+    lines.push('', '| file | lines |', '|---|---:|');
+    for (const f of coverage.files) lines.push(`| \`${f.file}\` | ${f.pct.toFixed(1)}% |`);
+  }
+  return lines.join('\n');
+}
+
 function workPinsSection(notes) {
   const totals = notes.flatMap((n) => n.totals);
   const changed = notes.reduce((s, n) => s + n.changed, 0);
@@ -141,6 +154,7 @@ try {
 }
 
 const tps = readJsonl(TPS).at(-1);
+const coverage = readJsonl(COVERAGE).at(-1);
 const tickWork =
   head && base
     ? Object.keys(head)
@@ -172,6 +186,7 @@ for (const t of notes.flatMap((n) => n.totals))
 const hasNews =
   Boolean(head) ||
   Boolean(tps) ||
+  Boolean(coverage) ||
   rows.length > 0 ||
   notes.some((n) => n.totals.length || n.changed) ||
   warnings.some((n) => n.errors || n.warnings);
@@ -190,6 +205,8 @@ const body = [
   countsSection(head, base),
   '',
   workPinsSection(notes),
+  '',
+  coverageSection(),
   '',
   `[This run](${RUN_URL})`
 ].join('\n');
