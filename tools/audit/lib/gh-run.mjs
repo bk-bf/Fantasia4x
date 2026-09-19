@@ -95,7 +95,7 @@ const one = (values, name, fallback) => values[name]?.at(-1) ?? fallback;
 export function restPlan(args, input, io) {
   const [group, verb, target] = args;
   const key = `${group} ${verb}`;
-  const positional = ['issue view', 'issue edit', 'issue comment', 'issue close', 'issue reopen', 'pr view', 'project item-add'];
+  const positional = ['issue view', 'issue edit', 'issue comment', 'issue close', 'issue reopen', 'pr view', 'pr comment', 'project item-add'];
   const flags = parse(args, positional.includes(key) ? 3 : 2);
   if (!flags) return null;
   const body = () => {
@@ -103,6 +103,13 @@ export function restPlan(args, input, io) {
     return file === '-' ? input : io.readFile(file);
   };
   const issuePath = () => `repos/${io.repo()}/issues/${target}`;
+  const milestoneNumber = (title) => {
+    const hit = io
+      .pages(`repos/${io.repo()}/milestones?state=all&per_page=100`)
+      .find((m) => m.title === title);
+    if (!hit) throw new Error(`no milestone "${title}"`);
+    return hit.number;
+  };
 
   if (key === 'repo view')
     return flags.json ? () => JSON.stringify({ nameWithOwner: io.repo() }) : null;
@@ -132,14 +139,7 @@ export function restPlan(args, input, io) {
       const patch = {};
       if (flags.title) patch.title = one(flags, 'title');
       if (flags['body-file']) patch.body = body();
-      if (flags.milestone) {
-        const title = one(flags, 'milestone');
-        const hit = io
-          .pages(`repos/${io.repo()}/milestones?state=all&per_page=100`)
-          .find((m) => m.title === title);
-        if (!hit) throw new Error(`no milestone "${title}"`);
-        patch.milestone = hit.number;
-      }
+      if (flags.milestone) patch.milestone = milestoneNumber(one(flags, 'milestone'));
       if (Object.keys(patch).length) io.api('PATCH', issuePath(), patch);
       if (flags['add-label']) io.api('POST', `${issuePath()}/labels`, { labels: flags['add-label'] });
       for (const label of flags['remove-label'] ?? []) {
@@ -178,8 +178,14 @@ export function restPlan(args, input, io) {
       const list = io
         .pages(`repos/${io.repo()}/pulls?${q}`)
         .map(pullFromRest)
-        .filter((p) => state !== 'merged' || p.mergedAt);
-      return JSON.stringify(list.slice(0, Number(one(flags, 'limit', 30))));
+        .filter((p) => state !== 'merged' || p.mergedAt)
+        .slice(0, Number(one(flags, 'limit', 30)));
+      if (one(flags, 'json', '').split(',').includes('files'))
+        for (const pull of list)
+          pull.files = io
+            .pages(`repos/${io.repo()}/pulls/${pull.number}/files?per_page=100`)
+            .map((f) => ({ path: f.filename, additions: f.additions, deletions: f.deletions }));
+      return JSON.stringify(list);
     };
 
   if (key === 'pr view')
@@ -192,6 +198,25 @@ export function restPlan(args, input, io) {
       if (wanted.includes('reviews'))
         pull.reviews = io.pages(`${base}/pulls/${target}/reviews?per_page=100`).map(reviewFromRest);
       return JSON.stringify(pull);
+    };
+
+  if (key === 'pr comment')
+    return () => `${io.api('POST', `${issuePath()}/comments`, { body: body() }).html_url}\n`;
+
+  if (key === 'pr create')
+    return () => {
+      const pull = io.api('POST', `repos/${io.repo()}/pulls`, {
+        base: one(flags, 'base'),
+        head: one(flags, 'head'),
+        title: one(flags, 'title'),
+        body: body()
+      });
+      const patch = {};
+      if (flags.milestone) patch.milestone = milestoneNumber(one(flags, 'milestone'));
+      if (flags.label) patch.labels = flags.label;
+      if (Object.keys(patch).length)
+        io.api('PATCH', `repos/${io.repo()}/issues/${pull.number}`, patch);
+      return `${pull.html_url}\n`;
     };
 
   if (key === 'project item-add')
