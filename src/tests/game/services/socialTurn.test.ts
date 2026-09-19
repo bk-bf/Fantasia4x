@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { socialService } from '$lib/game/services/SocialService';
 import { linkStartingKin, remapKinIds } from '$lib/game/entities/Pawns';
-import { findRelationship } from '$lib/game/core/rules/social/social';
+import { findRelationship, activeMoodModifiers } from '$lib/game/core/rules/social/social';
+import { computePrestige } from '$lib/game/core/rules/social/prestige';
 import { rng } from '$lib/game/core/util/rng';
 import type { GameState, Pawn, PawnRelationship } from '$lib/game/core/types';
 
@@ -229,6 +230,56 @@ describe('onPawnDeath (grief hook)', () => {
     expect(grieving.moodModifiers?.some((m) => m.id === 'grief:pawn-1' && m.value === -20)).toBe(
       true
     );
+  });
+});
+
+describe('computePrestige (equipped items sum, quality-scaled)', () => {
+  it('sums prestigeBonus across two equipped pieces, each scaled by its own quality/famed multiplier, rounded', () => {
+    const p = pawn('pawn-1', 5, 5, {
+      equipment: {
+        mainHand: {
+          instanceId: 'i-glaive',
+          itemId: 'rune_standard_glaive',
+          durability: 100,
+          quality: 3
+        },
+        bodyOuter: {
+          instanceId: 'i-plate',
+          itemId: 'ceremonial_plate',
+          durability: 100,
+          quality: 2,
+          famedStatMult: 1.5
+        }
+      }
+    } as unknown as Partial<Pawn>);
+    expect(computePrestige(p)).toBe(50);
+  });
+});
+
+describe('findRelationship (direct)', () => {
+  it('finds a stored row when queried in the reverse order from how it was created', () => {
+    const rel: PawnRelationship = {
+      pawnA: 'pawn-1',
+      pawnB: 'pawn-2',
+      score: 10,
+      stage: 'strangers',
+      tags: [],
+      points: { history: 0 }
+    };
+    expect(findRelationship([rel], 'pawn-2', 'pawn-1')).toBe(rel);
+  });
+});
+
+describe('activeMoodModifiers (prune vs. standing)', () => {
+  it('keeps a standing band (expiresAt 0) while dropping an expired one', () => {
+    const p = pawn('pawn-1', 5, 5, {
+      moodModifiers: [
+        { id: 'standing', label: 'Standing', value: 5, expiresAt: 0 },
+        { id: 'expired', label: 'Expired', value: -5, expiresAt: 50 }
+      ]
+    });
+    const active = activeMoodModifiers(p, 100);
+    expect(active.map((m) => m.id)).toEqual(['standing']);
   });
 });
 

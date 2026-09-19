@@ -1,7 +1,17 @@
 import { describe, it, expect } from 'vitest';
 import { pawnStatService } from '$lib/game/services/PawnStatService';
 import { jobService } from '$lib/game/services/JobService';
-import { SKILL_CATEGORIES, workSkillCategory } from '$lib/game/core/rules/body/workExperience';
+import {
+  SKILL_CATEGORIES,
+  workSkillCategory,
+  levelBase,
+  styleSpeedWeight,
+  styleFinesseWeight,
+  seedWorkLevels,
+  xpToNext,
+  workXpForJob
+} from '$lib/game/core/rules/body/workExperience';
+import { rng } from '$lib/game/core/util/rng';
 import type { Pawn, Job } from '$lib/game/core/types';
 
 const pawn = (stats: Partial<Record<string, number>>, extra: Partial<Pawn> = {}): Pawn =>
@@ -94,6 +104,8 @@ describe('craft-discipline leaves are INDEPENDENT skills', () => {
     expect(workSkillCategory('butchery')).toBe('butchery');
     expect(workSkillCategory('baking')).toBe('baking');
     expect(workSkillCategory('repair')).toBe('construction');
+    expect(workSkillCategory('deconstruct')).toBe('construction');
+    expect(workSkillCategory('refuel')).toBe('construction');
   });
 
   it('every leaf is a real skill; the grouping parents are NOT', () => {
@@ -129,5 +141,57 @@ describe('craft-discipline leaves are INDEPENDENT skills', () => {
       'tailoring'
     ).speed;
     expect(weave).toBeGreaterThan(leather * 2);
+  });
+});
+
+describe('workExperience internals', () => {
+  it('levelBase interpolates 0.6→1.0 over 1-25, then 1.0→2.0 over 25-50, and clamps outside range', () => {
+    expect(levelBase(1)).toBeCloseTo(0.6, 5);
+    expect(levelBase(25)).toBeCloseTo(1.0, 5);
+    expect(levelBase(50)).toBeCloseTo(2.0, 5);
+    expect(levelBase(0)).toBeCloseTo(levelBase(1), 5);
+    expect(levelBase(100)).toBeCloseTo(levelBase(50), 5);
+  });
+
+  it('styleSpeedWeight and styleFinesseWeight both carry the balance bonus at workStyle=0, and default to 1 when undefined', () => {
+    expect(styleSpeedWeight(0)).toBeCloseTo(1.1, 5);
+    expect(styleFinesseWeight(0)).toBeCloseTo(1.1, 5);
+    expect(styleSpeedWeight(undefined)).toBe(1);
+    expect(styleFinesseWeight(undefined)).toBe(1);
+  });
+
+  it('seedWorkLevels seeds every skill category within [1,50], with 0-2 categories favoured', () => {
+    let sawFavourite = false;
+    for (let seed = 1; seed <= 30; seed++) {
+      rng.reseed(seed);
+      const skills = seedWorkLevels();
+      expect(new Set(Object.keys(skills))).toEqual(new Set(SKILL_CATEGORIES));
+      for (const cat of SKILL_CATEGORIES) {
+        expect(skills[cat]).toBeGreaterThanOrEqual(1);
+        expect(skills[cat]).toBeLessThanOrEqual(50);
+      }
+      const favoured = Object.values(skills).filter((lvl) => lvl > 9).length;
+      expect(favoured).toBeGreaterThanOrEqual(0);
+      expect(favoured).toBeLessThanOrEqual(2);
+      if (favoured > 0) sawFavourite = true;
+    }
+    expect(sawFavourite, 'across seeds, the favourite bonus shows up at least once').toBe(true);
+  });
+
+  it('xpToNext returns the exact xp curve and is monotonically increasing', () => {
+    expect(xpToNext(1)).toBe(52);
+    expect(xpToNext(10)).toBe(341);
+    expect(xpToNext(25)).toBe(1127);
+    expect(xpToNext(50)).toBe(2909);
+    const levels = [1, 5, 10, 25, 50];
+    for (let i = 1; i < levels.length; i++)
+      expect(xpToNext(levels[i])).toBeGreaterThan(xpToNext(levels[i - 1]));
+  });
+
+  it('workXpForJob rounds and clamps to [4, 300]', () => {
+    expect(workXpForJob(2)).toBe(4);
+    expect(workXpForJob(0.4)).toBe(4);
+    expect(workXpForJob(150.4)).toBe(150);
+    expect(workXpForJob(500)).toBe(300);
   });
 });

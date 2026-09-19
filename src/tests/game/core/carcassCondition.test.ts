@@ -35,6 +35,19 @@ describe('carcass condition — per-unit rules', () => {
     expect(normalizeConditions([30], 3)).toEqual([30, FRESH_CONDITION, FRESH_CONDITION]);
     expect(Math.round(averageCondition([[40], [100, 100]]))).toBe(80);
   });
+
+  it('normalizeConditions truncates an array longer than quantity via slice(0, quantity)', () => {
+    expect(normalizeConditions([10, 20, 30, 40], 2)).toEqual([10, 20]);
+  });
+
+  it('mergeConditions normalizes each side to its own quantity before concatenating', () => {
+    expect(mergeConditions([90], 2, [10, 20], 1)).toEqual([90, FRESH_CONDITION, 10]);
+  });
+
+  it('averageCondition returns FRESH_CONDITION, not NaN, for empty input', () => {
+    expect(averageCondition([])).toBe(FRESH_CONDITION);
+    expect(averageCondition([[]])).toBe(FRESH_CONDITION);
+  });
 });
 
 describe('carcass condition — environmental decay over the whole stack (stepItemDecay)', () => {
