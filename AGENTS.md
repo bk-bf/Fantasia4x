@@ -343,8 +343,9 @@ required. The judgement calls:
   `tools/audit/lib/subarea.mjs` maps a path to its label, and an issue citing several files takes
   the one most of its evidence sits in. Set it by hand only on an issue that cites no code.
 - **Area** is the board's game-domain field: what part of the game, not where in the code.
-- **Work type** is a board field, not a label, and nothing mirrors it; its words are the commit
-  types.
+- **Work type** is a board field, not a label, and nothing mirrors it. Its words are the commit
+  types, plus `tooling`, `decision` and `release`; `release` is shipping and marketing work —
+  a store page, a demo build, a trailer — which changes no code.
 - **Size** is the effort: `S` is one change in a file or two, `M` is several files or a
   measurement, `L` is several steps, a new system or a design.
 - **Agent** is the model the fixer works the card under. Pick the smallest model the scope
