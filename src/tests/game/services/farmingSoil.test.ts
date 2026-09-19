@@ -126,6 +126,10 @@ describe('§F Soil-Works terraform builds', () => {
     expect(next.worldMap[1][1].subType).toBe('deep_grass');
     expect(soilFertilityPct(next.worldMap[1][1])).toBe(75);
     expect((next.buildings ?? []).find((b) => b.id === 'b1')).toBeUndefined();
+    expect(
+      (next.worldMap[1][1] as unknown as { blocksSight?: boolean }).blocksSight,
+      'deep_grass is walkable, so it never blocks sight'
+    ).toBe(false);
   });
 });
 
