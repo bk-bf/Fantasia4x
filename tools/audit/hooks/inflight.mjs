@@ -4,6 +4,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join, relative, resolve } from 'node:path';
 
+import { runGh } from '../lib/gh-run.mjs';
 import { linkOf } from '../lib/pulls.mjs';
 import { localLeftovers } from '../lib/tidy.mjs';
 
@@ -38,7 +39,7 @@ function snapshot() {
     if (Date.now() - cached.at < TTL_MS) return cached;
   }
   const pulls = JSON.parse(
-    run('gh', ['pr', 'list', '--state', 'open', '--limit', '100', '--json', 'number,title,headRefName,body,files'])
+    runGh(['pr', 'list', '--state', 'open', '--limit', '100', '--json', 'number,title,headRefName,body,files'], '', root)
   ).map((p) => ({
     number: p.number,
     title: p.title,
@@ -47,7 +48,7 @@ function snapshot() {
     files: (p.files ?? []).map((f) => f.path)
   }));
   const issues = JSON.parse(
-    run('gh', ['issue', 'list', '--state', 'open', '--limit', '300', '--json', 'number,title,body'])
+    runGh(['issue', 'list', '--state', 'open', '--limit', '300', '--json', 'number,title,body'], '', root)
   ).map((i) => ({
     number: i.number,
     title: i.title,
