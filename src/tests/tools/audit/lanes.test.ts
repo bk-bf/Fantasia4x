@@ -26,7 +26,7 @@ describe('passiveLane', () => {
   });
 
   it('never moves a card out of Failed, PR ready, his lanes or the merged lanes', () => {
-    for (const lane of ['failed', 'pr ready', 'blocked on you', 'rejected', 'on dev', 'done']) {
+    for (const lane of ['failed', 'pr ready', 'needs playtest', 'blocked on you', 'rejected', 'on dev', 'done']) {
       expect(passiveLane(lane, ready)).toBeNull();
       expect(passiveLane(lane, null)).toBeNull();
     }
