@@ -6,6 +6,7 @@ import { TICKS_PER_SECOND } from '$lib/game/core/util/time';
 import { SUBTERRAINS, SUBTERRAIN_FALLBACK } from '$lib/game/core/defs/terrains';
 import { ensureWorkSkills } from '$lib/game/core/rules/body/workExperience';
 import { ensureAptitudes } from '$lib/game/core/rules/body/aptitudes';
+import { colonistCount } from '$lib/game/core/state/colonists';
 import { autosaveEnabled } from './uiPrefs';
 
 const DB_NAME = 'fantasia4x';
@@ -71,12 +72,12 @@ export interface SaveEntry {
   meta: SaveMeta;
 }
 const TICKS_PER_DAY = 300 * TICKS_PER_SECOND;
-function buildMeta(state: GameState, kind: 'auto' | 'manual'): SaveMeta {
+export function buildMeta(state: GameState, kind: 'auto' | 'manual'): SaveMeta {
   return {
     cultureName: state.culture?.name ?? 'Unknown',
     day: Math.floor((state.turn ?? 0) / TICKS_PER_DAY) + 1,
     season: state.season ?? 'spring',
-    population: state.pawns?.length ?? 0,
+    population: colonistCount(state),
     savedAt: Date.now(),
     kind,
     seed: state.seed

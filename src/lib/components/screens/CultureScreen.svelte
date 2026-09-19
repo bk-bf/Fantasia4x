@@ -2,12 +2,13 @@
   import { onDestroy } from 'svelte';
   import { discoveredCultures, cultureRelations, gameState } from '$lib/stores/gameState';
   import type { Culture, CultureRelation, Pawn } from '$lib/game/core/types';
+  import { colonists } from '$lib/game/core/state/colonists';
   import CultureDetail from './culture/CultureDetail.svelte';
   import { persisted, persist } from '$lib/stores/uiPersist';
 
   let cultures: Culture[] = [];
   let relations: CultureRelation[] = [];
-  let pawns: Pawn[] = [];
+  let colonyPawns: Pawn[] = [];
   let selectedId: string | null = persisted('culture.selected', null);
   $: persist('culture.selected', selectedId);
 
@@ -18,7 +19,7 @@
     }
   });
   const unsubRel = cultureRelations.subscribe((v) => (relations = v));
-  const unsubState = gameState.subscribe((s) => (pawns = s.pawns ?? []));
+  const unsubState = gameState.subscribe((s) => (colonyPawns = colonists(s)));
 
   onDestroy(() => {
     unsubCultures();
@@ -27,7 +28,7 @@
   });
 
   $: selected = cultures.find((r) => r.id === selectedId) ?? null;
-  $: headcount = (id: string) => pawns.filter((p) => p.cultureId === id && p.isAlive).length;
+  $: headcount = (id: string) => colonyPawns.filter((p) => p.cultureId === id).length;
 </script>
 
 <div class="culture-screen">
