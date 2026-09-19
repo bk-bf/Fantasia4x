@@ -317,7 +317,7 @@ if (flag('dry-run')) {
   out(`would work #${num} under ${model} on ${branch} in ${wt}`);
   out(
     `  lane ${B.laneOf(num)} -> in progress, then a pull request into ${BASE}` +
-      (route === 'playtest' ? ` labelled ${PR.PLAYTEST_LABEL} and the card to pr ready` : '')
+      (route === 'playtest' ? ` labelled ${PR.PLAYTEST_LABEL} and the card to needs playtest` : '')
   );
   if (earlier) out(`  PR #${earlier.number} is open; ${notes.length} comment(s) go into the prompt`);
   out(`  ${(issue.body.match(/^\s*- \[ \]/gm) ?? []).length} open remediation step(s)`);
@@ -489,8 +489,8 @@ try {
       }
 
       if (pull && route === 'playtest') {
-        B.moveLane(num, 'pr ready');
-        out(`--- #${num} waits in PR ready on PR #${pull.number}; the worktree stays at ${wt}`);
+        B.moveLane(num, 'needs playtest');
+        out(`--- #${num} waits in Needs Playtest on PR #${pull.number}; the worktree stays at ${wt}`);
       } else if (pull) {
         B.moveLane(num, 'in check');
         out(`--- #${num} is In Check on PR #${pull.number}; review.mjs takes it from here`);
