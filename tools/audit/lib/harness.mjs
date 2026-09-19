@@ -15,8 +15,10 @@ export function run(cmd, args, { cwd = ROOT, input, timeoutMs = 1_800_000 } = {}
     const p = spawn(cmd, args, { cwd, stdio: ['pipe', 'pipe', 'pipe'], detached: true });
     let o = '',
       e = '',
-      settled = false;
+      settled = false,
+      capped = false;
     const t = setTimeout(() => {
+      capped = true;
       try {
         process.kill(-p.pid, 'SIGKILL');
       } catch {
@@ -32,8 +34,10 @@ export function run(cmd, args, { cwd = ROOT, input, timeoutMs = 1_800_000 } = {}
     };
     p.stdout.on('data', (d) => (o += d));
     p.stderr.on('data', (d) => (e += d));
-    p.on('error', (err) => done({ code: -1, out: o, err: `${e}spawn ${cmd}: ${err.message}` }));
-    p.on('close', (code) => done({ code, out: o, err: e }));
+    p.on('error', (err) =>
+      done({ code: -1, out: o, err: `${e}spawn ${cmd}: ${err.message}`, capped })
+    );
+    p.on('close', (code) => done({ code, out: o, err: e, capped }));
     p.stdin.on('error', () => {});
     if (input !== undefined) {
       p.stdin.write(input);
