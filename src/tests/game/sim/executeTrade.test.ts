@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { COMMANDS } from '$lib/game/sim/commands';
+import { baseItemValue } from '$lib/game/core/rules/gear/itemValue';
+import { itemService } from '$lib/game/services/ItemService';
 import type { GameState, Kingdom, KingdomParty, Pawn } from '$lib/game/core/types';
 
 const kingdom = (): Kingdom => ({
@@ -116,5 +118,16 @@ describe('executeTrade — barter commit', () => {
     });
     expect(out).not.toBe(s);
     expect(out.stockpile.gold_bar).toBe(3);
+  });
+});
+
+describe('baseItemValue — the price a trade quote derives when nothing overrides it', () => {
+  it('an item with no explicit `value` derives TYPE_BASE * tier^1.7 * CATEGORY_MULT', () => {
+    const def = itemService.getItemById('boarhide_jerkin')!;
+    expect(def.value).toBeUndefined();
+    expect(def.type).toBe('armor');
+    expect(def.tier).toBe(1);
+    expect(def.category).toBe('leather');
+    expect(baseItemValue(def)).toBe(18);
   });
 });

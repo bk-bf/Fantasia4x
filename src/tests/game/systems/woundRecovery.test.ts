@@ -1,7 +1,17 @@
 import { describe, it, expect } from 'vitest';
 import { combatService } from '$lib/game/systems/Combat';
 import { healWounds } from '$lib/game/systems/PawnStateMachine';
-import { rollWoundClotting, healLimbs } from '$lib/game/core/defs/wounds';
+import {
+  rollWoundClotting,
+  healLimbs,
+  severityFromFrac,
+  isTended,
+  CARE_CONFIG,
+  recomputeWoundInPlace,
+  healLimbsInPlace,
+  MOB_BLOODLETTING_CLOT_FACTOR
+} from '$lib/game/core/defs/wounds';
+import { createBodyPlanLimbs } from '$lib/game/core/defs/bodyParts';
 import { needsRecovery } from '$lib/game/systems/pawn/pawnHelpers';
 import { selectIdleNeed } from '$lib/game/systems/pawn/needSelection';
 import {
@@ -309,6 +319,168 @@ describe('wound recovery & bleeding', () => {
     expect(
       buildHealthModel(pawn).limbs.find((l) => l.label.toLowerCase().includes('torso'))
     ).toBeUndefined();
+  });
+
+  it('severityFromFrac sits at the documented band boundaries', () => {
+    expect(severityFromFrac(0.2)).toBe('minor');
+    expect(severityFromFrac(0.5)).toBe('serious');
+    expect(severityFromFrac(0.85)).toBe('critical');
+    expect(severityFromFrac(1.0)).toBe('destroyed');
+  });
+
+  it('isTended lapses exactly at treatmentDurationTicks * treatmentQuality', () => {
+    const w = { ...cut(10), treatedAt: 0, treatmentQuality: 0.5 } as Injury;
+    const threshold = CARE_CONFIG.treatmentDurationTicks * 0.5;
+    expect(isTended(w, threshold - 1)).toBe(true);
+    expect(isTended(w, threshold)).toBe(false);
+  });
+
+  it('recomputeWoundInPlace keeps peakSeverity as a wound heals, and pain falls with severity', () => {
+    const w = { ...cut(0, 'chest') } as Injury;
+    recomputeWoundInPlace(w, 64, 0);
+    expect(w.severity).toBe('critical');
+    expect(w.peakSeverity).toBe('critical');
+    const painAtCritical = w.painContribution;
+    recomputeWoundInPlace(w, 16, 10);
+    expect(w.severity).toBe('minor');
+    expect(w.peakSeverity, 'peak stays at the worst severity reached, even as it heals').toBe(
+      'critical'
+    );
+    expect(w.painContribution).toBeLessThan(painAtCritical);
+  });
+
+  it('a bloodletting wound needs one extra clot stage to fully stop, even at full bloodlettingFactor', () => {
+    const mk = (bloodletting: boolean): Injury =>
+      ({
+        bodyPart: 'leftForearm',
+        type: 'cut',
+        severity: 'minor',
+        damage: 5,
+        bleeding: 2,
+        painContribution: 1,
+        infected: false,
+        bloodletting
+      }) as Injury;
+
+    const limbsA = createBodyPlanLimbs('humanoid', 1);
+    const woundA = mk(false);
+    limbsA.find((l) => l.id === 'left_arm')!.parts!.find((p) => p.id === 'leftForearm')!
+      .injuries.push(woundA);
+    rollWoundClotting(limbsA, 1.0, 1, 1.0);
+    expect(woundA.bleeding, 'a non-bleeder clots fully in a single stage').toBe(0);
+
+    const limbsB = createBodyPlanLimbs('humanoid', 1);
+    const woundB = mk(true);
+    limbsB.find((l) => l.id === 'left_arm')!.parts!.find((p) => p.id === 'leftForearm')!
+      .injuries.push(woundB);
+    rollWoundClotting(limbsB, 1.0, 1, 1.0);
+    expect(woundB.bleeding, 'a bleeder is not done after the same single stage').toBeGreaterThan(
+      0
+    );
+    rollWoundClotting(limbsB, 1.0, 2, 1.0);
+    expect(woundB.bleeding, 'the second stage finishes the bleeder off').toBe(0);
+  });
+
+  it('rollWoundClotting: bloodlettingFactor scales the per-roll clot chance for a bleeder wound', () => {
+    const trial = (factor: number): boolean => {
+      const limbs = createBodyPlanLimbs('humanoid', 1);
+      const wound: Injury = {
+        bodyPart: 'leftForearm',
+        type: 'cut',
+        severity: 'minor',
+        damage: 5,
+        bleeding: 2,
+        painContribution: 1,
+        infected: false,
+        bloodletting: true
+      };
+      limbs.find((l) => l.id === 'left_arm')!.parts!.find((p) => p.id === 'leftForearm')!
+        .injuries.push(wound);
+      rollWoundClotting(limbs, 1.0, 1, factor);
+      return (wound.clotProgress ?? 0) > 0;
+    };
+    rng.reseed(42);
+    const N = 1000;
+    let fullSuccesses = 0;
+    let halfSuccesses = 0;
+    for (let i = 0; i < N; i++) {
+      if (trial(1.0)) fullSuccesses++;
+      if (trial(MOB_BLOODLETTING_CLOT_FACTOR)) halfSuccesses++;
+    }
+    expect(fullSuccesses, 'factor 1.0 clots at the full base chance, every roll').toBe(N);
+    expect(halfSuccesses, 'factor 0.5 clots roughly half as often').toBeGreaterThan(N * 0.4);
+    expect(halfSuccesses).toBeLessThan(N * 0.6);
+  });
+
+  it('healLimbs with canScar leaves a permanent scar and credits back only the un-scarred damage', () => {
+    rng.reseed(7);
+    const w: Injury = {
+      bodyPart: 'chest',
+      type: 'cut',
+      severity: 'critical',
+      damage: 2,
+      bleeding: 0,
+      painContribution: 0,
+      infected: false
+    };
+    const limbs = [
+      {
+        id: 'torso',
+        health: 100,
+        isMissing: false,
+        bleedRate: 0,
+        parts: [{ id: 'chest', health: 30, maxHp: 40, isMissing: false, injuries: [w] }]
+      }
+    ] as unknown as Pawn['limbs'];
+
+    const healed = healLimbs(limbs!, 100, 1, false, true);
+    const part = healed.flatMap((l) => l.parts ?? []).find((p) => p.id === 'chest')!;
+    expect(part.injuries).toHaveLength(1);
+    const scar = part.injuries[0];
+    expect(scar.permanent, 'the scar is a permanent injury').toBe(true);
+    expect(scar.type).toBe('cut_scar');
+    expect(scar.damage, 'scar damage = maxHp * SCARRING_CONFIG.damageFrac.critical').toBe(4);
+    expect(
+      part.health,
+      'health credit is w.damage - scar.damage, not the full w.damage'
+    ).toBe(28);
+  });
+
+  it('healLimbsInPlace stalls an untended serious wound to 15% of its normal heal', () => {
+    const mkWound = (): Injury => ({
+      bodyPart: 'chest',
+      type: 'cut',
+      severity: 'serious',
+      damage: 20,
+      bleeding: 0,
+      painContribution: 0,
+      infected: false
+    });
+    const mkLimbs = (wound: Injury) =>
+      [
+        {
+          id: 'torso',
+          health: 100,
+          isMissing: false,
+          bleedRate: 0,
+          parts: [{ id: 'chest', health: 60, maxHp: 80, isMissing: false, injuries: [wound] }]
+        }
+      ] as unknown as Pawn['limbs'];
+
+    const stalledWound = mkWound();
+    const stalledLimbs = mkLimbs(stalledWound);
+    healLimbsInPlace(stalledLimbs!, 1, 1, true);
+
+    const normalWound = mkWound();
+    const normalLimbs = mkLimbs(normalWound);
+    healLimbsInPlace(normalLimbs!, 1, 1, false);
+
+    const healedStalled = 20 - stalledWound.damage;
+    const healedNormal = 20 - normalWound.damage;
+    expect(healedStalled, 'untendedSeriousStalls reduces the heal to 15%').toBeCloseTo(
+      healedNormal * 0.15,
+      10
+    );
   });
 });
 

@@ -93,3 +93,24 @@ describe('infection incubation grace', () => {
     expect(hasInfection(out)).toBe(false);
   });
 });
+
+describe('applyShock (via a tick) reflects FELT pain, not raw pain', () => {
+  it('a pain-dulling condition lowers the felt pain the shock condition is driven from', () => {
+    const pawn = {
+      ...makePawn(openWound),
+      pain: 80,
+      conditions: [{ id: 'intoxicated', severity: 0.5 }]
+    };
+    const out = pawnStateMachineService.tick(makeState(pawn, 51));
+    const shock = out.pawns[0].conditions!.find((c) => c.id === 'pain_shock');
+    expect(shock).toBeDefined();
+    expect(shock!.severity).toBeCloseTo((80 * 0.7 - 40) / (100 - 40), 6);
+  });
+
+  it('felt pain below the onset threshold leaves pain_shock absent', () => {
+    const pawn = { ...makePawn(openWound), pain: 30, conditions: [] };
+    const out = pawnStateMachineService.tick(makeState(pawn, 51));
+    expect(out.pawns[0].conditions!.find((c) => c.id === 'pain_shock')).toBeUndefined();
+    expect(out.pawns[0].conditions!.find((c) => c.id === 'hypovolemia')).toBeUndefined();
+  });
+});
