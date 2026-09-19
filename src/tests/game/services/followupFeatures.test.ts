@@ -535,4 +535,20 @@ describe('tool carry / slot (bugfix)', () => {
     expect((withPick.equipment as Record<string, unknown>).belt).toBeUndefined();
     expect(jobService.pawnHasToolFor(withPick, 'mining', 0)).toBe(true);
   });
+
+  it('addInstanceToInventory keeps everything already carried, and stamps the new instance at max durability', () => {
+    const loaded = {
+      id: 'p',
+      equipment: {},
+      inventory: {
+        items: { branch: 4 },
+        instances: [{ instanceId: 'old-1', itemId: 'flint_knife', durability: 12 }]
+      }
+    } as unknown as Pawn;
+    const withPick = addInstanceToInventory(loaded, 'stone_pick', 0);
+    expect(withPick.inventory.items.branch).toBe(4);
+    expect(withPick.inventory.instances.some((i) => i.itemId === 'flint_knife')).toBe(true);
+    const added = withPick.inventory.instances.find((i) => i.itemId === 'stone_pick');
+    expect(added?.durability).toBe(30);
+  });
 });

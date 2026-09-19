@@ -4,8 +4,11 @@ import { complete as completeHarvest } from '$lib/game/services/jobs/harvest';
 import { clearTileDeltas, drainTileDeltas } from '$lib/game/core/state/tileDeltas';
 import {
   addWildGrowth,
+  removeWildGrowth,
+  wildGrowthEntries,
   clearWildGrowth,
   wildGrowthSize,
+  rebuildWildGrowth,
   RESOURCE_VISIBLE_GROWTH
 } from '$lib/game/core/rules/world/wildGrowth';
 import type { GameState, Job, WorldTile } from '$lib/game/core/types';
@@ -111,5 +114,59 @@ describe('gradual wild-plant regrowth (regrowsFromZero)', () => {
     runWildGrowth(map, 1);
     expect(r.growth!.grass_patch).toBeGreaterThanOrEqual(RESOURCE_VISIBLE_GROWTH);
     expect(drainTileDeltas()).not.toBeNull();
+  });
+});
+
+describe('wild-growth key encoding (regrowing set)', () => {
+  beforeEach(() => clearWildGrowth());
+
+  it('addWildGrowth / wildGrowthEntries keep x and y distinct, not swapped', () => {
+    addWildGrowth(3, 1);
+    expect(wildGrowthSize()).toBe(1);
+    expect(wildGrowthEntries()).toEqual([{ x: 3, y: 1 }]);
+  });
+
+  it('removeWildGrowth removes exactly the (x,y) pair added, even off-diagonal', () => {
+    addWildGrowth(3, 1);
+    removeWildGrowth(3, 1);
+    expect(wildGrowthSize()).toBe(0);
+    expect(wildGrowthEntries()).toEqual([]);
+  });
+
+  it('removeWildGrowth with swapped coordinates does not remove the real entry', () => {
+    addWildGrowth(3, 1);
+    removeWildGrowth(1, 3);
+    expect(wildGrowthSize()).toBe(1);
+    expect(wildGrowthEntries()).toEqual([{ x: 3, y: 1 }]);
+  });
+
+  it('clearWildGrowth empties a populated set', () => {
+    addWildGrowth(2, 5);
+    addWildGrowth(7, 9);
+    expect(wildGrowthSize()).toBeGreaterThan(0);
+    clearWildGrowth();
+    expect(wildGrowthSize()).toBe(0);
+  });
+});
+
+describe('rebuildWildGrowth exclusion filters', () => {
+  beforeEach(() => clearWildGrowth());
+
+  it('skips a tile whose resource is already stocked (resources > 0)', () => {
+    const stocked = tile({ resources: { wild_barley: 3 }, growth: { wild_barley: 40 } });
+    rebuildWildGrowth([[stocked]], () => true);
+    expect(wildGrowthSize()).toBe(0);
+  });
+
+  it('skips a mature tile (growth >= 100)', () => {
+    const mature = tile({ resources: { wild_barley: 0 }, growth: { wild_barley: 100 } });
+    rebuildWildGrowth([[mature]], () => true);
+    expect(wildGrowthSize()).toBe(0);
+  });
+
+  it('enrols an immature, unstocked tile that regrows from zero', () => {
+    const eligible = tile({ resources: { wild_barley: 0 }, growth: { wild_barley: 40 } });
+    rebuildWildGrowth([[eligible]], () => true);
+    expect(wildGrowthSize()).toBe(1);
   });
 });

@@ -134,6 +134,7 @@ describe('STEALTH — getStealth layers (via evaluateStat)', () => {
 describe('STEALTH — detection roll math (§5 worked examples)', () => {
   it('detectionScore: dull-eyed floor at PER 8, light-dampened through night vision', () => {
     expect(detectionScore(8, 1, 0)).toBe(0);
+    expect(detectionScore(2, 1, 0)).toBe(0);
     expect(detectionScore(20, 1, 0)).toBeCloseTo(1.44, 3);
     expect(detectionScore(20, 0.2, 0)).toBeCloseTo(1.44 * 0.2, 3);
     expect(detectionScore(20, 0.2, 1)).toBeCloseTo(1.44, 3);
@@ -182,6 +183,23 @@ describe('STEALTH — per-mob detection cache + reveal', () => {
   it('isDetectedBy: a mob that never saw the pawn treats it as unseen (sneak-shot eligible)', () => {
     const wolf = makeWolf('w3');
     expect(isDetectedBy(wolf, 'nobody')).toBe(false);
+  });
+
+  it('isDetectedBy: a cached {detected:false} entry reads false too, but is a distinct recorded state from no entry', () => {
+    const wolf = makeWolf('w4');
+    expect(wolf.stealthChecks?.['ghost3']).toBeUndefined();
+    expect(isDetectedBy(wolf, 'ghost3')).toBe(false);
+
+    wolf.stealthChecks = { ghost3: { at: 10, detected: false } };
+    expect(isDetectedBy(wolf, 'ghost3')).toBe(false);
+    expect(wolf.stealthChecks['ghost3']).toEqual({ at: 10, detected: false });
+  });
+
+  it('revealPawnToMob stamps at = turn and overwrites a cached {detected:false} entry', () => {
+    const wolf = makeWolf('w5');
+    wolf.stealthChecks = { p9: { at: 5, detected: false } };
+    revealPawnToMob(wolf, 'p9', 42);
+    expect(wolf.stealthChecks!['p9']).toEqual({ at: 42, detected: true });
   });
 });
 
