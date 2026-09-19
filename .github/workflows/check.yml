@@ -33,6 +33,7 @@ jobs:
       contents: read
     outputs:
       base: ${{ steps.scope.outputs.base }}
+      check: ${{ steps.scope.outputs.check }}
       workPins: ${{ steps.scope.outputs.workPins }}
       gungraun: ${{ steps.scope.outputs.gungraun }}
       browser: ${{ steps.scope.outputs.browser }}
@@ -142,6 +143,35 @@ jobs:
         with:
           name: work-pins-notes
           path: ${{ runner.temp }}/work-pins-notes.jsonl
+          if-no-files-found: ignore
+
+  coverage:
+    name: 'Test coverage: src/lib/game'
+    needs: precheck
+    if: (github.event_name != 'workflow_dispatch' || inputs.mode == 'chain') && needs.precheck.outputs.check == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    env:
+      CHECK_BASE: ${{ needs.precheck.outputs.base }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: ./.github/actions/prepare
+
+      - name: Line coverage of src/lib/game
+        env:
+          COVERAGE_NOTES: ${{ runner.temp }}/coverage-notes.jsonl
+        run: node tools/coverage/gate.mjs --base "$CHECK_BASE"
+
+      - uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() && github.event_name == 'pull_request' }}
+        with:
+          name: coverage-notes
+          path: ${{ runner.temp }}/coverage-notes.jsonl
           if-no-files-found: ignore
 
   compare:
@@ -266,7 +296,7 @@ jobs:
   perf-notes:
     name: Check notes on the pull request
     if: ${{ !cancelled() && github.event_name == 'pull_request' }}
-    needs: [precheck, measure, codspeed, tps]
+    needs: [precheck, measure, codspeed, tps, coverage]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -302,6 +332,12 @@ jobs:
           name: tps-notes
           path: ${{ runner.temp }}/tps
 
+      - uses: actions/download-artifact@v8
+        continue-on-error: true
+        with:
+          name: coverage-notes
+          path: ${{ runner.temp }}/coverage
+
       - uses: actions/setup-node@v7
         with:
           node-version: 24.20.0
@@ -317,4 +353,5 @@ jobs:
           CODSPEED_COUNTS: ${{ runner.temp }}/codspeed/codspeed-counts.json
           CODSPEED_RAN: ${{ needs.codspeed.result == 'success' || needs.codspeed.result == 'failure' }}
           TPS_NOTES: ${{ runner.temp }}/tps/tps-notes.jsonl
+          COVERAGE_NOTES: ${{ runner.temp }}/coverage/coverage-notes.jsonl
         run: node tools/work-pins/perf-notes.mjs
