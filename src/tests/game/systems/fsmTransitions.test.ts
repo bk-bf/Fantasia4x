@@ -396,7 +396,7 @@ describe('FSM transitions & interrupt priority', () => {
     const s = new HeadlessSession();
     await s.start(
       buildScenario({
-        seed: 107,
+        seed: 110,
         map: { w: 16, h: 16 },
         workReady: true,
         needsDisabled: ['hunger', 'fatigue', 'thirst', 'hygiene'],
