@@ -25,7 +25,10 @@ export const LANES = {
 
 const HIS_LANES = new Set(['blocked on you', 'rejected', 'manual', 'needs playtest']);
 
-const LEFT_ON_MERGE = { manual: new Set(['on dev']), 'needs playtest': new Set(['on dev', 'ready']) };
+const LEFT_ON_MERGE = new Map([
+  ['manual', new Set(['on dev'])],
+  ['needs playtest', new Set(['on dev', 'ready'])]
+]);
 
 const ANSWER_MARK = '**Answered**';
 
@@ -205,7 +208,7 @@ export function moveLane(n, to) {
     !answered &&
     !workedByHand &&
     !takenUp &&
-    !LEFT_ON_MERGE[from]?.has(lane)
+    !LEFT_ON_MERGE.get(from)?.has(lane)
   )
     throw new Error(
       `#${n} is in "${item.status}", which is Kirill's lane. He moves it out, not you.\n` +
