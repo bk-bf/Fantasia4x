@@ -85,7 +85,7 @@ const readBody = () => {
   return arg('body', '');
 };
 
-const TYPES = ['feat', 'fix', 'refactor', 'perf', 'test', 'tooling', 'docs', 'chore', 'decision'];
+const TYPES = ['feat', 'fix', 'refactor', 'perf', 'test', 'tooling', 'docs', 'chore', 'decision', 'release'];
 const SEVERITY_PRIORITY = { critical: 'P0', high: 'P1', medium: 'P2', low: 'P3' };
 
 const boardOption = (field, value, flag) => {
