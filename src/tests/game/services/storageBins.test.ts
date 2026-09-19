@@ -5,6 +5,7 @@ import {
   tileStoredPileCount,
   storageTileKeys,
   isStorageTile,
+  isStorageBinTile,
   isFilteredBinTile,
   binFilterAt,
   absorbDropIfOnStockpileTile
@@ -36,10 +37,29 @@ describe('storage bins — capacity', () => {
     expect(tileStoredPileCount(gs, 0, 0)).toBe(2);
   });
 
+  it('tileStoredPileCount ignores a drop at the same coordinates that is not stored', () => {
+    const gs = state(
+      [bin('larder_cupboard', 0, 0)],
+      [stored('branch', 0, 0), { ...stored('cordage', 0, 0), stored: false }]
+    );
+    expect(tileStoredPileCount(gs, 0, 0)).toBe(1);
+  });
+
+  it('tilePileCapacity ignores a bin that has not finished construction', () => {
+    const gs = state([{ ...bin('larder_cupboard', 3, 3), status: 'planned' }]);
+    expect(tilePileCapacity(gs, 3, 3)).toBe(1);
+  });
+
   it('a bin tile is a storage tile and appears in storageTileKeys with no zone drawn', () => {
     const gs = state([bin('larder_cupboard', 2, 4)]);
     expect(storageTileKeys(gs)).toEqual(['2,4']);
     expect(isStorageTile(gs, 2, 4)).toBe(true);
+  });
+
+  it('a bin under construction is not yet a storage tile', () => {
+    const gs = state([{ ...bin('larder_cupboard', 2, 4), status: 'under_construction' }]);
+    expect(isStorageBinTile(gs, 2, 4)).toBe(false);
+    expect(isStorageTile(gs, 2, 4)).toBe(false);
   });
 
   it('absorbDropIfOnStockpileTile stores a loose drop sitting on a standalone bin tile', () => {

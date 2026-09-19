@@ -47,4 +47,28 @@ describe('§2c wield strain', () => {
     expect(getConditionCurrentStage(conds[0])?.modifiers.hitChance).toBeLessThan(1);
     expect(conditionNeedMultipliers(conds).fatigueRate).toBeGreaterThan(1);
   });
+
+  it('conditionModifierSum adds contributions across conditions naming the same stat, not just the last', () => {
+    const conds: EntityCondition[] = [
+      { id: 'overmatched', severity: 0.5 },
+      { id: 'encumbered', severity: 0.5 }
+    ];
+    expect(conditionModifierSum({ conditions: conds }, 'melee_damage')).toBeCloseTo(
+      -0.14 + -0.1,
+      10
+    );
+  });
+
+  it('conditionNeedMultipliers multiplies fatigueRate across conditions rather than overwriting it', () => {
+    const conds: EntityCondition[] = [
+      { id: 'overmatched', severity: 0.1 },
+      { id: 'encumbered', severity: 0.1 }
+    ];
+    expect(conditionNeedMultipliers(conds).fatigueRate).toBeCloseTo(1.25 * 1.1, 10);
+  });
+
+  it('getConditionCurrentStage: undefined for an unknown id and for a severity below every stage', () => {
+    expect(getConditionCurrentStage({ id: 'not-a-real-condition', severity: 0.5 })).toBeUndefined();
+    expect(getConditionCurrentStage({ id: 'overmatched', severity: -1 })).toBeUndefined();
+  });
 });

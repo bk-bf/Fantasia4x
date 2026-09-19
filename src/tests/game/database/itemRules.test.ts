@@ -8,7 +8,7 @@ import buildingsData from '$lib/game/database/world/buildings.json';
 import conditionsData from '$lib/game/database/pawns/conditions.json';
 import type { Item } from '$lib/game/core/types';
 import { AGE_CEILING, AGE_NAMES, blameStation, chainAgeOf } from '$lib/dev/chainAge';
-import { gearClassOf } from '$lib/game/core/rules/gear/gearClass';
+import { gearClassOf, weaponClassOf } from '$lib/game/core/rules/gear/gearClass';
 import { vesselAccepts } from '$lib/game/core/rules/gear/vessels';
 import { itemMatchesCostCategory } from '$lib/game/core/defs/items';
 
@@ -695,6 +695,34 @@ describe('ITEM-RULES R12 — the weight class is the same axis on armour, carry 
           `${i.id} holds ${i.inventoryBonus?.volumeL}L, more than the crudest pack at ${packFloor}L`
       );
     expect(bad, bad.join('; ')).toEqual([]);
+  });
+});
+
+describe('weaponClassOf / gearClassOf — direct value checks', () => {
+  it('weaponClassOf bands a light one-handed weapon and a heavy two-handed one correctly', () => {
+    const boneKnife = ITEM_BY_ID.get('bone_knife')!;
+    expect(boneKnife.weightKg).toBeLessThan(1.2);
+    expect(weaponClassOf(boneKnife)).toBe('light');
+
+    const warhammer = ITEM_BY_ID.get('steel_warhammer')!;
+    expect(warhammer.weaponProperties?.twoHanded).toBe(true);
+    expect(warhammer.weightKg).toBeGreaterThanOrEqual(3.0);
+    expect(weaponClassOf(warhammer)).toBe('heavy');
+  });
+
+  it('gearClassOf reads a shield off armorProperties.armorType, and null for neither weapon nor armour', () => {
+    expect(gearClassOf(ITEM_BY_ID.get('rawhide_round_shield')!)).toBe('shield');
+    expect(gearClassOf(ITEM_BY_ID.get('branch')!)).toBeNull();
+  });
+
+  it('an authored armorType wins over a weaponProperties-derived class', () => {
+    const hybrid = {
+      id: 'hybrid-test',
+      armorProperties: { armorType: 'light' },
+      weaponProperties: { twoHanded: true },
+      weightKg: 5
+    } as unknown as Item;
+    expect(gearClassOf(hybrid)).toBe('light');
   });
 });
 

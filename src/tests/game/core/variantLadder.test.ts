@@ -111,6 +111,27 @@ describe('§2e variant-ladder data integrity', () => {
     expect(wolf.name).toBeUndefined();
   });
 
+  it('generateBossName draws its noun from the species EPITHET_NOUN table, falling back to GENERIC_NOUN', () => {
+    const wolfNouns = ['Fang', 'Howl', 'Pelt', 'Winter', 'Hunt', 'Shadow', 'Maw'];
+    for (let i = 0; i < 200; i++) {
+      const name = generateBossName('wolf');
+      const noun = name.split(' ').pop();
+      expect(wolfNouns, name).toContain(noun);
+    }
+
+    const genericNouns = ['Terror', 'Doom', 'Scourge', 'Shadow', 'Bane', 'Hunger'];
+    for (let i = 0; i < 200; i++) {
+      const name = generateBossName('no-such-species');
+      const noun = name.split(' ').pop();
+      expect(genericNouns, name).toContain(noun);
+    }
+    for (let i = 0; i < 50; i++) {
+      const name = generateBossName();
+      const noun = name.split(' ').pop();
+      expect(genericNouns, name).toContain(noun);
+    }
+  });
+
   it('tier spawn weights: T5 bosses NEVER come from a weighted ambient pick (escalation-only)', () => {
     expect(TIER_SPAWN_WEIGHT[5]).toBe(0);
     const bosses = CREATURES.filter((c) => c.tier === 5);

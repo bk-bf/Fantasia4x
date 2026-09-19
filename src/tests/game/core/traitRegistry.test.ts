@@ -15,6 +15,13 @@ const ANATOMY_NAME_RE =
   /\b(bone|boned|skin|skinned|hide|scale|scaled|shell|carapace|claw|clawed|horn|horned|fang|fanged|tusk|eyed|one-eyed|ear|winged|feather|feathered|furred|joint|jointed)\b/i;
 
 describe('TRAIT-SYSTEM-V2 trait registry', () => {
+  it('getTransientConditionDef: undefined for a staged, non-transient condition; the found def echoes its own id', () => {
+    expect(getTransientConditionDef('hypothermia')).toBeUndefined();
+    expect(getTransientConditionDef('not-a-real-condition-id')).toBeUndefined();
+    const def = getTransientConditionDef('tired');
+    expect(def?.id).toBe('tired');
+  });
+
   it('every trait has a valid rarity + kind', () => {
     for (const t of ALL) {
       if (t.rarity) expect(RARITY_IDS.has(t.rarity), `${t.id} rarity ${t.rarity}`).toBe(true);
