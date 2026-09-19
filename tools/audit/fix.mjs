@@ -39,6 +39,7 @@ import { ledgerEvidence } from './lib/raise.mjs';
 
 const modelOf = (card) => (card?.agent ?? '').toLowerCase() || null;
 const ROUTES = new Set(['tests', 'headless', 'playtest']);
+const MODEL_CAP_MS = 3_600_000;
 
 const arg = (n, d) => {
   const i = process.argv.indexOf(`--${n}`);
@@ -394,11 +395,17 @@ try {
     {
       cwd: wt,
       input: buildPrompt(issue, step) + feedbackSection(earlier?.number, notes),
-      timeoutMs: 3_600_000
+      timeoutMs: MODEL_CAP_MS
     }
   );
   const mins = ((Date.now() - t0) / 60000).toFixed(1);
-  if (res.code !== 0) throw new Error(`the model exited ${res.code}:\n${tail(res.err)}`);
+  if (res.code !== 0)
+    throw new Error(
+      (res.capped
+        ? `the model was killed at the ${MODEL_CAP_MS / 60000} minute cap, ${mins} min in`
+        : `the model exited ${res.code}`) +
+        `:\n${tail(res.err) || tail(res.out) || 'it wrote nothing before it stopped'}`
+    );
   const raw = res.out.trim();
   if (!/^ACCOUNT COMPLETE$/m.test(raw))
     throw new Error(
@@ -463,6 +470,7 @@ try {
       if (route === 'playtest') keepTree = true;
       const body = P.renderPull({ issue: num, step, route, account, ran, files, worktree: wt, port });
       let pull = pushed ? PR.openPullFor(branch) : null;
+      const onto = Boolean(pull);
       if (pull) {
         PR.editPull(pull.number, body);
         out(`--- pushed onto PR #${pull.number} and rewrote its description`);
@@ -478,6 +486,8 @@ try {
 
       if (!pull)
         say(num, P.renderAttempt({ branch, files, account, verified: 'pass', ran, pushed }));
+      else if (step)
+        say(num, `**Step ${onto ? 'pushed onto' : 'open in'} #${pull.number}:** ${step}\n`);
 
       if (!step) {
         try {
