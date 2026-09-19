@@ -63,6 +63,13 @@ describe('cultural seeding (RACE-SYSTEM Phase 1 regression)', () => {
     expect(seedScore(pawnOf('a', 'c-orc'), pawnOf('b', 'c-dwarf'), relations)).toBe(0);
   });
 
+  it('finds the relation row regardless of which pawn is a/b relative to how it was stored', () => {
+    const forward = seedScore(pawnOf('x', 'c-orc'), pawnOf('y', 'c-elf'), relations);
+    const reversed = seedScore(pawnOf('x', 'c-elf'), pawnOf('y', 'c-orc'), relations);
+    expect(forward).toBe(-40);
+    expect(reversed).toBe(-40);
+  });
+
   it('same-culture pawns start friendly; a kin tie without warmth uses the flat bonus', () => {
     expect(seedScore(pawnOf('a', 'c-orc'), pawnOf('b', 'c-orc'), relations)).toBe(15);
     const sib = pawnOf('a', 'c-orc', {
@@ -132,6 +139,13 @@ describe('effective mood', () => {
     const none = pawnOf('b', 'c1', {} as Partial<Pawn>);
     expect(effectiveMood(none, 1)).toBe(50);
   });
+
+  it('clamps a mood above 100 down to 100', () => {
+    const high = pawnOf('a', 'c1', {
+      state: { mood: 130, isWorking: false, isSleeping: false, isEating: false }
+    } as unknown as Partial<Pawn>);
+    expect(effectiveMood(high, 1)).toBe(100);
+  });
 });
 
 describe('moodModifierValue (fade-to-zero)', () => {
@@ -148,5 +162,10 @@ describe('moodModifierValue (fade-to-zero)', () => {
 describe('pair keys', () => {
   it('is canonical regardless of order', () => {
     expect(relKey('pawn-2', 'pawn-1')).toBe(relKey('pawn-1', 'pawn-2'));
+  });
+
+  it('is shaped "a|b" and is injective: distinct pairs never collide', () => {
+    expect(relKey('pawn-1', 'pawn-2')).toBe('pawn-1|pawn-2');
+    expect(relKey('a', 'bc')).not.toBe(relKey('ab', 'c'));
   });
 });

@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import type { TransientConditionDef } from '$lib/game/core/types';
 import { syncTransientConditions } from '$lib/game/systems/PawnStateMachine';
 import { equipItem } from '$lib/game/core/rules/gear/equipment';
+import { powerStatOf } from '$lib/game/core/rules/body/powerScale';
 import { combatService } from '$lib/game/systems/Combat';
 import { itemService } from '$lib/game/services/ItemService';
 import { recipeService } from '$lib/game/services/RecipeService';
@@ -259,6 +260,18 @@ describe('§M regalia (combo & head jewelry)', () => {
     expect(synced.transientConditions).toContain('insight');
   });
 
+  it('equipItem stamps the new instance at max durability, and replaces whatever already sat in that slot', () => {
+    let pawn = { id: 'p', equipment: {}, inventory: { items: {}, instances: [] } } as unknown as Pawn;
+    pawn = equipItem(pawn, 'gold_torc', 0);
+    const first = pawn.equipment.amulet;
+    expect(first?.itemId).toBe('gold_torc');
+    expect(first?.durability).toBe(itemService.getItemById('gold_torc')!.maxDurability);
+    pawn = equipItem(pawn, 'champions_torc', 5);
+    expect(pawn.equipment.amulet?.itemId).toBe('champions_torc');
+    expect(pawn.equipment.amulet?.instanceId).not.toBe(first?.instanceId);
+    expect(pawn.equipment.amulet?.durability).toBe(itemService.getItemById('champions_torc')!.maxDurability);
+  });
+
   it('crowns occupy the head slot — a buff crown means no helm', () => {
     for (const [id, spec] of Object.entries(REGALIA)) {
       if (spec.slot !== 'head') continue;
@@ -329,6 +342,15 @@ function avgHit(atk: Pawn, def: Mob): number {
   }
   return hits ? total / hits : 0;
 }
+
+describe('powerStatOf', () => {
+  it('an arcane weapon with no explicit powerStat rides INTELLIGENCE, a finesse one rides PERCEPTION', () => {
+    expect(powerStatOf({ arcane: true })).toBe('intelligence');
+    expect(powerStatOf({ finesse: true })).toBe('perception');
+    expect(powerStatOf({ powerStat: 'charisma', arcane: true })).toBe('charisma');
+    expect(powerStatOf(undefined)).toBe('strength');
+  });
+});
 
 describe('§M arcane staff damage rides INT', () => {
   it('a high-INT mage out-damages a low-INT one with the same staff (like rapier→PERCEPTION)', () => {

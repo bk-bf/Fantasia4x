@@ -89,7 +89,17 @@ describe('§F8 alcohol = mood good', () => {
     const sev = pawn.conditions!.find((c) => c.id === 'intoxicated')!.severity;
     expect(sev).toBeGreaterThan(0);
     decayIntoxication(pawn.conditions!);
-    expect(pawn.conditions!.find((c) => c.id === 'intoxicated')!.severity).toBeLessThan(sev);
+    const decayed = pawn.conditions!.find((c) => c.id === 'intoxicated')!.severity;
+    expect(decayed).toBeLessThan(sev);
+    expect(sev - decayed).toBeCloseTo(0.002 / 60, 10);
+
+    for (
+      let i = 0;
+      i < 20000 && pawn.conditions!.some((c) => c.id === 'intoxicated');
+      i++
+    )
+      decayIntoxication(pawn.conditions!);
+    expect(pawn.conditions!.find((c) => c.id === 'intoxicated')).toBeUndefined();
   });
 
   it('a sober meal (no drink) neither lifts mood nor intoxicates', () => {

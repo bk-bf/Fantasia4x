@@ -214,6 +214,13 @@ describe('rangedCombat helpers', () => {
     expect(getEquipmentSlot(itemService.getItemById('self_bow')!)).toBe('mainHand');
   });
 
+  it('a material/food item has no equipment slot at all', () => {
+    expect(itemService.getItemById('branch')!.type).toBe('material');
+    expect(getEquipmentSlot(itemService.getItemById('branch')!)).toBeNull();
+    expect(itemService.getItemById('spit_meat')!.type).toBe('food');
+    expect(getEquipmentSlot(itemService.getItemById('spit_meat')!)).toBeNull();
+  });
+
   it('the SHOT damage comes from ammo × drawPower; the bow’s own damage is only its weak melee stave', () => {
     const bow = itemService.getItemById('self_bow')!.weaponProperties!;
     const warBow = itemService.getItemById('war_bow')!.weaponProperties!;

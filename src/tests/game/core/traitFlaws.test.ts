@@ -55,6 +55,44 @@ describe('negative-trait (flaw) layer', () => {
     expect(pawnMeetsRequires(stocky, elephant)).toBe(true);
     expect(pawnMeetsRequires(sturdy, elephant)).toBe(true);
     expect(pawnMeetsRequires(gaunt, undefined)).toBe(true);
+
+    const longReach = byId('long-reach');
+    expect(pawnMeetsRequires(longReach, { weight: 100, height: 299 })).toBe(false);
+    expect(pawnMeetsRequires(longReach, { weight: 100, height: 300 })).toBe(true);
+
+    const weightGate: Trait = {
+      name: 'weight-gate',
+      description: '',
+      effects: {},
+      requires: { minWeightKg: 50, maxWeightKg: 100 }
+    };
+    expect(pawnMeetsRequires(weightGate, { weight: 49, height: 150 })).toBe(false);
+    expect(pawnMeetsRequires(weightGate, { weight: 50, height: 150 })).toBe(true);
+    expect(pawnMeetsRequires(weightGate, { weight: 100, height: 150 })).toBe(true);
+    expect(pawnMeetsRequires(weightGate, { weight: 101, height: 150 })).toBe(false);
+
+    const heightGate: Trait = {
+      name: 'height-gate',
+      description: '',
+      effects: {},
+      requires: { minHeightCm: 100, maxHeightCm: 200 }
+    };
+    expect(pawnMeetsRequires(heightGate, { weight: 50, height: 99 })).toBe(false);
+    expect(pawnMeetsRequires(heightGate, { weight: 50, height: 100 })).toBe(true);
+    expect(pawnMeetsRequires(heightGate, { weight: 50, height: 200 })).toBe(true);
+    expect(pawnMeetsRequires(heightGate, { weight: 50, height: 201 })).toBe(false);
+
+    expect(pawnMeetsRequires(heightGate, { weight: 50, height: 0 }), 'height<=0 guard').toBe(
+      false
+    );
+    expect(
+      pawnMeetsRequires(stocky, { weight: 100, height: 0 }),
+      'height<=0 forces build to 0, below minBuild'
+    ).toBe(false);
+    expect(
+      pawnMeetsRequires(gaunt, { weight: 100, height: 0 }),
+      'height<=0 forces build to 0, still under maxBuild'
+    ).toBe(true);
   });
 
   it('end-to-end: no generated pawn is BOTH gaunt and clearly heavyset', () => {
@@ -76,6 +114,36 @@ describe('negative-trait (flaw) layer', () => {
         false
       );
       expect(ids.has('night-blind') && (ids.has('night-owl') || ids.has('nocturnal'))).toBe(false);
+    }
+  });
+
+  it('affinity.guaranteed forces specific trait ids onto the pawn when the physique gate allows it', () => {
+    const culture = generateCulture();
+    const fitting = { weight: 200, height: 320 };
+    const forced = drawPawnTraits(culture, fitting, {
+      boost: new Set<string>(),
+      guaranteed: ['long-reach']
+    });
+    expect(forced.some((t) => t.id === 'long-reach')).toBe(true);
+
+    const tooShort = { weight: 200, height: 150 };
+    const skipped = drawPawnTraits(culture, tooShort, {
+      boost: new Set<string>(),
+      guaranteed: ['long-reach']
+    });
+    expect(skipped.some((t) => t.id === 'long-reach')).toBe(false);
+  });
+
+  it('the 2-cultural-trait draw cap (MAX_CULTURAL_TRAITS) holds across many draws', () => {
+    const culture = generateCulture();
+    const knownCulturalIds = new Set([
+      ...culture.guaranteedTraits.map((t) => t.id),
+      ...culture.culturalTraitPool.map((t) => t.id)
+    ]);
+    for (let i = 0; i < 500; i++) {
+      const traits = drawPawnTraits(culture);
+      const fromCulture = traits.filter((t) => t.id && knownCulturalIds.has(t.id));
+      expect(fromCulture.length, `draw ${i}`).toBeLessThanOrEqual(2);
     }
   });
 });

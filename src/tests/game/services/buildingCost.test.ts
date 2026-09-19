@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { buildingService } from '$lib/game/services/BuildingService';
-import type { GameState } from '$lib/game/core/types';
+import { availableAggregateFromDrops } from '$lib/game/core/state/stockpile';
+import type { GameState, DroppedItem } from '$lib/game/core/types';
 
 function gs(stock: Record<string, number>): GameState {
   const droppedItems = Object.entries(stock).map(([resourceId, quantity], i) => ({
@@ -61,5 +62,15 @@ describe('§A category building-cost (resolveBuildingCost)', () => {
     expect(out!['slate']).toBe(5);
     expect(out!['granite']).toBe(3);
     expect(out!['branch']).toBe(4);
+  });
+});
+
+describe('availableAggregateFromDrops (direct)', () => {
+  it('excludes a reservedFor drop from the aggregate', () => {
+    const drops: DroppedItem[] = [
+      { id: 'a', resourceId: 'granite', x: 0, y: 0, quantity: 5, stored: true },
+      { id: 'b', resourceId: 'granite', x: 1, y: 0, quantity: 3, stored: true, reservedFor: 'order-1' }
+    ] as DroppedItem[];
+    expect(availableAggregateFromDrops(drops)).toEqual({ granite: 5 });
   });
 });

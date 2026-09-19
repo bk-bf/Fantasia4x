@@ -7,7 +7,7 @@ import {
   PART_DEF_MAP,
   BOUND_NATURAL_WEAPONS
 } from '$lib/game/core/defs/bodyParts';
-import { healLimbs, recomputeWound } from '$lib/game/core/defs/wounds';
+import { healLimbs, recomputeWound, SCARRING_CONFIG } from '$lib/game/core/defs/wounds';
 import { itemService } from '$lib/game/services/ItemService';
 import type { GameState, Pawn, Trait, Injury } from '$lib/game/core/types';
 
@@ -64,6 +64,9 @@ describe('applyTraitWounds (§4 wound granters)', () => {
     expect(healed).toBe(pawn.limbs);
     const spineAfter = healed.flatMap((l) => l.parts ?? []).find((p) => p.id === 'spine');
     expect(spineAfter?.injuries[0]?.damage).toBe(spine?.injuries[0]?.damage);
+    const expectedDamage = Math.round(spine!.maxHp * SCARRING_CONFIG.damageFrac.serious * 10) / 10;
+    expect(spine?.injuries[0]?.damage).toBe(expectedDamage);
+    expect(spine?.injuries[0]?.painContribution).toBe(SCARRING_CONFIG.pain.serious);
   });
 
   it('a permanent scar STAYS permanent across a same-type re-hit (recomputeWound merge)', () => {
@@ -80,8 +83,26 @@ describe('applyTraitWounds (§4 wound granters)', () => {
     };
     const merged = recomputeWound('spine', 'crush', 40, scar, 500, 40);
     expect(merged.permanent).toBe(true);
+    expect(merged.severity).toBe('destroyed');
+    expect(merged.peakSeverity).toBe('destroyed');
     const fresh = recomputeWound('spine', 'crush', 10, undefined, 500, 40);
     expect(fresh.permanent).toBeUndefined();
+    expect(fresh.severity).toBe('minor');
+    expect(fresh.peakSeverity).toBe('minor');
+
+    const bleedingWound = recomputeWound('spine', 'cut', 20, undefined, 10, 40);
+    expect(bleedingWound.bleeding).toBeGreaterThan(0);
+    const treatedWound = recomputeWound('spine', 'cut', 20, { ...scar, treatedAt: 15 }, 10, 40);
+    expect(treatedWound.bleeding).toBe(0);
+  });
+
+  it('peakSeverity is monotonic — recomputing a wound that heals down keeps the worst severity it once reached', () => {
+    const wounded = recomputeWound('spine', 'crush', 32, undefined, 0, 40);
+    expect(wounded.severity).toBe('critical');
+    expect(wounded.peakSeverity).toBe('critical');
+    const healed = recomputeWound('spine', 'crush', 8, wounded, 10, 40);
+    expect(healed.severity).toBe('minor');
+    expect(healed.peakSeverity).toBe('critical');
   });
 
   it('non-lethal cap: a destroyed CONTAINER downgrades to critical; a vital part is refused', () => {

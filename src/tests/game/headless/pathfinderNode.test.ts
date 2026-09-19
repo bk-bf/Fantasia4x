@@ -90,6 +90,18 @@ describe('WASM pathfinder under Node (Phase 0 spike)', () => {
   });
 });
 
+describe('GameStateManager.updateState (partial merge)', () => {
+  it('merges updates into state, preserving fields that were not touched', () => {
+    const initial: GameState = { ...initialGameState, turn: 5, seed: SEED };
+    const mgr = new GameStateManager(initial);
+    mgr.updateState({ turn: 42 });
+    const s = mgr.getState();
+    expect(s.turn).toBe(42);
+    expect(s.seed).toBe(SEED);
+    expect(s.pawns).toBe(initial.pawns);
+  });
+});
+
 function chebyshev(a: { x: number; y: number }, b: { x: number; y: number }): number {
   return Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y));
 }
