@@ -557,11 +557,11 @@
     z-index: 6;
     border: none;
     background: transparent;
-    filter: url(#ambient-tint) brightness(1.3);
     pointer-events: none;
   }
   .sidebars-hidden .left-panel {
     left: 0;
+    filter: url(#ambient-tint) brightness(1.3);
   }
   .sidebars-hidden .right-panel {
     right: 0;
