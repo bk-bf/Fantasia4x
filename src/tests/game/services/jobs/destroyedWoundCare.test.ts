@@ -36,6 +36,10 @@ describe('destroyed non-bleeding wounds are uncareable', () => {
     expect(isUncareable(wound({ bleeding: 5 }))).toBe(false);
     expect(isUncareable(wound({ severity: 'serious', bleeding: 0 }))).toBe(false);
     expect(isUncareable(wound({ permanent: true }))).toBe(true);
+    expect(
+      isUncareable(wound({ permanent: true, severity: 'serious', bleeding: 0 })),
+      'permanent alone is uncareable, even when the destroyed+non-bleeding case does not also hold'
+    ).toBe(true);
   });
 
   it('hasUntendedWound ignores a lost (destroyed, non-bleeding) limb — no infinite tend', () => {

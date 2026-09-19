@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   baseVisionRange,
   lightVisionMultiplier,
+  dampenLightByNightVision,
   effectiveVisionRange,
   getNightVision,
   isWitnessedByColony
@@ -21,7 +22,11 @@ describe('shared vision model', () => {
     expect(lightVisionMultiplier(1, 0)).toBe(1);
     expect(lightVisionMultiplier(0.15, 0)).toBeCloseTo(0.35);
     expect(lightVisionMultiplier(0.15, 1)).toBe(1);
-    expect(lightVisionMultiplier(0.15, 0.5)).toBeGreaterThan(0.35);
+    expect(lightVisionMultiplier(0.15, 0.5)).toBeCloseTo(0.575, 10);
+  });
+
+  it('dampenLightByNightVision pins an interior blend of light and night vision, not just the endpoints', () => {
+    expect(dampenLightByNightVision(0.2, 0.3)).toBeCloseTo(0.44, 10);
   });
 
   it('never extends beyond base (bright firelight caps at 1)', () => {
@@ -83,6 +88,37 @@ describe('shared vision model', () => {
     expect(p).toBe(m);
     expect(p).toBe(baseVisionRange(12));
   });
+
+  it('getNightVision: blindness gates out a trait bonus too when every eye part is missing/dead', () => {
+    const blindEye = (id: string) => ({ id, health: 0, maxHp: 4, isMissing: true, injuries: [] });
+    const blinded = {
+      stats: { perception: 10 },
+      traits: [{ effects: { nightVision: 0.7 } }],
+      limbs: [{ id: 'head', parts: [blindEye('leftEye'), blindEye('rightEye')] }]
+    } as unknown as Pawn;
+    expect(getNightVision(blinded)).toBe(0);
+  });
+
+  it('getNightVision: a Mob reads its base night vision straight from creatures.json', () => {
+    expect(getNightVision({ creatureId: 'wolf' } as unknown as Mob)).toBe(0.9);
+  });
+
+  it('getNightVision: a transientCondition granting nightVision lifts it (echo_sighted)', () => {
+    const echoLocator = {
+      stats: { perception: 10 },
+      traits: [],
+      transientConditions: ['echo_sighted']
+    } as unknown as Pawn;
+    expect(getNightVision(echoLocator)).toBe(1);
+  });
+
+  it('weatherSightMul shrinks effectiveVisionRange by the exact multiplier (fog/storm)', () => {
+    const clear = effectiveVisionRange(pawn(10), 1, 1);
+    const foggy = effectiveVisionRange(pawn(10), 1, 0.5);
+    expect(clear).toBe(baseVisionRange(10));
+    expect(foggy).toBe(Math.round(baseVisionRange(10) * 0.5));
+    expect(foggy).toBeLessThan(clear);
+  });
 });
 
 const atPawn = (x: number, y: number, over: Partial<Pawn> = {}): Pawn =>
@@ -119,5 +155,10 @@ describe('isWitnessedByColony', () => {
     const far = Math.round(range * 0.7);
     expect(isWitnessedByColony([atPawn(0, 0)], far, 0, DAY)).toBe(true);
     expect(isWitnessedByColony([atPawn(0, 0)], far, 0, 0.0)).toBe(false);
+  });
+
+  it('weatherSightMul moves the witnessed boundary: seen at mul=1, not at mul=0.5', () => {
+    expect(isWitnessedByColony([atPawn(0, 0)], range, 0, DAY, 1)).toBe(true);
+    expect(isWitnessedByColony([atPawn(0, 0)], range, 0, DAY, 0.5)).toBe(false);
   });
 });
