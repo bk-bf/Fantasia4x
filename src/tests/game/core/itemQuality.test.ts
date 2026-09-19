@@ -79,10 +79,23 @@ describe('quality tier accessors', () => {
     expect(qualityMultiplier(5)).toBeGreaterThan(qualityMultiplier(2));
   });
 
+  it('multiplier at every tier matches the authored QUALITY_TIERS table', () => {
+    expect(qualityMultiplier(0)).toBe(0.8);
+    expect(qualityMultiplier(3)).toBe(1.3);
+    expect(qualityMultiplier(5)).toBe(1.8);
+  });
+
   it('prefix is empty only for Standard', () => {
     expect(qualityPrefix(STANDARD_QUALITY)).toBe('');
     expect(qualityPrefix(undefined)).toBe('');
     expect(qualityPrefix(4)).toBe('Masterwork');
+  });
+
+  it('prefix at every other tier matches the authored table', () => {
+    expect(qualityPrefix(0)).toBe('Crude');
+    expect(qualityPrefix(2)).toBe('Fine');
+    expect(qualityPrefix(3)).toBe('Superior');
+    expect(qualityPrefix(5)).toBe('Legendary');
   });
 
   it('colour is undefined for Standard, set otherwise', () => {
@@ -90,9 +103,21 @@ describe('quality tier accessors', () => {
     expect(qualityColor(5)).toMatch(/^#/);
   });
 
+  it('colour at every other tier matches the authored table', () => {
+    expect(qualityColor(0)).toBe('#7a5c20');
+    expect(qualityColor(2)).toBe('#68b030');
+    expect(qualityColor(3)).toBe('#4a90d8');
+    expect(qualityColor(4)).toBe('#a060d0');
+    expect(qualityColor(5)).toBe('#f0c020');
+  });
+
   it('name maps tiers', () => {
     expect(qualityName(0)).toBe('Crude');
     expect(qualityName(3)).toBe('Superior');
+  });
+
+  it('name(undefined) reads as Standard', () => {
+    expect(qualityName(undefined)).toBe('Standard');
   });
 });
 
@@ -132,6 +157,12 @@ describe('stat scaling (consume side)', () => {
     expect(master.defense).toBeCloseTo(30);
     expect(master.armorValue).toBeCloseTo(12);
     expect(master.movementPenalty).toBe(0.1);
+  });
+
+  it('Standard/undefined returns the SAME object (no hot-path allocation)', () => {
+    const ap = { defense: 20, armorValue: 8, movementPenalty: 0.1 };
+    expect(scaleArmorQuality(ap, STANDARD_QUALITY)).toBe(ap);
+    expect(scaleArmorQuality(ap, undefined)).toBe(ap);
   });
 
   it('Crude weapon is weaker than Standard', () => {

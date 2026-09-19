@@ -50,8 +50,12 @@ import {
   SEASON_LABELS,
   type ThermalSample
 } from '$lib/game/services/EnvironmentService';
-import { tempRange, driveTemperatureConditions } from '$lib/game/core/rules/body/conditions';
-import type { EntityCondition, PlacedBuilding } from '$lib/game/core/types';
+import {
+  tempRange,
+  driveTemperatureConditions,
+  applyConditionDriver
+} from '$lib/game/core/rules/body/conditions';
+import type { ConditionDef, EntityCondition, PlacedBuilding } from '$lib/game/core/types';
 
 function bld(
   type: string,
@@ -495,6 +499,36 @@ describe('Temperature comfort + exposure (hypothermia / heat stroke)', () => {
     for (let i = 0; i < 500; i++) driveTemperatureConditions(conditions, 0, 100);
     expect(conditions.find((c) => c.id === 'heat_stroke')).toBeDefined();
     expect(conditions.find((c) => c.id === 'hypothermia')).toBeUndefined();
+  });
+
+  it('driveTemperatureConditions returns the lethal condition id once severity reaches lethalSeverity, else null', () => {
+    const conditions: EntityCondition[] = [];
+    let lethal: string | null = null;
+    for (let i = 0; i < 5; i++) {
+      lethal = driveTemperatureConditions(conditions, 100, 0);
+      expect(lethal).toBeNull();
+    }
+    for (let i = 0; i < 100000 && lethal === null; i++) {
+      lethal = driveTemperatureConditions(conditions, 100, 0);
+    }
+    expect(lethal).toBe('hypothermia');
+  });
+});
+
+describe('applyConditionDriver — severity ceiling + rate branch', () => {
+  it('caps severity at 1.0, and uses rateCritical (not rateMax) while needVal sits in [onset, 100)', () => {
+    const fakeDef = {
+      id: 'test_driver_cond',
+      driver: { onset: 50, safe: 10, rateCritical: 0.6, rateMax: 6, recovery: 0.1 }
+    } as unknown as ConditionDef;
+    const conditions: EntityCondition[] = [];
+
+    applyConditionDriver(conditions, fakeDef, 70);
+    const afterCritical = conditions.find((c) => c.id === 'test_driver_cond')!.severity;
+    expect(afterCritical).toBeCloseTo(0.6 / 60, 10);
+
+    for (let i = 0; i < 50; i++) applyConditionDriver(conditions, fakeDef, 100);
+    expect(conditions.find((c) => c.id === 'test_driver_cond')!.severity).toBe(1.0);
   });
 });
 

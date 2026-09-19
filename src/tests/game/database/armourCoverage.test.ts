@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import itemsData from '$lib/game/database/items/items.json';
 import recipesData from '$lib/game/database/items/recipes.json';
 import type { EquipmentSlot, Item } from '$lib/game/core/types';
-import { SLOT_COVERAGE } from '$lib/game/core/rules/gear/armorCoverage';
+import { SLOT_COVERAGE, coveredParts, coversPart } from '$lib/game/core/rules/gear/armorCoverage';
 
 const ITEMS = itemsData as unknown as Item[];
 const RECIPES = recipesData as unknown as {
@@ -109,6 +109,25 @@ describe('armour slots resolve', () => {
     expect(covers('bodyOuter', 'leftShoulder'), 'torso-outer covers shoulders').toBe(true);
     expect(covers('bodyMid', 'rightShoulder'), 'torso-mid covers shoulders').toBe(true);
     expect(covers('head', 'neck'), 'the head piece covers the neck').toBe(true);
+  });
+});
+
+describe('coveredParts / coversPart precedence', () => {
+  it("an item's explicit armorProperties.covers overrides the slot's default coverage", () => {
+    const gambeson = ITEMS.find((i) => i.id === 'linen_gambeson')!;
+    expect(SLOT_COVERAGE.bodyBase, 'bodyBase alone does not reach the forearm').not.toContain(
+      'leftForearm'
+    );
+    expect(coveredParts(gambeson, 'bodyBase')).toContain('leftForearm');
+    expect(coversPart(gambeson, 'bodyBase', 'leftForearm')).toBe(true);
+  });
+
+  it('coversPart walks the containment chain — a finger contained in a covered hand is itself covered', () => {
+    const gloves = ITEMS.find((i) => i.id === 'linen_gloves')!;
+    expect(gloves.armorProperties?.covers, 'no explicit covers list on this item').toBeUndefined();
+    expect(SLOT_COVERAGE.gloves).toContain('leftHand');
+    expect(coversPart(gloves, 'gloves', 'leftIndexFinger')).toBe(true);
+    expect(coversPart(gloves, 'gloves', 'rightMiddleFinger')).toBe(true);
   });
 });
 
