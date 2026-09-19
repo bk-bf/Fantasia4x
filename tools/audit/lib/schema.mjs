@@ -48,7 +48,7 @@ export function checkRequired(labels = []) {
   return errors;
 }
 
-const FEATURE_TYPES = new Set(['feat', 'decision']);
+const FEATURE_TYPES = new Set(['feat', 'decision', 'release']);
 
 export function checkKind(labels = [], workType) {
   const feature = labels.includes('feature');
@@ -58,7 +58,7 @@ export function checkKind(labels = [], workType) {
     errors.push('work type feat needs the kind "feature" — the fixer works a feature one step at a time');
   }
   if (feature && workType && !FEATURE_TYPES.has(workType)) {
-    errors.push(`the kind "feature" goes with work type feat or decision, not ${workType}`);
+    errors.push(`the kind "feature" goes with work type ${[...FEATURE_TYPES].join(', ')}, not ${workType}`);
   }
   if (feature && others.length) {
     errors.push(`a feature carries no second kind — remove ${others.map((l) => `"${l}"`).join(', ')}`);
