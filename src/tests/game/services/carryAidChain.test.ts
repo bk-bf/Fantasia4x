@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { buildScenario } from '$lib/game/headless/Scenario';
 import { HeadlessSession } from '$lib/game/headless/HeadlessSession';
 import { itemService } from '$lib/game/services/ItemService';
+import { unequipItem } from '$lib/game/core/rules/gear/equipment';
 import type { GameState, Pawn } from '$lib/game/core/types';
 
 const stockOf = (s: HeadlessSession) => (s.getState().stockpile ?? {}) as Record<string, number>;
@@ -200,5 +201,26 @@ describe('the pack grid — light / medium / heavy at one age (HeadlessSession, 
     expect(carried.iron_buckled_satchel).toBeCloseTo(30, 1);
     expect(carried.iron_buckled_knapsack).toBeCloseTo(42, 1);
     expect(carried.iron_framed_pack).toBeCloseTo(60, 1);
+  });
+});
+
+describe('unequipItem clears exactly the named slot', () => {
+  it('clears the slot and leaves every other slot untouched', () => {
+    const pawn = {
+      id: 'p',
+      equipment: {
+        mainHand: { instanceId: 'm', itemId: 'bone_knife', durability: 50 },
+        belt: { instanceId: 'b', itemId: 'leather_belt', durability: 40 }
+      },
+      inventory: { items: {}, instances: [] }
+    } as unknown as Pawn;
+    const out = unequipItem(pawn, 'mainHand');
+    expect(out.equipment.mainHand).toBeUndefined();
+    expect(out.equipment.belt?.itemId).toBe('leather_belt');
+  });
+
+  it('is a no-op when the named slot is already empty', () => {
+    const pawn = { id: 'p', equipment: {}, inventory: { items: {}, instances: [] } } as unknown as Pawn;
+    expect(unequipItem(pawn, 'mainHand')).toBe(pawn);
   });
 });

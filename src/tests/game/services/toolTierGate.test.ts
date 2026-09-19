@@ -31,6 +31,20 @@ describe('ADR-009 colony tool-tier gate', () => {
     expect(colonyToolTier(gs)).toBe(2);
   });
 
+  it('takes the MAX of an owned tool and currentToolLevel, whichever is higher', () => {
+    const lowTool = makeState(
+      [{ id: 'a', resourceId: 'stone_axe', x: 0, y: 0, quantity: 1, stored: true }],
+      3
+    );
+    expect(colonyToolTier(lowTool)).toBe(3);
+
+    const highTool = makeState(
+      [{ id: 'b', resourceId: 'steel_pick', x: 0, y: 0, quantity: 1, stored: true }],
+      1
+    );
+    expect(colonyToolTier(highTool)).toBe(3);
+  });
+
   it('owning a tier-1 tool satisfies a tier-1 building gate (Splitting Stump)', () => {
     const gs = makeState([
       { id: 'a', resourceId: 'stone_axe', x: 0, y: 0, quantity: 1, stored: true },
