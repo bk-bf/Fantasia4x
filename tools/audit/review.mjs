@@ -29,6 +29,7 @@ import { ledgerEvidence } from './lib/raise.mjs';
 
 const MODEL = process.env.AUDIT_REVIEW_MODEL || 'sonnet';
 const ROUTES = new Set(['tests', 'headless']);
+const MODEL_CAP_MS = 3_600_000;
 
 const arg = (n, d) => {
   const i = process.argv.indexOf(`--${n}`);
@@ -303,10 +304,16 @@ try {
         'Edit',
         'Skill'
       ],
-      { cwd: wt, input: headlessPrompt(issue, route, files), timeoutMs: 3_600_000 }
+      { cwd: wt, input: headlessPrompt(issue, route, files), timeoutMs: MODEL_CAP_MS }
     );
     const mins = ((Date.now() - t0) / 60000).toFixed(1);
-    if (res.code !== 0) throw new Error(`the review session exited ${res.code}:\n${tail(res.err)}`);
+    if (res.code !== 0)
+      throw new Error(
+        (res.capped
+          ? `the review session was killed at the ${MODEL_CAP_MS / 60000} minute cap, ${mins} min in`
+          : `the review session exited ${res.code}`) +
+          `:\n${tail(res.err) || tail(res.out) || 'it wrote nothing before it stopped'}`
+      );
     const raw = res.out.trim();
     const verdict = raw.match(/^VERDICT: (PASS|FAIL)$/m);
     if (!verdict)
