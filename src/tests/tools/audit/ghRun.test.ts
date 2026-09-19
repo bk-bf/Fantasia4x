@@ -144,6 +144,66 @@ describe('gh commands answered over REST', () => {
   });
 });
 
+describe('pull request writes answered over REST', () => {
+  it('comments on a pull request through its issue', () => {
+    const { calls, io } = fakeIo({
+      'POST repos/bk-bf/Fantasia4x/issues/163/comments': {
+        html_url: 'https://github.com/bk-bf/Fantasia4x/pull/163#issuecomment-1'
+      }
+    });
+    const out = run(['pr', 'comment', '163', '--body-file', '-'], io, 'the verdict');
+    expect(calls).toEqual([
+      ['POST', 'repos/bk-bf/Fantasia4x/issues/163/comments', { body: 'the verdict' }]
+    ]);
+    expect(out.trim()).toBe('https://github.com/bk-bf/Fantasia4x/pull/163#issuecomment-1');
+  });
+
+  it('opens a pull request, then sets its milestone and labels', () => {
+    const { calls, io } = fakeIo({
+      'POST repos/bk-bf/Fantasia4x/pulls': {
+        number: 170,
+        html_url: 'https://github.com/bk-bf/Fantasia4x/pull/170'
+      },
+      'PAGES repos/bk-bf/Fantasia4x/milestones?state=all&per_page=100': [
+        { number: 4, title: 'v0.2 - Gameplay' }
+      ]
+    });
+    const out = run(
+      ['pr', 'create', '--base', 'dev', '--head', 'fix/thing-9', '--title', 'fix: a thing',
+        '--body-file', '-', '--milestone', 'v0.2 - Gameplay', '--label', 'tools', '--label', 'fix'],
+      io,
+      'Fixes #9'
+    );
+    expect(calls[0]).toEqual([
+      'POST',
+      'repos/bk-bf/Fantasia4x/pulls',
+      { base: 'dev', head: 'fix/thing-9', title: 'fix: a thing', body: 'Fixes #9' }
+    ]);
+    expect(calls.at(-1)).toEqual([
+      'PATCH',
+      'repos/bk-bf/Fantasia4x/issues/170',
+      { milestone: 4, labels: ['tools', 'fix'] }
+    ]);
+    expect(out.trim()).toBe('https://github.com/bk-bf/Fantasia4x/pull/170');
+  });
+
+  it('reads the changed files of each open pull request when they are asked for', () => {
+    const path = 'repos/bk-bf/Fantasia4x/pulls?state=open&per_page=100';
+    const { io } = fakeIo({
+      [`PAGES ${path}`]: [restPull(1, false)],
+      'PAGES repos/bk-bf/Fantasia4x/pulls/1/files?per_page=100': [
+        { filename: 'src/lib/game/sim/commands.ts', additions: 4, deletions: 1 }
+      ]
+    });
+    const out = JSON.parse(
+      run(['pr', 'list', '--state', 'open', '--limit', '100', '--json', 'number,title,headRefName,body,files'], io)
+    );
+    expect(out[0].files).toEqual([
+      { path: 'src/lib/game/sim/commands.ts', additions: 4, deletions: 1 }
+    ]);
+  });
+});
+
 describe('board lookups over REST', () => {
   it('finds a card or field REST id by its GraphQL node id', () => {
     const pages = [[{ id: 1, node_id: 'A' }], [{ id: 2, node_id: 'B' }]];
