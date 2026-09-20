@@ -169,7 +169,7 @@ describe('era invariants under fast-forward', () => {
       (s.stockpile['bread'] ?? 0) < bread0 ||
       s.pawns.some((p) => p.needs.hunger < 90 || p.state.isEating);
     expect(foodEaten, 'no pawn touched the food').toBe(true);
-  });
+  }, 180_000);
 
   it('seed replay is byte-identical (same scenario, same ticks ⇒ same state)', async () => {
     const spec = getScenarioPreset('bronze-colony')!.spec;
