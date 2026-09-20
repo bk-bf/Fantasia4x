@@ -29,6 +29,7 @@ function tile(over: Partial<WorldTile>): WorldTile {
     terrainType: 'plains',
     subType: 'grass',
     moisture: 40,
+    growthTurn: 0,
     resources: {} as Record<string, number>,
     ...over
   } as WorldTile;
@@ -116,6 +117,17 @@ describe('plant growth runs off a queue, not every tick', () => {
     clearTileDeltas();
     runGrowth(map, Math.ceil(GRASS_PER_PERCENT) * 2);
     expect(drainTileDeltas()).not.toBeNull();
+  });
+
+  it('treats a part-grown tile that was never harvested as a mature plant', () => {
+    const untouched = tile({
+      growthTurn: undefined,
+      resources: { grass_patch: 4 },
+      growth: { grass_patch: 72 }
+    });
+    rebuildGrowthQueue([[untouched]], 0);
+    expect(untouched.growth!.grass_patch).toBe(100);
+    expect(growthQueueSize()).toBe(0);
   });
 
   it('leaves a mature tile out of the queue entirely', () => {
