@@ -5,11 +5,12 @@ import { hexToRgb01 } from '../util/color';
 
 export interface ResourceYieldDef {
   itemId: string;
-  min: number;
-  max: number;
+  min?: number;
+  max?: number;
+  amount?: number;
+  minGrowth?: number;
   skillId: string;
   skillMultiplier: number;
-  regrowthTurns?: number;
 }
 
 export interface ToolRequirement {
@@ -24,12 +25,9 @@ export interface ResourceInteractionDef {
   workAmount: number;
   toolRequirement: ToolRequirement | null;
   yields: ResourceYieldDef[];
-  persistent?: boolean;
-  harvestDepletes?: boolean;
-  regrowthTurns?: number;
+  minGrowth?: number;
+  growthAfter?: number;
   harvestSubType?: string;
-  harvestGrowthCost?: number;
-  regrowsFromZero?: boolean;
 }
 
 export interface ResourceObjectDef {
@@ -56,6 +54,7 @@ export interface ResourceObjectDef {
     subterrains: Record<string, number>;
   };
   nodeAmountRange: [number, number];
+  growthTurns?: number;
   glow?: {
     color: [number, number, number];
     radius: number;
@@ -78,15 +77,17 @@ export interface ResourceObjectDef {
     minTemp: number;
     maxTemp: number;
     needsLight: boolean;
-    growthTurns: number;
     fertilityCost: number;
   };
 }
 
 export function isGrowableResource(def: ResourceObjectDef): boolean {
-  if (def.crop) return true;
-  const ints = def.interactions ?? [def.interaction];
-  return ints.some((i) => i.persistent === true || i.regrowthTurns !== undefined);
+  return def.growthTurns !== undefined;
+}
+
+export function resizesWithGrowth(def: ResourceObjectDef): boolean {
+  if (def.growthTurns === undefined) return false;
+  return !(def.interactions ?? [def.interaction]).some((i) => (i.growthAfter ?? 0) > 0);
 }
 
 interface RawSeasonVariant {

@@ -44,12 +44,12 @@ export function resourceMatchesFilter(
   return interaction.yields.some((y) => itemMatchesFilter(y.itemId, filter!));
 }
 
-export const MIN_FORAGE_GROWTH = 60;
-
-export function isForageGated(
-  interaction: { persistent?: boolean; harvestDepletes?: boolean } | undefined
+export function meetsGrowthGate(
+  interaction: { minGrowth?: number } | undefined,
+  growth: number | undefined
 ): boolean {
-  return interaction?.persistent === true && interaction.harvestDepletes !== true;
+  const gate = interaction?.minGrowth ?? 0;
+  return gate <= 0 || (growth ?? 100) >= gate;
 }
 
 export function isHarvestableTileNow(
@@ -68,8 +68,7 @@ export function isHarvestableTileNow(
       resourceId,
       designationType
     );
-    if (isForageGated(interaction) && (tile.growth?.[resourceId] ?? 100) < MIN_FORAGE_GROWTH)
-      continue;
+    if (!meetsGrowthGate(interaction, tile.growth?.[resourceId])) continue;
     return true;
   }
   return false;
