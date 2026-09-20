@@ -65,7 +65,7 @@ export function buildItemInfo(itemId: string): ItemInfoView {
   const cropRel = resourceObjectService.getCropForItem(itemId);
   if (cropRel?.def.crop) {
     const cr = cropRel.def.crop;
-    const days = cr.growthTurns / TURNS_PER_DAY;
+    const days = (cropRel.def.growthTurns ?? 0) / TURNS_PER_DAY;
     const rows = [
       { label: 'Grows', val: `${cr.minTemp} to ${cr.maxTemp}°C` },
       { label: 'Water', val: `${cr.minMoisture}–${cr.maxMoisture}%` },

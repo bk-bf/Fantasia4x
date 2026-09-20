@@ -1,12 +1,13 @@
 import type { WorldTile } from '../../types';
 
-interface RegrowthEntry {
+interface GrowthEntry {
   turn: number;
   x: number;
   y: number;
 }
 
-let heap: RegrowthEntry[] = [];
+let heap: GrowthEntry[] = [];
+const queued = new Set<string>();
 
 function swap(i: number, j: number): void {
   const t = heap[i];
@@ -37,16 +38,19 @@ function siftDown(i: number): void {
   }
 }
 
-export function pushRegrowth(turn: number, x: number, y: number): void {
+export function pushGrowth(turn: number, x: number, y: number): void {
+  const key = x + ',' + y;
+  if (queued.has(key)) return;
+  queued.add(key);
   heap.push({ turn, x, y });
   siftUp(heap.length - 1);
 }
 
-export function peekRegrowthTurn(): number {
+export function peekGrowthTurn(): number {
   return heap.length > 0 ? heap[0].turn : Infinity;
 }
 
-export function popRegrowth(): RegrowthEntry | undefined {
+export function popGrowth(): GrowthEntry | undefined {
   if (heap.length === 0) return undefined;
   const top = heap[0];
   const last = heap.pop()!;
@@ -54,30 +58,38 @@ export function popRegrowth(): RegrowthEntry | undefined {
     heap[0] = last;
     siftDown(0);
   }
+  queued.delete(top.x + ',' + top.y);
   return top;
 }
 
-export function minCooldownExpiry(cooldowns: Record<string, number> | undefined): number {
-  if (!cooldowns) return Infinity;
-  let min = Infinity;
-  for (const k in cooldowns) {
-    const v = cooldowns[k];
-    if (v < min) min = v;
-  }
-  return min;
+export function growthQueueSize(): number {
+  return heap.length;
 }
 
-export function clearRegrowthQueue(): void {
+export function clearGrowthQueue(): void {
   heap = [];
+  queued.clear();
 }
 
-export function rebuildRegrowthQueue(worldMap: WorldTile[][]): void {
+export function enrolGrowth(tile: WorldTile, turn: number): void {
+  tile.growthTurn = turn;
+  pushGrowth(turn + 1, tile.x, tile.y);
+}
+
+export function tileIsGrowing(tile: WorldTile): boolean {
+  const growth = tile.growth;
+  if (!growth) return false;
+  for (const id in growth) if (growth[id] < 100) return true;
+  return false;
+}
+
+export function rebuildGrowthQueue(worldMap: WorldTile[][], turn: number): void {
   heap = [];
+  queued.clear();
   for (let y = 0; y < worldMap.length; y++) {
     const row = worldMap[y];
     for (let x = 0; x < row.length; x++) {
-      const min = minCooldownExpiry(row[x].resourceCooldowns);
-      if (min !== Infinity) pushRegrowth(min, x, y);
+      if (tileIsGrowing(row[x])) enrolGrowth(row[x], turn);
     }
   }
 }
