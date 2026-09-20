@@ -89,7 +89,14 @@ export function rebuildGrowthQueue(worldMap: WorldTile[][], turn: number): void 
   for (let y = 0; y < worldMap.length; y++) {
     const row = worldMap[y];
     for (let x = 0; x < row.length; x++) {
-      if (tileIsGrowing(row[x])) enrolGrowth(row[x], turn);
+      const tile = row[x];
+      if (!tileIsGrowing(tile)) continue;
+      if (tile.growthTurn === undefined) {
+        const growth = tile.growth!;
+        for (const id in growth) if (growth[id] < 100) growth[id] = 100;
+        continue;
+      }
+      enrolGrowth(tile, turn);
     }
   }
 }
