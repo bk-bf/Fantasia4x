@@ -6,6 +6,7 @@ import { itemService } from '../ItemService';
 import { soilTierForTile, SUBTERRAINS, SUBTERRAIN_FALLBACK } from '../../core/defs/terrains';
 import { itemMatchesFilter } from './filters';
 import { markTileDirty } from '../../core/state/tileDeltas';
+import { enrolGrowth } from '../../core/rules/world/growthQueue';
 import { patchPathfindingWalkable } from '../PathfinderService';
 import { absorbDropIfOnStockpileTile } from '../../core/state/stockpile';
 import { rng } from '../../core/util/rng';
@@ -21,9 +22,13 @@ function cropIds(): Set<string> {
   return (_cropIds ??= new Set(cropDefs().map((d) => d.id)));
 }
 
-function hasCrop(tile: { resources?: Record<string, number> }): boolean {
+function hasCrop(tile: {
+  resources?: Record<string, number>;
+  growth?: Record<string, number>;
+}): boolean {
   const ids = cropIds();
-  for (const id in tile.resources ?? {}) if (ids.has(id)) return true;
+  for (const id in tile.resources ?? {})
+    if (ids.has(id) && ((tile.resources?.[id] ?? 0) > 0 || id in (tile.growth ?? {}))) return true;
   return false;
 }
 
@@ -113,7 +118,7 @@ export function complete(job: Job, gs: GameState): GameState {
     cleared.push(id);
     if (amt <= 0) continue;
     const growthPct = col.growth?.[id] ?? 100;
-    const yields = resourceObjectService.calculateYield(id, pawn, undefined, undefined, growthPct);
+    const yields = resourceObjectService.calculateYield(id, pawn, undefined, growthPct);
     for (const [dropResourceId, dropAmount] of Object.entries(yields)) {
       const dropId = `drop-${dropResourceId}-${job.targetX}-${job.targetY}-t${gs.turn}-${rng.random().toString(36).slice(2, 5)}`;
       newDropped.push({
@@ -136,6 +141,7 @@ export function complete(job: Job, gs: GameState): GameState {
   for (const id of cleared) delete growth[id];
   growth[job.resourceId] = 0;
   col.growth = growth;
+  enrolGrowth(col, gs.turn);
   if (cleared.length) {
     const baseSub = SUBTERRAINS[col.subType] ?? SUBTERRAIN_FALLBACK;
     col.walkable = baseSub.walkable;

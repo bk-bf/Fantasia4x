@@ -7,12 +7,11 @@ import type {
 import type { GameState, WorldTile } from '../core/types';
 import { GameStateManager } from '../core/state/GameStateManager';
 import {
-  peekRegrowthTurn,
-  popRegrowth,
-  pushRegrowth,
-  minCooldownExpiry,
-  rebuildRegrowthQueue
-} from '../core/rules/world/regrowthQueue';
+  peekGrowthTurn,
+  popGrowth,
+  pushGrowth,
+  rebuildGrowthQueue
+} from '../core/rules/world/growthQueue';
 import { workService } from '../services/WorkService';
 import { itemService } from '../services/ItemService';
 import { recipeService } from '../services/RecipeService';
@@ -38,7 +37,6 @@ import {
   separateStackedBodies
 } from './pawn/carry';
 import { tendPatient, hasUntendedWound, TEND_WORK } from '../services/jobs/caretake';
-import { MIN_FORAGE_GROWTH } from '../services/jobs/filters';
 import { equipDropToPawn, carryDropToInventory } from '../core/rules/gear/equipment';
 import { jobService, BASE_WORK_RATE } from '../services/JobService';
 import { pawnStatService } from '../services/PawnStatService';
@@ -81,17 +79,10 @@ import {
   tileTemperature,
   fermentTempRate
 } from '../services/EnvironmentService';
-import { zoneTileKeys } from '../services/DesignationService';
 import { soilTierForTile } from '../core/defs/terrains';
 import { cropHealth, cropLossPerDay } from '../core/rules/world/cropHealth';
 import { markTileDirty } from '../core/state/tileDeltas';
-import {
-  RESOURCE_VISIBLE_GROWTH,
-  rebuildWildGrowth,
-  wildGrowthSize,
-  wildGrowthEntries,
-  removeWildGrowth
-} from '../core/rules/world/wildGrowth';
+import { growthStageIndex } from '../core/rules/world/growthStages';
 import { simLog, vlog, isVerboseLogging } from '../core/util/logSink';
 
 const AVAILABLE_BUILDINGS = buildingsData as unknown as import('../core/types').Building[];
@@ -118,8 +109,7 @@ function popOrder(p: Pawn): {
 export class GameEngineImpl implements GameEngine {
   private gameState: GameState | null = null;
   private gameStateManager: GameStateManager | null = null;
-  private _lastRegrowthWorldMap: WorldTile[][] | null = null;
-  private _lastWildGrowthWorldMap: WorldTile[][] | null = null;
+  private _lastGrowthWorldMap: WorldTile[][] | null = null;
   private config: GameEngineConfig;
   private lastTurnProcessed = 0;
   private lastFlushMs = 0;
@@ -233,9 +223,7 @@ export class GameEngineImpl implements GameEngine {
       t('passiveProd', () => this.processPassiveProduction());
       t('pawns', () => this.processPawns());
       t('growth', () => this.processGrowth());
-      t('resourceRegrowth', () => this.processResourceRegrowth());
-      t('cropGrowth', () => this.processCropGrowth());
-      t('wildGrowth', () => this.processWildGrowth());
+      t('plantGrowth', () => this.processPlantGrowth());
       t('entityStep', () => {
         t('es:spawn', () => (this.gameState = entityService.spawnEntities(this.gameState!)));
         t('es:lairs', () => (this.gameState = entityService.tickLairs(this.gameState!)));
@@ -457,193 +445,89 @@ export class GameEngineImpl implements GameEngine {
     this.timed('env:connectivity', () => maybeRebuildConnectivity(gs.worldMap, gs.turn));
   }
 
-  private processResourceRegrowth(): void {
+  private processPlantGrowth(): void {
     if (!this.gameState) return;
     const gs = this.gameState;
 
-    if (gs.worldMap !== this._lastRegrowthWorldMap) {
-      rebuildRegrowthQueue(gs.worldMap);
-      this._lastRegrowthWorldMap = gs.worldMap;
+    if (gs.worldMap !== this._lastGrowthWorldMap) {
+      rebuildGrowthQueue(gs.worldMap, gs.turn);
+      this._lastGrowthWorldMap = gs.worldMap;
     }
-    if (peekRegrowthTurn() > gs.turn) return;
+    if (peekGrowthTurn() > gs.turn) return;
 
-    while (peekRegrowthTurn() <= gs.turn) {
-      const e = popRegrowth()!;
+    const rate = seasonRegrowthMultiplier(gs.season);
+    const cropScale = gs._devCropGrowthScale ?? 1;
+    while (peekGrowthTurn() <= gs.turn) {
+      const e = popGrowth()!;
       const tile = gs.worldMap[e.y]?.[e.x];
-      const cooldowns = tile?.resourceCooldowns;
-      if (!tile || !cooldowns) continue;
-
-      let expiredKeys: string[] | null = null;
-      for (const k in cooldowns) {
-        if (gs.turn >= cooldowns[k]) (expiredKeys ??= []).push(k);
-      }
-      if (!expiredKeys) continue;
-
-      let tileChanged = false;
-      for (const key of expiredKeys) {
-        const isCompound = key.includes(':');
-
-        if (isCompound) {
-          const colonIdx = key.indexOf(':');
-          const resourceId = key.slice(0, colonIdx);
-
-          delete cooldowns[key];
-          let anyStillCooling = false;
-          for (const k in cooldowns) {
-            if (k.startsWith(resourceId + ':')) {
-              anyStillCooling = true;
-              break;
-            }
-          }
-
-          const def = resourceObjectService.getById(resourceId);
-          if (anyStillCooling) {
-            tile.resources[resourceId] = 1;
-            gatedConsole.log(
-              `[Regrowth] ${key} at (${tile.x},${tile.y}) recovered (partial — other yields still cooling)`
-            );
-          } else {
-            const [minAmt, maxAmt] = def?.nodeAmountRange ?? [1, 3];
-            const newResourceCount = minAmt + Math.floor(rng.random() * (maxAmt - minAmt + 1));
-            tile.resources[resourceId] = newResourceCount;
-            if (tile.growth) tile.growth[resourceId] = 100;
-            if (def?.walkable === false) {
-              tile.walkable = false;
-              tile.blocksSight = def.blocksSight ?? false;
-              patchPathfindingWalkable(tile.x, tile.y, false);
-            }
-            gatedConsole.log(
-              `[Regrowth] ${resourceId} at (${tile.x},${tile.y}) fully restored ×${newResourceCount}`
-            );
-          }
-        } else {
-          const def = resourceObjectService.getById(key);
-          const [minAmt, maxAmt] = def?.nodeAmountRange ?? [1, 3];
-          const restored = minAmt + Math.floor(rng.random() * (maxAmt - minAmt + 1));
-
-          delete cooldowns[key];
-          tile.resources[key] = restored;
-          if (tile.growth) tile.growth[key] = 100;
-          if (def?.walkable === false) {
-            tile.walkable = false;
-            tile.blocksSight = def.blocksSight ?? false;
-            patchPathfindingWalkable(tile.x, tile.y, false);
-          }
-          gatedConsole.log(`[Regrowth] ${key} at (${tile.x},${tile.y}) regrew ×${restored}`);
-        }
-        tileChanged = true;
-      }
-
-      if (tileChanged) markTileDirty(e.y, e.x, tile);
-
-      const nextMin = minCooldownExpiry(cooldowns);
-      if (nextMin !== Infinity) pushRegrowth(nextMin, e.x, e.y);
+      if (!tile?.growth) continue;
+      const due = this.advanceTileGrowth(tile, rate, cropScale);
+      if (due !== Infinity) pushGrowth(due, e.x, e.y);
     }
   }
 
-  private processCropGrowth(): void {
-    if (!this.gameState) return;
-    const gs = this.gameState;
-    const growTiles = zoneTileKeys(gs, 'grow');
-    if (growTiles.length === 0) return;
-    const rate = seasonRegrowthMultiplier(gs.season);
+  private advanceTileGrowth(tile: WorldTile, rate: number, cropScale: number): number {
+    const gs = this.gameState!;
+    const growth = tile.growth!;
+    const elapsed = Math.max(0, gs.turn - (tile.growthTurn ?? gs.turn));
+    tile.growthTurn = gs.turn;
     const ticksPerDay = TURNS_PER_DAY * TICKS_PER_SECOND;
-    const growthScale = gs._devCropGrowthScale ?? 1;
+    let soonest = Infinity;
+    let repaint = false;
 
-    for (const key of growTiles) {
-      const ci = key.indexOf(',');
-      const x = +key.slice(0, ci);
-      const y = +key.slice(ci + 1);
-      const tile = gs.worldMap[y]?.[x];
-      const growth = tile?.growth;
-      if (!tile || !growth) continue;
+    for (const id in growth) {
+      const was = growth[id];
+      if (was >= 100) continue;
+      const def = resourceObjectService.getById(id);
+      if (!def?.growthTurns) continue;
 
-      for (const id in growth) {
-        if (growth[id] >= 100) continue;
-        const def = resourceObjectService.getById(id);
-        const c = def?.crop;
-        if (!c) continue;
-
-        const thermal = thermalAt(x, y);
+      const scale = def.crop ? cropScale : 1;
+      const ticksPerPercent = Math.max(1, ticksFromSeconds(def.growthTurns) / 100 / rate / scale);
+      let next = was;
+      if (def.crop) {
+        const thermal = thermalAt(tile.x, tile.y);
         const temp = tileTemperature(tile.terrainType, gs.season, gs.turn, gs.weather, thermal);
-        const m = tile.moisture ?? 0;
-        const health = cropHealth(c, {
+        const health = cropHealth(def.crop, {
           soilTier: soilTierForTile(tile),
           temp,
-          moisture: m,
+          moisture: tile.moisture ?? 0,
           snow: tile.snow ?? 0
         });
-        if (health.soilDead) {
-          if (growth[id] !== 1) {
-            growth[id] = 1;
-            if ((tile.resources[id] ?? 0) > 0) tile.resources[id] = 0;
-            markTileDirty(y, x, tile);
-          }
-          continue;
-        }
-        if (health.severity > 0) {
-          const loss = (cropLossPerDay(health.severity) / ticksPerDay) * growthScale;
-          const next = Math.max(1, growth[id] - loss);
-          if (next !== growth[id]) {
-            growth[id] = next;
-            if (next <= 1 && (tile.resources[id] ?? 0) > 0) tile.resources[id] = 0;
-            markTileDirty(y, x, tile);
-          }
-          continue;
-        }
-        if (c.needsLight && thermal.roofed) continue;
-
-        const totalTicks = Math.max(1, ticksFromSeconds(c.growthTurns) / rate);
-        const next = Math.min(100, growth[id] + (100 / totalTicks) * growthScale);
-        growth[id] = next;
-        if (next >= 100 && (tile.resources[id] ?? 0) <= 0) {
-          const [mn, mx] = def!.nodeAmountRange ?? [1, 1];
-          tile.resources[id] = mn + Math.floor(rng.random() * (mx - mn + 1));
-        }
-        markTileDirty(y, x, tile);
+        if (health.soilDead) next = 1;
+        else if (health.severity > 0)
+          next = Math.max(
+            1,
+            was - (cropLossPerDay(health.severity) / ticksPerDay) * elapsed * cropScale
+          );
+        else if (!(def.crop.needsLight && thermal.roofed))
+          next = Math.min(100, was + elapsed / ticksPerPercent);
+      } else {
+        next = Math.min(100, was + elapsed / ticksPerPercent);
       }
-    }
-  }
 
-  private processWildGrowth(): void {
-    if (!this.gameState) return;
-    const gs = this.gameState;
-    if (gs.worldMap !== this._lastWildGrowthWorldMap) {
-      rebuildWildGrowth(gs.worldMap, (id) => resourceObjectService.isRegrowsFromZero(id));
-      this._lastWildGrowthWorldMap = gs.worldMap;
-    }
-    if (wildGrowthSize() === 0) return;
+      growth[id] = next;
+      if (next < 100) soonest = Math.min(soonest, ticksPerPercent);
 
-    const rate = seasonRegrowthMultiplier(gs.season);
-    const DIRTY_BUCKET = 5;
-    const visualBucket = (g: number) =>
-      g < RESOURCE_VISIBLE_GROWTH ? -1 : Math.floor(g / DIRTY_BUCKET);
-
-    for (const { x, y } of wildGrowthEntries()) {
-      const tile = gs.worldMap[y]?.[x];
-      const growth = tile?.growth;
-      if (!tile || !growth) {
-        removeWildGrowth(x, y);
-        continue;
-      }
-      let stillGrowing = false;
-      for (const id in growth) {
-        const g = growth[id];
-        if (g >= 100) continue;
-        const interaction = resourceObjectService.getRegrowsFromZeroInteraction(id);
-        if (!interaction?.regrowthTurns) continue;
-        const totalTicks = Math.max(1, ticksFromSeconds(interaction.regrowthTurns) / rate);
-        const next = Math.min(100, g + 100 / totalTicks);
-        growth[id] = next;
-        if (next >= MIN_FORAGE_GROWTH && (tile.resources[id] ?? 0) <= 0) {
-          const [mn, mx] = resourceObjectService.getById(id)?.nodeAmountRange ?? [1, 1];
-          tile.resources[id] = mn + Math.floor(rng.random() * (mx - mn + 1));
+      const gate = resourceObjectService.minHarvestGrowth(id);
+      const stock = tile.resources[id] ?? 0;
+      if (next >= gate && stock <= 0) {
+        const [mn, mx] = def.nodeAmountRange ?? [1, 1];
+        tile.resources[id] = mn + Math.floor(rng.random() * (mx - mn + 1));
+        if (def.walkable === false) {
+          tile.walkable = false;
+          tile.blocksSight = def.blocksSight ?? false;
+          patchPathfindingWalkable(tile.x, tile.y, false);
         }
-        if (next < 100) stillGrowing = true;
-        if (visualBucket(g) !== visualBucket(next)) markTileDirty(y, x, tile);
+        repaint = true;
+      } else if (next <= 1 && stock > 0) {
+        tile.resources[id] = 0;
+        repaint = true;
       }
-      if (!stillGrowing) removeWildGrowth(x, y);
+      if (growthStageIndex(was) !== growthStageIndex(next)) repaint = true;
     }
+
+    if (repaint) markTileDirty(tile.y, tile.x, tile);
+    return soonest === Infinity ? Infinity : gs.turn + Math.ceil(soonest);
   }
 
   private debugLogPawns(): void {
@@ -928,9 +812,7 @@ export class GameEngineImpl implements GameEngine {
           gs = {
             ...gs,
             pawns: gs.pawns.map((p) =>
-              p.id === pawn.id
-                ? { ...p, draftTarget: { ...target, nextTendTurn } }
-                : p
+              p.id === pawn.id ? { ...p, draftTarget: { ...target, nextTendTurn } } : p
             )
           };
         };
