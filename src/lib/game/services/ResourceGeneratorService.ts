@@ -271,7 +271,7 @@ class ResourceGeneratorServiceImpl {
   ): void {
     tile.resources[def.id] = rng(def.nodeAmountRange[0], def.nodeAmountRange[1]);
     if (isGrowableResource(def)) {
-      (tile.growth ??= {})[def.id] = rng(60, 100);
+      (tile.growth ??= {})[def.id] = 100;
     }
     const resourceSub = SUBTERRAINS[def.subterrain] ?? SUBTERRAIN_FALLBACK;
     tile.ascii = pickChar(resourceSub, tile.x, tile.y);
