@@ -1,5 +1,6 @@
 import type { DesignationType, Pawn } from '../core/types';
 import {
+  isGrowableResource,
   RESOURCE_OBJECT_DEFS,
   resourceObjectDefById,
   type ResourceObjectDef,
@@ -75,22 +76,24 @@ class ResourceObjectServiceImpl {
     return def.interaction;
   }
 
-  getRegrowsFromZeroInteraction(resourceId: string): ResourceInteractionDef | undefined {
-    const def = this.getById(resourceId);
-    if (!def) return undefined;
-    const found = def.interactions?.find((i) => i.regrowsFromZero);
-    if (found) return found;
-    return def.interaction.regrowsFromZero ? def.interaction : undefined;
-  }
+  private harvestGates = new Map<string, number>();
 
-  isRegrowsFromZero(resourceId: string): boolean {
-    return this.getRegrowsFromZeroInteraction(resourceId) !== undefined;
+  minHarvestGrowth(resourceId: string): number {
+    const cached = this.harvestGates.get(resourceId);
+    if (cached !== undefined) return cached;
+    const def = this.getById(resourceId);
+    let lowest = Infinity;
+    for (const i of def ? (def.interactions ?? [def.interaction]) : []) {
+      if (i.minGrowth !== undefined) lowest = Math.min(lowest, i.minGrowth);
+    }
+    const gate = lowest === Infinity ? 100 : lowest;
+    this.harvestGates.set(resourceId, gate);
+    return gate;
   }
 
   calculateYield(
     resourceId: string,
     pawn?: Pawn,
-    availableItemIds?: Set<string>,
     dtype?: DesignationType,
     growthPct: number = 100
   ): Record<string, number> {
@@ -105,17 +108,18 @@ class ResourceObjectServiceImpl {
     const statYieldMult = pawn
       ? (pawnStatService.getWorkModifiers(pawn, interaction.workCategory).yield ?? 1)
       : 1;
+    const growable = isGrowableResource(def);
     const growthMult = Math.max(0, Math.min(1, growthPct / 100));
     for (const y of interaction.yields) {
-      if (availableItemIds && !availableItemIds.has(y.itemId)) continue;
-      const roll = this.randomInt(y.min, y.max);
-      const amount = Math.max(0, Math.ceil(roll * statYieldMult * growthMult));
+      if (growthPct < (y.minGrowth ?? 0)) continue;
+      const base = growable ? (y.amount ?? 0) * growthMult : this.randomInt(y.min ?? 0, y.max ?? 0);
+      const amount = Math.max(0, Math.ceil(base * statYieldMult));
       if (isGameDebug()) {
         gameLogger.log(
           0,
           'JOB-EVT',
           () =>
-            `YIELD-DBG ${resourceId}/${interaction.workCategory} ${y.itemId} cfg[${y.min}-${y.max}] roll=${roll} statx${statYieldMult.toFixed(2)} -> ${amount}`
+            `YIELD-DBG ${resourceId}/${interaction.workCategory} ${y.itemId} ${growable ? `amount=${y.amount} growth=${growthPct.toFixed(0)}%` : `roll[${y.min}-${y.max}]`} statx${statYieldMult.toFixed(2)} -> ${amount}`
         );
       }
       if (amount > 0) {

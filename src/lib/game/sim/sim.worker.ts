@@ -169,7 +169,6 @@ const TILE_RENDER_FIELDS = [
   'movementCost',
   'walkable',
   'resources',
-  'resourceCooldowns',
   'growth',
   'fertilityWear',
   'snow',

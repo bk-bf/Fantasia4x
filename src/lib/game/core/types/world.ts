@@ -14,8 +14,8 @@ export interface WorldTile {
   floor?: { speed: number; dryness: number };
   blocksSight?: boolean;
   resources: Record<string, number>;
-  resourceCooldowns?: Record<string, number>;
   growth?: Record<string, number>;
+  growthTurn?: number;
   fertilityWear?: number;
   snow?: number;
   ice?: number;
