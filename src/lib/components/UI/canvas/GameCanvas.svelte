@@ -49,9 +49,7 @@
   import { GameGrid as GameGridClass } from '$lib/webgl/game-grid.js';
   import { BASE_TILE_PX } from '$lib/webgl/tile-types.js';
   import { pawnService } from '$lib/game/services/PawnService.js';
-  import {
-    pathfinderService
-  } from '$lib/game/services/PathfinderService.js';
+  import { pathfinderService } from '$lib/game/services/PathfinderService.js';
   import { designationService } from '$lib/game/services/DesignationService.js';
   import {
     environmentService,
@@ -92,9 +90,9 @@
     resourceObjectService,
     isGrowableResource
   } from '$lib/game/services/ResourceObjectService.js';
-  import { RESOURCE_VISIBLE_GROWTH } from '$lib/game/core/rules/world/wildGrowth.js';
+  import { RESOURCE_VISIBLE_GROWTH } from '$lib/game/core/rules/world/growthStages.js';
   import { cropGrowthDirection } from '$lib/game/core/rules/world/cropHealth.js';
-  import { isHarvestableTileNow, MIN_FORAGE_GROWTH } from '$lib/game/services/jobs/filters.js';
+  import { isHarvestableTileNow } from '$lib/game/services/jobs/filters.js';
   import { itemService } from '$lib/game/services/ItemService.js';
   import { jobService } from '$lib/game/services/JobService.js';
   import { isEdibleFood } from '$lib/game/services/foodRules.js';
@@ -516,12 +514,7 @@
     return null;
   }
 
-  function updateHoverEntity(
-    tx = hoverTileX,
-    ty = hoverTileY,
-    pawnList?: Pawn[],
-    mobList?: Mob[]
-  ) {
+  function updateHoverEntity(tx = hoverTileX, ty = hoverTileY, pawnList?: Pawn[], mobList?: Mob[]) {
     if (tx < 0 || ty < 0) {
       hoverPawnId = null;
       hoverMobId = null;
@@ -782,15 +775,20 @@
     if (anyDesignated) {
       lines.push(`⊢ ${designatedCount}/${tileKeys.length} marked for harvest`);
     }
+    const growthMult = growthPct === undefined ? 1 : Math.max(0, Math.min(1, growthPct / 100));
     const pillMap = new Map<string, { min: number; max: number }>();
     if (!allDesignated) {
       for (const iact of activeInteractions) {
         for (const y of iact.yields) {
-          if (y.max <= 0) continue;
+          if (growthPct !== undefined && growthPct < (y.minGrowth ?? 0)) continue;
+          const lo =
+            growthPct === undefined ? (y.min ?? 0) : Math.ceil((y.amount ?? 0) * growthMult);
+          const hi = growthPct === undefined ? (y.max ?? 0) : lo;
+          if (hi <= 0) continue;
           const prev = pillMap.get(y.itemId);
           pillMap.set(y.itemId, {
-            min: Math.min(prev?.min ?? y.min, y.min),
-            max: Math.max(prev?.max ?? y.max, y.max)
+            min: Math.min(prev?.min ?? lo, lo),
+            max: Math.max(prev?.max ?? hi, hi)
           });
         }
       }
@@ -799,9 +797,9 @@
       itemId,
       qty: min === max ? `×${max}` : `${min}–${max}`
     }));
+    const harvestGate = resourceObjectService.minHarvestGrowth(selectedResourceTile.resourceId);
     const isRegrowing =
-      selectedResourceAmount <= 0 &&
-      resourceObjectService.isRegrowsFromZero(selectedResourceTile.resourceId);
+      selectedResourceAmount <= 0 && growthPct !== undefined && growthPct < harvestGate;
     if (isRegrowing) lines.push('regrowing — not ready to harvest');
     const harvestableNow = (dtype: DesignationType) =>
       tileKeys.some((k) => {
@@ -832,7 +830,7 @@
       }
     }
     if (withheldImmature && growthPct !== undefined)
-      lines.push(`not ready — ${Math.round(growthPct)}% grown (needs ${MIN_FORAGE_GROWTH}%)`);
+      lines.push(`not ready — ${Math.round(growthPct)}% grown (needs ${harvestGate}%)`);
     if (anyDesignated) {
       btns.push({ label: 'CANCEL', onClick: cancelResourceDesignation });
     }

@@ -10,17 +10,13 @@ import {
   SUBTYPE_BY_SOIL_TIER
 } from '../../core/defs/terrains';
 import { markTileDirty } from '../../core/state/tileDeltas';
-import { addWildGrowth } from '../../core/rules/world/wildGrowth';
-import { pushRegrowth, minCooldownExpiry } from '../../core/rules/world/regrowthQueue';
+import { enrolGrowth } from '../../core/rules/world/growthQueue';
 import { patchPathfindingWalkable } from '../PathfinderService';
 import { absorbDropIfOnStockpileTile } from '../../core/state/stockpile';
-import { ticksFromSeconds } from '../../core/util/time';
-import { seasonRegrowthMultiplier } from '../EnvironmentService';
 import { rng } from '../../core/util/rng';
 import {
   HARVEST_DTYPES,
-  MIN_FORAGE_GROWTH,
-  isForageGated,
+  meetsGrowthGate,
   resourceMatchesDesignation,
   resourceMatchesFilter
 } from './filters';
@@ -40,11 +36,7 @@ export function generate(jobs: Job[], gs: GameState): Job[] {
       j.resourceId ?? '',
       designationType
     );
-    if (
-      isForageGated(interaction) &&
-      (tile?.growth?.[j.resourceId ?? ''] ?? 100) < MIN_FORAGE_GROWTH
-    )
-      return false;
+    if (!meetsGrowthGate(interaction, tile?.growth?.[j.resourceId ?? ''])) return false;
     return (tile?.resources?.[j.resourceId ?? ''] ?? 0) > 0;
   });
 
@@ -65,8 +57,7 @@ export function generate(jobs: Job[], gs: GameState): Job[] {
       if (!resourceMatchesFilter(dtype, resourceId, gs, key)) continue;
 
       const interaction = resourceObjectService.getInteractionByDesignationType(resourceId, dtype);
-      if (isForageGated(interaction) && (tile.growth?.[resourceId] ?? 100) < MIN_FORAGE_GROWTH)
-        continue;
+      if (!meetsGrowthGate(interaction, tile.growth?.[resourceId])) continue;
 
       const existKey = `${x},${y},${resourceId}`;
       if (harvestKeys.has(existKey)) continue;
@@ -106,29 +97,11 @@ export function complete(job: Job, gs: GameState): GameState {
       ) ?? def.interaction)
     : undefined;
 
-  const shouldPersist = interaction?.persistent === true && interaction?.harvestDepletes !== true;
-
-  let availableItemIds: Set<string> | undefined;
-  if (shouldPersist && def && interaction) {
-    const currentCooldowns = tile.resourceCooldowns ?? {};
-    const yieldHasPerItemCooldowns = interaction.yields.some((y) => y.regrowthTurns !== undefined);
-    if (yieldHasPerItemCooldowns) {
-      availableItemIds = new Set<string>();
-      for (const y of interaction.yields) {
-        const key = `${job.resourceId}:${y.itemId}`;
-        if (!(key in currentCooldowns)) {
-          availableItemIds.add(y.itemId);
-        }
-      }
-    }
-  }
-
   const pawn = gs.pawns.find((p) => p.id === job.claimedBy);
   const growthPct = tile.growth?.[job.resourceId] ?? 100;
   const yields = resourceObjectService.calculateYield(
     job.resourceId,
     pawn,
-    availableItemIds,
     designationType,
     growthPct
   );
@@ -145,8 +118,10 @@ export function complete(job: Job, gs: GameState): GameState {
   }
 
   const col = gs.worldMap[job.targetY][job.targetX];
-  col.resources = { ...col.resources, [job.resourceId!]: 0 };
-  if (!shouldPersist) {
+  const growthAfter = interaction?.growthAfter;
+  const clearsTile = growthAfter === undefined;
+  if (clearsTile) {
+    col.resources = { ...col.resources, [job.resourceId]: 0 };
     if (interaction?.harvestSubType && SUBTERRAINS[interaction.harvestSubType]) {
       col.subType = interaction.harvestSubType;
     }
@@ -155,41 +130,15 @@ export function complete(job: Job, gs: GameState): GameState {
     col.blocksSight = baseSub.blocksSight ?? false;
     col.movementCost = baseSub.movementCost;
     patchPathfindingWalkable(col.x, col.y, baseSub.walkable);
-    if (col.growth && job.resourceId! in col.growth) {
+    if (col.growth && job.resourceId in col.growth) {
       const g = { ...col.growth };
-      delete g[job.resourceId!];
+      delete g[job.resourceId];
       col.growth = g;
     }
-  } else if (interaction?.regrowsFromZero) {
-    col.growth = { ...(col.growth ?? {}), [job.resourceId!]: 0 };
-    addWildGrowth(col.x, col.y);
   } else {
-    const prevGrowth = col.growth?.[job.resourceId!] ?? 100;
-    col.growth = {
-      ...(col.growth ?? {}),
-      [job.resourceId!]: Math.max(0, prevGrowth - (interaction?.harvestGrowthCost ?? 0))
-    };
-    const def = resourceObjectService.getById(job.resourceId!);
-    if (!def?.crop) {
-      const newCooldowns = { ...(col.resourceCooldowns ?? {}) };
-      const regrowthRate = seasonRegrowthMultiplier(gs.season);
-      const cooldownTicks = (turns: number) =>
-        gs.turn + Math.round(ticksFromSeconds(turns) / regrowthRate);
-      const yieldHasPerItemCooldowns = interaction!.yields.some(
-        (y) => y.regrowthTurns !== undefined
-      );
-      if (yieldHasPerItemCooldowns) {
-        for (const y of interaction!.yields) {
-          if (y.regrowthTurns && (availableItemIds?.has(y.itemId) ?? true)) {
-            newCooldowns[`${job.resourceId!}:${y.itemId}`] = cooldownTicks(y.regrowthTurns);
-          }
-        }
-      } else if (interaction?.regrowthTurns) {
-        newCooldowns[job.resourceId!] = cooldownTicks(interaction.regrowthTurns);
-      }
-      col.resourceCooldowns = newCooldowns;
-      pushRegrowth(minCooldownExpiry(newCooldowns), col.x, col.y);
-    }
+    col.growth = { ...(col.growth ?? {}), [job.resourceId]: growthAfter };
+    if (growthAfter <= 0) col.resources = { ...col.resources, [job.resourceId]: 0 };
+    enrolGrowth(col, gs.turn);
   }
 
   if (def?.crop) {
@@ -224,7 +173,7 @@ export function complete(job: Job, gs: GameState): GameState {
     });
     newDropIds.push(id);
     console.log(
-      `[JobService] Harvest complete: ${job.resourceId} at (${job.targetX},${job.targetY}) → ${dropResourceId} x${dropAmount}${shouldPersist ? ' (persistent)' : ''}`
+      `[JobService] Harvest complete: ${job.resourceId} at (${job.targetX},${job.targetY}) → ${dropResourceId} x${dropAmount} (growth ${growthPct.toFixed(0)}% → ${growthAfter ?? 'cleared'})`
     );
   }
   const newDesignations = { ...(gs.designations ?? {}) };
@@ -243,7 +192,7 @@ export function complete(job: Job, gs: GameState): GameState {
     state = wearWorkingPawnTool(job.claimedBy, interaction.workCategory, state);
   }
 
-  if (!shouldPersist && def?.overheadRoof) {
+  if (clearsTile && def?.overheadRoof) {
     state = buildingService.placeBuilding('mountain_roof', job.targetX, job.targetY, state);
     state = buildingService.removeUnsupportedRoofs(state, job.targetX, job.targetY);
   }
