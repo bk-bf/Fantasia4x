@@ -7,10 +7,11 @@ import {
   resolveCharSpans
 } from '$lib/game/core/defs/terrains.js';
 import {
+  resizesWithGrowth,
   resourceObjectDefById,
   type ResourceObjectDef
 } from '$lib/game/core/defs/resourceObjects.js';
-import { RESOURCE_VISIBLE_GROWTH } from '$lib/game/core/rules/world/wildGrowth.js';
+import { growthScale, RESOURCE_VISIBLE_GROWTH } from '$lib/game/core/rules/world/growthStages.js';
 import { buildingDefById } from '$lib/game/core/defs/buildings.js';
 import { parseHexRgb01 } from '$lib/game/core/util/color.js';
 import { glyph, SHEET } from './tilesets.js';
@@ -320,17 +321,10 @@ function isSnowFeature(tile: WorldTile): boolean {
 
 function resolveActiveResource(
   tile: WorldTile
-): { resDef: ResourceObjectDef; brightness: number } | undefined {
+): { resDef: ResourceObjectDef; scale: number } | undefined {
   if (!tile.resources || Object.keys(tile.resources).length === 0) return undefined;
-  const activeEntry = Object.entries(tile.resources).find(([, amt]) => amt > 0);
-  let resKey: string | undefined = activeEntry?.[0];
-  let brightness = 1;
-  if (resKey) {
-    const partial = Object.keys(tile.resourceCooldowns ?? {}).some((k) =>
-      k.startsWith(resKey! + ':')
-    );
-    if (partial) brightness = 0.65;
-  } else {
+  let resKey: string | undefined = Object.entries(tile.resources).find(([, amt]) => amt > 0)?.[0];
+  if (!resKey) {
     let bestGrowth = 0;
     for (const [id, g] of Object.entries(tile.growth ?? {})) {
       if (g > bestGrowth) {
@@ -338,12 +332,14 @@ function resolveActiveResource(
         resKey = id;
       }
     }
-    if (resKey && bestGrowth < RESOURCE_VISIBLE_GROWTH) resKey = undefined;
-    else if (resKey) brightness = Math.max(0.4, bestGrowth / 100);
+    if (bestGrowth < RESOURCE_VISIBLE_GROWTH) resKey = undefined;
   }
   const resDef = resKey ? resourceObjectDefById(resKey) : undefined;
   if (!resDef || resDef.chars.length === 0) return undefined;
-  return { resDef, brightness };
+  const growth = tile.growth?.[resKey!];
+  const scale = growth !== undefined && resizesWithGrowth(resDef) ? growthScale(growth) : 1;
+  if (scale <= 0) return undefined;
+  return { resDef, scale };
 }
 
 export function applyTileToGrid(grid: GameGrid, tile: WorldTile, hiddenMask: boolean[][]): void {
@@ -447,7 +443,7 @@ export function applyResourceToGrid(
   if (hiddenMask[tile.y]?.[tile.x]) return clear();
   const active = resolveActiveResource(tile);
   if (!active) return clear();
-  const { resDef, brightness } = active;
+  const { resDef, scale: stageScale } = active;
   const salt = resDef.glow ? GLOWING_GROVE_SPRITE_SALT : 0;
   const variant = season ? resDef.seasonVariants?.[season] : undefined;
   const pool = variant?.chars?.length ? variant.chars : resDef.chars;
@@ -455,23 +451,14 @@ export function applyResourceToGrid(
   const baseDetail = variant?.detail ?? resDef.detail;
   const h = ((tile.x * 1619 + tile.y * 31337 + salt) >>> 0) % pool.length;
   const rs = resDef.renderScale;
-  const scale = rs && rs !== 1 ? rs : undefined;
+  const drawScale = (rs ?? 1) * stageScale;
+  const scale = drawScale !== 1 ? drawScale : undefined;
   const tall = rs !== undefined && rs > 1;
   blank(tall ? gridShort : gridTall);
-  const detail = baseDetail
-    ? {
-        r: baseDetail[0] * brightness,
-        g: baseDetail[1] * brightness,
-        b: baseDetail[2] * brightness
-      }
-    : undefined;
+  const detail = baseDetail ? { r: baseDetail[0], g: baseDetail[1], b: baseDetail[2] } : undefined;
   (tall ? gridTall : gridShort).setTile(tile.x, tile.y, {
     char: pool[h],
-    foreground: {
-      r: baseFg[0] * brightness,
-      g: baseFg[1] * brightness,
-      b: baseFg[2] * brightness
-    },
+    foreground: { r: baseFg[0], g: baseFg[1], b: baseFg[2] },
     background: { r: 0, g: 0, b: 0 },
     position: { x: tile.x, y: tile.y },
     detail,
