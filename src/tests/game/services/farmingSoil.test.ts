@@ -38,13 +38,13 @@ describe('§F crop seeds', () => {
 describe('§F wild crops drop a few seeds when harvested', () => {
   it('wild barley yields grain_seed, wild rye yields rye_seed; berry bush yields berry_seed; each wild veg yields its own seed', () => {
     expect(
-      resourceObjectService.calculateYield('wild_barley', undefined, undefined, 'harvest')
+      resourceObjectService.calculateYield('wild_barley', undefined, 'harvest')
     ).toHaveProperty('grain_seed');
     expect(
-      resourceObjectService.calculateYield('wild_rye', undefined, undefined, 'harvest')
+      resourceObjectService.calculateYield('wild_rye', undefined, 'harvest')
     ).toHaveProperty('rye_seed');
     expect(
-      resourceObjectService.calculateYield('berry_bush', undefined, undefined, 'harvest')
+      resourceObjectService.calculateYield('berry_bush', undefined, 'harvest')
     ).toHaveProperty('berry_seed');
     for (const [resId, seed] of [
       ['wild_turnip', 'turnip_seed'],
@@ -54,7 +54,7 @@ describe('§F wild crops drop a few seeds when harvested', () => {
       ['wild_peas', 'pea_seed']
     ] as const) {
       expect(
-        resourceObjectService.calculateYield(resId, undefined, undefined, 'harvest')
+        resourceObjectService.calculateYield(resId, undefined, 'harvest')
       ).toHaveProperty(seed);
     }
   });
@@ -144,7 +144,7 @@ describe('§F dig = the harvest-vs-cut twin', () => {
       const def = resourceObjectService.getById(id)!;
       expect(def.designationTypes).toContain('dig');
       const dig = resourceObjectService.getInteractionByDesignationType(id, 'dig')!;
-      expect(dig.harvestDepletes).toBe(true);
+      expect(dig.growthAfter).toBeUndefined();
       expect(dig.harvestSubType).toBe('dirt');
       const yieldIds = dig.yields.map((y) => y.itemId);
       expect(yieldIds).toContain(soilItem);
@@ -158,7 +158,7 @@ describe('§F crops + planting', () => {
     const wheat = resourceObjectService.getById('crop_wheat')!;
     expect(wheat.crop?.seedItem).toBe('grain_seed');
     expect(wheat.crop?.minSoil).toBe(1);
-    const y = resourceObjectService.calculateYield('crop_wheat', undefined, undefined, 'harvest');
+    const y = resourceObjectService.calculateYield('crop_wheat', undefined, 'harvest');
     expect(y).toHaveProperty('wheat');
     expect(y).toHaveProperty('grain_seed');
     expect(resourceObjectService.getById('crop_pumpkin')!.crop?.minSoil).toBe(4);
@@ -213,9 +213,10 @@ describe('§F resource growth/maturity', () => {
     yields: []
   };
 
-  it('a crop config alone makes an object growable, with no persistent/regrowing interaction needed', () => {
+  it('a growth clock makes an object growable', () => {
     const def = {
       interaction: { ...bareInteraction },
+      growthTurns: 10,
       crop: {
         seedItem: 's',
         minSoil: 0,
@@ -224,53 +225,39 @@ describe('§F resource growth/maturity', () => {
         minTemp: 0,
         maxTemp: 1,
         needsLight: false,
-        growthTurns: 10,
         fertilityCost: 0
       }
     } as unknown as ResourceObjectDef;
     expect(isGrowableResource(def)).toBe(true);
   });
 
-  it('walks the interactions array, not just the single interaction, and treats regrowthTurns 0 as still regrowable', () => {
+  it('an object with no growth clock is not growable, whatever its interactions say', () => {
     const def = {
       interaction: { ...bareInteraction },
-      interactions: [{ ...bareInteraction }, { ...bareInteraction, regrowthTurns: 0 }]
-    } as unknown as ResourceObjectDef;
-    expect(isGrowableResource(def)).toBe(true);
-  });
-
-  it('an object with no crop, no persistent flag and no regrowthTurns is not growable', () => {
-    const def = {
-      interaction: { ...bareInteraction, persistent: false }
+      interactions: [{ ...bareInteraction }, { ...bareInteraction, growthAfter: 0 }]
     } as unknown as ResourceObjectDef;
     expect(isGrowableResource(def)).toBe(false);
   });
 
   it('growth scales harvest yield — an ungrown node yields nothing, a full one yields normally', () => {
-    const none = resourceObjectService.calculateYield(
-      'grass_patch',
-      undefined,
-      undefined,
-      'harvest',
-      0
-    );
+    const none = resourceObjectService.calculateYield('grass_patch', undefined, 'harvest', 0);
     expect(Object.keys(none).length).toBe(0);
-    const full = resourceObjectService.calculateYield(
-      'grass_patch',
-      undefined,
-      undefined,
-      'harvest',
-      100
-    );
-    expect(full).toHaveProperty('plant_fiber');
+    const half = resourceObjectService.calculateYield('grass_patch', undefined, 'harvest', 50);
+    const full = resourceObjectService.calculateYield('grass_patch', undefined, 'harvest', 100);
+    expect(full.plant_fiber).toBe(5);
+    expect(half.plant_fiber).toBe(3);
   });
 
-  it('a tree forage only strips ~20% growth (just branches) — the tree stays standing', () => {
+  it('a tree forage leaves the tree standing, part-grown; felling it clears the tile', () => {
     const forage = resourceObjectService.getInteractionByDesignationType('pine_tree', 'forage')!;
-    expect(forage.harvestGrowthCost).toBe(20);
+    expect(forage.growthAfter).toBe(35);
+    expect(forage.minGrowth).toBe(50);
+    const cut = resourceObjectService.getInteractionByDesignationType('pine_tree', 'woodcut')!;
+    expect(cut.growthAfter).toBeUndefined();
+    expect(cut.minGrowth).toBeUndefined();
   });
 
-  it('a foraged-down tree (growth < 60%) queues no new forage job until it regrows', () => {
+  it('a foraged-down tree queues no new forage job until it regrows past the gate', () => {
     const mk = (growth: number) =>
       ({
         worldMap: [
@@ -291,7 +278,7 @@ describe('§F resource growth/maturity', () => {
       }) as unknown as GameState;
 
     expect(harvestGenerate([], mk(80)).some((j) => j.resourceId === 'pine_tree')).toBe(true);
-    expect(harvestGenerate([], mk(40)).some((j) => j.resourceId === 'pine_tree')).toBe(false);
+    expect(harvestGenerate([], mk(35)).some((j) => j.resourceId === 'pine_tree')).toBe(false);
   });
 });
 

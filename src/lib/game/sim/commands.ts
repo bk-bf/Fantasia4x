@@ -1513,12 +1513,10 @@ export const COMMANDS: Record<string, Cmd> = {
     if (!tile) return s;
     const ids = new Set<string>([
       ...Object.keys(tile.resources ?? {}),
-      ...Object.keys(tile.resourceCooldowns ?? {}).map((k) =>
-        k.includes(':') ? k.slice(0, k.indexOf(':')) : k
-      )
+      ...Object.keys(tile.growth ?? {})
     ]);
     if (ids.size === 0) return s;
-    tile.resourceCooldowns = {};
+    if (tile.growth) for (const id of ids) if (id in tile.growth) tile.growth[id] = 100;
     const resources = { ...tile.resources };
     for (const id of ids) {
       const def = resourceObjectService.getById(id);

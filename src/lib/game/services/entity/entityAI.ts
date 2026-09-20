@@ -13,9 +13,9 @@ import { calcMaxStamina } from '../../entities/Pawns';
 import { gameLogger } from '../../debug/gameLogger';
 import { rng } from '../../core/util/rng';
 import { markTileDirty } from '../../core/state/tileDeltas';
-import { addWildGrowth } from '../../core/rules/world/wildGrowth';
+import { enrolGrowth } from '../../core/rules/world/growthQueue';
 import { consumeTop } from '../../core/rules/world/carcassCondition';
-import { resourceObjectService } from '../ResourceObjectService';
+import { isGrowableResource, resourceObjectService } from '../ResourceObjectService';
 import { pawnStatService } from '../PawnStatService';
 import { COLLAPSE_CONSCIOUSNESS, RECOVER_CONSCIOUSNESS } from '../../core/rules/body/conditions';
 import {
@@ -431,8 +431,9 @@ export function stepEntities(state: GameState): GameState {
     if (tile.growth && id in tile.growth && resourceObjectService.getById(id)?.crop) {
       tile.growth[id] = 1;
     }
-    if (remaining === 0 && resourceObjectService.isRegrowsFromZero(id)) {
-      addWildGrowth(x, y);
+    const def = resourceObjectService.getById(id);
+    if (remaining === 0 && def && isGrowableResource(def)) {
+      enrolGrowth(tile, finalState.turn);
     }
     markTileDirty(y, x, tile);
   }

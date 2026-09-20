@@ -23,16 +23,8 @@ describe('tilemap background uniformity', () => {
     expect([bg.r, bg.g, bg.b]).toEqual([grassBg[0], grassBg[1], grassBg[2]]);
   });
 
-  it('a harvested (depleted + on cooldown) tree keeps the subterrain background', () => {
-    const grid = buildGameGrid([
-      [
-        tile({
-          subType: 'grass',
-          resources: { oak_tree: 0 },
-          resourceCooldowns: { oak_tree: 9999 }
-        })
-      ]
-    ]);
+  it('a felled tree keeps the subterrain background', () => {
+    const grid = buildGameGrid([[tile({ subType: 'grass', resources: { oak_tree: 0 } })]]);
     const bg = grid.getTile(0, 0)!.background;
     expect([bg.r, bg.g, bg.b]).toEqual([grassBg[0], grassBg[1], grassBg[2]]);
   });
