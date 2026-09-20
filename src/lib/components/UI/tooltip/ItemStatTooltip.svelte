@@ -208,7 +208,7 @@
     const c = resourceObjectService.getCropForItem(item.id);
     if (!c?.def.crop) return null;
     const cr = c.def.crop;
-    const days = cr.growthTurns / TURNS_PER_DAY;
+    const days = (c.def.growthTurns ?? 0) / TURNS_PER_DAY;
     const rows: Row[] = [
       { label: 'Grows', val: `${cr.minTemp} to ${cr.maxTemp}°C` },
       { label: 'Water', val: `${cr.minMoisture}–${cr.maxMoisture}%` },
