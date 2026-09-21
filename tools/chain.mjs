@@ -24,10 +24,13 @@ if (spawnSync('git', ['push', 'origin', `HEAD:refs/heads/${branch}`], { stdio: '
   fail(`the push of ${branch} was refused`);
 
 const pull = JSON.parse(read('gh', ['pr', 'list', '--head', branch, '--state', 'open', '--json', 'number']))[0];
-const event = pull && !pre ? 'pull_request' : 'workflow_dispatch';
+const event = pull && !pre ? 'pull_request' : pre ? 'workflow_dispatch' : 'push';
+const chainRef = `chain/${branch.replaceAll('/', '-')}`;
 const since = Date.now() - 5_000;
 if (event === 'workflow_dispatch')
-  read('gh', ['workflow', 'run', WORKFLOW, '--ref', branch, '-f', `mode=${pre ? 'pre' : 'chain'}`]);
+  read('gh', ['workflow', 'run', WORKFLOW, '--ref', branch, '-f', 'mode=pre']);
+if (event === 'push' && spawnSync('git', ['push', '--force', 'origin', `HEAD:refs/heads/${chainRef}`], { stdio: 'inherit' }).status !== 0)
+  fail(`the push of ${chainRef} was refused`);
 
 async function findRun() {
   for (let i = 0; i < 40; i++) {
@@ -51,5 +54,6 @@ process.stdout.write(`pnpm chain: ${what} on ${branch} at ${sha.slice(0, 8)}: ${
 const watched = spawnSync('gh', ['run', 'watch', String(found.databaseId), '--exit-status', '--interval', '15'], {
   stdio: 'inherit'
 });
+if (event === 'push') spawnSync('git', ['push', 'origin', '--delete', chainRef], { stdio: 'inherit' });
 process.stdout.write(`pnpm chain: ${watched.status === 0 ? 'green' : 'red'}, ${found.url}\n`);
 process.exit(watched.status ?? 1);
