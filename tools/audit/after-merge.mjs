@@ -52,7 +52,7 @@ const removeWorktree = (dir) => {
 };
 
 function landStep(pull, num, step, sha) {
-  settle('tick the step', () => I.tickRemediation(num, `DONE: ${step}`));
+  settle('tick the step', () => I.tickRemediation(num, `DONE: ${step}`, ` (#${pull.number})`));
   I.invalidate();
   const left = I.featureSteps(I.readIssue(String(num)).body).filter((s) => !s.done);
   if (left.length) {
