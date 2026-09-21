@@ -1759,32 +1759,35 @@
           "itemId": "pine_log",
           "skillId": "woodcutting",
           "skillMultiplier": 0.2,
-          "amount": 5,
-          "minGrowth": 50
+          "amount": 5
         },
         {
           "itemId": "bark",
           "skillId": "woodcutting",
           "skillMultiplier": 0.1,
-          "amount": 2
+          "amount": 2,
+          "minGrowth": 50
         },
         {
           "itemId": "branch",
           "skillId": "woodcutting",
           "skillMultiplier": 0.15,
-          "amount": 10
+          "amount": 10,
+          "minGrowth": 50
         },
         {
           "itemId": "plant_fiber",
           "skillId": "woodcutting",
           "skillMultiplier": 0.05,
-          "amount": 3
+          "amount": 3,
+          "minGrowth": 50
         },
         {
           "itemId": "resin",
           "skillId": "woodcutting",
           "skillMultiplier": 0.06,
-          "amount": 1
+          "amount": 1,
+          "minGrowth": 50
         }
       ]
     },
@@ -1803,32 +1806,35 @@
             "itemId": "pine_log",
             "skillId": "woodcutting",
             "skillMultiplier": 0.2,
-            "amount": 5,
-            "minGrowth": 50
+            "amount": 5
           },
           {
             "itemId": "bark",
             "skillId": "woodcutting",
             "skillMultiplier": 0.1,
-            "amount": 2
+            "amount": 2,
+            "minGrowth": 50
           },
           {
             "itemId": "branch",
             "skillId": "woodcutting",
             "skillMultiplier": 0.15,
-            "amount": 10
+            "amount": 10,
+            "minGrowth": 50
           },
           {
             "itemId": "plant_fiber",
             "skillId": "woodcutting",
             "skillMultiplier": 0.05,
-            "amount": 3
+            "amount": 3,
+            "minGrowth": 50
           },
           {
             "itemId": "resin",
             "skillId": "woodcutting",
             "skillMultiplier": 0.06,
-            "amount": 1
+            "amount": 1,
+            "minGrowth": 50
           }
         ]
       },
@@ -1931,26 +1937,28 @@
           "itemId": "birch_log",
           "skillId": "woodcutting",
           "skillMultiplier": 0.2,
-          "amount": 5,
-          "minGrowth": 50
+          "amount": 5
         },
         {
           "itemId": "bark",
           "skillId": "woodcutting",
           "skillMultiplier": 0.1,
-          "amount": 2
+          "amount": 2,
+          "minGrowth": 50
         },
         {
           "itemId": "branch",
           "skillId": "woodcutting",
           "skillMultiplier": 0.15,
-          "amount": 10
+          "amount": 10,
+          "minGrowth": 50
         },
         {
           "itemId": "plant_fiber",
           "skillId": "woodcutting",
           "skillMultiplier": 0.05,
-          "amount": 3
+          "amount": 3,
+          "minGrowth": 50
         }
       ]
     },
@@ -1969,26 +1977,28 @@
             "itemId": "birch_log",
             "skillId": "woodcutting",
             "skillMultiplier": 0.2,
-            "amount": 5,
-            "minGrowth": 50
+            "amount": 5
           },
           {
             "itemId": "bark",
             "skillId": "woodcutting",
             "skillMultiplier": 0.1,
-            "amount": 2
+            "amount": 2,
+            "minGrowth": 50
           },
           {
             "itemId": "branch",
             "skillId": "woodcutting",
             "skillMultiplier": 0.15,
-            "amount": 10
+            "amount": 10,
+            "minGrowth": 50
           },
           {
             "itemId": "plant_fiber",
             "skillId": "woodcutting",
             "skillMultiplier": 0.05,
-            "amount": 3
+            "amount": 3,
+            "minGrowth": 50
           }
         ]
       },
@@ -2095,26 +2105,28 @@
           "itemId": "oak_log",
           "skillId": "woodcutting",
           "skillMultiplier": 0.2,
-          "amount": 5,
-          "minGrowth": 50
+          "amount": 5
         },
         {
           "itemId": "bark",
           "skillId": "woodcutting",
           "skillMultiplier": 0.1,
-          "amount": 2
+          "amount": 2,
+          "minGrowth": 50
         },
         {
           "itemId": "branch",
           "skillId": "woodcutting",
           "skillMultiplier": 0.15,
-          "amount": 10
+          "amount": 10,
+          "minGrowth": 50
         },
         {
           "itemId": "plant_fiber",
           "skillId": "woodcutting",
           "skillMultiplier": 0.05,
-          "amount": 3
+          "amount": 3,
+          "minGrowth": 50
         }
       ]
     },
@@ -2133,26 +2145,28 @@
             "itemId": "oak_log",
             "skillId": "woodcutting",
             "skillMultiplier": 0.2,
-            "amount": 5,
-            "minGrowth": 50
+            "amount": 5
           },
           {
             "itemId": "bark",
             "skillId": "woodcutting",
             "skillMultiplier": 0.1,
-            "amount": 2
+            "amount": 2,
+            "minGrowth": 50
           },
           {
             "itemId": "branch",
             "skillId": "woodcutting",
             "skillMultiplier": 0.15,
-            "amount": 10
+            "amount": 10,
+            "minGrowth": 50
           },
           {
             "itemId": "plant_fiber",
             "skillId": "woodcutting",
             "skillMultiplier": 0.05,
-            "amount": 3
+            "amount": 3,
+            "minGrowth": 50
           }
         ]
       },
@@ -2270,32 +2284,35 @@
           "itemId": "apple_log",
           "skillId": "woodcutting",
           "skillMultiplier": 0.2,
-          "amount": 4,
-          "minGrowth": 50
+          "amount": 4
         },
         {
           "itemId": "bark",
           "skillId": "woodcutting",
           "skillMultiplier": 0.1,
-          "amount": 2
+          "amount": 2,
+          "minGrowth": 50
         },
         {
           "itemId": "branch",
           "skillId": "woodcutting",
           "skillMultiplier": 0.15,
-          "amount": 8
+          "amount": 8,
+          "minGrowth": 50
         },
         {
           "itemId": "apple",
           "skillId": "woodcutting",
           "skillMultiplier": 0.1,
-          "amount": 6
+          "amount": 6,
+          "minGrowth": 50
         },
         {
           "itemId": "apple_seed",
           "skillId": "woodcutting",
           "skillMultiplier": 0.05,
-          "amount": 2
+          "amount": 2,
+          "minGrowth": 50
         }
       ]
     },
@@ -2314,32 +2331,35 @@
             "itemId": "apple_log",
             "skillId": "woodcutting",
             "skillMultiplier": 0.2,
-            "amount": 4,
-            "minGrowth": 50
+            "amount": 4
           },
           {
             "itemId": "bark",
             "skillId": "woodcutting",
             "skillMultiplier": 0.1,
-            "amount": 2
+            "amount": 2,
+            "minGrowth": 50
           },
           {
             "itemId": "branch",
             "skillId": "woodcutting",
             "skillMultiplier": 0.15,
-            "amount": 8
+            "amount": 8,
+            "minGrowth": 50
           },
           {
             "itemId": "apple",
             "skillId": "woodcutting",
             "skillMultiplier": 0.1,
-            "amount": 8
+            "amount": 8,
+            "minGrowth": 50
           },
           {
             "itemId": "apple_seed",
             "skillId": "woodcutting",
             "skillMultiplier": 0.05,
-            "amount": 2
+            "amount": 2,
+            "minGrowth": 50
           }
         ]
       },
@@ -2436,26 +2456,28 @@
           "itemId": "ash_log",
           "skillId": "woodcutting",
           "skillMultiplier": 0.2,
-          "amount": 5,
-          "minGrowth": 50
+          "amount": 5
         },
         {
           "itemId": "bark",
           "skillId": "woodcutting",
           "skillMultiplier": 0.1,
-          "amount": 2
+          "amount": 2,
+          "minGrowth": 50
         },
         {
           "itemId": "branch",
           "skillId": "woodcutting",
           "skillMultiplier": 0.15,
-          "amount": 10
+          "amount": 10,
+          "minGrowth": 50
         },
         {
           "itemId": "plant_fiber",
           "skillId": "woodcutting",
           "skillMultiplier": 0.05,
-          "amount": 3
+          "amount": 3,
+          "minGrowth": 50
         }
       ]
     },
@@ -2474,26 +2496,28 @@
             "itemId": "ash_log",
             "skillId": "woodcutting",
             "skillMultiplier": 0.2,
-            "amount": 5,
-            "minGrowth": 50
+            "amount": 5
           },
           {
             "itemId": "bark",
             "skillId": "woodcutting",
             "skillMultiplier": 0.1,
-            "amount": 2
+            "amount": 2,
+            "minGrowth": 50
           },
           {
             "itemId": "branch",
             "skillId": "woodcutting",
             "skillMultiplier": 0.15,
-            "amount": 10
+            "amount": 10,
+            "minGrowth": 50
           },
           {
             "itemId": "plant_fiber",
             "skillId": "woodcutting",
             "skillMultiplier": 0.05,
-            "amount": 3
+            "amount": 3,
+            "minGrowth": 50
           }
         ]
       },
@@ -2583,26 +2607,28 @@
           "itemId": "yew_log",
           "skillId": "woodcutting",
           "skillMultiplier": 0.2,
-          "amount": 5,
-          "minGrowth": 50
+          "amount": 5
         },
         {
           "itemId": "bark",
           "skillId": "woodcutting",
           "skillMultiplier": 0.1,
-          "amount": 2
+          "amount": 2,
+          "minGrowth": 50
         },
         {
           "itemId": "branch",
           "skillId": "woodcutting",
           "skillMultiplier": 0.15,
-          "amount": 10
+          "amount": 10,
+          "minGrowth": 50
         },
         {
           "itemId": "plant_fiber",
           "skillId": "woodcutting",
           "skillMultiplier": 0.05,
-          "amount": 3
+          "amount": 3,
+          "minGrowth": 50
         }
       ]
     },
@@ -2621,26 +2647,28 @@
             "itemId": "yew_log",
             "skillId": "woodcutting",
             "skillMultiplier": 0.2,
-            "amount": 5,
-            "minGrowth": 50
+            "amount": 5
           },
           {
             "itemId": "bark",
             "skillId": "woodcutting",
             "skillMultiplier": 0.1,
-            "amount": 2
+            "amount": 2,
+            "minGrowth": 50
           },
           {
             "itemId": "branch",
             "skillId": "woodcutting",
             "skillMultiplier": 0.15,
-            "amount": 10
+            "amount": 10,
+            "minGrowth": 50
           },
           {
             "itemId": "plant_fiber",
             "skillId": "woodcutting",
             "skillMultiplier": 0.05,
-            "amount": 3
+            "amount": 3,
+            "minGrowth": 50
           }
         ]
       },
@@ -2751,26 +2779,28 @@
           "itemId": "willow_log",
           "skillId": "woodcutting",
           "skillMultiplier": 0.2,
-          "amount": 5,
-          "minGrowth": 50
+          "amount": 5
         },
         {
           "itemId": "bark",
           "skillId": "woodcutting",
           "skillMultiplier": 0.1,
-          "amount": 2
+          "amount": 2,
+          "minGrowth": 50
         },
         {
           "itemId": "branch",
           "skillId": "woodcutting",
           "skillMultiplier": 0.15,
-          "amount": 10
+          "amount": 10,
+          "minGrowth": 50
         },
         {
           "itemId": "plant_fiber",
           "skillId": "woodcutting",
           "skillMultiplier": 0.05,
-          "amount": 3
+          "amount": 3,
+          "minGrowth": 50
         }
       ]
     },
@@ -2789,26 +2819,28 @@
             "itemId": "willow_log",
             "skillId": "woodcutting",
             "skillMultiplier": 0.2,
-            "amount": 5,
-            "minGrowth": 50
+            "amount": 5
           },
           {
             "itemId": "bark",
             "skillId": "woodcutting",
             "skillMultiplier": 0.1,
-            "amount": 2
+            "amount": 2,
+            "minGrowth": 50
           },
           {
             "itemId": "branch",
             "skillId": "woodcutting",
             "skillMultiplier": 0.15,
-            "amount": 10
+            "amount": 10,
+            "minGrowth": 50
           },
           {
             "itemId": "plant_fiber",
             "skillId": "woodcutting",
             "skillMultiplier": 0.05,
-            "amount": 3
+            "amount": 3,
+            "minGrowth": 50
           }
         ]
       },
