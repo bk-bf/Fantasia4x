@@ -15,7 +15,7 @@ as #N.
 
 ## Steps
 
-- [ ] A change that can be merged, verified and approved by itself
+- [ ] One change. On an S or M card every step lands in one pull request; on an L card each is its own
 - [ ] The next one
 
 ## How it gets verified
