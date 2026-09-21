@@ -81,7 +81,7 @@ describe('one harvest, one outcome', () => {
     expect(dropped(gs, 'branch')).toBe(10);
   });
 
-  it('felling a stripped tree yields its branches but no timber', () => {
+  it('felling a stripped tree yields its logs and nothing from its crown', () => {
     const t = tile({
       subType: 'forest',
       walkable: false,
@@ -90,8 +90,22 @@ describe('one harvest, one outcome', () => {
     });
     const gs = harvest(t, 'pine_tree', 'woodcut');
 
-    expect(dropped(gs, 'pine_log')).toBe(0);
-    expect(dropped(gs, 'branch')).toBe(4);
+    expect(dropped(gs, 'pine_log')).toBe(2);
+    for (const crown of ['branch', 'bark', 'plant_fiber', 'resin'])
+      expect(dropped(gs, crown), crown).toBe(0);
+  });
+
+  it('felling a stripped apple tree drops no fruit', () => {
+    const t = tile({
+      subType: 'forest',
+      walkable: false,
+      resources: { apple_tree: 3 },
+      growth: { apple_tree: 35 }
+    });
+    const gs = harvest(t, 'apple_tree', 'woodcut');
+
+    expect(dropped(gs, 'apple_log')).toBeGreaterThan(0);
+    expect(dropped(gs, 'apple')).toBe(0);
   });
 
   it('cutting grass takes the whole patch to zero and queues its regrowth', () => {
