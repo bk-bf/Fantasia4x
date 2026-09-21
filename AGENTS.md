@@ -137,8 +137,8 @@ the laptop.
 **One chain checks every change, and GitHub starts and records it.**
 `.github/workflows/check.yml` runs on every pull request into `dev`, every push to `dev`, and every
 `pnpm chain`; read it for its jobs, their order and where each runs. `scopeOf` in
-`tools/audit/ci-scope.mjs` decides which legs a change runs. The jobs a pull request into `dev`
-must pass:
+`tools/audit/ci-scope.mjs` decides which legs a change runs. The jobs a commit must pass before
+it can reach `dev`, by a pull request or by a direct push:
 
 ```bash
 gh api repos/bk-bf/Fantasia4x/branches/dev/protection --jq .required_status_checks.contexts
@@ -159,9 +159,9 @@ and never adds the label itself.
 
 **`pnpm chain` is the one command** (`tools/chain.mjs`). It pushes the current branch and streams
 its check run from GitHub until the run ends, exiting with its result; `pnpm chain --pre` runs the
-pre-check alone. A push to a pull request branch or to `dev` starts the same chain. Do not run
-`pnpm check` or the tests by hand before a push GitHub will check; the chain runs them on the
-pushed commit. Run them by hand only while you work.
+pre-check alone. A push to a pull request branch starts the same chain. Do not run `pnpm check`
+or the tests by hand to decide whether a commit may land; the chain runs them on the pushed commit.
+Run them by hand only while you work.
 
 **`pnpm check` is the gate**, and every tool its `package.json` script runs must stay green. Warning
 counts are frozen per tool in `tools/audit/warning-budget.json`; `tools/audit/warnings.mjs` fails
@@ -179,8 +179,8 @@ only when asked, or when the change touches a hub everything imports.
 ## Committing
 
 **Commit finished work and push it, on the laptop and on ubuntuserver alike.** Finished means the
-work is done and you have said so; the chain then checks the pushed commit, and a red one is fixed
-by the next push. Commit in logical groups. On ubuntuserver the checkout is reached over t3 code,
+work is done and you have said so; the chain checks the commit before it reaches `dev`, and a red
+one does not land. Commit in logical groups. On ubuntuserver the checkout is reached over t3 code,
 with no editor and no git UI, so an uncommitted tree there is invisible, and the tools that read
 that tree stop on it.
 
@@ -298,9 +298,10 @@ work is sent back with a reason. A branch for a card is named `<type>/<title>-<i
 a branch with no issue `<type>/<title>`, never a number alone. The fixer and the reviewer stop
 while the audit is paused, because they spend the same limits; `pnpm audit:fix` says when it is.
 
-Branch protection holds pull requests into `dev` to the required jobs on an up-to-date branch.
-The admin account every agent pushes with pushes to `dev` directly, and a red check on `dev` is
-fixed by the next push.
+**Branch protection holds every commit that reaches `dev` to the required jobs, the admin account
+included.** GitHub decides a push the moment it arrives, so it refuses a direct push to `dev` unless
+that exact commit already passed the required jobs, on a branch, and sits on top of the current
+`dev`. No pull request review is required.
 
 **`board-sync.py` runs every five minutes on ubuntuserver**
 (`~/server/mediaserver/scripts/board-sync.py`, with `tools/audit/after-merge.mjs`). It keeps the
@@ -455,9 +456,10 @@ goes back to its branch.
 `dev`.** Branch from `dev` in a worktree that does not track it, `git worktree add --no-track -b
 <type>/<title> <path> origin/dev`, because a branch that tracks `origin/dev` lets an editor's Sync
 push it without the gate. Commit, bring it up to date with `git fetch origin && git rebase
-origin/dev`, and push it with `git push origin HEAD:dev`. The chain then runs on GitHub for the
-pushed commit; watch it, and fix a red one with the next push. If the work settles an issue that
-already exists, close it with the commit.
+origin/dev`, run `pnpm chain` on the branch, and once it is green push the same commit with
+`git push origin HEAD:dev`. GitHub refuses that push while the chain is red or has not run on the
+commit, and when `dev` moved on during the run: rebase, run the chain again, and push. If the work
+settles an issue that already exists, close it with the commit.
 
 Open a pull request for conversation work only when it has to sit unmerged while something else
 is decided, or is large enough to be reviewed as one diff: `pnpm -s issue pr --head <branch> --title T
