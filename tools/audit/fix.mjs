@@ -40,6 +40,7 @@ import { ledgerEvidence } from './lib/raise.mjs';
 const modelOf = (card) => (card?.agent ?? '').toLowerCase() || null;
 const ROUTES = new Set(['tests', 'headless', 'playtest']);
 const MODEL_CAP_MS = 3_600_000;
+const STEPPED_SIZE = 'L';
 
 const arg = (n, d) => {
   const i = process.argv.indexOf(`--${n}`);
@@ -133,6 +134,10 @@ const nextStep = (issue) =>
     ? (I.featureSteps(issue.body).find((s) => !s.done)?.text ?? null)
     : null;
 
+const WHOLE_FEATURE = `This issue is a feature small enough for one pull request. Work every open step under
+## Steps, in order, in this worktree, and account for each one in the list below the way the
+Remediation items are accounted for.`;
+
 const featureScope = (step) => `This issue is a feature, built one step per branch. Work only its next open step:
 
     ${step}
@@ -164,7 +169,7 @@ function buildPrompt(issue, step) {
 
 This repository's AGENTS.md says not to touch code without being asked, and to stop at a
 proposal. **You have been asked.** This issue's card was triaged into the board's Ready lane,
-which is the explicit go-ahead to implement ${step ? 'the step named under Scope' : 'its whole Remediation list'}. Do not stop at a
+which is the explicit go-ahead to implement ${step ? 'the step named under Scope' : d.kind === 'feature' ? 'every open step under ## Steps' : 'its whole Remediation list'}. Do not stop at a
 proposal, do not ask for confirmation, and do not report back a plan — make the changes.
 
 Everything else in AGENTS.md still applies in full: the layering, the service singletons, the
@@ -173,7 +178,7 @@ the 200-line component limit, Svelte 5 runes, \`pnpm\` never \`npm\`.
 
 # Scope
 
-${step ? featureScope(step) : 'Work the Remediation list below, all of it, in this worktree. This is one class of defect and\none PR.'}
+${step ? featureScope(step) : d.kind === 'feature' ? WHOLE_FEATURE : 'Work the Remediation list below, all of it, in this worktree. This is one class of defect and\none PR.'}
 
 - Change only what the issue names. \`Out of scope\` is binding.${
     (d.files ?? []).length ? `\n- The issue scopes this to: ${(d.files ?? []).join(', ')}.` : ''
@@ -306,8 +311,10 @@ out(`--- route ${route}`);
 if (d.status === 'closed') fail(`#${num} is closed`);
 const errs = I.validate(issue);
 if (errs.length) fail(`${d.id} is invalid: ${errs.join('; ')}`);
-const step = nextStep(issue);
-if (d.kind === 'feature' && !step) fail(`#${num} is a feature with no open step under ## Steps`);
+if (d.kind === 'feature' && !nextStep(issue))
+  fail(`#${num} is a feature with no open step under ## Steps`);
+const stepped = d.kind === 'feature' && (B.itemFor(num)?.size ?? '').toUpperCase() === STEPPED_SIZE;
+const step = stepped ? nextStep(issue) : null;
 
 const earlier = pulls.find((p) => PR.linkOf(p)?.issue === num) ?? null;
 const branch = earlier?.headRefName ?? branchFor(issue);

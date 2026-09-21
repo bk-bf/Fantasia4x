@@ -342,9 +342,18 @@ try {
       pull.number,
       P.renderReview({ route, ran, ok: true, account, outside: wandered?.outside })
     );
+  const stepsLeft = /^Part of #/m.test(pull.body ?? '')
+    ? I.featureSteps(issue.body).filter((s) => !s.done).length
+    : 0;
   try {
-    B.moveLane(num, 'pr ready');
-    out(`--- PR #${pull.number} for #${num} passed; the card waits in PR ready`);
+    if (stepsLeft > 1) {
+      out(
+        `--- PR #${pull.number} for #${num} passed; ${stepsLeft - 1} step(s) follow it, so the card stays In Check`
+      );
+    } else {
+      B.moveLane(num, 'pr ready');
+      out(`--- PR #${pull.number} for #${num} passed; the card waits in PR ready`);
+    }
   } catch (e) {
     out(`--- PR #${pull.number} passed, but #${num} could not be moved: ${tail(String(e.message), 3)}`);
   }
