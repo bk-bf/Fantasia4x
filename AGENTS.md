@@ -353,12 +353,15 @@ required. The judgement calls:
   step or a headless measurement, `opus` only for a cross-cutting refactor, a new system or a
   design.
 
-**A feature is built one step per branch.** Work type `feat` goes with the kind `feature`. The body
-follows `.github/ISSUE_TEMPLATE/feat.md`, and may add `## Decisions this needs before any edit` and
-`## Considered and rejected`. Each checkbox under `## Steps` is one branch and one pull request:
-the fixer works the first open step only, and its pull request says `Part of #n` with the step on
-a `Step:` line, so merging it does not close the issue. Write each step as a change that can be
-merged, verified and reviewed by itself.
+**A feature is one pull request, unless its Size is `L`.** Work type `feat` goes with the kind
+`feature`. The body follows `.github/ISSUE_TEMPLATE/feat.md`, and may add `## Decisions this needs
+before any edit` and `## Considered and rejected`. On an `S` or `M` feature the `## Steps` list is
+the plan for one branch: the fixer works every open step in one run and its pull request says
+`Fixes #n`. On an `L` feature each checkbox is one branch and one pull request, because the whole
+of it does not fit one agent run: the fixer works the first open step only, its pull request says
+`Part of #n` with the step on a `Step:` line, and the card stays In Check until the last step's
+pull request passes review. Write each `L` step as a change that can be merged and verified by
+itself.
 
 **A pull request never links an issue with open sub-issues.** The board shows a pull request only
 on the issue it closes, so one that says `Part of #n` about a parent shows on no card. Link the
