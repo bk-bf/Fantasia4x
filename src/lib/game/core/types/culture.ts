@@ -19,6 +19,8 @@ export const CORE_STAT_ABBR: Record<StatKey, string> = Object.fromEntries(
 
 export type EntityStats = Record<StatKey, number>;
 
+export type TalentStars = Partial<Record<StatKey, number>>;
+
 type StatBonusEffects = { [K in `${StatKey}Bonus`]?: number };
 
 export interface GrowthOffer {

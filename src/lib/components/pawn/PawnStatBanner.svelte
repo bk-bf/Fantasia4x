@@ -9,7 +9,7 @@
     ({ id, abbr }) =>
       [abbr, pawn.stats[id], id === 'charisma' ? 1 : sm[id], id] as const
   );
-  const isFav = (key: string) => pawn.favStats?.includes(key as keyof typeof pawn.stats) ?? false;
+  const isFav = (key: string) => (pawn.talentStars?.[key as StatKey] ?? 0) > 0;
   const capOf = (key: string) =>
     pawn.maxStats?.[key as keyof typeof pawn.maxStats] as number | undefined;
 

@@ -2,6 +2,8 @@ import type {
   Pawn,
   Culture,
   EntityStats,
+  StatKey,
+  TalentStars,
   Trait,
   Injury,
   Kingdom,
@@ -397,7 +399,7 @@ export function buildPawnFromCulture(culture: Culture, index: number, origin?: P
   physicalTraits.weight += traitBodyWeightDelta(traits);
   const maxBloodVolume = calcMaxBloodVolume(physicalTraits, finalStats);
   const maxStamina = calcMaxStamina(finalStats);
-  const { maxStats, favStats } = rollGrowthProfile(finalStats, culture.statRanges);
+  const { maxStats, talentStars } = rollGrowthProfile(finalStats, culture.statRanges);
   const age = origin?.age ?? rng.int(16, 45);
   const skills = origin
     ? applyBackgroundExperience(seedWorkLevels(), origin.childhood, origin.adulthood)
@@ -413,7 +415,7 @@ export function buildPawnFromCulture(culture: Culture, index: number, origin?: P
     stats: finalStats,
     aptitudes: rollAptitudes(physicalTraits.weight),
     maxStats,
-    favStats,
+    talentStars,
     age,
     birthDayOfYear: rng.int(0, 359),
     physicalTraits,
@@ -709,31 +711,48 @@ function rollStatsFromRanges(statRanges: Record<string, [number, number]>): Enti
 
 const STAT_KEYS = CORE_STAT_KEYS;
 
+export const TALENTED_STAT_COUNT = 3;
+
+function rollStarCount(): number {
+  const r = rng.random();
+  return r < 0.6 ? 1 : r < 0.9 ? 2 : 3;
+}
+
+function talentWeight(range: [number, number] | undefined): number {
+  const [min, max] = range ?? [10, 15];
+  return 1 + Math.max(0, Math.round((max - min + (max - 18)) / 3));
+}
+
+function drawWeighted(candidates: { stat: StatKey; weight: number }[]): StatKey {
+  const total = candidates.reduce((sum, c) => sum + c.weight, 0);
+  let roll = rng.random() * total;
+  let index = candidates.length - 1;
+  for (let i = 0; i < candidates.length; i++) {
+    roll -= candidates[i].weight;
+    if (roll < 0) {
+      index = i;
+      break;
+    }
+  }
+  return candidates.splice(index, 1)[0].stat;
+}
+
 function rollGrowthProfile(
   finalStats: EntityStats,
   statRanges: Record<string, [number, number]>
-): { maxStats: EntityStats; favStats: (keyof EntityStats)[] } {
-  const pool: (keyof EntityStats)[] = [];
-  for (const stat of STAT_KEYS) {
-    const [min, max] = statRanges[stat] ?? [10, 15];
-    const weight = 1 + Math.max(0, Math.round((max - min + (max - 18)) / 3));
-    for (let i = 0; i < weight; i++) pool.push(stat);
-  }
-  const favCount = rng.int(0, 2);
-  const favStats: (keyof EntityStats)[] = [];
-  let guard = 0;
-  while (favStats.length < favCount && guard++ < 40) {
-    const pick = rng.pick(pool);
-    if (!favStats.includes(pick)) favStats.push(pick);
+): { maxStats: EntityStats; talentStars: TalentStars } {
+  const candidates = STAT_KEYS.map((stat) => ({ stat, weight: talentWeight(statRanges[stat]) }));
+  const talentStars: TalentStars = {};
+  for (let i = 0; i < TALENTED_STAT_COUNT; i++) {
+    talentStars[drawWeighted(candidates)] = rollStarCount();
   }
 
   const maxStats = {} as EntityStats;
   for (const stat of STAT_KEYS) {
-    const isFav = favStats.includes(stat);
-    const base = isFav ? rng.int(50, 60) : rng.int(40, 55);
+    const base = talentStars[stat] ? rng.int(50, 60) : rng.int(40, 55);
     maxStats[stat] = Math.max(base, finalStats[stat] + 15);
   }
-  return { maxStats, favStats };
+  return { maxStats, talentStars };
 }
 
 function applyCulturalTraitBonuses(baseStats: EntityStats, traits: Trait[]): EntityStats {
