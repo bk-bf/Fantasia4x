@@ -94,6 +94,8 @@
         )
           return false;
         if (Object.keys(recipe.outputs ?? {})[0] !== item.id) return false;
+        if (!$gameState.debugMode && buildingService.isRecipeStationDebugOnly(recipe.station))
+          return false;
         if (
           !$gameState._devResearchGateOff &&
           recipe.researchRequired &&

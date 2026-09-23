@@ -101,6 +101,7 @@ export interface BuildingService {
   butcheryYieldBonusOf(buildingType: string): number;
   stationFulfills(haveType: string, recipeStation: string): boolean;
   bestCraftStation(recipeStation: string, gameState: GameState): PlacedBuilding | null;
+  isRecipeStationDebugOnly(recipeStation: string | null | undefined): boolean;
 
   placeBuilding(
     type: string,
@@ -167,6 +168,7 @@ export class BuildingServiceImpl implements BuildingService {
   canBuildBuilding(buildingId: string, gameState: GameState): boolean {
     const building = this.getBuildingById(buildingId);
     if (!building) return false;
+    if (building.debugOnly && !gameState.debugMode) return false;
 
     return (
       this.hasRequiredResources(buildingId, gameState) &&
@@ -439,6 +441,14 @@ export class BuildingServiceImpl implements BuildingService {
     const need = this.stationLadders(recipeStation);
     const have = this.stationLadders(haveType);
     return need.some((n) => have.some((h) => h.family === n.family && h.rung >= n.rung));
+  }
+
+  isRecipeStationDebugOnly(recipeStation: string | null | undefined): boolean {
+    if (!recipeStation) return false;
+    if (!this.getBuildingById(recipeStation)?.debugOnly) return false;
+    return !AVAILABLE_BUILDINGS.some(
+      (b) => !b.debugOnly && this.stationFulfills(b.id, recipeStation)
+    );
   }
 
   bestCraftStation(recipeStation: string, gameState: GameState): PlacedBuilding | null {
