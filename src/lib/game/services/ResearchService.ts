@@ -1,5 +1,6 @@
 import type { ResearchProject, GameState } from '../core/types';
 import { consumeFromStockpiles, availableQuantityFromDrops } from '../core/state/stockpile';
+import { colonistCount } from '../core/state/colonists';
 import researchData from '../database/progression/research.json';
 import { perTick } from '../core/util/time';
 import { gatedConsole as console } from '../core/util/log';
@@ -127,7 +128,7 @@ export class ResearchServiceImpl implements ResearchService {
     const research = this.getResearchById(researchId);
     if (!research?.populationRequired) return true;
 
-    return gameState.pawns.length >= research.populationRequired;
+    return colonistCount(gameState) >= research.populationRequired;
   }
 
   calculateResearchProgress(

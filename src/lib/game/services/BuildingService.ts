@@ -7,6 +7,7 @@ import { resolveCharSpans } from '../core/defs/terrains';
 import { buildingDefById } from '../core/defs/buildings';
 import { itemMatchesCostCategory } from '../core/defs/items';
 import { markTileDirty } from '../core/state/tileDeltas';
+import { colonistCount } from '../core/state/colonists';
 import { patchPathfindingWalkable } from './PathfinderService';
 import type { CharSpan } from '../core/defs/terrains';
 import { rng } from '../core/util/rng';
@@ -256,7 +257,7 @@ export class BuildingServiceImpl implements BuildingService {
     const building = this.getBuildingById(buildingId);
     if (!building) return false;
 
-    const currentPop = gameState.pawns.length;
+    const currentPop = colonistCount(gameState);
 
     if (currentPop < building.populationRequired) return false;
 
@@ -302,7 +303,7 @@ export class BuildingServiceImpl implements BuildingService {
 
     let time = building.workAmount;
 
-    const availableWorkers = Math.min(gameState.pawns.length, building.populationRequired * 2);
+    const availableWorkers = Math.min(colonistCount(gameState), building.populationRequired * 2);
     const workerBonus = Math.max(0.5, availableWorkers / building.populationRequired);
     time = Math.round(time / workerBonus);
 
