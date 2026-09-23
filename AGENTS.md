@@ -465,8 +465,10 @@ Open a pull request for conversation work only when it has to sit unmerged while
 is decided, or is large enough to be reviewed as one diff: `pnpm -s issue pr --head <branch> --title T
 --body-file -`, then `gh pr merge <n> --merge` once its required jobs are green on an up-to-date branch.
 Keep the `-s`: it leaves the pull request's address as the command's only output, which the
-PostToolUse hook in `~/.claude/settings.json` on ubuntuserver reads to attach the pull request to the
-T3 Code thread.
+PostToolUse hook in this repo's `.claude/settings.json` reads to attach the pull request to the
+T3 Code thread. It calls the `t3-code` MCP server, which only a T3 Code session provides, so it
+lives here rather than in `~/.claude/settings.json`, where it fires on every Bash call in every
+project and fails.
 
 Open an issue only when one of these holds:
 
