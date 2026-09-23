@@ -48,6 +48,33 @@
           }
         ]
       }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "mcp_tool",
+            "if": "Bash(gh pr create *)",
+            "server": "t3-code",
+            "tool": "link_pull_request",
+            "input": {
+              "url": "${tool_response.stdout}"
+            },
+            "timeout": 30
+          },
+          {
+            "type": "mcp_tool",
+            "if": "Bash(pnpm -s issue pr *)",
+            "server": "t3-code",
+            "tool": "link_pull_request",
+            "input": {
+              "url": "${tool_response.stdout}"
+            },
+            "timeout": 30
+          }
+        ]
+      }
     ]
   }
 }
