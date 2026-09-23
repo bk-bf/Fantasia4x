@@ -58,6 +58,7 @@ export interface Mob {
   lastSeenY?: number;
   stealthChecks?: Record<string, { at: number; detected: boolean }>;
   alertedPawn?: boolean;
+  provokedUntil?: number;
   blockedTicks?: number;
   limbs?: LimbState[];
   bloodVolume?: number;

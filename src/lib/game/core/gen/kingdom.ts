@@ -326,13 +326,17 @@ function mixAffinity(a: Kingdom, b: Kingdom, relations: CultureRelation[]): numb
 export function generateKingdomRelations(
   kingdoms: Kingdom[],
   cultureRelations: CultureRelation[],
-  homeCultureId: string
+  homeCultureId: string,
+  existing: KingdomRelation[] = []
 ): KingdomRelation[] {
-  const relations: KingdomRelation[] = [];
-  for (let i = 0; i < kingdoms.length; i++) {
-    for (let j = i + 1; j < kingdoms.length; j++) {
-      const a = kingdoms[i];
-      const b = kingdoms[j];
+  const relations: KingdomRelation[] = [...existing];
+  const missing = (a: string, b: string) => findKingdomRelation(relations, a, b) == null;
+  const settled = kingdoms.filter((k) => !k.wild);
+  for (let i = 0; i < settled.length; i++) {
+    for (let j = i + 1; j < settled.length; j++) {
+      const a = settled[i];
+      const b = settled[j];
+      if (!missing(a.id, b.id)) continue;
       if (a.relationBias === 'always_hostile' || b.relationBias === 'always_hostile') {
         relations.push(makeRelation(a.id, b.id, -100));
         continue;
@@ -341,7 +345,8 @@ export function generateKingdomRelations(
       relations.push(makeRelation(a.id, b.id, score));
     }
   }
-  for (const k of kingdoms) {
+  for (const k of settled) {
+    if (!missing(COLONY_RELATION_ID, k.id)) continue;
     if (k.relationBias === 'always_hostile') {
       relations.push(makeRelation(COLONY_RELATION_ID, k.id, -100));
       continue;
@@ -351,6 +356,12 @@ export function generateKingdomRelations(
       score += share.weight * cultureScore(homeCultureId, share.cultureId, cultureRelations);
     }
     relations.push(makeRelation(COLONY_RELATION_ID, k.id, score + rng.range(-15, 15)));
+  }
+  for (const k of kingdoms) {
+    if (!k.wild || !missing(COLONY_RELATION_ID, k.id)) continue;
+    relations.push(
+      makeRelation(COLONY_RELATION_ID, k.id, k.relationBias === 'always_hostile' ? -100 : 0)
+    );
   }
   return relations;
 }
