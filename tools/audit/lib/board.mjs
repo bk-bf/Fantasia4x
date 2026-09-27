@@ -1,5 +1,6 @@
 import { linkOf, parentOf } from './pulls.mjs';
 import { passiveLane } from './lanes.mjs';
+import { cardFromNode } from './board-card.mjs';
 import { cardsFromRest, restFieldIds, restIdOf, selectFieldsFromRest } from './board-rest.mjs';
 import { runGh } from './gh-run.mjs';
 
@@ -45,8 +46,12 @@ const gh = (args, input = '') => runGh(args, input, '', true);
 
 let cache = null;
 
+let boardLoaded = false;
+
 export const invalidate = () => {
   cache = null;
+  boardLoaded = false;
+  cards = new Map();
 };
 
 const REST_BASE = `/users/${OWNER}/projectsV2/${PROJECT_NUMBER}`;
@@ -74,12 +79,42 @@ export function boardItems() {
       process.stderr.write('board: the GraphQL read failed, reading the board over REST\n');
       cache = restItems();
     }
+    boardLoaded = true;
   }
   return cache;
 }
 
-export const itemFor = (n) =>
-  boardItems().find((i) => String(i.content?.number) === String(n)) ?? null;
+const CARD_FIELDS =
+  'labels(first:50){ nodes{ name } } projectItems(first:10){ nodes{ id project{ number } ' +
+  'fieldValues(first:30){ nodes{ ... on ProjectV2ItemFieldSingleSelectValue{ name ' +
+  'field{ ... on ProjectV2SingleSelectField{ name } } } } } } }';
+
+const CARD_QUERY =
+  'query($o:String!,$r:String!,$n:Int!){ repository(owner:$o,name:$r){ issueOrPullRequest(number:$n){ ' +
+  `__typename ... on Issue{ number title ${CARD_FIELDS} } ... on PullRequest{ number title ${CARD_FIELDS} } } } }`;
+
+let cards = new Map();
+
+export function itemFor(n) {
+  const key = String(n);
+  const onBoard = () => boardItems().find((i) => String(i.content?.number) === key) ?? null;
+  if (boardLoaded || !/^\d+$/.test(key)) return onBoard();
+  if (cards.has(key)) return cards.get(key);
+  let item;
+  try {
+    const raw = JSON.parse(
+      gh([
+        'api', 'graphql', '-f', 'query=' + CARD_QUERY,
+        '-f', 'o=' + OWNER, '-f', 'r=Fantasia4x', '-F', 'n=' + key
+      ])
+    );
+    item = cardFromNode(raw.data?.repository?.issueOrPullRequest, PROJECT_NUMBER);
+  } catch {
+    return onBoard();
+  }
+  if (item) cards.set(key, item);
+  return item;
+}
 
 export const laneOf = (n) => (itemFor(n)?.status ?? '').toLowerCase();
 

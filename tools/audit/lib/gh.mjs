@@ -145,17 +145,24 @@ export function listIssues() {
     '--json', 'number,title,body,state,labels,createdAt,updatedAt'
   ]);
   cache = JSON.parse(raw).map(toIssue).sort((a, b) => a.number - b.number);
+  listed = true;
   return cache;
 }
 
+let listed = false;
+
 export const invalidate = () => {
   cache = null;
+  listed = false;
 };
 
 export function readIssue(handle) {
   const n = String(handle);
-  const hit = listIssues().find((i) => i.path === n || i.data.id === n);
-  if (hit) return hit;
+  const numbered = /^\d+$/.test(n);
+  if (listed || !numbered) {
+    const hit = listIssues().find((i) => i.path === n || i.data.id === n);
+    if (hit) return hit;
+  }
   const raw = gh([
     'issue', 'view', n,
     '--json', 'number,title,body,state,labels,createdAt,updatedAt'
