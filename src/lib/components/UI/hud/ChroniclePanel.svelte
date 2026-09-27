@@ -65,7 +65,28 @@
     return TYPE_ABBR[e.type];
   }
 
-  let expandedId: string | null = null;
+  let expandedId: string | null = $state(null);
+
+  const ENTRY_ROW_HEIGHT = 20;
+  const OVERSCAN_ROWS = 8;
+
+  let listViewport: HTMLElement | null = $state(null);
+  let listViewportHeight = $state(0);
+
+  $effect(() => {
+    if (!listViewport) return;
+    const el = listViewport;
+    const observer = new ResizeObserver(() => {
+      listViewportHeight = el.clientHeight;
+    });
+    observer.observe(el);
+    listViewportHeight = el.clientHeight;
+    return () => observer.disconnect();
+  });
+
+  let visibleActivity = $derived(
+    $recentActivity.slice(0, Math.ceil(listViewportHeight / ENTRY_ROW_HEIGHT) + OVERSCAN_ROWS)
+  );
 
   function socialLines(entry: ActivityLogEntry): { name: string; text: string }[] {
     if (entry.type !== 'social') return [];
@@ -94,9 +115,9 @@
     }
   }
 
-  let hoverEntry: ActivityLogEntry | null = null;
-  let hoverX = 0;
-  let hoverY = 0;
+  let hoverEntry: ActivityLogEntry | null = $state(null);
+  let hoverX = $state(0);
+  let hoverY = $state(0);
   function onEntryEnter(e: MouseEvent, entry: ActivityLogEntry) {
     hoverEntry = entry;
     hoverX = e.clientX;
@@ -119,7 +140,7 @@
       class="restore-btn"
       title="Expand chronicle"
       aria-label="Expand chronicle"
-      on:click={() => chronicleMinimized.set(false)}>‹</button
+      onclick={() => chronicleMinimized.set(false)}>‹</button
     >
   {:else}
     <div class="section-hdr">
@@ -129,33 +150,33 @@
           class="hdr-icon-btn"
           title="Minimise chronicle"
           aria-label="Minimise chronicle"
-          on:click={() => chronicleMinimized.set(true)}>›</button
+          onclick={() => chronicleMinimized.set(true)}>›</button
         >
         <button
           class="clear-btn"
           title="Clear chronicle"
           aria-label="Clear chronicle"
           disabled={$recentActivity.length === 0}
-          on:click={clearActivityLog}>✕</button
+          onclick={clearActivityLog}>✕</button
         >
       </span>
     </div>
 
-    <ScrollArea class="log-list">
+    <ScrollArea class="log-list" bind:viewport={listViewport}>
       {#if $recentActivity.length > 0}
-        {#each $recentActivity as entry (entry.id)}
+        {#each visibleActivity as entry (entry.id)}
           <div
             class="entry {SEV_CLASS[entry.severity] || ''} {entry.focusX !== undefined
               ? 'clickable'
               : ''}"
             class:expanded={expandedId === entry.id}
-            on:click={() => handleClick(entry)}
-            on:mouseenter={(e) => onEntryEnter(e, entry)}
-            on:mousemove={onEntryMove}
-            on:mouseleave={onEntryLeave}
+            onclick={() => handleClick(entry)}
+            onmouseenter={(e) => onEntryEnter(e, entry)}
+            onmousemove={onEntryMove}
+            onmouseleave={onEntryLeave}
             role="button"
             tabindex="0"
-            on:keydown={(e) => e.key === 'Enter' && handleClick(entry)}
+            onkeydown={(e) => e.key === 'Enter' && handleClick(entry)}
           >
             <span class="turn">T{entry.turn}</span>
             <span class="type">{abbr(entry)}</span>
