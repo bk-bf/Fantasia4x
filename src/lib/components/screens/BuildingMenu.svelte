@@ -83,6 +83,7 @@
   $: unlockedDefs = ALL_BUILDING_DEFS.filter(
     (b) =>
       !b.notBuildable &&
+      (!b.debugOnly || $gameState?.debugMode) &&
       ($gameState?._devResearchGateOff ||
         !b.researchRequired ||
         completedResearch.includes(b.researchRequired as string))
