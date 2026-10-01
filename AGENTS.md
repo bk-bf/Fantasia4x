@@ -135,8 +135,9 @@ the laptop.
 
 **One chain checks every change, and GitHub starts and records it.**
 `.github/workflows/check.yml` runs on every pull request into `dev`, every push to `dev`, and every
-`pnpm chain`; read it for its jobs, their order and where each runs. `scopeOf` in
-`tools/ci/ci-scope.mjs` decides which legs a change runs. The jobs a commit must pass before
+`pnpm chain`; read it for its jobs, their order and where each runs. `tools/ci/scope.json` maps
+every path to the legs it needs, or to `[]` to exclude it. A push that adds a file no rule
+matches is refused by `pre-push`, and the CI run fails on it too: add a rule in the same push. The jobs a commit must pass before
 it can reach `dev`, by a pull request or by a direct push:
 
 ```bash

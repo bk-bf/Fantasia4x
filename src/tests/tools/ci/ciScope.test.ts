@@ -1,22 +1,42 @@
 import { describe, it, expect } from 'vitest';
-import { scopeOf } from '../../../../tools/ci/ci-scope.mjs';
+import { execFileSync } from 'node:child_process';
+import { scopeOf, unmappedFiles } from '../../../../tools/ci/ci-scope.mjs';
 
-const checkOnly = { check: true, workPins: false, gungraun: false, browser: false, tps: false, bench: false };
+const none = {
+  check: false,
+  coverage: false,
+  workPins: false,
+  gungraun: false,
+  browser: false,
+  tps: false,
+  bench: false
+};
+const checkOnly = { ...none, check: true };
 
 describe('scopeOf', () => {
-  it('checks a tool change but measures nothing', () => {
-    expect(scopeOf(['tools/issue.mjs', 'AGENTS.md', 'docs/tasks/ROADMAP.md'])).toEqual(checkOnly);
+  it('runs nothing when only Markdown, agent config or the desktop spike change', () => {
+    expect(
+      scopeOf([
+        'AGENTS.md',
+        'tools/README.md',
+        '.claude/settings.json',
+        'desktop-spike/tauri/package.json'
+      ])
+    ).toEqual(none);
   });
 
-  it('skips the check and every leg when only Markdown or docs change', () => {
-    expect(scopeOf(['AGENTS.md', 'tools/README.md', 'docs/tasks/ROADMAP.md'])).toEqual({ ...checkOnly, check: false });
+  it('checks a tool or workflow change but measures nothing', () => {
+    expect(
+      scopeOf(['tools/issue.mjs', '.github/workflows/check.yml', 'electron/main.cjs'])
+    ).toEqual(checkOnly);
   });
 
-  it('measures everything but the Rust instruction counts for a game source change', () => {
+  it('runs every leg but the Rust instruction counts for a game source change', () => {
     expect(scopeOf(['src/lib/game/sim/commands.ts'])).toEqual({
+      ...none,
       check: true,
+      coverage: true,
       workPins: true,
-      gungraun: false,
       browser: true,
       tps: true,
       bench: true
@@ -28,27 +48,28 @@ describe('scopeOf', () => {
   });
 
   it('runs only the harness that changed', () => {
-    expect(scopeOf(['tools/bench/dev-save.bench.ts'])).toEqual({ ...checkOnly, tps: true, bench: true });
+    expect(scopeOf(['tools/bench/dev-save.bench.ts'])).toEqual({
+      ...checkOnly,
+      tps: true,
+      bench: true
+    });
     expect(scopeOf(['tools/gungraun/gate.mjs'])).toEqual({ ...checkOnly, gungraun: true });
   });
 
-  it('measures nothing when only the CI files change, since no leg runs them', () => {
-    for (const file of [
-      'tools/ci/ci-scope.mjs',
-      'tools/chain.mjs',
-      'tools/remote/run.mjs',
-      'tools/hooks/pre-push',
-      '.github/workflows/check.yml'
-    ])
-      expect(scopeOf([file])).toEqual(checkOnly);
+  it('checks and measures coverage for a change to tests alone', () => {
+    expect(scopeOf(['src/tests/game/combat.test.ts'])).toEqual({ ...checkOnly, coverage: true });
+  });
+});
+
+describe('unmappedFiles', () => {
+  it('names a file in a directory the manifest does not mention', () => {
+    expect(unmappedFiles(['newdir/thing.ts', 'src/lib/a.ts'])).toEqual(['newdir/thing.ts']);
   });
 
-  it('measures a dependency change, which always touches the lockfile, but not a script or description', () => {
-    expect(scopeOf(['package.json'])).toEqual(checkOnly);
-    expect(scopeOf(['package.json', 'pnpm-lock.yaml']).bench).toBe(true);
-  });
-
-  it('measures nothing for a change to tests alone, since no leg runs them', () => {
-    expect(scopeOf(['src/tests/tools/ci/ciScope.test.ts', 'src/tests/game/combat.test.ts'])).toEqual(checkOnly);
+  it('finds every tracked file in the manifest', () => {
+    const tracked = execFileSync('git', ['ls-files'], { encoding: 'utf8' })
+      .split('\n')
+      .filter(Boolean);
+    expect(unmappedFiles(tracked)).toEqual([]);
   });
 });

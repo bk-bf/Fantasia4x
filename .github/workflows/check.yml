@@ -34,6 +34,7 @@ jobs:
     outputs:
       base: ${{ steps.scope.outputs.base }}
       check: ${{ steps.scope.outputs.check }}
+      coverage: ${{ steps.scope.outputs.coverage }}
       workPins: ${{ steps.scope.outputs.workPins }}
       gungraun: ${{ steps.scope.outputs.gungraun }}
       browser: ${{ steps.scope.outputs.browser }}
@@ -43,8 +44,6 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-
-      - uses: ./.github/actions/prepare
 
       - name: What this change needs
         id: scope
@@ -58,6 +57,9 @@ jobs:
           esac
           echo "base=$base" >> "$GITHUB_OUTPUT"
           node tools/ci/ci-scope.mjs --base "$base"
+
+      - uses: ./.github/actions/prepare
+        if: steps.scope.outputs.check == 'true'
 
       - name: pnpm check and the related tests
         if: steps.scope.outputs.check == 'true'
@@ -74,9 +76,11 @@ jobs:
           if-no-files-found: ignore
 
       - name: Architecture seams and component sizes
+        if: steps.scope.outputs.check == 'true'
         run: node tools/ci/structure.mjs
 
       - name: Workflow files
+        if: steps.scope.outputs.check == 'true'
         run: |
           bash <(curl -fsSL https://raw.githubusercontent.com/rhysd/actionlint/v1.7.7/scripts/download-actionlint.bash) 1.7.7 "$RUNNER_TEMP"
           "$RUNNER_TEMP/actionlint" -color
@@ -148,7 +152,7 @@ jobs:
   coverage:
     name: 'Test coverage: src/lib/game'
     needs: precheck
-    if: (github.event_name != 'workflow_dispatch' || inputs.mode == 'chain') && needs.precheck.outputs.check == 'true'
+    if: (github.event_name != 'workflow_dispatch' || inputs.mode == 'chain') && needs.precheck.outputs.coverage == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:

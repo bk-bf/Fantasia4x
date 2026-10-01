@@ -1,0 +1,63 @@
+{
+  "legs": ["check", "coverage", "workPins", "gungraun", "browser", "tps", "bench"],
+  "rules": [
+    { "paths": ["**/*.md", "LICENSE"], "legs": [] },
+    { "paths": [".claude/**", ".vscode/**", ".copilotignore"], "legs": [] },
+    { "paths": [".github/ISSUE_TEMPLATE/**"], "legs": [] },
+    { "paths": ["desktop-spike/**", "build-resources/**", "electron-builder.yml"], "legs": [] },
+    { "paths": ["dev.sh", "launch.sh", "build.sh", "install.sh", "audit.sh", "cliff.toml"], "legs": [] },
+
+    { "paths": ["src/tests/**", "tests/**", "vitest.config.ts"], "legs": ["check", "coverage"] },
+    {
+      "paths": ["sim-core/**", "spatial-core/**"],
+      "legs": ["check", "coverage", "workPins", "gungraun", "browser", "tps", "bench"]
+    },
+    {
+      "paths": [
+        "src/**",
+        ".github/actions/**",
+        "pnpm-lock.yaml",
+        "tsconfig.json",
+        "vite.config.ts",
+        "svelte.config.js"
+      ],
+      "legs": ["check", "coverage", "workPins", "browser", "tps", "bench"]
+    },
+    { "paths": ["static/**"], "legs": ["check", "workPins", "browser", "tps", "bench"] },
+
+    { "paths": ["tools/work-pins/**"], "legs": ["check", "workPins", "browser", "tps"] },
+    { "paths": ["tools/bench/**"], "legs": ["check", "tps", "bench"] },
+    { "paths": ["tools/gungraun/**"], "legs": ["check", "gungraun"] },
+    { "paths": ["tools/coverage/**"], "legs": ["check", "coverage"] },
+    {
+      "paths": [
+        "tools/ci/**",
+        "tools/lib/**",
+        "tools/hooks/**",
+        "tools/remote/**",
+        "tools/claude/**",
+        "tools/gpu/**",
+        "tools/dev-tools/**",
+        "tools/*.mjs",
+        ".github/workflows/**",
+        "electron/**"
+      ],
+      "legs": ["check"]
+    },
+    {
+      "paths": [
+        "package.json",
+        "pnpm-workspace.yaml",
+        ".npmrc",
+        "eslint.config.js",
+        "eslint-config-output.json",
+        "knip.json",
+        ".jscpd.json",
+        ".prettierrc",
+        ".prettierignore",
+        ".gitignore"
+      ],
+      "legs": ["check"]
+    }
+  ]
+}

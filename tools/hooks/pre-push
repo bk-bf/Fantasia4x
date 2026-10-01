@@ -5,12 +5,32 @@ ROOT="$(git rev-parse --show-toplevel)"
 
 NEW=()
 BRANCHES=()
+CHANGED=""
 while read -r _local_ref local_sha remote_ref remote_sha; do
   [[ "$local_sha" =~ ^0+$ ]] && continue
   [[ "$remote_ref" == refs/heads/* ]] || continue
   BRANCHES+=("${remote_ref#refs/heads/}")
   [[ "$remote_sha" =~ ^0+$ ]] && NEW+=("${remote_ref#refs/heads/}")
+  if [[ "$remote_ref" == refs/heads/dev && ! "$remote_sha" =~ ^0+$ ]]; then
+    base="$remote_sha"
+  else
+    base="$(git merge-base "$local_sha" origin/dev 2>/dev/null || true)"
+  fi
+  [[ -n "$base" ]] && CHANGED+="$(git diff --name-only --diff-filter=d "$base" "$local_sha")"$'\n'
 done
+
+if [[ -n "${CHANGED//[$'\n']/}" ]]; then
+  printf '%s' "$CHANGED" | node --input-type=module -e "
+import { readFileSync } from 'node:fs';
+import { unmappedFiles, unmappedMessage } from 'file://$ROOT/tools/ci/ci-scope.mjs';
+const files = [...new Set(readFileSync(0, 'utf8').split('\\n').filter(Boolean))];
+const missing = unmappedFiles(files);
+if (missing.length) {
+  console.error('pre-push: refused. ' + unmappedMessage(missing));
+  process.exit(1);
+}
+" || exit 1
+fi
 
 if (( ${#BRANCHES[@]} )); then
   node --input-type=module -e "
