@@ -27,6 +27,7 @@ import * as L from './lib/ledger.mjs';
 import { extractRepo, sliceOf } from './lib/extract.mjs';
 import { loadRules } from './lib/rules.mjs';
 import { makeContext, match } from './lib/triggers.mjs';
+import { testFilesByIdentifier } from './lib/test-files.mjs';
 import { buildPrompt } from './lib/prompt.mjs';
 import { parseResponse, validate } from './lib/verdict.mjs';
 import {
@@ -91,7 +92,11 @@ function cmdPlan() {
   loadRulesOrDie(db);
   const rules = L.activeRules(db, 'T2');
   const symbols = L.liveSymbols(db);
-  const ctx = makeContext({ symbols, readSlice: (s) => sliceOf(ROOT, s) });
+  const ctx = makeContext({
+    symbols,
+    readSlice: (s) => sliceOf(ROOT, s),
+    testFiles: testFilesByIdentifier(ROOT)
+  });
   const { items, misses } = match(rules, symbols, ctx);
   L.plan(db, items);
 
@@ -228,7 +233,7 @@ function cmdSubmit() {
     runId: arg('run', null),
     model: arg('model', null)
   });
-  L.openFindings(db, res.accepted);
+  L.settleFindings(db, res.accepted);
 
   out(`accepted ${res.accepted.length}  rejected ${rejected.length + res.rejected.length}`);
   for (const r of rejected) out(`  [reject] ${r.rule_id}: ${r.reason}`);
