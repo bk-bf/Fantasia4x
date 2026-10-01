@@ -43,6 +43,35 @@ describe('debugOnly buildings (canBuildBuilding / getAvailableBuildings)', () =>
   });
 });
 
+const RUNED_AGE_BUILDING_IDS = [
+  'sanguinary_altar',
+  'magic_concrete_wall',
+  'attunement_bench',
+  'runecarver_bench',
+  'attunement_altar',
+  'runic_brewhouse',
+  'manaforge',
+  'runic_crucible',
+  'runic_loom',
+  'glyph_cutters_banker',
+  'arcane_alembic',
+  'heartwood_joiner'
+];
+
+describe('the runed-age buildings are debugOnly', () => {
+  it.each(RUNED_AGE_BUILDING_IDS)('%s is flagged debugOnly', (id) => {
+    const building = buildingService.getBuildingById(id) as Building;
+    expect(building.debugOnly).toBe(true);
+  });
+
+  it('every runed-age building is excluded from getAvailableBuildings with the toggle off', () => {
+    const available = buildingService.getAvailableBuildings(gs()).map((b) => b.id);
+    for (const id of RUNED_AGE_BUILDING_IDS) {
+      expect(available).not.toContain(id);
+    }
+  });
+});
+
 describe('isRecipeStationDebugOnly', () => {
   it('is false when the station has no debugOnly flag', () => {
     expect(buildingService.isRecipeStationDebugOnly('steel_stove')).toBe(false);
