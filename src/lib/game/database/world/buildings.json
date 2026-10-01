@@ -169,6 +169,7 @@
   {
     "id": "sanguinary_altar",
     "ageTier": "runed:1",
+    "debugOnly": true,
     "workstation"     : true,
     "name": "Sanguinary Altar",
     "color": "#8A2A4A",
@@ -1264,6 +1265,7 @@
   {
     "id": "magic_concrete_wall",
     "ageTier": "runed:3",
+    "debugOnly": true,
     "name": "Runed Concrete Wall",
     "color": "#7C5CA0",
     "charSpans": [ {"sheet": "tiles", "id": 149} ],
@@ -1776,6 +1778,7 @@
   {
     "id": "attunement_bench",
     "ageTier": "runed:1",
+    "debugOnly": true,
     "workstation"     : true,
     "name": "Attunement Bench",
     "color": "#A060D0",
@@ -1796,6 +1799,7 @@
   {
     "id": "runecarver_bench",
     "ageTier": "runed:1",
+    "debugOnly": true,
     "workstation"     : true,
     "name": "Heartwood Runecarver's Bench",
     "color": "#6B4E8C",
@@ -1816,6 +1820,7 @@
   {
     "id": "attunement_altar",
     "ageTier": "runed:2",
+    "debugOnly": true,
     "workstation"     : true,
     "name": "Attunement Altar",
     "color": "#9050D0",
@@ -2185,6 +2190,7 @@
   {
     "id": "runic_brewhouse",
     "ageTier": "runed:2",
+    "debugOnly": true,
     "workstation": true,
     "name": "Runed Brewing Vat",
     "color": "#9A8259",
@@ -2504,6 +2510,7 @@
   {
     "id": "manaforge",
     "ageTier": "runed:3",
+    "debugOnly": true,
     "workstation"     : true,
     "name": "Gem-Dust Manaforge",
     "color": "#B060E0",
@@ -2524,6 +2531,7 @@
   {
     "id": "runic_crucible",
     "ageTier": "runed:3",
+    "debugOnly": true,
     "workstation"     : true,
     "name": "Runed Crucible Furnace",
     "color": "#9C7CC0",
@@ -2551,6 +2559,7 @@
   {
     "id": "runic_loom",
     "ageTier": "runed:3",
+    "debugOnly": true,
     "workstation"     : true,
     "name": "Ironwood Runic Loom",
     "color": "#C090E0",
@@ -2571,6 +2580,7 @@
   {
     "id"                : "glyph_cutters_banker",
     "ageTier"           : "runed:3",
+    "debugOnly": true,
     "workstation"     : true,
     "name"              : "Heartwood Glyph Bench",
     "color"             : "#8C6CB0",
@@ -2590,6 +2600,7 @@
   {
     "id": "arcane_alembic",
     "ageTier": "runed:3",
+    "debugOnly": true,
     "workstation"     : true,
     "name": "Runed Still",
     "color": "#9050C0",
@@ -2611,6 +2622,7 @@
   {
     "id": "heartwood_joiner",
     "ageTier": "runed:3",
+    "debugOnly": true,
     "workstation"     : true,
     "name": "Heartwood Joiner's Bench",
     "color": "#A07840",
