@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { execFileSync } from 'node:child_process';
-import { scopeOf, unmappedFiles } from '../../../../tools/ci/ci-scope.mjs';
+import { scopeOf, unmappedFiles, unusedPatterns } from '../../../../tools/ci/ci-scope.mjs';
 
 const none = {
   check: false,
@@ -71,5 +71,12 @@ describe('unmappedFiles', () => {
       .split('\n')
       .filter(Boolean);
     expect(unmappedFiles(tracked)).toEqual([]);
+  });
+
+  it('has no pattern that matches no tracked file', () => {
+    const tracked = execFileSync('git', ['ls-files'], { encoding: 'utf8' })
+      .split('\n')
+      .filter(Boolean);
+    expect(unusedPatterns(tracked)).toEqual([]);
   });
 });

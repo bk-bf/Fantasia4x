@@ -31,6 +31,9 @@ export const ruleFor = (file) => rules.find((r) => r.res.some((re) => re.test(fi
 
 export const unmappedFiles = (files) => files.filter((f) => !ruleFor(f));
 
+export const unusedPatterns = (files) =>
+  rules.flatMap((r) => r.paths.filter((p, i) => !files.some((f) => r.res[i].test(f))));
+
 export function scopeOf(files) {
   const scope = Object.fromEntries(manifest.legs.map((leg) => [leg, false]));
   for (const f of files) for (const leg of ruleFor(f)?.legs ?? []) scope[leg] = true;
@@ -52,6 +55,16 @@ export const changedFiles = (base, head = 'HEAD') =>
 function main() {
   const i = process.argv.indexOf('--base');
   const files = changedFiles(i >= 0 ? process.argv[i + 1] : 'HEAD^1');
+  const tracked = execFileSync('git', ['ls-files'], { encoding: 'utf8' })
+    .split('\n')
+    .filter(Boolean);
+  const unused = unusedPatterns(tracked);
+  if (unused.length) {
+    process.stderr.write(
+      `${unused.length} pattern(s) in ${MANIFEST} match no tracked file:\n${unused.map((p) => `  ${p}`).join('\n')}\nRemove them.\n`
+    );
+    process.exit(1);
+  }
   const missing = unmappedFiles(files.filter((f) => existsSync(f)));
   if (missing.length) {
     process.stderr.write(`${unmappedMessage(missing)}\n`);
