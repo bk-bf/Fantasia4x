@@ -30,7 +30,7 @@ jobs:
         run: pnpm test
 
       - name: Architecture seams and component sizes
-        run: node tools/audit/audit.mjs t0
+        run: node tools/ci/structure.mjs
 
       - name: Rust crate tests
         run: pnpm test:sim-core

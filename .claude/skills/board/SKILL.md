@@ -1,6 +1,6 @@
 ---
 name: board
-description: Read the Fantasia4x project board and propose a short, ordered work sequence — handed-off and automated work first, by effort, his own work last. Read-only. Use when asked what to work on next, for next steps, a summary or the state of the board, a gameplan or a sequencing report, after an audit run, or to "look at the board".
+description: Read the Fantasia4x project board and propose a short, ordered work sequence — work an agent can do first, by effort, his own work last. Read-only. Use when asked what to work on next, for next steps, a summary or the state of the board, a gameplan or a sequencing report, or to "look at the board".
 ---
 
 # Sequencing the board
@@ -13,8 +13,7 @@ minutes.
 ## 1. Read, in four calls
 
 1. **Budget.** `gh api graphql -f query='{rateLimit{remaining resetAt}}' --jq .data.rateLimit`.
-   The board read costs 101 points of an hourly 5,000 that every agent and `board-sync.py`
-   share; when they run out it reads over REST instead, which has its own hourly 5,000
+   The board read costs 101 points of an hourly 5,000 that every agent shares; when they run out it reads over REST instead, which has its own hourly 5,000
    requests. The relations query below still needs about 3 points: below that, say so and stop
    until `resetAt`.
 2. **Board, once.** `pnpm -s issue board > <temporary file>`, read from there. It prints what
@@ -35,8 +34,6 @@ minutes.
 
 Then, without GitHub:
 
-- `jq -c '{paused, reason}' tools/audit/.ledger/control.json`. While the audit is paused, the
-  fixer and the reviewer work nothing.
 - For each `Failed` card, `gh issue view <n> --json comments` (about 1 point each). The latest
   comment holds the reason it failed; check whether that cause has been fixed since.
 
@@ -47,20 +44,17 @@ each group, the least effort comes first. Free cards break ties: a step that fre
 goes first, then Priority, `P0` first.
 
 1. **Lane moves and merges.** One command each, seconds of work.
-   - A paused audit or a red `check` on `dev`, first: either stops the fixer and the reviewer.
+   - A red `check` on `dev`, first: it blocks every merge.
    - `drift` and `test gap` cards in `Backlog`, which an agent moves to `Ready` itself:
      `pnpm issue lane <n> ready`.
    - A `Failed` card whose cause of failure has since been fixed, or that now has a clean open
      pull request. It needs his yes, because only he takes a card out of `Failed`.
-   - A card in the wrong lane: a decision in `Ready`, which the fixer cannot work, or a `Ready`
+   - A card in the wrong lane: a decision in `Ready`, which no agent can work, or a `Ready`
      card with an open blocker.
    - A pull request that passed review and its checks, and waits only to be merged.
-2. **Automated runs.** One command, then unattended. The reviewer on open pull requests
-   (`pnpm audit:review --issue <n>`), then the fixer on `Ready` cards with no open blocker, `S`
-   before `M` before `L`. `pnpm audit:fix --next` works only the `tests` route; a `headless` or
-   `playtest` card needs `pnpm audit:fix --issue <n>`.
-3. **Agent work that waits for his yes.** A card of another kind in `Backlog`, and a tooling
-   repair the run found, `S` before `M` before `L`.
+2. **Agent work.** `Ready` cards with no open blocker, `S` before `M` before `L`.
+3. **Agent work that waits for his yes.** A card of another kind in `Backlog`, `S` before `M`
+   before `L`.
 4. **Chains.** Blocked cards, in the order their blockers clear. A parent comes after its open
    sub-issues.
 5. **His own work, last.** A `needs playtest` pull request to play and merge, the `Blocked on
@@ -82,8 +76,7 @@ Short enough to act on in a minute.
 - A table of lane counts, then the steps under one heading per group from section 2, in that
   order, numbered across the groups. Each step names its cards (`#n`), says in one line why it
   comes now and how many cards it frees, and gives the command when one exists:
-  `pnpm issue lane <n> ready`, `pnpm audit:review --issue <n>`, `pnpm audit:fix --issue <n>`,
-  `/unblock`.
+  `pnpm issue lane <n> ready`, `/unblock`.
 - List prose dependencies with no `blockedBy` relation, each with the command that records it:
   `pnpm issue blocked-by <n> <blocker>`.
 - End with **Needs your decision**, holding only choices that are his.

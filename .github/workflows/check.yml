@@ -57,14 +57,14 @@ jobs:
             *) base="$(git merge-base HEAD origin/dev)" ;;
           esac
           echo "base=$base" >> "$GITHUB_OUTPUT"
-          node tools/audit/ci-scope.mjs --base "$base"
+          node tools/ci/ci-scope.mjs --base "$base"
 
       - name: pnpm check and the related tests
         if: steps.scope.outputs.check == 'true'
         env:
           CHECK_BASE: ${{ steps.scope.outputs.base }}
           WARNINGS_NOTES: ${{ runner.temp }}/warnings-notes.jsonl
-        run: node tools/audit/ci-check.mjs
+        run: node tools/ci/ci-check.mjs
 
       - uses: actions/upload-artifact@v7
         if: ${{ !cancelled() && github.event_name == 'pull_request' }}
@@ -74,7 +74,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Architecture seams and component sizes
-        run: node tools/audit/audit.mjs t0
+        run: node tools/ci/structure.mjs
 
       - name: Workflow files
         run: |

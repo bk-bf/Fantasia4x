@@ -1,0 +1,101 @@
+{
+  "required": [
+    "severity",
+    "kind",
+    "origin",
+    "verify",
+    "subarea"
+  ],
+  "groups": {
+    "severity": [
+      "critical",
+      "high",
+      "medium",
+      "low"
+    ],
+    "kind": [
+      "drift",
+      "correctness",
+      "performance",
+      "boundary",
+      "data",
+      "test gap",
+      "feature"
+    ],
+    "origin": [
+      "found by audit",
+      "found by hand"
+    ],
+    "verify": [
+      "verify tests",
+      "verify headless",
+      "needs playtest"
+    ],
+    "subarea": [
+      "ai",
+      "actions",
+      "audio",
+      "components",
+      "core",
+      "database",
+      "debug",
+      "dev",
+      "docs",
+      "entities",
+      "headless",
+      "routes",
+      "server",
+      "services",
+      "sim",
+      "sim-core",
+      "stores",
+      "systems",
+      "tools",
+      "webgl",
+      "world"
+    ],
+    "state": [
+      "ready",
+      "needs decision"
+    ],
+    "work": [
+      "combat balance"
+    ],
+    "override": [
+      "perf change accepted"
+    ],
+    "rule": [
+      "bypasses-reserve",
+      "comment-held-pairing",
+      "dead-branch",
+      "default-masks-lookup",
+      "dev-jargon",
+      "doc-contradicts-code",
+      "error-discarded",
+      "frame-collection-work",
+      "generic-before-thematic",
+      "job-switch-by-hand",
+      "label-mapped-by-hand",
+      "logic-in-defs",
+      "memo-ref-churn",
+      "missing-test",
+      "mixed-units",
+      "name-breaks-progression",
+      "raw-id-in-ui",
+      "restated-roster",
+      "selection-commits",
+      "silent-early-return",
+      "snapshot-growth",
+      "spatial-inlined",
+      "stat-outside-modifiers",
+      "state-outside-manager",
+      "text-instructs",
+      "tick-allocation",
+      "tick-logging",
+      "unnamed-unit",
+      "unvalidated-key",
+      "weak-assertion",
+      "wrong-tier"
+    ]
+  }
+}

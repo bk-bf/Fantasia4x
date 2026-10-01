@@ -21,7 +21,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"$CLAUDE_PROJECT_DIR/tools/audit/hooks/inflight.mjs\" prompt",
+            "command": "node \"$CLAUDE_PROJECT_DIR/tools/claude/inflight.mjs\" prompt",
             "timeout": 20
           }
         ]
@@ -43,7 +43,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"$CLAUDE_PROJECT_DIR/tools/audit/hooks/inflight.mjs\" edit",
+            "command": "node \"$CLAUDE_PROJECT_DIR/tools/claude/inflight.mjs\" edit",
             "timeout": 20
           }
         ]

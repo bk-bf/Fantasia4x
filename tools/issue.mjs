@@ -21,7 +21,7 @@
 //   node tools/issue.mjs tidy [--remove] [--host H]...   # merged or idle worktrees, branches and test clones
 
 import { readFileSync } from 'node:fs';
-import { runGh } from './audit/lib/gh-run.mjs';
+import { runGh } from './lib/gh-run.mjs';
 import {
   check,
   allowedLabels,
@@ -34,8 +34,8 @@ import {
   labelGroup,
   milestonePlan,
   versionOf
-} from './audit/lib/schema.mjs';
-import { checkPrivate } from './audit/lib/private.mjs';
+} from './lib/schema.mjs';
+import { checkPrivate } from './lib/private.mjs';
 import {
   linkify,
   issueRef,
@@ -43,8 +43,8 @@ import {
   blobUrl,
   resolveRepoPath,
   repairDeadCitation
-} from './audit/lib/links.mjs';
-import { checkSignOff } from './audit/lib/template.mjs';
+} from './lib/links.mjs';
+import { checkSignOff } from './lib/template.mjs';
 import {
   moveLane,
   setSelect,
@@ -55,9 +55,9 @@ import {
   fields,
   invalidate,
   strayCard
-} from './audit/lib/board.mjs';
-import { createPull, editPull, syncPull, linkOf } from './audit/lib/pulls.mjs';
-import { tidy } from './audit/lib/tidy.mjs';
+} from './lib/board.mjs';
+import { createPull, editPull, syncPull, linkOf } from './lib/pulls.mjs';
+import { tidy } from './lib/tidy.mjs';
 
 process.stdout.on('error', (e) => {
   if (e.code === 'EPIPE') process.exit(0);
@@ -431,7 +431,7 @@ if (cmd === 'check-labels') {
   if (!type) die(`--type is required, or --parent to take the parent's — one of: ${TYPES.join(', ')}`);
   if (!TYPES.includes(type)) die(`unknown --type "${type}" — one of: ${TYPES.join(', ')}`);
   const milestone = arg('milestone') ?? parentRecord?.milestone?.title ?? milestonePlan().current;
-  if (!milestone) die('no milestone — pass --milestone vX.Y, or set "current" in tools/audit/milestones.json');
+  if (!milestone) die('no milestone — pass --milestone vX.Y, or set "current" in tools/lib/milestones.json');
   milestoneNamed(milestone);
   const area = boardOption('Area', arg('area'), 'area');
   const size = boardOption('Size', arg('size'), 'size');
@@ -448,9 +448,6 @@ if (cmd === 'check-labels') {
   const url = gh(args, body).trim();
   process.stdout.write(url + '\n');
   const n = url.split('/').pop();
-  // Adding the item is not enough: an item with no Status has no lane, and board-sync only
-  // backfills Backlog for issues it adds itself. It also derives the verify label from the
-  // Verify field, so leaving that empty strips the label this issue was just created with.
   const VERIFY_FIELD = {
     'verify tests': 'tests',
     'verify headless': 'headless',

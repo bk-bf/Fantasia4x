@@ -80,10 +80,9 @@ which is the bug.
 
 ## Components
 
-200 line limit. Extract sub-components when it is exceeded. The t0 audit,
-`node tools/audit/audit.mjs t0`, warns on a component past the limit or past its entry in
-`tools/audit/component-sizes.json`. Entries only go down: lower one when a component shrinks,
-and drop it once the component is under the limit. A seam in `tools/audit/seams.json` marked
+200 line limit. Extract sub-components when it is exceeded. `node tools/ci/structure.mjs`
+warns on a component past the limit or past its entry in `tools/ci/component-sizes.json`. Entries only go down: lower one when a component shrinks,
+and drop it once the component is under the limit. A seam in `tools/ci/seams.json` marked
 `"blocks": true` fails the check; when the new caller is intended, add it to that rule's `allow`
 list in the same pull request.
 
@@ -137,7 +136,7 @@ the laptop.
 **One chain checks every change, and GitHub starts and records it.**
 `.github/workflows/check.yml` runs on every pull request into `dev`, every push to `dev`, and every
 `pnpm chain`; read it for its jobs, their order and where each runs. `scopeOf` in
-`tools/audit/ci-scope.mjs` decides which legs a change runs. The jobs a commit must pass before
+`tools/ci/ci-scope.mjs` decides which legs a change runs. The jobs a commit must pass before
 it can reach `dev`, by a pull request or by a direct push:
 
 ```bash
@@ -150,10 +149,10 @@ CodSpeed and ticks-per-second legs run on GitHub's own runners. Before moving ei
 machine, run the same commit against itself there several times and compare the spread with
 GitHub's, which the pull request that moved them records.
 
-**`perf change accepted`, in `tools/audit/labels.json`, lets an intended growth through the work
+**`perf change accepted`, in `tools/lib/labels.json`, lets an intended growth through the work
 pins, gungraun and ticks-per-second budgets, and past a regression CodSpeed reports.** With it set,
-those gates still run and write their tables, and pass. It reaches a pull request from its issue, copied by `pnpm issue pr`, `pr-edit`,
-`pr-sync` and `board-sync.py`, and `.github/workflows/perf-label.yml` re-runs `check` when it is
+those gates still run and write their tables, and pass. It reaches a pull request from its issue, copied by `pnpm issue pr`, `pr-edit`
+and `pr-sync`, and `.github/workflows/perf-label.yml` re-runs `check` when it is
 added or removed. An agent explains, in its pull request, every total that grows past its budget,
 and never adds the label itself.
 
@@ -164,7 +163,7 @@ or the tests by hand to decide whether a commit may land; the chain runs them on
 Run them by hand only while you work.
 
 **`pnpm check` is the gate**, and every tool its `package.json` script runs must stay green. Warning
-counts are frozen per tool in `tools/audit/warning-budget.json`; `tools/audit/warnings.mjs` fails
+counts are frozen per tool in `tools/ci/warning-budget.json`; `tools/ci/warnings.mjs` fails
 a count past its budget and says when one has dropped below it. Lower the budget then, and never
 raise it.
 
@@ -185,7 +184,7 @@ with no editor and no git UI, so an uncommitted tree there is invisible, and the
 that tree stop on it.
 
 **All work lands on `dev`.** `main` is the branch the owner plays and builds from, and only his
-promotion changes it: `pnpm audit:promote` and `.github/workflows/promote.yml` hold what a
+promotion changes it: `pnpm promote` and `.github/workflows/promote.yml` hold what a
 promotion runs. Nothing automated writes to `main`.
 
 Branch from `dev`, merge to `dev`, and never push `main`.
@@ -225,13 +224,9 @@ gh api '/users/bk-bf/projectsV2/4/fields?per_page=100'           # the board's f
 pnpm issue milestone list                                         # every milestone and how much of it is closed
 ```
 
-The labels are `tools/audit/labels.json` plus one per audit rule `name`. Adding a label means
+The labels are `tools/lib/labels.json`. Adding a label means
 editing that file, not inventing one at a call site; `pnpm issue sync-labels` creates what is
 missing and names the strays, and `--prune` deletes a stray no issue carries.
-
-**A rule is labelled by its name, not its id.** Every rule in `tools/audit/rules/` carries a
-`name`, and that is what reaches the board and the issue slug. The id stays the ledger's key and
-does not appear in anything a person reads.
 
 **Triage through the lanes, never around them.** The board is
 [projects/4](https://github.com/users/bk-bf/projects/4) and its columns are an order:
@@ -241,28 +236,26 @@ far as `Ready`; from there the work is a pull request, and the card follows it. 
 lanes inserts or drops the one option it concerns and keeps every other option where the owner put
 it; rewriting the whole option list moves his columns.
 
-- **`Backlog`** — raised, not yet evaluated. The audit raises here and nowhere else. A card with an
-  open pull request is never here.
+- **`Backlog`** — raised, not yet evaluated. A card with an open pull request is never here.
 - **`Ready`** — nothing blocks it, no decision is outstanding, the scope is clear enough to
   start. An agent promotes a `drift` or `test gap` card out of `Backlog` itself, and says why.
   Any other kind waits for the owner: the agent comments on the issue with the open decision or
   task it overlaps, or "none", and what in play reaches the code it cites, then moves it to
   `Blocked on you`. He moves it to `Ready`.
-- **`Failed`** — tried and did not land. The reason is on the issue or the pull request. The
-  fixer never picks from here; the owner reads the reason and moves the card on. An agent moves a
+- **`Failed`** — tried and did not land. The reason is on the issue or the pull request. Nobody
+  works it from here; the owner reads the reason and moves the card on. An agent moves a
   card out of `Failed` only when he says so.
 - **`In progress`** — a branch exists and an agent is on it. Pushing a `<type>/<title>-<n>` branch
   that has no ready pull request moves card `n` here.
-- **`In Check`** — a ready pull request is open and its checks, and the reviewer, are running.
+- **`In Check`** — a ready pull request is open and its checks are running.
   Nothing moves a card here by hand; opening or pushing its ready pull request does.
-- **`Manual`** — he is working it by hand, and the fixer and the reviewer leave it alone. When an
+- **`Manual`** — he is working it by hand, and agents leave it alone. When an
   agent takes a `Manual` card up, pushing its `-<n>` branch moves it to `In progress`, and opening
   its pull request moves it to `In Check`.
 - **`PR ready`** — the pull request has passed review, and waits to be merged.
 - **`Needs Playtest`** — a ready pull request carrying `needs playtest`: its numbers can be
-  produced but not judged, so it waits for him to play it and merge it. The fixer puts a
-  `playtest` card here when it opens the pull request, and `board-sync.py` moves any card whose
-  open pull request carries the label.
+  produced but not judged, so it waits for him to play it and merge it. Move a `playtest` card
+  here when its pull request opens.
 - **`On dev`** — merged to `dev` by a pull request, and not yet in the build he plays.
 - **`Done`** — promoted to `main`, so it is in the game he plays. The issue was closed when it
   reached `dev`; the lane is where the work lives, not whether it is finished.
@@ -289,27 +282,17 @@ which. Direct `gh project item-edit` is denied. Do not skip a lane: nothing goes
 straight to `In progress` except when a pull request opens for it, nothing reaches `On dev` except
 through a merged pull request, and nothing reaches `Done` except by a promotion he ran.
 
-**After `Ready`, the work is a pull request.** The fixer (`pnpm audit:fix`,
-`tools/audit/fix.mjs`), the reviewer (`pnpm audit:review`, `tools/audit/review.mjs`) and the
-resolver (the `resolve` skill) turn cards into pull requests and judge them; read them for what
-each picks and runs. A card that comes back to `Ready` is worked again onto the same pull request,
-and the fixer reads every comment on it first — the owner's included — so a comment there is how
-work is sent back with a reason. A branch for a card is named `<type>/<title>-<issue number>`, and
-a branch with no issue `<type>/<title>`, never a number alone. The fixer and the reviewer stop
-while the audit is paused, because they spend the same limits; `pnpm audit:fix` says when it is.
+**After `Ready`, the work is a pull request.** A card that comes back to `Ready` is worked again
+onto the same pull request; read every comment on it first — the owner's included — because a
+comment there is how work is sent back with a reason. A branch for a card is named
+`<type>/<title>-<issue number>`, and a branch with no issue `<type>/<title>`, never a number alone.
+After a pull request merges, move its card with `pnpm issue lane <n> "on dev"` and close the issue
+with `pnpm issue close <n> --commit <sha>`.
 
 **Branch protection holds every commit that reaches `dev` to the required jobs, the admin account
 included.** GitHub decides a push the moment it arrives, so it refuses a direct push to `dev` unless
 that exact commit already passed the required jobs, on a branch, and sits on top of the current
 `dev`. No pull request review is required.
-
-**`board-sync.py` runs every five minutes on ubuntuserver**
-(`~/server/mediaserver/scripts/board-sync.py`, with `tools/audit/after-merge.mjs`). It keeps the
-open pull requests up to date with `dev` and never merges one, moves merged cards to `On dev`,
-writes the labels that mirror a board field, and adds any open issue missing
-from the board to `Backlog`. It moves a parent issue into the lane all of its sub-issues share,
-unless the parent is in `Manual` or `Rejected`. Read it for the exact conditions before you rely
-on one.
 
 **Never write to GitHub with `gh` directly.** `gh issue create|edit|close|comment`,
 `gh label create|edit|delete` and `gh pr create|edit` are denied in `.claude/settings.json`. Use
@@ -337,19 +320,18 @@ can be repaired and leaves the rest reported.
 
 **Every issue carries the required labels and board fields.** `pnpm issue create` refuses an
 issue missing one and names it, and `pnpm issue check-labels` reports every open issue that has
-drifted. `checkRequired` in `tools/audit/lib/schema.mjs` and the board's fields say what is
+drifted. `checkRequired` in `tools/lib/schema.mjs` and the board's fields say what is
 required. The judgement calls:
 
-- **Subarea** names where in the code the issue is. It is derived, not judged:
-  `tools/audit/lib/subarea.mjs` maps a path to its label, and an issue citing several files takes
-  the one most of its evidence sits in. Set it by hand only on an issue that cites no code.
+- **Subarea** names where in the code the issue is: the label of the directory most of its
+  evidence sits in.
 - **Area** is the board's game-domain field: what part of the game, not where in the code.
 - **Work type** is a board field, not a label, and nothing mirrors it. Its words are the commit
   types, plus `tooling`, `decision` and `release`; `release` is shipping and marketing work —
   a store page, a demo build, a trailer — which changes no code.
 - **Size** is the effort: `S` is one change in a file or two, `M` is several files or a
   measurement, `L` is several steps, a new system or a design.
-- **Agent** is the model the fixer works the card under. Pick the smallest model the scope
+- **Agent** is the model the card is worked under. Pick the smallest model the scope
   allows: `haiku` for a mechanical change in a file or two, `sonnet` for several files, a feature
   step or a headless measurement, `opus` only for a cross-cutting refactor, a new system or a
   design.
@@ -357,9 +339,9 @@ required. The judgement calls:
 **A feature is one pull request, unless its Size is `L`.** Work type `feat` goes with the kind
 `feature`. The body follows `.github/ISSUE_TEMPLATE/feat.md`, and may add `## Decisions this needs
 before any edit` and `## Considered and rejected`. On an `S` or `M` feature the `## Steps` list is
-the plan for one branch: the fixer works every open step in one run and its pull request says
+the plan for one branch: every open step is worked in one branch and its pull request says
 `Fixes #n`. On an `L` feature each checkbox is one branch and one pull request, because the whole
-of it does not fit one agent run: the fixer works the first open step only, its pull request says
+of it does not fit one agent run: each branch works the next open step only, its pull request says
 `Part of #n` with the step on a `Step:` line, and the card stays In Check until the last step's
 pull request passes review. Write each `L` step as a change that can be merged and verified by
 itself.
@@ -372,7 +354,7 @@ has none. Its pull request says `Fixes #<sub-issue>`, with the parent's step on 
 **A milestone is a version, or one part of a version named after it**: `v0.2`, or
 `v0.2 - Gameplay`, because GitHub milestones do not nest. Every issue sits in one, and a sub-issue
 sits in a milestone of its parent's version. Each spec category is a parent issue, and each
-feature of the category is a sub-issue with its own `## Steps`. `tools/audit/milestones.json`
+feature of the category is a sub-issue with its own `## Steps`. `tools/lib/milestones.json`
 names the `current` milestone, where every new issue lands unless `--milestone` or its parent
 names another, and the `draft` ones, which take only an issue assigned to them by name. A new
 issue lands inside the version being finished because it can reveal a blocker for it; sort each
@@ -382,11 +364,11 @@ one into a part of that version or into the next.
 holds the shape, though structure is not the bar — a checkbox list with citations is fine, and a
 wall of unbroken prose is not.
 
-**Reading is not free.** Every agent on both machines, `board-sync.py` and the dashboard share one
+**Reading is not free.** Every agent on both machines and the dashboard share one
 hourly GraphQL budget, and reading the board is the costliest call there is. Read it once, with
 `pnpm -s issue board`, and keep the result; when GraphQL is spent it reads over REST, which has a
-budget of its own. `pnpm issue`, `after-merge.mjs` and `board-sync.py` then read and write issues,
-pull requests and cards over REST too, through `tools/audit/lib/gh-run.mjs`. `pnpm issue create`,
+budget of its own. `pnpm issue` then reads and writes issues,
+pull requests and cards over REST too, through `tools/lib/gh-run.mjs`. `pnpm issue create`,
 `blocked-by` and `--parent` still need GraphQL, and fail until the hour resets.
 
 **Check the limit with GraphQL, not `gh api rate_limit`.** Its `graphql` figure does not track
@@ -400,11 +382,10 @@ gh api graphql -f query='{rateLimit{used remaining resetAt}}' --jq .data.rateLim
 At `remaining 0`, wait for `resetAt` rather than retrying.
 
 **`Priority` is the severity label, projected onto a field** (`SEVERITY_PRIORITY` in
-`tools/issue.mjs` and `board-sync.py`). It exists because the board can group and sort by a field
+`tools/issue.mjs`). It exists because the board can group and sort by a field
 and not by a label, so it carries no information severity does not, and it is never set by hand.
 
-**Move the card, never the label.** A label that mirrors a board field is rewritten from the
-field by `board-sync.py` within minutes, so an edit to the label is lost; change the field. A pull
+**Move the card, never the label.** Change the board field, not a label that mirrors it. A pull
 request carries the labels and the milestone of the issue it fixes, and `pnpm issue pr`,
 `pr-edit` and `pr-sync` copy them. Label the issue, never the pull request. A pull request is
 never a card of its own. Kind, severity, origin and the rule name are not touched — they describe
@@ -420,7 +401,7 @@ starts:
   real pawns, real ticks, a stated delta. Job and stock flow, recipe throughput, combat
   measurement. Still an agent's job.
 - **`needs playtest`** — the numbers can be produced but not judged. Balance feel, pacing, an
-  interaction that has to be used. **Only these reach the owner.** An audit that says creatures die
+  interaction that has to be used. **Only these reach the owner.** A measurement that says creatures die
   faster cannot say whether that is the game he wants.
 
 Do not mark something `needs playtest` because it is large or risky. The test is whether a
@@ -433,7 +414,7 @@ to avoid.
 ## Pull requests
 
 **Check what is already open before building or investigating.** Two sessions building the same
-thing leaves two implementations and a conflict in the same file. `tools/audit/hooks/inflight.mjs`
+thing leaves two implementations and a conflict in the same file. `tools/claude/inflight.mjs`
 lists the open pull requests with every prompt, and refuses the first edit in a session of a file
 that an open pull request changes or an open issue cites, naming them. Read what it names; if the
 edit belongs to that work, do it on that branch.
@@ -442,10 +423,9 @@ edit belongs to that work, do it on that branch.
 are refused, naming the blocker. Work on it and test it locally; it is pushed once the blocker
 closes. `pnpm issue blocked-by <n> <blocker>` adds the link.
 
-**Work an agent does on a board card goes through a pull request into `dev`.** The fixer opens
-it, the reviewer and CI report on it, and it merges once they pass. The pull request is where he
-reads the diff and where he writes what is wrong with it, and the fixer reads those comments on
-its next attempt. Several related fixes belong in one branch and one pull request, not one each.
+**Work an agent does on a board card goes through a pull request into `dev`.** CI reports on it,
+and it merges once CI passes. The pull request is where he reads the diff and where he writes what
+is wrong with it; read those comments before the next attempt. Several related fixes belong in one branch and one pull request, not one each.
 
 **Read a pull request's Check notes before calling it ready or merging it.** The `perf-notes` job
 in `check.yml` keeps that one comment on each pull request, written by
@@ -474,10 +454,9 @@ Open an issue only when one of these holds:
 
 - the scope is large enough to be reviewed as one diff, spans several sessions, or has to sit
   unmerged while something else is decided;
-- the work is handed to the fixer, which works cards from `Ready` unattended and needs an issue
-  to work from.
+- the work is handed to another session, which needs an issue to work from.
 
 A small fix, a rule in this file, a tooling tweak or a one-step change asked for in the
 conversation is none of these. Filing an issue for it adds a card and nothing he reads.
 
-Nothing opens a pull request into `main`; `pnpm audit:promote` is how `dev` reaches it.
+Nothing opens a pull request into `main`; `pnpm promote` is how `dev` reaches it.
