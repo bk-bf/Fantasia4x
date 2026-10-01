@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -uo pipefail
 
-ROOT="$(cd "$(git rev-parse --git-common-dir)/.." && pwd)"
+ROOT="$(git rev-parse --show-toplevel)"
 
 NEW=()
 BRANCHES=()
