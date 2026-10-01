@@ -7,6 +7,7 @@
     resourcesMinimized
   } from '$lib/stores/uiPrefs';
   import { itemService } from '$lib/game/services/ItemService';
+  import { colonistCount } from '$lib/game/core/state/colonists';
   import { uiState } from '$lib/stores/uiState';
   import ScrollArea from '../widget/ScrollArea.svelte';
   import type { Item } from '$lib/game/core/types.js';
@@ -32,7 +33,6 @@
 
   const stockpile = $derived($currentStockpile as StockItem[]);
   const culture = $derived($currentCulture);
-  const population = $derived($gameState?.pawns?.length ?? 0);
   const carcassIntactness = $derived($gameState?._carcassCondition ?? {});
 
   let itemChanges = $state<Record<string, number>>({});
@@ -186,7 +186,7 @@
         </div>
         <div class="row">
           <span class="lbl">POPULATION</span>
-          <span class="val">{population}</span>
+          <span class="val">{colonistCount($gameState)}</span>
         </div>
       </div>
 

@@ -4,6 +4,7 @@ import { generateKingdomPool, generateKingdomRelations } from '../gen/kingdom';
 import { ticksFromSeconds } from '../util/time';
 import { freshSeed } from '../util/rng';
 import { isSpawnableTile } from '../defs/terrains';
+import { colonists } from './colonists';
 
 export const initialGameState: GameState = {
   seed: freshSeed(),
@@ -131,12 +132,10 @@ function normalizeLegacyCulture(culture: GameState['culture']): GameState['cultu
 export function markColonyCulturesDiscovered(state: GameState): GameState {
   const counts = new Map<string, number>();
   const firstColonist = new Map<string, string>();
-  for (const p of state.pawns) {
+  for (const p of colonists(state)) {
     if (!p.cultureId) continue;
     counts.set(p.cultureId, (counts.get(p.cultureId) ?? 0) + 1);
-    if (p.isAlive !== false && !firstColonist.has(p.cultureId)) {
-      firstColonist.set(p.cultureId, p.name);
-    }
+    if (!firstColonist.has(p.cultureId)) firstColonist.set(p.cultureId, p.name);
   }
   const culturePool = state.culturePool.map((r) => ({
     ...r,

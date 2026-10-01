@@ -171,6 +171,11 @@ export interface Pawn {
   adulthoodId?: string;
   basePrestige?: number;
 
+  isVisitor?: boolean;
+  visitorKingdomId?: string;
+  departTurn?: number;
+  foodStash?: Record<string, number>;
+
   familyId?: string;
   kin?: KinTie[];
   lastSeenTurn?: number;
