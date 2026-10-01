@@ -1,6 +1,6 @@
 ---
 name: board
-description: Read the Fantasia4x project board and propose a short, ordered work sequence — what to do first, what each step frees, and what waits on what. Read-only. Use when asked what to work on next, for a gameplan or a sequencing report, for the state of the board, or to "look at the board".
+description: Read the Fantasia4x project board and propose a short, ordered work sequence — handed-off and automated work first, by effort, his own work last. Read-only. Use when asked what to work on next, for next steps, a summary or the state of the board, a gameplan or a sequencing report, after an audit run, or to "look at the board".
 ---
 
 # Sequencing the board
@@ -37,48 +37,53 @@ Then, without GitHub:
 
 - `jq -c '{paused, reason}' tools/audit/.ledger/control.json`. While the audit is paused, the
   fixer and the reviewer work nothing.
-- `git fetch -q origin && git rev-list --count origin/main..origin/dev` — commits waiting for a
-  promotion.
 - For each `Failed` card, `gh issue view <n> --json comments` (about 1 point each). The latest
   comment holds the reason it failed; check whether that cause has been fixed since.
 
 ## 2. Order the work
 
-Put first whatever frees the most other work, not whatever has the highest priority.
+Work an agent or a command can finish comes first, and work only he can do comes last. Inside
+each group, the least effort comes first. Free cards break ties: a step that frees more cards
+goes first, then Priority, `P0` first.
 
-1. **Anything that stops the automation.** A red `check` on `dev` or on a pull request, a pull
-   request GitHub reports `DIRTY` (it conflicts with `dev`), or a paused audit. Each of these
-   holds up every card behind it.
-2. **What only he can do, ordered by how many cards it frees.**
-   - A `needs playtest` pull request, waiting for him to play and merge it.
-   - A `Blocked on you` card that other cards wait for. Count its dependents: `blockedBy` edges,
-     prose dependencies and open sub-issues. The whole lane is answered through `/unblock`.
-   - A `Failed` card whose cause of failure has since been fixed, and so can go back to `Ready`.
-3. **Work an agent can start now.** `Ready` cards with no open blocker.
-   `pnpm audit:fix --next` works only the `tests` route; a `headless` or `playtest` card needs
-   `pnpm audit:fix --issue <n>`.
+1. **Lane moves and merges.** One command each, seconds of work.
+   - A paused audit or a red `check` on `dev`, first: either stops the fixer and the reviewer.
+   - `drift` and `test gap` cards in `Backlog`, which an agent moves to `Ready` itself:
+     `pnpm issue lane <n> ready`.
+   - A `Failed` card whose cause of failure has since been fixed, or that now has a clean open
+     pull request. It needs his yes, because only he takes a card out of `Failed`.
+   - A card in the wrong lane: a decision in `Ready`, which the fixer cannot work, or a `Ready`
+     card with an open blocker.
+   - A pull request that passed review and its checks, and waits only to be merged.
+2. **Automated runs.** One command, then unattended. The reviewer on open pull requests
+   (`pnpm audit:review --issue <n>`), then the fixer on `Ready` cards with no open blocker, `S`
+   before `M` before `L`. `pnpm audit:fix --next` works only the `tests` route; a `headless` or
+   `playtest` card needs `pnpm audit:fix --issue <n>`.
+3. **Agent work that waits for his yes.** A card of another kind in `Backlog`, and a tooling
+   repair the run found, `S` before `M` before `L`.
 4. **Chains.** Blocked cards, in the order their blockers clear. A parent comes after its open
    sub-issues.
-5. **Promotion.** `pnpm audit:promote` once `On dev` holds finished work and nothing on `dev` is
-   known to be broken.
+5. **His own work, last.** A `needs playtest` pull request to play and merge, the `Blocked on
+   you` lane through `/unblock` (the card with the most dependents first), and `Manual` cards,
+   including a `Manual` card's pull request that conflicts with `dev`.
 
 Rules while ordering:
 
 - A card with an open blocker, relation or prose, is not startable. Put it after the blocker.
-- `Manual` cards are his, in progress by hand. List them; do not schedule them for an agent.
+- `Manual` cards are his, in progress by hand. Do not schedule them for an agent.
 - Do not guess answers to `Blocked on you` cards. The sequence says which to answer first, and
   `/unblock` asks the questions.
-- Ties break on Priority, `P0` first, then on Size, `S` before `L`, when both free the same
-  number of cards.
+- Never list a promotion of `dev` to `main`, nor how many commits wait for one.
 
 ## 3. Report
 
 Short enough to act on in a minute.
 
-- A table of lane counts, then the steps: 8 at most, numbered. Each step names its cards
-  (`#n`), says in one line why it comes now and how many cards it frees, and gives the command
-  when one exists: `/unblock`, `pnpm issue lane <n> ready`, `pnpm audit:fix --issue <n>`,
-  `pnpm audit:promote`.
+- A table of lane counts, then the steps under one heading per group from section 2, in that
+  order, numbered across the groups. Each step names its cards (`#n`), says in one line why it
+  comes now and how many cards it frees, and gives the command when one exists:
+  `pnpm issue lane <n> ready`, `pnpm audit:review --issue <n>`, `pnpm audit:fix --issue <n>`,
+  `/unblock`.
 - List prose dependencies with no `blockedBy` relation, each with the command that records it:
   `pnpm issue blocked-by <n> <blocker>`.
 - End with **Needs your decision**, holding only choices that are his.
