@@ -302,9 +302,17 @@ try {
         'Glob',
         'Write',
         'Edit',
-        'Skill'
+        'Skill',
+        '--disallowedTools',
+        'Monitor',
+        'ScheduleWakeup'
       ],
-      { cwd: wt, input: headlessPrompt(issue, route, files), timeoutMs: MODEL_CAP_MS }
+      {
+        cwd: wt,
+        input: headlessPrompt(issue, route, files),
+        timeoutMs: MODEL_CAP_MS,
+        env: { CLAUDE_CODE_DISABLE_BACKGROUND_TASKS: '1' }
+      }
     );
     const mins = ((Date.now() - t0) / 60000).toFixed(1);
     if (res.code !== 0)

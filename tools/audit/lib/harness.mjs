@@ -10,9 +10,18 @@ export const PNPM = process.env.AUDIT_PNPM || 'pnpm';
 export const BASE = process.env.AUDIT_BASE || 'dev';
 export const CLAUDE = process.env.AUDIT_CLAUDE || 'claude';
 
-export function run(cmd, args, { cwd = ROOT, input, timeoutMs = 1_800_000 } = {}) {
+export function run(
+  cmd,
+  args,
+  { cwd = ROOT, input, timeoutMs = 1_800_000, env = process.env } = {}
+) {
   return new Promise((resolve) => {
-    const p = spawn(cmd, args, { cwd, stdio: ['pipe', 'pipe', 'pipe'], detached: true });
+    const p = spawn(cmd, args, {
+      cwd,
+      env: { ...process.env, ...env },
+      stdio: ['pipe', 'pipe', 'pipe'],
+      detached: true
+    });
     let o = '',
       e = '',
       settled = false,
