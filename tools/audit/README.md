@@ -7,9 +7,10 @@ anything ever looked at, under which question, with which model. This tool makes
 row in a table instead of a claim.
 
 Every auditable object gets a line-independent key and a content hash. Every rule gets a
-hash over its own text. A verdict is valid only for the triple
-`(content_hash, dep_hash, rule_hash)` it was produced under — change the code, change a
-callee, or reword the rule, and the work item re-opens on its own. Coverage is then
+hash over its own text. A verdict is valid only for the pair `(content_hash, rule_hash)` it
+was produced under — change the code or reword the rule, and the work item re-opens on its
+own. For a rule in the `tests` family the work item's `content_hash` also covers every file
+under `src/tests` that names the symbol, so changing its tests re-opens it too. Coverage is then
 `SELECT count(*)`, not trust.
 
 ## Tiers
@@ -133,8 +134,10 @@ node tools/audit/audit.mjs tick --json # the same, as the document audit-monitor
 ```
 
 `index` re-reads every source file and rewrites the symbol inventory; `plan` crosses the
-active rules against it. A verdict survives both as long as its symbol's `content_hash` and
-its rule's `rule_hash` are unchanged, so only what actually moved is re-audited.
+active rules against it. A verdict survives both as long as its work item's `content_hash` and
+its rule's `rule_hash` are unchanged, so only what actually moved is re-audited. The latest
+verdict settles the finding: a `pass` or `n/a` marks it `fixed`, and a later `fail` reopens it
+with the new text.
 
 ## How the dashboard drives a run
 
