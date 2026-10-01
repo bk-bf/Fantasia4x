@@ -776,6 +776,7 @@ export function makeMob(
           traits: def.traits.map((id) => TRAIT_DATABASE.find((t) => t.id === id)).filter((t) => !!t)
         }
       : {}),
+    ...(def.kingdom ? { kingdomId: def.kingdom } : {}),
     ...(naturalArmorOverride !== undefined ? { naturalArmorOverride } : {}),
     ...(equipment ? { equipment } : {}),
     ...(def.tier === 5 ? { name: generateBossName(def.species) } : {})

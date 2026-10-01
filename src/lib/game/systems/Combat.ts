@@ -38,7 +38,7 @@ import {
   COLLAPSE_CONSCIOUSNESS
 } from '../core/rules/body/conditions';
 import { getCreatureById } from '../core/defs/creatures';
-import { willFinishOffDowned } from '../services/entity/entityConstants';
+import { willFinishOffDowned, SELF_DEFENCE_TICKS } from '../services/entity/entityConstants';
 import {
   woundForDamageType,
   woundById,
@@ -1199,7 +1199,12 @@ class CombatServiceImpl implements CombatService {
     const result = this.resolveHit(attacker, target, state, override, guaranteed);
     const pos = this.entityPos(target);
 
-    if (!('entityClass' in attacker) && 'entityClass' in target && (target as Mob).kingdomId) {
+    if (
+      !('entityClass' in attacker) &&
+      'entityClass' in target &&
+      (target as Mob).partyId &&
+      (target as Mob).kingdomId
+    ) {
       const kid = (target as Mob).kingdomId!;
       const rel = kingdomService.colonyRelationTo(state, kid);
       if (rel && rel.score > -100) {
@@ -1216,16 +1221,19 @@ class CombatServiceImpl implements CombatService {
       state = socialService.onFriendlyFire(state, attacker as Pawn, target as Pawn);
     }
 
-    if (result.hit && !('entityClass' in attacker) && 'entityClass' in target) {
+    if (!('entityClass' in attacker) && 'entityClass' in target) {
       const struck = target as Mob;
-      revealPawnToMob(struck, attacker.id, turn);
+      const provokedUntil = turn + SELF_DEFENCE_TICKS;
+      struck.provokedUntil = provokedUntil;
+      if (result.hit) revealPawnToMob(struck, attacker.id, turn);
       const packKey = struck.lairId ?? struck.partyId;
       if (packKey != null) {
         for (const m of state.mobs ?? []) {
           if (m.id === struck.id || m.isAlive === false) continue;
           if ((m.lairId ?? m.partyId) !== packKey) continue;
-          if (chebyshev(m.x, m.y, struck.x, struck.y) <= STEALTH_PACK_ALERT_RADIUS)
-            revealPawnToMob(m, attacker.id, turn);
+          if (chebyshev(m.x, m.y, struck.x, struck.y) > STEALTH_PACK_ALERT_RADIUS) continue;
+          m.provokedUntil = provokedUntil;
+          if (result.hit) revealPawnToMob(m, attacker.id, turn);
         }
       }
     }
@@ -1431,6 +1439,7 @@ class CombatServiceImpl implements CombatService {
       creditKillDeeds(attacker, target as Mob, result.weaponId, turn);
     if (justDied && isTargetMob && !('entityClass' in attacker)) {
       next = socialService.onFoughtTogether(next, attacker as Pawn, pos.x, pos.y);
+      next = kingdomService.onMobKilled(next, target as Mob);
     }
     const afterEffect = this.applyOnHitEffect(
       next,

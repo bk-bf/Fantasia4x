@@ -68,10 +68,11 @@ export function rollOrigin(
   culturePool: Culture[],
   kingdoms: Kingdom[]
 ): { homeKingdomId?: string; culture: Culture } {
-  if (kingdoms.length === 0 || rng.random() < STATELESS_CHANCE) {
+  const settled = kingdoms.filter((k) => !k.wild);
+  if (settled.length === 0 || rng.random() < STATELESS_CHANCE) {
     return { culture: rng.pick(culturePool) };
   }
-  const kingdom = weightedPick(kingdoms, (k) => {
+  const kingdom = weightedPick(settled, (k) => {
     if (k.relationBias === 'always_hostile') return 0.4;
     const idx = WEALTH_BANDS.indexOf(k.lore.wealthBand);
     return ORIGIN_SCALE_WEIGHT[idx < 0 ? 2 : idx];

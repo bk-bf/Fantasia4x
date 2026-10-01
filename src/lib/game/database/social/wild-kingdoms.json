@@ -1,0 +1,83 @@
+[
+  {
+    "id": "grazing-herds",
+    "name": "The Grazing Herds",
+    "relationBias": "derived",
+    "epithet": "of the Open Range",
+    "temperament": "watchful, and gone at a snapped twig",
+    "leaderName": "The Lead Doe",
+    "capitalName": "The Wide Meadows"
+  },
+  {
+    "id": "hunting-packs",
+    "name": "The Hunting Packs",
+    "relationBias": "derived",
+    "epithet": "of the Long Winter",
+    "temperament": "patient, and never alone",
+    "leaderName": "The Grey Alpha",
+    "capitalName": "The Deep Dens"
+  },
+  {
+    "id": "deep-wilds",
+    "name": "The Deep Wilds",
+    "relationBias": "derived",
+    "epithet": "of the Unwalked Places",
+    "temperament": "solitary, and slow to forgive a trespass",
+    "leaderName": "The Old One of the Thicket",
+    "capitalName": "The Tangled Reaches"
+  },
+  {
+    "id": "goblin-warrens",
+    "name": "The Goblin Warrens",
+    "relationBias": "always_hostile",
+    "epithet": "of the Sunless Tunnels",
+    "temperament": "spiteful and endlessly hungry",
+    "leaderName": "Warlord Gnashrik the Unwashed",
+    "capitalName": "Muckhollow"
+  },
+  {
+    "id": "orc-hordes",
+    "name": "The Orc Hordes",
+    "relationBias": "always_hostile",
+    "epithet": "of the Broken Standard",
+    "temperament": "brutal and unappeasable",
+    "leaderName": "Warboss Ghorrum Skullpiler",
+    "capitalName": "Ashen Camp"
+  },
+  {
+    "id": "kobold-burrows",
+    "name": "The Kobold Burrows",
+    "relationBias": "always_hostile",
+    "epithet": "of the Hundred Snares",
+    "temperament": "cowardly in the open, vicious underground",
+    "leaderName": "Chief Trapper Vek",
+    "capitalName": "The Pitworks"
+  },
+  {
+    "id": "gnoll-packs",
+    "name": "The Gnoll Packs",
+    "relationBias": "always_hostile",
+    "epithet": "of the Laughing Dark",
+    "temperament": "ravenous and cruel for sport",
+    "leaderName": "Flesh-Mother Grask",
+    "capitalName": "The Bone Ring"
+  },
+  {
+    "id": "harpy-eyries",
+    "name": "The Harpy Eyries",
+    "relationBias": "always_hostile",
+    "epithet": "of the Screaming Crags",
+    "temperament": "shrill, thieving and pitiless",
+    "leaderName": "Matron Skreigh",
+    "capitalName": "The High Nests"
+  },
+  {
+    "id": "bullywug-mires",
+    "name": "The Bullywug Mires",
+    "relationBias": "always_hostile",
+    "epithet": "of the Standing Water",
+    "temperament": "croaking, proud and territorial",
+    "leaderName": "Bloat-King Ogglurk",
+    "capitalName": "The Sunken Court"
+  }
+]

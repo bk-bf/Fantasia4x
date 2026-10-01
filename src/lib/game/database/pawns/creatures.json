@@ -1,6 +1,7 @@
 [
     {
         "id"            : "wolf",
+        "kingdom"       : "hunting-packs",
         "audio"            : "canine",
         "name"          : "Grey Wolf",
         "flavor": "Grey shapes at the treeline, patient and pack-wise; alone one is little, but they seldom come alone. The winter pelt tans well — if you can drop it before the others close.",
@@ -34,6 +35,7 @@
     },
     {
         "id"            : "great_wolf",
+        "kingdom"       : "hunting-packs",
         "audio"            : "canine",
         "name"          : "Great Wolf",
         "flavor": "The wolf of firelit warnings, grown to the size of a pony and older than any living pack. What can be cut from such a beast is worth more than its weight in common hide — but few return to do the cutting.",
@@ -68,6 +70,7 @@
     },
     {
         "id": "bear",
+        "kingdom" : "deep-wilds",
         "audio": "beast",
         "name": "Brown Bear",
         "flavor": "Slow to rouse and terrible once roused; the thick hide turns a careless blow, though the belly does not. A single one yields hide and meat enough to keep a household a season.",
@@ -104,6 +107,7 @@
     },
     {
         "id"            : "goblin",
+        "kingdom"       : "goblin-warrens",
         "audio"            : "goblinoid",
         "name"          : "Goblin Raider",
         "flavor": "Runty and vicious, it fights with whatever cruel little blade it has scavenged, edged with something that stings long after the cut. Kill enough and their nasty gear is yours — weak as it is.",
@@ -138,6 +142,7 @@
     },
     {
         "id"            : "giant_rat",
+        "kingdom"       : "grazing-herds",
         "species": "giant_rat",
         "tier": 2,
         "audio"            : "rustle",
@@ -196,6 +201,7 @@
     },
     {
         "id"            : "deer",
+        "kingdom"       : "grazing-herds",
         "species": "deer",
         "tier": 2,
         "audio"            : "grunt",
@@ -224,6 +230,7 @@
     },
     {
         "id"            : "rabbit",
+        "kingdom"       : "grazing-herds",
         "species": "rabbit",
         "tier": 2,
         "audio"            : "critter",
@@ -250,6 +257,7 @@
     },
     {
         "id"                : "boar",
+        "kingdom"           : "deep-wilds",
         "audio"                : "boar",
         "name"              : "Wild Boar",
         "flavor": "A slab of muscle on trotters that answers a wound with a charge, tusks first. Dangerous to corner, but the meat is rich and the hide stubborn enough to be worth the curing.",
@@ -282,6 +290,7 @@
     },
     {
         "id"            : "elk",
+        "kingdom"       : "grazing-herds",
         "species": "elk",
         "tier": 2,
         "audio"            : "grunt",
@@ -313,6 +322,7 @@
     },
     {
         "id": "mountain_goat",
+        "kingdom" : "grazing-herds",
         "species": "mountain_goat",
         "tier": 2,
         "audio": "goat",
@@ -344,6 +354,7 @@
     },
     {
         "id"            : "wild_chicken",
+        "kingdom"       : "grazing-herds",
         "species": "wild_chicken",
         "tier": 2,
         "audio"            : "fowl",
@@ -374,6 +385,7 @@
     },
     {
         "id"                : "aurochs",
+        "kingdom"           : "grazing-herds",
         "species": "aurochs",
         "tier": 2,
         "audio"                : "beast",
@@ -406,6 +418,7 @@
     },
     {
         "id"                : "woolly_mammoth",
+        "kingdom"           : "grazing-herds",
         "species": "woolly_mammoth",
         "tier": 2,
         "audio"                : "beast",
@@ -438,6 +451,7 @@
     },
     {
         "id"            : "hippogriff",
+        "kingdom"       : "deep-wilds",
         "species": "hippogriff",
         "tier": 2,
         "audio"            : "raptor",
@@ -472,6 +486,7 @@
     },
     {
         "id"            : "hoarfowl",
+        "kingdom"       : "grazing-herds",
         "species": "hoarfowl",
         "tier": 2,
         "audio"            : "fowl",
@@ -500,6 +515,7 @@
     },
     {
         "id"            : "quillback",
+        "kingdom"       : "grazing-herds",
         "species": "quillback",
         "tier": 2,
         "audio"            : "critter",
@@ -528,6 +544,7 @@
     },
     {
         "id"            : "worg",
+        "kingdom"       : "hunting-packs",
         "species": "worg",
         "tier": 2,
         "audio"            : "canine",
@@ -559,6 +576,7 @@
     },
     {
         "id"            : "jackal",
+        "kingdom"       : "hunting-packs",
         "species": "jackal",
         "tier": 2,
         "audio"            : "canine",
@@ -590,6 +608,7 @@
     },
     {
         "id"            : "owlbear",
+        "kingdom"       : "deep-wilds",
         "species": "owlbear",
         "tier": 2,
         "audio"            : "beast",
@@ -623,6 +642,7 @@
     },
     {
         "id"            : "sabretooth",
+        "kingdom"       : "hunting-packs",
         "species": "sabretooth",
         "tier": 2,
         "audio"            : "beast",
@@ -654,6 +674,7 @@
     },
     {
         "id"            : "mire_crocodile",
+        "kingdom"       : "deep-wilds",
         "species": "mire_crocodile",
         "tier": 2,
         "audio"            : "reptile",
@@ -686,6 +707,7 @@
     },
     {
         "id"            : "marsh_viper",
+        "kingdom"       : "deep-wilds",
         "species": "marsh_viper",
         "tier": 2,
         "audio"            : "reptile",
@@ -716,6 +738,7 @@
     },
     {
         "id"            : "stirge",
+        "kingdom"       : "deep-wilds",
         "species": "stirge",
         "tier": 2,
         "audio"            : "insect",
@@ -773,6 +796,7 @@
     },
     {
         "id"            : "giant_olm",
+        "kingdom"       : "grazing-herds",
         "species": "giant_olm",
         "tier": 2,
         "audio"            : "frog",
@@ -798,6 +822,7 @@
     },
     {
         "id"            : "thornwood_spider",
+        "kingdom"       : "deep-wilds",
         "audio"            : "insect",
         "name"          : "Bramble Weaver",
         "flavor": "It strings the barbed thickets with snare-silk and waits, hard-shelled above and venom-fanged below. The silk and the venom-glands both fetch coin from those who know their use.",
@@ -830,6 +855,7 @@
     },
     {
         "id"            : "kobold_skulker",
+        "kingdom"       : "kobold-burrows",
         "species": "kobold_skulker",
         "tier": 2,
         "audio"            : "goblinoid",
@@ -860,6 +886,7 @@
     },
     {
         "id"            : "gnoll_marauder",
+        "kingdom"       : "gnoll-packs",
         "species": "gnoll_marauder",
         "tier": 2,
         "audio"            : "canine",
@@ -891,6 +918,7 @@
     },
     {
         "id"            : "orc_reaver",
+        "kingdom"       : "orc-hordes",
         "audio"            : "goblinoid",
         "name"          : "Orc Reaver",
         "flavor": "Broad, scarred and heedless of pain, it swings iron too heavy for most men to lift — and only a strong hand turns that iron back on its kin. Kill one and the warband only grows angrier.",
@@ -923,6 +951,7 @@
     },
     {
         "id"            : "harpy",
+        "kingdom"       : "harpy-eyries",
         "species": "harpy",
         "tier": 2,
         "audio"            : "raptor",
@@ -953,6 +982,7 @@
     },
     {
         "id"            : "bullywug",
+        "kingdom"       : "bullywug-mires",
         "species": "bullywug",
         "tier": 2,
         "audio"            : "frog",
@@ -983,6 +1013,7 @@
     ,
     {
         "id": "wolf_pup",
+        "kingdom" : "hunting-packs",
         "audio": "canine",
         "name": "Wolf Pup",
         "flavor": "All ears and clumsy paws, it tumbles after the pack with more hunger than harm. Raise a blade to it and its yelping brings the grown ones back at a dead run.",
@@ -1017,6 +1048,7 @@
     },
     {
         "id": "scrawny_wolf",
+        "kingdom" : "hunting-packs",
         "audio": "canine",
         "name": "Scrawny Wolf",
         "flavor": "A hard winter's runt, ribs plain under a dull coat, dangerous only when there is no room left to run. The pelt is thin, but a pelt is a pelt.",
@@ -1051,6 +1083,7 @@
     },
     {
         "id": "grey_yearling",
+        "kingdom" : "hunting-packs",
         "audio": "canine",
         "name": "Grey Yearling",
         "flavor": "Past its first winter and still learning its place at the kill, bold beyond its strength. It will trade blows a wiser wolf would not, and leaves a serviceable hide.",
@@ -1085,6 +1118,7 @@
     },
     {
         "id": "timber_wolf",
+        "kingdom" : "hunting-packs",
         "audio": "canine",
         "name": "Timber Wolf",
         "flavor": "Deep-chested and thick-furred, the dependable killer at the heart of the pack. Neither swift nor armoured, but it endures — and the winter coat tans into something fine.",
@@ -1119,6 +1153,7 @@
     },
     {
         "id": "moor_runner",
+        "kingdom" : "hunting-packs",
         "audio": "canine",
         "name": "Moor Runner",
         "flavor": "Bred long and light for the open moor, it runs its quarry down over the miles and strikes hard when it closes — with little left to soak a blow in return.",
@@ -1153,6 +1188,7 @@
     },
     {
         "id": "pack_alpha",
+        "kingdom" : "hunting-packs",
         "audio": "canine",
         "name": "Pack Alpha",
         "flavor": "The wolf the others give way to, first to the throat and quickest to the kill. Put it down swiftly, for it hits far harder than it can take — and its hide is the pack's finest.",
@@ -1188,6 +1224,7 @@
     },
     {
         "id": "scarred_hunter",
+        "kingdom" : "hunting-packs",
         "audio": "canine",
         "name": "Scarred Hunter",
         "flavor": "Old wounds map every fight it has survived, and it fights like a beast with nothing left to lose. Swift and savage, no tougher for the scars — a worthy pelt for a hard kill.",
@@ -1222,6 +1259,7 @@
     },
     {
         "id": "dire_wolf",
+        "kingdom" : "hunting-packs",
         "audio": "canine",
         "name": "Dire Wolf",
         "flavor": "A wolf out of the deep-wood's memory, tall as a man's chest and faster than its size has any right to be. It deals a great deal of hurt and takes little; the great dark pelt is prize enough.",
@@ -1257,6 +1295,7 @@
     },
     {
         "id": "bloodmoon_alpha",
+        "kingdom" : "hunting-packs",
         "audio": "canine",
         "name": "Bloodmoon Alpha",
         "flavor": "They say it runs hardest under a red moon, and the whole pack runs mad behind it. A whirl of fang that must be dropped fast, before it opens the whole hunting party.",
@@ -1292,6 +1331,7 @@
     },
     {
         "id": "direwolf_matriarch",
+        "kingdom" : "hunting-packs",
         "audio": "canine",
         "name": "Direwolf Matriarch",
         "flavor": "Grey-muzzled and merciless, she has led the pack through more winters than most men see. Neither swift nor soft any longer — a slow, sure, hard-hided fight, and a matriarch's pelt to show for it.",
@@ -1326,6 +1366,7 @@
     },
     {
         "id": "frost_fang",
+        "kingdom" : "hunting-packs",
         "audio": "canine",
         "name": "Frost-Fang",
         "flavor": "Its breath smokes and its coat rimes white; the deep cold is kin to it, and only fire tells. Quick and cutting but thin-skinned — and the frosted pelt keeps a strange chill long after.",
@@ -1362,6 +1403,7 @@
     },
     {
         "id": "bear_cub",
+        "kingdom" : "deep-wilds",
         "audio": "beast",
         "name": "Bear Cub",
         "flavor": "Round, clumsy and endlessly curious — and never once out of its mother's reckoning. Small game at a large risk: the sow is always nearer than she looks.",
@@ -1396,6 +1438,7 @@
     },
     {
         "id": "yearling_bear",
+        "kingdom" : "deep-wilds",
         "audio": "beast",
         "name": "Yearling Bear",
         "flavor": "Newly turned out to fend for itself and still unsure what it may take. Manageable for a careful hunter, with hide and meat enough to be worth the stalk.",
@@ -1430,6 +1473,7 @@
     },
     {
         "id": "sun_bear",
+        "kingdom" : "deep-wilds",
         "audio": "beast",
         "name": "Sun Bear",
         "flavor": "Small for a bear, marked with a pale throat-blaze and a weakness for honey and grubs. The armoured back turns a spear where the soft belly will not.",
@@ -1465,6 +1509,7 @@
     },
     {
         "id": "black_bear",
+        "kingdom" : "deep-wilds",
         "audio": "beast",
         "name": "Black Bear",
         "flavor": "Shy of open ground and quicker to climb than to stand — until standing is all that's left. A thick pelt and a season's meat reward the hunter who forces the matter.",
@@ -1500,6 +1545,7 @@
     },
     {
         "id": "grizzly",
+        "kingdom" : "deep-wilds",
         "audio": "beast",
         "name": "Grizzly",
         "flavor": "It fears nothing afoot and turns from nothing that charges; the hide sheds glancing blows, the belly does not. One brings down meat, fat and a hide worth a whole winter's warmth.",
@@ -1535,6 +1581,7 @@
     },
     {
         "id": "cave_bear",
+        "kingdom" : "deep-wilds",
         "audio": "beast",
         "name": "Cave Bear",
         "flavor": "A giant out of the deep caves, its jaws remembered in the gnawed bones of its own dead. Thickly hided and hard to fell — but a single carcass keeps a hall in meat and fur.",
@@ -1570,6 +1617,7 @@
     },
     {
         "id": "scarred_grizzly",
+        "kingdom" : "deep-wilds",
         "audio": "beast",
         "name": "Scarred Grizzly",
         "flavor": "Every winter has taken something from it and given back only spite. A heavy, plodding, punishing fight — and the battered hide is all the tougher for the scars.",
@@ -1605,6 +1653,7 @@
     },
     {
         "id": "ridgeback_bear",
+        "kingdom" : "deep-wilds",
         "audio": "beast",
         "name": "Ridgeback",
         "flavor": "A stiff ridge of hair runs down a back plated thick as old bark, and little short of a spear-thrust reaches through it. Slow to bleed and slower to fall — the hide alone is armour half-made.",
@@ -1640,6 +1689,7 @@
     },
     {
         "id": "elder_cave_bear",
+        "kingdom" : "deep-wilds",
         "audio": "beast",
         "name": "Elder Cave Bear",
         "flavor": "Ancient and enormous, it has outlasted whole tribes that dared to hunt it. To fell one is a saga in itself, and its vast hide and ivory claws the proof of the telling.",
@@ -1675,6 +1725,7 @@
     },
     {
         "id": "ironhide_bruin",
+        "kingdom" : "deep-wilds",
         "audio": "beast",
         "name": "Ironhide Bruin",
         "flavor": "Its hide has turned so many spears that the scars have hardened into armour of their own. Blows glance and slide; you will not out-batter it, only outlast it — and the hide is worth every hour.",
@@ -1710,6 +1761,7 @@
     },
     {
         "id": "bloodclaw_bear",
+        "kingdom" : "deep-wilds",
         "audio": "beast",
         "name": "Bloodclaw",
         "flavor": "It kills long past its hunger, and the caked red never quite leaves its claws. Wound it and it only worsens; drop it clean, or not at all — the claws alone are a grim trophy.",
@@ -1746,6 +1798,7 @@
     },
     {
         "id": "great_bear",
+        "kingdom" : "deep-wilds",
         "audio": "beast",
         "name": "Great Bear",
         "flavor": "The bear the old songs raised to frighten children — a moving mountain of muscle and ancient wrath. What it leaves behind is more than meat and fur; such a beast carries something rarer in its bones.",
@@ -1781,6 +1834,7 @@
     },
     {
         "id": "piglet",
+        "kingdom" : "deep-wilds",
         "audio": "boar",
         "name": "Piglet",
         "flavor": "Striped and squealing, it keeps hard to the sow's flank and bolts at a footfall. Barely a meal — and the sow will make you pay for it.",
@@ -1811,6 +1865,7 @@
     },
     {
         "id": "scrub_boar",
+        "kingdom" : "deep-wilds",
         "audio": "boar",
         "name": "Scrub Boar",
         "flavor": "Lean and low, forever rooting the scrub for whatever a snout turns up. It would sooner crash off into the brush than fight, and falls into honest meat for a ready spear.",
@@ -1841,6 +1896,7 @@
     },
     {
         "id": "young_tusker",
+        "kingdom" : "deep-wilds",
         "audio": "boar",
         "name": "Young Tusker",
         "flavor": "Its tusks are freshly through and it is far too eager to try them, all squeal and no weight behind the swing. A clean kill for a steady spear, and hide enough to cure.",
@@ -1871,6 +1927,7 @@
     },
     {
         "id": "razorback",
+        "kingdom" : "deep-wilds",
         "audio": "boar",
         "name": "Razorback",
         "flavor": "A ridge of bristle stands along its spine when the temper rises, and it rises at nothing. It comes fast when it comes; the hide is coarse but stubborn, worth the curing.",
@@ -1901,6 +1958,7 @@
     },
     {
         "id": "bristleback",
+        "kingdom" : "deep-wilds",
         "audio": "boar",
         "name": "Bristleback",
         "flavor": "Broad through the shoulder and matted in hide and gristle thick enough to blunt a spear. It soaks more than it deals, and gives back good leather for the effort.",
@@ -1931,6 +1989,7 @@
     },
     {
         "id": "elder_tusker",
+        "kingdom" : "deep-wilds",
         "audio": "boar",
         "name": "Elder Tusker",
         "flavor": "Old, solitary and long past patience, its tusks worn to yellow scythes. A stubborn kill — but the ivory and the heavy hide reward a hunter who stands their ground.",
@@ -1961,6 +2020,7 @@
     },
     {
         "id": "irontusk",
+        "kingdom" : "deep-wilds",
         "audio": "boar",
         "name": "Irontusk",
         "flavor": "Tusks like ploughshares and a hide that stopped answering to fear seasons ago. Hard to wound and harder to turn, but there is fine ivory in that ugly head.",
@@ -1991,6 +2051,7 @@
     },
     {
         "id": "grey_sow",
+        "kingdom" : "deep-wilds",
         "audio": "boar",
         "name": "Grey Sow-Mother",
         "flavor": "She herds a squealing brood, and there is nothing in the wood she will not gore to keep it. Slow to fell and quick to anger — a thick hide and a great deal of meat for the patient.",
@@ -2021,6 +2082,7 @@
     },
     {
         "id": "direboar",
+        "kingdom" : "deep-wilds",
         "audio": "boar",
         "name": "Direboar",
         "flavor": "A boar the size of a bullock that charges the way an avalanche falls, trampling what its tusks miss. It costs blood to bring down and repays it in ivory, hide and meat.",
@@ -2051,6 +2113,7 @@
     },
     {
         "id": "blackmane_tusker",
+        "kingdom" : "deep-wilds",
         "audio": "boar",
         "name": "Blackmane Tusker",
         "flavor": "A black crest bristling to the shoulder, fast for its bulk and faster still to rage. It hits like a landslide but bleeds freely — end it quickly, and the great tusks are yours.",
@@ -2081,6 +2144,7 @@
     },
     {
         "id": "bog_colossus",
+        "kingdom" : "deep-wilds",
         "audio": "boar",
         "name": "Bog Colossus",
         "flavor": "It wallows the deep mire caked in dried mud thick as a shield, huge and slow and hard to stop. Wading it down is grim work, rewarded with hide and tusk enough to justify it.",
@@ -2111,6 +2175,7 @@
     },
     {
         "id": "great_boar",
+        "kingdom" : "deep-wilds",
         "audio": "boar",
         "name": "Great Boar",
         "flavor": "The tusker of hunters' boasts and hunters' nightmares, that fells saplings where it merely turns. Few beasts yield so grand a trophy — to the fewer still standing when it falls.",
@@ -2141,6 +2206,7 @@
     },
     {
         "id": "goblin_sneak",
+        "kingdom" : "goblin-warrens",
         "audio": "goblinoid",
         "name": "Goblin Sneak",
         "flavor": "It would sooner sink a blade in a back than face a front, and usually contrives to. Its scavenged gear is mean and poison-smeared, but it comes free with the corpse.",
@@ -2175,6 +2241,7 @@
     },
     {
         "id": "goblin_whelp",
+        "kingdom" : "goblin-warrens",
         "audio": "goblinoid",
         "name": "Goblin Whelp",
         "flavor": "Barely off the carrion pile, it flings itself into the fray to prove teeth it has not yet grown. One is nothing; they are never one, and the swarm carries a weight the whelp cannot.",
@@ -2209,6 +2276,7 @@
     },
     {
         "id": "cave_goblin",
+        "kingdom" : "goblin-warrens",
         "audio": "goblinoid",
         "name": "Cave Goblin",
         "flavor": "Pale and saucer-eyed from a life under stone, it flinches at daylight and little else. Fleet in the dark, it is gone with its stolen scraps before a slow hand can close the gap.",
@@ -2244,6 +2312,7 @@
     },
     {
         "id": "goblin_cutter",
+        "kingdom" : "goblin-warrens",
         "audio": "goblinoid",
         "name": "Goblin Cutter",
         "flavor": "It has learned exactly which way a knife goes in and takes an ugly pride in the knowing. A steadier hand than most of its kin — and a nastier little blade to strip from it.",
@@ -2279,6 +2348,7 @@
     },
     {
         "id": "goblin_netter",
+        "kingdom" : "goblin-warrens",
         "audio": "goblinoid",
         "name": "Goblin Netter",
         "flavor": "It fights with weighted net and hooked stick and likes its prey tangled before it strikes. Ungovernable in a pack; the net alone is a curiosity worth lifting.",
@@ -2314,6 +2384,7 @@
     },
     {
         "id": "goblin_bloodrager",
+        "kingdom" : "goblin-warrens",
         "audio": "goblinoid",
         "name": "Goblin Bloodrager",
         "flavor": "Work it into a froth and it forgets, for a while, that it is a coward. Frenzy makes it brave, not strong — cut it down before the froth peaks.",
@@ -2349,6 +2420,7 @@
     },
     {
         "id": "goblin_slinker",
+        "kingdom" : "goblin-warrens",
         "audio": "goblinoid",
         "name": "Goblin Slinker",
         "flavor": "Quick, low and greased with river-mud, gone from where the blade falls before it lands. It stings and slips away; corner it, for it cannot take what it dishes out.",
@@ -2384,6 +2456,7 @@
     },
     {
         "id": "goblin_boss",
+        "kingdom" : "goblin-warrens",
         "audio": "goblinoid",
         "name": "Goblin Boss",
         "flavor": "It rules its warren by being meaner than the next goblin, and no cleverer. Kill it and the warren squabbles — and its hoarded gear falls to the victor.",
@@ -2419,6 +2492,7 @@
     },
     {
         "id": "goblin_warchief",
+        "kingdom" : "goblin-warrens",
         "audio": "goblinoid",
         "name": "Goblin Warchief",
         "flavor": "It clawed to the top of the heap and dares the pack to test the claim. Sharper and deadlier than the rabble it drives, with the best of their scavenged iron on its own belt.",
@@ -2454,6 +2528,7 @@
     },
     {
         "id": "hobgoblin_champion",
+        "kingdom" : "goblin-warrens",
         "audio": "goblinoid",
         "name": "Hobgoblin Champion",
         "flavor": "Taller and better-drilled than the rabble it leads, and insufferably aware of it. It fights with a discipline the others lack — and carries gear actually worth the taking.",
@@ -2490,6 +2565,7 @@
     },
     {
         "id": "goblin_firecaller",
+        "kingdom" : "goblin-warrens",
         "audio": "goblinoid",
         "name": "Goblin Firecaller",
         "flavor": "It hoards fire-pots and burning tricks and cackles at every flame it sets. Deadly at a distance and useless up close — close the gap fast, before the whole warren is alight.",
@@ -2525,6 +2601,7 @@
     },
     {
         "id": "goblin_warlord",
+        "kingdom" : "goblin-warrens",
         "audio": "goblinoid",
         "name": "Goblin Warlord",
         "flavor": "Cunning enough to bind a hundred squabbling goblins to a single purpose, usually your undoing. The best gear of the whole warband hangs off its frame, and it did not gather that by being weak.",
@@ -2561,6 +2638,7 @@
     },
     {
         "id": "orc_whelp",
+        "kingdom" : "orc-hordes",
         "audio": "goblinoid",
         "name": "Orc Whelp",
         "flavor": "Young and untried, all snarl and no scars, hungry to earn its first. Strong for its age already; the crude iron it carries wants a strong arm to swing in turn.",
@@ -2596,6 +2674,7 @@
     },
     {
         "id": "orc_grunt",
+        "kingdom" : "orc-hordes",
         "audio": "goblinoid",
         "name": "Orc Grunt",
         "flavor": "The plain bulk of any warband — strong, blunt and wholly without doubt. Its heavy iron is honest loot, though only a stout arm turns it to use.",
@@ -2631,6 +2710,7 @@
     },
     {
         "id": "orc_scavenger",
+        "kingdom" : "orc-hordes",
         "audio": "goblinoid",
         "name": "Orc Scavenger",
         "flavor": "It picks the field after the fighting for whatever an iron boot has left behind. Weaker than its kin and more poorly armed, but a corpse that hides fewer surprises.",
@@ -2666,6 +2746,7 @@
     },
     {
         "id": "orc_marauder",
+        "kingdom" : "orc-hordes",
         "audio": "goblinoid",
         "name": "Orc Marauder",
         "flavor": "It raids for the sheer joy of it and counts a burned steading a fine day's work. Strong and mean, with weighty iron worth taking — if you have the shoulders to lift it.",
@@ -2701,6 +2782,7 @@
     },
     {
         "id": "orc_berserker",
+        "kingdom" : "orc-hordes",
         "audio": "goblinoid",
         "name": "Orc Berserker",
         "flavor": "It works itself past pain and past sense and comes on regardless of its wounds. Frenzy makes it relentless, not durable — weather the storm and it falls like any other.",
@@ -2737,6 +2819,7 @@
     },
     {
         "id": "orc_veteran",
+        "kingdom" : "orc-hordes",
         "audio": "goblinoid",
         "name": "Orc Veteran",
         "flavor": "Notched blade, notched tusks — it has buried better fighters than the one before it now. Its gear is well-used and well-kept, a proper prize for a proper fight.",
@@ -2773,6 +2856,7 @@
     },
     {
         "id": "orc_ironhide",
+        "kingdom" : "orc-hordes",
         "audio": "goblinoid",
         "name": "Orc Ironhide",
         "flavor": "Hide boiled to a leather thickness that shrugs the first blow and the second alike. A grinding kill — but that same hide, and its heavy iron, are worth the grind.",
@@ -2809,6 +2893,7 @@
     },
     {
         "id": "orc_slayer",
+        "kingdom" : "orc-hordes",
         "audio": "goblinoid",
         "name": "Orc Slayer",
         "flavor": "It fights in a whirl of iron and means to be surrounded, the better to reach everyone at once. Keep it single and keep it moving; its blades are a fine prize once it stills.",
@@ -2845,6 +2930,7 @@
     },
     {
         "id": "orc_warlord",
+        "kingdom" : "orc-hordes",
         "audio": "goblinoid",
         "name": "Orc Warlord",
         "flavor": "It leads from the front of every charge because nothing has yet stopped it there. Cut down, it leaves fine war-gear — and a leaderless host suddenly unsure of itself.",
@@ -2881,6 +2967,7 @@
     },
     {
         "id": "orc_blackguard",
+        "kingdom" : "orc-hordes",
         "audio": "goblinoid",
         "name": "Orc Blackguard",
         "flavor": "Sworn to its warboss and to the killing, in that order and no other. Disciplined, well-armed, and worth the danger of stripping once it is down.",
@@ -2917,6 +3004,7 @@
     },
     {
         "id": "orc_chosen",
+        "kingdom" : "orc-hordes",
         "audio": "goblinoid",
         "name": "Orc Chosen",
         "flavor": "Marked by scar and rite as the one the tribe throws at its worst problems. Thick-hided and heavily geared — bringing one down cracks open the warlord's own hoard.",
@@ -2953,6 +3041,7 @@
     },
     {
         "id": "orc_warboss",
+        "kingdom" : "orc-hordes",
         "audio": "goblinoid",
         "name": "Orc Warboss",
         "flavor": "It holds the whole warband by the throat of its own strength and points that strength wherever it pleases. The finest iron of the host is its own, and only the strongest hand will ever swing it back.",
@@ -2989,6 +3078,7 @@
     },
     {
         "id": "spiderling",
+        "kingdom" : "deep-wilds",
         "audio": "insect",
         "name": "Spiderling",
         "flavor": "A scatter of them across the web, each no larger than a thumbnail and just as sharp. Singly nothing; by the dozen, a creeping tide of little fangs.",
@@ -3022,6 +3112,7 @@
     },
     {
         "id": "web_scuttler",
+        "kingdom" : "deep-wilds",
         "audio": "insect",
         "name": "Web-Scuttler",
         "flavor": "It races the strands to whatever has blundered in, quicker than a dropped stone. Small and swift — a nip, not a wound — and a thread of usable silk.",
@@ -3055,6 +3146,7 @@
     },
     {
         "id": "thorn_hatchling",
+        "kingdom" : "deep-wilds",
         "audio": "insect",
         "name": "Thorn Hatchling",
         "flavor": "Small and venom-quick, its bite running colder than a thing that size has any right to. Brittle enough to crush underfoot, if you reach it before the fangs reach you.",
@@ -3088,6 +3180,7 @@
     },
     {
         "id": "ambush_weaver",
+        "kingdom" : "deep-wilds",
         "audio": "insect",
         "name": "Ambush Weaver",
         "flavor": "It strings a trip-line snare and holds still as bark until the thread twitches. Armoured above and venomed below; the silk it spins is worth more than the fight.",
@@ -3122,6 +3215,7 @@
     },
     {
         "id": "bristle_spider",
+        "kingdom" : "deep-wilds",
         "audio": "insect",
         "name": "Bristle Spider",
         "flavor": "Stiff hairs bristle from a swollen body, and it holds its ground where lesser kin bolt. Hard-shelled and stubborn — its venom-glands fetch a fair price from those who dare draw them.",
@@ -3156,6 +3250,7 @@
     },
     {
         "id": "broodmother",
+        "kingdom" : "deep-wilds",
         "audio": "insect",
         "name": "Broodmother",
         "flavor": "She squats over a bulging egg-sac and answers every shadow with fang and flung silk. A heavier kill than her brood, and a richer one — silk, venom and all.",
@@ -3190,6 +3285,7 @@
     },
     {
         "id": "venomfang_stalker",
+        "kingdom" : "deep-wilds",
         "audio": "insect",
         "name": "Venomfang Stalker",
         "flavor": "It does not spin — it hunts, and its bite is a great deal worse than any snare. Swift, deadly and thin-shelled; strike first, or the venom strikes for it.",
@@ -3224,6 +3320,7 @@
     },
     {
         "id": "carapace_lurker",
+        "kingdom" : "deep-wilds",
         "audio": "insect",
         "name": "Carapace Lurker",
         "flavor": "Plated dark and low to the ground, it lets blows glance off and closes at its own unhurried pace. A patient, grinding kill — and a carapace worth the salvaging.",
@@ -3258,6 +3355,7 @@
     },
     {
         "id": "great_weaver",
+        "kingdom" : "deep-wilds",
         "audio": "insect",
         "name": "Great Weaver",
         "flavor": "It has webbed a whole hollow in silk and killed everything else that ever lived there. A formidable thing, but its lair hangs heavy with silk, and its glands heavier still with venom.",
@@ -3292,6 +3390,7 @@
     },
     {
         "id": "dread_broodmother",
+        "kingdom" : "deep-wilds",
         "audio": "insect",
         "name": "Dread Broodmother",
         "flavor": "Ancient and swollen, she has seeded the wood with a hundred hungry broods. End her and you end them all — and lay claim to silk no ordinary weaver spins.",
@@ -3326,6 +3425,7 @@
     },
     {
         "id": "chitin_horror",
+        "kingdom" : "deep-wilds",
         "audio": "insect",
         "name": "Chitin Horror",
         "flavor": "So thickly armoured it scarcely reads as a spider — more a walking shield that happens to have fangs. Little will pierce it; only patience and a heavy arm bring the chitin down.",
@@ -3360,6 +3460,7 @@
     },
     {
         "id": "spider_queen",
+        "kingdom" : "deep-wilds",
         "audio": "insect",
         "name": "Spider Queen",
         "flavor": "The heart of the web-choked dark, to whom everything that skitters answers. What can be drawn from such a matriarch is no common venom — and few hollows are darker or deadlier to enter.",
@@ -3395,6 +3496,7 @@
     ,
     {
         "id": "dire_rat",
+        "kingdom" : "grazing-herds",
         "audio": "rustle",
         "name": "Dire Rat",
         "flavor": "Grown to the size of a hound on rich filth, and long past bolting from a raised stick. It holds its ground behind a mouthful of teeth, and its coarse hide will at least turn a draught.",
@@ -3457,6 +3559,7 @@
     },
     {
         "id": "fawn",
+        "kingdom" : "grazing-herds",
         "audio": "grunt",
         "name": "Fawn",
         "flavor": "Dapple-coated and wobble-legged, it freezes where its mother left it and trusts to stillness. A small, sad kill — and the doe is rarely far.",
@@ -3486,6 +3589,7 @@
     },
     {
         "id": "rabbit_kit",
+        "kingdom" : "grazing-herds",
         "audio": "critter",
         "name": "Rabbit Kit",
         "flavor": "Blind-new and no bigger than a fist, it scarcely knows yet to be afraid. It fits whole in one hand, bones and all — a single mouthful for the truly desperate.",
@@ -3514,6 +3618,7 @@
     },
     {
         "id": "great_elk",
+        "kingdom" : "grazing-herds",
         "audio": "grunt",
         "name": "Great Elk",
         "flavor": "A stag out of the old ballads, its antler-spread wider than a tall man stands. It would flee if it could and gore you through if it cannot; the crowned skull alone is a hall-worthy trophy.",
@@ -3546,6 +3651,7 @@
     },
     {
         "id": "goat_kid",
+        "kingdom" : "grazing-herds",
         "audio": "goat",
         "name": "Goat Kid",
         "flavor": "It skitters the high ledges after its dam, sure-footed before it is sure of anything. Easily kept for the milk to come — if you can lay hands on it at all.",
@@ -3579,6 +3685,7 @@
     },
     {
         "id": "chick",
+        "kingdom" : "grazing-herds",
         "audio": "fowl",
         "name": "Chick",
         "flavor": "A ball of down on toothpick legs, peeping after whatever moves and tripping over its own feet. Give it a season and it lays; take it now and there is barely a bite on it.",
@@ -3611,6 +3718,7 @@
     },
     {
         "id": "elder_aurochs",
+        "kingdom" : "grazing-herds",
         "audio": "beast",
         "name": "Elder Aurochs",
         "flavor": "Grey about the muzzle and vast through the shoulder, the herd-bull no wolf tests twice. It suffers no challenge lightly — but one carcass feeds a camp, and one gentled ox works a season.",
@@ -3644,6 +3752,7 @@
     },
     {
         "id": "bull_mammoth",
+        "kingdom" : "grazing-herds",
         "audio": "beast",
         "name": "Bull Mammoth",
         "flavor": "The great tusker of the herd, so vast the plain seems to tilt as it wheels; frost is nothing to it, and little else is much more. Fell one and there is ivory, hide and meat for a holdfast — should a warband survive the felling.",
@@ -3677,6 +3786,7 @@
     },
     {
         "id": "royal_hippogriff",
+        "kingdom" : "deep-wilds",
         "audio": "raptor",
         "name": "Royal Hippogriff",
         "flavor": "A prince of the crag-winds in bright plumage, its stoop swift as a loosed arrow and its temper princely too. Coveted alive by those who would ride the sky, dead for feathers finer than any common bird's.",
@@ -3712,6 +3822,7 @@
     },
     {
         "id": "hoarfowl_chick",
+        "kingdom" : "grazing-herds",
         "audio": "fowl",
         "name": "Hoarfowl Chick",
         "flavor": "A puff of frost-white down that hasn't yet learned to fear the cold it was born to. Harmless and slight — an egg-layer in time, if a fox doesn't find it first.",
@@ -3742,6 +3853,7 @@
     },
     {
         "id": "elder_quillback",
+        "kingdom" : "grazing-herds",
         "audio": "critter",
         "name": "Elder Quillback",
         "flavor": "Grown huge and slow behind a fortress of quills that nothing sensible cares to test. A long, patient kill by way of the soft underside — and a harvest of spines for the trouble.",
@@ -3771,6 +3883,7 @@
     },
     {
         "id": "alpha_worg",
+        "kingdom" : "hunting-packs",
         "audio": "canine",
         "name": "Alpha Worg",
         "flavor": "The worg the others circle, blacker and crueller than any of them, and it hunts men for the pleasure of it. Bring it down and the pack scatters — and its dark pelt is the finest of the lot.",
@@ -3803,6 +3916,7 @@
     },
     {
         "id": "jackal_pup",
+        "kingdom" : "hunting-packs",
         "audio": "canine",
         "name": "Jackal Pup",
         "flavor": "Yipping and underfoot, it learns to scavenge long before it learns to hunt, and runs at the first raised hand. Its dying only thins a hungry pack by a single mouth.",
@@ -3835,6 +3949,7 @@
     },
     {
         "id": "elder_owlbear",
+        "kingdom" : "deep-wilds",
         "audio": "beast",
         "name": "Elder Owlbear",
         "flavor": "Grizzled and enormous, its unnatural hate given a lifetime to deepen. A brutal, heavy fight — but the great beak and coarse hide make a rare and grisly prize.",
@@ -3869,6 +3984,7 @@
     },
     {
         "id": "dire_sabretooth",
+        "kingdom" : "hunting-packs",
         "audio": "beast",
         "name": "Dire Sabretooth",
         "flavor": "A great cat the size of a warhorse, its fangs the length of a man's forearm and its lunge a killing thing in itself. Fast, fanged and hard to weather — and its striped hide a trophy few can boast.",
@@ -3901,6 +4017,7 @@
     },
     {
         "id": "elder_crocodile",
+        "kingdom" : "deep-wilds",
         "audio": "reptile",
         "name": "Elder Crocodile",
         "flavor": "Moss-backed and log-still, it has taken game from this bank longer than the village has stood. Its plated hide turns near everything but a thrust to the soft belly, and makes leather worth the wading.",
@@ -3934,6 +4051,7 @@
     },
     {
         "id": "giant_viper",
+        "kingdom" : "deep-wilds",
         "audio": "reptile",
         "name": "Giant Viper",
         "flavor": "Thick as a strong man's arm and swift as a cracked whip; there is no simply walking off this one's venom. Cold-blooded and sluggish in the chill — the safest hour to take its prized skin.",
@@ -3966,6 +4084,7 @@
     },
     {
         "id": "stirgeling",
+        "kingdom" : "deep-wilds",
         "audio": "insect",
         "name": "Stirgeling",
         "flavor": "A newly-fledged blood-drinker, all appetite and no weight, that a walking-stick swats from the air. Its ending buys nothing but one fewer bite come nightfall.",
@@ -4026,6 +4145,7 @@
     },
     {
         "id": "elder_olm",
+        "kingdom" : "grazing-herds",
         "audio": "frog",
         "name": "Elder Olm",
         "flavor": "Old past guessing in the lightless pools, pale as a drowned thing and just as blind. It neither flees nor fights with much conviction; the wan flesh feeds those unbothered by the look of it.",
@@ -4053,6 +4173,7 @@
     },
     {
         "id": "kobold_trapper",
+        "kingdom" : "kobold-burrows",
         "audio": "goblinoid",
         "name": "Kobold Trapper",
         "flavor": "It seeds the ground with snares and deadfalls and lets the trap do its killing for it. Watch your footing more than its blade; the scraps it hoards are humble, but yours once it's dead.",
@@ -4085,6 +4206,7 @@
     },
     {
         "id": "gnoll_reaver",
+        "kingdom" : "gnoll-packs",
         "audio": "canine",
         "name": "Gnoll Reaver",
         "flavor": "Bigger, bloodier and hungrier than the pack it runs at the head of, and laughing all the while. Its looted cleaver is heavy and cruel — a fitting reward for a hard fight.",
@@ -4117,6 +4239,7 @@
     },
     {
         "id": "harpy_matron",
+        "kingdom" : "harpy-eyries",
         "audio": "raptor",
         "name": "Harpy Matron",
         "flavor": "She leads the roost's stooping, shrieking mob and screams the loudest of them all. Kill her and the flock loses its nerve — and her plumage is a strange, coveted prize.",
@@ -4148,6 +4271,7 @@
     },
     {
         "id": "bullywug_brute",
+        "kingdom" : "bullywug-mires",
         "audio": "frog",
         "name": "Bullywug Brute",
         "flavor": "Bloated and broad, it throngs the reeds bellowing war in a chorus of croaks. Simple and swamp-bound, but heavy enough that a mob of them is no laughing matter.",

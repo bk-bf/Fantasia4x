@@ -1,6 +1,7 @@
 import type { GameState, Pawn, WorldTile } from '../types';
 import { generateCulture, generateCulturePool, generateCultureRelations } from '../gen/culture';
 import { generateKingdomPool, generateKingdomRelations } from '../gen/kingdom';
+import { WILD_KINGDOMS } from '../defs/wildKingdoms';
 import { ticksFromSeconds } from '../util/time';
 import { freshSeed } from '../util/rng';
 import { isSpawnableTile } from '../defs/terrains';
@@ -91,24 +92,19 @@ export function ensureCulturePool(state: GameState): GameState {
 }
 
 export function ensureKingdomPool(state: GameState): GameState {
-  if (state.kingdoms && state.kingdoms.length > 0) {
-    if (!state.kingdomRelations || state.kingdomRelations.length === 0) {
-      return {
-        ...state,
-        kingdomRelations: generateKingdomRelations(
-          state.kingdoms,
-          state.cultureRelations,
-          state.culture.id
-        )
-      };
-    }
-    return state;
-  }
-  const kingdoms = generateKingdomPool(state.culturePool);
+  const existing = state.kingdoms ?? [];
+  const present = new Set(existing.map((k) => k.id));
+  const settled = existing.length > 0 ? existing : generateKingdomPool(state.culturePool);
+  const kingdoms = [...settled, ...WILD_KINGDOMS.filter((k) => !present.has(k.id))];
   return {
     ...state,
     kingdoms,
-    kingdomRelations: generateKingdomRelations(kingdoms, state.cultureRelations, state.culture.id)
+    kingdomRelations: generateKingdomRelations(
+      kingdoms,
+      state.cultureRelations,
+      state.culture.id,
+      state.kingdomRelations ?? []
+    )
   };
 }
 
