@@ -1,5 +1,5 @@
 import type { Aptitudes } from '../rules/body/aptitudes';
-import type { EntityStats, StatKey, GrowthOffer, LineagePath } from './culture';
+import type { EntityStats, TalentStars, GrowthOffer, LineagePath } from './culture';
 import type { EntityNeeds, EntityCondition, Injury, LimbState } from './health';
 import type { PawnInventory, PawnEquipment, EquipmentSlot } from './items';
 import type { Trait } from './culture';
@@ -143,7 +143,7 @@ export interface Pawn {
   aptitudes?: Aptitudes;
 
   maxStats?: EntityStats;
-  favStats?: StatKey[];
+  talentStars?: TalentStars;
   sex?: 'male' | 'female';
   age?: number;
   birthDayOfYear?: number;
