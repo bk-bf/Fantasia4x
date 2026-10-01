@@ -11,6 +11,8 @@
 // did not trigger, and never gets to decide that a rule does not apply to it -- an `n/a`
 // verdict must name the clause it believes failed, which is then checkable against this.
 
+import { sha } from './ledger.mjs';
+
 // JS has no inline (?i); rule authors write it as a prefix and it becomes the `i` flag.
 function re(pattern, extra = '') {
   const ci = pattern.startsWith('(?i)');
@@ -107,7 +109,7 @@ export function evaluate(trigger, symbol, ctx) {
 const describe = (t) => JSON.stringify(t);
 
 /** Build the evaluation context once per plan, so clauses stay O(1). */
-export function makeContext({ symbols, readSlice }) {
+export function makeContext({ symbols, readSlice, testFiles = new Map() }) {
   const flagCache = new Map();
   const textCache = new Map();
 
@@ -122,6 +124,7 @@ export function makeContext({ symbols, readSlice }) {
       if (!textCache.has(s.key)) textCache.set(s.key, s.text ?? readSlice(s));
       return textCache.get(s.key);
     },
+    testFiles,
     symbols
   };
 }
@@ -135,11 +138,13 @@ export function match(rules, symbols, ctx) {
     for (const r of rules) {
       const res = evaluate(r.trigger, s, ctx);
       if (res.ok) {
+        const own = s.content_hash ?? s.contentHash;
+        const tests = r.family === 'tests' ? ctx.testFiles.get(s.name)?.join('\n') : null;
         items.push({
           symbol_key: s.key,
           rule_id: r.id,
-          content_hash: s.content_hash ?? s.contentHash,
-                  rule_hash: r.rule_hash
+          content_hash: tests === null ? own : sha(`${own}\n${tests ?? ''}`),
+          rule_hash: r.rule_hash
         });
       } else {
         const m = misses.get(r.id) ?? new Map();

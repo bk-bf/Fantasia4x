@@ -364,16 +364,24 @@ export function submit(db, verdicts, { worker, runId, model }) {
   return { accepted, rejected };
 }
 
-export function openFindings(db, verdicts) {
+export function settleFindings(db, verdicts) {
   const ts = nowIso();
-  const ins = db.prepare(`INSERT OR IGNORE INTO finding
+  const ins = db.prepare(`INSERT INTO finding
     (id,verdict_id,symbol_key,rule_id,summary,evidence,state,created_at)
-    VALUES (?,?,?,?,?,?, 'open', ?)`);
+    VALUES (?,?,?,?,?,?, 'open', ?)
+    ON CONFLICT(id) DO UPDATE SET
+      verdict_id=excluded.verdict_id, summary=excluded.summary, evidence=excluded.evidence,
+      state=CASE WHEN finding.state='fixed' THEN 'open' ELSE finding.state END,
+      closed_at=CASE WHEN finding.state='fixed' THEN NULL ELSE finding.closed_at END`);
+  const close = db.prepare(`UPDATE finding SET state='fixed', closed_at=?
+                             WHERE id=? AND state='open'`);
   const vid = db.prepare(`SELECT id FROM verdict WHERE symbol_key=? AND rule_id=?
                            AND content_hash=? ORDER BY id DESC LIMIT 1`);
   db.exec('BEGIN IMMEDIATE');
   try {
-    for (const v of verdicts.filter((x) => x.status === 'fail')) {
+    for (const v of verdicts) {
+      if (v.status === 'pass' || v.status === 'n/a') close.run(ts, `${v.rule_id}:${sha(v.symbol_key)}`);
+      if (v.status !== 'fail') continue;
       const row = vid.get(v.symbol_key, v.rule_id, v.content_hash);
       if (!row) continue;
       const id = `${v.rule_id}:${sha(v.symbol_key)}`;
