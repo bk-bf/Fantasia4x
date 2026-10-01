@@ -22,38 +22,31 @@ function getWorkKeyForJob(job: Job): string {
 }
 
 function describeJob(job: Job): string {
+  const verb = (jobService.getJobLabel(job.type) ?? job.type).toLowerCase();
   switch (job.type) {
     case 'harvest':
-      return `harvest ${resourceLabel(job.resourceId)} @ (${job.targetX},${job.targetY})`;
-    case 'construct':
-      return `build @ (${job.targetX},${job.targetY})`;
     case 'haul':
-      return `haul ${resourceLabel(job.resourceId)} @ (${job.targetX},${job.targetY})`;
-    case 'craft':
-      return 'craft item';
+      return `${verb} ${resourceLabel(job.resourceId)} @ (${job.targetX},${job.targetY})`;
+    case 'construct':
+      return `${verb} @ (${job.targetX},${job.targetY})`;
     case 'refuel':
-      return `refuel ${job.buildingId ?? 'campfire'}`;
+      return `${verb} ${job.buildingId ?? 'campfire'}`;
     default:
-      return job.type;
+      return verb;
   }
 }
 
 function describeActiveJob(job: Pawn['activeJob']): string {
   if (!job) return 'idle';
+  if (job.type === 'need') return job.targetState === 'Sleeping' ? 'rest' : 'eat';
 
+  const verb = (jobService.getJobLabel(job.type) ?? job.type).toLowerCase();
   switch (job.type) {
     case 'harvest':
-      return `harvest ${resourceLabel(job.resourceId)}`;
-    case 'construct':
-      return 'build';
-    case 'craft':
-      return 'craft item';
     case 'haul':
-      return `haul ${resourceLabel(job.resourceId)}`;
-    case 'need':
-      return job.targetState === 'Sleeping' ? 'rest' : 'eat';
+      return `${verb} ${resourceLabel(job.resourceId)}`;
     default:
-      return job.type;
+      return verb;
   }
 }
 
