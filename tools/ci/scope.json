@@ -4,7 +4,7 @@
     { "paths": ["**/*.md", "LICENSE"], "legs": [] },
     { "paths": [".claude/**", ".vscode/**", ".copilotignore"], "legs": [] },
     { "paths": [".github/ISSUE_TEMPLATE/**"], "legs": [] },
-    { "paths": ["desktop-spike/**", "build-resources/**", "electron-builder.yml"], "legs": [] },
+    { "paths": ["build-resources/**", "electron-builder.yml"], "legs": [] },
     { "paths": ["dev.sh", "launch.sh", "build.sh", "install.sh", "audit.sh", "cliff.toml"], "legs": [] },
 
     { "paths": ["src/tests/**", "tests/**", "vitest.config.ts"], "legs": ["check", "coverage"] },
@@ -40,7 +40,8 @@
         "tools/dev-tools/**",
         "tools/*.mjs",
         ".github/workflows/**",
-        "electron/**"
+        "electron/**",
+        "tools/dev-shell/**"
       ],
       "legs": ["check"]
     },

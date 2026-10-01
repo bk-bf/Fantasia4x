@@ -14,13 +14,13 @@ const none = {
 const checkOnly = { ...none, check: true };
 
 describe('scopeOf', () => {
-  it('runs nothing when only Markdown, agent config or the desktop spike change', () => {
+  it('runs nothing when only Markdown, agent config or build resources change', () => {
     expect(
       scopeOf([
         'AGENTS.md',
         'tools/README.md',
         '.claude/settings.json',
-        'desktop-spike/tauri/package.json'
+        'build-resources/icon.png'
       ])
     ).toEqual(none);
   });

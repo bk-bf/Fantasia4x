@@ -20,7 +20,6 @@ for arg in "$@"; do
     --sandbox) SANDBOX=on ;;
     --net-host) SANDBOX=off ;;
     --electron) SHELL_TARGET=electron ;;
-    --tauri) SHELL_TARGET=tauri ;;
   esac
 done
 
@@ -30,7 +29,7 @@ needs_bootstrap() {
   [[ -d "$SCRIPT_DIR/src/lib/spatial-core-pkg" ]]  || return 0
   [[ -d "$SCRIPT_DIR/src/lib/sim-core-pkg" ]]      || return 0
   if [[ "$SHELL_TARGET" == electron ]]; then
-    [[ -x "$SCRIPT_DIR/desktop-spike/electron/node_modules/electron/dist/electron" ]] || return 0
+    [[ -x "$SCRIPT_DIR/tools/dev-shell/node_modules/electron/dist/electron" ]] || return 0
   fi
   return 1
 }
@@ -196,7 +195,7 @@ if [[ "$TOOLS" == true ]]; then
 fi
 
 if [[ -n "$SHELL_TARGET" ]]; then
-  SHELL_DIR="$SCRIPT_DIR/desktop-spike/$SHELL_TARGET"
+  SHELL_DIR="$SCRIPT_DIR/tools/dev-shell"
   if [[ ! -d "$SHELL_DIR/node_modules" ]]; then
     echo "launch.sh: $SHELL_TARGET deps not installed — installing (first run in this worktree)…" >&2
     (cd "$SHELL_DIR" && pnpm install --ignore-workspace) || {
@@ -254,10 +253,6 @@ if [[ -n "$SHELL_TARGET" ]]; then
     electron)
       echo "  [electron] V8/Chromium → http://localhost:$PORT (close window or Ctrl-C to stop)"
       (cd "$SHELL_DIR" && export SPIKE_URL="http://localhost:$PORT" F4X_PLAY="$PLAY" && run_at_app_priority pnpm start)
-      ;;
-    tauri)
-      echo "  [tauri] WebKitGTK/JSC → http://127.0.0.1:$PORT (close window or Ctrl-C to stop)"
-      (cd "$SHELL_DIR" && pnpm tauri dev -c "{\"build\":{\"devUrl\":\"http://127.0.0.1:$PORT\"}}")
       ;;
   esac
   cleanup

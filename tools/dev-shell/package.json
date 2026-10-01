@@ -1,8 +1,8 @@
 {
-  "name": "f4x-electron-spike",
+  "name": "f4x-dev-shell",
   "private": true,
   "version": "0.0.0",
-  "description": "Throwaway Electron (V8/Chromium) shell to read cross-engine TPS — DISTRIBUTION Phase A.",
+  "description": "Electron shell that loads the dev server, for ./launch.sh --electron.",
   "main": "main.js",
   "scripts": {
     "start": "env -u ELECTRON_RUN_AS_NODE -u ELECTRON_NO_ATTACH_CONSOLE electron ."

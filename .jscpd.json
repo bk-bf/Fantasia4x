@@ -13,7 +13,6 @@
     "**/build/**",
     "**/dist/**",
     "src/lib/sim-core-pkg/**",
-    "src/lib/spatial-core-pkg/**",
-    "desktop-spike/**"
+    "src/lib/spatial-core-pkg/**"
   ]
 }

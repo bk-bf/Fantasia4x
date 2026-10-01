@@ -16,7 +16,6 @@ const IGNORES = [
   'package/**',
   'spatial-core/**',
   'sim-core/**',
-  'desktop-spike/**',
   'static/**',
   '**/*.json',
   '**/*.jsonc'

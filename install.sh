@@ -38,10 +38,10 @@ if [[ ! -d src/lib/sim-core-pkg ]]; then
   pnpm add:wasm:sim || echo "install.sh: sim-core WASM build failed — run 'pnpm add:wasm:sim' manually." >&2
 fi
 
-SPIKE="$SCRIPT_DIR/desktop-spike/electron"
+SPIKE="$SCRIPT_DIR/tools/dev-shell"
 if [[ ! -d "$SPIKE/node_modules" ]]; then
-  step "installing electron spike deps…"
-  (cd "$SPIKE" && pnpm install --ignore-workspace) || die "electron spike 'pnpm install' failed."
+  step "installing the electron dev shell deps…"
+  (cd "$SPIKE" && pnpm install --ignore-workspace) || die "electron dev shell 'pnpm install' failed."
 fi
 if [[ ! -x "$SPIKE/node_modules/electron/dist/electron" ]]; then
   step "unpacking electron runtime…"

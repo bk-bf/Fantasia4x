@@ -19,6 +19,7 @@ to ubuntuserver through `remote/run.mjs`.
 | `ci/ci-check.mjs` | Runs `pnpm check` and the related tests in CI. | run by `check.yml` |
 | `ci/structure.mjs` | Checks the architecture seams in `ci/seams.json` and the component sizes in `ci/component-sizes.json`. | `node tools/ci/structure.mjs`, run by `check.yml` and `promote.yml` |
 | `ci/warnings.mjs` | Runs `svelte-check`, `eslint`, or `tsc` over the files in `tools/` that `svelte-check` does not reach; fails on an error or on a count past `ci/warning-budget.json`, and in CI lists every finding on the run page, annotates the changed files and feeds the pull request's Check notes. | `pnpm check:types`, `pnpm check:tools`, `pnpm lint` |
+| `dev-shell/` | The Electron shell `./launch.sh --electron` plays the dev server in; its own package, installed by `install.sh`. | `./launch.sh --electron` |
 | `claude/inflight.mjs` | Lists open pull requests with every prompt and flags the first edit of a file they touch. | Claude Code hook |
 | `bench/` | CodSpeed benchmarks of whole ticks and one entity phase, and ticks per second. | `pnpm bench`, `pnpm bench:tps` |
 | `bench/counts.mjs` | Reads the exact instruction and cache-miss counts per benchmark out of CodSpeed's profiles. | `node tools/bench/counts.mjs <dir> --out <file>`, run by the `codspeed` job |
