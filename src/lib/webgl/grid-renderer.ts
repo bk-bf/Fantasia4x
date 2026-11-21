@@ -12,7 +12,8 @@ const NO_OUTLINE = [0, 0, 0];
 const PAINTED_UV_SHIFT = 2;
 const paintedCorners = [0, 0, 0, 0];
 const GLYPH_VERTEX_FLOATS = 24;
-const ROW_VERTEX_FLOATS = 25;
+const ROW_VERTEX_FLOATS = 27;
+const NO_VEIN = { x: -1, y: -1 };
 export const ALPHA_CUT = 0.5;
 export const SHADOW_FLOOR = 0.5 / 255;
 
@@ -661,11 +662,14 @@ export class GridRenderer {
       if (vertexFloats === GLYPH_VERTEX_FLOATS) out.set(charVertices, o);
       else {
         const row = tile.position.y + offsetY / tileH;
+        const vein = painted?.vein ?? NO_VEIN;
         for (let v = 0; v < 6; v++) {
           const at = o + v * ROW_VERTEX_FLOATS;
           for (let f = 0; f < GLYPH_VERTEX_FLOATS; f++)
             out[at + f] = charVertices[v * GLYPH_VERTEX_FLOATS + f];
           out[at + GLYPH_VERTEX_FLOATS] = row;
+          out[at + GLYPH_VERTEX_FLOATS + 1] = vein.x;
+          out[at + GLYPH_VERTEX_FLOATS + 2] = vein.y;
         }
       }
       o += FLOATS_PER_TILE;
@@ -702,7 +706,8 @@ export class GridRenderer {
       ['a_uvBounds', 4, 17],
       ['a_light', 3, 21]
     ];
-    if (this.vertexFloats === ROW_VERTEX_FLOATS) attribs.push(['a_row', 1, GLYPH_VERTEX_FLOATS]);
+    if (this.vertexFloats === ROW_VERTEX_FLOATS)
+      attribs.push(['a_row', 1, GLYPH_VERTEX_FLOATS], ['a_vein', 2, GLYPH_VERTEX_FLOATS + 1]);
     for (const [name, size, offset] of attribs) {
       const loc = this.shaderManager.getAttributeLocation('tileRenderer', name);
       if (loc >= 0) {

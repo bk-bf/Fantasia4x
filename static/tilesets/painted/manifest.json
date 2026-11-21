@@ -6182,6 +6182,102 @@
       "ox": -16,
       "oy": -21
     },
+    "vein/azurite": {
+      "x": 76,
+      "y": 2750,
+      "w": 4,
+      "h": 1,
+      "ox": 0,
+      "oy": 0
+    },
+    "vein/cassiterite": {
+      "x": 81,
+      "y": 2750,
+      "w": 4,
+      "h": 1,
+      "ox": 0,
+      "oy": 0
+    },
+    "vein/chalcopyrite": {
+      "x": 86,
+      "y": 2750,
+      "w": 4,
+      "h": 1,
+      "ox": 0,
+      "oy": 0
+    },
+    "vein/coal": {
+      "x": 91,
+      "y": 2750,
+      "w": 4,
+      "h": 1,
+      "ox": 0,
+      "oy": 0
+    },
+    "vein/electrum": {
+      "x": 96,
+      "y": 2750,
+      "w": 4,
+      "h": 1,
+      "ox": 0,
+      "oy": 0
+    },
+    "vein/galena": {
+      "x": 101,
+      "y": 2750,
+      "w": 4,
+      "h": 1,
+      "ox": 0,
+      "oy": 0
+    },
+    "vein/gold": {
+      "x": 106,
+      "y": 2750,
+      "w": 4,
+      "h": 1,
+      "ox": 0,
+      "oy": 0
+    },
+    "vein/hematite": {
+      "x": 111,
+      "y": 2750,
+      "w": 4,
+      "h": 1,
+      "ox": 0,
+      "oy": 0
+    },
+    "vein/limonite": {
+      "x": 116,
+      "y": 2750,
+      "w": 4,
+      "h": 1,
+      "ox": 0,
+      "oy": 0
+    },
+    "vein/magnetite": {
+      "x": 121,
+      "y": 2750,
+      "w": 4,
+      "h": 1,
+      "ox": 0,
+      "oy": 0
+    },
+    "vein/malachite": {
+      "x": 126,
+      "y": 2750,
+      "w": 4,
+      "h": 1,
+      "ox": 0,
+      "oy": 0
+    },
+    "vein/salt": {
+      "x": 131,
+      "y": 2750,
+      "w": 4,
+      "h": 1,
+      "ox": 0,
+      "oy": 0
+    },
     "wall/daub": {
       "x": 1290,
       "y": 2040,
@@ -7652,9 +7748,24 @@
       ],
       "top": {
         "image": "rock-top.png",
+        "veins": "rock-veins.png",
         "size": 1024,
         "lift": 22,
         "ramp": "rock/ramp"
+      },
+      "veins": {
+        "azurite": "vein/azurite",
+        "cassiterite": "vein/cassiterite",
+        "chalcopyrite": "vein/chalcopyrite",
+        "coal": "vein/coal",
+        "electrum": "vein/electrum",
+        "galena": "vein/galena",
+        "hematite": "vein/hematite",
+        "limonite": "vein/limonite",
+        "magnetite": "vein/magnetite",
+        "malachite": "vein/malachite",
+        "native_gold": "vein/gold",
+        "rock_salt": "vein/salt"
       },
       "layouts": [
         "rock/mass/0",

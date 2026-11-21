@@ -16,13 +16,14 @@ import {
   TOP_SIZE,
   blobLayout,
   rockArt,
-  rockTop
+  rockTop,
+  rockVeins
 } from './rock.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const OUT = join(HERE, '..', '..', 'static', 'tilesets', 'painted');
 const EXPORTS =
-  '({ TREES, mkTree, PLANTS, mkPlant, CROPS, mkCrop, ROCKS, mkRock, BUILDS, mkBuild, PAWNS, mkPawn, BEASTS, OTHER, mkBeast, GROUND, TILES, ORE, rockTop, rockTone, rockFace, oreAt, decal, dith, hash, clamp, wrap, pn, rp, lit, dark, P })';
+  '({ TREES, mkTree, PLANTS, mkPlant, CROPS, mkCrop, ROCKS, mkRock, BUILDS, mkBuild, PAWNS, mkPawn, BEASTS, OTHER, mkBeast, GROUND, TILES, ORE, rockTop, rockTone, rockFace, oreAt, veinAt, decal, dith, hash, clamp, wrap, pn, rp, lit, dark, P })';
 
 const TILE = 32;
 const PATCH = 4;
@@ -30,8 +31,9 @@ const SIDE = TILE * PATCH;
 const ATLAS_W = 2048;
 const SHADOW = [0, 0, 0, 112];
 const TOP_IMAGE = 'rock-top.png';
+const VEIN_IMAGE = 'rock-veins.png';
 
-const art = (period = 0) =>
+export const art = (period = 0) =>
   new Function(
     'ART_PERIOD',
     `'use strict';\n${BAKE_ART.map((f) => readFileSync(join(HERE, 'art', f), 'utf8').replace(/^'use strict';\n/, '')).join('\n')}\nreturn ${EXPORTS};`
@@ -64,20 +66,23 @@ const sprite = (
 
 export const pieceId = (set = '', layout = 0) => `${set}/mass/${layout}`;
 
+const ramp = (colours = [[0, 0, 0]]) =>
+  sprite(colours.length, 1, 0, 0, new Uint8ClampedArray(colours.flatMap((c) => [...c, 255])));
+
 function pieceSprites(
   add = (id = '', spr = sprite()) => {
     void [id, spr];
   }
 ) {
-  add(
-    'rock/ramp',
-    sprite(
-      A.P.rock.length,
-      1,
-      0,
-      0,
-      new Uint8ClampedArray(A.P.rock.flatMap((c = [0, 0, 0]) => [...c, 255]))
-    )
+  add('rock/ramp', ramp(A.P.rock));
+  for (const [ore, colours] of Object.entries(A.ORE)) add(`vein/${ore}`, ramp(colours));
+  const veins = Object.fromEntries(
+    Object.entries(MAP.resource)
+      .flatMap(([id, refs]) => {
+        const ore = refs.length === 1 && refs[0].startsWith('ore/') ? refs[0].slice(4) : '';
+        return ore in A.ORE ? [[id, `vein/${ore}`]] : [];
+      })
+      .sort(([a], [b]) => (a < b ? -1 : 1))
   );
   for (const layout of BLOB_LAYOUTS)
     add(
@@ -100,7 +105,8 @@ function pieceSprites(
         resources: [...resources].sort(),
         terrains: [...terrains].sort(),
         neighbours: NEIGHBOURS,
-        top: { image: TOP_IMAGE, size: TOP_SIZE, lift: LIFT, ramp: 'rock/ramp' },
+        top: { image: TOP_IMAGE, veins: VEIN_IMAGE, size: TOP_SIZE, lift: LIFT, ramp: 'rock/ramp' },
+        veins,
         layouts: Array.from({ length: 1 << NEIGHBOURS.length }, (_, m) =>
           pieceId(set, blobLayout(m))
         )
@@ -383,18 +389,21 @@ export function bake() {
     map: resolveMap(all, roles, extra),
     pieces
   };
+  const wide = art(TOP_SIZE);
   return {
     png: encodePng(ATLAS_W, h, atlas),
     manifest,
-    top: encodePng(TOP_SIZE, TOP_SIZE, rockTop(art(TOP_SIZE)))
+    top: encodePng(TOP_SIZE, TOP_SIZE, rockTop(wide)),
+    veins: encodePng(TOP_SIZE, TOP_SIZE, rockVeins(wide))
   };
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  const { png, manifest, top } = bake();
+  const { png, manifest, top, veins } = bake();
   mkdirSync(OUT, { recursive: true });
   writeFileSync(join(OUT, 'atlas.png'), png);
   writeFileSync(join(OUT, TOP_IMAGE), top);
+  writeFileSync(join(OUT, VEIN_IMAGE), veins);
   writeFileSync(join(OUT, 'manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
   console.log(
     `${Object.keys(manifest.sprites).length} sprites, atlas ${manifest.atlas.w}x${manifest.atlas.h}`

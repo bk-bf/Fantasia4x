@@ -10,6 +10,7 @@ in vec3 v_outline;
 in highp vec4 v_uvBounds;  // (uMin, vMin, uMax, vMax) of this glyph in the atlas
 in vec3 v_light;     // Interpolated ADDITIVE point-light contribution (0 = none)
 in highp vec2 v_world;
+flat in vec2 v_vein;
 
 uniform sampler2D u_fontAtlas;
 uniform sampler2D u_paintAtlas;
@@ -35,6 +36,11 @@ uniform float u_alphaCeil;
 uniform highp sampler2D u_rockTexture;
 uniform vec2 u_rockRamp;
 uniform float u_rockLift;
+uniform highp sampler2D u_veinTexture;
+
+const int VEIN_NONE = 0;
+const int VEIN_EDGE = 1;
+const int VEIN_SHADE = 2;
 
 out vec4 fragColor;
 
@@ -43,7 +49,12 @@ vec3 rockTop(int rim) {
     highp ivec2 p = ivec2(floor(v_world + vec2(0.0, u_rockLift)));
     p = (p % size + size) % size;
     int shade = int(texelFetch(u_rockTexture, p, 0)[rim] * 255.0 + 0.5);
-    return texelFetch(u_paintAtlas, ivec2(u_rockRamp) + ivec2(shade, 0), 0).rgb;
+    vec3 rock = texelFetch(u_paintAtlas, ivec2(u_rockRamp) + ivec2(shade, 0), 0).rgb;
+    if (v_vein.x < 0.0) return rock;
+    int vein = int(texelFetch(u_veinTexture, p, 0).r * 255.0 + 0.5);
+    if (vein == VEIN_NONE) return rock;
+    if (vein == VEIN_EDGE) return rock * vec3(0.5, 0.5, 0.6);
+    return texelFetch(u_paintAtlas, ivec2(v_vein) + ivec2(vein - VEIN_SHADE, 0), 0).rgb;
 }
 
 void main() {

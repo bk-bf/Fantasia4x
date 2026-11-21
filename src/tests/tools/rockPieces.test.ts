@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { ROCK } from '../../../tools/tileset/bake.mjs';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { ROCK, art } from '../../../tools/tileset/bake.mjs';
 import {
   BLOB_LAYOUTS,
   CELL_H,
@@ -10,8 +12,11 @@ import {
   PATCH,
   REACH,
   TILE,
+  TOP_SIZE,
+  VEIN,
   blobLayout,
-  layoutMass
+  layoutMass,
+  rockVeins
 } from '../../../tools/tileset/rock.mjs';
 
 type Mass = (tx?: number, ty?: number) => boolean;
@@ -250,4 +255,30 @@ describe('rock pieces: placed by row, they rebuild a single drawing of the mass'
         for (let i = 0; i < drawn.px.length; i++) if (drawn.px[i] !== pieced.px[i]) differ++;
         expect(differ).toBe(0);
       });
+});
+
+describe('rock veins: where ore shows in the rock top', () => {
+  const veins = rockVeins(art(TOP_SIZE));
+  const code = (x: number, y: number) => veins[(y * TOP_SIZE + x) * 4];
+
+  it('names its codes as the fragment shader reads them', () => {
+    const glsl = readFileSync(join(__dirname, '../../lib/webgl/shaders/fragment.glsl'), 'utf8');
+    for (const [name, value] of [
+      ['NONE', VEIN.none],
+      ['EDGE', VEIN.edge],
+      ['SHADE', VEIN.shade]
+    ])
+      expect(glsl).toContain(`const int VEIN_${name} = ${value};`);
+  });
+
+  it('puts ore shades in every tile', () => {
+    for (let ty = 0; ty < TOP_SIZE / TILE; ty++)
+      for (let tx = 0; tx < TOP_SIZE / TILE; tx++) {
+        let shades = 0;
+        for (let j = 0; j < TILE; j++)
+          for (let i = 0; i < TILE; i++)
+            if (code(tx * TILE + i, ty * TILE + j) >= VEIN.shade) shades++;
+        expect(shades, `tile ${tx},${ty}`).toBeGreaterThan(TILE);
+      }
+  });
 });

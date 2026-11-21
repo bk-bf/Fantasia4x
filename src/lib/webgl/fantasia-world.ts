@@ -432,7 +432,9 @@ function inRockMass(pieces: PaintedPieces, tile: WorldTile): boolean {
   const def = resolveActiveResource(tile)?.resDef;
   if (!def) return false;
   return (
-    pieces.members.has(def.id) || (def.walkable === false && pieces.terrains.has(tile.terrainType))
+    pieces.members.has(def.id) ||
+    pieces.veins.has(def.id) ||
+    (def.walkable === false && pieces.terrains.has(tile.terrainType))
   );
 }
 
@@ -499,10 +501,12 @@ export function applyResourceToGrid(
   const drawScale = (rs ?? 1) * stageScale;
   const scale = drawScale !== 1 ? drawScale : undefined;
   const rock = rockUnder(tile, hiddenMask, worldMap);
-  const isWall = rock?.pieces.members.has(resDef.id) ?? false;
+  const vein = rock?.pieces.veins.get(resDef.id);
+  const isWall = (rock?.pieces.members.has(resDef.id) ?? false) || vein !== undefined;
   const sprite =
     PAINTED_TILES && !isWall ? paintedTile('resource', resDef.id, tile.x, tile.y) : undefined;
-  const painted = isWall ? rock?.piece : rock && sprite ? onPieceTop(rock.pieces, sprite) : sprite;
+  const wall = rock && vein ? { ...rock.piece, vein } : rock?.piece;
+  const painted = isWall ? wall : rock && sprite ? onPieceTop(rock.pieces, sprite) : sprite;
   const onRock = rock !== undefined && !isWall;
   const tall = (rs !== undefined && rs > 1) || onRock;
   if (onRock) putRock(rock.piece);

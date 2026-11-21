@@ -91,7 +91,7 @@ describe('a wall tile takes the rock piece of its eight neighbours', () => {
         const name = NAMES.find((n) => cx + OFFSET[n][0] === x && cy + OFFSET[n][1] === y);
         if (x === cx && y === cy) return wall(layout);
         if (name && walls.has(name)) return wall(x + y);
-        if (name && (x + y) % 3 === 0) return { resources: { hematite: 2 } };
+        if (name && (x + y) % 3 === 0) return { resources: { stone_outcrop: 2 } };
         return {};
       });
       expect(painted(map, cx, cy), `layout ${[...walls].join(' ')}`).toEqual(
@@ -148,7 +148,7 @@ describe('an object standing in the mountain sits on top of the rock', () => {
   const all = new Set(NAMES);
   const lift = rock.top!.lift / manifest.tile;
 
-  it.each(['stone_outcrop', 'amethyst_node', 'hematite'])(
+  it.each(['stone_outcrop', 'amethyst_node'])(
     'draws rock under %s and the object lifted onto the rock top',
     (id) => {
       const map = world(3, 3, (x, y) => (x === 1 && y === 1 ? onMountain({ [id]: 3 }) : wall(x)));
@@ -183,5 +183,42 @@ describe('an object standing in the mountain sits on top of the rock', () => {
     expect(painted(map, 1, 0)).toEqual(
       expected(blobName(new Set(NAMES.filter((n) => n !== 'S'))), 1, 0)
     );
+  });
+});
+
+describe('ore is set into the rock top, with no sprite over it', () => {
+  const all = new Set(NAMES);
+  const centre = (id: string) =>
+    world(3, 3, (x, y) => (x === 1 && y === 1 ? onMountain({ [id]: 3 }) : wall(x)));
+
+  it.each([
+    ['hematite', 'vein/hematite'],
+    ['native_gold', 'vein/gold'],
+    ['rock_salt', 'vein/salt']
+  ])('draws %s as the rock piece coloured from %s', (id, vein) => {
+    const { x, y } = manifest.sprites[vein];
+    expect(layers(centre(id), 1, 1)).toEqual({
+      short: { ...expected(blobName(all), 1, 1), vein: { x, y } },
+      tall: undefined
+    });
+  });
+
+  it('counts ore as rock for the walls around it', () => {
+    const map = centre('coal');
+    for (const [x, y] of [
+      [1, 0],
+      [0, 1],
+      [2, 2]
+    ])
+      expect(painted(map, x, y), `${x},${y}`).toEqual(expected(blobName(all), x, y));
+  });
+
+  it('draws fogged ore as plain rock', () => {
+    const map = centre('coal');
+    const hidden = map.map((row) => row.map(() => true));
+    expect(layers(map, 1, 1, hidden)).toEqual({
+      short: expected(blobName(all), 1, 1),
+      tall: undefined
+    });
   });
 });
