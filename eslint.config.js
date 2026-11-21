@@ -17,6 +17,7 @@ const IGNORES = [
   'spatial-core/**',
   'sim-core/**',
   'static/**',
+  'tools/tileset/art/**',
   '**/*.json',
   '**/*.jsonc'
 ];

@@ -80,7 +80,7 @@ const TSC_FLAGS = [
 const toolFiles = () =>
   execFileSync('git', ['ls-files', '-z', 'tools'], OUTPUT)
     .split('\0')
-    .filter((f) => /\.(mjs|js|ts)$/.test(f));
+    .filter((f) => /\.(mjs|js|ts)$/.test(f) && !f.startsWith('tools/tileset/art/'));
 
 const RUNNERS = {
   'svelte-check': () =>

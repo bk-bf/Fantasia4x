@@ -38,6 +38,7 @@
         "tools/claude/**",
         "tools/gpu/**",
         "tools/dev-tools/**",
+        "tools/tileset/**",
         "tools/*.mjs",
         ".github/workflows/**",
         "electron/**",

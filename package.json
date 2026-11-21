@@ -12,6 +12,8 @@
     "dev": "vite dev --host",
     "build": "vite build",
     "tools:pack": "node tools/dev-tools/pack.mjs",
+    "tileset:bake": "node tools/tileset/bake.mjs",
+    "tileset:sync": "node tools/tileset/sync.mjs",
     "preview": "vite preview",
     "electron": "electron .",
     "package": "electron-builder",
