@@ -1,4 +1,7 @@
 <script lang="ts">
+  import { chrome } from '$lib/pixelArt/chrome';
+  import CheckBox from '$lib/components/UI/widget/CheckBox.svelte';
+
   type Option = { value: string; label: string };
   let {
     label,
@@ -25,102 +28,131 @@
     onSelect?: (v: string) => void;
     onInput?: (v: number) => void;
   } = $props();
+
+  const level = $derived(Math.max(0, Math.min(100, sliderValue)));
 </script>
 
-<label class="opt" class:is-disabled={disabled}>
-  <span class="opt-label"
-    >{label}{#if sub}<em class="soon">{sub}</em>{/if}</span
+{#if type === 'checkbox'}
+  <CheckBox {checked} {disabled} onchange={() => onToggle?.()}
+    >{label}{#if sub}<em>{sub}</em>{/if}</CheckBox
   >
-  {#if type === 'checkbox'}
-    <input type="checkbox" {checked} {disabled} onchange={onToggle} />
-  {:else if type === 'select'}
-    <select
-      class="opt-select"
-      {value}
-      {disabled}
-      onchange={(e) => onSelect?.(e.currentTarget.value)}
+{:else}
+  <div class="srow" class:noted={!!sub} class:off={disabled}>
+    <span class="lbl"
+      >{label}{#if sub}<em>{sub}</em>{/if}</span
     >
-      {#each options as o (o.value)}
-        <option value={o.value}>{o.label}</option>
-      {/each}
-    </select>
-  {:else if disabled}
-    <input type="range" min="0" max="100" value="80" disabled aria-label={label} />
-  {:else}
-    <input
-      type="range"
-      min="0"
-      max="100"
-      value={sliderValue}
-      aria-label={label}
-      oninput={(e) => onInput?.(Number(e.currentTarget.value))}
-    />
-  {/if}
-</label>
+    {#if type === 'select'}
+      <span class="seg" role="radiogroup" aria-label={label}>
+        {#each options as o (o.value)}
+          <button
+            class="segb"
+            class:on={o.value === value}
+            role="radio"
+            aria-checked={o.value === value}
+            {disabled}
+            onclick={() => onSelect?.(o.value)}
+            {@attach chrome(o.value === value ? 'cellOn' : 'cell')}><span>{o.label}</span></button
+          >
+        {/each}
+      </span>
+    {:else}
+      <span class="slider">
+        <i class="track" {@attach chrome('well')}>
+          <i class="fill" style:width="{level}%"></i>
+          <i class="knob" style:left="{level}%" {@attach chrome('btn')}></i>
+        </i>
+        <input
+          type="range"
+          min="0"
+          max="100"
+          value={disabled ? 80 : sliderValue}
+          {disabled}
+          aria-label={label}
+          oninput={(e) => onInput?.(Number(e.currentTarget.value))}
+        />
+      </span>
+    {/if}
+  </div>
+{/if}
 
 <style>
-  .opt {
+  em {
+    margin-left: 6px;
+    font-style: normal;
+    color: var(--text-muted);
+  }
+  .srow {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
-    padding: 7px 2px;
-    color: var(--text);
-    font-size: 13px;
-    letter-spacing: 0.04em;
-    cursor: pointer;
+    gap: 10px;
+    min-height: 22px;
   }
-  .opt-label {
-    display: flex;
-    align-items: baseline;
-    gap: 6px;
+  .srow.noted .lbl em {
+    display: block;
+    margin: 0;
+    line-height: 14px;
   }
-  .soon {
-    color: var(--text-muted);
-    font-size: 10px;
-    font-style: italic;
-    letter-spacing: 0.02em;
+  .lbl {
+    min-width: 0;
   }
-  .opt.is-disabled {
-    color: var(--text-muted);
-    cursor: default;
-  }
-  input[type='checkbox'] {
-    accent-color: var(--accent);
-    width: 14px;
-    height: 14px;
-    cursor: pointer;
-  }
-  input[type='range'] {
-    accent-color: var(--accent);
-    width: 130px;
-    cursor: pointer;
-  }
-  input[type='range']:disabled {
-    cursor: inherit;
+  .off {
     opacity: 0.5;
-  }
-  .opt-select {
-    background: var(--bg);
-    color: var(--accent-hi);
-    border: 1px solid var(--border);
-    font-family: var(--font-mono);
-    font-size: 13px;
-    padding: 3px 6px;
-    cursor: pointer;
-    outline: none;
-    transition:
-      border-color 0.12s,
-      color 0.12s;
-  }
-  .opt-select:hover {
-    border-color: var(--border-hi);
-  }
-  .opt-select:focus {
-    border-color: var(--accent-hi);
-  }
-  .opt.is-disabled .opt-select {
-    color: var(--text-muted);
     cursor: default;
+  }
+  .seg {
+    display: inline-flex;
+    gap: 1px;
+    flex: none;
+  }
+  .segb {
+    height: 20px;
+    padding: 0 7px;
+    border: 0;
+    background: none;
+    font: inherit;
+    color: var(--text-dim);
+    cursor: pointer;
+  }
+  .segb.on {
+    color: var(--ember);
+  }
+  .slider {
+    position: relative;
+    display: flex;
+    align-items: center;
+    flex: none;
+    width: 110px;
+    height: 20px;
+  }
+  .track {
+    display: block;
+    flex: 1;
+    height: 8px;
+  }
+  .fill {
+    position: absolute;
+    left: 1px;
+    top: 1px;
+    bottom: 1px;
+    display: block;
+    background: var(--accent);
+  }
+  .knob {
+    position: absolute;
+    top: -5px;
+    display: block;
+    width: 9px;
+    height: 18px;
+    margin-left: -4px;
+  }
+  .slider input {
+    position: absolute;
+    inset: 0;
+    margin: 0;
+    opacity: 0;
+    width: 100%;
+    height: 100%;
+    cursor: pointer;
   }
 </style>

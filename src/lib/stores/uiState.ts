@@ -13,6 +13,8 @@ export type WindowId =
   | 'debug'
   | 'pause';
 
+export type ModalId = 'trade' | 'event' | 'settings';
+
 interface UIState {
   windows: WindowId[];
   showNotifications: boolean;

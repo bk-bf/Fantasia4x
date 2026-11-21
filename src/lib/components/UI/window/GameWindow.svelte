@@ -2,7 +2,7 @@
   import type { Snippet } from 'svelte';
   import { chrome } from '$lib/pixelArt/chrome';
   import { autohideScroll } from '$lib/actions/autohideScroll';
-  import type { WindowId } from '$lib/stores/uiState';
+  import type { ModalId, WindowId } from '$lib/stores/uiState';
   import ChromeButton from '$lib/components/UI/widget/ChromeButton.svelte';
   import PanelTitle from '$lib/components/UI/widget/PanelTitle.svelte';
   import { provideWindow, type WindowBar } from './windowContext';
@@ -24,7 +24,7 @@
     onclose,
     children
   }: {
-    id: WindowId;
+    id: WindowId | ModalId;
     title: string;
     modal?: boolean;
     pos: Point | null;
