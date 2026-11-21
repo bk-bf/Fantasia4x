@@ -117,7 +117,7 @@ export class GameEngineImpl implements GameEngine {
   private temperatureSeason: import('../core/types').Season | undefined = undefined;
   private tempProbe: { x: number; y: number } | undefined = undefined;
   private _seasonJustTransitioned = false;
-  private _lastGrowthDay: number | undefined = undefined;
+  private _lastGrowthDay = 0;
   private weatherFreezing = false;
   private _snowScanRow = 0;
   private _phaseMs: Record<string, number> = {};
@@ -890,10 +890,6 @@ export class GameEngineImpl implements GameEngine {
     const gs = this.gameState;
     if (!gs) return;
     const day = dayIndexForTurn(gs.turn);
-    if (this._lastGrowthDay === undefined) {
-      this._lastGrowthDay = day;
-      return;
-    }
     if (day === this._lastGrowthDay) return;
     for (let d = this._lastGrowthDay + 1; d <= day; d++) pawnGrowthService.processDay(gs, d);
     this._lastGrowthDay = day;
@@ -1087,6 +1083,19 @@ export class GameEngineImpl implements GameEngine {
   setGameStateManager(manager: GameStateManager): void {
     this.gameStateManager = manager;
     this.gameState = manager.getState();
+    this.resetWorldCaches(this.gameState);
+  }
+
+  private resetWorldCaches(state: GameState): void {
+    this._lastGrowthWorldMap = null;
+    this._lastGrowthDay = dayIndexForTurn(state.turn);
+    this.temperatureSeason = undefined;
+    this.tempProbe = undefined;
+    this.avgTileTemp = undefined;
+    this.weatherFreezing = false;
+    this._snowScanRow = 0;
+    this._seasonJustTransitioned = false;
+    this.lastFlushMs = 0;
   }
 
   integrateServices(services: any): void {
