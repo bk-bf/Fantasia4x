@@ -123,6 +123,7 @@
   import { debugMode } from '$lib/stores/uiPrefs';
   import HoverTip from '../tooltip/HoverTip.svelte';
   import { createPinnable } from '../../util/pinnable.svelte';
+  import { chrome } from '$lib/pixelArt/chrome';
 
   const flavorPin = createPinnable<string>();
 
@@ -141,8 +142,8 @@
         (!!model.health.blood && model.health.blood.current < model.health.blood.max))
   );
 
-  const BAR_WARN = '#ee8844';
-  const BAR_OK = '#68a030';
+  const BAR_WARN = 'var(--accent-hi)';
+  const BAR_OK = 'var(--pos)';
 </script>
 
 <div
@@ -155,7 +156,11 @@
   onmouseup={(e) => e.stopPropagation()}
   onclick={(e) => e.stopPropagation()}
 >
-  <div class="tile-hud tile-hud--pawn" class:tile-hud--selected={model.selected}>
+  <div
+    class="tile-hud tile-hud--pawn"
+    class:tile-hud--selected={model.selected}
+    {@attach chrome('card')}
+  >
     <div class="tile-hud-body">
       <div class="pawn-header">
         <div class="pawn-meta">
@@ -206,7 +211,11 @@
         {@const gpct = Math.round(model.growthPct)}
         <div
           class="growth-line"
-          style="color:{gpct >= 100 ? '#68b030' : gpct >= 50 ? '#9aac3a' : '#c89a3a'}"
+          style="color:{gpct >= 100
+            ? 'var(--pos)'
+            : gpct >= 50
+              ? 'var(--text)'
+              : 'var(--accent-hi)'}"
           title="resource maturity — scales harvest yield; crops grow only with enough fertility, warmth, water and light"
         >
           growth {gpct}%
@@ -290,6 +299,7 @@
       {#if model.health && model.selected}
         <button
           class="hud-btn"
+          {@attach chrome(healthToggle.open ? 'btnOn' : 'btn')}
           class:hud-btn--active={healthToggle.open}
           class:hud-btn--warn={damaged}
           onmousedown={(e) => e.stopPropagation()}
@@ -305,6 +315,7 @@
       {#if model.moodModel && model.selected}
         <button
           class="hud-btn"
+          {@attach chrome(moodToggle.open ? 'btnOn' : 'btn')}
           class:hud-btn--active={moodToggle.open}
           class:hud-btn--warn={model.moodModel.target < model.moodModel.mood - 0.5}
           onmousedown={(e) => e.stopPropagation()}
@@ -320,6 +331,7 @@
       {#if model.armor && model.selected && $debugMode}
         <button
           class="hud-btn"
+          {@attach chrome(armorToggle.open ? 'btnOn' : 'btn')}
           class:hud-btn--active={armorToggle.open}
           onmousedown={(e) => e.stopPropagation()}
           onmouseup={(e) => e.stopPropagation()}
@@ -334,6 +346,7 @@
       {#each model.buttons ?? [] as btn (btn.label)}
         <button
           class="hud-btn"
+          {@attach chrome(btn.active ? 'btnOn' : 'btn')}
           class:hud-btn--active={btn.active}
           onmousedown={(e) => e.stopPropagation()}
           onmouseup={(e) => e.stopPropagation()}
@@ -368,219 +381,112 @@
   }
   .tile-hud {
     position: relative;
-    background: transparent;
-    border: 1px solid transparent;
-    color: #a07840;
-    font-family: var(--font-mono);
-    font-size: 12px;
-    line-height: 1.25;
-    padding: 2px 7px;
+    color: var(--text);
+    font: 16px/18px var(--font-pixel);
+    letter-spacing: 0.6px;
+    padding: 9px 12px 10px;
     pointer-events: auto;
   }
-  .tile-hud::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    z-index: 0;
-    background: rgba(28, 16, 6, 0.92);
-    box-shadow: inset 0 0 0 1px #6b4a2a;
-    filter: url(#ambient-tint);
-    pointer-events: none;
-  }
-  .tile-hud-body {
-    position: relative;
-    z-index: 1;
-    filter: url(#ambient-tint-legible);
-  }
   .tile-hud--pawn {
-    width: 340px;
+    width: 344px;
     box-sizing: border-box;
   }
   .pawn-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 8px;
     margin-bottom: 2px;
   }
   .pawn-meta {
     display: flex;
     align-items: baseline;
-    gap: 5px;
-    flex-wrap: nowrap;
+    gap: 6px;
   }
   .pawn-name {
-    color: #c8a060;
-    font-weight: bold;
-    font-size: 13px;
+    font: calc(20px * var(--head-size, 1)) / 20px var(--font-head);
+    text-transform: var(--head-case, uppercase);
+    letter-spacing: 1px;
+    color: var(--text);
   }
   .pawn-name.has-flavor {
     cursor: help;
   }
   .pawn-flavor {
-    max-width: 100%;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    font-style: italic;
-    font-size: 11px;
-    color: #9a7a48;
-    margin: 8px 0;
+    color: var(--text-dim);
+    margin: 2px 0 4px;
     cursor: help;
   }
   .flavor-tip {
-    font-style: italic;
-    color: #c8b088;
-    line-height: 1.45;
+    color: var(--text-dim);
   }
-  .pawn-state {
-    color: #7a6030;
-    font-size: 12px;
-    white-space: nowrap;
-  }
-  .pawn-dismiss {
-    color: #886630;
-    font-size: 12px;
+  .pawn-state,
+  .pawn-dismiss,
+  .pawn-stat-label,
+  .pawn-pos {
+    color: var(--text-dim);
   }
   .btn-col {
     display: flex;
     flex-direction: column;
     gap: 3px;
     flex-shrink: 0;
-    pointer-events: auto;
   }
   .hud-btn {
-    background: transparent;
-    border: 1px solid transparent;
-    color: #a07840;
-    font-family: var(--font-mono);
-    font-size: 12px;
-    padding: 1px 5px;
+    height: 22px;
+    padding: 0 8px;
+    border: 0;
+    background: none;
+    color: var(--text);
+    font: 16px/18px var(--font-pixel);
     cursor: pointer;
-    pointer-events: auto;
-    line-height: 1.3;
-    position: relative;
-    z-index: 20;
     white-space: nowrap;
   }
-  .hud-btn::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    z-index: 0;
-    background: #2a1a0a;
-    box-shadow: inset 0 0 0 1px #6b4a2a;
-    filter: url(#ambient-tint);
-    pointer-events: none;
-  }
   .hud-btn-lbl {
-    position: relative;
-    z-index: 1;
     display: inline-block;
-    filter: url(#ambient-tint-legible);
+    text-transform: lowercase;
   }
-  .hud-btn:hover {
-    color: #c8a060;
+  .hud-btn-lbl::first-letter {
+    text-transform: uppercase;
   }
-  .hud-btn:hover::before {
-    box-shadow: inset 0 0 0 1px #c8a060;
-  }
-  .hud-btn--active {
-    color: #ee8844;
-  }
-  .hud-btn--active::before {
-    background: #4a2010;
-    box-shadow: inset 0 0 0 1px #ee8844;
-  }
-  .hud-btn--active:hover {
-    color: #ffaa66;
-  }
-  .hud-btn--active:hover::before {
-    background: #5a2814;
-    box-shadow: inset 0 0 0 1px #ffaa66;
-  }
-  .hud-btn--warn:not(.hud-btn--active) {
-    color: #ee8844;
-  }
-  .hud-btn--warn:not(.hud-btn--active)::before {
-    box-shadow: inset 0 0 0 1px #b5532a;
+  .hud-btn--active,
+  .hud-btn--warn {
+    color: var(--ember, var(--accent-hi));
   }
   .text-lines {
-    display: flex;
-    flex-direction: column;
-    gap: 1px;
     margin-bottom: 2px;
   }
-  .text-line {
-    color: #c0a040;
-    font-size: 12px;
-    white-space: normal;
+  .text-line,
+  .pawn-stat-val {
+    color: var(--text);
     overflow-wrap: break-word;
-  }
-  .growth-line {
-    font-size: 12px;
-    margin-bottom: 2px;
   }
   .pawn-row {
     display: flex;
     flex-wrap: wrap;
-    gap: 2px 8px;
-    align-items: baseline;
-    font-size: 12px;
+    gap: 0 10px;
   }
   .pawn-stat {
     display: inline-flex;
-    gap: 3px;
-    align-items: baseline;
-  }
-  .pawn-stat-label {
-    color: #7a6030;
-  }
-  .pawn-stat-val {
-    color: #c08040;
+    gap: 4px;
   }
   .pawn-warn {
-    color: #ee8844 !important;
+    color: var(--accent-hi) !important;
   }
   .bar-rows {
-    margin-top: 2px;
-    display: flex;
-    flex-direction: column;
-    gap: 1px;
+    margin-top: 3px;
   }
   .pawn-job {
-    color: #8a7040;
-    font-size: 12px;
-    margin-top: 1px;
-    white-space: normal;
+    color: var(--accent-hi);
     overflow-wrap: break-word;
   }
-  .job-progress {
-    margin-top: 1px;
-  }
-  .tile-hud--selected {
-    color: #e8c870;
-  }
-  .tile-hud--selected::before {
-    background: rgba(20, 14, 4, 0.96);
-    box-shadow: inset 0 0 0 1px #f0c060;
+  .pawn-idle {
+    color: var(--text-muted);
   }
   .tile-hud--selected .pawn-name {
-    color: #ffe890;
-  }
-  .tile-hud--selected .pawn-state {
-    color: #c0a040;
-  }
-  .pawn-idle {
-    color: #887040;
+    color: var(--accent-hi);
   }
   .pawn-pos {
     display: flex;
     gap: 8px;
-    color: #776040;
-    font-size: 12px;
-  }
-  .pawn-pos-meta {
-    color: #8a7040;
   }
 </style>

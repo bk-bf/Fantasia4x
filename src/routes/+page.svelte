@@ -142,7 +142,7 @@
       {/if}
 
       <main class="main-content">
-        <div class="map-area">
+        <div class="map-area" style:--hud-left-inset="{$hideSidebars ? leftInset : 0}px">
           <MainScreen />
 
           {#if !customMapOpen}

@@ -1,0 +1,51 @@
+.hud-col {
+  --col-ink: var(--text);
+  --col-dim: var(--text-dim);
+  --col-mute: var(--text-muted);
+  --col-hot: var(--accent-hi);
+  --col-pos: var(--pos);
+  --col-neg: var(--neg);
+  --col-cold: var(--cold);
+  position: relative;
+  isolation: isolate;
+  font: 16px/17px var(--font-pixel);
+  letter-spacing: 0.6px;
+  color: var(--col-ink);
+  background: var(--bg-panel);
+}
+.hud-col.transparent {
+  --col-ink: #f2e8cc;
+  --col-dim: #cdbd96;
+  --col-mute: #a39474;
+  --col-hot: #ffc468;
+  --col-pos: #b0dc80;
+  --col-neg: #ff8a70;
+  --col-cold: #a4d4f2;
+  background: none;
+  text-shadow:
+    1px 0 0 #08060a,
+    -1px 0 0 #08060a,
+    0 1px 0 #08060a,
+    0 -1px 0 #08060a,
+    1px 1px 0 #08060a;
+}
+.hud-col.transparent::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: calc(100% + 26px);
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(to right, rgb(6 4 3 / 0.58), rgb(6 4 3 / 0.36) 72%, rgb(6 4 3 / 0));
+  mask-image: linear-gradient(#000 calc(100% - 70px), transparent);
+}
+.hud-col.hud-col-r.transparent::before {
+  left: auto;
+  right: 0;
+  background: linear-gradient(to left, rgb(6 4 3 / 0.58), rgb(6 4 3 / 0.36) 72%, rgb(6 4 3 / 0));
+}
+.hud-col.transparent :is([role='button'], button) {
+  pointer-events: auto;
+}

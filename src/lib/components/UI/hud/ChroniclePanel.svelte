@@ -6,27 +6,9 @@
   import CombatBreakdown from './CombatBreakdown.svelte';
   import HoverTip from '../tooltip/HoverTip.svelte';
   import ScrollArea from '../widget/ScrollArea.svelte';
-
-  const TYPE_ABBR: Record<LogCategory, string> = {
-    work: 'WRK',
-    building: 'BLD',
-    crafting: 'CRF',
-    event: 'EVT',
-    pawn_action: 'PWN',
-    research: 'RSH',
-    exploration: 'EXP',
-    system: 'SYS',
-    combat: 'CBT',
-    entity: 'ENT',
-    social: 'SOC',
-    weather: 'WTR',
-    season: 'SEA',
-    ai: 'INS',
-    needs: 'NED',
-    job: 'JOB',
-    item: 'ITM',
-    perf: 'SYS'
-  };
+  import ChromeButton from '../widget/ChromeButton.svelte';
+  import { turnToGameDate } from './topbar/gameDate';
+  import './hudColumns.css';
 
   const CATEGORY_LABEL: Record<LogCategory, string> = {
     work: 'Labour',
@@ -61,13 +43,9 @@
     critical: 'sev-crit'
   };
 
-  function abbr(e: ActivityLogEntry) {
-    return TYPE_ABBR[e.type];
-  }
-
   let expandedId: string | null = $state(null);
 
-  const ENTRY_ROW_HEIGHT = 20;
+  const ENTRY_ROW_HEIGHT = 17;
   const OVERSCAN_ROWS = 8;
 
   let listViewport: HTMLElement | null = $state(null);
@@ -134,7 +112,11 @@
   }
 </script>
 
-<aside class="panel" class:transparent={$hideSidebars} class:collapsed={$chronicleMinimized}>
+<aside
+  class="panel hud-col hud-col-r"
+  class:transparent={$hideSidebars}
+  class:collapsed={$chronicleMinimized}
+>
   {#if $chronicleMinimized}
     <button
       class="restore-btn"
@@ -143,23 +125,14 @@
       onclick={() => chronicleMinimized.set(false)}>‹</button
     >
   {:else}
-    <div class="section-hdr">
-      <span>| CHRONICLE</span>
-      <span class="hdr-btns">
-        <button
-          class="hdr-icon-btn"
-          title="Minimise chronicle"
-          aria-label="Minimise chronicle"
-          onclick={() => chronicleMinimized.set(true)}>›</button
-        >
-        <button
-          class="clear-btn"
-          title="Clear chronicle"
-          aria-label="Clear chronicle"
-          disabled={$recentActivity.length === 0}
-          onclick={clearActivityLog}>✕</button
-        >
-      </span>
+    <div class="tools">
+      <ChromeButton
+        mini
+        glyph="x"
+        label="Clear chronicle"
+        disabled={$recentActivity.length === 0}
+        onclick={clearActivityLog}
+      />
     </div>
 
     <ScrollArea class="log-list" bind:viewport={listViewport}>
@@ -178,8 +151,7 @@
             tabindex="0"
             onkeydown={(e) => e.key === 'Enter' && handleClick(entry)}
           >
-            <span class="turn">T{entry.turn}</span>
-            <span class="type">{abbr(entry)}</span>
+            <span class="turn">{turnToGameDate(entry.turn).clock}</span>
             <span class="msg">{entry.action}{entry.result ? ' · ' + entry.result : ''}</span>
           </div>
           {#if expandedId === entry.id && entry.combatBreakdown && entry.combatBreakdown.length > 0}
@@ -226,202 +198,77 @@
   .panel {
     height: 100%;
     width: 100%;
-    background: var(--bg-panel);
-    font-family: var(--font-mono);
-    font-size: 11px;
-    color: var(--text);
     display: flex;
     flex-direction: column;
     overflow: hidden;
   }
-
-  .panel.transparent {
-    background: transparent;
-    text-shadow:
-      1px 0 0 #000,
-      -1px 0 0 #000,
-      0 1px 0 #000,
-      0 -1px 0 #000,
-      0 0 12px rgba(0, 0, 0, 0.95),
-      0 0 20px rgba(0, 0, 0, 0.9),
-      0 2px 4px rgba(0, 0, 0, 1),
-      0 4px 6px rgba(0, 0, 0, 1),
-      0 6px 10px rgba(0, 0, 0, 1),
-      0 8px 16px rgba(0, 0, 0, 0.95),
-      0 10px 24px rgba(0, 0, 0, 0.9);
-  }
-  .panel.transparent .section-hdr {
-    background: transparent;
-    border-bottom: none;
-  }
-  .panel.transparent .entry {
-    border-bottom: none;
-    pointer-events: auto;
-    background: linear-gradient(
-      to right,
-      transparent,
-      color-mix(in srgb, var(--bg-hover) 33%, transparent) 10%,
-      color-mix(in srgb, var(--bg-hover) 33%, transparent) 90%,
-      transparent
-    );
-  }
-  .panel.transparent .entry:hover {
-    background: var(--bg-hover);
-  }
-  .panel.transparent :global(.breakdown) {
-    pointer-events: auto;
-  }
-  .panel.transparent button {
-    pointer-events: auto;
-  }
-
-  .section-hdr {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 4px 6px 3px 0;
-    color: var(--accent-hi);
-    font-size: 11px;
-    letter-spacing: 0.06em;
-    border-bottom: 1px solid var(--border);
-    background: var(--bg);
-    flex-shrink: 0;
-  }
-
-  .hdr-btns {
-    display: inline-flex;
-    gap: 4px;
-    align-items: center;
-  }
-
-  .clear-btn,
-  .hdr-icon-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 14px;
-    height: 14px;
-    padding: 0;
-    border: 1px solid var(--border);
-    background: transparent;
-    color: var(--text-dim);
-    font-family: inherit;
-    font-size: 11px;
-    line-height: 1;
-    letter-spacing: 0;
-    cursor: pointer;
-  }
-
-  .clear-btn:hover:not(:disabled) {
-    color: var(--neg);
-    border-color: var(--neg);
-    background: var(--bg-hover);
-  }
-
-  .hdr-icon-btn:hover {
-    color: var(--accent-hi);
-    border-color: var(--border-hi);
-    background: var(--bg-hover);
-  }
-
-  .clear-btn:disabled {
-    opacity: 0.3;
-    cursor: default;
-  }
-
   .panel.collapsed {
     align-items: center;
     padding-top: 4px;
-    gap: 6px;
   }
   .restore-btn {
-    flex-shrink: 0;
     width: 18px;
     height: 18px;
     padding: 0;
-    border: 1px solid var(--border);
-    background: var(--bg);
-    color: var(--accent-hi);
-    font-family: inherit;
-    font-size: 13px;
-    line-height: 1;
+    border: 1px solid var(--col-mute);
+    background: none;
+    color: var(--col-hot);
+    font: inherit;
     cursor: pointer;
   }
-  .restore-btn:hover {
-    border-color: var(--border-hi);
-    background: var(--bg-hover);
+  .tools {
+    flex-shrink: 0;
+    display: flex;
+    justify-content: flex-end;
+    padding: 4px 10px 2px;
   }
   .panel :global(.log-list) {
     flex: 1;
-    padding: 2px 0;
+    padding: 2px 10px 8px 8px;
   }
-
   .entry {
-    display: grid;
-    grid-template-columns: 36px 28px 1fr;
-    gap: 3px;
-    padding: 2px 6px;
-    border-bottom: 1px solid var(--border);
-    line-height: 1.4;
+    display: flex;
+    gap: 6px;
+    height: 17px;
+    white-space: nowrap;
   }
-
-  .entry:hover {
-    background: var(--bg-hover);
-  }
-
   .turn {
-    color: var(--text-dim);
-    font-size: 10px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    flex-shrink: 0;
+    color: var(--col-mute);
   }
-
-  .type {
-    color: var(--accent-hi);
-    font-size: 10px;
-    text-transform: uppercase;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
   .msg {
-    color: var(--text-dim);
     overflow: hidden;
     text-overflow: ellipsis;
-    white-space: nowrap;
-    font-size: 11px;
   }
-
   .sev-ok .msg {
-    color: var(--pos);
+    color: var(--col-pos);
   }
   .sev-warn .msg {
-    color: var(--accent-hi);
+    color: var(--col-hot);
   }
   .sev-err .msg,
   .sev-crit .msg {
-    color: var(--neg);
+    color: var(--col-neg);
   }
-  .sev-crit .type {
-    color: var(--neg);
+  .sev-crit .turn::before {
+    content: '!';
+    display: inline-block;
+    width: 9px;
+    margin-right: 4px;
+    text-align: center;
+    background: var(--col-neg);
+    color: #1a0806;
+    text-shadow: none;
   }
-
   .clickable {
     cursor: pointer;
   }
-
-  .clickable:hover {
-    background: var(--bg-hover);
+  .clickable:hover .msg {
+    text-decoration: underline dotted;
+    text-underline-offset: 3px;
   }
-
-  .expanded {
-    background: rgba(212, 168, 64, 0.08);
-  }
-
-  .entry.expanded {
-    border-bottom: none;
+  .entry.expanded .msg {
+    color: var(--col-hot);
   }
 
   .tip-head {
@@ -456,18 +303,11 @@
     font-style: italic;
   }
   .convo {
-    padding: 3px 8px 5px 40px;
-    border-bottom: 1px solid var(--border);
-    background: rgba(255, 255, 255, 0.02);
-  }
-  .convo-line {
-    font-style: italic;
-    opacity: 0.9;
-    line-height: 1.5;
+    padding: 1px 0 4px 46px;
+    color: var(--col-dim);
   }
   .convo-who {
-    font-style: normal;
-    color: var(--accent-hi);
+    color: var(--col-hot);
   }
 
   .tip-hint {

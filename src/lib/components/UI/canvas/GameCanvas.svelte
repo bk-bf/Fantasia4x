@@ -5103,7 +5103,7 @@
   .bld-row {
     position: absolute;
     bottom: 6px;
-    left: 6px;
+    left: calc(var(--hud-left-inset, 0px) + 6px);
     display: flex;
     align-items: stretch;
     gap: 4px;
