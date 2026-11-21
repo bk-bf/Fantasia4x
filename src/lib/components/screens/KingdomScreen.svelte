@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onDestroy } from 'svelte';
+  import { DISPOSITION_TONE } from '$lib/components/util/dispositionTone';
   import {
     discoveredKingdoms,
     kingdomRelations,
@@ -7,178 +7,80 @@
     currentTurn,
     gameState
   } from '$lib/stores/gameState';
-  import type { Culture, Kingdom, KingdomRelation } from '$lib/game/core/types';
   import { COLONY_RELATION_ID } from '$lib/game/core/types';
   import { knowledgeTierLabel } from '$lib/game/core/gen/kingdom';
   import KingdomDetail from './kingdom/KingdomDetail.svelte';
+  import ListChip from '../UI/widget/ListChip.svelte';
+  import ListDetail from '../UI/widget/ListDetail.svelte';
   import { persisted, persist } from '$lib/stores/uiPersist';
 
-  let known: Kingdom[] = [];
-  let relations: KingdomRelation[] = [];
-  let cultures: Culture[] = [];
-  let turn = 0;
-  let selectedId: string | null = persisted('kingdom.selected', null);
-  $: persist('kingdom.selected', selectedId);
+  let known = $derived($discoveredKingdoms);
+  let chosen = $state<string | null>(persisted('kingdom.selected', null));
+  let selected = $derived(known.find((k) => k.id === chosen) ?? known[0] ?? null);
+  $effect(() => persist('kingdom.selected', selected?.id ?? null));
 
-  const unsubKingdoms = discoveredKingdoms.subscribe((v) => {
-    known = v;
-    if (!selectedId || !known.some((k) => k.id === selectedId)) {
-      selectedId = known[0]?.id ?? null;
-    }
-  });
-  const unsubRel = kingdomRelations.subscribe((v) => (relations = v));
-  const unsubCultures = culturePool.subscribe((v) => (cultures = v));
-  const unsubTurn = currentTurn.subscribe((v) => (turn = v));
-  let homelandBy = new Map<string, string[]>();
-  const unsubState = gameState.subscribe((s) => {
-    const m = new Map<string, string[]>();
-    for (const p of s.pawns ?? []) {
+  let homelandBy = $derived.by(() => {
+    const m: Record<string, string[]> = {};
+    for (const p of $gameState.pawns ?? []) {
       if (p.isAlive === false || !p.homeKingdomId) continue;
-      const names = m.get(p.homeKingdomId) ?? [];
-      names.push(p.name);
-      m.set(p.homeKingdomId, names);
+      (m[p.homeKingdomId] ??= []).push(p.name);
     }
-    homelandBy = m;
+    return m;
   });
   const homeLabel = (names: string[]) =>
     names.length === 1 ? names[0] : `${names[0]} +${names.length - 1}`;
 
-  onDestroy(() => {
-    unsubKingdoms();
-    unsubRel();
-    unsubCultures();
-    unsubTurn();
-    unsubState();
-  });
-
-  $: selected = known.find((k) => k.id === selectedId) ?? null;
-  $: dispositionTo = (id: string) =>
-    relations.find(
+  const dispositionTo = (id: string) =>
+    $kingdomRelations.find(
       (r) =>
         (r.a === COLONY_RELATION_ID && r.b === id) || (r.b === COLONY_RELATION_ID && r.a === id)
     )?.disposition ?? 'neutral';
 </script>
 
-<div class="kingdom-screen">
-  <div class="screen-hdr">| KNOWN KINGDOMS ({known.length})</div>
-
-  {#if known.length === 0}
-    <div class="empty">
-      no kingdoms known yet — the world will come to you: watch for visitors and caravans
-    </div>
-  {:else}
-    <div class="body">
-      <nav class="kingdom-list">
-        {#each known as kingdom}
-          <button
-            class="kingdom-item"
-            class:selected={kingdom.id === selectedId}
-            on:click={() => (selectedId = kingdom.id)}
+{#if known.length === 0}
+  <p class="empty">
+    no kingdoms known yet — the world will come to you: watch for visitors and caravans
+  </p>
+{:else}
+  <ListDetail>
+    {#snippet list()}
+      {#each known as kingdom (kingdom.id)}
+        {@const home = homelandBy[kingdom.id]}
+        {@const disp = dispositionTo(kingdom.id)}
+        {@const on = kingdom.id === selected?.id}
+        <ListChip {on} onclick={() => (chosen = kingdom.id)}>
+          <b>{kingdom.name}</b>
+          {#if home}<em title="home of {home.join(', ')}">⌂ {homeLabel(home)}</em>{/if}
+          <span
+            ><i style:color={on ? null : DISPOSITION_TONE[disp]}>{disp}</i> · {knowledgeTierLabel(
+              kingdom.knowledge
+            )}</span
           >
-            <span class="ki-name">{kingdom.name}</span>
-            {#if homelandBy.has(kingdom.id)}
-              <span class="ki-home" title="home of {homelandBy.get(kingdom.id)!.join(', ')}"
-                >⌂ {homeLabel(homelandBy.get(kingdom.id)!)}</span
-              >
-            {/if}
-            <span class="ki-disp">{dispositionTo(kingdom.id)}</span>
-            <span class="ki-tier">{knowledgeTierLabel(kingdom.knowledge)}</span>
-          </button>
-        {/each}
-      </nav>
-
-      <div class="kingdom-detail-pane">
-        {#if selected}
-          <KingdomDetail kingdom={selected} knownKingdoms={known} {relations} {cultures} {turn} />
-        {/if}
-      </div>
-    </div>
-  {/if}
-</div>
+        </ListChip>
+      {/each}
+    {/snippet}
+    {#snippet detail()}
+      {#if selected}
+        <KingdomDetail
+          kingdom={selected}
+          knownKingdoms={known}
+          relations={$kingdomRelations}
+          cultures={$culturePool}
+          turn={$currentTurn}
+        />
+      {/if}
+    {/snippet}
+  </ListDetail>
+{/if}
 
 <style>
-  .kingdom-screen {
-    height: 100%;
-    overflow: hidden;
-    background: var(--bg);
-    color: var(--text);
-    font-family: var(--font-mono);
-    font-size: 12px;
-    display: flex;
-    flex-direction: column;
-  }
-  .screen-hdr {
-    padding: 5px 10px;
-    background: var(--bg-panel);
-    color: var(--accent-hi);
-    letter-spacing: 0.08em;
-    border-bottom: 1px solid var(--border-hi);
-    flex-shrink: 0;
-  }
-  .body {
-    display: flex;
-    flex: 1;
-    min-height: 0;
-  }
-  .kingdom-list {
-    width: 180px;
-    flex-shrink: 0;
-    overflow-y: auto;
-    border-right: 1px solid var(--border-hi);
-    background: var(--bg-panel);
-  }
-  .kingdom-item {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 1px;
-    width: 100%;
-    padding: 5px 10px;
-    background: transparent;
-    border: none;
-    border-bottom: 1px solid var(--border);
-    color: var(--text-dim);
-    cursor: pointer;
-    font-family: var(--font-mono);
-    text-align: left;
-  }
-  .kingdom-item:hover {
-    background: var(--bg-hover);
-    color: var(--accent-hi);
-  }
-  .kingdom-item.selected {
-    background: var(--bg-active);
-    color: var(--accent-hi);
-    border-left: 2px solid var(--accent-hi);
-    padding-left: 8px;
-  }
-  .ki-name {
-    font-size: 12px;
-    letter-spacing: 0.04em;
-  }
-  .ki-home {
-    font-size: 10px;
-    color: var(--pos);
-    letter-spacing: 0.04em;
-  }
-  .ki-disp,
-  .ki-tier {
-    font-size: 10px;
-    color: var(--text-muted);
-  }
-  .kingdom-item.selected .ki-disp,
-  .kingdom-item.selected .ki-tier {
-    color: var(--accent-hi);
-    opacity: 0.7;
-  }
-  .kingdom-detail-pane {
-    flex: 1;
-    overflow-y: auto;
-    min-width: 0;
-  }
   .empty {
-    padding: 20px;
+    margin: 0;
+    padding: 12px 4px;
     color: var(--text-muted);
-    font-style: italic;
+    font: 16px/18px var(--font-pixel);
+  }
+  i {
+    font-style: normal;
   }
 </style>

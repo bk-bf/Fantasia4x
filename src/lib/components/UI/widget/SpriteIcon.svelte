@@ -3,6 +3,8 @@
   import type { PaintedKind } from '$lib/webgl/painted/manifest';
   import { fitInto } from '$lib/pixelArt/shrink';
   import { itemService } from '$lib/game/services/ItemService';
+  import { blank, pen } from '$lib/pixelArt/canvas';
+  import { toArt, type Art } from '$lib/pixelArt/picture';
 
   const _sheetCache = new Map<string, HTMLCanvasElement | null>();
   const _sheetWaiters = new Map<string, Set<() => void>>();
@@ -41,15 +43,58 @@
     return null;
   }
 
-  const _painted: Record<string, Promise<HTMLCanvasElement | null>> = {};
-  const _cells: Record<string, string> = {};
-  function paintedArt(kind: PaintedKind, id: string): Promise<HTMLCanvasElement | null> {
-    const key = `${kind}/${id}`;
-    return (_painted[key] ??= paintedSpriteCanvas(kind, id).catch(() => null));
+  const _painted = new Map<string, Promise<Art | null>>();
+  function paintedArt(kind: PaintedKind, id: string, px: number): Promise<Art | null> {
+    const key = `${kind}/${id}@${px}`;
+    let hit = _painted.get(key);
+    if (!hit)
+      _painted.set(
+        key,
+        (hit = paintedSpriteCanvas(kind, id)
+          .then((c) => (c ? toArt(fitInto(c, px)) : null))
+          .catch(() => null))
+      );
+    return hit;
+  }
+
+  const CELL_W = 12;
+  const CELL_H = 18;
+  const COLS = 16;
+  const _cells: Record<string, Art> = {};
+  function sheetCell(sheet: HTMLCanvasElement, name: string, id: number, tone: string | null): Art {
+    const key = `${name}/${id}/${tone ?? ''}`;
+    const hit = _cells[key];
+    if (hit) return hit;
+    const c = blank(CELL_W, CELL_H);
+    const ctx = pen(c);
+    if (ctx) {
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(
+        sheet,
+        (id % COLS) * CELL_W,
+        Math.floor(id / COLS) * CELL_H,
+        CELL_W,
+        CELL_H,
+        0,
+        0,
+        CELL_W,
+        CELL_H
+      );
+      if (tone) {
+        ctx.globalCompositeOperation = 'source-atop';
+        ctx.fillStyle = tone;
+        ctx.fillRect(0, 0, CELL_W, CELL_H);
+      }
+    }
+    const art = toArt(c);
+    _cells[key] = art;
+    return art;
   }
 </script>
 
 <script lang="ts">
+  import type { Snippet } from 'svelte';
+
   type CharSpan = { sheet?: string; id?: number; from?: number; to?: number; literal?: string };
 
   let {
@@ -57,106 +102,85 @@
     tint = null,
     px = 16,
     item = null,
-    building = null
+    building = null,
+    creature = null,
+    resource = null,
+    fallback
   }: {
     charSpans?: CharSpan[];
     tint?: string | null;
     px?: number;
     item?: string | null;
     building?: string | null;
+    creature?: string | null;
+    resource?: string | null;
+    fallback?: Snippet;
   } = $props();
 
   const itemDef = $derived(item ? itemService.getItemById(item) : undefined);
   const spans = $derived(charSpans ?? itemDef?.charSpans);
   const tone = $derived(tint ?? itemDef?.color ?? null);
   const painted = $derived<[PaintedKind, string] | null>(
-    item ? ['item', item] : building ? ['building', building] : null
+    item
+      ? ['item', item]
+      : building
+        ? ['building', building]
+        : creature
+          ? ['creature', creature]
+          : resource
+            ? ['resource', resource]
+            : null
   );
 
-  let art = $state<HTMLCanvasElement | null>(null);
+  let art = $state<Art | null>(null);
 
   $effect(() => {
     art = null;
     if (!painted) return;
     let live = true;
-    paintedArt(painted[0], painted[1]).then((c) => live && (art = c));
+    paintedArt(painted[0], painted[1], px).then((a) => live && (art = a));
     return () => (live = false);
   });
-
-  const paintedUrl = $derived(art ? fitInto(art, px).toDataURL() : null);
-
-  const CELL_W = 12;
-  const CELL_H = 18;
-  const COLS = 16;
 
   const span = $derived((spans ?? []).find((s) => s.sheet && (s.id != null || s.from != null)));
   const literal = $derived((spans ?? []).find((s) => s.literal)?.literal ?? null);
 
-  let cellUrl = $state<string | null>(null);
-
-  function draw() {
-    if (!span?.sheet) return;
-    const sheet = getSheet(span.sheet, draw);
-    if (!sheet) return;
-    const id = span.id ?? span.from ?? 0;
-    const key = `${span.sheet}|${id}|${tone ?? ''}`;
-    if (_cells[key]) {
-      cellUrl = _cells[key];
-      return;
-    }
-    const node = document.createElement('canvas');
-    node.width = CELL_W;
-    node.height = CELL_H;
-    const ctx = node.getContext('2d', { willReadFrequently: true });
-    if (!ctx) return;
-    ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(
-      sheet,
-      (id % COLS) * CELL_W,
-      Math.floor(id / COLS) * CELL_H,
-      CELL_W,
-      CELL_H,
-      0,
-      0,
-      CELL_W,
-      CELL_H
-    );
-    if (tone) {
-      ctx.globalCompositeOperation = 'source-atop';
-      ctx.fillStyle = tone;
-      ctx.fillRect(0, 0, CELL_W, CELL_H);
-    }
-    cellUrl = _cells[key] = node.toDataURL();
-  }
-
-  $effect(() => {
-    void span;
-    void tone;
-    cellUrl = null;
-    draw();
+  let sheetReady = $state(0);
+  const cell = $derived.by(() => {
+    void sheetReady;
+    if (!span?.sheet) return null;
+    const sheet = getSheet(span.sheet, () => sheetReady++);
+    return sheet ? sheetCell(sheet, span.sheet, span.id ?? span.from ?? 0, tone) : null;
   });
 </script>
 
-{#if paintedUrl}
-  <img src={paintedUrl} alt="" class="painted-icon" style="width:{px}px;height:{px}px" />
-{:else if span?.sheet && cellUrl}
-  <img src={cellUrl} alt="" class="sprite-icon" style="height:{px}px" />
+{#if art}
+  <img
+    class="painted-icon"
+    src={art.url}
+    alt=""
+    draggable="false"
+    style:width="{px}px"
+    style:height="{px}px"
+  />
+{:else if cell}
+  <img class="sprite-icon" src={cell.url} alt="" draggable="false" style:height="{px}px" />
 {:else if literal}
   <span class="sprite-literal" style="font-size:{px}px; color:{tone ?? 'inherit'}">{literal}</span>
+{:else}
+  {@render fallback?.()}
 {/if}
 
 <style>
+  .sprite-icon,
+  .painted-icon {
+    flex-shrink: 0;
+    display: block;
+    image-rendering: pixelated;
+  }
   .sprite-icon {
     width: auto;
     aspect-ratio: 12 / 18;
-    image-rendering: pixelated;
-    flex-shrink: 0;
-    display: block;
-  }
-  .painted-icon {
-    image-rendering: pixelated;
-    flex-shrink: 0;
-    display: block;
   }
   .sprite-literal {
     flex-shrink: 0;

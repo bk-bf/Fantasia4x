@@ -1,8 +1,13 @@
 <script lang="ts">
+  import { DISPOSITION_TONE } from '$lib/components/util/dispositionTone';
   import type { Culture, Kingdom, KingdomRelation } from '$lib/game/core/types';
   import { COLONY_RELATION_ID } from '$lib/game/core/types';
   import { knowledgeTier, WEALTH_BAND_LABEL } from '$lib/game/core/gen/kingdom';
   import { kingdomService } from '$lib/game/services/KingdomService';
+  import PanelTitle from '$lib/components/UI/widget/PanelTitle.svelte';
+  import Well from '$lib/components/UI/widget/Well.svelte';
+  import KvRow from '$lib/components/UI/widget/KvRow.svelte';
+  import MeterRow from '$lib/components/UI/widget/MeterRow.svelte';
 
   let {
     kingdom,
@@ -17,14 +22,6 @@
     cultures: Culture[];
     turn: number;
   } = $props();
-
-  const DISPOSITION_COLOR: Record<KingdomRelation['disposition'], string> = {
-    allied: 'var(--pos)',
-    friendly: 'var(--accent-hi)',
-    neutral: 'var(--text-dim)',
-    wary: 'var(--text-muted)',
-    hostile: 'var(--neg)'
-  };
 
   const tier = $derived(knowledgeTier(kingdom.knowledge));
   const stale = $derived(kingdomService.isKnowledgeStale(kingdom, turn));
@@ -70,224 +67,120 @@
   );
 </script>
 
-<div class="detail">
-  <div class="hdr-row">
-    <h2 class="k-name">{kingdom.name}</h2>
-    {#if colonyRel}
-      <span class="disp" style="color: {DISPOSITION_COLOR[colonyRel.disposition]}">
-        {colonyRel.disposition}
-      </span>
-    {/if}
-  </div>
-  <p class="epithet">{kingdom.lore.epithet}</p>
-  <p class="temperament">{kingdom.lore.temperament}</p>
-  <p class="known-via">
-    {#if kingdom.knownVia}remembered by {kingdom.knownVia}{#if stale}, out of date{/if}{:else}known
-      through contact{/if}
-  </p>
+<PanelTitle
+  >{kingdom.name}{#if colonyRel}<em style:color={DISPOSITION_TONE[colonyRel.disposition]}
+      >{colonyRel.disposition}</em
+    >{/if}</PanelTitle
+>
+<p class="lore">
+  {kingdom.lore.epithet}; {kingdom.lore.temperament}.
+  <i
+    >{#if kingdom.knownVia}remembered by {kingdom.knownVia}{#if stale}, out of date{/if}{:else}known
+      through contact{/if}.</i
+  >
+</p>
 
-  <div class="section">
-    <div class="sec-hdr">| PEOPLES</div>
-    {#each kingdom.cultureMix as share}
-      <div class="mix-row">
-        <span class="mix-name">{cultureName(share.cultureId)}</span>
-        <span class="mix-bar"
-          >{'█'.repeat(Math.max(1, Math.round(share.weight * 10)))}{'░'.repeat(
-            10 - Math.max(1, Math.round(share.weight * 10))
-          )}</span
-        >
-      </div>
+<div class="g2">
+  <Well title="Peoples">
+    {#each kingdom.cultureMix as share (share.cultureId)}
+      <MeterRow wide label={cultureName(share.cultureId)} value={share.weight}>
+        {Math.round(share.weight * 100)}%
+      </MeterRow>
     {/each}
-  </div>
+  </Well>
 
-  <div class="section">
-    <div class="sec-hdr">| COURT & COFFERS</div>
+  <Well title="Court & coffers">
     {#if tier >= 1 && known}
-      <div class="kv" class:stale>
-        <span class="k">Ruler</span>
-        <span class="v">{known.leaderName}</span>
-      </div>
-      <div class="kv" class:stale>
-        <span class="k">Wealth</span>
-        <span class="v">{WEALTH_BAND_LABEL[known.wealthBand]}</span>
-      </div>
-      {#if stale}<div class="stale-note">as last you knew, word may be out of date</div>{/if}
+      <KvRow label="Ruler" muted={stale}>{known.leaderName}</KvRow>
+      <KvRow label="Wealth" muted={stale}>{WEALTH_BAND_LABEL[known.wealthBand]}</KvRow>
+      {#if stale}<p class="it">as last you knew, word may be out of date</p>{/if}
     {:else}
-      <div class="teaser">Who rules, and how deep the coffers run, unknown.</div>
+      <p class="it">Who rules, and how deep the coffers run, unknown.</p>
     {/if}
-  </div>
+  </Well>
 
-  <div class="section">
-    <div class="sec-hdr">| LANDS</div>
+  <Well title="Lands">
     {#if tier >= 2}
-      <div class="kv">
-        <span class="k">Seat</span><span class="v">{kingdom.lore.capitalName}</span>
-      </div>
-      <div class="kv">
-        <span class="k">Holdings</span>
-        <span class="v">{settlementsLabel}</span>
-      </div>
+      <KvRow label="Seat">{kingdom.lore.capitalName}</KvRow>
+      <KvRow label="Holdings">{settlementsLabel}</KvRow>
     {:else}
-      <div class="teaser">Their seat and holdings, unknown.</div>
+      <p class="it">Their seat and holdings, unknown.</p>
     {/if}
-  </div>
+  </Well>
 
-  <div class="section">
-    <div class="sec-hdr">| CHRONICLE</div>
+  {#if otherRels.length > 0}
+    <Well title="Standing">
+      {#each otherRels as { other, rel } (other!.id)}
+        <KvRow label={other!.name}>
+          <span style:color={DISPOSITION_TONE[rel.disposition]}>{rel.disposition}</span>
+        </KvRow>
+      {/each}
+    </Well>
+  {/if}
+
+  <Well title="Chronicle">
     {#if tier >= 3}
       {#if kingdom.lore.history.length === 0 && kingdom.lore.figures.length === 0}
-        <p class="lore-line muted">A quiet place, with little of note remembered.</p>
+        <p class="it">A quiet place, with little of note remembered.</p>
       {:else}
-        {#each kingdom.lore.history as line}
-          <p class="lore-line">{line}</p>
+        {#each kingdom.lore.history as line, i (i)}
+          <p class="line">{line}</p>
         {/each}
         {#if kingdom.lore.figures.length > 0}
-          <div class="sub-hdr">Notable figures</div>
-          {#each kingdom.lore.figures as fig}
-            <p class="lore-line">{fig}</p>
+          <h5>Notable figures</h5>
+          {#each kingdom.lore.figures as fig, i (i)}
+            <p class="line">{fig}</p>
           {/each}
         {/if}
       {/if}
     {:else}
-      <div class="teaser">Their past, and the names that shaped it, unknown.</div>
+      <p class="it">Their past, and the names that shaped it, unknown.</p>
     {/if}
-  </div>
+  </Well>
 
-  <div class="section">
-    <div class="sec-hdr">| FAMED WORKS</div>
+  <Well title="Famed works">
     {#if tier >= 4 && known}
       {#if known.famedItems.created.length === 0 && known.famedItems.held.length === 0}
-        <p class="lore-line muted">Nothing famed to its name.</p>
+        <p class="it">Nothing famed to its name.</p>
       {:else}
         <div class:stale>
           {#if known.famedItems.created.length > 0}
-            <div class="sub-hdr">Forged by their hands</div>
-            {#each known.famedItems.created as item}
-              <p class="lore-line">{item}</p>
+            <h5>Forged by their hands</h5>
+            {#each known.famedItems.created as item, i (i)}
+              <p class="line">{item}</p>
             {/each}
           {/if}
           {#if known.famedItems.held.length > 0}
-            <div class="sub-hdr">Held in their vaults</div>
-            {#each known.famedItems.held as item}
-              <p class="lore-line">{item}</p>
+            <h5>Held in their vaults</h5>
+            {#each known.famedItems.held as item, i (i)}
+              <p class="line">{item}</p>
             {/each}
           {/if}
         </div>
-        {#if stale}<div class="stale-note">as last you knew, treasures change hands</div>{/if}
+        {#if stale}<p class="it">as last you knew, treasures change hands</p>{/if}
       {/if}
     {:else}
-      <div class="teaser">What treasures they forge and hoard, unknown.</div>
+      <p class="it">What treasures they forge and hoard, unknown.</p>
     {/if}
-  </div>
-
-  {#if otherRels.length > 0}
-    <div class="section">
-      <div class="sec-hdr">| STANDING AMONG KINGDOMS</div>
-      {#each otherRels as { other, rel }}
-        <div class="kv">
-          <span class="k">{other!.name}</span>
-          <span class="v" style="color: {DISPOSITION_COLOR[rel.disposition]}"
-            >{rel.disposition}</span
-          >
-        </div>
-      {/each}
-    </div>
-  {/if}
+  </Well>
 </div>
 
 <style>
-  .detail {
-    padding: 10px 14px 20px;
+  .lore i {
+    font-style: normal;
+    color: var(--text-muted);
   }
-  .hdr-row {
-    display: flex;
-    align-items: baseline;
-    gap: 10px;
-  }
-  .k-name {
-    color: var(--accent-hi);
-    font-size: 15px;
-    letter-spacing: 0.06em;
+  p {
     margin: 0;
   }
-  .disp {
-    font-size: 11px;
-    letter-spacing: 0.08em;
-  }
-  .epithet {
+  .line {
     color: var(--text-dim);
-    font-style: italic;
-    font-size: 12px;
-    margin: 4px 0 0;
+    margin-bottom: 3px;
   }
-  .temperament {
+  .it {
     color: var(--text-muted);
-    font-size: 11px;
-    margin: 2px 0 0;
   }
-  .known-via {
+  .stale .line {
     color: var(--text-muted);
-    font-size: 10px;
-    letter-spacing: 0.03em;
-    margin: 5px 0 0;
-  }
-  .section {
-    margin-top: 12px;
-  }
-  .sec-hdr {
-    color: var(--accent);
-    letter-spacing: 0.08em;
-    font-size: 11px;
-    border-bottom: 1px solid var(--border);
-    padding-bottom: 2px;
-    margin-bottom: 5px;
-  }
-  .sub-hdr {
-    color: var(--text-muted);
-    font-size: 10px;
-    letter-spacing: 0.06em;
-    margin: 5px 0 2px;
-  }
-  .mix-row,
-  .kv {
-    display: flex;
-    justify-content: space-between;
-    gap: 10px;
-    padding: 1px 0;
-  }
-  .mix-name,
-  .k {
-    color: var(--text-dim);
-  }
-  .mix-bar,
-  .v {
-    color: var(--text);
-  }
-  .lore-line {
-    color: var(--text-dim);
-    font-size: 11px;
-    line-height: 1.5;
-    margin: 0 0 4px;
-  }
-  .lore-line.muted {
-    color: var(--text-muted);
-    font-style: italic;
-  }
-  .teaser {
-    color: var(--text-muted);
-    font-style: italic;
-    font-size: 11px;
-  }
-  .stale,
-  .stale .v,
-  .stale .k {
-    color: var(--text-muted);
-    opacity: 0.75;
-  }
-  .stale-note {
-    color: var(--text-muted);
-    font-size: 10px;
-    font-style: italic;
-    margin-top: 3px;
   }
 </style>
