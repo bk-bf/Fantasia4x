@@ -139,11 +139,7 @@
             onclick={() => onTogglePin?.(it.itemId)}>{isPinned(it.itemId) ? '★' : '☆'}</button
           >
         {/if}
-        {#if def.charSpans}
-          <div class="icon-wrap">
-            <SpriteIcon charSpans={def.charSpans} tint={qColor ?? def.color ?? null} px={34} />
-          </div>
-        {/if}
+        <div class="icon-wrap"><SpriteIcon item={it.itemId} tint={qColor} px={34} /></div>
         {@const prefix = qualityPrefix(it.quality)}
         <span class="it-name" title={prefix ? `${prefix} ${def.name}` : def.name}
           >{#if prefix && qColor}<span class="rarity" style="color:{qColor}">{prefix}</span
