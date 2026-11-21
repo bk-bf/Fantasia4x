@@ -4,6 +4,7 @@ import {
   positionHash,
   spriteAt,
   type PaintedKind,
+  type PaintedPieces,
   type PaintedSprite,
   type PaintedTileset,
   type PaintedVariant
@@ -55,4 +56,30 @@ export function paintedEntity(
   const ofKind = active?.lookup.get(kind);
   const variants = (id === undefined ? undefined : ofKind?.get(id)) ?? ofKind?.get(ANY_ID);
   return variants ? pickVariant(variants, idHash(entityId)).entity : NO_PAINT;
+}
+
+export function paintedPieces(set: string): PaintedPieces | undefined {
+  return active?.pieces.get(set);
+}
+
+export function pieceLayout(
+  pieces: PaintedPieces,
+  isMass: (x: number, y: number) => boolean,
+  x: number,
+  y: number
+): number {
+  let layout = 0;
+  pieces.neighbours.forEach(([dx, dy], bit) => {
+    if (isMass(x + dx, y + dy)) layout |= 1 << bit;
+  });
+  return layout;
+}
+
+export function paintedPiece(
+  pieces: PaintedPieces,
+  isMass: (x: number, y: number) => boolean,
+  x: number,
+  y: number
+): PaintedSprite {
+  return spriteAt(pieces.layouts[pieceLayout(pieces, isMass, x, y)], x, y);
 }

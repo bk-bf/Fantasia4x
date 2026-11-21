@@ -479,6 +479,16 @@ export class WebGLRendererCore {
       1 / painted.tileset.atlasW,
       1 / painted.tileset.atlasH
     ]);
+    if (!painted.top) return;
+    gl.activeTexture(gl.TEXTURE2);
+    gl.bindTexture(gl.TEXTURE_2D, painted.top.texture);
+    gl.activeTexture(gl.TEXTURE0);
+    this.shaderManager.setUniform('tileRenderer', 'u_rockTexture', 2);
+    this.shaderManager.setUniform('tileRenderer', 'u_rockRamp', [
+      painted.top.ramp.x,
+      painted.top.ramp.y
+    ]);
+    this.shaderManager.setUniform('tileRenderer', 'u_rockLift', painted.top.lift);
   }
 
   private drawSnowGrid(
@@ -579,6 +589,7 @@ export class WebGLRendererCore {
     this.groundBlend?.dispose();
     this.groundBlend = null;
     if (this.painted) this.webglState.getContext()?.deleteTexture(this.painted.texture);
+    if (this.painted?.top) this.webglState.getContext()?.deleteTexture(this.painted.top.texture);
     this.painted = null;
     this.webglState.dispose();
     this.gridRenderer = null;

@@ -17,6 +17,22 @@ export interface ManifestSprite {
   ox: number;
   oy: number;
   patch?: number;
+  cw?: number;
+  ch?: number;
+}
+
+export interface ManifestPieceTop {
+  image: string;
+  size: number;
+  lift: number;
+  ramp: string;
+}
+
+export interface ManifestPieces {
+  resources: string[];
+  neighbours: [number, number][];
+  layouts: string[];
+  top?: ManifestPieceTop;
 }
 
 export interface PaintedManifest {
@@ -24,6 +40,7 @@ export interface PaintedManifest {
   atlas: { w: number; h: number };
   sprites: Record<string, ManifestSprite>;
   map: Partial<Record<PaintedKind, Record<string, string[]>>>;
+  pieces?: Record<string, ManifestPieces>;
 }
 
 export interface PaintedSprite {
@@ -43,11 +60,26 @@ export interface PaintedVariant {
   entity: { painted: PaintedSprite; scale: undefined };
 }
 
+export interface PaintedPieceTop {
+  image: string;
+  size: number;
+  lift: number;
+  ramp: { x: number; y: number; length: number };
+}
+
+export interface PaintedPieces {
+  members: ReadonlySet<string>;
+  neighbours: readonly (readonly [number, number])[];
+  layouts: PaintedVariant[];
+  top?: PaintedPieceTop;
+}
+
 export interface PaintedTileset {
   tile: number;
   atlasW: number;
   atlasH: number;
   lookup: Map<PaintedKind, Map<string, PaintedVariant[]>>;
+  pieces: Map<string, PaintedPieces>;
 }
 
 const isObject = (v: unknown): v is Record<string, unknown> =>
@@ -57,7 +89,7 @@ const isInt = (v: unknown): v is number => typeof v === 'number' && Number.isInt
 
 function readSprite(id: string, raw: unknown, m: { tile: number; w: number; h: number }) {
   if (!isObject(raw)) throw new Error(`sprite ${id} is not an object`);
-  const { x, y, w, h, ox, oy, patch } = raw;
+  const { x, y, w, h, ox, oy, patch, cw, ch } = raw;
   if (![x, y, w, h, ox, oy].every(isInt)) throw new Error(`sprite ${id} has a non-integer field`);
   const s = { x, y, w, h, ox, oy } as ManifestSprite;
   if (s.w <= 0 || s.h <= 0) throw new Error(`sprite ${id} is empty`);
@@ -65,16 +97,49 @@ function readSprite(id: string, raw: unknown, m: { tile: number; w: number; h: n
     throw new Error(`sprite ${id} lies outside the atlas`);
   if (patch !== undefined) {
     if (!isInt(patch) || patch < 1) throw new Error(`sprite ${id} has a bad patch`);
-    if (s.w !== patch * m.tile || s.h !== patch * m.tile)
-      throw new Error(`sprite ${id} is not ${patch} by ${patch} tiles`);
+    const cell = { w: cw ?? m.tile, h: ch ?? m.tile };
+    if (!isInt(cell.w) || !isInt(cell.h) || cell.w < m.tile || cell.h < m.tile)
+      throw new Error(`sprite ${id} has a bad cell size`);
+    if (s.w !== patch * cell.w || s.h !== patch * cell.h)
+      throw new Error(`sprite ${id} is not ${patch} by ${patch} cells`);
     s.patch = patch;
+    if (cw !== undefined || ch !== undefined) Object.assign(s, { cw: cell.w, ch: cell.h });
   }
   return s;
 }
 
+const isStrings = (v: unknown): v is string[] =>
+  Array.isArray(v) && v.every((e) => typeof e === 'string');
+
+function readPieces(set: string, raw: unknown): ManifestPieces {
+  if (!isObject(raw)) throw new Error(`pieces.${set} is not an object`);
+  const { resources, neighbours, layouts, top } = raw;
+  if (!isStrings(resources)) throw new Error(`pieces.${set}.resources is not a list of ids`);
+  if (
+    !Array.isArray(neighbours) ||
+    !neighbours.every((n) => Array.isArray(n) && n.length === 2 && n.every(isInt))
+  )
+    throw new Error(`pieces.${set}.neighbours is not a list of offsets`);
+  if (!isStrings(layouts) || layouts.length !== 1 << neighbours.length)
+    throw new Error(`pieces.${set}.layouts does not name a sprite for every layout`);
+  const out: ManifestPieces = { resources, neighbours: neighbours as [number, number][], layouts };
+  if (top !== undefined) out.top = readTop(set, top);
+  return out;
+}
+
+function readTop(set: string, raw: unknown): ManifestPieceTop {
+  if (!isObject(raw)) throw new Error(`pieces.${set}.top is not an object`);
+  const { image, size, lift, ramp } = raw;
+  if (typeof image !== 'string' || typeof ramp !== 'string')
+    throw new Error(`pieces.${set}.top does not name its image and ramp`);
+  if (!isInt(size) || size <= 0 || !isInt(lift) || lift < 0)
+    throw new Error(`pieces.${set}.top has a bad size or lift`);
+  return { image, size, lift, ramp };
+}
+
 export function parseManifest(raw: unknown): PaintedManifest {
   if (!isObject(raw)) throw new Error('manifest is not an object');
-  const { tile, atlas, sprites, map } = raw;
+  const { tile, atlas, sprites, map, pieces } = raw;
   if (!isInt(tile) || tile <= 0) throw new Error('manifest tile is not a positive integer');
   if (!isObject(atlas) || !isInt(atlas.w) || !isInt(atlas.h) || atlas.w <= 0 || atlas.h <= 0)
     throw new Error('manifest atlas size is missing');
@@ -94,6 +159,11 @@ export function parseManifest(raw: unknown): PaintedManifest {
       kindMap[id] = ids;
     }
     out.map[kind] = kindMap;
+  }
+  if (pieces !== undefined) {
+    if (!isObject(pieces)) throw new Error('manifest pieces is not an object');
+    out.pieces = {};
+    for (const [set, p] of Object.entries(pieces)) out.pieces[set] = readPieces(set, p);
   }
   return out;
 }
@@ -123,10 +193,10 @@ export function resolveVariant(m: PaintedManifest, s: ManifestSprite): PaintedVa
   const cells: PaintedSprite[] = [];
   if (s.patch === undefined) cells.push(cellOf(s, s.x, s.y, s, m));
   else {
-    const cell = { w: m.tile, h: m.tile };
+    const cell = { w: s.cw ?? m.tile, h: s.ch ?? m.tile };
     for (let cy = 0; cy < n; cy++)
       for (let cx = 0; cx < n; cx++)
-        cells.push(cellOf(s, s.x + cx * m.tile, s.y + cy * m.tile, cell, m));
+        cells.push(cellOf(s, s.x + cx * cell.w, s.y + cy * cell.h, cell, m));
   }
   return { patch: n, cells, entity: { painted: cells[0], scale: undefined } };
 }
@@ -134,29 +204,56 @@ export function resolveVariant(m: PaintedManifest, s: ManifestSprite): PaintedVa
 export function buildTileset(m: PaintedManifest): { tileset: PaintedTileset; problems: string[] } {
   const problems: string[] = [];
   const resolved = new Map<string, PaintedVariant>();
+  const variantOf = (sid: string): PaintedVariant | undefined => {
+    const s = m.sprites[sid];
+    if (!s) return undefined;
+    let v = resolved.get(sid);
+    if (!v) {
+      v = resolveVariant(m, s);
+      resolved.set(sid, v);
+    }
+    return v;
+  };
   const lookup = new Map<PaintedKind, Map<string, PaintedVariant[]>>();
   for (const kind of PAINTED_KINDS) {
     const kindMap = new Map<string, PaintedVariant[]>();
     for (const [id, spriteIds] of Object.entries(m.map[kind] ?? {})) {
       const variants: PaintedVariant[] = [];
       for (const sid of spriteIds) {
-        const s = m.sprites[sid];
-        if (!s) {
-          problems.push(`map.${kind}.${id} names unknown sprite ${sid}`);
-          continue;
-        }
-        let v = resolved.get(sid);
-        if (!v) {
-          v = resolveVariant(m, s);
-          resolved.set(sid, v);
-        }
-        variants.push(v);
+        const v = variantOf(sid);
+        if (v) variants.push(v);
+        else problems.push(`map.${kind}.${id} names unknown sprite ${sid}`);
       }
       if (variants.length > 0) kindMap.set(id, variants);
     }
     lookup.set(kind, kindMap);
   }
-  return { tileset: { tile: m.tile, atlasW: m.atlas.w, atlasH: m.atlas.h, lookup }, problems };
+  const pieces = new Map<string, PaintedPieces>();
+  for (const [set, p] of Object.entries(m.pieces ?? {})) {
+    const layouts = p.layouts.map(variantOf);
+    const missing = p.layouts.filter((_, i) => !layouts[i]);
+    if (missing.length > 0) {
+      problems.push(`pieces.${set} names unknown sprites ${[...new Set(missing)].join(', ')}`);
+      continue;
+    }
+    const ramp = p.top ? m.sprites[p.top.ramp] : undefined;
+    if (p.top && !ramp) {
+      problems.push(`pieces.${set}.top names unknown sprite ${p.top.ramp}`);
+      continue;
+    }
+    pieces.set(set, {
+      members: new Set(p.resources),
+      neighbours: p.neighbours,
+      layouts: layouts as PaintedVariant[],
+      ...(p.top && ramp
+        ? { top: { ...p.top, ramp: { x: ramp.x, y: ramp.y, length: ramp.w } } }
+        : null)
+    });
+  }
+  return {
+    tileset: { tile: m.tile, atlasW: m.atlas.w, atlasH: m.atlas.h, lookup, pieces },
+    problems
+  };
 }
 
 export function positionHash(x: number, y: number): number {

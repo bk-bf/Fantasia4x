@@ -8,10 +8,12 @@ import creatures from '$lib/game/database/pawns/creatures.json';
 import items from '$lib/game/database/items/items.json';
 import { buildTileset, parseManifest } from '$lib/webgl/painted/manifest';
 import { bake } from '../../../tools/tileset/bake.mjs';
+import { decodePng } from '../../../tools/tileset/png.mjs';
 
 const committed = (name: string) =>
   readFileSync(new URL(`../../../static/tilesets/painted/${name}`, import.meta.url));
 const png = committed('atlas.png');
+const decoded = () => ({ pixels: decodePng(png).rgba });
 const ids = (rows: { id: string }[]) => new Set(rows.map((r) => r.id));
 const database: Record<string, Set<string>> = {
   subterrain: ids(subterrains),
@@ -21,7 +23,17 @@ const database: Record<string, Set<string>> = {
   pawn: new Set(['*']),
   item: ids(items)
 };
-type Rect = { x: number; y: number; w: number; h: number; ox: number; oy: number; patch?: number };
+type Rect = {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  ox: number;
+  oy: number;
+  patch?: number;
+  cw?: number;
+  ch?: number;
+};
 const sprites: Record<string, Rect> = manifest.sprites;
 const map: Record<string, Record<string, string[]>> = manifest.map;
 
@@ -52,9 +64,34 @@ describe('painted atlas manifest', () => {
     }
   });
 
-  it('gives every patch sprite whole tiles', () => {
-    for (const [id, r] of Object.entries(sprites))
-      if (r.patch) expect([r.w, r.h, r.ox, r.oy], id).toEqual([r.patch * 32, r.patch * 32, 0, 0]);
+  it('gives every patch sprite whole tiles, or whole cells larger than a tile', () => {
+    for (const [id, r] of Object.entries(sprites)) {
+      if (!r.patch) continue;
+      if (r.cw === undefined)
+        expect([r.w, r.h, r.ox, r.oy], id).toEqual([r.patch * 32, r.patch * 32, 0, 0]);
+      else expect([r.w, r.h], id).toEqual([r.patch * r.cw, r.patch * r.ch!]);
+    }
+  });
+
+  it('keeps the rock top mark out of every sprite but the rock pieces', () => {
+    const { pixels } = decoded();
+    const mark = (i: number) => pixels[i] === 255 && pixels[i + 2] === 255 && pixels[i + 1] < 13;
+    for (const [id, r] of Object.entries(sprites)) {
+      if (id.startsWith('rock/mass/')) continue;
+      let marked = 0;
+      for (let y = r.y; y < r.y + r.h; y++)
+        for (let x = r.x; x < r.x + r.w; x++)
+          if (pixels[(y * manifest.atlas.w + x) * 4 + 3] && mark((y * manifest.atlas.w + x) * 4))
+            marked++;
+      expect(marked, id).toBe(0);
+    }
+  });
+
+  it('names a rock piece for every neighbour layout, for walls the database has', () => {
+    const rock = manifest.pieces.rock;
+    expect(rock.layouts).toHaveLength(256);
+    for (const id of rock.layouts) expect(sprites[id], id).toBeDefined();
+    for (const id of rock.resources) expect(database.resource.has(id), id).toBe(true);
   });
 
   it('leaves a gutter between sprites', () => {
@@ -85,9 +122,10 @@ describe('painted atlas manifest', () => {
     expect(tileset.atlasW).toBe(manifest.atlas.w);
   });
 
-  it('bakes the same bytes as the committed atlas and manifest', () => {
+  it('bakes the same bytes as the committed atlas, rock top and manifest', () => {
     const out = bake();
     expect(Buffer.compare(out.png, png)).toBe(0);
+    expect(Buffer.compare(out.top, committed(manifest.pieces.rock.top.image))).toBe(0);
     expect(JSON.stringify(out.manifest, null, 2) + '\n').toBe(
       committed('manifest.json').toString('utf8')
     );

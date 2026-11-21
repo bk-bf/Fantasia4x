@@ -1839,7 +1839,7 @@
       if (!t) continue;
       applyTileToGrid(_terrainGrid, t, hiddenMask);
       if (_resourceGrid && _resourceTallGrid)
-        applyResourceToGrid(_resourceGrid, _resourceTallGrid, t, hiddenMask, _renderSeason);
+        applyResourceToGrid(_resourceGrid, _resourceTallGrid, t, hiddenMask, _renderSeason, map);
       if (_snowGrid) applySnowToGrid(_snowGrid, t, hiddenMask);
       if (_updateEmitterAt(y, x, t)) emittersChanged = true;
     }
@@ -1947,7 +1947,14 @@
         const p = _foliagePending[i];
         const t = worldMap[p.y]?.[p.x];
         if (t) {
-          applyResourceToGrid(_resourceGrid, _resourceTallGrid, t, hiddenMask, _renderSeason);
+          applyResourceToGrid(
+            _resourceGrid,
+            _resourceTallGrid,
+            t,
+            hiddenMask,
+            _renderSeason,
+            worldMap
+          );
           due.push({ x: p.x, y: p.y });
         }
       }
@@ -1976,7 +1983,7 @@
       const p = P[_foliageIdx++];
       const t = map[p.y]?.[p.x];
       if (t) {
-        applyResourceToGrid(_resourceGrid, _resourceTallGrid, t, hiddenMask, _renderSeason);
+        applyResourceToGrid(_resourceGrid, _resourceTallGrid, t, hiddenMask, _renderSeason, map);
         due.push({ x: p.x, y: p.y });
         budget--;
       }

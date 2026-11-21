@@ -35,10 +35,10 @@ describe('painted manifest parsing', () => {
     expect(() => parseManifest(bad)).toThrow(/outside the atlas/);
   });
 
-  it('refuses a patch whose size is not n by n tiles', () => {
+  it('refuses a patch whose size is not n by n cells', () => {
     const bad = structuredClone(raw);
     bad.sprites.ground_grass.patch = 3;
-    expect(() => parseManifest(bad)).toThrow(/not 3 by 3 tiles/);
+    expect(() => parseManifest(bad)).toThrow(/not 3 by 3 cells/);
   });
 
   it('drops a map entry that names a missing sprite and reports it', () => {
