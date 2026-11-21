@@ -338,16 +338,18 @@ function sharpnessBleedMult(
   return typeof m === 'number' && m > 0 ? m : 1;
 }
 
+function isLiving(e: Pawn | Mob | undefined): boolean {
+  return !!e && e.isAlive !== false && !('state' in e && e.state === 'Corpse');
+}
+
 function creditKillDeeds(
-  attacker: Pawn | Mob,
+  deeds: Record<string, number>,
   victim: Mob,
   weaponId?: string,
   turn?: number
 ): void {
-  if ('creatureId' in attacker) return;
   const def = getCreatureById(victim.creatureId);
   if (!def) return;
-  const deeds = (attacker.deeds ??= {});
   const bump = (k: string) => (deeds[k] = (deeds[k] ?? 0) + 1);
   if (def.audio === 'canine') bump('kill:canine');
   if (def.limbMap === 'arachnid') bump('kill:arachnid');
@@ -1283,6 +1285,11 @@ class CombatServiceImpl implements CombatService {
     }
     if (!result.injury) return { state, staminaCost: result.staminaCost };
 
+    const wasAlive = isLiving(
+      isTargetMob
+        ? state.mobs?.find((m) => m.id === target.id)
+        : state.pawns.find((p) => p.id === target.id)
+    );
     let next = isTargetMob
       ? this.applyInjuryToMob(target.id, result.injury, state, result.knockdown)
       : this.applyInjury(target.id, result.injury, state, result.knockdown);
@@ -1360,10 +1367,9 @@ class CombatServiceImpl implements CombatService {
     const after = isTargetMob
       ? next.mobs?.find((m) => m.id === target.id)
       : next.pawns.find((p) => p.id === target.id);
-    const justDied =
-      !!after && (after.isAlive === false || ('state' in after && after.state === 'Corpse'));
+    const justDied = wasAlive && !!after && !isLiving(after);
 
-    if (isTargetMob && after && !justDied) {
+    if (isTargetMob && isLiving(after)) {
       const victim = after as Mob;
       const victimDef = getCreatureById(victim.creatureId);
       if (
@@ -1427,8 +1433,14 @@ class CombatServiceImpl implements CombatService {
       socialService.combatBark(attacker as Pawn, justDied ? 'kill' : 'hit', targetName, turn);
     if (!isTargetMob && !justDied && (target as Pawn).isAlive !== false)
       socialService.combatBark(target as Pawn, 'hurt', attackerName, turn);
-    if (justDied && isTargetMob && 'traits' in attacker)
-      creditKillDeeds(attacker, target as Mob, result.weaponId, turn);
+    if (justDied && isTargetMob && 'traits' in attacker) {
+      const live = next.pawns.find((p) => p.id === attacker.id);
+      if (live) {
+        const deeds = { ...live.deeds };
+        creditKillDeeds(deeds, target as Mob, result.weaponId, turn);
+        next = this.spliceEntity(next, live.id, { ...live, deeds }, false);
+      }
+    }
     if (justDied && isTargetMob && !('entityClass' in attacker)) {
       next = socialService.onFoughtTogether(next, attacker as Pawn, pos.x, pos.y);
     }
@@ -1563,9 +1575,11 @@ class CombatServiceImpl implements CombatService {
           ['humanoid', 'winged_humanoid'].includes(
             getCreatureById((updated as Mob).creatureId)?.limbMap ?? ''
           );
-        if (humanoidTarget) {
-          const deeds = ((attacker as Pawn).deeds ??= {});
+        const live = s.pawns.find((p) => p.id === attacker.id);
+        if (humanoidTarget && live) {
+          const deeds = { ...live.deeds };
           deeds.drewHumanoidBlood = (deeds.drewHumanoidBlood ?? 0) + 1;
+          s = this.spliceEntity(s, live.id, { ...live, deeds }, false);
         }
       }
       const feastDef = getTransientConditionDef(FEASTED_CONDITION);
@@ -2153,8 +2167,10 @@ class CombatServiceImpl implements CombatService {
     const pawnAmmoUpdates = new Map<string, { itemId: string; newQty: number }>();
     const recoveredAmmo: DroppedItem[] = [];
 
-    const mobs = state.mobs ?? [];
-    for (const mob of mobs) {
+    for (const mob0 of state.mobs ?? []) {
+      if (mob0.state !== 'Attacking' || mob0.isAlive === false) continue;
+      const mobs = next.mobs ?? [];
+      const mob = mobs.find((m) => m.id === mob0.id) ?? mob0;
       if (mob.state !== 'Attacking' || mob.isAlive === false) continue;
       if (this.isKnockedDown(mob)) continue;
       if (this.isWinded(mob)) continue;
@@ -2174,7 +2190,7 @@ class CombatServiceImpl implements CombatService {
       if (!target) {
         const mobDef = getCreatureById(mob.creatureId);
         const finisher = mobDef ? willFinishOffDowned(mob.needs?.hunger ?? 0, mobDef) : false;
-        target = state.pawns.find(
+        target = next.pawns.find(
           (p) =>
             p.isAlive !== false &&
             (finisher || p.currentState !== 'Collapsed') &&
@@ -2203,7 +2219,9 @@ class CombatServiceImpl implements CombatService {
       );
     }
 
-    for (const pawn of state.pawns) {
+    for (const pawn0 of state.pawns) {
+      const pawn = next.pawns.find((p) => p.id === pawn0.id) ?? pawn0;
+      const mobs = next.mobs ?? [];
       if (pawn.isAlive === false || !pawn.position) continue;
       if (this.isKnockedDown(pawn)) continue;
       if (this.isWinded(pawn)) continue;
@@ -2217,7 +2235,7 @@ class CombatServiceImpl implements CombatService {
         target =
           dt.targetType === 'mob'
             ? mobs.find((m) => m.id === dt.targetId && m.isAlive !== false)
-            : state.pawns.find((p) => p.id === dt.targetId && p.isAlive !== false);
+            : next.pawns.find((p) => p.id === dt.targetId && p.isAlive !== false);
         if (!target) {
           next = {
             ...next,
@@ -2235,7 +2253,7 @@ class CombatServiceImpl implements CombatService {
           mobs.find(
             (m) => m.id === pawn.huntTargetId && m.isAlive !== false && m.state !== 'Corpse'
           ) ??
-          state.pawns.find(
+          next.pawns.find(
             (p) => p.id === pawn.huntTargetId && p.id !== pawn.id && p.isAlive !== false
           );
         if (!target) continue;
