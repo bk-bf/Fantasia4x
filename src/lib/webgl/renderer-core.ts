@@ -3,7 +3,7 @@ import { ShaderManager, createTileRendererShaders } from './shaders.js';
 import { createSquareCellAtlas, loadBitlandsAtlas } from './font-atlas.js';
 import { TextureManager } from './texture-manager.js';
 import { CharacterRenderer } from './character-renderer.js';
-import { GridRenderer } from './grid-renderer.js';
+import { ALPHA_CUT, GridRenderer } from './grid-renderer.js';
 import { WebGLStateManager } from './webgl-state.js';
 import type { GameGrid } from './game-grid.js';
 import type { FontAtlas } from './types.js';
@@ -14,7 +14,6 @@ import { PAINTED_TILES } from './painted/flag.js';
 import { loadPaintedTileset, type LoadedPaintedTileset } from './painted/loader.js';
 
 export const ROW_DEPTH_RANGE = 8192;
-export const ALPHA_CUT = 0.5;
 
 interface Viewport {
   x: number;
@@ -363,6 +362,7 @@ export class WebGLRendererCore {
     if (this.rowDepth) {
       this.shaderManager.setUniform('tileRenderer', 'u_rowDepth', 1 / ROW_DEPTH_RANGE);
       this.shaderManager.setUniform('tileRenderer', 'u_alphaCut', ALPHA_CUT);
+      this.shaderManager.setUniform('tileRenderer', 'u_alphaCeil', 0);
     }
 
     const viewportTilesW = Math.ceil(this.viewport.width / this.tileWidth);
@@ -421,7 +421,7 @@ export class WebGLRendererCore {
         'resource'
       );
       if (this.snowGrid) {
-        this.drawSnowGrid(viewportTilesW, viewportTilesH, lightTime);
+        this.drawSnowGrid(viewportTilesW, viewportTilesH, lightTime, this.rowDepth);
       }
       this.renderGlyphOverlay(this.buildingOverlayGrid, viewportTilesW, viewportTilesH, lightTime);
       this.renderGlyphOverlay(this.itemOverlayGrid, viewportTilesW, viewportTilesH, lightTime);
@@ -455,7 +455,12 @@ export class WebGLRendererCore {
     ]);
   }
 
-  private drawSnowGrid(viewportTilesW: number, viewportTilesH: number, lightTime: number): void {
+  private drawSnowGrid(
+    viewportTilesW: number,
+    viewportTilesH: number,
+    lightTime: number,
+    rowPasses = false
+  ): void {
     if (!this.snowGrid || !this.gridRenderer) return;
     const s = this.gridRenderer.renderGrid(this.snowGrid, {
       tileWidth: BASE_TILE_PX,
@@ -470,7 +475,8 @@ export class WebGLRendererCore {
       lightVersion: this.lightVersion,
       litBounds: this.lightBounds,
       cacheVersion: this.snowVersion,
-      chunkLayer: 'snow'
+      chunkLayer: 'snow',
+      rowPasses
     });
     this.stats.drawCalls++;
     this.stats.vertexCount += s.tilesRendered * 6;
@@ -496,6 +502,7 @@ export class WebGLRendererCore {
       lightTime,
       litBounds: this.lightBounds,
       renderAllTiles: !viewportCulled,
+      rowPasses: this.rowDepth,
       ...(chunkLayer
         ? { chunkLayer, cacheVersion: this.gridVersion, lightVersion: this.lightVersion }
         : {})

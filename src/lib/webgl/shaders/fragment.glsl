@@ -30,6 +30,7 @@ uniform float u_glyphOnly;
 // drawn glyph-only in a later pass above the resources.
 uniform float u_bgOnly;
 uniform float u_alphaCut;
+uniform float u_alphaCeil;
 
 out vec4 fragColor;
 
@@ -90,7 +91,7 @@ void main() {
     // Glyph-only overlay pass: draw only the glyph, transparent elsewhere, so the
     // terrain rendered underneath shows through (no opaque background quad).
     if (u_glyphOnly > 0.5) {
-        if (sprite.a < u_alphaCut) discard;
+        if (sprite.a < u_alphaCut || (u_alphaCeil > 0.0 && sprite.a >= u_alphaCeil)) discard;
         fragColor = vec4(tinted * light, sprite.a);
         return;
     }

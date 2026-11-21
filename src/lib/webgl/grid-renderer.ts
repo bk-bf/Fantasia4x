@@ -13,6 +13,8 @@ const PAINTED_UV_SHIFT = 2;
 const paintedCorners = [0, 0, 0, 0];
 const GLYPH_VERTEX_FLOATS = 24;
 const ROW_VERTEX_FLOATS = 25;
+export const ALPHA_CUT = 0.5;
+export const SHADOW_FLOOR = 0.5 / 255;
 
 export interface GridRenderOptions {
   tileWidth: number;
@@ -29,6 +31,7 @@ export interface GridRenderOptions {
   cacheVersion?: number;
   chunkLayer?: 'terrain' | 'resource' | 'resourceTall' | 'snow';
   pointLightActive?: boolean;
+  rowPasses?: boolean;
 }
 
 export interface GridRenderStats {
@@ -55,6 +58,7 @@ export class GridRenderer {
   private fontAtlas: FontAtlas;
   private debug: boolean;
   private vertexFloats: number;
+  private drawnChunks: TerrainChunk[] = [];
 
   private gridVAO: WebGLVertexArrayObject | null = null;
   private gridVBO: WebGLBuffer | null = null;
@@ -138,7 +142,7 @@ export class GridRenderer {
 
     if (visibleTiles.length > 0) {
       const vertexData = this.generateBatchVertexData(visibleTiles, options);
-      this.uploadAndDraw(vertexData);
+      this.uploadAndDraw(vertexData, options.rowPasses === true);
     } else {
       this.currentVertexCount = 0;
     }
@@ -197,6 +201,7 @@ export class GridRenderer {
     const dirtyMap = options.chunkLayer === 'snow' ? this.snowChunkDirty : this.chunkDirty;
 
     let drawnVerts = 0;
+    this.drawnChunks.length = 0;
     for (let cy = minCY; cy <= maxCY; cy++) {
       for (let cx = minCX; cx <= maxCX; cx++) {
         drawnVerts += this.drawTerrainChunk(
@@ -213,6 +218,7 @@ export class GridRenderer {
       }
     }
 
+    if (options.rowPasses) this.drawShadowTexels(() => this.redrawChunks());
     if (frame % GridRenderer.CHUNK_SWEEP_EVERY === 0) this.evictStaleChunks(frame, chunks);
     this.currentVertexCount = drawnVerts;
     return drawnVerts / 6;
@@ -282,6 +288,7 @@ export class GridRenderer {
       gl.bindVertexArray(chunk.vao);
       gl.drawArrays(gl.TRIANGLES, 0, chunk.count);
       gl.bindVertexArray(null);
+      this.drawnChunks.push(chunk);
       return chunk.count;
     }
     return 0;
@@ -302,7 +309,27 @@ export class GridRenderer {
     }
   }
 
-  private uploadAndDraw(vertexData: Float32Array): void {
+  private redrawChunks(): void {
+    const gl = this.gl;
+    for (const chunk of this.drawnChunks) {
+      gl.bindVertexArray(chunk.vao);
+      gl.drawArrays(gl.TRIANGLES, 0, chunk.count);
+    }
+    gl.bindVertexArray(null);
+  }
+
+  private drawShadowTexels(draw: () => void): void {
+    const gl = this.gl;
+    gl.depthMask(false);
+    this.shaderManager.setUniform('tileRenderer', 'u_alphaCut', SHADOW_FLOOR);
+    this.shaderManager.setUniform('tileRenderer', 'u_alphaCeil', ALPHA_CUT);
+    draw();
+    this.shaderManager.setUniform('tileRenderer', 'u_alphaCut', ALPHA_CUT);
+    this.shaderManager.setUniform('tileRenderer', 'u_alphaCeil', 0);
+    gl.depthMask(true);
+  }
+
+  private uploadAndDraw(vertexData: Float32Array, rowPasses = false): void {
     if (!this.gridVAO || !this.gridVBO) {
       console.error('❌ Grid rendering resources not initialized');
       return;
@@ -323,6 +350,7 @@ export class GridRenderer {
 
     const vertexCount = vertexData.length / this.vertexFloats;
     gl.drawArrays(gl.TRIANGLES, 0, vertexCount);
+    if (rowPasses) this.drawShadowTexels(() => gl.drawArrays(gl.TRIANGLES, 0, vertexCount));
 
     gl.bindVertexArray(null);
 
