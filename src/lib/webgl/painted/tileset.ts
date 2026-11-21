@@ -83,3 +83,8 @@ export function paintedPiece(
 ): PaintedSprite {
   return spriteAt(pieces.layouts[pieceLayout(pieces, isMass, x, y)], x, y);
 }
+
+export function onPieceTop(pieces: PaintedPieces, sprite: PaintedSprite): PaintedSprite {
+  const lift = pieces.top?.lift ?? 0;
+  return lift > 0 && active ? { ...sprite, oy: sprite.oy - lift / active.tile } : sprite;
+}

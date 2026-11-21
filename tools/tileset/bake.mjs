@@ -94,10 +94,11 @@ function pieceSprites(
       )
     );
   return Object.fromEntries(
-    Object.entries(PIECES).map(([set, resources]) => [
+    Object.entries(PIECES).map(([set, { resources, terrains }]) => [
       set,
       {
         resources: [...resources].sort(),
+        terrains: [...terrains].sort(),
         neighbours: NEIGHBOURS,
         top: { image: TOP_IMAGE, size: TOP_SIZE, lift: LIFT, ramp: 'rock/ramp' },
         layouts: Array.from({ length: 1 << NEIGHBOURS.length }, (_, m) =>

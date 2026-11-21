@@ -18547,6 +18547,9 @@
         "cliff_wall",
         "mountain_wall"
       ],
+      "terrains": [
+        "mountain"
+      ],
       "neighbours": [
         [
           0,
