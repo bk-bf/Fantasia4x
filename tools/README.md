@@ -8,7 +8,7 @@ to ubuntuserver through `remote/run.mjs`.
 
 | Path | What it does | How to run it |
 |---|---|---|
-| `issue.mjs` | Writes GitHub issues, pull requests, board lanes, labels, blockers and milestones in the shape the repo checks. | `pnpm issue <command>` |
+| `issue.mjs` | Writes GitHub issues, pull requests, labels, blockers and milestones in the shape the repo checks. | `pnpm issue <command>` |
 | `chain.mjs` | Pushes the branch, starts or follows the CI chain for it on GitHub, and streams the run to its result. | `pnpm chain`, `pnpm chain --pre` |
 | `remote/run.mjs` | Runs a test or check command on ubuntuserver against the committed `HEAD`, for work in progress. | the `pnpm` test, check and bench scripts |
 | `remote/guard.mjs` | Refuses a test runner, linter or harness started on the laptop. | Claude Code hook |
