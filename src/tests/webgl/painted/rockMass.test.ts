@@ -173,3 +173,49 @@ describe('an object in an opening of the mountain shows whole', () => {
     expect(grid.getTile(2, 3)?.painted).toEqual(paintedTile('subterrain', 'cave', 2, 3));
   });
 });
+
+describe('ore carried by a wall shows in its rock top; ore with no wall draws no rock', () => {
+  const all = new Set(NAMES);
+  const centre = (resources: Record<string, number>) =>
+    world(3, 3, (x, y) => (x === 1 && y === 1 ? { walkable: false, resources } : wall(x)));
+  const tallAt = (map: WorldTile[][], hidden: boolean[][] = []) => {
+    const tall = new GameGrid();
+    applyResourceToGrid(new GameGrid(), tall, map[1][1], hidden, undefined, map);
+    return tall.getTile(1, 1)?.painted;
+  };
+
+  it.each([
+    ['hematite', 'mountain_wall', 'vein/hematite'],
+    ['native_gold', 'cliff_wall', 'vein/gold'],
+    ['rock_salt', 'mountain_wall', 'vein/salt']
+  ])('draws %s on %s as the wall piece coloured from %s', (ore, host, vein) => {
+    const map = centre({ [ore]: 3, [host]: 5 });
+    const { x, y } = manifest.sprites[vein];
+    expect(painted(map, 1, 1)).toEqual({ ...expected(blobName(all), 1, 1), vein: { x, y } });
+    expect(tallAt(map)).toBeUndefined();
+  });
+
+  it('counts a wall carrying ore as rock for the walls around it', () => {
+    const map = centre({ coal: 3, mountain_wall: 5 });
+    for (const [x, y] of [
+      [1, 0],
+      [0, 1],
+      [2, 2]
+    ])
+      expect(painted(map, x, y), `${x},${y}`).toEqual(expected(blobName(all), x, y));
+  });
+
+  it('draws a fogged wall carrying ore as plain rock', () => {
+    const map = centre({ coal: 3, mountain_wall: 5 });
+    const hidden = map.map((row) => row.map(() => true));
+    expect(painted(map, 1, 1, hidden)).toEqual(expected(blobName(all), 1, 1));
+  });
+
+  it('draws ore with no wall as its own sprite and leaves its tile open to the walls around', () => {
+    const map = centre({ coal: 3 });
+    expect(painted(map, 1, 1)).toEqual(expected(manifest.map.resource!.coal[0], 1, 1));
+    expect(painted(map, 1, 0)).toEqual(
+      expected(blobName(new Set(NAMES.filter((n) => n !== 'S'))), 1, 0)
+    );
+  });
+});

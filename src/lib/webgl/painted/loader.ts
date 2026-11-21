@@ -12,6 +12,7 @@ export const PAINTED_BASE_URL = '/tilesets/painted/';
 
 export interface LoadedPieceTop {
   texture: WebGLTexture;
+  veins: WebGLTexture;
   lift: number;
   ramp: { x: number; y: number };
 }
@@ -60,7 +61,7 @@ interface PaintedSource {
   manifest: PaintedManifest;
   tileset: PaintedTileset;
   image: HTMLImageElement;
-  top: { image: HTMLImageElement; piece: PaintedPieceTop } | null;
+  top: { image: HTMLImageElement; veins: HTMLImageElement; piece: PaintedPieceTop } | null;
 }
 
 const pieceTop = (tileset: PaintedTileset) =>
@@ -69,10 +70,15 @@ const pieceTop = (tileset: PaintedTileset) =>
 async function readTop(baseUrl: string, piece: PaintedPieceTop | null) {
   if (!piece) return null;
   try {
-    const image = await loadImage(`${baseUrl}${piece.image}`);
-    if (image.naturalWidth !== piece.size || image.naturalHeight !== piece.size)
-      throw new Error(`${piece.image} is not ${piece.size} px square`);
-    return { image, piece };
+    const [image, veins] = await Promise.all(
+      [piece.image, piece.veins].map(async (name) => {
+        const loaded = await loadImage(`${baseUrl}${name}`);
+        if (loaded.naturalWidth !== piece.size || loaded.naturalHeight !== piece.size)
+          throw new Error(`${name} is not ${piece.size} px square`);
+        return loaded;
+      })
+    );
+    return { image, veins, piece };
   } catch (err) {
     console.warn('[painted tiles] rock tops off:', err);
     return null;
@@ -116,6 +122,7 @@ export async function loadPaintedTileset(
     const top = loaded.top
       ? {
           texture: uploadAtlas(gl, loaded.top.image),
+          veins: uploadAtlas(gl, loaded.top.veins),
           lift: loaded.top.piece.lift,
           ramp: loaded.top.piece.ramp
         }
