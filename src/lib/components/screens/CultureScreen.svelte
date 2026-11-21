@@ -1,151 +1,55 @@
 <script lang="ts">
-  import { onDestroy } from 'svelte';
   import { discoveredCultures, cultureRelations, gameState } from '$lib/stores/gameState';
-  import type { Culture, CultureRelation, Pawn } from '$lib/game/core/types';
   import CultureDetail from './culture/CultureDetail.svelte';
+  import ListChip from '../UI/widget/ListChip.svelte';
+  import ListDetail from '../UI/widget/ListDetail.svelte';
   import { persisted, persist } from '$lib/stores/uiPersist';
 
-  let cultures: Culture[] = [];
-  let relations: CultureRelation[] = [];
-  let pawns: Pawn[] = [];
-  let selectedId: string | null = persisted('culture.selected', null);
-  $: persist('culture.selected', selectedId);
+  let cultures = $derived($discoveredCultures);
+  let chosen = $state<string | null>(persisted('culture.selected', null));
+  let selected = $derived(cultures.find((c) => c.id === chosen) ?? cultures[0] ?? null);
+  $effect(() => persist('culture.selected', selected?.id ?? null));
 
-  const unsubCultures = discoveredCultures.subscribe((v) => {
-    cultures = v;
-    if (!selectedId || !cultures.some((r) => r.id === selectedId)) {
-      selectedId = cultures[0]?.id ?? null;
-    }
+  let headcount = $derived.by(() => {
+    const m: Record<string, number> = {};
+    for (const p of $gameState.pawns ?? [])
+      if (p.isAlive && p.cultureId) m[p.cultureId] = (m[p.cultureId] ?? 0) + 1;
+    return m;
   });
-  const unsubRel = cultureRelations.subscribe((v) => (relations = v));
-  const unsubState = gameState.subscribe((s) => (pawns = s.pawns ?? []));
-
-  onDestroy(() => {
-    unsubCultures();
-    unsubRel();
-    unsubState();
-  });
-
-  $: selected = cultures.find((r) => r.id === selectedId) ?? null;
-  $: headcount = (id: string) => pawns.filter((p) => p.cultureId === id && p.isAlive).length;
+  const colonists = (n: number) => (n === 0 ? 'none here' : `${n} colonist${n === 1 ? '' : 's'}`);
 </script>
 
-<div class="culture-screen">
-  <div class="screen-hdr">| KNOWN CULTURES ({cultures.length})</div>
-
-  {#if cultures.length === 0}
-    <div class="empty">no cultures known yet</div>
-  {:else}
-    <div class="body">
-      <nav class="culture-list">
-        {#each cultures as culture}
-          <button
-            class="culture-item"
-            class:selected={culture.id === selectedId}
-            on:click={() => (selectedId = culture.id)}
-          >
-            <span class="ri-name">{culture.name}</span>
-            <span class="ri-arch">{culture.archetype}</span>
-            <span class="ri-pop">{headcount(culture.id)} colonists</span>
-          </button>
-        {/each}
-      </nav>
-
-      <div class="culture-detail-pane">
-        {#if selected}
-          <CultureDetail
-            culture={selected}
-            knownCultures={cultures}
-            {relations}
-            headcount={headcount(selected.id)}
-          />
-        {/if}
-      </div>
-    </div>
-  {/if}
-</div>
+{#if cultures.length === 0}
+  <p class="empty">no cultures known yet</p>
+{:else}
+  <ListDetail>
+    {#snippet list()}
+      {#each cultures as culture (culture.id)}
+        <ListChip on={culture.id === selected?.id} onclick={() => (chosen = culture.id)}>
+          <b>{culture.name}</b>
+          <em>{culture.archetype}</em>
+          <span>{colonists(headcount[culture.id] ?? 0)}</span>
+        </ListChip>
+      {/each}
+    {/snippet}
+    {#snippet detail()}
+      {#if selected}
+        <CultureDetail
+          culture={selected}
+          knownCultures={cultures}
+          relations={$cultureRelations}
+          headcount={headcount[selected.id] ?? 0}
+        />
+      {/if}
+    {/snippet}
+  </ListDetail>
+{/if}
 
 <style>
-  .culture-screen {
-    height: 100%;
-    overflow: hidden;
-    background: var(--bg);
-    color: var(--text);
-    font-family: var(--font-mono);
-    font-size: 12px;
-    display: flex;
-    flex-direction: column;
-  }
-  .screen-hdr {
-    padding: 5px 10px;
-    background: var(--bg-panel);
-    color: var(--accent-hi);
-    letter-spacing: 0.08em;
-    border-bottom: 1px solid var(--border-hi);
-    flex-shrink: 0;
-  }
-  .body {
-    display: flex;
-    flex: 1;
-    min-height: 0;
-  }
-  .culture-list {
-    width: 180px;
-    flex-shrink: 0;
-    overflow-y: auto;
-    border-right: 1px solid var(--border-hi);
-    background: var(--bg-panel);
-  }
-  .culture-item {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 1px;
-    width: 100%;
-    padding: 5px 10px;
-    background: transparent;
-    border: none;
-    border-bottom: 1px solid var(--border);
-    color: var(--text-dim);
-    cursor: pointer;
-    font-family: var(--font-mono);
-    text-align: left;
-  }
-  .culture-item:hover {
-    background: var(--bg-hover);
-    color: var(--accent-hi);
-  }
-  .culture-item.selected {
-    background: var(--bg-active);
-    color: var(--accent-hi);
-    border-left: 2px solid var(--accent-hi);
-    padding-left: 8px;
-  }
-  .ri-name {
-    font-size: 12px;
-    letter-spacing: 0.04em;
-  }
-  .ri-arch {
-    font-size: 10px;
-    color: var(--text-muted);
-  }
-  .ri-pop {
-    font-size: 10px;
-    color: var(--text-muted);
-  }
-  .culture-item.selected .ri-arch,
-  .culture-item.selected .ri-pop {
-    color: var(--accent-hi);
-    opacity: 0.7;
-  }
-  .culture-detail-pane {
-    flex: 1;
-    overflow-y: auto;
-    min-width: 0;
-  }
   .empty {
-    padding: 20px;
+    margin: 0;
+    padding: 12px 4px;
     color: var(--text-muted);
-    font-style: italic;
+    font: 16px/18px var(--font-pixel);
   }
 </style>

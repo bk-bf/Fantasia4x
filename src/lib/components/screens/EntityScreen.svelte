@@ -1,14 +1,11 @@
 <script lang="ts">
   import { gameState } from '$lib/stores/gameState';
-  import { uiState } from '$lib/stores/uiState';
-  import BackButton from '$lib/components/UI/widget/BackButton.svelte';
   import { getCreatureById } from '$lib/game/core/defs/creatures';
-  import type { Mob, LimbState } from '$lib/game/core/types';
-  import FollowButton from '../UI/widget/FollowButton.svelte';
-  import SearchBar from '../UI/widget/SearchBar.svelte';
-  import { limbLabel, partLabel } from '$lib/components/util/bodyLabels';
-  import { woundById } from '$lib/game/core/defs/wounds';
   import { persisted, persist } from '$lib/stores/uiPersist';
+  import { chrome } from '$lib/pixelArt/chrome';
+  import SearchBar from '../UI/widget/SearchBar.svelte';
+  import { useWindowBar } from '../UI/window/windowContext';
+  import EntityRow from './entity/EntityRow.svelte';
 
   let mobs = $derived(($gameState.mobs ?? []).filter((m) => m.state !== 'Corpse'));
   let corpses = $derived(($gameState.mobs ?? []).filter((m) => m.state === 'Corpse'));
@@ -35,399 +32,101 @@
   let expandedId = $state<string | null>(persisted('entities.expanded', null));
   $effect(() => persist('entities.expanded', expandedId));
 
-  function rgb(c: [number, number, number]): string {
-    return `rgb(${Math.round(c[0] * 255)}, ${Math.round(c[1] * 255)}, ${Math.round(c[2] * 255)})`;
-  }
-
-  function focus(m: Mob) {
-    uiState.focusMapOn(m.x, m.y, false);
-    uiState.selectMob(m.id);
-  }
-
-  function bloodPct(m: Mob): number {
-    if (!m.maxBloodVolume || m.maxBloodVolume <= 0) return 100;
-    return Math.round(((m.bloodVolume ?? m.maxBloodVolume) / m.maxBloodVolume) * 100);
-  }
-
-  function bloodColor(v: number): string {
-    if (v >= 80) return 'var(--pos)';
-    if (v >= 60) return 'var(--text-dim)';
-    if (v >= 40) return 'var(--accent-hi)';
-    return 'var(--neg)';
-  }
-
-  function worstLimb(m: Mob): { name: string; health: number } | null {
-    if (!m.limbs || m.limbs.length === 0) return null;
-    let worst: LimbState | null = null;
-    for (const l of m.limbs) {
-      if (l.isMissing) return { name: l.id.replace('_', ' '), health: 0 };
-      if (!worst || l.health < worst.health) worst = l;
-    }
-    if (!worst) return null;
-    return { name: worst.id.replace('_', ' '), health: worst.health };
-  }
-
-  function limbColor(h: number): string {
-    if (h <= 0) return 'var(--neg)';
-    if (h < 25) return 'var(--neg)';
-    if (h < 50) return 'var(--accent-hi)';
-    if (h < 75) return 'var(--text-dim)';
-    return 'var(--pos)';
-  }
-
-  function painPct(m: Mob): number {
-    if (!m.maxHealth || m.maxHealth <= 0) return 0;
-    return Math.round(((m.maxHealth - m.health) / m.maxHealth) * 100);
-  }
-
-  function painColor(v: number): string {
-    if (v >= 80) return 'var(--neg)';
-    if (v >= 55) return 'var(--accent-hi)';
-    if (v >= 30) return 'var(--text-dim)';
-    return 'var(--pos)';
-  }
-
-  function toggleExpand(id: string) {
-    expandedId = expandedId === id ? null : id;
-  }
+  useWindowBar({ tools: searchTool });
 </script>
 
-<div class="entity-screen">
-  <div class="screen-hdr">
-    | LIVE ENTITIES &nbsp;<span class="dim"
-      >{hostileCount} hostile · {neutralCount} neutral · {corpses.length} corpses</span
-    >
-    <div class="hdr-tools">
-      <SearchBar bind:value={query} placeholder="search entities…" cacheKey="entities" />
-      <BackButton />
-    </div>
-  </div>
+{#snippet searchTool()}
+  <SearchBar variant="well" bind:value={query} placeholder="search entities…" cacheKey="entities" />
+{/snippet}
+
+<div class="entities">
+  <p class="sub">
+    <span class="neg">{hostileCount} hostile</span> · {neutralCount} neutral · {corpses.length}
+    {corpses.length === 1 ? 'corpse' : 'corpses'}
+  </p>
 
   {#if mobs.length === 0}
-    <div class="empty">No creatures roaming the map right now.</div>
+    <p class="empty">No creatures roaming the map right now.</p>
   {:else if filteredMobs.length === 0}
-    <div class="empty">No entities match "{query}".</div>
+    <p class="empty">No entities match "{query}".</p>
   {:else}
-    <div class="table">
-      <div class="table-hdr">
-        <span class="col-name">ENTITY</span>
-        <span class="col-type">TYPE</span>
-        <span class="col-blood">BLOOD</span>
-        <span class="col-limb">WORST LIMB</span>
-        <span class="col-pain">PAIN</span>
-        <span class="col-state">STATE</span>
-        <span class="col-pos">POS</span>
-      </div>
-
-      {#each filteredMobs as m (m.id)}
-        {@const def = getCreatureById(m.creatureId)}
-        {@const bp = bloodPct(m)}
-        {@const wl = worstLimb(m)}
-        {@const pp = painPct(m)}
-        {@const expanded = expandedId === m.id}
-        <div class="table-row" class:expanded>
-          <div class="row-line">
-            <button class="row-toggle" onclick={() => toggleExpand(m.id)} title="health details">
-              {expanded ? '▾' : '▸'}
-            </button>
-            <button class="row-main" onclick={() => focus(m)} title="jump camera to entity">
-              <span class="col-name">
-                <span class="glyph" style="color: {def ? rgb(def.fg) : 'var(--text-dim)'}"
-                  >{m.entityClass === 'mob' ? '✦' : '◆'}</span
-                >
-                <span class="ename">{def?.name ?? m.creatureId}</span>
-              </span>
-              <span class="col-type col-type--{m.entityClass}"
-                >{m.entityClass === 'mob' ? 'hostile' : 'neutral'}</span
-              >
-              <span class="col-blood" style="color:{bloodColor(bp)}">{bp}%</span>
-              <span
-                class="col-limb"
-                style="color:{wl ? limbColor(wl.health) : 'var(--text-muted)'}"
-              >
-                {wl ? `${wl.name} ${Math.round(wl.health)}%` : '—'}
-              </span>
-              <span class="col-pain" style="color:{painColor(pp)}">{pp}%</span>
-              <span class="col-state">{m.state}</span>
-              <span class="col-pos">({m.x},{m.y})</span>
-            </button>
-          </div>
-
-          {#if expanded}
-            <div class="row-expand">
-              <div class="expand-actions">
-                <FollowButton
-                  isActive={$uiState.cameraFollowMobId === m.id}
-                  onToggle={() => {
-                    const isFollowing = $uiState.cameraFollowMobId === m.id;
-                    uiState.setFollowMob(isFollowing ? null : m.id);
-                  }}
-                />
-              </div>
-              {#if m.limbs && m.limbs.length > 0}
-                <div class="expand-limbs">
-                  {#each m.limbs as limb}
-                    <div class="expand-limb">
-                      <span class="expand-limb-name">{limbLabel(limb.id)}</span>
-                      <span class="expand-limb-hp" style="color:{limbColor(limb.health)}">
-                        {limb.isMissing ? 'MISSING' : `${Math.round(limb.health)}%`}
-                      </span>
-                      {#if limb.bleedRate && limb.bleedRate > 0}
-                        <span class="expand-limb-bleed">▼{limb.bleedRate.toFixed(1)}</span>
-                      {/if}
-                    </div>
-                    {#if limb.parts && limb.parts.length > 0}
-                      <div class="expand-parts">
-                        {#each limb.parts as part}
-                          <div
-                            class="expand-part"
-                            class:damaged={part.isMissing ||
-                              part.health < part.maxHp ||
-                              part.injuries.length > 0}
-                          >
-                            <span>{partLabel(part.id)}</span>
-                            <span
-                              style="color:{part.isMissing
-                                ? 'var(--neg)'
-                                : limbColor((part.health / part.maxHp) * 100)}"
-                            >
-                              {part.isMissing
-                                ? 'MISSING'
-                                : `${Math.round((part.health / part.maxHp) * 100)}%`}
-                            </span>
-                            {#if part.injuries.length > 0}
-                              <span class="expand-part-badges">
-                                {#each part.injuries as injury}
-                                  {@const wName = woundById(injury.type)?.name ?? injury.type}
-                                  <span class="part-badge" title="{injury.severity} {wName}"
-                                    >{wName.toUpperCase()} · {injury.severity}</span
-                                  >
-                                {/each}
-                              </span>
-                            {/if}
-                          </div>
-                        {/each}
-                      </div>
-                    {/if}
-                  {/each}
-                </div>
-              {/if}
-            </div>
-          {/if}
+    <div class="table" {@attach chrome('well')}>
+      <div class="th">
+        <i></i>
+        <div class="cols">
+          <i></i><span>Entity</span><span>Type</span><span>Blood</span><span>Worst limb</span><span
+            >Pain</span
+          ><span>State</span><span>Pos</span>
         </div>
-      {/each}
+      </div>
+      <div class="rows">
+        {#each filteredMobs as m (m.id)}
+          <EntityRow
+            mob={m}
+            expanded={expandedId === m.id}
+            ontoggle={() => (expandedId = expandedId === m.id ? null : m.id)}
+          />
+        {/each}
+      </div>
     </div>
   {/if}
 </div>
 
 <style>
-  .entity-screen {
-    height: 100%;
-    overflow-y: auto;
-    background: var(--bg);
-    color: var(--text);
-    font-family: var(--font-mono);
-    font-size: 12px;
+  .entities {
+    --entity-cols: 28px 1.6fr 0.8fr 0.6fr 1.5fr 0.5fr 0.9fr 0.8fr;
+    flex: 1;
+    min-height: 0;
     display: flex;
     flex-direction: column;
+    color: var(--text);
+    font: 16px/18px var(--font-pixel);
+    letter-spacing: 0.6px;
   }
-  .screen-hdr {
-    padding: 5px 10px;
-    background: var(--bg-panel);
-    color: var(--accent-hi);
-    letter-spacing: 0.08em;
-    border-bottom: 1px solid var(--border-hi);
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
+  .sub {
+    margin: -4px 0 5px;
+    color: var(--text-dim);
   }
-  .screen-hdr .dim {
-    color: var(--text-muted);
-    letter-spacing: 0;
-  }
-  .hdr-tools {
-    margin-left: auto;
-    display: flex;
-    align-items: center;
-    gap: 8px;
+  .neg {
+    color: var(--neg);
   }
   .empty {
-    padding: 16px 12px;
+    margin: 0;
+    padding: 12px 4px;
     color: var(--text-muted);
   }
-
   .table {
-    padding: 4px 8px 12px;
-    display: flex;
-    flex-direction: column;
-  }
-  .table-hdr {
-    display: grid;
-    grid-template-columns: 2fr 1fr 1fr 2fr 1fr 1.2fr 1fr;
-    gap: 6px;
-    padding: 3px 6px;
-    color: var(--text-muted);
-    font-size: 11px;
-    letter-spacing: 0.04em;
-    border-bottom: 1px solid var(--border);
-  }
-  .table-row {
-    display: flex;
-    flex-direction: column;
-    border-bottom: 1px solid var(--border);
-    background: var(--bg-panel);
-  }
-  .table-row.expanded {
-    border-bottom-color: var(--border-hi);
-  }
-  .row-line {
-    display: flex;
-    align-items: stretch;
-  }
-  .row-toggle {
-    flex-shrink: 0;
-    width: 20px;
-    background: transparent;
-    border: none;
-    color: var(--text-muted, #777);
-    cursor: pointer;
-    font-size: 11px;
-    font-family: var(--font-mono);
-  }
-  .row-toggle:hover {
-    color: var(--text);
-  }
-  .row-main {
     flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    padding: 3px 2px;
+  }
+  .th {
+    flex: none;
+    display: flex;
+    height: 20px;
+    color: var(--accent-hi);
+    letter-spacing: 1.4px;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .th > i {
+    flex: none;
+    width: 16px;
+  }
+  .cols {
+    flex: 1;
+    min-width: 0;
     display: grid;
-    grid-template-columns: 2fr 1fr 1fr 2fr 1fr 1.2fr 1fr;
+    grid-template-columns: var(--entity-cols);
     gap: 6px;
-    padding: 3px 6px;
-    align-items: baseline;
-    background: transparent;
-    border: none;
-    color: var(--text-dim);
-    font-family: var(--font-mono);
-    font-size: 11px;
-    cursor: pointer;
-    text-align: left;
-  }
-  .row-main:hover {
-    background: var(--bg-hover);
-    color: var(--text);
-  }
-  .col-name {
-    display: inline-flex;
     align-items: center;
-    gap: 4px;
+    padding-right: 6px;
   }
-  .glyph {
-    font-size: 12px;
-  }
-  .ename {
-    color: var(--text);
-  }
-  .col-type {
-    font-size: 11px;
-    font-variant-numeric: tabular-nums;
-    color: var(--text-muted);
-  }
-  .col-type--mob {
-    color: var(--neg);
-  }
-  .col-type--animal {
-    color: var(--pos);
-  }
-  .col-blood,
-  .col-limb,
-  .col-pain,
-  .col-state,
-  .col-pos {
-    font-variant-numeric: tabular-nums;
-  }
-  .col-pos {
-    color: var(--text-muted);
-  }
-
-  .row-expand {
-    padding: 4px 6px 6px;
-    border-top: 1px solid var(--border);
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-  }
-  .expand-actions {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-  .act-btn {
-    padding: 1px 6px;
-    background: transparent;
-    border: 1px solid var(--border);
-    color: var(--text-dim);
-    font-family: var(--font-mono);
-    font-size: 11px;
-    cursor: pointer;
-  }
-  .act-btn:hover {
-    color: var(--text);
-    border-color: var(--border-hi);
-  }
-  .expand-limbs {
-    display: flex;
-    flex-direction: column;
-    gap: 1px;
-    padding-left: 8px;
-    border-left: 1px solid var(--border);
-  }
-  .expand-limb {
-    display: flex;
-    align-items: baseline;
-    gap: 6px;
-    padding: 1px 0;
-  }
-  .expand-limb-name {
-    color: var(--text-muted);
-    font-size: 11px;
-    min-width: 60px;
-  }
-  .expand-limb-hp {
-    font-size: 11px;
-    font-variant-numeric: tabular-nums;
-    min-width: 36px;
-  }
-  .expand-limb-bleed {
-    color: var(--neg);
-    font-size: 11px;
-  }
-  .expand-parts {
-    display: flex;
-    flex-direction: column;
-    gap: 1px;
-    padding-left: 8px;
-    padding-bottom: 2px;
-  }
-  .expand-part {
-    display: flex;
-    align-items: baseline;
-    gap: 6px;
-    font-size: 11px;
-    opacity: 0.5;
-  }
-  .expand-part.damaged {
-    opacity: 1;
-  }
-  .expand-part-badges {
-    display: flex;
-    gap: 3px;
-  }
-  .part-badge {
-    font-size: 10px;
-    padding: 0 3px;
-    border-radius: 2px;
-    background: var(--bg-panel);
-    border: 1px solid var(--border);
-    color: var(--neg);
+  .rows {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
   }
 </style>

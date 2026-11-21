@@ -42,15 +42,27 @@
   }
 
   const _painted = new Map<string, Promise<HTMLCanvasElement | null>>();
-  function paintedArt(kind: PaintedKind, id: string): Promise<HTMLCanvasElement | null> {
-    const key = `${kind}/${id}`;
+  function paintedArt(
+    kind: PaintedKind,
+    id: string,
+    px: number
+  ): Promise<HTMLCanvasElement | null> {
+    const key = `${kind}/${id}@${px}`;
     let hit = _painted.get(key);
-    if (!hit) _painted.set(key, (hit = paintedSpriteCanvas(kind, id).catch(() => null)));
+    if (!hit)
+      _painted.set(
+        key,
+        (hit = paintedSpriteCanvas(kind, id)
+          .then((c) => (c ? fitInto(c, px) : null))
+          .catch(() => null))
+      );
     return hit;
   }
 </script>
 
 <script lang="ts">
+  import type { Snippet } from 'svelte';
+
   type CharSpan = { sheet?: string; id?: number; from?: number; to?: number; literal?: string };
 
   let {
@@ -58,20 +70,34 @@
     tint = null,
     px = 16,
     item = null,
-    building = null
+    building = null,
+    creature = null,
+    resource = null,
+    fallback
   }: {
     charSpans?: CharSpan[];
     tint?: string | null;
     px?: number;
     item?: string | null;
     building?: string | null;
+    creature?: string | null;
+    resource?: string | null;
+    fallback?: Snippet;
   } = $props();
 
   const itemDef = $derived(item ? itemService.getItemById(item) : undefined);
   const spans = $derived(charSpans ?? itemDef?.charSpans);
   const tone = $derived(tint ?? itemDef?.color ?? null);
   const painted = $derived<[PaintedKind, string] | null>(
-    item ? ['item', item] : building ? ['building', building] : null
+    item
+      ? ['item', item]
+      : building
+        ? ['building', building]
+        : creature
+          ? ['creature', creature]
+          : resource
+            ? ['resource', resource]
+            : null
   );
 
   let art = $state<HTMLCanvasElement | null>(null);
@@ -81,16 +107,15 @@
     art = null;
     if (!painted) return;
     let live = true;
-    paintedArt(painted[0], painted[1]).then((c) => live && (art = c));
+    paintedArt(painted[0], painted[1], px).then((c) => live && (art = c));
     return () => (live = false);
   });
 
   $effect(() => {
     if (!art || !paintedBox) return;
-    const fit = fitInto(art, px);
-    paintedBox.width = fit.width;
-    paintedBox.height = fit.height;
-    paintedBox.getContext('2d')?.drawImage(fit, 0, 0);
+    paintedBox.width = art.width;
+    paintedBox.height = art.height;
+    paintedBox.getContext('2d')?.drawImage(art, 0, 0);
   });
 
   const CELL_W = 12;
@@ -139,6 +164,8 @@
   <canvas bind:this={canvasEl} class="sprite-icon" style="height:{px}px"></canvas>
 {:else if literal}
   <span class="sprite-literal" style="font-size:{px}px; color:{tone ?? 'inherit'}">{literal}</span>
+{:else}
+  {@render fallback?.()}
 {/if}
 
 <style>
