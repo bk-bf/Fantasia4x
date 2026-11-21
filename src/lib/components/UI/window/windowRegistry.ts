@@ -34,8 +34,8 @@ export const WINDOWS: Record<WindowId, WindowSpec> = {
   entities: { title: 'Entities', component: EntityScreen, width: 900 },
   debug: { title: 'Debug', component: DebugScreen, width: 'big' },
   pause: { title: 'Paused', component: PauseMenu, width: 280, modal: true },
-  health: { title: 'Health', component: HealthWindow, width: 356 },
-  fuel: { title: 'Fuel', component: FuelWindow, width: 300 }
+  health: { title: 'Health', component: HealthWindow, width: 356, fit: true },
+  fuel: { title: 'Fuel', component: FuelWindow, width: 300, fit: true }
 };
 
 export const BIG_WIDTH_MAX = 1180;
