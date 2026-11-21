@@ -17,7 +17,8 @@ import { parseHexRgb01 } from '$lib/game/core/util/color.js';
 import { glyph, SHEET } from './tilesets.js';
 import type { RGB } from './tile-types.js';
 import { PAINTED_TILES } from './painted/flag.js';
-import { paintedTile } from './painted/tileset.js';
+import { paintedPiece, paintedPieces, paintedTile } from './painted/tileset.js';
+import type { PaintedSprite } from './painted/manifest.js';
 
 const DECONSTRUCT_GLYPH = glyph(SHEET.MAP, 88);
 
@@ -425,12 +426,35 @@ export function buildSnowOverlay(worldMap: WorldTile[][], hiddenMask?: boolean[]
   return grid;
 }
 
+const ROCK_PIECES = 'rock';
+
+function rockPiece(
+  tile: WorldTile,
+  hiddenMask: boolean[][],
+  worldMap: WorldTile[][] | undefined,
+  resourceId: string | undefined
+): PaintedSprite | undefined {
+  if (!PAINTED_TILES || !worldMap) return undefined;
+  const pieces = paintedPieces(ROCK_PIECES);
+  if (!pieces) return undefined;
+  if (!hiddenMask[tile.y]?.[tile.x] && !(resourceId && pieces.members.has(resourceId)))
+    return undefined;
+  const isMass = (x: number, y: number): boolean => {
+    const t = worldMap[y]?.[x];
+    if (!t || hiddenMask[y]?.[x]) return true;
+    const id = resolveActiveResource(t)?.resDef.id;
+    return id !== undefined && pieces.members.has(id);
+  };
+  return paintedPiece(pieces, isMass, tile.x, tile.y);
+}
+
 export function applyResourceToGrid(
   gridShort: GameGrid,
   gridTall: GameGrid,
   tile: WorldTile,
   hiddenMask: boolean[][],
-  season?: Season
+  season?: Season,
+  worldMap?: WorldTile[][]
 ): void {
   const blank = (g: GameGrid) =>
     g.setTile(tile.x, tile.y, {
@@ -443,7 +467,19 @@ export function applyResourceToGrid(
     blank(gridShort);
     blank(gridTall);
   };
-  if (hiddenMask[tile.y]?.[tile.x]) return clear();
+  if (hiddenMask[tile.y]?.[tile.x]) {
+    const piece = rockPiece(tile, hiddenMask, worldMap, undefined);
+    if (!piece) return clear();
+    blank(gridTall);
+    gridShort.setTile(tile.x, tile.y, {
+      char: ' ',
+      foreground: { r: 0, g: 0, b: 0 },
+      background: { r: 0, g: 0, b: 0 },
+      position: { x: tile.x, y: tile.y },
+      painted: piece
+    });
+    return;
+  }
   const active = resolveActiveResource(tile);
   if (!active) return clear();
   const { resDef, scale: stageScale } = active;
@@ -456,7 +492,10 @@ export function applyResourceToGrid(
   const rs = resDef.renderScale;
   const drawScale = (rs ?? 1) * stageScale;
   const scale = drawScale !== 1 ? drawScale : undefined;
-  const painted = PAINTED_TILES ? paintedTile('resource', resDef.id, tile.x, tile.y) : undefined;
+  const painted = PAINTED_TILES
+    ? (rockPiece(tile, hiddenMask, worldMap, resDef.id) ??
+      paintedTile('resource', resDef.id, tile.x, tile.y))
+    : undefined;
   const tall = rs !== undefined && rs > 1;
   blank(tall ? gridShort : gridTall);
   const detail = baseDetail ? { r: baseDetail[0], g: baseDetail[1], b: baseDetail[2] } : undefined;
@@ -496,8 +535,11 @@ export function buildResourceOverlay(
   const mask = hiddenMask ?? computeHiddenMask(worldMap);
   for (const row of worldMap)
     for (const tile of row)
-      if (tile.resources && Object.keys(tile.resources).length > 0)
-        applyResourceToGrid(short, tall, tile, mask, season);
+      if (
+        (tile.resources && Object.keys(tile.resources).length > 0) ||
+        (PAINTED_TILES && mask[tile.y]?.[tile.x])
+      )
+        applyResourceToGrid(short, tall, tile, mask, season, worldMap);
   return { short, tall };
 }
 
