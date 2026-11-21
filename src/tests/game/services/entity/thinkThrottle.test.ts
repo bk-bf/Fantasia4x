@@ -30,6 +30,9 @@ describe('isThinkTick — throttled mobs think once per window', () => {
     const before = thinkTurns('mob-elk-7', 0, AI_THROTTLE_TICKS);
     for (let i = 0; i < 20_000; i++) isThinkTick(`mob-churn-${i}`, i);
     expect(thinkTurns('mob-elk-7', 0, AI_THROTTLE_TICKS)).toEqual(before);
+    const phases = new Set<number>();
+    for (let i = 0; i < 300; i++) phases.add(thinkTurns(`mob-late-${i}`, 0, AI_THROTTLE_TICKS)[0]);
+    expect(phases.size).toBeGreaterThan(AI_THROTTLE_TICKS / 2);
   });
 });
 
