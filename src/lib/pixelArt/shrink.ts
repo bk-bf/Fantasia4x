@@ -6,7 +6,7 @@ export function halve(src: HTMLCanvasElement): HTMLCanvasElement {
   const w = Math.ceil(src.width / 2);
   const h = Math.ceil(src.height / 2);
   const out = blank(w + 2, h + 2);
-  const o = out.getContext('2d');
+  const o = out.getContext('2d', { willReadFrequently: true });
   if (!g || !o) return src;
   const s = g.getImageData(0, 0, src.width, src.height).data;
   const img = o.createImageData(out.width, out.height);
@@ -64,7 +64,7 @@ export function fitInto(src: HTMLCanvasElement, box: number): HTMLCanvasElement 
     art = halve(art);
   const k = Math.max(1, Math.floor(box / Math.max(art.width, art.height)));
   const out = blank(box, box);
-  const g = out.getContext('2d');
+  const g = out.getContext('2d', { willReadFrequently: true });
   if (!g) return out;
   g.imageSmoothingEnabled = Math.max(art.width, art.height) > box;
   const fit = Math.min(k, box / Math.max(art.width, art.height));
