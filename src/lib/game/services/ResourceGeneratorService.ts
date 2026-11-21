@@ -6,6 +6,8 @@ import { makeSeededRng } from '../core/util/rng';
 import { STARTING_BUBBLE_RADIUS, MIN_LAIR_SPACING } from './entity/entityConstants';
 
 const CLUSTERED_SUBTYPES = new Set(['mineral_deposit']);
+const HOST_WALL_SUBTYPE = 'cave';
+const HOST_SEED_SALT = 0x9e3779b9;
 
 const GUARD_SEARCH_RADIUS = 6;
 const GUARD_CHANCE = 0.4;
@@ -42,18 +44,13 @@ class ResourceGeneratorServiceImpl {
         const dy = tile.y - cy;
         const lairBlocked = dx * dx + dy * dy <= lairFreeR2;
 
-        for (const def of defs) {
-          if (def.lair && lairBlocked) continue;
-          const chance = def.spawn.subterrains[baseSubType] ?? 0;
-          if (chance <= 0) continue;
-          if (rng(0, 100000) / 100000 >= chance) continue;
-          this.placeResource(tile, def, rng);
-          break;
-        }
+        const def = this.rollSpawn(defs, baseSubType, rng, lairBlocked);
+        if (def) this.placeResource(tile, def, rng);
       }
     }
 
-    this.fillResourceClusters(worldMap, defs, rng);
+    const hostRng = makeRng((resourceSeed ^ HOST_SEED_SALT) >>> 0);
+    this.fillResourceClusters(worldMap, defs, rng, hostRng);
 
     this.placeLairGuardians(worldMap, defs, rng, cx, cy, lairFreeR2);
 
@@ -65,11 +62,31 @@ class ResourceGeneratorServiceImpl {
     this.placeResource(tile, def, makeRng(seed));
   }
 
+  private rollSpawn(
+    defs: ResourceObjectDef[],
+    subType: string,
+    rng: (min: number, max: number) => number,
+    lairBlocked = false
+  ): ResourceObjectDef | null {
+    for (const def of defs) {
+      if (def.lair && lairBlocked) continue;
+      const chance = def.spawn.subterrains[subType] ?? 0;
+      if (chance <= 0) continue;
+      if (rng(0, 100000) / 100000 >= chance) continue;
+      return def;
+    }
+    return null;
+  }
+
   private fillResourceClusters(
     worldMap: WorldTile[][],
     defs: ResourceObjectDef[],
-    rng: (min: number, max: number) => number
+    rng: (min: number, max: number) => number,
+    hostRng: (min: number, max: number) => number
   ): void {
+    const hostWalls = defs.filter(
+      (d) => d.overheadRoof && (d.spawn.subterrains[HOST_WALL_SUBTYPE] ?? 0) > 0
+    );
     const h = worldMap.length;
     const w = worldMap[0]?.length ?? 0;
     const visited = new Uint8Array(h * w);
@@ -121,6 +138,10 @@ class ResourceGeneratorServiceImpl {
         for (const t of cluster) {
           t.resources = {};
           this.placeResource(t, chosen, rng);
+          const host =
+            this.rollSpawn(hostWalls, HOST_WALL_SUBTYPE, hostRng) ??
+            hostWalls[hostWalls.length - 1];
+          if (host) this.placeResource(t, host, hostRng);
         }
       }
     }
