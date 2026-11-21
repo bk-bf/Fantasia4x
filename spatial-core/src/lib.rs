@@ -29,6 +29,54 @@ fn octile(ax: u32, ay: u32, bx: u32, by: u32) -> f32 {
 }
 
 
+struct Scratch {
+    g: Vec<f32>,
+    parent: Vec<u32>,
+    expanded: Vec<bool>,
+    touched: Vec<u32>,
+}
+
+impl Scratch {
+    const fn new() -> Scratch {
+        Scratch { g: Vec::new(), parent: Vec::new(), expanded: Vec::new(), touched: Vec::new() }
+    }
+
+    fn begin(&mut self, n: usize) {
+        if self.g.len() < n {
+            self.g = vec![f32::INFINITY; n];
+            self.parent = vec![0; n];
+            self.expanded = vec![false; n];
+        }
+    }
+
+    #[inline]
+    fn improve(&mut self, i: usize, g: f32, parent: u32) {
+        if self.g[i] == f32::INFINITY {
+            self.touched.push(i as u32);
+        }
+        self.g[i] = g;
+        self.parent[i] = parent;
+        self.expanded[i] = false;
+    }
+
+    #[inline]
+    fn expand_once(&mut self, i: usize) -> bool {
+        !std::mem::replace(&mut self.expanded[i], true)
+    }
+
+    fn reset(&mut self) {
+        for &t in &self.touched {
+            self.g[t as usize] = f32::INFINITY;
+            self.expanded[t as usize] = false;
+        }
+        self.touched.clear();
+    }
+}
+
+thread_local! {
+    static SCRATCH: std::cell::RefCell<Scratch> = const { std::cell::RefCell::new(Scratch::new()) };
+}
+
 #[wasm_bindgen]
 pub fn find_path(
     walkable: &[u8],
@@ -66,11 +114,31 @@ pub fn find_path(
 
     let cap = if max_iter == 0 { (w * h).min(100_000) as u32 } else { max_iter };
 
-    let mut g: Vec<f32> = vec![f32::INFINITY; n];
-    let mut parent: Vec<u32> = vec![u32::MAX; n];
-    g[start] = 0.0;
+    SCRATCH.with(|cell| {
+        let mut scratch = cell.borrow_mut();
+        scratch.begin(n);
+        let path = search(&mut scratch, walkable, costs, w, h, start, end, ex, ey, cap);
+        scratch.reset();
+        path
+    })
+}
+
+fn search(
+    scratch: &mut Scratch,
+    walkable: &[u8],
+    costs: &[f32],
+    w: usize,
+    h: usize,
+    start: usize,
+    end: usize,
+    ex: u32,
+    ey: u32,
+    cap: u32,
+) -> Vec<u32> {
+    scratch.improve(start, 0.0, u32::MAX);
 
     let mut open: BinaryHeap<(Reverse<F32Ord>, u32)> = BinaryHeap::new();
+    let (sx, sy) = ((start % w) as u32, (start / w) as u32);
     open.push((Reverse(F32Ord(octile(sx, sy, ex, ey))), start as u32));
 
     const DIRS: [(i32, i32); 8] = [
@@ -83,12 +151,17 @@ pub fn find_path(
     while let Some((_, cur_u32)) = open.pop() {
         let cur = cur_u32 as usize;
         if cur == end {
-            return reconstruct(&parent, start, end, w);
+            return reconstruct(&scratch.parent, start, end, w);
         }
         iters += 1;
         if iters >= cap {
             return vec![];
         }
+
+        if !scratch.expand_once(cur) {
+            continue;
+        }
+        let g_cur = scratch.g[cur];
 
         let cx = (cur % w) as i32;
         let cy = (cur / w) as i32;
@@ -113,11 +186,10 @@ pub fn find_path(
             }
 
             let step = if dx == 0 || dy == 0 { 1.0f32 } else { std::f32::consts::SQRT_2 };
-            let tentative_g = g[cur] + step * costs[ni].max(1.0);
+            let tentative_g = g_cur + step * costs[ni].max(1.0);
 
-            if tentative_g < g[ni] {
-                g[ni] = tentative_g;
-                parent[ni] = cur as u32;
+            if tentative_g < scratch.g[ni] {
+                scratch.improve(ni, tentative_g, cur as u32);
                 let h_val = octile(nx as u32, ny as u32, ex, ey);
                 open.push((Reverse(F32Ord(tentative_g + h_val)), ni as u32));
             }
