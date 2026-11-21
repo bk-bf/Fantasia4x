@@ -229,7 +229,7 @@
     place-items: center;
   }
   .gly :global(.glyph),
-  .gly :global(canvas) {
+  .gly :global(img) {
     width: 26px !important;
     height: 26px !important;
   }
