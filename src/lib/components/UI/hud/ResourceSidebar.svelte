@@ -9,6 +9,9 @@
   import { itemService } from '$lib/game/services/ItemService';
   import { uiState } from '$lib/stores/uiState';
   import ScrollArea from '../widget/ScrollArea.svelte';
+  import SpriteIcon from '../widget/SpriteIcon.svelte';
+  import ChromeButton from '../widget/ChromeButton.svelte';
+  import './hudColumns.css';
   import type { Item } from '$lib/game/core/types.js';
   import {
     buildCategoryTree,
@@ -32,7 +35,6 @@
 
   const stockpile = $derived($currentStockpile as StockItem[]);
   const culture = $derived($currentCulture);
-  const population = $derived($gameState?.pawns?.length ?? 0);
   const carcassIntactness = $derived($gameState?._carcassCondition ?? {});
 
   let itemChanges = $state<Record<string, number>>({});
@@ -94,9 +96,9 @@
   }
 
   function intactnessColor(pct: number): string {
-    if (pct >= 70) return 'var(--pos)';
-    if (pct >= 35) return '#e8b830';
-    return 'var(--neg)';
+    if (pct >= 70) return 'var(--col-pos)';
+    if (pct >= 35) return 'var(--col-hot)';
+    return 'var(--col-neg)';
   }
 </script>
 
@@ -144,9 +146,9 @@
             {itemChanges[item.id] > 0 ? '+' : ''}{Math.floor(itemChanges[item.id])}
           </span>
         {/if}
+        <SpriteIcon item={item.id} px={16} />
         <span class="res-name">{item.name}</span>
-        <span class="dots"></span>
-        <span class="res-amt" style="color:{stock?.color || 'var(--text)'}">
+        <span class="res-amt">
           {Math.floor(stock?.amount ?? 0)}
         </span>
       </div>
@@ -168,7 +170,11 @@
   {/if}
 {/snippet}
 
-<aside class="sidebar" class:transparent={$hideSidebars} class:collapsed={$resourcesMinimized}>
+<aside
+  class="sidebar hud-col"
+  class:transparent={$hideSidebars}
+  class:collapsed={$resourcesMinimized}
+>
   {#if $resourcesMinimized}
     <button
       class="restore-btn"
@@ -177,46 +183,20 @@
       onclick={() => resourcesMinimized.set(false)}>›</button
     >
   {:else if culture}
-    <div class="sticky-top">
-      <div class="section-hdr">| KINGDOM</div>
-      <div class="rows">
-        <div class="row">
-          <span class="lbl">SETTLEMENT</span>
-          <span class="val hi">{culture.name}</span>
-        </div>
-        <div class="row">
-          <span class="lbl">POPULATION</span>
-          <span class="val">{population}</span>
-        </div>
-      </div>
-
-      <div class="section-hdr top-sep res-hdr">
-        <span>| RESOURCES</span>
-        <span class="hdr-btns">
-          <button
-            class="hdr-btn"
-            class:active={$hideEmptyResourceCategories}
-            title={$hideEmptyResourceCategories
-              ? 'Showing only non-empty categories — click to show all'
-              : 'Showing all categories — click to hide empty ones'}
-            aria-label="Toggle empty categories"
-            onclick={() => hideEmptyResourceCategories.toggle()}>∅</button
-          >
-          <button
-            class="hdr-btn"
-            title={allExpanded ? 'Collapse all categories' : 'Expand all categories'}
-            aria-label={allExpanded ? 'Collapse all categories' : 'Expand all categories'}
-            disabled={tree.length === 0}
-            onclick={toggleAll}>{allExpanded ? '⊟' : '⊞'}</button
-          >
-          <button
-            class="hdr-btn"
-            title="Minimise resources panel"
-            aria-label="Minimise resources panel"
-            onclick={() => resourcesMinimized.set(true)}>‹</button
-          >
-        </span>
-      </div>
+    <div class="tools">
+      <ChromeButton
+        mini
+        on={$hideEmptyResourceCategories}
+        label="Toggle empty categories"
+        title={$hideEmptyResourceCategories ? 'Only kinds in store' : 'Every kind'}
+        onclick={() => hideEmptyResourceCategories.toggle()}>∅</ChromeButton
+      >
+      <ChromeButton
+        mini
+        label={allExpanded ? 'Collapse all categories' : 'Expand all categories'}
+        disabled={tree.length === 0}
+        onclick={toggleAll}>{allExpanded ? '−' : '+'}</ChromeButton
+      >
     </div>
 
     <ScrollArea class="res-area">
@@ -233,281 +213,99 @@
   .sidebar {
     height: 100%;
     width: 100%;
-    background: var(--bg-panel);
-    font-family: var(--font-mono);
-    font-size: 12px;
-    color: var(--text);
     display: flex;
     flex-direction: column;
     overflow: hidden;
   }
-
   .sidebar.collapsed {
     align-items: center;
     padding-top: 4px;
-    gap: 6px;
   }
   .restore-btn {
-    flex-shrink: 0;
     width: 18px;
     height: 18px;
     padding: 0;
-    border: 1px solid var(--border);
-    background: var(--bg);
-    color: var(--accent-hi);
-    font-family: inherit;
-    font-size: 13px;
-    line-height: 1;
+    border: 1px solid var(--col-mute);
+    background: none;
+    color: var(--col-hot);
+    font: inherit;
     cursor: pointer;
   }
-  .restore-btn:hover {
-    border-color: var(--border-hi);
-    background: var(--bg-hover);
-  }
-
-  .sidebar.transparent {
-    background: transparent;
-    text-shadow:
-      1px 0 0 #000,
-      -1px 0 0 #000,
-      0 1px 0 #000,
-      0 -1px 0 #000,
-      0 0 12px rgba(0, 0, 0, 0.95),
-      0 0 20px rgba(0, 0, 0, 0.9),
-      0 2px 4px rgba(0, 0, 0, 1),
-      0 4px 6px rgba(0, 0, 0, 1),
-      0 6px 10px rgba(0, 0, 0, 1),
-      0 8px 16px rgba(0, 0, 0, 0.95),
-      0 10px 24px rgba(0, 0, 0, 0.9);
-  }
-  .sidebar.transparent .section-hdr {
-    background: transparent;
-    border-bottom: none;
-  }
-  .sidebar.transparent .top-sep {
-    border-top: none;
-  }
-  .sidebar.transparent .cat-hdr {
-    border-bottom: none;
-  }
-  .sidebar.transparent .row,
-  .sidebar.transparent .res-row,
-  .sidebar.transparent .cat-hdr,
-  .sidebar.transparent button {
-    pointer-events: auto;
-  }
-  .sidebar.transparent .row,
-  .sidebar.transparent .res-row {
-    background: linear-gradient(
-      to right,
-      transparent,
-      color-mix(in srgb, var(--bg-hover) 33%, transparent) 10%,
-      color-mix(in srgb, var(--bg-hover) 33%, transparent) 90%,
-      transparent
-    );
-  }
-  .sidebar.transparent .row:hover,
-  .sidebar.transparent .res-row:hover {
-    background: var(--bg-hover);
-  }
-
-  .sticky-top {
+  .tools {
     flex-shrink: 0;
-  }
-
-  .section-hdr {
-    padding: 4px 8px 3px;
-    color: var(--accent-hi);
-    font-size: 12px;
-    letter-spacing: 0.06em;
-    border-bottom: 1px solid var(--border);
-    background: var(--bg);
-  }
-
-  .res-hdr {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 6px;
+    justify-content: flex-end;
+    gap: 3px;
+    padding: 4px 8px 2px;
   }
-
-  .hdr-btns {
-    display: flex;
-    gap: 4px;
-    flex-shrink: 0;
-  }
-  .hdr-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 15px;
-    height: 15px;
-    padding: 0;
-    border: 1px solid var(--border);
-    background: transparent;
-    color: var(--text-dim);
-    font-family: inherit;
-    font-size: 12px;
-    line-height: 1;
-    cursor: pointer;
-  }
-  .hdr-btn:hover:not(:disabled) {
-    color: var(--accent-hi);
-    border-color: var(--accent-hi);
-    background: var(--bg-hover);
-  }
-  .hdr-btn.active {
-    color: var(--accent-hi);
-    border-color: var(--accent-hi);
-  }
-  .hdr-btn:disabled {
-    opacity: 0.3;
-    cursor: default;
-  }
-
-  .top-sep {
-    margin-top: 4px;
-    border-top: 1px solid var(--border);
-  }
-
-  .rows {
-    padding: 2px 0;
-  }
-
-  .row {
-    display: flex;
-    align-items: baseline;
-    padding: 2px 8px;
-    gap: 4px;
-  }
-  .row:hover {
-    background: var(--bg-hover);
-  }
-
-  .lbl {
-    color: var(--text-dim);
-    font-size: 12px;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    white-space: nowrap;
-    flex-shrink: 0;
-  }
-
-  .val {
-    margin-left: auto;
-    color: var(--text);
-    text-align: right;
-    white-space: nowrap;
-  }
-  .val.hi {
-    color: var(--accent-hi);
-  }
-
   .sidebar :global(.res-area) {
     flex: 1;
-    padding: 2px 0;
+    padding: 0 0 8px;
   }
-
   .cat-hdr {
     display: flex;
     align-items: baseline;
     gap: 5px;
-    padding: 3px 8px;
+    padding: 5px 8px 0;
     cursor: pointer;
-    color: var(--text-dim);
-    border-bottom: 1px solid var(--border);
+    color: var(--col-dim);
+    letter-spacing: 1.6px;
+    text-transform: uppercase;
     user-select: none;
   }
-  .cat-hdr:hover {
-    background: var(--bg-hover);
-  }
   .cat-hdr.open {
-    color: var(--accent-hi);
+    color: var(--col-hot);
   }
   .caret {
     flex-shrink: 0;
     width: 8px;
-    color: var(--text-muted);
-  }
-  .cat-hdr.open .caret {
-    color: var(--accent-hi);
+    color: var(--col-mute);
   }
   .cat-name {
-    letter-spacing: 0.05em;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
   .cat-count {
     margin-left: auto;
-    color: var(--text-muted);
-    font-size: 10px;
+    color: var(--col-mute);
     flex-shrink: 0;
   }
   .cat-empty {
-    padding: 1px 8px 1px 24px;
-    color: var(--text-muted);
-    font-size: 10px;
-    font-style: italic;
+    color: var(--col-mute);
   }
-
   .res-row {
     position: relative;
     display: flex;
-    align-items: baseline;
-    padding: 1px 8px 1px 24px;
-    gap: 3px;
+    align-items: center;
+    gap: 5px;
+    height: 17px;
+    padding-right: 8px;
     cursor: pointer;
   }
-  .res-row:hover {
-    background: var(--bg-hover);
-  }
-
   .res-name {
-    color: var(--text-dim);
+    flex: 1;
+    min-width: 0;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    flex-shrink: 1;
-    min-width: 0;
-    font-size: 12px;
   }
-
-  .dots {
-    flex: 1;
-    border-bottom: 1px dotted var(--text-muted);
-    margin: 0 3px 2px;
-    min-width: 4px;
-  }
-
   .res-amt {
-    font-weight: bold;
-    white-space: nowrap;
     flex-shrink: 0;
-    font-size: 11px;
   }
-
   .delta {
     position: absolute;
     left: 3px;
-    top: 1px;
-    font-size: 10px;
-    font-weight: bold;
-    white-space: nowrap;
     pointer-events: none;
     animation: fadeout 2.5s ease-out forwards;
   }
   .delta.pos {
-    color: var(--pos);
+    color: var(--col-pos);
   }
   .delta.neg {
-    color: var(--neg);
+    color: var(--col-neg);
   }
-
   @keyframes fadeout {
-    0% {
-      opacity: 1;
-    }
     70% {
       opacity: 1;
     }
@@ -515,37 +313,17 @@
       opacity: 0;
     }
   }
-
   .empty {
     padding: 8px;
-    color: var(--text-muted);
-    font-size: 10px;
-    font-style: italic;
+    color: var(--col-mute);
   }
-
   .carcass-row {
     display: flex;
     align-items: center;
-    padding: 0 8px 2px 24px;
     gap: 4px;
-    font-size: 10px;
-    font-family: var(--font-mono);
+    padding-right: 8px;
   }
-
-  .intactness-lbl {
-    white-space: nowrap;
-    flex-shrink: 0;
-    letter-spacing: 0.03em;
-  }
-
   .intactness-bar {
     letter-spacing: -1px;
-    flex-shrink: 0;
-  }
-
-  .intactness-pct {
-    white-space: nowrap;
-    flex-shrink: 0;
-    font-size: 10px;
   }
 </style>

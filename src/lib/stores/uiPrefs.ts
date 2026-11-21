@@ -1,4 +1,5 @@
 import { writable } from 'svelte/store';
+import { isThemeId, type ThemeId } from '$lib/components/UI/theme/themes';
 
 const COLLAPSED_RES_CATS_KEY = 'fx.resourcePanel.collapsedCategories';
 const HIDE_EMPTY_RES_CATS_KEY = 'fx.resourcePanel.hideEmptyCategories';
@@ -66,6 +67,8 @@ export const hideEmptyResourceCategories = createPersistedBool(HIDE_EMPTY_RES_CA
 
 export const resourcesMinimized = createPersistedBool('fx.layout.resourcesMin', false);
 export const chronicleMinimized = createPersistedBool('fx.layout.chronicleMin', false);
+export const resourcesHidden = createPersistedBool('fx.layout.resourcesHidden', false);
+export const chronicleHidden = createPersistedBool('fx.layout.chronicleHidden', false);
 
 export const hideSidebars = createPersistedBool(HIDE_SIDEBARS_KEY, true);
 
@@ -124,3 +127,30 @@ export const masterVolume = createPersistedNumber('fx.audio.master', 70);
 export const musicVolume = createPersistedNumber('fx.audio.music', 70);
 export const sfxVolume = createPersistedNumber('fx.audio.sfx', 80);
 export const ambientVolume = createPersistedNumber('fx.audio.ambient', 70);
+
+function createPersistedChoice<T extends string>(
+  key: string,
+  fallback: T,
+  valid: (v: string) => v is T
+) {
+  const load = (): T => {
+    if (typeof localStorage === 'undefined') return fallback;
+    const raw = localStorage.getItem(key);
+    return raw !== null && valid(raw) ? raw : fallback;
+  };
+  const { subscribe, set } = writable<T>(load());
+  return {
+    subscribe,
+    set: (v: T) => {
+      set(v);
+      if (typeof localStorage === 'undefined') return;
+      try {
+        localStorage.setItem(key, v);
+      } catch {
+        return;
+      }
+    }
+  };
+}
+
+export const uiTheme = createPersistedChoice<ThemeId>('fx.ui.theme', 'timber', isThemeId);

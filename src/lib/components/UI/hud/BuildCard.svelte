@@ -78,7 +78,7 @@
       on:mousemove={onStatMove}
       on:mouseleave={onStatLeave}
     >
-      <SpriteIcon {charSpans} px={18} />
+      <SpriteIcon {charSpans} item={statItem?.id} building={buildingDef?.id} px={22} />
       <span class="card-name">{name}</span>
       {#if workAmount != null}<span class="card-work" title="work to complete">⚒{workAmount}</span
         >{/if}

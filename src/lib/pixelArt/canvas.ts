@@ -9,9 +9,12 @@ export function blank(w: number, h: number): HTMLCanvasElement {
   return c;
 }
 
+export const pen = (c: HTMLCanvasElement): CanvasRenderingContext2D | null =>
+  c.getContext('2d', { willReadFrequently: true });
+
 export function paint(w: number, h: number, fn: Painter): HTMLCanvasElement {
   const c = blank(w, h);
-  const g = c.getContext('2d');
+  const g = pen(c);
   if (!g) return c;
   const img = g.createImageData(c.width, c.height);
   const d = img.data;

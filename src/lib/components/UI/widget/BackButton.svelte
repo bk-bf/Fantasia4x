@@ -1,8 +1,10 @@
 <script lang="ts">
   import { uiState } from '$lib/stores/uiState';
+  import { currentWindow } from '$lib/components/UI/window/windowContext';
 
   let { label = 'BACK', onClick }: { label?: string; onClick?: () => void } = $props();
-  const handle = () => (onClick ? onClick() : uiState.setScreen('main'));
+  const win = currentWindow();
+  const handle = () => (onClick ? onClick() : win ? win.close() : uiState.closeTopWindow());
 </script>
 
 <button class="back-btn" onclick={handle} title="Back to map">‹ {label}</button>

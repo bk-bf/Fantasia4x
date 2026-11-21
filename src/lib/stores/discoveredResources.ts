@@ -77,7 +77,7 @@ function maybeScheduleRebuild(turn: number) {
 gameState.subscribe((s) => maybeScheduleRebuild(s.turn ?? 0));
 
 uiState.subscribe((s) => {
-  const open = s.currentScreen === 'exploration';
+  const open = s.windows.includes('exploration');
   if (open && !exploreOpen) {
     const bucket = Math.floor((get(gameState).turn ?? 0) / REFRESH_TURNS);
     if (bucket !== builtBucket) rebuildNow();

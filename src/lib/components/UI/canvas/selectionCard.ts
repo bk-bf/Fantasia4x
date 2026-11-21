@@ -565,13 +565,10 @@ export function buildPawnCard(
       ? ([
           {
             label: 'VIEW',
-            onClick: () =>
-              uiState.update((s) => ({
-                ...s,
-                selectedPawnId: pawn.id,
-                pawnScreenTab: 'status',
-                currentScreen: 'pawns'
-              }))
+            onClick: () => {
+              uiState.update((s) => ({ ...s, selectedPawnId: pawn.id, pawnScreenTab: 'status' }));
+              uiState.openWindow('pawns');
+            }
           },
           {
             label: cameraFollowPawnId === pawn.id ? 'UNFOLLOW' : 'FOLLOW',
@@ -586,23 +583,17 @@ export function buildPawnCard(
           ...(pawn.drafted ? [{ label: 'MOVE', onClick: () => armMove() }] : []),
           {
             label: 'WORK',
-            onClick: () =>
-              uiState.update((s) => ({
-                ...s,
-                selectedPawnId: pawn.id,
-                pawnScreenTab: null,
-                currentScreen: 'work'
-              }))
+            onClick: () => {
+              uiState.update((s) => ({ ...s, selectedPawnId: pawn.id, pawnScreenTab: null }));
+              uiState.openWindow('work');
+            }
           },
           {
             label: 'GEAR',
-            onClick: () =>
-              uiState.update((s) => ({
-                ...s,
-                selectedPawnId: pawn.id,
-                pawnScreenTab: 'gear',
-                currentScreen: 'pawns'
-              }))
+            onClick: () => {
+              uiState.update((s) => ({ ...s, selectedPawnId: pawn.id, pawnScreenTab: 'gear' }));
+              uiState.openWindow('pawns');
+            }
           },
           {
             label: 'FOOD',
@@ -693,7 +684,7 @@ export function buildMobCard(
             label: 'VIEW',
             onClick: () => {
               uiState.selectMob(mob.id);
-              uiState.setScreen('entities');
+              uiState.openWindow('entities');
             }
           },
           {

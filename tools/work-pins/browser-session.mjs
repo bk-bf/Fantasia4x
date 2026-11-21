@@ -16,7 +16,8 @@ const NETWORK_QUIET_MS = 3000;
 const LOG_ENDPOINT = '/api/log';
 const SAVE_ID = 'work-pins';
 const RANDOM_SEED = 0x2545f491;
-const PAUSE_BUTTON = 'button.ctrl-btn:has-text("PAUSE"), button.ctrl-btn:has-text("RESUME")';
+const PAUSE_BUTTON =
+  'button.ctrl-btn:has-text("PAUSE"), button.ctrl-btn:has-text("RESUME"), button.ctrl-btn[aria-label="Pause"], button.ctrl-btn[aria-label="Resume"]';
 const PANELS = 'aside.left-panel, aside.right-panel, .game-header, nav.bottom-nav';
 const CHRONICLE = 'aside.right-panel .log-list';
 const SERVE_WITHOUT_GIT = { GIT_DIR: '/dev/null' };
@@ -48,13 +49,19 @@ async function startServer(tree, port, logFile, workPins) {
   const child = spawn(join(tree, 'dev.sh'), ['--browser', '--port', String(port)], {
     cwd: tree,
     detached: true,
-    env: { ...process.env, ...SERVE_WITHOUT_GIT, ...(workPins ? { VITE_WORK_PINS: '1' } : {}), CI: 'true' },
+    env: {
+      ...process.env,
+      ...SERVE_WITHOUT_GIT,
+      ...(workPins ? { VITE_WORK_PINS: '1' } : {}),
+      CI: 'true'
+    },
     stdio: ['ignore', 'pipe', 'pipe']
   });
   child.stdout.pipe(out);
   child.stderr.pipe(out);
   for (let i = 0; i < 600; i++) {
-    if (child.exitCode !== null) throw new Error(`dev server exited ${child.exitCode}, see ${logFile}`);
+    if (child.exitCode !== null)
+      throw new Error(`dev server exited ${child.exitCode}, see ${logFile}`);
     try {
       if ((await fetch(`http://127.0.0.1:${port}/`)).ok) return child;
     } catch {
@@ -155,8 +162,7 @@ async function loadGame(page, origin) {
   await page.waitForFunction(
     () =>
       [...document.querySelectorAll('button')].some(
-        (b) =>
-          (b.getAttribute('aria-label') ?? b.textContent.trim()) === 'Load Game' && !b.disabled
+        (b) => (b.getAttribute('aria-label') ?? b.textContent.trim()) === 'Load Game' && !b.disabled
       ),
     null,
     { timeout: 300_000, polling: 500 }
@@ -233,7 +239,10 @@ async function flushLayout(page) {
 }
 
 export async function frame(page, ticks = 1) {
-  await withTimeout(page.evaluate((n) => window.__f4xWorkPins.step(n), ticks), 'sim step');
+  await withTimeout(
+    page.evaluate((n) => window.__f4xWorkPins.step(n), ticks),
+    'sim step'
+  );
   await flushLayout(page);
   await page.clock.runFor(FRAME_MS);
   await flushLayout(page);
@@ -248,11 +257,14 @@ export async function focusMap(page) {
 }
 
 export async function isPaused(page) {
-  return ((await page.locator(PAUSE_BUTTON).first().getAttribute('class')) ?? '').includes('is-paused');
+  return ((await page.locator(PAUSE_BUTTON).first().getAttribute('class')) ?? '').includes(
+    'is-paused'
+  );
 }
 
 export async function setPaused(page, want) {
-  if ((await isPaused(page)) !== want) await page.locator(PAUSE_BUTTON).first().dispatchEvent('click');
+  if ((await isPaused(page)) !== want)
+    await page.locator(PAUSE_BUTTON).first().dispatchEvent('click');
   await focusMap(page);
   if ((await isPaused(page)) !== want) throw new Error(`pause button did not reach paused=${want}`);
 }
@@ -267,7 +279,9 @@ export async function assertRunning(page, what) {
     const first = document.querySelector(list)?.firstElementChild;
     return (first?.textContent ?? '').replace(/\s+/g, ' ').trim().slice(0, 140);
   }, CHRONICLE);
-  throw new Error(`the game paused itself during ${what} at turn ${await turnOf(page)}: ${chronicle}`);
+  throw new Error(
+    `the game paused itself during ${what} at turn ${await turnOf(page)}: ${chronicle}`
+  );
 }
 
 export async function metrics(cdp, { collectGarbage = false } = {}) {
