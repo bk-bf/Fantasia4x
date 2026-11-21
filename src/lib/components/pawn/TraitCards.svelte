@@ -18,6 +18,9 @@
   import ConditionTooltip from '$lib/components/pawn/ConditionTooltip.svelte';
   import { conditionViewForId, traitGrantLines } from '$lib/components/util/conditionInfo';
   import { createPinnable } from '$lib/components/util/pinnable.svelte';
+  import { chrome } from '$lib/pixelArt/chrome';
+  import SkinBadge from '$lib/components/UI/widget/SkinBadge.svelte';
+  import { traitBadge } from './badges';
 
   const EFFECT_TO_STAT: Record<string, string> = {
     coldResistance: 'cold_resistance',
@@ -55,11 +58,13 @@
   let {
     traits,
     guaranteedCount = undefined,
-    pawn = undefined
+    pawn = undefined,
+    list = false
   }: {
     traits: Trait[];
     guaranteedCount?: number;
     pawn?: Pawn;
+    list?: boolean;
   } = $props();
 
   let workRank = $derived.by<Record<string, CellRank>>(() => {
@@ -121,9 +126,9 @@
   };
 
   const PILL_TINT: Record<Tag['type'], string> = {
-    pos: '#6fae3a',
-    neg: '#c65a3a',
-    neutral: '#b8965a'
+    pos: 'var(--pos)',
+    neg: 'var(--neg)',
+    neutral: 'var(--text-dim)'
   };
   const woundPartLabel = (id: string) => partLabel(id).replace(/^(left|right) /i, '');
   const stripSide = (id: string) => id.replace(/^(left|right)/i, '').toLowerCase();
@@ -315,35 +320,36 @@
   }
 </script>
 
-<div class="cards-grid">
+<div class="cards-grid" class:list>
   {#each traits as trait, i (trait.id ?? trait.name)}
     {@const tags = getEffectTags(trait)}
+    {@const b = traitBadge(trait)}
     <div
       class="trait-card"
-      style="--rarity: {rarityColor(trait)}"
+      class:bad={b.kind === 'neg'}
       role="presentation"
       onmouseenter={(e) => showCard(trait, e)}
       onmousemove={moveCard}
       onmouseleave={hideCard}
+      {@attach list ? undefined : chrome('cell')}
     >
-      <div class="card-accent"></div>
+      <SkinBadge glyph={b.glyph} kind={b.kind} />
       <div class="card-body">
         <div class="card-header">
-          <span class="card-name">{trait.name.toUpperCase()}</span>
+          <b class="card-name">{trait.name}</b>
           {#if guaranteedCount != null}
             <span class="ident-mk" class:always={i < guaranteedCount}
               >{i < guaranteedCount ? 'every member' : 'some'}</span
             >
           {/if}
         </div>
-        <div class="card-desc">{trait.description}</div>
+        <p class="card-desc">{trait.description}</p>
         {#if tags.length > 0}
           <div class="card-tags">
             {#each tags as tag, ti}
               {@const pk = (trait.id ?? trait.name) + ':' + ti}
               <span
                 class="chip"
-                class:warn={tag.type === 'neg'}
                 style="--pill: {PILL_TINT[tag.type]}"
                 role="button"
                 tabindex="0"
@@ -447,100 +453,79 @@
 <style>
   .cards-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-    gap: 6px;
-    padding: 6px 8px;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 4px;
   }
-
-  .trait-card {
-    display: flex;
-    background: var(--bg-panel);
-    border: 1px solid color-mix(in srgb, var(--rarity) 45%, var(--border));
-    border-radius: 2px;
-    overflow: hidden;
-    transition: border-color 0.15s ease;
-  }
-  .trait-card:hover {
-    border-color: var(--rarity);
-  }
-  .card-accent {
-    width: 3px;
-    flex-shrink: 0;
-    background: var(--rarity);
-  }
-  .card-body {
-    padding: 6px 8px;
+  .cards-grid.list {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 7px;
+  }
+  .trait-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 6px 9px 7px;
+    min-width: 0;
+  }
+  .list .trait-card {
+    padding: 0;
+  }
+  .card-body {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
     flex: 1;
     min-width: 0;
   }
   .card-header {
     display: flex;
     align-items: baseline;
-    gap: 5px;
-    color: var(--accent-hi);
-    font-size: 12px;
-    letter-spacing: 0.04em;
-    font-weight: 600;
+    gap: 8px;
     min-width: 0;
   }
   .card-name {
+    font-weight: normal;
+    color: var(--text);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
+  .bad .card-name {
+    color: var(--neg);
+  }
   .ident-mk {
     flex-shrink: 0;
-    font-size: 9px;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-    color: var(--text-dim);
+    margin-left: auto;
+    color: var(--text-muted);
   }
   .ident-mk.always {
-    color: var(--pos, #68b030);
+    color: var(--accent-hi);
   }
   .card-desc {
-    color: var(--text-muted);
-    font-size: 11px;
-    line-height: 1.35;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
+    margin: 0;
+    color: var(--text-dim);
+    line-height: 16px;
   }
-
   .card-tags {
     display: flex;
     flex-wrap: wrap;
-    gap: 2px;
-    margin-top: 3px;
+    gap: 3px;
+    margin-top: 2px;
   }
   .chip {
-    display: flex;
-    align-items: center;
-    gap: 3px;
-    border: 0;
-    background: color-mix(in srgb, var(--pill) 14%, rgba(28, 16, 6, 0.92));
-    padding: 0 4px;
-    height: 13px;
-    font-size: 9px;
-    line-height: 1;
+    display: inline-flex;
+    gap: 5px;
+    padding: 0 5px;
+    box-shadow: inset 0 0 0 1px var(--text-muted);
     white-space: nowrap;
-  }
-  .chip.warn {
-    background: color-mix(in srgb, var(--pill) 22%, rgba(40, 12, 6, 0.92));
+    cursor: help;
   }
   .pill-k {
-    color: color-mix(in srgb, var(--pill) 45%, #9a8458);
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
+    color: var(--text-dim);
   }
   .pill-v {
-    color: color-mix(in srgb, var(--pill) 75%, #e8c870);
-    font-weight: bold;
+    color: var(--pill);
   }
 
   .tip-name {

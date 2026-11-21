@@ -1,6 +1,7 @@
 import {
   buildTileset,
   parseManifest,
+  idHash,
   type PaintedKind,
   type PaintedManifest,
   type PaintedTileset
@@ -97,11 +98,14 @@ export async function loadPaintedTileset(
 export async function paintedSpriteCanvas(
   kind: PaintedKind,
   id: string,
-  baseUrl = PAINTED_BASE_URL
+  baseUrl = PAINTED_BASE_URL,
+  entityId?: string
 ): Promise<HTMLCanvasElement | null> {
   source ??= readSource(baseUrl);
   const loaded = await source;
-  const spriteId = loaded?.manifest.map[kind]?.[id]?.[0];
+  const byKind = loaded?.manifest.map[kind];
+  const ids = byKind?.[id] ?? (entityId === undefined ? undefined : byKind?.['*']);
+  const spriteId = ids?.[entityId === undefined ? 0 : idHash(entityId) % ids.length];
   const s = loaded && spriteId ? loaded.manifest.sprites[spriteId] : undefined;
   if (!loaded || !s) return null;
   const canvas = document.createElement('canvas');
