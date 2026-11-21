@@ -24,11 +24,8 @@
     const skin = kind;
     let start = performance.now();
     let turnedAt = 0;
-    let lastTick = -1;
-    let raf = 0;
     let timer: ReturnType<typeof setTimeout> | undefined;
     const paint = (f: number, tick: number) => {
-      lastTick = tick;
       g.clearRect(0, 0, SANDGLASS.w, SANDGLASS.h);
       g.drawImage(sandglassGlass(skin, f, tick), 0, 0);
       g.drawImage(art, 0, 0);
@@ -39,20 +36,20 @@
       paint(0, Math.floor(start / TICK_MS));
       turning = false;
     };
-    const step = (now: number) => {
+    const step = () => {
+      const now = performance.now();
       const f = turnedAt ? 1 : Math.min(1, (now - start) / RUN_MS);
-      const tick = Math.floor(now / TICK_MS);
-      if (tick !== lastTick) paint(f, tick);
+      paint(f, Math.floor(now / TICK_MS));
       if (f >= 1 && !turnedAt) {
         turnedAt = now;
         turning = true;
         timer = setTimeout(settle, TURN_MS + 40);
       }
-      raf = requestAnimationFrame(step);
     };
-    raf = requestAnimationFrame(step);
+    step();
+    const ticker = setInterval(step, TICK_MS);
     return () => {
-      cancelAnimationFrame(raf);
+      clearInterval(ticker);
       clearTimeout(timer);
     };
   });
