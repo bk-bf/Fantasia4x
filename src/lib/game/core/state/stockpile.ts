@@ -180,11 +180,9 @@ export function reserveForOrder(
         });
       }
       drops.push({
+        ...d,
         ...(d.unitConditions ? { unitConditions: d.unitConditions.slice(0, remaining) } : {}),
-        id: `${d.id}-resv-${orderId}`,
-        resourceId: d.resourceId,
-        x: d.x,
-        y: d.y,
+        id: `${d.id}${RESERVED_PIECE}${orderId}`,
         quantity: remaining,
         stored: true,
         reservedFor: orderId
@@ -195,15 +193,65 @@ export function reserveForOrder(
   return { state: { ...state, droppedItems: drops }, reserved: qty - remaining };
 }
 
+const RESERVED_PIECE = '-resv-';
+
+function sourceStackIndex(drops: DroppedItem[], piece: DroppedItem, orderId: string): number {
+  const suffix = `${RESERVED_PIECE}${orderId}`;
+  if (!piece.id.endsWith(suffix)) return -1;
+  const sourceId = piece.id.slice(0, -suffix.length);
+  return drops.findIndex(
+    (d) =>
+      d.id === sourceId &&
+      !d.reservedFor &&
+      d.resourceId === piece.resourceId &&
+      d.x === piece.x &&
+      d.y === piece.y &&
+      !!d.stored === !!piece.stored
+  );
+}
+
 export function releaseReservation(state: GameState, orderId: string): GameState {
-  let changed = false;
-  const drops = (state.droppedItems ?? []).map((d) => {
-    if (d.reservedFor !== orderId) return d;
-    changed = true;
+  const all = state.droppedItems ?? [];
+  if (!all.some((d) => d.reservedFor === orderId)) return state;
+  const drops: DroppedItem[] = [];
+  const pieces: DroppedItem[] = [];
+  for (const d of all) {
+    if (d.reservedFor !== orderId) {
+      drops.push(d);
+      continue;
+    }
     const { reservedFor, ...rest } = d;
-    return rest;
-  });
-  return changed ? { ...state, droppedItems: drops } : state;
+    pieces.push(rest);
+    drops.push(rest);
+  }
+  for (const piece of pieces) {
+    const src = sourceStackIndex(drops, piece, orderId);
+    if (src < 0) continue;
+    const source = drops[src];
+    const conditions =
+      piece.unitConditions || source.unitConditions
+        ? mergeConditions(
+            piece.unitConditions,
+            piece.quantity,
+            source.unitConditions,
+            source.quantity
+          )
+        : undefined;
+    drops[src] = {
+      ...source,
+      quantity: source.quantity + piece.quantity,
+      ...(conditions ? { unitConditions: conditions } : {})
+    };
+    drops.splice(drops.indexOf(piece), 1);
+  }
+  return { ...state, droppedItems: drops };
+}
+
+export function freeDropId(drops: readonly DroppedItem[], base: string): string {
+  if (!drops.some((d) => d.id === base)) return base;
+  let n = 1;
+  while (drops.some((d) => d.id === `${base}-${n}`)) n++;
+  return `${base}-${n}`;
 }
 
 export function tileStoredQuantity(state: GameState, x: number, y: number): number {
@@ -340,13 +388,13 @@ export function addToStockpileZone(
       continue;
     }
     const idx = drops.findIndex(
-      (d) => d.stored && d.resourceId === itemId && d.x === x && d.y === y
+      (d) => d.stored && !d.reservedFor && d.resourceId === itemId && d.x === x && d.y === y
     );
     if (idx >= 0) {
       drops[idx].quantity += amount;
     } else {
       drops.push({
-        id: `stored-${itemId}-${x}-${y}`,
+        id: freeDropId(drops, `stored-${itemId}-${x}-${y}`),
         resourceId: itemId,
         x,
         y,
@@ -523,7 +571,12 @@ export function absorbDropIfOnStockpileTile(state: GameState, dropId: string): G
   }
 
   const existingIdx = (state.droppedItems ?? []).findIndex(
-    (d) => d.stored && d.resourceId === drop.resourceId && d.x === drop.x && d.y === drop.y
+    (d) =>
+      d.stored &&
+      !d.reservedFor &&
+      d.resourceId === drop.resourceId &&
+      d.x === drop.x &&
+      d.y === drop.y
   );
 
   let newDropped: DroppedItem[];
