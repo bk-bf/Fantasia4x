@@ -1,0 +1,54 @@
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { REGISTRY_ART } from './sources.mjs';
+
+const ART = join(dirname(fileURLToPath(import.meta.url)), 'art');
+
+export const CATEGORY = new Map(
+  Object.entries({
+    tree: 'resource',
+    plant: 'resource',
+    crop: 'resource',
+    ore: 'resource',
+    site: 'resource',
+    building: 'building',
+    creature: 'creature',
+    folk: 'pawn'
+  })
+);
+
+const EXCLUDED_VARIANTS = new Set(['post', 'run', 'room', 'idle', 'empty', 'n', 'e', 'w']);
+const SHOWN_FACING = 's';
+const FRAME = /^f\d+$/;
+const SEASON = /^(summer|autumn|winter)-(\d+)$/;
+
+export function loadRegistry() {
+  const src = REGISTRY_ART.map((f) =>
+    readFileSync(join(ART, f), 'utf8').replace(/^'use strict';\n/, '')
+  ).join('\n;');
+  return new Function(`'use strict';\n${src}\nreturn DBX;`)();
+}
+
+function variantIndex(variant = '') {
+  if (EXCLUDED_VARIANTS.has(variant) || FRAME.test(variant)) return null;
+  if (variant === SHOWN_FACING) return variant;
+  const s = SEASON.exec(variant);
+  if (s) return s[1] === 'summer' ? s[2] : null;
+  return /^\d+$/.test(variant) ? variant : null;
+}
+
+export function registryEntries(
+  DBX = loadRegistry(),
+  skip = (cat = '', dbId = '') => !!(cat && dbId)
+) {
+  const out = [];
+  for (const e of DBX.list) {
+    const cat = CATEGORY.get(e.cat);
+    if (!cat || e.dbId.startsWith('_') || skip(cat, e.dbId)) continue;
+    const n = variantIndex(e.variant);
+    if (n === null) continue;
+    out.push({ cat, dbId: e.dbId, spriteId: `${e.cat}/${e.dbId}/${n}`, entry: e });
+  }
+  return out;
+}
