@@ -5,6 +5,8 @@ import { resolveCharSpans, type CharSpan } from '$lib/game/core/defs/terrains.js
 import { itemService } from '$lib/game/services/ItemService.js';
 import { buildingService } from '$lib/game/services/BuildingService.js';
 import { isFloorBuilding, isRoofBuilding } from '$lib/webgl/fantasia-world.js';
+import { PAINTED_TILES } from '$lib/webgl/painted/flag.js';
+import { paintedTile } from '$lib/webgl/painted/tileset.js';
 
 function hexToRgb(hex?: string): { r: number; g: number; b: number } | null {
   if (!hex) return null;
@@ -101,7 +103,10 @@ export function overlayBuildings(
       char: b.deconstructQueued ? DECONSTRUCT_GLYPH : sprite,
       foreground: b.deconstructQueued ? DECONSTRUCT_FG : color,
       background: { r: 0, g: 0, b: 0 },
-      position: { x: b.x, y: b.y }
+      position: { x: b.x, y: b.y },
+      ...(PAINTED_TILES && !b.deconstructQueued
+        ? { painted: paintedTile('building', b.type, b.x, b.y) }
+        : null)
     });
   }
 }

@@ -48,6 +48,7 @@
   import type { GameGrid } from '$lib/webgl/game-grid.js';
   import { GameGrid as GameGridClass } from '$lib/webgl/game-grid.js';
   import { BASE_TILE_PX } from '$lib/webgl/tile-types.js';
+  import { PAINTED_TILES, paintedEntity } from '$lib/webgl/painted/tileset.js';
   import { pawnService } from '$lib/game/services/PawnService.js';
   import { pathfinderService } from '$lib/game/services/PathfinderService.js';
   import { designationService } from '$lib/game/services/DesignationService.js';
@@ -1260,6 +1261,7 @@
             },
         background: { r: 0, g: 0, b: 0 },
         ...(mScale != null && mScale !== 1 ? { scale: mScale } : {}),
+        ...(PAINTED_TILES ? paintedEntity('creature', def.id, mob.id) : null),
         position: { x: cellX, y: cellY },
         animationOffset: {
           x: (rm.x - cellX) * BASE_TILE_PX + mLunge.x,
@@ -1322,7 +1324,8 @@
           x: (rp.x - cellX) * BASE_TILE_PX + pLunge.x,
           y: (rp.y - cellY) * BASE_TILE_PX + pLunge.y
         },
-        rotation: isSleeping || isCollapsed ? 90 : undefined
+        rotation: isSleeping || isCollapsed ? 90 : undefined,
+        ...(PAINTED_TILES ? paintedEntity('pawn', pawn.cultureId, pawn.id) : null)
       });
     }
 
