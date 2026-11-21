@@ -32,7 +32,7 @@
       <div
         class="stat-pill"
         class:warn={p.warn}
-        style="--pill: {p.color ?? '#b8965a'}"
+        style="--pill: {p.color ?? 'var(--text)'}"
         role="button"
         tabindex="0"
         aria-label="{p.label} {p.value}"
@@ -52,7 +52,7 @@
 {#if pin.active}
   {@const h = pin.active}
   <HoverTip x={pin.x} y={pin.y} pinned={pin.pinned}>
-    <div class="tip-name" style="color: {h.color ?? '#e8c870'}">
+    <div class="tip-name" style="color: {h.color ?? 'var(--accent-hi)'}">
       {(h.title ?? h.label).toUpperCase()}<span class="tip-val">{h.value}</span>
     </div>
     {#if h.desc}<div class="tip-desc">{h.desc}</div>{/if}
@@ -72,40 +72,29 @@
   .stat-pills {
     display: flex;
     flex-wrap: wrap;
-    gap: 2px;
-    padding: 2px 8px 3px;
+    gap: 3px;
   }
   .stat-pill {
-    display: flex;
-    align-items: center;
-    gap: 3px;
-    border: 0;
-    background: color-mix(in srgb, var(--pill) 14%, rgba(28, 16, 6, 0.92));
-    padding: 0 4px;
-    height: 13px;
-    font-size: 9px;
-    line-height: 1;
-    cursor: help;
+    display: inline-flex;
+    gap: 5px;
+    padding: 0 5px;
+    box-shadow: inset 0 0 0 1px var(--text-muted);
+    font: 16px/18px var(--font-pixel);
     white-space: nowrap;
+    cursor: help;
   }
   .stat-pill.warn {
-    background: color-mix(in srgb, var(--pill) 22%, rgba(40, 12, 6, 0.92));
+    box-shadow: inset 0 0 0 1px var(--ember);
   }
   .pill-sep {
     flex-basis: 100%;
-    width: 100%;
     height: 0;
-    margin: 3px 0 1px;
-    border-top: 1px solid rgba(122, 94, 40, 0.4);
   }
   .pill-k {
-    color: color-mix(in srgb, var(--pill) 45%, #9a8458);
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
+    color: var(--text-dim);
   }
   .pill-v {
-    color: color-mix(in srgb, var(--pill) 75%, #e8c870);
-    font-weight: bold;
+    color: var(--pill);
   }
   .tip-name {
     font-weight: bold;

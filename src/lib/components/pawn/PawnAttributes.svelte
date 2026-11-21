@@ -6,6 +6,7 @@
   import { computeAptitudeView } from '$lib/components/util/statView';
   import PawnSkillBanner from './PawnSkillBanner.svelte';
   import StatTooltip from './StatTooltip.svelte';
+  import { chrome } from '$lib/pixelArt/chrome';
   import {
     buildStatContext,
     computeStatView,
@@ -16,6 +17,7 @@
   export let pawn: Pawn;
   export let highlightCategory: string | null = null;
   export let categories: string[] = ['physical', 'capacity', 'combat', 'resistance', 'work'];
+  export let showBanner = true;
 
   const STATS = statsData as unknown as StatDef[];
   const CAPACITY_IDS = STATS.filter((s) => s.category === 'capacity').map((s) => s.id);
@@ -35,15 +37,16 @@
 
   const CATEGORY_ORDER = ['physical', 'capacity', 'combat', 'resistance', 'social', 'work'];
   const CATEGORY_LABEL: Record<string, string> = {
-    physical: 'PHYSICAL',
-    capacity: 'CAPACITIES',
-    combat: 'COMBAT',
-    resistance: 'RESISTANCES',
-    social: 'SOCIAL',
-    work: 'WORK'
+    physical: 'Body',
+    capacity: 'Capacities',
+    combat: 'Fight',
+    resistance: 'Resist',
+    social: 'Social',
+    work: 'Work'
   };
 
   $: ctx = buildStatContext(pawn);
+  const TREND: Record<string, string> = { '▲': 'var(--pos)', '▼': 'var(--neg)' };
 
   function flipTip(cell: HTMLElement) {
     const onEnter = () => {
@@ -122,7 +125,7 @@
     }));
     if (categories.includes('combat'))
       rows.unshift({
-        label: 'APTITUDES',
+        label: 'Aptitudes',
         cells: APTITUDE_IDS.map((id) => {
           const m = APT_META[id];
           return {
@@ -137,20 +140,20 @@
 </script>
 
 <div class="attrs">
-  <PawnStatBanner {pawn} />
+  {#if showBanner}<PawnStatBanner {pawn} />{/if}
   {#if categories.includes('work')}
     <PawnSkillBanner {pawn} />
   {/if}
 
   {#each catRows as g}
-    <div class="cat">
-      <div class="cat-hdr">{g.label}</div>
-      <div class="grid">
+    <div class="dcat">
+      <h5>{g.label}</h5>
+      <div class="dcells">
         {#each g.cells as c (c.id)}
-          <div class="cell" class:hl={c.hl} use:flipTip>
-            <span class="nm">{c.view.name}</span>
-            <span class="vl" style="color: {c.view.trend.color}"
-              >{c.view.value}{c.view.unit}<span class="trend">{c.view.trend.glyph}</span></span
+          <div class="dcell" class:hl={c.hl} use:flipTip {@attach chrome('well')}>
+            <em>{c.view.name}</em>
+            <b style:color={TREND[c.view.trend.glyph]}
+              >{c.view.value}{c.view.unit}<small>{c.view.trend.glyph}</small></b
             >
             <div class="tip"><StatTooltip view={c.view} /></div>
           </div>
@@ -162,43 +165,54 @@
 
 <style>
   .attrs {
-    font-family: var(--font-mono);
-    font-size: 11px;
-    color: var(--text-dim);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font: 16px/18px var(--font-pixel);
+    color: var(--text);
   }
-  .cat {
-    margin-bottom: 6px;
-  }
-  .cat-hdr {
-    color: var(--accent-hi);
-    font-size: 11px;
-    letter-spacing: 0.06em;
-    padding: 2px 6px;
-    border-bottom: 1px solid var(--border);
-  }
-  .grid {
+  .dcat {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    gap: 0 8px;
+    grid-template-columns: 86px 1fr;
+    align-items: start;
+    gap: 6px;
   }
-  .cell {
-    position: relative;
+  h5 {
+    margin: 4px 0 0;
+    font: inherit;
+    color: var(--accent-hi);
+    text-transform: uppercase;
+    letter-spacing: 1.6px;
+  }
+  .dcells {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 2px;
+  }
+  .dcell {
     display: flex;
     justify-content: space-between;
-    gap: 6px;
-    padding: 1px 6px;
-    border-bottom: 1px dotted var(--border, #222);
+    gap: 8px;
+    padding: 1px 7px 2px;
+    white-space: nowrap;
     cursor: help;
   }
-  .cell:hover {
-    background: var(--bg-hover, #151c26);
+  .dcell:hover {
+    z-index: 2;
   }
-  .cell.hl {
-    background: color-mix(in srgb, var(--accent-hi) 16%, transparent);
+  .dcell.hl {
     box-shadow: inset 2px 0 0 var(--accent-hi);
   }
-  .cell.hl .nm {
+  em {
+    font-style: normal;
     color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-transform: capitalize;
+  }
+  b {
+    flex-shrink: 0;
+    font-weight: normal;
   }
   .tip {
     display: none;
@@ -211,34 +225,19 @@
     max-height: 60vh;
     overflow-y: auto;
     padding: 6px 8px;
-    background: var(--bg-panel, #0c1118);
-    border: 1px solid var(--border-hi, #3a4658);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+    background: var(--bg-panel);
+    box-shadow:
+      inset 0 0 0 1px var(--border-hi),
+      0 4px 12px rgb(0 0 0 / 0.5);
     color: var(--text);
-    font-size: 11px;
-    line-height: 1.5;
+    white-space: normal;
     pointer-events: auto;
   }
-  .cell:hover .tip {
+  .dcell:hover .tip {
     display: block;
   }
-  .cell:global(.up) .tip {
+  .dcell:global(.up) .tip {
     top: auto;
     bottom: 100%;
-  }
-  .trend {
-    font-size: 9px;
-    margin-left: 3px;
-    vertical-align: middle;
-  }
-  .nm {
-    color: var(--text-dim);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .vl {
-    color: var(--text);
-    flex-shrink: 0;
   }
 </style>

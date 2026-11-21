@@ -9,17 +9,17 @@
   const POLICIES: { id: RestPolicy; label: string; title: string }[] = [
     {
       id: 'never',
-      label: 'NO REST',
+      label: 'No rest',
       title: 'Never break off to recover — keep working, accept the slow heal rate (emergencies)'
     },
     {
       id: 'shelter',
-      label: 'SHELTER',
+      label: 'Shelter',
       title: 'Recover only when a bed/roofed shelter is reachable; otherwise keep working'
     },
     {
       id: 'always',
-      label: 'ALWAYS',
+      label: 'Always',
       title: 'Recover freely, lying on the bare ground if no bed/shelter is near (default)'
     }
   ];
@@ -35,4 +35,4 @@
   }
 </script>
 
-<SegmentedRow label="REST" options={POLICIES} value={current} onSelect={setPolicy} />
+<SegmentedRow label="Rest" options={POLICIES} value={current} onSelect={setPolicy} />

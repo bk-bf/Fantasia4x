@@ -75,7 +75,7 @@ function bestArmorDefense(entity: Pawn | Mob): number {
   return best;
 }
 
-const COMBAT_TINT = '#7f96a8';
+const COMBAT_TINT = 'var(--text)';
 
 function combatPills(entity: Pawn | Mob): StatPillView[] {
   const s = (id: string) => pawnStatService.evaluateStat(id, entity);
@@ -206,7 +206,7 @@ function buildHealthPills(entity: Pawn | Mob): StatPillView[] {
     health.push({
       label: 'Blood',
       value: bleed > 0 ? `${pct}% (${etaStr})` : `${pct}%`,
-      color: '#ee5544',
+      color: 'var(--neg)',
       warn: pct < 60 || bleed > 0,
       desc: bleed > 0 ? 'losing blood' : 'whole-body blood pool',
       rows
@@ -216,7 +216,7 @@ function buildHealthPills(entity: Pawn | Mob): StatPillView[] {
     health.push({
       label: 'Pain',
       value: `${Math.round(entity.pain ?? 0)}%`,
-      color: '#e07050',
+      color: 'var(--ember)',
       warn: (entity.pain ?? 0) >= 40,
       desc: 'rises with injuries, limb damage and bleeding — saps consciousness',
       rows: painLocationRows(entity)
@@ -227,7 +227,7 @@ function buildHealthPills(entity: Pawn | Mob): StatPillView[] {
     temp.push({
       label: 'Cold',
       value: `${Math.round(entity.needs?.coldExposure ?? 0)}%`,
-      color: '#4fc3f7',
+      color: 'var(--cold)',
       warn: true,
       desc: 'hypothermia exposure — rises while colder than your tolerance'
     });
@@ -236,7 +236,7 @@ function buildHealthPills(entity: Pawn | Mob): StatPillView[] {
     temp.push({
       label: 'Heat',
       value: `${Math.round(entity.needs?.heatExposure ?? 0)}%`,
-      color: '#fb8c00',
+      color: 'var(--ember)',
       warn: true,
       desc: 'heat-stroke exposure — rises while hotter than your tolerance'
     });
@@ -262,7 +262,7 @@ function buildHealthPills(entity: Pawn | Mob): StatPillView[] {
     {
       label: 'Cold tol',
       value: `≤${Math.round(tol.coldOnset)}°`,
-      color: '#4fc3f7',
+      color: 'var(--cold)',
       desc: 'cold meter starts rising below this temperature',
       rows: tolRows(
         'Comfort floor',
@@ -276,7 +276,7 @@ function buildHealthPills(entity: Pawn | Mob): StatPillView[] {
     {
       label: 'Heat tol',
       value: `≥${Math.round(tol.heatOnset)}°`,
-      color: '#fb8c00',
+      color: 'var(--ember)',
       desc: 'heat meter starts rising above this temperature',
       rows: tolRows(
         'Comfort ceiling',

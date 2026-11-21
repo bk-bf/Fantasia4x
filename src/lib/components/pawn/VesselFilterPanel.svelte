@@ -86,8 +86,6 @@
     background: #0f0a03;
     border: 1px solid #6a4e20;
     padding: 5px;
-    font-family: var(--font-mono);
-    font-size: 10px;
     color: #d0a858;
     width: 260px;
   }
@@ -104,7 +102,6 @@
     background: none;
     border: none;
     color: #a07c38;
-    font-size: 13px;
     line-height: 1;
     cursor: pointer;
     padding: 0 2px;
@@ -137,8 +134,6 @@
     background: #160f06;
     border: 1px solid #6b4f22;
     color: #d0a858;
-    font-family: var(--font-mono);
-    font-size: 10px;
     padding: 2px 4px;
     cursor: pointer;
   }

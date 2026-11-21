@@ -11,6 +11,8 @@ import ResearchScreen from '$lib/components/screens/ResearchScreen.svelte';
 import EntityScreen from '$lib/components/screens/EntityScreen.svelte';
 import DebugScreen from '$lib/components/screens/DebugScreen.svelte';
 import PauseMenu from '$lib/components/UI/menu/PauseMenu.svelte';
+import HealthWindow from '$lib/components/pawn/HealthWindow.svelte';
+import FuelWindow from '$lib/components/UI/canvas/FuelWindow.svelte';
 
 export interface WindowSpec {
   title: string;
@@ -31,7 +33,9 @@ export const WINDOWS: Record<WindowId, WindowSpec> = {
   research: { title: 'Research', component: ResearchScreen, width: 'big' },
   entities: { title: 'Entities', component: EntityScreen, width: 900 },
   debug: { title: 'Debug', component: DebugScreen, width: 'big' },
-  pause: { title: 'Paused', component: PauseMenu, width: 280, modal: true }
+  pause: { title: 'Paused', component: PauseMenu, width: 280, modal: true },
+  health: { title: 'Health', component: HealthWindow, width: 356 },
+  fuel: { title: 'Fuel', component: FuelWindow, width: 300 }
 };
 
 export const BIG_WIDTH_MAX = 1180;

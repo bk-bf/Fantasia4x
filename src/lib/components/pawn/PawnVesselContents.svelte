@@ -65,7 +65,7 @@
 
 {#if rows.length > 0}
   <div class="inv-section">
-    <div class="section-hdr">| IN VESSELS</div>
+    <h5>In vessels</h5>
     <div class="list">
       {#each rows as row (row.key)}
         <div class="row" title={row.def?.description ?? ''}>
@@ -94,13 +94,6 @@
   .inv-section {
     margin-top: 6px;
   }
-  .section-hdr {
-    font-family: var(--font-mono);
-    font-size: 10px;
-    color: var(--text-dim, #888);
-    letter-spacing: 0.05em;
-    margin-bottom: 2px;
-  }
   .list {
     display: flex;
     flex-direction: column;
@@ -110,8 +103,6 @@
     display: flex;
     align-items: center;
     gap: 6px;
-    font-family: var(--font-mono);
-    font-size: 11px;
   }
   .name {
     flex: 1;
@@ -133,7 +124,6 @@
     border: 1px solid var(--border, #555);
     color: var(--text, #ccc);
     font-family: inherit;
-    font-size: 10px;
     padding: 0 5px;
     cursor: pointer;
   }

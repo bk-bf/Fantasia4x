@@ -7,6 +7,8 @@
   import { blockedSlots } from '$lib/game/core/rules/gear/equipment';
   import { naturalGearForTrait, type NaturalGearMeta } from '$lib/components/util/naturalGear';
   import { gameState } from '$lib/stores/gameState';
+  import { chrome } from '$lib/pixelArt/chrome';
+  import SkinBar from '$lib/components/UI/widget/SkinBar.svelte';
 
   let {
     pawn,
@@ -42,6 +44,25 @@
     ring2: 'Ring'
   };
   const SLOTS: EquipmentSlot[] = Object.keys(SLOT_LABEL) as EquipmentSlot[];
+  const GHOST: Record<EquipmentSlot, string> = {
+    head: 'cured_hide_hood',
+    mainHand: 'stone_axe',
+    bodyOuter: 'wicker_vest',
+    offHand: 'wattle_buckler',
+    bodyMid: 'cured_hide_vest',
+    bodyBase: 'linen_gambeson',
+    bracers: 'orc_plate_vambraces',
+    greaves: 'great_bone_greaves',
+    gloves: 'stitched_gauntlets',
+    belt: 'leather_belt',
+    boots: 'hide_boots',
+    socks: 'sackcloth_footwraps',
+    back: 'wool_cloak',
+    back2: 'woven_basket',
+    amulet: 'tooth_necklace',
+    ring: 'iron_signet_ring',
+    ring2: 'iron_signet_ring'
+  };
 
   function inst(slot: EquipmentSlot) {
     return pawn.equipment?.[slot];
@@ -98,22 +119,19 @@
   }
 </script>
 
-<div class="doll">
+<div class="slots">
   {#each SLOTS as slot (slot)}
-    {@const label = SLOT_LABEL[slot]}
     {@const it = inst(slot)}
     {@const def = it ? gameCoordinator.getItemById(it.itemId) : null}
     {@const maxDur = def?.maxDurability ?? 100}
     {@const qColor = it ? qualityColor(it.quality) : undefined}
     {@const isBlocked = blocked.has(slot)}
     {@const nat = !it ? natural.occupants[slot] : undefined}
+    {@const prefix = it ? qualityPrefix(it.quality) : ''}
     <div
-      class="slot-box"
-      class:filled={!!it}
-      class:natural={!!nat}
-      class:empty={!it && !isBlocked && !nat}
+      class="slot"
+      class:empty={!it && !nat}
       class:blocked={isBlocked && !it && !nat}
-      style="grid-area: {slot}"
       title={nat
         ? `${nat.name} — ${nat.sub} (innate; can't be unequipped)`
         : isBlocked && !it
@@ -127,45 +145,41 @@
       onmouseleave={hideTip}
       role="presentation"
     >
-      <span class="slot-lbl">{label}</span>
-      {#if it && def}
-        {#if onTogglePin}
-          <button
-            class="pin"
-            class:active={isPinned(it.itemId)}
-            title={isPinned(it.itemId)
-              ? 'Pinned — kept, never deposited. Click to unpin.'
-              : 'Pin — the pawn keeps this item (never deposited).'}
-            onclick={() => onTogglePin?.(it.itemId)}>{isPinned(it.itemId) ? '★' : '☆'}</button
-          >
+      <span class="sq" {@attach chrome('well')}>
+        <SpriteIcon item={it?.itemId ?? GHOST[slot]} tint={qColor} px={44} />
+      </span>
+      <div class="txt">
+        <em
+          >{SLOT_LABEL[slot]}{#if it && def}<span class="acts">
+              {#if onTogglePin}
+                <button
+                  class:on={isPinned(it.itemId)}
+                  title={isPinned(it.itemId)
+                    ? 'Pinned — kept, never deposited. Click to unpin.'
+                    : 'Pin — the pawn keeps this item (never deposited).'}
+                  onclick={() => onTogglePin?.(it.itemId)}>{isPinned(it.itemId) ? '★' : '☆'}</button
+                >
+              {/if}
+              <button title="Unequip {def.name}" disabled={loading} onclick={() => onUnequip(slot)}
+                >✕</button
+              >
+            </span>{/if}</em
+        >
+        {#if it && def}
+          <b title={prefix ? `${prefix} ${def.name}` : def.name}>{def.name}</b>
+          {#if prefix && qColor}<span style:color={qColor}>{prefix}</span>{/if}
+          <SkinBar
+            value={it.durability / maxDur}
+            ramp={it.durability / maxDur < 0.5 ? 'ember' : 'leaf'}
+            thin
+            title="{it.durability}/{maxDur}"
+          />
+        {:else if nat}
+          <b>{nat.name}</b><span>{nat.sub}</span>
+        {:else if isBlocked}
+          <span>⊘</span>
         {/if}
-        <div class="icon-wrap"><SpriteIcon item={it.itemId} tint={qColor} px={34} /></div>
-        {@const prefix = qualityPrefix(it.quality)}
-        <span class="it-name" title={prefix ? `${prefix} ${def.name}` : def.name}
-          >{#if prefix && qColor}<span class="rarity" style="color:{qColor}">{prefix}</span
-            >&nbsp;{/if}{def.name}</span
-        >
-        <div class="dur-bar" title="{it.durability}/{maxDur}">
-          <div
-            class="dur-fill"
-            class:low={it.durability / maxDur < 0.3}
-            style="width: {Math.max(0, Math.min(100, (it.durability / maxDur) * 100))}%"
-          ></div>
-        </div>
-        <button
-          class="unequip"
-          title="Unequip {def.name}"
-          disabled={loading}
-          onclick={() => onUnequip(slot)}>✕</button
-        >
-      {:else if nat}
-        <span class="nat-name">{nat.name}</span>
-        <span class="nat-sub">{nat.sub}</span>
-      {:else if isBlocked}
-        <span class="empty-mk blocked-mk">⊘</span>
-      {:else}
-        <span class="empty-mk">—</span>
-      {/if}
+      </div>
     </div>
   {/each}
 </div>
@@ -197,182 +211,98 @@
 {/if}
 
 <style>
-  .doll {
+  .slots {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    grid-template-areas:
-      '.        head      .'
-      'mainHand bodyOuter offHand'
-      'mainHand bodyMid   offHand'
-      'bracers  bodyBase  greaves'
-      'gloves   belt      boots'
-      '.        .         socks'
-      'back     back2     amulet'
-      'ring     ring2     .';
-    gap: 4px;
-    padding: 8px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 4px 10px;
   }
-
-  .slot-box {
-    position: relative;
-    border: 1px solid var(--border);
-    background: var(--bg);
-    min-height: 50px;
-    padding: 3px 5px;
+  .slot {
     display: flex;
-    flex-direction: column;
-    gap: 2px;
+    gap: 8px;
+    align-items: center;
+    min-width: 0;
+  }
+  .sq {
+    width: 54px;
+    height: 54px;
+    flex: none;
+    display: grid;
+    place-items: center;
     overflow: hidden;
   }
-  .slot-box.empty {
-    border-style: dashed;
-    opacity: 0.5;
+  .empty .sq :global(:is(canvas, img)) {
+    opacity: 0.25;
+    filter: grayscale(1);
   }
-  .slot-box.filled {
-    border-color: var(--accent);
-    background: var(--bg-panel);
+  .blocked .sq {
+    opacity: 0.4;
   }
-  .slot-box.blocked {
-    border-style: dashed;
-    opacity: 0.35;
-    background: repeating-linear-gradient(
-      45deg,
-      transparent,
-      transparent 4px,
-      var(--bg-active) 4px,
-      var(--bg-active) 5px
-    );
+  .txt {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
   }
-  .blocked-mk {
+  em {
+    display: flex;
+    font-style: normal;
+    white-space: nowrap;
     color: var(--text-muted);
-  }
-  .slot-box.natural {
-    border-color: var(--pos, #68b030);
-    border-style: solid;
-    background: color-mix(in srgb, var(--pos, #68b030) 12%, var(--bg));
-  }
-  .nat-name {
-    margin: auto 0 1px;
-    font-size: 11px;
-    color: var(--text);
-    text-align: center;
-    line-height: 1.15;
-  }
-  .nat-sub {
-    font-size: 9px;
-    letter-spacing: 0.04em;
     text-transform: uppercase;
-    color: var(--pos, #68b030);
-    text-align: center;
+    letter-spacing: 1.4px;
   }
-
+  b {
+    font-weight: normal;
+    line-height: 16px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .txt > span {
+    color: var(--text-dim);
+  }
+  .txt :global(.skin-bar) {
+    width: 100%;
+    flex: none;
+    margin-top: 3px;
+  }
+  .acts {
+    margin-left: auto;
+    display: flex;
+    gap: 2px;
+  }
+  .acts button {
+    padding: 0 1px;
+    letter-spacing: 0;
+    border: 0;
+    background: none;
+    font: inherit;
+    color: var(--text-muted);
+    cursor: pointer;
+  }
+  .acts button:hover,
+  .acts button.on {
+    color: var(--accent-hi);
+  }
+  .acts button:disabled {
+    opacity: 0.4;
+  }
   .innate-strip {
     display: flex;
     flex-wrap: wrap;
-    align-items: center;
-    gap: 4px;
-    padding: 4px 10px 8px;
+    gap: 3px 8px;
+    margin-top: 6px;
   }
   .innate-hdr {
-    font-size: 10px;
-    letter-spacing: 0.06em;
+    color: var(--text-muted);
     text-transform: uppercase;
-    color: var(--text-dim);
+    letter-spacing: 1.4px;
   }
   .innate-badge {
-    font-size: 10px;
-    padding: 1px 6px;
-    border-radius: 2px;
-    background: color-mix(in srgb, var(--pos, #68b030) 14%, var(--bg-panel));
-    border: 1px solid color-mix(in srgb, var(--pos, #68b030) 40%, transparent);
-    color: var(--text);
-    white-space: nowrap;
-  }
-
-  .slot-lbl {
-    font-size: 10px;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-    color: var(--text-dim);
-  }
-  .slot-box.filled .slot-lbl {
-    padding: 0 12px;
-  }
-
-  .icon-wrap {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 0;
-    padding: 2px 0;
-  }
-
-  .it-name {
-    font-size: 12px;
-    color: var(--text);
-    line-height: 1.15;
-    text-align: center;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .dur-bar {
-    height: 3px;
-    background: var(--bg-active);
-  }
-  .dur-fill {
-    height: 100%;
-    background: var(--pos);
-  }
-  .dur-fill.low {
-    background: var(--neg);
-  }
-
-  .empty-mk {
-    color: var(--text-muted);
-    font-size: 11px;
-    margin: auto;
-  }
-
-  .pin {
-    position: absolute;
-    top: 2px;
-    left: 3px;
-    border: none;
-    background: transparent;
-    color: var(--text-muted);
-    cursor: pointer;
-    font-family: inherit;
-    font-size: 11px;
-    line-height: 1;
-    padding: 1px 2px;
-  }
-  .pin:hover {
-    color: var(--text);
-  }
-  .pin.active {
-    color: var(--accent-hi, #ffd24a);
-  }
-
-  .unequip {
-    position: absolute;
-    top: 2px;
-    right: 3px;
-    border: none;
-    background: transparent;
-    color: var(--text-muted);
-    cursor: pointer;
-    font-family: inherit;
-    font-size: 11px;
-    line-height: 1;
-    padding: 1px 2px;
-  }
-  .unequip:hover {
-    color: var(--neg);
-  }
-  .unequip:disabled {
-    opacity: 0.4;
+    padding: 0 5px;
+    color: var(--pos);
+    box-shadow: inset 0 0 0 1px var(--pos);
   }
 </style>
