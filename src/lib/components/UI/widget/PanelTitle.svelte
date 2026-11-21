@@ -16,6 +16,14 @@
     color: var(--accent-hi);
     white-space: nowrap;
   }
+  h3 :global(em) {
+    margin-left: 7px;
+    font: 16px/18px var(--font-pixel);
+    letter-spacing: 0.6px;
+    text-transform: none;
+    color: var(--text-muted);
+    text-shadow: none;
+  }
   :global(:root[data-theme='timber']) h3 {
     text-shadow: 1px 1px 0 #0b0806;
   }
