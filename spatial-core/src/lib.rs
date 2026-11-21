@@ -77,6 +77,83 @@ thread_local! {
     static SCRATCH: std::cell::RefCell<Scratch> = const { std::cell::RefCell::new(Scratch::new()) };
 }
 
+struct Grid {
+    walkable: Vec<u8>,
+    costs: Vec<f32>,
+    width: u32,
+    height: u32,
+}
+
+thread_local! {
+    static GRID: std::cell::RefCell<Grid> = const {
+        std::cell::RefCell::new(Grid { walkable: Vec::new(), costs: Vec::new(), width: 0, height: 0 })
+    };
+}
+
+#[wasm_bindgen]
+pub fn load_grid(walkable: &[u8], costs: &[f32], width: u32, height: u32) {
+    GRID.with(|cell| {
+        let mut grid = cell.borrow_mut();
+        grid.walkable.clear();
+        grid.walkable.extend_from_slice(walkable);
+        grid.costs.clear();
+        grid.costs.extend_from_slice(costs);
+        grid.width = width;
+        grid.height = height;
+    });
+}
+
+#[wasm_bindgen]
+pub fn set_grid_walkable(index: u32, walkable: bool) {
+    GRID.with(|cell| {
+        if let Some(tile) = cell.borrow_mut().walkable.get_mut(index as usize) {
+            *tile = u8::from(walkable);
+        }
+    });
+}
+
+#[wasm_bindgen]
+pub fn find_path_on_grid(
+    soft_blocked: &[u32],
+    penalty: f32,
+    sx: u32,
+    sy: u32,
+    ex: u32,
+    ey: u32,
+    max_iter: u32,
+) -> Vec<u32> {
+    GRID.with(|cell| {
+        let mut grid = cell.borrow_mut();
+        let n = grid.costs.len();
+        let saved: Vec<f32> = soft_blocked
+            .iter()
+            .map(|&i| grid.costs.get(i as usize).copied().unwrap_or(0.0))
+            .collect();
+        for &i in soft_blocked {
+            if (i as usize) < n {
+                grid.costs[i as usize] += penalty;
+            }
+        }
+        let path = find_path(
+            &grid.walkable,
+            &grid.costs,
+            grid.width,
+            grid.height,
+            sx,
+            sy,
+            ex,
+            ey,
+            max_iter,
+        );
+        for (k, &i) in soft_blocked.iter().enumerate().rev() {
+            if (i as usize) < n {
+                grid.costs[i as usize] = saved[k];
+            }
+        }
+        path
+    })
+}
+
 #[wasm_bindgen]
 pub fn find_path(
     walkable: &[u8],

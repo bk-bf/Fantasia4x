@@ -18,6 +18,17 @@ export interface PathfinderService {
     maxIter?: number
   ): { x: number; y: number }[];
   nearestEach(points: Float32Array, queries: Float32Array, maxDist: number): Int32Array | null;
+  loadGrid(walkable: Uint8Array, costs: Float32Array, width: number, height: number): void;
+  setGridWalkable(index: number, walkable: boolean): void;
+  findPathOnGrid(
+    softBlocked: Uint32Array,
+    penalty: number,
+    sx: number,
+    sy: number,
+    ex: number,
+    ey: number,
+    maxIter?: number
+  ): { x: number; y: number }[];
 }
 
 export const pathfinderService: PathfinderService = wasmPathfinderService;
@@ -31,6 +42,7 @@ type PathfindingGrids = {
 
 let _cacheKey: WorldTile[][] | null = null;
 let _cache: PathfindingGrids | null = null;
+let _loaded: PathfindingGrids | null = null;
 
 export function buildPathfindingGrids(worldMap: WorldTile[][]): PathfindingGrids {
   if (_cacheKey === worldMap && _cache) return _cache;
@@ -61,6 +73,7 @@ export function patchPathfindingWalkable(x: number, y: number, walkable: boolean
   const next = walkable ? 1 : 0;
   if (_cache.walkable[idx] === next) return;
   _cache.walkable[idx] = next;
+  if (_loaded === _cache) pathfinderService.setGridWalkable(idx, walkable);
   patchConnectivity(_cache, x, y, walkable);
 }
 
@@ -96,35 +109,80 @@ export function buildPathfindingGridsWithBlocked(
 
 export const BODY_SOFT_PENALTY = 40;
 
-export function buildPathfindingGridsSoftBlocked(
+export function withSoftBlocked<T>(
+  worldMap: WorldTile[][],
+  blocked: Set<number>,
+  use: (grid: PathfindingGrids) => T,
+  exempt: readonly number[] = []
+): T {
+  const base = buildPathfindingGrids(worldMap);
+  if (blocked.size === 0) return use(base);
+  const { walkable, costs } = base;
+  const touched: number[] = [];
+  const saved: number[] = [];
+  for (const key of blocked) {
+    if (!walkable[key] || exempt.includes(key)) continue;
+    touched.push(key);
+    saved.push(costs[key]);
+    costs[key] += BODY_SOFT_PENALTY;
+  }
+  try {
+    return use(base);
+  } finally {
+    for (let i = touched.length - 1; i >= 0; i--) costs[touched[i]] = saved[i];
+  }
+}
+
+export function findPathOnWorld(
+  worldMap: WorldTile[][],
+  blocked: Set<number>,
+  sx: number,
+  sy: number,
+  ex: number,
+  ey: number,
+  maxIter = 0,
+  exempt: readonly number[] = []
+): { x: number; y: number }[] {
+  const grid = buildPathfindingGrids(worldMap);
+  if (_loaded !== grid && pathfinderService.isReady()) {
+    pathfinderService.loadGrid(grid.walkable, grid.costs, grid.width, grid.height);
+    _loaded = grid;
+  }
+  const soft: number[] = [];
+  for (const key of blocked) if (grid.walkable[key] && !exempt.includes(key)) soft.push(key);
+  return pathfinderService.findPathOnGrid(
+    Uint32Array.from(soft),
+    BODY_SOFT_PENALTY,
+    sx,
+    sy,
+    ex,
+    ey,
+    maxIter
+  );
+}
+
+export function findPathSoftBlocked(
   worldMap: WorldTile[][],
   blocked: Set<number>,
   sx: number,
   sy: number,
   ex: number,
   ey: number
-): PathfindingGrids {
-  const base = buildPathfindingGrids(worldMap);
-  if (blocked.size === 0) return base;
-  const { width, height, walkable } = base;
-  const costs = base.costs.slice();
-  const start = tileKey(sx, sy, width);
-  const end = tileKey(ex, ey, width);
-  for (const key of blocked) {
-    if (key !== start && key !== end && walkable[key]) costs[key] += BODY_SOFT_PENALTY;
-  }
-  return { walkable, costs, width, height };
+): { x: number; y: number }[] {
+  const width = worldMap[0]?.length ?? 0;
+  return findPathOnWorld(worldMap, blocked, sx, sy, ex, ey, 0, [
+    tileKey(sx, sy, width),
+    tileKey(ex, ey, width)
+  ]);
 }
 
-export function buildPathfindingGridsConfined(
-  worldMap: WorldTile[][],
-  blocked: Set<number>,
+export function confineGrid(
+  grid: PathfindingGrids,
   allowed: Set<string>,
   sx: number,
   sy: number
 ): PathfindingGrids {
-  const soft = buildSharedSoftBlockedGrid(worldMap, blocked);
-  const { width, height, costs } = soft;
+  const { width, height, costs } = grid;
   const walkable = new Uint8Array(width * height);
   for (const key of allowed) {
     const c = key.indexOf(',');
@@ -132,31 +190,9 @@ export function buildPathfindingGridsConfined(
     const y = +key.slice(c + 1);
     if (x >= 0 && x < width && y >= 0 && y < height) {
       const idx = y * width + x;
-      walkable[idx] = soft.walkable[idx];
+      walkable[idx] = grid.walkable[idx];
     }
   }
   if (sx >= 0 && sx < width && sy >= 0 && sy < height) walkable[sy * width + sx] = 1;
   return { walkable, costs, width, height };
-}
-
-let _sbWorld: WorldTile[][] | null = null;
-let _sbBlocked: Set<number> | null = null;
-let _sbResult: PathfindingGrids | null = null;
-
-export function buildSharedSoftBlockedGrid(
-  worldMap: WorldTile[][],
-  blocked: Set<number>
-): PathfindingGrids {
-  const base = buildPathfindingGrids(worldMap);
-  if (blocked.size === 0) return base;
-  if (_sbWorld === worldMap && _sbBlocked === blocked && _sbResult) return _sbResult;
-  const { width, height, walkable } = base;
-  const costs = base.costs.slice();
-  for (const key of blocked) {
-    if (walkable[key]) costs[key] += BODY_SOFT_PENALTY;
-  }
-  _sbWorld = worldMap;
-  _sbBlocked = blocked;
-  _sbResult = { walkable, costs, width, height };
-  return _sbResult;
 }

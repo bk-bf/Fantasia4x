@@ -14,7 +14,7 @@ import {
 import { pawnStatService } from '../PawnStatService';
 import { stepBody, seedMidCrossClaims } from '../MovementSystem';
 import { resourceObjectService } from '../ResourceObjectService';
-import { buildSharedSoftBlockedGrid, cannotReach, pathfinderService } from '../PathfinderService';
+import { cannotReach, findPathOnWorld, pathfinderService } from '../PathfinderService';
 import { occupancyService } from '../OccupancyService';
 import { hasLineOfSight } from '../../core/util/lineOfSight';
 import { reachable } from './connectivity';
@@ -603,10 +603,9 @@ export function pathTo(
   if (cannotReach(state.worldMap, sx, sy, ex, ey)) return [];
   void selfId;
   const blocked = occupancyService.blockedTilesShared(state);
-  const { walkable, costs, width, height } = buildSharedSoftBlockedGrid(state.worldMap, blocked);
   const dbg = isVerboseLogging();
   const _t0 = dbg ? performance.now() : 0;
-  const res = pathfinderService.findPath(walkable, costs, width, height, sx, sy, ex, ey, maxIter);
+  const res = findPathOnWorld(state.worldMap, blocked, sx, sy, ex, ey, maxIter);
   if (dbg) {
     _pathMs += performance.now() - _t0;
     _pathCalls++;

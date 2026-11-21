@@ -9,10 +9,11 @@ import BUILDINGS_DATABASE_RAW from '../../database/world/buildings.json';
 import { jobService } from '../../services/JobService';
 import { pawnService } from '../../services/PawnService';
 import {
-  buildSharedSoftBlockedGrid,
-  buildPathfindingGridsConfined,
   cannotReach,
-  pathfinderService
+  confineGrid,
+  findPathOnWorld,
+  pathfinderService,
+  withSoftBlocked
 } from '../../services/PathfinderService';
 import { allowedTilesForPawn } from './zoneConfine';
 import { occupancyService } from '../../services/OccupancyService';
@@ -134,19 +135,21 @@ export function markJobUnreachable(pawnId: string, jobId: string, turn: number):
   m.set(jobId, turn + UNREACHABLE_COOLDOWN_TICKS);
 }
 
-function gridForPawn(
+function findPawnPath(
   pawn: Pawn,
   gameState: GameState,
   blocked: Set<number>,
-  sx: number,
-  sy: number
-) {
-  if (!pawn.drafted) {
-    const allowed = allowedTilesForPawn(gameState, pawn.id);
-    if (allowed && allowed.has(`${sx},${sy}`))
-      return buildPathfindingGridsConfined(gameState.worldMap, blocked, allowed, sx, sy);
-  }
-  return buildSharedSoftBlockedGrid(gameState.worldMap, blocked);
+  tx: number,
+  ty: number
+): { x: number; y: number }[] {
+  const { x: sx, y: sy } = pawn.position!;
+  const allowed = pawn.drafted ? null : allowedTilesForPawn(gameState, pawn.id);
+  const confined = allowed && allowed.has(`${sx},${sy}`) ? allowed : null;
+  if (!confined) return findPathOnWorld(gameState.worldMap, blocked, sx, sy, tx, ty);
+  return withSoftBlocked(gameState.worldMap, blocked, (soft) => {
+    const g = confineGrid(soft, confined, sx, sy);
+    return pathfinderService.findPath(g.walkable, g.costs, g.width, g.height, sx, sy, tx, ty);
+  });
 }
 
 export function tryAssignPath(
@@ -177,23 +180,7 @@ export function tryAssignPath(
   }
   if (cannotReach(gameState.worldMap, pawn.position.x, pawn.position.y, approach.x, approach.y))
     return null;
-  const { walkable, costs, width, height } = gridForPawn(
-    pawn,
-    gameState,
-    blocked,
-    pawn.position.x,
-    pawn.position.y
-  );
-  const path = pathfinderService.findPath(
-    walkable,
-    costs,
-    width,
-    height,
-    pawn.position.x,
-    pawn.position.y,
-    approach.x,
-    approach.y
-  );
+  const path = findPawnPath(pawn, gameState, blocked, approach.x, approach.y);
   if (path.length === 0) {
     return null;
   }
@@ -281,23 +268,7 @@ export function tryAssignSleepPath(
   if (pawn.position.x === tx && pawn.position.y === ty) return null;
   if (cannotReach(gameState.worldMap, pawn.position.x, pawn.position.y, tx, ty)) return null;
   const blocked = occupancyService.blockedTilesShared(gameState);
-  const { walkable, costs, width, height } = gridForPawn(
-    pawn,
-    gameState,
-    blocked,
-    pawn.position.x,
-    pawn.position.y
-  );
-  const path = pathfinderService.findPath(
-    walkable,
-    costs,
-    width,
-    height,
-    pawn.position.x,
-    pawn.position.y,
-    tx,
-    ty
-  );
+  const path = findPawnPath(pawn, gameState, blocked, tx, ty);
   if (path.length === 0) {
     return null;
   }
