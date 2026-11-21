@@ -1,5 +1,6 @@
 export const PAINTED_SWITCH = 'fantasia4x-painted-tiles';
 export const GROUND_BLEND_SWITCH = 'fantasia4x-ground-blend';
+export const PAINTED_LIGHT_SWITCH = 'fantasia4x-painted-light';
 
 export function readPaintedFlag(search: string, stored: string | null): boolean {
   return new URLSearchParams(search).get('painted') === '1' || stored === '1';
@@ -7,6 +8,10 @@ export function readPaintedFlag(search: string, stored: string | null): boolean 
 
 export function readGroundBlendFlag(search: string, stored: string | null): boolean {
   return new URLSearchParams(search).get('blend') === '1' || stored === '1';
+}
+
+export function readPaintedLightFlag(search: string, stored: string | null): boolean {
+  return new URLSearchParams(search).get('light') !== 'old' && stored !== '0';
 }
 
 function readFromBrowser(key: string, read: (search: string, stored: string | null) => boolean) {
@@ -24,3 +29,5 @@ export const PAINTED_TILES = readFromBrowser(PAINTED_SWITCH, readPaintedFlag);
 
 export const GROUND_BLEND =
   PAINTED_TILES && readFromBrowser(GROUND_BLEND_SWITCH, readGroundBlendFlag);
+export const PAINTED_LIGHT =
+  PAINTED_TILES && readFromBrowser(PAINTED_LIGHT_SWITCH, readPaintedLightFlag);

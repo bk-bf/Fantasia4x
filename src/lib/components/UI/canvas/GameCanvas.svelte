@@ -49,6 +49,7 @@
   import { GameGrid as GameGridClass } from '$lib/webgl/game-grid.js';
   import { BASE_TILE_PX } from '$lib/webgl/tile-types.js';
   import { PAINTED_TILES, paintedEntity } from '$lib/webgl/painted/tileset.js';
+  import { PAINTED_LIGHT } from '$lib/webgl/painted/flag.js';
   import { pawnService } from '$lib/game/services/PawnService.js';
   import { pathfinderService } from '$lib/game/services/PathfinderService.js';
   import { designationService } from '$lib/game/services/DesignationService.js';
@@ -327,10 +328,9 @@
 
   let resourceGlowEmitters: import('$lib/game/services/LightingService.js').LightEmitter[] = [];
   function refreshEmitters(buildingList = buildings) {
-    lightingService.setEmitters([
-      ...lightingService.collectEmitters(buildingList),
-      ...resourceGlowEmitters
-    ]);
+    const emitters = [...lightingService.collectEmitters(buildingList), ...resourceGlowEmitters];
+    lightingService.setEmitters(emitters);
+    if (PAINTED_LIGHT) renderer?.setPointLights(emitters);
     renderer?.setDynamicLight(lightingService.hasEmitters());
     renderer?.setLightVersion(lightingService.getEmittersVersion());
     renderer?.setLightBounds(lightingService.getLitBounds());
@@ -1134,7 +1134,7 @@
       const { light, tint } = environmentService.getAmbient(environmentService.ambientTurn(s));
       const season = environmentService.effectiveSeason(s);
       const tinted = environmentService.getMapAmbientTint(tint, season, s.weather);
-      renderer.setAmbient(light, tinted);
+      renderer.setAmbient(light, tinted, tint);
       lightingService.setAmbient(light, tinted);
       _ambientLight = light;
       _ambientTint = tinted;
@@ -2853,7 +2853,7 @@
           $gameState ? environmentService.effectiveSeason($gameState) : undefined,
           $gameState?.weather
         );
-        renderer.setAmbient(light, tinted);
+        renderer.setAmbient(light, tinted, tint);
         lightingService.setAmbient(light, tinted);
         if (worldMap.length === 0) refreshEmitters();
         _ambientLight = light;

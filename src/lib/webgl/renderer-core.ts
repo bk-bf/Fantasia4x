@@ -10,9 +10,11 @@ import type { FontAtlas } from './types.js';
 import { BASE_TILE_PX } from './tile-types.js';
 import { WORK_PINS } from '../workPins/flag.js';
 import { addFrameTotals } from '../workPins/page.js';
-import { GROUND_BLEND, PAINTED_TILES } from './painted/flag.js';
+import { GROUND_BLEND, PAINTED_LIGHT, PAINTED_TILES } from './painted/flag.js';
 import { loadPaintedTileset, type LoadedPaintedTileset } from './painted/loader.js';
 import { GroundBlend } from './painted/groundBlend.js';
+import { PaintedLightPass } from './painted/lightPass.js';
+import { gradeForLight, type PointLight, type Rgb } from './painted/lightGrade.js';
 
 export const ROW_DEPTH_RANGE = 8192;
 
@@ -69,6 +71,9 @@ export class WebGLRendererCore {
   private painted: LoadedPaintedTileset | null = null;
   private rowDepth = PAINTED_TILES;
   private groundBlend: GroundBlend | null = null;
+  private lightPass: PaintedLightPass | null = null;
+  private pointLights: readonly PointLight[] = [];
+  private ambientEnv: Rgb = [1, 1, 1];
 
   private gameGrid: GameGrid | null = null;
   private gridVersion = 0;
@@ -175,9 +180,16 @@ export class WebGLRendererCore {
     this.viewTileY = y;
   }
 
-  setAmbient(light: number, tint: [number, number, number]): void {
+  setAmbient(light: number, tint: Rgb, baseTint?: Rgb): void {
     this.ambientLight = light;
     this.ambientTint = tint;
+    this.ambientEnv = baseTint
+      ? [tint[0] / baseTint[0], tint[1] / baseTint[1], tint[2] / baseTint[2]]
+      : [1, 1, 1];
+  }
+
+  setPointLights(lights: readonly PointLight[]): void {
+    this.pointLights = lights;
   }
 
   setDynamicLight(active: boolean): void {
@@ -303,6 +315,8 @@ export class WebGLRendererCore {
         this.groundBlend = GroundBlend.create(gl, this.shaderManager, this.painted);
       this.gridRenderer.skipBlendedGround = this.groundBlend !== null;
       if (this.gameGrid) this.groundBlend?.setGrid(this.gameGrid);
+      if (PAINTED_LIGHT && this.painted)
+        this.lightPass = PaintedLightPass.create(gl, this.shaderManager);
 
       if (this.debug) console.log('✅ WebGL2 renderer ready');
       return true;
@@ -344,13 +358,20 @@ export class WebGLRendererCore {
       this.tileWidth / BASE_TILE_PX,
       this.tileHeight / BASE_TILE_PX
     ]);
-    this.shaderManager.setUniform('tileRenderer', 'u_ambient', [
-      this.ambientLight * this.ambientTint[0],
-      this.ambientLight * this.ambientTint[1],
-      this.ambientLight * this.ambientTint[2]
-    ]);
+    const unlit = this.lightPass !== null;
+    this.shaderManager.setUniform(
+      'tileRenderer',
+      'u_ambient',
+      unlit
+        ? [1, 1, 1]
+        : [
+            this.ambientLight * this.ambientTint[0],
+            this.ambientLight * this.ambientTint[1],
+            this.ambientLight * this.ambientTint[2]
+          ]
+    );
     const flickerTime = performance.now() / 1000;
-    const flicker = this.dynamicLight ? fireFlickerGlobal(flickerTime) : 1.0;
+    const flicker = unlit ? 0 : this.dynamicLight ? fireFlickerGlobal(flickerTime) : 1.0;
     this.shaderManager.setUniform('tileRenderer', 'u_lightFlicker', flicker);
 
     gl.activeTexture(gl.TEXTURE0);
@@ -446,6 +467,32 @@ export class WebGLRendererCore {
     } else {
       this.stats.overlayMs = 0;
     }
+    if (this.lightPass && this.painted)
+      this.drawPaintedLight(
+        this.lightPass,
+        this.painted.tileset.tile,
+        viewportTilesW,
+        viewportTilesH
+      );
+  }
+
+  private drawPaintedLight(
+    pass: PaintedLightPass,
+    artTile: number,
+    viewportTilesW: number,
+    viewportTilesH: number
+  ): void {
+    this.stats.drawCalls += pass.draw({
+      canvas: [this.viewport.width, this.viewport.height],
+      viewOffset: [this.viewTileX * BASE_TILE_PX, this.viewTileY * BASE_TILE_PX],
+      zoom: [this.tileWidth / BASE_TILE_PX, this.tileHeight / BASE_TILE_PX],
+      artPerBase: artTile / BASE_TILE_PX,
+      artTile,
+      view: { x: this.viewTileX, y: this.viewTileY, w: viewportTilesW, h: viewportTilesH },
+      grade: gradeForLight(this.ambientLight, this.ambientEnv),
+      lights: this.pointLights,
+      time: performance.now() / 1000
+    });
   }
 
   private drawGroundBlend(blend: GroundBlend, flicker: number, lightTime: number): void {
@@ -453,11 +500,13 @@ export class WebGLRendererCore {
       projection: this.projectionMatrix,
       viewOffset: [this.viewTileX * BASE_TILE_PX, this.viewTileY * BASE_TILE_PX],
       zoom: [this.tileWidth / BASE_TILE_PX, this.tileHeight / BASE_TILE_PX],
-      ambient: [
-        this.ambientLight * this.ambientTint[0],
-        this.ambientLight * this.ambientTint[1],
-        this.ambientLight * this.ambientTint[2]
-      ],
+      ambient: this.lightPass
+        ? [1, 1, 1]
+        : [
+            this.ambientLight * this.ambientTint[0],
+            this.ambientLight * this.ambientTint[1],
+            this.ambientLight * this.ambientTint[2]
+          ],
       flicker,
       lightSampler: this.lightSampler ?? undefined,
       lightTime,
@@ -588,6 +637,8 @@ export class WebGLRendererCore {
     this.textureManager?.dispose();
     this.groundBlend?.dispose();
     this.groundBlend = null;
+    this.lightPass?.dispose();
+    this.lightPass = null;
     if (this.painted) this.webglState.getContext()?.deleteTexture(this.painted.texture);
     if (this.painted?.top) this.webglState.getContext()?.deleteTexture(this.painted.top.texture);
     this.painted = null;

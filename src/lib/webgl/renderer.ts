@@ -3,6 +3,7 @@ import type { ShaderManager } from './shaders.js';
 import type { CharacterRenderer } from './character-renderer.js';
 import type { GameGrid } from './game-grid.js';
 import type { FontAtlas } from './types.js';
+import type { PointLight, Rgb } from './painted/lightGrade.js';
 
 export type { RenderStats, RendererOptions };
 
@@ -89,8 +90,12 @@ export class WebGLRenderer {
     return this.core.getFontAtlas();
   }
 
-  setAmbient(light: number, tint: [number, number, number]): void {
-    this.core.setAmbient(light, tint);
+  setAmbient(light: number, tint: Rgb, baseTint?: Rgb): void {
+    this.core.setAmbient(light, tint, baseTint);
+  }
+
+  setPointLights(lights: readonly PointLight[]): void {
+    this.core.setPointLights(lights);
   }
 
   setDynamicLight(active: boolean): void {
