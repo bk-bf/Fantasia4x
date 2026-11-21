@@ -17,7 +17,7 @@
   "src/lib/components/screens/ResearchScreen.svelte": 388,
   "src/lib/components/screens/work/WorkCellTooltip.svelte": 286,
   "src/lib/components/screens/work/WorkPriorities.svelte": 443,
-  "src/lib/components/UI/audio/AudioController.svelte": 394,
+  "src/lib/components/UI/audio/AudioController.svelte": 319,
   "src/lib/components/UI/canvas/BuildingFuelPanel.svelte": 408,
   "src/lib/components/UI/canvas/BuildingInfo.svelte": 270,
   "src/lib/components/UI/canvas/BuildingRepairPanel.svelte": 405,
