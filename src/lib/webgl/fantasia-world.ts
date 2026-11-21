@@ -16,6 +16,8 @@ import { buildingDefById } from '$lib/game/core/defs/buildings.js';
 import { parseHexRgb01 } from '$lib/game/core/util/color.js';
 import { glyph, SHEET } from './tilesets.js';
 import type { RGB } from './tile-types.js';
+import { PAINTED_TILES } from './painted/flag.js';
+import { paintedTile } from './painted/tileset.js';
 
 const DECONSTRUCT_GLYPH = glyph(SHEET.MAP, 88);
 
@@ -362,7 +364,8 @@ export function applyTileToGrid(grid: GameGrid, tile: WorldTile, hiddenMask: boo
     char,
     foreground: { r: fg[0], g: fg[1], b: fg[2] },
     background: { r: bg[0], g: bg[1], b: bg[2] },
-    position: { x: tile.x, y: tile.y }
+    position: { x: tile.x, y: tile.y },
+    ...(PAINTED_TILES ? { painted: paintedTile('subterrain', tile.subType, tile.x, tile.y) } : null)
   });
 }
 
@@ -453,6 +456,7 @@ export function applyResourceToGrid(
   const rs = resDef.renderScale;
   const drawScale = (rs ?? 1) * stageScale;
   const scale = drawScale !== 1 ? drawScale : undefined;
+  const painted = PAINTED_TILES ? paintedTile('resource', resDef.id, tile.x, tile.y) : undefined;
   const tall = rs !== undefined && rs > 1;
   blank(tall ? gridShort : gridTall);
   const detail = baseDetail ? { r: baseDetail[0], g: baseDetail[1], b: baseDetail[2] } : undefined;
@@ -462,7 +466,8 @@ export function applyResourceToGrid(
     background: { r: 0, g: 0, b: 0 },
     position: { x: tile.x, y: tile.y },
     detail,
-    scale
+    scale: painted ? (stageScale !== 1 ? stageScale : undefined) : scale,
+    ...(painted ? { painted } : null)
   });
 }
 
@@ -567,7 +572,8 @@ export function applyBuildingToGrid(grid: GameGrid, b: PlacedBuilding, _tile?: W
     char,
     foreground: { r: fg[0], g: fg[1], b: fg[2] },
     background: { r: bg[0], g: bg[1], b: bg[2] },
-    position: { x: b.x, y: b.y }
+    position: { x: b.x, y: b.y },
+    ...(PAINTED_TILES ? { painted: paintedTile('building', b.type, b.x, b.y) } : null)
   });
   if (b.deconstructQueued) {
     grid.setTile(b.x, b.y, {

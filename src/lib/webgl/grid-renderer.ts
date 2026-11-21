@@ -4,9 +4,13 @@ import type { CharacterRenderer } from './character-renderer.js';
 import type { ShaderManager } from './shaders.js';
 import type { FontAtlas } from './types.js';
 import { checkWebGLError } from './utils.js';
+import { paintedQuad } from './painted/manifest.js';
 
 const ONE_LIGHT: [number, number, number] = [1, 1, 1];
 const ZERO_LIGHT: [number, number, number] = [0, 0, 0];
+const NO_OUTLINE = [0, 0, 0];
+const PAINTED_UV_SHIFT = 2;
+const paintedCorners = [0, 0, 0, 0];
 
 export interface GridRenderOptions {
   tileWidth: number;
@@ -353,16 +357,16 @@ export class GridRenderer {
       const tileH = options.tileHeight;
       const drawW = tileW * scale;
       const drawH = tileH * scale;
-      const x1 = screenX + offsetX - (drawW - tileW) / 2;
-      const y1 =
+      let x1 = screenX + offsetX - (drawW - tileW) / 2;
+      let y1 =
         scale >= 1 ? screenY + offsetY - (drawH - tileH) : screenY + offsetY + (tileH - drawH) / 2;
-      const x2 = x1 + drawW;
-      const y2 = y1 + drawH;
+      let x2 = x1 + drawW;
+      let y2 = y1 + drawH;
 
-      const u1 = charInfo ? charInfo.x / this.fontAtlas.atlasWidth : 0;
-      const v1 = charInfo ? charInfo.y / this.fontAtlas.atlasHeight : 0;
-      const u2 = charInfo ? (charInfo.x + charInfo.width) / this.fontAtlas.atlasWidth : 0;
-      const v2 = charInfo ? (charInfo.y + charInfo.height) / this.fontAtlas.atlasHeight : 0;
+      let u1 = charInfo ? charInfo.x / this.fontAtlas.atlasWidth : 0;
+      let v1 = charInfo ? charInfo.y / this.fontAtlas.atlasHeight : 0;
+      let u2 = charInfo ? (charInfo.x + charInfo.width) / this.fontAtlas.atlasWidth : 0;
+      let v2 = charInfo ? (charInfo.y + charInfo.height) / this.fontAtlas.atlasHeight : 0;
 
       const tileColor = [tile.foreground.r, tile.foreground.g, tile.foreground.b];
       const bg = [
@@ -375,8 +379,8 @@ export class GridRenderer {
         ? tileColor
         : [tileColor[0] * 0.3, tileColor[1] * 0.3, tileColor[2] * 0.3];
       const dt = tile.detail ? [tile.detail.r, tile.detail.g, tile.detail.b] : tileColor;
-      const ol = tile.outline ? [tile.outline.r, tile.outline.g, tile.outline.b] : [0, 0, 0];
-      const ub = charInfo
+      let ol = tile.outline ? [tile.outline.r, tile.outline.g, tile.outline.b] : [0, 0, 0];
+      let ub = charInfo
         ? [
             charInfo.x / this.fontAtlas.atlasWidth,
             charInfo.y / this.fontAtlas.atlasHeight,
@@ -384,6 +388,31 @@ export class GridRenderer {
             (charInfo.y + charInfo.height) / this.fontAtlas.atlasHeight
           ]
         : [0, 0, 0, 0];
+
+      const painted = tile.painted;
+      if (painted) {
+        paintedQuad(
+          painted,
+          tile.position.x,
+          tile.position.y,
+          tileW,
+          offsetX,
+          offsetY,
+          scale,
+          tile.rotation === 90 || tile.rotation === 270,
+          paintedCorners
+        );
+        x1 = paintedCorners[0];
+        y1 = paintedCorners[1];
+        x2 = paintedCorners[2];
+        y2 = paintedCorners[3];
+        u1 = painted.u1;
+        v1 = painted.v1;
+        u2 = painted.u2;
+        v2 = painted.v2;
+        ub = [u1 + PAINTED_UV_SHIFT, v1, u2 + PAINTED_UV_SHIFT, v2];
+        ol = NO_OUTLINE;
+      }
 
       let tlU = u1,
         tlV = v1;

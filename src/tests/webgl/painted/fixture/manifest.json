@@ -1,0 +1,181 @@
+{
+  "tile": 32,
+  "atlas": {
+    "w": 256,
+    "h": 260
+  },
+  "sprites": {
+    "ground_grass": {
+      "x": 1,
+      "y": 1,
+      "w": 128,
+      "h": 128,
+      "ox": 0,
+      "oy": 0,
+      "patch": 4
+    },
+    "ground_deep_grass": {
+      "x": 130,
+      "y": 1,
+      "w": 64,
+      "h": 64,
+      "ox": 0,
+      "oy": 0,
+      "patch": 2
+    },
+    "ground_dirt_a": {
+      "x": 195,
+      "y": 1,
+      "w": 32,
+      "h": 32,
+      "ox": 0,
+      "oy": 0
+    },
+    "ground_dirt_b": {
+      "x": 1,
+      "y": 130,
+      "w": 32,
+      "h": 32,
+      "ox": 0,
+      "oy": 0
+    },
+    "tree_pine_a": {
+      "x": 34,
+      "y": 130,
+      "w": 48,
+      "h": 80,
+      "ox": -8,
+      "oy": -48
+    },
+    "tree_pine_b": {
+      "x": 83,
+      "y": 130,
+      "w": 48,
+      "h": 80,
+      "ox": -8,
+      "oy": -48
+    },
+    "tree_oak": {
+      "x": 132,
+      "y": 130,
+      "w": 64,
+      "h": 80,
+      "ox": -16,
+      "oy": -48
+    },
+    "tree_birch": {
+      "x": 197,
+      "y": 130,
+      "w": 32,
+      "h": 64,
+      "ox": 0,
+      "oy": -32
+    },
+    "bush_berry": {
+      "x": 1,
+      "y": 211,
+      "w": 32,
+      "h": 32,
+      "ox": 0,
+      "oy": 0
+    },
+    "beast_deer": {
+      "x": 34,
+      "y": 211,
+      "w": 32,
+      "h": 32,
+      "ox": 0,
+      "oy": 0
+    },
+    "beast_worg": {
+      "x": 67,
+      "y": 211,
+      "w": 32,
+      "h": 32,
+      "ox": 0,
+      "oy": 0
+    },
+    "pawn_red": {
+      "x": 100,
+      "y": 211,
+      "w": 32,
+      "h": 48,
+      "ox": 0,
+      "oy": -16
+    },
+    "pawn_blue": {
+      "x": 133,
+      "y": 211,
+      "w": 32,
+      "h": 48,
+      "ox": 0,
+      "oy": -16
+    }
+  },
+  "map": {
+    "subterrain": {
+      "grass": [
+        "ground_grass"
+      ],
+      "tall_grass": [
+        "ground_grass"
+      ],
+      "deep_grass": [
+        "ground_deep_grass"
+      ],
+      "dirt": [
+        "ground_dirt_a",
+        "ground_dirt_b"
+      ]
+    },
+    "resource": {
+      "pine_tree": [
+        "tree_pine_a",
+        "tree_pine_b"
+      ],
+      "oak_tree": [
+        "tree_oak"
+      ],
+      "birch_tree": [
+        "tree_birch"
+      ],
+      "berry_bush": [
+        "bush_berry"
+      ]
+    },
+    "building": {},
+    "creature": {
+      "deer": [
+        "beast_deer"
+      ],
+      "elk": [
+        "beast_deer"
+      ],
+      "worg": [
+        "beast_worg"
+      ]
+    },
+    "pawn": {
+      "syleth": [
+        "pawn_red",
+        "pawn_blue"
+      ],
+      "veleth": [
+        "pawn_red",
+        "pawn_blue"
+      ],
+      "vorek": [
+        "pawn_red",
+        "pawn_blue"
+      ],
+      "fluxys": [
+        "pawn_red",
+        "pawn_blue"
+      ],
+      "velung": [
+        "pawn_red",
+        "pawn_blue"
+      ]
+    }
+  }
+}

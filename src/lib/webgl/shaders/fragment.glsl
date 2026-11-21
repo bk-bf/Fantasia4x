@@ -7,10 +7,12 @@ in vec3 v_foreground;
 in vec4 v_background;    // rgb + per-cell opacity (a; 1 = opaque terrain cell)
 in vec3 v_detail;
 in vec3 v_outline;
-in vec4 v_uvBounds;  // (uMin, vMin, uMax, vMax) of this glyph in the atlas
+in highp vec4 v_uvBounds;  // (uMin, vMin, uMax, vMax) of this glyph in the atlas
 in vec3 v_light;     // Interpolated ADDITIVE point-light contribution (0 = none)
 
 uniform sampler2D u_fontAtlas;
+uniform sampler2D u_paintAtlas;
+uniform vec2 u_paintTexelSize;
 uniform vec2 u_texelSize;  // (1/atlasWidth, 1/atlasHeight)
 // Global day/night ambient (light * tint). Combined per-fragment with the baked
 // additive point light so ambient changes never rebuild the vertex buffer.
@@ -44,7 +46,15 @@ void main() {
         return;
     }
 
-    vec4 sprite = texture(u_fontAtlas, v_texCoord);
+    bool painted = v_uvBounds.x >= 2.0;
+    vec4 sprite;
+    if (painted) {
+        vec4 cell = v_uvBounds - vec4(2.0, 0.0, 2.0, 0.0);
+        vec2 inset = 0.5 * u_paintTexelSize;
+        sprite = texture(u_paintAtlas, clamp(v_texCoord, cell.xy + inset, cell.zw - inset));
+    } else {
+        sprite = texture(u_fontAtlas, v_texCoord);
+    }
 
     // Outline: if this tile has an outline color and the current fragment is
     // in the background (alpha < 0.5) but a cardinal neighbour is inside the
@@ -74,7 +84,7 @@ void main() {
     //   dark pixels  → v_foreground (base glyph color)
     //   bright pixels → v_detail    (highlight / shading layer)
     float luma = dot(sprite.rgb, vec3(0.299, 0.587, 0.114));
-    vec3 tinted = mix(v_foreground, v_detail, luma);
+    vec3 tinted = painted ? sprite.rgb : mix(v_foreground, v_detail, luma);
 
     // Glyph-only overlay pass: draw only the glyph, transparent elsewhere, so the
     // terrain rendered underneath shows through (no opaque background quad).

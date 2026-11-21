@@ -10,6 +10,8 @@ import type { FontAtlas } from './types.js';
 import { BASE_TILE_PX } from './tile-types.js';
 import { WORK_PINS } from '../workPins/flag.js';
 import { addFrameTotals } from '../workPins/page.js';
+import { PAINTED_TILES } from './painted/flag.js';
+import { loadPaintedTileset, type LoadedPaintedTileset } from './painted/loader.js';
 
 interface Viewport {
   x: number;
@@ -61,6 +63,7 @@ export class WebGLRendererCore {
   private fontTexture: WebGLTexture | null = null;
 
   private tilesetLoaded = false;
+  private painted: LoadedPaintedTileset | null = null;
 
   private gameGrid: GameGrid | null = null;
   private gridVersion = 0;
@@ -288,6 +291,7 @@ export class WebGLRendererCore {
         this.fontAtlas,
         this.debug
       );
+      if (PAINTED_TILES) this.painted = await loadPaintedTileset(gl);
 
       if (this.debug) console.log('✅ WebGL2 renderer ready');
       return true;
@@ -350,6 +354,7 @@ export class WebGLRendererCore {
         1 / this.fontAtlas.atlasHeight
       ]);
     }
+    if (this.painted) this.bindPaintedAtlas(gl, this.painted);
 
     const viewportTilesW = Math.ceil(this.viewport.width / this.tileWidth);
     const viewportTilesH = Math.ceil(this.viewport.height / this.tileHeight);
@@ -422,6 +427,18 @@ export class WebGLRendererCore {
     } else {
       this.stats.overlayMs = 0;
     }
+  }
+
+  private bindPaintedAtlas(gl: WebGL2RenderingContext, painted: LoadedPaintedTileset): void {
+    if (!this.shaderManager) return;
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, painted.texture);
+    gl.activeTexture(gl.TEXTURE0);
+    this.shaderManager.setUniform('tileRenderer', 'u_paintAtlas', 1);
+    this.shaderManager.setUniform('tileRenderer', 'u_paintTexelSize', [
+      1 / painted.tileset.atlasW,
+      1 / painted.tileset.atlasH
+    ]);
   }
 
   private drawSnowGrid(viewportTilesW: number, viewportTilesH: number, lightTime: number): void {
@@ -512,6 +529,8 @@ export class WebGLRendererCore {
     this.characterRenderer?.dispose();
     this.shaderManager?.dispose();
     this.textureManager?.dispose();
+    if (this.painted) this.webglState.getContext()?.deleteTexture(this.painted.texture);
+    this.painted = null;
     this.webglState.dispose();
     this.gridRenderer = null;
     this.characterRenderer = null;

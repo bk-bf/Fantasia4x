@@ -1,3 +1,5 @@
+import type { PaintedSprite } from './painted/manifest.js';
+
 export const BASE_TILE_PX = 16;
 
 export interface RGB {
@@ -29,6 +31,7 @@ export interface TileData {
   animationOffset?: Vec2;
   rotation?: 0 | 90 | 180 | 270;
   scale?: number;
+  painted?: PaintedSprite;
   dirty?: boolean;
   lastUpdated?: number;
 }
