@@ -3,14 +3,17 @@
   import { recipeService } from '$lib/game/services/RecipeService';
   import { itemService } from '$lib/game/services/ItemService';
   import { getMaterialProperty, aggregateMaterialMods } from '$lib/game/core/defs/materials';
+  import { chrome } from '$lib/pixelArt/chrome';
 
   interface Props {
     building: Building;
     materials?: Record<string, string>;
-    x: number;
-    y: number;
+    left: number;
+    top: number;
   }
-  let { building, materials = {}, x, y }: Props = $props();
+  let { building, materials = {}, left, top }: Props = $props();
+  let h = $state(0);
+  let y = $derived(Math.max(8, Math.min(top, window.innerHeight - h - 8)));
 
   let matIds = $derived(Object.values(materials).filter(Boolean));
   let matNames = $derived(
@@ -36,11 +39,7 @@
 
   function portal(node: HTMLElement) {
     document.body.appendChild(node);
-    return {
-      destroy() {
-        node.remove();
-      }
-    };
+    return { destroy: () => node.remove() };
   }
 
   const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
@@ -115,45 +114,46 @@
   const ENABLES_CAP = 10;
 
   let headline = $derived(building.category ? humanize(building.category) : 'building');
-
-  let flipX = $derived(typeof window !== 'undefined' && x > window.innerWidth - 280);
-  let flipY = $derived(typeof window !== 'undefined' && y > window.innerHeight - 280);
-  let style = $derived(
-    `${flipX ? `right:${window.innerWidth - x + 14}px` : `left:${x + 16}px`};` +
-      `${flipY ? `bottom:${window.innerHeight - y + 14}px` : `top:${y + 16}px`};`
-  );
 </script>
 
-<div class="tip" use:portal {style}>
+<div
+  class="tip"
+  use:portal
+  style:left="{left}px"
+  style:top="{y}px"
+  bind:offsetHeight={h}
+  {@attach chrome('tip')}
+>
   <div class="tip-hdr">
     <span class="tip-name">{building.name}</span>
     <span class="tip-eff">{headline}</span>
   </div>
+  {#if building.description}<p class="tip-desc">{building.description}</p>{/if}
 
-  {#each infoRows as r}
+  {#each infoRows as r (r.label)}
     <div class="tip-row"><span class="tip-lbl">{r.label}</span><span>{r.val}</span></div>
   {/each}
 
   {#if effectRows.length > 0}
     <div class="tip-sep">EFFECTS</div>
-    {#each effectRows as r}
+    {#each effectRows as r, i (i)}
       <div class="tip-row"><span class="tip-lbl">{r.label}</span><span>{r.val}</span></div>
     {/each}
   {/if}
 
   {#if propRows.length > 0}
     <div class="tip-sep">PROPERTIES</div>
-    {#each propRows as r}
+    {#each propRows as r (r.label)}
       <div class="tip-row"><span class="tip-lbl">{r.label}</span><span>{r.val}</span></div>
     {/each}
   {/if}
 
   {#if matRows.length > 0}
     <div class="tip-sep">MATERIAL · {matNames}</div>
-    {#each matRows as r}
+    {#each matRows as r (r.label)}
       <div class="tip-row">
         <span class="tip-lbl">{r.label}</span>
-        <span style="color:{r.good ? '#6bc' : '#e08'}">{r.val}</span>
+        <span class:pos={r.good} class:neg={!r.good}>{r.val}</span>
       </div>
     {/each}
   {/if}
@@ -172,14 +172,9 @@
   .tip {
     position: fixed;
     z-index: 1000;
-    min-width: 190px;
-    max-width: 260px;
-    padding: 5px 7px;
-    background: var(--bg-panel, #11151c);
-    border: 1px solid var(--border-hi, #3a4656);
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.55);
-    font-family: var(--font-mono);
-    font-size: 12px;
+    width: 270px;
+    padding: 9px 12px;
+    font: 16px/17px var(--font-pixel);
     color: var(--text);
     pointer-events: none;
   }
@@ -188,39 +183,41 @@
     justify-content: space-between;
     align-items: baseline;
     gap: 8px;
-    border-bottom: 1px solid var(--border);
-    padding-bottom: 3px;
-    margin-bottom: 3px;
+    margin-bottom: 2px;
   }
   .tip-name {
     color: var(--accent-hi);
-    letter-spacing: 0.04em;
+    letter-spacing: 1.4px;
+    text-transform: uppercase;
   }
   .tip-eff {
-    font-weight: bold;
-    color: var(--accent);
+    color: var(--text-muted);
     white-space: nowrap;
+  }
+  .tip-desc {
+    margin: 0 0 5px;
+    color: var(--text-dim);
   }
   .tip-row {
     display: flex;
     justify-content: space-between;
     gap: 10px;
-    line-height: 1.5;
   }
   .tip-lbl {
     color: var(--text-dim);
   }
   .tip-sep {
-    margin-top: 4px;
-    padding-top: 3px;
-    border-top: 1px solid var(--border);
-    color: var(--text-muted, #555);
-    font-size: 10px;
-    letter-spacing: 0.08em;
+    margin-top: 5px;
+    color: var(--text-muted);
+    letter-spacing: 1.4px;
   }
   .tip-enables {
-    color: var(--text-muted);
-    font-size: 11px;
-    line-height: 1.4;
+    color: var(--text-dim);
+  }
+  .pos {
+    color: var(--pos);
+  }
+  .neg {
+    color: var(--neg);
   }
 </style>
