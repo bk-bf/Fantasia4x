@@ -122,7 +122,7 @@
     type SheetName
   } from '$lib/components/UI/canvas/spriteSheets';
   import { redrawHudSpriteIcons } from '$lib/components/UI/canvas/hudSpriteIcon';
-  import BuildingFuelPanel from '$lib/components/UI/canvas/BuildingFuelPanel.svelte';
+  import { fuelTarget } from '$lib/components/UI/canvas/fuelTarget';
   import BuildingRepairPanel from '$lib/components/UI/canvas/BuildingRepairPanel.svelte';
   import BuildingStoragePanel from '$lib/components/UI/canvas/BuildingStoragePanel.svelte';
   import FoodFilterPanel from '$lib/components/UI/canvas/FoodFilterPanel.svelte';
@@ -3288,7 +3288,7 @@
           uiState.deactivateDebugBrush();
           redrawOverlay();
         } else if (showFuelSettings) {
-          showFuelSettings = false;
+          uiState.closeWindow('fuel');
         } else if (showRepairSettings) {
           showRepairSettings = false;
         } else if (showStorageSettings) {
@@ -4078,7 +4078,7 @@
   }
 
   let showShelterAssign = false;
-  let showFuelSettings = false;
+  $: showFuelSettings = $uiState.windows.includes('fuel');
   let showStorageSettings = false;
   let showRepairSettings = false;
   let fuelSettingsForBuildingId: string | null = null;
@@ -4086,7 +4086,7 @@
   $: {
     const nextId = selectedBuilding?.id ?? null;
     if (nextId !== fuelSettingsForBuildingId) {
-      showFuelSettings = false;
+      uiState.closeWindow('fuel');
       showStorageSettings = false;
       showRepairSettings = false;
       fuelSettingsForBuildingId = nextId;
@@ -4094,17 +4094,14 @@
   }
 
   function toggleFuelSettingsPanel() {
-    showFuelSettings = !showFuelSettings;
-    if (showFuelSettings) {
-      showStorageSettings = false;
-      showRepairSettings = false;
-    }
+    if (!selectedBuilding) return;
+    fuelTarget.set(selectedBuilding.id);
+    uiState.toggleWindow('fuel');
   }
 
   function toggleStorageSettingsPanel() {
     showStorageSettings = !showStorageSettings;
     if (showStorageSettings) {
-      showFuelSettings = false;
       showRepairSettings = false;
     }
   }
@@ -4112,7 +4109,6 @@
   function toggleRepairSettingsPanel() {
     showRepairSettings = !showRepairSettings;
     if (showRepairSettings) {
-      showFuelSettings = false;
       showStorageSettings = false;
     }
   }
@@ -4700,9 +4696,6 @@
               {/if}
             {/snippet}
           </SelectedEntityCard>
-        {/if}
-        {#if canConfigureFuel}
-          <BuildingFuelPanel building={selectedBuilding} {pawns} open={showFuelSettings} />
         {/if}
         {#if canConfigureRepair}
           <BuildingRepairPanel building={selectedBuilding} {pawns} open={showRepairSettings} />

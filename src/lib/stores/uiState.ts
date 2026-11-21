@@ -11,7 +11,9 @@ export type WindowId =
   | 'work'
   | 'entities'
   | 'debug'
-  | 'pause';
+  | 'pause'
+  | 'health'
+  | 'fuel';
 
 interface UIState {
   windows: WindowId[];

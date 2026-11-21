@@ -47,7 +47,7 @@
 
 {#if rows.length > 0}
   <div class="inv-section">
-    <div class="section-hdr">| CONSUMABLES</div>
+    <h5>Consumables</h5>
     <div class="list">
       {#each rows as row (row.id)}
         <div class="row" title={row.def.description ?? ''}>
@@ -89,12 +89,6 @@
   .inv-section {
     margin-bottom: 1rem;
   }
-  .section-hdr {
-    font-family: var(--font-mono, monospace);
-    color: var(--accent, #0f0);
-    font-size: 0.75rem;
-    margin-bottom: 0.4rem;
-  }
   .list {
     display: flex;
     flex-direction: column;
@@ -105,8 +99,6 @@
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    font-family: var(--font-mono, monospace);
-    font-size: 0.72rem;
     color: var(--text, #ccc);
   }
   .name {
@@ -123,7 +115,6 @@
     background: transparent;
     color: var(--accent, #0f0);
     font-family: inherit;
-    font-size: 0.66rem;
     letter-spacing: 0.05em;
     padding: 1px 6px;
     cursor: pointer;

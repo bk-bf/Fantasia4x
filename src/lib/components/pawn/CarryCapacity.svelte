@@ -2,6 +2,7 @@
   import type { Pawn } from '$lib/game/core/types';
   import { itemService } from '$lib/game/services/ItemService';
   import { gameState } from '$lib/stores/gameState';
+  import SkinBar from '$lib/components/UI/widget/SkinBar.svelte';
 
   export let pawn: Pawn;
 
@@ -19,8 +20,15 @@
   const pct = (f: number) => `${Math.round(f * 100)}%`;
 </script>
 
-<span class="capacity">
-  [{weightKg.toFixed(1)}/{maxWeightKg.toFixed(1)} kg · {volumeL.toFixed(1)}/{maxVolumeL.toFixed(1)} L]
+<div class="capacity">
+  <div class="meter">
+    <em>Load</em><SkinBar value={weightKg / Math.max(maxWeightKg, 0.1)} ramp="honey" />
+    <span>{weightKg.toFixed(1)} of {maxWeightKg.toFixed(1)} kg</span>
+  </div>
+  <div class="meter">
+    <em>Room</em><SkinBar value={volumeL / Math.max(maxVolumeL, 0.1)} ramp="water" />
+    <span>{volumeL.toFixed(1)} of {maxVolumeL.toFixed(1)} L</span>
+  </div>
   <div class="cap-tip">
     <div class="tip-formula">CARRY CAPACITY — {cap.size} · {cap.bodyWeight}kg</div>
     <div class="tip-row">
@@ -51,16 +59,32 @@
       <div class="tip-gear">no belt or pack — equip one for more room</div>
     {/if}
   </div>
-</span>
+</div>
 
 <style>
   .capacity {
     position: relative;
-    color: var(--text-dim, #666);
-    font-size: 0.7rem;
+    margin-top: 6px;
     cursor: help;
   }
-
+  .meter {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    height: 18px;
+  }
+  em {
+    flex: none;
+    width: 44px;
+    font-style: normal;
+  }
+  .meter span {
+    flex: none;
+    width: 110px;
+    text-align: right;
+    color: var(--text-dim);
+    white-space: nowrap;
+  }
   .cap-tip {
     display: none;
     position: absolute;
@@ -70,12 +94,11 @@
     min-width: 240px;
     max-width: 340px;
     padding: 6px 8px;
-    background: var(--bg-panel, #0c1118);
-    border: 1px solid var(--border-hi, #3a4658);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
-    color: var(--text, #ccc);
-    font-size: 11px;
-    line-height: 1.5;
+    background: var(--bg-panel);
+    box-shadow:
+      inset 0 0 0 1px var(--border-hi),
+      0 4px 12px rgb(0 0 0 / 0.5);
+    color: var(--text);
     text-transform: none;
     pointer-events: none;
   }
@@ -97,7 +120,7 @@
     font-style: italic;
   }
   .cap-tip .tv {
-    color: #4caf50;
+    color: var(--pos);
   }
   .cap-tip .floor {
     color: var(--text-dim, #888);

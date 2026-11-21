@@ -6,16 +6,16 @@
   let { pawn }: { pawn: Pawn } = $props();
 
   const TIERS: Array<{ id: number | null; label: string; title: string }> = [
-    { id: null, label: 'BEST', title: 'Dress wounds with the best medicine in stock (default)' },
-    { id: 0, label: 'PRIM', title: 'Nothing above foraged moss, woundwort and chewed poultice' },
+    { id: null, label: 'Best', title: 'Dress wounds with the best medicine in stock (default)' },
+    { id: 0, label: 'Prim', title: 'Nothing above foraged moss, woundwort and chewed poultice' },
     {
       id: 1,
-      label: 'BRONZE',
+      label: 'Bronze',
       title: 'Up to honey salve — keep the worked medicine for someone else'
     },
-    { id: 2, label: 'IRON', title: 'Up to spirit tincture' },
-    { id: 3, label: 'STEEL', title: "Up to a surgeon's dressing" },
-    { id: 4, label: 'RUNED', title: 'Up to Emberbloom Balm' }
+    { id: 2, label: 'Iron', title: 'Up to spirit tincture' },
+    { id: 3, label: 'Steel', title: "Up to a surgeon's dressing" },
+    { id: 4, label: 'Runed', title: 'Up to Emberbloom Balm' }
   ];
 
   const current = $derived(pawn.medicineTierCap ?? null);
@@ -30,7 +30,7 @@
 </script>
 
 <SegmentedRow
-  label="MEDS"
+  label="Medicine"
   labelTitle="Ceiling on medicine spent dressing this pawn's wounds"
   options={TIERS}
   value={current}

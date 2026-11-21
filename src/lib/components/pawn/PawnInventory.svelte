@@ -56,14 +56,10 @@
 </script>
 
 <div class="inv-section">
-  <div class="section-hdr">
-    | CARRYING
-    <CarryCapacity {pawn} />
-  </div>
-
   {#if isEmpty}
-    <div class="empty">nothing carried</div>
+    <p class="empty">Nothing carried.</p>
   {:else}
+    <div class="packhead"><span>Item</span><span>Count</span><span>Weight</span><span></span></div>
     <div class="card-grid">
       {#each carriedInstances as inst (inst.instanceId)}
         {#if inst.itemId === 'carried_pawn'}
@@ -128,94 +124,58 @@
       {/each}
     </div>
   {/if}
+  <CarryCapacity {pawn} />
 </div>
 
 <PawnVesselContents {pawn} />
 <PawnConsumables {pawn} />
 
 <style>
-  .inv-section {
-    margin-bottom: 1rem;
-  }
-
-  .section-hdr {
-    font-family: var(--font-mono, monospace);
-    color: var(--accent, #0f0);
-    font-size: 0.75rem;
-    margin-bottom: 0.4rem;
-    display: flex;
-    gap: 0.5rem;
-    align-items: baseline;
-  }
-
-  .empty {
-    color: var(--text-dim, #666);
-    font-size: 0.75rem;
-    font-style: italic;
-    padding-left: 0.5rem;
-  }
-
-  .card-grid {
+  .packhead {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-    gap: 4px;
-    padding: 0 2px;
+    grid-template-columns: 1fr 40px 44px 46px;
+    gap: 6px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1.4px;
   }
-
-  .unknown-card {
-    border: 1px solid var(--neg, #e05a5a);
-    background: var(--bg-panel);
-    padding: 4px 6px 5px;
-    min-height: 42px;
-    font-family: var(--font-mono, monospace);
-    font-size: 0.68rem;
-    color: var(--neg, #e05a5a);
-    line-height: 1.3;
-    overflow: hidden;
+  .packhead span:not(:first-child) {
+    text-align: right;
   }
-  .unknown-card code {
-    color: var(--text, #ccc);
-    word-break: break-all;
+  .empty {
+    margin: 0;
+    color: var(--text-muted);
   }
-
-  .pawn-card {
-    position: relative;
-    border: 1px solid var(--accent-hi, #ffd24a);
-    background: var(--bg-panel);
-    padding: 4px 6px 5px;
+  .card-grid {
     display: flex;
     flex-direction: column;
-    gap: 3px;
-    min-height: 42px;
-    overflow: hidden;
+  }
+  .card {
+    position: relative;
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    min-height: 18px;
+  }
+  .unknown-card {
+    color: var(--neg);
   }
   .pawn-name {
-    font-family: var(--font-mono, monospace);
-    font-size: 0.72rem;
-    color: var(--accent-hi, #ffd24a);
-    line-height: 1.2;
-    padding-right: 16px;
+    color: var(--accent-hi);
   }
   .pawn-tag {
-    font-size: 0.62rem;
-    color: var(--neg, #e05a5a);
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
+    color: var(--neg);
   }
   .setdown {
-    position: absolute;
-    top: 2px;
-    right: 2px;
-    border: none;
-    background: transparent;
+    margin-left: auto;
+    padding: 0 2px;
+    border: 0;
+    background: none;
+    font: inherit;
+    color: var(--text-muted);
     cursor: pointer;
-    font-family: inherit;
-    font-size: 0.7rem;
-    line-height: 1;
-    padding: 1px 2px;
-    color: var(--text-dim, #666);
   }
   .setdown:hover {
-    color: var(--neg, #e05a5a);
+    color: var(--neg);
   }
 </style>
