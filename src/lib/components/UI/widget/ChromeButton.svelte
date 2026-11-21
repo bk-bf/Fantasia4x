@@ -37,6 +37,7 @@
   class="cbtn {cls}"
   class:on
   class:mini
+  class:verb={kind === 'verb'}
   aria-label={label}
   aria-pressed={on}
   data-title={title}
@@ -69,14 +70,35 @@
     height: 19px;
     padding: 0;
   }
-  .cbtn.on span {
+  .cbtn.on span,
+  .cbtn.verb span {
     color: var(--ember);
+  }
+  .cbtn.verb {
+    height: 24px;
+    padding: 0 10px;
+    font: calc(20px * var(--head-size, 1)) / 20px var(--font-head);
+    text-transform: var(--head-case, uppercase);
+    letter-spacing: 1px;
+  }
+  .cbtn.verb :global(.glyph canvas) {
+    filter: none;
   }
   .cbtn:disabled {
     color: var(--text-muted);
     cursor: default;
   }
-  :global(:root[data-theme='timber']) .cbtn.on span {
+  :global(:root[data-theme='timber']) .cbtn.verb {
+    box-shadow:
+      0 0 0 1px var(--ember),
+      0 0 9px rgb(255 160 60 / 0.4);
+  }
+  :global(:root[data-theme='vellum']) .cbtn.verb {
+    line-height: 22px;
+    letter-spacing: 0;
+  }
+  :global(:root[data-theme='timber']) .cbtn.on span,
+  :global(:root[data-theme='timber']) .cbtn.verb span {
     text-shadow:
       0 0 6px rgb(255 160 60 / 0.7),
       1px 1px 0 #0b0806;
