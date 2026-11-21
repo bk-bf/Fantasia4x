@@ -327,10 +327,9 @@
 
   let resourceGlowEmitters: import('$lib/game/services/LightingService.js').LightEmitter[] = [];
   function refreshEmitters(buildingList = buildings) {
-    lightingService.setEmitters([
-      ...lightingService.collectEmitters(buildingList),
-      ...resourceGlowEmitters
-    ]);
+    const emitters = [...lightingService.collectEmitters(buildingList), ...resourceGlowEmitters];
+    lightingService.setEmitters(emitters);
+    renderer?.setPointLights(emitters);
     renderer?.setDynamicLight(lightingService.hasEmitters());
     renderer?.setLightVersion(lightingService.getEmittersVersion());
     renderer?.setLightBounds(lightingService.getLitBounds());
@@ -1134,7 +1133,7 @@
       const { light, tint } = environmentService.getAmbient(environmentService.ambientTurn(s));
       const season = environmentService.effectiveSeason(s);
       const tinted = environmentService.getMapAmbientTint(tint, season, s.weather);
-      renderer.setAmbient(light, tinted);
+      renderer.setAmbient(light, tinted, tint);
       lightingService.setAmbient(light, tinted);
       _ambientLight = light;
       _ambientTint = tinted;
@@ -2846,7 +2845,7 @@
           $gameState ? environmentService.effectiveSeason($gameState) : undefined,
           $gameState?.weather
         );
-        renderer.setAmbient(light, tinted);
+        renderer.setAmbient(light, tinted, tint);
         lightingService.setAmbient(light, tinted);
         if (worldMap.length === 0) refreshEmitters();
         _ambientLight = light;
