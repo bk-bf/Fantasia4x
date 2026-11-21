@@ -3,7 +3,8 @@
   import type { PaintedKind } from '$lib/webgl/painted/manifest';
   import { fitInto } from '$lib/pixelArt/shrink';
   import { itemService } from '$lib/game/services/ItemService';
-  import { pen } from '$lib/pixelArt/canvas';
+  import { blank, pen } from '$lib/pixelArt/canvas';
+  import { picture, toArt, type Art } from '$lib/pixelArt/picture';
 
   const _sheetCache = new Map<string, HTMLCanvasElement | null>();
   const _sheetWaiters = new Map<string, Set<() => void>>();
@@ -42,22 +43,52 @@
     return null;
   }
 
-  const _painted = new Map<string, Promise<HTMLCanvasElement | null>>();
-  function paintedArt(
-    kind: PaintedKind,
-    id: string,
-    px: number
-  ): Promise<HTMLCanvasElement | null> {
+  const _painted = new Map<string, Promise<Art | null>>();
+  function paintedArt(kind: PaintedKind, id: string, px: number): Promise<Art | null> {
     const key = `${kind}/${id}@${px}`;
     let hit = _painted.get(key);
     if (!hit)
       _painted.set(
         key,
         (hit = paintedSpriteCanvas(kind, id)
-          .then((c) => (c ? fitInto(c, px) : null))
+          .then((c) => (c ? toArt(fitInto(c, px)) : null))
           .catch(() => null))
       );
     return hit;
+  }
+
+  const CELL_W = 12;
+  const CELL_H = 18;
+  const COLS = 16;
+  const _cells: Record<string, Art> = {};
+  function sheetCell(sheet: HTMLCanvasElement, name: string, id: number, tone: string | null): Art {
+    const key = `${name}/${id}/${tone ?? ''}`;
+    const hit = _cells[key];
+    if (hit) return hit;
+    const c = blank(CELL_W, CELL_H);
+    const ctx = pen(c);
+    if (ctx) {
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(
+        sheet,
+        (id % COLS) * CELL_W,
+        Math.floor(id / COLS) * CELL_H,
+        CELL_W,
+        CELL_H,
+        0,
+        0,
+        CELL_W,
+        CELL_H
+      );
+      if (tone) {
+        ctx.globalCompositeOperation = 'source-atop';
+        ctx.fillStyle = tone;
+        ctx.fillRect(0, 0, CELL_W, CELL_H);
+      }
+    }
+    const art = toArt(c);
+    _cells[key] = art;
+    return art;
   }
 </script>
 
@@ -101,68 +132,32 @@
             : null
   );
 
-  let art = $state<HTMLCanvasElement | null>(null);
-  let paintedBox: HTMLCanvasElement | undefined = $state();
+  let art = $state<Art | null>(null);
 
   $effect(() => {
     art = null;
     if (!painted) return;
     let live = true;
-    paintedArt(painted[0], painted[1], px).then((c) => live && (art = c));
+    paintedArt(painted[0], painted[1], px).then((a) => live && (art = a));
     return () => (live = false);
   });
-
-  $effect(() => {
-    if (!art || !paintedBox) return;
-    paintedBox.width = art.width;
-    paintedBox.height = art.height;
-    pen(paintedBox)?.drawImage(art, 0, 0);
-  });
-
-  const CELL_W = 12;
-  const CELL_H = 18;
-  const COLS = 16;
 
   const span = $derived((spans ?? []).find((s) => s.sheet && (s.id != null || s.from != null)));
   const literal = $derived((spans ?? []).find((s) => s.literal)?.literal ?? null);
 
-  let canvasEl: HTMLCanvasElement | undefined = $state();
-
-  function draw() {
-    const node = canvasEl;
-    if (!node || !span?.sheet) return;
-    const ctx = pen(node);
-    if (!ctx) return;
-    node.width = CELL_W;
-    node.height = CELL_H;
-    ctx.clearRect(0, 0, CELL_W, CELL_H);
-    const sheet = getSheet(span.sheet, draw);
-    if (!sheet) return;
-    const id = span.id ?? span.from ?? 0;
-    const col = id % COLS;
-    const row = Math.floor(id / COLS);
-    ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(sheet, col * CELL_W, row * CELL_H, CELL_W, CELL_H, 0, 0, CELL_W, CELL_H);
-    if (tone) {
-      ctx.globalCompositeOperation = 'source-atop';
-      ctx.fillStyle = tone;
-      ctx.fillRect(0, 0, CELL_W, CELL_H);
-      ctx.globalCompositeOperation = 'source-over';
-    }
-  }
-
-  $effect(() => {
-    void span;
-    void tone;
-    void canvasEl;
-    draw();
+  let sheetReady = $state(0);
+  const cell = $derived.by(() => {
+    void sheetReady;
+    if (!span?.sheet) return null;
+    const sheet = getSheet(span.sheet, () => sheetReady++);
+    return sheet ? sheetCell(sheet, span.sheet, span.id ?? span.from ?? 0, tone) : null;
   });
 </script>
 
 {#if art}
-  <canvas bind:this={paintedBox} class="painted-icon" style="width:{px}px;height:{px}px"></canvas>
-{:else if span?.sheet}
-  <canvas bind:this={canvasEl} class="sprite-icon" style="height:{px}px"></canvas>
+  <i class="painted-icon" style:width="{px}px" style:height="{px}px" {@attach picture(art)}></i>
+{:else if cell}
+  <i class="sprite-icon" style:height="{px}px" {@attach picture(cell)}></i>
 {:else if literal}
   <span class="sprite-literal" style="font-size:{px}px; color:{tone ?? 'inherit'}">{literal}</span>
 {:else}
@@ -170,17 +165,17 @@
 {/if}
 
 <style>
-  .sprite-icon {
-    width: auto;
-    aspect-ratio: 12 / 18;
-    image-rendering: pixelated;
+  .sprite-icon,
+  .painted-icon {
     flex-shrink: 0;
     display: block;
   }
-  .painted-icon {
-    image-rendering: pixelated;
-    flex-shrink: 0;
-    display: block;
+  .sprite-icon {
+    aspect-ratio: 12 / 18;
+  }
+  i :global(img) {
+    width: 100%;
+    height: 100%;
   }
   .sprite-literal {
     flex-shrink: 0;
