@@ -1,7 +1,7 @@
 import type { WorldTile } from '../core/types.js';
 import { tileKey } from '../core/util/tileKey.js';
 import { wasmPathfinderService } from './WasmPathfinderService.js';
-import { patchConnectivity } from './entity/connectivity.js';
+import { patchConnectivity, separated } from './entity/connectivity.js';
 
 export interface PathfinderService {
   init(): Promise<void>;
@@ -62,6 +62,16 @@ export function patchPathfindingWalkable(x: number, y: number, walkable: boolean
   if (_cache.walkable[idx] === next) return;
   _cache.walkable[idx] = next;
   patchConnectivity(_cache, x, y, walkable);
+}
+
+export function cannotReach(
+  worldMap: WorldTile[][],
+  sx: number,
+  sy: number,
+  ex: number,
+  ey: number
+): boolean {
+  return separated(buildPathfindingGrids(worldMap), sx, sy, ex, ey);
 }
 
 export function buildPathfindingGridsWithBlocked(

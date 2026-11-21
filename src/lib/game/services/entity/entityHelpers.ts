@@ -14,7 +14,7 @@ import {
 import { pawnStatService } from '../PawnStatService';
 import { stepBody, seedMidCrossClaims } from '../MovementSystem';
 import { resourceObjectService } from '../ResourceObjectService';
-import { buildSharedSoftBlockedGrid, pathfinderService } from '../PathfinderService';
+import { buildSharedSoftBlockedGrid, cannotReach, pathfinderService } from '../PathfinderService';
 import { occupancyService } from '../OccupancyService';
 import { hasLineOfSight } from '../../core/util/lineOfSight';
 import { reachable } from './connectivity';
@@ -599,6 +599,7 @@ export function pathTo(
   maxIter: number = MOB_PATH_MAX_ITER
 ): { x: number; y: number }[] {
   if (!pathfinderService.isReady()) return [];
+  if (cannotReach(state.worldMap, sx, sy, ex, ey)) return [];
   void selfId;
   const blocked = occupancyService.blockedTilesShared(state);
   const { walkable, costs, width, height } = buildSharedSoftBlockedGrid(state.worldMap, blocked);

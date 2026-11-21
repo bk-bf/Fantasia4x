@@ -11,6 +11,7 @@ import { pawnService } from '../../services/PawnService';
 import {
   buildSharedSoftBlockedGrid,
   buildPathfindingGridsConfined,
+  cannotReach,
   pathfinderService
 } from '../../services/PathfinderService';
 import { allowedTilesForPawn } from './zoneConfine';
@@ -174,6 +175,8 @@ export function tryAssignPath(
   if (!approach) {
     return null;
   }
+  if (cannotReach(gameState.worldMap, pawn.position.x, pawn.position.y, approach.x, approach.y))
+    return null;
   const { walkable, costs, width, height } = gridForPawn(
     pawn,
     gameState,
@@ -276,6 +279,7 @@ export function tryAssignSleepPath(
   if (!pawn.position) return null;
   if (!pathfinderService.isReady()) return null;
   if (pawn.position.x === tx && pawn.position.y === ty) return null;
+  if (cannotReach(gameState.worldMap, pawn.position.x, pawn.position.y, tx, ty)) return null;
   const blocked = occupancyService.blockedTilesShared(gameState);
   const { walkable, costs, width, height } = gridForPawn(
     pawn,
