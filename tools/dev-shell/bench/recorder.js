@@ -185,6 +185,11 @@
     const turn1 = turn();
     const cpu = await post('/cpu-since');
     if (document.querySelector('.game-over')) throw new Error(`the colony died by turn ${turn1}`);
+    if (times.length < 2)
+      throw new Error(
+        `${times.length} frames in ${secs.toFixed(1)} s of ${kindName}: visibility ${document.visibilityState}, ` +
+          `focus ${document.hasFocus()}, turn ${turn0} to ${turn1}, shown ${document.querySelector('.bi.perf')?.textContent?.trim()}`
+      );
     const gaps = times.slice(1).map((t, i) => t - times[i]).sort((a, b) => a - b);
     const frameMs = 1000 / CONFIG.refreshHz;
     return {
@@ -257,7 +262,7 @@
         await post('/segment', await runSegment(state.segment));
       }
     } catch (e) {
-      await post('/fail', { message: String(e?.message ?? e) });
+      await post('/fail', { message: String(e?.stack ?? e) });
     }
     location.reload();
   }

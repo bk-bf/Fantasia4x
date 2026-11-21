@@ -1,5 +1,5 @@
 import { execFileSync, spawn } from 'node:child_process';
-import { createWriteStream, readFileSync, writeFileSync } from 'node:fs';
+import { createWriteStream, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { cpus, hostname, loadavg, tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
@@ -7,7 +7,8 @@ import { fileURLToPath } from 'node:url';
 import { gunzipSync } from 'node:zlib';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const [SHELL, APP_TREE, SECONDS = '6', ROUNDS = '3'] = process.argv.slice(2);
+const [SHELL, APP_TREE, OUTPUT = 'display', SECONDS = '6', ROUNDS = '3'] = process.argv.slice(2);
+const HEADLESS_HZ = OUTPUT === 'display' ? null : Number(OUTPUT);
 const WINDOW = { width: 1440, height: 870 };
 const DEV_PORT = 5273;
 const LISTENER_PORT = 5274;
@@ -43,7 +44,7 @@ const SEGMENTS = PASSES.flatMap(([pass, kinds, seconds]) =>
 );
 
 if (!SHELLS[SHELL] || !APP_TREE) {
-  console.error(`usage: node run.mjs <${Object.keys(SHELLS).join('|')}> <tree serving the game> [seconds] [rounds]`);
+  console.error(`usage: node run.mjs <${Object.keys(SHELLS).join('|')}> <tree serving the game> [display|<headless output Hz>] [seconds] [rounds]`);
   process.exit(2);
 }
 
@@ -63,6 +64,8 @@ const median = (xs) => {
 
 const OWN_CGROUP = '/sys/fs/cgroup' + readFileSync('/proc/self/cgroup', 'utf8').trim().split('::')[1];
 const CGROUPS = new Set([OWN_CGROUP, join(dirname(OWN_CGROUP), `${UNIT}.scope`)]);
+const COMPOSITOR_UNIT = 'f4x-bench-compositor';
+const COMPOSITOR_CGROUP = join(dirname(OWN_CGROUP), `${COMPOSITOR_UNIT}.scope`);
 const cgroupSeconds = (dir) => {
   try {
     return Number(/usage_usec (\d+)/.exec(readFileSync(join(dir, 'cpu.stat'), 'utf8'))[1]) / 1e6;
@@ -73,24 +76,86 @@ const cgroupSeconds = (dir) => {
 function cpuSample() {
   const f = readFileSync('/proc/stat', 'utf8').split('\n')[0].trim().split(/\s+/).slice(1).map(Number);
   const busy = f.reduce((a, b) => a + b, 0) - f[3] - f[4];
-  return { t: Date.now() / 1000, busy: busy / 100, own: [...CGROUPS].reduce((sum, dir) => sum + cgroupSeconds(dir), 0) };
+  return {
+    t: Date.now() / 1000,
+    busy: busy / 100,
+    own: [...CGROUPS].reduce((sum, dir) => sum + cgroupSeconds(dir), 0),
+    compositor: cgroupSeconds(COMPOSITOR_CGROUP)
+  };
 }
 function cpuSince(a) {
   const b = cpuSample();
   const dt = b.t - a.t;
   const total = (b.busy - a.busy) / dt;
   const own = (b.own - a.own) / dt;
-  return { totalCores: +total.toFixed(2), ownCores: +own.toFixed(2), bgCores: +Math.max(0, total - own).toFixed(2) };
+  const compositor = (b.compositor - a.compositor) / dt;
+  return {
+    totalCores: +total.toFixed(2),
+    ownCores: +own.toFixed(2),
+    compositorCores: +compositor.toFixed(2),
+    bgCores: +Math.max(0, total - own - compositor).toFixed(2)
+  };
 }
 
-const hyprEnv = {
-  ...process.env,
-  HYPRLAND_INSTANCE_SIGNATURE: sh('systemctl', ['--user', 'show-environment'])
+const sessionEnv = Object.fromEntries(
+  sh('systemctl', ['--user', 'show-environment'])
     .split('\n')
-    .find((l) => l.startsWith('HYPRLAND_INSTANCE_SIGNATURE='))
-    ?.split('=')[1]
-};
+    .map((l) => [l.slice(0, l.indexOf('=')), l.slice(l.indexOf('=') + 1)])
+);
+const instances = () => JSON.parse(execFileSync('hyprctl', ['instances', '-j'], { encoding: 'utf8' }));
+const HEADLESS_CONFIG = `monitor = , 1920x1080@60, auto, 1
+animations {
+    enabled = false
+}
+decoration {
+    blur {
+        enabled = false
+    }
+    shadow {
+        enabled = false
+    }
+}
+misc {
+    disable_hyprland_logo = true
+    disable_splash_rendering = true
+}
+xwayland {
+    enabled = false
+}
+ecosystem {
+    no_update_news = true
+    no_donation_nag = true
+}
+`;
+
+async function startHeadlessCompositor() {
+  const config = join(tmpdir(), `${COMPOSITOR_UNIT}.conf`);
+  writeFileSync(config, HEADLESS_CONFIG);
+  const before = new Set(instances().map((i) => i.instance));
+  const { HYPRLAND_INSTANCE_SIGNATURE: _signature, HYPRLAND_CONFIG: _config, DISPLAY: _display, ...env } = process.env;
+  spawn(
+    'systemd-run',
+    ['--user', '--scope', '--quiet', '--collect', `--unit=${COMPOSITOR_UNIT}`, '--slice=app.slice', '--', 'Hyprland', '-c', config],
+    { env: { ...env, WAYLAND_DISPLAY: sessionEnv.WAYLAND_DISPLAY }, detached: true, stdio: 'ignore' }
+  ).unref();
+  let instance;
+  for (let i = 0; i < 60 && !(instance = instances().find((n) => !before.has(n.instance))); i++) await sleep(500);
+  if (!instance) throw new Error('the headless compositor did not start');
+  return instance.instance;
+}
+
+const HYPR_INSTANCE = HEADLESS_HZ ? await startHeadlessCompositor() : sessionEnv.HYPRLAND_INSTANCE_SIGNATURE;
+const hyprEnv = { ...process.env, HYPRLAND_INSTANCE_SIGNATURE: HYPR_INSTANCE };
 const hyprctl = (...args) => execFileSync('hyprctl', args, { encoding: 'utf8', env: hyprEnv }).trim();
+const monitors = () => JSON.parse(hyprctl('-j', 'monitors'));
+if (HEADLESS_HZ) {
+  const nested = monitors().map((m) => m.name);
+  hyprctl('output', 'create', 'headless');
+  for (const name of nested) hyprctl('output', 'remove', name);
+  const output = monitors()[0].name;
+  hyprctl('keyword', 'monitor', `${output},1920x1080@${HEADLESS_HZ},0x0,1`);
+  await sleep(1000);
+}
 const LUA_CONFIG = !hyprctl('eval', 'return 1').includes('only supported with the lua');
 const windows = () => JSON.parse(hyprctl('-j', 'clients'));
 const WINDOWS_BEFORE = new Set(windows().map((c) => c.address));
@@ -102,6 +167,36 @@ const startedByBench = (pid) => {
   }
 };
 const shellWindow = () => windows().find((c) => !WINDOWS_BEFORE.has(c.address) && startedByBench(c.pid));
+
+function gpuSecondsByProcess() {
+  const seen = new Set();
+  const byProcess = {};
+  for (const dir of CGROUPS) {
+    if (dir === OWN_CGROUP) continue;
+    let pids = [];
+    try {
+      pids = readFileSync(join(dir, 'cgroup.procs'), 'utf8').trim().split('\n').filter(Boolean);
+    } catch {
+      continue;
+    }
+    for (const pid of pids) {
+      try {
+        const name = readFileSync(`/proc/${pid}/comm`, 'utf8').trim();
+        for (const fd of readdirSync(`/proc/${pid}/fdinfo`)) {
+          const info = readFileSync(`/proc/${pid}/fdinfo/${fd}`, 'utf8');
+          const client = /drm-client-id:\s*(\d+)/.exec(info)?.[1];
+          const gfx = /drm-engine-gfx:\s*(\d+) ns/.exec(info)?.[1];
+          if (!client || !gfx || seen.has(client)) continue;
+          seen.add(client);
+          byProcess[name] = +((byProcess[name] ?? 0) + Number(gfx) / 1e9).toFixed(2);
+        }
+      } catch {
+        continue;
+      }
+    }
+  }
+  return byProcess;
+}
 
 async function startDevServer() {
   const out = createWriteStream(join(tmpdir(), `${UNIT}.dev-server.log`));
@@ -163,7 +258,7 @@ async function placeWindow() {
   log(`WINDOW ${JSON.stringify({ cgroups: [...CGROUPS].map((c) => c.split('/').pop()),  class: win.class, title: win.title, size: win.size, at: win.at, floating: win.floating, xwayland: win.xwayland, fullscreen: win.fullscreen, workspace: win.workspace?.id, pid: win.pid })}`);
 }
 
-const monitor = JSON.parse(hyprctl('-j', 'monitors')).find((m) => m.focused);
+const monitor = monitors().find((m) => m.focused) ?? monitors()[0];
 const rest0 = cpuSample();
 await sleep(10000);
 const machine = {
@@ -174,6 +269,8 @@ const machine = {
   load1: +loadavg()[0].toFixed(2),
   governor: sh('cat', ['/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor']),
   monitor: { name: monitor.name, mode: `${monitor.width}x${monitor.height}`, refreshHz: monitor.refreshRate, scale: monitor.scale, vrr: monitor.vrr },
+  output: HEADLESS_HZ ? 'a headless output of a nested Hyprland' : 'the display',
+  hyprland: sh('Hyprland', ['--version']).split('\n')[0],
   shell: SHELL,
   command: SHELLS[SHELL],
   window: WINDOW,
@@ -213,7 +310,7 @@ function recordSegment({ rows, window }) {
       `${row.segment} (tile ${row.tilePx}px) | ${row.kind}: fps ${summary.fps} [${list('fps')}] tps ${summary.tps} [${list('tps')}] | ` +
         `frame ms p50 [${list('p50Ms')}] p95 [${list('p95Ms')}] p99 [${list('p99Ms')}] max [${list('maxMs')}] | ` +
         `frames over 1.5x [${list('over1_5')}] over 3x [${list('over3')}] of [${list('frames')}] | ` +
-        `cores: shell ${m('ownCores')} [${list('ownCores')}], background ${m('bgCores')} [${list('bgCores')}] | turn ${row.runs.at(-1).turn}`
+        `cores: shell ${m('ownCores')} [${list('ownCores')}], compositor ${m('compositorCores')}, background ${m('bgCores')} [${list('bgCores')}] | turn ${row.runs.at(-1).turn}`
     );
   }
 }
@@ -234,7 +331,7 @@ const routes = {
   '/fail': (body) => {
     state.attempts += 1;
     const name = SEGMENTS[state.index]?.name;
-    log(`${name}: attempt ${state.attempts} failed: ${body.message}`);
+    log(`${name}: attempt ${state.attempts} failed: ${body.message.replace(/\n\s*/g, ' | ')}`);
     result.failures.push({ segment: name, attempt: state.attempts, message: body.message });
     if (state.attempts >= MAX_ATTEMPTS) advance();
     else state.step = 'seed';
@@ -279,6 +376,7 @@ try {
   launchShell(recorderFile);
   await placeWindow();
   const timedOut = await Promise.race([finished.then(() => false), sleep(RUN_TIMEOUT_MS).then(() => true)]);
+  log(`GPU seconds by process, from fdinfo drm-engine-gfx: ${JSON.stringify(gpuSecondsByProcess())}`);
   if (timedOut) {
     log(`timed out after ${RUN_TIMEOUT_MS / 60000} min at ${SEGMENTS[state.index]?.name} (${state.step})`);
     exitCode = 1;
@@ -299,6 +397,15 @@ try {
   }
   await sleep(2000);
   for (const dir of CGROUPS) if (dir !== OWN_CGROUP) sh('systemctl', ['--user', 'stop', dir.split('/').pop()]);
+  if (HEADLESS_HZ) {
+    try {
+      hyprctl('dispatch', 'exit');
+    } catch (e) {
+      log(`could not stop the headless compositor: ${e.message}`);
+    }
+    await sleep(1000);
+    sh('systemctl', ['--user', 'stop', `${COMPOSITOR_UNIT}.scope`]);
+  }
   try {
     process.kill(-server.pid, 'SIGTERM');
   } catch {
