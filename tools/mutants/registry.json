@@ -1,0 +1,1199 @@
+[
+  {
+    "id": "vessels-roomfor-fluid-unrounded",
+    "file": "src/lib/game/core/rules/gear/vessels.ts",
+    "find": "return fluid ? Math.round(room * 1000) / 1000 : Math.floor(room);",
+    "replace": "return fluid ? room : Math.floor(room);",
+    "tests": ["src/tests/game/core/vessels.test.ts"]
+  },
+  {
+    "id": "vessels-takeout-keeps-empty-entries",
+    "file": "src/lib/game/core/rules/gear/vessels.ts",
+    "find": "  inst.contents = inst.contents.filter((e) => (e.litres ?? e.amount ?? 0) > 0);\n",
+    "replace": "",
+    "tests": ["src/tests/game/core/vessels.test.ts"]
+  },
+  {
+    "id": "vessels-pick-largest-vessel",
+    "file": "src/lib/game/core/rules/gear/vessels.ts",
+    "find": "return (smallestFitting ?? largest)?.id ?? null;",
+    "replace": "return (largest ?? smallestFitting)?.id ?? null;",
+    "tests": ["src/tests/game/core/vessels.test.ts"]
+  },
+  {
+    "id": "stockpile-reserve-takes-reserved-drops",
+    "file": "src/lib/game/core/state/stockpile.ts",
+    "find": "if (remaining <= 0 || !d.stored || d.reservedFor || d.quantity <= 0) {",
+    "replace": "if (remaining <= 0 || !d.stored || d.quantity <= 0) {",
+    "tests": ["src/tests/game/services/physicalProduction.test.ts"]
+  },
+  {
+    "id": "stockpile-reserve-ignores-vessel-contents",
+    "file": "src/lib/game/core/state/stockpile.ts",
+    "find": "      if (held > 0) {\n        drops.push({ ...d, reservedFor: orderId });",
+    "replace": "      if (held < 0) {\n        drops.push({ ...d, reservedFor: orderId });",
+    "tests": ["src/tests/game/services/physicalProduction.test.ts"]
+  },
+  {
+    "id": "stockpile-reserve-reports-full-qty",
+    "file": "src/lib/game/core/state/stockpile.ts",
+    "find": "reserved: qty - remaining }",
+    "replace": "reserved: qty }",
+    "tests": ["src/tests/game/services/physicalProduction.test.ts"]
+  },
+  {
+    "id": "stockpile-reserve-drops-leftover",
+    "file": "src/lib/game/core/state/stockpile.ts",
+    "find": "      if (leftover > QUANTITY_EPSILON) {",
+    "replace": "      if (leftover < 0) {",
+    "tests": ["src/tests/game/services/physicalProduction.test.ts"]
+  },
+  {
+    "id": "stockpile-release-never-changes",
+    "file": "src/lib/game/core/state/stockpile.ts",
+    "find": "  return changed ? { ...state, droppedItems: drops } : state;",
+    "replace": "  return state;",
+    "tests": ["src/tests/game/services/physicalProduction.test.ts"]
+  },
+  {
+    "id": "stockpile-consume-takes-reserved-drops",
+    "file": "src/lib/game/core/state/stockpile.ts",
+    "find": "      if (!d.stored || d.reservedFor || (d.quantity ?? 0) <= 0) continue;\n      if (d.resourceId === itemId) {",
+    "replace": "      if (!d.stored || (d.quantity ?? 0) <= 0) continue;\n      if (d.resourceId === itemId) {",
+    "tests": ["src/tests/game/services/physicalProduction.test.ts"]
+  },
+  {
+    "id": "stockpile-consume-keeps-empty-stacks",
+    "file": "src/lib/game/core/state/stockpile.ts",
+    "find": "const kept = newDropped.filter((d) => !d.stored || d.quantity > QUANTITY_EPSILON);",
+    "replace": "const kept = newDropped;",
+    "tests": ["src/tests/game/core/tileStorage.test.ts"]
+  },
+  {
+    "id": "stockpile-add-always-new-stack",
+    "file": "src/lib/game/core/state/stockpile.ts",
+    "find": "    if (idx >= 0) {\n      drops[idx].quantity += amount;",
+    "replace": "    if (idx < -1) {\n      drops[idx].quantity += amount;",
+    "tests": ["src/tests/game/core/tileStorage.test.ts"]
+  },
+  {
+    "id": "stockpile-add-fluid-skips-vessels",
+    "file": "src/lib/game/core/state/stockpile.ts",
+    "find": "    if (isFluidId(itemId)) {\n      creditFluid(drops, itemId, amount, x, y);\n      continue;\n    }\n",
+    "replace": "",
+    "tests": ["src/tests/game/services/vesselChain.test.ts"]
+  },
+  {
+    "id": "stockpile-absorb-skips-storage-check",
+    "file": "src/lib/game/core/state/stockpile.ts",
+    "find": "  if (!isStorageTile(state, drop.x, drop.y)) return state;\n",
+    "replace": "",
+    "tests": ["src/tests/game/core/tileStorage.test.ts"]
+  },
+  {
+    "id": "stockpile-absorb-skips-vessel-packing",
+    "file": "src/lib/game/core/state/stockpile.ts",
+    "find": "const packed = idx >= 0 ? packIntoVesselOnTile(packing, idx, drop.x, drop.y) : 0;",
+    "replace": "const packed = 0;",
+    "tests": ["src/tests/game/services/vesselChain.test.ts"]
+  },
+  {
+    "id": "stockpile-absorb-never-merges",
+    "file": "src/lib/game/core/state/stockpile.ts",
+    "find": "  if (existingIdx >= 0) {",
+    "replace": "  if (existingIdx < -1) {",
+    "tests": ["src/tests/game/services/designationAbsorb.test.ts"]
+  },
+  {
+    "id": "stockpile-aggregate-counts-unstored",
+    "file": "src/lib/game/core/state/stockpile.ts",
+    "find": "    if (!d.stored || (d.quantity ?? 0) <= 0) continue;\n    agg[d.resourceId] = (agg[d.resourceId] ?? 0) + d.quantity;\n    creditVesselContents(agg, d);",
+    "replace": "    if ((d.quantity ?? 0) <= 0) continue;\n    agg[d.resourceId] = (agg[d.resourceId] ?? 0) + d.quantity;\n    creditVesselContents(agg, d);",
+    "tests": ["src/tests/game/core/tileStorage.test.ts"]
+  },
+  {
+    "id": "stockpile-available-counts-reserved",
+    "file": "src/lib/game/core/state/stockpile.ts",
+    "find": "    if (!d.stored || d.reservedFor || (d.quantity ?? 0) <= 0) continue;\n    if (d.resourceId === itemId) total += d.quantity;",
+    "replace": "    if (!d.stored || (d.quantity ?? 0) <= 0) continue;\n    if (d.resourceId === itemId) total += d.quantity;",
+    "tests": ["src/tests/game/services/physicalProduction.test.ts"]
+  },
+  {
+    "id": "stockpile-tool-tier-ignores-drops",
+    "file": "src/lib/game/core/state/stockpile.ts",
+    "find": "    if (t != null && t > tier) tier = t;\n",
+    "replace": "",
+    "tests": ["src/tests/game/services/toolTierGate.test.ts"]
+  },
+  {
+    "id": "stockpile-storage-keys-skip-bins",
+    "file": "src/lib/game/core/state/stockpile.ts",
+    "find": "binStacksForType(b.type) > 0) seen.add(",
+    "replace": "binStacksForType(b.type) < 0) seen.add(",
+    "tests": ["src/tests/game/services/storageBins.test.ts"]
+  },
+  {
+    "id": "stockpile-with-drops-keeps-loose-fluid",
+    "file": "src/lib/game/core/state/stockpile.ts",
+    "find": "  const kept = spilled ? drops.filter((d) => !isFluidId(d.resourceId)) : drops;",
+    "replace": "  const kept = drops;",
+    "tests": ["src/tests/game/services/vesselChain.test.ts"]
+  },
+  {
+    "id": "body-lethal-health-at-zero",
+    "file": "src/lib/game/core/defs/bodyParts.ts",
+    "find": "const destroyed = part.isMissing || part.health <= 0;",
+    "replace": "const destroyed = part.isMissing || part.health < 0;",
+    "tests": ["src/tests/game/core/bodyPlans.test.ts"]
+  },
+  {
+    "id": "body-lethal-ignores-missing",
+    "file": "src/lib/game/core/defs/bodyParts.ts",
+    "find": "const destroyed = part.isMissing || part.health <= 0;",
+    "replace": "const destroyed = part.health <= 0;",
+    "tests": ["src/tests/game/core/bodyPlans.test.ts"]
+  },
+  {
+    "id": "body-lethal-ignores-vital-containers",
+    "file": "src/lib/game/core/defs/bodyParts.ts",
+    "find": "def?.isCritical || CONTAINER_OF_VITAL.has(part.id))) {",
+    "replace": "def?.isCritical)) {",
+    "tests": ["src/tests/game/core/bodyPlans.test.ts"]
+  },
+  {
+    "id": "body-lethal-ignores-torso",
+    "file": "src/lib/game/core/defs/bodyParts.ts",
+    "find": "(limb.id === 'head' || limb.id === 'torso')",
+    "replace": "(limb.id === 'head')",
+    "tests": ["src/tests/game/core/bodyPlans.test.ts"]
+  },
+  {
+    "id": "body-cascade-never-loses-vital",
+    "file": "src/lib/game/core/defs/bodyParts.ts",
+    "find": "    if (PART_DEF_MAP[p.id]?.isVital) lostVital = true;\n",
+    "replace": "",
+    "tests": ["src/tests/game/core/bodyPlans.test.ts"]
+  },
+  {
+    "id": "body-cascade-keeps-health",
+    "file": "src/lib/game/core/defs/bodyParts.ts",
+    "find": "return { ...p, health: 0, isMissing: true };",
+    "replace": "return { ...p, isMissing: true };",
+    "tests": ["src/tests/game/core/bodyPlans.test.ts"]
+  },
+  {
+    "id": "body-contained-parts-not-transitive",
+    "file": "src/lib/game/core/defs/bodyParts.ts",
+    "find": "        stack.push(id);\n",
+    "replace": "",
+    "tests": ["src/tests/game/core/bodyPlans.test.ts"]
+  },
+  {
+    "id": "body-roll-ignores-extra-parts",
+    "file": "src/lib/game/core/defs/bodyParts.ts",
+    "find": "        if (w > 0) (extra ??= []).push({ id: p.id, w });\n",
+    "replace": "",
+    "tests": ["src/tests/game/core/bodyPlans.test.ts"]
+  },
+  {
+    "id": "body-bone-budget-swapped",
+    "file": "src/lib/game/core/defs/bodyParts.ts",
+    "find": "return def?.skeleton ? scaledMaxHp : BONE_FRACTION * scaledMaxHp;",
+    "replace": "return def?.skeleton ? BONE_FRACTION * scaledMaxHp : scaledMaxHp;",
+    "tests": ["src/tests/game/core/bodyPlans.test.ts"]
+  },
+  {
+    "id": "body-plan-ignores-body-scale",
+    "file": "src/lib/game/core/defs/bodyParts.ts",
+    "find": "Math.round((def?.maxHp ?? 10) * bodyScale)",
+    "replace": "Math.round(def?.maxHp ?? 10)",
+    "tests": ["src/tests/game/core/bodyPlans.test.ts"]
+  },
+  {
+    "id": "body-parent-limb-never-found",
+    "file": "src/lib/game/core/defs/bodyParts.ts",
+    "find": "    if (partIds.includes(partId)) return limbId as LimbId;\n",
+    "replace": "",
+    "tests": ["src/tests/game/core/bodyPlans.test.ts"]
+  },
+  {
+    "id": "wounds-uncareable-at-zero-bleed",
+    "file": "src/lib/game/core/defs/wounds.ts",
+    "find": "(w.severity === 'destroyed' && w.bleeding <= 0)",
+    "replace": "(w.severity === 'destroyed' && w.bleeding < 0)",
+    "tests": ["src/tests/game/services/jobs/destroyedWoundCare.test.ts"]
+  },
+  {
+    "id": "wounds-destroyed-above-full",
+    "file": "src/lib/game/core/defs/wounds.ts",
+    "find": "  if (frac >= 1.0) return 'destroyed';",
+    "replace": "  if (frac > 1.0) return 'destroyed';",
+    "tests": ["src/tests/game/entities/traitWounds.test.ts"]
+  },
+  {
+    "id": "wounds-max-severity-inverted",
+    "file": "src/lib/game/core/defs/wounds.ts",
+    "find": "return SEVERITY_RANK[a] >= SEVERITY_RANK[b] ? a : b;",
+    "replace": "return SEVERITY_RANK[a] <= SEVERITY_RANK[b] ? a : b;",
+    "tests": ["src/tests/game/entities/traitWounds.test.ts"]
+  },
+  {
+    "id": "wounds-tended-boundary",
+    "file": "src/lib/game/core/defs/wounds.ts",
+    "find": "return turn - w.treatedAt < CARE_CONFIG.treatmentDurationTicks * (w.treatmentQuality ?? 0);",
+    "replace": "return turn - w.treatedAt <= CARE_CONFIG.treatmentDurationTicks * (w.treatmentQuality ?? 0);",
+    "tests": ["src/tests/game/systems/woundRecovery.test.ts"]
+  },
+  {
+    "id": "wounds-tended-ignores-quality",
+    "file": "src/lib/game/core/defs/wounds.ts",
+    "find": "return turn - w.treatedAt < CARE_CONFIG.treatmentDurationTicks * (w.treatmentQuality ?? 0);",
+    "replace": "return turn - w.treatedAt < CARE_CONFIG.treatmentDurationTicks;",
+    "tests": ["src/tests/game/systems/woundRecovery.test.ts"]
+  },
+  {
+    "id": "wounds-serious-needs-three-clots",
+    "file": "src/lib/game/core/defs/wounds.ts",
+    "find": "severity === 'serious' ? 2 : 3",
+    "replace": "severity === 'serious' ? 3 : 3",
+    "tests": ["src/tests/game/systems/woundRecovery.test.ts"]
+  },
+  {
+    "id": "wounds-clot-ignores-bloodletting",
+    "file": "src/lib/game/core/defs/wounds.ts",
+    "find": "const need = clotsNeeded(w.severity) + (w.bloodletting ? 1 : 0);",
+    "replace": "const need = clotsNeeded(w.severity);",
+    "tests": ["src/tests/game/systems/woundRecovery.test.ts"]
+  },
+  {
+    "id": "wounds-recompute-drops-peak",
+    "file": "src/lib/game/core/defs/wounds.ts",
+    "find": "const peakSeverity = maxSeverity(prev?.peakSeverity ?? severity, severity);",
+    "replace": "const peakSeverity = severity;",
+    "tests": ["src/tests/game/entities/traitWounds.test.ts"]
+  },
+  {
+    "id": "wounds-recompute-in-place-drops-peak",
+    "file": "src/lib/game/core/defs/wounds.ts",
+    "find": "w.peakSeverity = maxSeverity(w.peakSeverity ?? sev, sev);",
+    "replace": "w.peakSeverity = sev;",
+    "tests": ["src/tests/game/systems/woundRecovery.test.ts"]
+  },
+  {
+    "id": "wounds-clotting-ignores-bloodletting-factor",
+    "file": "src/lib/game/core/defs/wounds.ts",
+    "find": "const chance = w.bloodletting ? clotChance * bloodlettingFactor : clotChance;",
+    "replace": "const chance = clotChance;",
+    "tests": ["src/tests/game/systems/woundRecovery.test.ts"]
+  },
+  {
+    "id": "wounds-clotting-keeps-bleed-rate",
+    "file": "src/lib/game/core/defs/wounds.ts",
+    "find": "      limb.bleedRate = (limb.parts ?? []).reduce(\n        (s, p) => s + p.injuries.reduce((ps, x) => ps + x.bleeding, 0),\n        0\n      );\n",
+    "replace": "",
+    "tests": ["src/tests/game/systems/woundRecovery.test.ts"]
+  },
+  {
+    "id": "wounds-clotting-roll-inverted",
+    "file": "src/lib/game/core/defs/wounds.ts",
+    "find": "        if (rng.random() < chance) {",
+    "replace": "        if (rng.random() >= chance) {",
+    "tests": ["src/tests/game/systems/woundRecovery.test.ts"]
+  },
+  {
+    "id": "wounds-heal-ignores-splint",
+    "file": "src/lib/game/core/defs/wounds.ts",
+    "find": "const splintBoost = wd?.structural && boneHealFor ? boneHealFor(part.id) : 1;",
+    "replace": "const splintBoost = 1;",
+    "tests": ["src/tests/game/systems/woundRecovery.test.ts"]
+  },
+  {
+    "id": "wounds-heal-ignores-tending",
+    "file": "src/lib/game/core/defs/wounds.ts",
+    "find": "const heal = (baseHeal / (wd?.healDifficulty ?? 1)) * tendBoost * splintBoost;",
+    "replace": "const heal = (baseHeal / (wd?.healDifficulty ?? 1)) * splintBoost;",
+    "tests": ["src/tests/game/systems/combatSim.test.ts"]
+  },
+  {
+    "id": "wounds-heal-keeps-bleed-rate",
+    "file": "src/lib/game/core/defs/wounds.ts",
+    "find": "return { ...limb, parts: newParts, health: rolledHealth, bleedRate: totalBleed };",
+    "replace": "return { ...limb, parts: newParts, health: rolledHealth };",
+    "tests": ["src/tests/game/systems/woundRecovery.test.ts"]
+  },
+  {
+    "id": "wounds-heal-never-scars",
+    "file": "src/lib/game/core/defs/wounds.ts",
+    "find": "const scar = canScar ? rollScarOnHeal(w, part.maxHp) : null;",
+    "replace": "const scar = null as Injury | null;",
+    "tests": ["src/tests/game/systems/woundRecovery.test.ts"]
+  },
+  {
+    "id": "wounds-scar-not-permanent",
+    "file": "src/lib/game/core/defs/wounds.ts",
+    "find": "    permanent: true\n  };",
+    "replace": "    permanent: false\n  };",
+    "tests": ["src/tests/game/entities/traitWounds.test.ts"]
+  },
+  {
+    "id": "terrain-biome-upper-bound-inclusive",
+    "file": "src/lib/game/core/defs/terrains.ts",
+    "find": "density < def.densityRange[1]) return name;",
+    "replace": "density <= def.densityRange[1]) return name;",
+    "tests": ["src/tests/game/core/soilFertility.test.ts"]
+  },
+  {
+    "id": "terrain-biome-shares-last-end",
+    "file": "src/lib/game/core/defs/terrains.ts",
+    "find": "const end = i === DENSITY_ORDER.length - 1 ? 1 : cursor;",
+    "replace": "const end = cursor;",
+    "tests": ["src/tests/game/core/soilFertility.test.ts"]
+  },
+  {
+    "id": "terrain-soil-tier-divisor",
+    "file": "src/lib/game/core/defs/terrains.ts",
+    "find": "return (soilFertilityPct(tile) / 25) as SoilTier;",
+    "replace": "return (soilFertilityPct(tile) / 20) as SoilTier;",
+    "tests": ["src/tests/game/core/soilFertility.test.ts"]
+  },
+  {
+    "id": "terrain-subterrain-no-parent-fallback",
+    "file": "src/lib/game/core/defs/terrains.ts",
+    "find": "const range = def.biomes?.[biomeName] ?? (parent ? def.biomes?.[parent] : undefined);",
+    "replace": "const range = def.biomes?.[biomeName];",
+    "tests": ["src/tests/game/core/soilFertility.test.ts"]
+  },
+  {
+    "id": "terrain-spawnable-allows-water",
+    "file": "src/lib/game/core/defs/terrains.ts",
+    "find": "  if (WATER_SUBTYPES.has(tile.subType)) return false;\n",
+    "replace": "",
+    "tests": ["src/tests/game/core/soilFertility.test.ts"]
+  },
+  {
+    "id": "amenity-counts-blueprints",
+    "file": "src/lib/game/core/defs/amenities.ts",
+    "find": "    if (b.status !== 'complete') continue;\n    if (Math.abs(b.x - x) > AMENITY_RADIUS",
+    "replace": "    if (Math.abs(b.x - x) > AMENITY_RADIUS",
+    "tests": ["src/tests/game/systems/pawn/amenity.test.ts"]
+  },
+  {
+    "id": "amenity-ignores-material-beauty",
+    "file": "src/lib/game/core/defs/amenities.ts",
+    "find": "beauty += (eff.beauty ?? 0) + (mods?.beauty ?? 0);",
+    "replace": "beauty += eff.beauty ?? 0;",
+    "tests": ["src/tests/game/systems/pawn/amenity.test.ts"]
+  },
+  {
+    "id": "amenity-ignores-material-comfort",
+    "file": "src/lib/game/core/defs/amenities.ts",
+    "find": "return (eff.comfort ?? 0) + (mods?.comfort ?? 0);",
+    "replace": "return eff.comfort ?? 0;",
+    "tests": ["src/tests/game/systems/pawn/amenity.test.ts"]
+  },
+  {
+    "id": "vision-blind-keeps-night-vision",
+    "file": "src/lib/game/core/rules/body/vision.ts",
+    "find": "    if (hasEye && !hasLivingEye) nv = 0;\n",
+    "replace": "",
+    "tests": ["src/tests/game/core/vision.test.ts"]
+  },
+  {
+    "id": "vision-light-floor-dropped",
+    "file": "src/lib/game/core/rules/body/vision.ts",
+    "find": "Math.max(VISION_LIGHT_FLOOR, dampenLightByNightVision(lightLevel, nightVision))",
+    "replace": "Math.max(0, dampenLightByNightVision(lightLevel, nightVision))",
+    "tests": ["src/tests/game/core/vision.test.ts"]
+  },
+  {
+    "id": "stealth-ignores-natural-armour",
+    "file": "src/lib/game/core/rules/body/stealth.ts",
+    "find": "    s -= (trait.naturalArmor ?? 0) * NATURAL_ARMOR_STEALTH_DRAG;\n",
+    "replace": "",
+    "tests": ["src/tests/game/core/stealth.test.ts"]
+  },
+  {
+    "id": "pawn-index-never-refreshes",
+    "file": "src/lib/game/core/state/pawnIndex.ts",
+    "find": "  if (pawns !== cachedArr) {",
+    "replace": "  if (cachedArr === null) {",
+    "tests": ["src/tests/game/core/pawnIndex.test.ts"]
+  },
+  {
+    "id": "conditions-stage-threshold-exclusive",
+    "file": "src/lib/game/core/rules/body/conditions.ts",
+    "find": "    if (condition.severity >= stage.minSeverity) active = stage;",
+    "replace": "    if (condition.severity > stage.minSeverity) active = stage;",
+    "tests": ["src/tests/game/core/vitalEscalation.test.ts"]
+  },
+  {
+    "id": "conditions-stage-stops-at-first",
+    "file": "src/lib/game/core/rules/body/conditions.ts",
+    "find": "    if (condition.severity >= stage.minSeverity) active = stage;",
+    "replace": "    if (condition.severity >= stage.minSeverity) {\n      active = stage;\n      break;\n    }",
+    "tests": ["src/tests/game/core/vitalEscalation.test.ts"]
+  },
+  {
+    "id": "conditions-driver-onset-exclusive",
+    "file": "src/lib/game/core/rules/body/conditions.ts",
+    "find": "  if (needVal >= d.onset) {",
+    "replace": "  if (needVal > d.onset) {",
+    "tests": ["src/tests/game/core/conditionOnsetDelay.test.ts"]
+  },
+  {
+    "id": "conditions-driver-rates-swapped",
+    "file": "src/lib/game/core/rules/body/conditions.ts",
+    "find": "needVal >= 100 ? d.rateMax : d.rateCritical",
+    "replace": "needVal >= 100 ? d.rateCritical : d.rateMax",
+    "tests": ["src/tests/game/services/environment.test.ts"]
+  },
+  {
+    "id": "conditions-driver-ignores-onset-delay",
+    "file": "src/lib/game/core/rules/body/conditions.ts",
+    "find": "severity: -(d.onsetDelay ?? 0) * d.rateMax + rate",
+    "replace": "severity: rate",
+    "tests": ["src/tests/game/core/conditionOnsetDelay.test.ts"]
+  },
+  {
+    "id": "conditions-driver-caps-below-one",
+    "file": "src/lib/game/core/rules/body/conditions.ts",
+    "find": "severity: Math.min(1.0, conditions[idx].severity + rate)",
+    "replace": "severity: Math.min(0.99, conditions[idx].severity + rate)",
+    "tests": ["src/tests/game/services/entitySim.test.ts"]
+  },
+  {
+    "id": "conditions-driver-keeps-recovered",
+    "file": "src/lib/game/core/rules/body/conditions.ts",
+    "find": "    if (newSeverity <= 0) conditions.splice(idx, 1);\n    else conditions[idx] = { ...conditions[idx], severity: newSeverity };",
+    "replace": "    conditions[idx] = { ...conditions[idx], severity: newSeverity };",
+    "tests": ["src/tests/game/services/environment.test.ts"]
+  },
+  {
+    "id": "conditions-need-lethal-exclusive",
+    "file": "src/lib/game/core/rules/body/conditions.ts",
+    "find": "applyConditionDriver(conditions, def, needVal, 1, tickScale);\n    const current = conditions.find((c) => c.id === def.id);\n    if (current && current.severity >= def.lethalSeverity)",
+    "replace": "applyConditionDriver(conditions, def, needVal, 1, tickScale);\n    const current = conditions.find((c) => c.id === def.id);\n    if (current && current.severity > def.lethalSeverity)",
+    "tests": ["src/tests/game/services/entitySim.test.ts"]
+  },
+  {
+    "id": "conditions-temperature-exposure-swapped",
+    "file": "src/lib/game/core/rules/body/conditions.ts",
+    "find": "src === 'heat' ? heatExposure : coldExposure,",
+    "replace": "src === 'heat' ? coldExposure : heatExposure,",
+    "tests": ["src/tests/game/services/environment.test.ts"]
+  },
+  {
+    "id": "conditions-temperature-never-lethal",
+    "file": "src/lib/game/core/rules/body/conditions.ts",
+    "find": "      recoveryMul\n    );\n    const current = conditions.find((c) => c.id === def.id);\n    if (current && current.severity >= def.lethalSeverity) return def.id;\n",
+    "replace": "      recoveryMul\n    );\n",
+    "tests": ["src/tests/game/services/environment.test.ts"]
+  },
+  {
+    "id": "conditions-shock-ignores-pain-multiplier",
+    "file": "src/lib/game/core/rules/body/conditions.ts",
+    "find": "const feltPain = pain * conditionPainMultiplier({ conditions });",
+    "replace": "const feltPain = pain;",
+    "tests": ["src/tests/game/systems/infectionIncubation.test.ts"]
+  },
+  {
+    "id": "conditions-intoxication-never-clears",
+    "file": "src/lib/game/core/rules/body/conditions.ts",
+    "find": "  if (next <= 0) conditions.splice(idx, 1);\n  else conditions[idx] = { ...conditions[idx], severity: next };",
+    "replace": "  conditions[idx] = { ...conditions[idx], severity: next };",
+    "tests": ["src/tests/game/services/foodChain.test.ts"]
+  },
+  {
+    "id": "conditions-intoxication-decays-double",
+    "file": "src/lib/game/core/rules/body/conditions.ts",
+    "find": "const next = conditions[idx].severity - perTick(INTOX_DECAY_PER_SEC);",
+    "replace": "const next = conditions[idx].severity - perTick(INTOX_DECAY_PER_SEC) * 2;",
+    "tests": ["src/tests/game/services/foodChain.test.ts"]
+  },
+  {
+    "id": "conditions-modifiers-skip-transient",
+    "file": "src/lib/game/core/rules/body/conditions.ts",
+    "find": "      if (v != null) visit(v, def!.name);\n",
+    "replace": "",
+    "tests": ["src/tests/game/services/conditionStatAdditivity.test.ts"]
+  },
+  {
+    "id": "conditions-modifier-sum-halved",
+    "file": "src/lib/game/core/rules/body/conditions.ts",
+    "find": "    sum += v;",
+    "replace": "    sum += v / 2;",
+    "tests": ["src/tests/game/services/conditionStatAdditivity.test.ts"]
+  },
+  {
+    "id": "conditions-transient-ignores-fatigue",
+    "file": "src/lib/game/core/rules/body/conditions.ts",
+    "find": "      fatigueRate *= m.fatigueRate ?? 1;\n",
+    "replace": "",
+    "tests": ["src/tests/game/services/entitySim.test.ts"]
+  },
+  {
+    "id": "conditions-fracture-severity-halved",
+    "file": "src/lib/game/core/rules/body/conditions.ts",
+    "find": "const sev = breakAt > 0 ? Math.min(1, frac.damage / breakAt) : 0;",
+    "replace": "const sev = breakAt > 0 ? Math.min(1, frac.damage / breakAt / 2) : 0;",
+    "tests": ["src/tests/game/systems/fractures.test.ts"]
+  },
+  {
+    "id": "conditions-fracture-never-removed",
+    "file": "src/lib/game/core/rules/body/conditions.ts",
+    "find": "  } else if (idx >= 0) {\n    conditions.splice(idx, 1);\n  }\n",
+    "replace": "  }\n",
+    "tests": ["src/tests/game/systems/fractures.test.ts"]
+  },
+  {
+    "id": "conditions-laden-band-shifted",
+    "file": "src/lib/game/core/rules/body/conditions.ts",
+    "find": "span(LADEN_START, ENC_BURDEN_START)",
+    "replace": "span(LADEN_START + 0.1, ENC_BURDEN_START)",
+    "tests": ["src/tests/game/systems/encumbrance.test.ts"]
+  },
+  {
+    "id": "conditions-wield-strain-full-twenty",
+    "file": "src/lib/game/core/rules/body/conditions.ts",
+    "find": "export const WIELD_STRAIN_FULL = 14;",
+    "replace": "export const WIELD_STRAIN_FULL = 20;",
+    "tests": ["src/tests/game/systems/wieldRequirement.test.ts"]
+  },
+  {
+    "id": "conditions-windchill-never-removed",
+    "file": "src/lib/game/core/rules/body/conditions.ts",
+    "find": "  const idx = conditions.findIndex((c) => c.id === 'windchilled');\n  if (sev <= 0) {\n    if (idx !== -1) conditions.splice(idx, 1);\n",
+    "replace": "  const idx = conditions.findIndex((c) => c.id === 'windchilled');\n  if (sev <= 0) {\n",
+    "tests": ["src/tests/game/services/windchill.test.ts"]
+  },
+  {
+    "id": "conditions-insulated-min-zero",
+    "file": "src/lib/game/core/rules/body/conditions.ts",
+    "find": "        min = -5;",
+    "replace": "        min = 0;",
+    "tests": ["src/tests/game/services/environment.test.ts"]
+  },
+  {
+    "id": "conditions-vital-escalation-from-first-stage",
+    "file": "src/lib/game/core/rules/body/conditions.ts",
+    "find": "    if (curIdx < 1) continue;",
+    "replace": "    if (curIdx < 0) continue;",
+    "tests": ["src/tests/game/core/vitalEscalation.test.ts"]
+  },
+  {
+    "id": "conditions-vital-escalation-repeats",
+    "file": "src/lib/game/core/rules/body/conditions.ts",
+    "find": "    if (curIdx > prevIdx) out.push(",
+    "replace": "    if (curIdx >= prevIdx) out.push(",
+    "tests": ["src/tests/game/core/vitalEscalation.test.ts"]
+  },
+  {
+    "id": "conditions-sig-ignores-severity",
+    "file": "src/lib/game/core/rules/body/conditions.ts",
+    "find": "s += conds[i].id + ':' + conds[i].severity + ';';",
+    "replace": "s += conds[i].id + ';';",
+    "tests": ["src/tests/game/core/conditionGraph.test.ts"]
+  },
+  {
+    "id": "condition-graph-ignores-at-or-below",
+    "file": "src/lib/game/core/rules/body/conditionGraph.ts",
+    "find": "    if (p.atOrBelow !== undefined && v > p.atOrBelow) return false;\n",
+    "replace": "",
+    "tests": ["src/tests/game/core/conditionGraph.test.ts"]
+  },
+  {
+    "id": "condition-graph-ignores-onset-gate",
+    "file": "src/lib/game/core/rules/body/conditionGraph.ts",
+    "find": "    if (t.per === 'onset' && !isOnset) continue;\n",
+    "replace": "",
+    "tests": ["src/tests/game/core/conditionGraph.test.ts"]
+  },
+  {
+    "id": "ranged-dual-wield-either-hand",
+    "file": "src/lib/game/systems/rangedCombat.ts",
+    "find": "if (mainWp?.offHandable && offWp?.offHandable) return 'dualWield';",
+    "replace": "if (mainWp?.offHandable || offWp?.offHandable) return 'dualWield';",
+    "tests": ["src/tests/game/systems/combatRanged.test.ts"]
+  },
+  {
+    "id": "ranged-ammoless-weapon-not-viable",
+    "file": "src/lib/game/systems/rangedCombat.ts",
+    "find": "return !rw.ammoCategory || pickAmmo(pawn, rw.ammoCategory) !== null;",
+    "replace": "return rw.ammoCategory ? pickAmmo(pawn, rw.ammoCategory) !== null : false;",
+    "tests": ["src/tests/game/systems/combatRanged.test.ts"]
+  },
+  {
+    "id": "ranged-no-distance-falloff",
+    "file": "src/lib/game/systems/rangedCombat.ts",
+    "find": "    dist * ACC_FALLOFF_PER_TILE -\n",
+    "replace": "",
+    "tests": ["src/tests/game/systems/combatRanged.test.ts"]
+  },
+  {
+    "id": "ranged-shot-interval-floor-one",
+    "file": "src/lib/game/systems/rangedCombat.ts",
+    "find": "const MIN_SHOT_INTERVAL_TICKS = 72;",
+    "replace": "const MIN_SHOT_INTERVAL_TICKS = 1;",
+    "tests": ["src/tests/game/systems/combatRanged.test.ts"]
+  },
+  {
+    "id": "ranged-no-draw-fumble",
+    "file": "src/lib/game/systems/rangedCombat.ts",
+    "find": "  if (hasContainer) return DRAW_FUMBLE_PENALTY;\n",
+    "replace": "",
+    "tests": ["src/tests/game/systems/combatRanged.test.ts"]
+  },
+  {
+    "id": "combat-armour-pen-adds-blockable",
+    "file": "src/lib/game/systems/Combat.ts",
+    "find": "let blockable = rawDamage * (1 - armorPen);",
+    "replace": "let blockable = rawDamage * (1 + armorPen);",
+    "tests": ["src/tests/game/systems/statAxisProposal.test.ts"]
+  },
+  {
+    "id": "combat-natural-armour-adds-damage",
+    "file": "src/lib/game/systems/Combat.ts",
+    "find": "if (natural > 0) blockable = Math.max(0, blockable - natural);",
+    "replace": "if (natural > 0) blockable = Math.max(0, blockable + natural);",
+    "tests": ["src/tests/game/systems/creatureDurability.test.ts"]
+  },
+  {
+    "id": "combat-unwind-above-max",
+    "file": "src/lib/game/systems/Combat.ts",
+    "find": "if (winded && stamina >= max) winded = false;",
+    "replace": "if (winded && stamina > max) winded = false;",
+    "tests": ["src/tests/game/systems/combatSim.test.ts"]
+  },
+  {
+    "id": "combat-winded-timer-zero",
+    "file": "src/lib/game/systems/Combat.ts",
+    "find": "      durations.winded = 2;",
+    "replace": "      durations.winded = 0;",
+    "tests": ["src/tests/game/systems/combatSim.test.ts"]
+  },
+  {
+    "id": "combat-winded-pawn-attacks",
+    "file": "src/lib/game/systems/Combat.ts",
+    "find": "      if (this.isWinded(pawn)) continue;\n",
+    "replace": "",
+    "tests": ["src/tests/game/systems/combatSim.test.ts"]
+  },
+  {
+    "id": "combat-pawn-attack-phase-shifted",
+    "file": "src/lib/game/systems/Combat.ts",
+    "find": "if (state.turn % pawnInterval !== 0) continue;",
+    "replace": "if (state.turn % pawnInterval !== 1) continue;",
+    "tests": ["src/tests/game/systems/combatSim.test.ts"]
+  },
+  {
+    "id": "combat-splice-loses-mob-write",
+    "file": "src/lib/game/systems/Combat.ts",
+    "find": "        if (idx >= 0) mobs[idx] = updated as Mob;",
+    "replace": "        if (idx < 0) mobs[idx] = updated as Mob;",
+    "tests": ["src/tests/game/systems/combatSim.test.ts"]
+  },
+  {
+    "id": "jobs-advance-completes-past-work",
+    "file": "src/lib/game/services/JobService.ts",
+    "find": "    if (newWorkDone >= job.workRequired) {",
+    "replace": "    if (newWorkDone > job.workRequired) {",
+    "tests": ["src/tests/game/services/JobService.test.ts"]
+  },
+  {
+    "id": "jobs-no-urgent-ordering",
+    "file": "src/lib/game/services/JobService.ts",
+    "find": "      if (urgB !== urgA) return urgB - urgA;\n",
+    "replace": "",
+    "tests": ["src/tests/game/services/urgentHaul.test.ts"]
+  },
+  {
+    "id": "jobs-claim-ignores-claimant",
+    "file": "src/lib/game/services/JobService.ts",
+    "find": "j.id === jobId && (j.claimedBy === null || j.claimedBy === pawnId)",
+    "replace": "j.id === jobId",
+    "tests": ["src/tests/game/services/JobService.test.ts"]
+  },
+  {
+    "id": "jobs-bulk-tool-never-counts",
+    "file": "src/lib/game/services/JobService.ts",
+    "find": "    return ids.some((id) => (bulk[id] ?? 0) > 0);",
+    "replace": "    return false;",
+    "tests": ["src/tests/game/services/equipSlotChoice.test.ts"]
+  },
+  {
+    "id": "jobs-subkey-always-category",
+    "file": "src/lib/game/services/JobService.ts",
+    "find": "    return subs.includes(job.type) ? job.type : categoryKey;",
+    "replace": "    return categoryKey;",
+    "tests": ["src/tests/game/services/JobService.test.ts"]
+  },
+  {
+    "id": "jobs-harvest-tool-gate-removed",
+    "file": "src/lib/game/services/JobService.ts",
+    "find": "      if (claimGate === 'harvestTool' || claimGate === 'craftTool') {",
+    "replace": "      if (claimGate === 'craftTool') {",
+    "tests": ["src/tests/game/services/followupFeatures.test.ts"]
+  },
+  {
+    "id": "jobs-designation-work-always-foraging",
+    "file": "src/lib/game/services/JobService.ts",
+    "find": "      return interaction?.workCategory ?? 'foraging';",
+    "replace": "      return 'foraging';",
+    "tests": ["src/tests/game/services/followupFeatures.test.ts"]
+  },
+  {
+    "id": "work-sync-ignores-eating",
+    "file": "src/lib/game/services/WorkService.ts",
+    "find": "        !pawn.state.isEating &&\n",
+    "replace": "",
+    "tests": ["src/tests/game/services/followupFeatures.test.ts"]
+  },
+  {
+    "id": "work-sync-never-updates-current-work",
+    "file": "src/lib/game/services/WorkService.ts",
+    "find": "        workAssignments[pawn.id] = { ...assignment, currentWork };\n        assignmentsChanged = true;\n",
+    "replace": "",
+    "tests": ["src/tests/game/services/followupFeatures.test.ts"]
+  },
+  {
+    "id": "caretake-tends-least-bleeding",
+    "file": "src/lib/game/services/jobs/caretake.ts",
+    "find": "          w.bleeding > target.bleeding ||",
+    "replace": "          w.bleeding < target.bleeding ||",
+    "tests": ["src/tests/game/systems/woundRecovery.test.ts"]
+  },
+  {
+    "id": "construct-ignores-supply",
+    "file": "src/lib/game/services/jobs/construct.ts",
+    "find": "    if (!buildingSupplied(building, gs)) continue;\n",
+    "replace": "",
+    "tests": ["src/tests/game/services/followupFeatures.test.ts"]
+  },
+  {
+    "id": "craft-reserve-accepts-one-short",
+    "file": "src/lib/game/services/jobs/craft.ts",
+    "find": "      if (res.reserved < need) {",
+    "replace": "      if (res.reserved < need - 1) {",
+    "tests": ["src/tests/game/services/craftPendingOrders.test.ts"]
+  },
+  {
+    "id": "craft-generate-ignores-supply",
+    "file": "src/lib/game/services/jobs/craft.ts",
+    "find": "    if (!orderSupplied(order, station, gs)) continue;\n",
+    "replace": "",
+    "tests": ["src/tests/game/services/JobService.test.ts"]
+  },
+  {
+    "id": "craft-skill-yield-ignored",
+    "file": "src/lib/game/services/jobs/craft.ts",
+    "find": "skillYieldMult = Math.max(1, mods.yield ?? 1);",
+    "replace": "skillYieldMult = 1;",
+    "tests": ["src/tests/game/services/pawnSkillEffects.test.ts"]
+  },
+  {
+    "id": "fetch-drops-already-at-station",
+    "file": "src/lib/game/services/jobs/fetch.ts",
+    "find": "      if (drop.x === dest.x && drop.y === dest.y) continue;\n",
+    "replace": "",
+    "tests": ["src/tests/game/services/JobService.test.ts"]
+  },
+  {
+    "id": "fetch-loses-untaken-units",
+    "file": "src/lib/game/services/jobs/fetch.ts",
+    "find": "  const remainder = drop.quantity - taken;",
+    "replace": "  const remainder = 0;",
+    "tests": ["src/tests/game/services/pawnSkillEffects.test.ts"]
+  },
+  {
+    "id": "filters-growth-gate-exclusive",
+    "file": "src/lib/game/services/jobs/filters.ts",
+    "find": "return gate <= 0 || (growth ?? 100) >= gate;",
+    "replace": "return gate <= 0 || (growth ?? 100) > gate;",
+    "tests": ["src/tests/game/services/jobs/harvestGrowthGate.test.ts"]
+  },
+  {
+    "id": "harvest-generate-ignores-growth",
+    "file": "src/lib/game/services/jobs/harvest.ts",
+    "find": "      if (!meetsGrowthGate(interaction, tile.growth?.[resourceId])) continue;\n",
+    "replace": "",
+    "tests": ["src/tests/game/services/farmingSoil.test.ts"]
+  },
+  {
+    "id": "harvest-zero-growth-keeps-resource",
+    "file": "src/lib/game/services/jobs/harvest.ts",
+    "find": "    if (growthAfter <= 0) col.resources",
+    "replace": "    if (growthAfter < 0) col.resources",
+    "tests": ["src/tests/game/services/jobs/harvestOutcome.test.ts"]
+  },
+  {
+    "id": "harvest-fertility-wear-exclusive",
+    "file": "src/lib/game/services/jobs/harvest.ts",
+    "find": "    while (wear >= WEAR_PER_TIER) {",
+    "replace": "    while (wear > WEAR_PER_TIER) {",
+    "tests": ["src/tests/game/services/farmingSoil.test.ts"]
+  },
+  {
+    "id": "harvest-keeps-designation",
+    "file": "src/lib/game/services/jobs/harvest.ts",
+    "find": "  delete newDesignations[`${job.targetX},${job.targetY}`];\n",
+    "replace": "",
+    "tests": ["src/tests/game/services/harvestZonePreservation.test.ts"]
+  },
+  {
+    "id": "haul-skips-urgent-at-capacity",
+    "file": "src/lib/game/services/jobs/haul.ts",
+    "find": "    if (atCapacity && !drop.urgent) continue;",
+    "replace": "    if (atCapacity) continue;",
+    "tests": ["src/tests/game/services/urgentHaul.test.ts"]
+  },
+  {
+    "id": "haul-no-urgent-sync",
+    "file": "src/lib/game/services/jobs/haul.ts",
+    "find": "    return [(j.urgent ?? undefined) === urgent ? j : { ...j, urgent }];",
+    "replace": "    return [j];",
+    "tests": ["src/tests/game/services/urgentHaul.test.ts"]
+  },
+  {
+    "id": "haul-evicts-reserved-drops",
+    "file": "src/lib/game/services/jobs/haul.ts",
+    "find": "    if (!d.stored || d.reservedFor) return d;",
+    "replace": "    if (!d.stored) return d;",
+    "tests": ["src/tests/game/services/JobService.test.ts"]
+  },
+  {
+    "id": "repair-condition-not-restored",
+    "file": "src/lib/game/services/jobs/repair.ts",
+    "find": "{ ...b, condition: plan.newCondition }",
+    "replace": "{ ...b }",
+    "tests": ["src/tests/game/services/timeProgression.test.ts"]
+  },
+  {
+    "id": "staging-supplied-exclusive",
+    "file": "src/lib/game/services/jobs/staging.ts",
+    "find": "stagedQty(order, itemId, station, gs) >= need",
+    "replace": "stagedQty(order, itemId, station, gs) > need",
+    "tests": ["src/tests/game/services/JobService.test.ts"]
+  },
+  {
+    "id": "staging-building-ignores-position",
+    "file": "src/lib/game/services/jobs/staging.ts",
+    "find": "(d) => d.stored && d.reservedFor === b.id && !(d.x === b.x && d.y === b.y)",
+    "replace": "(d) => d.stored && d.reservedFor === b.id && false",
+    "tests": ["src/tests/game/services/followupFeatures.test.ts"]
+  },
+  {
+    "id": "staging-counts-drops-off-station",
+    "file": "src/lib/game/services/jobs/staging.ts",
+    "find": "    if (d.x !== station.x || d.y !== station.y) continue;\n",
+    "replace": "",
+    "tests": ["src/tests/game/services/JobService.test.ts"]
+  },
+  {
+    "id": "items-worn-out-kept",
+    "file": "src/lib/game/services/ItemService.ts",
+    "find": "      if (left <= 0) {\n        continue;\n      }\n      next.push({ ...di, durability: left });",
+    "replace": "      next.push({ ...di, durability: left });",
+    "tests": ["src/tests/game/services/itemDeterioration.test.ts"]
+  },
+  {
+    "id": "items-tool-breaks-past-max",
+    "file": "src/lib/game/services/ItemService.ts",
+    "find": "    if (wear[toolId] >= max) {",
+    "replace": "    if (wear[toolId] > max) {",
+    "tests": ["src/tests/game/services/toolWear.test.ts"]
+  },
+  {
+    "id": "lighting-unlit-fire-glows",
+    "file": "src/lib/game/services/LightingService.ts",
+    "find": "  if (needsFuel && b.lit !== true) return null;\n",
+    "replace": "",
+    "tests": ["src/tests/game/services/buildingLight.test.ts"]
+  },
+  {
+    "id": "lighting-blueprint-glows",
+    "file": "src/lib/game/services/LightingService.ts",
+    "find": "  if (b.status !== 'complete') return null;\n  const def = buildingService.getBuildingById(b.type);\n  if (!def?.lightRadius)",
+    "replace": "  const def = buildingService.getBuildingById(b.type);\n  if (!def?.lightRadius)",
+    "tests": ["src/tests/game/services/buildingLight.test.ts"]
+  },
+  {
+    "id": "buildings-broken-never-removed",
+    "file": "src/lib/game/services/BuildingService.ts",
+    "find": "      if (next <= 0) (broken ??= []).push(updated);\n",
+    "replace": "",
+    "tests": ["src/tests/game/services/buildingCondition.test.ts"]
+  },
+  {
+    "id": "buildings-no-default-wear",
+    "file": "src/lib/game/services/BuildingService.ts",
+    "find": "    return Object.keys(def.buildingCost ?? {}).length > 0 ? DEFAULT_CONDITION_DECAY : 0;",
+    "replace": "    return 0;",
+    "tests": ["src/tests/game/services/buildingCondition.test.ts"]
+  },
+  {
+    "id": "resources-yield-floored",
+    "file": "src/lib/game/services/ResourceObjectService.ts",
+    "find": "const amount = Math.max(0, Math.ceil(base * statYieldMult));",
+    "replace": "const amount = Math.max(0, Math.floor(base * statYieldMult));",
+    "tests": ["src/tests/game/services/farmingSoil.test.ts"]
+  },
+  {
+    "id": "resources-yield-ignores-min-growth",
+    "file": "src/lib/game/services/ResourceObjectService.ts",
+    "find": "      if (growthPct < (y.minGrowth ?? 0)) continue;\n",
+    "replace": "",
+    "tests": ["src/tests/game/services/jobs/harvestOutcome.test.ts"]
+  },
+  {
+    "id": "resources-designation-interaction-ignored",
+    "file": "src/lib/game/services/ResourceObjectService.ts",
+    "find": "      if (found) return found;\n",
+    "replace": "",
+    "tests": ["src/tests/game/services/jobs/harvestOutcome.test.ts"]
+  },
+  {
+    "id": "pawn-move-barefoot-unslowed",
+    "file": "src/lib/game/services/PawnService.ts",
+    "find": "const BAREFOOT_MOVE_FACTOR = 0.9;",
+    "replace": "const BAREFOOT_MOVE_FACTOR = 1;",
+    "tests": ["src/tests/game/services/bootsAndStealth.test.ts"]
+  },
+  {
+    "id": "pawn-move-ignores-load",
+    "file": "src/lib/game/services/PawnService.ts",
+    "find": "      loadFactor = clamp(1 - loadFrac * 0.4, 0.6, 1);",
+    "replace": "      loadFactor = 1;",
+    "tests": ["src/tests/game/services/bulkLogistics.test.ts"]
+  },
+  {
+    "id": "pawn-stat-broken-bone-ignored",
+    "file": "src/lib/game/services/PawnStatService.ts",
+    "find": "(limbBoneBroken(l.id) ? BROKEN_BONE_FUNCTION_MULT : 1)",
+    "replace": "1",
+    "tests": ["src/tests/game/systems/fractures.test.ts"]
+  },
+  {
+    "id": "pawn-stat-capacity-cache-ignores-limbs",
+    "file": "src/lib/game/services/PawnStatService.ts",
+    "find": "if (c && c.limbs === pawn.limbs && c.injuries === pawn.injuries && c.light === lightBucket) {",
+    "replace": "if (c && c.injuries === pawn.injuries && c.light === lightBucket) {",
+    "tests": ["src/tests/game/systems/fractures.test.ts"]
+  },
+  {
+    "id": "pawn-stat-multiplier-keys-summed",
+    "file": "src/lib/game/services/PawnStatService.ts",
+    "find": "(CONDITION_MULTIPLIER_KEY_IDS.has(statId) ? 0 : conditionModifierSum(pawn, statId))",
+    "replace": "conditionModifierSum(pawn, statId)",
+    "tests": ["src/tests/game/services/conditionStatAdditivity.test.ts"]
+  },
+  {
+    "id": "environment-insulation-amplifies",
+    "file": "src/lib/game/services/EnvironmentService.ts",
+    "find": "(outdoor - NEUTRAL_TEMP) * (1 - thermal.insulation)",
+    "replace": "(outdoor - NEUTRAL_TEMP) * (1 + thermal.insulation)",
+    "tests": ["src/tests/game/services/environment.test.ts"]
+  },
+  {
+    "id": "environment-freezing-no-hysteresis",
+    "file": "src/lib/game/services/EnvironmentService.ts",
+    "find": "  return prevFreezing;\n",
+    "replace": "  return false;\n",
+    "tests": ["src/tests/game/services/environment.test.ts"]
+  },
+  {
+    "id": "movement-mid-crossers-blocked-by-claims",
+    "file": "src/lib/game/services/MovementSystem.ts",
+    "find": "const blocked = occupiedByOther || (!midCrossing && claimed.has(targetKey));",
+    "replace": "const blocked = occupiedByOther || claimed.has(targetKey);",
+    "tests": ["src/tests/game/services/entitySim.test.ts"]
+  },
+  {
+    "id": "movement-claim-not-recorded",
+    "file": "src/lib/game/services/MovementSystem.ts",
+    "find": "  if (!midCrossing) claimed.add(targetKey);\n",
+    "replace": "",
+    "tests": ["src/tests/game/services/movementPass.test.ts"]
+  },
+  {
+    "id": "movement-mid-cross-claims-not-seeded",
+    "file": "src/lib/game/services/MovementSystem.ts",
+    "find": "    if (t) claimed.add(tileKey(t.x, t.y, width));\n",
+    "replace": "",
+    "tests": ["src/tests/game/services/movementPass.test.ts"]
+  },
+  {
+    "id": "projection-drafted-path-truncated",
+    "file": "src/lib/game/sim/entityProjection.ts",
+    "find": "  if (o.drafted && o.draftTarget) return;\n",
+    "replace": "",
+    "tests": ["src/tests/game/sim/entityProjection.test.ts"]
+  },
+  {
+    "id": "projection-lookahead-three",
+    "file": "src/lib/game/sim/entityProjection.ts",
+    "find": "export const PATH_LOOKAHEAD = 2;",
+    "replace": "export const PATH_LOOKAHEAD = 3;",
+    "tests": ["src/tests/game/sim/entityProjection.test.ts"]
+  },
+  {
+    "id": "projection-path-index-kept",
+    "file": "src/lib/game/sim/entityProjection.ts",
+    "find": "  o.pathIndex = 0;\n",
+    "replace": "",
+    "tests": ["src/tests/game/sim/entityProjection.test.ts"]
+  },
+  {
+    "id": "projection-drops-hunger",
+    "file": "src/lib/game/sim/entityProjection.ts",
+    "find": "const NEEDS_DROP = new Set(['lastSleep',",
+    "replace": "const NEEDS_DROP = new Set(['hunger', 'lastSleep',",
+    "tests": ["src/tests/game/sim/entityProjection.test.ts"]
+  },
+  {
+    "id": "mob-live-region-never",
+    "file": "src/lib/game/services/entity/entityHelpers.ts",
+    "find": "    if (pos && Math.abs(pos.x - mob.x) <= radius && Math.abs(pos.y - mob.y) <= radius) return true;",
+    "replace": "    if (pos && Math.abs(pos.x - mob.x) <= radius && Math.abs(pos.y - mob.y) <= radius) return false;",
+    "tests": ["src/tests/game/services/entitySim.test.ts"]
+  },
+  {
+    "id": "mob-nearby-walkable-ignores-occupancy",
+    "file": "src/lib/game/services/entity/entityHelpers.ts",
+    "find": "    if (selfId && occupancyService.isBlocked(state, nx, ny, selfId)) continue;\n",
+    "replace": "",
+    "tests": ["src/tests/game/services/entity/findNearbyWalkable.test.ts"]
+  },
+  {
+    "id": "mob-flee-moves-on-tie",
+    "file": "src/lib/game/services/entity/entityHelpers.ts",
+    "find": "  if (!best || bestScore < stayScore) return { ...mob, path: [] };",
+    "replace": "  if (!best || bestScore <= stayScore) return { ...mob, path: [] };",
+    "tests": ["src/tests/game/services/entity/fleeFromThreats.test.ts"]
+  },
+  {
+    "id": "mob-detection-not-rescheduled",
+    "file": "src/lib/game/services/entity/entityHelpers.ts",
+    "find": "    at: turn + ticksFromSeconds(STEALTH_CHECK_INTERVAL_S + rng.random() * STEALTH_CHECK_JITTER_S),",
+    "replace": "    at: turn,",
+    "tests": ["src/tests/game/core/stealth.test.ts"]
+  },
+  {
+    "id": "mob-heals-only-in-combat",
+    "file": "src/lib/game/services/entity/entityLifecycle.ts",
+    "find": "if (limbs && !inCombat && (inBubble",
+    "replace": "if (limbs && inCombat && (inBubble",
+    "tests": ["src/tests/game/systems/woundRecovery.test.ts"]
+  },
+  {
+    "id": "mob-carcass-not-forbidden",
+    "file": "src/lib/game/services/entity/entityLifecycle.ts",
+    "find": "    ...(carcassName ? { name: carcassName } : {}),\n    forbidden: true\n",
+    "replace": "    ...(carcassName ? { name: carcassName } : {}),\n    forbidden: false\n",
+    "tests": ["src/tests/game/services/haulForbidden.test.ts"]
+  },
+  {
+    "id": "mob-hunger-step-skipped",
+    "file": "src/lib/game/services/EntityService.ts",
+    "find": "    return lifecycle.stepHunger(state);",
+    "replace": "    return state;",
+    "tests": ["src/tests/game/services/entitySim.test.ts"]
+  },
+  {
+    "id": "mob-movement-step-skipped",
+    "file": "src/lib/game/services/EntityService.ts",
+    "find": "    return advanceMobMovement(state);",
+    "replace": "    return state;",
+    "tests": ["src/tests/game/services/entitySim.test.ts"]
+  },
+  {
+    "id": "mob-starvation-never-downs",
+    "file": "src/lib/game/services/entity/entityAI.ts",
+    "find": "const downedByStarvation = malnutritionSeverity >= STARVATION_COLLAPSE_SEVERITY;",
+    "replace": "const downedByStarvation = false;",
+    "tests": ["src/tests/game/services/entitySim.test.ts"]
+  },
+  {
+    "id": "breakdown-ignores-mental-resistance",
+    "file": "src/lib/game/systems/pawn/handlers/breakdown.ts",
+    "find": "return clamp(base * (1 - mentalResistance * MENTAL_RESIST_WEIGHT), 0, base * 2);",
+    "replace": "return clamp(base, 0, base * 2);",
+    "tests": ["src/tests/game/systems/pawn/handlers/breakdown.test.ts"]
+  },
+  {
+    "id": "breakdown-mood-gate-raised",
+    "file": "src/lib/game/systems/pawn/handlers/breakdown.ts",
+    "find": "  if (mood > BREAKDOWN_MOOD_TIER1) return false;",
+    "replace": "  if (mood > BREAKDOWN_MOOD_TIER1 + 20) return false;",
+    "tests": ["src/tests/game/services/needsAndMood.test.ts"]
+  },
+  {
+    "id": "need-thirst-never-beats-hunger",
+    "file": "src/lib/game/systems/pawn/needSelection.ts",
+    "find": "if (thirstActive && (!hungerActive || shouldDrinkBeforeEating(pawn, gameState))) {",
+    "replace": "if (thirstActive && !hungerActive) {",
+    "tests": ["src/tests/game/systems/pawn/thirstBeforeHunger.test.ts"]
+  },
+  {
+    "id": "need-meal-portions-floored",
+    "file": "src/lib/game/systems/pawn/pawnQueries.ts",
+    "find": "const unitsNeeded = Math.ceil(remaining / hungerPerUnit);",
+    "replace": "const unitsNeeded = Math.floor(remaining / hungerPerUnit);",
+    "tests": ["src/tests/game/services/needsAndMood.test.ts"]
+  },
+  {
+    "id": "need-sleep-wake-thresholds-swapped",
+    "file": "src/lib/game/systems/pawn/handlers/needs.ts",
+    "find": "      ? SLEEP_WAKE_THRESHOLD_HUNGRY\n      : SLEEP_WAKE_THRESHOLD_FED;",
+    "replace": "      ? SLEEP_WAKE_THRESHOLD_FED\n      : SLEEP_WAKE_THRESHOLD_HUNGRY;",
+    "tests": ["src/tests/game/systems/pawn/sleepWakeForThirst.test.ts"]
+  },
+  {
+    "id": "need-drinking-nothing-takes-full-time",
+    "file": "src/lib/game/systems/pawn/handlers/needs.ts",
+    "find": "  const done = turnsInState >= duration || relief <= 0;",
+    "replace": "  const done = turnsInState >= duration;",
+    "tests": ["src/tests/game/systems/pawn/drinkWashGating.test.ts"]
+  },
+  {
+    "id": "creatures-territorial-default-off",
+    "file": "src/lib/game/core/defs/creatures.ts",
+    "find": "territorial: (raw.territorial as boolean) ?? true,",
+    "replace": "territorial: (raw.territorial as boolean) ?? false,",
+    "tests": ["src/tests/game/services/entitySim.test.ts"]
+  },
+  {
+    "id": "designation-stockpile-rect-skips-absorb",
+    "file": "src/lib/game/services/DesignationService.ts",
+    "find": "    if (type === 'stockpile') state = this.absorbLooseDropsOnTiles(state, paintedTiles);\n",
+    "replace": "",
+    "tests": ["src/tests/game/services/designationAbsorb.test.ts"]
+  },
+  {
+    "id": "designation-zone-keys-ignore-type",
+    "file": "src/lib/game/services/DesignationService.ts",
+    "find": "  for (const k in zt) if (zt[k]?.includes(type)) out.push(k);",
+    "replace": "  for (const k in zt) out.push(k);",
+    "tests": ["src/tests/game/services/cropChain.test.ts"]
+  },
+  {
+    "id": "wasm-path-drops-first-node",
+    "file": "src/lib/game/services/WasmPathfinderService.ts",
+    "find": "    for (let i = 0; i + 1 < raw.length; i += 2) {",
+    "replace": "    for (let i = 2; i + 1 < raw.length; i += 2) {",
+    "tests": ["src/tests/game/headless/pathfinderNode.test.ts"]
+  },
+  {
+    "id": "pawn-infection-incubation-delayed",
+    "file": "src/lib/game/systems/PawnStateMachine.ts",
+    "find": "age >= CARE_CONFIG.infectionIncubationTicks",
+    "replace": "age >= CARE_CONFIG.infectionIncubationTicks + 600",
+    "tests": ["src/tests/game/systems/infectionIncubation.test.ts"]
+  },
+  {
+    "id": "growth-wild-rate-halved",
+    "file": "src/lib/game/systems/GameEngineImpl.ts",
+    "find": "const scale = def.crop ? cropScale : 1;",
+    "replace": "const scale = def.crop ? cropScale : 0.5;",
+    "tests": ["src/tests/game/systems/plantGrowth.test.ts"]
+  }
+]
