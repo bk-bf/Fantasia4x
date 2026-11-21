@@ -2,6 +2,7 @@ const { app, BrowserWindow, session, shell, ipcMain } = require('electron');
 const path = require('path');
 
 const APP_URL = process.env.SPIKE_URL || 'http://localhost:5173';
+const START_URL = process.env.F4X_PAINTED === '1' ? `${APP_URL}/?painted=1` : APP_URL;
 
 const SHELL_UA_MARKER = 'Fantasia4xShell';
 
@@ -105,7 +106,7 @@ function createWindow() {
   });
 
   win.webContents.setUserAgent(shellUA);
-  const load = () => win.loadURL(APP_URL, { userAgent: shellUA }).catch(() => {});
+  const load = () => win.loadURL(START_URL, { userAgent: shellUA }).catch(() => {});
   load();
 
   let waitLogged = false;
