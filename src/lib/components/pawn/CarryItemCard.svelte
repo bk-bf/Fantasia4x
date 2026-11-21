@@ -95,9 +95,7 @@
 
   <!-- svelte-ignore a11y_no_static_element_interactions -->
   <span class="name" onmouseenter={show} onmousemove={move} onmouseleave={hide}>
-    {#if def.charSpans}
-      <SpriteIcon charSpans={def.charSpans} tint={qColor ?? def.color ?? null} px={16} />
-    {/if}
+    <SpriteIcon item={def.id} tint={qColor} px={16} />
     <span class="name-text" class:famed style={famed ? 'color:var(--accent-hi, #ffd24a)' : ''}
       >{#if hasPrefix}<span class="rarity" style="color:{qColor}">{prefix}</span
         >&nbsp;{/if}{baseName}</span
