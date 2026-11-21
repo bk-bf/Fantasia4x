@@ -18,7 +18,7 @@ import { glyph, SHEET } from './tilesets.js';
 import type { RGB } from './tile-types.js';
 import { PAINTED_TILES } from './painted/flag.js';
 import { paintedPiece, paintedPieces, paintedTile } from './painted/tileset.js';
-import type { PaintedSprite } from './painted/manifest.js';
+import type { PaintedPieces, PaintedSprite } from './painted/manifest.js';
 
 const DECONSTRUCT_GLYPH = glyph(SHEET.MAP, 88);
 
@@ -351,7 +351,8 @@ export function applyTileToGrid(grid: GameGrid, tile: WorldTile, hiddenMask: boo
       char: ' ',
       foreground: { r: DIRT_BG[0], g: DIRT_BG[1], b: DIRT_BG[2] },
       background: { r: DIRT_BG[0], g: DIRT_BG[1], b: DIRT_BG[2] },
-      position: { x: tile.x, y: tile.y }
+      position: { x: tile.x, y: tile.y },
+      ...(PAINTED_TILES ? { painted: paintedTile('subterrain', 'cave', tile.x, tile.y) } : null)
     });
     return;
   }
@@ -428,24 +429,45 @@ export function buildSnowOverlay(worldMap: WorldTile[][], hiddenMask?: boolean[]
 
 const ROCK_PIECES = 'rock';
 
-function rockPiece(
-  tile: WorldTile,
+function rockMass(
   hiddenMask: boolean[][],
-  worldMap: WorldTile[][] | undefined,
-  resourceId: string | undefined
-): PaintedSprite | undefined {
+  worldMap: WorldTile[][] | undefined
+): { pieces: PaintedPieces; isMass: (x: number, y: number) => boolean } | undefined {
   if (!PAINTED_TILES || !worldMap) return undefined;
   const pieces = paintedPieces(ROCK_PIECES);
   if (!pieces) return undefined;
-  if (!hiddenMask[tile.y]?.[tile.x] && !(resourceId && pieces.members.has(resourceId)))
-    return undefined;
   const isMass = (x: number, y: number): boolean => {
     const t = worldMap[y]?.[x];
     if (!t || hiddenMask[y]?.[x]) return true;
     const id = resolveActiveResource(t)?.resDef.id;
     return id !== undefined && pieces.members.has(id);
   };
-  return paintedPiece(pieces, isMass, tile.x, tile.y);
+  return { pieces, isMass };
+}
+
+function rockPiece(
+  tile: WorldTile,
+  hiddenMask: boolean[][],
+  worldMap: WorldTile[][] | undefined,
+  resourceId: string | undefined
+): PaintedSprite | undefined {
+  const mass = rockMass(hiddenMask, worldMap);
+  if (!mass) return undefined;
+  if (!hiddenMask[tile.y]?.[tile.x] && !(resourceId && mass.pieces.members.has(resourceId)))
+    return undefined;
+  return paintedPiece(mass.pieces, mass.isMass, tile.x, tile.y);
+}
+
+function inOpening(
+  tile: WorldTile,
+  hiddenMask: boolean[][],
+  worldMap: WorldTile[][] | undefined
+): { inFront: boolean } | undefined {
+  const mass = tile.terrainType === 'mountain' ? rockMass(hiddenMask, worldMap) : undefined;
+  if (!mass) return undefined;
+  const { x, y } = tile;
+  const inFront = mass.isMass(x, y + 1);
+  return inFront || mass.isMass(x - 1, y) || mass.isMass(x + 1, y) ? { inFront } : undefined;
 }
 
 export function applyResourceToGrid(
@@ -492,11 +514,12 @@ export function applyResourceToGrid(
   const rs = resDef.renderScale;
   const drawScale = (rs ?? 1) * stageScale;
   const scale = drawScale !== 1 ? drawScale : undefined;
+  const piece = rockPiece(tile, hiddenMask, worldMap, resDef.id);
   const painted = PAINTED_TILES
-    ? (rockPiece(tile, hiddenMask, worldMap, resDef.id) ??
-      paintedTile('resource', resDef.id, tile.x, tile.y))
+    ? (piece ?? paintedTile('resource', resDef.id, tile.x, tile.y))
     : undefined;
-  const tall = rs !== undefined && rs > 1;
+  const opening = piece ? undefined : inOpening(tile, hiddenMask, worldMap);
+  const tall = (rs !== undefined && rs > 1) || opening !== undefined;
   blank(tall ? gridShort : gridTall);
   const detail = baseDetail ? { r: baseDetail[0], g: baseDetail[1], b: baseDetail[2] } : undefined;
   (tall ? gridTall : gridShort).setTile(tile.x, tile.y, {
@@ -506,7 +529,8 @@ export function applyResourceToGrid(
     position: { x: tile.x, y: tile.y },
     detail,
     scale: painted ? (stageScale !== 1 ? stageScale : undefined) : scale,
-    ...(painted ? { painted } : null)
+    ...(painted ? { painted } : null),
+    ...(opening?.inFront ? { depthRow: tile.y + 1 } : null)
   });
 }
 
