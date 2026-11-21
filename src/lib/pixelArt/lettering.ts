@@ -46,14 +46,13 @@ export function textMask(text: string, family: string, px: number, track = 0): T
   const bits = new Uint8Array(w * h);
   for (let y = 0; y < h; y++)
     for (let x = 0; x < w; x++) bits[y * w + x] = on(x + x0, y + y0) ? 1 : 0;
-  const mask: TextMask = {
-    w,
-    h,
-    base: baseline - y0,
-    at: (x, y) => x >= 0 && y >= 0 && x < w && y < h && bits[y * w + x] === 1
-  };
+  const mask = maskOf(bits, w, h, baseline - y0);
   masks.set(key, mask);
   return mask;
+}
+
+function maskOf(bits: Uint8Array, w: number, h: number, base: number): TextMask {
+  return { w, h, base, at: (x, y) => x >= 0 && y >= 0 && x < w && y < h && bits[y * w + x] === 1 };
 }
 
 export function stamp(
