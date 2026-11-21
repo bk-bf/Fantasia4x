@@ -467,7 +467,7 @@ export function advanceMobMovement(state: GameState): GameState {
     const speed = def ? Math.max(0.5, def.stats.speed) : 1;
     const res = stepBody(mob, occupancy, claimed, state.worldMap, speed, targetByTile);
     next[i] = res.body;
-    if (res.body !== mob) changed = true;
+    if (res.status !== 'idle') changed = true;
   }
 
   return changed ? { ...state, mobs: next } : state;

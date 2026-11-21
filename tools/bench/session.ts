@@ -1,6 +1,7 @@
 import { HeadlessSession } from '$lib/game/headless/HeadlessSession';
 import { rng } from '$lib/game/core/util/rng';
-import type { GameState } from '$lib/game/core/types';
+import { entityService } from '$lib/game/services/EntityService';
+import type { GameState, Mob } from '$lib/game/core/types';
 import { initialState, type WorkPinScenario } from '../work-pins/scenarios';
 
 export const ROLLING = { time: 0, iterations: 20, warmupTime: 0, warmupIterations: 4 };
@@ -40,5 +41,31 @@ export function phase(session: HeadlessSession, step: (state: GameState) => Game
     const state = session.getState();
     rng.reseed(state.seed);
     step(state);
+  };
+}
+
+type MoveFields = Pick<Mob, 'x' | 'y' | 'path' | 'pathIndex' | 'nextCellCostLeft' | 'blockedTicks'>;
+
+export function mobMovement(session: HeadlessSession): () => void {
+  let ref: Mob[] | undefined;
+  let saved: MoveFields[] = [];
+  return () => {
+    const state = session.getState();
+    const mobs = state.mobs ?? [];
+    if (mobs !== ref) {
+      ref = mobs;
+      saved = mobs.map(({ x, y, path, pathIndex, nextCellCostLeft, blockedTicks }) => ({
+        x,
+        y,
+        path,
+        pathIndex,
+        nextCellCostLeft,
+        blockedTicks
+      }));
+    } else {
+      for (let i = 0; i < mobs.length; i++) Object.assign(mobs[i], saved[i]);
+    }
+    rng.reseed(state.seed);
+    entityService.advanceMobMovement(state);
   };
 }
