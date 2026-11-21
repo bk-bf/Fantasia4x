@@ -9,17 +9,17 @@
 
 <script lang="ts">
   import SpriteIcon from '$lib/components/UI/widget/SpriteIcon.svelte';
-  import HoverTip from '$lib/components/UI/tooltip/HoverTip.svelte';
+  import ItemInfoTip from './ItemInfoTip.svelte';
   import { buildItemInfo, type ItemInfoView } from '$lib/components/util/itemInfo';
   import { createPinnable } from '$lib/components/util/pinnable.svelte';
 
-  let { pills }: { pills: ItemPillView[] } = $props();
+  let { pills, rows = false }: { pills: ItemPillView[]; rows?: boolean } = $props();
 
   const pin = createPinnable<ItemInfoView>();
 </script>
 
 {#if pills.length > 0}
-  <div class="item-pills">
+  <div class="item-pills" class:rows>
     {#each pills as p, i (p.itemId + ':' + i)}
       {@const info = buildItemInfo(p.itemId)}
       <div
@@ -37,48 +37,23 @@
           (e.key === 'Enter' || e.key === ' ') &&
           pin.toggle(buildItemInfo(p.itemId), p.itemId + ':' + i, e)}
       >
-        <SpriteIcon item={p.itemId} px={14} />
-        {#if p.qty}<span class="pill-qty">{p.qty}</span>{/if}
-        <span class="pill-name">{info.name}</span>
-        {#if p.sub}<span class="pill-sub">{p.sub}</span>{/if}
+        <SpriteIcon item={p.itemId} px={rows ? 16 : 14} />
+        {#if rows}
+          <span class="pill-name">{info.name}</span>
+          {#if p.qty}<b class="pill-qty">{p.qty}</b>{/if}
+          {#if p.sub}<em class="pill-sub">{p.sub}</em>{/if}
+        {:else}
+          {#if p.qty}<span class="pill-qty">{p.qty}</span>{/if}
+          <span class="pill-name">{info.name}</span>
+          {#if p.sub}<span class="pill-sub">{p.sub}</span>{/if}
+        {/if}
       </div>
     {/each}
   </div>
 {/if}
 
 {#if pin.active}
-  {@const h = pin.active}
-  <HoverTip x={pin.x} y={pin.y} pinned={pin.pinned}>
-    <div class="tip-name" style="color: {h.color}">{h.name.toUpperCase()}</div>
-    {#if h.description}
-      <div class="tip-desc">{h.description}</div>
-    {/if}
-    {#if h.freshness || h.condition != null}
-      <div class="tip-row tip-life">
-        {#if h.freshness}<span>fresh ~{h.freshness}</span>{/if}
-        {#if h.condition != null}<span>cond {h.condition}</span>{/if}
-      </div>
-    {/if}
-    {#if h.farming}
-      <div class="tip-hdr">FARMING · {h.farming.crop}</div>
-      {#each h.farming.rows as r}
-        <div class="tip-row tip-farm">
-          <span class="tip-dim">{r.label}</span><span>{r.val}</span>
-        </div>
-      {/each}
-    {/if}
-    {#if h.craftedInto.length > 0}
-      <div class="tip-hdr">CRAFTS INTO</div>
-      <div class="tip-row">{h.craftedInto.join(' · ')}</div>
-    {/if}
-    {#if h.buildsInto.length > 0}
-      <div class="tip-hdr">BUILDS</div>
-      <div class="tip-row">{h.buildsInto.join(' · ')}</div>
-    {/if}
-    {#if h.craftedInto.length === 0 && h.buildsInto.length === 0}
-      <div class="tip-row tip-dim">— not used in any recipe</div>
-    {/if}
-  </HoverTip>
+  <ItemInfoTip info={pin.active} x={pin.x} y={pin.y} pinned={pin.pinned} />
 {/if}
 
 <style>
@@ -91,64 +66,59 @@
   .item-pill {
     display: flex;
     align-items: center;
-    gap: 2px;
-    border: 0;
-    background: color-mix(in srgb, var(--pill) 14%, rgba(28, 16, 6, 0.92));
-    padding: 0 3px;
-    height: 13px;
-    font-size: 9px;
-    line-height: 1;
+    gap: 3px;
+    background: color-mix(in srgb, var(--pill) 16%, var(--bg-panel));
+    padding: 0 4px;
+    height: 16px;
+    font: 14px/14px var(--font-pixel);
     cursor: help;
   }
   .item-pill.dim {
-    opacity: 0.4;
+    opacity: 0.45;
   }
   .pill-qty {
-    color: color-mix(in srgb, var(--pill) 70%, #e8c870);
-    font-weight: bold;
+    color: var(--accent-hi);
   }
   .pill-name {
-    color: color-mix(in srgb, var(--pill) 60%, #c8a060);
+    color: var(--text);
     white-space: nowrap;
   }
   .pill-sub {
-    color: color-mix(in srgb, var(--pill) 40%, #8a7040);
-  }
-  .tip-name {
-    font-weight: bold;
-    letter-spacing: 0.04em;
-  }
-  .tip-desc {
     color: var(--text-muted);
-    font-style: italic;
-    margin: 3px 0;
   }
-  .tip-hdr {
+  .rows {
+    flex-direction: column;
+    flex-wrap: nowrap;
+    gap: 0;
+    margin: 0;
+  }
+  .rows .item-pill {
+    gap: 6px;
+    height: 17px;
+    padding: 0;
+    background: none;
+    font: 16px/17px var(--font-pixel);
+  }
+  .rows .item-pill.dim {
+    opacity: 1;
+  }
+  .rows .pill-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
     color: var(--text-dim);
-    font-size: 10px;
-    letter-spacing: 0.08em;
-    margin-top: 4px;
   }
-  .tip-row {
+  .rows .pill-qty {
+    font-weight: normal;
     color: var(--text);
-    font-size: 11px;
   }
-  .tip-life {
-    color: var(--text-muted);
-    display: flex;
-    gap: 10px;
-    margin-top: 2px;
-  }
-  .tip-dim {
-    color: var(--text-dim);
-    font-style: italic;
-  }
-  .tip-farm {
-    display: flex;
-    justify-content: space-between;
-    gap: 12px;
-  }
-  .tip-farm .tip-dim {
+  .rows .pill-sub {
+    width: 28px;
+    text-align: right;
     font-style: normal;
+  }
+  .rows .dim .pill-qty,
+  .rows .dim .pill-sub {
+    color: var(--neg);
   }
 </style>

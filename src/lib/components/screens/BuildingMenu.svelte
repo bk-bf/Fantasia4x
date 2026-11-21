@@ -1,543 +1,87 @@
 <script lang="ts">
-  import { gameState, currentCulture } from '$lib/stores/gameState';
-  import { availableAggregateFromDrops } from '$lib/game/core/state/stockpile';
-  import { uiState } from '$lib/stores/uiState';
-  import BackButton from '$lib/components/UI/widget/BackButton.svelte';
-  import { itemService } from '$lib/game/services/ItemService';
-  import { getMaterialProperty } from '$lib/game/core/defs/materials';
-  import { buildingService } from '$lib/game/services/BuildingService';
-  import { onDestroy } from 'svelte';
-  import ZonePanel from '../UI/hud/ZonePanel.svelte';
-  import BuildCard from '../UI/hud/BuildCard.svelte';
-  import ItemPills, { type ItemPillView } from '../UI/widget/ItemPills.svelte';
-  import FilterTabs from '../UI/widget/FilterTabs.svelte';
-  import SearchBar from '../UI/widget/SearchBar.svelte';
+  import { gameState } from '$lib/stores/gameState';
+  import FilterTabs from '$lib/components/UI/widget/FilterTabs.svelte';
+  import SearchBar from '$lib/components/UI/widget/SearchBar.svelte';
+  import ScrollArea from '$lib/components/UI/widget/ScrollArea.svelte';
+  import { useWindowBar } from '$lib/components/UI/window/windowContext';
   import { persisted, persist } from '$lib/stores/uiPersist';
-  import type { PlacedBuilding } from '$lib/game/core/types';
-  import type { Building } from '$lib/game/core/types';
+  import ZonePanel from '../UI/hud/ZonePanel.svelte';
+  import BuildJobs from './build/BuildJobs.svelte';
+  import BuildingCards from './build/BuildingCards.svelte';
+  import { ZONES, buildSections, unlockedBuildings } from './build/buildSections';
 
-  let culture: any = null;
-  let buildings: PlacedBuilding[] = [];
-  let completedResearch: string[] = [];
+  const unlocked = $derived(unlockedBuildings($gameState));
+  const sections = $derived(buildSections(unlocked));
 
-  const SECTION_ORDER = [
-    'FIRE & COOKING',
-    'WORKSHOPS',
-    'SMELTING & FORGE',
-    'ARCANE',
-    'FARMING & SOIL',
-    'KITCHEN & BREWING',
-    'FOOD & HIDES',
-    'TRAPS & WATER',
-    'BEDS & SHELTER',
-    'FURNITURE & STORAGE',
-    'WALLS & DOORS',
-    'ROOFS & WINDOWS',
-    'KNOWLEDGE',
-    'OTHER'
-  ];
+  let selected = $state<string>(persisted('building.section', ''));
+  $effect(() => {
+    if (selected !== ZONES && sections.length && !sections.some((s) => s.label === selected))
+      selected = sections[0].label;
+  });
+  $effect(() => persist('building.section', selected));
 
-  function classify(b: Building): string {
-    const e = (b.effects ?? {}) as Record<string, number | boolean>;
-    if (b.id === 'campfire' || b.id === 'hearth' || e.isFire) return 'FIRE & COOKING';
-    if (e.farming) return 'FARMING & SOIL';
-    if (e.cooking) return 'KITCHEN & BREWING';
-    if (e.smeltingEnabled || e.smithingEnabled) return 'SMELTING & FORGE';
-    if (
-      e.butcheringEnabled ||
-      e.leatherworkingEnabled ||
-      b.id === 'drying_rack' ||
-      b.id === 'hide_rack'
-    )
-      return 'FOOD & HIDES';
-    if (e.trapEnabled || e.waterSource) return 'TRAPS & WATER';
-    if (e.roof || e.window || b.id.includes('roof') || b.id === 'window') return 'ROOFS & WINDOWS';
-    if (e.movementCost === 99 || b.id.includes('wall') || b.id.includes('door'))
-      return 'WALLS & DOORS';
-    if (e.sleepQuality || e.fatigueRecovery || b.category === 'shelter') return 'BEDS & SHELTER';
-    if (e.comfort || b.isStorage || b.category === 'furniture') return 'FURNITURE & STORAGE';
-    if (b.category === 'knowledge') return 'KNOWLEDGE';
-    if (e.arcane) return 'ARCANE';
-    if (e.craftingEnabled) return 'WORKSHOPS';
-    return 'OTHER';
-  }
-
-  const ALL_BUILDING_DEFS: Building[] = [
-    'housing',
-    'production',
-    'knowledge',
-    'military',
-    'food',
-    'commerce',
-    'magical',
-    'exploration',
-    'social',
-    'furniture',
-    'structure',
-    'shelter'
-  ].flatMap((cat) => buildingService.getBuildingsByCategory(cat));
-
-  $: allBuildingsInProgress = buildings.filter((b) => b.status !== 'complete');
-  $: campfires = buildings.filter((b) => b.type === 'campfire' && b.status === 'complete');
-
-  $: unlockedDefs = ALL_BUILDING_DEFS.filter(
-    (b) =>
-      !b.notBuildable &&
-      (!b.debugOnly || $gameState?.debugMode) &&
-      ($gameState?._devResearchGateOff ||
-        !b.researchRequired ||
-        completedResearch.includes(b.researchRequired as string))
+  let query = $state('');
+  const term = $derived(query.trim().toLowerCase());
+  const shown = $derived(
+    term
+      ? unlocked.filter((b) => b.name.toLowerCase().includes(term))
+      : ((sections.find((s) => s.label === selected) ?? sections[0])?.defs ?? [])
   );
 
-  $: sections = SECTION_ORDER.map((label) => ({
-    label,
-    defs: unlockedDefs.filter((b) => classify(b) === label)
-  })).filter((s) => s.defs.length > 0);
-
-  let selectedSection = persisted('building.section', '');
-  $: if (
-    selectedSection !== 'ZONES' &&
-    sections.length &&
-    !sections.some((s) => s.label === selectedSection)
-  ) {
-    selectedSection = sections[0].label;
-  }
-  $: persist('building.section', selectedSection);
-  $: activeSection = sections.find((s) => s.label === selectedSection) ?? sections[0];
-
-  let searchQuery = '';
-  $: searchTerm = searchQuery.trim().toLowerCase();
-  $: displayedDefs = searchTerm
-    ? unlockedDefs.filter((b) => b.name.toLowerCase().includes(searchTerm))
-    : (activeSection?.defs ?? []);
-
-  $: availStock = availableAggregateFromDrops($gameState?.droppedItems);
-  $: getItemAmount = (itemId: string): number => availStock[itemId] ?? 0;
-
-  $: getBuildingCount = (buildingId: string): number => {
-    return buildings.filter((b) => b.type === buildingId && b.status === 'complete').length;
-  };
-
-  $: getCostHave = (id: string): number => {
-    if (id.startsWith('category:')) {
-      const cat = id.slice('category:'.length);
-      return itemService.getItemsByCategory(cat).reduce((sum, it) => sum + getItemAmount(it.id), 0);
-    }
-    return getItemAmount(id);
-  };
-
-  let selectedMaterials: Record<string, Record<string, string>> = {};
-  function setMaterial(buildingId: string, costKey: string, itemId: string) {
-    const forBuilding = { ...(selectedMaterials[buildingId] ?? {}) };
-    if (itemId) forBuilding[costKey] = itemId;
-    else delete forBuilding[costKey];
-    selectedMaterials = { ...selectedMaterials, [buildingId]: forBuilding };
-  }
-  function categoryItemsFor(costKey: string) {
-    const cat = costKey.slice('category:'.length);
-    return itemService
-      .getItemsByCategory(cat)
-      .slice()
-      .sort((a, b) => (getItemAmount(b.id) > 0 ? 1 : 0) - (getItemAmount(a.id) > 0 ? 1 : 0));
-  }
-
-  $: canAfford = (building: Building): boolean =>
-    !!$gameState && buildingService.resolveBuildingCost(building.id, $gameState) !== null;
-
-  $: canBuild = (building: Building): boolean =>
-    !!$gameState && !!culture && buildingService.canBuildBuilding(building.id, $gameState);
-
-  const unsubscribeCulture = currentCulture.subscribe((value) => {
-    culture = value;
-  });
-
-  const unsubscribeGame = gameState.subscribe((state) => {
-    buildings = state.buildings || [];
-    completedResearch = state.completedResearch || [];
-  });
-
-  onDestroy(() => {
-    unsubscribeCulture();
-    unsubscribeGame();
-  });
-
-  function cancelBuilding(buildingId: string) {
-    gameState.command({ type: 'cancelBuildingRefund', payload: { buildingId }, save: true });
-  }
-
-  function pauseBuilding(buildingId: string) {
-    gameState.command({ type: 'togglePausedBuilding', payload: { id: buildingId }, save: true });
-  }
-
-  let dragId: string | null = null;
-  function onBuildDrop(targetId: string) {
-    const order = allBuildingsInProgress.map((b) => b.id);
-    const from = order.indexOf(dragId ?? '');
-    const to = order.indexOf(targetId);
-    dragId = null;
-    if (from < 0 || to < 0 || from === to) return;
-    const moved = order.splice(from, 1)[0];
-    order.splice(order.indexOf(targetId), 0, moved);
-    gameState.command({ type: 'reorderBuilds', payload: { orderedIds: order }, save: true });
-  }
-
+  useWindowBar({ tools: search });
 </script>
 
+{#snippet search()}
+  <SearchBar
+    variant="well"
+    bind:value={query}
+    placeholder="search buildings…"
+    cacheKey="building"
+  />
+{/snippet}
+
 <div class="building-menu">
-  <div class="screen-hdr">
-    | CONSTRUCTION
-    <BackButton />
-  </div>
+  <FilterTabs
+    tabs={[
+      { id: ZONES, label: 'Zones' },
+      ...sections.map((s) => ({ id: s.label, label: s.label }))
+    ]}
+    selected={term ? '' : selected}
+    onSelect={(id) => {
+      selected = id;
+      query = '';
+    }}
+  />
 
-  {#if sections.length > 0}
-    <div class="filter-bar">
-      <div class="filter-bar-tabs">
-        <FilterTabs
-          tabs={[
-            { id: 'ZONES', label: 'ZONES' },
-            ...sections.map((s) => ({ id: s.label, label: s.label }))
-          ]}
-          selected={selectedSection}
-          onSelect={(id) => (selectedSection = id)}
-        />
-      </div>
-      <SearchBar
-        variant="inline"
-        placeholder="search buildings…"
-        bind:value={searchQuery}
-        cacheKey="building"
-      />
-    </div>
+  <BuildJobs />
 
-    {#if allBuildingsInProgress.length > 0}
-      <div class="build-jobs queue-top">
-        <div class="jobs-hdr">| ACTIVE BUILD JOBS ({allBuildingsInProgress.length})</div>
-        <div class="jobs-grid">
-          {#each allBuildingsInProgress as bp (bp.id)}
-            {@const bDef = buildingService.getBuildingById(bp.type)}
-            {@const prog = Math.round(((bp.workDone ?? 0) / (bp.workRequired ?? 50)) * 100)}
-            <div
-              class="job-chip"
-              class:paused={bp.paused}
-              class:drag-over={dragId !== null && dragId !== bp.id}
-              draggable="true"
-              role="listitem"
-              on:dragstart={() => (dragId = bp.id)}
-              on:dragend={() => (dragId = null)}
-              on:dragover|preventDefault
-              on:drop|preventDefault={() => onBuildDrop(bp.id)}
-              title={bp.paused
-                ? `${bDef?.name ?? bp.type} — paused (${prog}%)`
-                : `${bDef?.name ?? bp.type} — ${prog}%`}
-            >
-              <span class="job-fill" style="width:{prog}%"></span>
-              <span class="job-grip">⠿</span>
-              <span class="job-name">{bDef?.name.toUpperCase() ?? bp.type}</span>
-              <span class="job-pct">{bp.paused ? 'PAUSE' : `${prog}%`}</span>
-              <button
-                class="job-pause"
-                title={bp.paused ? 'Resume' : 'Pause'}
-                on:click|stopPropagation={() => pauseBuilding(bp.id)}
-                >{bp.paused ? '▶' : '⏸'}</button
-              >
-              <button class="job-x" title="Cancel" on:click={() => cancelBuilding(bp.id)}>✕</button>
-            </div>
-          {/each}
-        </div>
-      </div>
-    {/if}
-
-    {#if selectedSection === 'ZONES' && !searchTerm}
+  <ScrollArea class="build-scroll">
+    {#if selected === ZONES && !term}
       <ZonePanel />
-    {:else if displayedDefs.length > 0}
-      <div class="card-grid">
-        {#each displayedDefs as building}
-          {@const placed = getBuildingCount(building.id)}
-          {@const affordable = canAfford(building)}
-          {@const buildable = canBuild(building)}
-          <BuildCard
-            name={building.name.toUpperCase()}
-            charSpans={building.charSpans}
-            description={building.description ?? null}
-            buildingDef={building}
-            statMaterials={selectedMaterials[building.id] ?? {}}
-            tint={building.color ?? 'var(--accent)'}
-            workAmount={building.workAmount ?? null}
-            badge={placed > 0 ? `×${placed}` : null}
-            actionLabel={!affordable ? 'MISSING' : !buildable ? 'BLOCKED' : 'BUILD'}
-            actionEnabled={buildable}
-            variant={!affordable ? 'missing' : !buildable ? 'blocked' : 'ok'}
-            onAction={() =>
-              uiState.activateBlueprint(building.id, selectedMaterials[building.id] ?? null)}
-          >
-            {#if Object.keys(building.buildingCost).length === 0}
-              <span class="muted-text">free</span>
-            {:else}
-              {@const costPills = Object.entries(building.buildingCost)
-                .filter(([id]) => !id.startsWith('category:'))
-                .map(([id, n]) => {
-                  const have = getCostHave(id);
-                  return { itemId: id, qty: `×${n}`, sub: `(${have})`, dim: have < (n as number) };
-                }) satisfies ItemPillView[]}
-              {#if costPills.length > 0}<ItemPills pills={costPills} />{/if}
-              {#each Object.entries(building.buildingCost).filter( ([id]) => id.startsWith('category:') ) as [id, n]}
-                {@const have = getCostHave(id)}
-                <span class="cost-item cost-cat" class:neg-text={have < (n as number)}>
-                  <select
-                    class="mat-select"
-                    value={selectedMaterials[building.id]?.[id] ?? ''}
-                    on:change={(e) => setMaterial(building.id, id, e.currentTarget.value)}
-                    title="choose {id.slice('category:'.length)} to spend"
-                  >
-                    <option value="">any {id.slice('category:'.length)}</option>
-                    {#each categoryItemsFor(id) as opt}
-                      <option value={opt.id}>{opt.name} ({getItemAmount(opt.id)})</option>
-                    {/each}
-                  </select>
-                  <span class="cost-qty">×{n}</span>
-                  <span class="cost-have" class:neg-text={have < (n as number)}>({have})</span>
-                </span>
-                {@const selMat = selectedMaterials[building.id]?.[id]}
-                {@const mp = selMat ? getMaterialProperty(selMat) : null}
-                {#if mp}<span class="mat-effect">▸ {mp.label}: {mp.desc}</span>{/if}
-              {/each}
-            {/if}
-          </BuildCard>
-        {/each}
-      </div>
-    {:else if searchTerm}
-      <div class="muted-row">no buildings match "{searchQuery}"</div>
+    {:else if shown.length > 0}
+      <BuildingCards defs={shown} />
+    {:else if term}
+      <p class="muted">no buildings match "{query}"</p>
     {/if}
-  {/if}
-
-  {#if campfires.length > 0}
-    <div class="build-jobs">
-      <div class="jobs-hdr">| FIRES ({campfires.length})</div>
-      <div class="jobs-grid">
-        {#each campfires as cf (cf.id)}
-          {@const fuelPct = Math.round(((cf.fuel ?? 0) / 60) * 100)}
-          <div class="job-chip" title="Campfire fuel {Math.floor(cf.fuel ?? 0)}/60">
-            <span class="job-fill" class:lit={cf.lit} style="width:{fuelPct}%"></span>
-            <span class="job-name" style="color:{cf.lit ? '#fa0' : '#555'}"
-              >{cf.lit ? '🔥' : '⬛'} CAMPFIRE</span
-            >
-            <span class="job-pct">{Math.floor(cf.fuel ?? 0)}/60</span>
-          </div>
-        {/each}
-      </div>
-    </div>
-  {/if}
+  </ScrollArea>
 </div>
 
 <style>
   .building-menu {
-    height: 100%;
-    overflow-y: auto;
-    background: var(--bg);
-    color: var(--text);
-    font-family: var(--font-mono);
-    font-size: 12px;
+    flex: 1;
+    min-height: 0;
     display: flex;
     flex-direction: column;
-  }
-  .card-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
-    gap: 5px;
-    padding: 5px 8px;
-  }
-
-  .filter-bar {
-    position: sticky;
-    top: 0;
-    z-index: 10;
-    display: flex;
-    align-items: stretch;
-    background: var(--bg);
-    border-bottom: 2px solid var(--border-hi);
-  }
-  .filter-bar-tabs {
-    flex: 1 1 auto;
-    min-width: 0;
-  }
-  .filter-bar-tabs :global(.filter-tabs) {
-    border-bottom: none;
-  }
-  .muted-row {
-    padding: 4px 10px;
-    font-size: 11px;
-    color: var(--text-dim);
-  }
-
-  .screen-hdr {
-    padding: 5px 10px;
-    background: var(--bg-panel);
-    color: var(--accent-hi);
-    font-size: 12px;
-    font-weight: bold;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border-bottom: 1px solid var(--border);
-  }
-
-  .cost-item {
-    display: inline-flex;
-    gap: 2px;
-    align-items: center;
-  }
-  .cost-cat {
-    margin-top: 2px;
-  }
-  .mat-effect {
-    display: block;
-    color: #7e9fbf;
-    font-size: 10px;
-    margin: 1px 0 2px 4px;
-  }
-
-  .cost-qty {
-    color: var(--accent);
-  }
-
-  .mat-select {
-    background: var(--bg);
-    border: 1px solid var(--border);
-    color: var(--accent-hi);
-    font-family: var(--font-mono);
-    font-size: 11px;
-    padding: 0 2px;
-    max-width: 110px;
-    cursor: pointer;
-    outline: none;
-  }
-  .mat-select:hover {
-    border-color: var(--border-hi);
-  }
-  .mat-select:focus {
-    border-color: var(--accent-hi);
-  }
-
-  .cost-have {
-    opacity: 0.6;
-  }
-
-  .muted-text {
-    color: var(--text-dim);
-  }
-
-  .neg-text {
-    color: var(--neg);
-  }
-
-  .build-jobs {
-    padding: 4px 8px 8px;
-    border-top: 1px solid var(--border);
-    margin-top: 4px;
-  }
-  .build-jobs.queue-top {
-    padding: 5px 8px;
-    border-top: none;
-    border-bottom: 1px solid var(--border);
-    margin-top: 0;
-    background: var(--bg);
-  }
-  .jobs-hdr {
-    color: var(--accent);
-    font-size: 11px;
-    letter-spacing: 0.08em;
-    padding: 2px 0 5px;
-  }
-  .jobs-grid {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px;
-  }
-  .job-chip {
-    position: relative;
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    max-width: 170px;
-    padding: 2px 5px;
-    border: 1px solid var(--border);
-    background: var(--bg-panel);
-    overflow: hidden;
-    font-size: 11px;
-  }
-  .queue-top .job-chip {
-    cursor: grab;
-  }
-  .queue-top .job-chip:active {
-    cursor: grabbing;
-  }
-  .job-chip.drag-over:hover {
-    border-color: var(--accent-hi);
-  }
-  .job-chip.paused {
-    border-style: dotted;
-    opacity: 0.6;
-  }
-  .job-grip {
-    position: relative;
-    z-index: 1;
-    color: var(--text-dim);
-    font-size: 10px;
-    cursor: grab;
-  }
-  .job-fill {
-    position: absolute;
-    inset: 0 auto 0 0;
-    background: color-mix(in srgb, var(--accent) 20%, transparent);
-    pointer-events: none;
-    z-index: 0;
-  }
-  .job-fill.lit {
-    background: color-mix(in srgb, #ff8800 32%, transparent);
-  }
-  .job-name {
-    position: relative;
-    z-index: 1;
-    max-width: 100px;
+    gap: 7px;
     color: var(--text);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    font: 16px/16px var(--font-pixel);
   }
-  .job-pct {
-    position: relative;
-    z-index: 1;
-    color: var(--accent);
-    font-size: 10px;
+  .building-menu :global(.build-scroll) {
+    flex: 1;
+    min-height: 0;
   }
-  .job-x {
-    position: relative;
-    z-index: 1;
-    background: none;
-    border: none;
-    color: var(--text-dim);
-    font-family: var(--font-mono);
-    font-size: 12px;
-    line-height: 1;
-    padding: 0 1px;
-    cursor: pointer;
-  }
-  .job-x:hover {
-    color: var(--neg);
-  }
-  .job-pause {
-    position: relative;
-    z-index: 1;
-    background: none;
-    border: none;
-    color: var(--text-dim);
-    font-family: var(--font-mono);
-    font-size: 11px;
-    line-height: 1;
-    padding: 0 1px;
-    cursor: pointer;
-  }
-  .job-pause:hover {
-    color: var(--accent-hi);
+  .muted {
+    margin: 4px 2px;
+    color: var(--text-muted);
   }
 </style>
