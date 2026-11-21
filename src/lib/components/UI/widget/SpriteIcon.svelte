@@ -41,12 +41,10 @@
     return null;
   }
 
-  const _painted = new Map<string, Promise<HTMLCanvasElement | null>>();
+  const _painted: Record<string, Promise<HTMLCanvasElement | null>> = {};
   function paintedArt(kind: PaintedKind, id: string): Promise<HTMLCanvasElement | null> {
     const key = `${kind}/${id}`;
-    let hit = _painted.get(key);
-    if (!hit) _painted.set(key, (hit = paintedSpriteCanvas(kind, id).catch(() => null)));
-    return hit;
+    return (_painted[key] ??= paintedSpriteCanvas(kind, id).catch(() => null));
   }
 </script>
 
@@ -90,7 +88,7 @@
     const fit = fitInto(art, px);
     paintedBox.width = fit.width;
     paintedBox.height = fit.height;
-    paintedBox.getContext('2d')?.drawImage(fit, 0, 0);
+    paintedBox.getContext('2d', { willReadFrequently: true })?.drawImage(fit, 0, 0);
   });
 
   const CELL_W = 12;
@@ -105,7 +103,7 @@
   function draw() {
     const node = canvasEl;
     if (!node || !span?.sheet) return;
-    const ctx = node.getContext('2d');
+    const ctx = node.getContext('2d', { willReadFrequently: true });
     if (!ctx) return;
     node.width = CELL_W;
     node.height = CELL_H;
