@@ -252,8 +252,8 @@
           const stat = name.replace('Bonus', '');
           tags.push({
             label: STAT_ABBR[stat] ?? stat,
-            value: `+${value}`,
-            type: 'pos',
+            value: `${value < 0 ? '−' : '+'}${Math.abs(value)}`,
+            type: value < 0 ? 'neg' : 'pos',
             kind: 'attr',
             statId: stat
           });
