@@ -17,8 +17,8 @@ import { parseHexRgb01 } from '$lib/game/core/util/color.js';
 import { glyph, SHEET } from './tilesets.js';
 import type { RGB } from './tile-types.js';
 import { PAINTED_TILES } from './painted/flag.js';
-import { onPieceTop, paintedPiece, paintedPieces, paintedTile } from './painted/tileset.js';
-import type { PaintedPieces, PaintedSprite } from './painted/manifest.js';
+import { paintedPiece, paintedPieces, paintedTile } from './painted/tileset.js';
+import type { PaintedSprite } from './painted/manifest.js';
 
 const DECONSTRUCT_GLYPH = glyph(SHEET.MAP, 88);
 
@@ -428,30 +428,24 @@ export function buildSnowOverlay(worldMap: WorldTile[][], hiddenMask?: boolean[]
 
 const ROCK_PIECES = 'rock';
 
-function inRockMass(pieces: PaintedPieces, tile: WorldTile): boolean {
-  const def = resolveActiveResource(tile)?.resDef;
-  if (!def) return false;
-  return (
-    pieces.members.has(def.id) ||
-    pieces.veins.has(def.id) ||
-    (def.walkable === false && pieces.terrains.has(tile.terrainType))
-  );
-}
-
-function rockUnder(
+function rockPiece(
   tile: WorldTile,
   hiddenMask: boolean[][],
-  worldMap: WorldTile[][] | undefined
-): { piece: PaintedSprite; pieces: PaintedPieces } | undefined {
+  worldMap: WorldTile[][] | undefined,
+  resourceId: string | undefined
+): PaintedSprite | undefined {
   if (!PAINTED_TILES || !worldMap) return undefined;
   const pieces = paintedPieces(ROCK_PIECES);
   if (!pieces) return undefined;
-  if (!hiddenMask[tile.y]?.[tile.x] && !inRockMass(pieces, tile)) return undefined;
+  if (!hiddenMask[tile.y]?.[tile.x] && !(resourceId && pieces.members.has(resourceId)))
+    return undefined;
   const isMass = (x: number, y: number): boolean => {
     const t = worldMap[y]?.[x];
-    return !t || !!hiddenMask[y]?.[x] || inRockMass(pieces, t);
+    if (!t || hiddenMask[y]?.[x]) return true;
+    const id = resolveActiveResource(t)?.resDef.id;
+    return id !== undefined && pieces.members.has(id);
   };
-  return { piece: paintedPiece(pieces, isMass, tile.x, tile.y), pieces };
+  return paintedPiece(pieces, isMass, tile.x, tile.y);
 }
 
 export function applyResourceToGrid(
@@ -473,7 +467,10 @@ export function applyResourceToGrid(
     blank(gridShort);
     blank(gridTall);
   };
-  const putRock = (piece: PaintedSprite) =>
+  if (hiddenMask[tile.y]?.[tile.x]) {
+    const piece = rockPiece(tile, hiddenMask, worldMap, undefined);
+    if (!piece) return clear();
+    blank(gridTall);
     gridShort.setTile(tile.x, tile.y, {
       char: ' ',
       foreground: { r: 0, g: 0, b: 0 },
@@ -481,11 +478,6 @@ export function applyResourceToGrid(
       position: { x: tile.x, y: tile.y },
       painted: piece
     });
-  if (hiddenMask[tile.y]?.[tile.x]) {
-    const rock = rockUnder(tile, hiddenMask, worldMap);
-    if (!rock) return clear();
-    blank(gridTall);
-    putRock(rock.piece);
     return;
   }
   const active = resolveActiveResource(tile);
@@ -500,17 +492,12 @@ export function applyResourceToGrid(
   const rs = resDef.renderScale;
   const drawScale = (rs ?? 1) * stageScale;
   const scale = drawScale !== 1 ? drawScale : undefined;
-  const rock = rockUnder(tile, hiddenMask, worldMap);
-  const vein = rock?.pieces.veins.get(resDef.id);
-  const isWall = (rock?.pieces.members.has(resDef.id) ?? false) || vein !== undefined;
-  const sprite =
-    PAINTED_TILES && !isWall ? paintedTile('resource', resDef.id, tile.x, tile.y) : undefined;
-  const wall = rock && vein ? { ...rock.piece, vein } : rock?.piece;
-  const painted = isWall ? wall : rock && sprite ? onPieceTop(rock.pieces, sprite) : sprite;
-  const onRock = rock !== undefined && !isWall;
-  const tall = (rs !== undefined && rs > 1) || onRock;
-  if (onRock) putRock(rock.piece);
-  else blank(tall ? gridShort : gridTall);
+  const painted = PAINTED_TILES
+    ? (rockPiece(tile, hiddenMask, worldMap, resDef.id) ??
+      paintedTile('resource', resDef.id, tile.x, tile.y))
+    : undefined;
+  const tall = rs !== undefined && rs > 1;
+  blank(tall ? gridShort : gridTall);
   const detail = baseDetail ? { r: baseDetail[0], g: baseDetail[1], b: baseDetail[2] } : undefined;
   (tall ? gridTall : gridShort).setTile(tile.x, tile.y, {
     char: pool[h],
