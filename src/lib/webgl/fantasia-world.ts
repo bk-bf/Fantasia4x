@@ -17,13 +17,7 @@ import { parseHexRgb01 } from '$lib/game/core/util/color.js';
 import { glyph, SHEET } from './tilesets.js';
 import type { RGB } from './tile-types.js';
 import { GROUND_BLEND, PAINTED_TILES } from './painted/flag.js';
-import {
-  onPieceTop,
-  paintedGroundKind,
-  paintedPiece,
-  paintedPieces,
-  paintedTile
-} from './painted/tileset.js';
+import { paintedGroundKind, paintedPiece, paintedPieces, paintedTile } from './painted/tileset.js';
 import type { PaintedPieces, PaintedSprite } from './painted/manifest.js';
 
 const DECONSTRUCT_GLYPH = glyph(SHEET.MAP, 88);
@@ -357,7 +351,8 @@ export function applyTileToGrid(grid: GameGrid, tile: WorldTile, hiddenMask: boo
       char: ' ',
       foreground: { r: DIRT_BG[0], g: DIRT_BG[1], b: DIRT_BG[2] },
       background: { r: DIRT_BG[0], g: DIRT_BG[1], b: DIRT_BG[2] },
-      position: { x: tile.x, y: tile.y }
+      position: { x: tile.x, y: tile.y },
+      ...(PAINTED_TILES ? { painted: paintedTile('subterrain', 'cave', tile.x, tile.y) } : null)
     });
     return;
   }
@@ -438,28 +433,45 @@ export function buildSnowOverlay(worldMap: WorldTile[][], hiddenMask?: boolean[]
 
 const ROCK_PIECES = 'rock';
 
-function inRockMass(pieces: PaintedPieces, tile: WorldTile): boolean {
-  const def = resolveActiveResource(tile)?.resDef;
-  if (!def) return false;
-  return (
-    pieces.members.has(def.id) || (def.walkable === false && pieces.terrains.has(tile.terrainType))
-  );
-}
-
-function rockUnder(
-  tile: WorldTile,
+function rockMass(
   hiddenMask: boolean[][],
   worldMap: WorldTile[][] | undefined
-): { piece: PaintedSprite; pieces: PaintedPieces } | undefined {
+): { pieces: PaintedPieces; isMass: (x: number, y: number) => boolean } | undefined {
   if (!PAINTED_TILES || !worldMap) return undefined;
   const pieces = paintedPieces(ROCK_PIECES);
   if (!pieces) return undefined;
-  if (!hiddenMask[tile.y]?.[tile.x] && !inRockMass(pieces, tile)) return undefined;
   const isMass = (x: number, y: number): boolean => {
     const t = worldMap[y]?.[x];
-    return !t || !!hiddenMask[y]?.[x] || inRockMass(pieces, t);
+    if (!t || hiddenMask[y]?.[x]) return true;
+    const id = resolveActiveResource(t)?.resDef.id;
+    return id !== undefined && pieces.members.has(id);
   };
-  return { piece: paintedPiece(pieces, isMass, tile.x, tile.y), pieces };
+  return { pieces, isMass };
+}
+
+function rockPiece(
+  tile: WorldTile,
+  hiddenMask: boolean[][],
+  worldMap: WorldTile[][] | undefined,
+  resourceId: string | undefined
+): PaintedSprite | undefined {
+  const mass = rockMass(hiddenMask, worldMap);
+  if (!mass) return undefined;
+  if (!hiddenMask[tile.y]?.[tile.x] && !(resourceId && mass.pieces.members.has(resourceId)))
+    return undefined;
+  return paintedPiece(mass.pieces, mass.isMass, tile.x, tile.y);
+}
+
+function inOpening(
+  tile: WorldTile,
+  hiddenMask: boolean[][],
+  worldMap: WorldTile[][] | undefined
+): { inFront: boolean } | undefined {
+  const mass = tile.terrainType === 'mountain' ? rockMass(hiddenMask, worldMap) : undefined;
+  if (!mass) return undefined;
+  const { x, y } = tile;
+  const inFront = mass.isMass(x, y + 1);
+  return inFront || mass.isMass(x - 1, y) || mass.isMass(x + 1, y) ? { inFront } : undefined;
 }
 
 export function applyResourceToGrid(
@@ -481,7 +493,10 @@ export function applyResourceToGrid(
     blank(gridShort);
     blank(gridTall);
   };
-  const putRock = (piece: PaintedSprite) =>
+  if (hiddenMask[tile.y]?.[tile.x]) {
+    const piece = rockPiece(tile, hiddenMask, worldMap, undefined);
+    if (!piece) return clear();
+    blank(gridTall);
     gridShort.setTile(tile.x, tile.y, {
       char: ' ',
       foreground: { r: 0, g: 0, b: 0 },
@@ -489,11 +504,6 @@ export function applyResourceToGrid(
       position: { x: tile.x, y: tile.y },
       painted: piece
     });
-  if (hiddenMask[tile.y]?.[tile.x]) {
-    const rock = rockUnder(tile, hiddenMask, worldMap);
-    if (!rock) return clear();
-    blank(gridTall);
-    putRock(rock.piece);
     return;
   }
   const active = resolveActiveResource(tile);
@@ -508,15 +518,13 @@ export function applyResourceToGrid(
   const rs = resDef.renderScale;
   const drawScale = (rs ?? 1) * stageScale;
   const scale = drawScale !== 1 ? drawScale : undefined;
-  const rock = rockUnder(tile, hiddenMask, worldMap);
-  const isWall = rock?.pieces.members.has(resDef.id) ?? false;
-  const sprite =
-    PAINTED_TILES && !isWall ? paintedTile('resource', resDef.id, tile.x, tile.y) : undefined;
-  const painted = isWall ? rock?.piece : rock && sprite ? onPieceTop(rock.pieces, sprite) : sprite;
-  const onRock = rock !== undefined && !isWall;
-  const tall = (rs !== undefined && rs > 1) || onRock;
-  if (onRock) putRock(rock.piece);
-  else blank(tall ? gridShort : gridTall);
+  const piece = rockPiece(tile, hiddenMask, worldMap, resDef.id);
+  const painted = PAINTED_TILES
+    ? (piece ?? paintedTile('resource', resDef.id, tile.x, tile.y))
+    : undefined;
+  const opening = piece ? undefined : inOpening(tile, hiddenMask, worldMap);
+  const tall = (rs !== undefined && rs > 1) || opening !== undefined;
+  blank(tall ? gridShort : gridTall);
   const detail = baseDetail ? { r: baseDetail[0], g: baseDetail[1], b: baseDetail[2] } : undefined;
   (tall ? gridTall : gridShort).setTile(tile.x, tile.y, {
     char: pool[h],
@@ -525,7 +533,8 @@ export function applyResourceToGrid(
     position: { x: tile.x, y: tile.y },
     detail,
     scale: painted ? (stageScale !== 1 ? stageScale : undefined) : scale,
-    ...(painted ? { painted } : null)
+    ...(painted ? { painted } : null),
+    ...(opening?.inFront ? { depthRow: tile.y + 1 } : null)
   });
 }
 

@@ -665,7 +665,7 @@ export class GridRenderer {
 
       if (vertexFloats === GLYPH_VERTEX_FLOATS) out.set(charVertices, o);
       else {
-        const row = tile.position.y + offsetY / tileH;
+        const row = tile.depthRow ?? tile.position.y + offsetY / tileH;
         for (let v = 0; v < 6; v++) {
           const at = o + v * ROW_VERTEX_FLOATS;
           for (let f = 0; f < GLYPH_VERTEX_FLOATS; f++)

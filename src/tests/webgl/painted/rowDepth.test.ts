@@ -125,6 +125,16 @@ describe('the row each quad carries for the depth test', () => {
     expect(rows).toEqual([31, 32]);
   });
 
+  it('takes the row from depthRow when a tile carries one', () => {
+    const uploads: Float32Array[] = [];
+    const { r } = gridRenderer(true, uploads);
+    const grid = new GameGrid();
+    grid.setTile(5, 7, { ...tiles[0], position: { x: 5, y: 7 }, depthRow: 8 });
+    r.renderGrid(grid, options);
+    const data = uploads[uploads.length - 1];
+    expect(data[GLYPH_FLOATS]).toBe(8);
+  });
+
   it('points the row attribute at the 25th float only when the depth test is on', () => {
     const on = gridRenderer(true).calls.filter((c) => c[0] === 'vertexAttribPointer');
     const off = gridRenderer(false).calls.filter((c) => c[0] === 'vertexAttribPointer');

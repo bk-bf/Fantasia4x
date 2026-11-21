@@ -8,7 +8,8 @@ vi.mock('$lib/webgl/painted/flag.js', () => ({ PAINTED_TILES: true }));
 const { buildTileset, parseManifest, resolveVariant, spriteAt } =
   await import('$lib/webgl/painted/manifest');
 const { paintedTile, setPaintedTileset } = await import('$lib/webgl/painted/tileset');
-const { applyResourceToGrid, buildResourceOverlay } = await import('$lib/webgl/fantasia-world');
+const { applyResourceToGrid, applyTileToGrid, buildResourceOverlay } =
+  await import('$lib/webgl/fantasia-world');
 const { GameGrid } = await import('$lib/webgl/game-grid');
 
 const manifest = parseManifest(manifestJson);
@@ -62,22 +63,12 @@ function expected(id: string, x: number, y: number) {
   return spriteAt(resolveVariant(manifest, manifest.sprites[id]), x, y);
 }
 
-function layers(map: WorldTile[][], x: number, y: number, hidden: boolean[][] = []) {
+function painted(map: WorldTile[][], x: number, y: number, hidden: boolean[][] = []) {
   const short = new GameGrid();
   const tall = new GameGrid();
   applyResourceToGrid(short, tall, map[y][x], hidden, undefined, map);
-  return { short: short.getTile(x, y)?.painted, tall: tall.getTile(x, y)?.painted };
+  return short.getTile(x, y)?.painted;
 }
-
-function painted(map: WorldTile[][], x: number, y: number, hidden: boolean[][] = []) {
-  return layers(map, x, y, hidden).short;
-}
-
-const onMountain = (resources: Record<string, number>, walkable = false) => ({
-  terrainType: 'mountain',
-  walkable,
-  resources
-});
 
 beforeAll(() => setPaintedTileset(buildTileset(manifest).tileset));
 
@@ -131,57 +122,54 @@ describe('a wall tile takes the rock piece of its eight neighbours', () => {
       expect(short.getTile(x, y)?.painted, `${x},${y}`).toEqual(expected(blobName(all), x, y));
   });
 
-  it('leaves the map sprite on an object that does not stand on the mountain', () => {
+  it('leaves the map sprite on everything that is not part of the mass', () => {
     const map = world(3, 3, () => wall(0));
-    map[1][1] = { ...map[1][1], terrainType: 'grass', resources: { stone_outcrop: 2 } };
-    expect(layers(map, 1, 1)).toEqual({
-      short: paintedTile('resource', 'stone_outcrop', 1, 1),
-      tall: undefined
-    });
-    expect(painted(map, 1, 0)).toEqual(
-      expected(blobName(new Set(NAMES.filter((n) => n !== 'S'))), 1, 0)
-    );
+    map[1][1] = { ...map[1][1], resources: { hematite: 2 } };
+    expect(painted(map, 1, 1)).toEqual(expected(manifest.map.resource!.hematite[0], 1, 1));
   });
 });
 
-describe('an object standing in the mountain sits on top of the rock', () => {
-  const all = new Set(NAMES);
-  const lift = rock.top!.lift / manifest.tile;
+describe('an object in an opening of the mountain shows whole', () => {
+  const opening = (resources: Record<string, number>, open: [number, number][]) => {
+    const map = world(3, 3, (x, y) => ({ terrainType: 'mountain', ...wall(x + y) }));
+    for (const [x, y] of open) map[y][x] = { ...map[y][x], walkable: true, resources: {} };
+    map[1][1] = { ...map[1][1], resources };
+    return map;
+  };
+  const drawn = (map: WorldTile[][]) => {
+    const short = new GameGrid();
+    const tall = new GameGrid();
+    applyResourceToGrid(short, tall, map[1][1], [], undefined, map);
+    return { short: short.getTile(1, 1), tall: tall.getTile(1, 1) };
+  };
 
-  it.each(['stone_outcrop', 'amethyst_node', 'hematite'])(
-    'draws rock under %s and the object lifted onto the rock top',
-    (id) => {
-      const map = world(3, 3, (x, y) => (x === 1 && y === 1 ? onMountain({ [id]: 3 }) : wall(x)));
-      const sprite = paintedTile('resource', id, 1, 1)!;
-      expect(layers(map, 1, 1)).toEqual({
-        short: expected(blobName(all), 1, 1),
-        tall: { ...sprite, oy: sprite.oy - lift }
-      });
-    }
-  );
-
-  it('counts the object as rock for the walls around it', () => {
-    const map = world(3, 3, (x, y) =>
-      x === 1 && y === 1 ? onMountain({ stone_outcrop: 3 }) : wall(x)
-    );
-    for (const [x, y] of [
-      [1, 0],
-      [0, 1],
-      [2, 2]
-    ])
-      expect(painted(map, x, y), `${x},${y}`).toEqual(expected(blobName(all), x, y));
+  it('draws it after the rock and one row ahead when rock stands in front of it', () => {
+    const { short, tall } = drawn(opening({ stone_outcrop: 3 }, [[1, 0]]));
+    expect(short?.painted).toBeUndefined();
+    expect(tall?.painted).toEqual(paintedTile('resource', 'stone_outcrop', 1, 1));
+    expect(tall?.depthRow).toBe(2);
   });
 
-  it('leaves a hole where the mountain floor can be walked on', () => {
-    const map = world(3, 3, (x, y) =>
-      x === 1 && y === 1 ? onMountain({ emberbloom: 3 }, true) : wall(x)
-    );
-    expect(layers(map, 1, 1)).toEqual({
-      short: paintedTile('resource', 'emberbloom', 1, 1),
-      tall: undefined
-    });
-    expect(painted(map, 1, 0)).toEqual(
-      expected(blobName(new Set(NAMES.filter((n) => n !== 'S'))), 1, 0)
-    );
+  it('draws it after the rock in its own row when rock stands only beside it', () => {
+    const { short, tall } = drawn(opening({ star_geode: 1 }, [[1, 2]]));
+    expect(short?.painted).toBeUndefined();
+    expect(tall?.painted).toEqual(paintedTile('resource', 'star_geode', 1, 1));
+    expect(tall?.depthRow).toBeUndefined();
+  });
+
+  it('leaves an object off the mountain in its row, under the rock in front of it', () => {
+    const map = opening({ stone_outcrop: 3 }, [[1, 0]]);
+    map[1][1] = { ...map[1][1], terrainType: 'forest' };
+    const { short, tall } = drawn(map);
+    expect(short?.painted).toEqual(paintedTile('resource', 'stone_outcrop', 1, 1));
+    expect(short?.depthRow).toBeUndefined();
+    expect(tall?.painted).toBeUndefined();
+  });
+
+  it('lays cave floor under a hidden tile, so no fill shows where a rock piece is cut in', () => {
+    const grid = new GameGrid();
+    const tile = { x: 2, y: 3, subType: 'mineral_deposit', resources: { coal: 2 } } as WorldTile;
+    applyTileToGrid(grid, tile, [[], [], [], [false, false, true]]);
+    expect(grid.getTile(2, 3)?.painted).toEqual(paintedTile('subterrain', 'cave', 2, 3));
   });
 });

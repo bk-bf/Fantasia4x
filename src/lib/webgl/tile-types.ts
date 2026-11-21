@@ -33,6 +33,7 @@ export interface TileData {
   scale?: number;
   painted?: PaintedSprite;
   ground?: number;
+  depthRow?: number;
   dirty?: boolean;
   lastUpdated?: number;
 }

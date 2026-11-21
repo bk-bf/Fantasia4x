@@ -192,6 +192,4 @@ export const UNPAINTED = {
   building: ['door', 'branch_door', 'window', 'clay_floor']
 };
 
-export const PIECES = {
-  rock: { resources: ['mountain_wall', 'cliff_wall'], terrains: ['mountain'] }
-};
+export const PIECES = { rock: ['mountain_wall', 'cliff_wall'] };

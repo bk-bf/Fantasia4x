@@ -30,7 +30,6 @@ export interface ManifestPieceTop {
 
 export interface ManifestPieces {
   resources: string[];
-  terrains: string[];
   neighbours: [number, number][];
   layouts: string[];
   top?: ManifestPieceTop;
@@ -70,7 +69,6 @@ export interface PaintedPieceTop {
 
 export interface PaintedPieces {
   members: ReadonlySet<string>;
-  terrains: ReadonlySet<string>;
   neighbours: readonly (readonly [number, number])[];
   layouts: PaintedVariant[];
   top?: PaintedPieceTop;
@@ -115,9 +113,8 @@ const isStrings = (v: unknown): v is string[] =>
 
 function readPieces(set: string, raw: unknown): ManifestPieces {
   if (!isObject(raw)) throw new Error(`pieces.${set} is not an object`);
-  const { resources, terrains = [], neighbours, layouts, top } = raw;
+  const { resources, neighbours, layouts, top } = raw;
   if (!isStrings(resources)) throw new Error(`pieces.${set}.resources is not a list of ids`);
-  if (!isStrings(terrains)) throw new Error(`pieces.${set}.terrains is not a list of ids`);
   if (
     !Array.isArray(neighbours) ||
     !neighbours.every((n) => Array.isArray(n) && n.length === 2 && n.every(isInt))
@@ -125,12 +122,7 @@ function readPieces(set: string, raw: unknown): ManifestPieces {
     throw new Error(`pieces.${set}.neighbours is not a list of offsets`);
   if (!isStrings(layouts) || layouts.length !== 1 << neighbours.length)
     throw new Error(`pieces.${set}.layouts does not name a sprite for every layout`);
-  const out: ManifestPieces = {
-    resources,
-    terrains,
-    neighbours: neighbours as [number, number][],
-    layouts
-  };
+  const out: ManifestPieces = { resources, neighbours: neighbours as [number, number][], layouts };
   if (top !== undefined) out.top = readTop(set, top);
   return out;
 }
@@ -251,7 +243,6 @@ export function buildTileset(m: PaintedManifest): { tileset: PaintedTileset; pro
     }
     pieces.set(set, {
       members: new Set(p.resources),
-      terrains: new Set(p.terrains),
       neighbours: p.neighbours,
       layouts: layouts as PaintedVariant[],
       ...(p.top && ramp
