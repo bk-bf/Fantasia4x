@@ -43,6 +43,14 @@ const CONDITION_BY_ID = new Map<string, ConditionDef | TransientConditionDef>(
 export function getConditionDefById(id: string): ConditionDef | TransientConditionDef | undefined {
   return CONDITION_BY_ID.get(id);
 }
+function conditionDef(id: string): ConditionDef | undefined {
+  return CONDITION_BY_ID.get(id) as ConditionDef | undefined;
+}
+type DrivenDef = ConditionDef & { driver: NonNullable<ConditionDef['driver']> };
+const NEED_DRIVER_DEFS = CONDITIONS_DB.filter(
+  (d): d is DrivenDef => !!d.driver && !d.driver.source
+);
+const TEMPERATURE_DRIVER_DEFS = CONDITIONS_DB.filter((d): d is DrivenDef => !!d.driver?.source);
 
 export const CONDITION_IDS_WITH_TRIGGERS: ReadonlySet<string> = new Set(
   ALL_CONDITION_DEFS.filter((d) => (d.triggers?.length ?? 0) > 0).map((d) => d.id)
@@ -171,7 +179,7 @@ export function snapshotConditionStages(
 ): Map<string, string> | undefined {
   let snap: Map<string, string> | undefined;
   for (const c of conditions) {
-    const def = CONDITIONS_DB.find((d) => d.id === c.id);
+    const def = conditionDef(c.id);
     if (!def?.floater) continue;
     const stage = getConditionCurrentStage(c);
     if (stage) (snap ??= new Map()).set(c.id, stage.label);
@@ -187,7 +195,7 @@ export function emitPersistentConditionFloaters(
 ): void {
   if (x < 0 || y < 0) return;
   for (const c of next) {
-    const def = CONDITIONS_DB.find((d) => d.id === c.id);
+    const def = conditionDef(c.id);
     if (!def?.floater) continue;
     const stage = getConditionCurrentStage(c);
     if (!stage || prevStages?.get(c.id) === stage.label) continue;
@@ -226,7 +234,7 @@ export function detectVitalEscalations(
   const out: { id: string; stageLabel: string }[] = [];
   for (const c of next) {
     if (!VITAL_ALERT_IDS.has(c.id)) continue;
-    const def = CONDITIONS_DB.find((d) => d.id === c.id);
+    const def = conditionDef(c.id);
     if (!def) continue;
     const stages = def.stages;
     let curIdx = -1;
@@ -240,7 +248,7 @@ export function detectVitalEscalations(
 }
 
 export function getConditionCurrentStage(condition: EntityCondition): ConditionStage | undefined {
-  const def = CONDITIONS_DB.find((d) => d.id === condition.id);
+  const def = conditionDef(condition.id);
   if (!def) return undefined;
   let active: ConditionStage | undefined;
   for (const stage of def.stages) {
@@ -250,12 +258,12 @@ export function getConditionCurrentStage(condition: EntityCondition): ConditionS
 }
 
 export function getConditionName(condition: EntityCondition): string {
-  const def = CONDITIONS_DB.find((d) => d.id === condition.id);
+  const def = conditionDef(condition.id);
   return def?.name ?? condition.id.replace(/_/g, ' ');
 }
 
 export function getConditionLabel(condition: EntityCondition): string {
-  const def = CONDITIONS_DB.find((d) => d.id === condition.id);
+  const def = conditionDef(condition.id);
   const name = def?.name ?? condition.id.replace(/_/g, ' ');
   const stage = getConditionCurrentStage(condition);
   return stage ? `${name} (${stage.label})` : name;
@@ -293,9 +301,7 @@ export function driveNeedConditions(
   needVals: Record<string, number> | undefined,
   tickScale = 1
 ): string | null {
-  for (const def of CONDITIONS_DB) {
-    if (!def.driver) continue;
-    if (def.driver.source) continue;
+  for (const def of NEED_DRIVER_DEFS) {
     const needVal = needVals?.[def.driver.need!] ?? 0;
     applyConditionDriver(conditions, def, needVal, 1, tickScale);
     const current = conditions.find((c) => c.id === def.id);
@@ -310,9 +316,8 @@ export function driveTemperatureConditions(
   heatExposure: number,
   recoveryMul = 1
 ): string | null {
-  for (const def of CONDITIONS_DB) {
-    const src = def.driver?.source;
-    if (!src) continue;
+  for (const def of TEMPERATURE_DRIVER_DEFS) {
+    const src = def.driver.source;
     applyConditionDriver(
       conditions,
       def,
