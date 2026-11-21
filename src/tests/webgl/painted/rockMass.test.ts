@@ -168,7 +168,12 @@ describe('an object in an opening of the mountain shows whole', () => {
 
   it('lays cave floor under a hidden tile, so no fill shows where a rock piece is cut in', () => {
     const grid = new GameGrid();
-    const tile = { x: 2, y: 3, subType: 'mineral_deposit', resources: { coal: 2 } } as WorldTile;
+    const tile = {
+      x: 2,
+      y: 3,
+      subType: 'mineral_deposit',
+      resources: { coal: 2 }
+    } as unknown as WorldTile;
     applyTileToGrid(grid, tile, [[], [], [], [false, false, true]]);
     expect(grid.getTile(2, 3)?.painted).toEqual(paintedTile('subterrain', 'cave', 2, 3));
   });
