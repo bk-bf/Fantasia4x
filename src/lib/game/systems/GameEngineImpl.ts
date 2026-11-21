@@ -6,12 +6,7 @@ import type {
 } from './GameEngine';
 import type { GameState, WorldTile } from '../core/types';
 import { GameStateManager } from '../core/state/GameStateManager';
-import {
-  peekGrowthTurn,
-  popGrowth,
-  pushGrowth,
-  rebuildGrowthQueue
-} from '../core/rules/world/growthQueue';
+import { GrowthQueue, useGrowthQueue } from '../core/rules/world/growthQueue';
 import { workService } from '../services/WorkService';
 import { itemService } from '../services/ItemService';
 import { recipeService } from '../services/RecipeService';
@@ -111,6 +106,7 @@ export class GameEngineImpl implements GameEngine {
   private gameState: GameState | null = null;
   private gameStateManager: GameStateManager | null = null;
   private _lastGrowthWorldMap: WorldTile[][] | null = null;
+  private readonly growthQueue = new GrowthQueue();
   private config: GameEngineConfig;
   private lastTurnProcessed = 0;
   private lastFlushMs = 0;
@@ -180,6 +176,7 @@ export class GameEngineImpl implements GameEngine {
 
     try {
       this.gameState = { ...this.gameState, turn: this.gameState.turn + 1 };
+      useGrowthQueue(this.growthQueue);
 
       if (this.previewMode) return this.processPreviewTurn();
 
@@ -451,21 +448,23 @@ export class GameEngineImpl implements GameEngine {
   private processPlantGrowth(): void {
     if (!this.gameState) return;
     const gs = this.gameState;
+    const queue = this.growthQueue;
+    useGrowthQueue(queue);
 
     if (gs.worldMap !== this._lastGrowthWorldMap) {
-      rebuildGrowthQueue(gs.worldMap, gs.turn);
+      queue.rebuild(gs.worldMap, gs.turn);
       this._lastGrowthWorldMap = gs.worldMap;
     }
-    if (peekGrowthTurn() > gs.turn) return;
+    if (queue.peek() > gs.turn) return;
 
     const rate = seasonRegrowthMultiplier(gs.season);
     const cropScale = gs._devCropGrowthScale ?? 1;
-    while (peekGrowthTurn() <= gs.turn) {
-      const e = popGrowth()!;
+    while (queue.peek() <= gs.turn) {
+      const e = queue.pop()!;
       const tile = gs.worldMap[e.y]?.[e.x];
       if (!tile?.growth) continue;
       const due = this.advanceTileGrowth(tile, rate, cropScale);
-      if (due !== Infinity) pushGrowth(due, e.x, e.y);
+      if (due !== Infinity) queue.push(due, e.x, e.y);
     }
   }
 
