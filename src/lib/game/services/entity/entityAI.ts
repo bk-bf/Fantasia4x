@@ -336,7 +336,7 @@ export function stepEntities(state: GameState): GameState {
         pendingMobState
       )
     );
-    const ticked = tickMobConditionTimers(stepped);
+    const ticked = tickMobConditionTimers(stepped, _thinkDtTicks);
     next[i] = ticked;
     traceMobTick(ticked, state, turn, 'fsm', mob.state);
     if (ticked !== mob) changed = true;
@@ -607,12 +607,12 @@ export function stepOne(
   );
 }
 
-export function tickMobConditionTimers(mob: Mob): Mob {
+export function tickMobConditionTimers(mob: Mob, elapsedTicks: number): Mob {
   const durations = mob.conditionTimers;
   if (!durations || Object.keys(durations).length === 0) return mob;
   const next: Record<string, number> = {};
   for (const [key, val] of Object.entries(durations)) {
-    const remaining = val - 1;
+    const remaining = val - elapsedTicks;
     if (remaining > 0) next[key] = remaining;
   }
   const changed =
