@@ -35,7 +35,6 @@
     min-width: 0;
     min-height: 0;
     padding: 8px 11px;
-    overflow: hidden;
     font: 16px/18px var(--font-pixel);
   }
   header {
