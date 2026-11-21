@@ -1,0 +1,9 @@
+{
+  "name": "f4x-pixi-bench",
+  "private": true,
+  "version": "0.0.0",
+  "description": "PixiJS scenes drawing what tools/gpu/pixi/synth.mjs draws by hand, for the renderer bench.",
+  "devDependencies": {
+    "pixi.js": "8.23.0"
+  }
+}

@@ -21,7 +21,8 @@ const UNCAPPED = ['--disable-gpu-vsync', '--disable-frame-rate-limit'];
 const ELECTRON = [
   join(HERE, '../node_modules/electron/dist/electron'),
   join(HERE, 'electron-main.js'),
-  `--user-data-dir=${join(tmpdir(), UNIT + '-profile')}`
+  `--user-data-dir=${join(tmpdir(), UNIT + '-profile')}`,
+  '--password-store=basic'
 ];
 const SHELLS = {
   electron: ELECTRON,
@@ -61,7 +62,7 @@ const median = (xs) => {
 };
 
 const OWN_CGROUP = '/sys/fs/cgroup' + readFileSync('/proc/self/cgroup', 'utf8').trim().split('::')[1];
-const SHELL_CGROUP = join(dirname(OWN_CGROUP), `${UNIT}.scope`);
+const CGROUPS = new Set([OWN_CGROUP, join(dirname(OWN_CGROUP), `${UNIT}.scope`)]);
 const cgroupSeconds = (dir) => {
   try {
     return Number(/usage_usec (\d+)/.exec(readFileSync(join(dir, 'cpu.stat'), 'utf8'))[1]) / 1e6;
@@ -72,7 +73,7 @@ const cgroupSeconds = (dir) => {
 function cpuSample() {
   const f = readFileSync('/proc/stat', 'utf8').split('\n')[0].trim().split(/\s+/).slice(1).map(Number);
   const busy = f.reduce((a, b) => a + b, 0) - f[3] - f[4];
-  return { t: Date.now() / 1000, busy: busy / 100, own: cgroupSeconds(OWN_CGROUP) + cgroupSeconds(SHELL_CGROUP) };
+  return { t: Date.now() / 1000, busy: busy / 100, own: [...CGROUPS].reduce((sum, dir) => sum + cgroupSeconds(dir), 0) };
 }
 function cpuSince(a) {
   const b = cpuSample();
@@ -90,17 +91,17 @@ const hyprEnv = {
     ?.split('=')[1]
 };
 const hyprctl = (...args) => execFileSync('hyprctl', args, { encoding: 'utf8', env: hyprEnv }).trim();
-const shellPids = () => {
+const LUA_CONFIG = !hyprctl('eval', 'return 1').includes('only supported with the lua');
+const windows = () => JSON.parse(hyprctl('-j', 'clients'));
+const WINDOWS_BEFORE = new Set(windows().map((c) => c.address));
+const startedByBench = (pid) => {
   try {
-    return readFileSync(join(SHELL_CGROUP, 'cgroup.procs'), 'utf8').trim().split('\n').filter(Boolean).map(Number);
+    return readFileSync(`/proc/${pid}/cmdline`, 'utf8').includes(HERE);
   } catch {
-    return [];
+    return false;
   }
 };
-const shellWindow = () => {
-  const pids = new Set(shellPids());
-  return JSON.parse(hyprctl('-j', 'clients')).find((c) => pids.has(c.pid));
-};
+const shellWindow = () => windows().find((c) => !WINDOWS_BEFORE.has(c.address) && startedByBench(c.pid));
 
 async function startDevServer() {
   const out = createWriteStream(join(tmpdir(), `${UNIT}.dev-server.log`));
@@ -139,7 +140,8 @@ function launchShell(recorderFile) {
     ['#!/usr/bin/env bash', ...exports, 'unset ELECTRON_RUN_AS_NODE ELECTRON_NO_ATTACH_CONSOLE', `exec ${scope} ${command}`, ''].join('\n'),
     { mode: 0o755 }
   );
-  hyprctl('eval', `hl.exec_cmd("${launcher}")`);
+  if (LUA_CONFIG) hyprctl('eval', `hl.exec_cmd("${launcher}")`);
+  else hyprctl('dispatch', 'exec', launcher);
 }
 
 async function placeWindow() {
@@ -147,12 +149,18 @@ async function placeWindow() {
   for (let i = 0; i < 120 && !(win = shellWindow()); i++) await sleep(500);
   if (!win) throw new Error('the shell opened no window');
   const target = `address:${win.address}`;
-  if (!win.floating) hyprctl('eval', `hl.dispatch(hl.dsp.window.float({ action = "enable", window = "${target}" }))`);
-  hyprctl('eval', `hl.dispatch(hl.dsp.window.resize({ x = ${WINDOW.width}, y = ${WINDOW.height}, window = "${target}" }))`);
-  hyprctl('eval', `hl.dispatch(hl.dsp.window.center({ window = "${target}" }))`);
+  CGROUPS.add('/sys/fs/cgroup' + readFileSync(`/proc/${win.pid}/cgroup`, 'utf8').trim().split('::')[1]);
+  const size = `${WINDOW.width} ${WINDOW.height}`;
+  if (LUA_CONFIG) {
+    if (!win.floating) hyprctl('eval', `hl.dispatch(hl.dsp.window.float({ action = "enable", window = "${target}" }))`);
+    hyprctl('eval', `hl.dispatch(hl.dsp.window.resize({ x = ${WINDOW.width}, y = ${WINDOW.height}, window = "${target}" }))`);
+  } else {
+    if (!win.floating) hyprctl('dispatch', 'setfloating', target);
+    hyprctl('dispatch', 'resizewindowpixel', `exact ${size},${target}`);
+  }
   await sleep(1000);
   win = shellWindow();
-  log(`WINDOW ${JSON.stringify({ class: win.class, title: win.title, size: win.size, at: win.at, floating: win.floating, xwayland: win.xwayland, fullscreen: win.fullscreen, workspace: win.workspace?.id, pid: win.pid })}`);
+  log(`WINDOW ${JSON.stringify({ cgroups: [...CGROUPS].map((c) => c.split('/').pop()),  class: win.class, title: win.title, size: win.size, at: win.at, floating: win.floating, xwayland: win.xwayland, fullscreen: win.fullscreen, workspace: win.workspace?.id, pid: win.pid })}`);
 }
 
 const monitor = JSON.parse(hyprctl('-j', 'monitors')).find((m) => m.focused);
@@ -279,7 +287,18 @@ try {
   log(`failed: ${e.message}`);
   exitCode = 1;
 } finally {
-  sh('systemctl', ['--user', 'stop', `${UNIT}.scope`]);
+  for (const win of windows().filter((c) => !WINDOWS_BEFORE.has(c.address) && startedByBench(c.pid))) {
+    log(`closing ${win.class} "${win.title}"`);
+    const target = `address:${win.address}`;
+    try {
+      if (LUA_CONFIG) hyprctl('dispatch', `hl.dsp.window.close({ window = "${target}" })`);
+      else hyprctl('dispatch', 'closewindow', target);
+    } catch (e) {
+      log(`could not close it: ${e.message}`);
+    }
+  }
+  await sleep(2000);
+  for (const dir of CGROUPS) if (dir !== OWN_CGROUP) sh('systemctl', ['--user', 'stop', dir.split('/').pop()]);
   try {
     process.kill(-server.pid, 'SIGTERM');
   } catch {
