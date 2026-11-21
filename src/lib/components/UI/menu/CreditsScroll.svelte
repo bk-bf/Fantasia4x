@@ -1,45 +1,8 @@
 <script lang="ts">
   import { fade } from 'svelte/transition';
+  import { CREDITS } from './creditsList';
 
   let { onClose }: { onClose: () => void } = $props();
-
-  const credits: { role: string; lines: string[] }[] = [
-    { role: 'A 4X Colony Chronicle', lines: [] },
-    { role: 'Design & Code', lines: ['bk'] },
-    {
-      role: 'Inspired by',
-      lines: [
-        'RimWorld',
-        'HSK Team',
-        'VilesMods — xenomacabre',
-        'Dwarf Fortress',
-        'Battle Brothers + Legends Mod',
-        'Vintage Story',
-        'Cataclysm: Dark Days Ahead'
-      ]
-    },
-    { role: 'Tileset', lines: ['Bitlands — DragonDePlatino', 'CC-BY 4.0'] },
-    { role: 'Music', lines: ['Alexandr Zhelanov', 'RandomMind'] },
-    { role: 'Ambience', lines: ['JC Sounds — Nature Ambient Pack'] },
-    {
-      role: 'Sound Effects',
-      lines: [
-        'rubberduck',
-        'Kenney',
-        'artisticdude',
-        'qubodup',
-        'AntumDeluge',
-        'leone',
-        'Vinrax',
-        'IMadeIt'
-      ]
-    },
-    {
-      role: 'Typography',
-      lines: ['Cousine', 'Cinzel', 'Dancing Script', 'Jacquard 24', 'Jersey 20', 'VT323', '— SIL Open Font License']
-    },
-    { role: 'Audio via', lines: ['OpenGameArt.org', 'CC0 / CC-BY 4.0'] }
-  ];
 
   function onKey(e: KeyboardEvent) {
     if (e.key === 'Escape') {
@@ -58,7 +21,7 @@
     <div class="scroller">
       <h1 class="wordmark">FANTASIA</h1>
 
-      {#each credits as block}
+      {#each CREDITS as block}
         <section class="block">
           {#if block.role}<div class="role">{block.role}</div>{/if}
           {#each block.lines as line}
