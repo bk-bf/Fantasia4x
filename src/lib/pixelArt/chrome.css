@@ -1,0 +1,39 @@
+:where(.chrome) {
+  position: relative;
+  isolation: isolate;
+}
+.chrome > canvas.skin,
+.chrome > canvas.lit {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+  pointer-events: none;
+  image-rendering: pixelated;
+}
+.chrome > canvas.skin {
+  filter: url(#ambient-tint);
+}
+.chrome > canvas.lit {
+  filter: url(#ambient-tint-lit);
+}
+:root[data-theme='timber']
+  :is([data-chrome='win'], [data-chrome='card'], [data-chrome='tip'], [data-chrome='tag'])
+  > canvas.skin {
+  filter: url(#ambient-tint) drop-shadow(3px 4px 0 rgb(6 4 3 / 0.45));
+}
+:root[data-theme='vellum'] .chrome > canvas.skin {
+  filter: url(#ambient-tint) drop-shadow(3px 3px 0 rgb(6 4 3 / 0.5));
+}
+:root[data-theme='vellum'] .chrome .chrome > canvas.skin {
+  filter: url(#ambient-tint-lit);
+}
+[data-chrome='rail'] > canvas.skin,
+:root[data-theme='vellum'] [data-chrome='rail'] > canvas.skin {
+  filter: url(#ambient-tint) drop-shadow(0 2px 0 rgb(6 4 3 / 0.55));
+}
+:root[data-theme='timber'] [data-modal] > canvas.skin {
+  filter: url(#ambient-tint) drop-shadow(4px 6px 0 rgb(6 4 3 / 0.55));
+}

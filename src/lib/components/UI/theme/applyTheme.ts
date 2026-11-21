@@ -6,7 +6,7 @@ if (typeof document !== 'undefined') {
     const root = document.documentElement,
       t = THEMES[id];
     root.dataset.theme = id;
-    for (const [k, v] of Object.entries({ ...t.surface, ...t.ink, ...t.fonts }))
+    for (const [k, v] of Object.entries({ ...t.surface, ...t.ink, ...t.emit, ...t.fonts }))
       root.style.setProperty(k, v);
   });
 }

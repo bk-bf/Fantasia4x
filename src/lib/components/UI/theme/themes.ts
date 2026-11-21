@@ -5,6 +5,7 @@ export interface Theme {
   inkOnLit: boolean;
   surface: Record<string, string>;
   ink: Record<string, string>;
+  emit: Record<string, string>;
   fonts: Record<string, string>;
 }
 
@@ -28,8 +29,10 @@ export const THEMES: Record<ThemeId, Theme> = {
       '--accent': '#d9822e',
       '--accent-hi': '#f2a444',
       '--pos': '#a4d070',
-      '--neg': '#f0735a'
+      '--neg': '#f0735a',
+      '--cold': '#96c8ec'
     },
+    emit: { '--ember': '#ffc466' },
     fonts: {
       '--font-head': "'Fantasia Block', var(--font-display)",
       '--head-case': 'uppercase',
@@ -55,8 +58,10 @@ export const THEMES: Record<ThemeId, Theme> = {
       '--accent': '#a3271a',
       '--accent-hi': '#7e1d12',
       '--pos': '#36632a',
-      '--neg': '#a3271a'
+      '--neg': '#a3271a',
+      '--cold': '#27467e'
     },
+    emit: { '--ember': '#fff2cc' },
     fonts: {
       '--font-head': "'Fantasia Blackletter', var(--font-display)",
       '--head-case': 'none',
