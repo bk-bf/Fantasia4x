@@ -23,6 +23,7 @@ export interface ManifestSprite {
 
 export interface ManifestPieceTop {
   image: string;
+  veins: string;
   size: number;
   lift: number;
   ramp: string;
@@ -32,6 +33,7 @@ export interface ManifestPieces {
   resources: string[];
   neighbours: [number, number][];
   layouts: string[];
+  veins: Record<string, string>;
   top?: ManifestPieceTop;
 }
 
@@ -52,6 +54,12 @@ export interface PaintedSprite {
   oy: number;
   w: number;
   h: number;
+  vein?: PaintedVein;
+}
+
+export interface PaintedVein {
+  x: number;
+  y: number;
 }
 
 export interface PaintedVariant {
@@ -62,6 +70,7 @@ export interface PaintedVariant {
 
 export interface PaintedPieceTop {
   image: string;
+  veins: string;
   size: number;
   lift: number;
   ramp: { x: number; y: number; length: number };
@@ -71,6 +80,7 @@ export interface PaintedPieces {
   members: ReadonlySet<string>;
   neighbours: readonly (readonly [number, number])[];
   layouts: PaintedVariant[];
+  veins: ReadonlyMap<string, PaintedVein>;
   top?: PaintedPieceTop;
 }
 
@@ -113,8 +123,10 @@ const isStrings = (v: unknown): v is string[] =>
 
 function readPieces(set: string, raw: unknown): ManifestPieces {
   if (!isObject(raw)) throw new Error(`pieces.${set} is not an object`);
-  const { resources, neighbours, layouts, top } = raw;
+  const { resources, neighbours, layouts, veins = {}, top } = raw;
   if (!isStrings(resources)) throw new Error(`pieces.${set}.resources is not a list of ids`);
+  if (!isObject(veins) || !isStrings(Object.values(veins)))
+    throw new Error(`pieces.${set}.veins does not map ids to sprites`);
   if (
     !Array.isArray(neighbours) ||
     !neighbours.every((n) => Array.isArray(n) && n.length === 2 && n.every(isInt))
@@ -122,19 +134,24 @@ function readPieces(set: string, raw: unknown): ManifestPieces {
     throw new Error(`pieces.${set}.neighbours is not a list of offsets`);
   if (!isStrings(layouts) || layouts.length !== 1 << neighbours.length)
     throw new Error(`pieces.${set}.layouts does not name a sprite for every layout`);
-  const out: ManifestPieces = { resources, neighbours: neighbours as [number, number][], layouts };
+  const out: ManifestPieces = {
+    resources,
+    neighbours: neighbours as [number, number][],
+    layouts,
+    veins: veins as Record<string, string>
+  };
   if (top !== undefined) out.top = readTop(set, top);
   return out;
 }
 
 function readTop(set: string, raw: unknown): ManifestPieceTop {
   if (!isObject(raw)) throw new Error(`pieces.${set}.top is not an object`);
-  const { image, size, lift, ramp } = raw;
-  if (typeof image !== 'string' || typeof ramp !== 'string')
-    throw new Error(`pieces.${set}.top does not name its image and ramp`);
+  const { image, veins, size, lift, ramp } = raw;
+  if (typeof image !== 'string' || typeof veins !== 'string' || typeof ramp !== 'string')
+    throw new Error(`pieces.${set}.top does not name its images and ramp`);
   if (!isInt(size) || size <= 0 || !isInt(lift) || lift < 0)
     throw new Error(`pieces.${set}.top has a bad size or lift`);
-  return { image, size, lift, ramp };
+  return { image, veins, size, lift, ramp };
 }
 
 export function parseManifest(raw: unknown): PaintedManifest {
@@ -241,10 +258,17 @@ export function buildTileset(m: PaintedManifest): { tileset: PaintedTileset; pro
       problems.push(`pieces.${set}.top names unknown sprite ${p.top.ramp}`);
       continue;
     }
+    const veins = new Map<string, PaintedVein>();
+    for (const [id, sprite] of Object.entries(p.veins)) {
+      const s = m.sprites[sprite];
+      if (s) veins.set(id, { x: s.x, y: s.y });
+      else problems.push(`pieces.${set}.veins.${id} names unknown sprite ${sprite}`);
+    }
     pieces.set(set, {
       members: new Set(p.resources),
       neighbours: p.neighbours,
       layouts: layouts as PaintedVariant[],
+      veins,
       ...(p.top && ramp
         ? { top: { ...p.top, ramp: { x: ramp.x, y: ramp.y, length: ramp.w } } }
         : null)

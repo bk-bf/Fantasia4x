@@ -531,8 +531,16 @@ export class WebGLRendererCore {
     if (!painted.top) return;
     gl.activeTexture(gl.TEXTURE2);
     gl.bindTexture(gl.TEXTURE_2D, painted.top.texture);
+    gl.activeTexture(gl.TEXTURE3);
+    gl.bindTexture(gl.TEXTURE_2D, painted.top.veins);
     gl.activeTexture(gl.TEXTURE0);
     this.shaderManager.setUniform('tileRenderer', 'u_rockTexture', 2);
+    this.shaderManager.setUniform('tileRenderer', 'u_veinTexture', 3);
+    this.shaderManager.setUniform(
+      'tileRenderer',
+      'u_veinScale',
+      painted.tileset.tile / BASE_TILE_PX
+    );
     this.shaderManager.setUniform('tileRenderer', 'u_rockRamp', [
       painted.top.ramp.x,
       painted.top.ramp.y
@@ -641,6 +649,7 @@ export class WebGLRendererCore {
     this.lightPass = null;
     if (this.painted) this.webglState.getContext()?.deleteTexture(this.painted.texture);
     if (this.painted?.top) this.webglState.getContext()?.deleteTexture(this.painted.top.texture);
+    if (this.painted?.top) this.webglState.getContext()?.deleteTexture(this.painted.top.veins);
     this.painted = null;
     this.webglState.dispose();
     this.gridRenderer = null;

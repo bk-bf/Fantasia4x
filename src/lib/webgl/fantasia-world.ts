@@ -442,24 +442,30 @@ function rockMass(
   if (!pieces) return undefined;
   const isMass = (x: number, y: number): boolean => {
     const t = worldMap[y]?.[x];
-    if (!t || hiddenMask[y]?.[x]) return true;
-    const id = resolveActiveResource(t)?.resDef.id;
-    return id !== undefined && pieces.members.has(id);
+    return !t || !!hiddenMask[y]?.[x] || heldBy(t, pieces.members) !== undefined;
   };
   return { pieces, isMass };
+}
+
+function heldBy(tile: WorldTile, ids: { has(id: string): boolean }): string | undefined {
+  return Object.entries(tile.resources ?? {}).find(
+    ([id, amount]) => amount > 0 && ids.has(id)
+  )?.[0];
 }
 
 function rockPiece(
   tile: WorldTile,
   hiddenMask: boolean[][],
-  worldMap: WorldTile[][] | undefined,
-  resourceId: string | undefined
+  worldMap: WorldTile[][] | undefined
 ): PaintedSprite | undefined {
   const mass = rockMass(hiddenMask, worldMap);
   if (!mass) return undefined;
-  if (!hiddenMask[tile.y]?.[tile.x] && !(resourceId && mass.pieces.members.has(resourceId)))
-    return undefined;
-  return paintedPiece(mass.pieces, mass.isMass, tile.x, tile.y);
+  const hidden = !!hiddenMask[tile.y]?.[tile.x];
+  if (!hidden && heldBy(tile, mass.pieces.members) === undefined) return undefined;
+  const piece = paintedPiece(mass.pieces, mass.isMass, tile.x, tile.y);
+  const ore = hidden ? undefined : heldBy(tile, mass.pieces.veins);
+  const vein = ore === undefined ? undefined : mass.pieces.veins.get(ore);
+  return vein ? { ...piece, vein } : piece;
 }
 
 function inOpening(
@@ -494,7 +500,7 @@ export function applyResourceToGrid(
     blank(gridTall);
   };
   if (hiddenMask[tile.y]?.[tile.x]) {
-    const piece = rockPiece(tile, hiddenMask, worldMap, undefined);
+    const piece = rockPiece(tile, hiddenMask, worldMap);
     if (!piece) return clear();
     blank(gridTall);
     gridShort.setTile(tile.x, tile.y, {
@@ -518,7 +524,7 @@ export function applyResourceToGrid(
   const rs = resDef.renderScale;
   const drawScale = (rs ?? 1) * stageScale;
   const scale = drawScale !== 1 ? drawScale : undefined;
-  const piece = rockPiece(tile, hiddenMask, worldMap, resDef.id);
+  const piece = rockPiece(tile, hiddenMask, worldMap);
   const painted = PAINTED_TILES
     ? (piece ?? paintedTile('resource', resDef.id, tile.x, tile.y))
     : undefined;
