@@ -36,7 +36,7 @@
     },
     {
       role: 'Typography',
-      lines: ['Cousine', 'Cinzel', 'Dancing Script', '— SIL Open Font License']
+      lines: ['Cousine', 'Cinzel', 'Dancing Script', 'Jacquard 24', 'Jersey 20', 'VT323', '— SIL Open Font License']
     },
     { role: 'Audio via', lines: ['OpenGameArt.org', 'CC0 / CC-BY 4.0'] }
   ];

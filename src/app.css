@@ -26,11 +26,35 @@
   font-style: normal;
   font-display: swap;
 }
+@font-face {
+  font-family: 'Fantasia Title';
+  src: url('/fonts/jacquard24-400.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Fantasia Banner';
+  src: url('/fonts/jersey20-400.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Fantasia Pixel';
+  src: url('/fonts/vt323-400.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
 
 :root {
   --font-mono: 'Fantasia Mono', 'Courier New', monospace;
   --font-script: 'Fantasia Script', 'Segoe Script', 'Brush Script MT', cursive;
   --font-display: 'Fantasia Display', 'Cinzel', 'Trajan Pro', Georgia, serif;
+  --font-title: 'Fantasia Title', 'Fantasia Display', serif;
+  --font-banner: 'Fantasia Banner', 'Fantasia Mono', sans-serif;
+  --font-pixel: 'Fantasia Pixel', 'Fantasia Mono', monospace;
 
   --bg: #0d0b07;
   --bg-panel: #150f08;
