@@ -16,8 +16,8 @@ import { buildingDefById } from '$lib/game/core/defs/buildings.js';
 import { parseHexRgb01 } from '$lib/game/core/util/color.js';
 import { glyph, SHEET } from './tilesets.js';
 import type { RGB } from './tile-types.js';
-import { PAINTED_TILES } from './painted/flag.js';
-import { paintedTile } from './painted/tileset.js';
+import { GROUND_BLEND, PAINTED_TILES } from './painted/flag.js';
+import { paintedGroundKind, paintedTile } from './painted/tileset.js';
 
 const DECONSTRUCT_GLYPH = glyph(SHEET.MAP, 88);
 
@@ -360,12 +360,16 @@ export function applyTileToGrid(grid: GameGrid, tile: WorldTile, hiddenMask: boo
   let bg: [number, number, number] = sub.bg as [number, number, number];
   const activeRes = resolveActiveResource(tile);
   if (activeRes && !activeRes.resDef.showGroundBelow) char = ' ';
+  const painted = PAINTED_TILES
+    ? paintedTile('subterrain', tile.subType, tile.x, tile.y)
+    : undefined;
   grid.setTile(tile.x, tile.y, {
     char,
     foreground: { r: fg[0], g: fg[1], b: fg[2] },
     background: { r: bg[0], g: bg[1], b: bg[2] },
     position: { x: tile.x, y: tile.y },
-    ...(PAINTED_TILES ? { painted: paintedTile('subterrain', tile.subType, tile.x, tile.y) } : null)
+    ...(PAINTED_TILES ? { painted } : null),
+    ...(GROUND_BLEND && painted ? { ground: paintedGroundKind(tile.subType) } : null)
   });
 }
 

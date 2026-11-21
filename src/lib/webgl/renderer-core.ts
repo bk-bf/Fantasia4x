@@ -10,8 +10,9 @@ import type { FontAtlas } from './types.js';
 import { BASE_TILE_PX } from './tile-types.js';
 import { WORK_PINS } from '../workPins/flag.js';
 import { addFrameTotals } from '../workPins/page.js';
-import { PAINTED_TILES } from './painted/flag.js';
+import { GROUND_BLEND, PAINTED_TILES } from './painted/flag.js';
 import { loadPaintedTileset, type LoadedPaintedTileset } from './painted/loader.js';
+import { GroundBlend } from './painted/groundBlend.js';
 
 export const ROW_DEPTH_RANGE = 8192;
 
@@ -67,6 +68,7 @@ export class WebGLRendererCore {
   private tilesetLoaded = false;
   private painted: LoadedPaintedTileset | null = null;
   private rowDepth = PAINTED_TILES;
+  private groundBlend: GroundBlend | null = null;
 
   private gameGrid: GameGrid | null = null;
   private gridVersion = 0;
@@ -131,6 +133,7 @@ export class WebGLRendererCore {
 
   setGrid(grid: GameGrid, dirtyTiles?: ReadonlyArray<{ x: number; y: number }>): void {
     this.gameGrid = grid;
+    this.groundBlend?.setGrid(grid, dirtyTiles);
     if (dirtyTiles && dirtyTiles.length > 0) {
       this.gridRenderer?.markTerrainChunksDirty(dirtyTiles);
     } else {
@@ -296,6 +299,10 @@ export class WebGLRendererCore {
         this.rowDepth
       );
       if (PAINTED_TILES) this.painted = await loadPaintedTileset(gl);
+      if (GROUND_BLEND && this.painted)
+        this.groundBlend = GroundBlend.create(gl, this.shaderManager, this.painted);
+      this.gridRenderer.skipBlendedGround = this.groundBlend !== null;
+      if (this.gameGrid) this.groundBlend?.setGrid(this.gameGrid);
 
       if (this.debug) console.log('✅ WebGL2 renderer ready');
       return true;
@@ -343,11 +350,8 @@ export class WebGLRendererCore {
       this.ambientLight * this.ambientTint[2]
     ]);
     const flickerTime = performance.now() / 1000;
-    this.shaderManager.setUniform(
-      'tileRenderer',
-      'u_lightFlicker',
-      this.dynamicLight ? fireFlickerGlobal(flickerTime) : 1.0
-    );
+    const flicker = this.dynamicLight ? fireFlickerGlobal(flickerTime) : 1.0;
+    this.shaderManager.setUniform('tileRenderer', 'u_lightFlicker', flicker);
 
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this.fontTexture);
@@ -372,6 +376,7 @@ export class WebGLRendererCore {
 
     this.shaderManager.setUniform('tileRenderer', 'u_glyphOnly', 0);
     const tTerrain = performance.now();
+    if (this.groundBlend) this.drawGroundBlend(this.groundBlend, flicker, lightTime);
     const gridStats = this.gridRenderer.renderGrid(this.gameGrid, {
       tileWidth: BASE_TILE_PX,
       tileHeight: BASE_TILE_PX,
@@ -441,6 +446,27 @@ export class WebGLRendererCore {
     } else {
       this.stats.overlayMs = 0;
     }
+  }
+
+  private drawGroundBlend(blend: GroundBlend, flicker: number, lightTime: number): void {
+    const drawn = blend.draw({
+      projection: this.projectionMatrix,
+      viewOffset: [this.viewTileX * BASE_TILE_PX, this.viewTileY * BASE_TILE_PX],
+      zoom: [this.tileWidth / BASE_TILE_PX, this.tileHeight / BASE_TILE_PX],
+      ambient: [
+        this.ambientLight * this.ambientTint[0],
+        this.ambientLight * this.ambientTint[1],
+        this.ambientLight * this.ambientTint[2]
+      ],
+      flicker,
+      lightSampler: this.lightSampler ?? undefined,
+      lightTime,
+      lightVersion: this.lightVersion,
+      litBounds: this.lightBounds
+    });
+    if (!drawn) return;
+    this.stats.drawCalls++;
+    this.stats.vertexCount += 6;
   }
 
   private bindPaintedAtlas(gl: WebGL2RenderingContext, painted: LoadedPaintedTileset): void {
@@ -550,6 +576,8 @@ export class WebGLRendererCore {
     this.characterRenderer?.dispose();
     this.shaderManager?.dispose();
     this.textureManager?.dispose();
+    this.groundBlend?.dispose();
+    this.groundBlend = null;
     if (this.painted) this.webglState.getContext()?.deleteTexture(this.painted.texture);
     this.painted = null;
     this.webglState.dispose();
