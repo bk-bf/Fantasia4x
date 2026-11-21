@@ -211,6 +211,24 @@ function sourceStackIndex(drops: DroppedItem[], piece: DroppedItem, orderId: str
   );
 }
 
+export function reservableQuantity(drops: DroppedItem[] | undefined, itemId: string): number {
+  let total = 0;
+  for (const d of drops ?? []) {
+    if (!d.stored || d.reservedFor || d.quantity <= 0) continue;
+    if (d.resourceId === itemId) {
+      total += d.quantity;
+      continue;
+    }
+    const held = heldQuantity(d.instance, itemId);
+    if (held > 0) total += held;
+  }
+  return total;
+}
+
+export function cannotReserve(available: number, need: number): boolean {
+  return available < need - QUANTITY_EPSILON * Math.max(1, Math.abs(need));
+}
+
 export function releaseReservation(state: GameState, orderId: string): GameState {
   const all = state.droppedItems ?? [];
   if (!all.some((d) => d.reservedFor === orderId)) return state;
