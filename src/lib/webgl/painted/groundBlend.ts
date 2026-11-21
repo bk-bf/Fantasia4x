@@ -106,8 +106,8 @@ export class GroundBlend {
     this.gl = gl;
     this.program = program;
     this.atlas = painted.texture;
-    this.kindTex = this.makeTexture(gl.NEAREST);
-    this.lightTex = this.makeTexture(gl.LINEAR);
+    this.kindTex = this.makeTexture(KIND_UNIT, gl.NEAREST);
+    this.lightTex = this.makeTexture(LIGHT_UNIT, gl.LINEAR);
     this.vao = gl.createVertexArray()!;
     this.vbo = gl.createBuffer()!;
     gl.bindVertexArray(this.vao);
@@ -143,15 +143,20 @@ export class GroundBlend {
     gl.uniform2fv(this.at.u_layer, layer);
   }
 
-  private makeTexture(filter: number): WebGLTexture {
+  private bindOn(unit: number, tex: WebGLTexture): void {
+    this.gl.activeTexture(this.gl.TEXTURE0 + unit);
+    this.gl.bindTexture(this.gl.TEXTURE_2D, tex);
+  }
+
+  private makeTexture(unit: number, filter: number): WebGLTexture {
     const gl = this.gl;
     const tex = gl.createTexture()!;
-    gl.bindTexture(gl.TEXTURE_2D, tex);
+    this.bindOn(unit, tex);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, filter);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, filter);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    gl.bindTexture(gl.TEXTURE_2D, null);
+    gl.activeTexture(gl.TEXTURE0);
     return tex;
   }
 
@@ -189,10 +194,11 @@ export class GroundBlend {
       const { x, y } = t.position;
       if (x >= 0 && y >= 0 && x < w && y < h) this.kinds[y * w + x] = t.ground ?? 0;
     }
-    gl.bindTexture(gl.TEXTURE_2D, this.kindTex);
+    this.bindOn(KIND_UNIT, this.kindTex);
     gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.R8UI, w, h, 0, gl.RED_INTEGER, gl.UNSIGNED_BYTE, this.kinds);
     gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
+    gl.activeTexture(gl.TEXTURE0);
   }
 
   private updateKindTexels(grid: GameGrid): void {
@@ -207,7 +213,7 @@ export class GroundBlend {
     }
     this.dirty = [];
     if (changed.length === 0) return;
-    gl.bindTexture(gl.TEXTURE_2D, this.kindTex);
+    this.bindOn(KIND_UNIT, this.kindTex);
     gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
     if (changed.length > TEXEL_UPDATE_LIMIT)
       gl.texSubImage2D(
@@ -235,6 +241,7 @@ export class GroundBlend {
           Uint8Array.of(k)
         );
     gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
+    gl.activeTexture(gl.TEXTURE0);
   }
 
   private sampleRect(r: Rect, sampler: LightSampler | undefined, time: number): Float32Array {
@@ -253,7 +260,7 @@ export class GroundBlend {
     const gl = this.gl;
     const cw = this.w + 1;
     const ch = this.h + 1;
-    gl.bindTexture(gl.TEXTURE_2D, this.lightTex);
+    this.bindOn(LIGHT_UNIT, this.lightTex);
     if (!built) gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA16F, cw, ch, 0, gl.RGBA, gl.FLOAT, null);
     const old = this.litRect;
     if (old && old.w > 0 && old.h > 0)
@@ -309,12 +316,9 @@ export class GroundBlend {
     gl.uniform3fv(this.at.u_ambient, f.ambient);
     gl.uniform1f(this.at.u_lightFlicker, f.flicker);
     gl.uniform2i(this.at.u_mapSize, this.w, this.h);
-    gl.activeTexture(gl.TEXTURE0 + ATLAS_UNIT);
-    gl.bindTexture(gl.TEXTURE_2D, this.atlas);
-    gl.activeTexture(gl.TEXTURE0 + KIND_UNIT);
-    gl.bindTexture(gl.TEXTURE_2D, this.kindTex);
-    gl.activeTexture(gl.TEXTURE0 + LIGHT_UNIT);
-    gl.bindTexture(gl.TEXTURE_2D, this.lightTex);
+    this.bindOn(ATLAS_UNIT, this.atlas);
+    this.bindOn(KIND_UNIT, this.kindTex);
+    this.bindOn(LIGHT_UNIT, this.lightTex);
     gl.activeTexture(gl.TEXTURE0);
     gl.bindVertexArray(this.vao);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
