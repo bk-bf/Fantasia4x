@@ -148,8 +148,9 @@ async function loadGame(page, origin) {
   await page.goto(`${origin}/`);
   await page.waitForFunction(
     () =>
-      [...document.querySelectorAll('button.menu-btn')].some(
-        (b) => b.textContent.trim() === 'Load Game' && !b.disabled
+      [...document.querySelectorAll('button')].some(
+        (b) =>
+          (b.getAttribute('aria-label') ?? b.textContent.trim()) === 'Load Game' && !b.disabled
       ),
     null,
     { timeout: 300_000, polling: 500 }
