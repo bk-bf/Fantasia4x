@@ -279,6 +279,7 @@ export function rollWoundClotting(
 ): boolean {
   let changed = false;
   for (const limb of limbs) {
+    if (!((limb.bleedRate ?? 0) > 0)) continue;
     let limbChanged = false;
     for (const part of limb.parts ?? []) {
       for (const w of part.injuries) {
