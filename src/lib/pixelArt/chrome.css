@@ -2,8 +2,8 @@
   position: relative;
   isolation: isolate;
 }
-.chrome > canvas.skin,
-.chrome > canvas.lit {
+.chrome > img.skin,
+.chrome > img.lit {
   position: absolute;
   left: 0;
   top: 0;
@@ -13,27 +13,27 @@
   pointer-events: none;
   image-rendering: pixelated;
 }
-.chrome > canvas.skin {
+.chrome > img.skin {
   filter: url(#ambient-tint);
 }
-.chrome > canvas.lit {
+.chrome > img.lit {
   filter: url(#ambient-tint-lit);
 }
 :root[data-theme='timber']
   :is([data-chrome='win'], [data-chrome='card'], [data-chrome='tip'], [data-chrome='tag'])
-  > canvas.skin {
+  > img.skin {
   filter: url(#ambient-tint) drop-shadow(3px 4px 0 rgb(6 4 3 / 0.45));
 }
-:root[data-theme='vellum'] .chrome > canvas.skin {
+:root[data-theme='vellum'] .chrome > img.skin {
   filter: url(#ambient-tint) drop-shadow(3px 3px 0 rgb(6 4 3 / 0.5));
 }
-:root[data-theme='vellum'] .chrome .chrome > canvas.skin {
+:root[data-theme='vellum'] .chrome .chrome > img.skin {
   filter: url(#ambient-tint-lit);
 }
-[data-chrome='rail'] > canvas.skin,
-:root[data-theme='vellum'] [data-chrome='rail'] > canvas.skin {
+[data-chrome='rail'] > img.skin,
+:root[data-theme='vellum'] [data-chrome='rail'] > img.skin {
   filter: url(#ambient-tint) drop-shadow(0 2px 0 rgb(6 4 3 / 0.55));
 }
-:root[data-theme='timber'] [data-modal] > canvas.skin {
+:root[data-theme='timber'] [data-modal] > img.skin {
   filter: url(#ambient-tint) drop-shadow(4px 6px 0 rgb(6 4 3 / 0.55));
 }

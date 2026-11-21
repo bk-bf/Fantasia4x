@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { pixels } from '$lib/pixelArt/pixels';
+  import { picture, toArt } from '$lib/pixelArt/picture';
   import type { RampName } from '$lib/pixelArt/palette';
   import { SKINS } from '$lib/pixelArt/skins';
   import { uiTheme } from '$lib/stores/uiPrefs';
@@ -14,11 +14,11 @@
   let w = $state(0);
   const h = $derived(thin ? 5 : 9);
   const frac = $derived(Math.round(Math.max(0, Math.min(1, value)) * 200) / 200);
-  const art = $derived(w > 2 ? SKINS[$uiTheme].bar(w, h, frac, ramp) : null);
+  const art = $derived(w > 2 ? toArt(SKINS[$uiTheme].bar(w, h, frac, ramp)) : null);
 </script>
 
 <i class="skin-bar" class:thin data-title={title} bind:clientWidth={w}>
-  {#if art}<span {@attach pixels(art, 1)}></span>{/if}
+  {#if art}<span {@attach picture(art)}></span>{/if}
 </i>
 
 <style>
@@ -37,10 +37,10 @@
     position: absolute;
     inset: 0;
   }
-  .skin-bar :global(canvas) {
+  .skin-bar :global(img) {
     filter: url(#ambient-tint-data);
   }
-  :global(:root[data-theme='vellum']) .skin-bar :global(canvas) {
+  :global(:root[data-theme='vellum']) .skin-bar :global(img) {
     filter: url(#ambient-tint-lit);
   }
 </style>

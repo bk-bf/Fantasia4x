@@ -2,14 +2,19 @@ import type { Attachment } from 'svelte/attachments';
 import { get } from 'svelte/store';
 import { uiTheme } from '$lib/stores/uiPrefs';
 import type { ThemeId } from '$lib/components/UI/theme/themes';
-import { blank, pen } from './canvas';
-import { SKINS, type ChromeKind, type Painted } from './skins';
+import { artImage, toArt, type Art } from './picture';
+import { SKINS, type ChromeKind } from './skins';
 import './chrome.css';
 
 const KEEP = 24;
-const painted = new Map<string, Painted | null>();
+interface PaintedArt {
+  base: Art;
+  lit?: Art;
+}
 
-function paintedFor(theme: ThemeId, kind: ChromeKind, w: number, h: number): Painted | null {
+const painted = new Map<string, PaintedArt | null>();
+
+function paintedFor(theme: ThemeId, kind: ChromeKind, w: number, h: number): PaintedArt | null {
   const key = `${theme}|${kind}|${w}|${h}`;
   if (painted.has(key)) {
     const hit = painted.get(key) ?? null;
@@ -17,17 +22,11 @@ function paintedFor(theme: ThemeId, kind: ChromeKind, w: number, h: number): Pai
     painted.set(key, hit);
     return hit;
   }
-  const made = SKINS[theme].chrome[kind](w, h);
+  const out = SKINS[theme].chrome[kind](w, h);
+  const made = out && { base: toArt(out.base), lit: out.lit && toArt(out.lit) };
   painted.set(key, made);
   if (painted.size > KEEP) painted.delete(painted.keys().next().value as string);
   return made;
-}
-
-function copy(src: HTMLCanvasElement, cls: string): HTMLCanvasElement {
-  const c = blank(src.width, src.height);
-  c.className = cls;
-  pen(c)?.drawImage(src, 0, 0);
-  return c;
 }
 
 export function chrome(kind: ChromeKind): Attachment<HTMLElement> {
@@ -37,14 +36,16 @@ export function chrome(kind: ChromeKind): Attachment<HTMLElement> {
     let theme = get(uiTheme);
     let w = 0;
     let h = 0;
-    let shown: HTMLCanvasElement[] = [];
+    let shown: HTMLImageElement[] = [];
     const draw = () => {
       for (const c of shown) c.remove();
       shown = [];
       if (w < 2 || h < 2) return;
       const out = paintedFor(theme, kind, w, h);
       if (!out) return;
-      shown = out.lit ? [copy(out.base, 'skin'), copy(out.lit, 'lit')] : [copy(out.base, 'skin')];
+      shown = out.lit
+        ? [artImage(out.base, 'skin'), artImage(out.lit, 'lit')]
+        : [artImage(out.base, 'skin')];
       el.prepend(...shown);
     };
     const seen = new ResizeObserver(() => {

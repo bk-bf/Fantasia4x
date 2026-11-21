@@ -81,7 +81,7 @@
     text-transform: var(--head-case, uppercase);
     letter-spacing: 1px;
   }
-  .cbtn.verb :global(.glyph canvas) {
+  .cbtn.verb :global(.glyph img) {
     filter: none;
   }
   .cbtn:disabled {
@@ -93,6 +93,15 @@
       0 0 0 1px var(--ember),
       0 0 9px rgb(255 160 60 / 0.4);
   }
+  .cbtn.verb:disabled span {
+    color: var(--text-muted);
+  }
+  :global(:root[data-theme='timber']) .cbtn.verb:disabled {
+    box-shadow: none;
+  }
+  :global(:root[data-theme='timber']) .cbtn.verb:disabled span {
+    text-shadow: 1px 1px 0 #0b0806;
+  }
   :global(:root[data-theme='vellum']) .cbtn.verb {
     line-height: 22px;
     letter-spacing: 0;
@@ -103,7 +112,7 @@
       0 0 6px rgb(255 160 60 / 0.7),
       1px 1px 0 #0b0806;
   }
-  :global(:root[data-theme='vellum']) .cbtn.on :global(.glyph canvas) {
+  :global(:root[data-theme='vellum']) .cbtn.on :global(.glyph img) {
     filter: invert(1);
   }
 </style>
