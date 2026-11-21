@@ -43,7 +43,7 @@ import { entityService } from '$lib/game/services/EntityService';
 import {
   loadSave,
   scheduleSave,
-  deleteSave,
+  retireActiveSave,
   saveGameNow,
   saveSnapshotNow,
   overwriteSnapshotNow,
@@ -506,7 +506,7 @@ function devClearAllItems() {
 }
 
 function resetGame() {
-  deleteSave().catch(console.error);
+  retireActiveSave().catch(console.error);
   clearActivityLog();
   const seed = freshSeed();
   rng.reseed(seed);

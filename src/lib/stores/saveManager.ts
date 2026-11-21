@@ -344,6 +344,12 @@ export async function deleteSaveById(id: string): Promise<void> {
   ]);
 }
 
+export function retireActiveSave(): Promise<void> {
+  const dying = activeSaveId;
+  mintActiveSave();
+  return dying ? deleteSaveById(dying) : Promise.resolve();
+}
+
 export async function deleteSave(): Promise<void> {
   if (!browser) return;
   clearLegacyLocalStorage();
