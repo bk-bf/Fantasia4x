@@ -55,27 +55,31 @@
   }
 </script>
 
-<div class="window-layer" style={$panelAmbient.vars} bind:clientWidth={W} bind:clientHeight={H}>
-  {#if veiled}<div class="veil"></div>{/if}
-  {#each mounted as id (id)}
-    {@const spec = WINDOWS[id]}
-    <GameWindow
-      {id}
-      title={spec.title}
-      modal={spec.modal}
-      pos={pos[id] ?? null}
-      width={widthOf(id)}
-      height={heightOf(id)}
-      z={(spec.modal ? 40 : 10) + open.indexOf(id)}
-      onsize={(w, h) => sized(id, w, h)}
-      onmove={(p) => (pos[id] = dragTo(p, size[id]?.w ?? 0, area))}
-      onraise={() => uiState.raiseWindow(id)}
-      onclose={() => uiState.closeWindow(id)}
-    >
-      <spec.component />
-    </GameWindow>
-  {/each}
-</div>
+<svelte:window bind:innerWidth={W} bind:innerHeight={H} />
+
+{#if mounted.length}
+  <div class="window-layer" style={$panelAmbient.vars}>
+    {#if veiled}<div class="veil"></div>{/if}
+    {#each mounted as id (id)}
+      {@const spec = WINDOWS[id]}
+      <GameWindow
+        {id}
+        title={spec.title}
+        modal={spec.modal}
+        pos={pos[id] ?? null}
+        width={widthOf(id)}
+        height={heightOf(id)}
+        z={(spec.modal ? 40 : 10) + open.indexOf(id)}
+        onsize={(w, h) => sized(id, w, h)}
+        onmove={(p) => (pos[id] = dragTo(p, size[id]?.w ?? 0, area))}
+        onraise={() => uiState.raiseWindow(id)}
+        onclose={() => uiState.closeWindow(id)}
+      >
+        <spec.component />
+      </GameWindow>
+    {/each}
+  </div>
+{/if}
 
 <style>
   .window-layer {
@@ -83,6 +87,7 @@
     inset: 0;
     z-index: 60;
     pointer-events: none;
+    will-change: transform;
   }
   .veil {
     position: absolute;

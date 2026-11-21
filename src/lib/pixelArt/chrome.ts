@@ -2,7 +2,7 @@ import type { Attachment } from 'svelte/attachments';
 import { get } from 'svelte/store';
 import { uiTheme } from '$lib/stores/uiPrefs';
 import type { ThemeId } from '$lib/components/UI/theme/themes';
-import { blank } from './canvas';
+import { blank, pen } from './canvas';
 import { SKINS, type ChromeKind, type Painted } from './skins';
 import './chrome.css';
 
@@ -26,7 +26,7 @@ function paintedFor(theme: ThemeId, kind: ChromeKind, w: number, h: number): Pai
 function copy(src: HTMLCanvasElement, cls: string): HTMLCanvasElement {
   const c = blank(src.width, src.height);
   c.className = cls;
-  c.getContext('2d')?.drawImage(src, 0, 0);
+  pen(c)?.drawImage(src, 0, 0);
   return c;
 }
 

@@ -1,4 +1,4 @@
-import { blank, paint } from './canvas';
+import { blank, paint, pen } from './canvas';
 import { clamp, dith, fbm, hash, noise } from './noise';
 import { RAMPS, pick, type Rgb } from './palette';
 
@@ -60,7 +60,7 @@ export function candleMask(src: HTMLCanvasElement, rim = 22): HTMLCanvasElement 
   const w = src.width;
   const h = src.height;
   const c = blank(w, h);
-  const g = c.getContext('2d');
+  const g = pen(c);
   if (!g) return c;
   g.drawImage(src, 0, 0);
   const img = g.getImageData(0, 0, w, h);
