@@ -11,6 +11,7 @@ import type { GameState } from '../core/types';
 import { toSnapshot, fromSnapshot, type HeadlessSnapshot } from './snapshot';
 import { setSimLogSink, setVerboseLogging, type SimLogSink } from '../core/util/logSink';
 import { setEntityTrace, drainEntityTiming } from '../services/entity/entityAI';
+import { clearTileDeltas } from '../core/state/tileDeltas';
 
 export interface TraceLine {
   turn: number;
@@ -64,6 +65,7 @@ export class HeadlessSession {
     let ticked = 0;
     for (let i = 0; i < n; i++) {
       result = this.engine.processGameTurn();
+      clearTileDeltas();
       ticked++;
       if (!result.success) break;
     }
