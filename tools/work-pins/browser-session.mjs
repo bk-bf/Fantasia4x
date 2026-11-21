@@ -13,6 +13,7 @@ const PAUSE_AT_MS = EPOCH_MS + 24 * 3600 * 1000;
 const VIEWPORT = { width: 1280, height: 800 };
 const STEP_TIMEOUT_MS = 120_000;
 const NETWORK_QUIET_MS = 3000;
+const LOG_ENDPOINT = '/api/log';
 const SAVE_ID = 'work-pins';
 const RANDOM_SEED = 0x2545f491;
 const PAUSE_BUTTON = 'button.ctrl-btn:has-text("PAUSE"), button.ctrl-btn:has-text("RESUME")';
@@ -129,16 +130,21 @@ async function seedSave(page, origin, body, log) {
   await page.unroute(route);
 }
 
+function loadsAsset(request) {
+  return new URL(request.url()).pathname !== LOG_ENDPOINT;
+}
+
 function trackNetwork(page) {
   let inflight = 0;
   let lastChange = Date.now();
-  const bump = (d) => {
+  const bump = (request, d) => {
+    if (!loadsAsset(request)) return;
     inflight += d;
     lastChange = Date.now();
   };
-  page.on('request', () => bump(1));
-  page.on('requestfinished', () => bump(-1));
-  page.on('requestfailed', () => bump(-1));
+  page.on('request', (r) => bump(r, 1));
+  page.on('requestfinished', (r) => bump(r, -1));
+  page.on('requestfailed', (r) => bump(r, -1));
   return async (quietMs) => {
     while (inflight > 0 || Date.now() - lastChange < quietMs) await sleep(250);
   };
