@@ -12,12 +12,24 @@ import {
 export { PAINTED_TILES } from './flag.js';
 
 let active: PaintedTileset | null = null;
+let groundIds: string[] = [];
+let groundIndex = new Map<string, number>();
 
 const NO_PAINT = {};
 const ANY_ID = '*';
 
 export function setPaintedTileset(tileset: PaintedTileset | null): void {
   active = tileset;
+  groundIds = [...(tileset?.lookup.get('subterrain')?.keys() ?? [])];
+  groundIndex = new Map(groundIds.map((id, i) => [id, i + 1]));
+}
+
+export function paintedGroundKind(subType: string): number {
+  return groundIndex.get(subType) ?? 0;
+}
+
+export function paintedGroundIds(): readonly string[] {
+  return groundIds;
 }
 
 export function paintedTileset(): PaintedTileset | null {

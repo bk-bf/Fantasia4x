@@ -3,8 +3,8 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { WorldTile, PlacedBuilding } from '$lib/game/core/types';
 
-vi.mock('$lib/webgl/painted/flag', () => ({ PAINTED_TILES: true }));
-vi.mock('$lib/webgl/painted/flag.js', () => ({ PAINTED_TILES: true }));
+vi.mock('$lib/webgl/painted/flag', () => ({ PAINTED_TILES: true, GROUND_BLEND: false }));
+vi.mock('$lib/webgl/painted/flag.js', () => ({ PAINTED_TILES: true, GROUND_BLEND: false }));
 
 const { buildTileset, parseManifest } = await import('$lib/webgl/painted/manifest');
 const { setPaintedTileset, paintedEntity } = await import('$lib/webgl/painted/tileset');

@@ -74,6 +74,7 @@ export class GridRenderer {
   private snowChunks: Map<string, TerrainChunk> = new Map();
   private terrainFrame = 0;
   chunksRebuiltLastRender = 0;
+  skipBlendedGround = false;
   private chunkDirty = new Map<string, number>();
   private snowChunkDirty = new Map<string, number>();
   private chunkDirtyCounter = 0;
@@ -248,7 +249,11 @@ export class GridRenderer {
       chunk.builtDirty !== dirtyStamp
     ) {
       this.chunksRebuiltLastRender++;
-      const tiles = grid.getTilesInRegion(cx * CS, cy * CS, CS, CS);
+      const region = grid.getTilesInRegion(cx * CS, cy * CS, CS, CS);
+      const tiles =
+        this.skipBlendedGround && chunks === this.terrainChunks
+          ? region.filter((t) => !t.ground)
+          : region;
       if (!chunk) {
         chunk = {
           vao: null,
