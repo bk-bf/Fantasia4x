@@ -14,14 +14,9 @@ const ITEMS_JSON = join(
   'items.json'
 );
 
-export const PAINTED_ITEMS = [
-  'candle',
-  'handcart',
-  'hide_boots',
-  'iron_hammer',
-  'sovereign_crown',
-  'wooden_chest'
-];
+const allItems = () => JSON.parse(readFileSync(ITEMS_JSON, 'utf8'));
+
+export const PAINTED_ITEMS = allItems().map((/** @type {{ id: string }} */ i) => i.id);
 
 const title = (s = '') => s.replace(/_/g, ' ').replace(/\b\w/g, (m) => m.toUpperCase());
 
@@ -29,10 +24,12 @@ const pick = (o = Object.fromEntries([['', /** @type {unknown} */ (null)]]), key
   Object.fromEntries(keys.filter((k) => o[k] !== undefined).map((k) => [k, o[k]]));
 
 export function itemObjects(ids = PAINTED_ITEMS) {
-  const rows = JSON.parse(readFileSync(ITEMS_JSON, 'utf8'));
+  const rows = allItems();
   const wanted = new Set(ids);
   const found = rows.filter((/** @type {Record<string, any>} */ i) => wanted.has(i.id));
-  const missing = ids.filter((id) => !found.some((/** @type {{ id: string }} */ i) => i.id === id));
+  const missing = ids.filter(
+    (/** @type {string} */ id) => !found.some((/** @type {{ id: string }} */ i) => i.id === id)
+  );
   if (missing.length) throw new Error(`items.json has no ${missing.join(', ')}`);
   return found.map((/** @type {Record<string, any>} */ i) => ({
     cat: 'item',

@@ -1,4 +1,9 @@
 <script module lang="ts">
+  import { paintedSpriteCanvas } from '$lib/webgl/painted/loader';
+  import type { PaintedKind } from '$lib/webgl/painted/manifest';
+  import { fitInto } from '$lib/pixelArt/shrink';
+  import { itemService } from '$lib/game/services/ItemService';
+
   const _sheetCache = new Map<string, HTMLCanvasElement | null>();
   const _sheetWaiters = new Map<string, Set<() => void>>();
 
@@ -35,6 +40,12 @@
     img.src = `/tilesets/bitlands_${name}.bmp`;
     return null;
   }
+
+  const _painted: Record<string, Promise<HTMLCanvasElement | null>> = {};
+  function paintedArt(kind: PaintedKind, id: string): Promise<HTMLCanvasElement | null> {
+    const key = `${kind}/${id}`;
+    return (_painted[key] ??= paintedSpriteCanvas(kind, id).catch(() => null));
+  }
 </script>
 
 <script lang="ts">
@@ -43,22 +54,56 @@
   let {
     charSpans = undefined,
     tint = null,
-    px = 16
-  }: { charSpans?: CharSpan[]; tint?: string | null; px?: number } = $props();
+    px = 16,
+    item = null,
+    building = null
+  }: {
+    charSpans?: CharSpan[];
+    tint?: string | null;
+    px?: number;
+    item?: string | null;
+    building?: string | null;
+  } = $props();
+
+  const itemDef = $derived(item ? itemService.getItemById(item) : undefined);
+  const spans = $derived(charSpans ?? itemDef?.charSpans);
+  const tone = $derived(tint ?? itemDef?.color ?? null);
+  const painted = $derived<[PaintedKind, string] | null>(
+    item ? ['item', item] : building ? ['building', building] : null
+  );
+
+  let art = $state<HTMLCanvasElement | null>(null);
+  let paintedBox: HTMLCanvasElement | undefined = $state();
+
+  $effect(() => {
+    art = null;
+    if (!painted) return;
+    let live = true;
+    paintedArt(painted[0], painted[1]).then((c) => live && (art = c));
+    return () => (live = false);
+  });
+
+  $effect(() => {
+    if (!art || !paintedBox) return;
+    const fit = fitInto(art, px);
+    paintedBox.width = fit.width;
+    paintedBox.height = fit.height;
+    paintedBox.getContext('2d', { willReadFrequently: true })?.drawImage(fit, 0, 0);
+  });
 
   const CELL_W = 12;
   const CELL_H = 18;
   const COLS = 16;
 
-  const span = $derived((charSpans ?? []).find((s) => s.sheet && (s.id != null || s.from != null)));
-  const literal = $derived((charSpans ?? []).find((s) => s.literal)?.literal ?? null);
+  const span = $derived((spans ?? []).find((s) => s.sheet && (s.id != null || s.from != null)));
+  const literal = $derived((spans ?? []).find((s) => s.literal)?.literal ?? null);
 
   let canvasEl: HTMLCanvasElement | undefined = $state();
 
   function draw() {
     const node = canvasEl;
     if (!node || !span?.sheet) return;
-    const ctx = node.getContext('2d');
+    const ctx = node.getContext('2d', { willReadFrequently: true });
     if (!ctx) return;
     node.width = CELL_W;
     node.height = CELL_H;
@@ -70,9 +115,9 @@
     const row = Math.floor(id / COLS);
     ctx.imageSmoothingEnabled = false;
     ctx.drawImage(sheet, col * CELL_W, row * CELL_H, CELL_W, CELL_H, 0, 0, CELL_W, CELL_H);
-    if (tint) {
+    if (tone) {
       ctx.globalCompositeOperation = 'source-atop';
-      ctx.fillStyle = tint;
+      ctx.fillStyle = tone;
       ctx.fillRect(0, 0, CELL_W, CELL_H);
       ctx.globalCompositeOperation = 'source-over';
     }
@@ -80,22 +125,29 @@
 
   $effect(() => {
     void span;
-    void tint;
+    void tone;
     void canvasEl;
     draw();
   });
 </script>
 
-{#if span?.sheet}
+{#if art}
+  <canvas bind:this={paintedBox} class="painted-icon" style="width:{px}px;height:{px}px"></canvas>
+{:else if span?.sheet}
   <canvas bind:this={canvasEl} class="sprite-icon" style="height:{px}px"></canvas>
 {:else if literal}
-  <span class="sprite-literal" style="font-size:{px}px; color:{tint ?? 'inherit'}">{literal}</span>
+  <span class="sprite-literal" style="font-size:{px}px; color:{tone ?? 'inherit'}">{literal}</span>
 {/if}
 
 <style>
   .sprite-icon {
     width: auto;
     aspect-ratio: 12 / 18;
+    image-rendering: pixelated;
+    flex-shrink: 0;
+    display: block;
+  }
+  .painted-icon {
     image-rendering: pixelated;
     flex-shrink: 0;
     display: block;

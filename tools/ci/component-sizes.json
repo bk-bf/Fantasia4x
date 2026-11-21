@@ -1,6 +1,6 @@
 {
-  "src/lib/components/pawn/CarryItemCard.svelte": 252,
-  "src/lib/components/pawn/EquipmentDoll.svelte": 382,
+  "src/lib/components/pawn/CarryItemCard.svelte": 250,
+  "src/lib/components/pawn/EquipmentDoll.svelte": 378,
   "src/lib/components/pawn/PawnAttributes.svelte": 244,
   "src/lib/components/pawn/PawnInventory.svelte": 221,
   "src/lib/components/pawn/PawnNeeds.svelte": 230,
