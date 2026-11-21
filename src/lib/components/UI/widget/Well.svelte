@@ -5,16 +5,25 @@
 
   let {
     title,
+    hint,
     tools,
     class: cls = '',
     children
-  }: { title?: string; tools?: Snippet; class?: string; children: Snippet } = $props();
+  }: {
+    title?: string;
+    hint?: string;
+    tools?: Snippet;
+    class?: string;
+    children: Snippet;
+  } = $props();
 </script>
 
 <section class="well {cls}" {@attach chrome('well')}>
   {#if title || tools}
     <header>
-      {#if title}<PanelTitle>{title}</PanelTitle>{/if}
+      {#if title}<PanelTitle
+          >{title}{#if hint}<em>{hint}</em>{/if}</PanelTitle
+        >{/if}
       {@render tools?.()}
     </header>
   {/if}
