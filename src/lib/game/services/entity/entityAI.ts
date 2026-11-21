@@ -828,6 +828,8 @@ export function stepHostile(
       canForage && forageCooldownExpired
         ? findNearestFoodTile(state, mob.x, mob.y, FORAGE_RADIUS, tileKinds)
         : null;
+    if (canForage && forageCooldownExpired && !forageTile)
+      mob.forageCooldownUntil = turn + ticksFromSeconds(FORAGE_COOLDOWN_SECONDS);
     const forageDist = forageTile ? manhattan(mob.x, mob.y, forageTile.x, forageTile.y) : Infinity;
 
     const prey =

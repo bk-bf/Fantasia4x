@@ -7,6 +7,8 @@ import { getCreatureById } from '$lib/game/core/defs/creatures';
 import { pathfinderService } from '$lib/game/services/PathfinderService';
 import { countPathSearches } from '../pathSearchCounter';
 import { clearConnectivity } from '$lib/game/services/entity/connectivity';
+import { FORAGE_COOLDOWN_SECONDS } from '$lib/game/services/entity/entityConstants';
+import { ticksFromSeconds } from '$lib/game/core/util/time';
 import type { GameState, Mob, Pawn, WorldTile } from '$lib/game/core/types';
 
 function plainMap(w: number, h: number, wall: (x: number, y: number) => boolean): WorldTile[][] {
@@ -105,5 +107,30 @@ describe('mobs whose target sits in another walkable region', () => {
       expect(m.state).toBe('Traveling');
       expect(m.x).toBeGreaterThan(5);
     }
+  });
+});
+
+describe('hungry foragers with no food in range', () => {
+  beforeEach(async () => {
+    await pathfinderService.init();
+    clearConnectivity();
+  });
+
+  it('a boar that finds nothing to eat waits out the forage cooldown before scanning again', () => {
+    const def = getCreatureById('boar')!;
+    const boar = makeMob(def, 60, 60, 0);
+    const state = {
+      turn: 6000,
+      mobs: [{ ...boar, needs: { ...boar.needs, hunger: 60, fatigue: 0 } }],
+      pawns: [],
+      worldMap: plainMap(120, 120, () => false),
+      stockpile: {},
+      droppedItems: [],
+      buildings: []
+    } as unknown as GameState;
+    const end = stepMobs(state, 3);
+    const cooldown = end.mobs![0].forageCooldownUntil ?? 0;
+    expect(cooldown).toBeGreaterThan(end.turn);
+    expect(cooldown).toBeLessThanOrEqual(end.turn + ticksFromSeconds(FORAGE_COOLDOWN_SECONDS));
   });
 });

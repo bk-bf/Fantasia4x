@@ -57,14 +57,15 @@ export function findNearestFoodTile(
   kinds: Set<TileFoodKind>
 ): { x: number; y: number } | null {
   if (kinds.size === 0) return null;
+  const map = state.worldMap;
   for (let d = 0; d <= radius; d++) {
     for (let dx = -d; dx <= d; dx++) {
       const ay = d - Math.abs(dx);
-      const dys = ay === 0 ? [0] : [ay, -ay];
-      for (const dy of dys) {
-        const tile = state.worldMap[y + dy]?.[x + dx];
-        if (tile?.walkable && edibleResourceOnTile(tile, kinds)) return { x: x + dx, y: y + dy };
-      }
+      const tile = map[y + ay]?.[x + dx];
+      if (tile?.walkable && edibleResourceOnTile(tile, kinds)) return { x: x + dx, y: y + ay };
+      if (ay === 0) continue;
+      const mirror = map[y - ay]?.[x + dx];
+      if (mirror?.walkable && edibleResourceOnTile(mirror, kinds)) return { x: x + dx, y: y - ay };
     }
   }
   return null;
