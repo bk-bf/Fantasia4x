@@ -1,7 +1,12 @@
 <script lang="ts">
   import { fade } from 'svelte/transition';
   import { onMount } from 'svelte';
+  import { pixels } from '$lib/pixelArt/pixels';
   import { loadingStatus } from '$lib/stores/gameState';
+  import { uiTheme } from '$lib/stores/uiPrefs';
+  import LoadingSandglass from './LoadingSandglass.svelte';
+  import LoadingWall from './LoadingWall.svelte';
+  import { loadingBoard } from './loadingArt';
 
   const TIPS = [
     'A colonist who collapses is down, not dead — send a caretaker before the bleeding wins.',
@@ -29,6 +34,18 @@
   let tip = $state(TIPS[order[0]]);
   let fading = $state(false);
 
+  let width = $state(0);
+  let height = $state(0);
+  let boardW = $state(0);
+  let boardH = $state(0);
+  const board = $derived({
+    x: Math.round((width - boardW) / 2),
+    y: Math.round((height - boardH) / 2),
+    w: boardW,
+    h: boardH
+  });
+  const boardArt = $derived(boardW && boardH ? loadingBoard($uiTheme, boardW, boardH) : null);
+
   onMount(() => {
     const id = setInterval(() => {
       fading = true;
@@ -42,13 +59,23 @@
   });
 </script>
 
-<div class="loading-screen" out:fade={{ duration: 250 }}>
-  <div class="box">
-    <div class="title">FANTASIA</div>
-    <div class="bar" role="status" aria-label="Loading"><div class="fill"></div></div>
-    <div class="status">{$loadingStatus}</div>
-    <div class="tip" class:fading aria-live="polite">{tip}</div>
-  </div>
+<svelte:window bind:innerWidth={width} bind:innerHeight={height} />
+
+<div class="loading-screen" data-skin={$uiTheme} out:fade={{ duration: 250 }}>
+  {#if boardArt}
+    <LoadingWall theme={$uiTheme} {width} {height} {board} />
+  {/if}
+  <section class="board" bind:offsetWidth={boardW} bind:offsetHeight={boardH}>
+    {#if boardArt}
+      <span class="board-art" aria-hidden="true" {@attach pixels(boardArt, 1)}></span>
+    {/if}
+    <h1 class="title">Fantasia</h1>
+    <LoadingSandglass kind={$uiTheme} />
+    <p class="status" class:ready={$loadingStatus === 'Ready'} role="status">{$loadingStatus}</p>
+    <div class="tip">
+      <p class:fading aria-live="polite">{tip}</p>
+    </div>
+  </section>
 </div>
 
 <style>
@@ -56,78 +83,94 @@
     position: fixed;
     inset: 0;
     z-index: 1000;
+    overflow: hidden;
     background: var(--bg);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-family: var(--font-mono);
+    display: grid;
+    place-items: center;
+    font: 18px/20px var(--font-pixel);
+    letter-spacing: 0.6px;
+    color: var(--text);
+    --hot: var(--accent-hi);
   }
-  .box {
+  .board {
+    position: relative;
+    isolation: isolate;
+    width: min(460px, calc(100vw - 32px));
+    padding: 26px 30px 30px;
     display: flex;
     flex-direction: column;
-    gap: 16px;
     align-items: center;
-    width: min(440px, 80vw);
+    gap: 12px;
+  }
+  .board-art {
+    position: absolute;
+    left: 0;
+    top: 0;
+    z-index: -1;
   }
   .title {
-    color: var(--accent-hi);
-    font-size: 19px;
-    letter-spacing: 0.5em;
-    text-indent: 0.5em;
-  }
-  .bar {
-    position: relative;
-    width: 260px;
-    height: 6px;
-    overflow: hidden;
-    background: var(--bg-panel);
-    border: 1px solid var(--border);
-  }
-  .fill {
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    left: 0;
-    width: 35%;
-    background: var(--accent-hi);
-    animation: bar-slide 1s linear infinite;
-  }
-  @keyframes bar-slide {
-    from {
-      transform: translateX(-110%);
-    }
-    to {
-      transform: translateX(390%);
-    }
+    margin: 0;
+    font: 52px/44px 'Fantasia Banner', var(--font-display);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: #ffc466;
   }
   .status {
-    color: var(--text-muted, #555);
-    font-size: 13px;
-    letter-spacing: 0.15em;
-    min-height: 1em;
+    margin: 0;
+    min-height: 20px;
+    color: var(--text-dim);
+  }
+  .status.ready {
+    color: var(--hot);
   }
   .tip {
-    color: var(--text-dim);
-    font-size: 13px;
-    font-style: italic;
-    line-height: 1.5;
-    letter-spacing: 0.02em;
-    text-align: center;
-    min-height: 2.4em;
-    max-width: 38ch;
-    opacity: 0.85;
-    transition: opacity 0.26s ease;
+    align-self: stretch;
+    min-height: 76px;
+    padding: 4px 16px 0;
+    display: grid;
+    place-items: center;
+    border-top: 1px solid color-mix(in srgb, var(--text-dim) 30%, transparent);
   }
-  .tip.fading {
+  .tip p {
+    margin: 0;
+    text-align: center;
+    color: var(--text-dim);
+    transition: opacity 0.26s;
+  }
+  .tip p.fading {
     opacity: 0;
   }
+  [data-skin='timber'] {
+    text-shadow: 1px 1px 0 #0b0806;
+  }
+  [data-skin='timber'] .title {
+    text-shadow:
+      0 0 14px rgb(255 160 60 / 0.55),
+      2px 2px 0 #0b0806;
+  }
+  [data-skin='timber'] .board-art {
+    filter: drop-shadow(0 4px 0 #24170d) drop-shadow(3px 0 0 #160e08);
+  }
+  [data-skin='vellum'] {
+    --hot: var(--accent);
+  }
+  [data-skin='vellum'] .title {
+    font: 60px/50px 'Fantasia Blackletter', var(--font-display);
+    text-transform: none;
+    letter-spacing: 0;
+    color: var(--text);
+  }
+  [data-skin='vellum'] .title::first-letter {
+    color: var(--hot);
+  }
+  [data-skin='vellum'] .board-art {
+    filter: drop-shadow(5px 7px 0 rgb(4 3 2 / 0.55));
+  }
+  [data-skin='vellum'] .tip p {
+    color: var(--text);
+  }
   @media (prefers-reduced-motion: reduce) {
-    .fill {
-      animation: none;
-      width: 100%;
-      opacity: 0.5;
-    }
-    .tip {
+    .tip p {
       transition: none;
     }
   }
