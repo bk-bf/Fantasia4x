@@ -7,11 +7,13 @@
   import { masterVolume, musicVolume, sfxVolume, ambientVolume } from '$lib/stores/uiPrefs';
   import { cameraViewport, cameraTileSize, cameraZoomRange } from '$lib/stores/cameraView';
   import { environmentService, getAmbientLight } from '$lib/game/services/EnvironmentService';
-  import { getCreatureById } from '$lib/game/core/defs/creatures';
   import { jobService } from '$lib/game/services/JobService';
   import { audioService } from '$lib/audio/AudioService';
+  import { spatialAt, zoomGainFor } from '$lib/audio/audibility';
+  import { creatureCallMix } from '$lib/audio/creatureCalls';
   import {
     resolveAmbient,
+    ambientMix,
     creatureClips,
     CREATURE_SOUND_LABELS,
     workClipsFor,
@@ -20,7 +22,6 @@
     UI_SFX,
     THREAT_ALERT_SFX,
     type MusicScene,
-    type AmbientBed,
     type AmbientLayers
   } from '$lib/audio/manifest';
 
@@ -31,14 +32,6 @@
   const NIGHT_HYST = 0.06;
 
   const CREATURE_TICK_MS = 400;
-  const ZOOM_OUT_FLOOR = 0.2;
-  const ZOOM_REF_LOW = 12;
-  const ZOOM_REF_HIGH = 28;
-  const PAWN_NEAR_TILES = 8;
-  const PAWN_FAR_TILES = 40;
-  const PAWN_FAR_FLOOR = 0.1;
-  const OFFSCREEN_MAX = 0.12;
-  const OFFSCREEN_MARGIN = 0.6;
   const CALL_FAST_MS = 6000;
   const CALL_SLOW_MS = 36000;
   const CALL_MIN_GAP_MS = 3000;
@@ -61,8 +54,6 @@
 
   const THREAT_ALERT_GAIN = 0.85;
 
-  const WEATHER_BEDS = new Set<AmbientBed>(['wind', 'rain', 'rain-heavy']);
-  const WEATHER_ZOOM_BOOST = 0.3;
   let baseAmbient: AmbientLayers = {};
 
   let lastCombatAt = 0;
@@ -108,27 +99,6 @@
     });
   });
 
-  type Vp = { x: number; y: number; w: number; h: number };
-
-  function spatialAt(x: number, y: number, vp: Vp): number {
-    const x0 = vp.x;
-    const y0 = vp.y;
-    const x1 = vp.x + vp.w;
-    const y1 = vp.y + vp.h;
-    if (x >= x0 && x < x1 && y >= y0 && y < y1) return 1;
-    const dx = x < x0 ? x0 - x : x >= x1 ? x - x1 : 0;
-    const dy = y < y0 ? y0 - y : y >= y1 ? y - y1 : 0;
-    const mX = vp.w * OFFSCREEN_MARGIN;
-    const mY = vp.h * OFFSCREEN_MARGIN;
-    if (dx > mX || dy > mY) return 0;
-    return OFFSCREEN_MAX * Math.max(0, Math.min(1 - dx / mX, 1 - dy / mY));
-  }
-
-  function zoomGainFor(tile: number): number {
-    const n = Math.max(0, Math.min(1, (tile - ZOOM_REF_LOW) / (ZOOM_REF_HIGH - ZOOM_REF_LOW)));
-    return ZOOM_OUT_FLOOR + (1 - ZOOM_OUT_FLOOR) * n;
-  }
-
   function emitSfx(
     product: Map<string, number>,
     opts: {
@@ -172,48 +142,10 @@
 
   function evalCreatures(): void {
     if (!playing) return void audioService.setCreatureLevels([]);
-    const mobs = $gameState?.mobs;
-    const vp = get(cameraViewport);
-    if (!mobs?.length || vp.w <= 0) return void audioService.setCreatureLevels([]);
-
-    const zg = zoomGainFor(get(cameraTileSize));
     const pawns = ($gameState?.pawns ?? [])
       .map((p) => p.position)
       .filter((pos): pos is { x: number; y: number } => !!pos);
-
-    const product = new Map<string, number>();
-    for (const m of mobs) {
-      if (m.state === 'Sleeping' || m.state === 'Collapsed' || m.state === 'Corpse') continue;
-      const sound = getCreatureById(m.creatureId)?.audio;
-      if (!sound || creatureClips(sound).length === 0) continue;
-      const spatial = spatialAt(m.x, m.y, vp);
-      if (spatial <= 0) continue;
-
-      let pawnGain = PAWN_FAR_FLOOR;
-      if (pawns.length) {
-        let best = Infinity;
-        for (const pp of pawns) {
-          const d2 = (pp.x - m.x) ** 2 + (pp.y - m.y) ** 2;
-          if (d2 < best) best = d2;
-        }
-        const dist = Math.sqrt(best);
-        pawnGain =
-          dist <= PAWN_NEAR_TILES
-            ? 1
-            : Math.max(
-                PAWN_FAR_FLOOR,
-                1 -
-                  ((dist - PAWN_NEAR_TILES) / (PAWN_FAR_TILES - PAWN_NEAR_TILES)) *
-                    (1 - PAWN_FAR_FLOOR)
-              );
-      }
-
-      const c = Math.max(0, Math.min(1, zg * spatial * pawnGain));
-      if (c <= 0) continue;
-      product.set(sound, (product.get(sound) ?? 1) * (1 - c));
-    }
-
-    emitSfx(product, {
+    emitSfx(creatureCallMix($gameState?.mobs ?? [], pawns), {
       clips: creatureClips,
       label: (id) => CREATURE_SOUND_LABELS[id as keyof typeof CREATURE_SOUND_LABELS] ?? id,
       gain: CREATURE_GAIN,
@@ -269,14 +201,7 @@
 
   function evalAmbient(): void {
     if (isMenu) return void audioService.setAmbient(baseAmbient);
-    const detail = zoomDetail(get(cameraTileSize));
-    const weatherMul = 1 + (1 - detail) * WEATHER_ZOOM_BOOST;
-    const out: AmbientLayers = {};
-    for (const key of Object.keys(baseAmbient) as AmbientBed[]) {
-      const g = (baseAmbient[key] ?? 0) * (WEATHER_BEDS.has(key) ? weatherMul : detail);
-      if (g > 0.001) out[key] = g;
-    }
-    audioService.setAmbient(out);
+    audioService.setAmbient(ambientMix(baseAmbient, zoomDetail(get(cameraTileSize))));
   }
 
   function evalFire(): void {

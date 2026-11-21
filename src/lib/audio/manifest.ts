@@ -288,3 +288,16 @@ export function resolveAmbient(opts: {
 
   return layers;
 }
+
+const WEATHER_BEDS: ReadonlySet<AmbientBed> = new Set<AmbientBed>(['wind', 'rain', 'rain-heavy']);
+const WEATHER_ZOOM_BOOST = 0.3;
+
+export function ambientMix(base: AmbientLayers, detail: number): AmbientLayers {
+  const weatherMul = 1 + (1 - detail) * WEATHER_ZOOM_BOOST;
+  const out: AmbientLayers = {};
+  for (const key of Object.keys(base) as AmbientBed[]) {
+    const g = (base[key] ?? 0) * (WEATHER_BEDS.has(key) ? weatherMul : detail);
+    if (g > 0.001) out[key] = g;
+  }
+  return out;
+}
