@@ -59,6 +59,7 @@ import { TICKS_PER_SECOND } from '$lib/game/core/util/time';
 import { clearTileDeltas } from '$lib/game/core/state/tileDeltas';
 import { rng, freshSeed } from '$lib/game/core/util/rng';
 import { resetSimTransients } from '$lib/game/systems/simTransients';
+import { biomeTempOverrides, applyBiomeTempOverrides } from '$lib/game/core/defs/terrains';
 
 const TICK_DURATION_MS = 1000 / TICKS_PER_SECOND;
 const MAX_STEPS_PER_FRAME = 4;
@@ -348,6 +349,7 @@ function loadStateIntoWorker(state0: GameState) {
   worldGenRev.update((n) => n + 1);
   scheduleSave(state);
   if (USE_SIM_WORKER) {
+    applyBiomeTempOverrides(state.biomeTemps);
     simWorkerBridge.init(state, state.seed);
     simWorkerBridge.setSpeed(gameSpeedValue);
     simWorkerBridge.setPaused(get(isPaused));
@@ -376,6 +378,7 @@ function regenWorld(seed?: number, dev = false, itemQty = 500, preview = false) 
       ...base,
       seed: s,
       worldMap: newWorld,
+      biomeTemps: biomeTempOverrides(),
       mobs: [],
       pawns: base.pawns.map((p) => ({
         ...p,
@@ -395,6 +398,7 @@ function regenWorld(seed?: number, dev = false, itemQty = 500, preview = false) 
     ...base,
     seed: s,
     worldMap: newWorld,
+    biomeTemps: biomeTempOverrides(),
     mobs: [],
     culturePool: [],
     cultureRelations: [],
@@ -512,6 +516,7 @@ function resetGame() {
     ...initialGameState,
     seed,
     worldMap: world,
+    biomeTemps: biomeTempOverrides(),
     pawns: [],
     culturePool: [],
     cultureRelations: [],

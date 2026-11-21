@@ -75,7 +75,7 @@ import {
   tileTemperature,
   fermentTempRate
 } from '../services/EnvironmentService';
-import { soilTierForTile } from '../core/defs/terrains';
+import { soilTierForTile, applyBiomeTempOverrides } from '../core/defs/terrains';
 import { cropHealth, cropLossPerDay } from '../core/rules/world/cropHealth';
 import { markTileDirty } from '../core/state/tileDeltas';
 import { growthStageIndex } from '../core/rules/world/growthStages';
@@ -1083,6 +1083,7 @@ export class GameEngineImpl implements GameEngine {
     this.gameStateManager = manager;
     this.gameState = manager.getState();
     this.resetWorldCaches(this.gameState);
+    applyBiomeTempOverrides(this.gameState.biomeTemps);
   }
 
   private resetWorldCaches(state: GameState): void {
