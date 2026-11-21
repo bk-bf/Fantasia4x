@@ -23,6 +23,13 @@ export const REGISTRY_ART = [
   'registry/db-buildings.js',
   'registry/db-ground.js',
   'registry/db-folk.js',
+  'registry/db-items.js',
+  'registry/db-hd.js',
+  'registry/db-tools.js',
+  'registry/db-weapons.js',
+  'registry/db-gear.js',
+  'registry/db-goods.js',
+  'registry/db-armor.js',
   'registry/db-rot.js',
   'registry/db-stations.js'
 ];
