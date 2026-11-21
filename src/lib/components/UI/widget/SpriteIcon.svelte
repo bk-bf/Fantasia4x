@@ -42,6 +42,7 @@
   }
 
   const _painted: Record<string, Promise<HTMLCanvasElement | null>> = {};
+  const _cells: Record<string, string> = {};
   function paintedArt(kind: PaintedKind, id: string): Promise<HTMLCanvasElement | null> {
     const key = `${kind}/${id}`;
     return (_painted[key] ??= paintedSpriteCanvas(kind, id).catch(() => null));
@@ -73,7 +74,6 @@
   );
 
   let art = $state<HTMLCanvasElement | null>(null);
-  let paintedBox: HTMLCanvasElement | undefined = $state();
 
   $effect(() => {
     art = null;
@@ -83,13 +83,7 @@
     return () => (live = false);
   });
 
-  $effect(() => {
-    if (!art || !paintedBox) return;
-    const fit = fitInto(art, px);
-    paintedBox.width = fit.width;
-    paintedBox.height = fit.height;
-    paintedBox.getContext('2d', { willReadFrequently: true })?.drawImage(fit, 0, 0);
-  });
+  const paintedUrl = $derived(art ? fitInto(art, px).toDataURL() : null);
 
   const CELL_W = 12;
   const CELL_H = 18;
@@ -98,43 +92,55 @@
   const span = $derived((spans ?? []).find((s) => s.sheet && (s.id != null || s.from != null)));
   const literal = $derived((spans ?? []).find((s) => s.literal)?.literal ?? null);
 
-  let canvasEl: HTMLCanvasElement | undefined = $state();
+  let cellUrl = $state<string | null>(null);
 
   function draw() {
-    const node = canvasEl;
-    if (!node || !span?.sheet) return;
-    const ctx = node.getContext('2d', { willReadFrequently: true });
-    if (!ctx) return;
-    node.width = CELL_W;
-    node.height = CELL_H;
-    ctx.clearRect(0, 0, CELL_W, CELL_H);
+    if (!span?.sheet) return;
     const sheet = getSheet(span.sheet, draw);
     if (!sheet) return;
     const id = span.id ?? span.from ?? 0;
-    const col = id % COLS;
-    const row = Math.floor(id / COLS);
+    const key = `${span.sheet}|${id}|${tone ?? ''}`;
+    if (_cells[key]) {
+      cellUrl = _cells[key];
+      return;
+    }
+    const node = document.createElement('canvas');
+    node.width = CELL_W;
+    node.height = CELL_H;
+    const ctx = node.getContext('2d', { willReadFrequently: true });
+    if (!ctx) return;
     ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(sheet, col * CELL_W, row * CELL_H, CELL_W, CELL_H, 0, 0, CELL_W, CELL_H);
+    ctx.drawImage(
+      sheet,
+      (id % COLS) * CELL_W,
+      Math.floor(id / COLS) * CELL_H,
+      CELL_W,
+      CELL_H,
+      0,
+      0,
+      CELL_W,
+      CELL_H
+    );
     if (tone) {
       ctx.globalCompositeOperation = 'source-atop';
       ctx.fillStyle = tone;
       ctx.fillRect(0, 0, CELL_W, CELL_H);
-      ctx.globalCompositeOperation = 'source-over';
     }
+    cellUrl = _cells[key] = node.toDataURL();
   }
 
   $effect(() => {
     void span;
     void tone;
-    void canvasEl;
+    cellUrl = null;
     draw();
   });
 </script>
 
-{#if art}
-  <canvas bind:this={paintedBox} class="painted-icon" style="width:{px}px;height:{px}px"></canvas>
-{:else if span?.sheet}
-  <canvas bind:this={canvasEl} class="sprite-icon" style="height:{px}px"></canvas>
+{#if paintedUrl}
+  <img src={paintedUrl} alt="" class="painted-icon" style="width:{px}px;height:{px}px" />
+{:else if span?.sheet && cellUrl}
+  <img src={cellUrl} alt="" class="sprite-icon" style="height:{px}px" />
 {:else if literal}
   <span class="sprite-literal" style="font-size:{px}px; color:{tone ?? 'inherit'}">{literal}</span>
 {/if}
