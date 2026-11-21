@@ -32,7 +32,6 @@ export interface TileData {
   rotation?: 0 | 90 | 180 | 270;
   scale?: number;
   painted?: PaintedSprite;
-  depthRow?: number;
   dirty?: boolean;
   lastUpdated?: number;
 }

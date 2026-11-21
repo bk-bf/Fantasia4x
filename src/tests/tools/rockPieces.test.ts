@@ -8,6 +8,8 @@ import {
   CELL_W,
   CELL_X,
   CELL_Y,
+  FACE_ALPHA,
+  LIFT,
   NEIGHBOURS,
   PATCH,
   REACH,
@@ -259,27 +261,37 @@ describe('rock pieces: placed by row, they rebuild a single drawing of the mass'
 
 describe('rock veins: where ore shows in the rock top', () => {
   const veins = rockVeins(art(TOP_SIZE));
-  const code = (x: number, y: number) => veins[(y * TOP_SIZE + x) * 4];
+  const channel = (c: number) => veins.filter((_, i) => i % 4 === c);
 
   it('names its codes as the fragment shader reads them', () => {
     const glsl = readFileSync(join(__dirname, '../../lib/webgl/shaders/fragment.glsl'), 'utf8');
     for (const [name, value] of [
-      ['NONE', VEIN.none],
-      ['EDGE', VEIN.edge],
-      ['SHADE', VEIN.shade],
-      ['TILE', TILE]
+      ['VEIN_EDGE', VEIN.edge],
+      ['VEIN_TILE', TILE],
+      ['FACE_ALPHA', FACE_ALPHA],
+      ['FACE_ROWS', LIFT]
     ])
-      expect(glsl).toContain(`const int VEIN_${name} = ${value};`);
+      expect(glsl).toContain(`const int ${name} = ${value};`);
   });
 
-  it('puts ore shades in every tile', () => {
-    for (let ty = 0; ty < TOP_SIZE / TILE; ty++)
-      for (let tx = 0; tx < TOP_SIZE / TILE; tx++) {
-        let shades = 0;
-        for (let j = 0; j < TILE; j++)
-          for (let i = 0; i < TILE; i++)
-            if (code(tx * TILE + i, ty * TILE + j) >= VEIN.shade) shades++;
-        expect(shades, `tile ${tx},${ty}`).toBeGreaterThan(TILE);
-      }
+  it('stores the shade or chunk edge, the chunk and the vein strength of every pixel', () => {
+    expect(new Set(channel(0))).toEqual(new Set([0, 1, 2, 3, VEIN.edge]));
+    const spread = (c: number) => {
+      const v = channel(c);
+      return v.reduce((a, b) => Math.max(a, b), 0) - v.reduce((a, b) => Math.min(a, b), 255);
+    };
+    expect(spread(1)).toBeGreaterThan(200);
+    expect(spread(2)).toBeGreaterThan(200);
+  });
+});
+
+describe('rock pieces: a face pixel carries its row in the face', () => {
+  it('marks the top with full alpha and each face row with its own alpha below it', () => {
+    const px = pieces.get(0)!;
+    const alphas = new Set(px.filter((_, i) => i % 4 === 3 && px[i] > 0));
+    expect([...alphas].sort((a, b) => a - b)).toEqual([
+      ...Array.from({ length: LIFT }, (_, fy) => FACE_ALPHA - LIFT + 1 + fy),
+      255
+    ]);
   });
 });

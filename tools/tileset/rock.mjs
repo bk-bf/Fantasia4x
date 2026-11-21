@@ -9,6 +9,7 @@ export const CELL_Y = -REACH - LIFT;
 export const PERIOD = TILE * PATCH;
 export const TOP_SIZE = 1024;
 export const TOP_MARK = [255, 0, 255];
+export const FACE_ALPHA = 254;
 const RIM_SHIFT = [0, 0.26, -0.2];
 export const NEIGHBOURS = [
   [0, -1],
@@ -164,8 +165,8 @@ export function rockArt(A = ART_SHAPE) {
     mass = (tx = 0, ty = 0) => tx === ty,
     x = 0,
     y = 0,
-    put = (px = 0, py = 0, c = colour) => {
-      void [px, py, c];
+    put = (px = 0, py = 0, c = colour, alpha = 255) => {
+      void [px, py, c, alpha];
     }
   ) {
     const open = { l: !rock(mass, x - 1, y), r: !rock(mass, x + 1, y), u: !rock(mass, x, y - 1) };
@@ -178,7 +179,7 @@ export function rockArt(A = ART_SHAPE) {
       if (open.l) c = A.lit(c, 1.14);
       else if (open.r) c = A.dark(c, 0.72);
       if (fy === LIFT - 1) c = A.dark(c, 0.6);
-      put(x, fyy, c);
+      put(x, fyy, c, FACE_ALPHA - fy);
     }
   }
 
@@ -186,8 +187,8 @@ export function rockArt(A = ART_SHAPE) {
     mass = (tx = 0, ty = 0) => tx === ty,
     tx = 0,
     ty = 0,
-    put = (px = 0, py = 0, c = colour) => {
-      void [px, py, c];
+    put = (px = 0, py = 0, c = colour, alpha = 255) => {
+      void [px, py, c, alpha];
     }
   ) {
     for (let ly = -REACH; ly < TILE + REACH; ly++)
@@ -203,8 +204,8 @@ export function rockArt(A = ART_SHAPE) {
     mass = (tx = 0, ty = 0) => tx === ty,
     owns = (tx = 0, ty = 0) => tx === ty,
     area = { x0: 0, x1: 0, y0: 0, y1: 0 },
-    put = (px = 0, py = 0, c = colour) => {
-      void [px, py, c];
+    put = (px = 0, py = 0, c = colour, alpha = 255) => {
+      void [px, py, c, alpha];
     }
   ) {
     for (let y = area.y0; y < area.y1; y++)
@@ -219,14 +220,14 @@ export function rockArt(A = ART_SHAPE) {
     const px = new Uint8ClampedArray(w * PATCH * CELL_H * 4);
     for (let cy = 0; cy < PATCH; cy++)
       for (let cx = 0; cx < PATCH; cx++)
-        paintTile(layoutMass(layout, cx, cy), cx, cy, (x = 0, y = 0, c = colour) => {
+        paintTile(layoutMass(layout, cx, cy), cx, cy, (x = 0, y = 0, c = colour, alpha = 255) => {
           const col = cx * CELL_W + x - cx * TILE - CELL_X,
             row = cy * CELL_H + y - cy * TILE - CELL_Y;
           const i = (row * w + col) * 4;
           px[i] = c[0];
           px[i + 1] = c[1];
           px[i + 2] = c[2];
-          px[i + 3] = 255;
+          px[i + 3] = alpha;
         });
     return px;
   }
@@ -252,39 +253,21 @@ export function rockTop(
   return px;
 }
 
-export const VEIN = { none: 0, edge: 1, shade: 2, share: 0.95, core: 5, reach: 12 };
-
-const clumpShare = (cx = 0, cy = 0) => {
-  const r = Math.hypot(wrap(cx, TILE) - TILE / 2, wrap(cy, TILE) - TILE / 2);
-  return VEIN.share * Math.min(1, Math.max(0, (VEIN.reach - r) / (VEIN.reach - VEIN.core)));
-};
+export const VEIN = { edge: 4 };
 
 export function rockVeins(
   A = {
-    veinAt: (x = 0, y = 0) => ({
-      cell: [x - (x % 6), y - (y % 6)],
-      id: ((x * 7 + y * 3) % 10) / 10,
-      k: ((x + y) % 5) - 1
-    })
+    veinAt: (x = 0, y = 0) => ({ blob: (x % 7) / 7, id: (y % 5) / 5, k: ((x + y) % 5) - 1 })
   }
 ) {
-  const tileOf = (x = 0, y = 0) => `${Math.floor(x / TILE)},${Math.floor(y / TILE)}`;
-  const home = new Map(),
-    split = new Set();
-  for (let y = 0; y < TOP_SIZE; y++)
-    for (let x = 0; x < TOP_SIZE; x++) {
-      const key = A.veinAt(x, y).cell.join(','),
-        tile = tileOf(x, y);
-      if (!home.has(key)) home.set(key, tile);
-      else if (home.get(key) !== tile) split.add(key);
-    }
   const px = new Uint8Array(TOP_SIZE * TOP_SIZE * 4);
   for (let y = 0; y < TOP_SIZE; y++)
     for (let x = 0; x < TOP_SIZE; x++) {
-      const v = A.veinAt(x, y),
+      const { blob, id, k } = A.veinAt(x, y),
         i = (y * TOP_SIZE + x) * 4;
-      const kept = !split.has(v.cell.join(',')) && v.id < clumpShare(v.cell[0], v.cell[1]);
-      px[i] = !kept ? VEIN.none : v.k < 0 ? VEIN.edge : VEIN.shade + v.k;
+      px[i] = k < 0 ? VEIN.edge : k;
+      px[i + 1] = Math.round(id * 255);
+      px[i + 2] = Math.round(blob * 255);
       px[i + 3] = 255;
     }
   return px;

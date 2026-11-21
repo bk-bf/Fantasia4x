@@ -11,6 +11,8 @@ in highp vec4 v_uvBounds;  // (uMin, vMin, uMax, vMax) of this glyph in the atla
 in vec3 v_light;     // Interpolated ADDITIVE point-light contribution (0 = none)
 in highp vec2 v_world;
 flat in vec4 v_vein;
+flat in float v_veinNear;
+flat in highp float v_row;
 
 uniform sampler2D u_fontAtlas;
 uniform sampler2D u_paintAtlas;
@@ -37,12 +39,17 @@ uniform highp sampler2D u_rockTexture;
 uniform vec2 u_rockRamp;
 uniform float u_rockLift;
 uniform highp sampler2D u_veinTexture;
-uniform float u_veinScale;
+uniform highp float u_atlasScale;
+uniform highp float u_rowPx;
+uniform highp float u_rowDepth;
 
-const int VEIN_NONE = 0;
-const int VEIN_EDGE = 1;
-const int VEIN_SHADE = 2;
+const int VEIN_EDGE = 4;
 const int VEIN_TILE = 32;
+const int FACE_ALPHA = 254;
+const int FACE_ROWS = 22;
+const highp float OBJECT_FOOT = 23.0;
+const float VEIN_FLOOR = 0.58;
+const float VEIN_FADE = 6.0;
 
 out vec4 fragColor;
 
@@ -51,18 +58,49 @@ vec3 rockTop(int rim) {
     highp ivec2 p = ivec2(floor(v_world + vec2(0.0, u_rockLift)));
     p = (p % size + size) % size;
     int shade = int(texelFetch(u_rockTexture, p, 0)[rim] * 255.0 + 0.5);
-    vec3 rock = texelFetch(u_paintAtlas, ivec2(u_rockRamp) + ivec2(shade, 0), 0).rgb;
+    return texelFetch(u_paintAtlas, ivec2(u_rockRamp) + ivec2(shade, 0), 0).rgb;
+}
+
+bool near(int bit) {
+    return (int(v_veinNear + 0.5) & (1 << bit)) != 0;
+}
+
+float veinFade(highp vec2 local) {
+    float d = float(VEIN_TILE);
+    float far = float(VEIN_TILE) - 1.0;
+    if (!near(0)) d = min(d, local.y);
+    if (!near(2)) d = min(d, far - local.x);
+    if (!near(4)) d = min(d, far - local.y);
+    if (!near(6)) d = min(d, local.x);
+    if (!near(1)) d = min(d, length(vec2(far - local.x, local.y)));
+    if (!near(3)) d = min(d, length(vec2(far - local.x, far - local.y)));
+    if (!near(5)) d = min(d, length(vec2(local.x, far - local.y)));
+    if (!near(7)) d = min(d, length(local));
+    return clamp(d / VEIN_FADE, 0.0, 1.0);
+}
+
+vec3 vein(vec3 rock, highp vec2 at, highp vec2 ground, bool face) {
     if (v_vein.x < 0.0) return rock;
-    highp ivec2 q = ivec2(floor(v_world * u_veinScale + vec2(0.0, u_rockLift)));
-    if (q / VEIN_TILE != ivec2(v_vein.zw)) return rock;
-    highp ivec2 veinSize = textureSize(u_veinTexture, 0);
-    int vein = int(texelFetch(u_veinTexture, (q % veinSize + veinSize) % veinSize, 0).r * 255.0 + 0.5);
-    if (vein == VEIN_NONE) return rock;
-    if (vein == VEIN_EDGE) return rock * vec3(0.5, 0.5, 0.6);
-    return texelFetch(u_paintAtlas, ivec2(v_vein) + ivec2(vein - VEIN_SHADE, 0), 0).rgb;
+    highp ivec2 tile = ivec2(floor(ground)) / VEIN_TILE;
+    if (tile != ivec2(v_vein.zw)) return rock;
+    highp ivec2 shift = ivec2(int(v_vein.x) * 97 + int(v_vein.y) * 31, int(v_vein.y) * 89 + int(v_vein.x) * 17);
+    highp ivec2 size = textureSize(u_veinTexture, 0);
+    highp ivec2 q = ivec2(floor(at)) + shift;
+    vec4 cell = texelFetch(u_veinTexture, (q % size + size) % size, 0);
+    float blob = max(cell.b, VEIN_FLOOR) - (1.0 - veinFade(ground - vec2(tile * VEIN_TILE))) * 0.3;
+    if (blob < 0.47 || cell.g < 0.42 + (0.62 - blob) * 1.6) return rock;
+    int k = int(cell.r * 255.0 + 0.5);
+    if (k == VEIN_EDGE) return rock * vec3(0.5, 0.5, 0.6);
+    return texelFetch(u_paintAtlas, ivec2(v_vein.xy) + ivec2(clamp(k - (face ? 1 : 0), 0, 3), 0), 0).rgb;
+}
+
+highp float groundDepth(highp float ground) {
+    return 0.5 - 0.5 * ground / u_rowPx * u_rowDepth;
 }
 
 void main() {
+    gl_FragDepth = gl_FragCoord.z;
+    if (u_rowPx > 0.0) gl_FragDepth = groundDepth(v_row * u_rowPx + OBJECT_FOOT);
     // Final light multiplier = day/night ambient + baked additive point lights
     // (animated by the global flicker uniform), clamped to the same ceiling the
     // CPU lighting model used (MAX_LIGHT = 1.6).
@@ -82,8 +120,21 @@ void main() {
         vec4 cell = v_uvBounds - vec4(2.0, 0.0, 2.0, 0.0);
         vec2 inset = 0.5 * u_paintTexelSize;
         sprite = texture(u_paintAtlas, clamp(v_texCoord, cell.xy + inset, cell.zw - inset));
-        if (sprite.a > 0.5 && sprite.r > 0.99 && sprite.b > 0.99 && sprite.g < 0.05)
-            sprite.rgb = rockTop(int(sprite.g * 255.0 + 0.5));
+        highp vec2 at = v_world * u_atlasScale;
+        int alpha = int(sprite.a * 255.0 + 0.5);
+        highp float ground = v_row * u_rowPx + OBJECT_FOOT;
+        if (alpha == 255 && sprite.r > 0.99 && sprite.b > 0.99 && sprite.g < 0.05) {
+            highp vec2 top = at + vec2(0.0, u_rockLift);
+            sprite.rgb = vein(rockTop(int(sprite.g * 255.0 + 0.5)), top, top, false);
+            ground = top.y;
+        } else if (alpha <= FACE_ALPHA && alpha > FACE_ALPHA - FACE_ROWS) {
+            int fy = FACE_ALPHA - alpha;
+            highp vec2 foot = at + vec2(0.0, u_rockLift - 1.0 - float(fy));
+            if (fy > 1) sprite.rgb = vein(sprite.rgb, at, foot, true);
+            sprite.a = 1.0;
+            ground = foot.y;
+        }
+        if (u_rowPx > 0.0) gl_FragDepth = groundDepth(ground);
     } else {
         sprite = texture(u_fontAtlas, v_texCoord);
     }

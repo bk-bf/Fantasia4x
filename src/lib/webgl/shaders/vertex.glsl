@@ -12,6 +12,7 @@ in vec4 a_uvBounds;      // Glyph UV bounds: (uMin, vMin, uMax, vMax)
 in vec3 a_light;         // Per-corner ADDITIVE point-light contribution (0 = none)
 in float a_row;
 in vec4 a_vein;
+in float a_veinNear;
 
 // Uniforms (constant for all vertices in a draw call)
 uniform mat4 u_projection;  // Orthographic projection matrix
@@ -31,6 +32,8 @@ out vec4 v_uvBounds;     // Pass glyph UV bounds to fragment
 out vec3 v_light;        // Interpolated per-tile light across the quad
 out highp vec2 v_world;
 flat out vec4 v_vein;
+flat out float v_veinNear;
+flat out highp float v_row;
 
 void main() {
     // a_position holds world coordinates baked at a FIXED base tile size. Pan
@@ -50,4 +53,6 @@ void main() {
     v_light = a_light;
     v_world = a_position;
     v_vein = a_vein;
+    v_veinNear = a_veinNear;
+    v_row = a_row;
 }

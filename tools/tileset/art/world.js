@@ -115,10 +115,9 @@ const oreAt = (ramp, seed, x, y, c) => {
   return ramp[clamp(k, 0, 3)];
 };
 const veinAt = (x, y) => {
-  const id = pvor(x, y, 6, 66), e = VEDGE, nw = VDX + VDY < 0;
-  const cell = [Math.round(x - VDX), Math.round(y - VDY)];
-  if (e < .9) return { cell, id, k: -1 };
-  return { cell, id, k: clamp(1 + (nw ? 1 : 0) + (e < 2 ? (nw ? 1 : -1) : 0) + (hash(x, y, 9) > .93 ? 1 : 0), 0, 3) };
+  const blob = pfbm(x, y, .028, 61, 2), id = pvor(x, y, 6, 63), e = VEDGE, nw = VDX + VDY < 0;
+  const k = e < .9 ? -1 : clamp(1 + (nw ? 1 : 0) + (e < 2 ? (nw ? 1 : -1) : 0) + (hash(x, y, 9) > .93 ? 1 : 0), 0, 3);
+  return { blob, id, k };
 };
 
 function pstone(ramp, bw, bh, o) {

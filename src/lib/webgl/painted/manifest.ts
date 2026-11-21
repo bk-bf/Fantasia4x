@@ -57,9 +57,13 @@ export interface PaintedSprite {
   vein?: PaintedVein;
 }
 
-export interface PaintedVein {
+export interface PaintedRamp {
   x: number;
   y: number;
+}
+
+export interface PaintedVein extends PaintedRamp {
+  near: number;
 }
 
 export interface PaintedVariant {
@@ -80,7 +84,7 @@ export interface PaintedPieces {
   members: ReadonlySet<string>;
   neighbours: readonly (readonly [number, number])[];
   layouts: PaintedVariant[];
-  veins: ReadonlyMap<string, PaintedVein>;
+  veins: ReadonlyMap<string, PaintedRamp>;
   top?: PaintedPieceTop;
 }
 
@@ -258,7 +262,7 @@ export function buildTileset(m: PaintedManifest): { tileset: PaintedTileset; pro
       problems.push(`pieces.${set}.top names unknown sprite ${p.top.ramp}`);
       continue;
     }
-    const veins = new Map<string, PaintedVein>();
+    const veins = new Map<string, PaintedRamp>();
     for (const [id, sprite] of Object.entries(p.veins)) {
       const s = m.sprites[sprite];
       if (s) veins.set(id, { x: s.x, y: s.y });
