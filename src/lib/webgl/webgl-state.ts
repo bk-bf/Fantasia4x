@@ -102,9 +102,10 @@ export class WebGLStateManager {
     }
   }
 
-  clear(): void {
+  clear(depth = false): void {
     if (!this.gl) return;
-    this.gl.clear(this.gl.COLOR_BUFFER_BIT);
+    const gl = this.gl;
+    gl.clear(depth ? gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT : gl.COLOR_BUFFER_BIT);
   }
 
   private onContextLost(event: Event): void {
