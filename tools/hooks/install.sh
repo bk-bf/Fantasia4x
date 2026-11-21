@@ -1,9 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
-HOOKS_DIR="$(git -C "$ROOT" rev-parse --git-path hooks)"
+HERE="$(cd "$(dirname "$0")" && pwd)"
+COMMON="$(git -C "$HERE" rev-parse --path-format=absolute --git-common-dir)"
+ROOT="$(cd "$COMMON/.." && pwd)"
+HOOKS_DIR="$COMMON/hooks"
 
+mkdir -p "$HOOKS_DIR"
 for hook in pre-commit commit-msg pre-push post-checkout; do
   SRC="$ROOT/tools/hooks/$hook"
   DEST="$HOOKS_DIR/$hook"

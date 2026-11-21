@@ -23,6 +23,12 @@ const VALID_FILL = new Set(
     .map((d) => d.id)
 );
 
+const STONE_WALLS = new Set(['mountain_wall', 'cliff_wall']);
+
+function oresOn(t: WorldTile): string[] {
+  return Object.keys(t.resources).filter((k) => t.resources[k] > 0 && VALID_FILL.has(k));
+}
+
 describe('ResourceGenerator — mineral_deposit guarantee + clustering', () => {
   it('a connected mineral_deposit blob fills as ONE mineral (cluster), never empty', () => {
     for (let seed = 1; seed <= 6; seed++) {
@@ -34,10 +40,7 @@ describe('ResourceGenerator — mineral_deposit guarantee + clustering', () => {
       const firstId = Object.keys(all[0].resources).filter((k) => all[0].resources[k] > 0)[0];
       expect(firstId, `empty blob seed ${seed}`).toBeDefined();
       expect(VALID_FILL.has(firstId)).toBe(true);
-      for (const t of all) {
-        const ids = Object.keys(t.resources).filter((k) => t.resources[k] > 0);
-        expect(ids).toEqual([firstId]);
-      }
+      for (const t of all) expect(oresOn(t)).toEqual([firstId]);
     }
   });
 
@@ -73,7 +76,31 @@ describe('ResourceGenerator — mineral_deposit guarantee + clustering', () => {
     expect(VALID_FILL.has(leftId)).toBe(true);
     expect(VALID_FILL.has(rightId)).toBe(true);
     for (let y = 0; y < 4; y++)
-      for (let x = 0; x < 4; x++) expect(Object.keys(map[y][x].resources)).toEqual([leftId]);
+      for (let x = 0; x < 4; x++) expect(oresOn(map[y][x])).toEqual([leftId]);
+  });
+
+  it('every ore sits on a stone wall, ore first, and both block the tile', () => {
+    const hosts = new Set<string>();
+    for (let seed = 1; seed <= 6; seed++) {
+      const map: WorldTile[][] = Array.from({ length: 12 }, (_, y) =>
+        Array.from({ length: 12 }, (_, x) =>
+          tile((x * 7 + y * 3) % 5 === 0 ? 'mineral_deposit' : 'cave', x, y, 'mountain')
+        )
+      );
+      resourceGeneratorService.generateResources(map, seed * 17);
+      const oreTiles = map.flat().filter((t) => oresOn(t).length > 0);
+      expect(oreTiles.length).toBeGreaterThan(0);
+      for (const t of oreTiles) {
+        const live = Object.keys(t.resources).filter((k) => t.resources[k] > 0);
+        expect(live).toHaveLength(2);
+        expect(VALID_FILL.has(live[0])).toBe(true);
+        expect(STONE_WALLS.has(live[1])).toBe(true);
+        expect(t.subType).toBe('mineral_deposit');
+        expect(t.walkable).toBe(false);
+        hosts.add(live[1]);
+      }
+    }
+    expect([...hosts].sort()).toEqual([...STONE_WALLS].sort());
   });
 
   it('the mineral_deposit pool is exactly ore / coal / salt (no stone or crystal)', () => {

@@ -17,6 +17,7 @@ to ubuntuserver through `remote/run.mjs`.
 | `promote.mjs` | Merges `dev` into `main` in a worktree and runs every check there; `--push` pushes `main`. | `pnpm promote` |
 | `ci/ci-scope.mjs` | Decides which CI legs a change runs from `ci/scope.json`, and refuses a file no rule there matches. | run by `check.yml` and `hooks/pre-push` |
 | `ci/ci-check.mjs` | Runs `pnpm check` and the related tests in CI. | run by `check.yml` |
+| `ci/stats.mjs` | Prints how long CI runs take, how much of it was waited on, red-run time, each job's share and time to green per branch, from the history the dashboard records. | `pnpm ci:stats [--days N] [--workflow W] [--json]` |
 | `ci/structure.mjs` | Checks the architecture seams in `ci/seams.json` and the component sizes in `ci/component-sizes.json`. | `node tools/ci/structure.mjs`, run by `check.yml` and `promote.yml` |
 | `ci/warnings.mjs` | Runs `svelte-check`, `eslint`, or `tsc` over the files in `tools/` that `svelte-check` does not reach; fails on an error or on a count past `ci/warning-budget.json`, and in CI lists every finding on the run page, annotates the changed files and feeds the pull request's Check notes. | `pnpm check:types`, `pnpm check:tools`, `pnpm lint` |
 | `dev-shell/` | The Electron shell `./launch.sh --electron` plays the dev server in; its own package, installed by `install.sh`. | `./launch.sh --electron` |
