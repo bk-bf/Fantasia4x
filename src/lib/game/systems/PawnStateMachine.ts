@@ -174,6 +174,7 @@ const ACTIVE_HEAL_MUL = 0.1;
 const SHELTER_HEAL_MUL = 1.6;
 
 const CONDITIONS_DB = conditionsData as unknown as ConditionDef[];
+const INFECTION_DEF = CONDITIONS_DB.find((d) => d.id === 'infection');
 
 const BLEED_ETA_REF_HOURS = 8;
 
@@ -517,9 +518,13 @@ function tickConditions(pawn: Pawn, gameState: GameState): GameState {
   }
 
   let infectionPressure = 0;
-  for (const limb of limbs) {
-    for (const part of limb.parts ?? []) {
-      for (const w of part.injuries) {
+  for (let li = 0; li < limbs.length; li++) {
+    const parts = limbs[li].parts;
+    if (!parts) continue;
+    for (let pi = 0; pi < parts.length; pi++) {
+      const injuries = parts[pi].injuries;
+      for (let wi = 0; wi < injuries.length; wi++) {
+        const w = injuries[wi];
         const open =
           w.bleeding > 0 ||
           w.severity === 'serious' ||
@@ -555,8 +560,7 @@ function tickConditions(pawn: Pawn, gameState: GameState): GameState {
   } else {
     conditions.push({ id: 'infection', severity: nextInf });
   }
-  const infectionDef = CONDITIONS_DB.find((d) => d.id === 'infection');
-  if (infectionDef && nextInf >= infectionDef.lethalSeverity) {
+  if (INFECTION_DEF && nextInf >= INFECTION_DEF.lethalSeverity) {
     const updatedGs = {
       ...gameState,
       pawns: gameState.pawns.map((p) =>
@@ -939,10 +943,14 @@ function buildGraphContext(pawn: Pawn, turn: number): GraphContext {
 }
 
 function hasLivingPart(pawn: Pawn, partIds: string[]): boolean {
-  for (const limb of pawn.limbs ?? []) {
-    if (limb.isMissing) continue;
-    for (const part of limb.parts ?? []) {
-      if (!part.isMissing && partIds.includes(part.id)) return true;
+  const limbs = pawn.limbs;
+  if (!limbs) return false;
+  for (let li = 0; li < limbs.length; li++) {
+    const limb = limbs[li];
+    if (limb.isMissing || !limb.parts) continue;
+    const parts = limb.parts;
+    for (let pi = 0; pi < parts.length; pi++) {
+      if (!parts[pi].isMissing && partIds.includes(parts[pi].id)) return true;
     }
   }
   return false;
