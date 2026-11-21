@@ -104,10 +104,11 @@ export function rockArt(A = ART_SHAPE) {
       const o =
         1 +
         (A.pn(a, e, 0.042, 0.042, seed) - 0.5) * 30 +
-        (A.pn(a, e, 0.155, 0.155, seed + 1) - 0.5) * 7 +
+        (A.pn(a, e, 0.155, 0.155, seed + 1) - 0.5) * 4 +
         JUNCTION * Math.cos((Math.PI * (a % TILE)) / TILE) ** 2;
       const r = reach(a % TILE);
-      offsets[i] = A.clamp(o, r > 0 ? -r : 1, MAX_INSET);
+      const out = o >= 0 ? o : r > 0 ? -r * Math.tanh(-o / r) : 1;
+      offsets[i] = A.clamp(out, r > 0 ? -r : 1, MAX_INSET);
     }
     return offsets[i];
   };
