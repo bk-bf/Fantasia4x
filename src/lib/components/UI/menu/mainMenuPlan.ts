@@ -2,7 +2,7 @@ import { textMask, type TextMask } from '$lib/pixelArt/lettering';
 import { clamp } from '$lib/pixelArt/noise';
 import { SKY_BOWL_W } from '$lib/pixelArt/skyBowl';
 
-export const TITLE_FONT = 'Fantasia Title';
+export const TITLE_FONT = 'Fantasia Blackletter';
 export const BANNER_FONT = 'Fantasia Banner';
 export const PIXEL_FONT = 'Fantasia Pixel';
 export const FLAG_W = 196;
