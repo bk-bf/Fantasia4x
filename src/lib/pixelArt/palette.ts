@@ -27,7 +27,10 @@ export const RAMPS = {
   brass: ramp('#2a1c0a #47310e #6e4e14 #987219 #c29628 #e2bd48 #f7e38a'),
   inkwash: ramp('#1c130c #2c1e14 #3e2c1e #54402c #6e583e #8c7454'),
   ochre: ramp('#4a3410 #6e4e16 #94701e #b8922c #d4b44c #ecd480'),
-  verdigris: ramp('#12322c #1c4c42 #2c6c5c #44907a #6cb49a #a4d8c0')
+  verdigris: ramp('#12322c #1c4c42 #2c6c5c #44907a #6cb49a #a4d8c0'),
+  vellum: ramp('#6e5a3c #8c7650 #a89068 #c0a880 #d4c098 #e4d6b2 #f0e6c8'),
+  vermilion: ramp('#4a1410 #741c14 #a02a18 #c8442a #e46e4a #f4a482'),
+  honey: ramp('#4a3408 #76540e #a47a16 #cca02a #e8c650 #f8e690')
 };
 
 export function pick(r: Ramp, t: number, x: number, y: number, spread = 0.7): Rgb {
