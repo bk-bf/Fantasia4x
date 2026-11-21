@@ -1,10 +1,11 @@
 <script lang="ts">
-  import { fade, scale } from 'svelte/transition';
   import { gameState } from '$lib/stores/gameState';
+  import { currentWindow } from '$lib/components/UI/window/windowContext';
   import SettingsModal from '../modal/SettingsModal.svelte';
   import SaveListMenu from './SaveListMenu.svelte';
 
-  let { onResume }: { onResume: () => void } = $props();
+  const win = currentWindow();
+  const onResume = () => win?.close();
 
   let showSettings = $state(false);
   let showLoad = $state(false);
@@ -32,26 +33,18 @@
   }
 </script>
 
-<div class="pause-overlay" transition:fade={{ duration: 120 }}>
-  <div class="pause-panel" transition:scale={{ duration: 140, start: 0.96 }}>
-    <h2 class="title">PAUSED</h2>
-
-    <nav class="menu">
-      <button class="menu-btn" onclick={onResume}>Resume</button>
-      <button class="menu-btn" onclick={() => (showSave = true)} disabled={busy}>
-        {saved ? 'Saved ✓' : 'Save Game'}
-      </button>
-      <button class="menu-btn" onclick={() => (showLoad = true)} disabled={busy}>Load Game</button>
-      <button class="menu-btn" onclick={() => (showSettings = true)}>Settings</button>
-      <button class="menu-btn" onclick={exitToMenu} disabled={busy}>Exit to Main Menu</button>
-      {#if isDesktop}
-        <button class="menu-btn danger" onclick={quitDesktop} disabled={busy}
-          >Quit to Desktop</button
-        >
-      {/if}
-    </nav>
-  </div>
-</div>
+<nav class="menu">
+  <button class="menu-btn" onclick={onResume}>Resume</button>
+  <button class="menu-btn" onclick={() => (showSave = true)} disabled={busy}>
+    {saved ? 'Saved ✓' : 'Save Game'}
+  </button>
+  <button class="menu-btn" onclick={() => (showLoad = true)} disabled={busy}>Load Game</button>
+  <button class="menu-btn" onclick={() => (showSettings = true)}>Settings</button>
+  <button class="menu-btn" onclick={exitToMenu} disabled={busy}>Exit to Main Menu</button>
+  {#if isDesktop}
+    <button class="menu-btn danger" onclick={quitDesktop} disabled={busy}>Quit to Desktop</button>
+  {/if}
+</nav>
 
 {#if showSave}
   <SaveListMenu mode="save" {onSaved} onClose={() => (showSave = false)} />
@@ -66,38 +59,6 @@
 {/if}
 
 <style>
-  .pause-overlay {
-    position: fixed;
-    inset: 0;
-    z-index: 900;
-    background: rgba(6, 4, 2, 0.72);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-family: var(--font-mono);
-  }
-
-  .pause-panel {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-    width: min(300px, 80vw);
-    padding: 22px 20px;
-    background: var(--bg-panel);
-    border: 1px solid var(--border-hi);
-    box-shadow: 0 0 28px rgba(0, 0, 0, 0.6);
-  }
-
-  .title {
-    color: var(--accent-hi);
-    font-size: 17px;
-    font-weight: 700;
-    letter-spacing: 0.4em;
-    text-indent: 0.4em;
-    margin: 0 0 12px;
-  }
-
   .menu {
     display: flex;
     flex-direction: column;

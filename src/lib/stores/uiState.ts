@@ -1,7 +1,6 @@
 import { writable } from 'svelte/store';
 
-type Screen =
-  | 'main'
+export type WindowId =
   | 'pawns'
   | 'culture'
   | 'kingdoms'
@@ -11,16 +10,17 @@ type Screen =
   | 'exploration'
   | 'work'
   | 'entities'
-  | 'debug';
+  | 'debug'
+  | 'pause';
 
 interface UIState {
-  currentScreen: Screen;
+  windows: WindowId[];
   showNotifications: boolean;
   lastEvent: string | null;
   designationActive: boolean;
   designationType: string | null;
   activeZoneInstanceId: string | null;
-  _screenBeforeDesignation: Screen | null;
+  _windowsBeforeDesignation: WindowId[] | null;
   mapFocusRequest: { x: number; y: number; selectTile: boolean } | null;
   selectedPawnId: string | null;
   selectedMobId: string | null;
@@ -37,15 +37,27 @@ interface UIState {
   tradeSession: { partyId: string; pawnId: string } | null;
 }
 
+const raise = (list: WindowId[], id: WindowId): WindowId[] => [...list.filter((w) => w !== id), id];
+
+const stashWindows = (state: UIState) => ({
+  _windowsBeforeDesignation: state.windows.length ? state.windows : state._windowsBeforeDesignation,
+  windows: [] as WindowId[]
+});
+
+const restoreWindows = (state: UIState) => ({
+  windows: state._windowsBeforeDesignation ?? state.windows,
+  _windowsBeforeDesignation: null
+});
+
 function createUIState() {
   const initialState: UIState = {
-    currentScreen: 'main',
+    windows: [],
     showNotifications: true,
     lastEvent: null,
     designationActive: false,
     designationType: null,
     activeZoneInstanceId: null,
-    _screenBeforeDesignation: null,
+    _windowsBeforeDesignation: null,
     mapFocusRequest: null,
     selectedPawnId: null,
     cameraFollowPawnId: null,
@@ -66,16 +78,33 @@ function createUIState() {
     set,
     update,
 
-    setScreen: (screen: Screen) => update((state) => ({ ...state, currentScreen: screen })),
+    openWindow: (id: WindowId) =>
+      update((state) => ({ ...state, windows: raise(state.windows, id) })),
+
+    closeWindow: (id: WindowId) =>
+      update((state) => ({ ...state, windows: state.windows.filter((w) => w !== id) })),
+
+    toggleWindow: (id: WindowId) =>
+      update((state) => ({
+        ...state,
+        windows: state.windows.includes(id)
+          ? state.windows.filter((w) => w !== id)
+          : raise(state.windows, id)
+      })),
+
+    raiseWindow: (id: WindowId) =>
+      update((state) =>
+        state.windows.at(-1) === id || !state.windows.includes(id)
+          ? state
+          : { ...state, windows: raise(state.windows, id) }
+      ),
+
+    closeAllWindows: () => update((state) => ({ ...state, windows: [] })),
+
+    closeTopWindow: () => update((state) => ({ ...state, windows: state.windows.slice(0, -1) })),
 
     toggleCustomMap: () => update((state) => ({ ...state, customMapOpen: !state.customMapOpen })),
     setCustomMap: (open: boolean) => update((state) => ({ ...state, customMapOpen: open })),
-
-    toggleScreen: (screen: Screen) =>
-      update((state) => ({
-        ...state,
-        currentScreen: state.currentScreen === screen ? 'main' : screen
-      })),
 
     addEvent: (event: string) => update((state) => ({ ...state, lastEvent: event })),
 
@@ -87,9 +116,7 @@ function createUIState() {
         designationActive: true,
         designationType: type,
         activeZoneInstanceId: instanceId,
-        _screenBeforeDesignation:
-          state.currentScreen !== 'main' ? state.currentScreen : state._screenBeforeDesignation,
-        currentScreen: 'main'
+        ...stashWindows(state)
       })),
 
     deactivateDesignation: () =>
@@ -98,8 +125,7 @@ function createUIState() {
         designationActive: false,
         designationType: null,
         activeZoneInstanceId: null,
-        currentScreen: state._screenBeforeDesignation ?? state.currentScreen,
-        _screenBeforeDesignation: null
+        ...restoreWindows(state)
       })),
 
     focusMapOn: (x: number, y: number, selectTile = true) =>
@@ -140,9 +166,7 @@ function createUIState() {
         ...state,
         blueprintBuildingId: buildingId,
         blueprintMaterials: materials,
-        _screenBeforeDesignation:
-          state.currentScreen !== 'main' ? state.currentScreen : state._screenBeforeDesignation,
-        currentScreen: 'main'
+        ...stashWindows(state)
       })),
 
     deactivateBlueprint: () =>
@@ -150,8 +174,7 @@ function createUIState() {
         ...state,
         blueprintBuildingId: null,
         blueprintMaterials: null,
-        currentScreen: state._screenBeforeDesignation ?? state.currentScreen,
-        _screenBeforeDesignation: null
+        ...restoreWindows(state)
       })),
 
     activateDebugBrush: (
@@ -161,17 +184,14 @@ function createUIState() {
       update((state) => ({
         ...state,
         debugBrush: { kind, id },
-        _screenBeforeDesignation:
-          state.currentScreen !== 'main' ? state.currentScreen : state._screenBeforeDesignation,
-        currentScreen: 'main'
+        ...stashWindows(state)
       })),
 
     deactivateDebugBrush: () =>
       update((state) => ({
         ...state,
         debugBrush: null,
-        currentScreen: state._screenBeforeDesignation ?? state.currentScreen,
-        _screenBeforeDesignation: null
+        ...restoreWindows(state)
       }))
   };
 }
