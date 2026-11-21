@@ -148,16 +148,23 @@ export function cascadeSeveredContents(
   return changed ? { parts: next, lostVital } : { parts, lostVital: false };
 }
 
+const LETHAL_IF_DESTROYED = new Set<string>(
+  (Object.keys(PART_DEF_MAP) as BodyPartId[]).filter(
+    (id) => PART_DEF_MAP[id]?.isVital || PART_DEF_MAP[id]?.isCritical || CONTAINER_OF_VITAL.has(id)
+  )
+);
+
 export function lethalAnatomyCause(limbs: LimbState[] | undefined): 'critical_limb' | null {
   if (!limbs) return null;
-  for (const limb of limbs) {
-    for (const part of limb.parts ?? []) {
-      const def = PART_DEF_MAP[part.id];
-      const destroyed = part.isMissing || part.health <= 0;
-      if (destroyed && (def?.isVital || def?.isCritical || CONTAINER_OF_VITAL.has(part.id))) {
-        return 'critical_limb';
+  for (let li = 0; li < limbs.length; li++) {
+    const limb = limbs[li];
+    const parts = limb.parts;
+    if (parts)
+      for (let pi = 0; pi < parts.length; pi++) {
+        const part = parts[pi];
+        if ((part.isMissing || part.health <= 0) && LETHAL_IF_DESTROYED.has(part.id))
+          return 'critical_limb';
       }
-    }
     if (limb.health <= 0 && (limb.id === 'head' || limb.id === 'torso')) {
       return 'critical_limb';
     }
