@@ -200,8 +200,8 @@
   }
 
   function evalAmbient(): void {
-    if (isMenu) return void audioService.setAmbient(baseAmbient);
-    audioService.setAmbient(ambientMix(baseAmbient, zoomDetail(get(cameraTileSize))));
+    const detail = isMenu ? 1 : zoomDetail(get(cameraTileSize));
+    audioService.setAmbient(ambientMix(baseAmbient, detail));
   }
 
   function evalFire(): void {
