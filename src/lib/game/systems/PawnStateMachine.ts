@@ -343,9 +343,12 @@ function tickConditions(pawn: Pawn, gameState: GameState): GameState {
           gameState.worldMap
         )
       : 1;
-    const el = dampenLightByNightVision(tileLight, getNightVision(pawn));
-    pawn.effectiveLight =
-      el >= DARKNESS_ONSET ? 1 : Math.max(DARKNESS_SIGHT_FLOOR, el / DARKNESS_ONSET);
+    if (tileLight >= DARKNESS_ONSET) pawn.effectiveLight = 1;
+    else {
+      const el = dampenLightByNightVision(tileLight, getNightVision(pawn));
+      pawn.effectiveLight =
+        el >= DARKNESS_ONSET ? 1 : Math.max(DARKNESS_SIGHT_FLOOR, el / DARKNESS_ONSET);
+    }
   }
 
   const needVals = pawn.needs as unknown as Record<string, number> | undefined;
