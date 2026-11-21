@@ -49,6 +49,7 @@
   import { GameGrid as GameGridClass } from '$lib/webgl/game-grid.js';
   import { BASE_TILE_PX } from '$lib/webgl/tile-types.js';
   import { PAINTED_TILES, paintedEntity } from '$lib/webgl/painted/tileset.js';
+  import { PAINTED_LIGHT } from '$lib/webgl/painted/flag.js';
   import { pawnService } from '$lib/game/services/PawnService.js';
   import { pathfinderService } from '$lib/game/services/PathfinderService.js';
   import { designationService } from '$lib/game/services/DesignationService.js';
@@ -329,7 +330,7 @@
   function refreshEmitters(buildingList = buildings) {
     const emitters = [...lightingService.collectEmitters(buildingList), ...resourceGlowEmitters];
     lightingService.setEmitters(emitters);
-    renderer?.setPointLights(emitters);
+    if (PAINTED_LIGHT) renderer?.setPointLights(emitters);
     renderer?.setDynamicLight(lightingService.hasEmitters());
     renderer?.setLightVersion(lightingService.getEmittersVersion());
     renderer?.setLightBounds(lightingService.getLitBounds());
