@@ -109,7 +109,7 @@
     z-index: -1;
   }
   .title {
-    margin: 0;
+    margin: 0.67em 0;
     font: 52px/44px 'Fantasia Banner', var(--font-display);
     letter-spacing: 3px;
     text-transform: uppercase;
