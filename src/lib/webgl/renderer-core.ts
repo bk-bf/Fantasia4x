@@ -560,9 +560,8 @@ export class WebGLRendererCore {
     this.characterRenderer?.dispose();
     this.shaderManager?.dispose();
     this.textureManager?.dispose();
-    const gl = this.webglState.getContext();
-    if (this.painted) gl?.deleteTexture(this.painted.texture);
-    if (this.painted?.top) gl?.deleteTexture(this.painted.top.texture);
+    if (this.painted) this.webglState.getContext()?.deleteTexture(this.painted.texture);
+    if (this.painted?.top) this.webglState.getContext()?.deleteTexture(this.painted.top.texture);
     this.painted = null;
     this.webglState.dispose();
     this.gridRenderer = null;
