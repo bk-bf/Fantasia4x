@@ -11,8 +11,8 @@ const PROGRAM = 'groundBlend';
 const MAX_KINDS = 64;
 const TEXEL_UPDATE_LIMIT = 64;
 const ATLAS_UNIT = 1;
-const KIND_UNIT = 2;
-const LIGHT_UNIT = 3;
+const KIND_UNIT = 3;
+const LIGHT_UNIT = 4;
 
 type LightSampler = (wx: number, wy: number, time: number) => [number, number, number];
 type Bounds = { minX: number; minY: number; maxX: number; maxY: number };
