@@ -20,6 +20,8 @@
   let size: Partial<Record<WindowId, { w: number; h: number }>> = $state({});
 
   const open = $derived($uiState.windows);
+  const ORDER = Object.keys(WINDOWS) as WindowId[];
+  const mounted = $derived(ORDER.filter((id) => open.includes(id)));
   const area: Area = $derived({ left, right, top, width: W, height: H });
   const veiled = $derived(open.some((id) => WINDOWS[id].modal));
 
@@ -55,7 +57,7 @@
 
 <div class="window-layer" style={$panelAmbient.vars} bind:clientWidth={W} bind:clientHeight={H}>
   {#if veiled}<div class="veil"></div>{/if}
-  {#each open as id, i (id)}
+  {#each mounted as id (id)}
     {@const spec = WINDOWS[id]}
     <GameWindow
       {id}
@@ -64,7 +66,7 @@
       pos={pos[id] ?? null}
       width={widthOf(id)}
       height={heightOf(id)}
-      z={(spec.modal ? 40 : 10) + i}
+      z={(spec.modal ? 40 : 10) + open.indexOf(id)}
       onsize={(w, h) => sized(id, w, h)}
       onmove={(p) => (pos[id] = dragTo(p, size[id]?.w ?? 0, area))}
       onraise={() => uiState.raiseWindow(id)}
