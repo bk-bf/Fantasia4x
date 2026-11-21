@@ -1,4 +1,8 @@
 <script lang="ts">
+  import ChromeButton from '$lib/components/UI/widget/ChromeButton.svelte';
+  import Well from '$lib/components/UI/widget/Well.svelte';
+  import SpriteIcon from '$lib/components/UI/widget/SpriteIcon.svelte';
+
   export interface TradeRow {
     itemId: string;
     name: string;
@@ -18,131 +22,99 @@
   } = $props();
 </script>
 
-<div class="col">
-  <div class="col-hdr">| {title}</div>
+<Well {title} class="trade-well">
+  <div class="trow th">
+    <i></i><span>Item</span><em>Have</em><em>Worth</em><span class="c4">Offered</span>
+  </div>
   <div class="rows">
     {#if rows.length === 0}
-      <div class="empty">nothing to offer</div>
+      <p class="empty">nothing to offer</p>
     {/if}
     {#each rows as row (row.itemId)}
-      <div class="row" class:active={row.offered > 0}>
-        <span class="name" title={row.name}>{row.name}</span>
-        <span class="have">×{row.have}</span>
-        <span class="price">{row.price}</span>
-        <span class="ctrl">
-          <button class="btn" disabled={row.offered <= 0} onclick={() => onAdjust(row.itemId, -1)}
-            >−</button
-          >
-          <span class="offered">{row.offered}</span>
-          <button
-            class="btn"
-            disabled={row.offered >= row.have}
-            onclick={() => onAdjust(row.itemId, 1)}>+</button
-          >
-          <button
-            class="btn all"
-            disabled={row.offered >= row.have}
-            onclick={() => onAdjust(row.itemId, row.have - row.offered)}>all</button
-          >
-        </span>
+      <div class="trow" class:on={row.offered > 0}>
+        <SpriteIcon item={row.itemId} px={16} />
+        <span title={row.name}>{row.name}</span>
+        <em>×{row.have}</em>
+        <em>{row.price}</em>
+        <ChromeButton
+          mini
+          label="Less"
+          disabled={row.offered <= 0}
+          onclick={() => onAdjust(row.itemId, -1)}>−</ChromeButton
+        >
+        <b>{row.offered}</b>
+        <ChromeButton
+          mini
+          label="More"
+          disabled={row.offered >= row.have}
+          onclick={() => onAdjust(row.itemId, 1)}>+</ChromeButton
+        >
+        <ChromeButton
+          class="all"
+          disabled={row.offered >= row.have}
+          onclick={() => onAdjust(row.itemId, row.have - row.offered)}>All</ChromeButton
+        >
       </div>
     {/each}
   </div>
-</div>
+</Well>
 
 <style>
-  .col {
-    flex: 1;
-    min-width: 0;
+  :global(.trade-well) {
     display: flex;
     flex-direction: column;
-    border: 1px solid var(--border);
-    background: var(--bg);
-  }
-  .col-hdr {
-    padding: 4px 8px;
-    background: var(--bg-panel);
-    color: var(--accent-hi);
-    letter-spacing: 0.08em;
-    font-size: 11px;
-    border-bottom: 1px solid var(--border-hi);
-    flex-shrink: 0;
   }
   .rows {
-    overflow-y: auto;
+    flex: 1;
     min-height: 0;
-    flex: 1;
+    overflow-y: auto;
   }
-  .row {
-    display: flex;
+  .trow {
+    display: grid;
+    grid-template-columns: 16px 1fr 40px 40px 19px 26px 19px 34px;
+    gap: 4px;
     align-items: center;
-    gap: 6px;
-    padding: 2px 8px;
-    border-bottom: 1px solid var(--border);
-    font-size: 11px;
-    color: var(--text-dim);
+    height: 22px;
+    white-space: nowrap;
+    color: var(--text);
   }
-  .row.active {
-    background: var(--bg-active);
-    color: var(--accent-hi);
-  }
-  .name {
-    flex: 1;
-    min-width: 0;
+  .trow > span {
     overflow: hidden;
     text-overflow: ellipsis;
-    white-space: nowrap;
   }
-  .have {
-    color: var(--text-muted);
-    width: 42px;
+  .trow em {
+    font-style: normal;
     text-align: right;
-  }
-  .price {
-    color: var(--text);
-    width: 36px;
-    text-align: right;
-  }
-  .row.active .price {
-    color: var(--accent-hi);
-  }
-  .ctrl {
-    display: flex;
-    align-items: center;
-    gap: 3px;
-  }
-  .btn {
-    background: none;
-    border: 1px solid var(--border);
     color: var(--text-dim);
-    font-family: var(--font-mono);
-    font-size: 11px;
-    width: 20px;
-    padding: 0;
-    cursor: pointer;
-    line-height: 16px;
   }
-  .btn.all {
-    width: 28px;
-    font-size: 9px;
-  }
-  .btn:hover:enabled {
-    color: var(--accent-hi);
-    border-color: var(--border-hi);
-  }
-  .btn:disabled {
-    opacity: 0.35;
-    cursor: default;
-  }
-  .offered {
-    width: 26px;
+  .trow b {
+    font-weight: normal;
     text-align: center;
-    color: var(--text);
+    color: var(--text-muted);
+  }
+  .trow.on > span,
+  .trow.on b {
+    color: var(--accent-hi);
+  }
+  .trow.th {
+    height: 18px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+  }
+  .trow.th em {
+    color: var(--text-muted);
+  }
+  .c4 {
+    grid-column: 5 / span 4;
+    text-align: center;
+  }
+  .trow :global(.all) {
+    height: 19px;
+    padding: 0 4px;
   }
   .empty {
-    padding: 12px;
+    margin: 6px 0;
     color: var(--text-muted);
-    font-style: italic;
-    font-size: 11px;
   }
 </style>

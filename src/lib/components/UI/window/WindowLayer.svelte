@@ -2,6 +2,7 @@
   import { uiState, type WindowId } from '$lib/stores/uiState';
   import { panelAmbient } from '$lib/components/UI/theme/ambientStore';
   import GameWindow from './GameWindow.svelte';
+  import ModalVeil from './ModalVeil.svelte';
   import { BIG_WIDTH_MAX, BIG_WIDTH_MIN, WINDOW_HEIGHT_MAX, WINDOWS } from './windowRegistry';
   import {
     centreWindow,
@@ -59,7 +60,7 @@
 
 {#if mounted.length}
   <div class="window-layer" style={$panelAmbient.vars}>
-    {#if veiled}<div class="veil"></div>{/if}
+    {#if veiled}<ModalVeil />{/if}
     {#each mounted as id (id)}
       {@const spec = WINDOWS[id]}
       <GameWindow
@@ -88,15 +89,5 @@
     z-index: 60;
     pointer-events: none;
     will-change: transform;
-  }
-  .veil {
-    position: absolute;
-    inset: 0;
-    z-index: 30;
-    background: rgb(8 6 10 / 0.45);
-    pointer-events: auto;
-  }
-  :global(:root[data-theme='vellum']) .veil {
-    background: rgb(20 12 6 / 0.35);
   }
 </style>

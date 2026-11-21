@@ -1,5 +1,5 @@
 import { getContext, onDestroy, setContext, type Snippet } from 'svelte';
-import type { WindowId } from '$lib/stores/uiState';
+import type { ModalId, WindowId } from '$lib/stores/uiState';
 
 const KEY = Symbol('game-window');
 
@@ -9,7 +9,7 @@ export interface WindowBar {
 }
 
 export interface WindowContext {
-  id: WindowId;
+  id: WindowId | ModalId;
   close: () => void;
   bar: WindowBar;
 }

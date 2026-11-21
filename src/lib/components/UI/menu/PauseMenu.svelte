@@ -1,6 +1,7 @@
 <script lang="ts">
   import { gameState } from '$lib/stores/gameState';
   import { currentWindow } from '$lib/components/UI/window/windowContext';
+  import ChromeButton from '$lib/components/UI/widget/ChromeButton.svelte';
   import SettingsModal from '../modal/SettingsModal.svelte';
   import SaveListMenu from './SaveListMenu.svelte';
 
@@ -34,15 +35,15 @@
 </script>
 
 <nav class="menu">
-  <button class="menu-btn" onclick={onResume}>Resume</button>
-  <button class="menu-btn" onclick={() => (showSave = true)} disabled={busy}>
-    {saved ? 'Saved ✓' : 'Save Game'}
-  </button>
-  <button class="menu-btn" onclick={() => (showLoad = true)} disabled={busy}>Load Game</button>
-  <button class="menu-btn" onclick={() => (showSettings = true)}>Settings</button>
-  <button class="menu-btn" onclick={exitToMenu} disabled={busy}>Exit to Main Menu</button>
+  <ChromeButton onclick={onResume}>Resume</ChromeButton>
+  <ChromeButton onclick={() => (showSave = true)} disabled={busy}>
+    {saved ? 'Saved' : 'Save game'}
+  </ChromeButton>
+  <ChromeButton onclick={() => (showLoad = true)} disabled={busy}>Load game</ChromeButton>
+  <ChromeButton onclick={() => (showSettings = true)}>Settings</ChromeButton>
+  <ChromeButton onclick={exitToMenu} disabled={busy}>Exit to main menu</ChromeButton>
   {#if isDesktop}
-    <button class="menu-btn danger" onclick={quitDesktop} disabled={busy}>Quit to Desktop</button>
+    <ChromeButton class="neg" onclick={quitDesktop} disabled={busy}>Quit to desktop</ChromeButton>
   {/if}
 </nav>
 
@@ -62,40 +63,13 @@
   .menu {
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    width: 100%;
+    gap: 4px;
+    padding: 2px 10px 4px;
   }
-
-  .menu-btn {
-    width: 100%;
-    padding: 9px 0;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    color: var(--text);
-    font-family: var(--font-mono);
-    font-size: 13px;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-    cursor: pointer;
-    transition:
-      background 0.12s,
-      color 0.12s,
-      border-color 0.12s;
+  .menu :global(.cbtn) {
+    height: 26px;
   }
-  .menu-btn:hover:not(:disabled) {
-    background: var(--bg-hover);
-    color: var(--accent-hi);
-    border-color: var(--border-hi);
-  }
-  .menu-btn:active:not(:disabled) {
-    background: var(--bg-active);
-  }
-  .menu-btn:disabled {
-    color: var(--text-muted);
-    cursor: default;
-  }
-  .menu-btn.danger:hover:not(:disabled) {
+  .menu :global(.cbtn.neg:enabled) {
     color: var(--neg);
-    border-color: var(--neg);
   }
 </style>

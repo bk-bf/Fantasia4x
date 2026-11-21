@@ -1,7 +1,10 @@
 <script lang="ts">
-  import { fade, scale } from 'svelte/transition';
   import type { MigrantWaveEvent } from '$lib/game/core/types';
+  import { chrome } from '$lib/pixelArt/chrome';
   import { describePawnAbilities } from '$lib/components/util/pawnBlurb';
+  import ChromeButton from '$lib/components/UI/widget/ChromeButton.svelte';
+  import PawnSprite from '$lib/components/UI/widget/PawnSprite.svelte';
+  import ModalWindow from '$lib/components/UI/window/ModalWindow.svelte';
 
   let { event, onResolve }: { event: MigrantWaveEvent; onResolve: (ids: string[]) => void } =
     $props();
@@ -18,191 +21,112 @@
   }
 </script>
 
-<div class="event-overlay" transition:fade={{ duration: 120 }}>
-  <div class="backdrop"></div>
-  <div
-    class="event-panel"
-    role="dialog"
-    aria-modal="true"
-    aria-label="Migrants arrive"
-    tabindex="-1"
-    transition:scale={{ duration: 140, start: 0.96 }}
-  >
-    <div class="hdr">
-      <h2 class="title">MIGRANTS ARRIVE</h2>
-    </div>
-    <p class="intro">
-      {event.candidates.length === 1
-        ? 'A wanderer has reached your colony, hoping to join.'
-        : `${event.candidates.length} wanderers have reached your colony, hoping to join.`}
-      Choose who to welcome.
-    </p>
-
-    <div class="cards">
-      {#each event.candidates as c (c.id)}
-        {@const blurb = describePawnAbilities(c)}
-        <div class="card" class:rejected={!isAccepted(c.id)}>
-          <div class="card-head">
-            <div class="who">
-              <span class="name">{c.name}</span>
-              <span class="culture">{c.cultureName}</span>
-            </div>
-            <button class="toggle" class:on={isAccepted(c.id)} onclick={() => toggle(c.id)}>
-              {isAccepted(c.id) ? '✓ Welcome' : '✕ Turn away'}
-            </button>
-          </div>
-          <div class="traits">
-            {#each blurb.strengths as s}
-              <span class="chip good">{s}</span>
-            {/each}
-            {#each blurb.weaknesses as w}
-              <span class="chip bad">{w}</span>
-            {/each}
+<ModalWindow id="event" title="Migrants arrive" width={440} onclose={confirm}>
+  <p class="lore">
+    {event.candidates.length === 1
+      ? 'A wanderer has reached your colony, hoping to join.'
+      : `${event.candidates.length} wanderers have reached your colony, hoping to join.`}
+  </p>
+  <div class="cards">
+    {#each event.candidates as c (c.id)}
+      {@const blurb = describePawnAbilities(c)}
+      {@const yes = isAccepted(c.id)}
+      <div class="mig" class:off={!yes} {@attach chrome('cell')}>
+        <span class="frame" {@attach chrome('well')}>
+          <PawnSprite id={c.id} cultureId={c.cultureId} height={40} />
+        </span>
+        <div class="who">
+          <b>{c.name}</b><em>{c.cultureName}</em>
+          <div class="pills">
+            {#each blurb.strengths as s (s)}<span class="pill good">{s}</span>{/each}
+            {#each blurb.weaknesses as w (w)}<span class="pill warn">{w}</span>{/each}
             {#if blurb.strengths.length === 0 && blurb.weaknesses.length === 0}
-              <span class="chip plain">of unremarkable ability</span>
+              <span class="pill">of unremarkable ability</span>
             {/if}
           </div>
         </div>
-      {/each}
-    </div>
-
-    <button class="done" onclick={confirm}>
+        <ChromeButton on={yes} glyph={yes ? undefined : 'x'} onclick={() => toggle(c.id)}>
+          {yes ? 'Welcome' : 'Turn away'}
+        </ChromeButton>
+      </div>
+    {/each}
+  </div>
+  <div class="foot">
+    <ChromeButton kind="verb" onclick={confirm}>
       {acceptedCount === 0
         ? 'Turn them all away'
         : acceptedCount === 1
           ? 'Welcome 1 migrant'
           : `Welcome ${acceptedCount} migrants`}
-    </button>
+    </ChromeButton>
   </div>
-</div>
+</ModalWindow>
 
 <style>
-  .event-overlay {
-    position: fixed;
-    inset: 0;
-    z-index: 1400;
-    background: rgba(6, 4, 2, 0.72);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-family: var(--font-mono);
-  }
-  .backdrop {
-    position: absolute;
-    inset: 0;
-  }
-  .event-panel {
-    position: relative;
-    z-index: 1;
-    display: flex;
-    flex-direction: column;
-    width: min(420px, 90vw);
-    max-height: 86vh;
-    padding: 16px 18px 14px;
-    background: var(--bg-panel);
-    border: 1px solid var(--border-hi);
-    box-shadow: 0 0 28px rgba(0, 0, 0, 0.6);
-    filter: url(#ambient-tint);
-  }
-  .hdr {
-    margin-bottom: 6px;
-  }
-  .title {
-    color: var(--accent-hi);
-    font-size: 16px;
-    font-weight: 700;
-    letter-spacing: 0.4em;
-    text-indent: 0.4em;
+  .lore {
     margin: 0;
-  }
-  .intro {
-    color: var(--text-muted);
-    font-size: 12px;
-    line-height: 1.5;
-    margin: 0 0 12px;
+    color: var(--text-dim);
+    line-height: 17px;
   }
   .cards {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
+    max-height: 56vh;
     overflow-y: auto;
-    min-height: 0;
   }
-  .card {
-    border: 1px solid var(--border);
-    padding: 8px 10px;
-    transition: opacity 0.12s;
-  }
-  .card.rejected {
-    opacity: 0.42;
-  }
-  .card-head {
+  .mig {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
     gap: 10px;
+    align-items: center;
+    margin-top: 5px;
+    padding: 5px 6px;
+  }
+  .mig.off {
+    opacity: 0.55;
+  }
+  .frame {
+    display: grid;
+    place-items: end center;
+    flex: none;
+    width: 46px;
+    height: 46px;
   }
   .who {
-    display: flex;
-    flex-direction: column;
+    flex: 1;
+    min-width: 0;
   }
-  .name {
+  b {
+    margin-right: 8px;
+    font-weight: normal;
     color: var(--text);
-    font-size: 14px;
-    font-weight: 600;
   }
-  .culture {
+  em {
+    font-style: normal;
     color: var(--text-muted);
-    font-size: 11px;
-    letter-spacing: 0.06em;
   }
-  .toggle {
-    background: none;
-    border: 1px solid var(--border);
-    color: var(--text-muted);
-    font-family: var(--font-mono);
-    font-size: 11px;
-    padding: 3px 8px;
-    cursor: pointer;
-    white-space: nowrap;
-  }
-  .toggle.on {
-    color: var(--accent-hi);
-    border-color: var(--border-hi);
-  }
-  .traits {
+  .pills {
     display: flex;
     flex-wrap: wrap;
-    gap: 4px;
-    margin-top: 6px;
+    gap: 3px;
+    margin-top: 2px;
   }
-  .chip {
-    font-size: 11px;
-    padding: 1px 6px;
-    border: 1px solid var(--border);
+  .pill {
+    padding: 0 5px;
+    box-shadow: inset 0 0 0 1px var(--text-muted);
+    color: var(--text-dim);
+    white-space: nowrap;
   }
-  .chip.good {
-    color: var(--accent-hi);
+  .pill.good {
+    color: var(--pos);
   }
-  .chip.bad {
-    color: var(--text-muted);
-    font-style: italic;
+  .pill.warn {
+    color: var(--accent);
   }
-  .chip.plain {
-    color: var(--text-muted);
+  .mig :global(.cbtn) {
+    width: 92px;
+    flex: none;
   }
-  .done {
-    margin-top: 14px;
-    background: var(--bg-panel);
-    border: 1px solid var(--border-hi);
-    color: var(--accent-hi);
-    font-family: var(--font-mono);
-    font-size: 13px;
-    letter-spacing: 0.1em;
-    padding: 8px;
-    cursor: pointer;
-  }
-  .done:hover {
-    background: var(--border);
+  .foot {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 10px;
   }
 </style>

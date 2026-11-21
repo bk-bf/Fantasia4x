@@ -15,6 +15,8 @@ export type WindowId =
   | 'health'
   | 'fuel';
 
+export type ModalId = 'trade' | 'event' | 'settings';
+
 interface UIState {
   windows: WindowId[];
   showNotifications: boolean;
