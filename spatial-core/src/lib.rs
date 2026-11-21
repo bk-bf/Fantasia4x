@@ -310,7 +310,6 @@ pub fn nearest_each(points: &[f32], queries: &[f32], max_dist: f32) -> Vec<i32> 
     }
 
     let max_d2 = max_dist * max_dist;
-    const EPS2: f32 = 1e-4;
     for q in 0..nq {
         let qx = queries[2 * q];
         let qy = queries[2 * q + 1];
@@ -334,7 +333,7 @@ pub fn nearest_each(points: &[f32], queries: &[f32], max_dist: f32) -> Vec<i32> 
                     let ddx = px - qx;
                     let ddy = py - qy;
                     let d2 = ddx * ddx + ddy * ddy;
-                    if d2 > EPS2 && d2 < best_d2 {
+                    if d2 < best_d2 {
                         best_d2 = d2;
                         best = pi as i32;
                     }
