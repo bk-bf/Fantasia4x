@@ -46,6 +46,20 @@ export function getConditionDefById(id: string): ConditionDef | TransientConditi
 function conditionDef(id: string): ConditionDef | undefined {
   return CONDITION_BY_ID.get(id) as ConditionDef | undefined;
 }
+type ModifierKey = keyof ConditionModifiers;
+function defModifierKeys(d: ConditionDef | TransientConditionDef): Set<ModifierKey> {
+  const keys = new Set<ModifierKey>();
+  const add = (m: ConditionModifiers | undefined) => {
+    if (m) for (const k of Object.keys(m) as ModifierKey[]) keys.add(k);
+  };
+  if ((d as TransientConditionDef).transient === true) add((d as TransientConditionDef).modifiers);
+  else for (const stage of (d as ConditionDef).stages ?? []) add(stage.modifiers);
+  return keys;
+}
+const DEF_MODIFIER_KEYS = new Map(ALL_CONDITION_DEFS.map((d) => [d.id, defModifierKeys(d)]));
+const ANY_MODIFIER_KEYS: ReadonlySet<ModifierKey> = new Set(
+  [...DEF_MODIFIER_KEYS.values()].flatMap((keys) => [...keys])
+);
 type DrivenDef = ConditionDef & { driver: NonNullable<ConditionDef['driver']> };
 const NEED_DRIVER_DEFS = CONDITIONS_DB.filter(
   (d): d is DrivenDef => !!d.driver && !d.driver.source
@@ -142,6 +156,7 @@ export function conditionModifierSum(
   entity: { conditions?: EntityCondition[]; transientConditions?: string[] },
   key: keyof ConditionModifiers
 ): number {
+  if (!ANY_MODIFIER_KEYS.has(key)) return 0;
   let sum = 0;
   eachConditionModifier(entity, key, (v) => {
     sum += v;
@@ -470,6 +485,24 @@ const NO_STAT_MULT: StatMultipliers = Object.freeze({
   perception: 1,
   intelligence: 1
 });
+const STAT_MULTIPLIER_KEYS = Object.keys(NO_STAT_MULT) as ModifierKey[];
+const STAT_MODIFIER_IDS: ReadonlySet<string> = new Set(
+  ALL_CONDITION_DEFS.filter((d) =>
+    STAT_MULTIPLIER_KEYS.some((k) => DEF_MODIFIER_KEYS.get(d.id)!.has(k))
+  ).map((d) => d.id)
+);
+
+function hasAnyId(conds: EntityCondition[] | undefined, ids: ReadonlySet<string>): boolean {
+  if (!conds) return false;
+  for (let i = 0; i < conds.length; i++) if (ids.has(conds[i].id)) return true;
+  return false;
+}
+
+function hasAnyTransientId(tconds: string[] | undefined, ids: ReadonlySet<string>): boolean {
+  if (!tconds) return false;
+  for (let i = 0; i < tconds.length; i++) if (ids.has(tconds[i])) return true;
+  return false;
+}
 
 export function conditionStatMultipliers(entity: {
   conditions?: EntityCondition[];
@@ -477,7 +510,8 @@ export function conditionStatMultipliers(entity: {
 }): StatMultipliers {
   const conds = entity.conditions;
   const tconds = entity.transientConditions;
-  if ((!conds || conds.length === 0) && (!tconds || tconds.length === 0)) return NO_STAT_MULT;
+  if (!hasAnyId(conds, STAT_MODIFIER_IDS) && !hasAnyTransientId(tconds, STAT_MODIFIER_IDS))
+    return NO_STAT_MULT;
   const out: StatMultipliers = {
     strength: 1,
     dexterity: 1,

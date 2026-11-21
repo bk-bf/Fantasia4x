@@ -148,7 +148,9 @@ const BLOOD_FAINT_FLOOR = 0.55;
 
 const BROKEN_BONE_FUNCTION_MULT = 0.4;
 
-const _formulaCache = new Map<string, ((...vars: number[]) => number) | null>();
+type CompiledFormula = (vars: number[]) => number;
+const _formulaCache = new Map<string, CompiledFormula | null>();
+const FORMULA_ARGS: number[] = new Array<number>(FORMULA_VARS.length).fill(0);
 const _formulaUsesPrestige = new Map<string, boolean>();
 
 function formulaUsesPrestige(formula: string): boolean {
@@ -210,20 +212,22 @@ function intactBodyFraction(p: Pawn | Mob): number {
 const FORMULA_CLAMP = (x: number, lo: number, hi: number): number =>
   x < lo ? lo : x > hi ? hi : x;
 
-function compileFormula(formula: string): ((...vars: number[]) => number) | null {
+function compileFormula(formula: string): CompiledFormula | null {
   const cached = _formulaCache.get(formula);
   if (cached !== undefined) return cached;
   const expr = formula.replace(/×/g, '*').replace(/−/g, '-');
   const stripped = expr.replace(/\bclamp\b/g, '').replace(FORMULA_VAR_RE, '0');
-  let fn: ((...vars: number[]) => number) | null = null;
+  let fn: CompiledFormula | null = null;
   if (/^[\d\s+\-*/.(),]+$/.test(stripped)) {
     try {
-      const raw = new Function(
+      fn = new Function(
         'clamp',
-        ...FORMULA_VARS,
-        '"use strict"; return (' + expr + ');'
-      ) as (clamp: typeof FORMULA_CLAMP, ...vars: number[]) => number;
-      fn = (...vars: number[]) => raw(FORMULA_CLAMP, ...vars);
+        '"use strict"; return function (vars) { const ' +
+          FORMULA_VARS.map((v, i) => `${v} = vars[${i}]`).join(', ') +
+          '; return (' +
+          expr +
+          '); };'
+      )(FORMULA_CLAMP) as CompiledFormula;
     } catch {
       fn = null;
     }
@@ -249,27 +253,28 @@ function evaluateFormula(
   const intact = formulaUsesIntact(formula) ? intactBodyFraction(p) : 1;
   const power = formulaUsesPower(formula) ? equippedPowerToken(p, sm) : STAT_SCALE;
   const apt = aptitudeOf(p as { aptitudes?: Record<string, number> }, statId);
-  const v = fn(
-    ...CORE_STAT_KEYS.map((k) => coreStatValue(k, s, sm)),
-    tr?.weight ?? 70,
-    tr?.height ?? 170,
-    capacities.consciousness ?? 1,
-    capacities.manipulation ?? 1,
-    capacities.sight ?? 1,
-    capacities.moving ?? 1,
-    capacities.blood_pumping ?? 1,
-    capacities.blood_filtration ?? 1,
-    capacities.breathing ?? 1,
-    capacities.digestion ?? 1,
-    capacities.talking ?? 1,
-    capacities.hearing ?? 1,
-    capacities.pain ?? 0,
-    prestige,
-    intact,
-    skill,
-    power,
-    apt
-  );
+  const a = FORMULA_ARGS;
+  let i = 0;
+  for (let k = 0; k < CORE_STAT_KEYS.length; k++) a[i++] = coreStatValue(CORE_STAT_KEYS[k], s, sm);
+  a[i++] = tr?.weight ?? 70;
+  a[i++] = tr?.height ?? 170;
+  a[i++] = capacities.consciousness ?? 1;
+  a[i++] = capacities.manipulation ?? 1;
+  a[i++] = capacities.sight ?? 1;
+  a[i++] = capacities.moving ?? 1;
+  a[i++] = capacities.blood_pumping ?? 1;
+  a[i++] = capacities.blood_filtration ?? 1;
+  a[i++] = capacities.breathing ?? 1;
+  a[i++] = capacities.digestion ?? 1;
+  a[i++] = capacities.talking ?? 1;
+  a[i++] = capacities.hearing ?? 1;
+  a[i++] = capacities.pain ?? 0;
+  a[i++] = prestige;
+  a[i++] = intact;
+  a[i++] = skill;
+  a[i++] = power;
+  a[i++] = apt;
+  const v = fn(a);
   return isFinite(v) ? Math.round(v * 1000) / 1000 : 1.0;
 }
 
