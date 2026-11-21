@@ -5,6 +5,7 @@ import subterrains from '$lib/game/database/world/subterrains.json';
 import resources from '$lib/game/database/world/resources.json';
 import buildings from '$lib/game/database/world/buildings.json';
 import creatures from '$lib/game/database/pawns/creatures.json';
+import items from '$lib/game/database/items/items.json';
 import { buildTileset, parseManifest } from '$lib/webgl/painted/manifest';
 import { bake } from '../../../tools/tileset/bake.mjs';
 
@@ -17,7 +18,8 @@ const database: Record<string, Set<string>> = {
   resource: ids(resources),
   building: ids(buildings),
   creature: ids(creatures),
-  pawn: new Set(['*'])
+  pawn: new Set(['*']),
+  item: ids(items)
 };
 type Rect = { x: number; y: number; w: number; h: number; ox: number; oy: number; patch?: number };
 const sprites: Record<string, Rect> = manifest.sprites;

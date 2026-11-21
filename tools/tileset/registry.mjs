@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { REGISTRY_ART } from './sources.mjs';
+import { itemObjects } from './items.mjs';
 
 const ART = join(dirname(fileURLToPath(import.meta.url)), 'art');
 
@@ -14,7 +15,8 @@ export const CATEGORY = new Map(
     site: 'resource',
     building: 'building',
     creature: 'creature',
-    folk: 'pawn'
+    folk: 'pawn',
+    item: 'item'
   })
 );
 
@@ -27,7 +29,9 @@ export function loadRegistry() {
   const src = REGISTRY_ART.map((f) =>
     readFileSync(join(ART, f), 'utf8').replace(/^'use strict';\n/, '')
   ).join('\n;');
-  return new Function(`'use strict';\n${src}\nreturn DBX;`)();
+  const DBX = new Function(`'use strict';\n${src}\nreturn DBX;`)();
+  DBX.fromData(itemObjects());
+  return DBX;
 }
 
 function variantIndex(variant = '') {
@@ -38,6 +42,11 @@ function variantIndex(variant = '') {
   return /^\d+$/.test(variant) ? variant : null;
 }
 
+const itemVariant = (DBX = loadRegistry(), e = DBX.list[0]) =>
+  e.variant === (DBX.of('item', e.dbId).some((v = e) => v.variant === 'map') ? 'map' : '0')
+    ? '0'
+    : null;
+
 export function registryEntries(
   DBX = loadRegistry(),
   skip = (cat = '', dbId = '') => !!(cat && dbId)
@@ -46,7 +55,7 @@ export function registryEntries(
   for (const e of DBX.list) {
     const cat = CATEGORY.get(e.cat);
     if (!cat || e.dbId.startsWith('_') || skip(cat, e.dbId)) continue;
-    const n = variantIndex(e.variant);
+    const n = e.cat === 'item' ? itemVariant(DBX, e) : variantIndex(e.variant);
     if (n === null) continue;
     out.push({ cat, dbId: e.dbId, spriteId: `${e.cat}/${e.dbId}/${n}`, entry: e });
   }

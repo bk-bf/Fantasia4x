@@ -1,11 +1,12 @@
-export type PaintedKind = 'subterrain' | 'resource' | 'building' | 'creature' | 'pawn';
+export type PaintedKind = 'subterrain' | 'resource' | 'building' | 'creature' | 'pawn' | 'item';
 
 export const PAINTED_KINDS: readonly PaintedKind[] = [
   'subterrain',
   'resource',
   'building',
   'creature',
-  'pawn'
+  'pawn',
+  'item'
 ];
 
 export interface ManifestSprite {

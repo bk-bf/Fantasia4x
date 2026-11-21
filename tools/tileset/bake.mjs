@@ -180,7 +180,7 @@ function registrySprites(
   const placed = (old = sprite(), spr = sprite()) =>
     old && old.w === spr.w && old.h === spr.h ? { ...spr, ox: old.ox, oy: old.oy } : spr;
   const extra = Object.fromEntries(
-    ['resource', 'building', 'creature', 'pawn'].map((c) => [c, refList()])
+    ['resource', 'building', 'creature', 'pawn', 'item'].map((c) => [c, refList()])
   );
   for (const drawn of byId.values()) {
     const { cat, dbId } = drawn[0];
@@ -246,7 +246,7 @@ function merged(extra = Object.fromEntries([['pawn', refList()]])) {
   );
   for (const [cat, entries] of Object.entries(extra))
     for (const [id, refs] of Object.entries(entries))
-      out[cat][id] = cat === 'pawn' ? [...(out[cat][id] ?? []), ...refs] : refs;
+      (out[cat] ??= refList())[id] = cat === 'pawn' ? [...(out[cat][id] ?? []), ...refs] : refs;
   return out;
 }
 
