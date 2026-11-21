@@ -1,42 +1,32 @@
 <script lang="ts">
   import '../app.css';
   import MainScreen from '$lib/components/UI/MainScreen.svelte';
-  import CultureScreen from '$lib/components/screens/CultureScreen.svelte';
-  import KingdomScreen from '$lib/components/screens/KingdomScreen.svelte';
   import TradeModal from '$lib/components/UI/trade/TradeModal.svelte';
-  import PawnScreen from '$lib/components/screens/PawnScreen.svelte';
-  import BuildingMenu from '$lib/components/screens/BuildingMenu.svelte';
-  import ResearchScreen from '$lib/components/screens/ResearchScreen.svelte';
-  import CraftingScreen from '$lib/components/screens/CraftingScreen.svelte';
-  import ExplorationScreen from '$lib/components/screens/ExplorationScreen.svelte';
-  import WorkScreen from '$lib/components/screens/WorkScreen.svelte';
-  import EntityScreen from '$lib/components/screens/EntityScreen.svelte';
-  import DebugScreen from '$lib/components/screens/DebugScreen.svelte';
   import ResourceSidebar from '$lib/components/UI/hud/ResourceSidebar.svelte';
-  import GameControls from '$lib/components/UI/hud/GameControls.svelte';
+  import HudTopBar from '$lib/components/UI/hud/topbar/HudTopBar.svelte';
   import CustomMapMenu from '$lib/components/UI/menu/CustomMapMenu.svelte';
   import ChroniclePanel from '$lib/components/UI/hud/ChroniclePanel.svelte';
   import WorldEffectsLayer from '$lib/components/UI/canvas/WorldEffectsLayer.svelte';
   import LoadingScreen from '$lib/components/UI/menu/LoadingScreen.svelte';
   import GameOverScreen from '$lib/components/UI/menu/GameOverScreen.svelte';
   import MainMenu from '$lib/components/UI/menu/MainMenu.svelte';
-  import PauseMenu from '$lib/components/UI/menu/PauseMenu.svelte';
   import EventModalHost from '$lib/components/UI/modal/EventModalHost.svelte';
   import AudioController from '$lib/components/UI/audio/AudioController.svelte';
-  import { get } from 'svelte/store';
+  import AmbientFilters from '$lib/components/UI/theme/AmbientFilters.svelte';
+  import WindowLayer from '$lib/components/UI/window/WindowLayer.svelte';
+  import { holdPauseWhileMenuOpen } from '$lib/components/UI/window/pauseWindow';
+  import { handleHudKey } from '$lib/components/UI/hud/topbar/hudKeys';
   import { onMount } from 'svelte';
-  import { autohideScroll } from '$lib/actions/autohideScroll';
   import { uiState } from '$lib/stores/uiState';
   import {
     hideSidebars,
     debugMode,
-    dayNightTint,
-    uiTheme,
     resourcesMinimized,
-    chronicleMinimized
+    chronicleMinimized,
+    resourcesHidden,
+    chronicleHidden
   } from '$lib/stores/uiPrefs';
   import {
-    gameState,
     storeReady,
     bootReveal,
     isGameOver,
@@ -45,98 +35,35 @@
     menuPreviewRendered
   } from '$lib/stores/gameState';
   import '$lib/stores/discoveredResources';
-  import { gameCoordinator } from '$lib/game/systems/GameCoordinator';
-  import {
-    environmentService,
-    effectivePanelSaturation
-  } from '$lib/game/services/EnvironmentService.js';
-  import type { PlacedBuilding } from '$lib/game/core/types';
   import '$lib/components/UI/theme/applyTheme';
-  import { THEMES } from '$lib/components/UI/theme/themes';
-  import {
-    IDENTITY_MATRIX,
-    ambientPanelVars as ambientVars,
-    bleakSaturation,
-    buildPanelMatrix,
-    legibleOf,
-    toTintStep
-  } from '$lib/components/UI/theme/ambientTokens';
+  import { panelAmbient } from '$lib/components/UI/theme/ambientStore';
 
-  let currentScreen = 'main';
-  let buildings: PlacedBuilding[] = [];
+  const LEFT_COLUMN = 180;
+  const RIGHT_COLUMN = 220;
+  const MINIMIZED_COLUMN = 26;
 
-  $: ambient = environmentService.getAmbient(environmentService.ambientTurn($gameState));
-  $: panelTint = ambient.panelTint.map(toTintStep) as [number, number, number];
-  $: panelSaturation = bleakSaturation(
-    effectivePanelSaturation(environmentService.effectiveSeason($gameState), $gameState.weather),
-    ambient.light
-  );
-  $: ambientMatrix = $dayNightTint ? buildPanelMatrix(panelTint, panelSaturation) : IDENTITY_MATRIX;
-  $: ambientLegibleMatrix = $dayNightTint
-    ? buildPanelMatrix(legibleOf(panelTint), 1)
-    : IDENTITY_MATRIX;
-  $: ambientPanelVars = ambientVars(
-    THEMES[$uiTheme],
-    $dayNightTint,
-    panelTint,
-    panelSaturation,
-    ambient.light
-  );
-
-  let customMapOpen = false;
-  uiState.subscribe((s) => {
-    currentScreen = s.currentScreen;
-    customMapOpen = s.customMapOpen;
-  });
-  gameState.subscribe((s) => (buildings = s.buildings ?? []));
-
-  $: hasResearch = buildings.some((b) => {
-    const bDef = gameCoordinator.getBuildingById(b.type);
-    return bDef?.category === 'knowledge' && b.status === 'complete';
-  });
+  $: customMapOpen = $uiState.customMapOpen;
+  $: ambientPanelVars = $panelAmbient.vars;
 
   const DEBUG_BUILD_FLAG =
     import.meta.env.VITE_DEBUG_MODE === 'true' || import.meta.env.VITE_DEBUG_LOG === 'true';
   $: debugEnabled = DEBUG_BUILD_FLAG || $debugMode;
 
-  $: NAV_TABS = [
-    { key: 'pawns', label: 'PAWNS', fkey: 'F2' },
-    { key: 'work', label: 'WORK', fkey: 'F3' },
-    { key: 'building', label: 'BUILDINGS', fkey: 'F4' },
-    { key: 'crafting', label: 'CRAFTING', fkey: 'F5' },
-    { key: 'exploration', label: 'EXPLORE', fkey: 'F6' },
-    { key: 'culture', label: 'CULTURE', fkey: 'F7' },
-    { key: 'kingdoms', label: 'KINGDOMS', fkey: 'F8' },
-    { key: 'research', label: 'RESEARCH', fkey: 'F9', needsResearch: true },
-    { key: 'entities', label: 'ENTITIES', fkey: 'F10' },
-    ...(debugEnabled ? [{ key: 'debug', label: 'DEBUG', fkey: 'F11' }] : [])
-  ];
-
-  function toggle(key: string) {
-    if (key === 'research' && !hasResearch) return;
-    uiState.toggleScreen(key as any);
-  }
+  $: leftInset = $resourcesHidden ? 0 : $resourcesMinimized ? MINIMIZED_COLUMN : LEFT_COLUMN;
+  $: rightInset = $chronicleHidden ? 0 : $chronicleMinimized ? MINIMIZED_COLUMN : RIGHT_COLUMN;
+  let flagsUnder = false;
 
   let menuRevealed = false;
   $: if ($menuPreviewRendered) menuRevealed = true;
   onMount(() => {
     const t = setTimeout(() => (menuRevealed = true), 8000);
-    return () => clearTimeout(t);
+    const stopPause = holdPauseWhileMenuOpen();
+    return () => {
+      clearTimeout(t);
+      stopPause();
+    };
   });
   $: menuLoading = $appPhase === 'menu' && $menuPreviewReady && !menuRevealed;
-
-  let pauseMenuOpen = false;
-  let wasPausedBeforeMenu = false;
-
-  function openPauseMenu() {
-    wasPausedBeforeMenu = get(gameState.isPaused);
-    if (!wasPausedBeforeMenu) gameState.pauseGame();
-    pauseMenuOpen = true;
-  }
-  function closePauseMenu() {
-    pauseMenuOpen = false;
-    if (!wasPausedBeforeMenu) gameState.unpauseGame();
-  }
 
   function blockContextMenu(e: Event) {
     e.preventDefault();
@@ -161,54 +88,7 @@
   }
 
   function handleKeydown(e: KeyboardEvent) {
-    if (!$bootReveal) return;
-    if (pauseMenuOpen) {
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        closePauseMenu();
-      }
-      return;
-    }
-    if (e.code === 'Space') {
-      e.preventDefault();
-      gameState.togglePause();
-      return;
-    }
-    if (e.key === 'Escape') {
-      if ($uiState.blueprintBuildingId) {
-        uiState.deactivateBlueprint();
-      } else if ($uiState.designationActive) {
-        uiState.deactivateDesignation();
-      } else if (currentScreen !== 'main') {
-        uiState.setScreen('main');
-      } else if (
-        $uiState.selectedPawnId ||
-        $uiState.selectedMobId ||
-        $uiState.cameraFollowPawnId ||
-        $uiState.cameraFollowMobId
-      ) {
-        uiState.selectPawn(null);
-        uiState.selectMob(null);
-        uiState.setFollowPawn(null);
-        uiState.setFollowMob(null);
-      } else {
-        openPauseMenu();
-      }
-      return;
-    }
-    if (e.key?.startsWith('F')) {
-      const n = parseInt(e.key.slice(1));
-      if (n === 1) {
-        e.preventDefault();
-        uiState.setScreen('main');
-        return;
-      }
-      if (n >= 2 && n <= 11) {
-        e.preventDefault();
-        const tab = NAV_TABS[n - 2];
-        if (tab) toggle(tab.key);
-      }
-    }
+    if ($bootReveal && $appPhase === 'game') handleHudKey(e, debugEnabled);
   }
 </script>
 
@@ -232,15 +112,7 @@
   playing={$appPhase === 'game' && $bootReveal && !$uiState.customMapOpen}
 />
 
-<svg width="0" height="0" style="position: absolute" aria-hidden="true" focusable="false">
-  <filter id="ambient-tint" color-interpolation-filters="sRGB">
-    <feColorMatrix type="matrix" values={ambientMatrix} />
-  </filter>
-
-  <filter id="ambient-tint-legible" color-interpolation-filters="sRGB">
-    <feColorMatrix type="matrix" values={ambientLegibleMatrix} />
-  </filter>
-</svg>
+<AmbientFilters />
 
 {#if $appPhase === 'menu'}
   <MainMenu />
@@ -253,13 +125,21 @@
 {#if $appPhase === 'game' && $storeReady}
   <div class="game-container" class:map-locked={customMapOpen}>
     <div class="game-header" style={ambientPanelVars}>
-      <GameControls mapGen={customMapOpen} />
+      <HudTopBar
+        mapGen={customMapOpen}
+        debug={debugEnabled}
+        left={leftInset}
+        right={rightInset}
+        bind:under={flagsUnder}
+      />
     </div>
 
-    <div class="game-body" class:sidebars-hidden={$hideSidebars}>
-      <aside class="left-panel" class:minimized={$resourcesMinimized} style={ambientPanelVars}>
-        <ResourceSidebar />
-      </aside>
+    <div class="game-body" class:sidebars-hidden={$hideSidebars} class:under={flagsUnder}>
+      {#if !$resourcesHidden}
+        <aside class="left-panel" class:minimized={$resourcesMinimized} style={ambientPanelVars}>
+          <ResourceSidebar />
+        </aside>
+      {/if}
 
       <main class="main-content">
         <div class="map-area">
@@ -268,63 +148,24 @@
           {#if !customMapOpen}
             <WorldEffectsLayer />
           {/if}
-
-          {#if currentScreen !== 'main'}
-            <div class="overlay-panel" use:autohideScroll style={ambientPanelVars}>
-              {#if currentScreen === 'pawns'}
-                <PawnScreen />
-              {:else if currentScreen === 'work'}
-                <WorkScreen />
-              {:else if currentScreen === 'building'}
-                <BuildingMenu />
-              {:else if currentScreen === 'crafting'}
-                <CraftingScreen />
-              {:else if currentScreen === 'exploration'}
-                <ExplorationScreen />
-              {:else if currentScreen === 'culture'}
-                <CultureScreen />
-              {:else if currentScreen === 'kingdoms'}
-                <KingdomScreen />
-              {:else if currentScreen === 'research'}
-                <ResearchScreen />
-              {:else if currentScreen === 'entities'}
-                <EntityScreen />
-              {:else if currentScreen === 'debug'}
-                <DebugScreen />
-              {/if}
-            </div>
-          {/if}
         </div>
-
-        <nav class="bottom-nav" style={ambientPanelVars}>
-          {#each NAV_TABS as tab}
-            {@const isActive = currentScreen === tab.key}
-            {@const disabled = ('needsResearch' in tab ? tab.needsResearch : false) && !hasResearch}
-            <button
-              class="nav-tab"
-              class:active={isActive}
-              class:disabled
-              on:click={() => toggle(tab.key)}
-              {disabled}
-              title={disabled ? 'Requires a knowledge building' : tab.fkey}>{tab.label}</button
-            >
-          {/each}
-        </nav>
       </main>
 
-      <aside class="right-panel" class:minimized={$chronicleMinimized} style={ambientPanelVars}>
-        <ChroniclePanel />
-      </aside>
+      {#if !$chronicleHidden}
+        <aside class="right-panel" class:minimized={$chronicleMinimized} style={ambientPanelVars}>
+          <ChroniclePanel />
+        </aside>
+      {/if}
     </div>
+
+    {#if $bootReveal && !customMapOpen}
+      <WindowLayer left={leftInset} right={rightInset} top={84} />
+    {/if}
 
     {#if customMapOpen && $bootReveal}
       <CustomMapMenu onClose={() => uiState.setCustomMap(false)} />
     {/if}
   </div>
-{/if}
-
-{#if $appPhase === 'game' && pauseMenuOpen}
-  <PauseMenu onResume={closePauseMenu} />
 {/if}
 
 {#if $appPhase === 'game' && $bootReveal}
@@ -345,6 +186,7 @@
 
 <style>
   .game-container {
+    position: relative;
     height: 100vh;
     width: 100vw;
     background: var(--bg);
@@ -399,76 +241,9 @@
     overflow: hidden;
   }
 
-  .map-locked .bottom-nav,
   .map-locked .left-panel,
   .map-locked .right-panel {
     display: none;
-  }
-
-  .overlay-panel {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 50%;
-    background: rgba(6, 4, 2, 0.94);
-    border-top: 1px solid var(--border-hi);
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    z-index: 10;
-  }
-
-  .bottom-nav {
-    flex-shrink: 0;
-    height: 30px;
-    display: flex;
-    align-items: stretch;
-    overflow-x: auto;
-    overflow-y: hidden;
-    background: var(--bg-panel);
-    border-top: 1px solid var(--border-hi);
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-  }
-  .bottom-nav::-webkit-scrollbar {
-    display: none;
-  }
-
-  .nav-tab {
-    flex: 1 0 auto;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0 14px;
-    background: transparent;
-    border: none;
-    border-right: 1px solid var(--border);
-    color: var(--text);
-    cursor: pointer;
-    font-family: var(--font-mono);
-    font-size: 12px;
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
-    white-space: nowrap;
-    transition:
-      background 0.1s,
-      color 0.1s;
-  }
-  .nav-tab:last-child {
-    border-right: none;
-  }
-  .nav-tab:hover:not(.disabled) {
-    background: var(--bg-hover);
-    color: var(--accent-hi);
-  }
-  .nav-tab.active {
-    background: var(--tab-active);
-    color: #fff;
-    box-shadow: inset 0 2px 0 var(--accent-hi);
-  }
-  .nav-tab.disabled {
-    color: var(--text-muted);
   }
 
   .right-panel {
@@ -480,11 +255,16 @@
     flex-direction: column;
   }
 
+  .under .left-panel,
+  .under .right-panel {
+    padding-top: 44px;
+  }
+
   .sidebars-hidden .left-panel,
   .sidebars-hidden .right-panel {
     position: absolute;
     top: 0;
-    bottom: 30px;
+    bottom: 0;
     z-index: 6;
     border: none;
     background: transparent;

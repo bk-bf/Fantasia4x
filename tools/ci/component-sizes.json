@@ -29,7 +29,6 @@
   "src/lib/components/UI/hud/ActivityLogOverlay.svelte": 548,
   "src/lib/components/UI/hud/BuildCard.svelte": 300,
   "src/lib/components/UI/hud/ChroniclePanel.svelte": 460,
-  "src/lib/components/UI/hud/GameControls.svelte": 394,
   "src/lib/components/UI/hud/ResourceSidebar.svelte": 551,
   "src/lib/components/UI/hud/SelectedEntityCard.svelte": 586,
   "src/lib/components/UI/hud/ZonePanel.svelte": 633,
@@ -44,6 +43,6 @@
   "src/lib/dev/AuditTables.svelte": 523,
   "src/lib/dev/TreeView.svelte": 333,
   "src/lib/dev/TreeViewNode.svelte": 248,
-  "src/routes/+page.svelte": 500,
+  "src/routes/+page.svelte": 280,
   "src/routes/gear-db/+page.svelte": 1743
 }

@@ -67,6 +67,8 @@ export const hideEmptyResourceCategories = createPersistedBool(HIDE_EMPTY_RES_CA
 
 export const resourcesMinimized = createPersistedBool('fx.layout.resourcesMin', false);
 export const chronicleMinimized = createPersistedBool('fx.layout.chronicleMin', false);
+export const resourcesHidden = createPersistedBool('fx.layout.resourcesHidden', false);
+export const chronicleHidden = createPersistedBool('fx.layout.chronicleHidden', false);
 
 export const hideSidebars = createPersistedBool(HIDE_SIDEBARS_KEY, true);
 
