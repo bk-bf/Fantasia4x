@@ -524,6 +524,11 @@ export class WebGLRendererCore {
     gl.bindTexture(gl.TEXTURE_2D, painted.texture);
     gl.activeTexture(gl.TEXTURE0);
     this.shaderManager.setUniform('tileRenderer', 'u_paintAtlas', 1);
+    this.shaderManager.setUniform(
+      'tileRenderer',
+      'u_atlasScale',
+      painted.tileset.tile / BASE_TILE_PX
+    );
     this.shaderManager.setUniform('tileRenderer', 'u_paintTexelSize', [
       1 / painted.tileset.atlasW,
       1 / painted.tileset.atlasH
@@ -538,8 +543,8 @@ export class WebGLRendererCore {
     this.shaderManager.setUniform('tileRenderer', 'u_veinTexture', 3);
     this.shaderManager.setUniform(
       'tileRenderer',
-      'u_veinScale',
-      painted.tileset.tile / BASE_TILE_PX
+      'u_rowPx',
+      this.rowDepth ? painted.tileset.tile : 0
     );
     this.shaderManager.setUniform('tileRenderer', 'u_rockRamp', [
       painted.top.ramp.x,

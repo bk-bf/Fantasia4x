@@ -129,41 +129,16 @@ describe('a wall tile takes the rock piece of its eight neighbours', () => {
   });
 });
 
-describe('an object in an opening of the mountain shows whole', () => {
-  const opening = (resources: Record<string, number>, open: [number, number][]) => {
+describe('an object in an opening of the mountain stays in its own row', () => {
+  it('draws it on the short layer of its tile, with no rock under it', () => {
     const map = world(3, 3, (x, y) => ({ terrainType: 'mountain', ...wall(x + y) }));
-    for (const [x, y] of open) map[y][x] = { ...map[y][x], walkable: true, resources: {} };
-    map[1][1] = { ...map[1][1], resources };
-    return map;
-  };
-  const drawn = (map: WorldTile[][]) => {
+    map[0][1] = { ...map[0][1], walkable: true, resources: {} };
+    map[1][1] = { ...map[1][1], resources: { stone_outcrop: 3 } };
     const short = new GameGrid();
     const tall = new GameGrid();
     applyResourceToGrid(short, tall, map[1][1], [], undefined, map);
-    return { short: short.getTile(1, 1), tall: tall.getTile(1, 1) };
-  };
-
-  it('draws it after the rock and one row ahead when rock stands in front of it', () => {
-    const { short, tall } = drawn(opening({ stone_outcrop: 3 }, [[1, 0]]));
-    expect(short?.painted).toBeUndefined();
-    expect(tall?.painted).toEqual(paintedTile('resource', 'stone_outcrop', 1, 1));
-    expect(tall?.depthRow).toBe(2);
-  });
-
-  it('draws it after the rock in its own row when rock stands only beside it', () => {
-    const { short, tall } = drawn(opening({ star_geode: 1 }, [[1, 2]]));
-    expect(short?.painted).toBeUndefined();
-    expect(tall?.painted).toEqual(paintedTile('resource', 'star_geode', 1, 1));
-    expect(tall?.depthRow).toBeUndefined();
-  });
-
-  it('leaves an object off the mountain in its row, under the rock in front of it', () => {
-    const map = opening({ stone_outcrop: 3 }, [[1, 0]]);
-    map[1][1] = { ...map[1][1], terrainType: 'forest' };
-    const { short, tall } = drawn(map);
-    expect(short?.painted).toEqual(paintedTile('resource', 'stone_outcrop', 1, 1));
-    expect(short?.depthRow).toBeUndefined();
-    expect(tall?.painted).toBeUndefined();
+    expect(short.getTile(1, 1)?.painted).toEqual(paintedTile('resource', 'stone_outcrop', 1, 1));
+    expect(tall.getTile(1, 1)?.painted).toBeUndefined();
   });
 
   it('lays cave floor under a hidden tile, so no fill shows where a rock piece is cut in', () => {
@@ -191,8 +166,24 @@ describe('ore carried by a wall shows in its rock top; ore with no wall draws no
   ])('draws %s on %s as the wall piece coloured from %s', (ore, host, vein) => {
     const map = centre({ [ore]: 3, [host]: 5 });
     const { x, y } = manifest.sprites[vein];
-    expect(painted(map, 1, 1)).toEqual({ ...expected(blobName(all), 1, 1), vein: { x, y } });
+    expect(painted(map, 1, 1)).toEqual({
+      ...expected(blobName(all), 1, 1),
+      vein: { x, y, near: 0 }
+    });
     expect(tallAt(map)).toBeUndefined();
+  });
+
+  it('marks the neighbours that carry the same ore on a visible wall, so the vein runs into them', () => {
+    const map = centre({ coal: 3, mountain_wall: 5 });
+    map[1][2] = { ...map[1][2], resources: { coal: 2, cliff_wall: 5 } };
+    map[0][1] = { ...map[0][1], resources: { coal: 2, mountain_wall: 5 } };
+    map[2][1] = { ...map[2][1], resources: { hematite: 2, mountain_wall: 5 } };
+    map[0][0] = { ...map[0][0], resources: { coal: 2 } };
+    const hidden = map.map((row) => row.map((t) => t.x === 1 && t.y === 0));
+    const bit = (dx: number, dy: number) =>
+      1 << rock.neighbours.findIndex(([a, b]) => a === dx && b === dy);
+    expect(painted(map, 1, 1)?.vein?.near).toBe(bit(1, 0) | bit(0, -1));
+    expect(painted(map, 1, 1, hidden)?.vein?.near).toBe(bit(1, 0));
   });
 
   it('counts a wall carrying ore as rock for the walls around it', () => {

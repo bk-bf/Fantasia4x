@@ -464,20 +464,22 @@ function rockPiece(
   if (!hidden && heldBy(tile, mass.pieces.members) === undefined) return undefined;
   const piece = paintedPiece(mass.pieces, mass.isMass, tile.x, tile.y);
   const ore = hidden ? undefined : heldBy(tile, mass.pieces.veins);
-  const vein = ore === undefined ? undefined : mass.pieces.veins.get(ore);
-  return vein ? { ...piece, vein } : piece;
-}
-
-function inOpening(
-  tile: WorldTile,
-  hiddenMask: boolean[][],
-  worldMap: WorldTile[][] | undefined
-): { inFront: boolean } | undefined {
-  const mass = tile.terrainType === 'mountain' ? rockMass(hiddenMask, worldMap) : undefined;
-  if (!mass) return undefined;
-  const { x, y } = tile;
-  const inFront = mass.isMass(x, y + 1);
-  return inFront || mass.isMass(x - 1, y) || mass.isMass(x + 1, y) ? { inFront } : undefined;
+  const ramp = ore === undefined ? undefined : mass.pieces.veins.get(ore);
+  if (!ore || !ramp) return piece;
+  const sameVein = (x: number, y: number): boolean => {
+    const t = worldMap?.[y]?.[x];
+    return (
+      !!t &&
+      !hiddenMask[y]?.[x] &&
+      (t.resources?.[ore] ?? 0) > 0 &&
+      heldBy(t, mass.pieces.members) !== undefined
+    );
+  };
+  const near = mass.pieces.neighbours.reduce(
+    (bits, [dx, dy], bit) => (sameVein(tile.x + dx, tile.y + dy) ? bits | (1 << bit) : bits),
+    0
+  );
+  return { ...piece, vein: { ...ramp, near } };
 }
 
 export function applyResourceToGrid(
@@ -528,8 +530,7 @@ export function applyResourceToGrid(
   const painted = PAINTED_TILES
     ? (piece ?? paintedTile('resource', resDef.id, tile.x, tile.y))
     : undefined;
-  const opening = piece ? undefined : inOpening(tile, hiddenMask, worldMap);
-  const tall = (rs !== undefined && rs > 1) || opening !== undefined;
+  const tall = rs !== undefined && rs > 1;
   blank(tall ? gridShort : gridTall);
   const detail = baseDetail ? { r: baseDetail[0], g: baseDetail[1], b: baseDetail[2] } : undefined;
   (tall ? gridTall : gridShort).setTile(tile.x, tile.y, {
@@ -539,8 +540,7 @@ export function applyResourceToGrid(
     position: { x: tile.x, y: tile.y },
     detail,
     scale: painted ? (stageScale !== 1 ? stageScale : undefined) : scale,
-    ...(painted ? { painted } : null),
-    ...(opening?.inFront ? { depthRow: tile.y + 1 } : null)
+    ...(painted ? { painted } : null)
   });
 }
 

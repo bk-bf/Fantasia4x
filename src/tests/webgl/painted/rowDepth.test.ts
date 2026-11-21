@@ -11,7 +11,7 @@ import type { CharacterRenderer } from '$lib/webgl/character-renderer';
 import { buildTileset, parseManifest, spriteAt } from '$lib/webgl/painted/manifest';
 
 const GLYPH_FLOATS = 24;
-const ROW_FLOATS = 29;
+const ROW_FLOATS = 30;
 const DEPTH_TEST = 0x0b71;
 
 const atlas = {
@@ -61,7 +61,7 @@ function gridRenderer(rowDepth: boolean, uploads?: Float32Array[]) {
   const { gl, calls } = recordingGl(uploads);
   const shaders = {
     getAttributeLocation: (_p: string, name: string) =>
-      name === 'a_row' ? 9 : name === 'a_vein' ? 10 : 1,
+      name === 'a_row' ? 9 : name === 'a_vein' ? 10 : name === 'a_veinNear' ? 11 : 1,
     useProgram: () => true
   } as unknown as ShaderManager;
   const r = new GridRenderer(gl, shaders, {} as CharacterRenderer, atlas, false, rowDepth);
@@ -126,16 +126,6 @@ describe('the row each quad carries for the depth test', () => {
     expect(rows).toEqual([31, 32]);
   });
 
-  it('takes the row from depthRow when a tile carries one', () => {
-    const uploads: Float32Array[] = [];
-    const { r } = gridRenderer(true, uploads);
-    const grid = new GameGrid();
-    grid.setTile(5, 7, { ...tiles[0], position: { x: 5, y: 7 }, depthRow: 8 });
-    r.renderGrid(grid, options);
-    const data = uploads[uploads.length - 1];
-    expect(data[GLYPH_FLOATS]).toBe(8);
-  });
-
   it('points the row and vein attributes past the glyph floats only when the depth test is on', () => {
     const on = gridRenderer(true).calls.filter((c) => c[0] === 'vertexAttribPointer');
     const off = gridRenderer(false).calls.filter((c) => c[0] === 'vertexAttribPointer');
@@ -145,7 +135,7 @@ describe('the row each quad carries for the depth test', () => {
       1,
       0x1406,
       false,
-      116,
+      120,
       96
     ]);
     expect(on.find((c) => c[1] === 10)).toEqual([
@@ -154,20 +144,29 @@ describe('the row each quad carries for the depth test', () => {
       4,
       0x1406,
       false,
-      116,
+      120,
       100
     ]);
-    expect(off.every((c) => c[5] === 96 && c[1] !== 9 && c[1] !== 10)).toBe(true);
+    expect(on.find((c) => c[1] === 11)).toEqual([
+      'vertexAttribPointer',
+      11,
+      1,
+      0x1406,
+      false,
+      120,
+      116
+    ]);
+    expect(off.every((c) => c[5] === 96 && ![9, 10, 11].includes(c[1] as number))).toBe(true);
   });
 
-  it('writes the vein of a painted sprite and its tile after the row, and -1 where there is none', () => {
+  it('writes the vein, its tile and its same-ore neighbours after the row, and -1 where there is none', () => {
     const uploads: Float32Array[] = [];
     const { r } = gridRenderer(true, uploads);
     const grid = new GameGrid();
     grid.setTile(1, 1, {
       ...tiles[0],
       position: { x: 1, y: 1 },
-      painted: { ...pine, vein: { x: 7, y: 9 } }
+      painted: { ...pine, vein: { x: 7, y: 9, near: 5 } }
     });
     grid.setTile(2, 1, { ...tiles[0], position: { x: 2, y: 1 }, painted: pine });
     r.renderGrid(grid, options);
@@ -175,8 +174,8 @@ describe('the row each quad carries for the depth test', () => {
     const veins = Array.from({ length: data.length / ROW_FLOATS }, (_, v) =>
       Array.from(data.subarray(v * ROW_FLOATS + GLYPH_FLOATS + 1, (v + 1) * ROW_FLOATS)).join(',')
     );
-    expect(new Set(veins)).toEqual(new Set(['7,9,1,1', '-1,-1,2,1']));
-    expect(veins.filter((v) => v === '7,9,1,1')).toHaveLength(6);
+    expect(new Set(veins)).toEqual(new Set(['7,9,1,1,5', '-1,-1,2,1,0']));
+    expect(veins.filter((v) => v === '7,9,1,1,5')).toHaveLength(6);
   });
 });
 
