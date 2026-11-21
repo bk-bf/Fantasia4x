@@ -3,39 +3,54 @@
   import { fade } from 'svelte/transition';
   import { menuPreviewReady, gameState } from '$lib/stores/gameState';
   import { uiState } from '$lib/stores/uiState';
-  import { hasSave } from '$lib/stores/saveManager';
-  import { getTimeOfDay, weatherOverlayKind } from '$lib/game/services/EnvironmentService';
+  import { listSaves, type SaveEntry } from '$lib/stores/saveManager';
+  import { paintedSpriteCanvas } from '$lib/webgl/painted/loader';
+  import { pole } from '$lib/pixelArt/cloth';
+  import { pixels } from '$lib/pixelArt/pixels';
   import MenuPreviewBackdrop from '$lib/components/UI/menu/MenuPreviewBackdrop.svelte';
   import SettingsModal from '$lib/components/UI/modal/SettingsModal.svelte';
   import SaveListMenu from '$lib/components/UI/menu/SaveListMenu.svelte';
   import CreditsScroll from '$lib/components/UI/menu/CreditsScroll.svelte';
+  import MenuSign from './MenuSign.svelte';
+  import MenuFlag from './MenuFlag.svelte';
+  import MenuSkyBowl from './MenuSkyBowl.svelte';
+  import { BANNER_FONT, PIXEL_FONT, TITLE_FONT, planMenu } from './mainMenuPlan';
+  import { menuAmbient } from './mainMenuAmbient';
+  import { stepFocus } from './mainMenuKeys';
+  import { MENU_ITEMS } from './mainMenuFlagArt';
 
-  let canLoad = $state(false);
+  let saves = $state<SaveEntry[]>([]);
   let showSettings = $state(false);
   let showLoad = $state(false);
   let showCredits = $state(false);
+  let fontsReady = $state(false);
+  let emblems = $state<Record<string, HTMLCanvasElement | null>>({});
+  let viewW = $state(0);
+  let viewH = $state(0);
   const isDesktop = typeof navigator !== 'undefined' && /electron/i.test(navigator.userAgent ?? '');
 
-  const DAWN = 0.25;
-  const DUSK = 0.78;
-  const NIGHT_LEN = 1 - DUSK + DAWN;
-  const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
-  const edgeFade = (prog: number) => clamp01(Math.min(prog, 1 - prog) / 0.12);
-
-  const tod = $derived(getTimeOfDay($gameState?.turn ?? 0));
-  const isDay = $derived(tod >= DAWN && tod <= DUSK);
-  const sunProg = $derived(clamp01((tod - DAWN) / (DUSK - DAWN)));
-  const moonProg = $derived(clamp01(((((tod - DUSK) % 1) + 1) % 1) / NIGHT_LEN));
-  const isRaining = $derived(weatherOverlayKind($gameState?.weather?.type) === 'rain');
-  const sunX = $derived(8 + sunProg * 84);
-  const sunY = $derived(38 - Math.sin(sunProg * Math.PI) * 24);
-  const sunO = $derived(isDay && !isRaining ? edgeFade(sunProg) : 0);
-  const moonX = $derived(8 + moonProg * 84);
-  const moonY = $derived(12 - Math.sin(moonProg * Math.PI) * 4);
-  const moonO = $derived(!isDay ? edgeFade(moonProg) : 0);
+  const latest = $derived(saves[0]);
+  const acts: Record<string, () => void> = {
+    Continue: () => latest && gameState.startGame('load', latest.id),
+    'New Game': newGame,
+    'Load Game': () => (showLoad = true),
+    Settings: () => (showSettings = true),
+    Credits: () => (showCredits = true),
+    Exit: () => window.close()
+  };
+  const entries = MENU_ITEMS.filter((m) => isDesktop || !m.desktopOnly);
+  const plan = $derived(fontsReady && viewW > 0 ? planMenu(viewW, viewH, entries.length) : null);
+  const ambient = $derived(menuAmbient($gameState));
+  const wind = $derived(ambient.wind);
+  const poleArt = $derived(plan ? pole(plan.pole.h) : null);
 
   onMount(async () => {
-    canLoad = await hasSave();
+    saves = await listSaves();
+    const faces = [`48px "${TITLE_FONT}"`, `20px "${BANNER_FONT}"`, `16px "${PIXEL_FONT}"`];
+    await Promise.all(faces.map((f) => document.fonts.load(f))).catch(() => undefined);
+    fontsReady = true;
+    const art = await Promise.all(entries.map((e) => paintedSpriteCanvas('item', e.emblem)));
+    emblems = Object.fromEntries(entries.map((e, i) => [e.emblem, art[i]]));
   });
 
   function newGame() {
@@ -43,49 +58,58 @@
     uiState.setCustomMap(true);
   }
 
-  function exitGame() {
-    window.close();
-  }
-
   async function closeLoad() {
     showLoad = false;
-    canLoad = await hasSave();
+    saves = await listSaves();
+  }
+
+  function step(e: KeyboardEvent) {
+    if (!showLoad && !showSettings && !showCredits)
+      stepFocus(e, '.main-menu .flags button:enabled');
   }
 </script>
+
+<svelte:window bind:innerWidth={viewW} bind:innerHeight={viewH} onkeydown={step} />
 
 <div class="main-menu" transition:fade={{ duration: 200 }}>
   {#if $menuPreviewReady}
     <MenuPreviewBackdrop />
   {/if}
+  <div class="shade" aria-hidden="true"></div>
 
-  <div class="sun-glow" aria-hidden="true" style="left:{sunX}%; top:{sunY}%; opacity:{sunO};"></div>
-  <div
-    class="moon-glow"
-    aria-hidden="true"
-    style="left:{moonX}%; top:{moonY}%; opacity:{moonO};"
-  ></div>
-
-  <div class="content">
-    <h1 class="title">FANTASIA</h1>
-    <div class="subtitle">a 4X colony chronicle</div>
-    <div class="credit-line">alpha {__APP_VERSION__} · tileset: Bitlands by DragonDePlatino</div>
-
-    <nav class="menu">
-      <button class="menu-btn" onclick={newGame}>New Game</button>
-      <button
-        class="menu-btn"
-        class:disabled={!canLoad}
-        disabled={!canLoad}
-        onclick={() => (showLoad = true)}
-      >
-        Load Game
-      </button>
-      <button class="menu-btn" onclick={() => (showSettings = true)}>Settings</button>
-      <button class="menu-btn" onclick={() => (showCredits = true)}>Credits</button>
-      {#if isDesktop}
-        <button class="menu-btn" onclick={exitGame}>Exit</button>
-      {/if}
-    </nav>
+  <div class="stage">
+    <h1 class="title">Fantasia</h1>
+    {#if plan && poleArt}
+      <MenuSkyBowl ambient={ambient.sky} x={plan.bowlX} scale={plan.scale} />
+      <span
+        class="pole"
+        aria-hidden="true"
+        style:left="{plan.pole.x * plan.scale}px"
+        style:top="{plan.pole.y * plan.scale}px"
+        style:--s={plan.scale}
+        {@attach pixels(poleArt, plan.scale)}
+      ></span>
+      <MenuSign rect={plan.board} title={plan.title} scale={plan.scale} lamp={ambient.lamp} />
+      <nav class="flags" aria-label="Main menu">
+        {#each entries as entry, i (entry.label)}
+          <MenuFlag
+            face={{
+              label: entry.label,
+              note: entry.label === 'Continue' ? (latest?.meta.cultureName ?? '') : '',
+              dye: entry.dye,
+              emblem: emblems[entry.emblem] ?? null
+            }}
+            index={i}
+            {wind}
+            rect={plan.flags[i]}
+            scale={plan.scale}
+            disabled={!!entry.needsSave && !latest}
+            onclick={acts[entry.label]}
+          />
+        {/each}
+      </nav>
+    {/if}
+    <p class="credit-line">alpha {__APP_VERSION__} · tileset: Bitlands by DragonDePlatino</p>
   </div>
 </div>
 
@@ -107,126 +131,52 @@
     inset: 0;
     z-index: 1000;
     background: var(--bg);
-    font-family: var(--font-mono);
     overflow: hidden;
   }
-
-  .sun-glow,
-  .moon-glow {
+  .shade {
     position: absolute;
-    width: 80vmin;
-    height: 80vmin;
-    transform: translate(-50%, -50%);
-    border-radius: 50%;
-    pointer-events: none;
-    transition:
-      left 0.4s linear,
-      top 0.4s linear,
-      opacity 0.8s linear;
-  }
-  .sun-glow {
-    background: radial-gradient(
-      circle,
-      rgba(240, 136, 40, 0.12) 0%,
-      rgba(240, 136, 40, 0.04) 34%,
-      transparent 64%
-    );
-  }
-  .moon-glow {
-    background: radial-gradient(
-      circle,
-      rgba(206, 222, 255, 0.12) 0%,
-      rgba(206, 222, 255, 0.04) 34%,
-      transparent 64%
-    );
-  }
-
-  .content {
-    position: absolute;
-    top: 5vh;
-    left: 3.5vw;
+    inset: 0;
     z-index: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.75em;
-    max-width: 94vw;
+    pointer-events: none;
+    background: linear-gradient(
+      to bottom,
+      rgb(8 6 10 / 0.5),
+      rgb(8 6 10 / 0.16) 46%,
+      rgb(8 6 10 / 0) 74%
+    );
   }
-
+  .stage {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+  }
   .title {
-    font-family: var(--font-display);
-    color: var(--accent-hi);
-    font-size: clamp(56px, 13vw, 200px);
-    line-height: 0.92;
-    font-weight: 700;
-    letter-spacing: 0.04em;
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
     margin: 0;
-    text-shadow:
-      0 0 28px rgba(240, 136, 40, 0.35),
-      0 6px 16px rgba(0, 0, 0, 0.75);
   }
-
-  .subtitle {
-    color: var(--text);
-    font-family: var(--font-display);
-    font-size: clamp(18px, 2vw, 30px);
-    letter-spacing: 0.1em;
-    text-shadow:
-      -1px -1px 0 rgba(0, 0, 0, 0.95),
-      1px -1px 0 rgba(0, 0, 0, 0.95),
-      -1px 1px 0 rgba(0, 0, 0, 0.95),
-      1px 1px 0 rgba(0, 0, 0, 0.95);
+  .pole {
+    position: absolute;
+    filter: url(#ambient-tint)
+      drop-shadow(calc(var(--s) * 2px) calc(var(--s) * 2px) 0 rgb(6 4 3 / 0.5));
   }
-
   .credit-line {
-    font-family: var(--font-script);
-    font-weight: 600;
-    color: var(--text);
-    font-size: clamp(13px, 1.15vw, 17px);
-    letter-spacing: 0.04em;
+    position: absolute;
+    right: 14px;
+    bottom: 8px;
+    margin: 0;
+    font: 16px/18px var(--font-pixel);
+    letter-spacing: 0.6px;
+    color: #ecdcb4;
     text-shadow:
-      -1px -1px 0 rgba(0, 0, 0, 0.95),
-      1px -1px 0 rgba(0, 0, 0, 0.95),
-      -1px 1px 0 rgba(0, 0, 0, 0.95),
-      1px 1px 0 rgba(0, 0, 0, 0.95);
-  }
-
-  .menu {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 10px;
-    margin-top: 7vh;
-    filter: url(#ambient-tint);
-  }
-
-  .menu-btn {
-    min-width: 320px;
-    padding: 13px 22px;
-    text-align: left;
-    background: rgba(28, 16, 6, 0.92);
-    border: 1px solid #6b4a2a;
-    color: var(--text);
-    font-family: var(--font-mono);
-    font-size: 17px;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    cursor: pointer;
-    transition:
-      background 0.12s,
-      color 0.12s,
-      border-color 0.12s;
-  }
-  .menu-btn:hover:not(.disabled) {
-    background: #2a1a0a;
-    color: var(--accent-hi);
-    border-color: #c8a060;
-  }
-  .menu-btn:active:not(.disabled) {
-    background: #4a2010;
-  }
-  .menu-btn.disabled {
-    color: var(--text-muted);
-    opacity: 0.5;
+      1px 0 0 #08060a,
+      -1px 0 0 #08060a,
+      0 1px 0 #08060a,
+      0 -1px 0 #08060a,
+      1px 1px 0 #08060a;
   }
 </style>
