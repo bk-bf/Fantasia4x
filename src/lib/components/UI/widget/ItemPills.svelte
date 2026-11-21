@@ -37,9 +37,7 @@
           (e.key === 'Enter' || e.key === ' ') &&
           pin.toggle(buildItemInfo(p.itemId), p.itemId + ':' + i, e)}
       >
-        {#if info.charSpans}
-          <SpriteIcon charSpans={info.charSpans} tint={info.color} px={9} />
-        {/if}
+        <SpriteIcon item={p.itemId} px={14} />
         {#if p.qty}<span class="pill-qty">{p.qty}</span>{/if}
         <span class="pill-name">{info.name}</span>
         {#if p.sub}<span class="pill-sub">{p.sub}</span>{/if}
