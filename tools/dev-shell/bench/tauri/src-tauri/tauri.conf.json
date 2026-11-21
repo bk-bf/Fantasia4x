@@ -1,0 +1,17 @@
+{
+  "productName": "f4x-tauri-bench",
+  "version": "0.1.0",
+  "identifier": "io.fantasia4x.bench",
+  "build": {
+    "devUrl": "http://127.0.0.1:5173"
+  },
+  "app": {
+    "windows": [],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": false
+  }
+}
