@@ -1,4 +1,10 @@
-import { buildTileset, parseManifest, type PaintedTileset } from './manifest.js';
+import {
+  buildTileset,
+  parseManifest,
+  type PaintedKind,
+  type PaintedManifest,
+  type PaintedTileset
+} from './manifest.js';
 import { setPaintedTileset } from './tileset.js';
 
 export const PAINTED_BASE_URL = '/tilesets/painted/';
@@ -39,6 +45,7 @@ function uploadAtlas(gl: WebGL2RenderingContext, image: HTMLImageElement): WebGL
 }
 
 interface PaintedSource {
+  manifest: PaintedManifest;
   tileset: PaintedTileset;
   image: HTMLImageElement;
 }
@@ -58,7 +65,7 @@ async function readSource(baseUrl: string): Promise<PaintedSource | null> {
       );
     const { tileset, problems } = buildTileset(manifest);
     if (problems.length > 0) console.warn(`[painted tiles] ${problems.join('; ')}`);
-    return { tileset, image };
+    return { manifest, tileset, image };
   } catch (err) {
     console.warn('[painted tiles] off, drawing the glyph tiles instead:', err);
     return null;
@@ -81,4 +88,21 @@ export async function loadPaintedTileset(
     console.warn('[painted tiles] off, drawing the glyph tiles instead:', err);
     return null;
   }
+}
+
+export async function paintedSpriteCanvas(
+  kind: PaintedKind,
+  id: string,
+  baseUrl = PAINTED_BASE_URL
+): Promise<HTMLCanvasElement | null> {
+  source ??= readSource(baseUrl);
+  const loaded = await source;
+  const spriteId = loaded?.manifest.map[kind]?.[id]?.[0];
+  const s = loaded && spriteId ? loaded.manifest.sprites[spriteId] : undefined;
+  if (!loaded || !s) return null;
+  const canvas = document.createElement('canvas');
+  canvas.width = s.w;
+  canvas.height = s.h;
+  canvas.getContext('2d')?.drawImage(loaded.image, s.x, s.y, s.w, s.h, 0, 0, s.w, s.h);
+  return canvas;
 }
