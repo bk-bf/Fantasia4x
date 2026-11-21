@@ -10,6 +10,7 @@
     rect,
     scale,
     disabled = false,
+    hot = false,
     onclick
   }: {
     face: FlagFace;
@@ -18,10 +19,9 @@
     rect: Rect;
     scale: number;
     disabled?: boolean;
+    hot?: boolean;
     onclick: () => void;
   } = $props();
-
-  let hot = $state(false);
 
   const idle = $derived(swayStrip(face, index, wind, false));
   const lit = $derived(swayStrip(face, index, wind, true));
@@ -45,10 +45,7 @@
   style:width="{strip.frameW * scale}px"
   style:height="{FLAG_H * scale}px"
   style:--s={scale}
-  onpointerenter={() => (hot = true)}
-  onpointerleave={() => (hot = false)}
-  onfocus={() => (hot = true)}
-  onblur={() => (hot = false)}
+  data-index={index}
   {onclick}
 >
   <span

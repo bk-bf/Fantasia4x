@@ -16,7 +16,7 @@
   import MenuSkyBowl from './MenuSkyBowl.svelte';
   import { BANNER_FONT, PIXEL_FONT, TITLE_FONT, planMenu } from './mainMenuPlan';
   import { menuAmbient } from './mainMenuAmbient';
-  import { stepFocus } from './mainMenuKeys';
+  import { flagIndex, stepFocus } from './mainMenuKeys';
   import { MENU_ITEMS } from './mainMenuFlagArt';
 
   let saves = $state<SaveEntry[]>([]);
@@ -27,6 +27,7 @@
   let emblems = $state<Record<string, HTMLCanvasElement | null>>({});
   let viewW = $state(0);
   let viewH = $state(0);
+  let hovered = $state(-1);
   const isDesktop = typeof navigator !== 'undefined' && /electron/i.test(navigator.userAgent ?? '');
 
   const latest = $derived(saves[0]);
@@ -64,14 +65,20 @@
   }
 
   function step(e: KeyboardEvent) {
-    if (!showLoad && !showSettings && !showCredits)
-      stepFocus(e, '.main-menu .flags button:enabled');
+    if (showLoad || showSettings || showCredits) return;
+    const flag = stepFocus(e, '.main-menu .flags button:enabled');
+    if (flag) hovered = flagIndex(flag);
   }
 </script>
 
 <svelte:window bind:innerWidth={viewW} bind:innerHeight={viewH} onkeydown={step} />
 
-<div class="main-menu" transition:fade={{ duration: 200 }}>
+<div
+  class="main-menu"
+  role="presentation"
+  transition:fade={{ duration: 200 }}
+  onmousemove={(e) => (hovered = flagIndex(e.target))}
+>
   {#if $menuPreviewReady}
     <MenuPreviewBackdrop />
   {/if}
@@ -104,6 +111,7 @@
             rect={plan.flags[i]}
             scale={plan.scale}
             disabled={!!entry.needsSave && !latest}
+            hot={hovered === i}
             onclick={acts[entry.label]}
           />
         {/each}
