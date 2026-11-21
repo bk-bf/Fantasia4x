@@ -9,6 +9,7 @@ in vec3 v_detail;
 in vec3 v_outline;
 in highp vec4 v_uvBounds;  // (uMin, vMin, uMax, vMax) of this glyph in the atlas
 in vec3 v_light;     // Interpolated ADDITIVE point-light contribution (0 = none)
+in highp vec2 v_world;
 
 uniform sampler2D u_fontAtlas;
 uniform sampler2D u_paintAtlas;
@@ -31,8 +32,19 @@ uniform float u_glyphOnly;
 uniform float u_bgOnly;
 uniform float u_alphaCut;
 uniform float u_alphaCeil;
+uniform highp sampler2D u_rockTexture;
+uniform vec2 u_rockRamp;
+uniform float u_rockLift;
 
 out vec4 fragColor;
+
+vec3 rockTop(int rim) {
+    highp ivec2 size = textureSize(u_rockTexture, 0);
+    highp ivec2 p = ivec2(floor(v_world + vec2(0.0, u_rockLift)));
+    p = (p % size + size) % size;
+    int shade = int(texelFetch(u_rockTexture, p, 0)[rim] * 255.0 + 0.5);
+    return texelFetch(u_paintAtlas, ivec2(u_rockRamp) + ivec2(shade, 0), 0).rgb;
+}
 
 void main() {
     // Final light multiplier = day/night ambient + baked additive point lights
@@ -54,6 +66,8 @@ void main() {
         vec4 cell = v_uvBounds - vec4(2.0, 0.0, 2.0, 0.0);
         vec2 inset = 0.5 * u_paintTexelSize;
         sprite = texture(u_paintAtlas, clamp(v_texCoord, cell.xy + inset, cell.zw - inset));
+        if (sprite.a > 0.5 && sprite.r > 0.99 && sprite.b > 0.99 && sprite.g < 0.05)
+            sprite.rgb = rockTop(int(sprite.g * 255.0 + 0.5));
     } else {
         sprite = texture(u_fontAtlas, v_texCoord);
     }

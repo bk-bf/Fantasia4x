@@ -28,6 +28,7 @@ out vec3 v_detail;       // Pass detail color to fragment
 out vec3 v_outline;      // Pass outline color to fragment
 out vec4 v_uvBounds;     // Pass glyph UV bounds to fragment
 out vec3 v_light;        // Interpolated per-tile light across the quad
+out highp vec2 v_world;
 
 void main() {
     // a_position holds world coordinates baked at a FIXED base tile size. Pan
@@ -45,4 +46,5 @@ void main() {
     v_outline = a_outline;
     v_uvBounds = a_uvBounds;
     v_light = a_light;
+    v_world = a_position;
 }

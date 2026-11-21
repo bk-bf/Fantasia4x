@@ -21,10 +21,18 @@ export interface ManifestSprite {
   ch?: number;
 }
 
+export interface ManifestPieceTop {
+  image: string;
+  size: number;
+  lift: number;
+  ramp: string;
+}
+
 export interface ManifestPieces {
   resources: string[];
   neighbours: [number, number][];
   layouts: string[];
+  top?: ManifestPieceTop;
 }
 
 export interface PaintedManifest {
@@ -52,10 +60,18 @@ export interface PaintedVariant {
   entity: { painted: PaintedSprite; scale: undefined };
 }
 
+export interface PaintedPieceTop {
+  image: string;
+  size: number;
+  lift: number;
+  ramp: { x: number; y: number; length: number };
+}
+
 export interface PaintedPieces {
   members: ReadonlySet<string>;
   neighbours: readonly (readonly [number, number])[];
   layouts: PaintedVariant[];
+  top?: PaintedPieceTop;
 }
 
 export interface PaintedTileset {
@@ -97,7 +113,7 @@ const isStrings = (v: unknown): v is string[] =>
 
 function readPieces(set: string, raw: unknown): ManifestPieces {
   if (!isObject(raw)) throw new Error(`pieces.${set} is not an object`);
-  const { resources, neighbours, layouts } = raw;
+  const { resources, neighbours, layouts, top } = raw;
   if (!isStrings(resources)) throw new Error(`pieces.${set}.resources is not a list of ids`);
   if (
     !Array.isArray(neighbours) ||
@@ -106,7 +122,19 @@ function readPieces(set: string, raw: unknown): ManifestPieces {
     throw new Error(`pieces.${set}.neighbours is not a list of offsets`);
   if (!isStrings(layouts) || layouts.length !== 1 << neighbours.length)
     throw new Error(`pieces.${set}.layouts does not name a sprite for every layout`);
-  return { resources, neighbours: neighbours as [number, number][], layouts };
+  const out: ManifestPieces = { resources, neighbours: neighbours as [number, number][], layouts };
+  if (top !== undefined) out.top = readTop(set, top);
+  return out;
+}
+
+function readTop(set: string, raw: unknown): ManifestPieceTop {
+  if (!isObject(raw)) throw new Error(`pieces.${set}.top is not an object`);
+  const { image, size, lift, ramp } = raw;
+  if (typeof image !== 'string' || typeof ramp !== 'string')
+    throw new Error(`pieces.${set}.top does not name its image and ramp`);
+  if (!isInt(size) || size <= 0 || !isInt(lift) || lift < 0)
+    throw new Error(`pieces.${set}.top has a bad size or lift`);
+  return { image, size, lift, ramp };
 }
 
 export function parseManifest(raw: unknown): PaintedManifest {
@@ -208,10 +236,18 @@ export function buildTileset(m: PaintedManifest): { tileset: PaintedTileset; pro
       problems.push(`pieces.${set} names unknown sprites ${[...new Set(missing)].join(', ')}`);
       continue;
     }
+    const ramp = p.top ? m.sprites[p.top.ramp] : undefined;
+    if (p.top && !ramp) {
+      problems.push(`pieces.${set}.top names unknown sprite ${p.top.ramp}`);
+      continue;
+    }
     pieces.set(set, {
       members: new Set(p.resources),
       neighbours: p.neighbours,
-      layouts: layouts as PaintedVariant[]
+      layouts: layouts as PaintedVariant[],
+      ...(p.top && ramp
+        ? { top: { ...p.top, ramp: { x: ramp.x, y: ramp.y, length: ramp.w } } }
+        : null)
     });
   }
   return {

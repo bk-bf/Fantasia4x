@@ -1,4 +1,4 @@
-import { deflateSync } from 'node:zlib';
+import { deflateSync, inflateSync } from 'node:zlib';
 
 const CRC = new Uint32Array(256).map((_, n) => {
   let c = n;
@@ -35,4 +35,23 @@ export function encodePng(w = 0, h = 0, rgba = new Uint8Array(0)) {
     chunk('IDAT', deflateSync(raw, { level: 9 })),
     chunk('IEND', Buffer.alloc(0))
   ]);
+}
+
+export function decodePng(png = Buffer.alloc(0)) {
+  const w = png.readUInt32BE(16),
+    h = png.readUInt32BE(20);
+  const data = [];
+  for (let at = 8; at < png.length; ) {
+    const len = png.readUInt32BE(at);
+    if (png.toString('ascii', at + 4, at + 8) === 'IDAT')
+      data.push(png.subarray(at + 8, at + 8 + len));
+    at += 12 + len;
+  }
+  const raw = inflateSync(Buffer.concat(data));
+  const rgba = new Uint8Array(w * h * 4);
+  for (let y = 0; y < h; y++) {
+    if (raw[y * (w * 4 + 1)] !== 0) throw new Error('decodePng reads only unfiltered rows');
+    rgba.set(raw.subarray(y * (w * 4 + 1) + 1, (y + 1) * (w * 4 + 1)), y * w * 4);
+  }
+  return { w, h, rgba };
 }

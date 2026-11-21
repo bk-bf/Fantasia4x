@@ -7,6 +7,9 @@ export const CELL_H = REACH + LIFT + TILE + REACH;
 export const CELL_X = -REACH;
 export const CELL_Y = -REACH - LIFT;
 export const PERIOD = TILE * PATCH;
+export const TOP_SIZE = 1024;
+export const TOP_MARK = [255, 0, 255];
+const RIM_SHIFT = [0, 0.26, -0.2];
 export const NEIGHBOURS = [
   [0, -1],
   [1, -1],
@@ -87,7 +90,6 @@ const ART_SHAPE = {
   P: { rock: [colour] },
   clamp: (v = 0, lo = 0, hi = 0) => Math.min(hi, Math.max(lo, v)),
   pn: (x = 0, y = 0, fx = 0, fy = 0, seed = 0) => x + y + fx + fy + seed,
-  rockTone: (x = 0, y = 0) => x + y,
   rockFace: (x = 0, y = 0, fy = 0, fh = 0) => [x, y, fy + fh],
   rp: (ramp = [colour], t = 0, x = 0, y = 0, d = 0) => ramp[Math.round(t + x + y + d)],
   lit: (c = colour, k = 0) => c.map((v) => v * k),
@@ -111,12 +113,6 @@ export function rockArt(A = ART_SHAPE) {
       offsets[i] = A.clamp(out, r > 0 ? -r : 1, MAX_INSET);
     }
     return offsets[i];
-  };
-  const tones = new Float64Array(PERIOD * PERIOD).fill(NaN);
-  const tone = (x = 0, y = 0) => {
-    const i = wrap(y) * PERIOD + wrap(x);
-    if (Number.isNaN(tones[i])) tones[i] = A.rockTone(wrap(x), wrap(y));
-    return tones[i];
   };
   const vertical = (y = 0, ex = 0) => offset(y, ex, SEEDS.vertical);
   const horizontal = (x = 0, ey = 0) => offset(x, ey, SEEDS.horizontal);
@@ -173,10 +169,8 @@ export function rockArt(A = ART_SHAPE) {
     }
   ) {
     const open = { l: !rock(mass, x - 1, y), r: !rock(mass, x + 1, y), u: !rock(mass, x, y - 1) };
-    let t = tone(x, y);
-    if (open.u || open.l) t += 0.26;
-    else if (open.r) t -= 0.2;
-    put(x, y - LIFT, A.rp(A.P.rock, t, x, y, 0.3));
+    const rim = open.u || open.l ? 1 : open.r ? 2 : 0;
+    put(x, y - LIFT, [TOP_MARK[0], TOP_MARK[1] + rim, TOP_MARK[2]]);
     if (rock(mass, x, y + 1)) return;
     for (let fy = 0; fy < LIFT; fy++) {
       const fyy = y - LIFT + 1 + fy;
@@ -238,4 +232,22 @@ export function rockArt(A = ART_SHAPE) {
   }
 
   return { rock, owner, paintTile, paintOwned, piece };
+}
+
+export function rockTop(
+  A = {
+    rockTone: (x = 0, y = 0) => x + y,
+    rp: (ramp = [0], t = 0, x = 0, y = 0, d = 0) => ramp[Math.round(t + x + y + d)]
+  }
+) {
+  const steps = [0, 1, 2, 3, 4, 5, 6];
+  const px = new Uint8Array(TOP_SIZE * TOP_SIZE * 4);
+  for (let y = 0; y < TOP_SIZE; y++)
+    for (let x = 0; x < TOP_SIZE; x++) {
+      const t = A.rockTone(x, y),
+        i = (y * TOP_SIZE + x) * 4;
+      RIM_SHIFT.forEach((shift, c) => (px[i + c] = A.rp(steps, t + shift, x, y, 0.3)));
+      px[i + 3] = 255;
+    }
+  return px;
 }

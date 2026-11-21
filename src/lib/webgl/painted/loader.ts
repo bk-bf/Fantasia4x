@@ -3,15 +3,23 @@ import {
   parseManifest,
   type PaintedKind,
   type PaintedManifest,
+  type PaintedPieceTop,
   type PaintedTileset
 } from './manifest.js';
 import { setPaintedTileset } from './tileset.js';
 
 export const PAINTED_BASE_URL = '/tilesets/painted/';
 
+export interface LoadedPieceTop {
+  texture: WebGLTexture;
+  lift: number;
+  ramp: { x: number; y: number };
+}
+
 export interface LoadedPaintedTileset {
   tileset: PaintedTileset;
   texture: WebGLTexture;
+  top: LoadedPieceTop | null;
 }
 
 function loadImage(url: string): Promise<HTMLImageElement> {
@@ -52,6 +60,23 @@ interface PaintedSource {
   manifest: PaintedManifest;
   tileset: PaintedTileset;
   image: HTMLImageElement;
+  top: { image: HTMLImageElement; piece: PaintedPieceTop } | null;
+}
+
+const pieceTop = (tileset: PaintedTileset) =>
+  [...tileset.pieces.values()].find((p) => p.top)?.top ?? null;
+
+async function readTop(baseUrl: string, piece: PaintedPieceTop | null) {
+  if (!piece) return null;
+  try {
+    const image = await loadImage(`${baseUrl}${piece.image}`);
+    if (image.naturalWidth !== piece.size || image.naturalHeight !== piece.size)
+      throw new Error(`${piece.image} is not ${piece.size} px square`);
+    return { image, piece };
+  } catch (err) {
+    console.warn('[painted tiles] rock tops off:', err);
+    return null;
+  }
 }
 
 let source: Promise<PaintedSource | null> | null = null;
@@ -69,7 +94,9 @@ async function readSource(baseUrl: string): Promise<PaintedSource | null> {
       );
     const { tileset, problems } = buildTileset(manifest);
     if (problems.length > 0) console.warn(`[painted tiles] ${problems.join('; ')}`);
-    return { manifest, tileset, image };
+    const top = await readTop(baseUrl, pieceTop(tileset));
+    if (!top) for (const [set, p] of tileset.pieces) if (p.top) tileset.pieces.delete(set);
+    return { manifest, tileset, image, top };
   } catch (err) {
     console.warn('[painted tiles] off, drawing the glyph tiles instead:', err);
     return null;
@@ -86,8 +113,15 @@ export async function loadPaintedTileset(
   if (!loaded) return null;
   try {
     const texture = uploadAtlas(gl, loaded.image);
+    const top = loaded.top
+      ? {
+          texture: uploadAtlas(gl, loaded.top.image),
+          lift: loaded.top.piece.lift,
+          ramp: loaded.top.piece.ramp
+        }
+      : null;
     setPaintedTileset(loaded.tileset);
-    return { tileset: loaded.tileset, texture };
+    return { tileset: loaded.tileset, texture, top };
   } catch (err) {
     console.warn('[painted tiles] off, drawing the glyph tiles instead:', err);
     return null;

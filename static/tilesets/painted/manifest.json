@@ -5446,6 +5446,14 @@
       "ox": -3,
       "oy": 6
     },
+    "rock/ramp": {
+      "x": 68,
+      "y": 2750,
+      "w": 7,
+      "h": 1,
+      "ox": 0,
+      "oy": 0
+    },
     "rock/ruby/0": {
       "x": 1894,
       "y": 2530,
@@ -7639,6 +7647,12 @@
           -1
         ]
       ],
+      "top": {
+        "image": "rock-top.png",
+        "size": 1024,
+        "lift": 22,
+        "ramp": "rock/ramp"
+      },
       "layouts": [
         "rock/mass/0",
         "rock/mass/1",

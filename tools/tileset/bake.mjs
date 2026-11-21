@@ -11,9 +11,12 @@ import {
   CELL_W,
   CELL_X,
   CELL_Y,
+  LIFT,
   NEIGHBOURS,
+  TOP_SIZE,
   blobLayout,
-  rockArt
+  rockArt,
+  rockTop
 } from './rock.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -26,10 +29,14 @@ const PATCH = 4;
 const SIDE = TILE * PATCH;
 const ATLAS_W = 2048;
 const SHADOW = [0, 0, 0, 112];
+const TOP_IMAGE = 'rock-top.png';
 
-const A = new Function(
-  `'use strict';\n${BAKE_ART.map((f) => readFileSync(join(HERE, 'art', f), 'utf8').replace(/^'use strict';\n/, '')).join('\n')}\nreturn ${EXPORTS};`
-)();
+const art = (period = 0) =>
+  new Function(
+    'ART_PERIOD',
+    `'use strict';\n${BAKE_ART.map((f) => readFileSync(join(HERE, 'art', f), 'utf8').replace(/^'use strict';\n/, '')).join('\n')}\nreturn ${EXPORTS};`
+  )(period);
+const A = art(SIDE);
 
 export const ROCK = rockArt(A);
 
@@ -62,6 +69,16 @@ function pieceSprites(
     void [id, spr];
   }
 ) {
+  add(
+    'rock/ramp',
+    sprite(
+      A.P.rock.length,
+      1,
+      0,
+      0,
+      new Uint8ClampedArray(A.P.rock.flatMap((c = [0, 0, 0]) => [...c, 255]))
+    )
+  );
   for (const layout of BLOB_LAYOUTS)
     add(
       pieceId('rock', layout),
@@ -82,6 +99,7 @@ function pieceSprites(
       {
         resources: [...resources].sort(),
         neighbours: NEIGHBOURS,
+        top: { image: TOP_IMAGE, size: TOP_SIZE, lift: LIFT, ramp: 'rock/ramp' },
         layouts: Array.from({ length: 1 << NEIGHBOURS.length }, (_, m) =>
           pieceId(set, blobLayout(m))
         )
@@ -364,13 +382,18 @@ export function bake() {
     map: resolveMap(all, roles, extra),
     pieces
   };
-  return { png: encodePng(ATLAS_W, h, atlas), manifest };
+  return {
+    png: encodePng(ATLAS_W, h, atlas),
+    manifest,
+    top: encodePng(TOP_SIZE, TOP_SIZE, rockTop(art(TOP_SIZE)))
+  };
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  const { png, manifest } = bake();
+  const { png, manifest, top } = bake();
   mkdirSync(OUT, { recursive: true });
   writeFileSync(join(OUT, 'atlas.png'), png);
+  writeFileSync(join(OUT, TOP_IMAGE), top);
   writeFileSync(join(OUT, 'manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
   console.log(
     `${Object.keys(manifest.sprites).length} sprites, atlas ${manifest.atlas.w}x${manifest.atlas.h}`

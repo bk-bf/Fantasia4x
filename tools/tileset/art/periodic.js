@@ -1,5 +1,5 @@
 'use strict';
-let PER = 128;
+let PER = typeof ART_PERIOD === 'number' ? ART_PERIOD : 128;
 const wrap = (v, q) => ((v % q) + q) % q;
 const cells = f => Math.max(1, Math.round(PER * f));
 function pnoiseQ(x, y, qx, qy, s, ox, oy) {
