@@ -31,6 +31,7 @@
     hideSidebars,
     debugMode,
     dayNightTint,
+    uiTheme,
     resourcesMinimized,
     chronicleMinimized
   } from '$lib/stores/uiPrefs';
@@ -50,107 +51,37 @@
     effectivePanelSaturation
   } from '$lib/game/services/EnvironmentService.js';
   import type { PlacedBuilding } from '$lib/game/core/types';
+  import '$lib/components/UI/theme/applyTheme';
+  import { THEMES } from '$lib/components/UI/theme/themes';
+  import {
+    IDENTITY_MATRIX,
+    ambientPanelVars as ambientVars,
+    bleakSaturation,
+    buildPanelMatrix,
+    legibleOf,
+    toTintStep
+  } from '$lib/components/UI/theme/ambientTokens';
 
   let currentScreen = 'main';
   let buildings: PlacedBuilding[] = [];
 
-  const toTintStep = (v: number): number => Math.round(v * 64) / 64;
   $: ambient = environmentService.getAmbient(environmentService.ambientTurn($gameState));
   $: panelTint = ambient.panelTint.map(toTintStep) as [number, number, number];
   $: panelSaturation = bleakSaturation(
     effectivePanelSaturation(environmentService.effectiveSeason($gameState), $gameState.weather),
     ambient.light
   );
-  const IDENTITY_MATRIX = '1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 1 0';
   $: ambientMatrix = $dayNightTint ? buildPanelMatrix(panelTint, panelSaturation) : IDENTITY_MATRIX;
-
-  const LUMA: [number, number, number] = [0.2126, 0.7152, 0.0722];
-
-  $: legibleTint = ((): [number, number, number] => {
-    const l = LUMA[0] * panelTint[0] + LUMA[1] * panelTint[1] + LUMA[2] * panelTint[2];
-    const k = l > 1e-4 ? 1 / l : 1;
-    return [panelTint[0] * k, panelTint[1] * k, panelTint[2] * k];
-  })();
-  $: ambientLegibleMatrix = $dayNightTint ? buildPanelMatrix(legibleTint, 1) : IDENTITY_MATRIX;
-
-  const NIGHT_BLEAK = 0.25;
-  const NIGHT_SAT_FLOOR = 0.6;
-  function bleakSaturation(baseSat: number, light: number): number {
-    const extra = (1 - baseSat) * (1 - light) * NIGHT_BLEAK;
-    return toTintStep(Math.max(Math.min(baseSat, NIGHT_SAT_FLOOR), baseSat - extra));
-  }
-
-  function buildPanelMatrix(tint: [number, number, number], s: number): string {
-    const lr = 0.2126;
-    const lg = 0.7152;
-    const lb = 0.0722;
-    const [tr, tg, tb] = tint;
-    const wash = (1 - s) * 0.08;
-    const f = (n: number) => n.toFixed(4);
-    return (
-      `${f(tr * ((1 - s) * lr + s))} ${f(tr * (1 - s) * lg)} ${f(tr * (1 - s) * lb)} 0 ${f(wash)} ` +
-      `${f(tg * (1 - s) * lr)} ${f(tg * ((1 - s) * lg + s))} ${f(tg * (1 - s) * lb)} 0 ${f(wash)} ` +
-      `${f(tb * (1 - s) * lr)} ${f(tb * (1 - s) * lg)} ${f(tb * ((1 - s) * lb + s))} 0 ${f(wash)} ` +
-      `0 0 0 1 0`
-    );
-  }
-
-  const BG_TOKENS: Record<string, string> = {
-    '--bg': '#0d0b07',
-    '--bg-panel': '#150f08',
-    '--bg-hover': '#201808',
-    '--bg-active': '#2c1e0a',
-    '--border': '#4a3818',
-    '--border-hi': '#7a5e28',
-    '--tab-active': '#c04818'
-  };
-  const FONT_TOKENS: Record<string, string> = {
-    '--text': '#d4a840',
-    '--text-dim': '#b09030',
-    '--text-muted': '#7a5c20',
-    '--accent': '#c84818',
-    '--accent-hi': '#f08828',
-    '--pos': '#68b030',
-    '--neg': '#c83018'
-  };
-
-  function tintRGB(
-    hex: string,
-    tint: [number, number, number],
-    s: number
-  ): [number, number, number] {
-    const r = parseInt(hex.slice(1, 3), 16) / 255;
-    const g = parseInt(hex.slice(3, 5), 16) / 255;
-    const b = parseInt(hex.slice(5, 7), 16) / 255;
-    const [lr, lg, lb] = LUMA;
-    const [tr, tg, tb] = tint;
-    const wash = (1 - s) * 0.08;
-    return [
-      tr * (((1 - s) * lr + s) * r + (1 - s) * lg * g + (1 - s) * lb * b) + wash,
-      tg * ((1 - s) * lr * r + ((1 - s) * lg + s) * g + (1 - s) * lb * b) + wash,
-      tb * ((1 - s) * lr * r + (1 - s) * lg * g + ((1 - s) * lb + s) * b) + wash
-    ];
-  }
-  const toHex = ([r, g, b]: [number, number, number]): string => {
-    const h = (n: number) =>
-      Math.max(0, Math.min(255, Math.round(n * 255)))
-        .toString(16)
-        .padStart(2, '0');
-    return `#${h(r)}${h(g)}${h(b)}`;
-  };
-
-  function tintTo(hex: string, tint: [number, number, number], s: number): string {
-    return toHex(tintRGB(hex, tint, s));
-  }
-
-  $: ambientPanelVars = [
-    ...Object.entries(BG_TOKENS).map(
-      ([k, v]) => `${k}: ${$dayNightTint ? tintTo(v, panelTint, panelSaturation) : v}`
-    ),
-    ...Object.entries(FONT_TOKENS).map(
-      ([k, v]) => `${k}: ${$dayNightTint ? tintTo(v, legibleTint, 1) : v}`
-    )
-  ].join('; ');
+  $: ambientLegibleMatrix = $dayNightTint
+    ? buildPanelMatrix(legibleOf(panelTint), 1)
+    : IDENTITY_MATRIX;
+  $: ambientPanelVars = ambientVars(
+    THEMES[$uiTheme],
+    $dayNightTint,
+    panelTint,
+    panelSaturation,
+    ambient.light
+  );
 
   let customMapOpen = false;
   uiState.subscribe((s) => {

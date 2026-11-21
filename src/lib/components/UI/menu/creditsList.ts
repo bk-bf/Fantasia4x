@@ -36,6 +36,7 @@ export const CREDITS: { role: string; lines: string[] }[] = [
       'Cinzel',
       'Dancing Script',
       'Jacquard 24',
+      'Jersey 10',
       'Jersey 20',
       'VT323',
       '— SIL Open Font License'
