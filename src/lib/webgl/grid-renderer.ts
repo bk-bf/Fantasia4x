@@ -11,6 +11,8 @@ const ZERO_LIGHT: [number, number, number] = [0, 0, 0];
 const NO_OUTLINE = [0, 0, 0];
 const PAINTED_UV_SHIFT = 2;
 const paintedCorners = [0, 0, 0, 0];
+const GLYPH_VERTEX_FLOATS = 24;
+const ROW_VERTEX_FLOATS = 25;
 
 export interface GridRenderOptions {
   tileWidth: number;
@@ -52,6 +54,7 @@ export class GridRenderer {
   private characterRenderer: CharacterRenderer;
   private fontAtlas: FontAtlas;
   private debug: boolean;
+  private vertexFloats: number;
 
   private gridVAO: WebGLVertexArrayObject | null = null;
   private gridVBO: WebGLBuffer | null = null;
@@ -83,13 +86,15 @@ export class GridRenderer {
     shaderManager: ShaderManager,
     characterRenderer: CharacterRenderer,
     fontAtlas: FontAtlas,
-    debug = false
+    debug = false,
+    rowDepth = false
   ) {
     this.gl = gl;
     this.shaderManager = shaderManager;
     this.characterRenderer = characterRenderer;
     this.fontAtlas = fontAtlas;
     this.debug = debug;
+    this.vertexFloats = rowDepth ? ROW_VERTEX_FLOATS : GLYPH_VERTEX_FLOATS;
 
     this.initializeGridRendering();
   }
@@ -265,7 +270,7 @@ export class GridRenderer {
         }
         gl.bindBuffer(gl.ARRAY_BUFFER, chunk.vbo);
         gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
-        chunk.count = data.length / 24;
+        chunk.count = data.length / this.vertexFloats;
       }
       chunk.builtVersion = version;
       chunk.builtLight = lightVersion;
@@ -316,7 +321,7 @@ export class GridRenderer {
 
     gl.bindVertexArray(this.gridVAO);
 
-    const vertexCount = vertexData.length / 24;
+    const vertexCount = vertexData.length / this.vertexFloats;
     gl.drawArrays(gl.TRIANGLES, 0, vertexCount);
 
     gl.bindVertexArray(null);
@@ -329,7 +334,8 @@ export class GridRenderer {
   }
 
   private generateBatchVertexData(tiles: TileData[], options: GridRenderOptions): Float32Array {
-    const FLOATS_PER_TILE = 6 * 24;
+    const vertexFloats = this.vertexFloats;
+    const FLOATS_PER_TILE = 6 * vertexFloats;
     const out = new Float32Array(tiles.length * FLOATS_PER_TILE);
     let o = 0;
     const sampler = options.lightSampler;
@@ -624,7 +630,16 @@ export class GridRenderer {
         Lbl[2]
       ];
 
-      out.set(charVertices, o);
+      if (vertexFloats === GLYPH_VERTEX_FLOATS) out.set(charVertices, o);
+      else {
+        const row = tile.position.y + offsetY / tileH;
+        for (let v = 0; v < 6; v++) {
+          const at = o + v * ROW_VERTEX_FLOATS;
+          for (let f = 0; f < GLYPH_VERTEX_FLOATS; f++)
+            out[at + f] = charVertices[v * GLYPH_VERTEX_FLOATS + f];
+          out[at + GLYPH_VERTEX_FLOATS] = row;
+        }
+      }
       o += FLOATS_PER_TILE;
     }
 
@@ -648,7 +663,7 @@ export class GridRenderer {
     const gl = this.gl;
     gl.bindVertexArray(vao);
     gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
-    const stride = 24 * 4;
+    const stride = this.vertexFloats * 4;
     const attribs: [string, number, number][] = [
       ['a_position', 2, 0],
       ['a_texCoord', 2, 2],
@@ -659,6 +674,7 @@ export class GridRenderer {
       ['a_uvBounds', 4, 17],
       ['a_light', 3, 21]
     ];
+    if (this.vertexFloats === ROW_VERTEX_FLOATS) attribs.push(['a_row', 1, GLYPH_VERTEX_FLOATS]);
     for (const [name, size, offset] of attribs) {
       const loc = this.shaderManager.getAttributeLocation('tileRenderer', name);
       if (loc >= 0) {

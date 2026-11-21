@@ -13,6 +13,9 @@ import { addFrameTotals } from '../workPins/page.js';
 import { PAINTED_TILES } from './painted/flag.js';
 import { loadPaintedTileset, type LoadedPaintedTileset } from './painted/loader.js';
 
+export const ROW_DEPTH_RANGE = 8192;
+export const ALPHA_CUT = 0.5;
+
 interface Viewport {
   x: number;
   y: number;
@@ -64,6 +67,7 @@ export class WebGLRendererCore {
 
   private tilesetLoaded = false;
   private painted: LoadedPaintedTileset | null = null;
+  private rowDepth = PAINTED_TILES;
 
   private gameGrid: GameGrid | null = null;
   private gridVersion = 0;
@@ -257,7 +261,7 @@ export class WebGLRendererCore {
     try {
       if (this.debug) console.log('🔄 Initializing WebGL2 renderer...');
 
-      const gl = await this.webglState.initialize();
+      const gl = await this.webglState.initialize({ depth: this.rowDepth });
 
       this.shaderManager = await createTileRendererShaders(gl, this.debug);
       if (!this.shaderManager) throw new Error('Shader init failed');
@@ -289,7 +293,8 @@ export class WebGLRendererCore {
         this.shaderManager,
         this.characterRenderer,
         this.fontAtlas,
-        this.debug
+        this.debug,
+        this.rowDepth
       );
       if (PAINTED_TILES) this.painted = await loadPaintedTileset(gl);
 
@@ -313,7 +318,7 @@ export class WebGLRendererCore {
     this.stats.drawCalls = 0;
     this.stats.vertexCount = 0;
     this.stats.resourceRebuilds = 0;
-    this.webglState.clear();
+    this.webglState.clear(this.rowDepth);
   }
 
   private render(): void {
@@ -355,6 +360,10 @@ export class WebGLRendererCore {
       ]);
     }
     if (this.painted) this.bindPaintedAtlas(gl, this.painted);
+    if (this.rowDepth) {
+      this.shaderManager.setUniform('tileRenderer', 'u_rowDepth', 1 / ROW_DEPTH_RANGE);
+      this.shaderManager.setUniform('tileRenderer', 'u_alphaCut', ALPHA_CUT);
+    }
 
     const viewportTilesW = Math.ceil(this.viewport.width / this.tileWidth);
     const viewportTilesH = Math.ceil(this.viewport.height / this.tileHeight);
@@ -399,6 +408,10 @@ export class WebGLRendererCore {
         this.drawSnowGrid(viewportTilesW, viewportTilesH, lightTime);
         this.shaderManager.setUniform('tileRenderer', 'u_bgOnly', 0);
       }
+      if (this.rowDepth) {
+        gl.enable(gl.DEPTH_TEST);
+        gl.depthFunc(gl.LEQUAL);
+      }
       this.renderGlyphOverlay(
         this.resourceOverlayGrid,
         viewportTilesW,
@@ -423,6 +436,7 @@ export class WebGLRendererCore {
       );
       this.stats.overlayMs = performance.now() - tOverlay;
       this.shaderManager.setUniform('tileRenderer', 'u_glyphOnly', 0);
+      if (this.rowDepth) gl.disable(gl.DEPTH_TEST);
       gl.disable(gl.BLEND);
     } else {
       this.stats.overlayMs = 0;

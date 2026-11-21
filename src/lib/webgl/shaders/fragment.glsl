@@ -29,6 +29,7 @@ uniform float u_glyphOnly;
 // glyphs render on top of it rather than being flattened to solid white), while the snow SPRITE is
 // drawn glyph-only in a later pass above the resources.
 uniform float u_bgOnly;
+uniform float u_alphaCut;
 
 out vec4 fragColor;
 
@@ -89,6 +90,7 @@ void main() {
     // Glyph-only overlay pass: draw only the glyph, transparent elsewhere, so the
     // terrain rendered underneath shows through (no opaque background quad).
     if (u_glyphOnly > 0.5) {
+        if (sprite.a < u_alphaCut) discard;
         fragColor = vec4(tinted * light, sprite.a);
         return;
     }
