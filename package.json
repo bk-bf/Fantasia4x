@@ -30,6 +30,7 @@
     "check": "node tools/remote/run.mjs sh -c 'pnpm check:types && pnpm check:tools && pnpm lint && pnpm knip'",
     "check:tools": "node tools/ci/warnings.mjs tools-types",
     "chain": "node tools/chain.mjs",
+    "ci:stats": "node tools/ci/stats.mjs",
     "lint": "node tools/remote/run.mjs node tools/ci/warnings.mjs eslint",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
