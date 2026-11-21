@@ -1,6 +1,7 @@
 import { TICKS_PER_SECOND } from '../core/util/time';
 import { vlog } from '../core/util/logSink';
 import { markTileDirty } from '../core/state/tileDeltas';
+import { TileSourceIndex } from './tileSourceIndex';
 import { buildingLight } from './LightingService';
 import { buildingService } from './BuildingService';
 import { resourceObjectService } from './ResourceObjectService';
@@ -105,10 +106,19 @@ interface GroveLight {
   intensity: number;
   radius: number;
 }
-let groveLightSources: GroveLight[] = [];
-let groveLightMapRef: WorldTile[][] | null = null;
-
-let groveVersion = 0;
+const groveLight = new TileSourceIndex<GroveLight>(
+  (id, x, y) => {
+    const glow = resourceObjectService.getById(id)?.glow;
+    return glow && glow.radius > 0
+      ? { x, y, intensity: glow.intensity, radius: glow.radius }
+      : null;
+  },
+  () =>
+    resourceObjectService
+      .getAll()
+      .filter((d) => d.glow && d.glow.radius > 0)
+      .map((d) => d.id)
+);
 
 interface BuildingLightSource {
   x: number;
@@ -139,24 +149,6 @@ function litBuildingSources(
   if (sig !== buildingLightSig) {
     buildingLightSig = sig;
     buildingLightVersion++;
-  }
-  return out;
-}
-
-function scanGroveLight(worldMap: WorldTile[][]): GroveLight[] {
-  const out: GroveLight[] = [];
-  for (let y = 0; y < worldMap.length; y++) {
-    const row = worldMap[y];
-    for (let x = 0; x < row.length; x++) {
-      const res = row[x]?.resources;
-      if (!res) continue;
-      for (const id in res) {
-        if ((res[id] ?? 0) <= 0) continue;
-        const glow = resourceObjectService.getById(id)?.glow;
-        if (glow && glow.radius > 0)
-          out.push({ x, y, intensity: glow.intensity, radius: glow.radius });
-      }
-    }
   }
   return out;
 }
@@ -220,14 +212,9 @@ export function computeTileLightLevel(
 ): number {
   const ambient = getAmbientLight(turn);
   const emitters = litBuildingSources(buildings);
-  if (worldMap && worldMap !== groveLightMapRef) {
-    groveLightMapRef = worldMap;
-    groveLightSources = scanGroveLight(worldMap);
-    groveVersion++;
-  }
   const W = worldMap?.[0]?.length ?? 0;
   const H = worldMap?.length ?? 0;
-  if (W === 0 || H === 0) {
+  if (!worldMap || W === 0 || H === 0) {
     let point = 0;
     for (let i = 0; i < emitters.length; i++) {
       const e = emitters[i];
@@ -236,15 +223,16 @@ export function computeTileLightLevel(
     }
     return Math.min(1, Math.max(0.1, ambient + point));
   }
+  const groves = groveLight.sources(worldMap);
   if (
     buildingLightVersion !== fieldBuildVer ||
-    groveVersion !== fieldGroveVer ||
+    groveLight.version !== fieldGroveVer ||
     pointLightW !== W ||
     pointLightH !== H
   ) {
-    rebuildPointLightField(W, H, emitters, groveLightSources);
+    rebuildPointLightField(W, H, emitters, groves);
     fieldBuildVer = buildingLightVersion;
-    fieldGroveVer = groveVersion;
+    fieldGroveVer = groveLight.version;
   }
   const point = x >= 0 && x < W && y >= 0 && y < H ? pointLightField![y * W + x] : 0;
   return Math.min(1, Math.max(0.1, ambient + point));
@@ -742,24 +730,17 @@ let fireSources: FireSource[] = [];
 let shelterTiles = new Map<string, { insulation: number; weatherProtection: number }>();
 
 let groveSources: FireSource[] = [];
-let groveMapRef: WorldTile[][] | null = null;
-
-function scanGroveThermal(worldMap: WorldTile[][]): FireSource[] {
-  const out: FireSource[] = [];
-  for (let y = 0; y < worldMap.length; y++) {
-    const row = worldMap[y];
-    for (let x = 0; x < row.length; x++) {
-      const res = row[x]?.resources;
-      if (!res) continue;
-      for (const id in res) {
-        if ((res[id] ?? 0) <= 0) continue;
-        const t = resourceObjectService.getById(id)?.thermal;
-        if (t && t.radius > 0) out.push({ x, y, degrees: t.degrees, radius: t.radius });
-      }
-    }
-  }
-  return out;
-}
+const groveThermal = new TileSourceIndex<FireSource>(
+  (id, x, y) => {
+    const t = resourceObjectService.getById(id)?.thermal;
+    return t && t.radius > 0 ? { x, y, degrees: t.degrees, radius: t.radius } : null;
+  },
+  () =>
+    resourceObjectService
+      .getAll()
+      .filter((d) => d.thermal && d.thermal.radius > 0)
+      .map((d) => d.id)
+);
 
 export function rebuildThermalField(
   buildings: PlacedBuilding[] | undefined,
@@ -785,10 +766,7 @@ export function rebuildThermalField(
       );
     }
   }
-  if (worldMap && worldMap !== groveMapRef) {
-    groveMapRef = worldMap;
-    groveSources = scanGroveThermal(worldMap);
-  }
+  if (worldMap) groveSources = groveThermal.sources(worldMap);
   fireSources = groveSources.length ? fires.concat(groveSources) : fires;
   shelterTiles = shelter;
 }
