@@ -58,7 +58,7 @@ import { applyDevWorld } from '$lib/game/debug/devWorld';
 import { TICKS_PER_SECOND } from '$lib/game/core/util/time';
 import { clearTileDeltas } from '$lib/game/core/state/tileDeltas';
 import { rng, freshSeed } from '$lib/game/core/util/rng';
-import { resetUnreachableJobs } from '$lib/game/systems/PawnStateMachine';
+import { resetSimTransients } from '$lib/game/systems/simTransients';
 
 const TICK_DURATION_MS = 1000 / TICKS_PER_SECOND;
 const MAX_STEPS_PER_FRAME = 4;
@@ -367,7 +367,7 @@ function getMapSize() {
 function regenWorld(seed?: number, dev = false, itemQty = 500, preview = false) {
   const s = (seed !== undefined ? seed : freshSeed()) >>> 0 || 1;
   rng.reseed(s);
-  resetUnreachableJobs();
+  resetSimTransients();
   const newWorld = generateWorld(currentMapSize.w, currentMapSize.h, s);
   const base = get(gameState) as GameState;
 
@@ -430,7 +430,7 @@ const MENU_PREVIEW_MAP = { w: 161, h: 101 };
 function startMenuPreview() {
   if (!browser || !USE_SIM_WORKER) return;
   rng.reseed(MENU_PREVIEW_SEED);
-  resetUnreachableJobs();
+  resetSimTransients();
   const world = generateWorld(MENU_PREVIEW_MAP.w, MENU_PREVIEW_MAP.h, MENU_PREVIEW_SEED, {
     skipResources: true,
     tidyWater: false
@@ -506,7 +506,7 @@ function resetGame() {
   clearActivityLog();
   const seed = freshSeed();
   rng.reseed(seed);
-  resetUnreachableJobs();
+  resetSimTransients();
   const world = generateWorld(240, 160, seed);
   let fresh: GameState = {
     ...initialGameState,
@@ -546,7 +546,7 @@ async function loadScenarioPreset(presetId: string): Promise<boolean> {
   clearActivityLog();
   mintActiveSave();
   setActiveCommitted(true);
-  resetUnreachableJobs();
+  resetSimTransients();
   const state = buildScenario(preset.spec);
   loadStateIntoWorker(state);
   console.info(`[GameState] Loaded scenario preset '${presetId}'.`);
@@ -713,7 +713,7 @@ export const savedStateReady: Promise<void> = (async () => {
     const { buildProfilerScenario } = await import('$lib/game/debug/profilerScenario');
     const scenario = buildProfilerScenario();
     rng.reseed(scenario.seed);
-    resetUnreachableJobs();
+    resetSimTransients();
     set(scenario);
     gameEngine.setGameStateManager(new GameStateManager(scenario));
     setGameSpeed(4);
@@ -746,7 +746,7 @@ export const savedStateReady: Promise<void> = (async () => {
   await reloadActivityLogForActiveSave();
 
   rng.reseed(baseState.seed);
-  resetUnreachableJobs();
+  resetSimTransients();
 
   if (
     !baseState.worldMap ||

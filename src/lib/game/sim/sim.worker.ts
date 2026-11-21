@@ -5,7 +5,7 @@ import { pathfinderService } from '../services/PathfinderService';
 import { GameStateManager } from '../core/state/GameStateManager';
 import { gameEngine } from '../systems/GameEngineImpl';
 import { rng } from '../core/util/rng';
-import { resetUnreachableJobs } from '../systems/PawnStateMachine';
+import { resetSimTransients } from '../systems/simTransients';
 import { TICKS_PER_SECOND } from '../core/util/time';
 import { setSimLogSink, simLog, setVerboseLogging, type SimLogSink } from '../core/util/logSink';
 import { applySimCommand } from './commands';
@@ -459,7 +459,7 @@ self.onmessage = async (e: MessageEvent) => {
     }
     case 'init': {
       rng.reseed(msg.seed ?? 0);
-      resetUnreachableJobs();
+      resetSimTransients();
       installForwardingLogSink();
       setVerboseLogging(!!msg.verbose);
       gameEngine.setGameStateManager(new GameStateManager(msg.state));
