@@ -56,7 +56,7 @@ describe('ground kinds reach the terrain grid', () => {
 
 describe('the blend pass tables', () => {
   it('points each kind at its patch in atlas pixels with its level', () => {
-    const { patch, layer } = groundKindTable({ tileset, texture: {} as WebGLTexture });
+    const { patch, layer } = groundKindTable({ tileset, texture: {} as WebGLTexture, top: null });
     const k = paintedGroundKind('grass');
     const cell = tileset.lookup.get('subterrain')!.get('grass')![0];
     expect(patch[k * 4]).toBe(Math.round(cell.cells[0].u1 * tileset.atlasW));
