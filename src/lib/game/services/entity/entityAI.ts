@@ -663,6 +663,15 @@ function nearestEngageablePos(
   return best;
 }
 
+function packCorpseWithin(mob: Mob, allMobs: Mob[], range: number): Mob | undefined {
+  return mobCorpses(allMobs).find(
+    (m) =>
+      m.state === 'Corpse' &&
+      m.creatureId === mob.creatureId &&
+      dist(mob, { x: m.x, y: m.y }) <= range
+  );
+}
+
 export function stepHostile(
   mob: Mob,
   def: CreatureDefinition,
@@ -742,13 +751,7 @@ export function stepHostile(
         path: []
       };
     }
-    const packCorpse = mobCorpses(allMobs).find(
-      (m) =>
-        m.state === 'Corpse' &&
-        m.creatureId === mob.creatureId &&
-        dist(mob, { x: m.x, y: m.y }) <= visionRange
-    );
-    if (packCorpse) {
+    if (packCorpseWithin(mob, allMobs, visionRange)) {
       return {
         ...mob,
         state: 'Fleeing',
@@ -1040,9 +1043,13 @@ export function stepHostile(
       const predThreat = def.huntable
         ? nearestPredatorThreat(mob, def, allMobs, visionRange)
         : null;
+      const packCorpse = def.huntable
+        ? packCorpseWithin(mob, allMobs, def.stats.fleeRange)
+        : undefined;
       const pawnDist = nearest ? dist(mob, nearest.pos) : Infinity;
       const predDist = predThreat ? dist(mob, predThreat.pos) : Infinity;
-      const closestDist = Math.min(pawnDist, predDist);
+      const corpseDist = packCorpse ? dist(mob, { x: packCorpse.x, y: packCorpse.y }) : Infinity;
+      const closestDist = Math.min(pawnDist, predDist, corpseDist);
       const cantEscape = !mob.fleeDest && turn - mob.stateSince > SAFE_RESET_TICKS;
       if (closestDist > def.stats.fleeRange || cantEscape) {
         return { ...mob, state: 'Wander', stateSince: turn, fleeDest: undefined };
@@ -1056,6 +1063,7 @@ export function stepHostile(
       const fleeThreats: { x: number; y: number }[] = [];
       if (nearest && pawnDist <= def.stats.fleeRange) fleeThreats.push(nearest.pos);
       if (predThreat && predDist <= def.stats.fleeRange) fleeThreats.push(predThreat.pos);
+      if (packCorpse) fleeThreats.push({ x: packCorpse.x, y: packCorpse.y });
       if (fleeThreats.length > 0)
         return { ...fleeToSafety(mob, fleeThreats, state), stamina: drainedStamina };
       return { ...wanderStep(mob, def, state), stamina: drainedStamina };
