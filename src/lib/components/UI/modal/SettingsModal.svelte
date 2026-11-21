@@ -3,6 +3,8 @@
   import { onMount } from 'svelte';
   import SettingRow from '../menu/SettingRow.svelte';
   import ScrollArea from '../widget/ScrollArea.svelte';
+  import ThemeSection from '../menu/ThemeSection.svelte';
+  import AudioSection from '../menu/AudioSection.svelte';
   import {
     weatherEffects,
     dayNightTint,
@@ -15,11 +17,7 @@
     autoPauseOnDeath,
     defaultGameSpeed,
     debugMode,
-    wasdPan,
-    masterVolume,
-    musicVolume,
-    sfxVolume,
-    ambientVolume
+    wasdPan
   } from '$lib/stores/uiPrefs';
 
   let { onClose }: { onClose: () => void } = $props();
@@ -61,11 +59,13 @@
     transition:scale={{ duration: 140, start: 0.96 }}
   >
     <div class="hdr">
-      <h2 class="title">SETTINGS</h2>
+      <h2 class="title">Settings</h2>
       <button class="close" aria-label="Close settings" onclick={onClose}>✕</button>
     </div>
 
     <ScrollArea class="body">
+      <ThemeSection />
+
       <div class="section">Display</div>
       <SettingRow
         type="select"
@@ -92,33 +92,7 @@
         onToggle={showTps.toggle}
       />
 
-      <div class="section">Audio</div>
-      <SettingRow
-        type="slider"
-        label="Master volume"
-        sliderValue={$masterVolume}
-        onInput={masterVolume.set}
-      />
-      <SettingRow
-        type="slider"
-        label="Music volume"
-        sliderValue={$musicVolume}
-        onInput={musicVolume.set}
-      />
-      <SettingRow
-        type="slider"
-        label="Ambient volume"
-        sub="— weather, nature, fire"
-        sliderValue={$ambientVolume}
-        onInput={ambientVolume.set}
-      />
-      <SettingRow
-        type="slider"
-        label="SFX volume"
-        sub="— creatures, work, combat, UI"
-        sliderValue={$sfxVolume}
-        onInput={sfxVolume.set}
-      />
+      <AudioSection />
 
       <div class="section">Graphics</div>
       <SettingRow
@@ -241,10 +215,11 @@
   }
   .title {
     color: var(--accent-hi);
-    font-size: 16px;
-    font-weight: 700;
-    letter-spacing: 0.4em;
-    text-indent: 0.4em;
+    font-family: var(--font-head);
+    font-size: calc(24px * var(--head-size));
+    font-weight: 400;
+    text-transform: var(--head-case);
+    letter-spacing: 0.12em;
     margin: 0;
   }
   .close {
@@ -266,16 +241,17 @@
     margin-right: -18px;
     padding-right: 10px;
   }
-  .section {
+  .settings-panel :global(.section) {
     color: var(--accent-hi);
-    font-size: 11px;
-    letter-spacing: 0.22em;
-    text-transform: uppercase;
+    font-family: var(--font-head);
+    font-size: calc(18px * var(--head-size));
+    letter-spacing: 0.08em;
+    text-transform: var(--head-case);
     margin: 12px 0 4px;
     padding-bottom: 3px;
     border-bottom: 1px solid var(--border);
   }
-  .section:first-child {
+  .settings-panel :global(.section:first-child) {
     margin-top: 0;
   }
   .done {
