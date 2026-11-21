@@ -48,6 +48,7 @@ import { combatService } from './Combat';
 import { getRangedWeapon, effectiveRangedRange, hasViableAmmo } from './rangedCombat';
 import { TICKS_PER_SECOND, ticksFromSeconds, perTick } from '../core/util/time';
 import {
+  buildPathfindingGrids,
   buildPathfindingGridsSoftBlocked,
   patchPathfindingWalkable,
   pathfinderService
@@ -442,7 +443,7 @@ export class GameEngineImpl implements GameEngine {
 
     this.timed('env:thermal', () => rebuildThermalField(gs.buildings, gs.worldMap));
 
-    this.timed('env:connectivity', () => maybeRebuildConnectivity(gs.worldMap, gs.turn));
+    this.timed('env:connectivity', () => maybeRebuildConnectivity(buildPathfindingGrids(gs.worldMap), gs.turn));
   }
 
   private processPlantGrowth(): void {
