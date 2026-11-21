@@ -1,4 +1,5 @@
 import type { Season } from '$lib/game/core/types';
+import bedLoudness from './bedLoudness.json';
 
 export type MusicScene = 'menu' | 'day' | 'night' | 'combat';
 
@@ -290,13 +291,18 @@ export function resolveAmbient(opts: {
 }
 
 const WEATHER_BEDS: ReadonlySet<AmbientBed> = new Set<AmbientBed>(['wind', 'rain', 'rain-heavy']);
-const WEATHER_ZOOM_BOOST = 0.3;
+
+const BED_LOUDNESS_LUFS: Record<AmbientBed, number> = bedLoudness;
+const LEVEL_LUFS = Math.min(...Object.values(BED_LOUDNESS_LUFS));
+
+export function bedTrim(bed: AmbientBed): number {
+  return 10 ** ((LEVEL_LUFS - BED_LOUDNESS_LUFS[bed]) / 20);
+}
 
 export function ambientMix(base: AmbientLayers, detail: number): AmbientLayers {
-  const weatherMul = 1 + (1 - detail) * WEATHER_ZOOM_BOOST;
   const out: AmbientLayers = {};
   for (const key of Object.keys(base) as AmbientBed[]) {
-    const g = (base[key] ?? 0) * (WEATHER_BEDS.has(key) ? weatherMul : detail);
+    const g = (base[key] ?? 0) * (WEATHER_BEDS.has(key) ? 1 : detail) * bedTrim(key);
     if (g > 0.001) out[key] = g;
   }
   return out;

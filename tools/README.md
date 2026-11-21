@@ -42,6 +42,7 @@ to ubuntuserver through `remote/run.mjs`.
 | `tileset/` | Bakes the painted map art in `tileset/art/` into `static/tilesets/painted/atlas.png` and its `manifest.json`, which maps database ids to sprites. | `pnpm tileset:bake` |
 | `tileset/sync.mjs` | Copies the drawing code the bake loads from a mockup folder into `tileset/art/`, without comments; `sources.mjs` lists those files and the hand-ported ones it leaves alone. | `pnpm tileset:sync <folder>` |
 | `profile-self.mjs`, `profile-window.mjs` | Read the newest Firefox Profiler recording in `.debug/` and report the simulation's functions in it. | `node tools/profile-self.mjs` |
+| `audio-loudness.mjs` | Measures the integrated loudness (EBU R128) of each ambient bed with ffmpeg; `--write` stores it in `src/lib/audio/bedLoudness.json`, which levels the beds against each other. | `node tools/audio-loudness.mjs [--write]` |
 | `threat-model.mjs` | Rates creature threat from the creature, item and loot data. | `pnpm threat`, `pnpm threat:check` |
 | `runner/` | Registers self-hosted GitHub Actions runners for this repo in `.ci/runners/<n>/` of the checkout it sits in, each as a `gha-fantasia4x@<n>` user unit behind `gate.sh`, which refuses anyone but the owner. CI falls back to them when the `RUNS_ON` repo variable is set. | `tools/runner/setup.sh [count]` on ubuntuserver |
 
