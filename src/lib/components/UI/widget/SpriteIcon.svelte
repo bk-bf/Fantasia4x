@@ -4,7 +4,7 @@
   import { fitInto } from '$lib/pixelArt/shrink';
   import { itemService } from '$lib/game/services/ItemService';
   import { blank, pen } from '$lib/pixelArt/canvas';
-  import { picture, toArt, type Art } from '$lib/pixelArt/picture';
+  import { toArt, type Art } from '$lib/pixelArt/picture';
 
   const _sheetCache = new Map<string, HTMLCanvasElement | null>();
   const _sheetWaiters = new Map<string, Set<() => void>>();
@@ -155,9 +155,16 @@
 </script>
 
 {#if art}
-  <i class="painted-icon" style:width="{px}px" style:height="{px}px" {@attach picture(art)}></i>
+  <img
+    class="painted-icon"
+    src={art.url}
+    alt=""
+    draggable="false"
+    style:width="{px}px"
+    style:height="{px}px"
+  />
 {:else if cell}
-  <i class="sprite-icon" style:height="{px}px" {@attach picture(cell)}></i>
+  <img class="sprite-icon" src={cell.url} alt="" draggable="false" style:height="{px}px" />
 {:else if literal}
   <span class="sprite-literal" style="font-size:{px}px; color:{tone ?? 'inherit'}">{literal}</span>
 {:else}
@@ -169,13 +176,11 @@
   .painted-icon {
     flex-shrink: 0;
     display: block;
+    image-rendering: pixelated;
   }
   .sprite-icon {
+    width: auto;
     aspect-ratio: 12 / 18;
-  }
-  i :global(img) {
-    width: 100%;
-    height: 100%;
   }
   .sprite-literal {
     flex-shrink: 0;
