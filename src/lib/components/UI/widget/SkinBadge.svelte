@@ -1,15 +1,15 @@
 <script lang="ts">
-  import { pixels } from '$lib/pixelArt/pixels';
+  import { picture, toArt } from '$lib/pixelArt/picture';
   import type { GlyphName } from '$lib/pixelArt/glyphs';
   import { SKINS, type BadgeKind } from '$lib/pixelArt/skins';
   import { uiTheme } from '$lib/stores/uiPrefs';
 
   let { glyph, kind }: { glyph: GlyphName; kind: BadgeKind } = $props();
 
-  const art = $derived(SKINS[$uiTheme].badge(glyph, kind));
+  const art = $derived(toArt(SKINS[$uiTheme].badge(glyph, kind)));
 </script>
 
-<i class="skin-badge" aria-hidden="true" {@attach pixels(art, 1)}></i>
+<i class="skin-badge" aria-hidden="true" {@attach picture(art)}></i>
 
 <style>
   .skin-badge {
@@ -19,10 +19,10 @@
     height: 17px;
     vertical-align: middle;
   }
-  .skin-badge :global(canvas) {
+  .skin-badge :global(img) {
     filter: url(#ambient-tint-data);
   }
-  :global(:root[data-theme='vellum']) .skin-badge :global(canvas) {
+  :global(:root[data-theme='vellum']) .skin-badge :global(img) {
     filter: url(#ambient-tint-lit);
   }
 </style>

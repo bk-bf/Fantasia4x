@@ -1,6 +1,6 @@
 <script lang="ts">
   import { ribbon } from '$lib/pixelArt/cloth';
-  import { pixels } from '$lib/pixelArt/pixels';
+  import { picture, toArt } from '$lib/pixelArt/picture';
   import { DYES } from '$lib/components/UI/menu/mainMenuFlagArt';
 
   const CLOTH_H = 56;
@@ -25,7 +25,7 @@
     onclick: () => void;
   } = $props();
 
-  const cloth = $derived(ribbon(width, CLOTH_H, DYES[dye % DYES.length], dye, on));
+  const cloth = $derived(toArt(ribbon(width, CLOTH_H, DYES[dye % DYES.length], dye, on)));
 </script>
 
 <button
@@ -38,7 +38,7 @@
   data-title={note}
   {onclick}
 >
-  <span class="cloth" {@attach pixels(cloth, 1)}></span>
+  <span class="cloth" {@attach picture(cloth)}></span>
   <span class="label">{label}</span>
   <kbd>{key}</kbd>
 </button>

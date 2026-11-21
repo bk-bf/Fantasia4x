@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { pixels } from '$lib/pixelArt/pixels';
+  import { picture, toArt } from '$lib/pixelArt/picture';
   import { glyph, type GlyphName } from '$lib/pixelArt/glyphs';
   import { RAMPS, type RampName } from '$lib/pixelArt/palette';
   import { SKINS } from '$lib/pixelArt/skins';
@@ -8,10 +8,10 @@
   let { name, ramp }: { name: GlyphName; ramp?: RampName } = $props();
 
   const skin = $derived(SKINS[$uiTheme]);
-  const art = $derived(glyph(name, ramp ? RAMPS[ramp] : skin.glyphRamp, skin.glyphLine));
+  const art = $derived(toArt(glyph(name, ramp ? RAMPS[ramp] : skin.glyphRamp, skin.glyphLine)));
 </script>
 
-<i class="glyph" aria-hidden="true" {@attach pixels(art, 1)}></i>
+<i class="glyph" aria-hidden="true" {@attach picture(art)}></i>
 
 <style>
   .glyph {
@@ -21,10 +21,10 @@
     height: 13px;
     vertical-align: middle;
   }
-  .glyph :global(canvas) {
+  .glyph :global(img) {
     filter: url(#ambient-tint-data);
   }
-  :global(:root[data-theme='vellum']) .glyph :global(canvas) {
+  :global(:root[data-theme='vellum']) .glyph :global(img) {
     filter: url(#ambient-tint-lit);
   }
 </style>

@@ -81,7 +81,7 @@
     text-transform: var(--head-case, uppercase);
     letter-spacing: 1px;
   }
-  .cbtn.verb :global(.glyph canvas) {
+  .cbtn.verb :global(.glyph img) {
     filter: none;
   }
   .cbtn:disabled {
@@ -112,7 +112,7 @@
       0 0 6px rgb(255 160 60 / 0.7),
       1px 1px 0 #0b0806;
   }
-  :global(:root[data-theme='vellum']) .cbtn.on :global(.glyph canvas) {
+  :global(:root[data-theme='vellum']) .cbtn.on :global(.glyph img) {
     filter: invert(1);
   }
 </style>
