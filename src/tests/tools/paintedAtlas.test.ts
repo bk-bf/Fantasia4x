@@ -21,7 +21,17 @@ const database: Record<string, Set<string>> = {
   pawn: new Set(['*']),
   item: ids(items)
 };
-type Rect = { x: number; y: number; w: number; h: number; ox: number; oy: number; patch?: number };
+type Rect = {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  ox: number;
+  oy: number;
+  patch?: number;
+  cw?: number;
+  ch?: number;
+};
 const sprites: Record<string, Rect> = manifest.sprites;
 const map: Record<string, Record<string, string[]>> = manifest.map;
 
@@ -52,9 +62,20 @@ describe('painted atlas manifest', () => {
     }
   });
 
-  it('gives every patch sprite whole tiles', () => {
-    for (const [id, r] of Object.entries(sprites))
-      if (r.patch) expect([r.w, r.h, r.ox, r.oy], id).toEqual([r.patch * 32, r.patch * 32, 0, 0]);
+  it('gives every patch sprite whole tiles, or whole cells larger than a tile', () => {
+    for (const [id, r] of Object.entries(sprites)) {
+      if (!r.patch) continue;
+      if (r.cw === undefined)
+        expect([r.w, r.h, r.ox, r.oy], id).toEqual([r.patch * 32, r.patch * 32, 0, 0]);
+      else expect([r.w, r.h], id).toEqual([r.patch * r.cw, r.patch * r.ch!]);
+    }
+  });
+
+  it('names a rock piece for every neighbour layout, for walls the database has', () => {
+    const rock = manifest.pieces.rock;
+    expect(rock.layouts).toHaveLength(256);
+    for (const id of rock.layouts) expect(sprites[id], id).toBeDefined();
+    for (const id of rock.resources) expect(database.resource.has(id), id).toBe(true);
   });
 
   it('leaves a gutter between sprites', () => {

@@ -2,14 +2,24 @@ import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { encodePng } from './png.mjs';
-import { MAP, UNPAINTED } from './map.mjs';
+import { MAP, PIECES, UNPAINTED } from './map.mjs';
 import { loadRegistry, registryEntries } from './registry.mjs';
 import { BAKE_ART } from './sources.mjs';
+import {
+  BLOB_LAYOUTS,
+  CELL_H,
+  CELL_W,
+  CELL_X,
+  CELL_Y,
+  NEIGHBOURS,
+  blobLayout,
+  rockArt
+} from './rock.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const OUT = join(HERE, '..', '..', 'static', 'tilesets', 'painted');
 const EXPORTS =
-  '({ TREES, mkTree, PLANTS, mkPlant, CROPS, mkCrop, ROCKS, mkRock, BUILDS, mkBuild, PAWNS, mkPawn, BEASTS, OTHER, mkBeast, GROUND, TILES, ORE, rockTop, oreAt, decal, dith, hash, clamp, wrap })';
+  '({ TREES, mkTree, PLANTS, mkPlant, CROPS, mkCrop, ROCKS, mkRock, BUILDS, mkBuild, PAWNS, mkPawn, BEASTS, OTHER, mkBeast, GROUND, TILES, ORE, rockTop, rockTone, rockFace, oreAt, decal, dith, hash, clamp, wrap, pn, rp, lit, dark, P })';
 
 const TILE = 32;
 const PATCH = 4;
@@ -21,16 +31,64 @@ const A = new Function(
   `'use strict';\n${BAKE_ART.map((f) => readFileSync(join(HERE, 'art', f), 'utf8').replace(/^'use strict';\n/, '')).join('\n')}\nreturn ${EXPORTS};`
 )();
 
+export const ROCK = rockArt(A);
+
 const refList = (entries = [['', ['']]].slice(1)) => Object.fromEntries(entries);
 
-const sprite = (w = 0, h = 0, ox = 0, oy = 0, px = new Uint8ClampedArray(0), patch = 0) => ({
+const sprite = (
+  w = 0,
+  h = 0,
+  ox = 0,
+  oy = 0,
+  px = new Uint8ClampedArray(0),
+  patch = 0,
+  cw = 0,
+  ch = 0
+) => ({
   w,
   h,
   ox,
   oy,
   px,
-  patch
+  patch,
+  cw,
+  ch
 });
+
+export const pieceId = (set = '', layout = 0) => `${set}/mass/${layout}`;
+
+function pieceSprites(
+  add = (id = '', spr = sprite()) => {
+    void [id, spr];
+  }
+) {
+  for (const layout of BLOB_LAYOUTS)
+    add(
+      pieceId('rock', layout),
+      sprite(
+        PATCH * CELL_W,
+        PATCH * CELL_H,
+        CELL_X,
+        CELL_Y,
+        ROCK.piece(layout),
+        PATCH,
+        CELL_W,
+        CELL_H
+      )
+    );
+  return Object.fromEntries(
+    Object.entries(PIECES).map(([set, resources]) => [
+      set,
+      {
+        resources: [...resources].sort(),
+        neighbours: NEIGHBOURS,
+        layouts: Array.from({ length: 1 << NEIGHBOURS.length }, (_, m) =>
+          pieceId(set, blobLayout(m))
+        )
+      }
+    ])
+  );
+}
 
 function patch(colour = A.rockTop, decals = A.GROUND[0].dec.slice(0, 0)) {
   const px = new Uint8ClampedArray(SIDE * SIDE * 4);
@@ -134,8 +192,9 @@ function sprites() {
   }
   for (const k of [...Object.keys(A.BEASTS), ...Object.keys(A.OTHER)])
     add(`creature/${k}`, object(A.mkBeast(k), 16, 27));
+  const pieces = pieceSprites(add);
   const extra = registrySprites(add, out, roles);
-  return { all: out, roles, extra };
+  return { all: out, roles, extra, pieces };
 }
 
 function registrySprites(
@@ -274,7 +333,7 @@ function resolveMap(
 }
 
 export function bake() {
-  const { all, roles, extra } = sprites();
+  const { all, roles, extra, pieces } = sprites();
   const order = [...all].sort(
     ([a, sa], [b, sb]) => sb.patch - sa.patch || sb.h - sa.h || (a < b ? -1 : 1)
   );
@@ -287,13 +346,23 @@ export function bake() {
     .sort((a, b) => (a.id < b.id ? -1 : 1))
     .map(({ id, s, x, y }) => [
       id,
-      { x, y, w: s.w, h: s.h, ox: s.ox, oy: s.oy, ...(s.patch ? { patch: s.patch } : {}) }
+      {
+        x,
+        y,
+        w: s.w,
+        h: s.h,
+        ox: s.ox,
+        oy: s.oy,
+        ...(s.patch ? { patch: s.patch } : {}),
+        ...(s.cw ? { cw: s.cw, ch: s.ch } : {})
+      }
     ]);
   const manifest = {
     tile: TILE,
     atlas: { w: ATLAS_W, h },
     sprites: Object.fromEntries(rects),
-    map: resolveMap(all, roles, extra)
+    map: resolveMap(all, roles, extra),
+    pieces
   };
   return { png: encodePng(ATLAS_W, h, atlas), manifest };
 }

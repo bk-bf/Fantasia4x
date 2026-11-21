@@ -93,11 +93,19 @@ function rockH(x, y) {
   const hh = r / n * .62 + clamp(1 - Math.hypot(VDX, VDY) / 24, 0, 1) * .38;
   return hh + Math.floor(hh * 7) / 7 * .55;
 }
-const rockTop = (x, y) => {
+const rockTone = (x, y) => {
   const hC = rockH(x, y), dx = rockH(x + 1, y) - rockH(x - 1, y), dy = rockH(x, y + 1) - rockH(x, y - 1);
   let t = .6 + (hC - .75) * .3 + (dx * .55 + dy * .6) * 4.4 - .09 + (hash(wrap(x, PER), wrap(y, PER), 44) - .5) * .07;
   if (Math.abs(pn(x, y, .035, .035, 161) - .5) < .012 && pn(x, y, .01, .01, 163) > .42) t -= .3;
-  return rp(P.rock, t, x, y, .3);
+  return t;
+};
+const rockTop = (x, y) => rp(P.rock, rockTone(x, y), x, y, .3);
+const rockFace = (x, y, fy, fh) => {
+  let t = .4 - fy / fh * .24 + (pn(x, y, .22, .045, 44) - .5) * .5 + (pn(x, y, .07, .02, 48) - .5) * .3;
+  if (Math.abs(pn(x, y, .06, .06, 49) - .5) < .02) t -= .3;
+  if (fy === 0) return P.rock[6];
+  if (fy === 1) t += .2;
+  return rp(P.rock, t * .8, x, y, .3);
 };
 const oreAt = (ramp, seed, x, y, c) => {
   const blob = pfbm(x, y, .028, 61 + seed, 2), id = pvor(x, y, 6, 63 + seed), e = VEDGE, nw = VDX + VDY < 0;
