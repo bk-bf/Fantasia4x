@@ -3,6 +3,7 @@
   import type { PaintedKind } from '$lib/webgl/painted/manifest';
   import { fitInto } from '$lib/pixelArt/shrink';
   import { itemService } from '$lib/game/services/ItemService';
+  import { pen } from '$lib/pixelArt/canvas';
 
   const _sheetCache = new Map<string, HTMLCanvasElement | null>();
   const _sheetWaiters = new Map<string, Set<() => void>>();
@@ -115,7 +116,7 @@
     if (!art || !paintedBox) return;
     paintedBox.width = art.width;
     paintedBox.height = art.height;
-    paintedBox.getContext('2d')?.drawImage(art, 0, 0);
+    pen(paintedBox)?.drawImage(art, 0, 0);
   });
 
   const CELL_W = 12;
@@ -130,7 +131,7 @@
   function draw() {
     const node = canvasEl;
     if (!node || !span?.sheet) return;
-    const ctx = node.getContext('2d');
+    const ctx = pen(node);
     if (!ctx) return;
     node.width = CELL_W;
     node.height = CELL_H;
