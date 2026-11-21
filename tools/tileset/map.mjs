@@ -188,6 +188,6 @@ export const MAP = {
 };
 
 export const UNPAINTED = {
-  resource: ['grass_patch', 'deep_grass_patch', 'tall_grass_patch', 'savanna'],
+  resource: [],
   building: ['door', 'branch_door', 'window', 'clay_floor']
 };
