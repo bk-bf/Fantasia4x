@@ -17,6 +17,7 @@ export interface WindowSpec {
   component: Component;
   width: 'big' | number;
   modal?: boolean;
+  fit?: boolean;
 }
 
 export const WINDOWS: Record<WindowId, WindowSpec> = {
