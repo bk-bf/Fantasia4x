@@ -53,7 +53,6 @@
   const WORK_MIN_GAP_MS = 1200;
 
   const FIRE_GAIN = 0.45;
-
   const COMBAT_GAIN = 0.6;
 
   const UI_HOVER_GAIN = 0.5;
@@ -321,6 +320,7 @@
   }
 
   onMount(() => {
+    audioService.preload();
     const unlock = () => {
       audioService.unlock();
       nowTick = Date.now();

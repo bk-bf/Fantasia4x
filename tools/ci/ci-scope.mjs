@@ -27,6 +27,16 @@ const globToRegExp = (glob) =>
 
 const rules = manifest.rules.map((r) => ({ ...r, res: r.paths.map(globToRegExp) }));
 
+const namedBy = Object.entries(manifest.named ?? {}).map(([leg, registry]) => [
+  leg,
+  new Set(
+    JSON.parse(readFileSync(new URL(`../../${registry}`, import.meta.url), 'utf8')).flatMap((m) => [
+      m.file,
+      ...m.tests
+    ])
+  )
+]);
+
 export const ruleFor = (file) => rules.find((r) => r.res.some((re) => re.test(file)));
 
 export const unmappedFiles = (files) => files.filter((f) => !ruleFor(f));
@@ -37,6 +47,7 @@ export const unusedPatterns = (files) =>
 export function scopeOf(files) {
   const scope = Object.fromEntries(manifest.legs.map((leg) => [leg, false]));
   for (const f of files) for (const leg of ruleFor(f)?.legs ?? []) scope[leg] = true;
+  for (const [leg, names] of namedBy) if (files.some((f) => names.has(f))) scope[leg] = true;
   return scope;
 }
 

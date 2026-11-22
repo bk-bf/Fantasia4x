@@ -66,13 +66,17 @@ class OccupancyServiceImpl implements OccupancyService {
   }
 
   isBlocked(state: GameState, x: number, y: number, excludeId?: string): boolean {
-    for (const p of state.pawns) {
-      if (p.id === excludeId || !p.position) continue;
-      if (p.position.x === x && p.position.y === y) return true;
+    const pawns = state.pawns;
+    for (let i = 0; i < pawns.length; i++) {
+      const p = pawns[i];
+      const pos = p.position;
+      if (pos && pos.x === x && pos.y === y && p.id !== excludeId) return true;
     }
-    for (const m of state.mobs ?? []) {
-      if (m.id === excludeId || m.state === 'Corpse') continue;
-      if (m.x === x && m.y === y) return true;
+    const mobs = state.mobs;
+    if (!mobs) return false;
+    for (let i = 0; i < mobs.length; i++) {
+      const m = mobs[i];
+      if (m.x === x && m.y === y && m.state !== 'Corpse' && m.id !== excludeId) return true;
     }
     return false;
   }

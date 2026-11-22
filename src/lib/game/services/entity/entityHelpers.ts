@@ -14,7 +14,7 @@ import {
 import { pawnStatService } from '../PawnStatService';
 import { stepBody, seedMidCrossClaims } from '../MovementSystem';
 import { resourceObjectService } from '../ResourceObjectService';
-import { buildSharedSoftBlockedGrid, pathfinderService } from '../PathfinderService';
+import { cannotReach, findPathOnWorld, pathfinderService } from '../PathfinderService';
 import { occupancyService } from '../OccupancyService';
 import { hasLineOfSight } from '../../core/util/lineOfSight';
 import { reachable } from './connectivity';
@@ -57,14 +57,15 @@ export function findNearestFoodTile(
   kinds: Set<TileFoodKind>
 ): { x: number; y: number } | null {
   if (kinds.size === 0) return null;
+  const map = state.worldMap;
   for (let d = 0; d <= radius; d++) {
     for (let dx = -d; dx <= d; dx++) {
       const ay = d - Math.abs(dx);
-      const dys = ay === 0 ? [0] : [ay, -ay];
-      for (const dy of dys) {
-        const tile = state.worldMap[y + dy]?.[x + dx];
-        if (tile?.walkable && edibleResourceOnTile(tile, kinds)) return { x: x + dx, y: y + dy };
-      }
+      const tile = map[y + ay]?.[x + dx];
+      if (tile?.walkable && edibleResourceOnTile(tile, kinds)) return { x: x + dx, y: y + ay };
+      if (ay === 0) continue;
+      const mirror = map[y - ay]?.[x + dx];
+      if (mirror?.walkable && edibleResourceOnTile(mirror, kinds)) return { x: x + dx, y: y - ay };
     }
   }
   return null;
@@ -106,32 +107,61 @@ export function findReachableFoodTile(
   return null;
 }
 
-let _mobThreatCache: { ref: Mob[] | undefined; predators: Mob[]; prey: Mob[] } | null = null;
+interface MobThreatSubsets {
+  ref: Mob[] | undefined;
+  predators: Mob[];
+  prey: Mob[];
+  preyIndex: number[];
+  corpses: Mob[];
+}
 
-function mobThreatSubsets(allMobs: Mob[]): { predators: Mob[]; prey: Mob[] } {
+let _mobThreatCache: MobThreatSubsets | null = null;
+
+function mobThreatSubsets(allMobs: Mob[]): MobThreatSubsets {
   if (_mobThreatCache && _mobThreatCache.ref === allMobs) return _mobThreatCache;
   const predators: Mob[] = [];
   const prey: Mob[] = [];
-  for (const m of allMobs) {
+  const preyIndex: number[] = [];
+  const corpses: Mob[] = [];
+  for (let i = 0; i < allMobs.length; i++) {
+    const m = allMobs[i];
     if (m.state === 'Corpse') {
-      if ((m.intactness ?? 1.0) > 0) prey.push(m);
+      corpses.push(m);
+      if ((m.intactness ?? 1.0) > 0) {
+        prey.push(m);
+        preyIndex.push(i);
+      }
       continue;
     }
     const def = getCreatureById(m.creatureId);
     if (def?.predator) predators.push(m);
-    if (def?.huntable && m.state !== 'Tamed') prey.push(m);
+    if (def?.huntable && m.state !== 'Tamed') {
+      prey.push(m);
+      preyIndex.push(i);
+    }
   }
-  _mobThreatCache = { ref: allMobs, predators, prey };
+  _mobThreatCache = { ref: allMobs, predators, prey, preyIndex, corpses };
   return _mobThreatCache;
 }
 
-const THREAT_QUERY_RANGE = 40;
-let _predNearestCache: { ref: Mob[] | undefined; map: Map<string, Mob | null> } | null = null;
+export function mobCorpses(allMobs: Mob[]): Mob[] {
+  return mobThreatSubsets(allMobs).corpses;
+}
 
-function nearestPredatorMap(allMobs: Mob[]): Map<string, Mob | null> {
-  if (_predNearestCache && _predNearestCache.ref === allMobs) return _predNearestCache.map;
-  const { predators, prey } = mobThreatSubsets(allMobs);
+const THREAT_QUERY_RANGE = 40;
+interface NearestPredators {
+  ref: Mob[] | undefined;
+  map: Map<string, Mob | null>;
+  byIndex: (Mob | null | undefined)[];
+}
+
+let _predNearestCache: NearestPredators | null = null;
+
+function nearestPredators(allMobs: Mob[]): NearestPredators {
+  if (_predNearestCache && _predNearestCache.ref === allMobs) return _predNearestCache;
+  const { predators, prey, preyIndex } = mobThreatSubsets(allMobs);
   const map = new Map<string, Mob | null>();
+  const byIndex: (Mob | null | undefined)[] = new Array(allMobs.length);
   if (predators.length > 0 && prey.length > 0) {
     const pts = new Float32Array(predators.length * 2);
     for (let i = 0; i < predators.length; i++) {
@@ -147,10 +177,13 @@ function nearestPredatorMap(allMobs: Mob[]): Map<string, Mob | null> {
     if (res) {
       for (let i = 0; i < prey.length; i++) {
         const idx = res[i];
-        map.set(prey[i].id, idx >= 0 ? predators[idx] : null);
+        const best = idx >= 0 ? predators[idx] : null;
+        map.set(prey[i].id, best);
+        byIndex[preyIndex[i]] = best;
       }
     } else {
-      for (const p of prey) {
+      for (let i = 0; i < prey.length; i++) {
+        const p = prey[i];
         let best: Mob | null = null;
         let bd = THREAT_QUERY_RANGE;
         for (const m of predators) {
@@ -162,11 +195,12 @@ function nearestPredatorMap(allMobs: Mob[]): Map<string, Mob | null> {
           }
         }
         map.set(p.id, best);
+        byIndex[preyIndex[i]] = best;
       }
     }
   }
-  _predNearestCache = { ref: allMobs, map };
-  return map;
+  _predNearestCache = { ref: allMobs, map, byIndex };
+  return _predNearestCache;
 }
 
 export function findNearestPrey(
@@ -226,10 +260,21 @@ export function nearestPredatorThreat(
   visionRange: number
 ): { pos: { x: number; y: number } } | null {
   if (!def.huntable || def.predator) return null;
-  const best = nearestPredatorMap(allMobs).get(prey.id);
+  const best = nearestPredators(allMobs).map.get(prey.id);
   if (!best) return null;
   const d = dist(prey, { x: best.x, y: best.y });
   return d <= visionRange ? { pos: { x: best.x, y: best.y } } : null;
+}
+
+export function predatorThreatAt(
+  index: number,
+  def: CreatureDefinition,
+  allMobs: Mob[],
+  range: number
+): boolean {
+  if (!def.huntable || def.predator) return false;
+  const best = nearestPredators(allMobs).byIndex[index];
+  return !!best && dist(allMobs[index], best) <= range;
 }
 
 export function wanderStep(mob: Mob, def: CreatureDefinition, state: GameState): Mob {
@@ -466,11 +511,15 @@ export function advanceMobMovement(state: GameState): GameState {
     const speed = def ? Math.max(0.5, def.stats.speed) : 1;
     const res = stepBody(mob, occupancy, claimed, state.worldMap, speed, targetByTile);
     next[i] = res.body;
-    if (res.body !== mob) changed = true;
+    if (res.status !== 'idle') changed = true;
   }
 
   return changed ? { ...state, mobs: next } : state;
 }
+
+const NEIGHBOUR_DX = [0, 0, -1, 1, -1, 1, -1, 1];
+const NEIGHBOUR_DY = [-1, 1, 0, 0, -1, -1, 1, 1];
+const NEIGHBOUR_ORDER = new Int8Array(8);
 
 export function findNearbyWalkable(
   state: GameState,
@@ -478,21 +527,17 @@ export function findNearbyWalkable(
   y: number,
   selfId?: string
 ): { x: number; y: number } | null {
-  const dirs = [
-    { dx: 0, dy: -1 },
-    { dx: 0, dy: 1 },
-    { dx: -1, dy: 0 },
-    { dx: 1, dy: 0 },
-    { dx: -1, dy: -1 },
-    { dx: 1, dy: -1 },
-    { dx: -1, dy: 1 },
-    { dx: 1, dy: 1 }
-  ];
-  for (let i = dirs.length - 1; i > 0; i--) {
+  const order = NEIGHBOUR_ORDER;
+  for (let i = 0; i < order.length; i++) order[i] = i;
+  for (let i = order.length - 1; i > 0; i--) {
     const j = Math.floor(rng.random() * (i + 1));
-    [dirs[i], dirs[j]] = [dirs[j], dirs[i]];
+    const t = order[i];
+    order[i] = order[j];
+    order[j] = t;
   }
-  for (const { dx, dy } of dirs) {
+  for (let k = 0; k < order.length; k++) {
+    const dx = NEIGHBOUR_DX[order[k]];
+    const dy = NEIGHBOUR_DY[order[k]];
     const nx = x + dx;
     const ny = y + dy;
     if (!isWalkable(state, nx, ny)) continue;
@@ -510,22 +555,66 @@ export function isWalkable(state: GameState, x: number, y: number): boolean {
   return !!tile && tile.walkable;
 }
 
-export function mobInLiveRegion(
-  mob: { x: number; y: number },
-  pawns: Pawn[],
-  radius: number
-): boolean {
+export interface LiveRegion {
+  pawns: Pawn[];
+  radius: number;
+  minX: number;
+  maxX: number;
+  minY: number;
+  maxY: number;
+}
+
+export function liveRegion(pawns: Pawn[], radius: number): LiveRegion {
+  let minX = Infinity;
+  let maxX = -Infinity;
+  let minY = Infinity;
+  let maxY = -Infinity;
   for (let i = 0; i < pawns.length; i++) {
     const pos = pawns[i].position;
-    if (pos && Math.abs(pos.x - mob.x) <= radius && Math.abs(pos.y - mob.y) <= radius) return true;
+    if (!pos) continue;
+    if (pos.x < minX) minX = pos.x;
+    if (pos.x > maxX) maxX = pos.x;
+    if (pos.y < minY) minY = pos.y;
+    if (pos.y > maxY) maxY = pos.y;
+  }
+  return {
+    pawns,
+    radius,
+    minX: minX - radius,
+    maxX: maxX + radius,
+    minY: minY - radius,
+    maxY: maxY + radius
+  };
+}
+
+export function mobInLiveRegion(mob: { x: number; y: number }, region: LiveRegion): boolean {
+  const mx = mob.x;
+  const my = mob.y;
+  if (mx < region.minX || mx > region.maxX || my < region.minY || my > region.maxY) return false;
+  const { pawns, radius } = region;
+  for (let i = 0; i < pawns.length; i++) {
+    const pos = pawns[i].position;
+    if (pos && Math.abs(pos.x - mx) <= radius && Math.abs(pos.y - my) <= radius) return true;
   }
   return false;
 }
 
-export function isThinkTick(id: string, turn: number): boolean {
+const THINK_PHASE_CACHE_LIMIT = 8192;
+const _thinkPhase = new Map<string, number>();
+
+function thinkPhase(id: string): number {
+  let phase = _thinkPhase.get(id);
+  if (phase !== undefined) return phase;
   let h = 0;
   for (let i = 0; i < id.length; i++) h = (Math.imul(h, 31) + id.charCodeAt(i)) | 0;
-  return turn % AI_THROTTLE_TICKS === (h >>> 0) % AI_THROTTLE_TICKS;
+  phase = (h >>> 0) % AI_THROTTLE_TICKS;
+  if (_thinkPhase.size >= THINK_PHASE_CACHE_LIMIT) _thinkPhase.clear();
+  _thinkPhase.set(id, phase);
+  return phase;
+}
+
+export function isThinkTick(id: string, turn: number): boolean {
+  return turn % AI_THROTTLE_TICKS === thinkPhase(id);
 }
 
 export function nearestPawn(
@@ -599,12 +688,12 @@ export function pathTo(
   maxIter: number = MOB_PATH_MAX_ITER
 ): { x: number; y: number }[] {
   if (!pathfinderService.isReady()) return [];
+  if (cannotReach(state.worldMap, sx, sy, ex, ey)) return [];
   void selfId;
   const blocked = occupancyService.blockedTilesShared(state);
-  const { walkable, costs, width, height } = buildSharedSoftBlockedGrid(state.worldMap, blocked);
   const dbg = isVerboseLogging();
   const _t0 = dbg ? performance.now() : 0;
-  const res = pathfinderService.findPath(walkable, costs, width, height, sx, sy, ex, ey, maxIter);
+  const res = findPathOnWorld(state.worldMap, blocked, sx, sy, ex, ey, maxIter);
   if (dbg) {
     _pathMs += performance.now() - _t0;
     _pathCalls++;

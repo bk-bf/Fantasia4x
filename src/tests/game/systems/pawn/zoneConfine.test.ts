@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import type { GameState, WorldTile, ZoneInstance } from '$lib/game/core/types';
 import { allowedTilesForPawn, nearestAllowedTile } from '$lib/game/systems/pawn/zoneConfine';
-import { buildPathfindingGridsConfined } from '$lib/game/services/PathfinderService';
+import { buildPathfindingGrids, confineGrid } from '$lib/game/services/PathfinderService';
 
 function stateWith(
   zoneInstances: ZoneInstance[],
@@ -78,14 +78,14 @@ describe('zone confinement — nearestAllowedTile (the walk-home target for an o
   });
 });
 
-describe('zone confinement — buildPathfindingGridsConfined', () => {
+describe('zone confinement — confineGrid', () => {
   const worldMap: WorldTile[][] = Array.from({ length: 3 }, () =>
     Array.from({ length: 3 }, () => ({ walkable: true, movementCost: 1 }) as unknown as WorldTile)
   );
 
   it('walls off every tile outside the allowed set, keeping the start tile walkable', () => {
     const allowed = new Set(['0,0', '1,0']);
-    const { walkable, width } = buildPathfindingGridsConfined(worldMap, new Set(), allowed, 2, 2);
+    const { walkable, width } = confineGrid(buildPathfindingGrids(worldMap), allowed, 2, 2);
     const at = (x: number, y: number) => walkable[y * width + x];
     expect(at(0, 0)).toBe(1);
     expect(at(1, 0)).toBe(1);
