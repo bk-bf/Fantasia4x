@@ -95,7 +95,7 @@ const one = (values, name, fallback) => values[name]?.at(-1) ?? fallback;
 export function restPlan(args, input, io) {
   const [group, verb, target] = args;
   const key = `${group} ${verb}`;
-  const positional = ['issue view', 'issue edit', 'issue comment', 'issue close', 'issue reopen', 'pr view', 'pr comment', 'project item-add'];
+  const positional = ['issue view', 'issue edit', 'issue comment', 'issue close', 'issue reopen', 'pr view', 'pr comment'];
   const flags = parse(args, positional.includes(key) ? 3 : 2);
   if (!flags) return null;
   const body = () => {
@@ -217,17 +217,6 @@ export function restPlan(args, input, io) {
       if (Object.keys(patch).length)
         io.api('PATCH', `repos/${io.repo()}/issues/${pull.number}`, patch);
       return `${pull.html_url}\n`;
-    };
-
-  if (key === 'project item-add')
-    return () => {
-      const number = one(flags, 'url', '').split('/').pop();
-      const issue = io.api('GET', `repos/${io.repo()}/issues/${number}`);
-      const item = io.api('POST', `/users/${one(flags, 'owner')}/projectsV2/${target}/items`, {
-        type: 'Issue',
-        id: issue.id
-      });
-      return JSON.stringify({ id: item.node_id });
     };
 
   return null;

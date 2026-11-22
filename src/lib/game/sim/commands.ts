@@ -1041,7 +1041,13 @@ export const COMMANDS: Record<string, Cmd> = {
       1,
       Math.ceil(((recipe.workAmount ?? 1) * quantity) / (1 + craftBonus))
     );
-    const orderId = crypto.randomUUID();
+    const takenIds = new Set<string>((s.craftingQueue ?? []).map((o) => o.id));
+    for (const d of s.droppedItems ?? []) if (d.reservedFor) takenIds.add(d.reservedFor);
+    for (const pw of s.pawns) if (pw.carryingForOrder) takenIds.add(pw.carryingForOrder);
+    const orderBase = `order-${item.id}-t${s.turn}`;
+    let orderSeq = 0;
+    while (takenIds.has(`${orderBase}-${orderSeq}`)) orderSeq++;
+    const orderId = `${orderBase}-${orderSeq}`;
     let gs = s;
     let allReserved = true;
     for (const [id, q] of Object.entries(inputs)) {

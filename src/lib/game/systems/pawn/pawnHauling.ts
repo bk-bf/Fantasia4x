@@ -299,7 +299,7 @@ export function stageInventoryAtStation(pawn: Pawn, orderId: string, gs: GameSta
       };
     } else {
       drops.push({
-        id: `staged-${orderId.slice(-6)}-${resourceId}-${station.x}-${station.y}`,
+        id: `staged-${orderId}-${resourceId}-${station.x}-${station.y}`,
         resourceId,
         x: station.x,
         y: station.y,
@@ -317,7 +317,7 @@ export function stageInventoryAtStation(pawn: Pawn, orderId: string, gs: GameSta
     if (!inst.contents?.length && !wantedHere.has(inst.itemId)) continue;
     stagedVesselIds.add(inst.instanceId);
     drops.push({
-      id: `staged-${orderId.slice(-6)}-${inst.instanceId}-${station.x}-${station.y}`,
+      id: `staged-${orderId}-${inst.instanceId}-${station.x}-${station.y}`,
       resourceId: inst.itemId,
       x: station.x,
       y: station.y,

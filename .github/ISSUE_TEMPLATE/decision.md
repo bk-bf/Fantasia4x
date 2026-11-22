@@ -21,4 +21,4 @@ The measurements or lines the choice rests on, as permalinks — `pnpm issue` tu
 
 ## What happens next
 
-What proceeds once it is decided, and which card it unblocks.
+What proceeds once it is decided, and which issue it unblocks.

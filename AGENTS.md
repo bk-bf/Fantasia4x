@@ -211,9 +211,9 @@ any clone whose hooks are missing. Never bypass them with `--no-verify`.
 ## Trackers
 
 **GitHub issues hold all tracked work** — defects, features and decisions. `gh issue list` is the
-board. Work done in a conversation is tracked only when its scope calls for it; see "Pull requests".
+list. Work done in a conversation is tracked only when its scope calls for it; see "Pull requests".
 A feature's issue is its spec; no spec file sits beside it. There is no `docs/` directory: what
-shipped before the board is the closed milestone `v0.1 - Before the board`, and a permalink pinned
+shipped before the issues is the closed milestone `v0.1 - Before the board`, and a permalink pinned
 to an older commit still reaches any file `docs/` held. The item rules live beside the `items`
 skill, in `.claude/skills/items/ITEM-RULES.md`.
 
@@ -221,7 +221,6 @@ skill, in `.claude/skills/items/ITEM-RULES.md`.
 
 ```bash
 pnpm issue labels                                                 # every label an issue may carry
-gh api '/users/bk-bf/projectsV2/4/fields?per_page=100'           # the board's fields and their options
 pnpm issue milestone list                                         # every milestone and how much of it is closed
 ```
 
@@ -229,66 +228,14 @@ The labels are `tools/lib/labels.json`. Adding a label means
 editing that file, not inventing one at a call site; `pnpm issue sync-labels` creates what is
 missing and names the strays, and `--prune` deletes a stray no issue carries.
 
-**Triage through the lanes, never around them.** The board is
-[projects/4](https://github.com/users/bk-bf/projects/4) and its columns are an order:
-`Backlog` → `Ready` → `In progress` → `In Check` → `PR ready` → `On dev` → `Done`, with
-`Blocked on you`, `Manual`, `Needs Playtest`, `Failed` and `Rejected` off to the side. The board carries an issue as
-far as `Ready`; from there the work is a pull request, and the card follows it. A change to the
-lanes inserts or drops the one option it concerns and keeps every other option where the owner put
-it; rewriting the whole option list moves his columns.
+**Any open issue is work an agent may take up**, unless it is blocked by an open issue or carries
+`needs decision`. Nothing waits for the owner to move it first. A `needs decision` issue states
+the choice on the issue; he answers there, and the label comes off with the answer.
 
-- **`Backlog`** — raised, not yet evaluated. A card with an open pull request is never here.
-- **`Ready`** — nothing blocks it, no decision is outstanding, the scope is clear enough to
-  start. An agent promotes a `drift` or `test gap` card out of `Backlog` itself, and says why.
-  Any other kind waits for the owner: the agent comments on the issue with the open decision or
-  task it overlaps, or "none", and what in play reaches the code it cites, then moves it to
-  `Blocked on you`. He moves it to `Ready`.
-- **`Failed`** — tried and did not land. The reason is on the issue or the pull request. Nobody
-  works it from here; the owner reads the reason and moves the card on. An agent moves a
-  card out of `Failed` only when he says so.
-- **`In progress`** — a branch exists and an agent is on it. Pushing a `<type>/<title>-<n>` branch
-  that has no ready pull request moves card `n` here.
-- **`In Check`** — a ready pull request is open and its checks are running.
-  Nothing moves a card here by hand; opening or pushing its ready pull request does.
-- **`Manual`** — he is working it by hand, and agents leave it alone. When an
-  agent takes a `Manual` card up, pushing its `-<n>` branch moves it to `In progress`, and opening
-  its pull request moves it to `In Check`.
-- **`PR ready`** — the pull request has passed review, and waits to be merged.
-- **`Needs Playtest`** — a ready pull request carrying `needs playtest`: its numbers can be
-  produced but not judged, so it waits for him to play it and merge it. Move a `playtest` card
-  here when its pull request opens.
-- **`On dev`** — merged to `dev` by a pull request, and not yet in the build he plays.
-- **`Done`** — promoted to `main`, so it is in the game he plays. The issue was closed when it
-  reached `dev`; the lane is where the work lives, not whether it is finished.
-- **`Blocked on you`** — cannot proceed until he chooses: a proposal awaiting a yes, a design
-  call whose measurements are already in hand, or a card that is not `drift` or `test gap`
-  waiting for his yes to be worked. Not a parking space for anything merely hard.
-- **`Rejected`** — closed without being wanted, with the reason as a comment on the issue.
-  The owner puts cards here.
-
-**Every card past `Backlog` is a real issue.** A draft or a pull request card sits only in
-`Backlog` or `Rejected`. Do not put a draft card on the board to represent work that has a spec
-but no issue; planned work is an issue from the start, and waits in `Backlog` until the owner moves
-it on.
-
-**`Blocked on you`, `Manual`, `Needs Playtest` and `Rejected` are his lanes.** Put a card in when it belongs there.
-**Never take one out**, except a `Manual` card an agent takes up — he is the only one who decides a
-thing he asked to look at has been looked at. And do not put one back because he moved it out:
-him moving a card is the answer, not a mistake to correct. The one other way out is the `unblock`
-skill, which asks him about each `Blocked on you` card and records his answer before it moves the
-card to `Ready`.
-
-Move a card with `pnpm issue lane <n> <lane>`; it refuses a move these rules forbid and says
-which. Direct `gh project item-edit` is denied. Do not skip a lane: nothing goes from `Backlog`
-straight to `In progress` except when a pull request opens for it, nothing reaches `On dev` except
-through a merged pull request, and nothing reaches `Done` except by a promotion he ran.
-
-**After `Ready`, the work is a pull request.** A card that comes back to `Ready` is worked again
-onto the same pull request; read every comment on it first — the owner's included — because a
-comment there is how work is sent back with a reason. A branch for a card is named
+**Read every comment on an issue and its pull request before working it**, the owner's included,
+because a comment there is how work is sent back with a reason. A branch for an issue is named
 `<type>/<title>-<issue number>`, and a branch with no issue `<type>/<title>`, never a number alone.
-After a pull request merges, move its card with `pnpm issue lane <n> "on dev"` and close the issue
-with `pnpm issue close <n> --commit <sha>`.
+After a pull request merges, close the issue with `pnpm issue close <n> --commit <sha>`.
 
 **Branch protection holds every commit that reaches `dev` to the required jobs, the admin account
 included.** GitHub decides a push the moment it arrives, so it refuses a direct push to `dev` unless
@@ -302,13 +249,12 @@ that exact commit already passed the required jobs, on a branch, and sits on top
 ```bash
 pnpm issue lint --body-file draft.md                     # would this body be accepted?
 pnpm issue create --title T --type fix --body-file - ... # a new issue; it names what is missing
-pnpm issue edit <n> ...                                  # labels, fields, milestone, parent
+pnpm issue edit <n> ...                                  # labels, body, milestone, parent
 pnpm issue close <n> --commit <sha>
 pnpm -s issue pr --head <branch> --title T --body-file - # open a pull request into dev
 pnpm issue pr-edit <n> --body-file -                     # rewrite its description
 pnpm issue pr-sync [<n>...]                              # copy each issue's labels and milestone to its pull request
-pnpm -s issue board                                      # the whole board as JSON
-pnpm issue check-labels                                  # every open issue with a missing label or field
+pnpm issue check-labels                                  # every open issue or pull request with a missing label
 pnpm issue check-links                                   # every citation that points at nothing
 pnpm issue tidy [--remove]                               # merged or idle worktrees, branches and test clones
 ```
@@ -319,38 +265,24 @@ such as a `path:line` into a permalink pinned to one commit, and refuses what is
 check on a handful of issues proves nothing about the rest. `pnpm issue fix-links` repairs what
 can be repaired and leaves the rest reported.
 
-**Every issue carries the required labels and board fields.** `pnpm issue create` refuses an
-issue missing one and names it, and `pnpm issue check-labels` reports every open issue that has
-drifted. `checkRequired` in `tools/lib/schema.mjs` and the board's fields say what is
-required. The judgement calls:
+**Every issue carries the required labels.** `pnpm issue create` refuses an issue missing one and
+names it, and `pnpm issue check-labels` reports every open issue that has drifted. `checkRequired`
+in `tools/lib/schema.mjs` says what is required; any other label in `tools/lib/labels.json` goes on
+an issue whenever it fits. **Subarea** names where in the code the issue is: the label of the
+directory most of its evidence sits in. `--type` on `create` picks the issue template; a
+later edit is checked against whichever template the body fits.
 
-- **Subarea** names where in the code the issue is: the label of the directory most of its
-  evidence sits in.
-- **Area** is the board's game-domain field: what part of the game, not where in the code.
-- **Work type** is a board field, not a label, and nothing mirrors it. Its words are the commit
-  types, plus `tooling`, `decision` and `release`; `release` is shipping and marketing work —
-  a store page, a demo build, a trailer — which changes no code.
-- **Size** is the effort: `S` is one change in a file or two, `M` is several files or a
-  measurement, `L` is several steps, a new system or a design.
-- **Agent** is the model the card is worked under. Pick the smallest model the scope
-  allows: `haiku` for a mechanical change in a file or two, `sonnet` for several files, a feature
-  step or a headless measurement, `opus` only for a cross-cutting refactor, a new system or a
-  design.
+**A feature is one pull request, unless it is too large for one agent run.** `--type feat` adds the
+kind `feature`. The body follows `.github/ISSUE_TEMPLATE/feat.md`, and may add `## Decisions this
+needs before any edit` and `## Considered and rejected`. Normally the `## Steps` list is the plan
+for one branch: every open step is worked in one branch and its pull request says `Fixes #n`. When
+the whole does not fit one run, each checkbox is one branch and one pull request: each branch works
+the next open step only, and its pull request says `Part of #n` with the step on a `Step:` line.
+Write each such step as a change that can be merged and verified by itself.
 
-**A feature is one pull request, unless its Size is `L`.** Work type `feat` goes with the kind
-`feature`. The body follows `.github/ISSUE_TEMPLATE/feat.md`, and may add `## Decisions this needs
-before any edit` and `## Considered and rejected`. On an `S` or `M` feature the `## Steps` list is
-the plan for one branch: every open step is worked in one branch and its pull request says
-`Fixes #n`. On an `L` feature each checkbox is one branch and one pull request, because the whole
-of it does not fit one agent run: each branch works the next open step only, its pull request says
-`Part of #n` with the step on a `Step:` line, and the card stays In Check until the last step's
-pull request passes review. Write each `L` step as a change that can be merged and verified by
-itself.
-
-**A pull request never links an issue with open sub-issues.** The board shows a pull request only
-on the issue it closes, so one that says `Part of #n` about a parent shows on no card. Link the
-sub-issue the work belongs to, making a new one with `pnpm issue create --parent <n>` when a step
-has none. Its pull request says `Fixes #<sub-issue>`, with the parent's step on the `Step:` line.
+**A pull request never links an issue with open sub-issues.** Link the sub-issue the work belongs
+to, making a new one with `pnpm issue create --parent <n>` when a step has none. Its pull request
+says `Fixes #<sub-issue>`, with the parent's step on the `Step:` line.
 
 **A milestone is a version, or one part of a version named after it**: `v0.2`, or
 `v0.2 - Gameplay`, because GitHub milestones do not nest. Every issue sits in one, and a sub-issue
@@ -365,12 +297,10 @@ one into a part of that version or into the next.
 holds the shape, though structure is not the bar — a checkbox list with citations is fine, and a
 wall of unbroken prose is not.
 
-**Reading is not free.** Every agent on both machines and the dashboard share one
-hourly GraphQL budget, and reading the board is the costliest call there is. Read it once, with
-`pnpm -s issue board`, and keep the result; when GraphQL is spent it reads over REST, which has a
-budget of its own. `pnpm issue` then reads and writes issues,
-pull requests and cards over REST too, through `tools/lib/gh-run.mjs`. `pnpm issue create`,
-`blocked-by` and `--parent` still need GraphQL, and fail until the hour resets.
+**Reading is not free.** Every agent on both machines and the dashboard share one hourly GraphQL
+budget. `pnpm issue` reads and writes issues and pull requests over REST when GraphQL is spent,
+through `tools/lib/gh-run.mjs`; `pnpm issue create`, `blocked-by` and `--parent` still need
+GraphQL, and fail until the hour resets.
 
 **Check the limit with GraphQL, not `gh api rate_limit`.** Its `graphql` figure does not track
 the counter the limit is enforced against, and reads `used 0` while hundreds are spent. A
@@ -382,19 +312,12 @@ gh api graphql -f query='{rateLimit{used remaining resetAt}}' --jq .data.rateLim
 
 At `remaining 0`, wait for `resetAt` rather than retrying.
 
-**`Priority` is the severity label, projected onto a field** (`SEVERITY_PRIORITY` in
-`tools/issue.mjs`). It exists because the board can group and sort by a field
-and not by a label, so it carries no information severity does not, and it is never set by hand.
+**Label the issue, never the pull request.** A pull request carries the labels and the milestone
+of the issue it fixes, and `pnpm issue pr`, `pr-edit` and `pr-sync` copy them. Kind, severity,
+origin and the rule name describe the finding, not its state, and are not changed as work moves.
 
-**Move the card, never the label.** Change the board field, not a label that mirrors it. A pull
-request carries the labels and the milestone of the issue it fixes, and `pnpm issue pr`,
-`pr-edit` and `pr-sync` copy them. Label the issue, never the pull request. A pull request is
-never a card of its own. Kind, severity, origin and the rule name are not touched — they describe
-the finding, not its state.
-
-**Every issue says how it will be verified**, as a `Verify` field on the board and a label on
-the issue. Set it at triage, not at review, so the cost of an item is visible before anyone
-starts:
+**Every issue says how it will be verified**, as a label. Set it at triage, not at review, so
+the cost of an item is visible before anyone starts:
 
 - **`verify tests`** — `pnpm check` and the vitest suite settle it. A refactor, a dead branch,
   a restated roster, a data row with a test over it. An agent finishes these alone.
@@ -424,7 +347,7 @@ edit belongs to that work, do it on that branch.
 are refused, naming the blocker. Work on it and test it locally; it is pushed once the blocker
 closes. `pnpm issue blocked-by <n> <blocker>` adds the link.
 
-**Work an agent does on a board card goes through a pull request into `dev`.** CI reports on it,
+**Work an agent does on an issue goes through a pull request into `dev`.** CI reports on it,
 and it merges once CI passes. The pull request is where he reads the diff and where he writes what
 is wrong with it; read those comments before the next attempt. Several related fixes belong in one branch and one pull request, not one each.
 
@@ -458,6 +381,6 @@ Open an issue only when one of these holds:
 - the work is handed to another session, which needs an issue to work from.
 
 A small fix, a rule in this file, a tooling tweak or a one-step change asked for in the
-conversation is none of these. Filing an issue for it adds a card and nothing he reads.
+conversation is none of these. Filing an issue for it adds an issue nobody reads.
 
 Nothing opens a pull request into `main`; `pnpm promote` is how `dev` reaches it.

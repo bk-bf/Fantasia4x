@@ -8,7 +8,7 @@ to ubuntuserver through `remote/run.mjs`.
 
 | Path | What it does | How to run it |
 |---|---|---|
-| `issue.mjs` | Writes GitHub issues, pull requests, board lanes, labels, blockers and milestones in the shape the repo checks. | `pnpm issue <command>` |
+| `issue.mjs` | Writes GitHub issues, pull requests, labels, blockers and milestones in the shape the repo checks. | `pnpm issue <command>` |
 | `chain.mjs` | Pushes the branch, starts or follows the CI chain for it on GitHub, and streams the run to its result. | `pnpm chain`, `pnpm chain --pre` |
 | `remote/run.mjs` | Runs a test or check command on ubuntuserver against the committed `HEAD`, for work in progress. | the `pnpm` test, check and bench scripts |
 | `remote/guard.mjs` | Refuses a test runner, linter or harness started on the laptop. | Claude Code hook |
@@ -26,6 +26,7 @@ to ubuntuserver through `remote/run.mjs`.
 | `bench/counts.mjs` | Reads the exact instruction and cache-miss counts per benchmark out of CodSpeed's profiles. | `node tools/bench/counts.mjs <dir> --out <file>`, run by the `codspeed` job |
 | `bench/codspeed-gate.mjs` | Waits for CodSpeed's verdict on the head commit and fails on a regression unless the pull request carries `perf change accepted`. The wait lives in `bench/codspeed-check.mjs`, which the Check notes share. | run by the `codspeed` job |
 | `coverage/gate.mjs` | Runs the whole test suite with line coverage of `src/lib/game` and writes the total and each changed file's coverage for the Check notes. | `pnpm test:coverage`, run by the `coverage` job |
+| `mutants/pins.mjs` | Applies each mutant in `mutants/registry.json` (a file, an exact text to find, its replacement, and the tests expected to kill it) to a scratch copy of the tree, runs those tests, and fails naming every mutant that survives. In CI it runs the mutants a change reaches, and the whole registry nightly. A test that closes a mutation gap adds its killed mutant to the registry. | `pnpm test:mutants [--base <ref>] [--only <id,...>] [--jobs N]` |
 | `work-pins/` | Call counts of the simulation tick and the browser frame, base against head. | `pnpm work-pins`, `pnpm work-pins:gate` |
 | `gungraun/gate.mjs` | Instruction counts for `sim-core` and `spatial-core`, base against head. | `node tools/gungraun/gate.mjs --base <ref>` |
 | `gpu/` | Frame measurement on a rented GPU: `vast.mjs` rents the machine, `probe.mjs` tries Chromium's GPU flags, `frames.mjs` times frames. | `node tools/gpu/<script>.mjs` |
@@ -33,6 +34,7 @@ to ubuntuserver through `remote/run.mjs`.
 | `dev-tools/` | Standalone dev pages packed into one HTML file, such as the gear database. | `pnpm tools:pack` |
 | `tileset/` | Bakes the painted map art in `tileset/art/` into `static/tilesets/painted/atlas.png` and its `manifest.json`, which maps database ids to sprites. | `pnpm tileset:bake` |
 | `tileset/sync.mjs` | Copies the drawing code the bake loads from a mockup folder into `tileset/art/`, without comments; `sources.mjs` lists those files and the hand-ported ones it leaves alone. | `pnpm tileset:sync <folder>` |
+| `tileset/colony.mjs` | Paints the main menu's colony scene from `colony.js` and `scene.js` in `tileset/art/` into `static/tilesets/painted/colony/`: a still and an animated png for each season and time of day. | `pnpm tileset:colony` |
 | `profile-self.mjs`, `profile-window.mjs` | Read the newest Firefox Profiler recording in `.debug/` and report the simulation's functions in it. | `node tools/profile-self.mjs` |
 | `threat-model.mjs` | Rates creature threat from the creature, item and loot data. | `pnpm threat`, `pnpm threat:check` |
 

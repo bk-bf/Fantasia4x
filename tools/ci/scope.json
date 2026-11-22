@@ -1,5 +1,6 @@
 {
-  "legs": ["check", "coverage", "workPins", "gungraun", "browser", "tps", "bench"],
+  "legs": ["check", "coverage", "workPins", "gungraun", "browser", "tps", "bench", "mutants"],
+  "named": { "mutants": "tools/mutants/registry.json" },
   "rules": [
     { "paths": ["**/*.md", "LICENSE"], "legs": [] },
     { "paths": [".claude/**", ".vscode/**", ".copilotignore"], "legs": [] },
@@ -29,6 +30,7 @@
     { "paths": ["tools/bench/**"], "legs": ["check", "tps", "bench"] },
     { "paths": ["tools/gungraun/**"], "legs": ["check", "gungraun"] },
     { "paths": ["tools/coverage/**"], "legs": ["check", "coverage"] },
+    { "paths": ["tools/mutants/**"], "legs": ["check", "mutants"] },
     {
       "paths": [
         "tools/ci/**",

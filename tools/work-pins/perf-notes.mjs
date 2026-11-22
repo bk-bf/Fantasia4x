@@ -12,6 +12,8 @@ const WARNINGS = process.env.WARNINGS_NOTES;
 const COUNTS = process.env.CODSPEED_COUNTS;
 const TPS = process.env.TPS_NOTES;
 const COVERAGE = process.env.COVERAGE_NOTES;
+const MUTANTS = process.env.MUTANT_NOTES;
+const MUTANTS_RAN = process.env.MUTANTS_RAN === 'true';
 const CODSPEED_RAN = process.env.CODSPEED_RAN === 'true';
 const RUN_URL = `${process.env.GITHUB_SERVER_URL}/${REPO}/actions/runs/${process.env.GITHUB_RUN_ID}`;
 const MARKER = '<!-- f4x-perf-notes -->';
@@ -108,6 +110,23 @@ function coverageSection() {
   return lines.join('\n');
 }
 
+function mutantsSection() {
+  if (!MUTANTS_RAN) return 'Mutant pins: not run, because no file `tools/mutants/registry.json` names changed.';
+  if (!mutants) return 'Mutant pins: the job left no report; its run page says why.';
+  if (!mutants.ran) return 'Mutant pins: no pinned mutant names a file this pull request changes.';
+  const lines = [
+    `Mutant pins: ${mutants.ran - mutants.survivors.length} of ${mutants.ran} killed in ${Math.round(mutants.seconds)}s.`
+  ];
+  if (mutants.survivors.length)
+    lines.push(
+      '',
+      'Survived, so the tests that killed them no longer do:',
+      '',
+      ...mutants.survivors.map((s) => `- \`${s.id}\` at \`${s.file}:${s.line}\``)
+    );
+  return lines.join('\n');
+}
+
 function workPinsSection(notes) {
   const totals = notes.flatMap((n) => n.totals);
   const changed = notes.reduce((s, n) => s + n.changed, 0);
@@ -155,6 +174,7 @@ try {
 
 const tps = readJsonl(TPS).at(-1);
 const coverage = readJsonl(COVERAGE).at(-1);
+const mutants = readJsonl(MUTANTS).at(-1);
 const tickWork =
   head && base
     ? Object.keys(head)
@@ -187,6 +207,7 @@ const hasNews =
   Boolean(head) ||
   Boolean(tps) ||
   Boolean(coverage) ||
+  Boolean(mutants?.survivors.length) ||
   rows.length > 0 ||
   notes.some((n) => n.totals.length || n.changed) ||
   warnings.some((n) => n.errors || n.warnings);
@@ -196,7 +217,7 @@ const body = [
   '',
   net.length ? `**Net effect:** ${net.join(' · ')}` : '**Net effect:** no measurement ran on this commit.',
   '',
-  'The check job fails on an error, on a warning count past its budget and on a work-pin total past its budget, and the CodSpeed job fails on a regression CodSpeed reports; the `perf change accepted` label lets a budget or a regression through. The exact counts are advisory; CodSpeed\'s estimate is computed from those counts.',
+  'The check job fails on an error, on a warning count past its budget and on a work-pin total past its budget, the CodSpeed job fails on a regression CodSpeed reports, and the mutant pins job fails when a pinned mutant survives; the `perf change accepted` label lets a budget or a regression through. The exact counts are advisory; CodSpeed\'s estimate is computed from those counts.',
   '',
   warningsSection(warnings),
   '',
@@ -207,6 +228,8 @@ const body = [
   workPinsSection(notes),
   '',
   coverageSection(),
+  '',
+  mutantsSection(),
   '',
   `[This run](${RUN_URL})`
 ].join('\n');
