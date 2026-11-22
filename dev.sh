@@ -35,13 +35,23 @@ if [[ ! -d "$SCRIPT_DIR/.svelte-kit" ]]; then
   (cd "$SCRIPT_DIR" && CI=true pnpm exec svelte-kit sync 2>&1) || true
 fi
 
-if [[ ! -f "$SCRIPT_DIR/src/lib/spatial-core-pkg/spatial_core.js" || ! -f "$SCRIPT_DIR/src/lib/sim-core-pkg/sim_core.js" ]]; then
-  echo "Building WASM packages (spatial-core, sim-core)…"
-  (cd "$SCRIPT_DIR" && pnpm add:wasm && pnpm add:wasm:sim) || {
-    echo "dev.sh: WASM build failed — run 'pnpm add:wasm && pnpm add:wasm:sim' manually." >&2
+wasm_stale() {
+  local crate="$SCRIPT_DIR/$1" pkg="$SCRIPT_DIR/src/lib/$1-pkg/$2"
+  [[ -f "$pkg.js" && -f "${pkg}_bg.wasm" ]] || return 0
+  [[ -n "$(find "$crate/src" "$crate/Cargo.toml" "$crate/Cargo.lock" -newer "${pkg}_bg.wasm" -print -quit 2>/dev/null)" ]]
+}
+
+build_wasm_if_stale() {
+  wasm_stale "$1" "$2" || return 0
+  echo "Building WASM package $1 (missing or older than its Rust source)…"
+  (cd "$SCRIPT_DIR" && PATH="$HOME/.cargo/bin:$PATH" pnpm "$3") || {
+    echo "dev.sh: WASM build failed — run 'pnpm $3' manually." >&2
     exit 1
   }
-fi
+}
+
+build_wasm_if_stale spatial-core spatial_core add:wasm
+build_wasm_if_stale sim-core sim_core add:wasm:sim
 
 if lsof -ti tcp:$PORT >/dev/null 2>&1; then
   echo "Dev server already running on http://localhost:$PORT"
