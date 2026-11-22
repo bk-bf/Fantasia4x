@@ -194,20 +194,55 @@ describe('§C spoilage (stepItemDecay)', () => {
     expect(stored.decayAcc).toBeCloseTo(SECONDS_PER_TICK);
   });
 
-  it('a container stored on the tile slows stored food (clay urn −20%; best wins)', () => {
-    const container = (id: string, resourceId: string): DroppedItem =>
-      drop({ id, resourceId, x: 0, y: 0, quantity: 1, stored: true });
-    const gs = state(
-      [
-        meat({ id: 'food', x: 0, y: 0, stored: true }),
-        container('basket', 'woven_basket'),
-        container('urn', 'water_urn')
-      ],
-      []
-    );
-    const out = itemService.stepItemDecay(gs);
-    const food = out.droppedItems!.find((d) => d.id === 'food')!;
-    expect(food.decayAcc).toBeCloseTo(SECONDS_PER_TICK * 0.8);
+  const larder = {
+    id: 'l',
+    type: 'meat_larder',
+    x: 0,
+    y: 0,
+    status: 'complete'
+  } as PlacedBuilding;
+  const foodAcc = (gs: GameState): number =>
+    itemService.stepItemDecay(gs).droppedItems!.find((d) => d.id === 'food')!.decayAcc ?? 0;
+
+  it('stored food under a meat larder ages 20% slower than bare-stored food', () => {
+    const food = meat({ id: 'food', x: 0, y: 0, stored: true });
+    expect(foodAcc(state([food], []))).toBe(SECONDS_PER_TICK);
+    expect(foodAcc(state([food], [larder])) / SECONDS_PER_TICK).toBeCloseTo(0.8, 9);
+  });
+
+  it('loose food on a larder tile gets no preservation', () => {
+    const food = meat({ id: 'food', x: 0, y: 0 });
+    expect(foodAcc(state([food], [larder]))).toBe(SECONDS_PER_TICK);
+  });
+
+  it('a container stored beside the food does not slow it', () => {
+    const urn = drop({ id: 'urn', resourceId: 'water_urn', quantity: 1, stored: true });
+    const food = meat({ id: 'food', x: 0, y: 0, stored: true });
+    expect(foodAcc(state([food, urn], []))).toBe(SECONDS_PER_TICK);
+  });
+
+  it('food lying on frozen ground does not age', () => {
+    rebuildThermalField([]);
+    const gs = {
+      ...state([meat({ id: 'food', x: 0, y: 0 })], []),
+      season: 'winter',
+      worldMap: [[{ x: 0, y: 0, terrainType: 'mountain', resources: {} }]]
+    } as unknown as GameState;
+    expect(foodAcc(gs)).toBe(0);
+  });
+
+  it('a reserved stack that is not drying does not spoil', () => {
+    rebuildThermalField([]);
+    const gs = {
+      ...state([meat({ id: 'food', x: 0, y: 0, reservedFor: 'order-1' })], []),
+      season: 'summer',
+      weather: { type: 'rain' },
+      worldMap: [[{ x: 0, y: 0, terrainType: 'swamp', moisture: 100, resources: {} }]]
+    } as unknown as GameState;
+    expect(foodAcc(gs)).toBe(0);
+    const { reservedFor, ...unreserved } = gs.droppedItems![0];
+    expect(reservedFor).toBe('order-1');
+    expect(foodAcc({ ...gs, droppedItems: [unreserved] })).toBeGreaterThan(0);
   });
 
   it('a unit rots into decaysTo when the clock fills', () => {

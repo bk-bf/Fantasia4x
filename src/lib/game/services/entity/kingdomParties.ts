@@ -16,6 +16,7 @@ import { TICKS_PER_SECOND } from '../../core/util/time';
 import { TURNS_PER_DAY } from '../EnvironmentService';
 import events from '../../database/social/events.json';
 import { pair } from '../../core/util/dataPair';
+import { cannotReach } from '../PathfinderService';
 
 const TICKS_PER_DAY = TURNS_PER_DAY * TICKS_PER_SECOND;
 
@@ -57,19 +58,23 @@ function findWalkableNear(
   cx: number,
   cy: number,
   minR: number,
-  maxR: number
+  maxR: number,
+  accept: (x: number, y: number) => boolean = () => true
 ): { x: number; y: number } | null {
   for (let attempt = 0; attempt < 60; attempt++) {
     const angle = rng.random() * Math.PI * 2;
     const r = minR + rng.random() * (maxR - minR);
     const x = Math.round(cx + Math.cos(angle) * r);
     const y = Math.round(cy + Math.sin(angle) * r);
-    if (isSpawnableTile(map[y]?.[x])) return { x, y };
+    if (isSpawnableTile(map[y]?.[x]) && accept(x, y)) return { x, y };
   }
   return null;
 }
 
-function findMapEdgeTile(map: WorldTile[][]): { x: number; y: number } | null {
+function findMapEdgeTile(
+  map: WorldTile[][],
+  accept: (x: number, y: number) => boolean
+): { x: number; y: number } | null {
   const h = map.length;
   const w = map[0]?.length ?? 0;
   if (w === 0 || h === 0) return null;
@@ -95,7 +100,7 @@ function findMapEdgeTile(map: WorldTile[][]): { x: number; y: number } | null {
         y = rng.int(0, h - 1);
         break;
     }
-    if (isSpawnableTile(map[y]?.[x])) return { x, y };
+    if (isSpawnableTile(map[y]?.[x]) && accept(x, y)) return { x, y };
   }
   return null;
 }
@@ -167,7 +172,11 @@ export function spawnKingdomParty(
   const ring = kind === 'caravan' ? EVENTS.caravan.anchorRing : EVENTS.visitors.anchorRing;
   const anchor = findWalkableNear(map, center.x, center.y, ring[0], ring[1]);
   if (!anchor) return null;
-  const entry = findMapEdgeTile(map) ?? findWalkableNear(map, center.x, center.y, 40, 90) ?? anchor;
+  const leadsToAnchor = (x: number, y: number) => !cannotReach(map, x, y, anchor.x, anchor.y);
+  const entry =
+    findMapEdgeTile(map, leadsToAnchor) ??
+    findWalkableNear(map, center.x, center.y, 40, 90, leadsToAnchor) ??
+    anchor;
 
   const roster = partyRoster(kingdom, kind);
   const tiles = clusterTiles(map, entry, roster.length);

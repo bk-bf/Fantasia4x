@@ -15,7 +15,7 @@ as #N.
 
 ## Steps
 
-- [ ] One change. On an S or M card every step lands in one pull request; on an L card each is its own
+- [ ] One change. Every step lands in one pull request, unless the feature is too large for one run; then each is its own
 - [ ] The next one
 
 ## How it gets verified

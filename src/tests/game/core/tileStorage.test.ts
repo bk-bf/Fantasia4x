@@ -106,6 +106,35 @@ describe('drops-authoritative storage core (Stage 2 flip)', () => {
     expect(d).toMatchObject({ x: 6, y: 6, stored: true, quantity: 2 });
   });
 
+  it('addToStockpileZone with null tile skips a stockpile tile whose pile slot is taken', () => {
+    const gs = withDesig([drop({ id: 's', resourceId: 'granite', x: 1, y: 1, quantity: 4 })], {
+      '1,1': 'stockpile',
+      '2,2': 'stockpile'
+    });
+    const out = addToStockpileZone(gs, null, { branch: 3 });
+    const d = out.droppedItems!.find((x) => x.resourceId === 'branch');
+    expect(d).toMatchObject({ x: 2, y: 2, stored: true, quantity: 3 });
+  });
+
+  it('consumeFromStockpiles draws a fluid out of a stored vessel', () => {
+    const jug = drop({
+      id: 'jug',
+      resourceId: 'wooden_bucket',
+      quantity: 1,
+      instance: {
+        instanceId: 'jug-1',
+        itemId: 'wooden_bucket',
+        durability: 100,
+        filter: ['water'],
+        contents: [{ itemId: 'water', litres: 3 }]
+      }
+    });
+    const out = consumeFromStockpiles(withDesig([jug]), { water: 2 });
+    const after = out.droppedItems!.find((x) => x.id === 'jug')!;
+    expect(after.instance!.contents).toEqual([{ itemId: 'water', litres: 1 }]);
+    expect(out.stockpile['water']).toBe(1);
+  });
+
   it('consumeFromStockpiles deducts from stored drops and drops emptied piles', () => {
     const gs = withDesig([drop({ id: 's', resourceId: 'branch', x: 0, y: 0, quantity: 5 })]);
     const out = consumeFromStockpiles(gs, { branch: 5 });

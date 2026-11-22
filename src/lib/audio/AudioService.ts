@@ -11,7 +11,9 @@ import {
 import type { Season } from '$lib/game/core/types';
 
 const MUSIC_FADE_MS = 2200;
+const MUSIC_ENTRY_FADE_MS = 250;
 const AMBIENT_SMOOTH_TAU_MS = 320;
+const AMBIENT_SETTLED = 1e-3;
 const MAX_CONCURRENT_SFX = 3;
 
 const EMERGENCY_SCENES: ReadonlySet<MusicScene> = new Set<MusicScene>(['combat']);
@@ -65,15 +67,22 @@ class AudioServiceImpl {
   private playIdx = 0;
 
   private beds = new Map<AmbientBed, BedState>();
+  private pendingAmbient: AmbientLayers | null = null;
   private fireBed: BedState | null = null;
   private rafId: number | null = null;
   private lastRafTs = 0;
 
   private sfxHowls = new Map<string, Howl>();
   private uiHowls = new Map<string, Howl>();
-  private activeSfx = 0;
+  private activeSfx = new Map<number, Howl>();
   private creatureLevels: { label: string; level: number }[] = [];
   private workLevels: { label: string; level: number }[] = [];
+
+  preload(): void {
+    if (typeof window === 'undefined') return;
+    for (const id of Object.keys(AMBIENT_FILES) as AmbientBed[]) this.ensureBed(id);
+    this.fireBed ??= loopBed(FIRE_LOOP);
+  }
 
   unlock(): void {
     if (this.unlocked || typeof window === 'undefined') return;
@@ -81,6 +90,8 @@ class AudioServiceImpl {
     Howler.volume(this.bus.master);
     const ctx = Howler.ctx;
     if (ctx && ctx.state === 'suspended') void ctx.resume();
+    if (this.pendingAmbient) this.setAmbient(this.pendingAmbient);
+    this.pendingAmbient = null;
     this.publish();
   }
 
@@ -101,9 +112,10 @@ class AudioServiceImpl {
     if (!this.unlocked || scene === this.desiredScene) return;
     this.desiredScene = scene;
     const idle = !this.musicHowl;
-    const emergency =
-      EMERGENCY_SCENES.has(scene) || (this.scene != null && EMERGENCY_SCENES.has(this.scene));
-    if ((idle || emergency) && scene !== this.scene) this.switchTo(scene);
+    const immediate = (s: MusicScene | null) =>
+      s === 'menu' || (s != null && EMERGENCY_SCENES.has(s));
+    if ((idle || immediate(scene) || immediate(this.scene)) && scene !== this.scene)
+      this.switchTo(scene);
   }
 
   private switchTo(scene: MusicScene): void {
@@ -115,19 +127,26 @@ class AudioServiceImpl {
 
   playSfx(url: string, volume: number): void {
     if (!this.unlocked || volume <= 0) return;
-    if (this.activeSfx >= MAX_CONCURRENT_SFX) return;
-    let howl = this.sfxHowls.get(url);
-    if (!howl) {
-      howl = new Howl({ src: [url], volume: 1, preload: true });
-      this.sfxHowls.set(url, howl);
-    }
+    if (this.activeSfx.size >= MAX_CONCURRENT_SFX) return;
+    const howl = this.sfxHowls.get(url) ?? this.createSfxHowl(url);
     const id = howl.play();
     howl.volume(Math.max(0, Math.min(1, volume)) * this.bus.sfx, id);
-    this.activeSfx++;
-    const release = () => (this.activeSfx = Math.max(0, this.activeSfx - 1));
-    howl.once('end', release, id);
-    howl.once('stop', release, id);
-    howl.once('playerror', release, id);
+    this.activeSfx.set(id, howl);
+  }
+
+  private createSfxHowl(url: string): Howl {
+    const howl = new Howl({ src: [url], volume: 1, preload: true });
+    const release = (id: number) => this.activeSfx.delete(id);
+    howl.on('end', release);
+    howl.on('stop', release);
+    howl.on('playerror', release);
+    howl.on('loaderror', () => {
+      for (const [id, owner] of this.activeSfx) if (owner === howl) this.activeSfx.delete(id);
+      if (this.sfxHowls.get(url) === howl) this.sfxHowls.delete(url);
+      howl.unload();
+    });
+    this.sfxHowls.set(url, howl);
+    return howl;
   }
 
   playUi(url: string, volume: number): void {
@@ -152,7 +171,10 @@ class AudioServiceImpl {
   }
 
   setAmbient(layers: AmbientLayers): void {
-    if (!this.unlocked) return;
+    if (!this.unlocked) {
+      this.pendingAmbient = layers;
+      return;
+    }
     for (const [id, bed] of this.beds) {
       if (!(id in layers) || (layers[id] ?? 0) <= 0) this.fadeBed(bed, 0);
     }
@@ -161,6 +183,7 @@ class AudioServiceImpl {
       if (target <= 0) continue;
       this.fadeBed(this.ensureBed(id), target);
     }
+    this.publish();
   }
 
   setFireLevel(target: number): void {
@@ -168,14 +191,10 @@ class AudioServiceImpl {
     const t = Math.max(0, Math.min(1, target));
     if (!this.fireBed) {
       if (t <= 0) return;
-      this.fireBed = {
-        howl: new Howl({ src: [FIRE_LOOP], html5: false, loop: true, volume: 0 }),
-        target: 0,
-        vol: 0,
-        playing: false
-      };
+      this.fireBed = loopBed(FIRE_LOOP);
     }
     this.fadeBed(this.fireBed, t);
+    this.publish();
   }
 
   dispose(): void {
@@ -190,13 +209,14 @@ class AudioServiceImpl {
     this.desiredScene = null;
     for (const bed of this.beds.values()) bed.howl.unload();
     this.beds.clear();
+    this.pendingAmbient = null;
     this.fireBed?.howl.unload();
     this.fireBed = null;
     for (const howl of this.sfxHowls.values()) howl.unload();
     this.sfxHowls.clear();
     for (const howl of this.uiHowls.values()) howl.unload();
     this.uiHowls.clear();
-    this.activeSfx = 0;
+    this.activeSfx.clear();
     this.creatureLevels = [];
     this.workLevels = [];
     this.publish();
@@ -220,10 +240,11 @@ class AudioServiceImpl {
 
   private startTrack(url: string | undefined): void {
     const prev = this.musicHowl;
-    if (prev) {
+    const audible = !!prev && prev.state() === 'loaded' && prev.volume() > 0;
+    if (prev && audible) {
       prev.fade(prev.volume(), 0, MUSIC_FADE_MS);
       prev.once('fade', () => prev.unload());
-    }
+    } else prev?.unload();
     if (!url) {
       this.musicHowl = null;
       this.currentTrack = null;
@@ -233,7 +254,7 @@ class AudioServiceImpl {
     const howl = new Howl({ src: [url], html5: true, volume: 0, loop: false });
     howl.once('end', () => this.advanceTrack(howl));
     howl.play();
-    howl.fade(0, this.bus.music, MUSIC_FADE_MS);
+    howl.fade(0, this.bus.music, audible ? MUSIC_FADE_MS : MUSIC_ENTRY_FADE_MS);
     this.musicHowl = howl;
     this.currentTrack = url;
     this.publish();
@@ -253,8 +274,7 @@ class AudioServiceImpl {
   private ensureBed(id: AmbientBed): BedState {
     let bed = this.beds.get(id);
     if (!bed) {
-      const howl = new Howl({ src: [AMBIENT_FILES[id]], html5: false, loop: true, volume: 0 });
-      bed = { howl, target: 0, vol: 0, playing: false };
+      bed = loopBed(AMBIENT_FILES[id]);
       this.beds.set(id, bed);
     }
     return bed;
@@ -269,8 +289,7 @@ class AudioServiceImpl {
       bed.howl.volume(0);
       bed.howl.play();
     }
-    this.ensureSmoothing();
-    this.publish();
+    if (bed.playing && (bed.vol !== target || target <= 0)) this.ensureSmoothing();
   }
 
   private ensureSmoothing(): void {
@@ -284,14 +303,16 @@ class AudioServiceImpl {
       const glide = (bed: BedState) => {
         if (!bed.playing) return;
         bed.vol += (bed.target - bed.vol) * k;
-        if (bed.target <= 0 && bed.vol <= 1e-3) {
+        if (bed.target <= 0 && bed.vol <= AMBIENT_SETTLED) {
           bed.vol = 0;
           bed.playing = false;
           bed.howl.pause();
           return;
         }
+        const settled = Math.abs(bed.target - bed.vol) <= AMBIENT_SETTLED;
+        if (settled) bed.vol = bed.target;
         bed.howl.volume(Math.min(1, bed.vol) * this.bus.ambient);
-        active = true;
+        if (!settled) active = true;
       };
       for (const bed of this.beds.values()) glide(bed);
       if (this.fireBed) glide(this.fireBed);
@@ -299,6 +320,11 @@ class AudioServiceImpl {
     };
     this.rafId = requestAnimationFrame(step);
   }
+}
+
+function loopBed(src: string): BedState {
+  const howl = new Howl({ src: [src], html5: false, loop: true, volume: 0 });
+  return { howl, target: 0, vol: 0, playing: false };
 }
 
 function shuffle<T>(arr: T[]): T[] {

@@ -143,7 +143,11 @@ const MOB_COLD = new Set<string>([
   'bloodVolume',
   'maxBloodVolume'
 ]);
-const MOB_VOLATILE = new Set<string>(['needs']);
+interface VolatileFields {
+  keys: Set<string>;
+  shown: Map<string, Record<string, Record<string, unknown>>>;
+}
+const MOB_VOLATILE: VolatileFields = { keys: new Set(['needs']), shown: new Map() };
 const lastPawnCold = new Map<string, Record<string, unknown>>();
 const lastMobCold = new Map<string, Record<string, unknown>>();
 const SNAP_SIZE_LOG = false;
@@ -183,14 +187,29 @@ function slimTile(tile: WorldTile): Partial<WorldTile> {
   return o as Partial<WorldTile>;
 }
 
+function shownValueChanged(v: unknown, shown: Record<string, unknown>): boolean {
+  if (!v || typeof v !== 'object') return false;
+  let changed = false;
+  const src = v as Record<string, unknown>;
+  for (const k in src) {
+    const x = src[k];
+    const q = typeof x === 'number' ? Math.round(x) : x;
+    if (shown[k] !== q) {
+      shown[k] = q;
+      changed = true;
+    }
+  }
+  return changed;
+}
+
 function syncEntities<T extends { id: string }>(
   arr: readonly T[],
   prevIds: Set<string>,
   cold: Set<string>,
   lastCold: Map<string, Record<string, unknown>>,
-  volatile?: Set<string>
+  volatile?: VolatileFields
 ): EntitySync<T> {
-  const upserts: Array<Partial<T> & { id: string }> = new Array(arr.length);
+  const upserts: Array<Partial<T> & { id: string }> = [];
   const order: string[] = new Array(arr.length);
   const cur = new Set<string>();
   for (let i = 0; i < arr.length; i++) {
@@ -204,14 +223,25 @@ function syncEntities<T extends { id: string }>(
     let o: Record<string, unknown>;
     if (volatile) {
       o = { id: e.id };
+      let changed = !seen;
+      let shown = volatile.shown.get(e.id);
+      if (!shown) volatile.shown.set(e.id, (shown = {}));
       for (const k in e) {
         if (k === 'id') continue;
         const v = er[k];
-        if (!seen || volatile.has(k) || v !== refs[k]) {
+        if (volatile.keys.has(k)) {
+          const shownK = (shown[k] ??= {});
+          if (shownValueChanged(v, shownK) || !seen) {
+            o[k] = v;
+            changed = true;
+          }
+        } else if (!seen || v !== refs[k]) {
           o[k] = v;
           refs[k] = v;
+          changed = true;
         }
       }
+      if (!changed) continue;
     } else {
       o = slimEntity(e, cold) as Record<string, unknown>;
       for (const k of cold) {
@@ -223,13 +253,14 @@ function syncEntities<T extends { id: string }>(
       }
     }
     projectSentEntity(o);
-    upserts[i] = o as Partial<T> & { id: string };
+    upserts.push(o as Partial<T> & { id: string });
   }
   const removed: string[] = [];
   for (const id of prevIds)
     if (!cur.has(id)) {
       removed.push(id);
       lastCold.delete(id);
+      volatile?.shown.delete(id);
     }
   prevIds.clear();
   for (const id of cur) prevIds.add(id);
@@ -443,6 +474,7 @@ self.onmessage = async (e: MessageEvent) => {
       lastMobIds = new Set();
       lastPawnCold.clear();
       lastMobCold.clear();
+      MOB_VOLATILE.shown.clear();
       lastDropRefs.clear();
       lastDropIds = new Set();
       lastDropsArrRef = undefined;
