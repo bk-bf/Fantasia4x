@@ -151,6 +151,22 @@ export function setBiomeField(id: string, field: 'baseTemp' | 'baseMoisture', va
   else d.baseMoisture = value;
 }
 
+export function biomeTempOverrides(): Record<string, number> | undefined {
+  const out: Record<string, number> = {};
+  for (const [id, def] of Object.entries(DEFAULT_BIOME_CONFIG)) {
+    const t = BIOMES[id]?.baseTemp;
+    if (t !== undefined && t !== def.baseTemp) out[id] = t;
+  }
+  return Object.keys(out).length > 0 ? out : undefined;
+}
+
+export function applyBiomeTempOverrides(overrides: Record<string, number> | undefined): void {
+  for (const [id, def] of Object.entries(DEFAULT_BIOME_CONFIG)) {
+    const d = BIOMES[id];
+    if (d) d.baseTemp = overrides?.[id] ?? def.baseTemp;
+  }
+}
+
 const DEFAULT_WATER_LEVEL = 0.22;
 let waterLevel = DEFAULT_WATER_LEVEL;
 export function getWaterLevel(): number {

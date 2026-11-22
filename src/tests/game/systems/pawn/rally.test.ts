@@ -8,6 +8,8 @@ import { shouldRollBreakdown } from '$lib/game/systems/pawn/handlers/breakdown';
 import { tryRally, _resetRallyCooldowns } from '$lib/game/systems/pawn/rally';
 import { TICKS_PER_GAME_HOUR } from '$lib/game/services/EnvironmentService';
 import { rng } from '$lib/game/core/util/rng';
+import { HeadlessSession } from '$lib/game/headless/HeadlessSession';
+import { buildScenario } from '$lib/game/headless/Scenario';
 import type { GameState, Pawn } from '$lib/game/core/types';
 
 function scene(id: string, dx: number, score: number) {
@@ -84,5 +86,17 @@ describe('rally system', () => {
     for (let t = T + 1; t < T + TICKS_PER_GAME_HOUR; t++) {
       expect(tryRally(broken, state, t)).toBeNull();
     }
+  });
+
+  it('starting a new session clears the rally cooldowns of the game played before it', async () => {
+    const { broken, state } = scene('load', 1, 90);
+    tryRally(broken, state, 400 * TICKS_PER_GAME_HOUR);
+    await new HeadlessSession().start(
+      buildScenario({ seed: 1, map: { w: 12, h: 12 }, pawns: [{ count: 1 }], seedEntities: false })
+    );
+    let rallied = false;
+    for (let h = 1; h <= 24; h++)
+      if (tryRally(broken, state, h * TICKS_PER_GAME_HOUR)) rallied = true;
+    expect(rallied).toBe(true);
   });
 });

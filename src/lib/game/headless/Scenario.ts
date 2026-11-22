@@ -23,7 +23,12 @@ import { socialService } from '../services/SocialService';
 import { researchService } from '../services/ResearchService';
 import { itemService } from '../services/ItemService';
 import { applySimCommand } from '../sim/commands';
-import { SUBTERRAINS, SUBTERRAIN_FALLBACK, pickChar } from '../core/defs/terrains';
+import {
+  SUBTERRAINS,
+  SUBTERRAIN_FALLBACK,
+  pickChar,
+  biomeTempOverrides
+} from '../core/defs/terrains';
 import { rng } from '../core/util/rng';
 
 export interface ScenarioPawnGroup {
@@ -126,8 +131,10 @@ export function buildScenario(spec: ScenarioSpec): GameState {
         : ' (uniformly walkable — every tile reachable; whole map is a stockpile)')
   );
 
+  const biomeTemps = biomeTempOverrides();
   let gs: GameState = {
     ...initialGameState,
+    ...(biomeTemps && { biomeTemps }),
     seed,
     turn: 0,
     worldMap: world,

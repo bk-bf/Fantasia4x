@@ -291,7 +291,7 @@ export class ResearchServiceImpl implements ResearchService {
     const newState = { ...gameState };
 
     if (!newState.completedResearch.includes(researchId)) {
-      newState.completedResearch.push(researchId);
+      newState.completedResearch = [...newState.completedResearch, researchId];
     }
 
     const unlocks = this.getResearchUnlocks(researchId);

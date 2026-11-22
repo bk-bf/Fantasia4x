@@ -7,10 +7,12 @@ import type {
 import type { GameState, WorldTile } from '../core/types';
 import { GameStateManager } from '../core/state/GameStateManager';
 import {
+  GrowthQueue,
   peekGrowthTurn,
   popGrowth,
   pushGrowth,
-  rebuildGrowthQueue
+  rebuildGrowthQueue,
+  useGrowthQueue
 } from '../core/rules/world/growthQueue';
 import { workService } from '../services/WorkService';
 import { itemService } from '../services/ItemService';
@@ -80,7 +82,7 @@ import {
   tileTemperature,
   fermentTempRate
 } from '../services/EnvironmentService';
-import { soilTierForTile } from '../core/defs/terrains';
+import { soilTierForTile, applyBiomeTempOverrides } from '../core/defs/terrains';
 import { cropHealth, cropLossPerDay } from '../core/rules/world/cropHealth';
 import { markTileDirty } from '../core/state/tileDeltas';
 import { growthStageIndex } from '../core/rules/world/growthStages';
@@ -111,13 +113,14 @@ export class GameEngineImpl implements GameEngine {
   private gameState: GameState | null = null;
   private gameStateManager: GameStateManager | null = null;
   private _lastGrowthWorldMap: WorldTile[][] | null = null;
+  private readonly growthQueue = new GrowthQueue();
   private config: GameEngineConfig;
   private lastTurnProcessed = 0;
   private lastFlushMs = 0;
   private temperatureSeason: import('../core/types').Season | undefined = undefined;
   private tempProbe: { x: number; y: number } | undefined = undefined;
   private _seasonJustTransitioned = false;
-  private _lastGrowthDay: number | undefined = undefined;
+  private _lastGrowthDay = 0;
   private weatherFreezing = false;
   private _snowScanRow = 0;
   private _phaseMs: Record<string, number> = {};
@@ -180,6 +183,7 @@ export class GameEngineImpl implements GameEngine {
 
     try {
       this.gameState = { ...this.gameState, turn: this.gameState.turn + 1 };
+      useGrowthQueue(this.growthQueue);
 
       if (this.previewMode) return this.processPreviewTurn();
 
@@ -890,10 +894,6 @@ export class GameEngineImpl implements GameEngine {
     const gs = this.gameState;
     if (!gs) return;
     const day = dayIndexForTurn(gs.turn);
-    if (this._lastGrowthDay === undefined) {
-      this._lastGrowthDay = day;
-      return;
-    }
     if (day === this._lastGrowthDay) return;
     for (let d = this._lastGrowthDay + 1; d <= day; d++) pawnGrowthService.processDay(gs, d);
     this._lastGrowthDay = day;
@@ -1087,6 +1087,20 @@ export class GameEngineImpl implements GameEngine {
   setGameStateManager(manager: GameStateManager): void {
     this.gameStateManager = manager;
     this.gameState = manager.getState();
+    this.resetWorldCaches(this.gameState);
+    applyBiomeTempOverrides(this.gameState.biomeTemps);
+  }
+
+  private resetWorldCaches(state: GameState): void {
+    this._lastGrowthWorldMap = null;
+    this._lastGrowthDay = dayIndexForTurn(state.turn);
+    this.temperatureSeason = undefined;
+    this.tempProbe = undefined;
+    this.avgTileTemp = undefined;
+    this.weatherFreezing = false;
+    this._snowScanRow = 0;
+    this._seasonJustTransitioned = false;
+    this.lastFlushMs = 0;
   }
 
   integrateServices(services: any): void {
