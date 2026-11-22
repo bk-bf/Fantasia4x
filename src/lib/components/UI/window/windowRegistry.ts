@@ -13,6 +13,8 @@ import DebugScreen from '$lib/components/screens/DebugScreen.svelte';
 import PauseMenu from '$lib/components/UI/menu/PauseMenu.svelte';
 import HealthWindow from '$lib/components/pawn/HealthWindow.svelte';
 import FuelWindow from '$lib/components/UI/canvas/FuelWindow.svelte';
+import MoodWindow from '$lib/components/pawn/MoodWindow.svelte';
+import FoodWindow from '$lib/components/UI/canvas/FoodWindow.svelte';
 
 export interface WindowSpec {
   title: string;
@@ -36,7 +38,9 @@ export const WINDOWS: Record<WindowId, WindowSpec> = {
   debug: { title: 'Debug', component: DebugScreen, width: 'big' },
   pause: { title: 'Paused', component: PauseMenu, width: 280, modal: true },
   health: { title: 'Health', component: HealthWindow, width: 356, fit: true },
-  fuel: { title: 'Fuel', component: FuelWindow, width: 300, fit: true }
+  fuel: { title: 'Fuel', component: FuelWindow, width: 300, fit: true },
+  mood: { title: 'Mood', component: MoodWindow, width: 320, height: 224 },
+  food: { title: 'Food', component: FoodWindow, width: 320, height: 231 }
 };
 
 export const BIG_WIDTH_MAX = 1180;

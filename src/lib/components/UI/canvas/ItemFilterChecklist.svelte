@@ -6,17 +6,25 @@
     type TreeNode
   } from '$lib/components/util/itemCategoryTree.js';
   import { filterClipboard } from '$lib/stores/filterClipboard.js';
+  import SpriteIcon from '$lib/components/UI/widget/SpriteIcon.svelte';
+  import ItemFilterToolbar from './ItemFilterToolbar.svelte';
 
   let {
     items,
     allowed,
     onChange,
-    listMaxHeight = '168px'
+    listMaxHeight = '168px',
+    fill = false,
+    icons = false,
+    stock
   }: {
     items: Item[];
     allowed: Set<string>;
     onChange: (ids: string[]) => void;
     listMaxHeight?: string;
+    fill?: boolean;
+    icons?: boolean;
+    stock?: Record<string, number>;
   } = $props();
 
   let query = $state('');
@@ -132,38 +140,18 @@
             checked={allowed.has(item.id)}
             onchange={() => toggleItem(item.id)}
           />
-          <span>{item.name}</span>
+          {#if icons}<SpriteIcon item={item.id} px={16} />{/if}
+          <span class="ifc-name">{item.name}</span>
+          {#if stock}<em class="ifc-stock">{stock[item.id] ?? 0}</em>{/if}
         </label>
       {/each}
     {/if}
   </div>
 {/snippet}
 
-<div class="ifc">
-  <div class="ifc-toolbar">
-    <input
-      class="ifc-search"
-      type="text"
-      placeholder="search…"
-      bind:value={query}
-      onkeydown={(e) => e.stopPropagation()}
-    />
-    <button
-      type="button"
-      class="ifc-icon-btn"
-      title={anyExpanded ? 'Collapse all' : 'Expand all'}
-      onclick={toggleCollapseAll}>{anyExpanded ? '⊟' : '⊞'}</button
-    >
-    <button type="button" class="ifc-icon-btn" title="Copy filter" onclick={copyFilter}>⧉</button>
-    <button
-      type="button"
-      class="ifc-icon-btn"
-      title="Paste filter"
-      disabled={$filterClipboard === null}
-      onclick={pasteFilter}>⎘</button
-    >
-  </div>
-  <div class="ifc-list" style="max-height: {listMaxHeight}">
+<div class="ifc" class:fill>
+  <ItemFilterToolbar bind:query {anyExpanded} {toggleCollapseAll} {copyFilter} {pasteFilter} />
+  <div class="ifc-list" style:max-height={fill ? null : listMaxHeight}>
     {#each tree as root (root.path.join('/'))}
       {@render nodeRow(root, 0)}
     {/each}
@@ -174,51 +162,23 @@
 </div>
 
 <style>
-  .ifc-toolbar {
+  .ifc.fill {
+    flex: 1;
+    min-height: 0;
     display: flex;
-    align-items: stretch;
-    gap: 3px;
-    margin-bottom: 3px;
+    flex-direction: column;
   }
-  .ifc-search {
+  .fill .ifc-list {
+    flex: 1;
+    min-height: 0;
+  }
+  .ifc-name {
     flex: 1;
     min-width: 0;
-    box-sizing: border-box;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    color: var(--text);
-    font-family: var(--font-mono);
-    font-size: 10px;
-    padding: 2px 4px;
   }
-  .ifc-search::placeholder {
-    color: var(--text-muted);
-  }
-  .ifc-search:focus {
-    outline: none;
-    border-color: var(--border-hi);
-    background: var(--bg);
-    color: var(--accent-hi);
-  }
-  .ifc-icon-btn {
-    flex: 0 0 auto;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    color: var(--text);
-    font-family: var(--font-mono);
-    font-size: 12px;
-    line-height: 1;
-    padding: 0 5px;
-    cursor: pointer;
-  }
-  .ifc-icon-btn:hover:not(:disabled) {
-    background: var(--bg-active);
-    border-color: var(--border-hi);
-    color: var(--accent-hi);
-  }
-  .ifc-icon-btn:disabled {
-    opacity: 0.4;
-    cursor: default;
+  .ifc-stock {
+    font-style: normal;
+    color: var(--text-dim);
   }
   .ifc-list {
     overflow-y: auto;

@@ -76,7 +76,6 @@
 
 <style>
   .capacity {
-    position: relative;
     margin-top: 6px;
     cursor: help;
   }

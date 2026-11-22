@@ -1,5 +1,4 @@
 {
-  "src/lib/components/pawn/EquipmentDoll.svelte": 308,
   "src/lib/components/pawn/PawnOverview.svelte": 233,
   "src/lib/components/pawn/PawnRelations.svelte": 265,
   "src/lib/components/pawn/TraitCards.svelte": 563,
@@ -9,8 +8,8 @@
   "src/lib/components/UI/audio/AudioController.svelte": 394,
   "src/lib/components/UI/canvas/BuildingFuelPanel.svelte": 261,
   "src/lib/components/UI/canvas/BuildingRepairPanel.svelte": 405,
-  "src/lib/components/UI/canvas/GameCanvas.svelte": 4933,
-  "src/lib/components/UI/canvas/ItemFilterChecklist.svelte": 315,
+  "src/lib/components/UI/canvas/GameCanvas.svelte": 4923,
+  "src/lib/components/UI/canvas/ItemFilterChecklist.svelte": 275,
   "src/lib/components/UI/canvas/StockpileZonePanel.svelte": 238,
   "src/lib/components/UI/canvas/WorldEffectsLayer.svelte": 1020,
   "src/lib/components/UI/hud/ActivityLogOverlay.svelte": 548,

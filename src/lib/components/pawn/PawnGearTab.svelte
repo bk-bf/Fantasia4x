@@ -2,7 +2,7 @@
   import type { EquipmentSlot, Pawn } from '$lib/game/core/types';
   import { gameState } from '$lib/stores/gameState';
   import Well from '$lib/components/UI/widget/Well.svelte';
-  import EquipmentDoll from './EquipmentDoll.svelte';
+  import LayeredGear from './gear/LayeredGear.svelte';
   import PawnInventory from './PawnInventory.svelte';
   import PawnProtection from './PawnProtection.svelte';
 
@@ -15,16 +15,17 @@
 </script>
 
 <div class="gear">
-  <Well title="Worn"><EquipmentDoll {pawn} onUnequip={unequip} onTogglePin={togglePin} /></Well>
-  <Well title="Pack"><PawnInventory {pawn} /></Well>
-  <Well title="Protection"><PawnProtection {pawn} /></Well>
+  <Well title="Worn" scroll><LayeredGear {pawn} onUnequip={unequip} onTogglePin={togglePin} /></Well
+  >
+  <Well title="Pack" scroll><PawnInventory {pawn} /></Well>
+  <Well title="Protection" scroll><PawnProtection {pawn} /></Well>
 </div>
 
 <style>
   .gear {
     display: grid;
-    grid-template-columns: 1.55fr 1fr 0.9fr;
+    grid-template-columns: 1.7fr 1fr 0.9fr;
+    grid-template-rows: 290px;
     gap: 6px;
-    align-items: start;
   }
 </style>

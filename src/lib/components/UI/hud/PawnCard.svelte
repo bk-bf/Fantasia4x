@@ -13,8 +13,6 @@
   import MeterRow from '../widget/MeterRow.svelte';
   import PawnSprite from '../widget/PawnSprite.svelte';
   import SkinBar from '../widget/SkinBar.svelte';
-  import MoodPanel from '../canvas/MoodPanel.svelte';
-  import { moodToggle } from '../canvas/moodToggle.svelte';
   import {
     openPawnWindow,
     pawnStateLabel,
@@ -63,6 +61,7 @@
   const conditions = $derived(getActiveConditionViews(pawn));
   const following = $derived($uiState.cameraFollowPawnId === pawn.id);
   const bodyOpen = $derived($uiState.windows.includes('health'));
+  const moodOpen = $derived($uiState.windows.includes('mood'));
 
   function select(e: MouseEvent) {
     e.stopPropagation();
@@ -106,7 +105,6 @@
       <div class="c-conds"><ConditionRows views={conditions} inline /></div>
     {/if}
   </HudCard>
-  {#if selected && moodModel}<MoodPanel mood={moodModel} open={moodToggle.open} />{/if}
 </div>
 
 {#snippet pawnVerbs()}
@@ -120,9 +118,7 @@
     onclick={() => uiState.setFollowPawn(following ? null : pawn.id)}>Follow</ChromeButton
   >
   <ChromeButton on={bodyOpen} onclick={() => uiState.toggleWindow('health')}>Body</ChromeButton>
-  <ChromeButton on={moodToggle.open} onclick={() => (moodToggle.open = !moodToggle.open)}
-    >Mood</ChromeButton
-  >
+  <ChromeButton on={moodOpen} onclick={() => uiState.toggleWindow('mood')}>Mood</ChromeButton>
   <ChromeButton onclick={() => openPawnWindow(pawn.id, 'gear')}>Gear</ChromeButton>
   {#if onfood}<ChromeButton on={foodOpen} onclick={onfood}>Food</ChromeButton>{/if}
 {/snippet}

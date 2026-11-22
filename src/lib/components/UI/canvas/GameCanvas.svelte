@@ -135,7 +135,6 @@
   import { fuelTarget } from '$lib/components/UI/canvas/fuelTarget';
   import BuildingRepairPanel from '$lib/components/UI/canvas/BuildingRepairPanel.svelte';
   import BuildingStoragePanel from '$lib/components/UI/canvas/BuildingStoragePanel.svelte';
-  import FoodFilterPanel from '$lib/components/UI/canvas/FoodFilterPanel.svelte';
   import StockpileZonePanel from '$lib/components/UI/canvas/StockpileZonePanel.svelte';
   import EnvReadout from '$lib/components/UI/canvas/EnvReadout.svelte';
   import { chrome } from '$lib/pixelArt/chrome';
@@ -3194,7 +3193,7 @@
         } else if (showStorageSettings) {
           showStorageSettings = false;
         } else if (showFoodSettings) {
-          showFoodSettings = false;
+          uiState.closeWindow('food');
         } else if (showZoneFilter) {
           showZoneFilter = false;
         } else if (moveAimActive || moveAimArmed) {
@@ -3936,17 +3935,9 @@
     }
   }
 
-  let showFoodSettings = false;
-  let foodSettingsForPawnId: string | null = null;
-  $: {
-    const nextPawnId = selectedPawn?.id ?? null;
-    if (nextPawnId !== foodSettingsForPawnId) {
-      showFoodSettings = false;
-      foodSettingsForPawnId = nextPawnId;
-    }
-  }
+  $: showFoodSettings = $uiState.windows.includes('food');
   function toggleFoodSettingsPanel() {
-    showFoodSettings = !showFoodSettings;
+    uiState.toggleWindow('food');
   }
 
   let showZoneFilter = false;
@@ -4488,7 +4479,6 @@
           onmove={armMoveAim}
           onfood={toggleFoodSettingsPanel}
         />
-        <FoodFilterPanel open={showFoodSettings} />
       </div>
     {:else if selectedMobCard}
       <SelectedEntityCard model={selectedMobCard} />
