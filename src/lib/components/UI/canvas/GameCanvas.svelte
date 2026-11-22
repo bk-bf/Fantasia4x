@@ -109,6 +109,13 @@
   import { simTarget } from '$lib/game/services/MovementSystem.js';
   import SelectedEntityCard from '$lib/components/UI/hud/SelectedEntityCard.svelte';
   import { brackets, dragBox, type ScreenRect } from '$lib/components/UI/canvas/selectionMarks';
+  import VerbTag from '$lib/components/UI/hud/VerbTag.svelte';
+  import {
+    designationVerb,
+    keyTiles,
+    type TagVerb,
+    type VerbTagModel
+  } from '$lib/components/UI/canvas/verbTag';
   import type {
     SelectedEntityModel,
     EntityBar,
@@ -140,7 +147,6 @@
   import { overlayDroppedItems, overlayBuildings } from '$lib/components/UI/canvas/overlay';
   import { buildingsVisualSig } from '$lib/game/core/state/buildingSig';
   import { lineFormationTargets } from '$lib/game/sim/commands';
-  import type { ItemPillView } from '$lib/components/UI/widget/ItemPills.svelte';
   import itemsData from '$lib/game/database/items/items.json';
 
   const ITEMS_DATABASE = itemsData as unknown as Item[];
@@ -422,16 +428,7 @@
   let _cycleTileX = -1;
   let _cycleTileY = -1;
   let _cycleIndex = 0;
-  let similarDragMode = false;
-  let similarDragResourceId = '';
-  let similarDragDisplayName = '';
-  let similarDragDesignationType: DesignationType = 'harvest';
-  let similarDragActive = false;
   let highlightedResourceTiles: Set<string> = new Set();
-  let similarAnchorX = 0;
-  let similarAnchorY = 0;
-  let similarEndX = 0;
-  let similarEndY = 0;
 
   let markKind: 'pawn' | 'mob' | null = null;
   let markDragActive = false;
@@ -593,52 +590,47 @@
   $: hasBuildJobs = ($gameState?.jobs ?? []).some((j) => j.type === 'construct');
   $: hasHarvestJobs = ($gameState?.jobs ?? []).some((j) => j.type === 'harvest');
 
-  $: markedGroupCard = ((): SelectedEntityModel | null => {
+  $: markedTag = ((): VerbTagModel | null => {
     if (!markedKind || markedIds.length < 1) return null;
     const n = markedIds.length;
-    const plural = n !== 1;
-    const status = plural ? 'multiple targets' : 'marked';
     if (markedKind === 'pawn') {
-      const names = pawns.filter((p) => markedSet.has(p.id)).map((p) => p.name);
-      const btns: EntityButton[] = [
-        {
-          label: markedAllDrafted ? 'UNDRAFT' : 'DRAFT',
-          active: markedAllDrafted,
-          onClick: () => draftMarkedPawns()
-        }
+      const marked = pawns.filter((p) => markedSet.has(p.id));
+      const verbs: TagVerb[] = [
+        { label: markedAllDrafted ? 'Undraft' : 'Draft', glyph: 'sword', onClick: draftMarkedPawns }
       ];
-      if (markedDraftedCount > 0) {
-        btns.push({ label: `MOVE (${markedDraftedCount})`, onClick: () => armMoveAim() });
-      }
+      if (markedDraftedCount > 0) verbs.push({ label: 'Move', quiet: true, onClick: armMoveAim });
       if (hasBuildJobs)
-        btns.push({ label: 'BUILD', onClick: () => forceMarkedPawnsJob('construct') });
+        verbs.push({
+          label: 'Build',
+          quiet: true,
+          onClick: () => forceMarkedPawnsJob('construct')
+        });
       if (hasHarvestJobs)
-        btns.push({ label: 'HARVEST', onClick: () => forceMarkedPawnsJob('harvest') });
-      btns.push({ label: 'CLEAR', onClick: () => clearMark() });
+        verbs.push({
+          label: 'Harvest',
+          quiet: true,
+          onClick: () => forceMarkedPawnsJob('harvest')
+        });
       return {
-        name: `${n} pawn${plural ? 's' : ''} selected`,
-        status,
-        selected: true,
-        dismissable: true,
-        note: markedDraftedCount > 0 ? `${markedDraftedCount} of ${n} drafted` : 'none drafted',
-        lines: [names.join(', ')],
-        buttons: btns
-      } satisfies SelectedEntityModel;
+        what: n === 1 ? (marked[0]?.name ?? 'Pawn') : 'Pawns',
+        count: n,
+        verbs,
+        tiles: marked.flatMap((p) => (p.position ? [p.position] : [])),
+        onClear: clearMark
+      };
     }
-    const names = mobs
-      .filter((m) => markedSet.has(m.id))
-      .map((m) => m.name ?? getCreatureById(m.creatureId)?.name ?? 'creature');
+    const marked = mobs.filter((m) => markedSet.has(m.id));
+    const def =
+      new Set(marked.map((m) => m.creatureId)).size === 1
+        ? getCreatureById(marked[0].creatureId)
+        : undefined;
     return {
-      name: `${n} entit${plural ? 'ies' : 'y'} selected`,
-      status,
-      selected: true,
-      dismissable: true,
-      lines: [names.join(', ')],
-      buttons: [
-        { label: 'HUNT', onClick: () => huntMarkedMobs() },
-        { label: 'CLEAR', onClick: () => clearMark() }
-      ]
-    } satisfies SelectedEntityModel;
+      what: n === 1 ? (marked[0]?.name ?? def?.name ?? 'Creature') : (def?.name ?? 'Creatures'),
+      count: n,
+      verbs: [{ label: 'Hunt', glyph: 'bow', onClick: huntMarkedMobs }],
+      tiles: marked.map((m) => ({ x: m.x, y: m.y })),
+      onClear: clearMark
+    };
   })();
 
   $: hoverBuilding =
@@ -677,9 +669,6 @@
         selectedResourceTile.resourceId
       ] ?? 0)
     : 0;
-  $: selectedResourceDesignation = selectedResourceTile
-    ? (designations[`${selectedResourceTile.x},${selectedResourceTile.y}`] ?? null)
-    : null;
 
   function tileEnv(t: { x: number; y: number; terrainType: string; moisture?: number }) {
     const thermal = computeThermalAt(t.x, t.y, buildings, worldMap);
@@ -752,141 +741,87 @@
     } satisfies SelectedEntityModel;
   })();
 
-  $: resourceCard = (() => {
+  function deselectResource() {
+    selectedResourceTile = null;
+    highlightedResourceTiles = new Set();
+    selectedResourceTypes = new Set();
+    drawDesignations();
+  }
+
+  $: resourceTag = ((): VerbTagModel | null => {
     if (!selectedResourceTile || !selectedResourceDef) return null;
-    const activeInteractions = selectedResourceDef.interactions ?? [
-      selectedResourceDef.interaction
-    ];
-    const lines: string[] = [];
-    lines.push(`${selectedResourceDef.displayName} — ×${selectedResourceAmount} nodes`);
-    const growthPct = isGrowableResource(selectedResourceDef)
-      ? (worldMap[selectedResourceTile.y]?.[selectedResourceTile.x]?.growth?.[
-          selectedResourceTile.resourceId
-        ] ?? 100)
-      : undefined;
+    const def = selectedResourceDef;
+    const { x, y, resourceId } = selectedResourceTile;
     const tileKeys =
-      highlightedResourceTiles.size > 0
-        ? [...highlightedResourceTiles]
-        : [`${selectedResourceTile.x},${selectedResourceTile.y}`];
+      highlightedResourceTiles.size > 0 ? [...highlightedResourceTiles] : [`${x},${y}`];
     const designatedCount = tileKeys.filter((k) => designations[k]).length;
-    const anyDesignated = designatedCount > 0;
-    const allDesignated = designatedCount === tileKeys.length;
-    if (highlightedResourceTiles.size > 0) {
-      lines.push(`◈ ${highlightedResourceTiles.size} tiles selected`);
-    }
-    if (anyDesignated) {
-      lines.push(`⊢ ${designatedCount}/${tileKeys.length} marked for harvest`);
-    }
-    const growthMult = growthPct === undefined ? 1 : Math.max(0, Math.min(1, growthPct / 100));
-    const pillMap = new Map<string, { min: number; max: number }>();
-    if (!allDesignated) {
-      for (const iact of activeInteractions) {
-        for (const y of iact.yields) {
-          if (growthPct !== undefined && growthPct < (y.minGrowth ?? 0)) continue;
-          const lo =
-            growthPct === undefined ? (y.min ?? 0) : Math.ceil((y.amount ?? 0) * growthMult);
-          const hi = growthPct === undefined ? (y.max ?? 0) : lo;
-          if (hi <= 0) continue;
-          const prev = pillMap.get(y.itemId);
-          pillMap.set(y.itemId, {
-            min: Math.min(prev?.min ?? lo, lo),
-            max: Math.max(prev?.max ?? hi, hi)
-          });
-        }
-      }
-    }
-    const itemPills: ItemPillView[] = [...pillMap].map(([itemId, { min, max }]) => ({
-      itemId,
-      qty: min === max ? `×${max}` : `${min}–${max}`
-    }));
-    const harvestGate = resourceObjectService.minHarvestGrowth(selectedResourceTile.resourceId);
-    const isRegrowing =
-      selectedResourceAmount <= 0 && growthPct !== undefined && growthPct < harvestGate;
-    if (isRegrowing) lines.push('regrowing — not ready to harvest');
-    const harvestableNow = (dtype: DesignationType) =>
-      tileKeys.some((k) => {
-        const [hx, hy] = k.split(',').map(Number);
-        return isHarvestableTileNow({ worldMap }, hx, hy, dtype);
-      });
-    const btns: EntityButton[] = [];
-    let withheldImmature = false;
-    if (!allDesignated && !isRegrowing) {
-      for (const iact of activeInteractions) {
-        const label = selectedResourceDef.lair
-          ? 'DESTROY'
-          : iact.designationType === 'woodcut'
-            ? 'CUT'
-            : iact.designationType === 'forage'
-              ? 'FORAGE'
-              : iact.designationType === 'mine'
-                ? 'MINE'
-                : iact.designationType === 'dig'
-                  ? 'DIG'
-                  : 'HARVEST';
+    const growthPct = isGrowableResource(def)
+      ? (worldMap[y]?.[x]?.growth?.[resourceId] ?? 100)
+      : undefined;
+    const regrowing =
+      selectedResourceAmount <= 0 &&
+      growthPct !== undefined &&
+      growthPct < resourceObjectService.minHarvestGrowth(resourceId);
+    const ripe = (dtype: DesignationType) =>
+      keyTiles(tileKeys).some((t) => isHarvestableTileNow({ worldMap }, t.x, t.y, dtype));
+    const verbs: TagVerb[] = [];
+    let unripe = false;
+    if (designatedCount < tileKeys.length && !regrowing) {
+      for (const iact of def.interactions ?? [def.interaction]) {
         const dtype = iact.designationType;
-        if (dtype && !harvestableNow(dtype)) {
-          withheldImmature = true;
+        if (dtype && !ripe(dtype)) {
+          unripe = true;
           continue;
         }
-        btns.push({ label, onClick: () => designateResource(dtype) });
+        const [label, glyph] = designationVerb(dtype, !!def.lair);
+        if (verbs.some((v) => v.label === label)) continue;
+        verbs.push({
+          label,
+          glyph,
+          quiet: verbs.length > 0,
+          onClick: () => designateResource(dtype)
+        });
       }
     }
-    if (withheldImmature && growthPct !== undefined)
-      lines.push(`not ready — ${Math.round(growthPct)}% grown (needs ${harvestGate}%)`);
-    if (anyDesignated) {
-      btns.push({ label: 'CANCEL', onClick: cancelResourceDesignation });
-    }
-    btns.push({ label: 'MARK', onClick: startSimilarSelect });
+    if (designatedCount > 0)
+      verbs.push({ label: 'Cancel', quiet: true, onClick: cancelResourceDesignation });
     return {
-      name: selectedResourceDef.displayName,
-      status:
-        selectedResourceDesignation ??
-        activeInteractions[0]?.designationType ??
-        activeInteractions[0]?.action ??
-        'harvest',
-      selected: true,
-      dismissable: true,
-      lines,
-      growthPct,
-      itemPills,
-      buttons: btns
-    } satisfies SelectedEntityModel;
+      what: def.displayName,
+      count: tileKeys.length,
+      note: regrowing
+        ? 'regrowing'
+        : unripe && growthPct !== undefined
+          ? `${Math.round(growthPct)}% grown`
+          : undefined,
+      verbs,
+      tiles: keyTiles(tileKeys),
+      onClear: deselectResource
+    };
   })();
 
-  $: multiResourceCard = ((): SelectedEntityModel | null => {
+  $: multiResourceTag = ((): VerbTagModel | null => {
     if (selectedResourceTypes.size < 2) return null;
-    const typeNames = [...selectedResourceTypes].map(
-      (id) => resourceObjectService.getById(id)?.displayName ?? id
+    const names = [...selectedResourceTypes].flatMap(
+      (id) => resourceObjectService.getById(id)?.displayName ?? []
     );
     const marked = highlightedResourceTiles.size;
     const designatedCount = [...highlightedResourceTiles].filter((k) => designations[k]).length;
-    const allDesignated = marked > 0 && designatedCount === marked;
-    const btns: EntityButton[] = [];
-    if (marked > 0 && !allDesignated) {
-      btns.push({
-        label: `DESIGNATE (${marked - designatedCount})`,
-        onClick: () => designateMarkedMulti()
-      });
-    }
-    if (designatedCount > 0) {
-      btns.push({ label: `CANCEL (${designatedCount})`, onClick: () => cancelMarkedMulti() });
-    }
-    btns.push({ label: 'CLEAR', onClick: () => clearResourceMark() });
-    return {
-      name: `${selectedResourceTypes.size} resource types`,
-      status: 'mark brush',
-      selected: true,
-      dismissable: true,
-      note:
-        marked === 0
-          ? 'Shift+drag a box to highlight all of these'
-          : designatedCount > 0
-            ? `${designatedCount}/${marked} marked for harvest`
-            : `${marked} tiles highlighted`,
-      lines: [typeNames.join(', ')],
-      buttons: btns
-    } satisfies SelectedEntityModel;
+    const verbs: TagVerb[] = [];
+    if (marked > designatedCount)
+      verbs.push({ label: 'Harvest', glyph: 'sprout', onClick: designateMarkedMulti });
+    if (designatedCount > 0)
+      verbs.push({ label: 'Cancel', quiet: true, onClick: cancelMarkedMulti });
+    const tiles =
+      marked > 0
+        ? keyTiles(highlightedResourceTiles)
+        : selectedResourceTile
+          ? [selectedResourceTile]
+          : [];
+    if (tiles.length === 0) return null;
+    return { what: names.join(', '), count: marked, verbs, tiles, onClear: deselectResource };
   })();
+
+  $: verbTag = markedTag ?? multiResourceTag ?? resourceTag;
 
   $: hoverDroppedItem =
     hoverTileX >= 0 && hoverTileY >= 0
@@ -2244,35 +2179,6 @@
       ctx.restore();
     }
 
-    if (similarDragActive) {
-      const minX = Math.min(similarAnchorX, similarEndX);
-      const maxX = Math.max(similarAnchorX, similarEndX);
-      const minY = Math.min(similarAnchorY, similarEndY);
-      const maxY = Math.max(similarAnchorY, similarEndY);
-      const vx0 = Math.max(minX, viewX);
-      const vy0 = Math.max(minY, viewY);
-      const vx1 = Math.min(maxX, viewX + Math.ceil(W / tileWidth));
-      const vy1 = Math.min(maxY, viewY + Math.ceil(H / tileHeight));
-      ctx.save();
-      for (let ry = vy0; ry <= vy1; ry++) {
-        for (let rx = vx0; rx <= vx1; rx++) {
-          const sx2 = (rx - viewX) * tileWidth;
-          const sy2 = (ry - viewY) * tileHeight;
-          const match = (worldMap[ry]?.[rx]?.resources?.[similarDragResourceId] ?? 0) > 0;
-          ctx.fillStyle = match ? 'rgba(76, 204, 68, 0.42)' : 'rgba(76, 204, 68, 0.14)';
-          ctx.fillRect(sx2, sy2, tileWidth, tileHeight);
-        }
-      }
-      const ox = (minX - viewX) * tileWidth;
-      const oy = (minY - viewY) * tileHeight;
-      const ow = (maxX - minX + 1) * tileWidth;
-      const oh = (maxY - minY + 1) * tileHeight;
-      ctx.strokeStyle = 'rgba(160, 255, 160, 0.95)';
-      ctx.lineWidth = 1;
-      ctx.strokeRect(ox + 0.5, oy + 0.5, ow - 1, oh - 1);
-      ctx.restore();
-    }
-
     if (highlightedResourceTiles.size > 0) {
       brackets(ctx, keyRects(highlightedResourceTiles, W, H));
     } else if (selectedResourceTile) {
@@ -3314,20 +3220,13 @@
           drawDesignations();
         } else if (markKind || markedKind) {
           clearMark();
-        } else if (similarDragMode) {
-          similarDragMode = false;
-          similarDragActive = false;
-          redrawOverlay();
         } else if (designationMode) {
           uiState.deactivateDesignation();
           zoneEraseMode = false;
           zoneDragActive = false;
           drawDesignations();
         } else if (selectedResourceTile) {
-          selectedResourceTile = null;
-          highlightedResourceTiles = new Set();
-          selectedResourceTypes = new Set();
-          drawDesignations();
+          deselectResource();
         } else if (selectedItemId) {
           selectedItemId = null;
         } else if (selectedZoneId) {
@@ -3477,15 +3376,6 @@
       drawDesignations();
       return;
     }
-    if (similarDragMode) {
-      similarDragActive = true;
-      similarAnchorX = hoverTileX;
-      similarAnchorY = hoverTileY;
-      similarEndX = hoverTileX;
-      similarEndY = hoverTileY;
-      drawDesignations();
-      return;
-    }
     if (designationMode) {
       zoneDragActive = true;
       zoneAnchorX = hoverTileX;
@@ -3552,12 +3442,6 @@
       drawDesignations();
       return;
     }
-    if (similarDragActive) {
-      similarEndX = hoverTileX;
-      similarEndY = hoverTileY;
-      drawDesignations();
-      return;
-    }
     if (blueprintDragActive) {
       redrawOverlay();
       return;
@@ -3586,10 +3470,6 @@
     }
     if (markDragActive) {
       completeMarkDrag();
-      return;
-    }
-    if (similarDragActive) {
-      completeSimilarDrag();
       return;
     }
     if (blueprintDragActive) {
@@ -3883,12 +3763,6 @@
     drawDesignations();
   }
 
-  function clearResourceMark() {
-    highlightedResourceTiles = new Set();
-    selectedResourceTypes = new Set();
-    drawDesignations();
-  }
-
   function startMarkDrag(kind: 'pawn' | 'mob') {
     markKind = kind;
     markDragActive = false;
@@ -4042,16 +3916,6 @@
     drawDesignations();
   }
 
-  function startSimilarSelect() {
-    if (!selectedResourceTile || !selectedResourceDef) return;
-    const dtype = (selectedResourceDef.designationTypes?.[0] ?? 'harvest') as DesignationType;
-    similarDragResourceId = selectedResourceTile.resourceId;
-    similarDragDisplayName = selectedResourceDef.displayName;
-    similarDragDesignationType = dtype;
-    similarDragMode = true;
-    similarDragActive = false;
-  }
-
   function highlightSimilarTiles() {
     if (!selectedResourceTile) return;
     const resourceId = selectedResourceTile.resourceId;
@@ -4064,26 +3928,6 @@
       }
     }
     highlightedResourceTiles = newHighlighted;
-    drawDesignations();
-  }
-
-  function completeSimilarDrag() {
-    const minX = Math.min(similarAnchorX, similarEndX);
-    const maxX = Math.max(similarAnchorX, similarEndX);
-    const minY = Math.min(similarAnchorY, similarEndY);
-    const maxY = Math.max(similarAnchorY, similarEndY);
-    const newHighlighted = new Set<string>();
-    for (let ry = minY; ry <= maxY; ry++) {
-      for (let rx = minX; rx <= maxX; rx++) {
-        const wt = worldMap[ry]?.[rx];
-        if ((wt?.resources?.[similarDragResourceId] ?? 0) > 0) {
-          newHighlighted.add(`${rx},${ry}`);
-        }
-      }
-    }
-    highlightedResourceTiles = newHighlighted;
-    similarDragActive = false;
-    similarDragMode = false;
     drawDesignations();
   }
 
@@ -4625,12 +4469,6 @@
         ({Math.abs(hoverTileX - blueprintAnchorX) + 1}×{Math.abs(hoverTileY - blueprintAnchorY) +
           1}){/if} — drag a box to fill · stays active · Esc cancel
     </div>
-  {:else if similarDragMode}
-    <div class="designation-hud">
-      [⊞ SELECT {similarDragDisplayName.toUpperCase()}] — drag to designate all · Esc cancel{#if similarDragActive}
-        — ({Math.abs(similarEndX - similarAnchorX) + 1}×{Math.abs(similarEndY - similarAnchorY) +
-          1}){/if}
-    </div>
   {:else if markKind}
     <div class="designation-hud" style:color="#ffc85a" style:border-color="#ffc85a">
       [⊞ MARK {markKind === 'pawn' ? 'PAWNS' : 'ENTITIES'}] — drag a box to highlight · Esc cancel{#if markDragActive}
@@ -4651,9 +4489,20 @@
   {/if}
 
   {#if !customMapPreview && !menuPreview}
-    {#if markedGroupCard}
-      <SelectedEntityCard model={markedGroupCard} />
-    {:else if selectedPawnCard}
+    {#if verbTag && container}
+      <VerbTag
+        model={verbTag}
+        view={{
+          x: viewX,
+          y: viewY,
+          tw: tileWidth,
+          th: tileHeight,
+          w: container.clientWidth,
+          h: container.clientHeight
+        }}
+      />
+    {/if}
+    {#if markedTag}{:else if selectedPawnCard}
       <!-- svelte-ignore a11y_no_static_element_interactions -->
       <div
         class="bld-row"
@@ -4741,10 +4590,6 @@
       </div>
     {:else if selectedItemCard}
       <SelectedEntityCard model={selectedItemCard} />
-    {:else if multiResourceCard}
-      <SelectedEntityCard model={multiResourceCard} />
-    {:else if resourceCard}
-      <SelectedEntityCard model={resourceCard} />
     {:else if hoverPawnCard}
       <SelectedEntityCard model={hoverPawnCard} />
     {:else if hoverMobCard}
