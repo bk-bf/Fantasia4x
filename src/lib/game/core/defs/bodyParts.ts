@@ -154,6 +154,19 @@ const LETHAL_IF_DESTROYED = new Set<string>(
   )
 );
 
+export function hasLivingPart(limbs: LimbState[] | undefined, partIds: string[]): boolean {
+  if (!limbs) return false;
+  for (let li = 0; li < limbs.length; li++) {
+    const limb = limbs[li];
+    if (limb.isMissing || !limb.parts) continue;
+    const parts = limb.parts;
+    for (let pi = 0; pi < parts.length; pi++) {
+      if (!parts[pi].isMissing && partIds.includes(parts[pi].id)) return true;
+    }
+  }
+  return false;
+}
+
 export function lethalAnatomyCause(limbs: LimbState[] | undefined): 'critical_limb' | null {
   if (!limbs) return null;
   for (let li = 0; li < limbs.length; li++) {

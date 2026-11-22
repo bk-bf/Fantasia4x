@@ -14,16 +14,15 @@ import type {
 import {
   HEALING_CONFIG,
   CARE_CONFIG,
-  isTended,
-  isUncareable,
   healLimbs,
   rollWoundClotting,
+  woundInfectionPressure,
   CLOT_ROLL_INTERVAL,
   BASE_CLOT_CHANCE
 } from '../core/defs/wounds';
 import { feedOnVictim } from '../core/defs/lineages';
 import { coversPart } from '../core/rules/gear/armorCoverage';
-import { lethalAnatomyCause } from '../core/defs/bodyParts';
+import { hasLivingPart, lethalAnatomyCause } from '../core/defs/bodyParts';
 import conditionsData from '../database/pawns/conditions.json';
 import buildingsData from '../database/world/buildings.json';
 const BED_TREATMENT_BONUS = new Map<string, number>(
@@ -517,32 +516,7 @@ function tickConditions(pawn: Pawn, gameState: GameState): GameState {
     return killPawn(updatedGs.pawns.find((p) => p.id === pawn.id)!, 'blood_loss', updatedGs);
   }
 
-  let infectionPressure = 0;
-  for (let li = 0; li < limbs.length; li++) {
-    const parts = limbs[li].parts;
-    if (!parts) continue;
-    for (let pi = 0; pi < parts.length; pi++) {
-      const injuries = parts[pi].injuries;
-      for (let wi = 0; wi < injuries.length; wi++) {
-        const w = injuries[wi];
-        const open =
-          w.bleeding > 0 ||
-          w.severity === 'serious' ||
-          w.severity === 'critical' ||
-          w.severity === 'destroyed';
-        const age = gameState.turn - (w.inflictedAt ?? gameState.turn);
-        if (
-          open &&
-          !isUncareable(w) &&
-          !isTended(w, gameState.turn) &&
-          age >= CARE_CONFIG.infectionIncubationTicks
-        ) {
-          infectionPressure += CARE_CONFIG.infectionRiskPerWound;
-        }
-      }
-    }
-  }
-  infectionPressure = Math.min(infectionPressure, CARE_CONFIG.infectionRiskMax);
+  const infectionPressure = woundInfectionPressure(limbs, gameState.turn);
   const immune = Math.max(
     0,
     Math.min(0.95, CARE_CONFIG.immuneResistBase + (pawn.stats.constitution - 10) * 0.02)
@@ -942,20 +916,6 @@ function buildGraphContext(pawn: Pawn, turn: number): GraphContext {
   };
 }
 
-function hasLivingPart(pawn: Pawn, partIds: string[]): boolean {
-  const limbs = pawn.limbs;
-  if (!limbs) return false;
-  for (let li = 0; li < limbs.length; li++) {
-    const limb = limbs[li];
-    if (limb.isMissing || !limb.parts) continue;
-    const parts = limb.parts;
-    for (let pi = 0; pi < parts.length; pi++) {
-      if (!parts[pi].isMissing && partIds.includes(parts[pi].id)) return true;
-    }
-  }
-  return false;
-}
-
 function envSelfConditionActive(pawn: Pawn, condId: string, turn: number): boolean {
   if (!(pawn.traits ?? []).some((t) => t.selfCondition === condId)) return false;
   const def = getTransientConditionDef(condId);
@@ -1010,7 +970,7 @@ export function syncTransientConditions(pawn: Pawn, turn?: number): Pawn {
     const sc = t.selfCondition;
     if (!sc || ids.includes(sc)) continue;
     const def = getTransientConditionDef(sc);
-    if (def?.hostParts?.length && pawn.limbs?.length && !hasLivingPart(pawn, def.hostParts))
+    if (def?.hostParts?.length && pawn.limbs?.length && !hasLivingPart(pawn.limbs, def.hostParts))
       continue;
     if (def?.activateWhen) {
       if (turn == null) continue;
