@@ -1,19 +1,18 @@
 <script lang="ts">
+  import HoverTip from '$lib/components/UI/tooltip/HoverTip.svelte';
   import type { Building } from '$lib/game/core/types';
   import { recipeService } from '$lib/game/services/RecipeService';
   import { itemService } from '$lib/game/services/ItemService';
   import { getMaterialProperty, aggregateMaterialMods } from '$lib/game/core/defs/materials';
-  import { chrome } from '$lib/pixelArt/chrome';
 
   interface Props {
+    anchored?: boolean;
     building: Building;
     materials?: Record<string, string>;
-    left: number;
-    top: number;
+    x: number;
+    y: number;
   }
-  let { building, materials = {}, left, top }: Props = $props();
-  let h = $state(0);
-  let y = $derived(Math.max(8, Math.min(top, window.innerHeight - h - 8)));
+  let { building, materials = {}, x, y, anchored = false }: Props = $props();
 
   let matIds = $derived(Object.values(materials).filter(Boolean));
   let matNames = $derived(
@@ -36,11 +35,6 @@
         out.push({ label, val: `${v > 0 ? '+' : ''}${v.toFixed(2)}`, good: v >= 0 });
     return out;
   });
-
-  function portal(node: HTMLElement) {
-    document.body.appendChild(node);
-    return { destroy: () => node.remove() };
-  }
 
   const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
   const humanize = (s: string) =>
@@ -116,44 +110,37 @@
   let headline = $derived(building.category ? humanize(building.category) : 'building');
 </script>
 
-<div
-  class="tip"
-  use:portal
-  style:left="{left}px"
-  style:top="{y}px"
-  bind:offsetHeight={h}
-  {@attach chrome('tip')}
->
-  <div class="tip-hdr">
-    <span class="tip-name">{building.name}</span>
+<HoverTip {x} {y} {anchored}>
+  <h5>
+    {building.name}
     <span class="tip-eff">{headline}</span>
-  </div>
+  </h5>
   {#if building.description}<p class="tip-desc">{building.description}</p>{/if}
 
-  {#each infoRows as r (r.label)}
-    <div class="tip-row"><span class="tip-lbl">{r.label}</span><span>{r.val}</span></div>
+  {#each infoRows as r}
+    <div class="kv"><em>{r.label}</em><span>{r.val}</span></div>
   {/each}
 
   {#if effectRows.length > 0}
     <div class="tip-sep">EFFECTS</div>
-    {#each effectRows as r, i (i)}
-      <div class="tip-row"><span class="tip-lbl">{r.label}</span><span>{r.val}</span></div>
+    {#each effectRows as r}
+      <div class="kv"><em>{r.label}</em><span>{r.val}</span></div>
     {/each}
   {/if}
 
   {#if propRows.length > 0}
     <div class="tip-sep">PROPERTIES</div>
-    {#each propRows as r (r.label)}
-      <div class="tip-row"><span class="tip-lbl">{r.label}</span><span>{r.val}</span></div>
+    {#each propRows as r}
+      <div class="kv"><em>{r.label}</em><span>{r.val}</span></div>
     {/each}
   {/if}
 
   {#if matRows.length > 0}
     <div class="tip-sep">MATERIAL · {matNames}</div>
-    {#each matRows as r (r.label)}
-      <div class="tip-row">
-        <span class="tip-lbl">{r.label}</span>
-        <span class:pos={r.good} class:neg={!r.good}>{r.val}</span>
+    {#each matRows as r}
+      <div class="kv">
+        <em>{r.label}</em>
+        <span style="color:{r.good ? 'var(--pos)' : 'var(--neg)'}">{r.val}</span>
       </div>
     {/each}
   {/if}
@@ -166,58 +153,11 @@
         : ''}
     </div>
   {/if}
-</div>
+</HoverTip>
 
 <style>
-  .tip {
-    position: fixed;
-    z-index: 1000;
-    width: 270px;
-    padding: 9px 12px;
-    font: 16px/17px var(--font-pixel);
-    color: var(--text);
-    pointer-events: none;
-  }
-  .tip-hdr {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    gap: 8px;
-    margin-bottom: 2px;
-  }
-  .tip-name {
-    color: var(--accent-hi);
-    letter-spacing: 1.4px;
-    text-transform: uppercase;
-  }
-  .tip-eff {
-    color: var(--text-muted);
-    white-space: nowrap;
-  }
-  .tip-desc {
-    margin: 0 0 5px;
-    color: var(--text-dim);
-  }
-  .tip-row {
-    display: flex;
-    justify-content: space-between;
-    gap: 10px;
-  }
-  .tip-lbl {
-    color: var(--text-dim);
-  }
-  .tip-sep {
-    margin-top: 5px;
-    color: var(--text-muted);
-    letter-spacing: 1.4px;
-  }
   .tip-enables {
-    color: var(--text-dim);
-  }
-  .pos {
-    color: var(--pos);
-  }
-  .neg {
-    color: var(--neg);
+    line-height: 16px;
+    color: var(--text-muted);
   }
 </style>

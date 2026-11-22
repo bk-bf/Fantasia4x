@@ -1,4 +1,5 @@
 <script lang="ts">
+  import HoverTip from '$lib/components/UI/tooltip/HoverTip.svelte';
   import type { Item, Recipe, EquipmentSlot } from '$lib/game/core/types';
   import type { NaturalGearMeta } from '$lib/components/util/naturalGear';
   import { coveredParts } from '$lib/game/core/rules/gear/armorCoverage';
@@ -69,15 +70,6 @@
     }
     return sum;
   });
-
-  function portal(node: HTMLElement) {
-    document.body.appendChild(node);
-    return {
-      destroy() {
-        node.remove();
-      }
-    };
-  }
 
   const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
   const coversSummary = (parts: string[]): string => {
@@ -221,62 +213,55 @@
 
   let effects = $derived(Object.entries(item.effects ?? {}));
   let abilities = $derived(item.weaponProperties?.tags ?? []);
-
-  let flipX = $derived(typeof window !== 'undefined' && x > window.innerWidth - 280);
-  let flipY = $derived(typeof window !== 'undefined' && y > window.innerHeight - 260);
-  let style = $derived(
-    `${flipX ? `right:${window.innerWidth - x + 14}px` : `left:${x + 16}px`};` +
-      `${flipY ? `bottom:${window.innerHeight - y + 14}px` : `top:${y + 16}px`};`
-  );
 </script>
 
-<div class="tip" class:pinned use:portal data-pin-panel {style}>
-  <div class="tip-hdr">
-    <span class="tip-name">{item.name}</span>
+<HoverTip {x} {y} {pinned}>
+  <h5>
+    {item.name}
     <span class="tip-eff">{headline}</span>
-  </div>
+  </h5>
 
   {#if item.description}
     <div class="tip-desc">{item.description}</div>
   {/if}
 
   {#if jobLabel}
-    <div class="tip-row tip-job">
-      <span class="tip-lbl">Job</span>
+    <div class="kv tip-job">
+      <em>Job</em>
       <span class="tip-job-val">{jobLabel}</span>
     </div>
   {/if}
 
   {#each rows as r}
-    <div class="tip-row">
-      <span class="tip-lbl">{r.label}</span>
+    <div class="kv">
+      <em>{r.label}</em>
       <span>{r.val}</span>
     </div>
   {/each}
 
   {#if coating}
     <div class="tip-sep">COATED</div>
-    <div class="tip-row">
-      <span class="tip-lbl">{coating.name}</span>
+    <div class="kv">
+      <em>{coating.name}</em>
       <span class="tip-coat-eff">{coating.effect}</span>
     </div>
   {/if}
 
   {#if natural}
     <div class="tip-sep">NATURAL</div>
-    <div class="tip-row">
-      <span class="tip-lbl">Innate</span>
+    <div class="kv">
+      <em>Innate</em>
       <span>Yes · can't be unequipped</span>
     </div>
     {#if natural.carryPenalty}
-      <div class="tip-row">
-        <span class="tip-lbl">Carry cost</span>
+      <div class="kv">
+        <em>Carry cost</em>
         <span>−{Math.round(natural.carryPenalty * 100)}%</span>
       </div>
     {/if}
     {#if natural.stage}
-      <div class="tip-row">
-        <span class="tip-lbl">Evolution</span>
+      <div class="kv">
+        <em>Evolution</em>
         <span>Stage {natural.stage}/3 · {natural.evolves ? 'grows with age' : 'apex'}</span>
       </div>
     {/if}
@@ -285,8 +270,8 @@
   {#if farming}
     <div class="tip-sep">FARMING · {farming.crop}</div>
     {#each farming.rows as r}
-      <div class="tip-row">
-        <span class="tip-lbl">{r.label}</span>
+      <div class="kv">
+        <em>{r.label}</em>
         <span>{r.val}</span>
       </div>
     {/each}
@@ -300,7 +285,9 @@
     {#if matItemMods.durability !== 1}
       <div class="tip-mod">
         <span class="tip-mod-name">Durability</span>
-        <span class="tip-mod-val" style="color:{matItemMods.durability >= 1 ? '#6bc' : '#e08'}"
+        <span
+          class="tip-mod-val"
+          style="color:{matItemMods.durability >= 1 ? 'var(--pos)' : 'var(--neg)'}"
           >×{matItemMods.durability.toFixed(2)}</span
         >
       </div>
@@ -308,7 +295,9 @@
     {#if matItemMods.weight !== 1}
       <div class="tip-mod">
         <span class="tip-mod-name">Weight</span>
-        <span class="tip-mod-val" style="color:{matItemMods.weight <= 1 ? '#6bc' : '#e08'}"
+        <span
+          class="tip-mod-val"
+          style="color:{matItemMods.weight <= 1 ? 'var(--pos)' : 'var(--neg)'}"
           >×{matItemMods.weight.toFixed(2)}</span
         >
       </div>
@@ -322,7 +311,7 @@
     <div class="tip-sep">ABILITIES</div>
     {#each abilities as a}
       <div class="tip-mod">
-        <span class="tip-mod-name" style="color:#6bc">{cap(a)}</span>
+        <span class="tip-mod-name" style="color:var(--pos)">{cap(a)}</span>
       </div>
     {/each}
   {/if}
@@ -331,70 +320,16 @@
     <div class="tip-sep">EFFECTS</div>
     {#each effects as [name, val]}
       <div class="tip-mod">
-        <span class="tip-mod-name" style="color:{val >= 0 ? '#6bc' : '#e08'}"
+        <span class="tip-mod-name" style="color:{val >= 0 ? 'var(--pos)' : 'var(--neg)'}"
           >{cap(name.replace(/([A-Z])/g, ' $1').trim())}</span
         >
         <span class="tip-mod-val">{signed(val)}</span>
       </div>
     {/each}
   {/if}
-</div>
+</HoverTip>
 
 <style>
-  .tip {
-    position: fixed;
-    z-index: 1000;
-    min-width: 190px;
-    max-width: 260px;
-    padding: 5px 7px;
-    background: var(--bg-panel, #11151c);
-    border: 1px solid var(--border-hi, #3a4656);
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.55);
-    font-family: var(--font-mono);
-    font-size: 12px;
-    color: var(--text);
-    pointer-events: none;
-  }
-  .tip.pinned {
-    pointer-events: auto;
-    box-shadow:
-      0 4px 14px rgba(0, 0, 0, 0.55),
-      0 0 0 1px var(--accent, #e8c870);
-  }
-  .tip-hdr {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    gap: 8px;
-    border-bottom: 1px solid var(--border);
-    padding-bottom: 3px;
-    margin-bottom: 3px;
-  }
-  .tip-name {
-    color: var(--accent-hi);
-    letter-spacing: 0.04em;
-  }
-  .tip-eff {
-    font-weight: bold;
-    color: var(--accent);
-    white-space: nowrap;
-  }
-  .tip-desc {
-    color: var(--text-muted);
-    font-size: 11px;
-    line-height: 1.4;
-    font-style: italic;
-    margin-bottom: 4px;
-  }
-  .tip-row {
-    display: flex;
-    justify-content: space-between;
-    gap: 10px;
-    line-height: 1.5;
-  }
-  .tip-lbl {
-    color: var(--text-dim);
-  }
   .tip-job {
     border-bottom: 1px solid var(--border);
     padding-bottom: 3px;
@@ -402,29 +337,6 @@
   }
   .tip-job-val {
     color: var(--accent-hi);
-  }
-  .tip-sep {
-    margin-top: 4px;
-    padding-top: 3px;
-    border-top: 1px solid var(--border);
-    color: var(--text-muted, #555);
-    font-size: 10px;
-    letter-spacing: 0.08em;
-  }
-  .tip-mod {
-    display: flex;
-    justify-content: space-between;
-    gap: 10px;
-    line-height: 1.45;
-  }
-  .tip-mod-name {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .tip-mod-val {
-    color: var(--text-dim);
-    flex-shrink: 0;
   }
   .tip-coat-eff {
     color: #b98fe6;

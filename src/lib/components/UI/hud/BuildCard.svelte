@@ -69,7 +69,7 @@
 
   let descTip = $state<{ x: number; y: number } | null>(null);
   let itemTip = $state<{ x: number; y: number } | null>(null);
-  let below = $state<{ left: number; top: number } | null>(null);
+  let below = $state<{ x: number; y: number } | null>(null);
 
   const hasItemStats = $derived(
     !!statItem &&
@@ -89,7 +89,7 @@
     if (!buildingDef) return;
     const card = (e.currentTarget as HTMLElement).getBoundingClientRect();
     const win = (e.currentTarget as HTMLElement).closest('[data-window]')?.getBoundingClientRect();
-    below = { left: card.left, top: (win?.bottom ?? card.bottom) + 6 };
+    below = { x: card.left, y: (win?.bottom ?? card.bottom) + 6 };
   }
   function enterDesc(e: MouseEvent) {
     const el = e.currentTarget as HTMLElement;
@@ -175,7 +175,7 @@
 {/if}
 
 {#if below && buildingDef}
-  <BuildingStatTooltip building={buildingDef} materials={statMaterials} {...below} />
+  <BuildingStatTooltip building={buildingDef} materials={statMaterials} {...below} anchored />
 {:else if itemTip && showItemTip && statItem}
   <ItemStatTooltip
     item={statItem}

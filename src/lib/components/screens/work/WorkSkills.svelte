@@ -76,7 +76,7 @@
 </div>
 
 {#if tip && shown}
-  <HoverTip painted x={tip.x} y={tip.y}>
+  <HoverTip x={tip.x} y={tip.y}>
     <div class="hd"><span>{shown.name}</span><b>{shown.level}</b></div>
     <div class="xp">
       {shown.mastered ? 'a true master' : `${shown.xp} / ${shown.need} to the next level`}
