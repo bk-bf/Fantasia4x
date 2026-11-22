@@ -1195,5 +1195,61 @@
     "find": "const scale = def.crop ? cropScale : 1;",
     "replace": "const scale = def.crop ? cropScale : 0.5;",
     "tests": ["src/tests/game/systems/plantGrowth.test.ts"]
+  },
+  {
+    "id": "workxp-one-level-per-award",
+    "file": "src/lib/game/core/rules/body/workExperience.ts",
+    "find": "  while (level < MAX_WORK_LEVEL && progress >= xpToNext(level)) {",
+    "replace": "  if (level < MAX_WORK_LEVEL && progress >= xpToNext(level)) {",
+    "tests": ["src/tests/game/core/workExperience.test.ts"]
+  },
+  {
+    "id": "workxp-overflow-dropped",
+    "file": "src/lib/game/core/rules/body/workExperience.ts",
+    "find": "    progress -= xpToNext(level);",
+    "replace": "    progress = 0;",
+    "tests": ["src/tests/game/core/workExperience.test.ts"]
+  },
+  {
+    "id": "workxp-max-gate-exclusive",
+    "file": "src/lib/game/core/rules/body/workExperience.ts",
+    "find": "  if (level >= MAX_WORK_LEVEL) return null;",
+    "replace": "  if (level > MAX_WORK_LEVEL) return null;",
+    "tests": ["src/tests/game/core/workExperience.test.ts"]
+  },
+  {
+    "id": "workxp-award-ignored",
+    "file": "src/lib/game/core/rules/body/workExperience.ts",
+    "find": "  let progress = (pawn.skillXp?.[category] ?? 0) + xp;",
+    "replace": "  let progress = (pawn.skillXp?.[category] ?? 0);",
+    "tests": ["src/tests/game/core/workExperience.test.ts"]
+  },
+  {
+    "id": "stockpile-consume-skips-vessel-contents",
+    "file": "src/lib/game/core/state/stockpile.ts",
+    "find": "      remaining = drawFromVessel(newDropped, i, itemId, remaining);",
+    "replace": "      void drawFromVessel;",
+    "tests": ["src/tests/game/core/tileStorage.test.ts"]
+  },
+  {
+    "id": "stockpile-pick-tile-ignores-pile-capacity",
+    "file": "src/lib/game/core/state/stockpile.ts",
+    "find": "    if (tileStoredPileCount(state, x, y) < tilePileCapacity(state, x, y)) return { x, y };",
+    "replace": "    return { x, y };",
+    "tests": ["src/tests/game/core/tileStorage.test.ts"]
+  },
+  {
+    "id": "vessels-roomfor-ignores-weight-cap",
+    "file": "src/lib/game/core/rules/gear/vessels.ts",
+    "find": "  if (v.capacityKg != null) {",
+    "replace": "  if (false) {",
+    "tests": ["src/tests/game/core/vessels.test.ts"]
+  },
+  {
+    "id": "vessels-putin-duplicates-entry",
+    "file": "src/lib/game/core/rules/gear/vessels.ts",
+    "find": "  const existing = inst.contents.find((e) => e.itemId === itemId && !e.instance);",
+    "replace": "  const existing = undefined as (typeof inst.contents)[number] | undefined;",
+    "tests": ["src/tests/game/core/vessels.test.ts"]
   }
 ]
