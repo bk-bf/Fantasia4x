@@ -128,8 +128,8 @@
   {
     "id": "stockpile-storage-keys-skip-bins",
     "file": "src/lib/game/core/state/stockpile.ts",
-    "find": "binStacksForType(b.type) > 0) seen.add(",
-    "replace": "binStacksForType(b.type) < 0) seen.add(",
+    "find": "b.status !== 'complete' || binStacksForType(b.type) <= 0) continue;",
+    "replace": "b.status !== 'complete' || binStacksForType(b.type) >= 0) continue;",
     "tests": ["src/tests/game/services/storageBins.test.ts"]
   },
   {
@@ -702,7 +702,7 @@
   {
     "id": "jobs-no-urgent-ordering",
     "file": "src/lib/game/services/JobService.ts",
-    "find": "      if (urgB !== urgA) return urgB - urgA;\n",
+    "find": "      if (b.urgent !== a.urgent) return b.urgent - a.urgent;\n",
     "replace": "",
     "tests": ["src/tests/game/services/urgentHaul.test.ts"]
   },
@@ -770,10 +770,10 @@
     "tests": ["src/tests/game/services/followupFeatures.test.ts"]
   },
   {
-    "id": "craft-reserve-accepts-one-short",
+    "id": "craft-reserve-refuses-exact-stock",
     "file": "src/lib/game/services/jobs/craft.ts",
-    "find": "      if (res.reserved < need) {",
-    "replace": "      if (res.reserved < need - 1) {",
+    "find": "cannotReserve(reservable(id), need)) return order;",
+    "replace": "cannotReserve(reservable(id), need + 1)) return order;",
     "tests": ["src/tests/game/services/craftPendingOrders.test.ts"]
   },
   {
@@ -1170,10 +1170,10 @@
   },
   {
     "id": "designation-zone-keys-ignore-type",
-    "file": "src/lib/game/services/DesignationService.ts",
-    "find": "  for (const k in zt) if (zt[k]?.includes(type)) out.push(k);",
-    "replace": "  for (const k in zt) out.push(k);",
-    "tests": ["src/tests/game/services/cropChain.test.ts"]
+    "file": "src/lib/game/core/state/zoneTiles.ts",
+    "find": "    for (const k in zt) if (zt[k]?.includes(type)) found.push(k);",
+    "replace": "    for (const k in zt) found.push(k);",
+    "tests": ["src/tests/game/core/zoneTileKeys.test.ts"]
   },
   {
     "id": "wasm-path-drops-first-node",
