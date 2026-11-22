@@ -1,43 +1,41 @@
 <script lang="ts">
   import type { LimbState } from '$lib/game/core/types';
-  import { limbLabel, partLabel } from '$lib/components/util/bodyLabels';
-  import { woundById } from '$lib/game/core/defs/wounds';
-  import { healthTone } from './entityHealth';
+  import { hurtLimbs } from '$lib/components/UI/canvas/selectionCard';
+  import { healthTone, wholeLimbsLine } from './entityHealth';
 
   let { limbs }: { limbs: LimbState[] } = $props();
+
+  const hurt = $derived(hurtLimbs(limbs));
+  const whole = $derived(wholeLimbsLine(limbs, new Set(hurt.map((l) => l.id))));
 </script>
 
 <div class="limbs">
-  {#each limbs as limb (limb.id)}
+  {#each hurt as limb (limb.id)}
     <div class="limb">
       <div class="limb-h">
-        <b>{limbLabel(limb.id)}</b>
-        <span style:color={limb.isMissing ? 'var(--neg)' : healthTone(limb.health)}>
-          {limb.isMissing ? 'missing' : `${Math.round(limb.health)}%`}
+        <b>{limb.label}</b>
+        <span style:color={limb.missing ? 'var(--neg)' : healthTone(limb.health)}>
+          {limb.missing ? 'missing' : `${Math.round(limb.health)}%`}
           {#if limb.bleedRate && limb.bleedRate > 0}<i class="bleed">▼{limb.bleedRate.toFixed(1)}</i
             >{/if}
         </span>
       </div>
-      {#each limb.parts ?? [] as part (part.id)}
-        {@const pct = (part.health / part.maxHp) * 100}
-        <div
-          class="part"
-          class:damaged={part.isMissing || part.health < part.maxHp || part.injuries.length > 0}
-        >
-          <span class="pn">{partLabel(part.id)}</span>
-          <span style:color={part.isMissing ? 'var(--neg)' : healthTone(pct)}>
-            {part.isMissing ? 'missing' : `${Math.round(part.health)}/${part.maxHp}`}
+      {#each limb.parts as part (part.label)}
+        <div class="part">
+          <span class="pn">{part.label}</span>
+          <span
+            style:color={part.missing ? 'var(--neg)' : healthTone((part.health / part.maxHp) * 100)}
+          >
+            {part.missing ? 'missing' : `${Math.round(part.health)}/${Math.round(part.maxHp)}`}
           </span>
-          {#each part.injuries as injury, i (i)}
-            {@const name = woundById(injury.type)?.name ?? injury.type}
-            <span class="wd" title="{injury.severity} {name}"
-              >· {name.toLowerCase()} · {injury.severity}</span
-            >
+          {#each part.wounds as w (w.text)}
+            <span class="wd" class:treated={w.treated}>· {w.text.toLowerCase()}</span>
           {/each}
         </div>
       {/each}
     </div>
   {/each}
+  {#if whole}<p class="rest">{whole}</p>{/if}
 </div>
 
 <style>
@@ -67,10 +65,6 @@
     gap: 8px;
     padding-left: 10px;
     color: var(--text-dim);
-    opacity: 0.55;
-  }
-  .part.damaged {
-    opacity: 1;
   }
   .pn {
     flex: none;
@@ -82,5 +76,13 @@
   .wd {
     color: var(--accent-hi);
     white-space: nowrap;
+  }
+  .wd.treated {
+    color: var(--text-dim);
+  }
+  .rest {
+    break-inside: avoid;
+    margin: 3px 0 0;
+    color: var(--text-muted);
   }
 </style>
