@@ -1197,11 +1197,7 @@
     vy: number,
     box: HTMLDivElement,
     tW: number,
-    tH: number,
-    selPawnId: string | null,
-    selMobId: string | null,
-    marked: 'pawn' | 'mob' | null,
-    markedIds: Set<string>
+    tH: number
   ) {
     pawnOverlayGrid.clear();
     itemOverlayGrid.clear();
@@ -1246,20 +1242,17 @@
       const cellX = Math.round(rm.x);
       const cellY = Math.round(rm.y);
       if (isHiddenTile(cellX, cellY)) continue;
-      const isSelected = mob.id === selMobId || (marked === 'mob' && markedIds.has(mob.id));
       const mLunge = lungeOffset(mob.id, nowMs);
       const mTier = def.tier;
       const mScale = mTier != null ? TIER_GLYPH_SCALE[mTier] : undefined;
       const mTint = mTier != null ? TIER_GLYPH_TINT[mTier] : 1;
       pawnOverlayGrid.setTile(cellX, cellY, {
         char: def.chars[0],
-        foreground: isSelected
-          ? { r: 1.0, g: 0.9, b: 0.1 }
-          : {
-              r: Math.min(1, def.fg[0] * mTint),
-              g: Math.min(1, def.fg[1] * mTint),
-              b: Math.min(1, def.fg[2] * mTint * (mTier === 5 ? 0.85 : 1))
-            },
+        foreground: {
+          r: Math.min(1, def.fg[0] * mTint),
+          g: Math.min(1, def.fg[1] * mTint),
+          b: Math.min(1, def.fg[2] * mTint * (mTier === 5 ? 0.85 : 1))
+        },
         background: { r: 0, g: 0, b: 0 },
         ...(mScale != null && mScale !== 1 ? { scale: mScale } : {}),
         ...(PAINTED_TILES ? paintedEntity('creature', def.id, mob.id) : null),
@@ -1297,7 +1290,6 @@
       const cellX = Math.round(rp.x);
       const cellY = Math.round(rp.y);
       if (isHiddenTile(cellX, cellY)) continue;
-      const isSelected = pawn.id === selPawnId || (marked === 'pawn' && markedIds.has(pawn.id));
       const isSleeping = pawn.currentState === 'Sleeping';
       const isCollapsed = pawn.currentState === 'Collapsed';
       const isResting = isSleeping && needsRecovery(pawn as never);
@@ -1318,7 +1310,7 @@
       const pLunge = lungeOffset(pawn.id, nowMs);
       pawnOverlayGrid.setTile(cellX, cellY, {
         char: PAWN_SPRITES[i % PAWN_SPRITES.length],
-        foreground: isSelected ? { r: 1.0, g: 0.9, b: 0.1 } : baseColor,
+        foreground: baseColor,
         background: isDrafted ? { r: 0.3, g: 0, b: 0 } : { r: 0, g: 0, b: 0 },
         position: { x: cellX, y: cellY },
         animationOffset: {
@@ -1335,6 +1327,32 @@
         if (!seen.has(id)) pawnRenderPos.delete(id);
       }
     }
+  }
+
+  let selectionRings: { id: string; left: number; top: number; w: number }[] = [];
+  let _selectionRingKey = '';
+
+  function updateSelectionRings(vx: number, vy: number, tW: number, tH: number) {
+    const ids =
+      markedKind && markedSet.size > 0
+        ? [...markedSet]
+        : [selectedPawnId, selectedMobId].filter((id): id is string => !!id);
+    const w = Math.round(tW * 1.2);
+    const next: typeof selectionRings = [];
+    for (const id of ids) {
+      const rp = pawnRenderPos.get(id) ?? mobRenderPos.get(id);
+      if (!rp) continue;
+      next.push({
+        id,
+        left: Math.round((rp.x - vx + 0.5) * tW - w / 2),
+        top: Math.round((rp.y - vy + 1) * tH - w * 0.3),
+        w
+      });
+    }
+    const key = next.map((r) => `${r.id}:${r.left},${r.top},${r.w}`).join('|');
+    if (key === _selectionRingKey) return;
+    _selectionRingKey = key;
+    selectionRings = next;
   }
 
   function updateWorldEffectOverlays(
@@ -3054,11 +3072,7 @@
             vy,
             box,
             tW,
-            tH,
-            selectedPawnId,
-            selectedMobId,
-            markedKind,
-            markedSet
+            tH
           );
         }
         if (cursorOverCanvas && (followPawnId || followMobId)) {
@@ -3079,6 +3093,7 @@
           rebuildLairTiles(map);
         }
         updateWorldEffectOverlays(pawnList, mobList, buildingList, vx, vy, box, tW, tH);
+        updateSelectionRings(vx, vy, tW, tH);
         if (
           _terrainDirty &&
           (_forceTerrainRebuild || now - _lastTerrainBuild >= TERRAIN_REBUILD_MIN_MS)
@@ -4549,6 +4564,14 @@
 >
   <canvas bind:this={canvas}></canvas>
   <canvas bind:this={designCanvas} class="desig-layer"></canvas>
+  {#each selectionRings as ring (ring.id)}
+    <i
+      class="sel-ring"
+      style:width="{ring.w}px"
+      style:height="{Math.round(ring.w * 0.4)}px"
+      style:transform="translate({ring.left}px, {ring.top}px)"
+    ></i>
+  {/each}
 
   {#if errorMsg}
     <div class="error">WebGL unavailable: {errorMsg}</div>
@@ -5001,6 +5024,17 @@
   }
   .canvas-wrap.dragging {
     cursor: var(--app-cursor), grabbing;
+  }
+  .sel-ring {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 1;
+    box-sizing: border-box;
+    border: 2px solid #ffd76a;
+    border-radius: 50%;
+    pointer-events: none;
+    filter: drop-shadow(1px 1px 0 #0d0a10);
   }
   .desig-layer {
     position: absolute;
