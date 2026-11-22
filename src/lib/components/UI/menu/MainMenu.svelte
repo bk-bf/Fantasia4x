@@ -7,13 +7,13 @@
   import { paintedSpriteCanvas } from '$lib/webgl/painted/loader';
   import { pole } from '$lib/pixelArt/cloth';
   import { pixels } from '$lib/pixelArt/pixels';
-  import MenuPreviewBackdrop from '$lib/components/UI/menu/MenuPreviewBackdrop.svelte';
   import SettingsModal from '$lib/components/UI/modal/SettingsModal.svelte';
   import SaveListMenu from '$lib/components/UI/menu/SaveListMenu.svelte';
   import CreditsScroll from '$lib/components/UI/menu/CreditsScroll.svelte';
   import MenuSign from './MenuSign.svelte';
   import MenuFlag from './MenuFlag.svelte';
   import MenuSkyBowl from './MenuSkyBowl.svelte';
+  import MenuColonyBackdrop from './MenuColonyBackdrop.svelte';
   import { BANNER_FONT, PIXEL_FONT, TITLE_FONT, planMenu } from './mainMenuPlan';
   import { menuAmbient } from './mainMenuAmbient';
   import { flagIndex, stepFocus } from './mainMenuKeys';
@@ -79,8 +79,8 @@
   transition:fade={{ duration: 200 }}
   onmousemove={(e) => (hovered = flagIndex(e.target))}
 >
-  {#if $menuPreviewReady}
-    <MenuPreviewBackdrop />
+  {#if $menuPreviewReady && plan}
+    <MenuColonyBackdrop colony={ambient.colony} scale={plan.scale} {viewW} {viewH} />
   {/if}
   <div class="shade" aria-hidden="true"></div>
 
@@ -117,7 +117,7 @@
         {/each}
       </nav>
     {/if}
-    <p class="credit-line">alpha {__APP_VERSION__} · tileset: Bitlands by DragonDePlatino</p>
+    <p class="credit-line">alpha {__APP_VERSION__}</p>
   </div>
 </div>
 
