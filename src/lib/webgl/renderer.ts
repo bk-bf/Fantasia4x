@@ -10,6 +10,7 @@ export type { RenderStats, RendererOptions };
 
 export class WebGLRenderer {
   private core: WebGLRendererCore;
+  private weather: string | null | undefined = null;
 
   constructor(options: RendererOptions) {
     this.core = new WebGLRendererCore(options);
@@ -93,6 +94,8 @@ export class WebGLRenderer {
 
   setAmbient(light: number, tint: Rgb, baseTint?: Rgb, weather?: string): void {
     this.core.setAmbient(light, tint, baseTint);
+    if (weather === this.weather) return;
+    this.weather = weather;
     this.core.setMapWeather(mapWeather(weatherOverlayKind(weather), weatherIsHeavy(weather)));
   }
 
