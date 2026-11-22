@@ -108,6 +108,7 @@
   import { vlog } from '$lib/game/core/util/logSink.js';
   import { simTarget } from '$lib/game/services/MovementSystem.js';
   import SelectedEntityCard from '$lib/components/UI/hud/SelectedEntityCard.svelte';
+  import { brackets, dragBox, type ScreenRect } from '$lib/components/UI/canvas/selectionMarks';
   import type {
     SelectedEntityModel,
     EntityBar,
@@ -2081,6 +2082,51 @@
     }
   }
 
+  function tileRect(x: number, y: number): ScreenRect {
+    return { x: (x - viewX) * tileWidth, y: (y - viewY) * tileHeight, w: tileWidth, h: tileHeight };
+  }
+
+  function tileBoxRect(minX: number, minY: number, maxX: number, maxY: number): ScreenRect {
+    return {
+      x: (minX - viewX) * tileWidth,
+      y: (minY - viewY) * tileHeight,
+      w: (maxX - minX + 1) * tileWidth,
+      h: (maxY - minY + 1) * tileHeight
+    };
+  }
+
+  function tilesInBox(
+    minX: number,
+    minY: number,
+    maxX: number,
+    maxY: number,
+    W: number,
+    H: number,
+    keep: (x: number, y: number) => boolean
+  ): ScreenRect[] {
+    const out: ScreenRect[] = [];
+    const x1 = Math.min(maxX, viewX + Math.ceil(W / tileWidth));
+    const y1 = Math.min(maxY, viewY + Math.ceil(H / tileHeight));
+    for (let ry = Math.max(minY, viewY); ry <= y1; ry++)
+      for (let rx = Math.max(minX, viewX); rx <= x1; rx++)
+        if (keep(rx, ry)) out.push(tileRect(rx, ry));
+    return out;
+  }
+
+  function keyRects(keys: Set<string>, W: number, H: number): ScreenRect[] {
+    const out: ScreenRect[] = [];
+    const colW = Math.ceil(W / tileWidth);
+    const rowH = Math.ceil(H / tileHeight);
+    for (const key of keys) {
+      const ci = key.indexOf(',');
+      const wx = +key.slice(0, ci);
+      const wy = +key.slice(ci + 1);
+      if (wx < viewX - 1 || wy < viewY - 1 || wx > viewX + colW || wy > viewY + rowH) continue;
+      out.push(tileRect(wx, wy));
+    }
+    return out;
+  }
+
   function drawDesignations() {
     if (!designCanvas || !container || !worldMap.length) return;
     markRenderDirty();
@@ -2210,24 +2256,9 @@
     }
 
     if (highlightedResourceTiles.size > 0) {
-      paintTileRegion(
-        ctx,
-        highlightedResourceTiles,
-        'rgba(240, 208, 32, 0.22)',
-        'rgba(240, 208, 32, 0.95)'
-      );
-    }
-
-    if (selectedResourceTile) {
-      const sx = (selectedResourceTile.x - viewX) * tileWidth;
-      const sy = (selectedResourceTile.y - viewY) * tileHeight;
-      ctx.save();
-      ctx.fillStyle = 'rgba(255, 220, 40, 0.22)';
-      ctx.fillRect(sx, sy, tileWidth, tileHeight);
-      ctx.strokeStyle = 'rgba(255, 220, 40, 0.95)';
-      ctx.lineWidth = 1;
-      ctx.strokeRect(sx + 0.5, sy + 0.5, tileWidth - 1, tileHeight - 1);
-      ctx.restore();
+      brackets(ctx, keyRects(highlightedResourceTiles, W, H));
+    } else if (selectedResourceTile) {
+      brackets(ctx, [tileRect(selectedResourceTile.x, selectedResourceTile.y)]);
     }
 
     if (selDragActive) {
@@ -2235,11 +2266,6 @@
       const minY = Math.min(selAnchorY, selEndY);
       const maxX = Math.max(selAnchorX, selEndX);
       const maxY = Math.max(selAnchorY, selEndY);
-      const sx = (minX - viewX) * tileWidth;
-      const sy = (minY - viewY) * tileHeight;
-      const rw = (maxX - minX + 1) * tileWidth;
-      const rh = (maxY - minY + 1) * tileHeight;
-      ctx.save();
       if (dragMarkKind() === 'resource') {
         const types =
           selectedResourceTypes.size > 0
@@ -2247,38 +2273,17 @@
             : selectedResourceTile
               ? new Set([selectedResourceTile.resourceId])
               : new Set<string>();
-        const vx0 = Math.max(minX, viewX);
-        const vy0 = Math.max(minY, viewY);
-        const vx1 = Math.min(maxX, viewX + Math.ceil(W / tileWidth));
-        const vy1 = Math.min(maxY, viewY + Math.ceil(H / tileHeight));
-        for (let ry = vy0; ry <= vy1; ry++) {
-          for (let rx = vx0; rx <= vx1; rx++) {
-            if (isHiddenTile(rx, ry)) continue;
+        brackets(
+          ctx,
+          tilesInBox(minX, minY, maxX, maxY, W, H, (rx, ry) => {
+            if (isHiddenTile(rx, ry)) return false;
             const res = worldMap[ry]?.[rx]?.resources;
-            let match = false;
-            if (res)
-              for (const t of types)
-                if ((res[t] ?? 0) > 0) {
-                  match = true;
-                  break;
-                }
-            ctx.fillStyle = match ? 'rgba(240, 208, 32, 0.42)' : 'rgba(240, 208, 32, 0.10)';
-            ctx.fillRect(
-              (rx - viewX) * tileWidth,
-              (ry - viewY) * tileHeight,
-              tileWidth,
-              tileHeight
-            );
-          }
-        }
-      } else {
-        ctx.fillStyle = 'rgba(255, 200, 90, 0.18)';
-        ctx.fillRect(sx, sy, rw, rh);
+            if (res) for (const t of types) if ((res[t] ?? 0) > 0) return true;
+            return false;
+          })
+        );
       }
-      ctx.strokeStyle = 'rgba(255, 220, 120, 0.95)';
-      ctx.lineWidth = 1;
-      ctx.strokeRect(sx + 0.5, sy + 0.5, rw - 1, rh - 1);
-      ctx.restore();
+      dragBox(ctx, tileBoxRect(minX, minY, maxX, maxY));
     }
 
     if (markDragActive) {
@@ -2286,17 +2291,7 @@
       const minY = Math.min(markAnchorY, markEndY);
       const maxX = Math.max(markAnchorX, markEndX);
       const maxY = Math.max(markAnchorY, markEndY);
-      const sx = (minX - viewX) * tileWidth;
-      const sy = (minY - viewY) * tileHeight;
-      const rw = (maxX - minX + 1) * tileWidth;
-      const rh = (maxY - minY + 1) * tileHeight;
-      ctx.save();
-      ctx.fillStyle = 'rgba(255, 200, 90, 0.22)';
-      ctx.fillRect(sx, sy, rw, rh);
-      ctx.strokeStyle = 'rgba(255, 210, 110, 0.95)';
-      ctx.lineWidth = 1;
-      ctx.strokeRect(sx + 0.5, sy + 0.5, rw - 1, rh - 1);
-      ctx.restore();
+      dragBox(ctx, tileBoxRect(minX, minY, maxX, maxY));
     }
 
     if (moveAimActive) {
