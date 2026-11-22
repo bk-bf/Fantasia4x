@@ -14,6 +14,10 @@ uniform vec4 u_patch[64];
 uniform vec2 u_layer[64];
 uniform vec3 u_ambient;
 uniform float u_lightFlicker;
+uniform highp sampler2D u_lightTexture;
+uniform float u_fieldLit;
+uniform float u_saturation;
+uniform float u_brightness;
 
 out vec4 fragColor;
 
@@ -79,6 +83,9 @@ void main() {
 
     vec2 corner = v_art / u_tileArt;
     vec3 point = texture(u_light, (corner + 0.5) / vec2(u_mapSize + 1)).rgb;
-    vec3 light = min(u_ambient + point * u_lightFlicker, vec3(1.6));
-    fragColor = vec4(c * light, 1.0);
+    vec3 light = u_fieldLit > 0.5
+        ? texelFetch(u_lightTexture, ivec2(gl_FragCoord.xy), 0).rgb * 2.0
+        : min(u_ambient + point * u_lightFlicker, vec3(1.6));
+    vec3 lit = c * light;
+    fragColor = vec4(mix(vec3(dot(lit, vec3(0.2126, 0.7152, 0.0722))), lit, u_saturation) * u_brightness, 1.0);
 }

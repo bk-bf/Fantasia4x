@@ -29,8 +29,9 @@ const TILE = 32;
 const PATCH = 4;
 const SIDE = TILE * PATCH;
 const ATLAS_W = 2048;
-const SHADOW = [0, 0, 0, 112];
 const TOP_IMAGE = 'rock-top.png';
+export const LIGHT_IMAGE = 'atlas-light.png';
+const SHADED = 255;
 const VEIN_IMAGE = 'rock-veins.png';
 
 export const art = (period = 0) =>
@@ -52,7 +53,10 @@ const sprite = (
   px = new Uint8ClampedArray(0),
   patch = 0,
   cw = 0,
-  ch = 0
+  ch = 0,
+  light = new Uint8ClampedArray(0),
+  cast = 0,
+  emit = [{ x: 0, y: 0, rad: 0, col: [0, 0, 0], flicker: false, night: false }, null][1]
 ) => ({
   w,
   h,
@@ -61,8 +65,17 @@ const sprite = (
   px,
   patch,
   cw,
-  ch
+  ch,
+  light,
+  cast,
+  emit
 });
+
+const lightOf = (w = 0, h = 0, glow = new Uint8Array(0)) => {
+  const light = new Uint8ClampedArray(w * h * 4);
+  for (let i = 0; i < w * h; i++) light[i * 4] = glow[i] ?? 0;
+  return light;
+};
 
 export const pieceId = (set = '', layout = 0) => `${set}/mass/${layout}`;
 
@@ -95,7 +108,9 @@ function pieceSprites(
         ROCK.piece(layout),
         PATCH,
         CELL_W,
-        CELL_H
+        CELL_H,
+        undefined,
+        LIFT
       )
     );
   return Object.fromEntries(
@@ -116,7 +131,7 @@ function pieceSprites(
 
 function patch(colour = A.rockTop, decals = A.GROUND[0].dec.slice(0, 0)) {
   const px = new Uint8ClampedArray(SIDE * SIDE * 4);
-  const put = (x = 0, y = 0, c = SHADOW) => {
+  const put = (x = 0, y = 0, c = [0, 0, 0]) => {
     if (!c) return;
     const i = (A.wrap(Math.round(y), SIDE) * SIDE + A.wrap(Math.round(x), SIDE)) * 4;
     px[i] = c[0];
@@ -146,9 +161,9 @@ function object(s = A.mkPawn({}), footX = 0, footY = 0) {
   for (let j = 0; j < s.h; j++)
     for (let i = 0; i < s.w; i++) {
       const c = s.c[j * s.w + i];
-      if (c) pts.push({ x: footX - s.ax + i, y: footY - s.ay + j, c });
+      if (c) pts.push({ x: footX - s.ax + i, y: footY - s.ay + j, c, e: s.e?.[j * s.w + i] ?? 0 });
     }
-  const own = new Set(pts.map((p) => `${p.x},${p.y}`));
+  const shade = [];
   const sh = s.sh;
   if (sh) {
     const cx = footX + sh.dx,
@@ -158,28 +173,55 @@ function object(s = A.mkPawn({}), footX = 0, footY = 0) {
         const nx = (x - cx) / sh.rx,
           ny = (y - cy) / sh.ry,
           q = nx * nx + ny * ny;
-        if (q >= 1 || own.has(`${x},${y}`)) continue;
+        if (q >= 1) continue;
         const v = (sh.k || 1) * A.clamp((1 - q) * 3.2, 0, 1);
-        if (v > A.dith(A.wrap(x, 4), A.wrap(y, 4)) * 0.7 + 0.15) pts.push({ x, y, c: SHADOW });
+        if (v > A.dith(A.wrap(x, 4), A.wrap(y, 4)) * 0.7 + 0.15) shade.push({ x, y });
       }
   }
   if (!pts.length) throw new Error('empty sprite');
-  const x0 = Math.min(...pts.map((p) => p.x)),
-    y0 = Math.min(...pts.map((p) => p.y));
-  const w = Math.max(...pts.map((p) => p.x)) - x0 + 1,
-    h = Math.max(...pts.map((p) => p.y)) - y0 + 1;
+  const all = [...pts, ...shade];
+  const x0 = Math.min(...all.map((p) => p.x)),
+    y0 = Math.min(...all.map((p) => p.y));
+  const w = Math.max(...all.map((p) => p.x)) - x0 + 1,
+    h = Math.max(...all.map((p) => p.y)) - y0 + 1;
   const px = new Uint8ClampedArray(w * h * 4);
-  for (const { x, y, c } of pts) {
+  const light = new Uint8ClampedArray(w * h * 4);
+  for (const { x, y, c, e } of pts) {
     const i = ((y - y0) * w + (x - x0)) * 4;
     px[i] = c[0];
     px[i + 1] = c[1];
     px[i + 2] = c[2];
-    px[i + 3] = c === SHADOW ? SHADOW[3] : 255;
+    px[i + 3] = 255;
+    light[i] = e;
   }
-  return sprite(w, h, x0, y0, px);
+  for (const { x, y } of shade) light[((y - y0) * w + (x - x0)) * 4 + 1] = SHADED;
+  const e = s.emit;
+  const emit = e
+    ? {
+        x: footX + e.dx,
+        y: footY + e.dy,
+        rad: e.rad,
+        col: e.col,
+        flicker: !!e.flicker,
+        night: !!e.night
+      }
+    : null;
+  return sprite(w, h, x0, y0, px, 0, 0, 0, light, 0, emit);
 }
 
+const compactEmit = ({ flicker = false, night = false, ...at }) => ({
+  ...at,
+  ...(flicker ? { flicker } : {}),
+  ...(night ? { night } : {})
+});
+
 function sprites() {
+  const DBX = loadRegistry();
+  const casts = new Map(
+    DBX.walls
+      .filter((w = DBX.walls[1]) => w && !w.rock)
+      .map((w = DBX.walls[1]) => [`wall/${w.id}`, w.h])
+  );
   const out = new Map(Object.entries({ '': sprite() }).slice(1));
   const roles = new Map(Object.entries({ '': '' }).slice(1));
   const add = (id = '', spr = sprite()) => {
@@ -187,7 +229,8 @@ function sprites() {
     out.set(id, spr);
   };
   for (const g of A.GROUND) add(`ground/${g.id}`, patch(g.f, g.dec ?? []));
-  for (const [id, f] of Object.entries(A.TILES)) add(id, patch(f, []));
+  for (const [id, f] of Object.entries(A.TILES))
+    add(id, { ...patch(f, []), cast: casts.get(id) ?? 0 });
   for (const [id, ramp] of Object.entries(A.ORE))
     add(
       `ore/${id}`,
@@ -217,7 +260,7 @@ function sprites() {
   for (const k of [...Object.keys(A.BEASTS), ...Object.keys(A.OTHER)])
     add(`creature/${k}`, object(A.mkBeast(k), 16, 27));
   const pieces = pieceSprites(add);
-  const extra = registrySprites(add, out, roles);
+  const extra = registrySprites(add, out, roles, DBX);
   return { all: out, roles, extra, pieces };
 }
 
@@ -226,9 +269,9 @@ function registrySprites(
     void [id, spr];
   },
   ours = new Map(Object.entries({ '': sprite() })),
-  roles = new Map(Object.entries({ '': '' }))
+  roles = new Map(Object.entries({ '': '' })),
+  DBX = loadRegistry()
 ) {
-  const DBX = loadRegistry();
   const expand = expander(ours, roles);
   const byId = new Map();
   const skipped = new Set(
@@ -287,11 +330,11 @@ function registrySprite(DBX = loadRegistry(), e = loadRegistry().list[0]) {
     if (e.variant !== '0') return null;
     const world = DBX.flat(PATCH + 2, PATCH + 2, 'dirt');
     world.floor.fill(DBX.built(e).world.floor[0]);
-    const px = DBX.crop({ world, rect: [TILE, TILE, SIDE, SIDE] }).rgba;
-    return sprite(SIDE, SIDE, 0, 0, px, PATCH);
+    const px = DBX.crop({ world, rect: [TILE, TILE, SIDE, SIDE] });
+    return sprite(SIDE, SIDE, 0, 0, px.rgba, PATCH, 0, 0, lightOf(SIDE, SIDE, px.emissive));
   }
   const b = DBX.bake(e);
-  return sprite(b.w, b.h, b.ox, b.oy, b.rgba);
+  return sprite(b.w, b.h, b.ox, b.oy, b.rgba, 0, 0, 0, lightOf(b.w, b.h, b.emissive));
 }
 
 function pack(list = Object.entries({ '': sprite() })) {
@@ -363,9 +406,14 @@ export function bake() {
   );
   const { placed, h } = pack(order);
   const atlas = new Uint8Array(ATLAS_W * h * 4);
+  const light = new Uint8Array(ATLAS_W * h * 4);
   for (const { s, x, y } of placed)
-    for (let j = 0; j < s.h; j++)
+    for (let j = 0; j < s.h; j++) {
       atlas.set(s.px.subarray(j * s.w * 4, (j + 1) * s.w * 4), ((y + j) * ATLAS_W + x) * 4);
+      if (s.light.length)
+        light.set(s.light.subarray(j * s.w * 4, (j + 1) * s.w * 4), ((y + j) * ATLAS_W + x) * 4);
+    }
+  for (let i = 3; i < light.length; i += 4) light[i] = 255;
   const rects = placed
     .sort((a, b) => (a.id < b.id ? -1 : 1))
     .map(({ id, s, x, y }) => [
@@ -378,7 +426,9 @@ export function bake() {
         ox: s.ox,
         oy: s.oy,
         ...(s.patch ? { patch: s.patch } : {}),
-        ...(s.cw ? { cw: s.cw, ch: s.ch } : {})
+        ...(s.cw ? { cw: s.cw, ch: s.ch } : {}),
+        ...(s.cast ? { cast: s.cast } : {}),
+        ...(s.emit ? { emit: compactEmit(s.emit) } : {})
       }
     ]);
   const manifest = {
@@ -391,6 +441,7 @@ export function bake() {
   const wide = art(TOP_SIZE);
   return {
     png: encodePng(ATLAS_W, h, atlas),
+    light: encodePng(ATLAS_W, h, light),
     manifest,
     top: encodePng(TOP_SIZE, TOP_SIZE, rockTop(wide)),
     veins: encodePng(TOP_SIZE, TOP_SIZE, rockVeins(wide))
@@ -398,9 +449,10 @@ export function bake() {
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  const { png, manifest, top, veins } = bake();
+  const { png, light, manifest, top, veins } = bake();
   mkdirSync(OUT, { recursive: true });
   writeFileSync(join(OUT, 'atlas.png'), png);
+  writeFileSync(join(OUT, LIGHT_IMAGE), light);
   writeFileSync(join(OUT, TOP_IMAGE), top);
   writeFileSync(join(OUT, VEIN_IMAGE), veins);
   writeFileSync(join(OUT, 'manifest.json'), JSON.stringify(manifest, null, 2) + '\n');

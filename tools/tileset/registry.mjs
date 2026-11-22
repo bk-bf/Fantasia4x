@@ -29,7 +29,7 @@ export function loadRegistry() {
   const src = REGISTRY_ART.map((f) =>
     readFileSync(join(ART, f), 'utf8').replace(/^'use strict';\n/, '')
   ).join('\n;');
-  const DBX = new Function(`'use strict';\n${src}\nreturn DBX;`)();
+  const DBX = new Function(`'use strict';\n${src}\nreturn Object.assign(DBX, { walls: WALLS });`)();
   DBX.fromData(itemObjects());
   return DBX;
 }

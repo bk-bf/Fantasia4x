@@ -19,6 +19,17 @@ export interface ManifestSprite {
   patch?: number;
   cw?: number;
   ch?: number;
+  cast?: number;
+  emit?: SpriteLight;
+}
+
+export interface SpriteLight {
+  x: number;
+  y: number;
+  rad: number;
+  col: [number, number, number];
+  flicker?: boolean;
+  night?: boolean;
 }
 
 export interface ManifestPieceTop {
@@ -54,6 +65,8 @@ export interface PaintedSprite {
   oy: number;
   w: number;
   h: number;
+  cast?: number;
+  emit?: SpriteLight;
   vein?: PaintedVein;
 }
 
@@ -103,7 +116,7 @@ const isInt = (v: unknown): v is number => typeof v === 'number' && Number.isInt
 
 function readSprite(id: string, raw: unknown, m: { tile: number; w: number; h: number }) {
   if (!isObject(raw)) throw new Error(`sprite ${id} is not an object`);
-  const { x, y, w, h, ox, oy, patch, cw, ch } = raw;
+  const { x, y, w, h, ox, oy, patch, cw, ch, cast, emit } = raw;
   if (![x, y, w, h, ox, oy].every(isInt)) throw new Error(`sprite ${id} has a non-integer field`);
   const s = { x, y, w, h, ox, oy } as ManifestSprite;
   if (s.w <= 0 || s.h <= 0) throw new Error(`sprite ${id} is empty`);
@@ -119,7 +132,31 @@ function readSprite(id: string, raw: unknown, m: { tile: number; w: number; h: n
     s.patch = patch;
     if (cw !== undefined || ch !== undefined) Object.assign(s, { cw: cell.w, ch: cell.h });
   }
+  if (cast !== undefined) {
+    if (!isInt(cast) || cast <= 0) throw new Error(`sprite ${id} has a bad cast height`);
+    s.cast = cast;
+  }
+  if (emit !== undefined) s.emit = readEmit(id, emit);
   return s;
+}
+
+const isNumber = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
+
+function readEmit(id: string, raw: unknown): SpriteLight {
+  if (!isObject(raw)) throw new Error(`sprite ${id} has a bad light`);
+  const { x, y, rad, col, flicker, night } = raw;
+  if (![x, y, rad].every(isNumber) || (rad as number) <= 0)
+    throw new Error(`sprite ${id} light has no place or reach`);
+  if (!Array.isArray(col) || col.length !== 3 || !col.every(isNumber))
+    throw new Error(`sprite ${id} light has no colour`);
+  return {
+    x: x as number,
+    y: y as number,
+    rad: rad as number,
+    col: col as [number, number, number],
+    ...(flicker === true ? { flicker: true } : null),
+    ...(night === true ? { night: true } : null)
+  };
 }
 
 const isStrings = (v: unknown): v is string[] =>
@@ -205,7 +242,9 @@ function cellOf(
     ox: s.ox / t,
     oy: s.oy / t,
     w: size.w / t,
-    h: size.h / t
+    h: size.h / t,
+    ...(s.cast ? { cast: s.cast } : null),
+    ...(s.emit ? { emit: s.emit } : null)
   };
 }
 

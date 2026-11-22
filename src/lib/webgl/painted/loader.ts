@@ -10,6 +10,7 @@ import {
 import { setPaintedTileset } from './tileset.js';
 
 export const PAINTED_BASE_URL = '/tilesets/painted/';
+const LIGHT_IMAGE = 'atlas-light.png';
 
 export interface LoadedPieceTop {
   texture: WebGLTexture;
@@ -21,6 +22,7 @@ export interface LoadedPieceTop {
 export interface LoadedPaintedTileset {
   tileset: PaintedTileset;
   texture: WebGLTexture;
+  light: WebGLTexture;
   top: LoadedPieceTop | null;
 }
 
@@ -58,10 +60,32 @@ function uploadAtlas(gl: WebGL2RenderingContext, image: HTMLImageElement): WebGL
   return texture;
 }
 
+function unlitTexture(gl: WebGL2RenderingContext): WebGLTexture {
+  const texture = gl.createTexture();
+  if (!texture) throw new Error('could not create the painted light texture');
+  gl.bindTexture(gl.TEXTURE_2D, texture);
+  gl.texImage2D(
+    gl.TEXTURE_2D,
+    0,
+    gl.RGBA,
+    1,
+    1,
+    0,
+    gl.RGBA,
+    gl.UNSIGNED_BYTE,
+    new Uint8Array([0, 0, 0, 255])
+  );
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+  gl.bindTexture(gl.TEXTURE_2D, null);
+  return texture;
+}
+
 interface PaintedSource {
   manifest: PaintedManifest;
   tileset: PaintedTileset;
   image: HTMLImageElement;
+  light: HTMLImageElement | null;
   top: { image: HTMLImageElement; veins: HTMLImageElement; piece: PaintedPieceTop } | null;
 }
 
@@ -86,6 +110,18 @@ async function readTop(baseUrl: string, piece: PaintedPieceTop | null) {
   }
 }
 
+async function readLight(baseUrl: string, manifest: PaintedManifest) {
+  try {
+    const image = await loadImage(`${baseUrl}${LIGHT_IMAGE}`);
+    if (image.naturalWidth !== manifest.atlas.w || image.naturalHeight !== manifest.atlas.h)
+      throw new Error(`${LIGHT_IMAGE} is not the size of the atlas`);
+    return image;
+  } catch (err) {
+    console.warn('[painted tiles] glow and shadows off:', err);
+    return null;
+  }
+}
+
 let source: Promise<PaintedSource | null> | null = null;
 
 async function readSource(baseUrl: string): Promise<PaintedSource | null> {
@@ -101,9 +137,12 @@ async function readSource(baseUrl: string): Promise<PaintedSource | null> {
       );
     const { tileset, problems } = buildTileset(manifest);
     if (problems.length > 0) console.warn(`[painted tiles] ${problems.join('; ')}`);
-    const top = await readTop(baseUrl, pieceTop(tileset));
+    const [top, light] = await Promise.all([
+      readTop(baseUrl, pieceTop(tileset)),
+      readLight(baseUrl, manifest)
+    ]);
     if (!top) for (const [set, p] of tileset.pieces) if (p.top) tileset.pieces.delete(set);
-    return { manifest, tileset, image, top };
+    return { manifest, tileset, image, light, top };
   } catch (err) {
     console.warn('[painted tiles] off, drawing the glyph tiles instead:', err);
     return null;
@@ -128,8 +167,9 @@ export async function loadPaintedTileset(
           ramp: loaded.top.piece.ramp
         }
       : null;
+    const light = loaded.light ? uploadAtlas(gl, loaded.light) : unlitTexture(gl);
     setPaintedTileset(loaded.tileset);
-    return { tileset: loaded.tileset, texture, top };
+    return { tileset: loaded.tileset, texture, light, top };
   } catch (err) {
     console.warn('[painted tiles] off, drawing the glyph tiles instead:', err);
     return null;
