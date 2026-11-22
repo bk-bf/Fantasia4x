@@ -2,7 +2,6 @@ import { uiState } from '$lib/stores/uiState.js';
 import { gameState } from '$lib/stores/gameState.js';
 import { resourceObjectService } from '$lib/game/services/ResourceObjectService.js';
 import { type CreatureDefinition, getCreatureById } from '$lib/game/core/defs/creatures.js';
-import { RELAXATION_NOTEWORTHY, WETNESS_NOTEWORTHY } from '$lib/components/util/pawnUtils';
 import type { Pawn, Mob, Injury, LimbState, LimbId } from '$lib/game/core/types.js';
 import { CORE_STATS } from '$lib/game/core/types.js';
 import { limbLabel, partLabel } from '$lib/components/util/bodyLabels';
