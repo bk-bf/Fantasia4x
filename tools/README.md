@@ -35,6 +35,7 @@ to ubuntuserver through `remote/run.mjs`.
 | `tileset/` | Bakes the painted map art in `tileset/art/` into `static/tilesets/painted/atlas.png` and its `manifest.json`, which maps database ids to sprites. | `pnpm tileset:bake` |
 | `tileset/sync.mjs` | Copies the drawing code the bake loads from a mockup folder into `tileset/art/`, without comments; `sources.mjs` lists those files and the hand-ported ones it leaves alone. | `pnpm tileset:sync <folder>` |
 | `tileset/colony.mjs` | Paints the main menu's colony scene from `colony.js` and `scene.js` in `tileset/art/` into `static/tilesets/painted/colony/`: a still and an animated png for each season and time of day. | `pnpm tileset:colony` |
+| `tileset/weather.mjs` | Paints the rain, fog and snow sheets the weather layer tiles over the map and the main menu, from `src/lib/components/UI/weather/weatherSheets.json`, into `static/tilesets/painted/weather/`. | `pnpm tileset:weather` |
 | `profile-self.mjs`, `profile-window.mjs` | Read the newest Firefox Profiler recording in `.debug/` and report the simulation's functions in it. | `node tools/profile-self.mjs` |
 | `threat-model.mjs` | Rates creature threat from the creature, item and loot data. | `pnpm threat`, `pnpm threat:check` |
 

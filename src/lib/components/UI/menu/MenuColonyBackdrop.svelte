@@ -2,13 +2,11 @@
   import { onMount } from 'svelte';
   import type { Attachment } from 'svelte/attachments';
   import { menuPreviewRendered } from '$lib/stores/gameState';
-  import WeatherCanvas from '$lib/components/UI/canvas/WeatherCanvas.svelte';
+  import WeatherLayer from '$lib/components/UI/weather/WeatherLayer.svelte';
   import { weatherEffects } from '$lib/stores/uiPrefs';
-  import { cameraTileSize } from '$lib/stores/cameraView';
   import type { ColonyAmbient } from './mainMenuAmbient';
   import {
     COLONY_H,
-    COLONY_TILE,
     COLONY_W,
     DRIFT_SECONDS,
     colonyDrift,
@@ -34,8 +32,6 @@
   const span = $derived(Math.round(drift.from.left - drift.to.left));
   const rest = $derived(Math.round(drift.rest.left - drift.from.left));
   const layers = $derived(colonyLayers(colony));
-
-  $effect(() => cameraTileSize.set(COLONY_TILE * k));
 
   onMount(() => {
     still = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
@@ -86,7 +82,7 @@
     {/each}
   </div>
   {#if $weatherEffects}
-    <WeatherCanvas />
+    <WeatherLayer scale={k} />
   {/if}
 </div>
 

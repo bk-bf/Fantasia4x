@@ -4,7 +4,6 @@ import type { ColonyAmbient, ColonySeason } from './mainMenuAmbient';
 
 export const COLONY_W = 1920;
 export const COLONY_H = 1088;
-export const COLONY_TILE = 32;
 const FOCUS_X = 912;
 const FOCUS_Y = 526;
 const DRIFT = 64;
