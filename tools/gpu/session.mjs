@@ -70,11 +70,12 @@ export async function openGpuGame({ tree, label, outDir, usage, init = [] }) {
   mkdirSync(outDir, { recursive: true });
   const log = (l) => process.stdout.write(`[${label}] ${l}\n`);
   const comp = await startCompositor(log);
-  const { chromium } = await import(tree + '/node_modules/playwright/index.mjs');
+  const harness = process.env.F4X_HARNESS ?? tree;
+  const { chromium } = await import(harness + '/node_modules/playwright/index.mjs');
   patchChromium(chromium, { chrome, socket: comp.socket, cleanEnv: comp.cleanEnv, query: process.env.F4X_QUERY ?? '' });
-  const { openGame } = await import(tree + '/tools/work-pins/browser-session.mjs');
+  const { openGame } = await import(harness + '/tools/work-pins/browser-session.mjs');
   const game = await openGame({
-    tree, fixture: tree + '/tools/work-pins/fixtures/dev-save.json.gz',
+    tree, fixture: process.env.F4X_FIXTURE ?? tree + '/tools/work-pins/fixtures/dev-save.json.gz',
     serverLog: join(outDir, `${label}-server.log`), log, clock: false, workPins: false, init
   });
   const { page } = game;

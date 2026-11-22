@@ -20,6 +20,9 @@ Tell the owner before starting if the desktop is off; he turns it on.
   TPS counted from the worker's turn. Same arguments as `zoom-out.mjs`, with seconds per cell last.
   The desktop holds 60 FPS at its vsync cap, so it shows a cost only when it breaks that cap.
 - Both share `tools/gpu/session.mjs`, which starts the nested compositor and the browser.
+  `F4X_FIXTURE=<save.json.gz>` loads another save than the CI fixture, such as one copied out of
+  the owner's game, and `F4X_HARNESS=<tree>` borrows the harness and Playwright of another tree for
+  a build too old to have them, such as `main`.
 - `tools/gpu/stall.mjs <file.cpuprofile>...` prints the longest busy stretch of a profile with
   its self and inclusive time per function.
 - The steady-state shell bench (frame times per zoom level at 1x, 4x and paused pan, Electron
