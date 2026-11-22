@@ -23,7 +23,7 @@ export interface WindowSpec {
 }
 
 export const WINDOWS: Record<WindowId, WindowSpec> = {
-  pawns: { title: 'Pawns', component: PawnScreen, width: 'big' },
+  pawns: { title: 'Pawns', component: PawnScreen, width: 'big', fit: true },
   work: { title: 'Work', component: WorkScreen, width: 'big' },
   building: { title: 'Construction', component: BuildingMenu, width: 'big' },
   crafting: { title: 'Crafting', component: CraftingScreen, width: 'big' },

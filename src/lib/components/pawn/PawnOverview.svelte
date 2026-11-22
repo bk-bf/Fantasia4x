@@ -1,16 +1,7 @@
 <script lang="ts">
   import type { Pawn } from '$lib/game/core/types';
   import type { GameState } from '$lib/game/core/types';
-  import {
-    getMoodColor,
-    getMoodDescription,
-    getHealthColor,
-    getHealthDescription,
-    getPawnTaskSummary,
-    pawnCultureLabel
-  } from '$lib/components/util/pawnUtils';
-  import { pawnService } from '$lib/game/services/PawnService';
-  import { effectiveMood } from '$lib/game/core/rules/social/social';
+  import { getPawnTaskSummary, pawnCultureLabel } from '$lib/components/util/pawnUtils';
   import { sizeFromHeight } from '$lib/game/core/gen/culture';
   import {
     getBackgroundById,
@@ -43,7 +34,6 @@
       : '';
 
   $: taskSummary = getPawnTaskSummary(pawn, gameState);
-  $: moveSpeed = pawnService.getMoveSpeed(pawn);
   $: culture = gameState.culturePool?.find((r) => r.id === pawn.cultureId);
   $: cultureLabel = pawnCultureLabel(pawn, gameState.culturePool);
   $: homeKingdom = pawn.homeKingdomId
@@ -138,6 +128,12 @@
     </div>
   {/if}
   <div class="row">
+    <span class="lbl">Build</span><span class="val"
+      >{sizeFromHeight(pawn.physicalTraits.height)} · {pawn.physicalTraits.height} cm · {pawn
+        .physicalTraits.weight} kg</span
+    >
+  </div>
+  <div class="row">
     <span class="lbl">State</span>
     <span class="val" style="color: {stateColor(pawn.currentState)}"
       >{taskSummary.currentState}</span
@@ -148,41 +144,6 @@
   <PawnMedicinePolicy {pawn} />
   <PawnAdminister {pawn} />
   <PawnForceWork {pawn} />
-  <div class="row">
-    <span class="lbl">Work</span><span class="val">{taskSummary.workAssignment}</span>
-  </div>
-  <div class="row">
-    <span class="lbl">Task</span><span class="val">{taskSummary.currentTask}</span>
-  </div>
-  <div class="row">
-    <span class="lbl">Next</span><span class="val">{taskSummary.nextTask}</span>
-  </div>
-  <div class="row">
-    <span class="lbl">Speed</span>
-    <span class="val" title={moveSpeed.sources.join('  ')}
-      >{moveSpeed.tilesPerSecond.toFixed(1)} t/s</span
-    >
-  </div>
-  <div class="row">
-    <span class="lbl">Height</span><span class="val">{pawn.physicalTraits.height}cm</span>
-  </div>
-  <div class="row">
-    <span class="lbl">Weight</span><span class="val">{pawn.physicalTraits.weight}kg</span>
-  </div>
-  <div class="row">
-    <span class="lbl">Size</span><span class="val"
-      >{sizeFromHeight(pawn.physicalTraits.height)}</span
-    >
-  </div>
-
-  <div class="row">
-    <span class="lbl">Mood</span>
-    <span class="val" style="color: {getMoodColor(effectiveMood(pawn, gameState.turn))}"
-      >{Math.round(effectiveMood(pawn, gameState.turn))}% — {getMoodDescription(
-        effectiveMood(pawn, gameState.turn)
-      )}</span
-    >
-  </div>
   {#if pawn.socialBreak}
     <div class="row">
       <span class="lbl">State</span>
@@ -193,14 +154,6 @@
       >
     </div>
   {/if}
-  <div class="row">
-    <span class="lbl">Health</span>
-    <span class="val" style="color: {getHealthColor(pawn.state.health ?? 100)}"
-      >{Math.round(pawn.state.health ?? 100)}% — {getHealthDescription(
-        pawn.state.health ?? 100
-      )}</span
-    >
-  </div>
 </div>
 
 {#if bgTip}

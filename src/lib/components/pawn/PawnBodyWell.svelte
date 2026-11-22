@@ -8,7 +8,23 @@
 
   let { pawn }: { pawn: Pawn } = $props();
 
-  const health = $derived(buildHealthModel(pawn));
+  const BODY_PILLS = new Set([
+    'Blood',
+    'Pain',
+    'Cold',
+    'Heat',
+    'Cold tol',
+    'Heat tol',
+    'Load',
+    'Hit',
+    'Dodge',
+    'Aim',
+    'Reach'
+  ]);
+  const model = $derived(buildHealthModel(pawn));
+  const health = $derived(
+    model && { ...model, pills: (model.pills ?? []).filter((p) => BODY_PILLS.has(p.label)) }
+  );
 </script>
 
 <Well title="Body">

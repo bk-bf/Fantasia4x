@@ -20,6 +20,6 @@
     display: grid;
     grid-template-columns: 1.1fr 1fr 1fr;
     gap: 6px;
-    align-items: start;
+    align-items: stretch;
   }
 </style>
