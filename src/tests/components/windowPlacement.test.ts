@@ -3,6 +3,7 @@ import {
   centreWindow,
   dragTo,
   placeWindow,
+  resizeTo,
   type Area
 } from '$lib/components/UI/window/windowPlacement';
 
@@ -34,5 +35,11 @@ describe('window placement', () => {
   it('keeps a dragged window reachable', () => {
     expect(dragTo({ x: -900, y: -50 }, 400, area)).toEqual({ x: -360, y: 0 });
     expect(dragTo({ x: 5000, y: 5000 }, 400, area)).toEqual({ x: 1400, y: 872 });
+  });
+
+  it('resizes a window within the screen and above a floor', () => {
+    expect(resizeTo({ x: 200, y: 100 }, 500.4, 320.6, area)).toEqual({ w: 500, h: 321 });
+    expect(resizeTo({ x: 200, y: 100 }, 20, 10, area)).toEqual({ w: 260, h: 160 });
+    expect(resizeTo({ x: 200, y: 100 }, 5000, 5000, area)).toEqual({ w: 1234, h: 794 });
   });
 });

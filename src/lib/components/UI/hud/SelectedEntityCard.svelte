@@ -430,7 +430,7 @@
   }
   .flavor-tip {
     font-style: italic;
-    color: #c8b088;
+    color: var(--text-dim);
     line-height: 1.45;
   }
   .pawn-state {
