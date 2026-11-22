@@ -2609,5 +2609,278 @@
     "find": "if (!stage || prevStages?.get(c.id) === stage.label) continue;",
     "replace": "if (!stage) continue;",
     "tests": ["src/tests/game/core/conditionDrivers.test.ts"]
+  },
+  {
+    "id": "snow-melt-threshold-raised",
+    "file": "src/lib/game/services/EnvironmentService.ts",
+    "find": "} else if (temp >= 0 && prevSnow > 0) {",
+    "replace": "} else if (temp > 5 && prevSnow > 0) {",
+    "tests": ["src/tests/game/services/snowAndIce.test.ts"]
+  },
+  {
+    "id": "ice-never-walkable",
+    "file": "src/lib/game/services/EnvironmentService.ts",
+    "find": "if (nowWalk && !wasWalk) {",
+    "replace": "if (false) {",
+    "tests": ["src/tests/game/services/snowAndIce.test.ts"]
+  },
+  {
+    "id": "water-never-freezes",
+    "file": "src/lib/game/services/EnvironmentService.ts",
+    "find": "const canFreeze = tile.walkable || tile.type === 'water';",
+    "replace": "const canFreeze = tile.walkable;",
+    "tests": ["src/tests/game/services/snowAndIce.test.ts"]
+  },
+  {
+    "id": "snow-melt-ignores-hours",
+    "file": "src/lib/game/services/EnvironmentService.ts",
+    "find": "nextSnow = Math.max(0, prevSnow - SNOW_MELT_PER_HOUR * hours);",
+    "replace": "nextSnow = Math.max(0, prevSnow - SNOW_MELT_PER_HOUR);",
+    "tests": ["src/tests/game/services/snowAndIce.test.ts"]
+  },
+  {
+    "id": "ice-walkable-not-patched",
+    "file": "src/lib/game/services/EnvironmentService.ts",
+    "find": "            patchWalkable?.(tile.x, tile.y, true);\n",
+    "replace": "",
+    "tests": ["src/tests/game/services/snowAndIce.test.ts"]
+  },
+  {
+    "id": "occupancy-corpses-block",
+    "file": "src/lib/game/services/OccupancyService.ts",
+    "find": "      if (m.id === excludeId || m.state === 'Corpse') continue;\n      occupied.add",
+    "replace": "      if (m.id === excludeId) continue;\n      occupied.add",
+    "tests": ["src/tests/game/services/blockedTiles.test.ts"]
+  },
+  {
+    "id": "occupancy-blocked-tiles-keeps-excluded-pawn",
+    "file": "src/lib/game/services/OccupancyService.ts",
+    "find": "if (p.id === excludeId || !p.position || p.isAlive === false) continue;",
+    "replace": "if (!p.position || p.isAlive === false) continue;",
+    "tests": ["src/tests/game/services/blockedTiles.test.ts"]
+  },
+  {
+    "id": "occupancy-dead-pawns-block",
+    "file": "src/lib/game/services/OccupancyService.ts",
+    "find": "if (p.id === excludeId || !p.position || p.isAlive === false) continue;",
+    "replace": "if (p.id === excludeId || !p.position) continue;",
+    "tests": ["src/tests/game/services/blockedTiles.test.ts"]
+  },
+  {
+    "id": "occupancy-mobs-never-block",
+    "file": "src/lib/game/services/OccupancyService.ts",
+    "find": "if (m.x === x && m.y === y && m.state !== 'Corpse' && m.id !== excludeId) return true;",
+    "replace": "if (m.x === x && m.y === y && m.state !== 'Corpse' && m.id !== excludeId) return false;",
+    "tests": ["src/tests/game/services/blockedTiles.test.ts"]
+  },
+  {
+    "id": "occupancy-is-blocked-keeps-excluded-pawn",
+    "file": "src/lib/game/services/OccupancyService.ts",
+    "find": "if (pos && pos.x === x && pos.y === y && p.id !== excludeId) return true;",
+    "replace": "if (pos && pos.x === x && pos.y === y) return true;",
+    "tests": ["src/tests/game/services/blockedTiles.test.ts"]
+  },
+  {
+    "id": "occupancy-is-blocked-keeps-excluded-mob",
+    "file": "src/lib/game/services/OccupancyService.ts",
+    "find": "if (m.x === x && m.y === y && m.state !== 'Corpse' && m.id !== excludeId) return true;",
+    "replace": "if (m.x === x && m.y === y && m.state !== 'Corpse') return true;",
+    "tests": ["src/tests/game/services/blockedTiles.test.ts"]
+  },
+  {
+    "id": "occupancy-is-blocked-corpses-block",
+    "file": "src/lib/game/services/OccupancyService.ts",
+    "find": "if (m.x === x && m.y === y && m.state !== 'Corpse' && m.id !== excludeId) return true;",
+    "replace": "if (m.x === x && m.y === y && m.id !== excludeId) return true;",
+    "tests": ["src/tests/game/services/blockedTiles.test.ts"]
+  },
+  {
+    "id": "occupancy-standing-pawns-moving",
+    "file": "src/lib/game/services/OccupancyService.ts",
+    "find": "if (p.isAlive === false || !p.position || !p.isMoving || !p.path?.length) continue;",
+    "replace": "if (p.isAlive === false || !p.position || !p.path?.length) continue;",
+    "tests": ["src/tests/game/services/blockedTiles.test.ts"]
+  },
+  {
+    "id": "occupancy-shared-set-never-rebuilt",
+    "file": "src/lib/game/services/OccupancyService.ts",
+    "find": "if (this._sharedMobs === state.mobs && this._sharedPawns === state.pawns && this._sharedSet)",
+    "replace": "if (this._sharedSet)",
+    "tests": ["src/tests/game/services/blockedTiles.test.ts"]
+  },
+  {
+    "id": "movement-cover-cost-dropped",
+    "file": "src/lib/game/services/MovementSystem.ts",
+    "find": "const coverMul = 1 + ((tile?.snow ?? 0) + (tile?.ice ?? 0)) / 100;",
+    "replace": "const coverMul = 1;",
+    "tests": ["src/tests/game/services/moveCost.test.ts"]
+  },
+  {
+    "id": "movement-diagonal-cost-one",
+    "file": "src/lib/game/services/MovementSystem.ts",
+    "find": "? Math.SQRT2 : 1;",
+    "replace": "? 1 : 1;",
+    "tests": ["src/tests/game/services/moveCost.test.ts"]
+  },
+  {
+    "id": "movement-exact-budget-waits",
+    "file": "src/lib/game/services/MovementSystem.ts",
+    "find": "if (b >= costLeft) {",
+    "replace": "if (b > costLeft) {",
+    "tests": ["src/tests/game/services/moveCost.test.ts"]
+  },
+  {
+    "id": "movement-blocked-drop-early",
+    "file": "src/lib/game/services/MovementSystem.ts",
+    "find": "if (bt > MAX_BLOCKED_TICKS) return",
+    "replace": "if (bt >= MAX_BLOCKED_TICKS) return",
+    "tests": ["src/tests/game/services/moveCost.test.ts"]
+  },
+  {
+    "id": "mob-think-every-tick",
+    "file": "src/lib/game/services/entity/entityHelpers.ts",
+    "find": "  return turn % AI_THROTTLE_TICKS ===",
+    "replace": "  return true || turn % AI_THROTTLE_TICKS ===",
+    "tests": ["src/tests/game/services/entity/lodThrottle.test.ts"]
+  },
+  {
+    "id": "mob-think-off-phase",
+    "file": "src/lib/game/services/entity/entityHelpers.ts",
+    "find": "  return turn % AI_THROTTLE_TICKS ===",
+    "replace": "  return turn % AI_THROTTLE_TICKS !==",
+    "tests": ["src/tests/game/services/entity/lodThrottle.test.ts"]
+  },
+  {
+    "id": "mob-hunger-not-scaled-when-throttled",
+    "file": "src/lib/game/services/entity/entityLifecycle.ts",
+    "find": "const tickScale = inBubble || bleeding ? 1 : AI_THROTTLE_TICKS;",
+    "replace": "const tickScale = 1;",
+    "tests": ["src/tests/game/services/entity/lodThrottle.test.ts"]
+  },
+  {
+    "id": "mob-bleeding-throttled",
+    "file": "src/lib/game/services/entity/entityLifecycle.ts",
+    "find": "if (!inBubble && !isThinkTick(mob.id, turn) && !bleeding) continue;",
+    "replace": "if (!inBubble && !isThinkTick(mob.id, turn)) continue;",
+    "tests": ["src/tests/game/services/entity/lodThrottle.test.ts"]
+  },
+  {
+    "id": "mob-think-no-catch-up",
+    "file": "src/lib/game/services/entity/entityAI.ts",
+    "find": "      : Math.min(AI_THROTTLE_TICKS, Math.max(1, turn - (mob.lastThinkTick ?? turn - 1)));",
+    "replace": "      : 1;",
+    "tests": ["src/tests/game/services/entity/lodThrottle.test.ts"]
+  },
+  {
+    "id": "mob-throttled-wanderers-frozen",
+    "file": "src/lib/game/services/entity/entityAI.ts",
+    "find": "          : mob.state === 'Wander' || mob.state === 'Grazing'\n            ? wanderStep(mob, def, state)\n            : mob;",
+    "replace": "          : mob;",
+    "tests": ["src/tests/game/services/entity/lodThrottle.test.ts"]
+  },
+  {
+    "id": "mob-flee-toward-threat",
+    "file": "src/lib/game/services/entity/entityHelpers.ts",
+    "find": "    .sort((a, b) => b.score - a.score);",
+    "replace": "    .sort((a, b) => a.score - b.score);",
+    "tests": ["src/tests/game/services/entity/fleeToSafety.test.ts"]
+  },
+  {
+    "id": "mob-flee-dest-never-kept",
+    "file": "src/lib/game/services/entity/entityHelpers.ts",
+    "find": "const stillSafe = minThreatDist(dest.x, dest.y) > fleeDistance / 2;",
+    "replace": "const stillSafe = false;",
+    "tests": ["src/tests/game/services/entity/fleeToSafety.test.ts"]
+  },
+  {
+    "id": "hostile-no-low-health-flee",
+    "file": "src/lib/game/services/entity/entityAI.ts",
+    "find": "    mob.health <= mob.maxHealth * FLEE_HEALTH_FRACTION &&",
+    "replace": "    mob.health < 0 &&",
+    "tests": ["src/tests/game/services/entity/hostileRules.test.ts"]
+  },
+  {
+    "id": "hostile-leash-disabled",
+    "file": "src/lib/game/services/entity/entityAI.ts",
+    "find": "    chebyshev(mob.x, mob.y, mob.lairX ?? mob.x, mob.lairY ?? mob.y) > leashReach\n",
+    "replace": "    chebyshev(mob.x, mob.y, mob.lairX ?? mob.x, mob.lairY ?? mob.y) > leashReach + 100000\n",
+    "tests": ["src/tests/game/services/entity/hostileRules.test.ts"]
+  },
+  {
+    "id": "mob-pending-state-dropped",
+    "file": "src/lib/game/services/entity/entityAI.ts",
+    "find": "      next[i] = { ...next[i], ...updates };",
+    "replace": "      void updates;",
+    "tests": ["src/tests/game/services/entity/hostileRules.test.ts"]
+  },
+  {
+    "id": "hostile-pack-corpse-ignored",
+    "file": "src/lib/game/services/entity/entityAI.ts",
+    "find": "    if (packCorpse) {",
+    "replace": "    if (packCorpse && false) {",
+    "tests": ["src/tests/game/services/entity/hostileRules.test.ts"]
+  },
+  {
+    "id": "hostile-flee-never-exhausts",
+    "file": "src/lib/game/services/entity/entityAI.ts",
+    "find": "      if (drainedStamina <= 0) {\n        return { ...mob, state: 'Exhausted', stateSince: turn, stamina: 0, path: [] };",
+    "replace": "      if (drainedStamina <= -1e9) {\n        return { ...mob, state: 'Exhausted', stateSince: turn, stamina: 0, path: [] };",
+    "tests": ["src/tests/game/services/entity/hostileRules.test.ts"]
+  },
+  {
+    "id": "hunt-never-given-up",
+    "file": "src/lib/game/services/entity/entityAI.ts",
+    "find": "  if (turn - mob.stateSince > ticksFromSeconds(HUNT_GIVE_UP_SECONDS)) {\n    stepReason('hunt:giveup');",
+    "replace": "  if (false) {\n    stepReason('hunt:giveup');",
+    "tests": ["src/tests/game/services/entity/hostileRules.test.ts"]
+  },
+  {
+    "id": "hunt-prey-never-fights-back",
+    "file": "src/lib/game/services/entity/entityAI.ts",
+    "find": "    pendingMobState.set(prey.id, { state: 'Attacking', stateSince: turn, huntTargetId: mob.id });\n",
+    "replace": "",
+    "tests": ["src/tests/game/services/entity/hostileRules.test.ts"]
+  },
+  {
+    "id": "hostile-sleeper-ignores-starving",
+    "file": "src/lib/game/services/entity/entityAI.ts",
+    "find": "        mob.needs.fatigue <= sleepWakeThreshold(mob.needs.hunger) ||\n        mob.needs.hunger >= SLEEP_MAX_HUNGER\n      ) {\n        return { ...mob, state: 'Wander', stateSince: turn };",
+    "replace": "        mob.needs.fatigue <= sleepWakeThreshold(mob.needs.hunger)\n      ) {\n        return { ...mob, state: 'Wander', stateSince: turn };",
+    "tests": ["src/tests/game/services/entity/hostileRules.test.ts"]
+  },
+  {
+    "id": "animal-flee-cant-escape-ignored",
+    "file": "src/lib/game/services/entity/entityAI.ts",
+    "find": "      if (fleeThreats.length === 0 || cantEscape) {",
+    "replace": "      if (fleeThreats.length === 0) {",
+    "tests": ["src/tests/game/services/entity/hostileRules.test.ts"]
+  },
+  {
+    "id": "hunt-stripped-carcass-strict",
+    "file": "src/lib/game/services/entity/entityAI.ts",
+    "find": "const targetStripped = (target.intactness ?? 1.0) - CORPSE_PORTION <= 0;",
+    "replace": "const targetStripped = (target.intactness ?? 1.0) - CORPSE_PORTION < 0;",
+    "tests": ["src/tests/game/services/entity/hostileRules.test.ts"]
+  },
+  {
+    "id": "travel-arrive-distance-zero",
+    "file": "src/lib/game/services/entity/entityAI.ts",
+    "find": "  if (chebyshev(mob.x, mob.y, gx, gy) <= TRAVEL_ARRIVE_DIST) {",
+    "replace": "  if (chebyshev(mob.x, mob.y, gx, gy) <= 0) {",
+    "tests": ["src/tests/game/services/entity/hostileRules.test.ts"]
+  },
+  {
+    "id": "spatial-core-diagonal-needs-both-corners-open",
+    "file": "spatial-core/src/lib.rs",
+    "find": "if walkable[ortho1] == 0 && walkable[ortho2] == 0 {",
+    "replace": "if walkable[ortho1] == 0 || walkable[ortho2] == 0 {",
+    "tests": ["spatial-core/src/lib.rs"]
+  },
+  {
+    "id": "spatial-core-diagonal-step-costs-one",
+    "file": "spatial-core/src/lib.rs",
+    "find": "{ std::f32::consts::SQRT_2 }",
+    "replace": "{ 1.0f32 }",
+    "tests": ["spatial-core/src/lib.rs"]
   }
 ]

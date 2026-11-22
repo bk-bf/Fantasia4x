@@ -369,3 +369,68 @@ fn reconstruct(parent: &[u32], start: usize, end: usize, w: usize) -> Vec<u32> {
     }
     path
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn open(w: usize, h: usize) -> (Vec<u8>, Vec<f32>) {
+        (vec![1u8; w * h], vec![1.0f32; w * h])
+    }
+
+    fn nodes(flat: Vec<u32>) -> Vec<(u32, u32)> {
+        flat.chunks(2).map(|c| (c[0], c[1])).collect()
+    }
+
+    #[test]
+    fn open_grid_goes_straight_down_the_diagonal() {
+        let (walk, costs) = open(5, 5);
+        let path = nodes(find_path(&walk, &costs, 5, 5, 0, 0, 4, 4, 0));
+        assert_eq!(path, vec![(1, 1), (2, 2), (3, 3), (4, 4)]);
+    }
+
+    #[test]
+    fn a_diagonal_step_costs_more_than_a_straight_one() {
+        let (walk, mut costs) = open(5, 3);
+        for x in 1..5 {
+            costs[x] = 1.2;
+        }
+        let path = nodes(find_path(&walk, &costs, 5, 3, 0, 0, 4, 0, 0));
+        assert_eq!(path, vec![(1, 0), (2, 0), (3, 0), (4, 0)]);
+    }
+
+    #[test]
+    fn a_diagonal_may_pass_one_blocked_corner() {
+        let (mut walk, costs) = open(3, 3);
+        walk[1] = 0;
+        let path = nodes(find_path(&walk, &costs, 3, 3, 0, 0, 1, 1, 0));
+        assert_eq!(path, vec![(1, 1)]);
+    }
+
+    #[test]
+    fn a_diagonal_never_squeezes_between_two_blocked_corners() {
+        let (mut walk, costs) = open(3, 3);
+        walk[1] = 0;
+        walk[3] = 0;
+        assert!(find_path(&walk, &costs, 3, 3, 0, 0, 1, 1, 0).is_empty());
+    }
+
+    #[test]
+    fn an_unwalkable_end_has_no_path() {
+        let (mut walk, costs) = open(5, 5);
+        walk[4 * 5 + 4] = 0;
+        assert!(find_path(&walk, &costs, 5, 5, 0, 0, 4, 4, 0).is_empty());
+    }
+
+    #[test]
+    fn a_cheaper_route_found_later_replaces_a_dearer_one() {
+        let (walk, mut costs) = open(5, 3);
+        for x in 1..4 {
+            costs[5 + x] = 9.0;
+        }
+        let path = nodes(find_path(&walk, &costs, 5, 3, 0, 1, 4, 1, 0));
+        assert_eq!(path.len(), 4);
+        assert!(path[..3].iter().all(|&(_, y)| y != 1));
+        assert_eq!(path[3], (4, 1));
+    }
+}
