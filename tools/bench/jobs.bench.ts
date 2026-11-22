@@ -1,12 +1,12 @@
 import { bench, describe } from 'vitest';
-import type { CraftingInProgress, DroppedItem, GameState } from '$lib/game/core/types';
-import { rng } from '$lib/game/core/util/rng';
-import * as haul from '$lib/game/services/jobs/haul';
-import * as harvest from '$lib/game/services/jobs/harvest';
-import * as plant from '$lib/game/services/jobs/plant';
-import { reservePendingOrders } from '$lib/game/services/jobs/craft';
-import { jobService } from '$lib/game/services/JobService';
-import { designationService } from '$lib/game/services/DesignationService';
+import type { CraftingInProgress, DroppedItem, GameState } from '../../src/lib/game/core/types';
+import { rng } from '../../src/lib/game/core/util/rng';
+import * as haul from '../../src/lib/game/services/jobs/haul';
+import * as harvest from '../../src/lib/game/services/jobs/harvest';
+import * as plant from '../../src/lib/game/services/jobs/plant';
+import { reservePendingOrders } from '../../src/lib/game/services/jobs/craft';
+import { jobService } from '../../src/lib/game/services/JobService';
+import { designationService } from '../../src/lib/game/services/DesignationService';
 import { colony, mobs } from '../work-pins/scenarios';
 import { ROLLING, warmSession } from './session';
 
@@ -116,7 +116,9 @@ const poolState = (() => {
   const gs = harvestSession.getState();
   const right = gs.worldMap[0].length - 1;
   const bottom = gs.worldMap.length - 1;
-  return jobService.generateJobs(designationService.designateRect(0, 0, right, bottom, 'woodcut', gs));
+  return jobService.generateJobs(
+    designationService.designateRect(0, 0, right, bottom, 'woodcut', gs)
+  );
 })();
 
 const budgetState = fullContainerBudget(30);
@@ -124,9 +126,9 @@ const crowdedState = crowdedStockpile(colonyState);
 const pendingState = unsuppliedOrders(1000, 5);
 
 describe('jobs', () => {
-  bench('haul:full-budget', () => haul.generate([], budgetState), ROLLING);
-  bench('haul:crowded', () => haul.generate([], crowdedState), ROLLING);
-  bench('haul:colony', () => haul.generate([...colonyState.jobs], colonyState), ROLLING);
+  bench('haul:full-budget', () => void haul.generate([], budgetState), ROLLING);
+  bench('haul:crowded', () => void haul.generate([], crowdedState), ROLLING);
+  bench('haul:colony', () => void haul.generate([...colonyState.jobs], colonyState), ROLLING);
   bench(
     'harvest:designated',
     () => {
@@ -143,6 +145,10 @@ describe('jobs', () => {
     },
     ROLLING
   );
-  bench('available:woodcut', () => jobService.getAvailableJobs(poolState.pawns[0], poolState), ROLLING);
-  bench('craft:unsupplied', () => reservePendingOrders(pendingState), ROLLING);
+  bench(
+    'available:woodcut',
+    () => void jobService.getAvailableJobs(poolState.pawns[0], poolState),
+    ROLLING
+  );
+  bench('craft:unsupplied', () => void reservePendingOrders(pendingState), ROLLING);
 });

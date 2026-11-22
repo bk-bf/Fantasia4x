@@ -239,7 +239,7 @@ export function releaseReservation(state: GameState, orderId: string): GameState
       drops.push(d);
       continue;
     }
-    const { reservedFor, ...rest } = d;
+    const { reservedFor: _reservedFor, ...rest } = d;
     pieces.push(rest);
     drops.push(rest);
   }
