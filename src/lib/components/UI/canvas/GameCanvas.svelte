@@ -111,6 +111,7 @@
   import { brackets, dragBox, type ScreenRect } from '$lib/components/UI/canvas/selectionMarks';
   import VerbTag from '$lib/components/UI/hud/VerbTag.svelte';
   import PawnCard from '$lib/components/UI/hud/PawnCard.svelte';
+  import BuildingCard from '$lib/components/UI/hud/BuildingCard.svelte';
   import {
     designationVerb,
     keyTiles,
@@ -668,8 +669,8 @@
     };
   }
 
-  $: buildingModel = ((): SelectedEntityModel | null => {
-    if (!selectedBuilding) return null;
+  $: buildingVerbs = ((): EntityButton[] => {
+    if (!selectedBuilding) return [];
     const bDef = buildingService.getBuildingById(selectedBuilding.type);
     const isBlueprint = selectedBuilding.status !== 'complete';
     const canConfigFuel =
@@ -682,48 +683,37 @@
       !isBlueprint &&
       !selectedBuilding.deconstructQueued &&
       buildingService.deterioratingRate(selectedBuilding.type) > 0;
-    const status = isBlueprint
-      ? selectedBuilding.paused
-        ? 'paused'
-        : 'building'
-      : `complete${selectedBuilding.deconstructQueued ? ' ⊢ demolish' : ''}`;
     const btns: EntityButton[] = [];
     if (isBlueprint) {
       btns.push({
-        label: selectedBuilding.paused ? 'RESUME' : 'PAUSE',
+        label: selectedBuilding.paused ? 'Resume' : 'Pause',
         onClick: togglePauseBlueprintBuilding
       });
-      btns.push({ label: 'ABORT', onClick: cancelBlueprintBuilding });
+      btns.push({ label: 'Abort', onClick: cancelBlueprintBuilding });
     } else if (selectedBuilding.deconstructQueued) {
-      btns.push({ label: 'CANCEL', onClick: cancelDeconstructBuilding });
+      btns.push({ label: 'Cancel', onClick: cancelDeconstructBuilding });
     } else {
-      btns.push({ label: 'BUILD', onClick: buildAnother });
-      btns.push({ label: 'DEMOLISH', onClick: deconstructBuilding });
+      btns.push({ label: 'Build', onClick: buildAnother });
+      btns.push({ label: 'Demolish', onClick: deconstructBuilding });
       if (canConfigFuel) {
-        btns.push({ label: 'FUEL', active: showFuelSettings, onClick: toggleFuelSettingsPanel });
+        btns.push({ label: 'Fuel', active: showFuelSettings, onClick: toggleFuelSettingsPanel });
       }
       if (canRepair) {
         btns.push({
-          label: 'REPAIR',
+          label: 'Repair',
           active: showRepairSettings,
           onClick: toggleRepairSettingsPanel
         });
       }
       if (canConfigStorage) {
         btns.push({
-          label: 'FILTER',
+          label: 'Stores',
           active: showStorageSettings,
           onClick: toggleStorageSettingsPanel
         });
       }
     }
-    return {
-      name: bDef?.name ?? selectedBuilding.type,
-      status,
-      selected: true,
-      dismissable: true,
-      buttons: btns
-    } satisfies SelectedEntityModel;
+    return btns;
   })();
 
   function deselectResource() {
@@ -4517,10 +4507,6 @@
     {:else if selectedMobCard}
       <SelectedEntityCard model={selectedMobCard} />
     {:else if selectedBuilding}
-      {@const canConfigureFuel =
-        selectedBuilding.status === 'complete' &&
-        !selectedBuilding.deconstructQueued &&
-        buildingService.getBuildingById(selectedBuilding.type)?.maxFuel !== undefined}
       {@const canConfigureStorage =
         selectedBuilding.status === 'complete' &&
         !selectedBuilding.deconstructQueued &&
@@ -4529,7 +4515,6 @@
         selectedBuilding.status === 'complete' &&
         !selectedBuilding.deconstructQueued &&
         buildingService.deterioratingRate(selectedBuilding.type) > 0}
-      {@const bt = worldMap[selectedBuilding.y]?.[selectedBuilding.x]}
       {@const clickedBin = buildingIsStorageBin(selectedBuilding)
         ? droppedItems.filter(
             (d) => d.stored && d.x === selectedBuilding.x && d.y === selectedBuilding.y
@@ -4542,29 +4527,7 @@
         on:mousedown|stopPropagation
         on:mouseup|stopPropagation
       >
-        {#if buildingModel}
-          <SelectedEntityCard model={buildingModel} embedded>
-            {#snippet body()}
-              <BuildingInfo
-                building={selectedBuilding}
-                detailed
-                showHeader={false}
-                binContents={clickedBin}
-                gameState={$gameState}
-              />
-              {#if bt}
-                {@const benv = tileEnv(bt)}
-                <EnvReadout
-                  light={benv.light}
-                  temp={benv.temp}
-                  wet={benv.wet}
-                  wind={benv.wind}
-                  debugTemp={$debugMode ? seasonBakedTemp(bt.terrainType, $currentSeason) : null}
-                />
-              {/if}
-            {/snippet}
-          </SelectedEntityCard>
-        {/if}
+        <BuildingCard building={selectedBuilding} verbs={buildingVerbs} stored={clickedBin} />
         {#if canConfigureRepair}
           <BuildingRepairPanel building={selectedBuilding} {pawns} open={showRepairSettings} />
         {/if}
