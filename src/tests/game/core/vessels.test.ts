@@ -11,6 +11,7 @@ import {
   usedCapacityL,
   usedWeightKg,
   roomFor,
+  putIn,
   vesselAllows,
   defaultFilterFor,
   takeOut,
@@ -213,6 +214,20 @@ describe('roomFor', () => {
   it('is 0 when vesselAccepts rejects the item', () => {
     const i = inst('v1', 'glassware', []);
     expect(roomFor(i, 'wild_berries', 5)).toBe(0);
+  });
+
+  it('caps a dense item by the vessel weight limit before its volume', () => {
+    const i = inst('v1', 'basket', []);
+    expect(roomFor(i, 'copper_bar', 100)).toBe(Math.floor(12 / 4));
+  });
+});
+
+describe('putIn', () => {
+  it('adds a second load of the same loose item to the existing entry', () => {
+    const i = inst('v1', 'basket', []);
+    expect(putIn(i, 'wheat', 2)).toBe(2);
+    expect(putIn(i, 'wheat', 3)).toBe(3);
+    expect(i.contents).toEqual([{ itemId: 'wheat', amount: 5 }]);
   });
 });
 

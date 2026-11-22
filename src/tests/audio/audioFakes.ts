@@ -133,6 +133,10 @@ export class FakeAudio {
   pause() {
     this.paused = true;
   }
+  end() {
+    this.paused = true;
+    for (const f of [...(this.listeners.ended ?? [])]) f();
+  }
 }
 
 export class FakeContext {

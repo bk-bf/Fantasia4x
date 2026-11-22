@@ -48,7 +48,8 @@ import { combatService } from './Combat';
 import { getRangedWeapon, effectiveRangedRange, hasViableAmmo } from './rangedCombat';
 import { TICKS_PER_SECOND, ticksFromSeconds, perTick } from '../core/util/time';
 import {
-  buildPathfindingGridsSoftBlocked,
+  buildPathfindingGrids,
+  findPathSoftBlocked,
   patchPathfindingWalkable,
   pathfinderService
 } from '../services/PathfinderService';
@@ -442,7 +443,9 @@ export class GameEngineImpl implements GameEngine {
 
     this.timed('env:thermal', () => rebuildThermalField(gs.buildings, gs.worldMap));
 
-    this.timed('env:connectivity', () => maybeRebuildConnectivity(gs.worldMap, gs.turn));
+    this.timed('env:connectivity', () =>
+      maybeRebuildConnectivity(buildPathfindingGrids(gs.worldMap), gs.turn)
+    );
   }
 
   private processPlantGrowth(): void {
@@ -642,19 +645,9 @@ export class GameEngineImpl implements GameEngine {
             gs = pawnService.assignPath(pawn.id, [], gs);
           }
         } else {
-          const { walkable, costs, width, height } = buildPathfindingGridsSoftBlocked(
+          const path = findPathSoftBlocked(
             gs.worldMap,
             blocked,
-            pawn.position.x,
-            pawn.position.y,
-            tx,
-            ty
-          );
-          const path = pathfinderService.findPath(
-            walkable,
-            costs,
-            width,
-            height,
             pawn.position.x,
             pawn.position.y,
             tx,
@@ -680,19 +673,9 @@ export class GameEngineImpl implements GameEngine {
           };
         };
         const walkTo = (tx: number, ty: number) => {
-          const grids = buildPathfindingGridsSoftBlocked(
+          const path = findPathSoftBlocked(
             gs.worldMap,
             blocked,
-            pawn.position!.x,
-            pawn.position!.y,
-            tx,
-            ty
-          );
-          const path = pathfinderService.findPath(
-            grids.walkable,
-            grids.costs,
-            grids.width,
-            grids.height,
             pawn.position!.x,
             pawn.position!.y,
             tx,

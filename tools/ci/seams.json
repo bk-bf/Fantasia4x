@@ -49,8 +49,6 @@
       "src/lib/audio/AudioService.ts::AudioServiceImpl.ensureSmoothing",
       "src/lib/components/UI/canvas/GameCanvas.svelte::redrawOverlay",
       "src/lib/components/UI/canvas/GameCanvas.svelte::startLoop",
-      "src/lib/components/UI/canvas/WeatherCanvas.svelte::<top level>",
-      "src/lib/components/UI/canvas/WeatherCanvas.svelte::frame",
       "src/lib/components/UI/menu/CustomMapMenu.svelte::nextFrames",
       "src/lib/components/UI/tooltip/HoverTip.svelte::schedule",
       "src/lib/components/screens/DebugLogScreen.svelte::<top level>"

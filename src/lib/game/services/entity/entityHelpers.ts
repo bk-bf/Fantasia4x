@@ -14,7 +14,7 @@ import {
 import { pawnStatService } from '../PawnStatService';
 import { stepBody, seedMidCrossClaims } from '../MovementSystem';
 import { resourceObjectService } from '../ResourceObjectService';
-import { buildSharedSoftBlockedGrid, pathfinderService } from '../PathfinderService';
+import { cannotReach, findPathOnWorld, pathfinderService } from '../PathfinderService';
 import { occupancyService } from '../OccupancyService';
 import { hasLineOfSight } from '../../core/util/lineOfSight';
 import { reachable } from './connectivity';
@@ -57,14 +57,15 @@ export function findNearestFoodTile(
   kinds: Set<TileFoodKind>
 ): { x: number; y: number } | null {
   if (kinds.size === 0) return null;
+  const map = state.worldMap;
   for (let d = 0; d <= radius; d++) {
     for (let dx = -d; dx <= d; dx++) {
       const ay = d - Math.abs(dx);
-      const dys = ay === 0 ? [0] : [ay, -ay];
-      for (const dy of dys) {
-        const tile = state.worldMap[y + dy]?.[x + dx];
-        if (tile?.walkable && edibleResourceOnTile(tile, kinds)) return { x: x + dx, y: y + dy };
-      }
+      const tile = map[y + ay]?.[x + dx];
+      if (tile?.walkable && edibleResourceOnTile(tile, kinds)) return { x: x + dx, y: y + ay };
+      if (ay === 0) continue;
+      const mirror = map[y - ay]?.[x + dx];
+      if (mirror?.walkable && edibleResourceOnTile(mirror, kinds)) return { x: x + dx, y: y - ay };
     }
   }
   return null;
@@ -599,12 +600,12 @@ export function pathTo(
   maxIter: number = MOB_PATH_MAX_ITER
 ): { x: number; y: number }[] {
   if (!pathfinderService.isReady()) return [];
+  if (cannotReach(state.worldMap, sx, sy, ex, ey)) return [];
   void selfId;
   const blocked = occupancyService.blockedTilesShared(state);
-  const { walkable, costs, width, height } = buildSharedSoftBlockedGrid(state.worldMap, blocked);
   const dbg = isVerboseLogging();
   const _t0 = dbg ? performance.now() : 0;
-  const res = pathfinderService.findPath(walkable, costs, width, height, sx, sy, ex, ey, maxIter);
+  const res = findPathOnWorld(state.worldMap, blocked, sx, sy, ex, ey, maxIter);
   if (dbg) {
     _pathMs += performance.now() - _t0;
     _pathCalls++;
