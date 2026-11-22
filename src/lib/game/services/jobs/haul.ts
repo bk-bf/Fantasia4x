@@ -4,12 +4,12 @@ import { itemService } from '../ItemService';
 import { vesselOf } from '../../core/rules/gear/vessels';
 import {
   storageTileKeys,
-  tilePileCapacity,
-  tileStoredPileCount,
+  storageBinIndex,
+  storedVesselsByStockpileZone,
   binFilterAt,
   isStorageTile,
-  tileVesselCount,
-  withDrops
+  withDrops,
+  type StorageBinIndex
 } from '../../core/state/stockpile';
 import { zoneInstanceIdAt } from '../DesignationService';
 import { itemMatchesFilter } from './filters';
@@ -35,45 +35,63 @@ function resourceAllowedByList(resourceId: string, allowed: string[]): boolean {
   return cat ? allowed.includes(cat) : false;
 }
 
+class StorageAcceptance {
+  private bins: StorageBinIndex | null = null;
+  private vessels: Map<string, number> | null = null;
+  private readonly general = new Map<string, boolean>();
+  private readonly anywhere = new Map<string, boolean>();
+
+  constructor(private readonly gs: GameState) {}
+
+  binIndex(): StorageBinIndex {
+    return (this.bins ??= storageBinIndex(this.gs));
+  }
+
+  tile(key: string, resourceId: string): boolean {
+    if (vesselOf(resourceId) && this.vesselBudgetReached(key)) return false;
+    const filter = this.binIndex().filter.get(key) ?? null;
+    if (filter) return resourceAllowedByList(resourceId, filter);
+    return this.stockpile(resourceId);
+  }
+
+  anyTile(keys: readonly string[], resourceId: string): boolean {
+    let accepted = this.anywhere.get(resourceId);
+    if (accepted === undefined) {
+      accepted = keys.some((key) => this.tile(key, resourceId));
+      this.anywhere.set(resourceId, accepted);
+    }
+    return accepted;
+  }
+
+  private stockpile(resourceId: string): boolean {
+    let accepted = this.general.get(resourceId);
+    if (accepted === undefined) {
+      accepted = stockpileAcceptsDrop(this.gs, resourceId);
+      this.general.set(resourceId, accepted);
+    }
+    return accepted;
+  }
+
+  private vesselBudgetReached(key: string): boolean {
+    const zoneId = zoneInstanceIdAt(this.gs, key, 'stockpile');
+    if (!zoneId) return false;
+    const budget = (this.gs.zoneInstances ?? []).find((z) => z.id === zoneId)?.containerBudget ?? 0;
+    if (budget <= 0) return false;
+    return ((this.vessels ??= storedVesselsByStockpileZone(this.gs)).get(zoneId) ?? 0) >= budget;
+  }
+}
+
 export function storageTileAcceptsDrop(
   gs: GameState,
   x: number,
   y: number,
   resourceId: string
 ): boolean {
-  if (vesselOf(resourceId) && !zoneAcceptsAnotherVessel(gs, x, y)) return false;
-  const filter = binFilterAt(gs, x, y);
-  if (filter) return resourceAllowedByList(resourceId, filter);
-  return stockpileAcceptsDrop(gs, resourceId);
-}
-
-function zoneAcceptsAnotherVessel(gs: GameState, x: number, y: number): boolean {
-  const instId = zoneInstanceIdAt(gs, `${x},${y}`, 'stockpile');
-  if (!instId) return true;
-  const budget = (gs.zoneInstances ?? []).find((z) => z.id === instId)?.containerBudget ?? 0;
-  if (budget <= 0) return true;
-  let held = 0;
-  for (const key of zoneTileKeys(gs, instId)) {
-    const [zx, zy] = key.split(',').map(Number);
-    held += tileVesselCount(gs, zx, zy);
-    if (held >= budget) return false;
-  }
-  return true;
-}
-
-function zoneTileKeys(gs: GameState, instanceId: string): string[] {
-  const out: string[] = [];
-  for (const [key] of Object.entries(gs.zoneTiles ?? {}))
-    if (zoneInstanceIdAt(gs, key, 'stockpile') === instanceId) out.push(key);
-  return out;
+  return new StorageAcceptance(gs).tile(`${x},${y}`, resourceId);
 }
 
 export function storageAcceptsDrop(gs: GameState, resourceId: string): boolean {
-  for (const key of storageTileKeys(gs)) {
-    const [x, y] = key.split(',').map(Number);
-    if (storageTileAcceptsDrop(gs, x, y, resourceId)) return true;
-  }
-  return false;
+  return new StorageAcceptance(gs).anyTile(storageTileKeys(gs), resourceId);
 }
 
 function storedTileStillAccepts(gs: GameState, x: number, y: number, resourceId: string): boolean {
@@ -101,14 +119,31 @@ export function reconcileEvictedDrops(gs: GameState): GameState {
   return withDrops(gs, drops);
 }
 
+function storageRoom(gs: GameState, keys: readonly string[], bins: StorageBinIndex): number {
+  const piles = new Map<string, number>();
+  const storedResourceIds = new Set<string>();
+  for (const d of gs.droppedItems ?? []) {
+    if (!d.stored) continue;
+    storedResourceIds.add(d.resourceId);
+    const k = `${d.x},${d.y}`;
+    piles.set(k, (piles.get(k) ?? 0) + 1);
+  }
+  let freeSlots = 0;
+  for (const k of keys)
+    freeSlots += Math.max(0, (bins.pileCapacity.get(k) ?? 1) - (piles.get(k) ?? 0));
+  return freeSlots + storedResourceIds.size;
+}
+
 export function generate(jobs: Job[], gs: GameState): Job[] {
-  const allDrops = (gs.droppedItems ?? []).filter(
+  const stockpileTiles = storageTileKeys(gs);
+  const acceptance = new StorageAcceptance(gs);
+  const drops = (gs.droppedItems ?? []).filter(
     (d) =>
       !d.stored &&
       !d.forbidden &&
-      !(d.rehaulCooldownUntil != null && d.rehaulCooldownUntil > gs.turn)
+      !(d.rehaulCooldownUntil != null && d.rehaulCooldownUntil > gs.turn) &&
+      acceptance.anyTile(stockpileTiles, d.resourceId)
   );
-  const drops = allDrops.filter((d) => storageAcceptsDrop(gs, d.resourceId));
   if (isGameDebug()) {
     console.log(
       `[HAUL-SYNC] drops on ground: ${drops.length}`,
@@ -116,7 +151,6 @@ export function generate(jobs: Job[], gs: GameState): Job[] {
     );
   }
 
-  const stockpileTiles = storageTileKeys(gs);
   if (stockpileTiles.length === 0) {
     const pruned = jobs.filter((j) => j.type !== 'haul');
     if (pruned.length !== jobs.length)
@@ -124,53 +158,46 @@ export function generate(jobs: Job[], gs: GameState): Job[] {
     return pruned;
   }
 
-  let freeSlots = 0;
-  for (const key of stockpileTiles) {
-    const [x, y] = key.split(',').map(Number);
-    freeSlots += Math.max(0, tilePileCapacity(gs, x, y) - tileStoredPileCount(gs, x, y));
-  }
-  const storedResourceIds = new Set(
-    (gs.droppedItems ?? []).filter((d) => d.stored).map((d) => d.resourceId)
-  );
-  const canAccept = freeSlots + storedResourceIds.size;
-
+  const dropById = new Map(drops.map((d) => [d.id, d]));
+  const hauled = new Set<string>();
   jobs = jobs.flatMap((j) => {
     if (j.type !== 'haul') return [j];
-    const d = drops.find((x) => x.id === j.droppedItemId);
+    const d = dropById.get(j.droppedItemId!);
     if (!d) {
       console.log(`[HAUL-SYNC] pruned stale haul job ${j.id}`);
       return [];
     }
+    hauled.add(d.id);
     const urgent = d.urgent || undefined;
     return [(j.urgent ?? undefined) === urgent ? j : { ...j, urgent }];
   });
+  if (drops.length === 0) return jobs;
 
   const activeHaulCount = jobs.filter((j) => j.type === 'haul').length;
-  const atCapacity = activeHaulCount >= canAccept;
+  const atCapacity = activeHaulCount >= storageRoom(gs, stockpileTiles, acceptance.binIndex());
 
   const ordered = drops.some((d) => d.urgent)
     ? [...drops].sort((a, b) => (b.urgent ? 1 : 0) - (a.urgent ? 1 : 0))
     : drops;
   for (const drop of ordered) {
     if (atCapacity && !drop.urgent) continue;
-    const exists = jobs.some((j) => j.type === 'haul' && j.droppedItemId === drop.id);
-    if (!exists) {
-      console.log(
-        `[HAUL-SYNC] creating ${drop.urgent ? 'URGENT ' : ''}haul job for drop ${drop.id} (${drop.resourceId}×${drop.quantity})`
-      );
-      jobs.push({
-        id: `haul-${drop.id}-t${gs.turn}`,
-        type: 'haul',
-        targetX: drop.x,
-        targetY: drop.y,
-        resourceId: drop.resourceId,
-        droppedItemId: drop.id,
-        workRequired: 0.02,
-        workDone: 0,
-        claimedBy: null,
-        ...(drop.urgent ? { urgent: true } : {})
-      });
-    }
+    if (hauled.has(drop.id)) continue;
+    hauled.add(drop.id);
+    console.log(
+      `[HAUL-SYNC] creating ${drop.urgent ? 'URGENT ' : ''}haul job for drop ${drop.id} (${drop.resourceId}×${drop.quantity})`
+    );
+    jobs.push({
+      id: `haul-${drop.id}-t${gs.turn}`,
+      type: 'haul',
+      targetX: drop.x,
+      targetY: drop.y,
+      resourceId: drop.resourceId,
+      droppedItemId: drop.id,
+      workRequired: 0.02,
+      workDone: 0,
+      claimedBy: null,
+      ...(drop.urgent ? { urgent: true } : {})
+    });
   }
 
   return jobs;

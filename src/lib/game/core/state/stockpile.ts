@@ -19,6 +19,7 @@ import {
   vesselOf
 } from '../rules/gear/vessels';
 import { allItemDefs, itemDefById } from '../defs/items';
+import { zoneTileKeys } from './zoneTiles';
 import buildingsData from '../../database/world/buildings.json';
 import itemsData from '../../database/items/items.json';
 
@@ -210,6 +211,24 @@ function sourceStackIndex(drops: DroppedItem[], piece: DroppedItem, orderId: str
   );
 }
 
+export function reservableQuantity(drops: DroppedItem[] | undefined, itemId: string): number {
+  let total = 0;
+  for (const d of drops ?? []) {
+    if (!d.stored || d.reservedFor || d.quantity <= 0) continue;
+    if (d.resourceId === itemId) {
+      total += d.quantity;
+      continue;
+    }
+    const held = heldQuantity(d.instance, itemId);
+    if (held > 0) total += held;
+  }
+  return total;
+}
+
+export function cannotReserve(available: number, need: number): boolean {
+  return available < need - QUANTITY_EPSILON * Math.max(1, Math.abs(need));
+}
+
 export function releaseReservation(state: GameState, orderId: string): GameState {
   const all = state.droppedItems ?? [];
   if (!all.some((d) => d.reservedFor === orderId)) return state;
@@ -220,7 +239,7 @@ export function releaseReservation(state: GameState, orderId: string): GameState
       drops.push(d);
       continue;
     }
-    const { reservedFor, ...rest } = d;
+    const { reservedFor: _reservedFor, ...rest } = d;
     pieces.push(rest);
     drops.push(rest);
   }
@@ -299,13 +318,39 @@ export function isStorageBinTile(state: GameState, x: number, y: number): boolea
   return false;
 }
 
-export function storageTileKeys(state: GameState): string[] {
-  const seen = new Set<string>();
-  const zt = state.zoneTiles ?? {};
-  for (const k in zt) if (zt[k]?.includes('stockpile')) seen.add(k);
-  for (const b of state.buildings ?? [])
-    if (b.status === 'complete' && binStacksForType(b.type) > 0) seen.add(`${b.x},${b.y}`);
-  return [...seen];
+export function storageTileKeys(state: GameState): readonly string[] {
+  const zoneKeys = zoneTileKeys(state, 'stockpile');
+  let keys: string[] | null = null;
+  let binKeys: Set<string> | null = null;
+  for (const b of state.buildings ?? []) {
+    if (b.status !== 'complete' || binStacksForType(b.type) <= 0) continue;
+    const k = `${b.x},${b.y}`;
+    if (state.zoneTiles?.[k]?.includes('stockpile') || binKeys?.has(k)) continue;
+    (binKeys ??= new Set()).add(k);
+    (keys ??= zoneKeys.slice()).push(k);
+  }
+  return keys ?? zoneKeys;
+}
+
+export interface StorageBinIndex {
+  pileCapacity: Map<string, number>;
+  filter: Map<string, string[] | null>;
+}
+
+export function storageBinIndex(state: GameState): StorageBinIndex {
+  const pileCapacity = new Map<string, number>();
+  const filter = new Map<string, string[] | null>();
+  for (const b of state.buildings ?? []) {
+    if (b.status !== 'complete') continue;
+    const stacks = binStacksForType(b.type);
+    if (stacks <= 0) continue;
+    const k = `${b.x},${b.y}`;
+    if (stacks > (pileCapacity.get(k) ?? 1)) pileCapacity.set(k, stacks);
+    if (filter.has(k)) continue;
+    const override = b.storageSettings?.allowedItemIds;
+    filter.set(k, override !== undefined ? override : (STORAGE_BIN_FILTER.get(b.type) ?? null));
+  }
+  return { pileCapacity, filter };
 }
 
 export function isStorageTile(state: GameState, x: number, y: number): boolean {
@@ -509,11 +554,17 @@ function zoneSeedFilter(state: GameState, x: number, y: number): string[] {
   return ids;
 }
 
-export function tileVesselCount(state: GameState, x: number, y: number): number {
-  let n = 0;
-  for (const d of state.droppedItems ?? [])
-    if (d.stored && d.x === x && d.y === y && d.instance && vesselOf(d.resourceId)) n++;
-  return n;
+export function storedVesselsByStockpileZone(state: GameState): Map<string, number> {
+  const held = new Map<string, number>();
+  const zt = state.zoneTiles ?? {};
+  for (const d of state.droppedItems ?? []) {
+    if (!d.stored || !d.instance || !vesselOf(d.resourceId)) continue;
+    const k = `${d.x},${d.y}`;
+    if (!(k in zt)) continue;
+    const zoneId = state.designationZoneId?.[k]?.stockpile;
+    if (zoneId) held.set(zoneId, (held.get(zoneId) ?? 0) + 1);
+  }
+  return held;
 }
 
 function packIntoVesselOnTile(drops: DroppedItem[], idx: number, x: number, y: number): number {

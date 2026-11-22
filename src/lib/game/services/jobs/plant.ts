@@ -1,6 +1,7 @@
 import type { GameState, Job } from '../../core/types';
 import { gatedConsole as console } from '../../core/util/log';
-import { zoneTileKeys, zoneInstanceIdAt } from '../DesignationService';
+import { zoneInstanceIdAt } from '../DesignationService';
+import { zoneTileKeys } from '../../core/state/zoneTiles';
 import { resourceObjectService, type ResourceObjectDef } from '../ResourceObjectService';
 import { itemService } from '../ItemService';
 import { soilTierForTile, SUBTERRAINS, SUBTERRAIN_FALLBACK } from '../../core/defs/terrains';
