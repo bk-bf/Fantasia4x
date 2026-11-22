@@ -30,7 +30,7 @@ export const WINDOWS: Record<WindowId, WindowSpec> = {
   culture: { title: 'Cultures', component: CultureScreen, width: 900 },
   kingdoms: { title: 'Kingdoms', component: KingdomScreen, width: 900 },
   research: { title: 'Research', component: ResearchScreen, width: 'big' },
-  entities: { title: 'Entities', component: EntityScreen, width: 900 },
+  entities: { title: 'Entities', component: EntityScreen, width: 900, height: 362 },
   debug: { title: 'Debug', component: DebugScreen, width: 'big' },
   pause: { title: 'Paused', component: PauseMenu, width: 280, modal: true }
 };
