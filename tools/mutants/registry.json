@@ -975,8 +975,8 @@
   {
     "id": "pawn-stat-capacity-cache-ignores-limbs",
     "file": "src/lib/game/services/PawnStatService.ts",
-    "find": "if (c && c.limbs === pawn.limbs && c.injuries === pawn.injuries && c.light === lightBucket) {",
-    "replace": "if (c && c.injuries === pawn.injuries && c.light === lightBucket) {",
+    "find": "      c.limbs === pawn.limbs &&\n      c.injuries === pawn.injuries &&\n",
+    "replace": "      c.injuries === pawn.injuries &&\n",
     "tests": ["src/tests/game/systems/fractures.test.ts"]
   },
   {
