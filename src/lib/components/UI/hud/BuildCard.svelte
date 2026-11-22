@@ -132,7 +132,7 @@
   </header>
   {#if description}
     <p
-      style="-webkit-line-clamp:{lines};height:{lines * 16}px"
+      style="-webkit-line-clamp:{lines};height:{lines * 16}px;flex:none"
       onmouseenter={enterDesc}
       onmousemove={(e) => descTip && (descTip = { x: e.clientX, y: e.clientY })}
       onmouseleave={() => (descTip = null)}
