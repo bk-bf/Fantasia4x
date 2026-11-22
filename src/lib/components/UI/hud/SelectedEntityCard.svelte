@@ -417,7 +417,9 @@
     cursor: help;
   }
   .flavor-tip {
+    font-style: italic;
     color: var(--text-dim);
+    line-height: 1.45;
   }
   .pawn-state,
   .pawn-dismiss,

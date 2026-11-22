@@ -6,6 +6,7 @@
   import { computeAptitudeView } from '$lib/components/util/statView';
   import PawnSkillBanner from './PawnSkillBanner.svelte';
   import StatTooltip from './StatTooltip.svelte';
+  import HoverTip from '$lib/components/UI/tooltip/HoverTip.svelte';
   import {
     buildStatContext,
     computeStatView,
@@ -45,38 +46,7 @@
 
   $: ctx = buildStatContext(pawn);
 
-  function flipTip(cell: HTMLElement) {
-    const onEnter = () => {
-      const tip = cell.querySelector<HTMLElement>('.tip');
-      if (!tip) return;
-      let clip: HTMLElement | null = cell.parentElement;
-      while (clip && clip !== document.body) {
-        const oy = getComputedStyle(clip).overflowY;
-        if (oy === 'auto' || oy === 'scroll' || oy === 'hidden') break;
-        clip = clip.parentElement;
-      }
-      const cr =
-        clip && clip !== document.body
-          ? clip.getBoundingClientRect()
-          : ({ top: 0, bottom: window.innerHeight } as DOMRect);
-      const prev = tip.style.cssText;
-      tip.style.visibility = 'hidden';
-      tip.style.display = 'block';
-      tip.style.maxHeight = 'none';
-      const tipH = tip.offsetHeight;
-      tip.style.cssText = prev;
-      const r = cell.getBoundingClientRect();
-      const margin = 6;
-      const below = cr.bottom - r.bottom - margin;
-      const above = r.top - cr.top - margin;
-      const up = tipH <= below ? false : tipH <= above ? true : above > below;
-      cell.classList.toggle('up', up);
-      const avail = up ? above : below;
-      tip.style.maxHeight = tipH > avail ? `${Math.max(60, avail)}px` : '';
-    };
-    cell.addEventListener('mouseenter', onEnter);
-    return { destroy: () => cell.removeEventListener('mouseenter', onEnter) };
-  }
+  let tip: { id: string; x: number; y: number } | null = null;
 
   $: categoryOrder = [
     ...CATEGORY_ORDER,
@@ -110,6 +80,7 @@
   };
 
   $: catRows = buildRows(pawn, ctx, relevant);
+  $: tipView = tip && catRows.flatMap((g) => g.cells).find((c) => c.id === tip?.id)?.view;
 
   function buildRows(..._deps: unknown[]) {
     const rows = grouped.map((g) => ({
@@ -147,18 +118,28 @@
       <div class="cat-hdr">{g.label}</div>
       <div class="grid">
         {#each g.cells as c (c.id)}
-          <div class="cell" class:hl={c.hl} use:flipTip>
+          <div
+            class="cell"
+            class:hl={c.hl}
+            role="note"
+            on:mouseenter={(e) => (tip = { id: c.id, x: e.clientX, y: e.clientY })}
+            on:mousemove={(e) => tip && (tip = { ...tip, x: e.clientX, y: e.clientY })}
+            on:mouseleave={() => (tip = null)}
+          >
             <span class="nm">{c.view.name}</span>
             <span class="vl" style="color: {c.view.trend.color}"
               >{c.view.value}{c.view.unit}<span class="trend">{c.view.trend.glyph}</span></span
             >
-            <div class="tip"><StatTooltip view={c.view} /></div>
           </div>
         {/each}
       </div>
     </div>
   {/each}
 </div>
+
+{#if tip && tipView}
+  <HoverTip x={tip.x} y={tip.y}><StatTooltip view={tipView} /></HoverTip>
+{/if}
 
 <style>
   .attrs {
@@ -182,7 +163,6 @@
     gap: 0 8px;
   }
   .cell {
-    position: relative;
     display: flex;
     justify-content: space-between;
     gap: 6px;
@@ -199,32 +179,6 @@
   }
   .cell.hl .nm {
     color: var(--text);
-  }
-  .tip {
-    display: none;
-    position: absolute;
-    z-index: 60;
-    left: 0;
-    top: 100%;
-    min-width: 220px;
-    max-width: 340px;
-    max-height: 60vh;
-    overflow-y: auto;
-    padding: 6px 8px;
-    background: var(--bg-panel, #0c1118);
-    border: 1px solid var(--border-hi, #3a4658);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
-    color: var(--text);
-    font-size: 11px;
-    line-height: 1.5;
-    pointer-events: auto;
-  }
-  .cell:hover .tip {
-    display: block;
-  }
-  .cell:global(.up) .tip {
-    top: auto;
-    bottom: 100%;
   }
   .trend {
     font-size: 9px;

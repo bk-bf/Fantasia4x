@@ -7,6 +7,7 @@
     centreWindow,
     dragTo,
     placeWindow,
+    resizeTo,
     type Area,
     type Point,
     type Rect
@@ -18,6 +19,7 @@
   let H = $state(0);
   let pos: Partial<Record<WindowId, Point>> = $state({});
   let size: Partial<Record<WindowId, { w: number; h: number }>> = $state({});
+  let chosen: Partial<Record<WindowId, { w: number; h: number }>> = $state({});
 
   const open = $derived($uiState.windows);
   const ORDER = Object.keys(WINDOWS) as WindowId[];
@@ -34,12 +36,22 @@
   });
 
   function widthOf(id: WindowId): number {
+    if (chosen[id]) return Math.min(chosen[id].w, W - 12);
     const want = WINDOWS[id].width;
     if (want !== 'big') return Math.min(want, W - 12);
     return Math.min(W - 12, BIG_WIDTH_MAX, Math.max(BIG_WIDTH_MIN, W - left - right - 16));
   }
-  const heightOf = (id: WindowId) =>
-    WINDOWS[id].modal || WINDOWS[id].fit ? null : Math.min(WINDOW_HEIGHT_MAX, H - top - 12);
+  function heightOf(id: WindowId): number | null {
+    const spec = WINDOWS[id];
+    if (spec.modal) return null;
+    if (chosen[id]) return Math.min(chosen[id].h, H - 12);
+    if (spec.fit) return null;
+    return Math.min(spec.height ?? WINDOW_HEIGHT_MAX, H - top - 12);
+  }
+
+  function resize(id: WindowId, w: number, h: number) {
+    if (pos[id]) chosen[id] = resizeTo(pos[id], w, h, area);
+  }
 
   function sized(id: WindowId, w: number, h: number) {
     size[id] = { w, h };
@@ -74,6 +86,8 @@
         onmove={(p) => (pos[id] = dragTo(p, size[id]?.w ?? 0, area))}
         onraise={() => uiState.raiseWindow(id)}
         onclose={() => uiState.closeWindow(id)}
+        onresize={(w, h) => resize(id, w, h)}
+        onresetsize={() => delete chosen[id]}
       >
         <spec.component />
       </GameWindow>
