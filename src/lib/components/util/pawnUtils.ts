@@ -114,6 +114,12 @@ function getNextAvailableJob(pawn: Pawn, gameState: GameState): Job | null {
   return jobs[0] ?? null;
 }
 
+export function pawnCultureLabel(pawn: Pawn, pool: GameState['culturePool'] | undefined): string {
+  if (!pawn.cultureName) return 'unknown';
+  const archetype = pool?.find((r) => r.id === pawn.cultureId)?.archetype;
+  return archetype ? `${pawn.cultureName} · ${archetype}` : pawn.cultureName;
+}
+
 export function getPawnTaskSummary(pawn: Pawn, gameState: GameState): PawnTaskSummary {
   const currentState = (pawn.currentState ?? 'Idle').toUpperCase();
   let currentTask = describeCurrentTask(pawn);

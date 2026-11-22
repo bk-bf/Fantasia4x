@@ -1,7 +1,8 @@
 <script lang="ts">
   import { gameState } from '$lib/stores/gameState';
   import { uiState } from '$lib/stores/uiState';
-  import { buildHealthModel } from '$lib/components/UI/canvas/selectionCard';
+  import { buildHealthModel, mobDisplayName } from '$lib/components/UI/canvas/selectionCard';
+  import { getCreatureById } from '$lib/game/core/defs/creatures';
   import { getActiveConditionViews } from '$lib/components/util/conditionInfo';
   import HealthReadout from '$lib/components/UI/canvas/HealthReadout.svelte';
   import StatPills from '$lib/components/UI/widget/StatPills.svelte';
@@ -9,17 +10,23 @@
   import ConditionRows from './ConditionRows.svelte';
 
   const pawn = $derived(($gameState.pawns ?? []).find((p) => p.id === $uiState.selectedPawnId));
-  const health = $derived(pawn ? buildHealthModel(pawn) : undefined);
-  const conditions = $derived(pawn ? getActiveConditionViews(pawn) : []);
+  const mob = $derived(
+    pawn ? undefined : ($gameState.mobs ?? []).find((m) => m.id === $uiState.selectedMobId)
+  );
+  const mobDef = $derived(mob ? getCreatureById(mob.creatureId) : undefined);
+  const entity = $derived(pawn ?? mob);
+  const name = $derived(pawn?.name ?? (mob && mobDef ? mobDisplayName(mob, mobDef) : ''));
+  const health = $derived(entity ? buildHealthModel(entity) : undefined);
+  const conditions = $derived(entity ? getActiveConditionViews(entity) : []);
 </script>
 
 <div class="health">
-  {#if pawn && health}
-    <h5>{pawn.name}</h5>
+  {#if entity && health}
+    <h5>{name}</h5>
     <StatPills pills={health.pills ?? []} />
     {#if conditions.length}<div class="conds"><ConditionRows views={conditions} inline /></div>{/if}
-    <div class="bodygrid">
-      <BodyDoll {pawn} />
+    <div class="bodygrid" class:whole={!pawn}>
+      {#if pawn}<BodyDoll {pawn} />{/if}
       <HealthReadout {health} pills={false} />
     </div>
   {:else}
@@ -47,6 +54,9 @@
     grid-template-columns: 72px 1fr;
     gap: 12px;
     margin-top: 6px;
+  }
+  .bodygrid.whole {
+    grid-template-columns: 1fr;
   }
   p {
     margin: 0;

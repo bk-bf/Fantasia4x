@@ -162,14 +162,8 @@
     if (m.weightKg) bits.push(`+${m.weightKg} kg body weight (loads the body, slows the pawn)`);
     return bits.join('; ');
   }
-  const axisShort = (name: string) =>
-    name === 'workSpeed'
-      ? 'spd'
-      : name === 'workYield'
-        ? 'yld'
-        : name === 'workQuality'
-          ? 'qual'
-          : workAxisLabel(name);
+  const workName = (id: string) =>
+    id === 'all' ? 'all work' : (WORK_CATEGORIES.find((c) => c.id === id)?.name ?? id);
 
   function getEffectTags(trait: Trait): Tag[] {
     const tags: Tag[] = [];
@@ -178,8 +172,8 @@
     const isCondTrait = !gear && !!cond;
     if (gear) {
       tags.push({
-        label: gear.kind === 'weapon' ? 'NAT WEAP' : 'NAT ARM',
-        value: gear.name.toLowerCase(),
+        label: gear.kind === 'weapon' ? 'natural weapon' : 'natural armour',
+        value: gear.name,
         type: 'pos',
         kind: 'gear',
         gearItem: gear.item,
@@ -187,8 +181,8 @@
       });
     } else if (cond) {
       tags.push({
-        label: 'COND',
-        value: cond.name.toLowerCase(),
+        label: 'grants',
+        value: cond.name,
         type: 'pos',
         kind: 'cond',
         condId: trait.selfCondition,
@@ -272,8 +266,8 @@
           for (const [workType, mul] of Object.entries(value as Record<string, number>)) {
             const pct = Math.round((mul - 1) * 100);
             tags.push({
-              label: workType.replace(/_/g, ' '),
-              value: `${pct >= 0 ? '+' : ''}${pct}% ${axisShort(name)}`,
+              label: workName(workType),
+              value: `${pct >= 0 ? '+' : ''}${pct}% ${workAxisLabel(name)}`,
               type: pct >= 0 ? 'pos' : 'neg',
               kind: workType === 'all' ? undefined : 'work',
               workId: workType === 'all' ? undefined : workType

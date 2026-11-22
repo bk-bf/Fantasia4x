@@ -45,7 +45,6 @@
     growthPct?: number;
     buttons?: EntityButton[];
     health?: HealthModel;
-    moodModel?: MoodModel;
     armor?: ArmorModel;
     onSelect?: () => void;
   }
@@ -114,10 +113,7 @@
   import StatBar from '../widget/StatBar.svelte';
   import ConditionChips from '../../pawn/ConditionChips.svelte';
   import ItemPills from '../widget/ItemPills.svelte';
-  import HealthPanel from '../canvas/HealthPanel.svelte';
-  import { healthToggle } from '../canvas/healthToggle.svelte';
-  import MoodPanel from '../canvas/MoodPanel.svelte';
-  import { moodToggle } from '../canvas/moodToggle.svelte';
+  import { uiState } from '$lib/stores/uiState';
   import ArmorPanel from '../canvas/ArmorPanel.svelte';
   import { armorToggle } from '../canvas/armorToggle.svelte';
   import { debugMode } from '$lib/stores/uiPrefs';
@@ -141,6 +137,8 @@
         (model.health.heatExposure ?? 0) > 0 ||
         (!!model.health.blood && model.health.blood.current < model.health.blood.max))
   );
+
+  const healthOpen = $derived($uiState.windows.includes('health'));
 
   const BAR_WARN = 'var(--accent-hi)';
   const BAR_OK = 'var(--pos)';
@@ -282,50 +280,26 @@
     </div>
   </div>
 
-  {#if model.health}
-    <HealthPanel health={model.health} open={healthToggle.open} />
-  {/if}
-
-  {#if model.moodModel}
-    <MoodPanel mood={model.moodModel} open={moodToggle.open} />
-  {/if}
-
   {#if model.armor && $debugMode}
     <ArmorPanel armor={model.armor} open={armorToggle.open} />
   {/if}
 
-  {#if (model.buttons && model.buttons.length > 0) || ((model.health || model.moodModel || model.armor) && model.selected)}
+  {#if (model.buttons && model.buttons.length > 0) || ((model.health || model.armor) && model.selected)}
     <div class="btn-col">
       {#if model.health && model.selected}
         <button
           class="hud-btn"
-          {@attach chrome(healthToggle.open ? 'btnOn' : 'btn')}
-          class:hud-btn--active={healthToggle.open}
+          {@attach chrome(healthOpen ? 'btnOn' : 'btn')}
+          class:hud-btn--active={healthOpen}
           class:hud-btn--warn={damaged}
           onmousedown={(e) => e.stopPropagation()}
           onmouseup={(e) => e.stopPropagation()}
           onclick={(e) => {
             e.stopPropagation();
-            healthToggle.open = !healthToggle.open;
+            uiState.toggleWindow('health');
           }}
         >
           <span class="hud-btn-lbl">HEALTH</span>
-        </button>
-      {/if}
-      {#if model.moodModel && model.selected}
-        <button
-          class="hud-btn"
-          {@attach chrome(moodToggle.open ? 'btnOn' : 'btn')}
-          class:hud-btn--active={moodToggle.open}
-          class:hud-btn--warn={model.moodModel.target < model.moodModel.mood - 0.5}
-          onmousedown={(e) => e.stopPropagation()}
-          onmouseup={(e) => e.stopPropagation()}
-          onclick={(e) => {
-            e.stopPropagation();
-            moodToggle.open = !moodToggle.open;
-          }}
-        >
-          <span class="hud-btn-lbl">MOOD</span>
         </button>
       {/if}
       {#if model.armor && model.selected && $debugMode}

@@ -6,7 +6,8 @@
     getMoodDescription,
     getHealthColor,
     getHealthDescription,
-    getPawnTaskSummary
+    getPawnTaskSummary,
+    pawnCultureLabel
   } from '$lib/components/util/pawnUtils';
   import { pawnService } from '$lib/game/services/PawnService';
   import { effectiveMood } from '$lib/game/core/rules/social/social';
@@ -44,9 +45,7 @@
   $: taskSummary = getPawnTaskSummary(pawn, gameState);
   $: moveSpeed = pawnService.getMoveSpeed(pawn);
   $: culture = gameState.culturePool?.find((r) => r.id === pawn.cultureId);
-  $: cultureLabel = pawn.cultureName
-    ? `${pawn.cultureName}${culture?.archetype ? ` · ${culture.archetype}` : ''}`
-    : 'unknown';
+  $: cultureLabel = pawnCultureLabel(pawn, gameState.culturePool);
   $: homeKingdom = pawn.homeKingdomId
     ? gameState.kingdoms?.find((k) => k.id === pawn.homeKingdomId)
     : undefined;

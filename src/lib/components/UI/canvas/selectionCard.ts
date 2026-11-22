@@ -2,7 +2,6 @@ import { uiState } from '$lib/stores/uiState.js';
 import { gameState } from '$lib/stores/gameState.js';
 import { resourceObjectService } from '$lib/game/services/ResourceObjectService.js';
 import { type CreatureDefinition, getCreatureById } from '$lib/game/core/defs/creatures.js';
-import { RELAXATION_NOTEWORTHY, WETNESS_NOTEWORTHY } from '$lib/components/util/pawnUtils';
 import type { Pawn, Mob, Injury } from '$lib/game/core/types.js';
 import { CORE_STATS } from '$lib/game/core/types.js';
 import { limbLabel, partLabel } from '$lib/components/util/bodyLabels';
@@ -25,7 +24,6 @@ import type {
   EntityButton,
   EntityStat,
   HealthModel,
-  MoodModel,
   HealthLimb,
   HealthPart,
   ArmorModel,
@@ -469,150 +467,15 @@ export function toggleHuntMark(mobId: string) {
   gameState.command({ type: 'toggleHuntMark', payload: { mobId }, save: true });
 }
 
-export interface PawnCardDeps {
-  cameraFollowPawnId: string | null;
-  startMark: () => void;
-  armMove: () => void;
-  toggleFood: () => void;
-  foodOpen: boolean;
-  moodModel?: MoodModel;
+export function openPawnWindow(pawnId: string, tab: 'status' | 'gear') {
+  uiState.update((s) => ({ ...s, selectedPawnId: pawnId, pawnScreenTab: tab }));
+  uiState.openWindow('pawns');
 }
 
 export interface MobCardDeps {
   cameraFollowMobId: string | null;
   startMark: () => void;
   colonyName?: string;
-}
-
-export function buildPawnCard(
-  pawn: Pawn,
-  selected: boolean,
-  deps: PawnCardDeps
-): SelectedEntityModel {
-  const { cameraFollowPawnId, startMark, armMove, toggleFood, foodOpen, moodModel } = deps;
-  const bars: EntityBar[] = [
-    { label: 'HUNGER', value: pawn.needs.hunger, warn: pawn.needs.hunger > 60 },
-    { label: 'REST', value: pawn.needs.fatigue, warn: pawn.needs.fatigue > 60 },
-    { label: 'THIRST', value: pawn.needs.thirst ?? 0, warn: (pawn.needs.thirst ?? 0) > 60 },
-    { label: 'HYGIENE', value: pawn.needs.hygiene ?? 0, warn: (pawn.needs.hygiene ?? 0) > 60 }
-  ];
-  if (pawn.maxBloodVolume) {
-    const curBV = pawn.bloodVolume ?? pawn.maxBloodVolume;
-    bars.push({
-      label: 'BLOOD',
-      value: Math.round((curBV / pawn.maxBloodVolume) * 100),
-      warn: curBV < pawn.maxBloodVolume * 0.6
-    });
-  }
-  if (pawn.maxStamina !== undefined) {
-    const curST = pawn.stamina ?? pawn.maxStamina;
-    bars.push({
-      label: 'STAMINA',
-      value: Math.round((curST / pawn.maxStamina) * 100),
-      warn: curST < pawn.maxStamina * 0.25
-    });
-  }
-  if ((pawn.needs.wetness ?? 0) > WETNESS_NOTEWORTHY) {
-    bars.push({ label: 'WETNESS', value: Math.round(pawn.needs.wetness ?? 0), color: '#4FA3D1' });
-  }
-  const relaxVal = pawn.needs.relaxation ?? 100;
-  if (relaxVal < RELAXATION_NOTEWORTHY) {
-    bars.push({
-      label: 'RELAXATION',
-      value: Math.round(relaxVal),
-      color: relaxVal >= 20 ? '#c8a030' : '#c86030',
-      warn: relaxVal < 20
-    });
-  }
-  const moodValue = moodModel ? Math.round(moodModel.mood) : Math.floor(pawn.state.mood);
-  const stats: EntityStat[] = [
-    ...coreStats(pawn),
-    moveSpeedStat(pawn),
-    { label: 'Mood', value: moodValue, warn: moodValue < 30 }
-  ];
-  const posMeta =
-    [
-      pawn.sex ? (pawn.sex === 'male' ? 'Male' : 'Female') : undefined,
-      pawn.age != null ? `${pawn.age} years` : undefined
-    ]
-      .filter(Boolean)
-      .join(', ') || undefined;
-  return {
-    name: pawn.name + entityDebugLabel(pawn),
-    status: pawn.socialBreak
-      ? pawn.socialBreak.kind === 'crisis'
-        ? 'in crisis'
-        : 'on a break'
-      : pawnStateLabel(pawn),
-    selected,
-    dismissable: selected,
-    stats,
-    conditionViews: getActiveConditionViews(pawn),
-    bars,
-    note:
-      (pawn.pendingGrowth?.length ?? 0) > 0
-        ? `★ growth ready${pawn.pendingGrowth!.length > 1 ? ` (${pawn.pendingGrowth!.length})` : ''}`
-        : undefined,
-    progress:
-      pawn.activeJob && pawn.currentState != null && PROGRESS_BAR_STATES.has(pawn.currentState)
-        ? (pawn.activeJob.progress ?? 0)
-        : undefined,
-    pos: selected ? (pawn.position ?? undefined) : undefined,
-    posMeta,
-    health: buildHealthModel(pawn),
-    moodModel,
-    buttons: selected
-      ? ([
-          {
-            label: 'VIEW',
-            onClick: () => {
-              uiState.update((s) => ({ ...s, selectedPawnId: pawn.id, pawnScreenTab: 'status' }));
-              uiState.openWindow('pawns');
-            }
-          },
-          {
-            label: cameraFollowPawnId === pawn.id ? 'UNFOLLOW' : 'FOLLOW',
-            active: cameraFollowPawnId === pawn.id,
-            onClick: () => uiState.setFollowPawn(cameraFollowPawnId === pawn.id ? null : pawn.id)
-          },
-          {
-            label: pawn.drafted ? 'DRAFTED' : 'DRAFT',
-            active: pawn.drafted ?? false,
-            onClick: () => toggleDraft(pawn.id)
-          },
-          ...(pawn.drafted ? [{ label: 'MOVE', onClick: () => armMove() }] : []),
-          {
-            label: 'WORK',
-            onClick: () => {
-              uiState.update((s) => ({ ...s, selectedPawnId: pawn.id, pawnScreenTab: null }));
-              uiState.openWindow('work');
-            }
-          },
-          {
-            label: 'GEAR',
-            onClick: () => {
-              uiState.update((s) => ({ ...s, selectedPawnId: pawn.id, pawnScreenTab: 'gear' }));
-              uiState.openWindow('pawns');
-            }
-          },
-          {
-            label: 'FOOD',
-            active: foodOpen,
-            onClick: () => toggleFood()
-          },
-          {
-            label: 'MARK',
-            onClick: () => startMark()
-          }
-        ] satisfies EntityButton[])
-      : undefined,
-    onSelect: !selected
-      ? () => {
-          uiState.selectPawn(pawn.id);
-          uiState.selectMob(null);
-        }
-      : undefined
-  };
 }
 
 export function mobDisplayName(mob: Mob, def: CreatureDefinition): string {
