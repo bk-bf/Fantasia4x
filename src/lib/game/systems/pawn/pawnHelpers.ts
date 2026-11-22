@@ -9,9 +9,11 @@ import BUILDINGS_DATABASE_RAW from '../../database/world/buildings.json';
 import { jobService } from '../../services/JobService';
 import { pawnService } from '../../services/PawnService';
 import {
-  buildSharedSoftBlockedGrid,
-  buildPathfindingGridsConfined,
-  pathfinderService
+  cannotReach,
+  confineGrid,
+  findPathOnWorld,
+  pathfinderService,
+  withSoftBlocked
 } from '../../services/PathfinderService';
 import { allowedTilesForPawn } from './zoneConfine';
 import { occupancyService } from '../../services/OccupancyService';
@@ -46,15 +48,23 @@ export function needsRecovery(pawn: Pawn): boolean {
   if (pawn.isAlive === false) return false;
   let bleed = 0;
   let recoverablePain = 0;
-  for (const l of pawn.limbs ?? []) {
-    bleed += l.bleedRate ?? 0;
-    for (const p of l.parts ?? [])
-      for (const w of p.injuries) {
-        if (isUncareable(w)) continue;
-        recoverablePain += w.painContribution ?? 0;
-        if (w.severity !== 'minor') return true;
+  const limbs = pawn.limbs;
+  if (limbs)
+    for (let li = 0; li < limbs.length; li++) {
+      const l = limbs[li];
+      bleed += l.bleedRate ?? 0;
+      const parts = l.parts;
+      if (!parts) continue;
+      for (let pi = 0; pi < parts.length; pi++) {
+        const injuries = parts[pi].injuries;
+        for (let wi = 0; wi < injuries.length; wi++) {
+          const w = injuries[wi];
+          if (isUncareable(w)) continue;
+          recoverablePain += w.painContribution ?? 0;
+          if (w.severity !== 'minor') return true;
+        }
       }
-  }
+    }
   if (recoverablePain >= RECOVER_PAIN_THRESHOLD) return true;
   return bleed >= RECOVER_BLEED_THRESHOLD;
 }
@@ -133,19 +143,21 @@ export function markJobUnreachable(pawnId: string, jobId: string, turn: number):
   m.set(jobId, turn + UNREACHABLE_COOLDOWN_TICKS);
 }
 
-function gridForPawn(
+function findPawnPath(
   pawn: Pawn,
   gameState: GameState,
   blocked: Set<number>,
-  sx: number,
-  sy: number
-) {
-  if (!pawn.drafted) {
-    const allowed = allowedTilesForPawn(gameState, pawn.id);
-    if (allowed && allowed.has(`${sx},${sy}`))
-      return buildPathfindingGridsConfined(gameState.worldMap, blocked, allowed, sx, sy);
-  }
-  return buildSharedSoftBlockedGrid(gameState.worldMap, blocked);
+  tx: number,
+  ty: number
+): { x: number; y: number }[] {
+  const { x: sx, y: sy } = pawn.position!;
+  const allowed = pawn.drafted ? null : allowedTilesForPawn(gameState, pawn.id);
+  const confined = allowed && allowed.has(`${sx},${sy}`) ? allowed : null;
+  if (!confined) return findPathOnWorld(gameState.worldMap, blocked, sx, sy, tx, ty);
+  return withSoftBlocked(gameState.worldMap, blocked, (soft) => {
+    const g = confineGrid(soft, confined, sx, sy);
+    return pathfinderService.findPath(g.walkable, g.costs, g.width, g.height, sx, sy, tx, ty);
+  });
 }
 
 export function tryAssignPath(
@@ -174,23 +186,9 @@ export function tryAssignPath(
   if (!approach) {
     return null;
   }
-  const { walkable, costs, width, height } = gridForPawn(
-    pawn,
-    gameState,
-    blocked,
-    pawn.position.x,
-    pawn.position.y
-  );
-  const path = pathfinderService.findPath(
-    walkable,
-    costs,
-    width,
-    height,
-    pawn.position.x,
-    pawn.position.y,
-    approach.x,
-    approach.y
-  );
+  if (cannotReach(gameState.worldMap, pawn.position.x, pawn.position.y, approach.x, approach.y))
+    return null;
+  const path = findPawnPath(pawn, gameState, blocked, approach.x, approach.y);
   if (path.length === 0) {
     return null;
   }
@@ -276,24 +274,9 @@ export function tryAssignSleepPath(
   if (!pawn.position) return null;
   if (!pathfinderService.isReady()) return null;
   if (pawn.position.x === tx && pawn.position.y === ty) return null;
+  if (cannotReach(gameState.worldMap, pawn.position.x, pawn.position.y, tx, ty)) return null;
   const blocked = occupancyService.blockedTilesShared(gameState);
-  const { walkable, costs, width, height } = gridForPawn(
-    pawn,
-    gameState,
-    blocked,
-    pawn.position.x,
-    pawn.position.y
-  );
-  const path = pathfinderService.findPath(
-    walkable,
-    costs,
-    width,
-    height,
-    pawn.position.x,
-    pawn.position.y,
-    tx,
-    ty
-  );
+  const path = findPawnPath(pawn, gameState, blocked, tx, ty);
   if (path.length === 0) {
     return null;
   }

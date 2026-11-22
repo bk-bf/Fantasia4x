@@ -4,6 +4,7 @@ import { HeadlessSession } from '$lib/game/headless/HeadlessSession';
 import { buildScenario } from '$lib/game/headless/Scenario';
 import { SCENARIO_PRESETS, getScenarioPreset } from '$lib/game/headless/scenarios/presets';
 import type { GameState, Pawn } from '$lib/game/core/types';
+import { initialState, colony } from '../../../../tools/work-pins/scenarios';
 
 const TICKS = 1200;
 const CHECK_EVERY = 100;
@@ -183,4 +184,22 @@ describe('era invariants under fast-forward', () => {
     const b = await run();
     expect(a === b, 'replay diverged').toBe(true);
   });
+
+  it('seed replay with craft orders is byte-identical', async () => {
+    const run = async () => {
+      const session = new HeadlessSession();
+      await session.start(initialState(colony));
+      for (const cmd of [...(colony.commands ?? []), ...(colony.commands ?? [])])
+        session.command(cmd);
+      const ids = (session.getState().craftingQueue ?? []).map((o) => o.id);
+      session.tick(600);
+      return { ids, dynamic: JSON.stringify(session.snapshot().dynamic) };
+    };
+    const a = await run();
+    const b = await run();
+    expect(a.ids).toHaveLength(2);
+    expect(new Set(a.ids).size).toBe(2);
+    expect(a.ids).toEqual(b.ids);
+    expect(a.dynamic === b.dynamic, 'replay with craft orders diverged').toBe(true);
+  }, 600_000);
 });

@@ -9,6 +9,7 @@ import {
 } from '$lib/game/systems/pawn/carry';
 import { itemService } from '$lib/game/services/ItemService';
 import { nearestShelterTile } from '$lib/game/systems/pawn/handlers/rescue';
+import { generate as generateRescueJobs } from '$lib/game/services/jobs/rescue';
 import type { GameState, Pawn } from '$lib/game/core/types';
 
 const pawn = (id: string, x: number, y: number, extra: Partial<Pawn> = {}): Pawn =>
@@ -39,6 +40,20 @@ describe('rescuePawn command (drafted carry order)', () => {
     expect(n.drafted).toBe(true);
     expect(n.draftTarget).toMatchObject({ type: 'rescue', victimId: 'v', auto: true });
     expect(out.pawns.find((p) => p.id === 'far')!.draftTarget).toBeUndefined();
+  });
+
+  it('never wakes a sleeping pawn to carry the victim', () => {
+    const victim = pawn('v', 5, 5, { currentState: PAWN_STATE.COLLAPSED });
+    const sleeper = pawn('sleeper', 6, 5, { currentState: PAWN_STATE.SLEEPING });
+    const awake = pawn('awake', 0, 0);
+    const out = COMMANDS.rescuePawn(state([victim, sleeper, awake], [bed(10, 10)]), {
+      victimId: 'v'
+    });
+    expect(out.pawns.find((p) => p.id === 'sleeper')!.draftTarget).toBeUndefined();
+    expect(out.pawns.find((p) => p.id === 'awake')!.draftTarget).toMatchObject({
+      type: 'rescue',
+      victimId: 'v'
+    });
   });
 
   it('no-ops when the colony has no shelter', () => {
@@ -134,5 +149,39 @@ describe('carried-pawn cargo (pawn/carry)', () => {
     const b = pawn('b', 2, 2);
     const gs = state([a, b]);
     expect(reconcileCarriedPawns(gs)).toBe(gs);
+  });
+});
+
+describe('rescue job generation', () => {
+  const victim = (extra: Partial<Pawn> = {}) =>
+    pawn('v', 5, 5, { currentState: PAWN_STATE.COLLAPSED, ...extra });
+  const rescueJob = (claimedBy: string | null) => ({
+    id: 'rescue-v',
+    type: 'rescue' as const,
+    targetX: 5,
+    targetY: 5,
+    patientId: 'v',
+    workRequired: 1,
+    workDone: 0,
+    claimedBy
+  });
+
+  it('raises one job for a pawn collapsed away from shelter', () => {
+    const jobs = generateRescueJobs([], state([victim()], [bed(10, 10)]));
+    expect(jobs.map((j) => j.patientId)).toEqual(['v']);
+  });
+
+  it('leaves a pawn already collapsed on a bed where it lies', () => {
+    expect(generateRescueJobs([], state([victim()], [bed(5, 5)]))).toEqual([]);
+  });
+
+  it('raises no job and clears old ones when the colony has no shelter', () => {
+    expect(generateRescueJobs([rescueJob(null)], state([victim()]))).toEqual([]);
+  });
+
+  it('keeps the job of the pawn carrying the victim', () => {
+    const carried = victim({ carriedBy: 'c' });
+    const gs = state([carried, pawn('c', 5, 6)], [bed(10, 10)]);
+    expect(generateRescueJobs([rescueJob('c')], gs).map((j) => j.id)).toEqual(['rescue-v']);
   });
 });

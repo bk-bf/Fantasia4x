@@ -51,6 +51,14 @@ function applyDropSync(
   return sync.order.map((id) => mirror.get(id)).filter((e): e is DroppedItem => e !== undefined);
 }
 
+function sameResources(a?: Record<string, number>, b?: Record<string, number>): boolean {
+  if (a === b) return true;
+  if (!a || !b) return false;
+  for (const k in a) if (a[k] !== b[k]) return false;
+  for (const k in b) if (!(k in a)) return false;
+  return true;
+}
+
 export function verifyWasmInWorker(): void {
   if (!isClientRuntime) {
     console.warn('[SIM-WORKER] not in a browser; cannot spawn worker');
@@ -88,6 +96,7 @@ class SimWorkerBridge {
   private pawnMirror = new Map<string, Pawn>();
   private mobMirror = new Map<string, Mob>();
   private dropMirror = new Map<string, DroppedItem>();
+  private resourceRev = 0;
   onState: ((s: GameState, flush: boolean) => void) | null = null;
   onFullState: ((s: GameState) => void) | null = null;
   private paused = false;
@@ -156,6 +165,7 @@ class SimWorkerBridge {
         for (const d of m.worldMapDelta) {
           const row = this.worldMap[d.y];
           if (row) {
+            if (!sameResources(row[d.x]?.resources, d.tile.resources)) this.resourceRev++;
             if (d.k === 1) {
               Object.assign(row[d.x], d.tile);
               markSnowRenderTileDirty(d.y, d.x);
@@ -195,7 +205,14 @@ class SimWorkerBridge {
         ? applyDropSync(this.dropMirror, m.drops)
         : (this.lastState.droppedItems ?? []);
       this.onState?.(
-        { ...this.lastState, pawns, mobs, droppedItems, worldMap: this.worldMap } as GameState,
+        {
+          ...this.lastState,
+          pawns,
+          mobs,
+          droppedItems,
+          worldMap: this.worldMap,
+          _resourceRev: this.resourceRev
+        } as GameState,
         m.flush ?? true
       );
     } else if (m.kind === 'simlog') {

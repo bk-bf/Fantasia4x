@@ -1,5 +1,8 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { jobService } from '$lib/game/services/JobService';
+import { completeCraftOrder } from '$lib/game/services/jobs/craft';
+import { generate as generateFetchJobs } from '$lib/game/services/jobs/fetch';
+import { rng } from '$lib/game/core/util/rng';
 import type { GameState, Job, Pawn } from '$lib/game/core/types';
 
 function makeState(partial: Partial<GameState> = {}): GameState {
@@ -131,7 +134,71 @@ describe('JobService subjobs (Work-tab fine-tuning)', () => {
   });
 });
 
+describe('JobService job choice', () => {
+  const assign = (a: {
+    laborSettings?: Record<string, number>;
+    workPriorities?: Record<string, number>;
+  }) =>
+    ({
+      'pawn-a': { pawnId: 'pawn-a', workPriorities: {}, laborSettings: {}, ...a }
+    }) as unknown as GameState['workAssignments'];
+
+  it('puts the nearer of two equal jobs first', () => {
+    const gs = makeState({
+      jobs: [
+        makeJob({ id: 'j-far', targetX: 5, targetY: 0 }),
+        makeJob({ id: 'j-near', targetX: 1, targetY: 0 })
+      ]
+    });
+    const order = jobService.getAvailableJobs(makePawn('pawn-a'), gs).map((j) => j.id);
+    expect(order).toEqual(['j-near', 'j-far']);
+  });
+
+  it('offers no job of a category set to priority 0', () => {
+    const gs = makeState({
+      jobs: [
+        makeJob({ id: 'j-haul', type: 'haul' }),
+        makeJob({ id: 'j-build', type: 'construct' })
+      ],
+      workAssignments: assign({ laborSettings: { hauling: 0 } })
+    });
+    const ids = jobService.getAvailableJobs(makePawn('pawn-a'), gs).map((j) => j.id);
+    expect(ids).toEqual(['j-build']);
+  });
+
+  it('clamps a legacy work priority into 0..4', () => {
+    const job = makeJob({ type: 'haul' });
+    const pawn = makePawn('pawn-a');
+    const high = makeState({ workAssignments: assign({ workPriorities: { hauling: 9 } }) });
+    const low = makeState({ workAssignments: assign({ workPriorities: { hauling: -3 } }) });
+    expect(jobService.getJobLaborLevel(job, pawn, high)).toBe(4);
+    expect(jobService.getJobLaborLevel(job, pawn, low)).toBe(0);
+  });
+
+  it('drops a light job when the job list is regenerated', () => {
+    const gs = makeState({
+      jobs: [makeJob({ id: 'j-light', type: 'light' })]
+    });
+    expect(jobService.generateJobs(gs).jobs.map((j) => j.id)).not.toContain('j-light');
+  });
+});
+
 describe('JobService advanceJob', () => {
+  it('grants the worker skill experience when a job completes', () => {
+    const worker = {
+      ...makePawn('pawn-a'),
+      skills: { construction: 1 },
+      skillXp: { construction: 0 }
+    } as unknown as Pawn;
+    const gs = makeState({
+      pawns: [worker],
+      jobs: [makeJob({ type: 'repair', buildingId: 'gone', workRequired: 10, claimedBy: 'pawn-a' })]
+    });
+    const out = jobService.advanceJob('job-1', 10, gs);
+    expect(out.jobs).toHaveLength(0);
+    expect(out.pawns[0].skillXp!.construction).toBe(10);
+  });
+
   it('accumulates work without completing below the threshold', () => {
     const gs = makeState({ jobs: [makeJob({ workRequired: 10, workDone: 0 })] });
     const out = jobService.advanceJob('job-1', 4, gs);
@@ -242,5 +309,78 @@ describe('JobService reserve-and-fetch crafting (ADR-016)', () => {
     );
     expect(produced).toBeDefined();
     expect(produced!.quantity).toBe(3);
+  });
+
+  const stagedFor = (orderId: string, over: Record<string, unknown> = {}) =>
+    ({
+      id: `d-${orderId}`,
+      resourceId: 'wood',
+      x: 5,
+      y: 5,
+      quantity: 2,
+      stored: true,
+      reservedFor: orderId,
+      ...over
+    }) as any;
+
+  it('opens one craft job at a station even when two orders there are supplied', () => {
+    const out = jobService.generateJobs(
+      makeState({
+        buildings: [station],
+        craftingQueue: [order(), order({ id: 'cq-2' })],
+        droppedItems: [stagedFor('cq-1'), stagedFor('cq-2')]
+      })
+    );
+    expect(out.jobs.filter((j) => j.type === 'craft').map((j) => j.craftQueueId)).toEqual(['cq-1']);
+  });
+
+  it('drops a fetch job whose source is now reserved for another order', () => {
+    const fetchJob = makeJob({
+      id: 'fetch-d-wood-cq-1',
+      type: 'fetch',
+      droppedItemId: 'd-wood',
+      craftQueueId: 'cq-1',
+      buildingId: 'st-1'
+    });
+    const gs = makeState({
+      buildings: [station],
+      craftingQueue: [order(), order({ id: 'cq-2' })],
+      droppedItems: [stagedFor('cq-2', { id: 'd-wood', x: 2, y: 0 })]
+    });
+    const jobs = generateFetchJobs([fetchJob], gs);
+    expect(jobs.filter((j) => j.craftQueueId === 'cq-1')).toEqual([]);
+    expect(jobs.map((j) => j.craftQueueId)).toEqual(['cq-2']);
+  });
+
+  it('rolls the fractional unit of a scaled yield', () => {
+    const produced = (roll: number) => {
+      const spy = vi.spyOn(rng, 'random').mockReturnValue(roll);
+      try {
+        const gs = makeState({
+          buildings: [station],
+          craftingQueue: [order()],
+          droppedItems: [stagedFor('cq-1')]
+        });
+        const out = completeCraftOrder(order(), gs, undefined, undefined, 1.5);
+        return (out.droppedItems ?? []).find((d) => d.resourceId === 'test_widget')?.quantity;
+      } finally {
+        spy.mockRestore();
+      }
+    };
+    expect(produced(0)).toBe(2);
+    expect(produced(0.9)).toBe(1);
+  });
+
+  it('keeps crafted output apart from a stored pile on the station tile', () => {
+    const pile = { id: 'pile', resourceId: 'test_widget', x: 5, y: 5, quantity: 4, stored: true };
+    const gs = makeState({
+      buildings: [station],
+      craftingQueue: [order()],
+      droppedItems: [stagedFor('cq-1'), pile] as any
+    });
+    const out = completeCraftOrder(order(), gs);
+    const widgets = (out.droppedItems ?? []).filter((d) => d.resourceId === 'test_widget');
+    expect(widgets.find((d) => d.id === 'pile')!.quantity).toBe(4);
+    expect(widgets.filter((d) => !d.stored).map((d) => d.quantity)).toEqual([1]);
   });
 });

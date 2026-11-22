@@ -74,10 +74,10 @@ import {
 } from '../services/EnvironmentService';
 import { SUBTERRAINS, SUBTERRAIN_FALLBACK } from '../core/defs/terrains';
 import { resourceObjectService } from '../services/ResourceObjectService';
-import { patchPathfindingWalkable } from '../services/PathfinderService';
+import { buildPathfindingGrids, patchPathfindingWalkable } from '../services/PathfinderService';
 import { occupancyService } from '../services/OccupancyService';
 import { assignDraftMovePath } from '../services/draftMovePath';
-import { rebuildConnectivity, reachable } from '../services/entity/connectivity';
+import { refreshConnectivity, reachable } from '../services/entity/connectivity';
 import { markTileDirty } from '../core/state/tileDeltas';
 import { simLog } from '../core/util/logSink';
 import type { SimCommand } from './simProtocol';
@@ -172,7 +172,7 @@ function refuseUnreachableMoves(
 ): Set<string> {
   const refused = new Set<string>();
   if (!s.worldMap?.length || targets.size === 0) return refused;
-  rebuildConnectivity(s.worldMap);
+  refreshConnectivity(buildPathfindingGrids(s.worldMap));
   for (const pawn of pawns) {
     const t = targets.get(pawn.id);
     if (!t || !pawn.position || reachable(pawn.position.x, pawn.position.y, t.x, t.y)) continue;
@@ -1041,7 +1041,13 @@ export const COMMANDS: Record<string, Cmd> = {
       1,
       Math.ceil(((recipe.workAmount ?? 1) * quantity) / (1 + craftBonus))
     );
-    const orderId = crypto.randomUUID();
+    const takenIds = new Set<string>((s.craftingQueue ?? []).map((o) => o.id));
+    for (const d of s.droppedItems ?? []) if (d.reservedFor) takenIds.add(d.reservedFor);
+    for (const pw of s.pawns) if (pw.carryingForOrder) takenIds.add(pw.carryingForOrder);
+    const orderBase = `order-${item.id}-t${s.turn}`;
+    let orderSeq = 0;
+    while (takenIds.has(`${orderBase}-${orderSeq}`)) orderSeq++;
+    const orderId = `${orderBase}-${orderSeq}`;
     let gs = s;
     let allReserved = true;
     for (const [id, q] of Object.entries(inputs)) {
