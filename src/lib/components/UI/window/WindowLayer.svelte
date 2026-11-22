@@ -39,7 +39,9 @@
     return Math.min(W - 12, BIG_WIDTH_MAX, Math.max(BIG_WIDTH_MIN, W - left - right - 16));
   }
   const heightOf = (id: WindowId) =>
-    WINDOWS[id].modal || WINDOWS[id].fit ? null : Math.min(WINDOW_HEIGHT_MAX, H - top - 12);
+    WINDOWS[id].modal || WINDOWS[id].fit
+      ? null
+      : Math.min(WINDOWS[id].height ?? WINDOW_HEIGHT_MAX, H - top - 12);
 
   function sized(id: WindowId, w: number, h: number) {
     size[id] = { w, h };

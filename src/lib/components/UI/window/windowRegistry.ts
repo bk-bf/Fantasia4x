@@ -16,6 +16,7 @@ export interface WindowSpec {
   title: string;
   component: Component;
   width: 'big' | number;
+  height?: number;
   modal?: boolean;
   fit?: boolean;
 }
@@ -25,7 +26,7 @@ export const WINDOWS: Record<WindowId, WindowSpec> = {
   work: { title: 'Work', component: WorkScreen, width: 'big' },
   building: { title: 'Construction', component: BuildingMenu, width: 'big' },
   crafting: { title: 'Crafting', component: CraftingScreen, width: 'big' },
-  exploration: { title: 'Exploration', component: ExplorationScreen, width: 640 },
+  exploration: { title: 'Exploration', component: ExplorationScreen, width: 560, height: 384 },
   culture: { title: 'Cultures', component: CultureScreen, width: 900 },
   kingdoms: { title: 'Kingdoms', component: KingdomScreen, width: 900 },
   research: { title: 'Research', component: ResearchScreen, width: 'big' },

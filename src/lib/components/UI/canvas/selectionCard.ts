@@ -3,7 +3,7 @@ import { gameState } from '$lib/stores/gameState.js';
 import { resourceObjectService } from '$lib/game/services/ResourceObjectService.js';
 import { type CreatureDefinition, getCreatureById } from '$lib/game/core/defs/creatures.js';
 import { RELAXATION_NOTEWORTHY, WETNESS_NOTEWORTHY } from '$lib/components/util/pawnUtils';
-import type { Pawn, Mob, Injury } from '$lib/game/core/types.js';
+import type { Pawn, Mob, Injury, LimbState, LimbId } from '$lib/game/core/types.js';
 import { CORE_STATS } from '$lib/game/core/types.js';
 import { limbLabel, partLabel } from '$lib/components/util/bodyLabels';
 import { woundById } from '$lib/game/core/defs/wounds';
@@ -296,9 +296,9 @@ function buildHealthPills(entity: Pawn | Mob): StatPillView[] {
   return [...health, ...temp, ...combat];
 }
 
-export function buildHealthModel(entity: Pawn | Mob): HealthModel {
-  const limbs: HealthLimb[] = [];
-  for (const limb of entity.limbs ?? []) {
+export function hurtLimbs(all: LimbState[]): (HealthLimb & { id: LimbId })[] {
+  const limbs: (HealthLimb & { id: LimbId })[] = [];
+  for (const limb of all) {
     const parts: HealthPart[] = [];
     for (const part of limb.parts ?? []) {
       const hurt = part.isMissing || part.health < part.maxHp - 0.5 || part.injuries.length > 0;
@@ -323,6 +323,7 @@ export function buildHealthModel(entity: Pawn | Mob): HealthModel {
       limb.isMissing || Math.round(limb.health) < 100 || limb.bleedRate > 0 || parts.length > 0;
     if (!damaged) continue;
     limbs.push({
+      id: limb.id,
       label: limbLabel(limb.id),
       health: limb.health,
       missing: limb.isMissing,
@@ -330,7 +331,11 @@ export function buildHealthModel(entity: Pawn | Mob): HealthModel {
       parts
     });
   }
+  return limbs;
+}
 
+export function buildHealthModel(entity: Pawn | Mob): HealthModel {
+  const limbs = hurtLimbs(entity.limbs ?? []);
   const bleedRate = (entity.limbs ?? []).reduce((s, l) => s + (l.bleedRate ?? 0), 0);
   return {
     blood:
