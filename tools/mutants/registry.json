@@ -51,7 +51,7 @@
   {
     "id": "stockpile-release-never-changes",
     "file": "src/lib/game/core/state/stockpile.ts",
-    "find": "  return changed ? { ...state, droppedItems: drops } : state;",
+    "find": "  return { ...state, droppedItems: drops };",
     "replace": "  return state;",
     "tests": ["src/tests/game/services/physicalProduction.test.ts"]
   },
