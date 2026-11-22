@@ -37,6 +37,17 @@ function body(id: string, transient: string[] = [], conditions: EntityCondition[
   } as unknown as Pawn;
 }
 
+type Resolve = (
+  attacker: Pawn,
+  defender: Pawn,
+  state: GameState,
+  override: undefined,
+  guaranteed: boolean
+) => HitResult;
+const resolveHit = (combatService as unknown as { resolveHit: Resolve }).resolveHit.bind(
+  combatService
+);
+
 function rolls(attacker: Pawn, defender: Pawn, guaranteed = false, n = 3000): HitResult[] {
   rng.reseed(99);
   const state = {
@@ -46,7 +57,7 @@ function rolls(attacker: Pawn, defender: Pawn, guaranteed = false, n = 3000): Hi
     worldMap: []
   } as unknown as GameState;
   return Array.from({ length: n }, () =>
-    combatService.resolveHit(attacker, defender, state, undefined, guaranteed)
+    resolveHit(attacker, defender, state, undefined, guaranteed)
   );
 }
 

@@ -127,7 +127,7 @@ describe('combat stamina loop', () => {
     const out = combatService.tickCombat(world([target], [winded]), 16);
     expect(out.mobs![0].stamina).toBeGreaterThan(10);
     expect(
-      out.pawns[0].limbs.every((l) => (l.parts ?? []).every((p) => p.injuries.length === 0))
+      (out.pawns[0].limbs ?? []).every((l) => (l.parts ?? []).every((p) => p.injuries.length === 0))
     ).toBe(true);
   });
 });

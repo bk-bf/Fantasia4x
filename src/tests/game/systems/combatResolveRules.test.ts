@@ -66,12 +66,21 @@ function wolf(over: Partial<Mob> = {}): Mob {
 const world = (pawns: Pawn[], mobs: Mob[] = [], turn = 1) =>
   ({ turn, pawns, mobs, worldMap: [] }) as unknown as GameState;
 
+type Resolve = (
+  attacker: Pawn,
+  defender: Pawn,
+  state: GameState,
+  override: undefined,
+  guaranteed: boolean
+) => HitResult;
+const resolveHit = (combatService as unknown as { resolveHit: Resolve }).resolveHit.bind(
+  combatService
+);
+
 function rolls(att: Pawn, def: Pawn, guaranteed: boolean, n = 2000): HitResult[] {
   rng.reseed(5);
   const state = world([att, def], [], 0);
-  return Array.from({ length: n }, () =>
-    combatService.resolveHit(att, def, state, undefined, guaranteed)
-  );
+  return Array.from({ length: n }, () => resolveHit(att, def, state, undefined, guaranteed));
 }
 
 const shield = (itemId: string) => ({ itemId, quantity: 1 }) as unknown as ItemInstance;
