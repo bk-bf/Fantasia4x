@@ -1159,7 +1159,7 @@ class PawnStateMachineImpl {
 
       const wasCollapsed = afterConditions.currentState === PAWN_STATE.COLLAPSED;
       if (wasCollapsed || consciousness < COLLAPSE_CONSCIOUSNESS) {
-        const durations = { ...(afterConditions.conditionTimers ?? {}) };
+        const durations = { ...(tickConditionTimers(afterConditions).conditionTimers ?? {}) };
         let jobs = state.jobs;
         if (wasCollapsed) {
           if (consciousness >= RECOVER_CONSCIOUSNESS) delete durations.collapse;

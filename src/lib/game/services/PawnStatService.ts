@@ -28,6 +28,7 @@ import {
   conditionModifierSum,
   conditionModifierContributions,
   tempRange,
+  getTransientConditionDef,
   RECOVER_CONSCIOUSNESS
 } from '../core/rules/body/conditions';
 import { equippedTemperatureSources, type WornThermalSource } from '../core/rules/gear/equipment';
@@ -145,6 +146,106 @@ function coreStatValue(
 
 const BLOOD_FAINT_ONSET = 0.2;
 const BLOOD_FAINT_FLOOR = 0.55;
+
+function bloodFaintSeverity(entity: Pawn | Mob): number {
+  const maxBlood = entity.maxBloodVolume ?? 100;
+  const bloodLoss = Math.max(0, 1 - (entity.bloodVolume ?? maxBlood) / maxBlood);
+  return Math.min(
+    1,
+    Math.max(0, (bloodLoss - BLOOD_FAINT_ONSET) / (BLOOD_FAINT_FLOOR - BLOOD_FAINT_ONSET))
+  );
+}
+
+function withBloodLoss(consciousnessBeforeBlood: number, entity: Pawn | Mob): number {
+  return consciousnessBeforeBlood * (1 - bloodFaintSeverity(entity));
+}
+
+type ConditionList = readonly { id: string; severity: number }[] | undefined;
+
+const STAGE_THRESHOLDS = new Map<string, number[]>();
+for (const d of ALL_CONDITION_DEFS)
+  if (!STAGE_THRESHOLDS.has(d.id))
+    STAGE_THRESHOLDS.set(
+      d.id,
+      ((d as ConditionDef).stages ?? []).map((s) => s.minSeverity)
+    );
+
+interface StageBand {
+  id: string;
+  lo: number;
+  hi: number;
+}
+
+function stageBands(conditions: ConditionList): StageBand[] {
+  const out: StageBand[] = [];
+  for (const c of conditions ?? []) {
+    let lo = -Infinity;
+    let hi = Infinity;
+    for (const t of STAGE_THRESHOLDS.get(c.id) ?? []) {
+      if (c.severity >= t) lo = Math.max(lo, t);
+      else hi = Math.min(hi, t);
+    }
+    out.push({ id: c.id, lo, hi });
+  }
+  return out;
+}
+
+function withinStageBands(bands: StageBand[], conditions: ConditionList): boolean {
+  const n = conditions?.length ?? 0;
+  if (n !== bands.length) return false;
+  for (let i = 0; i < n; i++) {
+    const c = conditions![i];
+    const b = bands[i];
+    if (c.id !== b.id || !(c.severity >= b.lo) || !(c.severity < b.hi)) return false;
+  }
+  return true;
+}
+
+function sameIds(a: readonly string[], b: readonly string[] | undefined): boolean {
+  const n = b?.length ?? 0;
+  if (n !== a.length) return false;
+  for (let i = 0; i < n; i++) if (a[i] !== b![i]) return false;
+  return true;
+}
+
+interface TransientCapacityTerms {
+  consciousness: number;
+  pain: number;
+  nightVision: number;
+}
+
+function transientCapacityTerms(ids: readonly string[] | undefined): TransientCapacityTerms {
+  const terms = { consciousness: 1, pain: 1, nightVision: 0 };
+  for (const id of ids ?? []) {
+    const def = getTransientConditionDef(id);
+    if (!def) continue;
+    if (def.modifiers.consciousness != null) terms.consciousness *= def.modifiers.consciousness;
+    if (def.modifiers.pain != null) terms.pain *= def.modifiers.pain;
+    terms.nightVision += def.grants?.nightVision ?? 0;
+  }
+  return terms;
+}
+
+function sameTerms(a: TransientCapacityTerms, b: TransientCapacityTerms): boolean {
+  return (
+    a.consciousness === b.consciousness && a.pain === b.pain && a.nightVision === b.nightVision
+  );
+}
+
+interface CapCacheEntry {
+  limbs: unknown;
+  injuries: unknown;
+  light: number;
+  conditions: unknown;
+  stageBands: StageBand[];
+  transient: unknown;
+  transientIds: string[];
+  transientTerms: TransientCapacityTerms;
+  bloodVolume: number | undefined;
+  maxBloodVolume: number | undefined;
+  consciousnessBeforeBlood: number;
+  caps: Record<string, number>;
+}
 
 const BROKEN_BONE_FUNCTION_MULT = 0.4;
 
@@ -411,19 +512,7 @@ function calculateCapacityValue(
       const hearingCap = capacities.hearing ?? 1;
       const effectivePain = Math.max(0, painValue - 0.1);
       const painMult = Math.max(0.05, 1 - effectivePain);
-      const maxBlood = pawn.maxBloodVolume ?? 100;
-      const bloodLoss = Math.max(0, 1 - (pawn.bloodVolume ?? maxBlood) / maxBlood);
-      const bloodSeverity = Math.min(
-        1,
-        Math.max(0, (bloodLoss - BLOOD_FAINT_ONSET) / (BLOOD_FAINT_FLOOR - BLOOD_FAINT_ONSET))
-      );
-      const bloodMult = 1 - bloodSeverity;
-      return (
-        (baseCon + hearingCap * 0.05) *
-        painMult *
-        bloodMult *
-        conditionConsciousnessMultiplier(pawn)
-      );
+      return (baseCon + hearingCap * 0.05) * painMult * conditionConsciousnessMultiplier(pawn);
     }
     case 'pain':
       return painValue;
@@ -623,19 +712,44 @@ export interface PawnStatService {
 }
 
 export class PawnStatServiceImpl implements PawnStatService {
-  private _capCache = new Map<
-    string,
-    { limbs: unknown; injuries: unknown; light: number; caps: Record<string, number> }
-  >();
+  private _capCache = new Map<string, CapCacheEntry>();
   private _capHits = 0;
   private _capMiss = 0;
+
+  private _conditionsHold(c: CapCacheEntry, pawn: Pawn | Mob): boolean {
+    if (c.conditions !== pawn.conditions) {
+      if (!withinStageBands(c.stageBands, pawn.conditions)) return false;
+      c.conditions = pawn.conditions;
+    }
+    if (c.transient !== pawn.transientConditions) {
+      if (!sameIds(c.transientIds, pawn.transientConditions)) {
+        if (!sameTerms(c.transientTerms, transientCapacityTerms(pawn.transientConditions)))
+          return false;
+        c.transientIds = [...(pawn.transientConditions ?? [])];
+      }
+      c.transient = pawn.transientConditions;
+    }
+    return true;
+  }
 
   computeCapacities(pawn: Pawn | Mob, lightMultiplier?: number): Record<string, number> {
     const light = lightMultiplier ?? pawn.effectiveLight ?? 1;
     const lightBucket = Math.round(light * 10) / 10;
     const c = this._capCache.get(pawn.id);
-    if (c && c.limbs === pawn.limbs && c.injuries === pawn.injuries && c.light === lightBucket) {
+    if (
+      c &&
+      c.limbs === pawn.limbs &&
+      c.injuries === pawn.injuries &&
+      c.light === lightBucket &&
+      ((c.conditions === pawn.conditions && c.transient === pawn.transientConditions) ||
+        this._conditionsHold(c, pawn))
+    ) {
       this._capHits++;
+      if (c.bloodVolume !== pawn.bloodVolume || c.maxBloodVolume !== pawn.maxBloodVolume) {
+        c.bloodVolume = pawn.bloodVolume;
+        c.maxBloodVolume = pawn.maxBloodVolume;
+        c.caps.consciousness = withBloodLoss(c.consciousnessBeforeBlood, pawn);
+      }
       return c.caps;
     }
     this._capMiss++;
@@ -648,12 +762,22 @@ export class PawnStatServiceImpl implements PawnStatService {
           `capCache hit ${Math.round((this._capHits / total) * 100)}% (${this._capHits}/${total}), size ${this._capCache.size}`
       );
     }
-    const caps = this._buildCapacities(pawn, light);
+    const caps = this._buildCapacitiesBeforeBlood(pawn, light);
+    const consciousnessBeforeBlood = caps.consciousness;
+    caps.consciousness = withBloodLoss(consciousnessBeforeBlood, pawn);
     if (this._capCache.size > 2048) this._capCache.clear();
     this._capCache.set(pawn.id, {
       limbs: pawn.limbs,
       injuries: pawn.injuries,
       light: lightBucket,
+      conditions: pawn.conditions,
+      stageBands: stageBands(pawn.conditions),
+      transient: pawn.transientConditions,
+      transientIds: [...(pawn.transientConditions ?? [])],
+      transientTerms: transientCapacityTerms(pawn.transientConditions),
+      bloodVolume: pawn.bloodVolume,
+      maxBloodVolume: pawn.maxBloodVolume,
+      consciousnessBeforeBlood,
       caps
     });
     return caps;
@@ -681,6 +805,15 @@ export class PawnStatServiceImpl implements PawnStatService {
   }
 
   private _buildCapacities(pawn: Pawn | Mob, lightMultiplier?: number): Record<string, number> {
+    const caps = this._buildCapacitiesBeforeBlood(pawn, lightMultiplier);
+    caps.consciousness = withBloodLoss(caps.consciousness, pawn);
+    return caps;
+  }
+
+  private _buildCapacitiesBeforeBlood(
+    pawn: Pawn | Mob,
+    lightMultiplier?: number
+  ): Record<string, number> {
     const capacities: Record<string, number> = {};
     const capacityIds = [
       'pain',

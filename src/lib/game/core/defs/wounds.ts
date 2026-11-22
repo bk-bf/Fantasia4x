@@ -2,7 +2,7 @@ import woundsRaw from '../../database/pawns/wounds.json';
 import { PART_DEF_MAP, boneBreakBudget } from './bodyParts';
 import { rng } from '../util/rng';
 import type { DamageType } from '../types';
-import type { Injury, LimbState, BodyPartId } from '../types/health';
+import type { Injury, LimbState, BodyPartId, BodyPartState } from '../types/health';
 
 export interface WoundDef {
   id: string;
@@ -336,6 +336,9 @@ export function rollWoundClotting(
 
 const UNTENDED_SERIOUS_HEAL_MUL = 0.15;
 
+const isHealable = (part: BodyPartState): boolean =>
+  !part.isMissing && part.injuries.some((w) => !w.permanent);
+
 export function healLimbs(
   limbs: LimbState[],
   baseHeal: number,
@@ -348,9 +351,9 @@ export function healLimbs(
   let changed = false;
   const newLimbs = limbs.map((limb) => {
     const parts = limb.parts;
-    if (!parts || !parts.some((p) => p.injuries.some((w) => !w.permanent))) return limb;
+    if (!parts || !parts.some(isHealable)) return limb;
     const newParts = parts.map((part) => {
-      if (part.isMissing || !part.injuries.some((w) => !w.permanent)) return part;
+      if (!isHealable(part)) return part;
       let healed = 0;
       const newWounds: Injury[] = [];
       for (const w of part.injuries) {
@@ -418,9 +421,9 @@ export function healLimbsInPlace(
   let changed = false;
   for (const limb of limbs) {
     const parts = limb.parts;
-    if (!parts || !parts.some((p) => p.injuries.some((w) => !w.permanent))) continue;
+    if (!parts || !parts.some(isHealable)) continue;
     for (const part of parts) {
-      if (part.isMissing || !part.injuries.some((w) => !w.permanent)) continue;
+      if (!isHealable(part)) continue;
       let healed = 0;
       let write = 0;
       const inj = part.injuries;
