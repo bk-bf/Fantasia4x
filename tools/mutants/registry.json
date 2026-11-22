@@ -1339,22 +1339,22 @@
   {
     "id": "haul-capacity-exclusive",
     "file": "src/lib/game/services/jobs/haul.ts",
-    "find": "const atCapacity = activeHaulCount >= canAccept;",
-    "replace": "const atCapacity = activeHaulCount > canAccept;",
+    "find": "activeHaulCount >= storageRoom",
+    "replace": "activeHaulCount > storageRoom",
     "tests": ["src/tests/game/services/haulRules.test.ts"]
   },
   {
     "id": "haul-free-slots-ignore-stored-piles",
     "file": "src/lib/game/services/jobs/haul.ts",
-    "find": "freeSlots += Math.max(0, tilePileCapacity(gs, x, y) - tileStoredPileCount(gs, x, y));",
-    "replace": "freeSlots += tilePileCapacity(gs, x, y);",
+    "find": "freeSlots += Math.max(0, (bins.pileCapacity.get(k) ?? 1) - (piles.get(k) ?? 0));",
+    "replace": "freeSlots += bins.pileCapacity.get(k) ?? 1;",
     "tests": ["src/tests/game/services/haulRules.test.ts"]
   },
   {
     "id": "haul-rehaul-cooldown-shifted",
     "file": "src/lib/game/services/jobs/haul.ts",
-    "find": "d.rehaulCooldownUntil > gs.turn)\n  );",
-    "replace": "d.rehaulCooldownUntil >= gs.turn + 5)\n  );",
+    "find": "d.rehaulCooldownUntil > gs.turn) &&",
+    "replace": "d.rehaulCooldownUntil >= gs.turn + 5) &&",
     "tests": ["src/tests/game/services/haulRules.test.ts"]
   },
   {
@@ -1367,22 +1367,22 @@
   {
     "id": "haul-container-budget-exclusive",
     "file": "src/lib/game/services/jobs/haul.ts",
-    "find": "if (held >= budget) return false;",
-    "replace": "if (held > budget) return false;",
+    "find": ".get(zoneId) ?? 0) >= budget;",
+    "replace": ".get(zoneId) ?? 0) > budget;",
     "tests": ["src/tests/game/services/haulRules.test.ts"]
   },
   {
     "id": "jobs-farthest-first",
     "file": "src/lib/game/services/JobService.ts",
-    "find": "return dA - dB;",
-    "replace": "return dB - dA;",
+    "find": "return a.distance - b.distance;",
+    "replace": "return b.distance - a.distance;",
     "tests": ["src/tests/game/services/JobService.test.ts"]
   },
   {
     "id": "jobs-priority-zero-claimed",
     "file": "src/lib/game/services/JobService.ts",
-    "find": "if (priority <= 0) return false;",
-    "replace": "if (priority < 0) return false;",
+    "find": "if (priority <= 0) continue;",
+    "replace": "if (priority < 0) continue;",
     "tests": ["src/tests/game/services/JobService.test.ts"]
   },
   {
