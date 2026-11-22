@@ -99,6 +99,7 @@
   .pawn-screen {
     flex: 1;
     min-height: 0;
+    max-height: min(547px, calc(100vh - 150px));
     display: flex;
     flex-direction: column;
     color: var(--text);
