@@ -93,7 +93,7 @@
 </script>
 
 <div class="rel">
-  <Well title="Family">
+  <Well title="Family" scroll>
     {#each kinRows as row}
       <div class="fam" class:stale={row.stale} class:dead={!row.target && !row.away}>
         <em>{row.kind}</em>
@@ -117,7 +117,7 @@
     {/each}
   </Well>
 
-  <Well title="Bonds">
+  <Well title="Bonds" scroll>
     {#if rels.length > 0}
       <div class="bonds">
         {#each rels as { r, other } (r.pawnA + r.pawnB)}
@@ -171,8 +171,9 @@
   .rel {
     display: grid;
     grid-template-columns: 1fr 2fr;
+    grid-template-rows: minmax(0, 1fr);
     gap: 6px;
-    align-items: start;
+    height: 248px;
   }
   .fam {
     margin-bottom: 6px;

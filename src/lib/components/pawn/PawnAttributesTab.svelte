@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { Pawn } from '$lib/game/core/types';
   import Well from '$lib/components/UI/widget/Well.svelte';
+  import ScrollArea from '$lib/components/UI/widget/ScrollArea.svelte';
   import PawnSkillBanner from './PawnSkillBanner.svelte';
   import PawnAttributes from './PawnAttributes.svelte';
   import TraitCards from './TraitCards.svelte';
@@ -10,14 +11,14 @@
 
 <div class="attrtab">
   <Well title="Skills" class="skillband"><PawnSkillBanner {pawn} /></Well>
-  <div class="dcats">
+  <ScrollArea class="dcats">
     <PawnAttributes
       {pawn}
       showBanner={false}
       categories={['physical', 'capacity', 'combat', 'resistance', 'social']}
     />
-  </div>
-  <Well title="Traits" class="traits">
+  </ScrollArea>
+  <Well title="Traits" class="traits" scroll>
     {#if pawn.traits?.length}
       <TraitCards traits={pawn.traits} {pawn} list />
     {:else}
@@ -30,18 +31,22 @@
   .attrtab {
     display: grid;
     grid-template-columns: 1fr 260px;
+    grid-template-rows: auto minmax(0, 1fr);
     gap: 6px;
     align-items: start;
+    height: 414px;
   }
   .attrtab :global(.skillband) {
     grid-column: 1;
   }
-  .dcats {
+  .attrtab :global(.dcats) {
     grid-column: 1;
+    align-self: stretch;
   }
   .attrtab :global(.traits) {
     grid-column: 2;
     grid-row: 1 / span 2;
+    align-self: stretch;
   }
   .none {
     margin: 0;

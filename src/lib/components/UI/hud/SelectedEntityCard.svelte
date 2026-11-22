@@ -116,8 +116,7 @@
   import ItemPills from '../widget/ItemPills.svelte';
   import HealthPanel from '../canvas/HealthPanel.svelte';
   import { healthToggle } from '../canvas/healthToggle.svelte';
-  import MoodPanel from '../canvas/MoodPanel.svelte';
-  import { moodToggle } from '../canvas/moodToggle.svelte';
+  import { uiState } from '$lib/stores/uiState';
   import ArmorPanel from '../canvas/ArmorPanel.svelte';
   import { armorToggle } from '../canvas/armorToggle.svelte';
   import { debugMode } from '$lib/stores/uiPrefs';
@@ -277,10 +276,6 @@
     <HealthPanel health={model.health} open={healthToggle.open} />
   {/if}
 
-  {#if model.moodModel}
-    <MoodPanel mood={model.moodModel} open={moodToggle.open} />
-  {/if}
-
   {#if model.armor && $debugMode}
     <ArmorPanel armor={model.armor} open={armorToggle.open} />
   {/if}
@@ -305,13 +300,13 @@
       {#if model.moodModel && model.selected}
         <button
           class="hud-btn"
-          class:hud-btn--active={moodToggle.open}
+          class:hud-btn--active={$uiState.windows.includes('mood')}
           class:hud-btn--warn={model.moodModel.target < model.moodModel.mood - 0.5}
           onmousedown={(e) => e.stopPropagation()}
           onmouseup={(e) => e.stopPropagation()}
           onclick={(e) => {
             e.stopPropagation();
-            moodToggle.open = !moodToggle.open;
+            uiState.toggleWindow('mood');
           }}
         >
           <span class="hud-btn-lbl">MOOD</span>
