@@ -192,7 +192,12 @@ export function complete(job: Job, gs: GameState): GameState {
 
     const dropDef = itemService.getItemById(drop.resourceId);
     if (dropDef?.dynamicName) {
-      const newDropped = (gs.droppedItems ?? []).filter((d) => d.id !== drop.id);
+      const units = Math.min(taken, drop.quantity);
+      const left = drop.quantity - units;
+      const newDropped =
+        left > 0
+          ? (gs.droppedItems ?? []).map((d) => (d.id === drop.id ? { ...d, quantity: left } : d))
+          : (gs.droppedItems ?? []).filter((d) => d.id !== drop.id);
       const newPawns = gs.pawns.map((p) => {
         if (p.id !== pawnId) return p;
         const inv = p.inventory ?? {
@@ -203,13 +208,18 @@ export function complete(job: Job, gs: GameState): GameState {
           volumeL: 0,
           maxVolumeL: 20
         };
-        const instance: ItemInstance = {
-          instanceId: drop.instance?.instanceId ?? drop.id,
-          itemId: drop.resourceId,
-          durability: drop.instance?.durability ?? 0,
-          name: drop.name
-        };
-        return { ...p, inventory: { ...inv, instances: [...inv.instances, instance] } };
+        const baseId = drop.instance?.instanceId ?? drop.id;
+        const picked: ItemInstance[] = [];
+        for (let k = 0; k < units; k++) {
+          const remaining = drop.quantity - k;
+          picked.push({
+            instanceId: remaining > 1 ? `${baseId}-q${remaining}` : baseId,
+            itemId: drop.resourceId,
+            durability: drop.instance?.durability ?? 0,
+            name: drop.name
+          });
+        }
+        return { ...p, inventory: { ...inv, instances: [...inv.instances, ...picked] } };
       });
       return { ...gs, droppedItems: newDropped, pawns: newPawns };
     }

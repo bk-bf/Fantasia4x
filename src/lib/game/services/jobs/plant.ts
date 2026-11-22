@@ -32,10 +32,15 @@ function hasCrop(tile: {
   return false;
 }
 
+function seedOf(cropId: string | undefined): string | undefined {
+  return cropId ? resourceObjectService.getById(cropId)?.crop?.seedItem : undefined;
+}
+
 function cropForTile(
   gs: GameState,
   tile: { subType: string },
-  tileKey: string
+  tileKey: string,
+  seedsLeft: Map<string, number>
 ): ResourceObjectDef | null {
   const instId = zoneInstanceIdAt(gs, tileKey, 'grow');
   const inst = (gs.zoneInstances ?? []).find((z) => z.id === instId);
@@ -45,7 +50,7 @@ function cropForTile(
     const seed = d.crop!.seedItem;
     if (filter && filter.allowedCategories.length > 0 && !itemMatchesFilter(seed, filter)) continue;
     if (tier < d.crop!.minSoil) continue;
-    if ((gs.stockpile?.[seed] ?? 0) <= 0) continue;
+    if ((seedsLeft.get(seed) ?? gs.stockpile?.[seed] ?? 0) <= 0) continue;
     return d;
   }
   return null;
@@ -60,12 +65,20 @@ export function generate(jobs: Job[], gs: GameState): Job[] {
     const key = `${j.targetX},${j.targetY}`;
     if (!growSet.has(key)) return false;
     const tile = gs.worldMap[j.targetY]?.[j.targetX];
-    return !!tile && !hasCrop(tile);
+    if (!tile || hasCrop(tile)) return false;
+    if (j.claimedBy) return true;
+    const seed = seedOf(j.resourceId);
+    return !seed || (gs.stockpile?.[seed] ?? 0) > 0;
   });
 
-  const existing = new Set(
-    jobs.filter((j) => j.type === 'plant').map((j) => `${j.targetX},${j.targetY}`)
-  );
+  const seedsLeft = new Map<string, number>();
+  const existing = new Set<string>();
+  for (const j of jobs) {
+    if (j.type !== 'plant') continue;
+    existing.add(`${j.targetX},${j.targetY}`);
+    const seed = seedOf(j.resourceId);
+    if (seed) seedsLeft.set(seed, (seedsLeft.get(seed) ?? gs.stockpile?.[seed] ?? 0) - 1);
+  }
 
   for (const key of growTiles) {
     if (existing.has(key)) continue;
@@ -73,8 +86,10 @@ export function generate(jobs: Job[], gs: GameState): Job[] {
     const tile = gs.worldMap[y]?.[x];
     if (!tile) continue;
     if (hasCrop(tile)) continue;
-    const crop = cropForTile(gs, tile, key);
+    const crop = cropForTile(gs, tile, key, seedsLeft);
     if (!crop) continue;
+    const seed = crop.crop!.seedItem;
+    seedsLeft.set(seed, (seedsLeft.get(seed) ?? gs.stockpile?.[seed] ?? 0) - 1);
     jobs.push({
       id: `plant-${x}-${y}-t${gs.turn}-${rng.random().toString(36).slice(2, 5)}`,
       type: 'plant',

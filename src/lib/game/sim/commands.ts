@@ -767,14 +767,18 @@ export const COMMANDS: Record<string, Cmd> = {
     if (!placed) return s;
     const def = buildingService.getBuildingById(placed.type);
     if (!def) return s;
-    const refund = Object.fromEntries(
-      Object.entries(def.buildingCost).filter(([k]) => !k.startsWith('category:'))
-    );
-    const withRefund = addToStockpileZone(s, null, refund);
+    let next = buildingService.cancelBuilding(p.buildingId, s);
+    if (placed.materialsDelivered) {
+      const refund = Object.fromEntries(
+        Object.entries(def.buildingCost).filter(([k]) => !k.startsWith('category:'))
+      );
+      next = addToStockpileZone(next, null, refund);
+    }
     return {
-      ...withRefund,
-      buildings: (s.buildings ?? []).filter((b) => b.id !== p.buildingId),
-      jobs: (s.jobs ?? []).filter((j) => !(j.type === 'construct' && j.buildingId === p.buildingId))
+      ...next,
+      jobs: (next.jobs ?? []).filter(
+        (j) => !(j.type === 'construct' && j.buildingId === p.buildingId)
+      )
     };
   },
   deconstructBuilding: (s, p: { id: string }) => buildingService.deconstructBuilding(p.id, s),
