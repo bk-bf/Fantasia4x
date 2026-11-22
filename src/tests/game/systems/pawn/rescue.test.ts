@@ -42,6 +42,20 @@ describe('rescuePawn command (drafted carry order)', () => {
     expect(out.pawns.find((p) => p.id === 'far')!.draftTarget).toBeUndefined();
   });
 
+  it('never wakes a sleeping pawn to carry the victim', () => {
+    const victim = pawn('v', 5, 5, { currentState: PAWN_STATE.COLLAPSED });
+    const sleeper = pawn('sleeper', 6, 5, { currentState: PAWN_STATE.SLEEPING });
+    const awake = pawn('awake', 0, 0);
+    const out = COMMANDS.rescuePawn(state([victim, sleeper, awake], [bed(10, 10)]), {
+      victimId: 'v'
+    });
+    expect(out.pawns.find((p) => p.id === 'sleeper')!.draftTarget).toBeUndefined();
+    expect(out.pawns.find((p) => p.id === 'awake')!.draftTarget).toMatchObject({
+      type: 'rescue',
+      victimId: 'v'
+    });
+  });
+
   it('no-ops when the colony has no shelter', () => {
     const victim = pawn('v', 5, 5, { currentState: PAWN_STATE.COLLAPSED });
     const helper = pawn('h', 6, 5);

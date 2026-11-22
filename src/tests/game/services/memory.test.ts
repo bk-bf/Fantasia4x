@@ -1,6 +1,10 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { memoryService, MEMORABILITY } from '$lib/game/services/MemoryService';
-import { runConversation, combatBark } from '$lib/game/services/social/conversations';
+import {
+  runConversation,
+  combatBark,
+  chooseCategory
+} from '$lib/game/services/social/conversations';
 import { rng } from '$lib/game/core/util/rng';
 import { TICKS_PER_SECOND } from '$lib/game/core/util/time';
 import { TURNS_PER_DAY } from '$lib/game/services/EnvironmentService';
@@ -28,6 +32,7 @@ function pawn(id: string, x: number, y: number, extra: Partial<Pawn> = {}): Pawn
 }
 
 beforeEach(() => rng.reseed(20260713));
+afterEach(() => vi.restoreAllMocks());
 
 describe('recordAround', () => {
   it('records onto near pawns only, never the subject', () => {
@@ -161,5 +166,89 @@ describe('recall → grounded dialog line', () => {
     expect(out.lines[0].text).toContain('Bram');
     expect(out.lines[0].text).toContain('a crooked stool');
     expect(out.subject).toBe('Bram and a crooked stool');
+  });
+});
+
+describe('memory store limits', () => {
+  it('a full store evicts the oldest ordinary memory and keeps one of exactly historic weight', () => {
+    const p = pawn('p', 0, 0);
+    p.memories = [{ kind: 'death', turn: 0, memorability: 0.9 }];
+    for (let i = 1; i < 30; i++) p.memories.push({ kind: 'combat', turn: i, memorability: 0.5 });
+    memoryService.record(p, { kind: 'combat', turn: 30, memorability: 0.5 });
+    expect(p.memories).toHaveLength(30);
+    expect(p.memories[0].memorability).toBe(0.9);
+    expect(p.memories[1].turn).toBe(2);
+  });
+
+  it('a memorable event is recalled for 90 days, an ordinary one for 20', () => {
+    const p = pawn('p', 0, 0);
+    p.memories = [
+      { kind: 'masterwork', turn: 0, memorability: 0.65 },
+      { kind: 'combat', turn: 0, memorability: 0.4 }
+    ];
+    memoryService.prune(p, DAY * 30);
+    expect(p.memories!.map((m) => m.memorability)).toEqual([0.65]);
+  });
+
+  it('a historic memory outlives even the longest recall window', () => {
+    const p = pawn('p', 0, 0);
+    p.memories = [{ kind: 'death', turn: 0, memorability: 0.95 }];
+    expect(memoryService.prune(p, DAY * 400)).toBe(false);
+    expect(p.memories).toHaveLength(1);
+  });
+});
+
+describe('recall weighting', () => {
+  it('a memory about the listener outweighs an equal one about someone else', () => {
+    const a = pawn('a', 0, 0);
+    const b = pawn('b', 1, 0);
+    a.memories = [
+      { kind: 'combat', turn: 0, subjectId: 'x', memorability: 0.5 },
+      { kind: 'combat', turn: 0, subjectId: 'b', memorability: 0.5 }
+    ];
+    vi.spyOn(rng, 'random').mockReturnValue(0.45);
+    expect(memoryService.recall(a, b, 0)?.subjectId).toBe('b');
+  });
+});
+
+describe('conversation rules', () => {
+  const rel = (stage: PawnRelationship['stage']): PawnRelationship => ({
+    pawnA: 'a',
+    pawnB: 'b',
+    score: 0,
+    stage,
+    tags: [],
+    points: { history: 0 }
+  });
+
+  it('small talk between strangers succeeds at its own odds, no better', () => {
+    vi.spyOn(rng, 'random').mockReturnValueOnce(0.1).mockReturnValueOnce(0.9);
+    const out = runConversation(
+      pawn('a', 0, 0),
+      pawn('b', 1, 0),
+      rel('strangers'),
+      { turn: 0 },
+      { flirtEligible: false, targetGrieving: false, battleContext: false }
+    );
+    expect(out.category).toBe('small_talk');
+    expect(out.positive).toBe(false);
+  });
+
+  it('enemies only ever insult or argue', () => {
+    const seen = new Set<string>();
+    for (let i = 0; i < 60; i++)
+      seen.add(
+        chooseCategory(rel('enemies'), {
+          flirtEligible: false,
+          targetGrieving: false,
+          battleContext: false
+        })
+      );
+    expect([...seen].sort()).toEqual(['argue', 'insult']);
+  });
+
+  it('a combat bark draws different lines for different rolls', () => {
+    const lines = new Set([0, 0.2, 0.4, 0.6, 0.8, 0.99].map((r) => combatBark('hit', 'it', r)));
+    expect(lines.size).toBeGreaterThan(1);
   });
 });

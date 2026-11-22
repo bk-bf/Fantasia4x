@@ -45,4 +45,22 @@ describe('ambient smoothing once the beds have settled', () => {
     stop();
     expect(sets).toBe(1);
   });
+
+  it('glides a bed to silence in small steps before pausing it', async () => {
+    const beds = (
+      audioService as unknown as { beds: Map<string, { vol: number; playing: boolean }> }
+    ).beds;
+    const watched = [...beds.values()].find((b) => b.playing && b.vol > 0.1)!;
+    expect(watched).toBeDefined();
+    audioService.setAmbient({});
+    let prev = watched.vol;
+    let biggestStep = 0;
+    for (let i = 0; i < 400 && watched.playing; i++) {
+      await advance(16);
+      biggestStep = Math.max(biggestStep, Math.abs(prev - watched.vol));
+      prev = watched.vol;
+    }
+    expect(watched.playing).toBe(false);
+    expect(biggestStep).toBeLessThan(0.05);
+  });
 });

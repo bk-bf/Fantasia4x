@@ -1531,5 +1531,425 @@
     "find": "    delete newZoneTiles[k];\n    return {",
     "replace": "    return {",
     "tests": ["src/tests/game/services/designationZones.test.ts"]
+  },
+  {
+    "id": "social-meet-radius-exclusive",
+    "file": "src/lib/game/services/SocialService.ts",
+    "find": "if (d <= MEET_RADIUS && !findRelationship",
+    "replace": "if (d < MEET_RADIUS && !findRelationship",
+    "tests": ["src/tests/game/services/relationshipStateMachine.test.ts"]
+  },
+  {
+    "id": "social-beauty-band-exclusive",
+    "file": "src/lib/game/services/SocialService.ts",
+    "find": "if (beauty >= 1.25) {",
+    "replace": "if (beauty > 1.25) {",
+    "tests": ["src/tests/game/services/relationshipStateMachine.test.ts"]
+  },
+  {
+    "id": "social-courting-never-breaks-up",
+    "file": "src/lib/game/services/SocialService.ts",
+    "find": "if ((stage === 'partners' || stage === 'courting') && rel.score < 0) {",
+    "replace": "if ((stage === 'partners') && rel.score < 0) {",
+    "tests": ["src/tests/game/services/relationshipStateMachine.test.ts"]
+  },
+  {
+    "id": "social-gloom-threshold-lowered",
+    "file": "src/lib/game/services/SocialService.ts",
+    "find": "if (em <= 2) deeds.gloomDays",
+    "replace": "if (em <= 1) deeds.gloomDays",
+    "tests": ["src/tests/game/services/relationshipStateMachine.test.ts"]
+  },
+  {
+    "id": "social-flirt-score-gate-dropped",
+    "file": "src/lib/game/services/SocialService.ts",
+    "find": "if (rel.score < FLIRT_MIN_SCORE) return false;",
+    "replace": "",
+    "tests": ["src/tests/game/services/relationshipStateMachine.test.ts"]
+  },
+  {
+    "id": "social-flirts-counted-twice",
+    "file": "src/lib/game/services/SocialService.ts",
+    "find": "rel.flirts = (rel.flirts ?? 0) + 1;",
+    "replace": "rel.flirts = (rel.flirts ?? 0) + 2;",
+    "tests": ["src/tests/game/services/relationshipStateMachine.test.ts"]
+  },
+  {
+    "id": "social-log-cap-off-by-one",
+    "file": "src/lib/game/services/SocialService.ts",
+    "find": "while (log.length > REL_LOG_CAP) {",
+    "replace": "while (log.length > REL_LOG_CAP + 1) {",
+    "tests": ["src/tests/game/services/relationshipStateMachine.test.ts"]
+  },
+  {
+    "id": "social-kin-parent-not-inverted",
+    "file": "src/lib/game/services/SocialService.ts",
+    "find": "        : kinTie.kind === 'parent'\n          ? 'child'",
+    "replace": "        : kinTie.kind === 'parent'\n          ? 'parent'",
+    "tests": ["src/tests/game/services/relationshipStateMachine.test.ts"]
+  },
+  {
+    "id": "social-worked-together-one-worker",
+    "file": "src/lib/game/services/SocialService.ts",
+    "find": "if (d <= WORK_CLUSTER_RADIUS && a.state?.isWorking && b.state?.isWorking) {",
+    "replace": "if (d <= WORK_CLUSTER_RADIUS && a.state?.isWorking) {",
+    "tests": ["src/tests/game/services/relationshipStateMachine.test.ts"]
+  },
+  {
+    "id": "social-friend-grief-zero",
+    "file": "src/lib/game/services/SocialService.ts",
+    "find": "        value = -12;\n        daysHeld = 5;",
+    "replace": "        value = 0;\n        daysHeld = 5;",
+    "tests": ["src/tests/game/services/relationshipStateMachine.test.ts"]
+  },
+  {
+    "id": "memory-evicts-historic",
+    "file": "src/lib/game/services/MemoryService.ts",
+    "find": "const i = store.findIndex((m) => m.memorability < HISTORIC);",
+    "replace": "const i = store.findIndex((m) => m.memorability <= HISTORIC);",
+    "tests": ["src/tests/game/services/memory.test.ts"]
+  },
+  {
+    "id": "memory-memorable-window-shortened",
+    "file": "src/lib/game/services/MemoryService.ts",
+    "find": "if (memorability >= 0.65) return DAY * 90;",
+    "replace": "if (memorability >= 0.65) return DAY * 20;",
+    "tests": ["src/tests/game/services/memory.test.ts"]
+  },
+  {
+    "id": "memory-recall-ignores-listener",
+    "file": "src/lib/game/services/MemoryService.ts",
+    "find": "const aboutB = m.subjectId === b.id ? 1.6 : 1;",
+    "replace": "const aboutB = 1;",
+    "tests": ["src/tests/game/services/memory.test.ts"]
+  },
+  {
+    "id": "memory-prunes-historic",
+    "file": "src/lib/game/services/MemoryService.ts",
+    "find": "(m) => m.memorability >= HISTORIC || turn - m.turn <= recallWindow(m.memorability)",
+    "replace": "(m) => turn - m.turn <= recallWindow(m.memorability)",
+    "tests": ["src/tests/game/services/memory.test.ts"]
+  },
+  {
+    "id": "conversation-good-odds-inflated",
+    "file": "src/lib/game/services/social/conversations.ts",
+    "find": "return Math.max(0.05, Math.min(0.95, pGood));",
+    "replace": "return Math.max(0.05, Math.min(0.95, pGood + 0.3));",
+    "tests": ["src/tests/game/services/memory.test.ts"]
+  },
+  {
+    "id": "conversation-bark-always-first-line",
+    "file": "src/lib/game/services/social/conversations.ts",
+    "find": "const line = pool[Math.floor((roll - Math.floor(roll)) * pool.length)] ?? pool[0];",
+    "replace": "const line = pool[0];",
+    "tests": ["src/tests/game/services/memory.test.ts"]
+  },
+  {
+    "id": "conversation-enemies-never-insult",
+    "file": "src/lib/game/services/social/conversations.ts",
+    "find": "if (stage === 'enemies') return rng.random() < 0.6 ? 'insult' : 'argue';",
+    "replace": "",
+    "tests": ["src/tests/game/services/memory.test.ts"]
+  },
+  {
+    "id": "kingdom-hostile-sender-gate-lowered",
+    "file": "src/lib/game/services/KingdomService.ts",
+    "find": "if (rel.score <= -20) continue;",
+    "replace": "if (rel.score <= -40) continue;",
+    "tests": ["src/tests/game/services/kingdomTradeRules.test.ts"]
+  },
+  {
+    "id": "kingdom-trade-margin-sign-flipped",
+    "file": "src/lib/game/services/KingdomService.ts",
+    "find": "const margin = clamp(0.4 - 0.25 * (tradeStat - 1)",
+    "replace": "const margin = clamp(0.4 + 0.25 * (tradeStat - 1)",
+    "tests": ["src/tests/game/services/kingdomTradeRules.test.ts"]
+  },
+  {
+    "id": "kingdom-party-never-departs",
+    "file": "src/lib/game/services/KingdomService.ts",
+    "find": "if (!anyAlive || s.turn >= party.departTurn) {",
+    "replace": "if (!anyAlive) {",
+    "tests": ["src/tests/game/services/kingdomTradeRules.test.ts"]
+  },
+  {
+    "id": "kingdom-familiar-tier-raised",
+    "file": "src/lib/game/services/KingdomService.ts",
+    "find": "const familiar = knowledgeTier(contacted.knowledge) >= 2;",
+    "replace": "const familiar = knowledgeTier(contacted.knowledge) >= 3;",
+    "tests": ["src/tests/game/services/kingdomTradeRules.test.ts"]
+  },
+  {
+    "id": "kingdom-caravan-tier-cap-dropped",
+    "file": "src/lib/game/services/KingdomService.ts",
+    "find": "if ((def.tier ?? 1) > tierCap) return false;",
+    "replace": "",
+    "tests": ["src/tests/game/services/kingdomTradeRules.test.ts"]
+  },
+  {
+    "id": "kingdom-seed-knowledge-uncapped",
+    "file": "src/lib/game/services/KingdomService.ts",
+    "find": "knowledge: Math.min(SEED_KNOWLEDGE_CAP, k.knowledge + xp),",
+    "replace": "knowledge: k.knowledge + xp,",
+    "tests": ["src/tests/game/services/kingdomTradeRules.test.ts"]
+  },
+  {
+    "id": "growth-ages-two-years",
+    "file": "src/lib/game/services/PawnGrowthService.ts",
+    "find": "pawn.age = (pawn.age ?? 0) + 1;",
+    "replace": "pawn.age = (pawn.age ?? 0) + 2;",
+    "tests": ["src/tests/game/services/pawnGrowth.test.ts"]
+  },
+  {
+    "id": "growth-three-picks",
+    "file": "src/lib/game/services/PawnGrowthService.ts",
+    "find": ".filter((s) => (offer.rolls[s] ?? 0) > 0).slice(0, 2);",
+    "replace": ".filter((s) => (offer.rolls[s] ?? 0) > 0).slice(0, 3);",
+    "tests": ["src/tests/game/services/pawnGrowth.test.ts"]
+  },
+  {
+    "id": "growth-stat-cap-dropped",
+    "file": "src/lib/game/services/PawnGrowthService.ts",
+    "find": "stats[stat] = Math.min(cap, stats[stat] + gain);",
+    "replace": "stats[stat] = stats[stat] + gain;",
+    "tests": ["src/tests/game/services/pawnGrowth.test.ts"]
+  },
+  {
+    "id": "research-completes-late",
+    "file": "src/lib/game/services/ResearchService.ts",
+    "find": "if (updated.currentProgress >= updated.researchTime) {",
+    "replace": "if (updated.currentProgress > updated.researchTime * 2) {",
+    "tests": ["src/tests/game/services/researchProgress.test.ts"]
+  },
+  {
+    "id": "research-tool-level-inverted",
+    "file": "src/lib/game/services/ResearchService.ts",
+    "find": "if (unlocks.toolTier > newState.currentToolLevel) {",
+    "replace": "if (unlocks.toolTier < newState.currentToolLevel) {",
+    "tests": ["src/tests/game/services/researchProgress.test.ts"]
+  },
+  {
+    "id": "pawn-stat-formula-rounds-to-hundredths",
+    "file": "src/lib/game/services/PawnStatService.ts",
+    "find": "  return isFinite(v) ? Math.round(v * 1000) / 1000 : 1.0;",
+    "replace": "  return isFinite(v) ? Math.round(v * 100) / 100 : 1.0;",
+    "tests": ["src/tests/game/services/pawnStatRules.test.ts"]
+  },
+  {
+    "id": "pawn-stat-core-ignores-condition-scaling",
+    "file": "src/lib/game/services/PawnStatService.ts",
+    "find": "  return k === 'charisma' ? (s?.charisma ?? 10) : (s?.[k] ?? 10) * sm[k];",
+    "replace": "  return (s?.[k] ?? 10);",
+    "tests": ["src/tests/game/services/conditionCoreStatScaling.test.ts"]
+  },
+  {
+    "id": "pawn-stat-intact-forced-whole",
+    "file": "src/lib/game/services/PawnStatService.ts",
+    "find": "const intact = formulaUsesIntact(formula) ? intactBodyFraction(p) : 1;",
+    "replace": "const intact = 1;",
+    "tests": ["src/tests/game/services/pawnStatRules.test.ts"]
+  },
+  {
+    "id": "pawn-stat-scar-weight-lowered",
+    "file": "src/lib/game/services/PawnStatService.ts",
+    "find": "      sum += Math.max(0.5, 1 - 0.25 * scars);",
+    "replace": "      sum += Math.max(0.5, 1 - 0.2 * scars);",
+    "tests": ["src/tests/game/services/pawnStatRules.test.ts"]
+  },
+  {
+    "id": "pawn-stat-capacity-cache-ignores-light",
+    "file": "src/lib/game/services/PawnStatService.ts",
+    "find": "    if (c && c.limbs === pawn.limbs && c.injuries === pawn.injuries && c.light === lightBucket) {",
+    "replace": "    if (c && c.limbs === pawn.limbs && c.injuries === pawn.injuries) {",
+    "tests": ["src/tests/game/services/pawnStatRules.test.ts"]
+  },
+  {
+    "id": "pawn-stat-temperature-cap-dropped",
+    "file": "src/lib/game/services/PawnStatService.ts",
+    "find": "      const deg = Math.min(TEMP_RES_DEG_CAP, raw);",
+    "replace": "      const deg = raw;",
+    "tests": ["src/tests/game/services/pawnStatRules.test.ts"]
+  },
+  {
+    "id": "pawn-stat-cold-onset-sign-flipped",
+    "file": "src/lib/game/services/PawnStatService.ts",
+    "find": "      coldOnset: comfortMin - cold.deg,",
+    "replace": "      coldOnset: comfortMin + cold.deg,",
+    "tests": ["src/tests/game/services/pawnStatRules.test.ts"]
+  },
+  {
+    "id": "pawn-stat-pain-floor-dropped",
+    "file": "src/lib/game/services/PawnStatService.ts",
+    "find": "      const effectivePain = Math.max(0, painValue - 0.1);",
+    "replace": "      const effectivePain = Math.max(0, painValue);",
+    "tests": ["src/tests/game/services/pawnStatRules.test.ts"]
+  },
+  {
+    "id": "pawn-stat-moving-ignores-worst-leg",
+    "file": "src/lib/game/services/PawnStatService.ts",
+    "find": "      value = limbCapacity((id) => /leg/i.test(id), 0.5);",
+    "replace": "      value = limbCapacity((id) => /leg/i.test(id), 0);",
+    "tests": ["src/tests/game/services/pawnStatRules.test.ts"]
+  },
+  {
+    "id": "pawn-stat-tool-pick-ignores-quality",
+    "file": "src/lib/game/services/PawnStatService.ts",
+    "find": "    if (b.speed * q > speed) {",
+    "replace": "    if (b.speed > speed) {",
+    "tests": ["src/tests/game/services/pawnStatRules.test.ts"]
+  },
+  {
+    "id": "pawn-stat-stage-threshold-exclusive",
+    "file": "src/lib/game/services/PawnStatService.ts",
+    "find": "      if (condition.severity >= stage.minSeverity) activeStage = stage;",
+    "replace": "      if (condition.severity > stage.minSeverity) activeStage = stage;",
+    "tests": ["src/tests/game/services/pawnStatRules.test.ts"]
+  },
+  {
+    "id": "pawn-stat-work-skill-ignored",
+    "file": "src/lib/game/services/PawnStatService.ts",
+    "find": "    const skill = def.category === 'work' ? (this.workSkillInfo(statId, pawn)?.factor ?? 1) : 1;",
+    "replace": "    const skill = 1;",
+    "tests": ["src/tests/game/services/pawnStatRules.test.ts"]
+  },
+  {
+    "id": "command-formation-ignores-claimed-tiles",
+    "file": "src/lib/game/sim/commands.ts",
+    "find": "        if (occupied.has(key)) continue;",
+    "replace": "",
+    "tests": ["src/tests/game/sim/playerCommands.test.ts"]
+  },
+  {
+    "id": "command-craft-keeps-partial-reservation",
+    "file": "src/lib/game/sim/commands.ts",
+    "find": "    if (!allReserved) gs = releaseReservation(gs, orderId);",
+    "replace": "",
+    "tests": ["src/tests/game/sim/playerCommands.test.ts"]
+  },
+  {
+    "id": "command-migrants-reuse-pawn-id",
+    "file": "src/lib/game/sim/commands.ts",
+    "find": "      while (existingIds.has(id)) id = `pawn-${n++}`;",
+    "replace": "",
+    "tests": ["src/tests/game/sim/playerCommands.test.ts"]
+  },
+  {
+    "id": "command-rescue-wakes-sleeper",
+    "file": "src/lib/game/sim/commands.ts",
+    "find": "      PAWN_STATE.SLEEPING,\n      PAWN_STATE.FIGHTING,",
+    "replace": "      PAWN_STATE.FIGHTING,",
+    "tests": ["src/tests/game/systems/pawn/rescue.test.ts"]
+  },
+  {
+    "id": "command-trade-skips-stock-check",
+    "file": "src/lib/game/sim/commands.ts",
+    "find": "      if ((available[id] ?? 0) < qty) return s;",
+    "replace": "",
+    "tests": ["src/tests/game/sim/executeTrade.test.ts"]
+  },
+  {
+    "id": "worker-mirror-overwrites-entity",
+    "file": "src/lib/game/sim/simWorkerClient.ts",
+    "find": "      mirror.set(u.id, prev ? ({ ...prev, ...u } as T) : (u as T));",
+    "replace": "      mirror.set(u.id, u as T);",
+    "tests": ["src/tests/game/sim/workerEntityMirror.test.ts"]
+  },
+  {
+    "id": "worker-new-mob-partial-first-send",
+    "file": "src/lib/game/sim/sim.worker.ts",
+    "find": "        if (!seen || volatile.has(k) || v !== refs[k]) {",
+    "replace": "        if (volatile.has(k) || v !== refs[k]) {",
+    "tests": ["src/tests/game/sim/workerEntityMirror.test.ts"]
+  },
+  {
+    "id": "audio-first-scene-waits",
+    "file": "src/lib/audio/AudioService.ts",
+    "find": "if ((idle || immediate(scene) || immediate(this.scene)) && scene !== this.scene)",
+    "replace": "if ((immediate(scene) || immediate(this.scene)) && scene !== this.scene)",
+    "tests": ["src/tests/audio/musicScenes.test.ts"]
+  },
+  {
+    "id": "audio-scene-immediate-switch-dropped",
+    "file": "src/lib/audio/AudioService.ts",
+    "find": "if ((idle || immediate(scene) || immediate(this.scene)) && scene !== this.scene)",
+    "replace": "if (idle && scene !== this.scene)",
+    "tests": ["src/tests/audio/musicScenes.test.ts"]
+  },
+  {
+    "id": "audio-sfx-cap-dropped",
+    "file": "src/lib/audio/AudioService.ts",
+    "find": "    if (this.activeSfx.size >= MAX_CONCURRENT_SFX) return;\n",
+    "replace": "",
+    "tests": ["src/tests/audio/sfxSlots.test.ts"]
+  },
+  {
+    "id": "audio-sfx-cap-one",
+    "file": "src/lib/audio/AudioService.ts",
+    "find": "const MAX_CONCURRENT_SFX = 3;",
+    "replace": "const MAX_CONCURRENT_SFX = 1;",
+    "tests": ["src/tests/audio/sfxSlots.test.ts"]
+  },
+  {
+    "id": "audio-sfx-release-noop",
+    "file": "src/lib/audio/AudioService.ts",
+    "find": "const release = (id: number) => this.activeSfx.delete(id);",
+    "replace": "const release = (_id: number) => false;",
+    "tests": ["src/tests/audio/sfxSlots.test.ts"]
+  },
+  {
+    "id": "audio-track-never-advances",
+    "file": "src/lib/audio/AudioService.ts",
+    "find": "this.playIdx = (this.playIdx + 1) % this.playlist.length;",
+    "replace": "this.playIdx = this.playIdx;",
+    "tests": ["src/tests/audio/musicScenes.test.ts"]
+  },
+  {
+    "id": "audio-stale-track-end-advances",
+    "file": "src/lib/audio/AudioService.ts",
+    "find": "    if (from !== this.musicHowl) return;\n",
+    "replace": "",
+    "tests": ["src/tests/audio/musicScenes.test.ts"]
+  },
+  {
+    "id": "audio-ambient-settle-threshold-raised",
+    "file": "src/lib/audio/AudioService.ts",
+    "find": "const AMBIENT_SETTLED = 1e-3;",
+    "replace": "const AMBIENT_SETTLED = 1e-1;",
+    "tests": ["src/tests/audio/ambientSmoothing.test.ts"]
+  },
+  {
+    "id": "save-autosave-skips-world",
+    "file": "src/lib/stores/saveManager.ts",
+    "find": "      if (worldDirty(state)) {\n        markWorldSaved(state);\n        idbPut(worldKey(id)",
+    "replace": "      if (false) {\n        markWorldSaved(state);\n        idbPut(worldKey(id)",
+    "tests": ["src/tests/stores/saveManager.test.ts"]
+  },
+  {
+    "id": "save-load-drops-path-fields",
+    "file": "src/lib/stores/saveManager.ts",
+    "find": "return { ...tile, ascii: ' ', gCost: 0, hCost: 0, fCost: 0, parent: null };",
+    "replace": "return { ...tile, ascii: ' ' } as WorldTile;",
+    "tests": ["src/tests/stores/saveManager.test.ts"]
+  },
+  {
+    "id": "save-load-keeps-cliff",
+    "file": "src/lib/stores/saveManager.ts",
+    "find": "cliff: 'cave', rocky: 'cave'",
+    "replace": "cliff: 'cliff', rocky: 'cave'",
+    "tests": ["src/tests/stores/saveManager.test.ts"]
+  },
+  {
+    "id": "store-notifies-unflushed-ticks",
+    "file": "src/lib/stores/gameState.ts",
+    "find": "  if (flush) gameStore.notify();\n  clearTileDeltas();",
+    "replace": "  gameStore.notify();\n  clearTileDeltas();",
+    "tests": ["src/tests/stores/gameStateStore.test.ts"]
+  },
+  {
+    "id": "store-stockpile-keeps-empty-rows",
+    "file": "src/lib/stores/gameState.ts",
+    "find": ".filter(([, amount]) => amount > 0)\n    .map(([id, amount]) => {\n      const def",
+    "replace": ".filter(([, amount]) => amount >= 0)\n    .map(([id, amount]) => {\n      const def",
+    "tests": ["src/tests/stores/gameStateStore.test.ts"]
   }
 ]
