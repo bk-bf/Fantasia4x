@@ -614,7 +614,7 @@ export function mobInLiveRegion(mob: { x: number; y: number }, region: LiveRegio
 const THINK_PHASE_CACHE_LIMIT = 8192;
 const _thinkPhase = new Map<string, number>();
 
-function thinkPhase(id: string): number {
+export function thinkPhase(id: string): number {
   let phase = _thinkPhase.get(id);
   if (phase !== undefined) return phase;
   let h = 0;
