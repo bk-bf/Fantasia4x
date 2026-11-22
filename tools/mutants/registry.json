@@ -1857,8 +1857,8 @@
   {
     "id": "worker-new-mob-partial-first-send",
     "file": "src/lib/game/sim/sim.worker.ts",
-    "find": "        if (!seen || volatile.has(k) || v !== refs[k]) {",
-    "replace": "        if (volatile.has(k) || v !== refs[k]) {",
+    "find": "        } else if (!seen || v !== refs[k]) {",
+    "replace": "        } else if (v !== refs[k]) {",
     "tests": ["src/tests/game/sim/workerEntityMirror.test.ts"]
   },
   {

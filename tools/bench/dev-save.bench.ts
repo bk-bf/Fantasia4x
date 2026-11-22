@@ -1,6 +1,7 @@
 import { bench, describe } from 'vitest';
 import { entityService } from '$lib/game/services/EntityService';
 import { pathTo } from '$lib/game/services/entity/entityHelpers';
+import { buildResourceRows } from '$lib/stores/resourceRows';
 import { devSave } from '../work-pins/scenarios';
 import {
   MEASURED_TICKS,
@@ -16,7 +17,11 @@ const session = await warmSession(devSave, 5);
 
 describe('dev-save', () => {
   bench(`${MEASURED_TICKS} ticks`, ...measuredWindow(session, 3));
-  bench('es:step', phase(session, (s) => entityService.stepEntities(s)), ROLLING);
+  bench(
+    'es:step',
+    phase(session, (s) => entityService.stepEntities(s)),
+    ROLLING
+  );
   bench('es:move', mobMovement(session), ROLLING);
   bench(
     'path:short',
@@ -28,4 +33,5 @@ describe('dev-save', () => {
     ROLLING
   );
   bench('env:thermal', thermalSampling(session), ROLLING);
+  bench('explore:rows', () => void buildResourceRows(session.getState().worldMap), ROLLING);
 });
