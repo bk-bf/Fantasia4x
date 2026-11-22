@@ -110,6 +110,7 @@
   import SelectedEntityCard from '$lib/components/UI/hud/SelectedEntityCard.svelte';
   import { brackets, dragBox, type ScreenRect } from '$lib/components/UI/canvas/selectionMarks';
   import VerbTag from '$lib/components/UI/hud/VerbTag.svelte';
+  import PawnCard from '$lib/components/UI/hud/PawnCard.svelte';
   import {
     designationVerb,
     keyTiles,
@@ -138,7 +139,6 @@
   import EnvReadout from '$lib/components/UI/canvas/EnvReadout.svelte';
   import BuildingInfo from '$lib/components/UI/canvas/BuildingInfo.svelte';
   import {
-    buildPawnCard,
     buildMobCard,
     dryingIndicator,
     growthIndicator,
@@ -532,26 +532,10 @@
   $: selectedMob = selectedMobId ? (mobs.find((m) => m.id === selectedMobId) ?? null) : null;
   $: selectedMobDef = selectedMob ? (getCreatureById(selectedMob.creatureId) ?? null) : null;
 
-  $: selectedPawnCard = selectedPawn
-    ? buildPawnCard(selectedPawn, true, {
-        cameraFollowPawnId,
-        startMark: () => startMarkDrag('pawn'),
-        armMove: () => armMoveAim(),
-        toggleFood: () => toggleFoodSettingsPanel(),
-        foodOpen: showFoodSettings,
-        moodModel: $gameState ? pawnService.getMoodBreakdown(selectedPawn, $gameState) : undefined
-      })
-    : null;
-  $: hoverPawnCard = hoverPawn
-    ? buildPawnCard(hoverPawn, false, {
-        cameraFollowPawnId,
-        startMark: () => startMarkDrag('pawn'),
-        armMove: () => armMoveAim(),
-        toggleFood: () => {},
-        foodOpen: false,
-        moodModel: $gameState ? pawnService.getMoodBreakdown(hoverPawn, $gameState) : undefined
-      })
-    : null;
+  $: selectedPawnMood =
+    selectedPawn && $gameState ? pawnService.getMoodBreakdown(selectedPawn, $gameState) : undefined;
+  $: hoverPawnMood =
+    hoverPawn && $gameState ? pawnService.getMoodBreakdown(hoverPawn, $gameState) : undefined;
 
   $: markedDraftedCount =
     markedKind === 'pawn' ? pawns.filter((p) => p.drafted && markedSet.has(p.id)).length : 0;
@@ -4512,7 +4496,7 @@
         }}
       />
     {/if}
-    {#if markedTag}{:else if selectedPawnCard}
+    {#if markedTag}{:else if selectedPawn}
       <!-- svelte-ignore a11y_no_static_element_interactions -->
       <div
         class="bld-row"
@@ -4520,7 +4504,14 @@
         on:mousedown|stopPropagation
         on:mouseup|stopPropagation
       >
-        <SelectedEntityCard model={selectedPawnCard} embedded />
+        <PawnCard
+          pawn={selectedPawn}
+          selected
+          moodModel={selectedPawnMood}
+          foodOpen={showFoodSettings}
+          onmove={armMoveAim}
+          onfood={toggleFoodSettingsPanel}
+        />
         <FoodFilterPanel open={showFoodSettings} />
       </div>
     {:else if selectedMobCard}
@@ -4600,8 +4591,10 @@
       </div>
     {:else if selectedItemCard}
       <SelectedEntityCard model={selectedItemCard} />
-    {:else if hoverPawnCard}
-      <SelectedEntityCard model={hoverPawnCard} />
+    {:else if hoverPawn}
+      <div class="bld-row hover-card">
+        <PawnCard pawn={hoverPawn} selected={false} moodModel={hoverPawnMood} />
+      </div>
     {:else if hoverMobCard}
       <SelectedEntityCard model={hoverMobCard} />
     {:else if hoverBuilding && !hoverPawn}
@@ -4996,6 +4989,9 @@
     gap: 4px;
     pointer-events: all;
     z-index: 10;
+  }
+  .hover-card {
+    pointer-events: none;
   }
   .tile-coord {
     color: #e8b86a;
