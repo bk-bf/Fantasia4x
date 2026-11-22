@@ -966,6 +966,20 @@
     "tests": ["src/tests/game/services/bulkLogistics.test.ts"]
   },
   {
+    "id": "pawn-stat-capacities-always-built",
+    "file": "src/lib/game/services/PawnStatService.ts",
+    "find": "const capacities = formulaReadsCapacities(def.formula)",
+    "replace": "const capacities = true",
+    "tests": ["src/tests/game/services/statFormulaSlots.test.ts"]
+  },
+  {
+    "id": "pawn-stat-capacities-never-built",
+    "file": "src/lib/game/services/PawnStatService.ts",
+    "find": "const capacities = formulaReadsCapacities(def.formula)",
+    "replace": "const capacities = false",
+    "tests": ["src/tests/game/services/statFormulaSlots.test.ts"]
+  },
+  {
     "id": "pawn-stat-broken-bone-ignored",
     "file": "src/lib/game/services/PawnStatService.ts",
     "find": "(limbBoneBroken(limbs, l.id) ? BROKEN_BONE_FUNCTION_MULT : 1)",

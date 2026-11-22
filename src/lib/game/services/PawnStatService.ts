@@ -270,6 +270,7 @@ type CompiledFormula = {
   readsIntact: boolean;
   readsPower: boolean;
   readsAptitude: boolean;
+  readsCapacities: boolean;
 };
 
 const FORMULA_PARAMS = ['prestige', 'intact', 'SKILL', 'POWER', 'APT'] as const;
@@ -362,7 +363,8 @@ function compileFormula(formula: string): CompiledFormula | null {
         readsPrestige: used.has('prestige'),
         readsIntact: used.has('intact'),
         readsPower: used.has('POWER'),
-        readsAptitude: used.has('APT')
+        readsAptitude: used.has('APT'),
+        readsCapacities: [...used].some((v) => CAPACITY_VAR_DEFAULT[v] !== undefined)
       };
     } catch {
       compiled = null;
@@ -370,6 +372,12 @@ function compileFormula(formula: string): CompiledFormula | null {
   }
   _formulaCache.set(formula, compiled);
   return compiled;
+}
+
+const NO_CAPACITIES: Readonly<Record<string, number>> = Object.freeze({});
+
+function formulaReadsCapacities(formula: string | undefined): boolean {
+  return !!formula && (compileFormula(formula)?.readsCapacities ?? false);
 }
 
 function evaluateFormula(
@@ -866,8 +874,9 @@ export class PawnStatServiceImpl implements PawnStatService {
   evaluateStat(statId: string, pawn: Pawn | Mob): number {
     const def = STAT_MAP[statId];
     if (!def) return 1.0;
-    const capacities =
-      def.category === 'capacity' ? this.computeCapacities(pawn) : this.computeCapacities(pawn);
+    const capacities = formulaReadsCapacities(def.formula)
+      ? this.computeCapacities(pawn)
+      : NO_CAPACITIES;
     const skill = def.category === 'work' ? (this.workSkillInfo(statId, pawn)?.factor ?? 1) : 1;
     const v =
       evaluateFormula(def.formula, pawn, capacities, skill, statId) *

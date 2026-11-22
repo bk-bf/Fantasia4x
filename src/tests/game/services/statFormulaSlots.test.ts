@@ -1,4 +1,4 @@
-import { it, expect } from 'vitest';
+import { it, expect, vi } from 'vitest';
 import statsData from '$lib/game/database/pawns/stats.json';
 import { pawnStatService } from '$lib/game/services/PawnStatService';
 import { createBodyPlanLimbs, DEFAULT_PLAN } from '$lib/game/core/defs/bodyParts';
@@ -95,5 +95,19 @@ it('every stat formula reads only its own variables and gets each from its own s
       byName(def.formula!, vars),
       9
     );
+  }
+});
+
+it('a stat whose formula names no capacity never asks for capacities', () => {
+  const m = body();
+  const spy = vi.spyOn(pawnStatService, 'computeCapacities');
+  try {
+    pawnStatService.evaluateStat('hunger_rate', m);
+    pawnStatService.evaluateStat('fire_resistance', m);
+    expect(spy).not.toHaveBeenCalled();
+    pawnStatService.evaluateStat('heal_rate', m);
+    expect(spy).toHaveBeenCalledTimes(1);
+  } finally {
+    spy.mockRestore();
   }
 });
