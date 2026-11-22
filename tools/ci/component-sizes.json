@@ -17,7 +17,7 @@
   "src/lib/components/UI/hud/ActivityLogOverlay.svelte": 548,
   "src/lib/components/UI/hud/BuildCard.svelte": 299,
   "src/lib/components/UI/hud/ChroniclePanel.svelte": 321,
-  "src/lib/components/UI/hud/ResourceSidebar.svelte": 274,
+  "src/lib/components/UI/hud/ResourceSidebar.svelte": 266,
   "src/lib/components/UI/hud/SelectedEntityCard.svelte": 466,
   "src/lib/components/UI/menu/CustomMapMenu.svelte": 508,
   "src/lib/components/UI/menu/SaveListMenu.svelte": 203,
