@@ -2669,29 +2669,29 @@
   {
     "id": "occupancy-mobs-never-block",
     "file": "src/lib/game/services/OccupancyService.ts",
-    "find": "      if (m.x === x && m.y === y) return true;",
-    "replace": "      if (m.x === x && m.y === y) return false;",
+    "find": "if (m.x === x && m.y === y && m.state !== 'Corpse' && m.id !== excludeId) return true;",
+    "replace": "if (m.x === x && m.y === y && m.state !== 'Corpse' && m.id !== excludeId) return false;",
     "tests": ["src/tests/game/services/blockedTiles.test.ts"]
   },
   {
     "id": "occupancy-is-blocked-keeps-excluded-pawn",
     "file": "src/lib/game/services/OccupancyService.ts",
-    "find": "      if (p.id === excludeId || !p.position) continue;",
-    "replace": "      if (!p.position) continue;",
+    "find": "if (pos && pos.x === x && pos.y === y && p.id !== excludeId) return true;",
+    "replace": "if (pos && pos.x === x && pos.y === y) return true;",
     "tests": ["src/tests/game/services/blockedTiles.test.ts"]
   },
   {
     "id": "occupancy-is-blocked-keeps-excluded-mob",
     "file": "src/lib/game/services/OccupancyService.ts",
-    "find": "      if (m.id === excludeId || m.state === 'Corpse') continue;\n      if (m.x",
-    "replace": "      if (m.state === 'Corpse') continue;\n      if (m.x",
+    "find": "if (m.x === x && m.y === y && m.state !== 'Corpse' && m.id !== excludeId) return true;",
+    "replace": "if (m.x === x && m.y === y && m.state !== 'Corpse') return true;",
     "tests": ["src/tests/game/services/blockedTiles.test.ts"]
   },
   {
     "id": "occupancy-is-blocked-corpses-block",
     "file": "src/lib/game/services/OccupancyService.ts",
-    "find": "      if (m.id === excludeId || m.state === 'Corpse') continue;\n      if (m.x",
-    "replace": "      if (m.id === excludeId) continue;\n      if (m.x",
+    "find": "if (m.x === x && m.y === y && m.state !== 'Corpse' && m.id !== excludeId) return true;",
+    "replace": "if (m.x === x && m.y === y && m.id !== excludeId) return true;",
     "tests": ["src/tests/game/services/blockedTiles.test.ts"]
   },
   {
@@ -2732,8 +2732,8 @@
   {
     "id": "movement-blocked-drop-early",
     "file": "src/lib/game/services/MovementSystem.ts",
-    "find": "if (bt > MAX_BLOCKED_TICKS) {",
-    "replace": "if (bt >= MAX_BLOCKED_TICKS) {",
+    "find": "if (bt > MAX_BLOCKED_TICKS) return",
+    "replace": "if (bt >= MAX_BLOCKED_TICKS) return",
     "tests": ["src/tests/game/services/moveCost.test.ts"]
   },
   {
