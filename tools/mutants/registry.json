@@ -142,22 +142,22 @@
   {
     "id": "body-lethal-health-at-zero",
     "file": "src/lib/game/core/defs/bodyParts.ts",
-    "find": "const destroyed = part.isMissing || part.health <= 0;",
-    "replace": "const destroyed = part.isMissing || part.health < 0;",
+    "find": "if ((part.isMissing || part.health <= 0) && LETHAL_IF_DESTROYED.has(part.id))",
+    "replace": "if ((part.isMissing || part.health < 0) && LETHAL_IF_DESTROYED.has(part.id))",
     "tests": ["src/tests/game/core/bodyPlans.test.ts"]
   },
   {
     "id": "body-lethal-ignores-missing",
     "file": "src/lib/game/core/defs/bodyParts.ts",
-    "find": "const destroyed = part.isMissing || part.health <= 0;",
-    "replace": "const destroyed = part.health <= 0;",
+    "find": "if ((part.isMissing || part.health <= 0) && LETHAL_IF_DESTROYED.has(part.id))",
+    "replace": "if (part.health <= 0 && LETHAL_IF_DESTROYED.has(part.id))",
     "tests": ["src/tests/game/core/bodyPlans.test.ts"]
   },
   {
     "id": "body-lethal-ignores-vital-containers",
     "file": "src/lib/game/core/defs/bodyParts.ts",
-    "find": "def?.isCritical || CONTAINER_OF_VITAL.has(part.id))) {",
-    "replace": "def?.isCritical)) {",
+    "find": "PART_DEF_MAP[id]?.isCritical || CONTAINER_OF_VITAL.has(id)",
+    "replace": "PART_DEF_MAP[id]?.isCritical",
     "tests": ["src/tests/game/core/bodyPlans.test.ts"]
   },
   {
@@ -968,7 +968,7 @@
   {
     "id": "pawn-stat-broken-bone-ignored",
     "file": "src/lib/game/services/PawnStatService.ts",
-    "find": "(limbBoneBroken(l.id) ? BROKEN_BONE_FUNCTION_MULT : 1)",
+    "find": "(limbBoneBroken(limbs, l.id) ? BROKEN_BONE_FUNCTION_MULT : 1)",
     "replace": "1",
     "tests": ["src/tests/game/systems/fractures.test.ts"]
   },
@@ -1184,7 +1184,7 @@
   },
   {
     "id": "pawn-infection-incubation-delayed",
-    "file": "src/lib/game/systems/PawnStateMachine.ts",
+    "file": "src/lib/game/core/defs/wounds.ts",
     "find": "age >= CARE_CONFIG.infectionIncubationTicks",
     "replace": "age >= CARE_CONFIG.infectionIncubationTicks + 600",
     "tests": ["src/tests/game/systems/infectionIncubation.test.ts"]
