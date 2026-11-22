@@ -23,7 +23,6 @@
 
   type StockItem = { id: string; name: string; amount: number; color?: string };
 
-  const LOW_STOCK = 10;
 
   const lastJumpIdx: Record<string, number> = {};
   function jumpToItemStack(itemId: string) {
@@ -134,7 +133,6 @@
             {@const jump = () => jumpToItemStack(item.id)}
             <div
               class="row"
-              class:low={n < LOW_STOCK}
               onclick={jump}
               role="button"
               tabindex="0"
@@ -242,12 +240,6 @@
   b {
     flex-shrink: 0;
     font-weight: normal;
-  }
-  .row.low b {
-    color: var(--col-neg);
-  }
-  .row.low .name {
-    color: var(--col-dim);
   }
   .delta {
     position: absolute;
