@@ -1178,8 +1178,8 @@
   {
     "id": "wasm-path-drops-first-node",
     "file": "src/lib/game/services/WasmPathfinderService.ts",
-    "find": "    for (let i = 0; i + 1 < raw.length; i += 2) {",
-    "replace": "    for (let i = 2; i + 1 < raw.length; i += 2) {",
+    "find": "  for (let i = 0; i + 1 < raw.length; i += 2) {",
+    "replace": "  for (let i = 2; i + 1 < raw.length; i += 2) {",
     "tests": ["src/tests/game/headless/pathfinderNode.test.ts"]
   },
   {

@@ -90,6 +90,7 @@ export function selectInterruptNeed(
   laborLevel: number
 ): NeedChoice {
   if (pawn.forceWork) return null;
+  let drinkRouteFailed = false;
   if (thirstNeedsRouting(pawn, gameState) && shouldDrinkBeforeEating(pawn, gameState)) {
     const routed = tryRouteToWaterNeed(pawn, gameState, 'drink');
     if (routed) {
@@ -101,6 +102,7 @@ export function selectInterruptNeed(
       );
       return { kind: 'water', need: 'drink', routedState: routed };
     }
+    drinkRouteFailed = true;
   }
   const hunger = pawn.needs?.hunger ?? 0;
   if (hunger >= HUNGER_THRESHOLD && hasAvailableFood(gameState)) {
@@ -125,7 +127,7 @@ export function selectInterruptNeed(
   }
 
   const thirst = pawn.needs?.thirst ?? 0;
-  if (thirst >= ROUTE_TO_DRINK_THIRST) {
+  if (thirst >= ROUTE_TO_DRINK_THIRST && !drinkRouteFailed) {
     const routed = tryRouteToWaterNeed(pawn, gameState, 'drink');
     if (routed) {
       gameLogger.log(

@@ -90,6 +90,33 @@ fn enclosed_route() -> Route {
     route.between((10, 10), (150, 150), 8000)
 }
 
+fn search(route: &Route) -> Vec<u32> {
+    spatial_core::find_path(
+        &route.walkable,
+        &route.costs,
+        route.width,
+        route.height,
+        route.start.0,
+        route.start.1,
+        route.end.0,
+        route.end.1,
+        route.max_iter,
+    )
+}
+
+fn after_one_search(route: Route) -> Route {
+    black_box(search(&route));
+    route
+}
+
+fn repeated_route() -> Route {
+    after_one_search(scattered_route())
+}
+
+fn short_route_on_save_sized_map() -> Route {
+    after_one_search(Route::scattered(500, 500, 150).between((100, 100), (106, 103), 8000))
+}
+
 fn scatter(count: u32, seed: u32, extent: u32) -> Vec<f32> {
     (0..count * 2)
         .map(|i| (hash(seed.wrapping_add(i)) % extent) as f32)
@@ -108,18 +135,10 @@ fn herd(predators: u32, prey: u32, extent: u32) -> Herd {
 #[bench::scattered(setup = scattered_route)]
 #[bench::walled(setup = walled_route)]
 #[bench::unreachable(setup = enclosed_route)]
+#[bench::repeated(setup = repeated_route)]
+#[bench::short_on_save_sized_map(setup = short_route_on_save_sized_map)]
 fn find_path(route: Route) -> Vec<u32> {
-    black_box(spatial_core::find_path(
-        black_box(&route.walkable),
-        black_box(&route.costs),
-        route.width,
-        route.height,
-        route.start.0,
-        route.start.1,
-        route.end.0,
-        route.end.1,
-        route.max_iter,
-    ))
+    black_box(search(black_box(&route)))
 }
 
 #[library_benchmark]

@@ -14,7 +14,26 @@ type WasmMod = {
     max_iter: number
   ) => Uint32Array;
   nearest_each: (points: Float32Array, queries: Float32Array, maxDist: number) => Int32Array;
+  load_grid: (walkable: Uint8Array, costs: Float32Array, width: number, height: number) => void;
+  set_grid_walkable: (index: number, walkable: boolean) => void;
+  find_path_on_grid: (
+    softBlocked: Uint32Array,
+    penalty: number,
+    sx: number,
+    sy: number,
+    ex: number,
+    ey: number,
+    max_iter: number
+  ) => Uint32Array;
 };
+
+function toPath(raw: Uint32Array): { x: number; y: number }[] {
+  const path: { x: number; y: number }[] = [];
+  for (let i = 0; i + 1 < raw.length; i += 2) {
+    path.push({ x: raw[i], y: raw[i + 1] });
+  }
+  return path;
+}
 
 class WasmPathfinderServiceImpl implements PathfinderService {
   private mod: WasmMod | null = null;
@@ -61,12 +80,28 @@ class WasmPathfinderServiceImpl implements PathfinderService {
     maxIter = 0
   ): { x: number; y: number }[] {
     if (!this.mod) return [];
-    const raw = this.mod.find_path(walkable, costs, width, height, sx, sy, ex, ey, maxIter);
-    const path: { x: number; y: number }[] = [];
-    for (let i = 0; i + 1 < raw.length; i += 2) {
-      path.push({ x: raw[i], y: raw[i + 1] });
-    }
-    return path;
+    return toPath(this.mod.find_path(walkable, costs, width, height, sx, sy, ex, ey, maxIter));
+  }
+
+  loadGrid(walkable: Uint8Array, costs: Float32Array, width: number, height: number): void {
+    this.mod?.load_grid(walkable, costs, width, height);
+  }
+
+  setGridWalkable(index: number, walkable: boolean): void {
+    this.mod?.set_grid_walkable(index, walkable);
+  }
+
+  findPathOnGrid(
+    softBlocked: Uint32Array,
+    penalty: number,
+    sx: number,
+    sy: number,
+    ex: number,
+    ey: number,
+    maxIter = 0
+  ): { x: number; y: number }[] {
+    if (!this.mod) return [];
+    return toPath(this.mod.find_path_on_grid(softBlocked, penalty, sx, sy, ex, ey, maxIter));
   }
 
   nearestEach(points: Float32Array, queries: Float32Array, maxDist: number): Int32Array | null {
