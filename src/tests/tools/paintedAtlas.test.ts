@@ -87,6 +87,28 @@ describe('painted atlas manifest', () => {
     }
   });
 
+  it('keeps drop shadows out of the colour atlas and in the light atlas', () => {
+    const { pixels } = decoded();
+    const light = decodePng(committed('atlas-light.png')).rgba;
+    const faintest = 233;
+    let translucent = 0;
+    for (let i = 3; i < pixels.length; i += 4)
+      if (pixels[i] > 0 && pixels[i] < faintest) translucent++;
+    expect(translucent).toBe(0);
+    const covered = (id: string, channel: number) => {
+      const r = sprites[id];
+      let n = 0;
+      for (let y = r.y; y < r.y + r.h; y++)
+        for (let x = r.x; x < r.x + r.w; x++)
+          if (light[(y * manifest.atlas.w + x) * 4 + channel]) n++;
+      return n;
+    };
+    expect(covered('tree/oak/0', 1)).toBeGreaterThan(0);
+    expect(covered('building/campfire', 0)).toBeGreaterThan(0);
+    expect(covered('rock/vent/0', 0)).toBeGreaterThan(0);
+    expect(covered('tree/oak/0', 0)).toBe(0);
+  });
+
   it('names a rock piece for every neighbour layout, for walls the database has', () => {
     const rock = manifest.pieces.rock;
     expect(rock.layouts).toHaveLength(256);
@@ -125,6 +147,7 @@ describe('painted atlas manifest', () => {
   it('bakes the same bytes as the committed atlas, rock top and manifest', () => {
     const out = bake();
     expect(Buffer.compare(out.png, png)).toBe(0);
+    expect(Buffer.compare(out.light, committed('atlas-light.png'))).toBe(0);
     expect(Buffer.compare(out.top, committed(manifest.pieces.rock.top.image))).toBe(0);
     expect(JSON.stringify(out.manifest, null, 2) + '\n').toBe(
       committed('manifest.json').toString('utf8')
