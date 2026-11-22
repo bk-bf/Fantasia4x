@@ -29,6 +29,131 @@ fn octile(ax: u32, ay: u32, bx: u32, by: u32) -> f32 {
 }
 
 
+struct Scratch {
+    g: Vec<f32>,
+    parent: Vec<u32>,
+    expanded: Vec<bool>,
+    touched: Vec<u32>,
+}
+
+impl Scratch {
+    const fn new() -> Scratch {
+        Scratch { g: Vec::new(), parent: Vec::new(), expanded: Vec::new(), touched: Vec::new() }
+    }
+
+    fn begin(&mut self, n: usize) {
+        if self.g.len() < n {
+            self.g = vec![f32::INFINITY; n];
+            self.parent = vec![0; n];
+            self.expanded = vec![false; n];
+        }
+    }
+
+    #[inline]
+    fn improve(&mut self, i: usize, g: f32, parent: u32) {
+        if self.g[i] == f32::INFINITY {
+            self.touched.push(i as u32);
+        }
+        self.g[i] = g;
+        self.parent[i] = parent;
+        self.expanded[i] = false;
+    }
+
+    #[inline]
+    fn expand_once(&mut self, i: usize) -> bool {
+        !std::mem::replace(&mut self.expanded[i], true)
+    }
+
+    fn reset(&mut self) {
+        for &t in &self.touched {
+            self.g[t as usize] = f32::INFINITY;
+            self.expanded[t as usize] = false;
+        }
+        self.touched.clear();
+    }
+}
+
+thread_local! {
+    static SCRATCH: std::cell::RefCell<Scratch> = const { std::cell::RefCell::new(Scratch::new()) };
+}
+
+struct Grid {
+    walkable: Vec<u8>,
+    costs: Vec<f32>,
+    width: u32,
+    height: u32,
+}
+
+thread_local! {
+    static GRID: std::cell::RefCell<Grid> = const {
+        std::cell::RefCell::new(Grid { walkable: Vec::new(), costs: Vec::new(), width: 0, height: 0 })
+    };
+}
+
+#[wasm_bindgen]
+pub fn load_grid(walkable: &[u8], costs: &[f32], width: u32, height: u32) {
+    GRID.with(|cell| {
+        let mut grid = cell.borrow_mut();
+        grid.walkable.clear();
+        grid.walkable.extend_from_slice(walkable);
+        grid.costs.clear();
+        grid.costs.extend_from_slice(costs);
+        grid.width = width;
+        grid.height = height;
+    });
+}
+
+#[wasm_bindgen]
+pub fn set_grid_walkable(index: u32, walkable: bool) {
+    GRID.with(|cell| {
+        if let Some(tile) = cell.borrow_mut().walkable.get_mut(index as usize) {
+            *tile = u8::from(walkable);
+        }
+    });
+}
+
+#[wasm_bindgen]
+pub fn find_path_on_grid(
+    soft_blocked: &[u32],
+    penalty: f32,
+    sx: u32,
+    sy: u32,
+    ex: u32,
+    ey: u32,
+    max_iter: u32,
+) -> Vec<u32> {
+    GRID.with(|cell| {
+        let mut grid = cell.borrow_mut();
+        let n = grid.costs.len();
+        let saved: Vec<f32> = soft_blocked
+            .iter()
+            .map(|&i| grid.costs.get(i as usize).copied().unwrap_or(0.0))
+            .collect();
+        for &i in soft_blocked {
+            if (i as usize) < n {
+                grid.costs[i as usize] += penalty;
+            }
+        }
+        let path = find_path(
+            &grid.walkable,
+            &grid.costs,
+            grid.width,
+            grid.height,
+            sx,
+            sy,
+            ex,
+            ey,
+            max_iter,
+        );
+        for (k, &i) in soft_blocked.iter().enumerate().rev() {
+            if (i as usize) < n {
+                grid.costs[i as usize] = saved[k];
+            }
+        }
+        path
+    })
+}
+
 #[wasm_bindgen]
 pub fn find_path(
     walkable: &[u8],
@@ -66,11 +191,31 @@ pub fn find_path(
 
     let cap = if max_iter == 0 { (w * h).min(100_000) as u32 } else { max_iter };
 
-    let mut g: Vec<f32> = vec![f32::INFINITY; n];
-    let mut parent: Vec<u32> = vec![u32::MAX; n];
-    g[start] = 0.0;
+    SCRATCH.with(|cell| {
+        let mut scratch = cell.borrow_mut();
+        scratch.begin(n);
+        let path = search(&mut scratch, walkable, costs, w, h, start, end, ex, ey, cap);
+        scratch.reset();
+        path
+    })
+}
+
+fn search(
+    scratch: &mut Scratch,
+    walkable: &[u8],
+    costs: &[f32],
+    w: usize,
+    h: usize,
+    start: usize,
+    end: usize,
+    ex: u32,
+    ey: u32,
+    cap: u32,
+) -> Vec<u32> {
+    scratch.improve(start, 0.0, u32::MAX);
 
     let mut open: BinaryHeap<(Reverse<F32Ord>, u32)> = BinaryHeap::new();
+    let (sx, sy) = ((start % w) as u32, (start / w) as u32);
     open.push((Reverse(F32Ord(octile(sx, sy, ex, ey))), start as u32));
 
     const DIRS: [(i32, i32); 8] = [
@@ -83,12 +228,17 @@ pub fn find_path(
     while let Some((_, cur_u32)) = open.pop() {
         let cur = cur_u32 as usize;
         if cur == end {
-            return reconstruct(&parent, start, end, w);
+            return reconstruct(&scratch.parent, start, end, w);
         }
         iters += 1;
         if iters >= cap {
             return vec![];
         }
+
+        if !scratch.expand_once(cur) {
+            continue;
+        }
+        let g_cur = scratch.g[cur];
 
         let cx = (cur % w) as i32;
         let cy = (cur / w) as i32;
@@ -113,11 +263,10 @@ pub fn find_path(
             }
 
             let step = if dx == 0 || dy == 0 { 1.0f32 } else { std::f32::consts::SQRT_2 };
-            let tentative_g = g[cur] + step * costs[ni].max(1.0);
+            let tentative_g = g_cur + step * costs[ni].max(1.0);
 
-            if tentative_g < g[ni] {
-                g[ni] = tentative_g;
-                parent[ni] = cur as u32;
+            if tentative_g < scratch.g[ni] {
+                scratch.improve(ni, tentative_g, cur as u32);
                 let h_val = octile(nx as u32, ny as u32, ex, ey);
                 open.push((Reverse(F32Ord(tentative_g + h_val)), ni as u32));
             }
@@ -219,4 +368,69 @@ fn reconstruct(parent: &[u32], start: usize, end: usize, w: usize) -> Vec<u32> {
         path.push((node / w) as u32);
     }
     path
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn open(w: usize, h: usize) -> (Vec<u8>, Vec<f32>) {
+        (vec![1u8; w * h], vec![1.0f32; w * h])
+    }
+
+    fn nodes(flat: Vec<u32>) -> Vec<(u32, u32)> {
+        flat.chunks(2).map(|c| (c[0], c[1])).collect()
+    }
+
+    #[test]
+    fn open_grid_goes_straight_down_the_diagonal() {
+        let (walk, costs) = open(5, 5);
+        let path = nodes(find_path(&walk, &costs, 5, 5, 0, 0, 4, 4, 0));
+        assert_eq!(path, vec![(1, 1), (2, 2), (3, 3), (4, 4)]);
+    }
+
+    #[test]
+    fn a_diagonal_step_costs_more_than_a_straight_one() {
+        let (walk, mut costs) = open(5, 3);
+        for x in 1..5 {
+            costs[x] = 1.2;
+        }
+        let path = nodes(find_path(&walk, &costs, 5, 3, 0, 0, 4, 0, 0));
+        assert_eq!(path, vec![(1, 0), (2, 0), (3, 0), (4, 0)]);
+    }
+
+    #[test]
+    fn a_diagonal_may_pass_one_blocked_corner() {
+        let (mut walk, costs) = open(3, 3);
+        walk[1] = 0;
+        let path = nodes(find_path(&walk, &costs, 3, 3, 0, 0, 1, 1, 0));
+        assert_eq!(path, vec![(1, 1)]);
+    }
+
+    #[test]
+    fn a_diagonal_never_squeezes_between_two_blocked_corners() {
+        let (mut walk, costs) = open(3, 3);
+        walk[1] = 0;
+        walk[3] = 0;
+        assert!(find_path(&walk, &costs, 3, 3, 0, 0, 1, 1, 0).is_empty());
+    }
+
+    #[test]
+    fn an_unwalkable_end_has_no_path() {
+        let (mut walk, costs) = open(5, 5);
+        walk[4 * 5 + 4] = 0;
+        assert!(find_path(&walk, &costs, 5, 5, 0, 0, 4, 4, 0).is_empty());
+    }
+
+    #[test]
+    fn a_cheaper_route_found_later_replaces_a_dearer_one() {
+        let (walk, mut costs) = open(5, 3);
+        for x in 1..4 {
+            costs[5 + x] = 9.0;
+        }
+        let path = nodes(find_path(&walk, &costs, 5, 3, 0, 1, 4, 1, 0));
+        assert_eq!(path.len(), 4);
+        assert!(path[..3].iter().all(|&(_, y)| y != 1));
+        assert_eq!(path[3], (4, 1));
+    }
 }

@@ -8,7 +8,7 @@ to ubuntuserver through `remote/run.mjs`.
 
 | Path | What it does | How to run it |
 |---|---|---|
-| `issue.mjs` | Writes GitHub issues, pull requests, board lanes, labels, blockers and milestones in the shape the repo checks. | `pnpm issue <command>` |
+| `issue.mjs` | Writes GitHub issues, pull requests, labels, blockers and milestones in the shape the repo checks. | `pnpm issue <command>` |
 | `chain.mjs` | Pushes the branch, starts or follows the CI chain for it on GitHub, and streams the run to its result. | `pnpm chain`, `pnpm chain --pre` |
 | `remote/run.mjs` | Runs a test or check command on ubuntuserver against the committed `HEAD`, for work in progress. | the `pnpm` test, check and bench scripts |
 | `remote/guard.mjs` | Refuses a test runner, linter or harness started on the laptop. | Claude Code hook |
@@ -17,14 +17,16 @@ to ubuntuserver through `remote/run.mjs`.
 | `promote.mjs` | Merges `dev` into `main` in a worktree and runs every check there; `--push` pushes `main`. | `pnpm promote` |
 | `ci/ci-scope.mjs` | Decides which CI legs a change runs from `ci/scope.json`, and refuses a file no rule there matches. | run by `check.yml` and `hooks/pre-push` |
 | `ci/ci-check.mjs` | Runs `pnpm check` and the related tests in CI. | run by `check.yml` |
+| `ci/stats.mjs` | Prints how long CI runs take, how much of it was waited on, red-run time, each job's share and time to green per branch, from the history the dashboard records. | `pnpm ci:stats [--days N] [--workflow W] [--json]` |
 | `ci/structure.mjs` | Checks the architecture seams in `ci/seams.json` and the component sizes in `ci/component-sizes.json`. | `node tools/ci/structure.mjs`, run by `check.yml` and `promote.yml` |
 | `ci/warnings.mjs` | Runs `svelte-check`, `eslint`, or `tsc` over the files in `tools/` that `svelte-check` does not reach; fails on an error or on a count past `ci/warning-budget.json`, and in CI lists every finding on the run page, annotates the changed files and feeds the pull request's Check notes. | `pnpm check:types`, `pnpm check:tools`, `pnpm lint` |
 | `dev-shell/` | The Electron shell `./launch.sh --electron` plays the dev server in; its own package, installed by `install.sh`. | `./launch.sh --electron` |
 | `claude/inflight.mjs` | Lists open pull requests with every prompt and flags the first edit of a file they touch. | Claude Code hook |
-| `bench/` | CodSpeed benchmarks of whole ticks and one entity phase, and ticks per second. | `pnpm bench`, `pnpm bench:tps` |
+| `bench/` | CodSpeed benchmarks of whole ticks, one entity phase and the exploration row build, and ticks per second. | `pnpm bench`, `pnpm bench:tps` |
 | `bench/counts.mjs` | Reads the exact instruction and cache-miss counts per benchmark out of CodSpeed's profiles. | `node tools/bench/counts.mjs <dir> --out <file>`, run by the `codspeed` job |
 | `bench/codspeed-gate.mjs` | Waits for CodSpeed's verdict on the head commit and fails on a regression unless the pull request carries `perf change accepted`. The wait lives in `bench/codspeed-check.mjs`, which the Check notes share. | run by the `codspeed` job |
 | `coverage/gate.mjs` | Runs the whole test suite with line coverage of `src/lib/game` and writes the total and each changed file's coverage for the Check notes. | `pnpm test:coverage`, run by the `coverage` job |
+| `mutants/pins.mjs` | Applies each mutant in `mutants/registry.json` (a file, an exact text to find, its replacement, and the tests expected to kill it) to a scratch copy of the tree, runs those tests, and fails naming every mutant that survives. In CI it runs the mutants a change reaches, and the whole registry nightly. A test that closes a mutation gap adds its killed mutant to the registry. | `pnpm test:mutants [--base <ref>] [--only <id,...>] [--jobs N]` |
 | `work-pins/` | Call counts of the simulation tick and the browser frame, base against head. | `pnpm work-pins`, `pnpm work-pins:gate` |
 | `gungraun/gate.mjs` | Instruction counts for `sim-core` and `spatial-core`, base against head. | `node tools/gungraun/gate.mjs --base <ref>` |
 | `gpu/` | Frame measurement on a rented GPU: `vast.mjs` rents the machine, `probe.mjs` tries Chromium's GPU flags, `frames.mjs` times frames. | `node tools/gpu/<script>.mjs` |

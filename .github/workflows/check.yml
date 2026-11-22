@@ -5,6 +5,8 @@ on:
     branches: [dev]
   push:
     branches: [dev, 'chain/**']
+  schedule:
+    - cron: '17 3 * * *'
   workflow_dispatch:
     inputs:
       mode:
@@ -20,7 +22,7 @@ on:
         default: dev
 
 concurrency:
-  group: ci-${{ github.event.pull_request.number || github.ref }}-${{ inputs.mode }}-${{ github.event_name == 'workflow_dispatch' && github.run_id || '' }}
+  group: ci-${{ github.event.pull_request.number || github.ref }}-${{ inputs.mode }}-${{ (github.event_name == 'workflow_dispatch' || github.event_name == 'schedule') && github.run_id || '' }}
   cancel-in-progress: true
 
 jobs:
@@ -40,6 +42,7 @@ jobs:
       browser: ${{ steps.scope.outputs.browser }}
       tps: ${{ steps.scope.outputs.tps }}
       bench: ${{ steps.scope.outputs.bench }}
+      mutants: ${{ steps.scope.outputs.mutants }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -178,6 +181,40 @@ jobs:
           path: ${{ runner.temp }}/coverage-notes.jsonl
           if-no-files-found: ignore
 
+  mutants:
+    name: 'Mutant pins: tools/mutants/registry.json'
+    needs: precheck
+    if: github.event_name == 'schedule' || ((github.event_name != 'workflow_dispatch' || inputs.mode == 'chain') && needs.precheck.outputs.mutants == 'true')
+    runs-on: ubuntu-latest
+    timeout-minutes: ${{ github.event_name == 'schedule' && 240 || 90 }}
+    permissions:
+      contents: read
+    env:
+      BASE: ${{ needs.precheck.outputs.base }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: ./.github/actions/prepare
+
+      - name: Every mutant in the registry
+        if: github.event_name == 'schedule'
+        run: node tools/mutants/pins.mjs --jobs 2
+
+      - name: The mutants this change reaches
+        if: github.event_name != 'schedule'
+        env:
+          MUTANT_NOTES: ${{ runner.temp }}/mutant-notes.jsonl
+        run: node tools/mutants/pins.mjs --jobs 2 --base "$BASE"
+
+      - uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() && github.event_name == 'pull_request' }}
+        with:
+          name: mutant-notes
+          path: ${{ runner.temp }}/mutant-notes.jsonl
+          if-no-files-found: ignore
+
   compare:
     name: Browser work pins, two branches
     if: github.event_name == 'workflow_dispatch' && (inputs.mode == 'browser' || inputs.mode == 'day')
@@ -300,7 +337,7 @@ jobs:
   perf-notes:
     name: Check notes on the pull request
     if: ${{ !cancelled() && github.event_name == 'pull_request' }}
-    needs: [precheck, measure, codspeed, tps, coverage]
+    needs: [precheck, measure, codspeed, tps, coverage, mutants]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -342,6 +379,12 @@ jobs:
           name: coverage-notes
           path: ${{ runner.temp }}/coverage
 
+      - uses: actions/download-artifact@v8
+        continue-on-error: true
+        with:
+          name: mutant-notes
+          path: ${{ runner.temp }}/mutants
+
       - uses: actions/setup-node@v7
         with:
           node-version: 24.20.0
@@ -358,4 +401,6 @@ jobs:
           CODSPEED_RAN: ${{ needs.codspeed.result == 'success' || needs.codspeed.result == 'failure' }}
           TPS_NOTES: ${{ runner.temp }}/tps/tps-notes.jsonl
           COVERAGE_NOTES: ${{ runner.temp }}/coverage/coverage-notes.jsonl
+          MUTANT_NOTES: ${{ runner.temp }}/mutants/mutant-notes.jsonl
+          MUTANTS_RAN: ${{ needs.mutants.result == 'success' || needs.mutants.result == 'failure' }}
         run: node tools/work-pins/perf-notes.mjs

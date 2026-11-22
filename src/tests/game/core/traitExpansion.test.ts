@@ -101,6 +101,7 @@ describe('TRAIT-LIBRARY-EXPANSION mechanics', () => {
       bloodletting: true
     };
     forearm.injuries.push(wound);
+    arm.bleedRate = wound.bleeding;
     for (let i = 0; i < 200; i++) rollWoundClotting(limbs, 1.0, i);
     expect(wound.clotProgress ?? 0).toBe(0);
     const merged = recomputeWound('leftForearm', 'cut', 20, wound, 10, forearm.maxHp);
