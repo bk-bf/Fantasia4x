@@ -14,6 +14,7 @@ import {
   LIFT,
   NEIGHBOURS,
   TOP_SIZE,
+  VEIN_SIZE,
   blobLayout,
   rockArt,
   rockTop,
@@ -32,6 +33,7 @@ const ATLAS_W = 2048;
 const SHADOW = [0, 0, 0, 112];
 const TOP_IMAGE = 'rock-top.png';
 const VEIN_IMAGE = 'rock-veins.png';
+const TOP_DEFLATE = 6;
 
 export const art = (period = 0) =>
   new Function(
@@ -104,7 +106,14 @@ function pieceSprites(
       {
         resources: [...resources].sort(),
         neighbours: NEIGHBOURS,
-        top: { image: TOP_IMAGE, veins: VEIN_IMAGE, size: TOP_SIZE, lift: LIFT, ramp: 'rock/ramp' },
+        top: {
+          image: TOP_IMAGE,
+          veins: VEIN_IMAGE,
+          size: TOP_SIZE,
+          veinSize: VEIN_SIZE,
+          lift: LIFT,
+          ramp: 'rock/ramp'
+        },
         veins,
         layouts: Array.from({ length: 1 << NEIGHBOURS.length }, (_, m) =>
           pieceId(set, blobLayout(m))
@@ -389,11 +398,12 @@ export function bake() {
     pieces
   };
   const wide = art(TOP_SIZE);
+  const veinArt = art(VEIN_SIZE);
   return {
     png: encodePng(ATLAS_W, h, atlas),
     manifest,
-    top: encodePng(TOP_SIZE, TOP_SIZE, rockTop(wide)),
-    veins: encodePng(TOP_SIZE, TOP_SIZE, rockVeins(wide))
+    top: encodePng(TOP_SIZE, TOP_SIZE, rockTop(wide), TOP_DEFLATE),
+    veins: encodePng(VEIN_SIZE, VEIN_SIZE, rockVeins(veinArt))
   };
 }
 

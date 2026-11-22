@@ -21,7 +21,7 @@ function chunk(type = '', data = Buffer.alloc(0)) {
   return out;
 }
 
-export function encodePng(w = 0, h = 0, rgba = new Uint8Array(0)) {
+export function encodePng(w = 0, h = 0, rgba = new Uint8Array(0), level = 9) {
   const head = Buffer.alloc(13);
   head.writeUInt32BE(w, 0);
   head.writeUInt32BE(h, 4);
@@ -32,7 +32,7 @@ export function encodePng(w = 0, h = 0, rgba = new Uint8Array(0)) {
   return Buffer.concat([
     Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
     chunk('IHDR', head),
-    chunk('IDAT', deflateSync(raw, { level: 9 })),
+    chunk('IDAT', deflateSync(raw, { level })),
     chunk('IEND', Buffer.alloc(0))
   ]);
 }

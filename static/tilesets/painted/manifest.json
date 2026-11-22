@@ -7746,7 +7746,8 @@
       "top": {
         "image": "rock-top.png",
         "veins": "rock-veins.png",
-        "size": 1024,
+        "size": 2048,
+        "veinSize": 1024,
         "lift": 22,
         "ramp": "rock/ramp"
       },

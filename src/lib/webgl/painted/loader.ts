@@ -71,10 +71,13 @@ async function readTop(baseUrl: string, piece: PaintedPieceTop | null) {
   if (!piece) return null;
   try {
     const [image, veins] = await Promise.all(
-      [piece.image, piece.veins].map(async (name) => {
+      [
+        [piece.image, piece.size],
+        [piece.veins, piece.veinSize]
+      ].map(async ([name, size]) => {
         const loaded = await loadImage(`${baseUrl}${name}`);
-        if (loaded.naturalWidth !== piece.size || loaded.naturalHeight !== piece.size)
-          throw new Error(`${name} is not ${piece.size} px square`);
+        if (loaded.naturalWidth !== size || loaded.naturalHeight !== size)
+          throw new Error(`${name} is not ${size} px square`);
         return loaded;
       })
     );

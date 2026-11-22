@@ -7,7 +7,8 @@ export const CELL_H = REACH + LIFT + TILE + REACH;
 export const CELL_X = -REACH;
 export const CELL_Y = -REACH - LIFT;
 export const PERIOD = TILE * PATCH;
-export const TOP_SIZE = 1024;
+export const TOP_SIZE = 2048;
+export const VEIN_SIZE = 1024;
 export const TOP_MARK = [255, 0, 255];
 export const FACE_ALPHA = 254;
 const RIM_SHIFT = [0, 0.26, -0.2];
@@ -253,21 +254,31 @@ export function rockTop(
   return px;
 }
 
-export const VEIN = { edge: 4 };
+export const VEIN = { edge: 4, floor: 0.58, density: 1.6, score: 2.6, reach: 8 };
+
+const offset = (d = 0) =>
+  Math.max(-VEIN.reach, Math.min(VEIN.reach - 1, Math.round(d))) + VEIN.reach;
 
 export function rockVeins(
   A = {
-    veinAt: (x = 0, y = 0) => ({ blob: (x % 7) / 7, id: (y % 5) / 5, k: ((x + y) % 5) - 1 })
+    veinAt: (x = 0, y = 0) => ({
+      blob: (x % 7) / 7,
+      id: (y % 5) / 5,
+      k: ((x + y) % 5) - 1,
+      dx: (x % 3) - 1,
+      dy: (y % 3) - 1
+    })
   }
 ) {
-  const px = new Uint8Array(TOP_SIZE * TOP_SIZE * 4);
-  for (let y = 0; y < TOP_SIZE; y++)
-    for (let x = 0; x < TOP_SIZE; x++) {
-      const { blob, id, k } = A.veinAt(x, y),
-        i = (y * TOP_SIZE + x) * 4;
+  const px = new Uint8Array(VEIN_SIZE * VEIN_SIZE * 4);
+  for (let y = 0; y < VEIN_SIZE; y++)
+    for (let x = 0; x < VEIN_SIZE; x++) {
+      const { blob, id, k, dx, dy } = A.veinAt(x, y),
+        i = (y * VEIN_SIZE + x) * 4;
+      const score = id + VEIN.density * Math.max(blob, VEIN.floor);
       px[i] = k < 0 ? VEIN.edge : k;
-      px[i + 1] = Math.round(id * 255);
-      px[i + 2] = Math.round(blob * 255);
+      px[i + 1] = Math.round((Math.min(score, VEIN.score) / VEIN.score) * 255);
+      px[i + 2] = offset(dx) * 2 * VEIN.reach + offset(dy);
       px[i + 3] = 255;
     }
   return px;
