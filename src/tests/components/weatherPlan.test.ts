@@ -4,7 +4,8 @@ import { makeWeather } from '$lib/game/services/EnvironmentService';
 import { planWeather, tileImage } from '$lib/components/UI/weather/weatherPlan';
 import { bakeWeather } from '../../../tools/tileset/weather.mjs';
 
-const kinds = (type: string, light = 1) => planWeather(makeWeather(type), light, 1).map((g) => g.kind);
+const kinds = (type: string, light = 1) =>
+  planWeather(makeWeather(type), light, 1).map((g) => g.kind);
 
 describe('weather plan', () => {
   it('draws rain, fog and snow from the weather the game is in', () => {
@@ -25,6 +26,15 @@ describe('weather plan', () => {
     expect(storm.sheets[0].tile).toBe('storm0');
     expect(storm.sheets[0].secs).toBeLessThan(rain.sheets[0].secs);
     expect(storm.opacity).toBeGreaterThan(rain.opacity);
+  });
+
+  it('loops the snow by whole tiles in any wind, so it never jumps', () => {
+    for (const type of ['snow', 'blizzard', 'winter_windy'])
+      for (const k of [1, 2]) {
+        const [snow] = planWeather(makeWeather(type), 1, k);
+        const tile = parseFloat(snow.sheets[0].size);
+        expect([snow.sheets[0].tx % tile, snow.sheets[0].ty % tile]).toEqual([0, 0]);
+      }
   });
 
   it('thins the fog at night', () => {

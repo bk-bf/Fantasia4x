@@ -82,7 +82,7 @@ function snow(amount: number, wind: number, k: number): WeatherGroup {
       {
         tile: 'snow',
         size: `${SNOW_TILE * k}px`,
-        tx: Math.round(SNOW_TILE * k * (0.4 + 2 * wind)),
+        tx: SNOW_TILE * k * Math.max(1, Math.round(0.4 + 2 * wind)),
         ty: SNOW_TILE * 4 * k,
         secs: round2(18 / pace(wind)),
         steps: 0,
