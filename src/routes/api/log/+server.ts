@@ -6,6 +6,12 @@ const MAX_LOG_BYTES = 16 * 1024 * 1024;
 
 const CATEGORY_RE = /^[a-z][a-z0-9_]*$/;
 
+const pad = (n: number, width = 2) => String(n).padStart(width, '0');
+
+function logStamp(d: Date): string {
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}.${pad(d.getMilliseconds(), 3)}`;
+}
+
 function appendToLog(logFile: string, lines: string[]): void {
   if (lines.length === 0) return;
   const payload = lines.join('\n') + '\n';
@@ -36,6 +42,7 @@ export const POST: RequestHandler = async ({ request }) => {
   if (!Array.isArray(entries)) return new Response('bad request', { status: 400 });
 
   const buckets = new Map<string, string[]>();
+  const stamp = logStamp(new Date());
   for (const e of entries) {
     if (typeof e !== 'object' || e === null) continue;
     const cat = (e as { category?: unknown }).category;
@@ -45,7 +52,7 @@ export const POST: RequestHandler = async ({ request }) => {
     const safe = line.replace(/[\r\n]/g, '↵');
     let bucket = buckets.get(cat);
     if (!bucket) buckets.set(cat, (bucket = []));
-    bucket.push(safe);
+    bucket.push(`${stamp} ${safe}`);
   }
   if (buckets.size === 0) return new Response(null, { status: 204 });
 

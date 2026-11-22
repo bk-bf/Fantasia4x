@@ -10,6 +10,8 @@ import {
 } from '$lib/game/core/state/stockpile';
 import { gameEngine } from '$lib/game/systems/GameEngineImpl';
 import './simLogBridge';
+import { vlog } from '$lib/game/core/util/logSink';
+import { describeSession } from '$lib/dev/sessionHeader';
 import { simWorkerBridge, USE_SIM_WORKER } from '$lib/game/sim/simWorkerClient';
 import { applySimCommand } from '$lib/game/sim/commands';
 import type { SimCommand } from '$lib/game/sim/simProtocol';
@@ -276,9 +278,15 @@ export function discoverCulture(state: GameState, cultureId: string): GameState 
   };
 }
 
+let sessionLogged = false;
+
 function startAutoTurns() {
   simRunning = true;
   simAccumulatorMs = 0;
+  if (!browser || sessionLogged) return;
+  sessionLogged = true;
+  const gs = get(gameState) as GameState;
+  vlog('perf', gs.turn, () => describeSession(gs, gameSpeedValue));
 }
 
 function stopAutoTurns() {

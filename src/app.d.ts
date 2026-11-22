@@ -2,6 +2,7 @@ declare global {
   namespace App {}
 
   const __APP_VERSION__: string;
+  const __F4X_BUILD__: import('$lib/dev/sessionHeader').BuildInfo;
 }
 
 interface ImportMetaEnv {
