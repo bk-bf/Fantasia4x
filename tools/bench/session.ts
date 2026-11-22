@@ -1,6 +1,7 @@
 import { HeadlessSession } from '$lib/game/headless/HeadlessSession';
 import { rng } from '$lib/game/core/util/rng';
 import { entityService } from '$lib/game/services/EntityService';
+import { rebuildThermalField, thermalAt } from '$lib/game/services/EnvironmentService';
 import type { GameState, Mob } from '$lib/game/core/types';
 import { initialState, type WorkPinScenario } from '../work-pins/scenarios';
 
@@ -67,5 +68,14 @@ export function mobMovement(session: HeadlessSession): () => void {
     }
     rng.reseed(state.seed);
     entityService.advanceMobMovement(state);
+  };
+}
+
+export function thermalSampling(session: HeadlessSession): () => void {
+  return () => {
+    const state = session.getState();
+    rebuildThermalField(state.buildings, state.worldMap);
+    for (const p of state.pawns) if (p.position) thermalAt(p.position.x, p.position.y);
+    for (const d of state.droppedItems ?? []) thermalAt(d.x, d.y);
   };
 }

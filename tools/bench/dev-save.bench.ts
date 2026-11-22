@@ -8,6 +8,7 @@ import {
   measuredWindow,
   mobMovement,
   phase,
+  thermalSampling,
   warmSession
 } from './session';
 
@@ -26,4 +27,5 @@ describe('dev-save', () => {
     }),
     ROLLING
   );
+  bench('env:thermal', thermalSampling(session), ROLLING);
 });
