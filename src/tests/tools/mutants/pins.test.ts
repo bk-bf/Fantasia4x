@@ -59,6 +59,40 @@ describe('registryErrors', () => {
     ]);
   });
 
+  it('takes the tests of a Rust mutant from the files of its crate that hold a #[test]', () => {
+    const crate: Record<string, string> = {
+      'core/Cargo.toml': '',
+      'core/src/lib.rs': 'let a = 1;\n#[test]\nfn t() {}\n',
+      'core/src/plain.rs': 'fn x() {}',
+      'other/Cargo.toml': '',
+      'other/src/lib.rs': '#[test]',
+      'loose.rs': 'let a = 1;'
+    };
+    const readCrate = (f: string) => crate[f] ?? files[f] ?? null;
+    const rust = {
+      id: 'r',
+      file: 'core/src/lib.rs',
+      find: 'a = 1',
+      replace: 'a = 2',
+      tests: ['core/src/lib.rs']
+    };
+    expect(registryErrors([rust], readCrate)).toEqual([]);
+    expect(
+      registryErrors(
+        [{ ...rust, tests: ['core/src/plain.rs', 'other/src/lib.rs', 'src/tests/a.test.ts'] }],
+        readCrate
+      )
+    ).toEqual([
+      'r: core/src/plain.rs holds no #[test] in the crate of core/src/lib.rs',
+      'r: other/src/lib.rs holds no #[test] in the crate of core/src/lib.rs',
+      'r: src/tests/a.test.ts holds no #[test] in the crate of core/src/lib.rs'
+    ]);
+    expect(registryErrors([{ ...rust, file: 'loose.rs' }], readCrate)).toEqual([
+      'r: loose.rs is not under the src/ of a crate',
+      'r: core/src/lib.rs holds no #[test] in the crate of loose.rs'
+    ]);
+  });
+
   it('holds for every mutant in the committed registry', () => {
     const registry = JSON.parse(readFileSync(REGISTRY, 'utf8'));
     expect(
