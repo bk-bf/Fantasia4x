@@ -1,15 +1,14 @@
 <script lang="ts">
   import type { DroppedItem, PlacedBuilding } from '$lib/game/core/types';
   import type { EntityButton } from './SelectedEntityCard.svelte';
-  import { chrome } from '$lib/pixelArt/chrome';
   import type { RampName } from '$lib/pixelArt/palette';
   import { gameState } from '$lib/stores/gameState';
   import { buildingService } from '$lib/game/services/BuildingService';
   import { itemService } from '$lib/game/services/ItemService';
   import { refuelNotes } from '../canvas/refuelNotes';
   import ChromeButton from '../widget/ChromeButton.svelte';
+  import HudCard from './HudCard.svelte';
   import MeterRow from '../widget/MeterRow.svelte';
-  import PanelTitle from '../widget/PanelTitle.svelte';
   import SpriteIcon from '../widget/SpriteIcon.svelte';
 
   let {
@@ -65,81 +64,32 @@
   const stacks = $derived(standing ? (def?.effects?.storageStacks ?? 0) : 0);
 </script>
 
-<section class="card" {@attach chrome('card')}>
-  <div class="c-top">
-    <span class="well" {@attach chrome('well')}>
-      <SpriteIcon building={building.type} px={40} />
-    </span>
-    <div class="c-id">
-      <PanelTitle>{def?.name ?? ''}</PanelTitle>
-      <p>{line}</p>
+<HudCard title={def?.name ?? ''} verbs={verbs.length > 0 ? buildingVerbs : undefined}>
+  {#snippet well()}<SpriteIcon building={building.type} px={40} />{/snippet}
+  {#snippet lines()}
+    <p>{line}</p>
+    <div class="meters">
       {#each meters as m (m.label)}
         <MeterRow label={m.label} value={m.frac} ramp={m.ramp}>{Math.round(m.frac * 100)}%</MeterRow
         >
       {/each}
-      {#if stacks > 0}<p>Holds {stored.length} of {stacks} stacks</p>{/if}
-      {#if warn}<p class="warn">{warn}</p>{/if}
     </div>
-  </div>
-  {#if verbs.length > 0}
-    <div class="c-verbs">
-      {#each verbs as v (v.label)}
-        <ChromeButton on={!!v.active} onclick={v.onClick}>{v.label}</ChromeButton>
-      {/each}
-    </div>
-  {/if}
-</section>
+    {#if stacks > 0}<p>Holds {stored.length} of {stacks} stacks</p>{/if}
+    {#if warn}<p class="hot">{warn}</p>{/if}
+  {/snippet}
+</HudCard>
+
+{#snippet buildingVerbs()}
+  {#each verbs as v (v.label)}
+    <ChromeButton on={!!v.active} onclick={v.onClick}>{v.label}</ChromeButton>
+  {/each}
+{/snippet}
 
 <style>
-  .card {
-    width: 344px;
-    box-sizing: border-box;
-    padding: 11px 13px;
-    color: var(--text);
-    font: 16px/18px var(--font-pixel);
-    letter-spacing: 0.6px;
-  }
-  .c-top {
-    display: flex;
-    gap: 10px;
-  }
-  .well {
-    flex: none;
-    display: grid;
-    place-items: center;
-    width: 56px;
-    height: 56px;
-  }
-  .c-id {
-    flex: 1;
-    min-width: 0;
-  }
-  .c-id :global(h3) {
-    color: var(--text);
-  }
-  .c-id :global(.meter-row em) {
+  .meters :global(.meter-row em) {
     width: 70px;
   }
-  .c-id :global(.meter-row > span) {
+  .meters :global(.meter-row > span) {
     width: 40px;
-  }
-  p {
-    margin: 0;
-    color: var(--text-dim);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  p.warn {
-    color: var(--accent-hi);
-  }
-  .c-verbs {
-    display: flex;
-    gap: 4px;
-    margin-top: 7px;
-  }
-  .c-verbs :global(.cbtn) {
-    flex: 1;
-    padding: 0 4px;
   }
 </style>
