@@ -6,7 +6,14 @@ import type {
 } from './GameEngine';
 import type { GameState, WorldTile } from '../core/types';
 import { GameStateManager } from '../core/state/GameStateManager';
-import { GrowthQueue, useGrowthQueue } from '../core/rules/world/growthQueue';
+import {
+  GrowthQueue,
+  peekGrowthTurn,
+  popGrowth,
+  pushGrowth,
+  rebuildGrowthQueue,
+  useGrowthQueue
+} from '../core/rules/world/growthQueue';
 import { workService } from '../services/WorkService';
 import { itemService } from '../services/ItemService';
 import { recipeService } from '../services/RecipeService';
@@ -448,23 +455,21 @@ export class GameEngineImpl implements GameEngine {
   private processPlantGrowth(): void {
     if (!this.gameState) return;
     const gs = this.gameState;
-    const queue = this.growthQueue;
-    useGrowthQueue(queue);
 
     if (gs.worldMap !== this._lastGrowthWorldMap) {
-      queue.rebuild(gs.worldMap, gs.turn);
+      rebuildGrowthQueue(gs.worldMap, gs.turn);
       this._lastGrowthWorldMap = gs.worldMap;
     }
-    if (queue.peek() > gs.turn) return;
+    if (peekGrowthTurn() > gs.turn) return;
 
     const rate = seasonRegrowthMultiplier(gs.season);
     const cropScale = gs._devCropGrowthScale ?? 1;
-    while (queue.peek() <= gs.turn) {
-      const e = queue.pop()!;
+    while (peekGrowthTurn() <= gs.turn) {
+      const e = popGrowth()!;
       const tile = gs.worldMap[e.y]?.[e.x];
       if (!tile?.growth) continue;
       const due = this.advanceTileGrowth(tile, rate, cropScale);
-      if (due !== Infinity) queue.push(due, e.x, e.y);
+      if (due !== Infinity) pushGrowth(due, e.x, e.y);
     }
   }
 
