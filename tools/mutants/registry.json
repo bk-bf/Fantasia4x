@@ -966,6 +966,20 @@
     "tests": ["src/tests/game/services/bulkLogistics.test.ts"]
   },
   {
+    "id": "pawn-stat-capacities-always-built",
+    "file": "src/lib/game/services/PawnStatService.ts",
+    "find": "const capacities = formulaReadsCapacities(def.formula)",
+    "replace": "const capacities = true",
+    "tests": ["src/tests/game/services/statFormulaSlots.test.ts"]
+  },
+  {
+    "id": "pawn-stat-capacities-never-built",
+    "file": "src/lib/game/services/PawnStatService.ts",
+    "find": "const capacities = formulaReadsCapacities(def.formula)",
+    "replace": "const capacities = false",
+    "tests": ["src/tests/game/services/statFormulaSlots.test.ts"]
+  },
+  {
     "id": "pawn-stat-broken-bone-ignored",
     "file": "src/lib/game/services/PawnStatService.ts",
     "find": "(limbBoneBroken(limbs, l.id) ? BROKEN_BONE_FUNCTION_MULT : 1)",
@@ -1745,9 +1759,30 @@
   {
     "id": "pawn-stat-intact-forced-whole",
     "file": "src/lib/game/services/PawnStatService.ts",
-    "find": "const intact = formulaUsesIntact(formula) ? intactBodyFraction(p) : 1;",
-    "replace": "const intact = 1;",
+    "find": "    f.readsIntact ? intactBodyFraction(p) : 1,",
+    "replace": "    1,",
     "tests": ["src/tests/game/services/pawnStatRules.test.ts"]
+  },
+  {
+    "id": "pawn-stat-formula-capacity-slot-shared",
+    "file": "src/lib/game/services/PawnStatService.ts",
+    "find": "  if (capDefault !== undefined) return { src: `c.${v} ?? ${capDefault}`, scaled: false };",
+    "replace": "  if (capDefault !== undefined) return { src: `c.consciousness ?? ${capDefault}`, scaled: false };",
+    "tests": ["src/tests/game/services/statFormulaSlots.test.ts"]
+  },
+  {
+    "id": "pawn-stat-formula-core-slot-shared",
+    "file": "src/lib/game/services/PawnStatService.ts",
+    "find": "  if (core) return { src: `core('${core}', s, sm)`, scaled: core !== 'charisma' };",
+    "replace": "  if (core) return { src: `core('strength', s, sm)`, scaled: core !== 'charisma' };",
+    "tests": ["src/tests/game/services/statFormulaSlots.test.ts"]
+  },
+  {
+    "id": "pawn-stat-formula-skips-condition-scaling",
+    "file": "src/lib/game/services/PawnStatService.ts",
+    "find": "        readsMultipliers: readsScaled || used.has('POWER'),",
+    "replace": "        readsMultipliers: used.has('POWER'),",
+    "tests": ["src/tests/game/services/conditionCoreStatScaling.test.ts"]
   },
   {
     "id": "pawn-stat-scar-weight-lowered",

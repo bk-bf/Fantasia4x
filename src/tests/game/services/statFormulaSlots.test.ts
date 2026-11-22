@@ -1,7 +1,8 @@
-import { it, expect } from 'vitest';
+import { it, expect, vi } from 'vitest';
 import statsData from '$lib/game/database/pawns/stats.json';
 import { pawnStatService } from '$lib/game/services/PawnStatService';
 import { createBodyPlanLimbs, DEFAULT_PLAN } from '$lib/game/core/defs/bodyParts';
+import { powerToken } from '$lib/game/core/rules/body/powerScale';
 import type { Mob } from '$lib/game/core/types';
 
 const STATS = {
@@ -67,4 +68,46 @@ it('each stat formula reads every core stat, body measure and capacity from its 
     expect(pawnStatService.evaluateStat(id, m), id).toBeCloseTo(byName(def.formula!, vars), 9);
   }
   expect(new Set(PICKED.map((id) => pawnStatService.evaluateStat(id, m))).size).toBe(PICKED.length);
+});
+
+it('every stat formula reads only its own variables and gets each from its own slot', () => {
+  const m = body();
+  const caps = pawnStatService.computeCapacities(m);
+  const defs = (statsData as unknown as { id: string; formula?: string }[]).filter(
+    (d) => d.formula
+  );
+  expect(defs.length).toBeGreaterThan(100);
+  for (const def of defs) {
+    const vars: Record<string, number> = {
+      ...Object.fromEntries(Object.entries(STATS).map(([k, v]) => [k.toUpperCase(), v])),
+      weight: 83,
+      height: 181,
+      prestige: 0,
+      intact: 1,
+      APT: 1,
+      POWER: powerToken(STATS.strength),
+      SKILL: pawnStatService.workSkillInfo(def.id, m)?.factor ?? 1,
+      ...caps
+    };
+    const names = def.formula!.match(/[A-Za-z_]\w*/g) ?? [];
+    if (names.some((n) => n !== 'clamp' && !(n in vars))) continue;
+    expect(pawnStatService.evaluateStat(def.id, m), def.id).toBeCloseTo(
+      byName(def.formula!, vars),
+      9
+    );
+  }
+});
+
+it('a stat whose formula names no capacity never asks for capacities', () => {
+  const m = body();
+  const spy = vi.spyOn(pawnStatService, 'computeCapacities');
+  try {
+    pawnStatService.evaluateStat('hunger_rate', m);
+    pawnStatService.evaluateStat('fire_resistance', m);
+    expect(spy).not.toHaveBeenCalled();
+    pawnStatService.evaluateStat('heal_rate', m);
+    expect(spy).toHaveBeenCalledTimes(1);
+  } finally {
+    spy.mockRestore();
+  }
 });
