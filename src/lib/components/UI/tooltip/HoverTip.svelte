@@ -1,7 +1,10 @@
 <script lang="ts">
+  import { chrome } from '$lib/pixelArt/chrome';
+
   export let x: number;
   export let y: number;
   export let pinned = false;
+  export let painted = false;
 
   let node: HTMLElement;
   let raf = 0;
@@ -57,7 +60,15 @@
   $: (x, y, schedule());
 </script>
 
-<div class="tip" class:pinned use:portal data-pin-panel style="left:{x + GAP}px; top:{y + GAP}px;">
+<div
+  class="tip"
+  class:pinned
+  class:painted
+  use:portal
+  data-pin-panel
+  style="left:{x + GAP}px; top:{y + GAP}px;"
+  {@attach painted && chrome('tip')}
+>
   <div class="tip-body">
     <slot />
   </div>
@@ -96,6 +107,14 @@
     box-shadow: inset 0 0 0 1px var(--border-hi, #3a4656);
     filter: url(#ambient-tint);
     pointer-events: none;
+  }
+  .tip.painted {
+    padding: 9px 12px;
+    box-shadow: none;
+    font: 16px/17px var(--font-pixel);
+  }
+  .tip.painted::before {
+    display: none;
   }
   .tip-body {
     position: relative;

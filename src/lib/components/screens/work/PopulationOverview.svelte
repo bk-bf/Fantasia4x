@@ -2,7 +2,7 @@
   import { gameState } from '$lib/stores/gameState';
   import { getPawnTaskSummary } from '$lib/components/util/pawnUtils';
   import type { Pawn } from '$lib/game/core/types';
-  import PawnAttributes from '$lib/components/pawn/PawnAttributes.svelte';
+  import WorkSkills from './WorkSkills.svelte';
   import SkinBar from '$lib/components/UI/widget/SkinBar.svelte';
   import Well from '$lib/components/UI/widget/Well.svelte';
 
@@ -31,7 +31,7 @@
     {/each}
   </Well>
   <Well title="Work skills">
-    <PawnAttributes {pawn} {highlightCategory} categories={['work']} />
+    <WorkSkills {pawn} highlight={highlightCategory} />
   </Well>
 </div>
 

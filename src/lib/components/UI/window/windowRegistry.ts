@@ -22,9 +22,9 @@ export interface WindowSpec {
 
 export const WINDOWS: Record<WindowId, WindowSpec> = {
   pawns: { title: 'Pawns', component: PawnScreen, width: 'big' },
-  work: { title: 'Work', component: WorkScreen, width: 'big' },
+  work: { title: 'Work', component: WorkScreen, width: 'big', fit: true },
   building: { title: 'Construction', component: BuildingMenu, width: 'big' },
-  crafting: { title: 'Crafting', component: CraftingScreen, width: 'big' },
+  crafting: { title: 'Crafting', component: CraftingScreen, width: 'big', fit: true },
   exploration: { title: 'Exploration', component: ExplorationScreen, width: 640 },
   culture: { title: 'Cultures', component: CultureScreen, width: 900 },
   kingdoms: { title: 'Kingdoms', component: KingdomScreen, width: 900 },

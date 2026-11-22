@@ -72,7 +72,7 @@
 
   {#if queue.length > 0}<CraftQueue {queue} />{/if}
 
-  <ScrollArea class="cards-scroll">
+  <ScrollArea horizontal class="cards-scroll">
     {#if shown.length > 0}
       <div class="cards">
         {#each shown as entry (entry.key)}
@@ -93,8 +93,7 @@
 
 <style>
   .crafting-screen {
-    flex: 1;
-    min-height: 0;
+    flex: none;
     display: flex;
     flex-direction: column;
     gap: 7px;
@@ -102,13 +101,15 @@
     font: 16px/16px var(--font-pixel);
   }
   .crafting-screen :global(.cards-scroll) {
-    flex: 1;
-    min-height: 0;
+    flex: none;
+    container-type: inline-size;
+    padding-bottom: 4px;
   }
   .cards {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(176px, 1fr));
-    grid-auto-rows: minmax(214px, auto);
+    grid-auto-flow: column;
+    grid-auto-columns: calc((100cqw - 24px) / 5);
+    grid-template-rows: 214px;
     gap: 6px;
   }
   .muted {

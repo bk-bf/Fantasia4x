@@ -5,6 +5,7 @@
   import PixelGlyph from '../widget/PixelGlyph.svelte';
   import ChromeButton from '../widget/ChromeButton.svelte';
   import HoverTip from '../tooltip/HoverTip.svelte';
+  import ScrollArea from '../widget/ScrollArea.svelte';
   import ItemStatTooltip from '../tooltip/ItemStatTooltip.svelte';
   import BuildingStatTooltip from '../tooltip/BuildingStatTooltip.svelte';
   import type { GlyphName } from '$lib/pixelArt/glyphs';
@@ -107,7 +108,7 @@
 >
   <header
     role="group"
-    class:help={showItemTip}
+    style:cursor={showItemTip ? 'help' : null}
     onmouseenter={(e) => showItemTip && (itemTip = { x: e.clientX, y: e.clientY })}
     onmousemove={(e) => itemTip && (itemTip = { x: e.clientX, y: e.clientY })}
     onmouseleave={() => (itemTip = null)}
@@ -150,7 +151,7 @@
       <PixelGlyph name="axe" /><span>needs {requiredTool}{requiredToolMet ? '' : ' (none)'}</span>
     </div>
   {/if}
-  <div class="cost">{@render children?.()}</div>
+  <ScrollArea class="cost">{@render children?.()}</ScrollArea>
   <div class="acts">
     <ChromeButton
       class="main {variant}"
@@ -203,9 +204,6 @@
     display: flex;
     gap: 8px;
     align-items: center;
-  }
-  header.help {
-    cursor: help;
   }
   .bspr {
     flex: none;
@@ -275,9 +273,11 @@
   .at.neg {
     color: var(--neg);
   }
-  .cost {
+  .bcard :global(.scroll-area.cost) {
+    flex: 1 1 auto;
     display: flex;
     flex-direction: column;
+    scrollbar-gutter: auto;
     color: var(--text-dim);
   }
   .acts {
