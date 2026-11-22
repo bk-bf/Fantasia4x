@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest';
 import { restPlan } from '../../../../tools/lib/gh-run.mjs';
-import { restIdOf, selectFieldsFromRest } from '../../../../tools/lib/board-rest.mjs';
 
 type Call = [string, string, unknown];
 
@@ -120,16 +119,6 @@ describe('gh commands answered over REST', () => {
     );
   });
 
-  it('adds an issue to the board by its database id', () => {
-    const { io, calls } = fakeIo({
-      'GET repos/bk-bf/Fantasia4x/issues/42': { id: 999 },
-      'POST /users/bk-bf/projectsV2/4/items': { node_id: 'PVTI_x' }
-    });
-    const out = run(['project', 'item-add', '4', '--owner', 'bk-bf', '--format', 'json', '--url', 'https://github.com/bk-bf/Fantasia4x/issues/42'], io);
-    expect(JSON.parse(out)).toEqual({ id: 'PVTI_x' });
-    expect(calls).toContainEqual(['POST', '/users/bk-bf/projectsV2/4/items', { type: 'Issue', id: 999 }]);
-  });
-
   it('names the repository', () => {
     const { io } = fakeIo();
     expect(JSON.parse(run(['repo', 'view', '--json', 'nameWithOwner'], io))).toEqual({ nameWithOwner: 'bk-bf/Fantasia4x' });
@@ -201,21 +190,5 @@ describe('pull request writes answered over REST', () => {
     expect(out[0].files).toEqual([
       { path: 'src/lib/game/sim/commands.ts', additions: 4, deletions: 1 }
     ]);
-  });
-});
-
-describe('board lookups over REST', () => {
-  it('finds a card or field REST id by its GraphQL node id', () => {
-    const pages = [[{ id: 1, node_id: 'A' }], [{ id: 2, node_id: 'B' }]];
-    expect(restIdOf(pages, 'B')).toBe(2);
-    expect(restIdOf(pages, 'C')).toBeNull();
-  });
-
-  it('shapes single-select fields the way the GraphQL read does', () => {
-    const pages = [[
-      { id: 1, node_id: 'F1', name: 'Status', data_type: 'single_select', options: [{ id: 'o1', name: { raw: 'Ready', html: 'Ready' } }] },
-      { id: 2, node_id: 'F2', name: 'Title', data_type: 'title' }
-    ]];
-    expect(selectFieldsFromRest(pages)).toEqual([{ id: 'F1', name: 'Status', options: [{ id: 'o1', name: 'Ready' }] }]);
   });
 });

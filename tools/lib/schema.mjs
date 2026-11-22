@@ -12,9 +12,11 @@ const TEMPLATE_FOR = { feat: 'feat.md', decision: 'decision.md' };
 
 export const templateFor = (workType) => TEMPLATE_FOR[workType] ?? 'defect.md';
 
+const TEMPLATES = ['feat.md', 'decision.md', 'defect.md'];
+
 
 /** Every label a writer may use: the fixed vocabulary plus one per rule name. Anything else
- *  is a typo or an invention, and both pollute the board the same way. */
+ *  is a typo or an invention, and both pollute the tracker the same way. */
 function vocabulary() {
   try {
     return JSON.parse(readFileSync(join(HERE, 'labels.json'), 'utf8'));
@@ -222,8 +224,12 @@ export function checkTemplate(body, labels = [], workType) {
   }
 
   const headings = headingsOf(text);
-  const file = templateFor(workType);
-  const missing = requiredSections(join('ISSUE_TEMPLATE', file)).filter((r) => !headings.includes(r));
+  const missingFrom = (f) => requiredSections(join('ISSUE_TEMPLATE', f)).filter((r) => !headings.includes(r));
+  const file =
+    workType !== undefined
+      ? templateFor(workType)
+      : (TEMPLATES.find((f) => !missingFrom(f).length) ?? templateFor(labels.includes('feature') ? 'feat' : undefined));
+  const missing = missingFrom(file);
   if (missing.length) {
     errors.push(
       `.github/ISSUE_TEMPLATE/${file} asks for a section this body does not have: ` +
@@ -243,7 +249,7 @@ export function checkTemplate(body, labels = [], workType) {
     errors.push('no citation — link the line, the spec or the issue this is about');
   }
 
-  const decision = labels.includes('needs decision') || workType === 'decision';
+  const decision = labels.includes('needs decision') || file === 'decision.md';
   if (!decision && !CHECKBOX.test(text)) {
     errors.push('no remediation checkbox — an issue needs a definition of done, or the label "needs decision"');
   }
