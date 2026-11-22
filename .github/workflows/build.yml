@@ -12,7 +12,7 @@ concurrency:
 jobs:
   guard:
     if: startsWith(github.ref, 'refs/tags/v')
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(vars.RUNS_ON || '"ubuntu-24.04"') }}
     outputs:
       skip: ${{ steps.check.outputs.skip }}
     steps:
@@ -92,7 +92,7 @@ jobs:
   release:
     needs: build
     if: startsWith(github.ref, 'refs/tags/v')
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(vars.RUNS_ON || '"ubuntu-24.04"') }}
     permissions:
       contents: write
     steps:

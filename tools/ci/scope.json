@@ -7,6 +7,7 @@
     { "paths": [".github/ISSUE_TEMPLATE/**"], "legs": [] },
     { "paths": ["build-resources/**", "electron-builder.yml"], "legs": [] },
     { "paths": ["dev.sh", "launch.sh", "build.sh", "install.sh", "audit.sh", "cliff.toml"], "legs": [] },
+    { "paths": ["tools/runner/**"], "legs": [] },
 
     { "paths": ["src/tests/**", "tests/**", "vitest.config.ts"], "legs": ["check", "coverage"] },
     {

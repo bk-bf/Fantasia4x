@@ -29,7 +29,7 @@ jobs:
   precheck:
     name: 'Pre-check: pnpm check, related tests, seams, workflow lint'
     if: github.event_name != 'workflow_dispatch' || inputs.mode == 'chain' || inputs.mode == 'pre'
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(vars.RUNS_ON || '"ubuntu-24.04"') }}
     timeout-minutes: 30
     permissions:
       contents: read
@@ -92,7 +92,7 @@ jobs:
     name: 'Measurements: work pins, Rust instruction counts, browser work pins'
     needs: precheck
     if: (github.event_name != 'workflow_dispatch' || inputs.mode == 'chain') && (needs.precheck.outputs.workPins == 'true' || needs.precheck.outputs.gungraun == 'true' || needs.precheck.outputs.browser == 'true')
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(vars.RUNS_ON || '"ubuntu-24.04"') }}
     timeout-minutes: 90
     permissions:
       contents: read
@@ -137,7 +137,7 @@ jobs:
 
       - name: Install Chromium for the browser work pins
         if: needs.precheck.outputs.browser == 'true'
-        run: pnpm exec playwright install --with-deps --only-shell chromium
+        run: pnpm exec playwright install ${{ runner.environment == 'github-hosted' && '--with-deps' || '' }} --only-shell chromium
 
       - name: Browser work pins, base against head
         if: needs.precheck.outputs.browser == 'true'
@@ -156,7 +156,7 @@ jobs:
     name: 'Test coverage: src/lib/game'
     needs: precheck
     if: (github.event_name != 'workflow_dispatch' || inputs.mode == 'chain') && needs.precheck.outputs.coverage == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(vars.RUNS_ON || '"ubuntu-24.04"') }}
     timeout-minutes: 30
     permissions:
       contents: read
@@ -185,7 +185,7 @@ jobs:
     name: 'Mutant pins: tools/mutants/registry.json'
     needs: precheck
     if: github.event_name == 'schedule' || ((github.event_name != 'workflow_dispatch' || inputs.mode == 'chain') && needs.precheck.outputs.mutants == 'true')
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(vars.RUNS_ON || '"ubuntu-24.04"') }}
     timeout-minutes: ${{ github.event_name == 'schedule' && 240 || 90 }}
     permissions:
       contents: read
@@ -218,7 +218,7 @@ jobs:
   compare:
     name: Browser work pins, two branches
     if: github.event_name == 'workflow_dispatch' && (inputs.mode == 'browser' || inputs.mode == 'day')
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(vars.RUNS_ON || '"ubuntu-24.04"') }}
     timeout-minutes: 300
     permissions:
       contents: read
@@ -230,7 +230,7 @@ jobs:
       - uses: ./.github/actions/prepare
 
       - name: Install Chromium for the browser work pins
-        run: pnpm exec playwright install --with-deps --only-shell chromium
+        run: pnpm exec playwright install ${{ runner.environment == 'github-hosted' && '--with-deps' || '' }} --only-shell chromium
 
       - name: Browser work pins, two branches
         env:
@@ -338,7 +338,7 @@ jobs:
     name: Check notes on the pull request
     if: ${{ !cancelled() && github.event_name == 'pull_request' }}
     needs: [precheck, measure, codspeed, tps, coverage, mutants]
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(vars.RUNS_ON || '"ubuntu-24.04"') }}
     timeout-minutes: 15
     permissions:
       actions: read

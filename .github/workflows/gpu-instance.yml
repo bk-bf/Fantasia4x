@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   set:
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(vars.RUNS_ON || '"ubuntu-24.04"') }}
     timeout-minutes: 20
     permissions:
       contents: read
