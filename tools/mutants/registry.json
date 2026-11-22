@@ -1195,5 +1195,341 @@
     "find": "const scale = def.crop ? cropScale : 1;",
     "replace": "const scale = def.crop ? cropScale : 0.5;",
     "tests": ["src/tests/game/systems/plantGrowth.test.ts"]
+  },
+  {
+    "id": "workxp-one-level-per-award",
+    "file": "src/lib/game/core/rules/body/workExperience.ts",
+    "find": "  while (level < MAX_WORK_LEVEL && progress >= xpToNext(level)) {",
+    "replace": "  if (level < MAX_WORK_LEVEL && progress >= xpToNext(level)) {",
+    "tests": ["src/tests/game/core/workExperience.test.ts"]
+  },
+  {
+    "id": "workxp-overflow-dropped",
+    "file": "src/lib/game/core/rules/body/workExperience.ts",
+    "find": "    progress -= xpToNext(level);",
+    "replace": "    progress = 0;",
+    "tests": ["src/tests/game/core/workExperience.test.ts"]
+  },
+  {
+    "id": "workxp-max-gate-exclusive",
+    "file": "src/lib/game/core/rules/body/workExperience.ts",
+    "find": "  if (level >= MAX_WORK_LEVEL) return null;",
+    "replace": "  if (level > MAX_WORK_LEVEL) return null;",
+    "tests": ["src/tests/game/core/workExperience.test.ts"]
+  },
+  {
+    "id": "workxp-award-ignored",
+    "file": "src/lib/game/core/rules/body/workExperience.ts",
+    "find": "  let progress = (pawn.skillXp?.[category] ?? 0) + xp;",
+    "replace": "  let progress = (pawn.skillXp?.[category] ?? 0);",
+    "tests": ["src/tests/game/core/workExperience.test.ts"]
+  },
+  {
+    "id": "stockpile-consume-skips-vessel-contents",
+    "file": "src/lib/game/core/state/stockpile.ts",
+    "find": "      remaining = drawFromVessel(newDropped, i, itemId, remaining);",
+    "replace": "      void drawFromVessel;",
+    "tests": ["src/tests/game/core/tileStorage.test.ts"]
+  },
+  {
+    "id": "stockpile-pick-tile-ignores-pile-capacity",
+    "file": "src/lib/game/core/state/stockpile.ts",
+    "find": "    if (tileStoredPileCount(state, x, y) < tilePileCapacity(state, x, y)) return { x, y };",
+    "replace": "    return { x, y };",
+    "tests": ["src/tests/game/core/tileStorage.test.ts"]
+  },
+  {
+    "id": "vessels-roomfor-ignores-weight-cap",
+    "file": "src/lib/game/core/rules/gear/vessels.ts",
+    "find": "  if (v.capacityKg != null) {",
+    "replace": "  if (false) {",
+    "tests": ["src/tests/game/core/vessels.test.ts"]
+  },
+  {
+    "id": "vessels-putin-duplicates-entry",
+    "file": "src/lib/game/core/rules/gear/vessels.ts",
+    "find": "  const existing = inst.contents.find((e) => e.itemId === itemId && !e.instance);",
+    "replace": "  const existing = undefined as (typeof inst.contents)[number] | undefined;",
+    "tests": ["src/tests/game/core/vessels.test.ts"]
+  },
+  {
+    "id": "repair-units-floored",
+    "file": "src/lib/game/services/repairRules.ts",
+    "find": "return Math.ceil(totalCostUnits",
+    "replace": "return Math.floor(totalCostUnits",
+    "tests": ["src/tests/game/services/repairRules.test.ts"]
+  },
+  {
+    "id": "repair-partial-plan-accepted",
+    "file": "src/lib/game/services/repairRules.ts",
+    "find": "  if (remaining > 0) return null;\n",
+    "replace": "",
+    "tests": ["src/tests/game/services/repairRules.test.ts"]
+  },
+  {
+    "id": "repair-threshold-unclamped",
+    "file": "src/lib/game/services/repairRules.ts",
+    "find": "return Math.max(0, Math.min(100, raw));",
+    "replace": "return raw;",
+    "tests": ["src/tests/game/services/repairRules.test.ts"]
+  },
+  {
+    "id": "repair-materials-ignored",
+    "file": "src/lib/game/services/repairRules.ts",
+    "find": "if (def.repairMaterials?.length) return [...def.repairMaterials];",
+    "replace": "",
+    "tests": ["src/tests/game/services/repairRules.test.ts"]
+  },
+  {
+    "id": "repair-default-threshold-shifted",
+    "file": "src/lib/game/services/repairRules.ts",
+    "find": "const DEFAULT_REPAIR_THRESHOLD_PCT = 30;",
+    "replace": "const DEFAULT_REPAIR_THRESHOLD_PCT = 31;",
+    "tests": ["src/tests/game/services/repairRules.test.ts"]
+  },
+  {
+    "id": "items-reserved-stack-spoils",
+    "file": "src/lib/game/services/ItemService.ts",
+    "find": "if (d.reservedFor || dryRateFor(d, gameState, dryCtx) > 0) {",
+    "replace": "if (dryRateFor(d, gameState, dryCtx) > 0) {",
+    "tests": ["src/tests/game/services/dryingAndDecay.test.ts"]
+  },
+  {
+    "id": "items-frozen-ground-spoils",
+    "file": "src/lib/game/services/ItemService.ts",
+    "find": "          thermalAt(d.x, d.y)\n        ) < 0\n",
+    "replace": "          thermalAt(d.x, d.y)\n        ) < -100\n",
+    "tests": ["src/tests/game/services/dryingAndDecay.test.ts"]
+  },
+  {
+    "id": "items-preservation-ignored",
+    "file": "src/lib/game/services/ItemService.ts",
+    "find": "const mult = d.stored ? 1 - (tilePreserve.get(`${d.x},${d.y}`) ?? 0) : 1;",
+    "replace": "const mult = 1;",
+    "tests": ["src/tests/game/services/dryingAndDecay.test.ts"]
+  },
+  {
+    "id": "items-preservation-on-loose-drops",
+    "file": "src/lib/game/services/ItemService.ts",
+    "find": "const mult = d.stored ? 1 - (tilePreserve.get(`${d.x},${d.y}`) ?? 0) : 1;",
+    "replace": "const mult = 1 - (tilePreserve.get(`${d.x},${d.y}`) ?? 0);",
+    "tests": ["src/tests/game/services/dryingAndDecay.test.ts"]
+  },
+  {
+    "id": "haul-pickup-destroys-remainder",
+    "file": "src/lib/game/services/jobs/haul.ts",
+    "find": "if (targetRem > 0) reduceQty.set(drop.id, targetRem);\n    else removeIds.add(drop.id);",
+    "replace": "removeIds.add(drop.id);",
+    "tests": ["src/tests/game/services/haulRules.test.ts"]
+  },
+  {
+    "id": "haul-gathers-forbidden-neighbour",
+    "file": "src/lib/game/services/jobs/haul.ts",
+    "find": "if (cand.id === drop.id || cand.stored || cand.reservedFor || cand.forbidden) continue;",
+    "replace": "if (cand.id === drop.id || cand.stored || cand.reservedFor) continue;",
+    "tests": ["src/tests/game/services/haulRules.test.ts"]
+  },
+  {
+    "id": "haul-gather-radius-two",
+    "file": "src/lib/game/services/jobs/haul.ts",
+    "find": "if (Math.abs(cand.x - drop.x) > 1 || Math.abs(cand.y - drop.y) > 1) continue;",
+    "replace": "if (Math.abs(cand.x - drop.x) > 2 || Math.abs(cand.y - drop.y) > 2) continue;",
+    "tests": ["src/tests/game/services/haulRules.test.ts"]
+  },
+  {
+    "id": "haul-capacity-exclusive",
+    "file": "src/lib/game/services/jobs/haul.ts",
+    "find": "const atCapacity = activeHaulCount >= canAccept;",
+    "replace": "const atCapacity = activeHaulCount > canAccept;",
+    "tests": ["src/tests/game/services/haulRules.test.ts"]
+  },
+  {
+    "id": "haul-free-slots-ignore-stored-piles",
+    "file": "src/lib/game/services/jobs/haul.ts",
+    "find": "freeSlots += Math.max(0, tilePileCapacity(gs, x, y) - tileStoredPileCount(gs, x, y));",
+    "replace": "freeSlots += tilePileCapacity(gs, x, y);",
+    "tests": ["src/tests/game/services/haulRules.test.ts"]
+  },
+  {
+    "id": "haul-rehaul-cooldown-shifted",
+    "file": "src/lib/game/services/jobs/haul.ts",
+    "find": "d.rehaulCooldownUntil > gs.turn)\n  );",
+    "replace": "d.rehaulCooldownUntil >= gs.turn + 5)\n  );",
+    "tests": ["src/tests/game/services/haulRules.test.ts"]
+  },
+  {
+    "id": "haul-unfiltered-stockpile-rejects-all",
+    "file": "src/lib/game/services/jobs/haul.ts",
+    "find": "      if (inst.filter.allowedCategories.length === 0) return true;\n      return itemMatchesFilter(resourceId, inst.filter);\n    });",
+    "replace": "      if (inst.filter.allowedCategories.length === 0) return false;\n      return itemMatchesFilter(resourceId, inst.filter);\n    });",
+    "tests": ["src/tests/game/services/haulRules.test.ts"]
+  },
+  {
+    "id": "haul-container-budget-exclusive",
+    "file": "src/lib/game/services/jobs/haul.ts",
+    "find": "if (held >= budget) return false;",
+    "replace": "if (held > budget) return false;",
+    "tests": ["src/tests/game/services/haulRules.test.ts"]
+  },
+  {
+    "id": "jobs-farthest-first",
+    "file": "src/lib/game/services/JobService.ts",
+    "find": "return dA - dB;",
+    "replace": "return dB - dA;",
+    "tests": ["src/tests/game/services/JobService.test.ts"]
+  },
+  {
+    "id": "jobs-priority-zero-claimed",
+    "file": "src/lib/game/services/JobService.ts",
+    "find": "if (priority <= 0) return false;",
+    "replace": "if (priority < 0) return false;",
+    "tests": ["src/tests/game/services/JobService.test.ts"]
+  },
+  {
+    "id": "jobs-no-work-xp",
+    "file": "src/lib/game/services/JobService.ts",
+    "find": "const next = applyWorkXp(state.pawns[idx], category, workXpForJob(job.workRequired));",
+    "replace": "const next = null as ReturnType<typeof applyWorkXp>;",
+    "tests": ["src/tests/game/services/JobService.test.ts"]
+  },
+  {
+    "id": "jobs-legacy-priority-unclamped",
+    "file": "src/lib/game/services/JobService.ts",
+    "find": "return Math.max(0, Math.min(4, legacyPriorities[workKey]));",
+    "replace": "return legacyPriorities[workKey];",
+    "tests": ["src/tests/game/services/JobService.test.ts"]
+  },
+  {
+    "id": "jobs-light-jobs-kept",
+    "file": "src/lib/game/services/JobService.ts",
+    "find": "jobs = jobs.filter((j) => j.type !== 'light');",
+    "replace": "",
+    "tests": ["src/tests/game/services/JobService.test.ts"]
+  },
+  {
+    "id": "craft-station-runs-two-jobs",
+    "file": "src/lib/game/services/jobs/craft.ts",
+    "find": "if (order.stationBuildingId && stationsBusy.has(order.stationBuildingId)) continue;",
+    "replace": "",
+    "tests": ["src/tests/game/services/JobService.test.ts"]
+  },
+  {
+    "id": "craft-yield-fraction-never-rolled",
+    "file": "src/lib/game/services/jobs/craft.ts",
+    "find": "qty = whole + (rng.random() < scaled - whole ? 1 : 0);",
+    "replace": "qty = whole;",
+    "tests": ["src/tests/game/services/JobService.test.ts"]
+  },
+  {
+    "id": "craft-output-merges-into-stored-pile",
+    "file": "src/lib/game/services/jobs/craft.ts",
+    "find": "!d.stored &&\n            !d.reservedFor &&",
+    "replace": "!d.reservedFor &&",
+    "tests": ["src/tests/game/services/JobService.test.ts"]
+  },
+  {
+    "id": "fetch-keeps-job-after-reservation-moves",
+    "file": "src/lib/game/services/jobs/fetch.ts",
+    "find": "(d) => d.id === j.droppedItemId && d.reservedFor === owner",
+    "replace": "(d) => d.id === j.droppedItemId",
+    "tests": ["src/tests/game/services/JobService.test.ts"]
+  },
+  {
+    "id": "caretake-tends-awake-patient",
+    "file": "src/lib/game/services/jobs/caretake.ts",
+    "find": "  if (!resting) return false;\n",
+    "replace": "",
+    "tests": ["src/tests/game/services/jobs/caretake.test.ts"]
+  },
+  {
+    "id": "caretake-no-min-quality-gate",
+    "file": "src/lib/game/services/jobs/caretake.ts",
+    "find": "if (quality < CARE_CONFIG.minTendQuality) return gs;",
+    "replace": "",
+    "tests": ["src/tests/game/services/jobs/caretake.test.ts"]
+  },
+  {
+    "id": "caretake-ignores-nonbleeding-serious-wound",
+    "file": "src/lib/game/services/jobs/caretake.ts",
+    "find": "(w.bleeding > 0 || w.severity !== 'minor')",
+    "replace": "(w.bleeding > 0)",
+    "tests": ["src/tests/game/services/jobs/caretake.test.ts"]
+  },
+  {
+    "id": "caretake-first-medicine-not-best",
+    "file": "src/lib/game/services/jobs/caretake.ts",
+    "find": "if (!found || q > found.quality)",
+    "replace": "if (!found)",
+    "tests": ["src/tests/game/services/jobs/caretake.test.ts"]
+  },
+  {
+    "id": "caretake-infection-untreated",
+    "file": "src/lib/game/services/jobs/caretake.ts",
+    "find": "const nextSev = Math.max(0, c.severity - CARE_CONFIG.infectionTreatment * quality);",
+    "replace": "const nextSev = c.severity;",
+    "tests": ["src/tests/game/services/jobs/caretake.test.ts"]
+  },
+  {
+    "id": "rescue-victim-on-shelter",
+    "file": "src/lib/game/services/jobs/rescue.ts",
+    "find": "!onShelterTile(gs, victim.position.x, victim.position.y)",
+    "replace": "true",
+    "tests": ["src/tests/game/systems/pawn/rescue.test.ts"]
+  },
+  {
+    "id": "rescue-without-shelter",
+    "file": "src/lib/game/services/jobs/rescue.ts",
+    "find": "if (!hasShelter(gs)) return jobs.filter((j) => j.type !== 'rescue');",
+    "replace": "",
+    "tests": ["src/tests/game/systems/pawn/rescue.test.ts"]
+  },
+  {
+    "id": "rescue-prunes-job-in-transit",
+    "file": "src/lib/game/services/jobs/rescue.ts",
+    "find": "const inTransit = !!victim.carriedBy && victim.carriedBy === j.claimedBy;",
+    "replace": "const inTransit = false;",
+    "tests": ["src/tests/game/systems/pawn/rescue.test.ts"]
+  },
+  {
+    "id": "designation-remove-zone-keeps-tiles",
+    "file": "src/lib/game/services/DesignationService.ts",
+    "find": "if (instType && isStandingZoneType(instType)) this.removeZoneTile(zoneTiles, k, instType);",
+    "replace": "if (instType && isStandingZoneType(instType)) void 0;",
+    "tests": ["src/tests/game/services/designationZones.test.ts"]
+  },
+  {
+    "id": "designation-stockpile-on-impassable",
+    "file": "src/lib/game/services/DesignationService.ts",
+    "find": "    if (this.requiresWalkableLand(type) && this.isImpassableTile(gameState, x, y)) return gameState;\n",
+    "replace": "",
+    "tests": ["src/tests/game/services/designationZones.test.ts"]
+  },
+  {
+    "id": "designation-full-category-list-kept",
+    "file": "src/lib/game/services/DesignationService.ts",
+    "find": "        if (allowed.length >= allCategories.length) allowed = [];\n",
+    "replace": "",
+    "tests": ["src/tests/game/services/designationZones.test.ts"]
+  },
+  {
+    "id": "filters-blocked-item-allowed",
+    "file": "src/lib/game/services/jobs/filters.ts",
+    "find": "  if (filter.blockedItems.includes(itemId)) return false;\n",
+    "replace": "",
+    "tests": ["src/tests/game/services/designationZones.test.ts"]
+  },
+  {
+    "id": "filters-empty-categories-filter",
+    "file": "src/lib/game/services/jobs/filters.ts",
+    "find": "if (!filter || filter.allowedCategories.length === 0) return true;",
+    "replace": "if (!filter) return true;",
+    "tests": ["src/tests/game/services/designationZones.test.ts"]
+  },
+  {
+    "id": "designation-clear-keeps-zone-tile",
+    "file": "src/lib/game/services/DesignationService.ts",
+    "find": "    delete newZoneTiles[k];\n    return {",
+    "replace": "    return {",
+    "tests": ["src/tests/game/services/designationZones.test.ts"]
   }
 ]
