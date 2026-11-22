@@ -3899,21 +3899,6 @@
     drawDesignations();
   }
 
-  function highlightSimilarTiles() {
-    if (!selectedResourceTile) return;
-    const resourceId = selectedResourceTile.resourceId;
-    const newHighlighted = new Set<string>();
-    for (const row of worldMap) {
-      for (const tile of row) {
-        if ((tile.resources?.[resourceId] ?? 0) > 0) {
-          newHighlighted.add(`${tile.x},${tile.y}`);
-        }
-      }
-    }
-    highlightedResourceTiles = newHighlighted;
-    drawDesignations();
-  }
-
   let showShelterAssign = false;
   $: showFuelSettings = $uiState.windows.includes('fuel');
   let showStorageSettings = false;
