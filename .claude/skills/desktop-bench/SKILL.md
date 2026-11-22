@@ -15,6 +15,11 @@ Tell the owner before starting if the desktop is off; he turns it on.
   out to the whole map at the recorder's pace (45 steps, 60 ms apart). It records every frame gap
   and a CPU profile per round, paused and running at 1x, and writes `<label>-results.json` and one
   `.cpuprofile` per round.
+- `tools/gpu/steady.mjs` holds the same save close up, at the default zoom and zoomed out, each
+  paused, at 1x and at 4x, and reports FPS, frame-time p50/p95/p99, frames over 33 and 50 ms, and
+  TPS counted from the worker's turn. Same arguments as `zoom-out.mjs`, with seconds per cell last.
+  The desktop holds 60 FPS at its vsync cap, so it shows a cost only when it breaks that cap.
+- Both share `tools/gpu/session.mjs`, which starts the nested compositor and the browser.
 - `tools/gpu/stall.mjs <file.cpuprofile>...` prints the longest busy stretch of a profile with
   its self and inclusive time per function.
 - The steady-state shell bench (frame times per zoom level at 1x, 4x and paused pan, Electron
