@@ -1759,8 +1759,8 @@
   {
     "id": "pawn-stat-capacity-cache-ignores-light",
     "file": "src/lib/game/services/PawnStatService.ts",
-    "find": "    if (c && c.limbs === pawn.limbs && c.injuries === pawn.injuries && c.light === lightBucket) {",
-    "replace": "    if (c && c.limbs === pawn.limbs && c.injuries === pawn.injuries) {",
+    "find": "      c.injuries === pawn.injuries &&\n      c.light === lightBucket &&\n",
+    "replace": "      c.injuries === pawn.injuries &&\n",
     "tests": ["src/tests/game/services/pawnStatRules.test.ts"]
   },
   {
