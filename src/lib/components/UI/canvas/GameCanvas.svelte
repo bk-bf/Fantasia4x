@@ -4821,7 +4821,7 @@
   .canvas-wrap.dragging {
     cursor: var(--app-cursor), grabbing;
   }
-  .mark-layer {
+  .desig-layer.mark-layer {
     filter: none;
   }
   .sel-ring {
