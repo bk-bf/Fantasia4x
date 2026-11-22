@@ -27,6 +27,31 @@ Tell the owner before starting if the desktop is off; he turns it on.
   (`run.mjs`, `recorder.js`). Its recorder clicks the old HUD; check its selectors against the
   build before using it.
 
+## Measuring the owner's laptop
+
+When a cost shows on the laptop and not on the desktop, record the laptop's own game rather than
+running anything there. Nothing runs on the laptop but the game the owner starts.
+
+1. The owner launches the build with its debug port on the host network:
+   `F4X_PAINTED=1 ./launch.sh --electron --net-host` (the default sandbox hides port 9222).
+2. From ubuntuserver, tunnel to it and attach:
+
+```bash
+systemd-run --user --collect --unit=f4x-laptop-tunnel ssh -N -L 9333:127.0.0.1:9222 laptop
+node tools/gpu/attach-trace.mjs http://127.0.0.1:9333 /tmp/f4x-laptop 3
+systemctl --user stop f4x-laptop-tunnel
+```
+
+- It zooms the owner's camera in and out for about a minute; tell him before it starts, and to
+  keep his hands off the window while it runs.
+- `ENV` names the GPU, window size and pixel ratio, `ROW` gives the frame gaps per round, and
+  `FRAME` the worst frames by thread. `CommandBufferProxyImpl::WaitForGetOffset` on the renderer
+  main thread is time spent waiting for the GPU process; the GPU process's own rows say on what.
+- Read the round profiles with `stall.mjs` for the JavaScript side.
+- `.debug/perf.log` in the laptop checkout opens each session with a `session` line naming the
+  build, GPU, window and map, and stamps every line with the time; match a complaint to its
+  session there before measuring.
+
 ## Setting up a build
 
 On the desktop, every build under test gets its own worktree inside the repo, its own install
