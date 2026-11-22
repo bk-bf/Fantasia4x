@@ -1,13 +1,14 @@
 import vertexSource from '../shaders/paintedLight.vert.glsl?raw';
 import fragmentSource from '../shaders/paintedShadow.frag.glsl?raw';
 import type { ShaderManager } from '../shaders.js';
-import type { GameGrid } from '../game-grid.js';
+import type { GameGrid, GridUpdateEvent } from '../game-grid.js';
 import type { TileRect } from './lightGrade.js';
 
 const PROGRAM = 'paintedShadow';
 export const CAST_UNIT = 8;
 export const SHADOW_SHADE: [number, number, number] = [0.56, 0.56, 0.68];
 export const SHADOW_DEPTH = 0.75;
+export const MIN_SHADOW_TILE_PX = 6;
 
 export interface CastFrame {
   canvas: [number, number];
@@ -46,6 +47,7 @@ export class PaintedShadowCast {
   private readonly at: Record<string, WebGLUniformLocation | null>;
   private heights = new Uint8Array(0);
   private builtKey = '';
+  private builtRect: TileRect | null = null;
   private casts = false;
   private changes = 0;
   private watched: (GameGrid | null)[] = [];
@@ -85,14 +87,37 @@ export class PaintedShadowCast {
       return;
     for (const off of this.unwatch) off();
     this.watched = [...casters];
-    this.unwatch = casters.flatMap((g) => (g ? [g.subscribe(() => this.changes++)] : []));
+    this.unwatch = casters.flatMap((g) =>
+      g
+        ? [
+            g.subscribe((e) => {
+              if (this.touchesCast(e)) this.changes++;
+            })
+          ]
+        : []
+    );
     this.changes++;
+  }
+
+  private touchesCast(event: GridUpdateEvent): boolean {
+    const r = this.builtRect;
+    if (event.type === 'clear' || !r) return true;
+    for (const t of event.tiles) {
+      const p = t.position;
+      if (!p) return true;
+      const i = p.x - r.x;
+      const j = p.y - r.y;
+      if (i < 0 || j < 0 || i >= r.w || j >= r.h) continue;
+      if ((t.painted?.cast ?? 0) > 0 || this.heights[j * r.w + i] > 0) return true;
+    }
+    return false;
   }
 
   private rebuild(f: CastFrame, rect: TileRect): void {
     const key = `${rect.x},${rect.y},${rect.w},${rect.h},${this.changes}`;
     if (key === this.builtKey) return;
     this.builtKey = key;
+    this.builtRect = rect;
     if (this.heights.length !== rect.w * rect.h) this.heights = new Uint8Array(rect.w * rect.h);
     this.casts = castHeights(f.casters, rect, this.heights);
     if (!this.casts) return;
@@ -121,6 +146,7 @@ export class PaintedShadowCast {
 
   draw(f: CastFrame): number {
     this.watch(f.casters);
+    if (f.canvas[0] / f.view.w < MIN_SHADOW_TILE_PX) return 0;
     const rect = {
       x: Math.floor(f.view.x) - 1,
       y: Math.floor(f.view.y) - 1,
