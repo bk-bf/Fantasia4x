@@ -29,23 +29,6 @@
     0 -1px 0 #08060a,
     1px 1px 0 #08060a;
 }
-.hud-col.transparent::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  width: calc(100% + 26px);
-  z-index: -1;
-  pointer-events: none;
-  background: linear-gradient(to right, rgb(6 4 3 / 0.58), rgb(6 4 3 / 0.36) 72%, rgb(6 4 3 / 0));
-  mask-image: linear-gradient(#000 calc(100% - 70px), transparent);
-}
-.hud-col.hud-col-r.transparent::before {
-  left: auto;
-  right: 0;
-  background: linear-gradient(to left, rgb(6 4 3 / 0.58), rgb(6 4 3 / 0.36) 72%, rgb(6 4 3 / 0));
-}
 .hud-col.transparent :is([role='button'], button) {
   pointer-events: auto;
 }
