@@ -249,41 +249,56 @@ interface CapCacheEntry {
 
 const BROKEN_BONE_FUNCTION_MULT = 0.4;
 
-type CompiledFormula = (vars: number[]) => number;
+type FormulaVar = (typeof FORMULA_VARS)[number];
+
+type FormulaFn = (
+  s: Partial<Record<StatKey, number>> | undefined,
+  sm: StatMultipliers | null,
+  tr: Pawn['physicalTraits'] | undefined,
+  c: Record<string, number>,
+  prestige: number,
+  intact: number,
+  SKILL: number,
+  POWER: number,
+  APT: number
+) => number;
+
+type CompiledFormula = {
+  fn: FormulaFn;
+  readsMultipliers: boolean;
+  readsPrestige: boolean;
+  readsIntact: boolean;
+  readsPower: boolean;
+  readsAptitude: boolean;
+};
+
+const FORMULA_PARAMS = ['prestige', 'intact', 'SKILL', 'POWER', 'APT'] as const;
+
+const CAPACITY_VAR_DEFAULT: Partial<Record<FormulaVar, number>> = {
+  consciousness: 1,
+  manipulation: 1,
+  sight: 1,
+  moving: 1,
+  blood_pumping: 1,
+  blood_filtration: 1,
+  breathing: 1,
+  digestion: 1,
+  talking: 1,
+  hearing: 1,
+  pain: 0
+};
+
+function formulaVarSource(v: FormulaVar): { src: string; scaled: boolean } | null {
+  const core = CORE_STAT_KEYS.find((k) => k.toUpperCase() === v);
+  if (core) return { src: `core('${core}', s, sm)`, scaled: core !== 'charisma' };
+  if (v === 'weight') return { src: 'tr?.weight ?? 70', scaled: false };
+  if (v === 'height') return { src: 'tr?.height ?? 170', scaled: false };
+  const capDefault = CAPACITY_VAR_DEFAULT[v];
+  if (capDefault !== undefined) return { src: `c.${v} ?? ${capDefault}`, scaled: false };
+  return null;
+}
+
 const _formulaCache = new Map<string, CompiledFormula | null>();
-const FORMULA_ARGS: number[] = new Array<number>(FORMULA_VARS.length).fill(0);
-const _formulaUsesPrestige = new Map<string, boolean>();
-
-function formulaUsesPrestige(formula: string): boolean {
-  let uses = _formulaUsesPrestige.get(formula);
-  if (uses === undefined) {
-    uses = formula.includes('prestige');
-    _formulaUsesPrestige.set(formula, uses);
-  }
-  return uses;
-}
-
-const _formulaUsesPower = new Map<string, boolean>();
-
-function formulaUsesPower(formula: string): boolean {
-  let uses = _formulaUsesPower.get(formula);
-  if (uses === undefined) {
-    uses = formula.includes('POWER');
-    _formulaUsesPower.set(formula, uses);
-  }
-  return uses;
-}
-
-const _formulaUsesIntact = new Map<string, boolean>();
-
-function formulaUsesIntact(formula: string): boolean {
-  let uses = _formulaUsesIntact.get(formula);
-  if (uses === undefined) {
-    uses = /\bintact\b/.test(formula);
-    _formulaUsesIntact.set(formula, uses);
-  }
-  return uses;
-}
 
 function intactBodyFraction(p: Pawn | Mob): number {
   const limbs = p.limbs;
@@ -318,23 +333,43 @@ function compileFormula(formula: string): CompiledFormula | null {
   if (cached !== undefined) return cached;
   const expr = formula.replace(/×/g, '*').replace(/−/g, '-');
   const stripped = expr.replace(/\bclamp\b/g, '').replace(FORMULA_VAR_RE, '0');
-  let fn: CompiledFormula | null = null;
+  let compiled: CompiledFormula | null = null;
   if (/^[\d\s+\-*/.(),]+$/.test(stripped)) {
+    const used = new Set((expr.match(FORMULA_VAR_RE) ?? []) as FormulaVar[]);
+    const locals: string[] = [];
+    let readsScaled = false;
+    for (const v of used) {
+      const read = formulaVarSource(v);
+      if (!read) continue;
+      locals.push(`${v} = ${read.src}`);
+      readsScaled ||= read.scaled;
+    }
     try {
-      fn = new Function(
+      const fn = new Function(
         'clamp',
-        '"use strict"; return function (vars) { const ' +
-          FORMULA_VARS.map((v, i) => `${v} = vars[${i}]`).join(', ') +
-          '; return (' +
+        'core',
+        '"use strict"; return function (s, sm, tr, c, ' +
+          FORMULA_PARAMS.join(', ') +
+          ') { ' +
+          (locals.length ? 'const ' + locals.join(', ') + '; ' : '') +
+          'return (' +
           expr +
           '); };'
-      )(FORMULA_CLAMP) as CompiledFormula;
+      )(FORMULA_CLAMP, coreStatValue) as FormulaFn;
+      compiled = {
+        fn,
+        readsMultipliers: readsScaled || used.has('POWER'),
+        readsPrestige: used.has('prestige'),
+        readsIntact: used.has('intact'),
+        readsPower: used.has('POWER'),
+        readsAptitude: used.has('APT')
+      };
     } catch {
-      fn = null;
+      compiled = null;
     }
   }
-  _formulaCache.set(formula, fn);
-  return fn;
+  _formulaCache.set(formula, compiled);
+  return compiled;
 }
 
 function evaluateFormula(
@@ -345,37 +380,20 @@ function evaluateFormula(
   statId = ''
 ): number {
   if (!formula) return 1.0;
-  const fn = compileFormula(formula);
-  if (!fn) return 1.0;
-  const s = p.stats;
-  const tr = p.physicalTraits;
-  const sm = conditionStatMultipliers(p);
-  const prestige = formulaUsesPrestige(formula) ? computePrestige(p) : 0;
-  const intact = formulaUsesIntact(formula) ? intactBodyFraction(p) : 1;
-  const power = formulaUsesPower(formula) ? equippedPowerToken(p, sm) : STAT_SCALE;
-  const apt = aptitudeOf(p as { aptitudes?: Record<string, number> }, statId);
-  const a = FORMULA_ARGS;
-  let i = 0;
-  for (let k = 0; k < CORE_STAT_KEYS.length; k++) a[i++] = coreStatValue(CORE_STAT_KEYS[k], s, sm);
-  a[i++] = tr?.weight ?? 70;
-  a[i++] = tr?.height ?? 170;
-  a[i++] = capacities.consciousness ?? 1;
-  a[i++] = capacities.manipulation ?? 1;
-  a[i++] = capacities.sight ?? 1;
-  a[i++] = capacities.moving ?? 1;
-  a[i++] = capacities.blood_pumping ?? 1;
-  a[i++] = capacities.blood_filtration ?? 1;
-  a[i++] = capacities.breathing ?? 1;
-  a[i++] = capacities.digestion ?? 1;
-  a[i++] = capacities.talking ?? 1;
-  a[i++] = capacities.hearing ?? 1;
-  a[i++] = capacities.pain ?? 0;
-  a[i++] = prestige;
-  a[i++] = intact;
-  a[i++] = skill;
-  a[i++] = power;
-  a[i++] = apt;
-  const v = fn(a);
+  const f = compileFormula(formula);
+  if (!f) return 1.0;
+  const sm = f.readsMultipliers ? conditionStatMultipliers(p) : null;
+  const v = f.fn(
+    p.stats,
+    sm,
+    p.physicalTraits,
+    capacities,
+    f.readsPrestige ? computePrestige(p) : 0,
+    f.readsIntact ? intactBodyFraction(p) : 1,
+    skill,
+    sm && f.readsPower ? equippedPowerToken(p, sm) : STAT_SCALE,
+    f.readsAptitude ? aptitudeOf(p as { aptitudes?: Record<string, number> }, statId) : 1
+  );
   return isFinite(v) ? Math.round(v * 1000) / 1000 : 1.0;
 }
 
