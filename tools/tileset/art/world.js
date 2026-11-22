@@ -86,12 +86,16 @@ function waterCol(x, y, kind) {
   return rp(kind === 1 ? P.shallow : P.deep, t, x, y, .45);
 }
 
+let RH = new Float64Array(0);
 function rockH(x, y) {
+  if (RH.length !== PER * PER) RH = new Float64Array(PER * PER).fill(-1);
+  const i = wrap(y, PER) * PER + wrap(x, PER);
+  if (RH[i] >= 0) return RH[i];
   let r = 0, a = .5, f = .013, n = 0;
   for (let o = 0; o < 4; o++) { const v = 1 - Math.abs(2 * pn(x, y, f, f, 141 + o * 9) - 1); r += a * v * v; n += a; a *= .5; f *= 2.1; }
   pvor(x, y, 34, 151);
   const hh = r / n * .62 + clamp(1 - Math.hypot(VDX, VDY) / 24, 0, 1) * .38;
-  return hh + Math.floor(hh * 7) / 7 * .55;
+  return RH[i] = hh + Math.floor(hh * 7) / 7 * .55;
 }
 const rockTone = (x, y) => {
   const hC = rockH(x, y), dx = rockH(x + 1, y) - rockH(x - 1, y), dy = rockH(x, y + 1) - rockH(x, y - 1);
@@ -115,9 +119,9 @@ const oreAt = (ramp, seed, x, y, c) => {
   return ramp[clamp(k, 0, 3)];
 };
 const veinAt = (x, y) => {
-  const blob = pfbm(x, y, .028, 61, 2), id = pvor(x, y, 6, 63), e = VEDGE, nw = VDX + VDY < 0;
+  const id = pvor(x, y, 6, 63), e = VEDGE, nw = VDX + VDY < 0, dx = -VDX, dy = -VDY;
   const k = e < .9 ? -1 : clamp(1 + (nw ? 1 : 0) + (e < 2 ? (nw ? 1 : -1) : 0) + (hash(x, y, 9) > .93 ? 1 : 0), 0, 3);
-  return { blob, id, k };
+  return { blob: pfbm(x + dx, y + dy, .028, 61, 2), id, k, dx, dy };
 };
 
 function pstone(ramp, bw, bh, o) {

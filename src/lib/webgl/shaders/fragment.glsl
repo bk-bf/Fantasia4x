@@ -57,14 +57,18 @@ const int VEIN_TILE = 32;
 const int FACE_ALPHA = 254;
 const int FACE_ROWS = 22;
 const highp float OBJECT_FOOT = 23.0;
-const float VEIN_FLOOR = 0.58;
+const float VEIN_SCORE = 2.6;
+const float VEIN_KEEP = 1.412;
+const float VEIN_THIN = 0.48;
+const int VEIN_REACH = 8;
+const float VEIN_CLEAR = 4.0;
 const float VEIN_FADE = 6.0;
 
 out vec4 fragColor;
 
-vec3 rockTop(int rim) {
+vec3 rockTop(int rim, highp vec2 top) {
     highp ivec2 size = textureSize(u_rockTexture, 0);
-    highp ivec2 p = ivec2(floor(v_world + vec2(0.0, u_rockLift)));
+    highp ivec2 p = ivec2(floor(top));
     p = (p % size + size) % size;
     int shade = int(texelFetch(u_rockTexture, p, 0)[rim] * 255.0 + 0.5);
     return texelFetch(u_paintAtlas, ivec2(u_rockRamp) + ivec2(shade, 0), 0).rgb;
@@ -74,9 +78,10 @@ bool near(int bit) {
     return (int(v_veinNear + 0.5) & (1 << bit)) != 0;
 }
 
-float veinFade(highp vec2 local) {
+float veinFade(highp vec2 local, bool face) {
     float d = float(VEIN_TILE);
     float far = float(VEIN_TILE) - 1.0;
+    if (face) local.y = far * 0.5;
     if (!near(0)) d = min(d, local.y);
     if (!near(2)) d = min(d, far - local.x);
     if (!near(4)) d = min(d, far - local.y);
@@ -85,7 +90,7 @@ float veinFade(highp vec2 local) {
     if (!near(3)) d = min(d, length(vec2(far - local.x, far - local.y)));
     if (!near(5)) d = min(d, length(vec2(local.x, far - local.y)));
     if (!near(7)) d = min(d, length(local));
-    return clamp(d / VEIN_FADE, 0.0, 1.0);
+    return clamp((d - VEIN_CLEAR) / VEIN_FADE, 0.0, 1.0);
 }
 
 vec3 vein(vec3 rock, highp vec2 at, highp vec2 ground, bool face) {
@@ -96,8 +101,10 @@ vec3 vein(vec3 rock, highp vec2 at, highp vec2 ground, bool face) {
     highp ivec2 size = textureSize(u_veinTexture, 0);
     highp ivec2 q = ivec2(floor(at)) + shift;
     vec4 cell = texelFetch(u_veinTexture, (q % size + size) % size, 0);
-    float blob = max(cell.b, VEIN_FLOOR) - (1.0 - veinFade(ground - vec2(tile * VEIN_TILE))) * 0.3;
-    if (blob < 0.47 || cell.g < 0.42 + (0.62 - blob) * 1.6) return rock;
+    int packed = int(cell.b * 255.0 + 0.5);
+    highp vec2 centre = ground + vec2(packed / (2 * VEIN_REACH) - VEIN_REACH, packed % (2 * VEIN_REACH) - VEIN_REACH);
+    float fade = veinFade(centre - vec2(tile * VEIN_TILE), face);
+    if (fade <= 0.0 || cell.g * VEIN_SCORE - VEIN_THIN * (1.0 - fade) < VEIN_KEEP) return rock;
     int k = int(cell.r * 255.0 + 0.5);
     if (k == VEIN_EDGE) return rock * vec3(0.5, 0.5, 0.6);
     return texelFetch(u_paintAtlas, ivec2(v_vein.xy) + ivec2(clamp(k - (face ? 1 : 0), 0, 3), 0), 0).rgb;
@@ -156,12 +163,12 @@ void main() {
         highp float ground = v_row * u_rowPx + OBJECT_FOOT;
         if (alpha == 255 && sprite.r > 0.99 && sprite.b > 0.99 && sprite.g < 0.05) {
             highp vec2 top = at + vec2(0.0, u_rockLift);
-            sprite.rgb = vein(rockTop(int(sprite.g * 255.0 + 0.5)), top, top, false);
+            sprite.rgb = vein(rockTop(int(sprite.g * 255.0 + 0.5), top), top, top, false);
             ground = top.y;
         } else if (alpha <= FACE_ALPHA && alpha > FACE_ALPHA - FACE_ROWS) {
             int fy = FACE_ALPHA - alpha;
             highp vec2 foot = at + vec2(0.0, u_rockLift - 1.0 - float(fy));
-            if (fy > 1) sprite.rgb = vein(sprite.rgb, at, foot, true);
+            if (fy > 1) sprite.rgb = vein(sprite.rgb, at + vec2(0.0, u_rockLift), foot, true);
             sprite.a = 1.0;
             ground = foot.y;
         }

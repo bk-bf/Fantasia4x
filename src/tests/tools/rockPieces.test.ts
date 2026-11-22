@@ -14,7 +14,7 @@ import {
   PATCH,
   REACH,
   TILE,
-  TOP_SIZE,
+  VEIN_SIZE,
   VEIN,
   blobLayout,
   layoutMass,
@@ -260,28 +260,33 @@ describe('rock pieces: placed by row, they rebuild a single drawing of the mass'
 });
 
 describe('rock veins: where ore shows in the rock top', () => {
-  const veins = rockVeins(art(TOP_SIZE));
+  const veins = rockVeins(art(VEIN_SIZE));
   const channel = (c: number) => veins.filter((_, i) => i % 4 === c);
 
   it('names its codes as the fragment shader reads them', () => {
     const glsl = readFileSync(join(__dirname, '../../lib/webgl/shaders/fragment.glsl'), 'utf8');
-    for (const [name, value] of [
-      ['VEIN_EDGE', VEIN.edge],
-      ['VEIN_TILE', TILE],
-      ['FACE_ALPHA', FACE_ALPHA],
-      ['FACE_ROWS', LIFT]
+    for (const [type, name, value] of [
+      ['int', 'VEIN_EDGE', VEIN.edge],
+      ['int', 'VEIN_TILE', TILE],
+      ['int', 'VEIN_REACH', VEIN.reach],
+      ['int', 'FACE_ALPHA', FACE_ALPHA],
+      ['int', 'FACE_ROWS', LIFT],
+      ['float', 'VEIN_SCORE', VEIN.score]
     ])
-      expect(glsl).toContain(`const int ${name} = ${value};`);
+      expect(glsl).toContain(`const ${type} ${name} = ${value};`);
   });
 
-  it('stores the shade or chunk edge, the chunk and the vein strength of every pixel', () => {
+  it('stores the shade or chunk edge, the chunk score and the offset to the chunk centre', () => {
     expect(new Set(channel(0))).toEqual(new Set([0, 1, 2, 3, VEIN.edge]));
-    const spread = (c: number) => {
-      const v = channel(c);
-      return v.reduce((a, b) => Math.max(a, b), 0) - v.reduce((a, b) => Math.min(a, b), 255);
-    };
-    expect(spread(1)).toBeGreaterThan(200);
-    expect(spread(2)).toBeGreaterThan(200);
+    const scores = channel(1);
+    const least = Math.round(((VEIN.density * VEIN.floor) / VEIN.score) * 255);
+    expect(scores.reduce((a, b) => Math.min(a, b), 255)).toBeGreaterThanOrEqual(least);
+    expect(scores.reduce((a, b) => Math.max(a, b), 0)).toBeGreaterThan(200);
+    const side = 2 * VEIN.reach;
+    for (const packed of new Set(channel(2))) {
+      expect(Math.abs(Math.floor(packed / side) - VEIN.reach)).toBeLessThanOrEqual(7);
+      expect(Math.abs((packed % side) - VEIN.reach)).toBeLessThanOrEqual(7);
+    }
   });
 });
 

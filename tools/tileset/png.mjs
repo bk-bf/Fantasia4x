@@ -31,18 +31,18 @@ function header(w = 0, h = 0) {
   return chunk('IHDR', head);
 }
 
-function scanlines(w = 0, h = 0, rgba = new Uint8Array(0)) {
+function scanlines(w = 0, h = 0, rgba = new Uint8Array(0), level = 9) {
   const raw = Buffer.alloc(h * (w * 4 + 1));
   for (let y = 0; y < h; y++)
     raw.set(rgba.subarray(y * w * 4, (y + 1) * w * 4), y * (w * 4 + 1) + 1);
-  return deflateSync(raw, { level: 9 });
+  return deflateSync(raw, { level });
 }
 
-export function encodePng(w = 0, h = 0, rgba = new Uint8Array(0)) {
+export function encodePng(w = 0, h = 0, rgba = new Uint8Array(0), level = 9) {
   return Buffer.concat([
     SIGNATURE,
     header(w, h),
-    chunk('IDAT', scanlines(w, h, rgba)),
+    chunk('IDAT', scanlines(w, h, rgba, level)),
     chunk('IEND', Buffer.alloc(0))
   ]);
 }

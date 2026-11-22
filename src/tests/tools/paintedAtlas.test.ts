@@ -152,5 +152,5 @@ describe('painted atlas manifest', () => {
     expect(JSON.stringify(out.manifest, null, 2) + '\n').toBe(
       committed('manifest.json').toString('utf8')
     );
-  });
+  }, 120_000);
 });

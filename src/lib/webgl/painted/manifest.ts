@@ -36,6 +36,7 @@ export interface ManifestPieceTop {
   image: string;
   veins: string;
   size: number;
+  veinSize: number;
   lift: number;
   ramp: string;
 }
@@ -89,6 +90,7 @@ export interface PaintedPieceTop {
   image: string;
   veins: string;
   size: number;
+  veinSize: number;
   lift: number;
   ramp: { x: number; y: number; length: number };
 }
@@ -187,12 +189,12 @@ function readPieces(set: string, raw: unknown): ManifestPieces {
 
 function readTop(set: string, raw: unknown): ManifestPieceTop {
   if (!isObject(raw)) throw new Error(`pieces.${set}.top is not an object`);
-  const { image, veins, size, lift, ramp } = raw;
+  const { image, veins, size, veinSize, lift, ramp } = raw;
   if (typeof image !== 'string' || typeof veins !== 'string' || typeof ramp !== 'string')
     throw new Error(`pieces.${set}.top does not name its images and ramp`);
-  if (!isInt(size) || size <= 0 || !isInt(lift) || lift < 0)
+  if (!isInt(size) || size <= 0 || !isInt(veinSize) || veinSize <= 0 || !isInt(lift) || lift < 0)
     throw new Error(`pieces.${set}.top has a bad size or lift`);
-  return { image, veins, size, lift, ramp };
+  return { image, veins, size, veinSize, lift, ramp };
 }
 
 export function parseManifest(raw: unknown): PaintedManifest {
