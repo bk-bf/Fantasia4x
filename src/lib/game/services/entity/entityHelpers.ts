@@ -111,8 +111,9 @@ interface MobThreatSubsets {
   ref: Mob[] | undefined;
   predators: Mob[];
   prey: Mob[];
-  preyIndex: number[];
-  corpses: Mob[];
+  threatened: Mob[];
+  threatenedIndex: number[];
+  corpsesByCreature: Map<string, Mob[]>;
 }
 
 let _mobThreatCache: MobThreatSubsets | null = null;
@@ -121,31 +122,43 @@ function mobThreatSubsets(allMobs: Mob[]): MobThreatSubsets {
   if (_mobThreatCache && _mobThreatCache.ref === allMobs) return _mobThreatCache;
   const predators: Mob[] = [];
   const prey: Mob[] = [];
-  const preyIndex: number[] = [];
-  const corpses: Mob[] = [];
+  const threatened: Mob[] = [];
+  const threatenedIndex: number[] = [];
+  const corpsesByCreature = new Map<string, Mob[]>();
   for (let i = 0; i < allMobs.length; i++) {
     const m = allMobs[i];
     if (m.state === 'Corpse') {
-      corpses.push(m);
-      if ((m.intactness ?? 1.0) > 0) {
-        prey.push(m);
-        preyIndex.push(i);
-      }
+      const pack = corpsesByCreature.get(m.creatureId);
+      if (pack) pack.push(m);
+      else corpsesByCreature.set(m.creatureId, [m]);
+      if ((m.intactness ?? 1.0) > 0) prey.push(m);
       continue;
     }
     const def = getCreatureById(m.creatureId);
     if (def?.predator) predators.push(m);
     if (def?.huntable && m.state !== 'Tamed') {
       prey.push(m);
-      preyIndex.push(i);
+      if (!def.predator) {
+        threatened.push(m);
+        threatenedIndex.push(i);
+      }
     }
   }
-  _mobThreatCache = { ref: allMobs, predators, prey, preyIndex, corpses };
+  _mobThreatCache = {
+    ref: allMobs,
+    predators,
+    prey,
+    threatened,
+    threatenedIndex,
+    corpsesByCreature
+  };
   return _mobThreatCache;
 }
 
-export function mobCorpses(allMobs: Mob[]): Mob[] {
-  return mobThreatSubsets(allMobs).corpses;
+const NO_CORPSES: readonly Mob[] = [];
+
+export function packCorpses(allMobs: Mob[], creatureId: string): readonly Mob[] {
+  return mobThreatSubsets(allMobs).corpsesByCreature.get(creatureId) ?? NO_CORPSES;
 }
 
 const THREAT_QUERY_RANGE = 40;
@@ -159,35 +172,34 @@ let _predNearestCache: NearestPredators | null = null;
 
 function nearestPredators(allMobs: Mob[]): NearestPredators {
   if (_predNearestCache && _predNearestCache.ref === allMobs) return _predNearestCache;
-  const { predators, prey, preyIndex } = mobThreatSubsets(allMobs);
+  const { predators, threatened, threatenedIndex } = mobThreatSubsets(allMobs);
   const map = new Map<string, Mob | null>();
   const byIndex: (Mob | null | undefined)[] = new Array(allMobs.length);
-  if (predators.length > 0 && prey.length > 0) {
+  if (predators.length > 0 && threatened.length > 0) {
     const pts = new Float32Array(predators.length * 2);
     for (let i = 0; i < predators.length; i++) {
       pts[2 * i] = predators[i].x;
       pts[2 * i + 1] = predators[i].y;
     }
-    const qrs = new Float32Array(prey.length * 2);
-    for (let i = 0; i < prey.length; i++) {
-      qrs[2 * i] = prey[i].x;
-      qrs[2 * i + 1] = prey[i].y;
+    const qrs = new Float32Array(threatened.length * 2);
+    for (let i = 0; i < threatened.length; i++) {
+      qrs[2 * i] = threatened[i].x;
+      qrs[2 * i + 1] = threatened[i].y;
     }
     const res = pathfinderService.nearestEach(pts, qrs, THREAT_QUERY_RANGE);
     if (res) {
-      for (let i = 0; i < prey.length; i++) {
+      for (let i = 0; i < threatened.length; i++) {
         const idx = res[i];
         const best = idx >= 0 ? predators[idx] : null;
-        map.set(prey[i].id, best);
-        byIndex[preyIndex[i]] = best;
+        map.set(threatened[i].id, best);
+        byIndex[threatenedIndex[i]] = best;
       }
     } else {
-      for (let i = 0; i < prey.length; i++) {
-        const p = prey[i];
+      for (let i = 0; i < threatened.length; i++) {
+        const p = threatened[i];
         let best: Mob | null = null;
         let bd = THREAT_QUERY_RANGE;
         for (const m of predators) {
-          if (m.id === p.id) continue;
           const d = dist(p, { x: m.x, y: m.y });
           if (d < bd) {
             bd = d;
@@ -195,7 +207,7 @@ function nearestPredators(allMobs: Mob[]): NearestPredators {
           }
         }
         map.set(p.id, best);
-        byIndex[preyIndex[i]] = best;
+        byIndex[threatenedIndex[i]] = best;
       }
     }
   }

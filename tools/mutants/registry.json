@@ -2816,8 +2816,8 @@
   {
     "id": "hostile-pack-corpse-ignored",
     "file": "src/lib/game/services/entity/entityAI.ts",
-    "find": "    if (packCorpse) {",
-    "replace": "    if (packCorpse && false) {",
+    "find": "    if (packCorpseWithin(mob, allMobs, visionRange)) {",
+    "replace": "    if (packCorpseWithin(mob, allMobs, visionRange) && false) {",
     "tests": ["src/tests/game/services/entity/hostileRules.test.ts"]
   },
   {

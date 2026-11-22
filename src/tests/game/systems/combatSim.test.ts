@@ -89,6 +89,11 @@ function makeState(pawns: Pawn[], mobs: Mob[]): GameState {
   return { turn: 0, pawns, mobs, worldMap: [] } as unknown as GameState;
 }
 
+function decayKnockdown(p: Pawn): Pawn {
+  const kd = p.conditionTimers?.knockdown ?? 0;
+  return kd > 0 ? { ...p, conditionTimers: { ...p.conditionTimers, knockdown: kd - 1 } } : p;
+}
+
 describe('combat sim (headless tickCombat)', () => {
   it('an undrafted Fighting pawn swings back at an adjacent hostile', () => {
     let state = makeState([makePawn()], [makeGoblin({ state: 'Wander' })]);
@@ -498,16 +503,27 @@ describe('combat sim (headless tickCombat)', () => {
     let state = makeState([guard], [goblin]);
     let goblinDamaged = false;
     for (let t = 0; t < 4000 && !goblinDamaged; t++) {
-      state = { ...state, turn: t };
+      state = { ...state, turn: t, pawns: state.pawns.map(decayKnockdown) };
       state = combatService.tickCombat(state, 16);
       const g = state.mobs![0];
       const hpLost = (g.limbs ?? []).reduce(
         (s, l) => s + (l.parts ?? []).reduce((ps, p) => ps + (p.maxHp - p.health), 0),
         0
       );
-      if (hpLost > 0 || g.isAlive === false || g.state === 'Corpse') goblinDamaged = true;
+      const wounded = (g.injuries?.length ?? 0) > 0;
+      if (hpLost > 0 || wounded || g.isAlive === false || g.state === 'Corpse')
+        goblinDamaged = true;
     }
     expect(goblinDamaged).toBe(true);
+  });
+
+  it('a pawn swings on the turn its attack interval divides, and not on the turn after', () => {
+    const staminaAfter = (turn: number) => {
+      const state = { ...makeState([makePawn()], [makeGoblin({ state: 'Wander' })]), turn };
+      return combatService.tickCombat(state, 16).pawns[0].stamina ?? 0;
+    };
+    expect(staminaAfter(0)).toBeLessThan(50);
+    expect(staminaAfter(1)).toBe(50);
   });
 
   it('a winded entity cannot attack — it passes turns instead (stamina gate)', () => {
