@@ -99,6 +99,7 @@ describe('clotting', () => {
   it('a tended wound is never rolled for clotting', () => {
     const w = { ...recomputeWound('chest', 'cut', 40, undefined, 0), treatedAt: 0, bleeding: 1 };
     const limbs = bodyWith(null, w);
+    limbs.find((l) => l.parts?.some((p) => p.id === 'chest'))!.bleedRate = w.bleeding;
     expect(rollWoundClotting(limbs, 1, 5)).toBe(false);
     expect(partOf(limbs, 'chest').injuries[0].clotProgress ?? 0).toBe(0);
   });
