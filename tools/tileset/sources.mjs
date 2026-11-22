@@ -34,6 +34,17 @@ export const REGISTRY_ART = [
   'registry/db-stations.js'
 ];
 
+export const COLONY_ART = [
+  'gfx.js',
+  'mat.js',
+  'registry/world.js',
+  'flora.js',
+  'build.js',
+  'actors.js',
+  'colony.js',
+  'scene.js'
+];
+
 export const HAND_PORTED = ['periodic.js', 'world.js', 'ground.js'];
 
 export const mockupName = (artPath = '') => artPath.replace(/^registry\//, '');
