@@ -11,6 +11,12 @@ let nowPlaying: NowPlayingStore;
 const playingVolume = (folder: string): number =>
   Math.max(0, ...htmlNodes.filter((n) => n.src.includes(folder) && !n.paused).map((n) => n.volume));
 
+const endPlaying = (folder: string): void => {
+  const node = htmlNodes.find((n) => n.src.includes(folder) && !n.paused);
+  expect(node).toBeDefined();
+  node!.end();
+};
+
 beforeAll(async () => {
   vi.useFakeTimers();
   installAudioFakes({ fetchMs: 20, decodeMs: 50, canplayMs: 80, sfxDurS: 0.1, sampleRate: 44100 });
@@ -81,5 +87,34 @@ describe('music scene changes', () => {
     expect(dayMid).toBeLessThan(dayBefore);
     await advance(1500);
     expect(playingVolume('/day/')).toBe(0);
+  });
+
+  it('starts the first scene straight away when nothing is playing', async () => {
+    audioService.setScene('day', 'summer');
+    await advance(100);
+    expect(get(nowPlaying).scene).toBe('day');
+    expect(get(nowPlaying).track).toMatch(/\/day\//);
+  });
+
+  it('moves on to the next track of the playlist when one ends', async () => {
+    audioService.setScene('day', 'summer');
+    await advance(3000);
+    const first = get(nowPlaying).track;
+    endPlaying('/day/');
+    await advance(500);
+    expect(get(nowPlaying).scene).toBe('day');
+    expect(get(nowPlaying).track).not.toBe(first);
+  });
+
+  it('ignores the end of a track that combat has already replaced', async () => {
+    audioService.setScene('day', 'summer');
+    await advance(3000);
+    audioService.setScene('combat', 'summer');
+    await advance(200);
+    const combatTrack = get(nowPlaying).track;
+    expect(combatTrack).toMatch(/\/combat\//);
+    endPlaying('/day/');
+    await advance(500);
+    expect(get(nowPlaying).track).toBe(combatTrack);
   });
 });

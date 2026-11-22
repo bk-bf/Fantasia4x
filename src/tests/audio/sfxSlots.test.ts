@@ -60,4 +60,23 @@ describe('sfx slots', () => {
     const listeners = howl._onend.length + howl._onstop.length + howl._onplayerror.length;
     expect(listeners).toBeLessThan(10);
   });
+
+  it('plays at most three clips at once', async () => {
+    audioService.playSfx('/audio/combat/slash/1.ogg', 1);
+    audioService.playSfx('/audio/combat/slash/2.ogg', 1);
+    audioService.playSfx('/audio/creatures/canine/1.ogg', 1);
+    audioService.playSfx('/audio/work/mining/1.ogg', 1);
+    await advance(200);
+    expect(sourceStarts).toHaveLength(3);
+  });
+
+  it('gives a slot back when a clip ends, so the next sound plays', async () => {
+    audioService.playSfx('/audio/combat/slash/1.ogg', 1);
+    audioService.playSfx('/audio/combat/slash/2.ogg', 1);
+    audioService.playSfx('/audio/creatures/canine/1.ogg', 1);
+    await advance(300);
+    audioService.playSfx('/audio/work/mining/1.ogg', 1);
+    await advance(200);
+    expect(sourceStarts.map((s) => s.url)).toContain('/audio/work/mining/1.ogg');
+  });
 });
