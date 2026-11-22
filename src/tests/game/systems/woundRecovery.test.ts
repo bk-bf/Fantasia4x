@@ -364,19 +364,19 @@ describe('wound recovery & bleeding', () => {
 
     const limbsA = createBodyPlanLimbs('humanoid', 1);
     const woundA = mk(false);
-    limbsA.find((l) => l.id === 'left_arm')!.parts!.find((p) => p.id === 'leftForearm')!
-      .injuries.push(woundA);
+    const armA = limbsA.find((l) => l.id === 'left_arm')!;
+    armA.parts!.find((p) => p.id === 'leftForearm')!.injuries.push(woundA);
+    armA.bleedRate = woundA.bleeding;
     rollWoundClotting(limbsA, 1.0, 1, 1.0);
     expect(woundA.bleeding, 'a non-bleeder clots fully in a single stage').toBe(0);
 
     const limbsB = createBodyPlanLimbs('humanoid', 1);
     const woundB = mk(true);
-    limbsB.find((l) => l.id === 'left_arm')!.parts!.find((p) => p.id === 'leftForearm')!
-      .injuries.push(woundB);
+    const armB = limbsB.find((l) => l.id === 'left_arm')!;
+    armB.parts!.find((p) => p.id === 'leftForearm')!.injuries.push(woundB);
+    armB.bleedRate = woundB.bleeding;
     rollWoundClotting(limbsB, 1.0, 1, 1.0);
-    expect(woundB.bleeding, 'a bleeder is not done after the same single stage').toBeGreaterThan(
-      0
-    );
+    expect(woundB.bleeding, 'a bleeder is not done after the same single stage').toBeGreaterThan(0);
     rollWoundClotting(limbsB, 1.0, 2, 1.0);
     expect(woundB.bleeding, 'the second stage finishes the bleeder off').toBe(0);
   });
@@ -394,8 +394,9 @@ describe('wound recovery & bleeding', () => {
         infected: false,
         bloodletting: true
       };
-      limbs.find((l) => l.id === 'left_arm')!.parts!.find((p) => p.id === 'leftForearm')!
-        .injuries.push(wound);
+      const arm = limbs.find((l) => l.id === 'left_arm')!;
+      arm.parts!.find((p) => p.id === 'leftForearm')!.injuries.push(wound);
+      arm.bleedRate = wound.bleeding;
       rollWoundClotting(limbs, 1.0, 1, factor);
       return (wound.clotProgress ?? 0) > 0;
     };
@@ -440,10 +441,7 @@ describe('wound recovery & bleeding', () => {
     expect(scar.permanent, 'the scar is a permanent injury').toBe(true);
     expect(scar.type).toBe('cut_scar');
     expect(scar.damage, 'scar damage = maxHp * SCARRING_CONFIG.damageFrac.critical').toBe(4);
-    expect(
-      part.health,
-      'health credit is w.damage - scar.damage, not the full w.damage'
-    ).toBe(28);
+    expect(part.health, 'health credit is w.damage - scar.damage, not the full w.damage').toBe(28);
   });
 
   it('healLimbsInPlace stalls an untended serious wound to 15% of its normal heal', () => {

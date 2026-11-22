@@ -4,8 +4,8 @@
 // mean nothing in an issue, an issue URL inside backticks that never becomes a link, and a
 // label invented one letter away from the one that already exists.
 //
-//   node tools/issue.mjs create --title T --type fix --area sim --size S --agent haiku --body-file - [--label L]... [--parent N] [--milestone vX.Y]
-//   node tools/issue.mjs edit <n> [--title T] [--body-file -] [--add-label L] [--remove-label L] [--type T] [--area A] [--size S] [--agent A] [--verify V] [--parent N] [--milestone vX.Y]
+//   node tools/issue.mjs create --title T --type fix --body-file - [--label L]... [--parent N] [--milestone vX.Y]
+//   node tools/issue.mjs edit <n> [--title T] [--body-file -] [--add-label L] [--remove-label L] [--parent N] [--milestone vX.Y]
 //   node tools/issue.mjs milestone list
 //   node tools/issue.mjs milestone create --title vX.Y --body-file - [--due YYYY-MM-DD]
 //   node tools/issue.mjs milestone edit vX.Y [--title vX.Y] [--body-file -] [--due YYYY-MM-DD]
@@ -45,17 +45,6 @@ import {
   repairDeadCitation
 } from './lib/links.mjs';
 import { checkSignOff } from './lib/template.mjs';
-import {
-  moveLane,
-  setSelect,
-  addToBoard,
-  itemFor,
-  laneOf,
-  boardItems,
-  fields,
-  invalidate,
-  strayCard
-} from './lib/board.mjs';
 import { createPull, editPull, syncPull, linkOf } from './lib/pulls.mjs';
 import { tidy } from './lib/tidy.mjs';
 
@@ -86,24 +75,6 @@ const readBody = () => {
 };
 
 const TYPES = ['feat', 'fix', 'refactor', 'perf', 'test', 'tooling', 'docs', 'chore', 'decision', 'release'];
-const SEVERITY_PRIORITY = { critical: 'P0', high: 'P1', medium: 'P2', low: 'P3' };
-
-const boardOption = (field, value, flag) => {
-  const options = fields().find((f) => f.name === field)?.options.map((o) => o.name) ?? [];
-  if (!value) die(`--${flag} is required — one of: ${options.join(', ')}`);
-  const hit = options.find((o) => o.toLowerCase() === String(value).toLowerCase());
-  if (!hit) die(`unknown --${flag} "${value}" — one of: ${options.join(', ')}`);
-  return hit;
-};
-
-const pause = (ms) => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
-
-function waitForCard(n) {
-  for (let i = 0; i < 6 && !itemFor(n); i++) {
-    pause(5000);
-    invalidate();
-  }
-}
 
 const EXT = /\.(ts|tsx|js|mjs|cjs|svelte|json|md|sh|py|rs|css|html)$/;
 
@@ -245,106 +216,36 @@ const milestoneGaps = (issue) => {
   return [`no milestone — pnpm issue edit <n> --milestone ${milestonePlan().current ?? 'vX.Y'}`];
 };
 
-const MERGED_LANES = new Set(['on dev', 'done']);
-
-const boardGaps = (card, open = false) => {
-  const gaps = [];
-  if (!card.status) gaps.push('no Status — the card is on the board in no lane');
-  if (!card['work type']) gaps.push('no Work type on the board');
-  if (!card.verify) gaps.push('no Verify route on the board');
-  if (!card.area) gaps.push('no Area on the board');
-  if (!card.size) gaps.push('no Size on the board');
-  if (open && !card.agent) gaps.push('no Agent on the board');
-  const sev = (card.labels ?? []).find((l) => SEVERITY_PRIORITY[l]);
-  if (sev && card.priority !== SEVERITY_PRIORITY[sev]) {
-    gaps.push(
-      `Priority is ${card.priority ?? 'unset'} but the severity is ${sev}, which is ` +
-        `${SEVERITY_PRIORITY[sev]} — Priority is derived, not set by hand`
-    );
-  }
-  return gaps;
-};
-
-
-
 if (cmd === 'check-labels') {
   let bad = 0;
   const nesting = openNesting();
-  const cards = new Map(
-    boardItems()
-      .filter((i) => i.content?.number)
-      .map((i) => [String(i.content.number), i])
-  );
+  const report = (n, title, problems) => {
+    if (!problems.length) return;
+    bad += 1;
+    process.stdout.write(`#${n}  ${title.slice(0, 52)}\n`);
+    for (const e of problems) process.stdout.write(`      ${e}\n`);
+  };
   for (const it of JSON.parse(
     gh(['issue', 'list', '--state', 'open', '--limit', '300', '--json', 'number,title,labels,body'])
   )) {
     const names = it.labels.map((l) => l.name);
-    const workType = cards.get(String(it.number))?.['work type'];
-    const problems = [
+    report(it.number, it.title, [
       ...checkRequired(names),
-      ...checkTemplate(it.body, names, workType),
-      ...checkKind(names, workType),
+      ...checkTemplate(it.body, names),
+      ...checkKind(names),
       ...milestoneGaps(nesting.get(String(it.number)))
-    ];
-    if (!problems.length) continue;
-    bad += 1;
-    process.stdout.write(`#${it.number}  ${it.title.slice(0, 52)}\n`);
-    for (const e of problems) process.stdout.write(`      ${e}\n`);
-  }
-  let untyped = 0;
-  const report = (n, title, gaps, lane) => {
-    if (!gaps.length) return;
-    untyped += 1;
-    process.stdout.write(`#${n}  ${title.slice(0, 52)}${lane ? `  (${lane})` : ''}\n`);
-    for (const g of gaps) process.stdout.write(`      ${g}\n`);
-  };
-  const open = new Set();
-  for (const it of JSON.parse(
-    gh(['issue', 'list', '--state', 'open', '--limit', '300', '--json', 'number,title'])
-  )) {
-    const key = String(it.number);
-    open.add(key);
-    report(it.number, it.title, cards.has(key) ? boardGaps(cards.get(key), true) : ['not on the board']);
-  }
-  for (const [key, card] of cards) {
-    if (open.has(key) || !MERGED_LANES.has((card.status ?? '').toLowerCase())) continue;
-    report(key, card.title ?? '', boardGaps(card), card.status);
-  }
-  for (const item of boardItems()) {
-    const stray = strayCard(item);
-    if (stray) report(item.content?.number ?? '-', item.content?.title ?? item.title ?? '', [stray], item.status);
+    ]);
   }
   const pulls = JSON.parse(
-    gh(['pr', 'list', '--state', 'open', '--limit', '100', '--json', 'number,title,body,isDraft,milestone'])
+    gh(['pr', 'list', '--state', 'open', '--limit', '100', '--json', 'number,title,body,milestone'])
   );
   for (const p of pulls)
     report(p.number, p.title, [
       ...(linkOf(p) ? [] : ['pull request links no issue']),
       ...(p.milestone ? [] : ["pull request has no milestone: `pnpm issue pr-sync` copies its issue's"])
     ]);
-  for (const [key, card] of cards) {
-    if ((card.status ?? '').toLowerCase() !== 'in check') continue;
-    const pull = pulls.find((p) => String(linkOf(p)?.issue) === key);
-    if (!pull || pull.isDraft)
-      report(key, card.title ?? '', [
-        pull ? `in In Check with only a draft pull request, #${pull.number}` : 'in In Check with no open pull request'
-      ], card.status);
-  }
-  process.stdout.write(
-    `\n${bad} open issue(s) incompletely classified, ${untyped} with a gap on the board\n`
-  );
-  if (bad || untyped) process.exit(1);
-} else if (cmd === 'board') {
-  process.stdout.write(`${JSON.stringify({ items: boardItems() })}\n`);
-} else if (cmd === 'lane') {
-  const n = argv[1] ?? die('which issue?');
-  const to = argv.slice(2).join(' ') || '';
-  try {
-    const r = moveLane(n, to);
-    process.stdout.write(`#${n}  ${r.from} -> ${r.to}${r.moved ? '' : ' (already there)'}\n`);
-  } catch (e) {
-    die(e.message);
-  }
+  process.stdout.write(`\n${bad} open issue(s) or pull request(s) incompletely classified\n`);
+  if (bad) process.exit(1);
 } else if (cmd === 'check-links' || cmd === 'fix-links') {
   const sha = indexedSha(null);
   const fix = cmd === 'fix-links';
@@ -427,51 +328,26 @@ if (cmd === 'check-labels') {
   const labels = all('label');
   const parent = arg('parent');
   const parentRecord = parent ? issueRecord(parent) : null;
-  const type = arg('type') ?? (parent ? itemFor(parent)?.['work type'] : null);
-  if (!type) die(`--type is required, or --parent to take the parent's — one of: ${TYPES.join(', ')}`);
+  const parentFeature = (parentRecord?.labels ?? []).some((l) => (l.name ?? l) === 'feature');
+  const type = arg('type') ?? (parentFeature ? 'feat' : null);
+  if (!type) die(`--type is required, or --parent of a feature to make it a feat — one of: ${TYPES.join(', ')}`);
   if (!TYPES.includes(type)) die(`unknown --type "${type}" — one of: ${TYPES.join(', ')}`);
   const milestone = arg('milestone') ?? parentRecord?.milestone?.title ?? milestonePlan().current;
   if (!milestone) die('no milestone — pass --milestone vX.Y, or set "current" in tools/lib/milestones.json');
   milestoneNamed(milestone);
-  const area = boardOption('Area', arg('area'), 'area');
-  const size = boardOption('Size', arg('size'), 'size');
-  const agent = boardOption('Agent', arg('agent'), 'agent');
   if (type === 'feat' && !labels.some((l) => labelGroup('kind').includes(l))) labels.push('feature');
   const body = prepare(readBody());
   guard(labels, body, { template: true, workType: type });
-  const INHERITED_LANES = new Set(['backlog', 'blocked on you', 'ready', 'manual']);
-  const parentLane = parent ? laneOf(parent) : '';
-  const lane = INHERITED_LANES.has(parentLane) ? parentLane : 'backlog';
   const args = ['issue', 'create', '--title', title, '--body-file', '-'];
   for (const l of labels) args.push('--label', l);
   if (milestone) args.push('--milestone', milestone);
   const url = gh(args, body).trim();
   process.stdout.write(url + '\n');
   const n = url.split('/').pop();
-  const VERIFY_FIELD = {
-    'verify tests': 'tests',
-    'verify headless': 'headless',
-    'needs playtest': 'playtest'
-  };
-  const verify = labels.map((l) => VERIFY_FIELD[l]).find(Boolean);
-  try {
-    addToBoard(n);
-    waitForCard(n);
-    setSelect(n, 'Status', lane);
-    setSelect(n, 'Work type', type);
-    setSelect(n, 'Area', area);
-    setSelect(n, 'Size', size);
-    setSelect(n, 'Agent', agent);
-    const priority = labels.map((l) => SEVERITY_PRIORITY[l]).find(Boolean);
-    if (priority) setSelect(n, 'Priority', priority);
-    if (verify) setSelect(n, 'Verify', verify);
-  } catch (e) {
-    process.stderr.write(`note: created #${n} but could not set its fields: ${e.message}\n`);
-  }
   if (parent) {
     try {
       linkParent(n, parent);
-      process.stdout.write(`#${n} is a sub-issue of #${parent}, in ${lane}\n`);
+      process.stdout.write(`#${n} is a sub-issue of #${parent}\n`);
     } catch (e) {
       process.stderr.write(`note: created #${n} but could not make it a sub-issue of #${parent}: ${e.message}\n`);
     }
@@ -480,14 +356,8 @@ if (cmd === 'check-labels') {
   const n = argv[1] ?? die('which issue?');
   const parent = arg('parent');
   if (parent) issueId(parent);
-  const area = arg('area') && boardOption('Area', arg('area'), 'area');
-  const size = arg('size') && boardOption('Size', arg('size'), 'size');
-  const agent = arg('agent') && boardOption('Agent', arg('agent'), 'agent');
   const add = all('add-label');
   const body = arg('body-file') ? prepare(readBody()) : null;
-  const type = arg('type');
-  if (type && !TYPES.includes(type)) die(`unknown --type "${type}" — one of: ${TYPES.join(', ')}`);
-  const verify = arg('verify');
   const milestone = arg('milestone');
   if (milestone) milestoneNamed(milestone);
   // Refuse what this edit introduces, not what it inherits. A body that already cites a file
@@ -498,8 +368,6 @@ if (cmd === 'check-labels') {
   const resulting = [...new Set([...current.labels.map((l) => l.name), ...add])].filter(
     (l) => !removed.has(l)
   );
-  const checksKind = add.length || removed.size || type;
-  const workType = type ?? (body !== null || checksKind ? itemFor(n)?.['work type'] : undefined);
   const inherited =
     body === null ? [] : check({ labels: [], body: current.body ?? '', allowReady: true });
   const introduced = [
@@ -507,9 +375,9 @@ if (cmd === 'check-labels') {
     ...(arg('title') ? checkPrivate(arg('title')).map((e) => `title ${e}`) : []),
     ...checkBody(body ?? ''),
     ...(body !== null
-      ? [...checkTemplate(body, resulting, workType), ...checkRequired(resulting)]
+      ? [...checkTemplate(body, resulting), ...checkRequired(resulting)]
       : []),
-    ...(add.length || removed.size || type ? checkKind(resulting, workType) : [])
+    ...(add.length || removed.size ? checkKind(resulting) : [])
   ].filter((e) => !inherited.includes(e));
   if (introduced.length) die(`refused:\n  - ${introduced.join('\n  - ')}`);
   const changes = [];
@@ -518,26 +386,11 @@ if (cmd === 'check-labels') {
   for (const l of add) changes.push('--add-label', l);
   for (const l of all('remove-label')) changes.push('--remove-label', l);
   if (milestone) changes.push('--milestone', milestone);
-  if (!changes.length && !parent && !type && !area && !size && !agent && !verify) die('nothing to edit');
+  if (!changes.length && !parent) die('nothing to edit');
   if (changes.length) process.stdout.write(gh(['issue', 'edit', n, ...changes], body ?? undefined));
   if (parent) {
     linkParent(n, parent);
     process.stdout.write(`#${n} is a sub-issue of #${parent}\n`);
-  }
-  for (const [field, value] of [
-    ['Work type', type],
-    ['Area', area],
-    ['Size', size],
-    ['Agent', agent],
-    ['Verify', verify]
-  ]) {
-    if (!value) continue;
-    try {
-      setSelect(n, field, value);
-    } catch (e) {
-      die(e.message);
-    }
-    process.stdout.write(`#${n} ${field} is ${value}\n`);
   }
 } else if (cmd === 'blocked-by') {
   const [n, blocker] = argv.slice(1, 3);
@@ -557,13 +410,6 @@ if (cmd === 'check-labels') {
     const body = readBody();
     const pull = createPull({ branch: head, title, body });
     process.stdout.write(`${pull?.url ?? ''}\n`);
-    const card = linkOf({ body }).issue;
-    try {
-      moveLane(card, 'in check');
-    } catch (e) {
-      if (process.stderr.isTTY)
-        process.stderr.write(`#${card} stayed put: ${String(e.message).split('\n')[0]}\n`);
-    }
   } catch (e) {
     die(e.message);
   }

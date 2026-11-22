@@ -3,8 +3,7 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 
-import * as B from './lib/board.mjs';
-import { ROOT, git, tail, prepareWorktree } from './lib/harness.mjs';
+import { ROOT, git, prepareWorktree } from './lib/harness.mjs';
 
 const flag = (n) => process.argv.includes(`--${n}`);
 const out = (s) => process.stdout.write(s + '\n');
@@ -28,11 +27,8 @@ if (commits.length === 0) {
 }
 
 const files = git(['diff', '--stat', 'origin/main...origin/dev']).split('\n').filter(Boolean);
-const cards = B.inLane('on dev').filter((i) => i.content?.number);
 
-out(`${commits.length} commit(s) on dev, ${cards.length} card(s) in On dev\n`);
-for (const c of cards) out(`  #${c.content.number}  ${c.content.title.slice(0, 66)}`);
-out('');
+out(`${commits.length} commit(s) on dev\n`);
 for (const f of files.slice(-14)) out(`  ${f}`);
 out('');
 
@@ -121,14 +117,6 @@ try {
     git(['push', 'origin', 'HEAD:main'], wt);
     pushed = true;
     out(`--- pushed ${sha.slice(0, 8)} to main after ${run.url}`);
-    for (const c of cards) {
-      try {
-        B.moveLane(c.content.number, 'done');
-        out(`    #${c.content.number} -> Done`);
-      } catch (e) {
-        out(`    #${c.content.number} stayed put: ${tail(String(e.message), 2)}`);
-      }
-    }
   }
 } catch (e) {
   out(`--- ${e.message}`);

@@ -4,8 +4,7 @@ import type {
   Mob,
   EntityNeeds,
   PawnState,
-  TransientConditionDef,
-  ConditionDef
+  TransientConditionDef
 } from '../core/types';
 import { takeOut, carriedDrinkVessel, hydrationOf } from '../core/rules/gear/vessels';
 import { pawnById } from '../core/state/pawnIndex';
@@ -17,13 +16,13 @@ import { SECONDS_PER_TICK, perTick } from '../core/util/time';
 import { tileKey } from '../core/util/tileKey';
 import { stepBody } from './MovementSystem';
 import { occupancyService } from './OccupancyService';
-import conditionsData from '../database/pawns/conditions.json';
 import { NEEDS_DB, needNum } from '../core/defs/needs';
 import { moodEffect, MOOD_BASE } from '../core/defs/moods';
 import {
   getConditionCurrentStage,
   conditionNeedMultipliers,
-  getConditionDefById
+  getConditionDefById,
+  getTransientConditionDef
 } from '../core/rules/body/conditions';
 import { amenityAt } from '../core/defs/amenities';
 import { effectiveMood, moodModifierValue } from '../core/rules/social/social';
@@ -41,14 +40,15 @@ import {
 } from './EnvironmentService';
 import { gatedConsole as console } from '../core/util/log';
 
-const TRANSIENT_CONDITIONS_DB = (
-  conditionsData as unknown as Array<ConditionDef | TransientConditionDef>
-).filter((d): d is TransientConditionDef => d.transient === true);
-
 function getActiveTransientConditions(entity: Pawn | Mob): TransientConditionDef[] {
-  return (entity.transientConditions ?? [])
-    .map((id) => TRANSIENT_CONDITIONS_DB.find((e) => e.id === id))
-    .filter((e): e is TransientConditionDef => e !== undefined);
+  const out: TransientConditionDef[] = [];
+  const ids = entity.transientConditions;
+  if (!ids) return out;
+  for (let i = 0; i < ids.length; i++) {
+    const def = getTransientConditionDef(ids[i]);
+    if (def) out.push(def);
+  }
+  return out;
 }
 
 const NEED_MOOD = NEEDS_DB;

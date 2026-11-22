@@ -28,6 +28,7 @@ import {
   fleeToSafety,
   wanderStep,
   nearestPredatorThreat,
+  predatorThreatAt,
   findNearestPrey,
   findNearestFoodTile,
   findReachableFoodTile,
@@ -35,6 +36,8 @@ import {
   approachForMelee,
   edibleResourceOnTile,
   mobInLiveRegion,
+  liveRegion,
+  mobCorpses,
   isThinkTick,
   entityName
 } from './entityHelpers';
@@ -286,6 +289,7 @@ export function stepEntities(state: GameState): GameState {
   const next: Mob[] = new Array(mobs.length);
 
   const lodActive = livePawns.length > 0;
+  const region = liveRegion(livePawns, LIVE_RADIUS);
 
   for (let i = 0; i < mobs.length; i++) {
     const mob = mobs[i];
@@ -298,11 +302,11 @@ export function stepEntities(state: GameState): GameState {
       next[i] = mob;
       continue;
     }
-    const inBubble = !lodActive || mobInLiveRegion(mob, livePawns, LIVE_RADIUS);
+    const inBubble = !lodActive || mobInLiveRegion(mob, region);
     if (
       !inBubble &&
       !isThinkTick(mob.id, turn) &&
-      !nearestPredatorThreat(mob, def, mobs, THREAT_INTERRUPT_RANGE)
+      !predatorThreatAt(i, def, mobs, THREAT_INTERRUPT_RANGE)
     ) {
       if (_traceActive) _stepReason = 'throttled';
       next[i] =
@@ -738,7 +742,7 @@ export function stepHostile(
         path: []
       };
     }
-    const packCorpse = allMobs.find(
+    const packCorpse = mobCorpses(allMobs).find(
       (m) =>
         m.state === 'Corpse' &&
         m.creatureId === mob.creatureId &&
@@ -828,6 +832,8 @@ export function stepHostile(
       canForage && forageCooldownExpired
         ? findNearestFoodTile(state, mob.x, mob.y, FORAGE_RADIUS, tileKinds)
         : null;
+    if (canForage && forageCooldownExpired && !forageTile)
+      mob.forageCooldownUntil = turn + ticksFromSeconds(FORAGE_COOLDOWN_SECONDS);
     const forageDist = forageTile ? manhattan(mob.x, mob.y, forageTile.x, forageTile.y) : Infinity;
 
     const prey =

@@ -9,7 +9,8 @@ const none = {
   gungraun: false,
   browser: false,
   tps: false,
-  bench: false
+  bench: false,
+  mutants: false
 };
 const checkOnly = { ...none, check: true };
 
@@ -32,7 +33,7 @@ describe('scopeOf', () => {
   });
 
   it('runs every leg but the Rust instruction counts for a game source change', () => {
-    expect(scopeOf(['src/lib/game/sim/commands.ts'])).toEqual({
+    expect(scopeOf(['src/lib/game/sim/simProtocol.ts'])).toEqual({
       ...none,
       check: true,
       coverage: true,
@@ -54,6 +55,13 @@ describe('scopeOf', () => {
       bench: true
     });
     expect(scopeOf(['tools/gungraun/gate.mjs'])).toEqual({ ...checkOnly, gungraun: true });
+  });
+
+  it('runs the mutant pins for a file the mutant registry names, and for the tool', () => {
+    expect(scopeOf(['src/lib/game/core/defs/wounds.ts']).mutants).toBe(true);
+    expect(scopeOf(['src/tests/game/systems/woundRecovery.test.ts']).mutants).toBe(true);
+    expect(scopeOf(['tools/mutants/pins.mjs'])).toEqual({ ...checkOnly, mutants: true });
+    expect(scopeOf(['src/lib/game/sim/simProtocol.ts']).mutants).toBe(false);
   });
 
   it('checks and measures coverage for a change to tests alone', () => {

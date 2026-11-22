@@ -10,6 +10,14 @@ export interface TileDelta {
 const dirtyTerrain = new Map<string, TileDelta>();
 const dirtySnow = new Map<string, TileDelta>();
 
+const terrainWatches: Map<string, WorldTile>[] = [];
+
+export function watchTerrainTiles(): Map<string, WorldTile> {
+  const watch = new Map<string, WorldTile>();
+  terrainWatches.push(watch);
+  return watch;
+}
+
 export function markTileDirty(
   y: number,
   x: number,
@@ -20,6 +28,7 @@ export function markTileDirty(
   if (kind === 'terrain') {
     dirtySnow.delete(key);
     dirtyTerrain.set(key, { y, x, tile, kind: 'terrain' });
+    for (let i = 0; i < terrainWatches.length; i++) terrainWatches[i].set(key, tile);
   } else if (!dirtyTerrain.has(key)) {
     dirtySnow.set(key, { y, x, tile, kind: 'snow' });
   }

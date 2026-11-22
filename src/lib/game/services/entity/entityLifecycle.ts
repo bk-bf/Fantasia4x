@@ -35,7 +35,7 @@ import {
   MOB_BASE_CLOT_CHANCE,
   MOB_BLOODLETTING_CLOT_FACTOR
 } from '../../core/defs/wounds';
-import { entityName, mobInLiveRegion, isThinkTick } from './entityHelpers';
+import { entityName, mobInLiveRegion, liveRegion, isThinkTick } from './entityHelpers';
 import {
   BASE_HUNGER_PER_SECOND,
   BASE_FATIGUE_PER_SECOND,
@@ -61,13 +61,14 @@ export function stepHunger(state: GameState): GameState {
 
   const livePawns = state.pawns.filter((p) => p.position && p.isAlive !== false);
   const lodActive = livePawns.length > 0;
+  const region = liveRegion(livePawns, LIVE_RADIUS);
   const witnessAmbient = getAmbientLight(turn);
   const witnessWeatherMul = weatherSightMul(state.weather?.type);
   const deathWitnessed = (x: number, y: number) =>
     isWitnessedByColony(state.pawns, x, y, witnessAmbient, witnessWeatherMul);
   for (const mob of mobs) {
     if (mob.state === 'Corpse' || mob.isAlive === false) continue;
-    const inBubble = !lodActive || mobInLiveRegion(mob, livePawns, LIVE_RADIUS);
+    const inBubble = !lodActive || mobInLiveRegion(mob, region);
     const maxBV = mob.maxBloodVolume ?? 100;
     const bleeding =
       (mob.bloodVolume ?? maxBV) < maxBV &&
