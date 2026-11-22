@@ -5,6 +5,7 @@
   import PixelGlyph from '../widget/PixelGlyph.svelte';
   import ChromeButton from '../widget/ChromeButton.svelte';
   import HoverTip from '../tooltip/HoverTip.svelte';
+  import ScrollArea from '../widget/ScrollArea.svelte';
   import ItemStatTooltip from '../tooltip/ItemStatTooltip.svelte';
   import BuildingStatTooltip from '../tooltip/BuildingStatTooltip.svelte';
   import type { GlyphName } from '$lib/pixelArt/glyphs';
@@ -68,7 +69,7 @@
 
   let descTip = $state<{ x: number; y: number } | null>(null);
   let itemTip = $state<{ x: number; y: number } | null>(null);
-  let below = $state<{ left: number; top: number } | null>(null);
+  let below = $state<{ x: number; y: number } | null>(null);
 
   const hasItemStats = $derived(
     !!statItem &&
@@ -88,7 +89,7 @@
     if (!buildingDef) return;
     const card = (e.currentTarget as HTMLElement).getBoundingClientRect();
     const win = (e.currentTarget as HTMLElement).closest('[data-window]')?.getBoundingClientRect();
-    below = { left: card.left, top: (win?.bottom ?? card.bottom) + 6 };
+    below = { x: card.left, y: (win?.bottom ?? card.bottom) + 6 };
   }
   function enterDesc(e: MouseEvent) {
     const el = e.currentTarget as HTMLElement;
@@ -107,7 +108,7 @@
 >
   <header
     role="group"
-    class:help={showItemTip}
+    style:cursor={showItemTip ? 'help' : null}
     onmouseenter={(e) => showItemTip && (itemTip = { x: e.clientX, y: e.clientY })}
     onmousemove={(e) => itemTip && (itemTip = { x: e.clientX, y: e.clientY })}
     onmouseleave={() => (itemTip = null)}
@@ -131,7 +132,7 @@
   </header>
   {#if description}
     <p
-      style="-webkit-line-clamp:{lines};height:{lines * 16}px"
+      style="-webkit-line-clamp:{lines};height:{lines * 16}px;flex:none"
       onmouseenter={enterDesc}
       onmousemove={(e) => descTip && (descTip = { x: e.clientX, y: e.clientY })}
       onmouseleave={() => (descTip = null)}
@@ -150,7 +151,7 @@
       <PixelGlyph name="axe" /><span>needs {requiredTool}{requiredToolMet ? '' : ' (none)'}</span>
     </div>
   {/if}
-  <div class="cost">{@render children?.()}</div>
+  <ScrollArea class="cost">{@render children?.()}</ScrollArea>
   <div class="acts">
     <ChromeButton
       class="main {variant}"
@@ -174,7 +175,7 @@
 {/if}
 
 {#if below && buildingDef}
-  <BuildingStatTooltip building={buildingDef} materials={statMaterials} {...below} />
+  <BuildingStatTooltip building={buildingDef} materials={statMaterials} {...below} anchored />
 {:else if itemTip && showItemTip && statItem}
   <ItemStatTooltip
     item={statItem}
@@ -203,9 +204,6 @@
     display: flex;
     gap: 8px;
     align-items: center;
-  }
-  header.help {
-    cursor: help;
   }
   .bspr {
     flex: none;
@@ -275,9 +273,11 @@
   .at.neg {
     color: var(--neg);
   }
-  .cost {
+  .bcard :global(.scroll-area.cost) {
+    flex: 1 1 auto;
     display: flex;
     flex-direction: column;
+    scrollbar-gutter: auto;
     color: var(--text-dim);
   }
   .acts {

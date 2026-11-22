@@ -8,6 +8,7 @@
   import BuildCard from '$lib/components/UI/hud/BuildCard.svelte';
   import ItemPills, { type ItemPillView } from '$lib/components/UI/widget/ItemPills.svelte';
   import MaterialPick from '$lib/components/UI/widget/MaterialPick.svelte';
+  import CardRow from '$lib/components/UI/widget/CardRow.svelte';
   import type { Building } from '$lib/game/core/types';
 
   let { defs }: { defs: Building[] } = $props();
@@ -45,7 +46,7 @@
       });
 </script>
 
-<div class="cards">
+<CardRow height={172}>
   {#each defs as building (building.id)}
     {@const count = placed(building.id)}
     {@const affordable = !!gs && buildingService.resolveBuildingCost(building.id, gs) !== null}
@@ -86,15 +87,9 @@
       {/if}
     </BuildCard>
   {/each}
-</div>
+</CardRow>
 
 <style>
-  .cards {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(176px, 1fr));
-    grid-auto-rows: minmax(172px, auto);
-    gap: 6px;
-  }
   .free {
     color: var(--text-muted);
   }

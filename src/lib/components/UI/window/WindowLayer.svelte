@@ -42,6 +42,8 @@
     if (want !== 'big') return Math.min(want, W - 12);
     return Math.min(W - 12, BIG_WIDTH_MAX, Math.max(BIG_WIDTH_MIN, W - left - right - 16));
   }
+  const capOf = () => Math.min(WINDOW_HEIGHT_MAX, H - top - 12);
+
   function heightOf(id: WindowId): number | null {
     const spec = WINDOWS[id];
     if (spec.modal) return null;
@@ -82,6 +84,7 @@
         pos={pos[id] ?? null}
         width={widthOf(id)}
         height={heightOf(id)}
+        maxHeight={spec.modal || chosen[id] ? null : capOf()}
         z={(spec.modal ? 40 : 10) + open.indexOf(id)}
         onsize={(w, h) => sized(id, w, h)}
         onmove={(p) => (pos[id] = dragTo(p, size[id]?.w ?? 0, area))}

@@ -2,6 +2,7 @@
   import { gameState } from '$lib/stores/gameState';
   import QueueChip from '$lib/components/UI/widget/QueueChip.svelte';
   import Well from '$lib/components/UI/widget/Well.svelte';
+  import ScrollArea from '$lib/components/UI/widget/ScrollArea.svelte';
   import type { CraftingInProgress } from '$lib/game/core/types';
   import { craftLanes, recipeOf } from './craftData';
 
@@ -37,7 +38,7 @@
 </script>
 
 <Well class="craft-queue" title="Queue ({queue.length})">
-  <div class="lanes">
+  <ScrollArea class="lanes">
     {#each lanes as lane (lane.id ?? 'hand')}
       <div
         class="lane"
@@ -77,7 +78,7 @@
         {#if lane.items.length === 0}<p class="hint">drop a task here</p>{/if}
       </div>
     {/each}
-  </div>
+  </ScrollArea>
 </Well>
 
 <style>
@@ -85,7 +86,8 @@
     flex: none;
     padding: 7px 10px 8px;
   }
-  .lanes {
+  :global(.craft-queue .scroll-area.lanes) {
+    max-height: 73px;
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
     gap: 4px 10px;

@@ -2,7 +2,7 @@
   import { gameState, currentCulture } from '$lib/stores/gameState';
   import FilterTabs from '$lib/components/UI/widget/FilterTabs.svelte';
   import SearchBar from '$lib/components/UI/widget/SearchBar.svelte';
-  import ScrollArea from '$lib/components/UI/widget/ScrollArea.svelte';
+  import CardRow from '$lib/components/UI/widget/CardRow.svelte';
   import { useWindowBar } from '$lib/components/UI/window/windowContext';
   import { persisted, persist } from '$lib/stores/uiPersist';
   import CraftQueue from './craft/CraftQueue.svelte';
@@ -72,44 +72,31 @@
 
   {#if queue.length > 0}<CraftQueue {queue} />{/if}
 
-  <ScrollArea class="cards-scroll">
-    {#if shown.length > 0}
-      <div class="cards">
-        {#each shown as entry (entry.key)}
-          <RecipeCard
-            {entry}
-            picked={dishSel[entry.item.id] ?? {}}
-            onpick={(slot, id) => setDishSlot(entry.item.id, slot, id)}
-          />
-        {/each}
-      </div>
-    {:else if term}
-      <p class="muted">no recipes match "{query}"</p>
-    {:else if items.length === 0}
-      <p class="muted">no recipes available</p>
-    {/if}
-  </ScrollArea>
+  {#if shown.length > 0}
+    <CardRow height={214}>
+      {#each shown as entry (entry.key)}
+        <RecipeCard
+          {entry}
+          picked={dishSel[entry.item.id] ?? {}}
+          onpick={(slot, id) => setDishSlot(entry.item.id, slot, id)}
+        />
+      {/each}
+    </CardRow>
+  {:else if term}
+    <p class="muted">no recipes match "{query}"</p>
+  {:else if items.length === 0}
+    <p class="muted">no recipes available</p>
+  {/if}
 </div>
 
 <style>
   .crafting-screen {
-    flex: 1;
-    min-height: 0;
+    flex: none;
     display: flex;
     flex-direction: column;
     gap: 7px;
     color: var(--text);
     font: 16px/16px var(--font-pixel);
-  }
-  .crafting-screen :global(.cards-scroll) {
-    flex: 1;
-    min-height: 0;
-  }
-  .cards {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(176px, 1fr));
-    grid-auto-rows: minmax(214px, auto);
-    gap: 6px;
   }
   .muted {
     margin: 4px 2px;

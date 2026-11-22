@@ -16,6 +16,7 @@
     pos,
     width,
     height,
+    maxHeight = null,
     z,
     tabs,
     tools,
@@ -33,6 +34,7 @@
     pos: Point | null;
     width: number;
     height: number | null;
+    maxHeight?: number | null;
     z: number;
     tabs?: Snippet;
     tools?: Snippet;
@@ -89,6 +91,7 @@
   style:top="{pos?.y ?? 0}px"
   style:width="{width}px"
   style:height={height ? `${height}px` : null}
+  style:max-height={maxHeight ? `${maxHeight}px` : null}
   style:z-index={z}
   style:visibility={pos ? null : 'hidden'}
   bind:offsetWidth={w}

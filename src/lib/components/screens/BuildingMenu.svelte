@@ -55,15 +55,13 @@
 
   <BuildJobs />
 
-  <ScrollArea class="build-scroll">
-    {#if selected === ZONES && !term}
-      <ZonePanel />
-    {:else if shown.length > 0}
-      <BuildingCards defs={shown} />
-    {:else if term}
-      <p class="muted">no buildings match "{query}"</p>
-    {/if}
-  </ScrollArea>
+  {#if selected === ZONES && !term}
+    <ScrollArea class="build-scroll"><ZonePanel /></ScrollArea>
+  {:else if shown.length > 0}
+    <BuildingCards defs={shown} />
+  {:else if term}
+    <p class="muted">no buildings match "{query}"</p>
+  {/if}
 </div>
 
 <style>

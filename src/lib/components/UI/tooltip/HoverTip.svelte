@@ -6,8 +6,9 @@
     x,
     y,
     pinned = false,
+    anchored = false,
     children
-  }: { x: number; y: number; pinned?: boolean; children: Snippet } = $props();
+  }: { x: number; y: number; pinned?: boolean; anchored?: boolean; children: Snippet } = $props();
 
   let node: HTMLElement;
   let raf = 0;
@@ -22,10 +23,11 @@
     const w = node.offsetWidth;
     const h = node.offsetHeight;
 
-    let left = x + GAP + w > vw - MARGIN ? x - GAP - w : x + GAP;
+    const gap = anchored ? 0 : GAP;
+    let left = anchored || x + gap + w <= vw - MARGIN ? x + gap : x - gap - w;
     left = Math.max(MARGIN, Math.min(left, vw - w - MARGIN));
 
-    let top = y + GAP + h > vh - MARGIN ? y - GAP - h : y + GAP;
+    let top = anchored || y + gap + h <= vh - MARGIN ? y + gap : y - gap - h;
     top = Math.max(MARGIN, Math.min(top, vh - h - MARGIN));
 
     node.style.left = `${left}px`;
@@ -71,7 +73,7 @@
   class:pinned
   use:portal
   data-pin-panel
-  style="left:{x + GAP}px; top:{y + GAP}px;"
+  style="left:{x + (anchored ? 0 : GAP)}px; top:{y + (anchored ? 0 : GAP)}px;"
   {@attach chrome('tip')}
 >
   <div class="tip-body">
