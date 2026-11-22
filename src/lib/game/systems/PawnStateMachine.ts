@@ -14,16 +14,15 @@ import type {
 import {
   HEALING_CONFIG,
   CARE_CONFIG,
-  isTended,
-  isUncareable,
   healLimbs,
   rollWoundClotting,
+  woundInfectionPressure,
   CLOT_ROLL_INTERVAL,
   BASE_CLOT_CHANCE
 } from '../core/defs/wounds';
 import { feedOnVictim } from '../core/defs/lineages';
 import { coversPart } from '../core/rules/gear/armorCoverage';
-import { lethalAnatomyCause } from '../core/defs/bodyParts';
+import { hasLivingPart, lethalAnatomyCause } from '../core/defs/bodyParts';
 import conditionsData from '../database/pawns/conditions.json';
 import buildingsData from '../database/world/buildings.json';
 const BED_TREATMENT_BONUS = new Map<string, number>(
@@ -174,6 +173,7 @@ const ACTIVE_HEAL_MUL = 0.1;
 const SHELTER_HEAL_MUL = 1.6;
 
 const CONDITIONS_DB = conditionsData as unknown as ConditionDef[];
+const INFECTION_DEF = CONDITIONS_DB.find((d) => d.id === 'infection');
 
 const BLEED_ETA_REF_HOURS = 8;
 
@@ -343,9 +343,12 @@ function tickConditions(pawn: Pawn, gameState: GameState): GameState {
           gameState.worldMap
         )
       : 1;
-    const el = dampenLightByNightVision(tileLight, getNightVision(pawn));
-    pawn.effectiveLight =
-      el >= DARKNESS_ONSET ? 1 : Math.max(DARKNESS_SIGHT_FLOOR, el / DARKNESS_ONSET);
+    if (tileLight >= DARKNESS_ONSET) pawn.effectiveLight = 1;
+    else {
+      const el = dampenLightByNightVision(tileLight, getNightVision(pawn));
+      pawn.effectiveLight =
+        el >= DARKNESS_ONSET ? 1 : Math.max(DARKNESS_SIGHT_FLOOR, el / DARKNESS_ONSET);
+    }
   }
 
   const needVals = pawn.needs as unknown as Record<string, number> | undefined;
@@ -513,28 +516,7 @@ function tickConditions(pawn: Pawn, gameState: GameState): GameState {
     return killPawn(updatedGs.pawns.find((p) => p.id === pawn.id)!, 'blood_loss', updatedGs);
   }
 
-  let infectionPressure = 0;
-  for (const limb of limbs) {
-    for (const part of limb.parts ?? []) {
-      for (const w of part.injuries) {
-        const open =
-          w.bleeding > 0 ||
-          w.severity === 'serious' ||
-          w.severity === 'critical' ||
-          w.severity === 'destroyed';
-        const age = gameState.turn - (w.inflictedAt ?? gameState.turn);
-        if (
-          open &&
-          !isUncareable(w) &&
-          !isTended(w, gameState.turn) &&
-          age >= CARE_CONFIG.infectionIncubationTicks
-        ) {
-          infectionPressure += CARE_CONFIG.infectionRiskPerWound;
-        }
-      }
-    }
-  }
-  infectionPressure = Math.min(infectionPressure, CARE_CONFIG.infectionRiskMax);
+  const infectionPressure = woundInfectionPressure(limbs, gameState.turn);
   const immune = Math.max(
     0,
     Math.min(0.95, CARE_CONFIG.immuneResistBase + (pawn.stats.constitution - 10) * 0.02)
@@ -552,8 +534,7 @@ function tickConditions(pawn: Pawn, gameState: GameState): GameState {
   } else {
     conditions.push({ id: 'infection', severity: nextInf });
   }
-  const infectionDef = CONDITIONS_DB.find((d) => d.id === 'infection');
-  if (infectionDef && nextInf >= infectionDef.lethalSeverity) {
+  if (INFECTION_DEF && nextInf >= INFECTION_DEF.lethalSeverity) {
     const updatedGs = {
       ...gameState,
       pawns: gameState.pawns.map((p) =>
@@ -935,16 +916,6 @@ function buildGraphContext(pawn: Pawn, turn: number): GraphContext {
   };
 }
 
-function hasLivingPart(pawn: Pawn, partIds: string[]): boolean {
-  for (const limb of pawn.limbs ?? []) {
-    if (limb.isMissing) continue;
-    for (const part of limb.parts ?? []) {
-      if (!part.isMissing && partIds.includes(part.id)) return true;
-    }
-  }
-  return false;
-}
-
 function envSelfConditionActive(pawn: Pawn, condId: string, turn: number): boolean {
   if (!(pawn.traits ?? []).some((t) => t.selfCondition === condId)) return false;
   const def = getTransientConditionDef(condId);
@@ -999,7 +970,7 @@ export function syncTransientConditions(pawn: Pawn, turn?: number): Pawn {
     const sc = t.selfCondition;
     if (!sc || ids.includes(sc)) continue;
     const def = getTransientConditionDef(sc);
-    if (def?.hostParts?.length && pawn.limbs?.length && !hasLivingPart(pawn, def.hostParts))
+    if (def?.hostParts?.length && pawn.limbs?.length && !hasLivingPart(pawn.limbs, def.hostParts))
       continue;
     if (def?.activateWhen) {
       if (turn == null) continue;

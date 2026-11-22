@@ -43,6 +43,28 @@ const CONDITION_BY_ID = new Map<string, ConditionDef | TransientConditionDef>(
 export function getConditionDefById(id: string): ConditionDef | TransientConditionDef | undefined {
   return CONDITION_BY_ID.get(id);
 }
+function conditionDef(id: string): ConditionDef | undefined {
+  return CONDITION_BY_ID.get(id) as ConditionDef | undefined;
+}
+type ModifierKey = keyof ConditionModifiers;
+function defModifierKeys(d: ConditionDef | TransientConditionDef): Set<ModifierKey> {
+  const keys = new Set<ModifierKey>();
+  const add = (m: ConditionModifiers | undefined) => {
+    if (m) for (const k of Object.keys(m) as ModifierKey[]) keys.add(k);
+  };
+  if ((d as TransientConditionDef).transient === true) add((d as TransientConditionDef).modifiers);
+  else for (const stage of (d as ConditionDef).stages ?? []) add(stage.modifiers);
+  return keys;
+}
+const DEF_MODIFIER_KEYS = new Map(ALL_CONDITION_DEFS.map((d) => [d.id, defModifierKeys(d)]));
+const ANY_MODIFIER_KEYS: ReadonlySet<ModifierKey> = new Set(
+  [...DEF_MODIFIER_KEYS.values()].flatMap((keys) => [...keys])
+);
+type DrivenDef = ConditionDef & { driver: NonNullable<ConditionDef['driver']> };
+const NEED_DRIVER_DEFS = CONDITIONS_DB.filter(
+  (d): d is DrivenDef => !!d.driver && !d.driver.source
+);
+const TEMPERATURE_DRIVER_DEFS = CONDITIONS_DB.filter((d): d is DrivenDef => !!d.driver?.source);
 
 export const CONDITION_IDS_WITH_TRIGGERS: ReadonlySet<string> = new Set(
   ALL_CONDITION_DEFS.filter((d) => (d.triggers?.length ?? 0) > 0).map((d) => d.id)
@@ -134,6 +156,7 @@ export function conditionModifierSum(
   entity: { conditions?: EntityCondition[]; transientConditions?: string[] },
   key: keyof ConditionModifiers
 ): number {
+  if (!ANY_MODIFIER_KEYS.has(key)) return 0;
   let sum = 0;
   eachConditionModifier(entity, key, (v) => {
     sum += v;
@@ -171,7 +194,7 @@ export function snapshotConditionStages(
 ): Map<string, string> | undefined {
   let snap: Map<string, string> | undefined;
   for (const c of conditions) {
-    const def = CONDITIONS_DB.find((d) => d.id === c.id);
+    const def = conditionDef(c.id);
     if (!def?.floater) continue;
     const stage = getConditionCurrentStage(c);
     if (stage) (snap ??= new Map()).set(c.id, stage.label);
@@ -187,7 +210,7 @@ export function emitPersistentConditionFloaters(
 ): void {
   if (x < 0 || y < 0) return;
   for (const c of next) {
-    const def = CONDITIONS_DB.find((d) => d.id === c.id);
+    const def = conditionDef(c.id);
     if (!def?.floater) continue;
     const stage = getConditionCurrentStage(c);
     if (!stage || prevStages?.get(c.id) === stage.label) continue;
@@ -226,7 +249,7 @@ export function detectVitalEscalations(
   const out: { id: string; stageLabel: string }[] = [];
   for (const c of next) {
     if (!VITAL_ALERT_IDS.has(c.id)) continue;
-    const def = CONDITIONS_DB.find((d) => d.id === c.id);
+    const def = conditionDef(c.id);
     if (!def) continue;
     const stages = def.stages;
     let curIdx = -1;
@@ -240,7 +263,7 @@ export function detectVitalEscalations(
 }
 
 export function getConditionCurrentStage(condition: EntityCondition): ConditionStage | undefined {
-  const def = CONDITIONS_DB.find((d) => d.id === condition.id);
+  const def = conditionDef(condition.id);
   if (!def) return undefined;
   let active: ConditionStage | undefined;
   for (const stage of def.stages) {
@@ -250,12 +273,12 @@ export function getConditionCurrentStage(condition: EntityCondition): ConditionS
 }
 
 export function getConditionName(condition: EntityCondition): string {
-  const def = CONDITIONS_DB.find((d) => d.id === condition.id);
+  const def = conditionDef(condition.id);
   return def?.name ?? condition.id.replace(/_/g, ' ');
 }
 
 export function getConditionLabel(condition: EntityCondition): string {
-  const def = CONDITIONS_DB.find((d) => d.id === condition.id);
+  const def = conditionDef(condition.id);
   const name = def?.name ?? condition.id.replace(/_/g, ' ');
   const stage = getConditionCurrentStage(condition);
   return stage ? `${name} (${stage.label})` : name;
@@ -293,9 +316,7 @@ export function driveNeedConditions(
   needVals: Record<string, number> | undefined,
   tickScale = 1
 ): string | null {
-  for (const def of CONDITIONS_DB) {
-    if (!def.driver) continue;
-    if (def.driver.source) continue;
+  for (const def of NEED_DRIVER_DEFS) {
     const needVal = needVals?.[def.driver.need!] ?? 0;
     applyConditionDriver(conditions, def, needVal, 1, tickScale);
     const current = conditions.find((c) => c.id === def.id);
@@ -310,9 +331,8 @@ export function driveTemperatureConditions(
   heatExposure: number,
   recoveryMul = 1
 ): string | null {
-  for (const def of CONDITIONS_DB) {
-    const src = def.driver?.source;
-    if (!src) continue;
+  for (const def of TEMPERATURE_DRIVER_DEFS) {
+    const src = def.driver.source;
     applyConditionDriver(
       conditions,
       def,
@@ -465,6 +485,24 @@ const NO_STAT_MULT: StatMultipliers = Object.freeze({
   perception: 1,
   intelligence: 1
 });
+const STAT_MULTIPLIER_KEYS = Object.keys(NO_STAT_MULT) as ModifierKey[];
+const STAT_MODIFIER_IDS: ReadonlySet<string> = new Set(
+  ALL_CONDITION_DEFS.filter((d) =>
+    STAT_MULTIPLIER_KEYS.some((k) => DEF_MODIFIER_KEYS.get(d.id)!.has(k))
+  ).map((d) => d.id)
+);
+
+function hasAnyId(conds: EntityCondition[] | undefined, ids: ReadonlySet<string>): boolean {
+  if (!conds) return false;
+  for (let i = 0; i < conds.length; i++) if (ids.has(conds[i].id)) return true;
+  return false;
+}
+
+function hasAnyTransientId(tconds: string[] | undefined, ids: ReadonlySet<string>): boolean {
+  if (!tconds) return false;
+  for (let i = 0; i < tconds.length; i++) if (ids.has(tconds[i])) return true;
+  return false;
+}
 
 export function conditionStatMultipliers(entity: {
   conditions?: EntityCondition[];
@@ -472,7 +510,8 @@ export function conditionStatMultipliers(entity: {
 }): StatMultipliers {
   const conds = entity.conditions;
   const tconds = entity.transientConditions;
-  if ((!conds || conds.length === 0) && (!tconds || tconds.length === 0)) return NO_STAT_MULT;
+  if (!hasAnyId(conds, STAT_MODIFIER_IDS) && !hasAnyTransientId(tconds, STAT_MODIFIER_IDS))
+    return NO_STAT_MULT;
   const out: StatMultipliers = {
     strength: 1,
     dexterity: 1,

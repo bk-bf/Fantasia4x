@@ -48,15 +48,23 @@ export function needsRecovery(pawn: Pawn): boolean {
   if (pawn.isAlive === false) return false;
   let bleed = 0;
   let recoverablePain = 0;
-  for (const l of pawn.limbs ?? []) {
-    bleed += l.bleedRate ?? 0;
-    for (const p of l.parts ?? [])
-      for (const w of p.injuries) {
-        if (isUncareable(w)) continue;
-        recoverablePain += w.painContribution ?? 0;
-        if (w.severity !== 'minor') return true;
+  const limbs = pawn.limbs;
+  if (limbs)
+    for (let li = 0; li < limbs.length; li++) {
+      const l = limbs[li];
+      bleed += l.bleedRate ?? 0;
+      const parts = l.parts;
+      if (!parts) continue;
+      for (let pi = 0; pi < parts.length; pi++) {
+        const injuries = parts[pi].injuries;
+        for (let wi = 0; wi < injuries.length; wi++) {
+          const w = injuries[wi];
+          if (isUncareable(w)) continue;
+          recoverablePain += w.painContribution ?? 0;
+          if (w.severity !== 'minor') return true;
+        }
       }
-  }
+    }
   if (recoverablePain >= RECOVER_PAIN_THRESHOLD) return true;
   return bleed >= RECOVER_BLEED_THRESHOLD;
 }

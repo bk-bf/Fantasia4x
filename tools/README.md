@@ -22,7 +22,7 @@ to ubuntuserver through `remote/run.mjs`.
 | `ci/warnings.mjs` | Runs `svelte-check`, `eslint`, or `tsc` over the files in `tools/` that `svelte-check` does not reach; fails on an error or on a count past `ci/warning-budget.json`, and in CI lists every finding on the run page, annotates the changed files and feeds the pull request's Check notes. | `pnpm check:types`, `pnpm check:tools`, `pnpm lint` |
 | `dev-shell/` | The Electron shell `./launch.sh --electron` plays the dev server in; its own package, installed by `install.sh`. | `./launch.sh --electron` |
 | `claude/inflight.mjs` | Lists open pull requests with every prompt and flags the first edit of a file they touch. | Claude Code hook |
-| `bench/` | CodSpeed benchmarks of whole ticks and one entity phase, and ticks per second. | `pnpm bench`, `pnpm bench:tps` |
+| `bench/` | CodSpeed benchmarks of whole ticks, one entity phase and the exploration row build, and ticks per second. | `pnpm bench`, `pnpm bench:tps` |
 | `bench/counts.mjs` | Reads the exact instruction and cache-miss counts per benchmark out of CodSpeed's profiles. | `node tools/bench/counts.mjs <dir> --out <file>`, run by the `codspeed` job |
 | `bench/codspeed-gate.mjs` | Waits for CodSpeed's verdict on the head commit and fails on a regression unless the pull request carries `perf change accepted`. The wait lives in `bench/codspeed-check.mjs`, which the Check notes share. | run by the `codspeed` job |
 | `coverage/gate.mjs` | Runs the whole test suite with line coverage of `src/lib/game` and writes the total and each changed file's coverage for the Check notes. | `pnpm test:coverage`, run by the `coverage` job |

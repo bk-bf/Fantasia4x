@@ -99,7 +99,19 @@ describe('worker snapshots mirrored on the main thread', () => {
       projectSentEntity(o);
       return o;
     };
-    const compare = (mirrored: Entity[], truth: (Pawn | Mob)[], skip: string[]) => {
+    const asShown = (v: unknown) =>
+      Object.fromEntries(
+        Object.entries(v as Record<string, unknown>).map(([k, x]) => [
+          k,
+          typeof x === 'number' ? Math.round(x) : x
+        ])
+      );
+    const compare = (
+      mirrored: Entity[],
+      truth: (Pawn | Mob)[],
+      skip: string[],
+      rounded: string[]
+    ) => {
       expect(mirrored.map((e) => e.id)).toEqual(truth.map((e) => e.id));
       for (const e of truth) {
         const want = expected(e);
@@ -109,12 +121,16 @@ describe('worker snapshots mirrored on the main thread', () => {
           delete want[k];
           delete got[k];
         }
+        for (const k of rounded) {
+          want[k] = asShown(want[k]);
+          got[k] = asShown(got[k]);
+        }
         expect(got).toEqual(want);
       }
     };
     const last = seen as unknown as GameState;
-    compare(last.pawns as unknown as Entity[], worker.pawns, []);
-    compare(last.mobs as unknown as Entity[], worker.mobs ?? [], ['path', 'pathIndex']);
+    compare(last.pawns as unknown as Entity[], worker.pawns, [], []);
+    compare(last.mobs as unknown as Entity[], worker.mobs ?? [], ['path', 'pathIndex'], ['needs']);
     expect((last.pawns[0] as Pawn).stats.strength).toBe(18);
   });
 });

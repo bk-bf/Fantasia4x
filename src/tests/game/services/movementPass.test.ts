@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   stepBody,
+  advanceAlongPath,
   seedMidCrossClaims,
   MAX_BLOCKED_TICKS,
   type MovableBody
@@ -110,5 +111,71 @@ describe('stepBody — shared move pass', () => {
     ];
     seedMidCrossClaims(bodies, claimed, 10, () => true);
     expect(claimed.has(tileKey(1, 0, 10))).toBe(true);
+  });
+
+  it('advances the body it is given in place instead of copying it', () => {
+    const path = [
+      { x: 1, y: 0 },
+      { x: 2, y: 0 }
+    ];
+    const b = body('a', 0, 0, { path, pathIndex: 0, blockedTicks: 3 });
+    const res = stepBody(b, new Set(), new Set(), world(), 200);
+    expect(res.body).toBe(b);
+    expect(res.status).toBe('moved');
+    expect(b).toMatchObject({ x: 2, y: 0, pathIndex: 0, blockedTicks: 0 });
+    expect(b.path).toEqual([]);
+    expect(b.nextCellCostLeft).toBeUndefined();
+    expect(res.done).toBe(true);
+  });
+
+  it('keeps the path array and records mid-crossing progress on the body', () => {
+    const path = [
+      { x: 1, y: 0 },
+      { x: 2, y: 0 }
+    ];
+    const b = body('a', 0, 0, { path, pathIndex: 0 });
+    stepBody(b, new Set(), new Set(), world(), 4);
+    expect(b.path).toBe(path);
+    expect(b.x).toBe(0);
+    expect(b.nextCellCostLeft).toBeGreaterThan(0);
+  });
+
+  it('writes blockedTicks onto the held body and clears the path of a dropped one', () => {
+    const occ = new Set([tileKey(1, 0, 10)]);
+    const held = body('a', 0, 0, { path: [{ x: 1, y: 0 }], pathIndex: 0 });
+    expect(stepBody(held, occ, new Set(), world(), 4).body).toBe(held);
+    expect(held.blockedTicks).toBe(1);
+    const dropped = body('b', 0, 0, {
+      path: [{ x: 1, y: 0 }],
+      pathIndex: 0,
+      nextCellCostLeft: 5,
+      blockedTicks: MAX_BLOCKED_TICKS
+    });
+    expect(stepBody(dropped, occ, new Set(), world(), 4).body).toBe(dropped);
+    expect(dropped).toMatchObject({ path: [], pathIndex: 0, blockedTicks: 0 });
+    expect(dropped.nextCellCostLeft).toBeUndefined();
+  });
+
+  it('abandons a path whose next step is not adjacent without moving', () => {
+    const b = body('a', 0, 0, { path: [{ x: 3, y: 0 }], pathIndex: 0 });
+    const res = stepBody(b, new Set(), new Set(), world(), 200);
+    expect(res.done).toBe(true);
+    expect(b).toMatchObject({ x: 0, y: 0, path: [], pathIndex: 0 });
+  });
+});
+
+describe('advanceAlongPath — the copying API', () => {
+  it('returns a moved copy and leaves its input untouched', () => {
+    const path = [{ x: 1, y: 0 }];
+    const b = body('a', 0, 0, { path, pathIndex: 0 });
+    const moved = advanceAlongPath(b, 200, world());
+    expect(moved).not.toBe(b);
+    expect(moved).toMatchObject({ x: 1, y: 0, path: [], pathIndex: 0 });
+    expect(b).toEqual({ id: 'a', x: 0, y: 0, path, pathIndex: 0 });
+  });
+
+  it('returns the same entity when there is no path', () => {
+    const b = body('a', 0, 0);
+    expect(advanceAlongPath(b, 200, world())).toBe(b);
   });
 });

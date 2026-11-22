@@ -14,7 +14,7 @@ import {
   symlinkSync,
   writeFileSync
 } from 'node:fs';
-import { availableParallelism, tmpdir } from 'node:os';
+import { availableParallelism, homedir, tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
@@ -24,6 +24,12 @@ const LINKED = ['node_modules', 'static', 'src/lib/sim-core-pkg', 'src/lib/spati
 const COPIED = ['.svelte-kit'];
 const TIMEOUT_MS = 10 * 60_000;
 const TEST_FILE = /^src\/.+\.(test|spec)\.ts$/;
+const RUST_FILE = /^([^/]+)\/src\/.+\.rs$/;
+const HOME_CARGO = join(homedir(), '.cargo/bin/cargo');
+const CARGO = process.env.CARGO || (existsSync(HOME_CARGO) ? HOME_CARGO : 'cargo');
+
+const crateOf = (file) => RUST_FILE.exec(file)?.[1] ?? null;
+const isRust = (file) => file.endsWith('.rs');
 
 const git = (args, cwd) => execFileSync('git', args, { cwd, encoding: 'utf8', maxBuffer: 1 << 26 });
 
@@ -62,9 +68,20 @@ export function registryErrors(mutants, read) {
         if (n !== 1) errors.push(`${name}: the find text occurs ${n} times in ${m.file}, not once`);
       }
     }
-    for (const t of Array.isArray(m.tests) ? m.tests : [])
-      if (typeof t !== 'string' || !TEST_FILE.test(t) || read(t) === null)
-        errors.push(`${name}: ${t} is not a test file under src/`);
+    const crate = typeof m.file === 'string' && isRust(m.file) ? crateOf(m.file) : undefined;
+    if (crate === null || (crate && read(`${crate}/Cargo.toml`) === null))
+      errors.push(`${name}: ${m.file} is not under the src/ of a crate`);
+    for (const t of Array.isArray(m.tests) ? m.tests : []) {
+      if (crate === undefined) {
+        if (typeof t !== 'string' || !TEST_FILE.test(t) || read(t) === null)
+          errors.push(`${name}: ${t} is not a test file under src/`);
+      } else if (
+        typeof t !== 'string' ||
+        crateOf(t) !== crate ||
+        !(read(t) ?? '').includes('#[test]')
+      )
+        errors.push(`${name}: ${t} holds no #[test] in the crate of ${m.file}`);
+    }
   }
   return errors;
 }
@@ -86,6 +103,7 @@ export function mutate(text, m) {
 }
 
 async function syntaxErrors(file, text) {
+  if (isRust(file)) return [];
   const ts = (await import('typescript')).default;
   const kind = file.endsWith('.ts') ? ts.ScriptKind.TS : ts.ScriptKind.JS;
   const source = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, false, kind);
@@ -154,6 +172,65 @@ function runTests(dir, tests, workers) {
       resolve({ code: code ?? 1, timedOut, seconds: (Date.now() - start) / 1000, ...found });
     });
   });
+}
+
+function runCargo(dir, crate) {
+  const start = Date.now();
+  return new Promise((resolve) => {
+    let out = '';
+    let timedOut = false;
+    const child = spawn(CARGO, ['test', '--lib', '--color', 'never'], {
+      cwd: join(dir, crate),
+      env: { ...process.env, CARGO_TARGET_DIR: join(dir, '.mutant-pins-cargo', crate) },
+      stdio: ['ignore', 'pipe', 'pipe'],
+      detached: true
+    });
+    child.stdout.on('data', (d) => (out += d));
+    child.stderr.on('data', (d) => (out += d));
+    const timer = setTimeout(() => {
+      timedOut = true;
+      try {
+        process.kill(-(child.pid ?? 0), 'SIGKILL');
+      } catch {
+        child.kill('SIGKILL');
+      }
+    }, TIMEOUT_MS);
+    const finish = (code) => {
+      clearTimeout(timer);
+      const unbuilt = /^error: could not compile/m.test(out) || code === null;
+      resolve({
+        code: code ?? 1,
+        timedOut,
+        unbuilt: unbuilt && !timedOut,
+        seconds: (Date.now() - start) / 1000,
+        failed: [...out.matchAll(/^test (\S+) \.\.\. FAILED$/gm)].map((f) => `${crate} ${f[1]}`),
+        errors: unbuilt ? [out.match(/^error.*$/m)?.[0] ?? `${CARGO} test did not run`] : []
+      });
+    };
+    child.on('error', (e) => {
+      out += `error: ${e.message}\n`;
+      finish(null);
+    });
+    child.on('close', finish);
+  });
+}
+
+async function runSuite(dir, tests, workers) {
+  const runs = [];
+  const vitest = tests.filter((t) => !isRust(t));
+  if (vitest.length) runs.push(await runTests(dir, vitest, workers));
+  for (const crate of new Set(tests.filter(isRust).map(crateOf))) {
+    if (runs.some((r) => r.code !== 0)) break;
+    runs.push(await runCargo(dir, crate));
+  }
+  return {
+    code: runs.find((r) => r.code !== 0)?.code ?? 0,
+    timedOut: runs.some((r) => r.timedOut),
+    unbuilt: runs.some((r) => r.unbuilt),
+    seconds: runs.reduce((s, r) => s + r.seconds, 0),
+    failed: runs.flatMap((r) => r.failed),
+    errors: runs.flatMap((r) => r.errors)
+  };
 }
 
 function arg(name) {
@@ -253,7 +330,7 @@ async function main() {
 
   try {
     process.stdout.write(`Running ${tests.length} test file(s) without a mutant in ${dirs[0]}\n`);
-    const baseline = await runTests(dirs[0], tests, Math.max(workers, jobs));
+    const baseline = await runSuite(dirs[0], tests, Math.max(workers, jobs));
     if (baseline.code !== 0) {
       process.stderr.write(
         `The tests fail with no mutant applied, so no mutant can be judged:\n${[...baseline.failed, ...baseline.errors].map((f) => `  ${f}`).join('\n')}\n`
@@ -271,25 +348,25 @@ async function main() {
           const path = join(dir, m.file);
           const original = readFileSync(path, 'utf8');
           writeFileSync(path, mutate(original, m));
-          const run = await runTests(dir, m.tests, workers);
+          const run = await runSuite(dir, m.tests, workers);
           writeFileSync(path, original);
-          const killed = run.code !== 0;
+          const killed = run.code !== 0 && !run.unbuilt;
           const by = run.timedOut ? 'timeout' : (run.failed[0] ?? run.errors[0]);
           const result = {
             id: m.id,
             file: m.file,
             line: lineOf(original, m.find),
-            outcome: killed ? 'killed' : 'survived',
+            outcome: killed ? 'killed' : run.unbuilt ? 'does not compile' : 'survived',
             by,
             seconds: run.seconds
           };
           results.push(result);
           process.stdout.write(
-            `${killed ? 'killed  ' : 'SURVIVED'} ${m.id} (${Math.round(run.seconds)}s)${by ? ` by ${by}` : ''}\n`
+            `${killed ? 'killed  ' : run.unbuilt ? 'UNBUILT ' : 'SURVIVED'} ${m.id} (${Math.round(run.seconds)}s)${by ? ` by ${by}` : ''}\n`
           );
           if (!killed && process.env.GITHUB_ACTIONS === 'true')
             process.stdout.write(
-              `::error file=${m.file},line=${result.line},title=Mutant survived::${escapeData(`${m.id}: replacing ${JSON.stringify(m.find)} with ${JSON.stringify(m.replace)} passes ${m.tests.join(', ')}`)}\n`
+              `::error file=${m.file},line=${result.line},title=Mutant survived::${escapeData(`${m.id}: replacing ${JSON.stringify(m.find)} with ${JSON.stringify(m.replace)} ${run.unbuilt ? 'does not compile' : `passes ${m.tests.join(', ')}`}`)}\n`
             );
         }
       })

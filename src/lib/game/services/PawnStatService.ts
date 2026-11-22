@@ -2,6 +2,7 @@ import type {
   Pawn,
   Mob,
   BodyPartState,
+  LimbState,
   ConditionDef,
   TransientConditionDef,
   Item,
@@ -147,7 +148,9 @@ const BLOOD_FAINT_FLOOR = 0.55;
 
 const BROKEN_BONE_FUNCTION_MULT = 0.4;
 
-const _formulaCache = new Map<string, ((...vars: number[]) => number) | null>();
+type CompiledFormula = (vars: number[]) => number;
+const _formulaCache = new Map<string, CompiledFormula | null>();
+const FORMULA_ARGS: number[] = new Array<number>(FORMULA_VARS.length).fill(0);
 const _formulaUsesPrestige = new Map<string, boolean>();
 
 function formulaUsesPrestige(formula: string): boolean {
@@ -209,20 +212,22 @@ function intactBodyFraction(p: Pawn | Mob): number {
 const FORMULA_CLAMP = (x: number, lo: number, hi: number): number =>
   x < lo ? lo : x > hi ? hi : x;
 
-function compileFormula(formula: string): ((...vars: number[]) => number) | null {
+function compileFormula(formula: string): CompiledFormula | null {
   const cached = _formulaCache.get(formula);
   if (cached !== undefined) return cached;
   const expr = formula.replace(/×/g, '*').replace(/−/g, '-');
   const stripped = expr.replace(/\bclamp\b/g, '').replace(FORMULA_VAR_RE, '0');
-  let fn: ((...vars: number[]) => number) | null = null;
+  let fn: CompiledFormula | null = null;
   if (/^[\d\s+\-*/.(),]+$/.test(stripped)) {
     try {
-      const raw = new Function(
+      fn = new Function(
         'clamp',
-        ...FORMULA_VARS,
-        '"use strict"; return (' + expr + ');'
-      ) as (clamp: typeof FORMULA_CLAMP, ...vars: number[]) => number;
-      fn = (...vars: number[]) => raw(FORMULA_CLAMP, ...vars);
+        '"use strict"; return function (vars) { const ' +
+          FORMULA_VARS.map((v, i) => `${v} = vars[${i}]`).join(', ') +
+          '; return (' +
+          expr +
+          '); };'
+      )(FORMULA_CLAMP) as CompiledFormula;
     } catch {
       fn = null;
     }
@@ -248,113 +253,161 @@ function evaluateFormula(
   const intact = formulaUsesIntact(formula) ? intactBodyFraction(p) : 1;
   const power = formulaUsesPower(formula) ? equippedPowerToken(p, sm) : STAT_SCALE;
   const apt = aptitudeOf(p as { aptitudes?: Record<string, number> }, statId);
-  const v = fn(
-    ...CORE_STAT_KEYS.map((k) => coreStatValue(k, s, sm)),
-    tr?.weight ?? 70,
-    tr?.height ?? 170,
-    capacities.consciousness ?? 1,
-    capacities.manipulation ?? 1,
-    capacities.sight ?? 1,
-    capacities.moving ?? 1,
-    capacities.blood_pumping ?? 1,
-    capacities.blood_filtration ?? 1,
-    capacities.breathing ?? 1,
-    capacities.digestion ?? 1,
-    capacities.talking ?? 1,
-    capacities.hearing ?? 1,
-    capacities.pain ?? 0,
-    prestige,
-    intact,
-    skill,
-    power,
-    apt
-  );
+  const a = FORMULA_ARGS;
+  let i = 0;
+  for (let k = 0; k < CORE_STAT_KEYS.length; k++) a[i++] = coreStatValue(CORE_STAT_KEYS[k], s, sm);
+  a[i++] = tr?.weight ?? 70;
+  a[i++] = tr?.height ?? 170;
+  a[i++] = capacities.consciousness ?? 1;
+  a[i++] = capacities.manipulation ?? 1;
+  a[i++] = capacities.sight ?? 1;
+  a[i++] = capacities.moving ?? 1;
+  a[i++] = capacities.blood_pumping ?? 1;
+  a[i++] = capacities.blood_filtration ?? 1;
+  a[i++] = capacities.breathing ?? 1;
+  a[i++] = capacities.digestion ?? 1;
+  a[i++] = capacities.talking ?? 1;
+  a[i++] = capacities.hearing ?? 1;
+  a[i++] = capacities.pain ?? 0;
+  a[i++] = prestige;
+  a[i++] = intact;
+  a[i++] = skill;
+  a[i++] = power;
+  a[i++] = apt;
+  const v = fn(a);
   return isFinite(v) ? Math.round(v * 1000) / 1000 : 1.0;
+}
+
+const ORGAN_PATTERNS = [
+  /brain|synganglion/i,
+  /heart/i,
+  /lung/i,
+  /eye/i,
+  /kidney|malpighian/i,
+  /stomach/i,
+  /liver|digestivegland/i
+];
+const BRAIN = 0;
+const HEART = 1;
+const LUNG = 2;
+const EYE = 3;
+const KIDNEY = 4;
+const STOMACH = 5;
+const LIVER = 6;
+const PART_ORGAN_MASK = new Map<string, number>();
+const ORGAN_COUNT = new Float64Array(ORGAN_PATTERNS.length);
+const ORGAN_MIN = new Float64Array(ORGAN_PATTERNS.length);
+const ORGAN_SUM = new Float64Array(ORGAN_PATTERNS.length);
+
+function partOrganMask(id: string): number {
+  let mask = PART_ORGAN_MASK.get(id);
+  if (mask === undefined) {
+    mask = 0;
+    for (let i = 0; i < ORGAN_PATTERNS.length; i++) if (ORGAN_PATTERNS[i].test(id)) mask |= 1 << i;
+    PART_ORGAN_MASK.set(id, mask);
+  }
+  return mask;
+}
+
+function scanOrgans(limbs: LimbState[]): void {
+  ORGAN_COUNT.fill(0);
+  ORGAN_SUM.fill(0);
+  ORGAN_MIN.fill(Infinity);
+  for (let li = 0; li < limbs.length; li++) {
+    const parts = limbs[li].parts;
+    if (!parts) continue;
+    for (let pi = 0; pi < parts.length; pi++) {
+      const p = parts[pi];
+      const mask = partOrganMask(p.id);
+      if (mask === 0) continue;
+      let frac = 0;
+      if (!p.isMissing) {
+        const max = p.maxHp ?? 100;
+        frac = max > 0 ? (p.health ?? max) / max : 0;
+      }
+      for (let i = 0; i < ORGAN_PATTERNS.length; i++) {
+        if ((mask & (1 << i)) === 0) continue;
+        ORGAN_COUNT[i]++;
+        ORGAN_SUM[i] += frac;
+        ORGAN_MIN[i] = Math.min(ORGAN_MIN[i], frac);
+      }
+    }
+  }
+}
+
+function organOne(organ: number): number {
+  return ORGAN_COUNT[organ] ? ORGAN_MIN[organ] : 1;
+}
+
+function organBlend(organ: number, minWeight: number): number {
+  if (!ORGAN_COUNT[organ]) return 1 * minWeight + 1 * (1 - minWeight);
+  return ORGAN_MIN[organ] * minWeight + (ORGAN_SUM[organ] / ORGAN_COUNT[organ]) * (1 - minWeight);
+}
+
+function findLimb(limbs: LimbState[], id: string): LimbState | undefined {
+  return limbs.find((l) => l.id === id);
+}
+
+function limbBoneBroken(limbs: LimbState[], id: string): boolean {
+  return (findLimb(limbs, id)?.parts ?? []).some((p) => p.boneBroken && !p.isMissing);
+}
+
+function limbCapacity(limbs: LimbState[], pattern: RegExp, minWeight: number): number {
+  const vals: number[] = [];
+  for (const l of limbs) {
+    if (!pattern.test(l.id)) continue;
+    vals.push(
+      l.isMissing
+        ? 0
+        : (Math.min(100, l.health) / 100) *
+            (limbBoneBroken(limbs, l.id) ? BROKEN_BONE_FUNCTION_MULT : 1)
+    );
+  }
+  if (vals.length === 0) return 1.0;
+  const min = Math.min(...vals);
+  const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
+  return min * minWeight + avg * (1 - minWeight);
+}
+
+function findOrgan(limbs: LimbState[], limbId: string, organId: string): BodyPartState | undefined {
+  return findLimb(limbs, limbId)?.parts?.find((p) => p.id === organId);
+}
+
+function organFraction(limbs: LimbState[], limbId: string, organId: string): number {
+  const o = findOrgan(limbs, limbId, organId);
+  if (!o) return 1;
+  if (o.isMissing) return 0;
+  const max = o.maxHp ?? 100;
+  const hp = o.health ?? max;
+  return (max > 0 ? (hp / max) * 100 : 0) / 100;
+}
+
+function capacityPain(pawn: Pawn | Mob, limbs: LimbState[]): number {
+  let injuryPain = 0;
+  pawn.injuries?.forEach((inj) => (injuryPain += inj.painContribution));
+  let limbPain = 0;
+  for (const l of limbs) {
+    if (!l.isMissing && l.health < 100) {
+      limbPain += (100 - l.health) * 0.01;
+    }
+  }
+  let bleedPain = 0;
+  for (const l of limbs) bleedPain += l.bleedRate * 0.5;
+  return ((injuryPain + limbPain + bleedPain) / 100) * conditionPainMultiplier(pawn);
 }
 
 function calculateCapacityValue(
   pawn: Pawn | Mob,
   capacityId: string,
   capacities: Record<string, number>,
+  limbs: LimbState[],
+  painValue: number,
   lightMultiplier?: number
 ): number {
-  const limbs = pawn.limbs ?? [];
-  const limb = (id: string) => limbs.find((l) => l.id === id);
-  const limbBoneBroken = (id: string) =>
-    (limb(id)?.parts ?? []).some((p) => p.boneBroken && !p.isMissing);
-  const limbCapacity = (pred: (id: string) => boolean, minWeight: number): number => {
-    const ls = limbs.filter((l) => pred(l.id));
-    if (ls.length === 0) return 1.0;
-    const vals = ls.map((l) =>
-      l.isMissing
-        ? 0
-        : (Math.min(100, l.health) / 100) * (limbBoneBroken(l.id) ? BROKEN_BONE_FUNCTION_MULT : 1)
-    );
-    const min = Math.min(...vals);
-    const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
-    return min * minWeight + avg * (1 - minWeight);
-  };
-
-  const organ = (limbId: string, organId: string): BodyPartState | undefined =>
-    limb(limbId)?.parts?.find((p) => p.id === organId);
-  const organH = (limbId: string, organId: string) => {
-    const o = organ(limbId, organId);
-    if (!o) return 100;
-    const max = o.maxHp ?? 100;
-    const hp = o.health ?? max;
-    return max > 0 ? (hp / max) * 100 : 0;
-  };
-  const organMissing = (limbId: string, organId: string) =>
-    organ(limbId, organId)?.isMissing ?? false;
-
-  const organFracs = (pat: RegExp): number[] => {
-    const out: number[] = [];
-    for (const l of limbs)
-      for (const p of l.parts ?? []) {
-        if (!pat.test(p.id)) continue;
-        if (p.isMissing) {
-          out.push(0);
-          continue;
-        }
-        const max = p.maxHp ?? 100;
-        out.push(max > 0 ? (p.health ?? max) / max : 0);
-      }
-    return out;
-  };
-  const organOne = (pat: RegExp): number => {
-    const f = organFracs(pat);
-    return f.length ? Math.min(...f) : 1;
-  };
-  const organBlend = (pat: RegExp, minWeight: number): number => {
-    const f = organFracs(pat);
-    const v = f.length ? f : [1];
-    const min = Math.min(...v);
-    const avg = v.reduce((a, b) => a + b, 0) / v.length;
-    return min * minWeight + avg * (1 - minWeight);
-  };
-
-  let value = 1.0;
-
-  let injuryPain = 0;
-  pawn.injuries?.forEach((inj) => (injuryPain += inj.painContribution));
-  let limbPain = 0;
-  limbs.forEach((l) => {
-    if (!l.isMissing && l.health < 100) {
-      limbPain += (100 - l.health) * 0.01;
-    }
-  });
-  let bleedPain = 0;
-  limbs.forEach((l) => {
-    bleedPain += l.bleedRate * 0.5;
-  });
-  const painValue = ((injuryPain + limbPain + bleedPain) / 100) * conditionPainMultiplier(pawn);
-
   switch (capacityId) {
     case 'consciousness': {
-      const brain = organOne(/brain|synganglion/i);
-      const heart = organOne(/heart/i);
-      const avgLung = organBlend(/lung/i, 0);
-      const baseCon = brain * 0.6 + heart * 0.15 + avgLung * 0.1 + 0.1;
+      const baseCon =
+        organOne(BRAIN) * 0.6 + organOne(HEART) * 0.15 + organBlend(LUNG, 0) * 0.1 + 0.1;
       const hearingCap = capacities.hearing ?? 1;
       const effectivePain = Math.max(0, painValue - 0.1);
       const painMult = Math.max(0.05, 1 - effectivePain);
@@ -365,68 +418,43 @@ function calculateCapacityValue(
         Math.max(0, (bloodLoss - BLOOD_FAINT_ONSET) / (BLOOD_FAINT_FLOOR - BLOOD_FAINT_ONSET))
       );
       const bloodMult = 1 - bloodSeverity;
-      value =
+      return (
         (baseCon + hearingCap * 0.05) *
         painMult *
         bloodMult *
-        conditionConsciousnessMultiplier(pawn);
-      break;
+        conditionConsciousnessMultiplier(pawn)
+      );
     }
-    case 'pain': {
-      value = painValue;
-      break;
-    }
-    case 'manipulation': {
-      value = limbCapacity((id) => /arm/i.test(id), 0.3);
-      break;
-    }
-    case 'sight': {
-      const baseSight = organBlend(/eye/i, 0.4) + 0.05;
-      value = baseSight * (lightMultiplier ?? 1.0);
-      break;
-    }
-    case 'night_vision': {
-      value = getNightVision(pawn);
-      break;
-    }
-    case 'moving': {
-      value = limbCapacity((id) => /leg/i.test(id), 0.5);
-      break;
-    }
-    case 'blood_pumping': {
-      value = organOne(/heart/i) * 0.9 + 0.1;
-      break;
-    }
-    case 'blood_filtration': {
-      value = organBlend(/kidney|malpighian/i, 0.4);
-      break;
-    }
-    case 'breathing': {
-      value = organBlend(/lung/i, 0.5) + 0.05;
-      break;
-    }
-    case 'digestion': {
-      value = organOne(/stomach/i) * 0.6 + organOne(/liver|digestivegland/i) * 0.4;
-      break;
-    }
-    case 'talking': {
-      const jaw = organMissing('head', 'jaw') ? 0.0 : organH('head', 'jaw') / 100;
-      value = jaw * 0.9 + 0.1;
-      break;
-    }
+    case 'pain':
+      return painValue;
+    case 'manipulation':
+      return limbCapacity(limbs, /arm/i, 0.3);
+    case 'sight':
+      return (organBlend(EYE, 0.4) + 0.05) * (lightMultiplier ?? 1.0);
+    case 'night_vision':
+      return getNightVision(pawn);
+    case 'moving':
+      return limbCapacity(limbs, /leg/i, 0.5);
+    case 'blood_pumping':
+      return organOne(HEART) * 0.9 + 0.1;
+    case 'blood_filtration':
+      return organBlend(KIDNEY, 0.4);
+    case 'breathing':
+      return organBlend(LUNG, 0.5) + 0.05;
+    case 'digestion':
+      return organOne(STOMACH) * 0.6 + organOne(LIVER) * 0.4;
+    case 'talking':
+      return organFraction(limbs, 'head', 'jaw') * 0.9 + 0.1;
     case 'hearing': {
-      const leftE = organMissing('head', 'leftEar') ? 0.0 : organH('head', 'leftEar') / 100;
-      const rightE = organMissing('head', 'rightEar') ? 0.0 : organH('head', 'rightEar') / 100;
+      const leftE = organFraction(limbs, 'head', 'leftEar');
+      const rightE = organFraction(limbs, 'head', 'rightEar');
       const minE = Math.min(leftE, rightE);
       const avgE = (leftE + rightE) / 2;
-      value = minE * 0.3 + avgE * 0.7 + 0.15;
-      break;
+      return minE * 0.3 + avgE * 0.7 + 0.15;
     }
     default:
-      value = 1.0;
+      return 1.0;
   }
-
-  return value;
 }
 
 function traitWorkMult(
@@ -668,11 +696,16 @@ export class PawnStatServiceImpl implements PawnStatService {
       'digestion',
       'talking'
     ];
+    const limbs = pawn.limbs ?? [];
+    scanOrgans(limbs);
+    const painValue = capacityPain(pawn, limbs);
     for (const id of capacityIds) {
       capacities[id] = calculateCapacityValue(
         pawn,
         id,
         capacities,
+        limbs,
+        painValue,
         id === 'sight' ? lightMultiplier : undefined
       );
     }
@@ -716,8 +749,7 @@ export class PawnStatServiceImpl implements PawnStatService {
       const sources: TempToleranceSource[] = [];
       if (con !== 0) sources.push({ label: 'Constitution', deg: con * TEMP_RES_DEG_PER_UNIT });
       if (trait !== 0) sources.push({ label: 'Traits', deg: trait * TEMP_RES_DEG_PER_UNIT });
-      for (const c of conds)
-        sources.push({ label: c.name, deg: c.value * TEMP_RES_DEG_PER_UNIT });
+      for (const c of conds) sources.push({ label: c.name, deg: c.value * TEMP_RES_DEG_PER_UNIT });
       let gearTotal = 0;
       for (const g of gear) {
         const r = pick(g);
