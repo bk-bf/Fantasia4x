@@ -1251,5 +1251,68 @@
     "find": "  const existing = inst.contents.find((e) => e.itemId === itemId && !e.instance);",
     "replace": "  const existing = undefined as (typeof inst.contents)[number] | undefined;",
     "tests": ["src/tests/game/core/vessels.test.ts"]
+  },
+  {
+    "id": "repair-units-floored",
+    "file": "src/lib/game/services/repairRules.ts",
+    "find": "return Math.ceil(totalCostUnits",
+    "replace": "return Math.floor(totalCostUnits",
+    "tests": ["src/tests/game/services/repairRules.test.ts"]
+  },
+  {
+    "id": "repair-partial-plan-accepted",
+    "file": "src/lib/game/services/repairRules.ts",
+    "find": "  if (remaining > 0) return null;\n",
+    "replace": "",
+    "tests": ["src/tests/game/services/repairRules.test.ts"]
+  },
+  {
+    "id": "repair-threshold-unclamped",
+    "file": "src/lib/game/services/repairRules.ts",
+    "find": "return Math.max(0, Math.min(100, raw));",
+    "replace": "return raw;",
+    "tests": ["src/tests/game/services/repairRules.test.ts"]
+  },
+  {
+    "id": "repair-materials-ignored",
+    "file": "src/lib/game/services/repairRules.ts",
+    "find": "if (def.repairMaterials?.length) return [...def.repairMaterials];",
+    "replace": "",
+    "tests": ["src/tests/game/services/repairRules.test.ts"]
+  },
+  {
+    "id": "repair-default-threshold-shifted",
+    "file": "src/lib/game/services/repairRules.ts",
+    "find": "const DEFAULT_REPAIR_THRESHOLD_PCT = 30;",
+    "replace": "const DEFAULT_REPAIR_THRESHOLD_PCT = 31;",
+    "tests": ["src/tests/game/services/repairRules.test.ts"]
+  },
+  {
+    "id": "items-reserved-stack-spoils",
+    "file": "src/lib/game/services/ItemService.ts",
+    "find": "if (d.reservedFor || dryRateFor(d, gameState, dryCtx) > 0) {",
+    "replace": "if (dryRateFor(d, gameState, dryCtx) > 0) {",
+    "tests": ["src/tests/game/services/dryingAndDecay.test.ts"]
+  },
+  {
+    "id": "items-frozen-ground-spoils",
+    "file": "src/lib/game/services/ItemService.ts",
+    "find": "          thermalAt(d.x, d.y)\n        ) < 0\n",
+    "replace": "          thermalAt(d.x, d.y)\n        ) < -100\n",
+    "tests": ["src/tests/game/services/dryingAndDecay.test.ts"]
+  },
+  {
+    "id": "items-preservation-ignored",
+    "file": "src/lib/game/services/ItemService.ts",
+    "find": "const mult = d.stored ? 1 - (tilePreserve.get(`${d.x},${d.y}`) ?? 0) : 1;",
+    "replace": "const mult = 1;",
+    "tests": ["src/tests/game/services/dryingAndDecay.test.ts"]
+  },
+  {
+    "id": "items-preservation-on-loose-drops",
+    "file": "src/lib/game/services/ItemService.ts",
+    "find": "const mult = d.stored ? 1 - (tilePreserve.get(`${d.x},${d.y}`) ?? 0) : 1;",
+    "replace": "const mult = 1 - (tilePreserve.get(`${d.x},${d.y}`) ?? 0);",
+    "tests": ["src/tests/game/services/dryingAndDecay.test.ts"]
   }
 ]
