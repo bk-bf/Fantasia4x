@@ -21,7 +21,8 @@ Tell the owner before starting if the desktop is off; he turns it on.
   The desktop holds 60 FPS at its vsync cap, so it shows a cost only when it breaks that cap.
 - Both share `tools/gpu/session.mjs`, which starts the nested compositor and the browser.
   `F4X_FIXTURE=<save.json.gz>` loads another save than the CI fixture, such as one copied out of
-  the owner's game, and `F4X_HARNESS=<tree>` borrows the harness and Playwright of another tree for
+  the owner's game; the probe serves it from the tree's `static/` for the run, since a save past
+  about 100 MB closes the page when Playwright hands it over directly, and `F4X_HARNESS=<tree>` borrows the harness and Playwright of another tree for
   a build too old to have them, such as `main`.
 - `tools/gpu/stall.mjs <file.cpuprofile>...` prints the longest busy stretch of a profile with
   its self and inclusive time per function.
@@ -98,7 +99,10 @@ systemd-run --user --collect --unit=f4x-zoom -E PATH="$PATH" -E CHROME="$CH" \
 - Alternate the builds (A B A B) and run three rounds each, so a slow minute on the machine shows
   up as spread rather than as a difference.
 - Read `ROW` lines from the log: `maxMs` is the longest frame, `stallMs` the sum of frames over
-  50 ms, `over100` the count over 100 ms.
+  50 ms, `over100` the count over 100 ms, `pausedShare` the share of the round's time the game sat
+  paused, and `worstPaused` whether the longest frame fell in a pause. A running row with a
+  `pausedShare` above 0 was paused part of the time, by auto-pause or by hand; never report it
+  as running.
 
 ## Reporting
 
