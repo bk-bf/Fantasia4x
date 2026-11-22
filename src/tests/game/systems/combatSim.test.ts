@@ -517,6 +517,15 @@ describe('combat sim (headless tickCombat)', () => {
     expect(goblinDamaged).toBe(true);
   });
 
+  it('a pawn swings on the turn its attack interval divides, and not on the turn after', () => {
+    const staminaAfter = (turn: number) => {
+      const state = { ...makeState([makePawn()], [makeGoblin({ state: 'Wander' })]), turn };
+      return combatService.tickCombat(state, 16).pawns[0].stamina ?? 0;
+    };
+    expect(staminaAfter(0)).toBeLessThan(50);
+    expect(staminaAfter(1)).toBe(50);
+  });
+
   it('a winded entity cannot attack — it passes turns instead (stamina gate)', () => {
     const winded = makePawn({
       currentState: 'Fighting',
