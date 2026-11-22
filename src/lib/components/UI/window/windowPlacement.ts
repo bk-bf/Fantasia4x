@@ -21,6 +21,8 @@ export interface Area {
 const GAP = 8;
 const EDGE = 6;
 const CASCADE = 26;
+const MIN_WINDOW_W = 260;
+const MIN_WINDOW_H = 160;
 
 const overlaps = (a: Rect, b: Rect) =>
   a.x < b.x + b.w + GAP && b.x < a.x + a.w + GAP && a.y < b.y + b.h + GAP && b.y < a.y + a.h + GAP;
@@ -56,5 +58,12 @@ export function dragTo(p: Point, w: number, area: Area): Point {
   return {
     x: Math.min(Math.max(p.x, 40 - w), area.width - 40),
     y: Math.min(Math.max(p.y, 0), area.height - 28)
+  };
+}
+
+export function resizeTo(p: Point, w: number, h: number, area: Area): { w: number; h: number } {
+  return {
+    w: Math.round(Math.max(MIN_WINDOW_W, Math.min(w, area.width - p.x - EDGE))),
+    h: Math.round(Math.max(MIN_WINDOW_H, Math.min(h, area.height - p.y - EDGE)))
   };
 }
