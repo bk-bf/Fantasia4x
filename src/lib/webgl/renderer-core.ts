@@ -21,6 +21,7 @@ import {
   type PointLight,
   type Rgb
 } from './painted/lightGrade.js';
+import { PaintedVignette } from './painted/vignette.js';
 import { PaintedShadowCast, SHADOW_DEPTH, SHADOW_SHADE } from './painted/shadowCast.js';
 
 const LIGHT_ATLAS_UNIT = 7;
@@ -82,6 +83,7 @@ export class WebGLRendererCore {
   private groundBlend: GroundBlend | null = null;
   private lightPass: PaintedLightPass | null = null;
   private shadowCast: PaintedShadowCast | null = null;
+  private vignette: PaintedVignette | null = null;
   private pointLights: readonly PointLight[] = [];
   private ambientBase: Rgb = [1, 1, 1];
   private mapWeather: MapWeatherId = 'clear';
@@ -331,6 +333,7 @@ export class WebGLRendererCore {
       if (PAINTED_LIGHT && this.painted)
         this.lightPass = PaintedLightPass.create(gl, this.shaderManager);
       if (this.painted) this.shadowCast = PaintedShadowCast.create(gl, this.shaderManager);
+      if (this.lightPass) this.vignette = PaintedVignette.create(gl, this.shaderManager);
 
       if (this.debug) console.log('✅ WebGL2 renderer ready');
       return true;
@@ -502,6 +505,12 @@ export class WebGLRendererCore {
     } else {
       this.stats.overlayMs = 0;
     }
+    if (this.vignette && lightFrame)
+      this.stats.drawCalls += this.vignette.draw({
+        canvas: [this.viewport.width, this.viewport.height],
+        strength: lightFrame.grade.vignette,
+        tilePx: this.tileWidth
+      });
   }
 
   private lightFrame(
@@ -738,6 +747,8 @@ export class WebGLRendererCore {
     this.lightPass = null;
     this.shadowCast?.dispose();
     this.shadowCast = null;
+    this.vignette?.dispose();
+    this.vignette = null;
     if (this.painted) this.webglState.getContext()?.deleteTexture(this.painted.texture);
     if (this.painted) this.webglState.getContext()?.deleteTexture(this.painted.light);
     if (this.painted?.top) this.webglState.getContext()?.deleteTexture(this.painted.top.texture);
