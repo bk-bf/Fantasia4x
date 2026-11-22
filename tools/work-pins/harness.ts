@@ -27,13 +27,23 @@ function messageKind(msg: unknown): string {
   return String(m.kind ?? m.type);
 }
 
-function installWorkerScope(tally: Record<string, MessageTally>, live: () => boolean): WorkerScope {
+function mobUpserts(msg: unknown): number {
+  const mobs = (msg as { mobs?: { upserts?: unknown[] } }).mobs;
+  return mobs?.upserts?.length ?? 0;
+}
+
+function installWorkerScope(
+  tally: Record<string, MessageTally>,
+  counters: Record<string, number>,
+  live: () => boolean
+): WorkerScope {
   const scope: WorkerScope = {
     postMessage(msg) {
       if (!live()) return;
       const t = (tally[messageKind(msg)] ??= { count: 0, bytes: 0 });
       t.count++;
       t.bytes += serialize(msg).byteLength;
+      counters['mob upserts'] += mobUpserts(msg);
     }
   };
   (globalThis as unknown as { self: WorkerScope }).self = scope;
@@ -94,8 +104,9 @@ async function tickThroughWorker(
 export async function runWorkPins(sc: WorkPinScenario): Promise<void> {
   await pathfinderService.init();
   const messages: Record<string, MessageTally> = {};
+  const counters: Record<string, number> = { 'mob upserts': 0 };
   let live = false;
-  const scope = installWorkerScope(messages, () => live);
+  const scope = installWorkerScope(messages, counters, () => live);
   vi.useFakeTimers({
     toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date', 'performance'],
     now: 0
@@ -112,7 +123,7 @@ export async function runWorkPins(sc: WorkPinScenario): Promise<void> {
     writeFileSync(
       file,
       JSON.stringify(
-        { scenario: sc.name, ticks: sc.ticks, turn, functions, phases, messages },
+        { scenario: sc.name, ticks: sc.ticks, turn, functions, phases, messages, counters },
         null,
         1
       )

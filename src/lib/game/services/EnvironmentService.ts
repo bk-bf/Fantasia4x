@@ -741,6 +741,65 @@ const groveThermal = new TileSourceIndex<FireSource>(
       .filter((d) => d.thermal && d.thermal.radius > 0)
       .map((d) => d.id)
 );
+let groveCellStart: Int32Array | null = null;
+let groveCellWarmth = new Float64Array(0);
+let groveFieldW = 0;
+let groveFieldH = 0;
+let groveFieldVersion = -1;
+
+function addWarmth(sources: FireSource[], x: number, y: number, warmth: number): number {
+  for (let i = 0; i < sources.length; i++) {
+    const f = sources[i];
+    const dx = x - f.x;
+    const dy = y - f.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist < f.radius) warmth += f.degrees * (1 - dist / f.radius);
+  }
+  return warmth;
+}
+
+function forEachReach(
+  sources: FireSource[],
+  W: number,
+  H: number,
+  visit: (cell: number, warmth: number) => void
+): void {
+  for (const f of sources) {
+    const r = Math.ceil(f.radius);
+    const maxY = Math.min(H - 1, f.y + r);
+    const maxX = Math.min(W - 1, f.x + r);
+    for (let y = Math.max(0, f.y - r); y <= maxY; y++) {
+      for (let x = Math.max(0, f.x - r); x <= maxX; x++) {
+        const dx = x - f.x;
+        const dy = y - f.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < f.radius) visit(y * W + x, f.degrees * (1 - dist / f.radius));
+      }
+    }
+  }
+}
+
+function splatGroveWarmth(sources: FireSource[], W: number, H: number): void {
+  const start = new Int32Array(W * H + 1);
+  forEachReach(sources, W, H, (cell) => start[cell + 1]++);
+  for (let c = 0; c < W * H; c++) start[c + 1] += start[c];
+  const warmth = new Float64Array(start[W * H]);
+  const next = start.slice(0, W * H);
+  forEachReach(sources, W, H, (cell, w) => (warmth[next[cell]++] = w));
+  groveCellStart = start;
+  groveCellWarmth = warmth;
+}
+
+function syncGroveField(worldMap: WorldTile[][]): void {
+  const H = worldMap.length;
+  const W = worldMap[0]?.length ?? 0;
+  if (groveThermal.version === groveFieldVersion && W === groveFieldW && H === groveFieldH) return;
+  groveFieldVersion = groveThermal.version;
+  groveFieldW = W;
+  groveFieldH = H;
+  if (groveSources.length && W && H) splatGroveWarmth(groveSources, W, H);
+  else groveCellStart = null;
+}
 
 export function rebuildThermalField(
   buildings: PlacedBuilding[] | undefined,
@@ -766,20 +825,29 @@ export function rebuildThermalField(
       );
     }
   }
-  if (worldMap) groveSources = groveThermal.sources(worldMap);
-  fireSources = groveSources.length ? fires.concat(groveSources) : fires;
+  if (worldMap) {
+    groveSources = groveThermal.sources(worldMap);
+    syncGroveField(worldMap);
+  }
+  fireSources = fires;
   shelterTiles = shelter;
 }
 
 export function thermalAt(x: number, y: number): ThermalSample {
-  let warmth = 0;
-  for (let i = 0; i < fireSources.length; i++) {
-    const f = fireSources[i];
-    const dx = x - f.x;
-    const dy = y - f.y;
-    const dist = Math.sqrt(dx * dx + dy * dy);
-    if (dist < f.radius) warmth += f.degrees * (1 - dist / f.radius);
-  }
+  let warmth = addWarmth(fireSources, x, y, 0);
+  if (
+    groveCellStart &&
+    Number.isInteger(x) &&
+    Number.isInteger(y) &&
+    x >= 0 &&
+    x < groveFieldW &&
+    y >= 0 &&
+    y < groveFieldH
+  ) {
+    const cell = y * groveFieldW + x;
+    for (let j = groveCellStart[cell]; j < groveCellStart[cell + 1]; j++)
+      warmth += groveCellWarmth[j];
+  } else warmth = addWarmth(groveSources, x, y, warmth);
   const s = shelterTiles.get(y + ',' + x);
   if (!s && warmth === 0) return NO_THERMAL;
   return {

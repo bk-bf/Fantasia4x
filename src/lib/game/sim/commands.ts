@@ -74,10 +74,10 @@ import {
 } from '../services/EnvironmentService';
 import { SUBTERRAINS, SUBTERRAIN_FALLBACK } from '../core/defs/terrains';
 import { resourceObjectService } from '../services/ResourceObjectService';
-import { patchPathfindingWalkable } from '../services/PathfinderService';
+import { buildPathfindingGrids, patchPathfindingWalkable } from '../services/PathfinderService';
 import { occupancyService } from '../services/OccupancyService';
 import { assignDraftMovePath } from '../services/draftMovePath';
-import { rebuildConnectivity, reachable } from '../services/entity/connectivity';
+import { refreshConnectivity, reachable } from '../services/entity/connectivity';
 import { markTileDirty } from '../core/state/tileDeltas';
 import { simLog } from '../core/util/logSink';
 import type { SimCommand } from './simProtocol';
@@ -172,7 +172,7 @@ function refuseUnreachableMoves(
 ): Set<string> {
   const refused = new Set<string>();
   if (!s.worldMap?.length || targets.size === 0) return refused;
-  rebuildConnectivity(s.worldMap);
+  refreshConnectivity(buildPathfindingGrids(s.worldMap));
   for (const pawn of pawns) {
     const t = targets.get(pawn.id);
     if (!t || !pawn.position || reachable(pawn.position.x, pawn.position.y, t.x, t.y)) continue;

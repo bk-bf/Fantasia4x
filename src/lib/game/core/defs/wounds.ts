@@ -139,6 +139,35 @@ export function isTended(w: Injury, turn: number): boolean {
   return turn - w.treatedAt < CARE_CONFIG.treatmentDurationTicks * (w.treatmentQuality ?? 0);
 }
 
+export function woundInfectionPressure(limbs: LimbState[], turn: number): number {
+  let pressure = 0;
+  for (let li = 0; li < limbs.length; li++) {
+    const parts = limbs[li].parts;
+    if (!parts) continue;
+    for (let pi = 0; pi < parts.length; pi++) {
+      const injuries = parts[pi].injuries;
+      for (let wi = 0; wi < injuries.length; wi++) {
+        const w = injuries[wi];
+        const open =
+          w.bleeding > 0 ||
+          w.severity === 'serious' ||
+          w.severity === 'critical' ||
+          w.severity === 'destroyed';
+        const age = turn - (w.inflictedAt ?? turn);
+        if (
+          open &&
+          !isUncareable(w) &&
+          !isTended(w, turn) &&
+          age >= CARE_CONFIG.infectionIncubationTicks
+        ) {
+          pressure += CARE_CONFIG.infectionRiskPerWound;
+        }
+      }
+    }
+  }
+  return Math.min(pressure, CARE_CONFIG.infectionRiskMax);
+}
+
 const BLEED_CONSTANT = 32;
 const SEVERED_STUMP_BLEED_MOD = 2.5;
 function bleedSizeScale(partDef: { maxHp: number } | undefined, maxHp: number): number {
@@ -279,6 +308,7 @@ export function rollWoundClotting(
 ): boolean {
   let changed = false;
   for (const limb of limbs) {
+    if (!((limb.bleedRate ?? 0) > 0)) continue;
     let limbChanged = false;
     for (const part of limb.parts ?? []) {
       for (const w of part.injuries) {

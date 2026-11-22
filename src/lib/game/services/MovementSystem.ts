@@ -43,21 +43,25 @@ export function advanceAlongPath<T extends Movable>(
   budget: number,
   worldMap: WorldTile[][]
 ): T {
-  const path = entity.path;
-  if (!path || path.length === 0) return entity;
+  if (!entity.path || entity.path.length === 0) return entity;
+  return advanceInPlace({ ...entity }, budget, worldMap);
+}
 
+function advanceInPlace<T extends Movable>(entity: T, budget: number, worldMap: WorldTile[][]): T {
+  const path = entity.path!;
   let b = budget;
   let idx = entity.pathIndex ?? 0;
   let pos = { x: entity.x, y: entity.y };
   let costLeft: number | null = entity.nextCellCostLeft ?? null;
-  let invalidPath = false;
 
   while (b > 0 && idx < path.length) {
     const next = path[idx];
     if (!next) break;
     if (Math.abs(next.x - pos.x) > 1 || Math.abs(next.y - pos.y) > 1) {
-      invalidPath = true;
-      break;
+      entity.path = [];
+      entity.pathIndex = 0;
+      entity.nextCellCostLeft = undefined;
+      return entity;
     }
     if (costLeft === null) costLeft = moveCostToEnter(pos, next, worldMap);
     if (b >= costLeft) {
@@ -71,19 +75,13 @@ export function advanceAlongPath<T extends Movable>(
     }
   }
 
-  if (invalidPath) {
-    return { ...entity, path: [], pathIndex: 0, nextCellCostLeft: undefined };
-  }
-
   const done = idx >= path.length;
-  return {
-    ...entity,
-    x: pos.x,
-    y: pos.y,
-    path: done ? [] : path,
-    pathIndex: done ? 0 : idx,
-    nextCellCostLeft: costLeft ?? undefined
-  };
+  entity.x = pos.x;
+  entity.y = pos.y;
+  entity.path = done ? [] : path;
+  entity.pathIndex = done ? 0 : idx;
+  entity.nextCellCostLeft = costLeft ?? undefined;
+  return entity;
 }
 
 export function simTarget<T extends Movable>(
@@ -142,28 +140,28 @@ export function stepBody<T extends MovableBody>(
     if (occupiedByOther && targetByTile) {
       const blocker = targetByTile.get(targetKey);
       if (blocker && blocker.target === selfKey && body.id > blocker.id) {
-        return {
-          body: { ...body, path: [], pathIndex: 0, nextCellCostLeft: undefined, blockedTicks: 0 },
-          status: 'dropped',
-          done: false
-        };
+        return { body: dropPath(body), status: 'dropped', done: false };
       }
     }
     const bt = (body.blockedTicks ?? 0) + 1;
-    if (bt > MAX_BLOCKED_TICKS) {
-      return {
-        body: { ...body, path: [], pathIndex: 0, nextCellCostLeft: undefined, blockedTicks: 0 },
-        status: 'dropped',
-        done: false
-      };
-    }
-    return { body: { ...body, blockedTicks: bt }, status: 'held', done: false };
+    if (bt > MAX_BLOCKED_TICKS) return { body: dropPath(body), status: 'dropped', done: false };
+    body.blockedTicks = bt;
+    return { body, status: 'held', done: false };
   }
 
   if (!midCrossing) claimed.add(targetKey);
-  const moved = advanceAlongPath(body, Math.max(0.01, speed), worldMap);
-  const done = !moved.path || moved.path.length === 0;
-  const progressed = moved.x !== body.x || moved.y !== body.y;
-  const out = body.blockedTicks && progressed ? { ...moved, blockedTicks: 0 } : moved;
-  return { body: out, status: 'moved', done };
+  const fromX = body.x;
+  const fromY = body.y;
+  advanceInPlace(body, Math.max(0.01, speed), worldMap);
+  const done = !body.path || body.path.length === 0;
+  if (body.blockedTicks && (body.x !== fromX || body.y !== fromY)) body.blockedTicks = 0;
+  return { body, status: 'moved', done };
+}
+
+function dropPath<T extends MovableBody>(body: T): T {
+  body.path = [];
+  body.pathIndex = 0;
+  body.nextCellCostLeft = undefined;
+  body.blockedTicks = 0;
+  return body;
 }

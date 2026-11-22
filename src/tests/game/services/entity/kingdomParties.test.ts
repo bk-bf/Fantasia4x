@@ -4,6 +4,8 @@ import { kingdomService } from '$lib/game/services/KingdomService';
 import { generateCulturePool, generateCultureRelations } from '$lib/game/core/gen/culture';
 import { generateKingdomPool, generateKingdomRelations } from '$lib/game/core/gen/kingdom';
 import { rng } from '$lib/game/core/util/rng';
+import { separated, clearConnectivity } from '$lib/game/services/entity/connectivity';
+import { buildPathfindingGrids } from '$lib/game/services/PathfinderService';
 import type { GameState, Kingdom } from '$lib/game/core/types';
 
 function plainsState(): GameState {
@@ -64,6 +66,21 @@ describe('spawnKingdomParty', () => {
     const guards = members.filter((m) => m.partyRole === 'guard');
     expect(guards.some((g) => g.equipment && Object.keys(g.equipment).length > 0)).toBe(true);
     expect(party.stock).toEqual([{ itemId: 'copper_bar', qty: 5 }]);
+  });
+
+  it('a caravan never enters from a map edge that has no way to its anchor', () => {
+    clearConnectivity();
+    const walled = plainsState();
+    for (const row of walled.worldMap) row[30].walkable = false;
+    walled.pawns[0].position = { x: 60, y: 40 };
+    const grid = buildPathfindingGrids(walled.worldMap);
+    for (let seed = 1; seed <= 12; seed++) {
+      rng.reseed(seed);
+      const { state, kingdom } = withKingdoms(walled);
+      const out = spawnKingdomParty(state, kingdom, 'caravan', [], 0);
+      for (const m of out?.state.mobs ?? [])
+        expect(separated(grid, m.x, m.y, m.travelGoalX!, m.travelGoalY!)).toBe(false);
+    }
   });
 
   it('despawnKingdomParty removes live members and the party record', () => {
