@@ -2868,5 +2868,19 @@
     "find": "  if (chebyshev(mob.x, mob.y, gx, gy) <= TRAVEL_ARRIVE_DIST) {",
     "replace": "  if (chebyshev(mob.x, mob.y, gx, gy) <= 0) {",
     "tests": ["src/tests/game/services/entity/hostileRules.test.ts"]
+  },
+  {
+    "id": "spatial-core-diagonal-needs-both-corners-open",
+    "file": "spatial-core/src/lib.rs",
+    "find": "if walkable[ortho1] == 0 && walkable[ortho2] == 0 {",
+    "replace": "if walkable[ortho1] == 0 || walkable[ortho2] == 0 {",
+    "tests": ["spatial-core/src/lib.rs"]
+  },
+  {
+    "id": "spatial-core-diagonal-step-costs-one",
+    "file": "spatial-core/src/lib.rs",
+    "find": "{ std::f32::consts::SQRT_2 }",
+    "replace": "{ 1.0f32 }",
+    "tests": ["spatial-core/src/lib.rs"]
   }
 ]
