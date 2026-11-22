@@ -1787,8 +1787,8 @@
   {
     "id": "pawn-stat-moving-ignores-worst-leg",
     "file": "src/lib/game/services/PawnStatService.ts",
-    "find": "      value = limbCapacity((id) => /leg/i.test(id), 0.5);",
-    "replace": "      value = limbCapacity((id) => /leg/i.test(id), 0);",
+    "find": "      return limbCapacity(limbs, /leg/i, 0.5);",
+    "replace": "      return limbCapacity(limbs, /leg/i, 0);",
     "tests": ["src/tests/game/services/pawnStatRules.test.ts"]
   },
   {
@@ -2381,8 +2381,8 @@
   },
   {
     "id": "psm-tended-wounds-fester",
-    "file": "src/lib/game/systems/PawnStateMachine.ts",
-    "find": "          !isTended(w, gameState.turn) &&\n",
+    "file": "src/lib/game/core/defs/wounds.ts",
+    "find": "          !isTended(w, turn) &&\n",
     "replace": "",
     "tests": ["src/tests/game/systems/pawnConditionTick.test.ts"]
   },
