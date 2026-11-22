@@ -34,10 +34,19 @@ export function colonyLayers(a: ColonyAmbient): ColonyLayer[] {
 export const colonyZoom = (scale: number, viewW: number, viewH: number): number =>
   Math.max(scale, Math.ceil(Math.max(viewW / COLONY_W, viewH / COLONY_H)));
 
-export function colonyCamera(viewW: number, viewH: number, k: number, seconds: number) {
-  const fx = FOCUS_X + Math.sin(seconds / DRIFT_PERIOD) * DRIFT;
+export const DRIFT_SECONDS = Math.PI * DRIFT_PERIOD;
+
+function cameraAt(viewW: number, viewH: number, k: number, fx: number) {
   return {
-    left: Math.round(clamp(viewW * VIEW_X - fx * k, viewW - COLONY_W * k, 0)),
+    left: clamp(viewW * VIEW_X - fx * k, viewW - COLONY_W * k, 0),
     top: Math.round(clamp(viewH * VIEW_Y - FOCUS_Y * k, viewH - COLONY_H * k, 0))
+  };
+}
+
+export function colonyDrift(viewW: number, viewH: number, k: number) {
+  return {
+    rest: cameraAt(viewW, viewH, k, FOCUS_X),
+    from: cameraAt(viewW, viewH, k, FOCUS_X - DRIFT),
+    to: cameraAt(viewW, viewH, k, FOCUS_X + DRIFT)
   };
 }

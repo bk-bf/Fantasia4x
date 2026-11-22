@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import {
   COLONY_H,
   COLONY_W,
-  colonyCamera,
+  colonyDrift,
   colonyImage,
   colonyLayers
 } from '$lib/components/UI/menu/menuColony';
@@ -34,12 +34,13 @@ describe('painted colony backdrop', () => {
     expect(colonyLayers(ambient(0, 1))).toEqual([{ time: 'night', opacity: 1 }]);
   });
 
-  it('keeps the camera inside the colony while it drifts', () => {
-    for (let s = 0; s < 240; s += 7) {
-      const { left, top } = colonyCamera(1920, 1080, 2, s);
+  it('keeps the camera inside the colony at both ends of the drift', () => {
+    const { rest, from, to } = colonyDrift(1920, 1080, 2);
+    for (const { left, top } of [rest, from, to]) {
       expect(left).toBeLessThanOrEqual(0);
       expect(left).toBeGreaterThanOrEqual(1920 - COLONY_W * 2);
       expect(top).toBeGreaterThanOrEqual(1080 - COLONY_H * 2);
     }
+    expect(from.left - to.left).toBe(256);
   });
 });
