@@ -338,6 +338,13 @@ function sharpnessBleedMult(
   return typeof m === 'number' && m > 0 ? m : 1;
 }
 
+function liveAt<T extends Pawn | Mob>(live: T[], i: number, start: T): T {
+  const at = live[i];
+  if (at?.id === start.id) return at;
+  for (const e of live) if (e.id === start.id) return e;
+  return start;
+}
+
 function isLiving(e: Pawn | Mob | undefined): boolean {
   return !!e && e.isAlive !== false && !('state' in e && e.state === 'Corpse');
 }
@@ -2167,10 +2174,12 @@ class CombatServiceImpl implements CombatService {
     const pawnAmmoUpdates = new Map<string, { itemId: string; newQty: number }>();
     const recoveredAmmo: DroppedItem[] = [];
 
-    for (const mob0 of state.mobs ?? []) {
+    const startMobs = state.mobs ?? [];
+    for (let i = 0; i < startMobs.length; i++) {
+      const mob0 = startMobs[i];
       if (mob0.state !== 'Attacking' || mob0.isAlive === false) continue;
       const mobs = next.mobs ?? [];
-      const mob = mobs.find((m) => m.id === mob0.id) ?? mob0;
+      const mob = liveAt(mobs, i, mob0);
       if (mob.state !== 'Attacking' || mob.isAlive === false) continue;
       if (this.isKnockedDown(mob)) continue;
       if (this.isWinded(mob)) continue;
@@ -2219,8 +2228,8 @@ class CombatServiceImpl implements CombatService {
       );
     }
 
-    for (const pawn0 of state.pawns) {
-      const pawn = next.pawns.find((p) => p.id === pawn0.id) ?? pawn0;
+    for (let i = 0; i < state.pawns.length; i++) {
+      const pawn = liveAt(next.pawns, i, state.pawns[i]);
       const mobs = next.mobs ?? [];
       if (pawn.isAlive === false || !pawn.position) continue;
       if (this.isKnockedDown(pawn)) continue;

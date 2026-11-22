@@ -113,7 +113,7 @@ interface MobThreatSubsets {
   prey: Mob[];
   threatened: Mob[];
   threatenedIndex: number[];
-  corpses: Mob[];
+  corpsesByCreature: Map<string, Mob[]>;
 }
 
 let _mobThreatCache: MobThreatSubsets | null = null;
@@ -124,11 +124,13 @@ function mobThreatSubsets(allMobs: Mob[]): MobThreatSubsets {
   const prey: Mob[] = [];
   const threatened: Mob[] = [];
   const threatenedIndex: number[] = [];
-  const corpses: Mob[] = [];
+  const corpsesByCreature = new Map<string, Mob[]>();
   for (let i = 0; i < allMobs.length; i++) {
     const m = allMobs[i];
     if (m.state === 'Corpse') {
-      corpses.push(m);
+      const pack = corpsesByCreature.get(m.creatureId);
+      if (pack) pack.push(m);
+      else corpsesByCreature.set(m.creatureId, [m]);
       if ((m.intactness ?? 1.0) > 0) prey.push(m);
       continue;
     }
@@ -142,12 +144,21 @@ function mobThreatSubsets(allMobs: Mob[]): MobThreatSubsets {
       }
     }
   }
-  _mobThreatCache = { ref: allMobs, predators, prey, threatened, threatenedIndex, corpses };
+  _mobThreatCache = {
+    ref: allMobs,
+    predators,
+    prey,
+    threatened,
+    threatenedIndex,
+    corpsesByCreature
+  };
   return _mobThreatCache;
 }
 
-export function mobCorpses(allMobs: Mob[]): Mob[] {
-  return mobThreatSubsets(allMobs).corpses;
+const NO_CORPSES: readonly Mob[] = [];
+
+export function packCorpses(allMobs: Mob[], creatureId: string): readonly Mob[] {
+  return mobThreatSubsets(allMobs).corpsesByCreature.get(creatureId) ?? NO_CORPSES;
 }
 
 const THREAT_QUERY_RANGE = 40;

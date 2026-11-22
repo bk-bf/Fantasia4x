@@ -37,7 +37,7 @@ import {
   edibleResourceOnTile,
   mobInLiveRegion,
   liveRegion,
-  mobCorpses,
+  packCorpses,
   isThinkTick,
   entityName
 } from './entityHelpers';
@@ -664,12 +664,10 @@ function nearestEngageablePos(
 }
 
 function packCorpseWithin(mob: Mob, allMobs: Mob[], range: number): Mob | undefined {
-  return mobCorpses(allMobs).find(
-    (m) =>
-      m.state === 'Corpse' &&
-      m.creatureId === mob.creatureId &&
-      dist(mob, { x: m.x, y: m.y }) <= range
-  );
+  for (const m of packCorpses(allMobs, mob.creatureId)) {
+    if (dist(mob, m) <= range) return m;
+  }
+  return undefined;
 }
 
 export function stepHostile(
