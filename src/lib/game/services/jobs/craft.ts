@@ -28,8 +28,9 @@ import { memoryService } from '../MemoryService';
 import { aggregateMaterialMods } from '../../core/defs/materials';
 import {
   absorbDropIfOnStockpileTile,
+  cannotReserve,
   reserveForOrder,
-  releaseReservation,
+  reservableQuantity,
   withDrops
 } from '../../core/state/stockpile';
 import { rng } from '../../core/util/rng';
@@ -51,26 +52,32 @@ export function reservePendingOrders(gs: GameState): GameState {
   if (!queue.some((o) => o.pending)) return gs;
 
   let state = gs;
+  let stock = new Map<string, number>();
+  const reservable = (id: string): number => {
+    let q = stock.get(id);
+    if (q === undefined) {
+      q = reservableQuantity(state.droppedItems, id);
+      stock.set(id, q);
+    }
+    return q;
+  };
   let changed = false;
   const newQueue = queue.map((order) => {
     if (!order.pending) return order;
+    for (const [id, q] of Object.entries(order.inputs)) {
+      const need = q - stationHeldUnits(state, order, id);
+      if (need > 0 && cannotReserve(reservable(id), need)) return order;
+    }
     let trial = state;
-    let allReserved = true;
     for (const [id, q] of Object.entries(order.inputs)) {
       const need = q - stationHeldUnits(trial, order, id);
       if (need <= 0) continue;
       const res = reserveForOrder(trial, id, need, order.id);
       trial = res.state;
-      if (res.reserved < need) {
-        allReserved = false;
-        break;
-      }
-    }
-    if (!allReserved) {
-      releaseReservation(trial, order.id);
-      return order;
+      if (res.reserved < need) return order;
     }
     state = trial;
+    stock = new Map();
     changed = true;
     const { pending: _drop, ...rest } = order;
     return rest;

@@ -76,6 +76,15 @@ type WorkKeyJob = {
   craftQueueId?: string;
 };
 
+type AvailableJobRow = {
+  job: Job;
+  urgent: number;
+  workKey: string;
+  labour: number;
+  subLabour: number;
+  distance: number;
+};
+
 export const BASE_WORK_RATE = 1;
 
 class JobServiceImpl {
@@ -176,21 +185,22 @@ class JobServiceImpl {
     const laborSettings = assignment?.laborSettings ?? {};
     const legacyPriorities = assignment?.workPriorities ?? {};
 
-    const available = (gameState.jobs ?? []).filter((j) => {
-      if (j.claimedBy !== null && j.claimedBy !== pawn.id) return false;
+    const rows: AvailableJobRow[] = [];
+    for (const j of gameState.jobs ?? []) {
+      if (j.claimedBy !== null && j.claimedBy !== pawn.id) continue;
 
       const claimGate = JOB_DEF_BY_ID.get(j.type)?.claimGate;
 
       if (claimGate === 'refuelAllowlist' && j.buildingId) {
         const building = (gameState.buildings ?? []).find((b) => b.id === j.buildingId);
         const allowedPawns = building?.fuelSettings?.allowedRefuelPawnIds ?? [];
-        if (allowedPawns.length > 0 && !allowedPawns.includes(pawn.id)) return false;
+        if (allowedPawns.length > 0 && !allowedPawns.includes(pawn.id)) continue;
       }
 
       if (claimGate === 'repairAllowlist' && j.buildingId) {
         const building = (gameState.buildings ?? []).find((b) => b.id === j.buildingId);
         const allowedPawns = building?.repairSettings?.allowedRepairPawnIds ?? [];
-        if (allowedPawns.length > 0 && !allowedPawns.includes(pawn.id)) return false;
+        if (allowedPawns.length > 0 && !allowedPawns.includes(pawn.id)) continue;
       }
 
       if (claimGate === 'harvestTool' || claimGate === 'craftTool') {
@@ -200,7 +210,7 @@ class JobServiceImpl {
           !this.pawnHasToolFor(pawn, req.workType, req.minTier) &&
           !this.colonyHasToolFor(gameState, req.workType, req.minTier)
         )
-          return false;
+          continue;
       }
 
       const workKey = this._jobTypeToWorkKey(j, gameState);
@@ -213,35 +223,28 @@ class JobServiceImpl {
       } else {
         priority = 2;
       }
-      if (priority <= 0) return false;
+      if (priority <= 0) continue;
       const subKey = this._jobSubKey(j, workKey, gameState);
-      if (subKey !== workKey && subKey in laborSettings && (laborSettings[subKey] ?? 2) <= 0)
-        return false;
-      return true;
-    });
+      const subSet = subKey !== workKey && subKey in laborSettings;
+      if (subSet && (laborSettings[subKey] ?? 2) <= 0) continue;
+      const labour = laborSettings[workKey] ?? 2;
+      rows.push({
+        job: j,
+        urgent: j.urgent ? 1 : 0,
+        workKey,
+        labour,
+        subLabour: subSet ? (laborSettings[subKey] ?? 2) : labour,
+        distance: manhattan(j.targetX, j.targetY, px, py)
+      });
+    }
 
-    return available.sort((a, b) => {
-      const urgA = a.urgent ? 1 : 0;
-      const urgB = b.urgent ? 1 : 0;
-      if (urgB !== urgA) return urgB - urgA;
-      const workKeyA = this._jobTypeToWorkKey(a, gameState);
-      const workKeyB = this._jobTypeToWorkKey(b, gameState);
-      const labA = laborSettings[workKeyA] ?? 2;
-      const labB = laborSettings[workKeyB] ?? 2;
-      if (labB !== labA) return labB - labA;
-      if (workKeyA === workKeyB) {
-        const subKeyA = this._jobSubKey(a, workKeyA, gameState);
-        const subKeyB = this._jobSubKey(b, workKeyB, gameState);
-        const subA =
-          subKeyA !== workKeyA && subKeyA in laborSettings ? (laborSettings[subKeyA] ?? 2) : labA;
-        const subB =
-          subKeyB !== workKeyB && subKeyB in laborSettings ? (laborSettings[subKeyB] ?? 2) : labB;
-        if (subB !== subA) return subB - subA;
-      }
-      const dA = manhattan(a.targetX, a.targetY, px, py);
-      const dB = manhattan(b.targetX, b.targetY, px, py);
-      return dA - dB;
+    rows.sort((a, b) => {
+      if (b.urgent !== a.urgent) return b.urgent - a.urgent;
+      if (b.labour !== a.labour) return b.labour - a.labour;
+      if (a.workKey === b.workKey && b.subLabour !== a.subLabour) return b.subLabour - a.subLabour;
+      return a.distance - b.distance;
     });
+    return rows.map((r) => r.job);
   }
 
   private _jobSubKey(job: WorkKeyJob, categoryKey: string, gs?: GameState): string {

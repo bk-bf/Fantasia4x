@@ -19,13 +19,6 @@ export function isStandingZoneType(type: DesignationType): boolean {
 
 const WALKABLE_ONLY_ZONE_TYPES = new Set<DesignationType>(['stockpile', 'grow']);
 
-export function zoneTileKeys(gameState: GameState, type: DesignationType): string[] {
-  const zt = gameState.zoneTiles ?? {};
-  const out: string[] = [];
-  for (const k in zt) if (zt[k]?.includes(type)) out.push(k);
-  return out;
-}
-
 export function isZoneTile(
   gameState: GameState,
   x: number,

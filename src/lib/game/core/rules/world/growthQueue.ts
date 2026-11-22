@@ -6,8 +6,18 @@ interface GrowthEntry {
   y: number;
 }
 
+export class GrowthQueue {
+  readonly heap: GrowthEntry[] = [];
+  readonly queued = new Set<string>();
+}
+
 let heap: GrowthEntry[] = [];
-const queued = new Set<string>();
+let queued = new Set<string>();
+
+export function useGrowthQueue(queue: GrowthQueue): void {
+  heap = queue.heap;
+  queued = queue.queued;
+}
 
 function swap(i: number, j: number): void {
   const t = heap[i];
@@ -67,7 +77,7 @@ export function growthQueueSize(): number {
 }
 
 export function clearGrowthQueue(): void {
-  heap = [];
+  heap.length = 0;
   queued.clear();
 }
 
@@ -84,8 +94,7 @@ export function tileIsGrowing(tile: WorldTile): boolean {
 }
 
 export function rebuildGrowthQueue(worldMap: WorldTile[][], turn: number): void {
-  heap = [];
-  queued.clear();
+  clearGrowthQueue();
   for (let y = 0; y < worldMap.length; y++) {
     const row = worldMap[y];
     for (let x = 0; x < row.length; x++) {

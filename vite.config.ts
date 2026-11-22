@@ -3,6 +3,7 @@ import { defineConfig, type Plugin } from 'vite';
 import wasm from 'vite-plugin-wasm';
 import path from 'path';
 import fs from 'fs';
+import { execFileSync } from 'child_process';
 
 function findGitRoot(dir: string): string {
   if (fs.existsSync(path.join(dir, 'package.json'))) return dir;
@@ -74,13 +75,33 @@ function desktopShellGuardPlugin(): Plugin {
   };
 }
 
+function git(...args: string[]): string {
+  try {
+    return execFileSync('git', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+  } catch {
+    return '';
+  }
+}
+
+const BUILD_INFO = {
+  commit: git('rev-parse', '--short', 'HEAD') || 'unknown',
+  branch: git('symbolic-ref', '--short', '-q', 'HEAD') || 'detached',
+  refs: git('for-each-ref', '--points-at', 'HEAD', '--format=%(refname:short)', 'refs/remotes')
+    .split('\n')
+    .filter(Boolean)
+    .join(','),
+  dirty: git('status', '--porcelain', '--untracked-files=no').split('\n').filter(Boolean).length,
+  serverStarted: new Date().toISOString()
+};
+
 const APP_VERSION = JSON.parse(
   fs.readFileSync(path.join(findGitRoot(process.cwd()), 'package.json'), 'utf-8')
 ).version;
 
 export default defineConfig({
   define: {
-    __APP_VERSION__: JSON.stringify(APP_VERSION)
+    __APP_VERSION__: JSON.stringify(APP_VERSION),
+    __F4X_BUILD__: JSON.stringify(BUILD_INFO)
   },
   plugins: [desktopShellGuardPlugin(), wasm(), sveltekit()],
   worker: {

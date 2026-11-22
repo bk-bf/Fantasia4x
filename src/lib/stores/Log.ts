@@ -77,10 +77,12 @@ if (browser) {
 
 export async function reloadActivityLogForActiveSave(): Promise<void> {
   if (!browser) return;
+  __resetCombatSessions();
   activityLog.set(await loadActivityLog());
 }
 
 export function clearActivityLog() {
+  __resetCombatSessions();
   activityLog.set([]);
   saveActivityLogNow([]);
 }
@@ -367,7 +369,8 @@ function findActiveSession(turn: number, a: string, b: string): CombatSession | 
       sessionByParticipant.delete(id);
       continue;
     }
-    if (s.closed || turn - s.lastActivityTurn > ENGAGEMENT_EXPIRE_TICKS) {
+    const idle = turn - s.lastActivityTurn;
+    if (s.closed || idle < 0 || idle > ENGAGEMENT_EXPIRE_TICKS) {
       closeSession(s);
       continue;
     }

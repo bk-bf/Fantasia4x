@@ -17,6 +17,7 @@ import {
 } from '../core/rules/world/carcassCondition';
 import {
   consumeFromStockpiles,
+  freeDropId,
   addToStockpileZone,
   withDrops,
   availableQuantityFromDrops,
@@ -772,7 +773,7 @@ export class ItemServiceImpl implements ItemService {
       if (idx >= 0) next[idx] = { ...next[idx], quantity: next[idx].quantity + r.qty };
       else {
         next.push({
-          id: `rot-${r.resourceId}-${r.x}-${r.y}`,
+          id: freeDropId(next, `rot-${r.resourceId}-${r.x}-${r.y}`),
           resourceId: r.resourceId,
           x: r.x,
           y: r.y,

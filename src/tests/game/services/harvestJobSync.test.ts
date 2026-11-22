@@ -48,4 +48,32 @@ describe('_syncHarvestJobs dedup (Set index)', () => {
     const after = jobService.generateJobs({ ...once, worldMap: depleted });
     expect((after.jobs ?? []).filter((j) => j.type === 'harvest')).toHaveLength(0);
   });
+
+  it('a job on one resource of a tile leaves its other resources to be jobbed, in tile order', () => {
+    const wm = [
+      [
+        tile({ x: 0, y: 0, resources: { test_stone: 2, test_wood: 0 } }),
+        tile({ x: 1, y: 0, resources: { test_wood: 5, test_stone: 3 } })
+      ]
+    ];
+    const held = {
+      id: 'held',
+      type: 'harvest',
+      targetX: 1,
+      targetY: 0,
+      resourceId: 'test_wood',
+      workRequired: 1,
+      workDone: 0,
+      claimedBy: null
+    };
+    const gs = { ...stateWith(wm, { '1,0': 'harvest', '0,0': 'harvest' }), jobs: [held] };
+    const out = (jobService.generateJobs(gs as GameState).jobs ?? []).filter(
+      (j) => j.type === 'harvest'
+    );
+    expect(out.map((j) => `${j.targetX},${j.targetY}:${j.resourceId}`)).toEqual([
+      '1,0:test_wood',
+      '1,0:test_stone',
+      '0,0:test_stone'
+    ]);
+  });
 });

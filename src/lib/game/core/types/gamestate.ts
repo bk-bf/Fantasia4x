@@ -45,6 +45,7 @@ export interface GameState {
   relationships?: PawnRelationship[];
   worldPawns?: Pawn[];
   worldMap: WorldTile[][];
+  biomeTemps?: Record<string, number>;
   season?: Season;
   seasonDay?: number;
   weather?: WeatherState;

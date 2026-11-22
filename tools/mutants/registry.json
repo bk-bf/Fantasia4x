@@ -51,7 +51,7 @@
   {
     "id": "stockpile-release-never-changes",
     "file": "src/lib/game/core/state/stockpile.ts",
-    "find": "  return changed ? { ...state, droppedItems: drops } : state;",
+    "find": "  return { ...state, droppedItems: drops };",
     "replace": "  return state;",
     "tests": ["src/tests/game/services/physicalProduction.test.ts"]
   },
@@ -128,8 +128,8 @@
   {
     "id": "stockpile-storage-keys-skip-bins",
     "file": "src/lib/game/core/state/stockpile.ts",
-    "find": "binStacksForType(b.type) > 0) seen.add(",
-    "replace": "binStacksForType(b.type) < 0) seen.add(",
+    "find": "b.status !== 'complete' || binStacksForType(b.type) <= 0) continue;",
+    "replace": "b.status !== 'complete' || binStacksForType(b.type) >= 0) continue;",
     "tests": ["src/tests/game/services/storageBins.test.ts"]
   },
   {
@@ -702,7 +702,7 @@
   {
     "id": "jobs-no-urgent-ordering",
     "file": "src/lib/game/services/JobService.ts",
-    "find": "      if (urgB !== urgA) return urgB - urgA;\n",
+    "find": "      if (b.urgent !== a.urgent) return b.urgent - a.urgent;\n",
     "replace": "",
     "tests": ["src/tests/game/services/urgentHaul.test.ts"]
   },
@@ -770,10 +770,10 @@
     "tests": ["src/tests/game/services/followupFeatures.test.ts"]
   },
   {
-    "id": "craft-reserve-accepts-one-short",
+    "id": "craft-reserve-refuses-exact-stock",
     "file": "src/lib/game/services/jobs/craft.ts",
-    "find": "      if (res.reserved < need) {",
-    "replace": "      if (res.reserved < need - 1) {",
+    "find": "cannotReserve(reservable(id), need)) return order;",
+    "replace": "cannotReserve(reservable(id), need + 1)) return order;",
     "tests": ["src/tests/game/services/craftPendingOrders.test.ts"]
   },
   {
@@ -966,6 +966,20 @@
     "tests": ["src/tests/game/services/bulkLogistics.test.ts"]
   },
   {
+    "id": "pawn-stat-capacities-always-built",
+    "file": "src/lib/game/services/PawnStatService.ts",
+    "find": "const capacities = formulaReadsCapacities(def.formula)",
+    "replace": "const capacities = true",
+    "tests": ["src/tests/game/services/statFormulaSlots.test.ts"]
+  },
+  {
+    "id": "pawn-stat-capacities-never-built",
+    "file": "src/lib/game/services/PawnStatService.ts",
+    "find": "const capacities = formulaReadsCapacities(def.formula)",
+    "replace": "const capacities = false",
+    "tests": ["src/tests/game/services/statFormulaSlots.test.ts"]
+  },
+  {
     "id": "pawn-stat-broken-bone-ignored",
     "file": "src/lib/game/services/PawnStatService.ts",
     "find": "(limbBoneBroken(limbs, l.id) ? BROKEN_BONE_FUNCTION_MULT : 1)",
@@ -975,8 +989,8 @@
   {
     "id": "pawn-stat-capacity-cache-ignores-limbs",
     "file": "src/lib/game/services/PawnStatService.ts",
-    "find": "if (c && c.limbs === pawn.limbs && c.injuries === pawn.injuries && c.light === lightBucket) {",
-    "replace": "if (c && c.injuries === pawn.injuries && c.light === lightBucket) {",
+    "find": "      c.limbs === pawn.limbs &&\n      c.injuries === pawn.injuries &&\n",
+    "replace": "      c.injuries === pawn.injuries &&\n",
     "tests": ["src/tests/game/systems/fractures.test.ts"]
   },
   {
@@ -1170,10 +1184,10 @@
   },
   {
     "id": "designation-zone-keys-ignore-type",
-    "file": "src/lib/game/services/DesignationService.ts",
-    "find": "  for (const k in zt) if (zt[k]?.includes(type)) out.push(k);",
-    "replace": "  for (const k in zt) out.push(k);",
-    "tests": ["src/tests/game/services/cropChain.test.ts"]
+    "file": "src/lib/game/core/state/zoneTiles.ts",
+    "find": "    for (const k in zt) if (zt[k]?.includes(type)) found.push(k);",
+    "replace": "    for (const k in zt) found.push(k);",
+    "tests": ["src/tests/game/core/zoneTileKeys.test.ts"]
   },
   {
     "id": "wasm-path-drops-first-node",
@@ -1339,22 +1353,22 @@
   {
     "id": "haul-capacity-exclusive",
     "file": "src/lib/game/services/jobs/haul.ts",
-    "find": "const atCapacity = activeHaulCount >= canAccept;",
-    "replace": "const atCapacity = activeHaulCount > canAccept;",
+    "find": "activeHaulCount >= storageRoom",
+    "replace": "activeHaulCount > storageRoom",
     "tests": ["src/tests/game/services/haulRules.test.ts"]
   },
   {
     "id": "haul-free-slots-ignore-stored-piles",
     "file": "src/lib/game/services/jobs/haul.ts",
-    "find": "freeSlots += Math.max(0, tilePileCapacity(gs, x, y) - tileStoredPileCount(gs, x, y));",
-    "replace": "freeSlots += tilePileCapacity(gs, x, y);",
+    "find": "freeSlots += Math.max(0, (bins.pileCapacity.get(k) ?? 1) - (piles.get(k) ?? 0));",
+    "replace": "freeSlots += bins.pileCapacity.get(k) ?? 1;",
     "tests": ["src/tests/game/services/haulRules.test.ts"]
   },
   {
     "id": "haul-rehaul-cooldown-shifted",
     "file": "src/lib/game/services/jobs/haul.ts",
-    "find": "d.rehaulCooldownUntil > gs.turn)\n  );",
-    "replace": "d.rehaulCooldownUntil >= gs.turn + 5)\n  );",
+    "find": "d.rehaulCooldownUntil > gs.turn) &&",
+    "replace": "d.rehaulCooldownUntil >= gs.turn + 5) &&",
     "tests": ["src/tests/game/services/haulRules.test.ts"]
   },
   {
@@ -1367,22 +1381,22 @@
   {
     "id": "haul-container-budget-exclusive",
     "file": "src/lib/game/services/jobs/haul.ts",
-    "find": "if (held >= budget) return false;",
-    "replace": "if (held > budget) return false;",
+    "find": ".get(zoneId) ?? 0) >= budget;",
+    "replace": ".get(zoneId) ?? 0) > budget;",
     "tests": ["src/tests/game/services/haulRules.test.ts"]
   },
   {
     "id": "jobs-farthest-first",
     "file": "src/lib/game/services/JobService.ts",
-    "find": "return dA - dB;",
-    "replace": "return dB - dA;",
+    "find": "return a.distance - b.distance;",
+    "replace": "return b.distance - a.distance;",
     "tests": ["src/tests/game/services/JobService.test.ts"]
   },
   {
     "id": "jobs-priority-zero-claimed",
     "file": "src/lib/game/services/JobService.ts",
-    "find": "if (priority <= 0) return false;",
-    "replace": "if (priority < 0) return false;",
+    "find": "if (priority <= 0) continue;",
+    "replace": "if (priority < 0) continue;",
     "tests": ["src/tests/game/services/JobService.test.ts"]
   },
   {
@@ -1745,9 +1759,30 @@
   {
     "id": "pawn-stat-intact-forced-whole",
     "file": "src/lib/game/services/PawnStatService.ts",
-    "find": "const intact = formulaUsesIntact(formula) ? intactBodyFraction(p) : 1;",
-    "replace": "const intact = 1;",
+    "find": "    f.readsIntact ? intactBodyFraction(p) : 1,",
+    "replace": "    1,",
     "tests": ["src/tests/game/services/pawnStatRules.test.ts"]
+  },
+  {
+    "id": "pawn-stat-formula-capacity-slot-shared",
+    "file": "src/lib/game/services/PawnStatService.ts",
+    "find": "  if (capDefault !== undefined) return { src: `c.${v} ?? ${capDefault}`, scaled: false };",
+    "replace": "  if (capDefault !== undefined) return { src: `c.consciousness ?? ${capDefault}`, scaled: false };",
+    "tests": ["src/tests/game/services/statFormulaSlots.test.ts"]
+  },
+  {
+    "id": "pawn-stat-formula-core-slot-shared",
+    "file": "src/lib/game/services/PawnStatService.ts",
+    "find": "  if (core) return { src: `core('${core}', s, sm)`, scaled: core !== 'charisma' };",
+    "replace": "  if (core) return { src: `core('strength', s, sm)`, scaled: core !== 'charisma' };",
+    "tests": ["src/tests/game/services/statFormulaSlots.test.ts"]
+  },
+  {
+    "id": "pawn-stat-formula-skips-condition-scaling",
+    "file": "src/lib/game/services/PawnStatService.ts",
+    "find": "        readsMultipliers: readsScaled || used.has('POWER'),",
+    "replace": "        readsMultipliers: used.has('POWER'),",
+    "tests": ["src/tests/game/services/conditionCoreStatScaling.test.ts"]
   },
   {
     "id": "pawn-stat-scar-weight-lowered",
@@ -1759,8 +1794,8 @@
   {
     "id": "pawn-stat-capacity-cache-ignores-light",
     "file": "src/lib/game/services/PawnStatService.ts",
-    "find": "    if (c && c.limbs === pawn.limbs && c.injuries === pawn.injuries && c.light === lightBucket) {",
-    "replace": "    if (c && c.limbs === pawn.limbs && c.injuries === pawn.injuries) {",
+    "find": "      c.injuries === pawn.injuries &&\n      c.light === lightBucket &&\n",
+    "replace": "      c.injuries === pawn.injuries &&\n",
     "tests": ["src/tests/game/services/pawnStatRules.test.ts"]
   },
   {
@@ -2816,8 +2851,8 @@
   {
     "id": "hostile-pack-corpse-ignored",
     "file": "src/lib/game/services/entity/entityAI.ts",
-    "find": "    if (packCorpse) {",
-    "replace": "    if (packCorpse && false) {",
+    "find": "    if (packCorpseWithin(mob, allMobs, visionRange)) {",
+    "replace": "    if (packCorpseWithin(mob, allMobs, visionRange) && false) {",
     "tests": ["src/tests/game/services/entity/hostileRules.test.ts"]
   },
   {

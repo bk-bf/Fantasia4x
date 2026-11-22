@@ -1,6 +1,12 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { get } from 'svelte/store';
-import { activityLog, logCombatSwing, logCombatKill, __resetCombatSessions } from '$lib/stores/Log';
+import {
+  activityLog,
+  logCombatSwing,
+  logCombatKill,
+  clearActivityLog,
+  __resetCombatSessions
+} from '$lib/stores/Log';
 import type { CombatTurnEntry } from '$lib/game/core/defs/events';
 
 function swing(turn: number, hit: boolean, damage = 0): CombatTurnEntry {
@@ -113,5 +119,39 @@ describe('engagement-scoped combat logging', () => {
     expect(engaged).toHaveLength(1);
     expect(engaged[0].combatBreakdown?.length).toBe(4);
     expect(engaged[0].combatBreakdown?.filter((b) => b.fatal)).toHaveLength(1);
+  });
+});
+
+describe('combat logging across a restart', () => {
+  beforeEach(() => {
+    activityLog.set([]);
+    __resetCombatSessions();
+  });
+
+  it('logs the first fight of a new colony whose pawn ids repeat the previous one', () => {
+    logCombatSwing('mob-goblin-1', 'Goblin', 'pawn-0', 'Wren', 50000, 5, 5, swing(50000, true, 2));
+    clearActivityLog();
+    logCombatSwing('mob-wolf-1', 'Wolf', 'pawn-0', 'Ada', 6100, 9, 9, {
+      turn: 6100,
+      attackerName: 'Wolf',
+      defenderName: 'Ada',
+      hit: true,
+      damage: 2
+    });
+    logCombatSwing('pawn-0', 'Ada', 'mob-wolf-1', 'Wolf', 6101, 9, 9, {
+      turn: 6101,
+      attackerName: 'Ada',
+      defenderName: 'Wolf',
+      hit: true,
+      damage: 2
+    });
+    expect(combatEntries()).toHaveLength(1);
+  });
+
+  it('opens a new engagement when the turn runs backwards, as it does after loading an earlier save', () => {
+    logCombatSwing('mob-goblin-1', 'Goblin', 'pawn-0', 'Wren', 50000, 5, 5, swing(50000, true, 2));
+    activityLog.set([]);
+    logCombatSwing('mob-wolf-1', 'Wolf', 'pawn-0', 'Ada', 6100, 9, 9, swing(6100, true, 2));
+    expect(combatEntries()).toHaveLength(1);
   });
 });

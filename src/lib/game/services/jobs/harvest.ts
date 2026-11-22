@@ -34,54 +34,66 @@ function blockingCoOccupants(
     .map(([id]) => id);
 }
 
+function keepHarvestJob(j: Job, gs: GameState, key: string): boolean {
+  const designationType = gs.designations?.[key];
+  if (!designationType || !HARVEST_DTYPES.includes(designationType)) return false;
+  const resourceId = j.resourceId ?? '';
+  if (!resourceMatchesDesignation(designationType, resourceId)) return false;
+  if (!resourceMatchesFilter(designationType, resourceId, gs, key)) return false;
+  const tile = gs.worldMap[j.targetY]?.[j.targetX];
+  const interaction = resourceObjectService.getInteractionByDesignationType(
+    resourceId,
+    designationType
+  );
+  if (!meetsGrowthGate(interaction, tile?.growth?.[resourceId])) return false;
+  return (tile?.resources?.[resourceId] ?? 0) > 0;
+}
+
 export function generate(jobs: Job[], gs: GameState): Job[] {
+  const jobbed = new Map<string, Set<string>>();
   jobs = jobs.filter((j) => {
     if (j.type !== 'harvest') return true;
-    const designationType = gs.designations?.[`${j.targetX},${j.targetY}`];
-    if (!designationType || !HARVEST_DTYPES.includes(designationType)) return false;
-    if (!resourceMatchesDesignation(designationType, j.resourceId ?? '')) return false;
-    if (
-      !resourceMatchesFilter(designationType, j.resourceId ?? '', gs, `${j.targetX},${j.targetY}`)
-    )
-      return false;
-    const tile = gs.worldMap[j.targetY]?.[j.targetX];
-    const interaction = resourceObjectService.getInteractionByDesignationType(
-      j.resourceId ?? '',
-      designationType
-    );
-    if (!meetsGrowthGate(interaction, tile?.growth?.[j.resourceId ?? ''])) return false;
-    return (tile?.resources?.[j.resourceId ?? ''] ?? 0) > 0;
+    const key = `${j.targetX},${j.targetY}`;
+    if (!keepHarvestJob(j, gs, key)) return false;
+    let resources = jobbed.get(key);
+    if (!resources) jobbed.set(key, (resources = new Set()));
+    resources.add(String(j.resourceId));
+    return true;
   });
 
-  const harvestKeys = new Set<string>();
   const blockedTileJobs = new Set<string>();
   for (const j of jobs) {
-    if (j.type !== 'harvest') continue;
-    harvestKeys.add(`${j.targetX},${j.targetY},${j.resourceId}`);
-    if (blocksTile(j.resourceId ?? '')) blockedTileJobs.add(`${j.targetX},${j.targetY}`);
+    if (j.type === 'harvest' && blocksTile(j.resourceId ?? ''))
+      blockedTileJobs.add(`${j.targetX},${j.targetY}`);
   }
 
-  for (const [key, dtype] of Object.entries(gs.designations ?? {})) {
+  const designations = gs.designations ?? {};
+  for (const key in designations) {
+    const dtype = designations[key];
     if (!HARVEST_DTYPES.includes(dtype)) continue;
-    const [x, y] = key.split(',').map(Number);
-    const tile = gs.worldMap[y]?.[x];
-    if (!tile) continue;
+    const comma = key.indexOf(',');
+    const x = Number(key.slice(0, comma));
+    const y = Number(key.slice(comma + 1));
+    const resources = gs.worldMap[y]?.[x]?.resources;
+    if (!resources) continue;
+    const tile = gs.worldMap[y][x];
+    let taken = jobbed.get(key);
 
-    for (const [resourceId, amount] of Object.entries(tile.resources ?? {})) {
-      if ((amount ?? 0) <= 0) continue;
+    for (const resourceId in resources) {
+      if ((resources[resourceId] ?? 0) <= 0) continue;
+      if (taken?.has(resourceId)) continue;
       if (!resourceMatchesDesignation(dtype, resourceId)) continue;
       if (!resourceMatchesFilter(dtype, resourceId, gs, key)) continue;
 
       const interaction = resourceObjectService.getInteractionByDesignationType(resourceId, dtype);
       if (!meetsGrowthGate(interaction, tile.growth?.[resourceId])) continue;
 
-      const existKey = `${x},${y},${resourceId}`;
-      if (harvestKeys.has(existKey)) continue;
       if (blocksTile(resourceId)) {
         if (blockedTileJobs.has(key)) continue;
         blockedTileJobs.add(key);
       }
-      harvestKeys.add(existKey);
+      if (!taken) jobbed.set(key, (taken = new Set()));
+      taken.add(resourceId);
 
       jobs.push({
         id: `harvest-${x}-${y}-${resourceId}-t${gs.turn}-${rng.random().toString(36).slice(2, 5)}`,

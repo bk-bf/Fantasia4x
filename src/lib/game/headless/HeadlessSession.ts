@@ -3,8 +3,7 @@ import type { TurnProcessingResult } from '../systems/GameEngine';
 import { GameStateManager } from '../core/state/GameStateManager';
 import { applySimCommand } from '../sim/commands';
 import type { SimCommand } from '../sim/simProtocol';
-import { resetUnreachableJobs } from '../systems/PawnStateMachine';
-import { resetSocialTransients } from '../services/SocialService';
+import { resetSimTransients } from '../systems/simTransients';
 import { pathfinderService } from '../services/PathfinderService';
 import { rng } from '../core/util/rng';
 import type { GameState } from '../core/types';
@@ -47,8 +46,7 @@ export class HeadlessSession {
 
   async start(state: GameState): Promise<void> {
     rng.reseed(state.seed);
-    resetUnreachableJobs();
-    resetSocialTransients();
+    resetSimTransients();
     this.engine.setGameStateManager(new GameStateManager(state));
     await pathfinderService.init();
     this.started = true;

@@ -19,6 +19,7 @@ import {
   vesselOf
 } from '../rules/gear/vessels';
 import { allItemDefs, itemDefById } from '../defs/items';
+import { zoneTileKeys } from './zoneTiles';
 import buildingsData from '../../database/world/buildings.json';
 import itemsData from '../../database/items/items.json';
 
@@ -180,11 +181,9 @@ export function reserveForOrder(
         });
       }
       drops.push({
+        ...d,
         ...(d.unitConditions ? { unitConditions: d.unitConditions.slice(0, remaining) } : {}),
-        id: `${d.id}-resv-${orderId}`,
-        resourceId: d.resourceId,
-        x: d.x,
-        y: d.y,
+        id: `${d.id}${RESERVED_PIECE}${orderId}`,
         quantity: remaining,
         stored: true,
         reservedFor: orderId
@@ -195,15 +194,83 @@ export function reserveForOrder(
   return { state: { ...state, droppedItems: drops }, reserved: qty - remaining };
 }
 
+const RESERVED_PIECE = '-resv-';
+
+function sourceStackIndex(drops: DroppedItem[], piece: DroppedItem, orderId: string): number {
+  const suffix = `${RESERVED_PIECE}${orderId}`;
+  if (!piece.id.endsWith(suffix)) return -1;
+  const sourceId = piece.id.slice(0, -suffix.length);
+  return drops.findIndex(
+    (d) =>
+      d.id === sourceId &&
+      !d.reservedFor &&
+      d.resourceId === piece.resourceId &&
+      d.x === piece.x &&
+      d.y === piece.y &&
+      !!d.stored === !!piece.stored
+  );
+}
+
+export function reservableQuantity(drops: DroppedItem[] | undefined, itemId: string): number {
+  let total = 0;
+  for (const d of drops ?? []) {
+    if (!d.stored || d.reservedFor || d.quantity <= 0) continue;
+    if (d.resourceId === itemId) {
+      total += d.quantity;
+      continue;
+    }
+    const held = heldQuantity(d.instance, itemId);
+    if (held > 0) total += held;
+  }
+  return total;
+}
+
+export function cannotReserve(available: number, need: number): boolean {
+  return available < need - QUANTITY_EPSILON * Math.max(1, Math.abs(need));
+}
+
 export function releaseReservation(state: GameState, orderId: string): GameState {
-  let changed = false;
-  const drops = (state.droppedItems ?? []).map((d) => {
-    if (d.reservedFor !== orderId) return d;
-    changed = true;
-    const { reservedFor, ...rest } = d;
-    return rest;
-  });
-  return changed ? { ...state, droppedItems: drops } : state;
+  const all = state.droppedItems ?? [];
+  if (!all.some((d) => d.reservedFor === orderId)) return state;
+  const drops: DroppedItem[] = [];
+  const pieces: DroppedItem[] = [];
+  for (const d of all) {
+    if (d.reservedFor !== orderId) {
+      drops.push(d);
+      continue;
+    }
+    const { reservedFor: _reservedFor, ...rest } = d;
+    pieces.push(rest);
+    drops.push(rest);
+  }
+  for (const piece of pieces) {
+    const src = sourceStackIndex(drops, piece, orderId);
+    if (src < 0) continue;
+    const source = drops[src];
+    const conditions =
+      piece.unitConditions || source.unitConditions
+        ? mergeConditions(
+            piece.unitConditions,
+            piece.quantity,
+            source.unitConditions,
+            source.quantity
+          )
+        : undefined;
+    drops[src] = {
+      ...source,
+      quantity: source.quantity + piece.quantity,
+      ...(conditions ? { unitConditions: conditions } : {})
+    };
+    drops.splice(drops.indexOf(piece), 1);
+  }
+  return { ...state, droppedItems: drops };
+}
+
+export function freeDropId(drops: readonly DroppedItem[], base: string): string {
+  if (!drops.some((d) => d.id === base)) return base;
+  let n = 1;
+  while (drops.some((d) => d.id === `${base}-${n}`)) n++;
+  return `${base}-${n}`;
 }
 
 export function tileStoredQuantity(state: GameState, x: number, y: number): number {
@@ -251,13 +318,39 @@ export function isStorageBinTile(state: GameState, x: number, y: number): boolea
   return false;
 }
 
-export function storageTileKeys(state: GameState): string[] {
-  const seen = new Set<string>();
-  const zt = state.zoneTiles ?? {};
-  for (const k in zt) if (zt[k]?.includes('stockpile')) seen.add(k);
-  for (const b of state.buildings ?? [])
-    if (b.status === 'complete' && binStacksForType(b.type) > 0) seen.add(`${b.x},${b.y}`);
-  return [...seen];
+export function storageTileKeys(state: GameState): readonly string[] {
+  const zoneKeys = zoneTileKeys(state, 'stockpile');
+  let keys: string[] | null = null;
+  let binKeys: Set<string> | null = null;
+  for (const b of state.buildings ?? []) {
+    if (b.status !== 'complete' || binStacksForType(b.type) <= 0) continue;
+    const k = `${b.x},${b.y}`;
+    if (state.zoneTiles?.[k]?.includes('stockpile') || binKeys?.has(k)) continue;
+    (binKeys ??= new Set()).add(k);
+    (keys ??= zoneKeys.slice()).push(k);
+  }
+  return keys ?? zoneKeys;
+}
+
+export interface StorageBinIndex {
+  pileCapacity: Map<string, number>;
+  filter: Map<string, string[] | null>;
+}
+
+export function storageBinIndex(state: GameState): StorageBinIndex {
+  const pileCapacity = new Map<string, number>();
+  const filter = new Map<string, string[] | null>();
+  for (const b of state.buildings ?? []) {
+    if (b.status !== 'complete') continue;
+    const stacks = binStacksForType(b.type);
+    if (stacks <= 0) continue;
+    const k = `${b.x},${b.y}`;
+    if (stacks > (pileCapacity.get(k) ?? 1)) pileCapacity.set(k, stacks);
+    if (filter.has(k)) continue;
+    const override = b.storageSettings?.allowedItemIds;
+    filter.set(k, override !== undefined ? override : (STORAGE_BIN_FILTER.get(b.type) ?? null));
+  }
+  return { pileCapacity, filter };
 }
 
 export function isStorageTile(state: GameState, x: number, y: number): boolean {
@@ -340,13 +433,13 @@ export function addToStockpileZone(
       continue;
     }
     const idx = drops.findIndex(
-      (d) => d.stored && d.resourceId === itemId && d.x === x && d.y === y
+      (d) => d.stored && !d.reservedFor && d.resourceId === itemId && d.x === x && d.y === y
     );
     if (idx >= 0) {
       drops[idx].quantity += amount;
     } else {
       drops.push({
-        id: `stored-${itemId}-${x}-${y}`,
+        id: freeDropId(drops, `stored-${itemId}-${x}-${y}`),
         resourceId: itemId,
         x,
         y,
@@ -461,11 +554,17 @@ function zoneSeedFilter(state: GameState, x: number, y: number): string[] {
   return ids;
 }
 
-export function tileVesselCount(state: GameState, x: number, y: number): number {
-  let n = 0;
-  for (const d of state.droppedItems ?? [])
-    if (d.stored && d.x === x && d.y === y && d.instance && vesselOf(d.resourceId)) n++;
-  return n;
+export function storedVesselsByStockpileZone(state: GameState): Map<string, number> {
+  const held = new Map<string, number>();
+  const zt = state.zoneTiles ?? {};
+  for (const d of state.droppedItems ?? []) {
+    if (!d.stored || !d.instance || !vesselOf(d.resourceId)) continue;
+    const k = `${d.x},${d.y}`;
+    if (!(k in zt)) continue;
+    const zoneId = state.designationZoneId?.[k]?.stockpile;
+    if (zoneId) held.set(zoneId, (held.get(zoneId) ?? 0) + 1);
+  }
+  return held;
 }
 
 function packIntoVesselOnTile(drops: DroppedItem[], idx: number, x: number, y: number): number {
@@ -523,7 +622,12 @@ export function absorbDropIfOnStockpileTile(state: GameState, dropId: string): G
   }
 
   const existingIdx = (state.droppedItems ?? []).findIndex(
-    (d) => d.stored && d.resourceId === drop.resourceId && d.x === drop.x && d.y === drop.y
+    (d) =>
+      d.stored &&
+      !d.reservedFor &&
+      d.resourceId === drop.resourceId &&
+      d.x === drop.x &&
+      d.y === drop.y
   );
 
   let newDropped: DroppedItem[];

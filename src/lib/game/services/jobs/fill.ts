@@ -232,7 +232,7 @@ export function complete(job: Job, gs: GameState): GameState {
             fluidContents: (x.fluidContents ?? [])
               .map((e) =>
                 e.itemId === itemId
-                  ? { ...e, litres: Math.round((e.litres ?? 0) - gotNative) / 1 }
+                  ? { ...e, litres: Math.round(((e.litres ?? 0) - gotNative) * 1000) / 1000 }
                   : e
               )
               .filter((e) => (e.litres ?? 0) > 0.0001)

@@ -80,3 +80,64 @@ describe('reservePendingCraftOrders (ADR-016 queue-without-materials)', () => {
     expect((gs.jobs ?? []).some((j) => j.craftQueueId === 'cq1')).toBe(false);
   });
 });
+
+describe('reservePendingCraftOrders with stock that cannot cover the order', () => {
+  function forgeOrder(stationLitres: number, drops: object[]): GameState {
+    return {
+      turn: 1,
+      buildings: [
+        {
+          id: 'forge',
+          type: 'stone_forge',
+          x: 1,
+          y: 1,
+          status: 'complete',
+          fluidContents: stationLitres > 0 ? [{ itemId: 'molten_copper', litres: stationLitres }] : []
+        }
+      ],
+      droppedItems: drops,
+      craftingQueue: [
+        {
+          id: 'bar',
+          item: { id: 'copper_bar' },
+          inputs: { molten_copper: 1, clay_mold: 2 },
+          pending: true,
+          stationBuildingId: 'forge'
+        }
+      ]
+    } as unknown as GameState;
+  }
+  const molds = { id: 'molds', resourceId: 'clay_mold', x: 0, y: 0, quantity: 3, stored: true };
+
+  it('hands back the same state while an input is missing', () => {
+    const gs = forgeOrder(0, [molds]);
+    expect(jobService.reservePendingCraftOrders(gs)).toBe(gs);
+  });
+
+  it('counts the fluid the station already holds toward the order', () => {
+    const out = jobService.reservePendingCraftOrders(forgeOrder(1, [molds]));
+    expect(out.craftingQueue[0].pending).toBeUndefined();
+    const reserved = (out.droppedItems ?? []).filter((d) => d.reservedFor === 'bar');
+    expect(reserved.map((d) => d.quantity)).toEqual([2]);
+  });
+
+  it('counts fluid carried in a stored vessel toward the order', () => {
+    const flask = {
+      id: 'flask',
+      resourceId: 'flask',
+      x: 0,
+      y: 0,
+      quantity: 1,
+      stored: true,
+      instance: {
+        instanceId: 'f',
+        itemId: 'flask',
+        durability: 5,
+        contents: [{ itemId: 'molten_copper', litres: 1 }]
+      }
+    };
+    const out = jobService.reservePendingCraftOrders(forgeOrder(0, [molds, flask]));
+    expect(out.craftingQueue[0].pending).toBeUndefined();
+    expect((out.droppedItems ?? []).find((d) => d.id === 'flask')?.reservedFor).toBe('bar');
+  });
+});
