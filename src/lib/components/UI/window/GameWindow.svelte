@@ -5,6 +5,7 @@
   import type { WindowId } from '$lib/stores/uiState';
   import ChromeButton from '$lib/components/UI/widget/ChromeButton.svelte';
   import PanelTitle from '$lib/components/UI/widget/PanelTitle.svelte';
+  import ResizeGrip from './ResizeGrip.svelte';
   import { provideWindow, type WindowBar } from './windowContext';
   import type { Point } from './windowPlacement';
 
@@ -22,6 +23,8 @@
     onmove,
     onraise,
     onclose,
+    onresize,
+    onresetsize,
     children
   }: {
     id: WindowId;
@@ -37,6 +40,8 @@
     onmove: (p: Point) => void;
     onraise: () => void;
     onclose: () => void;
+    onresize?: (w: number, h: number) => void;
+    onresetsize?: () => void;
     children: Snippet;
   } = $props();
 
@@ -110,6 +115,9 @@
   <div class="wb window-body" use:autohideScroll>
     {@render children()}
   </div>
+  {#if onresize && !modal}
+    <ResizeGrip from={() => ({ w, h })} {onresize} onreset={() => onresetsize?.()} />
+  {/if}
 </div>
 
 <style>
@@ -149,6 +157,6 @@
     min-height: 0;
     display: flex;
     flex-direction: column;
-    overflow: hidden;
+    overflow: auto;
   }
 </style>

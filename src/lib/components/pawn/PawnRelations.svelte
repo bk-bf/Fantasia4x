@@ -171,9 +171,8 @@
   .rel {
     display: grid;
     grid-template-columns: 1fr 2fr;
-    grid-template-rows: minmax(0, 1fr);
+    grid-template-rows: 248px;
     gap: 6px;
-    height: 248px;
   }
   .fam {
     margin-bottom: 6px;

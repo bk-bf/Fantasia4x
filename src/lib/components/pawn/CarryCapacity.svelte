@@ -3,6 +3,7 @@
   import { itemService } from '$lib/game/services/ItemService';
   import { gameState } from '$lib/stores/gameState';
   import SkinBar from '$lib/components/UI/widget/SkinBar.svelte';
+  import HoverTip from '$lib/components/UI/tooltip/HoverTip.svelte';
 
   export let pawn: Pawn;
 
@@ -18,9 +19,18 @@
   const r1 = (n: number) => Math.round(n * 10) / 10;
   const signed = (n: number) => (n >= 0 ? '+' : '−') + r1(Math.abs(n));
   const pct = (f: number) => `${Math.round(f * 100)}%`;
+
+  let at: { x: number; y: number } | null = null;
+  const follow = (e: MouseEvent) => (at = { x: e.clientX, y: e.clientY });
 </script>
 
-<div class="capacity">
+<div
+  class="capacity"
+  role="note"
+  on:mouseenter={follow}
+  on:mousemove={follow}
+  on:mouseleave={() => (at = null)}
+>
   <div class="meter">
     <em>Load</em><SkinBar value={weightKg / Math.max(maxWeightKg, 0.1)} ramp="honey" />
     <span>{weightKg.toFixed(1)} of {maxWeightKg.toFixed(1)} kg</span>
@@ -29,7 +39,10 @@
     <em>Room</em><SkinBar value={volumeL / Math.max(maxVolumeL, 0.1)} ramp="water" />
     <span>{volumeL.toFixed(1)} of {maxVolumeL.toFixed(1)} L</span>
   </div>
-  <div class="cap-tip">
+</div>
+
+{#if at}
+  <HoverTip x={at.x} y={at.y}>
     <div class="tip-formula">CARRY CAPACITY — {cap.size} · {cap.bodyWeight}kg</div>
     <div class="tip-row">
       weight = <span class="tv">{cap.bodyWeight}kg</span> ×
@@ -58,12 +71,11 @@
     {:else}
       <div class="tip-gear">no belt or pack — equip one for more room</div>
     {/if}
-  </div>
-</div>
+  </HoverTip>
+{/if}
 
 <style>
   .capacity {
-    position: relative;
     margin-top: 6px;
     cursor: help;
   }
@@ -85,26 +97,6 @@
     color: var(--text-dim);
     white-space: nowrap;
   }
-  .cap-tip {
-    display: none;
-    position: absolute;
-    z-index: 60;
-    left: 0;
-    top: 100%;
-    min-width: 240px;
-    max-width: 340px;
-    padding: 6px 8px;
-    background: var(--bg-panel);
-    box-shadow:
-      inset 0 0 0 1px var(--border-hi),
-      0 4px 12px rgb(0 0 0 / 0.5);
-    color: var(--text);
-    text-transform: none;
-    pointer-events: none;
-  }
-  .capacity:hover .cap-tip {
-    display: block;
-  }
   .tip-formula {
     color: var(--accent-hi, #ffd24a);
   }
@@ -119,10 +111,10 @@
     color: var(--text-dim, #888);
     font-style: italic;
   }
-  .cap-tip .tv {
+  .tv {
     color: var(--pos);
   }
-  .cap-tip .floor {
+  .floor {
     color: var(--text-dim, #888);
     font-style: italic;
   }
