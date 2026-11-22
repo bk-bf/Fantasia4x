@@ -33,7 +33,7 @@ describe('scopeOf', () => {
   });
 
   it('runs every leg but the Rust instruction counts for a game source change', () => {
-    expect(scopeOf(['src/lib/game/sim/commands.ts'])).toEqual({
+    expect(scopeOf(['src/lib/game/sim/simProtocol.ts'])).toEqual({
       ...none,
       check: true,
       coverage: true,
@@ -61,7 +61,7 @@ describe('scopeOf', () => {
     expect(scopeOf(['src/lib/game/core/defs/wounds.ts']).mutants).toBe(true);
     expect(scopeOf(['src/tests/game/systems/woundRecovery.test.ts']).mutants).toBe(true);
     expect(scopeOf(['tools/mutants/pins.mjs'])).toEqual({ ...checkOnly, mutants: true });
-    expect(scopeOf(['src/lib/game/sim/commands.ts']).mutants).toBe(false);
+    expect(scopeOf(['src/lib/game/sim/simProtocol.ts']).mutants).toBe(false);
   });
 
   it('checks and measures coverage for a change to tests alone', () => {
