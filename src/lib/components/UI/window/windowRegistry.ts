@@ -18,6 +18,7 @@ export interface WindowSpec {
   title: string;
   component: Component;
   width: 'big' | number;
+  height?: number;
   modal?: boolean;
   fit?: boolean;
 }

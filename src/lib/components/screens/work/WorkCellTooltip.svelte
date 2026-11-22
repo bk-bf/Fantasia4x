@@ -1,4 +1,5 @@
 <script lang="ts">
+  import HoverTip from '$lib/components/UI/tooltip/HoverTip.svelte';
   import type { Pawn, WorkCategory } from '$lib/game/core/types';
   import { getEfficiencyColor } from '$lib/components/util/pawnUtils';
   import { getActiveConditionViews } from '$lib/components/util/conditionInfo';
@@ -27,15 +28,6 @@
     pinned?: boolean;
   }
   let { pawn, wc, mods, rank, level, name, x, y, pinned = false }: Props = $props();
-
-  function portal(node: HTMLElement) {
-    document.body.appendChild(node);
-    return {
-      destroy() {
-        node.remove();
-      }
-    };
-  }
 
   const mult = (n: number) => `×${n.toFixed(2)}`;
   const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
@@ -106,22 +98,15 @@
     }
     return out;
   });
-
-  let flipX = $derived(typeof window !== 'undefined' && x > window.innerWidth - 280);
-  let flipY = $derived(typeof window !== 'undefined' && y > window.innerHeight - 240);
-  let style = $derived(
-    `${flipX ? `right:${window.innerWidth - x + 14}px` : `left:${x + 16}px`};` +
-      `${flipY ? `bottom:${window.innerHeight - y + 14}px` : `top:${y + 16}px`};`
-  );
 </script>
 
-<div class="tip" class:pinned use:portal data-pin-panel {style}>
-  <div class="tip-hdr">
-    <span class="tip-name">{name ?? wc.name}</span>
+<HoverTip {x} {y} {pinned}>
+  <h5>
+    {name ?? wc.name}
     {#if !nonSkill}
       <span class="tip-eff" style="color:{getEfficiencyColor(eff)}">{Math.round(eff * 100)}%</span>
     {/if}
-  </div>
+  </h5>
 
   {#if rank.best >= 0}
     <div class="tip-rank" style="color:{STAR_COLORS[rank.best]}">★ {STAR_TIERS[rank.best]}</div>
@@ -136,45 +121,45 @@
         : 'Carrying task — driven by carry capacity and movement, not a learned skill.'}
     </div>
     {#each relevantStats as s}
-      <div class="tip-row">
-        <span class="tip-lbl">{s.label}</span>
+      <div class="kv">
+        <em>{s.label}</em>
         <span>{s.text}</span>
       </div>
     {/each}
-    <div class="tip-row">
-      <span class="tip-lbl">Assigned</span>
+    <div class="kv">
+      <em>Assigned</em>
       <span style="color:{LABOR_COLORS[level]}">{LVL_NAMES[level]}</span>
     </div>
   {:else}
-    <div class="tip-row">
-      <span class="tip-lbl">Speed</span>
+    <div class="kv">
+      <em>Speed</em>
       <span style="color:{getEfficiencyColor(mods.speed)}">{mult(mods.speed)}</span>
     </div>
     {#if mods.yield !== null}
-      <div class="tip-row">
-        <span class="tip-lbl">Yield</span>
+      <div class="kv">
+        <em>Yield</em>
         <span style="color:{getEfficiencyColor(mods.yield)}">{mult(mods.yield)}</span>
       </div>
     {/if}
     {#if mods.quality !== null}
-      <div class="tip-row">
-        <span class="tip-lbl">Quality</span>
+      <div class="kv">
+        <em>Quality</em>
         <span style="color:{getEfficiencyColor(mods.quality)}">{mult(mods.quality)}</span>
       </div>
     {/if}
 
-    <div class="tip-row">
-      <span class="tip-lbl">Assigned</span>
+    <div class="kv">
+      <em>Assigned</em>
       <span style="color:{LABOR_COLORS[level]}">{LVL_NAMES[level]}</span>
     </div>
     {#each stats as s}
-      <div class="tip-row">
-        <span class="tip-lbl">{s.label}</span>
+      <div class="kv">
+        <em>{s.label}</em>
         <span>{s.val}</span>
       </div>
     {/each}
-    <div class="tip-row">
-      <span class="tip-lbl">Skill</span>
+    <div class="kv">
+      <em>Skill</em>
       <span>{skill}</span>
     </div>
   {/if}
@@ -191,96 +176,30 @@
     {/if}
     {#each traitMods as m}
       <div class="tip-mod">
-        <span class="tip-mod-name" style="color:{m.pct >= 0 ? '#6bc' : '#e08'}">{m.name}</span>
+        <span class="tip-mod-name" style="color:{m.pct >= 0 ? 'var(--pos)' : 'var(--neg)'}"
+          >{m.name}</span
+        >
         <span class="tip-mod-val">{m.pct >= 0 ? '+' : ''}{Math.round(m.pct)}% {m.axis}</span>
       </div>
     {/each}
     {#each condMods as m}
       <div class="tip-mod">
-        <span class="tip-mod-name" style="color:{m.pct >= 0 ? '#6bc' : '#e08'}">{m.name}</span>
+        <span class="tip-mod-name" style="color:{m.pct >= 0 ? 'var(--pos)' : 'var(--neg)'}"
+          >{m.name}</span
+        >
         <span class="tip-mod-val">{m.pct >= 0 ? '+' : ''}{Math.round(m.pct)}% speed</span>
       </div>
     {/each}
   {/if}
-</div>
+</HoverTip>
 
 <style>
-  .tip {
-    position: fixed;
-    z-index: 1000;
-    min-width: 190px;
-    max-width: 260px;
-    padding: 5px 7px;
-    background: var(--bg-panel, #11151c);
-    border: 1px solid var(--border-hi, #3a4656);
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.55);
-    font-family: var(--font-mono);
-    font-size: 12px;
-    color: var(--text);
-    pointer-events: none;
-  }
-  .tip.pinned {
-    pointer-events: auto;
-    box-shadow:
-      0 4px 14px rgba(0, 0, 0, 0.55),
-      0 0 0 1px var(--accent, #e8c870);
-  }
-  .tip-hdr {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    gap: 8px;
-    border-bottom: 1px solid var(--border);
-    padding-bottom: 3px;
-    margin-bottom: 3px;
-  }
-  .tip-name {
-    color: var(--accent-hi);
-    letter-spacing: 0.04em;
-  }
-  .tip-eff {
-    font-weight: bold;
-  }
   .tip-rank {
-    font-size: 11px;
     margin-bottom: 3px;
-  }
-  .tip-row {
-    display: flex;
-    justify-content: space-between;
-    gap: 10px;
-    line-height: 1.5;
-  }
-  .tip-lbl {
-    color: var(--text-dim);
   }
   .tip-note {
-    color: var(--text-muted, #778);
-    font-size: 10px;
-    line-height: 1.35;
     margin-bottom: 3px;
-  }
-  .tip-sep {
-    margin-top: 4px;
-    padding-top: 3px;
-    border-top: 1px solid var(--border);
-    color: var(--text-muted, #555);
-    font-size: 10px;
-    letter-spacing: 0.08em;
-  }
-  .tip-mod {
-    display: flex;
-    justify-content: space-between;
-    gap: 10px;
-    line-height: 1.45;
-  }
-  .tip-mod-name {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .tip-mod-val {
-    color: var(--text-dim);
-    flex-shrink: 0;
+    line-height: 16px;
+    color: var(--text-muted);
   }
 </style>

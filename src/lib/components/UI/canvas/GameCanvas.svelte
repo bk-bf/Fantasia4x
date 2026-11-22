@@ -138,6 +138,7 @@
   import FoodFilterPanel from '$lib/components/UI/canvas/FoodFilterPanel.svelte';
   import StockpileZonePanel from '$lib/components/UI/canvas/StockpileZonePanel.svelte';
   import EnvReadout from '$lib/components/UI/canvas/EnvReadout.svelte';
+  import { chrome } from '$lib/pixelArt/chrome';
   import BuildingInfo from '$lib/components/UI/canvas/BuildingInfo.svelte';
   import {
     buildMobCard,
@@ -4546,7 +4547,7 @@
     {:else if hoverMobCard}
       <SelectedEntityCard model={hoverMobCard} />
     {:else if hoverBuilding && !hoverPawn}
-      <div class="tile-hud tile-hud--building">
+      <div class="tile-hud tile-hud--building" {@attach chrome('tip')}>
         <div class="tile-hud-body">
           <BuildingInfo building={hoverBuilding} binContents={hoverBin ? hoverBinContents : []} />
           {#if hoverTile}
@@ -4584,7 +4585,7 @@
       {@const tileSnow = Math.round(hoverTile.snow ?? 0)}
       {@const soilTier = soilTierForTile(hoverTile)}
       {@const soilPct = soilFertilityPct(hoverTile)}
-      <div class="tile-hud">
+      <div class="tile-hud" {@attach chrome('tip')}>
         <div class="tile-hud-body">
           <span class="tile-coord">({hoverTile.x},{hoverTile.y})</span><span class="tile-layers"
             >{BIOMES[hoverTile.terrainType]?.displayName ??
@@ -4867,47 +4868,25 @@
     left: 6px;
     width: 340px;
     box-sizing: border-box;
-    background: transparent;
-    border: 1px solid transparent;
-    color: #a07840;
-    font-family: var(--font-mono);
-    font-size: 11px;
-    line-height: 1.5;
-    padding: 2px 7px;
+    color: var(--text-dim);
+    font: 16px/18px var(--font-pixel);
+    letter-spacing: 0.6px;
+    padding: 9px 12px 10px;
     pointer-events: none;
     white-space: normal;
     overflow-wrap: break-word;
     z-index: 10;
   }
-  .tile-hud::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    z-index: 0;
-    background: rgba(28, 16, 6, 0.92);
-    box-shadow: inset 0 0 0 1px #6b4a2a;
-    filter: url(#ambient-tint);
-    pointer-events: none;
-  }
   .tile-hud-body {
-    position: relative;
-    z-index: 1;
     filter: url(#ambient-tint-legible);
   }
-
-  .tile-zone {
-    font-size: 10px;
-    margin-top: 1px;
-  }
-  .tile-move {
-    font-size: 10px;
-    margin-top: 1px;
+  .tile-hud .tile-hud-body :global(*) {
+    font-size: inherit;
   }
   .tile-env {
-    font-size: 10px;
-    margin-top: 1px;
     display: flex;
-    gap: 8px;
+    flex-wrap: wrap;
+    column-gap: 8px;
   }
   .designation-hud {
     position: absolute;
@@ -4942,12 +4921,11 @@
     pointer-events: none;
   }
   .tile-coord {
-    color: #e8b86a;
-    font-weight: bold;
+    color: var(--accent-hi);
     margin-right: 5px;
   }
   .tile-layers {
-    color: #b08848;
+    color: var(--text);
   }
   .error {
     color: #c04040;

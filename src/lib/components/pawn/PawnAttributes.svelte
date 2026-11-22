@@ -7,6 +7,7 @@
   import PawnSkillBanner from './PawnSkillBanner.svelte';
   import StatTooltip from './StatTooltip.svelte';
   import { chrome } from '$lib/pixelArt/chrome';
+  import HoverTip from '$lib/components/UI/tooltip/HoverTip.svelte';
   import {
     buildStatContext,
     computeStatView,
@@ -48,38 +49,7 @@
   $: ctx = buildStatContext(pawn);
   const TREND: Record<string, string> = { '▲': 'var(--pos)', '▼': 'var(--neg)' };
 
-  function flipTip(cell: HTMLElement) {
-    const onEnter = () => {
-      const tip = cell.querySelector<HTMLElement>('.tip');
-      if (!tip) return;
-      let clip: HTMLElement | null = cell.parentElement;
-      while (clip && clip !== document.body) {
-        const oy = getComputedStyle(clip).overflowY;
-        if (oy === 'auto' || oy === 'scroll' || oy === 'hidden') break;
-        clip = clip.parentElement;
-      }
-      const cr =
-        clip && clip !== document.body
-          ? clip.getBoundingClientRect()
-          : ({ top: 0, bottom: window.innerHeight } as DOMRect);
-      const prev = tip.style.cssText;
-      tip.style.visibility = 'hidden';
-      tip.style.display = 'block';
-      tip.style.maxHeight = 'none';
-      const tipH = tip.offsetHeight;
-      tip.style.cssText = prev;
-      const r = cell.getBoundingClientRect();
-      const margin = 6;
-      const below = cr.bottom - r.bottom - margin;
-      const above = r.top - cr.top - margin;
-      const up = tipH <= below ? false : tipH <= above ? true : above > below;
-      cell.classList.toggle('up', up);
-      const avail = up ? above : below;
-      tip.style.maxHeight = tipH > avail ? `${Math.max(60, avail)}px` : '';
-    };
-    cell.addEventListener('mouseenter', onEnter);
-    return { destroy: () => cell.removeEventListener('mouseenter', onEnter) };
-  }
+  let tip: { id: string; x: number; y: number } | null = null;
 
   $: categoryOrder = [
     ...CATEGORY_ORDER,
@@ -113,6 +83,7 @@
   };
 
   $: catRows = buildRows(pawn, ctx, relevant);
+  $: tipView = tip && catRows.flatMap((g) => g.cells).find((c) => c.id === tip?.id)?.view;
 
   function buildRows(..._deps: unknown[]) {
     const rows = grouped.map((g) => ({
@@ -150,18 +121,29 @@
       <h5>{g.label}</h5>
       <div class="dcells">
         {#each g.cells as c (c.id)}
-          <div class="dcell" class:hl={c.hl} use:flipTip {@attach chrome('well')}>
+          <div
+            class="dcell"
+            class:hl={c.hl}
+            role="note"
+            on:mouseenter={(e) => (tip = { id: c.id, x: e.clientX, y: e.clientY })}
+            on:mousemove={(e) => tip && (tip = { ...tip, x: e.clientX, y: e.clientY })}
+            on:mouseleave={() => (tip = null)}
+            {@attach chrome('well')}
+          >
             <em>{c.view.name}</em>
             <b style:color={TREND[c.view.trend.glyph]}
               >{c.view.value}{c.view.unit}<small>{c.view.trend.glyph}</small></b
             >
-            <div class="tip"><StatTooltip view={c.view} /></div>
           </div>
         {/each}
       </div>
     </div>
   {/each}
 </div>
+
+{#if tip && tipView}
+  <HoverTip x={tip.x} y={tip.y}><StatTooltip view={tipView} /></HoverTip>
+{/if}
 
 <style>
   .attrs {
@@ -213,31 +195,5 @@
   b {
     flex-shrink: 0;
     font-weight: normal;
-  }
-  .tip {
-    display: none;
-    position: absolute;
-    z-index: 60;
-    left: 0;
-    top: 100%;
-    min-width: 220px;
-    max-width: 340px;
-    max-height: 60vh;
-    overflow-y: auto;
-    padding: 6px 8px;
-    background: var(--bg-panel);
-    box-shadow:
-      inset 0 0 0 1px var(--border-hi),
-      0 4px 12px rgb(0 0 0 / 0.5);
-    color: var(--text);
-    white-space: normal;
-    pointer-events: auto;
-  }
-  .dcell:hover .tip {
-    display: block;
-  }
-  .dcell:global(.up) .tip {
-    top: auto;
-    bottom: 100%;
   }
 </style>

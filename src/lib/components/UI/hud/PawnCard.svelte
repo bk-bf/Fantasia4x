@@ -97,7 +97,9 @@
       <MeterRow label="Health" value={health / 100} ramp="leaf">{health}</MeterRow>
       <MeterRow label="Mood" value={mood / 100} ramp="honey">{mood}</MeterRow>
       {#each needs as m (m.label)}
-        <MeterRow label={m.label} value={m.value / m.max} ramp={m.ramp}>{m.word}</MeterRow>
+        <MeterRow label={m.label} value={m.value / m.max} ramp={m.ramp} title={m.word}
+          >{m.word}</MeterRow
+        >
       {/each}
     </div>
     {#if conditions.length > 0}
@@ -153,7 +155,8 @@
     width: 48px;
   }
   .c-bars :global(.meter-row > span) {
-    width: 52px;
+    width: auto;
+    max-width: 96px;
   }
   .c-conds {
     margin-top: 6px;
