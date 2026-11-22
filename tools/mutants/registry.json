@@ -1052,8 +1052,8 @@
   {
     "id": "mob-live-region-never",
     "file": "src/lib/game/services/entity/entityHelpers.ts",
-    "find": "    if (pos && Math.abs(pos.x - mob.x) <= radius && Math.abs(pos.y - mob.y) <= radius) return true;",
-    "replace": "    if (pos && Math.abs(pos.x - mob.x) <= radius && Math.abs(pos.y - mob.y) <= radius) return false;",
+    "find": "    if (pos && Math.abs(pos.x - mx) <= radius && Math.abs(pos.y - my) <= radius) return true;",
+    "replace": "    if (pos && Math.abs(pos.x - mx) <= radius && Math.abs(pos.y - my) <= radius) return false;",
     "tests": ["src/tests/game/services/entitySim.test.ts"]
   },
   {
