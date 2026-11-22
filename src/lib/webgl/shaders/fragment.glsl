@@ -34,7 +34,16 @@ uniform float u_glyphOnly;
 // drawn glyph-only in a later pass above the resources.
 uniform float u_bgOnly;
 uniform float u_alphaCut;
-uniform float u_alphaCeil;
+uniform sampler2D u_lightAtlas;
+uniform highp sampler2D u_lightTexture;
+uniform float u_fieldLit;
+uniform float u_shadowPass;
+uniform vec3 u_shade;
+uniform highp float u_shadowDepth;
+uniform float u_saturation;
+uniform float u_brightness;
+
+const vec3 LUMA = vec3(0.2126, 0.7152, 0.0722);
 uniform highp sampler2D u_rockTexture;
 uniform vec2 u_rockRamp;
 uniform float u_rockLift;
@@ -94,6 +103,16 @@ vec3 vein(vec3 rock, highp vec2 at, highp vec2 ground, bool face) {
     return texelFetch(u_paintAtlas, ivec2(v_vein.xy) + ivec2(clamp(k - (face ? 1 : 0), 0, 3), 0), 0).rgb;
 }
 
+vec3 weathered(vec3 c) {
+    return mix(vec3(dot(c, LUMA)), c, u_saturation) * u_brightness;
+}
+
+vec2 paintedUv() {
+    vec4 cell = v_uvBounds - vec4(2.0, 0.0, 2.0, 0.0);
+    vec2 inset = 0.5 * u_paintTexelSize;
+    return clamp(v_texCoord, cell.xy + inset, cell.zw - inset);
+}
+
 highp float groundDepth(highp float ground) {
     return 0.5 - 0.5 * ground / u_rowPx * u_rowDepth;
 }
@@ -104,22 +123,34 @@ void main() {
     // Final light multiplier = day/night ambient + baked additive point lights
     // (animated by the global flicker uniform), clamped to the same ceiling the
     // CPU lighting model used (MAX_LIGHT = 1.6).
-    vec3 light = min(u_ambient + v_light * u_lightFlicker, vec3(1.6));
+    vec3 light = u_fieldLit > 0.5
+        ? texelFetch(u_lightTexture, ivec2(gl_FragCoord.xy), 0).rgb * 2.0
+        : min(u_ambient + v_light * u_lightFlicker, vec3(1.6));
+
+    if (u_shadowPass > 0.5) {
+        if (v_uvBounds.x < 2.0 || texture(u_lightAtlas, paintedUv()).g < 0.5) discard;
+        gl_FragDepth = u_shadowDepth;
+        fragColor = vec4(u_shade, 1.0);
+        return;
+    }
 
     // Background-only pass (snow/ice WASH beneath the resource glyphs): emit just the per-cell wash at
     // its own alpha, no glyph — so grass/tree/wall glyphs drawn on top stay visible instead of being
     // buried under solid white. Return early; no glyph/outline sampling needed.
     if (u_bgOnly > 0.5) {
-        fragColor = vec4(v_background.rgb * light, v_background.a);
+        fragColor = vec4(weathered(v_background.rgb * light), v_background.a);
         return;
     }
 
     bool painted = v_uvBounds.x >= 2.0;
     vec4 sprite;
     if (painted) {
-        vec4 cell = v_uvBounds - vec4(2.0, 0.0, 2.0, 0.0);
-        vec2 inset = 0.5 * u_paintTexelSize;
-        sprite = texture(u_paintAtlas, clamp(v_texCoord, cell.xy + inset, cell.zw - inset));
+        vec2 uv = paintedUv();
+        sprite = texture(u_paintAtlas, uv);
+        if (u_fieldLit > 0.5) {
+            float glow = texture(u_lightAtlas, uv).r;
+            if (glow > 0.0) light = mix(u_ambient, vec3(1.0), glow);
+        }
         highp vec2 at = v_world * u_atlasScale;
         int alpha = int(sprite.a * 255.0 + 0.5);
         highp float ground = v_row * u_rowPx + OBJECT_FOOT;
@@ -157,7 +188,7 @@ void main() {
         float aE = (nE.x <= hi.x) ? texture(u_fontAtlas, nE).a : 0.0;
         float aW = (nW.x >= lo.x) ? texture(u_fontAtlas, nW).a : 0.0;
         if (aN > 0.5 || aS > 0.5 || aE > 0.5 || aW > 0.5) {
-            fragColor = vec4(v_outline * light, 1.0);
+            fragColor = vec4(weathered(v_outline * light), 1.0);
             return;
         }
     }
@@ -172,8 +203,8 @@ void main() {
     // Glyph-only overlay pass: draw only the glyph, transparent elsewhere, so the
     // terrain rendered underneath shows through (no opaque background quad).
     if (u_glyphOnly > 0.5) {
-        if (sprite.a < u_alphaCut || (u_alphaCeil > 0.0 && sprite.a >= u_alphaCeil)) discard;
-        fragColor = vec4(tinted * light, sprite.a);
+        if (sprite.a < u_alphaCut) discard;
+        fragColor = vec4(weathered(tinted * light), sprite.a);
         return;
     }
 
@@ -183,5 +214,5 @@ void main() {
     // uses fractional bg alpha so the cell washes the terrain beneath it, while its glyph pixels
     // (the snow sprites) stay fully opaque.
     vec3 lit = mix(v_background.rgb, tinted, sprite.a);
-    fragColor = vec4(lit * light, mix(v_background.a, 1.0, sprite.a));
+    fragColor = vec4(weathered(lit * light), mix(v_background.a, 1.0, sprite.a));
 }

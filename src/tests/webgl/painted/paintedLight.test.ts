@@ -5,12 +5,19 @@ import { REGISTRY_ART } from '../../../../tools/tileset/sources.mjs';
 import { readPaintedLightFlag } from '$lib/webgl/painted/flag';
 import {
   LIGHT_SQUASH,
+  MAP_WEATHER,
   MAX_LIGHTS,
-  gradeForLight,
+  TIMES,
+  gradeForHour,
+  mapWeather,
   packLights,
-  stepFalloff,
-  type LightGrade
+  stepFalloff
 } from '$lib/webgl/painted/lightGrade';
+import {
+  TICKS_PER_GAME_HOUR,
+  getAmbientLight,
+  getAmbientTint
+} from '$lib/game/services/EnvironmentService';
 
 type Rgb = [number, number, number];
 type MockupLight = { x: number; y: number; col: Rgb };
@@ -76,61 +83,85 @@ describe('stepped point light', () => {
   });
 });
 
+const atHour = (hour: number) => {
+  const turn = Math.round(hour * TICKS_PER_GAME_HOUR);
+  return gradeForHour(getAmbientLight(turn), getAmbientTint(turn));
+};
+
 describe('time of day grade', () => {
-  const expectGrade = (g: LightGrade, t: { amb: Rgb; lk: number; vig: number }) => {
-    g.ambient.forEach((v, i) => expect(v).toBeCloseTo(t.amb[i], 6));
-    expect(g.strength).toBeCloseTo(t.lk, 6);
-    expect(g.vignette).toBeCloseTo(t.vig, 6);
-  };
-
-  it('is the mockup grade at full day, dusk and night light', () => {
-    expectGrade(gradeForLight(1), mockup.TIMES.day);
-    expectGrade(gradeForLight(0.5), mockup.TIMES.dusk);
-    expectGrade(gradeForLight(0.15), mockup.TIMES.night);
-    expectGrade(gradeForLight(0.05), mockup.TIMES.night);
+  it('holds the mockup grades for day, dusk and night', () => {
+    for (const time of ['day', 'dusk', 'night'] as const) {
+      expect(TIMES[time].ambient).toEqual(mockup.TIMES[time].amb);
+      expect(TIMES[time].strength).toBe(mockup.TIMES[time].lk);
+      expect(TIMES[time].vignette).toBe(mockup.TIMES[time].vig);
+    }
+    expect(TIMES.day.radius).toBe(0.7);
   });
 
-  it('blends between grades by light level', () => {
-    const g = gradeForLight(0.75);
-    const { day, dusk } = mockup.TIMES;
-    g.ambient.forEach((v, i) => expect(v).toBeCloseTo((day.amb[i] + dusk.amb[i]) / 2, 6));
-    expect(g.radius).toBeCloseTo(0.85, 6);
+  it('is the plain day grade at noon, with no colour cast', () => {
+    const g = atHour(12);
+    expect(g.weights).toEqual([1, 0, 0]);
+    expect(g.ambient).toEqual([1, 1, 1]);
   });
 
-  it('shrinks lights by day and stops their flicker', () => {
-    expect(gradeForLight(1).radius).toBeCloseTo(0.7, 6);
-    expect(gradeForLight(1).flicker).toBe(0);
-    expect(gradeForLight(0.3).radius).toBe(1);
+  it('is the mockup night grade at midnight', () => {
+    const g = atHour(0);
+    expect(g.weights).toEqual([0, 0, 1]);
+    g.ambient.forEach((v, i) => expect(v).toBeCloseTo(mockup.TIMES.night.amb[i], 6));
   });
 
-  it('carries the season and weather tint on the ambient', () => {
-    const g = gradeForLight(1, [0.9, 0.95, 1.1]);
-    expect(g.ambient).toEqual([0.9, 0.95, 1.1]);
+  it('crosses into dusk by the warmth of the hour and into night by its darkness', () => {
+    const evening = atHour(19);
+    expect(evening.weights[1]).toBeGreaterThan(0.9);
+    expect(evening.weights[2]).toBe(0);
+    const late = atHour(22);
+    expect(late.weights[2]).toBeGreaterThan(0.5);
+    for (const g of [evening, late]) expect(g.weights.reduce((a, b) => a + b, 0)).toBeCloseTo(1, 9);
+  });
+
+  it('takes the map weather from the overlay the game draws', () => {
+    expect(mapWeather('rain', false)).toBe('rain');
+    expect(mapWeather('rain', true)).toBe('storm');
+    expect(mapWeather('foggy_rain', false)).toBe('fog');
+    expect(mapWeather('snowdust', false)).toBe('snow');
+    expect(mapWeather('leaves', false)).toBe('clear');
+    const storm = gradeForHour(1, [1, 1, 1], MAP_WEATHER.storm);
+    expect(storm.saturation).toBeCloseTo(Math.pow(0.72, 2.2), 9);
+    expect(storm.brightness).toBeCloseTo(0.86, 9);
+    expect(gradeForHour(1, [1, 1, 1]).saturation).toBe(1);
   });
 });
 
 describe('light list', () => {
-  const night = gradeForLight(0.15);
   const fire = { x: 10, y: 10, color: [1, 0.55, 0.22] as Rgb, radius: 6, intensity: 1.1 };
 
-  it('packs position, radius and strength in art pixels', () => {
+  it('packs a light without a sprite at its tile centre, its reach in art pixels', () => {
     const out = new Float32Array(MAX_LIGHTS * 8);
-    const n = packLights([fire], { x: 0, y: 0, w: 30, h: 20 }, night, 32, 0, out);
+    const n = packLights([fire], { x: 0, y: 0, w: 30, h: 20 }, 32, 0, out);
     expect(n).toBe(1);
     expect([...out.slice(0, 8)].map((v) => +v.toFixed(4))).toEqual([
-      336, 336, 192, 1.1, 1, 0.55, 0.22, 0
+      336, 336, 192, 134.4, 1, 0.55, 0.22, 1.1
+    ]);
+  });
+
+  it('places a sprite light at its flame with the mockup reach and full strength', () => {
+    const out = new Float32Array(MAX_LIGHTS * 8);
+    const lamp = { ...fire, art: { x: 16, y: 13, rad: 170, night: true } };
+    packLights([lamp], { x: 0, y: 0, w: 30, h: 20 }, 32, 0, out);
+    expect([...out.slice(0, 8)].map((v) => +v.toFixed(4))).toEqual([
+      336, 333, 170, 0, 1, 0.55, 0.22, 1
     ]);
   });
 
   it('leaves out lights that cannot reach the view', () => {
     const out = new Float32Array(MAX_LIGHTS * 8);
     const far = { ...fire, x: 100 };
-    expect(packLights([far, fire], { x: 0, y: 0, w: 30, h: 20 }, night, 32, 0, out)).toBe(1);
+    expect(packLights([far, fire], { x: 0, y: 0, w: 30, h: 20 }, 32, 0, out)).toBe(1);
   });
 
   it('keeps at most the uniform array of lights', () => {
     const out = new Float32Array(MAX_LIGHTS * 8);
     const many = Array.from({ length: MAX_LIGHTS + 5 }, () => fire);
-    expect(packLights(many, { x: 0, y: 0, w: 30, h: 20 }, night, 32, 0, out)).toBe(MAX_LIGHTS);
+    expect(packLights(many, { x: 0, y: 0, w: 30, h: 20 }, 32, 0, out)).toBe(MAX_LIGHTS);
   });
 });

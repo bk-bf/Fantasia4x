@@ -1045,7 +1045,7 @@
       const { light, tint } = environmentService.getAmbient(environmentService.ambientTurn(s));
       const season = environmentService.effectiveSeason(s);
       const tinted = environmentService.getMapAmbientTint(tint, season, s.weather);
-      renderer.setAmbient(light, tinted, tint);
+      renderer.setAmbient(light, tinted, tint, s.weather?.type);
       lightingService.setAmbient(light, tinted);
       _ambientLight = light;
       _ambientTint = tinted;
@@ -2395,7 +2395,7 @@
       );
     }
 
-    const darken = Math.max(0, 1 - _ambientLight);
+    const darken = PAINTED_LIGHT ? 0 : Math.max(0, 1 - _ambientLight);
     if (darken > 0.001) {
       ctx.globalCompositeOperation = 'source-atop';
       const tr = Math.round(_ambientTint[0] * 255);
@@ -2755,7 +2755,7 @@
           $gameState ? environmentService.effectiveSeason($gameState) : undefined,
           $gameState?.weather
         );
-        renderer.setAmbient(light, tinted, tint);
+        renderer.setAmbient(light, tinted, tint, $gameState?.weather?.type);
         lightingService.setAmbient(light, tinted);
         if (worldMap.length === 0) refreshEmitters();
         _ambientLight = light;

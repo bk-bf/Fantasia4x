@@ -13,8 +13,17 @@ import { addFrameTotals } from '../workPins/page.js';
 import { GROUND_BLEND, PAINTED_LIGHT, PAINTED_TILES } from './painted/flag.js';
 import { loadPaintedTileset, type LoadedPaintedTileset } from './painted/loader.js';
 import { GroundBlend } from './painted/groundBlend.js';
-import { PaintedLightPass } from './painted/lightPass.js';
-import { gradeForLight, type PointLight, type Rgb } from './painted/lightGrade.js';
+import { LIGHT_FIELD_UNIT, PaintedLightPass, type LightPassFrame } from './painted/lightPass.js';
+import {
+  MAP_WEATHER,
+  gradeForHour,
+  type MapWeatherId,
+  type PointLight,
+  type Rgb
+} from './painted/lightGrade.js';
+import { PaintedShadowCast, SHADOW_DEPTH, SHADOW_SHADE } from './painted/shadowCast.js';
+
+const LIGHT_ATLAS_UNIT = 7;
 
 export const ROW_DEPTH_RANGE = 8192;
 
@@ -72,8 +81,10 @@ export class WebGLRendererCore {
   private rowDepth = PAINTED_TILES;
   private groundBlend: GroundBlend | null = null;
   private lightPass: PaintedLightPass | null = null;
+  private shadowCast: PaintedShadowCast | null = null;
   private pointLights: readonly PointLight[] = [];
-  private ambientEnv: Rgb = [1, 1, 1];
+  private ambientBase: Rgb = [1, 1, 1];
+  private mapWeather: MapWeatherId = 'clear';
 
   private gameGrid: GameGrid | null = null;
   private gridVersion = 0;
@@ -183,9 +194,11 @@ export class WebGLRendererCore {
   setAmbient(light: number, tint: Rgb, baseTint?: Rgb): void {
     this.ambientLight = light;
     this.ambientTint = tint;
-    this.ambientEnv = baseTint
-      ? [tint[0] / baseTint[0], tint[1] / baseTint[1], tint[2] / baseTint[2]]
-      : [1, 1, 1];
+    this.ambientBase = baseTint ?? tint;
+  }
+
+  setMapWeather(weather: MapWeatherId): void {
+    this.mapWeather = weather;
   }
 
   setPointLights(lights: readonly PointLight[]): void {
@@ -317,6 +330,7 @@ export class WebGLRendererCore {
       if (this.gameGrid) this.groundBlend?.setGrid(this.gameGrid);
       if (PAINTED_LIGHT && this.painted)
         this.lightPass = PaintedLightPass.create(gl, this.shaderManager);
+      if (this.painted) this.shadowCast = PaintedShadowCast.create(gl, this.shaderManager);
 
       if (this.debug) console.log('✅ WebGL2 renderer ready');
       return true;
@@ -347,6 +361,14 @@ export class WebGLRendererCore {
       return;
     }
 
+    const viewportTilesW = Math.ceil(this.viewport.width / this.tileWidth);
+    const viewportTilesH = Math.ceil(this.viewport.height / this.tileHeight);
+    const lightFrame =
+      this.lightPass && this.painted
+        ? this.lightFrame(this.painted.tileset.tile, viewportTilesW, viewportTilesH)
+        : null;
+    if (this.lightPass && lightFrame) this.stats.drawCalls += this.lightPass.drawField(lightFrame);
+
     if (!this.shaderManager.useProgram('tileRenderer')) return;
     this.shaderManager.setUniform('tileRenderer', 'u_projection', this.projectionMatrix);
 
@@ -358,12 +380,12 @@ export class WebGLRendererCore {
       this.tileWidth / BASE_TILE_PX,
       this.tileHeight / BASE_TILE_PX
     ]);
-    const unlit = this.lightPass !== null;
+    const unlit = lightFrame !== null;
     this.shaderManager.setUniform(
       'tileRenderer',
       'u_ambient',
-      unlit
-        ? [1, 1, 1]
+      lightFrame
+        ? lightFrame.grade.ambient
         : [
             this.ambientLight * this.ambientTint[0],
             this.ambientLight * this.ambientTint[1],
@@ -373,6 +395,18 @@ export class WebGLRendererCore {
     const flickerTime = performance.now() / 1000;
     const flicker = unlit ? 0 : this.dynamicLight ? fireFlickerGlobal(flickerTime) : 1.0;
     this.shaderManager.setUniform('tileRenderer', 'u_lightFlicker', flicker);
+    this.shaderManager.setUniform('tileRenderer', 'u_fieldLit', unlit ? 1 : 0);
+    this.shaderManager.setUniform(
+      'tileRenderer',
+      'u_saturation',
+      lightFrame?.grade.saturation ?? 1
+    );
+    this.shaderManager.setUniform(
+      'tileRenderer',
+      'u_brightness',
+      lightFrame?.grade.brightness ?? 1
+    );
+    if (unlit) this.shaderManager.setUniform('tileRenderer', 'u_lightTexture', LIGHT_FIELD_UNIT);
 
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this.fontTexture);
@@ -387,17 +421,17 @@ export class WebGLRendererCore {
     if (this.rowDepth) {
       this.shaderManager.setUniform('tileRenderer', 'u_rowDepth', 1 / ROW_DEPTH_RANGE);
       this.shaderManager.setUniform('tileRenderer', 'u_alphaCut', ALPHA_CUT);
-      this.shaderManager.setUniform('tileRenderer', 'u_alphaCeil', 0);
     }
-
-    const viewportTilesW = Math.ceil(this.viewport.width / this.tileWidth);
-    const viewportTilesH = Math.ceil(this.viewport.height / this.tileHeight);
 
     const lightTime = performance.now() / 1000;
 
     this.shaderManager.setUniform('tileRenderer', 'u_glyphOnly', 0);
     const tTerrain = performance.now();
-    if (this.groundBlend) this.drawGroundBlend(this.groundBlend, flicker, lightTime);
+    if (this.groundBlend)
+      this.drawGroundBlend(this.groundBlend, flicker, lightTime, [
+        lightFrame?.grade.saturation ?? 1,
+        lightFrame?.grade.brightness ?? 1
+      ]);
     const gridStats = this.gridRenderer.renderGrid(this.gameGrid, {
       tileWidth: BASE_TILE_PX,
       tileHeight: BASE_TILE_PX,
@@ -437,6 +471,7 @@ export class WebGLRendererCore {
       if (this.rowDepth) {
         gl.enable(gl.DEPTH_TEST);
         gl.depthFunc(gl.LEQUAL);
+        this.drawShadowCast(gl, viewportTilesW, viewportTilesH);
       }
       this.renderGlyphOverlay(
         this.resourceOverlayGrid,
@@ -467,35 +502,75 @@ export class WebGLRendererCore {
     } else {
       this.stats.overlayMs = 0;
     }
-    if (this.lightPass && this.painted)
-      this.drawPaintedLight(
-        this.lightPass,
-        this.painted.tileset.tile,
-        viewportTilesW,
-        viewportTilesH
-      );
   }
 
-  private drawPaintedLight(
-    pass: PaintedLightPass,
+  private lightFrame(
     artTile: number,
     viewportTilesW: number,
     viewportTilesH: number
-  ): void {
-    this.stats.drawCalls += pass.draw({
+  ): LightPassFrame {
+    return {
       canvas: [this.viewport.width, this.viewport.height],
       viewOffset: [this.viewTileX * BASE_TILE_PX, this.viewTileY * BASE_TILE_PX],
       zoom: [this.tileWidth / BASE_TILE_PX, this.tileHeight / BASE_TILE_PX],
       artPerBase: artTile / BASE_TILE_PX,
       artTile,
       view: { x: this.viewTileX, y: this.viewTileY, w: viewportTilesW, h: viewportTilesH },
-      grade: gradeForLight(this.ambientLight, this.ambientEnv),
-      lights: this.pointLights,
+      grade: gradeForHour(this.ambientLight, this.ambientBase, MAP_WEATHER[this.mapWeather]),
+      lights: this.spriteLights(),
       time: performance.now() / 1000
+    };
+  }
+
+  private spriteLights(): PointLight[] {
+    const layers = [
+      this.buildingOverlayGrid,
+      this.resourceOverlayGrid,
+      this.resourceTallOverlayGrid
+    ];
+    return this.pointLights.map((l) => {
+      const emit = layers
+        .map((g) => g?.getTile(l.x, l.y)?.painted?.emit)
+        .find((e) => e !== undefined);
+      if (!emit) return l;
+      return {
+        ...l,
+        color: emit.col,
+        flicker: emit.flicker === true,
+        art: { x: emit.x, y: emit.y, rad: emit.rad, night: emit.night === true }
+      };
     });
   }
 
-  private drawGroundBlend(blend: GroundBlend, flicker: number, lightTime: number): void {
+  private drawShadowCast(
+    gl: WebGL2RenderingContext,
+    viewportTilesW: number,
+    viewportTilesH: number
+  ): void {
+    if (!this.shadowCast || !this.painted || !this.shaderManager) return;
+    const artTile = this.painted.tileset.tile;
+    gl.depthFunc(gl.LESS);
+    gl.blendFunc(gl.ZERO, gl.SRC_COLOR);
+    this.stats.drawCalls += this.shadowCast.draw({
+      canvas: [this.viewport.width, this.viewport.height],
+      viewOffset: [this.viewTileX * BASE_TILE_PX, this.viewTileY * BASE_TILE_PX],
+      zoom: [this.tileWidth / BASE_TILE_PX, this.tileHeight / BASE_TILE_PX],
+      artPerBase: artTile / BASE_TILE_PX,
+      artTile,
+      view: { x: this.viewTileX, y: this.viewTileY, w: viewportTilesW, h: viewportTilesH },
+      casters: [this.resourceOverlayGrid, this.buildingOverlayGrid]
+    });
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    gl.depthFunc(gl.LEQUAL);
+    this.shaderManager.useProgram('tileRenderer');
+  }
+
+  private drawGroundBlend(
+    blend: GroundBlend,
+    flicker: number,
+    lightTime: number,
+    tone: [number, number]
+  ): void {
     const drawn = blend.draw({
       projection: this.projectionMatrix,
       viewOffset: [this.viewTileX * BASE_TILE_PX, this.viewTileY * BASE_TILE_PX],
@@ -508,6 +583,8 @@ export class WebGLRendererCore {
             this.ambientLight * this.ambientTint[2]
           ],
       flicker,
+      fieldLit: this.lightPass !== null,
+      tone,
       lightSampler: this.lightSampler ?? undefined,
       lightTime,
       lightVersion: this.lightVersion,
@@ -533,6 +610,13 @@ export class WebGLRendererCore {
       1 / painted.tileset.atlasW,
       1 / painted.tileset.atlasH
     ]);
+    gl.activeTexture(gl.TEXTURE0 + LIGHT_ATLAS_UNIT);
+    gl.bindTexture(gl.TEXTURE_2D, painted.light);
+    gl.activeTexture(gl.TEXTURE0);
+    this.shaderManager.setUniform('tileRenderer', 'u_lightAtlas', LIGHT_ATLAS_UNIT);
+    this.shaderManager.setUniform('tileRenderer', 'u_shade', SHADOW_SHADE);
+    this.shaderManager.setUniform('tileRenderer', 'u_shadowDepth', SHADOW_DEPTH);
+    this.shaderManager.setUniform('tileRenderer', 'u_shadowPass', 0);
     if (!painted.top) return;
     gl.activeTexture(gl.TEXTURE2);
     gl.bindTexture(gl.TEXTURE_2D, painted.top.texture);
@@ -652,7 +736,10 @@ export class WebGLRendererCore {
     this.groundBlend = null;
     this.lightPass?.dispose();
     this.lightPass = null;
+    this.shadowCast?.dispose();
+    this.shadowCast = null;
     if (this.painted) this.webglState.getContext()?.deleteTexture(this.painted.texture);
+    if (this.painted) this.webglState.getContext()?.deleteTexture(this.painted.light);
     if (this.painted?.top) this.webglState.getContext()?.deleteTexture(this.painted.top.texture);
     if (this.painted?.top) this.webglState.getContext()?.deleteTexture(this.painted.top.veins);
     this.painted = null;

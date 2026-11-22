@@ -15,7 +15,6 @@ const GLYPH_VERTEX_FLOATS = 24;
 const ROW_VERTEX_FLOATS = 30;
 const NO_VEIN = { x: -1, y: -1, near: 0 };
 export const ALPHA_CUT = 0.5;
-export const SHADOW_FLOOR = 0.5 / 255;
 
 export interface GridRenderOptions {
   tileWidth: number;
@@ -220,7 +219,7 @@ export class GridRenderer {
       }
     }
 
-    if (options.rowPasses) this.drawShadowTexels(() => this.redrawChunks());
+    if (options.rowPasses) this.drawShadows(() => this.redrawChunks());
     if (frame % GridRenderer.CHUNK_SWEEP_EVERY === 0) this.evictStaleChunks(frame, chunks);
     this.currentVertexCount = drawnVerts;
     return drawnVerts / 6;
@@ -324,15 +323,15 @@ export class GridRenderer {
     gl.bindVertexArray(null);
   }
 
-  private drawShadowTexels(draw: () => void): void {
+  private drawShadows(draw: () => void): void {
     const gl = this.gl;
-    gl.depthMask(false);
-    this.shaderManager.setUniform('tileRenderer', 'u_alphaCut', SHADOW_FLOOR);
-    this.shaderManager.setUniform('tileRenderer', 'u_alphaCeil', ALPHA_CUT);
+    gl.depthFunc(gl.LESS);
+    gl.blendFunc(gl.ZERO, gl.SRC_COLOR);
+    this.shaderManager.setUniform('tileRenderer', 'u_shadowPass', 1);
     draw();
-    this.shaderManager.setUniform('tileRenderer', 'u_alphaCut', ALPHA_CUT);
-    this.shaderManager.setUniform('tileRenderer', 'u_alphaCeil', 0);
-    gl.depthMask(true);
+    this.shaderManager.setUniform('tileRenderer', 'u_shadowPass', 0);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    gl.depthFunc(gl.LEQUAL);
   }
 
   private uploadAndDraw(vertexData: Float32Array, rowPasses = false): void {
@@ -356,7 +355,7 @@ export class GridRenderer {
 
     const vertexCount = vertexData.length / this.vertexFloats;
     gl.drawArrays(gl.TRIANGLES, 0, vertexCount);
-    if (rowPasses) this.drawShadowTexels(() => gl.drawArrays(gl.TRIANGLES, 0, vertexCount));
+    if (rowPasses) this.drawShadows(() => gl.drawArrays(gl.TRIANGLES, 0, vertexCount));
 
     gl.bindVertexArray(null);
 

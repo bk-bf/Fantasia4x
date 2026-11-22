@@ -6,6 +6,7 @@ import { BASE_TILE_PX } from '../tile-types.js';
 import type { LoadedPaintedTileset } from './loader.js';
 import { groundLayer } from './groundLevels.js';
 import { paintedGroundIds } from './tileset.js';
+import { LIGHT_FIELD_UNIT } from './lightPass.js';
 
 const PROGRAM = 'groundBlend';
 const MAX_KINDS = 64;
@@ -24,6 +25,8 @@ export interface GroundBlendFrame {
   zoom: [number, number];
   ambient: [number, number, number];
   flicker: number;
+  fieldLit: boolean;
+  tone: [number, number];
   lightSampler?: LightSampler;
   lightTime: number;
   lightVersion: number;
@@ -129,7 +132,11 @@ export class GroundBlend {
       'u_patch',
       'u_layer',
       'u_ambient',
-      'u_lightFlicker'
+      'u_lightFlicker',
+      'u_lightTexture',
+      'u_fieldLit',
+      'u_saturation',
+      'u_brightness'
     ];
     this.at = Object.fromEntries(names.map((n) => [n, gl.getUniformLocation(program, n)]));
     const { patch, layer } = groundKindTable(painted);
@@ -315,6 +322,10 @@ export class GroundBlend {
     gl.uniform2fv(this.at.u_zoom, f.zoom);
     gl.uniform3fv(this.at.u_ambient, f.ambient);
     gl.uniform1f(this.at.u_lightFlicker, f.flicker);
+    gl.uniform1i(this.at.u_lightTexture, LIGHT_FIELD_UNIT);
+    gl.uniform1f(this.at.u_fieldLit, f.fieldLit ? 1 : 0);
+    gl.uniform1f(this.at.u_saturation, f.tone[0]);
+    gl.uniform1f(this.at.u_brightness, f.tone[1]);
     gl.uniform2i(this.at.u_mapSize, this.w, this.h);
     this.bindOn(ATLAS_UNIT, this.atlas);
     this.bindOn(KIND_UNIT, this.kindTex);

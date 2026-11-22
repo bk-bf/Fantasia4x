@@ -3,7 +3,8 @@ import type { ShaderManager } from './shaders.js';
 import type { CharacterRenderer } from './character-renderer.js';
 import type { GameGrid } from './game-grid.js';
 import type { FontAtlas } from './types.js';
-import type { PointLight, Rgb } from './painted/lightGrade.js';
+import { mapWeather, type PointLight, type Rgb } from './painted/lightGrade.js';
+import { weatherIsHeavy, weatherOverlayKind } from '../game/services/EnvironmentService.js';
 
 export type { RenderStats, RendererOptions };
 
@@ -90,8 +91,9 @@ export class WebGLRenderer {
     return this.core.getFontAtlas();
   }
 
-  setAmbient(light: number, tint: Rgb, baseTint?: Rgb): void {
+  setAmbient(light: number, tint: Rgb, baseTint?: Rgb, weather?: string): void {
     this.core.setAmbient(light, tint, baseTint);
+    this.core.setMapWeather(mapWeather(weatherOverlayKind(weather), weatherIsHeavy(weather)));
   }
 
   setPointLights(lights: readonly PointLight[]): void {
