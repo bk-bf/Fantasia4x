@@ -7,6 +7,7 @@
   import HoverTip from '../tooltip/HoverTip.svelte';
   import ScrollArea from '../widget/ScrollArea.svelte';
   import ChromeButton from '../widget/ChromeButton.svelte';
+  import ColumnScrim from './ColumnScrim.svelte';
   import { turnToGameDate } from './topbar/gameDate';
   import './hudColumns.css';
 
@@ -117,6 +118,7 @@
   class:transparent={$hideSidebars}
   class:collapsed={$chronicleMinimized}
 >
+  {#if $hideSidebars}<ColumnScrim right />{/if}
   {#if $chronicleMinimized}
     <button
       class="restore-btn"
@@ -202,6 +204,9 @@
     flex-direction: column;
     overflow: hidden;
   }
+  .panel.transparent {
+    overflow: visible;
+  }
   .panel.collapsed {
     align-items: center;
     padding-top: 4px;
@@ -227,18 +232,13 @@
     padding: 2px 10px 8px 8px;
   }
   .entry {
-    display: flex;
-    gap: 6px;
-    height: 17px;
-    white-space: nowrap;
+    margin-bottom: 3px;
+    line-height: 16px;
+    overflow-wrap: break-word;
   }
   .turn {
-    flex-shrink: 0;
+    margin-right: 6px;
     color: var(--col-mute);
-  }
-  .msg {
-    overflow: hidden;
-    text-overflow: ellipsis;
   }
   .sev-ok .msg {
     color: var(--col-pos);
