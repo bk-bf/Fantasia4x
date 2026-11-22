@@ -5,7 +5,7 @@ vi.mock('$lib/game/core/rules/body/conditions', async (importOriginal) => {
   const actual = await importOriginal<typeof import('$lib/game/core/rules/body/conditions')>();
   return {
     ...actual,
-    conditionStatMultipliers: (e: { conditions?: { id: string }[] }) =>
+    conditionStatMultipliers: (e: Parameters<typeof actual.conditionStatMultipliers>[0]) =>
       e.conditions?.some((c) => c.id === 'hale')
         ? { strength: 1, dexterity: 1, constitution: 2, perception: 1, intelligence: 1 }
         : actual.conditionStatMultipliers(e)
