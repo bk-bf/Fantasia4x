@@ -184,6 +184,7 @@
 
   let canvas: HTMLCanvasElement;
   let designCanvas: HTMLCanvasElement;
+  let markCanvas: HTMLCanvasElement;
   let _ambientLight = 1;
   let _ambientTint: [number, number, number] = [1, 1, 1];
   let container: HTMLDivElement;
@@ -2081,7 +2082,7 @@
   }
 
   function drawDesignations() {
-    if (!designCanvas || !container || !worldMap.length) return;
+    if (!designCanvas || !markCanvas || !container || !worldMap.length) return;
     markRenderDirty();
     const W = container.clientWidth;
     const H = container.clientHeight;
@@ -2096,6 +2097,14 @@
     if (!ctx) return;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, W, H);
+    if (markCanvas.width !== bw || markCanvas.height !== bh) {
+      markCanvas.width = bw;
+      markCanvas.height = bh;
+    }
+    const mctx = markCanvas.getContext('2d');
+    if (!mctx) return;
+    mctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    mctx.clearRect(0, 0, W, H);
 
     {
       const byColor = new Map<string, Set<string>>();
@@ -2180,9 +2189,9 @@
     }
 
     if (highlightedResourceTiles.size > 0) {
-      brackets(ctx, keyRects(highlightedResourceTiles, W, H));
+      brackets(mctx, keyRects(highlightedResourceTiles, W, H));
     } else if (selectedResourceTile) {
-      brackets(ctx, [tileRect(selectedResourceTile.x, selectedResourceTile.y)]);
+      brackets(mctx, [tileRect(selectedResourceTile.x, selectedResourceTile.y)]);
     }
 
     if (selDragActive) {
@@ -2198,7 +2207,7 @@
               ? new Set([selectedResourceTile.resourceId])
               : new Set<string>();
         brackets(
-          ctx,
+          mctx,
           tilesInBox(minX, minY, maxX, maxY, W, H, (rx, ry) => {
             if (isHiddenTile(rx, ry)) return false;
             const res = worldMap[ry]?.[rx]?.resources;
@@ -2207,7 +2216,7 @@
           })
         );
       }
-      dragBox(ctx, tileBoxRect(minX, minY, maxX, maxY));
+      dragBox(mctx, tileBoxRect(minX, minY, maxX, maxY));
     }
 
     if (markDragActive) {
@@ -2215,7 +2224,7 @@
       const minY = Math.min(markAnchorY, markEndY);
       const maxX = Math.max(markAnchorX, markEndX);
       const maxY = Math.max(markAnchorY, markEndY);
-      dragBox(ctx, tileBoxRect(minX, minY, maxX, maxY));
+      dragBox(mctx, tileBoxRect(minX, minY, maxX, maxY));
     }
 
     if (moveAimActive) {
@@ -4408,6 +4417,7 @@
 >
   <canvas bind:this={canvas}></canvas>
   <canvas bind:this={designCanvas} class="desig-layer"></canvas>
+  <canvas bind:this={markCanvas} class="desig-layer mark-layer"></canvas>
   {#each selectionRings as ring (ring.id)}
     <i
       class="sel-ring"
@@ -4489,7 +4499,7 @@
   {/if}
 
   {#if !customMapPreview && !menuPreview}
-    {#if verbTag && container}
+    {#if verbTag && container && !selDragActive}
       <VerbTag
         model={verbTag}
         view={{
@@ -4869,6 +4879,9 @@
   }
   .canvas-wrap.dragging {
     cursor: var(--app-cursor), grabbing;
+  }
+  .mark-layer {
+    filter: none;
   }
   .sel-ring {
     position: absolute;
