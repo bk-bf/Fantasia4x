@@ -3,7 +3,8 @@ import { memoryService, MEMORABILITY } from '$lib/game/services/MemoryService';
 import {
   runConversation,
   combatBark,
-  chooseCategory
+  chooseCategory,
+  foeName
 } from '$lib/game/services/social/conversations';
 import { rng } from '$lib/game/core/util/rng';
 import { TICKS_PER_SECOND } from '$lib/game/core/util/time';
@@ -12,6 +13,7 @@ import type {
   EntityCondition,
   EventMemory,
   GameState,
+  Mob,
   Pawn,
   PawnRelationship
 } from '$lib/game/core/types';
@@ -126,6 +128,21 @@ describe('combat barks', () => {
       expect(line.length).toBeLessThan(40);
     }
     expect(combatBark('hurt')).not.toContain('{foe}');
+  });
+
+  it('names a creature foe by its kind and a pawn foe by first name, never by id', () => {
+    const goblin = {
+      id: 'mob-goblin-0-3',
+      debugId: 12,
+      entityClass: 'mob',
+      creatureId: 'goblin'
+    } as unknown as Mob;
+    const named = { ...goblin, name: 'Grimfang' } as Mob;
+    const pawn = { id: 'pawn-5', name: 'Wren Proudfoot' } as Pawn;
+    expect(foeName(goblin)).toBe('goblin raider');
+    expect(foeName(named)).toBe('Grimfang');
+    expect(foeName(pawn)).toBe('Wren');
+    for (const f of [goblin, named, pawn]) expect(foeName(f)).not.toMatch(/#|mob-|pawn-|\d/);
   });
 });
 

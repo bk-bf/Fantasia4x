@@ -1,4 +1,12 @@
-import type { EventMemory, Pawn, PawnRelationship, RelationStage, Season } from '../../core/types';
+import type {
+  EventMemory,
+  Mob,
+  Pawn,
+  PawnRelationship,
+  RelationStage,
+  Season
+} from '../../core/types';
+import { getCreatureById } from '../../core/defs/creatures';
 import { effectiveMood } from '../../core/rules/social/social';
 import { rng } from '../../core/util/rng';
 import { TICKS_PER_SECOND } from '../../core/util/time';
@@ -61,6 +69,11 @@ const DATA = dialogData as unknown as {
 };
 
 export type CombatBarkKind = 'hit' | 'miss' | 'hurt' | 'kill';
+
+export function foeName(foe: Pawn | Mob): string {
+  if (!('entityClass' in foe)) return firstName(foe);
+  return foe.name ?? getCreatureById(foe.creatureId)?.name.toLowerCase() ?? 'it';
+}
 
 export function combatBark(kind: CombatBarkKind, foeName?: string, roll = 0): string {
   const pool = DATA.combatBarks?.[kind] ?? [];

@@ -18,13 +18,18 @@ import {
 import type { BubbleSkin } from '$lib/pixelArt/fx/bubble';
 import { ART_TILE } from './figure';
 import { collectScene, type FxWorld, type Mark, type Scene } from './scene';
-import { drawFloats, floatersLive, type FloaterMode } from './floats';
+import { drawFloats, floatersLive, hideFloats, type FloaterMode } from './floats';
 import { drawSpeech } from './speech';
 import { drawFlights, flying } from './flights';
 import { conditionState } from './onsets';
 import type { EffectToggles } from '$lib/stores/fx/effectToggles';
 import type { CombatTextEvent } from '$lib/stores/fx/combatFeedback';
 import type { ProjectileEvent } from '$lib/stores/fx/projectiles';
+
+export interface LabelSizes {
+  floaters: number;
+  bubbles: number;
+}
 
 export interface FxView {
   vx: number;
@@ -37,8 +42,12 @@ export interface FxView {
 const BAR_W = 24;
 const BACKING = 1;
 
-export const textScale = (k: number, dpr: number): number =>
-  Math.max(1, Math.round(Math.min(k, dpr)));
+export const HIDE_BELOW_TILE_PX = 21;
+
+export function labelScale(k: number, percent: number): number {
+  if (k * ART_TILE < HIDE_BELOW_TILE_PX) return 0;
+  return Math.max(1, Math.round((k * percent) / 100));
+}
 const PRUNE_MS = 500;
 
 const MARKS: Record<Mark['kind'], (p: FxPainter, x: number, y: number, t: number) => void> = {
@@ -53,6 +62,7 @@ class WorldFxLayer {
   private skin: BubbleSkin = 'timber';
   private bubbles = true;
   private floaters: FloaterMode = { icons: true, text: true };
+  private sizes: LabelSizes = { floaters: 100, bubbles: 100 };
   private on: EffectToggles = {
     marks: true,
     work: true,
@@ -72,8 +82,10 @@ class WorldFxLayer {
     skin: BubbleSkin;
     bubbles: boolean;
     floaters: FloaterMode;
+    sizes: LabelSizes;
     on: EffectToggles;
   }): void {
+    this.sizes = o.sizes;
     this.skin = o.skin;
     this.bubbles = o.bubbles;
     this.floaters = o.floaters;
@@ -139,7 +151,7 @@ class WorldFxLayer {
       this.key = key;
     } else this.key = '';
     const k = (v.tW / ART_TILE) * dpr;
-    p.view(k, -v.vx * v.tW * dpr, -v.vy * v.tH * dpr, textScale(k, dpr));
+    p.view(k, -v.vx * v.tW * dpr, -v.vy * v.tH * dpr, labelScale(k, this.sizes.floaters));
     this.paint(p, w, scene, texts, shots, now);
     p.end();
     this.painted = true;
@@ -173,8 +185,10 @@ class WorldFxLayer {
     for (const b of s.bars) p.put(bar(BAR_W, b.v, b.ramp, b.pegs), b.x, b.y);
     for (const m of s.marks) MARKS[m.kind](p, m.x, m.y, t);
     drawFlights(p, w.renderer, shots, now);
-    drawFloats(p, w.renderer, texts, now, this.floaters);
-    drawSpeech(p, w.renderer, texts, now, this.skin);
+    const kb = labelScale(p.k, this.sizes.bubbles);
+    const bubbles = kb > 0 ? drawSpeech(p, w.renderer, texts, now, this.skin, kb) : [];
+    if (p.kt > 0) drawFloats(p, w.renderer, texts, now, this.floaters, bubbles);
+    else hideFloats();
   }
 }
 
