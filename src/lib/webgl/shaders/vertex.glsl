@@ -46,6 +46,7 @@ flat out float v_veinNear;
 flat out highp float v_row;
 flat out highp float v_lean;
 flat out highp float v_reach;
+flat out highp vec3 v_pose;
 
 float cell(ivec2 c) {
     uint h = uint(c.x) * 374761393u + uint(c.y) * 668265263u;
@@ -90,6 +91,11 @@ void main() {
     vec2 pos = (a_position - u_viewOffset) * u_zoom;
     v_lean = 0.0;
     v_reach = 0.0;
+    v_pose = vec3(0.0);
+    if (a_sway < 0.0) {
+        float code = -a_sway - 1.0;
+        v_pose = vec3(1.0, floor(code / 8.0) - 4.0, mod(code, 8.0) - 4.0);
+    }
     vec2 texCoord = a_texCoord;
     float span = a_uvBounds.w - a_uvBounds.y;
     if (a_sway > 0.0 && u_wind.x > 0.0 && span > 0.0) {

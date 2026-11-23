@@ -35,8 +35,8 @@ export function figureAt(
 
 const sprites = new Map<string, Spr | null>();
 
-function cellSprite(r: WebGLRenderer, cell: readonly number[]): Spr | null {
-  const key = cell.join(',');
+function cellSprite(r: WebGLRenderer, cell: readonly number[], flipped: boolean): Spr | null {
+  const key = cell.join(',') + (flipped ? 'f' : '');
   if (sprites.has(key)) return sprites.get(key) ?? null;
   const w = cell[2] - cell[0];
   const h = cell[3] - cell[1];
@@ -44,8 +44,10 @@ function cellSprite(r: WebGLRenderer, cell: readonly number[]): Spr | null {
   let s: Spr | null = null;
   if (rgba) {
     s = new Spr(w, h, 0, 0);
-    for (let i = 0; i < w * h; i++)
-      if (rgba[i * 4 + 3] >= OPAQUE) s.c[i] = [rgba[i * 4], rgba[i * 4 + 1], rgba[i * 4 + 2]];
+    for (let i = 0; i < w * h; i++) {
+      const at = flipped ? i - (i % w) + w - 1 - (i % w) : i;
+      if (rgba[at * 4 + 3] >= OPAQUE) s.c[i] = [rgba[at * 4], rgba[at * 4 + 1], rgba[at * 4 + 2]];
+    }
   }
   sprites.set(key, s);
   return s;
@@ -60,5 +62,5 @@ export function struckAt(r: WebGLRenderer | null, cellX: number, cellY: number, 
   const qw = Math.round((d.quad[2] - d.quad[0]) * K);
   const cw = d.cell[2] - d.cell[0];
   if (Math.abs(qw - cw) > 1) return plain;
-  return { ...plain, spr: cellSprite(r, d.cell), at: [qx, qy] };
+  return { ...plain, spr: cellSprite(r, d.cell, d.flipped), at: [qx, qy] };
 }

@@ -4,8 +4,9 @@ import type { CharacterRenderer } from './character-renderer.js';
 import type { ShaderManager } from './shaders.js';
 import type { FontAtlas } from './types.js';
 import { checkWebGLError } from './utils.js';
-import { tileQuad } from './drawnSprites.js';
+import { mirrored, tileQuad } from './drawnSprites.js';
 import { tuftTiles } from './painted/tufts.js';
+import { POSE_PAD, isPosed, poseSway } from './pose.js';
 
 const ONE_LIGHT: [number, number, number] = [1, 1, 1];
 const ZERO_LIGHT: [number, number, number] = [0, 0, 0];
@@ -79,6 +80,7 @@ export class GridRenderer {
   private snowChunks: Map<string, TerrainChunk> = new Map();
   private warmState = new Map<Map<string, TerrainChunk>, WarmState>();
   chunksRebuiltLastRender = 0;
+  private readonly paintTexel: [number, number] = [0, 0];
   skipBlendedGround = false;
   private chunkDirty = new Map<string, number>();
   private snowChunkDirty = new Map<string, number>();
@@ -111,6 +113,11 @@ export class GridRenderer {
 
   setFontAtlas(atlas: FontAtlas): void {
     this.fontAtlas = atlas;
+  }
+
+  setPaintTexel(u: number, v: number): void {
+    this.paintTexel[0] = u;
+    this.paintTexel[1] = v;
   }
 
   renderGrid(grid: GameGrid, options: GridRenderOptions): GridRenderStats {
@@ -428,7 +435,7 @@ export class GridRenderer {
       const offsetY = tile.animationOffset?.y || 0;
       const tileH = options.tileHeight;
       tileQuad(tile, options.tileWidth, tileH, corners);
-      const [x1, y1, x2, y2] = corners;
+      let [x1, y1, x2, y2] = corners;
 
       let u1 = charInfo ? charInfo.x / this.fontAtlas.atlasWidth : 0;
       let v1 = charInfo ? charInfo.y / this.fontAtlas.atlasHeight : 0;
@@ -464,6 +471,31 @@ export class GridRenderer {
         v2 = painted.v2;
         ub = [u1 + PAINTED_UV_SHIFT, v1, u2 + PAINTED_UV_SHIFT, v2];
         ol = NO_OUTLINE;
+      }
+      const posed =
+        !!painted &&
+        vertexFloats === ROW_VERTEX_FLOATS &&
+        this.paintTexel[0] > 0 &&
+        isPosed(tile.lean, tile.squash);
+      if (posed) {
+        const lying = tile.rotation === 90 || tile.rotation === 270;
+        const du = POSE_PAD * this.paintTexel[0];
+        const dv = POSE_PAD * this.paintTexel[1];
+        const padX = ((lying ? dv : du) * (x2 - x1)) / (lying ? v2 - v1 : u2 - u1);
+        const padY = ((lying ? du : dv) * (y2 - y1)) / (lying ? u2 - u1 : v2 - v1);
+        x1 -= padX;
+        x2 += padX;
+        y1 -= padY;
+        y2 += padY;
+        u1 -= du;
+        u2 += du;
+        v1 -= dv;
+        v2 += dv;
+      }
+      if (mirrored(tile)) {
+        const left = u2;
+        u2 = u1;
+        u1 = left;
       }
 
       let tlU = u1,
@@ -680,7 +712,11 @@ export class GridRenderer {
       else {
         const row = tile.position.y + offsetY / tileH;
         const vein = painted?.vein ?? NO_VEIN;
-        const sway = tile.rotation ? 0 : (painted?.sway ?? 0);
+        const sway = posed
+          ? poseSway(tile.lean ?? 0, tile.squash ?? 0)
+          : tile.rotation
+            ? 0
+            : (painted?.sway ?? 0);
         for (let v = 0; v < 6; v++) {
           const at = o + v * ROW_VERTEX_FLOATS;
           for (let f = 0; f < GLYPH_VERTEX_FLOATS; f++)

@@ -13,8 +13,9 @@ const { paintedEntity, setPaintedTileset } = await import('$lib/webgl/painted/ti
 const { buildResourceOverlay } = await import('$lib/webgl/fantasia-world');
 const { GameGrid } = await import('$lib/webgl/game-grid');
 const { BASE_TILE_PX } = await import('$lib/webgl/tile-types');
-const { atlasTexels, drawnAt, drawnBounds, FACE_ALPHA, FACE_ROWS, OBJECT_FOOT } =
+const { atlasTexels, drawnAt, drawnBounds, drawnFigure, FACE_ALPHA, FACE_ROWS, OBJECT_FOOT } =
   await import('$lib/webgl/drawnSprites');
+const { POSE_RANGE, poseSway } = await import('$lib/webgl/pose');
 type DrawnFrame = import('$lib/webgl/drawnSprites').DrawnFrame;
 
 const ROOT = join(__dirname, '../../..');
@@ -143,5 +144,61 @@ describe('the pick reads the rock depth the way the fragment shader does', () =>
     expect(glsl).toContain(`const int FACE_ALPHA = ${FACE_ALPHA};`);
     expect(glsl).toContain(`const int FACE_ROWS = ${FACE_ROWS};`);
     expect(glsl).toContain(`const highp float OBJECT_FOOT = ${OBJECT_FOOT.toFixed(1)};`);
+  });
+});
+
+describe('a flipped creature is drawn, picked and framed mirrored', () => {
+  const wolfAt = (flip: boolean) => {
+    const g = grids(world(() => ({})));
+    g.entity.setTile(3, 6, {
+      char: 'w',
+      foreground: { r: 1, g: 1, b: 1 },
+      background: { r: 0, g: 0, b: 0 },
+      position: { x: 3, y: 6 },
+      flip,
+      ...paintedEntity('creature', 'wolf', 'wolf-1')
+    });
+    return g;
+  };
+  const axis = 3 * B + B / 2;
+  const around = [4, 5, 6].flatMap((ty) => [1, 2, 3, 4, 5].flatMap((tx) => samples(tx, ty)));
+
+  it('gives the flipped wolf exactly the clicks the plain wolf gets on the other side', () => {
+    const plain = wolfAt(false);
+    const flipped = wolfAt(true);
+    const hits = around.filter((p) => pick(plain, p) !== null);
+    expect(hits.length).toBeGreaterThan(20);
+    for (const [x, y] of around)
+      expect(pick(flipped, [2 * axis - x, y]) !== null).toBe(pick(plain, [x, y]) !== null);
+    expect(hits.some(([x, y]) => pick(flipped, [x, y]) === null)).toBe(true);
+  });
+
+  it('mirrors the brackets and marks the figure flipped', () => {
+    const [x1, y1, x2, y2] = drawnBounds(wolfAt(false).entity.getTile(3, 6)!, frame);
+    expect(drawnBounds(wolfAt(true).entity.getTile(3, 6)!, frame)).toEqual([
+      2 * axis - x2,
+      y1,
+      2 * axis - x1,
+      y2
+    ]);
+    expect(drawnFigure(wolfAt(true).entity.getTile(3, 6)!, frame).flipped).toBe(true);
+  });
+});
+
+describe('a posed sprite reaches the shader through its sway value', () => {
+  const decode = (sway: number) => {
+    const code = -sway - 1;
+    return [Math.floor(code / 8) - 4, (code % 8) - 4];
+  };
+
+  it('round-trips every lean and squash the vertex shader can decode', () => {
+    const glsl = readFileSync(join(ROOT, 'src/lib/webgl/shaders/vertex.glsl'), 'utf8');
+    expect(glsl).toContain('v_pose = vec3(1.0, floor(code / 8.0) - 4.0, mod(code, 8.0) - 4.0);');
+    for (let lean = -POSE_RANGE; lean <= POSE_RANGE; lean++)
+      for (let squash = -POSE_RANGE; squash <= POSE_RANGE; squash++) {
+        const sway = poseSway(lean, squash);
+        expect(sway).toBeLessThan(0);
+        expect(decode(sway)).toEqual([lean, squash]);
+      }
   });
 });

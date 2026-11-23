@@ -776,6 +776,7 @@ export class WebGLRendererCore {
       1 / painted.tileset.atlasW,
       1 / painted.tileset.atlasH
     ]);
+    this.gridRenderer?.setPaintTexel(1 / painted.tileset.atlasW, 1 / painted.tileset.atlasH);
     gl.activeTexture(gl.TEXTURE0 + LIGHT_ATLAS_UNIT);
     gl.bindTexture(gl.TEXTURE_2D, painted.light);
     gl.activeTexture(gl.TEXTURE0);

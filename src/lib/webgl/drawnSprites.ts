@@ -79,6 +79,12 @@ export function tileQuad(
       lying,
       out
     );
+    if (mirrored(tile)) {
+      const axis = 2 * (tile.position.x * tileW + offsetX) + tileW;
+      const left = axis - out[2];
+      out[2] = axis - out[0];
+      out[0] = left;
+    }
     return;
   }
   const drawW = tileW * scale;
@@ -89,6 +95,10 @@ export function tileQuad(
   out[1] = y1;
   out[2] = x1 + drawW;
   out[3] = y1 + drawH;
+}
+
+export function mirrored(tile: TileData): boolean {
+  return !!tile.flip && !tile.rotation && !!tile.painted;
 }
 
 function cellOf(t: AtlasTexels, s: PaintedSprite): Quad {
@@ -117,9 +127,10 @@ function cellToQuad(rotation: TileData['rotation'], fu: number, fv: number): [nu
 function texelAt(t: AtlasTexels, tile: TileData, q: Quad, px: number, py: number): number {
   const s = tile.painted!;
   const [x0, y0, x1, y1] = cellOf(t, s);
+  const fx = (px - q[0]) / (q[2] - q[0]);
   const [fu, fv] = quadToCell(
     tile.rotation,
-    (px - q[0]) / (q[2] - q[0]),
+    mirrored(tile) ? 1 - fx : fx,
     (py - q[1]) / (q[3] - q[1])
   );
   const tx = Math.min(x1 - 1, Math.max(x0, x0 + Math.floor(fu * (x1 - x0))));
@@ -225,8 +236,9 @@ export function drawnBounds(tile: TileData, f: DrawnFrame): Quad {
   tileQuad(tile, f.basePx, f.basePx, q);
   const box = tile.painted && f.texels ? opaqueBox(f.texels, tile.painted) : null;
   if (!box) return q;
-  const [ax, ay] = cellToQuad(tile.rotation, box[0], box[1]);
-  const [bx, by] = cellToQuad(tile.rotation, box[2], box[3]);
+  const flip = mirrored(tile);
+  const [ax, ay] = cellToQuad(tile.rotation, flip ? 1 - box[0] : box[0], box[1]);
+  const [bx, by] = cellToQuad(tile.rotation, flip ? 1 - box[2] : box[2], box[3]);
   const w = q[2] - q[0];
   const h = q[3] - q[1];
   return [
@@ -241,6 +253,7 @@ export interface DrawnFigure {
   quad: Quad;
   box: Quad;
   rotated: boolean;
+  flipped: boolean;
   cell: Quad | null;
 }
 
@@ -252,6 +265,7 @@ export function drawnFigure(tile: TileData, f: DrawnFrame): DrawnFigure {
     quad,
     box: drawnBounds(tile, f),
     rotated: tile.rotation === 90 || tile.rotation === 270,
+    flipped: mirrored(tile),
     cell: s && f.texels ? cellOf(f.texels, s) : null
   };
 }

@@ -30,6 +30,9 @@ export interface TileData {
   position: { x: number; y: number };
   animationOffset?: Vec2;
   rotation?: 0 | 90 | 180 | 270;
+  flip?: boolean;
+  lean?: number;
+  squash?: number;
   scale?: number;
   painted?: PaintedSprite;
   scenery?: boolean;

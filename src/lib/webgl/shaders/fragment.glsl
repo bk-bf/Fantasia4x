@@ -15,6 +15,7 @@ flat in float v_veinNear;
 flat in highp float v_row;
 flat in highp float v_lean;
 flat in highp float v_reach;
+flat in highp vec3 v_pose;
 
 uniform sampler2D u_fontAtlas;
 uniform sampler2D u_paintAtlas;
@@ -126,7 +127,26 @@ highp vec2 swayed(highp vec2 uv) {
     return uv - vec2(step * u_paintTexelSize.x, 0.0);
 }
 
+highp vec2 posed(highp vec2 uv) {
+    highp float top = v_uvBounds.y;
+    highp float last = (v_uvBounds.w - top) / u_paintTexelSize.y - 1.0;
+    highp float row = floor((uv.y - top) / u_paintTexelSize.y);
+    highp float cut = floor(last - last * 0.45 + 0.5);
+    highp float sy = row;
+    if (v_pose.z > 0.0 && sy <= cut) sy -= v_pose.z;
+    else if (v_pose.z < 0.0 && sy < cut) sy = min(cut, sy - v_pose.z);
+    highp float rise = clamp((last - sy) / max(1.0, last), 0.0, 1.0);
+    highp float shift = floor(v_pose.y * rise * sqrt(rise) + 0.5);
+    return uv + vec2(-shift * u_paintTexelSize.x, (sy - row) * u_paintTexelSize.y);
+}
+
+highp vec2 warped(highp vec2 uv) {
+    return v_pose.x > 0.0 ? posed(uv) : swayed(uv);
+}
+
 bool offSprite(highp vec2 uv) {
+    if (v_pose.x > 0.0)
+        return uv.x < v_uvBounds.x - 2.0 || uv.x > v_uvBounds.z - 2.0 || uv.y < v_uvBounds.y || uv.y > v_uvBounds.w;
     return v_reach > 0.0 && (uv.x < v_uvBounds.x - 2.0 || uv.x > v_uvBounds.z - 2.0);
 }
 
@@ -151,7 +171,7 @@ void main() {
         : min(u_ambient + v_light * u_lightFlicker, vec3(1.6));
 
     if (u_shadowPass > 0.5) {
-        highp vec2 leaned = swayed(v_texCoord);
+        highp vec2 leaned = warped(v_texCoord);
         if (v_uvBounds.x < 2.0 || offSprite(leaned) || texture(u_lightAtlas, paintedUv(leaned)).g < 0.5) discard;
         gl_FragDepth = u_shadowDepth;
         fragColor = vec4(u_shade, 1.0);
@@ -169,7 +189,7 @@ void main() {
     bool painted = v_uvBounds.x >= 2.0;
     vec4 sprite;
     if (painted) {
-        highp vec2 leaned = swayed(v_texCoord);
+        highp vec2 leaned = warped(v_texCoord);
         bool off = offSprite(leaned);
         vec2 uv = paintedUv(leaned);
         sprite = off ? vec4(0.0) : texture(u_paintAtlas, uv);
