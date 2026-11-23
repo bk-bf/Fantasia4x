@@ -1,6 +1,6 @@
 'use strict';
 const TRIAL = (() => {
-  const { px, ball, poly, seg, path, curve, stamp, canvas } = TK;
+  const { px, ball, poly, seg, path, curve, stamp } = TK;
   const M = {
     leather: TK.ramp('#2a1810 #44281a #603a22 #7e5030 #9c6a40 #b88858'),
     hide: TK.ramp('#3a2a1a #584028 #785a38 #987648 #b6945e #d0b27c'),
@@ -17,9 +17,7 @@ const TRIAL = (() => {
     broth: TK.ramp('#3a2010 #583216 #7a481e #9c642c #bc8642'),
     carrot: TK.ramp('#8a3a10 #c05c18 #e88a2c'),
     herb: TK.ramp('#2c4a1c #47702a #6a983c'),
-    string: TK.ramp('#8a8474 #c8c2b0 #ece8dc'),
-    stone: TK.ramp('#2c2b30 #414046 #5a595c #767470 #94918a #b2aea2'),
-    bark: TK.ramp('#221a14 #34281c #4a3a28 #625036 #7c6846')
+    string: TK.ramp('#8a8474 #c8c2b0 #ece8dc')
   };
   const UP = [0, -1], MID = [0, 0], DOWN = [1, 0], UP2 = [-1, -1], DOWN2 = [1, 1];
   const diag = (o, i) => [o[0] + i, o[1] - i];
@@ -183,60 +181,26 @@ const TRIAL = (() => {
     for (const x of [12, 13, 14]) px(s, x, 11, M.broth, 4);
   }
 
-  function miniSword(s) {
-    band(s, [3, 13], 0, 2, MID, M.leather, 3);
-    band(s, [3, 13], 4, 10, MID, M.steel, i => i > 7 ? 6 : 5);
-    band(s, [3, 13], 4, 9, DOWN, M.steel, 2);
-    for (const k of [-1, 0, 1]) px(s, 6 + k, 10 + k, M.bronze, k < 0 ? 5 : 3);
-  }
-  function miniAxe(s) {
-    band(s, [3, 13], 0, 9, MID, M.wood, 4);
-    stamp(s, 6, 2, ['  665 ', ' 6554 ', '65443 ', '6543  ', ' 5    '], { 6: M.steel[6], 5: M.steel[5], 4: M.steel[4], 3: M.steel[2] });
-  }
-  function miniBow(s) { path(s, curve([2, 13], [3.5, 3.5], [13, 2], 8), .7, () => M.wood[4]); px(s, 6, 6, M.leather, 3); px(s, 7, 6, M.leather, 3); }
-  const miniBowString = s => { for (let i = 0; i <= 10; i++) px(s, 3 + i, 13 - i, M.string, 1); };
-  function miniHoe(s) {
-    band(s, [2, 13], 0, 8, MID, M.pale, 4);
-    stamp(s, 9, 4, ['54  ', ' 44 ', '  46', '   6'], { 6: M.steel[6], 5: M.steel[5], 4: M.steel[4] });
-  }
-  function log(s) {
-    rows(s, 7, 11, 2, 12, (x, y) => TK.at(M.bark, y === 7 ? 3 : y === 8 ? 4 : y === 9 ? 2 : y === 10 ? 2 : 1));
-    for (const x of [4, 8]) { px(s, x, 9, M.bark, 0); px(s, x + 1, 10, M.bark, 0); }
-    rows(s, 6, 12, 10, 14, (x, y) => ((x + .5 - 12.4) / 2.2) ** 2 + ((y + .5 - 9.5) / 3.1) ** 2 <= 1 ? TK.at(M.pale, x < 12 ? 5 : 4) : null);
-    px(s, 12, 9, M.pale, 2); px(s, 12, 10, M.pale, 2); px(s, 13, 9, M.pale, 3);
-  }
-  function stone(s) {
-    ball(s, 8, 10.5, 4.2, 3.2, M.stone, { amp: 1.1 });
-    px(s, 6, 9, M.stone, 5); px(s, 9, 12, M.stone, 1); px(s, 10, 11, M.stone, 1);
-  }
-
   const ITEMS = [
     { id: 'hide_boots', label: 'Boots', draw: boots },
-    { id: 'steel_longsword', label: 'Sword', draw: sword, mini: miniSword },
-    { id: 'bearded_axe', label: 'Axe', draw: axe, mini: miniAxe },
+    { id: 'steel_longsword', label: 'Sword', draw: sword },
+    { id: 'bearded_axe', label: 'Axe', draw: axe },
     { id: 'iron_nasal_helm', label: 'Helm', draw: helm },
     { id: 'plate_cuirass', label: 'Cuirass', draw: cuirass },
-    { id: 'hunting_recurve', label: 'Bow', draw: bow, over: bowString, mini: miniBow, miniOver: miniBowString },
-    { id: 'steel_hoe', label: 'Hoe', draw: hoe, mini: miniHoe },
+    { id: 'hunting_recurve', label: 'Bow', draw: bow, over: bowString },
+    { id: 'steel_hoe', label: 'Hoe', draw: hoe },
     { id: 'leather_sword_belt', label: 'Belt', draw: belt },
     { id: 'framed_leather_pack', label: 'Framed pack', draw: pack },
     { id: 'plank_round_shield', label: 'Shield', draw: shield },
-    { id: 'venison', label: 'Raw meat', draw: venison, stacks: true },
-    { id: 'small_stew', label: 'Stew', draw: stew, stacks: true },
-    { id: 'oak_log', label: 'Logs', mini: log, stacks: true, mapOnly: true },
-    { id: 'small_stone', label: 'Stones', mini: stone, stacks: true, mapOnly: true }
+    { id: 'venison', label: 'Raw meat', draw: venison },
+    { id: 'small_stew', label: 'Stew', draw: stew }
   ];
 
-  const MAP = 16;
-  const finished = (draw, over, size) => { const s = canvas(size, size); draw(s); TK.outline(s); if (over) over(s); return s; };
   const CRISP_EDGE = { even: true, k: .55 };
-  const sharp = (draw, over, w, h) => { const s = TK.outline(TK.crisp(draw, w, h), CRISP_EDGE); if (over) over(s); return s; };
-  const icon = it => it.draw ? finished(it.draw, it.over, 32) : null;
-  const crispIcon = it => it.draw ? sharp(it.draw, it.over, 32, 32) : null;
-  function onMap(it) {
-    if (it.mini) return sharp(it.mini, it.miniOver, MAP, MAP);
-    return TK.outline(TK.shrink(TK.crisp(it.draw, 32, 32), MAP - 2), CRISP_EDGE);
+  function crispIcon(it) {
+    const s = TK.outline(TK.crisp(it.draw, 32, 32), CRISP_EDGE);
+    if (it.over) it.over(s);
+    return s;
   }
-  const onMapRestyled = img => TK.outline(TK.shrink(TK.restyle.bare(img), MAP - 2));
-  return { M, ITEMS, MAP, CRISP_EDGE, rows, sharp, icon, crispIcon, onMap, onMapRestyled };
+  return { ITEMS, crispIcon };
 })();
