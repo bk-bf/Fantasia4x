@@ -1,6 +1,6 @@
 import type { CombatTextEvent } from '$lib/stores/fx/combatFeedback';
 import { COLD, CRIT, DULL, GORE, HURT, tint, word, type Pair } from '$lib/pixelArt/fx/glyphs';
-import { BADGE_TTL, badge, badgeDy, float, floatDy } from '$lib/pixelArt/fx/effects';
+import { BADGE_TTL, badge, badgeDy, float, floatDy, type Anchor } from '$lib/pixelArt/fx/effects';
 import { floater, strikeOf, type Trend } from '$lib/pixelArt/fx/icons';
 import { P, hex } from '$lib/pixelArt/fx/spr';
 import type { FxPainter } from '$lib/pixelArt/fx/painter';
@@ -36,11 +36,16 @@ interface Item {
   e: CombatTextEvent;
   fig: Figure;
   q: Placed;
+  at: Anchor;
   start: number;
   key: string;
+  who: string | null;
   hit: Hit | null;
   lift: number;
+  last: number;
 }
+
+export type Locate = (id: string) => { x: number; y: number } | undefined;
 
 interface Waiting {
   e: CombatTextEvent;
@@ -56,8 +61,7 @@ export const WORD_TTL = 1.4;
 const TIERS = [0, 20, 38, 56];
 const BADGE_STEP = 18;
 const GAP = 2;
-const SAMPLE_S = 0.3;
-const SEAT_PASSES = 2;
+const SETTLE_PX_S = 24;
 const STRIKE_IN_S = 0.25;
 const STRIKE_LIGHT = hex('#f4ecd8');
 
@@ -66,7 +70,7 @@ const waiting = new Map<string, Waiting[]>();
 const seen = new Set<number>();
 let modeKey = '';
 
-const keyOf = (e: CombatTextEvent) => `${e.worldX},${e.worldY}`;
+const keyOf = (e: CombatTextEvent) => e.entityId ?? `${e.worldX},${e.worldY}`;
 const isHit = (e: CombatTextEvent) => e.kind === 'damage' || e.kind === 'crit';
 const amount = (e: CombatTextEvent) => Number(/\d+/.exec(e.text)?.[0] ?? 0);
 
@@ -124,69 +128,45 @@ function place(e: CombatTextEvent, f: Figure, mode: FloaterMode): Placed | null 
   const switched = e.kind === 'condition' || id !== undefined;
   if (id && mode.icons) {
     const col = e.color ?? (e.kind === 'fracture' ? '#ff9944' : '#dddddd');
-    return {
+    return anchor(f, {
       pair: floater(id.id, mode.text ? e.text : null, col, id.mark, trend(e), !!e.lost),
-      x: f.x,
-      y: f.lying ? f.y - 20 : f.y - 34,
+      x: 0,
+      y: 0,
       ox: 0,
       oy: -tier * BADGE_STEP,
       ttl: BADGE_TTL,
       shake: false,
       badge: true,
       strike: !!e.lost
-    };
+    });
   }
   if (switched && !mode.text) return null;
   const [pair, dx, ttl, shake] = textLook(e);
-  return {
+  return anchor(f, {
     pair,
-    x: f.x,
-    y: f.head - 8,
+    x: 0,
+    y: 0,
     ox: dx,
     oy: TIERS[tier],
     ttl,
     shake,
     badge: false,
     strike: !!e.lost
-  };
+  });
 }
 
-function box(q: Placed, u: number, r: number): [number, number, number, number] {
+function anchor(f: Figure, q: Placed): Placed {
+  q.x = f.x;
+  q.y = q.badge ? (f.lying ? f.y - 20 : f.y - 34) : f.head - 8;
+  return q;
+}
+
+function box(q: Placed, u: number, r: number, lift: number): Box {
   const s = q.pair[0];
   const dy = q.badge ? badgeDy(u) : floatDy(u, q.ttl);
   const left = q.x + (q.ox - s.ax) * r;
-  const top = q.y + (q.oy + dy - s.ay) * r;
+  const top = q.y + (q.oy + lift + dy - s.ay) * r;
   return [left, top, left + s.w * r, top + s.h * r];
-}
-
-function lift(q: Placed, o: Item, ou: number, r: number): number {
-  let need = 0;
-  const span = Math.min(q.ttl, o.q.ttl - ou);
-  for (let t = 0; t <= span; t += SAMPLE_S) {
-    const a = box(q, t, r);
-    const b = box(o.q, ou + t, r);
-    if (a[3] + GAP * r <= b[1] || b[3] + GAP * r <= a[1]) continue;
-    need = Math.max(need, a[3] - b[1] + GAP * r);
-  }
-  return need;
-}
-
-function seat(q: Placed, now: number, r: number): void {
-  const a = box(q, 0, r);
-  const near = items.filter((o) => {
-    const b = box(o.q, 0, r);
-    return a[2] > b[0] && b[2] > a[0];
-  });
-  for (let pass = 0; pass < SEAT_PASSES; pass++) {
-    let moved = false;
-    for (const o of near) {
-      const need = lift(q, o, (now - o.start) / 1000, r);
-      if (need <= 0) continue;
-      q.oy -= need / r;
-      moved = true;
-    }
-    if (!moved) return;
-  }
 }
 
 const newHit = (e: CombatTextEvent): Hit => ({
@@ -220,7 +200,7 @@ function merge(e: CombatTextEvent): boolean {
   return true;
 }
 
-function release(r: WebGLRenderer | null, ratio: number, now: number, mode: FloaterMode): void {
+function release(r: WebGLRenderer | null, now: number, mode: FloaterMode): void {
   const live = new Map<string, number>();
   for (const i of items) live.set(i.key, (live.get(i.key) ?? 0) + 1);
   for (const [key, list] of waiting) {
@@ -239,9 +219,18 @@ function release(r: WebGLRenderer | null, ratio: number, now: number, mode: Floa
         q.shake = w.hit.crit;
         if (w.hit.crit) q.ox = 0;
       }
-      const base = q.oy;
-      seat(q, now, ratio);
-      items.push({ e, fig, q, start: now, key, hit: w.hit, lift: q.oy - base });
+      items.push({
+        e,
+        fig,
+        q,
+        at: { x: 0, y: 0, ox: 0, oy: 0 },
+        start: now,
+        key,
+        who: e.entityId ?? null,
+        hit: w.hit,
+        lift: 0,
+        last: now
+      });
       n++;
     }
     if (fresh.length) waiting.set(key, fresh);
@@ -257,7 +246,7 @@ function remode(mode: FloaterMode): void {
     const it = items[i];
     if (it.hit) continue;
     const q = place(it.e, it.fig, mode);
-    if (q) it.q = { ...q, oy: q.oy + it.lift };
+    if (q) it.q = q;
     else items.splice(i, 1);
   }
 }
@@ -268,7 +257,8 @@ export function drawFloats(
   list: readonly CombatTextEvent[],
   now: number,
   mode: FloaterMode,
-  blocked: readonly Box[] = []
+  blocked: readonly Box[] = [],
+  locate?: Locate
 ): void {
   remode(mode);
   const ids = new Set<number>();
@@ -286,29 +276,44 @@ export function drawFloats(
   for (const id of seen) if (!ids.has(id)) seen.delete(id);
   for (let i = items.length - 1; i >= 0; i--)
     if ((now - items[i].start) / 1000 > items[i].q.ttl) items.splice(i, 1);
-  release(r, p.textRatio, now, mode);
+  release(r, now, mode);
+  if (locate) follow(r, locate);
   settle(now, p.textRatio, blocked);
   for (const it of items) {
     const u = (now - it.start) / 1000;
-    if (it.q.badge) badge(p, it.q, it.q.pair, u);
-    else float(p, it.q, it.q.pair, u, it.q.ttl, it.q.shake);
-    if (it.q.strike) strike(p, it.q, u);
+    const at = it.at;
+    at.x = it.q.x;
+    at.y = it.q.y;
+    at.ox = it.q.ox;
+    at.oy = it.q.oy + it.lift;
+    if (it.q.badge) badge(p, at, it.q.pair, u);
+    else float(p, at, it.q.pair, u, it.q.ttl, it.q.shake);
+    if (it.q.strike) strike(p, it.q, at, u);
   }
 }
 
-function strike(p: FxPainter, q: Placed, u: number): void {
+function follow(r: WebGLRenderer | null, locate: Locate): void {
+  for (const it of items) {
+    const rp = it.who ? locate(it.who) : undefined;
+    if (!rp) continue;
+    it.fig = figureAt(r, Math.round(rp.x), Math.round(rp.y), rp.x, rp.y);
+    anchor(it.fig, it.q);
+  }
+}
+
+function strike(p: FxPainter, q: Placed, at: Anchor, u: number): void {
   if (u > q.ttl) return;
   const s = q.pair[0];
   const line = strikeOf(s);
   const w = Math.round(line.w * Math.min(1, u / STRIKE_IN_S));
   if (w <= 0) return;
   const dy = q.badge ? badgeDy(u) : floatDy(u, q.ttl);
-  const x = Math.round(q.ox) - s.ax + line.x;
-  const y = Math.round(q.oy + dy) - s.ay + line.y;
+  const x = Math.round(at.ox) - s.ax + line.x;
+  const y = Math.round(at.oy + dy) - s.ay + line.y;
   p.fill(P.ink, 255);
-  p.band(q.x, q.y, x - 1, y, w + 2, 2);
+  p.band(at.x, at.y, x - 1, y, w + 2, 2);
   p.fill(STRIKE_LIGHT, 255);
-  p.band(q.x, q.y, x, y, w, 1);
+  p.band(at.x, at.y, x, y, w, 1);
 }
 
 export type Box = [number, number, number, number];
@@ -318,17 +323,19 @@ function settle(now: number, r: number, blocked: readonly Box[]): void {
   const g = GAP * r;
   for (const it of items) {
     const u = (now - it.start) / 1000;
-    let b = box(it.q, u, r);
+    let lift = Math.min(0, it.lift + (SETTLE_PX_S * (now - it.last)) / 1000);
+    let b = box(it.q, u, r, lift);
     for (let pass = 0; pass <= done.length; pass++) {
       let need = 0;
       for (const o of done)
         if (b[0] < o[2] && o[0] < b[2] && b[1] < o[3] + g && o[1] < b[3] + g)
           need = Math.max(need, b[3] - o[1] + g);
       if (need <= 0) break;
-      it.q.oy -= need / r;
-      it.lift -= need / r;
-      b = box(it.q, u, r);
+      lift -= need / r;
+      b = box(it.q, u, r, lift);
     }
+    it.lift = lift;
+    it.last = now;
     done.push(b);
   }
 }

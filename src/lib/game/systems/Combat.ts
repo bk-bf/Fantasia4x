@@ -1153,9 +1153,16 @@ class CombatServiceImpl implements CombatService {
     return { x: e.position?.x ?? -1, y: e.position?.y ?? -1 };
   }
 
-  private emitFloat(x: number, y: number, kind: CombatTextKind, text: string, dy?: number): void {
+  private emitFloat(
+    entityId: string,
+    x: number,
+    y: number,
+    kind: CombatTextKind,
+    text: string,
+    dy?: number
+  ): void {
     if (x < 0 || y < 0) return;
-    simLog.pushCombatText({ worldX: x, worldY: y, text, kind, dy });
+    simLog.pushCombatText({ worldX: x, worldY: y, text, kind, dy, entityId });
   }
 
   private emitConditionFloat(
@@ -1267,16 +1274,16 @@ class CombatServiceImpl implements CombatService {
     );
 
     if (result.parried) {
-      this.emitFloat(pos.x, pos.y, 'dodge', 'PARRY');
+      this.emitFloat(target.id, pos.x, pos.y, 'dodge', 'PARRY');
       state = this.performAttack(target, attacker, state, turn, undefined, true).state;
       return { state, staminaCost: result.staminaCost };
     }
     if (result.blocked) {
-      this.emitFloat(pos.x, pos.y, 'dodge', 'BLOCK');
+      this.emitFloat(target.id, pos.x, pos.y, 'dodge', 'BLOCK');
       return { state, staminaCost: result.staminaCost };
     }
     if (!result.hit) {
-      this.emitFloat(pos.x, pos.y, 'dodge', 'dodge');
+      this.emitFloat(target.id, pos.x, pos.y, 'dodge', 'dodge');
       if (witnessed)
         simLog.logCombatSwing(
           attacker.id,
@@ -1324,7 +1331,7 @@ class CombatServiceImpl implements CombatService {
             ? this.applyInjuryToMob(behind.id, carried, next, false)
             : this.applyInjury(behind.id, carried, next, false);
         const bpos = this.entityPos(behind);
-        this.emitFloat(bpos.x, bpos.y, 'damage', `-${carried.damage}`);
+        this.emitFloat(behind.id, bpos.x, bpos.y, 'damage', `-${carried.damage}`);
       }
     }
 
@@ -1332,7 +1339,7 @@ class CombatServiceImpl implements CombatService {
       next = isTargetMob
         ? this.applyInjuryToMob(target.id, result.fractureInjury, next, false)
         : this.applyInjury(target.id, result.fractureInjury, next, false);
-      this.emitFloat(pos.x, pos.y, 'fracture', 'Fractured!', 26);
+      this.emitFloat(target.id, pos.x, pos.y, 'fracture', 'Fractured!', 26);
       const fxSound = conditionAudio('fractured');
       if (fxSound) simLog.pushCombatSound({ sound: fxSound, worldX: pos.x, worldY: pos.y });
     }
@@ -1341,7 +1348,7 @@ class CombatServiceImpl implements CombatService {
       next = isTargetMob
         ? this.applyInjuryToMob(target.id, result.organInjury, next, false)
         : this.applyInjury(target.id, result.organInjury, next, false);
-      this.emitFloat(pos.x, pos.y, 'fracture', 'Organ hit!', 26);
+      this.emitFloat(target.id, pos.x, pos.y, 'fracture', 'Organ hit!', 26);
     }
 
     if (!override) next = this.applyShieldBash(next, attacker, target, isTargetMob, pos, apos);
@@ -1351,13 +1358,14 @@ class CombatServiceImpl implements CombatService {
       result.injury.severity === 'critical' ||
       result.injury.severity === 'destroyed';
     this.emitFloat(
+      target.id,
       pos.x,
       pos.y,
       critFloater ? 'crit' : 'damage',
       result.crit ? `-${result.injury.damage}!` : `-${result.injury.damage}`
     );
     if (!result.knockdown && result.injury.bleeding > 0)
-      this.emitFloat(pos.x, pos.y, 'bleed', 'bleed', 13);
+      this.emitFloat(target.id, pos.x, pos.y, 'bleed', 'bleed', 13);
 
     if (witnessed)
       simLog.logCombatSwing(attacker.id, attackerName, target.id, targetName, turn, pos.x, pos.y, {

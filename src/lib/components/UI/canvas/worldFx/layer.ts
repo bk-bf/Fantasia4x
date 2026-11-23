@@ -185,9 +185,10 @@ class WorldFxLayer {
     for (const b of s.bars) p.put(bar(BAR_W, b.v, b.ramp, b.pegs), b.x, b.y);
     for (const m of s.marks) MARKS[m.kind](p, m.x, m.y, t);
     drawFlights(p, w.renderer, shots, now);
-    const kb = labelScale(p.k, this.sizes.bubbles);
+    const kb = this.bubbles && this.on.speech ? labelScale(p.k, this.sizes.bubbles) : 0;
     const bubbles = kb > 0 ? drawSpeech(p, w.renderer, texts, now, this.skin, kb) : [];
-    if (p.kt > 0) drawFloats(p, w.renderer, texts, now, this.floaters, bubbles);
+    const locate = (id: string) => w.pawnPos.get(id) ?? w.mobPos.get(id);
+    if (p.kt > 0) drawFloats(p, w.renderer, texts, now, this.floaters, bubbles, locate);
     else hideFloats();
   }
 }

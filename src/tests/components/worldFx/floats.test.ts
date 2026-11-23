@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   drawFloats,
   type Box,
+  type Locate,
   FLOATERS_PER_TARGET,
   MERGE_HITS_MS,
   type FloaterMode
@@ -30,7 +31,7 @@ const onset = (
   text,
   kind: 'condition',
   color: '#9575cd',
-  entityId: 'p1',
+  entityId: `p${worldX}`,
   conditionId,
   ...more
 });
@@ -53,14 +54,20 @@ interface Put {
 
 const both = { icons: true, text: true };
 
-function draw(list: CombatTextEvent[], mode: FloaterMode, now: number, blocked: Box[] = []): Put[] {
+function draw(
+  list: CombatTextEvent[],
+  mode: FloaterMode,
+  now: number,
+  blocked: Box[] = [],
+  locate?: Locate
+): Put[] {
   const put: Put[] = [];
   const p = {
     textRatio: 1,
     label: (s: Spr, x: number, y: number, ox: number, oy: number) =>
       put.push({ s, x: x + ox, y: y + oy })
   } as unknown as FxPainter;
-  drawFloats(p, null, list, now, mode, blocked);
+  drawFloats(p, null, list, now, mode, blocked, locate);
   return put;
 }
 
@@ -197,6 +204,41 @@ describe('condition floaters', () => {
       const drawn = draw([e], both, t0 + dt, [bubble]).map(rect);
       expect(drawn.every((d) => apart(d, bubble))).toBe(true);
     }
+  });
+
+  it('follows the creature it belongs to while it lives', () => {
+    const t0 = 270_000;
+    const e = onset('winded', 'Winded', 5000, 4, { entityId: 'walker' });
+    let pos = { x: 5000, y: 4 };
+    const locate: Locate = (id) => (id === 'walker' ? pos : undefined);
+    draw([e], both, t0, [], locate);
+    const before = rect(draw([e], both, t0 + 1000, [], locate)[0]);
+    pos = { x: 5003, y: 6 };
+    const after = rect(draw([e], both, t0 + 1000, [], locate)[0]);
+    expect(after[0] - before[0]).toBe(3 * 32);
+    expect(after[1] - before[1]).toBe(2 * 32);
+  });
+
+  it('settles back toward the head once the floater it made room for is gone', () => {
+    const t0 = 280_000;
+    const first = onset('knockdown', 'Knocked Down', 7000, 4, { entityId: 'a' });
+    const second = onset('winded', 'Winded', 7000, 4, { entityId: 'b' });
+    const alone = onset('winded', 'Winded', 7100, 4, { entityId: 'c' });
+    const w = worded('winded', 'Winded', '#9575cd')[0].w;
+    const lift = (now: number, list: CombatTextEvent[]) => {
+      const drawn = draw(list, both, now)
+        .filter((d) => d.s.w === w)
+        .map(rect);
+      const mine = drawn.find((d) => d[0] < 7050 * 32)!;
+      const ref = drawn.find((d) => d[0] > 7050 * 32)!;
+      return ref[1] - mine[1];
+    };
+    draw([first], both, t0);
+    draw([first, second, alone], both, t0 + 1500);
+    const blocked = lift(t0 + 2500, [first, second, alone]);
+    const freed = lift(t0 + 3600, [second, alone]);
+    expect(blocked).toBeGreaterThan(0);
+    expect(freed).toBeLessThan(blocked);
   });
 
   it('merges hits that land close together, however late the frame that sees them', () => {
