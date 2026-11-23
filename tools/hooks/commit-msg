@@ -44,7 +44,7 @@ fi
 for (( i = 2; i < ${#LINES[@]}; i++ )); do
   line="${LINES[$i]}"
   [[ -z "$line" ]] && continue
-  [[ "$line" =~ ^[A-Za-z-]+:\ .*$ ]] && continue
+  [[ "$line" =~ ^[A-Za-z0-9-]+:\ .*$ ]] && continue
   [[ "$line" =~ ^\ \ +[^-] ]] && continue
   if ! [[ "$line" =~ ^-\ [^[:space:]] ]]; then
     fail "a body line is not a bullet starting \"- \": $line"
