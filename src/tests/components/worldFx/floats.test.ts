@@ -25,12 +25,12 @@ interface Put {
   y: number;
 }
 
-function draw(list: CombatTextEvent[], mode: FloaterMode): Put[] {
+function draw(list: CombatTextEvent[], mode: FloaterMode, now = 300): Put[] {
   const put: Put[] = [];
   const p = {
     put: (s: Spr, x: number, y: number) => put.push({ s, x, y })
   } as unknown as FxPainter;
-  drawFloats(p, null, list, 300, mode);
+  drawFloats(p, null, list, now, mode);
   return put;
 }
 
@@ -77,5 +77,23 @@ describe('condition floaters', () => {
     ).map(rect);
     const apart = a[2] <= b[0] || b[2] <= a[0] || a[3] <= b[1] || b[3] <= a[1];
     expect(apart).toBe(true);
+  });
+
+  it('keeps a damage number rising from below clear of an icon for their whole lives', () => {
+    const both = { icons: true, text: true };
+    const icon = onset('knockdown', 'Knocked Down', 20, 4);
+    const hit: CombatTextEvent = {
+      ...onset('knockdown', '-7', 21, 4),
+      worldY: 5,
+      kind: 'damage',
+      until: 900
+    };
+    delete hit.conditionId;
+    const list = [icon, hit];
+    for (const now of [0, 150, 300, 450, 600, 750, 900]) {
+      const [a, b] = draw(list, both, now).map(rect);
+      if (!a || !b) continue;
+      expect(a[2] <= b[0] || b[2] <= a[0] || a[3] <= b[1] || b[3] <= a[1]).toBe(true);
+    }
   });
 });

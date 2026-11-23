@@ -1,6 +1,6 @@
 import type { CombatTextEvent } from '$lib/stores/fx/combatFeedback';
 import { COLD, CRIT, DULL, GORE, HURT, tint, word, type Pair } from '$lib/pixelArt/fx/glyphs';
-import { badge, badgeDy, float, floatDy } from '$lib/pixelArt/fx/effects';
+import { BADGE_TTL, badge, badgeDy, float, floatDy } from '$lib/pixelArt/fx/effects';
 import { icon, worded, type IconId } from '$lib/pixelArt/fx/icons';
 import type { FxPainter } from '$lib/pixelArt/fx/painter';
 import type { WebGLRenderer } from '$lib/webgl/renderer.js';
@@ -23,6 +23,7 @@ interface Placed {
 const TIERS = [0, 20, 38, 56];
 const BADGE_STEP = 18;
 const GAP = 1;
+const SAMPLE_S = 0.1;
 const TTL_BY_CONDITION: Record<string, number> = { knockdown: 1.3, staggered: 0.9 };
 const ICON_BY_CONDITION: Record<string, IconId> = {
   collapse: 'collapsed',
@@ -105,17 +106,29 @@ function box(q: Placed, u: number): [number, number, number, number] {
   return [left, top, left + s.w, top + s.h];
 }
 
+const life = (q: Placed) => (q.badge ? BADGE_TTL : q.ttl);
+
+function lift(q: Placed, qu: number, o: Seat, ou: number): number {
+  let need = 0;
+  const span = Math.min(life(q) - qu, life(o.q) - ou);
+  for (let t = 0; t <= span; t += SAMPLE_S) {
+    const a = box(q, qu + t);
+    const b = box(o.q, ou + t);
+    if (a[2] <= b[0] || b[2] <= a[0] || a[3] + GAP <= b[1] || b[3] + GAP <= a[1]) continue;
+    need = Math.max(need, a[3] - b[1] + GAP);
+  }
+  return need;
+}
+
 function seat(q: Placed, born: number, now: number): void {
-  for (let pass = 0; pass < placed.size; pass++) {
+  for (let pass = 0; pass <= placed.size; pass++) {
     let moved = false;
-    const a = box(q, (now - born) / 1000);
     for (const o of placed.values()) {
       if (!o) continue;
-      const b = box(o.q, (now - o.born) / 1000);
-      if (a[2] <= b[0] || b[2] <= a[0] || a[3] + GAP <= b[1] || b[3] + GAP <= a[1]) continue;
-      q.y -= a[3] - b[1] + GAP;
+      const need = lift(q, (now - born) / 1000, o, (now - o.born) / 1000);
+      if (need <= 0) continue;
+      q.y -= need;
       moved = true;
-      break;
     }
     if (!moved) return;
   }
