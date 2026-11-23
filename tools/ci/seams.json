@@ -50,6 +50,7 @@
       "src/lib/components/UI/canvas/GameCanvas.svelte::redrawOverlay",
       "src/lib/components/UI/canvas/GameCanvas.svelte::startLoop",
       "src/lib/components/UI/menu/CustomMapMenu.svelte::nextFrames",
+    "src/lib/components/UI/menu/MenuColonyBackdrop.svelte::<top level>",
       "src/lib/components/UI/tooltip/HoverTip.svelte::schedule",
       "src/lib/components/screens/DebugLogScreen.svelte::<top level>"
     ],
