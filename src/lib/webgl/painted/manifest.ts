@@ -118,7 +118,10 @@ export interface PaintedTileset {
   atlasH: number;
   lookup: Map<PaintedKind, Map<string, PaintedVariant[]>>;
   pieces: Map<string, PaintedPieces>;
+  scenery: Map<string, PaintedVariant[]>;
 }
+
+const SCENERY: Readonly<Record<string, string>> = { reeds: 'plant/reeds/' };
 
 const isObject = (v: unknown): v is Record<string, unknown> =>
   typeof v === 'object' && v !== null && !Array.isArray(v);
@@ -335,8 +338,16 @@ export function buildTileset(
         : null)
     });
   }
+  const scenery = new Map<string, PaintedVariant[]>();
+  for (const [id, prefix] of Object.entries(SCENERY)) {
+    const variants = Object.keys(m.sprites)
+      .filter((sid) => sid.startsWith(prefix))
+      .sort()
+      .map((sid) => resolveVariant(m, m.sprites[sid]));
+    if (variants.length > 0) scenery.set(id, variants);
+  }
   return {
-    tileset: { tile: m.tile, atlasW: m.atlas.w, atlasH: m.atlas.h, lookup, pieces },
+    tileset: { tile: m.tile, atlasW: m.atlas.w, atlasH: m.atlas.h, lookup, pieces, scenery },
     problems
   };
 }

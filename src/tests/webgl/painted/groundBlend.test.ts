@@ -11,7 +11,8 @@ const { setPaintedTileset, paintedGroundKind, paintedGroundIds } =
   await import('$lib/webgl/painted/tileset');
 const { applyTileToGrid } = await import('$lib/webgl/fantasia-world');
 const { GameGrid } = await import('$lib/webgl/game-grid');
-const { groundKindTable, lightRect } = await import('$lib/webgl/painted/groundBlend');
+const { GroundBlend, groundKindTable, lightRect } = await import('$lib/webgl/painted/groundBlend');
+const { groundLayer } = await import('$lib/webgl/painted/groundLevels');
 const { readGroundBlendFlag } =
   await vi.importActual<typeof import('$lib/webgl/painted/flag')>('$lib/webgl/painted/flag');
 
@@ -22,7 +23,29 @@ function tile(over: Partial<WorldTile>): WorldTile {
   return { x: 2, y: 3, walkable: true, subType: 'grass', resources: {}, ...over } as WorldTile;
 }
 
+const painted = {
+  tileset,
+  texture: {} as WebGLTexture,
+  light: {} as WebGLTexture,
+  top: null,
+  texels: () => null
+};
+
 beforeAll(() => setPaintedTileset(tileset));
+
+function recordingGl(calls: [string, unknown[]][]): WebGL2RenderingContext {
+  const answer = (name: string, args: unknown[]) =>
+    name === 'getUniformLocation' ? args[1] : name === 'getAttribLocation' ? 0 : {};
+  return new Proxy({} as WebGL2RenderingContext, {
+    get: (_, name) =>
+      typeof name !== 'string' || /^[A-Z0-9_]+$/.test(name)
+        ? 0
+        : (...args: unknown[]) => {
+            calls.push([name, args]);
+            return answer(name, args);
+          }
+  });
+}
 
 describe('the ground blend switch', () => {
   it('reads ?blend=1 or the stored switch', () => {
@@ -72,6 +95,16 @@ describe('the blend pass tables', () => {
     expect([...patch.slice(0, 4), ...layer.slice(0, 2)]).toEqual([0, 0, 0, 0, 0, 0]);
   });
 
+  it('tells shallow water, open water and rapids apart from land', () => {
+    expect(['grass', 'riverbank', 'shallow_water', 'water', 'rapids'].map(groundLayer)).toEqual([
+      { level: 5, water: 0 },
+      { level: 3, water: 0 },
+      { level: 1, water: 1 },
+      { level: 0, water: 2 },
+      { level: 0, water: 3 }
+    ]);
+  });
+
   it('covers the lit corners one past the bounds, clamped to the map', () => {
     expect(lightRect({ minX: 10.5, minY: 3, maxX: 12.2, maxY: 4 }, 500, 500)).toEqual({
       x: 9,
@@ -85,5 +118,37 @@ describe('the blend pass tables', () => {
       w: 501,
       h: 4
     });
+  });
+});
+
+describe('the water phase', () => {
+  it('reaches the shader as one uniform and uploads nothing', () => {
+    const calls: [string, unknown[]][] = [];
+    const shaders = {
+      createProgram: () => ({ success: true }),
+      getProgram: () => ({ program: {} })
+    } as unknown as Parameters<typeof GroundBlend.create>[1];
+    const blend = GroundBlend.create(recordingGl(calls), shaders, painted)!;
+    const grid = new GameGrid();
+    for (let x = 0; x < 4; x++) applyTileToGrid(grid, tile({ x, y: 0 }), []);
+    blend.setGrid(grid);
+    const frame = (waterPhase: number) => ({
+      projection: new Float32Array(16),
+      viewOffset: [0, 0] as [number, number],
+      zoom: [1, 1] as [number, number],
+      ambient: [1, 1, 1] as [number, number, number],
+      flicker: 1,
+      fieldLit: false,
+      tone: [1, 1] as [number, number],
+      waterPhase,
+      lightTime: 0,
+      lightVersion: 1,
+      litBounds: undefined
+    });
+    expect(blend.draw(frame(0))).toBe(true);
+    calls.length = 0;
+    expect(blend.draw(frame(2.5))).toBe(true);
+    expect(calls.filter(([name]) => /^(tex(Sub)?Image2D|bufferData)$/.test(name))).toEqual([]);
+    expect(calls).toContainEqual(['uniform1f', ['u_waterPhase', 2.5]]);
   });
 });

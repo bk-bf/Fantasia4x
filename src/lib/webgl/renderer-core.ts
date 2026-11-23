@@ -31,6 +31,7 @@ import { WindClock, type Heading } from './painted/wind.js';
 import { FallingLeaves } from './painted/leaves.js';
 
 const LIGHT_ATLAS_UNIT = 7;
+const STILL_WATER = 0;
 
 export const ROW_DEPTH_RANGE = 8192;
 
@@ -718,6 +719,7 @@ export class WebGLRendererCore {
       flicker,
       fieldLit: this.lightPass !== null,
       tone,
+      waterPhase: STILL_WATER,
       lightSampler: this.lightSampler ?? undefined,
       lightTime,
       lightVersion: this.lightVersion,
