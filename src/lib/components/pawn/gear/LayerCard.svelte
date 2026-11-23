@@ -28,7 +28,7 @@
     onShow: (i: number) => void;
     onPin?: (itemId: string) => void;
     onDrop: (slot: EquipmentSlot) => void;
-    onCard: (el: HTMLElement | null) => void;
+    onCard: (e: MouseEvent | null) => void;
     onIcon: (layer: GearLayer | null, e?: MouseEvent) => void;
   } = $props();
 
@@ -47,7 +47,8 @@
   class:hover={hovered}
   role="group"
   aria-label={card.label}
-  onmouseenter={(e) => onCard(e.currentTarget)}
+  onmouseenter={onCard}
+  onmousemove={onCard}
   onmouseleave={() => onCard(null)}
   {@attach chrome('cell')}
 >

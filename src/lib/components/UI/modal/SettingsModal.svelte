@@ -19,7 +19,9 @@
     autoPauseOnDeath,
     defaultGameSpeed,
     debugMode,
-    wasdPan
+    wasdPan,
+    tipPlacement,
+    isTipPlacement
   } from '$lib/stores/uiPrefs';
 
   let { onClose }: { onClose: () => void } = $props();
@@ -90,6 +92,16 @@
       </SettingSection>
       <SettingSection title="Interface">
         {@render checks([flag(hideSidebars, $hideSidebars, 'Cinematic layout')])}
+        <SettingRow
+          type="select"
+          label="Hover panels"
+          value={$tipPlacement}
+          options={[
+            { value: 'cursor', label: 'By cursor' },
+            { value: 'window', label: 'Under window' }
+          ]}
+          onSelect={(v) => isTipPlacement(v) && tipPlacement.set(v)}
+        />
       </SettingSection>
       <SettingSection title="Controls">
         {@render checks([flag(wasdPan, $wasdPan, 'WASD camera panning', 'alongside arrow keys')])}

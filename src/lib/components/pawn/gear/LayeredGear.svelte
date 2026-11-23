@@ -29,9 +29,6 @@
     loading?: boolean;
   } = $props();
 
-  const GAP = 16;
-  const ROW = 19;
-
   const innate = $derived(innateGear(pawn));
   const cards = $derived(gearCards(pawn, innate.occupants));
   const trinkets = $derived.by(() => {
@@ -46,17 +43,8 @@
   let hover: { i: number; x: number; y: number } | null = $state(null);
   let stat: { layer: GearLayer; x: number; y: number } | null = $state(null);
 
-  function enterCard(i: number, el: HTMLElement | null) {
-    if (!el) return (hover = null);
-    const win = (el.closest('[data-window]') ?? el).getBoundingClientRect();
-    const card = el.getBoundingClientRect();
-    const h = 40 + ROW * (cards[i].layers.length + 1);
-    const below = window.innerHeight - win.bottom - 6 >= h;
-    hover = {
-      i,
-      x: card.left - GAP,
-      y: below ? win.bottom + 6 - GAP : win.top - 6 - h - GAP
-    };
+  function onCard(i: number, e: MouseEvent | null) {
+    hover = e ? { i, x: e.clientX, y: e.clientY } : null;
   }
 
   function icon(layer: GearLayer | null, e?: MouseEvent) {
@@ -84,7 +72,7 @@
       onShow={(n) => (picked[`${pawn.id}:${i}`] = n)}
       onPin={onTogglePin}
       onDrop={onUnequip}
-      onCard={(el) => enterCard(i, el)}
+      onCard={(e) => onCard(i, e)}
       onIcon={icon}
     />
   {/each}
