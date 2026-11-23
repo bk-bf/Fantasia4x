@@ -406,12 +406,17 @@ const PROPS = (() => {
     s.sh = pose === 'lie' ? { rx: def.L * .5, ry: 2.4, dx: 2, dy: 0, k: .7 } : { rx: 5, ry: 2.2, dx: 4, dy: 0, k: .7 };
     return flip ? s.flip() : s;
   }
-  function worn(kind, ramps, flip) {
+  function worn(kind, ramps, flip, item) {
+    const own = item && WORLD_GEAR.of(item);
+    const s = own ? WORLD_GEAR.sprite(own, kind === 'shieldUp' ? 'lean' : 'ground') : generic(kind, ramps);
+    return flip ? s.flip() : s;
+  }
+  function generic(kind, ramps) {
     const s = new Spr(48, HIGH, CX, B);
     ARMOUR[kind](s, CX, ramps);
     s.outline();
     s.sh = { rx: kind === 'shield' ? 11 : 8, ry: 3, dx: 3, dy: 0, k: .8 };
-    return flip ? s.flip() : s;
+    return s;
   }
   function tucked(spr, ramp, seed, lush) {
     const s = new Spr(spr.w, spr.h, spr.ax, spr.ay), m = ramp.length - 1;

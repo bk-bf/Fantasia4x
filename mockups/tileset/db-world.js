@@ -5,8 +5,8 @@
     const k = RULES.classify(o), ramps = () => RULES.rampsFor(k, o);
     if (k.pile) return STAGES.map(stage => ['map-pile-' + (stage + 1), () => PROPS.pile(k.pile, [stage], ramps(), 1)]);
     if (k.long) return [['map-lean', () => PROPS.long(k.long, 'lean', false, o.id)], ['map-lie', () => PROPS.long(k.long, 'lie', false, o.id)]];
-    const ground = [['map-ground', () => PROPS.worn(k.worn, ramps(), false)]];
-    return k.worn === 'shield' ? [...ground, ['map-lean', () => PROPS.worn('shieldUp', ramps(), false)]] : ground;
+    const ground = [['map-ground', () => PROPS.worn(k.worn, ramps(), false, o)]];
+    return k.worn === 'shield' ? [...ground, ['map-lean', () => PROPS.worn('shieldUp', ramps(), false, o)]] : ground;
   }
   const drawn = o => X.of('item', o.id).length > 0, mapped = o => X.of('item', o.id).some(e => e.inWorld);
   const prev = X.fromData;

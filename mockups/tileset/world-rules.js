@@ -27,6 +27,8 @@ const RULES = (() => {
     return 'roll';
   }
   function classify(o) {
+    const own = WORLD_GEAR.of(o);
+    if (own) return { worn: own.kind, own: true, tuck: own.tuck || 'low' };
     if (o.group === 'Weapon') return { long: kindOf(o.id, 'sword') };
     if (o.group === 'Armor') return { worn: wornOf(o) };
     if (o.group === 'Tool' && o.sub === 'Storage') return /belt|sash|bandolier|harness/.test(o.id) ? { worn: 'roll' } : /pack|bag|pannier|quiver|satchel|sling/.test(o.id) ? { worn: 'pack' } : { pile: /skin|urn|jug|flask|bottle|bucket|barrel|cask|keg/.test(o.id) ? 'fluids' : /basket/.test(o.id) ? 'baskets' : 'crates' };
@@ -84,10 +86,19 @@ const RULES = (() => {
     if (k.long === 'hoe' && (east || west)) return { spr: tuck(env, d, PROPS.long('hoe', 'lie', !east), seed, false), x: d.x * TILE + (east ? 31 - L / 2 : 1 + L / 2), y: d.y * TILE + 24, rule: 'laid at the field edge' };
     return { spr: tuck(env, d, PROPS.long(k.long, 'lie', coin(d, seed, 6), d.item.id), seed, false), x: d.x * TILE + 16 + jit(d, seed, 7, 8), y: d.y * TILE + 22 + jit(d, seed, 8, 8), rule: 'lies in the grass' };
   }
-  function wornPlace(env, d, k, seed) {
-    const ramps = rampsFor(k, d.item), wall = env.wall(d.x, d.y - 1), up = k.worn === 'shield' && wall;
-    const spr = PROPS.worn(up ? 'shieldUp' : k.worn, ramps, coin(d, seed, 9));
-    return { spr: tuck(env, d, spr, seed, !up && k.worn !== 'pack'), x: d.x * TILE + 16 + jit(d, seed, 10, 10), y: d.y * TILE + (wall ? 8 : env.wall(d.x, d.y + 1) ? 14 : 23 + jit(d, seed, 11, 6)), rule: up ? 'leans on the wall' : wall ? 'against wall' : 'sits on the ground' };
+  const TUCKS = { lush: (env, d, spr, seed) => tuck(env, d, spr, seed, true), low: (env, d, spr, seed) => tuck(env, d, spr, seed, false), none: (env, d, spr) => spr };
+  const tuckOf = (k, up) => up ? 'none' : k.tuck || (k.worn === 'pack' ? 'low' : 'lush');
+  function shieldRest(env, d, k, piles) {
+    if (k.worn !== 'shield') return null;
+    if (env.wall(d.x, d.y - 1)) return { rule: 'leans on the wall' };
+    const sup = support(env, d, k, piles);
+    return sup && Object.assign(against(d, sup.on), { rule: sup.rule });
+  }
+  function wornPlace(env, d, k, seed, piles) {
+    const ramps = rampsFor(k, d.item), wall = env.wall(d.x, d.y - 1), up = shieldRest(env, d, k, piles);
+    const spr = PROPS.worn(up ? 'shieldUp' : k.worn, ramps, !k.own && (up ? !!up.flip : coin(d, seed, 9)), d.item);
+    if (up && up.x !== undefined) return { spr, x: up.x, y: up.y, rule: up.rule };
+    return { spr: TUCKS[tuckOf(k, up)](env, d, spr, seed), x: d.x * TILE + 16 + jit(d, seed, 10, 10), y: d.y * TILE + (wall ? 8 : env.wall(d.x, d.y + 1) ? 14 : 23 + jit(d, seed, 11, 6)), rule: up ? up.rule : wall ? 'against wall' : 'sits on the ground' };
   }
 
   function plan(env, drops, seed) {
@@ -106,7 +117,7 @@ const RULES = (() => {
     for (const d of sorted) {
       const k = kind.get(d);
       if (done.has(d)) continue;
-      const p = k.long ? longPlace(env, d, k, seed, piles) : wornPlace(env, d, k, seed);
+      const p = k.long ? longPlace(env, d, k, seed, piles) : wornPlace(env, d, k, seed, piles);
       out.push({ ...p, x: Math.round(p.x), y: Math.round(p.y), labels: [label(d)] });
       for (let i = 1; i < Math.min(3, d.quantity) && k.long; i++) out.push({ ...p, x: Math.round(p.x) + i * 5, y: Math.round(p.y) + (i & 1), labels: [] });
     }
