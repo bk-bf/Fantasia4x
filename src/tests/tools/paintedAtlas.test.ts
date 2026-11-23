@@ -6,6 +6,7 @@ import resources from '$lib/game/database/world/resources.json';
 import buildings from '$lib/game/database/world/buildings.json';
 import creatures from '$lib/game/database/pawns/creatures.json';
 import items from '$lib/game/database/items/items.json';
+import lore from '$lib/game/database/social/culture-lore.json';
 import { buildTileset, parseManifest } from '$lib/webgl/painted/manifest';
 import { bake } from '../../../tools/tileset/bake.mjs';
 import { decodePng } from '../../../tools/tileset/png.mjs';
@@ -20,8 +21,21 @@ const database: Record<string, Set<string>> = {
   resource: ids(resources),
   building: ids(buildings),
   creature: ids(creatures),
-  pawn: new Set(['*']),
+  pawn: new Set(['*', ...lore.archetypes.map((a) => a.name)]),
   item: ids(items)
+};
+const catalogued: Record<string, string[]> = {
+  subterrain: [...database.subterrain],
+  resource: [...database.resource],
+  building: buildings.filter((b) => !b.ageTier.startsWith('runed:')).map((b) => b.id),
+  creature: [...database.creature],
+  pawn: lore.archetypes.map((a) => a.name),
+  item: items.filter((i) => !i.hidden).map((i) => i.id)
+};
+const STATES = new Set(['idle']);
+const unstated = (key: string) => {
+  const [id, state] = key.split(':');
+  return state === undefined || STATES.has(state) ? id : key;
 };
 type Rect = {
   x: number;
@@ -118,24 +132,36 @@ describe('painted atlas manifest', () => {
 
   it('leaves a gutter between sprites', () => {
     const rects = Object.entries(sprites);
+    const touching: string[] = [];
     for (let i = 0; i < rects.length; i++)
       for (let j = i + 1; j < rects.length; j++) {
         const [a, ra] = rects[i];
         const [b, rb] = rects[j];
         const apart =
           ra.x + ra.w < rb.x || rb.x + rb.w < ra.x || ra.y + ra.h < rb.y || rb.y + rb.h < ra.y;
-        expect(apart, `${a} and ${b}`).toBe(true);
+        if (!apart) touching.push(`${a} and ${b}`);
       }
+    expect(touching).toEqual([]);
   });
 
   it('maps only database ids, and only to sprites that exist', () => {
     expect(Object.keys(map).sort()).toEqual(Object.keys(database).sort());
     for (const [cat, entries] of Object.entries(map))
       for (const [id, targets] of Object.entries(entries)) {
-        expect(database[cat].has(id), `${cat} ${id}`).toBe(true);
+        expect(database[cat].has(unstated(id)), `${cat} ${id}`).toBe(true);
         expect(targets.length, `${cat} ${id}`).toBeGreaterThan(0);
         for (const t of targets) expect(sprites[t], `${cat} ${id} -> ${t}`).toBeDefined();
       }
+  });
+
+  it('maps every catalogue entry the game uses', () => {
+    for (const [cat, wanted] of Object.entries(catalogued))
+      for (const id of wanted) expect(map[cat][id], `${cat} ${id}`).toBeDefined();
+  });
+
+  it('draws every fire the game can let go out unlit as well', () => {
+    for (const b of buildings.filter((d) => (d.maxFuel ?? 0) > 0))
+      expect(map.building[`${b.id}:idle`], b.id).toBeDefined();
   });
 
   it('loads through the renderer reader with no problems', () => {

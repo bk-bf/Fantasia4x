@@ -128,6 +128,14 @@ export const MAP = {
     compost_bin: ['building/compost'],
     stone_block_wall: ['wall/stone'],
     daub_wall: ['wall/daub'],
+    palisade: ['wall/palisade'],
+    branch_wall: ['wall/branch'],
+    wicker_wall: ['wall/wicker'],
+    mud_brick_wall: ['wall/mudbrick'],
+    rebar_concrete_wall: ['wall/concrete'],
+    thatch_roof: ['roof/thatch'],
+    tile_roof: ['roof/tile'],
+    mountain_roof: ['roof/mountain'],
     wooden_floor: ['floor/plank'],
     stone_floor: ['floor/flagstone'],
     packed_earth_floor: ['floor/earth'],
@@ -189,7 +197,7 @@ export const MAP = {
 
 export const UNPAINTED = {
   resource: [],
-  building: ['door', 'branch_door', 'window', 'clay_floor']
+  building: []
 };
 
 export const PIECES = { rock: ['mountain_wall', 'cliff_wall'] };

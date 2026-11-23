@@ -20,21 +20,47 @@ export const CATEGORY = new Map(
   })
 );
 
-const EXCLUDED_VARIANTS = new Set(['post', 'run', 'room', 'idle', 'empty', 'n', 'e', 'w']);
+const EXCLUDED_VARIANTS = new Set(['post', 'run', 'room', 'empty', 'n', 'e', 'w']);
 const SHOWN_FACING = 's';
 const FRAME = /^f\d+$/;
 const SEASON = /^(summer|autumn|winter)-(\d+)$/;
+const STATE = /^(?:s-)?(idle)$/;
+const LORE_JSON = join(
+  ART,
+  '..',
+  '..',
+  '..',
+  'src',
+  'lib',
+  'game',
+  'database',
+  'social',
+  'culture-lore.json'
+);
+
+export const ARCHETYPES = new Map(
+  JSON.parse(readFileSync(LORE_JSON, 'utf8')).archetypes.map(
+    (/** @type {{ name: string }} */ a) => [a.name.toLowerCase().replace(/-/g, '_'), a.name]
+  )
+);
 
 export function loadRegistry() {
   const src = REGISTRY_ART.map((f) =>
     readFileSync(join(ART, f), 'utf8').replace(/^'use strict';\n/, '')
   ).join('\n;');
-  const DBX = new Function(`'use strict';\n${src}\nreturn Object.assign(DBX, { walls: WALLS });`)();
+  const DBX = new Function(
+    `'use strict';\n${src}\nreturn Object.assign(DBX, { walls: WALLS, roofs: ROOFS });`
+  )();
   DBX.fromData(itemObjects());
   return DBX;
 }
 
+export function variantState(variant = '') {
+  return STATE.exec(variant)?.[1] ?? '';
+}
+
 function variantIndex(variant = '') {
+  if (variantState(variant)) return variantState(variant);
   if (EXCLUDED_VARIANTS.has(variant) || FRAME.test(variant)) return null;
   if (variant === SHOWN_FACING) return variant;
   const s = SEASON.exec(variant);
@@ -57,7 +83,13 @@ export function registryEntries(
     if (!cat || e.dbId.startsWith('_') || skip(cat, e.dbId)) continue;
     const n = e.cat === 'item' ? itemVariant(DBX, e) : variantIndex(e.variant);
     if (n === null) continue;
-    out.push({ cat, dbId: e.dbId, spriteId: `${e.cat}/${e.dbId}/${n}`, entry: e });
+    out.push({
+      cat,
+      dbId: e.dbId,
+      state: variantState(e.variant),
+      spriteId: `${e.cat}/${e.dbId}/${n}`,
+      entry: e
+    });
   }
   return out;
 }
