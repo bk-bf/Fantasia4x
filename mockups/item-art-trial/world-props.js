@@ -282,10 +282,63 @@ const PROPS = (() => {
     TK.seg(s, F(6.2 * k, -3.6 * k), F(6.2 * k, 3.6 * k), .8, () => P.gold[4]);
     plate(s, F, scaled([[7, 1.7], [18, 1.6], [21, 0], [18, -1.6], [7, -1.7]], k), P.iron, 5);
   }
+  const inside = (v, a, b) => v >= a && v <= b;
+  const wrap = (t, v) => [P.leather, (t & 1 ? 4 : 2) - (v > -1 ? 1 : 0)];
+  function swordCell(t, v) {
+    if (t === 0 || t === 2) return inside(v, -1, 0) && [P.gold, (t ? 2 : 3) - v];
+    if (t === 1) return inside(v, -2, 1) && [P.gold, v < 0 ? 4 : 2 - (v > 0 ? 1 : 0)];
+    if (t <= 9) return inside(v, -1, 0) && wrap(t, v);
+    if (t === 10) return inside(v, -5, 4) && [P.gold, Math.abs(v + .5) > 4 ? 2 : v < 0 ? 4 : 3];
+    if (t === 11) return inside(v, -2, 1) && [P.gold, v < 0 ? 3 : 1];
+    const half = t <= 30 ? [-2, 1] : t <= 32 ? [-1, 1] : t === 33 ? [-1, 0] : [0, 0];
+    if (!inside(v, half[0], half[1])) return null;
+    if (t >= 33) return [P.iron, 6];
+    return [P.iron, v === -2 ? 5 : v === -1 ? (t < 14 ? 4 : 6) : v === 0 ? 3 : 2];
+  }
+  const AXE_EDGE = [[2, 28], [3, 27], [4, 26], [5, 25], [6, 24], [7, 23]];
+  function axeHead(t, w) {
+    if (!inside(w, 2, 7) || !inside(t, AXE_EDGE[w - 2][1], 34)) return null;
+    const edge = w === 7 || t < AXE_EDGE[w - 1][1], bevel = w === 6 || (w < 6 && t < AXE_EDGE[w][1]);
+    return [P.iron, edge ? 6 : bevel ? 5 : w < 4 ? 3 : 4];
+  }
+  function axeCell(t, v) {
+    if (v < -2) return axeHead(t, -1 - v);
+    if (inside(t, 27, 34) && inside(v, -2, 1)) return [P.iron, t === 27 || t === 34 ? 2 : v === -2 ? 5 : v === 1 ? 2 : 3];
+    if (inside(t, 28, 33) && v === 2) return [P.iron, 2];
+    if (!inside(v, -1, 0) || t > 26) return null;
+    if (inside(t, 1, 6)) return wrap(t, v);
+    return [P.wood, t === 0 ? 3 : v < 0 ? 5 : 3];
+  }
+  const LEAN_STEP = 4;
+  function cells(def, pose) {
+    const out = [];
+    for (let t = 0; t < def.L; t++) for (let v = -10; v <= 10; v++) {
+      const c = def.cell(t, v);
+      if (!c) continue;
+      const lean = pose === 'lean';
+      out.push({ x: lean ? Math.floor(t / LEAN_STEP) + v : t, y: lean ? t : v - Math.floor(t / LEAN_STEP), r: c[0], k: c[1] });
+    }
+    return out;
+  }
+  function drawn(def, pose) {
+    const pts = cells(def, pose), s = new Spr(48, HIGH, CX, B), lean = pose === 'lean';
+    const dy = B - 1 - Math.max(...pts.map(p => p.y));
+    const dx = lean ? CX + 4 - Math.floor((def.L - 1) / LEAN_STEP) : CX - (def.L >> 1);
+    const ramp = new Map();
+    for (const p of pts) { s.set(p.x + dx, p.y + dy, at(p.r, p.k)); ramp.set((p.y + dy) * s.w + p.x + dx, p.r); }
+    const edge = [];
+    for (let y = 1; y < s.h - 1; y++) for (let x = 1; x < s.w - 1; x++) {
+      if (ramp.has(y * s.w + x)) continue;
+      const n = [(y - 1) * s.w + x, y * s.w + x - 1, y * s.w + x + 1, (y + 1) * s.w + x].find(i => ramp.has(i));
+      if (n !== undefined) edge.push([x, y, ramp.get(n)[0]]);
+    }
+    for (const [x, y, c] of edge) s.set(x, y, c);
+    return s;
+  }
   const LONG = {
-    sword: { L: 21, f: (s, F) => blade(s, F, 1) },
+    sword: { L: 35, cell: swordCell },
     dagger: { L: 11, f: (s, F) => blade(s, F, .52) },
-    axe: { L: 19, f(s, F) { shaft(s, F, 0, 19, .9, P.plank, 3); plate(s, F, [[14, .6], [17, .6], [17, 2.2], [14, 2.2]], P.iron, 3); plate(s, F, [[12.5, -.5], [17.5, -.5], [19.5, -7], [11, -7], [13.5, -3]], P.iron, 4, v => v < -5.6); } },
+    axe: { L: 35, cell: axeCell },
     hoe: { headUp: true, L: 34, f(s, F) { shaft(s, F, 0, 34, .9, P.plank, 3); plate(s, F, [[30.6, -.5], [34, -.5], [34, -7.4], [31.6, -7.4]], P.iron, 4, v => v < -6.2); } },
     spear: { headUp: true, L: 40, f(s, F) { shaft(s, F, 0, 34, .9, P.plank, 2); shaft(s, F, 33, 35.4, 1.4, P.iron, 3); plate(s, F, [[35, 2.3], [38, 1.7], [41, 0], [38, -1.7], [35, -2.3], [34, 0]], P.iron, 5); } },
     staff: { headUp: true, L: 36, f(s, F) { shaft(s, F, 0, 34, 1, P.wood, 3); shaft(s, F, 24, 28, 1.3, P.cloth, 3); const p = F(35); s.ball(p[0], p[1], 2.4, 2.4, 2, P.blue, { d: .3 }); } },
@@ -317,10 +370,16 @@ const PROPS = (() => {
     return s;
   }
   function long(kind, pose, flip) {
-    const def = LONG[kind], [a, b] = POSES[pose](def.L, def.headUp), F = frame(a, b), s = new Spr(48, HIGH, CX, B);
-    def.f(s, F);
-    s.outline();
-    if (def.over) def.over(s, F);
+    const def = LONG[kind];
+    let s;
+    if (def.cell) s = drawn(def, pose);
+    else {
+      const [a, b] = POSES[pose](def.L, def.headUp), F = frame(a, b);
+      s = new Spr(48, HIGH, CX, B);
+      def.f(s, F);
+      s.outline();
+      if (def.over) def.over(s, F);
+    }
     s.sh = pose === 'lie' ? { rx: def.L * .5, ry: 2.4, dx: 2, dy: 0, k: .7 } : { rx: 5, ry: 2.2, dx: 4, dy: 0, k: .7 };
     return flip ? s.flip() : s;
   }
