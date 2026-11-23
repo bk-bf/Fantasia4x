@@ -76,13 +76,13 @@ const RULES = (() => {
   }
   function longPlace(env, d, k, seed, piles) {
     const sup = support(env, d, k, piles), L = PROPS.lengthOf(k.long);
-    if (sup) { const p = against(d, sup.on); return { spr: PROPS.long(k.long, 'lean', p.flip), x: p.x, y: p.y, rule: sup.rule }; }
-    if (env.wall(d.x, d.y - 1)) return { spr: PROPS.long(k.long, 'lean', coin(d, seed, 3)), x: d.x * TILE + 16 + jit(d, seed, 4, 12), y: d.y * TILE + 7, rule: 'leans on the wall' };
-    if (env.wall(d.x - 1, d.y)) return { spr: PROPS.long(k.long, 'lean', false), x: d.x * TILE + 4, y: d.y * TILE + 22 + jit(d, seed, 5, 8), rule: 'leans on the wall' };
-    if (env.wall(d.x + 1, d.y)) return { spr: PROPS.long(k.long, 'lean', true), x: d.x * TILE + 28, y: d.y * TILE + 22 + jit(d, seed, 5, 8), rule: 'leans on the wall' };
+    if (sup) { const p = against(d, sup.on); return { spr: PROPS.long(k.long, 'lean', p.flip, d.item.id), x: p.x, y: p.y, rule: sup.rule }; }
+    if (env.wall(d.x, d.y - 1)) return { spr: PROPS.long(k.long, 'lean', coin(d, seed, 3), d.item.id), x: d.x * TILE + 16 + jit(d, seed, 4, 12), y: d.y * TILE + 7, rule: 'leans on the wall' };
+    if (env.wall(d.x - 1, d.y)) return { spr: PROPS.long(k.long, 'lean', false, d.item.id), x: d.x * TILE + 4, y: d.y * TILE + 22 + jit(d, seed, 5, 8), rule: 'leans on the wall' };
+    if (env.wall(d.x + 1, d.y)) return { spr: PROPS.long(k.long, 'lean', true, d.item.id), x: d.x * TILE + 28, y: d.y * TILE + 22 + jit(d, seed, 5, 8), rule: 'leans on the wall' };
     const east = env.field(d.x + 1, d.y), west = env.field(d.x - 1, d.y);
     if (k.long === 'hoe' && (east || west)) return { spr: tuck(env, d, PROPS.long('hoe', 'lie', !east), seed, false), x: d.x * TILE + (east ? 31 - L / 2 : 1 + L / 2), y: d.y * TILE + 24, rule: 'laid at the field edge' };
-    return { spr: tuck(env, d, PROPS.long(k.long, 'lie', coin(d, seed, 6)), seed, false), x: d.x * TILE + 16 + jit(d, seed, 7, 8), y: d.y * TILE + 22 + jit(d, seed, 8, 8), rule: 'lies in the grass' };
+    return { spr: tuck(env, d, PROPS.long(k.long, 'lie', coin(d, seed, 6), d.item.id), seed, false), x: d.x * TILE + 16 + jit(d, seed, 7, 8), y: d.y * TILE + 22 + jit(d, seed, 8, 8), rule: 'lies in the grass' };
   }
   function wornPlace(env, d, k, seed) {
     const ramps = rampsFor(k, d.item), wall = env.wall(d.x, d.y - 1), up = k.worn === 'shield' && wall;

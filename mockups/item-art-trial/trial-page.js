@@ -51,21 +51,22 @@
     return strip;
   }
 
-  const LONGS = ['steel_longsword', 'iron_rondel_dagger', 'short_seax', 'bearded_axe', 'iron_axe', 'iron_hoe', 'steel_boar_spear', 'hunting_recurve', 'iron_hammer', 'iron_pick', 'iron_mace', 'saw', 'iron_tongs'].filter(id => items.get(id));
+  const TOOLS = ['bearded_axe', 'iron_axe', 'iron_hoe', 'steel_boar_spear', 'hunting_recurve', 'iron_hammer', 'iron_pick', 'iron_mace', 'saw', 'iron_tongs'];
   const WORN = ['iron_nasal_helm', 'plate_cuirass', 'hide_boots', 'framed_leather_pack', 'leather_sword_belt', 'plank_round_shield'];
-  function loose(state) {
-    const all = [...LONGS, ...WORN], drops = [...all.map((id, i) => drop(id, 1, 1 + i, 1)), ...all.map((id, i) => drop(id, 1, 1 + i, 3))];
+  function loose(state, ids) {
+    const all = ids.filter(id => items.get(id)), drops = [...all.map((id, i) => drop(id, 1, 1 + i, 1)), ...all.map((id, i) => drop(id, 1, 1 + i, 3))];
     const made = ruled(all.length + 3, 4, drops, { walled: (x, y) => y === 0, pawns: [[all.length + 1.4, 1], [all.length + 1.4, 3]] });
     return framed(made.img, +state.zoom, state.labels === 'on' ? made.labels : []);
   }
 
-  function icons() {
+  function icons(state) {
     const strip = el('div', 'strip');
-    for (const it of TRIAL.ITEMS) {
-      const pair = el('div', 'well');
+    for (const it of PIXEL_ICONS) {
+      const pair = el('div', 'well'), was = DBX.pick('item', it.id, 'summer');
       pair.style.gridAutoFlow = 'column'; pair.style.gap = '8px';
-      pair.append(canvasOf(DBX.bake(DBX.pick('item', it.id, 'summer')), 1), canvasOf(TK.image(TRIAL.crispIcon(it)), 2));
-      strip.append(figure(pair, it.label));
+      if (was) pair.append(canvasOf(DBX.bake(was), +state.zoom));
+      pair.append(canvasOf(PX.icon(it.draw()), 2 * state.zoom));
+      strip.append(figure(pair, items.get(it.id).name));
     }
     return strip;
   }
@@ -76,8 +77,8 @@
     sheet.textContent = '';
     sheet.append(...yard(state),
       titled('Props by storage class', 'a drop is drawn as its class, three fill stages by quantity, tinted by the item'), classes(state),
-      titled('Weapons, tools and gear', 'top row beside a wall, bottom row in open grass'), loose(state),
-      titled('Window icons', 'as now, beside the 32 px redraw'), icons());
+      titled('Weapons, tools and gear', 'top row beside a wall, bottom row in open grass'), loose(state, WORLD_ITEMS.ids()), loose(state, [...TOOLS, ...WORN]),
+      titled('Window icons', 'as now, beside the pixel-placed icon'), icons(state));
   }
 
   const ui = F4X.bar(state => render(state));

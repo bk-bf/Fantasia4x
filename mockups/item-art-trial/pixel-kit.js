@@ -1,0 +1,166 @@
+'use strict';
+const PX = (() => {
+  const SIZE = 32, TONES = 'odml', GLYPHS = ['odml', 'ODML', 'wxyz', 'WXYZ'], NEAR = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+  const PALETTE = {
+    flint: '#15181e #3d4650 #6a7580 #a3aeb6',
+    bone: '#3d3023 #a39373 #d9cba8 #f7f0dc',
+    copper: '#35160d #9c4827 #d87c46 #f8b98a',
+    bronze: '#2f1d0b #8c5c1b #d09c38 #f7da7e',
+    iron: '#191b24 #565c6a #8b919c #c4c8cd',
+    steel: '#1d1f33 #7d87a4 #c3c9d8 #f6f7fb',
+    runed: '#15193b #5068b4 #a4bcec #eef7ff',
+    glow: '#0d3350 #1f86c4 #58d2f2 #d0f8ff',
+    black: '#0b0b11 #2b2d3a #4d5160 #808695',
+    wood: '#25160d #5c3d22 #8c6338 #ba8c57',
+    ember: '#2a0f0c #6e2a1a #a44a26 #d47a3c',
+    leather: '#27120b #5f2f1b #904d2a #be7645',
+    hide: '#33230f #7c5a30 #ab8650 #d3b47e',
+    cord: '#3a2c17 #8b744a #c1a86f #e7d7a5',
+    gold: '#3b2605 #b27a10 #ebb92e #fff19c',
+    red: '#2d090d #7b191d #b62b29 #e25f49',
+    wool: '#131f2d #2c4a60 #44708a #6f9cb0',
+    linen: '#3b3526 #a39878 #d5cbad #f3eddb',
+    fur: '#2c2117 #6c5a44 #a8957a #d8cbb0',
+    ruby: '#3a0714 #a8122c #ea3c4a #ffb0a8',
+    sapphire: '#0c1b4b #2350ba #4a8df2 #b4dcff',
+    string: '#3a3528 #8a8474 #c8c2b0 #ece8dc'
+  };
+  const THREADS = new Set(['string']);
+
+  const fail = message => { throw new Error('PX: ' + message); };
+  const rgb = hex => [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16));
+  const luma = c => c[0] * .3 + c[1] * .59 + c[2] * .11;
+  const key = (x, y) => x + ',' + y;
+
+  function material(name, hexes) {
+    const tones = hexes.split(' ').map(rgb);
+    if (tones.length !== TONES.length) fail(name + ' has ' + tones.length + ' tones, a material has ' + TONES.length);
+    return { name, tones, thread: THREADS.has(name) };
+  }
+  const MATERIALS = Object.fromEntries(Object.entries(PALETTE).map(([name, hexes]) => [name, material(name, hexes)]));
+
+  function ink(glyph, inks) {
+    for (let set = 0; set < GLYPHS.length; set++) {
+      const tone = GLYPHS[set].indexOf(glyph);
+      if (tone < 0) continue;
+      const mat = MATERIALS[inks[set]];
+      if (!mat) fail('glyph "' + glyph + '" needs material ' + (set + 1) + ' of [' + inks.join(', ') + ']');
+      return { mat, rgb: mat.tones[tone] };
+    }
+    return fail('unknown glyph "' + glyph + '"');
+  }
+
+  const sketch = () => new Map();
+  function put(sk, x, y, glyph, inks) {
+    if (glyph === ' ') return;
+    if (glyph === '.') { sk.delete(key(x, y)); return; }
+    sk.set(key(x, y), Object.assign({ x, y }, ink(glyph, inks)));
+  }
+
+  const lean = band => band >= 0 ? [(band + 1) >> 1, band >> 1] : [-(-band >> 1), -((1 - band) >> 1)];
+  function diagonal(step, band) {
+    const [dx, dy] = lean(band);
+    return [step + dx, dy - step];
+  }
+
+  function grid(rows, what) {
+    if (!rows.length || rows.some(r => r.length !== rows[0].length)) fail('ragged ' + what + ': ' + JSON.stringify(rows));
+    return rows;
+  }
+  const part = (top, rows) => ({ top, rows: grid(rows, 'part'), len: rows[0].length });
+  const tile = (pattern, n) => pattern.repeat(Math.ceil(n / pattern.length)).slice(0, n);
+  const run = (top, patterns, n) => part(top, patterns.map(p => tile(p, n)));
+
+  function join(...parts) {
+    const top = Math.min(...parts.map(p => p.top)), bottom = Math.max(...parts.map(p => p.top + p.rows.length - 1));
+    const rows = [];
+    for (let band = top; band <= bottom; band++) rows.push(parts.map(p => p.rows[band - p.top] || ' '.repeat(p.len)).join(''));
+    return part(top, rows);
+  }
+
+  const strip = (band, from, to, pattern) => part(band, [' '.repeat(from) + tile(pattern, to - from)]);
+  function stack(...parts) {
+    const top = Math.min(...parts.map(p => p.top)), bottom = Math.max(...parts.map(p => p.top + p.rows.length - 1)), len = Math.max(...parts.map(p => p.len));
+    const rows = [];
+    for (let band = top; band <= bottom; band++) {
+      const row = new Array(len).fill(' ');
+      for (const p of parts) [...(p.rows[band - p.top] || '')].forEach((glyph, c) => { if (glyph !== ' ') row[c] = glyph; });
+      rows.push(row.join(''));
+    }
+    return part(top, rows);
+  }
+  const profile = spans => stack(...spans.map(span => strip(...span)));
+
+  const patch = (rows, anchor, len) => ({ rows: grid(rows, 'patch'), anchor, len: len || 0 });
+  function mirror(p, swap) {
+    const flip = glyph => swap[glyph] || glyph;
+    return part(-(p.top + p.rows.length - 1), p.rows.slice().reverse().map(row => [...row].map(flip).join('')));
+  }
+
+  function lay(sk, step, p, inks, axis) {
+    const at = axis || diagonal;
+    if (p.anchor) {
+      const [x, y] = at(step, 0);
+      stamp(sk, x - p.anchor[0], y - p.anchor[1], p.rows, inks);
+      return step + p.len;
+    }
+    p.rows.forEach((row, r) => [...row].forEach((glyph, c) => put(sk, ...at(step + c, p.top + r), glyph, inks)));
+    return step + p.len;
+  }
+
+  function assemble(pieces, sk, axis) {
+    let step = 0;
+    sk = sk || sketch();
+    for (const piece of pieces) step = typeof piece === 'number' ? step + piece : lay(sk, step, piece[0], piece.slice(1), axis);
+    return sk;
+  }
+
+  function stamp(sk, x0, y0, rows, inks) {
+    grid(rows, 'stamp').forEach((row, j) => [...row].forEach((glyph, i) => put(sk, x0 + i, y0 + j, glyph, inks)));
+    return sk;
+  }
+
+  function transposed(rows) {
+    const n = Math.max(rows.length, ...rows.map(r => r.length)), cell = (x, y) => (rows[y] || '')[x] || ' ';
+    return Array.from({ length: n }, (_, y) => Array.from({ length: n }, (_, x) => cell(x, y) !== ' ' ? cell(x, y) : cell(y, x)).join(''));
+  }
+
+  function mirrored(rows) {
+    for (const row of grid(rows, 'stamp')) for (let i = 0; i < row.length >> 1; i++) {
+      if ((row[i] === ' ') !== (row[row.length - 1 - i] === ' ')) fail('lopsided row "' + row + '"');
+    }
+    return rows;
+  }
+
+  function outline(sk) {
+    const edge = new Map();
+    for (const cell of sk.values()) {
+      if (cell.mat.thread) continue;
+      for (const [dx, dy] of NEAR) {
+        const x = cell.x + dx, y = cell.y + dy, k = key(x, y), dark = cell.mat.tones[0], had = edge.get(k);
+        if (!sk.has(k) && (!had || luma(dark) < luma(had.rgb))) edge.set(k, { x, y, mat: cell.mat, rgb: dark });
+      }
+    }
+    for (const [k, cell] of edge) sk.set(k, cell);
+    return sk;
+  }
+
+  function bounds(sk) {
+    const xs = [...sk.values()].map(c => c.x), ys = [...sk.values()].map(c => c.y);
+    if (!xs.length) fail('empty icon');
+    const x = Math.min(...xs), y = Math.min(...ys);
+    return { x, y, w: Math.max(...xs) - x + 1, h: Math.max(...ys) - y + 1 };
+  }
+
+  function fit(sk) {
+    const b = bounds(sk), rgba = new Uint8ClampedArray(SIZE * SIZE * 4);
+    if (b.w > SIZE || b.h > SIZE) fail('icon is ' + b.w + ' x ' + b.h + ' with its outline, the canvas is ' + SIZE + ' x ' + SIZE);
+    const ox = ((SIZE - b.w) >> 1) - b.x, oy = ((SIZE - b.h) >> 1) - b.y;
+    for (const cell of sk.values()) rgba.set([...cell.rgb, 255], ((cell.y + oy) * SIZE + cell.x + ox) * 4);
+    return { w: SIZE, h: SIZE, rgba };
+  }
+
+  const icon = sk => fit(outline(sk));
+
+  return { SIZE, MATERIALS, sketch, part, tile, run, join, strip, stack, profile, patch, mirror, lay, assemble, stamp, mirrored, transposed, diagonal, outline, bounds, fit, icon };
+})();
