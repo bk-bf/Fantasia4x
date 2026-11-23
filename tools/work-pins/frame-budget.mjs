@@ -21,6 +21,13 @@ import {
 } from './browser-session.mjs';
 import { checkBudgets, median } from './budgets.mjs';
 
+/** @typedef {import('./browser-session.mjs').Page} Page */
+/** @typedef {import('./browser-session.mjs').CDPSession} CDPSession */
+/** @typedef {{ task: number, script: number }} FrameCost */
+/** @typedef {{ frames: number, meanMs: number, medianMs: number, maxMs: number, scriptMeanMs: number, scriptMedianMs: number, perFrame: FrameCost[] }} Summary */
+/** @typedef {Summary & { closeTile: number | null, farTile: number | null, steps: number }} Zoom */
+/** @typedef {{ round: number, idle: Summary, 'run-1x': Summary, 'run-4x': Summary, 'zoom-out-and-back': Zoom }} Round */
+
 const SCENARIO = 'large-wilderness';
 const ZOOM_IN_STEPS = 7;
 const FRAMES_PER_ZOOM = 10;
@@ -49,13 +56,17 @@ const { values: opts } = parseArgs({
 
 const log = logger('frame-budget');
 
+/** @param {CDPSession} cdp */
 async function mainThreadMs(cdp) {
   const { metrics } = await cdp.send('Performance.getMetrics');
-  const ms = (name) => metrics.find((m) => m.name === name).value * 1000;
+  /** @param {string} name */
+  const ms = (name) => /** @type {{ value: number }} */ (metrics.find((m) => m.name === name)).value * 1000;
   return { task: ms('TaskDuration'), script: ms('ScriptDuration') };
 }
 
+/** @param {Page} page @param {CDPSession} cdp @param {number} n @param {number} ticks @param {(i: number) => Promise<void>} [beforeFrame] @returns {Promise<FrameCost[]>} */
 async function timedFrames(page, cdp, n, ticks, beforeFrame) {
+  /** @type {FrameCost[]} */
   const perFrame = [];
   let last = await mainThreadMs(cdp);
   for (let i = 0; i < n; i++) {
@@ -68,17 +79,20 @@ async function timedFrames(page, cdp, n, ticks, beforeFrame) {
   return perFrame;
 }
 
+/** @param {Page} page @returns {Promise<number | null>} */
 const tileWidth = (page) =>
   page.evaluate(() => {
     try {
-      return JSON.parse(sessionStorage.getItem('fantasia4x-camera'))?.tileWidth ?? null;
+      return JSON.parse(sessionStorage.getItem('fantasia4x-camera') ?? 'null')?.tileWidth ?? null;
     } catch {
       return null;
     }
   });
 
+/** @param {number[]} xs */
 const mean = (xs) => xs.reduce((s, x) => s + x, 0) / xs.length;
 
+/** @param {FrameCost[]} perFrame @returns {Summary} */
 function describe(perFrame) {
   const task = perFrame.map((f) => f.task);
   const script = perFrame.map((f) => f.script);
@@ -93,6 +107,7 @@ function describe(perFrame) {
   };
 }
 
+/** @param {Summary} summary */
 function shown({ perFrame, ...rest }) {
   const slow = perFrame.flatMap((f, i) =>
     f.task > 4 * rest.medianMs ? [`${i}:${Math.round(f.task)}/${Math.round(f.script)}`] : []
@@ -100,6 +115,7 @@ function shown({ perFrame, ...rest }) {
   return `${JSON.stringify(rest)} slow frames (task/script ms) ${slow.join(' ')}`;
 }
 
+/** @param {Page} page @param {CDPSession} cdp @param {{ name: string, paused: boolean, ticks: number }} phase @param {number} n */
 async function steadyPhase(page, cdp, phase, n) {
   await setPaused(page, phase.paused);
   await cdp.send('HeapProfiler.collectGarbage');
@@ -111,15 +127,18 @@ async function steadyPhase(page, cdp, phase, n) {
   return describe(perFrame);
 }
 
+/** @param {Page} page @param {CDPSession} cdp @param {number} deltaY */
 async function wheelFrames(page, cdp, deltaY) {
   await page.mouse.wheel(0, deltaY);
   return timedFrames(page, cdp, CAMERA_SAVE_FRAMES, 0);
 }
 
+/** @param {Page} page @param {CDPSession} cdp @returns {Promise<Zoom>} */
 async function zoomOutAndBack(page, cdp) {
   await setPaused(page, true);
   await cdp.send('HeapProfiler.collectGarbage');
   const closeTile = await tileWidth(page);
+  /** @type {FrameCost[]} */
   const perFrame = [];
   let steps = 0;
   let tile = closeTile;
@@ -131,11 +150,11 @@ async function zoomOutAndBack(page, cdp) {
     tile = next;
   }
   const farTile = tile;
-  for (let i = 0; i < MAX_ZOOM_STEPS && tile < closeTile; i++) {
+  for (let i = 0; i < MAX_ZOOM_STEPS && tile !== null && closeTile !== null && tile < closeTile; i++) {
     perFrame.push(...(await wheelFrames(page, cdp, -120)));
     tile = await tileWidth(page);
   }
-  for (let i = 0; i < MAX_ZOOM_STEPS && tile > closeTile; i++) {
+  for (let i = 0; i < MAX_ZOOM_STEPS && tile !== null && closeTile !== null && tile > closeTile; i++) {
     perFrame.push(...(await wheelFrames(page, cdp, 120)));
     tile = await tileWidth(page);
   }
@@ -143,8 +162,10 @@ async function zoomOutAndBack(page, cdp) {
   return { closeTile, farTile, steps, ...describe(perFrame) };
 }
 
+/** @param {Page} page @param {CDPSession} cdp @param {number} n @param {number} rounds @returns {Promise<Round[]>} */
 async function measure(page, cdp, n, rounds) {
   const box = await page.locator(MAP).first().boundingBox();
+  if (!box) throw new Error('the map has no bounding box');
   await page.mouse.move(Math.round(box.x + box.width / 2), Math.round(box.y + box.height / 2));
   await focusMap(page);
   await setPaused(page, true);
@@ -154,22 +175,28 @@ async function measure(page, cdp, n, rounds) {
     await frames(page, FRAMES_PER_ZOOM);
   }
   await frames(page, SETTLE_FRAMES);
+  /** @type {Round[]} */
   const results = [];
   for (let r = 0; r < rounds; r++) {
-    const round = { round: r };
+    /** @type {[string, Summary][]} */
+    const steady = [];
     for (const phase of STEADY) {
-      round[phase.name] = await steadyPhase(page, cdp, phase, n);
-      log(`round ${r} ${phase.name}: ${shown(round[phase.name])}`);
+      const summary = await steadyPhase(page, cdp, phase, n);
+      log(`round ${r} ${phase.name}: ${shown(summary)}`);
+      steady.push([phase.name, summary]);
     }
-    round[ZOOM] = await zoomOutAndBack(page, cdp);
-    log(`round ${r} ${ZOOM}: ${shown(round[ZOOM])}`);
-    results.push(round);
+    const zoom = await zoomOutAndBack(page, cdp);
+    log(`round ${r} ${ZOOM}: ${shown(zoom)}`);
+    results.push(/** @type {Round} */ ({ round: r, ...Object.fromEntries(steady), [ZOOM]: zoom }));
   }
   return results;
 }
 
+/** @param {Round[]} results */
 function budgetsOf(results) {
+  /** @param {(r: Round) => number} pick */
   const runs = (pick) => results.map(pick);
+  /** @param {(r: Round) => number} pick */
   const entry = (pick) => ({ value: median(runs(pick)), runs: runs(pick) });
   return {
     'idle main-thread ms per frame': entry((r) => r.idle.medianMs),
@@ -194,7 +221,8 @@ async function main() {
     init: [disableAutosave, watchScenarioLoad(SCENARIO)],
     query: scenarioQuery(SCENARIO)
   });
-  let results;
+  /** @type {Round[]} */
+  let results = [];
   try {
     const { page, cdp } = game;
     await waitForScenario(page, SCENARIO);

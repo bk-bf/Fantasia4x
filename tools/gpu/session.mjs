@@ -70,6 +70,7 @@ function patchChromium(chromium, { chrome, socket, cleanEnv, query, servedSave, 
   };
 }
 
+/** @param {{ tree: string, label: string, outDir: string, usage: string, init?: import('../work-pins/browser-session.mjs').InitScript[], args?: string[], query?: string }} options */
 export async function openGpuGame({ tree, label, outDir, usage, init = [], args = [], query }) {
   const chrome = process.env.CHROME;
   if (!tree || !label || !outDir || !chrome) {
