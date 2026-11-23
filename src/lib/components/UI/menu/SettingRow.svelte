@@ -1,6 +1,7 @@
 <script lang="ts">
   import { chrome } from '$lib/pixelArt/chrome';
   import CheckBox from '$lib/components/UI/widget/CheckBox.svelte';
+  import Slider from '$lib/components/UI/widget/Slider.svelte';
 
   type Option = { value: string; label: string };
   let {
@@ -28,8 +29,6 @@
     onSelect?: (v: string) => void;
     onInput?: (v: number) => void;
   } = $props();
-
-  const level = $derived(Math.max(0, Math.min(100, sliderValue)));
 </script>
 
 {#if type === 'checkbox'}
@@ -56,21 +55,13 @@
         {/each}
       </span>
     {:else}
-      <span class="slider">
-        <i class="track" {@attach chrome('well')}>
-          <i class="fill" style:width="{level}%"></i>
-          <i class="knob" style:left="{level}%" {@attach chrome('btn')}></i>
-        </i>
-        <input
-          type="range"
-          min="0"
-          max="100"
-          value={disabled ? 80 : sliderValue}
-          {disabled}
-          aria-label={label}
-          oninput={(e) => onInput?.(Number(e.currentTarget.value))}
-        />
-      </span>
+      <Slider
+        class="srow-slider"
+        value={disabled ? 80 : sliderValue}
+        {disabled}
+        {label}
+        oninput={(v) => onInput?.(v)}
+      />
     {/if}
   </div>
 {/if}
@@ -117,42 +108,8 @@
   .segb.on {
     color: var(--ember);
   }
-  .slider {
-    position: relative;
-    display: flex;
-    align-items: center;
+  .srow :global(.srow-slider) {
     flex: none;
     width: 110px;
-    height: 20px;
-  }
-  .track {
-    display: block;
-    flex: 1;
-    height: 8px;
-  }
-  .fill {
-    position: absolute;
-    left: 1px;
-    top: 1px;
-    bottom: 1px;
-    display: block;
-    background: var(--accent);
-  }
-  .knob {
-    position: absolute;
-    top: -5px;
-    display: block;
-    width: 9px;
-    height: 18px;
-    margin-left: -4px;
-  }
-  .slider input {
-    position: absolute;
-    inset: 0;
-    margin: 0;
-    opacity: 0;
-    width: 100%;
-    height: 100%;
-    cursor: pointer;
   }
 </style>
