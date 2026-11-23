@@ -48,7 +48,12 @@ interface TerrainChunk {
   builtVersion: number;
   builtLight: number;
   builtDirty: number;
-  lastFrame: number;
+}
+
+interface WarmState {
+  cursor: number;
+  sweepFor: string | null;
+  done: boolean;
 }
 
 export class GridRenderer {
@@ -66,13 +71,12 @@ export class GridRenderer {
 
   private static readonly CHUNK_SIZE = 32;
   private static readonly CHUNK_MARGIN = 1;
-  private static readonly CHUNK_EVICT_FRAMES = 240;
-  private static readonly CHUNK_SWEEP_EVERY = 120;
+  private static readonly WARM_SCAN_PER_FRAME = 64;
   private terrainChunks: Map<string, TerrainChunk> = new Map();
   private resourceChunks: Map<string, TerrainChunk> = new Map();
   private resourceTallChunks: Map<string, TerrainChunk> = new Map();
   private snowChunks: Map<string, TerrainChunk> = new Map();
-  private terrainFrame = 0;
+  private warmState = new Map<Map<string, TerrainChunk>, WarmState>();
   chunksRebuiltLastRender = 0;
   private chunkDirty = new Map<string, number>();
   private snowChunkDirty = new Map<string, number>();
@@ -183,7 +187,6 @@ export class GridRenderer {
     const m = GridRenderer.CHUNK_MARGIN;
     const cacheVersion = options.cacheVersion ?? 0;
     const lightVersion = options.lightVersion ?? 0;
-    const frame = ++this.terrainFrame;
     this.chunksRebuiltLastRender = 0;
 
     const minTX = Math.floor(options.viewportX);
@@ -211,7 +214,6 @@ export class GridRenderer {
           cy,
           cacheVersion,
           lightVersion,
-          frame,
           chunks,
           dirtyMap
         );
@@ -219,7 +221,7 @@ export class GridRenderer {
     }
 
     if (options.rowPasses) this.drawShadowTexels(() => this.redrawChunks());
-    if (frame % GridRenderer.CHUNK_SWEEP_EVERY === 0) this.evictStaleChunks(frame, chunks);
+    this.warmOneChunk(grid, options, cacheVersion, lightVersion, chunks, dirtyMap);
     this.currentVertexCount = drawnVerts;
     return drawnVerts / 6;
   }
@@ -231,16 +233,12 @@ export class GridRenderer {
     cy: number,
     version: number,
     lightVersion: number,
-    frame: number,
     chunks: Map<string, TerrainChunk> = this.terrainChunks,
     dirtyMap: Map<string, number> = this.chunkDirty
   ): number {
-    const gl = this.gl;
-    const CS = GridRenderer.CHUNK_SIZE;
     const key = `${cx}:${cy}`;
-    let chunk = chunks.get(key);
     const dirtyStamp = dirtyMap.get(key) ?? 0;
-
+    let chunk = chunks.get(key);
     if (
       !chunk ||
       chunk.builtVersion !== version ||
@@ -248,43 +246,11 @@ export class GridRenderer {
       chunk.builtDirty !== dirtyStamp
     ) {
       this.chunksRebuiltLastRender++;
-      const tiles = grid.getTilesInRegion(cx * CS, cy * CS, CS, CS);
-      if (!chunk) {
-        chunk = {
-          vao: null,
-          vbo: null,
-          count: 0,
-          builtVersion: version,
-          builtLight: lightVersion,
-          builtDirty: dirtyStamp,
-          lastFrame: frame
-        };
-        chunks.set(key, chunk);
-      }
-      if (tiles.length === 0) {
-        chunk.count = 0;
-      } else {
-        const data = this.generateBatchVertexData(tiles, options);
-        if (!chunk.vao || !chunk.vbo) {
-          chunk.vao = gl.createVertexArray();
-          chunk.vbo = gl.createBuffer();
-          if (!chunk.vao || !chunk.vbo) {
-            console.error('❌ Failed to create terrain chunk VAO/VBO');
-            return 0;
-          }
-          this.setupGridAttribs(chunk.vao, chunk.vbo);
-        }
-        gl.bindBuffer(gl.ARRAY_BUFFER, chunk.vbo);
-        gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
-        chunk.count = data.length / this.vertexFloats;
-      }
-      chunk.builtVersion = version;
-      chunk.builtLight = lightVersion;
-      chunk.builtDirty = dirtyStamp;
+      chunk = this.buildChunk(grid, options, cx, cy, version, lightVersion, dirtyStamp, chunks);
+      if (!chunk) return 0;
     }
-
-    chunk.lastFrame = frame;
     if (chunk.count > 0 && chunk.vao) {
+      const gl = this.gl;
       gl.bindVertexArray(chunk.vao);
       gl.drawArrays(gl.TRIANGLES, 0, chunk.count);
       gl.bindVertexArray(null);
@@ -294,18 +260,91 @@ export class GridRenderer {
     return 0;
   }
 
-  private evictStaleChunks(
-    frame: number,
-    chunks: Map<string, TerrainChunk> = this.terrainChunks
-  ): void {
+  private buildChunk(
+    grid: GameGrid,
+    options: GridRenderOptions,
+    cx: number,
+    cy: number,
+    version: number,
+    lightVersion: number,
+    dirtyStamp: number,
+    chunks: Map<string, TerrainChunk>
+  ): TerrainChunk | undefined {
     const gl = this.gl;
-    const maxAge = GridRenderer.CHUNK_EVICT_FRAMES;
-    for (const [key, chunk] of chunks) {
-      if (frame - chunk.lastFrame > maxAge) {
-        if (chunk.vbo) gl.deleteBuffer(chunk.vbo);
-        if (chunk.vao) gl.deleteVertexArray(chunk.vao);
-        chunks.delete(key);
+    const CS = GridRenderer.CHUNK_SIZE;
+    const key = `${cx}:${cy}`;
+    let chunk = chunks.get(key);
+    const tiles = grid.getTilesInRegion(cx * CS, cy * CS, CS, CS);
+    if (!chunk) {
+      chunk = {
+        vao: null,
+        vbo: null,
+        count: 0,
+        builtVersion: version,
+        builtLight: lightVersion,
+        builtDirty: dirtyStamp
+      };
+      chunks.set(key, chunk);
+    }
+    if (tiles.length === 0) {
+      chunk.count = 0;
+    } else {
+      const data = this.generateBatchVertexData(tiles, options);
+      if (!chunk.vao || !chunk.vbo) {
+        chunk.vao = gl.createVertexArray();
+        chunk.vbo = gl.createBuffer();
+        if (!chunk.vao || !chunk.vbo) {
+          console.error('❌ Failed to create terrain chunk VAO/VBO');
+          return undefined;
+        }
+        this.setupGridAttribs(chunk.vao, chunk.vbo);
       }
+      gl.bindBuffer(gl.ARRAY_BUFFER, chunk.vbo);
+      gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
+      chunk.count = data.length / this.vertexFloats;
+    }
+    chunk.builtVersion = version;
+    chunk.builtLight = lightVersion;
+    chunk.builtDirty = dirtyStamp;
+    return chunk;
+  }
+
+  private warmOneChunk(
+    grid: GameGrid,
+    options: GridRenderOptions,
+    version: number,
+    lightVersion: number,
+    chunks: Map<string, TerrainChunk>,
+    dirtyMap: Map<string, number>
+  ): void {
+    const bounds = grid.getBounds();
+    if (!bounds) return;
+    const CS = GridRenderer.CHUNK_SIZE;
+    const cols = Math.floor(bounds.max.x / CS) + 1;
+    const rows = Math.floor(bounds.max.y / CS) + 1;
+    const total = cols * rows;
+    const stamp = `${version}:${lightVersion}:${cols}x${rows}`;
+    let state = this.warmState.get(chunks);
+    if (!state) this.warmState.set(chunks, (state = { cursor: 0, sweepFor: null, done: false }));
+    if (state.sweepFor !== stamp) {
+      state.sweepFor = stamp;
+      state.cursor = 0;
+      state.done = false;
+    }
+    if (state.done) return;
+    for (let scanned = 0; scanned < GridRenderer.WARM_SCAN_PER_FRAME; scanned++) {
+      if (state.cursor >= total) {
+        state.done = true;
+        return;
+      }
+      const cx = state.cursor % cols;
+      const cy = Math.floor(state.cursor / cols);
+      state.cursor++;
+      const chunk = chunks.get(`${cx}:${cy}`);
+      if (chunk && chunk.builtVersion === version && chunk.builtLight === lightVersion) continue;
+      const dirtyStamp = dirtyMap.get(`${cx}:${cy}`) ?? 0;
+      this.buildChunk(grid, options, cx, cy, version, lightVersion, dirtyStamp, chunks);
+      return;
     }
   }
 
