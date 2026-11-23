@@ -135,11 +135,11 @@ class WorldFxLayer {
     const speech = this.on.speech && this.bubbles;
     const conditions = this.floaters.icons || this.floaters.text;
     if (!speech && !this.on.text) return [];
-    return combatFeedback
-      .live(now)
-      .filter((e) =>
-        e.kind === 'social' ? speech : this.on.text && (conditions || e.kind !== 'condition')
-      );
+    const list = combatFeedback.live(now);
+    if (list.length === 0) return list;
+    return list.filter((e) =>
+      e.kind === 'social' ? speech : this.on.text && (conditions || e.kind !== 'condition')
+    );
   }
 
   private paint(

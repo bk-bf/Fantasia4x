@@ -6,6 +6,7 @@ export type { CombatTextKind };
 export interface CombatTextEvent extends CombatTextRequest {
   id: number;
   spawnTime: number;
+  until: number;
 }
 
 const MAX_ACTIVE = 60;
@@ -24,6 +25,7 @@ export const onsetKey = (entityId: string, conditionId: string): string =>
 
 function createCombatFeedback() {
   let list: CombatTextEvent[] = [];
+  let expiry = Infinity;
   const onsets = new Map<string, number>();
   let seq = 0;
 
@@ -35,13 +37,15 @@ function createCombatFeedback() {
         if (onsets.has(key)) return;
         onsets.set(key, now);
       }
-      list = list.filter((e) => now - e.spawnTime < floatLifeMs(e.kind));
-      list.push({ ...req, id: seq++, spawnTime: now });
-      if (list.length > MAX_ACTIVE) list = list.slice(list.length - MAX_ACTIVE);
+      const until = now + floatLifeMs(req.kind);
+      list.push({ ...req, id: seq++, spawnTime: now, until });
+      if (list.length > MAX_ACTIVE) list.shift();
+      expiry = Math.min(expiry, until);
     },
     live(now: number): readonly CombatTextEvent[] {
-      if (list.some((e) => now - e.spawnTime >= floatLifeMs(e.kind)))
-        list = list.filter((e) => now - e.spawnTime < floatLifeMs(e.kind));
+      if (now < expiry) return list;
+      list = list.filter((e) => e.until > now);
+      expiry = list.reduce((m, e) => Math.min(m, e.until), Infinity);
       return list;
     },
     hasOnsets(): boolean {
@@ -53,6 +57,7 @@ function createCombatFeedback() {
     },
     clear(): void {
       list = [];
+      expiry = Infinity;
       onsets.clear();
     }
   };

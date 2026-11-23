@@ -9,6 +9,7 @@ import type { CombatTextEvent } from '$lib/stores/fx/combatFeedback';
 const onset = (conditionId: string, text: string): CombatTextEvent => ({
   id: 1,
   spawnTime: 0,
+  until: 1700,
   worldX: 4,
   worldY: 4,
   text,
