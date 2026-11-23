@@ -99,33 +99,38 @@ interface Seat {
   born: number;
 }
 
-function box(q: Placed, u: number): [number, number, number, number] {
-  const s = q.pair[0];
-  const top = Math.round(q.y + (q.badge ? badgeDy(u) : floatDy(u, q.ttl))) - s.ay;
-  const left = Math.round(q.x) - s.ax;
-  return [left, top, left + s.w, top + s.h];
-}
-
 const life = (q: Placed) => (q.badge ? BADGE_TTL : q.ttl);
+const left = (q: Placed) => Math.round(q.x) - q.pair[0].ax;
+const top = (q: Placed, u: number) =>
+  Math.round(q.y + (q.badge ? badgeDy(u) : floatDy(u, q.ttl))) - q.pair[0].ay;
 
-function lift(q: Placed, qu: number, o: Seat, ou: number): number {
+function lift(q: Placed, qu: number, o: Placed, ou: number): number {
+  const qh = q.pair[0].h;
+  const oh = o.pair[0].h;
   let need = 0;
-  const span = Math.min(life(q) - qu, life(o.q) - ou);
+  const span = Math.min(life(q) - qu, life(o) - ou);
   for (let t = 0; t <= span; t += SAMPLE_S) {
-    const a = box(q, qu + t);
-    const b = box(o.q, ou + t);
-    if (a[2] <= b[0] || b[2] <= a[0] || a[3] + GAP <= b[1] || b[3] + GAP <= a[1]) continue;
-    need = Math.max(need, a[3] - b[1] + GAP);
+    const at = top(q, qu + t);
+    const bt = top(o, ou + t);
+    if (at + qh + GAP <= bt || bt + oh + GAP <= at) continue;
+    need = Math.max(need, at + qh - bt + GAP);
   }
   return need;
 }
 
 function seat(q: Placed, born: number, now: number): void {
-  for (let pass = 0; pass <= placed.size; pass++) {
+  const qa = left(q);
+  const qb = qa + q.pair[0].w;
+  const near: Seat[] = [];
+  for (const o of placed.values()) {
+    if (!o) continue;
+    const oa = left(o.q);
+    if (qb > oa && oa + o.q.pair[0].w > qa) near.push(o);
+  }
+  for (let pass = 0; pass <= near.length; pass++) {
     let moved = false;
-    for (const o of placed.values()) {
-      if (!o) continue;
-      const need = lift(q, (now - born) / 1000, o, (now - o.born) / 1000);
+    for (const o of near) {
+      const need = lift(q, (now - born) / 1000, o.q, (now - o.born) / 1000);
       if (need <= 0) continue;
       q.y -= need;
       moved = true;
