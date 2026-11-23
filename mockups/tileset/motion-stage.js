@@ -70,5 +70,5 @@ function mkTreeProp(kind, seed, season, x, y) {
   const spr = tree(kind, seed, season), cut = new Spr(spr.w, spr.h, spr.ax, spr.ay - 4);
   for (let yy = 0; yy < spr.h - 5; yy++) for (let xx = 0; xx < spr.w; xx++) { cut.c[yy * spr.w + xx] = spr.c[yy * spr.w + xx]; cut.e[yy * spr.w + xx] = spr.e[yy * spr.w + xx]; }
   cut.sh = spr.sh; cut.leaf = spr.leaf;
-  return { spr, cut, stump: plant('stump', seed, season), logs: plant('logs', seed, season), x, y };
+  return { spr, cut, stump: plant('stump', seed, season), logs: plant('logs', seed, season), x: rnd(x), y: rnd(y) };
 }
