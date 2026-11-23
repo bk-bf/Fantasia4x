@@ -315,6 +315,7 @@ export function stepEntities(state: GameState): GameState {
           : mob.state === 'Wander' || mob.state === 'Grazing'
             ? wanderStep(mob, def, state)
             : mob;
+      if (next[i] !== mob) changed = true;
       traceMobTick(next[i], state, turn, 'throttled', mob.state);
       continue;
     }
@@ -446,25 +447,49 @@ export function stepEntities(state: GameState): GameState {
 }
 
 const TRAVEL_ARRIVE_DIST = 4;
+export const TRAVEL_RETRY_TICKS = 300;
+export const TRAVEL_MAX_FAILS = 5;
+
+function endTravel(mob: Mob, turn: number): Mob {
+  return {
+    ...mob,
+    state: 'Wander',
+    stateSince: turn,
+    travelGoalX: undefined,
+    travelGoalY: undefined,
+    travelFails: undefined,
+    travelRetryTurn: undefined,
+    path: []
+  };
+}
 
 function travelStep(mob: Mob, state: GameState): Mob {
   const gx = mob.travelGoalX;
   const gy = mob.travelGoalY;
   if (gx == null || gy == null) return { ...mob, state: 'Wander', stateSince: state.turn };
-  if (chebyshev(mob.x, mob.y, gx, gy) <= TRAVEL_ARRIVE_DIST) {
+  if (chebyshev(mob.x, mob.y, gx, gy) <= TRAVEL_ARRIVE_DIST) return endTravel(mob, state.turn);
+  if (mob.path && (mob.pathIndex ?? 0) < mob.path.length) return mob;
+  const goal = { x: gx, y: gy };
+  if ((mob.travelRetryTurn ?? 0) > state.turn) return moveToward(mob, goal, state);
+  const wholeMap = state.worldMap.length * (state.worldMap[0]?.length ?? 0);
+  const path = pathTo(state, mob.x, mob.y, gx, gy, mob.id, 'caravan-travel', wholeMap);
+  if (path.length > 0) {
     return {
       ...mob,
-      state: 'Wander',
-      stateSince: state.turn,
-      travelGoalX: undefined,
-      travelGoalY: undefined,
-      path: []
+      path,
+      pathIndex: 0,
+      nextCellCostLeft: undefined,
+      travelFails: undefined,
+      travelRetryTurn: undefined
     };
   }
-  if (mob.path && (mob.pathIndex ?? 0) < mob.path.length) return mob;
-  const path = pathTo(state, mob.x, mob.y, gx, gy, mob.id, 'caravan-travel', 0);
-  if (path.length > 0) return { ...mob, path, pathIndex: 0, nextCellCostLeft: undefined };
-  return moveToward(mob, { x: gx, y: gy }, state);
+  const fails = (mob.travelFails ?? 0) + 1;
+  if (fails >= TRAVEL_MAX_FAILS) return endTravel(mob, state.turn);
+  return {
+    ...moveToward(mob, goal, state),
+    travelFails: fails,
+    travelRetryTurn: state.turn + TRAVEL_RETRY_TICKS
+  };
 }
 
 export function stepOne(
