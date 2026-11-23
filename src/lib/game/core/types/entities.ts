@@ -96,6 +96,8 @@ export interface Mob {
   worldKinRelation?: string;
   travelGoalX?: number;
   travelGoalY?: number;
+  travelFails?: number;
+  travelRetryTurn?: number;
 }
 
 export interface TamedAnimal {

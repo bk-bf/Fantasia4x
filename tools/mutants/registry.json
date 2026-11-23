@@ -2914,8 +2914,8 @@
   {
     "id": "travel-arrive-distance-zero",
     "file": "src/lib/game/services/entity/entityAI.ts",
-    "find": "  if (chebyshev(mob.x, mob.y, gx, gy) <= TRAVEL_ARRIVE_DIST) {",
-    "replace": "  if (chebyshev(mob.x, mob.y, gx, gy) <= 0) {",
+    "find": "  if (chebyshev(mob.x, mob.y, gx, gy) <= TRAVEL_ARRIVE_DIST) return endTravel(mob, state.turn);",
+    "replace": "  if (chebyshev(mob.x, mob.y, gx, gy) <= 0) return endTravel(mob, state.turn);",
     "tests": ["src/tests/game/services/entity/hostileRules.test.ts"]
   },
   {

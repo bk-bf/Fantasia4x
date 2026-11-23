@@ -289,6 +289,9 @@ function startAutoTurns() {
   if (!browser || sessionLogged) return;
   sessionLogged = true;
   logSession(get(gameState) as GameState);
+  const scenario = new URLSearchParams(location.search).get('scenario');
+  if (scenario)
+    loadScenarioPreset(scenario).then((ok) => ok && logSession(get(gameState) as GameState));
 }
 
 function logSession(gs: GameState) {
