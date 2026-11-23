@@ -301,6 +301,20 @@
     "tests": ["src/tests/game/systems/woundRecovery.test.ts"]
   },
   {
+    "id": "heal-every-tick",
+    "file": "src/lib/game/systems/PawnStateMachine.ts",
+    "find": "        !inMelee &&\n        state.turn % HEAL_INTERVAL_TICKS === thinkPhase(afterConditions.id) % HEAL_INTERVAL_TICKS\n",
+    "replace": "        !inMelee\n",
+    "tests": ["src/tests/game/systems/pawnTickGates.test.ts"]
+  },
+  {
+    "id": "heal-batch-one-tick-of-heal",
+    "file": "src/lib/game/systems/PawnStateMachine.ts",
+    "find": "const baseHeal = HEALING_CONFIG.baseHealPerTick * healRate * mult * ticks;",
+    "replace": "const baseHeal = HEALING_CONFIG.baseHealPerTick * healRate * mult;",
+    "tests": ["src/tests/game/systems/pawnTickGates.test.ts"]
+  },
+  {
     "id": "wounds-heal-ignores-splint",
     "file": "src/lib/game/core/defs/wounds.ts",
     "find": "const splintBoost = wd?.structural && boneHealFor ? boneHealFor(part.id) : 1;",
@@ -2515,8 +2529,8 @@
   {
     "id": "psm-heals-in-melee",
     "file": "src/lib/game/systems/PawnStateMachine.ts",
-    "find": "      if (!inMelee) {\n        const healed",
-    "replace": "      if (true) {\n        const healed",
+    "find": "        !inMelee &&\n        state.turn % HEAL_INTERVAL_TICKS",
+    "replace": "        state.turn % HEAL_INTERVAL_TICKS",
     "tests": ["src/tests/game/systems/pawnTickGates.test.ts"]
   },
   {
