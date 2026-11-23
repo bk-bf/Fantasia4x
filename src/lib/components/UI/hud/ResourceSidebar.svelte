@@ -23,7 +23,6 @@
 
   type StockItem = { id: string; name: string; amount: number; color?: string };
 
-
   const lastJumpIdx: Record<string, number> = {};
   function jumpToItemStack(itemId: string) {
     const stacks = ($gameState?.droppedItems ?? []).filter((d) => d.resourceId === itemId);
@@ -104,13 +103,17 @@
     >
   {:else if culture}
     <div class="tools">
-      <ChromeButton
-        mini
-        on={$hideEmptyResourceCategories}
-        label="Toggle empty categories"
-        title={$hideEmptyResourceCategories ? 'Only kinds in store' : 'Every kind'}
-        onclick={() => hideEmptyResourceCategories.toggle()}>∅</ChromeButton
-      >
+      {#each [true, false] as only (only)}
+        {@const tip = only ? 'Only kinds in store' : 'Every kind'}
+        <ChromeButton
+          mini
+          glyph={only ? 'crate' : 'eye'}
+          on={$hideEmptyResourceCategories === only}
+          label={tip}
+          title={tip}
+          onclick={() => hideEmptyResourceCategories.set(only)}
+        />
+      {/each}
       <ChromeButton
         mini
         label={allExpanded ? 'Collapse all categories' : 'Expand all categories'}
@@ -131,13 +134,7 @@
           {#each g.items as item (item.id)}
             {@const n = Math.floor(amountById.get(item.id) ?? 0)}
             {@const jump = () => jumpToItemStack(item.id)}
-            <div
-              class="row"
-              onclick={jump}
-              role="button"
-              tabindex="0"
-              onkeydown={keys(jump)}
-            >
+            <div class="row" onclick={jump} role="button" tabindex="0" onkeydown={keys(jump)}>
               {#if itemChanges[item.id]}
                 <span class="delta" class:neg={itemChanges[item.id] < 0}>
                   {itemChanges[item.id] > 0 ? '+' : ''}{Math.floor(itemChanges[item.id])}

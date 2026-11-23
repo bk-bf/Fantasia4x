@@ -7,6 +7,7 @@
   import HoverTip from '../tooltip/HoverTip.svelte';
   import ScrollArea from '../widget/ScrollArea.svelte';
   import ChromeButton from '../widget/ChromeButton.svelte';
+  import KvRow from '../widget/KvRow.svelte';
   import ColumnScrim from './ColumnScrim.svelte';
   import { turnToGameDate } from './topbar/gameDate';
   import './hudColumns.css';
@@ -74,9 +75,6 @@
   }
 
   function handleClick(entry: ActivityLogEntry) {
-    if (entry.type === 'combat' && entry.combatBreakdown && entry.combatBreakdown.length > 0) {
-      expandedId = expandedId === entry.id ? null : entry.id;
-    }
     if (socialLines(entry).length > 0) {
       expandedId = expandedId === entry.id ? null : entry.id;
     }
@@ -131,7 +129,8 @@
       <ChromeButton
         mini
         glyph="x"
-        label="Clear chronicle"
+        label="Clear the chronicle"
+        title="Clear the chronicle"
         disabled={$recentActivity.length === 0}
         onclick={clearActivityLog}
       />
@@ -156,9 +155,6 @@
             <span class="turn">{turnToGameDate(entry.turn).clock}</span>
             <span class="msg">{entry.action}{entry.result ? ' · ' + entry.result : ''}</span>
           </div>
-          {#if expandedId === entry.id && entry.combatBreakdown && entry.combatBreakdown.length > 0}
-            <CombatBreakdown turns={entry.combatBreakdown} />
-          {/if}
           {#if expandedId === entry.id && socialLines(entry).length > 0}
             <div class="convo">
               {#each socialLines(entry) as line}
@@ -175,22 +171,17 @@
 
   {#if hoverEntry}
     <HoverTip x={hoverX} y={hoverY}>
-      <div class="tip-head">
-        <span class="tip-cat">{categoryLabel(hoverEntry)}</span>
-        <span class="tip-turn">Turn {hoverEntry.turn}</span>
-      </div>
-      <div class="tip-action" class:grave={SEV_CLASS[hoverEntry.severity] === 'sev-crit'}>
-        {hoverEntry.action}
-      </div>
-      {#if hoverEntry.result}<div class="tip-result">{hoverEntry.result}</div>{/if}
-      {#if hoverEntry.location}<div class="tip-loc">at {hoverEntry.location}</div>{/if}
       {#if hoverEntry.combatBreakdown && hoverEntry.combatBreakdown.length > 0}
-        <div class="tip-hint">
-          {hoverEntry.combatBreakdown.length} blows traded · click to relive the exchange
-        </div>
-      {/if}
-      {#if socialLines(hoverEntry).length > 0}
-        <div class="tip-hint">click to hear the exchange</div>
+        <CombatBreakdown entry={hoverEntry} />
+      {:else}
+        <h5>{categoryLabel(hoverEntry)}</h5>
+        <p class:grave={SEV_CLASS[hoverEntry.severity] === 'sev-crit'}>{hoverEntry.action}</p>
+        {#if hoverEntry.result}<KvRow label="Outcome">{hoverEntry.result}</KvRow>{/if}
+        {#if hoverEntry.location}<KvRow label="Where">{hoverEntry.location}</KvRow>{/if}
+        <KvRow label="When">{turnToGameDate(hoverEntry.turn).clock}</KvRow>
+        {#if socialLines(hoverEntry).length > 0}
+          <KvRow label="Overheard">{socialLines(hoverEntry).length} lines</KvRow>
+        {/if}
       {/if}
     </HoverTip>
   {/if}
@@ -271,36 +262,8 @@
     color: var(--col-hot);
   }
 
-  .tip-head {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    gap: 12px;
-    margin-bottom: 3px;
-    font-size: 10px;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-  }
-  .tip-cat {
-    color: var(--accent-hi);
-  }
-  .tip-turn {
-    color: var(--text-muted);
-  }
-  .tip-action {
-    color: var(--text);
-  }
-  .tip-action.grave {
+  p.grave {
     color: var(--neg);
-  }
-  .tip-result {
-    color: var(--text-dim);
-    margin-top: 2px;
-  }
-  .tip-loc {
-    color: var(--text-muted);
-    margin-top: 2px;
-    font-style: italic;
   }
   .convo {
     padding: 1px 0 4px 46px;
@@ -308,14 +271,5 @@
   }
   .convo-who {
     color: var(--col-hot);
-  }
-
-  .tip-hint {
-    margin-top: 5px;
-    padding-top: 4px;
-    border-top: 1px solid var(--border);
-    color: var(--accent-hi);
-    font-size: 10px;
-    opacity: 0.85;
   }
 </style>

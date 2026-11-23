@@ -130,7 +130,8 @@
     flex-direction: column;
     height: 100%;
     min-height: 0;
-    font-family: var(--font-mono);
+    font: 16px/17px var(--font-pixel);
+    letter-spacing: 0.6px;
   }
   .debug-log :global(.body) {
     flex: 1;
@@ -140,8 +141,6 @@
   .row {
     display: flex;
     gap: 0.6em;
-    font-size: 12px;
-    line-height: 1.35;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -172,8 +171,6 @@
   }
   .waiting {
     color: var(--text-muted);
-    font-size: 12px;
-    font-style: italic;
     padding: 6px 2px;
   }
 </style>
