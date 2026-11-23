@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fantasia4x tileset redesign</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>Fantasia4x <span>tileset redesign</span></h1>
+  <nav id="tabs">
+    <button data-v="scene" class="on">Scene</button>
+    <button data-v="sheet">Tile sheet</button>
+  </nav>
+  <div class="ctl" id="ctl">
+    <span class="grp" data-k="time"><b>Light</b><button data-v="day">Day</button><button data-v="dusk">Dusk</button><button data-v="night">Night</button></span>
+    <span class="grp" data-k="season"><b>Season</b><button data-v="summer">Summer</button><button data-v="autumn">Autumn</button><button data-v="winter">Winter</button></span>
+    <span class="grp" data-k="roofs"><b>Roofs</b><button data-v="0">Off</button><button data-v="1">On</button></span>
+    <span class="grp" data-k="zoom"><b>Zoom</b><button data-v="1">1x</button><button data-v="2">2x</button><button data-v="3">3x</button><button data-v="4">4x</button></span>
+    <span class="grp" data-k="grid"><b>Grid</b><button data-v="0">Off</button><button data-v="1">On</button></span>
+  </div>
+</header>
+<main>
+  <section id="scene"><div class="wrap" id="wrap"><canvas id="cv"></canvas><canvas id="gridcv"></canvas></div></section>
+  <section id="sheet" hidden></section>
+</main>
+<footer>Mockup. Everything here is drawn by code at 16 px per tile; the map, pawns and creature placement are invented for the picture. <a href="../">32 px version</a></footer>
+<script src="gfx.js"></script>
+<script src="flora.js"></script>
+<script src="rock.js"></script>
+<script src="build.js"></script>
+<script src="actors.js"></script>
+<script src="world.js"></script>
+<script src="colony.js"></script>
+<script src="scene.js"></script>
+<script src="sheet.js"></script>
+<script src="main.js"></script>
+</body>
+</html>

@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fantasia4x database</title>
+<link rel="stylesheet" href="../fantasia4x-hud/chrome.css">
+<script src="../fantasia4x-hud/chrome.js"></script>
+<link rel="stylesheet" href="database.css">
+</head>
+<body class="dbase">
+<header id="mock" class="bar">
+  <div class="mrow"><strong>Database</strong><span class="stamp" id="stamp"></span><span class="total" id="total"></span><nav><a href="../fantasia4x-tileset-archive/">Old scene, archived</a></nav><span class="grp" data-k="theme"><button data-v="auto">Auto</button><button data-v="light">Light</button><button data-v="dark">Dark</button></span></div>
+  <nav id="tabs"></nav>
+  <div class="mrow" id="ctl">
+    <input id="q" type="search" placeholder="Search  /" autocomplete="off" spellcheck="false">
+    <span class="grp" id="viewgrp" data-s="view"><button data-v="matrix">Progression</button><button data-v="table">Table</button><button data-v="sprites">Sprites</button></span>
+    <span class="grp" id="by"></span>
+    <span class="grp" data-s="state"><span class="lab">Art</span><button data-v="all">Any</button><button data-v="covered">Drawn</button><button data-v="new">New</button><button data-v="missing">Missing</button><button data-v="skip">Skipped</button><button data-v="extra">Extra</button></span>
+    <span class="grp scenic" data-s="season"><button data-v="summer">Summer</button><button data-v="autumn">Autumn</button><button data-v="winter">Winter</button></span>
+    <span class="grp scenic" data-s="zoom"><button data-v="1">1x</button><button data-v="2">2x</button><button data-v="3">3x</button></span>
+    <span class="grp scenic" data-s="back"><button data-v="ground">Ground</button><button data-v="bare">Bare</button></span>
+    <span class="shown" id="shown"></span>
+  </div>
+  <div class="chips" id="chips"></div>
+</header>
+<div class="split">
+  <main id="list"></main>
+  <aside id="detail" hidden></aside>
+</div>
+<script src="gfx.js"></script>
+<script src="mat.js"></script>
+<script src="world.js"></script>
+<script src="flora.js"></script>
+<script src="build.js"></script>
+<script src="actors.js"></script>
+<script src="scene.js"></script>
+<script src="db-core.js"></script>
+<script src="db-mockup.js"></script>
+<script src="db-flora.js"></script>
+<script src="db-creatures.js"></script>
+<script src="db-buildings.js"></script>
+<script src="db-ground.js"></script>
+<script src="db-folk.js"></script>
+<script src="db-items.js"></script>
+<script src="db-hd.js"></script>
+<script src="db-tools.js"></script>
+<script src="db-weapons.js"></script>
+<script src="db-gear.js"></script>
+<script src="db-goods.js"></script>
+<script src="db-armor.js"></script>
+<script src="db-rare.js"></script>
+<script src="db-rot.js"></script>
+<script src="db-stations.js"></script>
+<script src="db-facings.js"></script>
+<script src="concept.js"></script>
+<script src="ui-core.js"></script>
+<script src="ui-schema.js"></script>
+<script src="ui-data.js"></script>
+<script src="ui-sprite.js"></script>
+<script src="ui-matrix.js"></script>
+<script src="ui-table.js"></script>
+<script src="ui-grid.js"></script>
+<script src="ui-detail.js"></script>
+<script src="ui-main.js"></script>
+</body>
+</html>

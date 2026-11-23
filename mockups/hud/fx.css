@@ -1,0 +1,30 @@
+#fxcv { pointer-events: none; }
+#screen:has(.fx-key) #marks { display: none; }
+#hud {
+  &:has(.fx-key) > .card, &:has(.fx-key) > .verbtag { display: none; }
+  .fx-key { position: absolute; left: calc(var(--colL) + 8px); bottom: 10px; z-index: 8; padding: 6px 9px 5px; font: 11px/14px system-ui, sans-serif; letter-spacing: 0; color: #f4ecd8; background: rgb(10 8 12 / .8); border: 1px solid #3a3444; }
+  .fx-key header { display: flex; align-items: center; gap: 5px; margin-bottom: 4px; }
+  .fx-key header b { font-weight: 650; margin-right: auto; padding-right: 10px; }
+  .fx-key button { border: 1px solid #4a4356; padding: 0 6px; color: #b8b0a0; }
+  .fx-key button.on { background: #e0a04a; border-color: #e0a04a; color: #14100a; }
+  .fx-key ol { margin: 0; padding: 0; list-style: none; counter-reset: fx; display: grid; grid-auto-flow: column; grid-auto-columns: auto; grid-template-rows: repeat(var(--rows, 6), auto); gap: 0 16px; }
+  .fx-key li { counter-increment: fx; display: flex; align-items: center; gap: 6px; height: 19px; white-space: nowrap; cursor: pointer; }
+  .fx-key li::before { content: counter(fx); flex: none; width: 13px; height: 13px; line-height: 13px; text-align: center; background: #f4ecd8; color: #14100a; font-weight: 650; font-size: 9px; }
+  .fx-key li.on span { color: #e0a04a; }
+  .fx-key li i { display: flex; align-items: center; gap: 4px; max-width: 96px; max-height: 18px; overflow: hidden; }
+  .fx-key p { margin-top: 3px; color: #948c7c; font-size: 10px; width: 0; min-width: 100%; }
+  .fx-tab { display: flex; gap: 0 24px; }
+  .fx-grid { display: grid; grid-template-columns: 13px repeat(4, auto); align-content: start; align-items: center; gap: 3px 10px; }
+  .fx-grid > b { font-weight: 500; font-size: 10px; color: #948c7c; }
+  .fx-r { display: contents; cursor: pointer; }
+  .fx-r em { width: 13px; height: 13px; font: 650 9px/13px system-ui, sans-serif; text-align: center; background: #f4ecd8; color: #14100a; }
+  .fx-r span { white-space: nowrap; }
+  .fx-r.on span { color: #e0a04a; }
+  .fx-r i { display: flex; align-items: center; min-height: 17px; }
+  .fx-r canvas { image-rendering: pixelated; }
+  .fx-pins { position: absolute; inset: 0; z-index: 3; pointer-events: none; }
+  .fx-pins i { position: absolute; width: 13px; height: 13px; margin: -6px 0 0 -6px; font: 650 9px/13px system-ui, sans-serif; letter-spacing: 0; text-align: center; background: #f4ecd8; color: #14100a; box-shadow: 0 0 0 1px #14100a; }
+  &.fx-nopins .fx-pins { display: none; }
+  &.fx-shut .fx-key ol, &.fx-shut .fx-key .fx-tab, &.fx-shut .fx-key p { display: none; }
+  &.fx-shut .fx-key header { margin: 0; }
+}

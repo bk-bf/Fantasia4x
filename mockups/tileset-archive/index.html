@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fantasia4x tileset redesign</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>Fantasia4x <span>tileset redesign</span></h1>
+  <nav id="tabs">
+    <button data-v="scene" class="on">Scene</button>
+    <button data-v="sheet">Tile sheet</button>
+    <a class="tablink" href="../fantasia4x-tileset/">Catalogue</a>
+  </nav>
+  <div class="ctl" id="ctl">
+    <span class="grp" data-k="time"><b>Light</b><button data-v="day">Day</button><button data-v="dusk">Dusk</button><button data-v="night">Night</button></span>
+    <span class="grp" data-k="season"><b>Season</b><button data-v="summer">Summer</button><button data-v="autumn">Autumn</button><button data-v="winter">Winter</button></span>
+    <span class="grp" data-k="roofs"><b>Roofs</b><button data-v="cut">See-through</button><button data-v="full">Closed</button><button data-v="">Off</button></span>
+    <span class="grp" data-k="zoom"><b>Zoom</b><button data-v="0.5">0.5x</button><button data-v="1">1x</button><button data-v="2">2x</button><button data-v="3">3x</button></span>
+    <span class="grp" data-k="grid"><b>Grid</b><button data-v="0">Off</button><button data-v="1">On</button></span>
+  </div>
+</header>
+<main>
+  <section id="scene"><div class="wrap" id="wrap"><canvas id="cv"></canvas><canvas id="vigcv"></canvas><canvas id="gridcv"></canvas></div><div id="busy" hidden>Drawing 60 × 34 tiles…</div></section>
+  <section id="sheet" hidden></section>
+</main>
+<footer>Mockup, 60 × 34 tiles at 32 px per tile, drawn by code. Drag to pan. Plants sway; leaves, snow and fireflies are live. The map and everything placed on it are invented for the picture. <a href="16/">16 px version</a> · <a href="../fantasia4x-tileset/">Sprite catalogue</a></footer>
+<script src="gfx.js"></script>
+<script src="mat.js"></script>
+<script src="world.js"></script>
+<script src="flora.js"></script>
+<script src="build.js"></script>
+<script src="actors.js"></script>
+<script src="colony.js"></script>
+<script src="scene.js"></script>
+<script src="sheet.js"></script>
+<script src="main.js"></script>
+</body>
+</html>

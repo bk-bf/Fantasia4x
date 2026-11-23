@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Map ground experiment</title>
+<link rel="stylesheet" href="../fantasia4x-hud/chrome.css">
+<script src="../fantasia4x-hud/chrome.js"></script>
+<style>
+  :root {
+    --bg: #f4f1ea; --panel: #fffdf8; --ink: #22201b; --mute: #6c665b; --line: #ddd6c8;
+    --accent: #8a5a1c; --chip: #ece5d6; --good: #2f6b3a; --bad: #9b3b2a; --warn-bg: #fbe9c8; --warn-ink: #6b4708;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #15140f; --panel: #1e1c16; --ink: #ebe5d8; --mute: #a39b8b; --line: #36322a;
+      --accent: #d7a35a; --chip: #2a2720; --good: #7fbf88; --bad: #e08a78; --warn-bg: #3a2c12; --warn-ink: #f0c879;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #15140f; --panel: #1e1c16; --ink: #ebe5d8; --mute: #a39b8b; --line: #36322a;
+    --accent: #d7a35a; --chip: #2a2720; --good: #7fbf88; --bad: #e08a78; --warn-bg: #3a2c12; --warn-ink: #f0c879;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.45 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 1600px; margin: 0 auto; padding: 16px; }
+  .sub { color: var(--mute); font-size: 13.5px; margin: 0 0 12px; }
+  .grid { display: grid; grid-template-columns: 1fr; gap: 16px; }
+  @media (min-width: 1000px) { .grid { grid-template-columns: 1fr 1fr; } }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+  .card h2 { font-size: 16px; margin: 0; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+  .card h2 small { color: var(--mute); font-weight: 400; font-size: 12.5px; }
+  .head { padding: 10px 12px 8px; }
+  .head p { margin: 4px 0 0; font-size: 13.5px; color: var(--mute); }
+  .shot { display: block; background: #000; line-height: 0; }
+  .shot img { width: 100%; height: auto; }
+  .pair { display: grid; grid-template-columns: 1fr; gap: 2px; background: var(--line); }
+  @media (min-width: 1000px) { .pair { grid-template-columns: 1fr 1fr; } }
+  .pair figure { margin: 0; background: var(--panel); }
+  .pair figcaption { padding: 6px 12px; font-size: 13px; color: var(--mute); }
+  .nums { padding: 8px 12px 12px; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; font-variant-numeric: tabular-nums; }
+  td, th { padding: 3px 6px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; }
+  td:first-child, th:first-child { text-align: left; color: var(--mute); white-space: normal; }
+  th { font-weight: 600; color: var(--mute); font-size: 12px; }
+  .better { color: var(--good); }
+  .worse { color: var(--bad); }
+  .pairs, .note { font-size: 12.5px; color: var(--mute); margin-top: 6px; }
+  section { margin-top: 22px; }
+  section > h2 { font-size: 16px; margin: 0 0 8px; }
+  section.res { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px; overflow-x: auto; }
+  .ref { display: grid; grid-template-columns: 1fr; gap: 16px; margin-bottom: 16px; }
+  .foot { color: var(--mute); font-size: 12.5px; margin-top: 16px; }
+  .foot p { margin: 4px 0; }
+  code { font-size: 12.5px; }
+</style>
+</head>
+<body>
+<header id="mock" class="bar">
+  <strong>Map ground: generator variants</strong>
+  <span class="grp" data-k="seed"><span class="lab">Seed</span><button data-v="1">1</button><button data-v="42">42</button></span>
+  <span class="grp" data-k="view"><span class="lab">View</span><button data-v="close">60×40 at 32 px</button><button data-v="mid">120×80 at 16 px</button></span>
+  <span class="grp" data-k="theme"><button data-v="auto">Auto</button><button data-v="light">Light</button><button data-v="dark">Dark</button></span>
+  <p class="mnote">Generator experiment · not in the game</p>
+</header>
+<main>
+    <p class="sub">Every map below is drawn by the game's own renderer from <code>test/look-overhaul</code>: painted tiles, ground blending, mountain rock as one mass, ore on walls, light with glow and shadows. Noon, clear weather, spring. Branch <code>exp/mapgen-painted-look</code> at <code>7e16a663</code>.</p>
+
+  <div class="ref">
+    <article class="card">
+      <div class="head"><h2>Target look<small>the HUD mockup's hand-made scene</small></h2></div>
+      <a class="shot" href="img/target-hud.webp" target="_blank" rel="noopener"><img src="img/target-hud.webp" alt="HUD mockup scene" loading="lazy"></a>
+    </article>
+    <article class="card">
+      <div class="head"><h2>Same pixels as the game<small>dev save, 50×30 tiles at 32 px</small></h2>
+        <p>Left: the running game with the HUD hidden. Right: the same tiles through the renderer used for every picture on this page. 0 of 1,561,600 pixels differ.</p></div>
+      <div class="pair">
+        <figure><a class="shot" href="img/proof-game.webp" target="_blank" rel="noopener"><img src="img/proof-game.webp" alt="Running game" loading="lazy"></a><figcaption>Game</figcaption></figure>
+        <figure><a class="shot" href="img/proof-harness.webp" target="_blank" rel="noopener"><img src="img/proof-harness.webp" alt="Render used on this page" loading="lazy"></a><figcaption>This page's renderer</figcaption></figure>
+      </div>
+    </article>
+  </div>
+
+  <div class="grid" id="grid"></div>
+
+  <section class="res">
+    <h2>Resources placed (tiles, mean of 3 seeds)</h2>
+    <div id="res"></div>
+  </section>
+
+  <section class="res">
+    <h2>Plan</h2>
+    <p><strong>Build Tidy.</strong> It cuts ground patches from 21.7 to 3.9 per 1000 tiles and unrelated borders from 24% to 17%. Reachable land is unchanged, and it generates about 0.5 s faster on a 500×500 map. It costs 15% of clay and 5% of ore; rare groves grow by 48%. Palettes and Rivers cut unrelated borders to 10%, but they cost 12–14% of wild food and 23–25% of lairs, and about 2.2 s of generation. On seed 1, tree clumps also close a mountain neck. Their large Barren Dirt fields show the dirt tile's diagonal repeat.</p>
+    <p><strong>What building it means:</strong> one step on the generator. <code>tidy</code> becomes the default ground in <code>generateWorld</code>, and the other variants are dropped. It is verified with the <code>headless</code> skill: new colonies on seeds 1, 42 and 1337, run for a fixed number of ticks, with food, wood and stone stock compared to today's map on the same seeds. Generation cost: about −0.5 s at 500×500. Rivers can follow as its own step once the food, lair and reachability losses from Palettes are fixed, since it is built on Palettes.</p>
+  </section>
+
+  <div class="foot">
+    <p>Close-up: the same 60×40 tiles for every variant on a seed, chosen on today's map for a mix of rock, water and trees. Mid: 120×80 tiles around it.</p>
+    <p>Numbers are from the earlier run: 500×500 maps, averaged over seeds 1, 42 and 1337. They were measured on an older <code>dev</code>, where resource placement differed from this base. Today's, Tidy's and Palettes' patch counts were checked again on this base and match. The Rivers patch count is re-measured after a fix to the generator: single deep-water tiles inside narrow rivers had shown as dark blocks. Before the fix it was 5.5. Its other figures are from before the fix.</p>
+    <p>Unrelated border: two touching ground kinds outside one family (dirt–savanna–grass–tall grass, grass–forest floor–mossy ground, moss–bog–mud–clay–quicksand). Reachable: share of walkable land in the largest connected area, without felling trees.</p>
+  </div>
+</main>
+<script src="data.js"></script>
+<script>
+  const S = F4X.bar((s, k) => { if (k !== 'theme') render(); }).state;
+  const fmt = (v, d = 1) => (v == null ? '—' : Number(v).toFixed(d));
+  const mean = (v, k) => { const xs = Object.values(DATA.stats[v]).map((s) => s[k]); return xs.reduce((a, b) => a + b, 0) / xs.length; };
+  const ROWS = [
+    ['Ground patches per 1000 tiles', 'patchesPer1k', 1, -1],
+    ['Tiles in specks under 10 tiles', 'speckTilePct', 2, -1, '%'],
+    ['Ground borders per 1000 tiles', 'groundBorderPer1k', 0, -1],
+    ['Unrelated ground borders', 'groundUnrelatedPct', 1, -1, '%'],
+    ['Generation, 500×500', 'ms', 0, -1, ' ms'],
+    ['Tiles with a resource', 'resTilePct', 1, 0, '%'],
+    ['Water', 'waterPct', 1, 0, '%'],
+    ['Reachable walkable land', 'mainWalkPct', 1, 1, '%']
+  ];
+  function card(v) {
+    const meta = DATA.variants[v];
+    const rows = ROWS.map(([label, k, d, dir, unit = '']) => {
+      const m = mean(v, k), b = mean('today', k);
+      let cls = '';
+      if (v !== 'today' && dir !== 0) { const rel = (m - b) / (Math.abs(b) || 1); if (Math.abs(rel) > 0.03) cls = (rel * dir > 0) ? 'better' : 'worse'; }
+      return `<tr><td>${label}</td><td class="${cls}">${fmt(m, d)}${unit}</td></tr>`;
+    }).join('');
+    const pairs = Object.values(DATA.stats[v])[0].topUnrelated.slice(0, 3).map(([k]) => k.split('|').map((id) => DATA.names[id] ?? id).join(' – ')).join(', ');
+    const img = `img/${v}-${S.seed}-${S.view}.webp`;
+    return `<article class="card">
+      <div class="head"><h2>${meta.name}<small>${meta.tag}</small></h2><p>${meta.line}</p></div>
+      <a class="shot" href="${img}" target="_blank" rel="noopener"><img src="${img}" alt="${meta.name}, seed ${S.seed}" loading="lazy" width="1920" height="1280"></a>
+      <div class="nums"><table>${rows}</table><div class="pairs">Most frequent unrelated borders: ${pairs || 'none'}</div></div>
+    </article>`;
+  }
+  function resTable() {
+    const vs = Object.keys(DATA.variants);
+    const head = `<tr><th></th>${vs.map((v) => `<th>${DATA.variants[v].name}</th>`).join('')}</tr>`;
+    const body = DATA.resGroups.map((g) => `<tr><td>${g}</td>${vs.map((v) => {
+      const m = DATA.res[v][g], b = DATA.res.today[g];
+      const rel = b ? (m - b) / b : 0;
+      const cls = v !== 'today' && rel < -0.1 ? 'worse' : '';
+      return `<td class="${cls}">${Math.round(m).toLocaleString('en')}${v !== 'today' && b ? ` <small>(${rel >= 0 ? '+' : ''}${Math.round(rel * 100)}%)</small>` : ''}</td>`;
+    }).join('')}</tr>`).join('');
+    return `<table>${head}${body}</table>`;
+  }
+  function render() {
+    document.getElementById('grid').innerHTML = Object.keys(DATA.variants).map(card).join('');
+    document.getElementById('res').innerHTML = resTable();
+  }
+  render();
+</script>
+</body>
+</html>
