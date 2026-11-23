@@ -26,9 +26,17 @@ const PX = (() => {
     fur: '#2c2117 #6c5a44 #a8957a #d8cbb0',
     ruby: '#3a0714 #a8122c #ea3c4a #ffb0a8',
     sapphire: '#0c1b4b #2350ba #4a8df2 #b4dcff',
-    string: '#3a3528 #8a8474 #c8c2b0 #ece8dc'
+    string: '#3a3528 #8a8474 #c8c2b0 #ece8dc',
+    topaz: '#3d1a04 #a8520c #e8901c #ffd27a',
+    clay: '#2a1610 #6e3c28 #a0644a #c89878',
+    lead: '#16171f #4a4f5e #737a8a #a3a9b6',
+    horn: '#1c130e #4b3426 #7d5c42 #b8946a',
+    moonwood: '#1f2430 #5f6b80 #98a6b8 #d4dde8',
+    flame: '#3a0d05 #b8300c #f07a1a #ffd54a',
+    venom: '#10180c #2f4a1e #5a7a2a #8fae4a',
+    gleam: '#0d3350 #1f86c4 #58d2f2 #d0f8ff'
   };
-  const THREADS = new Set(['string']);
+  const THREADS = new Set(['string', 'venom', 'gleam']);
 
   const fail = message => { throw new Error('PX: ' + message); };
   const rgb = hex => [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16));
