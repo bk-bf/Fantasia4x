@@ -17,7 +17,6 @@
   "src/lib/components/UI/hud/ChroniclePanel.svelte": 321,
   "src/lib/components/UI/hud/ResourceSidebar.svelte": 266,
   "src/lib/components/UI/hud/SelectedEntityCard.svelte": 466,
-  "src/lib/components/UI/menu/CustomMapMenu.svelte": 508,
   "src/lib/components/UI/tooltip/ItemStatTooltip.svelte": 344,
   "src/lib/dev/AuditTables.svelte": 523,
   "src/lib/dev/TreeView.svelte": 333,
