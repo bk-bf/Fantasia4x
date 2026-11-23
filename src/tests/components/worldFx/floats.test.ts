@@ -84,7 +84,7 @@ describe('condition floaters', () => {
       icon('winded')[0]
     ]);
     expect(draw([e], { icons: false, text: true }, at + 502).map((d) => d.s)).toEqual([
-      word('Winded', tint('#9575cd'), { small: true, icon: 'pip' })[0]
+      word('Winded', tint('#9575cd'), { small: true })[0]
     ]);
     expect(draw([e], { icons: false, text: false }, at + 503)).toEqual([]);
   });
@@ -156,6 +156,33 @@ describe('condition floaters', () => {
     const late = bands(loss, at + 10_900);
     expect(early.length).toBe(2);
     expect(late[1]).toBeGreaterThan(early[1]);
+  });
+
+  it('fades a lost condition so it never looks like the gain', () => {
+    const gain = floater('drops', 'Wet', '#4fa3d1')[0];
+    const loss = floater('drops', 'Wet', '#4fa3d1', undefined, 0, true)[0];
+    expect([loss.w, loss.h]).toEqual([gain.w, gain.h]);
+    const lit = (s: typeof gain) =>
+      s.c.reduce((n, c) => n + (c ? c[0] + c[1] + c[2] : 0), 0) / s.c.filter(Boolean).length;
+    expect(lit(loss)).toBeLessThan(lit(gain) * 0.8);
+  });
+
+  it('keeps every floater on screen clear of every other, across neighbouring creatures', () => {
+    const t0 = 250_000;
+    const list = [
+      onset('knockdown', 'Knocked Down', 3000, 4),
+      onset('winded', 'Winded', 3001, 4),
+      onset('bleeding', 'Bleeding', 3001, 4, { level: 2, levels: 3 }),
+      hit(7, 3000, 4, t0),
+      hit(9, 3001, 4, t0),
+      onset('staggered', 'Staggered', 3002, 4)
+    ];
+    draw(list, both, t0);
+    for (let dt = 100; dt <= 3000; dt += 100) {
+      const drawn = draw(list, both, t0 + dt).map(rect);
+      for (let i = 0; i < drawn.length; i++)
+        for (let j = i + 1; j < drawn.length; j++) expect(apart(drawn[i], drawn[j])).toBe(true);
+    }
   });
 
   it('merges hits that land close together, however late the frame that sees them', () => {

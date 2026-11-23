@@ -112,12 +112,11 @@ const beside = (a: string[], b: string[], gap: number): string[] => {
 };
 
 const DROP = ['..#..', '..#..', '.###.', '.###.', '#####', '#####', '.###.'];
-const PIP = ['.#.', '###', '.#.'];
 
 export interface WordOpts {
   big?: boolean;
   small?: boolean;
-  icon?: 'drop' | 'pip';
+  icon?: 'drop';
   e?: number;
 }
 
@@ -128,7 +127,7 @@ export function word(text: string, ramp: Ramp, o: WordOpts = {}): Pair {
         ? typeset(text, FX_FONT.bold, { gap: 3, k: 2 })
         : typeset(text, o.small ? FX_FONT.thin : FX_FONT.bold, { gap: 2, tall: true })
     );
-    if (o.icon) rows = beside(o.icon === 'drop' ? DROP : PIP, rows, 3);
+    if (o.icon) rows = beside(DROP, rows, 3);
     const s = shade(rows, ramp, { e: o.e === undefined ? 170 : o.e, grad: o.small });
     return [s, melt(s, 0.5)] as Pair;
   });

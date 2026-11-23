@@ -1,3 +1,4 @@
+import type { Rgb } from '../palette';
 import { GORE, HONEY, HURT, tint, word, type Pair } from './glyphs';
 import { P, STAR, Spr, hex, melt } from './spr';
 import { art, bane, boon, keys, lit, stamp } from './iconArt';
@@ -404,18 +405,35 @@ function row(parts: [Spr, number][], lead: Spr, struck: Spr): Spr {
   return s;
 }
 
+const FADE_GREY = 0.7;
+const FADE_DIM = 0.7;
+
+function faded(s: Spr): Spr {
+  const o = new Spr(s.w, s.h, s.ax, s.ay);
+  for (let i = 0; i < s.c.length; i++) {
+    const c = s.c[i];
+    if (!c) continue;
+    const g = c[0] * 0.3 + c[1] * 0.59 + c[2] * 0.11;
+    const v = c.map((k) => Math.round((k + (g - k) * FADE_GREY) * FADE_DIM)) as Rgb;
+    o.set(i % s.w, Math.floor(i / s.w), v, s.e[i] >> 1);
+  }
+  strikes.set(o, strikeOf(s));
+  return o;
+}
+
 export function floater(
   id: IconId | null,
   label: string | null,
   col: string,
   mark?: IconMark,
-  trend: Trend = 0
+  trend: Trend = 0,
+  struck = false
 ): Pair {
-  const key = `${id ?? ''}|${mark ?? ''}|${label ?? ''}|${col}|${trend}`;
+  const key = `${id ?? ''}|${mark ?? ''}|${label ?? ''}|${col}|${trend}|${struck}`;
   let p = memo.get(key);
   if (p) return p;
   const look = id ? icon(id, mark) : null;
-  const text = label ? word(label, tint(col), { small: true, icon: id ? undefined : 'pip' }) : null;
+  const text = label ? word(label, tint(col), { small: true }) : null;
   const up = arrows(trend);
   if (!up && !(look && text)) p = (look ?? text)!;
   else {
@@ -432,6 +450,7 @@ export function floater(
     const lead = (look ?? text)![0];
     p = pair(row(parts, lead, (text ?? look)![0]));
   }
+  if (struck) p = pair(faded(p[0]));
   memo.set(key, p);
   return p;
 }

@@ -51,13 +51,13 @@ interface Waiting {
 
 export const FLOATERS_PER_TARGET = 3;
 export const MERGE_HITS_MS = 400;
-const WAIT_MS = 2500;
+const WAIT_MS = 3500;
+export const WORD_TTL = 1.4;
 const TIERS = [0, 20, 38, 56];
 const BADGE_STEP = 18;
-const GAP = 1;
+const GAP = 2;
 const SAMPLE_S = 0.1;
-const TTL_BY_CONDITION: Record<string, number> = { knockdown: 1.3, staggered: 0.9 };
-const STRIKE_GROW = 0.45;
+const STRIKE_IN_S = 0.25;
 const STRIKE_LIGHT = hex('#f4ecd8');
 
 const items: Item[] = [];
@@ -96,29 +96,22 @@ function hitPair(h: Hit): Pair {
 function textLook(e: CombatTextEvent): [Pair, number, number, boolean] {
   switch (e.kind) {
     case 'damage':
-      return [word(e.text, HURT), 4, 0.9, false];
+      return [word(e.text, HURT), 4, WORD_TTL, false];
     case 'crit':
-      return [word(e.text, CRIT, { big: true }), 0, 0.9, true];
+      return [word(e.text, CRIT, { big: true }), 0, WORD_TTL, true];
     case 'miss':
-      return [word(e.text, DULL), 0, 0.9, false];
+      return [word(e.text, DULL), 0, WORD_TTL, false];
     case 'dodge':
-      return [word(e.text, COLD), -6, 0.9, false];
+      return [word(e.text, COLD), -6, WORD_TTL, false];
     case 'bleed':
-      return [word(e.text, GORE, { icon: 'drop' }), 4, 0.9, false];
+      return [word(e.text, GORE, { icon: 'drop' }), 4, WORD_TTL, false];
     case 'fracture':
-      return [word(e.text, tint('#ff9944')), 0, 0.9, false];
-    case 'knockdown':
-      return [
-        word(e.text, tint(e.color ?? '#ff6a3a'), { small: true, icon: 'pip' }),
-        6,
-        1.3,
-        false
-      ];
+      return [word(e.text, tint('#ff9944')), 0, WORD_TTL, false];
     default:
       return [
-        floater(null, e.text, e.color ?? '#dddddd', undefined, trend(e)),
+        floater(null, e.text, e.color ?? '#dddddd', undefined, trend(e), !!e.lost),
         4,
-        TTL_BY_CONDITION[e.conditionId ?? ''] ?? 1.4,
+        BADGE_TTL,
         false
       ];
   }
@@ -131,7 +124,7 @@ function place(e: CombatTextEvent, f: Figure, mode: FloaterMode): Placed | null 
   if (id && mode.icons) {
     const col = e.color ?? (e.kind === 'fracture' ? '#ff9944' : '#dddddd');
     return {
-      pair: floater(id.id, mode.text ? e.text : null, col, id.mark, trend(e)),
+      pair: floater(id.id, mode.text ? e.text : null, col, id.mark, trend(e), !!e.lost),
       x: f.x,
       y: f.lying ? f.y - 20 : f.y - 34,
       ox: 0,
@@ -292,6 +285,7 @@ export function drawFloats(
   for (let i = items.length - 1; i >= 0; i--)
     if ((now - items[i].start) / 1000 > items[i].q.ttl) items.splice(i, 1);
   release(r, p.textRatio, now, mode);
+  settle(now, p.textRatio);
   for (const it of items) {
     const u = (now - it.start) / 1000;
     if (it.q.badge) badge(p, it.q, it.q.pair, u);
@@ -304,15 +298,37 @@ function strike(p: FxPainter, q: Placed, u: number): void {
   if (u > q.ttl) return;
   const s = q.pair[0];
   const line = strikeOf(s);
-  const w = Math.round(line.w * Math.min(1, u / (q.ttl * STRIKE_GROW)));
+  const w = Math.round(line.w * Math.min(1, u / STRIKE_IN_S));
   if (w <= 0) return;
   const dy = q.badge ? badgeDy(u) : floatDy(u, q.ttl);
   const x = Math.round(q.ox) - s.ax + line.x;
   const y = Math.round(q.oy + dy) - s.ay + line.y;
   p.fill(P.ink, 255);
-  p.band(q.x, q.y, x - 1, y, w + 2, 2);
+  p.band(q.x, q.y, x - 1, y - 1, w + 2, 4);
   p.fill(STRIKE_LIGHT, 255);
-  p.band(q.x, q.y, x, y, w, 1);
+  p.band(q.x, q.y, x, y, w, 2);
+}
+
+type Box = [number, number, number, number];
+
+function settle(now: number, r: number): void {
+  const done: Box[] = [];
+  const g = GAP * r;
+  for (const it of items) {
+    const u = (now - it.start) / 1000;
+    let b = box(it.q, u, r);
+    for (let pass = 0; pass <= done.length; pass++) {
+      let need = 0;
+      for (const o of done)
+        if (b[0] < o[2] && o[0] < b[2] && b[1] < o[3] + g && o[1] < b[3] + g)
+          need = Math.max(need, b[3] - o[1] + g);
+      if (need <= 0) break;
+      it.q.oy -= need / r;
+      it.lift -= need / r;
+      b = box(it.q, u, r);
+    }
+    done.push(b);
+  }
 }
 
 export const floatersLive = (): boolean => items.length > 0 || waiting.size > 0;
