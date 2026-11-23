@@ -13,13 +13,34 @@ const TK = (() => {
   const px = (s, x, y, r, k) => s.set(x, y, at(r, k));
   const each = (s, fn) => { for (let y = 0; y < s.h; y++) for (let x = 0; x < s.w; x++) fn(x, y, s.c[y * s.w + x]); };
 
+  let hard = false;
+  const shade = (r, t, x, y, d) => rp(r, t, x, y, hard ? 0 : d);
+  const TONES = new Map();
+  const scaled = (c, k, lift) => c.map(v => Math.round(clamp(v * k + lift, 0, 255)));
+  const blend = (a, b) => a.map((v, i) => Math.round((v + b[i]) / 2));
+  function tones(r) {
+    if (TONES.has(r)) return TONES.get(r);
+    const n = r.length, four = n <= 4 ? r.slice() : [scaled(r[1], .8, 0), n > 5 ? blend(r[n - 4], r[n - 3]) : r[n - 3], r[n - 2], scaled(r[n - 1], 1, 12)];
+    for (const c of four) if (!RAMP_OF.has(c)) RAMP_OF.set(c, r);
+    TONES.set(r, four);
+    return four;
+  }
+  const bucket = (i, n) => n <= 4 ? i : i >= n - 1 ? 3 : i >= n - 2 ? 2 : i >= n - 4 ? 1 : 0;
+  function crisp(draw, w, h, over) {
+    const s = canvas(w, h);
+    hard = true;
+    try { draw(s); } finally { hard = false; }
+    each(s, (x, y, c) => { const r = c && RAMP_OF.get(c), i = r ? r.indexOf(c) : -1; if (i >= 0) s.c[y * s.w + x] = tones(r)[bucket(i, r.length)]; });
+    return s;
+  }
+
   function ball(s, cx, cy, rx, ry, r, o) {
     o = o || {};
     for (let y = Math.floor(cy - ry); y <= Math.ceil(cy + ry); y++) for (let x = Math.floor(cx - rx); x <= Math.ceil(cx + rx); x++) {
       const nx = (x + .5 - cx) / rx, ny = (y + .5 - cy) / ry, q = nx * nx + ny * ny;
       if (q > 1 || (o.clip && !o.clip(x, y))) continue;
       const l = nx * LV[0] + ny * LV[1] + Math.sqrt(1 - q) * LV[2];
-      s.set(x, y, rp(r, .5 + l * .5 * (o.amp === undefined ? 1 : o.amp) + (o.bias || 0), x, y, o.d === undefined ? .25 : o.d));
+      s.set(x, y, shade(r, .5 + l * .5 * (o.amp === undefined ? 1 : o.amp) + (o.bias || 0), x, y, o.d === undefined ? .25 : o.d));
     }
   }
 
@@ -74,7 +95,7 @@ const TK = (() => {
       if (c) return;
       const shaded = peek(s, x - 1, y) || peek(s, x, y - 1), lit = peek(s, x + 1, y) || peek(s, x, y + 1);
       const from = shaded || (o.shadowOnly ? null : lit);
-      if (from) add.push([y * s.w + x, cool(darkest(from), shaded ? (o.k || .6) : (o.litK || 1.25))]);
+      if (from) add.push([y * s.w + x, cool(darkest(from), shaded || o.even ? (o.k || .6) : (o.litK || 1.25))]);
     });
     for (const [i, c] of add) s.c[i] = c;
     return s;
@@ -131,5 +152,5 @@ const TK = (() => {
     return s;
   }
 
-  return { adopt, ramp, at, cool, canvas, luma, key, peek, cut, px, each, ball, poly, seg, path, curve, stamp, outline, clone, shrink, bounds, image, fromImage };
+  return { adopt, ramp, at, cool, shade, crisp, canvas, luma, key, peek, cut, px, each, ball, poly, seg, path, curve, stamp, outline, clone, shrink, bounds, image, fromImage };
 })();

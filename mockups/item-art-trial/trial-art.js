@@ -90,7 +90,7 @@ const TRIAL = (() => {
   function cuirass(s) {
     const plate = (x, y) => {
       const nx = (x + .5 - 16) / 10.5, ny = (y + .5 - 13) / 17, nz = Math.sqrt(Math.max(.05, 1 - nx * nx - ny * ny * .5));
-      return rp(M.steel, .34 + (nx * LV[0] + ny * LV[1] * .6 + nz * LV[2]) * .66, x, y, .2);
+      return TK.shade(M.steel, .34 + (nx * LV[0] + ny * LV[1] * .6 + nz * LV[2]) * .66, x, y, .2);
     };
     rows(s, 4, 6, 14, 17, (x, y) => TK.at(M.steel, y === 4 ? 3 : 1));
     TORSO.forEach((r, j) => { for (let k = 0; k < r.length; k += 2) rows(s, 4 + j, 4 + j, r[k], r[k + 1], plate); });
@@ -229,19 +229,14 @@ const TRIAL = (() => {
 
   const MAP = 16;
   const finished = (draw, over, size) => { const s = canvas(size, size); draw(s); TK.outline(s); if (over) over(s); return s; };
+  const CRISP_EDGE = { even: true, k: .55 };
+  const sharp = (draw, over, w, h) => { const s = TK.outline(TK.crisp(draw, w, h), CRISP_EDGE); if (over) over(s); return s; };
   const icon = it => it.draw ? finished(it.draw, it.over, 32) : null;
+  const crispIcon = it => it.draw ? sharp(it.draw, it.over, 32, 32) : null;
   function onMap(it) {
-    if (it.mini) return finished(it.mini, it.miniOver, MAP);
-    const raw = canvas(32, 32); it.draw(raw);
-    return TK.outline(TK.shrink(raw, MAP - 2));
+    if (it.mini) return sharp(it.mini, it.miniOver, MAP, MAP);
+    return TK.outline(TK.shrink(TK.crisp(it.draw, 32, 32), MAP - 2), CRISP_EDGE);
   }
   const onMapRestyled = img => TK.outline(TK.shrink(TK.restyle.bare(img), MAP - 2));
-  const HEAPS = { 1: [[8, 0]], 3: [[2, 0], [14, 0], [8, -6]], 7: [[0, 0], [8, 1], [16, 0], [4, -6], [12, -6], [8, -12], [8, 2]] };
-  function heap(it, n) {
-    const one = onMap(it), s = canvas(34, 34);
-    for (const [dx, dy] of HEAPS[n]) TK.each(one, (x, y, c) => { if (c) s.set(x + dx, y + dy + 34 - one.h, c); });
-    return s;
-  }
-
-  return { M, ITEMS, MAP, STAGES: [1, 3, 7], icon, onMap, onMapRestyled, heap };
+  return { M, ITEMS, MAP, CRISP_EDGE, rows, sharp, icon, crispIcon, onMap, onMapRestyled };
 })();

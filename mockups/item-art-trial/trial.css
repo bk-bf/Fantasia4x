@@ -7,7 +7,7 @@
 .strip figcaption, .grid figcaption { color: var(--mute); font-size: 14px; line-height: 14px; margin-top: 3px; }
 .well { background: var(--panel); border: 1px solid var(--line); padding: 6px; display: grid; place-items: center; }
 .ground .well.icon { background-image: var(--ground); background-size: var(--ground-size); image-rendering: pixelated; }
-.grid { display: grid; grid-template-columns: max-content repeat(5, max-content); gap: 6px 8px; align-items: stretch; width: max-content; }
+.grid { display: grid; grid-template-columns: max-content repeat(7, max-content); gap: 6px 8px; align-items: stretch; width: max-content; }
 .grid .head { position: sticky; top: -10px; z-index: 2; background: var(--bg); color: var(--dim); padding: 6px 0 3px; border-bottom: 1px solid var(--edge); }
 .grid .head b { font: 18px/18px Jersey10, sans-serif; letter-spacing: 1px; text-transform: uppercase; color: var(--ink); font-weight: 400; margin-right: 6px; }
 .grid .name { padding: 6px 8px 6px 0; min-width: 118px; max-width: 150px; }

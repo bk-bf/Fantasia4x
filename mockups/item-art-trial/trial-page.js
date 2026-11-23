@@ -36,34 +36,56 @@
   }
 
   const asNow = it => DBX.bake(DBX.pick('item', it.id, 'summer'));
-
-  function row(it, zoom) {
-    const cells = [], now = asNow(it), name = el('div', 'name');
-    name.append(el('b', '', it.label), el('i', '', names.get(it.id) || it.id), el('i', '', it.id));
-    if (it.stacks) name.append(el('span', 'tag', 'stackable'));
-    cells.push(name, boxed(now, zoom, 64));
-    cells.push(it.mapOnly ? el('div', 'none', '-') : boxed(TK.image(TK.restyle(now), true), zoom, 64));
-    cells.push(it.mapOnly ? el('div', 'none', '-') : boxed(TK.image(TRIAL.icon(it)), zoom, 32));
-    const lying = [{ spr: pawn(), tx: 1, ty: 1 }, { spr: grounded(TRIAL.onMap(it), 5), tx: 2, ty: 1, dy: 28 }];
-    if (!it.mapOnly) lying.push({ spr: grounded(TRIAL.onMapRestyled(now), 5), tx: 0, ty: 1, dy: 28 });
-    cells.push(scene(3, 2, lying, zoom, [it.mapOnly ? '' : 'B', '', 'C']));
-    cells.push(it.stacks ? scene(3, 2, TRIAL.STAGES.map((n, i) => ({ spr: grounded(TRIAL.heap(it, n), 4 + n * 1.4), tx: i, ty: 1, dy: 31 })), zoom, ['one', 'a few', 'full pile']) : el('div', 'none', 'single'));
-    return cells;
+  const none = text => el('div', 'none', text || '-');
+  const SHADOW = [5, 8, 13];
+  const stages = (it, tx, ty) => TRIAL.STAGE_NAMES.map((n, i) => ({ spr: grounded(TRIAL.stage(it, i), SHADOW[i]), tx: tx + i, ty, dy: i ? 31 : 28 }));
+  const upright = (it, tx, ty) => ({ spr: grounded(TRIAL.tall(it), 4), tx, ty, dy: 30 });
+  const halved = (it, tx, ty) => ({ spr: grounded(TRIAL.tallHalf(it), 3), tx, ty, dy: 30 });
+  function tree(tx, ty) {
+    const e = DBX.pick('tree', 'pine_tree', 'summer'), a = e.at || DBX.anchor.tree;
+    return { spr: DBX.still(DBX.built(e)), tx, ty, dy: a[1] };
   }
 
+  function row(it, zoom) {
+    const now = asNow(it), name = el('div', 'name'), drawn = !it.mapOnly && !it.tallOnly;
+    name.append(el('b', '', it.label), el('i', '', names.get(it.id) || it.id), el('i', '', it.id));
+    if (it.stacks) name.append(el('span', 'tag', 'stackable'));
+    const cells = [name, boxed(now, zoom, 64)];
+    cells.push(drawn ? boxed(TK.image(TK.restyle(now), true), zoom, 64) : none());
+    cells.push(drawn ? boxed(TK.image(TRIAL.icon(it)), zoom, 32) : none());
+    cells.push(drawn ? boxed(TK.image(TRIAL.crispIcon(it)), zoom, 32) : none());
+    cells.push(it.tall ? boxed(TK.image(TRIAL.tall(it)), zoom, 64) : none());
+    cells.push(it.tallOnly ? none() : lying(it, now, drawn, zoom));
+    cells.push(it.stacks ? scene(3, 2, stages(it, 0, 1), zoom, TRIAL.STAGE_NAMES) : none(it.tall ? 'stands, below' : 'single'));
+    return cells;
+  }
+  function lying(it, now, drawn, zoom) {
+    const things = [{ spr: pawn(), tx: 1, ty: 1 }, { spr: grounded(TRIAL.onMap(it), 5), tx: 2, ty: 1, dy: 28 }];
+    if (drawn) things.push({ spr: grounded(TRIAL.onMapRestyled(now), 5), tx: 0, ty: 1, dy: 28 });
+    return scene(3, 2, things, zoom, [drawn ? 'B' : '', '', 'C crisp']);
+  }
+
+  const HEADS = [['Item', ''], ['A', 'as now'], ['B', 'same shape, restyled'], ['C', 'redrawn at 32 px'], ['C crisp', 'hard tones, one outline'], ['Tall', '32 x 64 px, upright'], ['On the map', '16 x 16 px, a quarter of the tile'], ['Stack', 'its own drawing per stage']];
   function grid(zoom) {
     const g = el('div', 'grid');
-    for (const [b, note] of [['Item', ''], ['A', 'as now'], ['B', 'same shape, restyled'], ['C', 'redrawn at 32 px, seen from above'], ['On the map', '16 x 16 px, a quarter of the tile'], ['Stack', 'grows with the count']]) { const h = el('div', 'head'); h.append(el('b', '', b), note); g.append(h); }
+    for (const [b, note] of HEADS) { const h = el('div', 'head'); h.append(el('b', '', b), note); g.append(h); }
     for (const it of TRIAL.ITEMS) g.append(...row(it, zoom));
     return g;
   }
 
-  const SPOTS = [[1, 1], [3, 1], [5, 1], [7, 1], [9, 1], [11, 1], [0, 2], [2, 2], [4, 2], [8, 2], [10, 2], [12, 2], [1, 3], [3, 3]];
+  function standing(zoom) {
+    const strip = el('div', 'strip');
+    for (const it of TRIAL.ITEMS.filter(q => q.tall)) strip.append(figure(scene(6, 4, [tree(1, 3), upright(it, 3, 3), { spr: pawn(), tx: 4, ty: 3 }, halved(it, 5, 3)], zoom, ['', '', '', 'two tiles', '', 'half']), it.label));
+    return strip;
+  }
+
   function colony(zoom) {
-    const things = TRIAL.ITEMS.map((it, i) => ({ spr: grounded(it.stacks ? TRIAL.heap(it, TRIAL.STAGES[i % 3]) : TRIAL.onMap(it), 5), tx: SPOTS[i][0], ty: SPOTS[i][1], dy: it.stacks ? 31 : 28 }));
-    things.push({ spr: pawn(), tx: 6, ty: 2 }, { spr: pawn(), tx: 9, ty: 3 });
-    for (const [it, n, tx, ty] of [[TRIAL.ITEMS[12], 7, 5, 3], [TRIAL.ITEMS[13], 7, 7, 3], [TRIAL.ITEMS[10], 7, 11, 3]]) things.push({ spr: grounded(TRIAL.heap(it, n), 12), tx, ty, dy: 31 });
-    return figure(scene(13, 4, things, zoom), 'tile = ' + TILE * zoom + ' screen px');
+    const single = TRIAL.ITEMS.filter(it => !it.stacks && !it.tallOnly), stacked = TRIAL.ITEMS.filter(it => it.stacks), tall = TRIAL.ITEMS.filter(it => it.tall);
+    const things = single.map((it, i) => ({ spr: grounded(TRIAL.onMap(it), 5), tx: 1 + i, ty: 1, dy: 28 }));
+    stacked.forEach((it, i) => things.push(...stages(it, (i % 4) * 3, i < 4 ? 3 : 5)));
+    tall.forEach((it, i) => things.push(upright(it, 13 + i, 3), halved(it, 13 + i, 5)));
+    things.push({ spr: pawn(), tx: 12, ty: 1 }, { spr: pawn(), tx: 12, ty: 3 }, { spr: pawn(), tx: 12, ty: 5 }, tree(18, 5));
+    return figure(scene(20, 6, things, zoom), 'tile = ' + TILE * zoom + ' screen px');
   }
 
   function ground(zoom) {
@@ -77,10 +99,11 @@
     sheet.textContent = '';
     sheet.classList.toggle('ground', state.back === 'ground');
     ground(zoom);
-    const quality = el('h2', '', 'Quality bar'), rows = el('h2', '', 'Twelve items, three ways'), map = el('h2', '', 'On the map at the two game zooms');
+    const quality = el('h2', '', 'Quality bar'), rows = el('h2', '', 'Twelve items, three ways'), up = el('h2', '', 'Standing two tiles tall'), map = el('h2', '', 'On the map at the two game zooms');
     rows.append(el('small', '', 'stackable is a proposed flag, the database has none yet'));
+    up.append(el('small', '', 'beside a pine and a pawn, at full and at half size'));
     const strip = el('div', 'strip'); strip.append(colony(1), colony(2));
-    sheet.append(quality, reference(zoom), rows, grid(zoom), map, strip);
+    sheet.append(quality, reference(zoom), rows, grid(zoom), up, standing(zoom), map, strip);
   }
 
   const ui = F4X.bar(state => render(state));
