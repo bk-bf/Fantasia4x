@@ -18,8 +18,6 @@
   "src/lib/components/UI/hud/ResourceSidebar.svelte": 266,
   "src/lib/components/UI/hud/SelectedEntityCard.svelte": 466,
   "src/lib/components/UI/menu/CustomMapMenu.svelte": 508,
-  "src/lib/components/UI/menu/SaveListMenu.svelte": 203,
-  "src/lib/components/UI/menu/SaveListRow.svelte": 248,
   "src/lib/components/UI/tooltip/ItemStatTooltip.svelte": 344,
   "src/lib/dev/AuditTables.svelte": 523,
   "src/lib/dev/TreeView.svelte": 333,
