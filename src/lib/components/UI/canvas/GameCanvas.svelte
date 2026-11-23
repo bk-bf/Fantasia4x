@@ -2,7 +2,7 @@
   import { onMount, onDestroy } from 'svelte';
   import { get } from 'svelte/store';
   import { browser } from '$app/environment';
-  import { wasdPan, debugMode, vignetteOn } from '$lib/stores/uiPrefs';
+  import { wasdPan, debugMode, vignetteOn, windSwayOn } from '$lib/stores/uiPrefs';
   import { WebGLRenderer, type SpriteLayer } from '$lib/webgl/renderer.js';
   import { crashBreadcrumb } from '$lib/webgl/crashLog.js';
   import { startFreezeWatchdog, beat, stopFreezeWatchdog } from '$lib/webgl/freezeWatchdog.js';
@@ -282,6 +282,10 @@
 
   const unsubAnimPause = gameState.isPaused.subscribe((p) => setAnimPaused(p));
   const unsubVignette = vignetteOn.subscribe((on) => renderer?.setVignette(on));
+  const unsubSway = windSwayOn.subscribe((on) => {
+    renderer?.setSway(on);
+    markRenderDirty();
+  });
 
   let attackLungeList: AttackLungeEvent[] = [];
   const unsubAttackLunges = attackLunges.subscribe((list) => {
@@ -2470,6 +2474,7 @@
     unsubCombatFeedback();
     unsubAnimPause();
     unsubVignette();
+    unsubSway();
     unsubAttackLunges();
     unsubProjectiles();
     _unsubMenuPerf();
@@ -2525,6 +2530,7 @@
       const ok = await renderer.waitForInitialization();
       if (!ok || !renderer.isReady()) throw new Error('Renderer init failed');
       renderer.setVignette(get(vignetteOn));
+      renderer.setSway(get(windSwayOn));
 
       if (worldMap.length > 0) {
         _fullRebuildTerrain();

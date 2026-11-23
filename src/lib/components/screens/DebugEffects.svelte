@@ -1,7 +1,7 @@
 <script lang="ts">
   import ChromeButton from '$lib/components/UI/widget/ChromeButton.svelte';
   import { EFFECT_KINDS, effectToggles } from '$lib/stores/fx/effectToggles';
-  import { weatherEffects } from '$lib/stores/uiPrefs';
+  import { weatherEffects, windSwayOn } from '$lib/stores/uiPrefs';
 
   const allOff = $derived(!$weatherEffects && EFFECT_KINDS.every((k) => !$effectToggles[k.id]));
   function toggleAll() {
@@ -20,6 +20,7 @@
     {/each}
     <ChromeButton on={$weatherEffects} onclick={() => weatherEffects.toggle()}>Weather</ChromeButton
     >
+    <ChromeButton on={$windSwayOn} onclick={() => windSwayOn.toggle()}>Wind sway</ChromeButton>
   </div>
 </div>
 
