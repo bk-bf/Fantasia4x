@@ -1153,9 +1153,16 @@ class CombatServiceImpl implements CombatService {
     return { x: e.position?.x ?? -1, y: e.position?.y ?? -1 };
   }
 
-  private emitFloat(x: number, y: number, kind: CombatTextKind, text: string, dy?: number): void {
+  private emitFloat(
+    x: number,
+    y: number,
+    kind: CombatTextKind,
+    text: string,
+    dy?: number,
+    entityId?: string
+  ): void {
     if (x < 0 || y < 0) return;
-    simLog.pushCombatText({ worldX: x, worldY: y, text, kind, dy });
+    simLog.pushCombatText({ worldX: x, worldY: y, text, kind, dy, entityId });
   }
 
   private emitConditionFloat(
@@ -1324,7 +1331,7 @@ class CombatServiceImpl implements CombatService {
             ? this.applyInjuryToMob(behind.id, carried, next, false)
             : this.applyInjury(behind.id, carried, next, false);
         const bpos = this.entityPos(behind);
-        this.emitFloat(bpos.x, bpos.y, 'damage', `-${carried.damage}`);
+        this.emitFloat(bpos.x, bpos.y, 'damage', `-${carried.damage}`, undefined, behind.id);
       }
     }
 
@@ -1354,7 +1361,9 @@ class CombatServiceImpl implements CombatService {
       pos.x,
       pos.y,
       critFloater ? 'crit' : 'damage',
-      result.crit ? `-${result.injury.damage}!` : `-${result.injury.damage}`
+      result.crit ? `-${result.injury.damage}!` : `-${result.injury.damage}`,
+      undefined,
+      target.id
     );
     if (!result.knockdown && result.injury.bleeding > 0)
       this.emitFloat(pos.x, pos.y, 'bleed', 'bleed', 13);

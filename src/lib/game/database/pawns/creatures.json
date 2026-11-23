@@ -246,7 +246,8 @@
         "biomeWeights"  : {"plains": 1.0, "forest": 0.8, "mountain": 0.4},
         "carcassItemId" : "rabbit_carcass",
         "naturalWeapons": ["bite"],
-        "limbMap"        : "quadruped"
+        "limbMap"        : "quadruped",
+        "gait"           : "hop"
     },
     {
         "id"                : "boar",
@@ -3510,7 +3511,8 @@
         "species": "rabbit",
         "tier": 1,
         "variantOf": "rabbit",
-        "limbMap": "quadruped"
+        "limbMap": "quadruped",
+        "gait": "hop"
     },
     {
         "id": "great_elk",

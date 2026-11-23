@@ -84,6 +84,7 @@ export interface CreatureDefinition {
   hungerRate?: number;
   foodOverflow?: number;
   audio?: string;
+  gait?: 'hop';
 }
 
 type RawCreature = Record<string, unknown>;
@@ -192,7 +193,8 @@ function toDefinition(raw: RawCreature): CreatureDefinition {
     lairRange: (raw.lairRange as number | undefined) ?? undefined,
     hungerRate: (raw.hungerRate as number | undefined) ?? undefined,
     foodOverflow: (raw.foodOverflow as number | undefined) ?? undefined,
-    audio: (raw.audio as string | undefined) ?? undefined
+    audio: (raw.audio as string | undefined) ?? undefined,
+    gait: raw.gait === 'hop' ? 'hop' : undefined
   };
 }
 
