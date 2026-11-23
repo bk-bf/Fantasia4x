@@ -135,6 +135,7 @@ class WorldFxLayer {
     p.g.clearRect(0, 0, bw, bh);
     p.view((v.tW / ART_TILE) * dpr, -v.vx * v.tW * dpr, -v.vy * v.tH * dpr);
     this.paint(p, w, scene, texts, shots, now);
+    p.end();
     this.painted = true;
   }
 

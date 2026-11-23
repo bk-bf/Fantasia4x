@@ -8,12 +8,11 @@ export interface FxGrade {
 }
 
 const AMB = { dusk: [0.86, 0.6, 0.56], night: [0.24, 0.29, 0.5] };
-const CACHE_LIMIT = 4000;
 
 let gradeKey = '';
 let gen = 0;
 let ambient: Rgb = [1, 1, 1];
-const baked = new Map<number, HTMLCanvasElement>();
+const slots = new Map<number, Slot>();
 const ids = new WeakMap<Spr, number>();
 let nextId = 1;
 
@@ -31,7 +30,7 @@ export function setGrade(g: FxGrade, now: number): boolean {
   gradeAt = now;
   gen++;
   ambient = mul(q);
-  baked.clear();
+  resetAtlas();
   return true;
 }
 
@@ -52,33 +51,101 @@ function sprId(s: Spr): number {
   return id;
 }
 
-function bake(s: Spr, m: Rgb): HTMLCanvasElement {
-  const c = document.createElement('canvas');
-  c.width = s.w;
-  c.height = s.h;
-  const g = c.getContext('2d');
-  if (!g) return c;
-  const im = g.createImageData(s.w, s.h);
-  const d = im.data;
-  for (let i = 0, p = 0; i < s.c.length; i++, p += 4) {
-    const col = s.c[i];
-    if (!col) continue;
-    const k = s.e[i] / 255;
-    for (let j = 0; j < 3; j++) d[p + j] = Math.min(255, col[j] * (k + m[j] * (1 - k)));
-    d[p + 3] = 255;
-  }
-  g.putImageData(im, 0, 0);
-  return c;
+export interface Slot {
+  x: number;
+  y: number;
 }
 
-export function tex(s: Spr): HTMLCanvasElement {
-  const key = sprId(s);
-  let c = baked.get(key);
-  if (c) return c;
-  if (baked.size >= CACHE_LIMIT) baked.clear();
-  c = bake(s, ambient);
-  baked.set(key, c);
-  return c;
+const ATLAS = 1024;
+let atlas: HTMLCanvasElement | null = null;
+let atlasG: CanvasRenderingContext2D | null = null;
+let mirror: ImageData | null = null;
+let shelfX = 0;
+let shelfY = 0;
+let shelfH = 0;
+let epoch = 0;
+let dirty: [number, number, number, number] | null = null;
+
+function resetAtlas(): void {
+  slots.clear();
+  shelfX = shelfY = shelfH = 0;
+  epoch++;
+  dirty = null;
+}
+
+function alloc(w: number, h: number): Slot | null {
+  if (shelfX + w > ATLAS) {
+    shelfY += shelfH;
+    shelfX = 0;
+    shelfH = 0;
+  }
+  if (w > ATLAS || shelfY + h > ATLAS) return null;
+  const at = { x: shelfX, y: shelfY };
+  shelfX += w + 1;
+  shelfH = Math.max(shelfH, h + 1);
+  return at;
+}
+
+function grow(x0: number, y0: number, x1: number, y1: number): void {
+  dirty = dirty
+    ? [
+        Math.min(dirty[0], x0),
+        Math.min(dirty[1], y0),
+        Math.max(dirty[2], x1),
+        Math.max(dirty[3], y1)
+      ]
+    : [x0, y0, x1, y1];
+}
+
+function bake(s: Spr, at: Slot, m: Rgb, d: Uint8ClampedArray): void {
+  for (let y = 0; y < s.h; y++)
+    for (let x = 0; x < s.w; x++) {
+      const col = s.c[y * s.w + x];
+      const p = ((at.y + y) * ATLAS + at.x + x) * 4;
+      if (!col) {
+        d.fill(0, p, p + 4);
+        continue;
+      }
+      const k = s.e[y * s.w + x] / 255;
+      for (let j = 0; j < 3; j++) d[p + j] = Math.min(255, col[j] * (k + m[j] * (1 - k)));
+      d[p + 3] = 255;
+    }
+  grow(at.x, at.y, at.x + s.w, at.y + s.h);
+}
+
+export function atlasCanvas(): HTMLCanvasElement | null {
+  if (!atlas) {
+    atlas = document.createElement('canvas');
+    atlas.width = atlas.height = ATLAS;
+    atlasG = atlas.getContext('2d');
+    mirror = atlasG?.createImageData(ATLAS, ATLAS) ?? null;
+  }
+  return mirror ? atlas : null;
+}
+
+export const atlasEpoch = (): number => epoch;
+
+export function tex(s: Spr): Slot | null {
+  if (!atlasCanvas() || !mirror) return null;
+  const id = sprId(s);
+  const had = slots.get(id);
+  if (had) return had;
+  let at = alloc(s.w, s.h);
+  if (!at) {
+    resetAtlas();
+    at = alloc(s.w, s.h);
+    if (!at) return null;
+  }
+  bake(s, at, ambient, mirror.data);
+  slots.set(id, at);
+  return at;
+}
+
+export function flushAtlas(): void {
+  if (!dirty || !atlasG || !mirror) return;
+  const [x0, y0, x1, y1] = dirty;
+  atlasG.putImageData(mirror, 0, 0, x0, y0, x1 - x0, y1 - y0);
+  dirty = null;
 }
 
 export function css(c: Rgb, e: number): string {
