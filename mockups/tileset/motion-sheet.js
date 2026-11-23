@@ -148,6 +148,7 @@ const SHEET = (() => {
     one('stirge-attack', 'Creatures', 'Fen Stirge · darting', 'critter', 'stirge', 'attack', { ground: 'mud', ox: -8, h: 124 }),
     { id: 'stirge-death', group: 'Creatures', label: 'Fen Stirge · death', ground: 'mud', h: 124, cast: [P1('critter', 'stirge', [['act', 'idle', 1], ['act', 'fall', 0.9], ['act', 'down', 2.4]])], span: 1.4, t0: .9, n: 10 },
     { id: 'fell', group: 'World response', label: 'Felling', w: 190, h: 140, fell: ['oak', 2, 20, -2], cast: [P1('pawn', 'woodcutter', [['act', 'idle', .8], ['act', 'chop', 3.75, { tag: 'fell' }], ['act', 'idle', 2.2], ['go', [[26, 6]], 22, 'walk'], ['act', 'lift', 1.1, { tag: 'take' }], ['go', [[-120, 6]], 22, 'haul'], ['hide', 1], ['at', [-120, 0]], ['go', [[-6, 0]], 28, 'walk']], [-6, 0])], span: 6.8, n: 20, ox: -10 },
+    { id: 'fall-tree', group: 'World response', label: 'Felled tree falling', w: 190, h: 140, fell: ['oak', 2, 20, -2], cast: [P1('pawn', 'woodcutter', [['act', 'idle', .8], ['act', 'chop', 3.75, { tag: 'fell' }], ['act', 'idle', 2.2], ['go', [[26, 6]], 22, 'walk'], ['act', 'lift', 1.1, { tag: 'take' }], ['go', [[-120, 6]], 22, 'haul'], ['hide', 1], ['at', [-120, 0]], ['go', [[-6, 0]], 28, 'walk']], [-6, 0])], fallOnly: 1, ox: -10 },
     go('prints', 'World response', 'Prints in mud', 'pawn', 'farmer', 'walk', [1, 0], 28, { ground: 'mud', ox: 22, t0: 6 }),
     go('snow', 'World response', 'Snow prints and cold breath', 'pawn', 'guard', 'walk', [1, 0], 28, { ground: 'snow', cold: 1, ox: 22, t0: 6 }),
     go('shallows', 'World response', 'Wading the shallows', 'pawn', 'hunter', 'walk', [1, 0], 24, { ground: 'water', ox: 14, t0: 6 }),
@@ -163,7 +164,7 @@ const SHEET = (() => {
     if (cell.face) for (const S of cell.S) for (const st of S.steps) if (st.type === 'act') st.face = cell.face;
     cell.P = (cell.props || []).map(([n, x, y]) => ({ s: propSpr(n), x, y }));
     cell.w = cell.w || 112; cell.h = cell.h || 92; cell.ground = cell.ground || 'grass';
-    if (cell.fell) { cell.tree = mkTreeProp(cell.fell[0], cell.fell[1], 'summer', cell.fell[2], cell.fell[3]); cell.plan = fellPlan(cell.S[0]); }
+    if (cell.fell) { cell.tree = mkTreeProp(cell.fell[0], cell.fell[1], 'summer', cell.fell[2], cell.fell[3]); cell.plan = fellPlan(cell.S[0]);  if (cell.fallOnly) { cell.t0 = cell.plan.fallAt + .3; cell.span = .9; cell.n = 12; } }
     const S0 = cell.S[0], last = S0.steps[S0.steps.length - 1], def = animOf(S0.A, last.anim), cd = cycleDist(S0.A, def);
     if (!cell.span) { cell.span = cd ? cd / (last.v || 30) : def.dur; cell.n = def.n || 6; cell.cyc = 1; }
     return cell;
