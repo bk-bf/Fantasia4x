@@ -27,6 +27,7 @@ interface Hit {
   total: number;
   crit: boolean;
   bang: boolean;
+  last: number;
 }
 
 interface Item {
@@ -43,6 +44,7 @@ interface Waiting {
   e: CombatTextEvent;
   rank: number;
   at: number;
+  hit: Hit | null;
 }
 
 export const FLOATERS_PER_TARGET = 3;
@@ -179,13 +181,31 @@ function seat(q: Placed, now: number, r: number): void {
   }
 }
 
-function merge(e: CombatTextEvent, now: number): boolean {
+const newHit = (e: CombatTextEvent): Hit => ({
+  total: amount(e),
+  crit: e.kind === 'crit',
+  bang: e.text.endsWith('!'),
+  last: e.spawnTime
+});
+
+function add(h: Hit, e: CombatTextEvent): void {
+  h.total += amount(e);
+  h.crit ||= e.kind === 'crit';
+  h.bang ||= e.text.endsWith('!');
+  h.last = e.spawnTime;
+}
+
+function merge(e: CombatTextEvent): boolean {
   const key = keyOf(e);
-  const into = items.find((i) => i.hit && i.key === key && now - i.start < MERGE_HITS_MS);
+  const near = (h: Hit) => e.spawnTime - h.last < MERGE_HITS_MS;
+  const queued = waiting.get(key)?.find((w) => w.hit && near(w.hit));
+  if (queued?.hit) {
+    add(queued.hit, e);
+    return true;
+  }
+  const into = items.find((i) => i.hit && i.key === key && near(i.hit));
   if (!into?.hit) return false;
-  into.hit.total += amount(e);
-  into.hit.crit ||= e.kind === 'crit';
-  into.hit.bang ||= e.text.endsWith('!');
+  add(into.hit, e);
   into.q.pair = hitPair(into.hit);
   into.q.shake = into.hit.crit;
   if (into.hit.crit) into.q.ox = 0;
@@ -201,16 +221,19 @@ function release(r: WebGLRenderer | null, ratio: number, now: number, mode: Floa
       .sort((a, b) => b.rank - a.rank || a.at - b.at);
     let n = live.get(key) ?? 0;
     while (n < FLOATERS_PER_TARGET && fresh.length) {
-      const e = fresh.shift()!.e;
+      const w = fresh.shift()!;
+      const e = w.e;
       const fig = figureAt(r, e.worldX, e.worldY, e.worldX, e.worldY);
       const q = place(e, fig, mode);
       if (!q) continue;
+      if (w.hit) {
+        q.pair = hitPair(w.hit);
+        q.shake = w.hit.crit;
+        if (w.hit.crit) q.ox = 0;
+      }
       const base = q.oy;
       seat(q, now, ratio);
-      const hit = isHit(e)
-        ? { total: amount(e), crit: e.kind === 'crit', bang: e.text.endsWith('!') }
-        : null;
-      items.push({ e, fig, q, start: now, key, hit, lift: q.oy - base });
+      items.push({ e, fig, q, start: now, key, hit: w.hit, lift: q.oy - base });
       n++;
     }
     if (fresh.length) waiting.set(key, fresh);
@@ -245,10 +268,10 @@ export function drawFloats(
     ids.add(e.id);
     if (seen.has(e.id)) continue;
     seen.add(e.id);
-    if (isHit(e) && merge(e, now)) continue;
+    if (isHit(e) && merge(e)) continue;
     const key = keyOf(e);
     const w = waiting.get(key) ?? [];
-    w.push({ e, rank: rank(e), at: now });
+    w.push({ e, rank: rank(e), at: now, hit: isHit(e) ? newHit(e) : null });
     waiting.set(key, w);
   }
   for (const id of seen) if (!ids.has(id)) seen.delete(id);

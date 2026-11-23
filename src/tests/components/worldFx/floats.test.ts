@@ -32,9 +32,9 @@ const onset = (
   conditionId
 });
 
-const hit = (n: number, worldX: number, worldY = 4): CombatTextEvent => ({
+const hit = (n: number, worldX: number, worldY = 4, spawnTime = 0): CombatTextEvent => ({
   id: nextId++,
-  spawnTime: 0,
+  spawnTime,
   until: 900,
   worldX,
   worldY,
@@ -116,12 +116,21 @@ describe('condition floaters', () => {
     expect(later.length).toBeGreaterThan(0);
   });
 
-  it('merges hits on one target within a short window into one number', () => {
+  it('merges hits that land close together, however late the frame that sees them', () => {
     const t0 = 40_000;
-    const a = hit(7, 600);
-    draw([a], both, t0);
-    const b = hit(10, 600);
-    const drawn = draw([a, b], both, t0 + MERGE_HITS_MS / 2);
+    const a = hit(7, 600, 4, t0);
+    draw([a], both, t0 + 50);
+    const b = hit(10, 600, 4, t0 + MERGE_HITS_MS - 100);
+    const drawn = draw([a, b], both, t0 + 500);
     expect(drawn.map((d) => d.s)).toEqual([word('-17', HURT)[0]]);
+  });
+
+  it('keeps hits apart that land further apart than the window', () => {
+    const t0 = 50_000;
+    const a = hit(7, 700, 4, t0);
+    draw([a], both, t0 + 50);
+    const b = hit(10, 700, 4, t0 + MERGE_HITS_MS + 200);
+    const drawn = draw([a, b], both, t0 + MERGE_HITS_MS + 250);
+    expect(drawn).toHaveLength(2);
   });
 });
