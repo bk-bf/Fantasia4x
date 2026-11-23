@@ -3193,47 +3193,67 @@
     return view;
   }
 
-  function handleKeyDown(e: KeyboardEvent) {
-    if (!ready || menuPreview) return;
-
+  function panKeyDown(e: KeyboardEvent): boolean {
     if (get(wasdPan) && !e.ctrlKey && !e.metaKey && !e.altKey) {
       switch (e.key.toLowerCase()) {
         case 'a':
           heldPan.left = true;
           e.preventDefault();
-          return;
+          return true;
         case 'd':
           heldPan.right = true;
           e.preventDefault();
-          return;
+          return true;
         case 'w':
           heldPan.up = true;
           e.preventDefault();
-          return;
+          return true;
         case 's':
           heldPan.down = true;
           e.preventDefault();
-          return;
+          return true;
       }
     }
-
     switch (e.key) {
       case 'ArrowLeft':
         heldPan.left = true;
-        e.preventDefault();
         break;
       case 'ArrowRight':
         heldPan.right = true;
-        e.preventDefault();
         break;
       case 'ArrowUp':
         heldPan.up = true;
-        e.preventDefault();
         break;
       case 'ArrowDown':
         heldPan.down = true;
-        e.preventDefault();
         break;
+      default:
+        return false;
+    }
+    e.preventDefault();
+    return true;
+  }
+
+  function isTextEntry(target: EventTarget | null): boolean {
+    return (
+      target instanceof HTMLInputElement ||
+      target instanceof HTMLTextAreaElement ||
+      target instanceof HTMLSelectElement ||
+      (target instanceof HTMLElement && target.isContentEditable)
+    );
+  }
+
+  function handleWindowKeyDown(e: KeyboardEvent) {
+    if (!ready || menuPreview || e.defaultPrevented) return;
+    if (container?.contains(e.target as Node) || isTextEntry(e.target)) return;
+    panKeyDown(e);
+  }
+
+  function handleKeyDown(e: KeyboardEvent) {
+    if (!ready || menuPreview) return;
+    if (panKeyDown(e)) return;
+
+    switch (e.key) {
       case 'Escape': {
         let dismissed = true;
         if (debugBrush) {
@@ -4489,6 +4509,8 @@
     }
   }
 </script>
+
+<svelte:window on:keydown={handleWindowKeyDown} on:keyup={handleKeyUp} />
 
 <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
