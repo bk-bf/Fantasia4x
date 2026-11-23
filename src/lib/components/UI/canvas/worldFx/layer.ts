@@ -18,7 +18,13 @@ import {
 import type { BubbleSkin } from '$lib/pixelArt/fx/bubble';
 import { ART_TILE } from './figure';
 import { collectScene, type FxWorld, type Mark, type Scene } from './scene';
-import { drawFloats, floatersLive, hideFloats, type FloaterMode } from './floats';
+import {
+  drawFloats,
+  floatersLive,
+  hideFloats,
+  type ConditionShow,
+  type FloaterMode
+} from './floats';
 import { drawSpeech } from './speech';
 import { drawFlights, flying } from './flights';
 import { conditionState } from './onsets';
@@ -61,7 +67,7 @@ const MARKS: Record<Mark['kind'], (p: FxPainter, x: number, y: number, t: number
 class WorldFxLayer {
   private skin: BubbleSkin = 'timber';
   private bubbles = true;
-  private floaters: FloaterMode = { icons: true, text: true };
+  private floaters: FloaterMode = { icons: true, text: true, words: true };
   private sizes: LabelSizes = { floaters: 100, bubbles: 100 };
   private on: EffectToggles = {
     marks: true,
@@ -70,7 +76,8 @@ class WorldFxLayer {
     draft: true,
     text: true,
     speech: true,
-    projectiles: true
+    projectiles: true,
+    icons: true
   };
   private canvas: HTMLCanvasElement | null = null;
   private painter: FxPainter | null = null;
@@ -81,14 +88,18 @@ class WorldFxLayer {
   configure(o: {
     skin: BubbleSkin;
     bubbles: boolean;
-    floaters: FloaterMode;
+    floaters: ConditionShow;
     sizes: LabelSizes;
     on: EffectToggles;
   }): void {
     this.sizes = o.sizes;
     this.skin = o.skin;
     this.bubbles = o.bubbles;
-    this.floaters = o.floaters;
+    this.floaters = {
+      icons: o.floaters.icons && o.on.icons,
+      text: o.floaters.text && o.on.text,
+      words: o.on.text
+    };
     this.on = o.on;
     this.key = '';
   }
@@ -118,7 +129,7 @@ class WorldFxLayer {
     const scene = collectScene({ ...w, view }, this.on);
     const texts = this.texts(now);
     const shots: readonly ProjectileEvent[] = this.on.projectiles ? projectiles.live(now) : [];
-    if (this.on.text && combatFeedback.hasOnsets() && now >= this.pruneAt) {
+    if (this.conditions() && combatFeedback.hasOnsets() && now >= this.pruneAt) {
       this.pruneAt = now + PRUNE_MS;
       combatFeedback.pruneOnsets(now, conditionState(w));
     }
@@ -157,14 +168,19 @@ class WorldFxLayer {
     this.painted = true;
   }
 
+  private conditions(): boolean {
+    return this.floaters.icons || this.floaters.text;
+  }
+
   private texts(now: number): readonly CombatTextEvent[] {
     const speech = this.on.speech && this.bubbles;
-    const conditions = this.floaters.icons || this.floaters.text;
-    if (!speech && !this.on.text) return [];
+    const conditions = this.conditions();
+    const words = this.floaters.words;
+    if (!speech && !words && !conditions) return [];
     const list = combatFeedback.live(now);
     if (list.length === 0) return list;
     return list.filter((e) =>
-      e.kind === 'social' ? speech : this.on.text && (conditions || e.kind !== 'condition')
+      e.kind === 'social' ? speech : e.kind === 'condition' ? conditions : words || conditions
     );
   }
 
@@ -185,9 +201,10 @@ class WorldFxLayer {
     for (const b of s.bars) p.put(bar(BAR_W, b.v, b.ramp, b.pegs), b.x, b.y);
     for (const m of s.marks) MARKS[m.kind](p, m.x, m.y, t);
     drawFlights(p, w.renderer, shots, now);
-    const kb = labelScale(p.k, this.sizes.bubbles);
+    const kb = this.bubbles && this.on.speech ? labelScale(p.k, this.sizes.bubbles) : 0;
     const bubbles = kb > 0 ? drawSpeech(p, w.renderer, texts, now, this.skin, kb) : [];
-    if (p.kt > 0) drawFloats(p, w.renderer, texts, now, this.floaters, bubbles);
+    const locate = (id: string) => w.pawnPos.get(id) ?? w.mobPos.get(id);
+    if (p.kt > 0) drawFloats(p, w.renderer, texts, now, this.floaters, bubbles, locate);
     else hideFloats();
   }
 }
