@@ -49,19 +49,20 @@ const { values: opts } = parseArgs({
 
 const log = logger('frame-budget');
 
-async function taskMs(cdp) {
+async function mainThreadMs(cdp) {
   const { metrics } = await cdp.send('Performance.getMetrics');
-  return metrics.find((m) => m.name === 'TaskDuration').value * 1000;
+  const ms = (name) => metrics.find((m) => m.name === name).value * 1000;
+  return { task: ms('TaskDuration'), script: ms('ScriptDuration') };
 }
 
 async function timedFrames(page, cdp, n, ticks, beforeFrame) {
   const perFrame = [];
-  let last = await taskMs(cdp);
+  let last = await mainThreadMs(cdp);
   for (let i = 0; i < n; i++) {
     if (beforeFrame) await beforeFrame(i);
     await frame(page, ticks);
-    const now = await taskMs(cdp);
-    perFrame.push(now - last);
+    const now = await mainThreadMs(cdp);
+    perFrame.push({ task: now.task - last.task, script: now.script - last.script });
     last = now;
   }
   return perFrame;
@@ -76,20 +77,27 @@ const tileWidth = (page) =>
     }
   });
 
+const mean = (xs) => xs.reduce((s, x) => s + x, 0) / xs.length;
+
 function describe(perFrame) {
-  const sum = perFrame.reduce((s, x) => s + x, 0);
+  const task = perFrame.map((f) => f.task);
+  const script = perFrame.map((f) => f.script);
   return {
     frames: perFrame.length,
-    meanMs: sum / perFrame.length,
-    medianMs: median(perFrame),
-    maxMs: Math.max(...perFrame),
+    meanMs: mean(task),
+    medianMs: median(task),
+    maxMs: Math.max(...task),
+    scriptMeanMs: mean(script),
+    scriptMedianMs: median(script),
     perFrame
   };
 }
 
 function shown({ perFrame, ...rest }) {
-  const slow = perFrame.flatMap((ms, i) => (ms > 4 * rest.medianMs ? [`${i}:${Math.round(ms)}`] : []));
-  return `${JSON.stringify(rest)} slow frames ${slow.join(' ')}`;
+  const slow = perFrame.flatMap((f, i) =>
+    f.task > 4 * rest.medianMs ? [`${i}:${Math.round(f.task)}/${Math.round(f.script)}`] : []
+  );
+  return `${JSON.stringify(rest)} slow frames (task/script ms) ${slow.join(' ')}`;
 }
 
 async function steadyPhase(page, cdp, phase, n) {
@@ -123,10 +131,15 @@ async function zoomOutAndBack(page, cdp) {
     tile = next;
   }
   const farTile = tile;
-  for (let i = 0; i < steps; i++) perFrame.push(...(await wheelFrames(page, cdp, -120)));
-  const backTile = await tileWidth(page);
-  if (backTile !== closeTile)
-    throw new Error(`zoom came back to tile ${backTile}, left from ${closeTile}`);
+  for (let i = 0; i < MAX_ZOOM_STEPS && tile < closeTile; i++) {
+    perFrame.push(...(await wheelFrames(page, cdp, -120)));
+    tile = await tileWidth(page);
+  }
+  for (let i = 0; i < MAX_ZOOM_STEPS && tile > closeTile; i++) {
+    perFrame.push(...(await wheelFrames(page, cdp, 120)));
+    tile = await tileWidth(page);
+  }
+  if (tile !== closeTile) throw new Error(`zoom came back to tile ${tile}, left from ${closeTile}`);
   return { closeTile, farTile, steps, ...describe(perFrame) };
 }
 
