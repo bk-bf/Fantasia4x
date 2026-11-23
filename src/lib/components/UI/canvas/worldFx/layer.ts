@@ -18,7 +18,7 @@ import {
 import type { BubbleSkin } from '$lib/pixelArt/fx/bubble';
 import { ART_TILE } from './figure';
 import { collectScene, type FxWorld, type Mark, type Scene } from './scene';
-import { drawFloats, type FloaterMode } from './floats';
+import { drawFloats, floatersLive, type FloaterMode } from './floats';
 import { drawSpeech } from './speech';
 import { drawFlights, flying } from './flights';
 import { onsetChecker } from './onsets';
@@ -35,6 +35,9 @@ export interface FxView {
 }
 
 const BAR_W = 24;
+
+export const textScale = (k: number, dpr: number): number =>
+  Math.max(1, Math.round(Math.min(k, dpr)));
 const PRUNE_MS = 500;
 
 const MARKS: Record<Mark['kind'], (p: FxPainter, x: number, y: number, t: number) => void> = {
@@ -109,6 +112,7 @@ class WorldFxLayer {
     const moving =
       scene.routes.length > 0 ||
       texts.length > 0 ||
+      floatersLive() ||
       (shots.length > 0 && flying(shots, now)) ||
       scene.marks.length > 0;
     if (!moving && scene.bars.length === 0) {
@@ -133,7 +137,8 @@ class WorldFxLayer {
     } else this.key = '';
     p.g.setTransform(1, 0, 0, 1, 0, 0);
     p.g.clearRect(0, 0, bw, bh);
-    p.view((v.tW / ART_TILE) * dpr, -v.vx * v.tW * dpr, -v.vy * v.tH * dpr);
+    const k = (v.tW / ART_TILE) * dpr;
+    p.view(k, -v.vx * v.tW * dpr, -v.vy * v.tH * dpr, textScale(k, dpr));
     this.paint(p, w, scene, texts, shots, now);
     p.end();
     this.painted = true;
