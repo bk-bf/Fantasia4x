@@ -212,15 +212,15 @@ describe('the water moving through the painted map', () => {
     const uploads: Float32Array[] = [];
     const calls: [string, unknown[]][] = [];
     const core = windyCore(uploads, new Map(), calls);
-    const gl = core['webglState'].getContext();
+    const gl = core['webglState'].getContext()!;
     const blendShaders = {
       createProgram: () => ({ success: true }),
       getProgram: () => ({ program: {} })
     } as unknown as ShaderManager;
     const blend = GroundBlend.create(gl, blendShaders, { ...core['painted']!, water: {} })!;
-    blend.setGrid(core['gameGrid']);
+    blend.setGrid(core['gameGrid']!);
     Object.assign(core, { groundBlend: blend });
-    core['gridRenderer'].skipBlendedGround = true;
+    core['gridRenderer']!.skipBlendedGround = true;
     let now = 1000;
     vi.spyOn(performance, 'now').mockImplementation(() => now);
     core['render']();
