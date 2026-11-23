@@ -9,6 +9,17 @@ export const CAST_UNIT = 8;
 export const SHADOW_SHADE: [number, number, number] = [0.56, 0.56, 0.68];
 export const SHADOW_DEPTH = 0.75;
 export const MIN_SHADOW_TILE_PX = 6;
+export const SHADOW_REFRESH_MS = 250;
+
+export function rebuildDue(
+  built: { rect: TileRect | null; at: number },
+  rect: TileRect,
+  now: number
+): boolean {
+  const r = built.rect;
+  const moved = !r || r.x !== rect.x || r.y !== rect.y || r.w !== rect.w || r.h !== rect.h;
+  return moved || now - built.at >= SHADOW_REFRESH_MS;
+}
 
 export interface CastFrame {
   canvas: [number, number];
@@ -48,6 +59,7 @@ export class PaintedShadowCast {
   private heights = new Uint8Array(0);
   private builtKey = '';
   private builtRect: TileRect | null = null;
+  private builtAt = 0;
   private casts = false;
   private changes = 0;
   private watched: (GameGrid | null)[] = [];
@@ -116,8 +128,11 @@ export class PaintedShadowCast {
   private rebuild(f: CastFrame, rect: TileRect): void {
     const key = `${rect.x},${rect.y},${rect.w},${rect.h},${this.changes}`;
     if (key === this.builtKey) return;
+    const now = performance.now();
+    if (!rebuildDue({ rect: this.builtRect, at: this.builtAt }, rect, now)) return;
     this.builtKey = key;
     this.builtRect = rect;
+    this.builtAt = now;
     if (this.heights.length !== rect.w * rect.h) this.heights = new Uint8Array(rect.w * rect.h);
     this.casts = castHeights(f.casters, rect, this.heights);
     if (!this.casts) return;
