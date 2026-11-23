@@ -25,6 +25,7 @@
     clearRenderTileDeltas
   } from '$lib/components/UI/canvas/mainTileDeltas';
   import { fullRebuildTerrain } from '$lib/components/UI/canvas/terrainPaint';
+  import { farZoomTileSize } from '$lib/components/UI/canvas/zoomLimits';
   import {
     gameState,
     rendererReady,
@@ -172,7 +173,7 @@
   function computeFitTileSize(canvasW: number, canvasH: number): number {
     const mapW = worldMap.length > 0 ? worldMap[0].length : MAP_W;
     const mapH = worldMap.length > 0 ? worldMap.length : MAP_H;
-    return Math.max(canvasW / mapW, canvasH / mapH);
+    return farZoomTileSize(canvasW, canvasH, mapW, mapH);
   }
 
   let canvas: HTMLCanvasElement;
