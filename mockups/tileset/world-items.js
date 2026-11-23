@@ -78,7 +78,6 @@ const WORLD_ITEMS = (() => {
   const sword = (pommel, hilt, cross, blade) => [pommel, hilt, cross, blade];
   const knife = (hilt, collar, blade) => [hilt, collar, blade];
   const DRAWN = {
-    flint_dagger: { pieces: () => knife([grip(5), 'wood'], [wrapped(2), 'cord'], [BLADE.broad(8), 'flint']) },
     copper_dagger: { pieces: () => sword([POMMEL.dot, 'bone'], [wrapped(4), 'bone'], [guard(3), 'copper'], [BLADE.leaf(10), 'copper']) },
     iron_rondel: { pieces: () => sword([POMMEL.disc, 'iron'], [grip(5), 'wood'], [POMMEL.disc, 'iron'], [BLADE.spike(11, 5), 'iron']) },
     steel_stiletto: { pieces: () => sword([POMMEL.dot, 'steel'], [wrapped(5), 'leather'], [guard(3), 'steel'], [BLADE.needle(13), 'steel']) },
