@@ -62,6 +62,11 @@ function pawnHasCondition(pawn: Pawn, id: string): boolean {
   return false;
 }
 
+export type MoveFactor = {
+  kind: 'dexterity' | 'build' | 'legs' | 'needs' | 'boots' | 'barefoot' | 'conditions' | 'load';
+  mult: number;
+};
+
 export interface PawnService {
   updatePawnNeeds(pawnId: string, gameState: GameState): GameState;
 
@@ -96,7 +101,7 @@ export interface PawnService {
   teleportPawn(pawnId: string, pos: { x: number; y: number }, gameState: GameState): GameState;
   processMovement(gameState: GameState): GameState;
 
-  getMoveSpeed(entity: Pawn | Mob): { tilesPerSecond: number; sources: string[] };
+  getMoveSpeed(entity: Pawn | Mob): { tilesPerSecond: number; sources: MoveFactor[] };
 
   getTransientConditions(entity: Pawn | Mob): TransientConditionDef[];
 }
@@ -794,21 +799,21 @@ export class PawnServiceImpl implements PawnService {
     };
   }
 
-  getMoveSpeed(entity: Pawn | Mob): { tilesPerSecond: number; sources: string[] } {
+  getMoveSpeed(entity: Pawn | Mob): { tilesPerSecond: number; sources: MoveFactor[] } {
     const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
-    const sources: string[] = [];
+    const sources: MoveFactor[] = [];
 
     const base = 4.0;
 
     const dex = entity.stats?.dexterity ?? 10;
     const dexFactor = clamp(0.5 + dex / 20, 0.4, 1.8);
-    sources.push(`DEX ${dex} ×${dexFactor.toFixed(2)}`);
+    sources.push({ kind: 'dexterity', mult: dexFactor });
 
     const str = entity.stats?.strength ?? 10;
     const weight = entity.physicalTraits?.weight ?? 60;
     const capacity = Math.max(1, str * 6);
     const weightFactor = clamp(1.15 - 0.15 * (weight / capacity), 0.65, 1.1);
-    sources.push(`${weight}kg/STR${str} ×${weightFactor.toFixed(2)}`);
+    sources.push({ kind: 'build', mult: weightFactor });
 
     let legFactor = 1;
     const legs = (entity.limbs ?? []).filter((l) => l.id === 'left_leg' || l.id === 'right_leg');
@@ -816,7 +821,7 @@ export class PawnServiceImpl implements PawnService {
       const locomotion =
         legs.reduce((sum, l) => sum + (l.isMissing ? 0 : l.health / 100), 0) / legs.length;
       legFactor = clamp(locomotion, 0.1, 1);
-      if (legFactor < 0.999) sources.push(`legs ×${legFactor.toFixed(2)}`);
+      if (legFactor < 0.999) sources.push({ kind: 'legs', mult: legFactor });
     }
 
     const hunger = entity.needs?.hunger ?? 0;
@@ -824,7 +829,7 @@ export class PawnServiceImpl implements PawnService {
     const hungerPenalty = Math.max(0, (hunger - 50) / 50) * 0.25;
     const fatiguePenalty = Math.max(0, (fatigue - 50) / 50) * 0.25;
     const needsFactor = clamp(1 - hungerPenalty - fatiguePenalty, 0.5, 1);
-    if (needsFactor < 0.999) sources.push(`needs ×${needsFactor.toFixed(2)}`);
+    if (needsFactor < 0.999) sources.push({ kind: 'needs', mult: needsFactor });
 
     const boot = (entity as Pawn).equipment?.boots;
     const bootPenalty = boot
@@ -832,7 +837,7 @@ export class PawnServiceImpl implements PawnService {
       : 0;
     const footFactor = boot ? clamp(1 - bootPenalty, 0.8, 1) : BAREFOOT_MOVE_FACTOR;
     if (Math.abs(footFactor - 1) > 0.001)
-      sources.push(boot ? `boots ×${footFactor.toFixed(2)}` : `barefoot ×${footFactor.toFixed(2)}`);
+      sources.push({ kind: boot ? 'boots' : 'barefoot', mult: footFactor });
 
     let conditionFactor = getActiveTransientConditions(entity).reduce(
       (r, e) => r * (e.modifiers.moveSpeed ?? 1),
@@ -843,7 +848,7 @@ export class PawnServiceImpl implements PawnService {
       if (stage?.modifiers.moveSpeed != null) conditionFactor *= stage.modifiers.moveSpeed;
     }
     if (Math.abs(conditionFactor - 1) > 0.001)
-      sources.push(`conditions ×${conditionFactor.toFixed(2)}`);
+      sources.push({ kind: 'conditions', mult: conditionFactor });
 
     let loadFactor = 1;
     const inv = (entity as Pawn).inventory;
@@ -868,7 +873,7 @@ export class PawnServiceImpl implements PawnService {
       const fv = budget.maxVolumeL > 0 ? lv / budget.maxVolumeL : 0;
       const loadFrac = clamp(Math.max(fw, fv), 0, 1);
       loadFactor = clamp(1 - loadFrac * 0.4, 0.6, 1);
-      if (loadFactor < 0.999) sources.push(`load ×${loadFactor.toFixed(2)}`);
+      if (loadFactor < 0.999) sources.push({ kind: 'load', mult: loadFactor });
     }
 
     const tilesPerSecond = Math.max(

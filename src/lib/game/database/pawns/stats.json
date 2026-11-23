@@ -1,6 +1,7 @@
 [
     {
         "id": "hit_precision",
+        "name": "Precision",
         "category": "combat",
         "primaryStat": "dexterity",
         "formula": "clamp(0.045 × (APT / 0.85) ** 5, 0.03, 0.22) × consciousness × sight",
@@ -8,6 +9,7 @@
     },
     {
         "id"         : "melee_damage",
+        "name"       : "Strike",
         "category"   : "combat",
         "primaryStat": "strength",
         "formula"    : "(1.0 + (POWER − 10) × 0.1) × manipulation",
@@ -15,6 +17,7 @@
     },
     {
         "id"         : "armor_damage",
+        "name"       : "Leverage",
         "category"   : "combat",
         "primaryStat": "strength",
         "formula"    : "APT × manipulation",
@@ -22,6 +25,7 @@
     },
     {
         "id"         : "hit_chance",
+        "name"       : "Hit",
         "category"   : "combat",
         "primaryStat": "dexterity",
         "formula"    : "APT × sight × manipulation",
@@ -29,6 +33,7 @@
     },
     {
         "id"         : "dodge",
+        "name"       : "Dodge",
         "category"   : "combat",
         "primaryStat": "dexterity",
         "formula"    : "(APT − (weight − 70) × 0.002) × moving",
@@ -36,6 +41,7 @@
     },
     {
         "id"         : "block",
+        "name"       : "Block",
         "category"   : "combat",
         "primaryStat": "constitution",
         "formula"    : "0.06 × APT + (weight − 70) × 0.0015",
@@ -43,6 +49,7 @@
     },
     {
         "id"         : "stealth",
+        "name"       : "Stealth",
         "category"   : "combat",
         "primaryStat": "dexterity",
         "formula"    : "clamp(1 + (70 − weight) × 0.015, 0.2, 2.2) × clamp((DEXTERITY − 8) × 0.1, 0.0, 1.4) × moving",
@@ -50,6 +57,7 @@
     },
     {
         "id"         : "knockdown_resistance",
+        "name"       : "Footing",
         "category"   : "combat",
         "primaryStat": "constitution",
         "formula"    : "(1.0 + (CONSTITUTION − 10) × 0.025) × consciousness",
@@ -57,6 +65,7 @@
     },
     {
         "id"         : "attack_speed",
+        "name"       : "Swing",
         "category"   : "combat",
         "primaryStat": "dexterity",
         "formula"    : "APT × manipulation",
@@ -64,6 +73,7 @@
     },
     {
         "id": "aim_accuracy",
+        "name": "Aim",
         "category": "combat",
         "primaryStat": "perception",
         "formula": "APT × sight × manipulation",
@@ -71,6 +81,7 @@
     },
     {
         "id": "aim_speed",
+        "name": "Draw",
         "category": "combat",
         "primaryStat": "dexterity",
         "formula": "(1.0 + (DEXTERITY − 10) × 0.04) × manipulation",
@@ -78,6 +89,7 @@
     },
     {
         "id": "reload_speed",
+        "name": "Reload",
         "category": "combat",
         "primaryStat": "dexterity",
         "formula": "(1.0 + (DEXTERITY − 10) × 0.03) × manipulation",
@@ -85,6 +97,7 @@
     },
     {
         "id": "aim_range",
+        "name": "Range",
         "category": "combat",
         "primaryStat": "perception",
         "formula": "(1.0 + (PERCEPTION − 10) × 0.025) × sight",
@@ -92,6 +105,7 @@
     },
     {
         "id": "ranged_damage",
+        "name": "Shot",
         "category": "combat",
         "primaryStat": "strength",
         "formula": "(1.0 + (POWER − 10) × 0.1) × manipulation",
@@ -99,6 +113,7 @@
     },
     {
         "id": "heal_rate",
+        "name": "Healing",
         "category": "physical",
         "primaryStat": "constitution",
         "formula": "(1.0 + (CONSTITUTION − 10) × 0.05) × blood_filtration",
@@ -106,6 +121,7 @@
     },
     {
         "id"         : "movement_speed",
+        "name"       : "Move",
         "category"   : "physical",
         "primaryStat": "dexterity",
         "formula"    : "(1.0 + (DEXTERITY − 10) × 0.05 − (weight − 70) × 0.003 + (height − 170) × 0.001) × moving",
@@ -113,6 +129,7 @@
     },
     {
         "id"         : "stamina",
+        "name"       : "Stamina",
         "category"   : "physical",
         "primaryStat": "constitution",
         "formula"    : "(50 + (CONSTITUTION − 10) × 4 + (DEXTERITY − 10) × 2) × moving × blood_pumping",
@@ -120,6 +137,7 @@
     },
     {
         "id": "stamina_recovery_rate",
+        "name": "Second wind",
         "category": "physical",
         "primaryStat": "constitution",
         "formula": "(2 + (CONSTITUTION − 10) × 0.15) × blood_filtration × blood_pumping",
@@ -127,6 +145,7 @@
     },
     {
         "id"         : "blood_volume",
+        "name"       : "Blood",
         "category"   : "physical",
         "primaryStat": "constitution",
         "formula"    : "weight × 1.4 + (CONSTITUTION − 10) × 2",
@@ -134,6 +153,7 @@
     },
     {
         "id"         : "blood_regeneration",
+        "name"       : "Blood renewal",
         "category"   : "physical",
         "primaryStat": "constitution",
         "formula"    : "(1.0 + (CONSTITUTION − 10) × 0.08) × blood_filtration",
@@ -141,6 +161,7 @@
     },
     {
         "id"         : "blood_clotting",
+        "name"       : "Clotting",
         "category"   : "physical",
         "primaryStat": "constitution",
         "formula"    : "(1.0 + (CONSTITUTION − 10) × 0.05) × blood_filtration",
@@ -148,6 +169,7 @@
     },
     {
         "id": "hunger_rate",
+        "name": "Appetite",
         "category": "physical",
         "primaryStat": "constitution",
         "formula": "1.0 + (weight − 70) × 0.01",
@@ -155,6 +177,7 @@
     },
     {
         "id": "fatigue_rate",
+        "name": "Tiring",
         "category": "physical",
         "primaryStat": "constitution",
         "formula": "1.0 − (CONSTITUTION − 10) × 0.02",
@@ -162,6 +185,7 @@
     },
     {
         "id": "carry_weight",
+        "name": "Carry",
         "category": "capacity",
         "primaryStat": "strength",
         "formula": "(11 + STRENGTH × 0.19) × frameFactor",
@@ -169,6 +193,7 @@
     },
     {
         "id"              : "carry_volume",
+        "name"            : "Pack room",
         "category"        : "capacity",
         "primaryStat"     : "constitution",
         "carryVolumePerKg": 0.13,
@@ -177,6 +202,7 @@
     },
     {
         "id"         : "cutting_resistance",
+        "name"       : "Cut guard",
         "category"   : "resistance",
         "primaryStat": "dexterity",
         "formula"    : "(0.0 + (DEXTERITY − 10) × 0.01)",
@@ -184,6 +210,7 @@
     },
     {
         "id"         : "piercing_resistance",
+        "name"       : "Pierce guard",
         "category"   : "resistance",
         "primaryStat": "constitution",
         "formula"    : "(0.0 + (CONSTITUTION − 10) × 0.008)",
@@ -191,6 +218,7 @@
     },
     {
         "id"         : "blunt_resistance",
+        "name"       : "Blunt guard",
         "category"   : "resistance",
         "primaryStat": "constitution",
         "formula"    : "(0.0 + (CONSTITUTION − 10) × 0.008 + (STRENGTH − 10) × 0.004)",
@@ -198,6 +226,7 @@
     },
     {
         "id": "fire_resistance",
+        "name": "Heat",
         "category": "resistance",
         "primaryStat": "constitution",
         "formula": "(0.0 + (CONSTITUTION − 10) × 0.01)",
@@ -205,6 +234,7 @@
     },
     {
         "id": "cold_resistance",
+        "name": "Cold",
         "category": "resistance",
         "primaryStat": "constitution",
         "formula": "(0.0 + (CONSTITUTION − 10) × 0.01)",
@@ -212,6 +242,7 @@
     },
     {
         "id": "wetness_resistance",
+        "name": "Rain",
         "category": "resistance",
         "primaryStat": "constitution",
         "formula": "(0.0 + (CONSTITUTION − 10) × 0.015)",
@@ -219,6 +250,7 @@
     },
     {
         "id"         : "lightning_resistance",
+        "name"       : "Lightning",
         "category"   : "resistance",
         "primaryStat": "dexterity",
         "formula"    : "(0.0 + (DEXTERITY − 10) × 0.01)",
@@ -226,6 +258,7 @@
     },
     {
         "id"         : "shadow_resistance",
+        "name"       : "Shadow",
         "category"   : "resistance",
         "primaryStat": "intelligence",
         "formula"    : "(0.0 + (INTELLIGENCE − 10) × 0.01)",
@@ -233,6 +266,7 @@
     },
     {
         "id"         : "poison_resistance",
+        "name"       : "Poison",
         "category"   : "resistance",
         "primaryStat": "constitution",
         "formula"    : "(0.0 + (CONSTITUTION − 10) × 0.015) × blood_filtration",
@@ -240,6 +274,7 @@
     },
     {
         "id"         : "disease_resistance",
+        "name"       : "Sickness",
         "category"   : "resistance",
         "primaryStat": "constitution",
         "formula"    : "(0.0 + (CONSTITUTION − 10) × 0.01) × blood_filtration",
@@ -247,6 +282,7 @@
     },
     {
         "id"         : "mental_resistance",
+        "name"       : "Nerve",
         "category"   : "resistance",
         "primaryStat": "intelligence",
         "formula"    : "(0.0 + (INTELLIGENCE − 10) × 0.015) × consciousness",
@@ -254,6 +290,7 @@
     },
     {
         "id"         : "foraging_speed",
+        "name"       : "Foraging speed",
         "category"   : "work",
         "primaryStat": "perception",
         "formula"    : "SKILL × (1.0 + (STRENGTH − 10) × 0.0015 + (DEXTERITY − 10) × 0.0015) × ((sight + moving) / 2)",
@@ -261,6 +298,7 @@
     },
     {
         "id"         : "foraging_yield",
+        "name"       : "Foraging yield",
         "category"   : "work",
         "primaryStat": "perception",
         "formula"    : "SKILL × (1.0 + (INTELLIGENCE − 10) × 0.0015 + (PERCEPTION − 10) × 0.0015) × sight",
@@ -268,6 +306,7 @@
     },
     {
         "id"         : "woodcutting_speed",
+        "name"       : "Woodcutting speed",
         "category"   : "work",
         "primaryStat": "strength",
         "formula"    : "SKILL × (1.0 + (STRENGTH − 10) × 0.0015 + (DEXTERITY − 10) × 0.0015) × ((manipulation + moving) / 2)",
@@ -275,6 +314,7 @@
     },
     {
         "id"         : "woodcutting_yield",
+        "name"       : "Woodcutting yield",
         "category"   : "work",
         "primaryStat": "strength",
         "formula"    : "SKILL × (1.0 + (INTELLIGENCE − 10) × 0.0015 + (PERCEPTION − 10) × 0.0015) × manipulation",
@@ -282,6 +322,7 @@
     },
     {
         "id"         : "mining_speed",
+        "name"       : "Mining speed",
         "category"   : "work",
         "primaryStat": "strength",
         "formula"    : "SKILL × (1.0 + (STRENGTH − 10) × 0.0015 + (DEXTERITY − 10) × 0.0015) × ((manipulation + moving) / 2)",
@@ -289,6 +330,7 @@
     },
     {
         "id"         : "mining_yield",
+        "name"       : "Mining yield",
         "category"   : "work",
         "primaryStat": "strength",
         "formula"    : "SKILL × (1.0 + (INTELLIGENCE − 10) × 0.0015 + (PERCEPTION − 10) × 0.0015) × manipulation",
@@ -296,6 +338,7 @@
     },
     {
         "id"         : "butchery_speed",
+        "name"       : "Butchery speed",
         "category"   : "work",
         "primaryStat": "strength",
         "formula"    : "SKILL × (1.0 + (STRENGTH − 10) × 0.0015 + (DEXTERITY − 10) × 0.0015) × manipulation",
@@ -303,6 +346,7 @@
     },
     {
         "id"         : "butchery_yield",
+        "name"       : "Butchery yield",
         "category"   : "work",
         "primaryStat": "strength",
         "formula"    : "SKILL × (1.0 + (INTELLIGENCE − 10) × 0.0015 + (PERCEPTION − 10) × 0.0015) × manipulation",
@@ -310,6 +354,7 @@
     },
     {
         "id"         : "butchery_quality",
+        "name"       : "Butchery quality",
         "category"   : "work",
         "primaryStat": "dexterity",
         "formula"    : "SKILL × (1.0 + (STRENGTH − 10) × 0.0007 + (DEXTERITY − 10) × 0.0007 + (INTELLIGENCE − 10) × 0.0007 + (PERCEPTION − 10) × 0.0007) × ((manipulation + sight) / 2)",
@@ -317,6 +362,7 @@
     },
     {
         "id"         : "fishing_speed",
+        "name"       : "Fishing speed",
         "category"   : "work",
         "primaryStat": "dexterity",
         "formula"    : "SKILL × (1.0 + (STRENGTH − 10) × 0.0015 + (DEXTERITY − 10) × 0.0015) × ((sight + manipulation) / 2)",
@@ -324,6 +370,7 @@
     },
     {
         "id"         : "fishing_yield",
+        "name"       : "Fishing yield",
         "category"   : "work",
         "primaryStat": "dexterity",
         "formula"    : "SKILL × (1.0 + (INTELLIGENCE − 10) × 0.0015 + (PERCEPTION − 10) × 0.0015) × sight",
@@ -331,6 +378,7 @@
     },
     {
         "id"         : "crafting_speed",
+        "name"       : "Crafting speed",
         "category"   : "work",
         "primaryStat": "dexterity",
         "formula"    : "SKILL × (1.0 + (STRENGTH − 10) × 0.0015 + (DEXTERITY − 10) × 0.0015) × ((manipulation + sight) / 2)",
@@ -338,6 +386,7 @@
     },
     {
         "id"         : "crafting_quality",
+        "name"       : "Crafting quality",
         "category"   : "work",
         "primaryStat": "dexterity",
         "formula"    : "SKILL × (1.0 + (STRENGTH − 10) × 0.0007 + (DEXTERITY − 10) × 0.0007 + (INTELLIGENCE − 10) × 0.0007 + (PERCEPTION − 10) × 0.0007) × ((manipulation + sight + consciousness) / 3)",
@@ -345,6 +394,7 @@
     },
     {
         "id"         : "metalworking_speed",
+        "name"       : "Metalworking speed",
         "category"   : "work",
         "primaryStat": "strength",
         "formula"    : "SKILL × (1.0 + (STRENGTH − 10) × 0.0015 + (DEXTERITY − 10) × 0.0015) × ((manipulation + sight) / 2)",
@@ -352,6 +402,7 @@
     },
     {
         "id"         : "metalworking_quality",
+        "name"       : "Metalworking quality",
         "category"   : "work",
         "primaryStat": "intelligence",
         "formula"    : "SKILL × (1.0 + (STRENGTH − 10) × 0.0007 + (DEXTERITY − 10) × 0.0007 + (INTELLIGENCE − 10) × 0.0007 + (PERCEPTION − 10) × 0.0007) × ((manipulation + sight + consciousness) / 3)",
@@ -359,6 +410,7 @@
     },
     {
         "id"         : "leatherworking_speed",
+        "name"       : "Leatherwork speed",
         "category"   : "work",
         "primaryStat": "dexterity",
         "formula"    : "SKILL × (1.0 + (STRENGTH − 10) × 0.0015 + (DEXTERITY − 10) × 0.0015) × ((manipulation + sight) / 2)",
@@ -366,6 +418,7 @@
     },
     {
         "id"         : "leatherworking_quality",
+        "name"       : "Leatherwork quality",
         "category"   : "work",
         "primaryStat": "dexterity",
         "formula"    : "SKILL × (1.0 + (STRENGTH − 10) × 0.0007 + (DEXTERITY − 10) × 0.0007 + (INTELLIGENCE − 10) × 0.0007 + (PERCEPTION − 10) × 0.0007) × ((manipulation + sight) / 2)",
@@ -373,6 +426,7 @@
     },
     {
         "id"         : "tailoring_speed",
+        "name"       : "Tailoring speed",
         "category"   : "work",
         "primaryStat": "dexterity",
         "formula"    : "SKILL × (1.0 + (STRENGTH − 10) × 0.0015 + (DEXTERITY − 10) × 0.0015) × ((manipulation + sight) / 2)",
@@ -380,6 +434,7 @@
     },
     {
         "id"         : "tailoring_quality",
+        "name"       : "Tailoring quality",
         "category"   : "work",
         "primaryStat": "dexterity",
         "formula"    : "SKILL × (1.0 + (STRENGTH − 10) × 0.0007 + (DEXTERITY − 10) × 0.0007 + (INTELLIGENCE − 10) × 0.0007 + (PERCEPTION − 10) × 0.0007) × ((manipulation + sight) / 2)",
@@ -387,6 +442,7 @@
     },
     {
         "id"         : "woodworking_speed",
+        "name"       : "Woodworking speed",
         "category"   : "work",
         "primaryStat": "dexterity",
         "formula"    : "SKILL × (1.0 + (STRENGTH − 10) × 0.0015 + (DEXTERITY − 10) × 0.0015) × ((manipulation + sight) / 2)",
@@ -394,6 +450,7 @@
     },
     {
         "id"         : "woodworking_quality",
+        "name"       : "Woodworking quality",
         "category"   : "work",
         "primaryStat": "dexterity",
         "formula"    : "SKILL × (1.0 + (STRENGTH − 10) × 0.0007 + (DEXTERITY − 10) × 0.0007 + (INTELLIGENCE − 10) × 0.0007 + (PERCEPTION − 10) × 0.0007) × ((manipulation + sight) / 2)",
@@ -401,6 +458,7 @@
     },
     {
         "id"         : "pottery_speed",
+        "name"       : "Pottery speed",
         "category"   : "work",
         "primaryStat": "dexterity",
         "formula"    : "SKILL × (1.0 + (STRENGTH − 10) × 0.0015 + (DEXTERITY − 10) × 0.0015) × ((manipulation + sight) / 2)",
@@ -408,6 +466,7 @@
     },
     {
         "id"         : "pottery_quality",
+        "name"       : "Pottery quality",
         "category"   : "work",
         "primaryStat": "dexterity",
         "formula"    : "SKILL × (1.0 + (STRENGTH − 10) × 0.0007 + (DEXTERITY − 10) × 0.0007 + (INTELLIGENCE − 10) × 0.0007 + (PERCEPTION − 10) × 0.0007) × ((manipulation + sight) / 2)",
@@ -415,6 +474,7 @@
     },
     {
         "id"         : "stoneworking_speed",
+        "name"       : "Stoneworking speed",
         "category"   : "work",
         "primaryStat": "strength",
         "formula"    : "SKILL × (1.0 + (STRENGTH − 10) × 0.0015 + (DEXTERITY − 10) × 0.0015) × ((manipulation + sight) / 2)",
@@ -422,6 +482,7 @@
     },
     {
         "id"         : "stoneworking_quality",
+        "name"       : "Stoneworking quality",
         "category"   : "work",
         "primaryStat": "dexterity",
         "formula"    : "SKILL × (1.0 + (STRENGTH − 10) × 0.0007 + (DEXTERITY − 10) × 0.0007 + (INTELLIGENCE − 10) × 0.0007 + (PERCEPTION − 10) × 0.0007) × ((manipulation + sight + consciousness) / 3)",
@@ -429,6 +490,7 @@
     },
     {
         "id"         : "knapping_speed",
+        "name"       : "Knapping speed",
         "category"   : "work",
         "primaryStat": "strength",
         "formula"    : "SKILL × (1.0 + (STRENGTH − 10) × 0.0015 + (DEXTERITY − 10) × 0.0015) × ((manipulation + sight) / 2)",
@@ -436,6 +498,7 @@
     },
     {
         "id"         : "knapping_quality",
+        "name"       : "Knapping quality",
         "category"   : "work",
         "primaryStat": "strength",
         "formula"    : "SKILL × (1.0 + (STRENGTH − 10) × 0.0007 + (DEXTERITY − 10) × 0.0007 + (INTELLIGENCE − 10) × 0.0007 + (PERCEPTION − 10) × 0.0007) × ((manipulation + sight) / 2)",
@@ -443,6 +506,7 @@
     },
     {
         "id"         : "masonry_speed",
+        "name"       : "Masonry speed",
         "category"   : "work",
         "primaryStat": "strength",
         "formula"    : "SKILL × (1.0 + (STRENGTH − 10) × 0.0015 + (DEXTERITY − 10) × 0.0015) × ((manipulation + moving) / 2)",
@@ -450,6 +514,7 @@
     },
     {
         "id"         : "masonry_quality",
+        "name"       : "Masonry quality",
         "category"   : "work",
         "primaryStat": "strength",
         "formula"    : "SKILL × (1.0 + (STRENGTH − 10) × 0.0007 + (DEXTERITY − 10) × 0.0007 + (INTELLIGENCE − 10) × 0.0007 + (PERCEPTION − 10) × 0.0007) × ((manipulation + moving) / 2)",
@@ -457,6 +522,7 @@
     },
     {
         "id"         : "lapidary_speed",
+        "name"       : "Lapidary speed",
         "category"   : "work",
         "primaryStat": "dexterity",
         "formula"    : "SKILL × (1.0 + (DEXTERITY − 10) × 0.0015 + (PERCEPTION − 10) × 0.0015) × ((manipulation + sight) / 2)",
@@ -464,6 +530,7 @@
     },
     {
         "id"         : "lapidary_quality",
+        "name"       : "Lapidary quality",
         "category"   : "work",
         "primaryStat": "dexterity",
         "formula"    : "SKILL × (1.0 + (STRENGTH − 10) × 0.0007 + (DEXTERITY − 10) × 0.0007 + (INTELLIGENCE − 10) × 0.0007 + (PERCEPTION − 10) × 0.0007) × ((manipulation + sight) / 2)",
@@ -471,6 +538,7 @@
     },
     {
         "id"         : "bonecarving_speed",
+        "name"       : "Bonecarving speed",
         "category"   : "work",
         "primaryStat": "dexterity",
         "formula"    : "SKILL × (1.0 + (DEXTERITY − 10) × 0.0015 + (STRENGTH − 10) × 0.0015) × ((manipulation + sight) / 2)",
@@ -478,6 +546,7 @@
     },
     {
         "id"         : "bonecarving_quality",
+        "name"       : "Bonecarving quality",
         "category"   : "work",
         "primaryStat": "dexterity",
         "formula"    : "SKILL × (1.0 + (STRENGTH − 10) × 0.0007 + (DEXTERITY − 10) × 0.0007 + (INTELLIGENCE − 10) × 0.0007 + (PERCEPTION − 10) × 0.0007) × ((manipulation + sight) / 2)",
@@ -485,6 +554,7 @@
     },
     {
         "id"         : "weaving_speed",
+        "name"       : "Weaving speed",
         "category"   : "work",
         "primaryStat": "dexterity",
         "formula"    : "SKILL × (1.0 + (DEXTERITY − 10) × 0.0015 + (PERCEPTION − 10) × 0.0015) × ((manipulation + sight) / 2)",
@@ -492,6 +562,7 @@
     },
     {
         "id"         : "weaving_quality",
+        "name"       : "Weaving quality",
         "category"   : "work",
         "primaryStat": "dexterity",
         "formula"    : "SKILL × (1.0 + (STRENGTH − 10) × 0.0007 + (DEXTERITY − 10) × 0.0007 + (INTELLIGENCE − 10) × 0.0007 + (PERCEPTION − 10) × 0.0007) × ((manipulation + sight) / 2)",
@@ -499,6 +570,7 @@
     },
     {
         "id"         : "meals_speed",
+        "name"       : "Meals speed",
         "category"   : "work",
         "primaryStat": "dexterity",
         "formula"    : "SKILL × (1.0 + (DEXTERITY − 10) × 0.0015 + (INTELLIGENCE − 10) × 0.0015) × ((manipulation + sight) / 2)",
@@ -506,6 +578,7 @@
     },
     {
         "id"         : "meals_quality",
+        "name"       : "Meals quality",
         "category"   : "work",
         "primaryStat": "dexterity",
         "formula"    : "SKILL × (1.0 + (STRENGTH − 10) × 0.0007 + (DEXTERITY − 10) × 0.0007 + (INTELLIGENCE − 10) × 0.0007 + (PERCEPTION − 10) × 0.0007) × ((manipulation + sight) / 2)",
@@ -513,6 +586,7 @@
     },
     {
         "id"         : "baking_speed",
+        "name"       : "Baking speed",
         "category"   : "work",
         "primaryStat": "dexterity",
         "formula"    : "SKILL × (1.0 + (DEXTERITY − 10) × 0.0015 + (INTELLIGENCE − 10) × 0.0015) × ((manipulation + sight) / 2)",
@@ -520,6 +594,7 @@
     },
     {
         "id"         : "baking_quality",
+        "name"       : "Baking quality",
         "category"   : "work",
         "primaryStat": "dexterity",
         "formula"    : "SKILL × (1.0 + (STRENGTH − 10) × 0.0007 + (DEXTERITY − 10) × 0.0007 + (INTELLIGENCE − 10) × 0.0007 + (PERCEPTION − 10) × 0.0007) × ((manipulation + sight) / 2)",
@@ -527,6 +602,7 @@
     },
     {
         "id"         : "brewing_speed",
+        "name"       : "Brewing speed",
         "category"   : "work",
         "primaryStat": "intelligence",
         "formula"    : "SKILL × (1.0 + (INTELLIGENCE − 10) × 0.0015 + (PERCEPTION − 10) × 0.0015) × ((sight + consciousness) / 2)",
@@ -534,6 +610,7 @@
     },
     {
         "id"         : "brewing_quality",
+        "name"       : "Brewing quality",
         "category"   : "work",
         "primaryStat": "intelligence",
         "formula"    : "SKILL × (1.0 + (STRENGTH − 10) × 0.0007 + (DEXTERITY − 10) × 0.0007 + (INTELLIGENCE − 10) × 0.0007 + (PERCEPTION − 10) × 0.0007) × ((sight + consciousness) / 2)",
@@ -541,6 +618,7 @@
     },
     {
         "id"         : "herbalism_speed",
+        "name"       : "Herbalism speed",
         "category"   : "work",
         "primaryStat": "intelligence",
         "formula"    : "SKILL × (1.0 + (INTELLIGENCE − 10) × 0.0015 + (PERCEPTION − 10) × 0.0015) × ((sight + consciousness) / 2)",
@@ -548,6 +626,7 @@
     },
     {
         "id"         : "herbalism_quality",
+        "name"       : "Herbalism quality",
         "category"   : "work",
         "primaryStat": "intelligence",
         "formula"    : "SKILL × (1.0 + (STRENGTH − 10) × 0.0007 + (DEXTERITY − 10) × 0.0007 + (INTELLIGENCE − 10) × 0.0007 + (PERCEPTION − 10) × 0.0007) × ((sight + consciousness) / 2)",
@@ -555,6 +634,7 @@
     },
     {
         "id"         : "potions_speed",
+        "name"       : "Potions speed",
         "category"   : "work",
         "primaryStat": "intelligence",
         "formula"    : "SKILL × (1.0 + (INTELLIGENCE − 10) × 0.0015 + (PERCEPTION − 10) × 0.0015) × ((sight + consciousness) / 2)",
@@ -562,6 +642,7 @@
     },
     {
         "id"         : "potions_quality",
+        "name"       : "Potions quality",
         "category"   : "work",
         "primaryStat": "intelligence",
         "formula"    : "SKILL × (1.0 + (STRENGTH − 10) × 0.0007 + (DEXTERITY − 10) × 0.0007 + (INTELLIGENCE − 10) × 0.0007 + (PERCEPTION − 10) × 0.0007) × ((sight + consciousness) / 2)",
@@ -569,6 +650,7 @@
     },
     {
         "id"         : "digging_speed",
+        "name"       : "Digging speed",
         "category"   : "work",
         "primaryStat": "dexterity",
         "formula"    : "SKILL × (1.0 + (STRENGTH − 10) × 0.0015 + (DEXTERITY − 10) × 0.0015) × ((manipulation + moving) / 2)",
@@ -576,6 +658,7 @@
     },
     {
         "id"         : "digging_yield",
+        "name"       : "Digging yield",
         "category"   : "work",
         "primaryStat": "strength",
         "formula"    : "SKILL × (1.0 + (INTELLIGENCE − 10) × 0.0015 + (PERCEPTION − 10) × 0.0015) × manipulation",
@@ -583,6 +666,7 @@
     },
     {
         "id"         : "research_speed",
+        "name"       : "Research speed",
         "category"   : "work",
         "primaryStat": "intelligence",
         "formula"    : "SKILL × (1.0 + (STRENGTH − 10) × 0.0015 + (DEXTERITY − 10) × 0.0015) × ((sight + consciousness) / 2)",
@@ -590,6 +674,7 @@
     },
     {
         "id"         : "construction_speed",
+        "name"       : "Construction speed",
         "category"   : "work",
         "primaryStat": "strength",
         "formula"    : "SKILL × (1.0 + (STRENGTH − 10) × 0.0015 + (DEXTERITY − 10) × 0.0015) × ((manipulation + moving) / 2)",
@@ -597,6 +682,7 @@
     },
     {
         "id"         : "construction_quality",
+        "name"       : "Construction quality",
         "category"   : "work",
         "primaryStat": "dexterity",
         "formula"    : "SKILL × (1.0 + (STRENGTH − 10) × 0.0007 + (DEXTERITY − 10) × 0.0007 + (INTELLIGENCE − 10) × 0.0007 + (PERCEPTION − 10) × 0.0007) × ((manipulation + sight) / 2)",
@@ -604,6 +690,7 @@
     },
     {
         "id"         : "repair_speed",
+        "name"       : "Repairing speed",
         "category"   : "work",
         "primaryStat": "dexterity",
         "formula"    : "SKILL × (1.0 + (STRENGTH − 10) × 0.0015 + (DEXTERITY − 10) × 0.0015) × ((manipulation + sight) / 2)",
@@ -611,6 +698,7 @@
     },
     {
         "id"         : "repair_quality",
+        "name"       : "Repairing quality",
         "category"   : "work",
         "primaryStat": "dexterity",
         "formula"    : "SKILL × (1.0 + (STRENGTH − 10) × 0.0007 + (DEXTERITY − 10) × 0.0007 + (INTELLIGENCE − 10) × 0.0007 + (PERCEPTION − 10) × 0.0007) × ((manipulation + sight + consciousness) / 3)",
@@ -618,6 +706,7 @@
     },
     {
         "id"         : "deconstruct_speed",
+        "name"       : "Taking down speed",
         "category"   : "work",
         "primaryStat": "strength",
         "formula"    : "SKILL × (1.0 + (STRENGTH − 10) × 0.0015 + (DEXTERITY − 10) × 0.0015) × ((manipulation + moving) / 2)",
@@ -625,6 +714,7 @@
     },
     {
         "id"         : "refuel_speed",
+        "name"       : "Refuelling speed",
         "category"   : "work",
         "primaryStat": "strength",
         "formula"    : "SKILL × (1.0 + (STRENGTH − 10) × 0.0015 + (DEXTERITY − 10) × 0.0015) × ((moving + manipulation) / 2)",
@@ -632,6 +722,7 @@
     },
     {
         "id"         : "alchemy_speed",
+        "name"       : "Alchemy speed",
         "category"   : "work",
         "primaryStat": "intelligence",
         "formula"    : "SKILL × (1.0 + (STRENGTH − 10) × 0.0015 + (DEXTERITY − 10) × 0.0015) × ((sight + manipulation) / 2)",
@@ -639,6 +730,7 @@
     },
     {
         "id"         : "alchemy_quality",
+        "name"       : "Alchemy quality",
         "category"   : "work",
         "primaryStat": "intelligence",
         "formula"    : "SKILL × (1.0 + (STRENGTH − 10) × 0.0007 + (DEXTERITY − 10) × 0.0007 + (INTELLIGENCE − 10) × 0.0007 + (PERCEPTION − 10) × 0.0007) × ((sight + manipulation + consciousness) / 3)",
@@ -646,6 +738,7 @@
     },
     {
         "id"         : "cooking_speed",
+        "name"       : "Cooking speed",
         "category"   : "work",
         "primaryStat": "intelligence",
         "formula"    : "SKILL × (1.0 + (STRENGTH − 10) × 0.0015 + (DEXTERITY − 10) × 0.0015) × ((manipulation + sight) / 2)",
@@ -653,6 +746,7 @@
     },
     {
         "id"         : "cooking_quality",
+        "name"       : "Cooking quality",
         "category"   : "work",
         "primaryStat": "intelligence",
         "formula"    : "SKILL × (1.0 + (STRENGTH − 10) × 0.0007 + (DEXTERITY − 10) × 0.0007 + (INTELLIGENCE − 10) × 0.0007 + (PERCEPTION − 10) × 0.0007) × ((manipulation + sight + consciousness) / 3)",
@@ -660,6 +754,7 @@
     },
     {
         "id"         : "hauling_speed",
+        "name"       : "Hauling speed",
         "category"   : "work",
         "primaryStat": "strength",
         "formula"    : "(1.0 + (STRENGTH − 10) × 0.03 + (DEXTERITY − 10) × 0.02) × ((moving + manipulation) / 2)",
@@ -667,6 +762,7 @@
     },
     {
         "id"         : "fetch_speed",
+        "name"       : "Fetching speed",
         "category"   : "work",
         "primaryStat": "dexterity",
         "formula"    : "(1.0 + (DEXTERITY − 10) × 0.03 + (STRENGTH − 10) × 0.02) × ((moving + manipulation) / 2)",
@@ -674,6 +770,7 @@
     },
     {
         "id"         : "planting_speed",
+        "name"       : "Planting speed",
         "category"   : "work",
         "primaryStat": "dexterity",
         "formula"    : "SKILL × (1.0 + (STRENGTH − 10) × 0.0015 + (DEXTERITY − 10) × 0.0015) × ((manipulation + sight) / 2)",
@@ -681,6 +778,7 @@
     },
     {
         "id"         : "planting_yield",
+        "name"       : "Planting yield",
         "category"   : "work",
         "primaryStat": "dexterity",
         "formula"    : "SKILL × (1.0 + (INTELLIGENCE − 10) × 0.0015 + (PERCEPTION − 10) × 0.0015) × manipulation",
@@ -688,6 +786,7 @@
     },
     {
         "id"         : "caretaking_speed",
+        "name"       : "Caretaking speed",
         "category"   : "work",
         "primaryStat": "intelligence",
         "formula"    : "SKILL × (1.0 + (STRENGTH − 10) × 0.0015 + (DEXTERITY − 10) × 0.0015) × ((manipulation + sight) / 2)",
@@ -695,6 +794,7 @@
     },
     {
         "id"         : "caretaking_quality",
+        "name"       : "Caretaking quality",
         "category"   : "work",
         "primaryStat": "intelligence",
         "formula"    : "SKILL × (1.0 + (STRENGTH − 10) × 0.0007 + (DEXTERITY − 10) × 0.0007 + (INTELLIGENCE − 10) × 0.0007 + (PERCEPTION − 10) × 0.0007) × ((manipulation + sight + consciousness) / 3)",
@@ -702,6 +802,7 @@
     },
     {
         "id"         : "pain",
+        "name"       : "Pain",
         "category"   : "capacity",
         "primaryStat": "constitution",
         "formula"    : "1.0",
@@ -709,6 +810,7 @@
     },
     {
         "id"         : "sight",
+        "name"       : "Sight",
         "category"   : "capacity",
         "primaryStat": "perception",
         "formula"    : "1.0",
@@ -716,6 +818,7 @@
     },
     {
         "id"         : "night_vision",
+        "name"       : "Night sight",
         "category"   : "capacity",
         "primaryStat": "perception",
         "formula"    : "1.0",
@@ -723,6 +826,7 @@
     },
     {
         "id"         : "hearing",
+        "name"       : "Hearing",
         "category"   : "capacity",
         "primaryStat": "perception",
         "formula"    : "1.0",
@@ -730,6 +834,7 @@
     },
     {
         "id": "consciousness",
+        "name": "Consciousness",
         "category": "capacity",
         "primaryStat": "constitution",
         "formula": "1.0",
@@ -737,6 +842,7 @@
     },
     {
         "id"         : "manipulation",
+        "name"       : "Manipulation",
         "category"   : "capacity",
         "primaryStat": "dexterity",
         "formula"    : "1.0",
@@ -744,6 +850,7 @@
     },
     {
         "id"         : "moving",
+        "name"       : "Moving",
         "category"   : "capacity",
         "primaryStat": "dexterity",
         "formula"    : "1.0",
@@ -751,6 +858,7 @@
     },
     {
         "id"         : "blood_pumping",
+        "name"       : "Blood pumping",
         "category"   : "capacity",
         "primaryStat": "constitution",
         "formula"    : "1.0",
@@ -758,6 +866,7 @@
     },
     {
         "id"         : "blood_filtration",
+        "name"       : "Blood filtration",
         "category"   : "capacity",
         "primaryStat": "constitution",
         "formula"    : "1.0",
@@ -765,6 +874,7 @@
     },
     {
         "id"         : "breathing",
+        "name"       : "Breathing",
         "category"   : "capacity",
         "primaryStat": "constitution",
         "formula"    : "1.0",
@@ -772,6 +882,7 @@
     },
     {
         "id"         : "digestion",
+        "name"       : "Digestion",
         "category"   : "capacity",
         "primaryStat": "constitution",
         "formula"    : "1.0",
@@ -779,6 +890,7 @@
     },
     {
         "id"         : "talking",
+        "name"       : "Talking",
         "category"   : "capacity",
         "primaryStat": "charisma",
         "formula"    : "1.0",
@@ -786,6 +898,7 @@
     },
     {
         "id"         : "trade",
+        "name"       : "Trade",
         "category"   : "social",
         "primaryStat": "charisma",
         "formula"    : "(1.0 + (CHARISMA − 10) × 0.02 + prestige × 0.004) × ((talking + 1) / 2)",
@@ -793,6 +906,7 @@
     },
     {
         "id"         : "oratory",
+        "name"       : "Oratory",
         "category"   : "social",
         "primaryStat": "charisma",
         "formula"    : "(1.0 + (CHARISMA − 10) × 0.025 + prestige × 0.004) × ((talking + 1) / 2)",
@@ -800,6 +914,7 @@
     },
     {
         "id"         : "beauty",
+        "name"       : "Beauty",
         "category"   : "social",
         "primaryStat": "charisma",
         "formula"    : "(0.4 + 0.6 × intact) × (1.0 + (CHARISMA − 10) × 0.04)",
@@ -807,6 +922,7 @@
     },
     {
         "id"         : "prestige",
+        "name"       : "Prestige",
         "category"   : "social",
         "primaryStat": "charisma",
         "formula"    : "prestige",
