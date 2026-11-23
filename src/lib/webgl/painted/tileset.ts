@@ -10,6 +10,8 @@ import {
   type PaintedVariant
 } from './manifest.js';
 
+import { cultureArchetype } from '$lib/game/core/rules/social/social.js';
+
 export { PAINTED_TILES } from './flag.js';
 
 let active: PaintedTileset | null = null;
@@ -48,6 +50,16 @@ export function paintedTile(
   return spriteAt(pickVariant(variants, positionHash(x, y)), x, y);
 }
 
+export function paintedTileIn(
+  kind: PaintedKind,
+  id: string,
+  state: string | undefined,
+  x: number,
+  y: number
+): PaintedSprite | undefined {
+  return (state && paintedTile(kind, `${id}:${state}`, x, y)) || paintedTile(kind, id, x, y);
+}
+
 export function paintedEntity(
   kind: PaintedKind,
   id: string | undefined,
@@ -56,6 +68,13 @@ export function paintedEntity(
   const ofKind = active?.lookup.get(kind);
   const variants = (id === undefined ? undefined : ofKind?.get(id)) ?? ofKind?.get(ANY_ID);
   return variants ? pickVariant(variants, idHash(entityId)).entity : NO_PAINT;
+}
+
+export function paintedPawn(
+  pawn: { id: string; cultureId?: string },
+  pool: Parameters<typeof cultureArchetype>[1]
+): PaintedVariant['entity'] | Record<string, never> {
+  return paintedEntity('pawn', cultureArchetype(pawn.cultureId, pool), pawn.id);
 }
 
 export function paintedPieces(set: string): PaintedPieces | undefined {

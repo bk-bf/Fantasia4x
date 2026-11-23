@@ -1,5 +1,6 @@
 import type { GameState, Job, Pawn } from '$lib/game/core/types';
 import { jobService } from '$lib/game/services/JobService';
+import { cultureArchetype } from '$lib/game/core/rules/social/social';
 import { itemService } from '$lib/game/services/ItemService';
 import { resourceObjectDefById } from '$lib/game/core/defs/resourceObjects';
 
@@ -116,7 +117,7 @@ function getNextAvailableJob(pawn: Pawn, gameState: GameState): Job | null {
 
 export function pawnCultureLabel(pawn: Pawn, pool: GameState['culturePool'] | undefined): string {
   if (!pawn.cultureName) return 'unknown';
-  const archetype = pool?.find((r) => r.id === pawn.cultureId)?.archetype;
+  const archetype = cultureArchetype(pawn.cultureId, pool);
   return archetype ? `${pawn.cultureName} · ${archetype}` : pawn.cultureName;
 }
 

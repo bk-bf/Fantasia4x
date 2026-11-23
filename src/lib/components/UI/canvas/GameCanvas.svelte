@@ -47,7 +47,7 @@
   import type { GameGrid } from '$lib/webgl/game-grid.js';
   import { GameGrid as GameGridClass } from '$lib/webgl/game-grid.js';
   import { BASE_TILE_PX } from '$lib/webgl/tile-types.js';
-  import { PAINTED_TILES, paintedEntity } from '$lib/webgl/painted/tileset.js';
+  import { PAINTED_TILES, paintedEntity, paintedPawn } from '$lib/webgl/painted/tileset.js';
   import { PAINTED_LIGHT } from '$lib/webgl/painted/flag.js';
   import { pawnService } from '$lib/game/services/PawnService.js';
   import { pathfinderService } from '$lib/game/services/PathfinderService.js';
@@ -1047,7 +1047,7 @@
           y: (rp.y - cellY) * BASE_TILE_PX + pLunge.y
         },
         rotation: isSleeping || isCollapsed ? 90 : undefined,
-        ...(PAINTED_TILES ? paintedEntity('pawn', pawn.cultureId, pawn.id) : null)
+        ...(PAINTED_TILES ? paintedPawn(pawn, freshState.culturePool) : null)
       });
     }
 

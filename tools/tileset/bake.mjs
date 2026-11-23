@@ -3,7 +3,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { encodePng } from './png.mjs';
 import { MAP, PIECES, UNPAINTED } from './map.mjs';
-import { loadRegistry, registryEntries } from './registry.mjs';
+import { ARCHETYPES, loadRegistry, registryEntries } from './registry.mjs';
 import { BAKE_ART } from './sources.mjs';
 import {
   BLOB_LAYOUTS,
@@ -80,6 +80,19 @@ const lightOf = (w = 0, h = 0, glow = new Uint8Array(0)) => {
 };
 
 export const pieceId = (set = '', layout = 0) => `${set}/mass/${layout}`;
+
+const wallTop =
+  (
+    w = {
+      h: 0,
+      cap: (x = 0, y = 0, d = 0) => [x, y, d].slice(0, 0),
+      face: (x = 0, y = 0, fy = 0, h = 0) => [x, y, fy, h]
+    }
+  ) =>
+  (x = 0, y = 0) => {
+    const top = w.cap(x, y, 0);
+    return top?.length ? top : w.face(x, y, A.wrap(y, w.h), w.h);
+  };
 
 const ramp = (colours = [[0, 0, 0]]) =>
   sprite(colours.length, 1, 0, 0, new Uint8ClampedArray(colours.flatMap((c) => [...c, 255])));
@@ -240,6 +253,15 @@ function sprites() {
   for (const g of A.GROUND) add(`ground/${g.id}`, patch(g.f, g.dec ?? []));
   for (const [id, f] of Object.entries(A.TILES))
     add(id, { ...patch(f, []), cast: casts.get(id) ?? 0 });
+  const named = new Set(Object.values(MAP.building).flat());
+  for (const w of DBX.walls)
+    if (w && !w.rock && named.has(`wall/${w.id}`) && !out.has(`wall/${w.id}`))
+      add(`wall/${w.id}`, { ...patch(wallTop(w), []), cast: w.h });
+  for (const [kind, f] of Object.entries(DBX.roofs))
+    add(
+      `roof/${kind}`,
+      patch((x = 0, y = 0) => f(x, y, 0), [])
+    );
   for (const [id, ramp] of Object.entries(A.ORE))
     add(
       `ore/${id}`,
@@ -295,7 +317,7 @@ function registrySprites(
   for (const r of registryEntries(DBX, unpainted)) {
     const spr = registrySprite(DBX, r.entry);
     if (!spr) continue;
-    const key = `${r.cat}/${r.dbId}`;
+    const key = `${r.cat}/${r.dbId}${r.state ? `:${r.state}` : ''}`;
     byId.set(key, [...(byId.get(key) ?? []), { ...r, spr }]);
   }
   const body = (s = sprite()) => s.px.map((v, i) => (s.px[i | 3] === 255 ? v : 0));
@@ -314,16 +336,32 @@ function registrySprites(
   };
   const placed = (old = sprite(), spr = sprite()) =>
     old && old.w === spr.w && old.h === spr.h ? { ...spr, ox: old.ox, oy: old.oy } : spr;
+  const besideBase = (cat = '', dbId = '', spr = sprite()) => {
+    const base = byId.get(`${cat}/${dbId}`)?.[0]?.spr;
+    const old = mappedSprites(cat, dbId)[0];
+    if (!base || !old || base.w !== old.w || base.h !== old.h) return spr;
+    const dx = old.ox - base.ox,
+      dy = old.oy - base.oy;
+    const emit = spr.emit && { ...spr.emit, x: spr.emit.x + dx, y: spr.emit.y + dy };
+    return { ...spr, ox: spr.ox + dx, oy: spr.oy + dy, emit };
+  };
   const extra = Object.fromEntries(
     ['resource', 'building', 'creature', 'pawn', 'item'].map((c) => [c, refList()])
   );
   for (const drawn of byId.values()) {
-    const { cat, dbId } = drawn[0];
+    const { cat, dbId, state } = drawn[0];
+    if (state) {
+      for (const { spriteId, spr } of drawn) {
+        add(spriteId, besideBase(cat, dbId, spr));
+        (extra[cat][`${dbId}:${state}`] ??= []).push(spriteId);
+      }
+      continue;
+    }
     if (keepsMap(cat, dbId, drawn)) continue;
     const mapped = mappedSprites(cat, dbId);
     for (const [i, { spriteId, spr }] of drawn.entries()) {
       add(spriteId, mapped.length === drawn.length ? placed(mapped[i], spr) : spr);
-      const key = cat === 'pawn' ? '*' : dbId;
+      const key = cat === 'pawn' ? (ARCHETYPES.get(dbId) ?? '*') : dbId;
       (extra[cat][key] ??= []).push(spriteId);
     }
   }

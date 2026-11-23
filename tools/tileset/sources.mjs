@@ -30,8 +30,10 @@ export const REGISTRY_ART = [
   'registry/db-gear.js',
   'registry/db-goods.js',
   'registry/db-armor.js',
+  'registry/db-rare.js',
   'registry/db-rot.js',
-  'registry/db-stations.js'
+  'registry/db-stations.js',
+  'registry/db-facings.js'
 ];
 
 export const COLONY_ART = [
