@@ -26,6 +26,8 @@ export interface CombatTextRequest {
   kind: CombatTextKind;
   color?: string;
   dy?: number;
+  entityId?: string;
+  conditionId?: string;
 }
 
 export interface CombatLungeRequest {

@@ -1,48 +1,61 @@
-import { writable } from 'svelte/store';
 import { animNow } from './animClock';
-import type { CombatTextKind } from '$lib/game/core/util/logSink';
+import type { CombatTextKind, CombatTextRequest } from '$lib/game/core/util/logSink';
 
 export type { CombatTextKind };
 
-export interface CombatTextEvent {
-  id: string;
-  worldX: number;
-  worldY: number;
-  text: string;
-  kind: CombatTextKind;
-  color?: string;
-  dy?: number;
+export interface CombatTextEvent extends CombatTextRequest {
+  id: number;
   spawnTime: number;
 }
 
-export const FLOAT_TTL_MS = 900;
-export const SOCIAL_TTL_MS = 4500;
-
-export function floatTtl(kind: CombatTextKind): number {
-  return kind === 'social' ? SOCIAL_TTL_MS : FLOAT_TTL_MS;
-}
-
 const MAX_ACTIVE = 60;
+const ONSET_GRACE_MS = 2000;
+const LIFE_MS: Partial<Record<CombatTextKind, number>> = {
+  social: 4500,
+  condition: 1700,
+  knockdown: 1300
+};
+const DEFAULT_LIFE_MS = 900;
 
-function createCombatFeedbackStore() {
-  const { subscribe, update, set } = writable<CombatTextEvent[]>([]);
+export const floatLifeMs = (kind: CombatTextKind): number => LIFE_MS[kind] ?? DEFAULT_LIFE_MS;
 
+export const onsetKey = (entityId: string, conditionId: string): string =>
+  `${entityId}|${conditionId}`;
+
+function createCombatFeedback() {
+  let list: CombatTextEvent[] = [];
+  const onsets = new Map<string, number>();
   let seq = 0;
 
   return {
-    subscribe,
-    push(evt: Omit<CombatTextEvent, 'id' | 'spawnTime'>) {
+    push(req: CombatTextRequest): void {
       const now = animNow();
-      update((list) => {
-        const live = list.filter((e) => now - e.spawnTime < floatTtl(e.kind));
-        live.push({ ...evt, id: `cbt-${now}-${seq++}`, spawnTime: now });
-        return live.length > MAX_ACTIVE ? live.slice(live.length - MAX_ACTIVE) : live;
-      });
+      if (req.entityId && req.conditionId) {
+        const key = onsetKey(req.entityId, req.conditionId);
+        if (onsets.has(key)) return;
+        onsets.set(key, now);
+      }
+      list = list.filter((e) => now - e.spawnTime < floatLifeMs(e.kind));
+      list.push({ ...req, id: seq++, spawnTime: now });
+      if (list.length > MAX_ACTIVE) list = list.slice(list.length - MAX_ACTIVE);
     },
-    clear() {
-      set([]);
+    live(now: number): readonly CombatTextEvent[] {
+      if (list.some((e) => now - e.spawnTime >= floatLifeMs(e.kind)))
+        list = list.filter((e) => now - e.spawnTime < floatLifeMs(e.kind));
+      return list;
+    },
+    hasOnsets(): boolean {
+      return onsets.size > 0;
+    },
+    pruneOnsets(now: number, active: (key: string) => boolean): void {
+      for (const [key, at] of onsets)
+        if (now - at > ONSET_GRACE_MS && !active(key)) onsets.delete(key);
+    },
+    clear(): void {
+      list = [];
+      onsets.clear();
     }
   };
 }
 
-export const combatFeedback = createCombatFeedbackStore();
+export const combatFeedback = createCombatFeedback();

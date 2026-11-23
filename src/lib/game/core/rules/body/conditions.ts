@@ -206,7 +206,8 @@ export function emitPersistentConditionFloaters(
   prevStages: Map<string, string> | undefined,
   next: EntityCondition[],
   x: number,
-  y: number
+  y: number,
+  entityId?: string
 ): void {
   if (x < 0 || y < 0) return;
   for (const c of next) {
@@ -219,7 +220,9 @@ export function emitPersistentConditionFloaters(
       worldY: y,
       text: `${def.name} (${stage.label})`,
       kind: 'condition',
-      color: stage.color
+      color: stage.color,
+      entityId,
+      conditionId: `${c.id}:${stage.label}`
     });
   }
 }

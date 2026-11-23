@@ -113,6 +113,9 @@ export const windSwayOn = createPersistedBool('fx.debug.sway', true);
 
 export const showDialogBubbles = createPersistedBool('fx.gfx.dialogBubbles', false);
 
+export const conditionIcons = createPersistedBool('fx.ui.conditionIcons', true);
+export const conditionText = createPersistedBool('fx.ui.conditionText', true);
+
 export const showFps = createPersistedBool('fx.display.showFps', true);
 export const showTps = createPersistedBool('fx.display.showTps', true);
 
