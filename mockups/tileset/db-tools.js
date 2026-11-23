@@ -28,11 +28,10 @@
       return sel(s);
     },
     stone_chopper: () => {
-      const s = IC(), a = [14, 56], b = [34, 34], F = frame(a, b, 1, 1.25);
-      part(s, t => hafts.branch(t, a, F(4, 0), { seed: 9, bend: 1 }));
-      part(s, t => stoneHead(t, frame(F(6, -2), F(6, -20)), F.pts([...qv([-4, 7], [5, 11], [12, 7], 'back'), ...qv([12, 7], [17, 1], [14, -8], 'back'), ...qv([14, -8], [5, -17], [-5, -12], 'edge'), ...qv([-5, -12], [-8, -3], [-4, 7], 'edge')]).map(p => p), 23, { cortex: 3.2, amp: 1.6, raw: 1 }));
-      part(s, t => bindings(t, F, 3.2, C.cord, [[-9, -4.5]]), { line: 0 });
-      part(s, t => { strand(t, F(-4.5, -2.6), F(5, 7.4), C.cord, 1); strand(t, F(-4.5, 2.6), F(3, -8.6), C.cord, 1); }, { line: 0 });
+      const s = IC(), a = [6, 46], b = [58, 16], F = frame(a, b);
+      part(s, t => hafts.branch(t, a, F(19, 0), { seed: 9, bend: .6 }));
+      part(s, t => stoneHead(t, F, [[12, -3.8, 'back'], [21, -5.2, 'back'], [31, -5, 'back'], [40, -5.8, 'back'], [45, -4.4, 'back'], [48.5, -.5, 'edge'], [48.5, 5, 'edge'], [45.5, 11, 'edge'], [39, 14.6, 'edge'], [30, 15.6, 'edge'], [22, 14.6, 'edge'], [16.5, 11.6, 'edge'], [14, 7.4, 'edge'], [13, 4.6, 'back']], 23, { cortex: 2.8, amp: 2.4, pitch: 7.2, ridge: q => 7.5 }));
+      part(s, t => bindings(t, F, 5.4, C.cord, [[10.6, 15.4]]), { line: 0 });
       return sel(s);
     },
     copper_axe: () => {
