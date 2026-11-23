@@ -255,19 +255,24 @@ float iceAt(vec2 q, float depth, float near) {
     return front - ICE_SHOWS;
 }
 
-vec3 iceSheet(ivec2 cell, vec2 q, float margin, float depth) {
-    ivec2 at = cell % textureSize(u_waterField, 0);
-    float grain = texelFetch(u_waterField, at, 0).r * 255.0 / TONE_SCALE - TONE_OFFSET;
-    float thick = smoothstep(0.0, 0.35, margin);
-    float tone = 0.6 + thick * 2.0 + (grain - 1.5) * 0.45 - depth * 0.6;
+vec3 iceSheet(ivec2 cell, vec2 q, float margin, float depth, float near) {
+    float d = dither(cell);
+    float wobble = depth + (wn(q * 0.05, 54) - 0.5) * BAND_WOBBLE;
+    int band = clamp(int(floor(clamp(wobble, 0.0, 1.0) * float(BANDS - 1) + 0.5 + (d - 0.5) * BAND_DITHER)), 0, BANDS - 1);
+    float deep = float(band) / float(BANDS - 1);
+    int tier = rampStep(grainAt(cell, vec4(0.0), deep, 0.5), cell);
+    vec3 under = mix(SHALLOWS[tier], DEEP[min(tier + 1, 5)], deep);
+    float thick = smoothstep(0.0, 0.4, margin);
+    float frost = 0.14 + 0.22 * thick + 0.3 * smoothstep(6.0, 0.0, near) + (wn(q * 0.12, 98) - 0.5) * 0.16;
+    float level = floor(clamp(frost, 0.0, 0.8) * 5.0 + d) / 5.0;
+    vec3 c = mix(under, ICE[2 + int(step(0.6, frost))], level);
+    if (margin < 0.02) return mix(under, ICE[3], 0.35);
     float crack = abs(wn(q * 0.09, 93) - 0.5) + (wn(q * 0.4, 94) - 0.5) * 0.04;
-    if (crack < 0.012 && thick > 0.4) tone -= 1.4;
-    if (margin < 0.025) return mix(SHALLOWS[3], ICE[1], step(0.5, dither(cell)));
-    vec3 c = ICE[clamp(int(floor(tone + (dither(cell) - 0.5) * 0.8)), 0, 3)];
-    float drift = wn(q * 0.08 - u_sea[SEA_WIND].xy * u_ice.z * 0.4, 95) + (wn(q * 0.3, 96) - 0.5) * 0.3;
-    float cover = u_ice.y * thick * 0.5;
-    if (drift < cover - 0.08 + (dither(cell) - 0.5) * 0.15)
-        c = SNOW[clamp(int(floor(2.0 + drift * 3.0 + (dither(cell) - 0.5))), 1, 4)];
+    if (crack < 0.01 && thick > 0.3) return mix(c, ICE[3], 0.7);
+    if (thick > 0.25 && hash(cell.x >> 1, cell.y >> 1, 97) > 0.996) return ICE[3];
+    float patchy = wn(q * 0.08, 95) + (wn(q * 0.3, 96) - 0.5) * 0.3;
+    if (patchy < u_ice.y * thick * 0.45 - 0.1 + (d - 0.5) * 0.15)
+        c = SNOW[clamp(int(floor(2.0 + patchy * 3.0 + (d - 0.5))), 1, 4)];
     return c;
 }
 
@@ -284,7 +289,7 @@ vec3 waveWater(vec2 w, vec2 p, int kind) {
     vec2 slope = vec2(shoreAt(s + vec2(GRAD_STEP, 0.0)) - distArt, shoreAt(s + vec2(0.0, GRAD_STEP)) - distArt) / GRAD_STEP;
     float d = dither(cell);
     float ice = iceAt(q, tide.a, dist);
-    if (ice > 0.0) return iceSheet(cell << shift, q, ice, tide.a);
+    if (ice > 0.0) return iceSheet(cell << shift, q, ice, tide.a, dist);
     float edge = SWASH * (1.0 - u_sea[SEA_SURGE].x) * (0.6 + 0.8 * wn(q * 0.2, 55));
     if (dist < edge) return WET_SAND[dist > edge - 1.0 ? 0 : 1];
     float near = dist - edge;
