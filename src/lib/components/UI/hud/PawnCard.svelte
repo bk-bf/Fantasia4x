@@ -6,6 +6,7 @@
   import { pawnCultureLabel } from '$lib/components/util/pawnUtils';
   import { getActiveConditionViews } from '$lib/components/util/conditionInfo';
   import { getBackgroundById } from '$lib/game/core/defs/backgrounds';
+  import { bodyHealthShare } from '$lib/game/core/rules/body/bodyHealth';
   import { needMeters } from '../../pawn/needMeters';
   import ConditionRows from '../../pawn/ConditionRows.svelte';
   import ChromeButton from '../widget/ChromeButton.svelte';
@@ -53,7 +54,7 @@
       ? (pawn.activeJob.progress ?? 0)
       : null
   );
-  const health = $derived(Math.round(pawn.state.health ?? 100));
+  const health = $derived(Math.round(bodyHealthShare(pawn.limbs) * 100));
   const mood = $derived(Math.round(moodModel?.mood ?? pawn.state.mood));
   const needs = $derived(
     needMeters(pawn).filter((m) => m.label === 'Hunger' || m.label === 'Rest')
