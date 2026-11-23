@@ -48,12 +48,12 @@ function reachableFromCentre(world: WorldTile[][], open: (t: WorldTile) => boole
 }
 
 describe('map generator switch', () => {
-  it('reads the launch option before the stored choice and defaults to the old generator', () => {
-    expect(readMapGeneratorFlag('', null)).toBe('classic');
-    expect(readMapGeneratorFlag('', 'landforms')).toBe('landforms');
-    expect(readMapGeneratorFlag('?mapgen=classic', 'landforms')).toBe('classic');
-    expect(readMapGeneratorFlag('?mapgen=landforms', null)).toBe('landforms');
-    expect(readMapGeneratorFlag('?mapgen=nonsense', null)).toBe('classic');
+  it('reads the launch option before the stored choice and defaults to landforms', () => {
+    expect(readMapGeneratorFlag('', null)).toBe('landforms');
+    expect(readMapGeneratorFlag('', 'classic')).toBe('classic');
+    expect(readMapGeneratorFlag('?mapgen=landforms', 'classic')).toBe('landforms');
+    expect(readMapGeneratorFlag('?mapgen=classic', null)).toBe('classic');
+    expect(readMapGeneratorFlag('?mapgen=nonsense', null)).toBe('landforms');
   });
 
   it('only takes the new generator on maps of L size and larger', () => {

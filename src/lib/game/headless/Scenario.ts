@@ -125,7 +125,7 @@ export function buildScenario(spec: ScenarioSpec): GameState {
   const h = spec.map?.h ?? 96;
   const generated = spec.map?.preset === 'generated';
   const world = generated
-    ? generateWorld(w, h, seed, { generator: spec.map?.generator ?? 'classic' })
+    ? generateWorld(w, h, seed, { generator: spec.map?.generator })
     : flatWorld(w, h);
   scenarioLog(
     `map ${w}x${h} preset=${generated ? 'generated' : 'flat'}` +
