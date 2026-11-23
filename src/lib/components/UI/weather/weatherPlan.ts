@@ -1,30 +1,34 @@
 import {
   ambientWind,
   weatherIsHeavy,
-  weatherOverlayKind
+  weatherOverlayKind,
+  windVector
 } from '$lib/game/services/EnvironmentService';
 import type { WeatherState } from '$lib/game/core/types';
 import type { Attachment } from 'svelte/attachments';
 import { PAINTED_BASE_URL } from '$lib/webgl/painted/loader';
+import { heading, type Heading } from '$lib/webgl/painted/wind';
 import SHEETS from './weatherSheets.json';
 
-const { rain: RAIN, fog: FOG, fogInk: FOG_INK, snow: SNOW } = SHEETS;
+const { rain: RAIN, fog: FOG, fogInk: FOG_INK, fogPace: FOG_PACE, snow: SNOW } = SHEETS;
+
+export const WEATHER_TILE = 32;
+const SHRINK = 0.4;
+const RAIN_STEP = 6;
+const MAX_STEP_SECS = 0.25;
 
 export type SheetTile = `rain${number}` | `storm${number}` | `fog${number}` | 'snow';
 
 export interface WeatherSheet {
   tile: SheetTile;
-  size: string;
   w: number;
   h: number;
-  tx: number;
-  ty: number;
-  secs: number;
-  steps: number;
+  vx: number;
+  vy: number;
+  step: number;
   gust: readonly number[] | null;
   at: number;
   soft: boolean;
-  drift: { tx: number; secs: number } | null;
 }
 
 export interface WeatherGroup {
@@ -34,56 +38,71 @@ export interface WeatherGroup {
   sheets: WeatherSheet[];
 }
 
+export interface WeatherView {
+  x: number;
+  y: number;
+}
+
 const pace = (wind: number) => 0.85 + 0.5 * wind;
 const round2 = (v: number) => Math.round(v * 100) / 100;
 
-function rain(heavy: boolean, amount: number, wind: number, k: number): WeatherGroup {
+export function weatherScale(tileSize: number): number {
+  const z = tileSize / WEATHER_TILE;
+  return z >= 1 ? z : z ** SHRINK;
+}
+
+function windHeading(weather: WeatherState | undefined): Heading {
+  const { dx, dy } = windVector(weather?.windDir);
+  return heading(dx, dy);
+}
+
+function rain(heavy: boolean, amount: number, wind: number): WeatherGroup {
   const tile = heavy ? 'storm' : 'rain';
   return {
     kind: 'rain',
     opacity: round2(0.5 + 0.4 * amount),
     tint: '',
-    sheets: RAIN.map((L, n) => ({
-      tile: `${tile}${n}` as SheetTile,
-      size: `${L.p * k}px ${L.p * 3 * k}px`,
-      w: L.p * k,
-      h: L.p * k,
-      tx: (-L.p / 3) * k,
-      ty: L.p * k,
-      secs: round2(L.secs / pace(wind)),
-      steps: L.p / 6,
-      gust: L.gust,
-      at: n * 0.37,
-      soft: false,
-      drift: null
-    }))
+    sheets: RAIN.map((L, n) => {
+      const secs = L.secs / pace(wind);
+      return {
+        tile: `${tile}${n}` as SheetTile,
+        w: L.p,
+        h: L.p * 3,
+        vx: -L.p / 3 / secs,
+        vy: L.p / secs,
+        step: RAIN_STEP,
+        gust: L.gust,
+        at: n * 0.37,
+        soft: false
+      };
+    })
   };
 }
 
-function fog(light: number, k: number): WeatherGroup {
+function fog(light: number, wind: number, toward: Heading): WeatherGroup {
+  const drift = FOG_PACE[0] + FOG_PACE[1] * wind;
   return {
     kind: 'fog',
     opacity: round2(Math.min(1, (0.2 + 0.2 * light) * 2.5)),
     tint: `rgb(${FOG_INK.join(' ')} / 0.12)`,
-    sheets: FOG.map((L, n) => ({
-      tile: `fog${n}` as SheetTile,
-      size: `${L.size * k}px ${Math.round((L.size * L.h) / L.w) * k}px`,
-      w: L.size * k,
-      h: Math.round((L.size * L.h) / L.w) * k,
-      tx: L.dir * L.size * k,
-      ty: 0,
-      secs: L.secs,
-      steps: 0,
-      gust: L.gust,
-      at: n * 0.41,
-      soft: true,
-      drift: null
-    }))
+    sheets: FOG.map((L, n) => {
+      const speed = (L.size / L.secs) * L.pace * drift;
+      return {
+        tile: `fog${n}` as SheetTile,
+        w: L.size,
+        h: Math.round((L.size * L.h) / L.w),
+        vx: toward.x * speed,
+        vy: toward.y * speed,
+        step: 0,
+        gust: L.gust,
+        at: n * 0.41,
+        soft: true
+      };
+    })
   };
 }
 
-function snow(amount: number, wind: number, k: number): WeatherGroup {
-  const tile = SNOW.size * k;
+function snow(amount: number, wind: number): WeatherGroup {
   const fall = SNOW.fall * pace(wind);
   return {
     kind: 'snow',
@@ -92,176 +111,129 @@ function snow(amount: number, wind: number, k: number): WeatherGroup {
     sheets: [
       {
         tile: 'snow',
-        size: `${tile}px`,
-        w: tile,
-        h: tile,
-        tx: 0,
-        ty: tile,
-        secs: round2(SNOW.size / fall),
-        steps: 0,
+        w: SNOW.size,
+        h: SNOW.size,
+        vx: fall * (SNOW.slope[0] + SNOW.slope[1] * wind),
+        vy: fall,
+        step: 0,
         gust: null,
         at: 0,
-        soft: false,
-        drift: {
-          tx: tile,
-          secs: round2(SNOW.size / (fall * (SNOW.slope[0] + SNOW.slope[1] * wind)))
-        }
+        soft: false
       }
     ]
   };
 }
 
-export function planWeather(
-  weather: WeatherState | undefined,
-  light: number,
-  k: number
-): WeatherGroup[] {
+export function planWeather(weather: WeatherState | undefined, light: number): WeatherGroup[] {
   const kind = weatherOverlayKind(weather?.type);
   const wind = round2(ambientWind(weather));
   const out: WeatherGroup[] = [];
-  if (kind === 'fog' || kind === 'foggy_rain') out.push(fog(Math.round(light * 16) / 16, k));
+  if (kind === 'fog' || kind === 'foggy_rain')
+    out.push(fog(Math.round(light * 16) / 16, wind, windHeading(weather)));
   if (kind === 'rain' || kind === 'foggy_rain')
-    out.push(rain(weatherIsHeavy(weather?.type), weather?.intensity ?? 0.5, wind, k));
-  if (kind === 'snow') out.push(snow(1, wind, k));
-  if (kind === 'snowdust') out.push(snow(0.5, wind, k));
+    out.push(rain(weatherIsHeavy(weather?.type), weather?.intensity ?? 0.5, wind));
+  if (kind === 'snow') out.push(snow(1, wind));
+  if (kind === 'snowdust') out.push(snow(0.5, wind));
   return out;
 }
 
 export const tileImage = (tile: SheetTile): string => `url(${PAINTED_BASE_URL}weather/${tile}.png)`;
 
-export const sheetKey = (s: WeatherSheet): string =>
-  [s.tile, s.secs, s.tx, s.ty, s.steps, s.at, s.drift?.tx, s.drift?.secs].join('|');
-
 const wrap = (v: number, p: number) => ((v % p) + p) % p;
 
-export interface SheetAnchor {
+export interface SheetDrift {
   x: number;
   y: number;
-  phase: number;
-  drift: number;
 }
 
-export function anchorSheet(s: WeatherSheet, ox: number, oy: number, moving: boolean): SheetAnchor {
-  if (!moving) {
-    const rows = Math.floor(oy / s.h);
-    const shear = s.ty ? s.tx : 0;
-    return {
-      x: Math.round(wrap(ox - rows * shear, s.w)),
-      y: Math.round(oy - rows * s.h),
-      phase: 0,
-      drift: 0
-    };
-  }
-  if (!s.ty) return { x: 0, y: Math.round(wrap(oy, s.h)), phase: wrap(ox / s.tx, 1), drift: 0 };
-  const phase = wrap(oy / s.ty, 1);
-  const rest = ox - Math.floor(oy / s.ty) * s.tx - phase * s.tx;
-  if (s.drift) return { x: 0, y: 0, phase, drift: wrap(rest / s.drift.tx, 1) };
-  return { x: Math.round(wrap(rest, s.w)), y: 0, phase, drift: 0 };
+export function advance(s: WeatherSheet, d: SheetDrift, secs: number): void {
+  d.y = wrap(d.y + s.vy * secs, s.h);
+  d.x = s.step ? 0 : wrap(d.x + s.vx * secs, s.w);
 }
 
-export function sheetReach(
+export interface SheetPlace {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+export function placeSheet(
   s: WeatherSheet,
-  moving: boolean
-): { left: number; top: number; w: number; h: number } {
-  if (!moving) return { left: s.w, top: s.h, w: s.w, h: s.h };
-  const drift = s.drift?.tx ?? 0;
-  const spareX = s.ty && !s.drift ? s.w : 0;
-  const spareY = s.ty ? 0 : s.h;
-  return {
-    left: Math.max(0, s.tx) + drift + spareX,
-    top: s.ty + spareY,
-    w: Math.abs(s.tx) + drift + spareX,
-    h: s.ty + spareY
-  };
+  d: SheetDrift,
+  view: WeatherView,
+  scale: number,
+  centre: { x: number; y: number }
+): SheetPlace {
+  const w = s.w * scale;
+  const h = s.h * scale;
+  const dy = s.step ? Math.floor(d.y / s.step) * s.step : d.y;
+  const dx = s.step ? dy * (s.vx / s.vy) : d.x;
+  const x = wrap(centre.x + (dx - view.x) * scale, w) - w;
+  const y = wrap(centre.y + (dy - view.y) * scale, h) - h;
+  return s.soft ? { x, y, w, h } : { x: Math.round(x), y: Math.round(y), w, h };
 }
 
 export const weatherMoves = (): boolean =>
   !(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false);
 
-const FALL = 'fall';
-const DRIFT = 'drift';
-
-const loopStart = (el: HTMLElement, id: string, secs: number) =>
-  -Number(el.dataset[id] ?? 0) * secs * 1000;
-
-const motion =
-  (s: WeatherSheet): Attachment<HTMLElement> =>
-  (el) => {
-    if (!weatherMoves()) return;
-    const fall = el.animate(
-      [{ transform: 'none' }, { transform: `translate(${s.tx}px, ${s.ty}px)` }],
-      {
-        id: FALL,
-        duration: s.secs * 1000,
-        easing: s.steps ? `steps(${s.steps})` : 'linear',
-        iterations: Infinity,
-        delay: -s.secs * s.at * 1000
+export function weatherDriver(read: () => { scale: number; view: WeatherView }) {
+  const live = new Map<HTMLElement, WeatherSheet>();
+  const drift = new Map<SheetTile, SheetDrift>();
+  const track =
+    (s: WeatherSheet): Attachment<HTMLElement> =>
+    (el) => {
+      live.set(el, s);
+      return () => live.delete(el);
+    };
+  const drive: Attachment<HTMLElement> = (root) => {
+    const moving = weatherMoves();
+    let last = performance.now();
+    let frame = requestAnimationFrame(function tick(now) {
+      const secs = moving ? Math.min(MAX_STEP_SECS, Math.max(0, now - last) / 1000) : 0;
+      last = now;
+      const { scale, view } = read();
+      const centre = { x: root.clientWidth / 2, y: root.clientHeight / 2 };
+      for (const [el, s] of live) {
+        let d = drift.get(s.tile);
+        if (!d) drift.set(s.tile, (d = { x: 0, y: 0 }));
+        advance(s, d, secs);
+        const at = placeSheet(s, d, view, scale, centre);
+        el.style.translate = `${at.x}px ${at.y}px`;
+        const tile = el.firstElementChild as HTMLElement | null;
+        const size = `${at.w}px ${at.h}px`;
+        if (tile && tile.style.backgroundSize !== size) {
+          tile.style.backgroundSize = size;
+          tile.style.width = `calc(100% + ${at.w}px)`;
+          tile.style.height = `calc(100% + ${at.h}px)`;
+        }
       }
-    );
-    fall.startTime = loopStart(el, FALL, s.secs);
-    const runs = [fall];
-    if (s.gust)
-      runs.push(
-        el.animate([{ opacity: s.gust[1] }, { opacity: 1 }], {
-          duration: s.gust[0] * 1000,
-          easing: 'ease-in-out',
-          iterations: Infinity,
-          direction: 'alternate',
-          delay: -s.gust[0] * s.at * 1000
-        })
-      );
-    return () => runs.forEach((r) => r.cancel());
-  };
-
-const driftMotion =
-  (s: WeatherSheet): Attachment<HTMLElement> =>
-  (el) => {
-    if (!s.drift || !weatherMoves()) return;
-    const run = el.animate([{ transform: 'none' }, { transform: `translateX(${s.drift.tx}px)` }], {
-      id: DRIFT,
-      duration: s.drift.secs * 1000,
-      easing: 'linear',
-      iterations: Infinity
+      frame = requestAnimationFrame(tick);
     });
-    run.startTime = loopStart(el, DRIFT, s.drift.secs);
-    return () => run.cancel();
+    return () => cancelAnimationFrame(frame);
   };
+  return { track, drive };
+}
 
-const motions = new Map<string, Attachment<HTMLElement>>();
+const gusts = new Map<string, Attachment<HTMLElement>>();
 
-function cached(
-  key: string,
-  make: (s: WeatherSheet) => Attachment<HTMLElement>,
-  s: WeatherSheet
-): Attachment<HTMLElement> {
-  let made = motions.get(key);
+export function sheetGust(s: WeatherSheet): Attachment<HTMLElement> {
+  const key = `${s.tile}|${s.gust?.join(',')}|${s.at}`;
+  let made = gusts.get(key);
   if (!made) {
-    made = make(s);
-    motions.set(key, made);
+    const gust = s.gust;
+    made = (el) => {
+      if (!gust || !weatherMoves()) return;
+      const run = el.animate([{ opacity: gust[1] }, { opacity: 1 }], {
+        duration: gust[0] * 1000,
+        easing: 'ease-in-out',
+        iterations: Infinity,
+        direction: 'alternate',
+        delay: -gust[0] * s.at * 1000
+      });
+      return () => run.cancel();
+    };
+    gusts.set(key, made);
   }
   return made;
 }
-
-export const sheetMotion = (s: WeatherSheet): Attachment<HTMLElement> =>
-  cached(sheetKey(s), motion, s);
-
-export const sheetDrift = (s: WeatherSheet): Attachment<HTMLElement> =>
-  cached(`drift|${sheetKey(s)}`, driftMotion, s);
-
-function shiftLoop(el: HTMLElement, id: string, phase: number, secs: number) {
-  el.dataset[id] = String(phase);
-  const start = loopStart(el, id, secs);
-  for (const run of el.getAnimations())
-    if (run.id === id && (run.startTime === null || Math.abs(Number(run.startTime) - start) > 0.5))
-      run.startTime = start;
-}
-
-export const fallAt =
-  (phase: number, secs: number): Attachment<HTMLElement> =>
-  (el) =>
-    shiftLoop(el, FALL, phase, secs);
-
-export const driftAt =
-  (phase: number, secs: number): Attachment<HTMLElement> =>
-  (el) =>
-    shiftLoop(el, DRIFT, phase, secs);
