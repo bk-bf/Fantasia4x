@@ -1,8 +1,8 @@
-.trial #sheet { flex: 1 1 auto; min-height: 0; overflow: auto; padding: 10px 12px 60px; }
-.trial #mock nav { margin-left: auto; }
-.trial #mock output { min-width: 34px; text-align: center; }
-.trial h2 { font: 22px/22px Jersey10, sans-serif; letter-spacing: 1px; text-transform: uppercase; color: var(--hot); font-weight: 400; margin: 16px 0 6px; }
-.trial h2 small { font: 16px/18px VT, monospace; letter-spacing: .3px; text-transform: none; color: var(--dim); margin-left: 10px; }
+.yard #sheet { flex: 1 1 auto; min-height: 0; overflow: auto; padding: 10px 12px 60px; }
+.yard #mock nav { margin-left: auto; }
+.yard #mock output { min-width: 34px; text-align: center; }
+.yard h2 { font: 22px/22px Jersey10, sans-serif; letter-spacing: 1px; text-transform: uppercase; color: var(--hot); font-weight: 400; margin: 16px 0 6px; }
+.yard h2 small { font: 16px/18px VT, monospace; letter-spacing: .3px; text-transform: none; color: var(--dim); margin-left: 10px; }
 .strip { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px 14px; }
 .strip figure { margin: 0; }
 .strip figcaption { color: var(--mute); font-size: 14px; line-height: 14px; margin-top: 3px; }
@@ -14,4 +14,4 @@
 .scene .tag { position: absolute; transform: translate(-50%, 0); white-space: nowrap; color: #f4ecd8; font-size: 13px; line-height: 13px; text-shadow: 0 1px 0 #000, 1px 0 0 #000, -1px 0 0 #000, 0 -1px 0 #000; pointer-events: none; }
 .rules { color: var(--dim); margin: 5px 0 0; display: flex; flex-wrap: wrap; gap: 2px 14px; }
 .rules b { color: var(--ink); font-weight: 400; margin-right: 5px; }
-@media (max-width: 700px) { .trial #sheet { padding: 8px 8px 60px; } }
+@media (max-width: 700px) { .yard #sheet { padding: 8px 8px 60px; } }
