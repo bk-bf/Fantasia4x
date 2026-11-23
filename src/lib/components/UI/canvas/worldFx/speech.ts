@@ -1,9 +1,10 @@
 import type { CombatTextEvent } from '$lib/stores/fx/combatFeedback';
 import { bubble, bubbleHeight, bubbleWidth, type BubbleSkin } from '$lib/pixelArt/fx/bubble';
-import { say } from '$lib/pixelArt/fx/effects';
+import { SAY_TTL, say, sayDy } from '$lib/pixelArt/fx/effects';
 import type { FxPainter } from '$lib/pixelArt/fx/painter';
 import type { WebGLRenderer } from '$lib/webgl/renderer.js';
 import { figureAt, type Figure } from './figure';
+import type { Box } from './floats';
 
 const TAIL = 12;
 const NEAR_X = 160;
@@ -79,8 +80,9 @@ export function drawSpeech(
   now: number,
   skin: BubbleSkin,
   kt: number
-): void {
+): Box[] {
   const ratio = kt / p.k;
+  const boxes: Box[] = [];
   const seen = new Set<number>();
   for (const e of list) {
     if (e.kind !== 'social') continue;
@@ -90,14 +92,14 @@ export function drawSpeech(
   for (const id of seats.keys()) if (!seen.has(id)) seats.delete(id);
   for (const e of list) {
     const s = e.kind === 'social' ? seats.get(e.id) : undefined;
-    if (s)
-      say(
-        p,
-        s.x,
-        s.y,
-        bubble(e.text, skin, s.tail < 0 ? -TAIL : TAIL),
-        (now - e.spawnTime) / 1000,
-        kt
-      );
+    const u = (now - e.spawnTime) / 1000;
+    if (!s || u > SAY_TTL) continue;
+    const b = bubble(e.text, skin, s.tail < 0 ? -TAIL : TAIL);
+    say(p, s.x, s.y, b, u, kt);
+    const f = b.frame[0];
+    const left = s.x - f.ax * ratio;
+    const top = s.y + (sayDy(u) - f.ay) * ratio;
+    boxes.push([left, top, left + f.w * ratio, top + f.h * ratio]);
   }
+  return boxes;
 }

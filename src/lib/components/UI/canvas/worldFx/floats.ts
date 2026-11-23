@@ -266,7 +266,8 @@ export function drawFloats(
   r: WebGLRenderer | null,
   list: readonly CombatTextEvent[],
   now: number,
-  mode: FloaterMode
+  mode: FloaterMode,
+  blocked: readonly Box[] = []
 ): void {
   remode(mode);
   const ids = new Set<number>();
@@ -285,7 +286,7 @@ export function drawFloats(
   for (let i = items.length - 1; i >= 0; i--)
     if ((now - items[i].start) / 1000 > items[i].q.ttl) items.splice(i, 1);
   release(r, p.textRatio, now, mode);
-  settle(now, p.textRatio);
+  settle(now, p.textRatio, blocked);
   for (const it of items) {
     const u = (now - it.start) / 1000;
     if (it.q.badge) badge(p, it.q, it.q.pair, u);
@@ -309,10 +310,10 @@ function strike(p: FxPainter, q: Placed, u: number): void {
   p.band(q.x, q.y, x, y, w, 2);
 }
 
-type Box = [number, number, number, number];
+export type Box = [number, number, number, number];
 
-function settle(now: number, r: number): void {
-  const done: Box[] = [];
+function settle(now: number, r: number, blocked: readonly Box[]): void {
+  const done: Box[] = [...blocked];
   const g = GAP * r;
   for (const it of items) {
     const u = (now - it.start) / 1000;

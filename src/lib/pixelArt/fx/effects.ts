@@ -113,11 +113,16 @@ export function badge(p: FxPainter, at: Anchor, pair: Pair, u: number): void {
 
 export const SAY_TTL = 4.5;
 
+export function sayDy(u: number): number {
+  const f = Math.min(1, u / SAY_TTL);
+  return Math.round(f < 0.8 ? mix(2, -8, f / 0.8) : mix(-8, -12, (f - 0.8) / 0.2));
+}
+
 export function say(p: FxPainter, x: number, y: number, b: Bubble, u: number, kt: number): void {
   const f = u / SAY_TTL;
   if (f > 1) return;
   const i = f < 0.04 || f > 0.9 ? 1 : 0;
-  const dy = Math.round(f < 0.8 ? mix(2, -8, f / 0.8) : mix(-8, -12, (f - 0.8) / 0.2));
+  const dy = sayDy(u);
   p.label(b.plate[i], x, y, 0, dy, kt, b.alpha);
   p.label(b.frame[i], x, y, 0, dy, kt);
 }

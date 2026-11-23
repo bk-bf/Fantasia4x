@@ -186,8 +186,8 @@ class WorldFxLayer {
     for (const m of s.marks) MARKS[m.kind](p, m.x, m.y, t);
     drawFlights(p, w.renderer, shots, now);
     const kb = labelScale(p.k, this.sizes.bubbles);
-    if (kb > 0) drawSpeech(p, w.renderer, texts, now, this.skin, kb);
-    if (p.kt > 0) drawFloats(p, w.renderer, texts, now, this.floaters);
+    const bubbles = kb > 0 ? drawSpeech(p, w.renderer, texts, now, this.skin, kb) : [];
+    if (p.kt > 0) drawFloats(p, w.renderer, texts, now, this.floaters, bubbles);
     else hideFloats();
   }
 }

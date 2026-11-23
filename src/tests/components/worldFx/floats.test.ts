@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   drawFloats,
+  type Box,
   FLOATERS_PER_TARGET,
   MERGE_HITS_MS,
   type FloaterMode
@@ -52,14 +53,14 @@ interface Put {
 
 const both = { icons: true, text: true };
 
-function draw(list: CombatTextEvent[], mode: FloaterMode, now: number): Put[] {
+function draw(list: CombatTextEvent[], mode: FloaterMode, now: number, blocked: Box[] = []): Put[] {
   const put: Put[] = [];
   const p = {
     textRatio: 1,
     label: (s: Spr, x: number, y: number, ox: number, oy: number) =>
       put.push({ s, x: x + ox, y: y + oy })
   } as unknown as FxPainter;
-  drawFloats(p, null, list, now, mode);
+  drawFloats(p, null, list, now, mode, blocked);
   return put;
 }
 
@@ -182,6 +183,18 @@ describe('condition floaters', () => {
       const drawn = draw(list, both, t0 + dt).map(rect);
       for (let i = 0; i < drawn.length; i++)
         for (let j = i + 1; j < drawn.length; j++) expect(apart(drawn[i], drawn[j])).toBe(true);
+    }
+  });
+
+  it('rises clear of a speech bubble instead of landing on it', () => {
+    const t0 = 260_000;
+    const e = onset('winded', 'Winded', 4000, 4);
+    const first = draw([e], both, t0)[0];
+    const [x0, y0, x1, y1] = rect(first);
+    const bubble: Box = [x0 - 10, y0 - 20, x1 + 10, y1 + 20];
+    for (let dt = 100; dt <= 3000; dt += 300) {
+      const drawn = draw([e], both, t0 + dt, [bubble]).map(rect);
+      expect(drawn.every((d) => apart(d, bubble))).toBe(true);
     }
   });
 
