@@ -27,7 +27,14 @@ const PIXEL_DRINKS = (() => {
     ['predator', 'sabretooth', 'owlpelt'],
     ['sight', 'third_eye', 'dun']
   ];
-  const crude = fill => () => draw({ body: 'clay', fill }, ...crock(10));
+  const BEAST_MARKS = {
+    blood: [layer(3, 4, ['m  m  m ', ' m  m  m', '  m  m  '], 'mark', { keep: true })],
+    direpelt: [layer(3, -3, ['l l l l ', 'l m l m ', 'm m m m '], 'mark')],
+    owlpelt: [layer(6, -4, ['  M  ', ' LMD ', 'L M D', '  m  ', '  m  '], 'mark')],
+    dun: [layer(4, 5, [' lll ', 'lmoml', ' lll '], 'mark', { keep: true })]
+  };
+  const BEAST_INK = { blood: 'red', direpelt: 'fur', owlpelt: 'leaf', dun: 'milk' };
+  const crude = fill => () => draw({ body: 'clay', fill, mark: BEAST_INK[fill] }, ...crock(10), ...BEAST_MARKS[fill]);
   const transfusion = fill => () => draw({ body: 'glass', fill, trim: 'wood' }, ...flask('phial', {}));
   const essence = fill => () => draw({ body: 'glass', fill, mark: 'gold' }, ...flask('phial', { stopper: 'knob', band: true }));
   const beasts = BEASTS.flatMap(([line, prefix, fill]) => [
@@ -48,7 +55,7 @@ const PIXEL_DRINKS = (() => {
   const tea = () => draw({ body: 'plaster', fill: 'calm', trim: 'leaf' }, ...cup(), layer(6, 1, LEAF_FLOAT, 'trim', { keep: true }));
   const milkPail = () => draw({ body: 'wood', fill: 'milk', trim: 'iron', mark: 'iron' }, ...shift(pail(), 0, 4), layer(0, 0, BAIL, 'trim', { keep: true }));
   const stock = () => draw({ body: 'clay', fill: 'broth' }, ...bowl(18));
-  const sapCrock = () => draw({ body: 'stone', fill: 'birch' }, ...crock(10));
+  const sapCrock = () => draw({ body: 'glass', fill: 'birch', trim: 'cord', mark: 'birch' }, ...flask('gourd', { label: [4, 3], level: 2 }));
 
   const HORN_PATH = [[3.5, 3.5, 3.6], [6, 5.5, 3.3], [8.5, 7.5, 3], [11, 9, 2.6], [13.5, 10, 2.2], [16, 10.2, 1.8], [18, 9.4, 1.4], [19.5, 8, 1.1]];
   const hornBody = () => HORN_PATH.slice().reverse().map(([x, y, r]) => { const rows = ellipsoid(r, r); return layer(Math.round(x - rows[0].length / 2), Math.round(y - rows.length / 2), rows, 'body', { keep: true }); });

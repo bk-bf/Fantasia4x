@@ -186,11 +186,11 @@ const QUAD_ANIMS = {
 };
 const FB_ANIMS = {
   idle: (u, c) => ({ feet: still4, by: u > .4 && u < .8 ? -.6 : 0, blink: c.lvl > 2 && (c.t * .31 + c.seed) % 1 > .94 ? 1 : 0, tail: { w: 1.5, ph: u * TAU } }),
-  walk: (u, c) => { const a = sn(u); return { feet: [[0, Math.max(0, a) * 2.4], [0, Math.max(0, -a) * 2.4], [0, Math.max(0, -a) * 2.4], [0, Math.max(0, a) * 2.4]], by: sn(u * 2) * .6, head: [a * .6, sn(u * 2 + .2) * .8], tail: { w: 2, ph: u * TAU } }; },
-  trot: (u, c) => { const a = sn(u); return { feet: [[0, Math.max(0, a) * 3.6], [0, Math.max(0, -a) * 3.6], [0, Math.max(0, -a) * 3.6], [0, Math.max(0, a) * 3.6]], by: .4 - Math.abs(a) * 1.7, head: [a * .5, -Math.abs(a)], tail: { w: 2.5, ph: u * TAU * 2 } }; },
-  run: (u, c) => { const a = sn(u); return { feet: [[0, Math.max(0, a) * 5], [0, Math.max(0, a) * 4], [0, Math.max(0, -a) * 5], [0, Math.max(0, -a) * 4]], by: -1 - sn(u * 2) * 1.8, head: [0, -1 + a], ear: -1, tail: { w: 2, ph: u * TAU } }; },
+  walk: (u, c) => ({ feet: gaitFeet(c.o, 'walk', u), by: sn(u * 2) * .5, head: [0, sn(u * 2 + .2) * .8], tail: { w: 2, ph: u * TAU } }),
+  trot: (u, c) => ({ feet: gaitFeet(c.o, 'trot', u), by: .4 - Math.abs(sn(u)) * 1.5, head: [0, -Math.abs(sn(u))], tail: { w: 2.5, ph: u * TAU * 2 } }),
+  run: (u, c) => ({ feet: gaitFeet(c.o, 'run', u), by: -1 - sn(u * 2 + .1) * 1.6, head: [0, -1 + sn(u - .08)], ear: -1, tail: { w: 2, ph: u * TAU } }),
+  stalk: (u, c) => ({ feet: gaitFeet(c.o, 'stalk', u), by: c.o.leg * .28 + sn(u * 2) * .3, head: [0, 2], ear: -1, tail: { w: .5, ph: u * TAU } }),
 };
-FB_ANIMS.stalk = FB_ANIMS.walk;
 
 const FOWL_ANIMS = {
   idle: { label: 'Fowl', group: 'Creatures', dur: 2, n: 6, pose(u, c) { const j = Math.floor(u * 6); return { head: [j === 2 ? -1 : j === 4 ? 1 : 0, j === 2 ? 1 : 0] }; } },

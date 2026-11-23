@@ -41,8 +41,7 @@
   const dome = (s, cx, cy, rx, ry, ramp, o) => { s.ball(cx, cy, rx, ry, 0, ramp, Object.assign({ n: .2, d: .15 }, o)); for (let x = 0; x < s.w; x++) for (let y = BY + 1; y < s.h; y++) s.set(x, y, null); };
   const bands = (s, x0, x1, ys) => { for (const y of ys) for (let x = x0; x <= x1; x++) { const c = s.get(x, y); if (c && c !== P.ink) s.set(x, y, dark(c, .74)); } };
   const hoops = (s, x0, x1, ys, ramp) => { for (const y of ys) for (let x = x0; x <= x1; x++) if (s.get(x, y)) { const u = (x - x0) / Math.max(1, x1 - x0); s.set(x, y, ramp[u < .2 ? 5 : u < .6 ? 4 : 2]); if (s.get(x, y + 1)) s.set(x, y + 1, ramp[u < .6 ? 2 : 1]); } };
-  const sparks = (s, x, y, n, fr) => { for (let i = 0; i < n; i++) s.set(x + (hash(i, fr, 1) - .5) * 10, y - hash(i, fr, 2) * 9, P.fire[2 + (i % 3)], 255); };
-  Object.assign(BK, { mouth, hole, door, pipe, chimney, pot, loaf, bellows, dome, bands, hoops, sparks, FIRE, EMBER });
+  Object.assign(BK, { mouth, hole, door, pipe, chimney, pot, loaf, bellows, dome, bands, hoops, FIRE, EMBER });
 
   BK.add('brick_hearth', (s, r, fr) => {
     chimney(s, 24, BY - 44, BY - 18, 9, BRK(5, 3));
@@ -50,7 +49,6 @@
     hole(s, 9, BY, 16, 14); s.thick(11, BY - 1, 22, BY - 3, 2, P.wood, 2); s.thick(12, BY - 4, 21, BY - 1, 2, P.wood, 3);
     flame2(s, 17, BY - 2, 4, 10, fr);
     s.rect(4, y0 + 9, 32, 2, P.brick[5]); s.rect(4, y0 + 11, 32, 1, P.brick[1]);
-    smoke2(s, 28, BY - 47, 3, r);
   }, { frames: 3, emit: FIRE });
   BK.add('brick_stove', (s, r, fr) => {
     pipe(s, 29, BY - 38, BY - 20, 4, P.iron, true);
@@ -58,7 +56,6 @@
     s.oval(13, y0 + 6, 5, 2.6, (x, y, nx, ny) => Math.hypot(nx, ny) > .7 ? P.brick[1] : P.fire[hash(x, y + fr, 2) > .6 ? 2 : 1], 200);
     s.oval(26, y0 + 6, 5, 2.6, () => P.brick[1]); pot(s, 26, y0 + 6, 4.4, P.iron, P.furTan[3]);
     door(s, 14, BY - 10, 10, 8, P.iron, true); s.rect(17, BY - 4, 4, 1, P.fire[2], 255);
-    smoke2(s, 31, BY - 41, 2, r);
   }, { frames: 2, emit: EMBER });
   BK.add('iron_stove', (s, r, fr) => {
     pipe(s, 28, BY - 42, BY - 22, 4, P.iron, true);
@@ -67,7 +64,6 @@
     for (const x of [10, 21]) s.oval(x + 1, y0 - 4, 4, 2, (px2, py, nx, ny) => Math.hypot(nx, ny) > .7 ? P.iron[2] : P.iron[1]);
     pot(s, 11, y0 - 4, 4, P.copper, P.cloth[4]); pot(s, 22, y0 - 4, 3.4, P.iron, P.furTan[2]);
     door(s, 12, BY - 10, 12, 8, P.iron, false); s.rect(15, BY - 7, 6, 1, P.fire[3], 255); s.rect(15, BY - 5, 6, 1, P.fire[2], 255);
-    smoke2(s, 30, BY - 45, 2, r);
   }, { emit: EMBER });
   BK.add('steel_stove', (s, r, fr) => {
     pipe(s, 6, BY - 46, BY - 24, 5, P.iron, true); s.rect(10, BY - 33, 4, 1, P.iron[6]); s.rect(13, BY - 34, 1, 3, P.gold[3]);
@@ -77,7 +73,6 @@
     door(s, 6, BY - 13, 12, 11, P.iron, false); door(s, 21, BY - 13, 13, 6, P.iron, false); door(s, 21, BY - 6, 13, 5, P.iron, false);
     s.rect(8, BY - 5, 8, 1, P.fire[3], 255); s.rect(3, y0 + 12, 34, 1, P.iron[6]); for (let x = 5; x < 36; x += 5) s.set(x, y0 + 14, P.iron[6]);
     s.rect(3, BY, 34, 1, P.fireBrick[1]);
-    smoke2(s, 8, BY - 49, 2, r);
   }, { emit: EMBER });
   BK.add('oven', (s, r, fr) => {
     bx2(s, 5, 30, 5, 8, BRK(2, 4), BRK(5, 3), { fd: .84 });
@@ -85,7 +80,7 @@
     mouth(s, 14, BY - 9, 12, 9, false); s.rect(13, BY - 18, 14, 1, P.clay[4]);
     s.rect(8, BY - 8, 24, 1, P.brick[5]);
     loaf(s, 9, BY - 3, 3.2); s.thick(24, BY + 2, 36, BY - 10, 1, P.plank, 4); s.oval(25, BY, 3.4, 1.8, () => P.plank[4]);
-    s.oval(20, BY - 29, 2.6, 1.2, () => P.ink); smoke2(s, 20, BY - 32, 3, r);
+    s.oval(20, BY - 29, 2.6, 1.2, () => P.ink);
   }, { emit: EMBER });
   BK.add('brick_bake_oven', (s, r, fr) => {
     chimney(s, 28, BY - 44, BY - 20, 7, ST(3, 3));
@@ -94,7 +89,6 @@
     bx2(s, 3, 34, 5, 10, ST(1), ST(2, 4), { fd: .84 });
     mouth(s, 11, BY - 11, 14, 10, false); for (let i = 0; i < 9; i++) { const t = Math.PI * (i / 8), x = 18 - Math.cos(t) * 8.4, y = BY - 11 - Math.sin(t) * 10.4; s.rect(Math.round(x) - 1, Math.round(y) - 1, 2, 2, P.fireBrick[3 - (i & 1)]); }
     loaf(s, 8, BY - 12, 2.6); loaf(s, 29, BY - 2, 3.2); loaf(s, 23, BY, 3);
-    smoke2(s, 31, BY - 47, 3, r);
   }, { emit: EMBER });
   BK.add('bakehouse', (s, r, fr) => {
     chimney(s, 16, BY - 46, BY - 24, 8, BRK(5, 3));
@@ -105,7 +99,6 @@
     for (const y of [BY - 19, BY - 16, BY - 13]) { s.rect(16, y, 8, 1, P.plank[4]); }
     loaf(s, 20, BY - 20, 2.4); loaf(s, 19, BY - 17, 2.4);
     s.thick(37, BY + 2, 33, BY - 28, 1, P.plank, 4); s.oval(33, BY - 30, 2.6, 3.4, () => P.plank[4]);
-    smoke2(s, 20, BY - 49, 3, r);
   }, { frames: 2, emit: FIRE });
   BK.add('steel_bake_range', (s, r, fr) => {
     for (const x of [8, 19, 30]) { pipe(s, x, BY - 46, BY - 30, 3, P.iron, true); s.rect(x - 1, BY - 37, 5, 1, P.gold[3]); }
@@ -119,13 +112,12 @@
     hoops(s, 4, 36, [BY - 26, BY - 13], P.iron);
     s.oval(20, BY - 39, 4, 1.6, (x, y, nx, ny) => Math.hypot(nx, ny) < .6 ? P.ink : P.fireBrick[4]);
     mouth(s, 14, BY, 12, 10, true); s.rect(13, BY - 10, 14, 1, P.fireBrick[4]);
-    smoke2(s, 20, BY - 43, 4, r);
     pot(s, 34, BY, 2.6, P.clay); s.oval(5, BY, 3, 1.6, () => P.cloth[4]);
   }, { emit: FIRE });
   BK.add('porcelain_workshop', (s, r, fr) => {
     for (let j = 0; j < 34; j++) { const w = Math.round(j < 12 ? 6 + j : 18 + Math.sin(j / 33 * 3) * 2); s.tube(12 - (w >> 1) + 2, BY - 33 + j, w, 1, FB(5, 2)); }
     hoops(s, 4, 26, [BY - 20], P.iron); mouth(s, 9, BY, 10, 8, true); s.rect(8, BY - 8, 12, 1, P.fireBrick[4]);
-    s.oval(14, BY - 33, 3, 1.3, (x, y, nx, ny) => Math.hypot(nx, ny) < .6 ? P.ink : P.fireBrick[4]); smoke2(s, 14, BY - 37, 3, r);
+    s.oval(14, BY - 33, 3, 1.3, (x, y, nx, ny) => Math.hypot(nx, ny) < .6 ? P.ink : P.fireBrick[4]);
     const y0 = table2(s, 24, 14, 8, 7, WP(3, 'h', 4), P.plank);
     const W = P.snow;
     s.ball(28, y0 - 2, 2.6, 4, 3, W, { d: .15, bias: .1 }); s.rect(27, y0 - 7, 2, 2, W[4]); s.rect(26, y0 - 8, 4, 1, W[3]); s.set(28, y0 - 2, P.blue[3]); s.set(27, y0 - 1, P.blue[3]); s.set(29, y0 - 3, P.blue[2]);
@@ -145,10 +137,9 @@
     const y0 = bx2(s, 3, 22, 11, 13, BRK(2, 4), BRK(4, 3), { fd: .84 });
     s.fill(5, y0 + 2, 18, 7, (x, y) => hash(x, y + fr, 3) > .6 ? P.fire[1 + (hash(x, y, 5) > .5 ? 1 : 0)] : P.furDark[hash(x, y, 7) > .5 ? 1 : 0]); s.rect(5, y0 + 2, 18, 1, P.ink);
     s.ball(14, y0 + 5, 4, 2.6, 6, P.fire, { d: .3, bias: .1, e: 255 });
-    flame2(s, 14, y0 + 3, 3, 7, fr); sparks(s, 14, y0 - 4, 5, fr);
+    flame2(s, 14, y0 + 3, 3, 7, fr);
     bellows(s, 26, BY - 2, 11, 10, false); s.rect(23, BY - 6, 4, 2, P.iron[3]);
     s.thick(30, BY - 14, 36, BY - 26, 2, P.wood, 4); s.rect(33, BY - 30, 6, 5, P.iron[4]); s.rect(33, BY - 30, 6, 1, P.iron[6]);
-    smoke2(s, 13, BY - 45, 3, r);
   }, { frames: 3, emit: FIRE });
   BK.add('cementation_furnace', (s, r, fr) => {
     chimney(s, 28, BY - 40, BY - 22, 6, BRK(5, 3));
@@ -156,7 +147,6 @@
     for (const x of [5, 16, 27]) { s.slab(x, y0 + 1, 9, 8, 1, M.flat(P.stone, 5, x), M.flat(P.stone, 3, 5)); s.rect(x + 3, y0 + 4, 3, 1, P.iron[5]); s.rect(x, y0 + 1, 9, 1, P.clay[4]); }
     mouth(s, 6, BY, 7, 6, false); mouth(s, 27, BY, 7, 6, false);
     for (let x = 4; x < 36; x += 4) s.set(x, BY - 8, P.iron[5]); s.rect(2, BY - 9, 36, 1, P.iron[3]);
-    smoke2(s, 30, BY - 43, 2, r);
   }, { emit: EMBER });
   BK.add('puddling_furnace', (s, r, fr) => {
     chimney(s, 28, BY - 48, BY - 16, 8, FB(5, 3));
@@ -165,14 +155,13 @@
     door(s, 11, BY - 10, 9, 8, P.iron, true); s.rect(13, BY - 7, 5, 3, P.fire[3], 255); s.rect(14, BY - 6, 3, 1, P.fire[4], 255);
     s.thick(15, BY - 5, 2, BY + 3, 1, P.iron, 5); s.rect(1, BY + 2, 2, 2, P.wood[3]);
     mouth(s, 23, BY, 6, 5, false);
-    smoke2(s, 31, BY - 51, 4, r); sparks(s, 15, BY - 12, 3, fr);
   }, { frames: 2, emit: FIRE });
   BK.add('blast_furnace', (s, r, fr) => {
     const B = 102, cx = 34;
     for (let j = 0; j < 70; j++) { const f = j / 69, w = Math.round(18 + f * 22 - (f > .82 ? (f - .82) * 30 : 0)); s.tube(cx - (w >> 1), B - 69 + j, w, 1, ST(3, 3)); }
     hoops(s, 10, 58, [B - 52, B - 34, B - 16], P.iron);
     s.oval(cx, B - 69, 9, 3, (x, y, nx, ny) => Math.hypot(nx, ny) < .7 ? P.fire[2] : P.stone[5], 0); for (let x = cx - 6; x <= cx + 6; x++) for (let y = B - 70; y <= B - 68; y++) if (Math.hypot((x - cx) / 6.3, (y - B + 69) / 2.1) < 1) s.set(x, y, P.fire[2 + (hash(x, y, fr) > .5 ? 1 : 0)], 255);
-    flame2(s, cx, B - 70, 5, 12, fr); smoke2(s, cx, B - 86, 5, r);
+    flame2(s, cx, B - 70, 5, 12, fr);
     mouth(s, cx - 8, B, 16, 13, true); for (let i = 0; i < 11; i++) { const t = Math.PI * (i / 10), x = cx - Math.cos(t) * 9.6, y = B - Math.sin(t) * 14; s.rect(Math.round(x) - 1, Math.round(y) - 1, 2, 2, P.fireBrick[3 - (i & 1)]); }
     for (let k = 0; k < 14; k++) { s.set(cx - 2 + k * .6, B + 1 + (k >> 2), P.fire[4 - (k > 9 ? 1 : 0)], 255); s.set(cx - 1 + k * .6, B + 1 + (k >> 2), P.fire[3], 255); }
     s.rect(cx + 6, B + 3, 6, 3, P.iron[3]); s.rect(cx + 7, B + 3, 4, 1, P.fire[3], 255);
@@ -185,11 +174,11 @@
     for (const [x, hot] of [[6, 1], [17, 0], [28, 0]]) { s.rect(x, y0 + 3, 8, 7, P.ink); if (hot) { s.fill(x + 1, y0 + 4, 6, 5, (px2, py) => P.fire[1 + (hash(px2, py + fr, 3) > .5 ? 1 : 0)], 255); pot(s, x + 4, y0 + 8, 2.6, P.clay, P.fire[4]); } else s.slab(x, y0 + 2, 8, 7, 1, M.flat(P.fireBrick, 3, x), M.flat(P.fireBrick, 2, 5)); s.rect(x, y0 + 3, 8, 1, P.fireBrick[4]); }
     pot(s, 7, BY + 2, 2.6, P.clay); pot(s, 13, BY + 3, 2.6, P.clay, P.fire[3]);
     s.thick(20, BY + 2, 33, BY - 7, 1, P.iron, 5); s.thick(21, BY + 3, 34, BY - 5, 1, P.iron, 3);
-    mouth(s, 20, BY, 6, 5, false); smoke2(s, 30, BY - 47, 3, r);
+    mouth(s, 20, BY, 6, 5, false);
   }, { frames: 2, emit: FIRE });
 })();
 (() => {
-  const X = DBX, BK = X.BK, { mouth, hole, door, pipe, chimney, pot, loaf, bellows, hoops, sparks, FIRE, EMBER } = BK;
+  const X = DBX, BK = X.BK, { mouth, hole, door, pipe, chimney, pot, loaf, bellows, hoops, FIRE, EMBER } = BK;
   const post = (s, x, yTop, yBot, ramp, w) => { s.rect(x, yTop, w || 3, yBot - yTop + 1, ramp[2]); s.rect(x, yTop, 1, yBot - yTop + 1, ramp[4]); if ((w || 3) > 2) s.rect(x + (w || 3) - 1, yTop, 1, yBot - yTop + 1, ramp[1]); };
   const lash = (s, x, y, w) => { for (let i = 0; i < w; i++) s.set(x + i, y + (i & 1), P.cloth[i & 1 ? 3 : 4]); s.rect(x, y + 2, w, 1, P.cloth[2]); };
   const hide = (s, x, y, w, h, ramp, seed) => { for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) { const cut = (j < 2 || j > h - 3) && (i < 2 || i > w - 3) && !((j === 0 || j === h - 1) && (i === 0 || i === w - 1)) ? 0 : 1, notch = (i === 0 || i === w - 1) && j > h * .35 && j < h * .65; if (notch || ((j < 2 || j > h - 3) && i > 2 && i < w - 3 && (j === 0 || j === h - 1) && (i % 5 === 2))) continue; if (!cut && !((j === 0 || j === h - 1) || (i === 0 || i === w - 1))) continue; s.set(x + i, y + j, ramp[clamp(3 + (i < 2 ? 1 : i > w - 3 ? -1 : 0) - (noise(i * .6, j * .5, seed) > .62 ? 1 : 0) + (j < 2 ? 1 : 0), 0, ramp.length - 1)]); } };
@@ -318,7 +307,6 @@
     pot(s, 27, y0 + 9, 2.8, P.clay, P.purple[3]);
     flask(s, 31, y0 + 6, GLASS, P.green[4]); flask(s, 21, y0 + 12, GLASS, P.red[3]);
     for (let i = 0; i < 4; i++) s.line(5 + i, y0 + 3, 7 + i, y0 + 7, P.grassLoam[2 + (i % 3)]);
-    smoke2(s, 13, y0 - 10, 2, r);
   }, { emit: { dx: -6, dy: -18, rad: 30, col: [1, .5, .2], flicker: 1 } });
   BK.add('apothecary', (s, r, fr) => {
     const y0 = bx2(s, 4, 32, 7, 26, WP(5, 'h', 4), WP(6, 'v', 3), { fd: .86 });
@@ -377,7 +365,7 @@
     s.rect(9, BY - 8, 8, 7, P.ink); flame2(s, 13, BY - 2, 2, 5, fr); s.rect(8, BY - 9, 10, 1, P.brick[5]);
     const st = M.wood(P.plank, { dir: 'v', pw: 4, b: 3, seed: 7 }); for (let j = 0; j < 13; j++) s.tube(25, BY - 12 + j, 12, 1, j === 3 || j === 9 ? () => P.iron[4] : st);
     s.oval(31, BY - 13, 6, 2.4, (x, y, nx, ny) => Math.hypot(nx, ny) > .8 ? P.plank[5] : P.hay[2 + (hash(x, y, 3) > .6 ? 1 : 0)]);
-    s.thick(27, BY - 14, 35, BY - 26, 1, P.wood, 4); smoke2(s, 13, y0 - 16, 3, r);
+    s.thick(27, BY - 14, 35, BY - 26, 1, P.wood, 4);
   }, { frames: 2, emit: { dx: -6, dy: -4, rad: 50, col: [1, .5, .2], flicker: 1 } });
   BK.add('lagering_cellar', (s, r) => {
     const st = ST(3, 3);
@@ -561,7 +549,7 @@
     s.thick(2, BY - 13, 37, BY - 15, 2, P.woodGrey, 3);
   });
   function logOnSide(s, x, y, w) { for (let j = 0; j < 7; j++) for (let i = 0; i < w; i++) s.set(x + i, y + j, P.wood[clamp([4, 5, 4, 3, 2, 1, 0][j] - (noise(i * .22 + 7, j * 1.3, 2) > .68 ? 1 : 0), 0, 5)]); s.oval(x + 1.5, y + 3.5, 2.6, 3.5, (px2, py, nx, ny) => { const q = Math.hypot(nx, ny); return q > .8 ? P.wood[2] : q < .25 ? P.plank[2] : P.plank[q < .55 ? 5 : 4]; }); for (let j = 1; j < 6; j++) s.set(x + w, y + j, P.wood[0]); }
-  BK.add('gatehouse', (s) => {
+  const gatehouse = (s) => {
     const B = 102, st = M.stone(P.stone, 10, 6, { seed: 3, b: 4 }), fc = (x, y) => dark(st(x, y), .84);
     for (const x of [4, 50]) { s.slab(x, B - 62, 18, 10, 53, st, fc, { fd: .9 }); for (let k = 0; k < 3; k++) s.slab(x + k * 7, B - 68, 5, 4, 6, st, fc); s.rect(x + 8, B - 38, 2, 9, P.ink); s.rect(x + 7, B - 35, 4, 2, P.ink); }
     s.slab(20, B - 54, 32, 10, 14, st, fc, { fd: .9 }); for (let k = 0; k < 4; k++) s.slab(21 + k * 8, B - 59, 5, 3, 5, st, fc);
@@ -570,7 +558,8 @@
     for (let i = 0; i < 12; i++) { const t = Math.PI * (i / 11), x = 36 - Math.cos(t) * 15.4, y = B - 21 - Math.sin(t) * 10.6; s.rect(Math.round(x) - 1, Math.round(y) - 1, 3, 2, P.stone[5 - (i & 1)]); }
     s.rect(33, B - 14, 2, 3, P.iron[6]); s.rect(37, B - 14, 2, 3, P.iron[5]);
     for (const x of [12, 58]) { s.rect(x, B - 78, 1, 12, P.wood[4]); for (let j = 0; j < 6; j++) for (let i = 1; i < 8 - j; i++) s.set(x + i, B - 77 + j, P.red[clamp(3 - (i > 4 ? 1 : 0) + (j === 0 ? 1 : 0), 0, 4)]); }
-  }, { tall: 1 });
+  };
+  X.concept('building', 'gatehouse', { id: 'gatehouse', name: 'Gatehouse', note: 'concept for later', about: 'The stone gate tower with its portcullis and pennants. One frame. Set aside as a concept; it is not a building the game has.', step: 1, frames: () => [BK.make('gatehouse', gatehouse, { tall: 1 }, 0)] });
 })();
 (() => {
   const X = DBX;
@@ -598,17 +587,16 @@
 
   const cord = M.wood(P.wood, { pw: 5, b: 3, seed: 21 });
   X.floorKind('branch_floor', addFloor({ id: 'branch', name: 'Branch Floor', f: (x, y) => {
-    const i0 = Math.round((y - 1) / 4);
-    for (const i of [i0, i0 - 1, i0 + 1]) {
-      const h = hash(i, 3, 23), t = h > .4 ? 3 : 2, top = Math.round(i * 4 + 1.3 * Math.sin(x * .05 + i * 1.7) + .7 * Math.sin(x * .13 + i * .6)) - 1, d = y - top;
-      if (d < 0 || d >= t) continue;
-      const R2 = h > .8 ? P.woodGrey : P.wood, L = 52 + Math.floor(h * 44), gx = (x + Math.floor(h * 97)) % L;
-      if (gx === 0) return P.soilRich[0];
-      if ((x + (i % 3) * 11) % 33 === 0 && i % 2 === 0) return P.cloth[d ? 2 : 4];
-      let k = d === 0 ? 4 : d === t - 1 ? 1 : 3; if (gx === 1) k += 1; if (hash(Math.floor(x / 4), i, 25) > .85) k -= 1; if ((x + i * 13) % 43 === 0 && d < 2) k = 0;
-      return R2[clamp(k, 0, 5)];
-    }
-    return P.soilRich[hash(x, y, 29) > .86 ? 2 : 0];
+    const soil = P.soilRich[hash(x, y, 29) > .9 ? 1 : 0], yy = y - Math.round(1.2 * Math.sin(x * .06 + Math.floor(y / 4) * 1.7)), i = Math.floor(yy / 4), d = yy - i * 4;
+    if (d === 3) return soil;
+    const h = hash(i, 3, 23), L = 34 + Math.floor(h * 30), gx = (x + Math.floor(h * 97)) % L, seg = Math.floor((x + Math.floor(h * 97)) / L), sh = hash(i, seg, 31);
+    if (gx === 0 || (gx === L - 1 && d === 2)) return soil;
+    if ((x & 31) >= 13 && (x & 31) <= 14) return P.leather[d === 0 ? 3 : d === 1 ? 2 : 0];
+    const R2 = sh > .78 ? P.woodGrey : P.wood;
+    let k = [4, 3, 1][d] - (sh < .3 ? 1 : 0);
+    if (hash(Math.floor(x / 4), i, 25) > .86 && d === 1) k -= 1;
+    if (gx < 3 && d === 0) k -= 1;
+    return R2[clamp(k, 0, 5)];
   } }));
   X.floorKind('hay_floor', addFloor({ id: 'rush', name: 'Rush Floor', f: (x, y) => { const a = noise(x * .05, y * .05, 41) * 6.283, u = x * Math.cos(a) + y * Math.sin(a), v = -x * Math.sin(a) + y * Math.cos(a); let k = 2 + (noise(u * .12, v * .9, 43) > .55 ? 1 : 0) + (noise(u * .1 + 9, v * 1.1, 45) > .7 ? 1 : 0) - (noise(u * .15, v * .8 + 5, 47) > .72 ? 1 : 0); if (hash(x, y, 49) > .97) k -= 2; return P.hay[clamp(k, 0, 4)]; } }));
   X.floorKind('clay_floor', addFloor({ id: 'clayfloor', name: 'Rammed-Clay Floor', f: (x, y) => { const m = fbm(x * .04, y * .04, 51, 2), h2 = hash(x, y, 53); let k = 3 + (m > .6 ? 1 : m < .4 ? -1 : 0); if (h2 > .97) k -= 1; if (Math.abs(noise(x * .045, y * .045, 55) - .5) < .008) k -= 2; return P.clay[clamp(k, 0, 4)]; } }));

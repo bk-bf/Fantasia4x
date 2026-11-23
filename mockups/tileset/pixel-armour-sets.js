@@ -47,6 +47,7 @@ const PIXEL_ARMOUR_SETS = (() => {
   const STEEL_ON_LEATHER = { body: 'leather', trim: 'steel', strap: 'boarhide', lining: 'black' };
   const GRAVEN = { body: 'runed', trim: 'gold', strap: 'glow', lining: 'black' };
   const STITCHED = { body: 'runed', trim: 'glow', strap: 'glow', lining: 'black' };
+  const STITCHED_SCALE = { body: 'runecloth', trim: 'glow', strap: 'glow', lining: 'black' };
   const WOVEN = { body: 'runecloth', trim: 'glow', strap: 'glow', lining: 'black' };
   const WICKER = { body: 'ash', trim: 'wood', strap: 'cord', lining: 'wood' };
   const BRANCH = { body: 'wood', strap: 'cord' };
@@ -162,10 +163,10 @@ const PIXEL_ARMOUR_SETS = (() => {
     { id: 'rune_graven_sabatons', draw: () => shod(FEET.sabaton, soled(GRAVEN, 'black')) },
 
     { id: 'rune_stitched_lamellar', draw: () => dress(TORSO.lamellarVest, STITCHED, STITCHES) },
-    { id: 'rune_stitched_coif', draw: () => dress(HEAD.scaleCoif, STITCHED) },
-    { id: 'rune_stitched_bracers', draw: () => dress(ARMS.scale, STITCHED) },
+    { id: 'rune_stitched_coif', draw: () => dress(HEAD.scaleCoif, STITCHED_SCALE) },
+    { id: 'rune_stitched_bracers', draw: () => dress(ARMS.scale, STITCHED_SCALE) },
     { id: 'rune_stitched_gloves', draw: () => dress(HANDS.scaleGlove, { body: 'wool', trim: 'runed' }) },
-    { id: 'rune_stitched_greaves', draw: () => dress(LEGS.scale, STITCHED) },
+    { id: 'rune_stitched_greaves', draw: () => dress(LEGS.scale, STITCHED_SCALE) },
     { id: 'rune_stitched_boots', draw: () => shod(FEET.shoe, { body: 'wool', trim: 'runed', strap: 'black', lining: 'black' }) },
 
     { id: 'rune_woven_robe', draw: () => dress(TORSO.robe, Object.assign({}, WOVEN, { trim: 'gold' }), SPIRAL) },

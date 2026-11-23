@@ -4,23 +4,6 @@ const PIXEL_TOOLS = (() => {
 
   const rungs = (from, to, at, tones) => part(from, Array.from({ length: to - from + 1 }, (_, i) => ' '.repeat(at) + tones[i % tones.length]));
 
-  const POINT_HEAD = part(-11, [
-    ' l    ',
-    ' ll   ',
-    ' ml   ',
-    '  ml  ',
-    ' dml  ',
-    '  dml ',
-    '  ml  ',
-    '  dml ',
-    '  ml  ',
-    '  dml ',
-    '  ml  ',
-    '  dml ',
-    '  md  ',
-    '  dmm ',
-    '  dd  '
-  ]);
   const PICK_ARM = part(-13, [
     'l      ',
     'ml     ',
@@ -359,59 +342,91 @@ const PIXEL_TOOLS = (() => {
     '          LMMMMMMMMMMMMMMD',
     '          DDDDDDDDDDDDDDDD'
   ];
-  const NEEDLE_ROLL = [
-    '   M    M    M            ',
-    '   D    D    D            ',
-    '   L    L    L   M y      ',
-    '   LM   LM   LM  D y      ',
-    '   LM   LM   LM  L y      ',
-    ' llLMlllLMlllLMllLMyl     ',
-    'lmmLMmmmLMmmmLMmmLMymd    ',
-    'lmmLMmmmLMmmmLMmmLMmyd    ',
-    'lmmLMmmmLMmmmLMmmLMmmy    ',
-    'lmmLMmmmLMmmmLMmmLMXXXXXXX',
-    'lmmLMmmmLMmmmLMmmLMmzyzyz ',
-    'ldddddddddddddddddddyzyzy ',
-    'lmmmmmmmmmmmmmmmmmmmzyzyz ',
-    'lmmmmmmmmmmmmmmmmmmmyzyzy ',
-    'lmmmmmmmmmmmmmmmmmmXXXXXXX',
-    'lmmmmmmmmmmmmmmmmmmmmd    ',
-    'lmmmmmmmmmmmmmmmmmmmmd    ',
-    'lmmmmmmmmmmmmmmmmmmmmd    ',
-    ' dddddddddddddddddddd     '
-  ];
-  const SHEARS_CASE = [
-    '       Z            Z       ',
-    '       YZ          ZY       ',
-    '        YZ        ZY        ',
-    '         YZ      ZY         ',
-    '          YZ    ZY          ',
-    '           YZ  ZY           ',
-    '            YLLY            ',
-    '            XLLX            ',
-    '           YX  XY           ',
-    '          YX    XY          ',
-    '         XXX    XXX         ',
-    '        X   X  X   X        ',
-    '        X   X  X   X        ',
-    '         XXX    XXX         ',
-    ' llllllllllllllllllllllllll ',
-    'lmmmmmmmmmmmmmmmmmmmmmmmmmmd',
-    'llllllllllllllllllllllllllld',
-    'lddddddddddddddddddddddddddd',
-    'lmmmmmmmmmmmmmmmmmmmmmmmmmmd',
-    'lmmmmmmmmmmmLMMLmmmmmmmmmmmd',
-    'lmmmmmmmmmmmMDDMmmmmmmmmmmmd',
-    'lmmmmmmmmmmmmmmmmmmmmmmmmmmd',
-    'lmmmmmmmmmmmmmmmmmmmmmmmmmmd',
-    'lmmmmmmmmmmmmmmmmmmmmmmmmmmd',
-    'lmmmmmmmmmmmmmmmmmmmmmmmmmmd',
-    ' dddddddddddddddddddddddddd '
-  ];
 
+  const PICK_PATCH = PX.patch([
+    'll            ',
+    ' ddlll        ',
+    '   dmmll      ',
+    '    ddmmll    ',
+    '      dmmml   ',
+    '       dmml   ',
+    '       dmmml  ',
+    '         mmml ',
+    '          mmdd',
+    '           ddd',
+    '            d '
+  ], [9, 7]);
   const lashing = n => [binding(n), 'cord'];
+  const OPEN_SHEARS = [
+    'l              l',
+    'ml            lm',
+    ' ml          lm ',
+    ' dml        lmd ',
+    '  dml      lmd  ',
+    '   dml    lmd   ',
+    '    dml  lmd    ',
+    '     dmllmd     ',
+    '      dLLd      ',
+    '      MDDM      ',
+    '     MD  DM     ',
+    '  MMMM    MMMM  ',
+    ' M    M  M    M ',
+    ' M    D  M    D ',
+    ' M    D  M    D ',
+    '  DDDD    DDDD  '
+  ];
+  const CUSHION = [' l l l ', ' x x x ', 'llllmmd', 'lmmmmdd', 'mmmmddd', ' ddddd '];
+  const LID = [
+    'llllllllllllllllllllllll',
+    'lmmmmmmmmmmmmmmmmmmmmmmd',
+    'lmWWWWWWWWWWWWWWWWWWWWmd',
+    'lmWZZZZZZZZZZZZZZZZZZYmd',
+    'lmWZxZxZxZxZZZZZZZZZZYmd',
+    'lmWZyZyZyZyZZZZZZZZZZYmd',
+    'lmWXyXyXyXyXXXXXXXXXXXmd',
+    'lmWZyZyZyZyZZZZZZZZZZYmd',
+    'lmWZyZyZyZyZZZZZZZZZZYmd',
+    'lmWZyZyZyZyZZZZZZZZZZYmd',
+    'lmWYzYzYzYzYYYYYYYYYYXmd',
+    'lmWYYYYYYYYYYYYYYYYYYXmd'
+  ];
+  const CASE_FRONT = [
+    'llllllllllllllllllllllllllll',
+    'lmmmmmmmmmmmmmmmmmmmmmmmmmmd',
+    'lmmmmmmmmmmmLMMDmmmmmmmmmmmd',
+    'lmmmmmmmmmmmMDDDmmmmmmmmmmmd',
+    'lmmmmmmmmmmmmmmmmmmmmmmmmmmd',
+    'lmmmmmmmmmmmmmmmmmmmmmmmmmmd',
+    'lmmmmmmmmmmmmmmmmmmmmmmmmmmd',
+    'dddddddddddddddddddddddddddd'
+  ];
+  const SPOOL = ['lmmmd', ' WXY ', ' WYZ ', ' WXY ', ' WYZ ', 'lmmmd'];
+  const ROLL_BACK = ['llllllllllllllllllllll', ...new Array(10).fill('lmmmmmmmmmmmmmmmmmmmmm'), 'dddddddddddddddddddddd'];
+  const POCKET = ['llllllllllllllllllllll', ...new Array(5).fill('lmmmmmdmmmmmdmmmmmdmmm'), 'dddddddddddddddddddddd'];
+  const ROLLED_END = [' lmd ', ...new Array(14).fill('lmmdd'), ' mdd '];
+  const NEEDLE = n => ['m', 'o', ...new Array(n).fill('l')];
+  const AWL = [' lm ', 'lmmd', 'lmmd', 'lmmd', ' md ', ' ML ', ' MD ', ' MD ', ' MD '];
+  const SKEIN = [' lmm ', 'lmlmd', 'mlmld', 'lmldd', ' mdd '];
+  const sewingRoll = () => PX.layered(
+    [0, 8, ROLL_BACK, 'hide'],
+    [3, 2, NEEDLE(12), 'string'],
+    [5, 4, NEEDLE(10), 'string'],
+    [7, 3, NEEDLE(11), 'string'],
+    [11, 2, AWL, 'wood', 'iron'],
+    [0, 13, POCKET, 'hide'],
+    [21, 7, ROLLED_END, 'hide'],
+    [15, 4, SKEIN, 'cord'],
+    [8, 2, ['l      ', ' l     ', '  l   l', '   lll '], 'string']
+  );
+  const tailorsCase = () => PX.layered(
+    [2, 4, LID, 'leather', 'leather', 'steel', 'red'],
+    [0, 15, CASE_FRONT, 'leather', 'gold'],
+    [20, 9, SPOOL, 'wood', 'wood', 'wood', 'woad'],
+    [13, 9, CUSHION, 'red', 'red', 'steel'],
+    [0, 10, OPEN_SHEARS, 'steel', 'gold']
+  );
 
-  const copperPick = () => assemble([[haft(22), 'wood'], -8, lashing(2), -2, [POINT_HEAD, 'copper'], -3, lashing(2)]);
+  const copperPick = () => assemble([[haft(21), 'wood'], -1, [PICK_PATCH, 'copper'], -3, lashing(2)]);
   const ironPick = () => assemble([[haft(23), 'wood'], -8, [PICK_HEAD, 'iron']]);
   const saw = () => assemble([[SAW_FRAME, 'wood'], -SAW_FRAME.len, [SAW_BLADE, 'bronze']]);
   const woodenTongs = () => assemble([[HAIRPIN, 'sapwood'], -HAIRPIN.len, [HAIRPIN_LASHING, 'cord']]);
@@ -447,8 +462,8 @@ const PIXEL_TOOLS = (() => {
   const steelButcheryKit = () => front(FLENSING_ROLL, 'leather', 'steel', 'wood', 'steel');
   const curriersKit = () => front(CURRIER_SET, 'iron', 'iron', 'wood');
   const steelCurriersKit = () => front(CURRIER_SET, 'steel', 'steel', 'ash');
-  const sewingKit = () => front(NEEDLE_ROLL, 'hide', 'iron', 'cord', 'wood');
-  const tailorsKit = () => front(SHEARS_CASE, 'leather', 'gold', 'steel', 'steel');
+  const sewingKit = sewingRoll;
+  const tailorsKit = tailorsCase;
 
   return [
     { id: 'copper_pick', draw: copperPick },

@@ -87,8 +87,9 @@
   UI.conceptDetail = (c, d) => {
     const big = el('div', 'view'), cv = el('canvas'), strip = el('div', 'faces'), path = el('div', 'path', 'Concept animations');
     path.append(el('span', 'st skip', c.note));
-    CONCEPTS.play(cv, c, 4); big.append(cv);
-    c.frames().forEach((f, i) => { const s = el('canvas'); CONCEPTS.draw(s, f, 2, [18, 18, 28, 42]); s.title = 'frame ' + (i + 1); strip.append(s); });
-    d.append(el('h3', '', c.name), path, big, el('h4', '', c.frames().length + ' frames, ' + c.step + ' s each'), strip, el('p', '', c.about));
+    const fr = CONCEPTS.framesOf(c);
+    CONCEPTS.play(cv, c, c.strip ? 4 : 2); big.append(cv);
+    fr.forEach((f, i) => { const s = el('canvas'); CONCEPTS.draw(s, f, c.strip ? 2 : 1, c.strip, CONCEPTS.stageOf(c)); s.title = 'frame ' + (i + 1); strip.append(s); });
+    d.append(el('h3', '', c.name), path, big, el('h4', '', fr.length + (fr.length === 1 ? ' frame' : ' frames, ' + c.step + ' s each')), strip, el('p', '', c.about));
   };
 })();

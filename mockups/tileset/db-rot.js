@@ -72,5 +72,6 @@
     if (o.empty) states.push(['-empty', { empty: 1 }]);
     for (const [suf, st] of states) X.reg('building', id, 's' + suf, () => { const q = Object.assign({ frame: 0 }, st); return render(build(q, 's'), 's', q); }, { at: [16, 23] });
   };
-  X.rot = { Model, render, station };
+  const frames = (build, o) => Array.from({ length: (o && o.frames) || 1 }, (_, f) => { const q = { frame: f }; return render(build(q, 's'), 's', q); });
+  X.rot = { Model, render, station, frames };
 })();

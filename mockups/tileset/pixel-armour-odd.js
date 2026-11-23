@@ -11,12 +11,72 @@ const PIXEL_ARMOUR_ODD = (() => {
   const STUB_HORNS = [mark(-3, 5, [' lm', 'lmm', 'mmd', ' dd'], 'horn'), mark(22, 5, ['ml ', 'mmd', 'mdd', 'dd '], 'horn')];
   const EYE_SLOTS = mark(4, 9, ['oooo      oooo', 'oooo      oooo'], 'iron');
   const BRIM = mark(2, 5, ['llllllmmmmmmmmmmdddddd', ' dddddddddddddddddddd '], 'moss');
-  const PATCHES = [mark(11, 9, ['llmd', 'lmmd', 'lmdd', 'mddd'], 'wood'), mark(6, 15, ['lmd', 'mmd', 'mdd'], 'red'), mark(13, 16, ['lmmd', 'mmdd'], 'cord')];
   const IRON_FRAME = [mark(0, 9, ['llllllmmmmmmmmmmmmdddddd', 'dddddddddddddddddddddddd'], 'iron'), mark(11, 4, times(5, 'ld'), 'iron'), mark(11, 11, times(4, 'ld'), 'iron')];
   const ENGRAVING = [mark(5, 7, [' dd        dd ', 'd  d      d  d', ' d  d    d  d ', '  dd      dd  '], 'gold'), mark(11, 3, ['lm', 'md'], 'ruby')];
   const FUR_COLLAR = mark(5, 0, ['  lmlmmmdmdd  ', ' llmlmmmmdmdd ', 'lmllml  mdmddd'], 'ermine');
   const SIGILS = mark(9, 16, ['   mm   ', '  m  m  ', '   mm   ', '        ', ' l    l ', '        ', '   ll   '], 'glow');
+  const BONE_SCALES = [mark(1, 8, ['lmd lmd ', ' lmd lmd', 'lmd lmd '], 'bone'), mark(18, 8, ['lmd lmd ', ' lmd lmd', 'lmd lmd '], 'bone')];
+  const KNUCKLE_CLAWS = [mark(0, 5, ['l  l  l  l', 'm  m  m  m'], 'bone'), mark(17, 5, ['l  l  l  l', 'm  m  m  m'], 'bone')];
+  const FINGERLESS = [...HANDS.gauntlet.slice(7)];
+  const KNUCKLE_SPIKES = [mark(0, -2, [' l  l  l ', 'lm lm lm ', 'md md md '], 'black'), mark(15, -2, [' l  l  l ', 'lm lm lm ', 'md md md '], 'black')];
+  const SUTURES = mark(5, 1, ['   d    ', '  d d  d', ' d   dd ', '        ', '      d ', '     d d'], 'bone');
+  const BROW_RIDGE = mark(0, 7, [' llllllllmmmmmmmmmmdddd ', 'lllmmllmmmmmmmmdmmmddddd'], 'bone');
   const ELBOW_SPIKES = [mark(-2, 2, [' l', 'lm', 'md'], 'black'), mark(24, 2, ['l ', 'md', 'dd'], 'black')];
+
+  const SCRAP_VEST = [
+    '    llll      mmdd    ',
+    '    lllm      mmdd    ',
+    '    lllmm    mmmdd    ',
+    '   llllmmm  mmmmddd   ',
+    '   lllllmmmmmmmmdddd  ',
+    '  llllllmmmmmmmmmdddd ',
+    ' lllllllmmmmmmmmmddddd',
+    ...times(13, 'llllllllmmmmmmmmmddddd'),
+    'lllllllmmmmmmmmmmdddd ',
+    ' llll lmmm mmmmm ddd  ',
+    '  ll   mm   mm    d   '
+  ];
+  const vestPatches = () => PX.layered(
+    [0, 0, SCRAP_VEST, 'hide'],
+    [2, 6, ['lmlmd ', 'lmlmmd', 'lmlmmd', 'llmlmd', 'lmlmd ', ' lml  '], 'wood'],
+    [14, 3, ['lmmd', 'mmmd', 'mdd '], 'boarhide'],
+    [12, 12, ['llmmmmd', 'lmmmmmd', 'lmmmmdd', 'mmmmddd', ' mm dd '], 'red'],
+    [3, 15, ['lllmd', 'lmmmd', 'mmmdd'], 'ember'],
+    [8, 1, ['l    l', ' l  l ', '  ll  '], 'string'],
+    [8, 7, ['l', ' ', 'l', ' ', 'l', ' ', 'l'], 'string'],
+    [11, 18, ['l l l l l'], 'string']
+  );
+  const RIVETS = [[4, 16], [6, 16], [4, 17]];
+  const scrapVest = () => RIVETS.reduce((sk, [x, y]) => PX.stamp(sk, x, y, ['l'], ['iron']), vestPatches());
+  const POT = [
+    '  llllmmmmmmdd  ',
+    ' lllllmmmmmmmdd ',
+    'lllllmmmmmmmmddd',
+    'lllllmmmmmmmmddd',
+    'llllmmmmmmmmmddd',
+    'llllmmmmmmmmmddd',
+    'llllmmmmmmmmdddd',
+    'lllmmmmmmmmmdddd',
+    'lllmmmmmmmmmdddd',
+    'lllmmmmmmmmmdddd',
+    'llmmmmmmmmmmdddd',
+    'llllllmmmmmmmddd',
+    'dddddddddddddddd'
+  ];
+  const potHelm = () => PX.layered(
+    [3, 12, ['l              d', 'l              d', 'l              d', ' l            d ', '  ll        dd  ', '    lllmmmmdd    '.slice(0, 16)], 'leather'],
+    [3, 0, POT, 'lead'],
+    [19, 4, ['md', 'dm', 'm '], 'lead']
+  );
+  const DENTS = [[6, 3, ['dl']], [12, 6, ['d', 'l']], [8, 8, ['dl']]];
+  const RUST = [[4, 6, ['mm', 'dm', ' d']], [12, 1, ['mmd']], [15, 8, ['m', 'd']], [8, 11, ['mmd']]];
+  const scrapHelm = () => {
+    const sk = potHelm();
+    for (const [x, y, rows] of DENTS) PX.stamp(sk, x, y, rows, ['lead']);
+    for (const [x, y, rows] of RUST) PX.stamp(sk, x, y, rows, ['ember']);
+    for (const [x, y] of [[4, 10], [17, 10]]) PX.stamp(sk, x, y, ['l'], ['iron']);
+    return sk;
+  };
 
   return [
     { id: 'wooden_arm_splint', draw: () => dress(MEDICAL.armSplint, { body: 'linen', trim: 'wood', strap: 'leather' }) },
@@ -52,12 +112,12 @@ const PIXEL_ARMOUR_ODD = (() => {
     { id: 'orc_warplate', draw: () => dress(TORSO.slabPlate, ORC) },
     { id: 'orc_warhelm', draw: () => dress(HEAD.warhelm, ORC) },
     { id: 'orc_plate_vambraces', draw: () => dress(ARMS.vambrace, ORC, ...ELBOW_SPIKES) },
-    { id: 'orc_plate_gauntlets', draw: () => dress(HANDS.gauntlet, ORC) },
+    { id: 'orc_plate_gauntlets', draw: () => dress(FINGERLESS, ORC, ...KNUCKLE_SPIKES) },
     { id: 'orc_plate_greaves', draw: () => dress(LEGS.thighSlab, ORC) },
     { id: 'orc_plate_sabatons', draw: () => shod(FEET.sabaton, Object.assign({}, ORC, { strap: 'boarhide' })) },
 
-    { id: 'goblin_scrap_vest', draw: () => dress(TORSO.jerkin, { body: 'goblin', strap: 'cord', lining: 'black' }, ...PATCHES) },
-    { id: 'goblin_scrap_cap', draw: () => dress(HEAD.cookpot, { body: 'lead', trim: 'lead', strap: 'leather' }) },
+    { id: 'goblin_scrap_vest', draw: scrapVest },
+    { id: 'goblin_scrap_cap', draw: scrapHelm },
     { id: 'goblin_bark_bracers', draw: () => dress(ARMS.bark, { body: 'wood', strap: 'red' }) },
     { id: 'goblin_ring_vest', draw: () => dress(TORSO.ringVest, { body: 'iron', trim: 'ember', lining: 'black' }) },
     { id: 'goblin_pot_helm', draw: () => dress(HEAD.pot, { body: 'iron', trim: 'ember', lining: 'goblin' }, EYE_SLOTS) },
@@ -70,11 +130,11 @@ const PIXEL_ARMOUR_ODD = (() => {
     { id: 'gnoll_skull_helm', draw: () => dress(HEAD.skull, { body: 'bone' }) },
     { id: 'gnoll_hide_greaves', draw: () => dress(LEGS.shinWrap, { body: 'hide', trim: 'fur', strap: 'cord' }) },
 
-    { id: 'great_bone_helm', draw: () => dress(HEAD.boneHelm, GREAT_BONE) },
+    { id: 'great_bone_helm', draw: () => dress(HEAD.boneHelm, GREAT_BONE, SUTURES, BROW_RIDGE) },
     { id: 'great_bone_cuirass', draw: () => dress(TORSO.boneCuirass, BONE_ON_PELT) },
     { id: 'great_bone_vambraces', draw: () => dress(ARMS.sticks, GREAT_BONE) },
     { id: 'great_bone_greaves', draw: () => dress(LEGS.splint, BONE_ON_PELT) },
-    { id: 'great_bone_gauntlets', draw: () => dress(HANDS.scaleGlove, { body: 'owlpelt', trim: 'bone' }) },
+    { id: 'great_bone_gauntlets', draw: () => dress(HANDS.glove, { body: 'owlpelt', trim: 'bone' }, ...BONE_SCALES, ...KNUCKLE_CLAWS) },
     { id: 'great_bone_sabatons', draw: () => shod(FEET.sabaton, { body: 'bone', trim: 'fur', strap: 'boarhide', lining: 'fur' }) }
   ];
 })();

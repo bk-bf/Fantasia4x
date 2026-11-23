@@ -44,7 +44,7 @@
   function quadX(o) {
   const lg = o.leg < 4 ? o.leg : o.leg * clamp(.47 / (o.leg / (2 * o.Hb)), 1, 1.42);
   const cx = Math.max(38, Math.ceil(o.L + 24)), gy = Math.max(56, Math.ceil(lg + 2 * o.Hb + (o.hump || 0) + Math.max(0, o.up || 0) + o.head + 22 + (o.top || 0))), s = new Spr(Math.ceil(cx + o.L + o.head * 1.5 + (o.neck || 0) + (o.snout || 0) + 12 + (o.front || 0)), gy + 8, cx, gy), L = o.L, Hb = o.Hb, fur = o.fur, n = fur.length - 1;
-  const cy = gy - lg - Hb + 2, legw = o.legw || 4, bo = { n: o.shag || .22, ns: .85, seed: 3, d: .14 }, farFur = fur.map(c => dark(c, .62));
+  const cy = gy - lg - Hb + 2, legw = (o.legw || 4) >= 6 ? Math.round((o.legw || 4) * (o.ears === 'flap' ? .9 : .8)) : o.legw || 4, bo = { n: o.shag || .22, ns: .85, seed: 3, d: .14 }, farFur = fur.map(c => dark(c, .62));
   const legX = [cx - L + 2, cx + L - legw - 3];
   const leg = (x, far) => {
     const top = cy + Hb * .3, lr = far ? farFur : fur, hind = x < cx, y0 = Math.round(top + 3), len = Math.max(1, gy - y0), flat = lg < 4, pillar = o.ears === 'flap';
@@ -64,7 +64,7 @@
     else if (flat) { for (let i = 0; i < w + 2; i++) s.set(x0 + i, gy, lr[1]); }
     else { for (let i = 0; i < w + 2; i++) s.set(x0 + i, gy, lr[i > w ? 1 : clamp(n - 3, 0, n)]); for (let i = 0; i < w + 1; i++) s.set(x0 + i, gy - 1, lr[clamp(n - 2 + (i === 0 ? 1 : 0), 0, n)]); if (legw >= 5) { s.set(x0 + w + 1, gy, P.ink); s.set(x0 + w + 1, gy - 1, lr[n - 2]); } }
   };
-  for (const lx of legX) leg(Math.round(lx + 4), true);
+  for (const lx of legX) leg(Math.round(lx + Math.max(4, legw)), true);
   if (o.tail === 'bushy') for (let k = 0; k < 6; k++) s.ball(cx - L - 2 - k * 1.8, cy + 1 + k * 1.3, 4.6 - k * .4, 3.2 - k * .2, -1, k > 3 ? (o.tip || fur) : fur, bo);
   if (o.tail === 'short') s.ball(cx - L - 1, cy - 1, 2.6, 2.4, 0, o.tip || fur, bo);
   if (o.tail === 'long') for (let k = 0; k < L + 6; k++) { const y = cy + 1 + Math.sin(k * .45) * 2 + k * .25, tp = o.tip || fur; s.set(cx - L - k, y, tp[Math.min(3, tp.length - 1)]); s.set(cx - L - k, y + 1, tp[1]); }
@@ -275,7 +275,29 @@
   big('great_elk', 'elk', fac(1.82, 1.4), { top: 12 });
   big('goat_kid', 'bighorn', fac(.6, 1) * 1.04, { extra: (s, g) => { s.set(g.ax + 2, g.ay - 1, P.wicker[3]); s.set(g.ax + 4, g.ay - 1, P.wicker[2]); }, head: 3.4, shag: .3 });
   big('elder_aurochs', 'ox', fac(2.4, 2), { fur: C.aurochs, muzzle: P.furGrey, top: 6 });
-  big('elder_owlbear', 'owlbear', fac(2.5, 2), { fur: C.elderOwl });
+  const owlFace = fur => (s, g) => {
+    const n = fur.length - 1, k = g.hr / 8, cx = g.hx + g.hr * .32, cy = g.hy - g.hr * .02, rx = g.hr * .66, ry = g.hr * .74;
+    for (let y = Math.floor(cy - ry) - 1; y <= cy + ry + 1; y++) for (let x = Math.floor(cx - rx) - 1; x <= cx + rx + 1; x++) {
+      const nx = (x + .5 - cx) / rx, ny = (y + .5 - cy) / ry, q = nx * nx + ny * ny;
+      if (q <= 1 && X.onBody(s, x, y)) s.set(x, y, q > .72 ? fur[n - 3] : fur[n - (nx + ny < 0 ? 0 : 1)]);
+    }
+    const er = Math.max(2, Math.round(g.hr * .22)), ex = Math.round(g.hx + g.hr * .3), ey = Math.round(g.hy - g.hr * .2);
+    s.oval(ex, ey, er + 1.4, er + 1.4, () => fur[1]);
+    s.oval(ex, ey, er, er, (x, y, nx, ny) => { const q = Math.hypot(nx, ny); return q < .42 ? P.ink : P.gold[q < .82 ? 4 : 3]; });
+    s.set(ex - 1, ey - 1, P.cloth[5]);
+    s.rect(ex - er - 1, ey - er - 2, er * 2 + 3, 1, fur[0]);
+    const bx = Math.round(g.hx + g.hr * .74), by = Math.round(g.hy + g.hr * .02);
+    for (const [dx, dy, w, kk] of [[0, 0, 4, 4], [0, 1, 5, 4], [1, 2, 4, 3], [2, 3, 3, 3], [3, 4, 2, 2], [3, 5, 1, 1]]) s.rect(bx + dx, by + Math.round(dy * k), Math.max(1, Math.round(w * k)), Math.max(1, Math.round(k)), P.gold[kk]);
+  };
+  const owlbear = (id, f, over, fur) => {
+    X.drop('creature', id);
+    X.reg('creature', id, '0', () => {
+      const o = O('owlbear'), base = f === 1 ? o.extra : extraAt(o.extra, f);
+      return quadX(grow(o, f, Object.assign({ extra: (s, g) => { base(s, g); X.wingOf(s, g, fur.map(c => dark(c, .8)), g.hr / 8); owlFace(fur)(s, g); } }, over)));
+    });
+  };
+  owlbear('owlbear', 1, {}, P.furTan);
+  owlbear('elder_owlbear', fac(2.5, 2), { fur: C.elderOwl }, C.elderOwl);
   big('dire_sabretooth', 'sabre', fac(1.95, 1.5), {});
   X.reg('creature', 'elder_crocodile', '0', () => { const o = O('lurker'), f = fac(2.25, 1.8), s = quadX(grow(o, f, { fur: C.crocOld, top: 4, extra: also(extraAt(o.extra, f), (s2, g) => { for (let i = 0; i < 22; i++) { const x = g.cx - g.L * .8 + hash(i, 1, 5) * g.L * 1.5, y = g.cy - g.Hb + hash(i, 2, 5) * 3; if (X.onBody(s2, x, y)) { px(s2, x, y, P.moss, 3 + (i % 3)); px(s2, x, y - 1, P.moss, 4); } } }) })); return recolor(s, P.mossSwamp, C.crocOld); });
 
@@ -450,10 +472,15 @@
   X.reg('creature', 'shadow_wraith', '0', wraith(.8, C.shade, false));
   X.reg('creature', 'greater_wraith', '0', wraith(1.02, C.wraith, true));
 
-  const griff = (o) => (s, g) => {
-    const W = o.wing, n = W.length - 1, k = o.k || 1, bx = g.cx + g.L * .5, by = g.cy - g.Hb * .7;
+  const wingOf = (s, g, W, k) => {
+    const n = W.length - 1, bx = g.cx + g.L * .5, by = g.cy - g.Hb * .7;
     for (let i = 0; i < 26 * k; i++) { const t = i / (26 * k), x = bx - t * g.L * 1.9, yT = by - Math.sin(t * 2.6) * 6 * k - 1, yB = by + (3 + Math.sin(t * 3.1) * 7) * k + t * 2 * k; for (let y = Math.round(yT); y <= yB; y++) { const v = (y - yT) / Math.max(1, yB - yT), row = Math.floor(v * 3.4 + t * .3); px(s, x, y, W, (v < .22 ? n : v < .6 ? n - 1 : n - 2) - ((i + row * 2) % 4 === 0 ? 2 : 0) - (row & 1)); } }
     for (let i = 0; i < 4; i++) s.thick(bx - g.L * 1.7 + i, by + (5 + i * 1.6) * k, bx - g.L * 2.3 + i * 2, by + (7 + i * 2.6) * k, 2, W, n - 2 - (i & 1));
+  };
+  X.wingOf = wingOf;
+  const griff = (o) => (s, g) => {
+    const k = o.k || 1;
+    wingOf(s, g, o.wing, k);
     const nk = o.ruff, nn = nk.length - 1;
     for (let i = 0; i < 16; i++) { const a = -1 + i * .16, x = g.hx - g.hr * .9 + Math.cos(a) * 1, y = g.hy + g.hr * .5 + i * .8; for (let j = 0; j < 3; j++) px(s, x - j + (i & 1), y, nk, nn - (j ? 1 : 0) - (i % 3 === 0 ? 1 : 0)); }
     s.ball(g.hx, g.hy, g.hr * .95, g.hr * .9, 2.5, o.head, { d: .14, n: .2, ns: 1.2 });

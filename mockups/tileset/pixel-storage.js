@@ -121,166 +121,69 @@ const PIXEL_STORAGE = (() => {
     'yxdddddddddddddddd  yx',
     'yx                  yx'
   ];
-  const FRAME_PACK = [
-    'yxzzzzzzzzzzzzzzzzyx',
-    'yz                zx',
-    'zzzzzzzzzzzzzzzzzzzz',
-    'xxxxxxxxxxxxxxxxxxxx',
-    'yx llllllllllllll yx',
-    'yxllllllllllllllldyx',
-    'yxllmmmmmmmmmmmmddyx',
-    'yxllmmmmmmmmmmmmddyx',
-    'yxllmmmmmmmmmmmmddyx',
-    'yxllmmmmmmmmmmmmddyx',
-    'yxllmmmmmmmmmmmmddyx',
-    'yxllmmmmmmmmmmmmddyx',
-    'yxlmddddddddddddmdyx',
-    'yxlmoooooooooooomdyx',
-    'yxlmmmmmmmmmmmmmmdyx',
-    'yxllllllllllllllllyx',
-    'yxddddddddddddddddyx',
-    'yxlmmmmmmmmmmmmmmdyx',
-    'yxlmmmmmmmmmmmmmmdyx',
-    'yxlmmmmmmmmmmmmmmdyx',
-    'yxlmmmmmmmmmmmmmmdyx',
-    'yxllllllllllllllllyx',
-    'yxddddddddddddddddyx',
-    'yxlmmmmmmmmmmmmmmdyx',
-    'yxlmmmmmmmmmmmmmmdyx',
-    'yx dddddddddddddd yx',
-    'zzzzzzzzzzzzzzzzzzzz',
-    'xxxxxxxxxxxxxxxxxxxx',
-    'yx                yx',
-    'yx                yx'
+  const FRAMED_SACK = [
+    '  LM              LM  ',
+    '  LM              LM  ',
+    '  LM ZZXZZZZZZXZZ LM  ',
+    '  LMYYYXYYYYYYXYYYLM  ',
+    '  LMXXXWXXXXXXWXXXLM  ',
+    '  LMllllllllllllmmLM  ',
+    '  llllllllllllllllmd  ',
+    ' lllllllllllllllllmdd ',
+    ' llmmmmmmmmmmmmmmmmdd ',
+    'llmmmmmmmmmmmmmmmmmmdd',
+    'lmmmmmmmmmmmmmmmmmmmdd',
+    'lmoommmmmmmmmmmmmmoodd',
+    'lmmmoooooooooooooommdd',
+    'lmmmmmmmmmdommmmmmmmdd',
+    'llmmmmmmmmdommmmmmmddd',
+    'llmmmmmmmmdommmmmmmddd',
+    'llmmmmmmzzzyyxmmmmmddd',
+    'llmmmmmmzydoyxmmmmmddd',
+    'lmmmmmmmyxxxxwmmmmmddd',
+    'lmmmmmmmmmdommmmmmmddd',
+    'mddddddddddddddddddddo',
+    'lmmmmmmmmmmmmmmmmmmddd',
+    ' mmmmmmmmmmmmmmmmmddd ',
+    '  dddddddddddddddddd  ',
+    '  MD              MD  ',
+    '  MD              MD  '
   ];
-  const IRON_FRAME_PACK = [
-    'yx                yx',
-    'yx                yx',
-    'LMzzzzzzzzzzzzzzzzLM',
-    'MDxxxxxxxxxxxxxxxxMD',
-    'yx llllllllllllll yx',
-    'yxllllllllllllllldyx',
-    'yxllmmmmmmmmmmmmddyx',
-    'yxllmmmmmmmmmmmmddyx',
-    'yxllmmmmmmmmmmmmddyx',
-    'yxllmmmmmmmmmmmmddyx',
-    'yxllmmmmmmmmmmmmddyx',
-    'yxllmmmmmmmmmmmmddyx',
-    'yxlmddddddddddddmdyx',
-    'yxlmoooooooooooomdyx',
-    'yxlmmmmmmmmmmmmmmdyx',
-    'yxLLLLLLLLLLLLLLLLyx',
-    'yxDDDDDDDDDDDDDDDDyx',
-    'yxlmmmmmmmmmmmmmmdyx',
-    'yxlmmmmmmmmmmmmmmdyx',
-    'yxlmmmmmmmmmmmmmmdyx',
-    'yxlmmmmmmmmmmmmmmdyx',
-    'yxLLLLLLLLLLLLLLLLyx',
-    'yxDDDDDDDDDDDDDDDDyx',
-    'yxlmmmmmmmmmmmmmmdyx',
-    'yxlmmmmmmmmmmmmmmdyx',
-    'yx dddddddddddddd yx',
-    'LMzzzzzzzzzzzzzzzzLM',
-    'MDxxxxxxxxxxxxxxxxMD',
-    'yx                yx',
-    'yx                yx'
+  const SQUARE_SACK = [
+    '  LM              LM  ',
+    '  LM              LM  ',
+    '  LM ZZXZZZZZZXZZ LM  ',
+    '  LMYYYXYYYYYYXYYYLM  ',
+    '  LMXXXWXXXXXXWXXXLM  ',
+    'zzyllllllllllllllllyyx',
+    'zllllllllllllllllllmdx',
+    'yllmmmmmmmmmmmmmmmmddx',
+    'lmmmmmmmmmmmmmmmmmmmdd',
+    'lmmmmmmmmmmmmmmmmmmmdd',
+    'looooooooooooooooooood',
+    'lmmmmmmmmmdommmmmmmmdd',
+    'llmmmmmmmmdommmmmmmddd',
+    'llmmmmmmmmdommmmmmmddd',
+    'llmmmmmmzzzyyxmmmmmddd',
+    'llmmmmmmzydoyxmmmmmddd',
+    'lmmmmmmmyxxxxwmmmmmddd',
+    'lmmmmmmmmmdommmmmmmddd',
+    'mddddddddddddddddddddo',
+    'ylmmmmmmmmmmmmmmmmmddx',
+    'ymmmmmmmmmmmmmmmmmmddx',
+    'yxxdddddddddddddddxxxw',
+    '  MD              MD  ',
+    '  MD              MD  '
   ];
-  const STEEL_FRAME_PACK = [
-    'yx                yx',
-    'yx                yx',
-    'LMzzzzzzzzzzzzzzzzLM',
-    'MDxxxxxxxxxxxxxxxxMD',
-    'yx llllllllllllll yx',
-    'yxllllllllllllllldyx',
-    'yxllmmmmmmmmmmmmddyx',
-    'yxllmmmmmmmmmmmmddyx',
-    'yxllmmmmmmmmmmmmddyx',
-    'yxllmmmmmmmmmmmmddyx',
-    'yxllmmmmmmmmmmmmddyx',
-    'yxllmmmmmmmmmmmmddyx',
-    'yxlmddddddddddddmdyx',
-    'yxlmoooooooooooomdyx',
-    'yxlmmmmmmmmmmmmmmdyx',
-    'yxLLLLLLLLLLLLLLLLyx',
-    'yxDDDDDDDDDDDDDDDDyx',
-    'yxlmmmmmmmmmmmmmmdyx',
-    'yxlmmmmmmmmmmmmmmdyx',
-    'yxlmmmmmmmmmmmmmmdyx',
-    'yxlmmmmmmmmmmmmmmdyx',
-    'yxLLLLLLLLLLLLLLLLyx',
-    'yxDDDDDDDDDDDDDDDDyx',
-    'yxlmmmmmmmmmmmmmmdyx',
-    'yxlmmmmmmmmmmmmmmdyx',
-    'yx dddddddddddddd yx',
-    'LMzzzzzzzzzzzzzzzzLM',
-    'MDxxxxxxxxxxxxxxxxMD',
-    'yx                yx',
-    'yx                yx'
-  ];
-  const RUNE_FRAME_PACK = [
-    'yx                yx',
-    'yx                yx',
-    'LMzzzzzzzzzzzzzzzzLM',
-    'MDxxxxxxxxxxxxxxxxMD',
-    'yx llllllllllllll yx',
-    'yxllllllllllllllldyx',
-    'Zxllmmmmmmmmmmmmddyx',
-    'yxllmmmmmmmmmmmmddyx',
-    'yxllmmmmmmmmmmmmddyZ',
-    'yxllmmmmmmmmmmmmddyx',
-    'Zxllmmmmmmmmmmmmddyx',
-    'yxllmmmmmmmmmmmmddyx',
-    'yxlmddddddddddddmdyZ',
-    'yxlmoooooooooooomdyx',
-    'Zxlmmmmmmmmmmmmmmdyx',
-    'yxLLLLLLLLLLLLLLLLyx',
-    'yxDDDDDDDDDDDDDDDDyZ',
-    'yxlmmmmZmmZmmmmmmdyx',
-    'ZxlmmmmmZZmmmmmmmdyx',
-    'yxlmmmmZmmZmmmmmmdyx',
-    'yxlmmmmmmmmmmmmmmdyZ',
-    'yxLLLLLLLLLLLLLLLLyx',
-    'ZxDDDDDDDDDDDDDDDDyx',
-    'yxlmmmmmmmmmmmmmmdyx',
-    'yxlmmmmmmmmmmmmmmdyZ',
-    'yx dddddddddddddd yx',
-    'LMzzzzzzzzzzzzzzzzLM',
-    'MDxxxxxxxxxxxxxxxxMD',
-    'yx                yx',
-    'yx                yx'
-  ];
-  const WICKER_FRAME = [
-    'yx                yx',
-    'yx                yx',
-    'zzzzzzzzzzzzzzzzzzzz',
-    'xxxxxxxxxxxxxxxxxxxx',
-    'yx                yx',
-    'yx l    l    l    yx',
-    'yxl d  l d  l d  lyx',
-    'yx   dl   dl   dl yx',
-    'yx   ld   ld   ld yx',
-    'MMMMMMMMMMMMMMMMMMMM',
-    'yx l    l    l    yx',
-    'yxl d  l d  l d  lyx',
-    'yx   dl   dl   dl yx',
-    'yx   ld   ld   ld yx',
-    'yxd l  d l  d l  dyx',
-    'MMMMMMMMMMMMMMMMMMMM',
-    'yxl d  l d  l d  lyx',
-    'yx   dl   dl   dl yx',
-    'yx   ld   ld   ld yx',
-    'yxd l  d l  d l  dyx',
-    'yx l    l    l    yx',
-    'MMMMMMMMMMMMMMMMMMMM',
-    'yx   dl   dl   dl yx',
-    'yx   ld   ld   ld yx',
-    'yxd l  d l  d l  dyx',
-    'yx l    l    l    yx',
-    'zzlzdzzlzdzzlzdzzlzz',
-    'xxxxxxxxxxxxxxxxxxxx',
-    'yx                yx',
-    'yx                yx'
-  ];
+  const deeper = (rows, at, n) => [...rows.slice(0, at), ...new Array(n).fill(rows[at]), ...rows.slice(at)];
+  const swapAt = (rows, y, from, to) => rows.map((row, j) => j === y ? row.slice(0, from) + to + row.slice(from + to.length) : row);
+  const stake = (x, y) => x % 4 === ((y >> 1) % 2 ? 3 : 1);
+  const chequer = (g, x, y) => stake(x, y) ? ({ l: 'm', m: 'd', d: 'o' })[g] : y % 2 ? ({ l: 'm', m: 'm', d: 'd' })[g] : ({ l: 'l', m: 'l', d: 'm' })[g];
+  const weave = rows => rows.map((row, y) => [...row].map((g, x) => y > 4 && y < 23 && 'lmd'.includes(g) ? chequer(g, x, y) : g === 'o' || /[wxyz]/.test(g) ? chequer('m', x, y) : g).join(''));
+  const lashed = rows => swapAt(swapAt(rows, 8, 0, 'yyxx'), 8, 18, 'yyxx');
+  const riveted = rows => rows.map((row, y) => y < 5 && y % 2 ? row.replace(/LM/g, 'zM') : row);
+  const glyphed = rows => rows.map((row, y) => y === 1 || y === 3 ? row.replace(/LM/g, 'Lz') : row.replace(/^(l[lm])mmm/, y > 8 && y < 20 && y % 3 === 0 ? '$1ymy' : '$1mmm'));
+  const STEEL_SACK = deeper(FRAMED_SACK, 10, 3);
   const SATCHEL = [
     '        yyyyyyyy        ',
     '     yyyxxxxxxxxyyy     ',
@@ -806,24 +709,133 @@ const PIXEL_STORAGE = (() => {
     '      D                    '
   ];
 
+  const CHEST = [
+    '  llLMllllllllllllllllLMll  ',
+    ' lllLMllllllllllllllllLMlld ',
+    'lmmmLMmmmmmmmmmmmmmmmmLMmmmd',
+    'lmmmLMmmmmmmmmmmmmmmmmLMmmmd',
+    'ldddLMddddddddddddddddLMdddd',
+    'OOOOLMOOOOOOLMMLOOOOOOLMOOOO',
+    'ooooLMooooooMOOMooooooLMoooo',
+    'lmmmLMmmmmmmMODMmmmmmmLMmmmd',
+    'lmmmLMmmmmmmDMMDmmmmmmLMmmmd',
+    'lmmmLMmmmmmmmmmmmmmmmmLMmmmd',
+    'ldddLMddddddddddddddddLMdddd',
+    'lmmmLMmmmmmmmmmmmmmmmmLMmmmd',
+    'lmmmLMmmmmmmmmmmmmmmmmLMmmmd',
+    'lmmmLMmmmmmmmmmmmmmmmmLMmmmd',
+    'ldddLMddddddddddddddddLMdddd',
+    'lmmmLMmmmmmmmmmmmmmmmmLMmmmd',
+    'lmmmLMmmmmmmmmmmmmmmmmLMmmmd',
+    'lmmmLMmmmmmmmmmmmmmmmmLMmmmd',
+    'ddddLMddddddddddddddddLMdddo'
+  ];
+  const BIN = [
+    ' llllllllllllllllllll ',
+    'looooooooooooooooooood',
+    'lddddddddddddddddddddd',
+    'llllllllllllllllllllld',
+    ...new Array(2).fill('lmmmdlmmmdlmmmdlmmmdld'),
+    'lmomdlmomdlmomdlmomdld',
+    ...new Array(12).fill('lmmmdlmmmdlmmmdlmmmdld'),
+    'lmomdlmomdlmomdlmomdld',
+    ...new Array(3).fill('lmmmdlmmmdlmmmdlmmmdld'),
+    'dddddddddddddddddddddd'
+  ];
+  const SLAT = ['lLMllllllllllllllllllllLMd', 'lxMmmmmmmmmmmmmmmmmmmmmLxd', 'lLMddddddddddddddddddddLMd'];
+  const GAP = 'lLMooooooooooooooooooooLMd';
+  const CRATE = [
+    ' llllllllllllllllllllllll ',
+    'lLLooooooooooooooooooooLLd',
+    'lLLooooooooooooooooooooLLd',
+    ...SLAT, GAP, GAP, ...SLAT, GAP, GAP, ...SLAT, GAP, GAP, ...SLAT,
+    'dddddddddddddddddddddddddd'
+  ];
+  const WITHY_BASKET = [
+    '       lllllmmmm      ',
+    '     llm        mmd   ',
+    '    lm            md  ',
+    '    lm            md  ',
+    '   lm              md ',
+    '   lm              md ',
+    ' lzzzzzzzzzzzzzzzzzzy ',
+    ' lzyyyyyyyyyyyyyyyyyx ',
+    '  xxxxxxxxxxxxxxxxxx  ',
+    '  lmdlmdlmdlmdlmdlmd  ',
+    '  mdlmdlmdlmdlmdlmdd  ',
+    '  lmdlmdlmdlmdlmdlmd  ',
+    '  mdlmdlmdlmdlmdlmdd  ',
+    '  lmdlmdlmdlmdlmdlmd  ',
+    '  mdlmdlmdlmdlmdlmdd  ',
+    '   lmdlmdlmdlmdlmdl   ',
+    '   dlmdlmdlmdlmdlmd   ',
+    '    mdlmdlmdlmdlmd    ',
+    '     dddddddddddd     '
+  ];
+  const goods = (wear, ...layers) => GOODS.draw(wear, ...layers);
+  const emptyFlask = (shape, opts) => GOODS.flask(shape, Object.assign({ level: 99 }, opts)).slice(0, -1);
+  const woodenChest = () => front(CHEST, 'wood', 'iron');
+  const storageBin = () => front(BIN, 'wood');
+  const crate = () => front(CRATE, 'ash', 'wood', 'iron');
+  const withyBasket = () => front(WITHY_BASKET, 'sapwood', 'sapwood', 'sapwood');
+  const crucibleIcon = () => goods({ body: 'dun', fill: 'black' }, ...GOODS.crucible());
+  const runeFlask = () => goods({ body: 'glass', fill: 'glow', trim: 'runed', mark: 'gold' },
+    ...emptyFlask('round', { stopper: 'knob', band: true }),
+    GOODS.layer(6, 9, GOODS.ellipsoid(3, 3), 'fill', { keep: true }),
+    GOODS.layer(2, 9, ['  y        y  ', '              ', 'y            y', '              ', '              ', 'y            y', '              ', '  y        y  '], 'trim', { keep: true }));
+  const URN_HANDLE = ['mm', ' m', ' m', 'dd'];
+  const urn = () => goods({ body: 'clay', fill: 'black', mark: 'ember' },
+    ...GOODS.bands(GOODS.open(10, [8, 10, 12, 14, 16, 16, 16, 16, 14, 12, 10, 8], 1), [5, 9]),
+    GOODS.layer(-2, 5, URN_HANDLE.map(r => [...r].reverse().join('')), 'body', { behind: true }),
+    GOODS.layer(16, 5, URN_HANDLE, 'body', { behind: true }));
+  const staved = (rows, from) => rows.map((row, y) => y < from ? row : [...row].map((g, x) => g !== ' ' && x % 4 === 1 && g !== 'd' ? 'd' : g).join(''));
+  const bucket = () => goods({ body: 'wood', fill: 'water', trim: 'cord', mark: 'cord' },
+    ...GOODS.shift(GOODS.bands(GOODS.open(16, [16, 16, 16, 15, 15, 14, 14, 14, 13], 1), [1, 7]), 0, 4),
+    GOODS.layer(0, 0, GOODS.BAIL, 'trim', { keep: true }));
+  const barrel = () => goods({ body: 'wood', trim: 'iron', mark: 'iron' },
+    GOODS.layer(0, 3, staved(GOODS.lathe([14, 16, 16, 18, 18, 18, 18, 18, 18, 18, 18, 16, 16, 14]), 0)),
+    GOODS.layer(2, 0, GOODS.disc(14, 4), 'body', { keep: true }),
+    ...[[2, 16], [6, 18], [9, 18], [13, 14]].map(([y, w]) => GOODS.layer((18 - w) / 2, y + 3, GOODS.lathe([w]), 'mark', { keep: true })));
+  const glassware = () => goods({ body: 'glass', fill: 'glass', trim: 'wood' },
+    ...GOODS.shift(emptyFlask('phial', { neck: 2 }), 16, 2),
+    ...emptyFlask('round'),
+    GOODS.layer(3, 9, ['l', 'l'], 'body', { keep: true }), GOODS.layer(18, 9, ['l'], 'body', { keep: true }));
+  const clayJug = () => goods({ body: 'clay', fill: 'black', mark: 'cord' }, ...GOODS.jug(), GOODS.layer(3, 6, ['yyyyyyyyyy', 'xxxxxxxxxx'], 'mark', { keep: true }));
+  const GINGER_JAR = [
+    '      llmm      ',
+    '     lllmmd     ',
+    '   lllllmmmmd   ',
+    '   dddddddddd   ',
+    '  llllllmmmmmd  ',
+    ' llLLLLLMMMMMdd ',
+    'llllllllmmmmmmdd',
+    'llLllLlmMmmMmmdd',
+    'llllllllmmmmmmdd',
+    'lllLlllmmMmmmddd',
+    'llllllllmmmmmmdd',
+    ' llLLLLLMMMMMdd ',
+    '  lllllmmmmmdd  ',
+    '   dddddddddd   '
+  ];
+  const porcelain = () => front(GINGER_JAR, 'milk', 'sapphire');
   const waterskin = () => front(WATERSKIN, 'leather', 'cord', 'cord');
   const flask = () => front(FLASK, 'clay', 'cord', 'wood');
   const wovenBasket = () => front(BASKET, 'ash');
   const hideToolRoll = () => front(TOOL_ROLL, 'hide', 'cord', 'wood');
   const hideScrip = () => front(SCRIP, 'hide', 'cord', 'cord', 'cord');
   const linenSnapsack = () => front(SNAPSACK, 'linen', 'cord', 'cord', 'cord');
-  const wickerFrame = () => front(WICKER_FRAME, 'sapwood', 'cord', 'ash', 'ash');
+  const wickerFrame = () => front(lashed(weave(FRAMED_SACK)), 'ash', 'sapwood', 'cord', 'hide');
   const leatherKnapsack = () => front(KNAPSACK, 'leather', 'bronze', 'leather');
   const steelRivetedKnapsack = () => front(FRAMED_KNAPSACK, 'leather', 'steel', 'wood');
   const runeStitchedKnapsack = () => front(RUNE_KNAPSACK, 'leather', 'runed', 'leather', 'glow');
-  const framedLeatherPack = () => front(FRAME_PACK, 'leather', 'cord', 'wood');
+  const framedLeatherPack = () => front(FRAMED_SACK, 'leather', 'wood', 'bronze', 'linen');
   const ironBuckledSatchel = () => front(SATCHEL, 'leather', 'iron', 'leather');
   const ironBuckledKnapsack = () => front(SQUARE_KNAPSACK, 'leather', 'iron', 'leather');
-  const ironFramedPack = () => front(IRON_FRAME_PACK, 'leather', 'iron', 'wood');
+  const ironFramedPack = () => front(SQUARE_SACK, 'leather', 'wood', 'iron', 'fur');
   const steelBuckledSatchel = () => front(CLOSE_SATCHEL, 'leather', 'steel', 'leather');
-  const steelFramedPack = () => front(STEEL_FRAME_PACK, 'leather', 'steel', 'steel');
+  const steelFramedPack = () => front(riveted(STEEL_SACK), 'leather', 'steel', 'steel', 'sackcloth');
   const runeWovenSatchel = () => front(RUNE_SATCHEL, 'wool', 'gold', 'gold', 'glow');
-  const runeBoundFramePack = () => front(RUNE_FRAME_PACK, 'linen', 'runed', 'runed', 'glow');
+  const runeBoundFramePack = () => front(glyphed(FRAMED_SACK), 'linen', 'runed', 'glow', 'runecloth');
   const leatherBelt = () => front(BELT, 'leather', 'bronze', 'leather');
   const ringedBelt = () => front(RINGED_BELT, 'leather', 'iron');
   const steelBuckledBelt = () => front(TOOL_BELT, 'leather', 'steel', 'leather');
@@ -869,7 +881,19 @@ const PIXEL_STORAGE = (() => {
     { id: 'leather_back_quiver', draw: leatherBackQuiver },
     { id: 'stiffened_war_quiver', draw: stiffenedWarQuiver },
     { id: 'leather_bolt_case', draw: leatherBoltCase },
-    { id: 'banded_bolt_quiver', draw: bandedBoltQuiver }
+    { id: 'banded_bolt_quiver', draw: bandedBoltQuiver },
+    { id: 'wooden_chest', draw: woodenChest },
+    { id: 'storage_bin', draw: storageBin },
+    { id: 'crate', draw: crate },
+    { id: 'basket', draw: withyBasket },
+    { id: 'fireclay_crucible', draw: crucibleIcon },
+    { id: 'rune_sealed_flask', draw: runeFlask },
+    { id: 'water_urn', draw: urn },
+    { id: 'wooden_bucket', draw: bucket },
+    { id: 'wooden_barrel', draw: barrel },
+    { id: 'glassware', draw: glassware },
+    { id: 'clay_jug', draw: clayJug },
+    { id: 'porcelain_vessels', draw: porcelain }
   ];
 })();
 PIXEL_ICONS.push(...PIXEL_STORAGE);

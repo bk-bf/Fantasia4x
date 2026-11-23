@@ -35,9 +35,18 @@ const CONCEPTS = (() => {
       return s;
     });
   })());
-  const ground = () => memo.ground || (memo.ground = DBX.crop({ world: DBX.flat(2, 2, 'tall_grass'), rect: [0, 0, 64, 64], season: 'summer' }));
-  const draw = (cv, s, z, crop) => {
-    const g = ground(), [cx, cy, w, h] = crop || [0, 0, g.w, g.h], px = new Uint8ClampedArray(w * h * 4), ox = 32 - s.ax - cx, oy = 56 - s.ay - cy;
+  const STAGE = [2, 2, 32, 56];
+  const ground = (tw, th) => memo['ground' + tw + 'x' + th] || (memo['ground' + tw + 'x' + th] = DBX.crop({ world: DBX.flat(tw, th, 'tall_grass'), rect: [0, 0, tw * 32, th * 32], season: 'summer' }));
+  const framesOf = c => c.cache || (c.cache = c.frames());
+  const fit = fr => {
+    let L = 0, R = 0, U = 0, D = 0;
+    for (const s of fr) { L = Math.max(L, s.ax); R = Math.max(R, s.w - s.ax); U = Math.max(U, s.ay); D = Math.max(D, s.h - s.ay); }
+    const tw = Math.max(2, Math.ceil((L + R + 12) / 32)), th = Math.max(2, Math.ceil((U + D + 14) / 32));
+    return [tw, th, Math.round(tw * 16 + (L - R) / 2), th * 32 - 8 - D];
+  };
+  const stageOf = c => c.stage || (c.stage = fit(framesOf(c)));
+  const draw = (cv, s, z, crop, stage) => {
+    const [tw, th, ax, ay] = stage || STAGE, g = ground(tw, th), [cx, cy, w, h] = crop || [0, 0, g.w, g.h], px = new Uint8ClampedArray(w * h * 4), ox = ax - s.ax - cx, oy = ay - s.ay - cy;
     for (let y = 0; y < h; y++) px.set(g.rgba.slice(((y + cy) * g.w + cx) * 4, ((y + cy) * g.w + cx + w) * 4), y * w * 4);
     for (let y = 0; y < s.h; y++) for (let x = 0; x < s.w; x++) {
       const c = s.c[y * s.w + x], X = x + ox, Y = y + oy;
@@ -48,18 +57,19 @@ const CONCEPTS = (() => {
     if (z) { cv.style.width = w * z + 'px'; cv.style.height = h * z + 'px'; }
   };
   const list = [
-    { id: 'winded_heave', name: 'Winded', note: 'concept for later', about: 'The whole figure heaves while winded: shoulders and arms snap up on the inhale and sag on the exhale, the head dips at the bottom of each breath, the mouth opens and the cheeks flush. Eight frames, 0.105 s each. Set aside for later; the HUD shows winded as breath puffs at the mouth.', frames: () => winded('watch'), step: .105 }
+    { id: 'winded_heave', name: 'Winded', note: 'concept for later', strip: [18, 18, 28, 42], about: 'The whole figure heaves while winded: shoulders and arms snap up on the inhale and sag on the exhale, the head dips at the bottom of each breath, the mouth opens and the cheeks flush. Eight frames, 0.105 s each. Set aside for later; the HUD shows winded as breath puffs at the mouth.', frames: () => winded('watch'), step: .105 }
   ];
   const live = new Set();
-  const play = (cv, c, z) => { const fr = c.frames(); cv.c = c; cv.fr = fr; cv.z = z; draw(cv, fr[0], z); live.add(cv); };
+  for (const c of DBX.concepts) list.push(c);
+  const play = (cv, c, z) => { const fr = framesOf(c), stage = stageOf(c); cv.c = c; cv.fr = fr; cv.z = z; cv.stage = stage; draw(cv, fr[0], z, null, stage); live.add(cv); };
   const loop = now => {
     requestAnimationFrame(loop);
     for (const cv of live) {
       if (!cv.isConnected) { live.delete(cv); continue; }
       const i = Math.floor(now / 1000 / cv.c.step) % cv.fr.length;
-      if (cv.at !== i) { cv.at = i; draw(cv, cv.fr[i]); }
+      if (cv.at !== i) { cv.at = i; draw(cv, cv.fr[i], 0, null, cv.stage); }
     }
   };
   requestAnimationFrame(loop);
-  return { list, play, draw };
+  return { list, play, draw, framesOf, stageOf };
 })();
