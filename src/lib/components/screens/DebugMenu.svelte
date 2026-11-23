@@ -1,391 +1,56 @@
 <script lang="ts">
-  import { gameState } from '$lib/stores/gameState';
-  import { uiState } from '$lib/stores/uiState';
-  import { resourceObjectService } from '$lib/game/services/ResourceObjectService';
-  import { CREATURES } from '$lib/game/core/defs/creatures';
-  import {
-    WEATHER_IDS,
-    WEATHER_LABELS,
-    SEASON_IDS,
-    SEASON_LABELS
-  } from '$lib/game/services/EnvironmentService';
-  import type { Season } from '$lib/game/core/types';
-  import itemsData from '$lib/game/database/items/items.json';
-  import buildingsData from '$lib/game/database/world/buildings.json';
+  import Well from '$lib/components/UI/widget/Well.svelte';
   import AudioNowPlaying from '$lib/components/UI/audio/AudioNowPlaying.svelte';
+  import DebugSpawn from './DebugSpawn.svelte';
   import DebugGodmode from './DebugGodmode.svelte';
-
-  type NamedDef = { id: string; name?: string; category?: string };
-  const ITEMS = (itemsData as unknown as NamedDef[]).filter((i) => i.category !== 'natural_weapon');
-  const BUILDINGS = buildingsData as unknown as NamedDef[];
-  const RESOURCES = resourceObjectService.getAll();
-  const label = (d: { name?: string; displayName?: string; id: string }) =>
-    d.name ?? d.displayName ?? d.id;
-
-  let itemId = $state(ITEMS[0]?.id ?? '');
-  let itemAmount = $state(50);
-  let pawnCount = $state(1);
-  let creatureId = $state('');
-  let entityCount = $state(5);
-  let buildingId = $state(BUILDINGS[0]?.id ?? '');
-  let resourceId = $state(RESOURCES[0]?.id ?? '');
-  let snowValue = $state(0);
-  let iceValue = $state(0);
-
-  const brush = $derived($uiState.debugBrush);
-  const cmd = (type: string, payload: Record<string, unknown> = {}) =>
-    gameState.command({ type, payload, save: true });
-
-  function setWeather(e: Event) {
-    cmd('setWeather', { type: (e.target as HTMLSelectElement).value });
-  }
-  function setSeason(e: Event) {
-    const v = (e.target as HTMLSelectElement).value;
-    cmd('setSeason', { season: v === '' ? null : (v as Season) });
-  }
-
-  const TIME_OF_DAY: { label: string; value: number }[] = [
-    { label: 'Dawn', value: 0.3 },
-    { label: 'Day (noon)', value: 0.5 },
-    { label: 'Dusk', value: 0.82 },
-    { label: 'Night', value: 0.0 }
-  ];
-  function setTimeOfDay(e: Event) {
-    const v = (e.target as HTMLSelectElement).value;
-    cmd('setTimeOfDay', { timeOfDay: v === '' ? null : Number(v) });
-  }
-  function armBrush(
-    kind: 'regrow' | 'building' | 'resource' | 'kill' | 'resurrect',
-    id: string | null = null
-  ) {
-    if (brush?.kind === kind) uiState.deactivateDebugBrush();
-    else uiState.activateDebugBrush(kind, id);
-  }
-  function setMapSnow(v: number) {
-    snowValue = v;
-    cmd('devSetMapSnow', { value: v });
-  }
-  function setMapIce(v: number) {
-    iceValue = v;
-    cmd('devSetMapIce', { value: v });
-  }
+  import DebugWorld from './DebugWorld.svelte';
+  import DebugScenario from './DebugScenario.svelte';
+  import DebugEvents from './DebugEvents.svelte';
+  import DebugNeeds from './DebugNeeds.svelte';
 </script>
 
-<div class="menu">
-  <AudioNowPlaying />
-
-  <section>
-    <h4>Items</h4>
-    <div class="row">
-      <select bind:value={itemId}>
-        {#each ITEMS as it (it.id)}<option value={it.id}>{label(it)}</option>{/each}
-      </select>
-      <input type="number" min="1" bind:value={itemAmount} title="amount" />
-    </div>
-    <div class="row">
-      <button onclick={() => cmd('devSpawnItem', { itemId, amount: itemAmount })}>Spawn item</button
-      >
-      <button onclick={() => cmd('devSpawnAllItems')}>Spawn all</button>
-      <button onclick={() => cmd('devClearAllItems')}>Clear all</button>
-    </div>
-  </section>
-
-  <section>
-    <h4>Pawns</h4>
-    <div class="row">
-      <input type="number" min="1" bind:value={pawnCount} title="count" />
-      <button onclick={() => cmd('devSpawnPawns', { count: pawnCount })}>Spawn pawns</button>
-    </div>
-  </section>
-
-  <section>
-    <h4>Entities</h4>
-    <div class="row">
-      <select bind:value={creatureId}>
-        <option value="">random</option>
-        {#each CREATURES as c (c.id)}<option value={c.id}>{c.name}</option>{/each}
-      </select>
-      <input type="number" min="1" bind:value={entityCount} title="count" />
-    </div>
-    <button
-      onclick={() =>
-        cmd('devSpawnEntities', { count: entityCount, creatureId: creatureId || undefined })}
-      >Spawn entities</button
-    >
-  </section>
-
-  <section>
-    <h4>Events <span class="hint">(force a world event now)</span></h4>
-    <div class="row">
-      <button onclick={() => cmd('devTriggerKingdomArrival', { kind: 'caravan' })}
-        >Trade caravan</button
-      >
-      <button onclick={() => cmd('devTriggerKingdomArrival', { kind: 'visitor' })}>Visitors</button>
-    </div>
-    <button onclick={() => cmd('devTriggerMigrantWave')}>Migrant wave</button>
-  </section>
-
-  <section>
-    <h4>Weather</h4>
-    <select value={$gameState.weather?.type ?? 'clear'} onchange={setWeather}>
-      {#each WEATHER_IDS as w (w)}<option value={w}>{w} — {WEATHER_LABELS[w]}</option>{/each}
-    </select>
-  </section>
-
-  <section>
-    <h4>Season</h4>
-    <select value={$gameState._debugSeason ?? ''} onchange={setSeason}>
-      <option value="">natural (turn)</option>
-      {#each SEASON_IDS as s (s)}<option value={s}>{SEASON_LABELS[s]}</option>{/each}
-    </select>
-  </section>
-
-  <section>
-    <h4>Time of day</h4>
-    <select value={$gameState._debugTimeOfDay ?? ''} onchange={setTimeOfDay}>
-      <option value="">natural (turn)</option>
-      {#each TIME_OF_DAY as t (t.label)}<option value={t.value}>{t.label}</option>{/each}
-    </select>
-  </section>
-
-  <section>
-    <h4>Gating <span class="hint">(dev)</span></h4>
-    <label class="check-row">
-      <input
-        type="checkbox"
-        checked={!!$gameState._devResearchGateOff}
-        onchange={(e) => cmd('setResearchGateOff', { off: (e.target as HTMLInputElement).checked })}
-      />
-      Research gate off <span class="hint">(show + allow unresearched recipes & buildings)</span>
-    </label>
-  </section>
-
-  <DebugGodmode />
-
-  <section>
-    <h4>Snow cover <span class="hint">(× tile wetness)</span></h4>
-    <div class="row">
-      <input
-        type="range"
-        min="0"
-        max="100"
-        step="1"
-        value={snowValue}
-        oninput={(e) => setMapSnow(Number((e.target as HTMLInputElement).value))}
-      />
-      <input
-        type="number"
-        min="0"
-        max="100"
-        bind:value={snowValue}
-        onchange={() => setMapSnow(snowValue)}
-      />
-    </div>
-    <button onclick={() => setMapSnow(0)}>Clear snow</button>
-  </section>
-
-  <section>
-    <h4>Ice cover <span class="hint">(× tile wetness; water → walkable)</span></h4>
-    <div class="row">
-      <input
-        type="range"
-        min="0"
-        max="100"
-        step="1"
-        value={iceValue}
-        oninput={(e) => setMapIce(Number((e.target as HTMLInputElement).value))}
-      />
-      <input
-        type="number"
-        min="0"
-        max="100"
-        bind:value={iceValue}
-        onchange={() => setMapIce(iceValue)}
-      />
-    </div>
-    <button onclick={() => setMapIce(0)}>Clear ice</button>
-  </section>
-
-  <section>
-    <h4>Kill / Revive <span class="hint">(click an entity / corpse)</span></h4>
-    <button class="kill" class:active={brush?.kind === 'kill'} onclick={() => armBrush('kill')}>
-      {brush?.kind === 'kill' ? '■ ' : '☠ '}Kill (click entity)
-    </button>
-    <button
-      class="revive"
-      class:active={brush?.kind === 'resurrect'}
-      onclick={() => armBrush('resurrect')}
-    >
-      {brush?.kind === 'resurrect' ? '■ ' : '✚ '}Resurrect (click corpse)
-    </button>
-  </section>
-
-  <section>
-    <h4>Map brushes <span class="hint">(click tiles)</span></h4>
-    <button class:active={brush?.kind === 'regrow'} onclick={() => armBrush('regrow')}>
-      {brush?.kind === 'regrow' ? '■ ' : ''}Regrow resource
-    </button>
-    <div class="row">
-      <select bind:value={buildingId}>
-        {#each BUILDINGS as b (b.id)}<option value={b.id}>{label(b)}</option>{/each}
-      </select>
-      <button
-        class:active={brush?.kind === 'building'}
-        onclick={() => armBrush('building', buildingId)}
-      >
-        {brush?.kind === 'building' ? '■ ' : ''}Spawn
-      </button>
-    </div>
-    <div class="row">
-      <select bind:value={resourceId}>
-        {#each RESOURCES as r (r.id)}<option value={r.id}>{label(r)}</option>{/each}
-      </select>
-      <button
-        class:active={brush?.kind === 'resource'}
-        onclick={() => armBrush('resource', resourceId)}
-      >
-        {brush?.kind === 'resource' ? '■ ' : ''}Spawn
-      </button>
-    </div>
-    {#if brush}
-      <button class="stop" onclick={() => uiState.deactivateDebugBrush()}>Stop brush</button>
-    {/if}
-  </section>
+<div class="dbg">
+  <Well title="Spawn" scroll>
+    <DebugSpawn />
+    <DebugGodmode />
+  </Well>
+  <Well title="World" scroll>
+    <DebugWorld />
+    <DebugScenario />
+  </Well>
+  <Well title="Events and brushes" scroll>
+    <DebugEvents />
+    <DebugNeeds />
+    <AudioNowPlaying />
+  </Well>
 </div>
 
 <style>
-  .menu {
-    display: flex;
-    flex-direction: column;
-    gap: 0;
-    overflow-y: auto;
-    padding: 6px 8px;
-    background: rgba(13, 9, 3, 0.98);
-    color: #d4a860;
-    font-family: var(--font-mono);
-    font-size: 10px;
-  }
-  section {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    margin-top: 5px;
-    padding-top: 5px;
-    border-top: 1px solid rgba(122, 94, 40, 0.6);
-  }
-  section:first-child {
-    margin-top: 0;
-    padding-top: 0;
-    border-top: none;
-  }
-  h4 {
-    margin: 0;
-    font-size: 10px;
-    color: #c8a048;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-  .hint {
-    color: #9a7c40;
-    text-transform: none;
-    font-weight: normal;
-  }
-  .row {
-    display: flex;
-    gap: 4px;
-  }
-  .check-row {
-    display: flex;
-    align-items: center;
+  .dbg {
+    flex: 1;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 6px;
-    cursor: pointer;
   }
-  .check-row input {
-    width: auto;
+  .dbg :global(.well-scroll) {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
   }
-  select,
-  input {
-    background: #140e04;
-    color: #e0b868;
-    border: 1px solid #6a4e20;
-    font-family: var(--font-mono);
-    font-size: 10px;
-    padding: 2px 4px;
+  .dbg :global(.well-scroll > *) {
+    flex: none;
+  }
+  .dbg :global(.minis) {
+    display: flex;
+    gap: 4px;
     min-width: 0;
   }
-  select:focus,
-  input:focus {
-    outline: none;
-    border-color: #c88a30;
-    background: #1c1407;
-    color: #f0c878;
-  }
-  select {
+  .dbg :global(.minis > *) {
     flex: 1;
+    min-width: 0;
   }
-  input[type='number'] {
-    width: 3.5em;
-    appearance: textfield;
-  }
-  input[type='range'] {
-    flex: 1;
-    padding: 0;
-    accent-color: #c8a048;
-    background: transparent;
-    border: none;
-  }
-  button {
-    background: #160f06;
-    border: 1px solid #6b4f22;
-    color: #d0a858;
-    font-family: var(--font-mono);
-    font-size: 10px;
-    padding: 2px 6px;
-    cursor: pointer;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-  }
-  button:hover {
-    background: #24180a;
-    border-color: #b07a28;
-    color: #f0c878;
-  }
-  button.active {
-    background: #2a1a08;
-    border-color: #e0a848;
-    color: #f0c060;
-  }
-  button.revive {
-    color: #6ad29a;
-    border-color: #2a7a4a;
-  }
-  button.revive:hover,
-  button.revive.active {
-    background: #0a2418;
-    border-color: #3ad07a;
-    color: #80ffb0;
-  }
-  button.kill {
-    color: #e07a5a;
-    border-color: #9a3a2a;
-  }
-  button.kill:hover {
-    background: #2a1208;
-    border-color: #d0563a;
-    color: #ffa080;
-  }
-  button.kill.active {
-    background: #3a1408;
-    border-color: #ff5a3a;
-    color: #ff8060;
-  }
-  button.stop {
-    color: #d98a6a;
-    border-color: #8a4a2a;
-  }
-  button.stop:hover {
-    background: #2a1408;
-    border-color: #c0683a;
-    color: #f0a878;
+  .dbg :global(.minis > .field) {
+    flex: 2;
   }
 </style>
