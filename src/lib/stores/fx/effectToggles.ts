@@ -6,6 +6,7 @@ export const EFFECT_KINDS = [
   { id: 'health', label: 'Health bars' },
   { id: 'draft', label: 'Draft line' },
   { id: 'text', label: 'Floating text' },
+  { id: 'icons', label: 'Floating icons' },
   { id: 'speech', label: 'Speech bubbles' },
   { id: 'projectiles', label: 'Projectiles' }
 ] as const;
