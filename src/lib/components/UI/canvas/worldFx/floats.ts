@@ -332,3 +332,8 @@ function settle(now: number, r: number): void {
 }
 
 export const floatersLive = (): boolean => items.length > 0 || waiting.size > 0;
+
+export function hideFloats(): void {
+  items.length = 0;
+  waiting.clear();
+}

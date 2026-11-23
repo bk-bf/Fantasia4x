@@ -18,7 +18,7 @@ import {
 import type { BubbleSkin } from '$lib/pixelArt/fx/bubble';
 import { ART_TILE } from './figure';
 import { collectScene, type FxWorld, type Mark, type Scene } from './scene';
-import { drawFloats, floatersLive, type FloaterMode } from './floats';
+import { drawFloats, floatersLive, hideFloats, type FloaterMode } from './floats';
 import { drawSpeech } from './speech';
 import { drawFlights, flying } from './flights';
 import { conditionState } from './onsets';
@@ -42,8 +42,12 @@ export interface FxView {
 const BAR_W = 24;
 const BACKING = 1;
 
-export const labelScale = (k: number, percent: number): number =>
-  Math.max(1, Math.round((k * percent) / 100));
+export const LABEL_HIDE_BELOW = 0.75;
+
+export function labelScale(k: number, percent: number): number {
+  const s = (k * percent) / 100;
+  return s < LABEL_HIDE_BELOW ? 0 : Math.max(1, Math.round(s));
+}
 const PRUNE_MS = 500;
 
 const MARKS: Record<Mark['kind'], (p: FxPainter, x: number, y: number, t: number) => void> = {
@@ -181,8 +185,10 @@ class WorldFxLayer {
     for (const b of s.bars) p.put(bar(BAR_W, b.v, b.ramp, b.pegs), b.x, b.y);
     for (const m of s.marks) MARKS[m.kind](p, m.x, m.y, t);
     drawFlights(p, w.renderer, shots, now);
-    drawSpeech(p, w.renderer, texts, now, this.skin, labelScale(p.k, this.sizes.bubbles));
-    drawFloats(p, w.renderer, texts, now, this.floaters);
+    const kb = labelScale(p.k, this.sizes.bubbles);
+    if (kb > 0) drawSpeech(p, w.renderer, texts, now, this.skin, kb);
+    if (p.kt > 0) drawFloats(p, w.renderer, texts, now, this.floaters);
+    else hideFloats();
   }
 }
 
