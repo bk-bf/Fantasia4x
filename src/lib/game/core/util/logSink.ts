@@ -28,6 +28,10 @@ export interface CombatTextRequest {
   dy?: number;
   entityId?: string;
   conditionId?: string;
+  level?: number;
+  levels?: number;
+  easing?: boolean;
+  lost?: boolean;
 }
 
 export interface CombatLungeRequest {

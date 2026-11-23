@@ -16,7 +16,6 @@ const strings = (o: unknown): string[] =>
 interface Def {
   name?: string;
   floater?: boolean;
-  stages?: { label?: string }[];
 }
 
 const floaterDefs = (o: unknown): Def[] =>
@@ -27,11 +26,8 @@ const floaterDefs = (o: unknown): Def[] =>
       : [];
 
 describe('floater lettering', () => {
-  it('has a glyph for every condition name and severity', () => {
-    const texts = floaterDefs(conditions).flatMap((d) => [
-      d.name ?? '',
-      ...(d.stages ?? []).map((s) => `${d.name} (${s.label})`)
-    ]);
+  it('has a glyph for every condition name', () => {
+    const texts = floaterDefs(conditions).map((d) => d.name ?? '');
     expect(texts.length).toBeGreaterThan(50);
     expect(texts.flatMap((t) => unknownGlyphs(t, true))).toEqual([]);
   });

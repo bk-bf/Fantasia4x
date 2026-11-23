@@ -5,7 +5,7 @@ import {
   MERGE_HITS_MS,
   type FloaterMode
 } from '$lib/components/UI/canvas/worldFx/floats';
-import { icon, worded } from '$lib/pixelArt/fx/icons';
+import { arrows, floater, icon, worded } from '$lib/pixelArt/fx/icons';
 import { HURT, tint, word } from '$lib/pixelArt/fx/glyphs';
 import type { FxPainter } from '$lib/pixelArt/fx/painter';
 import type { Spr } from '$lib/pixelArt/fx/spr';
@@ -18,7 +18,8 @@ const onset = (
   conditionId: string,
   text: string,
   worldX = nextX++,
-  worldY = 4
+  worldY = 4,
+  more: Partial<CombatTextEvent> = {}
 ): CombatTextEvent => ({
   id: nextId++,
   spawnTime: 0,
@@ -29,7 +30,8 @@ const onset = (
   kind: 'condition',
   color: '#9575cd',
   entityId: 'p1',
-  conditionId
+  conditionId,
+  ...more
 });
 
 const hit = (n: number, worldX: number, worldY = 4, spawnTime = 0): CombatTextEvent => ({
@@ -99,25 +101,65 @@ describe('condition floaters', () => {
   it('shows at most a few floaters per target and queues the rest, most severe first', () => {
     const t0 = 30_000;
     const list = [
-      onset('pain_shock', 'Pain-Shock (mild)', 500),
-      onset('hypovolemia', 'Hypovolemia (critical)', 500),
+      onset('pain_shock', 'Pain-Shock', 500, 4, { level: 1, levels: 4 }),
+      onset('hypovolemia', 'Hypovolemia', 500, 4, { level: 4, levels: 4 }),
       onset('winded', 'Winded', 500),
       onset('staggered', 'Staggered', 500),
-      onset('bleeding', 'Bleeding (moderate)', 500)
+      onset('bleeding', 'Bleeding', 500, 4, { level: 2, levels: 3 })
     ];
     draw(list, both, t0);
     const first = draw(list, both, t0 + 300);
     expect(first).toHaveLength(FLOATERS_PER_TARGET);
     expect(first.map((d) => d.s)).not.toContain(
-      word('Pain-Shock (mild)', tint('#9575cd'), { small: true, icon: 'pip' })[0]
+      floater('pain', 'Pain-Shock', '#9575cd', undefined, 1)[0]
     );
     draw(list, both, t0 + 1800);
     const later = draw(list, both, t0 + 2000);
     expect(later.length).toBeGreaterThan(0);
   });
 
+  it('shows the stage as arrows, never as a word', () => {
+    let at = 100_000;
+    const look = (level: number, easing = false) => {
+      at += 10_000;
+      const e = onset('bleeding', 'Bleeding', nextX++, 4, { level, levels: 3, easing });
+      draw([e], both, at);
+      return draw([e], both, at + 500)[0].s;
+    };
+    const [one, two, three, eased] = [look(1), look(2), look(3), look(1, true)];
+    expect(new Set([one, two, three, eased]).size).toBe(4);
+    expect(two.w - one.w).toBe(arrows(2)!.w - arrows(1)!.w);
+    expect(three.w - two.w).toBe(arrows(3)!.w - arrows(2)!.w);
+    expect(one).toBe(floater('bleeding', 'Bleeding', '#9575cd', undefined, 1)[0]);
+    expect(eased).toBe(floater('bleeding', 'Bleeding', '#9575cd', undefined, -1)[0]);
+  });
+
+  it('strikes a lost condition out, left to right, and never a gained one', () => {
+    const at = 200_000;
+    const gain = onset('wet', 'Wet', 900, 4);
+    const loss = onset('wet', 'Wet', 1900, 4, { lost: true });
+    const bands = (e: CombatTextEvent, now: number) => {
+      const out: number[] = [];
+      const p = {
+        textRatio: 1,
+        label: () => {},
+        fill: () => {},
+        band: (_x: number, _y: number, _ox: number, _oy: number, w: number) => out.push(w)
+      } as unknown as FxPainter;
+      drawFloats(p, null, [e], now, both);
+      return out;
+    };
+    bands(gain, at);
+    expect(bands(gain, at + 300)).toEqual([]);
+    bands(loss, at + 10_000);
+    const early = bands(loss, at + 10_200);
+    const late = bands(loss, at + 10_900);
+    expect(early.length).toBe(2);
+    expect(late[1]).toBeGreaterThan(early[1]);
+  });
+
   it('merges hits that land close together, however late the frame that sees them', () => {
-    const t0 = 40_000;
+    const t0 = 300_000;
     const a = hit(7, 600, 4, t0);
     draw([a], both, t0 + 50);
     const b = hit(10, 600, 4, t0 + MERGE_HITS_MS - 100);
@@ -126,7 +168,7 @@ describe('condition floaters', () => {
   });
 
   it('keeps hits apart that land further apart than the window', () => {
-    const t0 = 50_000;
+    const t0 = 310_000;
     const a = hit(7, 700, 4, t0);
     draw([a], both, t0 + 50);
     const b = hit(10, 700, 4, t0 + MERGE_HITS_MS + 200);

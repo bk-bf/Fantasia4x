@@ -1,7 +1,8 @@
 import type { CombatTextEvent } from '$lib/stores/fx/combatFeedback';
 import { COLD, CRIT, DULL, GORE, HURT, tint, word, type Pair } from '$lib/pixelArt/fx/glyphs';
 import { BADGE_TTL, badge, badgeDy, float, floatDy } from '$lib/pixelArt/fx/effects';
-import { icon, worded } from '$lib/pixelArt/fx/icons';
+import { floater, strikeOf, type Trend } from '$lib/pixelArt/fx/icons';
+import { P, hex } from '$lib/pixelArt/fx/spr';
 import type { FxPainter } from '$lib/pixelArt/fx/painter';
 import type { WebGLRenderer } from '$lib/webgl/renderer.js';
 import { figureAt, type Figure } from './figure';
@@ -21,6 +22,7 @@ interface Placed {
   ttl: number;
   shake: boolean;
   badge: boolean;
+  strike: boolean;
 }
 
 interface Hit {
@@ -55,15 +57,8 @@ const BADGE_STEP = 18;
 const GAP = 1;
 const SAMPLE_S = 0.1;
 const TTL_BY_CONDITION: Record<string, number> = { knockdown: 1.3, staggered: 0.9 };
-const SEVERITY: Record<string, number> = {
-  critical: 4,
-  severe: 3,
-  serious: 3,
-  major: 3,
-  moderate: 2,
-  minor: 1,
-  mild: 1
-};
+const STRIKE_GROW = 0.45;
+const STRIKE_LIGHT = hex('#f4ecd8');
 
 const items: Item[] = [];
 const waiting = new Map<string, Waiting[]>();
@@ -77,12 +72,20 @@ const amount = (e: CombatTextEvent) => Number(/\d+/.exec(e.text)?.[0] ?? 0);
 function rank(e: CombatTextEvent): number {
   if (e.kind === 'crit') return 7;
   if (e.kind === 'damage') return 6;
+  if (e.lost) return 0;
   if (e.kind === 'condition' || e.kind === 'knockdown') {
-    const stage = /\(([a-z]+)\)/i.exec(e.text)?.[1].toLowerCase();
-    return stage ? (SEVERITY[stage] ?? 2) : 3;
+    const t = trend(e);
+    return t === 0 ? 3 : 1 + Math.max(0, t);
   }
   if (e.kind === 'fracture') return 3;
   return e.kind === 'bleed' ? 2 : 1;
+}
+
+function trend(e: CombatTextEvent): Trend {
+  if (e.lost || !e.level || !e.levels) return 0;
+  if (e.easing) return -1;
+  const n = e.levels <= 3 ? e.level : Math.round((e.level * 3) / e.levels);
+  return Math.min(3, Math.max(1, n)) as Trend;
 }
 
 function hitPair(h: Hit): Pair {
@@ -113,7 +116,7 @@ function textLook(e: CombatTextEvent): [Pair, number, number, boolean] {
       ];
     default:
       return [
-        word(e.text, tint(e.color ?? '#dddddd'), { small: true, icon: 'pip' }),
+        floater(null, e.text, e.color ?? '#dddddd', undefined, trend(e)),
         4,
         TTL_BY_CONDITION[e.conditionId ?? ''] ?? 1.4,
         false
@@ -128,19 +131,30 @@ function place(e: CombatTextEvent, f: Figure, mode: FloaterMode): Placed | null 
   if (id && mode.icons) {
     const col = e.color ?? (e.kind === 'fracture' ? '#ff9944' : '#dddddd');
     return {
-      pair: mode.text ? worded(id.id, e.text, col, id.mark) : icon(id.id, id.mark),
+      pair: floater(id.id, mode.text ? e.text : null, col, id.mark, trend(e)),
       x: f.x,
       y: f.lying ? f.y - 20 : f.y - 34,
       ox: 0,
       oy: -tier * BADGE_STEP,
       ttl: BADGE_TTL,
       shake: false,
-      badge: true
+      badge: true,
+      strike: !!e.lost
     };
   }
   if (switched && !mode.text) return null;
   const [pair, dx, ttl, shake] = textLook(e);
-  return { pair, x: f.x, y: f.head - 8, ox: dx, oy: TIERS[tier], ttl, shake, badge: false };
+  return {
+    pair,
+    x: f.x,
+    y: f.head - 8,
+    ox: dx,
+    oy: TIERS[tier],
+    ttl,
+    shake,
+    badge: false,
+    strike: !!e.lost
+  };
 }
 
 function box(q: Placed, u: number, r: number): [number, number, number, number] {
@@ -282,7 +296,23 @@ export function drawFloats(
     const u = (now - it.start) / 1000;
     if (it.q.badge) badge(p, it.q, it.q.pair, u);
     else float(p, it.q, it.q.pair, u, it.q.ttl, it.q.shake);
+    if (it.q.strike) strike(p, it.q, u);
   }
+}
+
+function strike(p: FxPainter, q: Placed, u: number): void {
+  if (u > q.ttl) return;
+  const s = q.pair[0];
+  const line = strikeOf(s);
+  const w = Math.round(line.w * Math.min(1, u / (q.ttl * STRIKE_GROW)));
+  if (w <= 0) return;
+  const dy = q.badge ? badgeDy(u) : floatDy(u, q.ttl);
+  const x = Math.round(q.ox) - s.ax + line.x;
+  const y = Math.round(q.oy + dy) - s.ay + line.y;
+  p.fill(P.ink, 255);
+  p.band(q.x, q.y, x - 1, y, w + 2, 2);
+  p.fill(STRIKE_LIGHT, 255);
+  p.band(q.x, q.y, x, y, w, 1);
 }
 
 export const floatersLive = (): boolean => items.length > 0 || waiting.size > 0;

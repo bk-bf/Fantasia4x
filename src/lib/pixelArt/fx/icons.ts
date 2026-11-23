@@ -350,18 +350,91 @@ export function icon(id: IconId, mark?: IconMark): Pair {
   return p;
 }
 
-export function worded(id: IconId, label: string, col: string, mark?: IconMark): Pair {
-  const key = `${id}|${mark ?? ''}|${label}|${col}`;
-  let p = memo.get(key);
-  if (!p) {
-    const a = icon(id, mark)[0];
-    const b = word(label, tint(col), { small: true })[0];
-    const h = Math.max(a.h, b.h);
-    const s = new Spr(a.w + 2 + b.w, h, a.w >> 1, h - 1);
-    stamp(s, a, 0, h - a.h);
-    stamp(s, b, a.w + 2, h - b.h - Math.max(0, (a.h - b.h) >> 1));
-    p = pair(s);
-    memo.set(key, p);
+export type Trend = -1 | 0 | 1 | 2 | 3;
+
+const UP = ['..5..', '.454.', '45554', '.454.', '.343.', '.343.'];
+const ARROW_STEP = 6;
+const arrow = (rows: string[], col: string) => art(rows, keys(tint(col), '012345'), 230);
+const RISE = () => arrow(UP, '#ff5a3a');
+const EASE = () => arrow([...UP].reverse(), '#7cc060');
+const arrowMemo = new Map<Trend, Spr>();
+
+export function arrows(t: Trend): Spr | null {
+  if (t === 0) return null;
+  let s = arrowMemo.get(t);
+  if (!s) {
+    const one = t < 0 ? EASE() : RISE();
+    const n = Math.max(1, t);
+    s = new Spr(one.w + (n - 1) * ARROW_STEP, one.h, 0, one.h - 1);
+    for (let i = 0; i < n; i++) stamp(s, one, i * ARROW_STEP, 0);
+    arrowMemo.set(t, s);
   }
+  return s;
+}
+
+export interface Strike {
+  x: number;
+  y: number;
+  w: number;
+}
+
+const strikes = new WeakMap<Spr, Strike>();
+
+export const strikeOf = (s: Spr): Strike => strikes.get(s) ?? { x: 1, y: s.h >> 1, w: s.w - 2 };
+
+function row(parts: [Spr, number][], lead: Spr, struck: Spr): Spr {
+  const h = Math.max(...parts.map(([p]) => p.h));
+  const w = parts.reduce((n, [p, gap]) => n + gap + p.w, 0);
+  let x = 0;
+  let ax = 0;
+  let ay = 0;
+  let line: Strike = { x: 1, y: h >> 1, w: w - 2 };
+  const s = new Spr(w, h, 0, 0);
+  for (const [p, gap] of parts) {
+    x += gap;
+    const y = (h - p.h + 1) >> 1;
+    stamp(s, p, x, y);
+    if (p === lead) [ax, ay] = [x + p.ax, y + p.ay];
+    if (p === struck) line = { x: x + 1, y: y + (p.h >> 1) + 1, w: p.w - 2 };
+    x += p.w;
+  }
+  s.ax = ax;
+  s.ay = ay;
+  strikes.set(s, line);
+  return s;
+}
+
+export function floater(
+  id: IconId | null,
+  label: string | null,
+  col: string,
+  mark?: IconMark,
+  trend: Trend = 0
+): Pair {
+  const key = `${id ?? ''}|${mark ?? ''}|${label ?? ''}|${col}|${trend}`;
+  let p = memo.get(key);
+  if (p) return p;
+  const look = id ? icon(id, mark) : null;
+  const text = label ? word(label, tint(col), { small: true, icon: id ? undefined : 'pip' }) : null;
+  const up = arrows(trend);
+  if (!up && !(look && text)) p = (look ?? text)!;
+  else {
+    const parts: [Spr, number][] = look
+      ? [
+          [look[0], 0],
+          ...(up ? [[up, 1] as [Spr, number]] : []),
+          ...(text ? [[text[0], 2] as [Spr, number]] : [])
+        ]
+      : [
+          [text![0], 0],
+          [up!, 2]
+        ];
+    const lead = (look ?? text)![0];
+    p = pair(row(parts, lead, (text ?? look)![0]));
+  }
+  memo.set(key, p);
   return p;
 }
+
+export const worded = (id: IconId, label: string, col: string, mark?: IconMark): Pair =>
+  floater(id, label, col, mark);

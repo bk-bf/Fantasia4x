@@ -96,6 +96,21 @@ export class FxPainter {
     this.ops.push({ s, fill: '', a: 1, dx, dy, dw: s.w * this.kt, dh: s.h * this.kt, at: null });
   }
 
+  band(x: number, y: number, ox: number, oy: number, w: number, h: number): void {
+    const dx = Math.round(x * this.k + this.ox + ox * this.kt);
+    const dy = Math.round(y * this.k + this.oy + oy * this.kt);
+    this.ops.push({
+      s: null,
+      fill: this.style,
+      a: 1,
+      dx,
+      dy,
+      dw: w * this.kt,
+      dh: h * this.kt,
+      at: null
+    });
+  }
+
   veil(s: Spr, x: number, y: number, a: number): void {
     this.push(s, '', a, Math.round(x) - s.ax, Math.round(y) - s.ay, s.w, s.h);
   }
