@@ -195,6 +195,10 @@ export function collectScene(w: FxWorld, on: SceneOn): Scene {
   const prio = PRIO();
   for (const p of w.pawns) {
     if (!p.position || p.carriedBy) continue;
+    const rp = w.pawnPos.get(p.id) ?? p.position;
+    const cx = Math.round(rp.x);
+    const cy = Math.round(rp.y);
+    if (!inView(w.view, cx, cy)) continue;
     const drafted = on.draft && p.drafted && p.draftTarget;
     const mark = on.marks ? pawnMark(p, prio) : null;
     const working = on.work ? pawnWork(p) : null;
@@ -203,10 +207,7 @@ export function collectScene(w: FxWorld, on: SceneOn): Scene {
         ? Math.max(0, (p.state.health ?? 100) / 100)
         : null;
     if (!mark && working === null && hp === null && !drafted) continue;
-    const rp = w.pawnPos.get(p.id) ?? p.position;
-    const cx = Math.round(rp.x);
-    const cy = Math.round(rp.y);
-    if (!inView(w.view, cx, cy) || w.hidden(cx, cy)) continue;
+    if (w.hidden(cx, cy)) continue;
     const f = figureAt(w.renderer, cx, cy, rp.x, rp.y);
     if (mark) s.marks.push(placeMark(mark, f));
     addBars(s, f, working, hp, RAMP.leaf, mark);
@@ -215,6 +216,10 @@ export function collectScene(w: FxWorld, on: SceneOn): Scene {
   if (!w.mobsDrawn || (!on.marks && !on.work && !on.health)) return s;
   for (const m of w.mobs) {
     if (m.state === 'Corpse') continue;
+    const rp = w.mobPos.get(m.id) ?? m;
+    const cx = Math.round(rp.x);
+    const cy = Math.round(rp.y);
+    if (!inView(w.view, cx, cy)) continue;
     const mark = on.marks ? mobMark(m, prio) : null;
     const eat = on.work && (m.eatProgress ?? 0) > 0 ? Math.min(1, m.eatProgress ?? 0) : null;
     const hp =
@@ -222,10 +227,7 @@ export function collectScene(w: FxWorld, on: SceneOn): Scene {
         ? Math.max(0, m.maxHealth > 0 ? m.health / m.maxHealth : 1)
         : null;
     if (!mark && eat === null && hp === null) continue;
-    const rp = w.mobPos.get(m.id) ?? { x: m.x, y: m.y };
-    const cx = Math.round(rp.x);
-    const cy = Math.round(rp.y);
-    if (!inView(w.view, cx, cy) || w.hidden(cx, cy)) continue;
+    if (w.hidden(cx, cy)) continue;
     const f = figureAt(w.renderer, cx, cy, rp.x, rp.y);
     if (mark) s.marks.push(placeMark(mark, f));
     addBars(s, f, eat, hp, RAMP.blood, mark);
