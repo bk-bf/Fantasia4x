@@ -5,11 +5,11 @@ export const LANDFORMS_MIN_DIM = 750;
 
 export function readMapGeneratorFlag(search: string, stored: string | null): MapGenerator {
   const asked = new URLSearchParams(search).get('mapgen') ?? stored;
-  return asked === 'landforms' ? 'landforms' : 'classic';
+  return asked === 'classic' ? 'classic' : 'landforms';
 }
 
 function fromBrowser(): MapGenerator {
-  if (typeof window === 'undefined') return 'classic';
+  if (typeof window === 'undefined') return 'landforms';
   let stored: string | null = null;
   try {
     stored = window.localStorage.getItem(MAP_GENERATOR_SWITCH);
