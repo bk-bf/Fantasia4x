@@ -50,7 +50,7 @@
     const ws = w.ws ?? (word ? word[1] : 0.25);
     const from = (text.match(/\b(n|ne|e|se|s|sw|w|nw)$/) || [])[1];
     const gusty = Math.min(1, 0.25 + ws * 0.6 + (w.rain ?? 0) * 0.3);
-    return { ws, toward: from ? TOWARD[from] : 'e', gusty, rain: w.rain ?? 0, temp: w.temp ?? 8, snow: w.snow ?? 0 };
+    return { ws, toward: from ? TOWARD[from] : 'e', gusty, rain: w.rain ?? 0, temp: w.temp ?? 8 };
   }
 
   const HEADINGS = { n: -90, ne: -45, e: 0, se: 45, s: 90, sw: 135, w: 180, nw: -135 };
@@ -435,7 +435,7 @@
     gl.uniform1i(u.u_waterBlock, waterBlockShift(artPerPx));
     const sky = weatherSea(state.weather);
     gl.uniform4f(u.u_weather, sky.gusty, sky.temp < 0 ? 0 : sky.rain, clock.t % 1000, 0);
-    gl.uniform4f(u.u_ice, ice, sky.snow, clock.t % 1000, 0);
+    gl.uniform4f(u.u_ice, ice, 0, 0, 0);
     for (const view of views) {
       if (canvas.width !== view.w || canvas.height !== view.h) {
         canvas.width = view.w;

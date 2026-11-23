@@ -92,9 +92,6 @@ const vec3 GRASS[4] = vec3[4](
 
 const vec3 ICE[4] = vec3[4](
     vec3(111.0, 147.0, 172.0) / 255.0, vec3(148.0, 180.0, 198.0) / 255.0, vec3(188.0, 211.0, 220.0) / 255.0, vec3(221.0, 233.0, 236.0) / 255.0);
-const vec3 SNOW[5] = vec3[5](
-    vec3(124.0, 142.0, 166.0) / 255.0, vec3(164.0, 182.0, 200.0) / 255.0, vec3(200.0, 214.0, 224.0) / 255.0,
-    vec3(230.0, 238.0, 240.0) / 255.0, vec3(248.0, 252.0, 252.0) / 255.0);
 const float ICE_SHOWS = 0.08;
 const float ICE_REACH = 1.3;
 const float ICE_DEPTH = 0.85;
@@ -250,9 +247,9 @@ float grainAt(ivec2 art, vec4 shift, float deep, float ruffle) {
 }
 
 float iceAt(vec2 q, float depth, float near) {
-    float front = u_ice.x * ICE_REACH - depth * ICE_DEPTH + smoothstep(10.0, 0.0, near) * 0.08
-        + (wn(q * 0.06, 91) - 0.5) * 0.22 + (wn(q * 0.25, 92) - 0.5) * 0.06;
-    return front - ICE_SHOWS;
+    if (u_ice.x < ICE_SHOWS) return -1.0;
+    float rough = smoothstep(10.0, 0.0, near) * 0.08 + (wn(q * 0.06, 91) - 0.5) * 0.22 + (wn(q * 0.25, 92) - 0.5) * 0.06;
+    return u_ice.x * ICE_REACH - depth * ICE_DEPTH + rough * min(1.0, u_ice.x / 0.3) - ICE_SHOWS;
 }
 
 vec3 iceSheet(ivec2 cell, vec2 q, float margin, float depth, float near) {
@@ -270,9 +267,6 @@ vec3 iceSheet(ivec2 cell, vec2 q, float margin, float depth, float near) {
     float crack = abs(wn(q * 0.09, 93) - 0.5) + (wn(q * 0.4, 94) - 0.5) * 0.04;
     if (crack < 0.01 && thick > 0.3) return mix(c, ICE[3], 0.7);
     if (thick > 0.25 && hash(cell.x >> 1, cell.y >> 1, 97) > 0.996) return ICE[3];
-    float patchy = wn(q * 0.08, 95) + (wn(q * 0.3, 96) - 0.5) * 0.3;
-    if (patchy < u_ice.y * thick * 0.45 - 0.1 + (d - 0.5) * 0.15)
-        c = SNOW[clamp(int(floor(2.0 + patchy * 3.0 + (d - 0.5))), 1, 4)];
     return c;
 }
 
