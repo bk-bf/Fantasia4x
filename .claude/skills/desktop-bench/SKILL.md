@@ -18,7 +18,10 @@ Tell the owner before starting if the desktop is off; he turns it on.
 - `tools/gpu/steady.mjs` holds the same save close up, at the default zoom and zoomed out, each
   paused, at 1x and at 4x, and reports FPS, frame-time p50/p95/p99, frames over 33 and 50 ms, and
   TPS counted from the worker's turn. Same arguments as `zoom-out.mjs`, with seconds per cell last.
-  The desktop holds 60 FPS at its vsync cap, so it shows a cost only when it breaks that cap.
+  The desktop holds 60 FPS at its vsync cap, so FPS shows a cost only when it breaks that cap;
+  `taskMs`, `scriptMs`, `layoutMs` and `styleMs` are main-thread milliseconds per second of the
+  cell and show it under the cap, and `nodes` is the DOM node count. The far cells come after
+  about a minute of play, so creatures have gone to sleep and the map has aged.
   `F4X_PROFILE=1` also saves a CPU profile per cell; `stall.mjs --whole <profile>` ranks the whole
   cell instead of its longest busy stretch, which is the read for a steady low frame rate.
 - Both share `tools/gpu/session.mjs`, which starts the nested compositor and the browser.
