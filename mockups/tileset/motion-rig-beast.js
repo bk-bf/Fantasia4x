@@ -17,13 +17,14 @@ function quadKit(kind) {
   const ex = { head: [], body: [] };
   if (o.extra) {
     const t = new Spr(140, 110), gx = 60, gcy = 60, hx = gx + L + hr * .35 + (o.neck || 0), hy = gcy - (o.up || 0), sl = o.snout || 0, sx = hx + hr * .7 + sl * .5, sy = hy + hr * .28;
-    o.extra(t, { cx: gx, cy: gcy, hx, hy, hr, tip: rnd(sx + sl * .5 + .8), sy, gy: gcy + o.leg + Hb - 2, L, Hb, ax: rnd(hx - hr * .35), ay: rnd(hy - hr * .8), ex: rnd(hx + hr * .2), ey: rnd(hy - hr * .3) });
-    for (let y = 0; y < t.h; y++) for (let x = 0; x < t.w; x++) {
-      const c = t.c[y * t.w + x]; if (!c) continue;
-      const head = x > gx + L * .75 || (x > gx + L * .45 && y < gcy - Hb - 1);
-      if (head) ex.head.push([x - hx, y - hy, c, x > hx + hr * .5 && y > hy - hr * .5]); else ex.body.push([x - gx, y - gcy, c]);
+    const calls = [], rec = {};
+    for (const m of ['set', 'rect', 'line', 'thick', 'ball', 'oval', 'slab']) rec[m] = (...a) => { calls.push([m, a]); return rec; };
+    o.extra(rec, { cx: gx, cy: gcy, hx, hy, hr, tip: rnd(sx + sl * .5 + .8), sy, gy: gcy + o.leg + Hb - 2, L, Hb, ax: rnd(hx - hr * .35), ay: rnd(hy - hr * .8), ex: rnd(hx + hr * .2), ey: rnd(hy - hr * .3) });
+    for (const [m, a] of calls) {
+      const head = a[0] > gx + L * .8 || (a[0] > gx + L * .45 && a[1] < gcy - Hb - 1);
+      if (head) ex.head.push([m, a, hx, hy]); else t[m](...a);
     }
-    for (const [dx, dy, c] of ex.body) body.set(cx + dx, cy + dy, c);
+    for (let y = 0; y < t.h; y++) for (let x = 0; x < t.w; x++) { const c = t.c[y * t.w + x]; if (c) body.set(cx + x - gx, cy + y - gcy, c); }
   }
   K = { o, body, ex, heads: new Map() };
   QKIT.set(kind, K);
@@ -46,11 +47,11 @@ function quadHead(K, v) {
     s.line(m0x, m0y, m1x, m1y, fur[0]);
     s.rect(rnd(tx), rnd(ty), 2, 2, P.ink); s.set(rnd(tx), rnd(ty), P.furGrey[2]);
   }
-  const ex = rnd(hx + hr * .2), ey = rnd(hy - hr * .3);
+  const [ex0, ey0] = R(hx + hr * .2, hy - hr * .3), ex = rnd(ex0), ey = rnd(ey0);
   if (v.blink) s.rect(ex - 1, ey, 4, 1, fur[1]);
   else { s.rect(ex, ey, 2, 2, o.eye || P.ink, o.eye ? 230 : 0); s.set(ex, ey, o.eye ? P.cloth[5] : P.furGrey[3], o.eye ? 230 : 0); }
   s.rect(ex - 1, ey - 1, 4, 1, fur[1]);
-  const ax = rnd(hx - hr * .35), ay = rnd(hy - hr * .8), ear = v.ear || 0;
+  const [ax0, ay0] = R(hx - hr * .35, hy - hr * .8), ax = rnd(ax0), ay = rnd(ay0), ear = v.ear || 0;
   if (o.ears === 'point') for (const [dx, sh] of [[3, 1], [-1, 0]]) for (let j = 0; j < (ear < 0 ? 3 : 5); j++) for (let i = 0; i < (5 - j + 1) / 2 + .5; i++) {
     const x = ax + dx + i + (ear < 0 ? -j * 2 : ear > 0 ? j >> 2 : j >> 1), y = ay - j + (ear < 0 ? 1 : 0);
     s.set(x, y, sh ? fur[n - 3] : fur[i === 0 ? n - 1 : n - 2]);
@@ -63,12 +64,25 @@ function quadHead(K, v) {
     else { for (let j = 0; j < 4; j++) s.rect(ax - 3 - j, ay + 1 - (j >> 1), 2, 2, fur[n - 1]); s.set(ax - 4, ay + 1, P.skinPale[3]); }
   }
   if (o.ears === 'flap') s.oval(ax - 3, ay + 9, 5.5, 9, M.fur(fur.map(c => dark(c, .62)), n - 1, 3));
-  for (const [dx, dy, c, front] of K.ex.head) { const q = front ? R(hx + dx, hy + dy) : [hx + dx, hy + dy]; s.set(q[0], q[1], c); }
+  const rs = turnedPen(s, (x, y) => R(x, y));
+  for (const [m, args, ox, oy] of K.ex.head) { const a2 = args.slice(); a2[0] += hx - ox; a2[1] += hy - oy; if (m === 'line' || m === 'thick') { a2[2] += hx - ox; a2[3] += hy - oy; } rs[m](...a2); }
   s.tip = R(sx0 + sl * .5 + 1.5, sy0 + 1);
   K.heads.set(key, s);
   return s;
 }
 
+function turnedPen(s, T) {
+  const pen = {
+    set(x, y, c, e) { const q = T(x, y); s.set(q[0], q[1], c, e); return pen; },
+    line(x0, y0, x1, y1, c, e) { const a = T(x0, y0), b = T(x1, y1); s.line(a[0], a[1], b[0], b[1], c, e); return pen; },
+    thick(x0, y0, x1, y1, w, r, b) { const a = T(x0, y0), q = T(x1, y1); s.thick(a[0], a[1], q[0], q[1], w, r, b); return pen; },
+    rect(x, y, w, h, c, e) { if (w >= h) for (let j = 0; j < h; j++) pen.line(x, y + j, x + w - 1, y + j, c, e); else for (let i = 0; i < w; i++) pen.line(x + i, y, x + i, y + h - 1, c, e); return pen; },
+    ball(x, y, ...r) { const q = T(x, y); s.ball(q[0], q[1], ...r); return pen; },
+    oval(x, y, ...r) { const q = T(x, y); s.oval(q[0], q[1], ...r); return pen; },
+    slab(x, y, ...r) { const q = T(x, y); s.slab(q[0], q[1], ...r); return pen; },
+  };
+  return pen;
+}
 function stamp(dst, src, ox, oy, shear) {
   for (let y = 0; y < src.h; y++) for (let x = 0; x < src.w; x++) {
     const c = src.c[y * src.w + x]; if (!c) continue;
@@ -112,44 +126,6 @@ function rigQuad(kind, p) {
   pts.head = [hx, hy - hr - 5]; pts.mouth = [hx + H.tip[0] - 42, hy + H.tip[1] - 42]; pts.body = [cx, cy];
   s.outline();
   s.sh = { rx: L + 4, ry: Math.max(4, Hb * .5), dx: 3, dy: 0 };
-  return s;
-}
-
-function rigQuadFB(kind, p, back) {
-  p = p || {};
-  const o = BEASTS[kind].o, s = new Spr(QG.W, QG.H, QG.CX, QG.GY), gy = QG.GY, cx = QG.CX, L = o.L, Hb = o.Hb, fur = o.fur, n = fur.length - 1, bo = furOpt(o), lw = Math.max(3, (o.legw || 4) - 1), hr = o.head;
-  const far = fur.map(c => dark(c, .62)), by = rnd(p.by || 0), dep = rnd(L * .36), bw = Hb * 1.28, cyN = gy - o.leg - Hb * .5 + by, cyF = cyN - dep, gap = rnd(bw * .42), feet = p.feet || [[0, 0], [0, 0], [0, 0], [0, 0]], pts = s.pts = { feet: [] };
-  const col = (x, y0, y1, lr, sd) => { for (let y = rnd(y0); y <= y1; y++) for (let i = 0; i < lw; i++) s.set(x + i, y, lr[clamp(n - 2 + (i === 0 ? 1 : i >= lw - 1 ? -1 : 0), 0, n)]); for (let i = 0; i < lw + 1; i++) s.set(x + i - (sd < 0 ? 1 : 0), y1, lr[1]); pts.feet.push([x + lw / 2, y1, true]); };
-  const fa = back ? [feet[1], feet[3]] : [feet[0], feet[2]], na = back ? [feet[0], feet[2]] : [feet[1], feet[3]], tw = p.tail || {}, sway = rnd(tw.w ? Math.sin(tw.ph || 0) * tw.w : 0);
-  const ears = (hx, hy, ear, shadeBoth) => { if (o.ears !== 'point') { if (o.ears === 'round') for (const sd of [-1, 1]) s.oval(hx + sd * hr * .75, hy - hr * .7, 2.8, 2.8, (x, y, nx, ny) => Math.hypot(nx, ny) < .45 && !shadeBoth ? fur[1] : fur[sd < 0 ? n - 1 : n - 3]); return; } for (const sd of [-1, 1]) for (let j = 0; j < (ear < 0 ? 4 : 7); j++) { const w = Math.max(1, 4 - (j >> 1)); for (let i = 0; i < w; i++) { const x = rnd(hx + sd * (hr * .9 - i - (ear < 0 ? -j * .6 : j * .25))) - (sd > 0 ? 1 : 0), y = rnd(hy - hr * .55 - j); s.set(x, y, !shadeBoth && i > 0 && i < w - 1 && j < 4 ? (o.inner || fur[1]) : fur[sd < 0 ? n - 1 : n - 3]); } } };
-  col(cx - gap - lw - 1, cyF, gy - dep - rnd(fa[0][1]), far, -1); col(cx + gap + 1, cyF, gy - dep - rnd(fa[1][1]), far, 1);
-  if (back) {
-    const hy = rnd(cyF - (o.up || 0) * .5 - hr * .5 + (p.head || [0, 0])[1]), hx = cx + rnd((p.head || [0, 0])[0]);
-    s.ball(hx, hy, hr, hr * .92, 0, fur, bo); ears(hx, hy, p.ear || 0, true);
-    s.ball(cx, cyF, bw * .9, Hb * .92 + (o.hump || 0), 1, fur, bo);
-    s.ball(cx, cyN, bw, Hb, 3, fur, bo);
-    col(cx - gap - lw, cyN + Hb * .3, gy - rnd(na[0][1]), fur, -1); col(cx + gap, cyN + Hb * .3, gy - rnd(na[1][1]), fur, 1);
-    s.ball(cx - gap - lw / 2, cyN + Hb * .3, lw * 1.1, 4.4, 4, fur, bo); s.ball(cx + gap + lw / 2, cyN + Hb * .3, lw * 1.1, 4.4, 4, fur, bo);
-    if (o.tail === 'bushy') for (let k = 0; k < 6; k++) s.ball(cx + rnd(sway * k / 5), cyN - Hb * .2 + k * 2.2, 3 - k * .2, 2.8, 5, k > 3 ? (o.tip || fur) : fur, bo);
-    pts.head = [hx, hy - hr - 7]; pts.mouth = [hx, hy];
-  } else {
-    if (o.tail === 'bushy') for (let k = 0; k < 4; k++) s.ball(cx + bw * .8 + k * 1.7 + sway, cyF + 2 - k * 1.3, 3.2 - k * .4, 2.8, -2, k > 2 ? (o.tip || fur) : fur, bo);
-    s.ball(cx, cyF, bw * .9, Hb * .92 + (o.hump || 0), 0, fur, bo);
-    s.ball(cx, cyN, bw, Hb, 2, fur, bo);
-    if (o.belly) for (let y = rnd(cyN + Hb * .1); y <= cyN + Hb + 2; y++) for (let x = cx - 4; x <= cx + 3; x++) { const c = s.get(x, y), i = fur.indexOf(c); if (i >= 0 && Math.abs(x - cx + .5) < 4.2 - Math.abs(y - cyN - Hb * .6) * .6) s.set(x, y, o.belly[clamp(i + 1, 0, o.belly.length - 1)]); }
-    col(cx - gap - lw, cyN + Hb * .3, gy - rnd(na[0][1]), fur, -1); col(cx + gap, cyN + Hb * .3, gy - rnd(na[1][1]), fur, 1);
-    const hd = p.head || [0, 0], hx = cx + rnd(hd[0]), hy = rnd(cyN - Hb * .5 - (o.up || 0) * .4 + hd[1]), sl = o.snout || 0, mz = o.muzzle || fur, mr = Math.max(2.2, hr * .42), mh = Math.max(2.6, sl * .5);
-    s.ball(hx, hy, hr * 1.1, hr * .96, 3, fur, bo); ears(hx, hy, p.ear || 0, false);
-    if (sl) s.ball(hx, hy + hr * .5, mr, mh, 4.5, mz, { d: .14, bias: .1 });
-    const my = rnd(hy + hr * .5 + mh * .45);
-    s.rect(hx - 1, my - 1, 2, 2, P.ink); s.set(hx - 1, my - 1, P.furGrey[2]);
-    if (p.jaw) { s.rect(hx - 2, my + 2, 4, 2, P.red[1]); s.set(hx - 2, my + 2, P.bone[5]); s.set(hx + 1, my + 2, P.bone[5]); }
-    for (const sd of [-1, 1]) { const ex = rnd(hx + sd * hr * .52) - (sd > 0 ? 1 : 0), ey = rnd(hy - hr * .12); if (p.blink) s.rect(ex, ey + 1, 2, 1, fur[1]); else { s.rect(ex, ey, 2, 2, o.eye || P.ink, o.eye ? 230 : 0); s.set(ex + (sd < 0 ? 1 : 0), ey + 1, P.ink, 0); } s.rect(ex - (sd < 0 ? 1 : 0), ey - 1, 3, 1, fur[1]); }
-    pts.head = [hx, hy - hr - 8]; pts.mouth = [hx, my + 3];
-  }
-  pts.body = [cx, cyN];
-  s.outline();
-  s.sh = { rx: bw + 3, ry: Math.max(4, dep * .9), dx: 3, dy: -dep * .5 };
   return s;
 }
 

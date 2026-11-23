@@ -15,7 +15,7 @@ const ptOf = (it, name) => { const s = it.fr.s, p = (s.pts && s.pts[name]) || [s
 
 function castGround(pen, items, T, lvl) {
   if (lvl < 3) return;
-  for (const it of items) if (it.S.A.rig !== 'plain') MOTION_FX.steps(pen, footfalls(it.S, T, 9), lvl, it.S.A.rig);
+  for (const it of items) if (it.S.A.rig !== 'plain' && !(it.S.A.rig === 'critter' && CRIT_AIR.has(it.S.A.kind))) MOTION_FX.steps(pen, footfalls(it.S, T, 9), lvl, it.S.A.rig);
 }
 function castFx(pen, items, T, lvl, env) {
   items.forEach((it, idx) => {

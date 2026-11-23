@@ -1,6 +1,5 @@
 'use strict';
 const FRAMES = new Map();
-const FBK = new Set(['wolf', 'direwolf', 'worg', 'frostfang', 'jackal']);
 const STRIKES = new Set(['chop', 'mine', 'hoe', 'hammer', 'attack', 'thrust', 'bite']);
 const NODS = { stir: 2, gather: 2, draw: 2, eat: 3, drink: 1, talk: 4, listen: 2, warm: 1, tired: 1, cry: 6, graze: 3, peck: 2, cud: 4, sniff: 2 };
 let SEEDS = 0;
@@ -9,7 +8,7 @@ function mkActor(rig, kind, over) {
   const A = { rig, kind, seed: (++SEEDS * .618) % 1, id: rig + ':' + kind + ':' + SEEDS };
   if (rig === 'pawn') { A.o = { ...PAWNS[kind].o, ...(over || {}) }; A.base = mkPawn(A.o); A.name = PAWNS[kind].name; A.ls = FOLK[A.o.race || 'human'].legs / 10; A.as = (FOLK[A.o.race || 'human'].tl - 1) / 11; A.look = JSON.stringify(Object.entries(A.o).map(([k, v]) => [k, Array.isArray(v) ? v[0] : v])); }
   else { A.base = mkBeast(kind); A.name = (BEASTS[kind] || {}).name || OTHER[kind]; A.look = kind; }
-  A.anims = rig === 'pawn' ? PAWN_ANIMS : rig === 'quad' ? QUAD_ANIMS : rig === 'fowl' ? FOWL_ANIMS : rig === 'rabbit' ? RABBIT_ANIMS : QUAD_ANIMS;
+  A.anims = rig === 'pawn' ? PAWN_ANIMS : rig === 'quad' ? QUAD_ANIMS : rig === 'fowl' ? FOWL_ANIMS : rig === 'rabbit' ? RABBIT_ANIMS : rig === 'critter' ? CRIT_ANIMS[kind] : QUAD_ANIMS;
   return A;
 }
 const animOf = (A, name) => A.anims[name] || A.anims.idle;
@@ -106,10 +105,11 @@ function frameOf(A, st, lvl, smooth) {
     if (pose.face !== 's') flip = false;
     make = () => rigPawn(A.o, JSON.parse(key0));
   } else if (A.rig === 'quad') {
-    const fb = c.face !== 's' && FBK.has(A.kind) && FB_ANIMS[st.anim];
+    const fb = c.face !== 's' && FB_ANIMS[st.anim];
     if (fb) { pose = fb(u, c); flip = false; make = () => rigQuadFB(A.kind, JSON.parse(key0), c.face === 'b'); }
     else { pose = def.pose(u, c); make = () => rigQuad(A.kind, JSON.parse(key0)); }
-  } else { pose = def.pose(u, c); make = () => (A.rig === 'fowl' ? rigFowl : rigRabbit)(JSON.parse(key0)); }
+  } else if (A.rig === 'critter') { pose = def.pose(u, c); make = () => rigCritter(A.kind, JSON.parse(key0)); }
+  else { pose = def.pose(u, c); make = () => (A.rig === 'fowl' ? rigFowl : rigRabbit)(JSON.parse(key0)); }
   const key0 = quant(pose, ang), key = A.look + '|' + lvl + (c.face !== 's' ? c.face : '') + (flip ? 'F' : '') + key0;
   return { s: cachedFrame(key, () => { const s = make(); return flip ? mirror(s) : s; }), dx: 0, dy: 0 };
 }
