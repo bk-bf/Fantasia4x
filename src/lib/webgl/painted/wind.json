@@ -1,0 +1,26 @@
+{
+  "mockupStrength": 0.45,
+  "maxScale": 2.2,
+  "ease": 2,
+  "sway": { "idle": 0.3, "gust": 1.2, "idleRate": 1.25, "flutterRate": 4 },
+  "phase": [0.045, 0.02],
+  "gust": { "along": 0.85, "across": 0.3, "onset": 150, "width": 105, "speed": 40 },
+  "gustNoise": [
+    { "fx": 0.006, "fy": 0.008, "amp": 520 },
+    { "fx": 0.05, "fy": 0.05, "amp": 26 }
+  ],
+  "grass": { "plant/grass_patch/": 1.1, "plant/tall_grass_patch/": 1.5, "plant/deep_grass_patch/": 1.3 },
+  "leaves": {
+    "max": 320,
+    "perTree": { "spring": 0.45, "summer": 0.45, "autumn": 1.5, "winter": 0 },
+    "fall": [8, 9],
+    "drift": [14, 50],
+    "settle": 3,
+    "blow": [0.7, 30],
+    "spread": 44,
+    "canopy": [0.35, 0.4],
+    "census": 0.5,
+    "samples": 160,
+    "triesPerSecond": 2400
+  }
+}

@@ -13,6 +13,7 @@ in highp vec2 v_world;
 flat in vec4 v_vein;
 flat in float v_veinNear;
 flat in highp float v_row;
+flat in highp float v_lean;
 
 uniform sampler2D u_fontAtlas;
 uniform sampler2D u_paintAtlas;
@@ -114,10 +115,22 @@ vec3 weathered(vec3 c) {
     return mix(vec3(dot(c, LUMA)), c, u_saturation) * u_brightness;
 }
 
+highp vec2 swayed(highp vec2 uv) {
+    if (v_lean == 0.0) return uv;
+    highp float top = v_uvBounds.y;
+    highp float bottom = v_uvBounds.w;
+    highp float rows = (bottom - top) / u_paintTexelSize.y;
+    highp float row = floor((uv.y - top) / u_paintTexelSize.y);
+    highp float rise = (rows - row + mod(row, 3.0)) / rows;
+    highp float step = rise > 0.0 ? floor(v_lean * rise * sqrt(rise) + 0.5) : 0.0;
+    highp float lean = v_lean * (bottom - uv.y) / (bottom - top);
+    return uv + vec2((lean - step) * u_paintTexelSize.x, 0.0);
+}
+
 vec2 paintedUv() {
     vec4 cell = v_uvBounds - vec4(2.0, 0.0, 2.0, 0.0);
     vec2 inset = 0.5 * u_paintTexelSize;
-    return clamp(v_texCoord, cell.xy + inset, cell.zw - inset);
+    return clamp(swayed(v_texCoord), cell.xy + inset, cell.zw - inset);
 }
 
 highp float groundDepth(highp float ground) {

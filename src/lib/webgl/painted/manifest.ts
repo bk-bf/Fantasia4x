@@ -69,7 +69,16 @@ export interface PaintedSprite {
   cast?: number;
   emit?: SpriteLight;
   vein?: PaintedVein;
+  sway?: number;
+  leafy?: boolean;
 }
+
+export interface PaintedWind {
+  sway: Readonly<Record<string, number>>;
+  leafy: readonly string[];
+}
+
+const STILL: PaintedWind = { sway: {}, leafy: [] };
 
 export interface PaintedRamp {
   x: number;
@@ -263,15 +272,22 @@ export function resolveVariant(m: PaintedManifest, s: ManifestSprite): PaintedVa
   return { patch: n, cells, entity: { painted: cells[0], scale: undefined } };
 }
 
-export function buildTileset(m: PaintedManifest): { tileset: PaintedTileset; problems: string[] } {
+export function buildTileset(
+  m: PaintedManifest,
+  wind: PaintedWind = STILL
+): { tileset: PaintedTileset; problems: string[] } {
   const problems: string[] = [];
   const resolved = new Map<string, PaintedVariant>();
+  const leafy = new Set(wind.leafy);
   const variantOf = (sid: string): PaintedVariant | undefined => {
     const s = m.sprites[sid];
     if (!s) return undefined;
     let v = resolved.get(sid);
     if (!v) {
       v = resolveVariant(m, s);
+      const sway = wind.sway[sid];
+      if (sway) for (const c of v.cells) c.sway = sway;
+      if (leafy.has(sid)) for (const c of v.cells) c.leafy = true;
       resolved.set(sid, v);
     }
     return v;
