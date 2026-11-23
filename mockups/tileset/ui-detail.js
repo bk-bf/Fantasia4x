@@ -96,17 +96,33 @@
     return { all, e, b };
   }
 
-  function inScene(o, e, b) {
-    const tw = Math.max(3, Math.ceil(b.w / 32) + 2), th = Math.max(2, Math.ceil(b.h / 32) + 1), tx = Math.max(0, Math.ceil(-b.ox / 32)), ty = th - 1;
+  const TILE = 32, HALF = 2, SCENE_ZOOM = 2;
+  const canvasOf = img => { const c = el('canvas'); UI.paint(c, img, 1); return c; };
+  const framed = (cv, tilePx) => { const sc = el('div', 'view'), wrap = el('div', 'gridded'); wrap.style.setProperty('--t', tilePx + 'px'); wrap.append(cv); sc.append(wrap); return sc; };
+
+  function standing(o, e, b) {
+    const tw = Math.max(3, Math.ceil(b.w / TILE) + 2), th = Math.max(2, Math.ceil(b.h / TILE) + 1), tx = Math.max(0, Math.ceil(-b.ox / TILE)), ty = th - 1;
     const w = DBX.flat(tw, th, e.ground || 'tall_grass'), a = e.at || DBX.anchor[o.cat] || [16, 23];
-    const centred = o.cat === 'item', left = centred ? (tw * 32 - b.w >> 1) - b.ox : tx * 32, top = centred ? (th * 32 - b.h >> 1) - b.oy : ty * 32;
-    w.objs.push({ spr: DBX.still(DBX.built(e)), x: left + a[0], y: top + a[1] });
-    if (o.cat !== 'item') w.objs.push({ spr: mkPawn(PAWNS.woodcutter.o), x: (tw - 1) * 32 + 16, y: ty * 32 + 27 });
-    const z = Math.max(1, Math.min(3, Math.floor(340 / (tw * 32)))), sc = el('div', 'view'), wrap = el('div', 'gridded'), cv = el('canvas');
-    UI.paint(cv, DBX.crop({ world: w, rect: [0, 0, tw * 32, th * 32], season: DBX.seasonOf(e, st.season) }), z);
-    wrap.style.setProperty('--t', 32 * z + 'px'); wrap.append(cv); sc.append(wrap);
-    return sc;
+    w.objs.push({ spr: DBX.still(DBX.built(e)), x: tx * TILE + a[0], y: ty * TILE + a[1] });
+    w.objs.push({ spr: mkPawn(PAWNS.woodcutter.o), x: (tw - 1) * TILE + 16, y: ty * TILE + 27 });
+    const z = Math.max(1, Math.min(3, Math.floor(340 / (tw * TILE)))), cv = el('canvas');
+    UI.paint(cv, DBX.crop({ world: w, rect: [0, 0, tw * TILE, th * TILE], season: DBX.seasonOf(e, st.season) }), z);
+    return framed(cv, TILE * z);
   }
+
+  function onOneTile(e, b) {
+    const w = DBX.flat(3, 2, e.ground || 'tall_grass'), wide = TILE * 2.5, high = TILE * 2, cv = el('canvas'), g = cv.getContext('2d');
+    w.objs.push({ spr: mkPawn(PAWNS.woodcutter.o), x: TILE + 16, y: TILE + 27 });
+    const ground = canvasOf(DBX.crop({ world: w, rect: [0, 0, wide, high], season: DBX.seasonOf(e, st.season) }));
+    const k = Math.max(b.w, b.h) > TILE ? 1 : HALF, cell = TILE * HALF;
+    cv.width = wide * HALF; cv.height = high * HALF; g.imageSmoothingEnabled = false;
+    g.drawImage(ground, 0, 0, cv.width, cv.height);
+    g.drawImage(canvasOf(b), cell - b.w * k >> 1, cell + (cell - b.h * k >> 1), b.w * k, b.h * k);
+    cv.style.width = cv.width * SCENE_ZOOM + 'px'; cv.style.height = cv.height * SCENE_ZOOM + 'px';
+    return framed(cv, cell * SCENE_ZOOM);
+  }
+
+  const inScene = (o, e, b) => o.cat === 'item' ? onOneTile(e, b) : standing(o, e, b);
 
   function registry(key, shown) {
     const t = el('table', 'reg'), head = el('tr');
