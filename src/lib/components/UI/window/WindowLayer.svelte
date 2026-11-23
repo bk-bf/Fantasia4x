@@ -92,6 +92,7 @@
         onclose={() => uiState.closeWindow(id)}
         onresize={(w, h) => resize(id, w, h)}
         onresetsize={() => delete chosen[id]}
+        resized={!!chosen[id]}
       >
         <spec.component />
       </GameWindow>
