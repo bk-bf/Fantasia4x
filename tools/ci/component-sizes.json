@@ -6,7 +6,7 @@
   "src/lib/components/screens/ResearchScreen.svelte": 388,
   "src/lib/components/screens/work/WorkCellTooltip.svelte": 205,
   "src/lib/components/UI/audio/AudioController.svelte": 394,
-  "src/lib/components/UI/canvas/GameCanvas.svelte": 4492,
+  "src/lib/components/UI/canvas/GameCanvas.svelte": 4486,
   "src/lib/components/UI/canvas/ItemFilterChecklist.svelte": 203,
   "src/lib/components/UI/canvas/WorldEffectsLayer.svelte": 1020,
   "src/lib/components/UI/hud/ActivityLogOverlay.svelte": 548,

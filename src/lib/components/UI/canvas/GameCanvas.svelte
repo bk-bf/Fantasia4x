@@ -2,8 +2,8 @@
   import { onMount, onDestroy } from 'svelte';
   import { get } from 'svelte/store';
   import { browser } from '$app/environment';
-  import { wasdPan, debugMode } from '$lib/stores/uiPrefs';
-  import { WebGLRenderer } from '$lib/webgl/renderer.js';
+  import { wasdPan, debugMode, vignetteOn } from '$lib/stores/uiPrefs';
+  import { WebGLRenderer, type SpriteLayer } from '$lib/webgl/renderer.js';
   import { crashBreadcrumb } from '$lib/webgl/crashLog.js';
   import { startFreezeWatchdog, beat, stopFreezeWatchdog } from '$lib/webgl/freezeWatchdog.js';
   import {
@@ -91,7 +91,20 @@
   import { TICKS_PER_SECOND } from '$lib/game/core/util/time.js';
   import { vlog } from '$lib/game/core/util/logSink.js';
   import { simTarget } from '$lib/game/services/MovementSystem.js';
-  import { brackets, dragBox, type ScreenRect } from '$lib/components/UI/canvas/selectionMarks';
+  import {
+    brackets,
+    dragBox,
+    MARK_INK,
+    type ScreenRect
+  } from '$lib/components/UI/canvas/selectionMarks';
+  import {
+    BUILDING_SPRITES,
+    drawnFirst,
+    drawnTile,
+    RESOURCE_SPRITES,
+    spriteRect,
+    type TileLayer
+  } from '$lib/components/UI/canvas/drawnSelection';
   import VerbTag from '$lib/components/UI/hud/VerbTag.svelte';
   import PawnCard from '$lib/components/UI/hud/PawnCard.svelte';
   import BuildingCard from '$lib/components/UI/hud/BuildingCard.svelte';
@@ -268,6 +281,7 @@
   });
 
   const unsubAnimPause = gameState.isPaused.subscribe((p) => setAnimPaused(p));
+  const unsubVignette = vignetteOn.subscribe((on) => renderer?.setVignette(on));
 
   let attackLungeList: AttackLungeEvent[] = [];
   const unsubAttackLunges = attackLunges.subscribe((list) => {
@@ -1051,7 +1065,6 @@
     }
   }
 
-  let selectionRings: { id: string; left: number; top: number; w: number }[] = [];
   let _selectionRingKey = '';
 
   function updateSelectionRings(vx: number, vy: number, tW: number, tH: number) {
@@ -1060,21 +1073,18 @@
         ? [...markedSet]
         : [selectedPawnId, selectedMobId].filter((id): id is string => !!id);
     const w = Math.round(tW * 1.2);
-    const next: typeof selectionRings = [];
+    const next: { x: number; y: number; w: number; h: number }[] = [];
     for (const id of ids) {
       const rp = pawnRenderPos.get(id) ?? mobRenderPos.get(id);
       if (!rp) continue;
-      next.push({
-        id,
-        left: Math.round((rp.x - vx + 0.5) * tW - w / 2),
-        top: Math.round((rp.y - vy + 1) * tH - w * 0.3),
-        w
-      });
+      const x = Math.round((rp.x - vx + 0.5) * tW - w / 2);
+      next.push({ x, y: Math.round((rp.y - vy + 1) * tH - w * 0.3), w, h: Math.round(w * 0.4) });
     }
-    const key = next.map((r) => `${r.id}:${r.left},${r.top},${r.w}`).join('|');
+    const key = next.map((r) => `${r.x},${r.y},${r.w}`).join('|');
     if (key === _selectionRingKey) return;
     _selectionRingKey = key;
-    selectionRings = next;
+    renderer?.setGroundRings(next, MARK_INK);
+    markRenderDirty();
   }
 
   function updateWorldEffectOverlays(
@@ -1826,6 +1836,11 @@
     return { x: (x - viewX) * tileWidth, y: (y - viewY) * tileHeight, w: tileWidth, h: tileHeight };
   }
 
+  function markRect(layers: readonly SpriteLayer[], x: number, y: number): ScreenRect {
+    const view = { viewX, viewY, tileWidth, tileHeight };
+    return spriteRect(renderer, layers, x, y, view) ?? tileRect(x, y);
+  }
+
   function tileBoxRect(minX: number, minY: number, maxX: number, maxY: number): ScreenRect {
     return {
       x: (minX - viewX) * tileWidth,
@@ -1849,7 +1864,7 @@
     const y1 = Math.min(maxY, viewY + Math.ceil(H / tileHeight));
     for (let ry = Math.max(minY, viewY); ry <= y1; ry++)
       for (let rx = Math.max(minX, viewX); rx <= x1; rx++)
-        if (keep(rx, ry)) out.push(tileRect(rx, ry));
+        if (keep(rx, ry)) out.push(markRect(RESOURCE_SPRITES, rx, ry));
     return out;
   }
 
@@ -1862,7 +1877,7 @@
       const wx = +key.slice(0, ci);
       const wy = +key.slice(ci + 1);
       if (wx < viewX - 1 || wy < viewY - 1 || wx > viewX + colW || wy > viewY + rowH) continue;
-      out.push(tileRect(wx, wy));
+      out.push(markRect(RESOURCE_SPRITES, wx, wy));
     }
     return out;
   }
@@ -1977,7 +1992,9 @@
     if (highlightedResourceTiles.size > 0) {
       brackets(mctx, keyRects(highlightedResourceTiles, W, H));
     } else if (selectedResourceTile) {
-      brackets(mctx, [tileRect(selectedResourceTile.x, selectedResourceTile.y)]);
+      brackets(mctx, [markRect(RESOURCE_SPRITES, selectedResourceTile.x, selectedResourceTile.y)]);
+    } else if (selectedBuilding) {
+      brackets(mctx, [markRect(BUILDING_SPRITES, selectedBuilding.x, selectedBuilding.y)]);
     }
 
     if (selDragActive) {
@@ -2252,14 +2269,6 @@
     });
   }
 
-  type TileLayer =
-    | { kind: 'pawn'; id: string }
-    | { kind: 'mob'; id: string }
-    | { kind: 'building'; id: string }
-    | { kind: 'zone'; id: string }
-    | { kind: 'item'; id: string }
-    | { kind: 'resource'; resourceId: string };
-
   function applyTileLayer(layer: TileLayer, x: number, y: number): void {
     selectedPawnId = null;
     selectedMobId = null;
@@ -2442,16 +2451,18 @@
       moveAimArmed = false;
     }
 
-    const layers = tileLayers(hoverTileX, hoverTileY);
+    const view = { viewX, viewY, tileWidth, tileHeight };
+    const hit = drawnTile(renderer, lastCursorCx, lastCursorCy, view);
+    const layers = drawnFirst(tileLayers(hit.x, hit.y), hit.layer);
     if (layers.length > 0) {
-      if (hoverTileX === _cycleTileX && hoverTileY === _cycleTileY) {
+      if (hit.x === _cycleTileX && hit.y === _cycleTileY) {
         _cycleIndex = (_cycleIndex + 1) % layers.length;
       } else {
-        _cycleTileX = hoverTileX;
-        _cycleTileY = hoverTileY;
+        _cycleTileX = hit.x;
+        _cycleTileY = hit.y;
         _cycleIndex = 0;
       }
-      applyTileLayer(layers[_cycleIndex], hoverTileX, hoverTileY);
+      applyTileLayer(layers[_cycleIndex], hit.x, hit.y);
       drawDesignations();
       return;
     }
@@ -2497,6 +2508,7 @@
     unsubWorldGen();
     unsubCombatFeedback();
     unsubAnimPause();
+    unsubVignette();
     unsubAttackLunges();
     unsubProjectiles();
     _unsubMenuPerf();
@@ -2551,6 +2563,7 @@
 
       const ok = await renderer.waitForInitialization();
       if (!ok || !renderer.isReady()) throw new Error('Renderer init failed');
+      renderer.setVignette(get(vignetteOn));
 
       if (worldMap.length > 0) {
         _fullRebuildTerrain();
@@ -4274,14 +4287,6 @@
   <canvas bind:this={canvas}></canvas>
   <canvas bind:this={designCanvas} class="desig-layer"></canvas>
   <canvas bind:this={markCanvas} class="desig-layer mark-layer"></canvas>
-  {#each selectionRings as ring (ring.id)}
-    <i
-      class="sel-ring"
-      style:width="{ring.w}px"
-      style:height="{Math.round(ring.w * 0.4)}px"
-      style:transform="translate({ring.left}px, {ring.top}px)"
-    ></i>
-  {/each}
 
   {#if errorMsg}
     <div class="error">WebGL unavailable: {errorMsg}</div>
@@ -4435,17 +4440,6 @@
   }
   .desig-layer.mark-layer {
     filter: none;
-  }
-  .sel-ring {
-    position: absolute;
-    top: 0;
-    left: 0;
-    z-index: 1;
-    box-sizing: border-box;
-    border: 2px solid #ffd76a;
-    border-radius: 50%;
-    pointer-events: none;
-    filter: drop-shadow(1px 1px 0 #0d0a10);
   }
   .desig-layer {
     position: absolute;

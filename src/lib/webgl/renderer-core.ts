@@ -23,10 +23,19 @@ import {
 } from './painted/lightGrade.js';
 import { PaintedVignette } from './painted/vignette.js';
 import { PaintedShadowCast, SHADOW_DEPTH, SHADOW_SHADE } from './painted/shadowCast.js';
+import { GroundRings, type GroundRing, type RingInk } from './groundRings.js';
+import { drawnAt, drawnBounds, type DrawnFrame, type Quad } from './drawnSprites.js';
 
 const LIGHT_ATLAS_UNIT = 7;
 
 export const ROW_DEPTH_RANGE = 8192;
+
+export const SPRITE_LAYERS = ['resource', 'building', 'item', 'entity', 'resourceTall'] as const;
+export type SpriteLayer = (typeof SPRITE_LAYERS)[number];
+const CHUNKED: Partial<Record<SpriteLayer, 'resource' | 'resourceTall'>> = {
+  resource: 'resource',
+  resourceTall: 'resourceTall'
+};
 
 interface Viewport {
   x: number;
@@ -84,6 +93,8 @@ export class WebGLRendererCore {
   private lightPass: PaintedLightPass | null = null;
   private shadowCast: PaintedShadowCast | null = null;
   private vignette: PaintedVignette | null = null;
+  private groundRings: GroundRings | null = null;
+  private rings: { list: readonly GroundRing[]; ink: RingInk } | null = null;
   private pointLights: readonly PointLight[] = [];
   private ambientBase: Rgb = [1, 1, 1];
   private mapWeather: MapWeatherId = 'clear';
@@ -102,6 +113,7 @@ export class WebGLRendererCore {
   private ambientTint: [number, number, number] = [1.0, 1.0, 1.0];
 
   private dynamicLight = false;
+  private vignetteOn = true;
 
   private lightVersion = 0;
 
@@ -188,6 +200,44 @@ export class WebGLRendererCore {
     this.resourceTallOverlayGrid = grid;
   }
 
+  setGroundRings(list: readonly GroundRing[], ink: RingInk): void {
+    this.rings = { list, ink };
+  }
+
+  private spriteGrid(layer: SpriteLayer): GameGrid | null {
+    if (layer === 'resource') return this.resourceOverlayGrid;
+    if (layer === 'building') return this.buildingOverlayGrid;
+    if (layer === 'item') return this.itemOverlayGrid;
+    if (layer === 'entity') return this.overlayGrid;
+    return this.resourceTallOverlayGrid;
+  }
+
+  private drawnFrame(): DrawnFrame {
+    return {
+      basePx: BASE_TILE_PX,
+      artPx: this.painted?.tileset.tile ?? BASE_TILE_PX,
+      lift: this.painted?.top?.lift ?? null,
+      texels: this.painted?.texels() ?? null,
+      depth: this.rowDepth
+    };
+  }
+
+  drawnAt(px: number, py: number): { layer: SpriteLayer; x: number; y: number } | null {
+    const hit = drawnAt(
+      SPRITE_LAYERS.map((layer) => this.spriteGrid(layer)),
+      px,
+      py,
+      this.drawnFrame()
+    );
+    return hit && { layer: SPRITE_LAYERS[hit.layer], x: hit.x, y: hit.y };
+  }
+
+  drawnBounds(layer: SpriteLayer, x: number, y: number): Quad | null {
+    const tile = this.spriteGrid(layer)?.getTile(x, y);
+    if (!tile || (!tile.painted && (!tile.char || tile.char === ' '))) return null;
+    return drawnBounds(tile, this.drawnFrame());
+  }
+
   setViewTileOffset(x: number, y: number): void {
     this.viewTileX = x;
     this.viewTileY = y;
@@ -209,6 +259,10 @@ export class WebGLRendererCore {
 
   setDynamicLight(active: boolean): void {
     this.dynamicLight = active;
+  }
+
+  setVignette(on: boolean): void {
+    this.vignetteOn = on;
   }
 
   setLightVersion(version: number): void {
@@ -334,6 +388,7 @@ export class WebGLRendererCore {
         this.lightPass = PaintedLightPass.create(gl, this.shaderManager);
       if (this.painted) this.shadowCast = PaintedShadowCast.create(gl, this.shaderManager);
       if (this.lightPass) this.vignette = PaintedVignette.create(gl, this.shaderManager);
+      this.groundRings = GroundRings.create(gl, this.shaderManager);
 
       if (this.debug) console.log('✅ WebGL2 renderer ready');
       return true;
@@ -476,28 +531,20 @@ export class WebGLRendererCore {
         gl.depthFunc(gl.LEQUAL);
         this.drawShadowCast(gl, viewportTilesW, viewportTilesH);
       }
-      this.renderGlyphOverlay(
-        this.resourceOverlayGrid,
-        viewportTilesW,
-        viewportTilesH,
-        lightTime,
-        true,
-        'resource'
-      );
-      if (this.snowGrid) {
-        this.drawSnowGrid(viewportTilesW, viewportTilesH, lightTime, this.rowDepth);
+      this.drawGroundRings();
+      for (const layer of SPRITE_LAYERS) {
+        const chunk = CHUNKED[layer];
+        this.renderGlyphOverlay(
+          this.spriteGrid(layer),
+          viewportTilesW,
+          viewportTilesH,
+          lightTime,
+          chunk !== undefined,
+          chunk
+        );
+        if (layer === 'resource' && this.snowGrid)
+          this.drawSnowGrid(viewportTilesW, viewportTilesH, lightTime, this.rowDepth);
       }
-      this.renderGlyphOverlay(this.buildingOverlayGrid, viewportTilesW, viewportTilesH, lightTime);
-      this.renderGlyphOverlay(this.itemOverlayGrid, viewportTilesW, viewportTilesH, lightTime);
-      this.renderGlyphOverlay(this.overlayGrid, viewportTilesW, viewportTilesH, lightTime);
-      this.renderGlyphOverlay(
-        this.resourceTallOverlayGrid,
-        viewportTilesW,
-        viewportTilesH,
-        lightTime,
-        true,
-        'resourceTall'
-      );
       this.stats.overlayMs = performance.now() - tOverlay;
       this.shaderManager.setUniform('tileRenderer', 'u_glyphOnly', 0);
       if (this.rowDepth) gl.disable(gl.DEPTH_TEST);
@@ -505,7 +552,7 @@ export class WebGLRendererCore {
     } else {
       this.stats.overlayMs = 0;
     }
-    if (this.vignette && lightFrame)
+    if (this.vignette && lightFrame && this.vignetteOn)
       this.stats.drawCalls += this.vignette.draw({
         canvas: [this.viewport.width, this.viewport.height],
         strength: lightFrame.grade.vignette,
@@ -549,6 +596,16 @@ export class WebGLRendererCore {
         art: { x: emit.x, y: emit.y, rad: emit.rad, night: emit.night === true }
       };
     });
+  }
+
+  private drawGroundRings(): void {
+    if (!this.groundRings || !this.rings || !this.shaderManager) return;
+    const { list, ink } = this.rings;
+    this.stats.drawCalls += this.groundRings.draw(list, ink, [
+      this.viewport.width,
+      this.viewport.height
+    ]);
+    this.shaderManager.useProgram('tileRenderer');
   }
 
   private drawShadowCast(
@@ -749,6 +806,8 @@ export class WebGLRendererCore {
     this.shadowCast = null;
     this.vignette?.dispose();
     this.vignette = null;
+    this.groundRings?.dispose();
+    this.groundRings = null;
     if (this.painted) this.webglState.getContext()?.deleteTexture(this.painted.texture);
     if (this.painted) this.webglState.getContext()?.deleteTexture(this.painted.light);
     if (this.painted?.top) this.webglState.getContext()?.deleteTexture(this.painted.top.texture);
