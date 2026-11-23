@@ -305,9 +305,9 @@ function strike(p: FxPainter, q: Placed, u: number): void {
   const x = Math.round(q.ox) - s.ax + line.x;
   const y = Math.round(q.oy + dy) - s.ay + line.y;
   p.fill(P.ink, 255);
-  p.band(q.x, q.y, x - 1, y - 1, w + 2, 4);
+  p.band(q.x, q.y, x - 1, y, w + 2, 2);
   p.fill(STRIKE_LIGHT, 255);
-  p.band(q.x, q.y, x, y, w, 2);
+  p.band(q.x, q.y, x, y, w, 1);
 }
 
 export type Box = [number, number, number, number];
