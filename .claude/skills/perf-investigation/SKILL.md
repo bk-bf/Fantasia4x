@@ -105,6 +105,11 @@ moved the number. Delete the debug branch, its worktree and its remote branch wh
 
 ## 7. Before reporting
 
+- Every number carries its unit and which way is better, in the table header or beside the
+  number: "main-thread ms per second, lower is better, 1000 is fully busy", "FPS, higher is
+  better", "TPS, target 60 per speed step". A bare number gets misread.
+- Report what each part costs (baseline minus the number with it removed), not the remaining
+  totals, and say how large the baseline's own spread is so a reader can tell noise from cost.
 - State the build, machine, power state, load, save, zoom, speed, paused or running, fresh or
   aged, and the number of runs with every result.
 - List every observation of his that disagrees with the conclusion and answer it, or drop the
