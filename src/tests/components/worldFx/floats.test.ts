@@ -163,9 +163,10 @@ describe('condition floaters', () => {
     const gain = floater('drops', 'Wet', '#4fa3d1')[0];
     const loss = floater('drops', 'Wet', '#4fa3d1', undefined, 0, true)[0];
     expect([loss.w, loss.h]).toEqual([gain.w, gain.h]);
-    const lit = (s: typeof gain) =>
-      s.c.reduce((n, c) => n + (c ? c[0] + c[1] + c[2] : 0), 0) / s.c.filter(Boolean).length;
-    expect(lit(loss)).toBeLessThan(lit(gain) * 0.8);
+    const colour = (s: typeof gain) =>
+      s.c.reduce((n, c) => n + (c ? Math.max(...c) - Math.min(...c) : 0), 0) /
+      s.c.filter(Boolean).length;
+    expect(colour(loss)).toBeLessThan(colour(gain) * 0.5);
   });
 
   it('keeps every floater on screen clear of every other, across neighbouring creatures', () => {

@@ -405,8 +405,8 @@ function row(parts: [Spr, number][], lead: Spr, struck: Spr): Spr {
   return s;
 }
 
-const FADE_GREY = 0.7;
-const FADE_DIM = 0.7;
+const FADE_GREY = 0.65;
+const FADE_DIM = 0.85;
 
 function faded(s: Spr): Spr {
   const o = new Spr(s.w, s.h, s.ax, s.ay);
@@ -415,7 +415,7 @@ function faded(s: Spr): Spr {
     if (!c) continue;
     const g = c[0] * 0.3 + c[1] * 0.59 + c[2] * 0.11;
     const v = c.map((k) => Math.round((k + (g - k) * FADE_GREY) * FADE_DIM)) as Rgb;
-    o.set(i % s.w, Math.floor(i / s.w), v, s.e[i] >> 1);
+    o.set(i % s.w, Math.floor(i / s.w), v, s.e[i]);
   }
   strikes.set(o, strikeOf(s));
   return o;
