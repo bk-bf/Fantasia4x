@@ -7,7 +7,8 @@ export const COLONY_H = 1088;
 const FOCUS_X = 912;
 const FOCUS_Y = 526;
 const DRIFT = 64;
-const DRIFT_PERIOD = 34;
+export const DRIFT_SPEED = 30;
+const DRIFT_TURN = 1.2;
 const VIEW_X = 0.64;
 const VIEW_Y = 0.56;
 
@@ -33,8 +34,6 @@ export function colonyLayers(a: ColonyAmbient): ColonyLayer[] {
 export const colonyZoom = (scale: number, viewW: number, viewH: number): number =>
   Math.max(scale, Math.ceil(Math.max(viewW / COLONY_W, viewH / COLONY_H)));
 
-export const DRIFT_SECONDS = Math.PI * DRIFT_PERIOD;
-
 function cameraAt(viewW: number, viewH: number, k: number, fx: number) {
   return {
     left: clamp(viewW * VIEW_X - fx * k, viewW - COLONY_W * k, 0),
@@ -49,3 +48,21 @@ export function colonyDrift(viewW: number, viewH: number, k: number) {
     to: cameraAt(viewW, viewH, k, FOCUS_X + DRIFT)
   };
 }
+
+export function driftOffset(span: number, seconds: number): number {
+  if (span <= 0) return 0;
+  const turn = Math.min(DRIFT_TURN, (2 * span) / DRIFT_SPEED);
+  const ease = (DRIFT_SPEED * turn) / 4;
+  const cruise = span / DRIFT_SPEED - turn / 2;
+  const half = cruise + turn;
+  const leg = (s: number) => {
+    if (s < cruise) return ease + DRIFT_SPEED * s;
+    const u = s - cruise;
+    return span - ease + DRIFT_SPEED * u - (DRIFT_SPEED * u * u) / turn;
+  };
+  const cycle = 2 * half;
+  const t = (((seconds + (span / 2 - ease) / DRIFT_SPEED) % cycle) + cycle) % cycle;
+  return t < half ? leg(t) : span - leg(t - half);
+}
+
+export const snapToDevice = (css: number, dpr: number): number => Math.round(css * dpr) / dpr;
