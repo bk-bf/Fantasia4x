@@ -23,7 +23,6 @@ function table2(s, x, w, d, legH, top, leg) {
   s.slab(x, y0, w, d, 3, top, top);
   return y0;
 }
-const smoke2 = (s, x, y, n, r) => { for (let i = 0; i < n; i++) { const sx = x + Math.round((r() - .5) * 5) + i, sy = y - i * 4; s.set(sx, sy, P.furGrey[4]); s.set(sx + 1, sy, P.furGrey[3]); s.set(sx, sy - 1, P.furGrey[3]); } };
 function logEnd2(s, x, y, r) { s.oval(x, y, r, r * .92, (px, py, nx, ny) => { const q = Math.hypot(nx, ny); return q > .78 ? P.wood[2] : q < .16 ? P.plank[2] : (Math.floor(q * 6.5) & 1) ? P.plank[4] : P.plank[5]; }); s.set(x + 1, y - 1, P.plank[2]); }
 function stoneRing(s, cx, cy, rx, ry, n, back) {
   for (let a = 0; a < n; a++) {
@@ -115,7 +114,6 @@ const BUILDS = {
     s.oval(20, BY - 31, 7, 2.6, (x, y, nx, ny) => Math.hypot(nx, ny) < .66 ? null : P.brick[4]); s.oval(20, BY - 31, 4.6, 1.6, () => P.fire[2], 255); s.rect(18, BY - 32, 4, 1, P.fire[4], 255);
     for (let j = 0; j < 10; j++) for (let i = 0; i < 10; i++) { const nx = (i - 4.5) / 5, ny = (9 - j) / 9; if (nx * nx + ny * ny < 1) s.set(15 + i, BY - 9 + j, ny < .5 && Math.abs(nx) < .6 ? P.fire[ny < .25 ? 4 : 3] : ny < .75 ? P.fire[1] : P.ink, ny < .75 ? 255 : 0); }
     s.rect(14, BY - 10, 12, 1, P.brick[5]);
-    smoke2(s, 20, BY - 35, 3, r);
     for (let j = 0; j < 8; j++) { const w = 4 + j; s.rect(31, BY - 8 + j, Math.min(w, 9), 1, P.leather[j < 2 ? 5 : j < 6 ? 3 : 1]); } s.rect(31, BY - 9, 6, 1, P.plank[5]); s.rect(31, BY, 9, 1, P.plank[2]); s.rect(27, BY - 3, 4, 2, P.iron[4]);
     for (let i = 0; i < 6; i++) { s.set(6 + hash(i, 3, 7) * 7, BY - hash(i, 4, 7) * 3, P.iron[2 + (i % 3)]); }
   } },
@@ -123,7 +121,7 @@ const BUILDS = {
     s.ball(20, BY - 13, 15, 15, 0, P.clay, { n: .2, d: .15 }); for (let x = 0; x < 40; x++) for (let y = BY + 1; y < 52; y++) s.set(x, y, null);
     for (let y = BY - 26; y < BY; y += 5) for (let x = 5; x < 36; x++) { const c = s.get(x, y); if (c) s.set(x, y, dark(c, .78)); }
     for (let j = 0; j < 11; j++) for (let i = 0; i < 12; i++) { const nx = (i - 5.5) / 6, ny = (10 - j) / 10; if (nx * nx + ny * ny < 1) s.set(14 + i, BY - 10 + j, ny < .55 && Math.abs(nx) < .6 ? P.fire[ny < .25 ? 4 : 2] : P.ink, ny < .55 ? 255 : 0); }
-    s.rect(13, BY - 11, 14, 1, P.clay[4]); s.oval(20, BY - 27, 3.4, 1.4, () => P.ink); smoke2(s, 20, BY - 30, 4, r);
+    s.rect(13, BY - 11, 14, 1, P.clay[4]); s.oval(20, BY - 27, 3.4, 1.4, () => P.ink);
   } },
   well: { name: 'Draw Well', cat: 'production', f(s) {
     s.tube(5, BY - 12, 30, 13, ST(4, 3));
@@ -230,7 +228,7 @@ const BUILDS = {
     s.thick(6, BY, 19, BY - 38, 2, P.wood, 4); s.thick(33, BY, 20, BY - 38, 2, P.wood, 2); s.thick(19, BY - 2, 19, BY - 38, 2, P.wood, 3);
     s.fill(10, BY - 26, 20, 2, (x, y, i, j) => P.wood[j ? 2 : 4]); s.rect(17, BY - 39, 5, 2, P.cloth[3]);
     for (const [x, h] of [[12, 9], [16, 11], [23, 10], [27, 8]]) { s.rect(x, BY - 24, 1, 2, P.cloth[4]); for (let j = 0; j < h; j++) { const w = j < 2 || j > h - 3 ? 1 : 2; s.rect(x - (w > 1 ? 1 : 0), BY - 22 + j, w + 1, 1, P.furGrey[j % 3 === 0 ? 3 : 4]); s.set(x + 1, BY - 22 + j, P.furGrey[2]); } s.set(x - 1, BY - 22 + h, P.furGrey[3]); s.set(x + 1, BY - 22 + h, P.furGrey[3]); }
-    s.oval(20, BY - 1, 7, 2.4, (x, y) => hash(x, y, 3) > .6 ? P.fire[1] : P.furDark[1]); s.set(18, BY - 2, P.fire[3], 255); s.set(22, BY - 1, P.fire[2], 255); smoke2(s, 20, BY - 6, 3, r);
+    s.oval(20, BY - 1, 7, 2.4, (x, y) => hash(x, y, 3) > .6 ? P.fire[1] : P.furDark[1]); s.set(18, BY - 2, P.fire[3], 255); s.set(22, BY - 1, P.fire[2], 255);
   } },
   hides: { name: 'Hides', cat: 'stock', f(s) {
     const L = [[P.furTan, 0], [P.furGrey, 1], [P.furBrown, 0], [P.leather, 1]];
@@ -247,7 +245,7 @@ const BUILDS = {
     s.ball(20, BY - 9, 16, 11, 0, P.furDark, { n: .5, ns: .7, d: .14 }); for (let x = 0; x < 40; x++) for (let y = BY + 1; y < 52; y++) s.set(x, y, null);
     for (let i = 0; i < 26; i++) { const x = 7 + Math.floor(r() * 26), y = BY - 18 + Math.floor(r() * 14); if (s.get(x, y)) { s.set(x, y, P.soil[2 + (i % 3)]); if (s.get(x + 1, y)) s.set(x + 1, y, P.soil[1]); } }
     for (const [x, y] of [[13, BY - 12], [24, BY - 15], [19, BY - 7], [28, BY - 8]]) { s.rect(x, y, 3, 2, P.ink); s.set(x + 1, y, P.fire[2], 255); s.set(x, y + 1, P.fire[1], 255); s.set(x + 2, y + 1, P.fire[3], 255); }
-    stoneRing(s, 20, BY - 1, 16, 3, 14, false); smoke2(s, 20, BY - 22, 5, r); smoke2(s, 26, BY - 18, 3, r);
+    stoneRing(s, 20, BY - 1, 16, 3, 14, false);
   } },
   windmill: { name: 'Windmill', cat: 'production', tall: 1, frames: 4, f(s, r, fr) {
     const B = 102, cx = 36, tw = daubTex(4, 31);

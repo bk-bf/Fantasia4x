@@ -22,6 +22,9 @@ const DBX = {
     return this.reg(cat, dbId, variant, build, Object.assign({ kind: 'world' }, meta || {}));
   },
   of(cat, dbId) { return this.byObj.get(cat + '/' + dbId) || []; },
+  concepts: [],
+  concept(cat, dbId, c) { this.drop(cat, dbId); this.concepts.push(Object.assign({ cat, dbId }, c)); },
+  conceptOf(o) { return this.concepts.find(c => c.cat === o.cat && c.dbId === o.id); },
   drop(cat, dbId) {
     const k = cat + '/' + dbId, l = this.byObj.get(k) || [];
     for (const e of l) this.byId.delete(e.id);
@@ -74,6 +77,7 @@ const DBX = {
   still(s) { return s.sway ? Object.assign(Object.create(Object.getPrototypeOf(s)), s, { sway: 0 }) : s; },
   seasonOf(e, fallback) { const s = e.variant.split('-')[0]; return this.seasons.includes(s) ? s : fallback || 'summer'; },
   skipReason(o) {
+    if (this.conceptOf(o)) return 'concept, set aside for later';
     if (o.cat === 'building' && o.src.age === 'runed') return 'runed age, look undecided';
     return '';
   },
