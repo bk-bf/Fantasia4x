@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 
 export const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-const UNIT = 'f4x-gpu-compositor';
+const UNIT = `f4x-gpu-compositor-${process.pid}`;
 const instances = () => JSON.parse(execFileSync('hyprctl', ['instances', '-j'], { encoding: 'utf8' }));
 
 async function startCompositor(log) {
@@ -40,13 +40,13 @@ async function startCompositor(log) {
 
 const SERVED_SAVE = 'f4x-bench-save.json';
 
-function patchChromium(chromium, { chrome, socket, cleanEnv, query, servedSave }) {
+function patchChromium(chromium, { chrome, socket, cleanEnv, query, servedSave, args }) {
   const origLaunch = chromium.launch.bind(chromium);
   chromium.launch = async (o) => {
     const browser = await origLaunch({
       ...o, headless: false, executablePath: chrome,
       env: { ...cleanEnv, WAYLAND_DISPLAY: socket, XDG_RUNTIME_DIR: process.env.XDG_RUNTIME_DIR },
-      args: ['--ozone-platform=wayland', '--ignore-gpu-blocklist', '--enable-gpu-rasterization', '--mute-audio', '--window-size=1440,870']
+      args: ['--ozone-platform=wayland', '--ignore-gpu-blocklist', '--enable-gpu-rasterization', '--mute-audio', '--window-size=1440,870', ...args]
     });
     const newContext = browser.newContext.bind(browser);
     browser.newContext = async (co) => {
@@ -70,7 +70,7 @@ function patchChromium(chromium, { chrome, socket, cleanEnv, query, servedSave }
   };
 }
 
-export async function openGpuGame({ tree, label, outDir, usage, init = [] }) {
+export async function openGpuGame({ tree, label, outDir, usage, init = [], args = [], query }) {
   const chrome = process.env.CHROME;
   if (!tree || !label || !outDir || !chrome) {
     console.error(usage);
@@ -85,11 +85,11 @@ export async function openGpuGame({ tree, label, outDir, usage, init = [] }) {
   const servedPath = join(tree, 'static', SERVED_SAVE);
   if (fixture) writeFileSync(servedPath, fixture.endsWith('.gz') ? gunzipSync(readFileSync(fixture)) : readFileSync(fixture));
   const dropServed = () => fixture && rmSync(servedPath, { force: true });
-  patchChromium(chromium, { chrome, socket: comp.socket, cleanEnv: comp.cleanEnv, query: process.env.F4X_QUERY ?? '', servedSave: fixture ? SERVED_SAVE : null });
+  patchChromium(chromium, { chrome, socket: comp.socket, cleanEnv: comp.cleanEnv, query: process.env.F4X_QUERY ?? '', servedSave: fixture ? SERVED_SAVE : null, args });
   const { openGame } = await import(harness + '/tools/work-pins/browser-session.mjs');
   const game = await openGame({
     tree, fixture: process.env.F4X_FIXTURE ?? tree + '/tools/work-pins/fixtures/dev-save.json.gz',
-    serverLog: join(outDir, `${label}-server.log`), log, clock: false, workPins: false, init
+    serverLog: join(outDir, `${label}-server.log`), log, clock: false, workPins: false, init, query
   }).catch((e) => {
     comp.stop();
     dropServed();

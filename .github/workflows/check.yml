@@ -145,6 +145,17 @@ jobs:
           WORK_PINS_NOTES: ${{ runner.temp }}/work-pins-notes.jsonl
         run: node tools/work-pins/gate.mjs --leg browser --base "$BASE"
 
+      - name: Browser frame budgets on large-wilderness
+        if: ${{ !cancelled() && needs.precheck.outputs.browser == 'true' }}
+        run: node tools/work-pins/frame-budget.mjs --out "$RUNNER_TEMP/frame-budget"
+
+      - uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() && needs.precheck.outputs.browser == 'true' }}
+        with:
+          name: frame-budget
+          path: ${{ runner.temp }}/frame-budget
+          if-no-files-found: ignore
+
       - uses: actions/upload-artifact@v7
         if: ${{ !cancelled() && github.event_name == 'pull_request' }}
         with:

@@ -26,6 +26,7 @@ const FRAMES_PER_ZOOM = 10;
 const SETTLE_FRAMES = 300;
 const PAUSE_CHECK_FRAMES = 25;
 const PHASES = [
+  { name: 'idle', paused: true, pan: false },
   { name: 'run', paused: false, pan: false },
   { name: 'pan', paused: false, pan: true },
   { name: 'paused-pan', paused: true, pan: true }

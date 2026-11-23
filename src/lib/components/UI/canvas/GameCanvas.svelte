@@ -6,6 +6,7 @@
   import { WebGLRenderer } from '$lib/webgl/renderer.js';
   import { crashBreadcrumb } from '$lib/webgl/crashLog.js';
   import { startFreezeWatchdog, beat, stopFreezeWatchdog } from '$lib/webgl/freezeWatchdog.js';
+  import { passOn } from '$lib/webgl/passes.js';
   import {
     applyTileToGrid,
     applyResourceToGrid,
@@ -2999,7 +3000,7 @@
           pawnOverlayGrid.clear();
           itemOverlayGrid.clear();
           buildingOverlayGrid.clear();
-        } else {
+        } else if (passOn('overlay')) {
           updatePawnOverlay(
             dt,
             map,
@@ -3035,7 +3036,8 @@
           designationsStale = false;
           drawDesignations();
         }
-        updateWorldEffectOverlays(pawnList, mobList, buildingList, vx, vy, box, tW, tH);
+        if (passOn('effects'))
+          updateWorldEffectOverlays(pawnList, mobList, buildingList, vx, vy, box, tW, tH);
         if (
           _terrainDirty &&
           (_forceTerrainRebuild || now - _lastTerrainBuild >= TERRAIN_REBUILD_MIN_MS)

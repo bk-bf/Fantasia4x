@@ -78,6 +78,30 @@ function hideAudio() {
   delete window.webkitAudioContext;
 }
 
+export function disableAutosave() {
+  localStorage.setItem('fx.gameplay.autosave', 'false');
+}
+
+function watchScenario(loaded) {
+  const info = console.info.bind(console);
+  console.info = (...a) => {
+    if (String(a[0]).includes(loaded)) window.__f4xScenarioLoaded = true;
+    info(...a);
+  };
+}
+
+const scenarioLoaded = (id) => `Loaded scenario preset '${id}'`;
+export const scenarioQuery = (id) => `?scenario=${encodeURIComponent(id)}`;
+export const watchScenarioLoad = (id) => [watchScenario, scenarioLoaded(id)];
+
+export async function waitForScenario(page, id, timeoutMs = 600_000) {
+  const start = Date.now();
+  while (!(await page.evaluate(() => window.__f4xScenarioLoaded === true))) {
+    if (Date.now() - start > timeoutMs) throw new Error(`no "${scenarioLoaded(id)}" within ${timeoutMs} ms`);
+    await sleep(250);
+  }
+}
+
 function disableAutoPause() {
   localStorage.setItem('fx.gameplay.autoPauseOnThreat', 'false');
   localStorage.setItem('fx.gameplay.autoPauseOnDeath', 'false');
@@ -150,8 +174,8 @@ function trackNetwork(page) {
   };
 }
 
-async function loadGame(page, origin) {
-  await page.goto(`${origin}/`);
+async function loadGame(page, origin, query) {
+  await page.goto(`${origin}/${query}`);
   await page.waitForFunction(
     () =>
       [...document.querySelectorAll('button')].some(
@@ -181,7 +205,8 @@ export async function openGame({
   log,
   clock = true,
   init = [],
-  workPins = true
+  workPins = true,
+  query = ''
 }) {
   const body = readFixture(resolve(fixture));
   const port = await freePort();
@@ -198,14 +223,14 @@ export async function openGame({
     await context.addInitScript(seedRandom, RANDOM_SEED);
     await context.addInitScript(hideAudio);
     await context.addInitScript(disableAutoPause);
-    for (const script of init) await context.addInitScript(script);
+    for (const script of init) await context.addInitScript(...(Array.isArray(script) ? script : [script]));
     const page = await context.newPage();
     const errors = [];
     page.on('pageerror', (e) => errors.push(e.message));
     const networkQuiet = trackNetwork(page);
     if (clock) await page.clock.install({ time: EPOCH_MS });
     await seedSave(page, origin, body, log);
-    await loadGame(page, origin);
+    await loadGame(page, origin, query);
     await networkQuiet(NETWORK_QUIET_MS);
     log('game ready');
     return { page, cdp: await context.newCDPSession(page), errors, close };
