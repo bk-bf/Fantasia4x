@@ -1,5 +1,6 @@
 <script lang="ts">
   import HoverTip from '$lib/components/UI/tooltip/HoverTip.svelte';
+  import KvRow from '$lib/components/UI/widget/KvRow.svelte';
   import type { Item, Recipe, EquipmentSlot } from '$lib/game/core/types';
   import type { NaturalGearMeta } from '$lib/components/util/naturalGear';
   import { coveredParts } from '$lib/game/core/rules/gear/armorCoverage';
@@ -55,7 +56,6 @@
     Object.values(selectedIngredients)
       .map((id) => getMaterialProperty(id))
       .filter((m): m is NonNullable<typeof m> => !!m)
-      .map((m) => `${m.label}: ${m.desc}`)
   );
   let matItemMods = $derived(
     Object.values(selectedIngredients).length
@@ -91,25 +91,17 @@
 
   type Row = { label: string; val: string };
 
-  let headline = $derived.by(() => {
-    const wp = item.weaponProperties;
-    const ap = item.armorProperties;
-    if (wp) {
-      const dmg =
-        wp.damMin != null && wp.damMax != null ? `${wp.damMin}–${wp.damMax}` : `${wp.damage ?? 0}`;
-      return `${dmg} dmg`;
-    }
-    if (ap) return `${ap.armorValue ?? ap.defense ?? 0} def`;
-    if (item.type === 'tool') return 'tool';
-    return cap(item.type);
-  });
-
   let rows = $derived.by(() => {
     const out: Row[] = [];
     const wp = item.weaponProperties;
     const ap = item.armorProperties;
 
     if (wp) {
+      const dmg =
+        wp.damMin != null && wp.damMax != null
+          ? `${wp.damMin} to ${wp.damMax}`
+          : `${wp.damage ?? 0}`;
+      out.push({ label: 'Damage', val: dmg });
       if (wp.damageType) out.push({ label: 'Damage type', val: cap(wp.damageType) });
       if (wp.attackSpeed != null) out.push({ label: 'Attack speed', val: `×${wp.attackSpeed}` });
       const reach = wp.reach ?? wp.range;
@@ -124,6 +116,7 @@
     }
 
     if (ap) {
+      out.push({ label: 'Defence', val: `${ap.armorValue ?? ap.defense ?? 0}` });
       if (ap.armorType) out.push({ label: 'Class', val: cap(ap.armorType) });
       const slot = ap.slot ?? ap.equipmentSlot;
       if (slot)
@@ -216,129 +209,62 @@
 </script>
 
 <HoverTip {x} {y} {pinned}>
-  <h5>
-    {item.name}
-    <span class="tip-eff">{headline}</span>
-  </h5>
-
-  {#if item.description}
-    <div class="tip-desc">{item.description}</div>
-  {/if}
-
-  {#if jobLabel}
-    <div class="kv tip-job">
-      <em>Job</em>
-      <span class="tip-job-val">{jobLabel}</span>
-    </div>
-  {/if}
-
-  {#each rows as r}
-    <div class="kv">
-      <em>{r.label}</em>
-      <span>{r.val}</span>
-    </div>
+  <h5>{item.name}</h5>
+  {#if item.description}<p>{item.description}</p>{/if}
+  {#if jobLabel}<KvRow label="Job">{jobLabel}</KvRow>{/if}
+  {#each rows as r (r.label)}
+    <KvRow label={r.label}>{r.val}</KvRow>
   {/each}
 
   {#if coating}
-    <div class="tip-sep">COATED</div>
-    <div class="kv">
-      <em>{coating.name}</em>
-      <span class="tip-coat-eff">{coating.effect}</span>
-    </div>
+    <div class="tip-sep">Coated</div>
+    <KvRow label={coating.name}>{coating.effect}</KvRow>
   {/if}
 
   {#if natural}
-    <div class="tip-sep">NATURAL</div>
-    <div class="kv">
-      <em>Innate</em>
-      <span>Yes · can't be unequipped</span>
-    </div>
+    <div class="tip-sep">Natural</div>
+    <KvRow label="Innate">can't be taken off</KvRow>
     {#if natural.carryPenalty}
-      <div class="kv">
-        <em>Carry cost</em>
-        <span>−{Math.round(natural.carryPenalty * 100)}%</span>
-      </div>
+      <KvRow label="Carry cost">−{Math.round(natural.carryPenalty * 100)}%</KvRow>
     {/if}
     {#if natural.stage}
-      <div class="kv">
-        <em>Evolution</em>
-        <span>Stage {natural.stage}/3 · {natural.evolves ? 'grows with age' : 'apex'}</span>
-      </div>
+      <KvRow label="Growth"
+        >stage {natural.stage} of 3 · {natural.evolves ? 'grows with age' : 'full grown'}</KvRow
+      >
     {/if}
   {/if}
 
   {#if farming}
-    <div class="tip-sep">FARMING · {farming.crop}</div>
-    {#each farming.rows as r}
-      <div class="kv">
-        <em>{r.label}</em>
-        <span>{r.val}</span>
-      </div>
+    <div class="tip-sep">Farming · {farming.crop}</div>
+    {#each farming.rows as r (r.label)}
+      <KvRow label={r.label}>{r.val}</KvRow>
     {/each}
   {/if}
 
   {#if matNotes.length > 0 || matItemMods.durability !== 1 || matItemMods.weight !== 1}
     <div class="tip-sep">
-      MATERIAL{#if matNames}
-        · {matNames}{/if}
+      Material{#if matNames}&nbsp;· {matNames}{/if}
     </div>
     {#if matItemMods.durability !== 1}
-      <div class="tip-mod">
-        <span class="tip-mod-name">Durability</span>
-        <span
-          class="tip-mod-val"
-          style="color:{matItemMods.durability >= 1 ? 'var(--pos)' : 'var(--neg)'}"
-          >×{matItemMods.durability.toFixed(2)}</span
-        >
-      </div>
+      <KvRow label="Durability">×{matItemMods.durability.toFixed(2)}</KvRow>
     {/if}
     {#if matItemMods.weight !== 1}
-      <div class="tip-mod">
-        <span class="tip-mod-name">Weight</span>
-        <span
-          class="tip-mod-val"
-          style="color:{matItemMods.weight <= 1 ? 'var(--pos)' : 'var(--neg)'}"
-          >×{matItemMods.weight.toFixed(2)}</span
-        >
-      </div>
+      <KvRow label="Weight">×{matItemMods.weight.toFixed(2)}</KvRow>
     {/if}
-    {#each matNotes as note}
-      <div class="tip-mod" style="color:#7e9fbf">{note}</div>
+    {#each matNotes as m (m.label)}
+      <KvRow label={m.label}>{m.desc}</KvRow>
     {/each}
   {/if}
 
   {#if abilities.length > 0}
-    <div class="tip-sep">ABILITIES</div>
-    {#each abilities as a}
-      <div class="tip-mod">
-        <span class="tip-mod-name" style="color:var(--pos)">{cap(a)}</span>
-      </div>
-    {/each}
+    <div class="tip-sep">Abilities</div>
+    <p>{abilities.map(cap).join(' · ')}</p>
   {/if}
 
   {#if effects.length > 0}
-    <div class="tip-sep">EFFECTS</div>
-    {#each effects as [name, val]}
-      <div class="tip-mod">
-        <span class="tip-mod-name" style="color:{val >= 0 ? 'var(--pos)' : 'var(--neg)'}"
-          >{cap(name.replace(/([A-Z])/g, ' $1').trim())}</span
-        >
-        <span class="tip-mod-val">{signed(val)}</span>
-      </div>
+    <div class="tip-sep">Effects</div>
+    {#each effects as [name, val] (name)}
+      <KvRow label={cap(name.replace(/([A-Z])/g, ' $1').trim())}>{signed(val)}</KvRow>
     {/each}
   {/if}
 </HoverTip>
-
-<style>
-  .tip-job {
-    border-bottom: 1px solid var(--border);
-    padding-bottom: 3px;
-    margin-bottom: 2px;
-  }
-  .tip-job-val {
-    color: var(--accent-hi);
-  }
-  .tip-coat-eff {
-    color: #b98fe6;
-  }
-</style>

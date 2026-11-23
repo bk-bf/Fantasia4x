@@ -1,60 +1,37 @@
 <script lang="ts">
+  import KvRow from '$lib/components/UI/widget/KvRow.svelte';
   import type { ConditionView } from '$lib/components/util/conditionInfo';
   let { view }: { view: ConditionView } = $props();
+
+  const split = (line: string): [string, string] => {
+    const m = line.match(/^(.*?)\s([+−-]\d.*)$/);
+    return m ? [m[1], m[2]] : [line, ''];
+  };
 </script>
 
-<div class="tip-name" style="color: {view.color}">
-  {view.name.toUpperCase()}
-  {#if view.severityPct != null}
-    <span class="tip-sev">· {view.severityPct}%{view.stageLabel ? ` ${view.stageLabel}` : ''}</span>
-  {/if}
-</div>
-{#if view.lifeThreatening}
-  <div class="tip-warn">⚠ life-threatening</div>
+<h5>
+  {view.name}{#if view.severityPct != null}&nbsp;· {view.severityPct}%{/if}
+</h5>
+<p>{view.description}</p>
+{#if view.stageLabel}
+  <KvRow label="Stage">{view.stageLabel}</KvRow>
 {/if}
-<div class="tip-desc">{view.description}</div>
+{#if view.lifeThreatening}
+  <KvRow label="Danger"><span class="grave">to life</span></KvRow>
+{/if}
 {#if view.sources.length > 0}
-  <div class="tip-hdr">FROM</div>
-  {#each view.sources as s}
-    <div class="tip-row">• {s}</div>
-  {/each}
+  <KvRow label="From">{view.sources.join(', ')}</KvRow>
 {/if}
 {#if view.trigger}
-  <div class="tip-hdr">WHEN</div>
-  <div class="tip-row">{view.trigger}</div>
+  <KvRow label="When">{view.trigger}</KvRow>
 {/if}
-{#if view.effects.length > 0}
-  <div class="tip-hdr">EFFECT</div>
-  <div class="tip-row">{view.effects.join('  ·  ')}</div>
-{/if}
+{#each view.effects as line (line)}
+  {@const [k, v] = split(line)}
+  <KvRow label={k}>{v}</KvRow>
+{/each}
 
 <style>
-  .tip-name {
-    font-weight: bold;
-    letter-spacing: 0.04em;
-  }
-  .tip-sev {
-    color: var(--text-muted);
-    font-weight: normal;
-  }
-  .tip-warn {
-    color: var(--neg, #ff5252);
-    font-size: 11px;
-    margin-top: 1px;
-  }
-  .tip-desc {
-    color: var(--text-muted);
-    font-style: italic;
-    margin: 3px 0;
-  }
-  .tip-hdr {
-    color: var(--text-dim);
-    font-size: 10px;
-    letter-spacing: 0.08em;
-    margin-top: 4px;
-  }
-  .tip-row {
-    color: var(--text);
-    font-size: 11px;
+  .grave {
+    color: var(--neg);
   }
 </style>
