@@ -93,6 +93,7 @@ function place(e: CombatTextEvent, f: Figure, mode: FloaterMode): Placed | null 
 }
 
 const placed = new Map<number, Placed | null>();
+let placedFor = '';
 
 export function drawFloats(
   p: FxPainter,
@@ -101,6 +102,11 @@ export function drawFloats(
   now: number,
   mode: FloaterMode
 ): void {
+  const modeKey = `${mode.icons}|${mode.text}`;
+  if (modeKey !== placedFor) {
+    placed.clear();
+    placedFor = modeKey;
+  }
   const seen = new Set<number>();
   for (const e of list) {
     if (e.kind === 'social') continue;
