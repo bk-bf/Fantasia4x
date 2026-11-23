@@ -61,6 +61,7 @@
   import { uiState } from '$lib/stores/uiState.js';
   import { worldEffects } from '$lib/stores/fx/worldEffects.js';
   import type { GlyphFloat, GlyphFloatKind } from '$lib/stores/fx/worldEffects.js';
+  import { effectToggles } from '$lib/stores/fx/effectToggles';
   import { combatFeedback, floatTtl, type CombatTextEvent } from '$lib/stores/fx/combatFeedback.js';
   import { animNow, setAnimPaused } from '$lib/stores/fx/animClock.js';
   import {
@@ -1092,6 +1093,7 @@
   ) {
     const W = box?.clientWidth ?? 0;
     const H = box?.clientHeight ?? 0;
+    const fx = $effectToggles;
 
     const glyphOf = (id: string, x: number, y: number, kind: GlyphFloatKind): GlyphFloat => ({
       id,
@@ -1104,7 +1106,7 @@
     const prioCollapse = conditionPriority('collapse');
     const prioSleeping = conditionPriority('sleeping');
     const prioWinded = conditionPriority('winded');
-    for (const p of pawnList) {
+    for (const p of fx.marks ? pawnList : []) {
       if (!p.position) continue;
       if (p.carriedBy) continue;
       if (isHiddenTile(p.position.x, p.position.y)) continue;
@@ -1128,7 +1130,7 @@
       }
     }
     const mobsDrawn = tW >= ENTITY_RENDER_MIN_PX;
-    for (const m of mobsDrawn ? mobList : []) {
+    for (const m of mobsDrawn && fx.marks ? mobList : []) {
       if (m.state === 'Corpse') continue;
       if (isHiddenTile(m.x, m.y)) continue;
       let kind: GlyphFloatKind | null = null;
@@ -1152,7 +1154,7 @@
         if (onScreen(o)) newGlyphs.push(o);
       }
     }
-    for (const b of buildingList) {
+    for (const b of fx.marks ? buildingList : []) {
       if (b.type !== 'campfire' || b.status !== 'complete' || b.lit !== true) continue;
       const o: GlyphFloat = {
         id: b.id,
@@ -1171,7 +1173,7 @@
     }
 
     const newProgress = [
-      ...pawnList
+      ...(fx.work ? pawnList : [])
         .filter(
           (p) =>
             p.position &&
@@ -1188,7 +1190,7 @@
           progress: Math.max(0, Math.min(1, p.activeJob?.progress ?? 0))
         }))
         .filter((o) => o.left >= 0 && o.top >= 0 && o.left <= W),
-      ...pawnList
+      ...(fx.work ? pawnList : [])
         .filter(
           (p) =>
             p.draftTarget?.type === 'tend' &&
@@ -1203,7 +1205,7 @@
           progress: Math.max(0, Math.min(1, p.tendProgress ?? 0))
         }))
         .filter((o) => o.left >= 0 && o.top >= 0 && o.left <= W),
-      ...mobList
+      ...(fx.work ? mobList : [])
         .filter((m) => (m.eatProgress ?? 0) > 0 && !isHiddenTile(m.x, m.y))
         .map((m) => ({
           id: m.id,
@@ -1224,7 +1226,7 @@
     }
 
     const newHealth = [
-      ...pawnList
+      ...(fx.health ? pawnList : [])
         .filter(
           (p) =>
             p.position &&
@@ -1240,7 +1242,7 @@
           type: 'pawn' as const
         }))
         .filter((o) => o.left >= 0 && o.top >= 0 && o.left <= W),
-      ...mobList
+      ...(fx.health ? mobList : [])
         .filter((m) => m.state !== 'Corpse' && m.health < m.maxHealth && !isHiddenTile(m.x, m.y))
         .map((m) => ({
           id: `hp-${m.id}`,
@@ -1259,7 +1261,7 @@
       worldEffects.setHealthOverlays(newHealth);
     }
 
-    const newDraftTargets = pawnList
+    const newDraftTargets = (fx.draft ? pawnList : [])
       .filter((p) => p.position && p.drafted && p.draftTarget)
       .map((p) => {
         const target = p.draftTarget!;
@@ -1310,6 +1312,7 @@
 
     const now = animNow();
     const newFloats = combatTexts
+      .filter((e) => (e.kind === 'social' ? fx.speech : fx.text))
       .filter((e) => now - e.spawnTime < floatTtl(e.kind))
       .map((e) => ({
         id: e.id,
@@ -1359,7 +1362,7 @@
       worldEffects.setFloatingTextOverlays(newFloats);
     }
 
-    const newProjectiles = projectileList
+    const newProjectiles = (fx.projectiles ? projectileList : [])
       .map((e) => {
         const progress = (now - e.spawnTime) / e.durationMs;
         const tc = Math.min(1, progress);
