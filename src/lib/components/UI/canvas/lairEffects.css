@@ -1,0 +1,336 @@
+.lair-effects .lair-smoke {
+  position: absolute;
+  left: 0;
+  top: 0;
+  pointer-events: none;
+  width: 0;
+  height: 0;
+}
+.lair-effects .puff {
+  position: absolute;
+  font-family: var(--font-mono);
+  font-size: 18px;
+  color: #4f4b45;
+  opacity: 0;
+  filter: blur(3px);
+  text-shadow: 0 0 6px #3a3833;
+  animation: smoke-rise 4.4s ease-out infinite;
+  will-change: transform, opacity;
+}
+.lair-effects .puff.p1 {
+  animation-delay: 0s;
+  left: -3px;
+}
+.lair-effects .puff.p2 {
+  animation-delay: 0.7s;
+  left: 4px;
+}
+.lair-effects .puff.p3 {
+  animation-delay: 1.4s;
+  left: -6px;
+}
+.lair-effects .puff.p4 {
+  animation-delay: 2.1s;
+  left: 2px;
+}
+.lair-effects .puff.p5 {
+  animation-delay: 2.8s;
+  left: -1px;
+}
+.lair-effects .puff.p6 {
+  animation-delay: 3.5s;
+  left: 5px;
+}
+@keyframes smoke-rise {
+  0% {
+    opacity: 0;
+    transform: translateY(2px) translateX(0) scale(0.7);
+  }
+  15% {
+    opacity: 0.72;
+  }
+  45% {
+    opacity: 0.55;
+    transform: translateY(-44px) translateX(7px) scale(1.7);
+  }
+  75% {
+    opacity: 0.3;
+    transform: translateY(-86px) translateX(3px) scale(2.7);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-124px) translateX(12px) scale(3.6);
+  }
+}
+.lair-effects .lair-fx {
+  position: absolute;
+  left: 0;
+  top: 0;
+  pointer-events: none;
+  width: 0;
+  height: 0;
+}
+.lair-effects .fly {
+  position: absolute;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: bold;
+  color: #14110e;
+  opacity: 0.85;
+  will-change: transform;
+}
+.lair-effects .fly.f1 {
+  animation: fly1 0.62s linear infinite;
+}
+.lair-effects .fly.f2 {
+  animation: fly2 0.74s linear infinite;
+}
+.lair-effects .fly.f3 {
+  animation: fly3 0.53s linear infinite;
+}
+.lair-effects .fly.f4 {
+  animation: fly4 0.81s linear infinite;
+}
+.lair-effects .fly.f5 {
+  animation: fly5 0.67s linear infinite;
+}
+.lair-effects .fly.f6 {
+  animation: fly6 0.58s linear infinite;
+}
+@keyframes fly1 {
+  0% {
+    transform: translate(-8px, -3px);
+  }
+  30% {
+    transform: translate(4px, -9px);
+  }
+  55% {
+    transform: translate(9px, 2px);
+  }
+  80% {
+    transform: translate(-2px, 6px);
+  }
+  100% {
+    transform: translate(-8px, -3px);
+  }
+}
+@keyframes fly2 {
+  0% {
+    transform: translate(6px, 4px);
+  }
+  28% {
+    transform: translate(-5px, 8px);
+  }
+  52% {
+    transform: translate(-9px, -2px);
+  }
+  78% {
+    transform: translate(3px, -7px);
+  }
+  100% {
+    transform: translate(6px, 4px);
+  }
+}
+@keyframes fly3 {
+  0% {
+    transform: translate(0, -7px);
+  }
+  33% {
+    transform: translate(7px, -1px);
+  }
+  60% {
+    transform: translate(2px, 7px);
+  }
+  82% {
+    transform: translate(-7px, 3px);
+  }
+  100% {
+    transform: translate(0, -7px);
+  }
+}
+@keyframes fly4 {
+  0% {
+    transform: translate(-6px, 5px);
+  }
+  26% {
+    transform: translate(8px, 3px);
+  }
+  54% {
+    transform: translate(5px, -6px);
+  }
+  80% {
+    transform: translate(-9px, -4px);
+  }
+  100% {
+    transform: translate(-6px, 5px);
+  }
+}
+@keyframes fly5 {
+  0% {
+    transform: translate(3px, -5px);
+  }
+  30% {
+    transform: translate(-8px, -6px);
+  }
+  58% {
+    transform: translate(-4px, 6px);
+  }
+  84% {
+    transform: translate(8px, 5px);
+  }
+  100% {
+    transform: translate(3px, -5px);
+  }
+}
+@keyframes fly6 {
+  0% {
+    transform: translate(-9px, 1px);
+  }
+  32% {
+    transform: translate(-1px, -8px);
+  }
+  56% {
+    transform: translate(9px, -3px);
+  }
+  80% {
+    transform: translate(4px, 8px);
+  }
+  100% {
+    transform: translate(-9px, 1px);
+  }
+}
+.lair-effects .fog {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+.lair-effects .lair-bloodmist .fog {
+  background: radial-gradient(
+    circle,
+    rgba(165, 40, 32, 0.3) 0%,
+    rgba(120, 30, 26, 0.2) 38%,
+    rgba(80, 22, 20, 0.08) 62%,
+    rgba(60, 18, 16, 0) 80%
+  );
+  filter: blur(7px);
+}
+.lair-effects .blood-a {
+  width: 124px;
+  height: 92px;
+  left: -62px;
+  top: -46px;
+  animation: blood-seethe 6s ease-in-out infinite;
+}
+.lair-effects .blood-b {
+  width: 88px;
+  height: 70px;
+  left: -44px;
+  top: -52px;
+  animation: blood-seethe 8s ease-in-out infinite reverse;
+  animation-delay: -2.4s;
+}
+@keyframes blood-seethe {
+  0% {
+    opacity: 0.22;
+    transform: translate(0, 0) scale(0.96);
+  }
+  50% {
+    opacity: 0.38;
+    transform: translate(-6px, -4px) scale(1.14);
+  }
+  100% {
+    opacity: 0.22;
+    transform: translate(5px, 2px) scale(0.96);
+  }
+}
+.lair-effects .lair-miasma .fog {
+  background: radial-gradient(
+    circle,
+    rgba(120, 158, 84, 0.5) 0%,
+    rgba(92, 126, 64, 0.3) 45%,
+    rgba(64, 96, 48, 0) 74%
+  );
+  filter: blur(6px);
+}
+.lair-effects .miasma-a {
+  width: 60px;
+  height: 44px;
+  left: -30px;
+  top: -22px;
+  animation: miasma-churn 6.5s ease-in-out infinite;
+}
+.lair-effects .miasma-b {
+  width: 44px;
+  height: 34px;
+  left: -22px;
+  top: -28px;
+  animation: miasma-churn 8.5s ease-in-out infinite reverse;
+  animation-delay: -3s;
+}
+@keyframes miasma-churn {
+  0% {
+    opacity: 0.4;
+    transform: translate(0, 0) scale(0.95);
+  }
+  50% {
+    opacity: 0.68;
+    transform: translate(7px, -6px) scale(1.18);
+  }
+  100% {
+    opacity: 0.4;
+    transform: translate(-5px, 2px) scale(0.95);
+  }
+}
+.lair-effects .feather {
+  position: absolute;
+  font-family: var(--font-mono);
+  font-size: 18px;
+  font-weight: bold;
+  color: #c4bcb2;
+  opacity: 0;
+  animation: feather-fall 4s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+.lair-effects .feather.fe1 {
+  animation-delay: 0s;
+  left: -12px;
+}
+.lair-effects .feather.fe2 {
+  animation-delay: 0.9s;
+  left: 8px;
+}
+.lair-effects .feather.fe3 {
+  animation-delay: 1.7s;
+  left: -4px;
+}
+.lair-effects .feather.fe4 {
+  animation-delay: 2.5s;
+  left: 13px;
+}
+.lair-effects .feather.fe5 {
+  animation-delay: 3.3s;
+  left: -8px;
+}
+@keyframes feather-fall {
+  0% {
+    opacity: 0;
+    transform: translateY(-34px) translateX(0) rotate(-18deg);
+  }
+  20% {
+    opacity: 0.75;
+  }
+  50% {
+    transform: translateY(-6px) translateX(16px) rotate(20deg);
+  }
+  80% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(26px) translateX(-10px) rotate(-14deg);
+  }
+}
+.lair-effects {
+  display: contents;
+}
