@@ -6,11 +6,11 @@ import type { FxPainter } from '$lib/pixelArt/fx/painter';
 import type { Spr } from '$lib/pixelArt/fx/spr';
 import type { CombatTextEvent } from '$lib/stores/fx/combatFeedback';
 
-const onset = (conditionId: string, text: string): CombatTextEvent => ({
-  id: 1,
+const onset = (conditionId: string, text: string, id = 1, worldX = 4): CombatTextEvent => ({
+  id,
   spawnTime: 0,
   until: 1700,
-  worldX: 4,
+  worldX,
   worldY: 4,
   text,
   kind: 'condition',
@@ -19,18 +19,36 @@ const onset = (conditionId: string, text: string): CombatTextEvent => ({
   conditionId
 });
 
-function drawn(e: CombatTextEvent, mode: FloaterMode): Spr[] {
-  const put: Spr[] = [];
-  const p = { put: (s: Spr) => put.push(s) } as unknown as FxPainter;
-  drawFloats(p, null, [e], 300, mode);
+interface Put {
+  s: Spr;
+  x: number;
+  y: number;
+}
+
+function draw(list: CombatTextEvent[], mode: FloaterMode): Put[] {
+  const put: Put[] = [];
+  const p = {
+    put: (s: Spr, x: number, y: number) => put.push({ s, x, y })
+  } as unknown as FxPainter;
+  drawFloats(p, null, list, 300, mode);
   return put;
 }
+
+const drawn = (e: CombatTextEvent, mode: FloaterMode): Spr[] => draw([e], mode).map((d) => d.s);
+
+const rect = (d: Put) => {
+  const x = Math.round(d.x) - d.s.ax;
+  const y = Math.round(d.y) - d.s.ay;
+  return [x, y, x + d.s.w, y + d.s.h];
+};
 
 describe('condition floaters', () => {
   const e = onset('winded', 'Winded');
 
   it('shows the icon and the word together when both are on', () => {
-    expect(drawn(e, { icons: true, text: true })).toEqual([worded('winded', 'Winded', '#9575cd')[0]]);
+    expect(drawn(e, { icons: true, text: true })).toEqual([
+      worded('winded', 'Winded', '#9575cd')[0]
+    ]);
   });
 
   it('shows the icon alone when the text is off', () => {
@@ -49,5 +67,15 @@ describe('condition floaters', () => {
   it('shows the word for a condition without an icon', () => {
     expect(drawn(onset('staggered', 'Staggered'), { icons: true, text: false })).toEqual([]);
     expect(drawn(onset('staggered', 'Staggered'), { icons: true, text: true })).toHaveLength(1);
+  });
+
+  it('lifts a floater that would overlap the floater of a neighbour', () => {
+    const both = { icons: true, text: true };
+    const [a, b] = draw(
+      [onset('knockdown', 'Knocked Down', 7, 4), onset('winded', 'Winded', 8, 5)],
+      both
+    ).map(rect);
+    const apart = a[2] <= b[0] || b[2] <= a[0] || a[3] <= b[1] || b[3] <= a[1];
+    expect(apart).toBe(true);
   });
 });

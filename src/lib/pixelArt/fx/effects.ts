@@ -52,6 +52,11 @@ export function trader(p: FxPainter, x: number, y: number, t: number): void {
   );
 }
 
+export function floatDy(u: number, ttl: number): number {
+  const f = Math.min(1, u / ttl);
+  return f < 0.7 ? mix(3, -26, f / 0.7) : mix(-26, -38, (f - 0.7) / 0.3);
+}
+
 export function float(
   p: FxPainter,
   x: number,
@@ -63,7 +68,7 @@ export function float(
 ): void {
   if (u > ttl) return;
   const f = u / ttl;
-  const dy = f < 0.7 ? mix(3, -26, f / 0.7) : mix(-26, -38, (f - 0.7) / 0.3);
+  const dy = floatDy(u, ttl);
   p.put(
     pair[f < 0.07 || f > 0.84 ? 1 : 0],
     x + (shake && u < 0.14 ? (Math.floor(u * 50) & 1 ? 1 : -1) : 0),
@@ -73,16 +78,16 @@ export function float(
 
 export const BADGE_TTL = 1.7;
 
+export function badgeDy(u: number): number {
+  const f = Math.min(1, u / BADGE_TTL);
+  if (f < 0.12) return mix(8, -3, 1 - (1 - f / 0.12) ** 2);
+  return f < 0.78 ? mix(-3, -9, (f - 0.12) / 0.66) : mix(-9, -15, (f - 0.78) / 0.22);
+}
+
 export function badge(p: FxPainter, x: number, y: number, pair: Pair, u: number): void {
   if (u > BADGE_TTL) return;
   const f = u / BADGE_TTL;
-  const dy =
-    f < 0.12
-      ? mix(8, -3, 1 - (1 - f / 0.12) ** 2)
-      : f < 0.78
-        ? mix(-3, -9, (f - 0.12) / 0.66)
-        : mix(-9, -15, (f - 0.78) / 0.22);
-  p.put(pair[f < 0.04 || f > 0.8 ? 1 : 0], x, y + dy);
+  p.put(pair[f < 0.04 || f > 0.8 ? 1 : 0], x, y + badgeDy(u));
 }
 
 export const SAY_TTL = 4.5;

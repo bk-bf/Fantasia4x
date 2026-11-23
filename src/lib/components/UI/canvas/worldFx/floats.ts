@@ -1,6 +1,6 @@
 import type { CombatTextEvent } from '$lib/stores/fx/combatFeedback';
 import { COLD, CRIT, DULL, GORE, HURT, tint, word, type Pair } from '$lib/pixelArt/fx/glyphs';
-import { badge, float } from '$lib/pixelArt/fx/effects';
+import { badge, badgeDy, float, floatDy } from '$lib/pixelArt/fx/effects';
 import { icon, worded, type IconId } from '$lib/pixelArt/fx/icons';
 import type { FxPainter } from '$lib/pixelArt/fx/painter';
 import type { WebGLRenderer } from '$lib/webgl/renderer.js';
@@ -22,6 +22,7 @@ interface Placed {
 
 const TIERS = [0, 20, 38, 56];
 const BADGE_STEP = 18;
+const GAP = 1;
 const TTL_BY_CONDITION: Record<string, number> = { knockdown: 1.3, staggered: 0.9 };
 const ICON_BY_CONDITION: Record<string, IconId> = {
   collapse: 'collapsed',
@@ -92,7 +93,35 @@ function place(e: CombatTextEvent, f: Figure, mode: FloaterMode): Placed | null 
   return { pair, x: f.x + dx, y: f.head - 8 + TIERS[tier], ttl, shake, badge: false };
 }
 
-const placed = new Map<number, Placed | null>();
+interface Seat {
+  q: Placed;
+  born: number;
+}
+
+function box(q: Placed, u: number): [number, number, number, number] {
+  const s = q.pair[0];
+  const top = Math.round(q.y + (q.badge ? badgeDy(u) : floatDy(u, q.ttl))) - s.ay;
+  const left = Math.round(q.x) - s.ax;
+  return [left, top, left + s.w, top + s.h];
+}
+
+function seat(q: Placed, born: number, now: number): void {
+  for (let pass = 0; pass < placed.size; pass++) {
+    let moved = false;
+    const a = box(q, (now - born) / 1000);
+    for (const o of placed.values()) {
+      if (!o) continue;
+      const b = box(o.q, (now - o.born) / 1000);
+      if (a[2] <= b[0] || b[2] <= a[0] || a[3] + GAP <= b[1] || b[3] + GAP <= a[1]) continue;
+      q.y -= a[3] - b[1] + GAP;
+      moved = true;
+      break;
+    }
+    if (!moved) return;
+  }
+}
+
+const placed = new Map<number, Seat | null>();
 let placedFor = '';
 
 export function drawFloats(
@@ -111,12 +140,15 @@ export function drawFloats(
   for (const e of list) {
     if (e.kind === 'social') continue;
     seen.add(e.id);
-    let q = placed.get(e.id);
-    if (q === undefined) {
-      q = place(e, figureAt(r, e.worldX, e.worldY, e.worldX, e.worldY), mode);
-      placed.set(e.id, q);
+    let at = placed.get(e.id);
+    if (at === undefined) {
+      const q = place(e, figureAt(r, e.worldX, e.worldY, e.worldX, e.worldY), mode);
+      if (q) seat(q, e.spawnTime, now);
+      at = q && { q, born: e.spawnTime };
+      placed.set(e.id, at);
     }
-    if (!q) continue;
+    if (!at) continue;
+    const q = at.q;
     const u = (now - e.spawnTime) / 1000;
     if (q.badge) badge(p, q.x, q.y, q.pair, u);
     else float(p, q.x, q.y, q.pair, u, q.ttl, q.shake);
