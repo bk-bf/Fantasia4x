@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { paintedSpriteCanvas, PAINTED_BASE_URL } from '$lib/webgl/painted/loader';
-  import { picture, toArt, type Art } from '$lib/pixelArt/picture';
+  import { picture, type Art } from '$lib/pixelArt/picture';
+  import { pawnSpriteArt } from './pawnSpriteArt';
 
   let {
     id,
@@ -13,9 +13,7 @@
   $effect(() => {
     art = null;
     let live = true;
-    paintedSpriteCanvas('pawn', cultureId ?? '*', PAINTED_BASE_URL, id).then(
-      (c) => live && c && (art = toArt(c))
-    );
+    pawnSpriteArt(cultureId ?? '*', id).then((a) => live && a && (art = a));
     return () => (live = false);
   });
 </script>
