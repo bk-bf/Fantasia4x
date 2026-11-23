@@ -5,10 +5,9 @@
   const isPaused = gameState.isPaused;
   import { environmentService, getAmbientLight } from '$lib/game/services/EnvironmentService';
   import { weatherEffects, showDialogBubbles } from '$lib/stores/uiPrefs';
-  import WeatherLayer from '$lib/components/UI/weather/WeatherLayer.svelte';
+  import WorldWeather from '$lib/components/UI/weather/WorldWeather.svelte';
 
   const BASE_TILE = 20;
-  const WEATHER_TILE = 32;
 
   $: floatScale = Math.max(0.25, Math.min(1.5, $cameraTileSize / BASE_TILE));
 
@@ -189,7 +188,7 @@
   {/each}
 </div>
 {#if $weatherEffects}
-  <WeatherLayer scale={Math.max(1, Math.round($cameraTileSize / WEATHER_TILE))} />
+  <WorldWeather />
 {/if}
 
 <style>

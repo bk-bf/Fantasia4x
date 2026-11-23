@@ -76,9 +76,9 @@ function fogTile(L = SHEETS.fog[0]) {
   });
 }
 
-function snowTile() {
-  return paint(SHEETS.snowTile, SHEETS.snowTile, (x = 0, y = 0) => {
-    const h = hash(x >> 1, y >> 1, 12);
+function snowTile(L = SHEETS.snow) {
+  return paint(L.size, L.size, (x = 0, y = 0) => {
+    const h = hash(x >> 1, y >> 1, L.seed);
     if (h > 0.992) return [246, 248, 252, 235];
     return h > 0.986 && !(x & 1) && !(y & 1) ? [226, 232, 244, 200] : null;
   });
