@@ -1,22 +1,30 @@
+/** @typedef {{ gaps: number[], paused: boolean[] }} FrameGaps */
+/** @typedef {typeof window & { __f4xGaps: number[], __f4xPaused: boolean[], __f4xRaf: number }} GapWindow */
+
 export function startFrameGaps() {
+  const w = /** @type {GapWindow} */ (window);
   const paused = () => (document.querySelector('button.ctrl-btn')?.className ?? '').includes('is-paused');
-  window.__f4xGaps = [];
-  window.__f4xPaused = [];
+  w.__f4xGaps = [];
+  w.__f4xPaused = [];
   let last = performance.now();
+  /** @param {number} t */
   const f = (t) => {
-    window.__f4xGaps.push(t - last);
-    window.__f4xPaused.push(paused());
+    w.__f4xGaps.push(t - last);
+    w.__f4xPaused.push(paused());
     last = t;
-    window.__f4xRaf = requestAnimationFrame(f);
+    w.__f4xRaf = requestAnimationFrame(f);
   };
-  window.__f4xRaf = requestAnimationFrame(f);
+  w.__f4xRaf = requestAnimationFrame(f);
 }
 
+/** @returns {FrameGaps} */
 export function stopFrameGaps() {
-  cancelAnimationFrame(window.__f4xRaf);
-  return { gaps: window.__f4xGaps.slice(1), paused: window.__f4xPaused.slice(1) };
+  const w = /** @type {GapWindow} */ (window);
+  cancelAnimationFrame(w.__f4xRaf);
+  return { gaps: w.__f4xGaps.slice(1), paused: w.__f4xPaused.slice(1) };
 }
 
+/** @param {FrameGaps} recorded */
 export function summarizeGaps({ gaps, paused }) {
   const sorted = [...gaps].sort((a, b) => b - a);
   const pausedMs = gaps.reduce((s, g, i) => s + (paused[i] ? g : 0), 0);
