@@ -105,7 +105,9 @@
 <style>
   .slots {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(4, 108px);
+    grid-auto-rows: 107px;
     gap: 4px;
+    padding: 2px 2px 0;
   }
 </style>

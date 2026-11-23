@@ -24,7 +24,7 @@
 <style>
   .gear {
     display: grid;
-    grid-template-columns: 1.7fr 1fr 0.9fr;
+    grid-template-columns: max-content 1fr 0.9fr;
     grid-template-rows: 290px;
     gap: 6px;
   }
