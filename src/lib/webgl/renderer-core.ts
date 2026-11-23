@@ -26,7 +26,14 @@ import { resolveSpriteLights } from './painted/spriteLights.js';
 import { PaintedVignette } from './painted/vignette.js';
 import { PaintedShadowCast, SHADOW_DEPTH, SHADOW_SHADE } from './painted/shadowCast.js';
 import { GroundRings, type GroundRing, type RingInk } from './groundRings.js';
-import { drawnAt, drawnBounds, type DrawnFrame, type Quad } from './drawnSprites.js';
+import {
+  drawnAt,
+  drawnBounds,
+  drawnFigure,
+  type DrawnFigure,
+  type DrawnFrame,
+  type Quad
+} from './drawnSprites.js';
 import { WindClock, type Heading } from './painted/wind.js';
 import { FallingLeaves } from './painted/leaves.js';
 
@@ -244,6 +251,20 @@ export class WebGLRendererCore {
     const tile = this.spriteGrid(layer)?.getTile(x, y);
     if (!tile || (!tile.painted && (!tile.char || tile.char === ' '))) return null;
     return drawnBounds(tile, this.drawnFrame());
+  }
+
+  drawnFigure(layer: SpriteLayer, x: number, y: number): DrawnFigure | null {
+    const tile = this.spriteGrid(layer)?.getTile(x, y);
+    if (!tile || (!tile.painted && (!tile.char || tile.char === ' '))) return null;
+    return drawnFigure(tile, this.drawnFrame());
+  }
+
+  atlasCell(q: Quad): Uint8ClampedArray | null {
+    return this.painted?.cell(q[0], q[1], q[2] - q[0], q[3] - q[1]) ?? null;
+  }
+
+  gradeWeights(): Rgb {
+    return gradeForHour(this.ambientLight, this.ambientBase, MAP_WEATHER[this.mapWeather]).weights;
   }
 
   setViewTileOffset(x: number, y: number): void {

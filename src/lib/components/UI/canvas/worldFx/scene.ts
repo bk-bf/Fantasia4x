@@ -1,0 +1,234 @@
+import type { Mob, Pawn, PawnOrder } from '$lib/game/core/types';
+import type { WebGLRenderer } from '$lib/webgl/renderer.js';
+import { conditionPriority } from '$lib/game/core/rules/body/conditions';
+import { needsRecovery } from '$lib/game/systems/pawn/pawnHelpers';
+import { PROGRESS_BAR_STATES } from '$lib/components/UI/canvas/selectionCard';
+import { HONEY } from '$lib/pixelArt/fx/glyphs';
+import { RAMP } from '$lib/pixelArt/fx/spr';
+import type { Ramp } from '$lib/pixelArt/palette';
+import type { Box, Pt } from '$lib/pixelArt/fx/effects';
+import { ART_TILE, figureAt, type Figure } from './figure';
+
+export type MarkKind = 'sleep' | 'rest' | 'reel' | 'coin' | 'winded';
+
+export interface Bar {
+  x: number;
+  y: number;
+  v: number;
+  ramp: Ramp;
+  pegs: boolean;
+}
+
+export interface Mark {
+  kind: MarkKind;
+  x: number;
+  y: number;
+}
+
+export interface Route {
+  from: Pt;
+  stops: Pt[];
+  col: Ramp;
+  attack: boolean;
+  boxes: Box[];
+}
+
+export interface Scene {
+  bars: Bar[];
+  marks: Mark[];
+  routes: Route[];
+}
+
+export interface FxWorld {
+  pawns: readonly Pawn[];
+  mobs: readonly Mob[];
+  pawnPos: ReadonlyMap<string, { x: number; y: number }>;
+  mobPos: ReadonlyMap<string, { x: number; y: number }>;
+  renderer: WebGLRenderer | null;
+  hidden: (x: number, y: number) => boolean;
+  mobsDrawn: boolean;
+  view: Box;
+}
+
+const PRIO = () => ({
+  collapse: conditionPriority('collapse'),
+  sleeping: conditionPriority('sleeping'),
+  winded: conditionPriority('winded')
+});
+
+function stateMark(
+  collapsed: boolean,
+  sleeping: boolean,
+  resting: boolean,
+  winded: boolean,
+  p: ReturnType<typeof PRIO>
+): MarkKind | null {
+  let kind: MarkKind | null = null;
+  let prio = -1;
+  if (collapsed && p.collapse > prio) [kind, prio] = ['reel', p.collapse];
+  if (sleeping && p.sleeping > prio) [kind, prio] = [resting ? 'rest' : 'sleep', p.sleeping];
+  if (winded && p.winded > prio) kind = 'winded';
+  return kind;
+}
+
+const HEAD_IN = 9;
+
+function placeMark(kind: MarkKind, f: Figure): Mark {
+  const head = f.box[2] - HEAD_IN;
+  if (kind === 'sleep')
+    return f.lying ? { kind, x: head, y: f.y - 26 } : { kind, x: f.x + 14, y: f.head - 2 };
+  if (kind === 'rest') return { kind, x: f.x + 2, y: f.lying ? f.y - 40 : f.head - 8 };
+  if (kind === 'reel')
+    return f.lying ? { kind, x: head, y: f.y - 30 } : { kind, x: f.x, y: f.head - 6 };
+  if (kind === 'coin') return { kind, x: f.x, y: f.head - 8 };
+  return { kind, x: f.x, y: f.head };
+}
+
+function addBars(
+  s: Scene,
+  f: Figure,
+  work: number | null,
+  health: number | null,
+  ramp: Ramp,
+  mark: MarkKind | null
+): void {
+  if (f.lying) {
+    const side = mark === 'reel' ? -14 : 0;
+    if (health !== null)
+      s.bars.push({ x: f.x + side, y: f.y - (side ? 30 : 32), v: health, ramp, pegs: false });
+    if (work !== null)
+      s.bars.push({ x: f.x + side, y: f.y - (side ? 36 : 38), v: work, ramp: HONEY, pegs: true });
+    return;
+  }
+  let y = f.head - 4;
+  if (work !== null) {
+    s.bars.push({ x: f.x, y, v: work, ramp: HONEY, pegs: true });
+    y -= 6;
+  }
+  if (health !== null) s.bars.push({ x: f.x, y, v: health, ramp, pegs: false });
+}
+
+const inView = (v: Box, x: number, y: number) =>
+  x >= v[0] - 1 && y >= v[1] - 1 && x <= v[2] + 1 && y <= v[3] + 2;
+
+const ground = (x: number, y: number): Pt => [
+  Math.round((x + 0.5) * ART_TILE),
+  (y + 1) * ART_TILE - 4
+];
+
+function orderStop(w: FxWorld, o: PawnOrder, boxes: Box[]): Pt | null {
+  if (o.type === 'attack' || o.type === 'rescue' || o.type === 'tend') {
+    const id = o.type === 'attack' ? o.targetId : o.type === 'rescue' ? o.victimId : o.patientId;
+    const mob = o.type === 'attack' && o.targetType === 'mob';
+    const e = mob ? w.mobs.find((m) => m.id === id) : w.pawns.find((p) => p.id === id);
+    const rp = mob ? w.mobPos.get(id) : w.pawnPos.get(id);
+    if (!e || !rp) return null;
+    const f = figureAt(w.renderer, Math.round(rp.x), Math.round(rp.y), rp.x, rp.y);
+    if (o.type !== 'attack') return [f.x, f.y - 4];
+    boxes.push([f.box[0] - 3, f.box[1] - 3, f.box[2] + 3, f.box[3] + 3]);
+    return [f.x + 6, f.y - 4];
+  }
+  return 'x' in o ? ground(o.x, o.y) : null;
+}
+
+function addRoute(s: Scene, w: FxWorld, p: Pawn, f: Figure): void {
+  const orders = [p.draftTarget!, ...(p.manualQueue ?? [])];
+  const attack = orders[orders.length - 1].type === 'attack';
+  const boxes: Box[] = [];
+  const stops = orders.map((o) => orderStop(w, o, boxes)).filter((q): q is Pt => q !== null);
+  if (stops.length === 0) return;
+  const lead = orders[0].type === 'attack';
+  s.routes.push({
+    from: [f.x, f.y - (lead ? 4 : 2)],
+    stops,
+    col: lead ? RAMP.vermilion : HONEY,
+    attack,
+    boxes
+  });
+}
+
+export interface SceneOn {
+  marks: boolean;
+  work: boolean;
+  health: boolean;
+  draft: boolean;
+}
+
+function pawnWork(p: Pawn): number | null {
+  if (
+    p.currentState != null &&
+    PROGRESS_BAR_STATES.has(p.currentState) &&
+    p.activeJob &&
+    (p.activeJob.progress ?? 0) >= 0
+  )
+    return Math.max(0, Math.min(1, p.activeJob.progress ?? 0));
+  if (p.draftTarget?.type === 'tend' && (p.tendProgress ?? -1) >= 0)
+    return Math.max(0, Math.min(1, p.tendProgress ?? 0));
+  return null;
+}
+
+function pawnMark(p: Pawn, prio: ReturnType<typeof PRIO>): MarkKind | null {
+  const sleeping = p.currentState === 'Sleeping';
+  return stateMark(
+    p.currentState === 'Collapsed',
+    sleeping,
+    sleeping && needsRecovery(p as never),
+    (p.transientConditions ?? []).includes('winded'),
+    prio
+  );
+}
+
+function mobMark(m: Mob, prio: ReturnType<typeof PRIO>): MarkKind | null {
+  if (m.partyRole === 'trader') return 'coin';
+  return stateMark(
+    m.state === 'Collapsed',
+    m.state === 'Sleeping',
+    false,
+    (m.transientConditions ?? []).includes('winded'),
+    prio
+  );
+}
+
+export function collectScene(w: FxWorld, on: SceneOn): Scene {
+  const s: Scene = { bars: [], marks: [], routes: [] };
+  if (!on.marks && !on.work && !on.health && !on.draft) return s;
+  const prio = PRIO();
+  for (const p of w.pawns) {
+    if (!p.position || p.carriedBy) continue;
+    const drafted = on.draft && p.drafted && p.draftTarget;
+    const mark = on.marks ? pawnMark(p, prio) : null;
+    const working = on.work ? pawnWork(p) : null;
+    const hp =
+      on.health && p.isAlive !== false && (p.state.health ?? 100) < 100
+        ? Math.max(0, (p.state.health ?? 100) / 100)
+        : null;
+    if (!mark && working === null && hp === null && !drafted) continue;
+    const rp = w.pawnPos.get(p.id) ?? p.position;
+    const cx = Math.round(rp.x);
+    const cy = Math.round(rp.y);
+    if (!inView(w.view, cx, cy) || w.hidden(cx, cy)) continue;
+    const f = figureAt(w.renderer, cx, cy, rp.x, rp.y);
+    if (mark) s.marks.push(placeMark(mark, f));
+    addBars(s, f, working, hp, RAMP.leaf, mark);
+    if (drafted) addRoute(s, w, p, f);
+  }
+  if (!w.mobsDrawn || (!on.marks && !on.work && !on.health)) return s;
+  for (const m of w.mobs) {
+    if (m.state === 'Corpse') continue;
+    const mark = on.marks ? mobMark(m, prio) : null;
+    const eat = on.work && (m.eatProgress ?? 0) > 0 ? Math.min(1, m.eatProgress ?? 0) : null;
+    const hp =
+      on.health && m.health < m.maxHealth
+        ? Math.max(0, m.maxHealth > 0 ? m.health / m.maxHealth : 1)
+        : null;
+    if (!mark && eat === null && hp === null) continue;
+    const rp = w.mobPos.get(m.id) ?? { x: m.x, y: m.y };
+    const cx = Math.round(rp.x);
+    const cy = Math.round(rp.y);
+    if (!inView(w.view, cx, cy) || w.hidden(cx, cy)) continue;
+    const f = figureAt(w.renderer, cx, cy, rp.x, rp.y);
+    if (mark) s.marks.push(placeMark(mark, f));
+    addBars(s, f, eat, hp, RAMP.blood, mark);
+  }
+  return s;
+}

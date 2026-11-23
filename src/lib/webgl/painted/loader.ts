@@ -27,6 +27,7 @@ export interface LoadedPaintedTileset {
   light: WebGLTexture;
   top: LoadedPieceTop | null;
   texels: () => AtlasTexels | null;
+  cell: (x: number, y: number, w: number, h: number) => Uint8ClampedArray | null;
 }
 
 function loadImage(url: string): Promise<HTMLImageElement> {
@@ -54,6 +55,18 @@ function readTexels(image: HTMLImageElement): () => AtlasTexels | null {
     const data = ctx?.getImageData(0, 0, canvas.width, canvas.height).data;
     texels = data ? atlasTexels(data, canvas.width, canvas.height) : null;
     return texels;
+  };
+}
+
+function readCell(image: HTMLImageElement) {
+  return (x: number, y: number, w: number, h: number): Uint8ClampedArray | null => {
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    if (!ctx) return null;
+    ctx.drawImage(image, x, y, w, h, 0, 0, w, h);
+    return ctx.getImageData(0, 0, w, h).data;
   };
 }
 
@@ -201,7 +214,14 @@ export async function loadPaintedTileset(
       : null;
     const light = loaded.light ? uploadAtlas(gl, loaded.light) : unlitTexture(gl);
     setPaintedTileset(loaded.tileset);
-    return { tileset: loaded.tileset, texture, light, top, texels: readTexels(loaded.image) };
+    return {
+      tileset: loaded.tileset,
+      texture,
+      light,
+      top,
+      texels: readTexels(loaded.image),
+      cell: readCell(loaded.image)
+    };
   } catch (err) {
     console.warn('[painted tiles] off, drawing the glyph tiles instead:', err);
     return null;

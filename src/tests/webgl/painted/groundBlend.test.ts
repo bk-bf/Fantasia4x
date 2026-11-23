@@ -61,7 +61,8 @@ describe('the blend pass tables', () => {
       texture: {} as WebGLTexture,
       light: {} as WebGLTexture,
       top: null,
-      texels: () => null
+      texels: () => null,
+      cell: () => null
     });
     const k = paintedGroundKind('grass');
     const cell = tileset.lookup.get('subterrain')!.get('grass')![0];
