@@ -90,7 +90,6 @@ const PIXEL_FOOD = (() => {
     layer(15, 0, FISH.tail, 'fill'), layer(5, -2, FISH.dorsal, 'fill'), layer(7, 8, ['mdd'], 'fill'),
     on(0, 0, spindle(FISH.body)), on(2, 3, ['W'], 'mark'), on(4, 2, ['d', 'd', 'd', 'd', 'd']), on(0, 4, ['.'])];
   const fish = (scales, fins) => () => draw({ body: scales, fill: fins || scales, mark: 'black' }, ...fishLayers());
-  const plated = (dish, x, y, layers) => [...plate(dish), ...shift(layers, x, y)];
   const servedFish = (scales, sauce) => () => draw({ body: scales, fill: scales, mark: 'black', trim: 'plaster' },
     ...plate(26), ...(sauce ? [on(4, 2, GOODS.flatDisc(18, 5), 'mark')] : []), ...shift(fishLayers(), 3, -3).map(l => Object.assign({}, l, { part: l.part === 'mark' ? 'mark' : l.part })));
 
@@ -131,8 +130,6 @@ const PIXEL_FOOD = (() => {
   const STRIP = [' lllllllllmm  ', 'llmmmmmmmmmmd ', 'mmmmmmmmmmmdd ', ' mddddddddddd ', '   d    d     '];
   const jerky = (meat, tie) => () => draw({ body: meat, trim: 'cord' },
     layer(4, 0, STRIP), layer(0, 4, STRIP), layer(3, 8, STRIP), ...(tie ? [on(8, 0, ['y', 'y', 'y', 'y', 'y', 'y', 'y', 'y', 'y', 'y', 'y', 'x'], 'trim')] : []));
-  const SLICE = ['    zzzzzz    ', '  zzyllllmyy  ', ' zyllllmmmmmy ', 'zyllllmmmmmmmy', 'zylllmmmmmmmdy', 'zyllmmmmmmmddy', ' yymmmmmmmddyx', ' xyyyddddddyyx', '  xxyyyyyyyxx ', '    xxxxxxx   '];
-  const slice = () => draw({ body: 'dun', trim: 'croc' }, layer(0, 0, SLICE));
   const HAM = ['   zy    ', '  zyyx   ', '   yx    '];
   const ham = (flesh, rind) => () => draw({ body: rind || flesh, trim: 'bone', mark: 'cord' },
     layer(9, 0, HAM, 'trim'), layer(8, 2, ellipsoid(3, 3.6, 30)), layer(0, 5, ellipsoid(7, 8, 30)),
@@ -186,13 +183,33 @@ const PIXEL_FOOD = (() => {
     layer(11, 1, ellipsoid(3.4, 3)), layer(7, 5, ellipsoid(3.4, 3)), layer(3, 9, ellipsoid(3.4, 3)));
   const ROOT = a => ellipsoid(4.5, 3, a);
   const roots = () => draw({ body: 'hide', trim: 'clay' }, ...plate(24), layer(3, -3, ROOT(-20)), layer(12, -3, ROOT(15)), layer(7, 0, ROOT(0)));
-  const roast = () => draw({ body: 'roast', trim: 'bone' }, ...plated(24, 2, -10, [layer(0, 9, BONE, 'trim'), layer(5, 0, ellipsoid(7, 5.6, -40))]).map((l, i) => i < 2 ? Object.assign({}, l, { part: 'trim', rows: l.rows }) : l));
-  const feast = () => draw({ body: 'wood', fill: 'roast', trim: 'bone', mark: 'ruby' },
-    layer(0, 4, disc(28, 9)), layer(2, 5, GOODS.flatDisc(24, 7).map(r => r.replace(/m/g, 'l'))),
-    layer(4, -1, BONE, 'trim'), layer(8, -6, ellipsoid(5.5, 4.4, -40), 'fill'),
-    layer(17, -1, ellipsoid(3.5, 3.4), 'mark'), layer(13, 3, ellipsoid(5, 3), 'fill'));
+  const scored = rows => rows.map((row, y) => y > 1 && y < rows.length - 2 ? [...row].map((g, x) => g !== ' ' && x % 4 === 2 ? 'd' : g).join('') : row);
+  const feast = () => PX.layered(
+    [0, 12, disc(30, 11), 'wood'],
+    [3, 13, GOODS.flatDisc(24, 8).map(r => r.replace(/m/g, 'l')), 'ash'],
+    [15, 4, scored(ellipsoid(7, 5)), 'crust'],
+    [0, 4, [' lm ', 'llmd', ' mmd', '  md'], 'bone'],
+    [2, 6, ellipsoid(7, 6, -20), 'roast'],
+    [3, 8, ['  l  ', ' l l ', '  l  '], 'roast'],
+    [16, 13, ellipsoid(3, 3), 'ruby'],
+    [21, 12, ellipsoid(3, 3), 'ruby'],
+    [20, 11, ['lm', 'md'], 'leaf']
+  );
 
-  const cheeseWheel = rind => () => draw({ body: rind }, ...wheel(16, 6));
+  const smokedCheese = () => PX.layered(
+    [0, 4, lathe(new Array(6).fill(20)), 'amber'],
+    [0, 0, disc(20, 8).map(r => r.replace(/m/g, 'l').replace(/d/g, 'm')), 'amber'],
+    [12, 2, ['  ll ', ' llll', 'lllll', 'mmmmm', 'mmmmm', 'mmmmd', 'mmmdd', 'mmdd '], 'cheese']);
+  const crocTail = () => PX.layered(
+    [0, 1, ellipsoid(10, 6.5), 'croc'],
+    [1, 0, ['  l l l l l l l  ', ' lmlmlmlmlmlmlmd '], 'croc'],
+    [12, 2, ellipsoid(4.5, 5.5).map(r => r.replace(/d/g, 'm')), 'tallow']);
+  const roastJoint = () => PX.layered(
+    [0, 9, disc(28, 9), 'wood'],
+    [0, 4, [' lm ', 'llmd', ' mmd'], 'bone'],
+    [2, 1, ellipsoid(10, 7.5), 'roast'],
+    [15, 3, ellipsoid(4.2, 6), 'ham'],
+    [17, 6, ['lm', 'mm', 'mm', 'md'], 'ham']);
   const WEDGE = [
     '             zy  ',
     '          llzzy  ',
@@ -217,7 +234,39 @@ const PIXEL_FOOD = (() => {
   const STEW_BITS = [[4, 1], [9, 0, 'mark'], [12, 1]];
   const RICH = [[3, 1], [7, 0, 'mark'], [10, 1], [6, 2, 'mark'], [13, 0]];
 
+  const FLOUR_SACK = [
+    '   llllllllmmmmmmd   ',
+    '  lllllllmmmmmmmmmd  ',
+    '   ddddddddddddddd   ',
+    '    lllllmmmmmmmd    ',
+    '   llllllmmmmmmmmd   ',
+    '  llllllmmmmmmmmmdd  ',
+    ' lllllllmmmmmmmmmddd ',
+    ' llllllmmmmmmmmmmddd ',
+    'llllllmmmmmmmmmmmdddd',
+    'lllllmmmmmmmmmmmmdddd',
+    'lllllmmmmmmmmmmmmdddd',
+    'llllmmmmmmmmmmmmddddd',
+    'llllmmmmmmmmmmmmddddd',
+    ' lllmmmmmmmmmmmdddd  ',
+    '  dddddddddddddddd   '
+  ];
+  const flour = () => PX.layered(
+    [2, 0, ellipsoid(8, 3.5), 'milk'],
+    [0, 5, FLOUR_SACK, 'linen'],
+    [6, 11, ['  y  ', ' yyy ', 'y y y', '  y  ', '  y  '], 'linen', 'linen', 'straw'],
+    [20, 15, [' lm', 'lmd'], 'milk']
+  );
+  const KERNEL = [' lm ', 'lmmd', ' dd '];
+  const SPROUT = ['z', 'y'];
+  const MALT_HEAP = [[9, 0], [7, 2], [13, 2], [3, 4], [9, 4], [15, 4], [2, 6], [7, 6], [12, 6], [17, 6], [0, 8], [4, 8], [9, 8], [13, 8], [18, 8], [3, 10], [8, 10], [12, 10], [17, 10]];
+  const malt = () => draw({ body: 'crust', trim: 'tallow' },
+    ...heap(KERNEL, MALT_HEAP),
+    ...MALT_HEAP.filter((_, i) => i % 2 === 0).map(([x, y]) => on(x + 3, y - 1, SPROUT, 'trim')));
+
   return [
+    { id: 'flour', draw: flour },
+    { id: 'malt', draw: malt },
     { id: 'wild_berries', draw: wildBerries },
     { id: 'grapes', draw: grapes },
     { id: 'apple', draw: apple },
@@ -247,7 +296,7 @@ const PIXEL_FOOD = (() => {
     { id: 'elk_meat', draw: steak('flesh', 'tallow', [chopBone()]) },
     { id: 'aurochs_meat', draw: steak('blood', 'tallow', [layer(-9, 6, TOMAHAWK, 'mark', { behind: true })]) },
     { id: 'boar_meat', draw: steak('ham', 'tallow') },
-    { id: 'crocodile_meat', draw: slice },
+    { id: 'crocodile_meat', draw: crocTail },
     { id: 'salted_meat', draw: steak('ham', 'tallow', [on(6, 3, SALT, 'mark'), on(12, 5, SALT, 'mark')]) },
     { id: 'seared_steak', draw: steak('roast', 'ash', [on(6, 3, GRILL), on(10, 3, GRILL)]) },
     { id: 'rabbit_meat', draw: haunch('flesh', 6) },
@@ -270,11 +319,11 @@ const PIXEL_FOOD = (() => {
     { id: 'smoked_sausage', draw: sausages('smoked') },
     { id: 'fresh_sausage', draw: sausages('ham') },
     { id: 'hard_cheese', draw: wedge },
-    { id: 'smoked_cheese', draw: cheeseWheel('topaz') },
-    { id: 'salt_pork', draw: crockOf('tallow', [on(3, 0, ['lm', 'md'], 'trim'), on(7, 1, ['lm', 'md'], 'trim')]) },
-    { id: 'pickled_vegetables', draw: crockOf('pickle', [on(5, 0, ['lm', 'md'], 'trim')].map(l => Object.assign(l, { part: 'fill' }))) },
+    { id: 'smoked_cheese', draw: smokedCheese },
+    { id: 'salt_pork', draw: () => draw({ body: 'wood', fill: 'brine', trim: 'salami', mark: 'iron' }, ...GOODS.bands(GOODS.open(14, [14, 16, 16, 16, 16, 16, 16, 14], 1), [1, 6]), on(3, 0, ['lmm', 'mdd'], 'trim'), on(8, 1, ['lm', 'md'], 'trim')) },
+    { id: 'pickled_vegetables', draw: () => draw({ body: 'stone', fill: 'pickle', trim: 'cabbage', mark: 'poppy' }, ...shift(deepPot(12), 0, 2), layer(2, 0, ['  lll ', ' llmmd', 'lmmd  '], 'trim'), layer(9, 1, ['lm', 'md'], 'mark')) },
     { id: 'potted_meat', draw: covered },
-    { id: 'confit_meat', draw: crockOf('tallow', [layer(7, -3, ['zy', 'yx', 'yx', 'yx'], 'mark')]) },
+    { id: 'confit_meat', draw: crockOf('tallow', [layer(7, -3, ['ZY', 'YX', 'YX', 'YX'], 'mark')], 'sage') },
     { id: 'preserved_fruit', draw: preserved },
     { id: 'marching_loaf', draw: loaf('roast') },
     { id: 'bread', draw: loaf() },
@@ -292,7 +341,7 @@ const PIXEL_FOOD = (() => {
     { id: 'pottage', draw: stew(16, 'pea', [[4, 1, 'mark'], [10, 1, 'mark']]) },
     { id: 'cold_milk_soup', draw: stew(16, 'milk', []) },
     { id: 'braised_game', draw: lidded },
-    { id: 'roast_joint', draw: roast },
+    { id: 'roast_joint', draw: roastJoint },
     { id: 'baked_roots', draw: roots },
     { id: 'feast_platter', draw: feast },
     { id: 'rotten_food', draw: rotten },

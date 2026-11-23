@@ -27,6 +27,7 @@ const PIXEL_SHIELDS = (() => {
 
   const PLANKS = 'lllldlmmmdmmmmdmmmdodddd';
   const PLANK_ROUND = disc(24, (dx, dy, x) => PLANKS[x]);
+  const CHEVRON = mark(2, 6, ['        ll        ', '       llmm       ', '      llmmmm      ', '     llmm mmd     ', '    llmm   mmd    ', '   llmm     mmd   ', '  llmm       mmd  ', ' llmm         mmd ', 'llmm           mmd', 'lmm             md'], 'red');
   const HAND_HOLE = mark(10, 9, ['oooo', 'oooo', 'lmmd', 'mddd', 'oooo', 'oooo'], 'wood');
   const BATTENS = mark(4, 5, ['d   d    d   d', ...times(12, ''), 'd   d    d   d'], 'wood');
 
@@ -92,7 +93,7 @@ const PIXEL_SHIELDS = (() => {
     { id: 'plank_round_shield', draw: () => dress(PLANK_ROUND, { body: 'ash' }, HAND_HOLE, BATTENS) },
     { id: 'iron_buckler', draw: () => dress(BUCKLER, { body: 'iron', trim: 'iron' }, BUCKLER_RIVETS) },
     { id: 'iron_boss_shield', draw: () => dress(BOSSED_KITE, { body: 'leather', trim: 'iron' }) },
-    { id: 'steel_heater_shield', draw: () => dress(HEATER, { body: 'steel', trim: 'iron' }) },
+    { id: 'steel_heater_shield', draw: () => dress(HEATER, { body: 'steel', trim: 'iron' }, CHEVRON) },
     { id: 'rune_graven_kite', draw: () => dress(GRAVEN_KITE, { body: 'runed', trim: 'gold', strap: 'glow' }) },
     { id: 'orc_iron_slab', draw: () => dress(SLAB, { body: 'black', trim: 'iron' }) }
   ];

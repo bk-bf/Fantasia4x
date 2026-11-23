@@ -54,30 +54,46 @@ const PIXEL_BLADES = (() => {
   const runeNeedleRapier = () => sword([POMMEL.jewel, 'gold', 'sapphire'], [bowed(6, 'MD', 5), 'gold', 'wool'], [swept(4, 5), 'gold'], [runeNeedle(19), 'runed', 'glow']);
 
   const ferrule = part(-1, ['l', 'm', 'd']);
+  const past = (t, from) => Math.max(0, (t - from) / (1 - from));
+  function hewer(n, root, belly, o) {
+    const opts = Object.assign({ bend: 3, spine: 1, teeth: 0, tooth: ' ', lines: [] }, o);
+    const back = t => 1 + Math.round(opts.bend * t * t);
+    const width = t => Math.max(1, Math.round((root + (belly - root) * Math.min(1, t / .6)) * (1 - past(t, .74) ** 1.4)));
+    const line = (b, i, hi) => opts.lines.find(([offset, from, to]) => b === hi - offset && i >= from && i < n - to);
+    const cell = (b, i) => {
+      const t = i / (n - 1), hi = back(t), lo = hi - width(t) + 1, mark = line(b, i, hi);
+      if (b < lo || b > hi) return ' ';
+      if (b === lo && opts.teeth && i % opts.teeth === 0 && i < n - 3) return opts.tooth;
+      if (mark) return mark[3][i % mark[3].length];
+      return b <= lo + 1 ? 'l' : b > hi - opts.spine ? 'd' : 'm';
+    };
+    const top = 1 - belly, bottom = 1 + opts.bend;
+    return part(top, PARTS.span(top, bottom).map(b => Array.from({ length: n }, (_, i) => cell(b, i)).join('')));
+  }
+  const BUTCHER = (n, belly) => hewer(n, belly - 2, belly, { spine: 2, bend: 2 });
+  const FLARED = (n, belly) => hewer(n, belly - 4, belly, { bend: 2 });
+  const FALCHION = (n, belly) => hewer(n, belly - 3, belly, { bend: 3, lines: [[2, 1, 6, 'd']] });
+  const TOOTHED = (n, belly) => hewer(n, belly - 3, belly, { bend: 3, teeth: 2, lines: [[2, 2, 5, 'M ']] });
+  const JAW = (n, belly) => hewer(n, belly - 3, belly, { bend: 2, teeth: 2, tooth: 'M', spine: 2, lines: [[2, 2, 6, 'l  ']] });
+  const ROLLED = (n, depth) => chopper(n, depth, () => 0, () => n, [[1, 0, n, 'D'], [0, 0, n, 'L'], [-1, 0, n, 'M']]);
+  const FANGED = (n, belly) => hewer(n, belly - 3, belly, { bend: 3, teeth: 3, tooth: 'M', lines: [[2, 2, 6, 'L ']] });
+  const HACKED = (n, belly) => hewer(n, belly - 2, belly, { spine: 2, bend: 2, teeth: 5, lines: [[3, 3, 7, 'm  d ']] });
   const bevel = (k, depth) => k >= depth - 2 ? 'l' : k <= 1 ? 'd' : 'm';
   const chopper = (n, depth, from, to, extras) => profile([
     ...Array.from({ length: depth }, (_, k) => [1 - k, from(k), to(k), bevel(k, depth)]),
     ...(extras || [])
   ]);
-  const clip = (k, n, teeth) => n - Math.max(0, teeth - k);
-  const BUTCHER = (n, depth) => chopper(n, depth, () => 0, k => k === depth - 1 ? n - 1 : n, [[-3, n - 4, n - 2, '.'], [-4, n - 4, n - 2, '.']]);
-  const FLARED = (n, depth) => chopper(n, depth, k => Math.max(0, k - 4), k => k === depth - 1 ? n - 1 : n);
-  const FALCHION = (n, depth, extras) => chopper(n, depth, k => Math.max(0, k - 3), k => clip(k, n, 3), extras);
-  const TOOTHED = (n, depth) => FALCHION(n, depth, [[2 - depth, 3, n, 'l.'], [4 - depth, 1, n - 1, 'mmM']]);
-  const JAW = (n, depth) => chopper(n, depth, k => Math.max(0, 2 * (k - depth + 4)), k => n - Math.max(0, 2 * (k - depth + 4)), [[-depth, 3, n - 3, 'L  '], [1 - depth, 3, n - 3, 'M']]);
-  const ROLLED = (n, depth) => chopper(n, depth, () => 0, () => n, [[1, 0, n, 'D'], [0, 0, n, 'L'], [-1, 0, n, 'M']]);
-  const FANGED = (n, depth) => chopper(n, depth, k => Math.max(0, k - 5), k => clip(k, n, 2), [[3 - depth, 2, n - 1, 'MM '], [4 - depth, 2, n - 1, ' D ']]);
 
-  const bronzeCleaver = () => knife([binding(6), 'wood'], [ferrule, 'bronze'], [FLARED(11, 11), 'bronze']);
-  const ironCleaver = () => knife([binding(6), 'wood'], [ferrule, 'iron'], [BUTCHER(11, 11), 'iron']);
-  const steelCleaver = () => sword([POMMEL.dot, 'steel'], [grip(5), 'leather'], [crossbar(2), 'steel'], [FALCHION(13, 10), 'steel']);
-  const runeToothedCleaver = () => sword([POMMEL.dot, 'runed'], [grip(5), 'black'], [crossbar(2), 'runed'], [TOOTHED(13, 10), 'runed', 'glow']);
-  const gnollBoneCleaver = () => knife([binding(6), 'hide'], [ferrule, 'bone'], [JAW(13, 10), 'bone', 'flint']);
+  const bronzeCleaver = () => knife([binding(6), 'wood'], [ferrule, 'bronze'], [FLARED(12, 9), 'bronze']);
+  const ironCleaver = () => knife([binding(6), 'wood'], [ferrule, 'iron'], [BUTCHER(12, 9), 'iron']);
+  const steelCleaver = () => sword([POMMEL.dot, 'steel'], [grip(5), 'leather'], [crossbar(2), 'steel'], [FALCHION(14, 8), 'steel']);
+  const runeToothedCleaver = () => sword([POMMEL.dot, 'runed'], [grip(5), 'black'], [crossbar(2), 'runed'], [TOOTHED(14, 8), 'runed', 'glow']);
+  const gnollBoneCleaver = () => knife([binding(6), 'hide'], [ferrule, 'bone'], [JAW(14, 8), 'bone', 'flint']);
   const flenser = () => knife([binding(8), 'leather'], [ferrule, 'steel'], [ROLLED(14, 12), 'iron', 'steel']);
-  const bronzeGreatcleaver = () => knife([haft(9), 'wood'], [ferrule, 'bronze'], [FLARED(13, 13), 'bronze']);
-  const ironGreatcleaver = () => knife([haft(9), 'wood'], [ferrule, 'iron'], [BUTCHER(13, 12), 'iron']);
-  const steelGreatcleaver = () => sword([POMMEL.block, 'steel'], [grip(7), 'leather'], [crossbar(3), 'steel'], [FALCHION(15, 13), 'steel']);
-  const runeFangedGreatcleaver = () => sword([POMMEL.jewel, 'gold', 'ruby'], [grip(7), 'black'], [crossbar(3), 'gold'], [FANGED(15, 13), 'runed', 'glow']);
+  const bronzeGreatcleaver = () => knife([haft(9), 'wood'], [ferrule, 'bronze'], [FLARED(15, 11), 'bronze']);
+  const ironGreatcleaver = () => knife([haft(9), 'wood'], [ferrule, 'iron'], [BUTCHER(15, 11), 'iron']);
+  const steelGreatcleaver = () => sword([POMMEL.block, 'steel'], [grip(7), 'leather'], [crossbar(3), 'steel'], [FALCHION(17, 10), 'steel']);
+  const runeFangedGreatcleaver = () => sword([POMMEL.jewel, 'gold', 'ruby'], [grip(7), 'black'], [crossbar(3), 'gold'], [FANGED(17, 10), 'runed', 'glow']);
 
   const ironGreatsword = () => sword([POMMEL.block, 'iron'], [grip(7), 'leather'], [crossbar(6), 'iron'], [BLADE.broad(18), 'iron']);
   const bronzeGreatLeaf = () => sword([POMMEL.wheel, 'bronze'], [grip(6, 'ml'), 'bronze'], [quillons(2), 'bronze'], [greatLeaf(19), 'bronze']);
@@ -90,7 +106,7 @@ const PIXEL_BLADES = (() => {
   const greatFangDirk = () => knife([binding(5), 'leather'], [part(0, ['d']), 'bone'], [curved(13, 2.2, 4), 'bone']);
   const runeSlottedStiletto = () => sword([POMMEL.dot, 'runed'], [grip(4), 'black'], [quillons(2), 'runed'], [slotted(13), 'runed', 'glow']);
 
-  const orcCleaver = () => knife([binding(6), 'leather'], [crossbar(1), 'black'], [BLADE.slab(18), 'black']);
+  const orcCleaver = () => knife([binding(6), 'leather'], [crossbar(1), 'black'], [HACKED(19, 8), 'black']);
 
   return [
     { id: 'copper_shortsword', draw: copperShortsword },

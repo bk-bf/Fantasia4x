@@ -9,21 +9,22 @@ const PIXEL_REMEDIES = (() => {
   const pouch = (body, tie) => () => draw({ body, trim: tie }, layer(0, 0, POUCH));
   const bundle = (leaf, tie) => () => draw({ body: leaf, trim: tie }, layer(0, 0, BUNDLE));
   const dressing = (cloth, extra, wear) => () => draw(Object.assign({ body: cloth }, wear), ...roll(), ...(extra || []));
-  const salve = (metal, fill) => () => draw({ body: metal, fill }, ...tin());
-  const KIT = [
-    '                 Z',
-    '               ZY ',
-    '      yyyy    ZY  ',
-    '   lllllllllll ZY ',
-    ' llmmmmmmmmmmmmY  ',
-    'llmmmmmmmmmmmmmmd ',
-    'lmmmmmmmmmmmmmmmd ',
-    'lmmmyyyyyyyyymmmdd',
-    'lmmmmmmmmmmmmmmmdd',
-    'lmmmmmmmmmmmmmmddd',
-    ' mmmmmmmmmmmmmmdd ',
-    '  ddddddddddddddd '];
-  const surgeonsKit = () => draw({ body: 'leather', trim: 'cord', mark: 'steel' }, layer(0, 0, KIT));
+  const STRIP = ['llllllllllllllllllmd', 'lmmmmmmmmmmmmmmmmmmd', 'lmmmmmmmmmmmmmmmmmmd', 'dddddddddddddddddddd'];
+  const honeySalve = () => PX.layered(
+    [0, 6, STRIP, 'linen'], [14, 3, [' lmd', 'lmmd', 'lmmd', 'lmmd', 'lmdd', ' dd '], 'linen'],
+    [2, 5, [' lllmmm  ', 'llmmmmmmd', ' mmmmddd '], 'honey'],
+    [8, 1, ['   lm', ' llmd', 'lmmd ', 'md   '], 'kale']);
+  const EMBER_BLOOM = [' l  l ', 'llmlmm', ' lmmd ', 'lmMMmd', ' mdmd ', ' d  d '];
+  const emberBalm = () => draw({ body: 'iron', fill: 'tallow', mark: 'red', trim: 'citrine' }, ...shift(tin(), 0, 4),
+    layer(5, 0, EMBER_BLOOM.map(r => r.replace(/M/g, 'y')), 'mark'), layer(7, 3, ['yy'], 'trim', { keep: true }));
+  const SURGEON_ROLL = ['llllllllllllllllllll', ...new Array(8).fill('lmmmmmdmmmmmdmmmmmmm'), 'dddddddddddddddddddd'];
+  const surgeonsRoll = () => PX.layered(
+    [0, 8, SURGEON_ROLL, 'leather'],
+    [3, 2, ['  lm', ' l  ', 'l   ', 'l   ', 'l   ', 'l   ', 'l   ', 'l   ', 'l   '], 'string'],
+    [8, 1, ['l', 'm', 'm', 'm', 'm', 'm', 'm', 'm', 'd'], 'steel'],
+    [11, 4, [' lll ', 'lmmmd', 'lmmmd', 'lmmmd', ' ddd '], 'linen'],
+    [17, 7, [' lmd ', ...new Array(10).fill('lmmdd'), ' mdd '], 'leather'],
+    [0, 13, ['llllllllllllllllll', 'lmmmmmmmmmmmmmmmmm', 'lmmmmmmmmmmmmmmmmm', 'dddddddddddddddddd'], 'leather']);
 
   const reagentJar = fill => () => draw({ body: 'glass', fill, trim: 'wood' }, ...jar({ level: 2 }));
   const HEART = [
@@ -75,7 +76,45 @@ const PIXEL_REMEDIES = (() => {
   const SHARD = ['     Z    ', '    lY    ', '    lmY   ', '   llmY   ', '   llmdY  ', '  llmmdY  ', '  lmmmddY ', ' llmmmddY ', ' lmmmmddd ', 'llmmmmdddY', 'lmmmmddd  ', ' lmmmddY  ', '  lmmdd   ', '   mdd    ', '    Y     '];
   const voidshard = () => draw({ body: 'black', mark: 'amethyst' }, layer(0, 0, SHARD));
 
+  const WOUNDWORT = [
+    '       LM       ',
+    '      LMMD      ',
+    '      MLMD      ',
+    '     LMMMMD     ',
+    '      MDDM      ',
+    '    LMLMMLMD    ',
+    '     MDdmDD     ',
+    '    LMMdmMMD    ',
+    '     DD dm DD   ',
+    '       dm       ',
+    ' llm   dm   lmd ',
+    'lllmm  dm  lmmdd',
+    ' lllmmmdmmmmmdd ',
+    '  lllmmdmmmddd  ',
+    '    ddddmddd    ',
+    '       dm       ',
+    '  lm   dm   lmd ',
+    ' llmm  dm  lmmd ',
+    'lllmmmmdmmmmmddd',
+    ' llmmmddmddmmdd ',
+    '   dddddmdddd   ',
+    '       dm       ',
+    '       dm       ',
+    '      xyyx      ',
+    '      xyyx      ',
+    '       dm       '
+  ];
+  const woundwort = () => PX.stamp(PX.sketch(), 0, 0, WOUNDWORT, ['kale', 'dye', 'cord']);
+  const TUFTS = [[3, 2], [8, 1], [13, 2], [18, 3], [5, 5], [10, 4], [15, 5], [2, 8], [7, 7], [12, 7], [17, 8], [9, 10], [4, 11], [14, 10]];
+  const sphagnum = () => {
+    const sk = PX.layered([0, 0, ellipsoid(11, 6.5), 'pea'], [2, 11, ['  d d    d  d     ', ' d   d  d    d d  '], 'rose']);
+    for (const [x, y] of TUFTS) PX.stamp(sk, x, y, [' l ', 'lml', ' d '], ['sage']);
+    return sk;
+  };
+
   return [
+    { id: 'woundwort', draw: woundwort },
+    { id: 'sphagnum_moss', draw: sphagnum },
     { id: 'bonemeal_draught', draw: labelled('bone') },
     { id: 'emberbloom_draught', draw: labelled('flame') },
     { id: 'fever_draught', draw: labelled('sage') },
@@ -87,9 +126,9 @@ const PIXEL_REMEDIES = (() => {
     { id: 'chewed_poultice', draw: bundle('poultice', 'cord') },
     { id: 'burn_dressing', draw: dressing('cheese') },
     { id: 'surgeons_dressing', draw: dressing('linen', [layer(4, 2, ['WYYYYYYYYYYX'], 'mark')], { mark: 'steel' }) },
-    { id: 'honey_salve', draw: salve('bronze', 'honey') },
-    { id: 'emberbloom_balm', draw: salve('iron', 'flame') },
-    { id: 'field_surgeons_kit', draw: surgeonsKit },
+    { id: 'honey_salve', draw: honeySalve },
+    { id: 'emberbloom_balm', draw: emberBalm },
+    { id: 'field_surgeons_kit', draw: surgeonsRoll },
     { id: 'alpha_ichor', draw: reagentJar('blood') },
     { id: 'owlbear_bile', draw: reagentJar('resin') },
     { id: 'caustic_bile', draw: reagentJar('caustic') },

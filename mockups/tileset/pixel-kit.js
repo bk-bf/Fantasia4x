@@ -246,5 +246,24 @@ const PX = (() => {
 
   const icon = sk => fit(outline(sk));
 
-  return { SIZE, MATERIALS, sketch, part, tile, run, join, strip, stack, profile, patch, mirror, lay, assemble, stamp, mirrored, transposed, diagonal, outline, bounds, fit, icon };
+  function edge(sk, fresh) {
+    for (const cell of fresh.values()) {
+      if (cell.mat.thread) continue;
+      for (const [dx, dy] of NEAR) {
+        const x = cell.x + dx, y = cell.y + dy, k = key(x, y);
+        if (!fresh.has(k) && sk.has(k)) sk.set(k, { x, y, mat: cell.mat, rgb: cell.mat.tones[0] });
+      }
+    }
+  }
+  function layered(...layers) {
+    const sk = sketch();
+    for (const [x, y, rows, ...inks] of layers) {
+      const fresh = stamp(sketch(), x, y, rows, inks);
+      edge(sk, fresh);
+      for (const [k, cell] of fresh) sk.set(k, cell);
+    }
+    return sk;
+  }
+
+  return { SIZE, MATERIALS, sketch, part, tile, run, join, strip, stack, profile, patch, mirror, lay, assemble, stamp, mirrored, transposed, diagonal, outline, bounds, fit, icon, layered };
 })();
