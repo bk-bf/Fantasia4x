@@ -11,7 +11,7 @@ function ik2(ax, ay, bx, by, l1, l2, bend) {
   return [ax + dx * a / d - dy / d * h * bend, ay + dy * a / d + dx / d * h * bend, ax + dx, ay + dy];
 }
 
-function limb(s, pts, w, col, rim) {
+function rigLimb(s, pts, w, col, rim) {
   const px = new Map(), half = w >> 1;
   const dab = (x, y, vert, t) => {
     for (let k = 0; k < w; k++) {

@@ -15,24 +15,24 @@ const ptOf = (it, name) => { const s = it.fr.s, p = (s.pts && s.pts[name]) || [s
 
 function castGround(pen, items, T, lvl) {
   if (lvl < 3) return;
-  for (const it of items) if (it.S.A.rig !== 'plain') FX.steps(pen, footfalls(it.S, T, 9), lvl, it.S.A.rig);
+  for (const it of items) if (it.S.A.rig !== 'plain') MOTION_FX.steps(pen, footfalls(it.S, T, 9), lvl, it.S.A.rig);
 }
 function castFx(pen, items, T, lvl, env) {
   items.forEach((it, idx) => {
     const { S, st, fr } = it, A = S.A;
     for (const e of st.events) {
       const dir = e.flip ? -1 : 1;
-      if (e.kind === 'arrow') { FX.arrow(pen, { ...e, stick: lvl > 2 && e.tag !== 'kill' }, dir); continue; }
-      if (lvl > 2) FX.burst(pen, e.kind, e.x, e.y, e.age, idx * 131 + e.n * 17, dir);
+      if (e.kind === 'arrow') { MOTION_FX.arrow(pen, { ...e, stick: lvl > 2 && e.tag !== 'kill' }, dir); continue; }
+      if (lvl > 2) MOTION_FX.burst(pen, e.kind, e.x, e.y, e.age, idx * 131 + e.n * 17, dir);
     }
     if (!fr) return;
-    if (A.o && A.o.tool === 'torch' && lvl > 1 && fr.s.pts.glow) { const g = ptOf(it, 'glow'); FX.flame(pen, g[0], g[1], T, A.seed); }
+    if (A.o && A.o.tool === 'torch' && lvl > 1 && fr.s.pts.glow) { const g = ptOf(it, 'glow'); MOTION_FX.flame(pen, g[0], g[1], T, A.seed); }
     if (lvl < 3) return;
     const head = ptOf(it, 'head'), lie = st.anim === 'sleep' || st.anim === 'down' || st.anim === 'rest';
-    if (st.anim === 'sleep') FX.zzz(pen, it.x + 6, it.y - 12, T + A.seed * 3);
+    if (st.anim === 'sleep') MOTION_FX.zzz(pen, it.x + 6, it.y - 12, T + A.seed * 3);
     const em = st.tag && GLYPHS.has(st.tag) ? st.tag : EMOTE[st.anim];
-    if (em && (em !== 'alert' || st.since < 1.6)) FX.bubble(pen, head[0], head[1] - 2, em, T + A.seed);
-    if (env && env.cold && !lie) { const m = ptOf(it, 'mouth'); FX.breath(pen, m[0], m[1], st.face === 's' ? (st.flip ? -1 : 1) : 0, T, A.seed); }
+    if (em && (em !== 'alert' || st.since < 1.6)) MOTION_FX.bubble(pen, head[0], head[1] - 2, em, T + A.seed);
+    if (env && env.cold && !lie) { const m = ptOf(it, 'mouth'); MOTION_FX.breath(pen, m[0], m[1], st.face === 's' ? (st.flip ? -1 : 1) : 0, T, A.seed); }
   });
 }
 const GLYPHS = new Set(['talk', 'alert', 'z', 'tear', 'heart', 'food', 'note']);

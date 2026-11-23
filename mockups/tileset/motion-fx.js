@@ -1,5 +1,5 @@
 'use strict';
-const FX = (() => {
+const MOTION_FX = (() => {
   const BURST = {
     chips: { n: 8, cols: [P.plank[5], P.plank[4], P.wood[4], P.plank[3]], vx: [-55, 12], vy: 9, vz: [35, 95], g: 300, life: 1.15, at: [23, -15] },
     stone: { n: 10, cols: [P.rock[6], P.rock[5], P.rock[4], P.rock[3]], vx: [-70, 10], vy: 10, vz: [40, 110], g: 330, life: 1.1, at: [23, -19], puff: P.rock[5] },

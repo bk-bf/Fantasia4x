@@ -88,8 +88,8 @@ function rigQuad(kind, p) {
     s.ball(x + legw / 2, ry, legw * .95, 5, far ? -3 : 3, lr, bo);
     const [jx, jy, ex, ey] = ik2(rx, ry, rx + ft[0], gy - ft[1], l1, l2, front ? -1 : 1);
     const col = w => (t, k) => lr[clamp(n - 2 + (k === 0 ? 1 : k >= w - 2 ? -1 : 0), 0, n)];
-    limb(s, [[rx, ry + 2], [jx, jy]], legw, col(legw));
-    limb(s, [[jx, jy], [ex, ey]], legw - thin, col(legw - thin));
+    rigLimb(s, [[rx, ry + 2], [jx, jy]], legw, col(legw));
+    rigLimb(s, [[jx, jy], [ex, ey]], legw - thin, col(legw - thin));
     const fx = rnd(ex) - (legw >> 1), fy = rnd(ey), hoof = o.hoof ? (far ? dark(o.hoof, .8) : o.hoof) : null;
     for (let i = 0; i < legw + 1; i++) { s.set(fx + i, fy, hoof || lr[1]); if (o.hoof) s.set(fx + i, fy - 1, hoof); else if (i === legw) s.set(fx + i, fy - 1, lr[n - 2]); }
     pts.feet.push([fx + legw / 2, fy, ft[1] < .6]);

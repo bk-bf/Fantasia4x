@@ -134,8 +134,8 @@ const SHEET = (() => {
     list.sort((a, b) => (a.top ? 1e6 : a.y) - (b.top ? 1e6 : b.y));
     for (const o of list) shadow(buf, W, H, o.s, o.x + ox, o.y + oy);
     for (const o of list) blit(buf, W, H, o.s, o.x + ox - o.s.ax, o.y + oy - o.s.ay);
-    for (const b of bursts) FX.burst(pen, ...b);
-    if (cell.smoke && lvl > 2) FX.smoke(pen, cell.smoke[0], cell.smoke[1], T);
+    for (const b of bursts) MOTION_FX.burst(pen, ...b);
+    if (cell.smoke && lvl > 2) MOTION_FX.smoke(pen, cell.smoke[0], cell.smoke[1], T);
     castFx(pen, items, T, lvl, { cold: cell.cold });
     return items.length + cell.P.length;
   }

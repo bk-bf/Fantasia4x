@@ -126,7 +126,7 @@ function rigPawn(o, p) {
   const legS = (ft, far) => {
     const w = Math.max(3, lw - 1), tot = f.legs - 1, l1 = Math.ceil(tot / 2), l2 = tot - l1, rx = cx - 2 + (far ? 3 : 0);
     const [kx, ky, ex, ey] = ik2(rx, legTop, rx + ft[0], base - ft[1], l1, l2, -1);
-    limb(s, [[rx, legTop], [kx, ky], [ex, ey]], w, (t, k) => {
+    rigLimb(s, [[rx, legTop], [kx, ky], [ex, ey]], w, (t, k) => {
       const u = k / (w - 1), boot = t >= tot - 2.5, sole = t >= tot - .5, c = pick3(boot ? P.leather : pants, far ? .3 + u * .7 : u * .7, (boot ? (sole ? -2 : t < tot - 1.5 ? 1 : 0) : 0) - (far ? 1 : 0));
       return far ? dark(c, .82) : c;
     }, far ? null : shade);
@@ -166,11 +166,11 @@ function rigPawn(o, p) {
     const tot = armLen - 1, l1 = Math.ceil(tot / 2), l2 = tot - l1, t = tgt || [0, tot];
     if (!side && Math.abs(t[0]) < 2.5 && t[1] > 4) {
       const len = Math.hypot(t[0], t[1]), col = armCol(lit, far);
-      limb(s, [[ax, ay], [ax + t[0], ay + t[1]]], aw, (d, k) => col(d * tot / len, k), rim ? shade : null);
+      rigLimb(s, [[ax, ay], [ax + t[0], ay + t[1]]], aw, (d, k) => col(d * tot / len, k), rim ? shade : null);
       return [rnd(ax + t[0]), rnd(ay + t[1])];
     }
     const [ex, ey, hx, hy] = ik2(ax, ay, ax + t[0], ay + t[1], l1, l2, bend);
-    limb(s, [[ax, ay], [ex, ey], [hx, hy]], aw, armCol(lit, far), rim ? shade : null);
+    rigLimb(s, [[ax, ay], [ex, ey], [hx, hy]], aw, armCol(lit, far), rim ? shade : null);
     return [rnd(hx), rnd(hy)];
   };
   const pad = (x0, lit) => { if (!o.armor) return; s.rect(x0, tTop - br, aw + 1, 4, o.armor[lit ? 4 : 2]); s.rect(x0, tTop - br, aw + 1, 1, o.armor[lit ? o.armor.length - 1 : 4]); s.rect(x0, tTop + 3 - br, aw + 1, 1, o.armor[1]); };
