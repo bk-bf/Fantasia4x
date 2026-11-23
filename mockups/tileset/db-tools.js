@@ -230,11 +230,11 @@
     return sel(s);
   };
   const handaxe = () => {
-    const s = IC(), a = [18, 51], b = [48, 13], F = frame(a, b), n = 16, up = [], dn = [];
-    const w = t => t < .3 ? 12.5 * Math.sqrt(1 - Math.pow((.3 - t) / .34, 2)) : 12.5 * Math.pow(1 - Math.pow((t - .3) / .7, 1.5), .9);
-    for (let i = 0; i <= n; i++) { const t = i / n; up.push([t * F.len, -w(t) * .95, t < .22 ? 'back' : 'edge']); dn.push([t * F.len, w(t), t < .2 ? 'back' : 'edge']); }
-    const pts = [...up, ...dn.reverse().map((p, i, l) => [p[0], p[1], (l[i + 1] || up[0])[2]])];
-    part(s, t => poly(t, rough(F.pts(pts), 1.3, 91, ['back']), flake(MAT.flint, F, { sd: 91, cortex: 4.5, pitch: 5.6 })));
+    const s = IC(), a = [15, 54], b = [45, 17], F = frame(a, b, .78, 1.12);
+    part(s, t => hafts.branch(t, a, F(10.5, 0), { seed: 27, bend: 2.6 }));
+    part(s, t => stoneHead(t, F, [[2.8, 4.4, 'back'], [.2, 5.4, 'back'], [-2.8, 4.6, 'back'], [-3.6, -2.4, 'bot'], [-4.4, -7.6, 'edge'], [-6.8, -13.4, 'edge'], [-6.2, -16.6, 'edge'], [-2.4, -18.4, 'edge'], [2.6, -18.2, 'edge'], [6.4, -16, 'edge'], [6.2, -12.2, 'edge'], [4.2, -7, 'edge'], [3.4, -2.4, 'top']], 27, { cortex: 2.6, amp: 1.7, pitch: 4, ridge: () => 0 }));
+    part(s, t => bindings(t, F, 3.6, C.cord, [[-7.4, -4.4]]), { line: 0 });
+    part(s, t => { strand(t, F(4.2, -3.2), F(-4.4, 3.4), C.cord, 1); strand(t, F(4.2, 3.4), F(-4.4, -3.2), C.cord, 1); }, { line: 0 });
     return sel(s);
   };
   const saw = () => {
