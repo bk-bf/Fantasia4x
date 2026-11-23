@@ -19,7 +19,7 @@ export type WindowId =
   | 'repair'
   | 'stores';
 
-export type ModalId = 'trade' | 'event' | 'settings';
+export type ModalId = 'trade' | 'event' | 'settings' | 'saves' | 'newgame' | 'gameover' | 'credits';
 
 interface UIState {
   windows: WindowId[];
