@@ -356,6 +356,12 @@ in `check.yml` keeps that one comment on each pull request, written by
 `tools/work-pins/perf-notes.mjs`. A change the notes show as real cost gets a follow-up issue, or
 goes back to its branch.
 
+**A validated perf fix reaches `test/look-overhaul` the moment it reaches `dev`.** Perf comes
+before UI, and the UI work is played and judged on `test/look-overhaul`, so a perf fix missing there
+is a slowdown the owner plays and reports. In the same task that lands the fix on `dev`, merge
+`origin/dev` into `test/look-overhaul`, run the related tests on the merge, push it, and tell him
+the commit to switch to.
+
 **Work done in a conversation needs no issue and no pull request; it is pushed straight to
 `dev`.** Branch from `dev` in a worktree that does not track it, `git worktree add --no-track -b
 <type>/<title> <path> origin/dev`, because a branch that tracks `origin/dev` lets an editor's Sync
