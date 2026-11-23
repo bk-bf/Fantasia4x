@@ -4147,7 +4147,7 @@
         });
         if (qty > 1) {
           entries.push({
-            label: `Pick up X ${name}…`,
+            label: `Pick up ${name}…`,
             run: () => {
               qtyPrompt = {
                 pawnId,

@@ -148,12 +148,10 @@ export function tileFacts(i: TileFactsInput): TileFacts {
   if (i.zoneType && ZONE_NAMES[i.zoneType])
     rows.push({ label: 'Zone', value: ZONE_NAMES[i.zoneType] });
   return {
-    title:
-      i.floorName ??
-      SUBTERRAINS[tile.subType]?.displayName ??
-      BIOMES[tile.terrainType]?.displayName ??
-      '',
-    desc: [BIOMES[tile.terrainType]?.displayName, res?.displayName].filter(Boolean).join(' · '),
+    title: i.floorName ?? BIOMES[tile.terrainType]?.displayName ?? '',
+    desc: [i.floorName ? null : SUBTERRAINS[tile.subType]?.displayName, res?.displayName]
+      .filter(Boolean)
+      .join(' · '),
     rows
   };
 }

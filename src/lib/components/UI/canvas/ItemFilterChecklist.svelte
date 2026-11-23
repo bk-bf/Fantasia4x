@@ -7,7 +7,7 @@
   } from '$lib/components/util/itemCategoryTree.js';
   import { filterClipboard } from '$lib/stores/filterClipboard.js';
   import SpriteIcon from '$lib/components/UI/widget/SpriteIcon.svelte';
-  import CheckBox from '$lib/components/UI/widget/CheckBox.svelte';
+  import ItemFilterRow from './ItemFilterRow.svelte';
   import PixelGlyph from '$lib/components/UI/widget/PixelGlyph.svelte';
   import ItemFilterToolbar from './ItemFilterToolbar.svelte';
 
@@ -29,9 +29,11 @@
     stock?: Record<string, number>;
   } = $props();
 
+  const FLAT_UP_TO = 12;
   let query = $state('');
   let collapsed = $state<Record<string, boolean>>({});
 
+  const flat = $derived(items.length <= FLAT_UP_TO);
   const tree = $derived(buildCategoryTree(items, { query }));
 
   const counts = $derived.by(() => {
@@ -96,48 +98,63 @@
   }
 </script>
 
+{#snippet itemRow(item: Item)}
+  <ItemFilterRow indent={!flat} checked={allowed.has(item.id)} onchange={() => toggleItem(item.id)}
+    >{#if icons}<SpriteIcon item={item.id} px={16} />{/if}<b>{item.name}</b>{#if stock}<em
+        >{stock[item.id] ?? 0}</em
+      >{/if}</ItemFilterRow
+  >
+{/snippet}
+
 {#snippet nodeRow(node: TreeNode, depth: number)}
   {@const id = node.path.join('/')}
   {@const c = counts.get(id) ?? { allowed: 0, total: 0 }}
   {@const allOn = c.total > 0 && c.allowed === c.total}
   <div class="ifc-cat">
-    <div class="ifc-row ifc-cat-hdr">
-      <button
-        type="button"
-        class="ifc-caret"
-        class:open={!collapsed[id]}
-        aria-label={collapsed[id] ? `Open ${node.label}` : `Close ${node.label}`}
-        onclick={() => (collapsed[id] = !collapsed[id])}><PixelGlyph name="right" /></button
-      >
-      <CheckBox checked={allOn} partial={c.allowed > 0 && !allOn} onchange={() => toggleNode(node)}
-        >{node.label}<em>{c.allowed}/{c.total}</em></CheckBox
-      >
-    </div>
+    <ItemFilterRow
+      group
+      checked={allOn}
+      partial={c.allowed > 0 && !allOn}
+      onchange={() => toggleNode(node)}
+    >
+      {#snippet lead()}
+        <button
+          type="button"
+          class="ifc-caret"
+          class:open={!collapsed[id]}
+          aria-label={collapsed[id] ? `Open ${node.label}` : `Close ${node.label}`}
+          onclick={() => (collapsed[id] = !collapsed[id])}><PixelGlyph name="right" /></button
+        >
+      {/snippet}
+      {node.label}<em>{c.allowed}/{c.total}</em>
+    </ItemFilterRow>
     {#if !collapsed[id]}
       {#each node.children as child (child.path.join('/'))}
         {@render nodeRow(child, depth + 1)}
       {/each}
       {#each node.items as item (item.id)}
-        <div class="ifc-row ifc-item-row">
-          <CheckBox checked={allowed.has(item.id)} onchange={() => toggleItem(item.id)}
-            >{#if icons}<SpriteIcon item={item.id} px={16} />{/if}<b>{item.name}</b>{#if stock}<em
-                >{stock[item.id] ?? 0}</em
-              >{/if}</CheckBox
-          >
-        </div>
+        {@render itemRow(item)}
       {/each}
     {/if}
   </div>
 {/snippet}
 
-<div class="ifc" class:fill>
-  <ItemFilterToolbar bind:query {anyExpanded} {toggleCollapseAll} {copyFilter} {pasteFilter} />
+<div class="ifc" class:fill class:flat>
+  {#if !flat}
+    <ItemFilterToolbar bind:query {anyExpanded} {toggleCollapseAll} {copyFilter} {pasteFilter} />
+  {/if}
   <div class="ifc-list" style:max-height={fill ? null : listMaxHeight}>
-    {#each tree as root (root.path.join('/'))}
-      {@render nodeRow(root, 0)}
-    {/each}
-    {#if tree.length === 0}
-      <div class="ifc-empty">Nothing by that name.</div>
+    {#if flat}
+      {#each items as item (item.id)}
+        {@render itemRow(item)}
+      {/each}
+    {:else}
+      {#each tree as root (root.path.join('/'))}
+        {@render nodeRow(root, 0)}
+      {/each}
+      {#if tree.length === 0}
+        <div class="ifc-empty">Nothing by that name.</div>
+      {/if}
     {/if}
   </div>
 </div>
@@ -164,36 +181,6 @@
   }
   .ifc-cat .ifc-cat {
     padding-left: 12px;
-  }
-  .ifc-row {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-  }
-  .ifc-item-row {
-    padding-left: 18px;
-  }
-  .ifc-row > :global(.chk) {
-    flex: 1;
-    min-width: 0;
-  }
-  .ifc-cat-hdr :global(.chk span) {
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: 1.6px;
-  }
-  .ifc-row :global(.chk span b) {
-    flex: 1;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    font-weight: normal;
-  }
-  .ifc-row :global(.chk span em) {
-    margin-left: auto;
-    font-style: normal;
-    color: var(--text-dim);
-    letter-spacing: 0.6px;
   }
   .ifc-caret {
     display: grid;
