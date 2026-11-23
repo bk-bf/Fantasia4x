@@ -42,11 +42,11 @@ export interface FxView {
 const BAR_W = 24;
 const BACKING = 1;
 
-export const LABEL_HIDE_BELOW = 0.75;
+export const HIDE_BELOW_TILE_PX = 21;
 
 export function labelScale(k: number, percent: number): number {
-  const s = (k * percent) / 100;
-  return s < LABEL_HIDE_BELOW ? 0 : Math.max(1, Math.round(s));
+  if (k * ART_TILE < HIDE_BELOW_TILE_PX) return 0;
+  return Math.max(1, Math.round((k * percent) / 100));
 }
 const PRUNE_MS = 500;
 
