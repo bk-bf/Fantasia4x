@@ -158,8 +158,8 @@ export class WebGLRenderer {
     this.core.setVignette(on);
   }
 
-  setSway(on: boolean): void {
-    this.core.setSway(on);
+  setMotion(motion: { sway: boolean; waves: boolean }): void {
+    this.core.setMotion(motion);
   }
 
   setLightVersion(version: number): void {

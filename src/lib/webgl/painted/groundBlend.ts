@@ -7,6 +7,8 @@ import type { LoadedGroundField, LoadedPaintedTileset } from './loader.js';
 import { groundLayer } from './groundLevels.js';
 import { paintedGroundIds } from './tileset.js';
 import { LIGHT_FIELD_UNIT } from './lightPass.js';
+import { DEEP, LAND, SHALLOW, shoreField } from './shoreField.js';
+import { waterBlockShift } from './waves.js';
 
 const PROGRAM = 'groundBlend';
 const MAX_KINDS = 64;
@@ -24,10 +26,13 @@ const DEEP_WATER = 2;
 const FULL = 255;
 const WATER_FRAMES = 16;
 const WATER_FPS = 8;
+const TIDE_BYTES = 4;
+const KIND_TIDE_BYTES = 2;
 
 type LightSampler = (wx: number, wy: number, time: number) => [number, number, number];
 type Bounds = { minX: number; minY: number; maxX: number; maxY: number };
 type Rect = { x: number; y: number; w: number; h: number };
+type Changed = { x: number; y: number; k: number };
 
 export interface GroundBlendFrame {
   projection: Float32Array;
@@ -38,6 +43,7 @@ export interface GroundBlendFrame {
   fieldLit: boolean;
   tone: [number, number];
   waterTime: number;
+  sea?: Float32Array;
   lightSampler?: LightSampler;
   lightTime: number;
   lightVersion: number;
@@ -52,10 +58,12 @@ export function groundKindTable(painted: LoadedPaintedTileset): {
   patch: Float32Array;
   layer: Float32Array;
   tide: Uint8Array;
+  shore: Uint8Array;
 } {
   const patch = new Float32Array(MAX_KINDS * 4);
   const layer = new Float32Array(MAX_KINDS * 4);
   const tide = new Uint8Array(MAX_KINDS * 2);
+  const shore = new Uint8Array(MAX_KINDS);
   tide[1] = FULL;
   const { tileset } = painted;
   const ground = tileset.lookup.get('subterrain');
@@ -81,8 +89,9 @@ export function groundKindTable(painted: LoadedPaintedTileset): {
     const { level, water } = groundLayer(id);
     layer.set([level, water, art?.ramps.x ?? NO_BLOCK, art?.ramps.y ?? NO_BLOCK], k * 4);
     tide.set([water >= DEEP_WATER ? FULL : 0, level > SHORE_LEVEL ? FULL : 0], k * 2);
+    shore[k] = water >= DEEP_WATER ? DEEP : water > 0 ? SHALLOW : LAND;
   });
-  return { patch, layer, tide };
+  return { patch, layer, tide, shore };
 }
 
 export function lightRect(bounds: Bounds, w: number, h: number): Rect {
@@ -103,6 +112,8 @@ export class GroundBlend {
   private readonly field: LoadedGroundField | null;
   private readonly artPerBase: number;
   private readonly tideOf: Uint8Array;
+  private readonly shoreOf: Uint8Array;
+  private waveStyle = 0;
   private readonly lightTex: WebGLTexture;
   private readonly vao: WebGLVertexArrayObject;
   private readonly vbo: WebGLBuffer;
@@ -182,11 +193,15 @@ export class GroundBlend {
       'u_groundField',
       'u_groundFar',
       'u_artPerPx',
-      'u_pieces'
+      'u_pieces',
+      'u_waterStyle',
+      'u_waterBlock',
+      'u_sea[0]'
     ];
     this.at = Object.fromEntries(names.map((n) => [n, gl.getUniformLocation(program, n)]));
-    const { patch, layer, tide } = groundKindTable(painted);
+    const { patch, layer, tide, shore } = groundKindTable(painted);
     this.tideOf = tide;
+    this.shoreOf = shore;
     gl.useProgram(program);
     gl.uniform1i(this.at.u_tide, TIDE_UNIT);
     gl.uniform1i(this.at.u_waterField, WATER_UNIT);
@@ -201,6 +216,10 @@ export class GroundBlend {
     gl.uniform1f(this.at.u_artPerBase, this.artPerBase);
     gl.uniform4fv(this.at.u_patch, patch);
     gl.uniform4fv(this.at.u_layer, layer);
+  }
+
+  setWaterStyle(waves: boolean): void {
+    this.waveStyle = waves ? 1 : 0;
   }
 
   private bindOn(unit: number, tex: WebGLTexture): void {
@@ -250,39 +269,58 @@ export class GroundBlend {
       );
     }
     this.kinds = new Uint8Array(w * h);
-    this.tides = new Uint8Array(w * h * 2);
+    this.tides = new Uint8Array(w * h * TIDE_BYTES);
     for (const t of grid.getAllTiles()) {
       const { x, y } = t.position;
       if (x < 0 || y < 0 || x >= w || y >= h) continue;
       this.kinds[y * w + x] = t.ground ?? 0;
-      this.tides.set(this.tideOfKind(t.ground ?? 0), (y * w + x) * 2);
+      this.tides.set(this.tideOfKind(t.ground ?? 0), (y * w + x) * TIDE_BYTES);
     }
+    this.fillShore();
     gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
     this.bindOn(KIND_UNIT, this.kindTex);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.R8UI, w, h, 0, gl.RED_INTEGER, gl.UNSIGNED_BYTE, this.kinds);
     this.bindOn(TIDE_UNIT, this.tideTex);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RG8, w, h, 0, gl.RG, gl.UNSIGNED_BYTE, this.tides);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, this.tides);
     gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
     gl.activeTexture(gl.TEXTURE0);
   }
 
   private tideOfKind(k: number): Uint8Array {
-    return this.tideOf.subarray(k * 2, k * 2 + 2);
+    return this.tideOf.subarray(k * KIND_TIDE_BYTES, k * KIND_TIDE_BYTES + KIND_TIDE_BYTES);
+  }
+
+  private fillShore(): void {
+    const n = this.w * this.h;
+    const classes = new Uint8Array(n);
+    for (let i = 0; i < n; i++) classes[i] = this.shoreOf[this.kinds[i]];
+    const field = shoreField(classes, this.w, this.h);
+    for (let i = 0; i < n; i++)
+      this.tides.set(field.subarray(i * 2, i * 2 + 2), i * TIDE_BYTES + KIND_TIDE_BYTES);
   }
 
   private updateKindTexels(grid: GameGrid): void {
     const gl = this.gl;
-    const changed: { x: number; y: number; k: number }[] = [];
+    const changed: Changed[] = [];
+    let reshore = false;
     for (const { x, y } of this.dirty) {
       if (x < 0 || y < 0 || x >= this.w || y >= this.h) continue;
       const k = grid.getTile(x, y)?.ground ?? 0;
-      if (this.kinds[y * this.w + x] === k) continue;
+      const was = this.kinds[y * this.w + x];
+      if (was === k) continue;
+      if (this.shoreOf[was] !== this.shoreOf[k]) reshore = true;
       this.kinds[y * this.w + x] = k;
-      this.tides.set(this.tideOfKind(k), (y * this.w + x) * 2);
+      this.tides.set(this.tideOfKind(k), (y * this.w + x) * TIDE_BYTES);
       changed.push({ x, y, k });
     }
     this.dirty = [];
     if (changed.length === 0) return;
+    if (reshore) this.fillShore();
+    const tideAt = (x: number, y: number) =>
+      this.tides.subarray(
+        (y * this.w + x) * TIDE_BYTES,
+        (y * this.w + x) * TIDE_BYTES + TIDE_BYTES
+      );
     gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
     const layers = [
       {
@@ -290,19 +328,21 @@ export class GroundBlend {
         tex: this.kindTex,
         format: gl.RED_INTEGER,
         all: this.kinds,
-        one: (k: number) => Uint8Array.of(k)
+        whole: false,
+        one: (c: Changed) => Uint8Array.of(c.k)
       },
       {
         unit: TIDE_UNIT,
         tex: this.tideTex,
-        format: gl.RG,
+        format: gl.RGBA,
         all: this.tides,
-        one: (k: number) => this.tideOfKind(k)
+        whole: reshore,
+        one: (c: Changed) => tideAt(c.x, c.y)
       }
     ];
     for (const layer of layers) {
       this.bindOn(layer.unit, layer.tex);
-      if (changed.length > TEXEL_UPDATE_LIMIT)
+      if (layer.whole || changed.length > TEXEL_UPDATE_LIMIT)
         gl.texSubImage2D(
           gl.TEXTURE_2D,
           0,
@@ -315,17 +355,17 @@ export class GroundBlend {
           layer.all
         );
       else
-        for (const { x, y, k } of changed)
+        for (const c of changed)
           gl.texSubImage2D(
             gl.TEXTURE_2D,
             0,
-            x,
-            y,
+            c.x,
+            c.y,
             1,
             1,
             layer.format,
             gl.UNSIGNED_BYTE,
-            layer.one(k)
+            layer.one(c)
           );
     }
     gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
@@ -409,6 +449,9 @@ export class GroundBlend {
     gl.uniform1f(this.at.u_saturation, f.tone[0]);
     gl.uniform1f(this.at.u_brightness, f.tone[1]);
     gl.uniform1f(this.at.u_waterTime, f.waterTime);
+    gl.uniform1i(this.at.u_waterStyle, f.sea ? this.waveStyle : 0);
+    gl.uniform1i(this.at.u_waterBlock, waterBlockShift(this.artPerBase / f.zoom[0]));
+    if (f.sea) gl.uniform4fv(this.at['u_sea[0]'], f.sea);
     gl.uniform2i(this.at.u_mapSize, this.w, this.h);
     this.bindOn(ATLAS_UNIT, this.atlas);
     this.bindOn(KIND_UNIT, this.kindTex);

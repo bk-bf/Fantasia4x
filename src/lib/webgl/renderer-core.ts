@@ -35,6 +35,7 @@ import {
   type Quad
 } from './drawnSprites.js';
 import { WindClock, type Heading } from './painted/wind.js';
+import { WaveClock, waterStill } from './painted/waves.js';
 import { FallingLeaves } from './painted/leaves.js';
 
 const LIGHT_ATLAS_UNIT = 7;
@@ -107,6 +108,7 @@ export class WebGLRendererCore {
   private groundRings: GroundRings | null = null;
   private leaves: FallingLeaves | null = null;
   private readonly wind = new WindClock();
+  private readonly waves = new WaveClock();
   private season: string | undefined = undefined;
   private rings: { list: readonly GroundRing[]; ink: RingInk } | null = null;
   private pointLights: readonly PointLight[] = [];
@@ -129,6 +131,7 @@ export class WebGLRendererCore {
   private dynamicLight = false;
   private vignetteOn = true;
   private swayOn = true;
+  private wavesOn = true;
 
   private lightVersion = 0;
 
@@ -299,8 +302,10 @@ export class WebGLRendererCore {
     this.vignetteOn = on;
   }
 
-  setSway(on: boolean): void {
-    this.swayOn = on;
+  setMotion(motion: { sway: boolean; waves: boolean }): void {
+    this.swayOn = motion.sway;
+    this.wavesOn = motion.waves;
+    this.groundBlend?.setWaterStyle(motion.waves);
   }
 
   setLightVersion(version: number): void {
@@ -420,6 +425,7 @@ export class WebGLRendererCore {
       if (PAINTED_TILES) this.painted = await loadPaintedTileset(gl);
       if (GROUND_BLEND && this.painted)
         this.groundBlend = GroundBlend.create(gl, this.shaderManager, this.painted);
+      this.groundBlend?.setWaterStyle(this.wavesOn);
       this.gridRenderer.skipBlendedGround = this.groundBlend !== null;
       if (this.gameGrid) this.groundBlend?.setGrid(this.gameGrid);
       if (PAINTED_LIGHT && this.painted)
@@ -740,6 +746,7 @@ export class WebGLRendererCore {
       fieldLit: this.lightPass !== null,
       tone,
       waterTime: waterTime(performance.now()),
+      sea: this.wavesOn ? this.seaFrame() : undefined,
       lightSampler: this.lightSampler ?? undefined,
       lightTime,
       lightVersion: this.lightVersion,
@@ -748,6 +755,13 @@ export class WebGLRendererCore {
     if (!drawn) return;
     this.stats.drawCalls++;
     this.stats.vertexCount += 6;
+  }
+
+  private seaFrame(): Float32Array {
+    const { strength, dir } = this.wind;
+    this.waves.tick(performance.now(), strength, dir, waterStill(this.tileWidth));
+    const artPerPx = (this.painted?.tileset.tile ?? BASE_TILE_PX) / this.tileWidth;
+    return this.waves.uniforms(strength, dir, artPerPx);
   }
 
   private bindPaintedAtlas(gl: WebGL2RenderingContext, painted: LoadedPaintedTileset): void {

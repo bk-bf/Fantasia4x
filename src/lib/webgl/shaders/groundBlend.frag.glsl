@@ -25,6 +25,9 @@ uniform float u_brightness;
 uniform float u_waterTime;
 uniform sampler2D u_tide;
 uniform sampler2D u_waterField;
+uniform int u_waterStyle;
+uniform int u_waterBlock;
+uniform vec4 u_sea[13];
 
 out vec4 fragColor;
 
@@ -82,6 +85,38 @@ const float GRASS_RIM = 0.7;
 const float SOIL_LIP = 0.68;
 const float FAR_ART_PER_PX = 4.0;
 const int FAR_SHIFT = 3;
+
+const int WAVE_STYLE = 1;
+const int SEA_PHASE = 0;
+const int SEA_AMP = 1;
+const int SEA_ROUGH = 2;
+const int SEA_CHOPPY = 4;
+const int SEA_STATE = 6;
+const int SEA_LOOK = 7;
+const int SEA_DRIFT = 8;
+const int SEA_BREAK = 9;
+const int SEA_SHORE = 10;
+const int SEA_WIND = 11;
+const int SEA_SURGE = 12;
+const int NOISE_WRAP = 1023;
+const float TAU = 6.2831853;
+const float LAMBDA[4] = float[4](30.0, 19.0, 12.0, 8.0);
+const float DIST_STEPS = 32.0;
+const float GRAD_STEP = 4.0;
+const vec3 SEA_LIGHT = vec3(-0.4511, -0.5514, 0.7018);
+const vec3 SEA_HALF = vec3(-0.2445, -0.2989, 0.9224);
+const float SHADE_STEPS = 4.5;
+const float SPEC_STEPS = 2.5;
+const float BASE_STEP = 2.2;
+const int BANDS = 6;
+const float BAND_WOBBLE = 0.12;
+const float BAND_DITHER = 0.5;
+const float SWASH = 3.0;
+const float FOAM_HIGH = 0.62;
+const float FOAM_LOW = 0.36;
+const float FOAM_DITHER = 0.24;
+const float GLINT_STEP = 0.5;
+const vec3 WET_SAND[2] = vec3[2](vec3(112.0, 98.0, 74.0) / 255.0, vec3(138.0, 122.0, 92.0) / 255.0);
 
 const float BAYER[16] = float[16](0.0, 8.0, 2.0, 10.0, 12.0, 4.0, 14.0, 6.0, 3.0, 11.0, 1.0, 9.0, 15.0, 7.0, 13.0, 5.0);
 const vec3 DEEP[6] = vec3[6](
@@ -178,6 +213,122 @@ vec3 water(vec2 w, int kind, ivec2 q) {
     return SHALLOWS[rampStep(tone - (int(field.g * 255.0 + 0.5) >= OPEN_CELL ? OPEN_CELL_DROP : 0.0), q)];
 }
 
+float wn(vec2 p, int seed) {
+    vec2 i = floor(p);
+    vec2 f = p - i;
+    f = f * f * (3.0 - 2.0 * f);
+    ivec2 a = ivec2(i) & NOISE_WRAP;
+    ivec2 b = (a + 1) & NOISE_WRAP;
+    float top = mix(hash(a.x, a.y, seed), hash(b.x, a.y, seed), f.x);
+    float bottom = mix(hash(a.x, b.y, seed), hash(b.x, b.y, seed), f.x);
+    return mix(top, bottom, f.y);
+}
+
+vec2 seaDir(int base, int i) {
+    vec4 d = u_sea[base + (i >> 1)];
+    return (i & 1) == 0 ? d.xy : d.zw;
+}
+
+vec3 crest(float ph, float chop, vec2 dk) {
+    float s = max(sin(ph) * 0.5 + 0.5, 1e-4);
+    float v = pow(s, chop);
+    return vec3(v * 2.0 - 1.0, dk * (chop * v / s * cos(ph)));
+}
+
+vec3 waveField(vec2 p) {
+    vec4 state = u_sea[SEA_STATE];
+    float chop = state.x;
+    float choppy = state.y;
+    vec2 warp = vec2(wn(p * 0.013, 41), wn(p * 0.013 + 9.0, 41)) - 0.5;
+    vec2 qR = p + warp * 11.5;
+    vec2 qC = p + warp * 46.0;
+    vec3 h = vec3(0.0);
+    for (int i = 0; i < 4; i++) {
+        float amp = u_sea[SEA_AMP][i];
+        if (amp <= 0.0) continue;
+        float k = TAU / LAMBDA[i];
+        float om = u_sea[SEA_PHASE][i];
+        float lift = amp * (0.55 + 0.9 * wn(p * 0.012 + float(i) * 3.1 - u_sea[SEA_DRIFT].xy, 43));
+        if (choppy < 1.0) {
+            vec2 d = seaDir(SEA_ROUGH, i);
+            float ph = dot(qR, d) * k - om + wn(qR * 0.008 + float(i) * 7.0, 44) * 5.75;
+            h += (1.0 - choppy) * lift * crest(ph, chop, d * k);
+        }
+        if (choppy > 0.0) {
+            vec2 d = seaDir(SEA_CHOPPY, i);
+            float ph = dot(qC, d) * k - om + wn(qC * 0.008 + float(i) * 7.0, 44) * 11.0;
+            h += choppy * lift * crest(ph, chop, d * k);
+        }
+    }
+    return h;
+}
+
+float shoreAt(vec2 art) {
+    return (texture(u_tide, art / u_tileArt / vec2(u_mapSize)).b * 255.0 / DIST_STEPS - 0.5) * u_tileArt;
+}
+
+vec2 warpAt(vec2 p) {
+    vec2 wide = vec2(valueNoise(p * WARP_WIDE_FREQ, 11), valueNoise(p * WARP_WIDE_FREQ, 14));
+    vec2 fine = vec2(valueNoise(p * WARP_FINE_FREQ, 12), valueNoise(p * WARP_FINE_FREQ, 15));
+    return p + (wide - 0.5) * WARP_WIDE_AMP + (fine - 0.5) * WARP_FINE_AMP;
+}
+
+vec3 waveWater(vec2 w, vec2 p, int kind) {
+    int shift = u_waterBlock;
+    ivec2 cell = ivec2(p) >> shift;
+    vec2 s = shift == 0 ? w + 0.5 : warpAt(vec2(cell << shift) + float(1 << shift) * 0.5);
+    float unit = u_sea[SEA_WIND].w;
+    vec2 at = s / u_tileArt / vec2(u_mapSize);
+    vec4 tide = texture(u_tide, at);
+    float distArt = (tide.b * 255.0 / DIST_STEPS - 0.5) * u_tileArt;
+    float dist = distArt / unit;
+    vec2 q = s / unit;
+    vec2 slope = vec2(shoreAt(s + vec2(GRAD_STEP, 0.0)) - distArt, shoreAt(s + vec2(0.0, GRAD_STEP)) - distArt) / GRAD_STEP;
+    float d = dither(cell);
+    float edge = SWASH * (1.0 - u_sea[SEA_SURGE].x) * (0.6 + 0.8 * wn(q * 0.2, 55));
+    if (dist < edge) return WET_SAND[dist > edge - 1.0 ? 0 : 1];
+    float near = dist - edge;
+    vec4 state = u_sea[SEA_STATE];
+    vec4 look = u_sea[SEA_LOOK];
+    float dw = near + wn(q * 0.035, 45) * 7.0 + wn(q * 0.11, 46) * 2.0;
+    float arg = dw * 0.36 + u_sea[SEA_SHORE].x;
+    float sb = max(sin(arg) * 0.5 + 0.5, 1e-4);
+    float sh = pow(sb, 2.5);
+    float shoal = smoothstep(45.0, 8.0, near) * (1.0 + 1.3 * smoothstep(14.0, 3.0, near));
+    float bl = smoothstep(45.0, 12.0, near);
+    vec3 hw = waveField(q);
+    hw.x += (wn(q * 0.3 + u_sea[SEA_SHORE].zw, 47) - 0.5) * look.z;
+    float lift = shoal * state.z * 2.2;
+    vec3 surge = vec3(sh * lift, slope * (1.25 * sh / sb * cos(arg) * 0.36 * lift));
+    vec3 h = mix(hw, surge + hw * 0.3, bl);
+    vec3 n = normalize(vec3(-h.yz * 0.55, 1.0));
+    float shade = clamp(dot(n, SEA_LIGHT) / SEA_LIGHT.z, 0.0, 2.0);
+    float spec = pow(max(dot(n, SEA_HALF), 0.0), 90.0) * look.y;
+    vec4 brkAt = u_sea[SEA_BREAK];
+    float brk = wn(q * 0.5 + brkAt.xy, 48) * 0.6 + wn(q * 1.4 - brkAt.zz, 49) * 0.4;
+    float cap = smoothstep(0.62, 1.0, h.x / max(look.w * 0.6, 0.2))
+        * smoothstep(0.45, 0.72, wn(q * 0.45 + u_sea[SEA_DRIFT].zw, 50)) * state.w * (1.0 - bl * 0.7);
+    vec2 dir = u_sea[SEA_WIND].xy;
+    vec2 qa = vec2(dot(q, dir), dot(q, vec2(-dir.y, dir.x)));
+    float streak = 0.0;
+    if (state.w > 0.4 || kind == RAPIDS)
+        streak = smoothstep(0.55, 0.85, wn(vec2(qa.x * 0.025 - brkAt.w, qa.y * 0.35), 51))
+            * smoothstep(0.3, 0.7, wn(q * 0.06, 52)) * look.x * max(state.w - 0.4, kind == RAPIDS ? 0.6 : 0.0) * 1.6;
+    float run = u_sea[SEA_SHORE].y;
+    float surf = smoothstep(0.55, 1.0, sh) * smoothstep(12.0, 1.5, near) * smoothstep(0.3, 0.6, brk) * state.z * 0.8;
+    surf += smoothstep(run, run * 0.4, near) * smoothstep(0.28, 0.6, brk);
+    surf += smoothstep(0.7, 0.0, abs(near - run * 1.5)) * smoothstep(0.45, 0.75, brk) * 0.5 * state.z;
+    float foam = clamp(cap + streak * 0.5 + surf, 0.0, 1.0) * 0.8 + (d - 0.5) * FOAM_DITHER;
+    if (foam > FOAM_HIGH) return FOAM[shade > 1.0 ? 2 : 1];
+    if (foam > FOAM_LOW) return FOAM[0];
+    float glint = pow(max(dot(n, SEA_HALF), 0.0), 70.0) * smoothstep(0.3, 0.75, wn(q * 0.2 + u_sea[SEA_WIND].z, 53));
+    float depth = tide.a + (wn(q * 0.05, 54) - 0.5) * BAND_WOBBLE;
+    int band = clamp(int(floor(clamp(depth, 0.0, 1.0) * float(BANDS - 1) + 0.5 + (d - 0.5) * BAND_DITHER)), 0, BANDS - 1);
+    float tone = BASE_STEP + (shade - 1.0) * look.x * SHADE_STEPS + spec * SPEC_STEPS + (glint > GLINT_STEP ? 2.0 : 0.0);
+    int tier = rampStep(tone, cell);
+    return mix(SHALLOWS[tier], DEEP[min(tier + 1, 5)], float(band) / float(BANDS - 1));
+}
+
 vec3 darken(vec3 c, float k) {
     return vec3(c.r * k, c.g * k, min(1.0, c.b * (k + 0.1)));
 }
@@ -229,15 +380,14 @@ void main() {
     uint own = kindAt(p);
     if (own == 0u) discard;
 
-    vec2 wide = vec2(valueNoise(p * WARP_WIDE_FREQ, 11), valueNoise(p * WARP_WIDE_FREQ, 14));
-    vec2 fine = vec2(valueNoise(p * WARP_FINE_FREQ, 12), valueNoise(p * WARP_FINE_FREQ, 15));
-    vec2 w = p + (wide - 0.5) * WARP_WIDE_AMP + (fine - 0.5) * WARP_FINE_AMP;
+    vec2 w = warpAt(p);
 
     uint k = kindAt(w);
     if (k == 0u) k = own;
     vec4 layer = u_layer[k];
     vec3 c;
-    if (layer.y > 0.5) c = water(w, int(layer.y + 0.5), ivec2(p));
+    if (layer.y > 0.5)
+        c = u_waterStyle == WAVE_STYLE ? waveWater(w, p, int(layer.y + 0.5)) : water(w, int(layer.y + 0.5), ivec2(p));
     else {
         vec4 patchRect = u_patch[k];
         ivec2 q = ivec2(p);
