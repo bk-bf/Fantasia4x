@@ -58,8 +58,10 @@ const MISS_VERBS = ['swung at', 'lunged at', 'lashed out at', 'struck at', 'thru
 export function bodyPartName(id?: string): string {
   if (!id) return '';
   return id
+    .replace(/_/g, ' ')
     .replace(/([A-Z])/g, ' $1')
     .toLowerCase()
+    .replace(/\s+/g, ' ')
     .trim();
 }
 
