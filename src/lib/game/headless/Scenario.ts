@@ -59,6 +59,7 @@ export interface ScenarioSpec {
   toolTier?: number;
   infiniteFuel?: boolean;
   seedEntities?: boolean;
+  wholeMapStockpile?: boolean;
   workReady?: boolean;
 }
 
@@ -170,7 +171,8 @@ export function buildScenario(spec: ScenarioSpec): GameState {
     gs = applySimCommand(gs, { type, payload });
   };
 
-  cmd('designateRect', { x1: 0, y1: 0, x2: w - 1, y2: h - 1, type: 'stockpile' });
+  if (spec.wholeMapStockpile !== false)
+    cmd('designateRect', { x1: 0, y1: 0, x2: w - 1, y2: h - 1, type: 'stockpile' });
 
   if (spec.researchMaxTier !== undefined) {
     for (const r of researchService.getAllResearch()) {
