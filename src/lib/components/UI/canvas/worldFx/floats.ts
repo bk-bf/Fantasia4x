@@ -330,11 +330,11 @@ function settle(now: number, r: number, blocked: readonly Box[]): void {
     const u = (now - it.start) / 1000;
     let lift = Math.min(0, it.lift + (SETTLE_PX_S * (now - it.last)) / 1000);
     let b = box(it.q, u, r, lift);
-    for (let pass = 0; pass <= done.length; pass++) {
+    const near = done.filter((o) => b[0] < o[2] && o[0] < b[2]);
+    for (let pass = 0; pass <= near.length; pass++) {
       let need = 0;
-      for (const o of done)
-        if (b[0] < o[2] && o[0] < b[2] && b[1] < o[3] + g && o[1] < b[3] + g)
-          need = Math.max(need, b[3] - o[1] + g);
+      for (const o of near)
+        if (b[1] < o[3] + g && o[1] < b[3] + g) need = Math.max(need, b[3] - o[1] + g);
       if (need <= 0) break;
       lift -= need / r;
       b = box(it.q, u, r, lift);
