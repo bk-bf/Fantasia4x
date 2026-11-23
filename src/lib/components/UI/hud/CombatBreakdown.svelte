@@ -11,28 +11,29 @@
   const lore = $derived(entry.result ?? (entry.location ? `at ${entry.location}` : ''));
 
   const attackers = $derived.by(() => {
-    const by = new Map<string, { thrown: number; landed: number }>();
+    const by: Record<string, { thrown: number; landed: number }> = {};
     for (const t of turns) {
-      const a = by.get(t.attackerName) ?? { thrown: 0, landed: 0 };
+      const a = (by[t.attackerName] ??= { thrown: 0, landed: 0 });
       a.thrown++;
       if (t.hit) a.landed++;
-      by.set(t.attackerName, a);
     }
-    return [...by].map(([name, a]) => ({ name, ...a }));
+    return Object.entries(by).map(([name, a]) => ({ name, ...a }));
   });
 
   const wounded = $derived.by(() => {
-    const by = new Map<string, Set<string>>();
+    const by: Record<string, string[]> = {};
+    const mark = (name: string, m: string) => {
+      const list = (by[name] ??= []);
+      if (!list.includes(m)) list.push(m);
+    };
     for (const t of turns) {
       if (!t.hit) continue;
-      const marks = by.get(t.defenderName) ?? new Set<string>();
-      if (t.woundType) marks.add(`${t.woundSeverity ?? ''} ${t.woundType}`.trim());
-      if (t.knockdown) marks.add('knocked down');
-      if (t.bleeding) marks.add('bleeding');
-      if (t.fatal) marks.add('slain');
-      by.set(t.defenderName, marks);
+      if (t.woundType) mark(t.defenderName, `${t.woundSeverity ?? ''} ${t.woundType}`.trim());
+      if (t.knockdown) mark(t.defenderName, 'knocked down');
+      if (t.bleeding) mark(t.defenderName, 'bleeding');
+      if (t.fatal) mark(t.defenderName, 'slain');
     }
-    return [...by].filter(([, m]) => m.size > 0).map(([name, m]) => ({ name, marks: [...m] }));
+    return Object.entries(by).map(([name, marks]) => ({ name, marks }));
   });
 
   const swings = $derived(

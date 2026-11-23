@@ -25,6 +25,8 @@
 <h5>Research</h5>
 <div class="minis">
   <ChromeButton onclick={() => cmd('devUnlockResearch', { all: true })}>Unlock all</ChromeButton>
+</div>
+<div class="minis">
   <DebugField>
     <span class="lab">Tool tier</span>
     <input type="number" min="0" max="6" bind:value={toolTier} aria-label="Tool tier" />
