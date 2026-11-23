@@ -5,6 +5,9 @@ description: Measure Fantasia4x rendering and frame-time performance on the desk
 
 # Benchmarking on the desktop
 
+The order to investigate a perf complaint in, and the traps found so far, are in the
+`perf-investigation` skill; this one holds the commands.
+
 The desktop (`ssh desktop`, CachyOS, Hyprland, AMD RX 5700 XT, 16 threads) is the machine for
 GPU-bound measurements. ubuntuserver has no GPU and the laptop runs the owner's own session.
 Tell the owner before starting if the desktop is off; he turns it on.
