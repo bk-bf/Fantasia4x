@@ -21,6 +21,7 @@ uniform int u_variant;
 uniform vec4 u_grain;
 uniform vec4 u_body;
 uniform vec4 u_weather;
+uniform vec4 u_ice;
 
 out vec4 fragColor;
 
@@ -88,6 +89,15 @@ const vec3 FOAM[3] = vec3[3](
     vec3(169.0, 207.0, 208.0) / 255.0, vec3(207.0, 230.0, 226.0) / 255.0, vec3(238.0, 247.0, 242.0) / 255.0);
 const vec3 GRASS[4] = vec3[4](
     vec3(58.0, 82.0, 40.0) / 255.0, vec3(70.0, 97.0, 46.0) / 255.0, vec3(84.0, 112.0, 52.0) / 255.0, vec3(101.0, 128.0, 60.0) / 255.0);
+
+const vec3 ICE[4] = vec3[4](
+    vec3(111.0, 147.0, 172.0) / 255.0, vec3(148.0, 180.0, 198.0) / 255.0, vec3(188.0, 211.0, 220.0) / 255.0, vec3(221.0, 233.0, 236.0) / 255.0);
+const vec3 SNOW[5] = vec3[5](
+    vec3(124.0, 142.0, 166.0) / 255.0, vec3(164.0, 182.0, 200.0) / 255.0, vec3(200.0, 214.0, 224.0) / 255.0,
+    vec3(230.0, 238.0, 240.0) / 255.0, vec3(248.0, 252.0, 252.0) / 255.0);
+const float ICE_SHOWS = 0.08;
+const float ICE_REACH = 1.3;
+const float ICE_DEPTH = 0.85;
 
 float dither(ivec2 q) {
     return (BAYER[((q.y & 3) << 2) | (q.x & 3)] + 0.5) / 16.0;
@@ -239,6 +249,28 @@ float grainAt(ivec2 art, vec4 shift, float deep, float ruffle) {
         - (int(field.g * 255.0 + 0.5) >= OPEN_CELL ? OPEN_CELL_DROP * (1.0 - deep) : 0.0);
 }
 
+float iceAt(vec2 q, float depth, float near) {
+    float front = u_ice.x * ICE_REACH - depth * ICE_DEPTH + smoothstep(10.0, 0.0, near) * 0.08
+        + (wn(q * 0.06, 91) - 0.5) * 0.22 + (wn(q * 0.25, 92) - 0.5) * 0.06;
+    return front - ICE_SHOWS;
+}
+
+vec3 iceSheet(ivec2 cell, vec2 q, float margin, float depth) {
+    ivec2 at = cell % textureSize(u_waterField, 0);
+    float grain = texelFetch(u_waterField, at, 0).r * 255.0 / TONE_SCALE - TONE_OFFSET;
+    float thick = smoothstep(0.0, 0.35, margin);
+    float tone = 0.6 + thick * 2.0 + (grain - 1.5) * 0.45 - depth * 0.6;
+    float crack = abs(wn(q * 0.09, 93) - 0.5) + (wn(q * 0.4, 94) - 0.5) * 0.04;
+    if (crack < 0.012 && thick > 0.4) tone -= 1.4;
+    if (margin < 0.025) return mix(SHALLOWS[3], ICE[1], step(0.5, dither(cell)));
+    vec3 c = ICE[clamp(int(floor(tone + (dither(cell) - 0.5) * 0.8)), 0, 3)];
+    float drift = wn(q * 0.08 - u_sea[SEA_WIND].xy * u_ice.z * 0.4, 95) + (wn(q * 0.3, 96) - 0.5) * 0.3;
+    float cover = u_ice.y * thick * 0.5;
+    if (drift < cover - 0.08 + (dither(cell) - 0.5) * 0.15)
+        c = SNOW[clamp(int(floor(2.0 + drift * 3.0 + (dither(cell) - 0.5))), 1, 4)];
+    return c;
+}
+
 vec3 waveWater(vec2 w, vec2 p, int kind) {
     int shift = u_waterBlock;
     ivec2 cell = ivec2(p) >> shift;
@@ -251,6 +283,8 @@ vec3 waveWater(vec2 w, vec2 p, int kind) {
     vec2 q = s / unit;
     vec2 slope = vec2(shoreAt(s + vec2(GRAD_STEP, 0.0)) - distArt, shoreAt(s + vec2(0.0, GRAD_STEP)) - distArt) / GRAD_STEP;
     float d = dither(cell);
+    float ice = iceAt(q, tide.a, dist);
+    if (ice > 0.0) return iceSheet(cell << shift, q, ice, tide.a);
     float edge = SWASH * (1.0 - u_sea[SEA_SURGE].x) * (0.6 + 0.8 * wn(q * 0.2, 55));
     if (dist < edge) return WET_SAND[dist > edge - 1.0 ? 0 : 1];
     float near = dist - edge;

@@ -38,6 +38,10 @@
   const WIND_WORDS = [['still air', 0.03], ['light air', 0.15], ['slightly windy', 0.25], ['fairly windy', 0.4], ['extremely windy', 0.9], ['very windy', 0.7], ['windy', 0.5], ['gale', 1]];
   const TOWARD = { n: 's', ne: 'sw', e: 'w', se: 'nw', s: 'n', sw: 'ne', w: 'e', nw: 'se' };
   const WEATHER = HUD.ambient.WEATHER;
+  const ICE_FREEZE_PER_HOUR = 3;
+  const ICE_MELT_PER_HOUR = 4;
+  const ICE_FULL_FREEZE_AT = 8;
+  const HOURS_PER_SEC = 1;
 
   function weatherSea(id) {
     const w = WEATHER[id] ?? WEATHER.clear;
@@ -46,7 +50,7 @@
     const ws = w.ws ?? (word ? word[1] : 0.25);
     const from = (text.match(/\b(n|ne|e|se|s|sw|w|nw)$/) || [])[1];
     const gusty = Math.min(1, 0.25 + ws * 0.6 + (w.rain ?? 0) * 0.3);
-    return { ws, toward: from ? TOWARD[from] : 'e', gusty, rain: w.rain ?? 0 };
+    return { ws, toward: from ? TOWARD[from] : 'e', gusty, rain: w.rain ?? 0, temp: w.temp ?? 8, snow: w.snow ?? 0 };
   }
 
   const HEADINGS = { n: -90, ne: -45, e: 0, se: 45, s: 90, sw: 135, w: 180, nw: -135 };
@@ -284,7 +288,7 @@
     gl.enableVertexAttribArray(loc);
     gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
     const u = {};
-    for (const name of ['u_kinds', 'u_mapSize', 'u_tileArt', 'u_origin', 'u_viewH', 'u_tide', 'u_waterField', 'u_waterBlock', 'u_sea[0]', 'u_variant', 'u_grain', 'u_body', 'u_weather'])
+    for (const name of ['u_kinds', 'u_mapSize', 'u_tileArt', 'u_origin', 'u_viewH', 'u_tide', 'u_waterField', 'u_waterBlock', 'u_sea[0]', 'u_variant', 'u_grain', 'u_body', 'u_weather', 'u_ice'])
       u[name] = gl.getUniformLocation(prog, name);
 
     const classes = lakeClasses();
@@ -328,6 +332,7 @@
       const sea = weatherSea(st.weather);
       windIn.value = String(sea.ws);
       showWind();
+      showIce();
       F4X.write({ wind: undefined });
       ui.set('dir', sea.toward);
       return;
@@ -342,6 +347,26 @@
   const showWind = () => { windOut.textContent = Math.round(windIn.value * 100) + '%'; };
   windIn.addEventListener('input', () => { showWind(); F4X.write({ wind: windIn.value }, { wind: String(weatherSea(state.weather).ws) }); });
   showWind();
+
+  const iceIn = document.getElementById('ice');
+  const iceOut = document.getElementById('iceout');
+  const showIce = () => { iceOut.textContent = `${Math.round(iceIn.value)} · ${weatherSea(state.weather).temp}°`; };
+  iceIn.value = q.get('ice') ?? '0';
+  iceIn.addEventListener('input', showIce);
+  showIce();
+
+  function freeze(secs) {
+    const temp = weatherSea(state.weather).temp;
+    const hours = secs * HOURS_PER_SEC;
+    let ice = Number(iceIn.value);
+    if (temp < 0) ice = Math.min(100, ice + ICE_FREEZE_PER_HOUR * Math.min(1, Math.max(0.15, -temp / ICE_FULL_FREEZE_AT)) * hours);
+    else ice = Math.max(0, ice - ICE_MELT_PER_HOUR * hours);
+    if (ice !== Number(iceIn.value)) {
+      iceIn.value = String(ice);
+      showIce();
+    }
+    return ice / 100;
+  }
 
   const stage = document.getElementById('stage');
   const note = document.getElementById('vnote');
@@ -399,7 +424,9 @@
     if (!gpu || document.hidden) { last = null; return; }
     const secs = last === null ? 0 : Math.min(0.25, (now - last) / 1000) * Number(state.speed);
     last = now;
-    const wind = Number(windIn.value);
+    const ice = freeze(secs);
+    const calm = 1 - Math.min(1, ice / 0.6) * 0.75;
+    const wind = Number(windIn.value) * calm;
     const dir = windHeading();
     clock.tick(secs, wind, dir);
     const { gl, canvas, u } = gpu;
@@ -407,7 +434,8 @@
     gl.uniform4fv(u['u_sea[0]'], clock.sea(wind, dir, artPerPx));
     gl.uniform1i(u.u_waterBlock, waterBlockShift(artPerPx));
     const sky = weatherSea(state.weather);
-    gl.uniform4f(u.u_weather, sky.gusty, sky.rain, clock.t % 1000, 0);
+    gl.uniform4f(u.u_weather, sky.gusty, sky.temp < 0 ? 0 : sky.rain, clock.t % 1000, 0);
+    gl.uniform4f(u.u_ice, ice, sky.snow, clock.t % 1000, 0);
     for (const view of views) {
       if (canvas.width !== view.w || canvas.height !== view.h) {
         canvas.width = view.w;
