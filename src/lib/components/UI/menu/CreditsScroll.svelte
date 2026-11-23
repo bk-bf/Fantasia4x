@@ -1,168 +1,86 @@
 <script lang="ts">
-  import { fade } from 'svelte/transition';
-  import { CREDITS } from './creditsList';
+  import ChromeButton from '$lib/components/UI/widget/ChromeButton.svelte';
+  import ModalWindow from '$lib/components/UI/window/ModalWindow.svelte';
+  import { CREDITS, CREDITS_TAGLINE } from './creditsList';
 
   let { onClose }: { onClose: () => void } = $props();
-
-  function onKey(e: KeyboardEvent) {
-    if (e.key === 'Escape') {
-      e.stopPropagation();
-      onClose();
-    }
-  }
 </script>
 
-<svelte:window onkeydown={onKey} />
-
-<div class="credits-overlay" transition:fade={{ duration: 160 }}>
-  <button class="backdrop" aria-label="Close credits" onclick={onClose}></button>
-
-  <div class="viewport" role="dialog" aria-modal="true" aria-label="Credits" tabindex="-1">
-    <div class="scroller">
-      <h1 class="wordmark">FANTASIA</h1>
-
-      {#each CREDITS as block}
-        <section class="block">
-          {#if block.role}<div class="role">{block.role}</div>{/if}
-          {#each block.lines as line}
-            <div class="name">{line}</div>
-          {/each}
+<ModalWindow id="credits" title="Fantasia" width={360} onclose={onClose}>
+  <p class="lore">{CREDITS_TAGLINE}</p>
+  <div class="view">
+    <div class="roll">
+      {#each CREDITS as block (block.role)}
+        <section>
+          <h5>{block.role}</h5>
+          {#each block.lines as line (line)}<p>{line}</p>{/each}
         </section>
       {/each}
-
-      <section class="block closer">
-        <div class="role">Thank you for playing</div>
-        <h1 class="wordmark small">FANTASIA</h1>
-      </section>
     </div>
   </div>
-
-  <button class="close" aria-label="Close credits" onclick={onClose}>✕</button>
-  <div class="hint" aria-hidden="true">Esc to close</div>
-</div>
+  <div class="foot">
+    <ChromeButton onclick={onClose}>Close</ChromeButton>
+  </div>
+</ModalWindow>
 
 <style>
-  .credits-overlay {
-    position: fixed;
-    inset: 0;
-    z-index: 1100;
-    background: var(--bg);
-    font-family: var(--font-mono);
-    overflow: hidden;
-  }
-  .backdrop {
-    position: absolute;
-    inset: 0;
-    border: none;
-    background: transparent;
-    cursor: default;
-    padding: 0;
-  }
-
-  .viewport {
-    position: absolute;
-    inset: 0;
-    overflow: hidden;
-    pointer-events: none;
-    -webkit-mask-image: linear-gradient(transparent, #000 16%, #000 84%, transparent);
-    mask-image: linear-gradient(transparent, #000 16%, #000 84%, transparent);
-  }
-  .scroller {
-    position: absolute;
-    top: 0;
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 30px;
-    padding: 0 24px;
-    box-sizing: border-box;
+  .lore {
+    margin: 0 0 8px;
+    color: var(--text-dim);
+    line-height: 17px;
     text-align: center;
-    animation: roll 58s linear infinite;
   }
-  @keyframes roll {
-    from {
-      transform: translateY(100vh);
-    }
-    to {
-      transform: translateY(-100%);
-    }
+  .view {
+    position: relative;
+    height: min(420px, 56vh);
+    overflow: hidden;
+    -webkit-mask-image: linear-gradient(transparent, #000 12%, #000 80%, transparent);
+    mask-image: linear-gradient(transparent, #000 12%, #000 80%, transparent);
   }
-
-  .wordmark {
-    color: var(--accent-hi);
-    font-size: 41px;
-    font-weight: 700;
-    letter-spacing: 0.5em;
-    text-indent: 0.5em;
-    margin: 0 0 16px;
-    text-shadow: 0 0 18px rgba(240, 136, 40, 0.35);
-  }
-  .wordmark.small {
-    font-size: 23px;
-    margin: 6px 0 0;
-  }
-
-  .block {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 6px;
-  }
-  .block.closer {
-    margin-top: 24px;
-  }
-  .role {
-    color: var(--accent-hi);
-    font-size: 12px;
-    letter-spacing: 0.26em;
-    text-transform: uppercase;
-  }
-  .name {
-    color: var(--text);
-    font-size: 16px;
-    letter-spacing: 0.08em;
-  }
-
-  .close {
+  .roll {
     position: absolute;
-    top: 14px;
-    right: 16px;
-    z-index: 2;
-    background: none;
-    border: none;
-    color: var(--text-muted);
-    font-size: 18px;
-    cursor: pointer;
-    padding: 4px 6px;
-    line-height: 1;
-  }
-  .close:hover {
-    color: var(--accent-hi);
-  }
-  .hint {
-    position: absolute;
-    bottom: 14px;
     left: 0;
     right: 0;
     text-align: center;
-    color: var(--text-muted);
-    font-size: 11px;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    opacity: 0.6;
+    animation: roll 48s linear infinite;
   }
-
-  @media (prefers-reduced-motion: reduce) {
-    .viewport {
-      overflow-y: auto;
-      pointer-events: auto;
+  @keyframes roll {
+    from {
+      top: 100%;
+      transform: translateY(0);
     }
-    .scroller {
+    to {
+      top: 0;
+      transform: translateY(-100%);
+    }
+  }
+  section {
+    margin-bottom: 14px;
+  }
+  h5 {
+    margin: 0 0 2px;
+    font: inherit;
+    color: var(--accent-hi);
+    text-transform: uppercase;
+    letter-spacing: 1.6px;
+  }
+  p {
+    margin: 0;
+    color: var(--text);
+  }
+  .foot {
+    display: flex;
+    justify-content: center;
+    margin-top: 10px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .view {
+      overflow-y: auto;
+    }
+    .roll {
       position: static;
       animation: none;
-      padding-top: 8vh;
-      padding-bottom: 8vh;
+      padding: 18px 0;
     }
   }
 </style>

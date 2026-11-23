@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { ArmorModel } from '$lib/components/UI/hud/SelectedEntityCard.svelte';
+  import type { ArmorModel } from '$lib/components/UI/hud/entityCard';
   import { chrome } from '$lib/pixelArt/chrome';
   import MeterRow from '../widget/MeterRow.svelte';
   import ScrollArea from '../widget/ScrollArea.svelte';

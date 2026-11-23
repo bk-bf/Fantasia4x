@@ -40,7 +40,6 @@
     PlacedBuilding,
     DesignationType,
     DroppedItem,
-    Item,
     Mob,
     ZoneInstance,
     EquipmentSlot
@@ -55,14 +54,7 @@
   import { designationService } from '$lib/game/services/DesignationService.js';
   import {
     environmentService,
-    computeTileLightLevel,
-    tileTemperature,
-    seasonBakedTemp,
-    tileWetness,
-    computeThermalAt,
-    effectiveWindAt,
-    windDegreeWord,
-    ICE_VISIBLE
+    computeTileLightLevel
   } from '$lib/game/services/EnvironmentService.js';
   import { lightingService } from '$lib/game/services/LightingService.js';
   import { glyph, SHEET } from '$lib/webgl/tilesets.js';
@@ -80,20 +72,12 @@
   import { renderFps } from '$lib/stores/perfStats.js';
   import { buildingService } from '$lib/game/services/BuildingService.js';
   import { roomFor } from '$lib/game/core/rules/gear/vessels';
-  import {
-    resolveCharSpans,
-    BIOMES,
-    SUBTERRAINS,
-    soilFertilityPct,
-    soilTierForTile,
-    SOIL_TIER_NAME
-  } from '$lib/game/core/defs/terrains.js';
+  import { resolveCharSpans } from '$lib/game/core/defs/terrains.js';
   import {
     resourceObjectService,
     isGrowableResource
   } from '$lib/game/services/ResourceObjectService.js';
   import { RESOURCE_VISIBLE_GROWTH } from '$lib/game/core/rules/world/growthStages.js';
-  import { cropGrowthDirection } from '$lib/game/core/rules/world/cropHealth.js';
   import { isHarvestableTileNow } from '$lib/game/services/jobs/filters.js';
   import { itemService } from '$lib/game/services/ItemService.js';
   import { jobService } from '$lib/game/services/JobService.js';
@@ -107,7 +91,6 @@
   import { TICKS_PER_SECOND } from '$lib/game/core/util/time.js';
   import { vlog } from '$lib/game/core/util/logSink.js';
   import { simTarget } from '$lib/game/services/MovementSystem.js';
-  import SelectedEntityCard from '$lib/components/UI/hud/SelectedEntityCard.svelte';
   import {
     brackets,
     dragBox,
@@ -125,17 +108,16 @@
   import VerbTag from '$lib/components/UI/hud/VerbTag.svelte';
   import PawnCard from '$lib/components/UI/hud/PawnCard.svelte';
   import BuildingCard from '$lib/components/UI/hud/BuildingCard.svelte';
+  import CreatureCard from '$lib/components/UI/hud/CreatureCard.svelte';
+  import ItemCard from '$lib/components/UI/hud/ItemCard.svelte';
+  import ZoneCard from '$lib/components/UI/hud/ZoneCard.svelte';
   import {
     designationVerb,
     keyTiles,
     type TagVerb,
     type VerbTagModel
   } from '$lib/components/UI/canvas/verbTag';
-  import type {
-    SelectedEntityModel,
-    EntityBar,
-    EntityButton
-  } from '$lib/components/UI/hud/SelectedEntityCard.svelte';
+  import type { EntityButton } from '$lib/components/UI/hud/entityCard';
   import {
     SHEET_CELL_W,
     SHEET_CELL_H,
@@ -145,25 +127,17 @@
     type SheetName
   } from '$lib/components/UI/canvas/spriteSheets';
   import { redrawHudSpriteIcons } from '$lib/components/UI/canvas/hudSpriteIcon';
-  import { fuelTarget } from '$lib/components/UI/canvas/fuelTarget';
-  import BuildingRepairPanel from '$lib/components/UI/canvas/BuildingRepairPanel.svelte';
-  import BuildingStoragePanel from '$lib/components/UI/canvas/BuildingStoragePanel.svelte';
-  import StockpileZonePanel from '$lib/components/UI/canvas/StockpileZonePanel.svelte';
-  import EnvReadout from '$lib/components/UI/canvas/EnvReadout.svelte';
-  import { chrome } from '$lib/pixelArt/chrome';
+  import { buildingTarget, storeTarget } from '$lib/components/UI/canvas/windowTargets';
+  import TileTip from '$lib/components/UI/canvas/TileTip.svelte';
+  import ContextMenu from '$lib/components/UI/canvas/ContextMenu.svelte';
+  import QtyPrompt from '$lib/components/UI/canvas/QtyPrompt.svelte';
+  import ModeBanner, { type BannerModel } from '$lib/components/UI/canvas/ModeBanner.svelte';
+  import { envFacts, tileFacts } from '$lib/components/UI/canvas/tileFacts';
   import BuildingInfo from '$lib/components/UI/canvas/BuildingInfo.svelte';
-  import {
-    buildMobCard,
-    dryingIndicator,
-    growthIndicator,
-    PROGRESS_BAR_STATES
-  } from '$lib/components/UI/canvas/selectionCard';
+  import { PROGRESS_BAR_STATES } from '$lib/components/UI/canvas/selectionCard';
   import { overlayDroppedItems, overlayBuildings } from '$lib/components/UI/canvas/overlay';
   import { buildingsVisualSig } from '$lib/game/core/state/buildingSig';
   import { lineFormationTargets } from '$lib/game/sim/commands';
-  import itemsData from '$lib/game/database/items/items.json';
-
-  const ITEMS_DATABASE = itemsData as unknown as Item[];
 
   export let menuPreview = false;
   const MENU_PREVIEW_ZOOM = 2;
@@ -496,6 +470,21 @@
       designations[`${hoverTile.x},${hoverTile.y}`] ??
       null)
     : null;
+  $: hoverFactsInput = hoverTile
+    ? {
+        tile: hoverTile,
+        light: hoverTileLight,
+        floorName: hoverFloorName ?? null,
+        resourceId: hoverDisplayResource,
+        zoneType: hoverZoneType,
+        buildings,
+        worldMap,
+        season: $currentSeason,
+        weather: $currentWeather,
+        ambientTurn: environmentService.ambientTurn($gameState ?? { turn: 0 }),
+        debug: $debugMode
+      }
+    : null;
   $: hoverTileLight = hoverTile
     ? computeTileLightLevel(
         environmentService.ambientTurn($gameState ?? { turn: 0 }),
@@ -565,27 +554,7 @@
         : 0;
 
   $: hoverMob = hoverMobId ? (mobs.find((m) => m.id === hoverMobId) ?? null) : null;
-
-  $: hoverMobCard = (() => {
-    if (!hoverMob) return null;
-    const def = getCreatureById(hoverMob.creatureId);
-    return def
-      ? buildMobCard(hoverMob, def, false, {
-          cameraFollowMobId,
-          startMark: () => startMarkDrag('mob'),
-          colonyName: $gameState?.culture?.name
-        })
-      : null;
-  })();
-
-  $: selectedMobCard = (() => {
-    if (!selectedMob || !selectedMobDef) return null;
-    return buildMobCard(selectedMob, selectedMobDef, true, {
-      cameraFollowMobId,
-      startMark: () => startMarkDrag('mob'),
-      colonyName: $gameState?.culture?.name
-    });
-  })();
+  $: hoverMobDef = hoverMob ? (getCreatureById(hoverMob.creatureId) ?? null) : null;
 
   $: hasBuildJobs = ($gameState?.jobs ?? []).some((j) => j.type === 'construct');
   $: hasHarvestJobs = ($gameState?.jobs ?? []).some((j) => j.type === 'harvest');
@@ -669,19 +638,6 @@
         selectedResourceTile.resourceId
       ] ?? 0)
     : 0;
-
-  function tileEnv(t: { x: number; y: number; terrainType: string; moisture?: number }) {
-    const thermal = computeThermalAt(t.x, t.y, buildings, worldMap);
-    const envTurn = environmentService.ambientTurn($gameState ?? { turn: 0 });
-    return {
-      light: computeTileLightLevel(envTurn, buildings, t.x, t.y, worldMap),
-      temp: Math.round(
-        tileTemperature(t.terrainType, $currentSeason, envTurn, $currentWeather, thermal)
-      ),
-      wet: tileWetness(t.moisture ?? 0, $currentWeather, thermal),
-      wind: windDegreeWord(effectiveWindAt(t.x, t.y, $currentWeather, thermal, worldMap))
-    };
-  }
 
   $: buildingVerbs = ((): EntityButton[] => {
     if (!selectedBuilding) return [];
@@ -822,102 +778,9 @@
     return '█'.repeat(filled) + '░'.repeat(10 - filled);
   }
 
-  function itemBarColor(goodPct: number): string {
-    if (goodPct >= 66) return '#4CAF50';
-    if (goodPct >= 33) return '#FFA726';
-    return '#D32F2F';
-  }
-
   $: selectedItem = selectedItemId
     ? (droppedItems.find((d) => d.id === selectedItemId) ?? null)
     : null;
-
-  function toggleDropForbidden(d: DroppedItem) {
-    gameState.command({
-      type: 'setDropForbidden',
-      payload: { dropId: d.id, forbidden: !d.forbidden },
-      save: true
-    });
-  }
-  function toggleDropUrgent(d: DroppedItem) {
-    gameState.command({
-      type: 'setDropUrgent',
-      payload: { dropId: d.id, urgent: !d.urgent },
-      save: true
-    });
-  }
-  function buildItemCard(d: DroppedItem, selected = false): SelectedEntityModel {
-    const itemDef = ITEMS_DATABASE.find((i) => i.id === d.resourceId);
-    const maxDur = itemDef?.maxDurability ?? 100;
-    const freshPct =
-      itemDef?.decaySeconds && itemDef.decaySeconds > 0
-        ? Math.round(Math.max(0, 1 - (d.decayAcc ?? 0) / itemDef.decaySeconds) * 100)
-        : null;
-    const durPct = Math.round((Math.min(maxDur, d.durability ?? maxDur) / maxDur) * 100);
-    const displayName =
-      itemDef?.dynamicName && d.name ? d.name : (itemDef?.name ?? d.resourceId.replace(/_/g, ' '));
-    const bars: EntityBar[] = [];
-    if (freshPct !== null) {
-      bars.push({
-        label: 'FRESH',
-        value: freshPct,
-        color: itemBarColor(freshPct),
-        valueText: `${freshPct}%`
-      });
-    }
-    bars.push({
-      label: 'COND',
-      value: durPct,
-      color: itemBarColor(durPct),
-      valueText: `${durPct}%`
-    });
-    const dryStatus = itemService.dryingStatus(d, $gameState);
-    if (dryStatus) {
-      const dryPct = Math.round(Math.min(1, dryStatus.progress / dryStatus.target) * 100);
-      const ind = dryingIndicator(dryStatus);
-      bars.push({
-        label: 'DRY',
-        value: dryPct,
-        color: ind.color,
-        valueText: `${dryPct}% ${ind.glyph}`,
-        title: ind.title
-      });
-    }
-    return {
-      name: `★ ${displayName}`,
-      status: `×${d.quantity}`,
-      itemPills: [{ itemId: d.resourceId }],
-      bars,
-      note: d.stored
-        ? 'stored'
-        : d.forbidden
-          ? 'forbidden — pawns will not haul this'
-          : d.urgent
-            ? 'urgent — hauled before other work'
-            : 'dropped item — awaiting hauler',
-      buttons:
-        selected && !d.stored
-          ? [
-              {
-                label: d.forbidden ? 'ALLOW HAUL' : 'FORBID HAUL',
-                active: !d.forbidden,
-                onClick: () => toggleDropForbidden(d)
-              },
-              ...(!d.forbidden
-                ? [
-                    {
-                      label: d.urgent ? 'NORMAL HAUL' : 'URGENT HAUL',
-                      active: !!d.urgent,
-                      onClick: () => toggleDropUrgent(d)
-                    }
-                  ]
-                : [])
-            ]
-          : undefined
-    } satisfies SelectedEntityModel;
-  }
-  $: hoverItemCard = hoverDroppedItem ? buildItemCard(hoverDroppedItem) : null;
-  $: selectedItemCard = selectedItem ? buildItemCard(selectedItem, true) : null;
 
   $: selectedZone = selectedZoneId
     ? (zoneInstances.find((z) => z.id === selectedZoneId) ?? null)
@@ -927,15 +790,11 @@
         Object.values(designationZoneId[k] ?? {}).includes(selectedZoneId!)
       )
     : [];
-  $: selectedZoneInventory = (() => {
-    if (!selectedZoneId) return {} as Record<string, number>;
+  $: selectedZoneFilled = (() => {
     const tiles = new Set(selectedZoneTileKeys);
-    const inv: Record<string, number> = {};
-    for (const d of droppedItems) {
-      if (!d.stored || !tiles.has(`${d.x},${d.y}`)) continue;
-      inv[d.resourceId] = (inv[d.resourceId] ?? 0) + d.quantity;
-    }
-    return inv;
+    return new Set(
+      droppedItems.filter((d) => d.stored && tiles.has(`${d.x},${d.y}`)).map((d) => `${d.x},${d.y}`)
+    ).size;
   })();
   $: zoneToolDrawing = designationMode && activeZoneInstanceId === selectedZoneId && !zoneEraseMode;
   $: zoneToolClearing = designationMode && activeZoneInstanceId === selectedZoneId && zoneEraseMode;
@@ -945,39 +804,15 @@
     uiState.activateDesignation('stockpile', instanceId);
   }
 
-  $: zoneStoredTotal = Object.values(selectedZoneInventory).reduce((a, b) => a + b, 0);
-  $: zoneCard = ((): SelectedEntityModel | null => {
-    if (!selectedZone) return null;
-    const allowed = selectedZone.filter.allowedCategories.length === 0 ? 'all items' : 'filtered';
-    const id = selectedZone.id;
-    return {
-      name: selectedZone.label,
-      status: 'stockpile',
-      selected: true,
-      dismissable: true,
-      lines: [
-        `${selectedZoneTileKeys.length} tiles · ${Math.floor(zoneStoredTotal)} stored`,
-        `haul filter: ${allowed}`
-      ],
-      buttons: [
-        {
-          label: 'FILTER',
-          active: showZoneFilter,
-          onClick: () => (showZoneFilter = !showZoneFilter)
-        },
-        { label: 'DRAW', active: zoneToolDrawing, onClick: () => paintZoneTool(id, false) },
-        { label: 'CLEAR', active: zoneToolClearing, onClick: () => paintZoneTool(id, true) }
-      ]
-    } satisfies SelectedEntityModel;
-  })();
-
-  function moveCostLabel(cost: number): { label: string; color: string } {
-    if (cost <= 0) return { label: 'impassable', color: '#cc4444' };
-    if (cost <= 1.0) return { label: 'normal', color: '#70bb70' };
-    if (cost <= 1.5) return { label: 'light', color: '#99cc77' };
-    if (cost <= 2.0) return { label: 'slow', color: '#ccaa44' };
-    if (cost <= 3.0) return { label: 'very slow', color: '#cc7733' };
-    return { label: 'barely passable', color: '#cc4444' };
+  function deleteSelectedZone() {
+    if (!selectedZoneId) return;
+    if (designationMode && activeZoneInstanceId === selectedZoneId) uiState.deactivateDesignation();
+    gameState.command({
+      type: 'removeZoneInstance',
+      payload: { instanceId: selectedZoneId },
+      save: true
+    });
+    selectedZoneId = null;
   }
 
   let selDragActive = false;
@@ -986,29 +821,6 @@
   let selEndX = 0;
   let selEndY = 0;
   let selectedResourceTypes = new Set<string>();
-
-  const ZONE_META: Record<string, { label: string; color: string; desc: string }> = {
-    stockpile: {
-      label: 'STOCKPILE ZONE',
-      color: '#e8a020',
-      desc: 'Haulers deposit carried resources here'
-    },
-    drink: { label: 'DRINK ZONE', color: '#4fc3f7', desc: 'Thirsty pawns come here to drink' },
-    wash: { label: 'WASH ZONE', color: '#80d8c0', desc: 'Dirty pawns come here to wash' },
-    grow: {
-      label: 'GROW ZONE',
-      color: '#6fae3a',
-      desc: 'Farmers sow the chosen seed on fertile soil here'
-    },
-    restrict: {
-      label: 'RESTRICT ZONE',
-      color: '#b06cd0',
-      desc: 'Assigned pawns stay confined to this zone'
-    },
-    harvest: { label: 'HARVEST', color: '#4ccc44', desc: 'Single-tile harvest designation' },
-    mine: { label: 'MINE', color: '#cc8833', desc: 'Single-tile mining designation' },
-    construct: { label: 'CONSTRUCT', color: '#44aacc', desc: 'Construction site' }
-  };
 
   let _lastWorldMapRef: unknown = null;
   const unsubState = gameState.subscribe((s) => {
@@ -3202,25 +3014,17 @@
         } else if (showFuelSettings) {
           uiState.closeWindow('fuel');
         } else if (showRepairSettings) {
-          showRepairSettings = false;
-        } else if (showStorageSettings) {
-          showStorageSettings = false;
+          uiState.closeWindow('repair');
+        } else if (storesOpen) {
+          uiState.closeWindow('stores');
         } else if (showFoodSettings) {
           uiState.closeWindow('food');
-        } else if (showZoneFilter) {
-          showZoneFilter = false;
         } else if (moveAimActive || moveAimArmed) {
-          moveAimActive = false;
-          moveAimArmed = false;
-          moveAimSlots = [];
-          drawDesignations();
+          stopMoveAim();
         } else if (markKind || markedKind) {
           clearMark();
         } else if (designationMode) {
-          uiState.deactivateDesignation();
-          zoneEraseMode = false;
-          zoneDragActive = false;
-          drawDesignations();
+          stopDesignation();
         } else if (selectedResourceTile) {
           deselectResource();
         } else if (selectedItemId) {
@@ -3234,11 +3038,7 @@
         } else if (selectedBuildingId) {
           selectedBuildingId = null;
         } else if (blueprintBuildingId) {
-          uiState.deactivateBlueprint();
-          blueprintDragActive = false;
-          blueprintAnchorX = -1;
-          blueprintAnchorY = -1;
-          redrawOverlay();
+          stopBlueprint();
         } else if (
           designationMode ||
           selectedPawnId ||
@@ -3791,6 +3591,106 @@
     drawDesignations();
   }
 
+  function stopMoveAim() {
+    moveAimActive = false;
+    moveAimArmed = false;
+    moveAimSlots = [];
+    drawDesignations();
+  }
+
+  function stopDesignation() {
+    uiState.deactivateDesignation();
+    zoneEraseMode = false;
+    zoneDragActive = false;
+    drawDesignations();
+  }
+
+  function stopBlueprint() {
+    uiState.deactivateBlueprint();
+    blueprintDragActive = false;
+    blueprintAnchorX = -1;
+    blueprintAnchorY = -1;
+    redrawOverlay();
+  }
+
+  const dragSize = (ax: number, ay: number, bx: number, by: number) =>
+    `${Math.abs(bx - ax) + 1} × ${Math.abs(by - ay) + 1}`;
+
+  const BRUSH_NAMES = {
+    regrow: 'Regrow',
+    building: 'Raise building',
+    kill: 'Strike down',
+    resurrect: 'Raise the dead',
+    resource: 'Sow resource'
+  } as const;
+
+  $: banner = ((): BannerModel | null => {
+    if (debugBrush)
+      return {
+        lead: 'Brush',
+        subject: BRUSH_NAMES[debugBrush.kind],
+        verbs: [
+          {
+            label: 'Stop',
+            verb: true,
+            onClick: () => {
+              uiState.deactivateDebugBrush();
+              redrawOverlay();
+            }
+          }
+        ]
+      };
+    if (designationMode) {
+      const zone = zoneInstances.find((z) => z.id === activeZoneInstanceId);
+      return {
+        lead: zoneEraseMode ? 'Erasing' : 'Painting',
+        subject: zone?.label ?? designationVerb(designationTypeActive, false)[0],
+        size: zoneDragActive ? dragSize(zoneAnchorX, zoneAnchorY, zoneEndX, zoneEndY) : null,
+        verbs: [
+          {
+            label: 'Erase',
+            glyph: 'x',
+            on: zoneEraseMode,
+            onClick: () => (zoneEraseMode = !zoneEraseMode)
+          },
+          { label: 'Done', verb: true, onClick: stopDesignation }
+        ]
+      };
+    }
+    if (selDragActive) {
+      const kind = dragMarkKind();
+      return {
+        lead: 'Marking',
+        subject: kind === 'resource' ? 'resources' : kind === 'mob' ? 'creatures' : 'colonists',
+        size: dragSize(selAnchorX, selAnchorY, selEndX, selEndY),
+        verbs: []
+      };
+    }
+    if (blueprintBuildingId)
+      return {
+        lead: 'Placing',
+        subject: buildingService.getBuildingById(blueprintBuildingId)?.name ?? '',
+        size: blueprintDragActive
+          ? dragSize(blueprintAnchorX, blueprintAnchorY, hoverTileX, hoverTileY)
+          : null,
+        verbs: [{ label: 'Done', verb: true, onClick: stopBlueprint }]
+      };
+    if (markKind)
+      return {
+        lead: 'Marking',
+        subject: markKind === 'pawn' ? 'colonists' : 'creatures',
+        size: markDragActive ? dragSize(markAnchorX, markAnchorY, markEndX, markEndY) : null,
+        verbs: [{ label: 'Done', verb: true, onClick: clearMark }]
+      };
+    if (moveAimActive || moveAimArmed)
+      return {
+        lead: 'Moving',
+        subject: `${moveAimCount} drafted`,
+        verbs: [{ label: 'Cancel', onClick: stopMoveAim }]
+      };
+    return null;
+  })();
+
   function clearMark() {
     markKind = null;
     markDragActive = false;
@@ -3914,38 +3814,38 @@
 
   let showShelterAssign = false;
   $: showFuelSettings = $uiState.windows.includes('fuel');
-  let showStorageSettings = false;
-  let showRepairSettings = false;
+  $: showRepairSettings = $uiState.windows.includes('repair');
+  $: storesOpen = $uiState.windows.includes('stores');
+  $: showStorageSettings = storesOpen && $storeTarget?.kind === 'building';
+  $: showZoneFilter = storesOpen && $storeTarget?.kind === 'zone';
   let fuelSettingsForBuildingId: string | null = null;
 
   $: {
     const nextId = selectedBuilding?.id ?? null;
     if (nextId !== fuelSettingsForBuildingId) {
       uiState.closeWindow('fuel');
-      showStorageSettings = false;
-      showRepairSettings = false;
+      uiState.closeWindow('repair');
+      if (get(storeTarget)?.kind === 'building') uiState.closeWindow('stores');
       fuelSettingsForBuildingId = nextId;
     }
   }
 
   function toggleFuelSettingsPanel() {
     if (!selectedBuilding) return;
-    fuelTarget.set(selectedBuilding.id);
+    buildingTarget.set(selectedBuilding.id);
     uiState.toggleWindow('fuel');
   }
 
   function toggleStorageSettingsPanel() {
-    showStorageSettings = !showStorageSettings;
-    if (showStorageSettings) {
-      showRepairSettings = false;
-    }
+    if (!selectedBuilding) return;
+    storeTarget.set({ kind: 'building', id: selectedBuilding.id });
+    uiState.toggleWindow('stores');
   }
 
   function toggleRepairSettingsPanel() {
-    showRepairSettings = !showRepairSettings;
-    if (showRepairSettings) {
-      showStorageSettings = false;
-    }
+    if (!selectedBuilding) return;
+    buildingTarget.set(selectedBuilding.id);
+    uiState.toggleWindow('repair');
   }
 
   $: showFoodSettings = $uiState.windows.includes('food');
@@ -3953,12 +3853,17 @@
     uiState.toggleWindow('food');
   }
 
-  let showZoneFilter = false;
+  function toggleZoneFilter() {
+    if (!selectedZoneId) return;
+    storeTarget.set({ kind: 'zone', id: selectedZoneId });
+    uiState.toggleWindow('stores');
+  }
+
   let zoneFilterForId: string | null = null;
   $: {
     const nextZoneId = selectedZoneId;
     if (nextZoneId !== zoneFilterForId) {
-      showZoneFilter = false;
+      if (get(storeTarget)?.kind === 'zone') uiState.closeWindow('stores');
       zoneFilterForId = nextZoneId;
     }
   }
@@ -4255,7 +4160,7 @@
         });
         if (qty > 1) {
           entries.push({
-            label: `Pick up X ${name}…`,
+            label: `Pick up ${name}…`,
             run: () => {
               qtyPrompt = {
                 pawnId,
@@ -4387,72 +4292,7 @@
     <div class="error">WebGL unavailable: {errorMsg}</div>
   {/if}
 
-  {#if debugBrush}
-    <div class="designation-hud" style:border-color="#c8a048" style:color="#e0b868">
-      [DEBUG: {debugBrush.kind === 'regrow'
-        ? 'REGROW'
-        : debugBrush.kind === 'building'
-          ? 'SPAWN BUILDING'
-          : debugBrush.kind === 'kill'
-            ? 'KILL'
-            : debugBrush.kind === 'resurrect'
-              ? 'RESURRECT'
-              : 'SPAWN RESOURCE'}] click {debugBrush.kind === 'kill'
-        ? 'a pawn/mob to kill it'
-        : debugBrush.kind === 'resurrect'
-          ? 'a corpse to revive it'
-          : 'tiles to apply'} · Esc to stop
-    </div>
-  {:else if designationMode}
-    <div
-      class="designation-hud"
-      style:border-color={zoneEraseMode ? '#cc3322' : undefined}
-      style:color={zoneEraseMode ? '#ff6655' : undefined}
-    >
-      {#if zoneEraseMode}
-        [ERASE] drag to remove · X to paint · Esc cancel
-      {:else}
-        [{designationTypeActive.toUpperCase()}] drag to paint · X to erase · Esc cancel
-      {/if}
-      {#if zoneDragActive}
-        — {zoneEraseMode ? 'erasing' : 'selecting'} ({Math.abs(zoneEndX - zoneAnchorX) +
-          1}×{Math.abs(zoneEndY - zoneAnchorY) + 1})
-      {/if}
-    </div>
-  {:else if selDragActive}
-    <div class="designation-hud" style:color="#ffd66a" style:border-color="#ffd66a">
-      [⊞ MARK {dragMarkKind() === 'resource'
-        ? 'RESOURCES'
-        : dragMarkKind() === 'mob'
-          ? 'CREATURES'
-          : 'PAWNS'}] ({Math.abs(selEndX - selAnchorX) + 1}×{Math.abs(selEndY - selAnchorY) + 1}) —
-      release to mark · Esc cancel
-    </div>
-  {:else if blueprintBuildingId}
-    <div class="designation-hud">
-      [◆ {buildingService.getBuildingById(blueprintBuildingId)?.name ??
-        blueprintBuildingId}]{#if blueprintDragActive}
-        ({Math.abs(hoverTileX - blueprintAnchorX) + 1}×{Math.abs(hoverTileY - blueprintAnchorY) +
-          1}){/if} — drag a box to fill · stays active · Esc cancel
-    </div>
-  {:else if markKind}
-    <div class="designation-hud" style:color="#ffc85a" style:border-color="#ffc85a">
-      [⊞ MARK {markKind === 'pawn' ? 'PAWNS' : 'ENTITIES'}] — drag a box to highlight · Esc cancel{#if markDragActive}
-        — ({Math.abs(markEndX - markAnchorX) + 1}×{Math.abs(markEndY - markAnchorY) + 1}){/if}
-    </div>
-  {:else if moveAimActive}
-    <div class="designation-hud" style:color="#ffc85a" style:border-color="#ffc85a">
-      [⊞ MOVE] — drag a line, release to spread {moveAimCount} drafted pawn{moveAimCount !== 1
-        ? 's'
-        : ''} along it · Esc cancel
-    </div>
-  {:else if moveAimArmed}
-    <div class="designation-hud" style:color="#ffc85a" style:border-color="#ffc85a">
-      [⊞ MOVE] — right-drag a line (or click) to send {moveAimCount} drafted pawn{moveAimCount !== 1
-        ? 's'
-        : ''} · Esc cancel
-    </div>
-  {/if}
+  {#if banner}<ModeBanner model={banner} />{/if}
 
   {#if !customMapPreview && !menuPreview}
     {#if verbTag && container && !selDragActive}
@@ -4469,7 +4309,6 @@
       />
     {/if}
     {#if markedTag}{:else if selectedPawn}
-      <!-- svelte-ignore a11y_no_static_element_interactions -->
       <div
         class="bld-row"
         role="presentation"
@@ -4485,23 +4324,26 @@
           onfood={toggleFoodSettingsPanel}
         />
       </div>
-    {:else if selectedMobCard}
-      <SelectedEntityCard model={selectedMobCard} />
+    {:else if selectedMob && selectedMobDef}
+      <div
+        class="bld-row"
+        role="presentation"
+        on:mousedown|stopPropagation
+        on:mouseup|stopPropagation
+      >
+        <CreatureCard
+          mob={selectedMob}
+          def={selectedMobDef}
+          selected
+          colonyName={$gameState?.culture?.name}
+        />
+      </div>
     {:else if selectedBuilding}
-      {@const canConfigureStorage =
-        selectedBuilding.status === 'complete' &&
-        !selectedBuilding.deconstructQueued &&
-        (buildingService.getBuildingById(selectedBuilding.type)?.effects?.storageStacks ?? 0) > 0}
-      {@const canConfigureRepair =
-        selectedBuilding.status === 'complete' &&
-        !selectedBuilding.deconstructQueued &&
-        buildingService.deterioratingRate(selectedBuilding.type) > 0}
       {@const clickedBin = buildingIsStorageBin(selectedBuilding)
         ? droppedItems.filter(
             (d) => d.stored && d.x === selectedBuilding.x && d.y === selectedBuilding.y
           )
         : []}
-      <!-- svelte-ignore a11y_no_static_element_interactions -->
       <div
         class="bld-row"
         role="presentation"
@@ -4509,301 +4351,80 @@
         on:mouseup|stopPropagation
       >
         <BuildingCard building={selectedBuilding} verbs={buildingVerbs} stored={clickedBin} />
-        {#if canConfigureRepair}
-          <BuildingRepairPanel building={selectedBuilding} {pawns} open={showRepairSettings} />
-        {/if}
-        {#if canConfigureStorage}
-          <BuildingStoragePanel building={selectedBuilding} open={showStorageSettings} />
-        {/if}
       </div>
-    {:else if selectedZone && zoneCard}
-      <!-- svelte-ignore a11y_no_static_element_interactions -->
+    {:else if selectedZone}
       <div
         class="bld-row"
         role="presentation"
         on:mousedown|stopPropagation
         on:mouseup|stopPropagation
       >
-        <SelectedEntityCard model={zoneCard} embedded />
-        <StockpileZonePanel
-          instanceId={selectedZone.id}
-          filter={selectedZone.filter}
-          priority={selectedZone.priority ?? 'normal'}
-          containerBudget={selectedZone.containerBudget ?? 0}
-          open={showZoneFilter}
+        <ZoneCard
+          zone={selectedZone}
+          tiles={selectedZoneTileKeys.length}
+          filled={selectedZoneFilled}
+          filterOpen={showZoneFilter}
+          painting={zoneToolDrawing}
+          erasing={zoneToolClearing}
+          onfilter={toggleZoneFilter}
+          onpaint={(erase) => selectedZone && paintZoneTool(selectedZone.id, erase)}
+          ondelete={deleteSelectedZone}
         />
       </div>
-    {:else if selectedItemCard}
-      <SelectedEntityCard model={selectedItemCard} />
+    {:else if selectedItem}
+      <div
+        class="bld-row"
+        role="presentation"
+        on:mousedown|stopPropagation
+        on:mouseup|stopPropagation
+      >
+        <ItemCard drop={selectedItem} selected />
+      </div>
     {:else if hoverPawn}
       <div class="bld-row hover-card">
         <PawnCard pawn={hoverPawn} selected={false} moodModel={hoverPawnMood} />
       </div>
-    {:else if hoverMobCard}
-      <SelectedEntityCard model={hoverMobCard} />
-    {:else if hoverBuilding && !hoverPawn}
-      <div class="tile-hud tile-hud--building" {@attach chrome('tip')}>
-        <div class="tile-hud-body">
-          <BuildingInfo building={hoverBuilding} binContents={hoverBin ? hoverBinContents : []} />
-          {#if hoverTile}
-            {@const env = tileEnv(hoverTile)}
-            <EnvReadout
-              light={env.light}
-              temp={env.temp}
-              wet={env.wet}
-              wind={env.wind}
-              debugTemp={$debugMode ? seasonBakedTemp(hoverTile.terrainType, $currentSeason) : null}
-            />
-          {/if}
-        </div>
+    {:else if hoverMob && hoverMobDef}
+      <div class="bld-row hover-card">
+        <CreatureCard mob={hoverMob} def={hoverMobDef} selected={false} />
       </div>
-    {:else if hoverItemCard}
-      <SelectedEntityCard model={hoverItemCard} />
-    {:else if hoverTile}
-      {@const tileThermal = computeThermalAt(hoverTile.x, hoverTile.y, buildings, worldMap)}
-      {@const tileTemp = Math.round(
-        tileTemperature(
-          hoverTile.terrainType,
-          $currentSeason,
-          environmentService.ambientTurn($gameState ?? { turn: 0 }),
-          $currentWeather,
-          tileThermal
-        )
-      )}
-      {@const tileIce = Math.round(hoverTile.ice ?? 0)}
-      {@const tileWet =
-        tileWetness(hoverTile.moisture ?? 0, $currentWeather, tileThermal, tileIce) *
-        (hoverTile.floor ? 1 - hoverTile.floor.dryness : 1)}
-      {@const windWord = windDegreeWord(
-        effectiveWindAt(hoverTile.x, hoverTile.y, $currentWeather, tileThermal, worldMap)
-      )}
-      {@const tileSnow = Math.round(hoverTile.snow ?? 0)}
-      {@const soilTier = soilTierForTile(hoverTile)}
-      {@const soilPct = soilFertilityPct(hoverTile)}
-      <div class="tile-hud" {@attach chrome('tip')}>
-        <div class="tile-hud-body">
-          <span class="tile-coord">({hoverTile.x},{hoverTile.y})</span><span class="tile-layers"
-            >{BIOMES[hoverTile.terrainType]?.displayName ??
-              hoverTile.terrainType},{hoverFloorName ??
-              SUBTERRAINS[hoverTile.subType]?.displayName ??
-              hoverTile.subType},{hoverDisplayResource
-              ? (resourceObjectService.getById(hoverDisplayResource)?.displayName ??
-                hoverDisplayResource)
-              : '—'}</span
-          >
-          {#if !hoverTile.walkable}
-            <div class="tile-move" style="color:#cc4444">move: impassable</div>
-          {:else}
-            {@const effMoveCost = (hoverTile.movementCost ?? 1) * (1 + (tileSnow + tileIce) / 100)}
-            {@const mc = moveCostLabel(effMoveCost)}
-            <div class="tile-move" style="color:{mc.color}">
-              move ×{effMoveCost.toFixed(1)}{#if tileSnow > 0}<span style="color:#cdd6e0">
-                  (snow)</span
-                >{/if}
-            </div>
-          {/if}
-          {#if hoverZoneType && ZONE_META[hoverZoneType]}
-            <div class="tile-zone" style="color:{ZONE_META[hoverZoneType].color}">
-              {ZONE_META[hoverZoneType].label} — {ZONE_META[hoverZoneType].desc}
-            </div>
-          {/if}
-          <EnvReadout
-            light={hoverTileLight}
-            temp={tileTemp}
-            wet={tileWet}
-            wind={windWord}
-            debugTemp={$debugMode ? seasonBakedTemp(hoverTile.terrainType, $currentSeason) : null}
-          />
-          <div class="tile-env">
-            {#if tileThermal.roofed}
-              {@const roofB = buildings.find(
-                (b) =>
-                  b.x === hoverTile.x &&
-                  b.y === hoverTile.y &&
-                  b.status === 'complete' &&
-                  isRoofBuilding(b)
-              )}
-              {@const roofDef = roofB ? buildingService.getBuildingById(roofB.type) : null}
-              <span
-                style="color:#7e9fbf"
-                title="under cover — this roof keeps rain and wind off the tile"
-                >{roofDef?.name ?? 'roofed'}</span
-              >{#if roofDef?.conditionDecayPerTurn}{@const cond = Math.round(
-                  roofB?.condition ?? 100
-                )}<span
-                  style="color:{cond >= 70 ? '#68b030' : cond >= 35 ? '#c8a13a' : '#cc5544'}"
-                  title="roof condition — weather wears it down; repair before it fails"
-                >
-                  {cond}%</span
-                >{/if}
-            {/if}
-            {#if hoverDisplayResource && hoverTile.walkable}
-              {@const growRes = resourceObjectService.getById(hoverDisplayResource)}
-              {#if growRes && isGrowableResource(growRes)}
-                {@const gpct = Math.round(hoverTile.growth?.[hoverDisplayResource] ?? 100)}
-                {@const dir = growRes.crop
-                  ? cropGrowthDirection(gpct, growRes.crop, {
-                      soilTier,
-                      temp: tileTemp,
-                      moisture: hoverTile.moisture ?? 0,
-                      snow: tileSnow
-                    })
-                  : gpct >= 100
-                    ? 'mature'
-                    : 'rising'}
-                {@const gi = growthIndicator(dir)}
-                <span
-                  style="color:{gpct >= 100 ? '#68b030' : gpct >= 50 ? '#9aac3a' : '#c89a3a'}"
-                  title="resource maturity — scales harvest yield; crops grow only with enough fertility, warmth, water and light"
-                  >growth {gpct}%</span
-                ><span style="color:{gi.color}" title={gi.title}>{gi.glyph}</span>
-              {/if}
-            {/if}
-            <span
-              style="color:{soilTier >= 4
-                ? '#6fae3a'
-                : soilTier === 3
-                  ? '#86ac3a'
-                  : soilTier === 2
-                    ? '#9aac3a'
-                    : soilTier === 1
-                      ? '#a89a4a'
-                      : '#8a7a5a'}"
-              title="soil fertility ({SOIL_TIER_NAME[
-                soilTier
-              ]}) — drives what crops grow here and how fast">fertility {soilPct}%</span
-            >
-            {#if hoverTile.walkable && tileSnow > 0}<span style="color:#cdd6e0"
-                >snow {tileSnow}%</span
-              >{/if}
-            {#if hoverTile.walkable && tileIce >= ICE_VISIBLE}<span
-                style="color:#9fc8e0"
-                title="frozen layer — suppresses wetness; thick ice on water turns it walkable but slippery"
-                >ice {tileIce}%</span
-              >{/if}
-          </div>
-        </div>
-      </div>
+    {:else if hoverBuilding && !hoverPawn && hoverFactsInput}
+      <BuildingInfo
+        building={hoverBuilding}
+        binContents={hoverBin ? hoverBinContents : []}
+        env={envFacts(hoverFactsInput)}
+      />
+    {:else if hoverDroppedItem}
+      <div class="bld-row hover-card"><ItemCard drop={hoverDroppedItem} /></div>
+    {:else if hoverFactsInput}
+      {@const facts = tileFacts(hoverFactsInput)}
+      <TileTip title={facts.title} desc={facts.desc} rows={facts.rows} />
     {/if}
   {/if}
 
   {#if equipMenu}
-    <div
-      class="ctx-backdrop"
-      role="presentation"
-      on:click={() => (equipMenu = null)}
-      on:contextmenu|preventDefault={() => (equipMenu = null)}
-    ></div>
-    <div class="ctx-menu" style="left:{equipMenu.x}px; top:{equipMenu.y}px">
-      {#each equipMenu.entries as entry}
-        <button
-          class="ctx-item"
-          on:click={() => {
-            entry.run();
-            equipMenu = null;
-          }}>{entry.label}</button
-        >
-      {/each}
-    </div>
+    <ContextMenu
+      x={equipMenu.x}
+      y={equipMenu.y}
+      entries={equipMenu.entries}
+      onclose={() => (equipMenu = null)}
+    />
   {/if}
 
   {#if qtyPrompt}
-    <div
-      class="ctx-backdrop"
-      role="presentation"
-      on:click={() => (qtyPrompt = null)}
-      on:contextmenu|preventDefault={() => (qtyPrompt = null)}
-    ></div>
-    <div class="ctx-menu qty-prompt" style="left:{qtyPrompt.x}px; top:{qtyPrompt.y}px">
-      <div class="qty-label">Pick up {qtyPrompt.name} (max {qtyPrompt.max})</div>
-      <!-- svelte-ignore a11y_autofocus -->
-      <input
-        class="qty-input"
-        type="number"
-        min="1"
-        max={qtyPrompt.max}
-        bind:value={qtyPrompt.value}
-        on:keydown={(ev) => {
-          if (ev.key === 'Enter') confirmQtyPickup();
-          else if (ev.key === 'Escape') qtyPrompt = null;
-        }}
-        autofocus
-      />
-      <div class="qty-actions">
-        <button class="ctx-item" on:click={confirmQtyPickup}>OK</button>
-        <button class="ctx-item" on:click={() => (qtyPrompt = null)}>Cancel</button>
-      </div>
-    </div>
+    <QtyPrompt
+      x={qtyPrompt.x}
+      y={qtyPrompt.y}
+      name={qtyPrompt.name}
+      max={qtyPrompt.max}
+      bind:value={qtyPrompt.value}
+      onconfirm={confirmQtyPickup}
+      onclose={() => (qtyPrompt = null)}
+    />
   {/if}
 </div>
 
 <style>
-  .ctx-backdrop {
-    position: fixed;
-    inset: 0;
-    z-index: 998;
-  }
-  .ctx-menu {
-    position: fixed;
-    z-index: 999;
-    display: flex;
-    flex-direction: column;
-    min-width: 160px;
-    background: var(--bg-panel);
-    border: 1px solid var(--border-hi);
-    border-radius: 2px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-    overflow: hidden;
-    filter: url(#ambient-tint);
-  }
-  .ctx-item {
-    text-align: left;
-    padding: 5px 10px;
-    background: transparent;
-    border: none;
-    border-bottom: 1px solid var(--border);
-    color: var(--text);
-    font-size: 12px;
-    cursor: pointer;
-    white-space: nowrap;
-  }
-  .ctx-item:last-child {
-    border-bottom: none;
-  }
-  .ctx-item:hover {
-    background: var(--bg-active);
-    color: var(--accent-hi);
-  }
-  .qty-prompt {
-    padding: 6px;
-    gap: 6px;
-  }
-  .qty-label {
-    font-size: 12px;
-    color: var(--text);
-    white-space: nowrap;
-  }
-  .qty-input {
-    width: 100%;
-    box-sizing: border-box;
-    padding: 3px 6px;
-    background: var(--bg);
-    border: 1px solid var(--border-hi);
-    color: var(--text);
-    font-size: 13px;
-    font-family: inherit;
-  }
-  .qty-actions {
-    display: flex;
-    gap: 6px;
-  }
-  .qty-actions .ctx-item {
-    flex: 1;
-    text-align: center;
-    border: 1px solid var(--border-hi);
-    border-bottom: 1px solid var(--border-hi);
-  }
-
   .canvas-wrap {
     position: relative;
     width: 100%;
@@ -4846,51 +4467,6 @@
     font-family: var(--font-mono);
     font-size: 13px;
   }
-  .tile-hud {
-    position: absolute;
-    bottom: 6px;
-    left: 6px;
-    width: 340px;
-    box-sizing: border-box;
-    color: var(--text-dim);
-    font: 16px/18px var(--font-pixel);
-    letter-spacing: 0.6px;
-    padding: 9px 12px 10px;
-    pointer-events: none;
-    white-space: normal;
-    overflow-wrap: break-word;
-    z-index: 10;
-  }
-  .tile-hud-body {
-    filter: url(#ambient-tint-legible);
-  }
-  .tile-hud .tile-hud-body :global(*) {
-    font-size: inherit;
-  }
-  .tile-env {
-    display: flex;
-    flex-wrap: wrap;
-    column-gap: 8px;
-  }
-  .designation-hud {
-    position: absolute;
-    top: 6px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: rgba(0, 20, 10, 0.92);
-    border: 1px solid #3aaa60;
-    color: #50ee80;
-    font-family: var(--font-mono);
-    font-size: 12px;
-    font-weight: bold;
-    padding: 3px 10px;
-    pointer-events: none;
-    white-space: nowrap;
-    z-index: 10;
-  }
-  .tile-hud--building {
-    pointer-events: none;
-  }
   .bld-row {
     position: absolute;
     bottom: 6px;
@@ -4903,13 +4479,6 @@
   }
   .hover-card {
     pointer-events: none;
-  }
-  .tile-coord {
-    color: var(--accent-hi);
-    margin-right: 5px;
-  }
-  .tile-layers {
-    color: var(--text);
   }
   .error {
     color: #c04040;

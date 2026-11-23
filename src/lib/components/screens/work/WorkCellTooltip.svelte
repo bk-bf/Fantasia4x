@@ -1,16 +1,13 @@
 <script lang="ts">
   import HoverTip from '$lib/components/UI/tooltip/HoverTip.svelte';
+  import KvRow from '$lib/components/UI/widget/KvRow.svelte';
   import type { Pawn, WorkCategory } from '$lib/game/core/types';
-  import { getEfficiencyColor } from '$lib/components/util/pawnUtils';
   import { getActiveConditionViews } from '$lib/components/util/conditionInfo';
   import { pawnStatService } from '$lib/game/services/PawnStatService';
   import { itemService } from '$lib/game/services/ItemService';
   import {
     LVL_NAMES,
-    LABOR_COLORS,
-    STAR_COLORS,
     STAR_TIERS,
-    WORST_COLORS,
     WORST_TIERS,
     NON_SKILL_TASKS,
     type CellRank
@@ -47,6 +44,15 @@
       return { label: s.label, text: s.statId === 'hit_precision' ? v.toFixed(3) : mult(v) };
     });
   });
+
+  let standing = $derived(
+    rank.best >= 0
+      ? STAR_TIERS[rank.best].toLowerCase()
+      : rank.worst >= 0
+        ? WORST_TIERS[rank.worst].toLowerCase()
+        : ''
+  );
+  const signed = (n: number) => `${n >= 0 ? '+' : ''}${Math.round(n)}%`;
 
   let eff = $derived(mods.speed * (mods.yield ?? 1) * (mods.quality ?? 1));
 
@@ -101,105 +107,43 @@
 </script>
 
 <HoverTip {x} {y} {pinned}>
-  <h5>
-    {name ?? wc.name}
-    {#if !nonSkill}
-      <span class="tip-eff" style="color:{getEfficiencyColor(eff)}">{Math.round(eff * 100)}%</span>
-    {/if}
-  </h5>
-
-  {#if rank.best >= 0}
-    <div class="tip-rank" style="color:{STAR_COLORS[rank.best]}">★ {STAR_TIERS[rank.best]}</div>
-  {:else if rank.worst >= 0}
-    <div class="tip-rank" style="color:{WORST_COLORS[rank.worst]}">▾ {WORST_TIERS[rank.worst]}</div>
-  {/if}
-
+  <h5>{pawn.name.split(' ')[0]} · {name ?? wc.name}</h5>
   {#if nonSkill}
-    <div class="tip-note">
+    <p>
       {wc.id === 'hunting'
-        ? 'Combat task — resolves as a normal fight, then the carcass is hauled.'
-        : 'Carrying task — driven by carry capacity and movement, not a learned skill.'}
-    </div>
-    {#each relevantStats as s}
-      <div class="kv">
-        <em>{s.label}</em>
-        <span>{s.text}</span>
-      </div>
+        ? 'Tracked and fought like any foe, then the carcass is carried home.'
+        : 'Strong backs and quick feet, not a learned craft.'}
+    </p>
+    {#if standing}<KvRow label="Standing">{standing}</KvRow>{/if}
+    <KvRow label="Priority">{LVL_NAMES[level].toLowerCase()}</KvRow>
+    {#each relevantStats as s (s.label)}
+      <KvRow label={s.label}>{s.text}</KvRow>
     {/each}
-    <div class="kv">
-      <em>Assigned</em>
-      <span style="color:{LABOR_COLORS[level]}">{LVL_NAMES[level]}</span>
-    </div>
   {:else}
-    <div class="kv">
-      <em>Speed</em>
-      <span style="color:{getEfficiencyColor(mods.speed)}">{mult(mods.speed)}</span>
-    </div>
-    {#if mods.yield !== null}
-      <div class="kv">
-        <em>Yield</em>
-        <span style="color:{getEfficiencyColor(mods.yield)}">{mult(mods.yield)}</span>
-      </div>
-    {/if}
-    {#if mods.quality !== null}
-      <div class="kv">
-        <em>Quality</em>
-        <span style="color:{getEfficiencyColor(mods.quality)}">{mult(mods.quality)}</span>
-      </div>
-    {/if}
-
-    <div class="kv">
-      <em>Assigned</em>
-      <span style="color:{LABOR_COLORS[level]}">{LVL_NAMES[level]}</span>
-    </div>
-    {#each stats as s}
-      <div class="kv">
-        <em>{s.label}</em>
-        <span>{s.val}</span>
-      </div>
+    <KvRow label="Skill"
+      >{skill}{#if standing}&nbsp;· {standing}{/if}</KvRow
+    >
+    <KvRow label="Priority">{LVL_NAMES[level].toLowerCase()}</KvRow>
+    <KvRow label="Overall">{Math.round(eff * 100)}%</KvRow>
+    <KvRow label="Speed">{mult(mods.speed)}</KvRow>
+    {#if mods.yield !== null}<KvRow label="Yield">{mult(mods.yield)}</KvRow>{/if}
+    {#if mods.quality !== null}<KvRow label="Quality">{mult(mods.quality)}</KvRow>{/if}
+    {#each stats as s (s.label)}
+      <KvRow label={s.label}>{s.val}</KvRow>
     {/each}
-    <div class="kv">
-      <em>Skill</em>
-      <span>{skill}</span>
-    </div>
-  {/if}
-
-  {#if !nonSkill && (toolMod || traitMods.length > 0 || condMods.length > 0)}
-    <div class="tip-sep">MODIFIERS</div>
-    {#if toolMod}
-      <div class="tip-mod">
-        <span class="tip-mod-name" style="color:#ca8">{toolMod.name} (tool)</span>
-        <span class="tip-mod-val"
-          >+{toolMod.speed.toFixed(2)} spd{#if toolMod.yield > 0}, +{toolMod.yield.toFixed(2)} yld{/if}</span
+    {#if toolMod || traitMods.length > 0 || condMods.length > 0}
+      <div class="tip-sep">Modifiers</div>
+      {#if toolMod}
+        <KvRow label={toolMod.name}
+          >+{toolMod.speed.toFixed(2)} spd{#if toolMod.yield > 0}, +{toolMod.yield.toFixed(2)} yld{/if}</KvRow
         >
-      </div>
+      {/if}
+      {#each traitMods as m, i (m.name + i)}
+        <KvRow label={m.name}>{signed(m.pct)} {m.axis}</KvRow>
+      {/each}
+      {#each condMods as m, i (m.name + i)}
+        <KvRow label={m.name}>{signed(m.pct)} speed</KvRow>
+      {/each}
     {/if}
-    {#each traitMods as m}
-      <div class="tip-mod">
-        <span class="tip-mod-name" style="color:{m.pct >= 0 ? 'var(--pos)' : 'var(--neg)'}"
-          >{m.name}</span
-        >
-        <span class="tip-mod-val">{m.pct >= 0 ? '+' : ''}{Math.round(m.pct)}% {m.axis}</span>
-      </div>
-    {/each}
-    {#each condMods as m}
-      <div class="tip-mod">
-        <span class="tip-mod-name" style="color:{m.pct >= 0 ? 'var(--pos)' : 'var(--neg)'}"
-          >{m.name}</span
-        >
-        <span class="tip-mod-val">{m.pct >= 0 ? '+' : ''}{Math.round(m.pct)}% speed</span>
-      </div>
-    {/each}
   {/if}
 </HoverTip>
-
-<style>
-  .tip-rank {
-    margin-bottom: 3px;
-  }
-  .tip-note {
-    margin-bottom: 3px;
-    line-height: 16px;
-    color: var(--text-muted);
-  }
-</style>

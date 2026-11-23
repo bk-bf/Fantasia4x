@@ -83,6 +83,22 @@
   .card :global(p.hot) {
     color: var(--accent-hi);
   }
+  .card :global(.c-bars) {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0 12px;
+    margin-top: 3px;
+  }
+  .card :global(.c-bars .meter-row em) {
+    width: 48px;
+  }
+  .card :global(.c-bars .meter-row > span) {
+    width: auto;
+    max-width: 96px;
+  }
+  .card :global(.c-conds) {
+    margin-top: 6px;
+  }
   .c-verbs {
     display: flex;
     gap: 4px;

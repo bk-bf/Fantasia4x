@@ -25,6 +25,10 @@ describe('combat narration', () => {
     expect(n.dodged).toBe(false);
   });
 
+  it('names a limb id with underscores in plain words', () => {
+    expect(describeSwing(swing({ bodyPart: 'left_arm' })).target).toBe("Goblin #2's left arm");
+  });
+
   it('picks a verb from the damage family + severity tier', () => {
     const n = describeSwing(swing({ damageType: 'cutting', woundSeverity: 'serious' }));
     expect(['slashed', 'gashed', 'lacerated']).toContain(n.verb);

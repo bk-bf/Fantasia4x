@@ -2,6 +2,7 @@
   import { uiState, type WindowId } from '$lib/stores/uiState';
   import { panelAmbient } from '$lib/components/UI/theme/ambientStore';
   import GameWindow from './GameWindow.svelte';
+  import { windowSubjects } from './windowSubjects';
   import ModalVeil from './ModalVeil.svelte';
   import { BIG_WIDTH_MAX, BIG_WIDTH_MIN, WINDOW_HEIGHT_MAX, WINDOWS } from './windowRegistry';
   import {
@@ -79,7 +80,7 @@
       {@const spec = WINDOWS[id]}
       <GameWindow
         {id}
-        title={spec.title}
+        title={[spec.title, $windowSubjects[id]].filter(Boolean).join(' · ')}
         modal={spec.modal}
         pos={pos[id] ?? null}
         width={widthOf(id)}

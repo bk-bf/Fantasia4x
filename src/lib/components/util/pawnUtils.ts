@@ -233,6 +233,13 @@ export function getNeedDescription(needType: string, needValue: number): string 
       high: 'Very thirsty',
       critical: 'Parched'
     },
+    pain: {
+      satisfied: 'None',
+      content: 'Dull',
+      moderate: 'Sharp',
+      high: 'Severe',
+      critical: 'Agony'
+    },
     hygiene: {
       satisfied: 'Clean',
       content: 'A little grubby',

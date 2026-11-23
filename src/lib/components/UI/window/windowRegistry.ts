@@ -15,6 +15,8 @@ import HealthWindow from '$lib/components/pawn/HealthWindow.svelte';
 import FuelWindow from '$lib/components/UI/canvas/FuelWindow.svelte';
 import MoodWindow from '$lib/components/pawn/MoodWindow.svelte';
 import FoodWindow from '$lib/components/UI/canvas/FoodWindow.svelte';
+import RepairWindow from '$lib/components/UI/canvas/RepairWindow.svelte';
+import StoresWindow from '$lib/components/UI/canvas/StoresWindow.svelte';
 
 export interface WindowSpec {
   title: string;
@@ -40,7 +42,9 @@ export const WINDOWS: Record<WindowId, WindowSpec> = {
   health: { title: 'Health', component: HealthWindow, width: 356, fit: true },
   fuel: { title: 'Fuel', component: FuelWindow, width: 300, fit: true },
   mood: { title: 'Mood', component: MoodWindow, width: 320, height: 224 },
-  food: { title: 'Food', component: FoodWindow, width: 320, height: 231 }
+  food: { title: 'Food', component: FoodWindow, width: 320, height: 231 },
+  repair: { title: 'Repair', component: RepairWindow, width: 320, fit: true },
+  stores: { title: 'Stores', component: StoresWindow, width: 380, height: 380 }
 };
 
 export const BIG_WIDTH_MAX = 1180;

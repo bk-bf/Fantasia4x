@@ -7,6 +7,8 @@
   import { buildingService } from '$lib/game/services/BuildingService';
   import ChromeButton from '$lib/components/UI/widget/ChromeButton.svelte';
   import CheckBox from '$lib/components/UI/widget/CheckBox.svelte';
+  import Pane from '$lib/components/UI/widget/Pane.svelte';
+  import Slider from '$lib/components/UI/widget/Slider.svelte';
   import {
     getRefuelRequirements,
     planRefuel,
@@ -89,15 +91,9 @@
   function setRefuelPaused(paused: boolean) {
     updateSelectedBuildingFuelSettings({ paused });
   }
-
-  function onRefuelThresholdInput(event: Event) {
-    const input = event.currentTarget as HTMLInputElement | null;
-    if (!input) return;
-    setRefuelThresholdPct(Number(input.value));
-  }
 </script>
 
-<div class="fuel">
+<Pane>
   <h5>Lights with</h5>
   <div class="kv">
     <span
@@ -121,26 +117,12 @@
   >
 
   <h5>Refuel below</h5>
-  <div class="slider">
-    <input
-      type="range"
-      min="0"
-      max="100"
-      step="5"
-      value={selectedFuelThresholdPct}
-      style:--fill="{selectedFuelThresholdPct}%"
-      on:input={onRefuelThresholdInput}
-    />
-    <input
-      class="num"
-      type="number"
-      min="0"
-      max="100"
-      value={selectedFuelThresholdPct}
-      on:change={onRefuelThresholdInput}
-    />
-    <b>%</b>
-  </div>
+  <Slider
+    value={selectedFuelThresholdPct}
+    step={5}
+    label="Refuel below"
+    oninput={setRefuelThresholdPct}>{selectedFuelThresholdPct}%</Slider
+  >
 
   <h5>Burns</h5>
   <ItemFilterChecklist
@@ -168,23 +150,9 @@
   <div class="minis">
     <ChromeButton onclick={clearRefuelPawnFilters}>Everyone</ChromeButton>
   </div>
-</div>
+</Pane>
 
 <style>
-  .fuel {
-    font: 16px/18px var(--font-pixel);
-    color: var(--text);
-  }
-  h5 {
-    margin: 6px 0 1px;
-    font: inherit;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: 1.6px;
-  }
-  h5:first-child {
-    margin-top: 0;
-  }
   .kv {
     display: flex;
     justify-content: space-between;
@@ -199,63 +167,8 @@
     box-shadow: inset 0 0 0 1px var(--text-muted);
     cursor: help;
   }
-  .warn {
-    margin: 2px 0;
-    color: var(--ember);
-  }
-  .slider {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    height: 20px;
-  }
-  input[type='range'] {
-    flex: 1;
-    height: 8px;
-    margin: 0;
-    appearance: none;
-    background: linear-gradient(to right, var(--accent-hi) var(--fill), var(--bg) var(--fill));
-    box-shadow: inset 0 0 0 1px var(--border-hi);
-    cursor: pointer;
-  }
-  input[type='range']::-webkit-slider-thumb {
-    appearance: none;
-    width: 9px;
-    height: 18px;
-    background: var(--bg-active);
-    box-shadow: inset 0 0 0 1px var(--border-hi);
-  }
-  input[type='range']::-moz-range-thumb {
-    width: 9px;
-    height: 18px;
-    border: 0;
-    border-radius: 0;
-    background: var(--bg-active);
-    box-shadow: inset 0 0 0 1px var(--border-hi);
-  }
-  .num {
-    width: 40px;
-    padding: 0 2px;
-    border: 0;
-    background: var(--bg);
-    box-shadow: inset 0 0 0 1px var(--border);
-    color: var(--text);
-    font: inherit;
-    appearance: textfield;
-  }
-  .slider b {
-    font-weight: normal;
-  }
   .who {
     max-height: 120px;
     overflow-y: auto;
-  }
-  .minis {
-    display: flex;
-    gap: 4px;
-    margin-top: 4px;
-  }
-  .minis :global(.cbtn) {
-    flex: 1;
   }
 </style>

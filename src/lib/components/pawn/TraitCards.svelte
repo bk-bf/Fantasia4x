@@ -417,9 +417,6 @@
       pawn && statCtx && isDerivedStat(sid) ? computeStatView(sid, pawn, statCtx) : null}
     {#if view}
       <HoverTip x={pill.x} y={pill.y} pinned={pill.pinned}>
-        <div class="tip-name" style="text-transform: capitalize">
-          {view.name}<span class="tip-val">{tag.value}</span>
-        </div>
         <StatTooltip {view} />
       </HoverTip>
     {:else}

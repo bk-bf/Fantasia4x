@@ -1,9 +1,9 @@
 <script lang="ts">
   import { gameState } from '$lib/stores/gameState';
-  import { fuelTarget } from './fuelTarget';
+  import { buildingTarget } from './windowTargets';
   import BuildingFuelPanel from './BuildingFuelPanel.svelte';
 
-  const building = $derived(($gameState.buildings ?? []).find((b) => b.id === $fuelTarget));
+  const building = $derived(($gameState.buildings ?? []).find((b) => b.id === $buildingTarget));
 </script>
 
 {#if building}

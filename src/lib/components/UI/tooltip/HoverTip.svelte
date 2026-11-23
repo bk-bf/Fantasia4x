@@ -128,6 +128,7 @@
   }
   .tip :global(:is(p, .tip-desc)) {
     margin: 2px 0 5px;
+    line-height: 16px;
     color: var(--text-dim);
   }
   .tip :global(.kv) {
