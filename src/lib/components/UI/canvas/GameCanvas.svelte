@@ -127,6 +127,7 @@
   import BuildingRepairPanel from '$lib/components/UI/canvas/BuildingRepairPanel.svelte';
   import BuildingStoragePanel from '$lib/components/UI/canvas/BuildingStoragePanel.svelte';
   import FoodFilterPanel from '$lib/components/UI/canvas/FoodFilterPanel.svelte';
+  import { bloodFrac } from '$lib/components/UI/canvas/healthColors';
   import StockpileZonePanel from '$lib/components/UI/canvas/StockpileZonePanel.svelte';
   import EnvReadout from '$lib/components/UI/canvas/EnvReadout.svelte';
   import BuildingInfo from '$lib/components/UI/canvas/BuildingInfo.svelte';
@@ -1481,23 +1482,23 @@
             p.position &&
             !isHiddenTile(p.position.x, p.position.y) &&
             p.isAlive !== false &&
-            (p.state.health ?? 100) < 100
+            bloodFrac(p) < 1
         )
         .map((p) => ({
           id: `hp-${p.id}`,
           left: (p.position!.x - vx + 0.5) * tW,
           top: (p.position!.y - vy) * tH - 10,
-          health: Math.max(0, Math.min(1, (p.state.health ?? 100) / 100)),
+          health: bloodFrac(p),
           type: 'pawn' as const
         }))
         .filter((o) => o.left >= 0 && o.top >= 0 && o.left <= W),
       ...mobList
-        .filter((m) => m.state !== 'Corpse' && m.health < m.maxHealth && !isHiddenTile(m.x, m.y))
+        .filter((m) => m.state !== 'Corpse' && bloodFrac(m) < 1 && !isHiddenTile(m.x, m.y))
         .map((m) => ({
           id: `hp-${m.id}`,
           left: (m.x - vx + 0.5) * tW,
           top: (m.y - vy) * tH - 10,
-          health: Math.max(0, Math.min(1, m.maxHealth > 0 ? m.health / m.maxHealth : 1)),
+          health: bloodFrac(m),
           type: 'mob' as const
         }))
         .filter((o) => o.left >= 0 && o.top >= 0 && o.left <= W)
