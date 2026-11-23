@@ -286,7 +286,7 @@ vec2 warpAt(vec2 p) {
     return p + (wide - 0.5) * WARP_WIDE_AMP + (fine - 0.5) * WARP_FINE_AMP;
 }
 
-float grainAt(ivec2 art, vec4 shift, float deep, float ruffle) {
+float grainAt(ivec2 art, vec4 shift, float ruffle) {
     ivec2 at = art % textureSize(u_waterField, 0);
     vec2 fq = vec2(at);
     vec4 field = texelFetch(u_waterField, at, 0);
@@ -294,8 +294,7 @@ float grainAt(ivec2 art, vec4 shift, float deep, float ruffle) {
     float rippled = ripple > 0.7 ? RIPPLE_CREST : ripple < 0.25 ? -RIPPLE_TROUGH : 0.0;
     return field.r * 255.0 / TONE_SCALE - TONE_OFFSET
         + rippled * ruffle
-        + (periodicNoise(fq, GLINT_CELLS, shift.zw * GLINT_CELLS / FIELD_PERIOD, 39) > 0.84 ? GLINT_RISE : 0.0)
-        - (int(field.g * 255.0 + 0.5) >= OPEN_CELL ? OPEN_CELL_DROP * (1.0 - deep) : 0.0);
+        + (periodicNoise(fq, GLINT_CELLS, shift.zw * GLINT_CELLS / FIELD_PERIOD, 39) > 0.84 ? GLINT_RISE : 0.0);
 }
 
 float gustAt(vec2 q) {
@@ -331,7 +330,7 @@ vec3 iceSheet(ivec2 cell, vec2 q, float margin, float depth, float near) {
     float wobble = depth + (wn(q * 0.05, 54) - 0.5) * BAND_WOBBLE;
     int band = clamp(int(floor(clamp(wobble, 0.0, 1.0) * float(BANDS - 1) + 0.5 + (d - 0.5) * BAND_DITHER)), 0, BANDS - 1);
     float deep = float(band) / float(BANDS - 1);
-    int tier = rampStep(grainAt(cell, vec4(0.0), deep, 0.5), cell);
+    int tier = rampStep(grainAt(cell, vec4(0.0), 0.5), cell);
     vec3 under = mix(SHALLOWS[tier], DEEP[min(tier + 1, 5)], deep);
     float thick = smoothstep(0.0, 0.4, margin);
     float frost = 0.14 + 0.22 * thick + 0.3 * smoothstep(6.0, 0.0, near) + (wn(q * 0.12, 98) - 0.5) * 0.16;
@@ -421,7 +420,7 @@ vec3 waveWater(vec2 w, vec2 p, int kind) {
     int band = clamp(int(floor(clamp(depth, 0.0, 1.0) * float(BANDS - 1) + 0.5 + (d - 0.5) * BAND_DITHER)), 0, BANDS - 1);
     float deep = float(band) / float(BANDS - 1);
     vec4 grain = u_sea[SEA_GRAIN] + vec4(seaward, seaward) * pull * PULL_GRAIN;
-    float tone = grainAt((cell << shift) + ((1 << shift) >> 1), grain, deep, smoothstep(0.15, 0.6, gust))
+    float tone = grainAt((cell << shift) + ((1 << shift) >> 1), grain, smoothstep(0.15, 0.6, gust))
         + (pock == 1 ? 1.5 : 0.0)
         + strength * ((shade - 1.0) * look.x * SHADE_STEPS + spec * SPEC_STEPS + (glint > GLINT_STEP ? 2.0 : 0.0));
     int tier = rampStep(tone, cell);
