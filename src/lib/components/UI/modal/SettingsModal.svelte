@@ -9,6 +9,7 @@
   import {
     weatherEffects,
     dayNightTint,
+    vignetteOn,
     showDialogBubbles,
     showFps,
     showTps,
@@ -83,6 +84,7 @@
         {@render checks([
           flag(weatherEffects, $weatherEffects, 'Weather effects'),
           flag(dayNightTint, $dayNightTint, 'Day/night UI tint'),
+          flag(vignetteOn, $vignetteOn, 'Vignette'),
           flag(showDialogBubbles, $showDialogBubbles, 'Dialog bubbles')
         ])}
       </SettingSection>

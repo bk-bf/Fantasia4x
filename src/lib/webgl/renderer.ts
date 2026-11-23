@@ -107,6 +107,10 @@ export class WebGLRenderer {
     this.core.setDynamicLight(active);
   }
 
+  setVignette(on: boolean): void {
+    this.core.setVignette(on);
+  }
+
   setLightVersion(version: number): void {
     this.core.setLightVersion(version);
   }

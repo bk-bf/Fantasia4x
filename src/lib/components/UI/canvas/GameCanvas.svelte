@@ -2,7 +2,7 @@
   import { onMount, onDestroy } from 'svelte';
   import { get } from 'svelte/store';
   import { browser } from '$app/environment';
-  import { wasdPan, debugMode } from '$lib/stores/uiPrefs';
+  import { wasdPan, debugMode, vignetteOn } from '$lib/stores/uiPrefs';
   import { WebGLRenderer } from '$lib/webgl/renderer.js';
   import { crashBreadcrumb } from '$lib/webgl/crashLog.js';
   import { startFreezeWatchdog, beat, stopFreezeWatchdog } from '$lib/webgl/freezeWatchdog.js';
@@ -294,6 +294,7 @@
   });
 
   const unsubAnimPause = gameState.isPaused.subscribe((p) => setAnimPaused(p));
+  const unsubVignette = vignetteOn.subscribe((on) => renderer?.setVignette(on));
 
   let attackLungeList: AttackLungeEvent[] = [];
   const unsubAttackLunges = attackLunges.subscribe((list) => {
@@ -2685,6 +2686,7 @@
     unsubWorldGen();
     unsubCombatFeedback();
     unsubAnimPause();
+    unsubVignette();
     unsubAttackLunges();
     unsubProjectiles();
     _unsubMenuPerf();
@@ -2739,6 +2741,7 @@
 
       const ok = await renderer.waitForInitialization();
       if (!ok || !renderer.isReady()) throw new Error('Renderer init failed');
+      renderer.setVignette(get(vignetteOn));
 
       if (worldMap.length > 0) {
         _fullRebuildTerrain();

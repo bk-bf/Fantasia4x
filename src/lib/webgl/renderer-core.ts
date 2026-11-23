@@ -102,6 +102,7 @@ export class WebGLRendererCore {
   private ambientTint: [number, number, number] = [1.0, 1.0, 1.0];
 
   private dynamicLight = false;
+  private vignetteOn = true;
 
   private lightVersion = 0;
 
@@ -209,6 +210,10 @@ export class WebGLRendererCore {
 
   setDynamicLight(active: boolean): void {
     this.dynamicLight = active;
+  }
+
+  setVignette(on: boolean): void {
+    this.vignetteOn = on;
   }
 
   setLightVersion(version: number): void {
@@ -505,7 +510,7 @@ export class WebGLRendererCore {
     } else {
       this.stats.overlayMs = 0;
     }
-    if (this.vignette && lightFrame)
+    if (this.vignette && lightFrame && this.vignetteOn)
       this.stats.drawCalls += this.vignette.draw({
         canvas: [this.viewport.width, this.viewport.height],
         strength: lightFrame.grade.vignette,

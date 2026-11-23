@@ -108,6 +108,8 @@ export const weatherEffects = createPersistedBool('fx.gfx.weather', true);
 
 export const dayNightTint = createPersistedBool('fx.gfx.dayNightTint', true);
 
+export const vignetteOn = createPersistedBool('fx.gfx.vignette', true);
+
 export const showDialogBubbles = createPersistedBool('fx.gfx.dialogBubbles', false);
 
 export const showFps = createPersistedBool('fx.display.showFps', true);
