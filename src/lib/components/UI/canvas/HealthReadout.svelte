@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { HealthModel } from '$lib/components/UI/hud/SelectedEntityCard.svelte';
+  import type { HealthModel } from '$lib/components/UI/hud/entityCard';
   import { healthPctColor } from './healthColors';
   import StatPills from '$lib/components/UI/widget/StatPills.svelte';
 

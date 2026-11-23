@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Pawn } from '$lib/game/core/types';
-  import type { MoodModel } from './SelectedEntityCard.svelte';
+  import type { MoodModel } from './entityCard';
   import { gameState } from '$lib/stores/gameState';
   import { uiState } from '$lib/stores/uiState';
   import { pawnCultureLabel } from '$lib/components/util/pawnUtils';
@@ -140,21 +140,5 @@
     width: 34px;
     text-align: right;
     color: var(--accent-hi);
-  }
-  .c-bars {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0 12px;
-    margin-top: 3px;
-  }
-  .c-bars :global(.meter-row em) {
-    width: 48px;
-  }
-  .c-bars :global(.meter-row > span) {
-    width: auto;
-    max-width: 96px;
-  }
-  .c-conds {
-    margin-top: 6px;
   }
 </style>

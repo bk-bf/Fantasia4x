@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { DroppedItem, PlacedBuilding } from '$lib/game/core/types';
-  import type { EntityButton } from './SelectedEntityCard.svelte';
+  import type { EntityButton } from './entityCard';
   import type { RampName } from '$lib/pixelArt/palette';
   import { gameState } from '$lib/stores/gameState';
   import { buildingService } from '$lib/game/services/BuildingService';

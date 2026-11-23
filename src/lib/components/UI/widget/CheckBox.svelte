@@ -4,15 +4,22 @@
 
   let {
     checked,
+    partial = false,
     disabled = false,
     onchange,
     children
-  }: { checked: boolean; disabled?: boolean; onchange: () => void; children: Snippet } = $props();
+  }: {
+    checked: boolean;
+    partial?: boolean;
+    disabled?: boolean;
+    onchange: () => void;
+    children: Snippet;
+  } = $props();
 </script>
 
-<label class="chk" class:on={checked} class:off={disabled}>
+<label class="chk" class:on={checked} class:partial={partial && !checked} class:off={disabled}>
   <input type="checkbox" {checked} {disabled} {onchange} />
-  <i class="box" {@attach chrome(checked ? 'cellOn' : 'well')}></i>
+  <i class="box" {@attach chrome(checked || partial ? 'cellOn' : 'well')}></i>
   <span>{@render children()}</span>
 </label>
 
@@ -45,6 +52,15 @@
     content: '';
     position: absolute;
     inset: 3px;
+    background: var(--accent-hi);
+  }
+  .partial .box::after {
+    content: '';
+    position: absolute;
+    left: 3px;
+    right: 3px;
+    top: 5px;
+    height: 1px;
     background: var(--accent-hi);
   }
   input:focus-visible + .box {

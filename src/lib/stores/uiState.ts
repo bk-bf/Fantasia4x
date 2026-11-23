@@ -15,7 +15,9 @@ export type WindowId =
   | 'health'
   | 'fuel'
   | 'mood'
-  | 'food';
+  | 'food'
+  | 'repair'
+  | 'stores';
 
 export type ModalId = 'trade' | 'event' | 'settings';
 
