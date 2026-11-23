@@ -56,7 +56,8 @@ export const WORD_TTL = 1.4;
 const TIERS = [0, 20, 38, 56];
 const BADGE_STEP = 18;
 const GAP = 2;
-const SAMPLE_S = 0.1;
+const SAMPLE_S = 0.3;
+const SEAT_PASSES = 2;
 const STRIKE_IN_S = 0.25;
 const STRIKE_LIGHT = hex('#f4ecd8');
 
@@ -176,7 +177,7 @@ function seat(q: Placed, now: number, r: number): void {
     const b = box(o.q, 0, r);
     return a[2] > b[0] && b[2] > a[0];
   });
-  for (let pass = 0; pass <= near.length; pass++) {
+  for (let pass = 0; pass < SEAT_PASSES; pass++) {
     let moved = false;
     for (const o of near) {
       const need = lift(q, o, (now - o.start) / 1000, r);
