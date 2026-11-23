@@ -53,7 +53,7 @@ function lastHit(S, step, upTo) {
   if (step.type !== 'act' || !def.hit) return null;
   const per = def.dur / step.rate, cyc = Math.min(upTo, step.t0 + step.dur) - step.t0, k = def.once ? 0 : Math.floor(cyc / per - def.hit[0]);
   if (cyc / per < def.hit[0] || k < 0) return null;
-  return { kind: def.hit[1], at: step.t0 + (k + def.hit[0]) * per, n: k, x: step.x, y: step.y, flip: step.flip, to: step.to, anim: step.anim, tag: step.tag };
+  return { kind: def.hit[1], at: step.t0 + (k + def.hit[0]) * per, n: k, x: step.x, y: step.y, flip: step.flip, to: step.to, anim: step.anim, tag: step.tag, face: step.face };
 }
 function evalAt(S, t) {
   const A = S.A, P = S.period, tl = S.loop ? ((t % P) + P) % P : Math.min(t, isFinite(P) ? P - .0001 : t), i = stepAt(S, tl), step = S.steps[i], since = tl - step.t0, def = animOf(A, step.anim);

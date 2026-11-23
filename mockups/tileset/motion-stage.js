@@ -23,7 +23,7 @@ function castFx(pen, items, T, lvl, env) {
     for (const e of st.events) {
       const dir = e.flip ? -1 : 1;
       if (e.kind === 'arrow') { MOTION_FX.arrow(pen, { ...e, stick: lvl > 2 && e.tag !== 'kill' }, dir); continue; }
-      if (lvl > 2) MOTION_FX.burst(pen, e.kind, e.x, e.y, e.age, idx * 131 + e.n * 17, dir);
+      if (lvl > 2) { const fb = e.face === 'f' || e.face === 'b'; MOTION_FX.burst(pen, e.kind, e.x + (fb ? 2 : 0), e.y + (e.face === 'f' ? 6 : e.face === 'b' ? -5 : 0), e.age, idx * 131 + e.n * 17, dir, fb ? { at: [0, -6] } : null); }
     }
     if (!fr) return;
     if (A.o && A.o.tool === 'torch' && lvl > 1 && fr.s.pts.glow) { const g = ptOf(it, 'glow'); MOTION_FX.flame(pen, g[0], g[1], T, A.seed); }
@@ -58,8 +58,8 @@ function treeState(tree, plan, T, lvl, smooth) {
   out.parts.push({ s: tree.stump, x: tree.x, y: tree.y });
   if (lvl > 1 && age < D + .5) {
     const k = Math.min(1, age / D), a0 = age < D ? 90 * k * k * k : age < D + .12 ? 86 : 90, step = smooth ? 3 : 9, ang = Math.min(90, Math.round(a0 / step) * step);
-    const key = 'fell' + tree.spr.w + tree.spr.h + tree.spr.ay + ang + dir;
-    out.parts.push({ s: cachedFrame(key, () => { const s = rotated(tree.cut, ang, dir); s.pts = {}; return s; }), x: tree.x, y: tree.y - 3, top: 1 });
+    const key = 'fell' + tree.kind + tree.seed + tree.season + ang + dir;
+    out.parts.push({ s: cachedFrame(key, () => { const s = (ang && fallTree(tree.kind, tree.seed, tree.season, ang, dir)) || rotated(tree.cut, ang, dir); s.pts = {}; return s; }), x: tree.x, y: tree.y - 3, top: 1 });
     if (lvl > 2 && age >= D) { out.bursts.push(['dustfall', tree.x + dir * tree.spr.ay * .55, tree.y, age - D, 7, 1]); out.bursts.push(['leaves', tree.x + dir * tree.spr.ay * .7, tree.y, age - D, 9, 1, { at: [0, -8], vz: [10, 60], g: 120 }]); }
     return out;
   }
@@ -70,5 +70,5 @@ function mkTreeProp(kind, seed, season, x, y) {
   const spr = tree(kind, seed, season), cut = new Spr(spr.w, spr.h, spr.ax, spr.ay - 4);
   for (let yy = 0; yy < spr.h - 5; yy++) for (let xx = 0; xx < spr.w; xx++) { cut.c[yy * spr.w + xx] = spr.c[yy * spr.w + xx]; cut.e[yy * spr.w + xx] = spr.e[yy * spr.w + xx]; }
   cut.sh = spr.sh; cut.leaf = spr.leaf;
-  return { spr, cut, stump: plant('stump', seed, season), logs: plant('logs', seed, season), x: rnd(x), y: rnd(y) };
+  return { spr, cut, kind, seed: seed % 4, season, stump: plant('stump', seed, season), logs: plant('logs', seed, season), x: rnd(x), y: rnd(y) };
 }
