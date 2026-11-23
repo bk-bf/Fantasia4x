@@ -2655,7 +2655,7 @@
   {
     "id": "conditions-floaters-repeat-unchanged-stage",
     "file": "src/lib/game/core/rules/body/conditions.ts",
-    "find": "if (!stage || prevStages?.get(c.id) === stage.label) continue;",
+    "find": "if (!stage || was === stage.label) continue;",
     "replace": "if (!stage) continue;",
     "tests": ["src/tests/game/core/conditionDrivers.test.ts"]
   },
