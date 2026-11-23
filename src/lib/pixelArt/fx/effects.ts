@@ -2,7 +2,7 @@ import { mix } from '../noise';
 import type { Ramp } from '../palette';
 import type { Bubble } from './bubble';
 import { cross, star, zed, type Pair } from './glyphs';
-import { coin, ring } from './marks';
+import { breath, coin, ring } from './marks';
 import type { FxPainter } from './painter';
 import { P } from './spr';
 
@@ -40,6 +40,25 @@ export function reel(p: FxPainter, x: number, y: number, t: number): void {
   for (const a of angles) {
     const z = Math.sin(a);
     p.put(s[z > 0.4 ? 2 : z < -0.4 ? 0 : 1], x + Math.cos(a) * 11, y + z * 4);
+  }
+}
+
+const BREATH_AT = [0.16, 0.32, 0.48, 0.64, 0.78, 0.9, 1];
+const BREATH_EVERY = 0.4;
+const BREATH_LIFE = 0.7;
+
+export function pant(p: FxPainter, x: number, y: number, t: number): void {
+  const b = breath();
+  for (let i = 0; i < 2; i++) {
+    const n = Math.floor(t / BREATH_EVERY) - i;
+    const u = (t - n * BREATH_EVERY) / BREATH_LIFE;
+    if (u < 0 || u >= 1) continue;
+    const f = b[BREATH_AT.findIndex((v) => u < v)];
+    p.put(
+      f,
+      x + f.ax - (f.w >> 1) - u * 15,
+      y + (f.h >> 1) + Math.sin(u * 2.4) * 1.5 - u * u * 3 + (n & 1)
+    );
   }
 }
 

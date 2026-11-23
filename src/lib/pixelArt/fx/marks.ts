@@ -1,7 +1,7 @@
 import { clamp, dith, hash } from '../noise';
 import type { Ramp, Rgb } from '../palette';
 import { keep, shade } from './glyphs';
-import { P, STAR, Spr, copy, melt } from './spr';
+import { P, R, STAR, Spr, copy, melt } from './spr';
 
 export const coin = (): Spr[] =>
   keep('coin', () =>
@@ -114,6 +114,20 @@ export const lick = (): Spr[] =>
       return s.outline(P.ember[1]);
     })
   );
+
+const MIST = R('#4e5c6e #7a8a9c #a8b8c8 #d2dee8 #eef4f8 #ffffff');
+
+export const breath = (): Spr[] =>
+  keep('breath', () => {
+    const b = [
+      ['##', '##'],
+      ['.##.', '####', '.##.'],
+      ['.###.', '#####', '#####', '.##..'],
+      ['..###..', '.######', '#######', '.#####.'],
+      ['..##.##..', '.########', '#########', '.#######.']
+    ].map((r) => shade(r, MIST, { e: 215, line: MIST[1] }));
+    return [...b, melt(b[4], 0.45), melt(b[4], 0.75)];
+  });
 
 export const glint = (): Spr[] =>
   keep('glint', () =>

@@ -72,6 +72,7 @@ function stateMark(
 }
 
 const HEAD_IN = 9;
+const MOUTH_AT = 0.64;
 
 function placeMark(kind: MarkKind, f: Figure): Mark {
   const head = f.box[2] - HEAD_IN;
@@ -81,7 +82,8 @@ function placeMark(kind: MarkKind, f: Figure): Mark {
   if (kind === 'reel')
     return f.lying ? { kind, x: head, y: f.y - 30 } : { kind, x: f.x, y: f.head - 6 };
   if (kind === 'coin') return { kind, x: f.x, y: f.head - 8 };
-  return { kind, x: f.x, y: f.head };
+  const rise = f.y - f.head;
+  return { kind, x: f.x - 1, y: f.y - Math.max(16, Math.min(25, Math.round(rise * MOUTH_AT))) };
 }
 
 function addBars(

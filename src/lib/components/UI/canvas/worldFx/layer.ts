@@ -4,7 +4,17 @@ import { projectiles } from '$lib/stores/fx/projectiles';
 import { gradeFromWeights, gradeGen, setGrade } from '$lib/pixelArt/fx/bake';
 import { FxPainter } from '$lib/pixelArt/fx/painter';
 import { bar } from '$lib/pixelArt/fx/marks';
-import { brackets, path, reel, rest, rings, route, sleep, trader } from '$lib/pixelArt/fx/effects';
+import {
+  brackets,
+  pant,
+  path,
+  reel,
+  rest,
+  rings,
+  route,
+  sleep,
+  trader
+} from '$lib/pixelArt/fx/effects';
 import type { BubbleSkin } from '$lib/pixelArt/fx/bubble';
 import { ART_TILE } from './figure';
 import { collectScene, type FxWorld, type Mark, type Scene } from './scene';
@@ -27,15 +37,12 @@ export interface FxView {
 const BAR_W = 24;
 const PRUNE_MS = 500;
 
-const MARKS: Record<
-  Mark['kind'],
-  ((p: FxPainter, x: number, y: number, t: number) => void) | null
-> = {
+const MARKS: Record<Mark['kind'], (p: FxPainter, x: number, y: number, t: number) => void> = {
   sleep,
   rest,
   reel,
   coin: trader,
-  winded: null
+  winded: pant
 };
 
 class WorldFxLayer {
@@ -103,7 +110,7 @@ class WorldFxLayer {
       scene.routes.length > 0 ||
       texts.length > 0 ||
       (shots.length > 0 && flying(shots, now)) ||
-      scene.marks.some((m) => MARKS[m.kind] !== null);
+      scene.marks.length > 0;
     if (!moving && scene.bars.length === 0) {
       if (this.painted) p.g.clearRect(0, 0, c.width, c.height);
       this.painted = false;
@@ -157,7 +164,7 @@ class WorldFxLayer {
       for (const b of r.boxes) brackets(p, b, r.col, t);
     }
     for (const b of s.bars) p.put(bar(BAR_W, b.v, b.ramp, b.pegs), b.x, b.y);
-    for (const m of s.marks) MARKS[m.kind]?.(p, m.x, m.y, t);
+    for (const m of s.marks) MARKS[m.kind](p, m.x, m.y, t);
     drawFlights(p, w.renderer, shots, now);
     drawFloats(p, w.renderer, texts, now, this.floaters);
     drawSpeech(p, w.renderer, texts, now, this.skin);
