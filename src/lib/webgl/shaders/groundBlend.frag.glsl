@@ -84,14 +84,12 @@ uint kindAt(vec2 art) {
     return texelFetch(u_kinds, tile, 0).r;
 }
 
-bool landAt(vec2 art) {
-    ivec2 tile = clamp(ivec2(floor(art / u_tileArt)), ivec2(0), u_mapSize - 1);
-    return texelFetch(u_tide, tile, 0).g > 0.5;
+vec2 tideAt(vec2 art) {
+    return texture(u_tide, art / u_tileArt / vec2(u_mapSize)).rg;
 }
 
-bool landWithin(vec2 w, float r) {
-    return landAt(w + vec2(r, 0.0)) || landAt(w - vec2(r, 0.0))
-        || landAt(w + vec2(0.0, r)) || landAt(w - vec2(0.0, r));
+bool landWithin(float bank, float reach) {
+    return bank > 0.5 - reach / u_tileArt;
 }
 
 int rampStep(float tone, ivec2 q) {
@@ -99,17 +97,16 @@ int rampStep(float tone, ivec2 q) {
 }
 
 vec3 water(vec2 w, int kind, ivec2 q) {
-    if (landWithin(w, WET_REACH)) {
-        if (landWithin(w, FOAM_REACH))
-            return FOAM[((int(floor(u_waterPhase)) + (q.x >> 2)) & 1) == 1 ? 1 : 2];
-        if (hash(q.x >> 1, q.y, 17) > WET_BREAK) return FOAM[0];
-    }
+    vec2 tide = tideAt(w);
+    if (landWithin(tide.g, FOAM_REACH))
+        return FOAM[((int(floor(u_waterPhase)) + (q.x >> 2)) & 1) == 1 ? 1 : 2];
+    if (landWithin(tide.g, WET_REACH) && hash(q.x >> 1, q.y, 17) > WET_BREAK) return FOAM[0];
     vec4 field = texelFetch(u_waterField, q % textureSize(u_waterField, 0), 0);
     int bits = int(field.g * 255.0 + 0.5);
     float tone = field.r * 255.0 / TONE_SCALE - TONE_OFFSET
-        - (landAt(w - vec2(0.0, BANK_REACH)) ? BANK_DROP : 0.0);
+        - (tideAt(w - vec2(0.0, BANK_REACH)).g > 0.5 ? BANK_DROP : 0.0);
     float edge = field.b * 255.0 / (EDGE_LEVELS - 1.0) - 0.5;
-    bool deep = texture(u_tide, w / u_tileArt / vec2(u_mapSize)).r > 0.5 + edge * EDGE_WOBBLE;
+    bool deep = tide.r > 0.5 + edge * EDGE_WOBBLE;
     if (kind == RAPIDS && deep) {
         int rapids = (bits >> RAPIDS_SHIFT) & 3;
         if (rapids == 3) return FOAM[2];
