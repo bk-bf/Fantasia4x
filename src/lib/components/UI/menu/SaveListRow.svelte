@@ -166,4 +166,10 @@
     flex: none;
     color: var(--accent-hi);
   }
+  :global(:root[data-theme='vellum']) .row.on :is(.info, b, em, .seed, .pill) {
+    color: var(--ember);
+  }
+  :global(:root[data-theme='vellum']) .row.on .pill {
+    box-shadow: inset 0 0 0 1px var(--ember);
+  }
 </style>

@@ -27,8 +27,9 @@
   <div class="grid">
     <span></span><em>Share</em><em>Warmth</em><em>Wet</em>
     {#each biomes as b (b.id)}
-      <span class="name" title="hold its share">
-        <CheckBox checked={locked.has(b.id)} onchange={() => onlock(b.id)}>{b.displayName}</CheckBox
+      <span class="name" title="its share shifts with the others">
+        <CheckBox checked={!locked.has(b.id)} onchange={() => onlock(b.id)}
+          >{b.displayName}</CheckBox
         >
       </span>
       <Slider
