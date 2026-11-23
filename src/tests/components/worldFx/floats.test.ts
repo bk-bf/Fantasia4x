@@ -52,7 +52,7 @@ interface Put {
   y: number;
 }
 
-const both = { icons: true, text: true };
+const both = { icons: true, text: true, words: true };
 
 function draw(
   list: CombatTextEvent[],
@@ -88,13 +88,22 @@ describe('condition floaters', () => {
     expect(draw([e], both, at + 500).map((d) => d.s)).toEqual([
       worded('winded', 'Winded', '#9575cd')[0]
     ]);
-    expect(draw([e], { icons: true, text: false }, at + 501).map((d) => d.s)).toEqual([
+    expect(draw([e], { icons: true, text: false, words: true }, at + 501).map((d) => d.s)).toEqual([
       icon('winded')[0]
     ]);
-    expect(draw([e], { icons: false, text: true }, at + 502).map((d) => d.s)).toEqual([
+    expect(draw([e], { icons: false, text: true, words: true }, at + 502).map((d) => d.s)).toEqual([
       word('Winded', tint('#9575cd'), { small: true })[0]
     ]);
-    expect(draw([e], { icons: false, text: false }, at + 503)).toEqual([]);
+    expect(draw([e], { icons: false, text: false, words: true }, at + 503)).toEqual([]);
+  });
+
+  it('shows condition icons alone, with no numbers, when only the icons are on', () => {
+    const at = 15_000;
+    const e = onset('winded', 'Winded', 8000);
+    const h = hit(7, 8001, 4, at);
+    const iconsOnly = { icons: true, text: false, words: false };
+    draw([e, h], iconsOnly, at);
+    expect(draw([e, h], iconsOnly, at + 500).map((d) => d.s)).toEqual([icon('winded')[0]]);
   });
 
   it('keeps neighbours apart for their whole lives', () => {

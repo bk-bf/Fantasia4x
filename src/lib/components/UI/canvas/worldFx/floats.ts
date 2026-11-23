@@ -8,9 +8,13 @@ import type { WebGLRenderer } from '$lib/webgl/renderer.js';
 import { figureAt, type Figure } from './figure';
 import { iconFor } from './conditionIcons';
 
-export interface FloaterMode {
+export interface ConditionShow {
   icons: boolean;
   text: boolean;
+}
+
+export interface FloaterMode extends ConditionShow {
+  words: boolean;
 }
 
 interface Placed {
@@ -126,6 +130,7 @@ function place(e: CombatTextEvent, f: Figure, mode: FloaterMode): Placed | null 
   const tier = Math.min(TIERS.length - 1, Math.round((e.dy ?? 0) / 13));
   const id = iconFor(e);
   const switched = e.kind === 'condition' || id !== undefined;
+  if (!switched && !mode.words) return null;
   if (id && mode.icons) {
     const col = e.color ?? (e.kind === 'fracture' ? '#ff9944' : '#dddddd');
     return anchor(f, {
@@ -239,7 +244,7 @@ function release(r: WebGLRenderer | null, now: number, mode: FloaterMode): void 
 }
 
 function remode(mode: FloaterMode): void {
-  const key = `${mode.icons}|${mode.text}`;
+  const key = `${mode.icons}|${mode.text}|${mode.words}`;
   if (key === modeKey) return;
   modeKey = key;
   for (let i = items.length - 1; i >= 0; i--) {
