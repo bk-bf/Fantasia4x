@@ -108,3 +108,4 @@ const PIXEL_AXES = (() => {
     { id: 'bearded_axe', draw: beardedAxe }
   ];
 })();
+PIXEL_ICONS.push(...PIXEL_AXES);

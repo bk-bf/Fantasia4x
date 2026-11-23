@@ -36,3 +36,4 @@ const PIXEL_BLADES = (() => {
     { id: 'orc_cleaver', draw: orcCleaver }
   ];
 })();
+PIXEL_ICONS.push(...PIXEL_BLADES);

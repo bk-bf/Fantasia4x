@@ -1,2 +1,2 @@
 'use strict';
-const PIXEL_ICONS = [...PIXEL_BLADES, ...PIXEL_AXES, ...PIXEL_BLUNT, ...PIXEL_POLES, ...PIXEL_TOOLS, ...PIXEL_BOWS];
+const PIXEL_ICONS = [];

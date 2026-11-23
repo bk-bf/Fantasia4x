@@ -54,3 +54,4 @@ const PIXEL_POLES = (() => {
     { id: 'iron_hoe', draw: ironHoe }
   ];
 })();
+PIXEL_ICONS.push(...PIXEL_POLES);

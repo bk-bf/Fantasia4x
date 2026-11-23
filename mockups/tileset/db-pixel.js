@@ -22,6 +22,6 @@
   X.fromData = objects => {
     prev.call(X, objects);
     const known = new Set(objects.filter(o => o.cat === 'item').map(o => o.id));
-    for (const icon of PIXEL_ICONS) { if (!known.has(icon.id)) throw new Error('pixel icon for an item the database does not have: ' + icon.id); adopt(icon); }
+    for (const icon of PIXEL_ICONS) { if (known.has(icon.id)) adopt(icon); else console.error('pixel icon for an item the database does not have: ' + icon.id); }
   };
 })();

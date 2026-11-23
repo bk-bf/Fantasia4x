@@ -42,3 +42,4 @@ const PIXEL_BOWS = (() => {
     { id: 'hunting_recurve', draw: huntingRecurve }
   ];
 })();
+PIXEL_ICONS.push(...PIXEL_BOWS);

@@ -83,3 +83,4 @@ const PIXEL_TOOLS = (() => {
     { id: 'flint_knife', draw: flintKnife }
   ];
 })();
+PIXEL_ICONS.push(...PIXEL_TOOLS);

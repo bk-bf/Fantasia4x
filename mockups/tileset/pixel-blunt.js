@@ -131,3 +131,4 @@ const PIXEL_BLUNT = (() => {
     { id: 'iron_hammer', draw: ironHammer }
   ];
 })();
+PIXEL_ICONS.push(...PIXEL_BLUNT);

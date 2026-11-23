@@ -64,5 +64,6 @@ const WORLD_ITEMS = (() => {
     return { L, cells: [...outline(assemble(pieces, undefined, axisFor(def, pose, L))).values()] };
   }
 
-  return { has: id => id in DRAWN, ids: () => Object.keys(DRAWN), cells };
+  const add = drawings => Object.assign(DRAWN, drawings);
+  return { has: id => id in DRAWN, ids: () => Object.keys(DRAWN), cells, add, parts: { POMMEL, BLADE, grip, wrapped, guard, shaped } };
 })();
