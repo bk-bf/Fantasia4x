@@ -7,7 +7,7 @@
   "src/lib/components/UI/canvas/GameCanvas.svelte": 4486,
   "src/lib/components/UI/canvas/ItemFilterChecklist.svelte": 203,
   "src/lib/components/UI/hud/ActivityLogOverlay.svelte": 548,
-  "src/lib/components/UI/hud/BuildCard.svelte": 297,
+  "src/lib/components/UI/hud/BuildCard.svelte": 295,
   "src/lib/components/UI/hud/ChroniclePanel.svelte": 275,
   "src/lib/components/UI/hud/ResourceSidebar.svelte": 263,
   "src/lib/components/UI/tooltip/ItemStatTooltip.svelte": 270,

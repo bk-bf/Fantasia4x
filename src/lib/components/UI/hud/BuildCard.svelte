@@ -83,7 +83,6 @@
   );
   const showItemTip = $derived(!!statItem && (hasItemStats || !!jobLabel));
   const short = $derived(variant === 'missing' || variant === 'blocked');
-  const lines = $derived(station || toolTier || requiredTool ? 2 : 3);
 
   function followCard(e: MouseEvent) {
     if (buildingDef) cardTip = { x: e.clientX, y: e.clientY };
@@ -111,13 +110,16 @@
     onmousemove={(e) => itemTip && (itemTip = { x: e.clientX, y: e.clientY })}
     onmouseleave={() => (itemTip = null)}
   >
-    {#if buildingDef}
-      <span class="bspr"><SpriteIcon {charSpans} building={buildingDef.id} px={40} /></span>
-    {:else if glyph}
+    {#if glyph && !buildingDef}
       <span class="gly"><PixelGlyph name={glyph} ramp="honey" /></span>
     {:else}
-      <span class="sq" {@attach chrome('well')}>
-        <SpriteIcon {charSpans} item={statItem?.id} px={34} />
+      <span class="bspr">
+        <SpriteIcon
+          {charSpans}
+          building={buildingDef?.id}
+          item={buildingDef ? undefined : statItem?.id}
+          px={40}
+        />
       </span>
     {/if}
     <div class="ttl">
@@ -130,7 +132,6 @@
   </header>
   {#if description}
     <p
-      style="-webkit-line-clamp:{lines};height:{lines * 16}px;flex:none"
       onmouseenter={enterDesc}
       onmousemove={(e) => descTip && (descTip = { x: e.clientX, y: e.clientY })}
       onmouseleave={() => (descTip = null)}
@@ -210,13 +211,6 @@
     display: grid;
     place-items: end center;
   }
-  .sq {
-    flex: none;
-    width: 44px;
-    height: 44px;
-    display: grid;
-    place-items: center;
-  }
   .gly {
     flex: none;
     width: 26px;
@@ -253,11 +247,15 @@
     color: var(--accent-hi);
   }
   p {
+    flex: none;
+    height: 32px;
     margin: 0;
     color: var(--text-dim);
     overflow: hidden;
     display: -webkit-box;
     -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
   }
   .at {
     display: flex;
