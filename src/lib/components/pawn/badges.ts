@@ -43,6 +43,15 @@ export function conditionKind(v: ConditionView): BadgeKind {
   return modifierLean(v.modifiers) > 0 ? 'good' : 'warn';
 }
 
+const SEVERITY_RANK: Record<BadgeKind, number> = { neg: 0, warn: 1, cold: 1, trait: 2, good: 3 };
+
+export function bySeverity(a: ConditionView, b: ConditionView): number {
+  return (
+    SEVERITY_RANK[conditionKind(a)] - SEVERITY_RANK[conditionKind(b)] ||
+    (b.severityPct ?? 0) - (a.severityPct ?? 0)
+  );
+}
+
 export function conditionBadge(v: ConditionView): { glyph: GlyphName; kind: BadgeKind } {
   const kind = conditionKind(v);
   if (COLD.has(v.id)) return { glyph: v.id === 'wet' ? 'drop' : 'snow', kind };

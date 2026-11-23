@@ -102,7 +102,7 @@
       {/each}
     </div>
     {#if conditions.length > 0}
-      <div class="c-conds"><ConditionRows views={conditions} inline /></div>
+      <div class="c-conds"><ConditionRows views={conditions} inline rows={2} /></div>
     {/if}
   </HudCard>
 </div>

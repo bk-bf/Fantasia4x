@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { ConditionView } from '$lib/components/util/conditionInfo';
 import type { Trait } from '$lib/game/core/types';
 import {
+  bySeverity,
   conditionBadge,
   conditionKind,
   modifierLean,
@@ -43,6 +44,21 @@ describe('condition badges', () => {
       kind: 'cold'
     });
     expect(conditionBadge(view('well_fed', { workEfficiency: 1.05 })).glyph).toBe('bowl');
+  });
+
+  it('orders life-threatening first, comfort last, and deeper severity ahead', () => {
+    const fed = view('well_fed', { hungerRate: 0.94 });
+    const wet = view('wet', { moveSpeed: 0.9 });
+    const bleeding = view('bleeding', {}, true);
+    const sore = { ...view('sore', { moveSpeed: 0.9 }), severityPct: 20 };
+    const broken = { ...view('broken', { moveSpeed: 0.8 }), severityPct: 70 };
+    expect([fed, sore, wet, bleeding, broken].sort(bySeverity).map((v) => v.id)).toEqual([
+      'bleeding',
+      'broken',
+      'sore',
+      'wet',
+      'well_fed'
+    ]);
   });
 });
 
