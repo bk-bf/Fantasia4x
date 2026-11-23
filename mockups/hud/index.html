@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fantasia4x HUD mockup</title>
+<link rel="stylesheet" href="base.css">
+<link rel="stylesheet" href="chrome.css">
+<link rel="stylesheet" href="hud.css">
+<link rel="stylesheet" href="extra.css">
+<link rel="stylesheet" href="fx.css">
+</head>
+<body>
+<header id="mock">
+  <div class="mrow"><strong>HUD mockup</strong><span class="grp" data-k="skin"><button data-v="timber">1 Timber</button><button data-v="vellum">2 Vellum</button></span><button id="mockhide" title="Hide this panel; the backquote key brings it back">Hide · `</button></div>
+  <div class="mrow"><span class="grp" data-k="hourset"><input id="hour" type="range" min="0" max="24" step="0.25" aria-label="Hour of the day"><output id="hourout"></output><button data-v="6.5">Dawn</button><button data-v="13">Day</button><button data-v="19">Dusk</button><button data-v="23.5">Night</button></span></div>
+  <div class="mrow"><span class="grp" data-k="weather"><button data-v="clear">Clear skies</button><button data-v="spring_windy">Spring windy</button><button data-v="summer_windy">Summer windy</button><button data-v="autumn_windy">Autumn windy</button><button data-v="winter_windy">Windy snow</button><button data-v="drizzle">Drizzle</button><button data-v="rain">Rain</button><button data-v="windy_rain">Windy rain</button><button data-v="heavy_rain">Heavy rain</button><button data-v="storm">Storm</button><button data-v="snow">Snow</button><button data-v="blizzard">Blizzard</button><button data-v="fog">Fog</button><button data-v="foggy_rain">Foggy rain</button><button data-v="heat_wave">Heat wave</button><button data-v="gale">Gale</button></span></div>
+  <div class="mrow"><label class="pane"><b>Pane</b><select id="pane"><option value="">none</option><optgroup label="Effects"><option value="fx">World effects</option><option value="fxfight">Combat effects</option><option value="fxicons">Icon floaters</option></optgroup><optgroup label="Awaiting sanction"><option value="saves">Load list</option><option value="savegame">Save list</option><option value="newgame">New game</option><option value="gameover">Game over</option><option value="hover">Map hover</option><option value="creature">Creature card</option><option value="item">Item card</option><option value="zonecard">Zone card</option><option value="mood">Mood</option><option value="food">Food</option><option value="stores">Stores</option><option value="repair">Repair</option><option value="banner">Mode banner</option><option value="ctx">Context menu</option><option value="overlays">Map overlays</option><option value="tips">Tooltips</option><option value="credits">Credits</option><option value="coltools">Column tools</option><option value="debug">Debug</option><option value="gearlayers">Layered gear</option></optgroup><optgroup label="Event popups"><option value="trade">Trade</option><option value="caravan">Caravan</option><option value="migrants">Migrants</option></optgroup></select></label></div>
+  <p class="mnote"><span id="pov" hidden></span>mock data · invented names and numbers</p>
+</header>
+<main id="screen">
+  <div id="world"><canvas id="mapday"></canvas><canvas id="mapdusk"></canvas><canvas id="mapnight"></canvas><div id="marks"></div></div>
+  <div id="wx"></div>
+  <div id="hud"></div>
+  <div id="stamp">Mockup · invented names and numbers</div>
+  <div id="busy">Painting the map…</div>
+</main>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <filter id="ambient-tint" color-interpolation-filters="sRGB"><feColorMatrix id="fm-panel" type="matrix" values="1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 1 0"/></filter>
+  <filter id="ambient-tint-legible" color-interpolation-filters="sRGB"><feColorMatrix id="fm-legible" type="matrix" values="1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 1 0"/></filter>
+  <filter id="ambient-tint-data" color-interpolation-filters="sRGB"><feColorMatrix id="fm-data" type="matrix" values="1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 1 0"/></filter>
+  <filter id="ambient-tint-lit" color-interpolation-filters="sRGB"><feColorMatrix id="fm-lit" type="matrix" values="1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 1 0"/></filter>
+</svg>
+<script src="../fantasia4x-tileset/gfx.js"></script>
+<script src="../fantasia4x-tileset/mat.js"></script>
+<script src="../fantasia4x-tileset/world.js"></script>
+<script src="../fantasia4x-tileset/flora.js"></script>
+<script src="../fantasia4x-tileset/build.js"></script>
+<script src="../fantasia4x-tileset/actors.js"></script>
+<script src="../fantasia4x-tileset/colony.js"></script>
+<script src="../fantasia4x-tileset/scene.js"></script>
+<script src="../fantasia4x-tileset/db-core.js"></script>
+<script src="../fantasia4x-tileset/db-mockup.js"></script>
+<script src="../fantasia4x-tileset/db-flora.js"></script>
+<script src="../fantasia4x-tileset/db-creatures.js"></script>
+<script src="../fantasia4x-tileset/db-buildings.js"></script>
+<script src="../fantasia4x-tileset/db-ground.js"></script>
+<script src="../fantasia4x-tileset/db-folk.js"></script>
+<script src="../fantasia4x-tileset/db-items.js"></script>
+<script src="../fantasia4x-tileset/db-hd.js"></script>
+<script src="../fantasia4x-tileset/db-tools.js"></script>
+<script src="../fantasia4x-tileset/db-weapons.js"></script>
+<script src="../fantasia4x-tileset/db-gear.js"></script>
+<script src="../fantasia4x-tileset/db-goods.js"></script>
+<script src="../fantasia4x-tileset/db-armor.js"></script>
+<script src="../fantasia4x-tileset/db-rare.js"></script>
+<script src="ambient.js"></script>
+<script src="art.js"></script>
+<script src="weather.js"></script>
+<script src="wind.js"></script>
+<script src="data.js"></script>
+<script src="hud.js"></script>
+<script src="screens.js"></script>
+<script src="extra.js"></script>
+<script src="fx-font.js"></script>
+<script src="fx-art.js"></script>
+<script src="fx-icons.js"></script>
+<script src="fx.js"></script>
+<script src="skins.js"></script>
+<script src="main.js"></script>
+</body>
+</html>

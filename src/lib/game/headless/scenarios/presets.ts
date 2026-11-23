@@ -186,7 +186,8 @@ export const SCENARIO_PRESETS: ScenarioPreset[] = [
       seed: 4242,
       map: { w: 750, h: 750, preset: 'generated' },
       pawns: [{ count: 5 }],
-      seedEntities: true
+      seedEntities: true,
+      wholeMapStockpile: false
     }
   }
 ];

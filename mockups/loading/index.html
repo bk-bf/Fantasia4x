@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fantasia4x loading screen mockup</title>
+<link rel="stylesheet" href="../fantasia4x-hud/base.css">
+<link rel="stylesheet" href="../fantasia4x-hud/chrome.css">
+<script src="../fantasia4x-hud/chrome.js"></script>
+<link rel="stylesheet" href="loading.css">
+</head>
+<body>
+<header id="mock">
+  <div class="mrow"><strong>Loading screen mockup</strong><span class="grp" data-k="skin"><button data-v="timber">1 Timber</button><button data-v="vellum">2 Vellum</button></span><button id="mockhide" title="Hide this panel; the backquote key brings it back">Hide · `</button></div>
+  <div class="mrow"><span class="grp" data-k="speed" data-def="normal"><span class="lab">Sand</span><button data-v="slow">Slow</button><button data-v="normal">Normal</button><button data-v="fast">Fast</button></span></div>
+  <div class="mrow"><span class="grp" id="act"><button data-a="flip">Flip now</button><button data-a="ready">Jump to Ready</button></span></div>
+  <p class="mnote"><span id="pov"></span><br>Mockup · tips and status lines are the game's own · the sandglass runs on a loop, the game reports no progress fraction</p>
+</header>
+<main id="screen">
+  <canvas id="bg"></canvas>
+  <section id="leaf" data-skin="win">
+    <h1 id="title">Fantasia</h1>
+    <div id="glasswrap"><canvas id="glass"></canvas></div>
+    <p id="status" role="status"></p>
+    <aside id="tip"><p id="tiptext" aria-live="polite"></p></aside>
+  </section>
+  <div id="stamp">Mockup · invented layout</div>
+</main>
+<script src="../fantasia4x-tileset/gfx.js"></script>
+<script src="../fantasia4x-tileset/mat.js"></script>
+<script src="../fantasia4x-hud/ambient.js"></script>
+<script src="../fantasia4x-hud/art.js"></script>
+<script src="../fantasia4x-hud/skins.js"></script>
+<script src="glass.js"></script>
+<script src="main.js"></script>
+</body>
+</html>

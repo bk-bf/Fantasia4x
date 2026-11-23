@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Menu drift speed</title>
+<style>
+  :root { --bg: #f2eee6; --fg: #241a12; --muted: #6b5a4a; --line: #d8cfc0; color-scheme: light; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #141012; --fg: #eee6da; --muted: #a8998a; --line: #3a3034; color-scheme: dark; } }
+  :root[data-theme="dark"] { --bg: #141012; --fg: #eee6da; --muted: #a8998a; --line: #3a3034; color-scheme: dark; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.45 system-ui, sans-serif; }
+  main { max-width: 1040px; margin: 0 auto; padding: 20px 16px 48px; }
+  h2 { font-size: 15px; margin: 28px 0 8px; }
+  p { margin: 4px 0; color: var(--muted); }
+  .pair { width: fit-content; max-width: 100%; margin-top: 10px; }
+  .labels { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-weight: 600; font-size: 13px; margin-bottom: 4px; }
+  .scroll { overflow-x: auto; }
+  video { display: block; image-rendering: pixelated; }
+  img { display: block; max-width: 100%; image-rendering: pixelated; margin-top: 6px; }
+</style>
+<link rel="stylesheet" href="../fantasia4x-hud/chrome.css">
+<script src="../fantasia4x-hud/chrome.js"></script>
+</head>
+<body>
+<header id="mock" class="bar">
+  <strong>Menu colony drift: current speed vs 30 px/s</strong>
+  <span class="grp" data-k="zoom"><button data-v="1">1:1</button><button data-v="2">2×</button></span>
+  <span class="grp" data-k="theme"><button data-v="auto">Auto</button><button data-v="light">Light</button><button data-v="dark">Dark</button></span>
+</header>
+<main>
+  <p>Recorded frame by frame in Chromium at 1440×900, 2× display, 120 Hz. Both sides use the new per-frame drawing and are sharp in every frame. Only the speed differs.</p>
+
+  <h2>While it travels</h2>
+  <div class="pair"><div class="labels"><span>Current: 3.8 px/s, a 1-pixel step every 16 frames</span><span>30 px/s: a 1-pixel step every 2 frames</span></div>
+  <div class="scroll"><video src="current-vs-30.mp4" autoplay loop muted playsinline></video></div></div>
+
+  <h2>Turning round at the end of the drift (right side)</h2>
+  <div class="pair"><div class="labels"><span>Current</span><span>30 px/s, turning round over 1.2 s</span></div>
+  <div class="scroll"><video src="current-vs-30-turn.mp4" autoplay loop muted playsinline></video></div></div>
+
+  <h2>Pixel edges, 4× crop, every 30th frame</h2>
+  <p>30 px/s, travelling</p><img src="crop4x-30.png" alt="">
+  <p>30 px/s, turning</p><img src="crop4x-30-turn.png" alt="">
+  <p>Current speed</p><img src="crop4x-current.png" alt="">
+</main>
+<script>
+  const vids = [...document.querySelectorAll('video')];
+  const ui = F4X.bar((s, k) => { if (k === 'zoom') size(); });
+  function size() {
+    for (const v of vids) if (v.videoWidth) v.style.width = (v.videoWidth / 2) * +ui.state.zoom / devicePixelRatio + 'px';
+  }
+  vids.forEach((v) => v.addEventListener('loadedmetadata', size));
+  addEventListener('resize', size);
+</script>
+</body>
+</html>

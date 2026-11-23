@@ -24,7 +24,8 @@
     ],
     "origin": [
       "found by audit",
-      "found by hand"
+      "found by hand",
+      "found by nightly check"
     ],
     "verify": [
       "verify tests",
@@ -72,6 +73,7 @@
       "dev-jargon",
       "doc-contradicts-code",
       "error-discarded",
+      "flaky-test",
       "frame-collection-work",
       "generic-before-thematic",
       "job-switch-by-hand",
@@ -87,8 +89,10 @@
       "silent-early-return",
       "snapshot-growth",
       "spatial-inlined",
+      "stale-test",
       "stat-outside-modifiers",
       "state-outside-manager",
+      "surviving-mutant",
       "text-instructs",
       "tick-allocation",
       "tick-logging",

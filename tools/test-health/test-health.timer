@@ -1,0 +1,9 @@
+[Unit]
+Description=Fantasia4x nightly test-health pass, after the 03:17 CI run on dev
+
+[Timer]
+OnCalendar=*-*-* 04:00:00 UTC
+Persistent=true
+
+[Install]
+WantedBy=timers.target

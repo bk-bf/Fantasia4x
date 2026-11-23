@@ -13,6 +13,7 @@ to ubuntuserver through `remote/run.mjs`.
 | `remote/run.mjs` | Runs a test or check command on ubuntuserver against the committed `HEAD`, for work in progress. | the `pnpm` test, check and bench scripts |
 | `remote/guard.mjs` | Refuses a test runner, linter or harness started on the laptop. | Claude Code hook |
 | `remote/prepare.sh` | Puts the pinned Node, pnpm and Rust on the path on ubuntuserver. | loaded by `remote/run.mjs` |
+| `test-health/run.sh` | Starts the nightly `claude -p` session that runs the `test-health` skill; `test-health/install.sh` installs its systemd timer on ubuntuserver (04:00 UTC). | `tools/test-health/install.sh` |
 | `lib/` | The GitHub wrapper's modules, the label, milestone and private-word lists, and `private-check.mjs`, which the git hooks run. | imported by `issue.mjs`, `promote.mjs` and the hooks |
 | `promote.mjs` | Merges `dev` into `main` in a worktree and runs every check there; `--push` pushes `main`. | `pnpm promote` |
 | `ci/ci-scope.mjs` | Decides which CI legs a change runs from `ci/scope.json`, and refuses a file no rule there matches. | run by `check.yml` and `hooks/pre-push` |

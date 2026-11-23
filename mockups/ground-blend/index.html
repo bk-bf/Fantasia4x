@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ground blend pass, off and on</title>
+<style>
+:root { color-scheme: light dark; --bg: #f4f1ea; --fg: #1d1b18; --muted: #5d574d; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #15140f; --fg: #ece7dc; --muted: #a39b8c; } }
+:root[data-theme="dark"] { --bg: #15140f; --fg: #ece7dc; --muted: #a39b8c; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.45 system-ui, sans-serif; }
+main { padding: 12px 16px 16px; }
+h2 { font-size: 16px; margin: 28px 0 8px; }
+p { margin: 0 0 8px; color: var(--muted); max-width: 70ch; }
+.pair { display: grid; grid-template-columns: 1fr; gap: 12px; }
+@media (min-width: 900px) { .pair { grid-template-columns: 1fr 1fr; } }
+figure { margin: 0; }
+figcaption { font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+img { width: 100%; height: auto; image-rendering: pixelated; display: block; border-radius: 4px; }
+</style>
+<link rel="stylesheet" href="../fantasia4x-hud/chrome.css">
+<script src="../fantasia4x-hud/chrome.js"></script>
+</head>
+<body>
+<header id="mock" class="bar"><strong>Ground blend pass (#205 step 1), off and on</strong><span class="grp" data-k="theme"><button data-v="auto">Auto</button><button data-v="light">Light</button><button data-v="dark">Dark</button></span></header>
+<main>
+<p>Same save, same camera, noon light, painted tiles on. 960 x 600, software GL.</p>
+
+<h2>Colony at 32 px: grass, dirt, rocky ground, mountain lower left</h2>
+<div class="pair">
+<figure><figcaption>blend off</figcaption><img src="off-32.png" alt="blend off, colony, 32 px"></figure>
+<figure><figcaption>blend on</figcaption><img src="on-32.png" alt="blend on, colony, 32 px"></figure>
+</div>
+
+<h2>Lake shore at 32 px: water, riverbank, grass, dirt</h2>
+<div class="pair">
+<figure><figcaption>blend off</figcaption><img src="shore-off.png" alt="blend off, shore, 32 px"></figure>
+<figure><figcaption>blend on</figcaption><img src="shore-on.png" alt="blend on, shore, 32 px"></figure>
+</div>
+
+<h2>Whole map (fit zoom)</h2>
+<div class="pair">
+<figure><figcaption>blend off</figcaption><img src="off-32-fit.png" alt="blend off, whole map"></figure>
+<figure><figcaption>blend on</figcaption><img src="on-32-fit.png" alt="blend on, whole map"></figure>
+</div>
+<div class="pair" style="margin-top:12px">
+<figure><figcaption>blend off, second run</figcaption><img src="shore-off-fit.png" alt="blend off, whole map, second run"></figure>
+<figure><figcaption>blend on, second run</figcaption><img src="shore-on-fit.png" alt="blend on, whole map, second run"></figure>
+</div>
+</main>
+</body>
+</html>
