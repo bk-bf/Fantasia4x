@@ -1806,7 +1806,7 @@
 
   function _queueSnowDeltas() {
     const coords = drainSnowRenderTileDeltas();
-    if (!coords || coords.length === 0) return;
+    if (!coords || coords.length === 0 || !_snowGrid) return;
     const CS = SNOW_CHUNK_SIZE;
     for (const c of coords) {
       const key = Math.floor(c.x / CS) + ':' + Math.floor(c.y / CS);
