@@ -1,6 +1,6 @@
 'use strict';
 const PIXEL_AMMO = (() => {
-  const { assemble, part, profile, run, stamp, sketch } = PX, { haft } = PARTS;
+  const { assemble, part, profile, run } = PX, { haft } = PARTS;
 
   const shaft = n => run(0, ['m'], n);
   const FLETCH = part(-2, ['LLLLL  ', ' LLLLL ', 'dmmmmmm', ' DDDDD ', 'DDDDD  ']);
@@ -27,11 +27,16 @@ const PIXEL_AMMO = (() => {
   const bolt = (wood, vane, head, metal) => assemble([[VANES, wood, vane], [haft(8), wood], [HEADS[head], metal]]);
   const dart = () => assemble([[TUFT, 'sapwood', 'linen'], [shaft(13), 'sapwood'], [HEADS.needle, 'wood']]);
 
-  const PEBBLE = [' lml ', 'lmmmd', 'mmmdd', ' ddd '];
-  const BULLET = [' lll  ', 'lmmmd ', 'mmmmdd', ' mddd ', '  dd  '];
+  const PEBBLE = [' llll ', 'lmmmml', 'lmmmmd', 'mmmmdd', ' dddd '];
+  const BICONE = ['   ll   ', ' llmLm  ', 'lmmmLmmd', ' mmmMdd ', '   dd   '];
   const ACORN = [' ll ', 'lmmd', 'mmmd', 'mmdd', ' dd '];
-  const ALMOND = ['  ll   ', ' lmmm  ', 'lmmLmmd', ' mmmdd ', '  ddd  '];
-  const pile = (rows, ...inks) => [[0, 7], [8, 9], [4, 1]].reduce((sk, [x, y]) => stamp(sk, x, y, rows, inks), sketch());
+  const TRAY = ['llllllllllllll', 'mmmmmmmmmmmmmm', ' dddddddddddd '];
+  const ALMOND = ['    lll    ', '  llmmmml  ', ' lmmmLLmmmd', 'lmmmmmmmmd ', ' mmmmmddd  ', '  dddd     '];
+  const heap = (rows, spots, ...inks) => PX.layered(...spots.map(([x, y]) => [x, y, rows, ...inks]));
+  const slingStones = () => heap(PEBBLE, [[0, 4], [7, 5], [4, 0]], 'stone');
+  const slingBullets = () => heap(BICONE, [[0, 8], [4, 4], [8, 0]], 'bronze', 'gold');
+  const clayTray = () => PX.layered([0, 3, TRAY, 'wood'], [1, -1, ACORN, 'clay'], [5, -1, ACORN, 'clay'], [9, -1, ACORN, 'clay'], [3, -4, ACORN, 'clay'], [7, -4, ACORN, 'clay']);
+  const leadGlandes = () => heap(ALMOND, [[0, 5], [3, 0]], 'lead', 'silver');
 
   return [
     { id: 'flint_arrow', draw: () => arrow('sapwood', 'fur', 'flint', 'flint', 'cord') },
@@ -49,10 +54,10 @@ const PIXEL_AMMO = (() => {
     { id: 'heavy_quarrel', draw: () => bolt('wood', 'leather', 'pyramid', 'iron') },
     { id: 'steel_quarrel', draw: () => bolt('ash', 'linen', 'pyramid', 'steel') },
     { id: 'blow_dart', draw: dart },
-    { id: 'sling_stone', draw: () => pile(PEBBLE, 'stone') },
-    { id: 'cast_sling_bullet', draw: () => pile(BULLET, 'bronze') },
-    { id: 'clay_bullet', draw: () => pile(ACORN, 'clay') },
-    { id: 'lead_glans', draw: () => pile(ALMOND, 'lead', 'lead') }
+    { id: 'sling_stone', draw: slingStones },
+    { id: 'cast_sling_bullet', draw: slingBullets },
+    { id: 'clay_bullet', draw: clayTray },
+    { id: 'lead_glans', draw: leadGlandes }
   ];
 })();
 PIXEL_ICONS.push(...PIXEL_AMMO);

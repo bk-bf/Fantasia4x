@@ -57,12 +57,12 @@ const PIXEL_DRINKS = (() => {
   const stock = () => draw({ body: 'clay', fill: 'broth' }, ...bowl(18));
   const sapCrock = () => draw({ body: 'glass', fill: 'birch', trim: 'cord', mark: 'birch' }, ...flask('gourd', { label: [4, 3], level: 2 }));
 
-  const HORN_PATH = [[3.5, 3.5, 3.6], [6, 5.5, 3.3], [8.5, 7.5, 3], [11, 9, 2.6], [13.5, 10, 2.2], [16, 10.2, 1.8], [18, 9.4, 1.4], [19.5, 8, 1.1]];
+  const HORN_PATH = [[5, 4.5, 4.6], [7.5, 6.5, 4], [10, 8.5, 3.4], [12.5, 10, 2.8], [15, 11, 2.3], [17.5, 11.2, 1.8], [19.5, 10.4, 1.4], [21, 9, 1.1]];
   const hornBody = () => HORN_PATH.slice().reverse().map(([x, y, r]) => { const rows = ellipsoid(r, r); return layer(Math.round(x - rows[0].length / 2), Math.round(y - rows.length / 2), rows, 'body', { keep: true }); });
   const mead = () => draw({ body: 'horn', fill: 'honey', mark: 'silver' },
     ...hornBody(),
-    layer(0, 0, ['  yyyy  ', ' y    y ', 'y      y', 'y      y', 'x      x', ' x    x ', '  xxxx  '], 'mark', { keep: true }),
-    layer(1, 1, ['  LL  ', ' LMMM ', 'LMMMMD', 'MMMMDD', ' MMDD '], 'fill', { keep: true }));
+    layer(0, 0, ['   yyyy   ', ' yy    yy ', 'y        y', 'y        y', 'y        y', 'x        x', ' xx    xx ', '   xxxx   '], 'mark', { keep: true }),
+    layer(1, 1, ['  LLLL  ', ' LMMMMM ', 'LMMMMMMD', 'MMMMMMDD', 'MMMMMDDD', ' MMMDDD '], 'fill', { keep: true }));
 
   return [
     ...potions,

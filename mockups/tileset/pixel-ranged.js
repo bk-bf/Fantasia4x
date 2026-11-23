@@ -1,20 +1,12 @@
 'use strict';
 const PIXEL_RANGED = (() => {
-  const { assemble, part, patch, profile, run, stack, strip, stamp, sketch, diagonal } = PX, { haft, pole, binding, HEAD, side } = PARTS;
+  const { assemble, part, patch, profile, run, stamp, sketch, diagonal } = PX, { haft, pole, binding, HEAD } = PARTS;
 
-  const sweepAt = (b, reach, sweep) => Math.round(sweep * (b / reach) ** 2);
-  function prod(reach, sweep, draw) {
-    const width = draw + 2, rows = [];
-    for (let b = -reach; b <= reach; b++) {
-      const row = new Array(width).fill(' '), back = sweepAt(b, reach, sweep), arm = draw - back;
-      row[arm] = row[arm + 1] = side(b, reach);
-      const pull = Math.round(Math.abs(b) / reach * (draw - sweep));
-      const from = Math.round((Math.abs(b) - 1) / reach * (draw - sweep));
-      if (Math.abs(b) > 1) for (let c = from; c <= pull && c < arm; c++) if (row[c] === ' ') row[c] = 'y';
-      rows.push(row.join(''));
-    }
-    return part(-reach, rows);
-  }
+  const ARMS = {
+    short: [[1, 1], [2, 2], [3, 3], [4, 4], [5, 5], [6, 5], [7, 6], [8, 6]],
+    long: [[1, 1], [2, 2], [3, 3], [4, 4], [5, 5], [6, 6], [7, 6], [8, 7], [9, 7], [10, 7]]
+  };
+  const STRING_DRAW = 11;
   const stock = (n, butt) => profile([[-2, 0, butt, 'l'], [-1, 0, n, 'l'], [0, 0, n, 'm'], [1, 0, n, 'd'], [2, 0, butt, 'd']]);
   const NUT = part(-1, ['L', 'M', 'D']);
   const TRIGGER = part(2, ['dm', ' d', ' d']);
@@ -34,11 +26,21 @@ const PIXEL_RANGED = (() => {
   ], [0, 0], 0);
   const LEVER = part(2, ['dddd', '  d ', '  dd', '   d']);
 
-  const crossbow = ({ wood, bow, metal, nut, reach, sweep, n, spanned, levered }) => assemble([
-    [stock(n, 7), wood], -14, [prod(reach, sweep, 12), bow, nut, 'string'], -14, [NUT, metal, nut], -5, [TRIGGER, metal],
+  function prod(sk, step, arm, bow) {
+    const [cx, cy] = diagonal(step, 0), [nx, ny] = diagonal(step - STRING_DRAW, 0), [ta, tb] = arm[arm.length - 1];
+    stamp(sk, cx - 1, cy - 1, ['lm', 'md'], [bow]);
+    for (const [a, b] of arm) {
+      stamp(sk, cx - a, cy - b, ['l', 'd'], [bow]);
+      stamp(sk, cx + b - 1, cy + a, ['dm'], [bow]);
+    }
+    cords(sk, cx - ta, cy - tb + 1, nx, ny, 'y', ['string', 'string', 'string']);
+    return cords(sk, cx + tb - 1, cy + ta, nx, ny, 'y', ['string', 'string', 'string']);
+  }
+  const crossbow = ({ wood, bow, metal, nut, arm, n, spanned, levered }) => assemble([
+    n - 13, [NUT, metal, nut], -5, [TRIGGER, metal],
     ...(levered ? [-1, [LEVER, metal], -3] : []),
     ...(spanned ? [16, [STIRRUP, metal], 1 - n, [CRANK, metal, nut]] : [])
-  ]);
+  ], prod(assemble([[stock(n, 7), wood]]), n - 2, ARMS[arm], bow));
 
   const SLING_CRADLE = [
     '   lmml   ',
@@ -70,15 +72,18 @@ const PIXEL_RANGED = (() => {
   };
 
   const ROCK = [
-    '   llll   ',
-    '  lllmmm  ',
-    ' llmmmmmd ',
-    'llmmmlmmd ',
-    'lmmmmmmmdd',
-    'mmmdmmmmdd',
-    'mmmmmmmddd',
-    ' dmmmmddd ',
-    '  dddddd  '
+    '     lll       ',
+    '   lllmmll     ',
+    '  llmmmmmmll   ',
+    ' llmmmmmmmmml  ',
+    'llmmmmmmmmmmmd ',
+    'lmmmmmmmmmmmmdd',
+    'lmmmmmmmmmmmddd',
+    'mmmmmmmmmmmmddd',
+    'mmmmmmmmmmmddd ',
+    ' dmmmmmmmmddd  ',
+    '  ddmmmmdddd   ',
+    '    dddddd     '
   ];
   const POT = [
     '      y    ',
@@ -123,6 +128,9 @@ const PIXEL_RANGED = (() => {
   const REED = n => run(-1, ['l', 'm'], n);
   const NODE = run(-1, ['d', 'd'], 1);
   const MOUTH = part(-1, ['l', 'o']);
+  const WRAP = run(-1, ['L', 'D'], 3);
+  const DART = [[part(-1, ['ZZ', 'YY']), 'linen', 'linen', 'linen', 'linen'], [run(0, ['m'], 9), 'sapwood'], [part(0, ['dm']), 'wood']];
+  const beside = (dx, dy) => (step, band) => { const [x, y] = diagonal(step, band); return [x + dx, y + dy]; };
 
   const throwingStone = () => stamp(sketch(), 0, 0, ROCK, ['stone']);
   const goblinFirepot = () => FIREPOT(sketch());
@@ -133,14 +141,14 @@ const PIXEL_RANGED = (() => {
   const greatFangJavelin = () => assemble([[haft(13), 'wood'], -3, [binding(5), 'red'], -2, [FANG, 'bone']]);
   const francisca = () => assemble([[haft(18), 'wood'], -6, [FRANCISCA, 'iron']]);
   const steelPlumbata = () => assemble([[DART_FLIGHT, 'wood', 'red'], [haft(5), 'wood'], [LEAD, 'lead'], [HEAD.narrow(6), 'steel']]);
-  const blowgun = () => assemble([[MOUTH, 'sapwood'], [REED(6), 'sapwood'], [NODE, 'sapwood'], [REED(8), 'sapwood'], [NODE, 'sapwood'], [REED(8), 'sapwood'], [MOUTH, 'sapwood']]);
+  const blowgun = () => assemble([2, ...DART], assemble([[MOUTH, 'sapwood'], [WRAP, 'sapwood', 'leather'], [REED(4), 'sapwood'], [NODE, 'sapwood'], [REED(6), 'sapwood'], [NODE, 'sapwood'], [REED(6), 'sapwood'], [NODE, 'sapwood'], [REED(3), 'sapwood'], [MOUTH, 'sapwood']]), beside(4, 2));
 
   return [
-    { id: 'composite_crossbow', draw: () => crossbow({ wood: 'wood', bow: 'horn', metal: 'bronze', nut: 'bone', reach: 9, sweep: 2, n: 20 }) },
-    { id: 'crossbow', draw: () => crossbow({ wood: 'wood', bow: 'wood', metal: 'iron', nut: 'bone', reach: 10, sweep: 2, n: 21, levered: true }) },
-    { id: 'steel_arbalest', draw: () => crossbow({ wood: 'wood', bow: 'steel', metal: 'steel', nut: 'bone', reach: 10, sweep: 2, n: 20, spanned: true }) },
-    { id: 'siege_lock_arbalest', draw: () => crossbow({ wood: 'black', bow: 'steel', metal: 'iron', nut: 'red', reach: 11, sweep: 2, n: 20, spanned: true }) },
-    { id: 'rune_cranked_arbalest', draw: () => crossbow({ wood: 'black', bow: 'runed', metal: 'gold', nut: 'glow', reach: 10, sweep: 3, n: 20, spanned: true }) },
+    { id: 'composite_crossbow', draw: () => crossbow({ wood: 'wood', bow: 'horn', metal: 'bronze', nut: 'bone', arm: 'short', n: 20 }) },
+    { id: 'crossbow', draw: () => crossbow({ wood: 'wood', bow: 'wood', metal: 'iron', nut: 'bone', arm: 'long', n: 21, levered: true }) },
+    { id: 'steel_arbalest', draw: () => crossbow({ wood: 'wood', bow: 'steel', metal: 'steel', nut: 'bone', arm: 'long', n: 20, spanned: true }) },
+    { id: 'siege_lock_arbalest', draw: () => crossbow({ wood: 'black', bow: 'steel', metal: 'iron', nut: 'red', arm: 'long', n: 20, spanned: true }) },
+    { id: 'rune_cranked_arbalest', draw: () => crossbow({ wood: 'black', bow: 'runed', metal: 'gold', nut: 'glow', arm: 'long', n: 20, spanned: true }) },
     { id: 'sling', draw: () => sling('leather', 'cord', 'cord') },
     { id: 'skullcracker_sling', draw: () => sling('hide', 'cord', 'red') },
     { id: 'staff_sling', draw: staffSling },

@@ -283,17 +283,13 @@ const PIXEL_STORAGE = (() => {
     '     dddddddddddddddddd     '
   ];
   const SCRIP = [
-    '    yyyyyyy     ',
-    '   y       y    ',
-    '  y         y   ',
-    '     lmmmmml    ',
-    '    lmmmmmmmd   ',
-    '     dmmmmmd    ',
-    '     XYXYXYX    ',
-    '    lllllllm Y  ',
-    '   llllmmlmmmY  ',
-    '  llmmmmmmmmmZ  ',
-    ' llmmmmmmmmmmmm ',
+    '      lmld      ',
+    '     lmlmdd     ',
+    '     ZYYYYX     ',
+    '     lmmmmdY    ',
+    '   llmmmmmmmY   ',
+    '  llmmmmmmmmmY  ',
+    '  llmmmmmmmmmmX ',
     ' llmmmmmmmmmmmm ',
     ' llmmmmmmmmmmmd ',
     'llmmmmmmmmmmmmdd',
@@ -399,49 +395,50 @@ const PIXEL_STORAGE = (() => {
   const SWORD_BELT = [
     '          llllllllll          ',
     '      llllllllllllllllll      ',
-    '    llllllllllllllllllllll    ',
-    '   llllll            llllll   ',
-    '  llll                  llll  ',
-    ' mmmm        zz          mmmm ',
-    ' mmm        zyx           mmm ',
-    'mmm        yyx             mmm',
-    ' mmm  LL  yx              mmm ',
-    ' mmmm  LMyx  LLLLL       mmmm ',
-    '  dddd  MMD  LmLmM      dddd  ',
-    '   ddddlmDDD LmDmM   dddddd   ',
-    '    dxlmmdddDMMMMDdddxxxdd    ',
-    '    ylmmddddddddddddyyyyy     ',
-    '    lmmdx ddddddddddymmmx     ',
-    '   lmmdmx           ymmmx     ',
-    '  lmmdxxx           yxxxx     ',
-    ' lmmd                         ',
-    'lmmd                          ',
-    'lmd                           ',
-    'dd                            '
+    '    lllllllllllllllLMlllll    ',
+    '   llllll         zx llllll   ',
+    '  llll           yx     llll  ',
+    ' mmmm         LMMMD      mmmm ',
+    ' mmm           zyx        mmm ',
+    'mmm           zyx          mmm',
+    ' mmm         zyx          mmm ',
+    ' mmmm       zyxLLL       mmmm ',
+    '  dddd     zyxmLmM      dddd  ',
+    '   dddddd zyxLmDmM   dddddd   ',
+    '    dddddzyxDMMMMDdddddddd    ',
+    '     dddzyxdddddddddddddd     ',
+    '       zyxddddddddddd         ',
+    '      zyx                     ',
+    '     zyx                      ',
+    '    zyx                       ',
+    '   zyx                        ',
+    '  zyx                         ',
+    ' zyx                          ',
+    'zyx                           '
   ];
   const MOUNTED_SWORD_BELT = [
     '          llllllllll          ',
     '      llllllllllllllllll      ',
-    '    llllllllllllllllllllll    ',
-    '   llllll            llllll   ',
-    '  llll                  llll  ',
-    ' mmmm        zz          mmmm ',
-    ' mmm        zyx           mmm ',
-    'mmm        yyx             mmm',
-    ' mmm  LL  yx              mmm ',
-    ' mmmm  LMyx  LLLLL       mmmm ',
-    '  dddd  MMD  LmLmM      dddd  ',
-    '   ddLMMDDDD LmDmM   dddddd   ',
-    '    dMDmmdddDMMMMDdddddddd    ',
-    '     lmmdddddddddddddddd      ',
-    '    lmmd  dddddddddd          ',
-    '   lmmd                       ',
-    '  lmmd                        ',
-    ' lmmd                         ',
-    'LMDd                          ',
-    'LMD                           ',
-    'MD                            ',
-    'D                             '
+    '    lllllllllllllllLMlllll    ',
+    '   llllll         zx llllll   ',
+    '  llll           yx     llll  ',
+    ' mmmm         LMMMD      mmmm ',
+    ' mmm           zyx        mmm ',
+    'mmm           zyx          mmm',
+    ' mmm         LMD          mmm ',
+    ' mmmm       LMDLLL       mmmm ',
+    '  dddd     zyxmLmM      dddd  ',
+    '   dddddd zyxLmDmM   dddddd   ',
+    '    dddddzyxDMMMMDdddddddd    ',
+    '     dddzyxdddddddddddddd     ',
+    '       zyxddddddddddd         ',
+    '      zyx                     ',
+    '     zyx                      ',
+    '    zyx                       ',
+    '   LMD                        ',
+    '  LMD                         ',
+    ' LMD                          ',
+    'LMD                           '
   ];
   const KNIFE_SHEATH = [
     '     zzzz  ',
@@ -564,10 +561,10 @@ const PIXEL_STORAGE = (() => {
     '  dddLDd  '
   ];
   const BOLT_CASE = [
-    'WXYZYX ZYX   ',
-    'XYXYXYXYXY   ',
-    'ZWZXZWZXZW   ',
-    ' xyxyxyxy    ',
+    '     ZXZ     ',
+    ' ZXZ YXY ZXZ ',
+    ' YXY YXY YXY ',
+    ' YXY  y  YXY ',
     '  llllllll   ',
     ' mmmmmmmmmm  ',
     'lmmmmmmmmmmdy',
@@ -587,10 +584,10 @@ const PIXEL_STORAGE = (() => {
     '  dddddddd   '
   ];
   const BANDED_BOLT_CASE = [
-    'WXYZYX ZYX  ',
-    'XYXYXYXYXY  ',
-    'ZWZXZWZXZW  ',
-    ' xyxyxyxy   ',
+    '     ZXZ    ',
+    ' ZXZ YXY ZXZ',
+    ' YXY YXY YXY',
+    ' YXY  y  YXY',
     ' llllllllll ',
     'LLLLLLLLLLLL',
     'DDDDDDDDDDDD',
@@ -665,28 +662,22 @@ const PIXEL_STORAGE = (() => {
     '    mmdddddd    '
   ];
   const BASKET = [
-    '   dd                  dd   ',
-    '   dd                  dd   ',
-    'llllllllllllllllllllllllllll',
-    'mmmmmmmmmmmmmmmmmmmmmmmmmmmm',
-    'dddddddddddddddddddddddddddd',
-    ' lmmllmmllmmllmmllmmllmmlld ',
-    ' lllmmllmmllmmllmmllmmllmmd ',
-    ' lllmmllmmllmmllmmllmmllmmd ',
-    ' lmmllmmllmmllmmllmmllmmlld ',
-    ' lmmllmmllmmllmmllmmllmmlld ',
-    '  llmmllmmllmmllmmllmmllmd  ',
-    '  dddddddddddddddddddddddd  ',
-    '  lmllmmllmmllmmllmmllmmld  ',
-    '  lmllmmllmmllmmllmmllmmld  ',
-    '  llmmllmmllmmllmmllmmllmd  ',
-    '   lmmllmmllmmllmmllmmlld   ',
-    '   dddddddddddddddddddddd   ',
-    '   lllmmllmmllmmllmmllmmd   ',
-    '   lmmllmmllmmllmmllmmlld   ',
-    '   lmmllmmllmmllmmllmmlld   ',
-    '    llmmllmmllmmllmmllmd    ',
-    '    dddddddddddddddddddd    '
+    '   dd                dd   ',
+    '   dd                dd   ',
+    'llllllllllllllllllllllllll',
+    'mmmmmmmmmmmmmmmmmmmmmmmmmm',
+    'dddddddddddddddddddddddddd',
+    ' llldmmmmllldmmmmllldmmmm ',
+    ' mmmdddddmmmdddddmmmddddd ',
+    ' mmmmllldmmmmllldmmmmllld ',
+    ' ddddmmmdddddmmmdddddmmmd ',
+    '  lldmmmmllldmmmmllldmmm  ',
+    '  mmdddddmmmdddddmmmdddd  ',
+    '  mmmllldmmmmllldmmmmlll  ',
+    '  dddmmmdddddmmmdddddmmm  ',
+    '   ldmmmmllldmmmmllldmm   ',
+    '   mdddddmmmdddddmmmddd   ',
+    '    dddddddddddddddddd    '
   ];
   const TOOL_ROLL = [
     '     zz     zz             ',
@@ -778,7 +769,7 @@ const PIXEL_STORAGE = (() => {
   const storageBin = () => front(BIN, 'wood');
   const crate = () => front(CRATE, 'ash', 'wood', 'iron');
   const withyBasket = () => front(WITHY_BASKET, 'sapwood', 'sapwood', 'sapwood');
-  const crucibleIcon = () => goods({ body: 'dun', fill: 'black' }, ...GOODS.crucible());
+  const crucibleIcon = () => goods({ body: 'dun', fill: 'flame', mark: 'black' }, ...GOODS.bands(GOODS.open(16, [16, 16, 15, 14, 12, 10], 1), [4, 5]), GOODS.layer(-1, 2, ['ll', ' m'], 'body'));
   const runeFlask = () => goods({ body: 'glass', fill: 'glow', trim: 'runed', mark: 'gold' },
     ...emptyFlask('round', { stopper: 'knob', band: true }),
     GOODS.layer(6, 9, GOODS.ellipsoid(3, 3), 'fill', { keep: true }),
@@ -822,7 +813,7 @@ const PIXEL_STORAGE = (() => {
   const flask = () => front(FLASK, 'clay', 'cord', 'wood');
   const wovenBasket = () => front(BASKET, 'ash');
   const hideToolRoll = () => front(TOOL_ROLL, 'hide', 'cord', 'wood');
-  const hideScrip = () => front(SCRIP, 'hide', 'cord', 'cord', 'cord');
+  const hideScrip = () => front(SCRIP, 'hide', 'cord', 'cord', 'leather');
   const linenSnapsack = () => front(SNAPSACK, 'linen', 'cord', 'cord', 'cord');
   const wickerFrame = () => front(lashed(weave(FRAMED_SACK)), 'ash', 'sapwood', 'cord', 'hide');
   const leatherKnapsack = () => front(KNAPSACK, 'leather', 'bronze', 'leather');
@@ -841,8 +832,8 @@ const PIXEL_STORAGE = (() => {
   const steelBuckledBelt = () => front(TOOL_BELT, 'leather', 'steel', 'leather');
   const runeEtchedBelt = () => front(RUNE_BELT, 'leather', 'runed', 'leather', 'glow');
   const hideKnifeSheath = () => front(KNIFE_SHEATH, 'hide', 'flint', 'wood');
-  const leatherSwordBelt = () => front(SWORD_BELT, 'leather', 'bronze', 'leather');
-  const mountedSwordBelt = () => front(MOUNTED_SWORD_BELT, 'leather', 'iron', 'leather');
+  const leatherSwordBelt = () => front(SWORD_BELT, 'leather', 'bronze', 'boarhide');
+  const mountedSwordBelt = () => front(MOUNTED_SWORD_BELT, 'leather', 'iron', 'boarhide');
   const platedWarBelt = () => front(PLATED_BELT, 'leather', 'steel');
   const hideArrowSheath = () => front(HIDE_QUIVER, 'hide', 'cord', 'wood', 'linen');
   const leatherBackQuiver = () => front(BACK_QUIVER, 'leather', 'bronze', 'wood', 'red');

@@ -57,7 +57,7 @@ const PIXEL_TOOLS = (() => {
   );
   const blade = (ends, tones) => profile(ends.map((end, i) => [i - 4, Math.abs(i - 4) > 3 ? 1 : 0, end, tones[i]]));
   const SHOVEL_IRON = stack(blade([8, 9, 10, 10, 10, 10, 10, 9, 8], 'llmmmmmdd'), strip(0, 1, 6, 'd'));
-  const SHOVEL_STEEL = stack(blade([7, 8, 9, 10, 11, 11, 10, 9, 8], 'llmmmmmdd'), strip(-1, 1, 7, 'l'));
+  const SHOVEL_STEEL = stack(blade([10, 11, 11, 11, 12, 11, 11, 11, 10], 'llmmmmmdd'), strip(-1, 1, 9, 'l'));
   const SOCKET = part(-1, ['lll', 'mmm', 'ddd']);
   const STEEL_HOE_BLADE = part(-12, [
     'l     ',
@@ -121,27 +121,33 @@ const PIXEL_TOOLS = (() => {
     '  yyyy  '
   ], [2, 9], 0);
 
-  const SICKLE = patch([
-    '        lllll     ',
-    '      llmmmmmll   ',
-    '     lmmdddddmml  ',
-    '    lmdLLM  LMdmm ',
-    '   lmdLM      MDdm',
-    '   lmdL        Mdm',
-    '  lmdLM        LDd',
-    '  lmdL          Md',
-    '  lmdLM           ',
-    '  mmdL            ',
-    '  lmd             ',
-    ' lmd              ',
-    'lmd               '
-  ], [0, 12], 0);
+  const BONE_SLAB = part(-7, [
+    ' l lll lll ',
+    'lllllllllll',
+    'lmmmmmmmmml',
+    'mmmmmmmmmmm',
+    'mmmmmmmmmmd',
+    'mmmmmmmmmdd',
+    'dddddddddd ',
+    'mmmmmmmmmd ',
+    'ddddddddd  '
+  ]);
   const KNIFE_BLADE = profile([[-1, 0, 9, 'l'], [0, 0, 11, 'm'], [1, 0, 10, 'm'], [2, 1, 8, 'd']]);
-  const BONE_SLAB = stack(BLADE.slab(10), strip(-6, 2, 9, 'm l'), strip(-1, 0, 2, 'd'));
-  const SCAPULA = stack(
-    profile([[-5, 7, 11, 'l'], [-4, 5, 11, 'l'], [-3, 3, 11, 'l'], [-2, 1, 11, 'm'], [-1, 0, 11, 'm'], [0, 0, 11, 'm'], [1, 0, 11, 'm'], [2, 1, 11, 'm'], [3, 3, 11, 'd'], [4, 5, 11, 'd'], [5, 7, 11, 'd']]),
-    strip(-2, 2, 10, 'l'), strip(-1, 1, 10, 'd')
-  );
+  const SCAPULA = patch([
+    '     l        ',
+    '     ll       ',
+    '     lml      ',
+    '    lmmml     ',
+    '    lmmmll    ',
+    '    lmmldml   ',
+    '   lmmldmmml  ',
+    '   lmldmmmmdll',
+    '   lldmmmdd   ',
+    '  lldmddd     ',
+    '  lddd        ',
+    '  ld          ',
+    ' l            '
+  ], [1, 12]);
   const DRAW_BLADE = PX.mirrored([
     'lm                          ml',
     'mm                          mm',
@@ -192,13 +198,13 @@ const PIXEL_TOOLS = (() => {
     '     llllllllllll     ',
     '   llmmmmmmmmmmmmll   ',
     '  lmmddddddddddddmml  ',
-    'llmmdoooooooooooodmmll',
-    'mmmmdoddddddddddodmmmm',
-    'ddmmdodmmmmmmmmdodmmdd',
-    '  mmdodmllllllmdodmm  ',
-    '  mmdodmllllllmdodmd  ',
-    '  mmdoddddddddddodmd  ',
-    '  mmmdoooooooooodmmd  ',
+    'llmmdLLLLLLLLLLLLdmmll',
+    'mmmmdLLLMMMMMMDDDdmmmm',
+    'ddmmdLLMMMMMMMMDDdmmdd',
+    '  mmdLLMMMMMMMMDDdmm  ',
+    '  mmdLLMMMMMMMMDDdmd  ',
+    '  mmdLLMMMMMMMMDDdmd  ',
+    '  mmmdDDDDDDDDDDdmmd  ',
     '   dmmmmmmmmmmmmmmd   ',
     '    dddddddddddddd    '
   ]);
@@ -245,7 +251,6 @@ const PIXEL_TOOLS = (() => {
     '                 DDDDD        '
   ];
   const HANDCART = [
-    '                              ',
     '        llllllllllllllllllllll',
     '        lmmmmldmmmmmmmmldmmmmd',
     '        lmmmmldmmmmmmmmldmmmmd',
@@ -254,20 +259,19 @@ const PIXEL_TOOLS = (() => {
     '        lddddldddddddddldddddd',
     'lllllllllmmmmldmmmmmmmmldmmmmd',
     'mmmmmmmmmddddddddddddddddddddd',
-    'ddddddddd md       LL         ',
-    '          md    LLLLLLLM      ',
-    '          md   LLL ll MMM     ',
-    '          md  LLL  ll  MMM    ',
-    '          md  LL l ll m MD    ',
-    '          md  L   lddm   D    ',
-    '          md LLllldoodmmmDD   ',
-    '             LLllldoodmmmDD   ',
-    '              L   mddm   D    ',
-    '              LM m mm m DD    ',
-    '              MMM  mm  DDD    ',
-    '               MMM mm DDD     ',
-    '                MDDDDDDD      ',
-    '                   DD         '
+    'ddddddddd md     LLLLL        ',
+    '          md   LLMMMMMLL      ',
+    '          md  LMM  m  MMD     ',
+    '          md  LM   m   MD     ',
+    '          md LM    m    MD    ',
+    '          md LM    m    MD    ',
+    '             LMmmmmOmmmmMD    ',
+    '             LM    m    MD    ',
+    '             LM    m    MD    ',
+    '              MD   m   DD     ',
+    '              MMD  m  DDD     ',
+    '               MDDDDDDDD      ',
+    '                 DDDDD        '
   ];
 
   const BUTCHER_ROLL = [
@@ -436,7 +440,7 @@ const PIXEL_TOOLS = (() => {
   const diggingStick = () => assemble([[haft(14), 'wood'], [KNOT, 'wood'], [haft(7), 'wood'], [haft(3), 'ember'], [FIRED_POINT, 'ember']]);
   const stoneSpade = () => assemble([[crossbar(1), 'wood'], [haft(17), 'wood'], -3, lashing(3), -1, [SPADE_STONE, 'stone']]);
   const ironShovel = () => assemble([[crossbar(2), 'wood'], [haft(13), 'wood'], [SOCKET, 'iron'], [SHOVEL_IRON, 'iron']]);
-  const steelShovel = () => assemble([[crossbar(2), 'steel'], [grip(3), 'leather'], [haft(10), 'ash'], [SOCKET, 'steel'], [SHOVEL_STEEL, 'steel']]);
+  const steelShovel = () => assemble([[crossbar(2), 'steel'], [grip(3), 'leather'], [haft(8), 'ash'], [SOCKET, 'steel'], [SHOVEL_STEEL, 'steel']]);
   const steelHoe = () => assemble([[grip(5), 'leather'], [haft(20), 'ash'], -6, [STEEL_HOE_BLADE, 'steel']]);
   const stonePick = () => assemble([[haft(20), 'wood'], -1, [STONE_POINT, 'stone'], -1, lashing(2)]);
   const steelPick = () => assemble([[grip(4), 'leather'], [haft(19), 'ash'], -8, [STEEL_PICK_HEAD, 'steel']]);
@@ -445,14 +449,13 @@ const PIXEL_TOOLS = (() => {
   const torch = () => assemble([[haft(13), 'wood'], -1, [TORCH_WRAP, 'hide'], -2, [FLAME, 'flame', 'flame', 'flame']]);
 
   const front = (rows, ...inks) => PX.stamp(PX.sketch(), 0, 0, rows, inks);
-  const flintSickle = () => assemble([[grip(6, 'md'), 'wood'], [binding(2), 'cord'], [SICKLE, 'wood', 'flint']]);
   const copperKnife = () => assemble([[POMMEL.dot, 'copper'], [binding(6), 'cord'], [crossbar(1), 'copper'], -1, [KNIFE_BLADE, 'copper']]);
   const boneCleaver = () => assemble([[grip(7), 'wood'], [binding(2), 'cord'], -1, [BONE_SLAB, 'bone']]);
-  const boneFleshingScraper = () => assemble([[haft(16), 'wood'], -3, lashing(3), -1, [SCAPULA, 'bone']]);
+  const boneFleshingScraper = () => assemble([[haft(15), 'wood'], [SCAPULA, 'bone'], -2, lashing(3)]);
   const ironFleshingKnife = () => front(DRAW_BLADE, 'wood', 'iron');
   const candle = () => front(CANDLE, 'linen', 'black', 'flame');
   const clayMold = () => front(INGOT_MOLD, 'clay');
-  const tileMold = () => front(TILE_MOLD, 'bronze');
+  const tileMold = () => front(TILE_MOLD, 'bronze', 'clay');
   const clayCookingPot = () => front(COOKING_POT, 'clay', 'black');
 
   const wheelbarrow = () => front(WHEELBARROW, 'wood', 'iron');
@@ -482,7 +485,6 @@ const PIXEL_TOOLS = (() => {
     { id: 'rune_etched_pick', draw: runeEtchedPick },
     { id: 'steel_tongs', draw: steelTongs },
     { id: 'torch', draw: torch },
-    { id: 'flint_sickle', draw: flintSickle },
     { id: 'copper_knife', draw: copperKnife },
     { id: 'bone_cleaver', draw: boneCleaver },
     { id: 'bone_fleshing_scraper', draw: boneFleshingScraper },

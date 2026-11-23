@@ -20,19 +20,30 @@ const PIXEL_AXES = (() => {
     '   dd  '
   ]);
   const CHOPPER_HEAD = part(-8, [
-    '     lll  ll  ',
-    '   lllllllll  ',
-    '  llmlllmlllm ',
-    '  lmmllmmllmm ',
-    ' lmmmlmmmlmmm ',
-    ' mmmmmmmmmmmm ',
-    ' mmmmmmmmmmmmm',
-    ' mmmmmmmmmmmm ',
-    ' mmmmmmmmmmmmm',
-    ' dmmmmmmmmmmd ',
-    '  dddddddddd  ',
-    '   dddddddd   '
+    '  lll lll  ',
+    ' lllllllll ',
+    'lmmmmmmmmml',
+    'lmmllmmmllm',
+    'mmmmdmmmmdm',
+    'mmmmmmmmmmm',
+    'mmmmmmmmmmd',
+    'mmmmmmmmmdd',
+    'dmmmmmmmmdd',
+    'ddddddddddd',
+    'dddddddddd '
   ]);
+  const CELT_THROUGH = PX.patch([
+    '  lll         ',
+    ' lmmml        ',
+    'lmmmmml       ',
+    'lmmmmmml      ',
+    ' lmmmmmmd     ',
+    '  dmmmmmmd    ',
+    '   ddmmmmmd   ',
+    '     ddmmmmd  ',
+    '       ddmmd  ',
+    '         ddd  '
+  ], [9, 7]);
   const CELT_HEAD = part(-14, [
     ' llllll',
     'lmmmmml',
@@ -105,26 +116,21 @@ const PIXEL_AXES = (() => {
     '    dd     '
   ]);
   const TUFT = PX.patch([' l ', 'lmm', 'mmd', 'md ', 'mdd', ' d ', 'd  '], [-1, -1]);
-  const FLAT_HEAD = part(-17, [
-    ' llll ',
-    'llllll',
-    'dmmmml',
-    ' dmmm ',
-    ' dmml ',
-    '  dm  ',
-    '  dm  ',
-    ' xzzx ',
-    ' xyyx ',
-    ' xzzx ',
-    '  DM  ',
-    '  DM  ',
-    '  DL  ',
-    '  DM  ',
-    '  DM  ',
-    '  DM  ',
-    ' DDM  ',
-    'DDDM  '
-  ]);
+  const ELBOW_BLADE = PX.patch([
+    ' ll         ',
+    'lmmd        ',
+    'dmmmd       ',
+    ' dmmmd      ',
+    '  ddmOOO    ',
+    '    OLLLO   ',
+    '   OLMMMLO  ',
+    '    LMMMMMO ',
+    '     DMMMMMO',
+    '      DMMMML',
+    '       DMMML',
+    '        DML ',
+    '         L  '
+  ], [1, 2]);
   const CHEEK_HEAD = part(-14, [
     '   lllllll  ',
     ' lllllllllll',
@@ -314,12 +320,13 @@ const PIXEL_AXES = (() => {
   const lashed = (length, drop, head, ink) => assemble([[haft(length), 'wood'], -drop, lashing(2), 3, lashing(1), -drop - 1, [head, ink]]);
 
   const flintHandaxe = () => lashed(17, 6, BIFACE_HEAD, 'flint');
-  const stoneChopper = () => assemble([[pole(8), 'wood'], -3, [CHOPPER_HEAD, 'stone'], -14, lashing(3)]);
+  const stoneChopper = () => assemble([[haft(9), 'wood'], -2, [CHOPPER_HEAD, 'stone'], -12, lashing(4)]);
+  const stoneAxe = () => assemble([[pole(15), 'wood'], lashing(2)], assemble([[pole(20), 'wood'], -2, [CELT_THROUGH, 'flint']]));
   const copperAxe = () => lashed(21, 7, CELT_HEAD, 'copper');
   const ironAxe = () => assemble([[haft(22), 'wood'], -8, [FELLING_HEAD, 'iron']]);
   const castBronzeHatchet = () => assemble([[haft(18), 'wood'], -8, [HATCHET_HEAD, 'bronze']]);
   const gnollFlintAxe = () => assemble([[haft(17), 'wood'], -5, [binding(3), 'hide'], -5, [GNOLL_HEAD, 'flint'], -9, [TUFT, 'fur']]);
-  const copperFlatAxe = () => assemble([[haft(17), 'wood'], -4, [FLAT_HEAD, 'copper', 'wood', 'cord']]);
+  const copperFlatAxe = () => assemble([[haft(17), 'wood'], [ELBOW_BLADE, 'wood', 'copper']]);
   const steelBroadaxe = () => assemble([[grip(5), 'leather'], [haft(13), 'wood'], -8, [CHEEK_HEAD, 'steel', 'iron']]);
   const runeEtchedAxe = () => assemble([[POMMEL.block, 'gold'], [grip(5), 'wool'], [haft(13), 'wood'], -8, [SPLITTING_HEAD, 'runed', 'glow']]);
   const orcSerratedAxe = () => assemble([[binding(6), 'leather'], [haft(13), 'black'], -8, [SERRATED_HEAD, 'black']]);
@@ -336,7 +343,7 @@ const PIXEL_AXES = (() => {
     { id: 'stone_chopper', draw: stoneChopper },
     { id: 'copper_axe', draw: copperAxe },
     { id: 'iron_axe', draw: ironAxe },
-    { id: 'stone_axe', draw: () => lashed(20, 7, CELT_HEAD, 'flint') },
+    { id: 'stone_axe', draw: stoneAxe },
     { id: 'steel_axe', draw: () => assemble([[grip(4), 'leather'], [haft(18), 'ash'], -8, [FELLING_HEAD, 'steel']]) },
     { id: 'bearded_axe', draw: beardedAxe },
     { id: 'cast_bronze_hatchet', draw: castBronzeHatchet },

@@ -8,7 +8,9 @@ const PIXEL_ARMOUR_SETS = (() => {
   const SCAR = ['  o o', ' o o ', 'o o  '];
   const MOTTLE = ['l   d  ', '   l   ', ' d    l', '    d  '];
   const BARS = ['dd dd dd', '', 'd dd dd ', '', 'dd dd dd'];
-  const UNMARKED = { coif: [], jerkin: [], gloves: [] };
+  const SADDLE = ['d   d', 'dd dd', ' ddd ', '  d  '];
+  const PAW = [' m m ', 'm   m', ' mmm ', ' mmm '];
+  const ANTLER = ['l l l', 'lllll', '  l  ', '  l  '];
   const corner = rows => rows.slice(0, 2).map(row => row.slice(0, 4));
   const emblem = (rows, mat) => ({ coif: [mark(12, 2, rows.slice(0, 3), mat)], jerkin: [mark(9, 10, rows, mat)], gloves: both(3, 21, 8, corner(rows), mat) });
 
@@ -62,12 +64,12 @@ const PIXEL_ARMOUR_SETS = (() => {
   const CALF_LACING = both(2, 16, 12, ['m', '', 'm', '', 'm', '', 'm', '', 'm', '', 'm'], 'cord');
 
   return [
-    ...leatherSet('jackal', JACKAL, UNMARKED, LEGS.wrap),
-    ...leatherSet('wolf', WOLF, UNMARKED, LEGS.wrap),
-    ...leatherSet('elk', ELK, UNMARKED, LEGS.greave),
+    ...leatherSet('jackal', JACKAL, emblem(SADDLE, 'boarhide'), LEGS.wrap),
+    ...leatherSet('wolf', WOLF, emblem(PAW, 'black'), LEGS.wrap),
+    ...leatherSet('elk', ELK, emblem(ANTLER, 'bone'), LEGS.greave),
     ...leatherSet('sabretooth', SABRE, emblem(SCAR, 'sabrehide'), LEGS.wrap),
     ...leatherSet('owlbear', OWLBEAR, emblem(MOTTLE, 'fur'), LEGS.greave),
-    ...leatherSet('direwolf', DIREWOLF, UNMARKED, LEGS.wrap),
+    ...leatherSet('direwolf', DIREWOLF, emblem(PAW, 'wolfpelt'), LEGS.wrap),
     ...leatherSet('hippogriff', HIPPOGRIFF, emblem(BARS, 'elkhide'), LEGS.greave),
 
     { id: 'leather_coif', draw: () => dress(HEAD.coif, LEATHER) },

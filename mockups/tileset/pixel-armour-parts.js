@@ -422,18 +422,17 @@ const ARMOUR = (() => {
     'lllllmmmmm',
     'lllllllmmmmmmmdd',
     'llllllllmmmmmmmmdddd',
-    'lllllllmmmmdmmmmmmdddd',
-    'lllllllmmmmmmdmmmmdddd',
+    'lllllllmmmmmmmmmmmdddd',
+    'lllllllmmmmmmmmmmmdddd',
     'llllllmmmmmmmmmmmmdddd',
     'llllllmmmmmmmmmmmddddd',
-    'lllllmmmmmmmmmmmmddddd',
-    'oooooooooooooooooooooo',
-    'llllllllllmmmmmmmmmmdddd',
-    'lllllllmmmmmmmmmmmdddddd',
+    'llllllllllllmmmmmmmmmmmmdd',
+    'lllmmmmmmmmmmmmmmmmmmmmddd',
     'dddddddddddddddddddddddd',
-    'ZYYZYYYZYYXYYXYYXYXXYXXX',
-    'YZYYXYYZYXYYXYXYYXYXXYXX',
-    'YY YX YYX YX XYX XX XX'
+    'lmmoooommmmmmmmoooommd',
+    'lmmoooommmmmmmmoooommd',
+    'llmmmmmmmmmmmmmmmmmmdd',
+    'ZYYZYYYZYYXYYXYYXYXXYX'
   ]);
   const HORNED_HELM = plate([
     'L                        M',
@@ -698,19 +697,19 @@ const ARMOUR = (() => {
     'd dd d dd dd d'
   ], 1);
   const THREE_FINGER = plate([
-    'llm',
-    'llm lmd llm',
-    ...times(6, 'lmd lmd lmd'),
-    'lmdllmdllmd',
-    'lllmmmmmddd',
-    'llmmommmddd',
-    'llmmmmomddd',
-    'llmmommmddd',
-    'llmmmmmdddd',
-    'zzyyyyyxx',
-    'zyyLDyyxx',
-    'lllmmmddd',
-    'ddddddd'
+    ' lm   lm   lm ',
+    'llmd llmd llmd',
+    ...times(5, 'lmmd lmmd lmmd'),
+    'lmmdllmmdllmmd',
+    'lllmmmmmmmmddd',
+    'llmmommmmommdd',
+    'llmm      mmdd',
+    'llmm      mmdd',
+    'llmmmmmmmmmddd',
+    'zzyyyyyyyyyyxx',
+    'zyyyyyLDyyyyxx',
+    'llllmmmmmmdddd',
+    'dddddddddddddd'
   ]);
   const LEG_WRAP = twin([
     'LLLLMMMDDD',
@@ -848,27 +847,21 @@ const ARMOUR = (() => {
     'dddddddddddddddddd'
   ], QUILT));
   const BREASTPLATE = plate([
-    'zyx      zyx',
-    'zLx      zLx',
-    'lllllm    mmmmmd',
-    'llllmmLLMMmmmmdd',
+    'zyx        zyx',
+    'zLx        zLx',
+    'llllm      mmmmd',
+    'lllmmLLMMMMmmmdd',
     'lllmmmmmmmmmmmdd',
-    'lllmmmmmmmmmmmmddd',
-    'llllmmmmmldmmmmmmddd',
-    'lllllmmmmmldmmmmmmmddd',
-    'llllllmmmmmldmmmmmmmdddd',
-    'llllllmmmmmldmmmmmmmdddd',
-    'lllllmmmmmmldmmmmmmmdddd',
-    'llllmmmmmmmldmmmmmmddddd',
-    'lllmmmmmmmmldmmmmmdddddd',
-    'llmmmmmmmmldmmmmmddddd',
-    'llmmmmmmmldmmmmddddd',
-    'lmmmmmmmmldmmmmddddd',
-    'lmmmmmmmldmmmddddd',
-    'lmmmmmdddddddddddd',
-    'oooooooooooooooooo',
-    'llllmmmmmmmmmmmddddd',
-    'lllllmmmmmmmmmmmdddddd',
+    'llllmmmmmmmmmmmmdd',
+    'llllmmmmmldmmmmmmmdd',
+    ...times(4, 'llllmmmmmldmmmmmmmdd'),
+    ...times(2, 'lllmmmmmmldmmmmmmddd'),
+    ...times(2, 'llmmmmmmldmmmmmddd'),
+    ...times(2, 'lmmmmmmldmmmmmdd'),
+    'lmmmmmmmdddddddd',
+    'oooooooooooooooo',
+    'llllmmmmmmmmmmmmdddd',
+    'lllllmmmmmmmmmmmmmdddd',
     'dddddddddddddddddddddd'
   ]);
   const SLAB_PLATE = plate([
@@ -1234,33 +1227,27 @@ const ARMOUR = (() => {
     ' xxxxxxxx     '
   ];
   const ARM_SPLINT = plate([
-    'llmmmmdd',
-    'lllmmmmddd',
-    ...times(2, 'LDllmmmmddLD'),
-    'zyyyyyyyyyyx',
-    ...times(4, 'LDllmmmmddLD'),
-    'zyyyyyyyyyyx',
-    ...times(4, 'LDllmmmmddLD'),
-    'zyyyyyyyyyyx',
-    ...times(2, 'LDllmmmmddLD'),
-    'lllmmmmddd',
-    'llmmmddd'
+    'LMD  lmmmmd  LMD',
+    'LMD llmmmmdd LMD',
+    'LMDlllmmmmdddLMD',
+    'zyyyyyyyyyyyyyyx',
+    ...times(6, 'LMDlllmmmmdddLMD'),
+    'zyyyyyyyyyyyyyyx',
+    ...times(2, 'LMDlllmmmmdddLMD'),
+    'LMD llmmmmdd LMD',
+    'LMD  lmmmmd  LMD'
   ]);
   const LEG_SPLINT = plate([
-    'llmmmmdd',
-    'lllmmmmddd',
-    'LDllmmmmddLD',
-    'zyyyyyyyyyyx',
-    ...times(5, 'LDllmmmmddLD'),
-    'zyyyyyyyyyyx',
-    ...times(5, 'LDllmmmmddLD'),
-    'zyyyyyyyyyyx',
-    ...times(5, 'LDllmmddLD'),
-    'zyyyyyyyyx',
-    ...times(4, 'LDllmmddLD'),
-    'zyyyyyyyyx',
-    'LDllmmddLD',
-    'llmmdd'
+    'LMD  lmmmmd  LMD',
+    'LMD llmmmmdd LMD',
+    'zyyyyyyyyyyyyyyx',
+    ...times(7, 'LMDlllmmmmdddLMD'),
+    'zyyyyyyyyyyyyyyx',
+    ...times(7, 'LMDlllmmmmdddLMD'),
+    'zyyyyyyyyyyyyyyx',
+    ...times(2, 'LMDlllmmmmdddLMD'),
+    'LMD llmmmmdd LMD',
+    'LMD  lmmmmd  LMD'
   ]);
   const ARM_CAST = [
     '  llllmm            ',

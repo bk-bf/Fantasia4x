@@ -13,30 +13,36 @@ const PIXEL_BLADES = (() => {
   const runeArmingSword = () => sword([POMMEL.jewel, 'gold', 'sapphire'], [grip(5), 'wool'], [quillons(4), 'gold'], [BLADE.runed(16), 'runed', 'glow']);
   const gravemaker = () => sword([POMMEL.ring, 'black'], [binding(7), 'red'], [crossbar(5), 'black'], [BLADE.jagged(17), 'black']);
 
-  const flintDagger = () => knife([grip(5, 'md'), 'wood'], [binding(2), 'cord'], [BLADE.broad(9), 'flint']);
   const copperDagger = () => sword([POMMEL.dot, 'bone'], [grip(4, 'ml'), 'bone'], [quillons(2), 'copper'], [BLADE.leaf(9, 2), 'copper']);
   const ironRondel = () => sword([part(-2, ['l', 'm', 'm', 'd', 'd']), 'iron'], [grip(4), 'wood'], [crossbar(3), 'iron'], [BLADE.spike(12, 6), 'iron']);
   const steelStiletto = () => sword([POMMEL.dot, 'steel'], [grip(4), 'leather'], [quillons(2), 'steel'], [BLADE.needle(12), 'steel']);
 
-  function curved(n, root, bend) {
-    const centre = i => bend * (i / n) ** 2, half = i => root * (1 - (i / n) ** 1.6);
-    const tone = (b, i) => b < centre(i) - half(i) / 3 ? 'l' : b > centre(i) + half(i) / 3 ? 'd' : 'm';
-    const bands = Array.from({ length: Math.ceil(root + bend) + Math.ceil(root) + 1 }, (_, k) => k - Math.ceil(root));
-    const cell = (b, i) => Math.abs(b - centre(i)) <= half(i) + .25 ? tone(b, i) : ' ';
-    return part(bands[0], bands.map(b => Array.from({ length: n }, (_, i) => cell(b, i)).join('')));
-  }
-  const PUNCH_HILT = part(-3, [
-    'llllll',
-    '  L  l',
-    '  M  m',
-    '  M  m',
-    '  M  m',
-    '  D  d',
-    'dddddd'
-  ]);
+  const FANG = PX.patch([
+    '        llll ',
+    '      llmmmmd',
+    '     lmmmmddd',
+    '    lmmmmd  d',
+    '   lmmmmd    ',
+    '  lmmmmd     ',
+    ' lmmmmd      ',
+    ' lmmmd       ',
+    'lmmmdd       ',
+    'mmmdd        '
+  ], [0, 9]);
+  const PUNCH_GRIP = [
+    ' L       ',
+    'LMM      ',
+    'LMMM     ',
+    ' DMMM    ',
+    '  DMMM   ',
+    '   DMMM  ',
+    '    DMMM ',
+    '     DMD ',
+    '      D  '
+  ];
   const greatLeaf = n => profile([[-3, 8, n - 6, 'l'], [-2, 4, n - 3, 'l'], [-1, 0, n - 1, 'm'], [0, 1, n + 1, 'm'], [1, 0, n - 1, 'm'], [2, 4, n - 3, 'd'], [3, 8, n - 6, 'd']]);
-  const splinter = n => profile([[-2, 2, 4, 'l'], [-1, 0, n - 3, 'l'], [0, 0, n, 'm'], [1, 0, n - 5, 'd'], [1, n - 4, n - 2, 'd'], [2, 1, 5, 'd']]);
-  const triangle = n => profile([[-2, 0, n - 8, 'l'], [-1, 0, n - 4, 'l'], [0, 1, n + 1, 'm'], [1, 0, n - 4, 'd'], [2, 0, n - 8, 'd']]);
+  const KNUCKLE = part(-2, [' l', 'll', 'mm', 'md', ' d']);
+  const PUSH_BLADE = profile([[-3, 1, 4, 'l'], [-2, 0, 7, 'l'], [-1, 0, 10, 'm'], [0, 0, 14, 'm'], [1, 0, 10, 'd'], [2, 0, 7, 'd'], [3, 1, 4, 'd']]);
   const scrap = n => profile([[-2, 1, 3, 'l'], [-2, 6, 8, 'l'], [-1, 0, n - 3, 'l'], [0, 0, n, 'm'], [0, n - 6, n - 2, 'L'], [1, 0, n - 2, 'd'], [1, n - 6, n - 3, 'M'], [2, 2, 5, 'd']]);
   const slotted = n => profile([[-1, 0, n - 4, 'l'], [0, 1, n + 1, 'm'], [0, 1, n - 3, 'L'], [1, 0, n - 4, 'd']]);
 
@@ -98,12 +104,12 @@ const PIXEL_BLADES = (() => {
   const ironGreatsword = () => sword([POMMEL.block, 'iron'], [grip(7), 'leather'], [crossbar(6), 'iron'], [BLADE.broad(18), 'iron']);
   const bronzeGreatLeaf = () => sword([POMMEL.wheel, 'bronze'], [grip(6, 'ml'), 'bronze'], [quillons(2), 'bronze'], [greatLeaf(19), 'bronze']);
   const runeSungGreatsword = () => sword([POMMEL.jewel, 'gold', 'ruby'], [grip(7), 'wool'], [crossbar(7), 'gold'], [BLADE.verse(17, 14), 'runed', 'glow']);
-  const fangReaver = () => knife([haft(7), 'wood'], [binding(3), 'hide'], [curved(17, 3, 6), 'bone']);
+  const fangReaver = () => assemble([[haft(13), 'wood'], [binding(4), 'string'], [FANG, 'bone']]);
 
-  const boneKnife = () => knife([grip(3, 'ml'), 'bone'], [binding(3), 'hide'], [splinter(12), 'bone']);
-  const bronzePunchDagger = () => knife([PUNCH_HILT, 'bronze', 'bone'], [part(0, ['m']), 'bronze'], [triangle(11), 'bronze']);
+  const boneKnife = () => knife([KNUCKLE, 'bone'], [binding(5), 'hide'], [BLADE.seax(11), 'bone']);
+  const bronzePunchDagger = () => assemble([[part(-1, ['l', 'm', 'd']), 'bronze'], [PUSH_BLADE, 'bronze']], PX.stamp(PX.sketch(), -5, -3, PUNCH_GRIP, ['bronze', 'bone']));
   const goblinShank = () => knife([binding(5), 'leather'], [part(0, ['d']), 'iron'], [scrap(12), 'iron', 'sapwood']);
-  const greatFangDirk = () => knife([binding(5), 'leather'], [part(0, ['d']), 'bone'], [curved(13, 2.2, 4), 'bone']);
+  const greatFangDirk = () => assemble([[POMMEL.dot, 'bone'], [binding(6), 'leather'], [FANG, 'bone']]);
   const runeSlottedStiletto = () => sword([POMMEL.dot, 'runed'], [grip(4), 'black'], [quillons(2), 'runed'], [slotted(13), 'runed', 'glow']);
 
   const orcCleaver = () => knife([binding(6), 'leather'], [crossbar(1), 'black'], [HACKED(19, 8), 'black']);
@@ -117,7 +123,6 @@ const PIXEL_BLADES = (() => {
     { id: 'steel_greatsword', draw: steelGreatsword },
     { id: 'rune_etched_arming_sword', draw: runeArmingSword },
     { id: 'gravemaker', draw: gravemaker },
-    { id: 'flint_dagger', draw: flintDagger },
     { id: 'copper_dagger', draw: copperDagger },
     { id: 'iron_rondel', draw: ironRondel },
     { id: 'steel_stiletto', draw: steelStiletto },

@@ -43,7 +43,7 @@
   }
 
   const TOOLS = ['bearded_axe', 'iron_axe', 'iron_hoe', 'steel_boar_spear', 'hunting_recurve', 'iron_hammer', 'iron_pick', 'iron_mace', 'saw', 'iron_tongs'];
-  const WORN = ['iron_nasal_helm', 'plate_cuirass', 'hide_boots', 'framed_leather_pack', 'leather_sword_belt', 'plank_round_shield'];
+  const WORN = ['iron_nasal_helm', 'great_helm', 'plate_cuirass', 'mail_hauberk', 'wool_cloak', 'hide_boots', 'steel_gauntlets', 'steel_heater_shield', 'plank_round_shield', 'champions_crown', 'ruby_ring', 'leather_knapsack', 'framed_leather_pack', 'leather_sword_belt', 'leather_back_quiver', 'iron_butchery_kit', 'tailors_kit', 'goblin_net'];
   const LIE_ROWS = [3, 4];
   function loose(state, ids) {
     const all = ids.filter(id => items.get(id)), leaning = all.map((id, i) => drop(id, 1, 1 + i, 1)), lying = all.map((id, i) => drop(id, 1, 1 + i, LIE_ROWS[i % LIE_ROWS.length]));

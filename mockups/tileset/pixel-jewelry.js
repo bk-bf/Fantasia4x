@@ -71,20 +71,21 @@ const PIXEL_JEWELRY = (() => {
   const torcGem = mat => mark(9, 0, ['llmd', 'lmmd', ' dd '], mat);
 
   const ARM_RING = boxed([
-    '            llm ',
-    '   lllmmmmmmlmd ',
-    ' llmWWWWWWWWmdd ',
-    'llmWWWWWWWWWWmdd',
-    'lllmmWWWWWWmmddd',
-    'lllllmmmoooooooo',
-    'oooooooommmmdddd',
-    'llllmmmmmmmmdddd',
-    'lllmmmmmoooooooo',
-    'oooooooommmddddd',
-    'llllmmmmmmmmdddd',
-    'lmllmmmmmmmmddd ',
-    'lmd ddddddddd   ',
-    ' dd             '
+    '    dddddddddd lm  ',
+    '  dd          dmd  ',
+    ' l              d  ',
+    'lm              md ',
+    ' lmm dddddddddmdd  ',
+    '   lllmmmmmmddddd  ',
+    '  l              d ',
+    ' lm              md',
+    '  lmmddddddddd mdd ',
+    '  ddlllmmmmmmddd   ',
+    ' l              d  ',
+    'lm              md ',
+    ' lmm          mdd  ',
+    '  lmllmmmmmmddd    ',
+    '  md               '
   ]);
 
   const TOOTH_NECKLACE = plate([
@@ -173,16 +174,17 @@ const PIXEL_JEWELRY = (() => {
     'mmmmmmdddddd'
   ]);
   const DIADEM = plate([
-    'll',
     'lm',
-    'll   lm   md',
+    'lmmd',
+    'll  dd',
+    'lmm  mmd',
+    'l lmmmmd d',
     'lm  lmmd  md',
-    'll  lm  lmmd  md  dd',
-    'lm lmmd lmmd mmdd md',
     'llllllmmmmmmmmmmdddddd',
-    'llloolmmoommoommdooddd',
-    'llllllmmmmmmmmmmdddddd',
-    'dddddddddddddddddddd'
+    'lm lm lm lmmd md md md',
+    'l ml ml mmmmdm dm dm d',
+    'lm lm lm lmmd md md md',
+    'llllllmmmmmmmmmmdddddd'
   ]);
   const WAR_CROWN = plate([
     'lm',

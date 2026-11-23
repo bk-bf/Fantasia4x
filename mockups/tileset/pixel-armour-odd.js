@@ -11,7 +11,7 @@ const PIXEL_ARMOUR_ODD = (() => {
   const STUB_HORNS = [mark(-3, 5, [' lm', 'lmm', 'mmd', ' dd'], 'horn'), mark(22, 5, ['ml ', 'mmd', 'mdd', 'dd '], 'horn')];
   const EYE_SLOTS = mark(4, 9, ['oooo      oooo', 'oooo      oooo'], 'iron');
   const BRIM = mark(2, 5, ['llllllmmmmmmmmmmdddddd', ' dddddddddddddddddddd '], 'moss');
-  const IRON_FRAME = [mark(0, 9, ['llllllmmmmmmmmmmmmdddddd', 'dddddddddddddddddddddddd'], 'iron'), mark(11, 4, times(5, 'ld'), 'iron'), mark(11, 11, times(4, 'ld'), 'iron')];
+  const IRON_FRAME = [mark(1, 10, ['llllllmmmmmmmmdddddd', 'dddddddddddddddddddd'], 'iron'), mark(10, 4, times(6, 'ld'), 'iron'), mark(10, 12, times(5, 'ld'), 'iron')];
   const ENGRAVING = [mark(5, 7, [' dd        dd ', 'd  d      d  d', ' d  d    d  d ', '  dd      dd  '], 'gold'), mark(11, 3, ['lm', 'md'], 'ruby')];
   const FUR_COLLAR = mark(5, 0, ['  lmlmmmdmdd  ', ' llmlmmmmdmdd ', 'lmllml  mdmddd'], 'ermine');
   const SIGILS = mark(9, 16, ['   mm   ', '  m  m  ', '   mm   ', '        ', ' l    l ', '        ', '   ll   '], 'glow');
@@ -19,8 +19,7 @@ const PIXEL_ARMOUR_ODD = (() => {
   const KNUCKLE_CLAWS = [mark(0, 5, ['l  l  l  l', 'm  m  m  m'], 'bone'), mark(17, 5, ['l  l  l  l', 'm  m  m  m'], 'bone')];
   const FINGERLESS = [...HANDS.gauntlet.slice(7)];
   const KNUCKLE_SPIKES = [mark(0, -2, [' l  l  l ', 'lm lm lm ', 'md md md '], 'black'), mark(15, -2, [' l  l  l ', 'lm lm lm ', 'md md md '], 'black')];
-  const SUTURES = mark(5, 1, ['   d    ', '  d d  d', ' d   dd ', '        ', '      d ', '     d d'], 'bone');
-  const BROW_RIDGE = mark(0, 7, [' llllllllmmmmmmmmmmdddd ', 'lllmmllmmmmmmmmdmmmddddd'], 'bone');
+  const SUTURES = mark(6, 1, ['   d    ', '  d d  d', ' d   dd ', '        ', '      d ', '     d d'], 'bone');
   const ELBOW_SPIKES = [mark(-2, 2, [' l', 'lm', 'md'], 'black'), mark(24, 2, ['l ', 'md', 'dd'], 'black')];
 
   const SCRAP_VEST = [
@@ -130,7 +129,7 @@ const PIXEL_ARMOUR_ODD = (() => {
     { id: 'gnoll_skull_helm', draw: () => dress(HEAD.skull, { body: 'bone' }) },
     { id: 'gnoll_hide_greaves', draw: () => dress(LEGS.shinWrap, { body: 'hide', trim: 'fur', strap: 'cord' }) },
 
-    { id: 'great_bone_helm', draw: () => dress(HEAD.boneHelm, GREAT_BONE, SUTURES, BROW_RIDGE) },
+    { id: 'great_bone_helm', draw: () => dress(HEAD.boneHelm, GREAT_BONE, SUTURES) },
     { id: 'great_bone_cuirass', draw: () => dress(TORSO.boneCuirass, BONE_ON_PELT) },
     { id: 'great_bone_vambraces', draw: () => dress(ARMS.sticks, GREAT_BONE) },
     { id: 'great_bone_greaves', draw: () => dress(LEGS.splint, BONE_ON_PELT) },
