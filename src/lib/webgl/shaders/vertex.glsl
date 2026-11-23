@@ -29,6 +29,8 @@ uniform vec4 u_gustShape;
 uniform vec4 u_gustNoise;
 uniform vec4 u_windPhase;
 uniform float u_basePerArt;
+uniform float u_swayReach;
+uniform mediump vec2 u_paintTexelSize;
 
 // Varying outputs (passed to fragment shader)
 out vec2 v_texCoord;     // Pass texture coordinates to fragment
@@ -43,6 +45,7 @@ flat out vec4 v_vein;
 flat out float v_veinNear;
 flat out highp float v_row;
 flat out highp float v_lean;
+flat out highp float v_reach;
 
 float cell(ivec2 c) {
     uint h = uint(c.x) * 374761393u + uint(c.y) * 668265263u;
@@ -86,16 +89,21 @@ void main() {
     // scrolling nor zooming ever requires rebuilding the vertex buffer.
     vec2 pos = (a_position - u_viewOffset) * u_zoom;
     v_lean = 0.0;
+    v_reach = 0.0;
+    vec2 texCoord = a_texCoord;
     float span = a_uvBounds.w - a_uvBounds.y;
     if (a_sway > 0.0 && u_wind.x > 0.0 && span > 0.0) {
         v_lean = leanAt((a_vein.zw + vec2(0.5, 1.0)) * u_wind.w, a_sway);
-        pos.x += v_lean * (a_uvBounds.w - a_texCoord.y) / span * u_basePerArt * u_zoom.x;
+        v_reach = ceil(a_sway * u_swayReach);
+        float side = a_texCoord.x * 2.0 < a_uvBounds.x + a_uvBounds.z - 4.0 ? -1.0 : 1.0;
+        pos.x += side * v_reach * u_basePerArt * u_zoom.x;
+        texCoord.x += side * v_reach * u_paintTexelSize.x;
     }
     gl_Position = u_projection * vec4(pos, 0.0, 1.0);
     gl_Position.z = -a_row * u_rowDepth;
     
     // Pass through texture coordinates and colors to fragment shader
-    v_texCoord = a_texCoord;
+    v_texCoord = texCoord;
     v_foreground = a_foreground;
     v_background = a_background;
     v_detail = a_detail;

@@ -14,6 +14,7 @@ flat in vec4 v_vein;
 flat in float v_veinNear;
 flat in highp float v_row;
 flat in highp float v_lean;
+flat in highp float v_reach;
 
 uniform sampler2D u_fontAtlas;
 uniform sampler2D u_paintAtlas;
@@ -118,19 +119,21 @@ vec3 weathered(vec3 c) {
 highp vec2 swayed(highp vec2 uv) {
     if (v_lean == 0.0) return uv;
     highp float top = v_uvBounds.y;
-    highp float bottom = v_uvBounds.w;
-    highp float rows = (bottom - top) / u_paintTexelSize.y;
+    highp float rows = (v_uvBounds.w - top) / u_paintTexelSize.y;
     highp float row = floor((uv.y - top) / u_paintTexelSize.y);
     highp float rise = (rows - row + mod(row, 3.0)) / rows;
     highp float step = rise > 0.0 ? floor(v_lean * rise * sqrt(rise) + 0.5) : 0.0;
-    highp float lean = v_lean * (bottom - uv.y) / (bottom - top);
-    return uv + vec2((lean - step) * u_paintTexelSize.x, 0.0);
+    return uv - vec2(step * u_paintTexelSize.x, 0.0);
 }
 
-vec2 paintedUv() {
+bool offSprite(highp vec2 uv) {
+    return v_reach > 0.0 && (uv.x < v_uvBounds.x - 2.0 || uv.x > v_uvBounds.z - 2.0);
+}
+
+vec2 paintedUv(highp vec2 uv) {
     vec4 cell = v_uvBounds - vec4(2.0, 0.0, 2.0, 0.0);
     vec2 inset = 0.5 * u_paintTexelSize;
-    return clamp(swayed(v_texCoord), cell.xy + inset, cell.zw - inset);
+    return clamp(uv, cell.xy + inset, cell.zw - inset);
 }
 
 highp float groundDepth(highp float ground) {
@@ -148,7 +151,8 @@ void main() {
         : min(u_ambient + v_light * u_lightFlicker, vec3(1.6));
 
     if (u_shadowPass > 0.5) {
-        if (v_uvBounds.x < 2.0 || texture(u_lightAtlas, paintedUv()).g < 0.5) discard;
+        highp vec2 leaned = swayed(v_texCoord);
+        if (v_uvBounds.x < 2.0 || offSprite(leaned) || texture(u_lightAtlas, paintedUv(leaned)).g < 0.5) discard;
         gl_FragDepth = u_shadowDepth;
         fragColor = vec4(u_shade, 1.0);
         return;
@@ -165,9 +169,11 @@ void main() {
     bool painted = v_uvBounds.x >= 2.0;
     vec4 sprite;
     if (painted) {
-        vec2 uv = paintedUv();
-        sprite = texture(u_paintAtlas, uv);
-        if (u_fieldLit > 0.5) {
+        highp vec2 leaned = swayed(v_texCoord);
+        bool off = offSprite(leaned);
+        vec2 uv = paintedUv(leaned);
+        sprite = off ? vec4(0.0) : texture(u_paintAtlas, uv);
+        if (u_fieldLit > 0.5 && !off) {
             float glow = texture(u_lightAtlas, uv).r;
             if (glow > 0.0) light = mix(u_ambient, vec3(1.0), glow);
         }
