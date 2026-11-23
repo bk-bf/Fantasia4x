@@ -239,6 +239,7 @@ void main() {
     // is ignored (output identical to the old vec3 path); the BLENDED weather layer (snow/ice wash)
     // uses fractional bg alpha so the cell washes the terrain beneath it, while its glyph pixels
     // (the snow sprites) stay fully opaque.
+    if (painted && v_background.a <= 0.0 && sprite.a < 0.5) discard;
     vec3 lit = mix(v_background.rgb, tinted, sprite.a);
     fragColor = vec4(weathered(lit * light), mix(v_background.a, 1.0, sprite.a));
 }

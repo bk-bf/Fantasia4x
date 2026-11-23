@@ -146,6 +146,7 @@ function windyCore(
       light: {},
       top: null,
       water: null,
+      ground: null,
       texels: () => null,
       cell: () => null
     },

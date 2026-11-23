@@ -31,18 +31,27 @@ function header(w = 0, h = 0) {
   return chunk('IHDR', head);
 }
 
-function scanlines(w = 0, h = 0, rgba = new Uint8Array(0), level = 9) {
-  const raw = Buffer.alloc(h * (w * 4 + 1));
-  for (let y = 0; y < h; y++)
-    raw.set(rgba.subarray(y * w * 4, (y + 1) * w * 4), y * (w * 4 + 1) + 1);
+export const UP = 2;
+
+function scanlines(w = 0, h = 0, rgba = new Uint8Array(0), level = 9, filter = 0) {
+  const row = w * 4;
+  const raw = Buffer.alloc(h * (row + 1));
+  for (let y = 0; y < h; y++) {
+    const line = rgba.subarray(y * row, (y + 1) * row);
+    raw[y * (row + 1)] = filter;
+    if (filter === UP && y > 0) {
+      const above = rgba.subarray((y - 1) * row, y * row);
+      for (let i = 0; i < row; i++) raw[y * (row + 1) + 1 + i] = (line[i] - above[i]) & 255;
+    } else raw.set(line, y * (row + 1) + 1);
+  }
   return deflateSync(raw, { level });
 }
 
-export function encodePng(w = 0, h = 0, rgba = new Uint8Array(0), level = 9) {
+export function encodePng(w = 0, h = 0, rgba = new Uint8Array(0), level = 9, filter = 0) {
   return Buffer.concat([
     SIGNATURE,
     header(w, h),
-    chunk('IDAT', scanlines(w, h, rgba, level)),
+    chunk('IDAT', scanlines(w, h, rgba, level, filter)),
     chunk('IEND', Buffer.alloc(0))
   ]);
 }
@@ -59,9 +68,14 @@ export function decodePng(png = Buffer.alloc(0)) {
   }
   const raw = inflateSync(Buffer.concat(data));
   const rgba = new Uint8Array(w * h * 4);
+  const row = w * 4;
   for (let y = 0; y < h; y++) {
-    if (raw[y * (w * 4 + 1)] !== 0) throw new Error('decodePng reads only unfiltered rows');
-    rgba.set(raw.subarray(y * (w * 4 + 1) + 1, (y + 1) * (w * 4 + 1)), y * w * 4);
+    const filter = raw[y * (row + 1)];
+    if (filter !== 0 && filter !== UP)
+      throw new Error('decodePng reads only unfiltered and up rows');
+    rgba.set(raw.subarray(y * (row + 1) + 1, (y + 1) * (row + 1)), y * row);
+    if (filter === UP && y > 0)
+      for (let i = y * row; i < (y + 1) * row; i++) rgba[i] = (rgba[i] + rgba[i - row]) & 255;
   }
   return { w, h, rgba };
 }

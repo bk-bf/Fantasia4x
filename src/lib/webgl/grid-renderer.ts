@@ -5,6 +5,7 @@ import type { ShaderManager } from './shaders.js';
 import type { FontAtlas } from './types.js';
 import { checkWebGLError } from './utils.js';
 import { tileQuad } from './drawnSprites.js';
+import { tuftTiles } from './painted/tufts.js';
 
 const ONE_LIGHT: [number, number, number] = [1, 1, 1];
 const ZERO_LIGHT: [number, number, number] = [0, 0, 0];
@@ -278,7 +279,7 @@ export class GridRenderer {
     const region = grid.getTilesInRegion(cx * CS, cy * CS, CS, CS);
     const tiles =
       this.skipBlendedGround && chunks === this.terrainChunks
-        ? region.filter((t) => !t.ground)
+        ? region.flatMap((t) => (t.ground ? tuftTiles(t) : [t]))
         : region;
     if (!chunk) {
       chunk = {
