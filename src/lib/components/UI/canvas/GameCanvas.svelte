@@ -152,6 +152,7 @@
   const MAP_W = 240;
   const MAP_H = 160;
   const MAX_TILE_W = 64;
+  const ENTITY_RENDER_MIN_PX = 5;
   const ZOOM_STEP = 2;
   const CAMERA_STORAGE_KEY = 'fantasia4x-camera';
   let saveCameraTimer: ReturnType<typeof setTimeout> | null = null;
@@ -1212,7 +1213,6 @@
     const cullMinY = vy - CULL_MARGIN;
     const cullMaxX = vx + Math.ceil((box?.clientWidth ?? 0) / tW) + CULL_MARGIN;
     const cullMaxY = vy + Math.ceil((box?.clientHeight ?? 0) / tH) + CULL_MARGIN;
-    const ENTITY_RENDER_MIN_PX = 5;
     const renderMobs = tW >= ENTITY_RENDER_MIN_PX;
     const seenMobs = new Set<string>();
     for (const mob of liveMobs) {
@@ -1375,7 +1375,8 @@
         if (onScreen(o)) newGlyphs.push(o);
       }
     }
-    for (const m of mobList) {
+    const mobsDrawn = tW >= ENTITY_RENDER_MIN_PX;
+    for (const m of mobsDrawn ? mobList : []) {
       if (m.state === 'Corpse') continue;
       if (isHiddenTile(m.x, m.y)) continue;
       let kind: GlyphFloatKind | null = null;
