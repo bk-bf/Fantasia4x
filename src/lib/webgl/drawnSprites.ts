@@ -236,3 +236,22 @@ export function drawnBounds(tile: TileData, f: DrawnFrame): Quad {
     q[1] + Math.max(ay, by) * h
   ];
 }
+
+export interface DrawnFigure {
+  quad: Quad;
+  box: Quad;
+  rotated: boolean;
+  cell: Quad | null;
+}
+
+export function drawnFigure(tile: TileData, f: DrawnFrame): DrawnFigure {
+  const quad: Quad = [0, 0, 0, 0];
+  tileQuad(tile, f.basePx, f.basePx, quad);
+  const s = tile.painted;
+  return {
+    quad,
+    box: drawnBounds(tile, f),
+    rotated: tile.rotation === 90 || tile.rotation === 270,
+    cell: s && f.texels ? cellOf(f.texels, s) : null
+  };
+}

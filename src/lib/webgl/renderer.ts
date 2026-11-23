@@ -5,7 +5,7 @@ import {
   type SpriteLayer
 } from './renderer-core.js';
 import type { GroundRing, RingInk } from './groundRings.js';
-import type { Quad } from './drawnSprites.js';
+import type { DrawnFigure, Quad } from './drawnSprites.js';
 import type { ShaderManager } from './shaders.js';
 import type { CharacterRenderer } from './character-renderer.js';
 import type { GameGrid } from './game-grid.js';
@@ -72,6 +72,18 @@ export class WebGLRenderer {
 
   drawnBounds(layer: SpriteLayer, x: number, y: number): Quad | null {
     return this.core.drawnBounds(layer, x, y);
+  }
+
+  drawnFigure(layer: SpriteLayer, x: number, y: number): DrawnFigure | null {
+    return this.core.drawnFigure(layer, x, y);
+  }
+
+  atlasCell(q: Quad): Uint8ClampedArray | null {
+    return this.core.atlasCell(q);
+  }
+
+  gradeWeights(): Rgb {
+    return this.core.gradeWeights();
   }
 
   setViewTileOffset(x: number, y: number): void {

@@ -688,7 +688,8 @@ function tickConditions(pawn: Pawn, gameState: GameState): GameState {
     prevStages,
     conditions,
     pawn.position?.x ?? -1,
-    pawn.position?.y ?? -1
+    pawn.position?.y ?? -1,
+    pawn.id
   );
   memoryService.recordConditionOnsets(gameState, pawn, prevStages, conditions);
   for (const esc of detectVitalEscalations(prevVitalStages, conditions)) {
@@ -1031,7 +1032,9 @@ export function syncTransientConditions(pawn: Pawn, turn?: number): Pawn {
           worldY: pawn.position.y,
           text: f.name,
           kind: 'condition',
-          color: f.color
+          color: f.color,
+          entityId: pawn.id,
+          conditionId: id
         });
     }
   }

@@ -250,7 +250,7 @@ export function stepHunger(state: GameState): GameState {
     mob.needs.fatigue = newFatigue;
     mob.bloodVolume = bloodVolume;
     if (conditionsSig(conditions) !== condSigBefore) mob.conditions = conditions.slice();
-    emitPersistentConditionFloaters(prevStages, conditions, mob.x, mob.y);
+    emitPersistentConditionFloaters(prevStages, conditions, mob.x, mob.y, mob.id);
     changed = true;
   }
 

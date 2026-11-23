@@ -139,7 +139,8 @@ function windyCore(uploads: Float32Array[], uniforms: Map<string, unknown>) {
       light: {},
       top: null,
       water: null,
-      texels: () => null
+      texels: () => null,
+      cell: () => null
     },
     fontTexture: {},
     fontAtlas: atlas,

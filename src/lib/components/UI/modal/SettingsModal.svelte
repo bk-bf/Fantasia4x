@@ -11,6 +11,8 @@
     dayNightTint,
     vignetteOn,
     showDialogBubbles,
+    conditionIcons,
+    conditionText,
     showFps,
     showTps,
     hideSidebars,
@@ -93,7 +95,11 @@
         ])}
       </SettingSection>
       <SettingSection title="Interface">
-        {@render checks([flag(hideSidebars, $hideSidebars, 'Cinematic layout')])}
+        {@render checks([
+          flag(hideSidebars, $hideSidebars, 'Cinematic layout'),
+          flag(conditionIcons, $conditionIcons, 'Condition icons'),
+          flag(conditionText, $conditionText, 'Condition text')
+        ])}
         <SettingRow
           type="select"
           label="Hover panels"

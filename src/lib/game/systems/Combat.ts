@@ -1086,7 +1086,7 @@ class CombatServiceImpl implements CombatService {
     for (const id of ['knockdown', 'collapse']) {
       if ((durations[id] ?? 0) > 0 && !transientConditions.includes(id)) {
         transientConditions.push(id);
-        this.emitConditionFloat(cpos.x, cpos.y, id, 13 * condTier++);
+        this.emitConditionFloat(entity.id, cpos.x, cpos.y, id, 13 * condTier++);
       }
     }
 
@@ -1158,7 +1158,13 @@ class CombatServiceImpl implements CombatService {
     simLog.pushCombatText({ worldX: x, worldY: y, text, kind, dy });
   }
 
-  private emitConditionFloat(x: number, y: number, id: string, dy?: number): void {
+  private emitConditionFloat(
+    entityId: string,
+    x: number,
+    y: number,
+    id: string,
+    dy?: number
+  ): void {
     if (x < 0 || y < 0) return;
     const f = getConditionFloater(id);
     if (!f) return;
@@ -1168,7 +1174,9 @@ class CombatServiceImpl implements CombatService {
       text: f.name,
       kind: 'condition',
       color: f.color,
-      dy
+      dy,
+      entityId,
+      conditionId: id
     });
     const sound = conditionAudio(id);
     if (sound) simLog.pushCombatSound({ sound, worldX: x, worldY: y });
@@ -1572,7 +1580,7 @@ class CombatServiceImpl implements CombatService {
       transientConditions,
       bloodVolume
     };
-    if (eff.condition) this.emitConditionFloat(pos.x, pos.y, eff.condition, 39);
+    if (eff.condition) this.emitConditionFloat(target.id, pos.x, pos.y, eff.condition, 39);
 
     let s = this.spliceEntity(state, targetId, updated as Pawn | Mob, isMob);
     if (fed && attacker && attacker.isAlive !== false) {
@@ -1603,7 +1611,7 @@ class CombatServiceImpl implements CombatService {
             ? live.transientConditions!
             : [...(live.transientConditions ?? []), FEASTED_CONDITION];
           const apos = this.entityPos(live);
-          this.emitConditionFloat(apos.x, apos.y, FEASTED_CONDITION, 39);
+          this.emitConditionFloat(live.id, apos.x, apos.y, FEASTED_CONDITION, 39);
           s = this.spliceEntity(
             s,
             live.id,
@@ -1750,7 +1758,7 @@ class CombatServiceImpl implements CombatService {
           conditionTimers: timers,
           transientConditions
         };
-    this.emitConditionFloat(nx, ny, 'staggered', 26);
+    this.emitConditionFloat(target.id, nx, ny, 'staggered', 26);
     return this.spliceEntity(state, target.id, moved as Pawn | Mob, isMob);
   }
 
@@ -2146,7 +2154,7 @@ class CombatServiceImpl implements CombatService {
       if (!transientConditions.includes(WINDED)) {
         transientConditions = [...transientConditions, WINDED];
         const wpos = this.entityPos(e);
-        this.emitConditionFloat(wpos.x, wpos.y, WINDED);
+        this.emitConditionFloat(e.id, wpos.x, wpos.y, WINDED);
       }
     } else {
       delete durations.winded;

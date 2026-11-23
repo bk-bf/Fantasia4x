@@ -59,17 +59,13 @@
   import { lightingService } from '$lib/game/services/LightingService.js';
   import { glyph, SHEET } from '$lib/webgl/tilesets.js';
   import { uiState } from '$lib/stores/uiState.js';
-  import { worldEffects } from '$lib/stores/fx/worldEffects.js';
-  import type { GlyphFloat, GlyphFloatKind } from '$lib/stores/fx/worldEffects.js';
-  import { effectToggles } from '$lib/stores/fx/effectToggles';
-  import { combatFeedback, floatTtl, type CombatTextEvent } from '$lib/stores/fx/combatFeedback.js';
   import { animNow, setAnimPaused } from '$lib/stores/fx/animClock.js';
   import {
     attackLunges,
     LUNGE_TTL_MS,
     type AttackLungeEvent
   } from '$lib/stores/fx/attackLunges.js';
-  import { projectiles, type ProjectileEvent } from '$lib/stores/fx/projectiles.js';
+  import { worldFx } from './worldFx/layer';
   import { renderFps } from '$lib/stores/perfStats.js';
   import { buildingService } from '$lib/game/services/BuildingService.js';
   import { roomFor } from '$lib/game/core/rules/gear/vessels';
@@ -87,7 +83,6 @@
   import { getRangedWeapon } from '$lib/game/systems/rangedCombat.js';
   import { needsRecovery } from '$lib/game/systems/pawn/pawnHelpers';
   import { hasUntendedWound, pickTendMedicine } from '$lib/game/services/jobs/caretake';
-  import { conditionPriority } from '$lib/game/core/rules/body/conditions';
   import { getCreatureById } from '$lib/game/core/defs/creatures.js';
   import { TICKS_PER_SECOND } from '$lib/game/core/util/time.js';
   import { vlog } from '$lib/game/core/util/logSink.js';
@@ -135,7 +130,6 @@
   import ModeBanner, { type BannerModel } from '$lib/components/UI/canvas/ModeBanner.svelte';
   import { envFacts, tileFacts } from '$lib/components/UI/canvas/tileFacts';
   import BuildingInfo from '$lib/components/UI/canvas/BuildingInfo.svelte';
-  import { PROGRESS_BAR_STATES } from '$lib/components/UI/canvas/selectionCard';
   import { overlayDroppedItems, overlayBuildings } from '$lib/components/UI/canvas/overlay';
   import { buildingsVisualSig } from '$lib/game/core/state/buildingSig';
   import { lineFormationTargets } from '$lib/game/sim/commands';
@@ -268,19 +262,11 @@
   const PAN_SMOOTH_TAU = 0.09;
   const FOLLOW_VERTICAL = 0.42;
 
-  let _glyphFloatKey = '';
-  let _progressOverlayKey = '';
-  let _healthOverlayKey = '';
-  let _draftOverlayKey = '';
-  let _floatTextKey = '';
-  let _projOverlayKey = '';
-
-  let combatTexts: CombatTextEvent[] = [];
-  const unsubCombatFeedback = combatFeedback.subscribe((list) => {
-    combatTexts = list;
+  let simPaused = false;
+  const unsubAnimPause = gameState.isPaused.subscribe((p) => {
+    simPaused = p;
+    setAnimPaused(p);
   });
-
-  const unsubAnimPause = gameState.isPaused.subscribe((p) => setAnimPaused(p));
   const unsubVignette = vignetteOn.subscribe((on) => renderer?.setVignette(on));
   const unsubSway = windSwayOn.subscribe((on) => {
     renderer?.setSway(on);
@@ -290,11 +276,6 @@
   let attackLungeList: AttackLungeEvent[] = [];
   const unsubAttackLunges = attackLunges.subscribe((list) => {
     attackLungeList = list;
-  });
-
-  let projectileList: ProjectileEvent[] = [];
-  const unsubProjectiles = projectiles.subscribe((list) => {
-    projectileList = list;
   });
 
   const LUNGE_DISTANCE = 0.4;
@@ -1083,312 +1064,6 @@
     _selectionRingKey = key;
     renderer?.setGroundRings(next, MARK_INK);
     markRenderDirty();
-  }
-
-  function updateWorldEffectOverlays(
-    pawnList: Pawn[],
-    mobList: Mob[],
-    buildingList: PlacedBuilding[],
-    vx: number,
-    vy: number,
-    box: HTMLDivElement,
-    tW: number,
-    tH: number
-  ) {
-    const W = box?.clientWidth ?? 0;
-    const H = box?.clientHeight ?? 0;
-    const fx = $effectToggles;
-
-    const glyphOf = (id: string, x: number, y: number, kind: GlyphFloatKind): GlyphFloat => ({
-      id,
-      left: (x - vx + 0.5) * tW,
-      top: (y - vy) * tH - 18,
-      kind
-    });
-    const onScreen = (o: { left: number; top: number }) => o.left >= 0 && o.top >= 0 && o.left <= W;
-    const newGlyphs: GlyphFloat[] = [];
-    const prioCollapse = conditionPriority('collapse');
-    const prioSleeping = conditionPriority('sleeping');
-    const prioWinded = conditionPriority('winded');
-    for (const p of fx.marks ? pawnList : []) {
-      if (!p.position) continue;
-      if (p.carriedBy) continue;
-      if (isHiddenTile(p.position.x, p.position.y)) continue;
-      let kind: GlyphFloatKind | null = null;
-      let prio = -1;
-      if (p.currentState === 'Collapsed' && prioCollapse > prio) {
-        prio = prioCollapse;
-        kind = 'collapse';
-      }
-      if (p.currentState === 'Sleeping' && prioSleeping > prio) {
-        prio = prioSleeping;
-        kind = needsRecovery(p as never) ? 'rest' : 'sleep';
-      }
-      if ((p.transientConditions ?? []).includes('winded') && prioWinded > prio) {
-        prio = prioWinded;
-        kind = 'winded';
-      }
-      if (kind) {
-        const o = glyphOf(p.id, p.position.x, p.position.y, kind);
-        if (onScreen(o)) newGlyphs.push(o);
-      }
-    }
-    const mobsDrawn = tW >= ENTITY_RENDER_MIN_PX;
-    for (const m of mobsDrawn && fx.marks ? mobList : []) {
-      if (m.state === 'Corpse') continue;
-      if (isHiddenTile(m.x, m.y)) continue;
-      let kind: GlyphFloatKind | null = null;
-      let prio = -1;
-      if (m.state === 'Collapsed' && prioCollapse > prio) {
-        prio = prioCollapse;
-        kind = 'collapse';
-      }
-      if (m.state === 'Sleeping' && prioSleeping > prio) {
-        prio = prioSleeping;
-        kind = 'sleep';
-      }
-      if ((m.transientConditions ?? []).includes('winded') && prioWinded > prio) {
-        prio = prioWinded;
-        kind = 'winded';
-      }
-      if (m.partyRole === 'trader') kind = 'trade';
-      if (kind) {
-        const rp = mobRenderPos.get(m.id);
-        const o = glyphOf(m.id, rp?.x ?? m.x, rp?.y ?? m.y, kind);
-        if (onScreen(o)) newGlyphs.push(o);
-      }
-    }
-    for (const b of fx.marks ? buildingList : []) {
-      if (b.type !== 'campfire' || b.status !== 'complete' || b.lit !== true) continue;
-      const o: GlyphFloat = {
-        id: b.id,
-        left: (b.x - vx + 0.5) * tW,
-        top: (b.y - vy + 0.5) * tH,
-        kind: 'campfire'
-      };
-      if (o.left >= 0 && o.top >= 0 && o.left <= W) newGlyphs.push(o);
-    }
-    const glyphKey = newGlyphs
-      .map((o) => `${o.kind}:${o.id}:${Math.round(o.left)},${Math.round(o.top)}`)
-      .join('|');
-    if (glyphKey !== _glyphFloatKey) {
-      _glyphFloatKey = glyphKey;
-      worldEffects.setGlyphFloats(newGlyphs);
-    }
-
-    const newProgress = [
-      ...(fx.work ? pawnList : [])
-        .filter(
-          (p) =>
-            p.position &&
-            !isHiddenTile(p.position.x, p.position.y) &&
-            p.currentState != null &&
-            PROGRESS_BAR_STATES.has(p.currentState) &&
-            p.activeJob &&
-            (p.activeJob.progress ?? 0) >= 0
-        )
-        .map((p) => ({
-          id: p.id,
-          left: (p.position!.x - vx + 0.5) * tW,
-          top: (p.position!.y - vy) * tH - 6,
-          progress: Math.max(0, Math.min(1, p.activeJob?.progress ?? 0))
-        }))
-        .filter((o) => o.left >= 0 && o.top >= 0 && o.left <= W),
-      ...(fx.work ? pawnList : [])
-        .filter(
-          (p) =>
-            p.draftTarget?.type === 'tend' &&
-            (p.tendProgress ?? -1) >= 0 &&
-            p.position &&
-            !isHiddenTile(p.position.x, p.position.y)
-        )
-        .map((p) => ({
-          id: p.id,
-          left: (p.position!.x - vx + 0.5) * tW,
-          top: (p.position!.y - vy) * tH - 6,
-          progress: Math.max(0, Math.min(1, p.tendProgress ?? 0))
-        }))
-        .filter((o) => o.left >= 0 && o.top >= 0 && o.left <= W),
-      ...(fx.work ? mobList : [])
-        .filter((m) => (m.eatProgress ?? 0) > 0 && !isHiddenTile(m.x, m.y))
-        .map((m) => ({
-          id: m.id,
-          left: (m.x - vx + 0.5) * tW,
-          top: (m.y - vy) * tH - 6,
-          progress: Math.max(0, Math.min(1, m.eatProgress ?? 0))
-        }))
-        .filter((o) => o.left >= 0 && o.top >= 0 && o.left <= W)
-    ];
-    const progressKey = newProgress
-      .map(
-        (o) => `${o.id}:${Math.round(o.left)},${Math.round(o.top)},${Math.round(o.progress * 20)}`
-      )
-      .join('|');
-    if (progressKey !== _progressOverlayKey) {
-      _progressOverlayKey = progressKey;
-      worldEffects.setProgressOverlays(newProgress);
-    }
-
-    const newHealth = [
-      ...(fx.health ? pawnList : [])
-        .filter(
-          (p) =>
-            p.position &&
-            !isHiddenTile(p.position.x, p.position.y) &&
-            p.isAlive !== false &&
-            (p.state.health ?? 100) < 100
-        )
-        .map((p) => ({
-          id: `hp-${p.id}`,
-          left: (p.position!.x - vx + 0.5) * tW,
-          top: (p.position!.y - vy) * tH - 10,
-          health: Math.max(0, Math.min(1, (p.state.health ?? 100) / 100)),
-          type: 'pawn' as const
-        }))
-        .filter((o) => o.left >= 0 && o.top >= 0 && o.left <= W),
-      ...(fx.health ? mobList : [])
-        .filter((m) => m.state !== 'Corpse' && m.health < m.maxHealth && !isHiddenTile(m.x, m.y))
-        .map((m) => ({
-          id: `hp-${m.id}`,
-          left: (m.x - vx + 0.5) * tW,
-          top: (m.y - vy) * tH - 10,
-          health: Math.max(0, Math.min(1, m.maxHealth > 0 ? m.health / m.maxHealth : 1)),
-          type: 'mob' as const
-        }))
-        .filter((o) => o.left >= 0 && o.top >= 0 && o.left <= W)
-    ];
-    const healthKey = newHealth
-      .map((o) => `${o.id}:${Math.round(o.left)},${Math.round(o.top)},${Math.round(o.health * 20)}`)
-      .join('|');
-    if (healthKey !== _healthOverlayKey) {
-      _healthOverlayKey = healthKey;
-      worldEffects.setHealthOverlays(newHealth);
-    }
-
-    const newDraftTargets = (fx.draft ? pawnList : [])
-      .filter((p) => p.position && p.drafted && p.draftTarget)
-      .map((p) => {
-        const target = p.draftTarget!;
-        const rp = pawnRenderPos.get(p.id) ?? p.position!;
-        const points: Array<{ x: number; y: number }> = [
-          { x: (rp.x - vx + 0.5) * tW, y: (rp.y - vy + 0.5) * tH }
-        ];
-        const path = p.path ?? [];
-        const pathIdx = p.pathIndex ?? 0;
-        for (let i = pathIdx; i < path.length; i++) {
-          const tile = path[i];
-          points.push({ x: (tile.x - vx + 0.5) * tW, y: (tile.y - vy + 0.5) * tH });
-        }
-        if (target.type === 'attack') {
-          let tx = p.position!.x;
-          let ty = p.position!.y;
-          if (target.targetType === 'mob') {
-            const m = mobList.find((mm) => mm.id === target.targetId);
-            if (m) {
-              tx = m.x;
-              ty = m.y;
-            }
-          } else {
-            const pp = pawnList.find((q) => q.id === target.targetId);
-            if (pp?.position) {
-              tx = pp.position.x;
-              ty = pp.position.y;
-            }
-          }
-          points.push({ x: (tx - vx + 0.5) * tW, y: (ty - vy + 0.5) * tH });
-        } else if (pathIdx >= path.length && 'x' in target) {
-          points.push({ x: (target.x - vx + 0.5) * tW, y: (target.y - vy + 0.5) * tH });
-        }
-        return { id: `draft-${p.id}`, points };
-      })
-      .filter((o) =>
-        o.points.some((p) => p.x >= -tW && p.y >= -tH && p.x <= W + tW && p.y <= H + tH)
-      );
-    const draftKey = newDraftTargets
-      .map(
-        (o) => `${o.id}:${o.points.map((p) => `${Math.round(p.x)},${Math.round(p.y)}`).join('|')}`
-      )
-      .join(';');
-    if (draftKey !== _draftOverlayKey) {
-      _draftOverlayKey = draftKey;
-      worldEffects.setDraftTargetOverlays(newDraftTargets);
-    }
-
-    const now = animNow();
-    const newFloats = combatTexts
-      .filter((e) => (e.kind === 'social' ? fx.speech : fx.text))
-      .filter((e) => now - e.spawnTime < floatTtl(e.kind))
-      .map((e) => ({
-        id: e.id,
-        left: (e.worldX - vx + 0.5) * tW,
-        top: (e.worldY - vy) * tH - 14 + (e.dy ?? 0),
-        text: e.text,
-        kind: e.kind,
-        color: e.color
-      }))
-      .filter((o) => o.left >= -tW && o.top >= -tH && o.left <= W + tW && o.top <= H + tH);
-    const flScale = Math.min(1.2, Math.max(0.25, tW / 20));
-    const CHAR_W = 5;
-    const MAX_TXT_W = 152;
-    const LINE_H = 15;
-    const boxOf = (text: string) => {
-      const full = Math.max(text.length * CHAR_W, 30);
-      return {
-        w: Math.min(MAX_TXT_W, full) + 8,
-        h: Math.max(1, Math.ceil(full / MAX_TXT_W)) * LINE_H + 6
-      };
-    };
-    const SEAT_EPS = 0.5;
-    const placedSocial: { left: number; top: number; w: number; h: number }[] = [];
-    for (const o of newFloats) {
-      if (o.kind !== 'social') continue;
-      const ob = boxOf(o.text);
-      for (let pass = 0; pass < placedSocial.length; pass++) {
-        let moved = false;
-        for (const p of placedSocial) {
-          const horiz = Math.abs(p.left - o.left) < (flScale * (p.w + ob.w)) / 2 + 2;
-          if (!horiz) continue;
-          const gap = (flScale * (p.h + ob.h)) / 2 + 2;
-          if (Math.abs(p.top + p.h / 2 - (o.top + ob.h / 2)) < gap) {
-            o.top = p.top + p.h / 2 + gap + SEAT_EPS - ob.h / 2;
-            moved = true;
-          }
-        }
-        if (!moved) break;
-      }
-      placedSocial.push({ left: o.left, top: o.top, w: ob.w, h: ob.h });
-    }
-    const floatKey = newFloats
-      .map((o) => `${o.id}:${Math.round(o.left)},${Math.round(o.top)}`)
-      .join('|');
-    if (floatKey !== _floatTextKey) {
-      _floatTextKey = floatKey;
-      worldEffects.setFloatingTextOverlays(newFloats);
-    }
-
-    const newProjectiles = (fx.projectiles ? projectileList : [])
-      .map((e) => {
-        const progress = (now - e.spawnTime) / e.durationMs;
-        const tc = Math.min(1, progress);
-        const wx = e.fromX + (e.toX - e.fromX) * tc;
-        const wy = e.fromY + (e.toY - e.fromY) * tc;
-        return {
-          id: e.id,
-          left: (wx - vx + 0.5) * tW,
-          top: (wy - vy + 0.5) * tH,
-          angle: (Math.atan2(e.toY - e.fromY, e.toX - e.fromX) * 180) / Math.PI,
-          effect: e.effect,
-          progress
-        };
-      })
-      .filter((o) => o.left >= -tW && o.top >= -tH && o.left <= W + tW && o.top <= H + tH);
-    const projKey = newProjectiles
-      .map((o) => `${o.id}:${Math.round(o.left)},${Math.round(o.top)}:${o.progress >= 1 ? 1 : 0}`)
-      .join('|');
-    if (projKey !== _projOverlayKey) {
-      _projOverlayKey = projKey;
-      worldEffects.setProjectileOverlays(newProjectiles);
-    }
   }
 
   function redrawOverlay() {
@@ -2471,12 +2146,10 @@
     unsubState();
     unsubUI();
     unsubWorldGen();
-    unsubCombatFeedback();
     unsubAnimPause();
     unsubVignette();
     unsubSway();
     unsubAttackLunges();
-    unsubProjectiles();
     _unsubMenuPerf();
     if (menuPreview) menuPreviewRendered.set(false);
     else rendererReady.set(false);
@@ -2769,7 +2442,18 @@
         if (mobView) [vx, vy] = setView(mobView[0], mobView[1], map, box, tW, tH, preview);
         const panView = updateKeyboardPan(dt, preview, followPawnId, followMobId, vx, vy);
         if (panView) [vx, vy] = setView(panView[0], panView[1], map, box, tW, tH, preview);
-        updateWorldEffectOverlays(pawnList, mobList, buildingList, vx, vy, box, tW, tH);
+        worldFx.frame(
+          {
+            pawns: pawnList,
+            mobs: mobList,
+            pawnPos: pawnRenderPos,
+            mobPos: mobRenderPos,
+            renderer,
+            hidden: isHiddenTile,
+            mobsDrawn: tW >= ENTITY_RENDER_MIN_PX
+          },
+          { vx, vy, tW, tH, paused: simPaused }
+        );
         updateSelectionRings(vx, vy, tW, tH);
         if (
           _terrainDirty &&
