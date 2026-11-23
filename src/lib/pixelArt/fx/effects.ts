@@ -97,7 +97,7 @@ export function float(
   p.label(pair[f < 0.07 || f > 0.84 ? 1 : 0], at.x, at.y, at.ox + jolt, at.oy + floatDy(u, ttl));
 }
 
-export const BADGE_TTL = 1.7;
+export const BADGE_TTL = 3;
 
 export function badgeDy(u: number): number {
   const f = Math.min(1, u / BADGE_TTL);
@@ -113,13 +113,18 @@ export function badge(p: FxPainter, at: Anchor, pair: Pair, u: number): void {
 
 export const SAY_TTL = 4.5;
 
-export function say(p: FxPainter, x: number, y: number, b: Bubble, u: number): void {
+export function sayDy(u: number): number {
+  const f = Math.min(1, u / SAY_TTL);
+  return Math.round(f < 0.8 ? mix(2, -8, f / 0.8) : mix(-8, -12, (f - 0.8) / 0.2));
+}
+
+export function say(p: FxPainter, x: number, y: number, b: Bubble, u: number, kt: number): void {
   const f = u / SAY_TTL;
   if (f > 1) return;
   const i = f < 0.04 || f > 0.9 ? 1 : 0;
-  const yy = y + Math.round(f < 0.8 ? mix(2, -8, f / 0.8) : mix(-8, -12, (f - 0.8) / 0.2));
-  p.veil(b.plate[i], x, yy, b.alpha);
-  p.put(b.frame[i], x, yy);
+  const dy = sayDy(u);
+  p.label(b.plate[i], x, y, 0, dy, kt, b.alpha);
+  p.label(b.frame[i], x, y, 0, dy, kt);
 }
 
 export type Pt = readonly [number, number];

@@ -24,10 +24,10 @@ const MAX_ACTIVE = 60;
 const ONSET_GRACE_MS = 2000;
 const LIFE_MS: Partial<Record<CombatTextKind, number>> = {
   social: 4500,
-  condition: 1700,
-  knockdown: 1300
+  condition: 3000,
+  knockdown: 3000
 };
-const DEFAULT_LIFE_MS = 900;
+const DEFAULT_LIFE_MS = 1400;
 
 export const floatLifeMs = (kind: CombatTextKind): number => LIFE_MS[kind] ?? DEFAULT_LIFE_MS;
 

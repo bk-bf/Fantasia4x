@@ -1,7 +1,6 @@
 import {
   buildTileset,
   parseManifest,
-  idHash,
   type ManifestField,
   type PaintedGround,
   type PaintedKind,
@@ -10,6 +9,7 @@ import {
   type PaintedTileset
 } from './manifest.js';
 import { setPaintedTileset } from './tileset.js';
+import { pawnLook, type PawnLookOf, type PawnLookPool } from './pawnLook.js';
 import { atlasTexels, type AtlasTexels } from '../drawnSprites.js';
 import { swayTable } from './wind.js';
 
@@ -287,19 +287,9 @@ export async function loadPaintedTileset(
   }
 }
 
-export async function paintedSpriteCanvas(
-  kind: PaintedKind,
-  id: string,
-  baseUrl = PAINTED_BASE_URL,
-  entityId?: string
-): Promise<HTMLCanvasElement | null> {
-  source ??= readSource(baseUrl);
-  const loaded = await source;
-  const byKind = loaded?.manifest.map[kind];
-  const ids = byKind?.[id] ?? (entityId === undefined ? undefined : byKind?.['*']);
-  const spriteId = ids?.[entityId === undefined ? 0 : idHash(entityId) % ids.length];
-  const s = loaded && spriteId ? loaded.manifest.sprites[spriteId] : undefined;
-  if (!loaded || !s) return null;
+function cropSprite(loaded: PaintedSource, spriteId: string | undefined): HTMLCanvasElement | null {
+  const s = spriteId ? loaded.manifest.sprites[spriteId] : undefined;
+  if (!s) return null;
   const canvas = document.createElement('canvas');
   canvas.width = s.w;
   canvas.height = s.h;
@@ -307,4 +297,33 @@ export async function paintedSpriteCanvas(
     .getContext('2d', { willReadFrequently: true })
     ?.drawImage(loaded.image, s.x, s.y, s.w, s.h, 0, 0, s.w, s.h);
   return canvas;
+}
+
+export async function paintedSpriteCanvas(
+  kind: PaintedKind,
+  id: string,
+  baseUrl = PAINTED_BASE_URL
+): Promise<HTMLCanvasElement | null> {
+  source ??= readSource(baseUrl);
+  const loaded = await source;
+  return loaded && cropSprite(loaded, loaded.manifest.map[kind]?.[id]?.[0]);
+}
+
+export async function paintedPawnLook(
+  pawn: PawnLookOf,
+  pool: PawnLookPool,
+  baseUrl = PAINTED_BASE_URL
+): Promise<string | undefined> {
+  source ??= readSource(baseUrl);
+  const loaded = await source;
+  return loaded ? pawnLook(loaded.manifest.map, pawn, pool) : undefined;
+}
+
+export async function paintedLookCanvas(
+  look: string,
+  baseUrl = PAINTED_BASE_URL
+): Promise<HTMLCanvasElement | null> {
+  source ??= readSource(baseUrl);
+  const loaded = await source;
+  return loaded && cropSprite(loaded, look);
 }

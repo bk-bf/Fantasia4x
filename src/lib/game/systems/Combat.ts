@@ -1295,7 +1295,7 @@ class CombatServiceImpl implements CombatService {
           }
         );
       if (!('entityClass' in attacker) && attacker.isAlive !== false)
-        socialService.combatBark(attacker as Pawn, 'miss', targetName, turn);
+        socialService.combatBark(attacker as Pawn, 'miss', target, turn);
       return { state, staminaCost: result.staminaCost };
     }
     if (!result.injury) return { state, staminaCost: result.staminaCost };
@@ -1445,9 +1445,9 @@ class CombatServiceImpl implements CombatService {
       });
     }
     if (!('entityClass' in attacker) && attacker.isAlive !== false)
-      socialService.combatBark(attacker as Pawn, justDied ? 'kill' : 'hit', targetName, turn);
+      socialService.combatBark(attacker as Pawn, justDied ? 'kill' : 'hit', target, turn);
     if (!isTargetMob && !justDied && (target as Pawn).isAlive !== false)
-      socialService.combatBark(target as Pawn, 'hurt', attackerName, turn);
+      socialService.combatBark(target as Pawn, 'hurt', attacker, turn);
     if (justDied && isTargetMob && 'traits' in attacker) {
       const live = next.pawns.find((p) => p.id === attacker.id);
       if (live) {

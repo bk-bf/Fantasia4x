@@ -13,6 +13,9 @@
     showDialogBubbles,
     conditionIcons,
     conditionText,
+    floaterSize,
+    bubbleSize,
+    LABEL_SIZE,
     showFps,
     showTps,
     hideSidebars,
@@ -100,6 +103,22 @@
           flag(conditionIcons, $conditionIcons, 'Condition icons'),
           flag(conditionText, $conditionText, 'Condition text')
         ])}
+        <SettingRow
+          type="slider"
+          label="Floater size"
+          {...LABEL_SIZE}
+          sliderValue={$floaterSize}
+          readout="{$floaterSize}%"
+          onInput={floaterSize.set}
+        />
+        <SettingRow
+          type="slider"
+          label="Bubble size"
+          {...LABEL_SIZE}
+          sliderValue={$bubbleSize}
+          readout="{$bubbleSize}%"
+          onInput={bubbleSize.set}
+        />
         <SettingRow
           type="select"
           label="Hover panels"

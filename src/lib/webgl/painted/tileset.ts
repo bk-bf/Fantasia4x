@@ -10,7 +10,7 @@ import {
   type PaintedVariant
 } from './manifest.js';
 
-import { cultureArchetype } from '$lib/game/core/rules/social/social.js';
+import { pawnLook, type PawnLookOf, type PawnLookPool } from './pawnLook.js';
 
 export { PAINTED_TILES } from './flag.js';
 
@@ -76,10 +76,11 @@ export function paintedEntity(
 }
 
 export function paintedPawn(
-  pawn: { id: string; cultureId?: string },
-  pool: Parameters<typeof cultureArchetype>[1]
+  pawn: PawnLookOf,
+  pool: PawnLookPool
 ): PaintedVariant['entity'] | Record<string, never> {
-  return paintedEntity('pawn', cultureArchetype(pawn.cultureId, pool), pawn.id);
+  const look = active && pawnLook(active.map, pawn, pool);
+  return (look && active?.sprites.get(look)?.entity) || NO_PAINT;
 }
 
 export function paintedPieces(set: string): PaintedPieces | undefined {

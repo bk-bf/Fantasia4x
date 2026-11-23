@@ -4,7 +4,9 @@
     uiTheme,
     showDialogBubbles,
     conditionIcons,
-    conditionText
+    conditionText,
+    floaterSize,
+    bubbleSize
   } from '$lib/stores/uiPrefs';
   import { effectToggles } from '$lib/stores/fx/effectToggles';
   import WorldWeather from '$lib/components/UI/weather/WorldWeather.svelte';
@@ -24,6 +26,7 @@
       skin: $uiTheme,
       bubbles: $showDialogBubbles,
       floaters: { icons: $conditionIcons, text: $conditionText },
+      sizes: { floaters: $floaterSize, bubbles: $bubbleSize },
       on: $effectToggles
     });
   });

@@ -84,7 +84,7 @@
     onwell={() => openPawnWindow(pawn.id, 'status')}
     verbs={selected ? pawnVerbs : undefined}
   >
-    {#snippet well()}<PawnSprite id={pawn.id} cultureId={pawn.cultureId} height={48} />{/snippet}
+    {#snippet well()}<PawnSprite {pawn} height={48} />{/snippet}
     {#snippet lines()}<p>{line}</p>
       <p class="hot">{job}</p>{/snippet}
     {#if progress != null}

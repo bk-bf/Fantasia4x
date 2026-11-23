@@ -152,6 +152,8 @@ export interface PaintedTileset {
   atlasW: number;
   atlasH: number;
   lookup: Map<PaintedKind, Map<string, PaintedVariant[]>>;
+  map: PaintedManifest['map'];
+  sprites: ReadonlyMap<string, PaintedVariant>;
   pieces: Map<string, PaintedPieces>;
   scenery: Map<string, PaintedVariant[]>;
   ground?: PaintedGround;
@@ -429,6 +431,8 @@ export function buildTileset(
       atlasW: m.atlas.w,
       atlasH: m.atlas.h,
       lookup,
+      map: m.map,
+      sprites: resolved,
       pieces,
       scenery,
       ...(ground ? { ground } : null)

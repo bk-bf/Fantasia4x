@@ -11,6 +11,10 @@
     checked = false,
     value = '',
     sliderValue = 80,
+    min = 0,
+    max = 100,
+    step = 1,
+    readout = '',
     options = [],
     disabled = false,
     onToggle,
@@ -23,6 +27,10 @@
     checked?: boolean;
     value?: string;
     sliderValue?: number;
+    min?: number;
+    max?: number;
+    step?: number;
+    readout?: string;
     options?: Option[];
     disabled?: boolean;
     onToggle?: () => void;
@@ -58,10 +66,13 @@
       <Slider
         class="srow-slider"
         value={disabled ? 80 : sliderValue}
+        {min}
+        {max}
+        {step}
         {disabled}
         {label}
-        oninput={(v) => onInput?.(v)}
-      />
+        oninput={(v) => onInput?.(v)}>{readout}</Slider
+      >
     {/if}
   </div>
 {/if}

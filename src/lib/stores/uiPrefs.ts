@@ -118,6 +118,10 @@ export const showDialogBubbles = createPersistedBool('fx.gfx.dialogBubbles', fal
 export const conditionIcons = createPersistedBool('fx.ui.conditionIcons', true);
 export const conditionText = createPersistedBool('fx.ui.conditionText', true);
 
+export const LABEL_SIZE = { min: 50, max: 200, step: 50 } as const;
+export const floaterSize = createPersistedNumber('fx.ui.floaterSize', 100);
+export const bubbleSize = createPersistedNumber('fx.ui.bubbleSize', 100);
+
 export const showFps = createPersistedBool('fx.display.showFps', true);
 export const showTps = createPersistedBool('fx.display.showTps', true);
 
