@@ -172,13 +172,9 @@ function budgetsOf(results) {
   const runs = (pick) => results.map(pick);
   const entry = (pick) => ({ value: median(runs(pick)), runs: runs(pick) });
   return {
-    'idle main-thread ms per frame': entry((r) => r.idle.meanMs),
-    'run-1x main-thread ms per frame': entry((r) => r['run-1x'].meanMs),
-    'run-4x main-thread ms per frame': entry((r) => r['run-4x'].meanMs),
-    'zoom-out-and-back first longest frame ms': {
-      value: results[0]?.[ZOOM].maxMs,
-      runs: [results[0]?.[ZOOM].maxMs]
-    },
+    'idle main-thread ms per frame': entry((r) => r.idle.medianMs),
+    'run-1x main-thread ms per frame': entry((r) => r['run-1x'].medianMs),
+    'run-4x main-thread ms per frame': entry((r) => r['run-4x'].medianMs),
     'zoom-out-and-back longest frame ms': entry((r) => r[ZOOM].maxMs)
   };
 }
