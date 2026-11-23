@@ -270,5 +270,277 @@ window.STATS = {
    "under50TilePct": 0.1,
    "edgePerTile": 0.279
   }
+ },
+ "L-1337-scaled": {
+  "ms": 4935,
+  "mountain": {
+   "pct": 20.1,
+   "bodies": 89,
+   "under50": 45,
+   "under50TilePct": 0.4,
+   "edgePerTile": 0.131
+  },
+  "water": {
+   "pct": 7.5,
+   "bodies": 83,
+   "under50": 27,
+   "under50TilePct": 0.5,
+   "edgePerTile": 0.219
+  }
+ },
+ "L-1337-tuned": {
+  "ms": 5766,
+  "mountain": {
+   "pct": 21.6,
+   "bodies": 61,
+   "under50": 25,
+   "under50TilePct": 0.2,
+   "edgePerTile": 0.109
+  },
+  "water": {
+   "pct": 8.2,
+   "bodies": 54,
+   "under50": 26,
+   "under50TilePct": 0.3,
+   "edgePerTile": 0.145
+  }
+ },
+ "L-2024-scaled": {
+  "ms": 7753,
+  "mountain": {
+   "pct": 20.9,
+   "bodies": 100,
+   "under50": 47,
+   "under50TilePct": 0.6,
+   "edgePerTile": 0.128
+  },
+  "water": {
+   "pct": 9,
+   "bodies": 75,
+   "under50": 25,
+   "under50TilePct": 0.5,
+   "edgePerTile": 0.192
+  }
+ },
+ "L-2024-tuned": {
+  "ms": 7596,
+  "mountain": {
+   "pct": 21.4,
+   "bodies": 86,
+   "under50": 42,
+   "under50TilePct": 0.5,
+   "edgePerTile": 0.117
+  },
+  "water": {
+   "pct": 8.7,
+   "bodies": 44,
+   "under50": 13,
+   "under50TilePct": 0.2,
+   "edgePerTile": 0.146
+  }
+ },
+ "L-42-scaled": {
+  "ms": 5931,
+  "mountain": {
+   "pct": 22.6,
+   "bodies": 64,
+   "under50": 27,
+   "under50TilePct": 0.2,
+   "edgePerTile": 0.11
+  },
+  "water": {
+   "pct": 7.9,
+   "bodies": 82,
+   "under50": 22,
+   "under50TilePct": 0.5,
+   "edgePerTile": 0.207
+  }
+ },
+ "L-42-tuned": {
+  "ms": 6234,
+  "mountain": {
+   "pct": 23.9,
+   "bodies": 49,
+   "under50": 28,
+   "under50TilePct": 0.2,
+   "edgePerTile": 0.094
+  },
+  "water": {
+   "pct": 9.7,
+   "bodies": 40,
+   "under50": 7,
+   "under50TilePct": 0.2,
+   "edgePerTile": 0.133
+  }
+ },
+ "L-7-scaled": {
+  "ms": 6244,
+  "mountain": {
+   "pct": 19.1,
+   "bodies": 78,
+   "under50": 44,
+   "under50TilePct": 0.4,
+   "edgePerTile": 0.12
+  },
+  "water": {
+   "pct": 7.4,
+   "bodies": 73,
+   "under50": 15,
+   "under50TilePct": 0.6,
+   "edgePerTile": 0.201
+  }
+ },
+ "L-7-tuned": {
+  "ms": 7112,
+  "mountain": {
+   "pct": 20.9,
+   "bodies": 56,
+   "under50": 29,
+   "under50TilePct": 0.3,
+   "edgePerTile": 0.1
+  },
+  "water": {
+   "pct": 9.2,
+   "bodies": 30,
+   "under50": 9,
+   "under50TilePct": 0.2,
+   "edgePerTile": 0.115
+  }
+ },
+ "XL-1337-scaled": {
+  "ms": 13010,
+  "mountain": {
+   "pct": 20.1,
+   "bodies": 81,
+   "under50": 27,
+   "under50TilePct": 0.1,
+   "edgePerTile": 0.099
+  },
+  "water": {
+   "pct": 7.5,
+   "bodies": 86,
+   "under50": 25,
+   "under50TilePct": 0.1,
+   "edgePerTile": 0.164
+  }
+ },
+ "XL-1337-tuned": {
+  "ms": 11181,
+  "mountain": {
+   "pct": 21.6,
+   "bodies": 48,
+   "under50": 14,
+   "under50TilePct": 0.1,
+   "edgePerTile": 0.075
+  },
+  "water": {
+   "pct": 7.7,
+   "bodies": 35,
+   "under50": 11,
+   "under50TilePct": 0.1,
+   "edgePerTile": 0.099
+  }
+ },
+ "XL-2024-scaled": {
+  "ms": 14256,
+  "mountain": {
+   "pct": 20.9,
+   "bodies": 102,
+   "under50": 40,
+   "under50TilePct": 0.3,
+   "edgePerTile": 0.097
+  },
+  "water": {
+   "pct": 9,
+   "bodies": 71,
+   "under50": 18,
+   "under50TilePct": 0.3,
+   "edgePerTile": 0.144
+  }
+ },
+ "XL-2024-tuned": {
+  "ms": 14811,
+  "mountain": {
+   "pct": 24.1,
+   "bodies": 75,
+   "under50": 30,
+   "under50TilePct": 0.3,
+   "edgePerTile": 0.081
+  },
+  "water": {
+   "pct": 8.1,
+   "bodies": 32,
+   "under50": 3,
+   "under50TilePct": 0.1,
+   "edgePerTile": 0.107
+  }
+ },
+ "XL-42-scaled": {
+  "ms": 11318,
+  "mountain": {
+   "pct": 22.6,
+   "bodies": 65,
+   "under50": 24,
+   "under50TilePct": 0.1,
+   "edgePerTile": 0.083
+  },
+  "water": {
+   "pct": 7.8,
+   "bodies": 78,
+   "under50": 15,
+   "under50TilePct": 0.2,
+   "edgePerTile": 0.155
+  }
+ },
+ "XL-42-tuned": {
+  "ms": 11051,
+  "mountain": {
+   "pct": 26.2,
+   "bodies": 37,
+   "under50": 16,
+   "under50TilePct": 0.1,
+   "edgePerTile": 0.063
+  },
+  "water": {
+   "pct": 7.8,
+   "bodies": 37,
+   "under50": 5,
+   "under50TilePct": 0.1,
+   "edgePerTile": 0.109
+  }
+ },
+ "XL-7-scaled": {
+  "ms": 10951,
+  "mountain": {
+   "pct": 19.1,
+   "bodies": 75,
+   "under50": 36,
+   "under50TilePct": 0.2,
+   "edgePerTile": 0.09
+  },
+  "water": {
+   "pct": 7.4,
+   "bodies": 75,
+   "under50": 14,
+   "under50TilePct": 0.2,
+   "edgePerTile": 0.151
+  }
+ },
+ "XL-7-tuned": {
+  "ms": 12051,
+  "mountain": {
+   "pct": 21.3,
+   "bodies": 50,
+   "under50": 20,
+   "under50TilePct": 0.1,
+   "edgePerTile": 0.065
+  },
+  "water": {
+   "pct": 8.7,
+   "bodies": 28,
+   "under50": 8,
+   "under50TilePct": 0.1,
+   "edgePerTile": 0.08
+  }
  }
 };
