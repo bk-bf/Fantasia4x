@@ -214,15 +214,21 @@ export function emitPersistentConditionFloaters(
     const def = conditionDef(c.id);
     if (!def?.floater) continue;
     const stage = getConditionCurrentStage(c);
-    if (!stage || prevStages?.get(c.id) === stage.label) continue;
+    const was = prevStages?.get(c.id);
+    if (!stage || was === stage.label) continue;
+    const level = def.stages.findIndex((s) => s.label === stage.label) + 1;
+    const before = def.stages.findIndex((s) => s.label === was) + 1;
     simLog.pushCombatText({
       worldX: x,
       worldY: y,
-      text: `${def.name} (${stage.label})`,
+      text: def.name,
       kind: 'condition',
       color: stage.color,
       entityId,
-      conditionId: `${c.id}:${stage.label}`
+      conditionId: c.id,
+      level,
+      levels: def.stages.length,
+      easing: before > level
     });
   }
 }

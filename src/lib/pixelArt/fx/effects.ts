@@ -76,10 +76,16 @@ export function floatDy(u: number, ttl: number): number {
   return f < 0.7 ? mix(3, -26, f / 0.7) : mix(-26, -38, (f - 0.7) / 0.3);
 }
 
+export interface Anchor {
+  x: number;
+  y: number;
+  ox: number;
+  oy: number;
+}
+
 export function float(
   p: FxPainter,
-  x: number,
-  y: number,
+  at: Anchor,
   pair: Pair,
   u: number,
   ttl: number,
@@ -87,12 +93,8 @@ export function float(
 ): void {
   if (u > ttl) return;
   const f = u / ttl;
-  const dy = floatDy(u, ttl);
-  p.put(
-    pair[f < 0.07 || f > 0.84 ? 1 : 0],
-    x + (shake && u < 0.14 ? (Math.floor(u * 50) & 1 ? 1 : -1) : 0),
-    y + dy
-  );
+  const jolt = shake && u < 0.14 ? (Math.floor(u * 50) & 1 ? 1 : -1) : 0;
+  p.label(pair[f < 0.07 || f > 0.84 ? 1 : 0], at.x, at.y, at.ox + jolt, at.oy + floatDy(u, ttl));
 }
 
 export const BADGE_TTL = 1.7;
@@ -103,10 +105,10 @@ export function badgeDy(u: number): number {
   return f < 0.78 ? mix(-3, -9, (f - 0.12) / 0.66) : mix(-9, -15, (f - 0.78) / 0.22);
 }
 
-export function badge(p: FxPainter, x: number, y: number, pair: Pair, u: number): void {
+export function badge(p: FxPainter, at: Anchor, pair: Pair, u: number): void {
   if (u > BADGE_TTL) return;
   const f = u / BADGE_TTL;
-  p.put(pair[f < 0.04 || f > 0.8 ? 1 : 0], x, y + badgeDy(u));
+  p.label(pair[f < 0.04 || f > 0.8 ? 1 : 0], at.x, at.y, at.ox, at.oy + badgeDy(u));
 }
 
 export const SAY_TTL = 4.5;

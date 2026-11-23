@@ -1,8 +1,9 @@
-import type { Ramp, Rgb } from '../palette';
 import { GORE, HONEY, HURT, tint, word, type Pair } from './glyphs';
 import { P, STAR, Spr, hex, melt } from './spr';
+import { art, bane, boon, keys, lit, stamp } from './iconArt';
+import { MOTIFS, type MotifId } from './motifs';
 
-export type IconId =
+type MockIconId =
   | 'collapsed'
   | 'winded'
   | 'knocked'
@@ -18,57 +19,6 @@ export type IconId =
   | 'wellfed'
   | 'rested'
   | 'healed';
-
-interface Lit {
-  c: Rgb;
-  e: number;
-}
-type Pal = Record<string, Rgb | Lit>;
-
-const keys = (r: Ramp, chars: string): Pal =>
-  Object.fromEntries([...chars].map((ch, i) => [ch, r[i]]));
-const lit = (c: Rgb, e: number): Lit => ({ c, e });
-const isLit = (p: Rgb | Lit): p is Lit => 'c' in p;
-
-function art(rows: string[], pal: Pal, e: number): Spr {
-  const h = rows.length;
-  const w = Math.max(...rows.map((r) => r.length));
-  const s = new Spr(w + 2, h + 2, (w >> 1) + 1, h + 1);
-  rows.forEach((r, y) =>
-    [...r].forEach((ch, x) => {
-      const p = pal[ch];
-      if (p) s.set(x + 1, y + 1, isLit(p) ? p.c : p, isLit(p) ? p.e : e);
-    })
-  );
-  return s.outline();
-}
-
-function stamp(dst: Spr, src: Spr, ox: number, oy: number): Spr {
-  for (let y = 0; y < src.h; y++)
-    for (let x = 0; x < src.w; x++) {
-      const i = y * src.w + x;
-      const c = src.c[i];
-      if (c) dst.set(x + ox, y + oy, c, src.e[i]);
-    }
-  return dst;
-}
-
-function boon(s: Spr): Spr {
-  const o = new Spr(s.w + 3, s.h + 2, s.ax, s.ay + 2);
-  const x = s.w;
-  const G = lit(HONEY[5], 255);
-  const g = lit(HONEY[3], 255);
-  stamp(o, s, 0, 2);
-  for (const [dx, dy, c] of [
-    [1, 0, G],
-    [0, 1, G],
-    [1, 1, G],
-    [2, 1, g],
-    [1, 2, g]
-  ] as const)
-    o.set(x - 1 + dx, dy + 1, c.c, c.e);
-  return o.outline();
-}
 
 function flake(): Spr {
   const s = new Spr(15, 15, 7, 14);
@@ -104,7 +54,7 @@ const SLAM = tint('#ff6a3a');
 const SALLOW = tint('#b4c060');
 const DUSK = tint('#a8a8cc');
 
-const ICONS: Record<IconId, () => Spr> = {
+const MOCK_ICONS: Record<MockIconId, () => Spr> = {
   collapsed: () =>
     art(
       [
@@ -379,30 +329,112 @@ const ICONS: Record<IconId, () => Spr> = {
     )
 };
 
+export type IconId = MockIconId | MotifId;
+export type IconMark = 'up' | 'down';
+
+const ICONS: Record<IconId, () => Spr> = { ...MOCK_ICONS, ...MOTIFS };
+const BANE_COL = hex('#c05060');
+const BANE_RIM = hex('#ffb0b8');
+
 const memo = new Map<string, Pair>();
 const pair = (s: Spr): Pair => [s, melt(s, 0.5)];
 
-export function icon(id: IconId): Pair {
-  let p = memo.get(id);
-  if (!p) {
-    p = pair(ICONS[id]());
-    memo.set(id, p);
-  }
-  return p;
-}
-
-export function worded(id: IconId, label: string, col: string): Pair {
-  const key = `${id}|${label}|${col}`;
+export function icon(id: IconId, mark?: IconMark): Pair {
+  const key = mark ? `${id}+${mark}` : id;
   let p = memo.get(key);
   if (!p) {
-    const a = icon(id)[0];
-    const b = word(label, tint(col), { small: true })[0];
-    const h = Math.max(a.h, b.h);
-    const s = new Spr(a.w + 2 + b.w, h, a.w >> 1, h - 1);
-    stamp(s, a, 0, h - a.h);
-    stamp(s, b, a.w + 2, h - b.h - Math.max(0, (a.h - b.h) >> 1));
-    p = pair(s);
+    const base = ICONS[id]();
+    p = pair(mark === 'up' ? boon(base) : mark === 'down' ? bane(base, BANE_COL, BANE_RIM) : base);
     memo.set(key, p);
   }
   return p;
 }
+
+export type Trend = -1 | 0 | 1 | 2 | 3;
+
+const UP = ['..5..', '.454.', '45554', '.454.', '.343.', '.343.'];
+const ARROW_STEP = 6;
+const arrow = (rows: string[], col: string) => art(rows, keys(tint(col), '012345'), 230);
+const RISE = () => arrow(UP, '#ff5a3a');
+const EASE = () => arrow([...UP].reverse(), '#7cc060');
+const arrowMemo = new Map<Trend, Spr>();
+
+export function arrows(t: Trend): Spr | null {
+  if (t === 0) return null;
+  let s = arrowMemo.get(t);
+  if (!s) {
+    const one = t < 0 ? EASE() : RISE();
+    const n = Math.max(1, t);
+    s = new Spr(one.w + (n - 1) * ARROW_STEP, one.h, 0, one.h - 1);
+    for (let i = 0; i < n; i++) stamp(s, one, i * ARROW_STEP, 0);
+    arrowMemo.set(t, s);
+  }
+  return s;
+}
+
+export interface Strike {
+  x: number;
+  y: number;
+  w: number;
+}
+
+const strikes = new WeakMap<Spr, Strike>();
+
+export const strikeOf = (s: Spr): Strike => strikes.get(s) ?? { x: 1, y: s.h >> 1, w: s.w - 2 };
+
+function row(parts: [Spr, number][], lead: Spr, struck: Spr): Spr {
+  const h = Math.max(...parts.map(([p]) => p.h));
+  const w = parts.reduce((n, [p, gap]) => n + gap + p.w, 0);
+  let x = 0;
+  let ax = 0;
+  let ay = 0;
+  let line: Strike = { x: 1, y: h >> 1, w: w - 2 };
+  const s = new Spr(w, h, 0, 0);
+  for (const [p, gap] of parts) {
+    x += gap;
+    const y = (h - p.h + 1) >> 1;
+    stamp(s, p, x, y);
+    if (p === lead) [ax, ay] = [x + p.ax, y + p.ay];
+    if (p === struck) line = { x: x + 1, y: y + (p.h >> 1) + 1, w: p.w - 2 };
+    x += p.w;
+  }
+  s.ax = ax;
+  s.ay = ay;
+  strikes.set(s, line);
+  return s;
+}
+
+export function floater(
+  id: IconId | null,
+  label: string | null,
+  col: string,
+  mark?: IconMark,
+  trend: Trend = 0
+): Pair {
+  const key = `${id ?? ''}|${mark ?? ''}|${label ?? ''}|${col}|${trend}`;
+  let p = memo.get(key);
+  if (p) return p;
+  const look = id ? icon(id, mark) : null;
+  const text = label ? word(label, tint(col), { small: true, icon: id ? undefined : 'pip' }) : null;
+  const up = arrows(trend);
+  if (!up && !(look && text)) p = (look ?? text)!;
+  else {
+    const parts: [Spr, number][] = look
+      ? [
+          [look[0], 0],
+          ...(up ? [[up, 1] as [Spr, number]] : []),
+          ...(text ? [[text[0], 2] as [Spr, number]] : [])
+        ]
+      : [
+          [text![0], 0],
+          [up!, 2]
+        ];
+    const lead = (look ?? text)![0];
+    p = pair(row(parts, lead, (text ?? look)![0]));
+  }
+  memo.set(key, p);
+  return p;
+}
+
+export const worded = (id: IconId, label: string, col: string, mark?: IconMark): Pair =>
+  floater(id, label, col, mark);

@@ -18,10 +18,10 @@ import {
 import type { BubbleSkin } from '$lib/pixelArt/fx/bubble';
 import { ART_TILE } from './figure';
 import { collectScene, type FxWorld, type Mark, type Scene } from './scene';
-import { drawFloats, type FloaterMode } from './floats';
+import { drawFloats, floatersLive, type FloaterMode } from './floats';
 import { drawSpeech } from './speech';
 import { drawFlights, flying } from './flights';
-import { onsetChecker } from './onsets';
+import { conditionState } from './onsets';
 import type { EffectToggles } from '$lib/stores/fx/effectToggles';
 import type { CombatTextEvent } from '$lib/stores/fx/combatFeedback';
 import type { ProjectileEvent } from '$lib/stores/fx/projectiles';
@@ -35,6 +35,10 @@ export interface FxView {
 }
 
 const BAR_W = 24;
+const BACKING = 1;
+
+export const textScale = (k: number, dpr: number): number =>
+  Math.max(1, Math.round(Math.min(k, dpr)));
 const PRUNE_MS = 500;
 
 const MARKS: Record<Mark['kind'], (p: FxPainter, x: number, y: number, t: number) => void> = {
@@ -104,25 +108,28 @@ class WorldFxLayer {
     const shots: readonly ProjectileEvent[] = this.on.projectiles ? projectiles.live(now) : [];
     if (this.on.text && combatFeedback.hasOnsets() && now >= this.pruneAt) {
       this.pruneAt = now + PRUNE_MS;
-      combatFeedback.pruneOnsets(now, onsetChecker(w));
+      combatFeedback.pruneOnsets(now, conditionState(w));
     }
     const moving =
       scene.routes.length > 0 ||
       texts.length > 0 ||
+      floatersLive() ||
       (shots.length > 0 && flying(shots, now)) ||
       scene.marks.length > 0;
     if (!moving && scene.bars.length === 0) {
       if (this.painted) p.g.clearRect(0, 0, c.width, c.height);
+      p.forget();
       this.painted = false;
       this.key = '';
       return;
     }
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = BACKING;
     const bw = Math.round(W * dpr);
     const bh = Math.round(H * dpr);
     if (c.width !== bw || c.height !== bh) {
       c.width = bw;
       c.height = bh;
+      p.forget();
       this.painted = false;
     }
     if (w.renderer) setGrade(gradeFromWeights(w.renderer.gradeWeights()), now);
@@ -131,9 +138,8 @@ class WorldFxLayer {
       if (this.painted && key === this.key) return;
       this.key = key;
     } else this.key = '';
-    p.g.setTransform(1, 0, 0, 1, 0, 0);
-    p.g.clearRect(0, 0, bw, bh);
-    p.view((v.tW / ART_TILE) * dpr, -v.vx * v.tW * dpr, -v.vy * v.tH * dpr);
+    const k = (v.tW / ART_TILE) * dpr;
+    p.view(k, -v.vx * v.tW * dpr, -v.vy * v.tH * dpr, textScale(k, dpr));
     this.paint(p, w, scene, texts, shots, now);
     p.end();
     this.painted = true;

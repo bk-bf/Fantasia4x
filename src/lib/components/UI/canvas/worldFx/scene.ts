@@ -123,8 +123,10 @@ const hurt = (limbs: Pawn['limbs']): number | null => {
   return share < 1 ? share : null;
 };
 
-const inView = (v: Box, x: number, y: number) =>
-  x >= v[0] - 1 && y >= v[1] - 1 && x <= v[2] + 1 && y <= v[3] + 2;
+const SLIDE = 3;
+
+const inView = (v: Box, x: number, y: number, pad = 0) =>
+  x >= v[0] - 1 - pad && y >= v[1] - 1 - pad && x <= v[2] + 1 + pad && y <= v[3] + 2 + pad;
 
 const ground = (x: number, y: number): Pt => [
   Math.round((x + 0.5) * ART_TILE),
@@ -135,9 +137,8 @@ function orderStop(w: FxWorld, o: PawnOrder, boxes: Box[]): Pt | null {
   if (o.type === 'attack' || o.type === 'rescue' || o.type === 'tend') {
     const id = o.type === 'attack' ? o.targetId : o.type === 'rescue' ? o.victimId : o.patientId;
     const mob = o.type === 'attack' && o.targetType === 'mob';
-    const e = mob ? w.mobs.find((m) => m.id === id) : w.pawns.find((p) => p.id === id);
     const rp = mob ? w.mobPos.get(id) : w.pawnPos.get(id);
-    if (!e || !rp) return null;
+    if (!rp) return null;
     const f = figureAt(w.renderer, Math.round(rp.x), Math.round(rp.y), rp.x, rp.y);
     if (o.type !== 'attack') return [f.x, f.y - 4];
     boxes.push([f.box[0] - 3, f.box[1] - 3, f.box[2] + 3, f.box[3] + 3]);
@@ -227,7 +228,7 @@ export function collectScene(w: FxWorld, on: SceneOn): Scene {
   }
   if (!w.mobsDrawn || (!on.marks && !on.work && !on.health)) return s;
   for (const m of w.mobs) {
-    if (m.state === 'Corpse') continue;
+    if (m.state === 'Corpse' || !inView(w.view, m.x, m.y, SLIDE)) continue;
     const rp = w.mobPos.get(m.id) ?? m;
     const cx = Math.round(rp.x);
     const cy = Math.round(rp.y);

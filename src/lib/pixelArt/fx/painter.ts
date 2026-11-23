@@ -16,20 +16,40 @@ interface Op {
 
 const RESOLVE_TRIES = 2;
 
+type Rect = [number, number, number, number];
+
+function bounds(ops: readonly Op[]): Rect | null {
+  if (ops.length === 0) return null;
+  let x0 = Infinity;
+  let y0 = Infinity;
+  let x1 = -Infinity;
+  let y1 = -Infinity;
+  for (const o of ops) {
+    x0 = Math.min(x0, o.dx);
+    y0 = Math.min(y0, o.dy);
+    x1 = Math.max(x1, o.dx + o.dw);
+    y1 = Math.max(y1, o.dy + o.dh);
+  }
+  return [x0 - 1, y0 - 1, x1 + 1, y1 + 1];
+}
+
 export class FxPainter {
   g: CanvasRenderingContext2D;
   k = 1;
+  kt = 1;
   ox = 0;
   oy = 0;
   private ops: Op[] = [];
   private style = '';
+  private drawn: Rect | null = null;
 
   constructor(g: CanvasRenderingContext2D) {
     this.g = g;
   }
 
-  view(k: number, ox: number, oy: number): void {
+  view(k: number, ox: number, oy: number, kt = k): void {
     this.k = k;
+    this.kt = kt;
     this.ox = ox;
     this.oy = oy;
     this.g.setTransform(1, 0, 0, 1, 0, 0);
@@ -66,8 +86,37 @@ export class FxPainter {
     this.push(s, '', 1, Math.round(x) - s.ax, Math.round(y) - s.ay, s.w, s.h);
   }
 
+  get textRatio(): number {
+    return this.kt / this.k;
+  }
+
+  label(s: Spr, x: number, y: number, ox: number, oy: number): void {
+    const dx = Math.round(x * this.k + this.ox + (Math.round(ox) - s.ax) * this.kt);
+    const dy = Math.round(y * this.k + this.oy + (Math.round(oy) - s.ay) * this.kt);
+    this.ops.push({ s, fill: '', a: 1, dx, dy, dw: s.w * this.kt, dh: s.h * this.kt, at: null });
+  }
+
+  band(x: number, y: number, ox: number, oy: number, w: number, h: number): void {
+    const dx = Math.round(x * this.k + this.ox + ox * this.kt);
+    const dy = Math.round(y * this.k + this.oy + oy * this.kt);
+    this.ops.push({
+      s: null,
+      fill: this.style,
+      a: 1,
+      dx,
+      dy,
+      dw: w * this.kt,
+      dh: h * this.kt,
+      at: null
+    });
+  }
+
   veil(s: Spr, x: number, y: number, a: number): void {
     this.push(s, '', a, Math.round(x) - s.ax, Math.round(y) - s.ay, s.w, s.h);
+  }
+
+  forget(): void {
+    this.drawn = null;
   }
 
   fill(c: Rgb, e: number): void {
@@ -88,6 +137,9 @@ export class FxPainter {
     }
     const src = flushAtlas();
     const g = this.g;
+    const now = bounds(ops);
+    for (const r of [this.drawn, now]) if (r) g.clearRect(r[0], r[1], r[2] - r[0], r[3] - r[1]);
+    this.drawn = now;
     for (const op of ops) {
       if (!op.s) {
         g.fillStyle = op.fill;
