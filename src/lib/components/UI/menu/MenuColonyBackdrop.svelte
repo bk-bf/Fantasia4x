@@ -1,6 +1,5 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import type { Attachment } from 'svelte/attachments';
   import { menuPreviewRendered } from '$lib/stores/gameState';
   import WeatherLayer from '$lib/components/UI/weather/WeatherLayer.svelte';
   import { weatherEffects } from '$lib/stores/uiPrefs';
@@ -8,11 +7,12 @@
   import {
     COLONY_H,
     COLONY_W,
-    DRIFT_SECONDS,
     colonyDrift,
     colonyImage,
     colonyLayers,
-    colonyZoom
+    colonyZoom,
+    driftOffset,
+    snapToDevice
   } from './menuColony';
 
   let {
@@ -24,33 +24,27 @@
 
   let still = $state(true);
   let revealed = $state(false);
-  const midway = Number(document.timeline.currentTime ?? 0) - (DRIFT_SECONDS * 1000) / 2;
+  let offset = $state(0);
+  let dpr = $state(1);
 
   const k = $derived(colonyZoom(scale, viewW, viewH));
   const drift = $derived(colonyDrift(viewW, viewH, k));
-  const left = $derived(Math.round(drift.from.left));
-  const span = $derived(Math.round(drift.from.left - drift.to.left));
-  const rest = $derived(Math.round(drift.rest.left - drift.from.left));
+  const left = $derived(snapToDevice(still ? drift.rest.left : drift.from.left - offset, dpr));
+  const top = $derived(snapToDevice(drift.from.top, dpr));
   const layers = $derived(colonyLayers(colony));
 
   onMount(() => {
+    dpr = window.devicePixelRatio || 1;
     still = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+    if (still) return;
+    const start = performance.now();
+    let frame = requestAnimationFrame(function tick(now) {
+      dpr = window.devicePixelRatio || 1;
+      offset = driftOffset(drift.from.left - drift.to.left, (now - start) / 1000);
+      frame = requestAnimationFrame(tick);
+    });
+    return () => cancelAnimationFrame(frame);
   });
-
-  const drifting: Attachment<HTMLImageElement> = (img) => {
-    if (still || !span) return;
-    const run = img.animate(
-      [{ transform: 'translateX(0)' }, { transform: `translateX(${-span}px)` }],
-      {
-        duration: DRIFT_SECONDS * 1000,
-        easing: 'cubic-bezier(0.37, 0, 0.63, 1)',
-        iterations: Infinity,
-        direction: 'alternate'
-      }
-    );
-    run.startTime = midway;
-    return () => run.cancel();
-  };
 
   function shown() {
     revealed = true;
@@ -61,22 +55,16 @@
 <div class="menu-backdrop" class:revealed aria-hidden="true">
   <div
     class="world"
-    style:transform="translate({left}px, {drift.from.top}px)"
+    style:transform="translate({left}px, {top}px)"
     style:width="{COLONY_W * k}px"
     style:height="{COLONY_H * k}px"
     style:filter={colony.filter || null}
-    style:--rest="{rest}px"
   >
     {#each layers as layer (layer.time)}
       <div class="layer" style:opacity={layer.opacity}>
-        <img
-          src={colonyImage(colony.season, layer.time, false)}
-          alt=""
-          onload={shown}
-          {@attach drifting}
-        />
+        <img src={colonyImage(colony.season, layer.time, false)} alt="" onload={shown} />
         {#if !still}
-          <img src={colonyImage(colony.season, layer.time, true)} alt="" {@attach drifting} />
+          <img src={colonyImage(colony.season, layer.time, true)} alt="" />
         {/if}
       </div>
     {/each}
@@ -104,6 +92,7 @@
     position: absolute;
     left: 0;
     top: 0;
+    will-change: transform;
   }
   .layer,
   img {
@@ -114,6 +103,5 @@
   }
   img {
     image-rendering: pixelated;
-    transform: translateX(var(--rest));
   }
 </style>
