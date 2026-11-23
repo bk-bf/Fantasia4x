@@ -61,6 +61,12 @@ It reads the save out of his running game's IndexedDB through the tunnel. Load i
 with `F4X_FIXTURE`; the probes serve it from the tree's `static/` because a save that large closes
 the page when Playwright hands it over directly.
 
+For a run he can repeat on his own laptop, launch the fixed map instead of a save:
+`F4X_PAINTED=1 F4X_SCENARIO=large-wilderness ./launch.sh --electron --net-host` loads a 750x750
+world from seed 4242 in its own save slot, the same on every launch. A world he generates by hand
+is a different world each time, and the size he picked in the menu is not always the size he got:
+read `map=` on the session line, and on every perf line after a regenerate, before comparing.
+
 ## 4. Pin the game state of every number
 
 - **Paused or running.** Auto-pause on threat or death stops his game whenever his party is
@@ -83,8 +89,13 @@ the page when Playwright hands it over directly.
 - Count what grows: DOM nodes and their classes, overlay list lengths, entities on screen. A count
   in the thousands is usually the answer before any profile is.
 - One run is one data point. Repeat the baseline, alternate builds, and give ranges.
+- His FPS, TPS and hiccups come from the game's own counter in `.debug/perf.log`, with no trace
+  running: min, median and worst frame per state. A trace is for finding which code is slow,
+  never for the number. A trace's mean hid hiccups he watched, and tracing itself cost a 275 ms
+  frame when it started and 107–163 ms frames while it was copied off.
 - The measuring tool can be the load: his TPS dipped to 17–30 while a 340 MB trace was pulled
-  over the tunnel. Do not read the minute after a trace as his game's behaviour.
+  over the tunnel. Mark the tool's windows in the report, and do not read the minute after a
+  trace as his game's behaviour.
 - To compare builds, use the same save, machine and probe on each; an old build without the
   harness borrows another tree's with `F4X_HARNESS`.
 
