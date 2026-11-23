@@ -130,7 +130,7 @@ const SCENE = (() => {
       particles(r, T, clamp(T - lastT, 0, .25), tm, X0, X1, Y0, Y1, a, e, gust);
     };
     present(r, ctx, time, T, { clip, post });
-    for (let j = 0; j < undo.length; j += 2) base[undo[j]] = undo[j + 1];
+    for (let j = undo.length - 2; j >= 0; j -= 2) base[undo[j]] = undo[j + 1];
     lastT = T;
     return items.filter(it => it.fr).length;
   }

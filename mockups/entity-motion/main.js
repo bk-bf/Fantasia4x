@@ -3,7 +3,7 @@
   const q = new URLSearchParams(location.search), $ = id => document.getElementById(id);
   const screen = $('screen'), sheet = $('sheet'), pinBtn = $('pin'), clock = $('clock'), cost = $('cost'), follow = $('follow');
   const extra = { anim: q.get('anim') || 'walk-side', follow: q.get('follow') || '', pin: q.has('t'), cx: q.get('cx'), cy: q.get('cy') };
-  let T = q.has('t') ? +q.get('t') / 1000 : 0, last = performance.now(), ms = 0, mounted = '', ui = null;
+  let T = q.has('t') ? +q.get('t') / 1000 : 0, last = performance.now(), ms = 0, shown = -500, mounted = '', ui = null;
 
   const state = () => ({ ...ui.state, ...extra });
   function mount() {
@@ -26,7 +26,7 @@
     const t0 = performance.now(), n = s.view === 'sheet' ? SHEET.frame(s, T) : SCENE.frame(s, T, extra);
     ms = ms ? ms * .9 + (performance.now() - t0) * .1 : performance.now() - t0;
     clock.textContent = (T * 1000 | 0) + ' ms';
-    cost.textContent = n ? `${n} drawn · ${ms.toFixed(1)} ms a frame here · ` : '';
+    if (now - shown >= 500) { shown = now; cost.textContent = n ? `${n} drawn · ${ms.toFixed(1)} ms a frame here · ` : ''; }
     requestAnimationFrame(tick);
   }
   ui = F4X.bar(() => mount());

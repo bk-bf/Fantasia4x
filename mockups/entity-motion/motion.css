@@ -24,6 +24,8 @@ body.scene { overflow: hidden; background: #05060a; }
 #strip figure { cursor: default; flex: none; }
 #strip figcaption { color: var(--m-dim); font-variant-numeric: tabular-nums; text-align: center; }
 
+#mock:not(.bar) { width: min(430px, calc(100vw - 24px)); }
 #mock #clock { min-width: 64px; }
+#mock #cost { font-variant-numeric: tabular-nums; }
 #mock #pin.on { background: var(--m-hot); border-color: var(--m-hot); color: var(--m-on); }
 @media (max-width: 600px) { #sheet { padding: 8px 12px 260px; } #strip { margin: 0 -12px; padding: 8px 12px; position: static; } }
