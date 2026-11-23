@@ -152,6 +152,8 @@ export async function paintedSpriteCanvas(
   const canvas = document.createElement('canvas');
   canvas.width = s.w;
   canvas.height = s.h;
-  canvas.getContext('2d')?.drawImage(loaded.image, s.x, s.y, s.w, s.h, 0, 0, s.w, s.h);
+  canvas
+    .getContext('2d', { willReadFrequently: true })
+    ?.drawImage(loaded.image, s.x, s.y, s.w, s.h, 0, 0, s.w, s.h);
   return canvas;
 }
