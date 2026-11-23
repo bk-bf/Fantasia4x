@@ -362,6 +362,11 @@ is a slowdown the owner plays and reports. In the same task that lands the fix o
 `origin/dev` into `test/look-overhaul`, run the related tests on the merge, push it, and tell him
 the commit to switch to.
 
+**Never walk past a broken test.** A failing, flaky, stale or skipped test, or a surviving mutant,
+is acted on when you see it: tell the agent whose change broke it with `SendMessage`, or start a
+child agent to fix it. Test fixes found by the nightly pass land only on `fix/test-health`; the
+`test-health` skill holds that pass.
+
 **Work done in a conversation needs no issue and no pull request; it is pushed straight to
 `dev`.** Branch from `dev` in a worktree that does not track it, `git worktree add --no-track -b
 <type>/<title> <path> origin/dev`, because a branch that tracks `origin/dev` lets an editor's Sync
