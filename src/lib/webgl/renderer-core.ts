@@ -35,7 +35,7 @@ import {
   type Quad
 } from './drawnSprites.js';
 import { WindClock, type Heading } from './painted/wind.js';
-import { WaveClock, waterStill, type MapMotion } from './painted/waves.js';
+import { WaveClock, waterStill, type MapMotion, type SeaWeather } from './painted/waves.js';
 import { FallingLeaves } from './painted/leaves.js';
 
 const LIGHT_ATLAS_UNIT = 7;
@@ -132,6 +132,7 @@ export class WebGLRendererCore {
   private vignetteOn = true;
   private swayOn = true;
   private wavesOn = true;
+  private seaWeather: SeaWeather = { rain: 0 };
   private waveMix = 1;
 
   private lightVersion = 0;
@@ -192,6 +193,7 @@ export class WebGLRendererCore {
 
   setSnowGrid(grid: GameGrid | null, dirtyTiles?: ReadonlyArray<{ x: number; y: number }>): void {
     this.snowGrid = grid;
+    this.groundBlend?.setIce(grid, dirtyTiles);
     if (dirtyTiles && dirtyTiles.length > 0) {
       this.gridRenderer?.markSnowChunksDirty(dirtyTiles);
     } else {
@@ -289,6 +291,10 @@ export class WebGLRendererCore {
   setWind(strength: number, dir: Heading, season?: string): void {
     this.wind.set(strength, dir);
     if (season !== undefined) this.season = season;
+  }
+
+  setSeaWeather(weather: SeaWeather): void {
+    this.seaWeather = weather;
   }
 
   setPointLights(lights: readonly PointLight[]): void {
@@ -429,7 +435,10 @@ export class WebGLRendererCore {
         this.groundBlend = GroundBlend.create(gl, this.shaderManager, this.painted);
       this.groundBlend?.setWaterStyle(this.wavesOn);
       this.gridRenderer.skipBlendedGround = this.groundBlend !== null;
+      this.gridRenderer.skipWaterIce = this.groundBlend !== null;
       if (this.gameGrid) this.groundBlend?.setGrid(this.gameGrid);
+      this.groundBlend?.setIce(this.snowGrid);
+      this.snowVersion++;
       if (PAINTED_LIGHT && this.painted)
         this.lightPass = PaintedLightPass.create(gl, this.shaderManager);
       if (this.painted) this.shadowCast = PaintedShadowCast.create(gl, this.shaderManager);
@@ -763,7 +772,7 @@ export class WebGLRendererCore {
     const { strength, dir } = this.wind;
     this.waves.tick(performance.now(), strength, dir, waterStill(this.tileWidth));
     const artPerPx = (this.painted?.tileset.tile ?? BASE_TILE_PX) / this.tileWidth;
-    return this.waves.uniforms(strength, dir, artPerPx, this.waveMix);
+    return this.waves.uniforms(strength, dir, artPerPx, this.waveMix, this.seaWeather);
   }
 
   private bindPaintedAtlas(gl: WebGL2RenderingContext, painted: LoadedPaintedTileset): void {

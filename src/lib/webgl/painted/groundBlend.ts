@@ -9,6 +9,7 @@ import { paintedGroundIds } from './tileset.js';
 import { LIGHT_FIELD_UNIT } from './lightPass.js';
 import { DEEP, LAND, SHALLOW, shoreField } from './shoreField.js';
 import { waterBlockShift } from './waves.js';
+import { ICE_UNIT, WaterIce } from './waterIce.js';
 
 const PROGRAM = 'groundBlend';
 const MAX_KINDS = 64;
@@ -115,6 +116,7 @@ export class GroundBlend {
   private readonly shoreOf: Uint8Array;
   private waveStyle = 0;
   private readonly lightTex: WebGLTexture;
+  private readonly ice: WaterIce;
   private readonly vao: WebGLVertexArrayObject;
   private readonly vbo: WebGLBuffer;
   private readonly at: Record<string, WebGLUniformLocation | null>;
@@ -161,6 +163,7 @@ export class GroundBlend {
     this.kindTex = this.makeTexture(KIND_UNIT, gl.NEAREST);
     this.tideTex = this.makeTexture(TIDE_UNIT, gl.LINEAR);
     this.lightTex = this.makeTexture(LIGHT_UNIT, gl.LINEAR);
+    this.ice = new WaterIce(gl);
     this.vao = gl.createVertexArray()!;
     this.vbo = gl.createBuffer()!;
     gl.bindVertexArray(this.vao);
@@ -196,7 +199,8 @@ export class GroundBlend {
       'u_pieces',
       'u_waterStyle',
       'u_waterBlock',
-      'u_sea[0]'
+      'u_sea[0]',
+      'u_ice'
     ];
     this.at = Object.fromEntries(names.map((n) => [n, gl.getUniformLocation(program, n)]));
     const { patch, layer, tide, shore } = groundKindTable(painted);
@@ -205,6 +209,7 @@ export class GroundBlend {
     gl.useProgram(program);
     gl.uniform1i(this.at.u_tide, TIDE_UNIT);
     gl.uniform1i(this.at.u_waterField, WATER_UNIT);
+    gl.uniform1i(this.at.u_ice, ICE_UNIT);
     gl.uniform1i(this.at.u_groundField, GROUND_UNIT);
     gl.uniform1i(this.at.u_groundFar, FAR_UNIT);
     const pieces = painted.tileset.ground?.pieces ?? { x: 0, y: 0 };
@@ -216,6 +221,10 @@ export class GroundBlend {
     gl.uniform1f(this.at.u_artPerBase, this.artPerBase);
     gl.uniform4fv(this.at.u_patch, patch);
     gl.uniform4fv(this.at.u_layer, layer);
+  }
+
+  setIce(grid: GameGrid | null, dirtyTiles?: ReadonlyArray<{ x: number; y: number }>): void {
+    this.ice.setGrid(grid, dirtyTiles);
   }
 
   setWaterStyle(waves: boolean): void {
@@ -436,6 +445,7 @@ export class GroundBlend {
       this.dirty = [];
     } else if (this.dirty.length > 0) this.updateKindTexels(grid);
     if (this.w === 0 || this.h === 0) return false;
+    this.ice.sync(this.w, this.h);
     this.rebuildLight(f);
     gl.useProgram(this.program);
     gl.uniformMatrix4fv(this.at.u_projection, false, f.projection);
@@ -462,6 +472,7 @@ export class GroundBlend {
       this.bindOn(FAR_UNIT, this.field.far);
     }
     this.bindOn(LIGHT_UNIT, this.lightTex);
+    this.ice.bind();
     gl.activeTexture(gl.TEXTURE0);
     gl.bindVertexArray(this.vao);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
@@ -474,6 +485,7 @@ export class GroundBlend {
     gl.deleteTexture(this.kindTex);
     gl.deleteTexture(this.tideTex);
     gl.deleteTexture(this.lightTex);
+    this.ice.dispose();
     gl.deleteBuffer(this.vbo);
     gl.deleteVertexArray(this.vao);
     gl.deleteProgram(this.program);

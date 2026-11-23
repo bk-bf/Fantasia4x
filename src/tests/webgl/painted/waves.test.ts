@@ -4,9 +4,11 @@ import {
   STILL_WATER_TILES,
   SEA_SLOTS,
   WaveClock,
+  gustiness,
   waterBlockShift,
   waterStill
 } from '$lib/webgl/painted/waves';
+import { iceRect } from '$lib/webgl/painted/waterIce';
 
 const EAST = { x: 1, y: 0 };
 
@@ -107,5 +109,48 @@ describe('the wave clock', () => {
       expect(block).toBeGreaterThanOrEqual(artPerPx);
       expect(block).toBeLessThan(Math.max(2, artPerPx * 2));
     }
+  });
+
+  it('carries the ripple and glint grain along the wind heading, faster in a stronger wind', () => {
+    const run = (wind: number, dir: { x: number; y: number }) => {
+      const clock = new WaveClock();
+      clock.tick(0, wind, dir, false);
+      for (let now = 100; now <= 1000; now += 100) clock.tick(now, wind, dir, false);
+      return clock.ripple;
+    };
+    const east = run(0.3, EAST);
+    expect(east.x).toBeGreaterThan(0);
+    expect(east.y).toBe(0);
+    const south = run(0.3, { x: 0, y: 1 });
+    expect(south.x).toBe(0);
+    expect(south.y).toBeGreaterThan(0);
+    expect(run(0.9, EAST).x).toBeGreaterThan(east.x);
+  });
+
+  it('puts the rain and the gustiness of the weather in the surge slot', () => {
+    const clock = new WaveClock();
+    clock.tick(0, 0.5, EAST, false);
+    const sea = clock.uniforms(0.5, EAST, 1, 1, { rain: 0.75 });
+    expect(sea[12 * 4 + 1]).toBeCloseTo(0.75, 6);
+    expect(sea[12 * 4 + 3]).toBeCloseTo(gustiness(0.5, 0.75), 6);
+    expect(gustiness(1, 1)).toBe(1);
+    expect(gustiness(0.9, 0)).toBeGreaterThan(gustiness(0.1, 0));
+  });
+});
+
+describe('the water ice upload', () => {
+  it('covers only the changed tiles that lie on the map', () => {
+    expect(
+      iceRect(
+        [
+          { x: 3, y: 4 },
+          { x: 6, y: 2 },
+          { x: 40, y: 1 }
+        ],
+        10,
+        10
+      )
+    ).toEqual({ x: 3, y: 2, w: 4, h: 3 });
+    expect(iceRect([{ x: -1, y: 0 }], 10, 10)).toBeNull();
   });
 });

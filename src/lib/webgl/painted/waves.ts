@@ -2,7 +2,7 @@ import type { Heading } from './wind.js';
 
 export const STILL_WATER_TILES = { from: 0, to: 4 };
 export const ART_PER_UNIT = 2;
-export const SEA_SLOTS = 13;
+export const SEA_SLOTS = 15;
 
 const TAU = Math.PI * 2;
 const NOISE_PERIOD = 1024;
@@ -19,6 +19,21 @@ const DRIFT = { calm: 2, gale: 12 };
 const RIPPLE_RATE = 0.26 * 8;
 const RIPPLE = { drift: 0.9, period: 553 };
 const GLINT = { drift: 0.7, period: 2253 };
+const FIELD_PERIOD = 2048;
+const RIPPLE_PX = (RIPPLE_RATE * RIPPLE.drift * FIELD_PERIOD) / RIPPLE.period;
+const GLINT_PX = (RIPPLE_RATE * GLINT.drift * FIELD_PERIOD) / GLINT.period;
+const SEICHE_SECS = 14;
+const SWAY = { ripple: 10, glint: 4, lean: 1.6 };
+const GUST_PACE = { calm: 5, gale: 19 };
+const RAIN_PERIOD = 1000;
+
+export interface SeaWeather {
+  rain: number;
+}
+
+export function gustiness(wind: number, rain: number): number {
+  return Math.min(1, 0.25 + wind * 0.6 + rain * 0.3);
+}
 
 export interface MapMotion {
   sway: boolean;
@@ -70,6 +85,9 @@ export class WaveClock {
   waveT = 0;
   t = 0;
   drift = { x: 0, y: 0 };
+  ripple = { x: 0, y: 0 };
+  glint = { x: 0, y: 0 };
+  gust = 0;
   private last: number | null = null;
 
   tick(nowMs: number, wind: number, dir: Heading, still: boolean): void {
@@ -81,9 +99,23 @@ export class WaveClock {
     const pace = lerp(DRIFT.calm, DRIFT.gale, Math.min(1, Math.max(0, wind)));
     this.drift.x += dir.x * pace * secs;
     this.drift.y += dir.y * pace * secs;
+    const fresh = 0.4 + 1.2 * wind;
+    const carry = (at: { x: number; y: number }, speed: number) => {
+      at.x = wrap(at.x + dir.x * speed * secs, FIELD_PERIOD);
+      at.y = wrap(at.y + dir.y * speed * secs, FIELD_PERIOD);
+    };
+    carry(this.ripple, RIPPLE_PX * fresh);
+    carry(this.glint, GLINT_PX * (0.5 + wind));
+    this.gust = wrap(this.gust + lerp(GUST_PACE.calm, GUST_PACE.gale, wind) * secs, NOISE_PERIOD);
   }
 
-  uniforms(wind: number, dir: Heading, artPerPx: number, waveMix = 1): Float32Array {
+  uniforms(
+    wind: number,
+    dir: Heading,
+    artPerPx: number,
+    waveMix = 1,
+    weather: SeaWeather = { rain: 0 }
+  ): Float32Array {
     const sea = seaFor(wind);
     const perPx = artPerPx / ART_PER_UNIT;
     const fade = LAMBDA.map((l) => smoothstep(3, 7, l / perPx));
@@ -97,6 +129,11 @@ export class WaveClock {
     const ampSum = sea.amp.reduce((s, v) => s + v, 0);
     const chop = 0.6 * (sea.amp[2] + sea.amp[3]) * smoothstep(3, 7, 3.3 / perPx);
     const t = this.t;
+    const sway = Math.sin((TAU * t) / SEICHE_SECS);
+    const swayed = (at: { x: number; y: number }, reach: number) => [
+      wrap(at.x + dir.x * sway * reach, FIELD_PERIOD),
+      wrap(at.y + dir.y * sway * reach, FIELD_PERIOD)
+    ];
     return Float32Array.from([
       ...phase,
       ...sea.amp.map((v, i) => v * fade[i]),
@@ -127,8 +164,14 @@ export class WaveClock {
       n(t * 0.3),
       ART_PER_UNIT,
       surge,
-      wrap(t * RIPPLE_RATE * RIPPLE.drift, RIPPLE.period),
-      wrap(t * RIPPLE_RATE * GLINT.drift, GLINT.period),
+      weather.rain,
+      wrap(t, RAIN_PERIOD),
+      gustiness(wind, weather.rain),
+      ...swayed(this.ripple, SWAY.ripple),
+      ...swayed(this.glint, SWAY.glint),
+      dir.x * sway * SWAY.lean,
+      dir.y * sway * SWAY.lean,
+      this.gust,
       waveMix
     ]);
   }

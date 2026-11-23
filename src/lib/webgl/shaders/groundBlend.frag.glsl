@@ -27,7 +27,8 @@ uniform sampler2D u_tide;
 uniform sampler2D u_waterField;
 uniform int u_waterStyle;
 uniform int u_waterBlock;
-uniform vec4 u_sea[13];
+uniform vec4 u_sea[15];
+uniform sampler2D u_ice;
 
 out vec4 fragColor;
 
@@ -98,6 +99,8 @@ const int SEA_BREAK = 9;
 const int SEA_SHORE = 10;
 const int SEA_WIND = 11;
 const int SEA_SURGE = 12;
+const int SEA_GRAIN = 13;
+const int SEA_BODY = 14;
 const int NOISE_WRAP = 1023;
 const float TAU = 6.2831853;
 const float LAMBDA[4] = float[4](30.0, 19.0, 12.0, 8.0);
@@ -115,6 +118,17 @@ const float FOAM_HIGH = 0.62;
 const float FOAM_LOW = 0.36;
 const float FOAM_DITHER = 0.24;
 const float GLINT_STEP = 0.5;
+const float POCK_CELL = 7.0;
+const float POCK_RATE = 2.2;
+const float PULL_REACH = 2.2;
+const vec4 PULL_GRAIN = vec4(9.0, 9.0, 4.0, 4.0);
+const float ICE_UNIT = 2.0;
+const float ICE_SHOWS = 0.08;
+const float ICE_REACH = 1.3;
+const float ICE_DEPTH = 0.85;
+const float ICE_CALM = 0.6;
+const vec3 ICE[4] = vec3[4](
+    vec3(111.0, 147.0, 172.0) / 255.0, vec3(148.0, 180.0, 198.0) / 255.0, vec3(188.0, 211.0, 220.0) / 255.0, vec3(221.0, 233.0, 236.0) / 255.0);
 const vec3 WET_SAND[2] = vec3[2](vec3(112.0, 98.0, 74.0) / 255.0, vec3(138.0, 122.0, 92.0) / 255.0);
 
 const float BAYER[16] = float[16](0.0, 8.0, 2.0, 10.0, 12.0, 4.0, 14.0, 6.0, 3.0, 11.0, 1.0, 9.0, 15.0, 7.0, 13.0, 5.0);
@@ -272,15 +286,78 @@ vec2 warpAt(vec2 p) {
     return p + (wide - 0.5) * WARP_WIDE_AMP + (fine - 0.5) * WARP_FINE_AMP;
 }
 
-float grainAt(ivec2 art, vec2 drift, float deep) {
+float grainAt(ivec2 art, vec4 shift, float deep, float ruffle) {
     ivec2 at = art % textureSize(u_waterField, 0);
     vec2 fq = vec2(at);
     vec4 field = texelFetch(u_waterField, at, 0);
-    float ripple = periodicNoise(fq, RIPPLE_CELLS, vec2(40.0, -drift.x), 33);
+    float ripple = periodicNoise(fq, RIPPLE_CELLS, vec2(40.0, 0.0) + shift.xy * RIPPLE_CELLS / FIELD_PERIOD, 33);
+    float rippled = ripple > 0.7 ? RIPPLE_CREST : ripple < 0.25 ? -RIPPLE_TROUGH : 0.0;
     return field.r * 255.0 / TONE_SCALE - TONE_OFFSET
-        + (ripple > 0.7 ? RIPPLE_CREST : ripple < 0.25 ? -RIPPLE_TROUGH : 0.0)
-        + (periodicNoise(fq, GLINT_CELLS, vec2(0.0, drift.y), 39) > 0.84 ? GLINT_RISE : 0.0)
+        + rippled * ruffle
+        + (periodicNoise(fq, GLINT_CELLS, shift.zw * GLINT_CELLS / FIELD_PERIOD, 39) > 0.84 ? GLINT_RISE : 0.0)
         - (int(field.g * 255.0 + 0.5) >= OPEN_CELL ? OPEN_CELL_DROP * (1.0 - deep) : 0.0);
+}
+
+float gustAt(vec2 q) {
+    vec2 g = q - u_sea[SEA_WIND].xy * u_sea[SEA_BODY].z;
+    float n = wn(g * 0.018, 61) * 0.65 + wn(g * 0.05 + 17.0, 62) * 0.35;
+    return smoothstep(0.42, 0.7, n);
+}
+
+int rainPock(ivec2 a) {
+    float rain = u_sea[SEA_SURGE].y;
+    if (rain <= 0.0) return 0;
+    ivec2 c = ivec2(floor(vec2(a) / POCK_CELL));
+    float tt = u_sea[SEA_SURGE].z * POCK_RATE + hash(c.x, c.y, 81);
+    int slot = int(floor(tt));
+    float age = fract(tt);
+    if (hash(c.x, c.y, 82 + slot % 97) > rain * 0.55) return 0;
+    vec2 centre = vec2(c) * POCK_CELL + 1.0
+        + floor(vec2(hash(c.x, c.y, 83 + slot % 89), hash(c.x, c.y, 84 + slot % 83)) * (POCK_CELL - 2.0));
+    float r = length(vec2(a) - centre);
+    if (age < 0.15 && r < 1.0) return 2;
+    if (age < 0.7 && abs(r - age * 3.0) < 0.5) return 1;
+    return 0;
+}
+
+float iceAt(float level, vec2 q, float depth, float near) {
+    if (level < ICE_SHOWS) return -1.0;
+    float rough = smoothstep(10.0, 0.0, near) * 0.08 + (wn(q * 0.06, 91) - 0.5) * 0.22 + (wn(q * 0.25, 92) - 0.5) * 0.06;
+    return level * ICE_REACH - depth * ICE_DEPTH + rough * min(1.0, level / 0.3) - ICE_SHOWS;
+}
+
+vec3 iceSheet(ivec2 cell, vec2 q, float margin, float depth, float near) {
+    float d = dither(cell);
+    float wobble = depth + (wn(q * 0.05, 54) - 0.5) * BAND_WOBBLE;
+    int band = clamp(int(floor(clamp(wobble, 0.0, 1.0) * float(BANDS - 1) + 0.5 + (d - 0.5) * BAND_DITHER)), 0, BANDS - 1);
+    float deep = float(band) / float(BANDS - 1);
+    int tier = rampStep(grainAt(cell, vec4(0.0), deep, 0.5), cell);
+    vec3 under = mix(SHALLOWS[tier], DEEP[min(tier + 1, 5)], deep);
+    float thick = smoothstep(0.0, 0.4, margin);
+    float frost = 0.14 + 0.22 * thick + 0.3 * smoothstep(6.0, 0.0, near) + (wn(q * 0.12, 98) - 0.5) * 0.16;
+    float level = floor(clamp(frost, 0.0, 0.8) * 5.0 + d) / 5.0;
+    vec3 c = mix(under, ICE[2 + int(step(0.6, frost))], level);
+    if (margin < 0.02) return mix(under, ICE[3], 0.35);
+    float crack = abs(wn(q * 0.09, 93) - 0.5) + (wn(q * 0.4, 94) - 0.5) * 0.04;
+    if (crack < 0.01 && thick > 0.3) return mix(c, ICE[3], 0.7);
+    if (thick > 0.25 && hash(cell.x >> 1, cell.y >> 1, 97) > 0.996) return ICE[3];
+    return c;
+}
+
+bool frozenAt(vec2 w, vec2 p, out vec3 c) {
+    int shift = u_waterBlock;
+    ivec2 cell = ivec2(p) >> shift;
+    vec2 s = shift == 0 ? w + 0.5 : warpAt(vec2(cell << shift) + float(1 << shift) * 0.5);
+    vec2 at = s / u_tileArt / vec2(u_mapSize);
+    float level = texture(u_ice, at).r;
+    if (level < ICE_SHOWS) return false;
+    vec4 tide = texture(u_tide, at);
+    float dist = (tide.b * 255.0 / DIST_STEPS - 0.5) * u_tileArt / ICE_UNIT;
+    vec2 q = s / ICE_UNIT;
+    float margin = iceAt(level, q, tide.a, dist);
+    if (margin <= 0.0) return false;
+    c = iceSheet(cell << shift, q, margin, tide.a, dist);
+    return true;
 }
 
 vec3 waveWater(vec2 w, vec2 p, int kind) {
@@ -306,9 +383,14 @@ vec3 waveWater(vec2 w, vec2 p, int kind) {
     float sh = pow(sb, 2.5);
     float shoal = smoothstep(45.0, 8.0, near) * (1.0 + 1.3 * smoothstep(14.0, 3.0, near));
     float bl = smoothstep(45.0, 12.0, near);
-    vec3 hw = waveField(q);
+    float calm = 1.0 - min(1.0, texture(u_ice, at).r / ICE_CALM) * 0.75;
+    vec2 seaward = length(slope) > 1e-3 ? normalize(slope) : vec2(0.0);
+    float pull = sin(arg - 1.1) * smoothstep(60.0, 6.0, near);
+    float gust = gustAt(q);
+    vec3 hw = waveField(q + u_sea[SEA_BODY].xy - seaward * pull * PULL_REACH);
+    hw *= mix(1.0, 0.3 + 0.95 * gust, 0.4 + 0.6 * u_sea[SEA_SURGE].w) * calm;
     hw.x += (wn(q * 0.3 + u_sea[SEA_SHORE].zw, 47) - 0.5) * look.z;
-    float lift = shoal * state.z * 2.2;
+    float lift = shoal * state.z * 2.2 * calm;
     vec3 surge = vec3(sh * lift, slope * (1.25 * sh / sb * cos(arg) * 0.36 * lift));
     vec3 h = mix(hw, surge + hw * 0.3, bl);
     vec3 n = normalize(vec3(-h.yz * 0.55, 1.0));
@@ -316,15 +398,15 @@ vec3 waveWater(vec2 w, vec2 p, int kind) {
     float spec = pow(max(dot(n, SEA_HALF), 0.0), 90.0) * look.y;
     vec4 brkAt = u_sea[SEA_BREAK];
     float brk = wn(q * 0.5 + brkAt.xy, 48) * 0.6 + wn(q * 1.4 - brkAt.zz, 49) * 0.4;
-    vec4 motif = u_sea[SEA_SURGE];
-    float cap = motif.w * smoothstep(0.62, 1.0, h.x / max(look.w * 0.6, 0.2))
-        * smoothstep(0.45, 0.72, wn(q * 0.45 + u_sea[SEA_DRIFT].zw, 50)) * state.w * (1.0 - bl * 0.7);
+    float strength = u_sea[SEA_BODY].w;
+    float cap = strength * smoothstep(0.62, 1.0, h.x / max(look.w * 0.6, 0.2))
+        * smoothstep(0.45, 0.72, wn(q * 0.45 + u_sea[SEA_DRIFT].zw, 50)) * state.w * (1.0 - bl * 0.7) * smoothstep(0.35, 0.8, gust);
     vec2 dir = u_sea[SEA_WIND].xy;
     vec2 qa = vec2(dot(q, dir), dot(q, vec2(-dir.y, dir.x)));
     float streak = 0.0;
     if (state.w > 0.4 || kind == RAPIDS)
         streak = smoothstep(0.55, 0.85, wn(vec2(qa.x * 0.025 - brkAt.w, qa.y * 0.35), 51))
-            * smoothstep(0.3, 0.7, wn(q * 0.06, 52)) * look.x * max((state.w - 0.4) * motif.w, kind == RAPIDS ? 0.6 : 0.0) * 1.6;
+            * smoothstep(0.3, 0.7, wn(q * 0.06, 52)) * look.x * max((state.w - 0.4) * strength, kind == RAPIDS ? 0.6 : 0.0) * 1.6;
     float run = u_sea[SEA_SHORE].y;
     float surf = smoothstep(0.55, 1.0, sh) * smoothstep(12.0, 1.5, near) * smoothstep(0.3, 0.6, brk) * state.z * 0.8;
     surf += smoothstep(run, run * 0.4, near) * smoothstep(0.28, 0.6, brk);
@@ -332,12 +414,16 @@ vec3 waveWater(vec2 w, vec2 p, int kind) {
     float foam = clamp(cap + streak * 0.5 + surf, 0.0, 1.0) * 0.8 + (d - 0.5) * FOAM_DITHER;
     if (foam > FOAM_HIGH) return FOAM[shade > 1.0 ? 2 : 1];
     if (foam > FOAM_LOW) return FOAM[0];
+    int pock = rainPock(cell << shift);
+    if (pock == 2) return FOAM[1];
     float glint = pow(max(dot(n, SEA_HALF), 0.0), 70.0) * smoothstep(0.3, 0.75, wn(q * 0.2 + u_sea[SEA_WIND].z, 53));
     float depth = tide.a + (wn(q * 0.05, 54) - 0.5) * BAND_WOBBLE;
     int band = clamp(int(floor(clamp(depth, 0.0, 1.0) * float(BANDS - 1) + 0.5 + (d - 0.5) * BAND_DITHER)), 0, BANDS - 1);
     float deep = float(band) / float(BANDS - 1);
-    float tone = grainAt((cell << shift) + ((1 << shift) >> 1), motif.yz, deep)
-        + motif.w * ((shade - 1.0) * look.x * SHADE_STEPS + spec * SPEC_STEPS + (glint > GLINT_STEP ? 2.0 : 0.0));
+    vec4 grain = u_sea[SEA_GRAIN] + vec4(seaward, seaward) * pull * PULL_GRAIN;
+    float tone = grainAt((cell << shift) + ((1 << shift) >> 1), grain, deep, smoothstep(0.15, 0.6, gust))
+        + (pock == 1 ? 1.5 : 0.0)
+        + strength * ((shade - 1.0) * look.x * SHADE_STEPS + spec * SPEC_STEPS + (glint > GLINT_STEP ? 2.0 : 0.0));
     int tier = rampStep(tone, cell);
     return mix(SHALLOWS[tier], DEEP[min(tier + 1, 5)], deep);
 }
@@ -399,9 +485,10 @@ void main() {
     if (k == 0u) k = own;
     vec4 layer = u_layer[k];
     vec3 c;
-    if (layer.y > 0.5)
-        c = u_waterStyle == WAVE_STYLE ? waveWater(w, p, int(layer.y + 0.5)) : water(w, int(layer.y + 0.5), ivec2(p));
-    else {
+    if (layer.y > 0.5) {
+        if (!frozenAt(w, p, c))
+            c = u_waterStyle == WAVE_STYLE ? waveWater(w, p, int(layer.y + 0.5)) : water(w, int(layer.y + 0.5), ivec2(p));
+    } else {
         vec4 patchRect = u_patch[k];
         ivec2 q = ivec2(p);
         ivec2 block = ivec2(layer.zw);
