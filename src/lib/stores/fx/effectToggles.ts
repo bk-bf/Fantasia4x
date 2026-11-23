@@ -28,9 +28,7 @@ function load(): EffectToggles {
 }
 
 function save(value: EffectToggles): EffectToggles {
-  try {
-    localStorage.setItem(KEY, JSON.stringify(value));
-  } catch {}
+  if (typeof localStorage !== 'undefined') localStorage.setItem(KEY, JSON.stringify(value));
   return value;
 }
 
