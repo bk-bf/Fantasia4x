@@ -9,6 +9,7 @@ import {
 } from './manifest.js';
 import { setPaintedTileset } from './tileset.js';
 import { atlasTexels, type AtlasTexels } from '../drawnSprites.js';
+import { swayTable } from './wind.js';
 
 export const PAINTED_BASE_URL = '/tilesets/painted/';
 const LIGHT_IMAGE = 'atlas-light.png';
@@ -60,6 +61,15 @@ async function fetchManifest(url: string): Promise<unknown> {
   const res = await fetch(url);
   if (!res.ok) throw new Error(`${url} answered ${res.status}`);
   return res.json();
+}
+
+async function fetchSway(url: string): Promise<unknown> {
+  try {
+    return await fetchManifest(url);
+  } catch (err) {
+    console.warn('[painted tiles] wind sway off:', err);
+    return null;
+  }
 }
 
 function uploadAtlas(gl: WebGL2RenderingContext, image: HTMLImageElement): WebGLTexture {
@@ -146,16 +156,18 @@ let source: Promise<PaintedSource | null> | null = null;
 
 async function readSource(baseUrl: string): Promise<PaintedSource | null> {
   try {
-    const [raw, image] = await Promise.all([
+    const [raw, image, sway] = await Promise.all([
       fetchManifest(`${baseUrl}manifest.json`),
-      loadImage(`${baseUrl}atlas.png`)
+      loadImage(`${baseUrl}atlas.png`),
+      fetchSway(`${baseUrl}sway.json`)
     ]);
     const manifest = parseManifest(raw);
     if (image.naturalWidth !== manifest.atlas.w || image.naturalHeight !== manifest.atlas.h)
       throw new Error(
         `atlas.png is ${image.naturalWidth}x${image.naturalHeight}, the manifest says ${manifest.atlas.w}x${manifest.atlas.h}`
       );
-    const { tileset, problems } = buildTileset(manifest);
+    const wind = swayTable(sway, Object.keys(manifest.sprites));
+    const { tileset, problems } = buildTileset(manifest, wind);
     if (problems.length > 0) console.warn(`[painted tiles] ${problems.join('; ')}`);
     const [top, light] = await Promise.all([
       readTop(baseUrl, pieceTop(tileset)),

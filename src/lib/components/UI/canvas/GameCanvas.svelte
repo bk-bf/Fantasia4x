@@ -865,7 +865,7 @@
       const { light, tint } = environmentService.getAmbient(environmentService.ambientTurn(s));
       const season = environmentService.effectiveSeason(s);
       const tinted = environmentService.getMapAmbientTint(tint, season, s.weather);
-      renderer.setAmbient(light, tinted, tint, s.weather?.type);
+      renderer.setAmbient(light, tinted, tint, s.weather, season);
       lightingService.setAmbient(light, tinted);
       _ambientLight = light;
       _ambientTint = tinted;
@@ -2538,7 +2538,7 @@
           $gameState ? environmentService.effectiveSeason($gameState) : undefined,
           $gameState?.weather
         );
-        renderer.setAmbient(light, tinted, tint, $gameState?.weather?.type);
+        renderer.setAmbient(light, tinted, tint, $gameState?.weather);
         lightingService.setAmbient(light, tinted);
         if (worldMap.length === 0) refreshEmitters();
         _ambientLight = light;

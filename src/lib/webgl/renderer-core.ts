@@ -27,6 +27,8 @@ import { PaintedVignette } from './painted/vignette.js';
 import { PaintedShadowCast, SHADOW_DEPTH, SHADOW_SHADE } from './painted/shadowCast.js';
 import { GroundRings, type GroundRing, type RingInk } from './groundRings.js';
 import { drawnAt, drawnBounds, type DrawnFrame, type Quad } from './drawnSprites.js';
+import { WindClock, type Heading } from './painted/wind.js';
+import { FallingLeaves } from './painted/leaves.js';
 
 const LIGHT_ATLAS_UNIT = 7;
 
@@ -96,6 +98,9 @@ export class WebGLRendererCore {
   private shadowCast: PaintedShadowCast | null = null;
   private vignette: PaintedVignette | null = null;
   private groundRings: GroundRings | null = null;
+  private leaves: FallingLeaves | null = null;
+  private readonly wind = new WindClock();
+  private season: string | undefined = undefined;
   private rings: { list: readonly GroundRing[]; ink: RingInk } | null = null;
   private pointLights: readonly PointLight[] = [];
   private ambientBase: Rgb = [1, 1, 1];
@@ -255,6 +260,11 @@ export class WebGLRendererCore {
     this.mapWeather = weather;
   }
 
+  setWind(strength: number, dir: Heading, season?: string): void {
+    this.wind.set(strength, dir);
+    if (season !== undefined) this.season = season;
+  }
+
   setPointLights(lights: readonly PointLight[]): void {
     this.pointLights = lights;
   }
@@ -391,6 +401,7 @@ export class WebGLRendererCore {
       if (this.painted) this.shadowCast = PaintedShadowCast.create(gl, this.shaderManager);
       if (this.lightPass) this.vignette = PaintedVignette.create(gl, this.shaderManager);
       this.groundRings = GroundRings.create(gl, this.shaderManager);
+      if (this.painted) this.leaves = FallingLeaves.create(gl, this.shaderManager);
 
       if (this.debug) console.log('✅ WebGL2 renderer ready');
       return true;
@@ -467,6 +478,14 @@ export class WebGLRendererCore {
       lightFrame?.grade.brightness ?? 1
     );
     if (unlit) this.shaderManager.setUniform('tileRenderer', 'u_lightTexture', LIGHT_FIELD_UNIT);
+    const windSecs = this.wind.tick(performance.now());
+    if (this.painted) {
+      const artTile = this.painted.tileset.tile;
+      for (const [name, value] of Object.entries(
+        this.wind.uniforms(artTile, BASE_TILE_PX / artTile)
+      ))
+        this.shaderManager.setUniform('tileRenderer', name, value);
+    }
 
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this.fontTexture);
@@ -547,6 +566,7 @@ export class WebGLRendererCore {
         if (layer === 'resource' && this.snowGrid)
           this.drawSnowGrid(viewportTilesW, viewportTilesH, lightTime, this.rowDepth);
       }
+      this.drawLeaves(windSecs, viewportTilesW, viewportTilesH, lightFrame);
       this.stats.overlayMs = performance.now() - tOverlay;
       this.shaderManager.setUniform('tileRenderer', 'u_glyphOnly', 0);
       if (this.rowDepth) gl.disable(gl.DEPTH_TEST);
@@ -587,6 +607,57 @@ export class WebGLRendererCore {
       [this.buildingOverlayGrid, this.resourceOverlayGrid, this.resourceTallOverlayGrid],
       view
     );
+  }
+
+  private leafTree = (x: number, y: number) => {
+    for (const grid of [this.resourceTallOverlayGrid, this.resourceOverlayGrid]) {
+      const s = grid?.getTile(x, y)?.painted;
+      if (s?.leafy) return s;
+    }
+    return undefined;
+  };
+
+  private drawLeaves(
+    secs: number,
+    viewportTilesW: number,
+    viewportTilesH: number,
+    lightFrame: LightPassFrame | null
+  ): void {
+    if (!this.leaves || !this.painted || !this.shaderManager) return;
+    const artTile = this.painted.tileset.tile;
+    this.stats.drawCalls += this.leaves.draw(
+      secs,
+      this.wind,
+      {
+        canvas: [this.viewport.width, this.viewport.height],
+        viewOffset: [this.viewTileX * BASE_TILE_PX, this.viewTileY * BASE_TILE_PX],
+        zoom: [this.tileWidth / BASE_TILE_PX, this.tileHeight / BASE_TILE_PX],
+        basePerArt: BASE_TILE_PX / artTile,
+        artTile,
+        view: {
+          x: Math.floor(this.viewTileX),
+          y: Math.floor(this.viewTileY),
+          w: viewportTilesW + 1,
+          h: viewportTilesH + 1
+        },
+        season: this.season,
+        treeAt: this.leafTree,
+        texels: this.painted.texels(),
+        light: {
+          fieldLit: lightFrame !== null,
+          ambient: lightFrame
+            ? lightFrame.grade.ambient
+            : [
+                this.ambientLight * this.ambientTint[0],
+                this.ambientLight * this.ambientTint[1],
+                this.ambientLight * this.ambientTint[2]
+              ],
+          tone: [lightFrame?.grade.saturation ?? 1, lightFrame?.grade.brightness ?? 1]
+        }
+      },
+      { atlas: 1, light: LIGHT_FIELD_UNIT }
+    );
+    this.shaderManager.useProgram('tileRenderer');
   }
 
   private drawGroundRings(): void {
@@ -799,6 +870,8 @@ export class WebGLRendererCore {
     this.vignette = null;
     this.groundRings?.dispose();
     this.groundRings = null;
+    this.leaves?.dispose();
+    this.leaves = null;
     if (this.painted) this.webglState.getContext()?.deleteTexture(this.painted.texture);
     if (this.painted) this.webglState.getContext()?.deleteTexture(this.painted.light);
     if (this.painted?.top) this.webglState.getContext()?.deleteTexture(this.painted.top.texture);

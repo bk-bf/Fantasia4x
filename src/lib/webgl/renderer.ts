@@ -11,7 +11,14 @@ import type { CharacterRenderer } from './character-renderer.js';
 import type { GameGrid } from './game-grid.js';
 import type { FontAtlas } from './types.js';
 import { mapWeather, type PointLight, type Rgb } from './painted/lightGrade.js';
-import { weatherIsHeavy, weatherOverlayKind } from '../game/services/EnvironmentService.js';
+import {
+  ambientWind,
+  weatherIsHeavy,
+  weatherOverlayKind,
+  windVector
+} from '../game/services/EnvironmentService.js';
+import type { WeatherState } from '../game/core/types.js';
+import { heading } from './painted/wind.js';
 
 export type { RenderStats, RendererOptions, SpriteLayer };
 
@@ -111,11 +118,20 @@ export class WebGLRenderer {
     return this.core.getFontAtlas();
   }
 
-  setAmbient(light: number, tint: Rgb, baseTint?: Rgb, weather?: string): void {
+  setAmbient(
+    light: number,
+    tint: Rgb,
+    baseTint?: Rgb,
+    weather?: WeatherState,
+    season?: string
+  ): void {
     this.core.setAmbient(light, tint, baseTint);
-    if (weather === this.weather) return;
-    this.weather = weather;
-    this.core.setMapWeather(mapWeather(weatherOverlayKind(weather), weatherIsHeavy(weather)));
+    const { dx, dy } = windVector(weather?.windDir);
+    this.core.setWind(ambientWind(weather), heading(dx, dy), season);
+    const type = weather?.type;
+    if (type === this.weather) return;
+    this.weather = type;
+    this.core.setMapWeather(mapWeather(weatherOverlayKind(type), weatherIsHeavy(type)));
   }
 
   setPointLights(lights: readonly PointLight[]): void {

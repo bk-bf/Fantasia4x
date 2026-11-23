@@ -10,9 +10,10 @@ import type { ShaderManager } from '$lib/webgl/shaders';
 import type { CharacterRenderer } from '$lib/webgl/character-renderer';
 import { buildTileset, parseManifest, spriteAt } from '$lib/webgl/painted/manifest';
 import { SHADOW_DEPTH } from '$lib/webgl/painted/shadowCast';
+import { WindClock } from '$lib/webgl/painted/wind';
 
 const GLYPH_FLOATS = 24;
-const ROW_FLOATS = 30;
+const ROW_FLOATS = 31;
 const DEPTH_TEST = 0x0b71;
 
 const atlas = {
@@ -67,7 +68,15 @@ function gridRenderer(rowDepth: boolean, uploads?: Float32Array[]) {
   const { gl, calls } = recordingGl(uploads);
   const shaders = {
     getAttributeLocation: (_p: string, name: string) =>
-      name === 'a_row' ? 9 : name === 'a_vein' ? 10 : name === 'a_veinNear' ? 11 : 1,
+      name === 'a_row'
+        ? 9
+        : name === 'a_vein'
+          ? 10
+          : name === 'a_veinNear'
+            ? 11
+            : name === 'a_sway'
+              ? 12
+              : 1,
     useProgram: () => true
   } as unknown as ShaderManager;
   const r = new GridRenderer(gl, shaders, {} as CharacterRenderer, atlas, false, rowDepth);
@@ -141,7 +150,7 @@ describe('the row each quad carries for the depth test', () => {
       1,
       0x1406,
       false,
-      120,
+      124,
       96
     ]);
     expect(on.find((c) => c[1] === 10)).toEqual([
@@ -150,7 +159,7 @@ describe('the row each quad carries for the depth test', () => {
       4,
       0x1406,
       false,
-      120,
+      124,
       100
     ]);
     expect(on.find((c) => c[1] === 11)).toEqual([
@@ -159,10 +168,19 @@ describe('the row each quad carries for the depth test', () => {
       1,
       0x1406,
       false,
-      120,
+      124,
       116
     ]);
-    expect(off.every((c) => c[5] === 96 && ![9, 10, 11].includes(c[1] as number))).toBe(true);
+    expect(on.find((c) => c[1] === 12)).toEqual([
+      'vertexAttribPointer',
+      12,
+      1,
+      0x1406,
+      false,
+      124,
+      120
+    ]);
+    expect(off.every((c) => c[5] === 96 && ![9, 10, 11, 12].includes(c[1] as number))).toBe(true);
   });
 
   it('writes the vein, its tile and its same-ore neighbours after the row, and -1 where there is none', () => {
@@ -178,7 +196,9 @@ describe('the row each quad carries for the depth test', () => {
     r.renderGrid(grid, options);
     const data = uploads[uploads.length - 1];
     const veins = Array.from({ length: data.length / ROW_FLOATS }, (_, v) =>
-      Array.from(data.subarray(v * ROW_FLOATS + GLYPH_FLOATS + 1, (v + 1) * ROW_FLOATS)).join(',')
+      Array.from(
+        data.subarray(v * ROW_FLOATS + GLYPH_FLOATS + 1, v * ROW_FLOATS + GLYPH_FLOATS + 6)
+      ).join(',')
     );
     expect(new Set(veins)).toEqual(new Set(['7,9,1,1,5', '-1,-1,2,1,0']));
     expect(veins.filter((v) => v === '7,9,1,1,5')).toHaveLength(6);
@@ -213,6 +233,7 @@ function layeredCore(rowDepth: boolean) {
   Object.assign(core, {
     ...grids,
     rowDepth,
+    wind: new WindClock(),
     painted: null,
     fontTexture: {},
     fontAtlas: atlas,
