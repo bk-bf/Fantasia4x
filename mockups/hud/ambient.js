@@ -74,5 +74,10 @@ const HUD = { dirs: {}, state: {} };
     const h = ((hour % 24) + 24) % 24, hh = Math.floor(h), mm = Math.round((h - hh) * 60);
     return String(hh).padStart(2, '0') + ':' + String(mm).padStart(2, '0');
   }
-  HUD.ambient = { at, compute, matrix, tintRGB, toHex, phase, clock, smooth, lerp, WEATHER };
+  const layers = amb => ({ dusk: clamp(amb.warm * 1.35, 0, 1), night: amb.night });
+  function seen(amb) {
+    const { dusk, night } = layers(amb);
+    return { day: dusk < .97 && night < .97, dusk: dusk > .08 && night < .97, night: night > .08 };
+  }
+  HUD.ambient = { at, compute, matrix, tintRGB, toHex, phase, clock, smooth, lerp, layers, seen, WEATHER };
 })();

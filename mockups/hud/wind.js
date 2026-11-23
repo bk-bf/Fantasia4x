@@ -111,14 +111,11 @@
       }
     }
   }
-  function frame() {
-    const map = HUD.map, amb = HUD.amb, v = HUD.view, w = amb && amb.weather;
-    if (!map || !w || !w.kind) return;
-    if (owner !== map) { clones = {}; owner = map; }
+  function effects() {
+    const map = HUD.map, amb = HUD.amb, w = amb && amb.weather;
+    if (!map || !w || !w.kind) return null;
     if (!map.blades) map.blades = blades(map.r);
-    const ts = now(), wd = windOf(w.ws), C = FX[w.kind] || {}, night = amb.night, dusk = clamp(amb.warm * 1.35, 0, 1);
-    const seen = { day: dusk < .97 && night < .97, dusk: dusk > .08 && night < .97, night: night > .08 };
-    const clip = { x0: Math.floor(-v.left / v.k) - 2, y0: Math.floor(-v.top / v.k) - 2, x1: Math.ceil((v.W - v.left) / v.k) + 2, y1: Math.ceil((v.H - v.top) / v.k) + 2 };
+    const ts = now(), wd = windOf(w.ws), C = FX[w.kind] || {};
     const post = (r, a, e, time, X0, X1, Y0, Y1, tint) => {
       const put = pen(a, r.W, time, X0, X1, Y0, Y1);
       if (wd.s >= .3) shimmer(r, a, time, Y0, Y1, tint, wd, map.blades);
@@ -127,8 +124,15 @@
       if (C.flock) flock(put, ts, C, wd.s, X0, X1, Y0, Y1);
       if (C.heat) heat(r, a, e, ts, .45 + .6 * amb.light, X0, X1, Y0, Y1);
     };
+    return { ts, wind: wd, post };
+  }
+  function frame() {
+    const map = HUD.map, fx = !HUD.motion.on && effects();
+    if (!fx) return;
+    if (owner !== map) { clones = {}; owner = map; }
+    const seen = HUD.ambient.seen(HUD.amb), clip = HUD.view.clip();
     SEASON = map.season;
-    for (const t of TIMEKEYS) if (seen[t]) present(clones[t] || (clones[t] = { ...map.r }), document.getElementById(CANVAS[t]).getContext('2d'), t, ts, { clip, wind: wd, post });
+    for (const t of TIMEKEYS) if (seen[t]) present(clones[t] || (clones[t] = { ...map.r }), document.getElementById(CANVAS[t]).getContext('2d'), t, fx.ts, { clip, wind: fx.wind, post: fx.post });
   }
   function loop(t) {
     raf = requestAnimationFrame(loop);
@@ -136,6 +140,7 @@
     last = t;
     frame();
   }
+  HUD.windEffects = effects;
   HUD.wind = () => {
     const map = HUD.map, on = !!(HUD.amb && HUD.amb.weather.kind);
     if (!on) {

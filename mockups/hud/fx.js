@@ -278,7 +278,7 @@
   }
   function tick(now) {
     raf = requestAnimationFrame(tick);
-    const dt = Math.min(.1, (now - last) / 1000), hs = HUD.state;
+    const dt = clamp((now - last) / 1000, 0, .1), hs = HUD.state;
     last = now;
     if (!frozen && !hs.paused) clock += dt * hs.speed * (slow ? .2 : 1);
     grade();

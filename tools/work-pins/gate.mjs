@@ -4,6 +4,7 @@ import { appendFileSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSyn
 import { cpus, tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
+import { checkBudgets, median } from './budgets.mjs';
 import { report } from './compare.mjs';
 
 const HARNESS_DIR = 'tools/work-pins';
@@ -15,6 +16,10 @@ const TPS_ROUNDS = Number(process.env.TPS_ROUNDS ?? 9);
 const TPS_THRESHOLD = Number(process.env.TPS_THRESHOLD ?? 0.05);
 const PERF_CHANGE_ACCEPTED = process.env.PERF_CHANGE_ACCEPTED === 'true';
 const TPS_CORE = process.env.TPS_CORE ?? String(cpus().length - 1);
+const TPS_BENCH = 'tps/ticks.bench';
+const FLOOR_BENCH = 'tps/large-wilderness.bench';
+const FLOOR_ROUNDS = Number(process.env.TPS_FLOOR_ROUNDS ?? 5);
+const IDLE_RUNS = { page: 'browser idle page', worker: 'browser idle worker' };
 
 function arg(name, fallback) {
   const i = process.argv.indexOf(name);
@@ -92,30 +97,55 @@ function refHasHook(ref) {
   }
 }
 
+function idleCalls(dir) {
+  const perFrame = (scenario) => {
+    const run = JSON.parse(readFileSync(join(dir, `${scenario.replaceAll(' ', '-')}.json`), 'utf8'));
+    const calls = Object.values(run.functions).reduce((s, f) => s + f.count, 0) / run.ticks;
+    return { value: calls, runs: [calls] };
+  };
+  return checkBudgets('browser work pins idle phase', {
+    'idle page calls per frame': perFrame(IDLE_RUNS.page),
+    'idle worker calls per frame': perFrame(IDLE_RUNS.worker)
+  });
+}
+
 function browserLeg(script, tree, base, head, results, hookFrom) {
   const headTree = head ? tree(head, 'head-tree') : process.cwd();
   if (!hasHook(headTree, hookFrom)) throw new Error(`head has no ${HOOK_DIR}, nothing to run`);
+  const absolute = () => script !== 'browser.mjs' || idleCalls(join(results, 'head'));
   if (!refHasHook(base) && !hookFrom) {
     runBrowser(script, headTree, join(results, 'head'));
     summary(`## Browser work pins: base has no \`${HOOK_DIR}\`, so head ran alone\n`);
-    return true;
+    return absolute();
   }
   const baseTree = tree(base, 'tree');
   if (!hasHook(baseTree, hookFrom)) throw new Error(`base has no ${HOOK_DIR} after the patch`);
   runBrowser(script, baseTree, join(results, 'base'));
   runBrowser(script, headTree, join(results, 'head'));
-  return report(join(results, 'base'), join(results, 'head'));
+  const compared = report(join(results, 'base'), join(results, 'head'));
+  return absolute() && compared;
 }
 
-function tpsRun(cwd, out) {
-  sh('taskset', ['-c', TPS_CORE, 'pnpm', 'exec', 'vitest', 'bench', '--run', '--config', TPS_CONFIG, '--outputJson', out], {
+function tpsRun(cwd, out, file = TPS_BENCH) {
+  sh('taskset', ['-c', TPS_CORE, 'pnpm', 'exec', 'vitest', 'bench', '--run', '--config', TPS_CONFIG, '--outputJson', out, file], {
     cwd
   });
   const bench = JSON.parse(readFileSync(out, 'utf8')).files[0].groups[0].benchmarks[0];
   return { name: bench.name, ms: bench.median ?? bench.mean };
 }
 
-const median = (xs) => [...xs].sort((a, b) => a - b)[Math.floor(xs.length / 2)];
+const ticksIn = (name) => Number(name.match(/(\d+) ticks/)?.[1] ?? 0);
+
+function tpsFloor(cwd, results) {
+  const runs = [];
+  for (let round = 0; round < FLOOR_ROUNDS; round++) {
+    const r = tpsRun(cwd, join(results, `tps-floor-${round}.json`), FLOOR_BENCH);
+    runs.push((ticksIn(r.name) * 1000) / r.ms);
+  }
+  return checkBudgets('ticks per second', {
+    'large-wilderness ticks per second': { value: median(runs), runs }
+  });
+}
 
 function tpsLeg(tree, base, head, results) {
   const trees = { base: tree(base, 'tree'), head: head ? tree(head, 'head-tree') : process.cwd() };
@@ -129,7 +159,7 @@ function tpsLeg(tree, base, head, results) {
       runs[side].push(r.ms);
     }
   }
-  const ticks = Number(name.match(/(\d+) ticks/)?.[1] ?? 0);
+  const ticks = ticksIn(name);
   const baseMs = median(runs.base);
   const headMs = median(runs.head);
   const change = (headMs - baseMs) / baseMs;
@@ -155,7 +185,8 @@ function tpsLeg(tree, base, head, results) {
       process.env.TPS_NOTES,
       `${JSON.stringify({ name, ticks, base: runs.base, head: runs.head, baseMs, headMs })}\n`
     );
-  return !slower;
+  const floor = tpsFloor(trees.head, results);
+  return !slower && floor;
 }
 
 const leg = arg('--leg', 'sim');

@@ -6,6 +6,7 @@
   import { WebGLRenderer, type SpriteLayer } from '$lib/webgl/renderer.js';
   import { crashBreadcrumb } from '$lib/webgl/crashLog.js';
   import { startFreezeWatchdog, beat, stopFreezeWatchdog } from '$lib/webgl/freezeWatchdog.js';
+  import { passOn } from '$lib/webgl/passes.js';
   import {
     applyTileToGrid,
     applyResourceToGrid,
@@ -2415,7 +2416,7 @@
           pawnOverlayGrid.clear();
           itemOverlayGrid.clear();
           buildingOverlayGrid.clear();
-        } else {
+        } else if (passOn('overlay')) {
           updatePawnOverlay(
             dt,
             map,
@@ -2447,18 +2448,19 @@
           designationsStale = false;
           drawDesignations();
         }
-        worldFx.frame(
-          {
-            pawns: pawnList,
-            mobs: mobList,
-            pawnPos: pawnRenderPos,
-            mobPos: mobRenderPos,
-            renderer,
-            hidden: isHiddenTile,
-            mobsDrawn: tW >= ENTITY_RENDER_MIN_PX
-          },
-          { vx, vy, tW, tH, paused: simPaused }
-        );
+        if (passOn('effects'))
+          worldFx.frame(
+            {
+              pawns: pawnList,
+              mobs: mobList,
+              pawnPos: pawnRenderPos,
+              mobPos: mobRenderPos,
+              renderer,
+              hidden: isHiddenTile,
+              mobsDrawn: tW >= ENTITY_RENDER_MIN_PX
+            },
+            { vx, vy, tW, tH, paused: simPaused }
+          );
         updateSelectionRings(vx, vy, tW, tH);
         if (
           _terrainDirty &&

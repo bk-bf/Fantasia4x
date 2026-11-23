@@ -62,7 +62,7 @@
 
   const matcher = tab => {
     const words = st.q.toLowerCase().split(/\s+/).filter(Boolean);
-    return o => tab.has(o) && (st.state === 'new' ? o.fresh : st.state === 'all' || o.state === st.state) && words.every(w => o.hay.includes(w));
+    return o => tab.has(o) && (st.state === 'new' ? o.fresh : st.state === 'pixel' ? o.pixel : st.state === 'all' || o.state === st.state) && words.every(w => o.hay.includes(w));
   };
 
   UI.render = () => {

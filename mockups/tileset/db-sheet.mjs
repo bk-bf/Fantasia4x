@@ -4,11 +4,11 @@ import { fileURLToPath } from 'node:url';
 import zlib from 'node:zlib';
 
 const here = dirname(fileURLToPath(import.meta.url));
-export const SCRIPTS = ['gfx.js', 'mat.js', 'world.js', 'flora.js', 'build.js', 'actors.js', 'scene.js', 'db-core.js', 'db-mockup.js', 'db-flora.js', 'db-creatures.js', 'db-buildings.js', 'db-ground.js', 'db-folk.js', 'db-items.js', 'db-hd.js', 'db-tools.js', 'db-weapons.js', 'db-gear.js', 'db-goods.js', 'db-armor.js', 'db-rare.js', 'db-rot.js', 'db-stations.js', 'db-facings.js'];
+export const SCRIPTS = new Function(readFileSync(join(here, 'registry-scripts.js'), 'utf8') + '\nreturn REGISTRY_SCRIPTS;')();
 
 export function loadRegistry() {
   let src = '';
-  for (const f of SCRIPTS) { try { src += readFileSync(join(here, f), 'utf8') + '\n;'; } catch { continue; } }
+  for (const f of SCRIPTS) src += readFileSync(join(here, f), 'utf8') + '\n;';
   const data = JSON.parse(readFileSync(join(here, 'catalog-data.json'), 'utf8'));
   const DBX = new Function('DATA', src + '\nif (typeof DBX.fromData === "function") DBX.fromData(DATA);\nreturn DBX;')(data.objects);
   return { DBX, data };

@@ -295,7 +295,19 @@ const PROPS = (() => {
     if (t >= 33) return [P.iron, 6];
     return [P.iron, v === -2 ? 5 : v === -1 ? (t < 14 ? 4 : 6) : v === 0 ? 3 : 2];
   }
-  const AXE = TRIAL.AXE, AXE_TOP = 27.5;
+  const AXE_EDGE = [[17, 9.5], [19.5, 10.4], [22.5, 10.8], [25.5, 10.2], [27.5, 8.5]];
+  function axeEdgeAt(a) {
+    const found = AXE_EDGE.findIndex(p => p[0] >= a), i = Math.max(1, found < 0 ? AXE_EDGE.length - 1 : found), p = AXE_EDGE[i - 1], q = AXE_EDGE[i];
+    return p[1] + (q[1] - p[1]) * clamp((a - p[0]) / (q[0] - p[0]), 0, 1);
+  }
+  const AXE = {
+    steel: TK.ramp('#1e2430 #323c4c #4c5a6a #6e7e8c #96a6b0 #c2ced2 #eaf0ee'),
+    head: [[24.8, 1.4], ...AXE_EDGE.slice().reverse(), [19.4, 5.6], [21.4, 3], [21.8, 1.4]],
+    socket: [[21.2, -1.8], [25.4, -1.8], [25.4, 1.8], [21.2, 1.8]],
+    headTone(a, q) { const d = axeEdgeAt(a) - q; return d < 1.1 ? 6 : d < 2.5 ? 5 : q < 3.2 ? 2 : a > 23.6 ? 4 : 3; },
+    socketTone: q => q > .4 ? 4 : q > -.8 ? 3 : 1
+  };
+  const AXE_TOP = 27.5;
   function within(pts, a, q) {
     let hit = false;
     for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
@@ -372,10 +384,18 @@ const PROPS = (() => {
     s.sh = { rx: half + 2, ry: 4.6 + (Math.max(...stages) > 0 ? 1 : 0), dx: 16 * (n - 1) + 4, dy: 0, k: .9 };
     return s;
   }
-  function long(kind, pose, flip) {
-    const def = LONG[kind];
+  function itemSprite(id, pose) {
+    const made = WORLD_ITEMS.cells(id, pose), s = new Spr(48, HIGH, CX, B), lean = pose === 'lean';
+    const ys = made.cells.map(c => c.y), low = Math.max(...ys), foot = made.cells.filter(c => c.y === low).map(c => c.x), xs = made.cells.map(c => c.x);
+    const dx = lean ? CX + 4 - Math.round((Math.min(...foot) + Math.max(...foot)) / 2) : CX - Math.round((Math.min(...xs) + Math.max(...xs)) / 2);
+    for (const c of made.cells) s.set(c.x + dx, c.y + B - 1 - low, c.rgb);
+    return { s, L: made.L };
+  }
+  function long(kind, pose, flip, id) {
+    const own = id && WORLD_ITEMS.has(id) && itemSprite(id, pose), def = own || LONG[kind];
     let s;
-    if (def.cell) s = drawn(def, pose);
+    if (own) s = own.s;
+    else if (def.cell) s = drawn(def, pose);
     else {
       const [a, b] = POSES[pose](def.L, def.headUp), F = frame(a, b);
       s = new Spr(48, HIGH, CX, B);
