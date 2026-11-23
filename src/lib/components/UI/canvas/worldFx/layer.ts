@@ -21,7 +21,7 @@ import { collectScene, type FxWorld, type Mark, type Scene } from './scene';
 import { drawFloats, type FloaterMode } from './floats';
 import { drawSpeech } from './speech';
 import { drawFlights, flying } from './flights';
-import { onsetActive } from './onsets';
+import { onsetChecker } from './onsets';
 import type { EffectToggles } from '$lib/stores/fx/effectToggles';
 import type { CombatTextEvent } from '$lib/stores/fx/combatFeedback';
 import type { ProjectileEvent } from '$lib/stores/fx/projectiles';
@@ -104,7 +104,7 @@ class WorldFxLayer {
     const shots: readonly ProjectileEvent[] = this.on.projectiles ? projectiles.live(now) : [];
     if (this.on.text && combatFeedback.hasOnsets() && now >= this.pruneAt) {
       this.pruneAt = now + PRUNE_MS;
-      combatFeedback.pruneOnsets(now, (key) => onsetActive(w, key));
+      combatFeedback.pruneOnsets(now, onsetChecker(w));
     }
     const moving =
       scene.routes.length > 0 ||

@@ -1,5 +1,6 @@
 import type { Rgb } from '../palette';
-import { atlasCanvas, atlasEpoch, css, flushAtlas, tex, type Slot } from './bake';
+import { css } from './bake';
+import { atlasEpoch, flushAtlas, tex, type Slot } from './atlas';
 import type { Spr } from './spr';
 
 interface Op {
@@ -85,8 +86,7 @@ export class FxPainter {
       for (const op of ops) if (op.s) op.at = tex(op.s);
       if (atlasEpoch() === before) break;
     }
-    flushAtlas();
-    const src = atlasCanvas();
+    const src = flushAtlas();
     const g = this.g;
     for (const op of ops) {
       if (!op.s) {
