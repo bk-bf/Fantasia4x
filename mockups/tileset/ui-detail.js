@@ -99,7 +99,8 @@
   function inScene(o, e, b) {
     const tw = Math.max(3, Math.ceil(b.w / 32) + 2), th = Math.max(2, Math.ceil(b.h / 32) + 1), tx = Math.max(0, Math.ceil(-b.ox / 32)), ty = th - 1;
     const w = DBX.flat(tw, th, e.ground || 'tall_grass'), a = e.at || DBX.anchor[o.cat] || [16, 23];
-    w.objs.push({ spr: DBX.still(DBX.built(e)), x: tx * 32 + a[0], y: ty * 32 + a[1] });
+    const centred = o.cat === 'item', left = centred ? (tw * 32 - b.w >> 1) - b.ox : tx * 32, top = centred ? (th * 32 - b.h >> 1) - b.oy : ty * 32;
+    w.objs.push({ spr: DBX.still(DBX.built(e)), x: left + a[0], y: top + a[1] });
     if (o.cat !== 'item') w.objs.push({ spr: mkPawn(PAWNS.woodcutter.o), x: (tw - 1) * 32 + 16, y: ty * 32 + 27 });
     const z = Math.max(1, Math.min(3, Math.floor(340 / (tw * 32)))), sc = el('div', 'view'), wrap = el('div', 'gridded'), cv = el('canvas');
     UI.paint(cv, DBX.crop({ world: w, rect: [0, 0, tw * 32, th * 32], season: DBX.seasonOf(e, st.season) }), z);
