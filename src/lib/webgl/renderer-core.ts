@@ -121,6 +121,7 @@ export class WebGLRendererCore {
 
   private dynamicLight = false;
   private vignetteOn = true;
+  private swayOn = true;
 
   private lightVersion = 0;
 
@@ -275,6 +276,10 @@ export class WebGLRendererCore {
 
   setVignette(on: boolean): void {
     this.vignetteOn = on;
+  }
+
+  setSway(on: boolean): void {
+    this.swayOn = on;
   }
 
   setLightVersion(version: number): void {
@@ -481,9 +486,9 @@ export class WebGLRendererCore {
     const windSecs = this.wind.tick(performance.now());
     if (this.painted) {
       const artTile = this.painted.tileset.tile;
-      for (const [name, value] of Object.entries(
-        this.wind.uniforms(artTile, BASE_TILE_PX / artTile)
-      ))
+      const wind = this.wind.uniforms(artTile, BASE_TILE_PX / artTile);
+      if (!this.swayOn) wind.u_wind[0] = 0;
+      for (const [name, value] of Object.entries(wind))
         this.shaderManager.setUniform('tileRenderer', name, value);
     }
 
