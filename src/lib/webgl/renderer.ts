@@ -1,4 +1,10 @@
-import { WebGLRendererCore, type RenderStats, type RendererOptions } from './renderer-core.js';
+import {
+  WebGLRendererCore,
+  type RenderStats,
+  type RendererOptions,
+  type SpriteLayer
+} from './renderer-core.js';
+import type { Quad } from './drawnSprites.js';
 import type { ShaderManager } from './shaders.js';
 import type { CharacterRenderer } from './character-renderer.js';
 import type { GameGrid } from './game-grid.js';
@@ -6,7 +12,7 @@ import type { FontAtlas } from './types.js';
 import { mapWeather, type PointLight, type Rgb } from './painted/lightGrade.js';
 import { weatherIsHeavy, weatherOverlayKind } from '../game/services/EnvironmentService.js';
 
-export type { RenderStats, RendererOptions };
+export type { RenderStats, RendererOptions, SpriteLayer };
 
 export class WebGLRenderer {
   private core: WebGLRendererCore;
@@ -46,6 +52,14 @@ export class WebGLRenderer {
 
   setResourceTallOverlayGrid(grid: GameGrid | null): void {
     this.core.setResourceTallOverlayGrid(grid);
+  }
+
+  drawnAt(px: number, py: number): { layer: SpriteLayer; x: number; y: number } | null {
+    return this.core.drawnAt(px, py);
+  }
+
+  drawnBounds(layer: SpriteLayer, x: number, y: number): Quad | null {
+    return this.core.drawnBounds(layer, x, y);
   }
 
   setViewTileOffset(x: number, y: number): void {

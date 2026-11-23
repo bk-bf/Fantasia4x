@@ -3,7 +3,7 @@
   import { get } from 'svelte/store';
   import { browser } from '$app/environment';
   import { wasdPan, debugMode } from '$lib/stores/uiPrefs';
-  import { WebGLRenderer } from '$lib/webgl/renderer.js';
+  import { WebGLRenderer, type SpriteLayer } from '$lib/webgl/renderer.js';
   import { crashBreadcrumb } from '$lib/webgl/crashLog.js';
   import { startFreezeWatchdog, beat, stopFreezeWatchdog } from '$lib/webgl/freezeWatchdog.js';
   import {
@@ -109,6 +109,14 @@
   import { simTarget } from '$lib/game/services/MovementSystem.js';
   import SelectedEntityCard from '$lib/components/UI/hud/SelectedEntityCard.svelte';
   import { brackets, dragBox, type ScreenRect } from '$lib/components/UI/canvas/selectionMarks';
+  import {
+    BUILDING_SPRITES,
+    drawnFirst,
+    drawnTile,
+    RESOURCE_SPRITES,
+    spriteRect,
+    type TileLayer
+  } from '$lib/components/UI/canvas/drawnSelection';
   import VerbTag from '$lib/components/UI/hud/VerbTag.svelte';
   import PawnCard from '$lib/components/UI/hud/PawnCard.svelte';
   import BuildingCard from '$lib/components/UI/hud/BuildingCard.svelte';
@@ -2014,6 +2022,11 @@
     return { x: (x - viewX) * tileWidth, y: (y - viewY) * tileHeight, w: tileWidth, h: tileHeight };
   }
 
+  function markRect(layers: readonly SpriteLayer[], x: number, y: number): ScreenRect {
+    const view = { viewX, viewY, tileWidth, tileHeight };
+    return spriteRect(renderer, layers, x, y, view) ?? tileRect(x, y);
+  }
+
   function tileBoxRect(minX: number, minY: number, maxX: number, maxY: number): ScreenRect {
     return {
       x: (minX - viewX) * tileWidth,
@@ -2037,7 +2050,7 @@
     const y1 = Math.min(maxY, viewY + Math.ceil(H / tileHeight));
     for (let ry = Math.max(minY, viewY); ry <= y1; ry++)
       for (let rx = Math.max(minX, viewX); rx <= x1; rx++)
-        if (keep(rx, ry)) out.push(tileRect(rx, ry));
+        if (keep(rx, ry)) out.push(markRect(RESOURCE_SPRITES, rx, ry));
     return out;
   }
 
@@ -2050,7 +2063,7 @@
       const wx = +key.slice(0, ci);
       const wy = +key.slice(ci + 1);
       if (wx < viewX - 1 || wy < viewY - 1 || wx > viewX + colW || wy > viewY + rowH) continue;
-      out.push(tileRect(wx, wy));
+      out.push(markRect(RESOURCE_SPRITES, wx, wy));
     }
     return out;
   }
@@ -2165,7 +2178,9 @@
     if (highlightedResourceTiles.size > 0) {
       brackets(mctx, keyRects(highlightedResourceTiles, W, H));
     } else if (selectedResourceTile) {
-      brackets(mctx, [tileRect(selectedResourceTile.x, selectedResourceTile.y)]);
+      brackets(mctx, [markRect(RESOURCE_SPRITES, selectedResourceTile.x, selectedResourceTile.y)]);
+    } else if (selectedBuilding) {
+      brackets(mctx, [markRect(BUILDING_SPRITES, selectedBuilding.x, selectedBuilding.y)]);
     }
 
     if (selDragActive) {
@@ -2440,14 +2455,6 @@
     });
   }
 
-  type TileLayer =
-    | { kind: 'pawn'; id: string }
-    | { kind: 'mob'; id: string }
-    | { kind: 'building'; id: string }
-    | { kind: 'zone'; id: string }
-    | { kind: 'item'; id: string }
-    | { kind: 'resource'; resourceId: string };
-
   function applyTileLayer(layer: TileLayer, x: number, y: number): void {
     selectedPawnId = null;
     selectedMobId = null;
@@ -2630,16 +2637,18 @@
       moveAimArmed = false;
     }
 
-    const layers = tileLayers(hoverTileX, hoverTileY);
+    const view = { viewX, viewY, tileWidth, tileHeight };
+    const hit = drawnTile(renderer, lastCursorCx, lastCursorCy, view);
+    const layers = drawnFirst(tileLayers(hit.x, hit.y), hit.layer);
     if (layers.length > 0) {
-      if (hoverTileX === _cycleTileX && hoverTileY === _cycleTileY) {
+      if (hit.x === _cycleTileX && hit.y === _cycleTileY) {
         _cycleIndex = (_cycleIndex + 1) % layers.length;
       } else {
-        _cycleTileX = hoverTileX;
-        _cycleTileY = hoverTileY;
+        _cycleTileX = hit.x;
+        _cycleTileY = hit.y;
         _cycleIndex = 0;
       }
-      applyTileLayer(layers[_cycleIndex], hoverTileX, hoverTileY);
+      applyTileLayer(layers[_cycleIndex], hit.x, hit.y);
       drawDesignations();
       return;
     }

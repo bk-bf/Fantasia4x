@@ -4,17 +4,17 @@ import type { CharacterRenderer } from './character-renderer.js';
 import type { ShaderManager } from './shaders.js';
 import type { FontAtlas } from './types.js';
 import { checkWebGLError } from './utils.js';
-import { paintedQuad } from './painted/manifest.js';
+import { tileQuad } from './drawnSprites.js';
 
 const ONE_LIGHT: [number, number, number] = [1, 1, 1];
 const ZERO_LIGHT: [number, number, number] = [0, 0, 0];
 const NO_OUTLINE = [0, 0, 0];
 const PAINTED_UV_SHIFT = 2;
-const paintedCorners = [0, 0, 0, 0];
+const corners = [0, 0, 0, 0];
 const GLYPH_VERTEX_FLOATS = 24;
 const ROW_VERTEX_FLOATS = 30;
 const NO_VEIN = { x: -1, y: -1, near: 0 };
-export const ALPHA_CUT = 0.5;
+export { ALPHA_CUT } from './drawnSprites.js';
 
 export interface GridRenderOptions {
   tileWidth: number;
@@ -385,22 +385,10 @@ export class GridRenderer {
         }
       }
 
-      const screenX = tile.position.x * options.tileWidth;
-      const screenY = tile.position.y * options.tileHeight;
-
-      const offsetX = tile.animationOffset?.x || 0;
       const offsetY = tile.animationOffset?.y || 0;
-
-      const scale = tile.scale && tile.scale > 0 ? tile.scale : 1;
-      const tileW = options.tileWidth;
       const tileH = options.tileHeight;
-      const drawW = tileW * scale;
-      const drawH = tileH * scale;
-      let x1 = screenX + offsetX - (drawW - tileW) / 2;
-      let y1 =
-        scale >= 1 ? screenY + offsetY - (drawH - tileH) : screenY + offsetY + (tileH - drawH) / 2;
-      let x2 = x1 + drawW;
-      let y2 = y1 + drawH;
+      tileQuad(tile, options.tileWidth, tileH, corners);
+      const [x1, y1, x2, y2] = corners;
 
       let u1 = charInfo ? charInfo.x / this.fontAtlas.atlasWidth : 0;
       let v1 = charInfo ? charInfo.y / this.fontAtlas.atlasHeight : 0;
@@ -430,21 +418,6 @@ export class GridRenderer {
 
       const painted = tile.painted;
       if (painted) {
-        paintedQuad(
-          painted,
-          tile.position.x,
-          tile.position.y,
-          tileW,
-          offsetX,
-          offsetY,
-          scale,
-          tile.rotation === 90 || tile.rotation === 270,
-          paintedCorners
-        );
-        x1 = paintedCorners[0];
-        y1 = paintedCorners[1];
-        x2 = paintedCorners[2];
-        y2 = paintedCorners[3];
         u1 = painted.u1;
         v1 = painted.v1;
         u2 = painted.u2;

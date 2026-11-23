@@ -8,6 +8,7 @@ import {
   type PaintedTileset
 } from './manifest.js';
 import { setPaintedTileset } from './tileset.js';
+import { atlasTexels, type AtlasTexels } from '../drawnSprites.js';
 
 export const PAINTED_BASE_URL = '/tilesets/painted/';
 const LIGHT_IMAGE = 'atlas-light.png';
@@ -24,6 +25,7 @@ export interface LoadedPaintedTileset {
   texture: WebGLTexture;
   light: WebGLTexture;
   top: LoadedPieceTop | null;
+  texels: () => AtlasTexels | null;
 }
 
 function loadImage(url: string): Promise<HTMLImageElement> {
@@ -37,6 +39,21 @@ function loadImage(url: string): Promise<HTMLImageElement> {
     image.onerror = settle(() => reject(new Error(`could not load ${url}`)));
     image.src = url;
   });
+}
+
+function readTexels(image: HTMLImageElement): () => AtlasTexels | null {
+  let texels: AtlasTexels | null | undefined;
+  return () => {
+    if (texels !== undefined) return texels;
+    const canvas = document.createElement('canvas');
+    canvas.width = image.naturalWidth;
+    canvas.height = image.naturalHeight;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    ctx?.drawImage(image, 0, 0);
+    const data = ctx?.getImageData(0, 0, canvas.width, canvas.height).data;
+    texels = data ? atlasTexels(data, canvas.width, canvas.height) : null;
+    return texels;
+  };
 }
 
 async function fetchManifest(url: string): Promise<unknown> {
@@ -172,7 +189,7 @@ export async function loadPaintedTileset(
       : null;
     const light = loaded.light ? uploadAtlas(gl, loaded.light) : unlitTexture(gl);
     setPaintedTileset(loaded.tileset);
-    return { tileset: loaded.tileset, texture, light, top };
+    return { tileset: loaded.tileset, texture, light, top, texels: readTexels(loaded.image) };
   } catch (err) {
     console.warn('[painted tiles] off, drawing the glyph tiles instead:', err);
     return null;

@@ -23,10 +23,18 @@ import {
 } from './painted/lightGrade.js';
 import { PaintedVignette } from './painted/vignette.js';
 import { PaintedShadowCast, SHADOW_DEPTH, SHADOW_SHADE } from './painted/shadowCast.js';
+import { drawnAt, drawnBounds, type DrawnFrame, type Quad } from './drawnSprites.js';
 
 const LIGHT_ATLAS_UNIT = 7;
 
 export const ROW_DEPTH_RANGE = 8192;
+
+export const SPRITE_LAYERS = ['resource', 'building', 'item', 'entity', 'resourceTall'] as const;
+export type SpriteLayer = (typeof SPRITE_LAYERS)[number];
+const CHUNKED: Partial<Record<SpriteLayer, 'resource' | 'resourceTall'>> = {
+  resource: 'resource',
+  resourceTall: 'resourceTall'
+};
 
 interface Viewport {
   x: number;
@@ -186,6 +194,40 @@ export class WebGLRendererCore {
 
   setResourceTallOverlayGrid(grid: GameGrid | null): void {
     this.resourceTallOverlayGrid = grid;
+  }
+
+  private spriteGrid(layer: SpriteLayer): GameGrid | null {
+    if (layer === 'resource') return this.resourceOverlayGrid;
+    if (layer === 'building') return this.buildingOverlayGrid;
+    if (layer === 'item') return this.itemOverlayGrid;
+    if (layer === 'entity') return this.overlayGrid;
+    return this.resourceTallOverlayGrid;
+  }
+
+  private drawnFrame(): DrawnFrame {
+    return {
+      basePx: BASE_TILE_PX,
+      artPx: this.painted?.tileset.tile ?? BASE_TILE_PX,
+      lift: this.painted?.top?.lift ?? null,
+      texels: this.painted?.texels() ?? null,
+      depth: this.rowDepth
+    };
+  }
+
+  drawnAt(px: number, py: number): { layer: SpriteLayer; x: number; y: number } | null {
+    const hit = drawnAt(
+      SPRITE_LAYERS.map((layer) => this.spriteGrid(layer)),
+      px,
+      py,
+      this.drawnFrame()
+    );
+    return hit && { layer: SPRITE_LAYERS[hit.layer], x: hit.x, y: hit.y };
+  }
+
+  drawnBounds(layer: SpriteLayer, x: number, y: number): Quad | null {
+    const tile = this.spriteGrid(layer)?.getTile(x, y);
+    if (!tile || (!tile.painted && (!tile.char || tile.char === ' '))) return null;
+    return drawnBounds(tile, this.drawnFrame());
   }
 
   setViewTileOffset(x: number, y: number): void {
@@ -476,28 +518,19 @@ export class WebGLRendererCore {
         gl.depthFunc(gl.LEQUAL);
         this.drawShadowCast(gl, viewportTilesW, viewportTilesH);
       }
-      this.renderGlyphOverlay(
-        this.resourceOverlayGrid,
-        viewportTilesW,
-        viewportTilesH,
-        lightTime,
-        true,
-        'resource'
-      );
-      if (this.snowGrid) {
-        this.drawSnowGrid(viewportTilesW, viewportTilesH, lightTime, this.rowDepth);
+      for (const layer of SPRITE_LAYERS) {
+        const chunk = CHUNKED[layer];
+        this.renderGlyphOverlay(
+          this.spriteGrid(layer),
+          viewportTilesW,
+          viewportTilesH,
+          lightTime,
+          chunk !== undefined,
+          chunk
+        );
+        if (layer === 'resource' && this.snowGrid)
+          this.drawSnowGrid(viewportTilesW, viewportTilesH, lightTime, this.rowDepth);
       }
-      this.renderGlyphOverlay(this.buildingOverlayGrid, viewportTilesW, viewportTilesH, lightTime);
-      this.renderGlyphOverlay(this.itemOverlayGrid, viewportTilesW, viewportTilesH, lightTime);
-      this.renderGlyphOverlay(this.overlayGrid, viewportTilesW, viewportTilesH, lightTime);
-      this.renderGlyphOverlay(
-        this.resourceTallOverlayGrid,
-        viewportTilesW,
-        viewportTilesH,
-        lightTime,
-        true,
-        'resourceTall'
-      );
       this.stats.overlayMs = performance.now() - tOverlay;
       this.shaderManager.setUniform('tileRenderer', 'u_glyphOnly', 0);
       if (this.rowDepth) gl.disable(gl.DEPTH_TEST);
