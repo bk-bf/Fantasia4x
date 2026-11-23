@@ -905,7 +905,7 @@
   {
     "id": "lighting-unlit-fire-glows",
     "file": "src/lib/game/services/LightingService.ts",
-    "find": "  if (needsFuel && b.lit !== true) return null;\n",
+    "find": "  if (fireIsOut(def.maxFuel, b)) return null;\n",
     "replace": "",
     "tests": ["src/tests/game/services/buildingLight.test.ts"]
   },
