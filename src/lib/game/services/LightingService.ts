@@ -14,6 +14,10 @@ export interface LightEmitter {
 export const FIRE_COLOR: [number, number, number] = [1.0, 0.55, 0.22];
 export const FIRE_INTENSITY = 1.1;
 
+export function fireIsOut(maxFuel: number | undefined, b: { lit?: boolean }): boolean {
+  return (maxFuel ?? 0) > 0 && b.lit !== true;
+}
+
 export function buildingLight(b: {
   type: string;
   status: string;
@@ -22,8 +26,7 @@ export function buildingLight(b: {
   if (b.status !== 'complete') return null;
   const def = buildingService.getBuildingById(b.type);
   if (!def?.lightRadius) return null;
-  const needsFuel = (def.maxFuel ?? 0) > 0;
-  if (needsFuel && b.lit !== true) return null;
+  if (fireIsOut(def.maxFuel, b)) return null;
   return {
     radius: def.lightRadius,
     intensity: def.lightIntensity ?? FIRE_INTENSITY,

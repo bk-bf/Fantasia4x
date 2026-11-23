@@ -6,7 +6,8 @@ import { itemService } from '$lib/game/services/ItemService.js';
 import { buildingService } from '$lib/game/services/BuildingService.js';
 import { isFloorBuilding, isRoofBuilding } from '$lib/webgl/fantasia-world.js';
 import { PAINTED_TILES } from '$lib/webgl/painted/flag.js';
-import { paintedTile } from '$lib/webgl/painted/tileset.js';
+import { paintedTile, paintedTileIn } from '$lib/webgl/painted/tileset.js';
+import { fireIsOut } from '$lib/game/services/LightingService.js';
 
 function hexToRgb(hex?: string): { r: number; g: number; b: number } | null {
   if (!hex) return null;
@@ -62,7 +63,8 @@ export function overlayDroppedItems(
       char,
       foreground,
       background: existing?.background ?? { r: 0, g: 0, b: 0 },
-      position: { x: drop.x, y: drop.y }
+      position: { x: drop.x, y: drop.y },
+      ...(PAINTED_TILES ? { painted: paintedTile('item', drop.resourceId, drop.x, drop.y) } : null)
     });
   }
 }
@@ -72,18 +74,19 @@ const DECONSTRUCT_FG = { r: 1.0, g: 0.25, b: 0.05 };
 
 const _buildingVisCache = new Map<
   string,
-  { sprite: string; color: { r: number; g: number; b: number } }
+  { sprite: string; color: { r: number; g: number; b: number }; maxFuel?: number }
 >();
 function buildingVisFor(typeId: string): {
   sprite: string;
   color: { r: number; g: number; b: number };
+  maxFuel?: number;
 } {
   let v = _buildingVisCache.get(typeId);
   if (!v) {
     const def = buildingService.getBuildingById(typeId);
     const sprite = def?.charSpans ? (resolveCharSpans(def.charSpans as CharSpan[])[0] ?? '#') : '#';
     const color = hexToRgb(def?.color) ?? { r: 0.87, g: 0.62, b: 0.12 };
-    v = { sprite, color };
+    v = { sprite, color, maxFuel: def?.maxFuel };
     _buildingVisCache.set(typeId, v);
   }
   return v;
@@ -98,14 +101,22 @@ export function overlayBuildings(
     if (b.status !== 'complete') continue;
     if (isFloorBuilding(b) || isRoofBuilding(b)) continue;
     if (isHidden?.(b.x, b.y)) continue;
-    const { sprite, color } = buildingVisFor(b.type);
+    const { sprite, color, maxFuel } = buildingVisFor(b.type);
     grid.setTile(b.x, b.y, {
       char: b.deconstructQueued ? DECONSTRUCT_GLYPH : sprite,
       foreground: b.deconstructQueued ? DECONSTRUCT_FG : color,
       background: { r: 0, g: 0, b: 0 },
       position: { x: b.x, y: b.y },
       ...(PAINTED_TILES && !b.deconstructQueued
-        ? { painted: paintedTile('building', b.type, b.x, b.y) }
+        ? {
+            painted: paintedTileIn(
+              'building',
+              b.type,
+              fireIsOut(maxFuel, b) ? 'idle' : undefined,
+              b.x,
+              b.y
+            )
+          }
         : null)
     });
   }
