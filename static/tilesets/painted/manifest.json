@@ -21613,5 +21613,9 @@
         "rock/mass/255"
       ]
     }
+  },
+  "water": {
+    "image": "water-field.png",
+    "size": 2048
   }
 }

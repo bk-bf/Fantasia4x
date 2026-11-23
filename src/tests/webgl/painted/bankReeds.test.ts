@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { WorldTile } from '$lib/game/core/types';
 import manifestJson from '../../../../static/tilesets/painted/manifest.json';
+import swayJson from '../../../../static/tilesets/painted/sway.json';
 import { decodePng } from '../../../../tools/tileset/png.mjs';
 
 vi.mock('$lib/webgl/painted/flag', () => ({ PAINTED_TILES: true }));
@@ -10,6 +11,7 @@ vi.mock('$lib/webgl/painted/flag.js', () => ({ PAINTED_TILES: true }));
 
 const { buildTileset, parseManifest, resolveVariant } = await import('$lib/webgl/painted/manifest');
 const { setPaintedTileset } = await import('$lib/webgl/painted/tileset');
+const { swayTable } = await import('$lib/webgl/painted/wind');
 const { applyResourceToGrid, buildResourceOverlay } = await import('$lib/webgl/fantasia-world');
 const { GameGrid } = await import('$lib/webgl/game-grid');
 const { BASE_TILE_PX } = await import('$lib/webgl/tile-types');
@@ -17,9 +19,9 @@ const { atlasTexels, drawnAt } = await import('$lib/webgl/drawnSprites');
 
 const manifest = parseManifest(manifestJson);
 const SIZE = 40;
-const reedSprites = Object.keys(manifest.sprites)
-  .filter((id) => id.startsWith('plant/reeds/'))
-  .map((id) => resolveVariant(manifest, manifest.sprites[id]).cells[0]);
+const reedIds = Object.keys(manifest.sprites).filter((id) => id.startsWith('plant/reeds/'));
+const reedSprites = reedIds.map((id) => resolveVariant(manifest, manifest.sprites[id]).cells[0]);
+const wind = swayTable(swayJson, Object.keys(manifest.sprites));
 
 function world(subType: string, over: Partial<WorldTile> = {}): WorldTile[][] {
   return Array.from({ length: SIZE }, (_, y) =>
@@ -37,7 +39,7 @@ function reeds(map: WorldTile[][]) {
   return { short, tall, at: short.getAllTiles().filter((t) => t.scenery) };
 }
 
-beforeAll(() => setPaintedTileset(buildTileset(manifest).tileset));
+beforeAll(() => setPaintedTileset(buildTileset(manifest, wind).tileset));
 
 describe('reeds along the banks', () => {
   it('stand on about a fifth of the riverbank tiles, the same ones every time', () => {
@@ -50,11 +52,13 @@ describe('reeds along the banks', () => {
     );
   });
 
-  it('draw the reed sprites of the atlas, still', () => {
+  it('draw the reed sprites of the atlas, swaying as the wind table says', () => {
     const at = reeds(world('riverbank')).at;
     for (const t of at) {
-      expect(reedSprites).toContainEqual(t.painted);
-      expect(t.painted!.sway).toBeUndefined();
+      const { sway, ...still } = t.painted!;
+      expect(reedSprites).toContainEqual(still);
+      expect(sway).toBe(wind.sway[reedIds[reedSprites.findIndex((r) => r.u1 === still.u1)]]);
+      expect(sway).toBeGreaterThan(0);
     }
     expect(new Set(at.map((t) => t.painted!.u1)).size).toBe(reedSprites.length);
   });

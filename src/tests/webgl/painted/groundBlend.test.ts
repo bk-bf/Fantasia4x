@@ -28,6 +28,7 @@ const painted = {
   texture: {} as WebGLTexture,
   light: {} as WebGLTexture,
   top: null,
+  water: {} as WebGLTexture,
   texels: () => null
 };
 
@@ -84,6 +85,7 @@ describe('the blend pass tables', () => {
       texture: {} as WebGLTexture,
       light: {} as WebGLTexture,
       top: null,
+      water: null,
       texels: () => null
     });
     const k = paintedGroundKind('grass');

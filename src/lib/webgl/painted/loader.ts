@@ -2,6 +2,7 @@ import {
   buildTileset,
   parseManifest,
   idHash,
+  type ManifestField,
   type PaintedKind,
   type PaintedManifest,
   type PaintedPieceTop,
@@ -26,6 +27,7 @@ export interface LoadedPaintedTileset {
   texture: WebGLTexture;
   light: WebGLTexture;
   top: LoadedPieceTop | null;
+  water: WebGLTexture | null;
   texels: () => AtlasTexels | null;
 }
 
@@ -114,6 +116,7 @@ interface PaintedSource {
   image: HTMLImageElement;
   light: HTMLImageElement | null;
   top: { image: HTMLImageElement; veins: HTMLImageElement; piece: PaintedPieceTop } | null;
+  water: HTMLImageElement | null;
 }
 
 const pieceTop = (tileset: PaintedTileset) =>
@@ -136,6 +139,19 @@ async function readTop(baseUrl: string, piece: PaintedPieceTop | null) {
     return { image, veins, piece };
   } catch (err) {
     console.warn('[painted tiles] rock tops off:', err);
+    return null;
+  }
+}
+
+async function readWater(baseUrl: string, field: ManifestField | undefined) {
+  if (!field) return null;
+  try {
+    const image = await loadImage(`${baseUrl}${field.image}`);
+    if (image.naturalWidth !== field.size || image.naturalHeight !== field.size)
+      throw new Error(`${field.image} is not ${field.size} px square`);
+    return image;
+  } catch (err) {
+    console.warn('[painted tiles] water field off:', err);
     return null;
   }
 }
@@ -169,12 +185,13 @@ async function readSource(baseUrl: string): Promise<PaintedSource | null> {
     const wind = swayTable(sway, Object.keys(manifest.sprites));
     const { tileset, problems } = buildTileset(manifest, wind);
     if (problems.length > 0) console.warn(`[painted tiles] ${problems.join('; ')}`);
-    const [top, light] = await Promise.all([
+    const [top, light, water] = await Promise.all([
       readTop(baseUrl, pieceTop(tileset)),
-      readLight(baseUrl, manifest)
+      readLight(baseUrl, manifest),
+      readWater(baseUrl, manifest.water)
     ]);
     if (!top) for (const [set, p] of tileset.pieces) if (p.top) tileset.pieces.delete(set);
-    return { manifest, tileset, image, light, top };
+    return { manifest, tileset, image, light, top, water };
   } catch (err) {
     console.warn('[painted tiles] off, drawing the glyph tiles instead:', err);
     return null;
@@ -200,8 +217,16 @@ export async function loadPaintedTileset(
         }
       : null;
     const light = loaded.light ? uploadAtlas(gl, loaded.light) : unlitTexture(gl);
+    const water = loaded.water ? uploadAtlas(gl, loaded.water) : null;
     setPaintedTileset(loaded.tileset);
-    return { tileset: loaded.tileset, texture, light, top, texels: readTexels(loaded.image) };
+    return {
+      tileset: loaded.tileset,
+      texture,
+      light,
+      top,
+      water,
+      texels: readTexels(loaded.image)
+    };
   } catch (err) {
     console.warn('[painted tiles] off, drawing the glyph tiles instead:', err);
     return null;

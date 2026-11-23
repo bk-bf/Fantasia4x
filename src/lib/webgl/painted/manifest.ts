@@ -55,6 +55,12 @@ export interface PaintedManifest {
   sprites: Record<string, ManifestSprite>;
   map: Partial<Record<PaintedKind, Record<string, string[]>>>;
   pieces?: Record<string, ManifestPieces>;
+  water?: ManifestField;
+}
+
+export interface ManifestField {
+  image: string;
+  size: number;
 }
 
 export interface PaintedSprite {
@@ -211,7 +217,7 @@ function readTop(set: string, raw: unknown): ManifestPieceTop {
 
 export function parseManifest(raw: unknown): PaintedManifest {
   if (!isObject(raw)) throw new Error('manifest is not an object');
-  const { tile, atlas, sprites, map, pieces } = raw;
+  const { tile, atlas, sprites, map, pieces, water } = raw;
   if (!isInt(tile) || tile <= 0) throw new Error('manifest tile is not a positive integer');
   if (!isObject(atlas) || !isInt(atlas.w) || !isInt(atlas.h) || atlas.w <= 0 || atlas.h <= 0)
     throw new Error('manifest atlas size is missing');
@@ -236,6 +242,16 @@ export function parseManifest(raw: unknown): PaintedManifest {
     if (!isObject(pieces)) throw new Error('manifest pieces is not an object');
     out.pieces = {};
     for (const [set, p] of Object.entries(pieces)) out.pieces[set] = readPieces(set, p);
+  }
+  if (water !== undefined) {
+    if (
+      !isObject(water) ||
+      typeof water.image !== 'string' ||
+      !isInt(water.size) ||
+      water.size <= 0
+    )
+      throw new Error('manifest water is not an image and a size');
+    out.water = { image: water.image, size: water.size };
   }
   return out;
 }
@@ -343,7 +359,7 @@ export function buildTileset(
     const variants = Object.keys(m.sprites)
       .filter((sid) => sid.startsWith(prefix))
       .sort()
-      .map((sid) => resolveVariant(m, m.sprites[sid]));
+      .flatMap((sid) => variantOf(sid) ?? []);
     if (variants.length > 0) scenery.set(id, variants);
   }
   return {

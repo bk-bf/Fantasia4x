@@ -14,6 +14,11 @@ const TEXEL_UPDATE_LIMIT = 64;
 const ATLAS_UNIT = 1;
 const KIND_UNIT = 4;
 const LIGHT_UNIT = 5;
+const TIDE_UNIT = 9;
+const WATER_UNIT = 10;
+const SHORE_LEVEL = 1.6;
+const DEEP_WATER = 2;
+const FULL = 255;
 
 type LightSampler = (wx: number, wy: number, time: number) => [number, number, number];
 type Bounds = { minX: number; minY: number; maxX: number; maxY: number };
@@ -37,9 +42,12 @@ export interface GroundBlendFrame {
 export function groundKindTable(painted: LoadedPaintedTileset): {
   patch: Float32Array;
   layer: Float32Array;
+  tide: Uint8Array;
 } {
   const patch = new Float32Array(MAX_KINDS * 4);
   const layer = new Float32Array(MAX_KINDS * 2);
+  const tide = new Uint8Array(MAX_KINDS * 2);
+  tide[1] = FULL;
   const { tileset } = painted;
   const ground = tileset.lookup.get('subterrain');
   paintedGroundIds().forEach((id, i) => {
@@ -58,8 +66,9 @@ export function groundKindTable(painted: LoadedPaintedTileset): {
     );
     const { level, water } = groundLayer(id);
     layer.set([level, water], k * 2);
+    tide.set([water >= DEEP_WATER ? FULL : 0, level > SHORE_LEVEL ? FULL : 0], k * 2);
   });
-  return { patch, layer };
+  return { patch, layer, tide };
 }
 
 export function lightRect(bounds: Bounds, w: number, h: number): Rect {
@@ -75,11 +84,15 @@ export class GroundBlend {
   private readonly program: WebGLProgram;
   private readonly atlas: WebGLTexture;
   private readonly kindTex: WebGLTexture;
+  private readonly tideTex: WebGLTexture;
+  private readonly water: WebGLTexture;
+  private readonly tideOf: Uint8Array;
   private readonly lightTex: WebGLTexture;
   private readonly vao: WebGLVertexArrayObject;
   private readonly vbo: WebGLBuffer;
   private readonly at: Record<string, WebGLUniformLocation | null>;
   private kinds = new Uint8Array(0);
+  private tides = new Uint8Array(0);
   private w = 0;
   private h = 0;
   private grid: GameGrid | null = null;
@@ -99,18 +112,25 @@ export class GroundBlend {
       console.warn('[ground blend] off:', made.error);
       return null;
     }
-    return new GroundBlend(gl, program, painted);
+    if (!painted.water) {
+      console.warn('[ground blend] off: the water field did not load');
+      return null;
+    }
+    return new GroundBlend(gl, program, painted, painted.water);
   }
 
   private constructor(
     gl: WebGL2RenderingContext,
     program: WebGLProgram,
-    painted: LoadedPaintedTileset
+    painted: LoadedPaintedTileset,
+    water: WebGLTexture
   ) {
     this.gl = gl;
     this.program = program;
     this.atlas = painted.texture;
+    this.water = water;
     this.kindTex = this.makeTexture(KIND_UNIT, gl.NEAREST);
+    this.tideTex = this.makeTexture(TIDE_UNIT, gl.LINEAR);
     this.lightTex = this.makeTexture(LIGHT_UNIT, gl.LINEAR);
     this.vao = gl.createVertexArray()!;
     this.vbo = gl.createBuffer()!;
@@ -138,11 +158,16 @@ export class GroundBlend {
       'u_fieldLit',
       'u_saturation',
       'u_brightness',
-      'u_waterPhase'
+      'u_waterPhase',
+      'u_tide',
+      'u_waterField'
     ];
     this.at = Object.fromEntries(names.map((n) => [n, gl.getUniformLocation(program, n)]));
-    const { patch, layer } = groundKindTable(painted);
+    const { patch, layer, tide } = groundKindTable(painted);
+    this.tideOf = tide;
     gl.useProgram(program);
+    gl.uniform1i(this.at.u_tide, TIDE_UNIT);
+    gl.uniform1i(this.at.u_waterField, WATER_UNIT);
     gl.uniform1i(this.at.u_paintAtlas, ATLAS_UNIT);
     gl.uniform1i(this.at.u_kinds, KIND_UNIT);
     gl.uniform1i(this.at.u_light, LIGHT_UNIT);
@@ -199,15 +224,24 @@ export class GroundBlend {
       );
     }
     this.kinds = new Uint8Array(w * h);
+    this.tides = new Uint8Array(w * h * 2);
     for (const t of grid.getAllTiles()) {
       const { x, y } = t.position;
-      if (x >= 0 && y >= 0 && x < w && y < h) this.kinds[y * w + x] = t.ground ?? 0;
+      if (x < 0 || y < 0 || x >= w || y >= h) continue;
+      this.kinds[y * w + x] = t.ground ?? 0;
+      this.tides.set(this.tideOfKind(t.ground ?? 0), (y * w + x) * 2);
     }
-    this.bindOn(KIND_UNIT, this.kindTex);
     gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+    this.bindOn(KIND_UNIT, this.kindTex);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.R8UI, w, h, 0, gl.RED_INTEGER, gl.UNSIGNED_BYTE, this.kinds);
+    this.bindOn(TIDE_UNIT, this.tideTex);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RG8, w, h, 0, gl.RG, gl.UNSIGNED_BYTE, this.tides);
     gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
     gl.activeTexture(gl.TEXTURE0);
+  }
+
+  private tideOfKind(k: number): Uint8Array {
+    return this.tideOf.subarray(k * 2, k * 2 + 2);
   }
 
   private updateKindTexels(grid: GameGrid): void {
@@ -218,37 +252,56 @@ export class GroundBlend {
       const k = grid.getTile(x, y)?.ground ?? 0;
       if (this.kinds[y * this.w + x] === k) continue;
       this.kinds[y * this.w + x] = k;
+      this.tides.set(this.tideOfKind(k), (y * this.w + x) * 2);
       changed.push({ x, y, k });
     }
     this.dirty = [];
     if (changed.length === 0) return;
-    this.bindOn(KIND_UNIT, this.kindTex);
     gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
-    if (changed.length > TEXEL_UPDATE_LIMIT)
-      gl.texSubImage2D(
-        gl.TEXTURE_2D,
-        0,
-        0,
-        0,
-        this.w,
-        this.h,
-        gl.RED_INTEGER,
-        gl.UNSIGNED_BYTE,
-        this.kinds
-      );
-    else
-      for (const { x, y, k } of changed)
+    const layers = [
+      {
+        unit: KIND_UNIT,
+        tex: this.kindTex,
+        format: gl.RED_INTEGER,
+        all: this.kinds,
+        one: (k: number) => Uint8Array.of(k)
+      },
+      {
+        unit: TIDE_UNIT,
+        tex: this.tideTex,
+        format: gl.RG,
+        all: this.tides,
+        one: (k: number) => this.tideOfKind(k)
+      }
+    ];
+    for (const layer of layers) {
+      this.bindOn(layer.unit, layer.tex);
+      if (changed.length > TEXEL_UPDATE_LIMIT)
         gl.texSubImage2D(
           gl.TEXTURE_2D,
           0,
-          x,
-          y,
-          1,
-          1,
-          gl.RED_INTEGER,
+          0,
+          0,
+          this.w,
+          this.h,
+          layer.format,
           gl.UNSIGNED_BYTE,
-          Uint8Array.of(k)
+          layer.all
         );
+      else
+        for (const { x, y, k } of changed)
+          gl.texSubImage2D(
+            gl.TEXTURE_2D,
+            0,
+            x,
+            y,
+            1,
+            1,
+            layer.format,
+            gl.UNSIGNED_BYTE,
+            layer.one(k)
+          );
+    }
     gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
     gl.activeTexture(gl.TEXTURE0);
   }
@@ -332,6 +385,8 @@ export class GroundBlend {
     gl.uniform2i(this.at.u_mapSize, this.w, this.h);
     this.bindOn(ATLAS_UNIT, this.atlas);
     this.bindOn(KIND_UNIT, this.kindTex);
+    this.bindOn(TIDE_UNIT, this.tideTex);
+    this.bindOn(WATER_UNIT, this.water);
     this.bindOn(LIGHT_UNIT, this.lightTex);
     gl.activeTexture(gl.TEXTURE0);
     gl.bindVertexArray(this.vao);
@@ -343,6 +398,7 @@ export class GroundBlend {
   dispose(): void {
     const gl = this.gl;
     gl.deleteTexture(this.kindTex);
+    gl.deleteTexture(this.tideTex);
     gl.deleteTexture(this.lightTex);
     gl.deleteBuffer(this.vbo);
     gl.deleteVertexArray(this.vao);

@@ -175,6 +175,7 @@ describe('painted atlas manifest', () => {
     expect(Buffer.compare(out.png, png)).toBe(0);
     expect(Buffer.compare(out.light, committed('atlas-light.png'))).toBe(0);
     expect(Buffer.compare(out.top, committed(manifest.pieces.rock.top.image))).toBe(0);
+    expect(Buffer.compare(out.water, committed(manifest.water.image))).toBe(0);
     expect(JSON.stringify(out.manifest, null, 2) + '\n').toBe(
       committed('manifest.json').toString('utf8')
     );

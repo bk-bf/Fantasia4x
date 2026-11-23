@@ -38,7 +38,7 @@ to ubuntuserver through `remote/run.mjs`.
 | `gpu/` | Frame measurement on a rented GPU: `vast.mjs` rents the machine, `probe.mjs` tries Chromium's GPU flags, `frames.mjs` times frames. | `node tools/gpu/<script>.mjs` |
 | `hooks/` | Git hooks: commit message shape, private words, branch names, branches of blocked issues, and the card of a pushed branch. | `pnpm hooks:install` |
 | `dev-tools/` | Standalone dev pages packed into one HTML file, such as the gear database. | `pnpm tools:pack` |
-| `tileset/` | Bakes the painted map art in `tileset/art/` into `static/tilesets/painted/atlas.png` and its `manifest.json`, which maps database ids to sprites. | `pnpm tileset:bake` |
+| `tileset/` | Bakes the painted map art in `tileset/art/` into `static/tilesets/painted/atlas.png` and its `manifest.json`, which maps database ids to sprites, and the rock top, rock veins and water field beside them; `rock.mjs` and `water.mjs` hold the last three. | `pnpm tileset:bake` |
 | `tileset/sync.mjs` | Copies the drawing code the bake loads from a mockup folder into `tileset/art/`, without comments; `sources.mjs` lists those files and the hand-ported ones it leaves alone. | `pnpm tileset:sync <folder>` |
 | `tileset/colony.mjs` | Paints the main menu's colony scene from `colony.js` and `scene.js` in `tileset/art/` into `static/tilesets/painted/colony/`: a still and an animated png for each season and time of day. | `pnpm tileset:colony` |
 | `tileset/weather.mjs` | Paints the rain, fog and snow sheets the weather layer tiles over the map and the main menu, from `src/lib/components/UI/weather/weatherSheets.json`, into `static/tilesets/painted/weather/`. | `pnpm tileset:weather` |

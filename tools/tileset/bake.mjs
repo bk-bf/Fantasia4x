@@ -20,11 +20,12 @@ import {
   rockTop,
   rockVeins
 } from './rock.mjs';
+import { WATER_IMAGE, WATER_SIZE, waterField } from './water.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const OUT = join(HERE, '..', '..', 'static', 'tilesets', 'painted');
 const EXPORTS =
-  '({ TREES, mkTree, PLANTS, mkPlant, CROPS, mkCrop, ROCKS, mkRock, BUILDS, mkBuild, PAWNS, mkPawn, BEASTS, OTHER, mkBeast, GROUND, TILES, ORE, rockTop, rockTone, rockFace, oreAt, veinAt, decal, dith, hash, clamp, wrap, pn, rp, lit, dark, P })';
+  '({ TREES, mkTree, PLANTS, mkPlant, CROPS, mkCrop, ROCKS, mkRock, BUILDS, mkBuild, PAWNS, mkPawn, BEASTS, OTHER, mkBeast, GROUND, TILES, ORE, rockTop, rockTone, rockFace, oreAt, veinAt, waterTone, rapidsFoam, decal, dith, hash, clamp, wrap, pn, rp, lit, dark, P })';
 
 const TILE = 32;
 const PATCH = 4;
@@ -483,7 +484,8 @@ export function bake() {
     atlas: { w: ATLAS_W, h },
     sprites: Object.fromEntries(rects),
     map: resolveMap(all, roles, extra),
-    pieces
+    pieces,
+    water: { image: WATER_IMAGE, size: WATER_SIZE }
   };
   const wide = art(TOP_SIZE);
   const veinArt = art(VEIN_SIZE);
@@ -492,17 +494,19 @@ export function bake() {
     light: encodePng(ATLAS_W, h, light),
     manifest,
     top: encodePng(TOP_SIZE, TOP_SIZE, rockTop(wide), TOP_DEFLATE),
-    veins: encodePng(VEIN_SIZE, VEIN_SIZE, rockVeins(veinArt))
+    veins: encodePng(VEIN_SIZE, VEIN_SIZE, rockVeins(veinArt)),
+    water: encodePng(WATER_SIZE, WATER_SIZE, waterField(art(WATER_SIZE)), TOP_DEFLATE)
   };
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  const { png, light, manifest, top, veins } = bake();
+  const { png, light, manifest, top, veins, water } = bake();
   mkdirSync(OUT, { recursive: true });
   writeFileSync(join(OUT, 'atlas.png'), png);
   writeFileSync(join(OUT, LIGHT_IMAGE), light);
   writeFileSync(join(OUT, TOP_IMAGE), top);
   writeFileSync(join(OUT, VEIN_IMAGE), veins);
+  writeFileSync(join(OUT, WATER_IMAGE), water);
   writeFileSync(join(OUT, 'manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
   console.log(
     `${Object.keys(manifest.sprites).length} sprites, atlas ${manifest.atlas.w}x${manifest.atlas.h}`

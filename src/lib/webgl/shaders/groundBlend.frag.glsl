@@ -19,6 +19,8 @@ uniform float u_fieldLit;
 uniform float u_saturation;
 uniform float u_brightness;
 uniform float u_waterPhase;
+uniform sampler2D u_tide;
+uniform sampler2D u_waterField;
 
 out vec4 fragColor;
 
@@ -31,15 +33,21 @@ const float LIP_STEP = 0.4;
 const float UNDER_HIGHER = 0.68;
 const float ABOVE_LOW = 0.8;
 const float LOW_GROUND = 2.0;
-const float SHORE_LEVEL = 1.6;
-const float UNPAINTED_LEVEL = 5.0;
 const float BANK_REACH = 6.0;
 const float FOAM_REACH = 2.0;
 const float WET_REACH = 4.5;
 const float WET_BREAK = 0.45;
-const float LIP_SKIP = 0.4;
-const float SAME_COLOUR = 1e-4;
 const int RAPIDS = 3;
+const float BANK_DROP = 1.4;
+const float RAPIDS_RISE = 0.75;
+const float OPEN_CELL_DROP = 1.0;
+const float TONE_SCALE = 8.0;
+const float TONE_OFFSET = 2.0;
+const float EDGE_LEVELS = 8.0;
+const float EDGE_WOBBLE = 0.6;
+const float DITHER = 0.45;
+const int OPEN_CELL = 128;
+const int RAPIDS_SHIFT = 5;
 
 const float BAYER[16] = float[16](0.0, 8.0, 2.0, 10.0, 12.0, 4.0, 14.0, 6.0, 3.0, 11.0, 1.0, 9.0, 15.0, 7.0, 13.0, 5.0);
 const vec3 DEEP[6] = vec3[6](
@@ -76,36 +84,41 @@ uint kindAt(vec2 art) {
     return texelFetch(u_kinds, tile, 0).r;
 }
 
-float levelAt(vec2 art) {
-    uint k = kindAt(art);
-    return k == 0u ? UNPAINTED_LEVEL : u_layer[k].x;
+bool landAt(vec2 art) {
+    ivec2 tile = clamp(ivec2(floor(art / u_tileArt)), ivec2(0), u_mapSize - 1);
+    return texelFetch(u_tide, tile, 0).g > 0.5;
 }
 
 bool landWithin(vec2 w, float r) {
-    float top = max(max(levelAt(w + vec2(r, 0.0)), levelAt(w - vec2(r, 0.0))),
-        max(levelAt(w + vec2(0.0, r)), levelAt(w - vec2(0.0, r))));
-    return top > SHORE_LEVEL;
+    return landAt(w + vec2(r, 0.0)) || landAt(w - vec2(r, 0.0))
+        || landAt(w + vec2(0.0, r)) || landAt(w - vec2(0.0, r));
 }
 
-vec3 bankLip(vec3 c, int kind, ivec2 q) {
-    int step = 1 + (dither(q) < LIP_SKIP ? 1 : 0);
-    for (int i = 0; i < 6; i++) {
-        vec3 d = DEEP[i] - c;
-        vec3 s = SHALLOWS[i] - c;
-        if (dot(d, d) < SAME_COLOUR) return DEEP[max(i - step, 0)];
-        if (kind != RAPIDS && dot(s, s) < SAME_COLOUR) return SHALLOWS[max(i - step, 0)];
-    }
-    return c;
+int rampStep(float tone, ivec2 q) {
+    return clamp(int(floor(clamp(tone, 0.0, 5.0) + 0.5 + (dither(q) - 0.5) * DITHER)), 0, 5);
 }
 
-vec3 water(vec3 c, vec2 w, int kind, ivec2 q) {
+vec3 water(vec2 w, int kind, ivec2 q) {
     if (landWithin(w, WET_REACH)) {
         if (landWithin(w, FOAM_REACH))
             return FOAM[((int(floor(u_waterPhase)) + (q.x >> 2)) & 1) == 1 ? 1 : 2];
         if (hash(q.x >> 1, q.y, 17) > WET_BREAK) return FOAM[0];
     }
-    if (levelAt(w - vec2(0.0, BANK_REACH)) > SHORE_LEVEL) return bankLip(c, kind, q);
-    return c;
+    vec4 field = texelFetch(u_waterField, q % textureSize(u_waterField, 0), 0);
+    int bits = int(field.g * 255.0 + 0.5);
+    float tone = field.r * 255.0 / TONE_SCALE - TONE_OFFSET
+        - (landAt(w - vec2(0.0, BANK_REACH)) ? BANK_DROP : 0.0);
+    float edge = field.b * 255.0 / (EDGE_LEVELS - 1.0) - 0.5;
+    bool deep = texture(u_tide, w / u_tileArt / vec2(u_mapSize)).r > 0.5 + edge * EDGE_WOBBLE;
+    if (kind == RAPIDS && deep) {
+        int rapids = (bits >> RAPIDS_SHIFT) & 3;
+        if (rapids == 3) return FOAM[2];
+        if (rapids == 2) return FOAM[1];
+        if (rapids == 1) return SHALLOWS[4];
+        return DEEP[rampStep(tone + RAPIDS_RISE, q)];
+    }
+    if (deep) return DEEP[rampStep(tone, q)];
+    return SHALLOWS[rampStep(tone - (bits >= OPEN_CELL ? OPEN_CELL_DROP : 0.0), q)];
 }
 
 vec3 darken(vec3 c, float k) {
@@ -124,10 +137,11 @@ void main() {
     uint k = kindAt(w);
     if (k == 0u) k = own;
     vec2 layer = u_layer[k];
-    vec4 patchRect = u_patch[k];
-    vec3 c = texelFetch(u_paintAtlas, ivec2(patchRect.xy) + ivec2(mod(p, patchRect.z)), 0).rgb;
-    if (layer.y > 0.5) c = water(c, w, int(layer.y + 0.5), ivec2(p));
+    vec3 c;
+    if (layer.y > 0.5) c = water(w, int(layer.y + 0.5), ivec2(p));
     else {
+        vec4 patchRect = u_patch[k];
+        c = texelFetch(u_paintAtlas, ivec2(patchRect.xy) + ivec2(mod(p, patchRect.z)), 0).rgb;
         uint up = kindAt(w - vec2(0.0, LIP_REACH));
         uint down = kindAt(w + vec2(0.0, LIP_REACH));
         vec2 upLayer = up == 0u ? layer : u_layer[up];
