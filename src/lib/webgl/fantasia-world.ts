@@ -15,15 +15,17 @@ import { growthScale, RESOURCE_VISIBLE_GROWTH } from '$lib/game/core/rules/world
 import { buildingDefById } from '$lib/game/core/defs/buildings.js';
 import { parseHexRgb01 } from '$lib/game/core/util/color.js';
 import { glyph, SHEET } from './tilesets.js';
-import type { RGB } from './tile-types.js';
+import type { RGB, TileData } from './tile-types.js';
 import { GROUND_BLEND, PAINTED_TILES } from './painted/flag.js';
 import {
   paintedGroundKind,
   paintedPiece,
   paintedPieces,
   paintedScenery,
-  paintedTile
+  paintedTile,
+  paintedTileset
 } from './painted/tileset.js';
+import { groundTufts } from './painted/tufts.js';
 import type { PaintedPieces, PaintedSprite } from './painted/manifest.js';
 
 const DECONSTRUCT_GLYPH = glyph(SHEET.MAP, 88);
@@ -380,8 +382,14 @@ export function applyTileToGrid(grid: GameGrid, tile: WorldTile, hiddenMask: boo
     background: { r: bg[0], g: bg[1], b: bg[2] },
     position: { x: tile.x, y: tile.y },
     ...(PAINTED_TILES ? { painted } : null),
-    ...(GROUND_BLEND && painted ? { ground: paintedGroundKind(tile.subType) } : null)
+    ...(GROUND_BLEND && painted ? blendedGround(tile) : null)
   });
+}
+
+function blendedGround(tile: WorldTile): Pick<TileData, 'ground' | 'tufts'> {
+  const art = paintedTileset();
+  const tufts = art && groundTufts(art.ground, tile, art.tile);
+  return { ground: paintedGroundKind(tile.subType), ...(tufts ? { tufts } : null) };
 }
 
 export function applySnowToGrid(grid: GameGrid, tile: WorldTile, hiddenMask: boolean[][]): void {
