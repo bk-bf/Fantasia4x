@@ -1,3 +1,4 @@
+import type { MapMotion } from './painted/waves.js';
 import {
   WebGLRendererCore,
   type RenderStats,
@@ -158,7 +159,7 @@ export class WebGLRenderer {
     this.core.setVignette(on);
   }
 
-  setMotion(motion: { sway: boolean; waves: boolean }): void {
+  setMotion(motion: MapMotion): void {
     this.core.setMotion(motion);
   }
 

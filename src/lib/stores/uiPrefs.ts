@@ -111,7 +111,15 @@ export const dayNightTint = createPersistedBool('fx.gfx.dayNightTint', true);
 export const vignetteOn = createPersistedBool('fx.gfx.vignette', true);
 export const windSwayOn = createPersistedBool('fx.debug.sway', true);
 export const waveWaterOn = createPersistedBool('fx.debug.waves', true);
-export const mapMotion = derived([windSwayOn, waveWaterOn], ([sway, waves]) => ({ sway, waves }));
+export const waveStrength = createPersistedNumber('fx.debug.waveStrength', 100);
+export const mapMotion = derived(
+  [windSwayOn, waveWaterOn, waveStrength],
+  ([sway, waves, strength]) => ({
+    sway,
+    waves,
+    waveMix: strength / 100
+  })
+);
 
 export const showDialogBubbles = createPersistedBool('fx.gfx.dialogBubbles', false);
 

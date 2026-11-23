@@ -16,6 +16,15 @@ const ANGLE = [-0.45, -0.12, 0.22, 0.55];
 const ROUGH_TURN = 1.25;
 const CHOPPY_TURN = 2;
 const DRIFT = { calm: 2, gale: 12 };
+const RIPPLE_RATE = 0.26 * 8;
+const RIPPLE = { drift: 0.9, period: 553 };
+const GLINT = { drift: 0.7, period: 2253 };
+
+export interface MapMotion {
+  sway: boolean;
+  waves: boolean;
+  waveMix: number;
+}
 
 export function waterStill(tilePx: number): boolean {
   return tilePx >= STILL_WATER_TILES.from && tilePx < STILL_WATER_TILES.to;
@@ -74,7 +83,7 @@ export class WaveClock {
     this.drift.y += dir.y * pace * secs;
   }
 
-  uniforms(wind: number, dir: Heading, artPerPx: number): Float32Array {
+  uniforms(wind: number, dir: Heading, artPerPx: number, waveMix = 1): Float32Array {
     const sea = seaFor(wind);
     const perPx = artPerPx / ART_PER_UNIT;
     const fade = LAMBDA.map((l) => smoothstep(3, 7, l / perPx));
@@ -118,9 +127,9 @@ export class WaveClock {
       n(t * 0.3),
       ART_PER_UNIT,
       surge,
-      0,
-      0,
-      0
+      wrap(t * RIPPLE_RATE * RIPPLE.drift, RIPPLE.period),
+      wrap(t * RIPPLE_RATE * GLINT.drift, GLINT.period),
+      waveMix
     ]);
   }
 }

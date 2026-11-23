@@ -107,7 +107,6 @@ const vec3 SEA_LIGHT = vec3(-0.4511, -0.5514, 0.7018);
 const vec3 SEA_HALF = vec3(-0.2445, -0.2989, 0.9224);
 const float SHADE_STEPS = 4.5;
 const float SPEC_STEPS = 2.5;
-const float BASE_STEP = 2.2;
 const int BANDS = 6;
 const float BAND_WOBBLE = 0.12;
 const float BAND_DITHER = 0.5;
@@ -273,6 +272,17 @@ vec2 warpAt(vec2 p) {
     return p + (wide - 0.5) * WARP_WIDE_AMP + (fine - 0.5) * WARP_FINE_AMP;
 }
 
+float grainAt(ivec2 art, vec2 drift, float deep) {
+    ivec2 at = art % textureSize(u_waterField, 0);
+    vec2 fq = vec2(at);
+    vec4 field = texelFetch(u_waterField, at, 0);
+    float ripple = periodicNoise(fq, RIPPLE_CELLS, vec2(40.0, -drift.x), 33);
+    return field.r * 255.0 / TONE_SCALE - TONE_OFFSET
+        + (ripple > 0.7 ? RIPPLE_CREST : ripple < 0.25 ? -RIPPLE_TROUGH : 0.0)
+        + (periodicNoise(fq, GLINT_CELLS, vec2(0.0, drift.y), 39) > 0.84 ? GLINT_RISE : 0.0)
+        - (int(field.g * 255.0 + 0.5) >= OPEN_CELL ? OPEN_CELL_DROP * (1.0 - deep) : 0.0);
+}
+
 vec3 waveWater(vec2 w, vec2 p, int kind) {
     int shift = u_waterBlock;
     ivec2 cell = ivec2(p) >> shift;
@@ -306,14 +316,15 @@ vec3 waveWater(vec2 w, vec2 p, int kind) {
     float spec = pow(max(dot(n, SEA_HALF), 0.0), 90.0) * look.y;
     vec4 brkAt = u_sea[SEA_BREAK];
     float brk = wn(q * 0.5 + brkAt.xy, 48) * 0.6 + wn(q * 1.4 - brkAt.zz, 49) * 0.4;
-    float cap = smoothstep(0.62, 1.0, h.x / max(look.w * 0.6, 0.2))
+    vec4 motif = u_sea[SEA_SURGE];
+    float cap = motif.w * smoothstep(0.62, 1.0, h.x / max(look.w * 0.6, 0.2))
         * smoothstep(0.45, 0.72, wn(q * 0.45 + u_sea[SEA_DRIFT].zw, 50)) * state.w * (1.0 - bl * 0.7);
     vec2 dir = u_sea[SEA_WIND].xy;
     vec2 qa = vec2(dot(q, dir), dot(q, vec2(-dir.y, dir.x)));
     float streak = 0.0;
     if (state.w > 0.4 || kind == RAPIDS)
         streak = smoothstep(0.55, 0.85, wn(vec2(qa.x * 0.025 - brkAt.w, qa.y * 0.35), 51))
-            * smoothstep(0.3, 0.7, wn(q * 0.06, 52)) * look.x * max(state.w - 0.4, kind == RAPIDS ? 0.6 : 0.0) * 1.6;
+            * smoothstep(0.3, 0.7, wn(q * 0.06, 52)) * look.x * max((state.w - 0.4) * motif.w, kind == RAPIDS ? 0.6 : 0.0) * 1.6;
     float run = u_sea[SEA_SHORE].y;
     float surf = smoothstep(0.55, 1.0, sh) * smoothstep(12.0, 1.5, near) * smoothstep(0.3, 0.6, brk) * state.z * 0.8;
     surf += smoothstep(run, run * 0.4, near) * smoothstep(0.28, 0.6, brk);
@@ -324,9 +335,11 @@ vec3 waveWater(vec2 w, vec2 p, int kind) {
     float glint = pow(max(dot(n, SEA_HALF), 0.0), 70.0) * smoothstep(0.3, 0.75, wn(q * 0.2 + u_sea[SEA_WIND].z, 53));
     float depth = tide.a + (wn(q * 0.05, 54) - 0.5) * BAND_WOBBLE;
     int band = clamp(int(floor(clamp(depth, 0.0, 1.0) * float(BANDS - 1) + 0.5 + (d - 0.5) * BAND_DITHER)), 0, BANDS - 1);
-    float tone = BASE_STEP + (shade - 1.0) * look.x * SHADE_STEPS + spec * SPEC_STEPS + (glint > GLINT_STEP ? 2.0 : 0.0);
+    float deep = float(band) / float(BANDS - 1);
+    float tone = grainAt((cell << shift) + ((1 << shift) >> 1), motif.yz, deep)
+        + motif.w * ((shade - 1.0) * look.x * SHADE_STEPS + spec * SPEC_STEPS + (glint > GLINT_STEP ? 2.0 : 0.0));
     int tier = rampStep(tone, cell);
-    return mix(SHALLOWS[tier], DEEP[min(tier + 1, 5)], float(band) / float(BANDS - 1));
+    return mix(SHALLOWS[tier], DEEP[min(tier + 1, 5)], deep);
 }
 
 vec3 darken(vec3 c, float k) {

@@ -35,7 +35,7 @@ import {
   type Quad
 } from './drawnSprites.js';
 import { WindClock, type Heading } from './painted/wind.js';
-import { WaveClock, waterStill } from './painted/waves.js';
+import { WaveClock, waterStill, type MapMotion } from './painted/waves.js';
 import { FallingLeaves } from './painted/leaves.js';
 
 const LIGHT_ATLAS_UNIT = 7;
@@ -132,6 +132,7 @@ export class WebGLRendererCore {
   private vignetteOn = true;
   private swayOn = true;
   private wavesOn = true;
+  private waveMix = 1;
 
   private lightVersion = 0;
 
@@ -302,9 +303,10 @@ export class WebGLRendererCore {
     this.vignetteOn = on;
   }
 
-  setMotion(motion: { sway: boolean; waves: boolean }): void {
+  setMotion(motion: MapMotion): void {
     this.swayOn = motion.sway;
     this.wavesOn = motion.waves;
+    this.waveMix = motion.waveMix;
     this.groundBlend?.setWaterStyle(motion.waves);
   }
 
@@ -761,7 +763,7 @@ export class WebGLRendererCore {
     const { strength, dir } = this.wind;
     this.waves.tick(performance.now(), strength, dir, waterStill(this.tileWidth));
     const artPerPx = (this.painted?.tileset.tile ?? BASE_TILE_PX) / this.tileWidth;
-    return this.waves.uniforms(strength, dir, artPerPx);
+    return this.waves.uniforms(strength, dir, artPerPx, this.waveMix);
   }
 
   private bindPaintedAtlas(gl: WebGL2RenderingContext, painted: LoadedPaintedTileset): void {

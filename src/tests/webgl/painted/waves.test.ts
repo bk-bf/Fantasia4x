@@ -88,6 +88,13 @@ describe('the wave clock', () => {
     expect(before.length).toBe(SEA_SLOTS * 4);
   });
 
+  it('carries the wave strength over the old texture in the last slot', () => {
+    const clock = new WaveClock();
+    clock.tick(0, 0.4, EAST, false);
+    expect(clock.uniforms(0.4, EAST, 1, 0.6).at(-1)).toBeCloseTo(0.6, 6);
+    expect(clock.uniforms(0.4, EAST, 1).at(-1)).toBe(1);
+  });
+
   it('stills the water only at the farthest zoom', () => {
     expect(waterStill(2.88)).toBe(true);
     expect(waterStill(STILL_WATER_TILES.to)).toBe(false);
