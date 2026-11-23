@@ -23,6 +23,7 @@ import {
 } from './painted/lightGrade.js';
 import { PaintedVignette } from './painted/vignette.js';
 import { PaintedShadowCast, SHADOW_DEPTH, SHADOW_SHADE } from './painted/shadowCast.js';
+import { GroundRings, type GroundRing, type RingInk } from './groundRings.js';
 import { drawnAt, drawnBounds, type DrawnFrame, type Quad } from './drawnSprites.js';
 
 const LIGHT_ATLAS_UNIT = 7;
@@ -92,6 +93,8 @@ export class WebGLRendererCore {
   private lightPass: PaintedLightPass | null = null;
   private shadowCast: PaintedShadowCast | null = null;
   private vignette: PaintedVignette | null = null;
+  private groundRings: GroundRings | null = null;
+  private rings: { list: readonly GroundRing[]; ink: RingInk } | null = null;
   private pointLights: readonly PointLight[] = [];
   private ambientBase: Rgb = [1, 1, 1];
   private mapWeather: MapWeatherId = 'clear';
@@ -194,6 +197,10 @@ export class WebGLRendererCore {
 
   setResourceTallOverlayGrid(grid: GameGrid | null): void {
     this.resourceTallOverlayGrid = grid;
+  }
+
+  setGroundRings(list: readonly GroundRing[], ink: RingInk): void {
+    this.rings = { list, ink };
   }
 
   private spriteGrid(layer: SpriteLayer): GameGrid | null {
@@ -376,6 +383,7 @@ export class WebGLRendererCore {
         this.lightPass = PaintedLightPass.create(gl, this.shaderManager);
       if (this.painted) this.shadowCast = PaintedShadowCast.create(gl, this.shaderManager);
       if (this.lightPass) this.vignette = PaintedVignette.create(gl, this.shaderManager);
+      this.groundRings = GroundRings.create(gl, this.shaderManager);
 
       if (this.debug) console.log('✅ WebGL2 renderer ready');
       return true;
@@ -518,6 +526,7 @@ export class WebGLRendererCore {
         gl.depthFunc(gl.LEQUAL);
         this.drawShadowCast(gl, viewportTilesW, viewportTilesH);
       }
+      this.drawGroundRings();
       for (const layer of SPRITE_LAYERS) {
         const chunk = CHUNKED[layer];
         this.renderGlyphOverlay(
@@ -582,6 +591,16 @@ export class WebGLRendererCore {
         art: { x: emit.x, y: emit.y, rad: emit.rad, night: emit.night === true }
       };
     });
+  }
+
+  private drawGroundRings(): void {
+    if (!this.groundRings || !this.rings || !this.shaderManager) return;
+    const { list, ink } = this.rings;
+    this.stats.drawCalls += this.groundRings.draw(list, ink, [
+      this.viewport.width,
+      this.viewport.height
+    ]);
+    this.shaderManager.useProgram('tileRenderer');
   }
 
   private drawShadowCast(
@@ -782,6 +801,8 @@ export class WebGLRendererCore {
     this.shadowCast = null;
     this.vignette?.dispose();
     this.vignette = null;
+    this.groundRings?.dispose();
+    this.groundRings = null;
     if (this.painted) this.webglState.getContext()?.deleteTexture(this.painted.texture);
     if (this.painted) this.webglState.getContext()?.deleteTexture(this.painted.light);
     if (this.painted?.top) this.webglState.getContext()?.deleteTexture(this.painted.top.texture);

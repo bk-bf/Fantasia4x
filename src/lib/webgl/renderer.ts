@@ -4,6 +4,7 @@ import {
   type RendererOptions,
   type SpriteLayer
 } from './renderer-core.js';
+import type { GroundRing, RingInk } from './groundRings.js';
 import type { Quad } from './drawnSprites.js';
 import type { ShaderManager } from './shaders.js';
 import type { CharacterRenderer } from './character-renderer.js';
@@ -52,6 +53,10 @@ export class WebGLRenderer {
 
   setResourceTallOverlayGrid(grid: GameGrid | null): void {
     this.core.setResourceTallOverlayGrid(grid);
+  }
+
+  setGroundRings(list: readonly GroundRing[], ink: RingInk): void {
+    this.core.setGroundRings(list, ink);
   }
 
   drawnAt(px: number, py: number): { layer: SpriteLayer; x: number; y: number } | null {

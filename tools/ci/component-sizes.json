@@ -8,7 +8,7 @@
   "src/lib/components/UI/audio/AudioController.svelte": 394,
   "src/lib/components/UI/canvas/BuildingFuelPanel.svelte": 261,
   "src/lib/components/UI/canvas/BuildingRepairPanel.svelte": 405,
-  "src/lib/components/UI/canvas/GameCanvas.svelte": 4923,
+  "src/lib/components/UI/canvas/GameCanvas.svelte": 4914,
   "src/lib/components/UI/canvas/ItemFilterChecklist.svelte": 275,
   "src/lib/components/UI/canvas/StockpileZonePanel.svelte": 238,
   "src/lib/components/UI/canvas/WorldEffectsLayer.svelte": 1020,

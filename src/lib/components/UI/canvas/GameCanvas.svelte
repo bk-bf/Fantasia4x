@@ -108,7 +108,12 @@
   import { vlog } from '$lib/game/core/util/logSink.js';
   import { simTarget } from '$lib/game/services/MovementSystem.js';
   import SelectedEntityCard from '$lib/components/UI/hud/SelectedEntityCard.svelte';
-  import { brackets, dragBox, type ScreenRect } from '$lib/components/UI/canvas/selectionMarks';
+  import {
+    brackets,
+    dragBox,
+    MARK_INK,
+    type ScreenRect
+  } from '$lib/components/UI/canvas/selectionMarks';
   import {
     BUILDING_SPRITES,
     drawnFirst,
@@ -1247,7 +1252,6 @@
     }
   }
 
-  let selectionRings: { id: string; left: number; top: number; w: number }[] = [];
   let _selectionRingKey = '';
 
   function updateSelectionRings(vx: number, vy: number, tW: number, tH: number) {
@@ -1256,21 +1260,18 @@
         ? [...markedSet]
         : [selectedPawnId, selectedMobId].filter((id): id is string => !!id);
     const w = Math.round(tW * 1.2);
-    const next: typeof selectionRings = [];
+    const next: { x: number; y: number; w: number; h: number }[] = [];
     for (const id of ids) {
       const rp = pawnRenderPos.get(id) ?? mobRenderPos.get(id);
       if (!rp) continue;
-      next.push({
-        id,
-        left: Math.round((rp.x - vx + 0.5) * tW - w / 2),
-        top: Math.round((rp.y - vy + 1) * tH - w * 0.3),
-        w
-      });
+      const x = Math.round((rp.x - vx + 0.5) * tW - w / 2);
+      next.push({ x, y: Math.round((rp.y - vy + 1) * tH - w * 0.3), w, h: Math.round(w * 0.4) });
     }
-    const key = next.map((r) => `${r.id}:${r.left},${r.top},${r.w}`).join('|');
+    const key = next.map((r) => `${r.x},${r.y},${r.w}`).join('|');
     if (key === _selectionRingKey) return;
     _selectionRingKey = key;
-    selectionRings = next;
+    renderer?.setGroundRings(next, MARK_INK);
+    markRenderDirty();
   }
 
   function updateWorldEffectOverlays(
@@ -4378,14 +4379,6 @@
   <canvas bind:this={canvas}></canvas>
   <canvas bind:this={designCanvas} class="desig-layer"></canvas>
   <canvas bind:this={markCanvas} class="desig-layer mark-layer"></canvas>
-  {#each selectionRings as ring (ring.id)}
-    <i
-      class="sel-ring"
-      style:width="{ring.w}px"
-      style:height="{Math.round(ring.w * 0.4)}px"
-      style:transform="translate({ring.left}px, {ring.top}px)"
-    ></i>
-  {/each}
 
   {#if errorMsg}
     <div class="error">WebGL unavailable: {errorMsg}</div>
@@ -4823,17 +4816,6 @@
   }
   .desig-layer.mark-layer {
     filter: none;
-  }
-  .sel-ring {
-    position: absolute;
-    top: 0;
-    left: 0;
-    z-index: 1;
-    box-sizing: border-box;
-    border: 2px solid #ffd76a;
-    border-radius: 50%;
-    pointer-events: none;
-    filter: drop-shadow(1px 1px 0 #0d0a10);
   }
   .desig-layer {
     position: absolute;

@@ -1,9 +1,17 @@
+import { parseHexRgb01 } from '$lib/game/core/util/color';
+
 export const MARK_COLOR = '#ffd76a';
 const MARK_SHADOW = '#0d0a10';
 const BOX_FILL = 'rgb(255 230 128 / 0.06)';
 const ARM_MAX = 7;
 const ARM_MIN = 3;
 const LINE = 2;
+
+export const MARK_INK = {
+  color: parseHexRgb01(MARK_COLOR)!,
+  shadow: parseHexRgb01(MARK_SHADOW)!,
+  line: LINE
+};
 
 export interface ScreenRect {
   x: number;
