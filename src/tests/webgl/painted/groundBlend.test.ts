@@ -125,7 +125,7 @@ describe('the blend pass tables', () => {
   });
 });
 
-describe('the water phase', () => {
+describe('the water clock', () => {
   it('reaches the shader as one uniform and uploads nothing', () => {
     const calls: [string, unknown[]][] = [];
     const shaders = {
@@ -136,7 +136,7 @@ describe('the water phase', () => {
     const grid = new GameGrid();
     for (let x = 0; x < 4; x++) applyTileToGrid(grid, tile({ x, y: 0 }), []);
     blend.setGrid(grid);
-    const frame = (waterPhase: number) => ({
+    const frame = (waterTime: number) => ({
       projection: new Float32Array(16),
       viewOffset: [0, 0] as [number, number],
       zoom: [1, 1] as [number, number],
@@ -144,15 +144,15 @@ describe('the water phase', () => {
       flicker: 1,
       fieldLit: false,
       tone: [1, 1] as [number, number],
-      waterPhase,
+      waterTime,
       lightTime: 0,
       lightVersion: 1,
       litBounds: undefined
     });
     expect(blend.draw(frame(0))).toBe(true);
     calls.length = 0;
-    expect(blend.draw(frame(2.5))).toBe(true);
+    expect(blend.draw(frame(1.25))).toBe(true);
     expect(calls.filter(([name]) => /^(tex(Sub)?Image2D|bufferData)$/.test(name))).toEqual([]);
-    expect(calls).toContainEqual(['uniform1f', ['u_waterPhase', 2.5]]);
+    expect(calls).toContainEqual(['uniform1f', ['u_waterTime', 1.25]]);
   });
 });

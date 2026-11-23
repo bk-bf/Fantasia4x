@@ -71,19 +71,23 @@ const GROUND = [
   { id: 'tilled', f: (x, y) => { const py = y & 7; let k = [0, 1, 3, 4, 4, 3, 2, 1][py]; if (hash(x >> 1, y >> 1, 81) > .8) k -= 1; if (hash(x, y, 83) > .95) k += 1; return P.tilled[clamp(k, 0, 4)]; }, dec: [] },
 ];
 
-function waterTone(x, y, kind) {
+function waterBase(x, y, kind) {
   let t = .12 + pfbm(x, y, .022, 31, 2) * .5;
   if (kind === 1 && pvor(x, y, 7, 37) > .8 && VEDGE > 1.4) t -= .2;
-  const rip = pn(x, y, .085, .27, 33, 40, 0);
-  if (rip > .7) t += .2; else if (rip < .25) t -= .1;
-  if (pn(x, y, .11, 1.1, 39) > .84) t += .16;
   return t;
 }
-const rapidsFoam = (x, y) => pn(x, y, .21, .055, 35, 9, 0) + (pn(x, y, .5, .45, 39) - .5) * .4;
-function waterCol(x, y, kind) {
-  const t = waterTone(x, y, kind);
+function waterTone(x, y, kind, ph = 0) {
+  let t = waterBase(x, y, kind);
+  const rip = pn(x, y, .085, .27, 33, 40, -ph * .9);
+  if (rip > .7) t += .2; else if (rip < .25) t -= .1;
+  if (pn(x, y, .11, 1.1, 39, 0, ph * .7) > .84) t += .16;
+  return t;
+}
+const rapidsFoam = (x, y, ph = 0) => pn(x, y, .21, .055, 35, 9, -ph * 1.7) + (pn(x, y, .5, .45, 39, 0, -ph * 2) - .5) * .4;
+function waterCol(x, y, kind, ph = 0) {
+  const t = waterTone(x, y, kind, ph);
   if (kind === 3) {
-    const f = rapidsFoam(x, y);
+    const f = rapidsFoam(x, y, ph);
     if (f > .68) return P.foam[f > .8 ? 2 : 1];
     if (f > .6) return P.shallow[4];
     return rp(P.deep, t + .15, x, y, .45);

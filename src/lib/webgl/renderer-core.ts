@@ -12,7 +12,7 @@ import { WORK_PINS } from '../workPins/flag.js';
 import { addFrameTotals } from '../workPins/page.js';
 import { GROUND_BLEND, PAINTED_LIGHT, PAINTED_TILES } from './painted/flag.js';
 import { loadPaintedTileset, type LoadedPaintedTileset } from './painted/loader.js';
-import { GroundBlend } from './painted/groundBlend.js';
+import { GroundBlend, waterTime } from './painted/groundBlend.js';
 import { LIGHT_FIELD_UNIT, PaintedLightPass, type LightPassFrame } from './painted/lightPass.js';
 import {
   MAP_WEATHER,
@@ -38,7 +38,6 @@ import { WindClock, type Heading } from './painted/wind.js';
 import { FallingLeaves } from './painted/leaves.js';
 
 const LIGHT_ATLAS_UNIT = 7;
-const STILL_WATER = 0;
 
 export const ROW_DEPTH_RANGE = 8192;
 
@@ -740,7 +739,7 @@ export class WebGLRendererCore {
       flicker,
       fieldLit: this.lightPass !== null,
       tone,
-      waterPhase: STILL_WATER,
+      waterTime: waterTime(performance.now()),
       lightSampler: this.lightSampler ?? undefined,
       lightTime,
       lightVersion: this.lightVersion,

@@ -18,7 +18,7 @@ uniform highp sampler2D u_lightTexture;
 uniform float u_fieldLit;
 uniform float u_saturation;
 uniform float u_brightness;
-uniform float u_waterPhase;
+uniform float u_waterTime;
 uniform sampler2D u_tide;
 uniform sampler2D u_waterField;
 
@@ -41,13 +41,25 @@ const int RAPIDS = 3;
 const float BANK_DROP = 1.4;
 const float RAPIDS_RISE = 0.75;
 const float OPEN_CELL_DROP = 1.0;
-const float TONE_SCALE = 8.0;
+const float TONE_SCALE = 32.0;
 const float TONE_OFFSET = 2.0;
 const float EDGE_LEVELS = 8.0;
 const float EDGE_WOBBLE = 0.6;
 const float DITHER = 0.45;
 const int OPEN_CELL = 128;
-const int RAPIDS_SHIFT = 5;
+const float WATER_FPS = 8.0;
+const int WATER_LOOP = 16;
+const int WATER_BLEND = 4;
+const float PHASE_STEP = 0.26;
+const float FIELD_PERIOD = 2048.0;
+const vec2 RIPPLE_CELLS = vec2(174.0, 553.0);
+const vec2 GLINT_CELLS = vec2(225.0, 2253.0);
+const vec2 STREAK_CELLS = vec2(430.0, 113.0);
+const vec2 CHURN_CELLS = vec2(1024.0, 922.0);
+const float RIPPLE_CREST = 1.0;
+const float RIPPLE_TROUGH = 0.5;
+const float GLINT_RISE = 0.8;
+const float CHURN_WEIGHT = 0.4;
 
 const float BAYER[16] = float[16](0.0, 8.0, 2.0, 10.0, 12.0, 4.0, 14.0, 6.0, 3.0, 11.0, 1.0, 9.0, 15.0, 7.0, 13.0, 5.0);
 const vec3 DEEP[6] = vec3[6](
@@ -79,6 +91,26 @@ float valueNoise(vec2 p, int seed) {
     return mix(top, bottom, f.y);
 }
 
+float periodicNoise(vec2 q, vec2 cells, vec2 offset, int seed) {
+    vec2 g = q * cells / FIELD_PERIOD + offset;
+    vec2 i = floor(g);
+    vec2 f = g - i;
+    f = f * f * (3.0 - 2.0 * f);
+    ivec2 a = ivec2(mod(i, cells));
+    ivec2 b = ivec2(mod(i + 1.0, cells));
+    float top = mix(hash(a.x, a.y, seed), hash(b.x, a.y, seed), f.x);
+    float bottom = mix(hash(a.x, b.y, seed), hash(b.x, b.y, seed), f.x);
+    return mix(top, bottom, f.y);
+}
+
+float waterPhase(ivec2 q) {
+    int frame = int(floor(u_waterTime * WATER_FPS)) % WATER_LOOP;
+    if (frame < WATER_BLEND
+        && BAYER[((q.y & 3) << 2) | (q.x & 3)] >= float((frame + 1) * 16) / float(WATER_BLEND + 1))
+        frame += WATER_LOOP;
+    return float(frame) * PHASE_STEP;
+}
+
 uint kindAt(vec2 art) {
     ivec2 tile = clamp(ivec2(floor(art / u_tileArt)), ivec2(0), u_mapSize - 1);
     return texelFetch(u_kinds, tile, 0).r;
@@ -97,25 +129,31 @@ int rampStep(float tone, ivec2 q) {
 }
 
 vec3 water(vec2 w, int kind, ivec2 q) {
+    float ph = waterPhase(q);
     vec2 tide = tideAt(w);
     if (landWithin(tide.g, FOAM_REACH))
-        return FOAM[((int(floor(u_waterPhase)) + (q.x >> 2)) & 1) == 1 ? 1 : 2];
+        return FOAM[((int(floor(ph)) + (q.x >> 2)) & 1) == 1 ? 1 : 2];
     if (landWithin(tide.g, WET_REACH) && hash(q.x >> 1, q.y, 17) > WET_BREAK) return FOAM[0];
-    vec4 field = texelFetch(u_waterField, q % textureSize(u_waterField, 0), 0);
-    int bits = int(field.g * 255.0 + 0.5);
+    ivec2 at = q % textureSize(u_waterField, 0);
+    vec2 fq = vec2(at);
+    vec4 field = texelFetch(u_waterField, at, 0);
+    float ripple = periodicNoise(fq, RIPPLE_CELLS, vec2(40.0, -ph * 0.9), 33);
     float tone = field.r * 255.0 / TONE_SCALE - TONE_OFFSET
+        + (ripple > 0.7 ? RIPPLE_CREST : ripple < 0.25 ? -RIPPLE_TROUGH : 0.0)
+        + (periodicNoise(fq, GLINT_CELLS, vec2(0.0, ph * 0.7), 39) > 0.84 ? GLINT_RISE : 0.0)
         - (tideAt(w - vec2(0.0, BANK_REACH)).g > 0.5 ? BANK_DROP : 0.0);
     float edge = field.b * 255.0 / (EDGE_LEVELS - 1.0) - 0.5;
     bool deep = tide.r > 0.5 + edge * EDGE_WOBBLE;
     if (kind == RAPIDS && deep) {
-        int rapids = (bits >> RAPIDS_SHIFT) & 3;
-        if (rapids == 3) return FOAM[2];
-        if (rapids == 2) return FOAM[1];
-        if (rapids == 1) return SHALLOWS[4];
+        float foam = periodicNoise(fq, STREAK_CELLS, vec2(9.0, -ph * 1.7), 35)
+            + (periodicNoise(fq, CHURN_CELLS, vec2(0.0, -ph * 2.0), 39) - 0.5) * CHURN_WEIGHT;
+        if (foam > 0.8) return FOAM[2];
+        if (foam > 0.68) return FOAM[1];
+        if (foam > 0.6) return SHALLOWS[4];
         return DEEP[rampStep(tone + RAPIDS_RISE, q)];
     }
     if (deep) return DEEP[rampStep(tone, q)];
-    return SHALLOWS[rampStep(tone - (bits >= OPEN_CELL ? OPEN_CELL_DROP : 0.0), q)];
+    return SHALLOWS[rampStep(tone - (int(field.g * 255.0 + 0.5) >= OPEN_CELL ? OPEN_CELL_DROP : 0.0), q)];
 }
 
 vec3 darken(vec3 c, float k) {

@@ -25,7 +25,7 @@ import { WATER_IMAGE, WATER_SIZE, waterField } from './water.mjs';
 const HERE = dirname(fileURLToPath(import.meta.url));
 const OUT = join(HERE, '..', '..', 'static', 'tilesets', 'painted');
 const EXPORTS =
-  '({ TREES, mkTree, PLANTS, mkPlant, CROPS, mkCrop, ROCKS, mkRock, BUILDS, mkBuild, PAWNS, mkPawn, BEASTS, OTHER, mkBeast, GROUND, TILES, ORE, rockTop, rockTone, rockFace, oreAt, veinAt, waterTone, rapidsFoam, decal, dith, hash, clamp, wrap, pn, rp, lit, dark, P })';
+  '({ TREES, mkTree, PLANTS, mkPlant, CROPS, mkCrop, ROCKS, mkRock, BUILDS, mkBuild, PAWNS, mkPawn, BEASTS, OTHER, mkBeast, GROUND, TILES, ORE, rockTop, rockTone, rockFace, oreAt, veinAt, waterBase, waterCol, decal, dith, hash, clamp, wrap, pn, rp, lit, dark, P })';
 
 const TILE = 32;
 const PATCH = 4;
