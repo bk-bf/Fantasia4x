@@ -40,6 +40,25 @@ const PROJECT_RULES = {
   ]
 };
 
+const FETCH_FROM_SRC = {
+  selector: "CallExpression[callee.name='fetch'] > Literal[value=/^\\/?src\\//]",
+  message:
+    'fetch() of a /src path 404s in the packaged/static build (it only works against the dev server). Import the asset with ?raw or ?url, or move it to static/ and fetch from the site root.'
+};
+
+const SWITCHED_OFF_TESTS = [
+  {
+    selector:
+      "MemberExpression[object.name=/^(it|test|describe|suite|bench)$/][property.name=/^(skip|only|todo|skipIf|runIf|fails)$/]",
+    message:
+      'A test is fixed or deleted, never switched off or singled out. If it fails or no longer checks anything, fix it, or tell the agent whose change broke it, or start a child agent to fix it.'
+  },
+  {
+    selector: "CallExpression[callee.name=/^[xf](it|test|describe)$/]",
+    message: 'A test is fixed or deleted, never switched off or singled out.'
+  }
+];
+
 const SHARED = {
   'no-unreachable': 'error',
   'no-fallthrough': 'error',
@@ -126,14 +145,7 @@ export default [
   {
     files: ['**/*.{js,ts,mjs}'],
     rules: {
-      'no-restricted-syntax': [
-        'error',
-        {
-          selector: "CallExpression[callee.name='fetch'] > Literal[value=/^\\/?src\\//]",
-          message:
-            'fetch() of a /src path 404s in the packaged/static build (it only works against the dev server). Import the asset with ?raw or ?url, or move it to static/ and fetch from the site root.'
-        }
-      ]
+      'no-restricted-syntax': ['error', FETCH_FROM_SRC]
     }
   },
   {
@@ -144,5 +156,9 @@ export default [
       'electron/**'
     ],
     rules: { 'no-console': 'off' }
+  },
+  {
+    files: ['src/tests/**/*.{js,ts,mjs}'],
+    rules: { 'no-restricted-syntax': ['error', FETCH_FROM_SRC, ...SWITCHED_OFF_TESTS] }
   }
 ];
