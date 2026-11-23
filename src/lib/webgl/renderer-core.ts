@@ -19,8 +19,10 @@ import {
   gradeForHour,
   type MapWeatherId,
   type PointLight,
-  type Rgb
+  type Rgb,
+  type TileRect
 } from './painted/lightGrade.js';
+import { resolveSpriteLights } from './painted/spriteLights.js';
 import { PaintedVignette } from './painted/vignette.js';
 import { PaintedShadowCast, SHADOW_DEPTH, SHADOW_SHADE } from './painted/shadowCast.js';
 
@@ -518,37 +520,26 @@ export class WebGLRendererCore {
     viewportTilesW: number,
     viewportTilesH: number
   ): LightPassFrame {
+    const view = { x: this.viewTileX, y: this.viewTileY, w: viewportTilesW, h: viewportTilesH };
     return {
       canvas: [this.viewport.width, this.viewport.height],
       viewOffset: [this.viewTileX * BASE_TILE_PX, this.viewTileY * BASE_TILE_PX],
       zoom: [this.tileWidth / BASE_TILE_PX, this.tileHeight / BASE_TILE_PX],
       artPerBase: artTile / BASE_TILE_PX,
       artTile,
-      view: { x: this.viewTileX, y: this.viewTileY, w: viewportTilesW, h: viewportTilesH },
+      view,
       grade: gradeForHour(this.ambientLight, this.ambientBase, MAP_WEATHER[this.mapWeather]),
-      lights: this.spriteLights(),
+      lights: this.spriteLights(view),
       time: performance.now() / 1000
     };
   }
 
-  private spriteLights(): PointLight[] {
-    const layers = [
-      this.buildingOverlayGrid,
-      this.resourceOverlayGrid,
-      this.resourceTallOverlayGrid
-    ];
-    return this.pointLights.map((l) => {
-      const emit = layers
-        .map((g) => g?.getTile(l.x, l.y)?.painted?.emit)
-        .find((e) => e !== undefined);
-      if (!emit) return l;
-      return {
-        ...l,
-        color: emit.col,
-        flicker: emit.flicker === true,
-        art: { x: emit.x, y: emit.y, rad: emit.rad, night: emit.night === true }
-      };
-    });
+  private spriteLights(view: TileRect): PointLight[] {
+    return resolveSpriteLights(
+      this.pointLights,
+      [this.buildingOverlayGrid, this.resourceOverlayGrid, this.resourceTallOverlayGrid],
+      view
+    );
   }
 
   private drawShadowCast(
