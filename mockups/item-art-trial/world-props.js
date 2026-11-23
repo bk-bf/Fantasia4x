@@ -286,19 +286,22 @@ const PROPS = (() => {
     sword: { L: 21, f: (s, F) => blade(s, F, 1) },
     dagger: { L: 11, f: (s, F) => blade(s, F, .52) },
     axe: { L: 19, f(s, F) { shaft(s, F, 0, 19, .9, P.plank, 3); plate(s, F, [[14, .6], [17, .6], [17, 2.2], [14, 2.2]], P.iron, 3); plate(s, F, [[12.5, -.5], [17.5, -.5], [19.5, -7], [11, -7], [13.5, -3]], P.iron, 4, v => v < -5.6); } },
-    hoe: { L: 34, f(s, F) { shaft(s, F, 0, 34, .9, P.plank, 3); plate(s, F, [[30.6, -.5], [34, -.5], [34, -7.4], [31.6, -7.4]], P.iron, 4, v => v < -6.2); } },
-    spear: { L: 40, f(s, F) { shaft(s, F, 0, 34, .9, P.plank, 2); shaft(s, F, 33, 35.4, 1.4, P.iron, 3); plate(s, F, [[35, 2.3], [38, 1.7], [41, 0], [38, -1.7], [35, -2.3], [34, 0]], P.iron, 5); } },
-    staff: { L: 36, f(s, F) { shaft(s, F, 0, 34, 1, P.wood, 3); shaft(s, F, 24, 28, 1.3, P.cloth, 3); const p = F(35); s.ball(p[0], p[1], 2.4, 2.4, 2, P.blue, { d: .3 }); } },
+    hoe: { headUp: true, L: 34, f(s, F) { shaft(s, F, 0, 34, .9, P.plank, 3); plate(s, F, [[30.6, -.5], [34, -.5], [34, -7.4], [31.6, -7.4]], P.iron, 4, v => v < -6.2); } },
+    spear: { headUp: true, L: 40, f(s, F) { shaft(s, F, 0, 34, .9, P.plank, 2); shaft(s, F, 33, 35.4, 1.4, P.iron, 3); plate(s, F, [[35, 2.3], [38, 1.7], [41, 0], [38, -1.7], [35, -2.3], [34, 0]], P.iron, 5); } },
+    staff: { headUp: true, L: 36, f(s, F) { shaft(s, F, 0, 34, 1, P.wood, 3); shaft(s, F, 24, 28, 1.3, P.cloth, 3); const p = F(35); s.ball(p[0], p[1], 2.4, 2.4, 2, P.blue, { d: .3 }); } },
     bow: { L: 25, f(s, F) { TK.path(s, TK.curve(F(0), F(12.5, 7.6), F(25)), 1.1, (t, v) => Math.abs(t - .5) < .09 ? P.leather[3] : at(P.wood, 4 + (v < 0 ? 1 : -1))); }, over: (s, F) => { const a = F(0), b = F(25); s.line(a[0], a[1], b[0], b[1], P.cloth[4]); } },
     hammer: { L: 15, f(s, F) { shaft(s, F, 0, 14, .9, P.plank, 3); plate(s, F, [[10.4, 3.6], [15, 3.6], [15, -3.6], [10.4, -3.6]], P.iron, 4); } },
-    pick: { L: 24, f(s, F) { shaft(s, F, 0, 24, .9, P.plank, 3); plate(s, F, [[21, 0], [23.6, 0], [21.6, 8.6], [20.4, 8.4]], P.iron, 4); plate(s, F, [[21, 0], [23.6, 0], [21.6, -8.6], [20.4, -8.4]], P.iron, 4); } },
+    pick: { headUp: true, L: 24, f(s, F) { shaft(s, F, 0, 24, .9, P.plank, 3); plate(s, F, [[21, 0], [23.6, 0], [21.6, 8.6], [20.4, 8.4]], P.iron, 4); plate(s, F, [[21, 0], [23.6, 0], [21.6, -8.6], [20.4, -8.4]], P.iron, 4); } },
     mace: { L: 17, f(s, F) { shaft(s, F, 0, 13, .9, P.plank, 3); const p = F(14.6); s.ball(p[0], p[1], 3.2, 3.2, 2, P.iron, { d: .3 }); for (const v of [-3.6, 3.6]) { const q = F(14.6, v); s.set(q[0], q[1], P.iron[6]); } } },
     saw: { L: 20, f(s, F) { plate(s, F, [[0, 2.6], [4.4, 2.6], [4.4, -2.6], [0, -2.6]], P.plank, 3); plate(s, F, [[4, 2.4], [20, 1.2], [20, -2.6], [4, -2.6]], P.iron, 5); for (let t = 5; t < 20; t += 2) { const p = F(t, -2.8); s.set(p[0], p[1], P.iron[2]); } } },
     tongs: { L: 17, f(s, F) { TK.seg(s, F(0, 1.8), F(17, -1.2), .7, () => P.iron[4]); TK.seg(s, F(0, -1.8), F(17, 1.2), .7, () => P.iron[3]); const p = F(10.6); s.set(p[0], p[1], P.iron[6]); } }
   };
   const POSES = {
     lie: L => [[CX - L * .47, B - 1], [CX + L * .47, B - 1 - L * .2]],
-    lean: L => [[CX + (L > 30 ? 5 : 3), B], [CX - (L > 30 ? 4 : 2), B - L * .94]]
+    lean(L, headUp) {
+      const foot = [CX + (L > 30 ? 5 : 3), B - (headUp ? 0 : 1)], top = [CX - (L > 30 ? 4 : 2), foot[1] - L * .94];
+      return headUp ? [foot, top] : [top, foot];
+    }
   };
   const ARMOUR = { helm, cuirass, boots, pack, roll, shield: shieldFlat, shieldUp };
   const PILES = { logs, planks, blocks, rubble, heap, bars, sacks, crates, fluids, baskets, meat, hides, cloth, pots, bundles };
@@ -314,7 +317,7 @@ const PROPS = (() => {
     return s;
   }
   function long(kind, pose, flip) {
-    const def = LONG[kind], [a, b] = POSES[pose](def.L), F = frame(a, b), s = new Spr(48, HIGH, CX, B);
+    const def = LONG[kind], [a, b] = POSES[pose](def.L, def.headUp), F = frame(a, b), s = new Spr(48, HIGH, CX, B);
     def.f(s, F);
     s.outline();
     if (def.over) def.over(s, F);
