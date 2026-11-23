@@ -29,7 +29,8 @@ const painted = {
   light: {} as WebGLTexture,
   top: null,
   water: {} as WebGLTexture,
-  texels: () => null
+  texels: () => null,
+  cell: () => null
 };
 
 beforeAll(() => setPaintedTileset(tileset));
