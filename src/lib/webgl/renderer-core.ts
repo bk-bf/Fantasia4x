@@ -11,6 +11,7 @@ import { BASE_TILE_PX } from './tile-types.js';
 import { WORK_PINS } from '../workPins/flag.js';
 import { addFrameTotals } from '../workPins/page.js';
 import { PAINTED_TILES } from './painted/flag.js';
+import { passOn } from './passes.js';
 import { loadPaintedTileset, type LoadedPaintedTileset } from './painted/loader.js';
 
 export const ROW_DEPTH_RANGE = 8192;
@@ -372,20 +373,22 @@ export class WebGLRendererCore {
 
     this.shaderManager.setUniform('tileRenderer', 'u_glyphOnly', 0);
     const tTerrain = performance.now();
-    const gridStats = this.gridRenderer.renderGrid(this.gameGrid, {
-      tileWidth: BASE_TILE_PX,
-      tileHeight: BASE_TILE_PX,
-      viewportX: this.viewTileX,
-      viewportY: this.viewTileY,
-      viewportWidth: viewportTilesW,
-      viewportHeight: viewportTilesH,
-      lightSampler: this.lightSampler ?? undefined,
-      lightTime,
-      pointLightActive: this.dynamicLight,
-      lightVersion: this.lightVersion,
-      litBounds: this.lightBounds,
-      cacheVersion: this.gridVersion
-    });
+    const gridStats = passOn('terrain')
+      ? this.gridRenderer.renderGrid(this.gameGrid, {
+          tileWidth: BASE_TILE_PX,
+          tileHeight: BASE_TILE_PX,
+          viewportX: this.viewTileX,
+          viewportY: this.viewTileY,
+          viewportWidth: viewportTilesW,
+          viewportHeight: viewportTilesH,
+          lightSampler: this.lightSampler ?? undefined,
+          lightTime,
+          pointLightActive: this.dynamicLight,
+          lightVersion: this.lightVersion,
+          litBounds: this.lightBounds,
+          cacheVersion: this.gridVersion
+        })
+      : { tilesRendered: 0 };
     this.stats.terrainMs = performance.now() - tTerrain;
     this.stats.terrainRebuilds = this.gridRenderer.chunksRebuiltLastRender;
     this.stats.drawCalls++;
@@ -403,7 +406,7 @@ export class WebGLRendererCore {
       gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
       this.shaderManager.setUniform('tileRenderer', 'u_glyphOnly', 1);
       const tOverlay = performance.now();
-      if (this.snowGrid) {
+      if (this.snowGrid && passOn('snow')) {
         this.shaderManager.setUniform('tileRenderer', 'u_bgOnly', 1);
         this.drawSnowGrid(viewportTilesW, viewportTilesH, lightTime);
         this.shaderManager.setUniform('tileRenderer', 'u_bgOnly', 0);
@@ -412,28 +415,38 @@ export class WebGLRendererCore {
         gl.enable(gl.DEPTH_TEST);
         gl.depthFunc(gl.LEQUAL);
       }
-      this.renderGlyphOverlay(
-        this.resourceOverlayGrid,
-        viewportTilesW,
-        viewportTilesH,
-        lightTime,
-        true,
-        'resource'
-      );
-      if (this.snowGrid) {
+      if (passOn('resources'))
+        this.renderGlyphOverlay(
+          this.resourceOverlayGrid,
+          viewportTilesW,
+          viewportTilesH,
+          lightTime,
+          true,
+          'resource'
+        );
+      if (this.snowGrid && passOn('snow')) {
         this.drawSnowGrid(viewportTilesW, viewportTilesH, lightTime, this.rowDepth);
       }
-      this.renderGlyphOverlay(this.buildingOverlayGrid, viewportTilesW, viewportTilesH, lightTime);
-      this.renderGlyphOverlay(this.itemOverlayGrid, viewportTilesW, viewportTilesH, lightTime);
-      this.renderGlyphOverlay(this.overlayGrid, viewportTilesW, viewportTilesH, lightTime);
-      this.renderGlyphOverlay(
-        this.resourceTallOverlayGrid,
-        viewportTilesW,
-        viewportTilesH,
-        lightTime,
-        true,
-        'resourceTall'
-      );
+      if (passOn('buildings'))
+        this.renderGlyphOverlay(
+          this.buildingOverlayGrid,
+          viewportTilesW,
+          viewportTilesH,
+          lightTime
+        );
+      if (passOn('items'))
+        this.renderGlyphOverlay(this.itemOverlayGrid, viewportTilesW, viewportTilesH, lightTime);
+      if (passOn('creatures'))
+        this.renderGlyphOverlay(this.overlayGrid, viewportTilesW, viewportTilesH, lightTime);
+      if (passOn('tall-resources'))
+        this.renderGlyphOverlay(
+          this.resourceTallOverlayGrid,
+          viewportTilesW,
+          viewportTilesH,
+          lightTime,
+          true,
+          'resourceTall'
+        );
       this.stats.overlayMs = performance.now() - tOverlay;
       this.shaderManager.setUniform('tileRenderer', 'u_glyphOnly', 0);
       if (this.rowDepth) gl.disable(gl.DEPTH_TEST);
@@ -513,7 +526,7 @@ export class WebGLRendererCore {
   }
 
   endFrame(): void {
-    this.render();
+    if (passOn('gl')) this.render();
     this.stats.frameTime = this.timer.end();
     this.stats.fps = this.timer.updateFPS();
     if (WORK_PINS) addFrameTotals(this.stats);

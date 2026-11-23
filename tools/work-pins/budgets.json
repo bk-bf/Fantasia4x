@@ -1,0 +1,51 @@
+{
+  "idle page calls per frame": {
+    "scenario": "dev-save fixture",
+    "phase": "idle",
+    "measure": "page function calls per frame",
+    "unit": "calls",
+    "ceiling": 17300
+  },
+  "idle worker calls per frame": {
+    "scenario": "dev-save fixture",
+    "phase": "idle",
+    "measure": "worker function calls per frame",
+    "unit": "calls",
+    "ceiling": 4.25
+  },
+  "idle main-thread ms per frame": {
+    "scenario": "large-wilderness",
+    "phase": "idle",
+    "measure": "median main-thread time per frame",
+    "unit": "ms",
+    "ceiling": 4
+  },
+  "run-1x main-thread ms per frame": {
+    "scenario": "large-wilderness",
+    "phase": "run-1x",
+    "measure": "median main-thread time per frame",
+    "unit": "ms",
+    "ceiling": 145
+  },
+  "run-4x main-thread ms per frame": {
+    "scenario": "large-wilderness",
+    "phase": "run-4x",
+    "measure": "median main-thread time per frame",
+    "unit": "ms",
+    "ceiling": 155
+  },
+  "zoom-out-and-back longest frame ms": {
+    "scenario": "large-wilderness",
+    "phase": "zoom-out-and-back",
+    "measure": "longest frame's main-thread time",
+    "unit": "ms",
+    "ceiling": 1200
+  },
+  "large-wilderness ticks per second": {
+    "scenario": "large-wilderness",
+    "phase": "running, headless sim",
+    "measure": "ticks per second",
+    "unit": "ticks per second",
+    "floor": 240
+  }
+}

@@ -27,11 +27,30 @@ Tell the owner before starting if the desktop is off; he turns it on.
   about a minute of play, so creatures have gone to sleep and the map has aged.
   `F4X_PROFILE=1` also saves a CPU profile per cell; `stall.mjs --whole <profile>` ranks the whole
   cell instead of its longest busy stretch, which is the read for a steady low frame rate.
-- Both share `tools/gpu/session.mjs`, which starts the nested compositor and the browser.
+- `tools/gpu/frame-cost.mjs` is the heavyweight absolute bench, for troubleshooting a slowdown
+  rather than gating one. It loads `large-wilderness` (750x750, seed 4242, about 1170 creatures)
+  through `?scenario=`, or the save in `F4X_FIXTURE` when that is set, with vsync and the frame-rate
+  limit off, and holds three zooms by paused, 1x, 4x and max speed (the worker told to run as fast
+  as it can). Each cell prints FPS, frame-time p50, p95 and longest in ms, main-thread, script and
+  layout-plus-style ms per frame, TPS and DOM nodes, and `<label>-frame-cost.json` keeps the rows.
+  `F4X_SKIP` lists the pass sets to run, `;` between sets and `,` inside one, `none` for every pass
+  on; each set is its own page load, since `src/lib/webgl/passes.ts` reads `?skip=` once, and only
+  in a dev build. The passes are `gl` (every GL draw), `terrain`, `snow`, `resources`, `buildings`,
+  `items`, `creatures`, `tall-resources`, `overlay` (the creature and item overlay update) and
+  `effects` (the world-effects layer). A pass's cost is the baseline's row minus the row with it
+  skipped. `F4X_CAPPED=1` keeps vsync on. It runs no CPU profiler.
+- All of them share `tools/gpu/session.mjs`, which starts the nested compositor and the browser.
+  The compositor's unit is named after the probe's process, so two probes at once no longer stop
+  each other's compositor; still run one at a time when the numbers matter, since they share
+  the GPU.
   `F4X_FIXTURE=<save.json.gz>` loads another save than the CI fixture, such as one copied out of
   the owner's game; the probe serves it from the tree's `static/` for the run, since a save past
   about 100 MB closes the page when Playwright hands it over directly, and `F4X_HARNESS=<tree>` borrows the harness and Playwright of another tree for
   a build too old to have them, such as `main`.
+- Starting V8's CPU profiler costs one frame of about 500 ms. `zoom-out.mjs` starts it right as
+  the measured zoom begins, so its first frame per round is the profiler, not the game; read its
+  longest frame from a run with no profile, or from the second-longest frame. Start a profiler
+  well before the stretch it measures, or leave it off.
 - `tools/gpu/stall.mjs <file.cpuprofile>...` prints the longest busy stretch of a profile with
   its self and inclusive time per function.
 - The steady-state shell bench (frame times per zoom level at 1x, 4x and paused pan, Electron
@@ -104,6 +123,15 @@ systemd-run --user --collect --unit=f4x-zoom -E PATH="$PATH" -E CHROME="$CH" \
 - `systemd-inhibit` keeps the session from idling or sleeping mid-run.
 - `F4X_QUERY='?painted=1&blend=1'` is the painted renderer, which `F4X_PAINTED=1 ./launch.sh`
   opens; leave it out to measure the glyph renderer.
+- The absolute bench, every pass on and with the GL draw off:
+
+```bash
+systemd-run --user --collect --unit=f4x-frame-cost -E PATH="$PATH" -E CHROME="$CH" \
+  -E F4X_QUERY='?painted=1&blend=1' -E F4X_SKIP='none;gl;terrain;effects' \
+  systemd-inhibit --what=idle:sleep --why=frame-cost \
+  node $T/tools/gpu/frame-cost.mjs $T <label> /tmp/f4x-frame-cost 8
+```
+
 - Alternate the builds (A B A B) and run three rounds each, so a slow minute on the machine shows
   up as spread rather than as a difference.
 - Read `ROW` lines from the log: `maxMs` is the longest frame, `stallMs` the sum of frames over
