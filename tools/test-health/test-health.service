@@ -1,0 +1,9 @@
+[Unit]
+Description=Fantasia4x nightly test-health pass
+After=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/Documents/Projects/Fantasia4x
+ExecStart=%h/Documents/Projects/Fantasia4x/tools/test-health/run.sh
+TimeoutStartSec=4h

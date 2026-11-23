@@ -1,6 +1,6 @@
 ---
 name: test-health
-description: The nightly test-health pass over Fantasia4x — read the night's CI run on dev and the latest runs on the active branches, find failing, flaky and stale tests and surviving mutants, hand each one to the agent responsible or fix it, all on the one branch fix/test-health, and carry the fixes to every active branch. Runs from the T3 scheduled task "Nightly test health" at 04:00 UTC. Use when that task fires, or when asked to run the test-health pass by hand.
+description: The nightly test-health pass over Fantasia4x — read the night's CI run on dev and the latest runs on the active branches, find failing, flaky and stale tests and surviving mutants, hand each one to the agent responsible or fix it, all on the one branch fix/test-health, and carry the fixes to every active branch. Runs nightly at 04:00 UTC as `claude -p` from `test-health.timer` (`tools/test-health/`). Use when that task fires, or when asked to run the test-health pass by hand.
 ---
 
 # Nightly test health
@@ -42,7 +42,8 @@ Nothing found: say so in one line and stop. No pull request, no issue.
    run. The commit's `Claude-Session:` or `T3-Thread:` trailer names the session; `ListAgents`
    shows whether it is still running.
 2. **A live agent is responsible:** `SendMessage` it the run link, the failing log lines and the
-   commit, and leave the fix to it.
+   commit, and leave the fix to it. If `SendMessage` cannot reach it, comment the same on its
+   pull request.
 3. **Otherwise:** `pnpm issue create --type fix` with `found by nightly check`, the rule
    `flaky-test`, `stale-test` or `surviving-mutant`, kind `correctness` or `test gap`,
    `verify tests` and the subarea. Then start a child agent per issue, in its own worktree branched
@@ -61,5 +62,6 @@ Nothing found: say so in one line and stop. No pull request, no issue.
 4. Carry the merge to every active branch from step 2: merge `origin/dev` into it in a worktree,
    `pnpm test:related` on the test files the pull request changed, push. A branch with a live agent
    gets a `SendMessage` asking it to merge `origin/dev` instead.
-5. Report in the thread: each finding, where it went (fixed in `<sha>`, sent to which agent,
-   issue `#n`), and which branches received the merge.
+5. Report as a comment on the `fix/test-health` pull request, open or just merged: each finding,
+   where it went (fixed in `<sha>`, sent to which agent, issue `#n`), and which branches received
+   the merge. The owner reads this pass on GitHub, not in a session.
