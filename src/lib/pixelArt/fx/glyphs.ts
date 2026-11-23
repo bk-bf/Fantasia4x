@@ -77,6 +77,11 @@ export function typeset(
   );
 }
 
+export const unknownGlyphs = (text: string, small: boolean): string[] => {
+  const font = small ? FX_FONT.thin : FX_FONT.bold;
+  return [...new Set([...text].filter((ch) => !font[ch] && !font[ch.toUpperCase()]))];
+};
+
 export const advance = (text: string, font: Font, gap: number): number =>
   [...text].reduce((n, ch) => n + (font[ch] || font['?'])[0].length + gap, -gap);
 
