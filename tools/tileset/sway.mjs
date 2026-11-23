@@ -13,7 +13,11 @@ const OUT = join(
   'tilesets',
   'painted'
 );
-const VARIANTS = { tree: 4, plant: 3, crop: 3 };
+const VARIANTS = new Map([
+  ['tree', 4],
+  ['plant', 3],
+  ['crop', 3]
+]);
 
 export function swayTable() {
   const A = art();
@@ -24,14 +28,17 @@ export function swayTable() {
   };
   const drawn = Object.entries(makers).flatMap(([family, [kinds, make]]) =>
     Object.keys(kinds).flatMap((k) =>
-      Array.from({ length: VARIANTS[family] }, (_, v) => [
+      Array.from({ length: VARIANTS.get(family) ?? 0 }, (_, v) => [
         `${family}/${k}/${v}`,
         make(k, v, 'summer')
       ])
     )
   );
   const DBX = loadRegistry();
-  const unpainted = (cat = '', dbId = '') => (UNPAINTED[cat] ?? []).includes(dbId);
+  const skipped = new Set(
+    Object.entries(UNPAINTED).flatMap(([c, ids]) => ids.map((id = '') => `${c}/${id}`))
+  );
+  const unpainted = (cat = '', dbId = '') => skipped.has(`${cat}/${dbId}`);
   for (const r of registryEntries(DBX, unpainted)) drawn.push([r.spriteId, DBX.bake(r.entry)]);
   const { sprites } = JSON.parse(readFileSync(join(OUT, 'manifest.json'), 'utf8'));
   const sway = new Map();
@@ -41,8 +48,11 @@ export function swayTable() {
     if (s?.sway) sway.set(id, s.sway);
     if (s?.leaf) leafy.add(id);
   }
-  const byId = ([a], [b]) => (a < b ? -1 : 1);
-  return { sway: Object.fromEntries([...sway].sort(byId)), leafy: [...leafy].sort() };
+  const ids = [...sway.keys()].sort();
+  return {
+    sway: Object.fromEntries(ids.map((id) => [id, sway.get(id)])),
+    leafy: [...leafy].sort()
+  };
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
