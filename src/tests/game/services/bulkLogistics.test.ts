@@ -72,12 +72,12 @@ describe('§L overloading is not free — load drags move-speed', () => {
     const emptySpeed = pawnService.getMoveSpeed(empty).tilesPerSecond;
     const loadedSpeed = pawnService.getMoveSpeed(loaded).tilesPerSecond;
     expect(loadedSpeed).toBeLessThan(emptySpeed);
-    expect(pawnService.getMoveSpeed(empty).sources.some((s) => s.startsWith('load'))).toBe(false);
-    expect(pawnService.getMoveSpeed(loaded).sources.some((s) => s.startsWith('load'))).toBe(true);
+    expect(pawnService.getMoveSpeed(empty).sources.some((s) => s.kind === 'load')).toBe(false);
+    expect(pawnService.getMoveSpeed(loaded).sources.some((s) => s.kind === 'load')).toBe(true);
   });
 
   it('an unladen pawn pays no encumbrance', () => {
     const speed = pawnService.getMoveSpeed(makePawn());
-    expect(speed.sources.some((s) => s.startsWith('load'))).toBe(false);
+    expect(speed.sources.some((s) => s.kind === 'load')).toBe(false);
   });
 });
