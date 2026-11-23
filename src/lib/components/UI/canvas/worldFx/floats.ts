@@ -126,7 +126,7 @@ function place(e: CombatTextEvent, f: Figure, mode: FloaterMode): Placed | null 
   if (id && mode.icons) {
     const col = e.color ?? (e.kind === 'fracture' ? '#ff9944' : '#dddddd');
     return {
-      pair: mode.text ? worded(id, e.text, col) : icon(id),
+      pair: mode.text ? worded(id.id, e.text, col, id.mark) : icon(id.id, id.mark),
       x: f.x,
       y: f.lying ? f.y - 20 : f.y - 34,
       ox: 0,

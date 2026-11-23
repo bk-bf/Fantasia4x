@@ -1,8 +1,9 @@
-import type { Ramp, Rgb } from '../palette';
 import { GORE, HONEY, HURT, tint, word, type Pair } from './glyphs';
 import { P, STAR, Spr, hex, melt } from './spr';
+import { art, bane, boon, keys, lit, stamp } from './iconArt';
+import { MOTIFS, type MotifId } from './motifs';
 
-export type IconId =
+type MockIconId =
   | 'collapsed'
   | 'winded'
   | 'knocked'
@@ -18,57 +19,6 @@ export type IconId =
   | 'wellfed'
   | 'rested'
   | 'healed';
-
-interface Lit {
-  c: Rgb;
-  e: number;
-}
-type Pal = Record<string, Rgb | Lit>;
-
-const keys = (r: Ramp, chars: string): Pal =>
-  Object.fromEntries([...chars].map((ch, i) => [ch, r[i]]));
-const lit = (c: Rgb, e: number): Lit => ({ c, e });
-const isLit = (p: Rgb | Lit): p is Lit => 'c' in p;
-
-function art(rows: string[], pal: Pal, e: number): Spr {
-  const h = rows.length;
-  const w = Math.max(...rows.map((r) => r.length));
-  const s = new Spr(w + 2, h + 2, (w >> 1) + 1, h + 1);
-  rows.forEach((r, y) =>
-    [...r].forEach((ch, x) => {
-      const p = pal[ch];
-      if (p) s.set(x + 1, y + 1, isLit(p) ? p.c : p, isLit(p) ? p.e : e);
-    })
-  );
-  return s.outline();
-}
-
-function stamp(dst: Spr, src: Spr, ox: number, oy: number): Spr {
-  for (let y = 0; y < src.h; y++)
-    for (let x = 0; x < src.w; x++) {
-      const i = y * src.w + x;
-      const c = src.c[i];
-      if (c) dst.set(x + ox, y + oy, c, src.e[i]);
-    }
-  return dst;
-}
-
-function boon(s: Spr): Spr {
-  const o = new Spr(s.w + 3, s.h + 2, s.ax, s.ay + 2);
-  const x = s.w;
-  const G = lit(HONEY[5], 255);
-  const g = lit(HONEY[3], 255);
-  stamp(o, s, 0, 2);
-  for (const [dx, dy, c] of [
-    [1, 0, G],
-    [0, 1, G],
-    [1, 1, G],
-    [2, 1, g],
-    [1, 2, g]
-  ] as const)
-    o.set(x - 1 + dx, dy + 1, c.c, c.e);
-  return o.outline();
-}
 
 function flake(): Spr {
   const s = new Spr(15, 15, 7, 14);
@@ -104,7 +54,7 @@ const SLAM = tint('#ff6a3a');
 const SALLOW = tint('#b4c060');
 const DUSK = tint('#a8a8cc');
 
-const ICONS: Record<IconId, () => Spr> = {
+const MOCK_ICONS: Record<MockIconId, () => Spr> = {
   collapsed: () =>
     art(
       [
@@ -379,23 +329,32 @@ const ICONS: Record<IconId, () => Spr> = {
     )
 };
 
+export type IconId = MockIconId | MotifId;
+export type IconMark = 'up' | 'down';
+
+const ICONS: Record<IconId, () => Spr> = { ...MOCK_ICONS, ...MOTIFS };
+const BANE_COL = hex('#c05060');
+const BANE_RIM = hex('#ffb0b8');
+
 const memo = new Map<string, Pair>();
 const pair = (s: Spr): Pair => [s, melt(s, 0.5)];
 
-export function icon(id: IconId): Pair {
-  let p = memo.get(id);
+export function icon(id: IconId, mark?: IconMark): Pair {
+  const key = mark ? `${id}+${mark}` : id;
+  let p = memo.get(key);
   if (!p) {
-    p = pair(ICONS[id]());
-    memo.set(id, p);
+    const base = ICONS[id]();
+    p = pair(mark === 'up' ? boon(base) : mark === 'down' ? bane(base, BANE_COL, BANE_RIM) : base);
+    memo.set(key, p);
   }
   return p;
 }
 
-export function worded(id: IconId, label: string, col: string): Pair {
-  const key = `${id}|${label}|${col}`;
+export function worded(id: IconId, label: string, col: string, mark?: IconMark): Pair {
+  const key = `${id}|${mark ?? ''}|${label}|${col}`;
   let p = memo.get(key);
   if (!p) {
-    const a = icon(id)[0];
+    const a = icon(id, mark)[0];
     const b = word(label, tint(col), { small: true })[0];
     const h = Math.max(a.h, b.h);
     const s = new Spr(a.w + 2 + b.w, h, a.w >> 1, h - 1);
