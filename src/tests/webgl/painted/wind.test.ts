@@ -16,6 +16,7 @@ import {
 } from '$lib/webgl/painted/manifest';
 import { WindClock, gustAt, heading, swayTable } from '$lib/webgl/painted/wind';
 import { LeafField, leafTarget, type LeafFrame } from '$lib/webgl/painted/leaves';
+import { GroundBlend, waterTime } from '$lib/webgl/painted/groundBlend';
 
 const GLYPH_FLOATS = 24;
 const ROW_FLOATS = 31;
@@ -43,7 +44,7 @@ const tile = (x: number, y: number, painted?: PaintedSprite, rotation?: 90): Til
   ...(rotation ? { rotation } : {})
 });
 
-function recordingGl(uploads: Float32Array[]) {
+function recordingGl(uploads: Float32Array[], calls: [string, unknown[]][] = []) {
   const constants = {
     DEPTH_TEST: 0x0b71,
     ARRAY_BUFFER: 0x8892,
@@ -63,6 +64,8 @@ function recordingGl(uploads: Float32Array[]) {
       if (typeof key !== 'string') return undefined;
       if (key in target) return target[key as keyof typeof target];
       return (...args: unknown[]) => {
+        calls.push([key, args]);
+        if (key === 'getUniformLocation') return args[1];
         if ((key === 'bufferData' || key === 'bufferSubData') && args[1] instanceof Float32Array)
           uploads.push(args[1]);
         return {};
@@ -111,8 +114,12 @@ describe('wind in the vertex data', () => {
   });
 });
 
-function windyCore(uploads: Float32Array[], uniforms: Map<string, unknown>) {
-  const gl = recordingGl(uploads);
+function windyCore(
+  uploads: Float32Array[],
+  uniforms: Map<string, unknown>,
+  calls: [string, unknown[]][] = []
+) {
+  const gl = recordingGl(uploads, calls);
   const grids = {
     gameGrid: new GameGrid(),
     resourceOverlayGrid: new GameGrid(),
@@ -197,6 +204,52 @@ describe('the wind blowing through the painted map', () => {
     expect(rebuilt).toBe(0);
     expect(uploads.length).toBe(firstUploads);
     expect(new Set(winds).size).toBe(winds.length);
+  });
+});
+
+describe('the water moving through the painted map', () => {
+  it('moves only its time uniform: no chunk is rebuilt and no buffer or texture uploaded', () => {
+    const uploads: Float32Array[] = [];
+    const calls: [string, unknown[]][] = [];
+    const core = windyCore(uploads, new Map(), calls);
+    const gl = core['webglState'].getContext();
+    const blendShaders = {
+      createProgram: () => ({ success: true }),
+      getProgram: () => ({ program: {} })
+    } as unknown as ShaderManager;
+    const blend = GroundBlend.create(gl, blendShaders, { ...core['painted']!, water: {} })!;
+    blend.setGrid(core['gameGrid']);
+    Object.assign(core, { groundBlend: blend });
+    core['gridRenderer'].skipBlendedGround = true;
+    let now = 1000;
+    vi.spyOn(performance, 'now').mockImplementation(() => now);
+    core['render']();
+    const firstUploads = uploads.length;
+    const frames = new Set<number>();
+    let rebuilt = 0;
+    for (let frame = 0; frame < 48; frame++) {
+      now += 1000 / 24;
+      calls.length = 0;
+      core['stats'].resourceRebuilds = 0;
+      core['render']();
+      rebuilt += core['stats'].resourceRebuilds + core['stats'].terrainRebuilds;
+      expect(calls.filter(([name]) => /^tex(Sub)?Image2D$/.test(name))).toEqual([]);
+      const time = calls.find(([name, args]) => name === 'uniform1f' && args[0] === 'u_waterTime');
+      frames.add(Math.floor((time![1][1] as number) * 8));
+    }
+    expect(rebuilt).toBe(0);
+    expect(uploads.length).toBe(firstUploads);
+    expect(frames.size).toBe(16);
+  });
+});
+
+describe('the water clock', () => {
+  it("loops the mockup's sixteen frames at eight a second", () => {
+    expect(waterTime(0)).toBe(0);
+    expect(waterTime(125)).toBeCloseTo(0.125, 9);
+    expect(waterTime(1999)).toBeCloseTo(1.999, 9);
+    expect(waterTime(2000)).toBe(0);
+    expect(waterTime(7250)).toBeCloseTo(1.25, 9);
   });
 });
 

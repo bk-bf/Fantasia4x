@@ -19,6 +19,8 @@ const WATER_UNIT = 10;
 const SHORE_LEVEL = 1.6;
 const DEEP_WATER = 2;
 const FULL = 255;
+const WATER_FRAMES = 16;
+const WATER_FPS = 8;
 
 type LightSampler = (wx: number, wy: number, time: number) => [number, number, number];
 type Bounds = { minX: number; minY: number; maxX: number; maxY: number };
@@ -32,11 +34,15 @@ export interface GroundBlendFrame {
   flicker: number;
   fieldLit: boolean;
   tone: [number, number];
-  waterPhase: number;
+  waterTime: number;
   lightSampler?: LightSampler;
   lightTime: number;
   lightVersion: number;
   litBounds: Bounds | null | undefined;
+}
+
+export function waterTime(nowMs: number): number {
+  return (nowMs / 1000) % (WATER_FRAMES / WATER_FPS);
 }
 
 export function groundKindTable(painted: LoadedPaintedTileset): {
@@ -158,7 +164,7 @@ export class GroundBlend {
       'u_fieldLit',
       'u_saturation',
       'u_brightness',
-      'u_waterPhase',
+      'u_waterTime',
       'u_tide',
       'u_waterField'
     ];
@@ -381,7 +387,7 @@ export class GroundBlend {
     gl.uniform1f(this.at.u_fieldLit, f.fieldLit ? 1 : 0);
     gl.uniform1f(this.at.u_saturation, f.tone[0]);
     gl.uniform1f(this.at.u_brightness, f.tone[1]);
-    gl.uniform1f(this.at.u_waterPhase, f.waterPhase);
+    gl.uniform1f(this.at.u_waterTime, f.waterTime);
     gl.uniform2i(this.at.u_mapSize, this.w, this.h);
     this.bindOn(ATLAS_UNIT, this.atlas);
     this.bindOn(KIND_UNIT, this.kindTex);
