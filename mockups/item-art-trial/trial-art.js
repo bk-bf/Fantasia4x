@@ -59,15 +59,21 @@ const TRIAL = (() => {
 
   const EDGE = [[17, 9.5], [19.5, 10.4], [22.5, 10.8], [25.5, 10.2], [27.5, 8.5]];
   const edgeAt = a => { const i = Math.max(1, EDGE.findIndex(p => p[0] >= a) < 0 ? EDGE.length - 1 : EDGE.findIndex(p => p[0] >= a)), p = EDGE[i - 1], q = EDGE[i]; return p[1] + (q[1] - p[1]) * clamp((a - p[0]) / (q[0] - p[0]), 0, 1); };
+  const AXE = {
+    steel: M.steel,
+    head: [[24.8, 1.4], ...EDGE.slice().reverse(), [19.4, 5.6], [21.4, 3], [21.8, 1.4]],
+    socket: [[21.2, -1.8], [25.4, -1.8], [25.4, 1.8], [21.2, 1.8]],
+    headTone(a, q) { const d = edgeAt(a) - q; return d < 1.1 ? 6 : d < 2.5 ? 5 : q < 3.2 ? 2 : a > 23.6 ? 4 : 3; },
+    socketTone: q => q > .4 ? 4 : q > -.8 ? 3 : 1
+  };
   function axe(s) {
     const o = [8, 27], F = frame([8.5, 27.5]);
     band(s, o, 0, 19, MID, M.wood, 5);
     band(s, o, 0, 19, DOWN, M.wood, 2);
     band(s, o, 1, 4, MID, M.leather, i => i & 1 ? 4 : 2);
     band(s, o, 1, 4, DOWN, M.leather, 1);
-    const head = [[24.8, 1.4], ...EDGE.slice().reverse(), [19.4, 5.6], [21.4, 3], [21.8, 1.4]].map(p => F(p[0], p[1]));
-    poly(s, head, (x, y) => { const q = F.q(x, y), a = F.a(x, y), d = edgeAt(a) - q; return TK.at(M.steel, d < 1.1 ? 6 : d < 2.5 ? 5 : q < 3.2 ? 2 : a > 23.6 ? 4 : 3); });
-    poly(s, [[21.2, -1.8], [25.4, -1.8], [25.4, 1.8], [21.2, 1.8]].map(p => F(p[0], p[1])), (x, y) => TK.at(M.steel, F.q(x, y) > .4 ? 4 : F.q(x, y) > -.8 ? 3 : 1));
+    poly(s, AXE.head.map(p => F(p[0], p[1])), (x, y) => TK.at(M.steel, AXE.headTone(F.a(x, y), F.q(x, y))));
+    poly(s, AXE.socket.map(p => F(p[0], p[1])), (x, y) => TK.at(M.steel, AXE.socketTone(F.q(x, y))));
   }
 
   function helm(s) {
@@ -202,5 +208,5 @@ const TRIAL = (() => {
     if (it.over) it.over(s);
     return s;
   }
-  return { ITEMS, crispIcon };
+  return { ITEMS, crispIcon, AXE };
 })();

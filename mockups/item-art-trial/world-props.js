@@ -295,28 +295,31 @@ const PROPS = (() => {
     if (t >= 33) return [P.iron, 6];
     return [P.iron, v === -2 ? 5 : v === -1 ? (t < 14 ? 4 : 6) : v === 0 ? 3 : 2];
   }
-  const AXE_EDGE = [[2, 28], [3, 27], [4, 26], [5, 25], [6, 24], [7, 23]];
-  function axeHead(t, w) {
-    if (!inside(w, 2, 7) || !inside(t, AXE_EDGE[w - 2][1], 34)) return null;
-    const edge = w === 7 || t < AXE_EDGE[w - 1][1], bevel = w === 6 || (w < 6 && t < AXE_EDGE[w][1]);
-    return [P.iron, edge ? 6 : bevel ? 5 : w < 4 ? 3 : 4];
+  const AXE = TRIAL.AXE, AXE_TOP = 27.5;
+  function within(pts, a, q) {
+    let hit = false;
+    for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+      const [ai, qi] = pts[i], [aj, qj] = pts[j];
+      if ((qi > q) !== (qj > q) && a < ai + (aj - ai) * (q - qi) / (qj - qi)) hit = !hit;
+    }
+    return hit;
   }
   function axeCell(t, v) {
-    if (v < -2) return axeHead(t, -1 - v);
-    if (inside(t, 27, 34) && inside(v, -2, 1)) return [P.iron, t === 27 || t === 34 ? 2 : v === -2 ? 5 : v === 1 ? 2 : 3];
-    if (inside(t, 28, 33) && v === 2) return [P.iron, 2];
-    if (!inside(v, -1, 0) || t > 26) return null;
+    const a = t + .5 - (LONG.axe.L - AXE_TOP), q = -v - .5;
+    if (within(AXE.socket, a, q)) return [AXE.steel, AXE.socketTone(q)];
+    if (within(AXE.head, a, q)) return [AXE.steel, AXE.headTone(a, q)];
+    if (!inside(v, -1, 0)) return null;
     if (inside(t, 1, 6)) return wrap(t, v);
     return [P.wood, t === 0 ? 3 : v < 0 ? 5 : 3];
   }
   const LEAN_STEP = 4;
   function cells(def, pose) {
     const out = [];
-    for (let t = 0; t < def.L; t++) for (let v = -10; v <= 10; v++) {
+    for (let t = 0; t < def.L; t++) for (let v = -12; v <= 12; v++) {
       const c = def.cell(t, v);
       if (!c) continue;
       const lean = pose === 'lean';
-      out.push({ x: lean ? Math.floor(t / LEAN_STEP) + v : t, y: lean ? t : v - Math.floor(t / LEAN_STEP), r: c[0], k: c[1] });
+      out.push({ x: lean ? Math.floor(t / LEAN_STEP) + v : t, y: lean ? t : Math.floor(t / LEAN_STEP) - v, r: c[0], k: c[1] });
     }
     return out;
   }
@@ -350,7 +353,7 @@ const PROPS = (() => {
     tongs: { L: 17, f(s, F) { TK.seg(s, F(0, 1.8), F(17, -1.2), .7, () => P.iron[4]); TK.seg(s, F(0, -1.8), F(17, 1.2), .7, () => P.iron[3]); const p = F(10.6); s.set(p[0], p[1], P.iron[6]); } }
   };
   const POSES = {
-    lie: L => [[CX - L * .47, B - 1], [CX + L * .47, B - 1 - L * .2]],
+    lie: L => [[CX - L * .47, B - 1 - L * .2], [CX + L * .47, B - 1]],
     lean(L, headUp) {
       const foot = [CX + (L > 30 ? 5 : 3), B - (headUp ? 0 : 1)], top = [CX - (L > 30 ? 4 : 2), foot[1] - L * .94];
       return headUp ? [foot, top] : [top, foot];
