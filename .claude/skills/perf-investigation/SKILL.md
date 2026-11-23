@@ -129,3 +129,30 @@ moved the number. Delete the debug branch, its worktree and its remote branch wh
 - Roll a fix out to him by merging it into the test branch he launches, updating his laptop
   checkout only while the game is not running, and telling him the commit to expect in the
   session line.
+
+## 8. What CI holds to an absolute number
+
+The work pins compare head with base, so a cost already in the base passes as "no change". Beside
+them, CI holds head alone to the limits in `tools/work-pins/budgets.json`, whatever the base does.
+Each entry names its scenario, phase, measure and unit, and a failure prints that line with the
+number and the limit. Read the file for the limits; do not copy them.
+
+- **Idle calls**, from the browser work pins (`tools/work-pins/browser.mjs`, dev-save fixture,
+  interpreter only so the counts are exact): page and worker function calls per frame in the
+  `idle` phase, paused with no input. They are exact, so anything that adds per-frame work to a
+  frame where nothing changes fails it.
+- **Frame time**, from `tools/work-pins/frame-budget.mjs`: `large-wilderness` loaded through
+  `?scenario=`, JIT on, the clock frozen and stepped one frame at a time, main-thread ms per frame
+  for `idle`, `run-1x` (one tick a frame) and `run-4x` (four), and the longest frame over a zoom
+  out to the farthest and back, the first of the session and the median over rounds. Its JSON
+  and server log are the `frame-budget` artifact of the run.
+- **Ticks per second**, from the tps leg: `tools/bench/tps/large-wilderness.bench.ts` on head,
+  pinned to one core, against a floor.
+
+The numbers come from GitHub's runners with SwiftShader, not from a real GPU or the owner's
+laptop; they say whether a change moved the cost, not what he will see. Each limit was set from
+what the code reached when it landed plus the spread measured across separate runners, which the
+pull request that set it records. When a change lowers a cost for good, lower its limit in the same
+pull request. The owner's `perf change accepted` label lets a number past its limit the same way
+it lets the relative budgets through; an agent never raises a limit to make a check pass, and
+explains in its pull request every number that grew past one.
