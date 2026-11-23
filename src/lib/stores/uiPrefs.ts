@@ -164,3 +164,12 @@ export const tipPlacement = createPersistedChoice<TipPlacement>(
   'cursor',
   isTipPlacement
 );
+
+export type TileTipStyle = 'hidden' | 'transparent' | 'panel';
+export const isTileTipStyle = (v: string): v is TileTipStyle =>
+  v === 'hidden' || v === 'transparent' || v === 'panel';
+export const tileTipStyle = createPersistedChoice<TileTipStyle>(
+  'fx.ui.tileTipStyle',
+  'panel',
+  isTileTipStyle
+);

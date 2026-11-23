@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
   import { chrome } from '$lib/pixelArt/chrome';
+  import { tileTipStyle } from '$lib/stores/uiPrefs';
   import KvRow from '../widget/KvRow.svelte';
   import type { TileFact } from './tileFacts';
 
@@ -12,7 +13,13 @@
   }: { title: string; desc?: string; rows: TileFact[]; children?: Snippet } = $props();
 </script>
 
-<aside class="tile-tip" {@attach chrome('tip')}>
+{#if $tileTipStyle === 'panel'}
+  <aside class="tile-tip" {@attach chrome('tip')}>{@render body()}</aside>
+{:else if $tileTipStyle === 'transparent'}
+  <aside class="tile-tip bare">{@render body()}</aside>
+{/if}
+
+{#snippet body()}
   <div class="body">
     <h5>{title}</h5>
     {#if desc}<p>{desc}</p>{/if}
@@ -21,7 +28,7 @@
       <KvRow label={r.label}>{r.value}</KvRow>
     {/each}
   </div>
-</aside>
+{/snippet}
 
 <style>
   .tile-tip {
@@ -39,6 +46,19 @@
   }
   .body {
     filter: url(#ambient-tint-legible);
+  }
+  .bare {
+    --halo: var(--bg-panel);
+    text-shadow:
+      -1px -1px 0 var(--halo),
+      0 -1px 0 var(--halo),
+      1px -1px 0 var(--halo),
+      -1px 0 0 var(--halo),
+      1px 0 0 var(--halo),
+      -1px 1px 0 var(--halo),
+      0 1px 0 var(--halo),
+      1px 1px 0 var(--halo),
+      0 2px 0 var(--halo);
   }
   h5 {
     margin: 0 0 2px;

@@ -21,7 +21,9 @@
     debugMode,
     wasdPan,
     tipPlacement,
-    isTipPlacement
+    isTipPlacement,
+    tileTipStyle,
+    isTileTipStyle
   } from '$lib/stores/uiPrefs';
 
   let { onClose }: { onClose: () => void } = $props();
@@ -101,6 +103,17 @@
             { value: 'window', label: 'Under window' }
           ]}
           onSelect={(v) => isTipPlacement(v) && tipPlacement.set(v)}
+        />
+        <SettingRow
+          type="select"
+          label="Tile panel"
+          value={$tileTipStyle}
+          options={[
+            { value: 'hidden', label: 'Hidden' },
+            { value: 'transparent', label: 'Transparent' },
+            { value: 'panel', label: 'Panel' }
+          ]}
+          onSelect={(v) => isTileTipStyle(v) && tileTipStyle.set(v)}
         />
       </SettingSection>
       <SettingSection title="Controls">
