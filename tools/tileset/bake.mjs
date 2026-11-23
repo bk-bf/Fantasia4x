@@ -1,7 +1,7 @@
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { encodePng } from './png.mjs';
+import { UP, encodePng } from './png.mjs';
 import { MAP, PIECES, UNPAINTED } from './map.mjs';
 import { ARCHETYPES, loadRegistry, registryEntries } from './registry.mjs';
 import { BAKE_ART } from './sources.mjs';
@@ -21,11 +21,22 @@ import {
   rockVeins
 } from './rock.mjs';
 import { WATER_IMAGE, WATER_SIZE, waterField } from './water.mjs';
+import {
+  FAR_IMAGE,
+  FAR_SIZE,
+  FIELD_IMAGE,
+  FIELD_SIZE,
+  farField,
+  fieldSlots,
+  groundField,
+  groundKinds,
+  groundSprites
+} from './ground.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const OUT = join(HERE, '..', '..', 'static', 'tilesets', 'painted');
 const EXPORTS =
-  '({ TREES, mkTree, PLANTS, mkPlant, CROPS, mkCrop, ROCKS, mkRock, BUILDS, mkBuild, PAWNS, mkPawn, BEASTS, OTHER, mkBeast, GROUND, TILES, ORE, rockTop, rockTone, rockFace, oreAt, veinAt, waterBase, waterCol, decal, dith, hash, clamp, wrap, pn, rp, lit, dark, P })';
+  '({ TREES, mkTree, PLANTS, mkPlant, CROPS, mkCrop, ROCKS, mkRock, BUILDS, mkBuild, PAWNS, mkPawn, BEASTS, OTHER, mkBeast, GROUND, TILES, ORE, covAt, soilShade, grassShade, rockTop, rockTone, rockFace, oreAt, veinAt, waterBase, waterCol, decal, dith, hash, clamp, wrap, pn, rp, lit, dark, P })';
 
 const TILE = 32;
 const PATCH = 4;
@@ -238,7 +249,7 @@ const compactEmit = ({ flicker = false, night = false, ...at }) => ({
   ...(night ? { night } : {})
 });
 
-function sprites() {
+function sprites(ground = groundSprites(A, [], [])) {
   const DBX = loadRegistry();
   const casts = new Map(
     DBX.walls
@@ -252,6 +263,7 @@ function sprites() {
     out.set(id, spr);
   };
   for (const g of A.GROUND) add(`ground/${g.id}`, patch(g.f, g.dec ?? []));
+  for (const [id, s] of ground.sprites) add(id, s);
   for (const [id, f] of Object.entries(A.TILES))
     add(id, { ...patch(f, []), cast: casts.get(id) ?? 0 });
   const named = new Set(Object.values(MAP.building).flat());
@@ -293,7 +305,10 @@ function sprites() {
     add(`creature/${k}`, object(A.mkBeast(k), 16, 27));
   const pieces = pieceSprites(add);
   const extra = registrySprites(add, out, roles, DBX);
-  return { all: out, roles, extra, pieces };
+  const grass = DBX.list
+    .filter((e = DBX.list[0]) => e.cat === 'plant' && e.layer === 'cover')
+    .map((e = DBX.list[0]) => e.dbId);
+  return { all: out, roles, extra, pieces, grass: [...new Set(grass)].sort() };
 }
 
 function registrySprites(
@@ -447,8 +462,22 @@ function resolveMap(
   );
 }
 
+function ground() {
+  const kinds = groundKinds(A.GROUND);
+  const field = groundField(art(FIELD_SIZE), fieldSlots(kinds));
+  const made = groundSprites(
+    A,
+    kinds,
+    field.palettes,
+    (w, h, ox, oy, px) => sprite(w, h, ox, oy, px),
+    (f) => patch(f, [])
+  );
+  return { field: field.px, ...made };
+}
+
 export function bake() {
-  const { all, roles, extra, pieces } = sprites();
+  const laid = ground();
+  const { all, roles, extra, pieces, grass } = sprites(laid);
   const order = [...all].sort(
     ([a, sa], [b, sb]) => sb.patch - sa.patch || sb.h - sa.h || (a < b ? -1 : 1)
   );
@@ -485,7 +514,14 @@ export function bake() {
     sprites: Object.fromEntries(rects),
     map: resolveMap(all, roles, extra),
     pieces,
-    water: { image: WATER_IMAGE, size: WATER_SIZE }
+    water: { image: WATER_IMAGE, size: WATER_SIZE },
+    ground: {
+      field: { image: FIELD_IMAGE, size: FIELD_SIZE },
+      far: { image: FAR_IMAGE, size: FAR_SIZE },
+      pieces: 'ground/pieces',
+      grass,
+      kinds: laid.kinds
+    }
   };
   const wide = art(TOP_SIZE);
   const veinArt = art(VEIN_SIZE);
@@ -495,18 +531,22 @@ export function bake() {
     manifest,
     top: encodePng(TOP_SIZE, TOP_SIZE, rockTop(wide), TOP_DEFLATE),
     veins: encodePng(VEIN_SIZE, VEIN_SIZE, rockVeins(veinArt)),
-    water: encodePng(WATER_SIZE, WATER_SIZE, waterField(art(WATER_SIZE)), TOP_DEFLATE)
+    water: encodePng(WATER_SIZE, WATER_SIZE, waterField(art(WATER_SIZE)), TOP_DEFLATE),
+    field: encodePng(FIELD_SIZE, FIELD_SIZE, laid.field, TOP_DEFLATE, UP),
+    far: encodePng(FAR_SIZE, FAR_SIZE, farField(laid.field), TOP_DEFLATE, UP)
   };
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  const { png, light, manifest, top, veins, water } = bake();
+  const { png, light, manifest, top, veins, water, field, far } = bake();
   mkdirSync(OUT, { recursive: true });
   writeFileSync(join(OUT, 'atlas.png'), png);
   writeFileSync(join(OUT, LIGHT_IMAGE), light);
   writeFileSync(join(OUT, TOP_IMAGE), top);
   writeFileSync(join(OUT, VEIN_IMAGE), veins);
   writeFileSync(join(OUT, WATER_IMAGE), water);
+  writeFileSync(join(OUT, FIELD_IMAGE), field);
+  writeFileSync(join(OUT, FAR_IMAGE), far);
   writeFileSync(join(OUT, 'manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
   console.log(
     `${Object.keys(manifest.sprites).length} sprites, atlas ${manifest.atlas.w}x${manifest.atlas.h}`

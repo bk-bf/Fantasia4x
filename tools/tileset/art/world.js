@@ -1,34 +1,36 @@
 'use strict';
 let SEASON = 'summer';
 
+function grassShade(x, y, seed) {
+  const big = pfbm(x, y, .021, seed, 3), mid = pn(x, y, .1, .1, seed + 5);
+  let k = big > .57 ? 1 : big < .43 ? -1 : 0;
+  const off = Math.floor(hash(x, 0, seed + 7) * 6), yy = wrap(y + off, PER), cy = Math.floor(yy / 6), py = yy - cy * 6, h = hash(x, cy, seed + 9);
+  if (h > .58) { if (py === 0) k += 2; else if (py < 4) k += 1; } else if (h < .2 && py > 2) k -= 1;
+  if (mid > .76) k += 1; else if (mid < .2) k -= 1;
+  return k;
+}
 function grassTex(ramp, seed) {
   const n = ramp.length - 1;
-  return (x, y) => {
-    const big = pfbm(x, y, .021, seed, 3), mid = pn(x, y, .1, .1, seed + 5);
-    let k = n - 3 + (big > .57 ? 1 : big < .43 ? -1 : 0);
-    const off = Math.floor(hash(x, 0, seed + 7) * 6), yy = wrap(y + off, PER), cy = Math.floor(yy / 6), py = yy - cy * 6, h = hash(x, cy, seed + 9);
-    if (h > .58) { if (py === 0) k += 2; else if (py < 4) k += 1; } else if (h < .2 && py > 2) k -= 1;
-    if (mid > .76) k += 1; else if (mid < .2) k -= 1;
-    return ramp[clamp(k, 0, n)];
-  };
+  return Object.assign((x, y) => ramp[clamp(n - 3 + grassShade(x, y, seed), 0, n)], { layer: 'grass', ramp, seed });
+}
+function soilShade(x, y, seed) {
+  const big = pfbm(x, y, .03, seed, 2), m = pn(x, y, .15, .15, seed + 3), h = hash(x, y, seed + 5);
+  let k = (big > .58 ? 1 : big < .4 ? -1 : 0) + (m > .74 ? 1 : m < .22 ? -1 : 0);
+  if (h > .95) k += 1; else if (h < .06) k -= 1;
+  return k;
 }
 function soilTex(ramp, seed) {
   const n = ramp.length - 1;
-  return (x, y) => {
-    const big = pfbm(x, y, .03, seed, 2), m = pn(x, y, .15, .15, seed + 3), h = hash(x, y, seed + 5);
-    let k = n - 3 + (big > .58 ? 1 : big < .4 ? -1 : 0) + (m > .74 ? 1 : m < .22 ? -1 : 0);
-    if (h > .95) k += 1; else if (h < .06) k -= 1;
-    return ramp[clamp(k, 0, n)];
-  };
+  return Object.assign((x, y) => ramp[clamp(n - 3 + soilShade(x, y, seed), 0, n)], { layer: 'soil', ramp, seed });
 }
 const covAt = (x, y) => pfbm(x, y, .02, 3, 3) * .72 + pn(x, y, .17, .17, 5) * .28;
 function cover(soil, grass, amount) {
-  return (x, y) => {
+  return Object.assign((x, y) => {
     const cov = covAt(x, y);
     if (cov < amount) { const c = grass(x, y); return cov > amount - .011 ? dark(c, .7) : c; }
     const c = soil(x, y);
     return covAt(x, y - 3) < amount ? dark(c, .68) : c;
-  };
+  }, { soil, grass, amount });
 }
 const GT = {
   dry: grassTex(P.grassDry, 41), loam: grassTex(P.grassLoam, 43), lush: grassTex(P.grass, 45), sav: grassTex(P.savanna, 47), moss: grassTex(P.moss, 49),
