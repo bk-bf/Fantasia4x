@@ -176,6 +176,18 @@ export const SCENARIO_PRESETS: ScenarioPreset[] = [
         iron_axe: 2
       }
     }
+  },
+  {
+    id: 'large-wilderness',
+    label: 'Large wilderness',
+    description:
+      'A 750×750 generated map, five fresh colonists and its natural wildlife on a fixed seed — the map perf runs compare on.',
+    spec: {
+      seed: 4242,
+      map: { w: 750, h: 750, preset: 'generated' },
+      pawns: [{ count: 5 }],
+      seedEntities: true
+    }
   }
 ];
 

@@ -235,6 +235,7 @@
 
   let dragging = false;
   let dragStartX = 0;
+  let designationsStale = false;
   let dragStartY = 0;
   let dragViewX = 0;
   let dragViewY = 0;
@@ -2442,6 +2443,10 @@
         if (mobView) [vx, vy] = setView(mobView[0], mobView[1], map, box, tW, tH, preview);
         const panView = updateKeyboardPan(dt, preview, followPawnId, followMobId, vx, vy);
         if (panView) [vx, vy] = setView(panView[0], panView[1], map, box, tW, tH, preview);
+        if (designationsStale) {
+          designationsStale = false;
+          drawDesignations();
+        }
         worldFx.frame(
           {
             pawns: pawnList,
@@ -2608,7 +2613,7 @@
     renderer?.setViewTileOffset(view[0], view[1]);
     markRenderDirty();
     saveCameraState(preview);
-    drawDesignations();
+    designationsStale = true;
     return view;
   }
 
@@ -2901,9 +2906,10 @@
     }
     if (!dragging) return;
     dragDistance += Math.abs(e.movementX) + Math.abs(e.movementY);
-    const dx = Math.round((dragStartX - e.clientX) / tileWidth);
-    const dy = Math.round((dragStartY - e.clientY) / tileHeight);
-    setView(dragViewX + dx, dragViewY + dy);
+    setView(
+      dragViewX + (dragStartX - e.clientX) / tileWidth,
+      dragViewY + (dragStartY - e.clientY) / tileHeight
+    );
   }
 
   function handleMouseUp() {

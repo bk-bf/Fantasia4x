@@ -2,7 +2,13 @@ const { app, BrowserWindow, session, shell, ipcMain } = require('electron');
 const path = require('path');
 
 const APP_URL = process.env.SPIKE_URL || 'http://localhost:5173';
-const START_URL = process.env.F4X_PAINTED === '1' ? `${APP_URL}/?painted=1&blend=1` : APP_URL;
+const START_QUERY = [
+  process.env.F4X_PAINTED === '1' ? 'painted=1&blend=1' : '',
+  process.env.F4X_SCENARIO ? `scenario=${encodeURIComponent(process.env.F4X_SCENARIO)}` : ''
+]
+  .filter(Boolean)
+  .join('&');
+const START_URL = START_QUERY ? `${APP_URL}/?${START_QUERY}` : APP_URL;
 
 const SHELL_UA_MARKER = 'Fantasia4xShell';
 
