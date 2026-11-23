@@ -1,8 +1,9 @@
 import { readFileSync } from 'node:fs';
 
-const files = process.argv.slice(2);
+const whole = process.argv.includes('--whole');
+const files = process.argv.slice(2).filter((a) => a !== '--whole');
 if (!files.length) {
-  console.error('usage: node tools/gpu/stall.mjs <file.cpuprofile>...');
+  console.error('usage: node tools/gpu/stall.mjs [--whole] <file.cpuprofile>...');
   process.exit(2);
 }
 
@@ -29,7 +30,7 @@ for (const file of files) {
       start = null;
     }
   });
-  const [dur, a, b] = best;
+  const [dur, a, b] = whole ? [samples.at(-1)[0] - samples[0][0], 0, samples.length] : best;
   const self = new Map();
   const incl = new Map();
   const add = (m, k, v) => m.set(k, (m.get(k) ?? 0) + v);
@@ -44,7 +45,7 @@ for (const file of files) {
   }
   const top = (m, n) =>
     [...m].filter(([k]) => !k.startsWith('(root)')).sort((x, y) => y[1] - x[1]).slice(0, n);
-  console.log(`== ${file.split('/').pop()}: longest busy stretch ${(dur / 1000).toFixed(0)} ms`);
+  console.log(`== ${file.split('/').pop()}: ${whole ? "whole profile" : "longest busy stretch"} ${(dur / 1000).toFixed(0)} ms`);
   console.log('  self:');
   for (const [k, v] of top(self, 12)) console.log(`  ${(v / 1000).toFixed(1).padStart(8)} ms  ${k}`);
   console.log('  inclusive:');
