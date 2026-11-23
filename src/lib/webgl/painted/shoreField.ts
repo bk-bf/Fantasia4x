@@ -6,8 +6,8 @@ export const DIST_STEPS = 32;
 const FULL = 255;
 const DIAGONAL = Math.SQRT2;
 const RAMP_TILES = 3;
-const SHALLOW_TOP = 0.42;
-const DEEP_FLOOR = 0.58;
+const SHALLOW_TOP = 0.36;
+const DEEP_FLOOR = 0.74;
 const BLUR_REACH = 2;
 
 function distanceTo(isSeed: (i: number) => boolean, w: number, h: number): Float32Array {
