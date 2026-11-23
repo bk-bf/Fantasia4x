@@ -148,6 +148,7 @@
   const MAP_W = 240;
   const MAP_H = 160;
   const MAX_TILE_W = 64;
+  const FAR_ZOOM_SHARE = 0.8;
   const ENTITY_RENDER_MIN_PX = 5;
   const ZOOM_STEP = 2;
   const CAMERA_STORAGE_KEY = 'fantasia4x-camera';
@@ -168,7 +169,7 @@
   function computeFitTileSize(canvasW: number, canvasH: number): number {
     const mapW = worldMap.length > 0 ? worldMap[0].length : MAP_W;
     const mapH = worldMap.length > 0 ? worldMap.length : MAP_H;
-    return Math.max(canvasW / mapW, canvasH / mapH);
+    return Math.max(canvasW / mapW, canvasH / mapH) / FAR_ZOOM_SHARE;
   }
 
   let canvas: HTMLCanvasElement;
