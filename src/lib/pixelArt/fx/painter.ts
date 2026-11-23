@@ -16,6 +16,23 @@ interface Op {
 
 const RESOLVE_TRIES = 2;
 
+type Rect = [number, number, number, number];
+
+function bounds(ops: readonly Op[]): Rect | null {
+  if (ops.length === 0) return null;
+  let x0 = Infinity;
+  let y0 = Infinity;
+  let x1 = -Infinity;
+  let y1 = -Infinity;
+  for (const o of ops) {
+    x0 = Math.min(x0, o.dx);
+    y0 = Math.min(y0, o.dy);
+    x1 = Math.max(x1, o.dx + o.dw);
+    y1 = Math.max(y1, o.dy + o.dh);
+  }
+  return [x0 - 1, y0 - 1, x1 + 1, y1 + 1];
+}
+
 export class FxPainter {
   g: CanvasRenderingContext2D;
   k = 1;
@@ -24,6 +41,7 @@ export class FxPainter {
   oy = 0;
   private ops: Op[] = [];
   private style = '';
+  private drawn: Rect | null = null;
 
   constructor(g: CanvasRenderingContext2D) {
     this.g = g;
@@ -82,6 +100,10 @@ export class FxPainter {
     this.push(s, '', a, Math.round(x) - s.ax, Math.round(y) - s.ay, s.w, s.h);
   }
 
+  forget(): void {
+    this.drawn = null;
+  }
+
   fill(c: Rgb, e: number): void {
     this.style = css(c, e);
   }
@@ -100,6 +122,9 @@ export class FxPainter {
     }
     const src = flushAtlas();
     const g = this.g;
+    const now = bounds(ops);
+    for (const r of [this.drawn, now]) if (r) g.clearRect(r[0], r[1], r[2] - r[0], r[3] - r[1]);
+    this.drawn = now;
     for (const op of ops) {
       if (!op.s) {
         g.fillStyle = op.fill;

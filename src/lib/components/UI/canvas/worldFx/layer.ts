@@ -35,6 +35,7 @@ export interface FxView {
 }
 
 const BAR_W = 24;
+const BACKING = 1;
 
 export const textScale = (k: number, dpr: number): number =>
   Math.max(1, Math.round(Math.min(k, dpr)));
@@ -117,16 +118,18 @@ class WorldFxLayer {
       scene.marks.length > 0;
     if (!moving && scene.bars.length === 0) {
       if (this.painted) p.g.clearRect(0, 0, c.width, c.height);
+      p.forget();
       this.painted = false;
       this.key = '';
       return;
     }
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = BACKING;
     const bw = Math.round(W * dpr);
     const bh = Math.round(H * dpr);
     if (c.width !== bw || c.height !== bh) {
       c.width = bw;
       c.height = bh;
+      p.forget();
       this.painted = false;
     }
     if (w.renderer) setGrade(gradeFromWeights(w.renderer.gradeWeights()), now);
@@ -135,8 +138,6 @@ class WorldFxLayer {
       if (this.painted && key === this.key) return;
       this.key = key;
     } else this.key = '';
-    p.g.setTransform(1, 0, 0, 1, 0, 0);
-    p.g.clearRect(0, 0, bw, bh);
     const k = (v.tW / ART_TILE) * dpr;
     p.view(k, -v.vx * v.tW * dpr, -v.vy * v.tH * dpr, textScale(k, dpr));
     this.paint(p, w, scene, texts, shots, now);
