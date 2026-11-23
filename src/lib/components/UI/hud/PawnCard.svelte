@@ -6,7 +6,7 @@
   import { pawnCultureLabel } from '$lib/components/util/pawnUtils';
   import { getActiveConditionViews } from '$lib/components/util/conditionInfo';
   import { getBackgroundById } from '$lib/game/core/defs/backgrounds';
-  import { bodyHealthShare } from '$lib/game/core/rules/body/bodyHealth';
+  import { bloodFrac } from '$lib/components/UI/canvas/healthColors';
   import { needMeters } from '../../pawn/needMeters';
   import ConditionRows from '../../pawn/ConditionRows.svelte';
   import ChromeButton from '../widget/ChromeButton.svelte';
@@ -54,7 +54,7 @@
       ? (pawn.activeJob.progress ?? 0)
       : null
   );
-  const health = $derived(Math.round(bodyHealthShare(pawn.limbs) * 100));
+  const blood = $derived(Math.round(bloodFrac(pawn) * 100));
   const mood = $derived(Math.round(moodModel?.mood ?? pawn.state.mood));
   const needs = $derived(
     needMeters(pawn).filter((m) => m.label === 'Hunger' || m.label === 'Rest')
@@ -94,7 +94,7 @@
       </div>
     {/if}
     <div class="c-bars">
-      <MeterRow label="Health" value={health / 100} ramp="leaf">{health}</MeterRow>
+      <MeterRow label="Blood" value={blood / 100} ramp="leaf">{blood}</MeterRow>
       <MeterRow label="Mood" value={mood / 100} ramp="honey">{mood}</MeterRow>
       {#each needs as m (m.label)}
         <MeterRow label={m.label} value={m.value / m.max} ramp={m.ramp} title={m.word}
