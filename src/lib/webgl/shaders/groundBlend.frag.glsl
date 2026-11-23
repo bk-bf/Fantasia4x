@@ -11,7 +11,11 @@ uniform sampler2D u_light;
 uniform ivec2 u_mapSize;
 uniform float u_tileArt;
 uniform vec4 u_patch[64];
-uniform vec2 u_layer[64];
+uniform vec4 u_layer[64];
+uniform highp sampler2D u_groundField;
+uniform highp sampler2D u_groundFar;
+uniform float u_artPerPx;
+uniform vec2 u_pieces;
 uniform vec3 u_ambient;
 uniform float u_lightFlicker;
 uniform highp sampler2D u_lightTexture;
@@ -60,6 +64,24 @@ const float RIPPLE_CREST = 1.0;
 const float RIPPLE_TROUGH = 0.5;
 const float GLINT_RISE = 0.8;
 const float CHURN_WEIGHT = 0.4;
+const int SHADE_MASK = 7;
+const int SHADE_BITS = 3;
+const int SOIL_ROW = 0;
+const int GRASS_ROW = 1;
+const int PEBBLE_ROW = 2;
+const int META_ROW = 5;
+const int SOIL_SHIFT = 13;
+const int GRASS_SHIFT = 14;
+const int AMOUNT = 15;
+const int OFFSET_STEP = 8;
+const int RIM = 3;
+const int LIP = 3;
+const int RAMP_PIECES = 3;
+const int NO_PIECE = 255;
+const float GRASS_RIM = 0.7;
+const float SOIL_LIP = 0.68;
+const float FAR_ART_PER_PX = 4.0;
+const int FAR_SHIFT = 3;
 
 const float BAYER[16] = float[16](0.0, 8.0, 2.0, 10.0, 12.0, 4.0, 14.0, 6.0, 3.0, 11.0, 1.0, 9.0, 15.0, 7.0, 13.0, 5.0);
 const vec3 DEEP[6] = vec3[6](
@@ -160,6 +182,48 @@ vec3 darken(vec3 c, float k) {
     return vec3(c.r * k, c.g * k, min(1.0, c.b * (k + 0.1)));
 }
 
+ivec4 fieldAt(ivec2 q) {
+    if (u_artPerPx >= FAR_ART_PER_PX) {
+        ivec2 size = textureSize(u_groundFar, 0);
+        ivec2 at = q >> FAR_SHIFT;
+        return ivec4(texelFetch(u_groundFar, (at % size + size) % size, 0) * 255.0 + 0.5);
+    }
+    ivec2 size = textureSize(u_groundField, 0);
+    return ivec4(texelFetch(u_groundField, (q % size + size) % size, 0) * 255.0 + 0.5);
+}
+
+ivec4 metaAt(ivec2 block, int col) {
+    return ivec4(texelFetch(u_paintAtlas, block + ivec2(col, META_ROW), 0) * 255.0 + 0.5);
+}
+
+vec3 rampAt(ivec2 block, int row, int step) {
+    return texelFetch(u_paintAtlas, block + ivec2(step, row), 0).rgb;
+}
+
+int shadeAt(ivec2 q, ivec2 block, bool grass) {
+    ivec2 shift = metaAt(block, grass ? GRASS_SHIFT : SOIL_SHIFT).rg * OFFSET_STEP;
+    int packed = fieldAt(q + shift).r;
+    return grass ? (packed >> SHADE_BITS) & SHADE_MASK : packed & SHADE_MASK;
+}
+
+vec3 fieldGround(ivec2 q, ivec2 block, int cover) {
+    int amount = metaAt(block, AMOUNT).r;
+    bool grass = cover < amount;
+    vec3 c = rampAt(block, grass ? GRASS_ROW : SOIL_ROW, shadeAt(q, block, grass));
+    if (grass) return cover > amount - RIM ? darken(c, GRASS_RIM) : c;
+    if (u_artPerPx >= FAR_ART_PER_PX) return c;
+    return fieldAt(q - ivec2(0, LIP)).g < amount ? darken(c, SOIL_LIP) : c;
+}
+
+vec3 fieldPiece(ivec4 here, ivec2 block, vec3 c) {
+    if (here.b == 0) return c;
+    int type = (here.b >> 4) - 1;
+    int colour = here.b & 15;
+    if (NO_PIECE - here.a >= metaAt(block, type).r) return c;
+    if (type < RAMP_PIECES) return rampAt(block, PEBBLE_ROW + type, colour);
+    return texelFetch(u_paintAtlas, ivec2(u_pieces) + ivec2(colour, type + 1), 0).rgb;
+}
+
 void main() {
     vec2 p = floor(v_art);
     uint own = kindAt(p);
@@ -171,16 +235,23 @@ void main() {
 
     uint k = kindAt(w);
     if (k == 0u) k = own;
-    vec2 layer = u_layer[k];
+    vec4 layer = u_layer[k];
     vec3 c;
     if (layer.y > 0.5) c = water(w, int(layer.y + 0.5), ivec2(p));
     else {
         vec4 patchRect = u_patch[k];
-        c = texelFetch(u_paintAtlas, ivec2(patchRect.xy) + ivec2(mod(p, patchRect.z)), 0).rgb;
+        ivec2 q = ivec2(p);
+        ivec2 block = ivec2(layer.zw);
+        bool field = layer.z >= 0.0;
+        ivec4 here = field ? fieldAt(q) : ivec4(0);
+        if (patchRect.z > 0.5)
+            c = texelFetch(u_paintAtlas, ivec2(patchRect.xy) + ivec2(mod(p, patchRect.z)), 0).rgb;
+        else c = fieldGround(q, block, here.g);
+        if (field) c = fieldPiece(here, block, c);
         uint up = kindAt(w - vec2(0.0, LIP_REACH));
         uint down = kindAt(w + vec2(0.0, LIP_REACH));
-        vec2 upLayer = up == 0u ? layer : u_layer[up];
-        vec2 downLayer = down == 0u ? layer : u_layer[down];
+        vec2 upLayer = up == 0u ? layer.xy : u_layer[up].xy;
+        vec2 downLayer = down == 0u ? layer.xy : u_layer[down].xy;
         if (upLayer.x > layer.x + LIP_STEP && upLayer.y < 0.5) c = darken(c, UNDER_HIGHER);
         else if (downLayer.x < layer.x - LIP_STEP && downLayer.x < LOW_GROUND) c = darken(c, ABOVE_LOW);
     }

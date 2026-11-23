@@ -49,6 +49,20 @@ export interface ManifestPieces {
   top?: ManifestPieceTop;
 }
 
+export interface ManifestGroundKind {
+  ramps: string;
+  bare?: string;
+  tufts?: { density: number; sprites: string[] };
+}
+
+export interface ManifestGround {
+  field: ManifestField;
+  far: ManifestField;
+  pieces: string;
+  grass: string[];
+  kinds: Record<string, ManifestGroundKind>;
+}
+
 export interface PaintedManifest {
   tile: number;
   atlas: { w: number; h: number };
@@ -56,6 +70,7 @@ export interface PaintedManifest {
   map: Partial<Record<PaintedKind, Record<string, string[]>>>;
   pieces?: Record<string, ManifestPieces>;
   water?: ManifestField;
+  ground?: ManifestGround;
 }
 
 export interface ManifestField {
@@ -118,6 +133,20 @@ export interface PaintedPieces {
   top?: PaintedPieceTop;
 }
 
+export interface PaintedGroundKind {
+  ramps: PaintedRamp;
+  bare?: PaintedRamp & { side: number };
+  tufts?: { density: number; sprites: PaintedSprite[] };
+}
+
+export interface PaintedGround {
+  field: ManifestField;
+  far: ManifestField;
+  pieces: PaintedRamp;
+  grass: ReadonlySet<string>;
+  kinds: Map<string, PaintedGroundKind>;
+}
+
 export interface PaintedTileset {
   tile: number;
   atlasW: number;
@@ -125,6 +154,7 @@ export interface PaintedTileset {
   lookup: Map<PaintedKind, Map<string, PaintedVariant[]>>;
   pieces: Map<string, PaintedPieces>;
   scenery: Map<string, PaintedVariant[]>;
+  ground?: PaintedGround;
 }
 
 const SCENERY: Readonly<Record<string, string>> = { reeds: 'plant/reeds/' };
@@ -215,9 +245,47 @@ function readTop(set: string, raw: unknown): ManifestPieceTop {
   return { image, veins, size, veinSize, lift, ramp };
 }
 
+function readField(name: string, raw: unknown): ManifestField {
+  if (!isObject(raw) || typeof raw.image !== 'string' || !isInt(raw.size) || raw.size <= 0)
+    throw new Error(`manifest ${name} is not an image and a size`);
+  return { image: raw.image, size: raw.size };
+}
+
+function readGroundKind(id: string, raw: unknown): ManifestGroundKind {
+  if (!isObject(raw) || typeof raw.ramps !== 'string')
+    throw new Error(`ground.kinds.${id} names no ramps`);
+  const out: ManifestGroundKind = { ramps: raw.ramps };
+  if (raw.bare !== undefined) {
+    if (typeof raw.bare !== 'string') throw new Error(`ground.kinds.${id}.bare is not a sprite`);
+    out.bare = raw.bare;
+  }
+  if (raw.tufts !== undefined) {
+    const t = raw.tufts;
+    if (!isObject(t) || !isNumber(t.density) || t.density < 0 || !isStrings(t.sprites))
+      throw new Error(`ground.kinds.${id}.tufts is not a density and sprites`);
+    out.tufts = { density: t.density, sprites: t.sprites };
+  }
+  return out;
+}
+
+function readGround(raw: unknown): ManifestGround {
+  if (!isObject(raw) || typeof raw.pieces !== 'string' || !isStrings(raw.grass))
+    throw new Error('manifest ground names no pieces or grass');
+  if (!isObject(raw.kinds)) throw new Error('manifest ground.kinds is not an object');
+  const kinds: Record<string, ManifestGroundKind> = {};
+  for (const [id, k] of Object.entries(raw.kinds)) kinds[id] = readGroundKind(id, k);
+  return {
+    field: readField('ground.field', raw.field),
+    far: readField('ground.far', raw.far),
+    pieces: raw.pieces,
+    grass: raw.grass,
+    kinds
+  };
+}
+
 export function parseManifest(raw: unknown): PaintedManifest {
   if (!isObject(raw)) throw new Error('manifest is not an object');
-  const { tile, atlas, sprites, map, pieces, water } = raw;
+  const { tile, atlas, sprites, map, pieces, water, ground } = raw;
   if (!isInt(tile) || tile <= 0) throw new Error('manifest tile is not a positive integer');
   if (!isObject(atlas) || !isInt(atlas.w) || !isInt(atlas.h) || atlas.w <= 0 || atlas.h <= 0)
     throw new Error('manifest atlas size is missing');
@@ -243,16 +311,8 @@ export function parseManifest(raw: unknown): PaintedManifest {
     out.pieces = {};
     for (const [set, p] of Object.entries(pieces)) out.pieces[set] = readPieces(set, p);
   }
-  if (water !== undefined) {
-    if (
-      !isObject(water) ||
-      typeof water.image !== 'string' ||
-      !isInt(water.size) ||
-      water.size <= 0
-    )
-      throw new Error('manifest water is not an image and a size');
-    out.water = { image: water.image, size: water.size };
-  }
+  if (water !== undefined) out.water = readField('water', water);
+  if (ground !== undefined) out.ground = readGround(ground);
   return out;
 }
 
@@ -362,9 +422,53 @@ export function buildTileset(
       .flatMap((sid) => variantOf(sid) ?? []);
     if (variants.length > 0) scenery.set(id, variants);
   }
+  const ground = m.ground && resolveGround(m, m.ground, problems);
   return {
-    tileset: { tile: m.tile, atlasW: m.atlas.w, atlasH: m.atlas.h, lookup, pieces, scenery },
+    tileset: {
+      tile: m.tile,
+      atlasW: m.atlas.w,
+      atlasH: m.atlas.h,
+      lookup,
+      pieces,
+      scenery,
+      ...(ground ? { ground } : null)
+    },
     problems
+  };
+}
+
+function resolveGround(
+  m: PaintedManifest,
+  g: ManifestGround,
+  problems: string[]
+): PaintedGround | undefined {
+  const at = (sid: string): ManifestSprite | undefined => {
+    const s = m.sprites[sid];
+    if (!s) problems.push(`ground names unknown sprite ${sid}`);
+    return s;
+  };
+  const pieces = at(g.pieces);
+  if (!pieces) return undefined;
+  const kinds = new Map<string, PaintedGroundKind>();
+  for (const [id, k] of Object.entries(g.kinds)) {
+    const ramps = at(k.ramps);
+    if (!ramps) continue;
+    const kind: PaintedGroundKind = { ramps: { x: ramps.x, y: ramps.y } };
+    const bare = k.bare === undefined ? undefined : at(k.bare);
+    if (bare) kind.bare = { x: bare.x, y: bare.y, side: bare.w };
+    const tufts = k.tufts?.sprites.flatMap((sid) => {
+      const s = at(sid);
+      return s ? [cellOf(s, s.x, s.y, s, m)] : [];
+    });
+    if (k.tufts && tufts?.length) kind.tufts = { density: k.tufts.density, sprites: tufts };
+    kinds.set(id, kind);
+  }
+  return {
+    field: g.field,
+    far: g.far,
+    pieces: { x: pieces.x, y: pieces.y },
+    grass: new Set(g.grass),
+    kinds
   };
 }
 

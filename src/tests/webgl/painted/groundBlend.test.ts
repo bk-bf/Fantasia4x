@@ -29,6 +29,7 @@ const painted = {
   light: {} as WebGLTexture,
   top: null,
   water: {} as WebGLTexture,
+  ground: null,
   texels: () => null,
   cell: () => null
 };
@@ -87,6 +88,7 @@ describe('the blend pass tables', () => {
       light: {} as WebGLTexture,
       top: null,
       water: null,
+      ground: null,
       texels: () => null,
       cell: () => null
     });
@@ -95,8 +97,8 @@ describe('the blend pass tables', () => {
     expect(patch[k * 4]).toBe(Math.round(cell.cells[0].u1 * tileset.atlasW));
     expect(patch[k * 4 + 1]).toBe(Math.round(cell.cells[0].v1 * tileset.atlasH));
     expect(patch[k * 4 + 2]).toBe(cell.patch * tileset.tile);
-    expect([layer[k * 2], layer[k * 2 + 1]]).toEqual([5, 0]);
-    expect([...patch.slice(0, 4), ...layer.slice(0, 2)]).toEqual([0, 0, 0, 0, 0, 0]);
+    expect([...layer.slice(k * 4, k * 4 + 4)]).toEqual([5, 0, -1, -1]);
+    expect([...patch.slice(0, 4), ...layer.slice(0, 4)]).toEqual([0, 0, 0, 0, 0, 0, 0, 0]);
   });
 
   it('tells shallow water, open water and rapids apart from land', () => {

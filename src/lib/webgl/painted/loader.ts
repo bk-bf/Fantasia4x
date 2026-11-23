@@ -3,6 +3,7 @@ import {
   parseManifest,
   idHash,
   type ManifestField,
+  type PaintedGround,
   type PaintedKind,
   type PaintedManifest,
   type PaintedPieceTop,
@@ -22,12 +23,18 @@ export interface LoadedPieceTop {
   ramp: { x: number; y: number };
 }
 
+export interface LoadedGroundField {
+  field: WebGLTexture;
+  far: WebGLTexture;
+}
+
 export interface LoadedPaintedTileset {
   tileset: PaintedTileset;
   texture: WebGLTexture;
   light: WebGLTexture;
   top: LoadedPieceTop | null;
   water: WebGLTexture | null;
+  ground: LoadedGroundField | null;
   texels: () => AtlasTexels | null;
   cell: (x: number, y: number, w: number, h: number) => Uint8ClampedArray | null;
 }
@@ -87,7 +94,7 @@ async function fetchSway(url: string): Promise<unknown> {
   }
 }
 
-function uploadAtlas(gl: WebGL2RenderingContext, image: HTMLImageElement): WebGLTexture {
+function uploadAtlas(gl: WebGL2RenderingContext, image: TexImageSource): WebGLTexture {
   const texture = gl.createTexture();
   if (!texture) throw new Error('could not create the painted atlas texture');
   gl.bindTexture(gl.TEXTURE_2D, texture);
@@ -130,6 +137,7 @@ interface PaintedSource {
   light: HTMLImageElement | null;
   top: { image: HTMLImageElement; veins: HTMLImageElement; piece: PaintedPieceTop } | null;
   water: HTMLImageElement | null;
+  ground: { field: ImageBitmap; far: ImageBitmap } | null;
 }
 
 const pieceTop = (tileset: PaintedTileset) =>
@@ -169,6 +177,32 @@ async function readWater(baseUrl: string, field: ManifestField | undefined) {
   }
 }
 
+async function readBitmap(baseUrl: string, field: ManifestField): Promise<ImageBitmap> {
+  const res = await fetch(`${baseUrl}${field.image}`);
+  if (!res.ok) throw new Error(`${field.image} answered ${res.status}`);
+  const bitmap = await createImageBitmap(await res.blob(), {
+    premultiplyAlpha: 'none',
+    colorSpaceConversion: 'none'
+  });
+  if (bitmap.width !== field.size || bitmap.height !== field.size)
+    throw new Error(`${field.image} is not ${field.size} px square`);
+  return bitmap;
+}
+
+async function readGroundField(baseUrl: string, ground: PaintedGround | undefined) {
+  if (!ground) return null;
+  try {
+    const [field, far] = await Promise.all([
+      readBitmap(baseUrl, ground.field),
+      readBitmap(baseUrl, ground.far)
+    ]);
+    return { field, far };
+  } catch (err) {
+    console.warn('[painted tiles] ground field off:', err);
+    return null;
+  }
+}
+
 async function readLight(baseUrl: string, manifest: PaintedManifest) {
   try {
     const image = await loadImage(`${baseUrl}${LIGHT_IMAGE}`);
@@ -198,13 +232,15 @@ async function readSource(baseUrl: string): Promise<PaintedSource | null> {
     const wind = swayTable(sway, Object.keys(manifest.sprites));
     const { tileset, problems } = buildTileset(manifest, wind);
     if (problems.length > 0) console.warn(`[painted tiles] ${problems.join('; ')}`);
-    const [top, light, water] = await Promise.all([
+    const [top, light, water, ground] = await Promise.all([
       readTop(baseUrl, pieceTop(tileset)),
       readLight(baseUrl, manifest),
-      readWater(baseUrl, manifest.water)
+      readWater(baseUrl, manifest.water),
+      readGroundField(baseUrl, tileset.ground)
     ]);
     if (!top) for (const [set, p] of tileset.pieces) if (p.top) tileset.pieces.delete(set);
-    return { manifest, tileset, image, light, top, water };
+    if (!ground) delete tileset.ground;
+    return { manifest, tileset, image, light, top, water, ground };
   } catch (err) {
     console.warn('[painted tiles] off, drawing the glyph tiles instead:', err);
     return null;
@@ -231,6 +267,9 @@ export async function loadPaintedTileset(
       : null;
     const light = loaded.light ? uploadAtlas(gl, loaded.light) : unlitTexture(gl);
     const water = loaded.water ? uploadAtlas(gl, loaded.water) : null;
+    const ground = loaded.ground
+      ? { field: uploadAtlas(gl, loaded.ground.field), far: uploadAtlas(gl, loaded.ground.far) }
+      : null;
     setPaintedTileset(loaded.tileset);
     return {
       tileset: loaded.tileset,
@@ -238,6 +277,7 @@ export async function loadPaintedTileset(
       light,
       top,
       water,
+      ground,
       texels: readTexels(loaded.image),
       cell: readCell(loaded.image)
     };
