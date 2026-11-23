@@ -24,6 +24,7 @@ import { checkBudgets, median } from './budgets.mjs';
 const SCENARIO = 'large-wilderness';
 const ZOOM_IN_STEPS = 7;
 const FRAMES_PER_ZOOM = 10;
+const CAMERA_SAVE_FRAMES = 15;
 const SETTLE_FRAMES = 300;
 const MAX_ZOOM_STEPS = 80;
 const PAUSE_CHECK_FRAMES = 25;
@@ -81,8 +82,14 @@ function describe(perFrame) {
     frames: perFrame.length,
     meanMs: sum / perFrame.length,
     medianMs: median(perFrame),
-    maxMs: Math.max(...perFrame)
+    maxMs: Math.max(...perFrame),
+    perFrame
   };
+}
+
+function shown({ perFrame, ...rest }) {
+  const slow = perFrame.flatMap((ms, i) => (ms > 4 * rest.medianMs ? [`${i}:${Math.round(ms)}`] : []));
+  return `${JSON.stringify(rest)} slow frames ${slow.join(' ')}`;
 }
 
 async function steadyPhase(page, cdp, phase, n) {
@@ -98,7 +105,7 @@ async function steadyPhase(page, cdp, phase, n) {
 
 async function wheelFrames(page, cdp, deltaY) {
   await page.mouse.wheel(0, deltaY);
-  return timedFrames(page, cdp, FRAMES_PER_ZOOM, 0);
+  return timedFrames(page, cdp, CAMERA_SAVE_FRAMES, 0);
 }
 
 async function zoomOutAndBack(page, cdp) {
@@ -139,10 +146,10 @@ async function measure(page, cdp, n, rounds) {
     const round = { round: r };
     for (const phase of STEADY) {
       round[phase.name] = await steadyPhase(page, cdp, phase, n);
-      log(`round ${r} ${phase.name}: ${JSON.stringify(round[phase.name])}`);
+      log(`round ${r} ${phase.name}: ${shown(round[phase.name])}`);
     }
     round[ZOOM] = await zoomOutAndBack(page, cdp);
-    log(`round ${r} ${ZOOM}: ${JSON.stringify(round[ZOOM])}`);
+    log(`round ${r} ${ZOOM}: ${shown(round[ZOOM])}`);
     results.push(round);
   }
   return results;
