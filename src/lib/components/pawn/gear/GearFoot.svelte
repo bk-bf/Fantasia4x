@@ -85,7 +85,7 @@
     display: flex;
     align-items: center;
     gap: 4px;
-    margin-top: 6px;
+    margin-top: 4px;
     white-space: nowrap;
   }
   em {

@@ -156,3 +156,11 @@ function createPersistedChoice<T extends string>(
 }
 
 export const uiTheme = createPersistedChoice<ThemeId>('fx.ui.theme', 'timber', isThemeId);
+
+export type TipPlacement = 'cursor' | 'window';
+export const isTipPlacement = (v: string): v is TipPlacement => v === 'cursor' || v === 'window';
+export const tipPlacement = createPersistedChoice<TipPlacement>(
+  'fx.ui.tipPlacement',
+  'cursor',
+  isTipPlacement
+);

@@ -22,8 +22,7 @@
 
 <style>
   .lab {
+    flex: none;
     color: var(--text-dim);
-    overflow: hidden;
-    text-overflow: ellipsis;
   }
 </style>

@@ -1,20 +1,37 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
   import { chrome } from '$lib/pixelArt/chrome';
+  import { tipPlacement } from '$lib/stores/uiPrefs';
 
   let {
     x,
     y,
     pinned = false,
-    anchored = false,
     children
-  }: { x: number; y: number; pinned?: boolean; anchored?: boolean; children: Snippet } = $props();
+  }: { x: number; y: number; pinned?: boolean; children: Snippet } = $props();
 
   let node: HTMLElement;
   let raf = 0;
 
   const GAP = 16;
   const MARGIN = 8;
+  const WINDOW_GAP = 6;
+
+  function nearCursor(w: number, h: number, vw: number, vh: number) {
+    return {
+      left: x + GAP + w <= vw - MARGIN ? x + GAP : x - GAP - w,
+      top: y + GAP + h <= vh - MARGIN ? y + GAP : y - GAP - h
+    };
+  }
+
+  function underWindow(h: number, vh: number) {
+    const win = document.elementFromPoint(x, y)?.closest('[data-window]');
+    if (!win) return null;
+    const r = win.getBoundingClientRect();
+    if (r.bottom + WINDOW_GAP + h <= vh - MARGIN) return { left: x, top: r.bottom + WINDOW_GAP };
+    if (r.top - WINDOW_GAP - h >= MARGIN) return { left: x, top: r.top - WINDOW_GAP - h };
+    return null;
+  }
 
   function reposition() {
     if (!node || typeof window === 'undefined') return;
@@ -22,16 +39,9 @@
     const vh = window.innerHeight;
     const w = node.offsetWidth;
     const h = node.offsetHeight;
-
-    const gap = anchored ? 0 : GAP;
-    let left = anchored || x + gap + w <= vw - MARGIN ? x + gap : x - gap - w;
-    left = Math.max(MARGIN, Math.min(left, vw - w - MARGIN));
-
-    let top = anchored || y + gap + h <= vh - MARGIN ? y + gap : y - gap - h;
-    top = Math.max(MARGIN, Math.min(top, vh - h - MARGIN));
-
-    node.style.left = `${left}px`;
-    node.style.top = `${top}px`;
+    const spot = ($tipPlacement === 'window' && underWindow(h, vh)) || nearCursor(w, h, vw, vh);
+    node.style.left = `${Math.max(MARGIN, Math.min(spot.left, vw - w - MARGIN))}px`;
+    node.style.top = `${Math.max(MARGIN, Math.min(spot.top, vh - h - MARGIN))}px`;
   }
 
   function schedule() {
@@ -50,7 +60,7 @@
     ro.observe(n);
     window.addEventListener('resize', schedule, { passive: true });
     window.addEventListener('scroll', schedule, { passive: true, capture: true });
-    schedule();
+    reposition();
     return {
       destroy() {
         ro.disconnect();
@@ -63,19 +73,12 @@
   }
 
   $effect(() => {
-    void [x, y];
-    schedule();
+    void [x, y, $tipPlacement];
+    reposition();
   });
 </script>
 
-<div
-  class="tip"
-  class:pinned
-  use:portal
-  data-pin-panel
-  style="left:{x + (anchored ? 0 : GAP)}px; top:{y + (anchored ? 0 : GAP)}px;"
-  {@attach chrome('tip')}
->
+<div class="tip" class:pinned use:portal data-pin-panel {@attach chrome('tip')}>
   <div class="tip-body">
     {@render children()}
   </div>

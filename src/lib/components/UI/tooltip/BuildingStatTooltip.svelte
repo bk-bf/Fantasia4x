@@ -6,13 +6,12 @@
   import { getMaterialProperty, aggregateMaterialMods } from '$lib/game/core/defs/materials';
 
   interface Props {
-    anchored?: boolean;
     building: Building;
     materials?: Record<string, string>;
     x: number;
     y: number;
   }
-  let { building, materials = {}, x, y, anchored = false }: Props = $props();
+  let { building, materials = {}, x, y }: Props = $props();
 
   let matIds = $derived(Object.values(materials).filter(Boolean));
   let matNames = $derived(
@@ -110,7 +109,7 @@
   let headline = $derived(building.category ? humanize(building.category) : 'building');
 </script>
 
-<HoverTip {x} {y} {anchored}>
+<HoverTip {x} {y}>
   <h5>
     {building.name}
     <span class="tip-eff">{headline}</span>

@@ -127,6 +127,10 @@ img {
   background: var(--border-hi);
 }
 
+:where(:focus:not(input, textarea, select, [contenteditable='true'])) {
+  outline: none;
+}
+
 select {
   accent-color: var(--accent);
 }

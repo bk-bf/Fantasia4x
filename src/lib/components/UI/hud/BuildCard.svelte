@@ -69,7 +69,7 @@
 
   let descTip = $state<{ x: number; y: number } | null>(null);
   let itemTip = $state<{ x: number; y: number } | null>(null);
-  let below = $state<{ x: number; y: number } | null>(null);
+  let cardTip = $state<{ x: number; y: number } | null>(null);
 
   const hasItemStats = $derived(
     !!statItem &&
@@ -85,11 +85,8 @@
   const short = $derived(variant === 'missing' || variant === 'blocked');
   const lines = $derived(station || toolTier || requiredTool ? 2 : 3);
 
-  function enterCard(e: MouseEvent) {
-    if (!buildingDef) return;
-    const card = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    const win = (e.currentTarget as HTMLElement).closest('[data-window]')?.getBoundingClientRect();
-    below = { x: card.left, y: (win?.bottom ?? card.bottom) + 6 };
+  function followCard(e: MouseEvent) {
+    if (buildingDef) cardTip = { x: e.clientX, y: e.clientY };
   }
   function enterDesc(e: MouseEvent) {
     const el = e.currentTarget as HTMLElement;
@@ -101,9 +98,10 @@
 <article
   class="bcard"
   class:short
-  class:hover={!!below}
-  onmouseenter={enterCard}
-  onmouseleave={() => (below = null)}
+  class:hover={!!cardTip}
+  onmouseenter={followCard}
+  onmousemove={followCard}
+  onmouseleave={() => (cardTip = null)}
   {@attach chrome('well')}
 >
   <header
@@ -174,8 +172,8 @@
   <HoverTip x={descTip.x} y={descTip.y}>{description}</HoverTip>
 {/if}
 
-{#if below && buildingDef}
-  <BuildingStatTooltip building={buildingDef} materials={statMaterials} {...below} anchored />
+{#if cardTip && buildingDef}
+  <BuildingStatTooltip building={buildingDef} materials={statMaterials} {...cardTip} />
 {:else if itemTip && showItemTip && statItem}
   <ItemStatTooltip
     item={statItem}

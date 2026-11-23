@@ -26,6 +26,7 @@
     onclose,
     onresize,
     onresetsize,
+    resized = false,
     children
   }: {
     id: WindowId | ModalId;
@@ -44,6 +45,7 @@
     onclose: () => void;
     onresize?: (w: number, h: number) => void;
     onresetsize?: () => void;
+    resized?: boolean;
     children: Snippet;
   } = $props();
 
@@ -113,6 +115,9 @@
     <PanelTitle>{title}</PanelTitle>
     <nav class="tabs">{@render (tabs ?? bar.tabs)?.()}</nav>
     {@render (tools ?? bar.tools)?.()}
+    {#if resized && onresetsize}
+      <ChromeButton mini glyph="restore" label="Default size" onclick={onresetsize} />
+    {/if}
     <ChromeButton mini glyph="x" label="Close" onclick={onclose} />
   </header>
   <div class="wb window-body" use:autohideScroll>

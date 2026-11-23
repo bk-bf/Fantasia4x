@@ -58,15 +58,15 @@
     <i></i>
     <div class="b-wx">
       <RailWeather hour={date.hour} />
-      {#if debugBuild}
-        <ChromeButton on={$uiState.customMapOpen} onclick={() => uiState.toggleCustomMap()}
-          >Custom map</ChromeButton
-        >
-      {/if}
       <RailSpeeds />
     </div>
   {/if}
   <div class="b-r">
+    {#if debugBuild && !mapGen}
+      <ChromeButton on={$uiState.customMapOpen} onclick={() => uiState.toggleCustomMap()}
+        >Custom map</ChromeButton
+      >
+    {/if}
     <PanelTitle>Chronicle</PanelTitle>
     <ChromeButton
       mini

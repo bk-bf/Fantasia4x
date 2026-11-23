@@ -12,6 +12,14 @@
   } = $props();
 
   let grab: { x: number; y: number; w: number; h: number } | null = null;
+  let want: { w: number; h: number } | null = null;
+  let frame = 0;
+
+  function flush() {
+    frame = 0;
+    if (want) onresize(want.w, want.h);
+    want = null;
+  }
 
   function start(e: PointerEvent) {
     if (e.button !== 0) return;
@@ -20,9 +28,13 @@
     e.preventDefault();
   }
   function move(e: PointerEvent) {
-    if (grab) onresize(grab.w + e.clientX - grab.x, grab.h + e.clientY - grab.y);
+    if (!grab) return;
+    want = { w: grab.w + e.clientX - grab.x, h: grab.h + e.clientY - grab.y };
+    frame ||= requestAnimationFrame(flush);
   }
   function end() {
+    if (frame) cancelAnimationFrame(frame);
+    flush();
     grab = null;
   }
 </script>

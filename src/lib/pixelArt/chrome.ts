@@ -7,6 +7,7 @@ import { SKINS, type ChromeKind } from './skins';
 import './chrome.css';
 
 const KEEP = 24;
+const SETTLE_MS = 120;
 interface PaintedArt {
   base: Art;
   lit?: Art;
@@ -37,6 +38,8 @@ export function chrome(kind: ChromeKind): Attachment<HTMLElement> {
     let w = 0;
     let h = 0;
     let shown: HTMLImageElement[] = [];
+    let drawnAt = 0;
+    let settle: ReturnType<typeof setTimeout> | undefined;
     const draw = () => {
       for (const c of shown) c.remove();
       shown = [];
@@ -54,7 +57,17 @@ export function chrome(kind: ChromeKind): Attachment<HTMLElement> {
       if (nw === w && nh === h) return;
       w = nw;
       h = nh;
-      draw();
+      clearTimeout(settle);
+      const now = performance.now();
+      if (!shown.length || now - drawnAt >= SETTLE_MS) {
+        drawnAt = now;
+        draw();
+        return;
+      }
+      settle = setTimeout(() => {
+        drawnAt = performance.now();
+        draw();
+      }, SETTLE_MS);
     });
     seen.observe(el);
     const stop = uiTheme.subscribe((t) => {
@@ -63,6 +76,7 @@ export function chrome(kind: ChromeKind): Attachment<HTMLElement> {
       draw();
     });
     return () => {
+      clearTimeout(settle);
       seen.disconnect();
       stop();
       for (const c of shown) c.remove();
