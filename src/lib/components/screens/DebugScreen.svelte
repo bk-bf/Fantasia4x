@@ -2,6 +2,7 @@
   import DebugMenu from './DebugMenu.svelte';
   import DebugLogScreen from './DebugLogScreen.svelte';
   import { persisted, persist } from '$lib/stores/uiPersist';
+  import { autoPauseOnThreat, autoPauseOnDeath } from '$lib/stores/uiPrefs';
 
   const TABS = [
     { id: 'menu', label: 'MENU' },
@@ -10,6 +11,12 @@
   type DebugTab = (typeof TABS)[number]['id'];
   let activeTab = $state<DebugTab>(persisted<DebugTab>('debug.tab', 'menu'));
   $effect(() => persist('debug.tab', activeTab));
+
+  const autoPauseOff = $derived(!$autoPauseOnThreat && !$autoPauseOnDeath);
+  function toggleAutoPause() {
+    autoPauseOnThreat.set(autoPauseOff);
+    autoPauseOnDeath.set(autoPauseOff);
+  }
 </script>
 
 <div class="debug-screen">
@@ -21,6 +28,9 @@
         onclick={() => (activeTab = tab.id)}>{tab.label}</button
       >
     {/each}
+    <button class="debug-tab" class:active={autoPauseOff} onclick={toggleAutoPause}
+      >Auto-pause off</button
+    >
   </nav>
 
   <div class="debug-content">
