@@ -1471,7 +1471,6 @@
     "lairAttractors": [
       "frostheart_pine"
     ],
-    "particleEffect": "flies",
     "charSpans": [
       {
         "sheet": "crops",
@@ -1514,7 +1513,6 @@
       "witchwood_grove",
       "soulwood_grove"
     ],
-    "particleEffect": "bloodmist",
     "charSpans": [
       {
         "sheet": "plants",
@@ -1555,7 +1553,6 @@
     "lairAttractors": [
       "bonewood_snag"
     ],
-    "particleEffect": "smoke",
     "charSpans": [
       {
         "sheet": "plants",
@@ -1597,7 +1594,6 @@
     "lairAttractors": [
       "bonewood_snag"
     ],
-    "particleEffect": "miasma",
     "charSpans": [
       {
         "sheet": "crops",
@@ -1635,7 +1631,6 @@
     "subterrain": "dirt",
     "walkable": true,
     "lair": true,
-    "particleEffect": "feathers",
     "charSpans": [
       {
         "sheet": "crops",
@@ -1673,7 +1668,6 @@
     "subterrain": "dirt",
     "walkable": true,
     "lair": true,
-    "particleEffect": "feathers",
     "charSpans": [
       {
         "sheet": "crops",

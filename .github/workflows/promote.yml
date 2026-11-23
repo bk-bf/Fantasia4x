@@ -12,7 +12,7 @@ concurrency:
 jobs:
   suite:
     name: pnpm check, the whole test suite, seams and Rust tests
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(vars.RUNS_ON || '"ubuntu-24.04"') }}
     timeout-minutes: 120
     permissions:
       contents: read
@@ -37,7 +37,7 @@ jobs:
 
   audits:
     name: Combat audits
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(vars.RUNS_ON || '"ubuntu-24.04"') }}
     timeout-minutes: 360
     permissions:
       contents: read
@@ -51,7 +51,7 @@ jobs:
 
   measure:
     name: Work pins, gungraun and browser legs, main against the candidate
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(vars.RUNS_ON || '"ubuntu-24.04"') }}
     timeout-minutes: 240
     permissions:
       contents: read
@@ -82,7 +82,7 @@ jobs:
 
       - name: Install Chromium for the browser legs
         if: steps.hook.outputs.present == 'true'
-        run: pnpm exec playwright install --with-deps --only-shell chromium
+        run: pnpm exec playwright install ${{ runner.environment == 'github-hosted' && '--with-deps' || '' }} --only-shell chromium
 
       - name: Browser work pins, main against the candidate
         if: steps.hook.outputs.present == 'true'

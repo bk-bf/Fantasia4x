@@ -1,5 +1,6 @@
 import { writable, derived, type Writable } from 'svelte/store';
 import { browser } from '$app/environment';
+import { perfContext } from '$lib/dev/perfContext';
 import type { ActivityLogEntry, CombatTurnEntry } from '$lib/game/core/defs/events';
 import type { LogEventInput } from '$lib/game/core/util/logSink';
 import {
@@ -184,9 +185,11 @@ function mirrorToFile(entry: ActivityLogEntry): void {
   const t = String(entry.turn).padStart(5, '0');
   const who = entry.actor && entry.actor !== 'system' ? ` <${entry.actor}>` : '';
   const tail = entry.result ? ` — ${entry.result}` : '';
+  const context =
+    entry.type === 'perf' && !entry.action.startsWith('session ') ? ` | ${perfContext()}` : '';
   _mirrorPending.push({
     category: entry.type,
-    line: `[T${t}] [${entry.severity}]${who} ${entry.action}${tail}`
+    line: `[T${t}] [${entry.severity}]${who} ${entry.action}${tail}${context}`
   });
   if (_mirrorTimer === null) _mirrorTimer = setTimeout(flushMirror, 1000);
 }

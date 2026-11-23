@@ -12,14 +12,17 @@ import { gameEngine } from '$lib/game/systems/GameEngineImpl';
 import './simLogBridge';
 import { vlog } from '$lib/game/core/util/logSink';
 import { describeSession } from '$lib/dev/sessionHeader';
+import { setPerfContextProvider } from '$lib/dev/perfContext';
+import {
+  environmentService,
+  dayIndexForTurn,
+  getTimeOfDay
+} from '$lib/game/services/EnvironmentService';
+import { cameraTileSize } from '$lib/stores/cameraView';
 import { simWorkerBridge, USE_SIM_WORKER } from '$lib/game/sim/simWorkerClient';
 import { applySimCommand } from '$lib/game/sim/commands';
 import type { SimCommand } from '$lib/game/sim/simProtocol';
-import type {
-  GameState,
-  FilterableZoneType,
-  DesignationType
-} from '$lib/game/core/types';
+import type { GameState, FilterableZoneType, DesignationType } from '$lib/game/core/types';
 import { generateColonyPawns, generateWorldKin } from '$lib/game/entities/Pawns';
 import {
   initialGameState,
@@ -285,9 +288,28 @@ function startAutoTurns() {
   simAccumulatorMs = 0;
   if (!browser || sessionLogged) return;
   sessionLogged = true;
-  const gs = get(gameState) as GameState;
-  vlog('perf', gs.turn, () => describeSession(gs, gameSpeedValue));
+  logSession(get(gameState) as GameState);
 }
+
+function logSession(gs: GameState) {
+  if (browser) vlog('perf', gs.turn, () => describeSession(gs, gameSpeedValue));
+}
+
+setPerfContextProvider(() => {
+  const gs = get(gameState) as GameState;
+  return [
+    `zoom=${get(cameraTileSize).toFixed(1)}px`,
+    `paused=${get(isPaused)}`,
+    `speed=${gameSpeedValue}x`,
+    `map=${gs.worldMap?.[0]?.length ?? 0}x${gs.worldMap?.length ?? 0}`,
+    `pawns=${gs.pawns?.length ?? 0}`,
+    `mobs=${gs.mobs?.length ?? 0}`,
+    `day=${dayIndexForTurn(gs.turn)}`,
+    `hour=${(getTimeOfDay(environmentService.ambientTurn(gs)) * 24).toFixed(1)}`,
+    `season=${gs.season ?? '-'}`,
+    `weather=${gs.weather?.type ?? '-'}`
+  ].join(' ');
+});
 
 function stopAutoTurns() {
   simRunning = false;
@@ -430,6 +452,7 @@ function regenWorld(seed?: number, dev = false, itemQty = 500, preview = false) 
   if (dev) next = applyDevWorld(next, itemQty);
   next = entityService.seedInitialEntities(next);
   loadStateIntoWorker(next);
+  logSession(next);
 }
 
 function restoreWorld(snapshot: GameState) {

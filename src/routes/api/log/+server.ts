@@ -1,5 +1,14 @@
-import { appendFileSync, writeFileSync, mkdirSync, existsSync, statSync } from 'node:fs';
+import {
+  appendFileSync,
+  writeFileSync,
+  mkdirSync,
+  existsSync,
+  statSync,
+  readdirSync,
+  readFileSync
+} from 'node:fs';
 import { join } from 'node:path';
+import { loadavg, freemem, totalmem } from 'node:os';
 import type { RequestHandler } from './$types';
 
 const MAX_LOG_BYTES = 16 * 1024 * 1024;
@@ -10,6 +19,42 @@ const pad = (n: number, width = 2) => String(n).padStart(width, '0');
 
 function logStamp(d: Date): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}.${pad(d.getMilliseconds(), 3)}`;
+}
+
+const SESSION_LINE = /^\[T\d+\] \[\w+\] session /;
+
+function readSys(path: string): string {
+  try {
+    return readFileSync(path, 'utf8').trim();
+  } catch {
+    return '-';
+  }
+}
+
+function powerState(): string {
+  let power = '-';
+  try {
+    const supplies = readdirSync('/sys/class/power_supply').filter((d) => d.startsWith('BAT'));
+    if (supplies.length) power = readSys(`/sys/class/power_supply/${supplies[0]}/status`);
+  } catch {
+    power = '-';
+  }
+  return [
+    `power=${power}`,
+    `profile=${readSys('/sys/firmware/acpi/platform_profile')}`,
+    `governor=${readSys('/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor')}`
+  ].join(' ');
+}
+
+let lastPower = '';
+
+function hostState(): string {
+  const gib = (b: number) => (b / 2 ** 30).toFixed(1);
+  return [
+    powerState(),
+    `load=${loadavg().map((l) => l.toFixed(2)).join('/')}`,
+    `freeGb=${gib(freemem())}/${gib(totalmem())}`
+  ].join(' ');
 }
 
 function appendToLog(logFile: string, lines: string[]): void {
@@ -52,9 +97,16 @@ export const POST: RequestHandler = async ({ request }) => {
     const safe = line.replace(/[\r\n]/g, '↵');
     let bucket = buckets.get(cat);
     if (!bucket) buckets.set(cat, (bucket = []));
-    bucket.push(`${stamp} ${safe}`);
+    bucket.push(`${stamp} ${safe}${SESSION_LINE.test(safe) ? ` ${hostState()}` : ''}`);
   }
   if (buckets.size === 0) return new Response(null, { status: 204 });
+
+  const perf = buckets.get('perf');
+  if (perf) {
+    const power = powerState();
+    if (lastPower && power !== lastPower) perf.unshift(`${stamp} host ${power}`);
+    lastPower = power;
+  }
 
   const logDir = join(process.cwd(), '.debug');
   if (!existsSync(logDir)) mkdirSync(logDir, { recursive: true });

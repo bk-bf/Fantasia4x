@@ -1,5 +1,6 @@
 import { execFileSync, spawn } from 'node:child_process';
-import { writeFileSync, mkdirSync } from 'node:fs';
+import { writeFileSync, mkdirSync, readFileSync, rmSync } from 'node:fs';
+import { gunzipSync } from 'node:zlib';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
@@ -37,7 +38,9 @@ async function startCompositor(log) {
   return { socket: inst.wl_socket, cleanEnv, stop };
 }
 
-function patchChromium(chromium, { chrome, socket, cleanEnv, query }) {
+const SERVED_SAVE = 'f4x-bench-save.json';
+
+function patchChromium(chromium, { chrome, socket, cleanEnv, query, servedSave }) {
   const origLaunch = chromium.launch.bind(chromium);
   chromium.launch = async (o) => {
     const browser = await origLaunch({
@@ -51,6 +54,12 @@ function patchChromium(chromium, { chrome, socket, cleanEnv, query }) {
       const newPage = ctx.newPage.bind(ctx);
       ctx.newPage = async () => {
         const pg = await newPage();
+        const route = pg.route.bind(pg);
+        pg.route = (pattern, handler) => route(pattern, (r) =>
+          servedSave && r.request().url().endsWith('/save.json')
+            ? r.fulfill({ status: 302, headers: { location: `/${servedSave}` } })
+            : handler(r)
+        );
         const goto = pg.goto.bind(pg);
         pg.goto = (url, opts) => goto(query && url.endsWith('/') ? url + query : url, opts);
         return pg;
@@ -70,12 +79,21 @@ export async function openGpuGame({ tree, label, outDir, usage, init = [] }) {
   mkdirSync(outDir, { recursive: true });
   const log = (l) => process.stdout.write(`[${label}] ${l}\n`);
   const comp = await startCompositor(log);
-  const { chromium } = await import(tree + '/node_modules/playwright/index.mjs');
-  patchChromium(chromium, { chrome, socket: comp.socket, cleanEnv: comp.cleanEnv, query: process.env.F4X_QUERY ?? '' });
-  const { openGame } = await import(tree + '/tools/work-pins/browser-session.mjs');
+  const harness = process.env.F4X_HARNESS ?? tree;
+  const { chromium } = await import(harness + '/node_modules/playwright/index.mjs');
+  const fixture = process.env.F4X_FIXTURE;
+  const servedPath = join(tree, 'static', SERVED_SAVE);
+  if (fixture) writeFileSync(servedPath, fixture.endsWith('.gz') ? gunzipSync(readFileSync(fixture)) : readFileSync(fixture));
+  const dropServed = () => fixture && rmSync(servedPath, { force: true });
+  patchChromium(chromium, { chrome, socket: comp.socket, cleanEnv: comp.cleanEnv, query: process.env.F4X_QUERY ?? '', servedSave: fixture ? SERVED_SAVE : null });
+  const { openGame } = await import(harness + '/tools/work-pins/browser-session.mjs');
   const game = await openGame({
-    tree, fixture: tree + '/tools/work-pins/fixtures/dev-save.json.gz',
+    tree, fixture: process.env.F4X_FIXTURE ?? tree + '/tools/work-pins/fixtures/dev-save.json.gz',
     serverLog: join(outDir, `${label}-server.log`), log, clock: false, workPins: false, init
+  }).catch((e) => {
+    comp.stop();
+    dropServed();
+    throw e;
   });
   const { page } = game;
   const renderer = await page.evaluate(() => { const gl = document.createElement('canvas').getContext('webgl2'); const e = gl?.getExtension('WEBGL_debug_renderer_info'); return gl ? gl.getParameter(e ? e.UNMASKED_RENDERER_WEBGL : gl.RENDERER) : 'none'; });
@@ -95,6 +113,7 @@ export async function openGpuGame({ tree, label, outDir, usage, init = [] }) {
     log(`ERRORS ${JSON.stringify(game.errors.slice(0, 5))}`);
     await game.close();
     comp.stop();
+    dropServed();
     log('DONE');
   };
   return { ...game, log, tile, wheel, setPaused, finish };

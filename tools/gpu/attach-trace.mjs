@@ -1,6 +1,7 @@
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { worstFrames } from './trace-stall.mjs';
+import { startFrameGaps, stopFrameGaps, summarizeGaps } from './frame-gaps.mjs';
 
 const [ENDPOINT, OUT_DIR, ROUNDS = '3'] = process.argv.slice(2);
 if (!ENDPOINT || !OUT_DIR) {
@@ -76,16 +77,15 @@ try {
     const inTile = await tile();
     await page.send('Profiler.start');
     await sleep(500);
-    await evaluate(() => { window.__gaps = []; let last = performance.now(); const f = (t) => { window.__gaps.push(t - last); last = t; window.__raf = requestAnimationFrame(f); }; window.__raf = requestAnimationFrame(f); });
+    await evaluate(startFrameGaps);
     await evaluate((r) => performance.mark(`f4x-zoom-${r}-start`), r);
     await wheel(120, 45);
     await sleep(3000);
     await evaluate((r) => performance.mark(`f4x-zoom-${r}-end`), r);
-    const gaps = await evaluate(() => { cancelAnimationFrame(window.__raf); return window.__gaps.slice(1); });
+    const recorded = await evaluate(stopFrameGaps);
     const { profile } = await page.send('Profiler.stop');
     writeFileSync(join(OUT_DIR, `round-${r}.cpuprofile`), JSON.stringify(profile));
-    const sorted = [...gaps].sort((a, b) => b - a);
-    const row = { round: r, inTile, outTile: await tile(), frames: gaps.length, maxMs: Math.round(sorted[0] ?? 0), top5: sorted.slice(0, 5).map(Math.round), over100: gaps.filter((g) => g > 100).length, stallMs: Math.round(gaps.filter((g) => g > 50).reduce((s, g) => s + g, 0)) };
+    const row = { round: r, inTile, outTile: await tile(), ...summarizeGaps(recorded) };
     rows.push(row);
     log(`ROW ${JSON.stringify(row)}`);
   }

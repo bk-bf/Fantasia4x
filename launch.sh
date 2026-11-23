@@ -237,7 +237,7 @@ if [[ -n "$SHELL_TARGET" ]]; then
 
   echo "Fantasia4x — $SHELL_TARGET shell over $SERVER_LABEL server (main only)"
   echo ""
-  start_spritesheet_viewer
+  start_spritesheet_viewer "$((PORT + 1))"
 
   if [[ "$SHELL_TARGET" == electron && "$SBX" == true ]]; then
     echo ""

@@ -148,6 +148,7 @@
   const MAP_W = 240;
   const MAP_H = 160;
   const MAX_TILE_W = 64;
+  const ENTITY_RENDER_MIN_PX = 5;
   const ZOOM_STEP = 2;
   const CAMERA_STORAGE_KEY = 'fantasia4x-camera';
   let saveCameraTimer: ReturnType<typeof setTimeout> | null = null;
@@ -267,9 +268,6 @@
 
   let _glyphFloatKey = '';
   let _progressOverlayKey = '';
-  let _particleOverlayKey = '';
-  let _lairTiles: { x: number; y: number; effect: string }[] = [];
-  let _lairScanAt = 0;
   let _healthOverlayKey = '';
   let _draftOverlayKey = '';
   let _floatTextKey = '';
@@ -822,12 +820,7 @@
   let selEndY = 0;
   let selectedResourceTypes = new Set<string>();
 
-  let _lastWorldMapRef: unknown = null;
   const unsubState = gameState.subscribe((s) => {
-    if (s.worldMap !== _lastWorldMapRef) {
-      _lastWorldMapRef = s.worldMap;
-      _lairScanAt = 0;
-    }
     worldMap = s.worldMap ?? [];
     pawns = s.pawns ?? [];
     buildings = s.buildings ?? [];
@@ -953,7 +946,6 @@
     const cullMinY = vy - CULL_MARGIN;
     const cullMaxX = vx + Math.ceil((box?.clientWidth ?? 0) / tW) + CULL_MARGIN;
     const cullMaxY = vy + Math.ceil((box?.clientHeight ?? 0) / tH) + CULL_MARGIN;
-    const ENTITY_RENDER_MIN_PX = 5;
     const renderMobs = tW >= ENTITY_RENDER_MIN_PX;
     const seenMobs = new Set<string>();
     for (const mob of liveMobs) {
@@ -1134,7 +1126,8 @@
         if (onScreen(o)) newGlyphs.push(o);
       }
     }
-    for (const m of mobList) {
+    const mobsDrawn = tW >= ENTITY_RENDER_MIN_PX;
+    for (const m of mobsDrawn ? mobList : []) {
       if (m.state === 'Corpse') continue;
       if (isHiddenTile(m.x, m.y)) continue;
       let kind: GlyphFloatKind | null = null;
@@ -1227,21 +1220,6 @@
     if (progressKey !== _progressOverlayKey) {
       _progressOverlayKey = progressKey;
       worldEffects.setProgressOverlays(newProgress);
-    }
-
-    const newParticles: { id: string; left: number; top: number; effect: string }[] = [];
-    for (const lt of _lairTiles) {
-      const left = (lt.x - vx + 0.5) * tW;
-      const top = (lt.y - vy + 0.5) * tH;
-      if (left < 0 || top < 0 || left > W || top > H) continue;
-      newParticles.push({ id: `${lt.x},${lt.y}`, left, top, effect: lt.effect });
-    }
-    const particleKey = newParticles
-      .map((o) => `${o.id}:${Math.round(o.left)},${Math.round(o.top)}:${o.effect}`)
-      .join('|');
-    if (particleKey !== _particleOverlayKey) {
-      _particleOverlayKey = particleKey;
-      worldEffects.setParticleOverlays(newParticles);
     }
 
     const newHealth = [
@@ -1403,27 +1381,6 @@
       _projOverlayKey = projKey;
       worldEffects.setProjectileOverlays(newProjectiles);
     }
-  }
-
-  function rebuildLairTiles(map: WorldTile[][]) {
-    const out: { x: number; y: number; effect: string }[] = [];
-    for (let y = 0; y < map.length; y++) {
-      const row = map[y];
-      if (!row) continue;
-      for (let x = 0; x < row.length; x++) {
-        const res = row[x]?.resources;
-        if (!res) continue;
-        for (const rid in res) {
-          if ((res[rid] ?? 0) <= 0) continue;
-          const eff = resourceObjectService.getById(rid)?.particleEffect;
-          if (eff) {
-            out.push({ x, y, effect: eff });
-            break;
-          }
-        }
-      }
-    }
-    _lairTiles = out;
   }
 
   function redrawOverlay() {
@@ -2802,10 +2759,6 @@
         if (mobView) [vx, vy] = setView(mobView[0], mobView[1], map, box, tW, tH, preview);
         const panView = updateKeyboardPan(dt, preview, followPawnId, followMobId, vx, vy);
         if (panView) [vx, vy] = setView(panView[0], panView[1], map, box, tW, tH, preview);
-        if (now - _lairScanAt > 4000) {
-          _lairScanAt = now;
-          rebuildLairTiles(map);
-        }
         updateWorldEffectOverlays(pawnList, mobList, buildingList, vx, vy, box, tW, tH);
         updateSelectionRings(vx, vy, tW, tH);
         if (

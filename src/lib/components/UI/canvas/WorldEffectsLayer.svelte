@@ -2,11 +2,9 @@
   import { worldEffects } from '$lib/stores/fx/worldEffects';
   import { cameraTileSize } from '$lib/stores/cameraView';
   import { gameState } from '$lib/stores/gameState';
-  import { environmentService, getAmbientLight } from '$lib/game/services/EnvironmentService';
   import { weatherEffects, uiTheme } from '$lib/stores/uiPrefs';
   import WorldWeather from '$lib/components/UI/weather/WorldWeather.svelte';
   import GlyphFloats from './GlyphFloats.svelte';
-  import LairEffects from './LairEffects.svelte';
   import ProjectileOverlays from './ProjectileOverlays.svelte';
   import CombatFloats from './CombatFloats.svelte';
   import { MAP_BAR_H, MAP_BAR_W, mapBarUrl } from './mapBar';
@@ -16,12 +14,6 @@
 
   const floatScale = $derived(Math.max(0.25, Math.min(1.5, $cameraTileSize / BASE_TILE)));
   const combatFloatScale = $derived(Math.min(floatScale, 1.2));
-  const fxScale = $derived(Math.max(0.35, Math.min(1.8, $cameraTileSize / BASE_TILE)));
-  const amb = $derived(
-    $worldEffects.particleOverlays.length > 0
-      ? getAmbientLight(environmentService.ambientTurn($gameState))
-      : 1
-  );
   const barAt = (left: number, top: number) =>
     `transform: translate(${left}px, ${top}px) translateX(-50%) scale(${floatScale});`;
 </script>
@@ -40,7 +32,6 @@
     />
   {/each}
 
-  <LairEffects overlays={$worldEffects.particleOverlays} {fxScale} {amb} />
   <ProjectileOverlays overlays={$worldEffects.projectileOverlays} />
 
   {#each $worldEffects.healthOverlays as overlay (overlay.id)}

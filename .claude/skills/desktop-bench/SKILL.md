@@ -5,6 +5,9 @@ description: Measure Fantasia4x rendering and frame-time performance on the desk
 
 # Benchmarking on the desktop
 
+The order to investigate a perf complaint in, and the traps found so far, are in the
+`perf-investigation` skill; this one holds the commands.
+
 The desktop (`ssh desktop`, CachyOS, Hyprland, AMD RX 5700 XT, 16 threads) is the machine for
 GPU-bound measurements. ubuntuserver has no GPU and the laptop runs the owner's own session.
 Tell the owner before starting if the desktop is off; he turns it on.
@@ -18,8 +21,17 @@ Tell the owner before starting if the desktop is off; he turns it on.
 - `tools/gpu/steady.mjs` holds the same save close up, at the default zoom and zoomed out, each
   paused, at 1x and at 4x, and reports FPS, frame-time p50/p95/p99, frames over 33 and 50 ms, and
   TPS counted from the worker's turn. Same arguments as `zoom-out.mjs`, with seconds per cell last.
-  The desktop holds 60 FPS at its vsync cap, so it shows a cost only when it breaks that cap.
+  The desktop holds 60 FPS at its vsync cap, so FPS shows a cost only when it breaks that cap;
+  `taskMs`, `scriptMs`, `layoutMs` and `styleMs` are main-thread milliseconds per second of the
+  cell and show it under the cap, and `nodes` is the DOM node count. The far cells come after
+  about a minute of play, so creatures have gone to sleep and the map has aged.
+  `F4X_PROFILE=1` also saves a CPU profile per cell; `stall.mjs --whole <profile>` ranks the whole
+  cell instead of its longest busy stretch, which is the read for a steady low frame rate.
 - Both share `tools/gpu/session.mjs`, which starts the nested compositor and the browser.
+  `F4X_FIXTURE=<save.json.gz>` loads another save than the CI fixture, such as one copied out of
+  the owner's game; the probe serves it from the tree's `static/` for the run, since a save past
+  about 100 MB closes the page when Playwright hands it over directly, and `F4X_HARNESS=<tree>` borrows the harness and Playwright of another tree for
+  a build too old to have them, such as `main`.
 - `tools/gpu/stall.mjs <file.cpuprofile>...` prints the longest busy stretch of a profile with
   its self and inclusive time per function.
 - The steady-state shell bench (frame times per zoom level at 1x, 4x and paused pan, Electron
@@ -95,7 +107,10 @@ systemd-run --user --collect --unit=f4x-zoom -E PATH="$PATH" -E CHROME="$CH" \
 - Alternate the builds (A B A B) and run three rounds each, so a slow minute on the machine shows
   up as spread rather than as a difference.
 - Read `ROW` lines from the log: `maxMs` is the longest frame, `stallMs` the sum of frames over
-  50 ms, `over100` the count over 100 ms.
+  50 ms, `over100` the count over 100 ms, `pausedShare` the share of the round's time the game sat
+  paused, and `worstPaused` whether the longest frame fell in a pause. A running row with a
+  `pausedShare` above 0 was paused part of the time, by auto-pause or by hand; never report it
+  as running.
 
 ## Reporting
 

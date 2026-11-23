@@ -16,13 +16,6 @@ export interface ProgressOverlay {
   progress: number;
 }
 
-export interface ParticleOverlay {
-  id: string;
-  left: number;
-  top: number;
-  effect: string;
-}
-
 export interface ProjectileOverlay {
   id: string;
   left: number;
@@ -57,7 +50,6 @@ export interface FloatingTextOverlay {
 export interface WorldEffectsState {
   glyphFloats: GlyphFloat[];
   progressOverlays: ProgressOverlay[];
-  particleOverlays: ParticleOverlay[];
   projectileOverlays: ProjectileOverlay[];
   healthOverlays: HealthOverlay[];
   draftTargetOverlays: DraftTargetOverlay[];
@@ -68,7 +60,6 @@ function createWorldEffectsStore() {
   const { subscribe, update } = writable<WorldEffectsState>({
     glyphFloats: [],
     progressOverlays: [],
-    particleOverlays: [],
     projectileOverlays: [],
     healthOverlays: [],
     draftTargetOverlays: [],
@@ -82,9 +73,6 @@ function createWorldEffectsStore() {
     },
     setProgressOverlays(overlays: ProgressOverlay[]) {
       update((s) => ({ ...s, progressOverlays: overlays }));
-    },
-    setParticleOverlays(overlays: ParticleOverlay[]) {
-      update((s) => ({ ...s, particleOverlays: overlays }));
     },
     setProjectileOverlays(overlays: ProjectileOverlay[]) {
       update((s) => ({ ...s, projectileOverlays: overlays }));

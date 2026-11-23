@@ -66,7 +66,6 @@ export interface ResourceObjectDef {
   grazing?: boolean;
   lair?: boolean;
   lairAttractors?: string[];
-  particleEffect?: string;
   interaction: ResourceInteractionDef;
   interactions?: ResourceInteractionDef[];
   crop?: {
