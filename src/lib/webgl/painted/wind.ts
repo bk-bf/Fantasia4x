@@ -25,6 +25,7 @@ export interface WindUniforms {
   u_gustNoise: [number, number, number, number];
   u_windPhase: [number, number, number, number];
   u_basePerArt: number;
+  u_swayReach: number;
 }
 
 export class WindClock {
@@ -70,7 +71,8 @@ export class WindClock {
       u_gustShape: [WIND.gust.onset, WIND.gust.width, a.amp, b.amp],
       u_gustNoise: [a.fx, a.fy, b.fx, b.fy],
       u_windPhase: [WIND.phase[0], WIND.phase[1], WIND.gust.along, WIND.gust.across],
-      u_basePerArt: basePerArt
+      u_basePerArt: basePerArt,
+      u_swayReach: WIND.maxScale * (WIND.sway.idle + WIND.sway.gust)
     };
   }
 }

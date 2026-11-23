@@ -224,6 +224,21 @@ describe('the wind clock', () => {
     expect(at(1)).toBeGreaterThan(2);
   });
 
+  it('keeps the sway reach the same from a calm to a gale, and wide enough for the strongest lean', () => {
+    const at = (strength: number, ms: number) => {
+      const c = new WindClock();
+      c.set(strength, heading(1, 0));
+      c.tick(0);
+      c.tick(ms);
+      return c.uniforms(32, 0.5);
+    };
+    const calm = at(0.05, 100);
+    const gale = at(1, 5000);
+    const [idle, gust] = gale.u_swayShape;
+    expect(calm.u_swayReach).toBe(gale.u_swayReach);
+    expect(gale.u_swayReach).toBeGreaterThanOrEqual(gale.u_wind[0] * (idle + gust));
+  });
+
   it('carries the gusts across the map downwind', () => {
     const rand = seeded(11);
     const points = Array.from({ length: 4000 }, () => [rand() * 6000, rand() * 6000]);
