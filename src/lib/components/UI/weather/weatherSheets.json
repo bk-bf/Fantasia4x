@@ -1,7 +1,7 @@
 {
   "rainInk": [170, 196, 236],
   "fogInk": [176, 184, 196],
-  "snowTile": 128,
+  "snow": { "size": 768, "seed": 12, "fall": 28, "slope": [0.1, 0.6] },
   "rain": [
     { "p": 384, "segs": 4, "len": 16, "alpha": 200, "dens": [0.5, 0.85], "secs": 1.5, "gust": [5.3, 0.55] },
     { "p": 300, "segs": 3, "len": 11, "alpha": 150, "dens": [0.55, 0.9], "secs": 1.75, "gust": [8.1, 0.45] },

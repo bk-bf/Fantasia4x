@@ -4,7 +4,7 @@
   import { gameState } from '$lib/stores/gameState';
   import { environmentService, getAmbientLight } from '$lib/game/services/EnvironmentService';
   import { weatherEffects, uiTheme } from '$lib/stores/uiPrefs';
-  import WeatherLayer from '$lib/components/UI/weather/WeatherLayer.svelte';
+  import WorldWeather from '$lib/components/UI/weather/WorldWeather.svelte';
   import GlyphFloats from './GlyphFloats.svelte';
   import LairEffects from './LairEffects.svelte';
   import ProjectileOverlays from './ProjectileOverlays.svelte';
@@ -13,7 +13,6 @@
 
   const isPaused = gameState.isPaused;
   const BASE_TILE = 20;
-  const WEATHER_TILE = 32;
 
   const floatScale = $derived(Math.max(0.25, Math.min(1.5, $cameraTileSize / BASE_TILE)));
   const combatFloatScale = $derived(Math.min(floatScale, 1.2));
@@ -68,7 +67,7 @@
   <CombatFloats overlays={$worldEffects.floatingTextOverlays} scale={combatFloatScale} />
 </div>
 {#if $weatherEffects}
-  <WeatherLayer scale={Math.max(1, Math.round($cameraTileSize / WEATHER_TILE))} />
+  <WorldWeather />
 {/if}
 
 <style>
