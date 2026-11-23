@@ -1,6 +1,6 @@
 export interface GroundLayer {
   level: number;
-  water: boolean;
+  water: number;
 }
 
 const LAND: Record<string, number> = {
@@ -32,11 +32,14 @@ const LAND: Record<string, number> = {
   crystal_formation: 4
 };
 
-const WATER: Record<string, number> = { shallow_water: 1, water: 0, rapids: 0 };
+const WATER: Record<string, GroundLayer> = {
+  shallow_water: { level: 1, water: 1 },
+  water: { level: 0, water: 2 },
+  rapids: { level: 0, water: 3 }
+};
 
 const UNLISTED_LEVEL = 5;
 
 export function groundLayer(subType: string): GroundLayer {
-  if (subType in WATER) return { level: WATER[subType], water: true };
-  return { level: LAND[subType] ?? UNLISTED_LEVEL, water: false };
+  return WATER[subType] ?? { level: LAND[subType] ?? UNLISTED_LEVEL, water: 0 };
 }

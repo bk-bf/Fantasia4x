@@ -32,6 +32,7 @@ export interface TileData {
   rotation?: 0 | 90 | 180 | 270;
   scale?: number;
   painted?: PaintedSprite;
+  scenery?: boolean;
   ground?: number;
   dirty?: boolean;
   lastUpdated?: number;

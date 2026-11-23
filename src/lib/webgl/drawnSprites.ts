@@ -133,7 +133,8 @@ function groundOf(kind: number, artY: number, row: number, f: DrawnFrame): numbe
   return row * f.artPx + OBJECT_FOOT;
 }
 
-const isBlank = (tile: TileData) => !tile.painted && (!tile.char || tile.char === ' ');
+const isBlank = (tile: TileData) =>
+  tile.scenery || (!tile.painted && (!tile.char || tile.char === ' '));
 
 interface Candidate extends DrawnHit {
   ground: number;

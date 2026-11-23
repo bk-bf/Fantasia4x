@@ -27,6 +27,7 @@ export interface GroundBlendFrame {
   flicker: number;
   fieldLit: boolean;
   tone: [number, number];
+  waterPhase: number;
   lightSampler?: LightSampler;
   lightTime: number;
   lightVersion: number;
@@ -56,7 +57,7 @@ export function groundKindTable(painted: LoadedPaintedTileset): {
       k * 4
     );
     const { level, water } = groundLayer(id);
-    layer.set([level, water ? 1 : 0], k * 2);
+    layer.set([level, water], k * 2);
   });
   return { patch, layer };
 }
@@ -136,7 +137,8 @@ export class GroundBlend {
       'u_lightTexture',
       'u_fieldLit',
       'u_saturation',
-      'u_brightness'
+      'u_brightness',
+      'u_waterPhase'
     ];
     this.at = Object.fromEntries(names.map((n) => [n, gl.getUniformLocation(program, n)]));
     const { patch, layer } = groundKindTable(painted);
@@ -326,6 +328,7 @@ export class GroundBlend {
     gl.uniform1f(this.at.u_fieldLit, f.fieldLit ? 1 : 0);
     gl.uniform1f(this.at.u_saturation, f.tone[0]);
     gl.uniform1f(this.at.u_brightness, f.tone[1]);
+    gl.uniform1f(this.at.u_waterPhase, f.waterPhase);
     gl.uniform2i(this.at.u_mapSize, this.w, this.h);
     this.bindOn(ATLAS_UNIT, this.atlas);
     this.bindOn(KIND_UNIT, this.kindTex);

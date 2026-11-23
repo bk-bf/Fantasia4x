@@ -17,7 +17,13 @@ import { parseHexRgb01 } from '$lib/game/core/util/color.js';
 import { glyph, SHEET } from './tilesets.js';
 import type { RGB } from './tile-types.js';
 import { GROUND_BLEND, PAINTED_TILES } from './painted/flag.js';
-import { paintedGroundKind, paintedPiece, paintedPieces, paintedTile } from './painted/tileset.js';
+import {
+  paintedGroundKind,
+  paintedPiece,
+  paintedPieces,
+  paintedScenery,
+  paintedTile
+} from './painted/tileset.js';
 import type { PaintedPieces, PaintedSprite } from './painted/manifest.js';
 
 const DECONSTRUCT_GLYPH = glyph(SHEET.MAP, 88);
@@ -276,6 +282,9 @@ function recomputeExteriorComponent(
 
 const DIRT_BG = (SUBTERRAINS['dirt']?.bg ?? [0.08, 0.06, 0.03]) as [number, number, number];
 const GLOWING_GROVE_SPRITE_SALT = 53;
+const REED_BANK = 'riverbank';
+const REED_SHARE = 0.2;
+const REED_SALT = 78;
 
 function tileHash(x: number, y: number, salt: number): number {
   let h = (x * 374761393 + y * 668265263 + salt * 2246822519) | 0;
@@ -482,6 +491,12 @@ function rockPiece(
   return { ...piece, vein: { ...ramp, near } };
 }
 
+function bankReeds(tile: WorldTile): PaintedSprite | undefined {
+  if (!PAINTED_TILES || tile.subType !== REED_BANK || tile.floor) return undefined;
+  if (tileHash(tile.x, tile.y, REED_SALT) >= REED_SHARE) return undefined;
+  return paintedScenery('reeds', tile.x, tile.y);
+}
+
 export function applyResourceToGrid(
   gridShort: GameGrid,
   gridTall: GameGrid,
@@ -501,21 +516,21 @@ export function applyResourceToGrid(
     blank(gridShort);
     blank(gridTall);
   };
-  if (hiddenMask[tile.y]?.[tile.x]) {
-    const piece = rockPiece(tile, hiddenMask, worldMap);
-    if (!piece) return clear();
+  const paintOnly = (painted: PaintedSprite | undefined, scenery: boolean) => {
+    if (!painted) return clear();
     blank(gridTall);
     gridShort.setTile(tile.x, tile.y, {
       char: ' ',
       foreground: { r: 0, g: 0, b: 0 },
       background: { r: 0, g: 0, b: 0 },
       position: { x: tile.x, y: tile.y },
-      painted: piece
+      painted,
+      ...(scenery ? { scenery } : null)
     });
-    return;
-  }
+  };
+  if (hiddenMask[tile.y]?.[tile.x]) return paintOnly(rockPiece(tile, hiddenMask, worldMap), false);
   const active = resolveActiveResource(tile);
-  if (!active) return clear();
+  if (!active) return paintOnly(bankReeds(tile), true);
   const { resDef, scale: stageScale } = active;
   const salt = resDef.glow ? GLOWING_GROVE_SPRITE_SALT : 0;
   const variant = season ? resDef.seasonVariants?.[season] : undefined;
@@ -571,7 +586,8 @@ export function buildResourceOverlay(
     for (const tile of row)
       if (
         (tile.resources && Object.keys(tile.resources).length > 0) ||
-        (PAINTED_TILES && mask[tile.y]?.[tile.x])
+        (PAINTED_TILES && mask[tile.y]?.[tile.x]) ||
+        bankReeds(tile)
       )
         applyResourceToGrid(short, tall, tile, mask, season, worldMap);
   return { short, tall };

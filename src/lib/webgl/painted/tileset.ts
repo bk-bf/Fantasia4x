@@ -50,6 +50,11 @@ export function paintedTile(
   return spriteAt(pickVariant(variants, positionHash(x, y)), x, y);
 }
 
+export function paintedScenery(id: string, x: number, y: number): PaintedSprite | undefined {
+  const variants = active?.scenery.get(id);
+  return variants && spriteAt(pickVariant(variants, positionHash(x, y)), x, y);
+}
+
 export function paintedTileIn(
   kind: PaintedKind,
   id: string,
