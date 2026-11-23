@@ -20,7 +20,7 @@
     else SCENE.mount(screen, s, list => { follow.innerHTML = '<option value="">nobody</option>' + list.map(([id, name]) => `<option value="${id}">${name}</option>`).join(''); follow.value = extra.follow; });
   }
   function tick(now) {
-    const dt = Math.min(.1, (now - last) / 1000), s = state();
+    const dt = clamp((now - last) / 1000, 0, .1), s = state();
     last = now;
     if (!extra.pin) T += dt * +s.speed;
     const t0 = performance.now(), n = s.view === 'sheet' ? SHEET.frame(s, T) : SCENE.frame(s, T, extra);
