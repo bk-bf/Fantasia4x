@@ -2,7 +2,7 @@
   import type { Pawn } from '$lib/game/core/types';
   import Well from '$lib/components/UI/widget/Well.svelte';
   import ScrollArea from '$lib/components/UI/widget/ScrollArea.svelte';
-  import PawnSkillBanner from './PawnSkillBanner.svelte';
+  import SkillRows from './SkillRows.svelte';
   import PawnAttributes from './PawnAttributes.svelte';
   import TraitCards from './TraitCards.svelte';
 
@@ -10,13 +10,9 @@
 </script>
 
 <div class="attrtab">
-  <Well title="Skills" class="skillband"><PawnSkillBanner {pawn} /></Well>
+  <Well title="Skills" class="skillband"><SkillRows {pawn} rows={3} stars /></Well>
   <ScrollArea class="dcats">
-    <PawnAttributes
-      {pawn}
-      showBanner={false}
-      categories={['physical', 'capacity', 'combat', 'resistance', 'social']}
-    />
+    <PawnAttributes {pawn} />
   </ScrollArea>
   <Well title="Traits" class="traits" scroll>
     {#if pawn.traits?.length}
@@ -30,7 +26,7 @@
 <style>
   .attrtab {
     display: grid;
-    grid-template-columns: 1fr 260px;
+    grid-template-columns: 1fr 250px;
     grid-template-rows: auto minmax(0, 1fr);
     gap: 6px;
     align-items: start;
