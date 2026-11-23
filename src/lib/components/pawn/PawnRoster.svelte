@@ -23,7 +23,7 @@
       onclick={() => onSelect(p)}
       {@attach chrome(on ? 'cellOn' : 'cell')}
     >
-      <PawnSprite id={p.id} cultureId={p.cultureId} height={40} />
+      <PawnSprite pawn={p} height={40} />
       <span class="who"><b>{first(p.name)}</b><em>{stateLabel(p.currentState)}</em></span>
     </button>
   {/each}

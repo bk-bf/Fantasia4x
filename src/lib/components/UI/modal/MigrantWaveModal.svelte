@@ -33,7 +33,7 @@
       {@const yes = isAccepted(c.id)}
       <div class="mig" class:off={!yes} {@attach chrome('cell')}>
         <span class="frame" {@attach chrome('well')}>
-          <PawnSprite id={c.id} cultureId={c.cultureId} height={40} />
+          <PawnSprite pawn={c} height={40} />
         </span>
         <div class="who">
           <b>{c.name}</b><em>{c.cultureName}</em>

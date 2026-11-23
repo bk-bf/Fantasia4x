@@ -1,19 +1,21 @@
 <script lang="ts">
   import { picture, type Art } from '$lib/pixelArt/picture';
+  import { gameState } from '$lib/stores/gameState';
+  import type { PawnLookOf } from '$lib/webgl/painted/pawnLook';
   import { pawnSpriteArt } from './pawnSpriteArt';
 
-  let {
-    id,
-    cultureId,
-    height = 40
-  }: { id: string; cultureId?: string; height?: number } = $props();
+  let { pawn, height = 40 }: { pawn: PawnLookOf; height?: number } = $props();
+
+  const id = $derived(pawn.id);
+  const cultureId = $derived(pawn.cultureId);
+  const pool = $derived($gameState?.culturePool);
 
   let art = $state<Art | null>(null);
 
   $effect(() => {
     art = null;
     let live = true;
-    pawnSpriteArt(cultureId ?? '*', id).then((a) => live && a && (art = a));
+    pawnSpriteArt({ id, cultureId }, pool).then((a) => live && a && (art = a));
     return () => (live = false);
   });
 </script>
