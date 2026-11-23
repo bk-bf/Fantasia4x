@@ -62,6 +62,8 @@
   import { glyph, SHEET } from '$lib/webgl/tilesets.js';
   import { uiState } from '$lib/stores/uiState.js';
   import { animNow, setAnimPaused } from '$lib/stores/fx/animClock.js';
+  import { combatFeedback } from '$lib/stores/fx/combatFeedback.js';
+  import { EntityMotion } from './entityMotion.js';
   import {
     attackLunges,
     LUNGE_TTL_MS,
@@ -252,6 +254,7 @@
   const buildingOverlayGrid: GameGrid = new GameGridClass();
   const pawnRenderPos = new Map<string, { x: number; y: number }>();
   const mobRenderPos = new Map<string, { x: number; y: number }>();
+  const motion = new EntityMotion();
   let lastFrameTime = 0;
   const _DBG_BUILD =
     import.meta.env.VITE_DEBUG_MODE === 'true' || import.meta.env.VITE_DEBUG_LOG === 'true';
@@ -925,6 +928,8 @@
     const clampedDt = Math.min(dt, 0.05);
     const alpha = clampedDt > 0 ? 1 - Math.exp(-clampedDt / MOVE_SMOOTH_TAU) : 1;
     const nowMs = animNow();
+    motion.begin(performance.now(), nowMs);
+    motion.noteHits(combatFeedback.live(nowMs));
 
     const freshState = get(gameState);
     const liveMobs = freshState.mobs ?? mobList;
@@ -962,6 +967,7 @@
       const mLunge = lungeOffset(mob.id, nowMs);
       const mTier = def.tier;
       const mScale = mTier != null ? TIER_GLYPH_SCALE[mTier] : undefined;
+      const mPose = motion.mob(mob.id, rm.x, rm.y, mob.state, def.gait, mLunge.x, mScale);
       const mTint = mTier != null ? TIER_GLYPH_TINT[mTier] : 1;
       pawnOverlayGrid.setTile(cellX, cellY, {
         char: def.chars[0],
@@ -975,9 +981,12 @@
         ...(PAINTED_TILES ? paintedEntity('creature', def.id, mob.id) : null),
         position: { x: cellX, y: cellY },
         animationOffset: {
-          x: (rm.x - cellX) * BASE_TILE_PX + mLunge.x,
-          y: (rm.y - cellY) * BASE_TILE_PX + mLunge.y
-        }
+          x: (rm.x - cellX) * BASE_TILE_PX + mLunge.x + mPose.dx,
+          y: (rm.y - cellY) * BASE_TILE_PX + mLunge.y + mPose.dy
+        },
+        flip: mPose.flip,
+        lean: mPose.lean,
+        squash: mPose.squash
       });
     }
     if (seenMobs.size !== mobRenderPos.size) {
@@ -1025,15 +1034,19 @@
                 : { r: 1, g: 1, b: 1 };
 
       const pLunge = lungeOffset(pawn.id, nowMs);
+      const pPose = motion.pawn(pawn.id, rp.x, rp.y, pawn.currentState, pLunge.x);
       pawnOverlayGrid.setTile(cellX, cellY, {
         char: PAWN_SPRITES[i % PAWN_SPRITES.length],
         foreground: baseColor,
         background: isDrafted ? { r: 0.3, g: 0, b: 0 } : { r: 0, g: 0, b: 0 },
         position: { x: cellX, y: cellY },
         animationOffset: {
-          x: (rp.x - cellX) * BASE_TILE_PX + pLunge.x,
-          y: (rp.y - cellY) * BASE_TILE_PX + pLunge.y
+          x: (rp.x - cellX) * BASE_TILE_PX + pLunge.x + pPose.dx,
+          y: (rp.y - cellY) * BASE_TILE_PX + pLunge.y + pPose.dy
         },
+        flip: pPose.flip,
+        lean: pPose.lean,
+        squash: pPose.squash,
         rotation: isSleeping || isCollapsed ? 90 : undefined,
         ...(PAINTED_TILES ? paintedPawn(pawn, freshState.culturePool) : null)
       });
@@ -1044,6 +1057,7 @@
         if (!seen.has(id)) pawnRenderPos.delete(id);
       }
     }
+    motion.end();
   }
 
   let _selectionRingKey = '';
