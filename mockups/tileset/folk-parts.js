@@ -294,6 +294,7 @@ const FOLK_PARTS = (() => {
   const stretch = (text, n, head, tail) => Array.from({ length: n }, (_, i) => text[spread(i, n, text.length, head, tail)]).join('');
   const wider = (rows, n, head, tail) => rows.map(row => stretch(row, n, head, tail));
   const taller = (rows, n, head, tail) => Array.from({ length: n }, (_, j) => rows[spread(j, n, rows.length, head, tail)]);
+  const armRows = d => d.tl - 3 + Math.round(2 * d.legs / REF.legs);
   const torsoOf = (rows, arm, d) => taller(rows.map(row => stretch(row.slice(0, arm), d.aw, 1, 1) + stretch(row.slice(arm, -arm), 2 * d.hw, 3, 3) + stretch(row.slice(-arm), d.aw, 1, 1)), d.tl + d.br, 3, 3);
 
   function layers(sex, face, hair, dims) {
@@ -307,7 +308,7 @@ const FOLK_PARTS = (() => {
       out.push({ name: 'Far leg', x: -2, y: legTop, rows: shaded(leg) }, { name: 'Near leg', x: -3, y: legTop, rows: leg });
       out.push({ name: 'Torso', x: -5 - (more >> 1), y: sTop, rows: taller(wider(TORSO[sex].s, TORSO[sex].s[0].length + more, 3, 3), d.tl + d.br, 3, 3) }, { name: 'Head', x: -5, y: hTop, rows: head });
     } else {
-      const leg = taller(wider(LEG, lw, 1, 1), d.legs, 2, 2), arm = taller(wider(ARM[sex], d.aw, 1, 1), d.tl - 1, 3, 4);
+      const leg = taller(wider(LEG, lw, 1, 1), d.legs, 2, 2), arm = taller(wider(ARM[sex], d.aw, 1, 1), armRows(d), 3, 4);
       out.push({ name: 'Leg', x: -lw, y: legTop, rows: leg, cut: lost('oneLeg', false) ? stump : 0 }, { name: 'Leg, mirrored', x: 0, y: legTop, rows: flipped(leg), cut: lost('oneLeg', true) ? stump : 0 });
       out.push({ name: 'Torso', x: -half, y: sTop, rows: torsoOf(TORSO[sex][face], arm0, d) });
       out.push({ name: 'Arm', x: -half, y: sTop + 3, rows: arm, cut: lost('oneArm', false) ? 3 : 0 }, { name: 'Arm, mirrored', x: d.hw, y: sTop + 3, rows: flipped(arm), cut: lost('oneArm', true) ? 3 : 0 });
@@ -318,7 +319,7 @@ const FOLK_PARTS = (() => {
     else if (cut) out.push({ name: 'Hair', x: hx, y: hTop - 1, rows: cut });
     if (beard) out.push({ name: 'Beard', x: beard.x, y: hTop + beard.y, rows: beard.rows });
     if (crown) out.push({ name: 'Crown', x: crown.x, y: hTop + crown.y, rows: crown.rows });
-    if (face === 's') out.push({ name: 'Arm', x: sex === 'woman' ? -2 : -3, y: sTop + 2, rows: taller(ARM_SIDE[sex], d.tl - 1, 2, 2) });
+    if (face === 's') out.push({ name: 'Arm', x: sex === 'woman' ? -2 : -3, y: sTop + 2, rows: taller(ARM_SIDE[sex], armRows(d), 2, 2) });
     return out.filter(layer => layer.rows.length);
   }
 
@@ -391,8 +392,9 @@ const FOLK_PARTS = (() => {
     face = face || 'f';
     const pose = idlePose(lk, time), rig = lookRig(lk), f = FOLK[rig.o.race], b = lk.body, sex = lk.sex === 'female' ? 'woman' : 'man';
     const c = { skin: SKINS[lk.skin].ramp === rig.skin ? kitTones('skin' + (SALLOW[lk.skin] || lk.skin)) : fromRig(rig.skin), hair: kitTones('hair' + lk.hair), eye: f.eyes };
-    const d = { hw: Math.max(3, Math.round(REF.hw * b.hw / typicalHw(lk.sex))), aw: b.aw, tl: b.tl, legs: b.legs, br: pose.br, sway: Math.round(pose.wave() * 1.2), oneArm: rig.o.oneArm, oneLeg: rig.o.oneLeg, beard: rig.o.beard };
-    const X = RG.CX, legTop = RG.BASE + 1 - d.legs, sTop = legTop - d.tl - d.br, hTop = sTop - HEAD_ROWS, er = hTop + (HEAD_ROWS >> 1), half = d.hw + d.aw, hy = sTop + d.tl;
+    const hw = Math.max(3, Math.round(REF.hw * b.hw / typicalHw(lk.sex))), aw = Math.max(1, Math.min(b.aw, Math.round(ARM[sex][0].length * hw / REF.hw)));
+    const d = { hw, aw, tl: b.tl, legs: b.legs, br: pose.br, sway: Math.round(pose.wave() * 1.2), oneArm: rig.o.oneArm, oneLeg: rig.o.oneLeg, beard: rig.o.beard };
+    const X = RG.CX, legTop = RG.BASE + 1 - d.legs, sTop = legTop - d.tl - d.br, hTop = sTop - HEAD_ROWS, er = hTop + (HEAD_ROWS >> 1), half = d.hw + d.aw, hy = sTop + armRows(d) + 1;
     const s = new Spr(RG.W, RG.H, RG.CX, RG.BASE);
     for (const layer of layers(sex, face, lk.style, d)) put(s, layer, c);
     eyes(s, face, pose, c, X, er);
