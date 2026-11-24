@@ -125,7 +125,7 @@ describe('keepsGreen', () => {
 
   it('keeps the green result when dev gained only paths that run no jobs', () => {
     const { cwd, green, rebasedOnto } = repo();
-    const { base, head } = rebasedOnto('mockups/tileset/new.js');
+    const { base, head } = rebasedOnto('tools/runner/new.mjs');
     expect(keepsGreen({ green, base, head, dev: 'dev', cwd })).toBe(true);
   });
 
@@ -137,7 +137,7 @@ describe('keepsGreen', () => {
 
   it('runs again when the work itself changed since it was green', () => {
     const { cwd, green, rebasedOnto, commit } = repo();
-    const { base } = rebasedOnto('mockups/tileset/new.js');
+    const { base } = rebasedOnto('tools/runner/new.mjs');
     const head = commit('tools/chain.mjs', 'more');
     expect(keepsGreen({ green, base, head, dev: 'dev', cwd })).toBe(false);
   });
