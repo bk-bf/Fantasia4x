@@ -967,7 +967,7 @@
       const mLunge = lungeOffset(mob.id, nowMs);
       const mTier = def.tier;
       const mScale = mTier != null ? TIER_GLYPH_SCALE[mTier] : undefined;
-      const mPose = motion.mob(mob.id, rm.x, rm.y, mob.state, def.gait, mLunge.x, mScale);
+      const mPose = motion.mob(mob.id, rm.x, rm.y, mob.state, def, mLunge.x, mScale);
       const mTint = mTier != null ? TIER_GLYPH_TINT[mTier] : 1;
       pawnOverlayGrid.setTile(cellX, cellY, {
         char: def.chars[0],
@@ -984,9 +984,7 @@
           x: (rm.x - cellX) * BASE_TILE_PX + mLunge.x + mPose.dx,
           y: (rm.y - cellY) * BASE_TILE_PX + mLunge.y + mPose.dy
         },
-        flip: mPose.flip,
-        lean: mPose.lean,
-        squash: mPose.squash
+        ...mPose.look
       });
     }
     if (seenMobs.size !== mobRenderPos.size) {
@@ -1044,9 +1042,7 @@
           x: (rp.x - cellX) * BASE_TILE_PX + pLunge.x + pPose.dx,
           y: (rp.y - cellY) * BASE_TILE_PX + pLunge.y + pPose.dy
         },
-        flip: pPose.flip,
-        lean: pPose.lean,
-        squash: pPose.squash,
+        ...pPose.look,
         rotation: isSleeping || isCollapsed ? 90 : undefined,
         ...(PAINTED_TILES ? paintedPawn(pawn, freshState.culturePool) : null)
       });

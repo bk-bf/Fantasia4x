@@ -1,16 +1,22 @@
-import { idHash } from '$lib/webgl/painted/manifest.js';
-import { BASE_TILE_PX } from '$lib/webgl/tile-types.js';
+import { idHash, type PaintedSprite } from '$lib/webgl/painted/manifest.js';
+import { paintedEntity } from '$lib/webgl/painted/tileset.js';
+import { BASE_TILE_PX, type TileData } from '$lib/webgl/tile-types.js';
 
 export type Body = 'pawn' | 'beast' | 'hopper';
-export type Gait = 'walk' | 'trot' | 'fast';
+export type Gait = 'walk' | 'trot' | 'fast' | 'haul';
 export type Rest = 'stand' | 'sleep' | 'down';
 
+export type Look = Required<Pick<TileData, 'flip' | 'lean' | 'squash' | 'pitch'>>;
+
 export interface Pose {
-  flip: boolean;
   dx: number;
   dy: number;
-  lean: number;
-  squash: number;
+  look: Look;
+}
+
+export interface CreatureLook {
+  id: string;
+  gait?: string;
 }
 
 export interface HitEvent {
@@ -20,7 +26,10 @@ export interface HitEvent {
   spawnTime: number;
 }
 
-interface Track extends Pose {
+interface Track extends Look {
+  dx: number;
+  dy: number;
+  size: number;
   x: number;
   y: number;
   anchorX: number;
@@ -49,18 +58,23 @@ const HOP_HEIGHT = 6;
 const FACING_SHIFT = 1;
 const HIT_KINDS: ReadonlySet<string> = new Set(['damage', 'crit']);
 
+const RUN_PITCH = 1.4;
+const RABBIT_HEIGHT = 26 / ART_PER_TILE;
+
 const STRIDE: Record<Body, Record<Gait, number>> = {
-  pawn: { walk: 19, trot: 19, fast: 34 },
-  beast: { walk: 14.5, trot: 26.4, fast: 63 },
-  hopper: { walk: 22, trot: 22, fast: 34 }
+  pawn: { walk: 19, trot: 19, fast: 34, haul: 12.5 },
+  beast: { walk: 14.5, trot: 26.4, fast: 63, haul: 14.5 },
+  hopper: { walk: 22, trot: 22, fast: 34, haul: 22 }
 };
+const STRIDE_HEIGHT: Record<Body, number> = { pawn: 1, beast: 1, hopper: RABBIT_HEIGHT };
 const STEP_FRAMES: Record<Body, Record<Gait, number>> = {
-  pawn: { walk: 8, trot: 8, fast: 8 },
-  beast: { walk: 8, trot: 8, fast: 8 },
-  hopper: { walk: 8, trot: 8, fast: 6 }
+  pawn: { walk: 8, trot: 8, fast: 8, haul: 8 },
+  beast: { walk: 8, trot: 8, fast: 8, haul: 8 },
+  hopper: { walk: 8, trot: 8, fast: 6, haul: 8 }
 };
-const BOB: Record<Gait, number> = { walk: 1, trot: 1.6, fast: 2.4 };
-const LEAN: Record<Gait, number> = { walk: 1, trot: 1, fast: 2 };
+const BOB: Record<Gait, number> = { walk: 1, trot: 1.6, fast: 2.4, haul: 1 };
+const LEAN: Record<Gait, number> = { walk: 1, trot: 1, fast: 2, haul: 1 };
+const HAULING: ReadonlySet<string> = new Set(['Hauling', 'MovingToDeposit']);
 const BREATH: Record<Body, Cycle> = {
   pawn: { ms: 2800, n: 4 },
   beast: { ms: 3000, n: 4 },
@@ -80,7 +94,8 @@ const stepped = (u: number, n: number) => (Math.floor(frac(u) * n) + 0.5) / n;
 const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
 
 export function pawnGait(state: string | undefined): Gait {
-  return state === 'Fleeing' || state === 'Panicking' ? 'fast' : 'walk';
+  if (state === 'Fleeing' || state === 'Panicking') return 'fast';
+  return state && HAULING.has(state) ? 'haul' : 'walk';
 }
 
 export function pawnRest(state: string | undefined): Rest {
@@ -98,6 +113,14 @@ export function mobRest(state: string): Rest {
 
 export function mobBody(gait: string | undefined): Body {
   return gait === 'hop' ? 'hopper' : 'beast';
+}
+
+export function strideSize(body: Body, height: number | undefined): number {
+  return height ? height / STRIDE_HEIGHT[body] : 0;
+}
+
+function creatureHeight(def: CreatureLook, entityId: string): number | undefined {
+  return (paintedEntity('creature', def.id, entityId) as { painted?: PaintedSprite }).painted?.h;
 }
 
 export class EntityMotion {
@@ -140,7 +163,8 @@ export class EntityMotion {
     gait: Gait,
     rest: Rest,
     lungeX: number,
-    scale = 1
+    scale = 1,
+    size = 0
   ): Pose {
     let t = this.tracks.get(id);
     if (!t) {
@@ -150,6 +174,8 @@ export class EntityMotion {
         dy: 0,
         lean: 0,
         squash: 0,
+        pitch: 0,
+        size,
         x,
         y,
         anchorX: x,
@@ -163,6 +189,7 @@ export class EntityMotion {
     }
     if (t.frame !== this.frame) this.live++;
     t.frame = this.frame;
+    t.size = size;
     let step = Math.hypot(x - t.x, y - t.y);
     if (step > JUMP) {
       t.anchorX = x;
@@ -178,18 +205,20 @@ export class EntityMotion {
     t.dy = 0;
     t.lean = 0;
     t.squash = 0;
+    t.pitch = 0;
     const hitU = (this.animMs - t.hitAt) / HIT_MS;
     if (!lying && hitU >= 0 && hitU < 1) shake(t, stepped(hitU, HIT_FRAMES));
-    else if (rest === 'stand' && t.stillMs < STOP_HOLD_MS) walk(t, body, gait);
+    else if (rest === 'stand' && t.stillMs < STOP_HOLD_MS) walk(t, body, gait, scale);
     else if (rest !== 'down')
       breathe(t, rest === 'sleep' ? SLEEP_BREATH : BREATH[body], this.realMs);
     const k = (BASE_TILE_PX / ART_PER_TILE) * scale;
     const facing = !lying && t.flip;
-    out.flip = facing;
     out.dx = ((facing ? FACING_SHIFT - t.dx : t.dx) || 0) * k;
     out.dy = t.dy * k;
-    out.lean = lying ? 0 : t.lean;
-    out.squash = t.squash;
+    look.flip = facing;
+    look.lean = lying ? 0 : t.lean;
+    look.squash = t.squash;
+    look.pitch = lying ? 0 : t.pitch;
     return out;
   }
 
@@ -198,11 +227,13 @@ export class EntityMotion {
     x: number,
     y: number,
     state: string,
-    gait: string | undefined,
+    def: CreatureLook,
     lungeX: number,
     scale = 1
   ): Pose {
-    return this.pose(id, x, y, mobBody(gait), mobGait(state), mobRest(state), lungeX, scale);
+    const body = mobBody(def.gait);
+    const size = this.tracks.get(id)?.size || strideSize(body, creatureHeight(def, id));
+    return this.pose(id, x, y, body, mobGait(state), mobRest(state), lungeX, scale, size);
   }
 
   pawn(id: string, x: number, y: number, state: string | undefined, lungeX: number): Pose {
@@ -215,7 +246,8 @@ export class EntityMotion {
   }
 }
 
-const out: Pose = { flip: false, dx: 0, dy: 0, lean: 0, squash: 0 };
+const look: Look = { flip: false, lean: 0, squash: 0, pitch: 0 };
+const out: Pose = { dx: 0, dy: 0, look };
 
 function face(t: Track, x: number, lungeX: number): void {
   if (Math.abs(lungeX) > LUNGE_FACE) {
@@ -232,8 +264,9 @@ function shake(t: Track, u: number): void {
   t.squash = u < 0.5 ? 1 : 0;
 }
 
-function walk(t: Track, body: Body, gait: Gait): void {
-  const u = stepped(t.dist / STRIDE[body][gait], STEP_FRAMES[body][gait]);
+function walk(t: Track, body: Body, gait: Gait, scale: number): void {
+  const stride = STRIDE[body][gait] * (t.size || 1) * scale;
+  const u = stepped(t.dist / stride, STEP_FRAMES[body][gait]);
   if (body === 'hopper') {
     const k = Math.sin(clamp01((u - 0.15) / 0.7) * Math.PI);
     t.dy = -Math.round(k * HOP_HEIGHT);
@@ -242,6 +275,7 @@ function walk(t: Track, body: Body, gait: Gait): void {
   }
   t.dy = -Math.round(Math.abs(Math.sin(u * TAU)) * BOB[gait]);
   if (body === 'pawn') t.lean = LEAN[gait];
+  else if (gait === 'fast') t.pitch = Math.round(Math.sin(u * TAU) * RUN_PITCH);
 }
 
 function breathe(t: Track, c: Cycle, realMs: number): void {

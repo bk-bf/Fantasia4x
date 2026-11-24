@@ -15,7 +15,7 @@ flat in float v_veinNear;
 flat in highp float v_row;
 flat in highp float v_lean;
 flat in highp float v_reach;
-flat in highp vec3 v_pose;
+flat in highp vec4 v_pose;
 
 uniform sampler2D u_fontAtlas;
 uniform sampler2D u_paintAtlas;
@@ -133,6 +133,11 @@ highp vec2 posed(highp vec2 uv) {
     highp float row = floor((uv.y - top) / u_paintTexelSize.y);
     highp float cut = floor(last - last * 0.45 + 0.5);
     highp float sy = row;
+    if (v_pose.w != 0.0) {
+        highp float span = (v_uvBounds.z - v_uvBounds.x) / u_paintTexelSize.x - 1.0;
+        highp float col = floor((uv.x - v_uvBounds.x + 2.0) / u_paintTexelSize.x);
+        sy -= floor(v_pose.w * (2.0 * col - span) / max(1.0, span) + 0.5);
+    }
     if (v_pose.z > 0.0 && sy <= cut) sy -= v_pose.z;
     else if (v_pose.z < 0.0 && sy < cut) sy = min(cut, sy - v_pose.z);
     highp float rise = clamp((last - sy) / max(1.0, last), 0.0, 1.0);

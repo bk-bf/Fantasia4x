@@ -476,7 +476,7 @@ export class GridRenderer {
         !!painted &&
         vertexFloats === ROW_VERTEX_FLOATS &&
         this.paintTexel[0] > 0 &&
-        isPosed(tile.lean, tile.squash);
+        isPosed(tile.lean, tile.squash, tile.pitch);
       if (posed) {
         const lying = tile.rotation === 90 || tile.rotation === 270;
         const du = POSE_PAD * this.paintTexel[0];
@@ -713,7 +713,7 @@ export class GridRenderer {
         const row = tile.position.y + offsetY / tileH;
         const vein = painted?.vein ?? NO_VEIN;
         const sway = posed
-          ? poseSway(tile.lean ?? 0, tile.squash ?? 0)
+          ? poseSway(tile.lean ?? 0, tile.squash ?? 0, tile.pitch ?? 0)
           : tile.rotation
             ? 0
             : (painted?.sway ?? 0);

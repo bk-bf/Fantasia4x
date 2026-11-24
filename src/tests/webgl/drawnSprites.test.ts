@@ -188,17 +188,20 @@ describe('a flipped creature is drawn, picked and framed mirrored', () => {
 describe('a posed sprite reaches the shader through its sway value', () => {
   const decode = (sway: number) => {
     const code = -sway - 1;
-    return [Math.floor(code / 8) - 4, (code % 8) - 4];
+    return [(Math.floor(code / 8) % 8) - 4, (code % 8) - 4, Math.floor(code / 64) - 4];
   };
 
-  it('round-trips every lean and squash the vertex shader can decode', () => {
+  it('round-trips every lean, squash and pitch the vertex shader can decode', () => {
     const glsl = readFileSync(join(ROOT, 'src/lib/webgl/shaders/vertex.glsl'), 'utf8');
-    expect(glsl).toContain('v_pose = vec3(1.0, floor(code / 8.0) - 4.0, mod(code, 8.0) - 4.0);');
+    expect(glsl).toContain(
+      'v_pose = vec4(1.0, mod(floor(code / 8.0), 8.0) - 4.0, mod(code, 8.0) - 4.0, floor(code / 64.0) - 4.0);'
+    );
     for (let lean = -POSE_RANGE; lean <= POSE_RANGE; lean++)
-      for (let squash = -POSE_RANGE; squash <= POSE_RANGE; squash++) {
-        const sway = poseSway(lean, squash);
-        expect(sway).toBeLessThan(0);
-        expect(decode(sway)).toEqual([lean, squash]);
-      }
+      for (let squash = -POSE_RANGE; squash <= POSE_RANGE; squash++)
+        for (let pitch = -POSE_RANGE; pitch <= POSE_RANGE; pitch++) {
+          const sway = poseSway(lean, squash, pitch);
+          expect(sway).toBeLessThan(0);
+          expect(decode(sway)).toEqual([lean, squash, pitch]);
+        }
   });
 });
