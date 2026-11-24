@@ -339,6 +339,8 @@ export type IconId = MockIconId | MotifId;
 export type IconMark = 'up' | 'down';
 
 const ICONS: Record<IconId, () => Spr> = { ...MOCK_ICONS, ...MOTIFS };
+
+export const ICON_IDS = Object.keys(ICONS) as IconId[];
 const BANE_COL = hex('#c05060');
 const BANE_RIM = hex('#ffb0b8');
 
