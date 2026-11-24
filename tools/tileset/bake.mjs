@@ -3,7 +3,15 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { UP, encodePng } from './png.mjs';
 import { MAP, PIECES, UNPAINTED } from './map.mjs';
-import { ARCHETYPES, loadRegistry, registryEntries } from './registry.mjs';
+import {
+  ARCHETYPES,
+  DROP_FOOT,
+  contactOf,
+  coverOf,
+  dropArt,
+  loadRegistry,
+  registryEntries
+} from './registry.mjs';
 import { BAKE_ART } from './sources.mjs';
 import {
   BLOB_LAYOUTS,
@@ -41,7 +49,7 @@ const EXPORTS =
 const TILE = 32;
 const PATCH = 4;
 const SIDE = TILE * PATCH;
-const ATLAS_W = 2048;
+const ATLAS_W = 4096;
 const TOP_IMAGE = 'rock-top.png';
 export const LIGHT_IMAGE = 'atlas-light.png';
 const SHADED = 255;
@@ -190,28 +198,34 @@ function patch(colour = A.rockTop, decals = A.GROUND[0].dec.slice(0, 0)) {
   return sprite(SIDE, SIDE, 0, 0, px, PATCH);
 }
 
-function object(s = A.mkPawn({}), footX = 0, footY = 0) {
+const CONTACT_SHADE = { rx: 2.4, ry: 1.15, k: 0.95 };
+
+function shaded(cx = 0, cy = 0, sh = CONTACT_SHADE) {
+  const out = [];
+  for (let y = Math.floor(cy - sh.ry); y <= cy + sh.ry; y++)
+    for (let x = Math.floor(cx - sh.rx); x <= cx + sh.rx; x++) {
+      const nx = (x - cx) / sh.rx,
+        ny = (y - cy) / sh.ry,
+        q = nx * nx + ny * ny;
+      if (q >= 1) continue;
+      const v = (sh.k || 1) * A.clamp((1 - q) * 3.2, 0, 1);
+      if (v > A.dith(A.wrap(x, 4), A.wrap(y, 4)) * 0.7 + 0.15) out.push({ x, y });
+    }
+  return out;
+}
+
+function object(s = A.mkPawn({}), footX = 0, footY = 0, contact = [{ x: 0, y: 0 }].slice(1)) {
   const pts = [];
   for (let j = 0; j < s.h; j++)
     for (let i = 0; i < s.w; i++) {
       const c = s.c[j * s.w + i];
       if (c) pts.push({ x: footX - s.ax + i, y: footY - s.ay + j, c, e: s.e?.[j * s.w + i] ?? 0 });
     }
-  const shade = [];
   const sh = s.sh;
-  if (sh) {
-    const cx = footX + sh.dx,
-      cy = footY + sh.dy;
-    for (let y = Math.floor(cy - sh.ry); y <= cy + sh.ry; y++)
-      for (let x = Math.floor(cx - sh.rx); x <= cx + sh.rx; x++) {
-        const nx = (x - cx) / sh.rx,
-          ny = (y - cy) / sh.ry,
-          q = nx * nx + ny * ny;
-        if (q >= 1) continue;
-        const v = (sh.k || 1) * A.clamp((1 - q) * 3.2, 0, 1);
-        if (v > A.dith(A.wrap(x, 4), A.wrap(y, 4)) * 0.7 + 0.15) shade.push({ x, y });
-      }
-  }
+  const shade = [
+    ...(sh ? shaded(footX + sh.dx, footY + sh.dy, sh) : []),
+    ...contact.flatMap((at) => shaded(footX + at.x, footY + at.y))
+  ];
   if (!pts.length) throw new Error('empty sprite');
   const all = [...pts, ...shade];
   const x0 = Math.min(...all.map((p) => p.x)),
@@ -305,10 +319,67 @@ function sprites(ground = groundSprites(A, [], [])) {
     add(`creature/${k}`, object(A.mkBeast(k), 16, 27));
   const pieces = pieceSprites(add);
   const extra = registrySprites(add, out, roles, DBX);
+  const drops = dropSprites(add, DBX);
   const grass = DBX.list
     .filter((e = DBX.list[0]) => e.cat === 'plant' && e.layer === 'cover')
     .map((e = DBX.list[0]) => e.dbId);
-  return { all: out, roles, extra, pieces, grass: [...new Set(grass)].sort() };
+  return { all: out, roles, extra, pieces, drops, grass: [...new Set(grass)].sort() };
+}
+
+function grassRamps() {
+  const ramps = [[[0, 0, 0]]].slice(1);
+  const kinds = Object.fromEntries([['', 0]].slice(1));
+  for (const g of A.GROUND) {
+    const tuft = (g.dec ?? []).find((d = ['', 0, [[0, 0, 0]]]) => d[0] === 'tuft');
+    if (!tuft) continue;
+    const key = JSON.stringify(tuft[2]);
+    const known = ramps.findIndex((r) => JSON.stringify(r) === key);
+    kinds[g.id] = known < 0 ? ramps.push(tuft[2]) - 1 : known;
+  }
+  return { ramps, kinds };
+}
+
+function dropSprites(
+  add = (id = '', spr = sprite()) => {
+    void [id, spr];
+  },
+  DBX = loadRegistry()
+) {
+  const [footX, footY] = DROP_FOOT;
+  const { ramps, kinds } = grassRamps();
+  const covers = new Map(Object.entries({ '': '' }).slice(1));
+  const cover = Object.fromEntries([['', '']].slice(1));
+  const coverId = (kind = '', drawn = DBX.list[0].out) => {
+    const blades = ramps.map((ramp) => coverOf(DBX, kind, drawn, ramp));
+    if (!blades[0]) return '';
+    const first = object(blades[0], footX, footY);
+    const key = [first.w, first.h, first.ox, first.oy, Buffer.from(first.px).toString('base64')];
+    const known = covers.get(key.join());
+    if (known) return known;
+    const id = `cover/${covers.size}`;
+    covers.set(key.join(), id);
+    blades.forEach((b, ramp) => add(`${id}/${ramp}`, object(b, footX, footY)));
+    return id;
+  };
+  const place = (item = '', part = { name: '', s: DBX.list[0].out, cover: '', contact: false }) => {
+    const id = `item/${item}/${part.name}`;
+    add(id, object(part.s, footX, footY, part.contact ? contactOf(DBX, part.s) : []));
+    const blades = part.cover && coverId(part.cover, part.s);
+    if (blades) cover[id] = blades;
+    return id;
+  };
+  const items = Object.fromEntries(
+    dropArt(DBX).map(({ id, parts }) => [
+      id,
+      Object.fromEntries(
+        Object.entries(parts).map(([pose, drawn]) => [
+          pose,
+          Array.isArray(drawn) ? drawn.map((part) => place(id, part)) : place(id, drawn)
+        ])
+      )
+    ])
+  );
+  return { grass: kinds, items, cover };
 }
 
 function registrySprites(
@@ -477,7 +548,7 @@ function ground() {
 
 export function bake() {
   const laid = ground();
-  const { all, roles, extra, pieces, grass } = sprites(laid);
+  const { all, roles, extra, pieces, drops, grass } = sprites(laid);
   const order = [...all].sort(
     ([a, sa], [b, sb]) => sb.patch - sa.patch || sb.h - sa.h || (a < b ? -1 : 1)
   );
@@ -514,6 +585,7 @@ export function bake() {
     sprites: Object.fromEntries(rects),
     map: resolveMap(all, roles, extra),
     pieces,
+    drops,
     water: { image: WATER_IMAGE, size: WATER_SIZE },
     ground: {
       field: { image: FIELD_IMAGE, size: FIELD_SIZE },

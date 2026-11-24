@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import {
+  conditionIcon,
   iconConditions,
   iconFor,
   iconWords
@@ -74,5 +75,15 @@ describe('condition icons', () => {
     expect(iconFor(event({ kind: 'crit', text: '-12!' }))).toBeDefined();
     for (const w of iconWords())
       expect(icon(iconFor(event({ kind: 'dodge', text: w }))!.id)[0].w).toBeGreaterThan(4);
+  });
+
+  it('gives every condition a pawn can show an icon, so no pill falls back to a glyph', () => {
+    const shown = (conditions as { id: string; hidden?: boolean }[]).filter((c) => !c.hidden);
+    expect(shown.length).toBeGreaterThan(100);
+    expect(shown.filter((c) => !conditionIcon(c.id)).map((c) => c.id)).toEqual([]);
+    for (const c of shown) {
+      const look = conditionIcon(c.id)!;
+      expect(icon(look.id, look.mark)[0].w).toBeGreaterThan(4);
+    }
   });
 });

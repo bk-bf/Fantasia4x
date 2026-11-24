@@ -10,7 +10,7 @@ const SHALLOW_TOP = 0.36;
 const DEEP_FLOOR = 0.74;
 const BLUR_REACH = 2;
 
-function distanceTo(isSeed: (i: number) => boolean, w: number, h: number): Float32Array {
+export function distanceTo(isSeed: (i: number) => boolean, w: number, h: number): Float32Array {
   const d = new Float32Array(w * h).fill(Infinity);
   for (let i = 0; i < w * h; i++) if (isSeed(i)) d[i] = 0;
   const relax = (i: number, x: number, y: number, cost: number) => {

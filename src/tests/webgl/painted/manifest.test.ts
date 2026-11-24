@@ -50,6 +50,74 @@ describe('painted manifest parsing', () => {
   });
 });
 
+describe('painted manifest drops', () => {
+  const withDrops = () => {
+    const m = structuredClone(raw);
+    m.sprites['cover/0'] = { ...m.sprites.ground_dirt_a };
+    m.sprites['cover/1'] = { ...m.sprites.ground_dirt_b };
+    m.drops = {
+      grass: { grass: 0, deep_grass: 1 },
+      items: {
+        oak_log: { pile: ['tree_pine_a', 'tree_pine_b', 'tree_oak'] },
+        iron_axe: { lean: ['tree_pine_a', 'tree_pine_b'], lie: ['tree_oak', 'tree_oak'] },
+        helm: { ground: 'tree_oak' }
+      },
+      cover: { tree_pine_a: 'cover', tree_oak: 'cover' }
+    };
+    return m;
+  };
+
+  it('resolves each pose to its sprites, with a cover in every grass colour', () => {
+    const built = buildTileset(parseManifest(withDrops()));
+    expect(built.problems).toEqual([]);
+    const drops = built.tileset.drops!;
+    expect([...drops.grass]).toEqual([
+      ['grass', 0],
+      ['deep_grass', 1]
+    ]);
+    const log = drops.items.get('oak_log')!;
+    expect(log.pile).toHaveLength(3);
+    expect(log.pile![0].cover).toHaveLength(2);
+    expect(log.pile![1].cover).toBeUndefined();
+    const axe = drops.items.get('iron_axe')!;
+    expect([axe.lean!.length, axe.lie!.length]).toEqual([2, 2]);
+    expect(drops.items.get('helm')!.ground!.sprite.w).toBe(2);
+  });
+
+  it('leaves the tileset without drops when the manifest has none', () => {
+    expect(tileset.drops).toBeUndefined();
+  });
+
+  it('drops an item that names a missing sprite and reports it', () => {
+    const odd = withDrops();
+    odd.drops.items.helm.ground = 'no_such_sprite';
+    const built = buildTileset(parseManifest(odd));
+    expect(built.problems).toEqual(['drops names unknown sprite no_such_sprite']);
+    expect(built.tileset.drops!.items.has('helm')).toBe(false);
+    expect(built.tileset.drops!.items.has('oak_log')).toBe(true);
+  });
+
+  it('draws a sprite without its cover when a grass colour of the cover is missing', () => {
+    const odd = withDrops();
+    delete odd.sprites['cover/1'];
+    const built = buildTileset(parseManifest(odd));
+    expect(built.problems).toEqual(['drops names unknown sprite cover/1']);
+    expect(built.tileset.drops!.items.get('oak_log')!.pile![0].cover).toBeUndefined();
+  });
+
+  it('refuses an item with no sprite to rest on the ground', () => {
+    const bad = withDrops();
+    bad.drops.items.helm = { lean: ['tree_oak'] };
+    expect(() => parseManifest(bad)).toThrow(/no sprite to rest on the ground/);
+  });
+
+  it('refuses a grass kind whose colour is not an index', () => {
+    const bad = withDrops();
+    bad.drops.grass.grass = 'green';
+    expect(() => parseManifest(bad)).toThrow(/not a ramp index/);
+  });
+});
+
 describe('painted manifest lookup', () => {
   it('finds a database id under its kind and nothing under another kind', () => {
     expect(tileset.lookup.get('resource')!.get('oak_tree')).toHaveLength(1);

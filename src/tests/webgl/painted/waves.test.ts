@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { DEEP, DIST_STEPS, LAND, SHALLOW, shoreField } from '$lib/webgl/painted/shoreField';
 import {
+  RIVER_PUSH,
   STILL_WATER_TILES,
   SEA_SLOTS,
   WaveClock,
@@ -90,11 +91,40 @@ describe('the wave clock', () => {
     expect(before.length).toBe(SEA_SLOTS * 4);
   });
 
-  it('carries the wave strength over the old texture in the last slot', () => {
+  it('carries the wave strength over the old texture in the body slot', () => {
     const clock = new WaveClock();
     clock.tick(0, 0.4, EAST, false);
-    expect(clock.uniforms(0.4, EAST, 1, 0.6).at(-1)).toBeCloseTo(0.6, 6);
-    expect(clock.uniforms(0.4, EAST, 1).at(-1)).toBe(1);
+    expect(clock.uniforms(0.4, EAST, 1, 0.6)[14 * 4 + 3]).toBeCloseTo(0.6, 6);
+    expect(clock.uniforms(0.4, EAST, 1)[14 * 4 + 3]).toBe(1);
+  });
+
+  it('hands the river the zoom fade, the air and the push of the current', () => {
+    const clock = new WaveClock();
+    clock.tick(0, 0.4, EAST, false);
+    const near = clock.uniforms(0.4, EAST, 1);
+    const far = clock.uniforms(0.4, EAST, 12);
+    const fade = (sea: Float32Array) => [...sea.slice(15 * 4, 16 * 4)];
+    expect(fade(near)).toEqual([1, 1, 1, 1]);
+    expect(fade(far)[3]).toBeLessThan(fade(far)[0]);
+    expect(near[16 * 4]).toBeCloseTo(0.4, 6);
+    expect(near[16 * 4 + 1]).toBeGreaterThan(0);
+    expect(near[16 * 4 + 2]).toBeGreaterThan(far[16 * 4 + 2]);
+    expect(near[17 * 4]).toBeCloseTo(RIVER_PUSH, 6);
+  });
+
+  it('moves the river downstream with time and holds it in the still zoom range', () => {
+    const clock = new WaveClock();
+    clock.tick(0, 0.4, EAST, false);
+    const along = () => clock.uniforms(0.4, EAST, 1)[17 * 4 + 1];
+    const cycle = () => clock.uniforms(0.4, EAST, 1)[16 * 4 + 3];
+    const start = along();
+    clock.tick(200, 0.4, EAST, false);
+    clock.tick(400, 0.4, EAST, false);
+    expect(along()).toBeGreaterThan(start);
+    expect(cycle()).toBeGreaterThan(0);
+    const held = along();
+    clock.tick(3000, 0.4, EAST, true);
+    expect(along()).toBe(held);
   });
 
   it('stills the water only at the farthest zoom', () => {
@@ -111,20 +141,22 @@ describe('the wave clock', () => {
     }
   });
 
-  it('carries the ripple and glint grain along the wind heading, faster in a stronger wind', () => {
+  it('shifts the ripple and glint lookup upwind so the grain drifts downwind, faster in a stronger wind', () => {
+    const signed = (v: number) => (v > 1024 ? v - 2048 : v);
     const run = (wind: number, dir: { x: number; y: number }) => {
       const clock = new WaveClock();
       clock.tick(0, wind, dir, false);
       for (let now = 100; now <= 1000; now += 100) clock.tick(now, wind, dir, false);
-      return clock.ripple;
+      return { x: signed(clock.ripple.x), y: signed(clock.ripple.y), glint: signed(clock.glint.x) };
     };
     const east = run(0.3, EAST);
-    expect(east.x).toBeGreaterThan(0);
+    expect(east.x).toBeLessThan(0);
     expect(east.y).toBe(0);
+    expect(east.glint).toBeLessThan(0);
     const south = run(0.3, { x: 0, y: 1 });
     expect(south.x).toBe(0);
-    expect(south.y).toBeGreaterThan(0);
-    expect(run(0.9, EAST).x).toBeGreaterThan(east.x);
+    expect(south.y).toBeLessThan(0);
+    expect(run(0.9, EAST).x).toBeLessThan(east.x);
   });
 
   it('puts the rain and the gustiness of the weather in the surge slot', () => {

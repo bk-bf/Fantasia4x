@@ -1,5 +1,5 @@
 import type { GameGrid } from './game-grid.js';
-import type { TileData, Viewport } from './tile-types.js';
+import { withOverlays, type TileData, type Viewport } from './tile-types.js';
 import type { CharacterRenderer } from './character-renderer.js';
 import type { ShaderManager } from './shaders.js';
 import type { FontAtlas } from './types.js';
@@ -150,9 +150,9 @@ export class GridRenderer {
       height: options.viewportHeight
     };
 
-    const visibleTiles = options.renderAllTiles
-      ? grid.getAllTiles()
-      : grid.getVisibleTiles(viewport);
+    const visibleTiles = withOverlays(
+      options.renderAllTiles ? grid.getAllTiles() : grid.getVisibleTiles(viewport)
+    );
 
     if (visibleTiles.length > 0) {
       const vertexData = this.generateBatchVertexData(visibleTiles, options);

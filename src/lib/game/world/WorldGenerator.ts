@@ -179,6 +179,9 @@ function classicTargets(
   };
 }
 
+const DISCHARGE_STEPS = 100;
+const SLOPE_DIGITS = 3;
+
 const LANDFORM_SUBTYPE: Record<number, string> = {
   [Cover.Lake]: 'shallow_water',
   [Cover.River]: 'shallow_water',
@@ -192,7 +195,7 @@ function landformWorld(
   detailNoise: Noise,
   targets: LandformTargets
 ): WorldTile[][] {
-  const { cover, lowland } = generateLandforms(width, height, seed, targets);
+  const { cover, lowland, courses } = generateLandforms(width, height, seed, targets);
   const world: WorldTile[][] = [];
   for (let y = 0; y < height; y++) {
     const row: WorldTile[] = [];
@@ -202,10 +205,19 @@ function landformWorld(
       const detail = detailNoise(x * DETAIL_FREQUENCY, y * DETAIL_FREQUENCY);
       const subType = LANDFORM_SUBTYPE[cover[i]] ?? pickSubterrain(biome, detail);
       const range = BIOMES[biome]?.densityRange ?? [0, 1];
-      row.push(makeTile(x, y, biome, subType, (range[0] + range[1]) / 2));
+      const tile = makeTile(x, y, biome, subType, (range[0] + range[1]) / 2);
+      if (cover[i] === Cover.River) tile.river = true;
+      row.push(tile);
     }
     world.push(row);
   }
+  courses.tiles.forEach((i, k) => {
+    world[(i / width) | 0][i % width].riverCourse = {
+      down: courses.down[k],
+      discharge: Math.round(courses.discharge[k] * DISCHARGE_STEPS) / DISCHARGE_STEPS,
+      slope: Number(courses.slope[k].toPrecision(SLOPE_DIGITS))
+    };
+  });
   return world;
 }
 

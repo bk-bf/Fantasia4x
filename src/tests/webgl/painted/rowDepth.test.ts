@@ -142,6 +142,23 @@ describe('the row each quad carries for the depth test', () => {
     }
   });
 
+  it('draws the overlays of a tile after it, on the row the tile stands on', () => {
+    const uploads: Float32Array[] = [];
+    const { r } = gridRenderer(true, uploads);
+    const grid = new GameGrid();
+    const prop = { ...tiles[2], animationOffset: { x: 3, y: -8 } };
+    grid.setTile(4, 6, { ...prop, overlays: [{ ...prop }, { ...prop }] });
+    grid.setTile(8, 6, tiles[2]);
+    r.renderGrid(grid, { ...options, renderAllTiles: true });
+    const data = uploads[uploads.length - 1];
+    const rows = Array.from({ length: data.length / (6 * ROW_FLOATS) }, (_, quad) => [
+      ...data.subarray(quad * 6 * ROW_FLOATS, quad * 6 * ROW_FLOATS + 2),
+      data[quad * 6 * ROW_FLOATS + GLYPH_FLOATS]
+    ]);
+    expect(rows.map(([, , row]) => row)).toEqual([5.5, 5.5, 5.5, 6]);
+    expect(new Set(rows.slice(0, 3).map(([x, y]) => `${x},${y}`)).size).toBe(1);
+  });
+
   it('writes the map row in a cached chunk, so the rows either side of a chunk edge stay in order', () => {
     const uploads: Float32Array[] = [];
     const { r } = gridRenderer(true, uploads);

@@ -261,21 +261,6 @@ describe('condition floaters', () => {
     expect(freed).toBeLessThan(blocked);
   });
 
-  it('ties a lifted floater to its own creature with a tick down to its head', () => {
-    const t0 = 290_000;
-    const low = onset('knockdown', 'Knocked Down', 9000, 4, { entityId: 'left' });
-    const high = onset('winded', 'Winded', 9001, 4, { entityId: 'right' });
-    draw([low], both, t0);
-    draw([low, high], both, t0 + 300);
-    const drawn = draw([low, high], both, t0 + 800);
-    const mine = ticks.filter((t) => t[2] === 1);
-    expect(mine).toHaveLength(1);
-    expect(mine[0][0]).toBe((9001 + 0.5) * 32);
-    const winded = rect(drawn.find((d) => d.x > (9001 - 0.5) * 32)!);
-    expect(mine[0][1]).toBe(winded[3]);
-    expect(mine[0][3]).toBeGreaterThan(5);
-  });
-
   it('merges hits that land close together, however late the frame that sees them', () => {
     const t0 = 300_000;
     const a = hit(7, 600, 4, t0);

@@ -1,7 +1,9 @@
 import type { Rgb } from '../palette';
 import { GORE, HONEY, HURT, tint, word, type Pair } from './glyphs';
-import { P, STAR, Spr, copy, hex, melt } from './spr';
+import { P, Spr, copy, hex, melt } from './spr';
 import { hash } from '../noise';
+import { paint } from '../canvas';
+import { toArt, type Art } from '../picture';
 import { art, bane, boon, keys, lit, stamp } from './iconArt';
 import { MOTIFS, type MotifId } from './motifs';
 
@@ -218,19 +220,21 @@ const MOCK_ICONS: Record<MockIconId, () => Spr> = {
   starving: () =>
     art(
       [
-        '..444444444..',
-        '.45555555554.',
-        '4500000000054',
-        '4510000000154',
-        '.45111111154.',
-        '.34455555443.',
-        '..344444433..',
-        '...3333332...',
-        '....22222....',
-        '....33322....'
+        '.........44...',
+        '.........454..',
+        '........4554..',
+        '........45543.',
+        '.44....455543.',
+        '4554..4555543.',
+        '45554455555433',
+        '4555555w555433',
+        '.4555555554333',
+        '..4555555433..',
+        '...444444333..',
+        '....33333.....'
       ],
-      keys([...P.wicker, hex('#d8bc80')], '012345'),
-      150
+      { ...keys(tint('#d4786c'), '012345'), w: lit(hex('#ffe0d0'), 230) },
+      170
     ),
   exhausted: () =>
     art(
@@ -254,21 +258,21 @@ const MOCK_ICONS: Record<MockIconId, () => Spr> = {
   moodbreak: () =>
     art(
       [
-        '....4555.....',
-        '..455555544..',
-        '.45555445554.',
-        '4555444444443',
-        '4444433334433',
-        '.3333333y3332',
-        '..2222yy2222.',
-        '.....yy......',
-        '....yyyy.....',
-        '......yy.....',
-        '.....yy......',
-        '....y........'
+        '....44444....',
+        '..445555544..',
+        '.45555555554.',
+        '.455k555k554.',
+        '45kkk555kkk54',
+        '455t55555t554',
+        '455t55555t554',
+        '45t5555555t54',
+        '45555kkk55554',
+        '.455k555k554.',
+        '..444444443..',
+        '....33333....'
       ],
-      { ...keys([...P.purple, hex('#c4a0e0')], '012345'), y: lit(STAR[4], 255) },
-      170
+      { ...keys(tint('#c4a0e0'), '012345'), k: P.ink, t: lit(hex('#7ec8ff'), 240) },
+      180
     ),
   wellfed: () =>
     boon(
@@ -335,6 +339,8 @@ export type IconId = MockIconId | MotifId;
 export type IconMark = 'up' | 'down';
 
 const ICONS: Record<IconId, () => Spr> = { ...MOCK_ICONS, ...MOTIFS };
+
+export const ICON_IDS = Object.keys(ICONS) as IconId[];
 const BANE_COL = hex('#c05060');
 const BANE_RIM = hex('#ffb0b8');
 
@@ -521,4 +527,17 @@ export function crumbled(s: Spr): Spr[] {
   }
   crumbles.set(s, frames);
   return frames;
+}
+
+const pictures = new Map<string, Art>();
+
+export function iconArt(id: IconId, mark?: IconMark): Art {
+  const key = mark ? `${id}+${mark}` : id;
+  let art = pictures.get(key);
+  if (!art) {
+    const s = icon(id, mark)[0];
+    art = toArt(paint(s.w, s.h, (x, y) => s.c[y * s.w + x]));
+    pictures.set(key, art);
+  }
+  return art;
 }

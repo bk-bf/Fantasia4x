@@ -18,10 +18,6 @@ export function traitBadge(t: Trait): { glyph: GlyphName; kind: BadgeKind } {
 }
 
 const COLD = new Set(['windchilled', 'hypothermia', 'wet']);
-const HOT = new Set(['heat_stroke']);
-const FED = new Set(['well_fed', 'hearty_meal', 'nourished', 'trail_fed', 'well_provisioned']);
-const WARMED = new Set(['warmed_through', 'stock_warmed', 'banked_warmth']);
-const WATERED = new Set(['cool_slaked', 'deep_slaked', 'clean']);
 
 const lowerIsBetter = (key: string) => key.endsWith('Rate') || key === 'pain';
 const additive = (key: string) => key.includes('_') || key === 'stamina';
@@ -50,16 +46,6 @@ export function bySeverity(a: ConditionView, b: ConditionView): number {
     SEVERITY_RANK[conditionKind(a)] - SEVERITY_RANK[conditionKind(b)] ||
     (b.severityPct ?? 0) - (a.severityPct ?? 0)
   );
-}
-
-export function conditionBadge(v: ConditionView): { glyph: GlyphName; kind: BadgeKind } {
-  const kind = conditionKind(v);
-  if (COLD.has(v.id)) return { glyph: v.id === 'wet' ? 'drop' : 'snow', kind };
-  if (HOT.has(v.id) || WARMED.has(v.id)) return { glyph: 'flame', kind };
-  if (FED.has(v.id)) return { glyph: 'bowl', kind };
-  if (WATERED.has(v.id)) return { glyph: 'drop', kind };
-  if (kind === 'neg') return { glyph: 'bang', kind };
-  return { glyph: kind === 'good' ? 'sprout' : 'flame', kind };
 }
 
 export const BADGE_TONE: Record<BadgeKind, string> = {
