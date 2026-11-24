@@ -8,8 +8,11 @@ import { groundLayer } from './groundLevels.js';
 import { paintedGroundIds } from './tileset.js';
 import { LIGHT_FIELD_UNIT } from './lightPass.js';
 import { DEEP, LAND, SHALLOW, shoreField } from './shoreField.js';
-import { waterBlockShift } from './waves.js';
+import { ART_PER_UNIT, waterBlockShift } from './waves.js';
 import { ICE_UNIT, WaterIce } from './waterIce.js';
+import { FLOW_UNIT, RiverTextures, STREAM_UNIT } from './riverTextures.js';
+import { riverTiles, type RiverTiles } from './riverGrid.js';
+import type { TileData } from '../tile-types.js';
 
 const PROGRAM = 'groundBlend';
 const MAX_KINDS = 64;
@@ -117,6 +120,10 @@ export class GroundBlend {
   private waveStyle = 0;
   private readonly lightTex: WebGLTexture;
   private readonly ice: WaterIce;
+  private readonly rivers: RiverTextures;
+  private readonly unitsPerTile: number;
+  private riverData: RiverTiles = riverTiles(0);
+  private riverStale = true;
   private readonly vao: WebGLVertexArrayObject;
   private readonly vbo: WebGLBuffer;
   private readonly at: Record<string, WebGLUniformLocation | null>;
@@ -164,6 +171,8 @@ export class GroundBlend {
     this.tideTex = this.makeTexture(TIDE_UNIT, gl.LINEAR);
     this.lightTex = this.makeTexture(LIGHT_UNIT, gl.LINEAR);
     this.ice = new WaterIce(gl);
+    this.rivers = new RiverTextures(gl);
+    this.unitsPerTile = painted.tileset.tile / ART_PER_UNIT;
     this.vao = gl.createVertexArray()!;
     this.vbo = gl.createBuffer()!;
     gl.bindVertexArray(this.vao);
@@ -200,7 +209,9 @@ export class GroundBlend {
       'u_waterStyle',
       'u_waterBlock',
       'u_sea[0]',
-      'u_ice'
+      'u_ice',
+      'u_flow',
+      'u_stream'
     ];
     this.at = Object.fromEntries(names.map((n) => [n, gl.getUniformLocation(program, n)]));
     const { patch, layer, tide, shore } = groundKindTable(painted);
@@ -210,6 +221,8 @@ export class GroundBlend {
     gl.uniform1i(this.at.u_tide, TIDE_UNIT);
     gl.uniform1i(this.at.u_waterField, WATER_UNIT);
     gl.uniform1i(this.at.u_ice, ICE_UNIT);
+    gl.uniform1i(this.at.u_flow, FLOW_UNIT);
+    gl.uniform1i(this.at.u_stream, STREAM_UNIT);
     gl.uniform1i(this.at.u_groundField, GROUND_UNIT);
     gl.uniform1i(this.at.u_groundFar, FAR_UNIT);
     const pieces = painted.tileset.ground?.pieces ?? { x: 0, y: 0 };
@@ -279,11 +292,14 @@ export class GroundBlend {
     }
     this.kinds = new Uint8Array(w * h);
     this.tides = new Uint8Array(w * h * TIDE_BYTES);
+    this.riverData = riverTiles(w * h);
+    this.riverStale = true;
     for (const t of grid.getAllTiles()) {
       const { x, y } = t.position;
       if (x < 0 || y < 0 || x >= w || y >= h) continue;
       this.kinds[y * w + x] = t.ground ?? 0;
       this.tides.set(this.tideOfKind(t.ground ?? 0), (y * w + x) * TIDE_BYTES);
+      this.setRiverAt(y * w + x, t);
     }
     this.fillShore();
     gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
@@ -293,6 +309,28 @@ export class GroundBlend {
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, this.tides);
     gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
     gl.activeTexture(gl.TEXTURE0);
+  }
+
+  private setRiverAt(i: number, t: TileData | undefined): void {
+    const r = this.riverData;
+    const course = t?.riverCourse;
+    r.river[i] = t?.river ? 1 : 0;
+    r.down[i] = course ? course.down : -1;
+    r.discharge[i] = course?.discharge ?? 0;
+    r.slope[i] = course?.slope ?? 0;
+  }
+
+  private syncRivers(): void {
+    if (!this.riverStale) return;
+    this.riverStale = false;
+    const water = Uint8Array.from(this.kinds, (k) => (this.shoreOf[k] === LAND ? 0 : 1));
+    this.rivers.update({
+      w: this.w,
+      h: this.h,
+      water,
+      tiles: this.riverData,
+      unitsPerTile: this.unitsPerTile
+    });
   }
 
   private tideOfKind(k: number): Uint8Array {
@@ -314,8 +352,11 @@ export class GroundBlend {
     let reshore = false;
     for (const { x, y } of this.dirty) {
       if (x < 0 || y < 0 || x >= this.w || y >= this.h) continue;
-      const k = grid.getTile(x, y)?.ground ?? 0;
+      const tile = grid.getTile(x, y);
+      const k = tile?.ground ?? 0;
       const was = this.kinds[y * this.w + x];
+      if (this.riverData.river[y * this.w + x] !== (tile?.river ? 1 : 0)) this.riverStale = true;
+      this.setRiverAt(y * this.w + x, tile);
       if (was === k) continue;
       if (this.shoreOf[was] !== this.shoreOf[k]) reshore = true;
       this.kinds[y * this.w + x] = k;
@@ -325,6 +366,7 @@ export class GroundBlend {
     this.dirty = [];
     if (changed.length === 0) return;
     if (reshore) this.fillShore();
+    if (reshore) this.riverStale = true;
     const tideAt = (x: number, y: number) =>
       this.tides.subarray(
         (y * this.w + x) * TIDE_BYTES,
@@ -446,6 +488,7 @@ export class GroundBlend {
     } else if (this.dirty.length > 0) this.updateKindTexels(grid);
     if (this.w === 0 || this.h === 0) return false;
     this.ice.sync(this.w, this.h);
+    if (f.sea && this.waveStyle) this.syncRivers();
     this.rebuildLight(f);
     gl.useProgram(this.program);
     gl.uniformMatrix4fv(this.at.u_projection, false, f.projection);
@@ -473,6 +516,7 @@ export class GroundBlend {
     }
     this.bindOn(LIGHT_UNIT, this.lightTex);
     this.ice.bind();
+    this.rivers.bind();
     gl.activeTexture(gl.TEXTURE0);
     gl.bindVertexArray(this.vao);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
@@ -486,6 +530,7 @@ export class GroundBlend {
     gl.deleteTexture(this.tideTex);
     gl.deleteTexture(this.lightTex);
     this.ice.dispose();
+    this.rivers.dispose();
     gl.deleteBuffer(this.vbo);
     gl.deleteVertexArray(this.vao);
     gl.deleteProgram(this.program);

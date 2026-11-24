@@ -1,4 +1,5 @@
 import type { PaintedSprite } from './painted/manifest.js';
+import type { RiverCourse } from '$lib/game/core/types.js';
 
 export const BASE_TILE_PX = 16;
 
@@ -35,6 +36,8 @@ export interface TileData {
   scenery?: boolean;
   ground?: number;
   waterIce?: number;
+  river?: boolean;
+  riverCourse?: RiverCourse;
   tufts?: readonly PaintedSprite[];
   overlays?: readonly TileData[];
   dirty?: boolean;

@@ -3,7 +3,7 @@ import { buildScenario } from '$lib/game/headless/Scenario';
 import { HeadlessSession } from '$lib/game/headless/HeadlessSession';
 import { resolveTraitGamble } from '$lib/game/core/defs/lineages';
 import { itemService } from '$lib/game/services/ItemService';
-import { applyConsumable } from '$lib/game/entities/Pawns';
+import { applyConsumable } from '$lib/game/core/rules/body/consumables';
 import type { Pawn } from '$lib/game/core/types';
 
 const stk = (s: HeadlessSession) => (s.getState().stockpile ?? {}) as Record<string, number>;

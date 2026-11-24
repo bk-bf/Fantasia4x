@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { generateCulture } from '$lib/game/core/gen/culture';
-import { generatePawns } from '$lib/game/entities/Pawns';
+import { generatePawns } from '$lib/game/core/gen/pawnBuild';
 import { itemService } from '$lib/game/services/ItemService';
 import { rng } from '$lib/game/core/util/rng';
 import type { GameState, Pawn } from '$lib/game/core/types';
@@ -64,7 +64,9 @@ describe('CARRY CAPACITY — does the curve gate heavy armour on strength?', () 
       `             strength still pays above 25: cap(25) ${capAt(25).toFixed(1)}kg → cap(60) ${capAt(60).toFixed(1)}kg ` +
         `(was flat at the 0.30 clamp)`
     );
-    expect(capAt(60), 'strength must keep paying past the old clamp').toBeGreaterThan(capAt(25) * 1.25);
+    expect(capAt(60), 'strength must keep paying past the old clamp').toBeGreaterThan(
+      capAt(25) * 1.25
+    );
 
     rows.push('');
     rows.push('[KIT AFFORDABILITY] share of the population in each encumbrance band');

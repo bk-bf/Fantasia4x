@@ -386,10 +386,17 @@ export function applyTileToGrid(grid: GameGrid, tile: WorldTile, hiddenMask: boo
   });
 }
 
-function blendedGround(tile: WorldTile): Pick<TileData, 'ground' | 'tufts'> {
+function blendedGround(
+  tile: WorldTile
+): Pick<TileData, 'ground' | 'tufts' | 'river' | 'riverCourse'> {
   const art = paintedTileset();
   const tufts = art && groundTufts(art.ground, tile, art.tile);
-  return { ground: paintedGroundKind(tile.subType), ...(tufts ? { tufts } : null) };
+  return {
+    ground: paintedGroundKind(tile.subType),
+    ...(tufts ? { tufts } : null),
+    ...(tile.river ? { river: true } : null),
+    ...(tile.riverCourse ? { riverCourse: tile.riverCourse } : null)
+  };
 }
 
 export function applySnowToGrid(grid: GameGrid, tile: WorldTile, hiddenMask: boolean[][]): void {

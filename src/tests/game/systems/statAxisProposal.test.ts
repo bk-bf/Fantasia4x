@@ -9,7 +9,7 @@ import {
   organsOf,
   PART_DEF_MAP
 } from '$lib/game/core/defs/bodyParts';
-import { applyGainedTrait } from '$lib/game/entities/Pawns';
+import { applyGainedTrait } from '$lib/game/core/rules/body/traitBody';
 import { rng } from '$lib/game/core/util/rng';
 import itemsData from '$lib/game/database/items/items.json';
 import traitsData from '$lib/game/database/pawns/traits.json';
@@ -394,8 +394,18 @@ describe('STAT AXIS — the landed two-axis split', () => {
         gaps.push(`${fam} (${pair.one ? 'no 2H' : 'no 1H'})`);
         continue;
       }
-      const strong = dpsProposed(pair.two, { strength: 40, dexterity: 10, perception: 10 }, FLAT, t);
-      const nimble = dpsProposed(pair.one, { strength: 10, dexterity: 40, perception: 10 }, FLAT, t);
+      const strong = dpsProposed(
+        pair.two,
+        { strength: 40, dexterity: 10, perception: 10 },
+        FLAT,
+        t
+      );
+      const nimble = dpsProposed(
+        pair.one,
+        { strength: 10, dexterity: 40, perception: 10 },
+        FLAT,
+        t
+      );
       rows.push(fam.padEnd(15) + f(strong, 18) + f(nimble, 22) + f(strong / nimble, 9, 2) + '×');
       ratios.push([fam, Math.max(strong, nimble) / Math.min(strong, nimble)]);
     }

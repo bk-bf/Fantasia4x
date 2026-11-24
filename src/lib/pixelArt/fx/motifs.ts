@@ -36,7 +36,8 @@ export type MotifId =
   | 'parry'
   | 'dodge'
   | 'crit'
-  | 'quiver';
+  | 'quiver'
+  | 'pack';
 
 const ramp = (h: string, chars = '012345'): Pal => keys(tint(h), chars);
 const glow = (h: string, e = 255) => lit(hex(h), e);
@@ -611,5 +612,22 @@ export const MOTIFS: Record<MotifId, () => Spr> = {
       ],
       { ...ramp('#a07048'), r: glow('#ff5040') },
       180
+    ),
+  pack: () =>
+    art(
+      [
+        '....444....',
+        '...4...4...',
+        '..4444444..',
+        '.455555554.',
+        '.455kkk554.',
+        '.455555543.',
+        '.455555543.',
+        '.455555433.',
+        '.45555433k.',
+        '..3333333..'
+      ],
+      { ...ramp('#a8844c'), k: P.wood[1] },
+      170
     )
 };

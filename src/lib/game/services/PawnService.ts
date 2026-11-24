@@ -8,7 +8,7 @@ import type {
 } from '../core/types';
 import { takeOut, carriedDrinkVessel, hydrationOf } from '../core/rules/gear/vessels';
 import { pawnById } from '../core/state/pawnIndex';
-import { categorizeStats, getStatDescription } from '../entities/Pawns';
+import { categorizeStats, getStatDescription } from '../core/rules/body/statDisplay';
 import { pawnStatService } from './PawnStatService';
 import { itemService } from './ItemService';
 import { WORK_CATEGORIES } from '../core/defs/work';

@@ -10,7 +10,7 @@ import {
   type Trend
 } from '$lib/pixelArt/fx/icons';
 import { mix } from '$lib/pixelArt/noise';
-import { P, hex } from '$lib/pixelArt/fx/spr';
+import { P } from '$lib/pixelArt/fx/spr';
 import type { FxPainter } from '$lib/pixelArt/fx/painter';
 import type { WebGLRenderer } from '$lib/webgl/renderer.js';
 import { figureAt, type Figure } from './figure';
@@ -74,8 +74,6 @@ const TIERS = [0, 20, 38, 56];
 const BADGE_STEP = 18;
 const GAP = 2;
 const SETTLE_PX_S = 24;
-const TICK_FROM = 6;
-const TICK_LIGHT = hex('#e8dcc4');
 const LOSS_IN_S = 0.6;
 const LOSS_FROM = -18;
 const LOSS_TO = -8;
@@ -325,7 +323,6 @@ export function drawFloats(
     if (it.q.lost) loss(p, it.q, at, u);
     else if (it.q.badge) badge(p, at, it.q.pair, u);
     else float(p, at, it.q.pair, u, it.q.ttl, it.q.shake);
-    if (it.lift <= -TICK_FROM) tick(p, it.q, at, u, -it.lift);
   }
 }
 
@@ -336,17 +333,6 @@ function follow(r: WebGLRenderer | null, locate: Locate): void {
     it.fig = figureAt(r, Math.round(rp.x), Math.round(rp.y), rp.x, rp.y);
     anchor(it.fig, it.q);
   }
-}
-
-function tick(p: FxPainter, q: Placed, at: Anchor, u: number, len: number): void {
-  if (u > q.ttl) return;
-  const s = q.pair[0];
-  const y = Math.round(at.oy + dyOf(q, u)) - s.ay + s.h;
-  const h = Math.round(len);
-  p.fill(P.ink, 255);
-  p.band(at.x, at.y, -1, y, 3, h);
-  p.fill(TICK_LIGHT, 255);
-  p.band(at.x, at.y, 0, y, 1, h);
 }
 
 function loss(p: FxPainter, q: Placed, at: Anchor, u: number): void {
