@@ -179,6 +179,11 @@ both, which is how the no-comments rule is enforced rather than remembered.
 
 **Always `./dev.sh`** to start the dev server, never `pnpm dev` directly.
 
+**Hand the owner a build to play as one line**: `./launch.sh <branch>   # <commit>`, with the commit
+it lands on. It fetches, switches his checkout detached to `origin/<branch>` and starts the painted
+game in Electron; any other launch flag goes after the branch. Never the separate `git fetch`,
+`git switch` and `F4X_PAINTED=1` steps.
+
 **Scope tests after an edit.** `pnpm test:related <the files you edited>`. Run the full suite
 only when asked, or when the change touches a hub everything imports.
 
