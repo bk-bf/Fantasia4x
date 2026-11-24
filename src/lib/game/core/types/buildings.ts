@@ -118,6 +118,7 @@ export interface Building {
   transparentBg?: boolean;
 
   walkable?: boolean;
+  workstation?: boolean;
 
   blocksSight?: boolean;
 

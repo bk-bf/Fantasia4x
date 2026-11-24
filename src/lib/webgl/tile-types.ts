@@ -36,8 +36,14 @@ export interface TileData {
   ground?: number;
   waterIce?: number;
   tufts?: readonly PaintedSprite[];
+  overlays?: readonly TileData[];
   dirty?: boolean;
   lastUpdated?: number;
+}
+
+export function withOverlays(tiles: TileData[]): TileData[] {
+  if (!tiles.some((t) => t.overlays)) return tiles;
+  return tiles.flatMap((t) => (t.overlays ? [t, ...t.overlays] : [t]));
 }
 
 export class GridCoords {

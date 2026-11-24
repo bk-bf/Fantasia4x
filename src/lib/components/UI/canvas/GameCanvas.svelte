@@ -919,8 +919,8 @@
     tH: number
   ) {
     pawnOverlayGrid.clear();
-    itemOverlayGrid.clear();
-    overlayDroppedItems(itemOverlayGrid, items, isHiddenTile);
+    const world = { map, buildings: buildingList, zoneTiles, rev: _prevTerrainRev };
+    overlayDroppedItems(itemOverlayGrid, items, isHiddenTile, world);
     buildingOverlayGrid.clear();
     overlayBuildings(buildingOverlayGrid, buildingList, isHiddenTile);
     const clampedDt = Math.min(dt, 0.05);

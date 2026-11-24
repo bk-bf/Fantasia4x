@@ -7,6 +7,7 @@ import {
   DROP_TILE,
   STATIONS_OF_TOOL,
   copyOffset,
+  isLowStation,
   planDrops,
   type DropPlacement,
   type DropStation,
@@ -302,6 +303,17 @@ describe('a planned yard', () => {
   it('draws one drop for a tile that holds several, the last named', () => {
     const placed = planDrops(yard(), [drop('oak_log', 5, 5, 3), drop('iron_bar', 5, 5, 3)], 7);
     expect(placed.map((p) => p.id)).toEqual(['iron_bar@5,5']);
+  });
+});
+
+describe('stations too low to lean on', () => {
+  it('are the fire, the work spots, the pit and every rug', () => {
+    const low = buildings.map((b) => b.id).filter(isLowStation);
+    expect(low).toEqual(
+      expect.arrayContaining(['campfire', 'craft_spot', 'butcher_spot', 'charcoal_pit', 'bear_rug'])
+    );
+    expect(low.every((id) => id.endsWith('_rug') || !id.includes('bench'))).toBe(true);
+    expect(isLowStation('anvil')).toBe(false);
   });
 });
 

@@ -76,6 +76,11 @@ export const STATIONS_OF_TOOL: Readonly<Partial<Record<LongKind, readonly string
   saw: ['carpenter_bench', 'sawtable']
 };
 
+const LOW_STATIONS = new Set(['campfire', 'craft_spot', 'butcher_spot', 'charcoal_pit']);
+
+export const isLowStation = (kind: string): boolean =>
+  LOW_STATIONS.has(kind) || kind.endsWith('_rug');
+
 const RUN_LENGTH = 3;
 const COPY_STEP = 5;
 const STATION_HALF_WIDTH = 15;
