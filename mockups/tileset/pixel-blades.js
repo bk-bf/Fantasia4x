@@ -1,4 +1,66 @@
 'use strict';
+const SABRE = (() => {
+  const ease = (t, from, to) => Math.min(1, Math.max(0, (t - from) / (to - from)));
+  const SHAPE = {
+    side: 1, start: 0, base: 0, turn: 25, sweep: 1.25, taper: 1.5, root: 1, back: 1, belly: 4, swell: .75, clip: .8, round: .75, point: 0, hook: 1, square: false,
+    spur: false, wideAt: 5, edge: 'l', bevel: 'd', flat: 'm', spine: 'm', roll: '', rune: '', runeAt: 1, fangs: 0, fang: 'L', fangLen: 1, from: .3
+  };
+
+  function bounds(t, s) {
+    const grow = s.root + (s.belly - s.root) * ease(t, 0, s.swell) ** .9;
+    if (s.square) return [-s.back, grow - (t === 1 ? .6 : 0)];
+    const edge = grow - (s.belly - s.point) * ease(t, s.round, 1) ** s.taper;
+    const spine = -s.back + (s.back + s.point) * ease(t, s.clip, 1) ** s.hook;
+    return [spine, edge];
+  }
+
+  function columns(n, s) {
+    const tilt = Math.atan(s.base), turn = s.side * s.turn * Math.PI / 180;
+    let shift = 0, spurred = !s.spur;
+    const cols = Array.from({ length: n }, (_, i) => {
+      const t = i / (n - 1), angle = tilt - turn * t ** s.sweep, stretch = 1 / Math.cos(angle), [spine, edge] = bounds(t, s);
+      const along = (s.start + i) * s.base, band = u => s.side * (Math.round(along + shift + s.side * u * stretch) - Math.floor(along));
+      const lo = band(spine), hi = Math.max(lo, band(edge));
+      shift += Math.tan(angle) - s.base;
+      return { i, t, lo, hi };
+    });
+    for (const c of cols) if (!spurred && c.t > s.clip) { c.lo -= 1; c.spur = spurred = true; }
+    cols.forEach((c, i) => { c.reach = cols[i + 1] ? Math.max(0, cols[i + 1].hi - c.hi - 1) : 0; });
+    return cols;
+  }
+
+  function glyph(s, b, c) {
+    const d = c.hi - b, wide = c.hi - c.lo >= s.wideAt, inClip = !s.square && c.t > s.clip;
+    const bevel = wide ? 2 : 1;
+    if (d < bevel - c.reach) return s.edge;
+    if (d <= bevel) return d === bevel || c.t < s.clip ? s.bevel : s.edge;
+    if (b === c.lo) return inClip || c.spur ? s.edge : s.spine[c.i % s.spine.length];
+    if (s.roll && b === c.lo + 1) return s.roll[c.i % s.roll.length];
+    if (s.rune && b === c.lo + s.runeAt && c.i > 1 && !inClip) return s.rune[c.i % s.rune.length];
+    return s.flat;
+  }
+
+  function fangCells(cols, s) {
+    const at = new Map(), mark = (i, b) => i >= 0 && b > cols[i].hi && at.set(i + ',' + b, s.fang);
+    for (const c of cols) {
+      if (!s.fangs || c.i % s.fangs !== s.fangs - 1 || c.t <= s.from || c.t >= s.round) continue;
+      mark(c.i, c.hi + 1);
+      if (s.fangLen > 1) { mark(c.i - 1, c.hi + 1); mark(c.i - 1, c.hi + 2); }
+    }
+    return at;
+  }
+
+  function blade(n, shape) {
+    const s = Object.assign({}, SHAPE, shape);
+    const cols = columns(n, s), fangs = fangCells(cols, s);
+    const cell = (b, c) => fangs.get(c.i + ',' + b) || (b < c.lo || b > c.hi ? ' ' : glyph(s, b, c));
+    const top = Math.min(...cols.map(c => c.lo)), bottom = Math.max(...cols.map(c => c.hi + 2)), rows = [];
+    for (let b = top; b <= bottom; b++) rows.push(cols.map(c => cell(b, c)).join(''));
+    return s.side < 0 ? PX.mirror(PX.part(top, rows), {}) : PX.part(top, rows);
+  }
+
+  return { blade };
+})();
 const PIXEL_BLADES = (() => {
   const { assemble, part, run, profile } = PX, { POMMEL, BLADE, grip, haft, binding, quillons, crossbar } = PARTS;
   const sword = (pommel, hilt, guard, blade) => assemble([pommel, hilt, guard, -1, blade]);
@@ -59,7 +121,6 @@ const PIXEL_BLADES = (() => {
   const bronzeRapier = () => sword([POMMEL.dot, 'bronze'], [grip(4), 'wood'], [BUTT_PLATE, 'bronze', 'copper'], [leafPoint(19), 'bronze']);
   const runeNeedleRapier = () => sword([POMMEL.jewel, 'gold', 'sapphire'], [bowed(6, 'MD', 5), 'gold', 'wool'], [swept(4, 5), 'gold'], [runeNeedle(19), 'runed', 'glow']);
 
-  const ferrule = part(-1, ['l', 'm', 'd']);
   const past = (t, from) => Math.max(0, (t - from) / (1 - from));
   function hewer(n, root, belly, o) {
     const opts = Object.assign({ bend: 3, spine: 1, teeth: 0, tooth: ' ', lines: [] }, o);
@@ -76,30 +137,29 @@ const PIXEL_BLADES = (() => {
     const top = 1 - belly, bottom = 1 + opts.bend;
     return part(top, PARTS.span(top, bottom).map(b => Array.from({ length: n }, (_, i) => cell(b, i)).join('')));
   }
-  const BUTCHER = (n, belly) => hewer(n, belly - 2, belly, { spine: 2, bend: 2 });
-  const FLARED = (n, belly) => hewer(n, belly - 4, belly, { bend: 2 });
-  const FALCHION = (n, belly) => hewer(n, belly - 3, belly, { bend: 3, lines: [[2, 1, 6, 'd']] });
-  const TOOTHED = (n, belly) => hewer(n, belly - 3, belly, { bend: 3, teeth: 2, lines: [[2, 2, 5, 'M ']] });
-  const JAW = (n, belly) => hewer(n, belly - 3, belly, { bend: 2, teeth: 2, tooth: 'M', spine: 2, lines: [[2, 2, 6, 'l  ']] });
-  const ROLLED = (n, depth) => chopper(n, depth, () => 0, () => n, [[1, 0, n, 'D'], [0, 0, n, 'L'], [-1, 0, n, 'M']]);
-  const FANGED = (n, belly) => hewer(n, belly - 3, belly, { bend: 3, teeth: 3, tooth: 'M', lines: [[2, 2, 6, 'L ']] });
   const HACKED = (n, belly) => hewer(n, belly - 2, belly, { spine: 2, bend: 2, teeth: 5, lines: [[3, 3, 7, 'm  d ']] });
-  const bevel = (k, depth) => k >= depth - 2 ? 'l' : k <= 1 ? 'd' : 'm';
-  const chopper = (n, depth, from, to, extras) => profile([
-    ...Array.from({ length: depth }, (_, k) => [1 - k, from(k), to(k), bevel(k, depth)]),
-    ...(extras || [])
-  ]);
 
-  const bronzeCleaver = () => knife([binding(6), 'wood'], [ferrule, 'bronze'], [FLARED(12, 9), 'bronze']);
-  const ironCleaver = () => knife([binding(6), 'wood'], [ferrule, 'iron'], [BUTCHER(12, 9), 'iron']);
-  const steelCleaver = () => sword([POMMEL.dot, 'steel'], [grip(5), 'leather'], [crossbar(2), 'steel'], [FALCHION(14, 8), 'steel']);
-  const runeToothedCleaver = () => sword([POMMEL.dot, 'runed'], [grip(5), 'black'], [crossbar(2), 'runed'], [TOOTHED(14, 8), 'runed', 'glow']);
-  const gnollBoneCleaver = () => knife([binding(6), 'hide'], [ferrule, 'bone'], [JAW(14, 8), 'bone', 'flint']);
-  const flenser = () => knife([binding(8), 'leather'], [ferrule, 'steel'], [ROLLED(14, 12), 'iron', 'steel']);
-  const bronzeGreatcleaver = () => knife([haft(9), 'wood'], [ferrule, 'bronze'], [FLARED(15, 11), 'bronze']);
-  const ironGreatcleaver = () => knife([haft(9), 'wood'], [ferrule, 'iron'], [BUTCHER(15, 11), 'iron']);
-  const steelGreatcleaver = () => sword([POMMEL.block, 'steel'], [grip(7), 'leather'], [crossbar(3), 'steel'], [FALCHION(17, 10), 'steel']);
-  const runeFangedGreatcleaver = () => sword([POMMEL.jewel, 'gold', 'ruby'], [grip(7), 'black'], [crossbar(3), 'gold'], [FANGED(17, 10), 'runed', 'glow']);
+  const ROWS = (step, band) => [step + band, -step];
+  const lengthOf = parts => parts.reduce((n, p) => n + p[0].len, 0);
+  function hewn(pommel, hilt, guard, blade) {
+    const hilted = [pommel, hilt, guard], sk = assemble(hilted);
+    PX.lay(sk, lengthOf(hilted) - 1, blade[0], blade.slice(1), ROWS);
+    return sk;
+  }
+  const cleaver = (n, shape) => SABRE.blade(n, shape);
+  const ONE = { base: 1, turn: 24, sweep: 1.1, root: 1.5, back: 1.2, belly: 4.4, point: .5, clip: .8, round: .7, hook: .8 };
+  const TWO = { base: 1, turn: 24, sweep: 1.1, root: 1.7, back: 1.4, belly: 5.4, point: .8, clip: .78, round: .68, hook: .7 };
+  const tuned = (base, extra) => Object.assign({}, base, extra);
+  const bronzeCleaver = () => hewn([POMMEL.wheel, 'bronze'], [grip(5), 'wood'], [quillons(2), 'bronze'], [cleaver(17, tuned(ONE, { root: 1.2, belly: 4.8, swell: .8 })), 'bronze']);
+  const ironCleaver = () => hewn([POMMEL.block, 'iron'], [grip(5), 'leather'], [crossbar(2), 'iron'], [cleaver(17, tuned(ONE, { spine: 'd', roll: 'd' })), 'iron']);
+  const steelCleaver = () => hewn([POMMEL.plus, 'steel'], [grip(5), 'leather'], [quillons(3), 'steel'], [cleaver(18, tuned(ONE, { root: 1.1, belly: 4.2 })), 'steel']);
+  const runeToothedCleaver = () => hewn([POMMEL.dot, 'runed'], [grip(5), 'black'], [crossbar(2), 'runed'], [cleaver(18, tuned(ONE, { fangs: 2, fang: 'l', rune: 'mL', from: .2 })), 'runed', 'glow']);
+  const gnollBoneCleaver = () => hewn([POMMEL.dot, 'bone'], [binding(6), 'hide'], [crossbar(1), 'bone'], [cleaver(17, tuned(ONE, { edge: 'm', bevel: 'm', spine: 'l', fangs: 3, fang: 'L', fangLen: 2, from: .15 })), 'bone', 'flint']);
+  const flenser = () => hewn([POMMEL.block, 'steel'], [binding(7), 'leather'], [crossbar(2), 'steel'], [cleaver(18, { base: 1, turn: 24, sweep: 1.1, root: 2, back: 1.2, belly: 5, square: true, spine: 'L', roll: 'D' }), 'iron', 'steel']);
+  const bronzeGreatcleaver = () => hewn([POMMEL.wheel, 'bronze'], [grip(7), 'wood'], [quillons(2), 'bronze'], [cleaver(18, tuned(TWO, { root: 1.3, belly: 5.8, swell: .8 })), 'bronze']);
+  const ironGreatcleaver = () => hewn([POMMEL.block, 'iron'], [grip(7), 'leather'], [crossbar(3), 'iron'], [cleaver(18, tuned(TWO, { spine: 'd', roll: 'd', spur: true })), 'iron']);
+  const steelGreatcleaver = () => hewn([POMMEL.wheel, 'steel'], [grip(7), 'leather'], [quillons(4), 'steel'], [cleaver(18, tuned(TWO, { spur: true })), 'steel']);
+  const runeFangedGreatcleaver = () => hewn([POMMEL.jewel, 'gold', 'ruby'], [grip(7), 'black'], [crossbar(3), 'gold'], [cleaver(18, tuned(TWO, { spur: true, fangs: 3, fang: 'M', fangLen: 2, rune: 'mL', from: .2 })), 'runed', 'glow']);
 
   const ironGreatsword = () => sword([POMMEL.block, 'iron'], [grip(7), 'leather'], [crossbar(6), 'iron'], [BLADE.broad(18), 'iron']);
   const bronzeGreatLeaf = () => sword([POMMEL.wheel, 'bronze'], [grip(6, 'ml'), 'bronze'], [quillons(2), 'bronze'], [greatLeaf(19), 'bronze']);
