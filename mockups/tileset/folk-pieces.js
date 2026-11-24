@@ -27,43 +27,15 @@ const FOLK_PIECES = (() => {
   const cultures = FOLK_CAST.cultures.map(c => ({ c, pref: culturePreference(c) }));
   const cast = cultures.flatMap(({ c, pref }) => c.pawns.map((p, i) => ({ c, p, i, look: pawnLookOf(p, pref, FOLK_CAST.traitRarity) })));
   const seen = test => { const n = cast.filter(test).length; return n ? `${n} of ${cast.length}` : 'none'; };
-  const leaning = (table, base) => key => cultures
-    .map(({ c, pref }) => ({ name: c.name, share: (pref[table][key] || 0) / sum(pref[table]) }))
-    .filter(x => x.share > 1.5 * base[key] / sum(base)).sort((a, b) => b.share - a.share).map(x => `${x.name} ${pct(x.share, 1)}`).join(', ');
+  const archetypes = FOLK_CAST.archetypes, sizeKeys = Object.keys(FOLK_CAST.sizes);
+  const sizeShare = (a, k) => (a.sizeBias.includes(k) ? .75 / a.sizeBias.length : 0) + .25 / sizeKeys.length;
+  const sizeOf = cm => sizeKeys.find(k => cm >= FOLK_CAST.sizes[k][0] && cm <= FOLK_CAST.sizes[k][1]);
+  const dressedIn = (field, key) => archetypes.filter(a => [].concat(HOMELAND_DRESS[a.name][field]).includes(key)).map(a => a.name).join(', ');
   const even = table => Object.fromEntries(Object.keys(table).map(k => [k, 1]));
   const traitName = t => FOLK_CAST.traitNames[t] || t;
 
   const rows = [];
   const add = (group, id, name, make, src) => rows.push({ group, id, name, make, src: src || {} });
-
-  for (const { c, pref } of cultures) {
-    const [lo, hi] = c.physicalTraits.heightRange, [wlo, whi] = c.physicalTraits.weightRange;
-    add('Culture', 'culture_' + c.id, `${c.name} · ${c.archetype}`, () => drawLook(cast.find(x => x.c === c).look, 'f'), {
-      odds: `${lo}–${hi} cm, ${wlo}–${whi} kg`,
-      seen: `${c.pawns.length} pawns`,
-      who: colouringPhrase(pref),
-      detail: [
-        'Skin ' + SKINS[topShare(pref.skin).key].word + ' ' + pct(topShare(pref.skin).share, 1),
-        'hair ' + HAIRS[topShare(pref.hair).key].word + ' ' + pct(topShare(pref.hair).share, 1),
-        'eyes ' + EYES[topShare(pref.eyes).key].word + ' ' + pct(topShare(pref.eyes).share, 1),
-        'dyes ' + listing(Object.keys(pref.garb)),
-        'hose ' + topShare(pref.legwear).key,
-        'headwear ' + topShare(Object.fromEntries(Object.entries(pref.headwear).filter(([k]) => k !== 'none'))).key,
-        'trim ' + (Object.keys(DYES).find(k => DYES[k] === pref.trim) || (pref.trim === P.cloth ? 'linen' : 'none')),
-      ].join(', '),
-      desc: c.description + ' ' + colouringPhrase(pref),
-    });
-  }
-  for (const x of cast) {
-    const { p, look, c } = x, marks = Object.values(look.from).map(traitName);
-    const colours = `${SKINS[look.skin].word}, ${(HAIRS[look.hair] || { word: look.hair + ' of hair' }).word}, ${EYES[look.eyes].word}${look.oddEye ? ' and ' + EYES[look.oddEye].word : ''}`;
-    add(`${c.name} folk`, `pawn_${c.id}_${x.i}`, p.name, () => drawLook(look, 'f'), {
-      odds: `${p.sex === 'female' ? 'Woman' : 'Man'}, ${p.age} · ${p.height} cm · ${p.weight} kg · ${buildWord(look.body.build)}`,
-      seen: c.archetype,
-      who: colours,
-      detail: [look.style + ' hair', look.beard !== 'none' && look.beard + ' beard', look.garb + (p.sex === 'female' ? ' kirtle' : ' tunic'), look.sleeves + ' sleeves', look.legwear + ' hose', look.hat !== 'none' && look.hat, look.cloak && look.cloak + ' cloak', look.apron && 'apron', look.pouch && 'pouch', ...marks].filter(Boolean).join(', '),
-    });
-  }
 
   const sexes = ['male', 'female'], sexWord = s => s === 'female' ? 'Woman' : 'Man';
   for (const sex of sexes) for (const [share, word] of [[.75, 'lean'], [1, 'average'], [1.4, 'heavy']]) add('Body', `body_${sex}_${word}`, `${sexWord(sex)}, ${word}`, () => drawLook(lookOf({ sex, weight: Math.round(typical(175) * share) }), 'f'), {
@@ -79,24 +51,24 @@ const FOLK_PIECES = (() => {
   });
   for (const cm of [90, 110, 130, 150, 175, 200, 230, 260, 290]) add('Height', 'height_' + cm, cm + ' cm', () => drawLook(lookOf({ height: cm, weight: typical(cm) }), 'f'), {
     odds: `${typical(cm)} kg typical`, seen: seen(x => Math.abs(x.p.height - cm) <= 10),
-    who: cultures.filter(({ c }) => c.physicalTraits.heightRange[0] <= cm && cm <= c.physicalTraits.heightRange[1]).map(({ c }) => c.name).join(', '),
-    detail: `${bodyOf({ height: cm, weight: typical(cm), sex: 'male' }).legs + bodyOf({ height: cm, weight: typical(cm), sex: 'male' }).tl + 10} px tall`,
+    who: archetypes.filter(a => a.sizeBias.includes(sizeOf(cm))).map(a => a.name).join(', '),
+    detail: `${sizeOf(cm)}, ${bodyOf({ height: cm, weight: typical(cm), sex: 'male' }).legs + bodyOf({ height: cm, weight: typical(cm), sex: 'male' }).tl + 10} px tall`,
   });
 
   for (const k of Object.keys(SKINS)) add('Skin tone', 'skin_' + k, cap(SKINS[k].word), () => {
     const a = drawLook(lookOf({ look: { skin: k } }), 'f');
     return isolate(a, withProbe(SKINS, '__probe', { ramp: probe }, () => drawLook(lookOf({ look: { skin: '__probe' } }), 'f')));
-  }, { odds: 'even, leaned per culture', seen: seen(x => x.look.skin === k), who: leaning('skin', even(SKINS))(k), detail: SKINS[k].word });
+  }, { odds: 'even, leaned per culture', seen: seen(x => x.look.skin === k), detail: SKINS[k].word });
   for (const k of [...Object.keys(HAIRS), 'grey']) add('Hair colour', 'hair_' + k, cap(k) + ' hair', () => {
     const fields = { look: { hair: k, style: 'long', beard: 'full' } }, a = drawLook(lookOf(fields), 'f');
     return isolate(a, withProbe(HAIRS, '__probe', { ramp: probe }, () => drawLook(lookOf({ look: { ...fields.look, hair: '__probe' } }), 'f')));
   }, k === 'grey'
     ? { odds: 'greying: 10% from 38, 40% from 46, 80% from 58', seen: seen(x => x.look.hair === k), detail: 'age, over any colour' }
-    : { odds: 'even, leaned per culture', seen: seen(x => x.look.hair === k), who: leaning('hair', even(HAIRS))(k), detail: HAIRS[k].word });
+    : { odds: 'even, leaned per culture', seen: seen(x => x.look.hair === k), detail: HAIRS[k].word });
   for (const k of Object.keys(EYES)) add('Eye colour', 'eyes_' + k, cap(EYES[k].word), () => {
     const a = drawLook(lookOf({ look: { eyes: k } }), 'f');
     return isolate(a, withProbe(EYES, '__probe', { col: probe[3] }, () => drawLook(lookOf({ look: { eyes: '__probe' } }), 'f')));
-  }, { odds: 'even, leaned per culture', seen: seen(x => x.look.eyes === k || x.look.oddEye === k), who: leaning('eyes', even(EYES))(k), detail: EYES[k].word + ', 4% of folk carry a second eye colour' });
+  }, { odds: 'even, leaned per culture', seen: seen(x => x.look.eyes === k || x.look.oddEye === k), detail: EYES[k].word + ', 4% of folk carry a second eye colour' });
 
   const styleTotal = sex => STYLES.reduce((a, s) => a + (s.sexes[sex] || 0), 0);
   for (const st of STYLES) for (const sex of Object.keys(st.sexes)) add('Hair style', `style_${st.id}_${sex}`, cap(st.id) + ', ' + sexWord(sex).toLowerCase(), () => {
@@ -107,7 +79,7 @@ const FOLK_PIECES = (() => {
     odds: pct(BEARDS[k], sum(BEARDS)) + ' of men', seen: seen(x => x.look.beard === k),
   });
   for (const k of Object.keys(HEADWEAR)) if (k !== 'none') add('Headwear', 'hat_' + k, cap(k), () => isolate(drawLook(lookOf({ look: { hat: k, hood: 'walnut' } }), 'f'), drawLook(lookOf({}), 'f')), {
-    odds: pct(HEADWEAR[k], sum(HEADWEAR)) + ', more where a culture favours it', seen: seen(x => x.look.hat === k), who: leaning('headwear', HEADWEAR)(k), detail: k === 'straw' ? 'woven straw' : 'dyed from the culture’s cloth',
+    odds: pct(HEADWEAR[k], sum(HEADWEAR)) + ', more where a culture favours it, and its homeland leans it', seen: seen(x => x.look.hat === k), who: dressedIn('headwear', k), detail: k === 'straw' ? 'woven straw' : 'dyed from the culture’s cloth',
   });
 
   const garment = (sex, look) => withProbe(DYES, '__probe', probe, () => isolate(drawLook(lookOf({ sex, look }), 'f'), drawLook(lookOf({ sex, look: { ...look, garb: '__probe' } }), 'f')));
@@ -119,13 +91,13 @@ const FOLK_PIECES = (() => {
   add('Garment', 'garment_pouch', 'Belt pouch', () => plainDiff({ look: { pouch: true } }), { odds: '50%', seen: seen(x => x.look.pouch), detail: 'leather' });
   add('Garment', 'garment_cloak', 'Cloak', () => plainDiff({ look: { cloak: 'woad' } }), { odds: '12%', seen: seen(x => x.look.cloak), detail: 'in one of the culture’s dyes' });
   for (const k of Object.keys(DYES)) add('Dye', 'dye_' + k, cap(k), () => garment('male', { garb: k, sleeves: 'long' }), {
-    odds: 'three dyes picked per culture', seen: seen(x => x.look.garb === k || x.look.cloak === k), who: cultures.filter(({ pref }) => pref.garb[k]).map(({ c, pref }) => `${c.name} ${pct(pref.garb[k], sum(pref.garb))}`).join(', '),
+    odds: `three dyes picked per culture, a homeland dye ${HOMELAND_PULL}× as likely`, seen: seen(x => x.look.garb === k || x.look.cloak === k), who: dressedIn('garb', k),
   });
   for (const k of Object.keys(HOSE)) add('Hose', 'hose_' + k, cap(k), () => withProbe(HOSE, '__probe', probe, () => isolate(drawLook(lookOf({ look: { legwear: k } }), 'f'), drawLook(lookOf({ look: { legwear: '__probe' } }), 'f'))), {
-    odds: 'even, leaned per culture', seen: seen(x => x.look.legwear === k), who: leaning('legwear', even(HOSE))(k),
+    odds: 'even, leaned per culture', seen: seen(x => x.look.legwear === k),
   });
   [['weld', DYES.weld], ['madder', DYES.madder], ['woad', DYES.woad], ['linen', P.cloth]].forEach(([k, ramp]) => add('Trim', 'trim_' + k, cap(k) + ' trim', () => plainDiff({ look: { trim: ramp, garb: 'walnut' } }, { look: { garb: 'walnut' } }), {
-    odds: `${pct(TRIMS.filter(t => t === ramp).length, TRIMS.length)} of cultures, worn by all its folk`, seen: seen(x => x.look.trim === ramp), who: cultures.filter(({ pref }) => pref.trim === ramp).map(({ c }) => c.name).join(', '), detail: 'hem and cuffs',
+    odds: `${pct(TRIMS.filter(t => t === ramp).length, TRIMS.length)} of cultures, worn by all its folk`, seen: seen(x => x.look.trim === ramp), detail: 'hem and cuffs',
   }));
 
   const markBases = [{}, { look: { style: 'bald' } }, { face: 's' }, { face: 's', look: { style: 'bald' } }];
@@ -136,11 +108,30 @@ const FOLK_PIECES = (() => {
     }
     return drawLook(lookOf(fields, traits), 'f');
   };
-  const carriers = t => cultures.filter(({ c }) => c.pawns.some(p => p.traits.includes(t))).map(({ c }) => c.name).join(', ');
+  const carriers = t => archetypes.filter(a => a.traits.includes(t)).map(a => a.name).join(', ');
   for (const m of MARKS) for (const t of m.traits) if (FOLK_CAST.traitRarity[t]) add('Mark', 'mark_' + t.replace(/-/g, '_'), traitName(t), markPiece({}, [t]), {
     odds: FOLK_CAST.traitRarity[t], seen: seen(x => x.p.traits.includes(t)), who: carriers(t),
     detail: `drawn as ${m.id.replace(/[A-Z]/g, ch => ' ' + ch.toLowerCase())} at strength ${RANK[FOLK_CAST.traitRarity[t]] || 1} of 5`,
   });
   add('Mark', 'mark_blind', 'Both eyes lost', markPiece({ blind: true }), { odds: 'from a wound', detail: 'blindfold over both eyes' });
+
+  rows.archetypes = archetypes.map(a => {
+    const id = a.name.toLowerCase().replace(/[^a-z]+/g, '_'), dress = HOMELAND_DRESS[a.name];
+    const sizes = sizeKeys.map(k => ({ k, share: sizeShare(a, k) })).sort((x, y) => y.share - x.share);
+    const marked = a.traits.filter(t => MARKS.some(m => m.traits.includes(t)) && FOLK_CAST.traitRarity[t]);
+    const makes = [
+      ...sizes.map(({ k }) => { const [lo, hi] = FOLK_CAST.sizes[k], cm = Math.round((lo + Math.min(hi, 290)) / 2); return () => drawLook(lookOf({ height: cm, weight: typical(cm) }), 'f'); }),
+      ...marked.map(t => markPiece({}, [t])),
+      ...dress.garb.map(k => () => garment('male', { garb: k, sleeves: 'long' })),
+      () => plainDiff({ look: { hat: dress.headwear, hood: dress.garb[0] } }),
+    ];
+    return {
+      id, makes,
+      src: {
+        odds: sizes.map(({ k, share }) => `${k} ${pct(share, 1)}`).join(', '),
+        detail: `its traits each 3× as likely; dresses in ${listing(dress.garb)}, ${HOMELAND_PULL}× as likely as other dyes; favours the ${dress.headwear}`,
+      },
+    };
+  });
   return rows;
 })();

@@ -44,6 +44,19 @@ const DYES = {
 const HOSE = { hide: P.leather, walnut: DYES.walnut, charcoal: DYES.charcoal, oatmeal: DYES.oatmeal, russet: DYES.russet, moss: DYES.moss };
 const TRIMS = [null, null, null, DYES.weld, DYES.madder, DYES.woad, P.cloth];
 const HEADWEAR = { none: 6, hood: 1.5, coif: 1, straw: 1 };
+const HOMELAND_DRESS = {
+  'Mountain-born': { garb: ['walnut', 'charcoal', 'russet'], headwear: 'hood' },
+  'Forest-kin': { garb: ['moss', 'walnut', 'weld'], headwear: 'hood' },
+  'Deep-dwellers': { garb: ['charcoal', 'lichen', 'undyed'], headwear: 'coif' },
+  'Sky-touched': { garb: ['woad', 'undyed', 'weld'], headwear: 'coif' },
+  'Marsh-folk': { garb: ['moss', 'oatmeal', 'lichen'], headwear: 'straw' },
+  'Tundra-clans': { garb: ['undyed', 'charcoal', 'woad'], headwear: 'hood' },
+  'Ember-kin': { garb: ['madder', 'weld', 'russet'], headwear: 'coif' },
+  'River-people': { garb: ['woad', 'oatmeal', 'moss'], headwear: 'straw' },
+  'Wastrel-nomads': { garb: ['oatmeal', 'russet', 'weld'], headwear: 'hood' },
+  'Verdant': { garb: ['moss', 'weld', 'madder'], headwear: 'straw' },
+};
+const HOMELAND_PULL = 3;
 
 const STYLES = [
   { id: 'short', sexes: { male: 4, female: 2 } },
@@ -82,9 +95,11 @@ function culturePreference(culture) {
   const r = rng(seedOf(culture.id + ':colour'));
   const eyes = Object.fromEntries(Object.keys(EYES).map(k => [k, k === 'red' || k === 'violet' ? .15 : 1]));
   const eyeLean = lean(r, eyes, 2 + r() * 6);
-  const garbKeys = Object.keys(DYES).filter(k => k !== 'lichen' || r() < .3), garb = {};
-  for (let i = 0; i < 3; i++) garb[garbKeys[Math.floor(r() * garbKeys.length)]] = 3 - i;
-  const headwear = { ...HEADWEAR }, worn = ['hood', 'coif', 'straw'][Math.floor(r() * 3)];
+  const dress = HOMELAND_DRESS[culture.archetype] || { garb: [], headwear: null };
+  const garbKeys = Object.keys(DYES).filter(k => k !== 'lichen' || dress.garb.includes(k) || r() < .3), garb = {};
+  const garbPool = Object.fromEntries(garbKeys.map(k => [k, dress.garb.includes(k) ? HOMELAND_PULL : 1]));
+  for (let i = 0; i < 3; i++) garb[weighted(r, garbPool)] = 3 - i;
+  const headwear = { ...HEADWEAR }, worn = weighted(r, Object.fromEntries(['hood', 'coif', 'straw'].map(k => [k, k === dress.headwear ? HOMELAND_PULL : 1])));
   if (r() < .6) headwear[worn] += 3;
   return {
     skin: lean(r, SKINS, 2 + r() * 10), hair: lean(r, HAIRS, 2 + r() * 8), eyes: eyeLean,

@@ -1,6 +1,6 @@
 'use strict';
 (() => {
-  const X = DBX, idOf = archetype => archetype.toLowerCase().replace(/[^a-z]+/g, '_');
+  const X = DBX;
   const trimmed = s => {
     let x0 = s.w, y0 = s.h, x1 = 0, y1 = 0;
     for (let y = 0; y < s.h; y++) for (let x = 0; x < s.w; x++) if (s.c[y * s.w + x]) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
@@ -11,9 +11,6 @@
     t.sh = s.sh;
     return t;
   };
-  for (const c of FOLK_CAST.cultures) {
-    const pref = culturePreference(c);
-    c.pawns.forEach((p, i) => X.reg('folk', idOf(c.archetype), String(i), () => trimmed(drawLook(pawnLookOf(p, pref, FOLK_CAST.traitRarity), 'f'))));
-  }
+  for (const a of FOLK_PIECES.archetypes) a.makes.forEach((make, i) => X.reg('folk', a.id, String(i), () => trimmed(make())));
   for (const r of FOLK_PIECES) X.reg('folk', r.id, '0', () => trimmed(r.make()));
 })();

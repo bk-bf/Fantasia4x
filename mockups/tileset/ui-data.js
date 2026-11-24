@@ -67,7 +67,8 @@
     const data = await (await fetch('catalog-data.json')).json();
     if (DBX.fromData) DBX.fromData(data.objects);
     const objs = data.objects.slice();
-    for (const r of FOLK_PIECES) objs.push({ cat: 'folk', group: r.group, id: r.id, name: r.name, desc: r.src.desc, src: r.src });
+    for (const r of FOLK_PIECES) objs.push({ cat: 'folk', group: r.group, id: r.id, name: r.name, src: r.src });
+    for (const a of FOLK_PIECES.archetypes) { const o = objs.find(x => x.cat === 'folk' && x.id === a.id); if (o) Object.assign(o.src, a.src); }
     for (const r of CONDITION_ICONS.rows) objs.push({ cat: 'condition', group: r.kind, id: r.id, name: r.name, src: { kind: r.kind, icon: r.icon, mark: r.mark } });
     extras(objs);
     for (const o of objs) normalise(o, data.ages);
