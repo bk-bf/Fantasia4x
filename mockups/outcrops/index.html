@@ -19,12 +19,12 @@
   #stage.one .pane:not(.shown) { display: none; }
   .pane img { position: absolute; left: 0; top: 0; transform-origin: 0 0; image-rendering: pixelated; user-select: none; -webkit-user-drag: none; max-width: none; }
   .pane figcaption { position: absolute; left: 6px; top: 6px; padding: 1px 7px; background: var(--chip); color: var(--ink); font-weight: 650; letter-spacing: .02em; pointer-events: none; }
-  #refs { position: fixed; right: 12px; bottom: 12px; display: grid; grid-template-columns: repeat(4, auto); gap: 4px; padding: 4px; background: var(--chip); outline: 1px solid var(--frame); }
+  #refs { position: fixed; right: 12px; top: 12px; display: grid; grid-template-columns: repeat(4, auto); gap: 4px; padding: 4px; background: var(--chip); outline: 1px solid var(--frame); }
   #refs[hidden] { display: none; }
-  @media (max-width: 760px) { #refs { grid-template-columns: repeat(2, auto); left: 12px; right: auto; } }
+  @media (max-width: 760px) { #refs { left: 12px; top: 36px; } }
   #refs figure { position: relative; margin: 0; line-height: 0; }
   #refs img { width: 168px; height: 112px; image-rendering: pixelated; }
-  @media (max-width: 760px) { #refs img { width: calc((100vw - 40px) / 2); height: auto; } }
+  @media (max-width: 760px) { #refs img { width: calc((100vw - 44px) / 4); height: auto; } }
   #refs figcaption { position: absolute; left: 3px; top: 3px; padding: 0 5px; line-height: 1.5; background: var(--chip); font-weight: 650; }
 </style>
 </head>
