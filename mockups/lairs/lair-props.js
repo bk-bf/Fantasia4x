@@ -359,5 +359,5 @@ const LAIR_PROPS = (() => {
     return s;
   }
 
-  return { den, bed, overhang, brush, ribs, skeleton, stakes, totem, hut, spit, eggs, spire, groundNest, clawed, firepit, rack, weeds, sapling, weathered };
+  return { den, bed, overhang, brush, ribs, skeleton, stakes, totem, hut, spit, eggs, spire, groundNest, clawed, firepit, rack, weeds, sapling, weathered, sticks };
 })();

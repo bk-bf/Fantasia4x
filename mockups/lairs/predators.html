@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Small hunters</title>
+<link rel="stylesheet" href="../fantasia4x-hud/chrome.css">
+<script src="../fantasia4x-hud/chrome.js"></script>
+<link rel="stylesheet" href="lairs.css">
+<link rel="stylesheet" href="predators.css">
+</head>
+<body>
+<header id="mock">
+  <div class="mrow"><strong>Small hunters</strong><a href="./">Dens</a><a href="region.html">Region</a><button id="mockhide">Hide · `</button></div>
+  <div class="mrow"><span class="grp" data-k="line"><button data-v="fox">Fox</button><button data-v="raptor">Hawk</button><button data-v="stoat">Stoat</button></span></div>
+  <div class="mrow"><span class="grp" data-k="zoom" data-def="3"><span class="lab">Zoom</span><button data-v="2">2</button><button data-v="3">3</button><button data-v="4">4</button></span></div>
+  <div class="mrow"><span class="grp" data-k="theme"><button data-v="auto">Auto</button><button data-v="light">Light</button><button data-v="dark">Dark</button></span></div>
+  <p class="mnote">mock sprites · names proposed, not final</p>
+</header>
+<main id="sheet"></main>
+<script src="../fantasia4x-hud/ambient.js"></script>
+<script src="../fantasia4x-tileset/registry-scripts.js"></script>
+<script>
+document.write([...REGISTRY_SCRIPTS, 'motion-rig-critter.js', 'motion-poses.js', 'motion-poses-critter.js', 'motion-poses-fb.js', 'motion-bake.js', 'motion-timeline.js', 'motion-stage.js', 'motion-fell.js', 'motion-scene.js'].map(src => '<script src="../fantasia4x-tileset/' + src + '"><\/script>').join(''));
+</script>
+<script src="lair-kit.js"></script>
+<script src="lair-props.js"></script>
+<script src="lair-small.js"></script>
+<script src="lair-raptor.js"></script>
+<script src="small-predators-data.js"></script>
+<script src="predators.js"></script>
+</body>
+</html>
