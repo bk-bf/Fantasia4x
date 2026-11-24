@@ -85,7 +85,7 @@ describe('carry aid chain — packs, belts and sheaths (HeadlessSession, real ti
     expect(after.maxVolumeL - before.maxVolumeL).toBeCloseTo(43, 1);
   });
 
-  it('pawns craft the steel and runed rungs at the smithy and the runecarver', async () => {
+  it('pawns craft the steel rungs at the smithy, and the runed pack and belt add their volume', async () => {
     const session = new HeadlessSession();
     await session.start(
       buildScenario({
@@ -97,7 +97,7 @@ describe('carry aid chain — packs, belts and sheaths (HeadlessSession, real ti
         workReady: true,
         pawns: [{ count: 6, skillLevel: 20 }],
         needsDisabled: ['hunger', 'fatigue'],
-        buildings: [{ id: 'makers_bench' }, { id: 'anvil' }, { id: 'runecarver_bench' }],
+        buildings: [{ id: 'makers_bench' }, { id: 'anvil' }],
         items: {
           buckskin: 200,
           sinew: 60,
@@ -107,23 +107,15 @@ describe('carry aid chain — packs, belts and sheaths (HeadlessSession, real ti
           oak_plank: 20,
           steel_rivet: 400,
           bloom_steel: 20,
-          magic_alloy_bar: 10,
-          gem_dust: 20,
-          enchant_thread: 20
+          rune_etched_belt: 1,
+          rune_stitched_knapsack: 1
         },
         seedEntities: false
       })
     );
     const made = await craftAll(
       session,
-      [
-        'mounted_sword_belt',
-        'steel_buckled_belt',
-        'steel_riveted_knapsack',
-        'plated_war_belt',
-        'rune_etched_belt',
-        'rune_stitched_knapsack'
-      ],
+      ['mounted_sword_belt', 'steel_buckled_belt', 'steel_riveted_knapsack', 'plated_war_belt'],
       60
     );
 
@@ -143,9 +135,7 @@ describe('carry aid chain — packs, belts and sheaths (HeadlessSession, real ti
       'mounted_sword_belt',
       'steel_buckled_belt',
       'steel_riveted_knapsack',
-      'plated_war_belt',
-      'rune_etched_belt',
-      'rune_stitched_knapsack'
+      'plated_war_belt'
     ])
       expect(stockOf(session)[id] ?? 0, `${id} is craftable in play`).toBeGreaterThan(0);
     expect(after.maxWeightKg - before.maxWeightKg).toBe(0);
