@@ -2,7 +2,7 @@
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #121014; --ink: #f4ecd8; --card: #1c1920; --line: #3a3444; --dim: #a79f8e; --hot: #e0a04a; --prey: #e2c078; --pred: #f0786c; --grass: #9cc46a; } }
 :root[data-theme="dark"] { --bg: #121014; --ink: #f4ecd8; --card: #1c1920; --line: #3a3444; --dim: #a79f8e; --hot: #e0a04a; --prey: #e2c078; --pred: #f0786c; --grass: #9cc46a; }
 html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); font: 11px/15px system-ui, sans-serif; }
-#screen { position: fixed; inset: 0; display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 12px; padding: 12px; box-sizing: border-box; }
+#screen { position: fixed; inset: 0; display: grid; grid-template-columns: 400px minmax(0, 1fr); gap: 12px; padding: 12px; box-sizing: border-box; }
 #map { position: relative; align-self: start; justify-self: center; outline: 1px solid var(--line); cursor: crosshair; }
 #map canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
 #land { image-rendering: pixelated; }
@@ -15,11 +15,21 @@ html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); 
 #when b { font-size: 14px; font-weight: 650; }
 #when span { display: block; color: var(--dim); }
 #graph { display: block; width: 100%; height: auto; }
-#clocks { display: grid; gap: 2px; }
-#clocks div { display: grid; grid-template-columns: 74px 1fr; gap: 6px; align-items: center; }
-#clocks i { position: relative; display: block; height: 9px; }
-#clocks i u { position: absolute; top: -1px; width: 1px; height: 11px; background: var(--ink); }
-#clocks em { font-style: normal; color: var(--dim); }
+#side table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+#side th { padding: 0 4px 3px 0; text-align: left; font-weight: 500; font-size: 10px; color: var(--dim); white-space: nowrap; }
+#side td { padding: 1px 4px 1px 0; white-space: nowrap; }
+#side td em { font-style: normal; color: var(--dim); }
+#now img { display: block; height: 16px; max-width: 30px; object-fit: contain; object-position: left; }
+#now td:first-child { width: 30px; }
+#now td:last-child { width: 96px; }
+#now i { position: relative; display: block; height: 9px; }
+#now i u { position: absolute; top: -1px; width: 1px; height: 11px; background: var(--ink); }
+#now tr.hunter:first-of-type td, #now tr:not(.hunter) + tr.hunter td { border-top: 1px solid var(--line); }
+#tally { margin: 0; display: grid; grid-template-columns: 1fr auto; gap: 1px 12px; }
+#tally dt { color: var(--dim); }
+#tally dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
+.scroll { max-height: 190px; overflow: auto; }
+#years td, #years th { font-size: 10px; }
 #pick ul, #log { margin: 5px 0 0; padding: 0; list-style: none; display: grid; gap: 3px; }
 #pick li, #log li { color: var(--dim); }
 #log li { cursor: pointer; }
@@ -30,5 +40,5 @@ html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); 
 #busy[hidden] { display: none; }
 #mock a { color: inherit; margin-left: 8px; }
 #mock button[data-wx], #again { font: inherit; }
-@media (max-width: 760px) { #screen { grid-template-columns: 1fr; overflow: auto; } #side { order: 1; overflow: visible; padding-bottom: 190px; } }
+@media (max-width: 860px) { #screen { grid-template-columns: 1fr; overflow: auto; } #side { order: 1; overflow: visible; padding-bottom: 190px; } }
 body.still #side section:not(#when) { display: none; }
